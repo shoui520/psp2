@@ -62,7 +62,7 @@ set(MODULE_IMPORT_FUNCS
 	SceCpuForTZS_C4137AED
 	SceCpuForTZS_CD98416C
 	SceCpuForTZS_D67A4356
-	SceDipswForTZS_ksceKernelCheckDipsw
+	SceDipswForTZS_A98FC2FD
 	SceSysclibForTZS_956DB750
 	SceSysclibForTZS_E5457B97
 )

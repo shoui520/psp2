@@ -649,10 +649,10 @@ modules:
         kernel: true
         nid: 0xFBD04C34
         functions:
-          ksceDbgpGetDTraceBreakpointHandler: 0x01D7C7BF
-          ksceDbgpGetDTraceUsdtHandler: 0x9CD5EE8C
-          ksceDbgpSetDTraceBreakpointHandler: 0x0509AC51
-          ksceDbgpSetDTraceUsdtHandler: 0x7251789E
+          SceDeci4pDbgpForDriver_01D7C7BF: 0x01D7C7BF
+          SceDeci4pDbgpForDriver_0509AC51: 0x0509AC51
+          SceDeci4pDbgpForDriver_7251789E: 0x7251789E
+          SceDeci4pDbgpForDriver_9CD5EE8C: 0x9CD5EE8C
   SceDeci4pDfMgr:
     nid: 0x00000000
     libraries:
@@ -876,7 +876,6 @@ modules:
           OSMemSet: 0x50494916
           OSProcHasPrivSrvInit: 0x302C7C5F
           PVRSRVAcquireDeviceDataKM: 0xE6B866FD
-          PVRSRVAllocDeviceMemKM: 0x623E50D0
           PVRSRVEnumerateDevicesKM: 0xEC5163B0
           PVRSRVFinaliseSystem: 0x399BC738
           PVRSRVFreeDeviceMemKM: 0xD9CE787A
@@ -887,18 +886,19 @@ modules:
           PVRSRVPerProcessDataDisconnect: 0xB4A2B60F
           PVRSRVSetInitServerState: 0xDCD78852
           SGXGetInfoForSrvinitKM: 0x668B1A60
+          SceGpuEs4ForDriver_14ECCFCD: 0x14ECCFCD
           SceGpuEs4ForDriver_18C90B42: 0x18C90B42
           SceGpuEs4ForDriver_26B03DCE: 0x26B03DCE
           SceGpuEs4ForDriver_395F7689: 0x395F7689
+          SceGpuEs4ForDriver_40E292D7: 0x40E292D7
           SceGpuEs4ForDriver_7AA79658: 0x7AA79658
           SceGpuEs4ForDriver_8A3929D2: 0x8A3929D2
           SceGpuEs4ForDriver_990338F6: 0x990338F6
           SceGpuEs4ForDriver_C0C73C1B: 0xC0C73C1B
           SceGpuEs4ForDriver_F001AE90: 0xF001AE90
-          ksceGpuGetRegisterDump: 0x14ECCFCD
-          ksceGpuMmuMapMemory: 0xEF4B16D3
-          ksceGpuMmuUnmapMemory: 0x9AAAD91C
-          ksceGpuSignalWaitLockup: 0x40E292D7
+          _PVRSRVAllocDeviceMemKM: 0x623E50D0
+          sceGpuMmuMapMemory: 0xEF4B16D3
+          sceGpuMmuUnmapMemory: 0x9AAAD91C
   SceHdmi:
     nid: 0x00000000
     libraries:
@@ -1349,7 +1349,6 @@ modules:
           SceModulemgrForKernel_E71530D7: 0xE71530D7
           SceModulemgrForKernel_F1DE6949: 0xF1DE6949
           SceModulemgrForKernel_FCA9FDB1: 0xFCA9FDB1
-          linkLostClientLibrary: 0x26C28FA4
           sceKernelFinalizeKbl: 0xB911516F
           sceKernelGetExportedLibraryListInModule: 0x7E3F9F55
           sceKernelGetImportedLibraryListInModule: 0x1360E9A8
@@ -1371,6 +1370,7 @@ modules:
           sceKernelGetStubInfoForDebugger: 0x07DBB649
           sceKernelGetStubList: 0xE48CDE07
           sceKernelGetStubNidTableForDebugger: 0xCE201AFC
+          sceKernelLinkWeakLibraryByLibname: 0x26C28FA4
           sceKernelLoadPreloadingModules: 0xE3C1AAA1
           sceKernelLoadProcessImage: 0xA85A44D7
           sceKernelLoadPtLoadSegForFwloader: 0xA07063EA
@@ -2098,13 +2098,13 @@ modules:
           SceMsifForDriver_855E1E38: 0x855E1E38
           SceMsifForDriver_D0307849: 0xD0307849
           SceMsifForDriver_F997286B: 0xF997286B
-          sceMsifDevNullPrepareDmaTable: 0x0F86BEEA
           sceMsifDisableSlowCardMode: 0x75848756
           sceMsifEnableSlowCardMode: 0x4B751CE6
           sceMsifFormat: 0x6EDE7DBA
           sceMsifGetMediaId: 0x718BDFDE
           sceMsifSwReset: 0x4EA579EF
           sceMsifWriteSector: 0x329035EF
+          sceMsifZerofillSector: 0x0F86BEEA
   SceMtpIfDriver:
     nid: 0x00000000
     libraries:
@@ -3219,13 +3219,13 @@ modules:
           SceSdifForDriver_F1A24EDD: 0xF1A24EDD
           SceSdifForDriver_FD9E5CFA: 0xFD9E5CFA
           SceSdifForDriver_FE6F3E7B: 0xFE6F3E7B
-          _sceSdifInitDmaAlignmentBuffer: 0x0EB0EF86
           sceMmcReadSector: 0x6F8D529B
           sceMmcSendGeneralCmdData: 0xB0996641
           sceMmcWriteSectorInternal: 0x175543D2
           sceSdWriteSectorInternal: 0xE0781171
           sceSdifDisableSlowCardMode: 0x29A71E7F
           sceSdifEnableSlowCardMode: 0xF37CF8E5
+          sceSdifInit: 0x0EB0EF86
           sendWriteProtectStatus: 0x995748EA
   SceSysLibTrace:
     nid: 0x00000000
@@ -3827,7 +3827,7 @@ modules:
         kernel: true
         nid: 0x9DBF584C
         functions:
-          SceDipswForTZS_ksceKernelCheckDipsw: 0xA98FC2FD
+          SceDipswForTZS_A98FC2FD: 0xA98FC2FD
       SceKernelSuspendForDriver:
         kernel: true
         nid: 0x7290B21C

@@ -33,7 +33,7 @@ int SceDipswForDriver_A98FC2FD(unsigned int bit);	/* vitasdk: ksceKernelCheckDip
 /* vitasdk: ksceKernelGetDipswInfo */
 SceUInt32 SceDipswForDriver_B2AD48BE(unsigned int index);
 void SceDipswForDriver_F1F3E9FE(unsigned int bit);	/* vitasdk: ksceKernelClearDipsw */
-int SceDipswForTZS_ksceKernelCheckDipsw(unsigned int bit);
+int SceDipswForTZS_A98FC2FD(unsigned int bit);	/* vitasdk: ksceKernelCheckDipsw */
 int sceKernelCheckDipsw(unsigned int bit);
 int sceKernelClearDipsw(unsigned int bit);
 int sceKernelSetDipsw(unsigned int bit);

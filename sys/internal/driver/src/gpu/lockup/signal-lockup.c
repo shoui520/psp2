@@ -124,7 +124,7 @@ int WaitSignalCounterKernel(unsigned *counter, unsigned timeout)
 	return WaitSignalCounter(counter, timeout, 0);
 }
 
-int ksceGpuSignalWaitLockup(void)
+int SceGpuEs4ForDriver_40E292D7(void)
 {
 	unsigned context, timeout = 100000;
 	int ret;
@@ -270,7 +270,7 @@ int sceGpuUnregisterSalvage(int eventUid)
 	return ret;
 }
 
-int ksceGpuGetRegisterDump(void *destination, unsigned size)
+int SceGpuEs4ForDriver_14ECCFCD(void *destination, unsigned size)
 {
 	const SceGpuRegisterDump *dump;
 	int ret;

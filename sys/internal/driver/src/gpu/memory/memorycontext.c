@@ -14,7 +14,7 @@ extern void *AllocProcessGpuMemory(unsigned size);
 extern int DestroyGpuHeap(GpuHeap *heap);
 int FreeProcessGpuMemory(void *memory);
 int DestroyGpuMmuContext(GpuMmuContext *context);
-int ksceGpuMmuUnmapMemory(GpuMmuContext *context, unsigned address,
+int sceGpuMmuUnmapMemory(GpuMmuContext *context, unsigned address,
 		unsigned size);
 
 GpuMemoryContext *kernelMemoryContext;
@@ -101,7 +101,7 @@ int RemoveMemoryContextFromList(GpuMemoryContext *context, unsigned pid)
 		return (int)0x804c0000;
 	for (heap = context->heaps; heap; heap = nextHeap) {
 		for (span = heap->spans; span; span = span->next)
-			ksceGpuMmuUnmapMemory(&context->mmu, span->base, span->size);
+			sceGpuMmuUnmapMemory(&context->mmu, span->base, span->size);
 		nextHeap = heap->next;
 		DestroyGpuHeap(heap);
 	}

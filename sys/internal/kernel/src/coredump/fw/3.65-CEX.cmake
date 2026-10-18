@@ -426,7 +426,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSdifForDriver_6A71987F
 	SceMsifForDriver_D0307849
 	sceKernelGetGPI
-	ksceGpuGetRegisterDump
+	SceGpuEs4ForDriver_14ECCFCD
 	SceGpuEs4ForDriver_18C90B42
 	SceGpuEs4ForDriver_395F7689
 	SceGpuEs4ForDriver_8A3929D2

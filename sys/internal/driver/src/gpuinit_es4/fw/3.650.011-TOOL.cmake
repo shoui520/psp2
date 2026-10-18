@@ -55,17 +55,17 @@ set(MODULE_IMPORT_FUNCS
 	PVRSRVPerProcessData
 	DevInitSGXPart2KM
 	OSMemSet
-	PVRSRVAllocDeviceMemKM
+	_PVRSRVAllocDeviceMemKM
 	SGXGetInfoForSrvinitKM
 	OSAllocMem
 	OSGetCurrentProcessIDKM
 	OSMemCopy
-	ksceGpuMmuUnmapMemory
+	sceGpuMmuUnmapMemory
 	PVRSRVPerProcessDataDisconnect
 	PVRSRVSetInitServerState
 	PVRSRVAcquireDeviceDataKM
 	PVRSRVEnumerateDevicesKM
-	ksceGpuMmuMapMemory
+	sceGpuMmuMapMemory
 	SceDebugForDriver_391B74B7
 	ScePervasiveForDriver_714EEFB7
 	SceSysmemForDriver_009E1C61

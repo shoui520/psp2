@@ -25,4 +25,5 @@ int ScePsmDrmForDriver_984F9017(const ScePsmDrmLicense *license, char *contentId
 /* vitasdk: kscePsmDrmGetActInfo */
 int ScePsmDrmForDriver_B09003A7(int *actType, int *versionFlag, SceUInt64 *accountId,
 				SceUInt64 *startTime, SceUInt64 *expirationTime);
+/* vitasdk: kscePsmDrmWriteActData */
 int ScePsmDrmForDriver_CB73E9D3(void *activation, const char *aesKey);

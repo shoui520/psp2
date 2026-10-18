@@ -295,7 +295,7 @@ int SceSdifForDriver_E80293EF(SdifSdioFunction *function);
 int SceSdifForDriver_F1A24EDD(SdifSdioFunction *function);
 int SceSdifForDriver_FD9E5CFA(unsigned int index);	/* vitasdk: ksceSdifGetCardInsertState2 */
 int SceSdifForDriver_FE6F3E7B(SdifSdioFunction *function);
-int _sceSdifInitDmaAlignmentBuffer(void);
+int sceSdifInit(void);
 int sceMmcReadSector(SdifMmcContext *part, unsigned int sector, void *buffer, unsigned int count);
 int sceMmcSendGeneralCmdData(SdifMmcContext *part, void *buffer, int length);
 int sceMmcWriteSectorInternal(SdifMmcContext *part, unsigned int sector, const void *buffer, unsigned int count);

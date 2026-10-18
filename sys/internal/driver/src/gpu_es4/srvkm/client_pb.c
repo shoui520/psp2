@@ -15,7 +15,7 @@ IMG_VOID *OSMemSet(IMG_VOID *destination, IMG_INT32 value, IMG_SIZE_T size);
 PVRSRV_ERROR PVRSRVAllocSharedSysMemoryKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		IMG_SID hMemBlockProcRef, IMG_UINT32 ui32Flags, IMG_SIZE_T uSize,
 		PVRSRV_KERNEL_MEM_INFO **ppsKernelMemInfo);
-PVRSRV_ERROR PVRSRVAllocDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
+PVRSRV_ERROR _PVRSRVAllocDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 		PVRSRV_PER_PROCESS_DATA *psPerProc, struct GpuHeap *heap,
 		IMG_UINT32 ui32Attribs, IMG_SIZE_T ui32Size, IMG_SIZE_T ui32Alignment,
 		IMG_INT32 hMemBlockProcRef, PVRSRV_KERNEL_MEM_INFO **ppsMemInfo);
@@ -158,13 +158,13 @@ int AllocateParameterBufferBlock(PVRSRV_DEVICE_NODE *psDeviceNode,
 	psBlock->psPBDesc = psPBDesc;
 	psBlock->psNext = NULL;
 	ui32Flags = (psPBDesc->bPerContextPB ? 11 : 1035) | 0x400000;
-	if (PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc, *ppsKernelHeap,
+	if (_PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc, *ppsKernelHeap,
 			ui32Flags | 4, sizeof(*psBlock->psHWBlock), 4,
 			hMemBlockProcRef, &psBlock->psHWBlockMemInfo) != PVRSRV_OK)
 		goto cleanup;
 	psBlock->psHWBlock = psBlock->psHWBlockMemInfo->pvLinAddrKM;
 	psBlock->sHWBlockDevVAddr = psBlock->psHWBlockMemInfo->sDevVAddr;
-	if (PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc, *ppsParameterHeap,
+	if (_PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc, *ppsParameterHeap,
 			ui32Flags, ui32Size, 4096, hMemBlockProcRef,
 			&psBlock->psParameterMemInfo) != PVRSRV_OK)
 		goto cleanup;
@@ -240,7 +240,7 @@ int CreatePrivateParameterBuffer(PVRSRV_DEVICE_NODE *psDeviceNode,
 	psPBDesc->bDetachedBlockAllocation = IMG_FALSE;
 	psPBDesc->ui32Control = 0;
 	psPBDesc->sPBBaseDevVAddr.uiAddr = 0x20000000;
-	if (PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+	if (_PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 			psKernelHeap->hDevMemHeap, 0x40000f,
 			sizeof(*psHWDesc), 32, hMemBlockProcRef,
 			&psClientPBDesc->psHWPBDescMemInfo) != PVRSRV_OK)
@@ -255,7 +255,7 @@ int CreatePrivateParameterBuffer(PVRSRV_DEVICE_NODE *psDeviceNode,
 			(struct GpuHeap **)&psKernelHeap->hDevMemHeap))
 		goto failed;
 	psHWDesc->sPBBlockListDevVAddr = psPBDesc->psPBBlockList->sHWBlockDevVAddr;
-	if (PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+	if (_PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 			psParameterHeap->hDevMemHeap, 0x40000b, 0x40000, 16,
 			hMemBlockProcRef, &psClientPBDesc->psPageTableMemInfo) != PVRSRV_OK)
 		goto failed;
@@ -299,7 +299,7 @@ int CreateSharedParameterBuffer(PVRSRV_DEVICE_NODE *psDeviceNode,
 	psPBDesc->ui32Control = 0;
 	psPBDesc->psPBBlockList = NULL;
 	psPBDesc->psPBBlockListTail = NULL;
-	if (PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+	if (_PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 			psKernelHeap->hDevMemHeap, 0x40040f, sizeof(*psHWDesc),
 			32, hMemBlockProcRef, &psHWMemInfo) != PVRSRV_OK)
 		goto cleanup;
@@ -316,7 +316,7 @@ int CreateSharedParameterBuffer(PVRSRV_DEVICE_NODE *psDeviceNode,
 		goto cleanup;
 	psHWDesc->sPBBlockListDevVAddr = psPBDesc->psPBBlockList->sHWBlockDevVAddr;
 	psParameterMemInfo = ((SGX_PBBLOCK *)psBlockMemInfo->pvLinAddrKM)->psParameterMemInfo;
-	if (PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+	if (_PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 			psParameterHeap->hDevMemHeap, 0x40040b, 0x40000, 16,
 			hMemBlockProcRef, &psPageTableMemInfo) != PVRSRV_OK)
 		goto cleanup;

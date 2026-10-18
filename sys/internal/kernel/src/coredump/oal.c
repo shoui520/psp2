@@ -3569,7 +3569,7 @@ void oalGetGpuInfo(void *buffer, SceSize size)
 	SCE_DBG_ASSERT(buffer != NULL, 5686);
 	if (size != 0) {
 		memset(buffer, 0, size);
-		ksceGpuGetRegisterDump(buffer, size);
+		SceGpuEs4ForDriver_14ECCFCD(buffer, size);
 	}
 }
 

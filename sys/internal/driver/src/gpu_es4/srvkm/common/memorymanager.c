@@ -77,7 +77,7 @@ int sceGpuHeapAlloc(GpuHeap *heap, IMG_SIZE_T size, IMG_SIZE_T alignment,
 		GpuHeapAllocation *output, IMG_SIZE_T boundary);
 int sceGpuHeapFreeByGpuVA(GpuHeap *heap, IMG_UINT32 address,
 		GpuHeapAllocation *output);
-int ksceGpuMmuMapMemory(GpuMmuContext *context, IMG_UINT32 gpuAddress,
+int sceGpuMmuMapMemory(GpuMmuContext *context, IMG_UINT32 gpuAddress,
 		IMG_UINT32 backingAddress, IMG_UINT32 size, IMG_UINT32 permissions);
 int ShareKernelMappingWithProcesses(IMG_UINT32 address, IMG_SIZE_T size);
 GpuMemBlockHeap *GetProcessMemBlockHeap(void);
@@ -115,7 +115,7 @@ PVRSRV_ERROR AllocDeviceMem(GpuHeap *psHeap, IMG_SIZE_T ui32Size,
 		}
 		if (ui32AllocationType == 1 || ui32AllocationType == 4)
 			permissions |= 0x7e0;
-		ret = ksceGpuMmuMapMemory(&psHeap->memoryContext->mmu,
+		ret = sceGpuMmuMapMemory(&psHeap->memoryContext->mmu,
 				allocation.releasedSpanBase,
 				allocation.releasedBackingAddress,
 				allocation.releasedSpanSize, permissions);
@@ -148,7 +148,7 @@ fail:
 	return PVRSRV_ERROR_OUT_OF_MEMORY;
 }
 
-int ksceGpuMmuUnmapMemory(GpuMmuContext *context, IMG_UINT32 gpuAddress,
+int sceGpuMmuUnmapMemory(GpuMmuContext *context, IMG_UINT32 gpuAddress,
 		IMG_SIZE_T size);
 
 /* SCE frees native heap spans. The later TOOL source adds descriptor references;
@@ -170,7 +170,7 @@ PVRSRV_ERROR FreeDeviceMem(PVRSRV_KERNEL_MEM_INFO *psMemInfo)
 	if (ret < 0)
 		SCE_DBG_PRINTF(0, 143, "%s: Heap free error code %08x\n", __func__, ret);
 	if (allocation.releasedSpanSize) {
-		ret = ksceGpuMmuUnmapMemory(&psMemInfo->heap->memoryContext->mmu,
+		ret = sceGpuMmuUnmapMemory(&psMemInfo->heap->memoryContext->mmu,
 				allocation.releasedSpanBase, allocation.releasedSpanSize);
 		if (ret < 0)
 			SCE_DBG_PRINTF(0, 148, "%s: Unmap error code %08x\n", __func__, ret);
@@ -329,7 +329,7 @@ struct Resource *ResManRegisterRes(struct ResourceContext *context,
 /* SCE replaces IMG's generic cache/mapping policy with native heap attributes.
  * Resource registration remains at the original IMG allocation boundary.
  */
-PVRSRV_ERROR PVRSRVAllocDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
+PVRSRV_ERROR _PVRSRVAllocDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 		PVRSRV_PER_PROCESS_DATA *psPerProc, GpuHeap *heap,
 		IMG_UINT32 ui32Attribs, IMG_SIZE_T ui32Size, IMG_SIZE_T ui32Alignment,
 		IMG_INT32 hMemBlockProcRef, PVRSRV_KERNEL_MEM_INFO **ppsMemInfo)
@@ -699,7 +699,7 @@ PVRSRV_ERROR PVRSRVMapMemoryToGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		record->deviceAddress.uiAddr = (IMG_UINTPTR_T)cpuAddress;
 	}
 	allocation.releasedBackingAddress = (IMG_UINTPTR_T)cpuAddress;
-	ret = ksceGpuMmuMapMemory(&selectedHeap->memoryContext->mmu,
+	ret = sceGpuMmuMapMemory(&selectedHeap->memoryContext->mmu,
 			allocation.releasedSpanBase, (IMG_UINTPTR_T)cpuAddress,
 			allocation.releasedSpanSize, permissions);
 	if (ret < 0) {
@@ -813,7 +813,7 @@ PVRSRV_ERROR PVRSRVUnmapMemoryFromGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		SCE_DBG_ASSERT(allocation.releasedSpanBase == output.deviceAddress.uiAddr, 998);
 		SCE_DBG_ASSERT(allocation.releasedSpanSize == output.size, 999);
 	}
-	ret = ksceGpuMmuUnmapMemory(&heap->memoryContext->mmu,
+	ret = sceGpuMmuUnmapMemory(&heap->memoryContext->mmu,
 			output.deviceAddress.uiAddr, output.size);
 	if (ret < 0)
 		SCE_DBG_PRINTF(0, 1004,

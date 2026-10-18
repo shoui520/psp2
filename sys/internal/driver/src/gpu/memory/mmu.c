@@ -291,7 +291,7 @@ void RequestGpuPageDirectoryCacheInvalidate(void);
 /* SCE native mapping path. Sony inlines sceGpuMmuCreatePageTable and
  * sceGpuMmuSetPageTableEntries here; the debug records retain their names.
  */
-int ksceGpuMmuMapMemory(GpuMmuContext *context, unsigned gpuAddress,
+int sceGpuMmuMapMemory(GpuMmuContext *context, unsigned gpuAddress,
 		unsigned backingAddress, unsigned size, unsigned permissions)
 {
 	GpuHeapAllocation allocation, released;
@@ -431,7 +431,7 @@ int ksceGpuMmuMapMemory(GpuMmuContext *context, unsigned gpuAddress,
 	return 0;
 }
 
-int ksceGpuMmuUnmapMemory(GpuMmuContext *context, unsigned address,
+int sceGpuMmuUnmapMemory(GpuMmuContext *context, unsigned address,
 		unsigned size)
 {
 	GpuPageTable *table;

@@ -12,7 +12,7 @@
 /* ForTZS imports: names unknown, the os0 function each one stands for */
 #define SceSysmemForDriver_C94850C9			SceSysmemForTZS_402EB970
 #define SceSysmemForDriver_A841EDDA		SceSysmemForTZS_E1DEDFF4
-#define SceDipswForDriver_A98FC2FD			SceDipswForTZS_ksceKernelCheckDipsw
+#define SceDipswForDriver_A98FC2FD			SceDipswForTZS_A98FC2FD
 #define SceCpuForDriver_BF82DEB2		SceCpuForTZS_71FD9AB5
 #define sceKernelSpinlockLowUnlock		SceCpuForTZS_CD98416C
 #define SceCpuForDriver_D32ACE9E	SceCpuForTZS_D67A4356

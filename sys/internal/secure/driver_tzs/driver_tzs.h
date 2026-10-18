@@ -14,7 +14,7 @@
 #define SceSysmemForDriver_C94850C9			SceSysmemForTZS_402EB970
 #define SceSysmemForDriver_A841EDDA		SceSysmemForTZS_E1DEDFF4
 #define SceSysmemForDriver_009E1C61			SceSysmemForTZS_658EACE3
-#define SceDipswForDriver_A98FC2FD			SceDipswForTZS_ksceKernelCheckDipsw
+#define SceDipswForDriver_A98FC2FD			SceDipswForTZS_A98FC2FD
 #define SceCpuForDriver_D32ACE9E	SceCpuForTZS_D67A4356
 #define sceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
 #define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB

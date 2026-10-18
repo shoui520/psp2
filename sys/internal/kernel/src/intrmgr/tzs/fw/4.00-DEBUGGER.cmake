@@ -71,7 +71,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForTZS_618F89E6
 	SceDebugForTZS_D26EB4BB
 	SceDebugForTZS_F851BA4F
-	SceDipswForTZS_ksceKernelCheckDipsw
+	SceDipswForTZS_A98FC2FD
 	SceSysclibForTZS_956DB750
 	SceSysclibForTZS_E5457B97
 )

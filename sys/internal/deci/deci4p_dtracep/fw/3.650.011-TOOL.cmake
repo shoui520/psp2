@@ -377,8 +377,8 @@ set(MODULE_IMPORT_FUNCS
 	SceBacktraceForDriver_888E99B8
 	sceKernelRegisterSysEventHandler
 	SceNidsymtblForDriver_138A9106
-	ksceDbgpSetDTraceBreakpointHandler
-	ksceDbgpSetDTraceUsdtHandler
+	SceDeci4pDbgpForDriver_0509AC51
+	SceDeci4pDbgpForDriver_7251789E
 	sceDfMgrClose
 	sceDfMgrOpen
 	sceDfMgrRecv

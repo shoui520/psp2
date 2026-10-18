@@ -31,7 +31,7 @@ int SceMsifForDriver_491E25B5(void);	/* vitasdk: ksceMsifGetSlowModeState */
 int SceMsifForDriver_58654AA3(uint32_t sector, uint8_t *data, unsigned int count);
 uint64_t SceMsifForDriver_855E1E38(void);
 int SceMsifForDriver_F997286B(void);
-int sceMsifDevNullPrepareDmaTable(uint32_t sector, unsigned int count);
+int sceMsifZerofillSector(uint32_t sector, unsigned int count);
 int sceMsifDisableSlowCardMode(void);
 int sceMsifEnableSlowCardMode(void);
 int sceMsifFormat(int mode);

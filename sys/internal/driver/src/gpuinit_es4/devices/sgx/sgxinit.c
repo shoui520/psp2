@@ -113,7 +113,7 @@ PVRSRV_ERROR allocKernelDataZeroed(IMG_HANDLE device, PVRSRV_PER_PROCESS_DATA *p
 	PVRSRV_KERNEL_MEM_INFO *mem;
 	PVRSRV_ERROR ret;
 
-	ret = PVRSRVAllocDeviceMemKM(device, process, heap->hDevMemHeap, SGX_KERNEL_DATA_ATTRIBS,
+	ret = _PVRSRVAllocDeviceMemKM(device, process, heap->hDevMemHeap, SGX_KERNEL_DATA_ATTRIBS,
 				     size, alignment, 1, memInfo);
 	if (ret != PVRSRV_OK)
 		return PVRSRV_ERROR_OUT_OF_MEMORY;
@@ -130,7 +130,7 @@ PVRSRV_ERROR allocKernelBufferZeroed(IMG_HANDLE device, PVRSRV_PER_PROCESS_DATA 
 	PVRSRV_KERNEL_MEM_INFO *mem;
 	PVRSRV_ERROR ret;
 
-	ret = PVRSRVAllocDeviceMemKM(device, process, heap->hDevMemHeap, SGX_KERNEL_BUFFER_ATTRIBS,
+	ret = _PVRSRVAllocDeviceMemKM(device, process, heap->hDevMemHeap, SGX_KERNEL_BUFFER_ATTRIBS,
 				     size, alignment, 1, memInfo);
 	if (ret != PVRSRV_OK)
 		return PVRSRV_ERROR_OUT_OF_MEMORY;
@@ -189,12 +189,12 @@ static void sceGpuMapPARegisters(IMG_HANDLE device, PVRSRV_HEAP_INFO *heap)
 	}
 	gpuHeap = heap->hDevMemHeap;
 	context = &gpuHeap->memoryContext->mmu;
-	ret = ksceGpuMmuMapMemory(context, SGX_PERFMON_USER_VADDR, perfmon, SGX_PERFMON_PAGE_SIZE, flags);
+	ret = sceGpuMmuMapMemory(context, SGX_PERFMON_USER_VADDR, perfmon, SGX_PERFMON_PAGE_SIZE, flags);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 5369, "%s: Failed to map user-land Perfmon registers with error %08x.\n", __func__, ret);
 		goto unmap;
 	}
-	ret = ksceGpuMmuMapMemory(context, SGX_PERFMON_KERNEL_VADDR,
+	ret = sceGpuMmuMapMemory(context, SGX_PERFMON_KERNEL_VADDR,
 				  (SceUInt8 *)perfmon + SGX_PERFMON_PAGE_SIZE, SGX_PERFMON_PAGE_SIZE, flags | 0x10);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 5377, "%s: Failed to map kernel-land Perfmon registers with error %08x.\n", __func__, ret);
@@ -204,14 +204,14 @@ static void sceGpuMapPARegisters(IMG_HANDLE device, PVRSRV_HEAP_INFO *heap)
 	flags = 0;
 	if (SceSblAIMgrForDriver_274663A0() && SceSblACMgrForDriver_E87D1777())
 		flags = 8;
-	ret = ksceGpuMmuMapMemory(context, SGX_BOOKMARK_VADDR, bookmark, SGX_BOOKMARK_SIZE, flags);
+	ret = sceGpuMmuMapMemory(context, SGX_BOOKMARK_VADDR, bookmark, SGX_BOOKMARK_SIZE, flags);
 	if (ret >= 0)
 		return;
 	SCE_DBG_PRINTF(0, 5388, "%s: Failed to map 32K for GPU Bookmark emit workaround with error %08x.\n", __func__, ret);
 unmap:
-	ksceGpuMmuUnmapMemory(context, SGX_PERFMON_USER_VADDR, SGX_PERFMON_PAGE_SIZE);
-	ksceGpuMmuUnmapMemory(context, SGX_PERFMON_KERNEL_VADDR, SGX_PERFMON_PAGE_SIZE);
-	ksceGpuMmuUnmapMemory(context, SGX_BOOKMARK_VADDR, SGX_BOOKMARK_SIZE);
+	sceGpuMmuUnmapMemory(context, SGX_PERFMON_USER_VADDR, SGX_PERFMON_PAGE_SIZE);
+	sceGpuMmuUnmapMemory(context, SGX_PERFMON_KERNEL_VADDR, SGX_PERFMON_PAGE_SIZE);
+	sceGpuMmuUnmapMemory(context, SGX_BOOKMARK_VADDR, SGX_BOOKMARK_SIZE);
 free:
 	SceSysmemForDriver_009E1C61(uid);
 }
@@ -321,19 +321,19 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 	init->ui32MasterClkGateStatus2Mask = 30;
 
 	/* the kernel CCB, its control blocks and the microkernel's control blocks */
-	if (PVRSRVAllocDeviceMemKM(device, process, heaps.kernelData->hDevMemHeap, SGX_KERNEL_DATA_ATTRIBS,
+	if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelData->hDevMemHeap, SGX_KERNEL_DATA_ATTRIBS,
 				   0x2000, 0x1000, 1, &init->hKernelCCBMemInfo) != PVRSRV_OK)
 		goto allocFail;
 	init->pvKernelCCB = init->hKernelCCBMemInfo->pvLinAddrKM;
-	if (PVRSRVAllocDeviceMemKM(device, process, heaps.kernelData->hDevMemHeap, SGX_KERNEL_DATA_ATTRIBS,
+	if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelData->hDevMemHeap, SGX_KERNEL_DATA_ATTRIBS,
 				   8, 0x1000, 1, &init->hKernelCCBCtlMemInfo) != PVRSRV_OK)
 		goto allocFail;
 	init->pvKernelCCBCtl = init->hKernelCCBCtlMemInfo->pvLinAddrKM;
-	if (PVRSRVAllocDeviceMemKM(device, process, heaps.kernelData->hDevMemHeap, SGX_KERNEL_DATA_ATTRIBS,
+	if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelData->hDevMemHeap, SGX_KERNEL_DATA_ATTRIBS,
 				   4, 0x10, 1, &init->hKernelCCBEventKickerMemInfo) != PVRSRV_OK ||
-	    PVRSRVAllocDeviceMemKM(device, process, heaps.kernelData->hDevMemHeap, SGX_KERNEL_CTL_ATTRIBS,
+	    _PVRSRVAllocDeviceMemKM(device, process, heaps.kernelData->hDevMemHeap, SGX_KERNEL_CTL_ATTRIBS,
 				   sizeof(SGXMKIF_TA3D_CTL), 0x20, 1, &init->hKernelSGXTA3DCtlMemInfo) != PVRSRV_OK ||
-	    PVRSRVAllocDeviceMemKM(device, process, heaps.kernelData->hDevMemHeap, SGX_KERNEL_CTL_ATTRIBS,
+	    _PVRSRVAllocDeviceMemKM(device, process, heaps.kernelData->hDevMemHeap, SGX_KERNEL_CTL_ATTRIBS,
 				   sizeof(struct SGXMKIF_HOST_CTL), 0x20, 1, &init->hKernelSGXHostCtlMemInfo) != PVRSRV_OK)
 		goto allocFail;
 
@@ -348,7 +348,7 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 	ta3dCtl->sPDDevPAddr = heaps.sPDDevPAddr;
 	OSMemSet(init->hKernelSGXHostCtlMemInfo->pvLinAddrKM, 0, sizeof(struct SGXMKIF_HOST_CTL));
 
-	if (PVRSRVAllocDeviceMemKM(device, process, heaps.kernelData->hDevMemHeap, SGX_KERNEL_CTL_ATTRIBS,
+	if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelData->hDevMemHeap, SGX_KERNEL_CTL_ATTRIBS,
 				   0x60, 0x20, 1, &init->hKernelSGXMiscMemInfo) != PVRSRV_OK)
 		goto allocFail;
 	OSMemSet(init->hKernelSGXMiscMemInfo->pvLinAddrKM, 0, 0x60);
@@ -396,7 +396,7 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 	/* the microkernel and its PDS programs, in the kernel code heap */
 	startUSE = 0;
 	entryUSE[0] = entryUSE[1] = entryUSE[2] = entryUSE[3] = 0;
-	if (PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
+	if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
 				   sizeof(program0), 8, 1, &microkernel) != PVRSRV_OK)
 		goto allocFail;
 	OSMemCopy(microkernel->pvLinAddrKM, program0, sizeof(program0));
@@ -404,7 +404,7 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 	program[0x1bf0 / 4] |= 0x11e8;
 	init->hKernelProgramMemInfo[0] = microkernel;
 
-	if (PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
+	if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
 				   sizeof(program1), 8, 1, &init->hKernelProgramMemInfo[1]) != PVRSRV_OK)
 		goto allocFail;
 	mem = init->hKernelProgramMemInfo[1];
@@ -416,7 +416,7 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 	doutu[1] = 1;
 	doutu[2] = 0;
 	setUSEExecutionAddress(&doutu[0], mem->sDevVAddr.uiAddr, heaps.kernelCode->sDevVAddrBase.uiAddr);
-	if (PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
+	if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
 				   sizeof(program2), 0x10, 1, &init->hKernelProgramMemInfo[2]) != PVRSRV_OK)
 		goto allocFail;
 	mem = init->hKernelProgramMemInfo[2];
@@ -433,7 +433,7 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 
 	/* a failure here does not stop the programs that follow */
 	eventUSE[0] = eventUSE[1] = eventUSE[2] = 0;
-	if (PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
+	if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
 				   sizeof(program3), 0x10, 1, &init->hKernelProgramMemInfo[3]) == PVRSRV_OK) {
 		data = init->hKernelProgramMemInfo[3]->pvLinAddrKM;
 		OSMemCopy(data, program3, sizeof(program3));
@@ -442,7 +442,7 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 		data[0] = eventUSE[0] | 0x8000000;
 		data[1] = 1;
 		data[2] = 0;
-		if (PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
+		if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
 					   sizeof(program4), 0x10, 1, &init->hKernelProgramMemInfo[4]) == PVRSRV_OK) {
 			data = init->hKernelProgramMemInfo[4]->pvLinAddrKM;
 			OSMemCopy(data, program4, sizeof(program4));
@@ -453,7 +453,7 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 			data[4] = eventUSE[1];
 			data[5] = 1;
 			data[2] = 0;
-			if (PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap,
+			if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap,
 						   SGX_KERNEL_CODE_ATTRIBS, sizeof(program5), 0x10, 1,
 						   &init->hKernelProgramMemInfo[5]) == PVRSRV_OK) {
 				data = init->hKernelProgramMemInfo[5]->pvLinAddrKM;
@@ -467,7 +467,7 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 		}
 	}
 
-	if (PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
+	if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
 				   sizeof(program6), 0x10, 1, &init->hKernelProgramMemInfo[6]) != PVRSRV_OK)
 		goto allocFail;
 	mem = init->hKernelProgramMemInfo[6];
@@ -502,7 +502,7 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 			       heaps.kernelCode->sDevVAddrBase.uiAddr);
 	setUSEExecutionAddress(&entryUSE[3], microkernel->sDevVAddr.uiAddr + 0xed60,
 			       heaps.kernelCode->sDevVAddrBase.uiAddr);
-	if (PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
+	if (_PVRSRVAllocDeviceMemKM(device, process, heaps.kernelCode->hDevMemHeap, SGX_KERNEL_CODE_ATTRIBS,
 				   sizeof(program7), 0x10, 1, &init->hKernelProgramMemInfo[7]) != PVRSRV_OK)
 		goto allocFail;
 	mem = init->hKernelProgramMemInfo[7];

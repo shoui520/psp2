@@ -6,7 +6,7 @@
 void *AllocProcessGpuMemory(unsigned size);
 int FreeProcessGpuMemory(void *address);
 IMG_VOID *OSMemSet(IMG_VOID *destination, IMG_INT32 value, IMG_SIZE_T size);
-PVRSRV_ERROR PVRSRVAllocDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
+PVRSRV_ERROR _PVRSRVAllocDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 		PVRSRV_PER_PROCESS_DATA *psPerProc, struct GpuHeap *heap,
 		IMG_UINT32 ui32Attribs, IMG_SIZE_T ui32Size, IMG_SIZE_T ui32Alignment,
 		IMG_INT32 hMemBlockProcRef, PVRSRV_KERNEL_MEM_INFO **ppsMemInfo);
@@ -48,7 +48,7 @@ PVRSRV_ERROR CreateCommandRing(PVRSRV_DEVICE_NODE *psDeviceNode,
 			ui32Alignment *= 2;
 	}
 	ui32Flags = hMemBlockProcRef ? 0x40004f : 0x4f;
-	if (PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc, heap, ui32Flags,
+	if (_PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc, heap, ui32Flags,
 			ui32BufferSize + ui32OverrunSize, ui32Alignment,
 			hMemBlockProcRef, &psRing->psBufferMemInfo) != PVRSRV_OK)
 		goto fail;
@@ -56,7 +56,7 @@ PVRSRV_ERROR CreateCommandRing(PVRSRV_DEVICE_NODE *psDeviceNode,
 	psRing->ui32BufferSize = ui32BufferSize;
 	psRing->ui32BufferAlignment = ui32Alignment;
 	psRing->sBufferDevVAddr = psRing->psBufferMemInfo->sDevVAddr;
-	if (PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc, heap, ui32Flags,
+	if (_PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc, heap, ui32Flags,
 			8, 32, hMemBlockProcRef,
 			&psRing->psControlMemInfo) != PVRSRV_OK)
 		goto fail;

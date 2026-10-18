@@ -31,7 +31,7 @@ PVRSRV_ERROR PVRSRVAcquireDeviceDataKM(IMG_UINT32 ui32DevIndex,
 				       IMG_HANDLE *phDevCookie);
 PVRSRV_ERROR SGXGetInfoForSrvinitKM(IMG_HANDLE hDevHandle,
 				    SGX_BRIDGE_INFO_FOR_SRVINIT *psInitInfo);
-PVRSRV_ERROR PVRSRVAllocDeviceMemKM(IMG_HANDLE hDevCookie,
+PVRSRV_ERROR _PVRSRVAllocDeviceMemKM(IMG_HANDLE hDevCookie,
 				    PVRSRV_PER_PROCESS_DATA *psPerProc,
 				    IMG_HANDLE hDevMemHeap, IMG_UINT32 ui32Attribs,
 				    IMG_SIZE_T ui32Size, IMG_SIZE_T ui32Alignment,
@@ -41,6 +41,6 @@ PVRSRV_ERROR DevInitSGXPart2KM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 			       IMG_HANDLE hDevHandle,
 			       SGX_BRIDGE_INIT_INFO *psInitInfo);
 
-int ksceGpuMmuMapMemory(GpuMmuContext *context, SceUInt32 vaddr, void *base,
+int sceGpuMmuMapMemory(GpuMmuContext *context, SceUInt32 vaddr, void *base,
 			SceUInt32 size, SceUInt32 flags);
-int ksceGpuMmuUnmapMemory(GpuMmuContext *context, SceUInt32 vaddr, SceUInt32 size);
+int sceGpuMmuUnmapMemory(GpuMmuContext *context, SceUInt32 vaddr, SceUInt32 size);

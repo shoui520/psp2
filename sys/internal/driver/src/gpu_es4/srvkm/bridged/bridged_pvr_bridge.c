@@ -1339,7 +1339,7 @@ typedef struct PVRSRV_BRIDGE_OUT_ALLOCDEVICEMEM {
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 } PVRSRV_BRIDGE_OUT_ALLOCDEVICEMEM;
 
-PVRSRV_ERROR PVRSRVAllocDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
+PVRSRV_ERROR _PVRSRVAllocDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 		PVRSRV_PER_PROCESS_DATA *psPerProc, struct GpuHeap *heap,
 		IMG_UINT32 ui32Attribs, IMG_SIZE_T ui32Size, IMG_SIZE_T ui32Alignment,
 		IMG_INT32 hMemBlockProcRef, PVRSRV_KERNEL_MEM_INFO **ppsMemInfo);
@@ -1377,7 +1377,7 @@ IMG_INT PVRSRVAllocDeviceMemBW(IMG_UINT32 ui32BridgeID,
 	if (psAllocDeviceMemOUT->eError != PVRSRV_OK)
 		return 0;
 	psAllocDeviceMemIN->ui32Attribs &= ~0x200000U;
-	psAllocDeviceMemOUT->eError = PVRSRVAllocDeviceMemKM(psDeviceNode,
+	psAllocDeviceMemOUT->eError = _PVRSRVAllocDeviceMemKM(psDeviceNode,
 			psPerProc, heap, psAllocDeviceMemIN->ui32Attribs,
 			psAllocDeviceMemIN->ui32Size, psAllocDeviceMemIN->ui32Alignment,
 			psAllocDeviceMemIN->hMemBlockProcRef, &psMemInfo);

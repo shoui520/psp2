@@ -51,7 +51,7 @@ int WaitSignalCounterKernel(volatile IMG_UINT32 *counter, IMG_UINT32 timeout);
 PVRSRV_ERROR PVRSRVGetDeviceMemHeapInfoKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 		GpuMemoryContext *context, IMG_UINT32 *pui32ClientHeapCount,
 		PVRSRV_HEAP_INFO *psHeapInfo, IMG_BOOL *pbSharedDeviceMemHeap);
-PVRSRV_ERROR PVRSRVAllocDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
+PVRSRV_ERROR _PVRSRVAllocDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 		PVRSRV_PER_PROCESS_DATA *psPerProc, GpuHeap *heap,
 		IMG_UINT32 ui32Attribs, IMG_SIZE_T ui32Size, IMG_SIZE_T ui32Alignment,
 		IMG_INT32 hMemBlockProcRef, PVRSRV_KERNEL_MEM_INFO **ppsMemInfo);
@@ -242,7 +242,7 @@ PVRSRV_ERROR CreateRenderContext(PVRSRV_DEVICE_NODE *psDeviceNode,
 	ui32Size = psCreate->ui32PBSize;
 	if (!psKernelHeap)
 		goto invalidHeap;
-	eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+	eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 			psKernelHeap->hDevMemHeap, 0x40004f,
 			sizeof(*psHWRenderContext), 32, psCreate->hMemBlockProcRef,
 			&psRenderContext->psHWRenderContextMemInfo);
@@ -318,7 +318,7 @@ PVRSRV_ERROR CreateRenderContext(PVRSRV_DEVICE_NODE *psDeviceNode,
 			psPerProc->hResManContext, 20, psRenderContext->psTA3DSyncObject,
 			0, (PVRSRV_ERROR (*)(IMG_VOID *, IMG_UINT32, IMG_BOOL))
 			FreeSyncInfoCallback);
-	eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+	eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 			psGeneralHeap->hDevMemHeap, 0x40000b, 496, 16,
 			psCreate->hMemBlockProcRef,
 			&psRenderContext->psMasterVDMSnapShotBufferMemInfo);
@@ -326,7 +326,7 @@ PVRSRV_ERROR CreateRenderContext(PVRSRV_DEVICE_NODE *psDeviceNode,
 		goto outOfMemory;
 	OSMemSet(psRenderContext->psMasterVDMSnapShotBufferMemInfo->pvLinAddrKM, 0, 496);
 	for (i = 0; i < 4; i++) {
-		eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+		eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 				psGeneralHeap->hDevMemHeap, 0x40000b, 496, 16,
 				psCreate->hMemBlockProcRef,
 				&psRenderContext->psVDMSnapShotBufferMemInfo[i]);
@@ -335,7 +335,7 @@ PVRSRV_ERROR CreateRenderContext(PVRSRV_DEVICE_NODE *psDeviceNode,
 		OSMemSet(psRenderContext->psVDMSnapShotBufferMemInfo[i]->pvLinAddrKM, 0, 496);
 	}
 	for (i = 0; i < 4; i++) {
-		eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+		eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 				psGeneralHeap->hDevMemHeap, 0x40000b, 100, 16,
 				psCreate->hMemBlockProcRef,
 				&psRenderContext->psMTEStateFlushMemInfo[i]);
@@ -344,14 +344,14 @@ PVRSRV_ERROR CreateRenderContext(PVRSRV_DEVICE_NODE *psDeviceNode,
 		OSMemSet(psRenderContext->psMTEStateFlushMemInfo[i]->pvLinAddrKM, 0, 100);
 	}
 	ui32SABufferSize = 4 * ((psCreate->ui32MaxSACount + 16) & ~15U);
-	eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+	eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 			psGeneralHeap->hDevMemHeap, 0x40000b, ui32SABufferSize, 1,
 			psCreate->hMemBlockProcRef, &psRenderContext->psSABufferMemInfo);
 	if (eError != PVRSRV_OK)
 		return eError;
 	OSMemSet(psRenderContext->psSABufferMemInfo->pvLinAddrKM, 0, ui32SABufferSize);
 	if (psCreate->ui32VisTestResultBufferSize) {
-		eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+		eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 				psSyncHeap->hDevMemHeap, 0x40004b,
 				4 * psCreate->ui32VisTestResultBufferSize, 32,
 				psCreate->hMemBlockProcRef, &psRenderContext->psVisTestResultMemInfo);
@@ -607,7 +607,7 @@ PVRSRV_ERROR AllocateRenderTargetResources(PVRSRV_DEVICE_NODE *psDeviceNode,
 		OSMemSet(psDetails, 0, sizeof(*psDetails));
 		psDetails->psNext = NULL;
 		psDetails->psHWRenderDetails = NULL;
-		eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+		eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 				psKernelHeap->hDevMemHeap, 0x40000f,
 				sizeof(*psDetails->psHWRenderDetails), 32,
 				hMemBlockProcRef, &psDetails->psHWRenderDetailsMemInfo);
@@ -617,7 +617,7 @@ PVRSRV_ERROR AllocateRenderTargetResources(PVRSRV_DEVICE_NODE *psDeviceNode,
 		OSMemSet(psDetails->psHWRenderDetails, 0, sizeof(*psDetails->psHWRenderDetails));
 		psDetails->psHWRenderDetails->firmwarePrivateState[16] = 0;
 		psDetails->psHWRenderDetails->firmwarePrivateState[17] = 0;
-		eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+		eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 				psSyncHeap->hDevMemHeap, 0x40000f, 8, 4,
 				hMemBlockProcRef, &psDetails->psLockMemInfo);
 		if (eError != PVRSRV_OK)
@@ -631,7 +631,7 @@ PVRSRV_ERROR AllocateRenderTargetResources(PVRSRV_DEVICE_NODE *psDeviceNode,
 		if (!psSyncList)
 			return PVRSRV_ERROR_OUT_OF_MEMORY;
 		OSMemSet(psSyncList, 0, sizeof(*psSyncList));
-		eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+		eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 				psKernelHeap->hDevMemHeap, 0x40000f,
 				sizeof(SGXMKIF_HWDEVICE_SYNC_LIST) + sizeof(PVRSRV_DEVICE_SYNC_OBJECT),
 				32, hMemBlockProcRef, &psSyncList->psHWDeviceSyncListMemInfo);
@@ -641,7 +641,7 @@ PVRSRV_ERROR AllocateRenderTargetResources(PVRSRV_DEVICE_NODE *psDeviceNode,
 		psSyncList->psDeviceSyncListMemInfo = psSyncList->psHWDeviceSyncListMemInfo;
 		OSMemSet(psSyncList->psHWDeviceSyncList, 0,
 				sizeof(SGXMKIF_HWDEVICE_SYNC_LIST) + sizeof(PVRSRV_DEVICE_SYNC_OBJECT));
-		eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+		eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 				psSyncHeap->hDevMemHeap, 0x40000f, 8, 4,
 				hMemBlockProcRef, &psSyncList->psLockMemInfo);
 		if (eError != PVRSRV_OK)
@@ -652,12 +652,12 @@ PVRSRV_ERROR AllocateRenderTargetResources(PVRSRV_DEVICE_NODE *psDeviceNode,
 		psSyncList->psNext = psRTDataSet->psDeviceSyncList;
 		psRTDataSet->psDeviceSyncList = psSyncList;
 	}
-	eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+	eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 			psKernelHeap->hDevMemHeap, 0x40004f, 4, 32,
 			hMemBlockProcRef, &psRTDataSet->psPendingCountMemInfo);
 	if (eError != PVRSRV_OK)
 		return eError;
-	eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+	eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 			psKernelHeap->hDevMemHeap, 0x40004f,
 			sizeof(*psHWDataSet) + sizeof(SGXMKIF_HWRTDATA) * psRTDataSet->ui32NumRTData,
 			32, hMemBlockProcRef, &psRTDataSet->psHWRTDataSetMemInfo);
@@ -692,31 +692,31 @@ PVRSRV_ERROR AllocateRenderTargetResources(PVRSRV_DEVICE_NODE *psDeviceNode,
 		ui32TailDimension = i;
 	ui32TailSize = 8 * ui32TailDimension * ui32TailDimension;
 	for (i = 0; i != 4; i++) {
-		eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+		eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 				psGeneralHeap->hDevMemHeap, 0x40000b, ui32TailSize, 64,
 				hMemBlockProcRef, &psRTDataSet->apsTailPtrsMemInfo[i]);
 		if (eError != PVRSRV_OK)
 			return eError;
 		OSMemSet(psRTDataSet->apsTailPtrsMemInfo[i]->pvLinAddrKM, 0, ui32TailSize);
-		eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+		eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 				psGeneralHeap->hDevMemHeap, 0x40000b, 128, 16,
 				hMemBlockProcRef, &psRTDataSet->psContextControlMemInfo[i]);
 		if (eError != PVRSRV_OK)
 			return eError;
 		OSMemSet(psRTDataSet->psContextControlMemInfo[i]->pvLinAddrKM, 0, 128);
-		eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+		eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 				psGeneralHeap->hDevMemHeap, 0x40000b, 144, 16,
 				hMemBlockProcRef, &psRTDataSet->psContextOTPMMemInfo[i]);
 		if (eError != PVRSRV_OK)
 			return eError;
 		OSMemSet(psRTDataSet->psContextOTPMMemInfo[i]->pvLinAddrKM, 0, 144);
 	}
-	eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+	eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 			psParameterHeap->hDevMemHeap, 0x40004b, sizeof(SGX_BGOBJ), 4096,
 			hMemBlockProcRef, &psRTDataSet->psSpecialObjMemInfo);
 	if (eError != PVRSRV_OK)
 		return eError;
-	eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+	eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 			psParameterHeap->hDevMemHeap, 0x40000b, 256, 16,
 			hMemBlockProcRef, &psRTDataSet->psPIMTableMemInfo);
 	if (eError != PVRSRV_OK)
@@ -738,20 +738,20 @@ PVRSRV_ERROR AllocateRenderTargetResources(PVRSRV_DEVICE_NODE *psDeviceNode,
 		psHWData->sPIMTableDevVAddr = psRTDataSet->psPIMTableMemInfo->sDevVAddr;
 		psHWData->ui32RgnHeaderMacroTileSize = 12 * ui32MTileX * ui32MTileY;
 		for (j = 0; j != 4; j++) {
-			eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+			eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 					psGeneralHeap->hDevMemHeap, 0x40000b, ui32RgnSize, 64,
 					hMemBlockProcRef, &psRTData->apsRgnHeaderMemInfo[j]);
 			if (eError != PVRSRV_OK)
 				return eError;
 		}
-		eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+		eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 				psGeneralHeap->hDevMemHeap, 0x40000b, 1768, 16,
 				hMemBlockProcRef, &psRTData->psContextStateMemInfo);
 		if (eError != PVRSRV_OK)
 			return eError;
 		psHWData->sContextStateDevVAddr = psRTData->psContextStateMemInfo->sDevVAddr;
 		OSMemSet(psRTData->psContextStateMemInfo->pvLinAddrKM, 0, 1768);
-		eError = PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
+		eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 				psKernelHeap->hDevMemHeap, 0x40004f,
 				16 * ui32MTileCount * ui32MTileCount, 32,
 				hMemBlockProcRef, &psRTData->psTileRgnLUTMemInfo);
@@ -1171,7 +1171,7 @@ PVRSRV_ERROR CreateTransferQueue(PVRSRV_DEVICE_NODE *psDeviceNode,
 	if (CreateCommandRing(psDeviceNode, psPerProc, psMemoryContext->hMemBlockProcRef,
 			0x10000, 64, 0x400, heap, &context->commandRing) != PVRSRV_OK)
 		goto failure;
-	if (PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc, heap, 0x40004b,
+	if (_PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc, heap, 0x40004b,
 			sizeof(*psHWContext), 16, psMemoryContext->hMemBlockProcRef,
 			&context->contextMemInfo) != PVRSRV_OK)
 		goto failure;
