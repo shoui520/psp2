@@ -87,15 +87,18 @@ VITASDK_BUILD_ASSERT_EQ(32, SceIftuFrameBuf);
 VITASDK_BUILD_ASSERT_EQ(84, SceIftuPlaneState);
 
 int SceIftuForDriver_67E37EFC(SceIftuFrameBuf *dst, SceIftuPlaneState *src,
-	      SceIftuConvParams *params);
+	      SceIftuConvParams *params);	/* vitasdk: ksceIftuCsc */
 
 int SceIftuForDriver_0FCBF457(unsigned int index, SceIftuCscParams *param);
 int SceIftuForDriver_357EAE24(unsigned int index, unsigned int alpha);
 int SceIftuForDriver_D64F4C6B(unsigned int index, SceIftuCscParams *param);
-int SceIftuForDriver_C11F30B3(unsigned int index);
-int SceIftuForDriver_0D7C02F7(unsigned int index);
+int SceIftuForDriver_C11F30B3(unsigned int index);	/* vitasdk: ksceIftuDisable */
+int SceIftuForDriver_0D7C02F7(unsigned int index);	/* vitasdk: ksceIftuEnable */
+/* vitasdk: ksceIftuSetInputFrameBuffer */
 int SceIftuForDriver_7CE0C4DA(unsigned int index, SceIftuPlaneState *state, int bilinear, int sync);
+/* vitasdk: ksceIftuSetMergeSetting */
 int SceIftuForDriver_AF19FD85(unsigned int index, int setting);
+/* vitasdk: ksceIftuSetOutputFormat */
 int SceIftuForDriver_E6EE2C6B(int index, unsigned int width, unsigned int height, unsigned int pixelFormat, unsigned int planeEnable);
 
 #ifdef __cplusplus

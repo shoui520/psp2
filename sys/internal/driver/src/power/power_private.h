@@ -79,9 +79,6 @@ struct PowerIdleTimer {
 	uint8_t idleState;
 };
 
-/* name unknown: told when a process goes idle (elapsed ticks) or wakes (0) */
-typedef int (*PowerProcessIdleCallback)(SceUID pid, uint32_t elapsed, void *argument);
-
 struct PowerProcessIdleState {
 	PowerProcessIdleCallback callback;
 	void *argument;
@@ -103,19 +100,11 @@ extern int powerSaveCpuContext(void *context) __attribute__((returns_twice));
 /* Voltage codes decrease as the required voltage increases. */
 
 /* Actual callbacks required by Power's startup registration sequence. */
-extern int SceCtrlForDriver_03777131(int clearMask, int setMask);
 
 /* LED callback and script engine; appended after the existing LED state. */
 
 extern int __aeabi_idiv(int numerator, int denominator);
 
-extern int SceCtrlForDriver_FA88D837(void);
-
-extern int SceCtrlForDriver_69E45836(void);
-extern int ScePervasiveForDriver_7D02215D(unsigned int selector);
-extern int ScePervasiveForDriver_C0F7CC39(unsigned int selector);
-extern int SceCtrlForDriver_12C13A72(int clearMask, int setMask);
-extern int SceDisplayForDriver_8D9A1CCE(int head, int unused);
 extern int ksceTouchSetEnableFlag(uint32_t port, uint32_t enabled);
 extern uint32_t __aeabi_uidiv(uint32_t numerator, uint32_t denominator);
 extern uint64_t __aeabi_uldivmod(uint64_t numerator, uint64_t denominator);
@@ -368,13 +357,6 @@ _Static_assert(offsetof(struct PowerBatteryBase, state.usbStatus) == 0xec,
 _Static_assert(offsetof(struct PowerBatteryBase, state.usbStatusPacket) == 0xf4,
 	       "Power USB status packet offset");
 
-struct PowerBatteryFakeStatus {
-	uint32_t size;
-	uint32_t remainingCapacity;
-	uint32_t fullCapacity;
-	uint32_t duration;
-};
-
 /* LED error codes (lowio's 0x803f01xx facility; names unknown) */
 #define SCE_LED_ERROR_INVALID_LED	0x803f0140
 #define SCE_LED_ERROR_INVALID_MODE	0x803f0141
@@ -498,25 +480,9 @@ extern struct PowerProcessState *volatile s_powerProcessList;
 
 /* across units */
 
-uint32_t ScePowerForDriver_165CE085(void);
-
-int scePowerRequestSuspend(void);
-int ScePowerForDriver_660D5AB4(uint32_t timerId);
-
-int ScePowerForDriver_991BDEAF(uint32_t timerId, uint32_t mask);
-
-int ScePowerForDriver_1BA2FCAE(uint32_t timerId, uint32_t tickFlags,
-			     uint64_t interval, PowerIdleCallback callback,
-			     void *argument);
 uint32_t powerIsIdleTimer(uint32_t timerId);
 
-SceUInt32 ScePowerForDriver_394DE492(void);
 int powerTickInternalPredicate(void);
-
-int ScePowerForDriver_EFD3C963(uint32_t mask);
-
-int ScePowerForDriver_77027B6B(uint32_t limit);
-int ScePowerForDriver_38415146(uint32_t value);
 
 int powerPermitChargeTimer(void *argp);
 
@@ -528,13 +494,9 @@ int powerSetBusRailClockRaw(unsigned int lane, int frequency,
 
 void powerUnlockClockControl(void);
 
-int ScePowerForDriver_264C24FC(int first, int second);
-
 void powerNotifyWirelessLimit(int enabled);
 
 void powerNotifyProcessFlags(SceUID pid, uint32_t flags);
-
-int scePowerBatteryUpdateInfo(void);
 
 void powerNotifyCallback(uint32_t clearMask,
 							    uint32_t setMask,

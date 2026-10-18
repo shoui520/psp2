@@ -8,6 +8,7 @@
 #include <sysmem/pmmgr.h>
 #include <sysmem/procevent.h>
 #include <syscon/syscon.h>
+#include <power/power.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <string.h>
@@ -31,9 +32,6 @@ int robinWlanSetConfiguration(int request, int force);
 unsigned int robinWlanGetConfiguration(void);
 int robinWlanGetWakeOnTargetProcess(void);
 int robinInitialize(void);
-int ScePowerForDriver_B24263F0(unsigned int index,
-		int (*callback)(int eventId, uint32_t flags, void *argument),
-		void *argument);
 
 static SceWlanBtRobinConfig gWlanBtConfig;
 static SceWlan gWlan;
@@ -585,7 +583,7 @@ int wlanBtInitializeRobin(void)
 	if (handlerId < 0)
 		return 2;
 	gWlan.procEventHandlerId = handlerId;
-	return ScePowerForDriver_B24263F0(0, wlanBtPowerEvent, NULL);
+	return ScePowerForDriver_B24263F0(0, (PowerProcessFlagsCallback)wlanBtPowerEvent, NULL);
 }
 
 int wlanIsSupportedChannel(int channel)

@@ -1,4 +1,7 @@
-/* SceLowio PWM services (ScePwmForDriver) not declared by vitasdk. */
+/*
+ * SceLowio (os0:kd/lowio.skprx): ScePwmForDriver, the PWM's exports, each declared once with its
+ * definition as the prototype.
+ */
 #pragma once
 
 #include <psp2kern/types.h>

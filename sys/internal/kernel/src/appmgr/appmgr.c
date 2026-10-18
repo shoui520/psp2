@@ -14,6 +14,7 @@
 #include "appmgr_event.h"
 #include "appmgr_shell_event.h"
 #include <sysmem/sysroot.h>
+#include <power/power.h>
 
 extern int _sceAppMgrSystemResume(void);
 extern int _sceAppMgrSystemSuspend(void);
@@ -32,8 +33,6 @@ extern int _sceAppMgrAbortHandlerInitialize(void);
 extern int _appmgrProcessInitialize(int (*callback)(struct AppState *app));
 extern int _appArbitrationOnProcessUnloaded(struct AppState *app);
 extern void initializeAppMgrDevice(void);
-extern int ScePowerForDriver_0856FD0A(
-		int (*callback)(SceUID, unsigned int, void *), void *argument);
 extern int _appmgrQueueInit(void);
 extern int appmgrInitializeDebugSettings(void);
 extern int appmgrRegisterMountDebugSettingCallback(void);
@@ -230,7 +229,7 @@ int sceAppMgrInit(void)
 	initializeAppMgrDevice();
 	/* The provider's opaque registration type has an ignored int result. */
 	result = ScePowerForDriver_0856FD0A(
-		(int (*)(SceUID, unsigned int, void *))appmgrProcessIdleCallback, NULL);
+		(PowerProcessIdleCallback)appmgrProcessIdleCallback, NULL);
 #if FW_DEBUG
 	INIT_RESULT(result, 296);
 #else

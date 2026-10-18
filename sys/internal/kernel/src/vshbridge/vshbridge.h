@@ -8,6 +8,8 @@
 #include <kernel/error.h>
 #include <modulemgr/modulemgr.h>
 #include <iofilemgr/iofilemgr.h>
+#include <display/display.h>
+#include <power/power.h>
 
 /* the caller is not a system program (errno 0x58) */
 
@@ -23,7 +25,8 @@ SceUInt32 vshKernelGetCompiledSdkVersionByPid(SceUID pid, SceUInt32 *version);
 SceUInt32 vshKernelCheckModelCapability(int bit);
 int vshKernelEnableAutoClockDown(void);
 int vshKernelDisableAutoClockDown(void);
-SceUInt32 vshRtcSetConf(void *a, void *b, void *c, void *d);
+SceUInt32 vshRtcSetConf(unsigned int dateFormat, unsigned int timeFormat, int timezone,
+			unsigned int daylightSaving);
 SceUInt32 vshRtcSetCurrentTick(const SceRtcTick *tick);
 SceUInt32 vshRtcSetCurrentSecureTick(const SceRtcTick *tick);
 SceUInt32 vshRtcGetCurrentSecureTick(SceRtcTick *tick);
@@ -40,8 +43,10 @@ SceUInt32 vshRtcIsSecureAlarmed(void);
 SceUInt32 vshRtcRegisterSecureAlarmCallback(SceUID cb);
 SceUInt32 vshRtcUnregisterSecureAlarmCallback(SceUID cb);
 SceUInt32 vshDisplaySetInvertColors(int head, int enable);
-SceUInt32 vshDisplaySetViewportConf(int head, const void *conf, int unk);
-SceUInt32 vshDisplayGetActualViewportConf(int head, void *conf, int unk);
+SceUInt32 vshDisplaySetViewportConf(SceUInt32 head, SceUInt32 plane,
+				    const SceDisplayViewportConf *conf);
+SceUInt32 vshDisplayGetActualViewportConf(SceUInt32 head, SceUInt32 plane,
+					  SceDisplayViewportConf *conf);
 SceUInt32 vshDisplayRegisterFrameBufCallback(SceUID cb);
 SceUInt32 vshCtrlSetIdleCancelKey(int a, int b, int c, int d);
 SceUInt32 vshCtrlSetIdleCancelThreshold(int a, int b);
@@ -60,7 +65,7 @@ SceUInt32 vshPowerSetPowerSwMode(int mode);
 SceUInt32 vshPowerSetStandbyButtonPushTime(int time);
 SceUInt32 vshPowerSetPsButtonPushTime(int time);
 SceUInt32 vshPowerGetWakeupFactor(void);
-SceUInt32 vshPowerSetBatteryFakeStatus(const void *status);
+SceUInt32 vshPowerSetBatteryFakeStatus(const struct PowerBatteryFakeStatus *status);
 SceUInt32 vshPowerRequestHibernate(void);
 SceUInt32 vshSysconGetManufacturesStatus(int *status);
 SceUInt32 vshSysconGetManualChargeMode(int *mode);

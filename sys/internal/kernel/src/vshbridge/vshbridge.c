@@ -193,9 +193,10 @@ int vshKernelDisableAutoClockDown(void)
 
 /* ===== rtc ===== */
 
-SceUInt32 vshRtcSetConf(void *a, void *b, void *c, void *d)
+SceUInt32 vshRtcSetConf(unsigned int dateFormat, unsigned int timeFormat, int timezone,
+			unsigned int daylightSaving)
 {
-	VSH_BRIDGE(SceRtcForDriver_ACFE5A9F(a, b, c, d));
+	VSH_BRIDGE(SceRtcForDriver_ACFE5A9F(dateFormat, timeFormat, timezone, daylightSaving));
 }
 
 SceUInt32 vshRtcSetCurrentTick(const SceRtcTick *tick)
@@ -280,14 +281,16 @@ SceUInt32 vshDisplaySetInvertColors(int head, int enable)
 	VSH_BRIDGE(SceDisplayForDriver_19140ACD(head, enable));
 }
 
-SceUInt32 vshDisplaySetViewportConf(int head, const void *conf, int unk)
+SceUInt32 vshDisplaySetViewportConf(SceUInt32 head, SceUInt32 plane,
+				    const SceDisplayViewportConf *conf)
 {
-	VSH_BRIDGE(SceDisplayForDriver_EE5EB52D(head, conf, unk));
+	VSH_BRIDGE(SceDisplayForDriver_EE5EB52D(head, plane, conf));
 }
 
-SceUInt32 vshDisplayGetActualViewportConf(int head, void *conf, int unk)
+SceUInt32 vshDisplayGetActualViewportConf(SceUInt32 head, SceUInt32 plane,
+					  SceDisplayViewportConf *conf)
 {
-	VSH_BRIDGE(SceDisplayForDriver_40ACFE51(head, conf, unk));
+	VSH_BRIDGE(SceDisplayForDriver_40ACFE51(head, plane, conf));
 }
 
 SceUInt32 vshDisplayRegisterFrameBufCallback(SceUID cb)
@@ -418,7 +421,7 @@ SceUInt32 vshPowerGetWakeupFactor(void)
 	VSH_BRIDGE(ScePowerForDriver_9F26222A());
 }
 
-SceUInt32 vshPowerSetBatteryFakeStatus(const void *status)
+SceUInt32 vshPowerSetBatteryFakeStatus(const struct PowerBatteryFakeStatus *status)
 {
 	VSH_BRIDGE(ScePowerForDriver_0C6973B8(status));
 }

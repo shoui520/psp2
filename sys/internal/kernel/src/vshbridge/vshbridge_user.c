@@ -290,7 +290,7 @@ int _vshRtcGetAlarmTick(SceRtcTick *tick, int *unk)
 
 	if (tick != NULL) {
 		ktick = alloca(sizeof(*ktick));
-		*ktick = 0;
+		ktick->tick = 0;
 	}
 	if (unk != NULL) {
 		kunk = alloca(sizeof(*kunk));

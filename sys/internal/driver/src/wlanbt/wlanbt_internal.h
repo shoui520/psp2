@@ -746,7 +746,6 @@ _Static_assert(offsetof(SceWlanBtRobin, firmwareSize) == 28,
 _Static_assert(offsetof(SceWlanBtRobin, firmwareLoaded) == 32,
 	       "Robin firmware load state");
 
-int ScePowerForDriver_F535D928(unsigned int mask, int enabled);
 struct SdifSdioContext *ksceSdifGetSdContextPartValidateSdio(unsigned int index);
 int SceSdifForDriver_DECE963B(struct SdifSdioContext *sdio, uint32_t offset,
 			    uint32_t size, uint8_t *buffer);

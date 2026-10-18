@@ -30,4 +30,5 @@ _Static_assert(offsetof(LedModeParam, blink.endState) == 16, "LED final state");
 
 #endif
 
+/* vitasdk: ksceLedSetMode */
 int SceLedForDriver_EA24BE03(uint32_t led, uint32_t mode, const void *option);

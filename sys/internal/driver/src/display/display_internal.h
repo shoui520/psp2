@@ -82,15 +82,6 @@ typedef struct DisplayProcessLocal {
 	SceUInt32 reserved2[8];		/* 0x1b8 */
 } DisplayProcessLocal;
 
-/* SceDisplayForDriver_EE5EB52D / SceDisplayForDriver_40ACFE51 (0x14 bytes). */
-typedef struct SceDisplayViewportConf {
-	SceSize size;			/* 0x00: sizeof(SceDisplayViewportConf) */
-	SceUInt32 x;			/* 0x04: in a 960x544 frame */
-	SceUInt32 y;			/* 0x08 */
-	SceUInt32 width;		/* 0x0c */
-	SceUInt32 height;		/* 0x10 */
-} SceDisplayViewportConf;
-
 /* Interrupt state of a vblank SGI (SceDisplayVbStartSGI): subinterrupts enabled. */
 typedef struct DisplaySgiState {
 	SceKernelSpinlock lock;		/* 0x00 */

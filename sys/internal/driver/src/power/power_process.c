@@ -180,7 +180,7 @@ void powerCreateProcessState(SceUID pid)
 	    SceProcessmgrForDriver_AF80F39C(SCE_KERNEL_PROCESS_ID,
 			s_processStorageKey, (void **)&state, 0) >= 0) {
 		state->clockFrequency[POWER_PROCESS_CLOCK_BUS] = 55;
-		if (SceDisplayForDriver_8D9A1CCE(1, 0))
+		if (SceDisplayForDriver_8D9A1CCE(1, NULL))
 			state->clockFrequency[POWER_PROCESS_CLOCK_BUS] = 222;
 		state->clockFrequency[POWER_PROCESS_CLOCK_ARM] = 41;
 		state->clockFrequency[POWER_PROCESS_CLOCK_GPU] = 41;

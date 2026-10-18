@@ -1,4 +1,7 @@
-/* ScePervasive driver interfaces not declared by vitasdk. */
+/*
+ * SceLowio (os0:kd/lowio.skprx): ScePervasiveForDriver, the pervasive block's exports, each
+ * declared once with its definition as the prototype.
+ */
 #pragma once
 
 #include <stdint.h>
@@ -78,13 +81,14 @@ uint32_t ScePervasiveForDriver_0C1A7FFA(void);
 int ScePervasiveForDriver_0EBBE8DE(void);
 int ScePervasiveForDriver_1068C067(int port);
 int ScePervasiveForDriver_17109C28(void);
-int ScePervasiveForDriver_18DD8043(int port);
+int ScePervasiveForDriver_18DD8043(int port);	/* vitasdk: kscePervasiveUartClockDisable */
 int ScePervasiveForDriver_243D0E78(uint32_t clock, double *frequency, double *pixelFrequency);
+/* vitasdk: kscePervasiveDsiClockDisable */
 int ScePervasiveForDriver_25AE181E(int port, unsigned int mask);
 uint32_t ScePervasiveForDriver_270BE98A(unsigned index);
 uint32_t ScePervasiveForDriver_2A563E35(void);
-int ScePervasiveForDriver_2A9778CD(void);
-int ScePervasiveForDriver_2F195C97(void);
+int ScePervasiveForDriver_2A9778CD(void);	/* vitasdk: kscePervasiveMsifClockDisable */
+int ScePervasiveForDriver_2F195C97(void);	/* vitasdk: kscePervasiveGpioClockEnable */
 uint32_t ScePervasiveForDriver_350BF570(unsigned head);
 int ScePervasiveForDriver_377126CD(void);
 int ScePervasiveForDriver_39979C55(void);
@@ -98,62 +102,69 @@ uint32_t ScePervasiveForDriver_443E2A3F(void);
 uint32_t ScePervasiveForDriver_4712740D(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3);
 int ScePervasiveForDriver_4B223AF5(int port);
 int ScePervasiveForDriver_4CCD40E6(void);
+/* vitasdk: kscePervasiveRemovableMemoryGetCardInsertState */
 uint32_t ScePervasiveForDriver_551EEE82(void);
 uint32_t ScePervasiveForDriver_59B7CA34(unsigned source, unsigned divider);
 int ScePervasiveForDriver_5AFE0AF0(void);
 uint32_t ScePervasiveForDriver_5B4EF352(void);
+/* vitasdk: kscePervasiveMsifSetClock */
 uint32_t ScePervasiveForDriver_64ABE589(unsigned value);
 int ScePervasiveForDriver_66BF2885(int port);
 int ScePervasiveForDriver_6E11EB97(void);
 int ScePervasiveForDriver_701D5355(int port);
-uint32_t ScePervasiveForDriver_714EEFB7(void);
-int ScePervasiveForDriver_731A097D(void);
-int ScePervasiveForDriver_7704C013(void);
-int ScePervasiveForDriver_788B6C61(int port);
-int ScePervasiveForDriver_78C34032(void);
+uint32_t ScePervasiveForDriver_714EEFB7(void);	/* vitasdk: kscePervasiveGetSoCRevision */
+int ScePervasiveForDriver_731A097D(void);	/* vitasdk: kscePervasiveGpioResetEnable */
+int ScePervasiveForDriver_7704C013(void);	/* vitasdk: kscePervasiveMsifClockEnable */
+int ScePervasiveForDriver_788B6C61(int port);	/* vitasdk: kscePervasiveUartResetEnable */
+int ScePervasiveForDriver_78C34032(void);	/* vitasdk: kscePervasiveGpioResetDisable */
 int ScePervasiveForDriver_7AE2F8E8(void);
 int ScePervasiveForDriver_7B0F388B(void);
-int ScePervasiveForDriver_7B16F900(int port);
+int ScePervasiveForDriver_7B16F900(int port);	/* vitasdk: kscePervasiveSpiResetEnable */
 int ScePervasiveForDriver_7C285361(void);
 int ScePervasiveForDriver_7E813FC5(unsigned head, uint32_t *clock);
 int ScePervasiveForDriver_7F4AB4AA(void);
 int ScePervasiveForDriver_86BEA9A4(int port);
 uint32_t ScePervasiveForDriver_8847825F(void);
 int ScePervasiveForDriver_8A85E36B(void);
+/* vitasdk: kscePervasiveUartSetBaudrate */
 uint32_t ScePervasiveForDriver_8BAB45F8(unsigned port, unsigned baud);
 int ScePervasiveForDriver_8EE3AEDF(void);
+/* vitasdk: kscePervasiveDsiSetPixelClock */
 int ScePervasiveForDriver_91C80C41(unsigned head, uint32_t clock);
 int ScePervasiveForDriver_9BB7B932(void);
 uint32_t ScePervasiveForDriver_9E81E057(void);
 int ScePervasiveForDriver_A10583FF(int port);
-int ScePervasiveForDriver_A3569FF1(void);
+int ScePervasiveForDriver_A3569FF1(void);	/* vitasdk: kscePervasiveMsifResetEnable */
 uint32_t ScePervasiveForDriver_A7855D3A(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3);
-int ScePervasiveForDriver_A7CE7DCC(int port);
-int ScePervasiveForDriver_A85BF98A(int port);
+int ScePervasiveForDriver_A7CE7DCC(int port);	/* vitasdk: kscePervasiveUartResetDisable */
+int ScePervasiveForDriver_A85BF98A(int port);	/* vitasdk: kscePervasiveSpiClockDisable */
 uint32_t ScePervasiveForDriver_A96642E3(unsigned value);
 int ScePervasiveForDriver_AC475961(int port);
 int ScePervasiveForDriver_B2EE45C9(void);
 uint32_t ScePervasiveForDriver_B2F232E5(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3);
 int ScePervasiveForDriver_B68254AD(void);
 int ScePervasiveForDriver_B9904983(void);
+/* vitasdk: kscePervasiveDsiClockEnable */
 int ScePervasiveForDriver_BC42C72F(int port, unsigned int mask);
 uint32_t ScePervasiveForDriver_BD868E6E(void);
 int ScePervasiveForDriver_C0C842FE(void);
 int ScePervasiveForDriver_C37CFDFC(int port);
-int ScePervasiveForDriver_CB0F15CD(void);
+int ScePervasiveForDriver_CB0F15CD(void);	/* vitasdk: kscePervasiveMsifResetDisable */
 int ScePervasiveForDriver_D3B59C33(int port);
-int ScePervasiveForDriver_DFD96BFC(int port);
+int ScePervasiveForDriver_DFD96BFC(int port);	/* vitasdk: kscePervasiveSpiClockEnable */
 uint32_t ScePervasiveForDriver_E3A735B9(unsigned port);
+/* vitasdk: kscePervasiveDsiResetEnable */
 int ScePervasiveForDriver_E3FC1C8D(int port, unsigned int mask);
 int ScePervasiveForDriver_E40BED0F(void);
-int ScePervasiveForDriver_E4B145AE(int port);
+int ScePervasiveForDriver_E4B145AE(int port);	/* vitasdk: kscePervasiveSpiResetDisable */
 int ScePervasiveForDriver_E92E28FF(void);
-int ScePervasiveForDriver_EB176898(void);
+int ScePervasiveForDriver_EB176898(void);	/* vitasdk: kscePervasiveGpioClockDisable */
 uint32_t ScePervasiveForDriver_ECA675E0(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3);
-int ScePervasiveForDriver_EFD084D8(int port);
+int ScePervasiveForDriver_EFD084D8(int port);	/* vitasdk: kscePervasiveUartClockEnable */
 uint32_t ScePervasiveForDriver_F1908D3C(unsigned head);
 uint32_t ScePervasiveForDriver_F58EF3A5(void);
 uint32_t ScePervasiveForDriver_FB0EF8C7(void);
 int ScePervasiveForDriver_FBE5AA2F(void);
 int ScePervasiveForDriver_FF4B3CA6(int port);
+/* vitasdk: kscePervasiveDsiResetDisable */
 int ScePervasiveForDriver_FFB43AC2(int port, unsigned int mask);

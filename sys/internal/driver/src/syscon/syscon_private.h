@@ -131,7 +131,6 @@ typedef struct SceSysconCallbackEntry {
 
 typedef void (*SysconLogger)(uint32_t event, uint32_t count, ...);
 
-
 /*
  * notificationState[]: one entry per notification bit, -1 until the first
  * report. The names come from the exports that read them; the others are
@@ -238,10 +237,5 @@ _Static_assert(sizeof(struct SysconControl) == 0x27c,
 	       "SysconControl size");
 
 extern struct SysconControl s_sysconControl;
-
-/* battery.c */
-int SceSysconForDriver_FF86F4C5(void);
-int SceSysconForDriver_CBD6D8BC(void);
-int SceSysconForDriver_9ADD60D2(void);
 
 #endif

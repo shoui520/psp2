@@ -21,6 +21,7 @@
 #include <appmgr/appmgr_rdrfp.h>
 #include <power/led.h>
 #include <power/power.h>
+#include <rtc/rtc.h>
 #include <processmgr/processmgr.h>
 #include <modulemgr/modulemgr.h>
 #include <iofilemgr/iofilemgr.h>
@@ -30,7 +31,6 @@
 #include <sysmem/pmmgr.h>
 #include <sysmem/debug.h>
 #include <ctrl/ctrl.h>
-typedef SceUInt64 SceRtcTick;
 
 /* sysroot, threads, modules */
 int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
@@ -76,30 +76,7 @@ int ksceIdStorageUpdate(SceSize key, SceSize offset, const void *buf, SceSize le
 int ksceIdStorageFlush(void);
 int ksceIdStorageRestart(int unk);
 
-/* Syscon, LED, power */
-int ScePowerForDriver_0C6973B8(const void *status);
-
-/* Rtc */
-int SceRtcForDriver_ACFE5A9F(void *a, void *b, void *c, void *d);
-int sceRtcSetCurrentTick(const SceRtcTick *tick);
-int SceRtcForDriver_7D431C87(const SceRtcTick *tick);
-int SceRtcForDriver_401C0954(SceRtcTick *tick);
-int SceRtcForDriver_162E486E(const SceRtcTick *tick);
-int SceRtcForDriver_AAB6053F(const SceRtcTick *tick);
-int sceRtcSetAlarmTick(const SceRtcTick *tick, int unk);
-int SceRtcForDriver_C838275A(SceRtcTick *tick, int *unk);
-int SceRtcForDriver_CD295F0C(void);
-int SceRtcForDriver_5220870D(SceUID cb);
-int SceRtcForDriver_9546C68B(SceUID cb);
-int SceRtcForDriver_8333790D(const SceRtcTick *tick);
-int SceRtcForDriver_BD53731C(SceRtcTick *tick);
-int SceRtcForDriver_E39F2ABE(void);
-int SceRtcForDriver_CF84DFC0(SceUID cb);
-int SceRtcForDriver_EDDC2325(SceUID cb);
-
-/* Display, Ctrl, Motion, Touch, Hdmi */
-int SceDisplayForDriver_EE5EB52D(int head, const void *conf, int unk);
-int SceDisplayForDriver_40ACFE51(int head, void *conf, int unk);
+/* Motion, Touch, Hdmi */
 int ksceMotionDevNoiseFilterIsAvailable(void);
 int ksceTouchSetTouchEmulationData(const void *front, const void *back);
 int sceHdmiCecEnableCec(void);
