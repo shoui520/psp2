@@ -1,5 +1,5 @@
 /* SceAudioenc control and information handling (Sony audioenc/audioenc.c). */
-#include <psp2/audioenc.h>
+#include <audioenc.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>

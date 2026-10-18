@@ -1,6 +1,6 @@
 #pragma once
 
-#include <psp2/audiodec.h>
+#include <audiodec.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <vnz_wrapper/venezia_rpc.h>
 

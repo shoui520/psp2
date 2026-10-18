@@ -1,6 +1,6 @@
 #pragma once
 
-#include <psp2/audioenc.h>
+#include <audioenc.h>
 #include <threadmgr/fast_mutex_object.h>
 
 #define AUDIOENC_TYPE_SILK 0x2007U
