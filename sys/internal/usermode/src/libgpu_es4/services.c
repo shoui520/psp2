@@ -2,7 +2,7 @@
  * SceGpuEs4User: the services connection and the bridge into gpu_es4.skprx.
  */
 
-#include <psp2/kernel/threadmgr.h>
+#include <kernel/threadmgr.h>
 #include "gpu_es4_user.h"
 
 #define GPU_BRIDGE_RETRY_DELAY	201	/* microseconds */

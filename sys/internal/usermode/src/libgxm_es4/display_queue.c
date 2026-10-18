@@ -42,7 +42,8 @@ static int gxmDisplayQueueThread(SceSize args, void *argp)
 			sceClibPrintf("Wait error %08x\n", err);
 			continue;
 		}
-		sceKernelWaitEventFlag(queue->readyEvent, 1, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		sceKernelWaitEventFlag(queue->readyEvent, 1,
+				       SCE_KERNEL_EVF_WAITMODE_OR | SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 				       NULL, NULL);
 	}
 
@@ -123,7 +124,8 @@ int gxmDisplayQueueCreate(SceUInt32 maxPending, SceGxmDisplayQueueCallback *call
 	if (err != 0)
 		goto fail;
 	/* the thread is running once it signals */
-	sceKernelWaitEventFlag(queue->completeEvent, 1, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+	sceKernelWaitEventFlag(queue->completeEvent, 1,
+			       SCE_KERNEL_EVF_WAITMODE_OR | SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 			       NULL, NULL);
 	*queueOut = queue;
 	return 0;
@@ -150,7 +152,8 @@ int sceGxmDisplayQueueAddEntry(void *oldBuffer, void *newBuffer, const void *cal
 	gxmRazorMarker(0x15000000, frame);
 
 	while (queue->writeIndex - queue->readIndex == queue->maxPending)
-		sceKernelWaitEventFlag(queue->completeEvent, 1, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		sceKernelWaitEventFlag(queue->completeEvent, 1,
+				       SCE_KERNEL_EVF_WAITMODE_OR | SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 				       NULL, NULL);
 	entry = &queue->entries[queue->writeIndex & queue->mask];
 	syncObjects[0] = oldBuffer;
@@ -185,7 +188,8 @@ int sceGxmDisplayQueueFinish(void)
 		return SCE_GXM_ERROR_UNINITIALIZED;
 	gxmRazorMarker(0x17000000, gxmGlobals.frameIndex);
 	while (queue->writeIndex != queue->readIndex)
-		sceKernelWaitEventFlag(queue->completeEvent, 1, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		sceKernelWaitEventFlag(queue->completeEvent, 1,
+				       SCE_KERNEL_EVF_WAITMODE_OR | SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 				       NULL, NULL);
 	gxmRazorMarker(0x18000000, gxmGlobals.frameIndex);
 	return 0;

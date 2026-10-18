@@ -132,7 +132,7 @@ typedef SceInt32 (*SceKernelThreadEventHandler)(SceInt32 type, SceUID threadId, 
 						void *pCommon);
 
 #ifndef PSP2_KERNEL
-/* sceKernelCreateThread's option; a kernel unit has the kernel's longer one (threadmgr/threadmgr.h) */
+/* sceKernelCreateThread's option (a kernel unit has the kernel's, threadmgr/threadmgr.h) */
 typedef struct _SceKernelThreadOptParam {
 	SceSize size;
 	SceUInt32 attr;

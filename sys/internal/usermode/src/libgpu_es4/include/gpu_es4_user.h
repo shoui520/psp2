@@ -10,9 +10,10 @@
 
 #pragma once
 
-#include <psp2/types.h>
+#include <stddef.h>
 #include <stdint.h>
-#include <psp2/kernel/clib.h>
+#include <scetypes.h>
+#include <libkernel/libkernel.h>
 #include <gpu/pvrsrv_client.h>
 #include <gpu/gpu_es4_trace.h>
 
@@ -167,7 +168,7 @@ typedef struct GpuPdsProgram {
 } GpuPdsProgram;
 
 /* gpu_user.c */
-extern SceClibMspace g_gpuUserHeap;
+extern void *g_gpuUserHeap;
 extern SceUID g_gpuUserHeapMemBlock;
 void *PVRSRVAllocUserModeMem(SceSize size);
 void PVRSRVFreeUserModeMem(void *ptr);

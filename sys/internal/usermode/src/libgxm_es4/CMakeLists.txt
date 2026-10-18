@@ -37,8 +37,6 @@ set(GXM_SOURCES
 # PARTIAL in Sony's layout: the C still calls sceClibMemcpy, which the original does not import,
 # and __aeabi_idivmod / __aeabi_uidiv, which the original has from its statically linked libgcc;
 # sceGxmFinish (exported) is not written yet
-# vitasdk's user headers and newlib until this module is on the tree's SDK headers
-set(MODULE_VITASDK_LIBC ON)
 psp2_module(os0_us_libgxm_es4 KIND user COMPILER gcc48 PARTIAL SOURCES
 	libgxm_es4.c
 	${GXM_SOURCES}

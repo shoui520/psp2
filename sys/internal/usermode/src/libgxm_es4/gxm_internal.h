@@ -8,12 +8,13 @@
 #ifndef _GXM_INTERNAL_H
 #define _GXM_INTERNAL_H
 
-#include <psp2/types.h>
-#include <psp2/kernel/clib.h>
-#include <psp2/kernel/sysmem.h>
-#include <psp2/kernel/threadmgr.h>
-#include <gpu/pvrsrv_client.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <scetypes.h>
+#include <kernel/sysmem.h>
+#include <kernel/threadmgr.h>
+#include <libkernel/libkernel.h>
+#include <gpu/pvrsrv_client.h>
 
 int sceKernelIsGameBudget(void);
 

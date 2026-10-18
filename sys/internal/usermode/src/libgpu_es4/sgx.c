@@ -7,7 +7,7 @@
  * kernel's result code.
  */
 
-#include <psp2/kernel/clib.h>
+#include <libkernel/libkernel.h>
 #include "gpu_es4_user.h"
 
 static inline GpuServices *DevServices(const PVRSRV_DEV_DATA *dev)

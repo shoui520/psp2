@@ -7,7 +7,7 @@
  * the descriptor and return the end of the buffer used.
  */
 
-#include <psp2/kernel/clib.h>
+#include <libkernel/libkernel.h>
 #include "gpu_es4_user.h"
 
 #define PDS_PROGRAM_COPY_SIZE	0x90	/* copied whatever the program's length */

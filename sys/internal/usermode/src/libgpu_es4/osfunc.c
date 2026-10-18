@@ -2,7 +2,7 @@
  * SceGpuEs4User: user heap exports and memory helpers.
  */
 
-#include <psp2/kernel/clib.h>
+#include <libkernel/libkernel.h>
 #include "gpu_es4_user.h"
 
 void *SceGpuEs4User_7AF40138(SceSize size)

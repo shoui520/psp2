@@ -2,8 +2,8 @@
  * SceGpuEs4User: connection, devices, device memory and sync objects.
  */
 
-#include <psp2/kernel/clib.h>
-#include <psp2/kernel/threadmgr.h>
+#include <kernel/threadmgr.h>
+#include <libkernel/libkernel.h>
 #include "gpu_es4_user.h"
 
 PVRSRV_CONNECTION g_gpuConnection;
@@ -443,7 +443,8 @@ int SceGpuEs4User_5C3A6DFE(SceUInt32 hModObj, SceUInt32 timeout)
 		return out.error;
 
 	return sceKernelWaitEventFlag(out.eventFlag, out.pattern,
-				      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, NULL,
+				      SCE_KERNEL_EVF_WAITMODE_OR |
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL,
 				      timeout != 0 ? &timeout : NULL);
 }
 

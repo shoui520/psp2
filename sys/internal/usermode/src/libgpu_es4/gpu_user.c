@@ -2,14 +2,14 @@
  * SceGpuEs4User module start/stop and its private heap.
  */
 
-#include <psp2/kernel/clib.h>
-#include <psp2/kernel/modulemgr.h>
-#include <psp2/kernel/sysmem.h>
+#include <kernel/modulemgr.h>
+#include <kernel/sysmem.h>
+#include <libkernel/libkernel.h>
 #include "gpu_es4_user.h"
 
 #define GPU_USER_HEAP_SIZE	0x8000
 
-SceClibMspace g_gpuUserHeap;
+void *g_gpuUserHeap;
 SceUID g_gpuUserHeapMemBlock;
 
 /* IMG services.h PVRSRVAllocUserModeMem, from the process heap */
