@@ -2,7 +2,6 @@
 #pragma once
 
 #include <scetypes.h>
-#include <vitasdk/build_utils.h>
 
 #ifdef __cplusplus
 extern "C" {

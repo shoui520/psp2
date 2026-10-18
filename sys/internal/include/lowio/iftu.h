@@ -1,7 +1,6 @@
 /* IFTU conversion parameters shared by the driver and its callers. */
 #pragma once
 
-#include <vitasdk/build_utils.h>
 #include <scetypes.h>
 
 #ifdef __cplusplus

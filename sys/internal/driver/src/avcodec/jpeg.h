@@ -1,7 +1,6 @@
 /* JPEG decoder control records shared by the driver and its callers. */
 #pragma once
 
-#include <vitasdk/build_utils.h>
 #include <scetypes.h>
 
 typedef struct SceJpegMJpegInitParam {
