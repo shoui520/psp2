@@ -266,32 +266,32 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	SceThreadmgrForKernel_CBADD6B3
-	ksceKernelSetPermission
-	ksceKernelSetProcessIdToTLS
-	ksceKernelGetThreadmgrUIDClass
-	ksceKernelWaitEventFlag
-	ksceKernelLockMutex
+	sceKernelSetThreadAccessLevel
+	SceThreadmgrForDriver_0486F239
+	sceKernelGetThreadmgrUIDClass
+	sceKernelWaitEventFlag
+	sceKernelLockMutex
 	sceKernelExitDeleteThread
-	ksceKernelUnlockMutex
+	sceKernelUnlockMutex
 	SceThreadmgrForDriver_20C228E4
-	ksceKernelStartThread
+	sceKernelStartThread
 	SceThreadmgrForDriver_332E127C
 	SceThreadmgrForDriver_3A72C6D8
-	ksceKernelWaitThreadEnd
-	ksceKernelCreateEventFlag
-	ksceKernelGetSystemTimeLow
-	ksceKernelGetThreadId
-	ksceKernelChangeThreadCpuAffinityMask
+	sceKernelWaitThreadEnd
+	sceKernelCreateEventFlag
+	SceThreadmgrForDriver_47F6DE49
+	sceKernelGetThreadId
+	sceKernelChangeThreadCpuAffinityMask
 	sceKernelGetThreadExitStatus
 	sceKernelGetProcessId
-	ksceKernelDeleteThread
+	sceKernelDeleteThread
 	SceThreadmgrForDriver_B645C7EF
-	ksceKernelCreateThread
+	sceKernelCreateThread
 	SceThreadmgrForDriver_C8E57BB4
-	ksceKernelSetEventFlag
-	ksceKernelEnqueueWorkQueue
+	sceKernelSetEventFlag
+	sceKernelScheduleWorkTask
 	sceKernelGetSystemTimeWide
-	ksceKernelCreateMutex
+	sceKernelCreateMutex
 	SceDipswForDriver_A98FC2FD
 	ksceSblAuthMgrClose
 	ksceSblAuthMgrSetupAuthSegment

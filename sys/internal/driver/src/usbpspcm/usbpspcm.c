@@ -382,17 +382,17 @@ static void commandComplete(SceUdcdDeviceRequest *request)
 {
 	struct Channel *channel = request->unused;
 	if (request->returnCode >= 0)
-		ksceKernelSetEventFlag(channel->event, PCM_EVENT_COMMAND_DONE);
+		sceKernelSetEventFlag(channel->event, PCM_EVENT_COMMAND_DONE);
 	else if (channel->state == PCM_CHANNEL_CANCELLING)
-		ksceKernelSetEventFlag(channel->event, PCM_EVENT_CANCELLED);
+		sceKernelSetEventFlag(channel->event, PCM_EVENT_CANCELLED);
 	else
-		ksceKernelSetEventFlag(channel->event, PCM_EVENT_DISCONNECTED);
+		sceKernelSetEventFlag(channel->event, PCM_EVENT_DISCONNECTED);
 }
 
 static void resetComplete(SceUdcdDeviceRequest *request)
 {
 	struct Channel *channel = request->unused;
-	ksceKernelSetEventFlag(channel->event, request->returnCode ? PCM_EVENT_SEND_FAILED : PCM_EVENT_SENT);
+	sceKernelSetEventFlag(channel->event, request->returnCode ? PCM_EVENT_SEND_FAILED : PCM_EVENT_SENT);
 }
 
 static void dataComplete(SceUdcdDeviceRequest *request)
@@ -400,7 +400,7 @@ static void dataComplete(SceUdcdDeviceRequest *request)
 	struct Channel *channel = request->unused;
 	if (!request->returnCode && !channel->remaining)
 		channel->write = NULL;
-	ksceKernelSetEventFlag(channel->event, request->returnCode ? PCM_EVENT_SEND_FAILED : PCM_EVENT_SENT);
+	sceKernelSetEventFlag(channel->event, request->returnCode ? PCM_EVENT_SEND_FAILED : PCM_EVENT_SENT);
 }
 
 static int disconnectChannel(struct Channel *channel, int command)
@@ -412,7 +412,7 @@ static int disconnectChannel(struct Channel *channel, int command)
 		channel->state = PCM_CHANNEL_CANCELLING;
 	ret = SceUdcdForDriver_AA5FD90E(&channel->command);
 	if (ret == (int)SCE_UDCD_ERROR_DRIVER_IN_PROGRESS) {
-		ret = ksceKernelWaitEventFlag(channel->event,
+		ret = sceKernelWaitEventFlag(channel->event,
 					      PCM_EVENT_DISCONNECTED | PCM_EVENT_CANCELLED,
 					      SCE_KERNEL_EVF_WAITMODE_OR, &bits, &timeout);
 		if (ret < 0)
@@ -423,7 +423,7 @@ static int disconnectChannel(struct Channel *channel, int command)
 			return PCM_ERROR_DISCONNECTED;
 		}
 	}
-	ksceKernelClearEventFlag(channel->event, ~PCM_EVENT_COMMAND_DONE);
+	sceKernelClearEventFlag(channel->event, ~PCM_EVENT_COMMAND_DONE);
 	channel->commandBuffer->command = command;
 	channel->commandBuffer->argument = channel->unit;
 	SceCpuForDriver_364E68A4(channel->commandBuffer, PCM_CACHE_LINE);
@@ -434,7 +434,7 @@ static int disconnectChannel(struct Channel *channel, int command)
 	}
 	ksceUdcdReqSend(&channel->command);
 	timeout = PCM_WAIT_TIMEOUT;
-	ret = ksceKernelWaitEventFlag(channel->event,
+	ret = sceKernelWaitEventFlag(channel->event,
 				      PCM_EVENT_COMMAND_DONE | PCM_EVENT_DISCONNECTED |
 				      PCM_EVENT_CANCELLED, SCE_KERNEL_EVF_WAITMODE_OR, NULL,
 				      &timeout);
@@ -657,14 +657,14 @@ static int startCommunication(int size, void *args, void *context)
 	initDescriptor(&memory->full, 0);
 	for (i = 0; i < PCM_UNITS; i++)
 		s.channels[i] = &memory->channels[i];
-	s.sema = ksceKernelCreateSema("SceUsbPspcm", 0x2000, 1, 1, NULL);
+	s.sema = sceKernelCreateSema("SceUsbPspcm", 0x2000, 1, 1, NULL);
 	if (s.sema <= 0)
 		goto failBlock;
 	for (i = 0; i < 8; i++) {
-		int event = ksceKernelCreateEventFlag("SceUsbPspcmUnit", 0x9000, 0, NULL);
+		int event = sceKernelCreateEventFlag("SceUsbPspcmUnit", 0x9000, 0, NULL);
 		if (event <= 0) {
 			while (i)
-				ksceKernelDeleteEventFlag(s.events[--i]);
+				sceKernelDeleteEventFlag(s.events[--i]);
 			goto failSema;
 		}
 		s.events[i] = event;
@@ -719,10 +719,10 @@ static int startCommunication(int size, void *args, void *context)
 	return 0;
 failEvents:
 	for (i = 0; i < 8; i++)
-		ksceKernelDeleteEventFlag(s.events[i]);
+		sceKernelDeleteEventFlag(s.events[i]);
 failSema:
 	sceKernelCancelSema(s.sema, -1, NULL);
-	ksceKernelDeleteSema(s.sema);
+	sceKernelDeleteSema(s.sema);
 failBlock:
 	SceSysmemForDriver_009E1C61(s.memblock);
 	return -1;
@@ -760,9 +760,9 @@ static int stopCommunication(int size, void *args, void *context)
 	unlock(state);
 	SceSysmemForDriver_009E1C61(s.unitMemblock);
 	sceKernelCancelSema(s.sema, -1, NULL);
-	ksceKernelDeleteSema(s.sema);
+	sceKernelDeleteSema(s.sema);
 	for (i = 0; i < 8; i++)
-		ksceKernelDeleteEventFlag(s.events[i]);
+		sceKernelDeleteEventFlag(s.events[i]);
 	SceSysmemForDriver_009E1C61(s.memblock);
 	return 0;
 }
@@ -774,7 +774,7 @@ static void disconnected(void)
 		s.connected = 0;
 		s.arrivals = 0;
 		if (!s.departures) {
-			ksceKernelClearEventFlag(s.event, ~PCM_THREAD_EVENT_CHANGED);
+			sceKernelClearEventFlag(s.event, ~PCM_THREAD_EVENT_CHANGED);
 			return;
 		}
 	} else {
@@ -785,7 +785,7 @@ static void disconnected(void)
 	s.arrivals = 0;
 	s.connected = 0;
 	s.hostPort = -1;
-	ksceKernelSetEventFlag(s.event, PCM_THREAD_EVENT_CHANGED);
+	sceKernelSetEventFlag(s.event, PCM_THREAD_EVENT_CHANGED);
 }
 
 static void detachCommunication(void *context)
@@ -801,7 +801,7 @@ static void detachCommunication(void *context)
 		struct Channel *channel = s.channels[i];
 		unsigned state = lock();
 		resetChannelState(channel);
-		ksceKernelSetEventFlag(channel->event, PCM_EVENT_DISCONNECTED | PCM_EVENT_CLOSED);
+		sceKernelSetEventFlag(channel->event, PCM_EVENT_DISCONNECTED | PCM_EVENT_CLOSED);
 		releaseChannel(channel);
 		unlock(state);
 	}
@@ -820,7 +820,7 @@ static void notifyConnection(const SceUdcdEP0DeviceRequest *request)
 	}
 	s.changes |= 0x80000000;
 	s.arrivals |= 0x80000000;
-	ksceKernelSetEventFlag(s.event, PCM_THREAD_EVENT_CHANGED);
+	sceKernelSetEventFlag(s.event, PCM_THREAD_EVENT_CHANGED);
 }
 
 static void notifyPorts(const SceUdcdEP0DeviceRequest *request)
@@ -838,9 +838,9 @@ static void notifyPorts(const SceUdcdEP0DeviceRequest *request)
 	s.connected = request->wValue;
 	s.changes = changed;
 	if (!s.arrivals && !s.departures)
-		ksceKernelClearEventFlag(s.event, ~PCM_THREAD_EVENT_CHANGED);
+		sceKernelClearEventFlag(s.event, ~PCM_THREAD_EVENT_CHANGED);
 	else
-		ksceKernelSetEventFlag(s.event, PCM_THREAD_EVENT_CHANGED);
+		sceKernelSetEventFlag(s.event, PCM_THREAD_EVENT_CHANGED);
 }
 
 static void controlComplete(SceUdcdDeviceRequest *request)
@@ -890,7 +890,7 @@ static int processRequest(int recipient, int endpoint, SceUdcdEP0DeviceRequest *
 			i = request->wValue & 255;
 			if (i < s.count && i < PCM_UNITS && s.channels[i]->state == PCM_CHANNEL_CONNECTING) {
 				s.channels[i]->state = PCM_CHANNEL_CONNECTED;
-				ksceKernelSetEventFlag(s.channels[i]->event, PCM_EVENT_ACCEPTED);
+				sceKernelSetEventFlag(s.channels[i]->event, PCM_EVENT_ACCEPTED);
 				s.controlBuffer[0] = 1;
 			}
 			s.control.size = 1;
@@ -920,7 +920,7 @@ static int processRequest(int recipient, int endpoint, SceUdcdEP0DeviceRequest *
 			for (i = 0; i < s.count; i++) {
 				struct Channel *channel = s.channels[i];
 				resetChannelState(channel);
-				ksceKernelSetEventFlag(channel->event, PCM_EVENT_CLOSED);
+				sceKernelSetEventFlag(channel->event, PCM_EVENT_CLOSED);
 				state = lock();
 				releaseChannel(channel);
 				unlock(state);
@@ -945,7 +945,7 @@ static int processRequest(int recipient, int endpoint, SceUdcdEP0DeviceRequest *
 				channel->write = NULL;
 				channel->remaining = 0;
 			}
-			ksceKernelSetEventFlag(channel->event, request->bRequest == PCM_REQUEST_CLOSE ?
+			sceKernelSetEventFlag(channel->event, request->bRequest == PCM_REQUEST_CLOSE ?
 					       PCM_EVENT_CLOSED : PCM_EVENT_CLOSED | PCM_EVENT_CANCELLED);
 			state = lock();
 			releaseChannel(channel);
@@ -979,7 +979,7 @@ static void processHeader(unsigned int unit, unsigned int flags)
 					appendBuffer(&channel->queue, &s.marker);
 			} else {
 				channel->read = NULL;
-				ksceKernelSetEventFlag(channel->event, PCM_EVENT_READ);
+				sceKernelSetEventFlag(channel->event, PCM_EVENT_READ);
 			}
 			receiveHeader();
 			return;
@@ -1002,8 +1002,8 @@ static void processHeader(unsigned int unit, unsigned int flags)
 		state = lock();
 		releaseChannel(channel);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s.lock, state);
-		ksceKernelSetEventFlag(channel->event, PCM_EVENT_RESET | PCM_EVENT_RESET_RECEIVED);
-		ksceKernelClearEventFlag(channel->event, ~PCM_EVENT_RESET);
+		sceKernelSetEventFlag(channel->event, PCM_EVENT_RESET | PCM_EVENT_RESET_RECEIVED);
+		sceKernelClearEventFlag(channel->event, ~PCM_EVENT_RESET);
 		if (channel->reset != PCM_RESET_SENT)
 			ksceUdcdReqSend(&channel->resetRequest.request);
 		channel->reset = PCM_RESET_RECEIVED;
@@ -1044,7 +1044,7 @@ static void receiveComplete(SceUdcdDeviceRequest *request)
 		buffer->size = request->transmitted;
 		if (channel->reset == PCM_RESET_SENT) {
 			releaseBuffer(buffer);
-			ksceKernelSetEventFlag(channel->event, PCM_EVENT_DATA);
+			sceKernelSetEventFlag(channel->event, PCM_EVENT_DATA);
 			unlock(state);
 			receiveHeader();
 			return;
@@ -1057,11 +1057,11 @@ static void receiveComplete(SceUdcdDeviceRequest *request)
 			} else {
 				releaseBuffer(buffer);
 			}
-			ksceKernelSetEventFlag(channel->event, PCM_EVENT_DATA);
+			sceKernelSetEventFlag(channel->event, PCM_EVENT_DATA);
 			unlock(state);
 			receiveHeader();
 		} else {
-			ksceKernelSetEventFlag(channel->event, PCM_EVENT_READ);
+			sceKernelSetEventFlag(channel->event, PCM_EVENT_READ);
 			unlock(state);
 		}
 		return;
@@ -1090,8 +1090,8 @@ static int dispatchNotification(const unsigned *args)
 	s.flags = (s.flags & ~PCM_STATE_MASK) | PCM_STATE_NOTIFYING;
 	unlock(state);
 	ret = -1;
-	if (s.callbackThread >= 0 && ksceKernelStartThread(s.callbackThread, 8, (void *)args) >= 0 &&
-	    ksceKernelWaitThreadEnd(s.callbackThread, NULL, NULL) >= 0)
+	if (s.callbackThread >= 0 && sceKernelStartThread(s.callbackThread, 8, (void *)args) >= 0 &&
+	    sceKernelWaitThreadEnd(s.callbackThread, NULL, NULL) >= 0)
 		ret = 0;
 	state = lock();
 	s.flags = (s.flags & ~PCM_STATE_MASK) | PCM_STATE_READY;
@@ -1133,7 +1133,7 @@ static int connectionThread(SceSize size, void *args)
 				dispatchNotification(event);
 			}
 		}
-		if (ksceKernelWaitEventFlag(s.event, PCM_THREAD_EVENT_CHANGED,
+		if (sceKernelWaitEventFlag(s.event, PCM_THREAD_EVENT_CHANGED,
 					    SCE_KERNEL_EVF_WAITMODE_OR |
 					    SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL, NULL, NULL) < 0)
 			continue;
@@ -1152,20 +1152,20 @@ static int connectionThread(SceSize size, void *args)
 
 static int initNotifications(void)
 {
-	s.event = ksceKernelCreateEventFlag("SceUsbPspcmConnect", 0x8000, 0, NULL);
+	s.event = sceKernelCreateEventFlag("SceUsbPspcmConnect", 0x8000, 0, NULL);
 	if (s.event <= 0)
 		return -1;
-	s.notificationSema = ksceKernelCreateSema("SceUsbPspcmConnect", 0x2000, 1, 1, NULL);
+	s.notificationSema = sceKernelCreateSema("SceUsbPspcmConnect", 0x2000, 1, 1, NULL);
 	if (s.notificationSema > 0) {
-		s.thread = ksceKernelCreateThread("SceUsbPspcm", connectionThread, 0x60, 0x1000, 0, 0x80000, NULL);
+		s.thread = sceKernelCreateThread("SceUsbPspcm", connectionThread, 0x60, 0x1000, 0, 0x80000, NULL);
 		if (s.thread >= 0) {
 			resetNotifications();
-			ksceKernelStartThread(s.thread, 0, NULL);
+			sceKernelStartThread(s.thread, 0, NULL);
 			return 0;
 		}
-		ksceKernelDeleteSema(s.notificationSema);
+		sceKernelDeleteSema(s.notificationSema);
 	}
-	ksceKernelDeleteEventFlag(s.event);
+	sceKernelDeleteEventFlag(s.event);
 	s.event = -1;
 	return -1;
 }
@@ -1206,9 +1206,9 @@ int module_start(SceSize size, void *args)
 int module_stop(SceSize size, void *args)
 {
 	ksceUdcdUnregister(&s.driver);
-	ksceKernelDeleteThread(s.thread);
-	ksceKernelDeleteSema(s.notificationSema);
-	ksceKernelDeleteEventFlag(s.event);
+	sceKernelDeleteThread(s.thread);
+	sceKernelDeleteSema(s.notificationSema);
+	sceKernelDeleteEventFlag(s.event);
 	s.event = -1;
 	return 0;
 }
@@ -1225,26 +1225,26 @@ static int connectChannel(const unsigned *args)
 		return PCM_ERROR_ARGUMENT;
 	if (port != 255 && ((int)port < 0 || s.ports < (int)port || !(s.connected & (1u << (port & 255)))))
 		return PCM_ERROR_NOT_FOUND;
-	ret = ksceKernelWaitSema(s.sema, 1, &timeout);
+	ret = sceKernelWaitSema(s.sema, 1, &timeout);
 	if (ret < 0)
 		return ret;
 	for (i = 0; i < s.count; i++) {
 		struct Channel *candidate = s.channels[i];
 		if (candidate->state && candidate->state != PCM_CHANNEL_CONNECTED && (unsigned)candidate->port == port) {
-			ksceKernelSignalSema(s.sema, 1);
+			sceKernelSignalSema(s.sema, 1);
 			return PCM_ERROR_BUSY;
 		}
 		if (!candidate->state && candidate->opened <= 0 && !channel)
 			channel = candidate;
 	}
 	if (!channel) {
-		ksceKernelSignalSema(s.sema, 1);
+		sceKernelSignalSema(s.sema, 1);
 		return PCM_ERROR_NO_UNIT;
 	}
 	channel->state = PCM_CHANNEL_CONNECTING;
 	channel->port = port;
-	ksceKernelClearEventFlag(channel->event, 0);
-	ksceKernelSignalSema(s.sema, 1);
+	sceKernelClearEventFlag(channel->event, 0);
+	sceKernelSignalSema(s.sema, 1);
 	channel->commandBuffer->command = PCM_COMMAND_CONNECT;
 	channel->commandBuffer->argument = ((port & 255) << 8) | (channel->unit & 255);
 	SceCpuForDriver_364E68A4(channel->commandBuffer, PCM_CACHE_LINE);
@@ -1253,7 +1253,7 @@ static int connectChannel(const unsigned *args)
 		timeout = *(unsigned *)(uintptr_t)args[2];
 		wait = &timeout;
 	}
-	ret = ksceKernelWaitEventFlag(channel->event,
+	ret = sceKernelWaitEventFlag(channel->event,
 				      PCM_EVENT_COMMAND_DONE | PCM_EVENT_DISCONNECTED |
 				      PCM_EVENT_CANCELLED, SCE_KERNEL_EVF_WAITMODE_OR, &bits, wait);
 	if (ret >= 0) {
@@ -1262,7 +1262,7 @@ static int connectChannel(const unsigned *args)
 			channel->state = PCM_CHANNEL_IDLE;
 			return PCM_ERROR_DISCONNECTED;
 		}
-		ret = ksceKernelWaitEventFlag(channel->event,
+		ret = sceKernelWaitEventFlag(channel->event,
 					      PCM_EVENT_DISCONNECTED | PCM_EVENT_ACCEPTED |
 					      PCM_EVENT_CANCELLED, SCE_KERNEL_EVF_WAITMODE_OR,
 					      &bits, wait);
@@ -1293,25 +1293,25 @@ static int cancelConnect(unsigned port)
 		return PCM_ERROR_ARGUMENT;
 	if (port != 255 && ((int)port < 0 || s.ports < (int)port || !(s.connected & (1u << (port & 255)))))
 		return PCM_ERROR_NOT_FOUND;
-	ret = ksceKernelWaitSema(s.sema, 1, &timeout);
+	ret = sceKernelWaitSema(s.sema, 1, &timeout);
 	if (ret < 0)
 		return ret;
 	for (i = 0; i < s.count; i++) {
 		struct Channel *channel = s.channels[i];
 		if (channel->state == PCM_CHANNEL_CONNECTING && (unsigned)channel->port == port) {
 			disconnectChannel(channel, PCM_COMMAND_CANCEL);
-			ksceKernelSetEventFlag(channel->event, PCM_EVENT_CANCELLED);
-			ksceKernelSignalSema(s.sema, 1);
+			sceKernelSetEventFlag(channel->event, PCM_EVENT_CANCELLED);
+			sceKernelSignalSema(s.sema, 1);
 			return 0;
 		}
 	}
-	ksceKernelSignalSema(s.sema, 1);
+	sceKernelSignalSema(s.sema, 1);
 	return PCM_ERROR_NOT_FOUND;
 }
 
 static int setCallback(unsigned command, int thread)
 {
-	int ret = ksceKernelPollSema(s.notificationSema, 1);
+	int ret = sceKernelPollSema(s.notificationSema, 1);
 	if (ret < 0)
 		return ret == (int)SCE_KERNEL_ERROR_SEMA_ZERO ? PCM_ERROR_BUSY : ret;
 	if (command == 0x3415001) {
@@ -1322,12 +1322,12 @@ static int setCallback(unsigned command, int thread)
 	} else if (s.callbackThread < 0) {
 		ret = PCM_ERROR_NOT_FOUND;
 	} else if (thread == s.callbackThread) {
-		ksceKernelDeleteThread(thread);
+		sceKernelDeleteThread(thread);
 		s.callbackThread = -1;
 	} else {
 		ret = PCM_ERROR_ARGUMENT;
 	}
-	ksceKernelSignalSema(s.notificationSema, 1);
+	sceKernelSignalSema(s.notificationSema, 1);
 	return ret;
 }
 
@@ -1400,7 +1400,7 @@ static int closeChannel(unsigned unit)
 	if (unit >= s.count || unit > 7)
 		return PCM_ERROR_ARGUMENT;
 	channel = s.channels[unit];
-	ksceKernelSetEventFlag(channel->event, PCM_EVENT_CLOSED);
+	sceKernelSetEventFlag(channel->event, PCM_EVENT_CLOSED);
 	disconnectChannel(channel, PCM_COMMAND_CLOSE);
 	channel->opened = 0;
 	channel->mode = 0;
@@ -1428,13 +1428,13 @@ static int waitData(struct Channel *channel, const unsigned *timeout)
 		return PCM_ERROR_BUSY;
 	}
 	channel->busy |= PCM_BUSY_WAIT;
-	ksceKernelClearEventFlag(channel->event, ~(PCM_EVENT_DATA | PCM_EVENT_WAIT_CANCEL));
+	sceKernelClearEventFlag(channel->event, ~(PCM_EVENT_DATA | PCM_EVENT_WAIT_CANCEL));
 	unlock(state);
 	if (timeout) {
 		time = *timeout;
 		wait = &time;
 	}
-	ret = ksceKernelWaitEventFlag(channel->event,
+	ret = sceKernelWaitEventFlag(channel->event,
 				      PCM_EVENT_DISCONNECTED | PCM_EVENT_CLOSED | PCM_EVENT_RESET |
 				      PCM_EVENT_DATA | PCM_EVENT_WAIT_CANCEL,
 				      SCE_KERNEL_EVF_WAITMODE_OR, &bits, wait);
@@ -1478,15 +1478,15 @@ static int ioctlReset(unsigned unit)
 		channel->write = NULL;
 		channel->remaining = 0;
 		channel->reset = PCM_RESET_SENT;
-		ksceKernelClearEventFlag(channel->event, ~PCM_EVENT_RESET_RECEIVED);
-		ksceKernelSetEventFlag(channel->event, PCM_EVENT_RESET);
+		sceKernelClearEventFlag(channel->event, ~PCM_EVENT_RESET_RECEIVED);
+		sceKernelSetEventFlag(channel->event, PCM_EVENT_RESET);
 		unlock(state);
 		channel->resetRequest.request.returnCode = 1;
 		ksceUdcdReqSend(&channel->resetRequest.request);
 	} else {
 		unlock(state);
 	}
-	ret = ksceKernelWaitEventFlag(channel->event,
+	ret = sceKernelWaitEventFlag(channel->event,
 				      PCM_EVENT_DISCONNECTED | PCM_EVENT_CLOSED |
 				      PCM_EVENT_RESET_RECEIVED, SCE_KERNEL_EVF_WAITMODE_OR, &bits,
 				      NULL);
@@ -1570,7 +1570,7 @@ static int ioctlCancel(unsigned unit)
 		return ret;
 	}
 	unlock(state);
-	ksceKernelSetEventFlag(channel->event, PCM_EVENT_WAIT_CANCEL);
+	sceKernelSetEventFlag(channel->event, PCM_EVENT_WAIT_CANCEL);
 	return 0;
 }
 
@@ -1601,8 +1601,8 @@ static int writeChannel(unsigned unit, const uint8_t *data, unsigned size, unsig
 		ret = PCM_ERROR_STATE;
 		goto done;
 	}
-	ksceKernelClearEventFlag(channel->event, ~PCM_EVENT_SENT);
-	ksceKernelClearEventFlag(channel->event, ~PCM_EVENT_SEND_FAILED);
+	sceKernelClearEventFlag(channel->event, ~PCM_EVENT_SENT);
+	sceKernelClearEventFlag(channel->event, ~PCM_EVENT_SEND_FAILED);
 	header = channel->headerRequest.header;
 	channel->write = (void *)data;
 	channel->remaining = size;
@@ -1632,7 +1632,7 @@ static int writeChannel(unsigned unit, const uint8_t *data, unsigned size, unsig
 	channel->headerRequest.request.returnCode = 1;
 	ksceUdcdReqSend(&channel->headerRequest.request);
 	for (;;) {
-		ret = ksceKernelWaitEventFlag(channel->event,
+		ret = sceKernelWaitEventFlag(channel->event,
 					      PCM_EVENT_SENT | PCM_EVENT_DISCONNECTED |
 					      PCM_EVENT_CLOSED | PCM_EVENT_RESET |
 					      PCM_EVENT_SEND_FAILED, SCE_KERNEL_EVF_WAITMODE_OR,
@@ -1641,10 +1641,10 @@ static int writeChannel(unsigned unit, const uint8_t *data, unsigned size, unsig
 			goto clear;
 		if (bits & (PCM_EVENT_DISCONNECTED | PCM_EVENT_CLOSED | PCM_EVENT_RESET | PCM_EVENT_SEND_FAILED))
 			goto failedEvent;
-		ksceKernelClearEventFlag(channel->event, ~PCM_EVENT_SENT);
-		ksceKernelClearEventFlag(channel->event, ~PCM_EVENT_SEND_FAILED);
+		sceKernelClearEventFlag(channel->event, ~PCM_EVENT_SENT);
+		sceKernelClearEventFlag(channel->event, ~PCM_EVENT_SEND_FAILED);
 		ksceUdcdReqSend(&channel->dataRequest);
-		ret = ksceKernelWaitEventFlag(channel->event,
+		ret = sceKernelWaitEventFlag(channel->event,
 					      PCM_EVENT_SENT | PCM_EVENT_DISCONNECTED |
 					      PCM_EVENT_CLOSED | PCM_EVENT_RESET |
 					      PCM_EVENT_SEND_FAILED, SCE_KERNEL_EVF_WAITMODE_OR,
@@ -1682,7 +1682,7 @@ static int writeChannel(unsigned unit, const uint8_t *data, unsigned size, unsig
 		channel->dataRequest.data = channel->sendBuffer;
 		channel->dataRequest.size = header->length;
 		SceCpuForDriver_364E68A4(channel->sendBuffer, PCM_ROUND_CACHE(channel->dataRequest.size));
-		ksceKernelClearEventFlag(channel->event, ~PCM_EVENT_SENT);
+		sceKernelClearEventFlag(channel->event, ~PCM_EVENT_SENT);
 		channel->dataRequest.returnCode = 1;
 		channel->headerRequest.request.returnCode = 1;
 		ksceUdcdReqSend(&channel->headerRequest.request);
@@ -1742,8 +1742,8 @@ static int readChannel(unsigned unit, uint8_t *data, unsigned size, unsigned mod
 		ret = PCM_ERROR_STATE;
 		goto done;
 	}
-	ksceKernelClearEventFlag(channel->event, ~PCM_EVENT_READ);
-	ksceKernelClearEventFlag(channel->event, ~PCM_EVENT_RESERVED);
+	sceKernelClearEventFlag(channel->event, ~PCM_EVENT_READ);
+	sceKernelClearEventFlag(channel->event, ~PCM_EVENT_RESERVED);
 	state = lock();
 	buffer = channel->partial;
 	if (buffer) {
@@ -1846,7 +1846,7 @@ static int readChannel(unsigned unit, uint8_t *data, unsigned size, unsigned mod
 	channel->read = data;
 	unlock(state);
 	for (;;) {
-		ret = ksceKernelWaitEventFlag(channel->event,
+		ret = sceKernelWaitEventFlag(channel->event,
 					      PCM_EVENT_READ | PCM_EVENT_DISCONNECTED |
 					      PCM_EVENT_CLOSED | PCM_EVENT_RESET,
 					      SCE_KERNEL_EVF_WAITMODE_OR, &bits, NULL);
@@ -1892,7 +1892,7 @@ static int readChannel(unsigned unit, uint8_t *data, unsigned size, unsigned mod
 			}
 			channel->read = NULL;
 			channel->readRemaining = 0;
-			ksceKernelSetEventFlag(channel->event, PCM_EVENT_DATA);
+			sceKernelSetEventFlag(channel->event, PCM_EVENT_DATA);
 			receiveHeader();
 			break;
 		}
@@ -1903,14 +1903,14 @@ static int readChannel(unsigned unit, uint8_t *data, unsigned size, unsigned mod
 		if (s.headerBuffer->flags & PCM_HEADER_LAST) {
 			channel->read = NULL;
 			releaseBuffer(buffer);
-			ksceKernelSetEventFlag(channel->event, PCM_EVENT_DATA);
+			sceKernelSetEventFlag(channel->event, PCM_EVENT_DATA);
 			receiveHeader();
 			break;
 		}
 		releaseBuffer(buffer);
-		ksceKernelSetEventFlag(channel->event, PCM_EVENT_DATA);
+		sceKernelSetEventFlag(channel->event, PCM_EVENT_DATA);
 		receiveHeader();
-		ksceKernelClearEventFlag(channel->event, ~PCM_EVENT_READ);
+		sceKernelClearEventFlag(channel->event, ~PCM_EVENT_READ);
 	}
 	ret = copied + size - channel->readRemaining;
 	channel->readRemaining = 0;
@@ -2020,13 +2020,13 @@ int sceUsbPspcmStopDevice(void)
 		ret = ksceUdcdDeactivate();
 		if (ret < 0 && ret != SCE_UDCD_ERROR_INVALID_ARGUMENT)
 			goto done;
-		time = ksceKernelGetSystemTimeLow();
+		time = SceThreadmgrForDriver_47F6DE49();
 		do {
 			sceKernelDelayThread(1000);
 			ret = ksceUdcdStop("USBPSPCommunicationDriver", 0, NULL);
 			if (ret >= 0)
 				break;
-		} while ((unsigned)(ksceKernelGetSystemTimeLow() - time) < 5000000);
+		} while ((unsigned)(SceThreadmgrForDriver_47F6DE49() - time) < 5000000);
 		if (ret < 0 && ret != SCE_UDCD_ERROR_INVALID_ARGUMENT)
 			goto done;
 		ret = ksceUdcdStop("USBDeviceControllerDriver", 0, NULL);

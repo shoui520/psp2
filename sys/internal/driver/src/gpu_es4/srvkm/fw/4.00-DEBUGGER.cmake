@@ -145,31 +145,31 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	strncpy_s
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
 	SceThreadmgrForDriver_1096042E
-	ksceKernelLockMutex
+	sceKernelLockMutex
 	sceKernelExitDeleteThread
-	ksceKernelUnlockMutex
-	ksceKernelStartThread
-	ksceKernelTryLockMutex
+	sceKernelUnlockMutex
+	sceKernelStartThread
+	sceKernelTryLockMutex
 	threadmgrGpuExceptionHandler
-	ksceKernelWaitThreadEnd
-	ksceKernelCreateEventFlag
-	ksceKernelGetSystemTimeLow
+	sceKernelWaitThreadEnd
+	sceKernelCreateEventFlag
+	SceThreadmgrForDriver_47F6DE49
 	sceKernelDelayThread
-	ksceKernelSignalCondAll
-	ksceKernelDeleteEventFlag
+	sceKernelSignalCondAll
+	sceKernelDeleteEventFlag
 	sceKernelGetProcessId
-	ksceKernelDeleteThread
-	ksceKernelDeleteCond
-	ksceKernelCreateThread
-	ksceKernelWaitCond
-	ksceKernelSetEventFlag
-	ksceKernelCreateCond
+	sceKernelDeleteThread
+	sceKernelDeleteCond
+	sceKernelCreateThread
+	sceKernelWaitCond
+	sceKernelSetEventFlag
+	sceKernelCreateCond
 	sceKernelCancelEventFlag
 	sceKernelGetSystemTimeWide
-	ksceKernelCreateMutex
+	sceKernelCreateMutex
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_20C811FA
 	SceSysmemForDriver_24A99FFF

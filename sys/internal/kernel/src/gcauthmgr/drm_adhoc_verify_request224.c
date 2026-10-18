@@ -27,13 +27,13 @@ int GcAuthAdhocVerifyRequest224(const GcAuthAdhocSign224Request *request)
 	default:
 		return (int)0x808a040a;
 	}
-	if (ksceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
 		return (int)0x808a0008;
 	result = (int)0x808a040d;
 	if (GcAuthAdhocVerify224(publicKey, request->digest,
 			request->signature) == 0)
 		result = 0;
-	if (ksceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
 		return (int)0x808a0008;
 	return result;
 }

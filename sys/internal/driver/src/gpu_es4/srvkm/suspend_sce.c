@@ -10,7 +10,7 @@ int CreateSuspendWaitEvent(void)
 {
 	int event;
 
-	event = ksceKernelCreateEventFlag("SceGpuSuspendWait", 0x9000, 0, NULL);
+	event = sceKernelCreateEventFlag("SceGpuSuspendWait", 0x9000, 0, NULL);
 	if (event < 0)
 		return event;
 	suspendWaitEvent = event;
@@ -24,11 +24,11 @@ int sceGpuCancelSuspendWait(void)
 
 int sceGpuSignalSuspendWait(void)
 {
-	return ksceKernelSetEventFlag(suspendWaitEvent, ~0U);
+	return sceKernelSetEventFlag(suspendWaitEvent, ~0U);
 }
 
 int sceGpuWaitSuspend(void)
 {
-	return ksceKernelWaitEventFlag(suspendWaitEvent, ~0U, SCE_KERNEL_EVF_WAITMODE_OR,
+	return sceKernelWaitEventFlag(suspendWaitEvent, ~0U, SCE_KERNEL_EVF_WAITMODE_OR,
 			NULL, NULL);
 }

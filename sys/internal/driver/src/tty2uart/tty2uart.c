@@ -428,7 +428,7 @@ static SceSSize dev_tty_vop_read(SceVopReadArgs *argp)
 	}
 	if (!SceDipswForDriver_A98FC2FD(0xc4))
 		return 0;
-	ret = ksceKernelLockMutex(s_mutex, 1, NULL);
+	ret = sceKernelLockMutex(s_mutex, 1, NULL);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 913, "LockMutex failed (0x%08X)\n", ret);
 		return ret;
@@ -436,12 +436,12 @@ static SceSSize dev_tty_vop_read(SceVopReadArgs *argp)
 	for (i = 0; i != n; i++) {
 		c = SceUartForKernel_4E97D3AD(TTY2_UART);
 		if (c < 0) {
-			ksceKernelUnlockMutex(s_mutex, 1);
+			sceKernelUnlockMutex(s_mutex, 1);
 			return c;
 		}
 		buf[i] = c;
 	}
-	ksceKernelUnlockMutex(s_mutex, 1);
+	sceKernelUnlockMutex(s_mutex, 1);
 	return n;
 }
 
@@ -458,7 +458,7 @@ static SceSSize dev_tty_vop_write(SceVopWriteArgs *argp)
 	controlWrite(buf, n);
 
 	if ((SceDipswForDriver_A98FC2FD(0xc4) || SceDipswForDriver_A98FC2FD(0xc5)) &&
-	    ksceKernelLockMutex(s_mutex, 1, NULL) >= 0) {
+	    sceKernelLockMutex(s_mutex, 1, NULL) >= 0) {
 		for (i = 0; i < n; i++) {
 			if (buf[i] == '\\' && buf[i + 1] == 'n') {
 				i++;
@@ -467,7 +467,7 @@ static SceSSize dev_tty_vop_write(SceVopWriteArgs *argp)
 				SceDebugForDriver_391B74B7("%c", buf[i]);
 			}
 		}
-		ksceKernelUnlockMutex(s_mutex, 1);
+		sceKernelUnlockMutex(s_mutex, 1);
 	}
 	return n;
 }
@@ -557,7 +557,7 @@ int tty2uartModuleStart(SceSize args, void *argp)
 	if (!SceDipswForDriver_A98FC2FD(0xd3))
 		return SCE_KERNEL_START_NO_RESIDENT;
 
-	ret = ksceKernelCreateMutex("SceDeci4pTtyp", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
+	ret = sceKernelCreateMutex("SceDeci4pTtyp", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 677, "CreateMutex failed (0x%08X)\n", ret);
 		return SCE_KERNEL_START_FAILED;

@@ -53,7 +53,7 @@ int GcAuthPcactGetAesDecryptKey(const GcAuthPcactKeyRequest *request)
 	unsigned int index;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
 		return (int)0x808a0306;
 	if (random == NULL || activation == NULL || outputKey == NULL) {
 		result = (int)0x808a0300;
@@ -107,7 +107,7 @@ finish:
 	do {
 		*cursor++ = 0;
 	} while (cursor != (unsigned char *)&gcAuthPcactScratch + 184);
-	if (ksceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
 		result = (int)0x808a0306;
 	return result;
 }
@@ -117,18 +117,18 @@ int GcAuthPcactReadCertificate(GcAuthPcactCertificate *certificate)
 	int permission;
 	int result;
 
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
 	if (ksceIdStorageLookup(0x46, 64, certificate, 232) < 0 ||
 	    ksceIdStorageLookup(0x47, 0, certificate + 1, 0) < 0) {
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		return (int)0x808a080b;
 	}
 	result = (int)0x808a080c;
 	if (GcAuthExecuteKirkCommand(NULL, certificate, 25, 232, 0) == 0)
 		result = 0;
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }
 
@@ -139,7 +139,7 @@ int GcAuthPcactGetCertificate(const GcAuthPcactCertificateRequest *request)
 	unsigned int index;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
 		return (int)0x808a0801;
 	if (output != NULL &&
 	    GcAuthPcactReadCertificate(&gcAuthPcactScratch.certificate) >= 0) {
@@ -153,7 +153,7 @@ int GcAuthPcactGetCertificate(const GcAuthPcactCertificateRequest *request)
 	do {
 		*cursor++ = 0;
 	} while (cursor != (unsigned char *)&gcAuthPcactScratch + 184);
-	if (ksceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
 		result = (int)0x808a0801;
 	return result;
 }
@@ -173,7 +173,7 @@ int GcAuthPsmactCreateChallenge(const GcAuthPsmactChallengeRequest *request)
 	unsigned int index;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
 		return (int)0x808a0801;
 	if (output == NULL || rtcSeconds == NULL || random == NULL) {
 		result = (int)0x808a0800;
@@ -285,7 +285,7 @@ finish:
 	do {
 		*cursor++ = 0;
 	} while (cursor != (unsigned char *)&gcAuthPcactScratch + 184);
-	if (ksceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
 		result = (int)0x808a0801;
 	return result;
 }
@@ -304,7 +304,7 @@ int GcAuthPsmactVerifyActivation(const GcAuthPsmactVerifyRequest *request)
 	unsigned int index;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
 		return (int)0x808a0801;
 	if (record == NULL || activation == NULL || output == NULL) {
 		result = (int)0x808a0800;
@@ -414,7 +414,7 @@ finish:
 	do {
 		*cursor++ = 0;
 	} while (cursor != (unsigned char *)&gcAuthPcactScratch + 184);
-	if (ksceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
 		result = (int)0x808a0801;
 	return result;
 }

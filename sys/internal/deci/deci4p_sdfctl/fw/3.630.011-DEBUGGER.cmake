@@ -59,13 +59,13 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_9421B223
 	SceSysrootForDriver_D56A2F3E
 	SceSysrootForDriver_E541959B
-	ksceKernelWaitEventFlag
-	ksceKernelStartThread
-	ksceKernelCreateEventFlag
-	ksceKernelDeleteEventFlag
-	ksceKernelDeleteThread
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
+	sceKernelWaitEventFlag
+	sceKernelStartThread
+	sceKernelCreateEventFlag
+	sceKernelDeleteEventFlag
+	sceKernelDeleteThread
+	sceKernelCreateThread
+	sceKernelSetEventFlag
 	ksceKernelDisableIntr
 	ksceKernelTriggerSGI
 	ksceKernelRegisterIntrHandler

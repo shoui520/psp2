@@ -223,39 +223,39 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelRegisterIntrHandler
 	ksceKernelEnableIntr
 	ksceKernelReleaseIntrHandler
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
-	ksceKernelFinalizeFastMutex
-	ksceKernelDeleteSema
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelStartThread
-	ksceKernelCreateSema
-	ksceKernelWaitSema
-	ksceKernelWaitThreadEnd
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
+	sceKernelFinalizeFastMutex
+	sceKernelDeleteSema
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelStartThread
+	sceKernelCreateSema
+	sceKernelWaitSema
+	sceKernelWaitThreadEnd
 	SceThreadmgrForDriver_419E6736
-	ksceKernelCreateEventFlag
+	sceKernelCreateEventFlag
 	sceKernelCancelAlarm
-	ksceKernelGetSystemTimeLow
+	SceThreadmgrForDriver_47F6DE49
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelGetThreadId
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
-	ksceKernelPollEventFlag
+	sceKernelClearEventFlag
+	sceKernelGetThreadId
+	lockFastMutex
+	sceKernelDeleteEventFlag
+	sceKernelPollEventFlag
 	sceKernelCancelSema
 	sceKernelGetProcessId
-	ksceKernelDeleteThread
-	ksceKernelInitializeFastMutex
-	ksceKernelNotifyCallback
-	ksceKernelRegisterTimer
-	ksceKernelCreateThread
-	ksceKernelSignalSema
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
+	sceKernelDeleteThread
+	sceKernelInitializeFastMutex
+	sceKernelNotifyCallback
+	SceThreadmgrForDriver_C58DF384
+	sceKernelCreateThread
+	sceKernelSignalSema
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
 	sceKernelCancelEventFlag
 	sceKernelGetSystemTimeWide
-	ksceKernelCreateMutex
+	sceKernelCreateMutex
 	ksceIoRemove
 	ksceIoWrite
 	ksceIoGetstatByFd

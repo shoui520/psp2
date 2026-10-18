@@ -10,16 +10,16 @@ int StorageUtilReadMbr(SceMbr *mbr)
 	SceUID fd;
 	int permission, result;
 
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
 	if (!mbr) {
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		return (int)0x800f0216;
 	}
 	fd = StorageUtileGetPartitionFd(255, 1);
 	if (fd < 0) {
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		updateLastResult = 0x80100ff;
 		return fd;
 	}
@@ -30,7 +30,7 @@ int StorageUtilReadMbr(SceMbr *mbr)
 		updateLastResult = 0x80100ff;
 	}
 	ksceIoClose(fd);
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }
 
@@ -40,16 +40,16 @@ int StorageUtilWriteMbr(const SceMbr *mbr)
 	SceUID fd;
 	int permission, result;
 
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
 	if (!mbr) {
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		return (int)0x800f0216;
 	}
 	fd = StorageUtileGetPartitionFd(255, 1);
 	if (fd < 0) {
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		updateLastResult = 0x80100ff;
 		return fd;
 	}
@@ -64,6 +64,6 @@ int StorageUtilWriteMbr(const SceMbr *mbr)
 	}
 	ksceIoSync(path, 0);
 	ksceIoClose(fd);
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return 0;
 }

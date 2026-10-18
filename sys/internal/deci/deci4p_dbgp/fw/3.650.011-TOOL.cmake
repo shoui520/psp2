@@ -211,59 +211,59 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelGetModuleInfo
 	ksceIoGetPUIDFdListForDebugger
 	ksceIoGetFileInfo
-	ksceKernelChangeThreadSuspendStatus
+	SceThreadmgrForDriver_04C6764B
 	sceKernelGetLwMutexInfoAllProc
 	SceThreadmgrForDriver_09346D1A
-	ksceKernelWaitEventFlag
+	sceKernelWaitEventFlag
 	sceKernelExitThread
 	SceThreadmgrForDriver_0EB0ABF0
-	ksceKernelFinalizeFastMutex
+	sceKernelFinalizeFastMutex
 	SceThreadmgrForDriver_12FC0FAB
-	ksceKernelDeleteSema
+	sceKernelDeleteSema
 	SceThreadmgrForDriver_20C228E4
-	ksceKernelStartThread
+	sceKernelStartThread
 	sceKernelGetMutexInfoAllProc
-	ksceKernelCreateSema
-	ksceKernelWaitSema
-	ksceKernelWaitThreadEnd
-	ksceKernelCreateEventFlag
+	sceKernelCreateSema
+	sceKernelWaitSema
+	sceKernelWaitThreadEnd
+	sceKernelCreateEventFlag
 	SceThreadmgrForDriver_477F7C8A
 	SceThreadmgrForDriver_47F26712
 	SceThreadmgrForDriver_49A0B679
-	ksceKernelClearEventFlag
-	ksceKernelGetThreadCpuRegisters
+	sceKernelClearEventFlag
+	SceThreadmgrForDriver_5022689D
 	SceThreadmgrForDriver_555CA6BB
-	ksceKernelGetThreadId
-	ksceKernelGetVfpRegisterForDebugger
+	sceKernelGetThreadId
+	SceThreadmgrForDriver_5CDE387A
 	SceThreadmgrForDriver_64E89DE9
 	sceKernelGetRWLockInfoAllProc
 	SceThreadmgrForDriver_6C2E3A49
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
+	lockFastMutex
+	sceKernelDeleteEventFlag
 	sceKernelGetProcessId
-	ksceKernelIsThreadDebugSuspended
-	ksceKernelDeleteThread
-	ksceKernelInitializeFastMutex
+	SceThreadmgrForDriver_A0B1AB21
+	sceKernelDeleteThread
+	sceKernelInitializeFastMutex
 	sceKernelGetWaitingThreadList
 	SceThreadmgrForDriver_C327CA7C
-	ksceKernelCreateThread
+	sceKernelCreateThread
 	SceThreadmgrForDriver_CA704239
 	SceThreadmgrForDriver_CBA7FAAA
-	ksceKernelSignalSema
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
+	sceKernelSignalSema
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
 	SceThreadmgrForDriver_E0C7BCBB
-	ksceKernelEnqueueWorkQueue
+	sceKernelScheduleWorkTask
 	SceThreadmgrForDriver_E9E50096
-	ksceKernelGetThreadIdList
-	ksceKernelDebugResumeThread
+	sceKernelGetThreadIdList
+	sceKernelDebugResumeThread
 	SceThreadmgrForDriver_F2C9DC97
-	ksceKernelGetUserThreadId
+	SceThreadmgrForDriver_F311808F
 	sceKernelGetSystemTimeWide
-	ksceKernelDebugSuspendThread
+	sceKernelDebugSuspendThread
 	SceThreadmgrForDriver_FD87586C
 	SceThreadmgrForDriver_FF8DA217
-	ksceKernelGetThreadContextInfo
+	SceThreadmgrForKernel_6C1F092F
 	ksceKernelIsIntrAllowedInCurrentContext
 	ksceExcpmgrRegisterHandler
 	sceKernelInitialHandlerDebugDabtCfunc

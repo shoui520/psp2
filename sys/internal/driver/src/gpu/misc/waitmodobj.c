@@ -99,7 +99,7 @@ int sceGpuWaitModObjRemove(MODIFY_SYNC_OP_INFO *psModSyncOpInfo)
 		entry->psModSyncOpInfo->ui32WaitState--;
 		OSFreeMem(entry);
 		/* Native removal signals the first word, unlike the poll callback. */
-		ksceKernelSetEventFlag(waitEventFlag,
+		sceKernelSetEventFlag(waitEventFlag,
 				(unsigned)psModSyncOpInfo->hResItem);
 		ret = 0;
 	} else {

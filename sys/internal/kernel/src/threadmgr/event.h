@@ -165,7 +165,7 @@ uint32_t setEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t u
 uint32_t pulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t userData,
 				      uint32_t arg, ThreadmgrEvent *event);
 int sceKernelEventObjectInit(SceUID eventId, uint32_t attr, uint64_t userData, uint32_t pattern);
-int ksceKernelSetEvent(SceUID eventId, uint32_t pattern, uint64_t userData);
-int ksceKernelClearEvent(SceUID eventId, uint32_t keep);
+int sceKernelSetEvent(SceUID eventId, uint32_t pattern, uint64_t userData);
+int sceKernelClearEvent(SceUID eventId, uint32_t keep);
 
 #endif

@@ -51,8 +51,8 @@ PVRSRV_ERROR PollForValueKM_SGXPower(volatile IMG_UINT32 *pui32LinMemAddr,
 		if ((*pui32LinMemAddr & ui32Mask) == ui32Value)
 			return PVRSRV_OK;
 		/* SCE OSWaitus inline; the platform clock is in microseconds. */
-		ui32Start = ksceKernelGetSystemTimeLow();
-		while ((IMG_UINT32)(ksceKernelGetSystemTimeLow() - ui32Start) < 50)
+		ui32Start = SceThreadmgrForDriver_47F6DE49();
+		while ((IMG_UINT32)(SceThreadmgrForDriver_47F6DE49() - ui32Start) < 50)
 			;
 	}
 	return PVRSRV_ERROR_TIMEOUT;

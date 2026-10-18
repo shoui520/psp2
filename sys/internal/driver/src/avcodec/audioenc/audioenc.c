@@ -90,7 +90,7 @@ int initializeAudioenc(void)
 	audioencResident.processStorage = -1;
 	audioencResident.owners[0] = -1;
 	audioencResident.manager.maxEncoders = 1;
-	ret = ksceKernelInitializeFastMutex((SceKernelFastMutex *)&audioencResident.mutex,
+	ret = sceKernelInitializeFastMutex((SceKernelFastMutex *)&audioencResident.mutex,
 					  "SceAudioencResident", 0x8000, NULL);
 	if (ret < 0)
 		return ret;
@@ -152,7 +152,7 @@ int _sceAudioencProcessCreateEntry(SceUID pid)
 				external->pChannels[channel].encoderIndex = -1;
 			}
 		}
-		ret = ksceKernelInitializeFastMutex((SceKernelFastMutex *)&process->mutexes[codec],
+		ret = sceKernelInitializeFastMutex((SceKernelFastMutex *)&process->mutexes[codec],
 						  audioencMutexNames[codec], 0x8000, NULL);
 		if (ret < 0)
 			break;
@@ -184,7 +184,7 @@ int _sceAudioencProcessExitEntry(SceUID pid)
 		ret = _audioencInternalExitLibrary(pid, &process->external.managers[codec], 1, 0);
 		if (ret < 0)
 			status = ret;
-		ret = ksceKernelFinalizeFastMutex((SceKernelFastMutex *)&process->mutexes[codec]);
+		ret = sceKernelFinalizeFastMutex((SceKernelFastMutex *)&process->mutexes[codec]);
 		if (ret < 0)
 			status = ret;
 	}
@@ -205,7 +205,7 @@ int _audioencSetResidentEncoderOwner(unsigned int encoder)
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(encoder == 0, &residentOwnerSet, __builtin_return_address(0));
 #endif
-	audioencResident.owners[encoder] = ksceKernelGetProcessId();
+	audioencResident.owners[encoder] = sceKernelGetProcessId();
 	return 0;
 }
 
@@ -276,11 +276,11 @@ int sceAudioencInitLibraryForUser(SceUInt32 codecType, SceAudioencInitParam *use
 		goto unlock;
 	}
 	manager = &process->internal.managers[index];
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)manager->pMutex);
+	ret = lockFastMutex((SceKernelFastMutex *)manager->pMutex);
 	if (ret < 0)
 		goto unlock;
 	ret = _audioencInternalInitLibrary(manager, &param, 1);
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)manager->pMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)manager->pMutex);
 	if (ret >= 0) {
 #if FW_DEBUG
 		SceDebugForDriver_35A35322(1, &copyOutInfoSource, caller);
@@ -331,10 +331,10 @@ int sceAudioencTermLibraryForUser(SceUInt32 codecType)
 		goto unlock;
 	}
 	manager = &process->internal.managers[index];
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)manager->pMutex);
+	ret = lockFastMutex((SceKernelFastMutex *)manager->pMutex);
 	if (ret >= 0) {
 		ret = _audioencInternalTermLibrary(manager, 1);
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)manager->pMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)manager->pMutex);
 	}
 unlock:
 	_unlockProcessSuspendCore();
@@ -626,10 +626,10 @@ int sceAudioencCreateEncoderForUser(SceAudioencCtrl *userCtrl,
 		}
 		manager = &process->internal.managers[index];
 	}
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)manager->pMutex);
+	ret = lockFastMutex((SceKernelFastMutex *)manager->pMutex);
 	if (ret >= 0) {
 		ret = _audioencInternalCreateEncoder(manager, &ctrl, 0, 0, resident);
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)manager->pMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)manager->pMutex);
 		if (ret >= 0)
 			ret = _copyOutSceAudioencCtrl(userCtrl, (SceAudioencInfo *)userInfo,
 						    (SceAudioencOptInfo *)userOptInfo, &ctrl);
@@ -781,10 +781,10 @@ int sceAudioencCreateEncoderResidentForUser(SceAudioencCtrl *userCtrl,
 #else
 	(void)process;
 #endif
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)audioencResident.manager.pMutex);
+	ret = lockFastMutex((SceKernelFastMutex *)audioencResident.manager.pMutex);
 	if (ret >= 0) {
 		ret = _audioencInternalCreateEncoder(&audioencResident.manager, &ctrl, 0, 0, 1);
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)audioencResident.manager.pMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)audioencResident.manager.pMutex);
 		if (ret >= 0)
 			ret = _copyOutSceAudioencCtrl(userCtrl, userInfo, userOptInfo, &ctrl);
 	}
@@ -949,10 +949,10 @@ int sceAudioencCreateEncoderExternalForUser(SceAudioencCtrl *userCtrl,
 		goto unlock;
 	}
 	manager = &process->external.managers[index];
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)manager->pMutex);
+	ret = lockFastMutex((SceKernelFastMutex *)manager->pMutex);
 	if (ret >= 0) {
 		ret = _audioencInternalCreateEncoder(manager, &ctrl, context, contextSize, 0);
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)manager->pMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)manager->pMutex);
 		if (ret >= 0)
 			ret = _copyOutSceAudioencCtrl(userCtrl, userInfo, userOptInfo, &ctrl);
 	}
@@ -1117,10 +1117,10 @@ int sceAudioencDeleteEncoderForUser(SceAudioencCtrl *userCtrl)
 		ret = SCE_AUDIOENC_ERROR_NOT_HANDLE_IN_USE;
 		goto unlock;
 	}
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)manager->pMutex);
+	ret = lockFastMutex((SceKernelFastMutex *)manager->pMutex);
 	if (ret >= 0) {
 		ret = _audioencInternalDeleteEncoder(manager, &ctrl, 0);
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)manager->pMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)manager->pMutex);
 		if (ret >= 0)
 			ret = _copyOutSceAudioencCtrl(userCtrl, userInfo, userOptInfo, &ctrl);
 	}
@@ -1247,10 +1247,10 @@ int sceAudioencDeleteEncoderResidentForUser(SceAudioencCtrl *userCtrl)
 		ret = SCE_AUDIOENC_ERROR_NOT_HANDLE_IN_USE;
 		goto unlock;
 	}
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)audioencResident.manager.pMutex);
+	ret = lockFastMutex((SceKernelFastMutex *)audioencResident.manager.pMutex);
 	if (ret >= 0) {
 		ret = _audioencInternalDeleteEncoder(&audioencResident.manager, &ctrl, 0);
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)audioencResident.manager.pMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)audioencResident.manager.pMutex);
 		if (ret >= 0)
 			ret = _copyOutSceAudioencCtrl(userCtrl, userInfo, userOptInfo, &ctrl);
 	}
@@ -1396,10 +1396,10 @@ int sceAudioencDeleteEncoderExternalForUser(SceAudioencCtrl *userCtrl,
 		ret = SCE_AUDIOENC_ERROR_NOT_HANDLE_IN_USE;
 		goto unlock;
 	}
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)manager->pMutex);
+	ret = lockFastMutex((SceKernelFastMutex *)manager->pMutex);
 	if (ret >= 0) {
 		ret = _audioencInternalDeleteEncoder(manager, &ctrl, (SceUIntVAddr *)context);
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)manager->pMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)manager->pMutex);
 		if (ret >= 0)
 			ret = _copyOutSceAudioencCtrl(userCtrl, userInfo, userOptInfo, &ctrl);
 	}

@@ -139,7 +139,7 @@ int sceCodecEngineOpenUnmapMemBlockForUser(void *base, SceSize size)
 		ret = (int)0x80600000;
 		goto unlockProcess;
 	}
-	ret = ksceKernelLockFastMutex(mutex);
+	ret = lockFastMutex(mutex);
 	if (ret < 0)
 		goto unlockProcess;
 	guid = SceSysmemForDriver_56A13E90(&g_codecEngineMemoryClass, "SceCodecEngineMemory", (SceObjectBase **)&memory);
@@ -252,7 +252,7 @@ int sceCodecEngineOpenUnmapMemBlockForUser(void *base, SceSize size)
 close:
 	sceGUIDClose(guid);
 unlock:
-	ksceKernelUnlockFastMutex(mutex);
+	sceKernelUnlockFastMutex(mutex);
 unlockProcess:
 	_unlockProcessSuspendCore();
 leave:
@@ -279,7 +279,7 @@ int _closeUnmapMemBlock(SceUID puid)
 		ret = (int)0x80600000;
 		goto unlockProcess;
 	}
-	ret = ksceKernelLockFastMutex(mutex);
+	ret = lockFastMutex(mutex);
 	if (ret < 0)
 		goto unlockProcess;
 	memory = NULL;
@@ -330,7 +330,7 @@ int _closeUnmapMemBlock(SceUID puid)
 #endif
 	ret = _closeUnmapMemBlockCore(0, entry);
 unlock:
-	ksceKernelUnlockFastMutex(mutex);
+	sceKernelUnlockFastMutex(mutex);
 unlockProcess:
 	_unlockProcessSuspendCore();
 leave:
@@ -367,7 +367,7 @@ void *sceCodecEngineAllocMemoryFromUnmapMemBlockForUser(SceUID puid,
 		goto leave;
 	}
 	mutex = _sceCodecEngineGetMutex(0);
-	if (!mutex || ksceKernelLockFastMutex(mutex) < 0) {
+	if (!mutex || lockFastMutex(mutex) < 0) {
 		result = 0;
 		goto unlockProcess;
 	}
@@ -407,7 +407,7 @@ void *sceCodecEngineAllocMemoryFromUnmapMemBlockForUser(SceUID puid,
 	if (memory)
 		result &= ~(sceGUIDReleaseObject(entry->guid) >> 31);
 unlock:
-	ksceKernelUnlockFastMutex(mutex);
+	sceKernelUnlockFastMutex(mutex);
 unlockProcess:
 	_unlockProcessSuspendCore();
 leave:
@@ -435,7 +435,7 @@ int sceCodecEngineFreeMemoryFromUnmapMemBlockForUser(SceUID puid, void *address)
 		ret = (int)0x80600000;
 		goto unlockProcess;
 	}
-	ret = ksceKernelLockFastMutex(mutex);
+	ret = lockFastMutex(mutex);
 	if (ret < 0)
 		goto unlockProcess;
 	memory = NULL;
@@ -473,7 +473,7 @@ int sceCodecEngineFreeMemoryFromUnmapMemBlockForUser(SceUID puid, void *address)
 			ret = error;
 	}
 unlock:
-	ksceKernelUnlockFastMutex(mutex);
+	sceKernelUnlockFastMutex(mutex);
 unlockProcess:
 	_unlockProcessSuspendCore();
 leave:
@@ -497,7 +497,7 @@ int sceCodecEngineRegisterUnmapMemory(SceUID pid, void *address, SceSize size)
 	mutex = _sceCodecEngineGetMutex(pid);
 	if (!mutex)
 		return (int)0x80600000;
-	ret = ksceKernelLockFastMutex(mutex);
+	ret = lockFastMutex(mutex);
 	if (ret < 0)
 		return ret;
 	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
@@ -539,7 +539,7 @@ checkResult:
 	}
 	ret = (int)0x80600000;
 unlock:
-	ksceKernelUnlockFastMutex(mutex);
+	sceKernelUnlockFastMutex(mutex);
 	return ret;
 }
 
@@ -559,7 +559,7 @@ int sceCodecEngineUnregisterUnmapMemory(SceUID pid, void *address, SceSize size)
 	mutex = _sceCodecEngineGetMutex(pid);
 	if (!mutex)
 		return (int)0x80600000;
-	ret = ksceKernelLockFastMutex(mutex);
+	ret = lockFastMutex(mutex);
 	if (ret < 0)
 		return ret;
 	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
@@ -601,7 +601,7 @@ checkResult:
 	}
 	ret = (int)0x80600000;
 unlock:
-	ksceKernelUnlockFastMutex(mutex);
+	sceKernelUnlockFastMutex(mutex);
 	return ret;
 }
 
@@ -617,7 +617,7 @@ int sceCodecEngineIsUnmapMemory(SceUID pid, const void *address, SceSize size)
 	mutex = _sceCodecEngineGetMutex(pid);
 	if (!mutex)
 		return (int)0x80600000;
-	ret = ksceKernelLockFastMutex(mutex);
+	ret = lockFastMutex(mutex);
 	if (ret < 0)
 		return ret;
 	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
@@ -656,7 +656,7 @@ int sceCodecEngineIsUnmapMemory(SceUID pid, const void *address, SceSize size)
 		}
 	}
 unlock:
-	ksceKernelUnlockFastMutex(mutex);
+	sceKernelUnlockFastMutex(mutex);
 	return ret;
 }
 
@@ -673,7 +673,7 @@ int sceCodecEngineUnmapUserVAtoPA(SceUID pid, const void *address, uintptr_t *ph
 	mutex = _sceCodecEngineGetMutex(pid);
 	if (!mutex)
 		return (int)0x80600000;
-	ret = ksceKernelLockFastMutex(mutex);
+	ret = lockFastMutex(mutex);
 	if (ret < 0)
 		return ret;
 	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
@@ -712,7 +712,7 @@ int sceCodecEngineUnmapUserVAtoPA(SceUID pid, const void *address, uintptr_t *ph
 	}
 	ret = (int)0x80600000;
 unlock:
-	ksceKernelUnlockFastMutex(mutex);
+	sceKernelUnlockFastMutex(mutex);
 	return ret;
 }
 
@@ -729,7 +729,7 @@ int sceCodecEngineUnmapPAtoUserVA(SceUID pid, uintptr_t address, void **userAddr
 	mutex = _sceCodecEngineGetMutex(pid);
 	if (!mutex)
 		return (int)0x80600000;
-	ret = ksceKernelLockFastMutex(mutex);
+	ret = lockFastMutex(mutex);
 	if (ret < 0)
 		return ret;
 	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
@@ -768,7 +768,7 @@ int sceCodecEngineUnmapPAtoUserVA(SceUID pid, uintptr_t address, void **userAddr
 	}
 	ret = (int)0x80600000;
 unlock:
-	ksceKernelUnlockFastMutex(mutex);
+	sceKernelUnlockFastMutex(mutex);
 	return ret;
 }
 
@@ -785,7 +785,7 @@ int sceCodecEngineUnmapUserVAtoKernelVA(SceUID pid, const void *address, void **
 	mutex = _sceCodecEngineGetMutex(pid);
 	if (!mutex)
 		return (int)0x80600000;
-	ret = ksceKernelLockFastMutex(mutex);
+	ret = lockFastMutex(mutex);
 	if (ret < 0)
 		return ret;
 	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
@@ -824,7 +824,7 @@ int sceCodecEngineUnmapUserVAtoKernelVA(SceUID pid, const void *address, void **
 	}
 	ret = (int)0x80600000;
 unlock:
-	ksceKernelUnlockFastMutex(mutex);
+	sceKernelUnlockFastMutex(mutex);
 	return ret;
 }
 
@@ -841,7 +841,7 @@ int sceCodecEngineUnmapKernelVAtoUserVA(SceUID pid, const void *address, void **
 	mutex = _sceCodecEngineGetMutex(pid);
 	if (!mutex)
 		return (int)0x80600000;
-	ret = ksceKernelLockFastMutex(mutex);
+	ret = lockFastMutex(mutex);
 	if (ret < 0)
 		return ret;
 	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
@@ -880,7 +880,7 @@ int sceCodecEngineUnmapKernelVAtoUserVA(SceUID pid, const void *address, void **
 	}
 	ret = (int)0x80600000;
 unlock:
-	ksceKernelUnlockFastMutex(mutex);
+	sceKernelUnlockFastMutex(mutex);
 	return ret;
 }
 
@@ -896,7 +896,7 @@ int _closeUnmapMemBlockAll(SceUID pid)
 	mutex = _sceCodecEngineGetMutex(pid);
 	if (!mutex)
 		return (int)0x80600000;
-	ret = ksceKernelLockFastMutex(mutex);
+	ret = lockFastMutex(mutex);
 	if (ret < 0)
 		return ret;
 	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
@@ -943,6 +943,6 @@ int _closeUnmapMemBlockAll(SceUID pid)
 			ret = error;
 	}
 	ret &= ret >> 31;
-	ksceKernelUnlockFastMutex(mutex);
+	sceKernelUnlockFastMutex(mutex);
 	return ret;
 }

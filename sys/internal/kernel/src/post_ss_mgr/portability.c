@@ -239,13 +239,13 @@ int SceSblPostSsMgrForDriver_C977601E(void)
 {
 	int ret;
 
-	if (ksceKernelLockFastMutex(&g_postSsMgrKeysMutex) != 0)
+	if (lockFastMutex(&g_postSsMgrKeysMutex) != 0)
 		return SCE_SBL_ERROR_KEYS_LOCK;
 	if (postSsMgrGetKeySetA() != NULL && postSsMgrGetKeySetB() != NULL) {
-		ret = ksceKernelUnlockFastMutex(&g_postSsMgrKeysMutex);
+		ret = sceKernelUnlockFastMutex(&g_postSsMgrKeysMutex);
 		return ret < 0 ? ret : 0;
 	}
-	ksceKernelUnlockFastMutex(&g_postSsMgrKeysMutex);
+	sceKernelUnlockFastMutex(&g_postSsMgrKeysMutex);
 	return SCE_SBL_ERROR_KEYS_UNAVAILABLE;
 }
 
@@ -254,7 +254,7 @@ int SceSblPostSsMgrForDriver_4100B9E9(void)
 {
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&g_postSsMgrKeysMutex);
+	ret = lockFastMutex(&g_postSsMgrKeysMutex);
 	if (ret < 0)
 		return ret;
 	ksceSblSsMemset(g_keySetA0, 0xff, sizeof(g_keySetA0));
@@ -267,7 +267,7 @@ int SceSblPostSsMgrForDriver_4100B9E9(void)
 	g_keySetB = NULL;
 	SceCpuForDriver_103872A5(g_keySetB0, sizeof(g_keySetB0));
 	SceCpuForDriver_103872A5(g_keySetB1, sizeof(g_keySetB1));
-	ret = ksceKernelUnlockFastMutex(&g_postSsMgrKeysMutex);
+	ret = sceKernelUnlockFastMutex(&g_postSsMgrKeysMutex);
 	return ret < 0 ? ret : 0;
 }
 
@@ -279,15 +279,15 @@ int SceSblPostSsMgrForDriver_2C463AF1(SceUInt32 type, SceSize size, void *key)
 
 	if (type - 1 >= 3 || size != POST_SS_KEY_SIZE || key == NULL)
 		return SCE_SBL_ERROR_KEYS_INVALID_ARGUMENT;
-	if (ksceKernelLockFastMutex(&g_postSsMgrKeysMutex) != 0)
+	if (lockFastMutex(&g_postSsMgrKeysMutex) != 0)
 		return SCE_SBL_ERROR_KEYS_LOCK;
 	keys = postSsMgrGetKeySetA();
 	if (keys != NULL) {
 		*(ScePostSsKey *)key = *(const ScePostSsKey *)(keys + g_keySetAOffsets[type - 1]);
-		ret = ksceKernelUnlockFastMutex(&g_postSsMgrKeysMutex);
+		ret = sceKernelUnlockFastMutex(&g_postSsMgrKeysMutex);
 		return ret < 0 ? ret : 0;
 	}
-	ksceKernelUnlockFastMutex(&g_postSsMgrKeysMutex);
+	sceKernelUnlockFastMutex(&g_postSsMgrKeysMutex);
 	return SCE_SBL_ERROR_KEYS_UNAVAILABLE;
 }
 
@@ -311,7 +311,7 @@ int SceSblPostSsMgrForDriver_CB5436BD(SceUInt32 type, SceSize size, void *key)
 	}
 	if (key == NULL)
 		return SCE_SBL_ERROR_KEYS_INVALID_ARGUMENT;
-	if (ksceKernelLockFastMutex(&g_postSsMgrKeysMutex) != 0)
+	if (lockFastMutex(&g_postSsMgrKeysMutex) != 0)
 		return SCE_SBL_ERROR_KEYS_LOCK;
 	if (setB) {
 		keys = postSsMgrGetKeySetB();
@@ -325,11 +325,11 @@ int SceSblPostSsMgrForDriver_CB5436BD(SceUInt32 type, SceSize size, void *key)
 		offset = g_keySetAKeyOffsets[type] + 0x80;
 	}
 	memcpy(key, keys + offset, size);
-	ret = ksceKernelUnlockFastMutex(&g_postSsMgrKeysMutex);
+	ret = sceKernelUnlockFastMutex(&g_postSsMgrKeysMutex);
 	return ret < 0 ? ret : 0;
 
 unavailable:
-	ksceKernelUnlockFastMutex(&g_postSsMgrKeysMutex);
+	sceKernelUnlockFastMutex(&g_postSsMgrKeysMutex);
 	return SCE_SBL_ERROR_KEYS_UNAVAILABLE;
 }
 
@@ -354,15 +354,15 @@ int SceSblPostSsMgrForDriver_C6684F7E(void *keys)
 
 	if (keys == NULL)
 		return SCE_SBL_ERROR_KEYS_INVALID_ARGUMENT;
-	if (ksceKernelLockFastMutex(&g_postSsMgrCloudMutex) != 0)
+	if (lockFastMutex(&g_postSsMgrCloudMutex) != 0)
 		return SCE_SBL_ERROR_KEYS_LOCK;
 	ret = postSsMgrLoadCloudKeys();
 	if (ret < 0) {
-		ksceKernelUnlockFastMutex(&g_postSsMgrCloudMutex);
+		sceKernelUnlockFastMutex(&g_postSsMgrCloudMutex);
 		return ret;
 	}
 	memcpy(keys, g_cloudKeys, POST_SS_CLOUD_KEYS_SIZE);
-	return ksceKernelUnlockFastMutex(&g_postSsMgrCloudMutex);
+	return sceKernelUnlockFastMutex(&g_postSsMgrCloudMutex);
 }
 
 /* the cloud backup key pair of index (version 1 only) */
@@ -373,11 +373,11 @@ int SceSblPostSsMgrForDriver_739C981E(SceUInt32 version, SceUInt32 index, void *
 
 	if (version != 1 || index > 1 || keys == NULL)
 		return SCE_SBL_ERROR_KEYS_INVALID_ARGUMENT;
-	if (ksceKernelLockFastMutex(&g_postSsMgrCloudMutex) != 0)
+	if (lockFastMutex(&g_postSsMgrCloudMutex) != 0)
 		return SCE_SBL_ERROR_KEYS_LOCK;
 	ret = postSsMgrLoadCloudKeys();
 	if (ret < 0) {
-		ksceKernelUnlockFastMutex(&g_postSsMgrCloudMutex);
+		sceKernelUnlockFastMutex(&g_postSsMgrCloudMutex);
 		return ret;
 	}
 	key = g_cloudKeyTable[index];
@@ -387,7 +387,7 @@ int SceSblPostSsMgrForDriver_739C981E(SceUInt32 version, SceUInt32 index, void *
 	key = g_cloudKeyTable[index];
 	*(SceUInt32 *)((char *)keys + 0x100) = *(const SceUInt32 *)(key + 0x100);
 	*(SceUInt32 *)((char *)keys + 0x204) = *(const SceUInt32 *)(key + 0x204);
-	return ksceKernelUnlockFastMutex(&g_postSsMgrCloudMutex);
+	return sceKernelUnlockFastMutex(&g_postSsMgrCloudMutex);
 }
 
 /* wipe the cloud backup keys */
@@ -395,7 +395,7 @@ int SceSblPostSsMgrForDriver_2BF04B8E(void)
 {
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&g_postSsMgrCloudMutex);
+	ret = lockFastMutex(&g_postSsMgrCloudMutex);
 	if (ret < 0)
 		return ret;
 	if (g_cloudKeys != NULL) {
@@ -407,7 +407,7 @@ int SceSblPostSsMgrForDriver_2BF04B8E(void)
 	}
 	if (g_cloudKeyTable != NULL)
 		g_cloudKeyTable = NULL;
-	ret = ksceKernelUnlockFastMutex(&g_postSsMgrCloudMutex);
+	ret = sceKernelUnlockFastMutex(&g_postSsMgrCloudMutex);
 	return ret < 0 ? ret : 0;
 }
 

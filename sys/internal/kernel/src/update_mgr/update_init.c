@@ -11,19 +11,19 @@ unsigned int UpdateUtilInit(void)
 	char name[32];
 	int index, result;
 
-	result = ksceKernelInitializeFastMutex((SceKernelFastMutex *)&updateMutex,
+	result = sceKernelInitializeFastMutex((SceKernelFastMutex *)&updateMutex,
 		"SceSblUpdateMgr", 0, NULL);
 	if (result)
 		return result;
-	result = ksceKernelInitializeFastMutex((SceKernelFastMutex *)&updateTableMutex,
+	result = sceKernelInitializeFastMutex((SceKernelFastMutex *)&updateTableMutex,
 		"SceSblUpdateMgrTable", 0, NULL);
 	if (result)
 		return result;
-	result = ksceKernelInitializeFastMutex((SceKernelFastMutex *)&updateMbrMutex,
+	result = sceKernelInitializeFastMutex((SceKernelFastMutex *)&updateMbrMutex,
 		"SceSblUpdateMgrMbr", 0, NULL);
 	if (result)
 		return result;
-	result = ksceKernelInitializeFastMutex((SceKernelFastMutex *)&updateComMutex,
+	result = sceKernelInitializeFastMutex((SceKernelFastMutex *)&updateComMutex,
 		"SceSblUpdateMgrCom", 0, NULL);
 	if (result)
 		return result;
@@ -33,7 +33,7 @@ unsigned int UpdateUtilInit(void)
 	index = 0;
 	do {
 		snprintf(name, sizeof(name), "SceSblUpdateMgrNode%d", index);
-		result = ksceKernelInitializeFastMutex(
+		result = sceKernelInitializeFastMutex(
 			(SceKernelFastMutex *)&node->mutex, name, 0, NULL);
 		if (result)
 			return result;

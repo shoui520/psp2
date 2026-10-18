@@ -41,7 +41,7 @@ static int pfsCryptEngineThread(SceSize args, void *argp)
 	int ret;
 
 	for (;;) {
-		ret = ksceKernelLockMutex(g_pfsCryptEngineTodoMtx, 1, NULL);
+		ret = sceKernelLockMutex(g_pfsCryptEngineTodoMtx, 1, NULL);
 		if (ret != 0)
 			return ret;
 		for (;;) {
@@ -53,7 +53,7 @@ static int pfsCryptEngineThread(SceSize args, void *argp)
 				ret = 0;
 				goto out;
 			}
-			ret = ksceKernelWaitCond(g_pfsCryptEngineTodoCnd, NULL);
+			ret = sceKernelWaitCond(g_pfsCryptEngineTodoCnd, NULL);
 			if (ret != 0)
 				goto out;
 		}
@@ -62,26 +62,26 @@ static int pfsCryptEngineThread(SceSize args, void *argp)
 			ret = 0;
 			goto out;
 		}
-		ksceKernelUnlockMutex(g_pfsCryptEngineTodoMtx, 1);
+		sceKernelUnlockMutex(g_pfsCryptEngineTodoMtx, 1);
 
 		pfsCryptEngineProcess(job);
 
-		ret = ksceKernelLockMutex(g_pfsCryptEngineDoneMtx, 1, NULL);
+		ret = sceKernelLockMutex(g_pfsCryptEngineDoneMtx, 1, NULL);
 		if (ret != 0)
 			return ret;
 		pfsListAppend(&g_pfsCryptEngineDone, &job->link);
 		if (job->waiting) {
 			job->waiting = 0;
-			ret = ksceKernelSignalCondTo(g_pfsCryptEngineDoneCnd, job->thread);
+			ret = sceKernelSignalCondTo(g_pfsCryptEngineDoneCnd, job->thread);
 			if (ret != 0) {
-				ksceKernelUnlockMutex(g_pfsCryptEngineDoneMtx, 1);
+				sceKernelUnlockMutex(g_pfsCryptEngineDoneMtx, 1);
 				return ret;
 			}
 		}
-		ksceKernelUnlockMutex(g_pfsCryptEngineDoneMtx, 1);
+		sceKernelUnlockMutex(g_pfsCryptEngineDoneMtx, 1);
 	}
 out:
-	ksceKernelUnlockMutex(g_pfsCryptEngineTodoMtx, 1);
+	sceKernelUnlockMutex(g_pfsCryptEngineTodoMtx, 1);
 	return ret;
 }
 
@@ -89,19 +89,19 @@ int pfsCryptEngineInit(void)
 {
 	SceUID ret;
 
-	ret = ksceKernelCreateMutex("ScePfsCryptEngineTodoMtx", PFS_MUTEX_ATTR | 2, 0, NULL);
+	ret = sceKernelCreateMutex("ScePfsCryptEngineTodoMtx", PFS_MUTEX_ATTR | 2, 0, NULL);
 	g_pfsCryptEngineTodoMtx = ret;
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelCreateCond("ScePfsCryptEngineTodoCnd", PFS_MUTEX_ATTR, ret, NULL);
+	ret = sceKernelCreateCond("ScePfsCryptEngineTodoCnd", PFS_MUTEX_ATTR, ret, NULL);
 	g_pfsCryptEngineTodoCnd = ret;
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelCreateMutex("ScePfsCryptEngineDoneMtx", PFS_MUTEX_ATTR | 2, 0, NULL);
+	ret = sceKernelCreateMutex("ScePfsCryptEngineDoneMtx", PFS_MUTEX_ATTR | 2, 0, NULL);
 	g_pfsCryptEngineDoneMtx = ret;
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelCreateCond("ScePfsCryptEngineDoneCnd", PFS_MUTEX_ATTR, ret, NULL);
+	ret = sceKernelCreateCond("ScePfsCryptEngineDoneCnd", PFS_MUTEX_ATTR, ret, NULL);
 	g_pfsCryptEngineDoneCnd = ret;
 	if (ret < 0)
 		return ret;
@@ -110,25 +110,25 @@ int pfsCryptEngineInit(void)
 	g_pfsCryptEngineTodo.prev = &g_pfsCryptEngineTodo;
 	g_pfsCryptEngineDone.next = &g_pfsCryptEngineDone;
 	g_pfsCryptEngineDone.prev = &g_pfsCryptEngineDone;
-	ret = ksceKernelCreateThread("ScePfsCryptEngineThread", pfsCryptEngineThread, 0x20, 0x2000,
+	ret = sceKernelCreateThread("ScePfsCryptEngineThread", pfsCryptEngineThread, 0x20, 0x2000,
 				     0, 0x80000, NULL);
 	g_pfsCryptEngineThread = ret;
 	if (ret < 0)
 		return ret;
-	return ksceKernelStartThread(ret, 0, NULL);
+	return sceKernelStartThread(ret, 0, NULL);
 }
 
 void pfsCryptEngineTerm(void)
 {
-	ksceKernelLockMutex(g_pfsCryptEngineTodoMtx, 1, NULL);
+	sceKernelLockMutex(g_pfsCryptEngineTodoMtx, 1, NULL);
 	g_pfsCryptEngineFlags |= PFS_CRYPT_ENGINE_STOP;
-	ksceKernelSignalCond(g_pfsCryptEngineTodoCnd);
-	ksceKernelUnlockMutex(g_pfsCryptEngineTodoMtx, 1);
-	ksceKernelWaitThreadEnd(g_pfsCryptEngineThread, NULL, NULL);
-	ksceKernelDeleteCond(g_pfsCryptEngineTodoCnd);
-	ksceKernelDeleteCond(g_pfsCryptEngineDoneCnd);
-	ksceKernelDeleteMutex(g_pfsCryptEngineTodoMtx);
-	ksceKernelDeleteMutex(g_pfsCryptEngineDoneMtx);
+	sceKernelSignalCond(g_pfsCryptEngineTodoCnd);
+	sceKernelUnlockMutex(g_pfsCryptEngineTodoMtx, 1);
+	sceKernelWaitThreadEnd(g_pfsCryptEngineThread, NULL, NULL);
+	sceKernelDeleteCond(g_pfsCryptEngineTodoCnd);
+	sceKernelDeleteCond(g_pfsCryptEngineDoneCnd);
+	sceKernelDeleteMutex(g_pfsCryptEngineTodoMtx);
+	sceKernelDeleteMutex(g_pfsCryptEngineDoneMtx);
 }
 
 int pfsCryptEngineSubmit(ScePfsCryptJob *job)
@@ -137,12 +137,12 @@ int pfsCryptEngineSubmit(ScePfsCryptJob *job)
 
 	if (job == NULL)
 		return SCE_PFS_ERROR_NO_JOB;
-	ret = ksceKernelLockMutex(g_pfsCryptEngineTodoMtx, 1, NULL);
+	ret = sceKernelLockMutex(g_pfsCryptEngineTodoMtx, 1, NULL);
 	if (ret != 0)
 		return ret;
 	pfsListAppend(&g_pfsCryptEngineTodo, &job->link);
-	ret = ksceKernelSignalCond(g_pfsCryptEngineTodoCnd);
-	ksceKernelUnlockMutex(g_pfsCryptEngineTodoMtx, 1);
+	ret = sceKernelSignalCond(g_pfsCryptEngineTodoCnd);
+	sceKernelUnlockMutex(g_pfsCryptEngineTodoMtx, 1);
 	return ret;
 }
 
@@ -152,7 +152,7 @@ static inline int pfsCryptEngineTakeDone(ScePfsCryptJob *job)	/* name unknown */
 	ScePfsListNode *node;
 	int ret;
 
-	ret = ksceKernelLockMutex(g_pfsCryptEngineDoneMtx, 1, NULL);
+	ret = sceKernelLockMutex(g_pfsCryptEngineDoneMtx, 1, NULL);
 	if (ret != 0)
 		return ret;
 	do {
@@ -169,10 +169,10 @@ static inline int pfsCryptEngineTakeDone(ScePfsCryptJob *job)	/* name unknown */
 			}
 		}
 		job->waiting = 1;
-		ret = ksceKernelWaitCond(g_pfsCryptEngineDoneCnd, NULL);
+		ret = sceKernelWaitCond(g_pfsCryptEngineDoneCnd, NULL);
 	} while (ret == 0);
 out:
-	ksceKernelUnlockMutex(g_pfsCryptEngineDoneMtx, 1);
+	sceKernelUnlockMutex(g_pfsCryptEngineDoneMtx, 1);
 	return ret;
 }
 
@@ -183,18 +183,18 @@ int pfsCryptEngineCancel(ScePfsCryptJob *job)
 
 	if (job == NULL)
 		return SCE_PFS_ERROR_NO_JOB;
-	ret = ksceKernelLockMutex(g_pfsCryptEngineTodoMtx, 1, NULL);
+	ret = sceKernelLockMutex(g_pfsCryptEngineTodoMtx, 1, NULL);
 	if (ret != 0)
 		return ret;
 	for (node = g_pfsCryptEngineTodo.next; node != &g_pfsCryptEngineTodo && node != NULL;
 	     node = node->next) {
 		if (node == &job->link) {
 			pfsListUnlink(&job->link);
-			ksceKernelUnlockMutex(g_pfsCryptEngineTodoMtx, 1);
+			sceKernelUnlockMutex(g_pfsCryptEngineTodoMtx, 1);
 			return 0;
 		}
 	}
-	ksceKernelUnlockMutex(g_pfsCryptEngineTodoMtx, 1);
+	sceKernelUnlockMutex(g_pfsCryptEngineTodoMtx, 1);
 	return pfsCryptEngineTakeDone(job);
 }
 

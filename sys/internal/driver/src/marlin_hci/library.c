@@ -41,7 +41,7 @@ int MarlinInitialize(void)
 {
 	unsigned int result = 0;
 
-	marlinHciMutex = ksceKernelCreateMutex("SceMarlinHciMutex", 0, 0, 0);
+	marlinHciMutex = sceKernelCreateMutex("SceMarlinHciMutex", 0, 0, 0);
 	if (marlinHciMutex < 0)
 		result = marlinHciMutex;
 	if (result == 0)
@@ -54,7 +54,7 @@ void MarlinTerminate(void)
 	MarlinBufferDestroy(0, marlinStoredData);
 	marlinStoredData = 0;
 	MarlinMemoryTerminate();
-	ksceKernelDeleteMutex(marlinHciMutex);
+	sceKernelDeleteMutex(marlinHciMutex);
 	marlinHciMutex = -1;
 	return;
 }
@@ -63,7 +63,7 @@ int MarlinLock(void *context)
 {
 	unsigned int result = 0;
 
-	result = ksceKernelLockMutex(marlinHciMutex, 1, 0);
+	result = sceKernelLockMutex(marlinHciMutex, 1, 0);
 	return result;
 }
 
@@ -73,7 +73,7 @@ int MarlinUnlock(void *context)
 
 	MarlinBufferDestroy(0, marlinStoredData);
 	marlinStoredData = 0;
-	ksceKernelUnlockMutex(marlinHciMutex, 1);
+	sceKernelUnlockMutex(marlinHciMutex, 1);
 	return result;
 }
 

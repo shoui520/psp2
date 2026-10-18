@@ -22,6 +22,7 @@
 #include <string.h>
 #include <sysmem/sysclib.h>
 #include <psp2kern/kernel/processmgr.h>
+#include <threadmgr/threadmgr.h>
 
 int dispatchVeneziaVipProcessReset(VeneziaVipProcessStorage *storage);
 int dispatchVeneziaVipProcessResume(VeneziaVipProcessStorage *storage);
@@ -67,7 +68,7 @@ int _sceHwd0ProcessCreateEntry(SceUID pid)
 #endif
 		memset(storage, 0, sizeof(*storage));
 		snprintf(name, sizeof(name), "SceVipSuspend%08x", pid);
-		ret = ksceKernelCreateSema(name, 0x8000, 1, 1, NULL);
+		ret = sceKernelCreateSema(name, 0x8000, 1, 1, NULL);
 		if (ret >= 0) {
 			storage->suspendSemaphore = ret;
 			ret = initializeVeneziaVipProcessStorage(storage);
@@ -75,8 +76,6 @@ int _sceHwd0ProcessCreateEntry(SceUID pid)
 	}
 	return ret;
 }
-
-extern int sceKernelCancelSema(SceUID uid, int count, int *waiters);
 
 /* name unknown: cancel waiters and delete the process's VIP suspend semaphore. */
 int releaseVeneziaVipProcessStorage(SceUID pid)
@@ -90,7 +89,7 @@ int releaseVeneziaVipProcessStorage(SceUID pid)
 		ret = 0;
 		if (storage && storage->suspendSemaphore >= 0) {
 			sceKernelCancelSema(storage->suspendSemaphore, -1, NULL);
-			ksceKernelDeleteSema(storage->suspendSemaphore);
+			sceKernelDeleteSema(storage->suspendSemaphore);
 			storage->suspendSemaphore = -1;
 		}
 	}
@@ -128,9 +127,9 @@ int waitVeneziaVipProcessReady(void)
 #endif
 	if (!storage)
 		return -2141060856;
-	ret = ksceKernelWaitSema(storage->suspendSemaphore, 1, NULL);
+	ret = sceKernelWaitSema(storage->suspendSemaphore, 1, NULL);
 	if (ret >= 0) {
-		signal = ksceKernelSignalSema(storage->suspendSemaphore, 1);
+		signal = sceKernelSignalSema(storage->suspendSemaphore, 1);
 		if (signal < 0)
 			ret = signal;
 	}
@@ -151,7 +150,7 @@ int _sceHwd0StartProcessSuspend(SceUID pid)
 			__builtin_return_address(0));
 #endif
 		process = storage;
-		ret = ksceKernelWaitSema(storage->suspendSemaphore, 1, NULL);
+		ret = sceKernelWaitSema(storage->suspendSemaphore, 1, NULL);
 		if (ret >= 0) {
 			lockVeneziaVipProcess(g_veneziaVipState.processLock);
 			if (process->state & 0x100)
@@ -190,7 +189,7 @@ int _sceHwd0ProcessResume(SceUID pid)
 			ret = dispatchVeneziaVipProcessReset(process);
 		unlockVeneziaVipProcess(g_veneziaVipState.processLock);
 		if (ret >= 0)
-			ret = ksceKernelSignalSema(process->suspendSemaphore, 1);
+			ret = sceKernelSignalSema(process->suspendSemaphore, 1);
 	}
 	return ret;
 }

@@ -68,7 +68,7 @@ int pfsModeToAttr(SceUInt32 mode, SceUInt16 *attr)
 	value.type = PFS_ACMGR_ATTR;
 	value.value = (unsigned char *)attr;
 	value.size = sizeof(*attr);
-	return SceSblACMgrForDriver_6210D745(ksceKernelGetProcessIdFromTLS(), &value, mode);
+	return SceSblACMgrForDriver_6210D745(SceThreadmgrForDriver_FA54D49A(), &value, mode);
 }
 
 int pfsAttrToMode(SceUInt16 attr, SceUInt32 *mode)
@@ -159,16 +159,16 @@ int pfsAccessBegin(ScePfsPmi *pmi, int op, SceUInt32 arg, int *oldPermission)
 	always = (unsigned int)op < 9 && ((1 << op) & 0x1ef) != 0;
 	isRead = pfsOpIsRead(op, arg);
 	level = SceSysrootForKernel_20009397();
-	isSystem = sceSblACMgrIsSystemProgram(ksceKernelGetProcessIdFromTLS());
+	isSystem = sceSblACMgrIsSystemProgram(SceThreadmgrForDriver_FA54D49A());
 	if ((unsigned int)(pmi->mode - 0x1f) < 3) {
 		owner = pmi->parent;
-		if (ksceKernelGetProcessSelfAuthInfo(ksceKernelGetProcessIdFromTLS(), &authInfo) < 0)
+		if (ksceKernelGetProcessSelfAuthInfo(SceThreadmgrForDriver_FA54D49A(), &authInfo) < 0)
 			approved = 0;
 		else
 			approved = pfsPmiIsApproved(owner, authInfo.program_authority_id);
 		flags = pmi->parent->flags;
 	} else {
-		if (ksceKernelGetProcessSelfAuthInfo(ksceKernelGetProcessIdFromTLS(), &authInfo) < 0)
+		if (ksceKernelGetProcessSelfAuthInfo(SceThreadmgrForDriver_FA54D49A(), &authInfo) < 0)
 			approved = 0;
 		else
 			approved = pfsPmiIsApproved(pmi, authInfo.program_authority_id);
@@ -224,14 +224,14 @@ int pfsAccessBegin(ScePfsPmi *pmi, int op, SceUInt32 arg, int *oldPermission)
 	return SCE_PFS_ERROR_ACCESS;
 
 grant:
-	*oldPermission = ksceKernelSetPermission(PFS_PERMISSION);
+	*oldPermission = sceKernelSetThreadAccessLevel(PFS_PERMISSION);
 	SceCpuForDriver_5F6A8743(&g_pfsBusy, 1);
 	return 0;
 }
 
 void pfsAccessEnd(int oldPermission)
 {
-	ksceKernelSetPermission(oldPermission);
+	sceKernelSetThreadAccessLevel(oldPermission);
 	SceCpuForDriver_A4884C4E(&g_pfsBusy, 1);
 }
 

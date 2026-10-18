@@ -96,14 +96,14 @@ const QmiDeviceOperations g_qmiDeviceOperations[2] = {
 int qmiUsbReceiveCompleted(QmiUsbRequest *request, int resultOrCount);
 
 extern int bbmcLockFastMutex(struct ThreadmgrFastMutex *mutex)
-	__asm__("ksceKernelLockFastMutex");
+	__asm__("lockFastMutex");
 extern int bbmcUnlockFastMutex(struct ThreadmgrFastMutex *mutex)
-	__asm__("ksceKernelUnlockFastMutex");
+	__asm__("sceKernelUnlockFastMutex");
 extern int bbmcInitializeFastMutex(struct ThreadmgrFastMutex *mutex,
 	const char *name, int attr, void *opt)
-	__asm__("ksceKernelInitializeFastMutex");
+	__asm__("sceKernelInitializeFastMutex");
 extern int bbmcFinalizeFastMutex(struct ThreadmgrFastMutex *mutex)
-	__asm__("ksceKernelFinalizeFastMutex");
+	__asm__("sceKernelFinalizeFastMutex");
 
 QmiDeviceControl *g_qmiDeviceControl;
 QmiDeviceControl g_qmiDeviceStorage;
@@ -156,7 +156,7 @@ int qmiUartReceiveCompleted(unsigned int requestId, unsigned int count,
 	(void)requestId;
 	control->uartReceiveCount = count;
 	control->uartReceiveFlags = flags;
-	ksceKernelSetEventFlag(event, 1);
+	sceKernelSetEventFlag(event, 1);
 	return 0;
 }
 
@@ -195,7 +195,7 @@ int qmiUsbReceiveCompleted(QmiUsbRequest *request, int resultOrCount)
 		memset(request, 0, sizeof(*request));
 		bbmcUnlockFastMutex(&control->usbRequestMutex);
 	} else {
-		ksceKernelSetEventFlag(control->event, 2);
+		sceKernelSetEventFlag(control->event, 2);
 	}
 	return 0;
 }
@@ -221,7 +221,7 @@ int qmiSendUsbPacket(const void *data, SceSize length)
 		ret = qmiSubmitUsbControlOut(&control->usbSendRequest);
 		if (ret < 0)
 			break;
-		ret = ksceKernelWaitEventFlag(g_qmiDeviceControl->event,
+		ret = sceKernelWaitEventFlag(g_qmiDeviceControl->event,
 			8, 5, NULL, NULL);
 		if (ret < 0)
 			break;
@@ -372,7 +372,7 @@ void qmiUsbDisconnectTimedOut(void *context)
 	control->usbDisconnectTimer = 0;
 	control->usbConnected = 0;
 	if (device->channelState[1] == 0)
-		ksceKernelSetEventFlag(control->event, 32);
+		sceKernelSetEventFlag(control->event, 32);
 }
 
 int UsbCtrlOutFinCb(QmiUsbRequest *request, int resultOrCount)
@@ -381,7 +381,7 @@ int UsbCtrlOutFinCb(QmiUsbRequest *request, int resultOrCount)
 	int ret;
 
 	control->usbSendResult = resultOrCount;
-	ret = ksceKernelSetEventFlag(control->event, 8);
+	ret = sceKernelSetEventFlag(control->event, 8);
 	if (ret < 0)
 		SCE_DBG_ASSERT(0, 847);
 	return ret;
@@ -408,7 +408,7 @@ int qmiDeviceThread(SceSize args, void *argp)
 			waitTimeout = &timeout;
 		}
 		flags = 0;
-		ret = ksceKernelWaitEventFlag(control->event, 0x80000037,
+		ret = sceKernelWaitEventFlag(control->event, 0x80000037,
 			5, &flags, waitTimeout);
 		if (ret != 0x80028005 && (int)ret < 0)
 			break;
@@ -418,7 +418,7 @@ int qmiDeviceThread(SceSize args, void *argp)
 				timeout = 0;
 			if (control->uartSuspendSema > 0 &&
 				qmiIsUartFrameQueueEmpty() == 1)
-				ksceKernelSignalSema(control->uartSuspendSema, 1);
+				sceKernelSignalSema(control->uartSuspendSema, 1);
 		}
 		if ((int)flags < 0)
 			break;
@@ -453,7 +453,7 @@ int qmiDeviceThread(SceSize args, void *argp)
 				control->deactivateCallback = NULL;
 				control->deactivateRequest = NULL;
 			}
-			ksceKernelClearEventFlag(control->event, ~2U);
+			sceKernelClearEventFlag(control->event, ~2U);
 			control->usbControlActive = 0;
 			flags &= ~2U;
 		}
@@ -579,7 +579,7 @@ save_partial:
 			}
 		}
 		if (qmiIsPacketFifoEmpty() != 1)
-			ksceKernelSetEventFlag(g_qmiDeviceControl->event, 4);
+			sceKernelSetEventFlag(g_qmiDeviceControl->event, 4);
 	}
 	return 0;
 }
@@ -615,7 +615,7 @@ int qmiActivateDeviceUart(int (*completed)(BbcmdRequest *request, int result),
 	memset(g_qmiDeviceControl->uartReceiveBuffer, 0, 32);
 	g_qmiDeviceControl->uartReceiveFlags = 0;
 	g_qmiDeviceControl->uartReceiveCount = 0;
-	ksceKernelSetEventFlag(g_qmiDeviceControl->event, 1);
+	sceKernelSetEventFlag(g_qmiDeviceControl->event, 1);
 	return ret;
 }
 
@@ -639,12 +639,12 @@ int qmiSuspendDeviceUart(void *forwardedValue1, void *forwardedValue2)
 	(void)forwardedValue1;
 	(void)forwardedValue2;
 	if (qmiIsUartFrameQueueEmpty() != 1) {
-		sema = ksceKernelCreateSema("SceQmiUartSuspendSync", 0, 0, 1, NULL);
+		sema = sceKernelCreateSema("SceQmiUartSuspendSync", 0, 0, 1, NULL);
 		if (sema >= 0)
 			g_qmiDeviceStorage.uartSuspendSema = sema;
 		if (g_qmiDeviceControl->uartSuspendSema > 0) {
-			ksceKernelWaitSema(g_qmiDeviceControl->uartSuspendSema, 1, NULL);
-			ksceKernelDeleteSema(g_qmiDeviceControl->uartSuspendSema);
+			sceKernelWaitSema(g_qmiDeviceControl->uartSuspendSema, 1, NULL);
+			sceKernelDeleteSema(g_qmiDeviceControl->uartSuspendSema);
 			g_qmiDeviceStorage.uartSuspendSema = -1;
 		}
 	}
@@ -677,7 +677,7 @@ int qmiDeactivateDeviceUsb(int (*completed)(BbcmdRequest *request),
 
 			control->usbConnected = 0;
 			if (channelState == 0 && control->usbControlActive != 0)
-				ksceKernelSetEventFlag(control->event, 32);
+				sceKernelSetEventFlag(control->event, 32);
 			if (control->usbDisconnectTimer > 0) {
 				bbmcTimerCancelHandler(control->usbDisconnectTimer);
 				control->usbDisconnectTimer = 0;
@@ -717,7 +717,7 @@ int qmiResumeDeviceUart(void *forwardedValue1, void *forwardedValue2)
 	memset(g_qmiDeviceControl->uartReceiveBuffer, 0, 32);
 	g_qmiDeviceControl->uartReceiveFlags = 0;
 	g_qmiDeviceControl->uartReceiveCount = 0;
-	ksceKernelSetEventFlag(g_qmiDeviceControl->event, 1);
+	sceKernelSetEventFlag(g_qmiDeviceControl->event, 1);
 	return ret;
 }
 
@@ -731,13 +731,13 @@ int qmiUsbStateChanged(int state, void *context)
 		if (connected == 0)
 			control->usbConnected = 1;
 		if (control->channelState[1] == 1 && control->usbControlActive == 0)
-			ksceKernelSetEventFlag(control->event, 16);
+			sceKernelSetEventFlag(control->event, 16);
 	} else if (connected != 0) {
 		unsigned int channelState = control->channelState[1];
 
 		control->usbConnected = 0;
 		if (channelState == 0 && control->usbControlActive != 0)
-			ksceKernelSetEventFlag(control->event, 32);
+			sceKernelSetEventFlag(control->event, 32);
 		if (control->usbDisconnectTimer > 0) {
 			bbmcTimerCancelHandler(control->usbDisconnectTimer);
 			control->usbDisconnectTimer = 0;
@@ -765,7 +765,7 @@ int qmiActivateDeviceUsb(int (*completed)(BbcmdRequest *request, int result),
 			if (control->usbConnected == 0)
 				control->usbConnected = 1;
 			if (control->channelState[1] == 1 && control->usbControlActive == 0)
-				ksceKernelSetEventFlag(control->event, 16);
+				sceKernelSetEventFlag(control->event, 16);
 		}
 	}
 	return ret;
@@ -785,10 +785,10 @@ int qmiInitializeDeviceDriver(void)
 			"SceBbmcUartFrame", 2, NULL);
 		if (ret >= 0) {
 			frameMutexInitialized = 1;
-			ret = ksceKernelCreateEventFlag("SceBbmcDevProto", 4096, 0, NULL);
+			ret = sceKernelCreateEventFlag("SceBbmcDevProto", 4096, 0, NULL);
 			if (ret >= 0) {
 				g_qmiDeviceStorage.event = ret;
-				ret = ksceKernelCreateThread("SceBbmcDevProto", qmiDeviceThread,
+				ret = sceKernelCreateThread("SceBbmcDevProto", qmiDeviceThread,
 					96, 0x2000, 0x10000000, 0x80000, NULL);
 				if (ret >= 0) {
 					g_qmiDeviceStorage.thread = ret;
@@ -799,7 +799,7 @@ int qmiInitializeDeviceDriver(void)
 						g_qmiDeviceStorage.channelState[0] = 0;
 						g_qmiDeviceStorage.channelState[1] = 0;
 						g_qmiDeviceStorage.state = 1;
-						ksceKernelStartThread(g_qmiDeviceStorage.thread, 4,
+						sceKernelStartThread(g_qmiDeviceStorage.thread, 4,
 							&g_qmiDeviceControl);
 						return ret;
 					}
@@ -808,9 +808,9 @@ int qmiInitializeDeviceDriver(void)
 		}
 	}
 	if (g_qmiDeviceStorage.thread > 0)
-		ksceKernelDeleteThread(g_qmiDeviceStorage.thread);
+		sceKernelDeleteThread(g_qmiDeviceStorage.thread);
 	if (g_qmiDeviceStorage.event > 0)
-		ksceKernelDeleteEventFlag(g_qmiDeviceStorage.event);
+		sceKernelDeleteEventFlag(g_qmiDeviceStorage.event);
 	if (frameMutexInitialized != 0)
 		bbmcFinalizeFastMutex(&g_qmiDeviceStorage.uartFrameMutex);
 	return ret;
@@ -826,16 +826,16 @@ int qmiFinalizeDeviceDriver(void)
 		return (int)0x80330003;
 	control = g_qmiDeviceControl;
 	control->state = 0;
-	if (ksceKernelSetEventFlag(control->event, 0x80000000) >= 0)
-		ksceKernelWaitThreadEnd(g_qmiDeviceControl->thread, NULL, &timeout);
+	if (sceKernelSetEventFlag(control->event, 0x80000000) >= 0)
+		sceKernelWaitThreadEnd(g_qmiDeviceControl->thread, NULL, &timeout);
 	control = g_qmiDeviceControl;
 	if (control->usbDisconnectTimer > 0) {
 		bbmcTimerCancelHandler(control->usbDisconnectTimer);
 		control = g_qmiDeviceControl;
 		control->usbDisconnectTimer = 0;
 	}
-	ksceKernelDeleteThread(control->thread);
-	ksceKernelDeleteEventFlag(g_qmiDeviceControl->event);
+	sceKernelDeleteThread(control->thread);
+	sceKernelDeleteEventFlag(g_qmiDeviceControl->event);
 	bbmcFinalizeFastMutex(&g_qmiDeviceStorage.uartFrameMutex);
 	if (g_qmiDeviceControl->partialReceiveBuffer != NULL)
 		bbmcFree(g_qmiDeviceControl->partialReceiveBuffer);
@@ -951,5 +951,5 @@ int qmiResumeDeviceChannel(unsigned int channel, void *forwardedValue1,
 /* name unknown: signal queued transport output to the device worker. */
 int qmiWakePacketTransmitter(void)
 {
-	return ksceKernelSetEventFlag(g_qmiDeviceControl->event, 4);
+	return sceKernelSetEventFlag(g_qmiDeviceControl->event, 4);
 }

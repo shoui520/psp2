@@ -42,7 +42,7 @@ int udcdPhyInterrupt(int interrupt, void *argp)
 	registers->usbPhyInterrupt = mask;
 	ready = registers->usbPhyReady;
 	if ((unsigned int)bus < 32 && ((ready >> bus) & 1))
-		ksceKernelSetEventFlag(state->phyReadyEvent, 1);
+		sceKernelSetEventFlag(state->phyReadyEvent, 1);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return -1;
 }
@@ -146,9 +146,9 @@ int ksceUdcdWaitBusInitialized(unsigned int timeout, int bus)
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 		return 0;
 	}
-	ksceKernelClearEventFlag(state->phyReadyEvent, ~1u);
+	sceKernelClearEventFlag(state->phyReadyEvent, ~1u);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
-	result = ksceKernelWaitEventFlag(state->phyReadyEvent, 1, SCE_KERNEL_EVF_WAITMODE_OR, NULL,
+	result = sceKernelWaitEventFlag(state->phyReadyEvent, 1, SCE_KERNEL_EVF_WAITMODE_OR, NULL,
 				       timeout ? &timeout : NULL);
 	return result == SCE_KERNEL_ERROR_WAIT_TIMEOUT ? UDCD_ERROR_TIMEOUT : result;
 }
@@ -173,7 +173,7 @@ int ksceUdcdWaitStateInternal(SceUdcdWaitParam *parameter, unsigned int timeout,
 	for (;;) {
 		while (parameter->driverName &&
 		       ksceUdcdGetDrvStateInternal(parameter->driverName, bus) != 2) {
-			result = ksceKernelWaitEventFlag(state->stateEvent, 0x80004000,
+			result = sceKernelWaitEventFlag(state->stateEvent, 0x80004000,
 						       SCE_KERNEL_EVF_WAITMODE_OR |
 						       SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits,
 						       remaining);
@@ -188,7 +188,7 @@ int ksceUdcdWaitStateInternal(SceUdcdWaitParam *parameter, unsigned int timeout,
 			  parameter->connection;
 		if (!pattern)
 			return 0;
-		result = ksceKernelWaitEventFlag(state->stateEvent, pattern | 0x80004000,
+		result = sceKernelWaitEventFlag(state->stateEvent, pattern | 0x80004000,
 					       SCE_KERNEL_EVF_WAITMODE_OR, &bits, remaining);
 		if (state->waitError)
 			return state->waitError;
@@ -228,7 +228,7 @@ SceUInt32 udcdAlarmTick(void *argp)
 	if (state->connectionState == SCE_UDCD_STATUS_CONNECTION_ESTABLISHED && state->busPowered == 1 && state->chargingEnabled == 1 &&
 	    (powerStatus & 0xf00) != 0x200) {
 		SceKernelSuspendForDriver_E0489831(1);
-		state->alarmTickTimer = ksceKernelRegisterTimer("SceUdcdAlarmTickTimer",
+		state->alarmTickTimer = SceThreadmgrForDriver_C58DF384("SceUdcdAlarmTickTimer",
 			5000000, udcdAlarmTick, argp);
 	}
 	return 0;
@@ -241,11 +241,11 @@ static inline __attribute__((always_inline)) void udcdPublishState(int bus)
 	unsigned int pattern, changed;
 	int configured;
 
-	ksceKernelClearEventFlag(state->stateEvent, 0);
+	sceKernelClearEventFlag(state->stateEvent, 0);
 	pattern = state->controllerState | state->activationState | state->cableState | state->connectionState;
 	if (state->waitError)
 		pattern |= UDCD_STATE_ERROR;
-	ksceKernelSetEventFlag(state->stateEvent, pattern);
+	sceKernelSetEventFlag(state->stateEvent, pattern);
 	if (bus == 2 && state->busPowered == 1 && state->chargingEnabled == 1) {
 		configured = state->connectionState == SCE_UDCD_STATUS_CONNECTION_ESTABLISHED;
 		if (state->alarmTickTimer > 0) {
@@ -253,7 +253,7 @@ static inline __attribute__((always_inline)) void udcdPublishState(int bus)
 			state->alarmTickTimer = -1;
 		}
 		if (configured)
-			state->alarmTickTimer = ksceKernelRegisterTimer("SceUdcdAlarmTickTimer",
+			state->alarmTickTimer = SceThreadmgrForDriver_C58DF384("SceUdcdAlarmTickTimer",
 				0, udcdAlarmTick, (void *)(uintptr_t)2);
 	}
 	changed = state->activationState & ~state->notifiedMask;
@@ -1125,11 +1125,11 @@ int module_start(SceSize args, void *argp)
 		state->descriptorMemBlock = 0;
 		state->driverSetting = 0;
 		state->alarmTickTimer = -1;
-		state->callbackEvent = ksceKernelCreateSimpleEvent(s_connectNames[bus], 0, 0, NULL);
+		state->callbackEvent = sceKernelCreateSimpleEvent(s_connectNames[bus], 0, 0, NULL);
 		state->callbackProcess = -1;
 		state->callbackThread = -1;
 		state->lock = 0;
-		state->phyReadyEvent = ksceKernelCreateEventFlag(s_phyReadyNames[bus], 0x9000, 0, NULL);
+		state->phyReadyEvent = sceKernelCreateEventFlag(s_phyReadyNames[bus], 0x9000, 0, NULL);
 		if (state->phyReadyEvent < 0)
 			break;
 		if (bus == 0)
@@ -1147,7 +1147,7 @@ int module_start(SceSize args, void *argp)
 		language->bDescriptorType = 3;
 		language->bString[0] = 0x409;
 		state->chargingEnabled = 0;
-		state->stateEvent = ksceKernelCreateEventFlag(s_connectNames[bus], 0x9000, 0, NULL);
+		state->stateEvent = sceKernelCreateEventFlag(s_connectNames[bus], 0x9000, 0, NULL);
 		if (state->stateEvent < 0)
 			break;
 		if (bus == 2) {
@@ -1206,8 +1206,8 @@ void udcdDetachDrivers(SceKernelIntrStatus *intrStatus, int bus)
 /* Original name unknown. Wake waiters without retaining the transition bit. */
 void udcdNotifyStateChange(int bus)
 {
-	ksceKernelSetEventFlag(udcdState.buses[bus].stateEvent, 0x4000);
-	ksceKernelClearEventFlag(udcdState.buses[bus].stateEvent, ~0x4000U);
+	sceKernelSetEventFlag(udcdState.buses[bus].stateEvent, 0x4000);
+	sceKernelClearEventFlag(udcdState.buses[bus].stateEvent, ~0x4000U);
 }
 
 /* Original name unknown. Serialize descriptors without SDK pointer fields. */

@@ -9,7 +9,7 @@ int UpdateUtilCheckBuffer(SceSize size, void *buffer)
 
 	if (!buffer)
 		return (int)0x800f0216;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&updateTableMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	if (result)
 		return result;
 	bufferResult = (int)0x800f0202;
@@ -33,6 +33,6 @@ int UpdateUtilCheckBuffer(SceSize size, void *buffer)
 			entry->pid = 0;
 		}
 	}
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&updateTableMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	return bufferResult;
 }

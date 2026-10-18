@@ -52,8 +52,8 @@ static unsigned reverseByte(unsigned value) /* name unknown */
 
 static void waitTime(unsigned usec) /* name unknown */
 {
-	unsigned start = ksceKernelGetSystemTimeLow();
-	while ((unsigned)(ksceKernelGetSystemTimeLow() - start) < usec)
+	unsigned start = SceThreadmgrForDriver_47F6DE49();
+	while ((unsigned)(SceThreadmgrForDriver_47F6DE49() - start) < usec)
 		;
 }
 
@@ -531,7 +531,7 @@ static __attribute__((noinline)) int initOled(void) /* name unknown */
 			return ret;
 		}
 	} else {
-		ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceOledInit", initWork, 0);
+		sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceOledInit", initWork, 0);
 	}
 	return 0;
 }

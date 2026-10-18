@@ -9,13 +9,13 @@ int UpdateUtilGetNodeStatus(int nodeType, UpdateUtilNodeStatus *status, int lock
 		return (int)0x800f0216;
 	if (lock) {
 		node = &updateNodes[nodeType];
-		ksceKernelLockFastMutex((SceKernelFastMutex *)&node->mutex);
+		lockFastMutex((SceKernelFastMutex *)&node->mutex);
 		if (node->initialized) {
 			*status = node->status;
-			ksceKernelUnlockFastMutex((SceKernelFastMutex *)&node->mutex);
+			sceKernelUnlockFastMutex((SceKernelFastMutex *)&node->mutex);
 			return 0;
 		}
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&node->mutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&node->mutex);
 		return (int)0x800f0229;
 	}
 	node = &updateNodes[nodeType];

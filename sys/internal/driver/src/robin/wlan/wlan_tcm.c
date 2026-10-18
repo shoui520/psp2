@@ -864,10 +864,10 @@ int robinWlanInitializeTcm(SceWlanBtRobinWlanContext *context)
 {
 	int result, eventFlag;
 
-	result = ksceKernelInitializeFastMutex(&context->tcm.mutex,
+	result = sceKernelInitializeFastMutex(&context->tcm.mutex,
 					       "SceWlanBtRobinWlanTcm", 0x2000, NULL);
 	if (result >= 0) {
-		eventFlag = ksceKernelCreateEventFlag("SceWlanBtRobinWlanTcm", 0, 0, NULL);
+		eventFlag = sceKernelCreateEventFlag("SceWlanBtRobinWlanTcm", 0, 0, NULL);
 		if (eventFlag < 0)
 			return eventFlag;
 		context->tcm.eventFlag = eventFlag;
@@ -1120,7 +1120,7 @@ int robinWlanBeginWakeOffConfiguration(SceWlanBtRobinWlanContext *context)
 
 int robinWlanNotifyCommandCancellation(SceWlanBtRobinWlanContext *context)
 {
-	return ksceKernelSetEventFlag(context->tcm.eventFlag, 8);
+	return sceKernelSetEventFlag(context->tcm.eventFlag, 8);
 }
 
 int robinWlanTcmSetMulticastAddresses(SceWlanBtRobinWlanTcm *tcm,
@@ -1128,7 +1128,7 @@ int robinWlanTcmSetMulticastAddresses(SceWlanBtRobinWlanTcm *tcm,
 {
 	int result;
 
-	ksceKernelLockFastMutex(&tcm->mutex);
+	lockFastMutex(&tcm->mutex);
 	if (!addresses) {
 		result = robinWlanSetMulticastAddresses(tcm->context, 32, NULL);
 		if (result < 0)
@@ -1146,7 +1146,7 @@ int robinWlanTcmSetMulticastAddresses(SceWlanBtRobinWlanTcm *tcm,
 	tcm->control &= 0xfeff;
 	result = robinWlanSetControl(tcm->context, tcm->control);
 out:
-	ksceKernelUnlockFastMutex(&tcm->mutex);
+	sceKernelUnlockFastMutex(&tcm->mutex);
 	return result;
 }
 
@@ -1155,9 +1155,9 @@ int robinWlanTcmScan(SceWlanBtRobinWlanTcm *tcm, WlanScanConfig *configuration,
 {
 	int result;
 
-	ksceKernelLockFastMutex(&tcm->mutex);
+	lockFastMutex(&tcm->mutex);
 	result = robinWlanScan(tcm->context, configuration, capacity);
-	ksceKernelUnlockFastMutex(&tcm->mutex);
+	sceKernelUnlockFastMutex(&tcm->mutex);
 	return result;
 }
 
@@ -1173,7 +1173,7 @@ int robinWlanTcmStartBackgroundScan(SceWlanBtRobinWlanTcm *tcm,
 	uint8_t bssType;
 	int result;
 
-	ksceKernelLockFastMutex(&tcm->mutex);
+	lockFastMutex(&tcm->mutex);
 	if (configuration->ssidCount > 10)
 		goto invalid;
 	bssType = wlanMapBssType(configuration->bssType);
@@ -1211,10 +1211,10 @@ int robinWlanTcmStartBackgroundScan(SceWlanBtRobinWlanTcm *tcm,
 		else
 			memset(tcm->informationElementMask, 0, sizeof(tcm->informationElementMask));
 	}
-	ksceKernelUnlockFastMutex(&tcm->mutex);
+	sceKernelUnlockFastMutex(&tcm->mutex);
 	return result;
 invalid:
-	ksceKernelUnlockFastMutex(&tcm->mutex);
+	sceKernelUnlockFastMutex(&tcm->mutex);
 	return 0x80418001;
 }
 
@@ -1222,12 +1222,12 @@ int robinWlanTcmStopBackgroundScan(SceWlanBtRobinWlanTcm *tcm)
 {
 	int result;
 
-	ksceKernelLockFastMutex(&tcm->mutex);
+	lockFastMutex(&tcm->mutex);
 	result = robinWlanSetBackgroundScan(tcm->context, 0, NULL, 0, NULL, 0,
 					  0, 0, 0, NULL, 0, 0, 0, 0);
 	if (result >= 0)
 		result = robinWlanReadBackgroundScan(tcm->context, NULL, 0);
-	ksceKernelUnlockFastMutex(&tcm->mutex);
+	sceKernelUnlockFastMutex(&tcm->mutex);
 	return result;
 }
 
@@ -1236,9 +1236,9 @@ int robinWlanTcmReadBackgroundScan(SceWlanBtRobinWlanTcm *tcm,
 {
 	int result;
 
-	ksceKernelLockFastMutex(&tcm->mutex);
+	lockFastMutex(&tcm->mutex);
 	result = robinWlanReadBackgroundScan(tcm->context, scanResult, capacity);
-	ksceKernelUnlockFastMutex(&tcm->mutex);
+	sceKernelUnlockFastMutex(&tcm->mutex);
 	return result;
 }
 
@@ -1251,7 +1251,7 @@ int robinWlanTcmAssociate(SceWlanBtRobinWlanTcm *tcm,
 	int retries;
 	int result;
 
-	ksceKernelLockFastMutex(&tcm->mutex);
+	lockFastMutex(&tcm->mutex);
 	retries = tcm->context->status & 0xc00;
 	if (retries) {
 		result = 0x80418002;
@@ -1260,7 +1260,7 @@ int robinWlanTcmAssociate(SceWlanBtRobinWlanTcm *tcm,
 	memset(&tcm->context->bss, 0,
 	       offsetof(SceWlanBtRobinWlanContext, wakeScan) -
 	       offsetof(SceWlanBtRobinWlanContext, bss));
-	result = ksceKernelClearEventFlag(tcm->eventFlag, 0);
+	result = sceKernelClearEventFlag(tcm->eventFlag, 0);
 	if (result < 0)
 		goto unlock;
 	result = robinWlanSetBssMode(tcm->context, 0);
@@ -1295,7 +1295,7 @@ int robinWlanTcmAssociate(SceWlanBtRobinWlanTcm *tcm,
 		SceUInt timeout = 30000000;
 		unsigned int events = 0;
 
-		result = ksceKernelWaitEventFlag(tcm->eventFlag, 15, 5, &events, &timeout);
+		result = sceKernelWaitEventFlag(tcm->eventFlag, 15, 5, &events, &timeout);
 		if (result < 0)
 			goto deauthenticate;
 		if (events & 2) {
@@ -1344,7 +1344,7 @@ int robinWlanTcmAssociate(SceWlanBtRobinWlanTcm *tcm,
 deauthenticate:
 	robinWlanDeauthenticate(tcm->context);
 unlock:
-	ksceKernelUnlockFastMutex(&tcm->mutex);
+	sceKernelUnlockFastMutex(&tcm->mutex);
 	return result;
 }
 
@@ -1352,7 +1352,7 @@ int robinWlanTcmDisconnect(SceWlanBtRobinWlanTcm *tcm)
 {
 	int result;
 
-	ksceKernelLockFastMutex(&tcm->mutex);
+	lockFastMutex(&tcm->mutex);
 	result = tcm->context->status & 0x400;
 	if (result) {
 		result = robinWlanDeauthenticate(tcm->context);
@@ -1368,7 +1368,7 @@ int robinWlanTcmDisconnect(SceWlanBtRobinWlanTcm *tcm)
 			context->signal.rssi = -100;
 		}
 	}
-	ksceKernelUnlockFastMutex(&tcm->mutex);
+	sceKernelUnlockFastMutex(&tcm->mutex);
 	return result;
 }
 
@@ -1376,12 +1376,12 @@ int robinWlanTcmSetStationPowerSave(SceWlanBtRobinWlanTcm *tcm, int enabled)
 {
 	int result;
 
-	ksceKernelLockFastMutex(&tcm->mutex);
+	lockFastMutex(&tcm->mutex);
 	if (enabled)
 		result = robinWlanEnableStationPowerSave(tcm->context, 0, 5, 0, 1);
 	else
 		result = robinWlanDisableStationPowerSave(tcm->context);
-	ksceKernelUnlockFastMutex(&tcm->mutex);
+	sceKernelUnlockFastMutex(&tcm->mutex);
 	return result;
 }
 
@@ -1390,7 +1390,7 @@ int robinWlanTcmStartAdhoc(SceWlanBtRobinWlanTcm *tcm,
 {
 	int result;
 
-	ksceKernelLockFastMutex(&tcm->mutex);
+	lockFastMutex(&tcm->mutex);
 	if (tcm->context->status & 0xc00) {
 		result = 0x80418002;
 		goto unlock;
@@ -1418,7 +1418,7 @@ int robinWlanTcmStartAdhoc(SceWlanBtRobinWlanTcm *tcm,
 	else
 		__atomic_fetch_or(&tcm->context->status, 0x800, __ATOMIC_RELEASE);
 unlock:
-	ksceKernelUnlockFastMutex(&tcm->mutex);
+	sceKernelUnlockFastMutex(&tcm->mutex);
 	return result;
 }
 
@@ -1427,7 +1427,7 @@ int robinWlanTcmJoinAdhoc(SceWlanBtRobinWlanTcm *tcm,
 {
 	int result;
 
-	ksceKernelLockFastMutex(&tcm->mutex);
+	lockFastMutex(&tcm->mutex);
 	if (tcm->context->status & 0xc00) {
 		result = 0x80418002;
 		goto unlock;
@@ -1455,7 +1455,7 @@ int robinWlanTcmJoinAdhoc(SceWlanBtRobinWlanTcm *tcm,
 	else
 		__atomic_fetch_or(&tcm->context->status, 0x800, __ATOMIC_RELEASE);
 unlock:
-	ksceKernelUnlockFastMutex(&tcm->mutex);
+	sceKernelUnlockFastMutex(&tcm->mutex);
 	return result;
 }
 
@@ -1463,7 +1463,7 @@ int robinWlanTcmStopAdhoc(SceWlanBtRobinWlanTcm *tcm)
 {
 	int result;
 
-	ksceKernelLockFastMutex(&tcm->mutex);
+	lockFastMutex(&tcm->mutex);
 	result = tcm->context->status & 0x800;
 	if (result) {
 		robinWlanSetTransmitRate(tcm->context, 0x100);
@@ -1471,7 +1471,7 @@ int robinWlanTcmStopAdhoc(SceWlanBtRobinWlanTcm *tcm)
 		if (result >= 0)
 			__atomic_fetch_and(&tcm->context->status, ~0x800, __ATOMIC_RELEASE);
 	}
-	ksceKernelUnlockFastMutex(&tcm->mutex);
+	sceKernelUnlockFastMutex(&tcm->mutex);
 	return result;
 }
 
@@ -1480,10 +1480,10 @@ int robinWlanTcmSetManagementInformationElements(SceWlanBtRobinWlanTcm *tcm,
 {
 	int result;
 
-	ksceKernelLockFastMutex(&tcm->mutex);
+	lockFastMutex(&tcm->mutex);
 	result = robinWlanSetManagementInformationElements(tcm->context,
 							 informationElements, size);
-	ksceKernelUnlockFastMutex(&tcm->mutex);
+	sceKernelUnlockFastMutex(&tcm->mutex);
 	return result;
 }
 
@@ -1525,11 +1525,11 @@ void robinWlanTcmEventReceive(SceWlanBtRobinWlanContext *context, const void *in
 			driver->notify(driver, NULL, NET_DRIVER_EVENT_LINK_UP, 0, NULL, 0);
 		break;
 	case 8:
-		ksceKernelSetEventFlag(context->tcm.eventFlag, 2);
+		sceKernelSetEventFlag(context->tcm.eventFlag, 2);
 		driver->notify(driver, NULL, NET_DRIVER_EVENT_LINK_DOWN, 0, NULL, 0);
 		break;
 	case 9:
-		ksceKernelSetEventFlag(context->tcm.eventFlag, 4);
+		sceKernelSetEventFlag(context->tcm.eventFlag, 4);
 		driver->notify(driver, NULL, 8, 0, NULL, 0);
 		break;
 	case 10:
@@ -1547,7 +1547,7 @@ void robinWlanTcmEventReceive(SceWlanBtRobinWlanContext *context, const void *in
 			driver->notify(driver, NULL, 4, 0, NULL, 0);
 		break;
 	case 43:
-		ksceKernelSetEventFlag(context->tcm.eventFlag, 1);
+		sceKernelSetEventFlag(context->tcm.eventFlag, 1);
 		break;
 	case 51:
 		if ((context->status & 8) && !context->blockAckReceivePending) {

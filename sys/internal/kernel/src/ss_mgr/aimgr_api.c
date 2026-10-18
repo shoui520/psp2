@@ -36,7 +36,7 @@ int aimgrInit(void)
 		aimgrPscode = (ScePsCode){ 0 };
 		aimgrOpenPsId = (SceOpenPsId){ { 0 } };
 	}
-	mutex = ksceKernelCreateMutex("SceSblAimgrSm", 0, 0, NULL);
+	mutex = sceKernelCreateMutex("SceSblAimgrSm", 0, 0, NULL);
 	aimgrMutex = mutex;
 	return mutex >> 31;
 }
@@ -67,25 +67,25 @@ int ksceSblAimgrGetPscode2(ScePsCode *pscode)
 	if (!productMode)
 		return AIMGR_ERROR_NOT_PRODUCTION;
 
-	ret = ksceKernelLockMutex(aimgrMutex, 1, NULL);
+	ret = sceKernelLockMutex(aimgrMutex, 1, NULL);
 	if (ret < 0)
 		return ret;
-	permission = ksceKernelSetPermission(0x80);
+	permission = sceKernelSetThreadAccessLevel(0x80);
 	if (permission < 0) {
-		ksceKernelUnlockMutex(aimgrMutex, 1);
+		sceKernelUnlockMutex(aimgrMutex, 1);
 		return permission;
 	}
 	ret = aimgrReadPscode2(&value);
 	if (ret) {
-		ksceKernelUnlockMutex(aimgrMutex, 1);
+		sceKernelUnlockMutex(aimgrMutex, 1);
 		return ret;
 	}
-	ret = ksceKernelSetPermission(permission);
+	ret = sceKernelSetThreadAccessLevel(permission);
 	if (ret < 0) {
-		ksceKernelUnlockMutex(aimgrMutex, 1);
+		sceKernelUnlockMutex(aimgrMutex, 1);
 		return ret;
 	}
-	ret = ksceKernelUnlockMutex(aimgrMutex, 1);
+	ret = sceKernelUnlockMutex(aimgrMutex, 1);
 	if (ret)
 		return ret;
 
@@ -103,15 +103,15 @@ int ksceSblAimgrGetConsoleId(SceConsoleId *consoleId)
 	if (!consoleId)
 		return AIMGR_ERROR_INVALID_ARGUMENT;
 
-	ret = ksceKernelLockMutex(aimgrMutex, 1, NULL);
+	ret = sceKernelLockMutex(aimgrMutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	ret = aimgrReadConsoleId(consoleId);
 	if (ret) {
-		ksceKernelUnlockMutex(aimgrMutex, 1);
+		sceKernelUnlockMutex(aimgrMutex, 1);
 		return ret;
 	}
-	return ksceKernelUnlockMutex(aimgrMutex, 1);
+	return sceKernelUnlockMutex(aimgrMutex, 1);
 }
 
 int ksceSblAimgrGetOpenPsId(SceOpenPsId *openPsId)
@@ -130,15 +130,15 @@ int ksceSblAimgrGetVisibleId(void *visibleId)
 	if (!visibleId)
 		return AIMGR_ERROR_INVALID_ARGUMENT;
 
-	ret = ksceKernelLockMutex(aimgrMutex, 1, NULL);
+	ret = sceKernelLockMutex(aimgrMutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	ret = aimgrReadVisibleId(visibleId);
 	if (ret) {
-		ksceKernelUnlockMutex(aimgrMutex, 1);
+		sceKernelUnlockMutex(aimgrMutex, 1);
 		return ret;
 	}
-	return ksceKernelUnlockMutex(aimgrMutex, 1);
+	return sceKernelUnlockMutex(aimgrMutex, 1);
 }
 
 int ksceSblSsCreatePassPhrase(const uint32_t *parameters, void *passPhrase)
@@ -147,14 +147,14 @@ int ksceSblSsCreatePassPhrase(const uint32_t *parameters, void *passPhrase)
 
 	if (!parameters || !passPhrase)
 		return AIMGR_ERROR_INVALID_ARGUMENT;
-	ret = ksceKernelLockMutex(aimgrMutex, 1, NULL);
+	ret = sceKernelLockMutex(aimgrMutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	ret = aimgrCreatePassPhrase(parameters, passPhrase);
 	if (ret) {
-		ksceKernelUnlockMutex(aimgrMutex, 1);
+		sceKernelUnlockMutex(aimgrMutex, 1);
 		return ret;
 	}
-	return ksceKernelUnlockMutex(aimgrMutex, 1);
+	return sceKernelUnlockMutex(aimgrMutex, 1);
 }
 

@@ -8,10 +8,10 @@ void notifyContextFinalized(void)
 
 int lockVideoDriver(void)
 {
-	return ksceKernelLockMutex(driverMutex, 1, 0);
+	return sceKernelLockMutex(driverMutex, 1, 0);
 }
 
 int unlockVideoDriver(void)
 {
-	return ksceKernelUnlockMutex(driverMutex, 1);
+	return sceKernelUnlockMutex(driverMutex, 1);
 }

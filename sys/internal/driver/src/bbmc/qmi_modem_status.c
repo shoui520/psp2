@@ -535,7 +535,7 @@ int bbcmdNetworkScan(BbcmdRequest *request)
 			node = request->node;
 			mask = 1U << node->index;
 			binding->requestBits &= ~mask;
-			result = ksceKernelSetEventFlag(node->control->event, mask);
+			result = sceKernelSetEventFlag(node->control->event, mask);
 			control = request->node->control;
 			request->state = 5;
 			bbcmdUnlockMutex(&control->mutex);

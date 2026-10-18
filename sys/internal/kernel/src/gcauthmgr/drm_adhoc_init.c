@@ -12,7 +12,7 @@ int GcAuthInitializeAdhocBb(void)
 {
 	SceUID semaphore;
 
-	semaphore = ksceKernelCreateSema("SceAdhocBB", 0, 1, 1, NULL);
+	semaphore = sceKernelCreateSema("SceAdhocBB", 0, 1, 1, NULL);
 	gcAuthAdhocSemaphore = semaphore;
 	return semaphore <= 0;
 }

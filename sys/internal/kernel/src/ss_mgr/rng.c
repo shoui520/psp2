@@ -34,11 +34,11 @@ int ksceSblRngPseudoRandomNumber(void *result, SceSize size)
 	SceSize copySize;
 	int ret;
 
-	ret = ksceKernelLockMutex(rngMutex, 1, NULL);
+	ret = sceKernelLockMutex(rngMutex, 1, NULL);
 	SCE_DBG_ASSERT_CHECK_FUNC(ret == 0, 98, "_set_key_seed");
 	SsRngGenerateBlock(key, rngKey, rngSeed);
 	SsRngGenerateBlock(seed, rngKey, rngSeed);
-	ksceKernelUnlockMutex(rngMutex, 1);
+	sceKernelUnlockMutex(rngMutex, 1);
 	while (size) {
 		uint8_t *destination = output;
 
@@ -57,18 +57,18 @@ int sceSblRngInit(void)
 	SceUID mutex;
 	int ret;
 
-	mutex = ksceKernelCreateMutex("SceSblRng", 0x2000, 0, NULL);
+	mutex = sceKernelCreateMutex("SceSblRng", 0x2000, 0, NULL);
 	rngMutex = mutex;
 	SCE_DBG_ASSERT_CHECK(mutex >= 0, 134);
 	ret = ksceSblDmac5Rnd(random, sizeof(random), 1);
 	if (ret) {
 		SCE_DBG_PRINTF(0, 141, "%s(%d) %s: sceSblDmac5Rnd() r=0x%x.\n",
 			       "rng.c", 141, "sceSblRngInit", ret);
-		ksceKernelDeleteMutex(rngMutex);
+		sceKernelDeleteMutex(rngMutex);
 	} else {
 		SceKernelUtilsForDriver_29A28957(rngKeyHmacKey, sizeof(rngKeyHmacKey), random,
 				   sizeof(random), rngKey);
-		random[0] = ksceKernelGetSystemTimeLow();
+		random[0] = SceThreadmgrForDriver_47F6DE49();
 		SceKernelUtilsForDriver_29A28957(rngSeedHmacKey, sizeof(rngSeedHmacKey), random,
 				   sizeof(random), rngSeed);
 	}

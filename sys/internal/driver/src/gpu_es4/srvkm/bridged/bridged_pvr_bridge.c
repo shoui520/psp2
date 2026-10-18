@@ -1486,7 +1486,7 @@ IMG_INT sceGpuWaitModObjSignal(IMG_INT waitEventFlag,
 		MODIFY_SYNC_OP_INFO *psModSyncOpInfo)
 {
 	if (waitEventFlag > 0 && psModSyncOpInfo)
-		return ksceKernelSetEventFlag(waitEventFlag, psModSyncOpInfo->ui32WaitState);
+		return sceKernelSetEventFlag(waitEventFlag, psModSyncOpInfo->ui32WaitState);
 	return (IMG_INT)0x804c0000;
 }
 

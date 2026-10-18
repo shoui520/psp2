@@ -12,7 +12,7 @@ int GcAuthAdhocInitializeState(void)
 {
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
 		return 0x808A010A;
 	result = 0;
 	if (!gcAuthAdhocInitialized) {
@@ -23,7 +23,7 @@ int GcAuthAdhocInitializeState(void)
 			gcAuthAdhocInitialized = 1;
 		}
 	}
-	if (ksceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
 		result = 0x808A010A;
 	return result;
 }

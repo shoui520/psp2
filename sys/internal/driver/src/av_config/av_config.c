@@ -4,7 +4,7 @@
 #include "av_config_internal.h"
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
-#include <psp2/kernel/threadmgr/callback.h>
+#include <threadmgr/threadmgr.h>
 #include <regmgr/regmgr.h>
 #include <sysmem/cpu.h>
 #include <sysmem/sblaimgr.h>
@@ -209,7 +209,7 @@ int _sceAVConfigResumePhase1Main(int resume, int eventId, void *args, void *opt)
 				if (maximum >= brightness)
 					maximum = brightness;
 				kscePowerSetDisplayBrightness(maximum);
-				ksceKernelSetEventFlag(avConfigState.eventFlag, 16);
+				sceKernelSetEventFlag(avConfigState.eventFlag, 16);
 				avConfigResumeActive = resume;
 				avConfigEnableAudioDevices(resume);
 				intr = SceCpuForDriver_D32ACE9E(
@@ -281,14 +281,14 @@ int _sceAVConfigResumePhase1Main(int resume, int eventId, void *args, void *opt)
 	if ((unsigned char)avConfigState.settings.connectedDevices == 17) {
 		if (avConfigState.muted != 0) {
 			if (avConfigState.callbackMask & 16)
-				ksceKernelNotifyCallback(avConfigState.callback, 16);
+				sceKernelNotifyCallback(avConfigState.callback, 16);
 		} else if (avConfigState.settings.displayBlanked != 1) {
 			avConfigState.muted = 1;
 			avConfigState.savedVolume = avConfigState.settings.systemVolume;
 			if (avConfigHasCodec != 0)
 				SceCodecForDriver_8932F886(0);
 			if (avConfigState.callbackMask & 16)
-				ksceKernelNotifyCallback(avConfigState.callback, 16);
+				sceKernelNotifyCallback(avConfigState.callback, 16);
 		}
 	}
 	if (avConfigState.avlsTimerEnabled == 1) {
@@ -377,7 +377,7 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 	if (SceSblAIMgrForDriver_71608CA3() != 0 && volume <= 30)
 		SceAudioForDriver_15FB30DF(avConfigMasterVolumeGain[volume]);
 	SceHpremoteForDriver_D22913DB(avConfigHpremoteCallback, NULL);
-	result = ksceKernelCreateCallback("SceAVConfigBt", 0, avConfigBtCallback, NULL);
+	result = sceKernelCreateCallback("SceAVConfigBt", 0, avConfigBtCallback, NULL);
 	ksceBtRegisterCallback(result, 0x100be060ULL);
 	if (avConfigHdmiAvailable == 1) {
 		SceHdmiForDriver_0F12364A(1, avConfigHdmiConnected);
@@ -395,7 +395,7 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 			if (ksceRegMgrSystemParamGetInt(2265410, &registryValue) >= 0 &&
 			    (unsigned int)registryValue < 2)
 				SceHdmiForDriver_47894820(registryValue);
-			avConfigPowerCallback = ksceKernelCreateCallback("SceAVConfigDisplay",
+			avConfigPowerCallback = sceKernelCreateCallback("SceAVConfigDisplay",
 						0, _sceAVConfigPowerIntr, NULL);
 			if (avConfigPowerCallback < 0)
 				SCE_DBG_ASSERT_CHECK_LR(0, 1584, lr);
@@ -443,7 +443,7 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 	avConfigSetDisplayColorSpaceMode(avConfigState.settings.colorSpaceMode);
 	for (;;) {
 		timeout = 40000;
-		ksceKernelWaitEventFlag(avConfigState.eventFlag, ~0u, 5, &bits, &timeout);
+		sceKernelWaitEventFlag(avConfigState.eventFlag, ~0u, 5, &bits, &timeout);
 		avConfigState.eventBits = bits;
 		if (avConfigState.bt.deviceChanged == 0) {
 			avConfigState.bt.operation = 0;
@@ -651,7 +651,7 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 			if (removedBtOutput != 0) {
 				avConfigStopBtSend();
 				if (newBtOutput == 0 && (avConfigState.callbackMask & 1))
-					ksceKernelNotifyCallback(avConfigState.callback, 1);
+					sceKernelNotifyCallback(avConfigState.callback, 1);
 			}
 			if (removedBtInput != 0)
 				avConfigStopBtReceive();
@@ -677,14 +677,14 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 				if ((avConfigState.settings.connectedDevices & 6) == 0) {
 					if (avConfigState.muted != 0) {
 						if (avConfigState.callbackMask & 16)
-							ksceKernelNotifyCallback(avConfigState.callback, 16);
+							sceKernelNotifyCallback(avConfigState.callback, 16);
 					} else if (avConfigState.settings.displayBlanked != 1) {
 						avConfigState.muted = 1;
 						avConfigState.savedVolume = avConfigState.settings.systemVolume;
 						if (avConfigHasCodec != 0)
 							SceCodecForDriver_8932F886(0);
 						if (avConfigState.callbackMask & 16)
-							ksceKernelNotifyCallback(avConfigState.callback, 16);
+							sceKernelNotifyCallback(avConfigState.callback, 16);
 					}
 				}
 				goto displayComplete;
@@ -735,28 +735,28 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 			if (speakerEnabled && removedBtOutput != 0) {
 				if (avConfigState.muted != 0) {
 					if (avConfigState.callbackMask & 16)
-						ksceKernelNotifyCallback(avConfigState.callback, 16);
+						sceKernelNotifyCallback(avConfigState.callback, 16);
 				} else if (avConfigState.settings.displayBlanked != 1) {
 					avConfigState.muted = 1;
 					avConfigState.savedVolume = avConfigState.settings.systemVolume;
 					if (avConfigHasCodec != 0)
 						SceCodecForDriver_8932F886(0);
 					if (avConfigState.callbackMask & 16)
-						ksceKernelNotifyCallback(avConfigState.callback, 16);
+						sceKernelNotifyCallback(avConfigState.callback, 16);
 				}
 			}
 			if (speakerEnabled && ((outputRemoved & 4) || (avConfigSavedOutputDevices & 4)) &&
 			    avConfigState.settings.speakerMute == 1) {
 				if (avConfigState.muted != 0) {
 					if (avConfigState.callbackMask & 16)
-						ksceKernelNotifyCallback(avConfigState.callback, 16);
+						sceKernelNotifyCallback(avConfigState.callback, 16);
 				} else if (avConfigState.settings.displayBlanked != 1) {
 					avConfigState.muted = avConfigState.settings.speakerMute;
 					avConfigState.savedVolume = avConfigState.settings.systemVolume;
 					if (avConfigHasCodec != 0)
 						SceCodecForDriver_8932F886(0);
 					if (avConfigState.callbackMask & 16)
-						ksceKernelNotifyCallback(avConfigState.callback, 16);
+						sceKernelNotifyCallback(avConfigState.callback, 16);
 				}
 			} else if (avConfigState.muted == 0 && avConfigHasCodec != 0) {
 				SceCodecForDriver_8932F886(avConfigState.settings.systemVolume);
@@ -837,7 +837,7 @@ iterationComplete:
 						sceKernelDelayThread(40000);
 					}
 					if (avConfigState.callbackMask & 8)
-						ksceKernelNotifyCallback(avConfigState.callback, 8);
+						sceKernelNotifyCallback(avConfigState.callback, 8);
 				}
 			}
 		} else {
@@ -892,18 +892,18 @@ int module_start(SceSize arglen, const void *argp)
 	result = avConfigInitializeBtTransfer();
 	if (result < 0)
 		return result;
-	result = ksceKernelCreateEventFlag("SceAVConfig", 0, 0, NULL);
+	result = sceKernelCreateEventFlag("SceAVConfig", 0, 0, NULL);
 	avConfigState.eventFlag = result;
 	if (result < 0)
 		return result;
 	if (SceHdmiForDriver_0F12364A != NULL)
 		avConfigHdmiAvailable = 1;
-	result = ksceKernelCreateThread("SceAVConfig", _sceAVConfigThread,
+	result = sceKernelCreateThread("SceAVConfig", _sceAVConfigThread,
 				      32, 0x2000, 0, 0x80000, NULL);
 	avConfigState.thread = result;
 	if (result < 0)
 		return result;
-	result = ksceKernelStartThread(result, 0, NULL);
+	result = sceKernelStartThread(result, 0, NULL);
 	if (result < 0)
 		return result;
 	sceKernelRegisterSysEventHandler("SceAVConfig",

@@ -40,7 +40,7 @@ int avConfigBtReceiveThread(SceSize arglen, void *argp)
 	(void)argp;
 	for (;;) {
 		memset(avConfigBtReceiveSamples, 0, sizeof(avConfigBtReceiveSamples));
-		ksceKernelWaitEventFlag(avConfigBtReceiveEvent, 16, 5, NULL, NULL);
+		sceKernelWaitEventFlag(avConfigBtReceiveEvent, 16, 5, NULL, NULL);
 		if (avConfigBtReceiveFlags & 4) {
 			size = 2048;
 			interval = 10667;
@@ -54,7 +54,7 @@ int avConfigBtReceiveThread(SceSize arglen, void *argp)
 		for (;;) {
 			SceAudioInForDriver_3D164387(avConfigBtReceiveSamples,
 				(received < 0 ? 0 : received) >> 1);
-			ksceKernelPollEventFlag(avConfigBtReceiveEvent, 32, 5, &bits);
+			sceKernelPollEventFlag(avConfigBtReceiveEvent, 32, 5, &bits);
 			if (bits == 32)
 				break;
 			now = sceKernelGetSystemTimeWide();
@@ -80,7 +80,7 @@ int avConfigBtSendThread(SceSize arglen, void *argp)
 	(void)argp;
 	for (;;) {
 		memset(avConfigBtSendSamples[0], 0, sizeof(avConfigBtSendSamples[0]));
-		ksceKernelWaitEventFlag(avConfigBtSendEvent, 1, 5, NULL, NULL);
+		sceKernelWaitEventFlag(avConfigBtSendEvent, 1, 5, NULL, NULL);
 		if (avConfigBtSendFlags & 8) {
 			words = 512;
 			SceAudioForDriver_134C96C1(48000);
@@ -100,7 +100,7 @@ int avConfigBtSendThread(SceSize arglen, void *argp)
 			buffer = avConfigBtSendSamples[bank];
 			SceAudioForDriver_81EB0AE5(0, previous, words);
 			ksceBtSendAudio(avConfigBtSendAddress, buffer, size);
-			ksceKernelPollEventFlag(avConfigBtSendEvent, 2, 5, &bits);
+			sceKernelPollEventFlag(avConfigBtSendEvent, 2, 5, &bits);
 		} while (bits != 2);
 		SceAudioForDriver_134C96C1(48000);
 		SceAudioForDriver_FC375BAC(2);
@@ -113,28 +113,28 @@ int avConfigInitializeBtTransfer(void)
 
 	avConfigBtSendActive = 0;
 	avConfigBtReceiveActive = 0;
-	result = ksceKernelCreateEventFlag(avConfigBtSendName, 0, 0, NULL);
+	result = sceKernelCreateEventFlag(avConfigBtSendName, 0, 0, NULL);
 	avConfigBtSendEvent = result;
 	if (result < 0)
 		return result;
-	result = ksceKernelCreateEventFlag(avConfigBtReceiveName, 0, 0, NULL);
+	result = sceKernelCreateEventFlag(avConfigBtReceiveName, 0, 0, NULL);
 	avConfigBtReceiveEvent = result;
 	if (result < 0)
 		return result;
-	result = ksceKernelCreateThread(avConfigBtSendName, avConfigBtSendThread,
+	result = sceKernelCreateThread(avConfigBtSendName, avConfigBtSendThread,
 				       18, 0x2000, 0, 0x80000, NULL);
 	avConfigBtSendThreadId = result;
 	if (result < 0)
 		return result;
-	result = ksceKernelCreateThread(avConfigBtReceiveName, avConfigBtReceiveThread,
+	result = sceKernelCreateThread(avConfigBtReceiveName, avConfigBtReceiveThread,
 				       19, 0x2000, 0, 0x80000, NULL);
 	avConfigBtReceiveThreadId = result;
 	if (result < 0)
 		return result;
-	result = ksceKernelStartThread(avConfigBtSendThreadId, 0, NULL);
+	result = sceKernelStartThread(avConfigBtSendThreadId, 0, NULL);
 	if (result < 0)
 		return result;
-	result = ksceKernelStartThread(avConfigBtReceiveThreadId, 0, NULL);
+	result = sceKernelStartThread(avConfigBtReceiveThreadId, 0, NULL);
 	return result < 0 ? result : 0;
 }
 
@@ -148,7 +148,7 @@ int avConfigStartBtSend(SceUInt64 address, unsigned int flags)
 	avConfigBtSendFlags = flags;
 	avConfigBtSendRate = sampleRate;
 	avConfigBtSendActive = 1;
-	ksceKernelSetEventFlag(avConfigBtSendEvent, 1);
+	sceKernelSetEventFlag(avConfigBtSendEvent, 1);
 	return 0;
 }
 
@@ -160,7 +160,7 @@ int avConfigStartBtReceive(SceUInt64 address, unsigned int flags, int sampleRate
 	avConfigBtReceiveRate = sampleRate;
 	avConfigBtReceiveFlags = flags;
 	avConfigBtReceiveActive = 1;
-	ksceKernelSetEventFlag(avConfigBtReceiveEvent, 16);
+	sceKernelSetEventFlag(avConfigBtReceiveEvent, 16);
 	return 0;
 }
 
@@ -168,7 +168,7 @@ int avConfigStopBtSend(void)
 {
 	if (avConfigBtSendActive == 1) {
 		avConfigBtSendActive = 0;
-		ksceKernelSetEventFlag(avConfigBtSendEvent, 2);
+		sceKernelSetEventFlag(avConfigBtSendEvent, 2);
 	}
 	return 0;
 }
@@ -177,7 +177,7 @@ int avConfigStopBtReceive(void)
 {
 	if (avConfigBtReceiveActive == 1) {
 		avConfigBtReceiveActive = 0;
-		ksceKernelSetEventFlag(avConfigBtReceiveEvent, 32);
+		sceKernelSetEventFlag(avConfigBtReceiveEvent, 32);
 	}
 	return 0;
 }

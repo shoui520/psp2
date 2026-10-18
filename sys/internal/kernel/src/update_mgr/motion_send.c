@@ -13,7 +13,7 @@ int MotionUtilSendCommand(void)
 		if (SceMotionDevForDriver_09918DAE(MotionUtilCommandComplete,
 			    &updateMotionRequest, &updateMotionResponse,
 			    &updateMotionEvent) == 0) {
-			result = ksceKernelWaitEventFlag(updateMotionEvent.eventFlagId,
+			result = sceKernelWaitEventFlag(updateMotionEvent.eventFlagId,
 				3, 5, &resultPattern, NULL);
 			if (result == 0 && !(resultPattern & 2) &&
 			    updateMotionResponse.payload.control == 6)

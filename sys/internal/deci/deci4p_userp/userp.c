@@ -206,7 +206,7 @@ static inline __attribute__((always_inline)) void UserpResetRing(UserpState *st)
 static void UserpNotify(UserpState *st)
 {
 	if (st->callback > 0)
-		ksceKernelNotifyCallback(st->callback, st->status);
+		sceKernelNotifyCallback(st->callback, st->status);
 }
 
 /* name unknown: DfMgr event handler (protocol API version 2) */
@@ -278,7 +278,7 @@ static int UserpHandler(int event, void *arg, void *ctx)
 		st->recvCount = 0;
 		st->used += count;
 		st->pending = total + st->pending - sizeof(SceDeci4pHeader);
-		ksceKernelSetEventFlag(st->evf, EVF_DATA);
+		sceKernelSetEventFlag(st->evf, EVF_DATA);
 		st->status = (st->pending | STATUS_DATA) | (st->status & 0xff000000);
 		UserpNotify(st);
 		return 0;
@@ -291,7 +291,7 @@ static int UserpHandler(int event, void *arg, void *ctx)
 		return 0;
 
 	case 4:					/* sent */
-		ksceKernelSetEventFlag(st->evf, EVF_SENT);
+		sceKernelSetEventFlag(st->evf, EVF_SENT);
 		return 0;
 
 	case 5:					/* status */
@@ -299,10 +299,10 @@ static int UserpHandler(int event, void *arg, void *ctx)
 		if (status->kind == 0) {
 			if (status->connected == 0) {
 				st->status |= STATUS_DOWN | STATUS_CLOSED;
-				ksceKernelSetEventFlag(st->evf, EVF_DOWN | EVF_CLOSED);
+				sceKernelSetEventFlag(st->evf, EVF_DOWN | EVF_CLOSED);
 			} else if (status->connected == 1) {
 				st->status &= ~STATUS_DOWN;
-				ksceKernelClearEventFlag(st->evf, ~EVF_DOWN);
+				sceKernelClearEventFlag(st->evf, ~EVF_DOWN);
 			}
 			UserpNotify(st);
 			return 0;
@@ -311,10 +311,10 @@ static int UserpHandler(int event, void *arg, void *ctx)
 			return 0;
 		if (status->enabled == 0) {
 			st->status |= STATUS_CLOSED;
-			ksceKernelSetEventFlag(st->evf, EVF_CLOSED);
+			sceKernelSetEventFlag(st->evf, EVF_CLOSED);
 		} else if (status->enabled == 1) {
 			st->status &= ~STATUS_CLOSED;
-			ksceKernelClearEventFlag(st->evf, ~EVF_CLOSED);
+			sceKernelClearEventFlag(st->evf, ~EVF_CLOSED);
 		} else {
 			return 0;
 		}
@@ -325,10 +325,10 @@ static int UserpHandler(int event, void *arg, void *ctx)
 		UserpResetRing(st);
 		if (status->kind == 1) {
 			st->status |= STATUS_DOWN | STATUS_CLOSED;
-			ksceKernelSetEventFlag(st->evf, EVF_SEND_FAIL | EVF_DOWN | EVF_CLOSED);
+			sceKernelSetEventFlag(st->evf, EVF_SEND_FAIL | EVF_DOWN | EVF_CLOSED);
 		} else if (status->kind == 2) {
 			st->status |= STATUS_CLOSED;
-			ksceKernelSetEventFlag(st->evf, EVF_SEND_FAIL | EVF_CLOSED);
+			sceKernelSetEventFlag(st->evf, EVF_SEND_FAIL | EVF_CLOSED);
 		} else {
 			return 0;
 		}
@@ -346,11 +346,11 @@ static inline __attribute__((always_inline)) void UserpFreeObject(UserpObject *o
 	if (st->handle > 0)
 		sceDfMgrClose(st->handle);
 	if (st->evf > 0)
-		ksceKernelDeleteEventFlag(st->evf);
+		sceKernelDeleteEventFlag(st->evf);
 	if (st->readMutex > 0)
-		ksceKernelDeleteMutex(st->readMutex);
+		sceKernelDeleteMutex(st->readMutex);
 	if (st->writeMutex > 0)
-		ksceKernelDeleteMutex(st->writeMutex);
+		sceKernelDeleteMutex(st->writeMutex);
 	if (st->ringBlock > 0)
 		SceSysmemForDriver_009E1C61(st->ringBlock);
 	if (obj->memblock > 0)
@@ -364,14 +364,14 @@ static int UserpCloseProcess(SceUID pid)
 	UserpState *st;
 	int i, ret;
 
-	ret = ksceKernelLockMutex(s_mutex, 1, NULL);
+	ret = sceKernelLockMutex(s_mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	for (i = 0; i < USERP_CHANNELS; i++) {
 		if (s_channel[i] == -1)
 			continue;
 		if (SceSysmemForDriver_00ED6C14(s_channel[i], s_class, (SceObjectBase **)&obj) < 0) {
-			ksceKernelUnlockMutex(s_mutex, 1);
+			sceKernelUnlockMutex(s_mutex, 1);
 			return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_SID;
 		}
 		st = obj->state;
@@ -380,19 +380,19 @@ static int UserpCloseProcess(SceUID pid)
 			continue;
 		}
 		SceSysmemForDriver_84A4AF5E(pid, st->puid);
-		ret = ksceKernelLockMutex(st->writeMutex, 1, NULL);
+		ret = sceKernelLockMutex(st->writeMutex, 1, NULL);
 		if (ret < 0) {
 			sceGUIDReleaseObject(s_channel[i]);
-			ksceKernelUnlockMutex(s_mutex, 1);
+			sceKernelUnlockMutex(s_mutex, 1);
 			return ret;
 		}
-		ksceKernelSetEventFlag(st->evf, EVF_CLOSE);
+		sceKernelSetEventFlag(st->evf, EVF_CLOSE);
 		UserpFreeObject(obj);
 		sceGUIDReleaseObject(s_channel[i]);
 		sceGUIDClose(s_channel[i]);
 		s_channel[i] = -1;
 	}
-	ksceKernelUnlockMutex(s_mutex, 1);
+	sceKernelUnlockMutex(s_mutex, 1);
 	return 0;
 }
 
@@ -438,7 +438,7 @@ int module_start(SceSize args, void *argp)
 	if (uid < 0)
 		return 1;
 	s_procEvent = uid;
-	uid = ksceKernelCreateMutex("SceDeci4pUserGlobal", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
+	uid = sceKernelCreateMutex("SceDeci4pUserGlobal", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 	if (uid < 0)
 		goto unregister;
 	s_mutex = uid;
@@ -457,7 +457,7 @@ int module_start(SceSize args, void *argp)
 	}
 	sceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, s_class);
 delete:
-	ksceKernelDeleteMutex(s_mutex);
+	sceKernelDeleteMutex(s_mutex);
 unregister:
 	SceProcEventForDriver_3DED57CC(s_procEvent);
 	return 1;
@@ -478,7 +478,7 @@ SceUID sceKernelDeci4pOpen(const char *name, SceUInt32 protocol, SceSize ringSiz
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_PROTOCOL;
 
 	SYSCALL_ENTER(tid);
-	ret = ksceKernelLockMutex(s_mutex, 1, NULL);
+	ret = sceKernelLockMutex(s_mutex, 1, NULL);
 	if (ret < 0) {
 		SYSCALL_LEAVE(tid);
 		return ret;
@@ -517,15 +517,15 @@ SceUID sceKernelDeci4pOpen(const char *name, SceUInt32 protocol, SceSize ringSiz
 	st->callback = -1;
 	s_channel[slot] = guid;
 
-	ret = uid = ksceKernelCreateMutex("SceDeci4pUserRead", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
+	ret = uid = sceKernelCreateMutex("SceDeci4pUserRead", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 	if (uid < 0)
 		goto fail;
 	st->readMutex = uid;
-	ret = uid = ksceKernelCreateMutex("SceDeci4pUserWrite", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
+	ret = uid = sceKernelCreateMutex("SceDeci4pUserWrite", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 	if (uid < 0)
 		goto fail;
 	st->writeMutex = uid;
-	ret = uid = ksceKernelCreateEventFlag("SceDeci4pUserp",
+	ret = uid = sceKernelCreateEventFlag("SceDeci4pUserp",
 					      EVF_ATTR_UNK8000 | SCE_KERNEL_EVF_ATTR_MULTI,
 					       0, NULL);
 	if (uid < 0)
@@ -575,7 +575,7 @@ SceUID sceKernelDeci4pOpen(const char *name, SceUInt32 protocol, SceSize ringSiz
 	memset(st->ring, 0, st->ringSize);
 	st->recvCount = 0;
 	st->pending = 0;
-	ksceKernelUnlockMutex(s_mutex, 1);
+	sceKernelUnlockMutex(s_mutex, 1);
 	SYSCALL_LEAVE(tid);
 	return st->puid;
 
@@ -586,7 +586,7 @@ fail:
 		s_channel[slot] = -1;
 	}
 unlock:
-	ksceKernelUnlockMutex(s_mutex, 1);
+	sceKernelUnlockMutex(s_mutex, 1);
 	SYSCALL_LEAVE(tid);
 	return ret;
 }
@@ -604,7 +604,7 @@ int sceKernelDeci4pClose(SceUID puid)
 	if (guid < 0)
 		goto bad;
 	SceSysmemForDriver_84A4AF5E(0, puid);
-	ret = ksceKernelLockMutex(s_mutex, 1, NULL);
+	ret = sceKernelLockMutex(s_mutex, 1, NULL);
 	if (ret < 0) {
 		SYSCALL_LEAVE(tid);
 		return ret;
@@ -612,18 +612,18 @@ int sceKernelDeci4pClose(SceUID puid)
 	for (i = 0; i < USERP_CHANNELS; i++)
 		if (s_channel[i] == guid)
 			s_channel[i] = -1;
-	ksceKernelUnlockMutex(s_mutex, 1);
+	sceKernelUnlockMutex(s_mutex, 1);
 
 	if (SceSysmemForDriver_00ED6C14(guid, s_class, (SceObjectBase **)&obj) < 0)
 		goto bad;
 	st = obj->state;
-	ret = ksceKernelLockMutex(st->writeMutex, 1, NULL);
+	ret = sceKernelLockMutex(st->writeMutex, 1, NULL);
 	if (ret < 0) {
 		sceGUIDReleaseObject(guid);
 		SYSCALL_LEAVE(tid);
 		return ret;
 	}
-	ksceKernelSetEventFlag(st->evf, EVF_CLOSE);
+	sceKernelSetEventFlag(st->evf, EVF_CLOSE);
 	UserpFreeObject(obj);
 	sceGUIDReleaseObject(guid);
 	sceGUIDClose(guid);
@@ -658,7 +658,7 @@ int sceKernelDeci4pRegisterCallback(SceUID puid, SceUID cbPuid)
 	intr = SceCpuForDriver_D32ACE9E(&st->lock);
 	st->callback = cb;
 	if (cb != 0)
-		ksceKernelNotifyCallback(cb, st->status);
+		sceKernelNotifyCallback(cb, st->status);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&st->lock, intr);
 	sceGUIDReleaseObject(guid);
 	SYSCALL_LEAVE(tid);
@@ -709,7 +709,7 @@ int sceKernelDeci4pRead(SceUID puid, void *buf, SceSize size, int flags)
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_SID;
 	}
 	st = obj->state;
-	ret = ksceKernelLockMutex(st->readMutex, 1, NULL);
+	ret = sceKernelLockMutex(st->readMutex, 1, NULL);
 	if (ret < 0) {
 		sceGUIDReleaseObject(guid);
 		SYSCALL_LEAVE(tid);
@@ -723,14 +723,14 @@ int sceKernelDeci4pRead(SceUID puid, void *buf, SceSize size, int flags)
 	intr = SceCpuForDriver_D32ACE9E(&st->lock);
 	if (st->used < 0x10) {
 		/* wait for a packet */
-		ksceKernelClearEventFlag(st->evf, ~EVF_DATA);
+		sceKernelClearEventFlag(st->evf, ~EVF_DATA);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&st->lock, intr);
-		ret = ksceKernelWaitEventFlag(st->evf, EVF_DATA | EVF_CLOSE | EVF_DOWN | EVF_CLOSED,
+		ret = sceKernelWaitEventFlag(st->evf, EVF_DATA | EVF_CLOSE | EVF_DOWN | EVF_CLOSED,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 		if (ret < 0) {
 			sceGUIDReleaseObject(guid);
-			ksceKernelUnlockMutex(st->readMutex, 1);
+			sceKernelUnlockMutex(st->readMutex, 1);
 			SYSCALL_LEAVE(tid);
 			return ret;
 		}
@@ -759,7 +759,7 @@ int sceKernelDeci4pRead(SceUID puid, void *buf, SceSize size, int flags)
 	if (size < len) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&st->lock, intr);
 		sceGUIDReleaseObject(guid);
-		ksceKernelUnlockMutex(st->readMutex, 1);
+		sceKernelUnlockMutex(st->readMutex, 1);
 		SYSCALL_LEAVE(tid);
 		return SCE_KERNEL_ERROR_DECI4P_TOOSMALL_BUFFER;
 	}
@@ -784,7 +784,7 @@ int sceKernelDeci4pRead(SceUID puid, void *buf, SceSize size, int flags)
 		if (count < 0) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&st->lock, intr);
 			sceGUIDReleaseObject(guid);
-			ksceKernelUnlockMutex(st->readMutex, 1);
+			sceKernelUnlockMutex(st->readMutex, 1);
 			SYSCALL_LEAVE(tid);
 			return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_ADDR;
 		}
@@ -809,18 +809,18 @@ int sceKernelDeci4pRead(SceUID puid, void *buf, SceSize size, int flags)
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&st->lock, intr);
 	}
 	sceGUIDReleaseObject(guid);
-	ksceKernelUnlockMutex(st->readMutex, 1);
+	sceKernelUnlockMutex(st->readMutex, 1);
 	SYSCALL_LEAVE(tid);
 	return count;
 
 down:
 	sceGUIDReleaseObject(guid);
-	ksceKernelUnlockMutex(st->readMutex, 1);
+	sceKernelUnlockMutex(st->readMutex, 1);
 	SYSCALL_LEAVE(tid);
 	return SCE_KERNEL_ERROR_DECI4P_NO_CONNECT;
 closed:
 	sceGUIDReleaseObject(guid);
-	ksceKernelUnlockMutex(st->readMutex, 1);
+	sceKernelUnlockMutex(st->readMutex, 1);
 	SYSCALL_LEAVE(tid);
 	return SCE_KERNEL_ERROR_DECI4P_NO_PROTO;
 }
@@ -846,7 +846,7 @@ int sceKernelDeci4pWrite(SceUID puid, const void *buf, SceSize size, int flags)
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_SID;
 	}
 	st = obj->state;
-	ret = ksceKernelLockMutex(st->writeMutex, 1, NULL);
+	ret = sceKernelLockMutex(st->writeMutex, 1, NULL);
 	if (ret < 0) {
 		sceGUIDReleaseObject(guid);
 		SYSCALL_LEAVE(tid);
@@ -880,11 +880,11 @@ int sceKernelDeci4pWrite(SceUID puid, const void *buf, SceSize size, int flags)
 	ret = sceDfMgrReqSend(st->handle);
 	if (ret < 0) {
 		sceGUIDReleaseObject(guid);
-		ksceKernelUnlockMutex(st->writeMutex, 1);
+		sceKernelUnlockMutex(st->writeMutex, 1);
 		SYSCALL_LEAVE(tid);
 		return ret == (int)DFMGR_ERROR_NOT_CONNECTED ? SCE_KERNEL_ERROR_DECI4P_NO_CONNECT : SCE_KERNEL_ERROR_DECI4P_UNKNOWN;
 	}
-	ret = ksceKernelWaitEventFlag(st->evf, EVF_SENT | EVF_SEND_FAIL,
+	ret = sceKernelWaitEventFlag(st->evf, EVF_SENT | EVF_SEND_FAIL,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	if (ret >= 0) {
@@ -899,7 +899,7 @@ int sceKernelDeci4pWrite(SceUID puid, const void *buf, SceSize size, int flags)
 	}
 out:
 	sceGUIDReleaseObject(guid);
-	ksceKernelUnlockMutex(st->writeMutex, 1);
+	sceKernelUnlockMutex(st->writeMutex, 1);
 	SYSCALL_LEAVE(tid);
 	return ret;
 }

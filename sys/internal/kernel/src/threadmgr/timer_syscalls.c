@@ -9,6 +9,7 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>
 #include <sysmem/uid_class.h>
+#include <threadmgr/threadmgr.h>
 
 int cancelTimerForUser(SceUID uid, uint32_t *count);
 int createTimerForUser(const char *name, uint32_t attributes, const uint32_t *options);
@@ -34,16 +35,6 @@ _Static_assert(sizeof(struct ThreadmgrTimerInfoCopyArgs) == 8,
 	       "timer info copy arguments size");
 
 extern int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attributes);
-int ksceKernelStartTimer(SceUID uid);
-int ksceKernelStopTimer(SceUID uid);
-int sceKernelGetTimerBase(SceUID uid, uint64_t *value);
-int sceKernelGetTimerTime(SceUID uid, uint64_t *value);
-uint64_t ksceKernelGetTimerBaseWide(SceUID uid);
-uint64_t ksceKernelGetTimerTimeWide(SceUID uid);
-int sceKernelSetTimerTime(SceUID uid, uint64_t *value);
-uint64_t ksceKernelSetTimerTimeWide(SceUID uid, uint64_t value);
-int sceKernelCancelTimer(SceUID uid, uint32_t *count);
-int sceKernelGetTimerEventRemainingTime(SceUID uid, uint64_t *remaining);
 
 int _sceKernelCancelTimer(SceUID uid, uint32_t *count)
 {

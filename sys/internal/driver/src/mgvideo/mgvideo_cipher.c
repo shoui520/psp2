@@ -735,7 +735,7 @@ int replaceUserVideoRecordBlock(MgVideoContext *context, int index,
 	update.recordKey = &workspace.recordKey;
 	update.recordTag = &recordTag;
 	update.slot = slot;
-	result = ksceKernelRunWithStack(1280, updateUserVideoRecord, &update);
+	result = SceThreadmgrForDriver_E54FD746(1280, updateUserVideoRecord, &update);
 	if (result >= 0) {
 		result = 0;
 		SceSysmemForDriver_6D88EF8A(&record->record.header.authenticatedData.sequence,
@@ -1189,7 +1189,7 @@ int authorizeUserVideoRecord(int handle, unsigned int index,
 	request.headerTag = &headerTag;
 	request.record = &record->record;
 	request.sourceSlot = slot;
-	result = ksceKernelRunWithStack(1280, authenticateUserVideoRecord, &request);
+	result = SceThreadmgrForDriver_E54FD746(1280, authenticateUserVideoRecord, &request);
 	if (result < 0)
 		goto release;
 compare:
@@ -1297,7 +1297,7 @@ int openVideoRecordStream(int handle, unsigned int index, int blockNumber,
 	request.keyring = &keyringBuffer;
 	request.record = record;
 	request.input = &inputBuffer;
-	result = ksceKernelRunWithStack(5680, openUserVideoKeyring, &request);
+	result = SceThreadmgrForDriver_E54FD746(5680, openUserVideoKeyring, &request);
 	if (result < 0) {
 		if (recordStreams[owner].contentKeySlot >= 0) {
 			SceMagicGateForDriver_144BFA76(recordStreams[owner].contentKeySlot);
@@ -1717,7 +1717,7 @@ int removeUserVideoRecordBlocks(int handle, unsigned int index,
 	request.recordKey = &workspace.recordKey;
 	request.recordTag = &recordTag;
 	request.slot = slot;
-	result = ksceKernelRunWithStack(1280, updateUserVideoRecord, &request);
+	result = SceThreadmgrForDriver_E54FD746(1280, updateUserVideoRecord, &request);
 	if (result >= 0) {
 		SceSysmemForDriver_6D88EF8A(&record->record.header.authenticatedData.sequence,
 				    &workspace.header.authenticatedData.sequence, 4);
@@ -2309,7 +2309,7 @@ int updateUserVideoPlaybackPeriod(int handle, unsigned int index, int blockNumbe
 	request.keyring = &keyringCopy;
 	request.record = record;
 	request.input = &body;
-	result = ksceKernelRunWithStack(5680, openUserVideoKeyring, &request);
+	result = SceThreadmgrForDriver_E54FD746(5680, openUserVideoKeyring, &request);
 	if (result >= 0) {
 		SceMagicGateForDriver_144BFA76(result);
 		result = 0;

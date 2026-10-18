@@ -63,11 +63,11 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_02B04343
 	SceDebugForDriver_391B74B7
 	SceDebugForDriver_D9703808
-	ksceKernelDeleteMutex
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
+	sceKernelDeleteMutex
+	sceKernelLockMutex
+	sceKernelUnlockMutex
 	sceKernelGetProcessId
-	ksceKernelCreateMutex
+	sceKernelCreateMutex
 	ksceVfsAddVfs
 	vfsUmount
 	vfsLockVnode

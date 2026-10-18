@@ -64,10 +64,10 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelUtilsForDriver_D909FA2C
 	SceKernelUtilsForDriver_E39CD272
 	SceKernelUtilsForDriver_EDA97D6D
-	ksceKernelLockFastMutex
+	lockFastMutex
 	sceKernelGetProcessId
-	ksceKernelInitializeFastMutex
-	ksceKernelUnlockFastMutex
+	sceKernelInitializeFastMutex
+	sceKernelUnlockFastMutex
 	ksceSblSsDecryptWithPortability
 	ksceSblAimgrGetOpenPsId
 	ksceSblRngGenuineRandomNumber

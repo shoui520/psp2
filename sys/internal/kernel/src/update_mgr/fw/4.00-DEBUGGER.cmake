@@ -315,29 +315,29 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_9E96D990
 	SceSysrootForDriver_9EC02A41
 	SceSysrootForDriver_B0E1FC67
-	ksceKernelSetPermission
-	ksceKernelWaitEventFlag
+	sceKernelSetThreadAccessLevel
+	sceKernelWaitEventFlag
 	sceKernelExitThread
-	ksceKernelFinalizeFastMutex
-	ksceKernelCreateCallback
+	sceKernelFinalizeFastMutex
+	sceKernelCreateCallback
 	sceKernelExitDeleteThread
-	ksceKernelStartThread
-	ksceKernelDeleteCallback
-	ksceKernelWaitThreadEnd
-	ksceKernelCreateEventFlag
+	sceKernelStartThread
+	sceKernelDeleteCallback
+	sceKernelWaitThreadEnd
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
+	sceKernelClearEventFlag
 	SceThreadmgrForDriver_56C18B11
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
+	lockFastMutex
+	sceKernelDeleteEventFlag
 	SceThreadmgrForDriver_84EB1EA4
-	ksceKernelWaitEventFlagCB
+	SceThreadmgrForDriver_8A35F714
 	sceKernelGetProcessId
-	ksceKernelDeleteThread
-	ksceKernelInitializeFastMutex
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
+	sceKernelDeleteThread
+	sceKernelInitializeFastMutex
+	sceKernelCreateThread
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
 	SceSblACMgrForKernel_sceSblACMgrIsKernelProgram
 	SceSblACMgrForKernel_sceSblACMgrIsSystemProgram
 	SceSblACMgrForKernel_sceSblACMgrGetMediaType

@@ -15,21 +15,21 @@ int GcAuthAdhocReadCertificate224(void)
 	int permission;
 	int result;
 
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
 	if (ksceIdStorageLookup(0x44, 392,
 		gcAuthAdhocCertificate.certificate224.serialized, 120) < 0 ||
 	    ksceIdStorageLookup(0x45, 0,
 		gcAuthAdhocCertificate.certificate224.serialized + 120, 112) < 0) {
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		return (int)0x808a010e;
 	}
 	result = (int)0x808a0107;
 	if (GcAuthExecuteKirkCommand(NULL,
 		&gcAuthAdhocCertificate.certificate224, 25, 232, 0) == 0)
 		result = 0;
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }
 

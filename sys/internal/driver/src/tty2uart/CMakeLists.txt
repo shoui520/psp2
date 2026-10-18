@@ -2,6 +2,6 @@
 psp2_module(os0_kd_bootimage_tty2uart KIND kernel COMPILER gcc48 SOURCES
 	tty2uart.c
 IMPORTS
-	ksceKernelDeleteMutex
+	sceKernelDeleteMutex
 	SceProcEventForDriver_3DED57CC
 )

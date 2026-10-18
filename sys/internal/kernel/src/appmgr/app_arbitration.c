@@ -114,7 +114,7 @@ int _onlaunchCallback(int notifyId, int notifyCount, int notifyArg, void *userDa
 	(void)notifyId;
 	(void)notifyCount;
 	(void)notifyArg;
-	result = ksceKernelSignalSema(*semaphore, 1);
+	result = sceKernelSignalSema(*semaphore, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -207,7 +207,7 @@ int getMiniAppValue(struct AppState *app)
 	int value, runningValue;
 
 #if FW_DEBUG
-	if (owner != ksceKernelGetThreadId()) {
+	if (owner != sceKernelGetThreadId()) {
 		sceAppMgrDump();
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 148, "getMiniAppValue");
@@ -218,7 +218,7 @@ int getMiniAppValue(struct AppState *app)
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 149, "getMiniAppValue");
 	}
 #else
-	if (owner != ksceKernelGetThreadId() || app == NULL)
+	if (owner != sceKernelGetThreadId() || app == NULL)
 		appmgrArbitrationPanic();
 #endif
 	value = 100000;
@@ -251,23 +251,23 @@ int getMiniAppValue(struct AppState *app)
 	for (ownerIndex = 0; ownerIndex != 20; ++ownerIndex) { \
 		__builtin_prefetch(&g_appmgrAppStates[ownerIndex + 5].mutexOwner); \
 		SCE_DBG_ASSERT_CHECK_FUNC(g_appmgrAppStates[ownerIndex].mutexOwner != \
-			ksceKernelGetThreadId(), _line, _func); \
+			sceKernelGetThreadId(), _line, _func); \
 	} \
 } while (0)
 
 #define GC_LOCK(_mutex, _owner, _line, _func) do { \
-	int lockResult = ksceKernelLockMutex(_mutex, 1, NULL); \
+	int lockResult = sceKernelLockMutex(_mutex, 1, NULL); \
 	if (lockResult != 0) { \
 		if ((unsigned int)(lockResult + 0x7ffd7fd4) > 1) \
 			GC_FAILURE(lockResult, _line, _func); \
 		GC_FAILURE(lockResult, (_line) + 1, _func); \
 	} else { \
-		_owner = ksceKernelGetThreadId(); \
+		_owner = sceKernelGetThreadId(); \
 	} \
 } while (0)
 
 #define GC_MAIN_LOCK(_line, _func) do { \
-	int lockResult = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL); \
+	int lockResult = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL); \
 	if (lockResult != 0) { \
 		SCE_DBG_PRINTF_FUNC(0, _line, _func, \
 			"Failed to lock ret=0x%08x\n", lockResult); \
@@ -275,7 +275,7 @@ int getMiniAppValue(struct AppState *app)
 		dumpBgmState(); \
 		SCE_DBG_ASSERT_CHECK_FUNC(0, _line, _func); \
 	} else { \
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId(); \
+		g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
 	} \
 } while (0)
 
@@ -289,29 +289,29 @@ int getMiniAppValue(struct AppState *app)
 	GC_UNLOCK_CHECK(_result, _line, _func)
 #define GC_APP_LOCK_CHECK(_line, _func) do { \
 	SCE_DBG_ASSERT_CHECK_FUNC(g_appmgrMainMutexOwner != \
-		ksceKernelGetThreadId(), _line, _func); \
-	if (g_appmgrCore2MutexOwner != ksceKernelGetThreadId()) \
+		sceKernelGetThreadId(), _line, _func); \
+	if (g_appmgrCore2MutexOwner != sceKernelGetThreadId()) \
 		GC_CHECK_APP_OWNERS(_line, _func); \
 } while (0)
 #define GC_APP_UNLOCK_CHECK(_line, _func) \
 	SCE_DBG_ASSERT_CHECK_FUNC(g_appmgrMainMutexOwner != \
-		ksceKernelGetThreadId(), _line, _func)
+		sceKernelGetThreadId(), _line, _func)
 #define GC_PREFETCH_APP(_app) __builtin_prefetch(&(_app)[1].mutex)
 #else
 #define GC_CHECK_APP_OWNERS(_line, _func) do { } while (0)
 #define GC_LOCK(_mutex, _owner, _line, _func) do { \
-	int lockResult = ksceKernelLockMutex(_mutex, 1, NULL); \
+	int lockResult = sceKernelLockMutex(_mutex, 1, NULL); \
 	if (lockResult != 0) { \
 		if ((unsigned int)(lockResult + 0x7ffd7fd4) > 1) \
 			appmgrGcListenerMutexPanic(); \
 		appmgrArbitrationPanic(); \
 	} \
-	_owner = ksceKernelGetThreadId(); \
+	_owner = sceKernelGetThreadId(); \
 } while (0)
 #define GC_MAIN_LOCK(_line, _func) do { \
-	if (ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL) != 0) \
+	if (sceKernelLockMutex(g_appmgrMainMutex, 1, NULL) != 0) \
 		appmgrGcListenerMutexPanic(); \
-	g_appmgrMainMutexOwner = ksceKernelGetThreadId(); \
+	g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
 } while (0)
 #define GC_UNLOCK_CHECK(_result, _line, _func) do { \
 	if (_result != 0) \
@@ -327,7 +327,7 @@ int getMiniAppValue(struct AppState *app)
 		appmgrArbitrationPanic(); \
 } while (0)
 #define GC_APP_LOCK_CHECK(_line, _func) \
-	((void)ksceKernelGetThreadId())
+	((void)sceKernelGetThreadId())
 #define GC_APP_UNLOCK_CHECK(_line, _func) do { } while (0)
 #define GC_PREFETCH_APP(_app) __builtin_prefetch(&(_app)[2].mutex)
 #endif
@@ -354,7 +354,7 @@ int getMiniAppValue(struct AppState *app)
 			strncmp(app->process.content.devicePrefix, "grw0:", 5) == 0 || \
 			((_includeUx) && strncmp(app->process.content.devicePrefix, "ux0:", 4) == 0); \
 		g_appmgrMainMutexOwner = -1; \
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1); \
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1); \
 		GC_UNLOCK_CHECK(result, _unlockLine, _func); \
 		if (fromMedia && pid >= 0 && (pid & 1) != 0 && \
 			(attributes & 1) == (_game)) { \
@@ -367,7 +367,7 @@ int getMiniAppValue(struct AppState *app)
 		} \
 		GC_APP_UNLOCK_CHECK(_appUnlockLine, _func); \
 		app->mutexOwner = -1; \
-		result = ksceKernelUnlockMutex(app->mutex, 1); \
+		result = sceKernelUnlockMutex(app->mutex, 1); \
 		GC_UNLOCK_CHECK(result, _appUnlockLine, _func); \
 		++index; \
 		++app; \
@@ -390,8 +390,8 @@ int _gcListenerThreadEntry(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 	for (;;) {
-		ksceKernelClearEvent(g_appmgrGro0MountEvent, 0);
-		ksceKernelClearEvent(g_appmgrGrw0MountEvent, 0);
+		sceKernelClearEvent(g_appmgrGro0MountEvent, 0);
+		sceKernelClearEvent(g_appmgrGrw0MountEvent, 0);
 		g_appmgrGcWaitEvents[0].eventId = g_appmgrGro0MountEvent;
 		g_appmgrGcWaitEvents[1].eventId = g_appmgrGrw0MountEvent;
 		g_appmgrGcWaitEvents[2].eventId = g_appmgrUx0MountEvent;
@@ -443,7 +443,7 @@ int _gcListenerThreadEntry(SceSize args, void *argp)
 			}
 		}
 		g_appmgrCore2MutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrCore2Mutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrCore2Mutex, 1);
 		GC_UNLOCK_CHECK(result, 2791, "_gcListenerThreadEntry");
 #if FW_DEBUG
 		if (result != 0)
@@ -456,7 +456,7 @@ void initProcessStateUpdaterThread(void)
 {
 	int result;
 
-	g_appmgrUpdateNotifySemaphore = ksceKernelCreateSema("SceAppMgrUpdtNtfy",
+	g_appmgrUpdateNotifySemaphore = sceKernelCreateSema("SceAppMgrUpdtNtfy",
 		0, 0, 2000, NULL);
 	if (g_appmgrUpdateNotifySemaphore <= 0) {
 #if FW_DEBUG
@@ -468,7 +468,7 @@ void initProcessStateUpdaterThread(void)
 #endif
 	}
 	dmb();
-	g_appmgrProcessStateUpdaterThread = ksceKernelCreateThread(
+	g_appmgrProcessStateUpdaterThread = sceKernelCreateThread(
 		"SceAppMgrProcessStateUpdater", _processUpdateThreadEntry,
 		96, 8192, 0, 0x80000, NULL);
 	if (g_appmgrProcessStateUpdaterThread <= 0) {
@@ -480,7 +480,7 @@ void initProcessStateUpdaterThread(void)
 		appmgrArbitrationPanic();
 #endif
 	}
-	result = ksceKernelStartThread(g_appmgrProcessStateUpdaterThread, 0, NULL);
+	result = sceKernelStartThread(g_appmgrProcessStateUpdaterThread, 0, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -493,7 +493,7 @@ void initProcessStateUpdaterThread(void)
 	g_appmgrGro0MountEvent = ksceIoCreateMountEvent(0x900, 0x202);
 	g_appmgrGrw0MountEvent = ksceIoCreateMountEvent(0xa00, 0x202);
 	g_appmgrUx0MountEvent = ksceIoCreateMountEvent(0x800, 2);
-	g_appmgrGcListenerThread = ksceKernelCreateThread("SceAppMgrGcListener",
+	g_appmgrGcListenerThread = sceKernelCreateThread("SceAppMgrGcListener",
 		_gcListenerThreadEntry, 96, 4096, 0, 0x80000, NULL);
 	if (g_appmgrGcListenerThread <= 0) {
 #if FW_DEBUG
@@ -504,7 +504,7 @@ void initProcessStateUpdaterThread(void)
 		appmgrArbitrationPanic();
 #endif
 	}
-	result = ksceKernelStartThread(g_appmgrGcListenerThread, 0, NULL);
+	result = sceKernelStartThread(g_appmgrGcListenerThread, 0, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();

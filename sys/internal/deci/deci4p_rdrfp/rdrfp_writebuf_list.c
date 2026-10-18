@@ -43,7 +43,7 @@ static int requestWritebufCallback(SceUID notifyId, SceInt32 notifyCount, SceInt
 	(void)notifyArg;
 	(void)common;
 
-	ksceKernelLockMutex(rdrfpWritebufList.mutex, 1, NULL);
+	sceKernelLockMutex(rdrfpWritebufList.mutex, 1, NULL);
 	if (rdrfpWritebufList.head.next != WRITEBUF_HEAD) {
 		for (link = rdrfpWritebufList.head.next; link != WRITEBUF_HEAD; link = next) {
 			next = link->next;
@@ -57,9 +57,9 @@ static int requestWritebufCallback(SceUID notifyId, SceInt32 notifyCount, SceInt
 			wb->flushed = 1;
 		}
 		if (flushed && rdrfpWritebufList.head.next == WRITEBUF_HEAD)
-			ksceKernelStopTimer(rdrfpWritebufTimer);
+			sceKernelStopTimer(rdrfpWritebufTimer);
 	}
-	ksceKernelUnlockMutex(rdrfpWritebufList.mutex, 1);
+	sceKernelUnlockMutex(rdrfpWritebufList.mutex, 1);
 	return 0;
 }
 
@@ -69,7 +69,7 @@ int rdrfpInitWritebufList(void)
 
 	rdrfpWritebufList.head.next = WRITEBUF_HEAD;
 	rdrfpWritebufList.head.prev = WRITEBUF_HEAD;
-	ret = ksceKernelCreateMutex("SceDeci4pRDrfp", 0x2000, 0, NULL);
+	ret = sceKernelCreateMutex("SceDeci4pRDrfp", 0x2000, 0, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 85, "CreateMutex failed (0x%08X)\n", ret);
 		return ret;
@@ -109,16 +109,16 @@ void rdrfpPutWritebufToList(RdrfpWritebuf *wb)
 	RdrfpLink *link = &wb->link;
 	RdrfpLink *head = WRITEBUF_HEAD;
 
-	ksceKernelLockMutex(rdrfpWritebufList.mutex, 1, NULL);
+	sceKernelLockMutex(rdrfpWritebufList.mutex, 1, NULL);
 	SCE_DBG_ASSERT_LEVEL(0, link == link->next, 134);
 	if (head->next == head)
-		ksceKernelStartTimer(rdrfpWritebufTimer);
+		sceKernelStartTimer(rdrfpWritebufTimer);
 	link->next = head;
 	link->prev = head->prev;
 	head->prev = link;
 	wb->flushed = 0;
 	link->prev->next = link;
-	ksceKernelUnlockMutex(rdrfpWritebufList.mutex, 1);
+	sceKernelUnlockMutex(rdrfpWritebufList.mutex, 1);
 }
 
 /* the oldest waiting write buffer, taken off the list */
@@ -126,16 +126,16 @@ RdrfpWritebuf *rdrfpGetWritebufFromList(void)
 {
 	RdrfpWritebuf *wb;
 
-	ksceKernelLockMutex(rdrfpWritebufList.mutex, 1, NULL);
+	sceKernelLockMutex(rdrfpWritebufList.mutex, 1, NULL);
 	wb = (RdrfpWritebuf *)rdrfpWritebufList.head.next;
 	if (&wb->link == WRITEBUF_HEAD) {
 		wb = NULL;
 	} else {
 		writebufUnlink(&wb->link);
 		if (rdrfpWritebufList.head.next == WRITEBUF_HEAD)
-			ksceKernelStopTimer(rdrfpWritebufTimer);
+			sceKernelStopTimer(rdrfpWritebufTimer);
 	}
-	ksceKernelUnlockMutex(rdrfpWritebufList.mutex, 1);
+	sceKernelUnlockMutex(rdrfpWritebufList.mutex, 1);
 	return wb;
 }
 
@@ -145,20 +145,20 @@ RdrfpWritebuf *rdrfpFindWritebuf(SceUInt32 fd, SceOff offset, SceSize size)
 	RdrfpLink *link;
 	RdrfpWritebuf *wb;
 
-	ksceKernelLockMutex(rdrfpWritebufList.mutex, 1, NULL);
+	sceKernelLockMutex(rdrfpWritebufList.mutex, 1, NULL);
 	for (link = rdrfpWritebufList.head.next; link != WRITEBUF_HEAD; link = link->next) {
 		wb = (RdrfpWritebuf *)link;
 		if (wb->fd == fd && wb->offset + wb->size == offset &&
 		    wb->size + size <= RDRFP_WRITE_MAX) {
 			writebufUnlink(link);
 			if (rdrfpWritebufList.head.next == WRITEBUF_HEAD)
-				ksceKernelStopTimer(rdrfpWritebufTimer);
+				sceKernelStopTimer(rdrfpWritebufTimer);
 			goto out;
 		}
 	}
 	wb = NULL;
 out:
-	ksceKernelUnlockMutex(rdrfpWritebufList.mutex, 1);
+	sceKernelUnlockMutex(rdrfpWritebufList.mutex, 1);
 	return wb;
 }
 
@@ -177,7 +177,7 @@ int rdrfpRegisterWritebufTimer(void)
 	SceKernelSysClock interval;
 	int ret;
 
-	ret = ksceKernelCreateCallback("SceDeci4pRDrfp", 0, requestWritebufCallback, NULL);
+	ret = sceKernelCreateCallback("SceDeci4pRDrfp", 0, requestWritebufCallback, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 206, "CreateCallback failed (0x%08X)\n", ret);
 		return ret;
@@ -196,7 +196,7 @@ int rdrfpRegisterWritebufTimer(void)
 		SceThreadmgrForDriver_91A8F38B(rdrfpWritebufTimer);
 		goto delete_callback;
 	}
-	ret = ksceKernelRegisterCallbackToEvent(rdrfpWritebufTimer,
+	ret = sceKernelRegisterCallbackToEventForDriver(rdrfpWritebufTimer,
 					      rdrfpWritebufCallback, rdrfpWritebufCallback);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 232, "RegisterCallbackToEvent failed (0x%08x)\n", ret);
@@ -205,16 +205,16 @@ int rdrfpRegisterWritebufTimer(void)
 	return 0;
 
 delete_callback:
-	ksceKernelDeleteCallback(rdrfpWritebufCallback);
+	sceKernelDeleteCallback(rdrfpWritebufCallback);
 	return ret;
 }
 
 void rdrfpUnregisterWritebufTimer(void)
 {
-	ksceKernelStopTimer(rdrfpWritebufTimer);
+	sceKernelStopTimer(rdrfpWritebufTimer);
 	SceThreadmgrForDriver_91A8F38B(rdrfpWritebufTimer);
 	/* Sony deletes the timer's UID as the callback */
-	ksceKernelDeleteCallback(rdrfpWritebufTimer);
+	sceKernelDeleteCallback(rdrfpWritebufTimer);
 }
 
 /* ===== file cache ===== */

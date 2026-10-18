@@ -20,10 +20,10 @@ void ewPowerButton(uint32_t state, uint32_t previous, void *argument)
 	intr = SceCpuForDriver_D32ACE9E(&ewg.ew.spinlock);
 	ewg.ew.powerButton = state;
 	if (state & EW_BUTTON_POWER) {
-		ksceKernelSetEventFlag(ewg.ew.evf, EW_EVENT_POWER_PRESSED);
-		ksceKernelClearEventFlag(ewg.ew.evf, ~EW_EVENT_POWER_RELEASED);
+		sceKernelSetEventFlag(ewg.ew.evf, EW_EVENT_POWER_PRESSED);
+		sceKernelClearEventFlag(ewg.ew.evf, ~EW_EVENT_POWER_RELEASED);
 	} else {
-		ksceKernelSetEventFlag(ewg.ew.evf, EW_EVENT_POWER_RELEASED);
+		sceKernelSetEventFlag(ewg.ew.evf, EW_EVENT_POWER_RELEASED);
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ewg.ew.spinlock, intr);
 }
@@ -45,11 +45,11 @@ int ewPowerOffThread(SceSize args, void *argp)
 	ewg.ew.powerMask = EW_BUTTON_POWER;
 	ewg.ew.powerCallback = SceCtrlForDriver_FF9D4DD4(EW_BUTTON_POWER, ewPowerButton, 0, &state);
 	if (state & EW_BUTTON_POWER)
-		ksceKernelSetEventFlag(ewg.ew.evf, EW_EVENT_POWER_PRESSED);
+		sceKernelSetEventFlag(ewg.ew.evf, EW_EVENT_POWER_PRESSED);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ewg.ew.spinlock, intr);
 
 	for (;;) {
-		ksceKernelWaitEventFlag(ewg.ew.evf, EW_EVENT_POWER_PRESSED | EW_EVENT_UNPLUGGED
+		sceKernelWaitEventFlag(ewg.ew.evf, EW_EVENT_POWER_PRESSED | EW_EVENT_UNPLUGGED
 					| EW_EVENT_TIMER | EW_EVENT_DISPLAY_TIMER | EW_EVENT_CHARGED
 					| EW_EVENT_SHUTDOWN,
 					SCE_KERNEL_EVF_WAITMODE_OR |
@@ -64,7 +64,7 @@ int ewPowerOffThread(SceSize args, void *argp)
 			break;
 		/* held for 1.5 s: power on */
 		timeout = 1500000;
-		ret = ksceKernelWaitEventFlag(ewg.ew.evf, EW_EVENT_POWER_RELEASED,
+		ret = sceKernelWaitEventFlag(ewg.ew.evf, EW_EVENT_POWER_RELEASED,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits,
 					      &timeout);
@@ -90,7 +90,7 @@ standby:
 /* the alarm: give up waiting */
 int ewTimer(void)
 {
-	ksceKernelSetEventFlag(ewg.ew.evf, ewg.ew.mode == EW_MODE_DISPLAY ? EW_EVENT_DISPLAY_TIMER : EW_EVENT_TIMER);
+	sceKernelSetEventFlag(ewg.ew.evf, ewg.ew.mode == EW_MODE_DISPLAY ? EW_EVENT_DISPLAY_TIMER : EW_EVENT_TIMER);
 	return 0;
 }
 
@@ -311,7 +311,7 @@ clocks:
 		ewg.ew.motionFlags = 0;
 	}
 	if (ewg.ew.mode == EW_MODE_DISPLAY)
-		ewg.ew.timer = ksceKernelRegisterTimer("SceEnumWakeupAlarm", 8000000, ewTimer, NULL);
+		ewg.ew.timer = SceThreadmgrForDriver_C58DF384("SceEnumWakeupAlarm", 8000000, ewTimer, NULL);
 
 	for (;;) {
 		if (ewg.ew.mode == EW_MODE_MTP) {
@@ -329,12 +329,12 @@ clocks:
 			} else if (ewg.ew.mode == EW_MODE_DISPLAY) {
 				/* the icon blinks: 0.19 s on of every 0.31 s */
 				rgb = ewg.ew.icon;
-				if (deadline < ksceKernelGetSystemTimeLow()) {
-					start = ksceKernelGetSystemTimeLow();
+				if (deadline < SceThreadmgrForDriver_47F6DE49()) {
+					start = SceThreadmgrForDriver_47F6DE49();
 					deadline = start + 312500;
 				}
 				if (ewg.ew.mode == EW_MODE_DISPLAY
-				    && ksceKernelGetSystemTimeLow() < start + 187500) {
+				    && SceThreadmgrForDriver_47F6DE49() < start + 187500) {
 					x0 = 480 - ewg.ew.iconWidth / 2;
 					y0 = 272 - ewg.ew.iconHeight / 2;
 					for (i = 0; i < ewg.ew.iconWidth * ewg.ew.iconHeight; i++, rgb += 3)
@@ -375,7 +375,7 @@ clocks:
 						goto motion;
 					}
 					if (pressed & EW_BUTTON_START)
-						ksceKernelSetEventFlag(ewg.ew.evf, EW_EVENT_SHUTDOWN);
+						sceKernelSetEventFlag(ewg.ew.evf, EW_EVENT_SHUTDOWN);
 					if (ewg.ew.displayOn()) {
 						if ((pressed & EW_BUTTON_UP) && ewg.ew.brightness < 0x100)
 							ewSetBrightness(ewg.ew.brightness + 1);
@@ -411,12 +411,12 @@ motion:
 				}
 				if ((charger & 0x12) == 0x10 && ewg.ew.charged != 1) {
 					ewg.ew.charged = 1;
-					ksceKernelSetEventFlag(ewg.ew.evf, EW_EVENT_CHARGED);
+					sceKernelSetEventFlag(ewg.ew.evf, EW_EVENT_CHARGED);
 				}
 			} else if (ewg.ew.connected == 1) {
 				/* unplugged: power off after a minute */
 				ewg.ew.connected = 0;
-				ewg.ew.timer = ksceKernelRegisterTimer("SceEnumWakeupAlarm", 60000000,
+				ewg.ew.timer = SceThreadmgrForDriver_C58DF384("SceEnumWakeupAlarm", 60000000,
 								   ewTimer, NULL);
 			}
 		}
@@ -428,24 +428,24 @@ int module_start(SceSize args, void *argp)
 {
 	SceUID main, powerOff;
 
-	ewg.ew.evf = ksceKernelCreateEventFlag("SceEnumWakeupPowerOff", 0x9000, 0, NULL);
+	ewg.ew.evf = sceKernelCreateEventFlag("SceEnumWakeupPowerOff", 0x9000, 0, NULL);
 	if (ewg.ew.evf < 0)
 		return SCE_KERNEL_START_FAILED;
-	main = ksceKernelCreateThread("EnumWakeupMain", ewMainThread, 0x10000102, 0x20000, 0,
+	main = sceKernelCreateThread("EnumWakeupMain", ewMainThread, 0x10000102, 0x20000, 0,
 				      0x80000, NULL);
 	if (main >= 0) {
-		if (ksceKernelStartThread(main, args, argp) >= 0) {
-			powerOff = ksceKernelCreateThread("EnumWakeupPowerOff", ewPowerOffThread,
+		if (sceKernelStartThread(main, args, argp) >= 0) {
+			powerOff = sceKernelCreateThread("EnumWakeupPowerOff", ewPowerOffThread,
 							  0x10000102, 0x20000, 0, 0x80000, NULL);
 			if (powerOff >= 0) {
-				if (ksceKernelStartThread(powerOff, args, argp) >= 0)
+				if (sceKernelStartThread(powerOff, args, argp) >= 0)
 					return SCE_KERNEL_START_SUCCESS;
-				ksceKernelDeleteThread(powerOff);
+				sceKernelDeleteThread(powerOff);
 			}
 		}
-		ksceKernelDeleteThread(main);
+		sceKernelDeleteThread(main);
 	}
-	ksceKernelDeleteEventFlag(ewg.ew.evf);
+	sceKernelDeleteEventFlag(ewg.ew.evf);
 	return SCE_KERNEL_START_FAILED;
 }
 

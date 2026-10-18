@@ -67,7 +67,7 @@ int armPmonExecAllThread(unsigned int operation, unsigned int counter,
 	unsigned int i;
 	int count, result;
 
-	result = ksceKernelGetThreadIdList(process, NULL, 0, NULL);
+	result = sceKernelGetThreadIdList(process, NULL, 0, NULL);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0, 84,
 			"[Error] sceKernelGetThreadIdList (ret = 0x%08x)\n", result);
@@ -77,7 +77,7 @@ int armPmonExecAllThread(unsigned int operation, unsigned int counter,
 	threads = SceSysmemForKernel_85571907(bytes);
 	if (threads == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
-	result = ksceKernelGetThreadIdList(process, threads, bytes, &count);
+	result = sceKernelGetThreadIdList(process, threads, bytes, &count);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0, 97,
 			"[Error] sceKernelGetThreadIdList (ret = 0x%08x)\n", result);
@@ -353,7 +353,7 @@ int ScePamgrForDriver_B699F4B0(unsigned int counter, uint32_t *value)
 
 int sceKernelPerfArmPmonOpenForUser(void)
 {
-	int permission = ksceKernelSetPermission(PAMGR_ACCESS_LEVEL);
+	int permission = sceKernelSetThreadAccessLevel(PAMGR_ACCESS_LEVEL);
 	int result;
 
 	if (permission < 0) {
@@ -363,13 +363,13 @@ int sceKernelPerfArmPmonOpenForUser(void)
 		return permission;
 	}
 	result = sceKernelPerfArmPmonOpen();
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }
 
 int sceKernelPerfArmPmonCloseForUser(void)
 {
-	int permission = ksceKernelSetPermission(PAMGR_ACCESS_LEVEL);
+	int permission = sceKernelSetThreadAccessLevel(PAMGR_ACCESS_LEVEL);
 	int result;
 
 	if (permission < 0) {
@@ -379,7 +379,7 @@ int sceKernelPerfArmPmonCloseForUser(void)
 		return permission;
 	}
 	result = sceKernelPerfArmPmonClose();
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }
 

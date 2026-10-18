@@ -159,7 +159,7 @@ int _audioencInternalDeleteEncoder(AudioencWorkManager *manager,
 	if (audioencIsResidentHandle(ctrl->handle)) {
 		SceUID owner = _audioencGetResidentEncoderOwner(index);
 
-		if (owner != ksceKernelGetProcessId())
+		if (owner != sceKernelGetProcessId())
 			return SCE_AUDIOENC_ERROR_INVALID_HANDLE;
 	}
 	audioencGetHandleCodecType(ctrl->handle);

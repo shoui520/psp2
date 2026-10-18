@@ -24,7 +24,7 @@ int bbmcUsbExtIfTransferCompleted(int forwardedValue, BbmcUsbSerialRequest *requ
 	BbmcUsbExtIfCompletion *completion = request->context;
 
 	completion->result = resultOrCount;
-	ksceKernelSignalSema(completion->semaphore, 1);
+	sceKernelSignalSema(completion->semaphore, 1);
 	return 0;
 }
 
@@ -233,7 +233,7 @@ int sceBbmcUsbExtIfRead(unsigned int channel, void *data, SceSize length)
 		return (int)0x80330002;
 	completion.semaphore = 0;
 	completion.result = -1;
-	ret = ksceKernelCreateSema(names[channel], 0, 0, 1, NULL);
+	ret = sceKernelCreateSema(names[channel], 0, 0, 1, NULL);
 	if (ret < 0)
 		return ret;
 	completion.semaphore = ret;
@@ -259,12 +259,12 @@ int sceBbmcUsbExtIfRead(unsigned int channel, void *data, SceSize length)
 	if (ret < 0)
 		goto finished;
 wait:
-	ret = ksceKernelWaitSema(completion.semaphore, 1, NULL);
+	ret = sceKernelWaitSema(completion.semaphore, 1, NULL);
 	if (ret >= 0)
 		ret = completion.result;
 finished:
 	if (completion.semaphore > 0)
-		ksceKernelDeleteSema(completion.semaphore);
+		sceKernelDeleteSema(completion.semaphore);
 	if (ret > 0) {
 		int copied = SceSysmemForDriver_6D88EF8A(data, buffer, ret);
 
@@ -297,7 +297,7 @@ int sceBbmcUsbExtIfWrite(unsigned int channel, const void *data, SceSize length)
 		return (int)0x80330002;
 	completion.semaphore = 0;
 	completion.result = -1;
-	ret = ksceKernelCreateSema(names[channel], 0, 0, 1, NULL);
+	ret = sceKernelCreateSema(names[channel], 0, 0, 1, NULL);
 	if (ret < 0)
 		return ret;
 	completion.semaphore = ret;
@@ -323,11 +323,11 @@ int sceBbmcUsbExtIfWrite(unsigned int channel, const void *data, SceSize length)
 	if (ret < 0)
 		goto finished;
 wait:
-	ret = ksceKernelWaitSema(completion.semaphore, 1, NULL);
+	ret = sceKernelWaitSema(completion.semaphore, 1, NULL);
 	if (ret >= 0)
 		ret = completion.result;
 finished:
 	if (completion.semaphore > 0)
-		ksceKernelDeleteSema(completion.semaphore);
+		sceKernelDeleteSema(completion.semaphore);
 	return ret;
 }

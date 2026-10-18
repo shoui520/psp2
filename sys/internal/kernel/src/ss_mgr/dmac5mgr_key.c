@@ -12,9 +12,9 @@ int __attribute__((noinline, noclone)) decKeyRingKeyUseCount(unsigned int keyRin
 {
 	if (keyRingIndex > 31)
 		return (int)0x800f1516;
-	ksceKernelLockFastMutex(&dmacKeyringMutex);
+	lockFastMutex(&dmacKeyringMutex);
 	--dmacKeyringStorage[keyRingIndex].useCount;
-	ksceKernelUnlockFastMutex(&dmacKeyringMutex);
+	sceKernelUnlockFastMutex(&dmacKeyringMutex);
 	return 0;
 }
 
@@ -103,7 +103,7 @@ int checkKeyRingKeyExist(const void *key, unsigned int keyBits,
 	uint16_t useCount;
 	int ret;
 
-	ksceKernelLockFastMutex(&dmacKeyringMutex);
+	lockFastMutex(&dmacKeyringMutex);
 	for (;;) {
 		if (entry->valid == 1 && entry->keyId == keyId &&
 			entry->keySize == keySize) {
@@ -114,12 +114,12 @@ int checkKeyRingKeyExist(const void *key, unsigned int keyBits,
 		++index;
 		++entry;
 		if (index == 24) {
-			ksceKernelUnlockFastMutex(&dmacKeyringMutex);
+			sceKernelUnlockFastMutex(&dmacKeyringMutex);
 			return (int)0x800f1502;
 		}
 	}
 	if (dmacKeyringStorage[index].useCount == UINT16_MAX) {
-		ksceKernelUnlockFastMutex(&dmacKeyringMutex);
+		sceKernelUnlockFastMutex(&dmacKeyringMutex);
 		return (int)0x800f1510;
 	}
 	for (SceSblDmac5KeyRing *other = &dmacKeyringStorage[12];
@@ -132,7 +132,7 @@ int checkKeyRingKeyExist(const void *key, unsigned int keyBits,
 	entry->age = 0;
 	*keyRingIndex = index;
 	entry->useCount = useCount + 1;
-	ksceKernelUnlockFastMutex(&dmacKeyringMutex);
+	sceKernelUnlockFastMutex(&dmacKeyringMutex);
 	return ret;
 }
 
@@ -161,7 +161,7 @@ int setNewKeyRingKey(const void *key, unsigned int keyBits,
 	SceSblDmac5KeyRing *entry = &dmacKeyringStorage[12];
 	int ret;
 
-	ksceKernelLockFastMutex(&dmacKeyringMutex);
+	lockFastMutex(&dmacKeyringMutex);
 	for (;;) {
 		if (entry->valid == 0)
 			break;
@@ -178,12 +178,12 @@ int setNewKeyRingKey(const void *key, unsigned int keyBits,
 				}
 			}
 			if (oldest == UINT16_MAX) {
-				ksceKernelUnlockFastMutex(&dmacKeyringMutex);
+				sceKernelUnlockFastMutex(&dmacKeyringMutex);
 				return (int)0x800f1510;
 			}
 			ret = ksceSblAuthMgrSetDmac5Key(key, keyBits >> 3, oldest, keyId);
 			if (ret != 0) {
-				ksceKernelUnlockFastMutex(&dmacKeyringMutex);
+				sceKernelUnlockFastMutex(&dmacKeyringMutex);
 				return ret;
 			}
 			for (index = 12; index != 24; ++index) {
@@ -193,13 +193,13 @@ int setNewKeyRingKey(const void *key, unsigned int keyBits,
 			}
 			cacheKeyRingKey(oldest, key, keyBits, keyId);
 			*keyRingIndex = oldest;
-			ksceKernelUnlockFastMutex(&dmacKeyringMutex);
+			sceKernelUnlockFastMutex(&dmacKeyringMutex);
 			return 0;
 		}
 	}
 	ret = ksceSblAuthMgrSetDmac5Key(key, keyBits >> 3, index, keyId);
 	if (ret != 0) {
-		ksceKernelUnlockFastMutex(&dmacKeyringMutex);
+		sceKernelUnlockFastMutex(&dmacKeyringMutex);
 		return ret;
 	}
 	for (unsigned int other = 12; other != 24; ++other) {
@@ -209,7 +209,7 @@ int setNewKeyRingKey(const void *key, unsigned int keyBits,
 	}
 	cacheKeyRingKey(index, key, keyBits, keyId);
 	*keyRingIndex = index;
-	ksceKernelUnlockFastMutex(&dmacKeyringMutex);
+	sceKernelUnlockFastMutex(&dmacKeyringMutex);
 	return 0;
 }
 

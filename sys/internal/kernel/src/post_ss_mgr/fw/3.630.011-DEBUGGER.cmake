@@ -175,14 +175,14 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_E25D2FD5
 	SceSysrootForDriver_E2E88E3E
 	SceSysrootForDriver_EE5D6CE9
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
+	sceKernelLockMutex
+	sceKernelUnlockMutex
 	sceKernelDelayThread
-	ksceKernelLockFastMutex
-	ksceKernelInitializeFastMutex
-	ksceKernelUnlockFastMutex
-	ksceKernelEnqueueWorkQueue
-	ksceKernelCreateMutex
+	lockFastMutex
+	sceKernelInitializeFastMutex
+	sceKernelUnlockFastMutex
+	sceKernelScheduleWorkTask
+	sceKernelCreateMutex
 	SceSysmemForKernel_4233C16D
 	SceSysmemForKernel_85571907
 	SceSysmemForDriver_009E1C61

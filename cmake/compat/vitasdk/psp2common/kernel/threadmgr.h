@@ -10,7 +10,7 @@
 
 #include <threadmgr/threadmgr.h>
 
-/* vitasdk's psp2kern/kernel/threadmgr/misc.h: ksceKernelGetThreadmgrUIDClass */
+/* vitasdk's psp2kern/kernel/threadmgr/misc.h: sceKernelGetThreadmgrUIDClass */
 typedef enum SceKernelIdListType {
 	SCE_KERNEL_TMID_Thread			= 1,
 	SCE_KERNEL_TMID_Semaphore		= 2,

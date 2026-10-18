@@ -84,7 +84,7 @@ static int NOINLINE AllocateSessionSlot(void)
 	uint64_t used, bit;
 	int index;
 
-	if (ksceKernelLockFastMutex(&s_fastMutex) != 0)
+	if (lockFastMutex(&s_fastMutex) != 0)
 		return -1;
 	used = s_usedSlots;
 	for (index = 0; index < 32; index++) {
@@ -92,11 +92,11 @@ static int NOINLINE AllocateSessionSlot(void)
 		if (used & bit)
 			continue;
 		s_usedSlots = used | bit;
-		if (ksceKernelUnlockFastMutex(&s_fastMutex) != 0)
+		if (sceKernelUnlockFastMutex(&s_fastMutex) != 0)
 			return -1;
 		return index;
 	}
-	ksceKernelUnlockFastMutex(&s_fastMutex);
+	sceKernelUnlockFastMutex(&s_fastMutex);
 	return -1;
 }
 
@@ -104,12 +104,12 @@ static int NOINLINE ReleaseSessionSlot(int index)
 {
 	uint64_t used;
 
-	if (index >= 32 || ksceKernelLockFastMutex(&s_fastMutex) != 0)
+	if (index >= 32 || lockFastMutex(&s_fastMutex) != 0)
 		return -1;
 	used = s_usedSlots & ~(UINT64_C(1) << index);
 	s_sessions[index].id = 0;
 	s_usedSlots = used;
-	return ksceKernelUnlockFastMutex(&s_fastMutex) != 0 ? -1 : 0;
+	return sceKernelUnlockFastMutex(&s_fastMutex) != 0 ? -1 : 0;
 }
 
 static int FindSessionSlot(SceUID id)
@@ -169,7 +169,7 @@ static void NOINLINE sceSblSmCommIntHandler(SceUID id, int channel, void *argume
 		goto out;
 	}
 	s_sessions[index].result = result;
-	ksceKernelSetEventFlag(s_sessions[index].eventFlag, eventBits);
+	sceKernelSetEventFlag(s_sessions[index].eventFlag, eventBits);
 out:
 	return;
 }
@@ -185,7 +185,7 @@ static int NOINLINE StartSession(int index, uint32_t priority,
 	int ret;
 
 	*id = -1;
-	eventFlag = ksceKernelCreateEventFlag("SceSblSmCommB639DB03", 0, 0, NULL);
+	eventFlag = sceKernelCreateEventFlag("SceSblSmCommB639DB03", 0, 0, NULL);
 	ret = eventFlag;
 	if (ret < 0)
 		goto cleanup;
@@ -232,7 +232,7 @@ static int NOINLINE StartSession(int index, uint32_t priority,
 		goto cleanup;
 	vector.size = 1;
 	sceKernelSysrootDisableAutoClockDown();
-	ret = ksceKernelWaitEventFlag(eventFlag, 0x11,
+	ret = sceKernelWaitEventFlag(eventFlag, 0x11,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &vector.size, NULL);
 	sceKernelSysrootEnableAutoClockDown();
@@ -251,7 +251,7 @@ cleanup:
 	if (memBlock >= 0)
 		SceSysmemForDriver_009E1C61(memBlock);
 	if (eventFlag >= 0)
-		ksceKernelDeleteEventFlag(eventFlag);
+		sceKernelDeleteEventFlag(eventFlag);
 out:
 	return ret;
 }
@@ -264,9 +264,9 @@ int module_start(SceSize arglen, void *argp)
 	(void)arglen;
 	(void)argp;
 	context = sceSyscallEnter();
-	ret = ksceKernelInitializeFastMutex(&s_fastMutex, "SceSblSmCommAB75E2BE", 0, 0);
+	ret = sceKernelInitializeFastMutex(&s_fastMutex, "SceSblSmCommAB75E2BE", 0, 0);
 	if (ret == 0) {
-		ret = ksceKernelCreateSema("SceSblSmComm62970c2d", 0, 32, 32, NULL);
+		ret = sceKernelCreateSema("SceSblSmComm62970c2d", 0, 32, 32, NULL);
 		if (ret >= 0)
 			s_semaphore = ret;
 	}
@@ -284,7 +284,7 @@ int ksceSblSmCommStartSmFromFile(SceUInt32 priority, const char *path,
 	SceOff fileSize, position;
 	int index, ret;
 
-	ret = ksceKernelWaitSema(s_semaphore, 1, NULL);
+	ret = sceKernelWaitSema(s_semaphore, 1, NULL);
 	if (ret != 0)
 		goto out;
 	index = AllocateSessionSlot();
@@ -348,7 +348,7 @@ int ksceSblSmCommStartSmFromData(SceUInt32 priority, const void *data,
 	SceUID memBlock;
 	int index, ret;
 
-	ret = ksceKernelWaitSema(s_semaphore, 1, NULL);
+	ret = sceKernelWaitSema(s_semaphore, 1, NULL);
 	if (ret != 0)
 		goto out;
 	index = AllocateSessionSlot();
@@ -427,7 +427,7 @@ int ksceSblSmCommCallFunc(SceSblSmCommId id, SceUInt32 service,
 		goto out;
 	}
 	sceKernelSysrootDisableAutoClockDown();
-	ret = ksceKernelWaitEventFlag(eventFlag, 0x11,
+	ret = sceKernelWaitEventFlag(eventFlag, 0x11,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &eventBits, NULL);
 	sceKernelSysrootEnableAutoClockDown();
@@ -455,9 +455,9 @@ int ksceSblSmCommStopSm(SceSblSmCommId id, SceSblSmCommPair *result)
 		/* Native cleanup does not reject an unmatched (-1) slot here. */
 		session = &s_sessions[index];
 		SceSysmemForDriver_009E1C61(session->memBlock);
-		ksceKernelDeleteEventFlag(session->eventFlag);
+		sceKernelDeleteEventFlag(session->eventFlag);
 		ReleaseSessionSlot(index);
-		ret = ksceKernelSignalSema(s_semaphore, 1);
+		ret = sceKernelSignalSema(s_semaphore, 1);
 		waitRet = ksceSblSmSchedProxyWait(id, result);
 		if (waitRet != 0 && ret == 0)
 			ret = waitRet;

@@ -65,13 +65,13 @@ set(MODULE_IMPORT_FUNCS
 	timingsafe_memcmp
 	__stack_chk_fail
 	memcmp
-	ksceKernelDeleteMutex
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelTryLockMutex
+	sceKernelDeleteMutex
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelTryLockMutex
 	sceKernelIsUserModeThread
-	ksceKernelRunWithStack
-	ksceKernelCreateMutex
+	SceThreadmgrForDriver_E54FD746
+	sceKernelCreateMutex
 	ksceIoRemove
 	ksceIoDclose
 	ksceIoWrite

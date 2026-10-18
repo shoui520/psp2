@@ -50,7 +50,7 @@ set(MODULE_IMPORT_FUNCS
 	__aeabi_uidivmod
 	__stack_chk_fail
 	sceKernelGetProcessId
-	ksceKernelRegisterTimer
+	SceThreadmgrForDriver_C58DF384
 	sceKernelGetSystemTimeWide
 	SceProcessmgrForDriver_8CB01675
 	sceKernelRegisterProcEventHandler

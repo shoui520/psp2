@@ -962,7 +962,7 @@ SgxDeviceCallback34:
 	bmi .LSgxDeviceCallback3420
 	bl GpuGetLockupEvent
 	movs r1, #1
-	bl ksceKernelSetEventFlag
+	bl sceKernelSetEventFlag
 .LSgxDeviceCallback3420:
 	mov r0, r4
 	mvn r1, #2
@@ -2353,7 +2353,7 @@ GpuRuntimeSubmitCommandLiteral5c:
 .thumb_func
 GpuClockLow:
 	push {r3, lr}
-	bl ksceKernelGetSystemTimeLow
+	bl SceThreadmgrForDriver_47F6DE49
 	pop {r3, pc}
 .size GpuClockLow, .-GpuClockLow
 .align 2

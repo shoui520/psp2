@@ -220,7 +220,7 @@ typedef struct IoAsyncEvent {
 } IoAsyncEvent;
 _Static_assert(sizeof(IoAsyncEvent) == 0xf8, "IoAsyncEvent");
 
-/* names unknown: the arguments of the vfs calls made with ksceKernelRunWithStack */
+/* names unknown: the arguments of the vfs calls made with SceThreadmgrForDriver_E54FD746 */
 typedef struct IofilemgrCloseParam {
 	SceUID fd;
 } IofilemgrCloseParam;
@@ -318,7 +318,6 @@ typedef struct IofilemgrSyncParam {
 #define IOFILEMGR_IOCTL_ACCESS_CHECK	0x800
 
 /* imports vitasdk does not declare */
-SceInt64 sceKernelExtendKernelStackWide(SceSize size, SceInt64 (*func)(void *), void *arg);
 int sceKernelUIDInheritedEventClassInit(SceClass *cls, const char *name, SceSize itemSize,
 					SceClassCallback create, SceClassCallback destroy);
 int sceKernelEventObjectInit(SceUID uid, SceUInt32 attr, SceUInt32 pattern, int a3, int a4);

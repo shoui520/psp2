@@ -79,24 +79,24 @@ set(MODULE_IMPORT_FUNCS
 	memset
 	memcpy
 	__stack_chk_fail
-	ksceKernelWaitEventFlag
-	ksceKernelDeleteSema
-	ksceKernelStartThread
-	ksceKernelCreateSema
-	ksceKernelWaitSema
-	ksceKernelWaitThreadEnd
-	ksceKernelCreateEventFlag
-	ksceKernelGetSystemTimeLow
+	sceKernelWaitEventFlag
+	sceKernelDeleteSema
+	sceKernelStartThread
+	sceKernelCreateSema
+	sceKernelWaitSema
+	sceKernelWaitThreadEnd
+	sceKernelCreateEventFlag
+	SceThreadmgrForDriver_47F6DE49
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelPollSema
-	ksceKernelDeleteEventFlag
+	sceKernelClearEventFlag
+	sceKernelPollSema
+	sceKernelDeleteEventFlag
 	sceKernelCancelSema
 	sceKernelGetProcessId
-	ksceKernelDeleteThread
-	ksceKernelCreateThread
-	ksceKernelSignalSema
-	ksceKernelSetEventFlag
+	sceKernelDeleteThread
+	sceKernelCreateThread
+	sceKernelSignalSema
+	sceKernelSetEventFlag
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_FD00C72A
 	ksceUdcdUnregister

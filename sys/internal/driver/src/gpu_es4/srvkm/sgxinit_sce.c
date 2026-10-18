@@ -190,7 +190,7 @@ IMG_VOID SGX_MISRHandler(IMG_VOID *pvData)
 
 	if ((psSGXHostCtl->ui32InterruptFlags & 1U) &&
 	    !(psSGXHostCtl->ui32InterruptClearFlags & 1U))
-		ksceKernelSetEventFlag(GetLockupEventUid(), 1);
+		sceKernelSetEventFlag(GetLockupEventUid(), 1);
 	SGXTestActivePowerEvent(psDeviceNode, (IMG_UINT32)-3);
 }
 
@@ -689,7 +689,7 @@ IMG_VOID SGXOSTimer(IMG_VOID *pvData)
 					psSGXHostCtl->ui32OpenCLDelayCount = --ui32OpenCLDelayCounter;
 			} else {
 				psSGXHostCtl->ui32HostDetectedLockups++;
-				ksceKernelSetEventFlag(GetLockupEventUid(), 2);
+				sceKernelSetEventFlag(GetLockupEventUid(), 2);
 			}
 		}
 	} else {

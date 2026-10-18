@@ -119,19 +119,19 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelReleaseSubIntrHandler
 	ksceKernelEnableSubIntr
 	ksceKernelRegisterSubIntrHandler
-	ksceKernelWaitEventFlag
+	sceKernelWaitEventFlag
 	sceKernelExitThread
-	ksceKernelStartThread
-	ksceKernelWaitThreadEnd
-	ksceKernelCreateEventFlag
+	sceKernelStartThread
+	sceKernelWaitThreadEnd
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelGetThreadId
-	ksceKernelDeleteEventFlag
+	sceKernelGetThreadId
+	sceKernelDeleteEventFlag
 	sceKernelGetProcessId
-	ksceKernelDeleteThread
-	ksceKernelNotifyCallback
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
+	sceKernelDeleteThread
+	sceKernelNotifyCallback
+	sceKernelCreateThread
+	sceKernelSetEventFlag
 	sceKernelGetSystemTimeWide
 	ksceIoWrite
 	ksceIoLseek

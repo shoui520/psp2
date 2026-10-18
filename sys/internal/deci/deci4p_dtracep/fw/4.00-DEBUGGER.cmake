@@ -310,51 +310,51 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSetDTraceThreadCBEnable
 	SceThreadmgrForKernel_19440C83
 	SceThreadmgrForKernel_565BD2DA
-	ksceKernelGetThreadContextInfo
+	SceThreadmgrForKernel_6C1F092F
 	SceThreadmgrForKernel_DF59DF99
-	ksceKernelSetPermission
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
-	ksceKernelDeleteSema
-	ksceKernelLockMutex
-	ksceKernelCreateCallback
+	sceKernelSetThreadAccessLevel
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
+	sceKernelDeleteSema
+	sceKernelLockMutex
+	sceKernelCreateCallback
 	sceKernelExitDeleteThread
-	ksceKernelUnlockMutex
-	ksceKernelStartThread
-	ksceKernelTryLockMutex
-	ksceKernelCreateSema
-	ksceKernelDeleteCallback
-	ksceKernelWaitSema
-	ksceKernelWaitThreadEnd
-	ksceKernelCreateEventFlag
-	ksceKernelStopTimer
+	sceKernelUnlockMutex
+	sceKernelStartThread
+	sceKernelTryLockMutex
+	sceKernelCreateSema
+	sceKernelDeleteCallback
+	sceKernelWaitSema
+	sceKernelWaitThreadEnd
+	sceKernelCreateEventFlag
+	sceKernelStopTimer
 	sceKernelDelayThread
-	ksceKernelGetThreadCpuRegisters
-	ksceKernelGetThreadId
-	ksceKernelGetMutexInfo
-	ksceKernelSignalCondAll
-	ksceKernelDeleteEventFlag
-	ksceKernelRegisterCallbackToEvent
-	ksceKernelStartTimer
-	ksceKernelWaitEventFlagCB
+	SceThreadmgrForDriver_5022689D
+	sceKernelGetThreadId
+	sceKernelGetMutexInfo
+	sceKernelSignalCondAll
+	sceKernelDeleteEventFlag
+	sceKernelRegisterCallbackToEventForDriver
+	sceKernelStartTimer
+	SceThreadmgrForDriver_8A35F714
 	sceKernelCreateTimer
 	SceThreadmgrForDriver_91A8F38B
 	sceKernelSetTimerEvent
 	sceKernelGetProcessId
-	ksceKernelSignalCond
-	ksceKernelDeleteThread
-	ksceKernelDeleteCond
-	ksceKernelCreateThread
-	ksceKernelWaitCond
+	sceKernelSignalCond
+	sceKernelDeleteThread
+	sceKernelDeleteCond
+	sceKernelCreateThread
+	sceKernelWaitCond
 	SceThreadmgrForDriver_D1FBDFA6
-	ksceKernelSignalSema
-	ksceKernelSetEventFlag
-	ksceKernelCreateCond
-	ksceKernelRunWithStack
-	ksceKernelGetUserThreadId
+	sceKernelSignalSema
+	sceKernelSetEventFlag
+	sceKernelCreateCond
+	SceThreadmgrForDriver_E54FD746
+	SceThreadmgrForDriver_F311808F
 	sceKernelGetSystemTimeWide
-	ksceKernelDebugSuspendThread
-	ksceKernelCreateMutex
+	sceKernelDebugSuspendThread
+	sceKernelCreateMutex
 	ksceKernelLibcGettimeofday
 	ksceKernelResumeProcess
 	ksceKernelSuspendProcess

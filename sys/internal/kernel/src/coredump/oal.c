@@ -64,34 +64,11 @@ extern unsigned int SceGpuEs4ForDriver_18C90B42(void);
 extern unsigned int SceGpuEs4ForDriver_8A3929D2(void *destination,
 	unsigned int size);
 /* imports under the names of our NID db (tools/nids/kernel.yml) */
-extern int sceKernelGetRWLockInfo(SceUID rwLockId, SceKernelRWLockInfo *info);
 extern int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
 extern int coredumpGetCachedRWLockInfo(SceUID pid, SceUID rwLockId,
 	CoredumpRWLockInfo *info);
 extern int coredumpGetCachedSimpleEventInfo(SceUID pid, SceUID eventId,
 	CoredumpSimpleEventInfo *info);
-extern int SceThreadmgrForDriver_477F7C8A(SceUID pid, int level,
-	SceKernelSemaInfo *infos, SceSize size, SceSize *count);
-extern int SceThreadmgrForDriver_0EB0ABF0(SceUID pid, int level,
-	SceKernelEventFlagInfo *infos, SceSize size, SceSize *count);
-extern int sceKernelGetMutexInfoAllProc(SceUID pid, int level,
-	SceKernelMutexInfo *infos, SceSize size, SceSize *count);
-extern int sceKernelGetLwMutexInfoAllProc(SceUID pid, int level,
-	SceKernelLwMutexInfo *infos, SceSize size, SceSize *count);
-extern int SceThreadmgrForDriver_CA704239(SceUID pid, int level,
-	SceKernelCondInfo *infos, SceSize size, SceSize *count);
-extern int SceThreadmgrForDriver_09346D1A(SceUID pid, int level,
-	SceKernelLwCondInfo *infos, SceSize size, SceSize *count);
-extern int SceThreadmgrForDriver_E9E50096(SceUID pid, int level,
-	SceKernelMsgPipeInfo *infos, SceSize size, SceSize *count);
-extern int SceThreadmgrForDriver_FF8DA217(SceUID pid, int level,
-	SceKernelCallbackInfo *infos, SceSize size, SceSize *count);
-extern int SceThreadmgrForDriver_C327CA7C(SceUID pid, int level,
-	SceKernelTimerInfo *infos, SceSize size, SceSize *count);
-extern int sceKernelGetRWLockInfoAllProc(SceUID pid, int level,
-	SceKernelRWLockInfo *infos, SceSize size, SceSize *count);
-extern int SceThreadmgrForDriver_E0C7BCBB(SceUID pid, int level,
-	SceKernelEventInfo *infos, SceSize size, SceSize *count);
 extern void *memMgrLocalAllAlloc(SceSize *size);
 extern int memMgrLocalFree(void *allocation);
 extern int memMgrInit(void);
@@ -116,8 +93,6 @@ extern int coredumpGetCachedTimerInfo(SceUID pid, SceUID timerId,
 	CoredumpTimerInfo *info);
 extern int coredumpGetCachedMsgPipeInfo(SceUID pid, SceUID msgPipeId,
 	CoredumpMsgPipeInfo *info);
-extern int SceThreadmgrForDriver_D1FBDFA6(SceUID condId,
-	SceKernelCondInfo *info);
 extern int ksceKernelGetProcessStatus(SceUID pid, int *status);
 extern int ksceKernelGetProcessInfo(SceUID pid, SceKernelProcessInfo *info);
 extern int ksceKernelGetModuleInfo(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
@@ -206,7 +181,7 @@ __attribute__((noinline)) int _getThreadStopReason(SceUID threadId,
 	stopReason->detail.codeHigh = 0;
 	stopReason->detail.groupLow = 0;
 	stopReason->detail.groupHigh = 0;
-	result = ksceKernelIsThreadDebugSuspended(threadId);
+	result = SceThreadmgrForDriver_A0B1AB21(threadId);
 	if (result < 0)
 		return result;
 	if (result & 1) {
@@ -285,7 +260,7 @@ int _getCdnPcAndLrInfo(SceUID pid, const CoredumpThreadStopEvent *stopEvent,
 	uintptr_t end;
 
 	memset(location, 0, sizeof(*location));
-	result = ksceKernelGetThreadIdList(pid, NULL, 0, NULL);
+	result = sceKernelGetThreadIdList(pid, NULL, 0, NULL);
 	if (result <= 0)
 		return result;
 	threadBytes = result * sizeof(*threadIds);
@@ -293,7 +268,7 @@ int _getCdnPcAndLrInfo(SceUID pid, const CoredumpThreadStopEvent *stopEvent,
 	threadIds = allocation;
 	if (threadIds == NULL)
 		return 0;
-	if (ksceKernelGetThreadIdList(pid, threadIds, threadBytes,
+	if (sceKernelGetThreadIdList(pid, threadIds, threadBytes,
 		(int *)&copiedCount) < 0 || copiedCount == 0)
 		goto freeAllocation;
 	for (i = 0; i < copiedCount; ++i) {
@@ -301,13 +276,13 @@ int _getCdnPcAndLrInfo(SceUID pid, const CoredumpThreadStopEvent *stopEvent,
 		SceUID threadId = threadIds[i];
 
 		threadInfo.size = sizeof(threadInfo);
-		if (ksceKernelGetThreadInfoForDebugger(threadId, 0, &threadInfo) != 0)
+		if (SceThreadmgrForDriver_DD8D9429(threadId, 0, &threadInfo) != 0)
 			continue;
 		_getThreadStopReason(threadId, stopEvent, &stopReason);
 		__builtin_memcpy(&reason, &stopReason.reason, sizeof(reason));
 		if (reason == 0)
 			continue;
-		if (ksceKernelGetThreadCpuRegisters(threadId, &registers) == 0) {
+		if (SceThreadmgrForDriver_5022689D(threadId, &registers) == 0) {
 			if ((registers.entry[0].cpsr & 0x1f) == 0x10) {
 				location->pc = registers.entry[0].pc;
 				location->lr = registers.entry[0].lr;
@@ -468,7 +443,7 @@ int _getAbortedProcessStopReason(CoredumpStopReason *stopReason)
 	__builtin_memcpy(&reason, &threadStopReason.reason, sizeof(reason));
 	if (IS_ABORT_REASON(reason))
 		goto foundReason;
-	count = ksceKernelGetThreadIdList(coredumpRun.pid, NULL, 0, NULL);
+	count = sceKernelGetThreadIdList(coredumpRun.pid, NULL, 0, NULL);
 	if (count < 0) {
 		capacity = 0;
 		threadBytes = 0;
@@ -489,11 +464,11 @@ int _getAbortedProcessStopReason(CoredumpStopReason *stopReason)
 		goto processStatus;
 	}
 	memset(threadIds, 0, threadBytes);
-	if (ksceKernelGetThreadIdList(coredumpRun.pid, threadIds, threadBytes,
+	if (sceKernelGetThreadIdList(coredumpRun.pid, threadIds, threadBytes,
 		(int *)&copiedCount) >= 0) {
 		for (i = 0; i < copiedCount; ++i) {
 			if (threadIds[i] != 0) {
-				SceUID uid = ksceKernelGetUserThreadId(threadIds[i]);
+				SceUID uid = SceThreadmgrForDriver_F311808F(threadIds[i]);
 
 				if (uid < 0)
 					uid = 0;
@@ -843,7 +818,7 @@ int oalGetPartitionOfMemBlock(const CoredumpMemBlockInfo *info)
 
 SceUID oalGetThreadId(void)
 {
-	return ksceKernelGetThreadId();
+	return sceKernelGetThreadId();
 }
 
 int oalCreateThread(SceUID *threadId, const char *name, int priority,
@@ -852,7 +827,7 @@ int oalCreateThread(SceUID *threadId, const char *name, int priority,
 	SceUID result;
 
 	SCE_DBG_ASSERT(threadId != NULL, 543);
-	result = ksceKernelCreateThread(name, entry, priority, stackSize,
+	result = sceKernelCreateThread(name, entry, priority, stackSize,
 		0, 0x80000, NULL);
 	if (result >= 0) {
 		*threadId = result;
@@ -863,12 +838,12 @@ int oalCreateThread(SceUID *threadId, const char *name, int priority,
 
 int oalDeleteThread(SceUID threadId)
 {
-	return ksceKernelDeleteThread(threadId);
+	return sceKernelDeleteThread(threadId);
 }
 
 int oalStartThread(SceUID threadId)
 {
-	return ksceKernelStartThread(threadId, 0, NULL);
+	return sceKernelStartThread(threadId, 0, NULL);
 }
 
 int oalExitDeleteThread(void)
@@ -881,7 +856,7 @@ int oalWaitThreadEnd(SceUID threadId, SceUInt timeout)
 	SceUInt remaining = timeout;
 	int exitStatus;
 
-	return ksceKernelWaitThreadEnd(threadId, &exitStatus, &remaining);
+	return sceKernelWaitThreadEnd(threadId, &exitStatus, &remaining);
 }
 
 /* the core file's name part: the process name, else its program class */
@@ -906,7 +881,7 @@ int oalCondInit(SceUID *condId, SceUID mutexId)
 	SceUID result;
 
 	SCE_DBG_ASSERT(condId != NULL, 648);
-	result = ksceKernelCreateCond("SceCoredumpCnd", 0, mutexId, NULL);
+	result = sceKernelCreateCond("SceCoredumpCnd", 0, mutexId, NULL);
 	if (result >= 0) {
 		*condId = result;
 		return 0;
@@ -916,17 +891,17 @@ int oalCondInit(SceUID *condId, SceUID mutexId)
 
 int oalCondFinal(SceUID condId)
 {
-	return ksceKernelDeleteCond(condId);
+	return sceKernelDeleteCond(condId);
 }
 
 int oalCondWait(SceUID condId)
 {
-	return ksceKernelWaitCond(condId, NULL);
+	return sceKernelWaitCond(condId, NULL);
 }
 
 int oalCondSignalTo(SceUID condId, SceUID threadId)
 {
-	return ksceKernelSignalCondTo(condId, threadId);
+	return sceKernelSignalCondTo(condId, threadId);
 }
 
 int oalMutexInit(SceUID *mutexId)
@@ -934,7 +909,7 @@ int oalMutexInit(SceUID *mutexId)
 	SceUID result;
 
 	SCE_DBG_ASSERT(mutexId != NULL, 713);
-	result = ksceKernelCreateMutex("SceCoredumpMtx", 0, 0, NULL);
+	result = sceKernelCreateMutex("SceCoredumpMtx", 0, 0, NULL);
 	if (result >= 0) {
 		*mutexId = result;
 		return 0;
@@ -944,17 +919,17 @@ int oalMutexInit(SceUID *mutexId)
 
 int oalMutexFinal(SceUID mutexId)
 {
-	return ksceKernelDeleteMutex(mutexId);
+	return sceKernelDeleteMutex(mutexId);
 }
 
 int oalMutexLock(SceUID mutexId)
 {
-	return ksceKernelLockMutex(mutexId, 1, NULL);
+	return sceKernelLockMutex(mutexId, 1, NULL);
 }
 
 int oalMutexUnlock(SceUID mutexId)
 {
-	return ksceKernelUnlockMutex(mutexId, 1);
+	return sceKernelUnlockMutex(mutexId, 1);
 }
 
 int oalEventQueueInit(CoredumpEventQueue *queue)
@@ -963,13 +938,13 @@ int oalEventQueueInit(CoredumpEventQueue *queue)
 
 	SCE_DBG_ASSERT(queue != NULL, 760);
 	memset(queue, 0, sizeof(*queue));
-	mutexId = ksceKernelCreateMutex("SceCoredumpEvtMtx", 0, 0, NULL);
+	mutexId = sceKernelCreateMutex("SceCoredumpEvtMtx", 0, 0, NULL);
 	if (mutexId < 0)
 		return mutexId;
 	queue->mutexId = mutexId;
-	condId = ksceKernelCreateCond("SceCoredumpEvtCnd", 0, mutexId, NULL);
+	condId = sceKernelCreateCond("SceCoredumpEvtCnd", 0, mutexId, NULL);
 	if (condId < 0) {
-		ksceKernelDeleteMutex(queue->mutexId);
+		sceKernelDeleteMutex(queue->mutexId);
 		return condId;
 	}
 	queue->condId = condId;
@@ -981,8 +956,8 @@ int oalEventQueueFinal(CoredumpEventQueue *queue)
 	int condResult, mutexResult;
 
 	SCE_DBG_ASSERT(queue != NULL, 803);
-	condResult = ksceKernelDeleteCond(queue->condId);
-	mutexResult = ksceKernelDeleteMutex(queue->mutexId);
+	condResult = sceKernelDeleteCond(queue->condId);
+	mutexResult = sceKernelDeleteMutex(queue->mutexId);
 	return mutexResult < 0 ? mutexResult : condResult;
 }
 
@@ -992,18 +967,18 @@ int oalEventQueueSend(CoredumpEventQueue *queue, const CoredumpEvent *event)
 	int result, status;
 
 	SCE_DBG_ASSERT(queue != NULL && event != NULL, 825);
-	result = ksceKernelLockMutex(queue->mutexId, 1, NULL);
+	result = sceKernelLockMutex(queue->mutexId, 1, NULL);
 	if (result < 0)
 		return result;
 	count = queue->count;
 	if (count < 10) {
 		memcpy(&queue->events[count], event, sizeof(*event));
 		queue->count = count + 1;
-		status = ksceKernelSignalCond(queue->condId);
+		status = sceKernelSignalCond(queue->condId);
 	} else {
 		status = (int)0x80010069;
 	}
-	result = ksceKernelUnlockMutex(queue->mutexId, 1);
+	result = sceKernelUnlockMutex(queue->mutexId, 1);
 	return result == 0 ? status : result;
 }
 
@@ -1013,11 +988,11 @@ int oalEventQueueReceive(CoredumpEventQueue *queue, CoredumpEvent *event)
 	int result, status;
 
 	SCE_DBG_ASSERT(queue != NULL && event != NULL, 865);
-	status = ksceKernelLockMutex(queue->mutexId, 1, NULL);
+	status = sceKernelLockMutex(queue->mutexId, 1, NULL);
 	if (status < 0)
 		return status;
 	while (queue->count == 0) {
-		status = ksceKernelWaitCond(queue->condId, NULL);
+		status = sceKernelWaitCond(queue->condId, NULL);
 		if (status < 0)
 			goto unlock;
 	}
@@ -1028,7 +1003,7 @@ int oalEventQueueReceive(CoredumpEventQueue *queue, CoredumpEvent *event)
 			sizeof(*event) * count - sizeof(*event));
 	queue->count = count - 1;
 unlock:
-	result = ksceKernelUnlockMutex(queue->mutexId, 1);
+	result = sceKernelUnlockMutex(queue->mutexId, 1);
 	return result == 0 ? status : result;
 }
 
@@ -1040,7 +1015,7 @@ int oalEventQueueEachElem(CoredumpEventQueue *queue,
 	int result, status;
 
 	SCE_DBG_ASSERT(queue != NULL && callback != NULL, 915);
-	status = ksceKernelLockMutex(queue->mutexId, 1, NULL);
+	status = sceKernelLockMutex(queue->mutexId, 1, NULL);
 	if (status < 0)
 		return status;
 	if (queue->count != 0) {
@@ -1052,7 +1027,7 @@ int oalEventQueueEachElem(CoredumpEventQueue *queue,
 			++event;
 		} while (index < queue->count);
 	}
-	result = ksceKernelUnlockMutex(queue->mutexId, 1);
+	result = sceKernelUnlockMutex(queue->mutexId, 1);
 	return result == 0 ? status : result;
 }
 
@@ -1153,7 +1128,7 @@ int oalGetThreadStack(SceUID pid, SceUID threadId, uintptr_t *stackBase,
 	*stackBase = 0;
 	*stackSize = 0;
 	info.size = sizeof(info);
-	result = ksceKernelGetThreadInfoForDebugger(
+	result = SceThreadmgrForDriver_DD8D9429(
 		SceSysmemForDriver_45D22597(pid, threadId), 0, &info);
 	if (result == 0) {
 		*stackBase = info.userStackBase;
@@ -1174,8 +1149,8 @@ int oalGetThreadTlsStack(SceUID pid, SceUID threadId, uintptr_t *stackBase,
 	*stackBase = 0;
 	*stackSize = 0;
 	guid = SceSysmemForDriver_45D22597(pid, threadId);
-	topAddress = ksceKernelGetThreadTLSAddr(guid, 2);
-	bottomAddress = ksceKernelGetThreadTLSAddr(guid, 3);
+	topAddress = SceThreadmgrForDriver_66EEA46A(guid, 2);
+	bottomAddress = SceThreadmgrForDriver_66EEA46A(guid, 3);
 	stackTop = 0;
 	stackBottom = 0;
 	SCE_DBG_ASSERT_FUNC(1, 1254, "oalCopyFromUserSpace");
@@ -1190,7 +1165,7 @@ int oalGetThreadTlsStack(SceUID pid, SceUID threadId, uintptr_t *stackBase,
 	*stackSize = ((stackTop + 4095) >> 12 << 12) - *stackBase;
 	accessible = SceSysmemForDriver_9F6E45E3(pid, 16,
 		(const void *)*stackBase, *stackSize);
-	result = ksceKernelGetThreadCpuRegisters(guid, &registers);
+	result = SceThreadmgrForDriver_5022689D(guid, &registers);
 	if (result == 0) {
 		sp = (registers.entry[0].cpsr & 0x1f) == 0x10 ?
 			registers.entry[0].sp : registers.entry[1].sp;
@@ -1206,7 +1181,7 @@ int oalProbeThreadInfo(SceUID pid, SceUID threadId)
 	ThreadmgrThreadInfoForDebugger info;
 
 	info.size = sizeof(info);
-	ksceKernelGetThreadInfoForDebugger(SceSysmemForDriver_45D22597(pid, threadId), 0, &info);
+	SceThreadmgrForDriver_DD8D9429(SceSysmemForDriver_45D22597(pid, threadId), 0, &info);
 	return 0;
 }
 
@@ -1554,7 +1529,7 @@ unsigned int oalGetNumOfThreads(SceUID pid)
 	int count;
 	unsigned int capacity;
 
-	count = ksceKernelGetThreadIdList(pid, NULL, 0, NULL);
+	count = sceKernelGetThreadIdList(pid, NULL, 0, NULL);
 	if (count < 0)
 		return 0;
 	capacity = memMgrLocalGetFreeSize() / sizeof(SceUID);
@@ -1573,7 +1548,7 @@ void oalGetThreadIdList(SceUID pid, SceUID *ids, unsigned int capacity)
 	if (capacity == 0)
 		return;
 	memset(ids, 0, capacity * sizeof(*ids));
-	if (ksceKernelGetThreadIdList(pid, ids, capacity * sizeof(*ids),
+	if (sceKernelGetThreadIdList(pid, ids, capacity * sizeof(*ids),
 		&count) < 0)
 		return;
 	if (count != 0) {
@@ -1582,7 +1557,7 @@ void oalGetThreadIdList(SceUID pid, SceUID *ids, unsigned int capacity)
 		do {
 			threadId = *cursor++;
 			if (threadId != 0) {
-				threadId = ksceKernelGetUserThreadId(threadId);
+				threadId = SceThreadmgrForDriver_F311808F(threadId);
 				if (threadId < 0)
 					threadId = 0;
 			}
@@ -1663,12 +1638,12 @@ void oalGetThreadInfo(SceUID pid, SceUID threadId,
 	snapshot.info.size = sizeof(snapshot.info);
 	guid = SceSysmemForDriver_45D22597(pid, threadId);
 	if (coredumpGetCachedThreadInfo(pid, threadId, info) != 0 &&
-		ksceKernelGetThreadInfoForDebugger(guid, 0, &snapshot.info) == 0)
+		SceThreadmgrForDriver_DD8D9429(guid, 0, &snapshot.info) == 0)
 		oalFormatThreadInfo(info, &snapshot);
 	if (guid < 0)
 		return;
 	_getThreadStopReason(guid, stopEvent, &info->stopReason);
-	if (ksceKernelGetThreadCpuRegisters(guid, &registers) != 0)
+	if (SceThreadmgrForDriver_5022689D(guid, &registers) != 0)
 		return;
 	if ((registers.entry[0].cpsr & 0x1f) != 0x10) {
 		status = info->status;
@@ -1690,7 +1665,7 @@ int oalGetStackInfo(SceUID pid, SceUID threadId, CoredumpStackInfo *info)
 	memset(info, 0, sizeof(*info));
 	info->threadId = threadId;
 	snapshot.info.size = sizeof(snapshot.info);
-	result = ksceKernelGetThreadInfoForDebugger(SceSysmemForDriver_45D22597(pid, threadId),
+	result = SceThreadmgrForDriver_DD8D9429(SceSysmemForDriver_45D22597(pid, threadId),
 		1, &snapshot.info);
 	if (result == 0) {
 		info->userStackMaxUsed = snapshot.info.userStackMaxUsed;
@@ -1721,7 +1696,7 @@ int oalGetThreadRegInfo(SceUID pid, SceUID threadId,
 	info->formatSize[2] = 0;
 	info->formatSize[3] = 0;
 	guid = SceSysmemForDriver_45D22597(pid, threadId);
-	if (ksceKernelGetThreadCpuRegisters(guid, &registers) == 0) {
+	if (SceThreadmgrForDriver_5022689D(guid, &registers) == 0) {
 		if ((registers.entry[0].cpsr & 0x1f) == 0x10) {
 			__builtin_memcpy(&info->registers, &registers.entry[0],
 				offsetof(SceArmCpuRegisters, cpsr));
@@ -1733,7 +1708,7 @@ int oalGetThreadRegInfo(SceUID pid, SceUID threadId,
 		}
 		info->registers.fpscr = registers.entry[0].fpscr;
 	}
-	result = ksceKernelGetVfpRegisterForDebugger(guid, vfp);
+	result = SceThreadmgrForDriver_5CDE387A(guid, vfp);
 	if (result == 0) {
 		if (((uintptr_t)info->vfp & 15) == 0) {
 			alignedVfp = (uint64_t *)info->vfp;
@@ -1763,7 +1738,7 @@ int oalGetThreadRegInfo(SceUID pid, SceUID threadId,
 		}
 	}
 	snapshot.info.size = sizeof(snapshot.info);
-	result = ksceKernelGetThreadInfoForDebugger(guid, 0, &snapshot.info);
+	result = SceThreadmgrForDriver_DD8D9429(guid, 0, &snapshot.info);
 	if (result == 0) {
 		result = snapshot.info.tls;
 		context = (ThreadRegisterContext *)snapshot.info.registers;
@@ -2452,7 +2427,7 @@ void oalGetSemaphoreInfo(SceUID pid, SceUID semaId, CoredumpSemaphoreInfo *info)
 	memset(&sema, 0, sizeof(sema));
 	sema.size = sizeof(sema);
 	guid = SceSysmemForDriver_45D22597(pid, semaId);
-	if (guid < 0 || ksceKernelGetSemaInfo(guid, &sema) < 0)
+	if (guid < 0 || SceThreadmgrForDriver_C99DCF0D(guid, &sema) < 0)
 		return;
 	if (scePUIDGetAttr(pid, semaId, &uidAttr) >= 0 && (uidAttr & 0x80000))
 		attr = sema.attr | 0x80000;
@@ -2485,7 +2460,7 @@ void oalGetEventFlagInfo(SceUID pid, SceUID eventFlagId,
 	SceKernelEventFlagInfo eventFlag = {0};
 	eventFlag.size = sizeof(eventFlag);
 	guid = SceSysmemForDriver_45D22597(pid, eventFlagId);
-	if (guid < 0 || ksceKernelGetEventFlagInfo(guid, &eventFlag) < 0)
+	if (guid < 0 || SceThreadmgrForDriver_612277C9(guid, &eventFlag) < 0)
 		return;
 	if (scePUIDGetAttr(pid, eventFlagId, &uidAttr) >= 0 && (uidAttr & 0x80000))
 		attr = eventFlag.attr | 0x80000;
@@ -2517,7 +2492,7 @@ void oalGetMutexInfo(SceUID pid, SceUID mutexId, CoredumpMutexInfo *info)
 	memset(&mutex, 0, sizeof(mutex));
 	mutex.size = sizeof(mutex);
 	guid = SceSysmemForDriver_45D22597(pid, mutexId);
-	if (guid < 0 || ksceKernelGetMutexInfo(guid, &mutex) < 0)
+	if (guid < 0 || sceKernelGetMutexInfo(guid, &mutex) < 0)
 		return;
 	if (scePUIDGetAttr(pid, mutexId, &uidAttr) >= 0 && (uidAttr & 0x80000))
 		mutex.attr |= 0x80000;
@@ -2534,7 +2509,7 @@ void oalGetMutexInfo(SceUID pid, SceUID mutexId, CoredumpMutexInfo *info)
 	info->formatVersion[3] = 0;
 	owner = mutex.currentOwnerId;
 	if (owner != 0) {
-		owner = ksceKernelGetUserThreadId(owner);
+		owner = SceThreadmgrForDriver_F311808F(owner);
 		if (owner < 0)
 			owner = 0;
 	}
@@ -2558,7 +2533,7 @@ void oalGetLwMutexInfo(SceUID pid, SceUID lwMutexId, CoredumpLwMutexInfo *info)
 	guid = SceSysmemForDriver_45D22597(pid, lwMutexId);
 	if (guid < 0)
 		return;
-	result = ksceKernelGetLwMutexInfo(guid, &mutex);
+	result = sceKernelGetLwMutexInfoById(guid, &mutex);
 	if (result >= 0) {
 		info->lwMutexId = lwMutexId;
 		strncpy(info->name, mutex.name, 32);
@@ -2568,7 +2543,7 @@ void oalGetLwMutexInfo(SceUID pid, SceUID lwMutexId, CoredumpLwMutexInfo *info)
 		info->currentCount = mutex.currentCount;
 		owner = mutex.currentOwnerId;
 		if (owner != 0) {
-			owner = ksceKernelGetUserThreadId(owner);
+			owner = SceThreadmgrForDriver_F311808F(owner);
 			if (owner < 0)
 				owner = 0;
 		}
@@ -2639,7 +2614,7 @@ void oalGetLwCondInfo(SceUID pid, SceUID lwCondId, CoredumpLwCondInfo *info,
 	SceKernelLwCondInfo cond = {0};
 	cond.size = sizeof(cond);
 	guid = SceSysmemForDriver_45D22597(pid, lwCondId);
-	if (guid < 0 || ksceKernelGetLwCondInfo(guid, &cond) < 0)
+	if (guid < 0 || SceThreadmgrForDriver_C2AFFBD0(guid, &cond) < 0)
 		return;
 	__builtin_memset(uidBytes, 0, sizeof(uidBytes));
 	mutexWork = cond.pLwMutex;
@@ -2673,7 +2648,7 @@ void oalGetMsgPipeInfo(SceUID pid, SceUID msgPipeId, CoredumpMsgPipeInfo *info)
 	memset(&msgPipe, 0, sizeof(msgPipe));
 	msgPipe.size = sizeof(msgPipe);
 	guid = SceSysmemForDriver_45D22597(pid, msgPipeId);
-	if (guid < 0 || ksceKernelGetMsgPipeInfo(guid, &msgPipe) < 0)
+	if (guid < 0 || SceThreadmgrForDriver_207E0E18(guid, &msgPipe) < 0)
 		return;
 	if (scePUIDGetAttr(pid, msgPipeId, &uidAttr) >= 0 && (uidAttr & 0x80000))
 		attr = msgPipe.attr | 0x80000;
@@ -2709,7 +2684,7 @@ void oalGetCallbackInfo(SceUID pid, SceUID callbackId, CoredumpCallbackInfo *inf
 	info->pid = pid;
 	threadId = callback.threadId;
 	if (threadId != 0) {
-		threadId = ksceKernelGetUserThreadId(threadId);
+		threadId = SceThreadmgrForDriver_F311808F(threadId);
 		if (threadId < 0)
 			threadId = 0;
 	}
@@ -2802,7 +2777,7 @@ void oalGetRWLockInfo(SceUID pid, SceUID rwLockId, CoredumpRWLockInfo *info)
 	info->formatVersion[3] = 0;
 	owner = rwLock.writeOwnerId;
 	if (owner != 0) {
-		owner = ksceKernelGetUserThreadId(owner);
+		owner = SceThreadmgrForDriver_F311808F(owner);
 		if (owner < 0)
 			owner = 0;
 	}
@@ -3916,14 +3891,14 @@ SceUID oalGetAbortedThreadID(SceUID pid,
 	int count;
 
 	SCE_DBG_ASSERT(stopEvent != NULL, 6047);
-	count = ksceKernelGetThreadIdList(pid, NULL, 0, NULL);
+	count = sceKernelGetThreadIdList(pid, NULL, 0, NULL);
 	if (count <= 0)
 		return -1;
 	allocationSize = count * sizeof(*threadIds);
 	threadIds = memMgrLocalAlloc(allocationSize);
 	if (threadIds == NULL)
 		return -1;
-	if (ksceKernelGetThreadIdList(pid, threadIds, allocationSize,
+	if (sceKernelGetThreadIdList(pid, threadIds, allocationSize,
 		&copiedCount) < 0) {
 		memMgrLocalFree(threadIds);
 		return -1;
@@ -3931,7 +3906,7 @@ SceUID oalGetAbortedThreadID(SceUID pid,
 	for (i = 0; i < copiedCount; i++) {
 		threadId = threadIds[i];
 		threadInfo.info.size = sizeof(threadInfo.info);
-		if (ksceKernelGetThreadInfoForDebugger(threadId, 0,
+		if (SceThreadmgrForDriver_DD8D9429(threadId, 0,
 			&threadInfo.info) == 0) {
 			_getThreadStopReason(threadId, stopEvent, &stopReason);
 			__builtin_memcpy(&reason, &stopReason.reason, sizeof(reason));
@@ -3944,7 +3919,7 @@ found:
 	memMgrLocalFree(threadIds);
 	if (threadId == 0)
 		return 0;
-	userThreadId = ksceKernelGetUserThreadId(threadId);
+	userThreadId = SceThreadmgrForDriver_F311808F(threadId);
 	if (userThreadId < 0)
 		userThreadId = 0;
 	return userThreadId;
@@ -4018,12 +3993,12 @@ int oalIsCoredumpHandlerAtSyscall(SceUID pid, SceUID threadId)
 	SceThreadCpuRegisters registers;
 	uint32_t instruction;
 
-	if (ksceKernelIsThreadDebugSuspended(threadId) <= 0)
+	if (SceThreadmgrForDriver_A0B1AB21(threadId) <= 0)
 		return 0;
 	snapshot.info.size = sizeof(snapshot.info);
-	if (ksceKernelGetThreadInfoForDebugger(threadId, 0, &snapshot.info) != 0)
+	if (SceThreadmgrForDriver_DD8D9429(threadId, 0, &snapshot.info) != 0)
 		return 0;
-	if (ksceKernelGetThreadCpuRegisters(threadId, &registers) != 0)
+	if (SceThreadmgrForDriver_5022689D(threadId, &registers) != 0)
 		return 0;
 	if ((registers.entry[0].cpsr & 0x3f) != 0x10)
 		return 0;
@@ -4139,7 +4114,7 @@ int oalReleaseObject(SceUID guid)
 
 int oalChangeThreadPriority(SceUID threadId, int priority)
 {
-	return ksceKernelChangeThreadPriority(threadId, priority);
+	return sceKernelChangeThreadPriority2(threadId, priority);
 }
 
 int oalGetEventlog(void *buf, SceSize size, SceSize *readBlocks)

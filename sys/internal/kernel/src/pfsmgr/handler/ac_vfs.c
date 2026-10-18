@@ -63,9 +63,9 @@ static inline void pfsAcResolveDir(ScePfsPmi *acid, SceVfsVnode *dvp, SceVfsPath
 
 static inline void pfsAcOpened(ScePfsPmi *acid, int count)	/* name unknown */
 {
-	ksceKernelLockMutex(acid->mutex, 1, NULL);
+	sceKernelLockMutex(acid->mutex, 1, NULL);
 	acid->openCount += count;
-	ksceKernelUnlockMutex(acid->mutex, 1);
+	sceKernelUnlockMutex(acid->mutex, 1);
 }
 
 static int dev_ac_init(SceVfsOpInitArgs *arg)
@@ -108,24 +108,24 @@ static int dev_ac_umount(SceVfsOpUmountArgs *arg)
 	ScePfsListNode *node;
 	int ret;
 
-	ksceKernelLockMutex(pmi->mutex, 1, NULL);
+	sceKernelLockMutex(pmi->mutex, 1, NULL);
 	node = pmi->acidDirs.next;
 	if (node == NULL) {
-		ksceKernelUnlockMutex(pmi->mutex, 1);
+		sceKernelUnlockMutex(pmi->mutex, 1);
 		return pfsErrorToErrno(SCE_PFS_ERROR_NOT_IN_LIST);
 	}
 	for (; node != &pmi->acidDirs; node = node->next) {
 		ret = pfsCoreUmount((ScePfsPmi *)node, arg->flags);
 		if (ret != 0) {
-			ksceKernelUnlockMutex(pmi->mutex, 1);
+			sceKernelUnlockMutex(pmi->mutex, 1);
 			return pfsErrorToErrno(ret);
 		}
 		if (node->next == NULL) {
-			ksceKernelUnlockMutex(pmi->mutex, 1);
+			sceKernelUnlockMutex(pmi->mutex, 1);
 			return pfsErrorToErrno(SCE_PFS_ERROR_NOT_IN_LIST);
 		}
 	}
-	ksceKernelUnlockMutex(pmi->mutex, 1);
+	sceKernelUnlockMutex(pmi->mutex, 1);
 	return pfsErrorToErrno(pfsGdsdUmount(pmi, arg->mnt, arg->flags));
 }
 

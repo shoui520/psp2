@@ -76,7 +76,7 @@ PVRSRV_ERROR PVRSRVPerProcessDataDisconnect(IMG_UINT32 ui32PID)
 			if (psPerProc->processHandle > 0)
 				SceSysmemForDriver_84A4AF5E(psPerProc->ui32PID, psPerProc->processHandle);
 			if (psPerProc->waitEventFlag > 0)
-				ksceKernelDeleteEventFlag(psPerProc->waitEventFlag);
+				sceKernelDeleteEventFlag(psPerProc->waitEventFlag);
 			PVRSRVResManDisconnect(psPerProc->hResManContext, IMG_FALSE);
 			FreePerProcessData(psPerProc);
 		}
@@ -108,6 +108,6 @@ GpuMemBlockHeap *GetProcessMemBlockHeap(IMG_VOID)
 {
 	PVRSRV_PER_PROCESS_DATA *psPerProc;
 
-	psPerProc = PVRSRVPerProcessData(ksceKernelGetProcessId());
+	psPerProc = PVRSRVPerProcessData(sceKernelGetProcessId());
 	return psPerProc ? psPerProc->memBlockHeap : NULL;
 }

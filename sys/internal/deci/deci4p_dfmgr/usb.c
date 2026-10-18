@@ -64,7 +64,7 @@ static int _recvThread(SceSize args, void *argp)
 
 	for (;;) {
 		bits = 0;
-		ret = ksceKernelWaitEventFlag(s_usbRecvEvf,
+		ret = sceKernelWaitEventFlag(s_usbRecvEvf,
 					      USB_EVF_DATA | USB_EVF_CONNECTED | USB_EVF_DISCONNECTED,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
@@ -97,7 +97,7 @@ static int _sendThread(SceSize args, void *argp)
 
 	for (;;) {
 		bits = 0;
-		ret = ksceKernelWaitEventFlag(s_usbSendEvf, 1,
+		ret = sceKernelWaitEventFlag(s_usbSendEvf, 1,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      &bits, NULL);
@@ -129,7 +129,7 @@ int usbInit(DfMgrLinkCB *link, DfMgrLinkCallback sendCallback, DfMgrLinkCallback
 	s_usbSendCallback = sendCallback;
 	s_usbLink = link;
 
-	ret = ksceKernelCreateEventFlag("SceDeci4pDfMgrUsbSend", SCE_KERNEL_EVF_ATTR_MULTI, 0,
+	ret = sceKernelCreateEventFlag("SceDeci4pDfMgrUsbSend", SCE_KERNEL_EVF_ATTR_MULTI, 0,
 					NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_LEVEL(0, 0, 90);
@@ -137,7 +137,7 @@ int usbInit(DfMgrLinkCB *link, DfMgrLinkCallback sendCallback, DfMgrLinkCallback
 	}
 	*pSendEvf = ret;
 	s_usbSendEvf = ret;
-	ret = ksceKernelCreateEventFlag("SceDeci4pDfMgrUsbRecv", SCE_KERNEL_EVF_ATTR_MULTI, 0,
+	ret = sceKernelCreateEventFlag("SceDeci4pDfMgrUsbRecv", SCE_KERNEL_EVF_ATTR_MULTI, 0,
 					NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_LEVEL(0, 0, 104);
@@ -151,20 +151,20 @@ int usbInit(DfMgrLinkCB *link, DfMgrLinkCallback sendCallback, DfMgrLinkCallback
 		return ret;
 	}
 
-	ret = ksceKernelCreateThread("SceDeci4pDfMgrUsbSend", _sendThread, 0x1e, 0x4000, 0, 0xf,
+	ret = sceKernelCreateThread("SceDeci4pDfMgrUsbSend", _sendThread, 0x1e, 0x4000, 0, 0xf,
 				     &opt);
 	if (ret < 0)
 		return ret;
 	s_usbSendThread = ret;
-	ret = ksceKernelCreateThread("SceDeci4pDfMgrUsbRecv", _recvThread, 0x1e, 0x4000, 0, 8,
+	ret = sceKernelCreateThread("SceDeci4pDfMgrUsbRecv", _recvThread, 0x1e, 0x4000, 0, 8,
 				     &opt);
 	if (ret < 0)
 		return ret;
 	s_usbRecvThread = ret;
-	ret = ksceKernelStartThread(s_usbSendThread, 0, NULL);
+	ret = sceKernelStartThread(s_usbSendThread, 0, NULL);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelStartThread(s_usbRecvThread, 0, NULL);
+	ret = sceKernelStartThread(s_usbRecvThread, 0, NULL);
 	if (ret < 0)
 		return ret;
 
@@ -184,19 +184,19 @@ int usbTerm(DfMgrLinkCB *link)
 	ret = dfmgrSetLinkStatus(link, DFMGR_LINK_READY, 0);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(15, 182, "0x%08X\n", ret);
-	ret = ksceKernelDeleteThread(s_usbRecvThread);
+	ret = sceKernelDeleteThread(s_usbRecvThread);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(15, 189, "0x%08X\n", ret);
-	ret = ksceKernelDeleteThread(s_usbSendThread);
+	ret = sceKernelDeleteThread(s_usbSendThread);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(15, 196, "0x%08X\n", ret);
 	ret = SceDbgUsbForDriver_08CF16D1();
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(15, 203, "0x%08X\n", ret);
-	ret = ksceKernelDeleteEventFlag(s_usbRecvEvf);
+	ret = sceKernelDeleteEventFlag(s_usbRecvEvf);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(15, 210, "0x%08X\n", ret);
-	ret = ksceKernelDeleteEventFlag(s_usbSendEvf);
+	ret = sceKernelDeleteEventFlag(s_usbSendEvf);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(15, 217, "0x%08X\n", ret);
 	return 0;

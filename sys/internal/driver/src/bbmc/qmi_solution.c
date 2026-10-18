@@ -125,7 +125,7 @@ int bbcmdSecondaryDeactivateCompleted(BbcmdRequest *request)
 	request->state = 3;
 	bbcmdSetChannelState(1, 1);
 	node = request->node;
-	return ksceKernelSetEventFlag(node->control->event, 1U << node->index);
+	return sceKernelSetEventFlag(node->control->event, 1U << node->index);
 }
 
 /* name unknown: secondary instance activation reports failure before waking. */
@@ -139,7 +139,7 @@ int bbcmdSecondaryActivateCompleted(BbcmdRequest *request, int result)
 		request->result = result;
 	node = request->node;
 	request->state = 3;
-	return ksceKernelSetEventFlag(node->control->event, 1U << node->index);
+	return sceKernelSetEventFlag(node->control->event, 1U << node->index);
 }
 
 int bbcmdActivateInstance(BbcmdRequest *request);
@@ -1997,7 +1997,7 @@ responseParsed:
 			request->state = 0;
 		} else {
 			request->state = 2;
-			ret = ksceKernelSetEventFlag(request->node->control->event,
+			ret = sceKernelSetEventFlag(request->node->control->event,
 				1u << request->node->index);
 		}
 		bbcmdUnlockMutex(&request->node->control->mutex);
@@ -2836,7 +2836,7 @@ void bbcmdClientRetryTimer(void *arg)
 		return;
 	}
 	*bits &= ~(1U << node->index);
-	ksceKernelSetEventFlag(control->event, 1U << node->index);
+	sceKernelSetEventFlag(control->event, 1U << node->index);
 	if (service == 3 && request->result == (int)0x80335004)
 		return;
 	pendingBits = *bits;
@@ -2853,7 +2853,7 @@ void bbcmdClientRetryTimer(void *arg)
 		pending = 3;
 	else
 		return;
-	ksceKernelSetEventFlag(request->node->control->event, 1U << pending);
+	sceKernelSetEventFlag(request->node->control->event, 1U << pending);
 	*bits &= ~(1U << (pending + 16));
 }
 
@@ -2993,7 +2993,7 @@ int bbcmdSelectClientDeactivation(BbcmdRequest *request, unsigned int clearMask)
 	request->state = 0;
 	return 0;
 notify:
-	return ksceKernelSetEventFlag(control->event, 1U << node->index);
+	return sceKernelSetEventFlag(control->event, 1U << node->index);
 }
 
 
@@ -3914,7 +3914,7 @@ int bbcmdGetUimFacilityStatus(BbcmdRequest *request)
 			node = request->node;
 next_facility:
 			request->state = 3;
-			result = ksceKernelSetEventFlag(node->control->event,
+			result = sceKernelSetEventFlag(node->control->event,
 				1U << node->index);
 		} else {
 			request->state = 6;
@@ -6574,7 +6574,7 @@ deactivated:
 		goto out;
 	node = request->node;
 	binding->requestBits &= ~(1U << node->index);
-	result = ksceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
 	if (service == 3 && request->result == (int)0x80335004)
 		goto out;
 	bits = binding->requestBits;
@@ -6590,7 +6590,7 @@ deactivated:
 		next = 3;
 	else
 		goto out;
-	result = ksceKernelSetEventFlag(request->node->control->event, 1U << next);
+	result = sceKernelSetEventFlag(request->node->control->event, 1U << next);
 	binding->requestBits &= ~(1U << (next + 16));
 out:
 	bbcmdUnlockMutex(&request->node->control->mutex);
@@ -6684,7 +6684,7 @@ deactivated:
 		goto out;
 	node = request->node;
 	binding->requestBits &= ~(1U << node->index);
-	result = ksceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
 	bits = binding->requestBits;
 	if ((bits >> 16) == 0)
 		goto out;
@@ -6698,7 +6698,7 @@ deactivated:
 		next = 3;
 	else
 		goto out;
-	result = ksceKernelSetEventFlag(request->node->control->event, 1U << next);
+	result = sceKernelSetEventFlag(request->node->control->event, 1U << next);
 	binding->requestBits &= ~(1U << (next + 16));
 out:
 	bbcmdUnlockMutex(&request->node->control->mutex);
@@ -6791,7 +6791,7 @@ deactivated:
 		goto out;
 	node = request->node;
 	binding->requestBits &= ~(1U << node->index);
-	result = ksceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
 	bits = binding->requestBits;
 	if ((bits >> 16) == 0)
 		goto out;
@@ -6805,7 +6805,7 @@ deactivated:
 		next = 3;
 	else
 		goto out;
-	result = ksceKernelSetEventFlag(request->node->control->event, 1U << next);
+	result = sceKernelSetEventFlag(request->node->control->event, 1U << next);
 	binding->requestBits &= ~(1U << (next + 16));
 out:
 	bbcmdUnlockMutex(&request->node->control->mutex);
@@ -6898,7 +6898,7 @@ deactivated:
 		goto out;
 	node = request->node;
 	binding->requestBits &= ~(1U << node->index);
-	result = ksceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
 	bits = binding->requestBits;
 	if ((bits >> 16) == 0)
 		goto out;
@@ -6912,7 +6912,7 @@ deactivated:
 		next = 3;
 	else
 		goto out;
-	result = ksceKernelSetEventFlag(request->node->control->event, 1U << next);
+	result = sceKernelSetEventFlag(request->node->control->event, 1U << next);
 	binding->requestBits &= ~(1U << (next + 16));
 out:
 	bbcmdUnlockMutex(&request->node->control->mutex);
@@ -7005,7 +7005,7 @@ deactivated:
 		goto out;
 	node = request->node;
 	binding->requestBits &= ~(1U << node->index);
-	result = ksceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
 	bits = binding->requestBits;
 	if ((bits >> 16) == 0)
 		goto out;
@@ -7019,7 +7019,7 @@ deactivated:
 		next = 3;
 	else
 		goto out;
-	result = ksceKernelSetEventFlag(request->node->control->event, 1U << next);
+	result = sceKernelSetEventFlag(request->node->control->event, 1U << next);
 	binding->requestBits &= ~(1U << (next + 16));
 out:
 	bbcmdUnlockMutex(&request->node->control->mutex);
@@ -7112,7 +7112,7 @@ deactivated:
 		goto out;
 	node = request->node;
 	binding->requestBits &= ~(1U << node->index);
-	result = ksceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
 	bits = binding->requestBits;
 	if ((bits >> 16) == 0)
 		goto out;
@@ -7126,7 +7126,7 @@ deactivated:
 		next = 3;
 	else
 		goto out;
-	result = ksceKernelSetEventFlag(request->node->control->event, 1U << next);
+	result = sceKernelSetEventFlag(request->node->control->event, 1U << next);
 	binding->requestBits &= ~(1U << (next + 16));
 out:
 	bbcmdUnlockMutex(&request->node->control->mutex);
@@ -7254,7 +7254,7 @@ deactivated:
 		goto out;
 	node = request->node;
 	binding->requestBits &= ~(1U << node->index);
-	result = ksceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
 	bits = binding->requestBits;
 	if ((bits >> 16) == 0)
 		goto out;
@@ -7268,7 +7268,7 @@ deactivated:
 		next = 3;
 	else
 		goto out;
-	result = ksceKernelSetEventFlag(request->node->control->event, 1U << next);
+	result = sceKernelSetEventFlag(request->node->control->event, 1U << next);
 	binding->requestBits &= ~(1U << (next + 16));
 out:
 	bbcmdUnlockMutex(&request->node->control->mutex);
@@ -7404,7 +7404,7 @@ deactivated:
 		goto out;
 	node = request->node;
 	binding->requestBits &= ~(1U << node->index);
-	result = ksceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
 	bits = binding->requestBits;
 	if ((bits >> 16) == 0)
 		goto out;
@@ -7418,7 +7418,7 @@ deactivated:
 		next = 3;
 	else
 		goto out;
-	result = ksceKernelSetEventFlag(request->node->control->event, 1U << next);
+	result = sceKernelSetEventFlag(request->node->control->event, 1U << next);
 	binding->requestBits &= ~(1U << (next + 16));
 out:
 	bbcmdUnlockMutex(&request->node->control->mutex);
@@ -7563,7 +7563,7 @@ deactivated:
 		goto out;
 	node = request->node;
 	binding->requestBits &= ~(1U << node->index);
-	result = ksceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
 	if (request->result == (int)0x80335004)
 		goto out;
 	bits = binding->requestBits;
@@ -7579,7 +7579,7 @@ deactivated:
 		next = 3;
 	else
 		goto out;
-	result = ksceKernelSetEventFlag(request->node->control->event, 1U << next);
+	result = sceKernelSetEventFlag(request->node->control->event, 1U << next);
 	binding->requestBits &= ~(1U << (next + 16));
 out:
 	bbcmdUnlockMutex(&request->node->control->mutex);
@@ -7672,7 +7672,7 @@ deactivated:
 		goto out;
 	node = request->node;
 	binding->requestBits &= ~(1U << node->index);
-	result = ksceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
 	bits = binding->requestBits;
 	if ((bits >> 16) == 0)
 		goto out;
@@ -7686,7 +7686,7 @@ deactivated:
 		next = 3;
 	else
 		goto out;
-	result = ksceKernelSetEventFlag(request->node->control->event, 1U << next);
+	result = sceKernelSetEventFlag(request->node->control->event, 1U << next);
 	binding->requestBits &= ~(1U << (next + 16));
 out:
 	bbcmdUnlockMutex(&request->node->control->mutex);
@@ -8083,7 +8083,7 @@ int bbcmdDepersonalizeUim(BbcmdRequest *request)
 		}
 		control = node->control;
 		request->state = 3;
-		result = ksceKernelSetEventFlag(control->event, 1U << node->index);
+		result = sceKernelSetEventFlag(control->event, 1U << node->index);
 		goto response_unlocked;
 	case 3:
 	case 4:
@@ -9683,7 +9683,7 @@ scan_files:
 					sizeof(fileKind));
 				if (fileKind == 17) {
 					request->state = 3;
-					result = ksceKernelSetEventFlag(control->event, 1U << node->index);
+					result = sceKernelSetEventFlag(control->event, 1U << node->index);
 					control = request->node->control;
 					goto response_unlocked;
 				}
@@ -10360,7 +10360,7 @@ int bbcmdReleaseClients(BbcmdRequest *request)
 				}
 			}
 		}
-		result = ksceKernelSetEventFlag(control->event, 1U << node->index);
+		result = sceKernelSetEventFlag(control->event, 1U << node->index);
 		control = request->node->control;
 		goto check_result;
 	RELEASE_CLIENT_CASE(1, 1, 0, 2);

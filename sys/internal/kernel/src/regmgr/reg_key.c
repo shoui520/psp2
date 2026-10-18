@@ -122,7 +122,7 @@ int regCreateKey(int handle, const char *name, int type, int size)
 		regPlatformUnlock(state);
 		return REG_ERROR_BAD_PATH;
 	}
-	if (ksceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
+	if (sceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
 		regPlatformUnlock(state);
 		return REG_ERROR_LOCK;
 	}
@@ -210,7 +210,7 @@ int regCreateKey(int handle, const char *name, int type, int size)
 	ret = 0;
 
 unlock:
-	if (ksceKernelUnlockMutex(g_regMutex, 1) != 0)
+	if (sceKernelUnlockMutex(g_regMutex, 1) != 0)
 		ret = REG_ERROR_UNLOCK;
 	regPlatformUnlock(state);
 
@@ -233,7 +233,7 @@ int regSetKey(int handle, const char *name, const void *buf, SceSize size)
 		regPlatformUnlock(state);
 		return REG_ERROR_BAD_PATH;
 	}
-	if (ksceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
+	if (sceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
 		regPlatformUnlock(state);
 		return REG_ERROR_LOCK;
 	}
@@ -274,7 +274,7 @@ int regSetKey(int handle, const char *name, const void *buf, SceSize size)
 	}
 
 unlock:
-	if (ksceKernelUnlockMutex(g_regMutex, 1) != 0)
+	if (sceKernelUnlockMutex(g_regMutex, 1) != 0)
 		ret = REG_ERROR_UNLOCK;
 	regPlatformUnlock(state);
 
@@ -298,7 +298,7 @@ int regGetKeyInfo(int handle, const char *name, int *type, int *size)
 		return REG_ERROR_BAD_PATH;
 	}
 
-	if (ksceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
+	if (sceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
 		regPlatformUnlock(state);
 		return REG_ERROR_LOCK;
 	}
@@ -343,7 +343,7 @@ int regGetKeyInfo(int handle, const char *name, int *type, int *size)
 	*size = 0;
 
 unlock:
-	if (ksceKernelUnlockMutex(g_regMutex, 1) != 0)
+	if (sceKernelUnlockMutex(g_regMutex, 1) != 0)
 		ret = REG_ERROR_UNLOCK;
 	regPlatformUnlock(state);
 
@@ -366,7 +366,7 @@ int regGetKey(int handle, const char *name, void *buf, SceSize size)
 		return REG_ERROR_BAD_PATH;
 	}
 
-	if (ksceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
+	if (sceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
 		regPlatformUnlock(state);
 		return REG_ERROR_LOCK;
 	}
@@ -424,7 +424,7 @@ int regGetKey(int handle, const char *name, void *buf, SceSize size)
 	}
 
 unlock:
-	if (ksceKernelUnlockMutex(g_regMutex, 1) != 0)
+	if (sceKernelUnlockMutex(g_regMutex, 1) != 0)
 		ret = REG_ERROR_UNLOCK;
 	regPlatformUnlock(state);
 
@@ -508,13 +508,13 @@ int regDeleteKey(int handle, const char *name)
 		return REG_ERROR_BAD_PATH;
 	}
 
-	if (ksceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
+	if (sceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
 		regPlatformUnlock(state);
 		return REG_ERROR_LOCK;
 	}
 
 	ret = regDeleteKeyUnlocked(handle, name);
-	if (ksceKernelUnlockMutex(g_regMutex, 1) != 0)
+	if (sceKernelUnlockMutex(g_regMutex, 1) != 0)
 		ret = REG_ERROR_UNLOCK;
 	regPlatformUnlock(state);
 
@@ -534,7 +534,7 @@ int regGetKeyNum(int handle, int *num)
 		return REG_ERROR_BAD_PATH;
 	}
 
-	if (ksceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
+	if (sceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
 		regPlatformUnlock(state);
 		return REG_ERROR_LOCK;
 	}
@@ -550,7 +550,7 @@ int regGetKeyNum(int handle, int *num)
 		*num = entry->cache->data->keyNum;
 	}
 
-	if (ksceKernelUnlockMutex(g_regMutex, 1) != 0)
+	if (sceKernelUnlockMutex(g_regMutex, 1) != 0)
 		ret = REG_ERROR_UNLOCK;
 	regPlatformUnlock(state);
 
@@ -572,7 +572,7 @@ int regGetKeyNames(int handle, char (*names)[REG_CATEGORY_NAME_LEN + 1], int num
 		return REG_ERROR_BAD_PATH;
 	}
 
-	if (ksceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
+	if (sceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
 		regPlatformUnlock(state);
 		return REG_ERROR_LOCK;
 	}
@@ -589,7 +589,7 @@ int regGetKeyNames(int handle, char (*names)[REG_CATEGORY_NAME_LEN + 1], int num
 		ret = 0;
 	}
 
-	if (ksceKernelUnlockMutex(g_regMutex, 1) != 0)
+	if (sceKernelUnlockMutex(g_regMutex, 1) != 0)
 		ret = REG_ERROR_UNLOCK;
 	regPlatformUnlock(state);
 

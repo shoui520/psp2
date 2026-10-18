@@ -135,23 +135,23 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelReleaseSubIntrHandler
 	ksceKernelEnableSubIntr
 	ksceKernelRegisterSubIntrHandler
-	ksceKernelWaitEventFlag
-	ksceKernelFinalizeFastMutex
-	ksceKernelStartThread
-	ksceKernelCreateEventFlag
+	sceKernelWaitEventFlag
+	sceKernelFinalizeFastMutex
+	sceKernelStartThread
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelGetThreadId
-	ksceKernelChangeThreadCpuAffinityMask
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
+	sceKernelClearEventFlag
+	sceKernelGetThreadId
+	sceKernelChangeThreadCpuAffinityMask
+	lockFastMutex
+	sceKernelDeleteEventFlag
 	sceKernelGetProcessId
-	ksceKernelInitializeFastMutex
-	ksceKernelNotifyCallback
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
-	ksceKernelEnqueueWorkQueue
+	sceKernelInitializeFastMutex
+	sceKernelNotifyCallback
+	sceKernelCreateThread
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
+	sceKernelScheduleWorkTask
 	sceKernelGetSystemTimeWide
 	ScePmMgrForDriver_2AC815A2
 	SceQafMgrForDriver_52B4E164

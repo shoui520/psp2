@@ -115,8 +115,8 @@ static inline __attribute__((always_inline)) void finalize_lock(struct Flock *fl
 			}
 			SCE_DBG_ASSERT(0, 987);
 		}
-		ksceKernelFinalizeFastMutex(&lock->mutex);
-		ksceKernelDeleteEventFlag(lock->waitQueue);
+		sceKernelFinalizeFastMutex(&lock->mutex);
+		sceKernelDeleteEventFlag(lock->waitQueue);
 		sceKernelFreeHeapMemory(g_ioVfsHeapUid, flock->lock);
 	}
 }
@@ -164,7 +164,7 @@ int vfs_flock_init(void)
 	if (g_flockInitialized)
 		return 0;
 
-	ret = ksceKernelInitializeFastMutex(&g_flockMutex, "SceIofileFlock", 0, NULL);
+	ret = sceKernelInitializeFastMutex(&g_flockMutex, "SceIofileFlock", 0, NULL);
 	if (ret < 0)
 		return ret;
 	for (i = 0; i < FLOCK_LIST_MAX; i++) {
@@ -186,7 +186,7 @@ static inline __attribute__((always_inline)) FlockLock *vfs_get_lock(SceVfsFile 
 	SceUID evf;
 	int i;
 
-	if (ksceKernelLockFastMutex(&g_flockMutex) < 0)
+	if (lockFastMutex(&g_flockMutex) < 0)
 		return NULL;
 
 	flock = vp->core.flock;
@@ -198,7 +198,7 @@ static inline __attribute__((always_inline)) FlockLock *vfs_get_lock(SceVfsFile 
 			tag->ref_count++;
 			file->has_flock_ent = 1;
 		}
-		ksceKernelUnlockFastMutex(&g_flockMutex);
+		sceKernelUnlockFastMutex(&g_flockMutex);
 		return flock->lock;
 	}
 
@@ -219,14 +219,14 @@ static inline __attribute__((always_inline)) FlockLock *vfs_get_lock(SceVfsFile 
 		flock->fid = fid;
 		flock->refcount = 0;
 		lock = flock->lock;
-		evf = ksceKernelCreateEventFlag("SceIofileFlockWaitQueue",
+		evf = sceKernelCreateEventFlag("SceIofileFlockWaitQueue",
 						SCE_KERNEL_EVF_ATTR_MULTI,
 						0, NULL);
 		if (evf >= 0) {
 			lock->waitQueue = evf;
-			if (ksceKernelInitializeFastMutex(&lock->mutex, "SceIofileFlockLock",
+			if (sceKernelInitializeFastMutex(&lock->mutex, "SceIofileFlockLock",
 							  0, NULL) < 0) {
-				ksceKernelDeleteEventFlag(evf);
+				sceKernelDeleteEventFlag(evf);
 			} else {
 				lock->lock_val = 0;
 				lock->write_waiters = 0;
@@ -254,12 +254,12 @@ static inline __attribute__((always_inline)) FlockLock *vfs_get_lock(SceVfsFile 
 		file->has_flock_ent = 1;
 	}
 out:
-	if (ksceKernelUnlockFastMutex(&g_flockMutex) < 0)
+	if (sceKernelUnlockFastMutex(&g_flockMutex) < 0)
 		SCE_DBG_ASSERT(0, 1167);
 	return lock;
 
 no_tag:
-	ksceKernelUnlockFastMutex(&g_flockMutex);
+	sceKernelUnlockFastMutex(&g_flockMutex);
 	return NULL;
 }
 
@@ -272,13 +272,13 @@ static inline __attribute__((always_inline)) int lock_shared(SceVfsFile *file, F
 
 	reserved = 0;
 	for (;;) {
-		ret = ksceKernelLockFastMutex(&lock->mutex);
+		ret = lockFastMutex(&lock->mutex);
 		if (ret < 0)
 			return ret;
 		tag = get_tag(lock, pid);
 		if (tag == NULL) {
 			ret = SCE_ERROR_ERRNO_ENOMEM;
-			ksceKernelUnlockFastMutex(&lock->mutex);
+			sceKernelUnlockFastMutex(&lock->mutex);
 			return ret;
 		}
 		if (tag->type == FLOCK_TAG_RS) {
@@ -308,7 +308,7 @@ static inline __attribute__((always_inline)) int lock_shared(SceVfsFile *file, F
 				locked = 1;
 			} else if (tag->type == FLOCK_TAG_EX) {
 				if (lock->write_waiters == 0) {
-					ret = ksceKernelSetEventFlag(lock->waitQueue, FLOCK_WAKE_SH);
+					ret = sceKernelSetEventFlag(lock->waitQueue, FLOCK_WAKE_SH);
 					if (ret < 0)
 						goto out;
 					lockVal = lock->lock_val & ~FLOCK_LOCK_EX;
@@ -320,10 +320,10 @@ static inline __attribute__((always_inline)) int lock_shared(SceVfsFile *file, F
 					/* the writers come first: unlock, then wait as a reader */
 					tag->type = FLOCK_TAG_NONE;
 					if (lock->reserved_waiter == 0)
-						ret = ksceKernelSetEventFlag(lock->waitQueue,
+						ret = sceKernelSetEventFlag(lock->waitQueue,
 									     FLOCK_WAKE_EX);
 					else
-						ret = ksceKernelSetEventFlag(lock->waitQueue,
+						ret = sceKernelSetEventFlag(lock->waitQueue,
 									     FLOCK_WAKE_RS);
 					if (ret < 0)
 						goto out;
@@ -337,13 +337,13 @@ static inline __attribute__((always_inline)) int lock_shared(SceVfsFile *file, F
 		if (locked && file != NULL)
 			file->is_locked = 1;
 
-		if (ksceKernelUnlockFastMutex(&lock->mutex) < 0)
+		if (sceKernelUnlockFastMutex(&lock->mutex) < 0)
 			SCE_DBG_ASSERT(0, 486);
 		if (locked)
 			return 0;
 		if (op & FLOCK_OP_NB)
 			return SCE_KERNEL_ERROR_IO_WOULD_BLOCK;
-		ret = ksceKernelWaitEventFlag(lock->waitQueue, FLOCK_WAKE_SH,
+		ret = sceKernelWaitEventFlag(lock->waitQueue, FLOCK_WAKE_SH,
 					      SCE_KERNEL_EVF_WAITMODE_AND,
 					      NULL, NULL);
 		if (ret < 0)
@@ -351,7 +351,7 @@ static inline __attribute__((always_inline)) int lock_shared(SceVfsFile *file, F
 	}
 
 out:
-	ksceKernelUnlockFastMutex(&lock->mutex);
+	sceKernelUnlockFastMutex(&lock->mutex);
 	return ret;
 }
 
@@ -361,13 +361,13 @@ static inline __attribute__((always_inline)) int lock_exclusive(SceVfsFile *file
 	int isR;
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&lock->mutex);
+	ret = lockFastMutex(&lock->mutex);
 	if (ret < 0)
 		return ret;
 	tag = get_tag(lock, pid);
 	if (tag == NULL) {
 		ret = SCE_ERROR_ERRNO_ENOMEM;
-		ksceKernelUnlockFastMutex(&lock->mutex);
+		sceKernelUnlockFastMutex(&lock->mutex);
 		return ret;
 	}
 
@@ -376,11 +376,11 @@ static inline __attribute__((always_inline)) int lock_exclusive(SceVfsFile *file
 			tag->pid = pid;
 		tag->type = FLOCK_TAG_EX;
 		lock->lock_val = FLOCK_LOCK_EX;
-		ksceKernelClearEventFlag(lock->waitQueue, ~FLOCK_WAKE_SH);
+		sceKernelClearEventFlag(lock->waitQueue, ~FLOCK_WAKE_SH);
 		if (file != NULL)
 			file->is_locked = 1;
 		ret = 0;
-		ksceKernelUnlockFastMutex(&lock->mutex);
+		sceKernelUnlockFastMutex(&lock->mutex);
 		return ret;
 	}
 
@@ -400,18 +400,18 @@ static inline __attribute__((always_inline)) int lock_exclusive(SceVfsFile *file
 		if (file != NULL)
 			file->is_locked = 1;
 		ret = 0;
-		ksceKernelUnlockFastMutex(&lock->mutex);
+		sceKernelUnlockFastMutex(&lock->mutex);
 		return ret;
 	} else if (tag->type == FLOCK_TAG_SH) {
 		SCE_DBG_ASSERT(!isR, 579);
 		if (lock->lock_val == FLOCK_LOCK_SH) {
 			lock->lock_val = FLOCK_LOCK_EX;
 			tag->type = FLOCK_TAG_EX;
-			ksceKernelClearEventFlag(lock->waitQueue, ~FLOCK_WAKE_SH);
+			sceKernelClearEventFlag(lock->waitQueue, ~FLOCK_WAKE_SH);
 			if (file != NULL)
 				file->is_locked = 1;
 			ret = 0;
-			ksceKernelUnlockFastMutex(&lock->mutex);
+			sceKernelUnlockFastMutex(&lock->mutex);
 			return ret;
 		}
 	} else if (tag->type == FLOCK_TAG_RS) {
@@ -420,11 +420,11 @@ static inline __attribute__((always_inline)) int lock_exclusive(SceVfsFile *file
 			lock->lock_val = FLOCK_LOCK_EX;
 			tag->type = FLOCK_TAG_EX;
 			lock->reserved_pid = 0;
-			ksceKernelClearEventFlag(lock->waitQueue, ~FLOCK_WAKE_SH);
+			sceKernelClearEventFlag(lock->waitQueue, ~FLOCK_WAKE_SH);
 			if (file != NULL)
 				file->is_locked = 1;
 			ret = 0;
-			ksceKernelUnlockFastMutex(&lock->mutex);
+			sceKernelUnlockFastMutex(&lock->mutex);
 			return ret;
 		}
 	} else {
@@ -435,7 +435,7 @@ wait:
 	SCE_DBG_ASSERT(lock->lock_val > 0, 629);
 	if (op & FLOCK_OP_NB) {
 		ret = SCE_KERNEL_ERROR_IO_WOULD_BLOCK;
-		ksceKernelUnlockFastMutex(&lock->mutex);
+		sceKernelUnlockFastMutex(&lock->mutex);
 		return ret;
 	}
 	lock->lock_val |= FLOCK_LOCK_EX;
@@ -445,23 +445,23 @@ wait:
 	tag->type = FLOCK_TAG_NONE;
 	if (file != NULL)
 		file->is_locked = 0;
-	ksceKernelClearEventFlag(lock->waitQueue, ~FLOCK_WAKE_SH);
+	sceKernelClearEventFlag(lock->waitQueue, ~FLOCK_WAKE_SH);
 	if (isR) {
 		SCE_DBG_ASSERT(lock->reserved_waiter == 0, 655);
 		lock->reserved_waiter = 1;
 	}
-	if (ksceKernelUnlockFastMutex(&lock->mutex) < 0)
+	if (sceKernelUnlockFastMutex(&lock->mutex) < 0)
 		SCE_DBG_ASSERT(0, 661);
 
 	if (isR)
-		ret = ksceKernelWaitEventFlag(lock->waitQueue, FLOCK_WAKE_RS,
+		ret = sceKernelWaitEventFlag(lock->waitQueue, FLOCK_WAKE_RS,
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, NULL);
 	else
-		ret = ksceKernelWaitEventFlag(lock->waitQueue, FLOCK_WAKE_EX,
+		ret = sceKernelWaitEventFlag(lock->waitQueue, FLOCK_WAKE_EX,
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, NULL);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelLockFastMutex(&lock->mutex);
+	ret = lockFastMutex(&lock->mutex);
 	if (ret < 0)
 		return ret;
 
@@ -475,7 +475,7 @@ wait:
 	}
 	if (file != NULL)
 		file->is_locked = 1;
-	if (ksceKernelUnlockFastMutex(&lock->mutex) < 0)
+	if (sceKernelUnlockFastMutex(&lock->mutex) < 0)
 		SCE_DBG_ASSERT(0, 709);
 	return 0;
 }
@@ -485,13 +485,13 @@ static inline __attribute__((always_inline)) int lock_reserved(SceVfsFile *file,
 	FlockTag *tag;
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&lock->mutex);
+	ret = lockFastMutex(&lock->mutex);
 	if (ret < 0)
 		return ret;
 	tag = get_tag(lock, pid);
 	if (tag == NULL) {
 		ret = SCE_ERROR_ERRNO_ENOMEM;
-		ksceKernelUnlockFastMutex(&lock->mutex);
+		sceKernelUnlockFastMutex(&lock->mutex);
 		return ret;
 	}
 
@@ -504,11 +504,11 @@ static inline __attribute__((always_inline)) int lock_reserved(SceVfsFile *file,
 		tag->type = FLOCK_TAG_RS;
 		lock->reserved_pid = pid;
 		lock->lock_val = FLOCK_LOCK_SH;
-		ksceKernelClearEventFlag(lock->waitQueue, ~FLOCK_WAKE_SH);
+		sceKernelClearEventFlag(lock->waitQueue, ~FLOCK_WAKE_SH);
 		if (file != NULL)
 			file->is_locked = 1;
 		ret = 0;
-		ksceKernelUnlockFastMutex(&lock->mutex);
+		sceKernelUnlockFastMutex(&lock->mutex);
 		return ret;
 	}
 
@@ -521,15 +521,15 @@ static inline __attribute__((always_inline)) int lock_reserved(SceVfsFile *file,
 			if (file != NULL)
 				file->is_locked = 1;
 			ret = 0;
-			ksceKernelUnlockFastMutex(&lock->mutex);
+			sceKernelUnlockFastMutex(&lock->mutex);
 			return ret;
 		}
 	} else if (tag->type == FLOCK_TAG_EX) {
 		SCE_DBG_ASSERT(pid == tag->pid, 765);
 		if (lock->write_waiters == 0) {
-			ret = ksceKernelSetEventFlag(lock->waitQueue, FLOCK_WAKE_SH);
+			ret = sceKernelSetEventFlag(lock->waitQueue, FLOCK_WAKE_SH);
 			if (ret < 0) {
-				ksceKernelUnlockFastMutex(&lock->mutex);
+				sceKernelUnlockFastMutex(&lock->mutex);
 				return ret;
 			}
 		}
@@ -544,11 +544,11 @@ static inline __attribute__((always_inline)) int lock_reserved(SceVfsFile *file,
 		if (lock->lock_val == FLOCK_LOCK_SH) {
 			lock->reserved_pid = pid;
 			tag->type = FLOCK_TAG_RS;
-			ksceKernelClearEventFlag(lock->waitQueue, ~FLOCK_WAKE_SH);
+			sceKernelClearEventFlag(lock->waitQueue, ~FLOCK_WAKE_SH);
 			if (file != NULL)
 				file->is_locked = 1;
 			ret = 0;
-			ksceKernelUnlockFastMutex(&lock->mutex);
+			sceKernelUnlockFastMutex(&lock->mutex);
 			return ret;
 		}
 		if ((lock->lock_val & FLOCK_LOCK_EX) == 0) {
@@ -557,12 +557,12 @@ static inline __attribute__((always_inline)) int lock_reserved(SceVfsFile *file,
 			if (file != NULL)
 				file->is_locked = 1;
 			ret = 0;
-			ksceKernelUnlockFastMutex(&lock->mutex);
+			sceKernelUnlockFastMutex(&lock->mutex);
 			return ret;
 		}
 	} else if (tag->type == FLOCK_TAG_RS) {
 		ret = lock->reserved_pid;
-		ksceKernelUnlockFastMutex(&lock->mutex);
+		sceKernelUnlockFastMutex(&lock->mutex);
 		return ret;
 	} else {
 		SCE_DBG_ASSERT(lock->reserved_pid, 825);
@@ -570,7 +570,7 @@ static inline __attribute__((always_inline)) int lock_reserved(SceVfsFile *file,
 	SCE_DBG_ASSERT(lock->lock_val > 0, 843);
 busy:
 	ret = SCE_ERROR_ERRNO_EBUSY;
-	ksceKernelUnlockFastMutex(&lock->mutex);
+	sceKernelUnlockFastMutex(&lock->mutex);
 	return ret;
 }
 
@@ -579,28 +579,28 @@ static inline __attribute__((always_inline)) int unlock(SceVfsFile *file, FlockL
 	FlockTag *tag;
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&lock->mutex);
+	ret = lockFastMutex(&lock->mutex);
 	if (ret < 0)
 		return ret;
 	tag = get_tag(lock, pid);
 	if (tag == NULL) {
 		ret = SCE_ERROR_ERRNO_ENOMEM;
-		ksceKernelUnlockFastMutex(&lock->mutex);
+		sceKernelUnlockFastMutex(&lock->mutex);
 		return ret;
 	}
 
 	if (tag->type == FLOCK_TAG_NONE) {
 		ret = SCE_ERROR_ERRNO_EINVAL;
-		ksceKernelUnlockFastMutex(&lock->mutex);
+		sceKernelUnlockFastMutex(&lock->mutex);
 		return ret;
 	} else if (tag->type == FLOCK_TAG_EX) {
 		if (lock->write_waiters == 0) {
-			ret = ksceKernelSetEventFlag(lock->waitQueue, FLOCK_WAKE_SH);
+			ret = sceKernelSetEventFlag(lock->waitQueue, FLOCK_WAKE_SH);
 			if (ret < 0)
 				goto out;
 			lock->lock_val &= ~FLOCK_LOCK_EX;
 		} else {
-			ret = ksceKernelSetEventFlag(lock->waitQueue,
+			ret = sceKernelSetEventFlag(lock->waitQueue,
 						     lock->reserved_waiter != 0 ? FLOCK_WAKE_RS
 										: FLOCK_WAKE_EX);
 			if (ret < 0)
@@ -609,7 +609,7 @@ static inline __attribute__((always_inline)) int unlock(SceVfsFile *file, FlockL
 	} else if (tag->type == FLOCK_TAG_SH) {
 		lock->lock_val -= FLOCK_LOCK_SH;
 		if (lock->lock_val == FLOCK_LOCK_EX)
-			ret = ksceKernelSetEventFlag(lock->waitQueue,
+			ret = sceKernelSetEventFlag(lock->waitQueue,
 						     lock->reserved_waiter != 0 ? FLOCK_WAKE_RS
 										: FLOCK_WAKE_EX);
 		else
@@ -618,7 +618,7 @@ static inline __attribute__((always_inline)) int unlock(SceVfsFile *file, FlockL
 		lock->reserved_pid = 0;
 		lock->lock_val -= FLOCK_LOCK_SH;
 		SCE_DBG_ASSERT(lock->reserved_waiter == 0, 939);
-		ret = ksceKernelSetEventFlag(lock->waitQueue,
+		ret = sceKernelSetEventFlag(lock->waitQueue,
 					     lock->lock_val == FLOCK_LOCK_EX ? FLOCK_WAKE_EX
 									     : FLOCK_WAKE_SH);
 	} else {
@@ -628,7 +628,7 @@ static inline __attribute__((always_inline)) int unlock(SceVfsFile *file, FlockL
 	if (file != NULL)
 		file->is_locked = 0;
 out:
-	ksceKernelUnlockFastMutex(&lock->mutex);
+	sceKernelUnlockFastMutex(&lock->mutex);
 	return ret;
 }
 
@@ -661,13 +661,13 @@ int vfs_flock_close(SceVfsFile *file, SceUID pid, SceVfsVnode *vp)
 	int ret;
 
 	while (vp->core.flock != NULL) {
-		ret = ksceKernelLockFastMutex(&g_flockMutex);
+		ret = lockFastMutex(&g_flockMutex);
 		if (ret >= 0) {
 			list = get_lock_list(vp->core.mnt);
 			if (list != NULL)
 				ret = release_lock_entry(&list->head, vnodeFid(vp), pid,
 							 file->has_flock_ent);
-			ksceKernelUnlockFastMutex(&g_flockMutex);
+			sceKernelUnlockFastMutex(&g_flockMutex);
 		}
 		if (ret == -2) {
 			/* the process still holds the lock: unlock it, then try again */
@@ -692,7 +692,7 @@ int vfs_flock_dup(SceVfsVnode *src, SceVfsVnode *dst)
 	if (src->core.flock == NULL)
 		return SCE_ERROR_ERRNO_EINVAL;
 
-	ret = ksceKernelLockFastMutex(&g_flockMutex);
+	ret = lockFastMutex(&g_flockMutex);
 	if (ret < 0)
 		return ret;
 
@@ -716,7 +716,7 @@ int vfs_flock_dup(SceVfsVnode *src, SceVfsVnode *dst)
 			dst->core.flock = dup;
 		}
 	}
-	if (ksceKernelUnlockFastMutex(&g_flockMutex) < 0)
+	if (sceKernelUnlockFastMutex(&g_flockMutex) < 0)
 		SCE_DBG_ASSERT(0, 1313);
 	return ret;
 }
@@ -728,7 +728,7 @@ int vfs_flock_release(SceUID pid, SceVfsVnode *vp)
 	FlockList *list;
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&g_flockMutex);
+	ret = lockFastMutex(&g_flockMutex);
 	if (ret < 0)
 		return ret;
 
@@ -738,7 +738,7 @@ int vfs_flock_release(SceUID pid, SceVfsVnode *vp)
 	} else {
 		list = get_lock_list(vp->core.mnt);
 		if (list == NULL) {
-			ksceKernelUnlockFastMutex(&g_flockMutex);
+			sceKernelUnlockFastMutex(&g_flockMutex);
 			return SCE_ERROR_ERRNO_ENOENT;
 		}
 		for (flock = list->head; flock != NULL; flock = flock->next) {
@@ -750,7 +750,7 @@ int vfs_flock_release(SceUID pid, SceVfsVnode *vp)
 		else
 			ret = release_lock_tag(flock->lock, pid);
 	}
-	ksceKernelUnlockFastMutex(&g_flockMutex);
+	sceKernelUnlockFastMutex(&g_flockMutex);
 	return ret;
 }
 
@@ -760,13 +760,13 @@ int vfs_release_lock_entry(SceVfsVnode *vp)
 	FlockList *list;
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&g_flockMutex);
+	ret = lockFastMutex(&g_flockMutex);
 	if (ret < 0)
 		return ret;
 
 	list = get_lock_list(vp->core.mnt);
 	if (list != NULL)
 		ret = release_lock_entry(&list->head, vnodeFid(vp), 0, 0);
-	ksceKernelUnlockFastMutex(&g_flockMutex);
+	sceKernelUnlockFastMutex(&g_flockMutex);
 	return ret;
 }

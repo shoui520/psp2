@@ -3,14 +3,14 @@
 #include <psp2kern/kernel/threadmgr.h>
 
 extern int bbmcLockFastMutex(struct ThreadmgrFastMutex *mutex)
-	__asm__("ksceKernelLockFastMutex");
+	__asm__("lockFastMutex");
 extern int bbmcUnlockFastMutex(struct ThreadmgrFastMutex *mutex)
-	__asm__("ksceKernelUnlockFastMutex");
+	__asm__("sceKernelUnlockFastMutex");
 extern int bbmcInitializeFastMutex(struct ThreadmgrFastMutex *mutex,
 	const char *name, int attr, void *opt)
-	__asm__("ksceKernelInitializeFastMutex");
+	__asm__("sceKernelInitializeFastMutex");
 extern int bbmcFinalizeFastMutex(struct ThreadmgrFastMutex *mutex)
-	__asm__("ksceKernelFinalizeFastMutex");
+	__asm__("sceKernelFinalizeFastMutex");
 
 QmiUsbTransport *g_qmiUsbTransport;
 QmiUsbTransport g_qmiUsbTransportStorage;
@@ -59,8 +59,8 @@ int qmiDetachUsbTransport(int deviceId)
 		}
 	}
 	bbmcUnlockFastMutex(&control->mutex);
-	ksceKernelClearEventFlag(g_qmiUsbTransport->event, ~2u);
-	ksceKernelSetEventFlag(g_qmiUsbTransport->event, 1);
+	sceKernelClearEventFlag(g_qmiUsbTransport->event, ~2u);
+	sceKernelSetEventFlag(g_qmiUsbTransport->event, 1);
 	g_qmiUsbTransport->deviceId = 0;
 	return 0;
 }
@@ -130,8 +130,8 @@ int qmiAttachUsbTransport(int deviceId)
 		}
 	}
 	bbmcUnlockFastMutex(&control->mutex);
-	ksceKernelClearEventFlag(g_qmiUsbTransport->event, ~1u);
-	ksceKernelSetEventFlag(g_qmiUsbTransport->event, 2);
+	sceKernelClearEventFlag(g_qmiUsbTransport->event, ~1u);
+	sceKernelSetEventFlag(g_qmiUsbTransport->event, 2);
 	return 0;
 }
 
@@ -168,7 +168,7 @@ int qmiInitializeUsbTransport(void)
 {
 	int result;
 
-	result = ksceKernelCreateEventFlag("SceBbmcProtoUsbCls", 0x1000, 1, NULL);
+	result = sceKernelCreateEventFlag("SceBbmcProtoUsbCls", 0x1000, 1, NULL);
 	if (result < 0)
 		return result;
 	g_qmiUsbTransportStorage.event = result;
@@ -201,7 +201,7 @@ int qmiFinalizeUsbTransport(void)
 	}
 	result = ksceUsbdUnregisterCompositeLdd(&g_qmiUsbDriver);
 	bbmcFinalizeFastMutex(&g_qmiUsbTransport->mutex);
-	ksceKernelDeleteEventFlag(g_qmiUsbTransport->event);
+	sceKernelDeleteEventFlag(g_qmiUsbTransport->event);
 	g_qmiUsbTransport = NULL;
 	return result;
 }
@@ -214,7 +214,7 @@ int qmiGetUsbState(SceUInt32 *state)
 		return 0x80330003;
 	if (!state)
 		return 0x80330002;
-	result = ksceKernelPollEventFlag(g_qmiUsbTransport->event, ~0u, 1, state);
+	result = sceKernelPollEventFlag(g_qmiUsbTransport->event, ~0u, 1, state);
 	if (result == (int)0x800280e3) {
 		*state = 0;
 		return 0;

@@ -37,14 +37,14 @@ int module_start(SceSize args, void *argp)
 	if (failed) {
 		SCE_DBG_PRINTF(0, 81, "sceKernelCreateHeap() failure\n");
 	} else {
-		ksceKernelInitializeFastMutex(&g_postSsMgrKeysMutex, "SceSblSsMgr", 0, 0);
-		ksceKernelInitializeFastMutex(&g_postSsMgrSdMutex, "SceSblSsMgr", 0, 0);
-		ksceKernelInitializeFastMutex(&g_postSsMgrCloudMutex, "SceSblSsMgr", 0, 0);
+		sceKernelInitializeFastMutex(&g_postSsMgrKeysMutex, "SceSblSsMgr", 0, 0);
+		sceKernelInitializeFastMutex(&g_postSsMgrSdMutex, "SceSblSsMgr", 0, 0);
+		sceKernelInitializeFastMutex(&g_postSsMgrCloudMutex, "SceSblSsMgr", 0, 0);
 		sceSblPmMgrInit();
 		sceSblRtcMgrInit();
 		sceSblFwLoaderInit();
 		sceSblRsaSetRandom(postSsMgrRandom);
-		ksceKernelEnqueueWorkQueue(0x10023, "SceSblPostSsMgrInit", postSsMgrInitWork, NULL);
+		sceKernelScheduleWorkTask(0x10023, "SceSblPostSsMgrInit", postSsMgrInitWork, NULL);
 	}
 	return failed;
 }

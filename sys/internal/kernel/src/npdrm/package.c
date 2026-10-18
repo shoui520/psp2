@@ -1638,7 +1638,7 @@ __attribute__((noinline)) int NpDrmPackageCheckForUser(const void *buffer,
 		args.size = size;
 		args.digest = digest;
 		args.flags = identifier;
-		ret = ksceKernelRunWithStack(0x2000, NpDrmPackageCheckOnStack, &args);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, NpDrmPackageCheckOnStack, &args);
 	}
 	sceKernelUserUnmap(mapId, buffer, size);
 out:
@@ -1689,7 +1689,7 @@ __attribute__((noinline)) int NpDrmPackageDecryptForUser(void *buffer,
 	args.offset = offset;
 	args.flags = identifier;
 	args.reserved = 0;
-	ret = ksceKernelRunWithStack(0x2000, NpDrmPackageDecryptOnStack, &args);
+	ret = SceThreadmgrForDriver_E54FD746(0x2000, NpDrmPackageDecryptOnStack, &args);
 	sceKernelUserUnmap(mapId, buffer, size);
 out:
 	sceSyscallLeave(syscall);

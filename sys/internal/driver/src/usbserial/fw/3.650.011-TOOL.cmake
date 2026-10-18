@@ -64,15 +64,15 @@ set(MODULE_IMPORT_FUNCS
 	memset
 	memcpy
 	__stack_chk_fail
-	ksceKernelWaitEventFlag
+	sceKernelWaitEventFlag
 	SceThreadmgrForDriver_20C228E4
-	ksceKernelCreateEventFlag
-	ksceKernelClearEventFlag
-	ksceKernelDeleteEventFlag
-	ksceKernelWaitEventFlagCB
-	ksceKernelNotifyCallback
-	ksceKernelSetEventFlag
-	ksceKernelEnqueueWorkQueue
+	sceKernelCreateEventFlag
+	sceKernelClearEventFlag
+	sceKernelDeleteEventFlag
+	SceThreadmgrForDriver_8A35F714
+	sceKernelNotifyCallback
+	sceKernelSetEventFlag
+	sceKernelScheduleWorkTask
 	SceSblACMgrForDriver_062CAEB2
 	ksceUdcdUnregister
 	ksceUdcdStop

@@ -84,6 +84,6 @@ int qmiControlClientCompleted(unsigned int event, BbcmdProtocolClient *client)
 		return 0;
 	bit = channel + 4;
 signal:
-	ksceKernelSetEventFlag(g_qmiBackendControl->controlEvent, 1U << bit);
+	sceKernelSetEventFlag(g_qmiBackendControl->controlEvent, 1U << bit);
 	return 0;
 }

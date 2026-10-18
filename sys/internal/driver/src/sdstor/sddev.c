@@ -118,7 +118,7 @@ int sddev_init(void)
 		SCE_DBG_ASSERT_FUNC(1, 596, "sddev_get_mtype");
 		mediaType = sddevMediaTypes[port];
 		SCE_DBG_ASSERT(1, 211);
-		result = ksceKernelInitializeFastMutex(&device->fastmutex,
+		result = sceKernelInitializeFastMutex(&device->fastmutex,
 						     "SceSdStorDevice", 0, 0);
 		if (result != 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 15, 220, "0x%08x\n", result);
@@ -185,7 +185,7 @@ int sddev_power_on(SceSdstorSddev *device)
 	int result, powerResult, unlockResult;
 
 	SCE_DBG_ASSERT_FUNC(device != NULL, 604, "sddev_open");
-	result = ksceKernelLockFastMutex(&device->fastmutex);
+	result = lockFastMutex(&device->fastmutex);
 	if (result < 0)
 		return result;
 	if (device->stat == 2)
@@ -395,7 +395,7 @@ failed:
 noDevice:
 	result = 0x80010013;
 unlock:
-	unlockResult = ksceKernelUnlockFastMutex(&device->fastmutex);
+	unlockResult = sceKernelUnlockFastMutex(&device->fastmutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
 
@@ -404,7 +404,7 @@ int sddev_close(SceSdstorSddev *device)
 	int result;
 
 	SCE_DBG_ASSERT(device != NULL, 684);
-	result = ksceKernelLockFastMutex(&device->fastmutex);
+	result = lockFastMutex(&device->fastmutex);
 	if (result < 0)
 		return result;
 	device->stat = 0;
@@ -413,7 +413,7 @@ int sddev_close(SceSdstorSddev *device)
 	device->mediaInfo.eraseBlockCount = 0;
 	device->writeProtected = 0;
 	device->sdif_ctx = NULL;
-	result = ksceKernelUnlockFastMutex(&device->fastmutex);
+	result = sceKernelUnlockFastMutex(&device->fastmutex);
 	return result < 0 ? result : 0;
 }
 
@@ -423,7 +423,7 @@ int sddev_remove(SceSdstorSddev *device)
 	int result, unlockResult;
 
 	SCE_DBG_ASSERT(device != NULL, 703);
-	result = ksceKernelLockFastMutex(&device->fastmutex);
+	result = lockFastMutex(&device->fastmutex);
 	if (result < 0)
 		return result;
 	device->stat = 0;
@@ -459,10 +459,10 @@ int sddev_remove(SceSdstorSddev *device)
 		}
 	}
 	if (result == 0) {
-		result = ksceKernelUnlockFastMutex(&device->fastmutex);
+		result = sceKernelUnlockFastMutex(&device->fastmutex);
 		return result < 0 ? result : 0;
 	}
-	unlockResult = ksceKernelUnlockFastMutex(&device->fastmutex);
+	unlockResult = sceKernelUnlockFastMutex(&device->fastmutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
 
@@ -472,7 +472,7 @@ int sddev_insert(SceSdstorSddev *device)
 
 	SCE_DBG_ASSERT(device != NULL, 725);
 	SCE_DBG_ASSERT_FUNC(device != NULL, 684, "sddev_close");
-	result = ksceKernelLockFastMutex(&device->fastmutex);
+	result = lockFastMutex(&device->fastmutex);
 	if (result < 0)
 		goto closeFailed;
 	device->stat = 0;
@@ -481,7 +481,7 @@ int sddev_insert(SceSdstorSddev *device)
 	device->mediaInfo.eraseBlockCount = 0;
 	device->writeProtected = 0;
 	device->sdif_ctx = NULL;
-	result = ksceKernelUnlockFastMutex(&device->fastmutex);
+	result = sceKernelUnlockFastMutex(&device->fastmutex);
 	if (result < 0)
 		goto closeFailed;
 	result = sddev_power_on(device);
@@ -503,7 +503,7 @@ int sddev_suspend(SceSdstorSddev *device)
 	int result, unlockResult;
 
 	SCE_DBG_ASSERT(device != NULL, 746);
-	result = ksceKernelLockFastMutex(&device->fastmutex);
+	result = lockFastMutex(&device->fastmutex);
 	if (result < 0)
 		return result;
 	device->stat = 2;
@@ -539,10 +539,10 @@ int sddev_suspend(SceSdstorSddev *device)
 		}
 	}
 	if (result == 0) {
-		result = ksceKernelUnlockFastMutex(&device->fastmutex);
+		result = sceKernelUnlockFastMutex(&device->fastmutex);
 		return result < 0 ? result : 0;
 	}
-	unlockResult = ksceKernelUnlockFastMutex(&device->fastmutex);
+	unlockResult = sceKernelUnlockFastMutex(&device->fastmutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
 
@@ -557,7 +557,7 @@ int sddev_resume(SceSdstorSddev *device)
 	if (hport == 0)
 		return 0;
 	SCE_DBG_ASSERT_FUNC(device != NULL, 684, "sddev_close");
-	result = ksceKernelLockFastMutex(&device->fastmutex);
+	result = lockFastMutex(&device->fastmutex);
 	if (result < 0)
 		goto closeFailed;
 	device->stat = 0;
@@ -566,7 +566,7 @@ int sddev_resume(SceSdstorSddev *device)
 	device->mediaInfo.eraseBlockCount = 0;
 	device->writeProtected = 0;
 	device->sdif_ctx = NULL;
-	result = ksceKernelUnlockFastMutex(&device->fastmutex);
+	result = sceKernelUnlockFastMutex(&device->fastmutex);
 	if (result < 0)
 		goto closeFailed;
 	result = sddev_power_on(device);
@@ -591,11 +591,11 @@ int sddev_read(SceSdstorSddev *device, void *buffer, uint32_t sector,
 	int result, unlockResult, initResult, attempt;
 
 	SCE_DBG_ASSERT(device != NULL, 793);
-	result = ksceKernelLockFastMutex(&device->fastmutex);
+	result = lockFastMutex(&device->fastmutex);
 	if (result < 0)
 		return result;
 	if (device->stat != 1) {
-		result = ksceKernelUnlockFastMutex(&device->fastmutex);
+		result = sceKernelUnlockFastMutex(&device->fastmutex);
 		return result < 0 ? result : (int)0x80010013;
 	}
 	switch (device->mediaType) {
@@ -649,7 +649,7 @@ int sddev_read(SceSdstorSddev *device, void *buffer, uint32_t sector,
 		result = 0x80010006;
 		break;
 	}
-	unlockResult = ksceKernelUnlockFastMutex(&device->fastmutex);
+	unlockResult = sceKernelUnlockFastMutex(&device->fastmutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
 
@@ -662,11 +662,11 @@ int sddev_write(SceSdstorSddev *device, const void *buffer, uint32_t sector,
 	int result, unlockResult, initResult, attempt;
 
 	SCE_DBG_ASSERT(device != NULL, 858);
-	result = ksceKernelLockFastMutex(&device->fastmutex);
+	result = lockFastMutex(&device->fastmutex);
 	if (result < 0)
 		return result;
 	if (device->stat != 1) {
-		result = ksceKernelUnlockFastMutex(&device->fastmutex);
+		result = sceKernelUnlockFastMutex(&device->fastmutex);
 		return result < 0 ? result : (int)0x80010013;
 	}
 	switch (device->mediaType) {
@@ -720,7 +720,7 @@ int sddev_write(SceSdstorSddev *device, const void *buffer, uint32_t sector,
 		result = 0x80010006;
 		break;
 	}
-	unlockResult = ksceKernelUnlockFastMutex(&device->fastmutex);
+	unlockResult = sceKernelUnlockFastMutex(&device->fastmutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
 
@@ -730,11 +730,11 @@ int sddev_check_removal(SceSdstorSddev *device)
 	int result, unlockResult;
 
 	SCE_DBG_ASSERT(device != NULL, 922);
-	result = ksceKernelLockFastMutex(&device->fastmutex);
+	result = lockFastMutex(&device->fastmutex);
 	if (result < 0)
 		return result;
 	if (device->stat != 1) {
-		result = ksceKernelUnlockFastMutex(&device->fastmutex);
+		result = sceKernelUnlockFastMutex(&device->fastmutex);
 		return result < 0 ? result : (int)0x80010013;
 	}
 	if (device->mediaType == 0) {
@@ -749,7 +749,7 @@ int sddev_check_removal(SceSdstorSddev *device)
 	} else {
 		result = 0x80010030;
 	}
-	unlockResult = ksceKernelUnlockFastMutex(&device->fastmutex);
+	unlockResult = sceKernelUnlockFastMutex(&device->fastmutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
 
@@ -760,11 +760,11 @@ int sddev_has_write_protect_area(SceSdstorSddev *device, uint32_t sector,
 	int result, unlockResult, protected = 0;
 
 	SCE_DBG_ASSERT(device != NULL, 957);
-	result = ksceKernelLockFastMutex(&device->fastmutex);
+	result = lockFastMutex(&device->fastmutex);
 	if (result < 0)
 		return result;
 	if (device->stat != 1) {
-		result = ksceKernelUnlockFastMutex(&device->fastmutex);
+		result = sceKernelUnlockFastMutex(&device->fastmutex);
 		return result < 0 ? result : (int)0x80010013;
 	}
 	switch (device->mediaType) {
@@ -791,7 +791,7 @@ int sddev_has_write_protect_area(SceSdstorSddev *device, uint32_t sector,
 		result = 0x80010013;
 		break;
 	}
-	unlockResult = ksceKernelUnlockFastMutex(&device->fastmutex);
+	unlockResult = sceKernelUnlockFastMutex(&device->fastmutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
 
@@ -800,17 +800,17 @@ int sddev_format_rm(SceSdstorSddev *device)
 	int result, unlockResult;
 
 	SCE_DBG_ASSERT(device != NULL, 1007);
-	result = ksceKernelLockFastMutex(&device->fastmutex);
+	result = lockFastMutex(&device->fastmutex);
 	if (result < 0)
 		return result;
 	if (device->stat != 1 || device->mediaType != 2) {
-		result = ksceKernelUnlockFastMutex(&device->fastmutex);
+		result = sceKernelUnlockFastMutex(&device->fastmutex);
 		return result < 0 ? result : (int)0x80010013;
 	}
 	result = sceMsifFormat(1);
 	if (result != 0)
 		SCE_DBG_PRINTF_LEVEL(1, 15, 1025, "0x%08x\n", result);
-	unlockResult = ksceKernelUnlockFastMutex(&device->fastmutex);
+	unlockResult = sceKernelUnlockFastMutex(&device->fastmutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
 
@@ -820,11 +820,11 @@ int sddev_erase_sd(SceSdstorSddev *device, SceUID callback)
 	int result, unlockResult;
 
 	SCE_DBG_ASSERT(device != NULL, 1036);
-	result = ksceKernelLockFastMutex(&device->fastmutex);
+	result = lockFastMutex(&device->fastmutex);
 	if (result < 0)
 		return result;
 	if (device->stat != 1 || device->mediaType != 1) {
-		result = ksceKernelUnlockFastMutex(&device->fastmutex);
+		result = sceKernelUnlockFastMutex(&device->fastmutex);
 		return result < 0 ? result : (int)0x80010013;
 	}
 	hport = device->hport;
@@ -838,7 +838,7 @@ int sddev_erase_sd(SceSdstorSddev *device, SceUID callback)
 	result = SceSdifForDriver_35BA9DF8(device->hport, callback);
 	if (result != 0)
 		SCE_DBG_PRINTF_LEVEL(1, 15, 1060, "0x%08x\n", result);
-	unlockResult = ksceKernelUnlockFastMutex(&device->fastmutex);
+	unlockResult = sceKernelUnlockFastMutex(&device->fastmutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
 
@@ -847,15 +847,15 @@ int sddev_is_read_write(SceSdstorSddev *device)
 	int result, unlockResult;
 
 	SCE_DBG_ASSERT(device != NULL, 1071);
-	result = ksceKernelLockFastMutex(&device->fastmutex);
+	result = lockFastMutex(&device->fastmutex);
 	if (result < 0)
 		return result;
 	if (device->stat != 1) {
-		result = ksceKernelUnlockFastMutex(&device->fastmutex);
+		result = sceKernelUnlockFastMutex(&device->fastmutex);
 		return result < 0 ? result : (int)0x80010013;
 	}
 	result = device->writeProtected & 1 ? (int)0x8001000d : 0;
-	unlockResult = ksceKernelUnlockFastMutex(&device->fastmutex);
+	unlockResult = sceKernelUnlockFastMutex(&device->fastmutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
 
@@ -864,14 +864,14 @@ int sddev_get_info(SceSdstorSddev *device, SceSdstorMediaInfo *info)
 	int result;
 
 	SCE_DBG_ASSERT(device != NULL && info != NULL, 1094);
-	result = ksceKernelLockFastMutex(&device->fastmutex);
+	result = lockFastMutex(&device->fastmutex);
 	if (result < 0)
 		return result;
 	if (device->stat != 1) {
-		result = ksceKernelUnlockFastMutex(&device->fastmutex);
+		result = sceKernelUnlockFastMutex(&device->fastmutex);
 		return result < 0 ? result : (int)0x80010013;
 	}
 	*info = device->mediaInfo;
-	result = ksceKernelUnlockFastMutex(&device->fastmutex);
+	result = sceKernelUnlockFastMutex(&device->fastmutex);
 	return result < 0 ? result : 0;
 }

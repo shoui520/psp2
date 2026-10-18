@@ -35,7 +35,7 @@ int ModulemgrLockLibDB(void)
 	int ret;
 
 	SceKernelSuspendForDriver_4DF40893(0);
-	ret = ksceKernelLockMutex(g_mutex, 1, NULL);
+	ret = sceKernelLockMutex(g_mutex, 1, NULL);
 	SCE_DBG_ASSERT_LEVEL(0, ret >= 0, 164);
 	return ret;
 }
@@ -44,7 +44,7 @@ int ModulemgrUnlockLibDB(void)
 {
 	int ret;
 
-	ret = ksceKernelUnlockMutex(g_mutex, 1);
+	ret = sceKernelUnlockMutex(g_mutex, 1);
 	SCE_DBG_ASSERT_LEVEL(0, ret >= 0, 175);
 	SceKernelSuspendForDriver_2BB92967(0);
 	return ret;
@@ -364,12 +364,12 @@ int ModulemgrCallEntryOnUserThread(SceModuleCB *cb, SceModuleEntry entry,
 		thid = SceThreadmgrForDriver_C8E57BB4(pid, name, entry, prio, stack, attr, cpu, optp);
 		if (thid >= 0) {
 			if (!userArgs)
-				ret = ksceKernelStartThread(thid, args, argp);
+				ret = sceKernelStartThread(thid, args, argp);
 			else
 				ret = SceThreadmgrForKernel_CBADD6B3(thid, args, argp);
 			if (ret < 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 479, "start failed (0x%08x)\n", ret);
-				ksceKernelDeleteThread(thid);
+				sceKernelDeleteThread(thid);
 				SceSysrootForDriver_1B3FA457(pid);
 				return ret;
 			}
@@ -399,7 +399,7 @@ raise:
 	return thid;
 
 wait:
-	ret = ksceKernelWaitThreadEnd(thid, NULL, NULL);
+	ret = sceKernelWaitThreadEnd(thid, NULL, NULL);
 	if (ret < 0) {
 		if (ret == 0x8002802d) {
 			state = SceThreadmgrForDriver_3A72C6D8(g_threadStateSlot);
@@ -408,12 +408,12 @@ wait:
 			state->flags = THREAD_STATE_RETRY_WAIT | 2;
 		} else if (ret != 0x8002802c) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 500, "wait failed (0x%08x)\n", ret);
-			ksceKernelDeleteThread(thid);
+			sceKernelDeleteThread(thid);
 		}
 		return ret;
 	}
 	sceKernelGetThreadExitStatus(thid, status);
-	ksceKernelDeleteThread(thid);
+	sceKernelDeleteThread(thid);
 	return 0;
 }
 
@@ -426,7 +426,7 @@ static inline int ModulemgrCallStartEntry(SceModuleCB *cb, SceSize args, void *a
 	void **probe;
 	int n, ret;
 
-	start = ksceKernelGetSystemTimeLow();
+	start = SceThreadmgrForDriver_47F6DE49();
 	*status = 0;
 	if (cb->pid == KERNEL_PID) {
 		probesInfo = cb->probesInfo;
@@ -468,7 +468,7 @@ static inline int ModulemgrCallStartEntry(SceModuleCB *cb, SceSize args, void *a
 	}
 
 	if (cb->moduleStart == NULL) {
-		*usec = ksceKernelGetSystemTimeLow() - start;
+		*usec = SceThreadmgrForDriver_47F6DE49() - start;
 		return 0;
 	}
 	if (cb->pid == KERNEL_PID) {
@@ -479,10 +479,10 @@ static inline int ModulemgrCallStartEntry(SceModuleCB *cb, SceSize args, void *a
 						     args, argp, (flags >> 27) & 1, status);
 	}
 	if (*status == SCE_KERNEL_START_NO_RESIDENT + 1) {	/* 2: SCE_KERNEL_START_FAILED */
-		ksceKernelGetSystemTimeLow();
+		SceThreadmgrForDriver_47F6DE49();
 		return SCE_KERNEL_ERROR_MODULEMGR_START_FAILED;
 	}
-	*usec = ksceKernelGetSystemTimeLow() - start;
+	*usec = SceThreadmgrForDriver_47F6DE49() - start;
 	return ret;
 }
 
@@ -816,7 +816,7 @@ inhibited:
 				goto out;
 			}
 			obj->cb.shared = shared;
-			t0 = ksceKernelGetSystemTimeLow();
+			t0 = SceThreadmgrForDriver_47F6DE49();
 			ret = ModulemgrLoadModule(obj, path, -1, NULL, flags);
 			goto loaded;
 		}
@@ -849,7 +849,7 @@ inhibited:
 		goto out;
 	}
 	obj->cb.shared = NULL;
-	t0 = ksceKernelGetSystemTimeLow();
+	t0 = SceThreadmgrForDriver_47F6DE49();
 	ret = ModulemgrLoadModule(obj, path, fd, NULL, flags);
 	if (fd > 0) {
 		if ((flags & LOAD_FLAG_NO_AUTH) != 0)
@@ -867,7 +867,7 @@ loaded:
 		return ret;
 	}
 	SceCpuForKernel_803C84BF();
-	t1 = ksceKernelGetSystemTimeLow();
+	t1 = SceThreadmgrForDriver_47F6DE49();
 	SCE_DBG_PRINTF_LEVEL(1, 0, 2219,
 		"Loading %s (guid=0x%08x, fingerprint=0x%08x): OK.   %d usec (form 0x%03x)\n",
 		obj->cb.path, obj->cb.modid, obj->cb.fingerprint, t1 - t0, g_relocForms);
@@ -946,11 +946,11 @@ SceUID ksceKernelLoadModuleForPid(SceUID pid, const char *path, SceUInt32 flags,
 		return SCE_KERNEL_ERROR_MODULEMGR_BAD_PID;
 	if ((flags & 0xfff8260f) != 0)
 		return SCE_KERNEL_ERROR_INVALID_FLAGS;
-	perm = ksceKernelSetPermission(0x80);
-	old = ksceKernelSetProcessIdToTLS(KERNEL_PID);
+	perm = sceKernelSetThreadAccessLevel(0x80);
+	old = SceThreadmgrForDriver_0486F239(KERNEL_PID);
 	ret = loadModuleCommon(pid, path, flags | LOAD_FLAG_USE_PID, opt);
-	ksceKernelSetProcessIdToTLS(old);
-	ksceKernelSetPermission(perm);
+	SceThreadmgrForDriver_0486F239(old);
+	sceKernelSetThreadAccessLevel(perm);
 	return ret;
 }
 
@@ -963,11 +963,11 @@ SceUID ModulemgrLoadSharedModuleForPid(SceUID pid, const char *path, SceUInt32 f
 
 	if (pid == 0)
 		return SCE_KERNEL_ERROR_MODULEMGR_BAD_PID;
-	perm = ksceKernelSetPermission(0x80);
-	old = ksceKernelSetProcessIdToTLS(KERNEL_PID);
+	perm = sceKernelSetThreadAccessLevel(0x80);
+	old = SceThreadmgrForDriver_0486F239(KERNEL_PID);
 	ret = loadModuleCommon(pid, path, flags | LOAD_FLAG_SHARED, NULL);
-	ksceKernelSetProcessIdToTLS(old);
-	ksceKernelSetPermission(perm);
+	SceThreadmgrForDriver_0486F239(old);
+	sceKernelSetThreadAccessLevel(perm);
 	return ret;
 }
 
@@ -1515,7 +1515,7 @@ int ModulemgrUnloadMySelfWork(void *arg)
 	typeof(g_unloadMySelf) *req = arg;
 	int ret;
 
-	ret = ksceKernelWaitThreadEnd(req->thid, NULL, NULL);
+	ret = sceKernelWaitThreadEnd(req->thid, NULL, NULL);
 	if (ret < 0 && ret != 0x80028021)
 		return ret;
 	ret = StopUnloadModuleCommon(KERNEL_PID, req->modid, 0, NULL, 0x220, NULL, NULL);
@@ -1829,10 +1829,10 @@ int ksceKernelModuleUnloadMySelf(void)
 	int ret;
 
 	relocatorFormLogPrint();
-	g_unloadMySelf.thid = ksceKernelGetThreadId();
+	g_unloadMySelf.thid = sceKernelGetThreadId();
 	g_unloadMySelf.modid = LibraryDBGetModuleIdByAddr(KERNEL_PID,
 							  (SceUInt32)__builtin_return_address(0));
-	ret = ksceKernelEnqueueWorkQueue(0x10023, "SceKernelUnloadMySelf",
+	ret = sceKernelScheduleWorkTask(0x10023, "SceKernelUnloadMySelf",
 					 ModulemgrUnloadMySelfWork, &g_unloadMySelf);
 	if (ret < 0)
 		return ret;
@@ -1869,7 +1869,7 @@ int ModulemgrModuleStart(SceSize args, void *argp)
 	ModulemgrProcEvent handler;
 	int ret;
 
-	g_mutex = ksceKernelCreateMutex("SceModuleMgr", 0x2000, 0, NULL);
+	g_mutex = sceKernelCreateMutex("SceModuleMgr", 0x2000, 0, NULL);
 	if (g_mutex < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 3654, "create mutex failed (0x%08x)\n", g_mutex);
 		SCE_DBG_ASSERT_LEVEL(0, 0, 3655);
@@ -2014,22 +2014,22 @@ SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, SceUInt32 flags,
 
 	if (pid == KERNEL_PID)
 		return SCE_KERNEL_ERROR_INVALID_FLAGS;
-	perm = ksceKernelSetPermission(0x80);
-	old = ksceKernelSetProcessIdToTLS(KERNEL_PID);
+	perm = sceKernelSetThreadAccessLevel(0x80);
+	old = SceThreadmgrForDriver_0486F239(KERNEL_PID);
 	SceKernelSuspendForDriver_4DF40893(0);
 	fd = ksceIoOpen(path, SCE_O_RDONLY, 0);
 	if (fd < 0) {
 		SceKernelSuspendForDriver_2BB92967(0);
-		ksceKernelSetProcessIdToTLS(old);
-		ksceKernelSetPermission(perm);
+		SceThreadmgrForDriver_0486F239(old);
+		sceKernelSetThreadAccessLevel(perm);
 		return fd;
 	}
 	db = LibraryDBInitializeAddr2ModuleTable(pid);
 	if (db == NULL) {
 		ksceIoClose(fd);
 		SceKernelSuspendForDriver_2BB92967(0);
-		ksceKernelSetProcessIdToTLS(old);
-		ksceKernelSetPermission(perm);
+		SceThreadmgrForDriver_0486F239(old);
+		sceKernelSetThreadAccessLevel(perm);
 		return SCE_KERNEL_ERROR_MODULEMGR_NOMEM_LIB;
 	}
 	sceKernelSetProcessLibdb(pid, db);
@@ -2038,17 +2038,17 @@ SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, SceUInt32 flags,
 		LibraryDBDelete(pid);
 		ksceIoClose(fd);
 		SceKernelSuspendForDriver_2BB92967(0);
-		ksceKernelSetProcessIdToTLS(old);
-		ksceKernelSetPermission(perm);
+		SceThreadmgrForDriver_0486F239(old);
+		sceKernelSetThreadAccessLevel(perm);
 		return ret;
 	}
-	t0 = ksceKernelGetSystemTimeLow();
+	t0 = SceThreadmgrForDriver_47F6DE49();
 	ret = ModulemgrLoadModule(obj, path, fd, auth, flags | LOAD_FLAG_PROCESS_IMAGE);
-	t1 = ksceKernelGetSystemTimeLow();
+	t1 = SceThreadmgrForDriver_47F6DE49();
 	ksceIoClose(fd);
 	SceKernelSuspendForDriver_2BB92967(0);
-	ksceKernelSetProcessIdToTLS(old);
-	ksceKernelSetPermission(perm);
+	SceThreadmgrForDriver_0486F239(old);
+	sceKernelSetThreadAccessLevel(perm);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 3108, "load (%s) failed (0x%08x)\n", path, ret);
 		LibraryDBDelete(pid);

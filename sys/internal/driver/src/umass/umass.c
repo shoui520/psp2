@@ -17,7 +17,7 @@
 
 #define UMASS_ERROR(n) ((int)(0x802a0000U | (n))) /* official names unavailable */
 #define logError(func, fmt, ...) SceDebugForDriver_391B74B7("[Umass]%08x:%s: " fmt, \
-	ksceKernelGetSystemTimeLow(), func, ##__VA_ARGS__)
+	SceThreadmgrForDriver_47F6DE49(), func, ##__VA_ARGS__)
 
 /* Bulk-Only Transport (USB Mass Storage Class) */
 #define UMASS_CBW_SIGNATURE	0x43425355	/* "USBC" */
@@ -176,7 +176,7 @@ static void transferDone(int result, int count, void *arg)
 
 	dev->result = result;
 	dev->count = count;
-	ksceKernelSetEventFlag(dev->eventFlag, 1);
+	sceKernelSetEventFlag(dev->eventFlag, 1);
 }
 
 /* name unknown */
@@ -188,14 +188,14 @@ static void dataDone(int result, int count, void *arg)
 	dev->count = count;
 	if (!result && count >= 0)
 		dev->transferred += count;
-	ksceKernelSetEventFlag(dev->eventFlag, 1);
+	sceKernelSetEventFlag(dev->eventFlag, 1);
 }
 
 /* name unknown */
 static int waitTransfer(UsbMassDevice *dev, unsigned int mode)
 {
 	unsigned int bits;
-	int ret = ksceKernelWaitEventFlag(dev->eventFlag, 3, mode, &bits, NULL);
+	int ret = sceKernelWaitEventFlag(dev->eventFlag, 3, mode, &bits, NULL);
 
 	if (ret == (int)SCE_KERNEL_ERROR_WAIT_DELETE || ret == (int)SCE_KERNEL_ERROR_WAIT_CANCEL)
 		return UMASS_ERROR(1);
@@ -214,7 +214,7 @@ static int _sceUsbMassDetach(int deviceId)
 	dev->mediaChanged = dev->sectors = dev->sectorSize = dev->readOnly = 0;
 	dev->capacityValid = dev->lun = 0;
 	attached = NULL;
-	ksceKernelSetEventFlag(dev->eventFlag, 2);
+	sceKernelSetEventFlag(dev->eventFlag, 2);
 	SceCpuForDriver_2A40BB93(&pending, 2);
 	ksceKernelTriggerSGI(15, 2, 0);
 	return 0;
@@ -270,7 +270,7 @@ static int clearHalt(UsbMassDevice *dev, SceUsbdEndpointDescriptor *endpoint, in
 		if (inspect)
 			ret = waitTransfer(dev, 5);
 		else
-			ksceKernelWaitEventFlag(dev->eventFlag, 3,
+			sceKernelWaitEventFlag(dev->eventFlag, 3,
 						SCE_KERNEL_EVF_WAITMODE_OR |
 						SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	}
@@ -580,7 +580,7 @@ static int _sceUsbMassAttach(int deviceId)
 		goto fail;
 	dev->eventFlag = eventFlag;
 	dev->buffer = ioBuffer;
-	ksceKernelClearEventFlag(eventFlag, 0);
+	sceKernelClearEventFlag(eventFlag, 0);
 	dev->mutex = mutex;
 	config = ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_CONFIGURATION);
 	req.bmRequestType = 0;
@@ -634,7 +634,7 @@ connected:
 			attached = dev;
 			desc = ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
 			SceDebugForDriver_391B74B7("[Umass]%08x:USB mass storage (%04x:%04x) attached\n",
-				ksceKernelGetSystemTimeLow(), desc->idVendor, desc->idProduct);
+				SceThreadmgrForDriver_47F6DE49(), desc->idVendor, desc->idProduct);
 			SceCpuForDriver_2A40BB93(&pending, 1);
 			ksceKernelTriggerSGI(15, 2, 0);
 			return 0;
@@ -665,7 +665,7 @@ int _sceUsbMassGetDevInfo(SceUsbMassDevInfo *info)
 	UsbMassDevice *dev = attached;
 	int ret;
 
-	if (!dev || ksceKernelLockMutex(dev->mutex, 1, NULL))
+	if (!dev || sceKernelLockMutex(dev->mutex, 1, NULL))
 		return (int)SCE_ERROR_ERRNO_ENODEV;
 	ret = 0;
 	if (!dev->capacityValid)
@@ -694,11 +694,11 @@ int _sceUsbMassGetDevInfo(SceUsbMassDevInfo *info)
 	}
 	if (ret == UMASS_ERROR(1)) {
 cancelled:
-		ksceKernelCancelMutex(dev->mutex, -1, NULL);
+		sceKernelCancelMutex(dev->mutex, -1, NULL);
 		return ret;
 	}
 unlock:
-	ksceKernelUnlockMutex(dev->mutex, 1);
+	sceKernelUnlockMutex(dev->mutex, 1);
 	return ret;
 }
 
@@ -709,7 +709,7 @@ static int transferSectors(unsigned int sector, SceUInt8 *buffer, unsigned int c
 	unsigned int chunk;
 	int ret = 0, status;
 
-	if (!dev || ksceKernelLockMutex(dev->mutex, 1, NULL))
+	if (!dev || sceKernelLockMutex(dev->mutex, 1, NULL))
 		return (int)SCE_ERROR_ERRNO_ENODEV;
 	while (count) {
 		chunk = count > UMASS_SECTORS_MAX ? UMASS_SECTORS_MAX : count;
@@ -752,7 +752,7 @@ next:
 		count = (count - chunk) & 0xffff;
 		buffer += chunk * UMASS_SECTOR_SIZE;
 	}
-	ksceKernelUnlockMutex(dev->mutex, 1);
+	sceKernelUnlockMutex(dev->mutex, 1);
 	return ret;
 }
 
@@ -816,11 +816,11 @@ int module_start(SceSize args, void *argp)
 	(void)argp;
 	if (!SceSblAIMgrForDriver_71608CA3() || !SceSysrootForDriver_834439A7())
 		return 1;
-	ret = ksceKernelCreateMutex("SceUsbMassLock", 0, 0, NULL);
+	ret = sceKernelCreateMutex("SceUsbMassLock", 0, 0, NULL);
 	if (ret < 0)
 		return ret;
 	mutex = ret;
-	ret = ksceKernelCreateEventFlag("SceUsbMassUsbdSync", 0x2000, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceUsbMassUsbdSync", 0x2000, 0, NULL);
 	if (ret < 0)
 		goto deleteMutex;
 	eventFlag = ret;
@@ -844,7 +844,7 @@ int module_start(SceSize args, void *argp)
 		}
 		SceSysmemForDriver_009E1C61(memblock);
 	}
-	ksceKernelDeleteEventFlag(eventFlag);
+	sceKernelDeleteEventFlag(eventFlag);
 deleteMutex:
-	return ksceKernelDeleteMutex(mutex);
+	return sceKernelDeleteMutex(mutex);
 }

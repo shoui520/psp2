@@ -162,7 +162,7 @@ int call_daemon(MountRequest *request)
 	MountRequest *last;
 	int ret;
 
-	ret = ksceKernelLockMutex(g_mountMutex, 1, NULL);
+	ret = sceKernelLockMutex(g_mountMutex, 1, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 1262, "mutex lock failed ... %d 0x%08x\n", ret, ret);
 		return ret;
@@ -175,14 +175,14 @@ int call_daemon(MountRequest *request)
 	} else {
 		g_mountRequestList = request;
 	}
-	ksceKernelSignalCondTo(g_mountCond, g_mountThread);
-	ret = ksceKernelWaitCond(g_mountCond, NULL);
+	sceKernelSignalCondTo(g_mountCond, g_mountThread);
+	ret = sceKernelWaitCond(g_mountCond, NULL);
 	if (ret < 0) {
 		mntRemoveRequest(request);
-		ksceKernelUnlockMutex(g_mountMutex, 1);
+		sceKernelUnlockMutex(g_mountMutex, 1);
 		return ret;
 	}
-	ret = ksceKernelUnlockMutex(g_mountMutex, 1);
+	ret = sceKernelUnlockMutex(g_mountMutex, 1);
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 1282, "mutex unlock failed ... %d 0x%08x\n", ret, ret);
 	return ret;
@@ -200,7 +200,7 @@ void mount(MountRequest *request)
 
 	if (request->command == 3) {
 		param = *request->mountParam;
-		oldPid = ksceKernelSetProcessIdToTLS(request->pid);
+		oldPid = SceThreadmgrForDriver_0486F239(request->pid);
 	} else {
 		for (i = 0; i < 32; i++) {
 			if (g_mountPoints[i].id == request->id) {
@@ -230,7 +230,7 @@ void mount(MountRequest *request)
 	vfs_decrement_io_count();
 	request->result = ret;
 	if (request->command == 3) {
-		ksceKernelSetProcessIdToTLS(oldPid);
+		SceThreadmgrForDriver_0486F239(oldPid);
 		return;
 	}
 	result = ret;
@@ -293,7 +293,7 @@ void umount(MountRequest *request)
 
 	if (request->command == 4) {
 		work.param = *request->umountParam;
-		oldPid = ksceKernelSetProcessIdToTLS(request->pid);
+		oldPid = SceThreadmgrForDriver_0486F239(request->pid);
 	} else {
 		for (i = 0; i < 32; i++) {
 			if (g_mountPoints[i].id == request->id) {
@@ -320,7 +320,7 @@ void umount(MountRequest *request)
 	vfs_decrement_io_count();
 	request->result = ret;
 	if (request->command == 4) {
-		ksceKernelSetProcessIdToTLS(oldPid);
+		SceThreadmgrForDriver_0486F239(oldPid);
 		return;
 	}
 	result = ret;
@@ -366,7 +366,7 @@ int mnt_main(SceSize args, void *argp)
 	MountRequest *request;
 	int ret;
 
-	ret = ksceKernelLockMutex(g_mountMutex, 1, NULL);
+	ret = sceKernelLockMutex(g_mountMutex, 1, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 1198, "mutex lock failed ... %d 0x%08x\n", ret, ret);
 		return ret;
@@ -374,11 +374,11 @@ int mnt_main(SceSize args, void *argp)
 	for (;;) {
 		request = mntRemoveRequest(NULL);
 		while (request == NULL) {
-			ret = ksceKernelWaitCond(g_mountCond, NULL);
+			ret = sceKernelWaitCond(g_mountCond, NULL);
 			if (ret < 0) {
 				SCE_DBG_PRINTF_LEVEL(2, 0xf, 1213, "%s wait failed ... %d 0x%08x\n",
 						     "SceIofilemgrMount", ret, ret);
-				ksceKernelUnlockMutex(g_mountMutex, 1);
+				sceKernelUnlockMutex(g_mountMutex, 1);
 				SCE_DBG_ASSERT(0, 1216);
 			}
 			request = mntRemoveRequest(NULL);
@@ -396,7 +396,7 @@ int mnt_main(SceSize args, void *argp)
 			request->result = SCE_ERROR_ERRNO_EINVAL;
 			break;
 		}
-		ret = ksceKernelSignalCondTo(g_mountCond, request->threadId);
+		ret = sceKernelSignalCondTo(g_mountCond, request->threadId);
 		if (ret < 0)
 			SCE_DBG_PRINTF_LEVEL(1, 0xf, 1238,
 					     "sceKernelSignalCondTo failed ... ret=%d 0x%x thr=0x%x\n",
@@ -448,7 +448,7 @@ int mnt_get_mount_opt(int id)
 	if ((point->param.mnt_flags & 0xff) != SCE_VFS_MOUNT_TYPE_STACKFS)
 		return (short)point->param.opt;
 	param.path = mnt_get_mount_data(id)->assign_name;
-	ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfs_get_vnode_mnt_opt,
+	ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfs_get_vnode_mnt_opt,
 				     &param);
 	if (ret < 0)
 		ret = 0;
@@ -927,12 +927,12 @@ int mnt_initialize(void)
 			(int (*)(void *))mountEventClassDestroy);
 	if (ret < 0)
 		return ret;
-	g_mountMutex = ksceKernelCreateMutex("SceIofilemgrMount", 0, 0, NULL);
+	g_mountMutex = sceKernelCreateMutex("SceIofilemgrMount", 0, 0, NULL);
 	if (g_mountMutex < 0)
 		return g_mountMutex;
-	g_mountCond = ksceKernelCreateCond("SceIofilemgrMount", 0, g_mountMutex, NULL);
+	g_mountCond = sceKernelCreateCond("SceIofilemgrMount", 0, g_mountMutex, NULL);
 	if (g_mountCond < 0) {
-		ksceKernelDeleteMutex(g_mountMutex);
+		sceKernelDeleteMutex(g_mountMutex);
 		return g_mountCond;
 	}
 	init_sdstor();
@@ -965,11 +965,11 @@ int mnt_start(void)
 {
 	int ret;
 
-	g_mountThread = ksceKernelCreateThread("SceIofilemgrMount", mnt_main,
+	g_mountThread = sceKernelCreateThread("SceIofilemgrMount", mnt_main,
 			100, 0x2000, 0x10000000, 0x80000, NULL);
 	if (g_mountThread < 0)
 		SCE_DBG_ASSERT(0, 1151);
-	ret = ksceKernelStartThread(g_mountThread, 0, NULL);
+	ret = sceKernelStartThread(g_mountThread, 0, NULL);
 	if (ret < 0)
 		SCE_DBG_ASSERT(0, 1156);
 	return ret;
@@ -993,7 +993,7 @@ int ksceIoMount(int id, const char *path, unsigned int flags, void *data, uint64
 	request.flags = flags;
 	request.reserved = 0;
 	request.command = 1;
-	request.threadId = ksceKernelGetThreadId();
+	request.threadId = sceKernelGetThreadId();
 	request.next = NULL;
 	if (g_mountThread != 0) {
 		ret = call_daemon(&request);
@@ -1019,7 +1019,7 @@ int ksceIoUmount(int id, int flags, uint64_t reserved)
 	request.command = 2;
 	request.flags = 0;
 	request.data = NULL;
-	request.threadId = ksceKernelGetThreadId();
+	request.threadId = sceKernelGetThreadId();
 	request.next = NULL;
 	if (g_mountThread != 0) {
 		ret = call_daemon(&request);
@@ -1082,7 +1082,7 @@ SceUID ksceIoCreateMountEvent(SceUInt32 id, SceUInt32 pattern)
 	}
 	event->uid = uid;
 	event->pattern = pattern;
-	ret = ksceKernelLockMutex(g_mountMutex, 1, NULL);
+	ret = sceKernelLockMutex(g_mountMutex, 1, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1652, "sceIoCreateMountEvent",
 				"mutex lock failed ... %d 0x%08x\n", ret, ret);
@@ -1097,7 +1097,7 @@ SceUID ksceIoCreateMountEvent(SceUInt32 id, SceUInt32 pattern)
 		point->events = event;
 	}
 	event->mountPoint = point;
-	ret = ksceKernelUnlockMutex(g_mountMutex, 1);
+	ret = sceKernelUnlockMutex(g_mountMutex, 1);
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1662, "sceIoCreateMountEvent",
 				"mutex unlock failed ... %d 0x%08x\n", ret, ret);
@@ -1119,7 +1119,7 @@ int ksceIoDeleteMountEvent(SceUID uid)
 		return 0x80028002;
 	event = SceSysmemForKernel_FA6C098C(uid);
 	sceGUIDClose(handle);
-	ret = ksceKernelLockMutex(g_mountMutex, 1, NULL);
+	ret = sceKernelLockMutex(g_mountMutex, 1, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1696, "sceIoDeleteMountEvent",
 				"mutex lock failed ... %d 0x%08x\n", ret, ret);
@@ -1141,7 +1141,7 @@ int ksceIoDeleteMountEvent(SceUID uid)
 		}
 		event->next = NULL;
 	}
-	ret = ksceKernelUnlockMutex(g_mountMutex, 1);
+	ret = sceKernelUnlockMutex(g_mountMutex, 1);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1705, "sceIoDeleteMountEvent",
 				"mutex unlock failed ... %d 0x%08x\n", ret, ret);
@@ -1211,7 +1211,7 @@ int sceIoSetMountEvent(int id, SceUInt32 pattern, SceInt64 result, SceUInt32 res
 	if (i == 32)
 		return SCE_ERROR_ERRNO_EINVAL;
 	point = &g_mountPoints[i];
-	ret = ksceKernelLockMutex(g_mountMutex, 1, NULL);
+	ret = sceKernelLockMutex(g_mountMutex, 1, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xf, 1788,
 			"mutex lock failed ... %d 0x%08x\n", ret, ret);
@@ -1227,7 +1227,7 @@ int sceIoSetMountEvent(int id, SceUInt32 pattern, SceInt64 result, SceUInt32 res
 					ret, ret, event->uid);
 		}
 	}
-	ret = ksceKernelUnlockMutex(g_mountMutex, 1);
+	ret = sceKernelUnlockMutex(g_mountMutex, 1);
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0xf, 1810,
 			"mutex unlock failed ... %d 0x%08x\n", ret, ret);
@@ -1248,8 +1248,8 @@ int vfsMountForPFS(SceVfsMountParam *param, int reservedLow, int reservedHigh)
 	request.reserved = 0;
 	request.result = 0;
 	request.mountParam = param;
-	request.pid = ksceKernelGetProcessIdFromTLS();
-	request.threadId = ksceKernelGetThreadId();
+	request.pid = SceThreadmgrForDriver_FA54D49A();
+	request.threadId = sceKernelGetThreadId();
 	request.next = NULL;
 	if (g_mountThread == 0)
 		return SCE_ERROR_ERRNO_EPERM;
@@ -1273,8 +1273,8 @@ int vfsUmountForPFS(SceVfsUmountParam *param, int reservedLow, int reservedHigh)
 	request.reserved = 0;
 	request.result = 0;
 	request.umountParam = param;
-	request.pid = ksceKernelGetProcessIdFromTLS();
-	request.threadId = ksceKernelGetThreadId();
+	request.pid = SceThreadmgrForDriver_FA54D49A();
+	request.threadId = sceKernelGetThreadId();
 	request.next = NULL;
 	if (g_mountThread == 0)
 		return SCE_ERROR_ERRNO_EPERM;

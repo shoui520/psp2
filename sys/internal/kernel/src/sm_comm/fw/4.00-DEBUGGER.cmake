@@ -63,18 +63,18 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSysrootEnableAutoClockDown
 	memcpy
 	__stack_chk_fail
-	ksceKernelWaitEventFlag
-	ksceKernelFinalizeFastMutex
-	ksceKernelDeleteSema
-	ksceKernelCreateSema
-	ksceKernelWaitSema
-	ksceKernelCreateEventFlag
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
-	ksceKernelInitializeFastMutex
-	ksceKernelSignalSema
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
+	sceKernelWaitEventFlag
+	sceKernelFinalizeFastMutex
+	sceKernelDeleteSema
+	sceKernelCreateSema
+	sceKernelWaitSema
+	sceKernelCreateEventFlag
+	lockFastMutex
+	sceKernelDeleteEventFlag
+	sceKernelInitializeFastMutex
+	sceKernelSignalSema
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
 	ksceSblSmSchedProxyWriteCry2Arm
 	ksceSblSmSchedProxyInvoke
 	ksceSblSmSchedCallFunc

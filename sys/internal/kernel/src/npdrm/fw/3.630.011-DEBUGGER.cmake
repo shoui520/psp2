@@ -166,13 +166,13 @@ set(MODULE_IMPORT_FUNCS
 	SceSblGcAuthMgrPsmactForDriver_39222A58
 	SceSblGcAuthMgrPkgForDriver_E459A9A8
 	ksceSblUtMgrHasStoreFlag
-	ksceKernelSetPermission
-	ksceKernelDeleteMutex
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelEnqueueWorkQueue
-	ksceKernelRunWithStack
-	ksceKernelCreateMutex
+	sceKernelSetThreadAccessLevel
+	sceKernelDeleteMutex
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelScheduleWorkTask
+	SceThreadmgrForDriver_E54FD746
+	sceKernelCreateMutex
 	SceSblACMgrForDriver_091F7247
 	sceSblACMgrIsSystemProgram
 	sceSblACMgrGetPaid

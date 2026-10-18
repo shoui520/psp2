@@ -77,7 +77,7 @@ int BtHandleSdioInterrupt(void *subInterruptArgument, void *registerArgument,
 	} while (AtomicStoreReserved32(&transport->interruptSignal.events,
 		events | 1));
 	if (transport->interruptSignal.waiters)
-		ksceKernelSetEventFlag(transport->interruptSignal.eventFlag, 1);
+		sceKernelSetEventFlag(transport->interruptSignal.eventFlag, 1);
 	return 0;
 }
 
@@ -88,7 +88,7 @@ int BtIsAsleep(void)
 
 int BtUnlockTransport(int result)
 {
-	SceUID thread = ksceKernelGetThreadId();
+	SceUID thread = sceKernelGetThreadId();
 	uint32_t available;
 
 	if (gBtTransport.lockOwner != thread)
@@ -103,7 +103,7 @@ int BtUnlockTransport(int result)
 		available = AtomicLoadReserved32(&gBtTransport.lockSignal.events);
 	} while (AtomicStoreReserved32(&gBtTransport.lockSignal.events, available | 1));
 	if (gBtTransport.lockSignal.waiters)
-		ksceKernelSetEventFlag(gBtTransport.lockSignal.eventFlag, 1);
+		sceKernelSetEventFlag(gBtTransport.lockSignal.eventFlag, 1);
 	return result;
 }
 
@@ -178,7 +178,7 @@ void BtWakeTransport(void)
 	} while (AtomicStoreReserved32(&gBtTransport.interruptSignal.events,
 		events | 1));
 	if (gBtTransport.interruptSignal.waiters)
-		ksceKernelSetEventFlag(gBtTransport.interruptSignal.eventFlag, 1);
+		sceKernelSetEventFlag(gBtTransport.interruptSignal.eventFlag, 1);
 }
 
 int module_start(SceSize argumentSize, const void *argument)
@@ -189,13 +189,13 @@ int module_start(SceSize argumentSize, const void *argument)
 
 	(void)argumentSize;
 	(void)argument;
-	gBtTransport.interruptSignal.eventFlag = ksceKernelCreateEventFlag(
+	gBtTransport.interruptSignal.eventFlag = sceKernelCreateEventFlag(
 		"SceBtIntr", 0x9000, 0, NULL);
 	gBtTransport.interruptSignal.events = 0;
 	gBtTransport.interruptSignal.waiters = 0;
 	if (gBtTransport.interruptSignal.eventFlag < 0)
 		return 0;
-	result = ksceKernelCreateEventFlag("SceBtSync", 0x9000, 0, NULL);
+	result = sceKernelCreateEventFlag("SceBtSync", 0x9000, 0, NULL);
 	gBtTransport.lockSignal.waiters = 0;
 	gBtTransport.lockSignal.eventFlag = result;
 	gBtTransport.lockSignal.events = 1;
@@ -210,10 +210,10 @@ int module_start(SceSize argumentSize, const void *argument)
 		request++;
 	} while (request < &gBtTransport.requests[32]);
 	gBtTransport.transmitActive = 0;
-	thread = ksceKernelCreateThread("SceBtIntr", BtTransportThread,
+	thread = sceKernelCreateThread("SceBtIntr", BtTransportThread,
 		18, 0x2000, 0, 0x80000, NULL);
 	if (thread >= 0) {
-		result = ksceKernelStartThread(thread, 0, NULL);
+		result = sceKernelStartThread(thread, 0, NULL);
 		if (result >= 0) {
 			gBtTransport.interruptThread = thread;
 			return 0;
@@ -221,8 +221,8 @@ int module_start(SceSize argumentSize, const void *argument)
 		thread = result;
 	}
 	gBtTransport.interruptThread = thread;
-	ksceKernelDeleteEventFlag(gBtTransport.lockSignal.eventFlag);
+	sceKernelDeleteEventFlag(gBtTransport.lockSignal.eventFlag);
 deleteInterrupt:
-	ksceKernelDeleteEventFlag(gBtTransport.interruptSignal.eventFlag);
+	sceKernelDeleteEventFlag(gBtTransport.interruptSignal.eventFlag);
 	return 0;
 }

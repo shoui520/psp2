@@ -47,7 +47,7 @@ int GcAuthPcactBeginActivation(const GcAuthPcactBeginActivationRequest *request)
 	int permission;
 	int result;
 
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
 	if (entropy == NULL || output == NULL)
@@ -60,7 +60,7 @@ int GcAuthPcactBeginActivation(const GcAuthPcactBeginActivationRequest *request)
 		gcAuthPcactActivationMode = 0;
 		if (gcAuthActivationCurrentTick.tick <
 		    gcAuthActivationRetryDeadline.tick) {
-			ksceKernelSetPermission(permission);
+			sceKernelSetThreadAccessLevel(permission);
 			return (int)0x808a0384;
 		}
 		tick = gcAuthActivationCurrentTick.tick;
@@ -136,10 +136,10 @@ challenge:
 		break;
 	}
 invalid:
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return (int)0x808a0380;
 finish:
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }
 
@@ -151,11 +151,11 @@ int GcAuthPcactApplyActivation(const GcAuthPcactApplyActivationRequest *request)
 	int permission;
 	int result;
 
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
 	if ((activation == NULL) | (size != sizeof(*activation))) {
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		return (int)0x808a0380;
 	}
 	result = GcAuthPcactGetAesDecryptKeyWithStack(&activation->key,
@@ -169,7 +169,7 @@ int GcAuthPcactApplyActivation(const GcAuthPcactApplyActivationRequest *request)
 	aesKey[1] = 0;
 	aesKey[2] = 0;
 	aesKey[3] = 0;
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }
 
@@ -189,7 +189,7 @@ int GcAuthPsmactBeginActivation(const GcAuthPsmactBeginActivationRequest *reques
 	int result;
 	int copyResult;
 
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
 	if (output == NULL || random == NULL)
@@ -252,7 +252,7 @@ invalid:
 clockError:
 	result = (int)0x808a0810;
 finishPsm:
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }
 

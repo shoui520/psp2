@@ -428,7 +428,7 @@ PVRSRV_ERROR PVRSRVCreateDeviceMemContextKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 		*pbCreated = IMG_FALSE;
 	if (!psDeviceNode || GetKernelMemoryContext(&psKernelContext) < 0)
 		return PVRSRV_ERROR_INVALID_PARAMS;
-	pid = ksceKernelGetProcessId();
+	pid = sceKernelGetProcessId();
 	if (!sceSblACMgrIsGameProgram(pid) || GetMemoryContext(&psContext, pid) != 0) {
 		if (AddMemoryContextToList(&psContext, pid) < 0)
 			return PVRSRV_ERROR_OUT_OF_MEMORY;
@@ -492,7 +492,7 @@ PVRSRV_ERROR PVRSRVCreateDeviceMemContextKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 	*pui32ClientHeapCount = ui32ClientHeapCount;
 	*context = psContext;
 	psContext->hResItem = ResManRegisterRes(psPerProc->hResManContext, 12,
-			psContext, ksceKernelGetProcessId(),
+			psContext, sceKernelGetProcessId(),
 			(PVRSRV_ERROR (*)(IMG_VOID *, IMG_UINT32))DestroyDeviceMemContextCallback);
 	return PVRSRV_OK;
 removeContext:
@@ -519,7 +519,7 @@ PVRSRV_ERROR PVRSRVDestroyDeviceMemContextKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 	if (context->hResItem)
 		eError = ResManFreeResByPtr(context->hResItem, IMG_FALSE);
 	else
-		eError = DestroyDeviceMemContextCallback(context, ksceKernelGetProcessId());
+		eError = DestroyDeviceMemContextCallback(context, sceKernelGetProcessId());
 	if (pbDestroyed)
 		*pbDestroyed = IMG_TRUE;
 	return eError;
@@ -712,7 +712,7 @@ PVRSRV_ERROR PVRSRVMapMemoryToGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	if (deviceAddress)
 		deviceAddress->uiAddr = allocation.releasedSpanBase;
 	record->resource = ResManRegisterRes(psPerProc->hResManContext, 15,
-			cpuAddress, ksceKernelGetProcessId(),
+			cpuAddress, sceKernelGetProcessId(),
 			(PVRSRV_ERROR (*)(IMG_VOID *, IMG_UINT32))ReleaseDeviceMemBlockCallback);
 	return PVRSRV_OK;
 }
@@ -743,7 +743,7 @@ PVRSRV_ERROR PVRSRVUnmapMemoryFromGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 				"%s: Range check failed for VA %08x\n", __func__, cpuAddress);
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
-	pid = ksceKernelGetProcessId();
+	pid = sceKernelGetProcessId();
 	if (bWaitForIdle) {
 		psPerProc->unmapInProgress = IMG_TRUE;
 		for (i = 0; i < psPerProc->numSourceSyncs; i++) {
@@ -839,7 +839,7 @@ PVRSRV_ERROR PVRSRVRegisterMemBlockKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 
 	if (!blockGroupId)
 		return PVRSRV_ERROR_INVALID_PARAMS;
-	guid = SceSysmemForDriver_45D22597(ksceKernelGetProcessId(), memBlockUid);
+	guid = SceSysmemForDriver_45D22597(sceKernelGetProcessId(), memBlockUid);
 	if (guid < 0) {
 		SCE_DBG_PRINTF(0, 1020, "%s: Failed to get GUID for MemBlock %08x\n",
 				__func__, memBlockUid);

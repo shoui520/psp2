@@ -24,6 +24,7 @@
 #include <sysmem/sysclib.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <sysmem/sysroot.h>
+#include <threadmgr/threadmgr.h>
 
 int _closeUnmapMemBlock(SceUID puid);
 int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request);
@@ -42,8 +43,6 @@ int waitVeneziaVipProcessReady(void);
 	(PERVASIVE_MAILBOX_BASE + offsetof(ScePervasiveMailboxRegisters, field))
 #define TAS_SIGNAL_PADDR(channel) \
 	(PERVASIVE_TAS_BASE(channel) + offsetof(ScePervasiveTasChannel, unidentifiedRegisters))
-
-extern int sceKernelDelayThread(SceUInt delay);
 
 extern void *veneziaDebugMemset(void *destination, int value, SceSize size)
 	__asm__("memset");
@@ -2989,13 +2988,13 @@ int veneziaDebugInterruptHandler(int interrupt, VeneziaVipState *state)
 			callback = &callbacks->callbacks[i];
 			if (callback->uid && (callback->eventMask & events)) {
 				callback->pendingEvents = callback->eventMask & events;
-				ksceKernelNotifyCallback(callback->uid, callback->pendingEvents);
+				sceKernelNotifyCallback(callback->uid, callback->pendingEvents);
 			}
 		}
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
 	}
 	writeVeneziaDebuggerMailbox(0, mailbox);
-	ksceKernelSetEventFlag(state->eventFlag, events);
+	sceKernelSetEventFlag(state->eventFlag, events);
 	__asm__ volatile("dmb sy" ::: "memory");
 	return -1;
 }
@@ -3052,7 +3051,7 @@ int veneziaDebugAuxiliaryInterruptHandler(int interrupt, VeneziaVipState *state)
 			++callbacks->counters[0].unidentifiedControl;
 		}
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
-		ksceKernelSetEventFlag(state->auxiliaryEventFlag, events);
+		sceKernelSetEventFlag(state->auxiliaryEventFlag, events);
 	}
 	__asm__ volatile("dmb sy" ::: "memory");
 	return -1;
@@ -3273,7 +3272,6 @@ int unregisterVeneziaVipCallbacks(unsigned int processor, VeneziaVipState *state
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
 	return 0;
 }
-extern SceUID sceKernelGetProcessId(void);
 __attribute__((noinline)) int lockVeneziaVipProcess(struct ThreadmgrFastMutex *mutex);
 __attribute__((noinline)) int unlockVeneziaVipProcess(struct ThreadmgrFastMutex *mutex);
 
@@ -3296,7 +3294,7 @@ int registerVeneziaVipCallback(unsigned int processor, SceUID uid, uint32_t even
 	lockVeneziaVipProcess(g_veneziaVipState.processLock);
 	ret = SceSysmemForDriver_45D22597(0, uid);
 	if (ret >= 0) {
-		kind = ksceKernelGetThreadmgrUIDClass(ret);
+		kind = sceKernelGetThreadmgrUIDClass(ret);
 		if (kind < 0) {
 			ret = kind;
 		} else if (kind != 8) {
@@ -3347,7 +3345,7 @@ int unregisterVeneziaVipCallback(unsigned int processor, SceUID uid)
 			ret = uid;
 			goto unlock;
 		}
-		kind = ksceKernelGetThreadmgrUIDClass(uid);
+		kind = sceKernelGetThreadmgrUIDClass(uid);
 		if (kind < 0) {
 			ret = kind;
 			goto unlock;
@@ -3705,7 +3703,7 @@ int processVeneziaVipCapture(unsigned int processor, const VeneziaVipVideoInput 
 	event = 0;
 	if (setVeneziaDebugTraceFlag(0, 1))
 		goto hardwareError;
-	ret = ksceKernelWaitEventFlag(g_veneziaVipState.eventFlag, 15110, 5, &event, &timeout);
+	ret = sceKernelWaitEventFlag(g_veneziaVipState.eventFlag, 15110, 5, &event, &timeout);
 	if (setVeneziaDebugTraceFlag(0, 0) || clearVeneziaDebugTraceStatus(0))
 		goto hardwareError;
 	if (ret < 0) {
@@ -3846,7 +3844,7 @@ int submitVeneziaVipCapture(unsigned int processor, const VeneziaVipVideoInput *
 	event = 0;
 	if (setVeneziaDebugTraceFlag(0, 1))
 		goto hardwareError;
-	ret = ksceKernelWaitEventFlag(g_veneziaVipState.eventFlag, 15108, 5, &event, &timeout);
+	ret = sceKernelWaitEventFlag(g_veneziaVipState.eventFlag, 15108, 5, &event, &timeout);
 	if (setVeneziaDebugTraceFlag(0, 0) || clearVeneziaDebugTraceStatus(0))
 		goto hardwareError;
 	if (ret < 0) {
@@ -4033,7 +4031,7 @@ int processVeneziaVipRawCapture(unsigned int processor, const VeneziaVipRawInput
 	event = 0;
 	if (setVeneziaDebugTraceFlag(0, 1))
 		goto hardwareError;
-	ret = ksceKernelWaitEventFlag(g_veneziaVipState.eventFlag, 15110, 5, &event, &timeout);
+	ret = sceKernelWaitEventFlag(g_veneziaVipState.eventFlag, 15110, 5, &event, &timeout);
 	if (setVeneziaDebugTraceFlag(0, 0) || clearVeneziaDebugTraceStatus(0))
 		goto hardwareError;
 	if (ret < 0) {
@@ -4184,7 +4182,7 @@ int submitVeneziaVipRawCapture(unsigned int processor, const VeneziaVipRawInput 
 	event = 0;
 	if (setVeneziaDebugTraceFlag(0, 1))
 		goto hardwareError;
-	ret = ksceKernelWaitEventFlag(g_veneziaVipState.eventFlag, 15108, 5, &event, &timeout);
+	ret = sceKernelWaitEventFlag(g_veneziaVipState.eventFlag, 15108, 5, &event, &timeout);
 	if (setVeneziaDebugTraceFlag(0, 0) || clearVeneziaDebugTraceStatus(0))
 		goto hardwareError;
 	if (ret < 0) {
@@ -4289,7 +4287,7 @@ int waitVeneziaVipCapture(unsigned int processor, VeneziaDebugSnapshotList *list
 	event = 0;
 	if (setVeneziaDebugTraceFlag(0, 1))
 		goto hardwareError;
-	ret = ksceKernelWaitEventFlag(g_veneziaVipState.eventFlag, 15110, 5, &event, &timeout);
+	ret = sceKernelWaitEventFlag(g_veneziaVipState.eventFlag, 15110, 5, &event, &timeout);
 	if (setVeneziaDebugTraceFlag(0, 0) || clearVeneziaDebugTraceStatus(0))
 		goto hardwareError;
 	if (ret < 0) {
@@ -4400,7 +4398,7 @@ int drainVeneziaVipCapture(unsigned int processor, VeneziaDebugSnapshotList *lis
 		timeout = 8000;
 		if (setVeneziaDebugTraceFlag(0, 1))
 			goto hardwareError;
-		ret = ksceKernelWaitEventFlag(g_veneziaVipState.eventFlag, 15114, 5, &event, &timeout);
+		ret = sceKernelWaitEventFlag(g_veneziaVipState.eventFlag, 15114, 5, &event, &timeout);
 		if (setVeneziaDebugTraceFlag(0, 0) || clearVeneziaDebugTraceStatus(0))
 			goto hardwareError;
 		if (ret < 0 && ret != -2147319803)
@@ -4806,7 +4804,7 @@ int stopVeneziaVipCaptureChannel(unsigned int processor, VeneziaVipState *state,
 		g_veneziaDebugger.log(20, 3, processor, ret, status);
 	if (ret != 0)
 		return -2141060860;
-	ksceKernelClearEventFlag(state->eventFlag, 0);
+	sceKernelClearEventFlag(state->eventFlag, 0);
 	return status == 4 ? -2141060851 : 0;
 }
 
@@ -6370,8 +6368,6 @@ int startVeneziaVipDriver(int mode);
 
 int initializeVeneziaVipProcessStorage(VeneziaVipProcessStorage *storage);
 
-extern int sceKernelCancelSema(SceUID uid, int count, int *waiters);
-
 extern int dispatchVeneziaVipProcessSuspend(VeneziaVipProcessStorage *storage, int reason);
 
 extern int dispatchVeneziaVipProcessResume(VeneziaVipProcessStorage *storage);
@@ -6536,60 +6532,60 @@ int startVeneziaVipDriver(int mode)
 	void *firmwareBase;
 
 	(void)mode;
-	uid = ksceKernelCreateEventFlag("SceVipDriver", 0x1000, 0, NULL);
+	uid = sceKernelCreateEventFlag("SceVipDriver", 0x1000, 0, NULL);
 	if (uid < 0)
 		goto failed;
 	state->eventFlag = uid;
-	ret = ksceKernelInitializeFastMutex(&state->processMutex, "SceVipDriver", 2, NULL);
+	ret = sceKernelInitializeFastMutex(&state->processMutex, "SceVipDriver", 2, NULL);
 	if (ret < 0)
 		goto cleanup;
 	state->processLock = &state->processMutex;
-	ret = ksceKernelInitializeFastMutex(&state->apiWrapperMutex, "SceVipFW2ApiWrapper", 2, NULL);
+	ret = sceKernelInitializeFastMutex(&state->apiWrapperMutex, "SceVipFW2ApiWrapper", 2, NULL);
 	if (ret < 0)
 		goto cleanup;
 	state->apiWrapperLock = &state->apiWrapperMutex;
-	ret = ksceKernelInitializeFastMutex(&state->requestMutex, "SceVipFW2Request", 2, NULL);
+	ret = sceKernelInitializeFastMutex(&state->requestMutex, "SceVipFW2Request", 2, NULL);
 	if (ret < 0)
 		goto cleanup;
 	state->requestLock = &state->requestMutex;
-	ret = ksceKernelInitializeFastMutex(&state->standardBufferMutex, "SceVipStdBuf", 2, NULL);
+	ret = sceKernelInitializeFastMutex(&state->standardBufferMutex, "SceVipStdBuf", 2, NULL);
 	if (ret < 0)
 		goto cleanup;
 	state->standardBufferLock = &state->standardBufferMutex;
-	ret = ksceKernelInitializeFastMutex(&state->commonProcessorMutex, "SceVipCommonPu0Pu1", 2, NULL);
+	ret = sceKernelInitializeFastMutex(&state->commonProcessorMutex, "SceVipCommonPu0Pu1", 2, NULL);
 	if (ret < 0)
 		goto cleanup;
 	state->commonProcessorLock = &state->commonProcessorMutex;
-	uid = ksceKernelCreateEventFlag("SceVipDriverPu0", 0x1000, 0, NULL);
+	uid = sceKernelCreateEventFlag("SceVipDriverPu0", 0x1000, 0, NULL);
 	if (uid < 0)
 		goto failed;
 	state->processorEvents[0] = uid;
-	uid = ksceKernelCreateEventFlag("SceVipDriverPu1", 0x1000, 0, NULL);
+	uid = sceKernelCreateEventFlag("SceVipDriverPu1", 0x1000, 0, NULL);
 	if (uid < 0)
 		goto failed;
 	state->processorEvents[1] = uid;
-	uid = ksceKernelCreateEventFlag("SceVipDriverInt0", 0x1000, 0, NULL);
+	uid = sceKernelCreateEventFlag("SceVipDriverInt0", 0x1000, 0, NULL);
 	if (uid < 0)
 		goto failed;
 	state->auxiliaryEventFlag = uid;
-	uid = ksceKernelCreateEventFlag("SceVipDriverInt1", 0x1000, 0, NULL);
+	uid = sceKernelCreateEventFlag("SceVipDriverInt1", 0x1000, 0, NULL);
 	if (uid < 0)
 		goto failed;
 	state->secondaryInterruptEvent = uid;
-	uid = ksceKernelCreateThread("SceVipDriverPu0", veneziaVipProcessorThread0,
+	uid = sceKernelCreateThread("SceVipDriverPu0", veneziaVipProcessorThread0,
 		72, 0x1000, 0, 0x80000, NULL);
 	if (uid < 0)
 		goto cleanup;
 	state->processorThreads[0] = uid;
-	uid = ksceKernelCreateThread("SceVipDriverPu1", veneziaVipProcessorThread1,
+	uid = sceKernelCreateThread("SceVipDriverPu1", veneziaVipProcessorThread1,
 		72, 0x1000, 0, 0x80000, NULL);
 	if (uid < 0)
 		goto cleanup;
 	state->processorThreads[1] = uid;
-	ret = ksceKernelStartThread(state->processorThreads[0], sizeof(*state), &state);
+	ret = sceKernelStartThread(state->processorThreads[0], sizeof(*state), &state);
 	if (ret < 0)
 		goto cleanup;
-	ret = ksceKernelStartThread(state->processorThreads[1], sizeof(*state), &state);
+	ret = sceKernelStartThread(state->processorThreads[1], sizeof(*state), &state);
 	if (ret < 0)
 		goto cleanup;
 	waitVeneziaVipProcessorResponse(state, 0, 0);
@@ -6663,7 +6659,7 @@ int SceCodecEngineWrapperForDriver_86861877(unsigned int flags, int wait, SceUID
 	storage = _sceVipGetVipProcessResource(pid);
 	if (!storage)
 		return -2141060856;
-	ksceKernelLockFastMutex(g_veneziaVipState.processLock);
+	lockFastMutex(g_veneziaVipState.processLock);
 	if (storage->status[0] || storage->processors[0] != -1) {
 		ret = -2141060858;
 	} else if (flags && !(flags & ~3u) && flags != 3) {
@@ -6672,10 +6668,10 @@ int SceCodecEngineWrapperForDriver_86861877(unsigned int flags, int wait, SceUID
 		if (flags & 1)
 			storage->count = 0;
 	} else {
-		ksceKernelUnlockFastMutex(g_veneziaVipState.processLock);
+		sceKernelUnlockFastMutex(g_veneziaVipState.processLock);
 		return -2141060863;
 	}
-	ksceKernelUnlockFastMutex(g_veneziaVipState.processLock);
+	sceKernelUnlockFastMutex(g_veneziaVipState.processLock);
 	return ret;
 }
 
@@ -6690,7 +6686,7 @@ int SceCodecEngineWrapperForDriver_62996F94(unsigned int value, unsigned int mas
 	storage = _sceVipGetVipProcessResource(0);
 	if (!storage)
 		return -2141060856;
-	ksceKernelLockFastMutex(g_veneziaVipState.processLock);
+	lockFastMutex(g_veneziaVipState.processLock);
 	if (storage->count == 1)
 		mask &= 0x1060000;
 	else
@@ -6700,10 +6696,10 @@ int SceCodecEngineWrapperForDriver_62996F94(unsigned int value, unsigned int mas
 	} else if (!storage->status[0] && storage->processors[0] == -1) {
 		storage->state = (~mask & storage->state) | (mask & value);
 	} else {
-		ksceKernelUnlockFastMutex(g_veneziaVipState.processLock);
+		sceKernelUnlockFastMutex(g_veneziaVipState.processLock);
 		return -2141060858;
 	}
-	ksceKernelUnlockFastMutex(g_veneziaVipState.processLock);
+	sceKernelUnlockFastMutex(g_veneziaVipState.processLock);
 	return ret;
 }
 
@@ -6718,7 +6714,7 @@ int SceCodecEngineWrapperForDriver_54F39D1D(unsigned int size)
 	storage = _sceVipGetVipProcessResource(0);
 	if (!storage)
 		return -2141060856;
-	ksceKernelLockFastMutex(g_veneziaVipState.processLock);
+	lockFastMutex(g_veneziaVipState.processLock);
 	if (storage->count != 1)
 		ret = -2147418017;
 	if (storage->status[0] || storage->processors[0] != -1)
@@ -6727,7 +6723,7 @@ int SceCodecEngineWrapperForDriver_54F39D1D(unsigned int size)
 		ret = -2141060863;
 	else
 		storage->status[2] = size;
-	ksceKernelUnlockFastMutex(g_veneziaVipState.processLock);
+	sceKernelUnlockFastMutex(g_veneziaVipState.processLock);
 	return ret;
 }
 
@@ -6792,12 +6788,12 @@ __attribute__((noinline)) int calculateVeneziaVipCaptureStorage(unsigned int pro
 
 __attribute__((noinline)) int lockVeneziaVipProcess(struct ThreadmgrFastMutex *mutex)
 {
-	return ksceKernelLockFastMutex(mutex);
+	return lockFastMutex(mutex);
 }
 
 __attribute__((noinline)) int unlockVeneziaVipProcess(struct ThreadmgrFastMutex *mutex)
 {
-	return ksceKernelUnlockFastMutex(mutex);
+	return sceKernelUnlockFastMutex(mutex);
 }
 
 /* name unknown: retain the image allocation and resolve its physical address. */
@@ -7261,7 +7257,7 @@ int veneziaDebugSecondaryInterruptHandler(int interrupt, VeneziaVipState *state)
 			}
 		}
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
-		ksceKernelSetEventFlag(state->secondaryInterruptEvent, events);
+		sceKernelSetEventFlag(state->secondaryInterruptEvent, events);
 	}
 	__asm__ volatile("dmb sy" ::: "memory");
 	return -1;
@@ -7909,7 +7905,7 @@ int registerVeneziaVipCaptureCallback(unsigned int processor, SceUID uid,
 	ret = SceSysmemForDriver_45D22597(0, uid);
 	if (ret < 0)
 		goto unlockProcess;
-	kind = ksceKernelGetThreadmgrUIDClass(ret);
+	kind = sceKernelGetThreadmgrUIDClass(ret);
 	if (kind < 0) {
 		ret = kind;
 		goto unlockProcess;
@@ -7973,7 +7969,7 @@ int unregisterVeneziaVipCaptureCallback(unsigned int processor, SceUID uid)
 			ret = uid;
 			goto unlock;
 		}
-		kind = ksceKernelGetThreadmgrUIDClass(uid);
+		kind = sceKernelGetThreadmgrUIDClass(uid);
 		if (kind < 0) {
 			ret = kind;
 			goto unlock;
@@ -8144,7 +8140,7 @@ int registerVeneziaVipMultiCapture(unsigned int *processor,
 		storage->status[1]++;
 	}
 	snprintf(name, sizeof(name), "SceVipFW2_%08x_%02ld", sceKernelGetProcessId(), index + 1);
-	ret = ksceKernelCreateEventFlag(name, 0x1000, 0, NULL);
+	ret = sceKernelCreateEventFlag(name, 0x1000, 0, NULL);
 	if (ret >= 0) {
 		capture->eventFlag = ret;
 		storage->processors[index] = index;
@@ -8177,7 +8173,7 @@ int registerVeneziaVipMultiCapture(unsigned int *processor,
 			goto unlock;
 		}
 		ret = -2141060856;
-		ksceKernelDeleteEventFlag(capture->eventFlag);
+		sceKernelDeleteEventFlag(capture->eventFlag);
 		storage->processors[index] = -1;
 	}
 	if (initialize)
@@ -8230,7 +8226,7 @@ int unregisterVeneziaVipMultiCapture(unsigned int processor, int wait, SceUID pi
 	}
 	capture = &storage->captures[index];
 	capture->flags &= ~0x100;
-	ksceKernelDeleteEventFlag(capture->eventFlag);
+	sceKernelDeleteEventFlag(capture->eventFlag);
 	storage->processors[index] = -1;
 	storage->status[1]--;
 	goto unlock;
@@ -8362,7 +8358,7 @@ int processVeneziaVipMultiCapture(unsigned int processor, const VeneziaVipVideoI
 		inputSize = ret;
 	}
 	event = 0;
-	ksceKernelPollEventFlag(g_veneziaVipState.eventFlag, 0x2000000, 1, &event);
+	sceKernelPollEventFlag(g_veneziaVipState.eventFlag, 0x2000000, 1, &event);
 	if (event & 0x2000000)
 		recoverVeneziaVipProcessors(&g_veneziaVipState, storage);
 	capture = &storage->captures[index];
@@ -8424,7 +8420,7 @@ inputReady:
 	if (list->count && list->count <= capture->completedCount)
 		timeout = 1;
 	event = 0;
-	ret = ksceKernelWaitEventFlag(capture->eventFlag, 0x3f06, 5, &event, &timeout);
+	ret = sceKernelWaitEventFlag(capture->eventFlag, 0x3f06, 5, &event, &timeout);
 	if (ret < 0) {
 		if (ret != -2147319803)
 			goto finished;
@@ -8507,7 +8503,7 @@ int submitVeneziaVipMultiCapture(unsigned int processor, const VeneziaVipVideoIn
 		inputSize = ret;
 	}
 	event = 0;
-	ksceKernelPollEventFlag(g_veneziaVipState.eventFlag, 0x2000000, 1, &event);
+	sceKernelPollEventFlag(g_veneziaVipState.eventFlag, 0x2000000, 1, &event);
 	if (event & 0x2000000)
 		recoverVeneziaVipProcessors(&g_veneziaVipState, storage);
 	capture = &storage->captures[index];
@@ -8569,7 +8565,7 @@ inputReady:
 	if (list->count && list->count <= capture->completedCount)
 		timeout = 1;
 	event = 0;
-	ret = ksceKernelWaitEventFlag(capture->eventFlag, 0x3f06, 5, &event, &timeout);
+	ret = sceKernelWaitEventFlag(capture->eventFlag, 0x3f06, 5, &event, &timeout);
 	if (ret < 0) {
 		if (ret != -2147319803)
 			goto finished;
@@ -8645,7 +8641,7 @@ int processVeneziaVipMultiRawCapture(unsigned int processor, const VeneziaVipRaw
 	if (input && input->payload.data)
 		inputSize = input->payload.size;
 	event = 0;
-	ksceKernelPollEventFlag(g_veneziaVipState.eventFlag, 0x2000000, 1, &event);
+	sceKernelPollEventFlag(g_veneziaVipState.eventFlag, 0x2000000, 1, &event);
 	if (event & 0x2000000)
 		recoverVeneziaVipProcessors(&g_veneziaVipState, storage);
 	capture = &storage->captures[index];
@@ -8722,7 +8718,7 @@ inputReady:
 	if (list->count && list->count <= capture->completedCount)
 		timeout = 1;
 	event = 0;
-	ret = ksceKernelWaitEventFlag(capture->eventFlag, 0x3f06, 5, &event, &timeout);
+	ret = sceKernelWaitEventFlag(capture->eventFlag, 0x3f06, 5, &event, &timeout);
 	if (ret < 0) {
 		if (ret != -2147319803)
 			goto finished;
@@ -8798,7 +8794,7 @@ int submitVeneziaVipMultiRawCapture(unsigned int processor, const VeneziaVipRawI
 	if (input && input->payload.data)
 		inputSize = input->payload.size;
 	event = 0;
-	ksceKernelPollEventFlag(g_veneziaVipState.eventFlag, 0x2000000, 1, &event);
+	sceKernelPollEventFlag(g_veneziaVipState.eventFlag, 0x2000000, 1, &event);
 	if (event & 0x2000000)
 		recoverVeneziaVipProcessors(&g_veneziaVipState, storage);
 	capture = &storage->captures[index];
@@ -8875,7 +8871,7 @@ inputReady:
 	if (list->count && list->count <= capture->completedCount)
 		timeout = 1;
 	event = 0;
-	ret = ksceKernelWaitEventFlag(capture->eventFlag, 0x3f06, 5, &event, &timeout);
+	ret = sceKernelWaitEventFlag(capture->eventFlag, 0x3f06, 5, &event, &timeout);
 	if (ret < 0) {
 		if (ret != -2147319803)
 			goto finished;
@@ -8943,7 +8939,7 @@ int pollVeneziaVipMultiCapture(unsigned int processor, const VeneziaDebugSnapsho
 		goto unlock;
 	}
 	event = 0;
-	ksceKernelPollEventFlag(g_veneziaVipState.eventFlag, 0x2000000, 1, &event);
+	sceKernelPollEventFlag(g_veneziaVipState.eventFlag, 0x2000000, 1, &event);
 	if (event & 0x2000000)
 		recoverVeneziaVipProcessors(&g_veneziaVipState, storage);
 	capture = &storage->captures[index];
@@ -9020,12 +9016,12 @@ int finishVeneziaVipMultiCapture(unsigned int processor,
 		if (collected >= list->count || ((capture->flags & 7) == 7 && before == after))
 			break;
 		status = 0;
-		ksceKernelPollEventFlag(g_veneziaVipState.eventFlag, 0x2000000, 1, &status);
+		sceKernelPollEventFlag(g_veneziaVipState.eventFlag, 0x2000000, 1, &status);
 		if (status & 0x2000000)
 			recoverVeneziaVipProcessors(&g_veneziaVipState, storage);
 		event = 0;
 		timeout = 8000;
-		ret = ksceKernelWaitEventFlag(capture->eventFlag, 0x3f0a, 5, &event, &timeout);
+		ret = sceKernelWaitEventFlag(capture->eventFlag, 0x3f0a, 5, &event, &timeout);
 		if (ret < 0 && ret != -2147319803)
 			break;
 		if (!(capture->flags & 2)) {
@@ -9313,7 +9309,7 @@ int resetVeneziaVipCaptureContext(unsigned int index, VeneziaVipState *state,
 			endVeneziaVipCaptureSetup(index, state, storage);
 		}
 	}
-	ksceKernelClearEventFlag(capture->eventFlag, 512);
+	sceKernelClearEventFlag(capture->eventFlag, 512);
 	return ret;
 }
 
@@ -9504,7 +9500,7 @@ int waitVeneziaVipCaptureInterrupt(VeneziaDebugProcessCapture *capture,
 	do {
 		timeout = 500000;
 		currentEvents = 0;
-		ret = ksceKernelWaitEventFlag(state->captureInterruptEvents[processor],
+		ret = sceKernelWaitEventFlag(state->captureInterruptEvents[processor],
 			0xf00800ff, 3, &currentEvents, &timeout);
 		if (ret < 0) {
 			if (ret != (int)0x80028005) {
@@ -9578,7 +9574,7 @@ int waitVeneziaVipPrimaryCaptureInterrupt(VeneziaDebugProcessCapture *capture,
 	do {
 		timeout = 500000;
 		currentEvents = 0;
-		ret = ksceKernelWaitEventFlag(state->captureInterruptEvents[0],
+		ret = sceKernelWaitEventFlag(state->captureInterruptEvents[0],
 			0xf00800ff, 3, &currentEvents, &timeout);
 		if (ret < 0) {
 			if (ret != (int)0x80028005) {
@@ -9652,7 +9648,7 @@ int waitVeneziaVipSecondaryCaptureInterrupt(VeneziaDebugProcessCapture *capture,
 	do {
 		timeout = 500000;
 		currentEvents = 0;
-		ret = ksceKernelWaitEventFlag(state->captureInterruptEvents[1],
+		ret = sceKernelWaitEventFlag(state->captureInterruptEvents[1],
 			0xf00800ff, 3, &currentEvents, &timeout);
 		if (ret < 0) {
 			if (ret != (int)0x80028005) {
@@ -9737,7 +9733,7 @@ int markVeneziaVipCaptureRecovery(VeneziaVipState *state, unsigned int processor
 	if (pending < 0) {
 		state->processorPendingCommands[processor] = 0;
 		unlockVeneziaVipProcess(state->commonProcessorLock);
-		return ksceKernelSetEventFlag(state->processorEvents[processor], 0x100000);
+		return sceKernelSetEventFlag(state->processorEvents[processor], 0x100000);
 	}
 	unlockVeneziaVipProcess(state->commonProcessorLock);
 	return 0;
@@ -9791,38 +9787,38 @@ int completeVeneziaVipCaptureRequest(VeneziaVipState *state, int index,
 	goto acknowledge;
 notify:
 	event = 0;
-	ksceKernelPollEventFlag(state->processorEvents[0], 0x2000000, 1, &event);
+	sceKernelPollEventFlag(state->processorEvents[0], 0x2000000, 1, &event);
 	if (event != 0x2000000) {
-		ksceKernelSetEventFlag(capture->eventFlag, 512);
+		sceKernelSetEventFlag(capture->eventFlag, 512);
 		lockVeneziaVipProcess(state->commonProcessorLock);
 		if (capture->callbacks[0].uid && (capture->callbacks[0].eventMask & 512)) {
 			capture->callbacks[0].pendingEvents = capture->callbacks[0].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[0].uid,
+			sceKernelNotifyCallback(capture->callbacks[0].uid,
 				capture->callbacks[0].pendingEvents);
 		}
 		if (capture->callbacks[1].uid && (capture->callbacks[1].eventMask & 512)) {
 			capture->callbacks[1].pendingEvents = capture->callbacks[1].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[1].uid,
+			sceKernelNotifyCallback(capture->callbacks[1].uid,
 				capture->callbacks[1].pendingEvents);
 		}
 		if (capture->callbacks[2].uid && (capture->callbacks[2].eventMask & 512)) {
 			capture->callbacks[2].pendingEvents = capture->callbacks[2].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[2].uid,
+			sceKernelNotifyCallback(capture->callbacks[2].uid,
 				capture->callbacks[2].pendingEvents);
 		}
 		if (capture->callbacks[3].uid && (capture->callbacks[3].eventMask & 512)) {
 			capture->callbacks[3].pendingEvents = capture->callbacks[3].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[3].uid,
+			sceKernelNotifyCallback(capture->callbacks[3].uid,
 				capture->callbacks[3].pendingEvents);
 		}
 		if (capture->callbacks[4].uid && (capture->callbacks[4].eventMask & 512)) {
 			capture->callbacks[4].pendingEvents = capture->callbacks[4].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[4].uid,
+			sceKernelNotifyCallback(capture->callbacks[4].uid,
 				capture->callbacks[4].pendingEvents);
 		}
 		if (capture->callbacks[5].uid && (capture->callbacks[5].eventMask & 512)) {
 			capture->callbacks[5].pendingEvents = capture->callbacks[5].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[5].uid,
+			sceKernelNotifyCallback(capture->callbacks[5].uid,
 				capture->callbacks[5].pendingEvents);
 		}
 		unlockVeneziaVipProcess(state->commonProcessorLock);
@@ -9832,7 +9828,7 @@ acknowledge:
 	if (pending < 0) {
 		state->processorPendingCommands[0] = 0;
 		unlockVeneziaVipProcess(state->commonProcessorLock);
-		return ksceKernelSetEventFlag(state->processorEvents[0], 0x100000);
+		return sceKernelSetEventFlag(state->processorEvents[0], 0x100000);
 	}
 	unlockVeneziaVipProcess(state->commonProcessorLock);
 	return 0;
@@ -9886,38 +9882,38 @@ int completeVeneziaVipSecondaryCaptureRequest(VeneziaVipState *state, int index,
 	goto acknowledge;
 notify:
 	event = 0;
-	ksceKernelPollEventFlag(state->processorEvents[1], 0x2000000, 1, &event);
+	sceKernelPollEventFlag(state->processorEvents[1], 0x2000000, 1, &event);
 	if (event != 0x2000000) {
-		ksceKernelSetEventFlag(capture->eventFlag, 512);
+		sceKernelSetEventFlag(capture->eventFlag, 512);
 		lockVeneziaVipProcess(state->commonProcessorLock);
 		if (capture->callbacks[0].uid && (capture->callbacks[0].eventMask & 512)) {
 			capture->callbacks[0].pendingEvents = capture->callbacks[0].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[0].uid,
+			sceKernelNotifyCallback(capture->callbacks[0].uid,
 				capture->callbacks[0].pendingEvents);
 		}
 		if (capture->callbacks[1].uid && (capture->callbacks[1].eventMask & 512)) {
 			capture->callbacks[1].pendingEvents = capture->callbacks[1].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[1].uid,
+			sceKernelNotifyCallback(capture->callbacks[1].uid,
 				capture->callbacks[1].pendingEvents);
 		}
 		if (capture->callbacks[2].uid && (capture->callbacks[2].eventMask & 512)) {
 			capture->callbacks[2].pendingEvents = capture->callbacks[2].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[2].uid,
+			sceKernelNotifyCallback(capture->callbacks[2].uid,
 				capture->callbacks[2].pendingEvents);
 		}
 		if (capture->callbacks[3].uid && (capture->callbacks[3].eventMask & 512)) {
 			capture->callbacks[3].pendingEvents = capture->callbacks[3].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[3].uid,
+			sceKernelNotifyCallback(capture->callbacks[3].uid,
 				capture->callbacks[3].pendingEvents);
 		}
 		if (capture->callbacks[4].uid && (capture->callbacks[4].eventMask & 512)) {
 			capture->callbacks[4].pendingEvents = capture->callbacks[4].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[4].uid,
+			sceKernelNotifyCallback(capture->callbacks[4].uid,
 				capture->callbacks[4].pendingEvents);
 		}
 		if (capture->callbacks[5].uid && (capture->callbacks[5].eventMask & 512)) {
 			capture->callbacks[5].pendingEvents = capture->callbacks[5].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[5].uid,
+			sceKernelNotifyCallback(capture->callbacks[5].uid,
 				capture->callbacks[5].pendingEvents);
 		}
 		unlockVeneziaVipProcess(state->commonProcessorLock);
@@ -9927,7 +9923,7 @@ acknowledge:
 	if (pending < 0) {
 		state->processorPendingCommands[1] = 0;
 		unlockVeneziaVipProcess(state->commonProcessorLock);
-		return ksceKernelSetEventFlag(state->processorEvents[1], 0x100000);
+		return sceKernelSetEventFlag(state->processorEvents[1], 0x100000);
 	}
 	unlockVeneziaVipProcess(state->commonProcessorLock);
 	return 0;
@@ -9941,7 +9937,7 @@ int notifyVeneziaVipProcessor(VeneziaVipState *state, int processor,
 	VeneziaDebugProcessCapture *capture;
 
 	if (processor == -1)
-		return ksceKernelSetEventFlag(state->processorEvents[channel], 0x20000);
+		return sceKernelSetEventFlag(state->processorEvents[channel], 0x20000);
 	if (!events)
 		return 0;
 	lockVeneziaVipProcess(state->commonProcessorLock);
@@ -9951,7 +9947,7 @@ int notifyVeneziaVipProcessor(VeneziaVipState *state, int processor,
 		enqueueVeneziaVipProcess(&storage->queues[channel], (uint8_t)processor);
 		capture->pendingProcessorEvents[channel] |= events;
 		unlockVeneziaVipProcess(state->commonProcessorLock);
-		return ksceKernelSetEventFlag(state->processorEvents[channel], 0x20000);
+		return sceKernelSetEventFlag(state->processorEvents[channel], 0x20000);
 	}
 	unlockVeneziaVipProcess(state->commonProcessorLock);
 	return 0;
@@ -9988,7 +9984,7 @@ int waitVeneziaVipProcessorResponse(VeneziaVipState *state, unsigned int process
 	uint32_t event;
 	int ret;
 
-	ret = ksceKernelWaitEventFlag(state->processorEvents[processor],
+	ret = sceKernelWaitEventFlag(state->processorEvents[processor],
 		0x100000, 5, &event, NULL);
 	if (resultFlags) {
 		lockVeneziaVipProcess(state->commonProcessorLock);
@@ -10026,43 +10022,43 @@ int recoverVeneziaVipProcessors(VeneziaVipState *state,
 				sceKernelDelayThread(1000);
 			}
 		}
-		ksceKernelClearEventFlag(state->captureInterruptEvents[processor], 0);
+		sceKernelClearEventFlag(state->captureInterruptEvents[processor], 0);
 		index = state->processorActiveCaptures[processor];
 		if (index == -1)
 			continue;
 		if (processor == 1 && recovered[0] == 1)
 			goto removePrimary;
 		capture = &storage->captures[index];
-		ksceKernelSetEventFlag(capture->eventFlag, 512);
+		sceKernelSetEventFlag(capture->eventFlag, 512);
 		lockVeneziaVipProcess(state->commonProcessorLock);
 		if (capture->callbacks[0].uid && (capture->callbacks[0].eventMask & 512)) {
 			capture->callbacks[0].pendingEvents = capture->callbacks[0].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[0].uid,
+			sceKernelNotifyCallback(capture->callbacks[0].uid,
 				capture->callbacks[0].pendingEvents);
 		}
 		if (capture->callbacks[1].uid && (capture->callbacks[1].eventMask & 512)) {
 			capture->callbacks[1].pendingEvents = capture->callbacks[1].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[1].uid,
+			sceKernelNotifyCallback(capture->callbacks[1].uid,
 				capture->callbacks[1].pendingEvents);
 		}
 		if (capture->callbacks[2].uid && (capture->callbacks[2].eventMask & 512)) {
 			capture->callbacks[2].pendingEvents = capture->callbacks[2].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[2].uid,
+			sceKernelNotifyCallback(capture->callbacks[2].uid,
 				capture->callbacks[2].pendingEvents);
 		}
 		if (capture->callbacks[3].uid && (capture->callbacks[3].eventMask & 512)) {
 			capture->callbacks[3].pendingEvents = capture->callbacks[3].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[3].uid,
+			sceKernelNotifyCallback(capture->callbacks[3].uid,
 				capture->callbacks[3].pendingEvents);
 		}
 		if (capture->callbacks[4].uid && (capture->callbacks[4].eventMask & 512)) {
 			capture->callbacks[4].pendingEvents = capture->callbacks[4].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[4].uid,
+			sceKernelNotifyCallback(capture->callbacks[4].uid,
 				capture->callbacks[4].pendingEvents);
 		}
 		if (capture->callbacks[5].uid && (capture->callbacks[5].eventMask & 512)) {
 			capture->callbacks[5].pendingEvents = capture->callbacks[5].eventMask & 512;
-			ksceKernelNotifyCallback(capture->callbacks[5].uid,
+			sceKernelNotifyCallback(capture->callbacks[5].uid,
 				capture->callbacks[5].pendingEvents);
 		}
 		unlockVeneziaVipProcess(state->commonProcessorLock);
@@ -10083,13 +10079,13 @@ removeSecondary:
 	removeVeneziaVipProcess(&storage->queues[1], (uint8_t)state->processorActiveCaptures[1]);
 restart:
 	stopVeneziaVipDebugger(state, storage);
-	ksceKernelClearEventFlag(state->captureInterruptEvents[0], 0);
-	ksceKernelClearEventFlag(state->captureInterruptEvents[1], 0);
+	sceKernelClearEventFlag(state->captureInterruptEvents[0], 0);
+	sceKernelClearEventFlag(state->captureInterruptEvents[1], 0);
 	beginVeneziaVipCaptureConfiguration(state, storage);
 	prepareVeneziaVipCapture(state, storage);
-	ksceKernelClearEventFlag(state->eventFlag, 0);
-	ksceKernelSetEventFlag(state->processorEvents[0], 0x4000000);
-	ksceKernelSetEventFlag(state->processorEvents[1], 0x4000000);
+	sceKernelClearEventFlag(state->eventFlag, 0);
+	sceKernelSetEventFlag(state->processorEvents[0], 0x4000000);
+	sceKernelSetEventFlag(state->processorEvents[1], 0x4000000);
 	return ret;
 }
 
@@ -10104,7 +10100,7 @@ int prepareVeneziaVipProcessorContext(unsigned int processor, VeneziaVipState *s
 	lockVeneziaVipProcess(state->requestLock);
 	do {
 		event = 0;
-		ksceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
+		sceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
 		if (event & 0x2000000)
 			recoverVeneziaVipProcessors(state, storage);
 		for (channel = 0; channel < 2; channel++) {
@@ -10112,11 +10108,11 @@ int prepareVeneziaVipProcessorContext(unsigned int processor, VeneziaVipState *s
 			state->processorRequests[channel].captureIndex = processor;
 			state->processorRequests[channel].command = 0x80000010;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
-			ksceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
-			ret = ksceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
+			sceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
+			ret = sceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
 			if (ret < 0)
 				break;
-			ret = ksceKernelWaitEventFlag(state->processorEvents[channel],
+			ret = sceKernelWaitEventFlag(state->processorEvents[channel],
 				0x100000, 5, &response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			event = state->processorRequests[channel].resultFlags;
@@ -10130,7 +10126,7 @@ int prepareVeneziaVipProcessorContext(unsigned int processor, VeneziaVipState *s
 			goto out;
 retry:
 		event = 0;
-		ksceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
+		sceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
 	} while (event & 0x2000000);
 	ret = -2141060856;
 out:
@@ -10150,7 +10146,7 @@ int configureVeneziaVipProcessorQueues(unsigned int processor, VeneziaVipState *
 	lockVeneziaVipProcess(state->requestLock);
 	do {
 		event = 0;
-		ksceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
+		sceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
 		if (event & 0x2000000)
 			recoverVeneziaVipProcessors(state, storage);
 		for (channel = 0; channel < 2; channel++) {
@@ -10159,13 +10155,13 @@ int configureVeneziaVipProcessorQueues(unsigned int processor, VeneziaVipState *
 			state->processorRequests[channel].captureIndex = processor;
 			state->processorRequests[channel].command = command;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
-			ksceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
-			ret = ksceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
+			sceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
+			ret = sceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
 			if (ret < 0)
 				goto failed;
 		}
 		for (channel = 0; channel < 2; channel++) {
-			ret = ksceKernelWaitEventFlag(state->processorEvents[channel],
+			ret = sceKernelWaitEventFlag(state->processorEvents[channel],
 				0x100000, 5, &response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			event = state->processorRequests[channel].resultFlags;
@@ -10181,7 +10177,7 @@ failed:
 			goto out;
 retry:
 		event = 0;
-		ksceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
+		sceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
 	} while (event & 0x2000000);
 	ret = -2141060856;
 out:
@@ -10200,7 +10196,7 @@ int startVeneziaVipProcessorContext(unsigned int processor, VeneziaVipState *sta
 	lockVeneziaVipProcess(state->requestLock);
 	do {
 		event = 0;
-		ksceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
+		sceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
 		if (event & 0x2000000)
 			recoverVeneziaVipProcessors(state, storage);
 		for (channel = 0; channel < 2; channel++) {
@@ -10208,11 +10204,11 @@ int startVeneziaVipProcessorContext(unsigned int processor, VeneziaVipState *sta
 			state->processorRequests[channel].captureIndex = processor;
 			state->processorRequests[channel].command = 0x80000040;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
-			ksceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
-			ret = ksceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
+			sceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
+			ret = sceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
 			if (ret < 0)
 				break;
-			ret = ksceKernelWaitEventFlag(state->processorEvents[channel],
+			ret = sceKernelWaitEventFlag(state->processorEvents[channel],
 				0x100000, 5, &response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			event = state->processorRequests[channel].resultFlags;
@@ -10226,7 +10222,7 @@ int startVeneziaVipProcessorContext(unsigned int processor, VeneziaVipState *sta
 			goto out;
 retry:
 		event = 0;
-		ksceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
+		sceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
 	} while (event & 0x2000000);
 	ret = -2141060856;
 out:
@@ -10245,7 +10241,7 @@ int detachVeneziaVipCaptureContext(unsigned int processor, VeneziaVipState *stat
 	lockVeneziaVipProcess(state->requestLock);
 	do {
 		event = 0;
-		ksceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
+		sceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
 		if (event & 0x2000000)
 			recoverVeneziaVipProcessors(state, storage);
 		for (channel = 0; channel < 2; channel++) {
@@ -10253,11 +10249,11 @@ int detachVeneziaVipCaptureContext(unsigned int processor, VeneziaVipState *stat
 			state->processorRequests[channel].captureIndex = processor;
 			state->processorRequests[channel].command = 0x80000080;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
-			ksceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
-			ret = ksceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
+			sceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
+			ret = sceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
 			if (ret < 0)
 				break;
-			ret = ksceKernelWaitEventFlag(state->processorEvents[channel],
+			ret = sceKernelWaitEventFlag(state->processorEvents[channel],
 				0x100000, 5, &response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			event = state->processorRequests[channel].resultFlags;
@@ -10271,7 +10267,7 @@ int detachVeneziaVipCaptureContext(unsigned int processor, VeneziaVipState *stat
 			goto out;
 retry:
 		event = 0;
-		ksceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
+		sceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
 	} while (event & 0x2000000);
 	ret = -2141060856;
 out:
@@ -10290,7 +10286,7 @@ int beginVeneziaVipCaptureSetup(unsigned int processor, VeneziaVipState *state,
 	lockVeneziaVipProcess(state->requestLock);
 	do {
 		event = 0;
-		ksceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
+		sceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
 		if (event & 0x2000000)
 			recoverVeneziaVipProcessors(state, storage);
 		for (channel = 0; channel < 2; channel++) {
@@ -10298,11 +10294,11 @@ int beginVeneziaVipCaptureSetup(unsigned int processor, VeneziaVipState *state,
 			state->processorRequests[channel].captureIndex = processor;
 			state->processorRequests[channel].command = 0x80020000;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
-			ksceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
-			ret = ksceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
+			sceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
+			ret = sceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
 			if (ret < 0)
 				break;
-			ret = ksceKernelWaitEventFlag(state->processorEvents[channel],
+			ret = sceKernelWaitEventFlag(state->processorEvents[channel],
 				0x100000, 5, &response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			event = state->processorRequests[channel].resultFlags;
@@ -10316,7 +10312,7 @@ int beginVeneziaVipCaptureSetup(unsigned int processor, VeneziaVipState *state,
 			goto out;
 retry:
 		event = 0;
-		ksceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
+		sceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
 	} while (event & 0x2000000);
 	ret = -2141060856;
 out:
@@ -10335,7 +10331,7 @@ int endVeneziaVipCaptureSetup(unsigned int processor, VeneziaVipState *state,
 	lockVeneziaVipProcess(state->requestLock);
 	do {
 		event = 0;
-		ksceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
+		sceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
 		if (event & 0x2000000)
 			recoverVeneziaVipProcessors(state, storage);
 		for (channel = 0; channel < 2; channel++) {
@@ -10343,11 +10339,11 @@ int endVeneziaVipCaptureSetup(unsigned int processor, VeneziaVipState *state,
 			state->processorRequests[channel].captureIndex = processor;
 			state->processorRequests[channel].command = 0x80040000;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
-			ksceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
-			ret = ksceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
+			sceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
+			ret = sceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
 			if (ret < 0)
 				break;
-			ret = ksceKernelWaitEventFlag(state->processorEvents[channel],
+			ret = sceKernelWaitEventFlag(state->processorEvents[channel],
 				0x100000, 5, &response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			event = state->processorRequests[channel].resultFlags;
@@ -10361,7 +10357,7 @@ int endVeneziaVipCaptureSetup(unsigned int processor, VeneziaVipState *state,
 			goto out;
 retry:
 		event = 0;
-		ksceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
+		sceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
 	} while (event & 0x2000000);
 	ret = -2141060856;
 out:
@@ -10380,7 +10376,7 @@ int stopVeneziaVipProcessors(VeneziaVipState *state,
 	lockVeneziaVipProcess(state->requestLock);
 	do {
 		event = 0;
-		ksceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
+		sceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
 		if (event & 0x2000000)
 			recoverVeneziaVipProcessors(state, storage);
 		for (channel = 0; channel < 2; channel++) {
@@ -10388,11 +10384,11 @@ int stopVeneziaVipProcessors(VeneziaVipState *state,
 			state->processorRequests[channel].captureIndex = -1;
 			state->processorRequests[channel].command = 0x80000100;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
-			ksceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
-			ret = ksceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
+			sceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
+			ret = sceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
 			if (ret < 0)
 				break;
-			ret = ksceKernelWaitEventFlag(state->processorEvents[channel],
+			ret = sceKernelWaitEventFlag(state->processorEvents[channel],
 				0x100000, 5, &response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			event = state->processorRequests[channel].resultFlags;
@@ -10406,7 +10402,7 @@ int stopVeneziaVipProcessors(VeneziaVipState *state,
 			goto out;
 retry:
 		event = 0;
-		ksceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
+		sceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
 	} while (event & 0x2000000);
 	ret = -2141060856;
 out:
@@ -10425,7 +10421,7 @@ int requestVeneziaVipProcessorControl(VeneziaVipState *state,
 	lockVeneziaVipProcess(state->requestLock);
 	do {
 		event = 0;
-		ksceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
+		sceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
 		if (event & 0x2000000)
 			recoverVeneziaVipProcessors(state, storage);
 		for (channel = 0; channel < 2; channel++) {
@@ -10433,11 +10429,11 @@ int requestVeneziaVipProcessorControl(VeneziaVipState *state,
 			state->processorRequests[channel].captureIndex = -1;
 			state->processorRequests[channel].command = 0x80000200;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
-			ksceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
-			ret = ksceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
+			sceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
+			ret = sceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
 			if (ret < 0)
 				break;
-			ret = ksceKernelWaitEventFlag(state->processorEvents[channel],
+			ret = sceKernelWaitEventFlag(state->processorEvents[channel],
 				0x100000, 5, &response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			event = state->processorRequests[channel].resultFlags;
@@ -10451,7 +10447,7 @@ int requestVeneziaVipProcessorControl(VeneziaVipState *state,
 			goto out;
 retry:
 		event = 0;
-		ksceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
+		sceKernelPollEventFlag(state->eventFlag, 0x2000000, 1, &event);
 	} while (event & 0x2000000);
 	ret = -2141060856;
 out:
@@ -10472,11 +10468,11 @@ int startVeneziaVipProcessors(VeneziaVipState *state)
 		state->processorRequests[channel].captureIndex = -1;
 		state->processorRequests[channel].command = 0x80000400;
 		unlockVeneziaVipProcess(state->commonProcessorLock);
-		ksceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
-		ret = ksceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
+		sceKernelClearEventFlag(state->processorEvents[channel], ~0x100000u);
+		ret = sceKernelSetEventFlag(state->processorEvents[channel], 0x10000);
 		if (ret < 0)
 			break;
-		ret = ksceKernelWaitEventFlag(state->processorEvents[channel],
+		ret = sceKernelWaitEventFlag(state->processorEvents[channel],
 			0x100000, 5, &response, NULL);
 		lockVeneziaVipProcess(state->commonProcessorLock);
 		event = state->processorRequests[channel].resultFlags;
@@ -10506,11 +10502,11 @@ int requestVeneziaVipCaptureProcessing(unsigned int processor,
 	state->processorRequests[0].captureIndex = processor;
 	state->processorRequests[0].command = command;
 	unlockVeneziaVipProcess(state->commonProcessorLock);
-	ksceKernelClearEventFlag(state->processorEvents[0], ~0x100000u);
-	ret = ksceKernelSetEventFlag(state->processorEvents[0], 0x10000);
+	sceKernelClearEventFlag(state->processorEvents[0], ~0x100000u);
+	ret = sceKernelSetEventFlag(state->processorEvents[0], 0x10000);
 	if (ret >= 0) {
 		for (channel = 0; channel < 2; channel++) {
-			ret = ksceKernelWaitEventFlag(state->processorEvents[channel],
+			ret = sceKernelWaitEventFlag(state->processorEvents[channel],
 				0x100000, 5, &response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			event = state->processorRequests[channel].resultFlags;
@@ -10688,7 +10684,7 @@ int veneziaVipProcessorThread0(SceSize size, void *arg)
 	uint8_t value;
 	int command = 0, captureIndex = -1, recovering, ret, inputState, inputResult;
 
-	ret = ksceKernelSetEventFlag(state->processorEvents[0], 0x100000);
+	ret = sceKernelSetEventFlag(state->processorEvents[0], 0x100000);
 	if (ret < 0)
 		return ret;
 	for (;;) {
@@ -10699,7 +10695,7 @@ receive:
 		command = 0;
 		if (recovering == 1)
 			goto recoveryWait;
-		ksceKernelWaitEventFlag(state->processorEvents[0], 0x1030000, 5,
+		sceKernelWaitEventFlag(state->processorEvents[0], 0x1030000, 5,
 			&events, NULL);
 		lockVeneziaVipProcess(state->commonProcessorLock);
 		storage = state->activeProcess;
@@ -10708,38 +10704,38 @@ receive:
 		if (events & 0x1000000) {
 			state->processorRecoveryEvents[0] = events;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
-			ksceKernelWaitEventFlag(state->processorEvents[0], 0x2000000, 1,
+			sceKernelWaitEventFlag(state->processorEvents[0], 0x2000000, 1,
 				&response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
-			ksceKernelSetEventFlag(state->processorEvents[1], 0x2000000);
-			ksceKernelSetEventFlag(state->eventFlag, 0x2000000);
+			sceKernelSetEventFlag(state->processorEvents[1], 0x2000000);
+			sceKernelSetEventFlag(state->eventFlag, 0x2000000);
 			deferred = events & 0x20000;
 			if ((events & 0x10000) || (int)state->processorRequests[0].command < 0 ||
 			    (int)state->processorActiveCommands[0] < 0)
-				ksceKernelSetEventFlag(state->processorEvents[0], 0x10000);
+				sceKernelSetEventFlag(state->processorEvents[0], 0x10000);
 			recovering = 1;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
 recoveryWait:
 			command = 0;
-			ksceKernelWaitEventFlag(state->processorEvents[0], 0x4010000, 5,
+			sceKernelWaitEventFlag(state->processorEvents[0], 0x4010000, 5,
 				&events, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			if (!state->activeProcess)
 				goto noProcess;
 			if (events & 0x4000000) {
-				ksceKernelSetEventFlag(state->processorEvents[0],
+				sceKernelSetEventFlag(state->processorEvents[0],
 					deferred | (events & 0x10000));
 				deferred = 0;
 				state->processorActiveCaptures[0] = -1;
 				state->processorActiveEvents[0] = 0;
 				recovering = 0;
 				state->processorActiveCommands[0] = 0;
-				ksceKernelClearEventFlag(state->processorEvents[0], ~0x6000000u);
+				sceKernelClearEventFlag(state->processorEvents[0], ~0x6000000u);
 			} else if ((events & 0x10000) &&
 				   ((int)state->processorRequests[0].command < 0 ||
 				    (int)state->processorActiveCommands[0] < 0)) {
 				state->processorRequests[0].resultFlags = 6;
-				ksceKernelSetEventFlag(state->processorEvents[0], 0x100000);
+				sceKernelSetEventFlag(state->processorEvents[0], 0x100000);
 			}
 			unlockVeneziaVipProcess(state->commonProcessorLock);
 			goto receive;
@@ -10765,7 +10761,7 @@ recoveryWait:
 			if ((command & 0x400) && getVeneziaVipProcessQueueCount(&storage->queues[0]) > 0)
 				events |= 0x20000;
 			if (events & 0x20000)
-				ksceKernelSetEventFlag(state->processorEvents[0], 0x20000);
+				sceKernelSetEventFlag(state->processorEvents[0], 0x20000);
 		} else if (events & 0x20000) {
 			captureIndex = -1;
 			if (!dequeueVeneziaVipProcess(&storage->queues[0], &value)) {
@@ -10775,7 +10771,7 @@ recoveryWait:
 			}
 			command = queued;
 			if (getVeneziaVipProcessQueueCount(&storage->queues[0]) > 0)
-				ksceKernelSetEventFlag(state->processorEvents[0], 0x20000);
+				sceKernelSetEventFlag(state->processorEvents[0], 0x20000);
 		}
 		state->processorPendingCommands[0] = command < 0 ? 0x80000000 : 0;
 		if ((command & 0x90) && captureIndex != -1)
@@ -10807,7 +10803,7 @@ recoveryWait:
 			flags = command & 0x60580;
 			command &= 0xff06058f;
 			if (!flags) {
-				ksceKernelClearEventFlag(state->processorEvents[0], ~0x7030000u);
+				sceKernelClearEventFlag(state->processorEvents[0], ~0x7030000u);
 				completeVeneziaVipCaptureRequest(state, captureIndex, 2, &command);
 				continue;
 			}
@@ -10861,11 +10857,11 @@ recoveryWait:
 						ret = 0;
 				}
 			}
-			ksceKernelClearEventFlag(state->processorEvents[0], ~0x7030000u);
+			sceKernelClearEventFlag(state->processorEvents[0], ~0x7030000u);
 			completeVeneziaVipCaptureRequest(state, captureIndex, ret ? 2 : 1, &command);
 		}
 		if (command & 0x200) {
-			ksceKernelClearEventFlag(state->processorEvents[0], ~0x7030000u);
+			sceKernelClearEventFlag(state->processorEvents[0], ~0x7030000u);
 			storage->pendingCounters[0] = 1;
 			completeVeneziaVipCaptureRequest(state, captureIndex, 1, &command);
 		}
@@ -11026,7 +11022,7 @@ checkCompletion:
 		}
 		if (inputState) {
 			if (captureIndex == -1) {
-				ksceKernelSetEventFlag(state->processorEvents[1], 0x20000);
+				sceKernelSetEventFlag(state->processorEvents[1], 0x20000);
 			} else if (forwardCommand) {
 				lockVeneziaVipProcess(state->commonProcessorLock);
 				active = state->activeProcess;
@@ -11034,7 +11030,7 @@ checkCompletion:
 					enqueueVeneziaVipProcess(&active->queues[1], (uint8_t)captureIndex);
 					active->captures[captureIndex].pendingProcessorEvents[1] |= forwardCommand;
 					unlockVeneziaVipProcess(state->commonProcessorLock);
-					ksceKernelSetEventFlag(state->processorEvents[1], 0x20000);
+					sceKernelSetEventFlag(state->processorEvents[1], 0x20000);
 				} else {
 					unlockVeneziaVipProcess(state->commonProcessorLock);
 				}
@@ -11052,7 +11048,7 @@ checkCompletion:
 			active->captures[captureIndex].pendingProcessorEvents[1] |= 0x40001000 | forwardCommand;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
 		}
-		ksceKernelSetEventFlag(state->processorEvents[1], 0x20000);
+		sceKernelSetEventFlag(state->processorEvents[1], 0x20000);
 startCapture:
 		if (getVeneziaVipProcessorStatusLocked(state, 0, &status))
 			goto captureFailure;
@@ -11077,8 +11073,8 @@ startCapture:
 			ret = waitVeneziaVipPrimaryCaptureInterrupt(capture, state, &interruptEvents, &status);
 			if (status == 6) {
 				interruptEvents |= 0x80000;
-				ksceKernelSetEventFlag(state->processorEvents[0], 0x1000000);
-				ksceKernelSetEventFlag(state->processorEvents[1], 0x1000000);
+				sceKernelSetEventFlag(state->processorEvents[0], 0x1000000);
+				sceKernelSetEventFlag(state->processorEvents[1], 0x1000000);
 				deferred = 0;
 				recovering = 0;
 				goto receive;
@@ -11101,48 +11097,48 @@ startCapture:
 				lockVeneziaVipProcess(state->standardBufferLock);
 				if (capture->ringMode && capture->ringSize < available) {
 					capture->unidentifiedCaptureCounter++;
-					ksceKernelSetEventFlag(capture->eventFlag, 4);
+					sceKernelSetEventFlag(capture->eventFlag, 4);
 					lockVeneziaVipProcess(state->commonProcessorLock);
 					if (capture->callbacks[0].uid &&
 					    (capture->callbacks[0].eventMask & 4)) {
 						capture->callbacks[0].pendingEvents =
 							capture->callbacks[0].eventMask & 4;
-						ksceKernelNotifyCallback(capture->callbacks[0].uid,
+						sceKernelNotifyCallback(capture->callbacks[0].uid,
 							capture->callbacks[0].pendingEvents);
 					}
 					if (capture->callbacks[1].uid &&
 					    (capture->callbacks[1].eventMask & 4)) {
 						capture->callbacks[1].pendingEvents =
 							capture->callbacks[1].eventMask & 4;
-						ksceKernelNotifyCallback(capture->callbacks[1].uid,
+						sceKernelNotifyCallback(capture->callbacks[1].uid,
 							capture->callbacks[1].pendingEvents);
 					}
 					if (capture->callbacks[2].uid &&
 					    (capture->callbacks[2].eventMask & 4)) {
 						capture->callbacks[2].pendingEvents =
 							capture->callbacks[2].eventMask & 4;
-						ksceKernelNotifyCallback(capture->callbacks[2].uid,
+						sceKernelNotifyCallback(capture->callbacks[2].uid,
 							capture->callbacks[2].pendingEvents);
 					}
 					if (capture->callbacks[3].uid &&
 					    (capture->callbacks[3].eventMask & 4)) {
 						capture->callbacks[3].pendingEvents =
 							capture->callbacks[3].eventMask & 4;
-						ksceKernelNotifyCallback(capture->callbacks[3].uid,
+						sceKernelNotifyCallback(capture->callbacks[3].uid,
 							capture->callbacks[3].pendingEvents);
 					}
 					if (capture->callbacks[4].uid &&
 					    (capture->callbacks[4].eventMask & 4)) {
 						capture->callbacks[4].pendingEvents =
 							capture->callbacks[4].eventMask & 4;
-						ksceKernelNotifyCallback(capture->callbacks[4].uid,
+						sceKernelNotifyCallback(capture->callbacks[4].uid,
 							capture->callbacks[4].pendingEvents);
 					}
 					if (capture->callbacks[5].uid &&
 					    (capture->callbacks[5].eventMask & 4)) {
 						capture->callbacks[5].pendingEvents =
 							capture->callbacks[5].eventMask & 4;
-						ksceKernelNotifyCallback(capture->callbacks[5].uid,
+						sceKernelNotifyCallback(capture->callbacks[5].uid,
 							capture->callbacks[5].pendingEvents);
 					}
 					unlockVeneziaVipProcess(state->commonProcessorLock);
@@ -11166,7 +11162,7 @@ startCapture:
 			if (contextState != 2 && contextState != 4)
 				goto acknowledge;
 			if (captureIndex == -1) {
-				ksceKernelSetEventFlag(state->processorEvents[0], 0x20000);
+				sceKernelSetEventFlag(state->processorEvents[0], 0x20000);
 			} else {
 				lockVeneziaVipProcess(state->commonProcessorLock);
 				active = state->activeProcess;
@@ -11174,7 +11170,7 @@ startCapture:
 					enqueueVeneziaVipProcess(&active->queues[0], (uint8_t)captureIndex);
 					active->captures[captureIndex].pendingProcessorEvents[0] |= 0x1000;
 					unlockVeneziaVipProcess(state->commonProcessorLock);
-					ksceKernelSetEventFlag(state->processorEvents[0], 0x20000);
+					sceKernelSetEventFlag(state->processorEvents[0], 0x20000);
 				} else {
 					unlockVeneziaVipProcess(state->commonProcessorLock);
 				}
@@ -11194,7 +11190,7 @@ invalidCapture:
 noProcess:
 		if ((int)state->processorRequests[0].command < 0) {
 			state->processorRequests[0].resultFlags = 2;
-			ksceKernelSetEventFlag(state->processorEvents[0], 0x100000);
+			sceKernelSetEventFlag(state->processorEvents[0], 0x100000);
 		}
 		unlockVeneziaVipProcess(state->commonProcessorLock);
 		goto receive;
@@ -11222,7 +11218,7 @@ int veneziaVipProcessorThread1(SceSize size, void *arg)
 	uint8_t value;
 	int command = 0, captureIndex = -1, recovering, ret, inputState, inputResult;
 
-	ret = ksceKernelSetEventFlag(state->processorEvents[1], 0x100000);
+	ret = sceKernelSetEventFlag(state->processorEvents[1], 0x100000);
 	if (ret < 0)
 		return ret;
 	for (;;) {
@@ -11233,7 +11229,7 @@ receive:
 		command = 0;
 		if (recovering == 1)
 			goto recoveryWait;
-		ksceKernelWaitEventFlag(state->processorEvents[1], 0x1030000, 5,
+		sceKernelWaitEventFlag(state->processorEvents[1], 0x1030000, 5,
 			&events, NULL);
 		lockVeneziaVipProcess(state->commonProcessorLock);
 		storage = state->activeProcess;
@@ -11241,38 +11237,38 @@ receive:
 			goto noProcess;
 		if (events & 0x1000000) {
 			state->processorRecoveryEvents[1] = events;
-			ksceKernelSetEventFlag(state->processorEvents[0], 0x2000000);
+			sceKernelSetEventFlag(state->processorEvents[0], 0x2000000);
 			unlockVeneziaVipProcess(state->commonProcessorLock);
-			ksceKernelWaitEventFlag(state->processorEvents[1], 0x2000000, 1,
+			sceKernelWaitEventFlag(state->processorEvents[1], 0x2000000, 1,
 				&response, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			deferred = events & 0x20000;
 			if ((events & 0x10000) || (int)state->processorRequests[1].command < 0 ||
 			    (int)state->processorActiveCommands[1] < 0)
-				ksceKernelSetEventFlag(state->processorEvents[1], 0x10000);
+				sceKernelSetEventFlag(state->processorEvents[1], 0x10000);
 			recovering = 1;
 			unlockVeneziaVipProcess(state->commonProcessorLock);
 recoveryWait:
 			command = 0;
-			ksceKernelWaitEventFlag(state->processorEvents[1], 0x4010000, 5,
+			sceKernelWaitEventFlag(state->processorEvents[1], 0x4010000, 5,
 				&events, NULL);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			if (!state->activeProcess)
 				goto noProcess;
 			if (events & 0x4000000) {
-				ksceKernelSetEventFlag(state->processorEvents[1],
+				sceKernelSetEventFlag(state->processorEvents[1],
 					deferred | (events & 0x10000));
 				deferred = 0;
 				state->processorActiveCaptures[1] = -1;
 				state->processorActiveEvents[1] = 0;
 				recovering = 0;
 				state->processorActiveCommands[1] = 0;
-				ksceKernelClearEventFlag(state->processorEvents[1], ~0x6000000u);
+				sceKernelClearEventFlag(state->processorEvents[1], ~0x6000000u);
 			} else if ((events & 0x10000) &&
 				   ((int)state->processorRequests[1].command < 0 ||
 				    (int)state->processorActiveCommands[1] < 0)) {
 				state->processorRequests[1].resultFlags = 6;
-				ksceKernelSetEventFlag(state->processorEvents[1], 0x100000);
+				sceKernelSetEventFlag(state->processorEvents[1], 0x100000);
 			}
 			unlockVeneziaVipProcess(state->commonProcessorLock);
 			goto receive;
@@ -11298,7 +11294,7 @@ recoveryWait:
 			if ((command & 0x400) && getVeneziaVipProcessQueueCount(&storage->queues[1]) > 0)
 				events |= 0x20000;
 			if (events & 0x20000)
-				ksceKernelSetEventFlag(state->processorEvents[1], 0x20000);
+				sceKernelSetEventFlag(state->processorEvents[1], 0x20000);
 		} else if (events & 0x20000) {
 			captureIndex = -1;
 			if (!dequeueVeneziaVipProcess(&storage->queues[1], &value)) {
@@ -11308,7 +11304,7 @@ recoveryWait:
 			}
 			command = queued;
 			if (getVeneziaVipProcessQueueCount(&storage->queues[1]) > 0)
-				ksceKernelSetEventFlag(state->processorEvents[1], 0x20000);
+				sceKernelSetEventFlag(state->processorEvents[1], 0x20000);
 		}
 		state->processorPendingCommands[1] = command < 0 ? 0x80000000 : 0;
 		if ((command & 0x90) && captureIndex != -1)
@@ -11340,7 +11336,7 @@ recoveryWait:
 			flags = command & 0x60580;
 			command &= 0xff06058f;
 			if (!flags) {
-				ksceKernelClearEventFlag(state->processorEvents[1], ~0x7030000u);
+				sceKernelClearEventFlag(state->processorEvents[1], ~0x7030000u);
 				completeVeneziaVipSecondaryCaptureRequest(state, captureIndex, 2, &command);
 				continue;
 			}
@@ -11400,11 +11396,11 @@ recoveryWait:
 						ret = 0;
 				}
 			}
-			ksceKernelClearEventFlag(state->processorEvents[1], ~0x7030000u);
+			sceKernelClearEventFlag(state->processorEvents[1], ~0x7030000u);
 			completeVeneziaVipSecondaryCaptureRequest(state, captureIndex, ret ? 2 : 1, &command);
 		}
 		if (command & 0x200) {
-			ksceKernelClearEventFlag(state->processorEvents[1], ~0x7030000u);
+			sceKernelClearEventFlag(state->processorEvents[1], ~0x7030000u);
 			storage->pendingCounters[1] = 1;
 			completeVeneziaVipSecondaryCaptureRequest(state, captureIndex, 1, &command);
 		}
@@ -11486,8 +11482,8 @@ recoveryWait:
 			ret = waitVeneziaVipSecondaryCaptureInterrupt(capture, state, &interruptEvents, &status);
 			if (status == 6) {
 				interruptEvents = 0x40000000;
-				ksceKernelSetEventFlag(state->processorEvents[0], 0x1000000);
-				ksceKernelSetEventFlag(state->processorEvents[1], 0x1000000);
+				sceKernelSetEventFlag(state->processorEvents[0], 0x1000000);
+				sceKernelSetEventFlag(state->processorEvents[1], 0x1000000);
 				goto nextCommand;
 			}
 			if (ret < 0) {
@@ -11500,7 +11496,7 @@ recoveryWait:
 					goto notifyCapture;
 			}
 			if (captureIndex == -1) {
-				ksceKernelSetEventFlag(state->processorEvents[0], 0x20000);
+				sceKernelSetEventFlag(state->processorEvents[0], 0x20000);
 			} else {
 				lockVeneziaVipProcess(state->commonProcessorLock);
 				active = state->activeProcess;
@@ -11508,7 +11504,7 @@ recoveryWait:
 					enqueueVeneziaVipProcess(&active->queues[0], (uint8_t)captureIndex);
 					active->captures[captureIndex].pendingProcessorEvents[0] |= 0x1000;
 					unlockVeneziaVipProcess(state->commonProcessorLock);
-					ksceKernelSetEventFlag(state->processorEvents[0], 0x20000);
+					sceKernelSetEventFlag(state->processorEvents[0], 0x20000);
 				} else {
 					unlockVeneziaVipProcess(state->commonProcessorLock);
 				}
@@ -11527,7 +11523,7 @@ recoveryWait:
 			unlockVeneziaVipProcess(state->commonProcessorLock);
 			if (completionCount > secondaryCount && primaryPending > secondaryPending) {
 				if (captureIndex == -1) {
-					ksceKernelSetEventFlag(state->processorEvents[1], 0x20000);
+					sceKernelSetEventFlag(state->processorEvents[1], 0x20000);
 				} else {
 					lockVeneziaVipProcess(state->commonProcessorLock);
 					active = state->activeProcess;
@@ -11535,7 +11531,7 @@ recoveryWait:
 						enqueueVeneziaVipProcess(&active->queues[1], (uint8_t)captureIndex);
 						active->captures[captureIndex].pendingProcessorEvents[1] |= 0x1000;
 						unlockVeneziaVipProcess(state->commonProcessorLock);
-						ksceKernelSetEventFlag(state->processorEvents[1], 0x20000);
+						sceKernelSetEventFlag(state->processorEvents[1], 0x20000);
 					} else {
 						unlockVeneziaVipProcess(state->commonProcessorLock);
 					}
@@ -11586,48 +11582,48 @@ notifyCapture:
 		if (interruptEvents & 0x8000000)
 			notification |= 0x2000;
 		if (notification) {
-			ksceKernelSetEventFlag(capture->eventFlag, notification);
+			sceKernelSetEventFlag(capture->eventFlag, notification);
 			lockVeneziaVipProcess(state->commonProcessorLock);
 			if (capture->callbacks[0].uid) {
 				callbackEvents = notification & capture->callbacks[0].eventMask;
 				if (callbackEvents) {
 					capture->callbacks[0].pendingEvents = callbackEvents;
-					ksceKernelNotifyCallback(capture->callbacks[0].uid, callbackEvents);
+					sceKernelNotifyCallback(capture->callbacks[0].uid, callbackEvents);
 				}
 			}
 			if (capture->callbacks[1].uid) {
 				callbackEvents = notification & capture->callbacks[1].eventMask;
 				if (callbackEvents) {
 					capture->callbacks[1].pendingEvents = callbackEvents;
-					ksceKernelNotifyCallback(capture->callbacks[1].uid, callbackEvents);
+					sceKernelNotifyCallback(capture->callbacks[1].uid, callbackEvents);
 				}
 			}
 			if (capture->callbacks[2].uid) {
 				callbackEvents = notification & capture->callbacks[2].eventMask;
 				if (callbackEvents) {
 					capture->callbacks[2].pendingEvents = callbackEvents;
-					ksceKernelNotifyCallback(capture->callbacks[2].uid, callbackEvents);
+					sceKernelNotifyCallback(capture->callbacks[2].uid, callbackEvents);
 				}
 			}
 			if (capture->callbacks[3].uid) {
 				callbackEvents = notification & capture->callbacks[3].eventMask;
 				if (callbackEvents) {
 					capture->callbacks[3].pendingEvents = callbackEvents;
-					ksceKernelNotifyCallback(capture->callbacks[3].uid, callbackEvents);
+					sceKernelNotifyCallback(capture->callbacks[3].uid, callbackEvents);
 				}
 			}
 			if (capture->callbacks[4].uid) {
 				callbackEvents = notification & capture->callbacks[4].eventMask;
 				if (callbackEvents) {
 					capture->callbacks[4].pendingEvents = callbackEvents;
-					ksceKernelNotifyCallback(capture->callbacks[4].uid, callbackEvents);
+					sceKernelNotifyCallback(capture->callbacks[4].uid, callbackEvents);
 				}
 			}
 			if (capture->callbacks[5].uid) {
 				callbackEvents = notification & capture->callbacks[5].eventMask;
 				if (callbackEvents) {
 					capture->callbacks[5].pendingEvents = callbackEvents;
-					ksceKernelNotifyCallback(capture->callbacks[5].uid, callbackEvents);
+					sceKernelNotifyCallback(capture->callbacks[5].uid, callbackEvents);
 				}
 			}
 			unlockVeneziaVipProcess(state->commonProcessorLock);
@@ -11638,42 +11634,42 @@ notifyCapture:
 				callbackEvents = capture->callbacks[0].eventMask & 2;
 				if (callbackEvents) {
 					capture->callbacks[0].pendingEvents = callbackEvents;
-					ksceKernelNotifyCallback(capture->callbacks[0].uid, callbackEvents);
+					sceKernelNotifyCallback(capture->callbacks[0].uid, callbackEvents);
 				}
 			}
 			if (capture->callbacks[1].uid) {
 				callbackEvents = capture->callbacks[1].eventMask & 2;
 				if (callbackEvents) {
 					capture->callbacks[1].pendingEvents = callbackEvents;
-					ksceKernelNotifyCallback(capture->callbacks[1].uid, callbackEvents);
+					sceKernelNotifyCallback(capture->callbacks[1].uid, callbackEvents);
 				}
 			}
 			if (capture->callbacks[2].uid) {
 				callbackEvents = capture->callbacks[2].eventMask & 2;
 				if (callbackEvents) {
 					capture->callbacks[2].pendingEvents = callbackEvents;
-					ksceKernelNotifyCallback(capture->callbacks[2].uid, callbackEvents);
+					sceKernelNotifyCallback(capture->callbacks[2].uid, callbackEvents);
 				}
 			}
 			if (capture->callbacks[3].uid) {
 				callbackEvents = capture->callbacks[3].eventMask & 2;
 				if (callbackEvents) {
 					capture->callbacks[3].pendingEvents = callbackEvents;
-					ksceKernelNotifyCallback(capture->callbacks[3].uid, callbackEvents);
+					sceKernelNotifyCallback(capture->callbacks[3].uid, callbackEvents);
 				}
 			}
 			if (capture->callbacks[4].uid) {
 				callbackEvents = capture->callbacks[4].eventMask & 2;
 				if (callbackEvents) {
 					capture->callbacks[4].pendingEvents = callbackEvents;
-					ksceKernelNotifyCallback(capture->callbacks[4].uid, callbackEvents);
+					sceKernelNotifyCallback(capture->callbacks[4].uid, callbackEvents);
 				}
 			}
 			if (capture->callbacks[5].uid) {
 				callbackEvents = capture->callbacks[5].eventMask & 2;
 				if (callbackEvents) {
 					capture->callbacks[5].pendingEvents = callbackEvents;
-					ksceKernelNotifyCallback(capture->callbacks[5].uid, callbackEvents);
+					sceKernelNotifyCallback(capture->callbacks[5].uid, callbackEvents);
 				}
 			}
 			unlockVeneziaVipProcess(state->commonProcessorLock);
@@ -11693,7 +11689,7 @@ invalidCapture:
 noProcess:
 		if ((int)state->processorRequests[1].command < 0) {
 			state->processorRequests[1].resultFlags = 2;
-			ksceKernelSetEventFlag(state->processorEvents[1], 0x100000);
+			sceKernelSetEventFlag(state->processorEvents[1], 0x100000);
 		}
 		unlockVeneziaVipProcess(state->commonProcessorLock);
 		goto receive;

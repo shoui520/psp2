@@ -15,6 +15,7 @@
 #include "scheduler.h"
 #include "syscall_context.h"
 #include <sysmem/sysroot.h>
+#include <threadmgr/threadmgr.h>
 
 #define THREAD_ATTR_USER		0x80000000
 #define PROCESS_DEBUG_SUSPEND_EXCEPTION	0x11	/* PLACEHOLDER: SceSysrootForKernel_1247A825's reason */
@@ -68,7 +69,6 @@ typedef void (*ThreadmgrProcessDebugSuspendHook)(SceUID pid, SceUID threadId, in
 extern void SceIntrmgrForKernel_71E08D71(ThreadmgrVfpTrace *trace, const void *raw);
 extern int SceExcpmgrForKernel_B615A7DA(void);
 void runningThreadPreemptByIntr(struct ThreadCB *context, uint32_t reason);
-int ksceKernelDebugResumeThread(SceUID threadId, uint32_t reason);
 
 static const char *const s_traceExceptions[16] = {
 	"0", "Halting debug-mode", "Secure Monitor", "3", "Imprecise data abort", "T2EE Trap",
@@ -240,7 +240,7 @@ decided:
 		return -1;
 	switch (action) {
 	case VFP_EXCEPTION_RESUME:
-		ret = ksceKernelDebugResumeThread(threadId, DEBUG_SUSPEND_VFP_EXCEPTION);
+		ret = sceKernelDebugResumeThread(threadId, DEBUG_SUSPEND_VFP_EXCEPTION);
 		if (ret < 0 && ret != (int)SCE_KERNEL_ERROR_NOT_DEBUG_SUSPENDED)
 			SCE_PANIC(254);
 		break;

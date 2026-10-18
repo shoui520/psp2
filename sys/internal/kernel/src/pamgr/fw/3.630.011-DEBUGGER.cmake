@@ -92,16 +92,16 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForKernel_A3975A5A
 	SceThreadmgrForKernel_F885ECCA
 	pmonCpuSetEventSelf
-	ksceKernelSetPermission
+	sceKernelSetThreadAccessLevel
 	sceKernelPMonSetControlRegister
 	sceKernelPMonSetUserEnableRegister
-	ksceKernelChangeThreadCpuAffinityMask
-	ksceKernelLockFastMutex
-	ksceKernelGetThreadCpuAffinityMask
+	sceKernelChangeThreadCpuAffinityMask
+	lockFastMutex
+	sceKernelGetThreadCpuAffinityMask
 	sceKernelGetProcessId
-	ksceKernelInitializeFastMutex
-	ksceKernelUnlockFastMutex
-	ksceKernelGetThreadIdList
+	sceKernelInitializeFastMutex
+	sceKernelUnlockFastMutex
+	sceKernelGetThreadIdList
 	SceIntrmgrForKernel_217AC350
 	memset
 	memcpy

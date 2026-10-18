@@ -225,13 +225,13 @@ int cecDevCallbackIsEnabled(void)
 
 int cecDevCallbackRx(void)
 {
-	ksceKernelSetEventFlag(work.eventFlag, CEC_EVENT_RX);
+	sceKernelSetEventFlag(work.eventFlag, CEC_EVENT_RX);
 	return 0;
 }
 
 int cecDevCallbackTxDone(void)
 {
-	ksceKernelSetEventFlag(work.eventFlag, CEC_EVENT_TX_DONE);
+	sceKernelSetEventFlag(work.eventFlag, CEC_EVENT_TX_DONE);
 	return 0;
 }
 
@@ -537,7 +537,7 @@ int cecDevCallbackConnected(void)
 	if ((work.status & (CEC_STATUS_ENABLED | CEC_STATUS_CONNECTED)) ==
 	    (CEC_STATUS_ENABLED | CEC_STATUS_CONNECTED)) {
 		if (!(work.status & CEC_STATUS_REPORTED))
-			ksceKernelSetEventFlag(work.eventFlag, CEC_EVENT_ALLOC);
+			sceKernelSetEventFlag(work.eventFlag, CEC_EVENT_ALLOC);
 	}
 	return 0;
 }
@@ -548,7 +548,7 @@ int cecDevCallbackStandby(void)
 		return 0;
 	_setStatus(CEC_STATUS_STANDBY_REQUEST);
 	if (work.status & CEC_STATUS_ENABLED)
-		ksceKernelSetEventFlag(work.eventFlag, CEC_EVENT_STANDBY);
+		sceKernelSetEventFlag(work.eventFlag, CEC_EVENT_STANDBY);
 	return 0;
 }
 
@@ -602,7 +602,7 @@ static int _recvUserControlPressed(const CecMessage *msg)
 		sceKernelCancelAlarm(work.passThroughTimer);
 		work.passThroughTimer = 0;
 	}
-	timer = ksceKernelRegisterTimer("SceHdmiCecPassThrough", CEC_PASS_THROUGH_USEC,
+	timer = SceThreadmgrForDriver_C58DF384("SceHdmiCecPassThrough", CEC_PASS_THROUGH_USEC,
 					passThroughTimerHandler, NULL);
 	if (timer < 0) {
 		SCE_DBG_ASSERT(0, 1565);
@@ -887,7 +887,7 @@ static int _mainThread(SceSize args, void *argp)
 	int ret, i15;
 
 	for (;;) {
-		ret = ksceKernelWaitEventFlag(work.eventFlag, CEC_EVENT_ALL,
+		ret = sceKernelWaitEventFlag(work.eventFlag, CEC_EVENT_ALL,
 					      SCE_KERNEL_EVF_WAITMODE_OR,
 					      &bits, NULL);
 		if (ret < 0) {
@@ -895,7 +895,7 @@ static int _mainThread(SceSize args, void *argp)
 			return ret;
 		}
 		if (bits & CEC_EVENT_TX_DONE)
-			ksceKernelClearEventFlag(work.eventFlag, ~CEC_EVENT_TX_DONE);
+			sceKernelClearEventFlag(work.eventFlag, ~CEC_EVENT_TX_DONE);
 		if (bits & CEC_EVENT_ALLOC) {
 			if ((work.status & CEC_STATUS_ENABLED) && !(work.status & CEC_STATUS_REPORTED) &&
 			    cecDevGetPhysicalAddress(physical) >= 0 &&
@@ -904,7 +904,7 @@ static int _mainThread(SceSize args, void *argp)
 					work.unrecognized[i15][0] = 0;
 				_allocLogicalAddr(physical);
 			}
-			ksceKernelClearEventFlag(work.eventFlag, ~CEC_EVENT_ALLOC);
+			sceKernelClearEventFlag(work.eventFlag, ~CEC_EVENT_ALLOC);
 		}
 		if (bits & CEC_EVENT_RX) {
 			SceUInt8 ids[3] = { 0 };
@@ -921,7 +921,7 @@ static int _mainThread(SceSize args, void *argp)
 						break;
 				}
 			}
-			ksceKernelClearEventFlag(work.eventFlag, ~CEC_EVENT_RX);
+			sceKernelClearEventFlag(work.eventFlag, ~CEC_EVENT_RX);
 		}
 		if (bits & CEC_EVENT_ONE_TOUCH_PLAY) {
 			if (work.status & CEC_STATUS_ALLOCATED) {
@@ -936,7 +936,7 @@ static int _mainThread(SceSize args, void *argp)
 					_send(OP_MENU_STATUS, &param);
 				}
 			}
-			ksceKernelClearEventFlag(work.eventFlag, ~CEC_EVENT_ONE_TOUCH_PLAY);
+			sceKernelClearEventFlag(work.eventFlag, ~CEC_EVENT_ONE_TOUCH_PLAY);
 		}
 		if (bits & CEC_EVENT_STANDBY) {
 			param = (CecParam){ { 0 } };
@@ -954,7 +954,7 @@ static int _mainThread(SceSize args, void *argp)
 				_clearStatus(CEC_STATUS_REPORTED);
 				_clearStatus(CEC_STATUS_CLEARED);
 			}
-			ksceKernelClearEventFlag(work.eventFlag, ~CEC_EVENT_STANDBY);
+			sceKernelClearEventFlag(work.eventFlag, ~CEC_EVENT_STANDBY);
 		}
 	}
 }
@@ -977,19 +977,19 @@ int cecInitialize(void)
 	_clearStatus(CEC_STATUS_REPORTED);
 	_clearStatus(CEC_STATUS_ONE_TOUCH_COUNTED);
 	_clearStatus(CEC_STATUS_USER_CONTROL_COUNTED);
-	thread = ksceKernelCreateThread("SceHdmiCecMain", _mainThread, 0x1f, 0x2000, 0,
+	thread = sceKernelCreateThread("SceHdmiCecMain", _mainThread, 0x1f, 0x2000, 0,
 					0x80000, NULL);
 	if (thread < 0) {
 		SCE_DBG_ASSERT_FAIL(2762);
 		return thread;
 	}
-	ret = ksceKernelCreateEventFlag("SceHdmiCEC", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceHdmiCEC", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(2774);
 		return ret;
 	}
 	work.eventFlag = ret;
-	ret = ksceKernelStartThread(thread, 0, NULL);
+	ret = sceKernelStartThread(thread, 0, NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(2781);
 		return ret;
@@ -1060,7 +1060,7 @@ int sceHdmiCecEnableCec(void)
 	}
 	if ((work.status & CEC_STATUS_ENABLED) && !(work.status & CEC_STATUS_REPORTED) &&
 	    (work.status & (CEC_STATUS_ALLOCATED | CEC_STATUS_CONNECTED)))
-		ksceKernelSetEventFlag(work.eventFlag, CEC_EVENT_ALLOC);
+		sceKernelSetEventFlag(work.eventFlag, CEC_EVENT_ALLOC);
 	return 0;
 }
 
@@ -1087,7 +1087,7 @@ int SceHdmiForDriver_D929E4E5(void)
 	if (ret != 0)
 		return ret;
 	if (work.status & CEC_STATUS_ENABLED)
-		ksceKernelSetEventFlag(work.eventFlag, CEC_EVENT_STANDBY);
+		sceKernelSetEventFlag(work.eventFlag, CEC_EVENT_STANDBY);
 	return 0;
 }
 
@@ -1107,14 +1107,14 @@ static inline int _oneTouchPlayAlarmStart(void)
 		sceKernelCancelAlarm(work.oneTouchPlayAlarm);
 		work.oneTouchPlayAlarm = 0;
 	}
-	alarm = ksceKernelRegisterTimer("SceHdmiCecOneTouchPlay", CEC_ONE_TOUCH_PLAY_USEC,
+	alarm = SceThreadmgrForDriver_C58DF384("SceHdmiCecOneTouchPlay", CEC_ONE_TOUCH_PLAY_USEC,
 					oneTouchPlayAlarmHandler, NULL);
 	if (alarm < 0) {
 		SCE_DBG_ASSERT_FUNC(0, 362, "_oneTouchPlayAlarmStart");
 		return alarm;
 	}
 	work.oneTouchPlayAlarm = alarm;
-	ksceKernelSetEventFlag(work.eventFlag, CEC_EVENT_ONE_TOUCH_PLAY);
+	sceKernelSetEventFlag(work.eventFlag, CEC_EVENT_ONE_TOUCH_PLAY);
 	return 0;
 }
 

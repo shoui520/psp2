@@ -64,8 +64,8 @@ static unsigned reverseByte(unsigned value) /* name unknown */
 
 static void waitTime(unsigned usec) /* name unknown */
 {
-	unsigned start = ksceKernelGetSystemTimeLow();
-	while ((unsigned)(ksceKernelGetSystemTimeLow() - start) < usec)
+	unsigned start = SceThreadmgrForDriver_47F6DE49();
+	while ((unsigned)(SceThreadmgrForDriver_47F6DE49() - start) < usec)
 		;
 }
 
@@ -456,7 +456,7 @@ static int enqueueBrightness(void) /* name unknown */
 	int ret;
 	if (!backlightReady)
 		return 0;
-	ret = ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceLcdBlSetBrightness",
+	ret = sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceLcdBlSetBrightness",
 				      backlightWork, 0);
 	return ret < 0 ? ret : 0;
 }
@@ -577,7 +577,7 @@ int SceLcdForDriver_3E7C2CCA(void)
 	if (!revision)
 		revision = 50;
 	scriptRevision = revision;
-	return ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceLcdBlResetSeq", resetBacklightWork, 0);
+	return sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceLcdBlResetSeq", resetBacklightWork, 0);
 }
 static inline void setupSpi(volatile SceSpiRegisters *regs) /* name unknown */
 {
@@ -630,7 +630,7 @@ static __attribute__((noinline)) int initLcd(void) /* name unknown */
 	SceSysmemForDriver_A841EDDA(ret, &base);
 	lcd.spi = base;
 	setupSpi(base);
-	ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceLcdInit", initWork, 0);
+	sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceLcdInit", initWork, 0);
 	return 0;
 }
 

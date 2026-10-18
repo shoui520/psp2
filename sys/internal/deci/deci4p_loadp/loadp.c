@@ -377,7 +377,7 @@ int pdLoadpReqSend(LoadpContext *ctx, LoadpSendBuf *buf)
 
 	if (!(ctx->flags & LOADP_FLAG_ENABLED))
 		return DFMGR_ERROR_NOT_CONNECTED;
-	ret = ksceKernelLockMutex(ctx->mutex, 1, NULL);
+	ret = sceKernelLockMutex(ctx->mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	if (ctx->sendHead == NULL) {
@@ -397,7 +397,7 @@ int pdLoadpReqSend(LoadpContext *ctx, LoadpSendBuf *buf)
 		ctx->sendHead = NULL;
 		ctx->sendCount = 0;
 	}
-	ret = ksceKernelUnlockMutex(ctx->mutex, 1);
+	ret = sceKernelUnlockMutex(ctx->mutex, 1);
 	if (ret < 0)
 		return ret;
 	ret = sceDfMgrReqSend(ctx->handle);
@@ -413,14 +413,14 @@ int pdLoadpReqSend(LoadpContext *ctx, LoadpSendBuf *buf)
 	do {
 		if (ctx->sendCount == 0)
 			return DFMGR_ERROR_NOT_CONNECTED;
-		ret = ksceKernelLockMutex(ctx->mutex, 1, NULL);
+		ret = sceKernelLockMutex(ctx->mutex, 1, NULL);
 		if (ret < 0)
 			return ret;
 		if (ctx->sendHead != NULL) {
 			ctx->sendHead = ctx->sendHead->next;
 			ctx->sendCount--;
 		}
-		ret = ksceKernelUnlockMutex(ctx->mutex, 1);
+		ret = sceKernelUnlockMutex(ctx->mutex, 1);
 	} while (ret >= 0);
 	return ret;
 }
@@ -770,7 +770,7 @@ static void loadpOnModuleUnload(SceUID pid, SceUID modid, SceUInt64 time)
 static void loadpOnAppResult(int result)
 {
 	loadpAppResult = result;
-	ksceKernelSignalSema(loadp.sema, 1);
+	sceKernelSignalSema(loadp.sema, 1);
 }
 
 static void loadpOnSpawn(SceUID pid, SceUID spawnPid, SceUInt64 time)
@@ -853,7 +853,7 @@ static inline __attribute__((always_inline)) int pdLoadpGetCmd(LoadpContext *ctx
 	loadp.pending = ctx->recvBuf;
 	if (loadp.pending == NULL)
 		return DFMGR_ERROR_INVALID_ARGUMENT;
-	return ksceKernelSetEventFlag(loadp.evf, 1);
+	return sceKernelSetEventFlag(loadp.evf, 1);
 
 failed:
 	loadp.pending = NULL;
@@ -862,11 +862,11 @@ failed:
 
 static inline void pdLoadpPutSendDoneMsgQueue(LoadpSendBuf *buf)
 {
-	if (ksceKernelLockMutex(loadp.mutex, 1, NULL) < 0)
+	if (sceKernelLockMutex(loadp.mutex, 1, NULL) < 0)
 		SCE_PANIC(1091);
 	buf->next = loadp.doneList;
 	loadp.doneList = buf;
-	if (ksceKernelUnlockMutex(loadp.mutex, 1) < 0)
+	if (sceKernelUnlockMutex(loadp.mutex, 1) < 0)
 		SCE_PANIC(1100);
 }
 
@@ -874,7 +874,7 @@ static inline void pdLoadpCleanSendDoneMsgQueue(void)
 {
 	LoadpSendBuf *buf, *next;
 
-	if (ksceKernelLockMutex(loadp.mutex, 1, NULL) < 0)
+	if (sceKernelLockMutex(loadp.mutex, 1, NULL) < 0)
 		SCE_PANIC(1114);
 	for (buf = loadp.doneList; buf != NULL; buf = next) {
 		next = buf->next;
@@ -882,7 +882,7 @@ static inline void pdLoadpCleanSendDoneMsgQueue(void)
 		sceKernelFreeHeapMemory(loadp.heap, buf);
 	}
 	loadp.doneList = NULL;
-	if (ksceKernelUnlockMutex(loadp.mutex, 1) < 0)
+	if (sceKernelUnlockMutex(loadp.mutex, 1) < 0)
 		SCE_PANIC(1129);
 }
 
@@ -892,16 +892,16 @@ static inline __attribute__((always_inline)) int pdLoadpSend(void)
 	LoadpSendBuf *buf;
 	int ret;
 
-	if (ksceKernelLockMutex(loadp.mutex, 1, NULL) < 0)
+	if (sceKernelLockMutex(loadp.mutex, 1, NULL) < 0)
 		return 0;
 	buf = loadp.sendHead;
 	if (buf == NULL) {
-		ksceKernelUnlockMutex(loadp.mutex, 1);
+		sceKernelUnlockMutex(loadp.mutex, 1);
 		return 0;
 	}
 	loadp.sendHead = buf->next;
 	loadp.sendCount--;
-	if (ksceKernelUnlockMutex(loadp.mutex, 1) < 0)
+	if (sceKernelUnlockMutex(loadp.mutex, 1) < 0)
 		return 0;
 	ret = sceDfMgrSend(loadp.handle, buf->packet, buf->size);
 	if (ret < 0)
@@ -937,8 +937,8 @@ static int pdLoadpHandler(int event, void *arg, void *ctxp)
 			return ret;
 		break;
 	case SCE_DFMGR_EVENT_SENT:
-		if (ksceKernelLockMutex(loadp.mutex, 1, NULL) < 0 ||
-		    (head = loadp.sendHead, ksceKernelUnlockMutex(loadp.mutex, 1) < 0) ||
+		if (sceKernelLockMutex(loadp.mutex, 1, NULL) < 0 ||
+		    (head = loadp.sendHead, sceKernelUnlockMutex(loadp.mutex, 1) < 0) ||
 		    head == NULL)
 			pdLoadpCleanSendDoneMsgQueue();
 		else
@@ -1045,7 +1045,7 @@ static inline __attribute__((always_inline)) int sendSpawnReply(SceUID pid, cons
 	r->reserved0[4] = 0;
 	r->reserved1 = 0;
 	r->reserved2 = -1;
-	r->mainThread = ksceKernelGetUserThreadId(ksceKernelGetProcessMainThread(pid));
+	r->mainThread = SceThreadmgrForDriver_F311808F(ksceKernelGetProcessMainThread(pid));
 	info = SceSysmemForDriver_7B4CB60A(loadp.heap, sizeof(*info));
 	if (info == NULL) {
 		*result = LOADP_RESULT_NO_MEMORY;
@@ -1071,7 +1071,7 @@ static inline __attribute__((always_inline)) int sendSpawnReply(SceUID pid, cons
 	tail[2] = (SceUInt32)cb->extabStart;
 	tail[3] = (SceUInt32)cb->extabEnd;
 	if (launchParam != NULL) {
-		ret = ksceKernelWaitSema(loadp.sema, 1, NULL);
+		ret = sceKernelWaitSema(loadp.sema, 1, NULL);
 		if (ret < 0)
 			SceDebugForDriver_02B04343(0xf, SCE_DBGINFO_FUNC(3948, "pdLoadpProcSpawnCmd"),
 						 "0x%08x\n", ret);
@@ -1817,7 +1817,7 @@ reply:
 		result = pdLoadpKernelErrToLoadpErr(pid);					\
 		goto free_info;								\
 	}										\
-	ret = ksceKernelWaitSema(loadp.sema, 1, NULL);					\
+	ret = sceKernelWaitSema(loadp.sema, 1, NULL);					\
 	if (ret < 0)									\
 		SCE_PRINTF_WITH_INFO(0xf, _lWait, "0x%08x\n", ret);			\
 	if (loadpAppResult != 0) {							\
@@ -2139,7 +2139,7 @@ static int _loadpThread(SceSize args, void *argp)
 
 	for (;;) {
 		bits = 0;
-		ret = ksceKernelWaitEventFlag(loadp.evf, 1,
+		ret = sceKernelWaitEventFlag(loadp.evf, 1,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      &bits, NULL);
@@ -2229,11 +2229,11 @@ int module_start(SceSize args, void *argp)
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
 	memset(&loadp, 0, sizeof(loadp));
-	ret = ksceKernelCreateMutex("SceDeci4pLoadp", 0x2000, 0, NULL);
+	ret = sceKernelCreateMutex("SceDeci4pLoadp", 0x2000, 0, NULL);
 	if (ret < 0)
 		return SCE_KERNEL_START_FAILED;
 	loadp.mutex = ret;
-	ret = ksceKernelCreateEventFlag("SceDeci4pLoadp", 0, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceDeci4pLoadp", 0, 0, NULL);
 	if (ret < 0)
 		return SCE_KERNEL_START_FAILED;
 	loadp.evf = ret;
@@ -2243,13 +2243,13 @@ int module_start(SceSize args, void *argp)
 		threadOpt.size = sizeof(threadOpt);
 		threadOpt.attr = 1;
 		threadOpt.kStackMemType = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW;
-		ret = ksceKernelCreateThread("SceDeci4pLoadp", _loadpThread, 0x1e, 0x4000,
+		ret = sceKernelCreateThread("SceDeci4pLoadp", _loadpThread, 0x1e, 0x4000,
 					    0, 0xf, &threadOpt);
 	}
 	if (ret < 0)
 		return SCE_KERNEL_START_FAILED;
 	loadp.thread = ret;
-	ret = ksceKernelStartThread(loadp.thread, 0, NULL);
+	ret = sceKernelStartThread(loadp.thread, 0, NULL);
 	if (ret < 0)
 		return SCE_KERNEL_START_FAILED;
 	heapOpt.size = sizeof(heapOpt);
@@ -2283,7 +2283,7 @@ int module_start(SceSize args, void *argp)
 	if (ret < 0)
 		return SCE_KERNEL_START_FAILED;
 	loadp.handle = ret;
-	ret = ksceKernelCreateSema("SceDeci4pLoadp", 0, 0, 1, NULL);
+	ret = sceKernelCreateSema("SceDeci4pLoadp", 0, 0, 1, NULL);
 	if (ret < 0)
 		return SCE_KERNEL_START_FAILED;
 	loadp.appPid = -1;

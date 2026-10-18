@@ -180,7 +180,7 @@ int appmgrCreateSaveDataSlotFile(SceUID pid, const char *path,
 	int result;
 
 	SceKernelSuspendForDriver_4DF40893(0);
-	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
 	if (result < 0)
 		goto unlockPower;
 	option.mmapKind = 0;
@@ -249,7 +249,7 @@ closeFile:
 freePath:
 	sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
 unlockMutex:
-	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
 unlockPower:
 	SceKernelSuspendForDriver_2BB92967(0);
 	return result;
@@ -282,14 +282,14 @@ int ksceAppMgrSaveDataSlotInit(void *parameters)
 	if (result < 0)
 		goto leave;
 	SceKernelSuspendForDriver_4DF40893(0);
-	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
 	if (result < 0)
 		goto unlockPower;
 	memset(directory, 0, sizeof(directory));
 	snprintf(directory, sizeof(directory), "%s%s", mountPoint, "sce_sys");
 	appmgrResolvePath(directory, 0, resolvedDirectory,
 			  sizeof(resolvedDirectory));
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (g_appmgrSaveDataSlotCache.processId == sceKernelGetProcessId() &&
 	    g_appmgrSaveDataSlotCache.fd != -1 &&
 	    strncmp(g_appmgrSaveDataSlotCache.mountPoint, mountPoint, 16) == 0) {
@@ -391,8 +391,8 @@ int ksceAppMgrSaveDataSlotInit(void *parameters)
 	sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, zeroSlots);
 	result = 0;
 restorePermission:
-	ksceKernelSetPermission(permission);
-	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+	sceKernelSetThreadAccessLevel(permission);
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
 unlockPower:
 	SceKernelSuspendForDriver_2BB92967(0);
 leave:
@@ -423,10 +423,10 @@ int ksceAppMgrSaveDataSlotCreate(void *parameters)
 	if (result < 0)
 		goto leaveSyscall;
 	SceKernelSuspendForDriver_4DF40893(0);
-	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
 	if (result < 0)
 		goto unlockPower;
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (g_appmgrSaveDataSlotCache.processId == sceKernelGetProcessId()) {
 		fd = g_appmgrSaveDataSlotCache.fd;
 		if (fd != -1 &&
@@ -455,8 +455,8 @@ int ksceAppMgrSaveDataSlotCreate(void *parameters)
 	}
 	result = 0;
 restorePermission:
-	ksceKernelSetPermission(permission);
-	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+	sceKernelSetThreadAccessLevel(permission);
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
 unlockPower:
 	SceKernelSuspendForDriver_2BB92967(0);
 leaveSyscall:
@@ -487,10 +487,10 @@ int ksceAppMgrSaveDataSlotDelete(SceAppMgrSaveDataSlotDelete *parameters)
 	if (result < 0)
 		goto leaveSyscall;
 	SceKernelSuspendForDriver_4DF40893(0);
-	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
 	if (result < 0)
 		goto unlockPower;
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (g_appmgrSaveDataSlotCache.processId == sceKernelGetProcessId()) {
 		fd = g_appmgrSaveDataSlotCache.fd;
 		if (fd != -1 &&
@@ -518,8 +518,8 @@ int ksceAppMgrSaveDataSlotDelete(SceAppMgrSaveDataSlotDelete *parameters)
 	}
 	result = 0;
 restorePermission:
-	ksceKernelSetPermission(permission);
-	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+	sceKernelSetThreadAccessLevel(permission);
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
 unlockPower:
 	SceKernelSuspendForDriver_2BB92967(0);
 leaveSyscall:
@@ -550,10 +550,10 @@ int ksceAppMgrSaveDataSlotSetParam(void *parameters)
 	if (result < 0)
 		goto leaveSyscall;
 	SceKernelSuspendForDriver_4DF40893(0);
-	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
 	if (result < 0)
 		goto unlockPower;
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (g_appmgrSaveDataSlotCache.processId == sceKernelGetProcessId()) {
 		fd = g_appmgrSaveDataSlotCache.fd;
 		if (fd != -1 &&
@@ -582,8 +582,8 @@ int ksceAppMgrSaveDataSlotSetParam(void *parameters)
 	}
 	result = 0;
 restorePermission:
-	ksceKernelSetPermission(permission);
-	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+	sceKernelSetThreadAccessLevel(permission);
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
 unlockPower:
 	SceKernelSuspendForDriver_2BB92967(0);
 leaveSyscall:
@@ -614,10 +614,10 @@ int ksceAppMgrSaveDataSlotSetStatus(void *parameters)
 	if (result < 0)
 		goto leaveSyscall;
 	SceKernelSuspendForDriver_4DF40893(0);
-	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
 	if (result < 0)
 		goto unlockPower;
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (g_appmgrSaveDataSlotCache.processId == sceKernelGetProcessId()) {
 		fd = g_appmgrSaveDataSlotCache.fd;
 		if (fd != -1 &&
@@ -645,8 +645,8 @@ int ksceAppMgrSaveDataSlotSetStatus(void *parameters)
 	}
 	result = 0;
 restorePermission:
-	ksceKernelSetPermission(permission);
-	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+	sceKernelSetThreadAccessLevel(permission);
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
 unlockPower:
 	SceKernelSuspendForDriver_2BB92967(0);
 leaveSyscall:
@@ -669,11 +669,11 @@ int appmgrOpenSaveDataSlotFile(const char *mountPoint,
 		result = (int)0x80800001;
 		goto unlockPower;
 	}
-	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
 	if (result < 0)
 		goto unlockPower;
 	result = (int)0x80801091;
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (g_appmgrSaveDataSlotCache.processId != 0)
 		goto restorePermission;
 	if (sceKernelGetProcessId() == 0 &&
@@ -701,8 +701,8 @@ int appmgrOpenSaveDataSlotFile(const char *mountPoint,
 		}
 	}
 restorePermission:
-	ksceKernelSetPermission(permission);
-	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+	sceKernelSetThreadAccessLevel(permission);
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
 unlockPower:
 	SceKernelSuspendForDriver_2BB92967(0);
 	sceSyscallLeave(syscallState);
@@ -726,7 +726,7 @@ int appmgrSaveDataSlotFileGetParam(unsigned int slotId, void *param)
 		result = (int)0x80800001;
 		goto leaveSyscall;
 	}
-	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
 	if (result < 0)
 		goto leaveSyscall;
 	if (g_appmgrSaveDataSlotCache.processId != sceKernelGetProcessId()) {
@@ -742,7 +742,7 @@ int appmgrSaveDataSlotFileGetParam(unsigned int slotId, void *param)
 		windowLength = g_appmgrSaveDataSlotCache.windowLength;
 	} else {
 		if (g_appmgrSaveDataSlotCache.fd == -1) {
-			permission = ksceKernelSetPermission(128);
+			permission = sceKernelSetThreadAccessLevel(128);
 			if (g_appmgrSaveDataSlotCache.processId == sceKernelGetProcessId()) {
 				fd = g_appmgrSaveDataSlotCache.fd;
 				if (fd != -1 &&
@@ -750,7 +750,7 @@ int appmgrSaveDataSlotFileGetParam(unsigned int slotId, void *param)
 					    g_appmgrSaveDataSlotCache.mountPoint, 16) == 0) {
 					result = ksceIoClose(fd);
 					if (result < 0) {
-						ksceKernelSetPermission(permission);
+						sceKernelSetThreadAccessLevel(permission);
 						goto unlockMutex;
 					}
 					g_appmgrSaveDataSlotCache.fd = -1;
@@ -758,20 +758,20 @@ int appmgrSaveDataSlotFileGetParam(unsigned int slotId, void *param)
 			}
 			result = appmgrLoadSaveDataSlotCache(
 				g_appmgrSaveDataSlotCache.mountPoint);
-			ksceKernelSetPermission(permission);
+			sceKernelSetThreadAccessLevel(permission);
 			if (result < 0)
 				goto unlockMutex;
 		}
-		permission = ksceKernelSetPermission(128);
+		permission = sceKernelSetThreadAccessLevel(128);
 		offset = ksceIoLseek(g_appmgrSaveDataSlotCache.fd,
 				     (SceOff)(windowIndex << 15), 0);
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		if (offset < 0)
 			goto readError;
-		permission = ksceKernelSetPermission(128);
+		permission = sceKernelSetThreadAccessLevel(128);
 		result = ksceIoRead(g_appmgrSaveDataSlotCache.fd,
 				    g_appmgrSaveDataSlotCache.readWindow, 32768);
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		if (result < 0)
 			goto readError;
 		windowLength = result;
@@ -790,7 +790,7 @@ int appmgrSaveDataSlotFileGetParam(unsigned int slotId, void *param)
 readError:
 	result = (int)0x80801088;
 unlockMutex:
-	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
 leaveSyscall:
 	sceSyscallLeave(syscallState);
 	return result;
@@ -808,7 +808,7 @@ int appmgrCloseSaveDataSlotFile(const char *mountPoint)
 		result = (int)0x80800001;
 		goto unlockPower;
 	}
-	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
 	if (result < 0)
 		goto unlockPower;
 	if (g_appmgrSaveDataSlotCache.processId != sceKernelGetProcessId() ||
@@ -817,9 +817,9 @@ int appmgrCloseSaveDataSlotFile(const char *mountPoint)
 		goto unlockMutex;
 	}
 	if (g_appmgrSaveDataSlotCache.fd != -1) {
-		permission = ksceKernelSetPermission(128);
+		permission = sceKernelSetThreadAccessLevel(128);
 		result = ksceIoClose(g_appmgrSaveDataSlotCache.fd);
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		if (result < 0)
 			goto unlockMutex;
 	}
@@ -830,7 +830,7 @@ int appmgrCloseSaveDataSlotFile(const char *mountPoint)
 	memset(g_appmgrSaveDataSlotCache.header, 0, 1024);
 	memset(g_appmgrSaveDataSlotCache.readWindow, 0, 32768);
 unlockMutex:
-	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
 unlockPower:
 	SceKernelSuspendForDriver_2BB92967(0);
 	sceSyscallLeave(syscallState);
@@ -903,10 +903,10 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 	if (result < 0)
 		goto leaveSyscall;
 	SceKernelSuspendForDriver_4DF40893(0);
-	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
 	if (result < 0)
 		goto unlockPower;
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	memset(path, 0, sizeof(path));
 	memset(resolvedPath, 0, sizeof(resolvedPath));
 	memset(mountDevice, 0, sizeof(mountDevice));
@@ -1336,8 +1336,8 @@ freeDirectories:
 freeSecondFilePath:
 	sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
 restorePermission:
-	ksceKernelSetPermission(permission);
-	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+	sceKernelSetThreadAccessLevel(permission);
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
 unlockPower:
 	SceKernelSuspendForDriver_2BB92967(0);
 leaveSyscall:

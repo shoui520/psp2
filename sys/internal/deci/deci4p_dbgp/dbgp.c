@@ -164,14 +164,14 @@ _dbgpSetBufStatus(DbgpBuf *buf, SceUInt32 clear, SceUInt32 set)
 {
 	int result;
 
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&buf->mutex);
+	result = lockFastMutex((SceKernelFastMutex *)&buf->mutex);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO_FUNC(15, 3150, "_dbgpSetBufStatus",
 					  "0x%08x\n", result);
 		return;
 	}
 	buf->status = (buf->status & ~clear) | set;
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&buf->mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&buf->mutex);
 }
 
 void _dbgpFreeWorkBuf(DbgpProcCB *proc)
@@ -263,7 +263,7 @@ int _dbgpReqSend(DbgpProcCB *proc)
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&g_dbgp.sendLock, state);
 		}
 		_dbgpFreeBuf(proc, 1);
-		ksceKernelSetEventFlag(proc->eventFlag, 0x20000);
+		sceKernelSetEventFlag(proc->eventFlag, 0x20000);
 		return DFMGR_ERROR_NOT_CONNECTED;
 	}
 	SCE_PRINTF_WITH_INFO(15, 1126, "0x%08x\n", result);
@@ -376,7 +376,7 @@ int _dbgpStopProcessForPrxDebug(SceUID pid, SceUID modid,
 	}
 	return DFMGR_ERROR_INVALID_ARGUMENT;
 found:
-	result = ksceKernelWaitSema(proc->prxSema, 1, NULL);
+	result = sceKernelWaitSema(proc->prxSema, 1, NULL);
 	if (result < 0)
 		SCE_PRINTF_WITH_INFO(15, 2723, "0x%08x\n", result);
 	if (SceThreadmgrForDriver_20C228E4() == 0) {
@@ -385,12 +385,12 @@ found:
 		proc->prxStopReason = reason;
 		proc->time.low = time;
 		proc->time.high = time >> 32;
-		result = ksceKernelSetEventFlag(proc->eventFlag, 0x1000000);
+		result = sceKernelSetEventFlag(proc->eventFlag, 0x1000000);
 		if (result < 0)
 			goto cancelled;
 	}
 	for (;;) {
-		result = ksceKernelWaitEventFlag(proc->prxDebugEventFlag,
+		result = sceKernelWaitEventFlag(proc->prxDebugEventFlag,
 				0x80000, 5, &bits, NULL);
 		if (result == SCE_KERNEL_ERROR_THREAD_SUSPENDED ||
 		    result == SCE_KERNEL_ERROR_THREAD_STOPPED)
@@ -399,12 +399,12 @@ found:
 			break;
 		SCE_PRINTF_WITH_INFO(15, 2772, "0x%08x\n", result);
 	}
-	result = ksceKernelSignalSema(proc->prxSema, 1);
+	result = sceKernelSignalSema(proc->prxSema, 1);
 	if (result < 0)
 		SCE_PRINTF_WITH_INFO(15, 2782, "0x%08x\n", result);
 	return 0;
 cancelled:
-	return ksceKernelSignalSema(proc->prxSema, 1);
+	return sceKernelSignalSema(proc->prxSema, 1);
 }
 
 int _dbgpParseProcessInfo(DbgpProcCB *proc)
@@ -466,7 +466,7 @@ freeWork:
 		_dbgpSetBufStatus(buf, ~0u, 0);
 	}
 	if (info.type == 5) {
-		result = ksceKernelSignalSema(proc->spontaneousExitSema, 1);
+		result = sceKernelSignalSema(proc->spontaneousExitSema, 1);
 		if (result < 0) {
 			SCE_PRINTF_WITH_INFO(15, 2604, "0x%08x\n", result);
 			goto error;
@@ -581,43 +581,43 @@ available:
 	proc->buf[1].base = base + 0x11000;
 	proc->buf[0].base = base;
 	proc->buf[2].base = base + 0x22000;
-	result = ksceKernelInitializeFastMutex((SceKernelFastMutex *)&proc->buf[0].mutex,
+	result = sceKernelInitializeFastMutex((SceKernelFastMutex *)&proc->buf[0].mutex,
 			"SceDeci4pDbgpRecvBuf", 0, NULL);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 1191, "0x%08x\n", result);
 		return result;
 	}
-	result = ksceKernelInitializeFastMutex((SceKernelFastMutex *)&proc->buf[1].mutex,
+	result = sceKernelInitializeFastMutex((SceKernelFastMutex *)&proc->buf[1].mutex,
 			"SceDeci4pDbgpSendBuf", 0, NULL);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 1199, "0x%08x\n", result);
 		return result;
 	}
-	result = ksceKernelInitializeFastMutex((SceKernelFastMutex *)&proc->buf[2].mutex,
+	result = sceKernelInitializeFastMutex((SceKernelFastMutex *)&proc->buf[2].mutex,
 			"SceDeci4pDbgpWorkBuf", 0, NULL);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 1207, "0x%08x\n", result);
 		return result;
 	}
-	result = ksceKernelCreateEventFlag("SceDeci4pDbgp", 0x1000, 0, NULL);
+	result = sceKernelCreateEventFlag("SceDeci4pDbgp", 0x1000, 0, NULL);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 1216, "0x%08x\n", result);
 		return result;
 	}
 	proc->eventFlag = result;
-	result = ksceKernelCreateEventFlag("SceDeci4pDbgpPrxDebug", 0x9000, 0, NULL);
+	result = sceKernelCreateEventFlag("SceDeci4pDbgpPrxDebug", 0x9000, 0, NULL);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 1226, "0x%08x\n", result);
 		return result;
 	}
 	proc->prxDebugEventFlag = result;
-	result = ksceKernelCreateSema("SceDeci4pDbgpPrx", 0, 1, 1, NULL);
+	result = sceKernelCreateSema("SceDeci4pDbgpPrx", 0, 1, 1, NULL);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 1236, "0x%08x\n", result);
 		return result;
 	}
 	proc->prxSema = result;
-	result = ksceKernelCreateSema("SceDeci4pDbgpSponExit", 0x8000, 0, 1, NULL);
+	result = sceKernelCreateSema("SceDeci4pDbgpSponExit", 0x8000, 0, 1, NULL);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 1246, "0x%08x\n", result);
 		return result;
@@ -626,7 +626,7 @@ available:
 	opt.size = sizeof(opt);
 	opt.attr = 1;
 	opt.kStackMemType = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW;
-	result = ksceKernelCreateThread("SceDeci4pDbgp", _dbgpWorkerThread,
+	result = sceKernelCreateThread("SceDeci4pDbgp", _dbgpWorkerThread,
 				      30, 0x4000, 0, 15, &opt);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 1263, "0x%08x\n", result);
@@ -636,7 +636,7 @@ available:
 	state = SceCpuForDriver_D32ACE9E(&proc->lock);
 	proc->status |= 0x10000000;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&proc->lock, state);
-	result = ksceKernelStartThread(proc->workerThread, sizeof(proc), &proc);
+	result = sceKernelStartThread(proc->workerThread, sizeof(proc), &proc);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 1279, "0x%08x\n", result);
 		return result;
@@ -669,7 +669,7 @@ int module_start(SceSize args, const void *argp)
 	g_dbgp.lock = 0;
 	g_dbgp.heap = result;
 	g_dbgp.processDebugInfo = NULL;
-	result = ksceKernelInitializeFastMutex((SceKernelFastMutex *)&g_dbgp.mutex,
+	result = sceKernelInitializeFastMutex((SceKernelFastMutex *)&g_dbgp.mutex,
 			"SceDeci4pDbgpFlowCtl", 0, NULL);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO_FUNC(15, 231, "_dbgpInit", "0x%08x\n", result);
@@ -724,7 +724,7 @@ int dbgpDeleteWorkerThread(SceUID pid)
 	}
 	return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 found:
-	result = ksceKernelSetEventFlag(proc->eventFlag, 0x10000000);
+	result = sceKernelSetEventFlag(proc->eventFlag, 0x10000000);
 	if (result < 0)
 		return result;
 
@@ -733,18 +733,18 @@ found:
 	if (result < 0)						\
 		SCE_PRINTF_WITH_INFO(15, line, "0x%08x\n", result);	\
 } while (0)
-	DELETE_RESOURCE(ksceKernelWaitThreadEnd(proc->workerThread,
+	DELETE_RESOURCE(sceKernelWaitThreadEnd(proc->workerThread,
 					     &exitStatus, NULL), 1313);
-	DELETE_RESOURCE(ksceKernelDeleteThread(proc->workerThread), 1320);
-	DELETE_RESOURCE(ksceKernelDeleteEventFlag(proc->eventFlag), 1332);
-	DELETE_RESOURCE(ksceKernelDeleteEventFlag(proc->prxDebugEventFlag), 1339);
-	DELETE_RESOURCE(ksceKernelDeleteSema(proc->spontaneousExitSema), 1346);
-	DELETE_RESOURCE(ksceKernelDeleteSema(proc->prxSema), 1353);
-	DELETE_RESOURCE(ksceKernelFinalizeFastMutex(
+	DELETE_RESOURCE(sceKernelDeleteThread(proc->workerThread), 1320);
+	DELETE_RESOURCE(sceKernelDeleteEventFlag(proc->eventFlag), 1332);
+	DELETE_RESOURCE(sceKernelDeleteEventFlag(proc->prxDebugEventFlag), 1339);
+	DELETE_RESOURCE(sceKernelDeleteSema(proc->spontaneousExitSema), 1346);
+	DELETE_RESOURCE(sceKernelDeleteSema(proc->prxSema), 1353);
+	DELETE_RESOURCE(sceKernelFinalizeFastMutex(
 			(SceKernelFastMutex *)&proc->buf[2].mutex), 1360);
-	DELETE_RESOURCE(ksceKernelFinalizeFastMutex(
+	DELETE_RESOURCE(sceKernelFinalizeFastMutex(
 			(SceKernelFastMutex *)&proc->buf[1].mutex), 1367);
-	DELETE_RESOURCE(ksceKernelFinalizeFastMutex(
+	DELETE_RESOURCE(sceKernelFinalizeFastMutex(
 			(SceKernelFastMutex *)&proc->buf[0].mutex), 1374);
 	DELETE_RESOURCE(SceSysmemForDriver_009E1C61(proc->bufferMemBlock), 1381);
 #undef DELETE_RESOURCE
@@ -947,7 +947,7 @@ int _dbgpEventRecv(int event, void *arg, void *ctx)
 
 	switch (event) {
 	case SCE_DFMGR_EVENT_RECV:
-		result = ksceKernelLockFastMutex((SceKernelFastMutex *)&g_dbgp.mutex);
+		result = lockFastMutex((SceKernelFastMutex *)&g_dbgp.mutex);
 		if (result < 0) {
 			SCE_PRINTF_WITH_INFO(15, 561, "0x%08x\n", result);
 			goto error;
@@ -963,10 +963,10 @@ int _dbgpEventRecv(int event, void *arg, void *ctx)
 			state = SceCpuForDriver_D32ACE9E(&g_dbgp.lock);
 			g_dbgp.status |= 1;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&g_dbgp.lock, state);
-			ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_dbgp.mutex);
+			sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_dbgp.mutex);
 			return DFMGR_ERROR_QUEUE_FULL;
 		}
-		result = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_dbgp.mutex);
+		result = sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_dbgp.mutex);
 		if (result < 0)
 			SCE_PRINTF_WITH_INFO(15, 588, "0x%08x\n", result);
 		result = _dbgpRecvData(g_dbgp.protocol, &request.prefix, sizeof(request.prefix));
@@ -1040,7 +1040,7 @@ int _dbgpEventRecv(int event, void *arg, void *ctx)
 		proc = dbgpFindProcess(dbgp->recvPid);
 		if (proc == NULL)
 			goto invalid;
-		result = ksceKernelSetEventFlag(proc->eventFlag, 0x10000);
+		result = sceKernelSetEventFlag(proc->eventFlag, 0x10000);
 		if (result >= 0)
 			return 0;
 		goto error;
@@ -1142,12 +1142,12 @@ int _dbgpEventRecv(int event, void *arg, void *ctx)
 			if (kernelProc == NULL)
 				SCE_PANIC_FUNC(928, "_dbgpEventSendDone");
 			dbgp->deferredPid = proc->pid;
-			result = ksceKernelSetEventFlag(kernelProc->eventFlag, 0x20000000);
+			result = sceKernelSetEventFlag(kernelProc->eventFlag, 0x20000000);
 			if (result < 0)
 				SCE_PRINTF_WITH_INFO_FUNC(15, 937, "_dbgpEventSendDone",
 							  "0x%08x\n", result);
 		}
-		result = ksceKernelSetEventFlag(proc->eventFlag, 0x20000);
+		result = sceKernelSetEventFlag(proc->eventFlag, 0x20000);
 		if (result < 0)
 			goto error;
 		if (dbgp->sendCount <= 0)
@@ -1220,7 +1220,7 @@ int dbgpClearPrxDebug(DbgpProcCB *proc)
 	state = SceCpuForDriver_D32ACE9E(&proc->lock);
 	proc->status &= ~0x100000u;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&proc->lock, state);
-	result = ksceKernelSetEventFlag(proc->prxDebugEventFlag, 0x80000);
+	result = sceKernelSetEventFlag(proc->prxDebugEventFlag, 0x80000);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 2798, "0x%08x\n", result);
 		return result;
@@ -1327,7 +1327,7 @@ void dbgpFreeRecvBuf(DbgpProcCB *proc)
 	}
 	if ((g_dbgp.status & 1) == 0)
 		return;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&g_dbgp.mutex);
+	result = lockFastMutex((SceKernelFastMutex *)&g_dbgp.mutex);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 3234, "0x%08x\n", result);
 		return;
@@ -1345,7 +1345,7 @@ void dbgpFreeRecvBuf(DbgpProcCB *proc)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_dbgp.lock, state);
 	sceDfMgrSendSpace(g_dbgp.protocol);
 unlock:
-	result = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_dbgp.mutex);
+	result = sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_dbgp.mutex);
 	if (result < 0)
 		SCE_PRINTF_WITH_INFO(15, 3258, "0x%08x\n", result);
 }
@@ -1374,7 +1374,7 @@ int _dbgpWorkerThread(SceSize args, void *argp)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&proc->lock, state); \
 } while (0)
 #define SET_EVENT(event, line) do { \
-	result = ksceKernelSetEventFlag(proc->eventFlag, (event)); \
+	result = sceKernelSetEventFlag(proc->eventFlag, (event)); \
 	if (result < 0) \
 		SCE_PRINTF_WITH_INFO(15, line, "0x%08x\n", result); \
 } while (0)
@@ -1397,7 +1397,7 @@ int _dbgpWorkerThread(SceSize args, void *argp)
 		else
 			mask = (status & 0x10) != 0 ? 1023477697 : 1023477745;
 		bits = 0;
-		result = ksceKernelWaitEventFlag(proc->eventFlag, mask, 5,
+		result = sceKernelWaitEventFlag(proc->eventFlag, mask, 5,
 					       &bits, NULL);
 		if (result < 0) {
 			SCE_PRINTF_WITH_INFO(15, 1602, "0x%08x\n", result);
@@ -1442,7 +1442,7 @@ int _dbgpWorkerThread(SceSize args, void *argp)
 		} else if ((bits & 0x100000) != 0) {
 			if (stepAutoSkipBpPost(proc) < 0) {
 				UPDATE_STATUS(0, 0x8000);
-				ksceKernelSetEventFlag(proc->eventFlag, 0x200000);
+				sceKernelSetEventFlag(proc->eventFlag, 0x200000);
 			}
 			dbgpFreeRecvBuf(proc);
 			_dbgpFreeWorkBuf(proc);
@@ -1474,10 +1474,10 @@ int _dbgpWorkerThread(SceSize args, void *argp)
 					UPDATE_STATUS(0, 0x8000);
 				status = proc->status;
 				if ((status & 0x6000) == 0 ||
-				    ksceKernelSetEventFlag(proc->eventFlag,
+				    sceKernelSetEventFlag(proc->eventFlag,
 							   0x100000) >= 0) {
 					if ((proc->status & 0x8000) != 0)
-						ksceKernelSetEventFlag(proc->eventFlag,
+						sceKernelSetEventFlag(proc->eventFlag,
 								       0x200000);
 				}
 			} else if (excpInfoLoad(proc, &info.thread, &reason, &pc) < 0) {
@@ -1653,7 +1653,7 @@ unknown_command:
 			status = proc->status;
 			if ((status & 0x1000) != 0) {
 				if ((status & 0x8000) != 0)
-					ksceKernelSetEventFlag(proc->eventFlag, 0x200000);
+					sceKernelSetEventFlag(proc->eventFlag, 0x200000);
 			} else {
 				dbgpFreeRecvBuf(proc);
 				if (result >= 0 && _dbgpReqSend(proc) < 0)
@@ -1663,7 +1663,7 @@ unknown_command:
 		} else if ((bits & 0x10000000) != 0) {
 			bits &= ~0x10000000u;
 			UPDATE_STATUS(0x10000000, 0);
-			ksceKernelExitThread(0);
+			sceKernelExitThread(0);
 			return 0;
 		}
 		if (bits != 0)

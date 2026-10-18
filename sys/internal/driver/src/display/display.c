@@ -300,7 +300,7 @@ static int _sceDisplayModuleProcessCreate(SceUID pid, ProcEventCreateParam *para
 	memset(pls, 0, sizeof(*pls));
 	if (SceProcessmgrForDriver_E1A67C86(pid, &pls->resolutionFlags) < 0)
 		pls->resolutionFlags = 0;
-	event = ksceKernelCreateSimpleEvent("SceDispaly", 0x100, 0, NULL);
+	event = sceKernelCreateSimpleEvent("SceDispaly", 0x100, 0, NULL);
 	pls->frameEvent = event | (event >> 31);
 	pls->vcountBase[0] = heads[0].vcount;
 	pls->vcountBase[1] = heads[1].vcount;
@@ -658,7 +658,7 @@ static inline __attribute__((always_inline)) void setHeadMode(DisplayHead *h, Sc
 {
 	SceKernelIntrStatus intr;
 
-	if (ksceKernelLockFastMutex(&mutex) < 0)
+	if (lockFastMutex(&mutex) < 0)
 		return;
 	intr = SceCpuForDriver_D32ACE9E(&h->lock);
 	h->vic = vic;
@@ -670,7 +670,7 @@ static inline __attribute__((always_inline)) void setHeadMode(DisplayHead *h, Sc
 	h->height = height;
 	h->interlaced = interlaced;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 }
 
 /* Work queue item: set the heads up once the panels are ready. */
@@ -726,7 +726,7 @@ static int initWork(void *arg) /* name unknown */
 	}
 	if (hdmiInit() >= 0) {
 		hdmiPresent = 1;
-		if (ksceKernelLockFastMutex(&mutex) >= 0) {
+		if (lockFastMutex(&mutex) >= 0) {
 			SceKernelIntrStatus intr = SceCpuForDriver_D32ACE9E(&heads[1].lock);
 
 			if (ksceIftuSetMergeSetting(3, 4) >= 0) {
@@ -735,7 +735,7 @@ static int initWork(void *arg) /* name unknown */
 				SceIftuForDriver_357EAE24(3, 0xff);
 			}
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&heads[1].lock, intr);
-			ksceKernelUnlockFastMutex(&mutex);
+			sceKernelUnlockFastMutex(&mutex);
 		}
 	}
 
@@ -753,9 +753,9 @@ static int initWork(void *arg) /* name unknown */
 			}
 		}
 	}
-	if (genuineDolce == 0 && ksceKernelLockFastMutex(&mutex) >= 0) {
+	if (genuineDolce == 0 && lockFastMutex(&mutex) >= 0) {
 		enableHead(0);
-		ksceKernelUnlockFastMutex(&mutex);
+		sceKernelUnlockFastMutex(&mutex);
 	}
 	if (SceSysrootForDriver_B0E1FC67() == 0 && SceSysrootForDriver_89D19090() == 0
 	    && SceSysrootForDriver_7918D44E() == 0 && SceSysrootForDriver_79C9AE10() == 0
@@ -784,9 +784,9 @@ static int sysEventHandler(int resume, int eventid, void *args, void *opt) /* na
 			for (head = 0; head < DISPLAY_HEAD_COUNT; head++) {
 				if (heads[head].enabled && head == 1 && hdmiPresent) {
 					_sceDisplaySetHdmiTxMute(1);
-					if (ksceKernelLockFastMutex(&mutex) >= 0) {
+					if (lockFastMutex(&mutex) >= 0) {
 						disableHead(1);
-						ksceKernelUnlockFastMutex(&mutex);
+						sceKernelUnlockFastMutex(&mutex);
 					}
 				}
 			}
@@ -903,7 +903,7 @@ int displayInit(void) /* name unknown */
 	plsKey = ksceKernelCreateProcessLocalStorage("SceDisplay", sizeof(DisplayProcessLocal));
 	mutexOpt.size = 8;
 	mutexOpt.attr = 0x20;
-	ksceKernelInitializeFastMutex(&mutex, "SceDisplay", 6, &mutexOpt);
+	sceKernelInitializeFastMutex(&mutex, "SceDisplay", 6, &mutexOpt);
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 0x200000;
@@ -916,7 +916,7 @@ int displayInit(void) /* name unknown */
 	sceKernelRegisterSysEventHandler("SceDisplay", sysEventHandler, NULL);
 	sceKernelRegisterProcEventHandler("SceDisplay", &procEventHandler, 0);
 	sceKernelRegisterInitCallback(initCallback, 8, 0, 0);
-	ret = ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceDisplayInit", initWork, NULL);
+	ret = sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceDisplayInit", initWork, NULL);
 	return ret < 0 ? ret : 0;
 }
 
@@ -1044,7 +1044,7 @@ int ksceDisplaySetOutputMode(SceUInt32 head, SceUInt32 vic, SceUInt32 mode)
 		return SCE_DISPLAY_ERROR_INVALID_HEAD;
 	}
 
-	ret = ksceKernelLockFastMutex(&mutex);
+	ret = lockFastMutex(&mutex);
 	if (ret < 0)
 		return ret;
 	intr = SceCpuForDriver_D32ACE9E(&heads[head].lock);
@@ -1057,7 +1057,7 @@ int ksceDisplaySetOutputMode(SceUInt32 head, SceUInt32 vic, SceUInt32 mode)
 	heads[head].height = height;
 	heads[head].interlaced = interlaced;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&heads[head].lock, intr);
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 	return 0;
 }
 
@@ -1107,14 +1107,14 @@ int ksceDisplayEnableHead(SceUInt32 head)
 {
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&mutex);
+	ret = lockFastMutex(&mutex);
 	if (ret < 0)
 		return ret;
 	if (head == 0 || head == 1)
 		ret = enableHead(head);
 	else
 		ret = SCE_DISPLAY_ERROR_INVALID_HEAD;
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 	return ret;
 }
 
@@ -1122,14 +1122,14 @@ int ksceDisplayDisableHead(SceUInt32 head)
 {
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&mutex);
+	ret = lockFastMutex(&mutex);
 	if (ret < 0)
 		return ret;
 	if (head == 0 || head == 1)
 		ret = disableHead(head);
 	else
 		ret = SCE_DISPLAY_ERROR_INVALID_HEAD;
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 	return ret;
 }
 
@@ -1188,7 +1188,7 @@ int setFrameBufForCompat(int x, int y, int cropWidth, int cropHeight,
 	if (SceSblACMgrForDriver_FD00C72A(0) != 1)
 		return SCE_ERROR_ERRNO_ENOSYS;
 	t = sceSyscallEnter();
-	ret = ksceKernelLockFastMutex(&mutex);
+	ret = lockFastMutex(&mutex);
 	if (ret < 0) {
 		sceSyscallLeave(t);
 		return ret;
@@ -1315,22 +1315,22 @@ int setFrameBufForCompat(int x, int y, int cropWidth, int cropHeight,
 		ret = ksceIftuCsc(&dst, &state, &conv);
 		SceCpuForDriver_02796361(convDst->base, size);
 		SceSysmemForDriver_22CBE925(0x30, convDst->base, size);
-		ksceKernelUnlockFastMutex(&mutex);
+		sceKernelUnlockFastMutex(&mutex);
 		if (ret < 0) {
 			sceSyscallLeave(t);
 			return ret;
 		}
 	} else {
-		ksceKernelUnlockFastMutex(&mutex);
+		sceKernelUnlockFastMutex(&mutex);
 	}
 
 	if (pls->frameEvent > 0)
-		ksceKernelPulseEvent(pls->frameEvent, heads[head].eventBits, 0);
+		sceKernelPulseEvent(pls->frameEvent, heads[head].eventBits, 0);
 	if (pParam != NULL && pls->frameBuf[head][0].notified == 0) {
 		SceUID callback = heads[head].frameBufCallback;
 
 		pls->frameBuf[head][0].notified = 1;
-		if (callback != 0 && ksceKernelNotifyCallback(callback, sceKernelGetProcessId()) < 0)
+		if (callback != 0 && sceKernelNotifyCallback(callback, sceKernelGetProcessId()) < 0)
 			heads[head].frameBufCallback = 0;
 	}
 	sceSyscallLeave(t);
@@ -1339,7 +1339,7 @@ int setFrameBufForCompat(int x, int y, int cropWidth, int cropHeight,
 unlockRange:
 	SceSysmemForDriver_22CBE925(0x30, convDst->base, size);
 unlock:
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -1375,7 +1375,7 @@ int ksceDisplaySetOwner(int head, int plane, SceUID pid)
 
 	if ((SceUInt32)head > 1 || (SceUInt32)plane > 1)
 		return SCE_DISPLAY_ERROR_INVALID_HEAD;
-	ret = ksceKernelLockFastMutex(&mutex);
+	ret = lockFastMutex(&mutex);
 	if (ret < 0)
 		return ret;
 	if (bootLogoShown && head == primaryHead && pid != -1) {
@@ -1388,7 +1388,7 @@ int ksceDisplaySetOwner(int head, int plane, SceUID pid)
 		h->plane[plane].owner = -1;
 		if (owner != -1)
 			blankPlane(h, plane);
-		ksceKernelUnlockFastMutex(&mutex);
+		sceKernelUnlockFastMutex(&mutex);
 		return 0;
 	}
 	if (owner != pid
@@ -1398,7 +1398,7 @@ int ksceDisplaySetOwner(int head, int plane, SceUID pid)
 		if (rec->paddr == 0) {
 			ret = blankPlane(h, plane);
 			if (ret >= 0) {
-				ksceKernelUnlockFastMutex(&mutex);
+				sceKernelUnlockFastMutex(&mutex);
 				return 0;
 			}
 		} else if (rec->cropWidth == 0) {
@@ -1413,7 +1413,7 @@ int ksceDisplaySetOwner(int head, int plane, SceUID pid)
 			ksceIftuSetInputFrameBuffer(h->iftuPlane[plane], &state, (rec->flags >> 20) & 1, 1);
 		}
 	}
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 	return ret;
 }
 
@@ -1439,7 +1439,7 @@ int __attribute__((pcs("aapcs-vfp"))) ksceDisplaySetScaleConf(float scale, SceUI
 	} else if (scale != scale) {
 		return SCE_DISPLAY_ERROR_INVALID_VALUE;
 	}
-	ret = ksceKernelLockFastMutex(&mutex);
+	ret = lockFastMutex(&mutex);
 	if (ret < 0)
 		return ret;
 	h = &heads[head];
@@ -1447,7 +1447,7 @@ int __attribute__((pcs("aapcs-vfp"))) ksceDisplaySetScaleConf(float scale, SceUI
 	h->plane[plane].scaleFlags = flags;
 	h->plane[plane].scale = scale;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 	return 0;
 }
 
@@ -1461,7 +1461,7 @@ int ksceDisplaySetMergeConf(SceUInt32 head, SceUInt32 setting, SceUInt32 alpha)
 		return SCE_DISPLAY_ERROR_INVALID_HEAD;
 	if (alpha > 0x100)
 		return SCE_DISPLAY_ERROR_INVALID_VALUE;
-	ret = ksceKernelLockFastMutex(&mutex);
+	ret = lockFastMutex(&mutex);
 	if (ret < 0)
 		return ret;
 	h = &heads[head];
@@ -1470,14 +1470,14 @@ int ksceDisplaySetMergeConf(SceUInt32 head, SceUInt32 setting, SceUInt32 alpha)
 	ret = ksceIftuSetMergeSetting(plane, setting);
 	if (ret < 0) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
-		ksceKernelUnlockFastMutex(&mutex);
+		sceKernelUnlockFastMutex(&mutex);
 		return ret;
 	}
 	h->mergeSetting = setting;
 	SceIftuForDriver_357EAE24(head * 2, 0);
 	SceIftuForDriver_357EAE24(plane, alpha);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 	return 0;
 }
 
@@ -1574,7 +1574,7 @@ int ksceDisplaySetViewportConf(SceUInt32 head, SceUInt32 plane, const SceDisplay
 			return SCE_DISPLAY_ERROR_INVALID_VALUE;
 		}
 	}
-	ret = ksceKernelLockFastMutex(&mutex);
+	ret = lockFastMutex(&mutex);
 	if (ret < 0)
 		return ret;
 	h = &heads[head];
@@ -1604,7 +1604,7 @@ int ksceDisplaySetViewportConf(SceUInt32 head, SceUInt32 plane, const SceDisplay
 						 rec->flags, 1);
 		}
 	}
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 	return 0;
 }
 
@@ -1621,7 +1621,7 @@ int ksceDisplayGetActualViewportConf(SceUInt32 head, SceUInt32 plane, SceDisplay
 		return SCE_DISPLAY_ERROR_INVALID_HEAD;
 	if (conf == NULL || conf->size != sizeof(*conf))
 		return SCE_DISPLAY_ERROR_INVALID_VALUE;
-	ret = ksceKernelLockFastMutex(&mutex);
+	ret = lockFastMutex(&mutex);
 	if (ret < 0)
 		return ret;
 	h = &heads[head];
@@ -1630,12 +1630,12 @@ int ksceDisplayGetActualViewportConf(SceUInt32 head, SceUInt32 plane, SceDisplay
 		conf->y = 0;
 		conf->width = 0;
 		conf->height = 0;
-		ksceKernelUnlockFastMutex(&mutex);
+		sceKernelUnlockFastMutex(&mutex);
 		return 0;
 	}
 	ret = ksceKernelGetProcessLocalStorageAddrForPid(h->plane[plane].owner, plsKey, (void **)&pls, 0);
 	if (ret < 0) {
-		ksceKernelUnlockFastMutex(&mutex);
+		sceKernelUnlockFastMutex(&mutex);
 		return ret;
 	}
 	intr = SceCpuForDriver_D32ACE9E(&h->lock);
@@ -1662,7 +1662,7 @@ int ksceDisplayGetActualViewportConf(SceUInt32 head, SceUInt32 plane, SceDisplay
 		conf->height = 0;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 	return 0;
 }
 
@@ -1780,7 +1780,7 @@ int ksceDisplaySetFrameBufInternal(int head, int plane, const SceDisplayFrameBuf
 	SceUInt32 t;
 
 	t = sceSyscallEnter();
-	ret = ksceKernelLockFastMutex(&mutex);
+	ret = lockFastMutex(&mutex);
 	if (ret < 0) {
 		sceSyscallLeave(t);
 		return ret;
@@ -1981,22 +1981,22 @@ set:
 	rec->flags = resolution;
 
 notify:
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 	if (pls->frameEvent > 0)
-		ksceKernelPulseEvent(pls->frameEvent, h->eventBits, 0);
+		sceKernelPulseEvent(pls->frameEvent, h->eventBits, 0);
 	if (devStatus != NULL && head == primaryHead && sceKernelGetProcessId() == devOwnerPid)
 		*devStatus = sync == 1 ? 0x10800000 : 0x10000000;
 	if (pParam != NULL && rec->notified == 0) {
 		callback = h->frameBufCallback;
 		rec->notified = 1;
-		if (callback != 0 && ksceKernelNotifyCallback(callback, sceKernelGetProcessId()) < 0)
+		if (callback != 0 && sceKernelNotifyCallback(callback, sceKernelGetProcessId()) < 0)
 			h->frameBufCallback = 0;
 	}
 	sceSyscallLeave(t);
 	return 0;
 
 unlock:
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -2017,7 +2017,7 @@ int ksceDisplayGetFrameBufInternal(int head, int plane, SceDisplayFrameBuf *pPar
 	if ((SceUInt32)sync > 1)
 		return SCE_DISPLAY_ERROR_INVALID_UPDATETIMING;
 	t = sceSyscallEnter();
-	ret = ksceKernelLockFastMutex(&mutex);
+	ret = lockFastMutex(&mutex);
 	if (ret < 0) {
 		sceSyscallLeave(t);
 		return ret;
@@ -2027,7 +2027,7 @@ int ksceDisplayGetFrameBufInternal(int head, int plane, SceDisplayFrameBuf *pPar
 	if (size > DISPLAY_FRAMEBUF_PARAM_SIZE)
 		size = DISPLAY_FRAMEBUF_PARAM_SIZE;
 	memcpy(pParam, &pls->frameBuf[head][plane], size);
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 	sceSyscallLeave(t);
 	return 0;
 }
@@ -2047,7 +2047,7 @@ int ksceDisplaySetFrameBuf(const SceDisplayFrameBuf *pParam, int sync)
 	int ret;
 
 	t = sceSyscallEnter();
-	ret = ksceKernelLockFastMutex(&mutex);
+	ret = lockFastMutex(&mutex);
 	if (ret < 0) {
 		sceSyscallLeave(t);
 		return ret;
@@ -2056,7 +2056,7 @@ int ksceDisplaySetFrameBuf(const SceDisplayFrameBuf *pParam, int sync)
 	ret = ksceDisplaySetFrameBufInternal(0, 0, pParam, sync);
 	sceSyscallLeave(u);
 	if (ret < 0) {
-		ksceKernelUnlockFastMutex(&mutex);
+		sceKernelUnlockFastMutex(&mutex);
 		sceSyscallLeave(t);
 		return ret;
 	}
@@ -2064,11 +2064,11 @@ int ksceDisplaySetFrameBuf(const SceDisplayFrameBuf *pParam, int sync)
 	ret = ksceDisplaySetFrameBufInternal(1, 0, pParam, sync);
 	sceSyscallLeave(u);
 	if (ret < 0) {
-		ksceKernelUnlockFastMutex(&mutex);
+		sceKernelUnlockFastMutex(&mutex);
 		sceSyscallLeave(t);
 		return ret;
 	}
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 	sceSyscallLeave(t);
 	return 0;
 }
@@ -2090,7 +2090,7 @@ int ksceDisplayGetFrameBuf(SceDisplayFrameBuf *pParam, int sync)
 	if ((SceUInt32)sync > 1)
 		return SCE_DISPLAY_ERROR_INVALID_UPDATETIMING;
 	t = sceSyscallEnter();
-	ret = ksceKernelLockFastMutex(&mutex);
+	ret = lockFastMutex(&mutex);
 	if (ret < 0) {
 		sceSyscallLeave(t);
 		return ret;
@@ -2100,7 +2100,7 @@ int ksceDisplayGetFrameBuf(SceDisplayFrameBuf *pParam, int sync)
 	if (size > DISPLAY_FRAMEBUF_PARAM_SIZE)
 		size = DISPLAY_FRAMEBUF_PARAM_SIZE;
 	memcpy(pParam, &pls->frameBuf[head][0], size);
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 	sceSyscallLeave(t);
 	return 0;
 }
@@ -2119,7 +2119,7 @@ int ksceDisplayGetProcFrameBufInternal(SceUID pid, int head, int plane,
 		return SCE_DISPLAY_ERROR_INVALID_ADDR;
 	if (info->size != sizeof(*info))
 		return SCE_DISPLAY_ERROR_INVALID_VALUE;
-	ret = ksceKernelLockFastMutex(&mutex);
+	ret = lockFastMutex(&mutex);
 	if (ret < 0)
 		return ret;
 	if (pid == -1)
@@ -2128,7 +2128,7 @@ int ksceDisplayGetProcFrameBufInternal(SceUID pid, int head, int plane,
 		pid = sceKernelGetProcessId();
 	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, plsKey, (void **)&pls, 0);
 	if (ret < 0) {
-		ksceKernelUnlockFastMutex(&mutex);
+		sceKernelUnlockFastMutex(&mutex);
 		return ret;
 	}
 	info->pid = pid;
@@ -2140,7 +2140,7 @@ int ksceDisplayGetProcFrameBufInternal(SceUID pid, int head, int plane,
 	info->paddr = paddr;
 	info->framebuf = pls->frameBuf[head][plane].frameBuf;
 	info->resolution = pls->frameBuf[head][plane].resolution;
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 	return 0;
 }
 
@@ -2157,7 +2157,7 @@ static inline __attribute__((always_inline)) int waitProcessFrame(DisplayProcess
 	SceUInt32 timeout = 64000;
 	int ret;
 
-	ret = ksceKernelWaitEvent(pls->frameEvent, heads[head].eventBits, NULL, NULL, &timeout);
+	ret = SceThreadmgrForDriver_C529EA32(pls->frameEvent, heads[head].eventBits, NULL, NULL, &timeout);
 	if (ret == SCE_KERNEL_ERROR_WAIT_TIMEOUT)
 		return ksceDisplayWaitVblankStartInternal(head);
 	return ret;
@@ -2249,7 +2249,7 @@ static inline __attribute__((always_inline)) int captureFrameBufIftu(SceUID pid,
 	src.scaleY = 0;
 	src.dst_x = 0;
 	src.dst_y = 0;
-	ret = ksceKernelLockFastMutex(&mutex);
+	ret = lockFastMutex(&mutex);
 	if (ret < 0)
 		goto release;
 	rec = &pls->frameBuf[head][plane];
@@ -2264,7 +2264,7 @@ static inline __attribute__((always_inline)) int captureFrameBufIftu(SceUID pid,
 		src.dst_x = rec->cropX;
 		src.dst_y = rec->cropY;
 	}
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 	if (iftuFormat == 0) {
 		ret = SCE_DISPLAY_ERROR_NO_PIXEL_DATA;
 		goto release;
@@ -2378,12 +2378,12 @@ static inline __attribute__((always_inline)) int captureFrameBufDmac(SceUID pid,
 		goto release;
 	}
 	timeout = 64000;
-	ret = ksceKernelWaitEvent(pls->frameEvent, heads[head].eventBits, NULL, NULL, &timeout);
+	ret = SceThreadmgrForDriver_C529EA32(pls->frameEvent, heads[head].eventBits, NULL, NULL, &timeout);
 	if (ret == SCE_KERNEL_ERROR_WAIT_TIMEOUT)
 		ret = ksceDisplayWaitVblankStartInternal(head);
 	if (ret < 0)
 		goto release;
-	ret = ksceKernelLockFastMutex(&mutex);
+	ret = lockFastMutex(&mutex);
 	if (ret < 0)
 		goto release;
 	rec = &pls->frameBuf[head][plane];
@@ -2395,7 +2395,7 @@ static inline __attribute__((always_inline)) int captureFrameBufDmac(SceUID pid,
 	if (rec->frameBuf.height < height)
 		height = rec->frameBuf.height;
 	pixelformat = rec->frameBuf.pixelformat;
-	ksceKernelUnlockFastMutex(&mutex);
+	sceKernelUnlockFastMutex(&mutex);
 	if (iftuFormat == 0) {
 		ret = SCE_DISPLAY_ERROR_NO_PIXEL_DATA;
 		goto release;
@@ -2471,7 +2471,7 @@ int ksceDisplayRegisterFrameBufCallbackInternal(int head, SceUID uid)
 
 	if ((SceUInt32)head > 2)
 		return SCE_DISPLAY_ERROR_INVALID_HEAD;
-	ret = ksceKernelGetThreadmgrUIDClass(uid);
+	ret = sceKernelGetThreadmgrUIDClass(uid);
 	if (ret < 0)
 		return ret;
 	if (ret != 8)
@@ -2487,7 +2487,7 @@ int ksceDisplayRegisterFrameBufCallback(SceUID uid)
 
 	if (head > 2)
 		return SCE_DISPLAY_ERROR_INVALID_HEAD;
-	ret = ksceKernelGetThreadmgrUIDClass(uid);
+	ret = sceKernelGetThreadmgrUIDClass(uid);
 	if (ret < 0)
 		return ret;
 	if (ret != 8)

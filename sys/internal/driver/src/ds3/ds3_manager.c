@@ -47,7 +47,7 @@ int ds3PortManagerThread(SceSize args, void *argp)
 
 	for (;;) {
 		timeout = 3000000;
-		result = ksceKernelWaitEventFlag(ds3PortManager.workEvent, 1, 3,
+		result = sceKernelWaitEventFlag(ds3PortManager.workEvent, 1, 3,
 			NULL, &timeout);
 		refresh = result != (int)0x80028005;
 		if (refresh)
@@ -94,26 +94,26 @@ int ds3InitializePortManager(void)
 	int result;
 
 	memset(&ds3PortManager, 0, sizeof(ds3PortManager));
-	ksceKernelInitializeFastMutex((SceKernelFastMutex *)&ds3PortManager.mutex,
+	sceKernelInitializeFastMutex((SceKernelFastMutex *)&ds3PortManager.mutex,
 		"SceDs3Manager", 0x2000, NULL);
-	result = ksceKernelCreateEventFlag("SceDs3Manager", 0x1000, 0, NULL);
+	result = sceKernelCreateEventFlag("SceDs3Manager", 0x1000, 0, NULL);
 	ds3PortManager.workEvent = result;
 	if (result < 0)
 		return result;
-	result = ksceKernelCreateThread("SceDs3Manager", ds3PortManagerThread,
+	result = sceKernelCreateThread("SceDs3Manager", ds3PortManagerThread,
 		0x60, 0x2000, 0x10000000, 0x80000,
 		(const SceKernelThreadOptParam *)&option);
 	ds3PortManager.workerThread = result;
 	if (result < 0)
 		return result;
-	return ksceKernelStartThread(result, 0, NULL);
+	return sceKernelStartThread(result, 0, NULL);
 }
 
 int ds3SignalPortChange(void)
 {
-	ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3PortManager.mutex);
-	ksceKernelSetEventFlag(ds3PortManager.workEvent, 1);
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3PortManager.mutex);
+	lockFastMutex((SceKernelFastMutex *)&ds3PortManager.mutex);
+	sceKernelSetEventFlag(ds3PortManager.workEvent, 1);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3PortManager.mutex);
 	return 0;
 }
 

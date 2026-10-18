@@ -29,7 +29,7 @@ int sceAudioInReleasePort(int port)
 		writeTpidruro(userState);
 		return pid;
 	}
-	ksceKernelLockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+	lockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 	portPid = g_audioInPorts[0].pid;
 	if (portPid == pid && g_audioInPorts[0].port == port) {
 		index = 0;
@@ -50,7 +50,7 @@ int sceAudioInReleasePort(int port)
 		index = 3;
 		goto found;
 	}
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 	writeTpidruro(userState);
 	return SCE_AUDIO_IN_ERROR_NOT_OPENED;
 found:
@@ -58,9 +58,9 @@ found:
 	if (entry->eventFlag) {
 		if (entry->flags & 0x10) {
 			entry->flags &= ~0x86u;
-			ksceKernelSetEventFlag(entry->eventFlag, 1024);
+			sceKernelSetEventFlag(entry->eventFlag, 1024);
 		} else {
-			ksceKernelDeleteEventFlag(entry->eventFlag);
+			sceKernelDeleteEventFlag(entry->eventFlag);
 			entry->eventFlag = 0;
 		}
 	}
@@ -72,7 +72,7 @@ found:
 	entry->port = 0;
 	if (closed)
 		closed(portPid);
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 	writeTpidruro(userState);
 	return 0;
 }
@@ -92,7 +92,7 @@ int sceAudioInInput(int port, void *destPtr)
 	result = sceKernelGetProcessId();
 	if (result < 0)
 		goto done;
-	ksceKernelLockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+	lockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 	if (result == g_audioInPorts[0].pid && port == g_audioInPorts[0].port)
 		index = 0;
 	else if (result == g_audioInPorts[1].pid && port == g_audioInPorts[1].port)
@@ -108,20 +108,20 @@ int sceAudioInInput(int port, void *destPtr)
 		goto notOpened;
 	if (!destPtr) {
 		result = SCE_AUDIO_IN_ERROR_INVALID_POINTER;
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 		goto done;
 	}
 	entry->flags |= 4;
 	entry->destPtr = destPtr;
 	entry->auxiliaryDestinations[0] = NULL;
 	entry->auxiliaryDestinations[1] = NULL;
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 	eventFlag = entry->eventFlag;
 	entry->flags |= 0x10;
-	result = ksceKernelWaitEventFlag(eventFlag, 1807, 5, &bits, NULL);
+	result = sceKernelWaitEventFlag(eventFlag, 1807, 5, &bits, NULL);
 	entry->flags &= ~0x10u;
 	if (bits & 0x400) {
-		ksceKernelDeleteEventFlag(entry->eventFlag);
+		sceKernelDeleteEventFlag(entry->eventFlag);
 		entry->eventFlag = 0;
 	}
 	if ((g_audioInRequestFlags & 2) || result >= 0) {
@@ -131,7 +131,7 @@ int sceAudioInInput(int port, void *destPtr)
 	goto done;
 notOpened:
 	result = SCE_AUDIO_IN_ERROR_NOT_OPENED;
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 done:
 	writeTpidruro(userState);
 	return result;
@@ -153,7 +153,7 @@ int sceAudioInInputWithInputDeviceState(int port, void *destPtr,
 	result = sceKernelGetProcessId();
 	if (result < 0)
 		goto done;
-	ksceKernelLockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+	lockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 	if (result == g_audioInPorts[0].pid && port == g_audioInPorts[0].port)
 		index = 0;
 	else if (result == g_audioInPorts[1].pid && port == g_audioInPorts[1].port)
@@ -169,21 +169,21 @@ int sceAudioInInputWithInputDeviceState(int port, void *destPtr,
 		goto notOpened;
 	if (!destPtr) {
 		result = SCE_AUDIO_IN_ERROR_INVALID_POINTER;
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 		goto done;
 	}
 	entry->flags |= 4;
 	entry->auxiliaryDestinations[0] = NULL;
 	entry->auxiliaryDestinations[1] = NULL;
 	entry->destPtr = destPtr;
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 	eventFlag = entry->eventFlag;
 	entry->flags |= 0x10;
-	result = ksceKernelWaitEventFlag(eventFlag, 1807, 5, &bits, NULL);
+	result = sceKernelWaitEventFlag(eventFlag, 1807, 5, &bits, NULL);
 	deleteEvent = (bits & 0x400) != 0;
 	entry->flags &= ~0x10u;
 	if (deleteEvent) {
-		ksceKernelDeleteEventFlag(entry->eventFlag);
+		sceKernelDeleteEventFlag(entry->eventFlag);
 		entry->eventFlag = 0;
 	}
 	if ((g_audioInRequestFlags & 2) || result >= 0) {
@@ -205,7 +205,7 @@ int sceAudioInInputWithInputDeviceState(int port, void *destPtr,
 	goto done;
 notOpened:
 	result = SCE_AUDIO_IN_ERROR_NOT_OPENED;
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 done:
 	writeTpidruro(userState);
 	return result;
@@ -284,7 +284,7 @@ int SceAudioInForDriver_005A2A31(void)
 int SceAudioInForDriver_E4042F6F(int pid, int unusedArgument1,
 		int unusedArgument2, int delay)
 {
-	ksceKernelLockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+	lockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 	g_audioInOwnerPid = pid;
 #define ACTIVATE_OWNER_PORT(index) do { \
 	if (g_audioInPorts[index].pid == pid) { \
@@ -324,7 +324,7 @@ int SceAudioInForDriver_E4042F6F(int pid, int unusedArgument1,
 #undef MUTE_OWNER_PORT
 	}
 	SceCpuForDriver_BC248C30(&g_audioInRequestFlags, 256);
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 	return 0;
 }
 
@@ -361,32 +361,32 @@ int module_start(SceSize unusedSize, const void *unusedArgument)
 	int event, result;
 
 	memset(g_audioInPorts, 0, sizeof(g_audioInPorts));
-	ksceKernelInitializeFastMutex((SceKernelFastMutex *)&g_audioInLock,
+	sceKernelInitializeFastMutex((SceKernelFastMutex *)&g_audioInLock,
 			g_audioInMutexName, 2, NULL);
 	g_audioInCaptureDevice = 0;
 	g_audioInRequestedInput = 2;
-	event = ksceKernelCreateEventFlag(g_audioInRequestEventName, 0, 0, NULL);
+	event = sceKernelCreateEventFlag(g_audioInRequestEventName, 0, 0, NULL);
 	g_audioInRequestEventFlag = event;
 	if (event < 0)
 		goto failed;
-	event = ksceKernelCreateEventFlag(g_audioInAecRequestEventName, 0, 0, NULL);
+	event = sceKernelCreateEventFlag(g_audioInAecRequestEventName, 0, 0, NULL);
 	g_audioInAecEventFlag = event;
 	if (event < 0)
 		goto failed;
-	event = ksceKernelCreateThread(g_audioInInputThreadName, audioInCaptureThread,
+	event = sceKernelCreateThread(g_audioInInputThreadName, audioInCaptureThread,
 			19, 4096, 0, 0x80000, NULL);
 	g_audioInInputThreadId = event;
 	if (event < 0)
 		goto failed;
-	result = ksceKernelStartThread(event, 0, NULL);
+	result = sceKernelStartThread(event, 0, NULL);
 	if (result < 0)
 		return result;
-	event = ksceKernelCreateThread(g_audioInAecThreadName, audioInAecThread,
+	event = sceKernelCreateThread(g_audioInAecThreadName, audioInAecThread,
 			19, 4096, 0, 0x80000, NULL);
 	g_audioInAecThreadId = event;
 	if (event < 0)
 		goto failed;
-	result = ksceKernelStartThread(event, 0, NULL);
+	result = sceKernelStartThread(event, 0, NULL);
 	if (result < 0)
 		return result;
 	sceKernelRegisterSysEventHandler(g_audioInModuleName, audioInSysEventHandler, NULL);
@@ -433,7 +433,7 @@ int sceAudioInSelectInput(int input)
 		g_audioInRequestedInput = input;
 		SceCpuForDriver_BC248C30(&g_audioInRequestFlags, 512);
 		event = g_audioInAppliedInput == 16 ? 264 : 256;
-		result = ksceKernelSetEventFlag(g_audioInRequestEventFlag, event);
+		result = sceKernelSetEventFlag(g_audioInRequestEventFlag, event);
 	}
 	writeTpidruro(userState);
 	return result;
@@ -450,16 +450,16 @@ int sceAudioInGetInput(void)
 
 int SceAudioInForDriver_3D164387(const int16_t *samples, int count)
 {
-	int result = ksceKernelLockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+	int result = lockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 
 	if (result < 0)
 		return result;
 	if (g_audioInCaptureDevice == 1) {
 		writeAudioInLegacyQueue(samples, count);
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
-		return ksceKernelSetEventFlag(g_audioInRequestEventFlag, 4);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+		return sceKernelSetEventFlag(g_audioInRequestEventFlag, 4);
 	}
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 	return -1;
 }
 

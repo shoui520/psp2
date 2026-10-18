@@ -30,9 +30,9 @@ int readIoChunkByPread(IoRequest *req, IoChunk *chunk)
 	}
 	if (req->mntOpt & 0x10000) {
 		SCE_DBG_ASSERT(g_ioPfsPreadEnabled != 0, 673);
-		ret = ksceKernelRunWithStack(0x2000, NULL, &param);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, NULL, &param);
 	} else {
-		ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsPread, &param);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsPread, &param);
 	}
 	if (ret == SCE_ERROR_ERRNO_EUNSUP)
 		SCE_DBG_ASSERT(0, 697);
@@ -65,8 +65,8 @@ int sceIoRequestQueueAddIoRequest(IoRequestQueue *queue, IoRequest *req)
 	req->next = NULL;
 	req->prev = NULL;
 	SCE_DBG_PRINTF_LEVEL(2, 0, 107, "%s %d : tid 0x%x, prio %d\n",
-			"sceIoRequestQueueAddIoRequest", 107, ksceKernelGetThreadId(),
-			ksceKernelGetThreadCurrentPriority());
+			"sceIoRequestQueueAddIoRequest", 107, sceKernelGetThreadId(),
+			sceKernelGetThreadCurrentPriority());
 	if (queue->tail != NULL) {
 		SCE_DBG_ASSERT(queue->tail->next != req, 113);
 		queue->tail->next = req;
@@ -123,7 +123,7 @@ IoRequest *sceIoRequestQueueGetIoRequest(IoRequestQueue *queue, int *waiting)
 	req = queue->head;
 	*waiting = 0;
 	if (getIofilemgrTls()->isCountedWorker == 1) {
-		thid = ksceKernelGetThreadId();
+		thid = sceKernelGetThreadId();
 		while (req != NULL && req->thid != thid &&
 				(req->isRunning != 1 ||
 				 (int)req->doneChunkNum - (int)req->runningChunkNum <= 0) &&
@@ -381,9 +381,9 @@ static inline __attribute__((always_inline)) int readIoChunkByRead(IoRequest *re
 	param.size = chunk != NULL ? chunk->size : 0;
 	if (req->mntOpt & 0x10000) {
 		SCE_DBG_ASSERT_FUNC(g_ioPfsReadEnabled != 0, 619, "readIoChunkByRead");
-		return ksceKernelRunWithStack(0x2000, NULL, &param);
+		return SceThreadmgrForDriver_E54FD746(0x2000, NULL, &param);
 	}
-	return ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsRead, &param);
+	return SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsRead, &param);
 }
 
 int sceIoRequestQueueExecuteIoChunk(IoRequest *req, IoChunk *chunk)
@@ -407,9 +407,9 @@ int sceIoRequestQueueExecuteIoChunk(IoRequest *req, IoChunk *chunk)
 		param.rw.size = chunk != NULL ? chunk->size : 0;
 		if (req->mntOpt & 0x10000) {
 			SCE_DBG_ASSERT(g_ioPfsWriteEnabled != 0, 743);
-			return ksceKernelRunWithStack(0x2000, NULL, &param.rw);
+			return SceThreadmgrForDriver_E54FD746(0x2000, NULL, &param.rw);
 		}
-		return ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsWrite, &param.rw);
+		return SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsWrite, &param.rw);
 	case IO_REQUEST_PREAD:
 		return readIoChunkByPread(req, chunk);
 	case IO_REQUEST_PWRITE:
@@ -425,9 +425,9 @@ int sceIoRequestQueueExecuteIoChunk(IoRequest *req, IoChunk *chunk)
 		}
 		if (req->mntOpt & 0x10000) {
 			SCE_DBG_ASSERT(g_ioPfsPwriteEnabled != 0, 789);
-			return ksceKernelRunWithStack(0x2000, NULL, &param.prw);
+			return SceThreadmgrForDriver_E54FD746(0x2000, NULL, &param.prw);
 		}
-		return ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsPwrite, &param.prw);
+		return SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsPwrite, &param.prw);
 	default:
 		SCE_DBG_ASSERT(0, 811);
 		return 0;

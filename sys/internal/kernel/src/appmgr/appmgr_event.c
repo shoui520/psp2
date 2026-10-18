@@ -161,7 +161,7 @@ int _sendParam(const char *name, const AppmgrParamQueueEntry *entry,
 	SceUID callbackId, sourcePid;
 	int result, processId, sourceProcessId;
 
-	if (g_appmgrMainMutexOwner == ksceKernelGetThreadId()) {
+	if (g_appmgrMainMutexOwner == sceKernelGetThreadId()) {
 #if FW_DEBUG
 		sceAppMgrDump();
 		dumpBgmState();
@@ -209,7 +209,7 @@ int _sendParam(const char *name, const AppmgrParamQueueEntry *entry,
 			break;
 		PARAM_UNLOCK_APP(app, 76, "_sendParam");
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 82, "Failed to lock ret=0x%08x\n", result);
@@ -220,11 +220,11 @@ int _sendParam(const char *name, const AppmgrParamQueueEntry *entry,
 		appmgrParamQueueMutexPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	if (app->budgetType == 1 && entry->param[0] == 0) {
 		if (entry->callbackId > 0 &&
-		    ksceKernelNotifyCallback(entry->callbackId, 0) != 0)
+		    sceKernelNotifyCallback(entry->callbackId, 0) != 0)
 			SCE_DBG_PRINTF(0, 90,
 				"[SceAppMgr:Error] Notifying param pop callback failed\n");
 	} else {
@@ -232,7 +232,7 @@ int _sendParam(const char *name, const AppmgrParamQueueEntry *entry,
 		sourcePid = entry->sourcePid;
 		if (app->params.count == 4) {
 			if (callbackId > 0 &&
-			    ksceKernelNotifyCallback(callbackId, (int)0x8080201b) != 0)
+			    sceKernelNotifyCallback(callbackId, (int)0x8080201b) != 0)
 				SCE_DBG_PRINTF(0, 104,
 					"[SceAppMgr:Error] Notifying param pop callback failed\n");
 			*flags |= 1;
@@ -265,7 +265,7 @@ int _sendParam(const char *name, const AppmgrParamQueueEntry *entry,
 	app->paramDeliveryHandled = 1;
 	processId = app->process.processId;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -283,20 +283,20 @@ int _sendParam(const char *name, const AppmgrParamQueueEntry *entry,
 
 #if FW_DEBUG
 #define PARAM_LOCK(_line) do { \
-	int lockResult = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL); \
+	int lockResult = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL); \
 	if (lockResult != 0) { \
 		SCE_DBG_PRINTF(0, _line, "Failed to lock ret=0x%08x\n", lockResult); \
 		sceAppMgrDump(); \
 		dumpBgmState(); \
 		SCE_DBG_ASSERT_FAIL(_line); \
 	} else { \
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId(); \
+		g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
 	} \
 } while (0)
 #define PARAM_UNLOCK(_line) do { \
 	int unlockResult; \
 	g_appmgrMainMutexOwner = -1; \
-	unlockResult = ksceKernelUnlockMutex(g_appmgrMainMutex, 1); \
+	unlockResult = sceKernelUnlockMutex(g_appmgrMainMutex, 1); \
 	if (unlockResult != 0) { \
 		sceAppMgrDump(); \
 		dumpBgmState(); \
@@ -307,13 +307,13 @@ int _sendParam(const char *name, const AppmgrParamQueueEntry *entry,
 } while (0)
 #else
 #define PARAM_LOCK(_line) do { \
-	if (ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL) != 0) \
+	if (sceKernelLockMutex(g_appmgrMainMutex, 1, NULL) != 0) \
 		appmgrParamQueueMutexPanic(); \
-	g_appmgrMainMutexOwner = ksceKernelGetThreadId(); \
+	g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
 } while (0)
 #define PARAM_UNLOCK(_line) do { \
 	g_appmgrMainMutexOwner = -1; \
-	if (ksceKernelUnlockMutex(g_appmgrMainMutex, 1) != 0) \
+	if (sceKernelUnlockMutex(g_appmgrMainMutex, 1) != 0) \
 		appmgrParamQueueMutexPanic(); \
 } while (0)
 #endif
@@ -329,7 +329,7 @@ int sceAppMgrPeekLaunchParamForShell(int appId, char *param)
 
 	if (!SceSblACMgrForDriver_991FDC15(0) ||
 	    (shell = appmgrGetShellApp()) == NULL ||
-	    shell->process.processId != ksceKernelGetProcessId()) {
+	    shell->process.processId != sceKernelGetProcessId()) {
 		result = (int)0x8080201f;
 		goto leave;
 	}
@@ -338,7 +338,7 @@ int sceAppMgrPeekLaunchParamForShell(int appId, char *param)
 		goto leave;
 	}
 	PARAM_LOCK(209);
-	if (appmgrGetShellApp()->process.processId != ksceKernelGetProcessId()) {
+	if (appmgrGetShellApp()->process.processId != sceKernelGetProcessId()) {
 		PARAM_UNLOCK(212);
 		result = (int)0x8080201c;
 		goto leave;
@@ -386,7 +386,7 @@ int sceAppMgrOverwriteLaunchParamForShell(int appId, const char *param)
 
 	if (!SceSblACMgrForDriver_991FDC15(0) ||
 	    (shell = appmgrGetShellApp()) == NULL ||
-	    shell->process.processId != ksceKernelGetProcessId()) {
+	    shell->process.processId != sceKernelGetProcessId()) {
 		result = (int)0x8080201f;
 		goto leave;
 	}
@@ -395,7 +395,7 @@ int sceAppMgrOverwriteLaunchParamForShell(int appId, const char *param)
 		goto leave;
 	}
 	PARAM_LOCK(264);
-	if (appmgrGetShellApp()->process.processId != ksceKernelGetProcessId()) {
+	if (appmgrGetShellApp()->process.processId != sceKernelGetProcessId()) {
 		PARAM_UNLOCK(267);
 		result = (int)0x8080201c;
 		goto leave;
@@ -474,7 +474,7 @@ int _paramQueueCancelAll(AppmgrParamQueue *queue)
 		do {
 			callbackId = queue->entries[(index + first) % 4].callbackId;
 			if (callbackId > 0) {
-				result = ksceKernelNotifyCallback(callbackId, 0x8080201b);
+				result = sceKernelNotifyCallback(callbackId, 0x8080201b);
 #if FW_DEBUG
 				if (result)
 					SCE_DBG_PRINTF_FUNC(0, 427, "_paramQueueCancelAll",
@@ -500,7 +500,7 @@ int _appmgrQueueInit(void)
 	g_appmgrNotificationQueue.count = 0;
 	g_appmgrNotificationQueue.writeIndex = 0;
 	g_appmgrNotificationQueue.capacity = 4;
-	uid = ksceKernelCreateSema("SceAppMgrNtfQ", 0x8000, 0, 4, NULL);
+	uid = sceKernelCreateSema("SceAppMgrNtfQ", 0x8000, 0, 4, NULL);
 	g_appmgrNotificationQueue.readSemaphore = uid;
 	if (uid <= 0) {
 #if FW_DEBUG
@@ -512,7 +512,7 @@ int _appmgrQueueInit(void)
 			__builtin_return_address(0));
 #endif
 	}
-	uid = ksceKernelCreateSema("SceAppMgrNtfQ", 0x8000, 4, 4, NULL);
+	uid = sceKernelCreateSema("SceAppMgrNtfQ", 0x8000, 4, 4, NULL);
 	g_appmgrNotificationQueue.writeSemaphore = uid;
 	if (uid <= 0) {
 #if FW_DEBUG
@@ -524,7 +524,7 @@ int _appmgrQueueInit(void)
 			__builtin_return_address(0));
 #endif
 	}
-	uid = ksceKernelCreateMutex("SceAppMgrNtfQ", 0x8000, 0, NULL);
+	uid = sceKernelCreateMutex("SceAppMgrNtfQ", 0x8000, 0, NULL);
 	g_appmgrNotificationQueue.mutex = uid;
 	if (uid < 0) {
 #if FW_DEBUG
@@ -555,7 +555,7 @@ int _appmgrQueuePop(AppmgrNotificationRequest *request)
 		sceSyscallLeave(syscallState);
 		return 0x80802016;
 	}
-	result = ksceKernelPollSema(g_appmgrNotificationQueue.readSemaphore, 1);
+	result = sceKernelPollSema(g_appmgrNotificationQueue.readSemaphore, 1);
 	if (result) {
 		if (result != (int)0x80028102) {
 #if FW_DEBUG
@@ -573,7 +573,7 @@ int _appmgrQueuePop(AppmgrNotificationRequest *request)
 		sceSyscallLeave(syscallState);
 		return 0x80802024;
 	}
-	lockResult = ksceKernelLockMutex(g_appmgrNotificationQueue.mutex, 1, NULL);
+	lockResult = sceKernelLockMutex(g_appmgrNotificationQueue.mutex, 1, NULL);
 	if (lockResult) {
 		if ((SceUInt32)lockResult + 0x7ffd7fd4 > 1) {
 #if FW_DEBUG
@@ -587,7 +587,7 @@ int _appmgrQueuePop(AppmgrNotificationRequest *request)
 				__builtin_return_address(0), "0x%08x,0x%08x\n", lockResult, 0);
 #endif
 		}
-		result = ksceKernelSignalSema(g_appmgrNotificationQueue.readSemaphore, 1);
+		result = sceKernelSignalSema(g_appmgrNotificationQueue.readSemaphore, 1);
 		if (result) {
 #if FW_DEBUG
 			sceAppMgrDump();
@@ -621,7 +621,7 @@ int _appmgrQueuePop(AppmgrNotificationRequest *request)
 		g_appmgrNotificationQueue.entrySize * (index - count),
 		g_appmgrNotificationQueue.entrySize);
 	--g_appmgrNotificationQueue.count;
-	result = ksceKernelUnlockMutex(g_appmgrNotificationQueue.mutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrNotificationQueue.mutex, 1);
 	if (result) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -634,7 +634,7 @@ int _appmgrQueuePop(AppmgrNotificationRequest *request)
 			__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
 #endif
 	}
-	result = ksceKernelSignalSema(g_appmgrNotificationQueue.writeSemaphore, 1);
+	result = sceKernelSignalSema(g_appmgrNotificationQueue.writeSemaphore, 1);
 	if (result) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -667,7 +667,7 @@ int _appmgrQueuePush(const AppmgrNotificationRequest *request, int wait)
 	if (appmgrIsTrcCheckNotifyEnabled() != 1)
 		goto done;
 	if (wait) {
-		result = ksceKernelWaitSema(g_appmgrNotificationQueue.writeSemaphore,
+		result = sceKernelWaitSema(g_appmgrNotificationQueue.writeSemaphore,
 			1, NULL);
 		if (result) {
 			if ((SceUInt32)result + 0x7ffd7fd4 > 1) {
@@ -685,7 +685,7 @@ int _appmgrQueuePush(const AppmgrNotificationRequest *request, int wait)
 			goto done;
 		}
 	} else {
-		result = ksceKernelPollSema(g_appmgrNotificationQueue.writeSemaphore, 1);
+		result = sceKernelPollSema(g_appmgrNotificationQueue.writeSemaphore, 1);
 		if (result) {
 			if (result != (int)0x80028102) {
 #if FW_DEBUG
@@ -703,7 +703,7 @@ int _appmgrQueuePush(const AppmgrNotificationRequest *request, int wait)
 			goto done;
 		}
 	}
-	result = ksceKernelLockMutex(g_appmgrNotificationQueue.mutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrNotificationQueue.mutex, 1, NULL);
 	if (result) {
 		if ((SceUInt32)result + 0x7ffd7fd4 > 1) {
 #if FW_DEBUG
@@ -717,7 +717,7 @@ int _appmgrQueuePush(const AppmgrNotificationRequest *request, int wait)
 				__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
 #endif
 		}
-		result = ksceKernelSignalSema(g_appmgrNotificationQueue.writeSemaphore, 1);
+		result = sceKernelSignalSema(g_appmgrNotificationQueue.writeSemaphore, 1);
 		if (result) {
 #if FW_DEBUG
 			sceAppMgrDump();
@@ -747,7 +747,7 @@ int _appmgrQueuePush(const AppmgrNotificationRequest *request, int wait)
 	g_appmgrNotificationQueue.writeIndex =
 		(g_appmgrNotificationQueue.writeIndex + 1) % g_appmgrNotificationQueue.capacity;
 	++g_appmgrNotificationQueue.count;
-	result = ksceKernelUnlockMutex(g_appmgrNotificationQueue.mutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrNotificationQueue.mutex, 1);
 	if (result) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -760,7 +760,7 @@ int _appmgrQueuePush(const AppmgrNotificationRequest *request, int wait)
 			__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
 #endif
 	}
-	result = ksceKernelSignalSema(g_appmgrNotificationQueue.readSemaphore, 1);
+	result = sceKernelSignalSema(g_appmgrNotificationQueue.readSemaphore, 1);
 	if (result) {
 #if FW_DEBUG
 		sceAppMgrDump();

@@ -48,7 +48,7 @@ static inline int fiosPathIsDrive(const char *path)	/* name unknown */
 /* the caller may see and change this overlay of pid's */
 static inline int fiosOverlayIsAccessible(SceUID pid, const SceFiosOverlay *overlay)	/* name unknown */
 {
-	SceUID caller = ksceKernelGetProcessIdFromTLS();
+	SceUID caller = SceThreadmgrForDriver_FA54D49A();
 
 	return fiosCallerIsPrivileged(caller) ||
 	       ((signed char)overlay->order >= 0 && pid == caller && pid == overlay->pid);
@@ -165,7 +165,7 @@ int sceFiosKernelOverlayAddInternal(SceUID pid, const SceFiosOverlay *overlay, S
 	if (outId == NULL)
 		return SCE_FIOS_ERROR_BAD_PTR;
 	*outId = 0;
-	caller = ksceKernelGetProcessIdFromTLS();
+	caller = SceThreadmgrForDriver_FA54D49A();
 	if (!fiosCallerIsPrivileged(caller)) {
 		if (fiosPathIsDrive(overlay->dst))
 			return SCE_FIOS_ERROR_BAD_PATH;
@@ -212,7 +212,7 @@ int sceFiosKernelOverlayRemoveInternal(SceUID pid, SceFiosOverlayID id)
 	SceUID caller;
 	int i, ret;
 
-	caller = ksceKernelGetProcessIdFromTLS();
+	caller = SceThreadmgrForDriver_FA54D49A();
 	if (!fiosCallerIsPrivileged(caller) && (pid != caller || pid == -1))
 		return SCE_FIOS_ERROR_ACCESS;
 
@@ -259,7 +259,7 @@ void sceFiosKernelOverlayRemoveAll(SceUID pid)
 		found = 0;
 		for (i = 0; i < *table.count; i++) {
 			overlay = &table.overlays[i];
-			caller = ksceKernelGetProcessIdFromTLS();
+			caller = SceThreadmgrForDriver_FA54D49A();
 			if (fiosCallerIsPrivileged(caller)) {
 				if (overlay->order > maxOrder)
 					continue;
@@ -286,7 +286,7 @@ int sceFiosKernelOverlayGetInfoInternal(SceUID pid, SceFiosOverlayID id, SceFios
 
 	if (outOverlay == NULL)
 		return SCE_FIOS_ERROR_BAD_PTR;
-	caller = ksceKernelGetProcessIdFromTLS();
+	caller = SceThreadmgrForDriver_FA54D49A();
 	if (!fiosCallerIsPrivileged(caller) && (pid != caller || pid == -1))
 		return SCE_FIOS_ERROR_ACCESS;
 
@@ -313,7 +313,7 @@ int sceFiosKernelOverlayModifyInternal(SceUID pid, SceFiosOverlayID id, const Sc
 	SceUID caller;
 	int i, ret;
 
-	caller = ksceKernelGetProcessIdFromTLS();
+	caller = SceThreadmgrForDriver_FA54D49A();
 	if (!fiosCallerIsPrivileged(caller) && (pid != caller || pid == -1))
 		return SCE_FIOS_ERROR_ACCESS;
 	ret = fiosOverlayCopyIn(overlay, &copy);

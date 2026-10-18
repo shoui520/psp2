@@ -1158,7 +1158,7 @@ int vfsBuffCacheCtl(SceVfsVnode *vp, SceSize dataCacheSize, SceUInt32 wayNum, Sc
 	if (bc == NULL) {
 		memType = vfs_buff_mem_type(vp);
 		ret = vfsBuffAllocate(dataCacheSize, wayNum, lineSize, ioCacheSize,
-				      ksceKernelGetProcessIdFromTLS(),
+				      SceThreadmgrForDriver_FA54D49A(),
 				      memType, NULL, &newBc);
 		if (ret >= 0)
 			vp->core.bc = newBc;

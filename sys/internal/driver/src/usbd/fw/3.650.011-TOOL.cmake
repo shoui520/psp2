@@ -69,27 +69,27 @@ set(MODULE_IMPORT_NIDS
 	0x887F19D0:F:0x3DED57CC
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelGetThreadmgrUIDClass
+	sceKernelGetThreadmgrUIDClass
 	sceKernelExitThread
-	ksceKernelFinalizeFastMutex
-	ksceKernelDeleteSema
-	ksceKernelStartThread
-	ksceKernelUnregisterCallbackFromEvent
-	ksceKernelCreateSema
-	ksceKernelCreateSimpleEvent
-	ksceKernelWaitSema
-	ksceKernelWaitThreadEnd
+	sceKernelFinalizeFastMutex
+	sceKernelDeleteSema
+	sceKernelStartThread
+	sceKernelUnregisterCallbackFromEvent
+	sceKernelCreateSema
+	sceKernelCreateSimpleEvent
+	sceKernelWaitSema
+	sceKernelWaitThreadEnd
 	sceKernelDelayThread
-	ksceKernelLockFastMutex
-	ksceKernelRegisterCallbackToEvent
+	lockFastMutex
+	sceKernelRegisterCallbackToEventForDriver
 	sceKernelGetProcessId
-	ksceKernelDeleteThread
-	ksceKernelInitializeFastMutex
+	sceKernelDeleteThread
+	sceKernelInitializeFastMutex
 	sceKernelSetEventWithNotifyCallback
-	ksceKernelRegisterTimer
-	ksceKernelCreateThread
-	ksceKernelSignalSema
-	ksceKernelUnlockFastMutex
+	SceThreadmgrForDriver_C58DF384
+	sceKernelCreateThread
+	sceKernelSignalSema
+	sceKernelUnlockFastMutex
 	ksceKernelDisableIntr
 	ksceKernelRegisterIntrHandler
 	ksceKernelEnableIntr

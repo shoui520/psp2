@@ -68,18 +68,18 @@ static const char *const rdrfpSceSysFiles[] = { "sdslot.dat", "safemem.dat", NUL
 static inline __attribute__((always_inline)) void beginIo(RdrfpIoContext *ctx, int elevated)
 {
 	if (elevated) {
-		ctx->pid = ksceKernelSetProcessIdToTLS(RDRFP_PID_SCE_SYS);
-		ctx->permission = ksceKernelSetPermission(RDRFP_PERMISSION_SCE_SYS);
+		ctx->pid = SceThreadmgrForDriver_0486F239(RDRFP_PID_SCE_SYS);
+		ctx->permission = sceKernelSetThreadAccessLevel(RDRFP_PERMISSION_SCE_SYS);
 	} else {
-		ctx->pid = ksceKernelSetProcessIdToTLS(RDRFP_PID);
-		ctx->permission = ksceKernelSetPermission(RDRFP_PERMISSION);
+		ctx->pid = SceThreadmgrForDriver_0486F239(RDRFP_PID);
+		ctx->permission = sceKernelSetThreadAccessLevel(RDRFP_PERMISSION);
 	}
 }
 
 static inline __attribute__((always_inline)) void endIo(const RdrfpIoContext *ctx)
 {
-	ksceKernelSetProcessIdToTLS(ctx->pid);
-	ksceKernelSetPermission(ctx->permission);
+	SceThreadmgrForDriver_0486F239(ctx->pid);
+	sceKernelSetThreadAccessLevel(ctx->permission);
 }
 
 /* elevated, the others' permissions count as the owner's */

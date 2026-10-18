@@ -15,6 +15,7 @@
 #include <psp2kern/kernel/rtc.h>
 #include <sysmem/sysmem.h>
 #include <acmgr/acmgr.h>
+#include <threadmgr/threadmgr.h>
 
 /* Name unknown: driver-owned CBC chaining state after the compact schedule. */
 typedef struct KrmAesCbcContext {
@@ -194,7 +195,6 @@ unsigned int KrmDriverGetState(void);
 SceUID KrmDriverGetPID(void);
 void sceKrmDriverSetPID(SceUID pid);
 unsigned int KrmDriverGetAuthorization(SceUID pid);
-SceUID ksceKernelGetProcessId(void) __asm__("sceKernelGetProcessId");
 
 typedef struct KrmSignedNonce {
 	unsigned char nonce[16];
@@ -302,11 +302,6 @@ extern SceUID g_krmDriverPid;
 extern unsigned int g_krmDriverState;
 extern const SceKernelDebugInfo g_krmSetPidDebug;
 extern const char g_krmDriverMutexName[];
-
-int ksceKernelLockFastMutex(struct ThreadmgrFastMutex *mutex);
-int ksceKernelUnlockFastMutex(struct ThreadmgrFastMutex *mutex);
-int ksceKernelInitializeFastMutex(struct ThreadmgrFastMutex *mutex,
-				const char *name, int attr, void *opt);
 
 int KrmDriverLock(void);
 int KrmDriverUnlock(void);

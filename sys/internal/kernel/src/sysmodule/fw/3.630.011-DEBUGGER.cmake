@@ -64,16 +64,16 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelStopUnloadModuleForPid
 	ksceKernelLoadStartModuleForPid
 	ksceKernelLoadStartSharedModuleForPid
-	ksceKernelSetPermission
-	ksceKernelDeleteMutex
-	ksceKernelLockMutex
+	sceKernelSetThreadAccessLevel
+	sceKernelDeleteMutex
+	sceKernelLockMutex
 	sceKernelPMonSetControlRegister
-	ksceKernelUnlockMutex
+	sceKernelUnlockMutex
 	SceThreadmgrForDriver_20C228E4
 	sceKernelPMonSetUserEnableRegister
-	ksceKernelGetThreadId
+	sceKernelGetThreadId
 	sceKernelGetProcessId
-	ksceKernelCreateMutex
+	sceKernelCreateMutex
 	ksceKernelCreateProcessLocalStorage
 	SceProcessmgrForDriver_61B9B6FA
 	sceKernelSetPMUSERENR

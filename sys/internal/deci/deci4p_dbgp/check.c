@@ -366,7 +366,7 @@ int checkIllegalThreadStatusResumeThread(SceUID pid, SceUID thid)
 	int status;
 
 	guid = SceSysmemForDriver_45D22597(pid, thid);
-	status = ksceKernelIsThreadDebugSuspended(guid);
+	status = SceThreadmgrForDriver_A0B1AB21(guid);
 	if ((status & 1) != 0)
 		return 0;
 	SCE_PRINTF_WITH_INFO(15, 804, "0x%08x:0x%08x\n", thid, status);
@@ -383,14 +383,14 @@ int checkIllegalThreadStatusResumeProcess(SceUID pid, SceUID thid,
 	int status, result;
 
 	guid = SceSysmemForDriver_45D22597(pid, thid);
-	status = ksceKernelIsThreadDebugSuspended(guid);
+	status = SceThreadmgrForDriver_A0B1AB21(guid);
 	if (status < 0) {
 		SCE_PRINTF_WITH_INFO(15, 823, "0x%08x\n", status);
 		return status;
 	}
 	if (status == 0 || (status & 1) != 0)
 		return 0x20060;
-	result = ksceKernelGetThreadCpuRegisters(guid, &registers);
+	result = SceThreadmgrForDriver_5022689D(guid, &registers);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 845, "0x%08x\n", result);
 		return result;
@@ -428,7 +428,7 @@ int checkThreadIsSuspendedAlready(SceUID pid, SceUID thid)
 	int status;
 
 	guid = SceSysmemForDriver_45D22597(pid, thid);
-	status = ksceKernelIsThreadDebugSuspended(guid);
+	status = SceThreadmgrForDriver_A0B1AB21(guid);
 	if (status < 0) {
 		SCE_PRINTF_WITH_INFO(15, 913, "0x%08x\n", status);
 		return status;

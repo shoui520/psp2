@@ -362,7 +362,7 @@ void LibStubReleaseNidTable(LibStubNidTable *info)
 	if ((stub->linked == NULL || (stub->linked->exports->attr & LIBRARY_ATTR_SYSCALL) == 0) &&
 	    (stub->imports->attr & 8) != 0)
 		goto out;
-	t = ksceKernelGetSystemTimeLow();
+	t = SceThreadmgrForDriver_47F6DE49();
 	imp = stub->imports;
 	if (imp->nvar != 0) {
 		SceSysmemForKernel_FCB5745A((SceUInt32 *)imp->varent, t, imp->nvar);

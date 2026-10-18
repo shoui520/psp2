@@ -138,15 +138,15 @@ set(MODULE_IMPORT_FUNCS
 	memset
 	memcpy
 	__stack_chk_fail
-	ksceKernelWaitEventFlag
-	ksceKernelCreateCallback
-	ksceKernelStartThread
-	ksceKernelCreateEventFlag
+	sceKernelWaitEventFlag
+	sceKernelCreateCallback
+	sceKernelStartThread
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelPollEventFlag
-	ksceKernelNotifyCallback
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
+	sceKernelPollEventFlag
+	sceKernelNotifyCallback
+	sceKernelCreateThread
+	sceKernelSetEventFlag
 	sceKernelCheckCallback
 	sceKernelGetSystemTimeWide
 	SceSblAIMgrForDriver_4273B97B

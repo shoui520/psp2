@@ -823,7 +823,7 @@ restore:
  * Sony's sceKernelGetLwMutexInfoById: an unreadable work area still gives
  * the rest of the information.
  */
-int ksceKernelGetLwMutexInfo(SceUID lwMutexId, SceKernelLwMutexInfo *info)
+int sceKernelGetLwMutexInfoById(SceUID lwMutexId, SceKernelLwMutexInfo *info)
 {
 	struct ThreadmgrThreadObject *owner;
 	SceKernelLwMutexInfo local;

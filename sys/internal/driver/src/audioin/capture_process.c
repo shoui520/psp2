@@ -29,14 +29,14 @@ extern void resampleAudioInCapture(unsigned int stream, const int16_t *input,
 int audioInProcessKillHandler(SceUID pid, ProcEventParam *unusedParam,
 		int unusedArgument)
 {
-	ksceKernelLockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+	lockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 	CLOSE_PROCESS_PORT(0);
 	CLOSE_PROCESS_PORT(1);
 	CLOSE_PROCESS_PORT(2);
 	CLOSE_PROCESS_PORT(3);
 	if (g_audioInOwnerPid == pid)
 		g_audioInOwnerPid = -2;
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 	return 0;
 }
 
@@ -48,7 +48,7 @@ int audioInProcessStartHandler(SceUID pid, int unusedEventType,
 	    (g_audioInPorts[index].flags & 0x40)) { \
 		g_audioInPorts[index].flags &= ~0x40u; \
 		if (g_audioInPorts[index].eventFlag != 0) \
-			ksceKernelClearEventFlag(g_audioInPorts[index].eventFlag, ~1807u); \
+			sceKernelClearEventFlag(g_audioInPorts[index].eventFlag, ~1807u); \
 	} \
 } while (0)
 	RESTART_PROCESS_PORT(0);
@@ -57,7 +57,7 @@ int audioInProcessStartHandler(SceUID pid, int unusedEventType,
 	RESTART_PROCESS_PORT(3);
 #undef RESTART_PROCESS_PORT
 	SceCpuForDriver_BC248C30(&g_audioInRequestFlags, 256);
-	ksceKernelSetEventFlag(g_audioInRequestEventFlag, 256);
+	sceKernelSetEventFlag(g_audioInRequestEventFlag, 256);
 	return 0;
 }
 
@@ -74,7 +74,7 @@ int audioInAecThread(SceSize unusedSize, void *unusedArgument)
 		int codecFlags, selectedGain;
 		unsigned int requestFlags;
 
-		ksceKernelWaitEventFlag(g_audioInAecEventFlag, 1, 5, NULL, NULL);
+		sceKernelWaitEventFlag(g_audioInAecEventFlag, 1, 5, NULL, NULL);
 		SceCpuForDriver_BC248C30(&g_audioInAecFlags, 1);
 		if (g_audioInAecEnabled != 0 && g_audioInCaptureDevice != 1) {
 #define REQUIRE_AEC(index) do { \

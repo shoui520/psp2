@@ -170,7 +170,7 @@ static int _workerThread(SceSize args, void *argp)
 	int ret;
 
 	for (;;) {
-		ret = ksceKernelWaitEventFlag(s_stsmp.evf, STSMP_EVF_SEND,
+		ret = sceKernelWaitEventFlag(s_stsmp.evf, STSMP_EVF_SEND,
 					    SCE_KERNEL_EVF_WAITMODE_OR |
 					    SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, NULL);
 		if (ret < 0)
@@ -203,7 +203,7 @@ static __attribute__((noinline, noclone)) int stsmpQueue(const void *pkt, SceSiz
 	if (next > STSMP_QUEUE - 1)
 		s_stsmp.tx.write = 0;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_stsmpLock, intr);
-	return ksceKernelSetEventFlag(s_stsmp.evf, STSMP_EVF_SEND);
+	return sceKernelSetEventFlag(s_stsmp.evf, STSMP_EVF_SEND);
 }
 
 /* (SceSysrootForDriver_E541959B) a boot parameter (0 / 1) to the host */
@@ -311,11 +311,11 @@ int stsmpInit(SDfCtlPd *pd)
 	s_stsmp.tx.buf[1] = (SceUInt8 *)s_txBuf + STSMP_QUEUE;
 	s_stsmp.tx.buf[2] = (SceUInt8 *)s_txBuf + 2 * STSMP_QUEUE;
 
-	uid = ksceKernelCreateThread("SceDeci4pSDfCtl", _workerThread, 0x1e, 0x2000, 0, 0x80000, NULL);
+	uid = sceKernelCreateThread("SceDeci4pSDfCtl", _workerThread, 0x1e, 0x2000, 0, 0x80000, NULL);
 	if (uid < 0)
 		return uid;
 	s_stsmp.thread = uid;
-	uid = ksceKernelCreateEventFlag("SceDeci4pSDfCtl", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
+	uid = sceKernelCreateEventFlag("SceDeci4pSDfCtl", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (uid < 0) {
 		SDFCTL_PRINTF(139, "CreateEventFlag failed (0x%08X)\n", uid);
 		return uid;
@@ -337,6 +337,6 @@ int stsmpInit(SDfCtlPd *pd)
 		return ret;
 	}
 	sceKernelRegisterSysEventHandler("SceDeci4pSDfCtl", stsmpSysEventHandler, NULL);
-	ret = ksceKernelStartThread(s_stsmp.thread, 0, NULL);
+	ret = sceKernelStartThread(s_stsmp.thread, 0, NULL);
 	return ret < 0 ? ret : 0;
 }

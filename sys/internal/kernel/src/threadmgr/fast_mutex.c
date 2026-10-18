@@ -32,11 +32,6 @@
 #define SCE_KERNEL_ERROR_FAST_MUTEX_ALREADY_INITIALIZED 0x80028167
 #define SCE_KERNEL_ERROR_FAST_MUTEX_NOT_INITIALIZED 0x80028168
 
-typedef struct ThreadmgrFastMutexOptParam {
-	SceSize size;
-	int ceilingPriority;
-} ThreadmgrFastMutexOptParam;
-
 int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
 
@@ -261,8 +256,8 @@ uint32_t releaseAllFastMutex(struct ThreadCB *thread)
 	return wake;
 }
 
-int ksceKernelInitializeFastMutex(struct ThreadmgrFastMutex *mutex, const char *name,
-				  SceUInt32 attr, const ThreadmgrFastMutexOptParam *option)
+int sceKernelInitializeFastMutex(struct ThreadmgrFastMutex *mutex, const char *name,
+				 SceUInt32 attr, const ThreadmgrFastMutexOptParam *option)
 {
 	struct ThreadmgrUidFastMutex *uidMutex;
 	struct ThreadCB *thread;
@@ -344,7 +339,7 @@ restore:
 	return ret;
 }
 
-int ksceKernelFinalizeFastMutex(struct ThreadmgrFastMutex *mutex)
+int sceKernelFinalizeFastMutex(struct ThreadmgrFastMutex *mutex)
 {
 	uint32_t saved;
 	int intr, ret;
@@ -408,7 +403,7 @@ restore:
 	}										\
 } while (0)
 
-int ksceKernelLockFastMutex(struct ThreadmgrFastMutex *mutex)
+int lockFastMutex(struct ThreadmgrFastMutex *mutex)
 {
 	struct ThreadCB *thread;
 	SceKernelSpinlock *queueLock;
@@ -544,7 +539,7 @@ restore:
 	return ret;
 }
 
-int ksceKernelTryLockFastMutex(struct ThreadmgrFastMutex *mutex)
+int sceKernelTryLockFastMutex(struct ThreadmgrFastMutex *mutex)
 {
 	struct ThreadCB *thread;
 	uint32_t saved;
@@ -625,7 +620,7 @@ static inline __attribute__((always_inline)) uint32_t releaseFastMutex(
 }
 
 /* SceThreadmgrForDriver_DB395782: when no thread spins, the first sleeper gets the mutex */
-int ksceKernelUnlockFastMutex(struct ThreadmgrFastMutex *mutex)
+int sceKernelUnlockFastMutex(struct ThreadmgrFastMutex *mutex)
 {
 	struct ThreadCB *owner, *first;
 	struct ThreadmgrWaitQueue *queue;
@@ -683,7 +678,7 @@ restore:
 	return ret;
 }
 
-int ksceKernelGetFastMutexInfo(struct ThreadmgrFastMutex *mutex, ThreadmgrFastMutexInfo *info)
+int sceKernelGetFastMutexInfo(struct ThreadmgrFastMutex *mutex, ThreadmgrFastMutexInfo *info)
 {
 	ThreadmgrFastMutexInfo local;
 	const char *name;

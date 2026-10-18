@@ -69,16 +69,16 @@ set(MODULE_IMPORT_FUNCS
 	__strncpy_chk
 	__stack_chk_fail
 	memcmp
-	ksceKernelSetPermission
-	ksceKernelWaitEventFlag
+	sceKernelSetThreadAccessLevel
+	sceKernelWaitEventFlag
 	sceKernelExitThread
-	ksceKernelStartThread
-	ksceKernelWaitThreadEnd
-	ksceKernelCreateEventFlag
-	ksceKernelDeleteEventFlag
-	ksceKernelDeleteThread
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
+	sceKernelStartThread
+	sceKernelWaitThreadEnd
+	sceKernelCreateEventFlag
+	sceKernelDeleteEventFlag
+	sceKernelDeleteThread
+	sceKernelCreateThread
+	sceKernelSetEventFlag
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_D0E11C89
 	ksceIoWrite

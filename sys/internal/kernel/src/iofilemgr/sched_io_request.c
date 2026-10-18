@@ -27,7 +27,7 @@ int sceIoRequestCreateIoRequest(IoRequest *req, int type, int isAsync, SceUID as
 	SceUID thid;
 	int ret;
 
-	thid = ksceKernelGetThreadId();
+	thid = sceKernelGetThreadId();
 	memset(req, 0, sizeof(*req));
 	req->isCanceled = 0;
 	req->isRunning = 0;
@@ -37,10 +37,10 @@ int sceIoRequestCreateIoRequest(IoRequest *req, int type, int isAsync, SceUID as
 	req->mntOpt = mntOpt;
 	req->pid = sceKernelGetProcessId();
 	req->thid = isAsync == 1 ? 0 : thid;
-	req->processId = ksceKernelGetProcessIdFromTLS();
+	req->processId = SceThreadmgrForDriver_FA54D49A();
 	req->threadAcl = SceThreadmgrForDriver_332E127C();
-	req->cpuAffinityMask = ksceKernelGetThreadCpuAffinityMask(thid);
-	req->threadPriority = ksceKernelGetThreadCurrentPriority();
+	req->cpuAffinityMask = sceKernelGetThreadCpuAffinityMask(thid);
+	req->threadPriority = sceKernelGetThreadCurrentPriority();
 	req->time = sceKernelGetSystemTimeWide();
 
 	ret = sceIoChunkCreateIoChunkPool(chunks, chunkNum, &req->chunkPool);

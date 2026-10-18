@@ -267,46 +267,46 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForKernel_9928DFBA
 	sceKernelThreadMgrProcessCreate
 	sceKernelGetDefaultCpuAffinityMask
-	ksceKernelSetPermission
-	ksceKernelSetProcessIdToTLS
-	ksceKernelGetThreadmgrUIDClass
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
+	sceKernelSetThreadAccessLevel
+	SceThreadmgrForDriver_0486F239
+	sceKernelGetThreadmgrUIDClass
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
 	sceKernelExitThread
-	ksceKernelFinalizeFastMutex
-	ksceKernelDeleteSema
-	ksceKernelLockMutex
+	sceKernelFinalizeFastMutex
+	sceKernelDeleteSema
+	sceKernelLockMutex
 	sceKernelExitDeleteThread
-	ksceKernelUnlockMutex
-	ksceKernelStartThread
-	ksceKernelGetThreadInfo
-	ksceKernelCreateSema
+	sceKernelUnlockMutex
+	sceKernelStartThread
+	sceKernelGetThreadInfo
+	sceKernelCreateSema
 	SceThreadmgrForDriver_332E127C
 	SceThreadmgrForDriver_33E85E9E
-	ksceKernelWaitSema
-	ksceKernelWaitThreadEnd
-	ksceKernelCreateEventFlag
+	sceKernelWaitSema
+	sceKernelWaitThreadEnd
+	sceKernelCreateEventFlag
 	sceKernelCancelAlarm
-	ksceKernelGetSystemTimeLow
+	SceThreadmgrForDriver_47F6DE49
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelPollSema
-	ksceKernelGetThreadId
-	ksceKernelChangeThreadPriority
-	ksceKernelDeleteEventFlag
+	sceKernelClearEventFlag
+	sceKernelPollSema
+	sceKernelGetThreadId
+	sceKernelChangeThreadPriority2
+	sceKernelDeleteEventFlag
 	sceKernelGetProcessId
-	ksceKernelIsThreadDebugSuspended
-	ksceKernelDeleteThread
-	ksceKernelNotifyCallback
-	ksceKernelRegisterTimer
-	ksceKernelCreateThread
+	SceThreadmgrForDriver_A0B1AB21
+	sceKernelDeleteThread
+	sceKernelNotifyCallback
+	SceThreadmgrForDriver_C58DF384
+	sceKernelCreateThread
 	SceThreadmgrForDriver_C8E57BB4
-	ksceKernelSignalSema
-	ksceKernelSetEventFlag
-	ksceKernelDebugResumeThread
+	sceKernelSignalSema
+	sceKernelSetEventFlag
+	sceKernelDebugResumeThread
 	sceKernelGetSystemTimeWide
-	ksceKernelDebugSuspendThread
-	ksceKernelCreateMutex
+	sceKernelDebugSuspendThread
+	sceKernelCreateMutex
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_00ED6C14
 	sceGUIDClose

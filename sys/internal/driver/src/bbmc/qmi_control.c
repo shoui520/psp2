@@ -132,7 +132,7 @@ int qmiControlThread(SceSize args, void *argp)
 	unsigned int advance;
 
 	while (control->state != 0) {
-		if (ksceKernelWaitEventFlag(control->controlEvent, 0x80030333,
+		if (sceKernelWaitEventFlag(control->controlEvent, 0x80030333,
 			5, &flags, NULL) < 0 || (SceInt32)flags < 0)
 			break;
 		if (flags & 0x10111) {

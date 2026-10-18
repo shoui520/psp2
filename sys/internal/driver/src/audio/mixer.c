@@ -49,7 +49,7 @@ int _sceAudiodrvMixer(SceSize arglen, void *argp)
 	result = SceSysmemForDriver_8D160E65(audioMixerBuffers[1], &physicalAddress[1]);
 	SCE_DBG_ASSERT(result >= 0, 255);
 	audioMixerDeadline = ksceKernelGetProcessTimeLowCore();
-	while (ksceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL) >= 0) {
+	while (sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL) >= 0) {
 		AudioProcessLocalStorage *process;
 		unsigned int index;
 
@@ -165,7 +165,7 @@ int _sceAudiodrvMixer(SceSize arglen, void *argp)
 			process->ramp.current = current;
 			process->ramp.direction = direction;
 			if (notify != 0)
-				ksceKernelSetEventFlag(process->eventFlag, notify);
+				sceKernelSetEventFlag(process->eventFlag, notify);
 			process = (AudioProcessLocalStorage *)process->link.next;
 		}
 		if (state != 0) {
@@ -182,7 +182,7 @@ int _sceAudiodrvMixer(SceSize arglen, void *argp)
 			}
 			state += 64;
 			if (state != 0) {
-				ksceKernelSetEventFlag(audioEventFlag, 32);
+				sceKernelSetEventFlag(audioEventFlag, 32);
 				if ((state & 4) != 0 || state >= 1024 || audioSuspended != 0) {
 					unsigned int samples = state & ~63U;
 
@@ -204,12 +204,12 @@ int _sceAudiodrvMixer(SceSize arglen, void *argp)
 			}
 		}
 		audioMixerIdle = 1;
-		ksceKernelSetEventFlag(audioEventFlag, 32);
+		sceKernelSetEventFlag(audioEventFlag, 32);
 		state = 0;
-		ksceKernelWaitEventFlag(audioEventFlag, 1, 5, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, 1, 5, NULL, NULL);
 		audioMixerDeadline = ksceKernelGetProcessTimeLowCore();
 	}
-	ksceKernelExitThread(0);
+	sceKernelExitThread(0);
 	return 0;
 }
 

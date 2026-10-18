@@ -24,7 +24,7 @@ int BbmcUtilInitialize(void)
 	if (updateBbmcInitialized)
 		return 0;
 	memset(&updateBbmcContext, 0, sizeof(updateBbmcContext));
-	result = ksceKernelCreateEventFlag("SceSblUsBbmcUpdaterResultEVF",
+	result = sceKernelCreateEventFlag("SceSblUsBbmcUpdaterResultEVF",
 		0x1000, 0, NULL);
 	if (result < 0)
 		return result;
@@ -35,10 +35,10 @@ int BbmcUtilInitialize(void)
 		return result;
 	updateBbmcContext.threadId = result;
 	updateBbmcContext.running = 1;
-	result = ksceKernelStartThread(result, 0, NULL);
+	result = sceKernelStartThread(result, 0, NULL);
 	if (result < 0)
 		return result;
-	result = ksceKernelWaitEventFlagCB(updateBbmcContext.resultEventFlagId,
+	result = SceThreadmgrForDriver_8A35F714(updateBbmcContext.resultEventFlagId,
 		3, 5, &pattern, NULL);
 	if (!result) {
 		if (pattern & 2)
@@ -59,20 +59,20 @@ int SceSblUsComUtilCallbackHandler(SceSize args, void *argp)
 	UpdateUtilNodeStatus *status;
 	int result, operationResult;
 
-	result = ksceKernelCreateEventFlag("SceSblUsBbmcUpdaterEVF", 0x1000, 0, NULL);
+	result = sceKernelCreateEventFlag("SceSblUsBbmcUpdaterEVF", 0x1000, 0, NULL);
 	if (result < 0)
 		goto exit;
 	updateBbmcContext.subscriber.featureId = 7;
 	updateBbmcContext.subscriber.eventMask = -1;
 	updateBbmcContext.eventFlagId = result;
-	result = ksceKernelCreateCallback("SceSblUsBbmcUpdaterCallBack", 0,
+	result = sceKernelCreateCallback("SceSblUsBbmcUpdaterCallBack", 0,
 		BbmcUtilCallback, NULL);
 	if (result < 0)
 		goto deleteEvent;
 	updateBbmcContext.subscriber.callbackId = result;
 	result = SceBbmcForDriver_580A3C06(&updateBbmcContext.subscriber);
 	if (result < 0) {
-		ksceKernelDeleteCallback(updateBbmcContext.subscriber.callbackId);
+		sceKernelDeleteCallback(updateBbmcContext.subscriber.callbackId);
 		goto deleteEvent;
 	}
 	updateBbmcContext.state = 0;
@@ -80,16 +80,16 @@ int SceSblUsComUtilCallbackHandler(SceSize args, void *argp)
 	updateBbmcContext.chunkCount = 0;
 	updateBbmcContext.chunkIndex = 0;
 	updateBbmcContext.dataSize = 0;
-	ksceKernelSetEventFlag(updateBbmcContext.eventFlagId, 2);
+	sceKernelSetEventFlag(updateBbmcContext.eventFlagId, 2);
 	for (;;) {
 		pattern = 0;
-		result = ksceKernelWaitEventFlagCB(updateBbmcContext.eventFlagId,
+		result = SceThreadmgrForDriver_8A35F714(updateBbmcContext.eventFlagId,
 			0xffffff, 1, &pattern, NULL);
 		if (result < 0)
 			goto exit;
 		events = pattern;
 		if (events) {
-			ksceKernelClearEventFlag(updateBbmcContext.eventFlagId, ~events);
+			sceKernelClearEventFlag(updateBbmcContext.eventFlagId, ~events);
 			events = pattern;
 			if (events & 1)
 				break;
@@ -111,7 +111,7 @@ int SceSblUsComUtilCallbackHandler(SceSize args, void *argp)
 						goto failure;
 				} else {
 					updateBbmcContext.state = 1;
-					ksceKernelSetEventFlag(updateBbmcContext.eventFlagId, 2);
+					sceKernelSetEventFlag(updateBbmcContext.eventFlagId, 2);
 				}
 			}
 			if (events & 0x10000) {
@@ -137,7 +137,7 @@ int SceSblUsComUtilCallbackHandler(SceSize args, void *argp)
 			}
 			if ((events & 0x80000) && reply.driverInfo.currentState > 1) {
 				updateBbmcContext.state = 1;
-				ksceKernelSetEventFlag(updateBbmcContext.eventFlagId, 2);
+				sceKernelSetEventFlag(updateBbmcContext.eventFlagId, 2);
 			} else if (operationResult < 0) {
 				goto failure;
 			}
@@ -149,7 +149,7 @@ int SceSblUsComUtilCallbackHandler(SceSize args, void *argp)
 				goto failure;
 			if ((events & 0x80000) && reply.driverInfo.currentState > 1) {
 				operationResult = 0;
-				ksceKernelSetEventFlag(updateBbmcContext.eventFlagId, 2);
+				sceKernelSetEventFlag(updateBbmcContext.eventFlagId, 2);
 			}
 			if (events & 2) {
 				updateBbmcContext.ready = 1;
@@ -205,7 +205,7 @@ int SceSblUsComUtilCallbackHandler(SceSize args, void *argp)
 			break;
 		}
 		if (updateBbmcContext.transferDone || updateBbmcContext.ready) {
-			ksceKernelSetEventFlag(updateBbmcContext.resultEventFlagId, 1);
+			sceKernelSetEventFlag(updateBbmcContext.resultEventFlagId, 1);
 			updateBbmcContext.transferDone = 0;
 			updateBbmcContext.ready = 0;
 		}
@@ -215,11 +215,11 @@ completed:
 	goto exit;
 failure:
 	updateBbmcContext.state = 0;
-	ksceKernelSetEventFlag(updateBbmcContext.resultEventFlagId, 2);
+	sceKernelSetEventFlag(updateBbmcContext.resultEventFlagId, 2);
 	result = (int)0x800f0205;
 	goto exit;
 deleteEvent:
-	ksceKernelDeleteEventFlag(updateBbmcContext.eventFlagId);
+	sceKernelDeleteEventFlag(updateBbmcContext.eventFlagId);
 	updateBbmcContext.eventFlagId = 0;
 exit:
 	updateBbmcContext.running = 0;

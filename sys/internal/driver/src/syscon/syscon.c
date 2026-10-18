@@ -208,7 +208,7 @@ static void sysconStartPacket(SceSysconPacket *packet)
 	uint32_t offset, length;
 	uint8_t checksum;
 
-	packet->time = ksceKernelGetSystemTimeLow();
+	packet->time = SceThreadmgrForDriver_47F6DE49();
 	handlers = s_sysconControl.debugHandlers;
 	if (handlers)
 		handlers->start(packet);
@@ -248,7 +248,7 @@ static void sysconStartPacket(SceSysconPacket *packet)
 
 static void sysconWaitTransferDelay(uint32_t delay)
 {
-	while ((uint32_t)(ksceKernelGetSystemTimeLow() -
+	while ((uint32_t)(SceThreadmgrForDriver_47F6DE49() -
 			  s_sysconControl.lastTransferTime) <= delay)
 		;
 }
@@ -404,7 +404,7 @@ int ksceSysconCmdSync(SceSysconPacket *packet, int noWait)
 			state = SceCpuForDriver_D32ACE9E(
 						&s_sysconControl.callbackLock);
 			if (!(packet->status & SYSCON_PACKET_DONE)) {
-				semaphore = ksceKernelCreateSema("SceSysconSync", 0,
+				semaphore = sceKernelCreateSema("SceSysconSync", 0,
 							       0, 1, NULL);
 				if (semaphore < 0) {
 					sceKernelSpinlockLowUnlockCpuResumeIntr(
@@ -414,14 +414,14 @@ int ksceSysconCmdSync(SceSysconPacket *packet, int noWait)
 				packet->semaId = semaphore;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(
 					&s_sysconControl.callbackLock, state);
-				result = ksceKernelWaitSema(semaphore, 1, NULL);
+				result = sceKernelWaitSema(semaphore, 1, NULL);
 #if FW_DEBUG
 				if (SceDebugForDriver_374B7868() > 0)
 					SceDebugForDriver_FD753E7A(1, result >= 0,
 						SCE_DBGINFO_FUNC(2493, "sceSysconCmdSync"),
 						__builtin_return_address(0));
 #endif
-				result = ksceKernelDeleteSema(semaphore);
+				result = sceKernelDeleteSema(semaphore);
 #if FW_DEBUG
 				if (SceDebugForDriver_374B7868() > 0)
 					SceDebugForDriver_FD753E7A(1, result >= 0,
@@ -753,7 +753,7 @@ static int sysconSysEvent(int resume, int eventid, void *args, void *opt)
 			ksceGpioSetPortMode(0, 4, 1);
 			ksceGpioSetIntrMode(0, 4, 3);
 			ksceKernelEnableSubIntr(0xf8, 4);
-			s_sysconControl.lastTransferTime = ksceKernelGetSystemTimeLow();
+			s_sysconControl.lastTransferTime = SceThreadmgrForDriver_47F6DE49();
 			s_sysconControl.notificationBits = resumeInfo[3];
 			sysconDecodeNotifications(s_sysconControl.notificationBits);
 			s_sysconControl.notificationState[SYSCON_STATE_POWER_BIT14] =
@@ -858,7 +858,7 @@ static __attribute__((noinline)) int sysconInitialize(void)
 	s_sysconControl.affirmativeRertyMode = 1;
 	s_sysconControl.command884State = 3;
 	ksceGpioPortClear(0, 3);
-	s_sysconControl.lastTransferTime = ksceKernelGetSystemTimeLow();
+	s_sysconControl.lastTransferTime = SceThreadmgrForDriver_47F6DE49();
 	ksceGpioSetPortMode(0, 3, 0);
 	ksceGpioSetPortMode(0, 4, 1);
 	ksceGpioSetIntrMode(0, 4, 3);
@@ -879,7 +879,7 @@ static __attribute__((noinline)) int sysconInitialize(void)
 	s_sysconControl.hardwareInfo = SceSysrootForDriver_930B1342();
 	SceSysrootForDriver_46E72428(s_sysconControl.hardwareFlags);
 	sceKernelRegisterSysEventHandler("SceSyscon", sysconSysEvent, NULL);
-	result = ksceKernelCreateMutex("SceSyscon", 0, 0, NULL);
+	result = sceKernelCreateMutex("SceSyscon", 0, 0, NULL);
 	s_sysconControl.mutex = result;
 	spi = s_sysconControl.spiRegisters;
 	if (result < 0)
@@ -888,7 +888,7 @@ static __attribute__((noinline)) int sysconInitialize(void)
 	kscePervasiveSpiResetDisable(0);
 	spi->mode = 0;
 	dmb();
-	ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceSysconInit", sysconStartupWorker, NULL);
+	sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceSysconInit", sysconStartupWorker, NULL);
 	s_sysconControl.logger = (SysconLogger)SceSysrootForDriver_3AE319DA();
 	return 0;
 }
@@ -1246,7 +1246,7 @@ static int _sceSysconGpioIntr(void *subintrArg, void *registerArg, unsigned char
 	s_sysconControl.currentPacket = NULL;
 	if (!(packet->status & SCE_SYSCON_PACKET_FLAG_KEEP_SELECT))
 		ksceGpioPortClear(0, 3);
-	s_sysconControl.lastTransferTime = ksceKernelGetSystemTimeLow();
+	s_sysconControl.lastTransferTime = SceThreadmgrForDriver_47F6DE49();
 	ksceGpioAcquireIntr(0, 4);
 	sceKernelSpinlockLowUnlock(&s_sysconControl.callbackLock);
 	spi = s_sysconControl.spiRegisters;
@@ -1370,7 +1370,7 @@ select:
 		sysconStartPacket(next);
 	}
 	if (!callbackResult && semaphore >= 0) {
-		result = ksceKernelSignalSema(semaphore, 1);
+		result = sceKernelSignalSema(semaphore, 1);
 		(void)result;
 #if FW_DEBUG
 		if (SceDebugForDriver_374B7868() > 0)
@@ -3904,17 +3904,17 @@ int ksceSysconJigOpenPort(void)
 	sysconPacketSetCommand(&packet, SYSCON_CMD_JIG_OPEN_PORT);
 	packet.request.length = 2;
 	packet.request.data[0] = 0;
-	result = ksceKernelLockMutex(s_sysconControl.mutex, 1, NULL);
+	result = sceKernelLockMutex(s_sysconControl.mutex, 1, NULL);
 	if (result < 0)
 		return result;
 	if (s_sysconControl.jigPortState >= 1) {
-		ksceKernelUnlockMutex(s_sysconControl.mutex, 1);
+		sceKernelUnlockMutex(s_sysconControl.mutex, 1);
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
 	}
 	result = ksceSysconCmdExec(&packet, 0x0);
 	if (result >= 0 && s_sysconControl.jigPortState < 0)
 		s_sysconControl.jigPortState = 1;
-	ksceKernelUnlockMutex(s_sysconControl.mutex, 1);
+	sceKernelUnlockMutex(s_sysconControl.mutex, 1);
 	return result;
 }
 
@@ -3926,17 +3926,17 @@ int ksceSysconJigClosePort(void)
 	sysconPacketSetCommand(&packet, SYSCON_CMD_JIG_CLOSE_PORT);
 	packet.request.length = 1;
 	packet.request.data[0] = 0;
-	result = ksceKernelLockMutex(s_sysconControl.mutex, 1, NULL);
+	result = sceKernelLockMutex(s_sysconControl.mutex, 1, NULL);
 	if (result < 0)
 		return result;
 	if (s_sysconControl.jigPortState < 0) {
-		ksceKernelUnlockMutex(s_sysconControl.mutex, 1);
+		sceKernelUnlockMutex(s_sysconControl.mutex, 1);
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
 	}
 	result = ksceSysconCmdExec(&packet, 0x0);
 	if (result >= 0)
 		s_sysconControl.jigPortState = -1;
-	ksceKernelUnlockMutex(s_sysconControl.mutex, 1);
+	sceKernelUnlockMutex(s_sysconControl.mutex, 1);
 	return result;
 }
 
@@ -3947,11 +3947,11 @@ int ksceSysconJigSetConfig(uint32_t first, uint32_t second)
 
 	sysconPacketSetCommand(&packet, SYSCON_CMD_JIG_SET_CONFIG);
 	packet.request.length = 5;
-	result = ksceKernelLockMutex(s_sysconControl.mutex, 1, NULL);
+	result = sceKernelLockMutex(s_sysconControl.mutex, 1, NULL);
 	if (result < 0)
 		return result;
 	if (s_sysconControl.jigPortState < 0) {
-		ksceKernelUnlockMutex(s_sysconControl.mutex, 1);
+		sceKernelUnlockMutex(s_sysconControl.mutex, 1);
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
 	}
 	packet.request.data[0] = first;
@@ -3959,7 +3959,7 @@ int ksceSysconJigSetConfig(uint32_t first, uint32_t second)
 	packet.request.data[2] = 0;
 	packet.request.data[3] = 0;
 	result = ksceSysconCmdExec(&packet, 0x0);
-	ksceKernelUnlockMutex(s_sysconControl.mutex, 1);
+	sceKernelUnlockMutex(s_sysconControl.mutex, 1);
 	return result;
 }
 
@@ -3976,11 +3976,11 @@ int SceSysconForDriver_3C80B529(uint32_t offset, uint32_t size, void *data)
 		return SCE_SYSCON_ERROR_INVALID_ARGUMENT;
 	if (offset >= 64 || !size)
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
-	result = ksceKernelLockMutex(s_sysconControl.mutex, 1, NULL);
+	result = sceKernelLockMutex(s_sysconControl.mutex, 1, NULL);
 	if (result < 0)
 		return result;
 	if (s_sysconControl.jigPortState < 0) {
-		ksceKernelUnlockMutex(s_sysconControl.mutex, 1);
+		sceKernelUnlockMutex(s_sysconControl.mutex, 1);
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
 	}
 	do {
@@ -3995,7 +3995,7 @@ int SceSysconForDriver_3C80B529(uint32_t offset, uint32_t size, void *data)
 		size -= chunk;
 		data = (uint8_t *)data + chunk;
 	} while (size);
-	ksceKernelUnlockMutex(s_sysconControl.mutex, 1);
+	sceKernelUnlockMutex(s_sysconControl.mutex, 1);
 	return result;
 }
 
@@ -4011,11 +4011,11 @@ int SceSysconForDriver_CE346793(uint32_t size, const void *data)
 		return SCE_SYSCON_ERROR_INVALID_ARGUMENT;
 	if (size - 1 >= 24)
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
-	result = ksceKernelLockMutex(s_sysconControl.mutex, 1, NULL);
+	result = sceKernelLockMutex(s_sysconControl.mutex, 1, NULL);
 	if (result < 0)
 		return result;
 	if (s_sysconControl.jigPortState < 0) {
-		ksceKernelUnlockMutex(s_sysconControl.mutex, 1);
+		sceKernelUnlockMutex(s_sysconControl.mutex, 1);
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
 	}
 	packet.request.length = size + 3;
@@ -4023,7 +4023,7 @@ int SceSysconForDriver_CE346793(uint32_t size, const void *data)
 	packet.request.data[1] = size;
 	memcpy(&packet.request.data[2], data, size);
 	result = ksceSysconCmdExec(&packet, 0x0);
-	ksceKernelUnlockMutex(s_sysconControl.mutex, 1);
+	sceKernelUnlockMutex(s_sysconControl.mutex, 1);
 	return result;
 }
 
@@ -4040,11 +4040,11 @@ int SceSysconForDriver_7BFBA09E(uint32_t mode, uint32_t offset, uint32_t size, c
 		return SCE_SYSCON_ERROR_INVALID_ARGUMENT;
 	if (offset >= 64 || !size || (int32_t)(offset + size) >= 64)
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
-	result = ksceKernelLockMutex(s_sysconControl.mutex, 1, NULL);
+	result = sceKernelLockMutex(s_sysconControl.mutex, 1, NULL);
 	if (result < 0)
 		return result;
 	if (s_sysconControl.jigPortState < 0) {
-		ksceKernelUnlockMutex(s_sysconControl.mutex, 1);
+		sceKernelUnlockMutex(s_sysconControl.mutex, 1);
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
 	}
 	do {
@@ -4063,7 +4063,7 @@ int SceSysconForDriver_7BFBA09E(uint32_t mode, uint32_t offset, uint32_t size, c
 		offset += chunk;
 		data = (const uint8_t *)data + chunk;
 	} while (size);
-	ksceKernelUnlockMutex(s_sysconControl.mutex, 1);
+	sceKernelUnlockMutex(s_sysconControl.mutex, 1);
 	return result;
 }
 
@@ -4077,18 +4077,18 @@ int SceSysconForDriver_933D813F(uint32_t mode, uint32_t offset, uint32_t size)
 	packet.request.length = 4;
 	if (offset >= 64 || !size || (int32_t)(offset + size) >= 64)
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
-	result = ksceKernelLockMutex(s_sysconControl.mutex, 1, NULL);
+	result = sceKernelLockMutex(s_sysconControl.mutex, 1, NULL);
 	if (result < 0)
 		return result;
 	if (s_sysconControl.jigPortState < 0) {
-		ksceKernelUnlockMutex(s_sysconControl.mutex, 1);
+		sceKernelUnlockMutex(s_sysconControl.mutex, 1);
 		return SCE_SYSCON_ERROR_INVALID_SIZE;
 	}
 	packet.request.data[0] = mode;
 	packet.request.data[1] = offset;
 	packet.request.data[2] = size;
 	result = ksceSysconCmdExec(&packet, 0x0);
-	ksceKernelUnlockMutex(s_sysconControl.mutex, 1);
+	sceKernelUnlockMutex(s_sysconControl.mutex, 1);
 	return result;
 }
 

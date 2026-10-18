@@ -28,7 +28,7 @@ CodecEngineProcessorState g_codecEngineProcessorState;
 
 int initializeCodecEngineProcessor(void)
 {
-	return ksceKernelInitializeFastMutex(&g_codecEngineProcessorState.mutex,
+	return sceKernelInitializeFastMutex(&g_codecEngineProcessorState.mutex,
 		"SceCodecEngineProcessor", 0x8000, 0);
 }
 
@@ -37,7 +37,7 @@ int _sceCodecEngineProcessorProcessSuspend(SceUID pid)
 	unsigned int *processor;
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&g_codecEngineProcessorState.mutex);
+	ret = lockFastMutex(&g_codecEngineProcessorState.mutex);
 	if (ret >= 0) {
 		processor = _sceCodecEngineGetProcessor(pid);
 #if FW_DEBUG
@@ -56,7 +56,7 @@ int _sceCodecEngineProcessorProcessSuspend(SceUID pid)
 			g_codecEngineProcessorState.processorCount -= *processor;
 		}
 unlock:
-		ksceKernelUnlockFastMutex(&g_codecEngineProcessorState.mutex);
+		sceKernelUnlockFastMutex(&g_codecEngineProcessorState.mutex);
 	}
 	return ret;
 }
@@ -65,7 +65,7 @@ int _sceCodecEngineProcessorProcessResume(SceUID pid)
 	unsigned int *processor;
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&g_codecEngineProcessorState.mutex);
+	ret = lockFastMutex(&g_codecEngineProcessorState.mutex);
 	if (ret >= 0) {
 		processor = _sceCodecEngineGetProcessor(pid);
 #if FW_DEBUG
@@ -80,7 +80,7 @@ int _sceCodecEngineProcessorProcessResume(SceUID pid)
 			g_codecEngineProcessorState.processorCount += *processor;
 		}
 unlock:
-		ksceKernelUnlockFastMutex(&g_codecEngineProcessorState.mutex);
+		sceKernelUnlockFastMutex(&g_codecEngineProcessorState.mutex);
 	}
 	return ret;
 }
@@ -97,7 +97,7 @@ int sceCodecEngineChangeNumWorkerCoresDefaultForUser(void)
 
 	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret >= 0) {
-		ret = ksceKernelLockFastMutex(&g_codecEngineProcessorState.mutex);
+		ret = lockFastMutex(&g_codecEngineProcessorState.mutex);
 		if (ret < 0)
 			goto unlockProcess;
 		processor = _sceCodecEngineGetProcessor(0);
@@ -119,7 +119,7 @@ int sceCodecEngineChangeNumWorkerCoresDefaultForUser(void)
 			*processor = count - 1;
 		}
 unlock:
-		ksceKernelUnlockFastMutex(&g_codecEngineProcessorState.mutex);
+		sceKernelUnlockFastMutex(&g_codecEngineProcessorState.mutex);
 unlockProcess:
 		_unlockProcessSuspendCore();
 	}
@@ -136,7 +136,7 @@ int sceCodecEngineChangeNumWorkerCoresMaxForUser(void)
 
 	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret >= 0) {
-		ret = ksceKernelLockFastMutex(&g_codecEngineProcessorState.mutex);
+		ret = lockFastMutex(&g_codecEngineProcessorState.mutex);
 		if (ret < 0)
 			goto unlockProcess;
 		processor = _sceCodecEngineGetProcessor(0);
@@ -156,7 +156,7 @@ int sceCodecEngineChangeNumWorkerCoresMaxForUser(void)
 		g_codecEngineProcessorState.processorCount++;
 		*processor = count + 1;
 unlock:
-		ksceKernelUnlockFastMutex(&g_codecEngineProcessorState.mutex);
+		sceKernelUnlockFastMutex(&g_codecEngineProcessorState.mutex);
 unlockProcess:
 		_unlockProcessSuspendCore();
 	}

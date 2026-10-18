@@ -394,7 +394,7 @@ static int ErrorSyncCreate(ErrorSync *sync, SceUInt32 signal, const char *name)
 {
 	SceUID evf;
 
-	evf = ksceKernelCreateEventFlag(name, SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
+	evf = sceKernelCreateEventFlag(name, SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (evf < 0)
 		return evf;
 	sync->evf = evf;
@@ -405,7 +405,7 @@ static int ErrorSyncCreate(ErrorSync *sync, SceUInt32 signal, const char *name)
 
 static int ErrorSyncDelete(ErrorSync *sync)
 {
-	ksceKernelDeleteEventFlag(sync->evf);
+	sceKernelDeleteEventFlag(sync->evf);
 	return 0;
 }
 
@@ -418,7 +418,7 @@ static SceUInt32 ErrorSyncLock(ErrorSync *sync)
 		signal = __atomic_exchange_n(&sync->signal, 0, __ATOMIC_SEQ_CST);
 		if (signal != 0)
 			break;
-		if (ksceKernelWaitEventFlag(sync->evf, 1,
+		if (sceKernelWaitEventFlag(sync->evf, 1,
 					    SCE_KERNEL_EVF_WAITMODE_OR |
 					    SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					    &bits, NULL) < 0)
@@ -433,7 +433,7 @@ static int ErrorSyncUnlock(ErrorSync *sync, SceUInt32 signal)
 	__atomic_fetch_or(&sync->signal, signal, __ATOMIC_SEQ_CST);
 	if (sync->waiters == 0)
 		return 0;
-	return ksceKernelSetEventFlag(sync->evf, 1);
+	return sceKernelSetEventFlag(sync->evf, 1);
 }
 
 /* ---- sys events ---- */
@@ -653,7 +653,7 @@ int module_start(SceSize args, void *argp)
 		ErrorSysEventUnregister(s_sysEvent.uid);
 		goto delete;
 	}
-	ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceErrorInit", ErrorInitWork, NULL);
+	sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceErrorInit", ErrorInitWork, NULL);
 	return SCE_KERNEL_START_SUCCESS;
 
 delete:

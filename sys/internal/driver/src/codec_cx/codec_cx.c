@@ -166,7 +166,7 @@ int module_start(unsigned int args, void *argp)
 {
 	SceClockgenForDriver_5130682D();
 	ScePervasiveForDriver_925D9D24(0);
-	if (ksceKernelInitializeFastMutex(&s_codec.mutex, "SceCodec", 0x2000, 0) < 0)
+	if (sceKernelInitializeFastMutex(&s_codec.mutex, "SceCodec", 0x2000, 0) < 0)
 		return 2;
 	initializeCodec(1);
 	sceKernelRegisterSysEventHandler("SceCodec", codecEvent, 0);
@@ -175,7 +175,7 @@ int module_start(unsigned int args, void *argp)
 
 int SceCodecForDriver_41CFFE48(int *output, int *level)
 {
-	int ret = ksceKernelLockFastMutex(&s_codec.mutex);
+	int ret = lockFastMutex(&s_codec.mutex);
 
 	if (ret < 0)
 		return ret;
@@ -185,7 +185,7 @@ int SceCodecForDriver_41CFFE48(int *output, int *level)
 		*level = s_codec.level;
 	ret = ((s_codec.flags & 0x10) ? 0x1000 : 0) |
 	      ((s_codec.flags & 4) ? 0x100 : 0);
-	ksceKernelUnlockFastMutex(&s_codec.mutex);
+	sceKernelUnlockFastMutex(&s_codec.mutex);
 	return ret;
 }
 
@@ -195,31 +195,31 @@ int SceCodecForDriver_8932F886(SceUInt32 volume)
 
 	if (volume >= 31)
 		return 0x80261000;
-	ret = ksceKernelLockFastMutex(&s_codec.mutex);
+	ret = lockFastMutex(&s_codec.mutex);
 	if (ret < 0)
 		return ret;
 	ret = setVolume(volume);
 	if (ret >= 0)
 		s_codec.volume = volume;
-	ksceKernelUnlockFastMutex(&s_codec.mutex);
+	sceKernelUnlockFastMutex(&s_codec.mutex);
 	return ret;
 }
 
 int SceCodecForDriver_762BF716(unsigned int flags)
 {
-	int ret = ksceKernelLockFastMutex(&s_codec.mutex);
+	int ret = lockFastMutex(&s_codec.mutex);
 
 	if (ret < 0)
 		return ret;
 	ret = setRouting((flags & 0x100) ? 1 : -1, (flags & 0x1000) ? 1 : -1, 0, 1);
-	ksceKernelUnlockFastMutex(&s_codec.mutex);
+	sceKernelUnlockFastMutex(&s_codec.mutex);
 	return ret;
 }
 
 int SceCodecForDriver_C1DB7BAF(unsigned int mode)
 {
 	short script[29], *p = script;
-	int ret = ksceKernelLockFastMutex(&s_codec.mutex);
+	int ret = lockFastMutex(&s_codec.mutex);
 	int other = mode != 1;
 
 	if (ret < 0)
@@ -272,13 +272,13 @@ int SceCodecForDriver_C1DB7BAF(unsigned int mode)
 	if (ret >= 0)
 		ret = 0;
 out:
-	ksceKernelUnlockFastMutex(&s_codec.mutex);
+	sceKernelUnlockFastMutex(&s_codec.mutex);
 	return ret;
 }
 
 int SceCodecForDriver_CCDE1B04(unsigned int mode)
 {
-	int ret = ksceKernelLockFastMutex(&s_codec.mutex);
+	int ret = lockFastMutex(&s_codec.mutex);
 
 	if (ret < 0)
 		return ret;
@@ -287,7 +287,7 @@ int SceCodecForDriver_CCDE1B04(unsigned int mode)
 		if ((s_codec.flags & 0x14) == 0x10)
 			ret = writeScript(s_codec.mode ? s_normal : s_alternate);
 	}
-	ksceKernelUnlockFastMutex(&s_codec.mutex);
+	sceKernelUnlockFastMutex(&s_codec.mutex);
 	return ret;
 }
 
@@ -296,11 +296,11 @@ int SceCodecForDriver_CF398D8A(void)
 	int count, ret;
 
 	for (count = 100; count; count--) {
-		ret = ksceKernelLockFastMutex(&s_codec.mutex);
+		ret = lockFastMutex(&s_codec.mutex);
 		if (ret < 0)
 			return ret;
 		ret = SceCodecForDriver_4FA36937(0xb6);
-		ksceKernelUnlockFastMutex(&s_codec.mutex);
+		sceKernelUnlockFastMutex(&s_codec.mutex);
 		if (ret < 0)
 			return ret;
 		if (ret & 0x40)
@@ -312,11 +312,11 @@ int SceCodecForDriver_CF398D8A(void)
 
 int SceCodecForDriver_E483B663(int enable)
 {
-	int ret = ksceKernelLockFastMutex(&s_codec.mutex);
+	int ret = lockFastMutex(&s_codec.mutex);
 
 	if (ret < 0)
 		return ret;
 	ret = writeScript(enable ? s_on : s_off);
-	ksceKernelUnlockFastMutex(&s_codec.mutex);
+	sceKernelUnlockFastMutex(&s_codec.mutex);
 	return ret;
 }

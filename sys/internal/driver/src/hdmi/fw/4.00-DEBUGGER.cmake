@@ -103,28 +103,28 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelReleaseSubIntrHandler
 	ksceKernelEnableSubIntr
 	ksceKernelRegisterSubIntrHandler
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
 	sceKernelExitThread
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelStartThread
-	ksceKernelCreateEventFlag
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelStartThread
+	sceKernelCreateEventFlag
 	sceKernelCancelAlarm
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
-	ksceKernelPollEventFlag
-	ksceKernelDeleteThread
-	ksceKernelInitializeFastMutex
-	ksceKernelRegisterTimer
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
-	ksceKernelEnqueueWorkQueue
+	sceKernelClearEventFlag
+	lockFastMutex
+	sceKernelDeleteEventFlag
+	sceKernelPollEventFlag
+	sceKernelDeleteThread
+	sceKernelInitializeFastMutex
+	SceThreadmgrForDriver_C58DF384
+	sceKernelCreateThread
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
+	sceKernelScheduleWorkTask
 	sceKernelGetSystemTimeWide
-	ksceKernelCreateMutex
+	sceKernelCreateMutex
 	sceKernelRegisterSysEventHandler
 	SceSblAIMgrForDriver_274663A0
 	SceSblAIMgrForDriver_71608CA3

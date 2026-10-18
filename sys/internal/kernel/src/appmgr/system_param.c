@@ -21,14 +21,14 @@ static AppmgrDateTimeConf dateTimeConf = { { 0 } };
 int appmgrSystemParamDateTimeGetConf(void *conf)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
-	int result = ksceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
+	int result = sceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
 
 	if (result >= 0) {
 		if (conf != NULL)
 			*(AppmgrDateTimeConf *)conf = dateTimeConf;
 		else
 			result = (int)0x80801001;
-		ksceKernelUnlockMutex(g_appmgrAppMutex, 1);
+		sceKernelUnlockMutex(g_appmgrAppMutex, 1);
 	}
 	sceSyscallLeave(syscallState);
 	return result;
@@ -37,11 +37,11 @@ int appmgrSystemParamDateTimeGetConf(void *conf)
 int ksceAppMgrSystemParamDateTimeSetConf(const void *conf)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
-	int result = ksceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
+	int result = sceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
 
 	if (result >= 0) {
 		dateTimeConf = *(const AppmgrDateTimeConf *)conf;
-		ksceKernelUnlockMutex(g_appmgrAppMutex, 1);
+		sceKernelUnlockMutex(g_appmgrAppMutex, 1);
 	}
 	sceSyscallLeave(syscallState);
 	return result;

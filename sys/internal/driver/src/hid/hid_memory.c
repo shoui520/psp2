@@ -2,14 +2,10 @@
 #include <sysmem/sysmem.h>
 #include <threadmgr/fast_mutex.h>
 #include "hid_internal.h"
+#include <threadmgr/threadmgr.h>
 
 SceUID hidHeapId;
 struct ThreadmgrFastMutex hidMutex;
-
-int ksceKernelInitializeFastMutex(struct ThreadmgrFastMutex *mutex,
-				 const char *name, int attr, void *opt);
-int ksceKernelLockFastMutex(struct ThreadmgrFastMutex *mutex);
-int ksceKernelUnlockFastMutex(struct ThreadmgrFastMutex *mutex);
 
 int hidInitializeMemory(void)
 {
@@ -24,7 +20,7 @@ int hidInitializeMemory(void)
 	if (result < 0)
 		return result;
 	hidHeapId = result;
-	result = ksceKernelInitializeFastMutex(&hidMutex, "SceHid", 0x2000, NULL);
+	result = sceKernelInitializeFastMutex(&hidMutex, "SceHid", 0x2000, NULL);
 	return result & (result >> 31);
 }
 
@@ -45,10 +41,10 @@ int hidFreeMemory(void *memory)
 /* Same wrappers as krm's driver.c, with this module's canonical mutex. */
 int hidLock(void)
 {
-	return ksceKernelLockFastMutex(&hidMutex);
+	return lockFastMutex(&hidMutex);
 }
 
 int hidUnlock(void)
 {
-	return ksceKernelUnlockFastMutex(&hidMutex);
+	return sceKernelUnlockFastMutex(&hidMutex);
 }

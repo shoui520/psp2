@@ -34,7 +34,7 @@ static int uidMutex_Constructor(void *object)
 	return 0;
 }
 
-/* a mutex's information (ksceKernelGetMutexInfo's core) */
+/* a mutex's information (sceKernelGetMutexInfo's core) */
 int getMutexInfo(SceUID mutexId, SceKernelMutexInfo *info)
 {
 	ThreadmgrMutex *mutex;
@@ -447,8 +447,8 @@ static inline SceUID OpenByGUID(SceUID pid, SceUID guid)
 	return puid;
 }
 
-SceUID ksceKernelCreateMutex(const char *name, SceUInt32 attr, int initCount,
-			     const SceKernelMutexOptParam *option)
+SceUID sceKernelCreateMutex(const char *name, SceUInt32 attr, int initCount,
+			    const SceKernelMutexOptParam *option)
 {
 	struct ThreadCB *thread;
 	SceProcessObject *process;
@@ -675,7 +675,7 @@ restore:
 	return uid;
 }
 
-int ksceKernelDeleteMutex(SceUID mutexId)
+int sceKernelDeleteMutex(SceUID mutexId)
 {
 	uint32_t saved;
 	int intr, ret;
@@ -845,18 +845,18 @@ restore:
 }
 
 /* SceThreadmgrForKernel_1059CCDD, SceThreadmgrForDriver_16AC80C5 */
-int ksceKernelLockMutex(SceUID mutexId, int count, SceUInt32 *timeout)
+int sceKernelLockMutex(SceUID mutexId, int count, SceUInt32 *timeout)
 {
 	return lockMutex(mutexId, count, timeout, 0);
 }
 
 /* SceThreadmgrForDriver_D06F2886 */
-int ksceKernelLockMutexCB_089(SceUID mutexId, int count, SceUInt32 *timeout)
+int SceThreadmgrForDriver_D06F2886(SceUID mutexId, int count, SceUInt32 *timeout)
 {
 	return lockMutex(mutexId, count, timeout, 1);
 }
 
-int ksceKernelTryLockMutex(SceUID mutexId, int count)
+int sceKernelTryLockMutex(SceUID mutexId, int count)
 {
 	struct ThreadCB *thread;
 	ThreadmgrMutex *mutex;
@@ -922,7 +922,7 @@ restore:
  * Unlocks count times; at zero the mutex goes to its first waiter. Sony's
  * export and unlockMutexForCond differ only in their checks of the context.
  */
-int ksceKernelUnlockMutex(SceUID mutexId, int count)
+int sceKernelUnlockMutex(SceUID mutexId, int count)
 {
 	struct ThreadCB *thread, *first;
 	ThreadmgrMutex *mutex;
@@ -1015,7 +1015,7 @@ restore:
  * Wakes every waiter with WAIT_CANCEL and leaves the mutex locked newCount
  * times by the caller (a negative newCount restores initCount).
  */
-int ksceKernelCancelMutex(SceUID mutexId, int newCount, int *numWaitThreads)
+int sceKernelCancelMutex(SceUID mutexId, int newCount, int *numWaitThreads)
 {
 	struct ThreadCB *thread;
 	ThreadmgrMutex *mutex;
@@ -1073,7 +1073,7 @@ restore:
 }
 
 /* inside a syscall the owner is reported by its user-visible thread ID */
-int ksceKernelGetMutexInfo(SceUID mutexId, SceKernelMutexInfo *info)
+int sceKernelGetMutexInfo(SceUID mutexId, SceKernelMutexInfo *info)
 {
 	struct ThreadmgrThreadObject *owner;
 	SceKernelMutexInfo local;

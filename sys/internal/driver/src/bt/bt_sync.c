@@ -6,7 +6,7 @@
 
 int BtCreateSignal(BtSignal *signal, unsigned int events, const char *name)
 {
-	SceUID eventFlag = ksceKernelCreateEventFlag(name, 0x9000, 0, NULL);
+	SceUID eventFlag = sceKernelCreateEventFlag(name, 0x9000, 0, NULL);
 
 	signal->eventFlag = eventFlag;
 	signal->events = events;
@@ -16,7 +16,7 @@ int BtCreateSignal(BtSignal *signal, unsigned int events, const char *name)
 
 int BtDeleteSignal(BtSignal *signal)
 {
-	ksceKernelDeleteEventFlag(signal->eventFlag);
+	sceKernelDeleteEventFlag(signal->eventFlag);
 	return 0;
 }
 
@@ -29,7 +29,7 @@ int BtSetSignal(BtSignal *signal)
 		events = AtomicLoadReserved32(&signal->events);
 	} while (AtomicStoreReserved32(&signal->events, events | 1));
 	if (signal->waiters)
-		return ksceKernelSetEventFlag(signal->eventFlag, 1);
+		return sceKernelSetEventFlag(signal->eventFlag, 1);
 	return 0;
 }
 
@@ -50,7 +50,7 @@ int BtWaitSignal(BtSignal *signal, uint32_t timeout)
 		} while (AtomicStoreReserved32(&signal->events, 0));
 		if (events)
 			break;
-		result = ksceKernelWaitEventFlag(signal->eventFlag, 1, 5, NULL,
+		result = sceKernelWaitEventFlag(signal->eventFlag, 1, 5, NULL,
 			(int32_t)timeout >= 0 ? &timeout : NULL);
 	}
 	AtomicFullBarrier();
@@ -64,7 +64,7 @@ int BtWaitSignal(BtSignal *signal, uint32_t timeout)
 
 int BtLockTransport(void)
 {
-	SceUID thread = ksceKernelGetThreadId();
+	SceUID thread = sceKernelGetThreadId();
 	int result;
 
 	if (gBtTransport.lockOwner == thread) {

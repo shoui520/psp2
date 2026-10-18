@@ -75,7 +75,7 @@ static inline __attribute__((always_inline)) int vfs_check_vnode_access(SceVfsVn
 	    (vp->core.type & (SCE_VNODE_TYPE_DEV | SCE_VNODE_TYPE_CHR)) ==
 		    (SCE_VNODE_TYPE_DEV | SCE_VNODE_TYPE_CHR))
 		return 0;
-	pid = ksceKernelGetProcessIdFromTLS();
+	pid = SceThreadmgrForDriver_FA54D49A();
 	attr = *(SceUInt64 *)vp->core.acl_data;
 	set_attr_info(vp, &attr, &info, pid);
 	return SceSblACMgrForKernel_75AAF981(pid, &info, mode);
@@ -113,7 +113,7 @@ int sceVfsACCheckOpen(SceVfsVnode *vp, int flags)
 	    (vp->core.type & (SCE_VNODE_TYPE_DEV | SCE_VNODE_TYPE_CHR)) ==
 		    (SCE_VNODE_TYPE_DEV | SCE_VNODE_TYPE_CHR))
 		return 0;
-	pid = ksceKernelGetProcessIdFromTLS();
+	pid = SceThreadmgrForDriver_FA54D49A();
 	attr = *(SceUInt64 *)vp->core.acl_data;
 	access = flags & SCE_O_RDWR;
 	set_attr_info(vp, &attr, &info, pid);

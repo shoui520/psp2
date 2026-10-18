@@ -83,9 +83,9 @@ int pfsUnicvOpen(ScePfsPmi *pmi, ScePfsNode *node, int create)
 		if (ret < 0)
 			return ret;
 	}
-	pid = ksceKernelSetProcessIdToTLS(PFS_KERNEL_PID);
+	pid = SceThreadmgrForDriver_0486F239(PFS_KERNEL_PID);
 	ret = pfsLowerOpen(&pmi->unicvDb, node, 0, info->unicvOpenFlags | PFS_OPEN_KERNEL);
-	ksceKernelSetProcessIdToTLS(pid);
+	SceThreadmgrForDriver_0486F239(pid);
 	if (ret == 0) {
 		ret = pfsUnicvInit(&pmi->unicv, &pmi->icvLru, &pmi->unicvDb,
 				   pfsVersionUnicvParam(pmi->version));
@@ -358,9 +358,9 @@ int pfsPathResolve(ScePfsPmi *pmi, ScePfsVd *vd, const char *path)
 			key.parentIndex = index;
 			key.name = name;
 			key.mnt = vd->lowerVp->core.mnt;
-			perm = ksceKernelSetPermission(0x40);
+			perm = sceKernelSetThreadAccessLevel(0x40);
 			ret = pfsDbFind(pmi, &key, NULL, &index, &attr, NULL);
-			ksceKernelSetPermission(perm);
+			sceKernelSetThreadAccessLevel(perm);
 			parentIndex = last;
 			if (ret != 0)
 				return ret;

@@ -176,55 +176,55 @@ set(MODULE_IMPORT_NIDS
 	0x54D6B9EB:F:0xDD7627EC
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelGetThreadCurrentPriority
-	ksceKernelSetPermission
-	ksceKernelSetProcessIdToTLS
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
+	sceKernelGetThreadCurrentPriority
+	sceKernelSetThreadAccessLevel
+	SceThreadmgrForDriver_0486F239
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
 	sceKernelGetEventPattern
 	SceThreadmgrForDriver_1096042E
-	ksceKernelFinalizeFastMutex
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelStartThread
+	sceKernelFinalizeFastMutex
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelStartThread
 	sceKernelEventObjectInit
-	ksceKernelTryLockMutex
+	sceKernelTryLockMutex
 	SceThreadmgrForDriver_332E127C
 	sceKernelChangeThreadPriorityAndCpuAffinityMask
-	ksceKernelWaitThreadEnd
-	ksceKernelCreateEventFlag
+	sceKernelWaitThreadEnd
+	sceKernelCreateEventFlag
 	sceKernelCancelAlarm
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelGetThreadId
-	ksceKernelSignalCondTo
-	ksceKernelGetMutexInfo
-	ksceKernelSignalCondAll
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
-	ksceKernelTryLockFastMutex
-	ksceKernelGetThreadCpuAffinityMask
+	sceKernelClearEventFlag
+	sceKernelGetThreadId
+	sceKernelSignalCondTo
+	sceKernelGetMutexInfo
+	sceKernelSignalCondAll
+	lockFastMutex
+	sceKernelDeleteEventFlag
+	sceKernelTryLockFastMutex
+	sceKernelGetThreadCpuAffinityMask
 	SceThreadmgrForDriver_89CA5698
 	sceKernelGetProcessId
-	ksceKernelSetEvent
+	sceKernelSetEvent
 	sceKernelExtendKernelStackWide
-	ksceKernelDeleteThread
-	ksceKernelDeleteCond
-	ksceKernelInitializeFastMutex
+	sceKernelDeleteThread
+	sceKernelDeleteCond
+	sceKernelInitializeFastMutex
 	SceThreadmgrForDriver_B645C7EF
 	sceKernelSetEventWithNotifyCallback
-	ksceKernelRegisterTimer
-	ksceKernelCreateThread
-	ksceKernelWaitCond
-	ksceKernelSetEventFlag
-	ksceKernelGetFastMutexInfo
-	ksceKernelUnlockFastMutex
-	ksceKernelCreateCond
+	SceThreadmgrForDriver_C58DF384
+	sceKernelCreateThread
+	sceKernelWaitCond
+	sceKernelSetEventFlag
+	sceKernelGetFastMutexInfo
+	sceKernelUnlockFastMutex
+	sceKernelCreateCond
 	sceKernelUIDInheritedEventClassInit
-	ksceKernelRunWithStack
+	SceThreadmgrForDriver_E54FD746
 	sceKernelGetSystemTimeWide
-	ksceKernelGetProcessIdFromTLS
-	ksceKernelCreateMutex
+	SceThreadmgrForDriver_FA54D49A
+	sceKernelCreateMutex
 	sceKernelUserUnmap
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_00ED6C14

@@ -88,7 +88,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_C94850C9
 	ksceExcpmgrRegisterHandler
 	ksceKernelDisableIntr
-	ksceKernelGetProcessIdFromTLS
+	SceThreadmgrForDriver_FA54D49A
 	ksceVfsAddVfs
 	vfsUmount
 	ksceVfsDeleteVfs

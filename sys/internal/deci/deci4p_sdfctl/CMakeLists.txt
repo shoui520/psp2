@@ -7,8 +7,8 @@ psp2_module(os0_kd_deci4p_sdfctl KIND kernel COMPILER gcc48 SOURCES
 IMPORTS
 	SceSysrootForDriver_2816A813
 	SceSysrootForDriver_9421B223
-	ksceKernelDeleteEventFlag
-	ksceKernelDeleteThread
+	sceKernelDeleteEventFlag
+	sceKernelDeleteThread
 	ksceKernelTriggerSGI
 	ksceKernelReleaseIntrHandler
 )

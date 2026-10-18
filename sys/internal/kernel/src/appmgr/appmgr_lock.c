@@ -35,7 +35,7 @@ int appMgrLockInitialize(void)
 {
 	SceUID mutex;
 
-	mutex = ksceKernelCreateMutex("SceAppMgrCore", 0, 0, NULL);
+	mutex = sceKernelCreateMutex("SceAppMgrCore", 0, 0, NULL);
 	if (mutex < 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -46,7 +46,7 @@ int appMgrLockInitialize(void)
 #endif
 	}
 	g_appmgrMainMutex = mutex;
-	mutex = ksceKernelCreateMutex("SceAppMgrCore2", 0x8000, 0, NULL);
+	mutex = sceKernelCreateMutex("SceAppMgrCore2", 0x8000, 0, NULL);
 	if (mutex < 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -57,7 +57,7 @@ int appMgrLockInitialize(void)
 #endif
 	}
 	g_appmgrCore2Mutex = mutex;
-	mutex = ksceKernelCreateMutex("SceAppMgrCoreKM", 0x8000, 0, NULL);
+	mutex = sceKernelCreateMutex("SceAppMgrCoreKM", 0x8000, 0, NULL);
 	if (mutex < 0) {
 #if FW_DEBUG
 		sceAppMgrDump();

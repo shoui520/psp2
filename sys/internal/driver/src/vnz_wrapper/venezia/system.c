@@ -46,7 +46,7 @@ int initCodecEnginePerformanceMonitor(void)
 	unsigned int arguments[4] __attribute__((aligned(8)));
 	int ret;
 
-	ret = ksceKernelInitializeFastMutex(&g_veneziaPerformanceMonitor.mutex,
+	ret = sceKernelInitializeFastMutex(&g_veneziaPerformanceMonitor.mutex,
 		"SceCodecEnginePerformanceMonitor", 0x8002, NULL);
 	if (ret >= 0) {
 		arguments[0] = (uintptr_t)g_veneziaThreadExecGroups;
@@ -91,14 +91,14 @@ int startCodecEnginePerformanceMonitor(void)
 	int ret = _lockProcessSuspendCore();
 
 	if (ret >= 0) {
-		ret = ksceKernelLockFastMutex(&g_veneziaPerformanceMonitor.mutex);
+		ret = lockFastMutex(&g_veneziaPerformanceMonitor.mutex);
 		if (ret >= 0) {
 			if (!g_veneziaPerformanceMonitor.active) {
 				ret = veneziaDebugRpc(2);
 				if (ret >= 0)
 					g_veneziaPerformanceMonitor.active = 1;
 			}
-			ksceKernelUnlockFastMutex(&g_veneziaPerformanceMonitor.mutex);
+			sceKernelUnlockFastMutex(&g_veneziaPerformanceMonitor.mutex);
 		}
 		_unlockProcessSuspendCore();
 	}
@@ -112,7 +112,7 @@ int stopCodecEnginePerformanceMonitor(void)
 	int ret = _lockProcessSuspendCore();
 
 	if (ret >= 0) {
-		ret = ksceKernelLockFastMutex(&g_veneziaPerformanceMonitor.mutex);
+		ret = lockFastMutex(&g_veneziaPerformanceMonitor.mutex);
 		if (ret >= 0) {
 			if (g_veneziaPerformanceMonitor.active) {
 				arguments[0] = (uintptr_t)g_veneziaPerformanceMonitor.counters;
@@ -122,7 +122,7 @@ int stopCodecEnginePerformanceMonitor(void)
 				if (ret >= 0)
 					g_veneziaPerformanceMonitor.active = 0;
 			}
-			ksceKernelUnlockFastMutex(&g_veneziaPerformanceMonitor.mutex);
+			sceKernelUnlockFastMutex(&g_veneziaPerformanceMonitor.mutex);
 		}
 		_unlockProcessSuspendCore();
 	}
@@ -134,7 +134,7 @@ int getCodecEnginePerformanceResults(VeneziaPerformanceResult *result)
 {
 	VeneziaPerformanceMonitorState *monitor = &g_veneziaPerformanceMonitor;
 	unsigned int sum = 0, maximum = 0, usage;
-	int ret = ksceKernelLockFastMutex(&monitor->mutex);
+	int ret = lockFastMutex(&monitor->mutex);
 
 	if (ret >= 0) {
 		if (monitor->counters[0].total == ~0u) {
@@ -181,7 +181,7 @@ int getCodecEnginePerformanceResults(VeneziaPerformanceResult *result)
 		monitor->result.average = maximum;
 		if (result)
 			*result = monitor->result;
-		ksceKernelUnlockFastMutex(&monitor->mutex);
+		sceKernelUnlockFastMutex(&monitor->mutex);
 	}
 	return ret;
 }
@@ -189,12 +189,12 @@ int getCodecEnginePerformanceResults(VeneziaPerformanceResult *result)
 /* name unknown: clear the DSP's accumulated counter pairs. */
 int clearCodecEnginePerformanceCounters(void)
 {
-	int ret = ksceKernelLockFastMutex(&g_veneziaPerformanceMonitor.mutex);
+	int ret = lockFastMutex(&g_veneziaPerformanceMonitor.mutex);
 
 	if (ret >= 0) {
 		memset(g_veneziaPerformanceMonitor.counters, 0,
 			sizeof(g_veneziaPerformanceMonitor.counters));
-		ksceKernelUnlockFastMutex(&g_veneziaPerformanceMonitor.mutex);
+		sceKernelUnlockFastMutex(&g_veneziaPerformanceMonitor.mutex);
 	}
 	return ret;
 }

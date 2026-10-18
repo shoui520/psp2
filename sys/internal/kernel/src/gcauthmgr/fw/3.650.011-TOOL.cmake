@@ -82,12 +82,12 @@ set(MODULE_IMPORT_FUNCS
 	__aeabi_uldivmod
 	__stack_chk_fail
 	SceSysrootForKernel_F10AB792
-	ksceKernelSetPermission
-	ksceKernelDeleteSema
-	ksceKernelCreateSema
-	ksceKernelWaitSema
-	ksceKernelSignalSema
-	ksceKernelRunWithStack
+	sceKernelSetThreadAccessLevel
+	sceKernelDeleteSema
+	sceKernelCreateSema
+	sceKernelWaitSema
+	sceKernelSignalSema
+	SceThreadmgrForDriver_E54FD746
 	sceKernelGetSystemTimeWide
 	ksceSblSmCommStartSmFromData
 	ksceSblSmCommStopSm

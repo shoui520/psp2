@@ -38,12 +38,12 @@ static inline void rtcPackTick(SceUInt8 *packed, SceUInt64 tick)
 }
 
 /* name unknown: alarm of an aux clock reached */
-static int rtcAuxAlarmHandler(void *argp)
+static SceUInt32 rtcAuxAlarmHandler(void *argp)
 {
 	RtcAuxClock *aux = argp;
 
 	if (aux->callback > 0) {
-		if (ksceKernelNotifyCallback(aux->callback, 1) < 0)
+		if (sceKernelNotifyCallback(aux->callback, 1) < 0)
 			aux->callback = -1;
 	}
 	return 0;
@@ -55,7 +55,7 @@ static void rtcSysconAlarmHandler(int arg)
 	if (g_rtc.alarmCallback < 0)
 		return;
 	if (g_rtc.alarmState == 0) {
-		if (ksceKernelNotifyCallback(g_rtc.alarmCallback, arg) < 0)
+		if (sceKernelNotifyCallback(g_rtc.alarmCallback, arg) < 0)
 			g_rtc.alarmCallback = -1;
 	} else if (g_rtc.alarmState == 1) {
 		g_rtc.alarmState = 2;
@@ -92,13 +92,13 @@ static int rtcSetAuxAlarm(unsigned int index, const SceRtcTick *tick)
 		if (aux->alarmTick.tick != 0) {
 			if (now >= aux->alarmTick.tick) {
 				if (aux->callback > 0) {
-					if (ksceKernelNotifyCallback(aux->callback, 1) < 0)
+					if (sceKernelNotifyCallback(aux->callback, 1) < 0)
 						aux->callback = -1;
 				}
 				return 0;
 			}
 			if (aux->callback > 0) {
-				if (ksceKernelNotifyCallback(aux->callback, 0) < 0)
+				if (sceKernelNotifyCallback(aux->callback, 0) < 0)
 					aux->callback = -1;
 			}
 			delay = aux->alarmTick.tick - now;
@@ -111,7 +111,7 @@ static int rtcSetAuxAlarm(unsigned int index, const SceRtcTick *tick)
 		}
 	}
 	if (aux->callback > 0) {
-		if (ksceKernelNotifyCallback(aux->callback, 0) < 0)
+		if (sceKernelNotifyCallback(aux->callback, 0) < 0)
 			aux->callback = -1;
 	}
 	return 0;
@@ -130,7 +130,7 @@ int module_start(SceSize args, void *argp)
 	rtcRegisterLibcTime();
 	SceSysconForDriver_8351526D(rtcSysconAlarmHandler, NULL);
 	sceKernelRegisterSysEventHandler("SceRtc", rtcSysEventHandler, NULL);
-	ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceRtcInit", rtcInitWork, NULL);
+	sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceRtcInit", rtcInitWork, NULL);
 	return 0;
 }
 
@@ -220,7 +220,7 @@ static int rtcSysEventHandler(int resume, int eventid, void *args, void *opt)
 			sceRtcSynchronize();
 		} else if (eventid == SYSEVENT_RESUME_START) {
 			if (g_rtc.alarmState != 1) {
-				if (ksceKernelNotifyCallback(g_rtc.alarmCallback, ksceRtcIsAlarmed()) < 0)
+				if (sceKernelNotifyCallback(g_rtc.alarmCallback, ksceRtcIsAlarmed()) < 0)
 					g_rtc.alarmCallback = -1;
 			}
 			g_rtc.alarmState = 0;
@@ -359,7 +359,7 @@ int sceRtcSetAlarmTick(const SceRtcTick *tick, int arg)
 	else
 		g_rtc.alarmTick = *tick;
 	if (g_rtc.alarmState != 1) {
-		if (ksceKernelNotifyCallback(g_rtc.alarmCallback, ksceRtcIsAlarmed()) < 0)
+		if (sceKernelNotifyCallback(g_rtc.alarmCallback, ksceRtcIsAlarmed()) < 0)
 			g_rtc.alarmCallback = -1;
 	}
 	g_rtc.alarmState = 0;
@@ -442,7 +442,7 @@ int sceRtcSetCurrentTick(const SceRtcTick *tick)
 	}
 	intr = SceCpuForDriver_821FC0EE();
 	if (g_rtc.alarmState != 1) {
-		if (ksceKernelNotifyCallback(g_rtc.alarmCallback, ksceRtcIsAlarmed()) < 0)
+		if (sceKernelNotifyCallback(g_rtc.alarmCallback, ksceRtcIsAlarmed()) < 0)
 			g_rtc.alarmCallback = -1;
 	}
 	g_rtc.alarmState = 0;
@@ -626,7 +626,7 @@ int ksceRtcRegisterCallback(SceUID cb)
 	if (g_rtc.alarmCallback >= 0) {
 		ret = SCE_RTC_ERROR_ALREADY_REGISTERD;
 	} else {
-		ret = ksceKernelNotifyCallback(cb, ksceRtcIsAlarmed());
+		ret = sceKernelNotifyCallback(cb, ksceRtcIsAlarmed());
 		if (ret >= 0) {
 			g_rtc.alarmCallback = cb;
 			ret = 0;
@@ -787,7 +787,7 @@ int ksceRtcRegisterSecureAlarmCallback(SceUID cb)
 	int ret;
 
 	context = rtcEnter();
-	if (ksceKernelGetThreadmgrUIDClass(cb) != SCE_KERNEL_THREADMGR_UID_CLASS_CALLBACK) {
+	if (sceKernelGetThreadmgrUIDClass(cb) != SCE_KERNEL_THREADMGR_UID_CLASS_CALLBACK) {
 		rtcLeave(context);
 		return SCE_KERNEL_ERROR_UNKNOWN_CALLBACK_ID;	/* SCE_KERNEL_ERROR_UNKNOWN_CALLBACK_ID */
 	}
@@ -795,7 +795,7 @@ int ksceRtcRegisterSecureAlarmCallback(SceUID cb)
 	if (g_rtc.aux[RTC_AUX_SECURE].callback >= 0) {
 		ret = SCE_RTC_ERROR_ALREADY_REGISTERD;
 	} else {
-		ret = ksceKernelNotifyCallback(cb, ksceRtcIsSecureAlarmed() == 1);
+		ret = sceKernelNotifyCallback(cb, ksceRtcIsSecureAlarmed() == 1);
 		if (ret >= 0) {
 			g_rtc.aux[RTC_AUX_SECURE].callback = cb;
 			ret = 0;

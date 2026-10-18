@@ -26,7 +26,7 @@ void MsproalUserCancelTransfer(struct MsproalHandle *handle)
 
 	controller->sequencer.control &= 0xfffe;
 	handle->interruptFlags |= 0x80000000;
-	result = ksceKernelSetEventFlag(eventFlag, 0x80000000);
+	result = sceKernelSetEventFlag(eventFlag, 0x80000000);
 	SCE_DBG_ASSERT_FUNC(result == 0, 1171, "msproal_user_set_flg");
 }
 
@@ -57,12 +57,12 @@ void MsproalUserCompleteTransfer(struct MsproalHandle *handle)
 	if (controller->sequencer.control & 4) {
 		controller->sequencer.control |= 8;
 		handle->interruptFlags |= 0x20000000;
-		result = ksceKernelSetEventFlag(gMsifContext.eventFlag, 0x20000000);
+		result = sceKernelSetEventFlag(gMsifContext.eventFlag, 0x20000000);
 	} else {
 		bits = handle->registers->interruptStatus;
 		handle->registers->interruptStatus = bits;
 		handle->interruptFlags |= bits;
-		result = ksceKernelSetEventFlag(gMsifContext.eventFlag, bits);
+		result = sceKernelSetEventFlag(gMsifContext.eventFlag, bits);
 	}
 	SCE_DBG_ASSERT_FUNC(result == 0, 1171, "msproal_user_set_flg");
 }
@@ -74,7 +74,7 @@ int MsproalUserInitialize(void)
 
 void msproal_user_clear_flg(uint32_t preserveMask)
 {
-	int result = ksceKernelClearEventFlag(gMsifContext.eventFlag, preserveMask);
+	int result = sceKernelClearEventFlag(gMsifContext.eventFlag, preserveMask);
 
 	SCE_DBG_ASSERT(result == 0, 1192);
 }
@@ -84,7 +84,7 @@ int MsproalUserPollEventFlag(uint32_t bits)
 	uint32_t outBits;
 	int result;
 
-	result = ksceKernelPollEventFlag(gMsifContext.eventFlag, bits, 1, &outBits);
+	result = sceKernelPollEventFlag(gMsifContext.eventFlag, bits, 1, &outBits);
 	return result < 0 ? -101 : 0;
 }
 
@@ -94,7 +94,7 @@ int MsproalUserWaitEventFlag(uint32_t bits, int milliseconds)
 	SceUInt timeout = (SceUInt)milliseconds * 1000;
 	int result;
 
-	result = ksceKernelWaitEventFlag(gMsifContext.eventFlag, bits, 5,
+	result = sceKernelWaitEventFlag(gMsifContext.eventFlag, bits, 5,
 		&outBits, &timeout);
 	return result < 0 ? -104 : 0;
 }

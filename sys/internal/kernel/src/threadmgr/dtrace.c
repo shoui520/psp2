@@ -8,13 +8,13 @@
 #include <sysmem/sysmem.h>
 #include "syscall_context.h"
 #include <sysmem/sysclib.h>
+#include <threadmgr/threadmgr.h>
 
 #define DTRACE_STATE_SIZE		0x28
 #define DTRACE_HEAP_SIZE		0x20000
 #define THREAD_ID_LIST_ALL		0x00010021	/* PLACEHOLDER: name */
 #define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
 
-extern int ksceKernelGetThreadIdList(SceUID type, SceUID *ids, SceSize size, SceSize *count);
 void issueDTraceAsyncXCallIntrRequest(unsigned int cpuId, void (*fn)(void *), const void *arg,
 				      SceSize size);
 void issueDTraceSyncXCallIntrRequest(unsigned int cpuId, void (*fn)(void *), void *arg,
@@ -86,7 +86,7 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 		if (s_threadmgrRuntime.manager->dtraceHeapId < 0)
 			SCE_PANIC(38);
 	}
-	ret = ksceKernelGetThreadIdList(THREAD_ID_LIST_ALL, NULL, 0, NULL);
+	ret = sceKernelGetThreadIdList(THREAD_ID_LIST_ALL, NULL, 0, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 44, "error: failed to get thread id count (0x%08x)\n", ret);
 		return ret;
@@ -99,7 +99,7 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	}
 	memset(ids, 0, count * sizeof(SceUID));
-	ret = ksceKernelGetThreadIdList(THREAD_ID_LIST_ALL, ids, count * sizeof(SceUID), &count);
+	ret = sceKernelGetThreadIdList(THREAD_ID_LIST_ALL, ids, count * sizeof(SceUID), &count);
 	if (ret < 0) {
 		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId, ids);
 		SCE_DBG_PRINTF(0, 60, "error: failed to get thread id list (0x%08x)\n", ret);

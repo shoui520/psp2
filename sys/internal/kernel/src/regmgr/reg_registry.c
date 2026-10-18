@@ -41,7 +41,7 @@ int regInit(void)
 	g_regCategoryList = NULL;
 	g_regMutex = -1;
 
-	mutex = ksceKernelCreateMutex("SceRegBlockAPI", 0, 0, NULL);
+	mutex = sceKernelCreateMutex("SceRegBlockAPI", 0, 0, NULL);
 	if (mutex < 0) {
 		regPlatformUnlock(state);
 		return REG_ERROR_MUTEX;
@@ -49,7 +49,7 @@ int regInit(void)
 	g_regMutex = mutex;
 
 	if (regMemInit(0, 0x10000) <= 0) {
-		ksceKernelDeleteMutex(g_regMutex);
+		sceKernelDeleteMutex(g_regMutex);
 		regPlatformUnlock(state);
 		return REG_ERROR_HEAP;
 	}
@@ -75,7 +75,7 @@ int regRemoveRegistry(void *param)
 		return REG_ERROR_BAD_PATH;
 	}
 
-	if (ksceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
+	if (sceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
 		regPlatformUnlock(state);
 		return REG_ERROR_LOCK;
 	}
@@ -103,7 +103,7 @@ int regRemoveRegistry(void *param)
 	regFileRemove(data);
 	SceKernelSuspendForDriver_2BB92967(0);
 
-	ret = ksceKernelUnlockMutex(g_regMutex, 1) == 0 ? 0 : REG_ERROR_UNLOCK;
+	ret = sceKernelUnlockMutex(g_regMutex, 1) == 0 ? 0 : REG_ERROR_UNLOCK;
 	regPlatformUnlock(state);
 
 	return ret;
@@ -488,7 +488,7 @@ int regOpenRegistry(void *param, int mode, int *handle)
 		regPlatformUnlock(state);
 		return REG_ERROR_BAD_PATH;
 	}
-	if (ksceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
+	if (sceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
 		regPlatformUnlock(state);
 		return REG_ERROR_LOCK;
 	}
@@ -548,7 +548,7 @@ int regOpenRegistry(void *param, int mode, int *handle)
 		*handle = registry;
 
 unlock:
-	if (ksceKernelUnlockMutex(g_regMutex, 1) != 0)
+	if (sceKernelUnlockMutex(g_regMutex, 1) != 0)
 		ret = REG_ERROR_UNLOCK;
 	if ((p->mode & REG_PARAM_CLOSE_FILES) && registry != -1 && g_regRegistryList != NULL) {
 		reg = regGetRegistry(registry);
@@ -577,7 +577,7 @@ int regCloseRegistry(int registry)
 	int i;
 
 	state = regPlatformLock();
-	if (ksceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
+	if (sceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
 		regPlatformUnlock(state);
 		return REG_ERROR_LOCK;
 	}
@@ -652,7 +652,7 @@ int regCloseRegistry(int registry)
 	regMemFree(reg);
 
 unlock:
-	if (ksceKernelUnlockMutex(g_regMutex, 1) != 0)
+	if (sceKernelUnlockMutex(g_regMutex, 1) != 0)
 		ret = REG_ERROR_UNLOCK;
 	regPlatformUnlock(state);
 
@@ -779,7 +779,7 @@ int regBackupRegistry(void)
 	ret = 0;
 	locked = 0;
 	state = regPlatformLock();
-	ret = ksceKernelLockMutex(g_regMutex, 1, NULL);
+	ret = sceKernelLockMutex(g_regMutex, 1, NULL);
 	if (ret != 0) {
 		locked = -1;
 		ret = REG_ERROR_LOCK;
@@ -852,7 +852,7 @@ close:
 out:
 	SceKernelSuspendForDriver_2BB92967(0);
 	if (locked != -1)
-		ksceKernelUnlockMutex(g_regMutex, 1);
+		sceKernelUnlockMutex(g_regMutex, 1);
 	regPlatformUnlock(state);
 
 	return ret;
@@ -868,7 +868,7 @@ int regRestoreRegistry(void)
 	int i;
 
 	state = regPlatformLock();
-	if (ksceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
+	if (sceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
 		regPlatformUnlock(state);
 		return REG_ERROR_LOCK;
 	}
@@ -904,7 +904,7 @@ int regRestoreRegistry(void)
 
 out:
 	SceKernelSuspendForDriver_2BB92967(0);
-	ksceKernelUnlockMutex(g_regMutex, 1);
+	sceKernelUnlockMutex(g_regMutex, 1);
 	regPlatformUnlock(state);
 
 	return ret;
@@ -928,7 +928,7 @@ int regExportRegistry(const char *path)
 
 	ret = 0;
 	state = regPlatformLock();
-	ret = ksceKernelLockMutex(g_regMutex, 1, NULL);
+	ret = sceKernelLockMutex(g_regMutex, 1, NULL);
 	if (ret != 0) {
 		locked = -1;
 		ret = REG_ERROR_LOCK;
@@ -1029,7 +1029,7 @@ free:
 out:
 	SceKernelSuspendForDriver_2BB92967(0);
 	if (locked != -1)
-		ksceKernelUnlockMutex(g_regMutex, 1);
+		sceKernelUnlockMutex(g_regMutex, 1);
 	regPlatformUnlock(state);
 
 	return ret;
@@ -1053,7 +1053,7 @@ int regImportRegistry(const char *path)
 
 	ret = 0;
 	state = regPlatformLock();
-	ret = ksceKernelLockMutex(g_regMutex, 1, NULL);
+	ret = sceKernelLockMutex(g_regMutex, 1, NULL);
 	if (ret != 0) {
 		locked = -1;
 		ret = REG_ERROR_LOCK;
@@ -1161,7 +1161,7 @@ out:
 	}
 	SceKernelSuspendForDriver_2BB92967(0);
 	if (locked != -1)
-		ksceKernelUnlockMutex(g_regMutex, 1);
+		sceKernelUnlockMutex(g_regMutex, 1);
 	regPlatformUnlock(state);
 
 	return ret;

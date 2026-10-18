@@ -357,7 +357,7 @@ void _cleanup_after_umount(SceExfatfsDrive *drive)
 		SCE_DBG_PRINTF_LEVEL(2, 15, 1095, "sceFatfsFinalizeHeap failed (0x%08X)\n", result);
 	if (!drive->deviceInfo.mount_misc)
 		return;
-	result = ksceKernelFinalizeFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+	result = sceKernelFinalizeFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 	if (result < 0)
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 868, "_finalize_drive_information",
 			"%s: sceKernelFinalizeFastMutex failed[%#x]\n", "_finalize_drive_information", result);
@@ -383,7 +383,7 @@ int _lock_drive_information(SceVfsMount *mount, const char *function)
 			"%s: mp[%p] doesn't have drive\n", function, mount);
 		return 0x80010013;
 	}
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+	result = lockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 	if (result < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 791, "_lock_drive_information_core",
 			"%s: sceKernelLockFastMutex failed[%#x]\n", function, result);
@@ -399,7 +399,7 @@ int _lock_drive_information(SceVfsMount *mount, const char *function)
 	} else {
 		return result;
 	}
-	error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+	error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 	if (error < 0)
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 			"%s: sceKernelUnlockFastMutex failed[%#x]\n", function, error);
@@ -413,11 +413,11 @@ static inline int _lock_drive_information(SceVfsMount *mount, const char *functi
 
 	if (!drive)
 		return 0x80010013;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+	result = lockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 	if (result < 0)
 		return result;
 	if (drive != mount->data || !(drive->state & 1)) {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		return 0x80010013;
 	}
 	return result;
@@ -466,7 +466,7 @@ int exfatfs_vfs_umount(SceVfsOpUmountArgs *argp)
 			"%s: mp[%p] doesn't have drive\n", "_unlock_drive_information", mount);
 		return result;
 	}
-	error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+	error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 	if (error < 0)
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 			"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vfs_umount", error);
@@ -514,7 +514,7 @@ int exfatfs_vfs_decode_path_elem(SceVfsOpDecodePathElemArgs *argp)
 			"%s: mp[%p] doesn't have drive\n", "_unlock_drive_information", mount);
 		return result;
 	}
-	error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+	error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 	if (error < 0)
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 			"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vfs_decode_path_elem", error);
@@ -561,7 +561,7 @@ int exfatfs_vop_dread(SceVopDreadArgs *argp)
 	}
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_exfatfs_dread", error);
@@ -620,7 +620,7 @@ int _exfatfs_rename(SceVfsVnode *vnode, SceExfatfsFnode *parent,
 	}
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_exfatfs_rename", error);
@@ -659,7 +659,7 @@ static inline void _exfatfs_lookup_rollback(SceVfsVnode *vnode, SceExfatfsFnode 
 			"%s: mp[%p] doesn't have drive\n", "_unlock_drive_information", mount);
 		return;
 	}
-	result = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+	result = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 	if (result < 0)
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 			"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_exfatfs_lookup_rollback", result);
@@ -738,7 +738,7 @@ int _exfatfs_create(SceVopCreateArgs *argp)
 	}
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_exfatfs_create", error);
@@ -764,7 +764,7 @@ int _exfatfs_create(SceVopCreateArgs *argp)
 					"_exfatfs_lookup_rollback_core", rollbackFnode, error);
 			drive = mount->data;
 			if (drive) {
-				error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+				error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 				if (error < 0)
 					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 						"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_exfatfs_create_rollback", error);
@@ -865,7 +865,7 @@ int _exfatfs_mkdir(SceVopMkdirArgs *argp)
 	}
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_exfatfs_mkdir", error);
@@ -891,7 +891,7 @@ int _exfatfs_mkdir(SceVopMkdirArgs *argp)
 					"_exfatfs_lookup_rollback_core", rollbackFnode, error);
 			drive = mount->data;
 			if (drive) {
-				error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+				error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 				if (error < 0)
 					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 						"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_exfatfs_mkdir_rollback", error);
@@ -960,7 +960,7 @@ int exfatfs_vop_rename(SceVopRenameArgs *argp)
 					"_exfatfs_lookup_rollback_core", rollbackFnode, error);
 			drive = mount->data;
 			if (drive) {
-				error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+				error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 				if (error < 0)
 					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 						"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_exfatfs_rename_rollback", error);
@@ -1007,7 +1007,7 @@ int exfatfs_vop_dopen(SceVopDopenAgrs *argp)
 	result = sceExfatfsVopDopen(vnode->core.node_data, &file->fd);
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vop_dopen", error);
@@ -1082,7 +1082,7 @@ int exfatfs_vop_lookup(SceVopLookupArgs *argp)
 	}
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vop_lookup", error);
@@ -1166,7 +1166,7 @@ static inline int _exfatfs_getstat_common(SceVfsVnode *vnode, SceIoStat *stat, c
 	result = sceExfatfsVopGetstat(vnode->core.node_data, stat);
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", function, error);
@@ -1236,7 +1236,7 @@ int exfatfs_vop_open(SceVopOpenArgs *argp)
 	_file_size_sync_check(vnode, file, "exfatfs_vop_open");
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vop_open", error);
@@ -1284,7 +1284,7 @@ SceOff exfatfs_vop_lseek(SceVopLseekArgs *argp)
 	result = sceExfatfsVopLseek(file->fd, offset, whence, &position);
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vop_lseek", error);
@@ -1369,7 +1369,7 @@ int _exfatfs_chstat_common(SceVfsVnode *vnode, SceIoStat *stat, unsigned int bit
 unlock:
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_exfatfs_chstat_common", error);
@@ -1450,7 +1450,7 @@ int exfatfs_vop_remove(SceVopRemoveArgs *argp)
 unlock:
 #endif
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vop_remove", error);
@@ -1491,7 +1491,7 @@ int exfatfs_vop_rmdir(SceVopRmdirArgs *argp)
 	}
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vop_rmdir", error);
@@ -1527,7 +1527,7 @@ int exfatfs_vfs_devctl(SceVfsOpDevctlArg *argp)
 		return 0x80010013;
 	switch (command) {
 	case 0x3001:
-		if (SceSblACMgrForDriver_D7AD8471(ksceKernelGetProcessIdFromTLS(),
+		if (SceSblACMgrForDriver_D7AD8471(SceThreadmgrForDriver_FA54D49A(),
 			mount->mnt_data->assign_name) != 1)
 			return 0x80010030;
 		if (arglen)
@@ -1693,7 +1693,7 @@ int exfatfs_vfs_devctl(SceVfsOpDevctlArg *argp)
 	}
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", function, error);
@@ -1726,7 +1726,7 @@ int exfatfs_vop_link(SceVopLinkArgs *argp)
 	result = sceExfatfsVopLink(from->core.node_data, to->core.node_data);
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vop_link", error);
@@ -1751,7 +1751,7 @@ int lockDriveInformationAllowUnmount(SceVfsMount *mount, int allowUnmount, const
 			"%s: mp[%p] doesn't have drive\n", function, mount);
 		return 0x80010013;
 	}
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+	result = lockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 	if (result < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 791, "_lock_drive_information_core",
 			"%s: sceKernelLockFastMutex failed[%#x]\n", function, result);
@@ -1761,7 +1761,7 @@ int lockDriveInformationAllowUnmount(SceVfsMount *mount, int allowUnmount, const
 	if (current != drive) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1254, "_lock_drive_information",
 			"%s: drive[%p]->[%p], mp[%p]\n", function, drive, current, mount);
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		goto unlockFailed;
 	}
 	if (!(current->state & 1)) {
@@ -1777,7 +1777,7 @@ int lockDriveInformationAllowUnmount(SceVfsMount *mount, int allowUnmount, const
 	} else {
 		return result;
 	}
-	error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+	error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 unlockFailed:
 	if (error < 0)
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
@@ -1793,11 +1793,11 @@ static inline int lockDriveInformationAllowUnmount(SceVfsMount *mount, int allow
 
 	if (!drive)
 		return 0x80010013;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+	result = lockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 	if (result < 0)
 		return result;
 	if (drive != mount->data || (!(drive->state & 1) && !allowUnmount)) {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		return 0x80010013;
 	}
 	return result;
@@ -1838,7 +1838,7 @@ int exfatfs_vop_cleanup(SceVopCleanupArgs *argp)
 		result = sceExfatfsVopCleanup(vnode->core.node_data, 0);
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vop_cleanup", error);
@@ -1890,7 +1890,7 @@ int exfatfs_vop_sync(SceVopSyncArgs *argp)
 	}
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vop_sync", error);
@@ -1930,7 +1930,7 @@ int exfatfs_vfs_sync(SceVfsOpSyncArgs *argp)
 	result = _exfatfs_flush_all_data(drive);
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vfs_sync", error);
@@ -1969,7 +1969,7 @@ int exfatfs_vop_read(SceVopReadArgs *argp)
 	result = sceExfatfsVopPread(file->fd, buffer, size, file->position, &readSize);
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vop_read", error);
@@ -2043,7 +2043,7 @@ int exfatfs_vop_write(SceVopWriteArgs *argp)
 	_file_size_sync_check(vnode, file, "exfatfs_vop_write");
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vop_write", error);
@@ -2081,7 +2081,7 @@ int exfatfs_vop_pread(SceVopPreadArgs *argp)
 	result = sceExfatfsVopPread(file->fd, buffer, size, offset, &readSize);
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vop_pread", error);
@@ -2124,7 +2124,7 @@ int exfatfs_vop_pwrite(SceVopPwriteArgs *argp)
 		vnode->core.size = fileSize;
 	drive = mount->data;
 	if (drive) {
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vop_pwrite", error);
@@ -2229,7 +2229,7 @@ int exfatfs_vfs_mount(SceVfsOpMountArgs *argp)
 				} while (*assignName != '0' && suffix < &mutexName[31]);
 			}
 			suffix[1] = 0;
-			result = ksceKernelInitializeFastMutex((SceKernelFastMutex *)&drive->fastmutex,
+			result = sceKernelInitializeFastMutex((SceKernelFastMutex *)&drive->fastmutex,
 				mutexName, 0x2000, 0);
 			if (result < 0) {
 				SCE_DBG_PRINTF_LEVEL_FUNC(2, 15, 845, "_initialize_drive_information",
@@ -2397,7 +2397,7 @@ finalizeHeap:
 		SCE_DBG_PRINTF_LEVEL(2, 15, 1553, "sceFatfsFinalizeHeap failed (0x%08X)\n", error);
 finalizeDrive:
 	if (drive->deviceInfo.mount_misc) {
-		error = ksceKernelFinalizeFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelFinalizeFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 868, "_finalize_drive_information",
 				"%s: sceKernelFinalizeFastMutex failed[%#x]\n", "_finalize_drive_information", error);
@@ -2445,7 +2445,7 @@ int exfatfs_vop_close(SceVopCloseArgs *argp)
 				mount->data = NULL;
 				SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 1236, "_umount_after_all_close",
 					"%s: mp[%p], drive[%p]\n", "_umount_after_all_close", mount, current);
-				error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&current->fastmutex);
+				error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&current->fastmutex);
 				if (error < 0)
 					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 						"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_force_umount_check", error);
@@ -2462,7 +2462,7 @@ int exfatfs_vop_close(SceVopCloseArgs *argp)
 				goto closed;
 			}
 		}
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vop_close", error);
@@ -2504,7 +2504,7 @@ int exfatfs_vop_inactive(SceVopInactiveArgs *argp)
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 1207, "_umount_after_root_inactive",
 				"%s: mp[%p], drive[%p]\n", "_umount_after_root_inactive", mount, current);
 			mount->data = NULL;
-			error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&current->fastmutex);
+			error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&current->fastmutex);
 			if (error < 0)
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 					"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_umount_after_root_inactive", error);
@@ -2517,7 +2517,7 @@ int exfatfs_vop_inactive(SceVopInactiveArgs *argp)
 			mount->data = NULL;
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 1236, "_umount_after_all_close",
 				"%s: mp[%p], drive[%p]\n", "_umount_after_all_close", mount, current);
-			error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&current->fastmutex);
+			error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&current->fastmutex);
 			if (error < 0)
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 					"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_umount_check", error);
@@ -2531,7 +2531,7 @@ int exfatfs_vop_inactive(SceVopInactiveArgs *argp)
 		if (current) {
 			if (current == drive) {
 unlock:
-				error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+				error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 				if (error < 0)
 					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 						"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_umount_check", error);
@@ -2574,7 +2574,7 @@ int exfatfs_vop_dclose(SceVopDcloseArgs *argp)
 				mount->data = NULL;
 				SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 1236, "_umount_after_all_close",
 					"%s: mp[%p], drive[%p]\n", "_umount_after_all_close", mount, current);
-				error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&current->fastmutex);
+				error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&current->fastmutex);
 				if (error < 0)
 					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 						"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_force_umount_check", error);
@@ -2591,7 +2591,7 @@ int exfatfs_vop_dclose(SceVopDcloseArgs *argp)
 				goto closed;
 			}
 		}
-		error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 				"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vop_dclose", error);
@@ -2627,7 +2627,7 @@ int exfatfs_vop_unlink(SceVopUnlinkArgs *argp)
 			mount->data = NULL;
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 1236, "_umount_after_all_close",
 				"%s: mp[%p], drive[%p]\n", "_umount_after_all_close", mount, current);
-			error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&current->fastmutex);
+			error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&current->fastmutex);
 			if (error < 0)
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 					"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_force_umount_check", error);
@@ -2644,7 +2644,7 @@ int exfatfs_vop_unlink(SceVopUnlinkArgs *argp)
 			return result;
 		}
 	}
-	error = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+	error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 	if (error < 0)
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 			"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vop_unlink", error);

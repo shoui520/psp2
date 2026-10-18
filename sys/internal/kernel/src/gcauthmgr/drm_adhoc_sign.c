@@ -18,7 +18,7 @@ int GcAuthAdhocSign160(const GcAuthAdhocSign160Request *request)
 
 	if (request->keyId != 0)
 		return (int)0x808a040a;
-	if (ksceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
 		return (int)0x808a0008;
 	cursor = gcAuthAdhocSigningScratch.input160.zero;
 	do {
@@ -36,7 +36,7 @@ int GcAuthAdhocSign160(const GcAuthAdhocSign160Request *request)
 				((unsigned char *)&gcAuthAdhocSigningScratch.signature160)[index];
 		result = 0;
 	}
-	if (ksceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
 		return (int)0x808a0008;
 	return result;
 }
@@ -47,7 +47,7 @@ int GcAuthAdhocSign224(const GcAuthAdhocSign224Request *request)
 	unsigned int index;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
 		return (int)0x808a0008;
 	cursor = gcAuthAdhocSigningScratch.input224.zero;
 	do {
@@ -65,7 +65,7 @@ int GcAuthAdhocSign224(const GcAuthAdhocSign224Request *request)
 				((unsigned char *)&gcAuthAdhocSigningScratch.signature224)[index];
 		result = 0;
 	}
-	if (ksceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
 		return (int)0x808a0008;
 	return result;
 }

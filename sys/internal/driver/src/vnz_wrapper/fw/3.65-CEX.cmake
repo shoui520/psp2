@@ -133,28 +133,28 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelRegisterIntrHandler
 	ksceKernelEnableIntr
 	ksceKernelReleaseIntrHandler
-	ksceKernelGetThreadmgrUIDClass
-	ksceKernelWaitEventFlag
-	ksceKernelFinalizeFastMutex
-	ksceKernelDeleteSema
-	ksceKernelStartThread
-	ksceKernelCreateSema
-	ksceKernelWaitSema
-	ksceKernelCreateEventFlag
+	sceKernelGetThreadmgrUIDClass
+	sceKernelWaitEventFlag
+	sceKernelFinalizeFastMutex
+	sceKernelDeleteSema
+	sceKernelStartThread
+	sceKernelCreateSema
+	sceKernelWaitSema
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
-	ksceKernelPollEventFlag
+	sceKernelClearEventFlag
+	lockFastMutex
+	sceKernelDeleteEventFlag
+	sceKernelPollEventFlag
 	sceKernelCancelSema
 	sceKernelGetProcessId
-	ksceKernelInitializeFastMutex
-	ksceKernelNotifyCallback
-	ksceKernelCreateThread
-	ksceKernelSignalSema
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
-	ksceKernelEnqueueWorkQueue
+	sceKernelInitializeFastMutex
+	sceKernelNotifyCallback
+	sceKernelCreateThread
+	sceKernelSignalSema
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
+	sceKernelScheduleWorkTask
 	sceKernelRegisterSysEventHandler
 	ksceKernelCreateProcessLocalStorage
 	ksceKernelGetProcessLocalStorageAddrForPid

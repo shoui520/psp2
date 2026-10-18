@@ -20,6 +20,7 @@
 #include <sysmem/uid_class.h>
 #include <intrmgr/intrmgr.h>
 #include <sysmem/sysroot.h>
+#include <threadmgr/threadmgr.h>
 
 #define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define THREAD_ATTR_USER		0x80000000
@@ -204,18 +205,6 @@ extern void SceIntrmgrForKernel_08FDB0CE(struct ThreadRegisterContext *context, 
 					 uintptr_t vfp) __attribute__((noreturn));
 extern int SceIntrmgrForKernel_71C5F42F(struct ThreadRegisterContext *context, uintptr_t vfp)
 	__attribute__((returns_twice));
-SceUID ksceKernelCreateSema(const char *name, SceUInt32 attr, int initCount, int maxCount,
-			    const void *option);
-int ksceKernelDeleteSema(SceUID semaId);
-int ksceKernelSignalSema(SceUID semaId, int signalCount);
-int ksceKernelWaitSema(SceUID semaId, int needCount, SceUInt32 *timeout);
-SceUID ksceKernelCreateThread(const char *name, int (*entry)(SceSize, void *), int priority,
-			      SceSize stackSize, SceUInt32 attr, int cpuAffinityMask,
-			      const void *option);
-int ksceKernelStartThread(SceUID threadId, SceSize argSize, void *argp);
-int ksceKernelDeleteThread(SceUID threadId);
-SceUID ksceKernelGetThreadId(void);
-SceUID sceKernelGetProcessId(void);
 int callCallbackAll(struct ThreadCB *thread);
 int sceKernelCheckThreadUserStackSelf(void);
 int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result,
@@ -358,9 +347,9 @@ int uidWorkQueue_Destructor(ThreadmgrWorkQueue *queue)
 			SCE_PANIC(SCE_LINE(2256, 2253));
 	}
 	wake = wakeupWaitObjectAll((uintptr_t)&queue->next, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
-	ksceKernelDeleteSema(queue->sema);
+	sceKernelDeleteSema(queue->sema);
 	for (i = 0; i < queue->threadCount; i++)
-		ksceKernelDeleteThread(queue->threads[i]);
+		sceKernelDeleteThread(queue->threads[i]);
 	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, queue->threads);
 	sceKernelSpinlockLowUnlock(&queue->lock);
 	if ((wake & 1) && currentThreadContext() != NULL) {
@@ -837,7 +826,7 @@ int workQueueThread(SceSize argSize, void *argp)
 	int intr;
 
 	for (;;) {
-		if (ksceKernelWaitSema(queue->sema, 1, NULL) < 0)
+		if (sceKernelWaitSema(queue->sema, 1, NULL) < 0)
 			return 0;
 		intr = SceCpuForDriver_D32ACE9E(&queue->lock);
 		while ((link = queue->pending.next) != &queue->pending) {
@@ -852,7 +841,7 @@ int workQueueThread(SceSize argSize, void *argp)
 				sceKernelSpinlockLowUnlock(&queue->lock);
 				sceGUIDReleaseObject(cb->guid);
 			} else {
-				cb->threadId = ksceKernelGetThreadId();
+				cb->threadId = sceKernelGetThreadId();
 				link->next = &queue->running;
 				link->prev = queue->running.prev;
 				queue->running.prev = link;
@@ -931,7 +920,7 @@ int createGlobalWorkQueue(void)
 	int intr, ret, i;
 
 	snprintf(name, sizeof(name), "wqueue: %s", "SceKernelGlobalWorkQueue");
-	sema = ksceKernelCreateSema(name, 0, 0, 0x7fffffff, NULL);
+	sema = sceKernelCreateSema(name, 0, 0, 0x7fffffff, NULL);
 	if (sema < 0) {
 		SCE_DBG_PRINTF(0xb, 249, " error: sceKernelCreateSema(0x%08X)\n", sema);
 		SCE_PANIC(250);
@@ -943,7 +932,7 @@ int createGlobalWorkQueue(void)
 		SCE_PANIC(259);
 	}
 	for (i = 0; i < WORK_QUEUE_MAX_THREADS; i++) {
-		thread = ksceKernelCreateThread(name, workQueueThread, WORK_QUEUE_THREAD_PRIORITY,
+		thread = sceKernelCreateThread(name, workQueueThread, WORK_QUEUE_THREAD_PRIORITY,
 						WORK_QUEUE_THREAD_STACK, 0, 0xf, NULL);
 		if (thread < 0) {
 			SCE_DBG_PRINTF(0xb, 272, " error: sceKernelCreateThread(0x%08X)\n", thread);
@@ -969,7 +958,7 @@ int createGlobalWorkQueue(void)
 	queue->creatorPid = THREADMGR_KERNEL_PID;
 	queue->reservedId = -1;
 	for (i = 0; i < WORK_QUEUE_MAX_THREADS; i++) {
-		ret = ksceKernelStartThread(threads[i], sizeof(queue), &queue);
+		ret = sceKernelStartThread(threads[i], sizeof(queue), &queue);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xb, 311, " error: sceKernelStartThread(0x%08X)\n", ret);
 			SCE_PANIC(312);
@@ -1031,7 +1020,7 @@ SceUID sceKernelCreateWorkQueue(const char *name, SceUInt32 attr,
 			cpuMask = option->cpuAffinityMask;
 	}
 	snprintf(threadName, sizeof(threadName), "wqueue: %s", name);
-	sema = ksceKernelCreateSema(threadName, 0, 0, 0x7fffffff, NULL);
+	sema = sceKernelCreateSema(threadName, 0, 0, 0x7fffffff, NULL);
 	if (sema < 0) {
 		SCE_DBG_PRINTF(0xb, 1114, " error: sceKernelCreateSema(0x%08X)\n", sema);
 		ret = sema;
@@ -1046,7 +1035,7 @@ SceUID sceKernelCreateWorkQueue(const char *name, SceUInt32 attr,
 	}
 	ret = sema;
 	for (i = 0; i < count; i++) {
-		ret = ksceKernelCreateThread(threadName, workQueueThread, priority, stackSize, 0,
+		ret = sceKernelCreateThread(threadName, workQueueThread, priority, stackSize, 0,
 					     cpuMask, NULL);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xb, 1137, " error: sceKernelCreateThread(0x%08X)\n", ret);
@@ -1076,7 +1065,7 @@ SceUID sceKernelCreateWorkQueue(const char *name, SceUInt32 attr,
 	queue->reservedId = -1;
 	queue->sema = sema;
 	for (i = 0; i < count; i++) {
-		ret = ksceKernelStartThread(threads[i], sizeof(queue), &queue);
+		ret = sceKernelStartThread(threads[i], sizeof(queue), &queue);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xb, 1187, " error: sceKernelStartThread(0x%08X)\n", ret);
 			if (sceGUIDClose(uid) < 0)
@@ -1090,14 +1079,14 @@ SceUID sceKernelCreateWorkQueue(const char *name, SceUInt32 attr,
 deleteThreads:
 	if (threads[0] != -1) {
 		for (i = 0; i < count; ) {
-			ksceKernelDeleteThread(threads[i]);
+			sceKernelDeleteThread(threads[i]);
 			if (++i >= count || threads[i] == -1)
 				break;
 		}
 	}
 	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, threads);
 deleteSema:
-	ksceKernelDeleteSema(sema);
+	sceKernelDeleteSema(sema);
 restore:
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
@@ -1114,7 +1103,7 @@ int SceThreadmgrForDriver_48C06CD6(SceUID workQueueId, SceUInt32 *timeout)
 }
 
 /* sceKernelScheduleWorkTask: queues entry(arg) as a task named name; returns the task's UID */
-SceUID ksceKernelEnqueueWorkQueue(SceUID workQueueId, const char *name, uintptr_t entry, void *arg)
+SceUID sceKernelScheduleWorkTask(SceUID workQueueId, const char *name, uintptr_t entry, void *arg)
 {
 	UIDCreateOpt opt;
 	struct ThreadCB *thread =
@@ -1168,7 +1157,7 @@ SceUID ksceKernelEnqueueWorkQueue(SceUID workQueueId, const char *name, uintptr_
 	task->cb.puid = -1;
 	task->cb.threadId = -1;
 	task->cb.closed = 0;
-	task->cb.creatorThreadId = ksceKernelGetThreadId();
+	task->cb.creatorThreadId = sceKernelGetThreadId();
 	task->cb.caller = __builtin_return_address(0);
 	if (thread == NULL) {
 		task->cb.ioFlags = 0;
@@ -1209,7 +1198,7 @@ SceUID ksceKernelEnqueueWorkQueue(SceUID workQueueId, const char *name, uintptr_
 	task->cb.queue = queue;
 	sceKernelSpinlockLowUnlock(&queue->lock);
 	sceGUIDReleaseObject(workQueueId);
-	ret = ksceKernelSignalSema(sema, 1);
+	ret = sceKernelSignalSema(sema, 1);
 	if (ret < 0)
 		SCE_DBG_PRINTF_FUNC(0xb, 1391, "sceKernelScheduleWorkTask",
 				    " error: sceKernelSignalSema(0x%08X)\n", ret);

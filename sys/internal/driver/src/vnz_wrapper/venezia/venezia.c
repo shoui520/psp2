@@ -61,7 +61,7 @@ int _sceVeneziaProcessCreateEntry(void)
 			 __builtin_return_address(0));
 #endif
 	memset(storage, 0, sizeof(*storage));
-	ret = ksceKernelInitializeFastMutex(&storage->suspendMutex, "SceVeneziaSuspend",
+	ret = sceKernelInitializeFastMutex(&storage->suspendMutex, "SceVeneziaSuspend",
 					  0x8000, NULL);
 	if (ret < 0)
 		goto out;
@@ -114,7 +114,7 @@ int _sceVeneziaProcessCreateEntryInternal2(SceUID pid, SceUInt32 type)
 			 __builtin_return_address(0));
 #endif
 	memset(storage, 0, sizeof(*storage));
-	ret = ksceKernelInitializeFastMutex(&storage->suspendMutex, "SceVeneziaSuspend",
+	ret = sceKernelInitializeFastMutex(&storage->suspendMutex, "SceVeneziaSuspend",
 					  0x8000, NULL);
 	if (ret < 0)
 		return ret;
@@ -146,11 +146,11 @@ int _sceVeneziaProcessExitEntry(SceUID pid, SceUInt32 type)
 			 __builtin_return_address(0));
 #endif
 	if (storage->suspendInProgress != 0) {
-		err = ksceKernelUnlockFastMutex(&storage->suspendMutex);
+		err = sceKernelUnlockFastMutex(&storage->suspendMutex);
 		if (err < 0)
 			ret = err;
 	}
-	err = ksceKernelFinalizeFastMutex(&storage->suspendMutex);
+	err = sceKernelFinalizeFastMutex(&storage->suspendMutex);
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -166,12 +166,12 @@ int SceCodecEngineWrapperForDriver_CB8703D8(void)
 	SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(269, "_lockProcessSuspendCore"),
 			 __builtin_return_address(0));
 #endif
-	ret = ksceKernelLockFastMutex(&storage->suspendMutex);
+	ret = lockFastMutex(&storage->suspendMutex);
 	if (ret >= 0) {
 		intr = SceCpuForDriver_D32ACE9E((SceKernelSpinlock *)&storage->suspendLock);
 		storage->suspendLockCount++;
 		sceKernelSpinlockLowUnlockCpuResumeIntr((SceKernelSpinlock *)&storage->suspendLock, intr);
-		ksceKernelUnlockFastMutex(&storage->suspendMutex);
+		sceKernelUnlockFastMutex(&storage->suspendMutex);
 	}
 	return ret;
 }
@@ -186,12 +186,12 @@ int _lockProcessSuspendCore(void)
 	SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(269, "_lockProcessSuspendCore"),
 			 __builtin_return_address(0));
 #endif
-	ret = ksceKernelLockFastMutex(&storage->suspendMutex);
+	ret = lockFastMutex(&storage->suspendMutex);
 	if (ret >= 0) {
 		intr = SceCpuForDriver_D32ACE9E((SceKernelSpinlock *)&storage->suspendLock);
 		storage->suspendLockCount++;
 		sceKernelSpinlockLowUnlockCpuResumeIntr((SceKernelSpinlock *)&storage->suspendLock, intr);
-		ksceKernelUnlockFastMutex(&storage->suspendMutex);
+		sceKernelUnlockFastMutex(&storage->suspendMutex);
 	}
 	return ret;
 }
@@ -227,7 +227,7 @@ int _sceVeneziaStartProcessSuspend(SceUID pid)
 			 __builtin_return_address(0));
 #endif
 	storage->suspendPollCount = 0;
-	ret = ksceKernelLockFastMutex(&storage->suspendMutex);
+	ret = lockFastMutex(&storage->suspendMutex);
 	if (ret >= 0)
 		storage->suspendInProgress = 1;
 	return ret;
@@ -293,7 +293,7 @@ int _sceVeneziaProcessResume(SceUID pid)
 	intr = SceCpuForDriver_D32ACE9E(&g_veneziaState.clockLock);
 	g_veneziaState.clockLockCount += storage->clockLockCount;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaState.clockLock, intr);
-	ret = ksceKernelUnlockFastMutex(&storage->suspendMutex);
+	ret = sceKernelUnlockFastMutex(&storage->suspendMutex);
 	if (ret >= 0)
 		storage->suspendInProgress = 0;
 	return ret;
@@ -314,7 +314,7 @@ int _sceVeneziaStartSystemSuspend(void)
 			 __builtin_return_address(0));
 #endif
 	storage->suspendPollCount = 0;
-	ret = ksceKernelLockFastMutex(&storage->suspendMutex);
+	ret = lockFastMutex(&storage->suspendMutex);
 	if (ret < 0)
 		goto out;
 	storage->suspendInProgress = 1;
@@ -372,7 +372,7 @@ int _sceVeneziaSystemResumePhase0(void)
 	ret = veneziaResume();
 	if (ret < 0)
 		goto out;
-	ret = ksceKernelUnlockFastMutex(&storage->suspendMutex);
+	ret = sceKernelUnlockFastMutex(&storage->suspendMutex);
 	if (ret < 0)
 		goto out;
 	storage->suspendInProgress = 0;

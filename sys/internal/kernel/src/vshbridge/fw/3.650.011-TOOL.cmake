@@ -285,9 +285,9 @@ set(MODULE_IMPORT_FUNCS
 	memset
 	snprintf
 	__stack_chk_fail
-	ksceKernelSetPermission
+	sceKernelSetThreadAccessLevel
 	sceKernelExitDeleteThread
-	ksceKernelRunWithStack
+	SceThreadmgrForDriver_E54FD746
 	ksceIoDreadForVshbridge
 	ksceIoFlock
 	ksceIoChstatForVshbridge

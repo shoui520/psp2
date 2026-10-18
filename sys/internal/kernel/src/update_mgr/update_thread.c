@@ -10,7 +10,7 @@ int UpdateUtilCreateThread(const char *name, SceKernelThreadEntry entry,
 
 	state = readTpidruro();
 	writeTpidruro(0);
-	result = ksceKernelCreateThread(name, entry, priority, stackSize,
+	result = sceKernelCreateThread(name, entry, priority, stackSize,
 			attr, cpuAffinityMask, option);
 	writeTpidruro(state);
 	return result;

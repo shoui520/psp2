@@ -48,19 +48,6 @@ _Static_assert(sizeof(ThreadmgrThreadEvent) == 0x38, "SceUIDThreadEventObject si
 #define THREAD_EVENT_FROM_LINK(l) \
 	((ThreadmgrThreadEvent *)((uintptr_t)(l) - offsetof(ThreadmgrThreadEvent, link)))
 
-/* the thread event info (0x40) */
-typedef struct ThreadmgrThreadEventInfo {
-	SceSize size;
-	SceUID uid;
-	char name[32];
-	uint32_t attr;				/* 0x28 */
-	uint32_t mask;
-	SceUID target;				/* 0x30 */
-	SceUID pid;
-	uintptr_t handler;			/* 0x38 */
-	uint32_t arg;
-} ThreadmgrThreadEventInfo;
-
 int callCallbackEntry(struct ThreadCB *thread, int user, uintptr_t entry,
 		      uint32_t arg0, uint32_t arg1, uint32_t arg2, uint32_t arg3);
 

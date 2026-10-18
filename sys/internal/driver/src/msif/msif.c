@@ -88,14 +88,14 @@ int MsifSleepThread(SceSize args, void *argp)
 	uint32_t outBits;
 
 	for (;;) {
-		ksceKernelWaitEventFlag(gMsifContext.sleepEventFlag, 1, 5,
+		sceKernelWaitEventFlag(gMsifContext.sleepEventFlag, 1, 5,
 			&outBits, NULL);
-		if (ksceKernelLockFastMutex(
+		if (lockFastMutex(
 			(SceKernelFastMutex *)&gMsifContext.mutex) < 0)
 			continue;
 		if (gMsifContext.started && gMsifContext.mediaAccessTickEnabled)
 			MsproalSleep();
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	}
 }
 
@@ -153,7 +153,7 @@ void sceMsifIdleCallback(uint32_t event, uint32_t idle, void *argument,
 	(void)elapsedHigh;
 	if (!idle)
 		return;
-	result = ksceKernelSetEventFlag(gMsifContext.sleepEventFlag, 1);
+	result = sceKernelSetEventFlag(gMsifContext.sleepEventFlag, 1);
 #if FW_DEBUG
 	if (result != 0)
 		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(2287),
@@ -165,7 +165,7 @@ int sceMsifInitCallback(uint32_t kind, void *argument)
 {
 	int result;
 
-	result = ksceKernelStartThread(gMsifContext.sleepThread, 4, NULL);
+	result = sceKernelStartThread(gMsifContext.sleepThread, 4, NULL);
 	if (result < 0) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(2306),
@@ -648,11 +648,11 @@ tick:
 				"msif power tick error. ret:0x%x\n", tickResult);
 #endif
 	}
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	return 0;
 
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	return result;
 }
 
@@ -689,10 +689,10 @@ int module_start(SceSize args, const void *argp)
 		return 2;
 	gMsifContext.controllerMemBlock = result;
 	SceSysmemForDriver_A841EDDA(result, (void **)&gMsifContext.controller);
-	gMsifContext.eventFlag = ksceKernelCreateEventFlag("SceMsif", 0, 0, NULL);
+	gMsifContext.eventFlag = sceKernelCreateEventFlag("SceMsif", 0, 0, NULL);
 	if (gMsifContext.eventFlag < 0)
 		goto free_controller;
-	if (ksceKernelInitializeFastMutex((SceKernelFastMutex *)&gMsifContext.mutex,
+	if (sceKernelInitializeFastMutex((SceKernelFastMutex *)&gMsifContext.mutex,
 		"SceMsif", 2, NULL) < 0)
 		goto delete_event;
 	memset(&option, 0, sizeof(option));
@@ -737,11 +737,11 @@ int module_start(SceSize args, const void *argp)
 		goto unregister_sys_event;
 	}
 	gMsifContext.started = 0;
-	result = ksceKernelCreateEventFlag("SceMsifSleepCtrl", 0, 0, NULL);
+	result = sceKernelCreateEventFlag("SceMsifSleepCtrl", 0, 0, NULL);
 	gMsifContext.sleepEventFlag = result;
 	if (result < 0)
 		goto unregister_sys_event;
-	result = ksceKernelCreateThread("SceMsifSleepCtrl", MsifSleepThread,
+	result = sceKernelCreateThread("SceMsifSleepCtrl", MsifSleepThread,
 		96, 8192, 0x10000000, 0x80000, NULL);
 	if (result < 0)
 		goto delete_sleep_event;
@@ -761,9 +761,9 @@ int module_start(SceSize args, const void *argp)
 	return 0;
 
 delete_sleep_thread:
-	ksceKernelDeleteThread(gMsifContext.sleepThread);
+	sceKernelDeleteThread(gMsifContext.sleepThread);
 delete_sleep_event:
-	ksceKernelDeleteEventFlag(gMsifContext.sleepEventFlag);
+	sceKernelDeleteEventFlag(gMsifContext.sleepEventFlag);
 unregister_sys_event:
 	sceKernelUnregisterSysEventHandler(gMsifSysEventHandler);
 release_insertion_interrupt:
@@ -775,12 +775,12 @@ release_controller_interrupt:
 free_dma:
 	SceSysmemForDriver_009E1C61(gMsifContext.dmaMemBlock);
 finalize_mutex:
-	ksceKernelFinalizeFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
-	ksceKernelDeleteEventFlag(gMsifContext.eventFlag);
+	sceKernelFinalizeFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	sceKernelDeleteEventFlag(gMsifContext.eventFlag);
 	SceSysmemForDriver_009E1C61(gMsifContext.controllerMemBlock);
 	return result < 0 ? 2 : 0;
 delete_event:
-	ksceKernelDeleteEventFlag(gMsifContext.eventFlag);
+	sceKernelDeleteEventFlag(gMsifContext.eventFlag);
 free_controller:
 	SceSysmemForDriver_009E1C61(gMsifContext.controllerMemBlock);
 	return 2;
@@ -790,7 +790,7 @@ int sceMsifSwReset(void)
 {
 	uint8_t mediaType;
 	uint32_t revision;
-	int result = ksceKernelLockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	int result = lockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 
 	if (result < 0)
 		return result;
@@ -862,7 +862,7 @@ check_media:
 		SceDebugForDriver_02B04343(0, SCE_DBGINFO(427),
 			"0x%x %d\n", result, 427);
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	return result;
 }
 
@@ -875,7 +875,7 @@ int ksceMsifGetMsInfo(SceMsInfo *info)
 
 	if (!info)
 		return 0x803d0001;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	result = lockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	if (result < 0)
 		return result;
 	result = MsproalGetMediaInformation(&information);
@@ -884,7 +884,7 @@ int ksceMsifGetMsInfo(SceMsInfo *info)
 			result = gMsifLibraryErrors[result + 205];
 		else
 			result = 0x803d0000;
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 		return result;
 	}
 	switch (information.mediaType & 0x1f0) {
@@ -929,7 +929,7 @@ int ksceMsifGetMsInfo(SceMsInfo *info)
 		(info->assemblyModel << 8);
 	info->assemblyMaker = handle->systemInformation.assemblyMaker;
 	__builtin_memcpy(info->assemblyDate, handle->systemInformation.assemblyDate, 8);
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	result = lockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	if (result >= 0)
 		result = sceMsifReadSector(totalSectors - 1,
 			gMsifContext.dummyReadBuffer, 1);
@@ -954,7 +954,7 @@ int ksceMsifGetMsInfo(SceMsInfo *info)
 				"msif power tick error. ret:0x%x\n", result);
 #endif
 	}
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	return 0;
 }
 
@@ -968,7 +968,7 @@ int ksceMsifReadSector(uint32_t sector, uint8_t *data, unsigned int count)
 		return 0x803d0001;
 	if ((uintptr_t)data << 30)
 		return 0x803d0002;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	result = lockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	if (result >= 0)
 		return sceMsifReadSector(sector, data, count);
 	return result;
@@ -988,7 +988,7 @@ int ksceMsifWriteSector(uint32_t sector, uint8_t *data, unsigned int count)
 		return 0x803d0001;
 	if ((uintptr_t)data << 30)
 		return 0x803d0002;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	result = lockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	if (result < 0)
 		return result;
 	result = MsproalGetMediaInformation(&information);
@@ -1000,7 +1000,7 @@ int ksceMsifWriteSector(uint32_t sector, uint8_t *data, unsigned int count)
 		goto unlock;
 	}
 	if (information.writeProtected) {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 		return 0x803d0003;
 	}
 	result = sceMsifPrepareDmaTable(data, count << 9, 1);
@@ -1112,11 +1112,11 @@ tick:
 				"msif power tick error. ret:0x%x\n", tickResult);
 #endif
 	}
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	return 0;
 
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	return result;
 }
 
@@ -1129,7 +1129,7 @@ int sceMsifZerofillSector(uint32_t sector, unsigned int count)
 
 	if (!count)
 		return 0x803d0001;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	result = lockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	if (result < 0)
 		return result;
 	result = MsproalGetMediaInformation(&information);
@@ -1141,7 +1141,7 @@ int sceMsifZerofillSector(uint32_t sector, unsigned int count)
 		goto unlock;
 	}
 	if (information.writeProtected) {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 		return 0x803d0003;
 	}
 	do {
@@ -1174,7 +1174,7 @@ int sceMsifZerofillSector(uint32_t sector, unsigned int count)
 			SceDebugForDriver_02B04343(0,
 				SCE_DBGINFO_FUNC(1574, "sceMsifDevNullPrepareDmaTable"),
 				"0x%x %d %d 0x%x\n", 0x803d0005, 1574, entries, length);
-			ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+			sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 			return 0x803d0005;
 		}
 		descriptors[entries - 1].transferControl &= ~0x40000000U;
@@ -1203,22 +1203,22 @@ int sceMsifZerofillSector(uint32_t sector, unsigned int count)
 				"msif power tick error. ret:0x%x\n", tickResult);
 #endif
 	}
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	return 0;
 
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	return result;
 }
 
 int sceMsifFormat(int mode)
 {
-	int result = ksceKernelLockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	int result = lockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 
 	if (result < 0)
 		return result;
 	if (mode != 0 && mode != 1) {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 		return 0x803d0001;
 	}
 	result = MsproalFormat(mode);
@@ -1240,7 +1240,7 @@ int sceMsifFormat(int mode)
 				"msif power tick error. ret:0x%x\n", tickResult);
 #endif
 	}
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	return result;
 }
 
@@ -1248,7 +1248,7 @@ int sceMsifGetMediaId(uint8_t *mediaId)
 {
 	struct MsproalMediaInformation information;
 	uint8_t temporaryMediaId[16];
-	int result = ksceKernelLockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	int result = lockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 
 	if (result < 0)
 		return result;
@@ -1296,7 +1296,7 @@ int sceMsifGetMediaId(uint8_t *mediaId)
 				"msif power tick error. ret:0x%x\n", tickResult);
 #endif
 	}
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	return 0;
 
 library_error:
@@ -1305,7 +1305,7 @@ library_error:
 	else
 		result = 0x803d0000;
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	return result;
 }
 
@@ -1345,7 +1345,7 @@ int SceMsifForDriver_F997286B(void)
 {
 	sceKernelDelayThread(25000);
 	if (!kscePervasiveRemovableMemoryGetCardInsertState() ||
-		ksceKernelLockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex) < 0 ||
+		lockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex) < 0 ||
 		sceMsifReadSector(0, gMsifContext.dummyReadBuffer, 1)) {
 		MsproalUserCancelTransfer(gMsifContext.handle);
 		return 0x803d0009;

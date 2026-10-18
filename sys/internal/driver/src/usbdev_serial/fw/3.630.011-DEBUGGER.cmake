@@ -55,12 +55,12 @@ set(MODULE_IMPORT_FUNCS
 	memcpy
 	__stack_chk_fail
 	strnlen
-	ksceKernelCreateEventFlag
-	ksceKernelClearEventFlag
-	ksceKernelDeleteEventFlag
-	ksceKernelPollEventFlag
-	ksceKernelWaitEventFlagCB
-	ksceKernelSetEventFlag
+	sceKernelCreateEventFlag
+	sceKernelClearEventFlag
+	sceKernelDeleteEventFlag
+	sceKernelPollEventFlag
+	SceThreadmgrForDriver_8A35F714
+	sceKernelSetEventFlag
 	ksceUdcdStopInternal
 	ksceUdcdReqRecvInternal
 	ksceUdcdReqSendInternal

@@ -28,11 +28,10 @@
 #include <acmgr/acmgr.h>
 #include <sysmem/utils.h>
 #include <intrmgr/syscall.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/threadmgr_debugger.h>
 
 void issueChangeThreadPriorityIntrRequest(unsigned int cpuId, SceUID threadId, int priority);
-int sceKernelChangeThreadPriority(SceUID uid, uint32_t priority);
-int sceKernelChangeThreadPriority2(SceUID uid, uint32_t priority);
-int sceKernelChangeThreadVfpException(uint32_t clear, uint32_t set);
 
 /* SceThreadmgrForKernel_59D1D5B0: processmgr's process class */
 int SceThreadmgrForKernel_59D1D5B0(SceClass *processClass)
@@ -588,7 +587,6 @@ void startCpuTimer(struct ThreadMgrCpuCB *cpu);
 void suspendCpuTimer(void);
 void resumeCpuTimer(void);
 void callThreadmgrBeforeIntrHandler(uintptr_t unused, struct ThreadCB *context);
-int SceThreadmgrForKernel_BB56D42F(void);
 int registerThreadmgrVfpExceptionIntrHandler(void);
 void suspendThreadmgrVfpException(void);
 void resumeThreadmgrVfpException(void);
@@ -608,16 +606,8 @@ int startSimpleEvent(void);
 void startWorkQueue(void);
 void startException(void);
 int waitThreadEnd(SceUID threadId, int *status, SceUInt32 *timeout, int callbacks);
-int sceKernelExitDeleteThread(int status);
 int createGlobalWorkQueue(void);
 int startMsgPipeAfterProcess(void);
-int SceThreadmgrForDriver_B645C7EF(uint32_t size, void (*destructor)(void *, uintptr_t),
-				   uintptr_t argument);
-SceUID ksceKernelGetThreadId(void);
-SceUID sceKernelGetProcessId(void);
-int SceThreadmgrForDriver_332E127C(void);
-int sceKernelIsUserModeThread(void);
-int SceThreadmgrForDriver_AB977C72(SceUInt32 *attributes);
 int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result,
 				    uint32_t request);
 void returnFromExcpToThread(void);
@@ -667,7 +657,7 @@ static void *getCurrentUIDEntryHeapCB(void)
 
 static const SysrootThreadmgrOps s_sysrootThreadmgrOps = {
 	.size = sizeof(SysrootThreadmgrOps),
-	.getThreadId = ksceKernelGetThreadId,
+	.getThreadId = sceKernelGetThreadId,
 	.isUserModeThread = sceKernelIsUserModeThread,
 	.getThreadAccessLevel = SceThreadmgrForDriver_332E127C,
 	.getCurrentThreadAttr = (int (*)(uint32_t *))SceThreadmgrForDriver_AB977C72,
@@ -1299,7 +1289,7 @@ void returnFromExcpToThread(void)
 }
 
 /* SceKernelThreadMgr: the running thread's context queries and setters. */
-SceUID ksceKernelGetThreadId(void)
+SceUID sceKernelGetThreadId(void)
 {
 	struct ThreadCB *thread = currentThreadContext();
 
@@ -1362,7 +1352,7 @@ int SceThreadmgrForDriver_AB977C72(SceUInt32 *attributes)
 	return ret;
 }
 
-int ksceKernelGetThreadCurrentPriority(void)
+int sceKernelGetThreadCurrentPriority(void)
 {
 	struct ThreadCB *thread;
 	SceUInt32 state;
@@ -1395,7 +1385,7 @@ int sceKernelCheckWaitableStatus(void)
 	return result;
 }
 
-void *ksceKernelGetTLSAddr(unsigned int index)
+void *SceThreadmgrForDriver_E938FB20(unsigned int index)
 {
 	struct ThreadCB *thread = currentThreadContext();
 	uintptr_t tls;
@@ -1415,7 +1405,7 @@ int SceThreadmgrForDriver_20C228E4(void)
 	return (currentThreadContext()->flags >> 15) & 1;
 }
 
-int ksceKernelSetPermission(int permission)
+int sceKernelSetThreadAccessLevel(int permission)
 {
 	struct ThreadCB *thread = currentThreadContext();
 	int previous;
@@ -1429,14 +1419,14 @@ int ksceKernelSetPermission(int permission)
 	return previous;
 }
 
-SceUID ksceKernelGetProcessIdFromTLS(void)
+SceUID SceThreadmgrForDriver_FA54D49A(void)
 {
 	struct ThreadCB *thread = currentThreadContext();
 
 	return thread ? thread->tlsProcessId : SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 }
 
-SceUID ksceKernelSetProcessIdToTLS(SceUID pid)
+SceUID SceThreadmgrForDriver_0486F239(SceUID pid)
 {
 	struct ThreadCB *thread = currentThreadContext();
 	SceUID previous;
@@ -1497,7 +1487,6 @@ void __attribute__((noreturn)) exitDeleteThread(int delete, int intr, int status
 int releaseThreadTlsSlots(struct ThreadCB *thread);
 int dtraceThreadCBExit(struct ThreadCB *thread);
 int syslibtraceThreadCBExit(struct ThreadCB *thread);
-int ksceKernelExitThread(int status);
 
 /* the thread goes from the list it is on to the manager's closed list */
 static inline void listClosed(struct ThreadCB *thread)
@@ -1541,7 +1530,7 @@ void kernelThreadReturn(int status)
 	if (cpu->disabledDispatch != 0)
 		cpu->disabledDispatch = 0;
 	sceKernelCpuResumeIntr(intr);
-	ksceKernelExitThread(status);
+	sceKernelExitThread(status);
 }
 
 /*
@@ -1600,8 +1589,8 @@ load:
 	}
 }
 
-/* ksceKernelExitThread: the running thread ends with status */
-int ksceKernelExitThread(int status)
+/* sceKernelExitThread: the running thread ends with status */
+int sceKernelExitThread(int status)
 {
 	struct ThreadCB *thread = currentThreadContext();
 	struct ThreadMgrCpuCB *cpu;
@@ -1740,8 +1729,8 @@ out:
 	return ret;
 }
 
-/* ksceKernelDeleteThread: deletes another, dormant, thread */
-int ksceKernelDeleteThread(SceUID threadId)
+/* sceKernelDeleteThread: deletes another, dormant, thread */
+int sceKernelDeleteThread(SceUID threadId)
 {
 	struct ThreadmgrThreadObject *object;
 	struct ThreadmgrDebugThreadEvent message;
@@ -2304,7 +2293,6 @@ unlock:
 #define SDK_VERSION_DELAY_ZERO_ERROR	0x02100000	/* from 2.10 a delay of 0 is an error */
 #define SDK_VERSION_DELAY_JITTER	0x03100000	/* from 3.10 a user delay gets a little jitter */
 #define SCE_KERNEL_ERROR_ILLEGAL_CONTEXT_ARG	0x80020005	/* PLACEHOLDER: name */
-extern SceUInt32 ksceKernelGetSystemTimeLow(void);
 
 /* the __sched_:sleep probe of a delay */
 static uint32_t s_delaySleepProbeId;
@@ -2427,7 +2415,7 @@ int delayThread(SceUInt32 usec, uint32_t flags, SceUInt32 *remaining, int callba
 			if (remaining != NULL)
 				*remaining = (uint32_t)wakeup +
 					(uint32_t)thread->process->time -
-					ksceKernelGetSystemTimeLow();
+					SceThreadmgrForDriver_47F6DE49();
 			break;
 		}
 		SCE_DBG_ASSERT_CHECK(thread->delayId == -1, 2162);
@@ -2716,16 +2704,6 @@ typedef void (*ThreadmgrProcessDebugSuspendHook)(SceUID pid, SceUID threadId, in
 int stopThread(SceUID threadId, int priority, uint32_t request);
 int deleteThread(struct ThreadCB *thread);
 int startThread(SceUID threadId, SceSize argSize, const void *arg, int checkSource);
-SceUID ksceKernelCreateThread(const char *name, uintptr_t entry, int initPriority, SceSize stackSize,
-			      uint32_t attr, uint32_t cpuAffinityMask, const SceKernelThreadOptParam *option);
-int ksceKernelDeleteThread(SceUID threadId);
-int ksceKernelInitializeFastMutex(void *mutex, const char *name, int attr, const void *option);
-SceUID ksceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initPattern,
-				 const void *option);
-int ksceKernelSetEventFlag(SceUID evfId, uint32_t pattern);
-int ksceKernelDeleteEventFlag(SceUID evfId);
-int ksceKernelWaitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern,
-			    SceUInt32 *timeout);
 int createException(SceProcessObject *process);
 int deleteException(SceProcessObject *process);
 int uidLwMutex_DeleteCache(SceProcessObject *process, int target);
@@ -2876,7 +2854,7 @@ int processWorkerThread(SceSize argSize, void *arg)
 	for (;;) {
 		pattern = 0;
 		timeout = WORKER_IDLE_USEC;
-		ret = ksceKernelWaitEventFlag(process->abortEventFlag,
+		ret = sceKernelWaitEventFlag(process->abortEventFlag,
 					      WORKER_EVENT_EXIT | WORKER_EVENT_SUSPEND,
 					      WORKER_WAIT_MODE, &pattern, &timeout);
 		if (ret != (int)SCE_KERNEL_ERROR_WAIT_TIMEOUT && ret < 0)
@@ -2944,7 +2922,7 @@ int sceKernelThreadMgrProcessCreate(SceProcessObject *process)
 	process->threads.next = &process->threads;
 	process->threads.prev = &process->threads;
 	process->timerLock = 0;
-	ret = ksceKernelInitializeFastMutex(&process->msgPipeLock, "SceKernelMsgPipeListLock", 0,
+	ret = sceKernelInitializeFastMutex(&process->msgPipeLock, "SceKernelMsgPipeListLock", 0,
 					    NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(10353);
@@ -2961,7 +2939,7 @@ int sceKernelThreadMgrProcessCreate(SceProcessObject *process)
 			"*** error: sceKernelThreadMgrProcessCreate() -> sceGUIDGetName(0x%08X)=0x%08X\n",
 			process->pid, ret);
 	snprintf(name, sizeof(name), "tworker: %s", processName);
-	process->abortEventFlag = ksceKernelCreateEventFlag(name, 0, 0, NULL);
+	process->abortEventFlag = sceKernelCreateEventFlag(name, 0, 0, NULL);
 	if (process->abortEventFlag < 0) {
 		SCE_DBG_ASSERT_FAIL(10380);
 		return ret;
@@ -2969,14 +2947,14 @@ int sceKernelThreadMgrProcessCreate(SceProcessObject *process)
 	/* the worker is created with the kernel's permission */
 	self = currentThreadContext();
 	if (self == NULL) {
-		process->workerThread = ksceKernelCreateThread(name,
+		process->workerThread = sceKernelCreateThread(name,
 			(uintptr_t)processWorkerThread, WORKER_PRIORITY, WORKER_STACK_SIZE, 0,
 			WORKER_CPU_AFFINITY, NULL);
 		self = currentThreadContext();
 	} else {
 		permission = self->permission;
 		self->permission = PERMISSION_WORKER;
-		process->workerThread = ksceKernelCreateThread(name,
+		process->workerThread = sceKernelCreateThread(name,
 			(uintptr_t)processWorkerThread, WORKER_PRIORITY, WORKER_STACK_SIZE, 0,
 			WORKER_CPU_AFFINITY, NULL);
 		self = currentThreadContext();
@@ -3065,19 +3043,19 @@ int sceKernelThreadMgrProcessDeleteAfterPUIDClose(SceProcessObject *process)
 	SCE_DBG_ASSERT_CHECK(ret >= 0, 10466);
 	if (process->abortEventFlag == -1)
 		return ret;
-	ret = ksceKernelSetEventFlag(process->abortEventFlag, WORKER_EVENT_EXIT);
+	ret = sceKernelSetEventFlag(process->abortEventFlag, WORKER_EVENT_EXIT);
 	SCE_DBG_ASSERT_PRINTF(ret >= 0, 10480,
 		"Fatal Error: sceKernelSetEventFlag(0x%08x) failed 0x%08x\n",
 		process->abortEventFlag, ret);
 	if (process->workerThread != -1) {
 		waitThreadEnd(process->workerThread, NULL, NULL, 0);
-		ret = ksceKernelDeleteThread(process->workerThread);
+		ret = sceKernelDeleteThread(process->workerThread);
 		if (ret != 0)
 			SCE_DBG_PRINTF(0, 10486,
 				" k: error: sceKernelThreadMgrProcessDeleteAfterPUIDClose() -> sceKernelDeleteThread()=0x%08X\n",
 				ret);
 	}
-	ret = ksceKernelDeleteEventFlag(process->abortEventFlag);
+	ret = sceKernelDeleteEventFlag(process->abortEventFlag);
 	if (ret != 0) {
 		SCE_DBG_PRINTF(0, 10491,
 			" k: error: sceKernelThreadMgrProcessDeleteAfterPUIDClose() -> sceKernelDeleteEventFlag()=0x%08X\n",
@@ -3105,9 +3083,8 @@ int sceKernelThreadMgrProcessDeleteAfterPUIDClose(SceProcessObject *process)
 
 #define USER_TLS_STACK_RANGE		0x7f8
 
-extern int ksceKernelSetEventFlag(SceUID evfId, uint32_t pattern);
-void issueCallPAScheduleHookIntrRequest(unsigned int cpuId, SceUID processId, SceUID threadId, uint32_t event,
-		  int priority);
+void issueCallPAScheduleHookIntrRequest(unsigned int cpuId, SceUID processId, SceUID threadId,
+					uint32_t event, int priority);
 
 /* the user stack left below the syscall's sp, 0 if it is out of the stack */
 int sceKernelCheckThreadUserStackSelf(void)
@@ -3230,7 +3207,7 @@ suspend:
 		goto none;
 	process->abortCode = kind;
 	process->abortThread = thread->threadId;
-	ret = ksceKernelSetEventFlag(process->abortEventFlag, 1);
+	ret = sceKernelSetEventFlag(process->abortEventFlag, 1);
 	if (ret < 0)
 		SCE_DBG_PRINTF(0, 11427,
 			"*** error: debugSuspendThreadSelf() -> sceKernelSetEventFlag(0x%08X)=0x%08X\n",
@@ -3461,7 +3438,7 @@ void setupThreadExit(struct ThreadCB *thread, uint32_t request)
 		} while (dest != frame->r + 13);
 		vfp = thread->pVfpRegisterContext;
 		frame->syscallAux = regs->syscallAux;
-		frame->entry = (uintptr_t)ksceKernelExitThread;
+		frame->entry = (uintptr_t)sceKernelExitThread;
 		if (vfp != 0)
 			frame->fpscr = ((struct ThreadmgrVfpContext *)vfp)->fpscr;
 		frame->apiDeclare = 0;
@@ -3935,7 +3912,6 @@ out:
 #define SDK_VERSION_DEFAULT_AFFINITY	0x02100000
 #define SCE_KERNEL_ERROR_ILLEGAL_ARGUMENT	0x80020005	/* PLACEHOLDER: name */
 void __attribute__((noreturn)) threadEntry(void);
-SceUID sceKernelStartThreadForUser(SceUID threadId, SceSize argSize, const void *arg);
 
 /* what a kernel argument copied to a user stack is replaced with (cleared at boot) */
 uint8_t s_zeroBlock[0x80];
@@ -5102,7 +5078,7 @@ distribute:
 }
 
 /* SceKernelThreadMgr: kernel thread-start entry points. */
-int ksceKernelStartThread(SceUID threadId, SceSize argSize, const void *arg)
+int sceKernelStartThread(SceUID threadId, SceSize argSize, const void *arg)
 {
 	return startThread(threadId, argSize, arg, 0);
 }
@@ -5135,13 +5111,11 @@ int SceThreadmgrForKernel_CBADD6B3(SceUID threadId, SceSize argSize, const void 
 #define TRACE_EVENT_EXTEND_STACK_END	0x11
 #define SCE_KERNEL_ERROR_ILLEGAL_STACK_SIZE	0x80028024
 
-typedef int64_t (*ThreadmgrStackFunction)(void *arg);
 /* kernel_stack.S */
 extern int64_t callWithStack(void *arg, uintptr_t stackTop, int *intrState,
 			     ThreadmgrStackFunction function);
 
 /* The early query is emitted separately in kernel_stack_space.c. */
-SceSize SceThreadmgrForDriver_D74F66BD(void);
 
 /*
  * sceKernelExtendKernelStackWide: function(arg) runs with at least size
@@ -5247,8 +5221,8 @@ out:
 	return ret;
 }
 
-/* ksceKernelRunWithStack */
-int64_t ksceKernelRunWithStack(SceSize size, ThreadmgrStackFunction function, void *arg)
+/* SceThreadmgrForDriver_E54FD746 */
+int64_t SceThreadmgrForDriver_E54FD746(SceSize size, ThreadmgrStackFunction function, void *arg)
 {
 	return sceKernelExtendKernelStackWide(size, function, arg);
 }
@@ -5259,8 +5233,8 @@ int64_t ksceKernelRunWithStack(SceSize size, ThreadmgrStackFunction function, vo
  * before 2.10; the syscall gives it in bits 16-19.
  */
 
-/* ksceKernelGetThreadCpuAffinityMask: uid's mask (0: the caller's) */
-int ksceKernelGetThreadCpuAffinityMask(SceUID uid)
+/* sceKernelGetThreadCpuAffinityMask: uid's mask (0: the caller's) */
+int sceKernelGetThreadCpuAffinityMask(SceUID uid)
 {
 	struct ThreadmgrThreadObject *object;
 	SceKernelIntrStatus intr;
@@ -5331,8 +5305,8 @@ static inline int sharedPriority(uint32_t priority)
 	return priority - PRIORITY_SHARED_LOW < PRIORITY_SHARED_RANGE;
 }
 
-/* ksceKernelChangeThreadPriority: uid's priority (0: its own); returns the old one */
-int ksceKernelChangeThreadPriority(SceUID uid, uint32_t priority)
+/* sceKernelChangeThreadPriority2: uid's priority (0: its own); returns the old one */
+int sceKernelChangeThreadPriority2(SceUID uid, uint32_t priority)
 {
 	struct ThreadCB *current = currentThreadContext();
 	struct ThreadmgrThreadObject *object;
@@ -5462,10 +5436,10 @@ out:
 	return result;
 }
 
-/* sceKernelChangeThreadPriorityForDriver: 0 or an error */
-int sceKernelChangeThreadPriorityForDriver(SceUID uid, uint32_t priority)
+/* sceKernelChangeThreadPriority: 0 or an error */
+int sceKernelChangeThreadPriority(SceUID uid, uint32_t priority)
 {
-	int result = ksceKernelChangeThreadPriority(uid, priority);
+	int result = sceKernelChangeThreadPriority2(uid, priority);
 
 	SCE_DBG_ASSERT_CHECK_FUNC(result != 0, 6367, "sceKernelChangeThreadPriority");
 	return result < 0 ? result : 0;
@@ -5619,8 +5593,8 @@ out:
 	return result;
 }
 
-/* ksceKernelChangeThreadCpuAffinityMask: uid's mask (0: its own); returns the old one */
-int ksceKernelChangeThreadCpuAffinityMask(SceUID uid, uint32_t mask)
+/* sceKernelChangeThreadCpuAffinityMask: uid's mask (0: its own); returns the old one */
+int sceKernelChangeThreadCpuAffinityMask(SceUID uid, uint32_t mask)
 {
 	SceKernelIntrStatus intr;
 	uint32_t saved, previousMask;
@@ -5842,8 +5816,8 @@ int SceThreadmgrForKernel_16D1961A(void)
 #define THREAD_ATTR_KERNEL_SETTABLE	0xf0000000	/* what a kernel caller may change */
 #define THREAD_PERMISSION_SYSTEM	0x40	/* PLACEHOLDER: names */
 
-/* ksceKernelChangeCurrentThreadAttr: the running thread's attributes, clear then set */
-int ksceKernelChangeCurrentThreadAttr(uint32_t clear, uint32_t set)
+/* sceKernelChangeCurrentThreadAttr: the running thread's attributes, clear then set */
+int sceKernelChangeCurrentThreadAttr(uint32_t clear, uint32_t set)
 {
 	struct ThreadCB *thread = currentThreadContext();
 	SceKernelIntrStatus intr;
@@ -6047,14 +6021,14 @@ restore:
 	return ret;
 }
 
-/* ksceKernelWaitThreadEnd */
-int ksceKernelWaitThreadEnd(SceUID threadId, int *status, SceUInt32 *timeout)
+/* sceKernelWaitThreadEnd */
+int sceKernelWaitThreadEnd(SceUID threadId, int *status, SceUInt32 *timeout)
 {
 	return waitThreadEnd(threadId, status, timeout, 0);
 }
 
-/* ksceKernelWaitThreadEndCB */
-int ksceKernelWaitThreadEndCB(SceUID threadId, int *status, SceUInt32 *timeout)
+/* SceThreadmgrForDriver_9EF4F62C */
+int SceThreadmgrForDriver_9EF4F62C(SceUID threadId, int *status, SceUInt32 *timeout)
 {
 	return waitThreadEnd(threadId, status, timeout, 1);
 }
@@ -6237,8 +6211,8 @@ static inline void getCallerSdkVersion(SceUInt32 *version)
 		*version = 0;
 }
 
-/* ksceKernelGetThreadStackFreeSize: the stack the thread never touched (0 is the caller) */
-int ksceKernelGetThreadStackFreeSize(SceUID threadId)
+/* SceThreadmgrForDriver_7B278A0B: the stack the thread never touched (0 is the caller) */
+int SceThreadmgrForDriver_7B278A0B(SceUID threadId)
 {
 	struct ThreadmgrThreadObject *object;
 	struct ThreadCB *thread;
@@ -6304,8 +6278,8 @@ restore:
 	return ret;
 }
 
-/* ksceKernelGetThreadInfo: 0 is the calling thread; a syscall sees PUIDs */
-int ksceKernelGetThreadInfo(SceUID threadId, SceKernelThreadInfo *output)
+/* sceKernelGetThreadInfo: 0 is the calling thread; a syscall sees PUIDs */
+int sceKernelGetThreadInfo(SceUID threadId, SceKernelThreadInfo *output)
 {
 	struct ThreadmgrThreadObject *object;
 	struct ThreadCB *thread;
@@ -6529,10 +6503,10 @@ restore:
 }
 
 /*
- * ksceKernelGetThreadIdList: the threads of process pid (THREAD_ID_LIST_ALL:
+ * sceKernelGetThreadIdList: the threads of process pid (THREAD_ID_LIST_ALL:
  * every thread), as GUIDs.
  */
-int ksceKernelGetThreadIdList(SceUID pid, SceUID *ids, SceSize size, SceSize *count)
+int sceKernelGetThreadIdList(SceUID pid, SceUID *ids, SceSize size, SceSize *count)
 {
 	SceSize found;
 	int ret, i;
@@ -6579,8 +6553,8 @@ int ksceKernelGetThreadIdList(SceUID pid, SceUID *ids, SceSize size, SceSize *co
 #define THREADMGR_UID_CLASS_UNK2374		0x43
 #define THREADMGR_UID_CLASS_WORK_TASK		0x44
 
-/* ksceKernelGetThreadmgrUIDClass: the internal classes have no number */
-int ksceKernelGetThreadmgrUIDClass(SceUID uid)
+/* sceKernelGetThreadmgrUIDClass: the internal classes have no number */
+int sceKernelGetThreadmgrUIDClass(SceUID uid)
 {
 	volatile struct SceKernelThreadmgrPrivate *manager;
 	SceClass *cls;
@@ -6658,8 +6632,8 @@ int ksceKernelGetThreadmgrUIDClass(SceUID uid)
 #define THREAD_ATTR_UNLIMITED_SHIFT	14
 #define UNKNOWN_THREAD			0x40000000	/* PLACEHOLDER: what an unknown UID gets */
 
-/* ksceKernelGetThreadTLSAddr: uid's TLS slot index (NULL if none) */
-void *ksceKernelGetThreadTLSAddr(SceUID uid, unsigned int index)
+/* SceThreadmgrForDriver_66EEA46A: uid's TLS slot index (NULL if none) */
+void *SceThreadmgrForDriver_66EEA46A(SceUID uid, unsigned int index)
 {
 	struct ThreadmgrThreadObject *object;
 	SceKernelIntrStatus intr;
@@ -7544,10 +7518,10 @@ restore:
 	return ret;
 }
 
-/* ksceKernelCreateThread: cpuAffinityMask may name the CPUs in bits 16-19 */
-SceUID ksceKernelCreateThread(const char *name, uintptr_t entry, int initPriority,
-			      SceSize stackSize, uint32_t attr, uint32_t cpuAffinityMask,
-			      const SceKernelThreadOptParam *option)
+/* sceKernelCreateThread: cpuAffinityMask may name the CPUs in bits 16-19 */
+SceUID sceKernelCreateThread(const char *name, SceKernelThreadEntry entry, int initPriority,
+			     SceSize stackSize, uint32_t attr, uint32_t cpuAffinityMask,
+			     const SceKernelThreadOptParam *option)
 {
 	if (cpuAffinityMask & ~0xf000f)
 		return SCE_KERNEL_ERROR_ILLEGAL_CPU_AFFINITY_MASK;
@@ -7556,12 +7530,12 @@ SceUID ksceKernelCreateThread(const char *name, uintptr_t entry, int initPriorit
 			return SCE_KERNEL_ERROR_ILLEGAL_CPU_AFFINITY_MASK;
 		cpuAffinityMask = (int)cpuAffinityMask >> 16;
 	}
-	return createThread(0, name, entry, initPriority, stackSize, attr, cpuAffinityMask,
-			    option, attr >> 31, NULL);
+	return createThread(0, name, (uintptr_t)entry, initPriority, stackSize, attr,
+			    cpuAffinityMask, option, attr >> 31, NULL);
 }
 
 /* SceThreadmgrForDriver_C8E57BB4: a user thread of process pid */
-SceUID SceThreadmgrForDriver_C8E57BB4(SceUID pid, const char *name, uintptr_t entry,
+SceUID SceThreadmgrForDriver_C8E57BB4(SceUID pid, const char *name, SceKernelThreadEntry entry,
 				      int initPriority, SceSize stackSize, uint32_t attr,
 				      uint32_t cpuAffinityMask,
 				      const SceKernelThreadOptParam *option)
@@ -7581,7 +7555,7 @@ SceUID SceThreadmgrForDriver_C8E57BB4(SceUID pid, const char *name, uintptr_t en
 	} else {
 		if (cpuAffinityMask & 0xf0000)
 			cpuAffinityMask = (int)cpuAffinityMask >> 16;
-		ret = createThread(pid, name, entry, initPriority, stackSize,
+		ret = createThread(pid, name, (uintptr_t)entry, initPriority, stackSize,
 				   attr | THREAD_ATTR_USER, cpuAffinityMask, option,
 				   CREATE_FLAG_PROCESS, NULL);
 	}
@@ -8274,8 +8248,8 @@ int sceKernelCpuScanThreadForProcessmgr(SceUID processId)
 #define VFP_EXCEPTION_ILLEGAL		0xf7ffff60	/* bits a caller may not change */
 #define CHANGE_VFP_FUNC			"sceKernelChangeThreadVfpException"
 
-/* ksceKernelChangeThreadVfpException: clear then set; returns the old mask */
-uint32_t ksceKernelChangeThreadVfpException(uint32_t clear, uint32_t set)
+/* sceKernelChangeThreadVfpException: clear then set; returns the old mask */
+uint32_t sceKernelChangeThreadVfpException(uint32_t clear, uint32_t set)
 {
 	struct ThreadCB *thread = currentThreadContext();
 	volatile uint32_t *word;
@@ -8370,10 +8344,6 @@ uint32_t sceKernelGetCurrentThreadVfpException(void)
 #define CPU_STOP_ALL_STOPPED		3	/* each of the other CPUs counted itself in */
 #define PROCESS_DEBUG_SUSPEND_CPU	0	/* the processDebugSuspendHook kind */
 #define SCE_KERNEL_ERROR_NOT_DEBUG_SUSPENDED	0x80028030	/* PLACEHOLDER: name */
-int ksceKernelIsThreadDebugSuspended(SceUID threadId);
-int ksceKernelDebugResumeThread(SceUID threadId, uint32_t reason);
-int ksceKernelGetThreadInfoForDebugger(SceUID threadId, uint32_t flags,
-				       ThreadmgrThreadInfoForDebugger *info);
 
 /*
  * threadMgrExcpHandlerCfunc_0: an abort or undefined instruction of the
@@ -8551,10 +8521,10 @@ void threadMgrExcpHandlerCfunc_2(SceUID threadId)
 {
 	int reason, ret;
 
-	reason = ksceKernelIsThreadDebugSuspended(threadId);
+	reason = SceThreadmgrForDriver_A0B1AB21(threadId);
 	if (reason <= 0)
 		return;
-	ret = ksceKernelDebugResumeThread(threadId, reason);
+	ret = sceKernelDebugResumeThread(threadId, reason);
 	if (ret < 0 && ret != (int)SCE_KERNEL_ERROR_NOT_DEBUG_SUSPENDED)
 		SCE_PANIC(SCE_LINE(11066, 11071));
 }
@@ -8595,7 +8565,7 @@ void threadMgrExcpHandlerCfunc_3(struct ThreadCB *thread)
 		other = THREAD_FROM_PROCESS_LINK(link);
 		memset(&info, 0, sizeof(info));
 		info.size = sizeof(info);
-		ret = ksceKernelGetThreadInfoForDebugger(other->threadId, 0, &info);
+		ret = SceThreadmgrForDriver_DD8D9429(other->threadId, 0, &info);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(11148);
 			continue;

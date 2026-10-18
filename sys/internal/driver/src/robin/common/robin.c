@@ -261,7 +261,7 @@ int robinInitialize(void)
 		gRobin.firmwareMemBlock = result;
 		result = SceSysmemForDriver_A841EDDA(result, &gRobin.firmwareBuffer);
 		if (result >= 0) {
-			ksceKernelEnqueueWorkQueue(0x10023, "SceWlanBtRobinInit",
+			sceKernelScheduleWorkTask(0x10023, "SceWlanBtRobinInit",
 						 robinInitializeWork, NULL);
 			return 0;
 		}

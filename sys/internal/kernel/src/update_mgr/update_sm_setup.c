@@ -37,11 +37,11 @@ int UpdateUtilSetupSm(unsigned int type, int *smId, int commandId)
 	const char *sm_path;
 	int result, permission;
 
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
 	if (!smId || *smId != -1 || type > 1) {
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		return (int)0x800f0216;
 	}
 	sm_path = updateSmPaths[type].sm_path;
@@ -57,6 +57,6 @@ int UpdateUtilSetupSm(unsigned int type, int *smId, int commandId)
 	auth.self_type = (auth.self_type & ~15) | 2;
 	result = ksceSblSmCommStartSmFromFile(0, sm_path, commandId, &auth, smId);
 restorePermission:
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }

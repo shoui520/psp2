@@ -15,7 +15,7 @@ void LinuxInitMutex(SceUID *psPVRSRVMutex)
 
 	opt.ceilingPriority = 0;
 	opt.size = sizeof(opt);
-	uid = ksceKernelCreateMutex("SceGpuSrvKmMutex", 0x2000, 0, &opt);
+	uid = sceKernelCreateMutex("SceGpuSrvKmMutex", 0x2000, 0, &opt);
 	*psPVRSRVMutex = uid < 0 ? 0 : uid;
 }
 
@@ -30,7 +30,7 @@ unsigned LinuxLockMutexForPid(SceUID *psPVRSRVMutex, SceUID pid)
 {
 	int res;
 
-	res = ksceKernelLockMutex(*psPVRSRVMutex, 1, NULL);
+	res = sceKernelLockMutex(*psPVRSRVMutex, 1, NULL);
 	if (res != 0) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 0, &dbg_LinuxLockMutexForPid_L53,
@@ -43,18 +43,18 @@ unsigned LinuxLockMutexForPid(SceUID *psPVRSRVMutex, SceUID pid)
 
 unsigned LinuxLockMutex(SceUID *psPVRSRVMutex)
 {
-	return LinuxLockMutexForPid(psPVRSRVMutex, ksceKernelGetProcessId());
+	return LinuxLockMutexForPid(psPVRSRVMutex, sceKernelGetProcessId());
 }
 
 /* SCE maps the native failure to IMG's mutex-interrupted result. */
 int LinuxTryLockMutex(SceUID *psPVRSRVMutex)
 {
-	return ksceKernelTryLockMutex(*psPVRSRVMutex, 1) != 0 ?
+	return sceKernelTryLockMutex(*psPVRSRVMutex, 1) != 0 ?
 		PVRSRV_ERROR_MUTEX_INTERRUPTIBLE_ERROR : PVRSRV_OK;
 }
 
 int LinuxUnLockMutex(SceUID *psPVRSRVMutex)
 {
 	SetRemoteAllocProcess((unsigned)-1);
-	return ksceKernelUnlockMutex(*psPVRSRVMutex, 1);
+	return sceKernelUnlockMutex(*psPVRSRVMutex, 1);
 }

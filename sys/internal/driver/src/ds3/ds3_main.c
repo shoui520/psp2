@@ -157,7 +157,7 @@ int ds3GetControllerPortInfo(SceCtrlPortInfo *info)
 	int result, port, index;
 	Ds3Device *device;
 
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	if (result < 0)
 		return result;
 	for (port = 0; port < 5; port++) {
@@ -197,7 +197,7 @@ int ds3GetControllerPortInfo(SceCtrlPortInfo *info)
 		}
 	}
 	info->port[0] = SCE_CTRL_TYPE_VIRT;
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	return 0;
 }
 
@@ -207,7 +207,7 @@ int ds3GetBatteryInfo(int port, uint8_t *battery)
 
 	if (battery == NULL)
 		return (int)0x80340001;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	if (result < 0)
 		return result;
 	if (port == ds3State.devices[0].port &&
@@ -235,18 +235,18 @@ int ds3GetBatteryInfo(int port, uint8_t *battery)
 		(ds3State.devices[7].bluetoothState == 2 || ds3State.devices[7].usbState == 2))
 		index = 7;
 	else {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 		return (int)0x80340020;
 	}
 	*battery = ds3State.devices[index].batteryInfo;
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	return 0;
 }
 
 int ds3ForegroundChanged(SceUID pid)
 {
 	ds3State.foregroundProcess = pid;
-	ksceKernelSetEventFlag(ds3State.workEvent, 0x20);
+	sceKernelSetEventFlag(ds3State.workEvent, 0x20);
 	return 0;
 }
 
@@ -259,7 +259,7 @@ int ds3SetActuator(int port, const SceCtrlActuator *state)
 
 	if (state == NULL)
 		return (int)0x80340001;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	if (result < 0)
 		return result;
 	if (port == ds3State.devices[0].port &&
@@ -287,7 +287,7 @@ int ds3SetActuator(int port, const SceCtrlActuator *state)
 		(ds3State.devices[7].bluetoothState == 2 || ds3State.devices[7].usbState == 2))
 		index = 7;
 	else {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 		return (int)0x80340020;
 	}
 	device = &ds3State.devices[index];
@@ -301,8 +301,8 @@ int ds3SetActuator(int port, const SceCtrlActuator *state)
 	largeMotor = state->large;
 	device->pendingWork = pendingWork | 2;
 	device->actuatorState.largeMotor = largeMotor;
-	ksceKernelSetEventFlag(ds3State.workEvent, 1);
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	sceKernelSetEventFlag(ds3State.workEvent, 1);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	return 0;
 }
 
@@ -310,7 +310,7 @@ int ds3DisconnectController(int port)
 {
 	int result, index;
 
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	if (result < 0)
 		return result;
 	if (port == ds3State.devices[0].port &&
@@ -338,12 +338,12 @@ int ds3DisconnectController(int port)
 		(ds3State.devices[7].bluetoothState == 2 || ds3State.devices[7].usbState == 2))
 		index = 7;
 	else {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 		return (int)0x80340020;
 	}
 	ds3State.devices[index].pendingWork = 8;
-	ksceKernelSetEventFlag(ds3State.workEvent, 1);
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	sceKernelSetEventFlag(ds3State.workEvent, 1);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	return 0;
 }
 
@@ -387,7 +387,7 @@ int ds3SetAuxiliaryMotor(int port, int level)
 		device->pendingWork = 16;
 		device->actuatorState.auxiliaryMotor = level;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&ds3State.lock, intr);
-		ksceKernelSetEventFlag(ds3State.workEvent, 1);
+		sceKernelSetEventFlag(ds3State.workEvent, 1);
 	} else {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&ds3State.lock, intr);
 	}
@@ -693,7 +693,7 @@ int ds3ResetLightbar(int port)
 
 	if ((unsigned int)port - 1u > 3)
 		return (int)0x80340001;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	if (result < 0)
 		return result;
 	pid = sceKernelGetProcessId();
@@ -764,7 +764,7 @@ int ds3ResetLightbar(int port)
 		(ds3State.devices[7].bluetoothState == 2 || ds3State.devices[7].usbState == 2))
 		index = 7;
 	else {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 		return 0;
 	}
 	device = &ds3State.devices[index];
@@ -774,9 +774,9 @@ int ds3ResetLightbar(int port)
 		device->ledState.lightbarColor[1] = ds3DefaultLightbarColors[port][1];
 		device->ledState.lightbarColor[2] = ds3DefaultLightbarColors[port][2];
 		device->pendingWork = pendingWork | 1;
-		ksceKernelSetEventFlag(ds3State.workEvent, 1);
+		sceKernelSetEventFlag(ds3State.workEvent, 1);
 	}
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	return result;
 }
 
@@ -790,7 +790,7 @@ int ds3SetLightbar(int port, uint8_t red, uint8_t green, uint8_t blue)
 
 	if ((unsigned int)port - 1u > 3)
 		return (int)0x80340001;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	if (result < 0)
 		return result;
 	pid = sceKernelGetProcessId();
@@ -861,7 +861,7 @@ int ds3SetLightbar(int port, uint8_t red, uint8_t green, uint8_t blue)
 		(ds3State.devices[7].bluetoothState == 2 || ds3State.devices[7].usbState == 2))
 		index = 7;
 	else {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 		return 0;
 	}
 	device = &ds3State.devices[index];
@@ -871,16 +871,16 @@ int ds3SetLightbar(int port, uint8_t red, uint8_t green, uint8_t blue)
 		device->ledState.lightbarColor[1] = green;
 		device->ledState.lightbarColor[2] = blue;
 		device->pendingWork = pendingWork | 1;
-		ksceKernelSetEventFlag(ds3State.workEvent, 1);
+		sceKernelSetEventFlag(ds3State.workEvent, 1);
 	}
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	return result;
 }
 
 int ds3DisconnectAll(void)
 {
-	ksceKernelClearEventFlag(ds3State.workEvent, ~0x10u);
-	ksceKernelSetEventFlag(ds3State.workEvent, 0x10);
+	sceKernelClearEventFlag(ds3State.workEvent, ~0x10u);
+	sceKernelSetEventFlag(ds3State.workEvent, 0x10);
 	ds3DisconnectTrackedDevice();
 	return 0;
 }
@@ -890,7 +890,7 @@ int ds3SwapPorts(int port, int destinationPort)
 	Ds3Device *first, *second;
 	int index, result;
 
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	if (result < 0)
 		return result;
 	if (port == ds3State.devices[0].port &&
@@ -958,7 +958,7 @@ int ds3SwapPorts(int port, int destinationPort)
 	} else {
 		result = (int)0x80340020;
 	}
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	return result;
 }
 
@@ -1035,7 +1035,7 @@ int ds3SetIdleTimeout(int seconds)
 	uint64_t timestamp;
 	int result;
 
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	if (result < 0)
 		return result;
 	ds3State.idleTimeout = (uint64_t)(unsigned int)seconds * 1000000;
@@ -1056,7 +1056,7 @@ int ds3SetIdleTimeout(int seconds)
 		ds3State.devices[6].lastActivityTime = timestamp;
 	if (ds3State.devices[7].bluetoothState == 2)
 		ds3State.devices[7].lastActivityTime = timestamp;
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	return 0;
 }
 
@@ -1183,7 +1183,7 @@ int ds3ExitProcess(SceUID pid, ProcEventParam *params, int event)
 {
 	int result;
 
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	if (result < 0)
 		return result;
 	if (pid == ds3State.processColors[0].pid) {
@@ -1246,7 +1246,7 @@ int ds3ExitProcess(SceUID pid, ProcEventParam *params, int event)
 		ds3State.singleControllerProcess = -1;
 		ds3State.singleControllerMode = 0;
 	}
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	return result;
 }
 
@@ -1254,7 +1254,7 @@ int ds3KillProcess(SceUID pid, ProcEventParam *params, int event)
 {
 	int result;
 
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	if (result < 0)
 		return result;
 	if (pid == ds3State.processColors[0].pid) {
@@ -1317,7 +1317,7 @@ int ds3KillProcess(SceUID pid, ProcEventParam *params, int event)
 		ds3State.singleControllerProcess = -1;
 		ds3State.singleControllerMode = 0;
 	}
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	return result;
 }
 
@@ -1538,7 +1538,7 @@ int ds3StopProcess(SceUID pid, int eventType, ProcEventParam *params, int event)
 	if (eventType != 0x201)
 		return 0;
 	for (port = 1; port != 5; port++) {
-		if (ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex) < 0)
+		if (lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex) < 0)
 			continue;
 		if (port == ds3State.devices[0].port &&
 			(ds3State.devices[0].bluetoothState == 2 || ds3State.devices[0].usbState == 2))
@@ -1574,9 +1574,9 @@ int ds3StopProcess(SceUID pid, int eventType, ProcEventParam *params, int event)
 		device->actuatorState.timestamp = timestamp;
 		device->actuatorState.largeMotor = 0;
 		device->pendingWork = pendingWork | 2;
-		ksceKernelSetEventFlag(ds3State.workEvent, 1);
+		sceKernelSetEventFlag(ds3State.workEvent, 1);
 unlock:
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	}
 	if (pid == ds3State.singleControllerProcess && ds3State.singleControllerMode != 0) {
 		ds3State.singleControllerProcess = -1;
@@ -1694,13 +1694,13 @@ int ds3SysEventHandler(int resume, int eventId, void *args, void *opt)
 		return 0;
 	timeout = 5000000;
 	ds3State.suspending = 1;
-	ksceKernelClearEventFlag(ds3State.workEvent, ~2U);
-	ksceKernelClearEventFlag(ds3State.workEvent, ~4U);
-	ksceKernelClearEventFlag(ds3State.workEvent, ~8U);
-	ksceKernelSetEventFlag(ds3State.workEvent, 2);
-	result = ksceKernelWaitEventFlag(ds3State.workEvent, 8, 5, NULL, &timeout);
+	sceKernelClearEventFlag(ds3State.workEvent, ~2U);
+	sceKernelClearEventFlag(ds3State.workEvent, ~4U);
+	sceKernelClearEventFlag(ds3State.workEvent, ~8U);
+	sceKernelSetEventFlag(ds3State.workEvent, 2);
+	result = sceKernelWaitEventFlag(ds3State.workEvent, 8, 5, NULL, &timeout);
 	if (result == (int)0x80028005) {
-		result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
+		result = lockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
 		if (result < 0)
 			return result;
 		for (index = 0; index < DS3_CONTROLLERS; index++) {
@@ -1739,7 +1739,7 @@ int ds3SysEventHandler(int resume, int eventId, void *args, void *opt)
 		ds3State.pairedUsbDeviceCount = 0;
 		ds3State.usbDeviceCount = 0;
 		ds3State.activeDeviceCount = 0;
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
 	}
 	ds3State.suspending = 0;
 	return 0;
@@ -1753,7 +1753,7 @@ int ds3FreeUsbDevice(int deviceId)
 	int index;
 	int requestIndex;
 
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
 	if (result < 0)
 		return result;
 	if (deviceId == ds3State.devices[0].usbDeviceId)
@@ -1806,7 +1806,7 @@ int ds3FreeUsbDevice(int deviceId)
 	device->usbDeviceId = DS3_USB_DEVICE_UNUSED;
 	device->port = -1;
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
 	return 0;
 }
 
@@ -1818,7 +1818,7 @@ int ds3FreeBluetoothDevice(uint64_t address)
 	int index;
 	int requestIndex;
 
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
 	if (result < 0)
 		return result;
 	if (address == ds3State.devices[0].deviceAddress &&
@@ -1876,7 +1876,7 @@ int ds3FreeBluetoothDevice(uint64_t address)
 	device->usbDeviceId = DS3_USB_DEVICE_UNUSED;
 	device->port = -1;
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
 	return 0;
 }
 
@@ -1910,7 +1910,7 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 
 	ds3State.safeMode = SceSysrootForDriver_834439A7();
 	if (!ds3State.safeMode) {
-		result = ksceKernelCreateCallback("SceDs3", 0, _sceDs3BtCb, NULL);
+		result = sceKernelCreateCallback("SceDs3", 0, _sceDs3BtCb, NULL);
 		ds3State.bluetoothCallback = result;
 		if (result < 0)
 			return result;
@@ -1943,16 +1943,16 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 	ds3InitializeBdRemocon();
 	for (;;) {
 		timeout = 500000;
-		result = ksceKernelWaitEventFlagCB(ds3State.workEvent, 55, 1, &events, &timeout);
+		result = SceThreadmgrForDriver_8A35F714(ds3State.workEvent, 55, 1, &events, &timeout);
 		if (result < 0)
 			goto checkTimeouts;
-		result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+		result = lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 #if FW_VERSION >= 0x04000000
 		if (result < 0)
 			SCE_DBG_ASSERT_FAIL(552);
 #endif
 		if (events & 1) {
-			ksceKernelClearEventFlag(ds3State.workEvent, ~1u);
+			sceKernelClearEventFlag(ds3State.workEvent, ~1u);
 			for (index = 0; index != 8; index++) {
 				device = &ds3State.devices[index];
 				pending = device->pendingWork;
@@ -2162,7 +2162,7 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 			}
 		}
 		if (events & 2) {
-			ksceKernelClearEventFlag(ds3State.workEvent, ~2u);
+			sceKernelClearEventFlag(ds3State.workEvent, ~2u);
 			for (index = 0; index != 8; index++) {
 				device = &ds3State.devices[index];
 				if (device->usbState == 2) {
@@ -2188,14 +2188,14 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 					ds3FreeUsbDevice(device->usbDeviceId);
 				}
 			}
-			ksceKernelSetEventFlag(ds3State.workEvent, 4);
+			sceKernelSetEventFlag(ds3State.workEvent, 4);
 		}
 		if ((events & 4) && ds3State.activeDeviceCount == 0) {
-			ksceKernelClearEventFlag(ds3State.workEvent, ~4u);
-			ksceKernelSetEventFlag(ds3State.workEvent, 8);
+			sceKernelClearEventFlag(ds3State.workEvent, ~4u);
+			sceKernelSetEventFlag(ds3State.workEvent, 8);
 		}
 		if (events & 16) {
-			ksceKernelClearEventFlag(ds3State.workEvent, ~16u);
+			sceKernelClearEventFlag(ds3State.workEvent, ~16u);
 			for (index = 0; index != 8; index++) {
 				device = &ds3State.devices[index];
 				if (device->bluetoothState == 2) {
@@ -2207,7 +2207,7 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 			}
 		}
 		if (events & 32) {
-			ksceKernelClearEventFlag(ds3State.workEvent, ~32u);
+			sceKernelClearEventFlag(ds3State.workEvent, ~32u);
 			for (processIndex = 0; processIndex != 8; processIndex++)
 				if (ds3State.processColors[processIndex].pid == ds3State.foregroundProcess)
 					break;
@@ -2245,7 +2245,7 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 			}
 		}
 unlock:
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 checkTimeouts:
 		if (ds3State.idleTimeout != 0) {
 			now = sceKernelGetSystemTimeWide();
@@ -2306,7 +2306,7 @@ int _sceDs3BtCb(int notifyId, int notifyCount, int notifyArg, void *userData)
 	unsigned int reportId, reportLength;
 	int result, count, eventIndex, index, item;
 
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 #if FW_VERSION >= 0x04000000
 	if (result < 0)
 		SCE_DBG_ASSERT_FAIL(745);
@@ -2323,7 +2323,7 @@ readEvents:
 		address = event->mac0 | ((uint64_t)event->mac1 << 32);
 		switch (event->id) {
 		case 5:
-			result = ksceKernelLockFastMutex(
+			result = lockFastMutex(
 				(SceKernelFastMutex *)&ds3State.registrationMutex);
 			if (result < 0)
 				goto rejectConnection;
@@ -2388,7 +2388,7 @@ readEvents:
 			device->idProduct = registeredInfo.pid;
 			ds3State.bluetoothDeviceCount++;
 			ds3State.activeDeviceCount++;
-			ksceKernelUnlockFastMutex(
+			sceKernelUnlockFastMutex(
 				(SceKernelFastMutex *)&ds3State.registrationMutex);
 			address = event->mac0 | ((uint64_t)event->mac1 << 32);
 			for (index = 0; index < 8; index++) {
@@ -2416,7 +2416,7 @@ readEvents:
 			}
 			break;
 unlockRegistration:
-			ksceKernelUnlockFastMutex(
+			sceKernelUnlockFastMutex(
 				(SceKernelFastMutex *)&ds3State.registrationMutex);
 rejectConnection:
 			if (result != -101) {
@@ -2717,7 +2717,7 @@ nextEvent:
 	if (count == 2)
 		goto readEvents;
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	return 0;
 }
 
@@ -3027,22 +3027,22 @@ int module_start(SceSize args, void *argp)
 	ds3State.devices[6].usbDeviceId = DS3_USB_DEVICE_UNUSED;
 	ds3State.devices[7].usbDeviceId = DS3_USB_DEVICE_UNUSED;
 	ds3State.lock = 0;
-	ksceKernelInitializeFastMutex((SceKernelFastMutex *)&ds3State.stateMutex,
+	sceKernelInitializeFastMutex((SceKernelFastMutex *)&ds3State.stateMutex,
 		"SceDs3", 0x2000, NULL);
-	ksceKernelInitializeFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex,
+	sceKernelInitializeFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex,
 		"SceDs3Register", 0x2000, NULL);
-	result = ksceKernelCreateEventFlag("SceDs3Event", 0x1000, 0, NULL);
+	result = sceKernelCreateEventFlag("SceDs3Event", 0x1000, 0, NULL);
 	ds3State.workEvent = result;
 	if (result < 0)
 		return result;
 	ds3State.heap = SceSysmemForDriver_9328E0E8("SceDs3", 0x1000, &heapOptions);
-	result = ksceKernelCreateThread("SceDs3Worker", _sceDs3WorkerThread,
+	result = sceKernelCreateThread("SceDs3Worker", _sceDs3WorkerThread,
 		60, 0x2000, 0x10000000, 0x80000,
 		(const SceKernelThreadOptParam *)&threadOptions);
 	ds3State.workerThread = result;
 	if (result < 0)
 		return result;
-	result = ksceKernelStartThread(result, 0, NULL);
+	result = sceKernelStartThread(result, 0, NULL);
 	if (result < 0)
 		return result;
 	ksceCtrlRegisterVirtualControllerDriver(&ds3ControllerDriver);
@@ -3160,7 +3160,7 @@ int ds3AllocateDevice(int transport, int deviceId, uint64_t address)
 	uint16_t productId;
 	int result, index;
 
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
 	if (result < 0)
 		return result;
 	if (transport == 3) {
@@ -3278,7 +3278,7 @@ int ds3AllocateDevice(int transport, int deviceId, uint64_t address)
 	}
 	result = 0;
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
 	return result;
 }
 
@@ -3288,7 +3288,7 @@ int ds3ReleaseDevice(int transport, int deviceId, uint64_t address)
 	SceBtHidRequest *request;
 	int result, index, requestIndex;
 
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
 	if (result < 0)
 		return result;
 	if (transport == 3) {
@@ -3400,7 +3400,7 @@ int ds3ReleaseDevice(int transport, int deviceId, uint64_t address)
 	device->usbDeviceId = DS3_USB_DEVICE_UNUSED;
 	device->port = -1;
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
 	return 0;
 }
 
@@ -3408,7 +3408,7 @@ int ds3DetachBluetoothTransport(uint64_t address)
 {
 	int result, index;
 
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
 	if (result < 0)
 		return result;
 	if (address == ds3State.devices[0].deviceAddress &&
@@ -3441,7 +3441,7 @@ int ds3DetachBluetoothTransport(uint64_t address)
 	if (ds3State.activeDeviceCount != 0)
 		ds3State.activeDeviceCount--;
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
 	return 0;
 }
 
@@ -3449,7 +3449,7 @@ int ds3UnpairUsbDevice(int deviceId)
 {
 	int result, index;
 
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
 	if (result < 0)
 		return result;
 	if (deviceId == ds3State.devices[0].usbDeviceId)
@@ -3476,7 +3476,7 @@ int ds3UnpairUsbDevice(int deviceId)
 	if (ds3State.activeDeviceCount != 0)
 		ds3State.activeDeviceCount--;
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.registrationMutex);
 	return 0;
 }
 
@@ -3674,7 +3674,7 @@ int ds3QueueLedState(int port, const Ds3LedState *state)
 
 	if (state == NULL)
 		return (int)0x80340001;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	if (result < 0)
 		return result;
 	if (port == ds3State.devices[0].port &&
@@ -3702,14 +3702,14 @@ int ds3QueueLedState(int port, const Ds3LedState *state)
 		(ds3State.devices[7].bluetoothState == 2 || ds3State.devices[7].usbState == 2))
 		index = 7;
 	else {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 		return (int)0x80340020;
 	}
 	device = &ds3State.devices[index];
 	device->ledState = *state;
 	device->pendingWork |= 1;
-	ksceKernelSetEventFlag(ds3State.workEvent, 1);
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	sceKernelSetEventFlag(ds3State.workEvent, 1);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	return 0;
 }
 
@@ -3722,7 +3722,7 @@ int ds3QueueLightbarState(int port, const Ds3LedState *state)
 
 	if (state == NULL)
 		return (int)0x80340001;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	if (result < 0)
 		return result;
 	if (port == ds3State.devices[0].port &&
@@ -3750,7 +3750,7 @@ int ds3QueueLightbarState(int port, const Ds3LedState *state)
 		(ds3State.devices[7].bluetoothState == 2 || ds3State.devices[7].usbState == 2))
 		index = 7;
 	else {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 		return (int)0x80340020;
 	}
 	device = &ds3State.devices[index];
@@ -3809,9 +3809,9 @@ useState:
 	device->ledState.lightbarColor[2] = blue;
 queue:
 	device->pendingWork |= 1;
-	ksceKernelSetEventFlag(ds3State.workEvent, 1);
+	sceKernelSetEventFlag(ds3State.workEvent, 1);
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&ds3State.stateMutex);
 	return 0;
 }
 

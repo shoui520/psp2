@@ -36,7 +36,7 @@ uintptr_t BtNotifyHidVuEvent(uint64_t deviceAddress, uint8_t eventId,
 		}
 		result = subscriber->callbackId;
 		if (subscriber->callbackId != -1)
-			result = ksceKernelNotifyCallback(subscriber->callbackId, 0);
+			result = sceKernelNotifyCallback(subscriber->callbackId, 0);
 	}
 	return result;
 }
@@ -77,7 +77,7 @@ uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
 			}
 			result = subscriber->callbackId;
 			if (subscriber->callbackId != -1)
-				result = ksceKernelNotifyCallback(subscriber->callbackId, 0);
+				result = sceKernelNotifyCallback(subscriber->callbackId, 0);
 		}
 		subscriber++;
 	} while (subscriber < gBtStack.subscribers + 8);

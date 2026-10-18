@@ -13,7 +13,7 @@ int rtlEnableReceive(struct RtlAdapter *a)
 	unsigned int value;
 	int ret;
 
-	ksceKernelLockFastMutex(&a->mutex);
+	lockFastMutex(&a->mutex);
 	ret = rtlReadPla8(a, 0xe813, &byte);
 	if (ret < 0)
 		goto out;
@@ -30,7 +30,7 @@ int rtlEnableReceive(struct RtlAdapter *a)
 	if (ret >= 0)
 		ret = rtlWritePla32(a, 0xc010, value | (a->macControl & 1 ? 11 : 10));
 out:
-	ksceKernelUnlockFastMutex(&a->mutex);
+	sceKernelUnlockFastMutex(&a->mutex);
 	return ret;
 }
 
@@ -47,7 +47,7 @@ static int kickTx(struct NetDriver *driver, int argument)
 	SceCpuForDriver_5F6A8743(&a->references, 1);
 	old = __atomic_fetch_add(&a->pendingTx, 1, __ATOMIC_SEQ_CST);
 	if (!old)
-		ksceKernelSetEventFlag(a->workerEvent, 8);
+		sceKernelSetEventFlag(a->workerEvent, 8);
 	SceCpuForDriver_A4884C4E(&a->references, 1);
 	return 0;
 }
@@ -92,7 +92,7 @@ static int systemEvent(int resume, int event, void *parameter, void *context)
 		if (suspendRequested && !suspending) {
 			if (!(a->flags & 4))
 				return -2;
-			ksceKernelSetEventFlag(a->workerEvent, 0x40);
+			sceKernelSetEventFlag(a->workerEvent, 0x40);
 			suspending = 1;
 		}
 		break;
@@ -116,7 +116,7 @@ static int interfaceClose(struct NetDriver *driver, int argument)
 
 	(void)argument;
 	if (a->state & 1)
-		ksceKernelSetEventFlag(a->workerEvent, 4);
+		sceKernelSetEventFlag(a->workerEvent, 4);
 	else
 		driver->notify(driver, driver->notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_STOPPED, NULL, 0);
 	return 0;
@@ -130,7 +130,7 @@ static int interfaceOpen(struct NetDriver *driver, int argument)
 
 	(void)argument;
 	if (a->state & 1)
-		ksceKernelSetEventFlag(a->workerEvent, 2);
+		sceKernelSetEventFlag(a->workerEvent, 2);
 	else
 		driver->notify(driver, &error, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_ERROR, &error, 4);
 	return 0;
@@ -144,9 +144,9 @@ int rtlProcessEvent(int event, int type, void *parameter, void *context)
 	(void)type;
 	(void)parameter;
 	if (event == 0x10)
-		return ksceKernelChangeThreadCpuAffinityMask(a->thread, 0x80000);
+		return sceKernelChangeThreadCpuAffinityMask(a->thread, 0x80000);
 	if (event == 0x11)
-		return ksceKernelChangeThreadCpuAffinityMask(a->thread, 0xf0000);
+		return sceKernelChangeThreadCpuAffinityMask(a->thread, 0xf0000);
 	return 0;
 }
 
@@ -161,7 +161,7 @@ static int multicast(struct NetDriver *driver, const unsigned char *addresses,
 	if (!a->active)
 		return RTL_ERROR(4);
 	SceCpuForDriver_5F6A8743(&a->references, 1);
-	ksceKernelLockFastMutex(&a->mutex);
+	lockFastMutex(&a->mutex);
 	if ((!addresses && length) || (addresses && length % 6)) {
 		ret = RTL_ERROR(1);
 		goto out;
@@ -192,7 +192,7 @@ static int multicast(struct NetDriver *driver, const unsigned char *addresses,
 	if (ret >= 0)
 		ret = rtlWriteRegister(a, 0xcd04, 0x10f, 4, __builtin_bswap32(hash[0]));
 out:
-	ksceKernelUnlockFastMutex(&a->mutex);
+	sceKernelUnlockFastMutex(&a->mutex);
 	SceCpuForDriver_A4884C4E(&a->references, 1);
 	return ret;
 }
@@ -339,12 +339,12 @@ static int interfaceControl(struct NetDriver *driver, unsigned int command,
 	SceCpuForDriver_5F6A8743(&a->references, 1);
 	switch (command) {
 	case NET_DRIVER_CTL_SET_LINK:
-		ksceKernelLockFastMutex(&a->mutex);
+		lockFastMutex(&a->mutex);
 		ret = setLink(a, *value);
-		ksceKernelUnlockFastMutex(&a->mutex);
+		sceKernelUnlockFastMutex(&a->mutex);
 		break;
 	case NET_DRIVER_CTL_SET_PROMISCUOUS:
-		ksceKernelLockFastMutex(&a->mutex);
+		lockFastMutex(&a->mutex);
 		ret = rtlReadRegister(a, 0xc010, 0x100, 4, &reg);
 		if (ret >= 0) {
 			if (*value == 1) {
@@ -356,7 +356,7 @@ static int interfaceControl(struct NetDriver *driver, unsigned int command,
 			}
 			ret = rtlWriteRegister(a, 0xc010, 0x10f, 4, reg);
 		}
-		ksceKernelUnlockFastMutex(&a->mutex);
+		sceKernelUnlockFastMutex(&a->mutex);
 		break;
 	case NET_DRIVER_CTL_GET_PROMISCUOUS:
 		*value = a->macControl & 1;
@@ -377,7 +377,7 @@ int rtlUpdateLink(struct RtlAdapter *a)
 	unsigned int value, partner;
 	int ret;
 
-	ksceKernelLockFastMutex(&a->mutex);
+	lockFastMutex(&a->mutex);
 	ret = rtlWriteRegister(a, 0xde00, 0x10f, 4, 0x10000);
 	if (ret < 0)
 		goto out;
@@ -428,7 +428,7 @@ int rtlUpdateLink(struct RtlAdapter *a)
 	}
 	a->driver.notify(&a->driver, a->driver.notify, NET_DRIVER_EVENT_LINK_UP, 0, NULL, 0);
 out:
-	ksceKernelUnlockFastMutex(&a->mutex);
+	sceKernelUnlockFastMutex(&a->mutex);
 	return ret;
 }
 
@@ -471,9 +471,9 @@ int SceUsbEtherRtlForDriver_7473CB10(unsigned short reg, unsigned short mask,
 
 	if (!value)
 		return -1;
-	ksceKernelLockFastMutex(&rtlAdapter.mutex);
+	lockFastMutex(&rtlAdapter.mutex);
 	ret = rtlReadRegister(&rtlAdapter, reg, mask, 4, value);
-	ksceKernelUnlockFastMutex(&rtlAdapter.mutex);
+	sceKernelUnlockFastMutex(&rtlAdapter.mutex);
 	return ret;
 }
 
@@ -482,9 +482,9 @@ int SceUsbEtherRtlForDriver_1E0E3E59(unsigned short reg, unsigned short mask,
 {
 	int ret;
 
-	ksceKernelLockFastMutex(&rtlAdapter.mutex);
+	lockFastMutex(&rtlAdapter.mutex);
 	ret = rtlWriteRegister(&rtlAdapter, reg, mask, 4, value);
-	ksceKernelUnlockFastMutex(&rtlAdapter.mutex);
+	sceKernelUnlockFastMutex(&rtlAdapter.mutex);
 	return ret;
 }
 
@@ -493,7 +493,7 @@ int SceUsbEtherRtlForDriver_BAF95A47(const unsigned char *mac)
 	unsigned int offset = 0, value, bit, word, index;
 	int ret;
 
-	ksceKernelLockFastMutex(&rtlAdapter.mutex);
+	lockFastMutex(&rtlAdapter.mutex);
 	while (offset < 0xb4) {
 		ret = rtlWriteRegister(&rtlAdapter, 0xe81c, 0x101, 4, 0xc0);
 		if (ret < 0)
@@ -560,7 +560,7 @@ int SceUsbEtherRtlForDriver_BAF95A47(const unsigned char *mac)
 	}
 	ret = RTL_ERROR(0x802);
 out:
-	ksceKernelUnlockFastMutex(&rtlAdapter.mutex);
+	sceKernelUnlockFastMutex(&rtlAdapter.mutex);
 	return ret;
 }
 
@@ -571,7 +571,7 @@ static void txDone(int result, int count, void *context)
 
 	(void)count;
 	if (result >= 0)
-		ksceKernelSetEventFlag(a->workerEvent, 8);
+		sceKernelSetEventFlag(a->workerEvent, 8);
 }
 
 /* name unknown */
@@ -581,7 +581,7 @@ static void rxDone(int result, int count, void *context)
 
 	if (result >= 0) {
 		a->rxCount = count;
-		ksceKernelSetEventFlag(a->workerEvent, 0x10);
+		sceKernelSetEventFlag(a->workerEvent, 0x10);
 	}
 }
 
@@ -604,11 +604,11 @@ static int detach(int device)
 	int ret;
 
 	(void)device;
-	ret = ksceKernelSetEventFlag(a->controlEvent, 1);
+	ret = sceKernelSetEventFlag(a->controlEvent, 1);
 	if (ret < 0)
 		return -1;
 	__atomic_fetch_and(&a->flags, ~1U, __ATOMIC_SEQ_CST);
-	ksceKernelSetEventFlag(a->workerEvent, 0x20);
+	sceKernelSetEventFlag(a->workerEvent, 0x20);
 	a->link = 0;
 	return 0;
 }
@@ -647,7 +647,7 @@ static int attach(int device)
 	int ret;
 
 	a->controlPipe = a->rxPipe = a->txPipe = -1;
-	ret = ksceKernelClearEventFlag(a->controlEvent, 0);
+	ret = sceKernelClearEventFlag(a->controlEvent, 0);
 	if (ret < 0)
 		return ret;
 	previous = ksceUsbdScanStaticDescriptor(device, NULL, 1);
@@ -684,7 +684,7 @@ static int attach(int device)
 	ret = ksceUsbdControlTransfer(a->controlPipe, &request, NULL, rtlControlDone, a);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelWaitEventFlag(a->controlEvent, 3,
+	ret = sceKernelWaitEventFlag(a->controlEvent, 3,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	if (ret < 0)
@@ -693,7 +693,7 @@ static int attach(int device)
 	ret = ksceUsbdControlTransfer(a->controlPipe, &request, NULL, rtlControlDone, a);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelWaitEventFlag(a->controlEvent, 3,
+	ret = sceKernelWaitEventFlag(a->controlEvent, 3,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	if (ret < 0)
@@ -701,7 +701,7 @@ static int attach(int device)
 	a->device = device;
 	a->txBufferSize = a->rxBufferSize = 0x4000;
 	__atomic_fetch_or(&a->flags, 1, __ATOMIC_SEQ_CST);
-	ret = ksceKernelSetEventFlag(a->workerEvent, 1);
+	ret = sceKernelSetEventFlag(a->workerEvent, 1);
 	return ret < 0 ? ret : 0;
 }
 
@@ -734,24 +734,24 @@ int module_start(SceSize length, void *arg)
 	if (SceSblAIMgrForDriver_D78B04A2() && SceSblAIMgrForDriver_4273B97B() && !(hardware & 0x80))
 		return 0;
 	memset(a, 0, sizeof(*a));
-	ret = ksceKernelInitializeFastMutex(&a->mutex, "SceUsbEtherRtlControl", 0x2000, 0);
+	ret = sceKernelInitializeFastMutex(&a->mutex, "SceUsbEtherRtlControl", 0x2000, 0);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelCreateEventFlag("SceUsbEtherRtlWorker", 0, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceUsbEtherRtlWorker", 0, 0, NULL);
 	if (ret < 0)
 		return ret;
 	a->workerEvent = ret;
-	ret = ksceKernelCreateThread("SceNetDrvEther", rtlWorker, 0x3e, 0x2000, 0, 0xf0000, NULL);
+	ret = sceKernelCreateThread("SceNetDrvEther", rtlWorker, 0x3e, 0x2000, 0, 0xf0000, NULL);
 	if (ret < 0)
 		return ret;
 	a->thread = ret;
-	ret = ksceKernelStartThread(ret, 4, &a);
+	ret = sceKernelStartThread(ret, 4, &a);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelRegisterSysEventHandler("SceUsbEtherRtl", systemEvent, a);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelCreateEventFlag("SceRtlControlTransfer", 0, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceRtlControlTransfer", 0, 0, NULL);
 	if (ret < 0)
 		return ret;
 	a->controlEvent = ret;

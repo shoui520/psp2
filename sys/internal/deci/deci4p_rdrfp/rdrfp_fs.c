@@ -123,7 +123,7 @@ static int rdrfpMountCallback(SceUID notifyId, SceInt32 notifyCount, SceInt32 no
 	(void)notifyCount;
 	(void)notifyArg;
 
-	ret = ksceKernelWaitEvent(rdrfpMountEvents[dev], 3, &events, NULL, NULL);
+	ret = SceThreadmgrForDriver_C529EA32(rdrfpMountEvents[dev], 3, &events, NULL, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 341, "WaitEvent failed (0x%08x)\n", ret);
 		return ret;
@@ -153,7 +153,7 @@ static int rdrfpFSThreadEntryPoint(SceSize args, void *argp)
 	(void)argp;
 
 	for (i = 0; i < RDRFP_DEVICES; i++) {
-		rdrfpMountCallbacks[i] = ksceKernelCreateCallback("SceDeci4pRDrfp", 0, rdrfpMountCallback,
+		rdrfpMountCallbacks[i] = sceKernelCreateCallback("SceDeci4pRDrfp", 0, rdrfpMountCallback,
 								  (void *)i);
 		if (rdrfpMountCallbacks[i] < 0) {
 			SCE_DBG_PRINTF_WITH_INFO(0xf, 135, "CreateCallback failed (0x%08x)\n",
@@ -167,7 +167,7 @@ static int rdrfpFSThreadEntryPoint(SceSize args, void *argp)
 					     rdrfpMountEvents[i]);
 			return rdrfpMountEvents[i];
 		}
-		ret = ksceKernelRegisterCallbackToEvent(rdrfpMountEvents[i],
+		ret = sceKernelRegisterCallbackToEventForDriver(rdrfpMountEvents[i],
 						      rdrfpMountCallbacks[i], 0);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_WITH_INFO(0xf, 156, "RegisterCallbackToEvent failed (0x%08x)\n", ret);
@@ -185,7 +185,7 @@ static int rdrfpFSThreadEntryPoint(SceSize args, void *argp)
 	rdrfpUnregisterWritebufTimer();
 	for (i = 0; i < RDRFP_DEVICES; i++) {
 		ksceIoDeleteMountEvent(rdrfpMountEvents[i]);
-		ksceKernelDeleteCallback(rdrfpMountCallbacks[i]);
+		sceKernelDeleteCallback(rdrfpMountCallbacks[i]);
 	}
 	return 0;
 }
@@ -198,14 +198,14 @@ int rdrfpInitFS(void)
 	opt.size = 0x1c;
 	opt.attr = 1;
 	opt.kStackMemType = 0x10f0d006;
-	ret = ksceKernelCreateThread("SceDeci4pRDrfpFS", rdrfpFSThreadEntryPoint, 0x1f, 0x4000, 0,
+	ret = sceKernelCreateThread("SceDeci4pRDrfpFS", rdrfpFSThreadEntryPoint, 0x1f, 0x4000, 0,
 				     0x80000, &opt);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 87, "CreateThread failed (0x%08x)\n", ret);
 		return ret;
 	}
 	rdrfpFSThread = ret;
-	ret = ksceKernelStartThread(rdrfpFSThread, 0, NULL);
+	ret = sceKernelStartThread(rdrfpFSThread, 0, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 96, "StartThread failed (0x%08x)\n", ret);
 		return ret;

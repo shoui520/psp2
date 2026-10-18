@@ -117,7 +117,7 @@ void motionStopComplete(int result, void *arg)
 	}
 	motionBusy = 0;
 	if (motion.state == 3) {
-		ksceKernelSetEventFlag(motionUpdate.event, 1);
+		sceKernelSetEventFlag(motionUpdate.event, 1);
 	} else if (motion.state == 5) {
 		motion.savedState = 2;
 		motion.suspendState |= 0x80000000;
@@ -138,11 +138,11 @@ void motionIdentityComplete(int result, void *arg)
 	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	switch (motion.state) {
 	case 3:
-		ksceKernelSetEventFlag(motionUpdate.event, 1);
+		sceKernelSetEventFlag(motionUpdate.event, 1);
 		break;
 	case 4:
 		motion.state = 128;
-		ksceKernelSetEventFlag(motionUpdate.event, 2);
+		sceKernelSetEventFlag(motionUpdate.event, 2);
 		break;
 	case 5:
 		motion.savedState = 128;
@@ -872,7 +872,7 @@ int motionInitializeManager(void *arg)
 			"SceMotion", motionSysEvent, NULL);
 		motion.procEventHandler = sceKernelRegisterProcEventHandler(
 			"SceMotion", &motionProcessHandlers, 0);
-		ksceKernelRegisterTimer("SceMotionAlarm0", 80000,
+		SceThreadmgrForDriver_C58DF384("SceMotionAlarm0", 80000,
 			motionInitializeTimer, NULL);
 	}
 	return 1;
@@ -922,7 +922,7 @@ void motionResumeComplete(int result, void *arg)
 				mode = mode == 3 ? 0 : 3;
 		}
 		if (motion.timer == -1 && motion.savedState == 2 && mode <= 1)
-			motion.timer = ksceKernelRegisterTimer("SceMotionAlarm", motion.period,
+			motion.timer = SceThreadmgrForDriver_C58DF384("SceMotionAlarm", motion.period,
 				motionSampleTimer, NULL);
 		motion.suspendState = 16;
 		break;
@@ -1000,7 +1000,7 @@ int motionStartProcess(SceUID pid, int event, ProcEventParam *param, int flags)
 			mode = mode == 3 ? 0 : 3;
 	}
 	if (motion.timer == -1 && motion.state == 2 && mode <= 1)
-		motion.timer = ksceKernelRegisterTimer("SceMotionAlarm", motion.period,
+		motion.timer = SceThreadmgrForDriver_C58DF384("SceMotionAlarm", motion.period,
 			motionSampleTimer, NULL);
 out:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
@@ -1181,7 +1181,7 @@ void motionInitializeComplete(int result, void *arg)
 	case 6:
 		intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 		if (motion.state == 3) {
-			ksceKernelSetEventFlag(motionUpdate.event, 1);
+			sceKernelSetEventFlag(motionUpdate.event, 1);
 			goto unlock;
 		}
 		if (motion.state == 5) {
@@ -1190,7 +1190,7 @@ void motionInitializeComplete(int result, void *arg)
 			goto unlock;
 		}
 		if (motion.state == 4)
-			ksceKernelSetEventFlag(motionUpdate.event, 2);
+			sceKernelSetEventFlag(motionUpdate.event, 2);
 		mode = motion.overrideSampling;
 		motion.state = 2;
 		if (mode != 0) {
@@ -1224,7 +1224,7 @@ void motionInitializeComplete(int result, void *arg)
 			mode |= sampling;
 		}
 		if ((mode & ~2u) == 1 && motion.timer == -1)
-			motion.timer = ksceKernelRegisterTimer("SceMotionAlarm", motion.period,
+			motion.timer = SceThreadmgrForDriver_C58DF384("SceMotionAlarm", motion.period,
 				motionSampleTimer, NULL);
 		goto unlock;
 	default:
@@ -1250,11 +1250,11 @@ failRecords:
 	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	switch (motion.state) {
 	case 3:
-		ksceKernelSetEventFlag(motionUpdate.event, 1);
+		sceKernelSetEventFlag(motionUpdate.event, 1);
 		break;
 	case 4:
 		motion.state = 128;
-		ksceKernelSetEventFlag(motionUpdate.event, 2);
+		sceKernelSetEventFlag(motionUpdate.event, 2);
 		break;
 	case 5:
 		motion.savedState = 128;
@@ -1463,7 +1463,7 @@ int module_start(SceSize arglen, const void *argp)
 			MOTION_RING_SAMPLES);
 		clearGyroFilter(&motion.filter);
 	}
-	ksceKernelEnqueueWorkQueue(0x10023, "SceMotionInit", motionInitializeManager, NULL);
+	sceKernelScheduleWorkTask(0x10023, "SceMotionInit", motionInitializeManager, NULL);
 	return 0;
 }
 
@@ -1668,7 +1668,7 @@ int ksceMotionDevSamplingStart(void)
 			mode = mode == 3 ? 0 : 3;
 	}
 	if (motion.timer == -1 && motion.state == 2 && mode <= 1)
-		motion.timer = ksceKernelRegisterTimer("SceMotionAlarm", motion.period,
+		motion.timer = SceThreadmgrForDriver_C58DF384("SceMotionAlarm", motion.period,
 			motionSampleTimer, NULL);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
@@ -2022,7 +2022,7 @@ int SceMotionDevForDriver_0808D77D(unsigned int overrideSampling)
 		if (overrideSampling != 1)
 			overrideSampling = overrideSampling == 3 ? 0 : 3;
 		if (motion.timer == -1 && motion.state == 2 && overrideSampling <= 1)
-			motion.timer = ksceKernelRegisterTimer("SceMotionAlarm", motion.period,
+			motion.timer = SceThreadmgrForDriver_C58DF384("SceMotionAlarm", motion.period,
 				motionSampleTimer, NULL);
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
@@ -2035,7 +2035,7 @@ int SceMotionDevForDriver_FD1C528D(void)
 	int result, intr, state;
 
 	memset(&motionUpdate, 0, sizeof(motionUpdate));
-	result = ksceKernelCreateEventFlag("SceMotionUpdate", 0x1000, 0, NULL);
+	result = sceKernelCreateEventFlag("SceMotionUpdate", 0x1000, 0, NULL);
 	motionUpdate.event = result;
 	if (result < 0)
 		return result;
@@ -2050,7 +2050,7 @@ int SceMotionDevForDriver_FD1C528D(void)
 	result = 0;
 	if (state == 3) {
 		timeout = 5000000;
-		result = ksceKernelWaitEventFlag(motionUpdate.event, 1, 5, NULL, &timeout);
+		result = sceKernelWaitEventFlag(motionUpdate.event, 1, 5, NULL, &timeout);
 		if (result == 0)
 			motion.state = 4;
 		state = motion.state;
@@ -2067,7 +2067,7 @@ int SceMotionDevForDriver_FD1C528D(void)
 int SceMotionDevForDriver_D7DA3DA7(void)
 {
 	if (motionUpdate.event != -1) {
-		ksceKernelDeleteEventFlag(motionUpdate.event);
+		sceKernelDeleteEventFlag(motionUpdate.event);
 		motionUpdate.event = -1;
 	}
 	return 0;
@@ -2096,12 +2096,12 @@ int SceMotionDevForDriver_A75976EE(void)
 	motion.deviceInfo = (SceMotionDevDeviceInfo){0};
 	motionSetActivePolarity(0);
 	motionReleaseReset(1);
-	ksceKernelRegisterTimer("SceMotionAlarm5", 80000, motionInitializeTimer, NULL);
-	result = ksceKernelWaitEventFlag(motionUpdate.event, 2, 5, NULL, &timeout);
+	SceThreadmgrForDriver_C58DF384("SceMotionAlarm5", 80000, motionInitializeTimer, NULL);
+	result = sceKernelWaitEventFlag(motionUpdate.event, 2, 5, NULL, &timeout);
 	if (result >= 0 && motion.state == 128)
 		result = (int)0x80360006;
 	if (motionUpdate.event != -1) {
-		ksceKernelDeleteEventFlag(motionUpdate.event);
+		sceKernelDeleteEventFlag(motionUpdate.event);
 		motionUpdate.event = -1;
 	}
 	SceKernelSuspendForDriver_2BB92967(0);

@@ -30,7 +30,7 @@ int GcAuthAdhocCreateContext160(const GcAuthAdhocCreateContext160Request *reques
 	const unsigned char *end;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
 		return 0x808A010A;
 	if (context == NULL || packet == NULL) {
 		result = 0x808A0124;
@@ -63,7 +63,7 @@ int GcAuthAdhocCreateContext160(const GcAuthAdhocCreateContext160Request *reques
 		} while (source != end);
 	}
 finish:
-	if (ksceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
 		result = 0x808A010A;
 	return result;
 }

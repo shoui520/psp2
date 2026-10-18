@@ -149,24 +149,24 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_391B5B74
 	SceDebugForDriver_391B74B7
 	SceDipswForDriver_A98FC2FD
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
-	ksceKernelDeleteSema
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelStartThread
-	ksceKernelCreateSema
-	ksceKernelWaitSema
-	ksceKernelCreateEventFlag
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
+	sceKernelDeleteSema
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelStartThread
+	sceKernelCreateSema
+	sceKernelWaitSema
+	sceKernelCreateEventFlag
 	SceThreadmgrForDriver_555CA6BB
-	ksceKernelDeleteEventFlag
-	ksceKernelDeleteThread
-	ksceKernelCreateThread
-	ksceKernelSignalSema
-	ksceKernelSetEventFlag
-	ksceKernelGetUserThreadId
+	sceKernelDeleteEventFlag
+	sceKernelDeleteThread
+	sceKernelCreateThread
+	sceKernelSignalSema
+	sceKernelSetEventFlag
+	SceThreadmgrForDriver_F311808F
 	sceKernelGetSystemTimeWide
-	ksceKernelCreateMutex
+	sceKernelCreateMutex
 	ksceKernelGetProcessStatus
 	sceKernelSpawnProcessExt
 	ksceKernelGetProcessMainThread

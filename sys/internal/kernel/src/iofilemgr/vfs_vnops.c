@@ -2287,7 +2287,7 @@ void vfs_dump_fast_mutex(SceKernelFastMutex *mtx)
 	int ret;
 
 	info.size = sizeof(info);
-	ret = ksceKernelGetFastMutexInfo(mtx, &info);
+	ret = sceKernelGetFastMutexInfo(mtx, &info);
 	if (ret < 0) {
 		SceDebugForDriver_391B74B7("can not get fmtx info ... %d 0x%X\n", ret, ret);
 		return;

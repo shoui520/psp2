@@ -207,7 +207,7 @@ int regMgrSetKey(int handle, const char *category, const char *name, const void 
 		if (g_regMgrCallback[cb].cbid == -1)
 			continue;
 		if (g_regMgrCallback[cb].mode != REGMGR_CALLBACK_NOTIFY) {
-			if (ksceKernelGetCallbackCount(g_regMgrCallback[cb].cbid) < 0)
+			if (SceThreadmgrForDriver_0892D8DF(g_regMgrCallback[cb].cbid) < 0)
 				memset(&g_regMgrCallback[cb], 0xff, sizeof(g_regMgrCallback[cb]));
 			continue;
 		}
@@ -226,7 +226,7 @@ int regMgrSetKey(int handle, const char *category, const char *name, const void 
 		}
 		continue;
 notify:
-		if (ksceKernelNotifyCallback(g_regMgrCallback[cb].cbid, i) != 0)
+		if (sceKernelNotifyCallback(g_regMgrCallback[cb].cbid, i) != 0)
 			memset(&g_regMgrCallback[cb], 0xff, sizeof(g_regMgrCallback[cb]));
 	}
 	return 0;
@@ -2109,7 +2109,7 @@ int regMgrComApiPrologue(int *lock)
 		if (ret < 0)
 			goto out;
 	} else {
-		ret = ksceKernelLockMutex(g_regMgrMutex, 1, NULL);
+		ret = sceKernelLockMutex(g_regMgrMutex, 1, NULL);
 		*lock = ret;
 		if (ret < 0)
 			goto out;
@@ -2150,12 +2150,12 @@ int regMgrComApiEpilogue(int lock)
 	int error;
 
 	if (g_regMgrDrvErrCallback != -1) {
-		if (ksceKernelGetCallbackCount(g_regMgrDrvErrCallback) < 0) {
+		if (SceThreadmgrForDriver_0892D8DF(g_regMgrDrvErrCallback) < 0) {
 			g_regMgrDrvErrCallback = -1;
 		} else {
 			error = regMgrGetLastError();
 			if (regMgrIsBlueScreenError(regMgrMaskError(error)) &&
-			    ksceKernelNotifyCallback(g_regMgrDrvErrCallback, error) != 0)
+			    sceKernelNotifyCallback(g_regMgrDrvErrCallback, error) != 0)
 				g_regMgrDrvErrCallback = -1;
 		}
 	}
@@ -2166,7 +2166,7 @@ int regMgrComApiEpilogue(int lock)
 		writeTpidruro(g_regMgrSavedTpidruro);
 	}
 	if (lock >= 0)
-		return ksceKernelUnlockMutex(g_regMgrMutex, 1);
+		return sceKernelUnlockMutex(g_regMgrMutex, 1);
 	return 0;
 }
 
@@ -2185,7 +2185,7 @@ int regMgrInitWork(void *arg)
 	ret = regMgrComApiPrologue(&lock);
 	if (ret < 0)
 		goto out;
-	ret = ksceKernelSetEventFlag(g_regMgrEventFlag, 1);
+	ret = sceKernelSetEventFlag(g_regMgrEventFlag, 1);
 	if (ret < 0)
 		goto out;
 	memset(g_regMgrCategoryName, 0, sizeof(g_regMgrCategoryName));
@@ -2512,22 +2512,22 @@ int module_start(SceSize args, void *argp)
 	if (g_regMgrMutex != -1) {
 		ret = 0x800d0005;	/* name unknown */
 	} else {
-		ret = ksceKernelCreateEventFlag("SceRegMgr", 0, 0, NULL);
+		ret = sceKernelCreateEventFlag("SceRegMgr", 0, 0, NULL);
 		if (ret < 0)
 			goto out;
 		g_regMgrEventFlag = ret;
-		ret = ksceKernelCreateMutex("SceRegMgr", 2, 0, NULL);
+		ret = sceKernelCreateMutex("SceRegMgr", 2, 0, NULL);
 		if (ret < 0)
 			goto out;
 		g_regMgrMutex = ret;
-		ret = ksceKernelEnqueueWorkQueue(0x10023, "SceRegMgrInit", regMgrInitWork, NULL);
+		ret = sceKernelScheduleWorkTask(0x10023, "SceRegMgrInit", regMgrInitWork, NULL);
 		if (ret < 0)
 			goto out;
-		ret = ksceKernelWaitEventFlag(g_regMgrEventFlag, 1, 0, &bits, &timeout);
+		ret = sceKernelWaitEventFlag(g_regMgrEventFlag, 1, 0, &bits, &timeout);
 	}
 out:
 	if (g_regMgrEventFlag != -1) {
-		ret = ksceKernelDeleteEventFlag(g_regMgrEventFlag);
+		ret = sceKernelDeleteEventFlag(g_regMgrEventFlag);
 		g_regMgrEventFlag = -1;
 	}
 	if (ret < 0)
@@ -2748,7 +2748,7 @@ int regMgrLock(int *lock)
 		*lock = ret;
 		return ret;
 	}
-	ret = ksceKernelLockMutex(g_regMgrMutex, 1, NULL);
+	ret = sceKernelLockMutex(g_regMgrMutex, 1, NULL);
 	*lock = ret;
 	if (ret >= 0 && g_regMgrInitResult != 0 && g_regMgrVolatileMode != 1) {
 		ret = g_regMgrInitResult;
@@ -2761,7 +2761,7 @@ int regMgrLock(int *lock)
 int regMgrUnlock(int lock)
 {
 	if (lock >= 0)
-		return ksceKernelUnlockMutex(g_regMgrMutex, 1);
+		return sceKernelUnlockMutex(g_regMgrMutex, 1);
 	return 0;
 }
 

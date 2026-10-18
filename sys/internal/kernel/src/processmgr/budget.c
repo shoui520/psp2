@@ -108,7 +108,7 @@ static int ProcessBudgetDestructor(ProcessBudget *budget)
 		if (budget->cdramPartition != NULL)
 			sceKernelDeletePhyMemPart(budget->cdramPartition);
 	}
-	if (budget->mutex > 0 && ksceKernelDeleteMutex(budget->mutex) < 0)
+	if (budget->mutex > 0 && sceKernelDeleteMutex(budget->mutex) < 0)
 		SCE_DBG_ASSERT_FAIL(1042);
 	return 0;
 }
@@ -137,12 +137,12 @@ static int CreateDefaultPhyMemPart(const char *name, SceUInt32 type, SceUIntPtr 
 
 int BudgetLock(ProcessBudget *budget)
 {
-	return ksceKernelLockMutex(budget->mutex, 1, NULL);
+	return sceKernelLockMutex(budget->mutex, 1, NULL);
 }
 
 int BudgetUnlock(ProcessBudget *budget)
 {
-	return ksceKernelUnlockMutex(budget->mutex, 1);
+	return sceKernelUnlockMutex(budget->mutex, 1);
 }
 
 SceUID BudgetGetKernelBudgetId(void)
@@ -171,11 +171,11 @@ int SceProcessmgrForKernel_459A223B(SceUID budgetId)
 	budget = SceSysmemForKernel_FA6C098C(budgetId);
 	if (budget == NULL)
 		return SCE_KERNEL_ERROR_PROCESSMGR_BUDGET_BUSY;
-	ret = ksceKernelLockMutex(budget->mutex, 1, (SceUInt32 *)isDefault);
+	ret = sceKernelLockMutex(budget->mutex, 1, (SceUInt32 *)isDefault);
 	if (ret < 0)
 		return ret;
 	if (budget->processCount != 0) {
-		ksceKernelUnlockMutex(budget->mutex, 1);
+		sceKernelUnlockMutex(budget->mutex, 1);
 		return SCE_KERNEL_ERROR_PROCESSMGR_BUDGET_IN_USE;
 	}
 	return sceGUIDClose(budgetId);
@@ -584,7 +584,7 @@ static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 	budget->cdialogPartition = cdialogPart;
 	budget->phyContPartition = phyContPart;
 	budget->cdramPartition = cdramPart;
-	mutex = ksceKernelCreateMutex(name, 2, 0, NULL);
+	mutex = sceKernelCreateMutex(name, 2, 0, NULL);
 	if (mutex < 0) {
 		if (fixedUid)
 			SCE_PANIC(292);
@@ -929,9 +929,9 @@ int sceKernelIsCDialogAvailable(void)
 	cb = getCurrentThreadCB();
 	ret = 0;
 	if (cb != NULL && (ret = BudgetIDtoBudgetObj(cb->process->budgetId, &budget)) >= 0
-	    && (ret = ksceKernelLockMutex(budget->mutex, 1, NULL)) >= 0) {
+	    && (ret = sceKernelLockMutex(budget->mutex, 1, NULL)) >= 0) {
 		ret = budget->cdialogPartition != NULL;
-		ksceKernelUnlockMutex(budget->mutex, 1);
+		sceKernelUnlockMutex(budget->mutex, 1);
 	}
 	ProcessSyscallLeave(state);
 	return ret;
@@ -949,7 +949,7 @@ int sceKernelGrowBudget(SceUID budgetId, int index, SceSize size)
 	ret = BudgetIDtoBudgetObj(budgetId, &budget);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelLockMutex(budget->mutex, 1, NULL);
+	ret = sceKernelLockMutex(budget->mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	switch (index) {
@@ -966,17 +966,17 @@ int sceKernelGrowBudget(SceUID budgetId, int index, SceSize size)
 		partition = budget->cdramPartition;
 		break;
 	default:
-		ksceKernelUnlockMutex(budget->mutex, 1);
+		sceKernelUnlockMutex(budget->mutex, 1);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	SCE_DBG_PRINTF_LEVEL(1, 0xb, 1479, "pPhyMemPart %p\n", partition);
 	ret = SceSysmemForKernel_5B434019(partition, size);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1483, "grow partition failed. 0x%08x\n", ret);
-		ksceKernelUnlockMutex(budget->mutex, 1);
+		sceKernelUnlockMutex(budget->mutex, 1);
 		return ret;
 	}
-	ksceKernelUnlockMutex(budget->mutex, 1);
+	sceKernelUnlockMutex(budget->mutex, 1);
 	return 0;
 }
 

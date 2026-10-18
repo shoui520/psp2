@@ -13,16 +13,16 @@ static int CdramInitWorker(void *arg)
 	int priority, affinity;
 
 	(void)arg;
-	priority = ksceKernelChangeThreadPriority(0, 16);
+	priority = sceKernelChangeThreadPriority2(0, 16);
 	if (priority < 0)
 		priority = 0xbf;
-	affinity = ksceKernelChangeThreadCpuAffinityMask(0, 6);
+	affinity = sceKernelChangeThreadCpuAffinityMask(0, 6);
 	if (affinity < 0)
 		affinity = 0xf;
 	Smc117(0);
 	s_cdramReady = 1;
-	ksceKernelChangeThreadCpuAffinityMask(0, affinity);
-	ksceKernelChangeThreadPriority(0, priority);
+	sceKernelChangeThreadCpuAffinityMask(0, affinity);
+	sceKernelChangeThreadPriority2(0, priority);
 	return 1;
 }
 
@@ -30,7 +30,7 @@ int LowioCdramInit(SceSize arglen, const void *argp)
 {
 	(void)arglen;
 	(void)argp;
-	ksceKernelEnqueueWorkQueue(0x10023, "SceCdramInit", CdramInitWorker, NULL);
+	sceKernelScheduleWorkTask(0x10023, "SceCdramInit", CdramInitWorker, NULL);
 	return 0;
 }
 

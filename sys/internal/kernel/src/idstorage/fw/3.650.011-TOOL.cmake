@@ -62,13 +62,13 @@ set(MODULE_IMPORT_FUNCS
 	memcpy
 	__stack_chk_fail
 	memcmp
-	ksceKernelDeleteMutex
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
+	sceKernelDeleteMutex
+	sceKernelLockMutex
+	sceKernelUnlockMutex
 	SceThreadmgrForDriver_56C18B11
 	SceThreadmgrForDriver_84EB1EA4
 	sceKernelGetProcessId
-	ksceKernelCreateMutex
+	sceKernelCreateMutex
 	ksceIoWrite
 	ksceIoLseek
 	ksceIoOpen

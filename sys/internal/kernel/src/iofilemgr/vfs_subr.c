@@ -8,7 +8,7 @@
 #include <sysmem/atomic.h>
 
 extern int vfsGetMutexInfo(SceUID uid, SceKernelMutexInfo *info)
-	__asm__("ksceKernelGetMutexInfo");
+	__asm__("sceKernelGetMutexInfo");
 
 SceClass g_vfsFileClass;
 SceVopTable *g_vopTableCache[VFS_VOP_TABLE_CACHE_NUM];
@@ -85,10 +85,10 @@ SceVfsMount *vfs_alloc_mount(void)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_freeMntListLock, intr);
 	fdlock = (struct FdLock *)mnt->opaque;
 	mnt->fd_lock = fdlock;
-	uid = ksceKernelCreateMutex("SceVfsFdLock", 0, 0, NULL);
+	uid = sceKernelCreateMutex("SceVfsFdLock", 0, 0, NULL);
 	if (uid >= 0) {
 		fdlock->mutex = uid;
-		uid = ksceKernelCreateCond("SceVfsFdCond", 0, uid, NULL);
+		uid = sceKernelCreateCond("SceVfsFdCond", 0, uid, NULL);
 		if (uid >= 0) {
 			fdlock->cond = uid;
 			fdlock->state = 0;
@@ -96,7 +96,7 @@ SceVfsMount *vfs_alloc_mount(void)
 			mnt->fumount = (struct Fumount *)mnt->opaque2;
 			return mnt;
 		}
-		ksceKernelDeleteMutex(fdlock->mutex);
+		sceKernelDeleteMutex(fdlock->mutex);
 		fdlock->mutex = -1;
 	}
 	intr = SceCpuForDriver_D32ACE9E(&g_freeMntListLock);
@@ -112,7 +112,7 @@ void vfs_init_mount(SceVfsMount *mnt, SceVfsVnode *vp, SceUID allocator, SceVfsI
 {
 	struct Fumount *fumount;
 
-	ksceKernelInitializeFastMutex(&mnt->fast_mutex, "SceVfsMnt", 2, 0);
+	sceKernelInitializeFastMutex(&mnt->fast_mutex, "SceVfsMnt", 2, 0);
 	mnt->allocator = allocator;
 	mnt->mnt_vfs_inf = vfsInf;
 	mnt->mnt_ref_count = 1;
@@ -142,7 +142,7 @@ int vfs_create_mnt_list_mtx(void)
 {
 	int ret;
 
-	ret = ksceKernelInitializeFastMutex(&g_mntListMutex, "SceVfsMntlistLock", 0, 0);
+	ret = sceKernelInitializeFastMutex(&g_mntListMutex, "SceVfsMntlistLock", 0, 0);
 	if (ret < 0)
 		SCE_DBG_PRINTF(0xf, 693, "mnt_list lock creation failed ret=0x%x\n", ret);
 	return ret;
@@ -152,7 +152,7 @@ int vfs_lock_mnt_list(void)
 {
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&g_mntListMutex);
+	ret = lockFastMutex(&g_mntListMutex);
 	if (ret < 0)
 		SCE_DBG_PRINTF(0xf, 711, "mnt_list lock failed ret=0x%x\n", ret);
 	return ret;
@@ -162,7 +162,7 @@ int vfs_unlock_mnt_list(void)
 {
 	int ret;
 
-	ret = ksceKernelUnlockFastMutex(&g_mntListMutex);
+	ret = sceKernelUnlockFastMutex(&g_mntListMutex);
 	if (ret < 0)
 		SCE_DBG_PRINTF(0xf, 730, "mnt_list unlock failed ret=0x%x\n", ret);
 	return ret;
@@ -189,7 +189,7 @@ int vfs_create_ncache_mtx(void)
 {
 	int ret;
 
-	ret = ksceKernelInitializeFastMutex(&g_ncacheMutex, "SceVfsNcacheLock", 2, 0);
+	ret = sceKernelInitializeFastMutex(&g_ncacheMutex, "SceVfsNcacheLock", 2, 0);
 	if (ret < 0)
 		SCE_DBG_PRINTF(0xf, 743, "ncache lock creation failed ret=0x%x\n", ret);
 	return ret;
@@ -197,19 +197,19 @@ int vfs_create_ncache_mtx(void)
 
 void vfs_lock_ncache(void)
 {
-	ksceKernelLockFastMutex(&g_ncacheMutex);
+	lockFastMutex(&g_ncacheMutex);
 }
 
 void vfs_unlock_ncache(void)
 {
-	ksceKernelUnlockFastMutex(&g_ncacheMutex);
+	sceKernelUnlockFastMutex(&g_ncacheMutex);
 }
 
 int vfs_create_vfs_mtx(void)
 {
 	int ret;
 
-	ret = ksceKernelInitializeFastMutex(&g_vfsMutex, "SceVfsLock", 0, 0);
+	ret = sceKernelInitializeFastMutex(&g_vfsMutex, "SceVfsLock", 0, 0);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 787, "::0x10f::004::0x%x\n", ret);
 		SCE_DBG_PRINTF(0xf, 788, "vfs lock creation failed ret=0x%x\n", ret);
@@ -221,7 +221,7 @@ int vfs_lock_vfs(void)
 {
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&g_vfsMutex);
+	ret = lockFastMutex(&g_vfsMutex);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 805, "::0x10f::006::0x%x\n", ret);
 		SCE_DBG_PRINTF(0xf, 806, "vfs lock failed ret=0x%x\n", ret);
@@ -233,7 +233,7 @@ int vfs_unlock_vfs(void)
 {
 	int ret;
 
-	ret = ksceKernelUnlockFastMutex(&g_vfsMutex);
+	ret = sceKernelUnlockFastMutex(&g_vfsMutex);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 825, "::0x10f::008::0x%x\n", ret);
 		SCE_DBG_PRINTF(0xf, 826, "vfs unlock failed ret=0x%x\n", ret);
@@ -265,7 +265,7 @@ static inline __attribute__((always_inline)) int unlock_vdlock(SceVfsVnode *vp)
 	SceUID thid;
 	int ret;
 
-	thid = ksceKernelGetThreadId();
+	thid = sceKernelGetThreadId();
 	if (vp->vdlock.owner_id != thid)
 		return SCE_ERROR_ERRNO_EPERM;
 	if (vp->vdlock.recursive_count != 0) {
@@ -285,7 +285,7 @@ static inline __attribute__((always_inline)) int unlock_vdlock(SceVfsVnode *vp)
 		}
 	}
 	vp->vdlock.owner_id = VDLOCK_OWNER_HANDOVER;
-	ret = ksceKernelSetEventFlag(vp->vdlock.wait_id, vp->vdlock.wait_pattern);
+	ret = sceKernelSetEventFlag(vp->vdlock.wait_id, vp->vdlock.wait_pattern);
 	if (ret != 0)
 		SCE_DBG_PRINTF_FUNC(0xf, 682, "unlock_vdlock",
 				    "sceKernelSetEventFlag(0x%x, 0x%x) failed ret=0x%x\n",
@@ -310,7 +310,7 @@ void fini_vnode(SceVfsVnode *vp)
 			SCE_DBG_ASSERT(0, 1320);
 	}
 	memset(&vp->core, 0, 0x98);
-	if (ksceKernelGetThreadId() != vp->vdlock.owner_id)
+	if (sceKernelGetThreadId() != vp->vdlock.owner_id)
 		return;
 	vp->vdlock.recursive_count = 0;
 	ret = unlock_vdlock(vp);
@@ -409,7 +409,7 @@ int vfsLockMnt(SceVfsMount *mnt)
 {
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&mnt->fast_mutex);
+	ret = lockFastMutex(&mnt->fast_mutex);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 835, "::0x10f::009::%p 0x%x\n", mnt, ret);
 		SCE_DBG_PRINTF(0xf, 836, "mnt[%p] lock failed ret=0x%x\n", mnt, ret);
@@ -421,7 +421,7 @@ int vfsUnlockMnt(SceVfsMount *mnt)
 {
 	int ret;
 
-	ret = ksceKernelUnlockFastMutex(&mnt->fast_mutex);
+	ret = sceKernelUnlockFastMutex(&mnt->fast_mutex);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 855, "::0x10f::011::%p 0x%x\n", mnt, ret);
 		SCE_DBG_PRINTF(0xf, 856, "mnt[%p] unlock failed ret=0x%x\n", mnt, ret);
@@ -444,13 +444,13 @@ static inline __attribute__((always_inline)) void fini_fdlock(struct FdLock *fdl
 
 	uid = fdlock->cond;
 	fdlock->cond = -1;
-	ret = ksceKernelDeleteCond(uid);
+	ret = sceKernelDeleteCond(uid);
 	if (ret < 0)
 		SCE_DBG_PRINTF_FUNC(0xf, 2567, "fini_fdlock", "sceKernelDeleteCond failed ret = 0x%x\n",
 				    ret);
 	uid = fdlock->mutex;
 	fdlock->mutex = -1;
-	ret = ksceKernelDeleteMutex(uid);
+	ret = sceKernelDeleteMutex(uid);
 	if (ret < 0)
 		SCE_DBG_PRINTF_FUNC(0xf, 2574, "fini_fdlock",
 				    "sceKernelDeleteMutex failed ret = 0x%x\n", ret);
@@ -463,14 +463,14 @@ void vfs_free_mount(SceVfsMount *mnt)
 	int ret, intr;
 
 	info.size = sizeof(info);
-	ret = ksceKernelGetFastMutexInfo(&mnt->fast_mutex, &info);
+	ret = sceKernelGetFastMutexInfo(&mnt->fast_mutex, &info);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 360, "can not get fmtx info ... %d 0x%X\n", ret, ret);
 		vfsUnlockMnt(mnt);
 	} else if (info.lockCount != 0) {
 		vfsUnlockMnt(mnt);
 	}
-	ret = ksceKernelFinalizeFastMutex(&mnt->fast_mutex);
+	ret = sceKernelFinalizeFastMutex(&mnt->fast_mutex);
 	fini_mtx(&mnt->fast_mutex, ret);
 	fini_fdlock(mnt->fd_lock);
 	if (mnt->fumount != NULL) {
@@ -492,17 +492,17 @@ SceBool vfsIsLockedMnt(SceVfsMount *mnt)
 	int ret;
 
 	info.size = sizeof(info);
-	ret = ksceKernelGetFastMutexInfo(&mnt->fast_mutex, &info);
+	ret = sceKernelGetFastMutexInfo(&mnt->fast_mutex, &info);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xf, 869, "sceKernelGetFastMutexInfo(%p): 0x%08x\n", mnt, ret);
 		SCE_DBG_ASSERT_CHECK(0, 870);
 		return ret;
 	}
-	if (info.currentOwnerId != ksceKernelGetThreadId()) {
+	if (info.currentOwnerId != sceKernelGetThreadId()) {
 		SCE_DBG_PRINTF(0xf, 874, "sceKernelGetFastMutexInfo(%p): 0x%08x\n", mnt, ret);
 		SCE_DBG_PRINTF(0xf, 875, "inf.currentOwnerId:     0x%08x\n", info.currentOwnerId);
 		SCE_DBG_PRINTF(0xf, 876, "inf.lockCount:          0x%08x\n", info.lockCount);
-		SCE_DBG_PRINTF(0xf, 877, "sceKernelGetThreadId(): 0x%08x\n", ksceKernelGetThreadId());
+		SCE_DBG_PRINTF(0xf, 877, "sceKernelGetThreadId(): 0x%08x\n", sceKernelGetThreadId());
 		SCE_DBG_ASSERT_LEVEL_CHECK(2, 0, 878);
 		return 0;
 	}
@@ -511,7 +511,7 @@ SceBool vfsIsLockedMnt(SceVfsMount *mnt)
 	SCE_DBG_PRINTF(0xf, 881, "sceKernelGetFastMutexInfo(%p): 0x%08x\n", mnt, ret);
 	SCE_DBG_PRINTF(0xf, 882, "inf.currentOwnerId:     0x%08x\n", info.currentOwnerId);
 	SCE_DBG_PRINTF(0xf, 883, "inf.lockCount:          0x%08x\n", info.lockCount);
-	SCE_DBG_PRINTF(0xf, 884, "sceKernelGetThreadId(): 0x%08x\n", ksceKernelGetThreadId());
+	SCE_DBG_PRINTF(0xf, 884, "sceKernelGetThreadId(): 0x%08x\n", sceKernelGetThreadId());
 	SCE_DBG_ASSERT_LEVEL_CHECK(2, 0, 885);
 	return 0;
 }
@@ -520,7 +520,7 @@ static inline __attribute__((always_inline)) int lock_fdlock(struct FdLock *fdlo
 {
 	int ret;
 
-	ret = ksceKernelLockMutex(fdlock->mutex, 1, NULL);
+	ret = sceKernelLockMutex(fdlock->mutex, 1, NULL);
 	if (ret < 0)
 		SCE_DBG_PRINTF_FUNC(0xf, 2520, "lock_fdlock",
 				    "sceKernelLockMutex failed ... %d 0x%08x\n", ret, ret);
@@ -555,7 +555,7 @@ int vfsTrylockFd(SceVfsFile *file)
 {
 	int ret;
 
-	ret = ksceKernelTryLockMutex(file->fd_lock->mutex, 1);
+	ret = sceKernelTryLockMutex(file->fd_lock->mutex, 1);
 	if (ret < 0) {
 		if (ret != SCE_KERNEL_ERROR_MUTEX_FAILED_TO_OWN) {
 			SCE_PRINTF_WITH_INFO(0xf, 961, "::0x10f::014::0x%x\n", ret);
@@ -569,7 +569,7 @@ int vfsUnlockFd(SceVfsFile *file)
 {
 	int ret;
 
-	ret = ksceKernelUnlockMutex(file->fd_lock->mutex, 1);
+	ret = sceKernelUnlockMutex(file->fd_lock->mutex, 1);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 976, "::0x10f::015::0x%x\n", ret);
 		SCE_DBG_PRINTF(0xf, 977, "fdmnt unlock failed ret=0x%x\n", ret);
@@ -582,7 +582,7 @@ static inline __attribute__((always_inline)) int wait_fdlock(struct FdLock *fdlo
 	int ret;
 
 	fdlock->waitNum++;
-	ret = ksceKernelWaitCond(fdlock->cond, NULL);
+	ret = sceKernelWaitCond(fdlock->cond, NULL);
 	fdlock->waitNum--;
 	if (ret < 0)
 		SCE_DBG_PRINTF_FUNC(0xf, 2543, "wait_fdlock", "sceKernelWaitCond failed ... %d 0x%08x\n",
@@ -618,12 +618,12 @@ SceBool vfsIsLockedFd(SceVfsFile *file)
 	if ((info.currentOwnerId & 0x40000000) != 0)
 		info.currentOwnerId = SceSysmemForDriver_45D22597(SCE_KERNEL_PROCESS_ID, info.currentOwnerId);
 	owner = info.currentOwnerId;
-	if (ksceKernelGetThreadId() != owner) {
+	if (sceKernelGetThreadId() != owner) {
 		SCE_DBG_PRINTF(0xf, 1005, "sceKernelGetMutexInfo(0x%08x): 0x%08x\n",
 			       file->fd_lock->mutex, ret);
 		SCE_DBG_PRINTF(0xf, 1006, "inf.currentOwnerId:     0x%08x\n", info.currentOwnerId);
 		SCE_DBG_PRINTF(0xf, 1007, "inf.currentCount:       0x%08x\n", info.currentCount);
-		SCE_DBG_PRINTF(0xf, 1008, "sceKernelGetThreadId(): 0x%08x\n", ksceKernelGetThreadId());
+		SCE_DBG_PRINTF(0xf, 1008, "sceKernelGetThreadId(): 0x%08x\n", sceKernelGetThreadId());
 		SCE_DBG_ASSERT_LEVEL_CHECK(2, 0, 1009);
 		return 0;
 	}
@@ -633,7 +633,7 @@ SceBool vfsIsLockedFd(SceVfsFile *file)
 		       ret);
 	SCE_DBG_PRINTF(0xf, 1013, "inf.currentOwnerId:     0x%08x\n", info.currentOwnerId);
 	SCE_DBG_PRINTF(0xf, 1014, "inf.currentCount:       0x%08x\n", info.currentCount);
-	SCE_DBG_PRINTF(0xf, 1015, "sceKernelGetThreadId(): 0x%08x\n", ksceKernelGetThreadId());
+	SCE_DBG_PRINTF(0xf, 1015, "sceKernelGetThreadId(): 0x%08x\n", sceKernelGetThreadId());
 	SCE_DBG_ASSERT_LEVEL_CHECK(2, 0, 1016);
 	return 0;
 }
@@ -655,7 +655,7 @@ int vfsUnlockFdAll(SceVfsMount *mnt)
 {
 	int ret;
 
-	ret = ksceKernelUnlockMutex(mnt->fd_lock->mutex, 1);
+	ret = sceKernelUnlockMutex(mnt->fd_lock->mutex, 1);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 1060, "::0x10f::019::0x%x\n", ret);
 		SCE_DBG_PRINTF(0xf, 1061, "fdmnt unlock all failed ret=0x%x\n", ret);
@@ -669,7 +669,7 @@ int vfsSignalFd(SceVfsMount *mnt)
 
 	if (mnt->fd_lock->waitNum < 1)
 		return 0;
-	ret = ksceKernelSignalCondAll(mnt->fd_lock->cond);
+	ret = sceKernelSignalCondAll(mnt->fd_lock->cond);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 1074, "::0x10f::020::0x%x\n", ret);
 		SCE_DBG_PRINTF(0xf, 1075, "fdmnt signal failed ret=0x%x\n", ret);
@@ -709,7 +709,7 @@ int vfsLockVnode(SceVfsVnode *vp)
 	SceUID thid, owner;
 	int ret;
 
-	thid = ksceKernelGetThreadId();
+	thid = sceKernelGetThreadId();
 	owner = vdlock_try_own(vp, thid);
 	if (owner == -1) {
 		AtomicFullBarrier();
@@ -726,7 +726,7 @@ int vfsLockVnode(SceVfsVnode *vp)
 		AtomicFullBarrier();
 		return 0;
 	}
-	ret = ksceKernelWaitEventFlag(vp->vdlock.wait_id, vp->vdlock.wait_pattern,
+	ret = sceKernelWaitEventFlag(vp->vdlock.wait_id, vp->vdlock.wait_pattern,
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, NULL);
 	vdlock_change_waiters(vp, (SceUInt64)-1);
 	if (ret == 0) {
@@ -746,7 +746,7 @@ int lock_vdlock(SceVfsVnode *vp)
 {
 	SceUID thid, owner;
 
-	thid = ksceKernelGetThreadId();
+	thid = sceKernelGetThreadId();
 	owner = vdlock_try_own(vp, thid);
 	if (owner == -1) {
 		AtomicFullBarrier();
@@ -774,7 +774,7 @@ int vfsUnlockVnode(SceVfsVnode *vp)
 
 SceBool vfsIsOwnerVnode(SceVfsVnode *vp)
 {
-	return vp->vdlock.owner_id == ksceKernelGetThreadId();
+	return vp->vdlock.owner_id == sceKernelGetThreadId();
 }
 
 struct Ncache *vfs_alloc_ncache(SceUID heap, const VfsPathElem *elem)
@@ -1107,7 +1107,7 @@ void vfs_initialize_file(SceVfsVnode *vp, SceVfsFile *file)
 	SceVfsMount *mnt = vp->core.mnt;
 	SceUInt32 attr;
 
-	SCE_DBG_ASSERT_CHECK(vp->vdlock.owner_id == ksceKernelGetThreadId(), 1734);
+	SCE_DBG_ASSERT_CHECK(vp->vdlock.owner_id == sceKernelGetThreadId(), 1734);
 	vp->core.fd_num++;
 	file->state = SCE_VFS_FILE_STATE_OPEN;
 	file->vp = vp;
@@ -1116,7 +1116,7 @@ void vfs_initialize_file(SceVfsVnode *vp, SceVfsFile *file)
 	file->is_dir = 0;
 	file->flags = 0;
 	file->fd = 0;
-	file->pid = ksceKernelGetProcessIdFromTLS();
+	file->pid = SceThreadmgrForDriver_FA54D49A();
 	file->has_flock_ent = 0;
 	file->fd_lock = mnt->fd_lock;
 	attr = (mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_INTERNAL) != 0;
@@ -1275,7 +1275,7 @@ int vfs_vnode_initialize(void)
 	size = g_vnodePool.size;
 	for (i = 0; i < VFS_VNODE_MAX; i++) {
 		if ((i & 0x1f) == 0)
-			evf = ksceKernelCreateEventFlag("SceVfsVnode", 0x1000, 0, NULL);
+			evf = sceKernelCreateEventFlag("SceVfsVnode", 0x1000, 0, NULL);
 		SCE_DBG_ASSERT(evf > 0, 2109);
 		vp->vdlock.waiter = 0;
 		vp->vdlock.wait_id = evf;
@@ -1376,11 +1376,11 @@ static inline __attribute__((always_inline)) int vfs_process_close(SceUID guid, 
 	if (file->is_dir != 0) {
 		param.dclose.fd = guid;
 		param.dclose.reserved = 0;
-		ret = ksceKernelRunWithStack(0x2000, (void *)vfsDclose, &param);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (void *)vfsDclose, &param);
 		if (ret < 0) {
 			sceKernelDelayThread(10000);
 			for (i = 0; i < 3; i++) {
-				ret = ksceKernelRunWithStack(0x2000, (void *)vfsDclose, &param);
+				ret = SceThreadmgrForDriver_E54FD746(0x2000, (void *)vfsDclose, &param);
 				if (ret >= 0)
 					goto done;
 				sceKernelDelayThread(10000);
@@ -1389,7 +1389,7 @@ static inline __attribute__((always_inline)) int vfs_process_close(SceUID guid, 
 			if (ret < 0)
 				SCE_DBG_PRINTF_FUNC(0xf, 2267, "vfs_process_finalize",
 					"vfsCleanup(guid=0x%x) failed = 0x%x\n", guid, ret);
-			ret = ksceKernelRunWithStack(0x2000, (void *)vfsDclose, &param);
+			ret = SceThreadmgrForDriver_E54FD746(0x2000, (void *)vfsDclose, &param);
 			if (ret < 0)
 				SCE_DBG_PRINTF_FUNC(0xf, 2282, "vfs_process_finalize",
 					"vfsDclose failed() ... %d 0x%x uid=0x%x %d\n",
@@ -1397,11 +1397,11 @@ static inline __attribute__((always_inline)) int vfs_process_close(SceUID guid, 
 		}
 	} else {
 		param.close.fd = guid;
-		ret = ksceKernelRunWithStack(0x2000, (void *)vfsClose, &param);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (void *)vfsClose, &param);
 		if (ret < 0) {
 			sceKernelDelayThread(10000);
 			for (i = 0; i < 3; i++) {
-				ret = ksceKernelRunWithStack(0x2000, (void *)vfsClose, &param);
+				ret = SceThreadmgrForDriver_E54FD746(0x2000, (void *)vfsClose, &param);
 				if (ret >= 0)
 					goto done;
 				sceKernelDelayThread(10000);
@@ -1410,7 +1410,7 @@ static inline __attribute__((always_inline)) int vfs_process_close(SceUID guid, 
 			if (ret < 0)
 				SCE_DBG_PRINTF_FUNC(0xf, 2311, "vfs_process_finalize",
 					"vfsCleanup(guid=0x%x) failed = 0x%x\n", guid, ret);
-			ret = ksceKernelRunWithStack(0x2000, (void *)vfsClose, &param);
+			ret = SceThreadmgrForDriver_E54FD746(0x2000, (void *)vfsClose, &param);
 			if (ret < 0)
 				SCE_DBG_PRINTF_FUNC(0xf, 2328, "vfs_process_finalize",
 					"vfsClose failed() ... %d 0x%x uid=0x%x %d\n",
@@ -1750,7 +1750,7 @@ int vfs_finalize_file(SceVfsVnode *vp, SceVfsFile *file)
 	SceVfsFile *prev, *cur;
 	int ret;
 
-	SCE_DBG_ASSERT_CHECK(vp->vdlock.owner_id == ksceKernelGetThreadId(), 1780);
+	SCE_DBG_ASSERT_CHECK(vp->vdlock.owner_id == sceKernelGetThreadId(), 1780);
 	cur = vp->core.fd_list;
 	if (cur == NULL) {
 		ret = SCE_ERROR_ERRNO_ENOENT;
@@ -1800,7 +1800,7 @@ int vfs_set_dev_wait_evf(SceVfsMount *mnt)
 	switch (opt) {
 	case VFS_MOUNT_OPT_MC:
 		if (g_vfsDevWaitForMCEvf == -1)
-			g_vfsDevWaitForMCEvf = ksceKernelCreateEventFlag("SceIofileDevWaitForMC",
+			g_vfsDevWaitForMCEvf = sceKernelCreateEventFlag("SceIofileDevWaitForMC",
 									  0x1000, 0, NULL);
 		if (g_vfsDevWaitForMCEvf > 0) {
 			fumount->activationEvf = &g_vfsDevWaitForMCEvf;
@@ -1809,7 +1809,7 @@ int vfs_set_dev_wait_evf(SceVfsMount *mnt)
 		return g_vfsDevWaitForMCEvf;
 	case VFS_MOUNT_OPT_SD:
 		if (g_vfsDevWaitForSDEvf == -1)
-			g_vfsDevWaitForSDEvf = ksceKernelCreateEventFlag("SceIofileDevWaitForSD",
+			g_vfsDevWaitForSDEvf = sceKernelCreateEventFlag("SceIofileDevWaitForSD",
 									  0x1000, 0, NULL);
 		if (g_vfsDevWaitForSDEvf > 0) {
 			fumount->activationEvf = &g_vfsDevWaitForSDEvf;
@@ -1818,7 +1818,7 @@ int vfs_set_dev_wait_evf(SceVfsMount *mnt)
 		return g_vfsDevWaitForSDEvf;
 	case VFS_MOUNT_OPT_VC:
 		if (g_vfsDevWaitForVCEvf == -1)
-			g_vfsDevWaitForVCEvf = ksceKernelCreateEventFlag("SceIofileDevWaitForVC",
+			g_vfsDevWaitForVCEvf = sceKernelCreateEventFlag("SceIofileDevWaitForVC",
 									  0x1000, 0, NULL);
 		if (g_vfsDevWaitForVCEvf > 0) {
 			fumount->activationEvf = &g_vfsDevWaitForVCEvf;
@@ -1832,7 +1832,7 @@ int vfs_set_dev_wait_evf(SceVfsMount *mnt)
 
 int vfs_wait_fumount(SceVfsMount *mnt)
 {
-	return ksceKernelWaitEventFlag(*mnt->fumount->activationEvf, 1, 0, NULL, NULL);
+	return sceKernelWaitEventFlag(*mnt->fumount->activationEvf, 1, 0, NULL, NULL);
 }
 
 int vfs_check_fd_status(SceVfsFile *file, int closing)
@@ -1955,7 +1955,7 @@ int vfs_change_file_attr(SceUID guid, SceUInt32 bits, int set)
 /* name unknown: wakes the threads waiting for a mount's device */
 int vfs_signal_fumount(SceVfsMount *mnt)
 {
-	return ksceKernelSetEventFlag(*mnt->fumount->activationEvf, 1);
+	return sceKernelSetEventFlag(*mnt->fumount->activationEvf, 1);
 }
 
 int vfs_prepare_for_resume(void)
@@ -1967,7 +1967,7 @@ int vfs_prepare_for_resume(void)
 	for (mnt = g_mntList; mnt != NULL; mnt = mnt->mnt_list_next) {
 		if ((mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_EXTERNAL) == 0)
 			continue;
-		err = ksceKernelClearEventFlag(*mnt->fumount->activationEvf, 0);
+		err = sceKernelClearEventFlag(*mnt->fumount->activationEvf, 0);
 		if (err < 0) {
 			SCE_DBG_PRINTF(0xf, 3278,
 				       "vfs_prepare_dev_activation failed ... 0x%x mnt=%p %s\n", err,
@@ -1984,13 +1984,13 @@ int vfs_create_fdlock(struct FdLock *fdlock)
 {
 	SceUID uid;
 
-	uid = ksceKernelCreateMutex("SceVfsFdLock", 0, 0, NULL);
+	uid = sceKernelCreateMutex("SceVfsFdLock", 0, 0, NULL);
 	if (uid < 0)
 		return uid;
 	fdlock->mutex = uid;
-	uid = ksceKernelCreateCond("SceVfsFdCond", 0, uid, NULL);
+	uid = sceKernelCreateCond("SceVfsFdCond", 0, uid, NULL);
 	if (uid < 0) {
-		ksceKernelDeleteMutex(fdlock->mutex);
+		sceKernelDeleteMutex(fdlock->mutex);
 		fdlock->mutex = -1;
 		return uid;
 	}
@@ -2012,7 +2012,7 @@ int vfs_create_file_object(SceUIDVfsFileObject **obj, const char *name)
 	UIDCreateOpt opt;
 	SceUID pid;
 
-	pid = ksceKernelGetProcessIdFromTLS();
+	pid = SceThreadmgrForDriver_FA54D49A();
 	switch (pid) {
 	case SCE_KERNEL_PROCESS_ID:
 	case SCE_KERNEL_DUMMY_PROCESS_GAME_ID:
@@ -2045,7 +2045,7 @@ SceUID vfs_allocate_file(SceVfsVnode *vp, SceVfsFile **file, const char *name)
 	SceUID uid;
 
 	data = mnt->mnt_data;
-	SCE_DBG_ASSERT_CHECK(vp->vdlock.owner_id == ksceKernelGetThreadId(), 1682);
+	SCE_DBG_ASSERT_CHECK(vp->vdlock.owner_id == sceKernelGetThreadId(), 1682);
 	if (name == NULL) {
 		strncpy(objName, "SceVfsFile", 0x1f);
 	} else {

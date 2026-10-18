@@ -113,12 +113,12 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_D32ACE9E
 	sceKernelSpinlockLowUnlock
-	ksceKernelFinalizeFastMutex
+	sceKernelFinalizeFastMutex
 	sceKernelDelayThread
-	ksceKernelLockFastMutex
+	lockFastMutex
 	sceKernelGetProcessId
-	ksceKernelInitializeFastMutex
-	ksceKernelUnlockFastMutex
+	sceKernelInitializeFastMutex
+	sceKernelUnlockFastMutex
 	ksceKernelCreateProcessLocalStorage
 	ksceKernelGetProcessLocalStorageAddrForPid
 	SceProcessmgrForDriver_D141C076

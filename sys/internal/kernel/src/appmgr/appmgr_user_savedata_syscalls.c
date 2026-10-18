@@ -108,7 +108,7 @@ int _sceAppMgrSaveDataSlotGetParam(SceAppMgrSaveDataSlot *slot,
 
 	arguments.userArguments = userArguments;
 	arguments.slot = slot;
-	return ksceKernelRunWithStack(8192, appmgrSaveDataSlotGetParamOnStack,
+	return SceThreadmgrForDriver_E54FD746(8192, appmgrSaveDataSlotGetParamOnStack,
 				      &arguments);
 }
 

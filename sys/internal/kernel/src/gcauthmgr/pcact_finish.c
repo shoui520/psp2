@@ -31,7 +31,7 @@ int GcAuthPsmactApplyActivation(const GcAuthPsmactApplyActivationRequest *reques
 	int permission;
 	int result;
 
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
 	if (activation == NULL || random == NULL)
@@ -112,7 +112,7 @@ finish:
 	do {
 		*cursor++ = 0;
 	} while (cursor != (unsigned char *)&keys + sizeof(keys));
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }
 
@@ -133,7 +133,7 @@ int GcAuthPcactBeginActivationWithStack(unsigned int mode,
 	request.mode = mode;
 	request.entropy = entropy;
 	request.output = output;
-	result = ksceKernelRunWithStack(8192,
+	result = SceThreadmgrForDriver_E54FD746(8192,
 		(int (*)(void *))GcAuthPcactBeginActivation, &request);
 	sceSyscallLeave(state);
 	return result;
@@ -153,7 +153,7 @@ int GcAuthPcactApplyActivationWithStack(const GcAuthPcactActivationBundle *activ
 		if (result >= 0) {
 			request.activation = &gcAuthActivationWorkspace.pcact;
 			request.size = size;
-			result = ksceKernelRunWithStack(8192,
+			result = SceThreadmgrForDriver_E54FD746(8192,
 				(int (*)(void *))GcAuthPcactApplyActivation, &request);
 		}
 	} else {
@@ -174,7 +174,7 @@ int GcAuthPsmactBeginActivationWithStack(unsigned char mode,
 	request.mode = mode;
 	request.output = output;
 	request.random = random;
-	result = ksceKernelRunWithStack(8192,
+	result = SceThreadmgrForDriver_E54FD746(8192,
 		(int (*)(void *))GcAuthPsmactBeginActivation, &request);
 	sceSyscallLeave(state);
 	return result;
@@ -192,7 +192,7 @@ int GcAuthPsmactApplyActivationWithStack(const GcAuthPsmactActivation *activatio
 	request.activation = activation;
 	request.random = random;
 	request.encryptedActivation = encryptedActivation;
-	result = ksceKernelRunWithStack(8192,
+	result = SceThreadmgrForDriver_E54FD746(8192,
 		(int (*)(void *))GcAuthPsmactApplyActivation, &request);
 	sceSyscallLeave(state);
 	return result;

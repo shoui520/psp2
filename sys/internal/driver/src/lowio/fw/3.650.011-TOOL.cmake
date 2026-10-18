@@ -77,27 +77,27 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelEnableIntr
 	ksceKernelTriggerSubIntr
 	ksceKernelReleaseIntrHandler
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
-	ksceKernelFinalizeFastMutex
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelCreateEventFlag
-	ksceKernelGetSystemTimeLow
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
+	sceKernelFinalizeFastMutex
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelCreateEventFlag
+	SceThreadmgrForDriver_47F6DE49
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelChangeThreadPriority
-	ksceKernelChangeThreadCpuAffinityMask
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
-	ksceKernelInitializeFastMutex
+	sceKernelClearEventFlag
+	sceKernelChangeThreadPriority2
+	sceKernelChangeThreadCpuAffinityMask
+	lockFastMutex
+	sceKernelDeleteEventFlag
+	sceKernelInitializeFastMutex
 	SceThreadmgrForDriver_B4A05763
-	ksceKernelSetEventFlag
+	sceKernelSetEventFlag
 	sceKernelCheckWaitableStatus
-	ksceKernelUnlockFastMutex
-	ksceKernelEnqueueWorkQueue
+	sceKernelUnlockFastMutex
+	sceKernelScheduleWorkTask
 	sceKernelGetSystemTimeWide
-	ksceKernelCreateMutex
+	sceKernelCreateMutex
 	sceKernelRegisterSysEventHandler
 )
 set(MODULE_IMPORT_VARS

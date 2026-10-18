@@ -439,7 +439,7 @@ selectState:
 		goto complete;
 	}
 signal:
-	result = ksceKernelSetEventFlag(node->control->event, 1U << node->index);
+	result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
 	bbcmdUnlockMutex(&request->node->control->mutex);
 	if (result >= 0)
 		goto complete;

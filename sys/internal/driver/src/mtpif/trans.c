@@ -91,7 +91,7 @@ int _sceMtpIfModuleStart(SceSize arglen, const char *argp)
 				port = 2;
 		}
 	}
-	ksceKernelInitializeFastMutex(s_mtp.mutex, "SceMtpIfData", 0x2002, 0);
+	sceKernelInitializeFastMutex(s_mtp.mutex, "SceMtpIfData", 0x2002, 0);
 	memset(options, 0, sizeof(options));
 	options[0] = sizeof(options);
 	options[2] = 0x200004;
@@ -402,12 +402,12 @@ int sceMtpIfSendResponse(const void *port, const void *response)
 	int ret = SCE_ERROR_ERRNO_ENOSYS;
 
 	if (sceSblACMgrIsSystemProgram(0)) {
-		ret = ksceKernelLockFastMutex(s_mtp.mutex);
+		ret = lockFastMutex(s_mtp.mutex);
 		if (ret >= 0) {
 			ret = SceSysmemForDriver_BC996A7A(local, response, sizeof(local));
 			if (ret >= 0)
 				ret = SceMtpIfForDriver_5766D257(port, local);
-			ksceKernelUnlockFastMutex(s_mtp.mutex);
+			sceKernelUnlockFastMutex(s_mtp.mutex);
 		}
 	}
 	return leaveSyscall(saved, ret);
@@ -421,7 +421,7 @@ int sceMtpIfSendDataWithParam(const void *port, MtpIfTransfer *params)
 
 	if (!sceSblACMgrIsSystemProgram(0))
 		goto out;
-	ret = ksceKernelLockFastMutex(s_mtp.mutex);
+	ret = lockFastMutex(s_mtp.mutex);
 	if (ret < 0)
 		goto out;
 	ret = SceSysmemForDriver_BC996A7A(&local, params, sizeof(local));
@@ -437,7 +437,7 @@ int sceMtpIfSendDataWithParam(const void *port, MtpIfTransfer *params)
 		goto unlock;
 	local.buffer = s_mtp.buffer;
 	ret = SceMtpIfForDriver_33F1826F(port, &local);
-	ksceKernelUnlockFastMutex(s_mtp.mutex);
+	sceKernelUnlockFastMutex(s_mtp.mutex);
 	if (ret >= 0) {
 		copy = SceSysmemForDriver_6D88EF8A(params, &local, sizeof(local));
 		if (copy < 0)
@@ -445,7 +445,7 @@ int sceMtpIfSendDataWithParam(const void *port, MtpIfTransfer *params)
 	}
 	goto out;
 unlock:
-	ksceKernelUnlockFastMutex(s_mtp.mutex);
+	sceKernelUnlockFastMutex(s_mtp.mutex);
 out:
 	return leaveSyscall(saved, ret);
 }
@@ -458,7 +458,7 @@ int sceMtpIfRecvDataWithParam(const void *port, MtpIfTransfer *params)
 
 	if (!sceSblACMgrIsSystemProgram(0))
 		goto out;
-	ret = ksceKernelLockFastMutex(s_mtp.mutex);
+	ret = lockFastMutex(s_mtp.mutex);
 	if (ret < 0)
 		goto out;
 	ret = SceSysmemForDriver_BC996A7A(&local, params, sizeof(local));
@@ -485,13 +485,13 @@ int sceMtpIfRecvDataWithParam(const void *port, MtpIfTransfer *params)
 		ret = copy;
 		goto unlock;
 	}
-	ksceKernelUnlockFastMutex(s_mtp.mutex);
+	sceKernelUnlockFastMutex(s_mtp.mutex);
 	copy = SceSysmemForDriver_6D88EF8A(params, &local, sizeof(local));
 	if (copy < 0)
 		ret = copy;
 	goto out;
 unlock:
-	ksceKernelUnlockFastMutex(s_mtp.mutex);
+	sceKernelUnlockFastMutex(s_mtp.mutex);
 out:
 	return leaveSyscall(saved, ret);
 }

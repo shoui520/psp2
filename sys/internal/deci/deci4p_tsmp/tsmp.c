@@ -66,7 +66,7 @@ TSMP_INLINE void tsmpSetSystemStatus(SceUInt32 bits, int set)
 {
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&tsmp.statusLock);
+	ret = lockFastMutex(&tsmp.statusLock);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 3454, "0x%08X\n", ret);
 		return;
@@ -75,14 +75,14 @@ TSMP_INLINE void tsmpSetSystemStatus(SceUInt32 bits, int set)
 		tsmp.status |= bits;
 	else
 		tsmp.status &= ~bits;
-	ksceKernelUnlockFastMutex(&tsmp.statusLock);
+	sceKernelUnlockFastMutex(&tsmp.statusLock);
 }
 
 TSMP_INLINE void tsmpSetBufStatus(TsmpBuffer *buf, SceUInt32 bits, int set)
 {
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&buf->lock);
+	ret = lockFastMutex(&buf->lock);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 3484, "0x%08X\n", ret);
 		return;
@@ -91,7 +91,7 @@ TSMP_INLINE void tsmpSetBufStatus(TsmpBuffer *buf, SceUInt32 bits, int set)
 		buf->status |= bits;
 	else
 		buf->status &= ~bits;
-	ksceKernelUnlockFastMutex(&buf->lock);
+	sceKernelUnlockFastMutex(&buf->lock);
 }
 
 TSMP_INLINE void *tsmpAllocSendBuf(void)
@@ -146,7 +146,7 @@ TSMP_INLINE int tsmpInitNotification(TsmpNotificationQueue *queue, const char *h
 	SceKernelHeapCreateOpt opt;
 	int ret;
 
-	ret = ksceKernelInitializeFastMutex(&queue->lock, "SceDeci4pTsmpNtfcBuf", 0, 0);
+	ret = sceKernelInitializeFastMutex(&queue->lock, "SceDeci4pTsmpNtfcBuf", 0, 0);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 3623, "0x%08X\n", ret);
 		return ret;
@@ -193,7 +193,7 @@ TSMP_INLINE int tsmpPushNotificaiton(TsmpNotificationQueue *queue, const TsmpNot
 	TsmpNotificationNode *node;
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&queue->lock);
+	ret = lockFastMutex(&queue->lock);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 3730, "0x%08X\n", ret);
 		return ret;
@@ -201,7 +201,7 @@ TSMP_INLINE int tsmpPushNotificaiton(TsmpNotificationQueue *queue, const TsmpNot
 	node = SceSysmemForDriver_7B4CB60A(queue->heap, sizeof(*node));
 	if (node == NULL) {
 		SCE_PRINTF_WITH_INFO(0xf, 3738, "\n");
-		ksceKernelUnlockFastMutex(&queue->lock);
+		sceKernelUnlockFastMutex(&queue->lock);
 		return SCE_ERROR_ERRNO_ENOMEM;
 	}
 	if (queue->head == NULL)
@@ -213,7 +213,7 @@ TSMP_INLINE int tsmpPushNotificaiton(TsmpNotificationQueue *queue, const TsmpNot
 	memcpy(&node->ntf, ntf, sizeof(node->ntf));
 	if (++queue->count > queue->peak)
 		queue->peak = queue->count;
-	ksceKernelUnlockFastMutex(&queue->lock);
+	sceKernelUnlockFastMutex(&queue->lock);
 	return 0;
 }
 
@@ -226,7 +226,7 @@ static int tsmpPushRegistryNotification(const TsmpNotification *entry)
 	if (ret < 0)
 		return ret;
 	if (!(tsmp.status & TSMP_STATUS_SYNCING)) {
-		ret = ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_REG);
+		ret = sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_REG);
 		return ret < 0 ? ret : 0;
 	}
 	return 0;
@@ -238,7 +238,7 @@ __attribute__((noinline)) static int tsmpPopNotification(TsmpNotificationQueue *
 	TsmpNotificationNode *node;
 	int peak, ret;
 
-	ret = ksceKernelLockFastMutex(&queue->lock);
+	ret = lockFastMutex(&queue->lock);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 3810, "0x%08X\n", ret);
 		return ret;
@@ -266,7 +266,7 @@ __attribute__((noinline)) static int tsmpPopNotification(TsmpNotificationQueue *
 				SCE_PRINTF_WITH_INFO(0xf, 3856, "\n");
 		}
 	}
-	ksceKernelUnlockFastMutex(&queue->lock);
+	sceKernelUnlockFastMutex(&queue->lock);
 	return ret;
 }
 
@@ -276,7 +276,7 @@ static inline int tsmpSyncLocalTime(void)
 
 	if (tsmp.status & TSMP_STATUS_SYNCING)
 		return 0;
-	ret = ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_TICK);
+	ret = sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_TICK);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(0xf, 1064, "0x%08X\n", ret);
 	return 0;
@@ -349,7 +349,7 @@ __attribute__((noinline)) static int tsmpConvertRegMgrToTsmp(SceUInt32 *out)
 TSMP_INLINE int tsmpQueueSwInfo(TsmpNotification *ntf)
 {
 	if (tsmpPushNotificaiton(&tsmp.swInfo, ntf) >= 0)
-		ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_SWINFO);
+		sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_SWINFO);
 	return sceKernelFreeHeapMemory(tsmp.miscHeap, ntf);
 }
 
@@ -533,7 +533,7 @@ static int tsmpEventHandler(int event, void *arg, void *ctx)
 		ret = tsmpEventRecv((SceSize)arg);
 		break;
 	case SCE_DFMGR_EVENT_REQ_DONE:
-		ret = ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_RECV);
+		ret = sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_RECV);
 		if (ret >= 0)
 			return 0;
 		break;
@@ -542,7 +542,7 @@ static int tsmpEventHandler(int event, void *arg, void *ctx)
 		break;
 	case SCE_DFMGR_EVENT_SENT:
 		tsmpFreeSendBuf();
-		ret = ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_SENT);
+		ret = sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_SENT);
 		ret = ret < 0 ? ret : 0;
 		break;
 	case SCE_DFMGR_EVENT_STATUS:
@@ -807,7 +807,7 @@ TSMP_INLINE int tsmpSettingSyncRequest(const TsmpHeader *pkt, SceSize size)
 			tsmpSetSystemStatus(TSMP_STATUS_SYNC_EVENTLOG, 1);
 	}
 	if (tsmp.syncEvf != 0) {
-		ret = ksceKernelSetEventFlag(tsmp.syncEvf, TSMP_SYNC_START);
+		ret = sceKernelSetEventFlag(tsmp.syncEvf, TSMP_SYNC_START);
 		if (ret < 0) {
 			SCE_PRINTF_WITH_INFO(0xf, 1927, "0x%08X\n", ret);
 			return ret;
@@ -986,7 +986,7 @@ TSMP_INLINE void tsmpNotifyUpdateReg(void)
 	} while (tsmp.registry.count > 0 && total < 0x7000);
 
 	if (tsmp.registry.count == 0 && tsmp.syncEvf != 0) {
-		ret = ksceKernelSetEventFlag(tsmp.syncEvf, TSMP_SYNC_REG_DONE);
+		ret = sceKernelSetEventFlag(tsmp.syncEvf, TSMP_SYNC_REG_DONE);
 		if (ret < 0)
 			SCE_PRINTF_WITH_INFO(0xf, 2014, "0x%08X\n", ret);
 	}
@@ -1057,7 +1057,7 @@ TSMP_INLINE void tsmpNotifyUpdateSwInfo(void)
 		_left = tsmp.fileRequest.total - tsmp.fileSent;				\
 		if (_left <= TSMP_DATA_MAX) {						\
 			tsmpSetSystemStatus(_status, 0);				\
-			_ret = ksceKernelSetEventFlag(tsmp.syncEvf, _done);		\
+			_ret = sceKernelSetEventFlag(tsmp.syncEvf, _done);		\
 			if (_ret < 0)							\
 				SCE_PRINTF_WITH_INFO(0xf, _line1, "0x%08X\n", _ret);	\
 			tsmp.send.length = sizeof(*_pkt) + _left;			\
@@ -1151,7 +1151,7 @@ TSMP_INLINE int tsmpSyncCurrentTick(void)
 		tsmpSetBufStatus(&tsmp.send, TSMP_BUF_HEADER, 1);	\
 		_pkt->result = _phase;					\
 		TSMP_REQ_SEND(_line1);					\
-		_ret = ksceKernelSetEventFlag(tsmp.syncEvf, _done);	\
+		_ret = sceKernelSetEventFlag(tsmp.syncEvf, _done);	\
 		if (_ret < 0)						\
 			SCE_PRINTF_WITH_INFO(0xf, _line2, "0x%08X\n", _ret); \
 		_ret = 0;						\
@@ -1173,11 +1173,11 @@ TSMP_INLINE void tsmpSyncTerm(void)
 {
 	int ret;
 
-	ret = ksceKernelDeleteThread(tsmp.syncThread);
+	ret = sceKernelDeleteThread(tsmp.syncThread);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(0xf, 2489, "0x%08X\n", ret);
 	tsmp.syncThread = 0;
-	ret = ksceKernelDeleteEventFlag(tsmp.syncEvf);
+	ret = sceKernelDeleteEventFlag(tsmp.syncEvf);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(0xf, 2497, "0x%08X\n", ret);
 	tsmp.syncEvf = 0;
@@ -1195,7 +1195,7 @@ static int tsmpMainThread(SceSize args, void *argp)
 	for (;;) {
 		pattern = (tsmp.status & TSMP_STATUS_SENDING) ? TSMP_EVENT_SENT : TSMP_EVENT_ALL;
 		bits = 0;
-		ret = ksceKernelWaitEventFlag(tsmp.evf, pattern,
+		ret = sceKernelWaitEventFlag(tsmp.evf, pattern,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 		if (ret < 0) {
@@ -1207,13 +1207,13 @@ static int tsmpMainThread(SceSize args, void *argp)
 		if (bits & TSMP_EVENT_SENT) {
 			tsmpSetSystemStatus(TSMP_STATUS_SENDING, 0);
 			if (tsmp.registry.count > 0)
-				ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_REG);
+				sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_REG);
 			if (tsmp.status & TSMP_STATUS_SETTING_XML)
-				ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_SETTING_XML);
+				sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_SETTING_XML);
 			if (tsmp.status & TSMP_STATUS_EVENTLOG_XML)
-				ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_EVENTLOG_XML);
+				sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_EVENTLOG_XML);
 			if (tsmp.swInfo.count > 0)
-				ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_SWINFO);
+				sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_SWINFO);
 			bits &= ~TSMP_EVENT_SENT;
 		} else if (bits & TSMP_EVENT_RECV) {
 			ret = tsmpParseRecvPacket();
@@ -1258,7 +1258,7 @@ static int tsmpMainThread(SceSize args, void *argp)
 		}
 
 		if (bits != 0) {
-			ret = ksceKernelSetEventFlag(tsmp.evf, bits);
+			ret = sceKernelSetEventFlag(tsmp.evf, bits);
 			if (ret < 0)
 				SCE_PRINTF_WITH_INFO(0xf, 1323, "0x%08X\n", ret);
 		}
@@ -1312,7 +1312,7 @@ TSMP_INLINE int tsmpSyncSettingXml(void)
 		goto free;
 	}
 	tsmpSetSystemStatus(TSMP_STATUS_SETTING_XML, 1);
-	ret = ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_SETTING_XML);
+	ret = sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_SETTING_XML);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 2934, "0x%08X\n", ret);
 		goto free;
@@ -1369,7 +1369,7 @@ TSMP_INLINE int tsmpSyncEventLogXml(void)
 	__builtin_memcpy(header->name, "NPXS19999", sizeof(header->name));
 	header->dataSize = size;
 	tsmpSetSystemStatus(TSMP_STATUS_EVENTLOG_XML, 1);
-	ret = ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_EVENTLOG_XML);
+	ret = sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_EVENTLOG_XML);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 3031, "0x%08X\n", ret);
 		goto free;
@@ -1394,7 +1394,7 @@ static int tsmpSyncThread(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 
-	ret = ksceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_START, SCE_KERNEL_EVF_WAITMODE_OR,
+	ret = sceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_START, SCE_KERNEL_EVF_WAITMODE_OR,
 				      NULL,
 				      &timeout);
 	if (ret < 0 && ret != (int)SCE_KERNEL_ERROR_WAIT_TIMEOUT) {
@@ -1413,12 +1413,12 @@ static int tsmpSyncThread(SceSize args, void *argp)
 
 	tsmpSetSystemStatus(TSMP_STATUS_SYNCING, 1);
 	if (any) {
-		ret = ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_REG_BEGIN);
+		ret = sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_REG_BEGIN);
 		if (ret < 0) {
 			SCE_PRINTF_WITH_INFO(0xf, 2588, "0x%08X\n", ret);
 			goto term;
 		}
-		ret = ksceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_TICK_DONE,
+		ret = sceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_TICK_DONE,
 					      SCE_KERNEL_EVF_WAITMODE_OR,
 					      NULL, NULL);
 		if (ret < 0) {
@@ -1439,12 +1439,12 @@ static int tsmpSyncThread(SceSize args, void *argp)
 			SCE_PRINTF_WITH_INFO(0xf, 2620, "0x%08X\n", ret);
 			goto fail;
 		}
-		ret = ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_REG);
+		ret = sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_REG);
 		if (ret < 0) {
 			SCE_PRINTF_WITH_INFO(0xf, 2628, "0x%08X\n", ret);
 			goto fail;
 		}
-		ret = ksceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_REG_DONE,
+		ret = sceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_REG_DONE,
 					      SCE_KERNEL_EVF_WAITMODE_OR,
 					      NULL, NULL);
 		if (ret < 0) {
@@ -1459,7 +1459,7 @@ static int tsmpSyncThread(SceSize args, void *argp)
 			SCE_PRINTF_WITH_INFO(0xf, 2649, "0x%08X\n", ret);
 			goto fail;
 		}
-		ret = ksceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_SETTING_DONE,
+		ret = sceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_SETTING_DONE,
 					      SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 		if (ret < 0) {
 			SCE_PRINTF_WITH_INFO(0xf, 2658, "0x%08X\n", ret);
@@ -1473,7 +1473,7 @@ static int tsmpSyncThread(SceSize args, void *argp)
 			SCE_PRINTF_WITH_INFO(0xf, 2670, "0x%08X\n", ret);
 			goto fail;
 		}
-		ret = ksceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_EVENTLOG_DONE,
+		ret = sceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_EVENTLOG_DONE,
 					      SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 		if (ret < 0) {
 			SCE_PRINTF_WITH_INFO(0xf, 2679, "0x%08X\n", ret);
@@ -1482,12 +1482,12 @@ static int tsmpSyncThread(SceSize args, void *argp)
 	}
 
 	if (any) {
-		ret = ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_REG_END);
+		ret = sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_REG_END);
 		if (ret < 0) {
 			SCE_PRINTF_WITH_INFO(0xf, 2691, "0x%08X\n", ret);
 			goto fail;
 		}
-		ret = ksceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_REG_END_DONE,
+		ret = sceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_REG_END_DONE,
 					      SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 		if (ret < 0) {
 			SCE_PRINTF_WITH_INFO(0xf, 2700, "0x%08X\n", ret);
@@ -1495,18 +1495,18 @@ static int tsmpSyncThread(SceSize args, void *argp)
 		}
 	}
 
-	ret = ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_TICK);
+	ret = sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_TICK);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(0xf, 2709, "0x%08X\n", ret);
 	tsmpSetSystemStatus(TSMP_STATUS_SYNCING, 0);
 	if (tsmp.registry.count > 0) {
-		ret = ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_REG);
+		ret = sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_REG);
 		if (ret < 0) {
 			SCE_PRINTF_WITH_INFO(0xf, 2724, "0x%08X\n", ret);
 			goto term;
 		}
 	}
-	ret = ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_SYNC_TERM);
+	ret = sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_SYNC_TERM);
 	if (ret >= 0) {
 		sceKernelExitThread(0);
 		return 0;
@@ -1515,9 +1515,9 @@ static int tsmpSyncThread(SceSize args, void *argp)
 	goto error;
 
 fail:
-	ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_REG_END);
+	sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_REG_END);
 term:
-	ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_SYNC_TERM);
+	sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_SYNC_TERM);
 error:
 	SCE_PRINTF_WITH_INFO(0, 2750, "[DECI] Setting/EventLog synchronization failed (0x%08x)\n",
 			     ret);
@@ -1536,14 +1536,14 @@ static int tsmpSyncInit(void *args)
 	opt.size = sizeof(opt);
 	opt.attr = 1;
 	opt.kStackMemType = TSMP_MEMTYPE;
-	ret = ksceKernelCreateThread("SceDeci4pTsmpSync", tsmpSyncThread, 0x1e, 0x2000, 0,
+	ret = sceKernelCreateThread("SceDeci4pTsmpSync", tsmpSyncThread, 0x1e, 0x2000, 0,
 				     0x80000, &opt);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 2464, "0x%08X\n", ret);
 		return ret;
 	}
 	tsmp.syncThread = ret;
-	ret = ksceKernelStartThread(ret, 0, NULL);
+	ret = sceKernelStartThread(ret, 0, NULL);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 2472, "0x%08X\n", ret);
 		return ret;
@@ -1584,7 +1584,7 @@ TSMP_INLINE int tsmpInit(void)
 		return ret;
 	}
 	tsmp.send.block = ret;
-	ret = ksceKernelInitializeFastMutex(&tsmp.statusLock, "SceDeci4pTsmpStatus", 0, 0);
+	ret = sceKernelInitializeFastMutex(&tsmp.statusLock, "SceDeci4pTsmpStatus", 0, 0);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 367, "0x%08X\n", ret);
 		return ret;
@@ -1595,7 +1595,7 @@ TSMP_INLINE int tsmpInit(void)
 		SCE_DBG_ASSERT_FAIL(376);
 		return ret;
 	}
-	ret = ksceKernelInitializeFastMutex(&tsmp.send.lock, "SceDeci4pTsmpSendBuf", 0, 0);
+	ret = sceKernelInitializeFastMutex(&tsmp.send.lock, "SceDeci4pTsmpSendBuf", 0, 0);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 386, "0x%08X\n", ret);
 		return ret;
@@ -1614,13 +1614,13 @@ TSMP_INLINE int tsmpInit(void)
 		SCE_DBG_ASSERT_FAIL(406);
 		return ret;
 	}
-	ret = ksceKernelInitializeFastMutex(&tsmp.recv.lock, "SceDeci4pTsmpRecvBuf", 0, 0);
+	ret = sceKernelInitializeFastMutex(&tsmp.recv.lock, "SceDeci4pTsmpRecvBuf", 0, 0);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 416, "0x%08X\n", ret);
 		return ret;
 	}
 
-	ret = ksceKernelCreateEventFlag("SceDeci4pTsmp", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceDeci4pTsmp", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 425, "0x%08X\n", ret);
 		return ret;
@@ -1629,12 +1629,12 @@ TSMP_INLINE int tsmpInit(void)
 	threadOpt.size = sizeof(threadOpt);
 	threadOpt.attr = 1;
 	threadOpt.kStackMemType = TSMP_MEMTYPE;
-	ret = ksceKernelCreateThread("SceDeci4pTsmp", tsmpMainThread, 0x1e, 0x2000, 0, 0x80000,
+	ret = sceKernelCreateThread("SceDeci4pTsmp", tsmpMainThread, 0x1e, 0x2000, 0, 0x80000,
 				     &threadOpt);
 	if (ret < 0)
 		return ret;
 	tsmp.mainThread = ret;
-	ret = ksceKernelCreateEventFlag("SceDeci4pTsmpSync", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceDeci4pTsmpSync", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 451, "0x%08X\n", ret);
 		return ret;
@@ -1656,10 +1656,10 @@ TSMP_INLINE int tsmpInit(void)
 	}
 	tsmp.handle = ret;
 
-	ret = ksceKernelStartThread(tsmp.mainThread, 0, NULL);
+	ret = sceKernelStartThread(tsmp.mainThread, 0, NULL);
 	if (ret < 0)
 		return ret;
-	ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceDeci4pTsmpInit", tsmpSyncInit, NULL);
+	sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceDeci4pTsmpInit", tsmpSyncInit, NULL);
 	SceSysrootForDriver_1FFD2AFA(tsmpSetSwInfoInt);
 	SceSysrootForDriver_7C0BE393(tsmpSetSwInfoStr);
 	SceSysrootForDriver_05CD0DD9(tsmpSetSwInfoBin);

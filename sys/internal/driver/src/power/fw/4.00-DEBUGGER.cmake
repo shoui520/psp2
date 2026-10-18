@@ -249,30 +249,30 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelReleaseSubIntrHandler
 	ksceKernelEnableSubIntr
 	ksceKernelRegisterSubIntrHandler
-	ksceKernelGetCallbackCount
-	ksceKernelGetThreadmgrUIDClass
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelStartThread
-	ksceKernelWaitThreadEnd
-	ksceKernelCreateEventFlag
+	SceThreadmgrForDriver_0892D8DF
+	sceKernelGetThreadmgrUIDClass
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelStartThread
+	sceKernelWaitThreadEnd
+	sceKernelCreateEventFlag
 	sceKernelCancelAlarm
-	ksceKernelGetSystemTimeLow
+	SceThreadmgrForDriver_47F6DE49
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelDeleteEventFlag
-	ksceKernelPollEventFlag
+	sceKernelClearEventFlag
+	sceKernelDeleteEventFlag
+	sceKernelPollEventFlag
 	sceKernelGetProcessId
-	ksceKernelDeleteThread
-	ksceKernelNotifyCallback
-	ksceKernelRegisterTimer
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
-	ksceKernelEnqueueWorkQueue
+	sceKernelDeleteThread
+	sceKernelNotifyCallback
+	SceThreadmgrForDriver_C58DF384
+	sceKernelCreateThread
+	sceKernelSetEventFlag
+	sceKernelScheduleWorkTask
 	sceKernelGetSystemTimeWide
-	ksceKernelCreateMutex
+	sceKernelCreateMutex
 	ksceKernelCreateProcessLocalStorage
 	SceProcessmgrForDriver_5468892A
 	SceProcessmgrForDriver_879153D9

@@ -92,17 +92,17 @@ set(MODULE_IMPORT_FUNCS
 	memcpy
 	__aeabi_uidivmod
 	__stack_chk_fail
-	ksceKernelWaitEventFlag
-	ksceKernelStartThread
-	ksceKernelCreateEventFlag
-	ksceKernelGetSystemTimeLow
+	sceKernelWaitEventFlag
+	sceKernelStartThread
+	sceKernelCreateEventFlag
+	SceThreadmgrForDriver_47F6DE49
 	sceKernelDelayThread
-	ksceKernelDeleteEventFlag
+	sceKernelDeleteEventFlag
 	sceKernelGetProcessId
-	ksceKernelRegisterTimer
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
-	ksceKernelEnqueueWorkQueue
+	SceThreadmgrForDriver_C58DF384
+	sceKernelCreateThread
+	sceKernelSetEventFlag
+	sceKernelScheduleWorkTask
 	sceKernelGetSystemTimeWide
 	SceProcessmgrForDriver_8CB01675
 	sceKernelRegisterProcEventHandler

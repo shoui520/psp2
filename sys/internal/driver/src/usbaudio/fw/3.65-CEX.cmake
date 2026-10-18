@@ -51,19 +51,19 @@ set(MODULE_IMPORT_FUNCS
 	memset
 	memcpy
 	__stack_chk_fail
-	ksceKernelWaitEventFlag
-	ksceKernelUnlockMutex
-	ksceKernelTryLockMutex
-	ksceKernelCreateEventFlag
-	ksceKernelClearEventFlag
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
+	sceKernelWaitEventFlag
+	sceKernelUnlockMutex
+	sceKernelTryLockMutex
+	sceKernelCreateEventFlag
+	sceKernelClearEventFlag
+	lockFastMutex
+	sceKernelDeleteEventFlag
 	sceKernelGetProcessId
-	ksceKernelInitializeFastMutex
-	ksceKernelNotifyCallback
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
-	ksceKernelCreateMutex
+	sceKernelInitializeFastMutex
+	sceKernelNotifyCallback
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
+	sceKernelCreateMutex
 	SceSysmemForDriver_009E1C61
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_6D88EF8A

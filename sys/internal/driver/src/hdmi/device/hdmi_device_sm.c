@@ -119,15 +119,15 @@ int hdmiDeviceSmInitialize(void)
 	int ret, ret2;
 
 	smWork = (HdmiSmWork){ 0 };
-	smWork.eventFlag = ksceKernelCreateEventFlag("SceHdmiDeviceSm", SCE_KERNEL_EVF_ATTR_MULTI,
+	smWork.eventFlag = sceKernelCreateEventFlag("SceHdmiDeviceSm", SCE_KERNEL_EVF_ATTR_MULTI,
 						     0,
 						     &smWork.eventFlagOpt);
 	smWork.threadOpt.size = sizeof(smWork.threadOpt);
-	smWork.thread = ksceKernelCreateThread("SceHdmiDeviceSm", smThread, 0x1e, 0x2000,
+	smWork.thread = sceKernelCreateThread("SceHdmiDeviceSm", smThread, 0x1e, 0x2000,
 					       0x10000000, 0x80000,
 					       (SceKernelThreadOptParam *)&smWork.threadOpt);
 	ret = smWork.thread < 0 ? SCE_HDMI_ERROR_DEVICE : 0;
-	ret2 = ksceKernelStartThread(smWork.thread, 0, NULL);
+	ret2 = sceKernelStartThread(smWork.thread, 0, NULL);
 	if (ret2 == 0)
 		ret2 = ret;
 	return ret2;
@@ -136,7 +136,7 @@ int hdmiDeviceSmInitialize(void)
 /* Did one of the events in pattern come? The events stay set. */
 int hdmiDeviceSmPollEvent(SceUInt32 *events, SceUInt32 pattern)
 {
-	return ksceKernelPollEventFlag(smWork.eventFlag, pattern, SCE_KERNEL_EVF_WAITMODE_OR,
+	return sceKernelPollEventFlag(smWork.eventFlag, pattern, SCE_KERNEL_EVF_WAITMODE_OR,
 				       events) == 0;
 }
 
@@ -147,10 +147,10 @@ int hdmiDeviceSmWaitEvent(SceUInt32 *events, SceUInt32 pattern)
 	int ret;
 
 	HDMI_PRINTF(HDMI_DBG_SEVT, "[hdmiSEVT] ", "WaitSystemEvent Ptn:0x%08X\n", pattern);
-	ret = ksceKernelWaitEventFlag(smWork.eventFlag, pattern, SCE_KERNEL_EVF_WAITMODE_OR, events,
+	ret = sceKernelWaitEventFlag(smWork.eventFlag, pattern, SCE_KERNEL_EVF_WAITMODE_OR, events,
 				      NULL);
 	cleared = pattern & *events;
-	ksceKernelClearEventFlag(smWork.eventFlag, ~cleared);
+	sceKernelClearEventFlag(smWork.eventFlag, ~cleared);
 	HDMI_PRINTF(HDMI_DBG_SEVT, "[hdmiSEVT] ", "Event Occure :0x%08X\n", *events);
 	HDMI_PRINTF(HDMI_DBG_SEVT, "[hdmiSEVT] ", "Event Clear  :0x%08X\n", cleared);
 	return ret;
@@ -159,17 +159,17 @@ int hdmiDeviceSmWaitEvent(SceUInt32 *events, SceUInt32 pattern)
 int hdmiDeviceSmSetEvent(SceUInt32 bits)
 {
 	HDMI_PRINTF(HDMI_DBG_SEVT, "[hdmiSEVT] ", "Event Set :0x%08X\n", bits);
-	return ksceKernelSetEventFlag(smWork.eventFlag, bits);
+	return sceKernelSetEventFlag(smWork.eventFlag, bits);
 }
 
 int hdmiDeviceSmClearAllEvents(void)
 {
-	return ksceKernelClearEventFlag(smWork.eventFlag, 0);
+	return sceKernelClearEventFlag(smWork.eventFlag, 0);
 }
 
 int hdmiDeviceSmClearEvent(SceUInt32 bits)
 {
-	return ksceKernelClearEventFlag(smWork.eventFlag, ~bits);
+	return sceKernelClearEventFlag(smWork.eventFlag, ~bits);
 }
 
 /* Stop HDCP: no encryption, no authentication interrupts, start again at step 1. */
@@ -830,9 +830,9 @@ static int smThread(SceSize args, void *argp)
 		if (state == HDMI_SM_STATE_KEEP)
 			continue;
 		timeout = 0xffffffff;
-		ksceKernelLockMutex(serviceWork.mutex, 1, &timeout);
+		sceKernelLockMutex(serviceWork.mutex, 1, &timeout);
 		pDevice.state = state;
-		ksceKernelUnlockMutex(serviceWork.mutex, 1);
+		sceKernelUnlockMutex(serviceWork.mutex, 1);
 	}
 }
 
@@ -860,12 +860,12 @@ int _sceHdmiDeviceSmStartService(HdmiDevice *device)
 	serviceWork.reserved[0] = 0;
 	serviceWork.reserved[1] = 0;
 	serviceWork.reserved[2] = 0;
-	serviceWork.mutex = ksceKernelCreateMutex("SceHdmiDeviceSm", 0x2002, 0, NULL);
+	serviceWork.mutex = sceKernelCreateMutex("SceHdmiDeviceSm", 0x2002, 0, NULL);
 	timeout = 0xffffffff;
 	ret = serviceWork.mutex < 0 ? SCE_HDMI_ERROR_DEVICE : 0;
-	ksceKernelLockMutex(serviceWork.mutex, 1, &timeout);
+	sceKernelLockMutex(serviceWork.mutex, 1, &timeout);
 	device->state = HDMI_SM_STATE_UNPLUGGED;
-	ksceKernelUnlockMutex(serviceWork.mutex, 1);
+	sceKernelUnlockMutex(serviceWork.mutex, 1);
 	_smDisconnect(device);
 	return ret;
 }

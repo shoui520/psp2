@@ -123,7 +123,7 @@ PVRSRV_ERROR BM_DestroyContext(IMG_HANDLE hBMContext, IMG_BOOL *pbDestroyed)
 		*pbDestroyed = IMG_FALSE;
 	if (!pBMContext)
 		return PVRSRV_ERROR_INVALID_PARAMS;
-	RemoveMemoryContextFromList(pBMContext, ksceKernelGetProcessId());
+	RemoveMemoryContextFromList(pBMContext, sceKernelGetProcessId());
 	if (pbDestroyed)
 		*pbDestroyed = IMG_TRUE;
 	return PVRSRV_OK;

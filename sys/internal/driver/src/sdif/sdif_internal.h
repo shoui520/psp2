@@ -165,9 +165,6 @@ int sceSdifAdmaKick(SdifCommand *command, uint16_t commandFlags);
 SdifCommand *sdifCommandQueuePop(SdifCommandQueue *queue);
 void _sceSdifCmdQueueDump(SdifCommandQueue *queue);
 int freeAdmaDescriptorArea(SdifCommand *command);
-int ksceKernelLockFastMutex(struct ThreadmgrFastMutex *mutex);
-int ksceKernelUnlockFastMutex(struct ThreadmgrFastMutex *mutex);
-int ksceKernelFinalizeFastMutex(struct ThreadmgrFastMutex *mutex);
 SdifContextGlobal *ksceSdifGetSdContextGlobal(unsigned int index);
 int sceSdifReset(SdifContextGlobal *context, int flags);
 int sdifPowerOn(SdifContextGlobal *context, uint8_t powerControl);
@@ -182,8 +179,6 @@ int sdifSetClock(SdifContextGlobal *context, uint32_t frequency, int highSpeed);
 int sdifSetBusWidth(SdifContextGlobal *context, int width);
 int sdifStartMmcInitialization(unsigned int index, SdifMmcContext **part);
 int sdifCompleteMmcInitialization(unsigned int index);
-int ksceKernelInitializeFastMutex(struct ThreadmgrFastMutex *mutex,
-				 const char *name, int attr, void *opt);
 int sceSdifInterrupt(int interrupt, SdifContextGlobal *context, unsigned int intrPriority);
 void sdifStartFunctionInterrupt(SdifContextGlobal *context, int interrupt, unsigned int intrPriority);
 void sdifDispatchFunctionInterrupt(SdifContextGlobal *context);

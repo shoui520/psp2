@@ -169,14 +169,14 @@ static int systemEvent(int resume, int event, void *args, void *opt)
 	if (resume != 1)
 		return 0;
 	if (event == SYSEVENT_RESUME_DEVICE(0)) {
-		ksceKernelTryLockMutex(clockgen.mutex, 1);
+		sceKernelTryLockMutex(clockgen.mutex, 1);
 	} else if (event == SYSEVENT_RESUME_START) {
 		if (clockgen.registers[0] != CLOCKGEN_REV2_VENDOR_F)
 			clockgen.registers[1] &= ~CLOCKGEN_CAMERA_CLK;
 		writeRegister(CLOCKGEN_REG(1), clockgen.registers[1]);
 		writeRegister(CLOCKGEN_REG(2), clockgen.registers[2]);
 		writePll();
-		ksceKernelUnlockMutex(clockgen.mutex, 1);
+		sceKernelUnlockMutex(clockgen.mutex, 1);
 	}
 	return 0;
 }
@@ -187,7 +187,7 @@ int module_start(SceSize argc, const void *argv)
 
 	(void)argc;
 	(void)argv;
-	ret = ksceKernelCreateMutex("SceClockgen", 0, 0, NULL);
+	ret = sceKernelCreateMutex("SceClockgen", 0, 0, NULL);
 	if (ret < 0)
 		return 2;
 	clockgen.mutex = ret;
@@ -196,12 +196,12 @@ int module_start(SceSize argc, const void *argv)
 	SceClockgenForDriver_0BA41732();
 	if (!supportsSpread(clockgen.registers[0]))
 		return 0;
-	ret = ksceKernelLockMutex(clockgen.mutex, 1, NULL);
+	ret = sceKernelLockMutex(clockgen.mutex, 1, NULL);
 	if (ret < 0)
 		return 0;
 	clockgen.registers[2] = (clockgen.registers[2] & ~CLOCKGEN_SPREAD_MASK) | 1;
 	ret = writeRegister(CLOCKGEN_REG(2), clockgen.registers[2]);
-	ksceKernelUnlockMutex(clockgen.mutex, 1);
+	sceKernelUnlockMutex(clockgen.mutex, 1);
 	if (ret >= 0)
 		writePll();
 	return 0;
@@ -227,7 +227,7 @@ static inline int changeBit(unsigned int bit, int enable)
 	unsigned char value;
 	int ret, old;
 
-	ret = ksceKernelLockMutex(clockgen.mutex, 1, NULL);
+	ret = sceKernelLockMutex(clockgen.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	old = !!(clockgen.registers[1] & bit);
@@ -236,7 +236,7 @@ static inline int changeBit(unsigned int bit, int enable)
 		clockgen.registers[1] = value;
 		writeRegister(CLOCKGEN_REG(1), value);
 	}
-	ksceKernelUnlockMutex(clockgen.mutex, 1);
+	sceKernelUnlockMutex(clockgen.mutex, 1);
 	return old;
 }
 
@@ -353,12 +353,12 @@ int SceClockgenForDriver_A2CA8B65(int spread)
 			result = 30;
 		}
 	}
-	ret = ksceKernelLockMutex(clockgen.mutex, 1, NULL);
+	ret = sceKernelLockMutex(clockgen.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	clockgen.registers[2] = (clockgen.registers[2] & ~CLOCKGEN_SPREAD_MASK) | code;
 	ret = writeRegister(CLOCKGEN_REG(2), clockgen.registers[2]);
-	ksceKernelUnlockMutex(clockgen.mutex, 1);
+	sceKernelUnlockMutex(clockgen.mutex, 1);
 	if (ret < 0)
 		return ret;
 	writePll();

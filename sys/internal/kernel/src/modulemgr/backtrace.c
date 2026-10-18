@@ -392,7 +392,7 @@ int _sceKernelBacktraceCore(SceUID thid, SceKernelBacktraceFrame *frames, SceSiz
 		goto current;
 
 	/* another thread */
-	if (ksceKernelGetThreadmgrUIDClass(thid) != 1) {
+	if (sceKernelGetThreadmgrUIDClass(thid) != 1) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
 		goto resume;
 	}
@@ -570,7 +570,7 @@ int _sceKernelBacktraceForKernelCore(SceUID thid, SceKernelBacktraceFrameForKern
 		goto current;
 
 	/* another thread */
-	if (ksceKernelGetThreadmgrUIDClass(thid) != 1) {
+	if (sceKernelGetThreadmgrUIDClass(thid) != 1) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
 		goto resume;
 	}

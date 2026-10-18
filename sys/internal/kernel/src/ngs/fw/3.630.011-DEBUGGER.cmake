@@ -69,18 +69,18 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_391B74B7
 	SceCpuForDriver_103872A5
 	SceCpuForDriver_CDA96E81
-	ksceKernelDeleteMutex
-	ksceKernelFinalizeFastMutex
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
+	sceKernelDeleteMutex
+	sceKernelFinalizeFastMutex
+	sceKernelLockMutex
+	sceKernelUnlockMutex
 	sceKernelDelayThread
-	ksceKernelLockFastMutex
+	lockFastMutex
 	sceKernelGetProcessId
-	ksceKernelInitializeFastMutex
-	ksceKernelGetFastMutexInfo
-	ksceKernelUnlockFastMutex
+	sceKernelInitializeFastMutex
+	sceKernelGetFastMutexInfo
+	sceKernelUnlockFastMutex
 	sceKernelGetSystemTimeWide
-	ksceKernelCreateMutex
+	sceKernelCreateMutex
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_24A99FFF
 	SceSysmemForDriver_59A4402F

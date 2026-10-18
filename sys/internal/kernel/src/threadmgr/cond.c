@@ -14,6 +14,7 @@
 #include "syscall_context.h"
 #include <sysmem/sysclib.h>
 #include <sysmem/uid_class.h>
+#include <threadmgr/threadmgr.h>
 
 #if FW_DEBUG
 /* Native data retains this record without an executable reference. */
@@ -59,7 +60,6 @@ __attribute__((section(SCE_DBGSRC_SECTION), used)) = {
 #define SCE_KERNEL_ERROR_WAIT_DELETE_COND 0x800281a4
 #define SCE_KERNEL_ERROR_WAIT_CANCEL_COND 0x800281a5
 
-extern int SceThreadmgrForDriver_20C228E4(void);
 int callCallbackAll(struct ThreadCB *thread);
 int sceKernelCheckThreadUserStackSelf(void);
 int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
@@ -405,8 +405,8 @@ static inline SceUID OpenByGUID(SceUID pid, SceUID guid)
  * Inside a syscall the result is the caller's PUID. Sony's PUID failure
  * path keeps the mutex locked and referenced; kept.
  */
-SceUID ksceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
-			    const SceKernelCondOptParam *option)
+SceUID sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
+			   const SceKernelCondOptParam *option)
 {
 	struct ThreadCB *thread;
 	SceProcessObject *process = NULL;
@@ -571,7 +571,7 @@ restore:
 	return uid;
 }
 
-int ksceKernelDeleteCond(SceUID condId)
+int sceKernelDeleteCond(SceUID condId)
 {
 	uint32_t saved;
 	int intr, ret;
@@ -593,7 +593,7 @@ int ksceKernelDeleteCond(SceUID condId)
 	return ret;
 }
 
-int ksceKernelWaitCond(SceUID condId, SceUInt32 *timeout)
+int sceKernelWaitCond(SceUID condId, SceUInt32 *timeout)
 {
 	return waitCond(condId, timeout, 0);
 }
@@ -621,7 +621,7 @@ static inline int CondSignalDeferred(struct ThreadCB *thread, ThreadmgrCond *con
 }
 
 /* wakes the first waiter */
-int ksceKernelSignalCond(SceUID condId)
+int sceKernelSignalCond(SceUID condId)
 {
 	struct ThreadCB *thread, *first;
 	ThreadmgrCond *cond;
@@ -683,7 +683,7 @@ restore:
 }
 
 /* wakes every waiter */
-int ksceKernelSignalCondAll(SceUID condId)
+int sceKernelSignalCondAll(SceUID condId)
 {
 	struct ThreadCB *thread, *first;
 	struct ThreadmgrWaitQueue *queue;
@@ -765,7 +765,7 @@ static inline SceUInt32 CondCallerSdkVersion(struct ThreadCB *thread,
  * thread is an error (two kernel conds of the I/O scheduler and PFS are
  * exempt from the message).
  */
-int ksceKernelSignalCondTo(SceUID condId, SceUID threadId)
+int sceKernelSignalCondTo(SceUID condId, SceUID threadId)
 {
 	struct ThreadCB *thread, *waiter;
 	struct ThreadmgrWaitNode *node, *next;

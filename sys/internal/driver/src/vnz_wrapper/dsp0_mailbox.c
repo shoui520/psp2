@@ -36,7 +36,7 @@ int veneziaMailboxIntrHandler(int intrCode, void *userCtx)
 	__asm__ volatile("dsb sy" ::: "memory");
 	sceKernelCpuResumeIntr(intr);
 	if (pending << 16)
-		ksceKernelSetEventFlag(g_veneziaMailboxState.blockingEvent, mask);
+		sceKernelSetEventFlag(g_veneziaMailboxState.blockingEvent, mask);
 	if (pending >> 16) {
 		intr = SceCpuForDriver_D32ACE9E(
 			&g_veneziaMailboxState.completionLock);
@@ -60,7 +60,7 @@ int initVeneziaMailbox(void)
 	g_veneziaMailboxState.completionLock = 0;
 	g_veneziaMailboxState.registers = (ScePervasiveMailboxRegisters *)(uintptr_t)
 		ScePervasiveForDriver_04D145C7();
-	ret = ksceKernelCreateEventFlag("SceVeneziaRpcBlocking", 0x1000, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceVeneziaRpcBlocking", 0x1000, 0, NULL);
 	if (ret < 0)
 		return ret;
 	g_veneziaMailboxState.blockingEvent = ret;
@@ -109,7 +109,7 @@ int submitVeneziaRpc(unsigned int channel)
 /* name unknown: wait and consume the selected blocking completion. */
 int waitVeneziaRpc(unsigned int channel)
 {
-	return ksceKernelWaitEventFlag(g_veneziaMailboxState.blockingEvent,
+	return sceKernelWaitEventFlag(g_veneziaMailboxState.blockingEvent,
 		1U << (channel & 15), SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, NULL);
 }
 

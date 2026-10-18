@@ -9,7 +9,7 @@ int UpdateUtilSetBufferState(unsigned int state, void *buffer)
 
 	if (!buffer)
 		return (int)0x800f0216;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&updateTableMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	if (result)
 		return result;
 	bufferResult = (int)0x800f0202;
@@ -32,6 +32,6 @@ int UpdateUtilSetBufferState(unsigned int state, void *buffer)
 			entry->pid = 0;
 		}
 	}
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&updateTableMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	return bufferResult;
 }

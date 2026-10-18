@@ -61,7 +61,7 @@ int SpkgUtilSpackageTopHalf(unsigned int nodeType, int packageType,
 	uint32_t id;
 	int result, permission;
 
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
 	if (!buffer || !size || !requestId)
@@ -128,17 +128,17 @@ authorized:
 	args.size = size;
 	args.flags = flags;
 	args.pid = sceKernelGetProcessId();
-	result = ksceKernelStartThread(thread, sizeof(args), &args);
+	result = sceKernelStartThread(thread, sizeof(args), &args);
 	if (result)
-		ksceKernelDeleteThread(thread);
+		sceKernelDeleteThread(thread);
 	else
 		*requestId = id;
 unlock:
 	UpdateUtilUnlockPupHeader();
 restorePermission:
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return result;
 invalid:
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return (int)0x800f0216;
 }

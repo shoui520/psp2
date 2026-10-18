@@ -96,7 +96,7 @@ int appmgrReadPlayReadySystemData(SceUInt32 location, void *information,
 	int permission, result;
 
 	syscallState = sceSyscallEnter();
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	__builtin_memset(path, 0, sizeof(path));
 	memset(&header, 0, sizeof(header));
 	if (!SceSblACMgrForDriver_AE1AF154(0)) {
@@ -122,7 +122,7 @@ int appmgrReadPlayReadySystemData(SceUInt32 location, void *information,
 			goto leave;
 		}
 	}
-	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
 	if (result < 0)
 		goto leave;
 	result = appmgrDecodeString(encodedPlayReadyFile, path, sizeof(path));
@@ -182,9 +182,9 @@ int appmgrReadPlayReadySystemData(SceUInt32 location, void *information,
 closeFile:
 	ksceIoClose(fd);
 unlock:
-	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
 leave:
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	sceSyscallLeave(syscallState);
 	return result;
 }
@@ -204,7 +204,7 @@ int appmgrWritePlayReadySystemData(SceUInt32 location, const void *information,
 	int permission, result, transferred;
 
 	syscallState = sceSyscallEnter();
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	__builtin_memset(path, 0, sizeof(path));
 	memset(&header, 0, sizeof(header));
 	if (!SceSblACMgrForDriver_AE1AF154(0)) {
@@ -230,7 +230,7 @@ int appmgrWritePlayReadySystemData(SceUInt32 location, const void *information,
 			goto leave;
 		}
 	}
-	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
 	if (result < 0)
 		goto leave;
 	result = appmgrDecodeString(encodedPlayReadyDirectory, path, sizeof(path));
@@ -337,13 +337,13 @@ int appmgrWritePlayReadySystemData(SceUInt32 location, const void *information,
 	if (result >= 0)
 		result = location == 1 ? 0 : dataSize;
 unlockAndFree:
-	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
 	appmgrFreeSaveDataHeapMemory(scratch);
 	goto leave;
 unlock:
-	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
 leave:
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	sceSyscallLeave(syscallState);
 	return result;
 }
@@ -355,7 +355,7 @@ int appmgrSetSystemDataFile(SceUInt32 location, const void *userData,
 	int permission, result;
 
 	syscallState = sceSyscallEnter();
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (location != 3) {
 		result = (int)0x80800001;
 		goto leave;
@@ -401,7 +401,7 @@ int appmgrSetSystemDataFile(SceUInt32 location, const void *userData,
 freeKeys:
 	sceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, keys);
 leave:
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	sceSyscallLeave(syscallState);
 	return result;
 }

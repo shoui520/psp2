@@ -43,6 +43,6 @@ int BbmcUtilCallback(int notifyId, int notifyCount, int notifyArg, void *userDat
 	if (events)
 		SceBbmcForDriver_E83B73CA(updateBbmcContext.subscriber.subscriberId, events);
 	if (pattern)
-		ksceKernelSetEventFlag(updateBbmcContext.eventFlagId, pattern);
+		sceKernelSetEventFlag(updateBbmcContext.eventFlagId, pattern);
 	return SceBbmcForDriver_435858B1(updateBbmcContext.subscriber.subscriberId);
 }

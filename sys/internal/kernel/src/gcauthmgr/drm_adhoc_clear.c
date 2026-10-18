@@ -11,7 +11,7 @@ int GcAuthAdhocClearState(void)
 {
 	unsigned int index;
 
-	if (ksceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
 		return 0x808A010A;
 	if (gcAuthAdhocInitialized) {
 		for (index = 0; index < sizeof(gcAuthAdhocRandom); index++)
@@ -19,7 +19,7 @@ int GcAuthAdhocClearState(void)
 		gcAuthAdhocInitialized = 0;
 		gcAuthAdhocCounter = 0;
 	}
-	if (ksceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
 		return 0x808A010A;
 	return 0;
 }

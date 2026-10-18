@@ -155,7 +155,7 @@ static int sysmoduleLoadLib(SysmoduleProc *proc, SceUInt32 *ref, const Sysmodule
 	if ((lib->flags & SYSMODULE_LIB_DEVONLY) && SceDipswForDriver_A98FC2FD(0xd2))
 		flags = alt;
 	pid = sceKernelGetProcessId();
-	perm = ksceKernelSetPermission(0x80);
+	perm = sceKernelSetThreadAccessLevel(0x80);
 	if (perm < 0)
 		return perm;
 	if (!(lib->flags & SYSMODULE_LIB_SHARED))
@@ -166,7 +166,7 @@ static int sysmoduleLoadLib(SysmoduleProc *proc, SceUInt32 *ref, const Sysmodule
 		modid = ksceKernelLoadStartSharedModuleForPid(pid, proc->path, proc->opt.args, proc->opt.argp,
 							      flags | proc->opt.flags, proc->opt.sharedLoadOpt,
 							      proc->opt.status);
-	ksceKernelSetPermission(perm);
+	sceKernelSetThreadAccessLevel(perm);
 	if (modid < 0) {
 		if (sysmoduleBlocked(modid)) {
 			proc->prefix = prefix;
@@ -244,11 +244,11 @@ allowed:
 /* name unknown: lock the process state, unless this thread is resuming an interrupted load */
 static inline int sysmoduleLock(SysmoduleProc *proc)
 {
-	if (SceThreadmgrForDriver_20C228E4() && proc->waiter == ksceKernelGetThreadId()) {
+	if (SceThreadmgrForDriver_20C228E4() && proc->waiter == sceKernelGetThreadId()) {
 		proc->waiter = -1;
 		return 0;
 	}
-	return ksceKernelLockMutex(proc->mutex, 1, NULL);
+	return sceKernelLockMutex(proc->mutex, 1, NULL);
 }
 
 static inline void sysmoduleSetOpt(SysmoduleProc *proc, const SysmoduleEntry *entry, const SysmoduleOpt *opt)
@@ -452,7 +452,7 @@ static int sysmoduleLoad(SceUInt32 id, const SysmoduleOpt *opt)
 				if (ret < 0) {
 					if (!sysmoduleBlocked(ret))
 						goto unlock;
-					proc->waiter = ksceKernelGetThreadId();
+					proc->waiter = sceKernelGetThreadId();
 					sceSyscallLeave(t);
 					return ret;
 				}
@@ -463,7 +463,7 @@ static int sysmoduleLoad(SceUInt32 id, const SysmoduleOpt *opt)
 	ret = 0;
 	state[0]++;
 unlock:
-	ksceKernelUnlockMutex(proc->mutex, 1);
+	sceKernelUnlockMutex(proc->mutex, 1);
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -540,7 +540,7 @@ static int sysmoduleUnload(SceUInt32 id, const SysmoduleOpt *opt)
 					state[0]++;
 					if (!sysmoduleBlocked(ret))
 						goto unlock;
-					proc->waiter = ksceKernelGetThreadId();
+					proc->waiter = sceKernelGetThreadId();
 					sceSyscallLeave(t);
 					return ret;
 				}
@@ -550,7 +550,7 @@ static int sysmoduleUnload(SceUInt32 id, const SysmoduleOpt *opt)
 	}
 	ret = 0;
 unlock:
-	ksceKernelUnlockMutex(proc->mutex, 1);
+	sceKernelUnlockMutex(proc->mutex, 1);
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -626,7 +626,7 @@ allowed:
 	ret = SCE_SYSMODULE_ERROR_UNLOADED;
 	if (proc->module[idx].loaded != 0 && proc->module[idx].pos == entry->nlibs)
 		ret = 0;
-	ksceKernelUnlockMutex(proc->mutex, 1);
+	sceKernelUnlockMutex(proc->mutex, 1);
 	goto out;
 denied:
 	ret = SYSMODULE_ERROR_NOT_ALLOWED;
@@ -644,7 +644,7 @@ static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, int args)
 	if (s_storage >= 0 &&
 	    ksceKernelGetProcessLocalStorageAddrForPid(pid, s_storage, (void **)&proc, 1) >= 0 &&
 	    proc != NULL) {
-		proc->mutex = ksceKernelCreateMutex("SceSysmodule", 0x8000, 0, NULL);
+		proc->mutex = sceKernelCreateMutex("SceSysmodule", 0x8000, 0, NULL);
 		proc->waiter = -1;
 	}
 	return 0;
@@ -658,7 +658,7 @@ static inline void sysmoduleProcEnd(SceUID pid)
 	if (s_storage >= 0 &&
 	    ksceKernelGetProcessLocalStorageAddrForPid(pid, s_storage, (void **)&proc, 0) >= 0 &&
 	    proc != NULL && proc->mutex >= 0) {
-		ksceKernelDeleteMutex(proc->mutex);
+		sceKernelDeleteMutex(proc->mutex);
 		proc->mutex = -1;
 	}
 }

@@ -37,14 +37,6 @@
 /* SceCpuForDriver / SceCpuForKernel */
 
 /* SceThreadmgrForDriver / SceThreadmgrForKernel */
-SceUID ksceKernelCreateThread(const char *name, void *entry, int prio, SceSize stack,
-			      SceUInt32 attr, int cpu, void *opt);
-int ksceKernelStartThread(SceUID thid, SceSize args, void *argp);
-int ksceKernelDeleteThread(SceUID thid);
-int ksceKernelWaitThreadEnd(SceUID thid, int *stat, SceUInt32 *timeout);
-SceUID ksceKernelGetThreadId(void);
-SceUID SceThreadmgrForDriver_C8E57BB4(SceUID pid, const char *name, void *entry, int prio,
-				      SceSize stack, SceUInt32 attr, int cpu, void *opt);
 
 /* SceSblACMgrForDriver / SceSblAuthMgrForKernel / SceQafMgrForDriver */
 int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, void *type);

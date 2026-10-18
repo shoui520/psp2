@@ -190,7 +190,7 @@ static int softIntrHandler(int intrCode, void *userCtx)
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
 
-	if ((flags & MSG_SET_EVENT) && ksceKernelSetEventFlag(s->eventFlag, msg->eventBits) < 0)
+	if ((flags & MSG_SET_EVENT) && sceKernelSetEventFlag(s->eventFlag, msg->eventBits) < 0)
 		SCE_PANIC(1045);
 
 	if (handler == NULL) {
@@ -284,11 +284,11 @@ static void SessionFree(SceUID id)
 	if (s == NULL)
 		return;
 	if (s->eventFlag != -1) {
-		ksceKernelDeleteEventFlag(s->eventFlag);
+		sceKernelDeleteEventFlag(s->eventFlag);
 		s->eventFlag = -1;
 	}
 	if (s->mutex != -1) {
-		ksceKernelDeleteMutex(s->mutex);
+		sceKernelDeleteMutex(s->mutex);
 		s->mutex = -1;
 	}
 	s->id = -1;
@@ -417,11 +417,11 @@ int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUIn
 	s->eventFlag = -1;
 	s->mutex = -1;
 
-	ret = ksceKernelCreateEventFlag("SceSblSmsProxy", 0, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceSblSmsProxy", 0, 0, NULL);
 	if (ret < 0)
 		goto fail_session;
 	s->eventFlag = ret;
-	ret = ksceKernelCreateMutex("SceSblSmsProxyWait", 0, 0, NULL);
+	ret = sceKernelCreateMutex("SceSblSmsProxyWait", 0, 0, NULL);
 	if (ret < 0)
 		goto fail_session;
 	s->mutex = ret;
@@ -499,11 +499,11 @@ int sceSblSmSchedProxyWait(SceUID id, SceUInt32 *result)
 		sceSyscallLeave(tls);
 		return SCE_SBL_ERROR_NO_SESSION;
 	}
-	if (ksceKernelTryLockMutex(s->mutex, 1) < 0)
+	if (sceKernelTryLockMutex(s->mutex, 1) < 0)
 		goto invalid;
 
 	sceKernelSysrootDisableAutoClockDown();
-	ret = ksceKernelWaitEventFlag(s->eventFlag, 1, 3, NULL, NULL);
+	ret = sceKernelWaitEventFlag(s->eventFlag, 1, 3, NULL, NULL);
 	sceKernelSysrootEnableAutoClockDown();
 	if (ret < 0)
 		goto out;

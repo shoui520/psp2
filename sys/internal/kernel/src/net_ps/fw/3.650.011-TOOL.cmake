@@ -123,23 +123,23 @@ set(MODULE_IMPORT_FUNCS
 	timingsafe_memcmp
 	strlen
 	memcmp
-	ksceKernelWaitEventFlag
+	sceKernelWaitEventFlag
 	sceKernelExitThread
 	SceThreadmgrForDriver_20C228E4
-	ksceKernelStartThread
+	sceKernelStartThread
 	sceKernelUnregisterThreadEventHandler
-	ksceKernelWaitThreadEnd
-	ksceKernelCreateEventFlag
+	sceKernelWaitThreadEnd
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelGetThreadId
-	ksceKernelChangeThreadCpuAffinityMask
-	ksceKernelDeleteEventFlag
-	ksceKernelWaitEventFlagCB
+	sceKernelGetThreadId
+	sceKernelChangeThreadCpuAffinityMask
+	sceKernelDeleteEventFlag
+	SceThreadmgrForDriver_8A35F714
 	sceKernelGetProcessId
-	ksceKernelDeleteThread
-	ksceKernelNotifyCallback
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
+	sceKernelDeleteThread
+	sceKernelNotifyCallback
+	sceKernelCreateThread
+	sceKernelSetEventFlag
 	sceKernelGetSystemTimeWide
 	SceThreadmgrForDriver_FD6150D5
 	SceProcessmgrForDriver_D141C076

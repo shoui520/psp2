@@ -68,7 +68,7 @@ int KrmDriverLockProcess(void)
 		return (int)0x80a0000a;
 	}
 	pid = KrmDriverGetPID();
-	currentPid = ksceKernelGetProcessId();
+	currentPid = sceKernelGetProcessId();
 	if (pid == -1) {
 		if (KrmDriverGetAuthorization(currentPid)) {
 			memset(&g_krmSignedState, 0, sizeof(g_krmSignedState));
@@ -106,7 +106,7 @@ int SceKrm_ECE6B5F4(const KrmSignedStateConfig *config)
 		goto leave;
 	}
 	pid = KrmDriverGetPID();
-	currentPid = ksceKernelGetProcessId();
+	currentPid = sceKernelGetProcessId();
 	if (pid == -1) {
 		if (!KrmDriverGetAuthorization(currentPid))
 			goto denied;
@@ -174,7 +174,7 @@ int SceKrm_820B45C6(void)
 		return (int)0x80a0000a;
 	}
 	pid = KrmDriverGetPID();
-	currentPid = ksceKernelGetProcessId();
+	currentPid = sceKernelGetProcessId();
 	if (pid == -1) {
 		if (!KrmDriverGetAuthorization(currentPid))
 			goto denied;
@@ -226,7 +226,7 @@ int SceKrm_E0AEAE3B(const KrmSignedState *state)
 		goto leave;
 	}
 	pid = KrmDriverGetPID();
-	currentPid = ksceKernelGetProcessId();
+	currentPid = sceKernelGetProcessId();
 	if (pid == -1) {
 		if (!KrmDriverGetAuthorization(currentPid))
 			goto denied;
@@ -372,7 +372,7 @@ int SceKrm_10202EB4(const void *keyId)
 		goto leave;
 	}
 	pid = KrmDriverGetPID();
-	currentPid = ksceKernelGetProcessId();
+	currentPid = sceKernelGetProcessId();
 	if (__builtin_expect(pid == -1, 0)) {
 		if (!KrmDriverGetAuthorization(currentPid))
 			goto denied;
@@ -439,7 +439,7 @@ int SceKrm_98EEB7F3(void *keyId)
 		goto leave;
 	}
 	pid = KrmDriverGetPID();
-	currentPid = ksceKernelGetProcessId();
+	currentPid = sceKernelGetProcessId();
 	if (pid == -1) {
 		if (!KrmDriverGetAuthorization(currentPid))
 			goto denied;
@@ -594,7 +594,7 @@ int SceKrm_949506DC(const KrmKey *key)
 		goto leave;
 	}
 	pid = KrmDriverGetPID();
-	currentPid = ksceKernelGetProcessId();
+	currentPid = sceKernelGetProcessId();
 	if (pid == -1) {
 		if (!KrmDriverGetAuthorization(currentPid))
 			goto denied;
@@ -650,7 +650,7 @@ int SceKrm_18DE25C6(const void *keyId)
 		goto leave;
 	}
 	pid = KrmDriverGetPID();
-	currentPid = ksceKernelGetProcessId();
+	currentPid = sceKernelGetProcessId();
 	if (pid == -1) {
 		if (!KrmDriverGetAuthorization(currentPid))
 			goto denied;
@@ -706,7 +706,7 @@ int SceKrm_5296A954(const KrmCryptRequest *request)
 		return (int)0x80a0000a;
 	}
 	pid = KrmDriverGetPID();
-	currentPid = ksceKernelGetProcessId();
+	currentPid = sceKernelGetProcessId();
 	if (pid == -1) {
 		if (!KrmDriverGetAuthorization(currentPid))
 			goto denied;
@@ -755,7 +755,7 @@ int SceKrm_7251237D(const KrmCryptRequest *request)
 		return (int)0x80a0000a;
 	}
 	pid = KrmDriverGetPID();
-	currentPid = ksceKernelGetProcessId();
+	currentPid = sceKernelGetProcessId();
 	if (pid == -1) {
 		if (!KrmDriverGetAuthorization(currentPid))
 			goto denied;
@@ -807,7 +807,7 @@ int SceKrm_A9201DA3(const KrmSignatureRequest *request)
 		goto leave;
 	}
 	pid = KrmDriverGetPID();
-	currentPid = ksceKernelGetProcessId();
+	currentPid = sceKernelGetProcessId();
 	if (pid == -1) {
 		if (!KrmDriverGetAuthorization(currentPid))
 			goto denied;
@@ -895,7 +895,7 @@ int SceKrm_F0B626E7(const KrmSignatureRequest *request)
 		goto leave;
 	}
 	pid = KrmDriverGetPID();
-	currentPid = ksceKernelGetProcessId();
+	currentPid = sceKernelGetProcessId();
 	if (pid == -1) {
 		if (!KrmDriverGetAuthorization(currentPid))
 			goto denied;
@@ -1021,7 +1021,7 @@ int SceKrm_7401B932(int index, KrmKey *key)
 		goto leave;
 	}
 	pid = KrmDriverGetPID();
-	currentPid = ksceKernelGetProcessId();
+	currentPid = sceKernelGetProcessId();
 	if (pid == -1) {
 		if (!KrmDriverGetAuthorization(currentPid))
 			goto denied;
@@ -1077,7 +1077,7 @@ int SceKrm_D7B35BE6(KrmKeyCounts *counts)
 		goto leave;
 	}
 	pid = KrmDriverGetPID();
-	currentPid = ksceKernelGetProcessId();
+	currentPid = sceKernelGetProcessId();
 	if (pid == -1) {
 		if (!KrmDriverGetAuthorization(currentPid))
 			goto denied;

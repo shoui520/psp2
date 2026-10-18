@@ -22,11 +22,11 @@ int UpdateUtilInflateWritePartition(const void *input, uint64_t size,
 	unsigned int inflateResult;
 	int result, permission;
 
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
 	if (!size || !input || !mbr) {
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		return (int)0x800f0216;
 	}
 	result = UpdateUtilAllocateBuffer(0x40000, &buffer, pid);
@@ -81,6 +81,6 @@ finish:
 	SceZlibForDriver_9030BAE4(&stream);
 	if (buffer)
 		UpdateUtilReleaseBuffer(buffer, pid);
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }

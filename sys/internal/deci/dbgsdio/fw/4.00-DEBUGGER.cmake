@@ -83,15 +83,15 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelRegisterIntrHandler
 	ksceKernelEnableIntr
 	ksceKernelReleaseIntrHandler
-	ksceKernelWaitEventFlag
-	ksceKernelFinalizeFastMutex
-	ksceKernelCreateEventFlag
+	sceKernelWaitEventFlag
+	sceKernelFinalizeFastMutex
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
-	ksceKernelInitializeFastMutex
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
+	lockFastMutex
+	sceKernelDeleteEventFlag
+	sceKernelInitializeFastMutex
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
 	SceDipswForDriver_A98FC2FD
 	sceKernelRegisterSysEventHandler
 	sceKernelUnregisterSysEventHandler

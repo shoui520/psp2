@@ -70,12 +70,12 @@ set(MODULE_IMPORT_FUNCS
 	__aeabi_uidivmod
 	__stack_chk_fail
 	strnlen
-	ksceKernelWaitEventFlag
-	ksceKernelCreateEventFlag
-	ksceKernelClearEventFlag
-	ksceKernelDeleteEventFlag
-	ksceKernelSetEventFlag
-	ksceKernelEnqueueWorkQueue
+	sceKernelWaitEventFlag
+	sceKernelCreateEventFlag
+	sceKernelClearEventFlag
+	sceKernelDeleteEventFlag
+	sceKernelSetEventFlag
+	sceKernelScheduleWorkTask
 	ksceUdcdUnregister
 	ksceUdcdStop
 	ksceUdcdReqSend

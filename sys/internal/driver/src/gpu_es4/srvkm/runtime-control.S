@@ -209,10 +209,10 @@ GpuRuntimeCriticalLeave:
 GpuBusyWaitClock:
 	push {r3, r4, r5, lr}
 	mov r4, r0
-	bl ksceKernelGetSystemTimeLow
+	bl SceThreadmgrForDriver_47F6DE49
 	mov r5, r0
 .LGpuBusyWaitClocka:
-	bl ksceKernelGetSystemTimeLow
+	bl SceThreadmgrForDriver_47F6DE49
 	subs r0, r0, r5
 	cmp r0, r4
 	blo .LGpuBusyWaitClocka

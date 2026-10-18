@@ -75,11 +75,11 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelUtilsForDriver_E4390FFA
 	SceKernelUtilsForDriver_F12B6451
 	ksceRtcGetCurrentTick
-	ksceKernelDeleteMutex
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelRunWithStack
-	ksceKernelCreateMutex
+	sceKernelDeleteMutex
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	SceThreadmgrForDriver_E54FD746
+	sceKernelCreateMutex
 	SceSysmemForDriver_009E1C61
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_6D88EF8A

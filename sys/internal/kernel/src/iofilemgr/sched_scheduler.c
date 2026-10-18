@@ -557,7 +557,7 @@ void sceIoSchedulerSignalCond(IoScheduler *sched, IoRequest *req)
 		req->isWaiting = 0;
 		if (req->isAsync == 1)
 			sched->asyncWaiting = 0;
-		ret = ksceKernelSignalCondTo(sched->cond, req->thid);
+		ret = sceKernelSignalCondTo(sched->cond, req->thid);
 		if (ret != 0)
 			SCE_DBG_PRINTF_LEVEL(1, 0, 595, "%s %d : %x : %d %d\n",
 				"sceIoSchedulerSignalCond", 595, ret, req->isWaiting, req->isWaitingIo);
@@ -565,7 +565,7 @@ void sceIoSchedulerSignalCond(IoScheduler *sched, IoRequest *req)
 			SCE_DBG_ASSERT(ret == 0, 599);
 	} else if (req->isAsync == 1 && sched->asyncWaiting == 1) {
 		sched->asyncWaiting = 0;
-		ret = ksceKernelSignalCondTo(sched->cond, req->thid);
+		ret = sceKernelSignalCondTo(sched->cond, req->thid);
 		SCE_DBG_ASSERT(ret == 0, 606);
 	}
 }
@@ -628,7 +628,7 @@ int sceIoSchedulerCompleteAsyncIoRequest(IoScheduler *sched, IoRequest *req)
 			asyncParam->priority = req->asyncPriority;
 		}
 	}
-	err = ksceKernelSetEvent(req->asyncEvent, 1,
+	err = sceKernelSetEvent(req->asyncEvent, 1,
 			asyncParam != NULL ? (SceUInt32)asyncParam : req->asyncResult);
 	SCE_DBG_ASSERT(err == 0, 1333);
 	return ret;
@@ -681,7 +681,7 @@ int sceIoSchedulerIssueAnotherIoRequestInternal(IoScheduler *sched)
 	IoRequest *req;
 	int ret;
 
-	ret = ksceKernelLockMutex(sched->mutex, 1, NULL);
+	ret = sceKernelLockMutex(sched->mutex, 1, NULL);
 	SCE_DBG_ASSERT(ret == 0, 2272);
 	sched->issueCount++;
 	req = sceIoSchedulerGetIoRequest(sched);
@@ -690,18 +690,18 @@ int sceIoSchedulerIssueAnotherIoRequestInternal(IoScheduler *sched)
 			req->isWaiting = 0;
 			if (req->isAsync == 1)
 				sched->asyncWaiting = 0;
-			ret = ksceKernelSignalCondTo(sched->cond, req->thid);
+			ret = sceKernelSignalCondTo(sched->cond, req->thid);
 			SCE_DBG_ASSERT(ret == 0, 2288);
 		} else if (req->isAsync == 1 && sched->asyncWaiting == 1) {
 			sched->asyncWaiting = 0;
-			ret = ksceKernelSignalCondTo(sched->cond, req->thid);
+			ret = sceKernelSignalCondTo(sched->cond, req->thid);
 			SCE_DBG_ASSERT(ret == 0, 2294);
 		}
 	} else {
-		ret = ksceKernelSetEventFlag(sched->dispatcher->evf, sched->eventBits & 0xff00);
+		ret = sceKernelSetEventFlag(sched->dispatcher->evf, sched->eventBits & 0xff00);
 		SCE_DBG_ASSERT(ret == 0, 2301);
 	}
-	ret = ksceKernelUnlockMutex(sched->mutex, 1);
+	ret = sceKernelUnlockMutex(sched->mutex, 1);
 	SCE_DBG_ASSERT(ret == 0, 2306);
 	return 0;
 }
@@ -731,7 +731,7 @@ int getSchedWorkerName(IoScheduler *sched)
 		break;
 	}
 	snprintf(name, sizeof(name), "%s%d", "SceIoSchedWorker", index);
-	sched->worker.thid = ksceKernelCreateThread(name, schedWorkerEntry, 100, 0x2000,
+	sched->worker.thid = sceKernelCreateThread(name, schedWorkerEntry, 100, 0x2000,
 						 0x10000000, 0x80000, NULL);
 	if (sched->worker.thid < 0)
 		return sched->worker.thid;
@@ -764,10 +764,10 @@ IoScheduler *sceIoSchedulerCreateIoScheduler(SchedDispatcher *dispatcher,
 	sched->dispatcher = dispatcher;
 	sched->readChunkSize = attr->readChunkSize;
 	sched->writeChunkSize = attr->writeChunkSize;
-	sched->mutex = ksceKernelCreateMutex("SceIoScheduler", 0x2002, 0, NULL);
+	sched->mutex = sceKernelCreateMutex("SceIoScheduler", 0x2002, 0, NULL);
 	if (sched->mutex < 0)
 		goto free;
-	sched->cond = ksceKernelCreateCond("SceIoScheduler", 0x2000, sched->mutex, NULL);
+	sched->cond = sceKernelCreateCond("SceIoScheduler", 0x2000, sched->mutex, NULL);
 	if (sched->cond < 0)
 		goto deleteMutex;
 	sched->runningNum = 0;
@@ -778,7 +778,7 @@ IoScheduler *sceIoSchedulerCreateIoScheduler(SchedDispatcher *dispatcher,
 	if (ret < 0)
 		goto deleteCond;
 	worker = &sched->worker;
-	ret = ksceKernelStartThread(sched->worker.thid, sizeof(worker), &worker);
+	ret = sceKernelStartThread(sched->worker.thid, sizeof(worker), &worker);
 	if (ret < 0)
 		goto deleteCond;
 	sched->writeDelay = 0;
@@ -810,9 +810,9 @@ IoScheduler *sceIoSchedulerCreateIoScheduler(SchedDispatcher *dispatcher,
 	}
 	return sched;
 deleteCond:
-	ksceKernelDeleteCond(sched->cond);
+	sceKernelDeleteCond(sched->cond);
 deleteMutex:
-	ksceKernelDeleteMutex(sched->mutex);
+	sceKernelDeleteMutex(sched->mutex);
 free:
 	sceKernelFreeHeapMemory(g_ioSchedHeap, sched);
 	return NULL;
@@ -844,9 +844,9 @@ typedef struct IoSchedulerAcl {
 void sceIoSchedulerPretendRequesterAcl(IoRequest *req, IoSchedulerAcl *acl)
 {
 	acl->isSet = 1;
-	acl->processId = ksceKernelSetProcessIdToTLS(req->processId);
+	acl->processId = SceThreadmgrForDriver_0486F239(req->processId);
 	SCE_DBG_ASSERT(acl->processId >= 0, 2488);
-	acl->permission = ksceKernelSetPermission(req->threadAcl);
+	acl->permission = sceKernelSetThreadAccessLevel(req->threadAcl);
 	SCE_DBG_ASSERT(acl->permission >= 0, 2492);
 }
 
@@ -855,9 +855,9 @@ void sceIoSchedulerRestoreAcl(IoSchedulerAcl *acl)
 	int ret;
 
 	if (acl->isSet) {
-		ret = ksceKernelSetProcessIdToTLS(acl->processId);
+		ret = SceThreadmgrForDriver_0486F239(acl->processId);
 		SCE_DBG_ASSERT(ret >= 0, 2506);
-		ret = ksceKernelSetPermission(acl->permission);
+		ret = sceKernelSetThreadAccessLevel(acl->permission);
 		SCE_DBG_ASSERT(ret >= 0, 2509);
 	}
 }
@@ -869,7 +869,7 @@ int sceIoSchedulerCancelAsyncIoRequest(IoScheduler *sched, IoRequest *req)
 	IoRequestQueue *queue;
 	int ret, err;
 
-	err = ksceKernelLockMutex(sched->mutex, 1, NULL);
+	err = sceKernelLockMutex(sched->mutex, 1, NULL);
 	SCE_DBG_ASSERT(err == 0, 2521);
 	if ((unsigned int)req->priority <= 15) {
 		queue = sched->queue[req->priority];
@@ -880,7 +880,7 @@ int sceIoSchedulerCancelAsyncIoRequest(IoScheduler *sched, IoRequest *req)
 	} else {
 		ret = SCE_ERROR_ERRNO_EINVAL;
 	}
-	err = ksceKernelUnlockMutex(sched->mutex, 1);
+	err = sceKernelUnlockMutex(sched->mutex, 1);
 	SCE_DBG_ASSERT(err == 0, 2537);
 	return ret;
 }
@@ -1035,16 +1035,16 @@ void sceIoSchedulerAddAsyncIoRequest(IoScheduler *sched, IoRequest *req)
 	int ret;
 
 	SCE_DBG_ASSERT(req->isAsync == 1, 272);
-	ret = ksceKernelLockMutex(sched->mutex, 1, NULL);
+	ret = sceKernelLockMutex(sched->mutex, 1, NULL);
 	SCE_DBG_ASSERT(ret == 0, 275);
 	SCE_DBG_ASSERT(req->thid == 0, 277);
 	req->thid = sched->worker.thid;
 	ret = sceIoSchedulerAddIoRequest(sched, req);
 	SCE_DBG_ASSERT(ret == 0, 281);
 	sched->asyncRequestNum++;
-	ret = ksceKernelUnlockMutex(sched->mutex, 1);
+	ret = sceKernelUnlockMutex(sched->mutex, 1);
 	SCE_DBG_ASSERT(ret == 0, 298);
-	ret = ksceKernelSetEventFlag(dispatcher->evf, (SceUInt8)sched->eventBits);
+	ret = sceKernelSetEventFlag(dispatcher->evf, (SceUInt8)sched->eventBits);
 	SCE_DBG_ASSERT(ret == 0, 308);
 }
 
@@ -1121,7 +1121,7 @@ int sceIoSchedulerExecuteIoRequestCore(IoScheduler *sched, IoRequest *request)
 	SceUInt32 timeout, delay;
 	int ret, result, finished, stackSize, removed;
 
-	thid = ksceKernelGetThreadId();
+	thid = sceKernelGetThreadId();
 	vfs_increment_io_count();
 	for (;;) {
 		req = sceIoSchedulerGetIoRequest(sched);
@@ -1137,7 +1137,7 @@ int sceIoSchedulerExecuteIoRequestCore(IoScheduler *sched, IoRequest *request)
 				}
 				if (sched->worker.thid == thid)
 					sched->asyncWaiting = 1;
-				ret = ksceKernelWaitCond(sched->cond, NULL);
+				ret = sceKernelWaitCond(sched->cond, NULL);
 				SCE_DBG_ASSERT(ret == 0, 678);
 				if (sched->worker.thid == thid)
 					SCE_DBG_ASSERT(sched->asyncWaiting == 0, 682);
@@ -1169,7 +1169,7 @@ int sceIoSchedulerExecuteIoRequestCore(IoScheduler *sched, IoRequest *request)
 				sched->priorityWaitStart = sceKernelGetSystemTimeWide();
 			req->isWaiting = 1;
 			req->isWaitingIo = 1;
-			ret = ksceKernelWaitCond(sched->cond, NULL);
+			ret = sceKernelWaitCond(sched->cond, NULL);
 			SCE_DBG_ASSERT(ret == 0, 744);
 			SCE_DBG_ASSERT(req->isWaiting == 0, 747);
 			req->isWaitingIo = 0;
@@ -1191,7 +1191,7 @@ int sceIoSchedulerExecuteIoRequestCore(IoScheduler *sched, IoRequest *request)
 			req->isWaiting = 1;
 			if (sched->worker.thid == thid)
 				sched->asyncWaiting = 1;
-			ret = ksceKernelWaitCond(sched->cond, &timeout);
+			ret = sceKernelWaitCond(sched->cond, &timeout);
 			SCE_DBG_ASSERT(ret == 0 || ret == (int)SCE_KERNEL_ERROR_WAIT_TIMEOUT, 796);
 			if (sched->worker.thid == thid)
 				SCE_DBG_ASSERT(sched->asyncWaiting == 0, 800);
@@ -1240,7 +1240,7 @@ execute:
 			chunk = sceIoRequestPopIoChunk(req);
 		}
 		iofile_daemon_notify_write(req->mntOpt);
-		ret = ksceKernelUnlockMutex(sched->mutex, 1);
+		ret = sceKernelUnlockMutex(sched->mutex, 1);
 		SCE_DBG_ASSERT(ret == 0, 922);
 		sceIoSchedulerPretendRequesterAcl(req, &acl);
 		getIofilemgrTls()->request = req;
@@ -1255,13 +1255,13 @@ execute:
 			if ((req->mntOpt & 0x10000) && req->type == IO_REQUEST_IOCTL &&
 			    (req->args.ioctl.cmd & 0x4000))
 				stackSize = 0x3000;
-			ksceKernelRunWithStack(stackSize, (int (*)(void *))sceIoSchedulerExecuteIoCommand, req);
+			SceThreadmgrForDriver_E54FD746(stackSize, (int (*)(void *))sceIoSchedulerExecuteIoCommand, req);
 			result = 0;
 		}
 		tls->requesterThreadId = oldThid;
 		getIofilemgrTls()->request = NULL;
 		sceIoSchedulerRestoreAcl(&acl);
-		ret = ksceKernelLockMutex(sched->mutex, 1, NULL);
+		ret = sceKernelLockMutex(sched->mutex, 1, NULL);
 		SCE_DBG_ASSERT(ret == 0, 996);
 		if (isDataIoReq(req)) {
 			if (result == (int)0x80142318) {
@@ -1291,7 +1291,7 @@ execute:
 				req->isWaiting = 1;
 				if (sched->worker.thid == thid)
 					sched->asyncWaiting = 1;
-				ret = ksceKernelWaitCond(sched->cond, NULL);
+				ret = sceKernelWaitCond(sched->cond, NULL);
 				SCE_DBG_ASSERT(ret == 0, 1071);
 				if (sched->worker.thid == thid)
 					SCE_DBG_ASSERT(sched->asyncWaiting == 0, 1075);
@@ -1356,12 +1356,12 @@ int sceIoSchedulerExecuteSyncIoRequest(IoScheduler *sched, IoRequest *req)
 
 	if (req->next != NULL)
 		SCE_DBG_ASSERT(0, 233);
-	ret = ksceKernelLockMutex(sched->mutex, 1, NULL);
+	ret = sceKernelLockMutex(sched->mutex, 1, NULL);
 	SCE_DBG_ASSERT(ret == 0, 237);
 	ret = sceIoSchedulerAddIoRequest(sched, req);
 	SCE_DBG_ASSERT(ret == 0, 240);
 	result = sceIoSchedulerExecuteIoRequestCore(sched, req);
-	ret = ksceKernelUnlockMutex(sched->mutex, 1);
+	ret = sceKernelUnlockMutex(sched->mutex, 1);
 	SCE_DBG_ASSERT(ret == 0, 262);
 	return result;
 }
@@ -1370,7 +1370,7 @@ int sceIoSchedulerExecuteIoRequestWorkerForDispatcher(IoScheduler *sched)
 {
 	int ret, result;
 
-	ret = ksceKernelLockMutex(sched->mutex, 1, NULL);
+	ret = sceKernelLockMutex(sched->mutex, 1, NULL);
 	SCE_DBG_ASSERT(ret == 0, 345);
 	for (;;) {
 		if (getIofilemgrTls()->isCountedWorker == 1) {
@@ -1385,7 +1385,7 @@ int sceIoSchedulerExecuteIoRequestWorkerForDispatcher(IoScheduler *sched)
 			break;
 	}
 	result = sched->workerResult;
-	ret = ksceKernelUnlockMutex(sched->mutex, 1);
+	ret = sceKernelUnlockMutex(sched->mutex, 1);
 	SCE_DBG_ASSERT(ret == 0, 372);
 	return result;
 }

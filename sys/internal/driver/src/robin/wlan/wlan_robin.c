@@ -114,7 +114,7 @@ int robinWlanDriverClose(struct NetDriver *driver, int argument)
 	(void)argument;
 	if (!wlanBtIsAvailable())
 		return 0x80411682;
-	return ksceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x1000000);
+	return sceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x1000000);
 }
 
 int robinWlanDriverSetMulticastAddresses(struct NetDriver *driver,
@@ -162,7 +162,7 @@ int robinWlanDriverKickTx(struct NetDriver *driver, int argument)
 		return result;
 	if ((context->status & 0x1008) == 0x1008) {
 		if (__atomic_fetch_add(&context->transmitRequests, 1, __ATOMIC_RELEASE) == 0)
-			result = ksceKernelSetEventFlag(context->workerEventFlag, 128);
+			result = sceKernelSetEventFlag(context->workerEventFlag, 128);
 	} else {
 		while ((packet = driver->dequeueTx(driver)) != NULL)
 			driver->releaseTx(driver, packet);
@@ -206,18 +206,18 @@ int robinWlanDriverOpen(struct NetDriver *driver, int argument)
 	(void)argument;
 	if (!wlanBtIsAvailable())
 		return 0x80411682;
-	ksceKernelLockFastMutex(&context->mutex);
+	lockFastMutex(&context->mutex);
 	status = context->status;
 	if ((status & 0x800000) || context->workPending) {
 		context->driverNotifyPending = 1;
 	} else if (status & 8) {
-		ksceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x800000);
+		sceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x800000);
 	} else {
 		error = context->intError;
 		context->driver.notify(&context->driver, NULL, NET_DRIVER_EVENT_STATUS,
 				       NET_DRIVER_STATUS_ERROR, &error, sizeof(error));
 	}
-	ksceKernelUnlockFastMutex(&context->mutex);
+	sceKernelUnlockFastMutex(&context->mutex);
 	return 0;
 }
 
@@ -446,7 +446,7 @@ int robinWlanDriverControl(struct NetDriver *driver, unsigned int command,
 
 			if (time < previous || previous + 3000000 < time) {
 				context->signalTimestamp = time;
-				result = ksceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x400000);
+				result = sceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x400000);
 				if (result < 0)
 					goto out;
 			}
@@ -847,7 +847,7 @@ void robinWlanUpdateConfiguration(SceWlanBtRobinWlanContext *context)
 		}
 		if (desired & 1) {
 			context->workPending = 1;
-			ksceKernelSetEventFlag(context->workerEventFlag, 4);
+			sceKernelSetEventFlag(context->workerEventFlag, 4);
 			desired = context->desiredConfiguration;
 			goto reconcile;
 		}
@@ -872,7 +872,7 @@ void robinWlanUpdateConfiguration(SceWlanBtRobinWlanContext *context)
 		desired = context->desiredConfiguration;
 	} else if (wakeRestoreMode == 2) {
 		context->workPending = 1;
-		ksceKernelSetEventFlag(context->workerEventFlag, 4);
+		sceKernelSetEventFlag(context->workerEventFlag, 4);
 		desired = context->desiredConfiguration;
 	}
 	context->wakeRestoreMode = 0;
@@ -881,7 +881,7 @@ stop:
 	context->workPending = 1;
 	context->intError = error;
 	WlanVisitorClose(&context->visitor, error);
-	ksceKernelSetEventFlag(context->workerEventFlag, 16);
+	sceKernelSetEventFlag(context->workerEventFlag, 16);
 	desired = context->desiredConfiguration;
 	goto reconcile;
 close:
@@ -893,12 +893,12 @@ reconcilePowerSave:
 	if (context->currentConfiguration & 0x100) {
 		if (!(desired & 0x100)) {
 			context->workPending = 1;
-			ksceKernelSetEventFlag(context->workerEventFlag, 0x100000);
+			sceKernelSetEventFlag(context->workerEventFlag, 0x100000);
 			desired = context->desiredConfiguration;
 		}
 	} else if (desired & 0x100) {
 		context->workPending = 1;
-		ksceKernelSetEventFlag(context->workerEventFlag, 0x40000);
+		sceKernelSetEventFlag(context->workerEventFlag, 0x40000);
 		desired = context->desiredConfiguration;
 	}
 reconcile:
@@ -934,7 +934,7 @@ reconcile:
 	}
 	if (context->driverNotifyPending) {
 		if (context->status & 8) {
-			ksceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x800000);
+			sceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x800000);
 		} else {
 			error = context->intError;
 			context->driver.notify(&context->driver, NULL, NET_DRIVER_EVENT_STATUS,
@@ -949,7 +949,7 @@ int robinWlanReloadConfiguration(SceWlanBtRobinWlanContext *context)
 	unsigned int desired;
 	int value, wifiConfigured;
 
-	ksceKernelLockFastMutex(&context->mutex);
+	lockFastMutex(&context->mutex);
 	context->desiredConfiguration = 0;
 	context->wakeRestoreMode = 0;
 	if (wlanBtIsAvailable()) {
@@ -979,7 +979,7 @@ int robinWlanReloadConfiguration(SceWlanBtRobinWlanContext *context)
 	} else {
 		context->currentConfiguration = context->desiredConfiguration;
 	}
-	ksceKernelUnlockFastMutex(&context->mutex);
+	sceKernelUnlockFastMutex(&context->mutex);
 	return 0;
 }
 
@@ -988,7 +988,7 @@ int robinWlanCompleteConfiguration(SceWlanBtRobinWlanContext *context, int opera
 	unsigned int status, next;
 	int error, request;
 
-	ksceKernelLockFastMutex(&context->mutex);
+	lockFastMutex(&context->mutex);
 	status = context->status;
 	next = context->nextConfiguration;
 	context->workPending = 0;
@@ -1014,7 +1014,7 @@ int robinWlanCompleteConfiguration(SceWlanBtRobinWlanContext *context, int opera
 	}
 	robinWlanUpdateConfiguration(context);
 unlock:
-	ksceKernelUnlockFastMutex(&context->mutex);
+	sceKernelUnlockFastMutex(&context->mutex);
 	if (!(context->status & 0x20)) {
 		request = context->deferredConfigurationRequest;
 		if (request) {
@@ -1037,7 +1037,7 @@ int _workerEntry(SceSize args, void *argument)
 	context = *(SceWlanBtRobinWlanContext **)argument;
 	for (;;) {
 		events = 0;
-		result = ksceKernelWaitEventFlag(context->workerEventFlag, ~0u, 5, &events, NULL);
+		result = sceKernelWaitEventFlag(context->workerEventFlag, ~0u, 5, &events, NULL);
 		if (result < 0)
 			goto failed;
 		if (events & 1) {
@@ -1120,7 +1120,7 @@ int _workerEntry(SceSize args, void *argument)
 				flags = context->wakeFlags;
 				gWlanContext.pendingStateMarker = 0x80000a00;
 				if ((flags & 4) && context->connectionSize) {
-					ksceKernelEnqueueWorkQueue(65571, "SceWlanBtRobinWlanWakeConfig",
+					sceKernelScheduleWorkTask(65571, "SceWlanBtRobinWlanWakeConfig",
 						(SceKernelWorkQueueWorkFunction)robinWlanRetryWakeOnConfiguration,
 						context);
 					goto stopEvent;
@@ -1134,7 +1134,7 @@ stopEvent:
 		if (events & 16) {
 			if (!WlanVisitorIsIdle(&context->visitor)) {
 				robinWlanNotifyCommandCancellation(context);
-				result = ksceKernelSetEventFlag(gWlanContext.workerEventFlag, 16);
+				result = sceKernelSetEventFlag(gWlanContext.workerEventFlag, 16);
 				if (result < 0)
 					goto failed;
 				sceKernelDelayThread(10000);
@@ -1146,7 +1146,7 @@ stopEvent:
 					if (result < 0)
 						goto failed;
 				} else {
-					ksceKernelSetEventFlag(gWlanContext.workerEventFlag, 32);
+					sceKernelSetEventFlag(gWlanContext.workerEventFlag, 32);
 				}
 			}
 		}
@@ -1171,7 +1171,7 @@ stopEvent:
 		if (events & 0x200) {
 			gWlanContext.pendingStateMarker = 0x80000600;
 			if (context->status & 0x70000) {
-				result = ksceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x200);
+				result = sceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x200);
 				sceKernelDelayThread(1000);
 				if (result < 0)
 					goto failed;
@@ -1212,7 +1212,7 @@ stopEvent:
 				gWlanContext.pendingStateMarker = 0x80001000;
 			} else {
 				gWlanContext.pendingStateMarker = 0x80000e00;
-				result = ksceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x400);
+				result = sceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x400);
 				sceKernelDelayThread(1000);
 				if (result < 0)
 					goto failed;
@@ -1238,7 +1238,7 @@ stopEvent:
 				gWlanContext.pendingStateMarker = 0x80001400;
 			} else {
 				gWlanContext.pendingStateMarker = 0x80001100;
-				result = ksceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x800);
+				result = sceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x800);
 				sceKernelDelayThread(1000);
 				if (result < 0)
 					goto failed;
@@ -1247,7 +1247,7 @@ stopEvent:
 		if (events & 0x100) {
 			result = robinWlanTransmitCommand(context);
 			if (result == (int)0x80418004) {
-				result = ksceKernelSetEventFlag(context->workerEventFlag, 0x10000);
+				result = sceKernelSetEventFlag(context->workerEventFlag, 0x10000);
 				context->commandDeferred = 1;
 				if (result < 0)
 					goto failed;
@@ -1292,7 +1292,7 @@ stopEvent:
 				memset(&gWlanContext.bss, 0,
 				       offsetof(SceWlanBtRobinWlanContext, wakeScan) -
 				       offsetof(SceWlanBtRobinWlanContext, bss));
-				ksceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x2000);
+				sceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x2000);
 			}
 		}
 wakeResult:
@@ -1381,7 +1381,7 @@ wakeResult:
 					if (result < 0)
 						goto failed;
 				} else if (status & 0x48) {
-					result = ksceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x4000);
+					result = sceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x4000);
 					if (result < 0)
 						goto failed;
 				}
@@ -1400,12 +1400,12 @@ wakeResult:
 		if (events & 0x20000) {
 			__atomic_fetch_and(&context->status, ~0x100010, __ATOMIC_RELEASE);
 			if (context->transmitDeferred) {
-				result = ksceKernelSetEventFlag(gWlanContext.workerEventFlag, 128);
+				result = sceKernelSetEventFlag(gWlanContext.workerEventFlag, 128);
 				if (result < 0)
 					goto failed;
 			}
 			if (context->commandDeferred) {
-				result = ksceKernelSetEventFlag(gWlanContext.workerEventFlag, 256);
+				result = sceKernelSetEventFlag(gWlanContext.workerEventFlag, 256);
 				if (result < 0)
 					goto failed;
 			}
@@ -1473,7 +1473,7 @@ int robinInitializeWlanContext(void)
 	gWlanContext.dcm.context = &gWlanContext;
 	gWlanContext.tcm.context = &gWlanContext;
 	gWlanContext.tcm.contextAlias = &gWlanContext;
-	result = ksceKernelInitializeFastMutex(&context->mutex,
+	result = sceKernelInitializeFastMutex(&context->mutex,
 					     "SceWlanBtRobinWlanContext", 0x2000, 0);
 	if (result < 0)
 		goto out;
@@ -1483,19 +1483,19 @@ int robinInitializeWlanContext(void)
 	result = robinWlanInitializeDcm(&context->dcm);
 	if (result < 0)
 		goto out;
-	result = ksceKernelCreateEventFlag("SceWlanBtRobinWlanWorker", 0, 0, NULL);
+	result = sceKernelCreateEventFlag("SceWlanBtRobinWlanWorker", 0, 0, NULL);
 	if (result < 0)
 		goto out;
 	context->workerEventFlag = result;
-	result = ksceKernelCreateThread("SceNetDrvWlan", _workerEntry, 62, 8192, 0, 0xf0000, NULL);
+	result = sceKernelCreateThread("SceNetDrvWlan", _workerEntry, 62, 8192, 0, 0xf0000, NULL);
 	if (result < 0)
 		goto out;
 	context->worker = result;
-	result = ksceKernelStartThread(result, sizeof(context), &context);
+	result = sceKernelStartThread(result, sizeof(context), &context);
 	if (result < 0)
 		goto out;
 	WlanVisitorClose(&context->visitor, 0x80411682);
-	result = ksceKernelSetEventFlag(context->workerEventFlag, 1);
+	result = sceKernelSetEventFlag(context->workerEventFlag, 1);
 	if (result < 0)
 		goto out;
 	result = sceKernelRegisterSysEventHandler("SceWlanBtRobin", _debugDumpStatus, context);
@@ -1509,7 +1509,7 @@ out:
 
 int robinWlanNotifyWorker(unsigned int flags)
 {
-	return ksceKernelSetEventFlag(gWlanContext.workerEventFlag, flags);
+	return sceKernelSetEventFlag(gWlanContext.workerEventFlag, flags);
 }
 
 int robinWlanSetIoctlError(int error)
@@ -1557,7 +1557,7 @@ unsigned int robinWlanGetConfiguration(void)
 {
 	unsigned int result, next;
 
-	ksceKernelLockFastMutex(&gWlanContext.mutex);
+	lockFastMutex(&gWlanContext.mutex);
 	next = gWlanContext.nextConfiguration & 1;
 	result = (gWlanContext.currentConfiguration & ~1) | next;
 	if (gWlanContext.workPending) {
@@ -1579,7 +1579,7 @@ unsigned int robinWlanGetConfiguration(void)
 		result |= 0x400;
 	if (gWlanContext.wakeEnabled)
 		result |= 0x100;
-	ksceKernelUnlockFastMutex(&gWlanContext.mutex);
+	sceKernelUnlockFastMutex(&gWlanContext.mutex);
 	return result;
 }
 
@@ -1599,7 +1599,7 @@ int robinWlanSetConfiguration(int request, int force)
 			return 0;
 		}
 	}
-	ksceKernelLockFastMutex(&context->mutex);
+	lockFastMutex(&context->mutex);
 	switch (request) {
 	case 0:
 		context->wakeRestoreMode = 0;
@@ -1663,7 +1663,7 @@ int robinWlanSetConfiguration(int request, int force)
 	if (!context->workPending)
 		robinWlanUpdateConfiguration(context);
 out:
-	ksceKernelUnlockFastMutex(&context->mutex);
+	sceKernelUnlockFastMutex(&context->mutex);
 	return result;
 }
 
@@ -1722,7 +1722,7 @@ int _debugDumpStatus(int resume, int eventId, void *arguments, void *registeredC
 			if (!context->workPending && (wlanGetConfiguration() & 0x201) != 1 &&
 			    !gSuspendWorkerRequested && !(context->status & 0x40)) {
 				gWlanContext.pendingStateMarker = 0x80000500;
-				result = ksceKernelSetEventFlag(context->workerEventFlag, 0x200);
+				result = sceKernelSetEventFlag(context->workerEventFlag, 0x200);
 				if (result < 0)
 					gWlanContext.ioctlError = 0x804116c3;
 				gSuspendWorkerRequested = 1;
@@ -1764,7 +1764,7 @@ int _debugDumpStatus(int resume, int eventId, void *arguments, void *registeredC
 						gWlanContext.dcm.pendingCommands->commandId,
 						(now - gWlanContext.dcm.pendingCommands->timestamp) / 1000);
 #endif
-				ksceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x2000000);
+				sceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x2000000);
 			}
 			break;
 		default:
@@ -1780,7 +1780,7 @@ int _debugDumpStatus(int resume, int eventId, void *arguments, void *registeredC
 			__atomic_fetch_or(&context->status, 0x800000, __ATOMIC_RELEASE);
 			context->nextConfiguration = context->savedConfiguration;
 			context->deferredConfigurationRequest = 0;
-			result = ksceKernelSetEventFlag(context->workerEventFlag, 0x1000);
+			result = sceKernelSetEventFlag(context->workerEventFlag, 0x1000);
 			if (result < 0)
 				gWlanContext.ioctlError = 0x804116c2;
 			gWlanContext.currentStateMarker = 0x82000000;
@@ -1796,7 +1796,7 @@ int robinWlanGetWakeOnTargetProcess(void)
 {
 	int processId;
 
-	ksceKernelLockFastMutex(&gWlanContext.mutex);
+	lockFastMutex(&gWlanContext.mutex);
 	processId = gWlanContext.secondNetworkId;
 	if (!processId) {
 		processId = gWlanContext.firstNetworkId;
@@ -1806,7 +1806,7 @@ int robinWlanGetWakeOnTargetProcess(void)
 				processId = -1;
 		}
 	}
-	ksceKernelUnlockFastMutex(&gWlanContext.mutex);
+	sceKernelUnlockFastMutex(&gWlanContext.mutex);
 	return processId;
 }
 
@@ -1859,8 +1859,8 @@ int robinWlanKillProcess(SceUID pid)
 int robinWlanSwitchProcess(int eventId)
 {
 	if (eventId == 16)
-		return ksceKernelChangeThreadCpuAffinityMask(gWlanContext.worker, 0x80000);
+		return sceKernelChangeThreadCpuAffinityMask(gWlanContext.worker, 0x80000);
 	if (eventId == 17)
-		return ksceKernelChangeThreadCpuAffinityMask(gWlanContext.worker, 0xf0000);
+		return sceKernelChangeThreadCpuAffinityMask(gWlanContext.worker, 0xf0000);
 	return 0;
 }

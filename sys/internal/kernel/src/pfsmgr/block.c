@@ -125,7 +125,7 @@ int pfsFileWriteChunk(ScePfsLowerFile *lf, SceUInt32 index, SceOff size, SceUInt
 		return ret;
 	ret = pfsBlockReadEdges(&req, lf, ctx);
 	if (ret == 0) {
-		job.thread = ksceKernelGetThreadId();
+		job.thread = sceKernelGetThreadId();
 		job.req = &req;
 		job.result = 0;
 		job.waiting = 0;
@@ -255,7 +255,7 @@ int pfsFileRead(ScePfsLowerFile *lf, SceUInt32 index, SceOff size, SceUInt16 att
 		return ret;
 	ret = pfsBlockRead(&req, lf, ctx);
 	if (ret == 0) {
-		job.thread = ksceKernelGetThreadId();
+		job.thread = sceKernelGetThreadId();
 		job.req = &req;
 		job.result = 0;
 		job.waiting = 0;
@@ -320,7 +320,7 @@ int pfsFileResize(ScePfsLowerFile *lf, SceUInt32 index, SceOff size, SceUInt16 a
 			return ret;
 		ret = pfsBlockReadEdges(&req, lf, ctx);
 		if (ret == 0) {
-			job.thread = ksceKernelGetThreadId();
+			job.thread = sceKernelGetThreadId();
 			job.req = &req;
 			job.result = 0;
 			job.waiting = 0;

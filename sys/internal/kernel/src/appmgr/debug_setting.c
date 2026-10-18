@@ -93,7 +93,7 @@ int ksceAppMgrDebugSettingNotifyUpdate(int setting)
 {
 	SceUInt32 value = 0;
 	SceUInt32 syscallState = sceSyscallEnter();
-	int result = ksceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
+	int result = sceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
 
 	if (result >= 0) {
 		switch (setting) {
@@ -143,7 +143,7 @@ int ksceAppMgrDebugSettingNotifyUpdate(int setting)
 			result = (int)0x80800001;
 			break;
 		}
-		ksceKernelUnlockMutex(g_appmgrAppMutex, 1);
+		sceKernelUnlockMutex(g_appmgrAppMutex, 1);
 	}
 	sceSyscallLeave(syscallState);
 	return result;

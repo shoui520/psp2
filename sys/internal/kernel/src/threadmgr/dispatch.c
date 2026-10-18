@@ -18,6 +18,7 @@
 #include <intrmgr/intrmgr.h>
 #include "affinity.h"
 #include <threadmgr/uid_waitable.h>
+#include <threadmgr/threadmgr.h>
 
 /* what both context selectors share */
 #define DISPATCH_CPU_COUNT		4
@@ -509,7 +510,6 @@ typedef void (*ThreadmgrProbe)(const struct ThreadmgrSchedProbeDescriptor *probe
 extern int SceIntrmgrForKernel_71C5F42F(struct ThreadRegisterContext *context, uintptr_t vfp);
 extern uint32_t SceIntrmgrForKernel_08FDB0CE(struct ThreadRegisterContext *context,
 					     uint32_t flags, uintptr_t vfp);
-extern int ksceKernelSetEventFlag(SceUID uid, uint32_t pattern);
 /* context_runtime.S */
 extern void callSwitchThread2OnStack(uintptr_t stackTop, uint32_t mode);
 
@@ -623,7 +623,7 @@ struct ThreadCB *setupNextContext_thread(struct ThreadCB *current,
 					thread = (struct ThreadCB *)cpu->runningThread;
 					process->abortCode = DEBUG_KIND_STACK_OVERFLOW;
 					process->abortThread = thread->threadId;
-					status = ksceKernelSetEventFlag(process->abortEventFlag,
+					status = sceKernelSetEventFlag(process->abortEventFlag,
 									DEBUG_EVENT_SUSPEND);
 					if (status < 0) {
 						SCE_DBG_PRINTF(0, 665, "*** error: debugSuspendThreadSelf() "
@@ -932,7 +932,7 @@ overflowed:
 					thread = (struct ThreadCB *)cpu->runningThread;
 					process->abortCode = DEBUG_KIND_STACK_OVERFLOW;
 					process->abortThread = thread->threadId;
-					status = ksceKernelSetEventFlag(process->abortEventFlag,
+					status = sceKernelSetEventFlag(process->abortEventFlag,
 									DEBUG_EVENT_SUSPEND);
 					if (status < 0) {
 						SCE_DBG_PRINTF(0, 1103, "*** error: debugSuspendThreadSelf() "

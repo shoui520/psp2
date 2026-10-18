@@ -121,20 +121,20 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelEnableIntr
 	ksceKernelTriggerSubIntr
 	ksceKernelReleaseIntrHandler
-	ksceKernelWaitEventFlag
-	ksceKernelFinalizeFastMutex
-	ksceKernelStartThread
-	ksceKernelCreateEventFlag
+	sceKernelWaitEventFlag
+	sceKernelFinalizeFastMutex
+	sceKernelStartThread
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
-	ksceKernelPollEventFlag
-	ksceKernelDeleteThread
-	ksceKernelInitializeFastMutex
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
+	sceKernelClearEventFlag
+	lockFastMutex
+	sceKernelDeleteEventFlag
+	sceKernelPollEventFlag
+	sceKernelDeleteThread
+	sceKernelInitializeFastMutex
+	sceKernelCreateThread
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
 	sceKernelGetSystemTimeWide
 	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967

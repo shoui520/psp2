@@ -90,20 +90,20 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	ksceKernelSearchModuleByName
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelStartThread
-	ksceKernelCreateEventFlag
-	ksceKernelDeleteEventFlag
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelStartThread
+	sceKernelCreateEventFlag
+	sceKernelDeleteEventFlag
 	sceKernelIsUserModeThread
 	sceKernelGetProcessId
-	ksceKernelDeleteThread
-	ksceKernelRegisterTimer
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
-	ksceKernelCreateMutex
+	sceKernelDeleteThread
+	SceThreadmgrForDriver_C58DF384
+	sceKernelCreateThread
+	sceKernelSetEventFlag
+	sceKernelCreateMutex
 	SceSysrootForDriver_834439A7
 	SceDebugForDriver_02B04343
 	SceDebugForDriver_374B7868

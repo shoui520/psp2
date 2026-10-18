@@ -159,7 +159,7 @@ static int VcpHandler(int event, void *arg, void *ctx)
 		}
 		if (event == 2) {
 			vcp->recvLen = 0;
-			ksceKernelSetEventFlag(vcp->evf, EVF_REQUEST);
+			sceKernelSetEventFlag(vcp->evf, EVF_REQUEST);
 		}
 		break;
 	case 3:					/* ready to send: the header, then the data */
@@ -173,7 +173,7 @@ static int VcpHandler(int event, void *arg, void *ctx)
 		break;
 	case 4:					/* sent */
 		if (vcp->sendData == NULL || sceDfMgrReqSend(vcp->handle) < 0)
-			ksceKernelSetEventFlag(vcp->evf, EVF_SENT);
+			sceKernelSetEventFlag(vcp->evf, EVF_SENT);
 		break;
 	case 5:
 		break;
@@ -181,10 +181,10 @@ static int VcpHandler(int event, void *arg, void *ctx)
 		st = arg;
 		if (st->kind == 1) {
 			vcp->flags |= VCP_LINK_UP;
-			ksceKernelSetEventFlag(vcp->evf, EVF_STATUS);
+			sceKernelSetEventFlag(vcp->evf, EVF_STATUS);
 		} else if (st->kind == 2) {
 			vcp->flags &= ~VCP_FLAG_2;
-			ksceKernelSetEventFlag(vcp->evf, EVF_STATUS);
+			sceKernelSetEventFlag(vcp->evf, EVF_STATUS);
 		}
 		break;
 	default:
@@ -233,7 +233,7 @@ static inline __attribute__((always_inline)) int VcpSend(const void *hdr,
 	ret = sceDfMgrReqSend(s_vcp.handle);
 	if (ret < 0)
 		return ret;
-	return ksceKernelWaitEventFlag(s_vcp.evf, EVF_SENT, SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
+	return sceKernelWaitEventFlag(s_vcp.evf, EVF_SENT, SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 				       &bits, NULL);
 }
 
@@ -519,11 +519,11 @@ static int VcpThread(SceSize args, void *argp)
 		SceSysmemForDriver_009E1C61(s_vcp.fbMemblock);
 		return ret;
 	}
-	ksceKernelChangeThreadCpuAffinityMask(0, 0xf);
+	sceKernelChangeThreadCpuAffinityMask(0, 0xf);
 
 	for (;;) {
 		bits = 0;
-		ret = ksceKernelWaitEventFlag(s_vcp.evf, EVF_REQUEST,
+		ret = sceKernelWaitEventFlag(s_vcp.evf, EVF_REQUEST,
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL, &bits, NULL);
 		if (ret < 0)
 			return ret;
@@ -574,7 +574,7 @@ int VcpModuleStart(SceSize args, void *argp)
 	s_vcp.fbSize = SceSblAIMgrForDriver_71608CA3() ? 0x3c0000 : 0x200000;
 	s_vcp.req = (VcpRequest *)s_recvBuf;
 
-	uid = ksceKernelCreateEventFlag("SceDeci4pVcp", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
+	uid = sceKernelCreateEventFlag("SceDeci4pVcp", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (uid < 0)
 		return SCE_KERNEL_START_FAILED;
 	s_vcp.evf = uid;
@@ -596,13 +596,13 @@ int VcpModuleStart(SceSize args, void *argp)
 		.attr = 1,
 		.kStackMemType = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW,
 	};
-	uid = ksceKernelCreateThread("SceDeci4pVcp", VcpThread, 0x40, 0x2000, 0,
+	uid = sceKernelCreateThread("SceDeci4pVcp", VcpThread, 0x40, 0x2000, 0,
 				     (1 << GetCpuId()) ^ 0xf, &topt);
 	if (uid < 0)
 		goto err_thread;
 	s_vcp.thread = uid;
-	if (ksceKernelStartThread(uid, 0, NULL) < 0) {
-		ksceKernelDeleteThread(s_vcp.thread);
+	if (sceKernelStartThread(uid, 0, NULL) < 0) {
+		sceKernelDeleteThread(s_vcp.thread);
 		goto err_thread;
 	}
 
@@ -622,6 +622,6 @@ int VcpModuleStart(SceSize args, void *argp)
 err_thread:
 	sceKernelDeleteHeap(s_vcp.heap);
 err_heap:
-	ksceKernelDeleteEventFlag(s_vcp.evf);
+	sceKernelDeleteEventFlag(s_vcp.evf);
 	return SCE_KERNEL_START_FAILED;
 }

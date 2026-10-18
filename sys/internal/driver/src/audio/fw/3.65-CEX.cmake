@@ -118,17 +118,17 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	ksceKernelRegisterIntrHandler
 	ksceKernelEnableIntr
-	ksceKernelWaitEventFlag
+	sceKernelWaitEventFlag
 	sceKernelExitThread
-	ksceKernelStartThread
-	ksceKernelCreateEventFlag
-	ksceKernelGetSystemTimeLow
+	sceKernelStartThread
+	sceKernelCreateEventFlag
+	SceThreadmgrForDriver_47F6DE49
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelDeleteEventFlag
+	sceKernelClearEventFlag
+	sceKernelDeleteEventFlag
 	sceKernelGetProcessId
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
+	sceKernelCreateThread
+	sceKernelSetEventFlag
 	ksceKernelGetProcessTimeLowCore
 	ksceKernelCreateProcessLocalStorage
 	ksceKernelGetProcessLocalStorageAddrForPid

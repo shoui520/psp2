@@ -90,19 +90,19 @@ set(MODULE_IMPORT_NIDS
 	0x88758561:F:0xD9703808
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelSetPermission
-	ksceKernelGetCallbackCount
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
+	sceKernelSetThreadAccessLevel
+	SceThreadmgrForDriver_0892D8DF
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
+	sceKernelLockMutex
+	sceKernelUnlockMutex
 	SceThreadmgrForDriver_332E127C
-	ksceKernelCreateEventFlag
-	ksceKernelDeleteEventFlag
-	ksceKernelNotifyCallback
-	ksceKernelSetEventFlag
-	ksceKernelEnqueueWorkQueue
-	ksceKernelCreateMutex
+	sceKernelCreateEventFlag
+	sceKernelDeleteEventFlag
+	sceKernelNotifyCallback
+	sceKernelSetEventFlag
+	sceKernelScheduleWorkTask
+	sceKernelCreateMutex
 	SceSysrootForDriver_55392965
 	SceSysrootForDriver_834439A7
 	SceSysrootForDriver_B0E1FC67

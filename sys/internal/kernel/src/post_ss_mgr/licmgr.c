@@ -664,7 +664,7 @@ int sceSblLicMgrActivateFromFs(void)
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}
 #if FW_VERSION >= 0x04000000
-	ret = ksceKernelRunWithStack(0x1000, licMgrActivateFromFs, NULL);
+	ret = SceThreadmgrForDriver_E54FD746(0x1000, licMgrActivateFromFs, NULL);
 #else
 	ret = licMgrActivateFromFs();
 #endif

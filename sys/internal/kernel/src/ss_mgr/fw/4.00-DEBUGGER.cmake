@@ -133,16 +133,16 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_A43599E9
 	sceKernelSysrootDisableAutoClockDown
 	sceKernelSysrootEnableAutoClockDown
-	ksceKernelSetPermission
-	ksceKernelDeleteMutex
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelGetSystemTimeLow
-	ksceKernelLockFastMutex
+	sceKernelSetThreadAccessLevel
+	sceKernelDeleteMutex
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	SceThreadmgrForDriver_47F6DE49
+	lockFastMutex
 	sceKernelGetProcessId
-	ksceKernelInitializeFastMutex
-	ksceKernelUnlockFastMutex
-	ksceKernelCreateMutex
+	sceKernelInitializeFastMutex
+	sceKernelUnlockFastMutex
+	sceKernelCreateMutex
 	ksceKernelDmaOpSetupDirect
 	ksceKernelDmaOpSync
 	ksceKernelDmaOpEnQueue

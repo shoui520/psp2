@@ -15,7 +15,7 @@ int GcAuthAdhocReadCertificate160(void)
 	int permission;
 	int result;
 
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
 	if (ksceIdStorageLookup(0x42, 264,
@@ -30,6 +30,6 @@ int GcAuthAdhocReadCertificate160(void)
 	} else {
 		result = (int)0x808a010e;
 	}
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }

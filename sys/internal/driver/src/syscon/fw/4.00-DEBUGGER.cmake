@@ -92,18 +92,18 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelEnableSubIntr
 	ksceKernelRegisterSubIntrHandler
 	ksceKernelSetIntrTarget
-	ksceKernelDeleteMutex
-	ksceKernelDeleteSema
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelCreateSema
-	ksceKernelWaitSema
-	ksceKernelGetSystemTimeLow
+	sceKernelDeleteMutex
+	sceKernelDeleteSema
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelCreateSema
+	sceKernelWaitSema
+	SceThreadmgrForDriver_47F6DE49
 	sceKernelDelayThread
-	ksceKernelSignalSema
+	sceKernelSignalSema
 	sceKernelCheckWaitableStatus
-	ksceKernelEnqueueWorkQueue
-	ksceKernelCreateMutex
+	sceKernelScheduleWorkTask
+	sceKernelCreateMutex
 	sceKernelRegisterSysEventHandler
 	SceSblAIMgrForDriver_71608CA3
 	SceSblAIMgrForDriver_C6E83F34

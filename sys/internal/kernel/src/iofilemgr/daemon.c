@@ -76,7 +76,7 @@ static void iofDaemonSetAlarm(int index, SceUInt32 usec)
 {
 	if (g_iofDaemonAlarm > 0)
 		sceKernelCancelAlarm(g_iofDaemonAlarm);
-	g_iofDaemonAlarm = ksceKernelRegisterTimer("SceIofilemgrAlarm", usec,
+	g_iofDaemonAlarm = SceThreadmgrForDriver_C58DF384("SceIofilemgrAlarm", usec,
 						   iofDaemonAlarmHandler, (void *)index);
 }
 
@@ -89,7 +89,7 @@ static SceUInt32 iofDaemonAlarmHandler(void *arg)
 	t->isExpired = 1;
 	g_iofDaemonExpiredTimer = index;
 	t->expireTime = sceKernelGetSystemTimeWide();
-	ksceKernelSetEventFlag(g_iofDaemonEvf, IOF_DAEMON_EVF_ALARM);
+	sceKernelSetEventFlag(g_iofDaemonEvf, IOF_DAEMON_EVF_ALARM);
 	return 0;
 }
 
@@ -105,7 +105,7 @@ int iof_daemon_main(SceSize args, void *argp)
 	while (1) {
 		if (mntOpt == 0 || g_iofDaemonTimer[index].isExpired == 0) {
 			now = sceKernelGetSystemTimeWide();
-			ksceKernelLockFastMutex(&g_iofDaemonLock);
+			lockFastMutex(&g_iofDaemonLock);
 			if (g_iofDaemonTimerNum > 0) {
 				oldest = now;
 				next = -1;
@@ -127,9 +127,9 @@ int iof_daemon_main(SceSize args, void *argp)
 					}
 				}
 			}
-			ksceKernelUnlockFastMutex(&g_iofDaemonLock);
+			sceKernelUnlockFastMutex(&g_iofDaemonLock);
 
-			ret = ksceKernelWaitEventFlag(g_iofDaemonEvf, IOF_DAEMON_EVF_ALARM,
+			ret = sceKernelWaitEventFlag(g_iofDaemonEvf, IOF_DAEMON_EVF_ALARM,
 						      SCE_KERNEL_EVF_WAITMODE_AND |
 						      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL,
 						      NULL);
@@ -184,7 +184,7 @@ int iof_daemon_main(SceSize args, void *argp)
 		goto check;
 
 no_device:
-		ksceKernelLockFastMutex(&g_iofDaemonLock);
+		lockFastMutex(&g_iofDaemonLock);
 		for (i = 0; i < g_iofDaemonTimerNum; i++) {
 			if ((g_iofDaemonTimer[i].mntOpt & mntOpt) == mntOpt) {
 				mntOpt = 0;
@@ -193,7 +193,7 @@ no_device:
 				break;
 			}
 		}
-		ksceKernelUnlockFastMutex(&g_iofDaemonLock);
+		sceKernelUnlockFastMutex(&g_iofDaemonLock);
 keep:
 		time = g_iofDaemonTimer[index].lastWriteTime;
 check:
@@ -245,7 +245,7 @@ void iofile_daemon_start(void)
 	g_iofDaemonInitialDevList = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, 0x100);
 	if (g_iofDaemonInitialDevList == NULL)
 		SCE_DBG_ASSERT(0, 334);
-	ret = ksceKernelInitializeFastMutex(&g_iofDaemonLock, "SceIofileDaemonLock", 2, NULL);
+	ret = sceKernelInitializeFastMutex(&g_iofDaemonLock, "SceIofileDaemonLock", 2, NULL);
 	if (ret < 0)
 		SCE_DBG_ASSERT(0, 342);
 	devlist_initialize(g_iofDaemonInitialDevList);
@@ -264,14 +264,14 @@ void iofile_daemon_start(void)
 	g_iofDaemonTimerNum = 3;
 	iofDaemonSetAlarm(0, IOF_DAEMON_FLUSH_DELAY);
 
-	g_iofDaemonThread = ksceKernelCreateThread("SceIofilemgrDaemon", iof_daemon_main, 0x65,
+	g_iofDaemonThread = sceKernelCreateThread("SceIofilemgrDaemon", iof_daemon_main, 0x65,
 						   0x2000, 0x10000000, 0x80000, NULL);
 	if (g_iofDaemonThread < 0)
 		SCE_DBG_ASSERT(0, 359);
-	g_iofDaemonEvf = ksceKernelCreateEventFlag("SceIofilemgrDaemon", 0, 0, NULL);
+	g_iofDaemonEvf = sceKernelCreateEventFlag("SceIofilemgrDaemon", 0, 0, NULL);
 	if (g_iofDaemonEvf < 0)
 		SCE_DBG_ASSERT(0, 367);
-	ret = ksceKernelStartThread(g_iofDaemonThread, 0, NULL);
+	ret = sceKernelStartThread(g_iofDaemonThread, 0, NULL);
 	if (ret < 0)
 		SCE_DBG_ASSERT(0, 372);
 }
@@ -283,12 +283,12 @@ int iofile_daemon_notify_write(int mntOpt)
 	int ret, index, i;
 
 	now = sceKernelGetSystemTimeWide();
-	ret = ksceKernelLockFastMutex(&g_iofDaemonLock);
+	ret = lockFastMutex(&g_iofDaemonLock);
 	if (ret < 0)
 		return ret;
 	index = iofDaemonRestartTimer(mntOpt, now);
 	if (index < 0) {
-		ksceKernelUnlockFastMutex(&g_iofDaemonLock);
+		sceKernelUnlockFastMutex(&g_iofDaemonLock);
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
 
@@ -307,7 +307,7 @@ int iofile_daemon_notify_write(int mntOpt)
 		iofDaemonSetAlarm(index, diff <= IOF_DAEMON_FLUSH_DELAY ?
 				  IOF_DAEMON_FLUSH_DELAY - (SceUInt32)diff : 0);
 	}
-	ksceKernelUnlockFastMutex(&g_iofDaemonLock);
+	sceKernelUnlockFastMutex(&g_iofDaemonLock);
 	return 0;
 }
 
@@ -341,11 +341,11 @@ void iofile_daemon_notify_mount(int mntId)
 		}
 	}
 found:
-	ksceKernelLockFastMutex(&g_iofDaemonLock);
+	lockFastMutex(&g_iofDaemonLock);
 	for (i = 0; i < g_iofDaemonTimerNum; i++) {
 		if ((mntOpt & g_iofDaemonTimer[i].mntOpt) == mntOpt) {
 			iofile_daemon_notify_write(mntOpt);
-			ksceKernelUnlockFastMutex(&g_iofDaemonLock);
+			sceKernelUnlockFastMutex(&g_iofDaemonLock);
 			return;
 		}
 	}
@@ -355,10 +355,10 @@ found:
 			g_iofDaemonTimer[i].lastWriteTime = sceKernelGetSystemTimeWide();
 			g_iofDaemonTimer[i].isExpired = 0;
 			iofile_daemon_notify_write(mntOpt);
-			ksceKernelUnlockFastMutex(&g_iofDaemonLock);
+			sceKernelUnlockFastMutex(&g_iofDaemonLock);
 			return;
 		}
 	}
 	SCE_DBG_PRINTF_LEVEL(1, 0xf, 677, "unexpected error !! mntId=%x\n", mntId);
-	ksceKernelUnlockFastMutex(&g_iofDaemonLock);
+	sceKernelUnlockFastMutex(&g_iofDaemonLock);
 }

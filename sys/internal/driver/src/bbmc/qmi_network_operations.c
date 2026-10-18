@@ -247,7 +247,7 @@ int bbcmdStartNetwork(BbcmdRequest *request)
 		}
 		completedCommand = 25;
 		node = request->node;
-		result = ksceKernelSetEventFlag(node->control->event, 1U << node->index);
+		result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
 		control = request->node->control;
 		bbcmdUnlockMutex(&control->mutex);
 		if (result < 0)
@@ -328,7 +328,7 @@ int bbcmdStartNetwork(BbcmdRequest *request)
 			node = request->node;
 			control = node->control;
 			request->state = 2;
-			result = ksceKernelSetEventFlag(control->event, 1U << node->index);
+			result = sceKernelSetEventFlag(control->event, 1U << node->index);
 			if (result < 0)
 				goto failedResult;
 		} else {

@@ -86,12 +86,12 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelRegisterIntrHandler
 	ksceKernelEnableIntr
 	ksceKernelReleaseIntrHandler
-	ksceKernelWaitEventFlag
-	ksceKernelCreateEventFlag
+	sceKernelWaitEventFlag
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelDeleteEventFlag
-	ksceKernelPollEventFlag
-	ksceKernelSetEventFlag
+	sceKernelDeleteEventFlag
+	sceKernelPollEventFlag
+	sceKernelSetEventFlag
 	SceDebugForDriver_391B5B74
 	sceKernelIsUncacheAddressInTmpFsGame
 	sceKernelCpuId

@@ -36,13 +36,13 @@ static BbmcTimerState *g_bbmcTimer;
 
 /* Canonical owner work area at the SDK's opaque fast-mutex boundary. */
 extern int bbmcInitializeFastMutex(struct ThreadmgrFastMutex *mutex, const char *name,
-				 int attr, void *opt) __asm__("ksceKernelInitializeFastMutex");
+				 int attr, void *opt) __asm__("sceKernelInitializeFastMutex");
 extern int bbmcFinalizeFastMutex(struct ThreadmgrFastMutex *mutex)
-	__asm__("ksceKernelFinalizeFastMutex");
+	__asm__("sceKernelFinalizeFastMutex");
 extern int bbmcLockFastMutex(struct ThreadmgrFastMutex *mutex)
-	__asm__("ksceKernelLockFastMutex");
+	__asm__("lockFastMutex");
 extern int bbmcUnlockFastMutex(struct ThreadmgrFastMutex *mutex)
-	__asm__("ksceKernelUnlockFastMutex");
+	__asm__("sceKernelUnlockFastMutex");
 
 /* Sony names/NIDs from the ThreadMgr owner export table. */
 
@@ -52,7 +52,7 @@ SceUInt32 alarmHandler(void *arg)
 {
 	BbmcTimerState *state = arg;
 
-	if (ksceKernelSignalSema(state->semaphore, 1) < 0)
+	if (sceKernelSignalSema(state->semaphore, 1) < 0)
 		SCE_DBG_ASSERT(0, 253);
 	state->alarm = 0;
 	return 0;
@@ -67,7 +67,7 @@ int bbmcTimerThread(SceSize args, void *argp)
 	SceUInt32 delay;
 	int ret;
 
-	while (ksceKernelWaitSema(state->semaphore, 1, NULL) >= 0) {
+	while (sceKernelWaitSema(state->semaphore, 1, NULL) >= 0) {
 		if (bbmcLockFastMutex(&g_bbmcTimer->mutex) < 0)
 			continue;
 		if (state->alarm > 0) {
@@ -86,7 +86,7 @@ int bbmcTimerThread(SceSize args, void *argp)
 						sceKernelCancelAlarm(state->alarm);
 						state->alarm = 0;
 					}
-					ret = ksceKernelRegisterTimer("SceBbmcTimerEvent", delay,
+					ret = SceThreadmgrForDriver_C58DF384("SceBbmcTimerEvent", delay,
 								      alarmHandler, state);
 					if (ret >= 0)
 						state->alarm = ret;
@@ -138,17 +138,17 @@ int bbmcInitializeTimer(void)
 	if (ret < 0)
 		goto fail;
 	mutexReady = 1;
-	ret = ksceKernelCreateSema("SceBbmcTimerEvent", 0, 0, 1, NULL);
+	ret = sceKernelCreateSema("SceBbmcTimerEvent", 0, 0, 1, NULL);
 	if (ret < 0)
 		goto fail;
 	g_bbmcTimerState.semaphore = ret;
-	ret = ksceKernelCreateThread("SceBbmcTimerEvent", bbmcTimerThread, 94, 0x2000,
+	ret = sceKernelCreateThread("SceBbmcTimerEvent", bbmcTimerThread, 94, 0x2000,
 				     0x10000000, 0x80000, NULL);
 	if (ret < 0)
 		goto fail;
 	g_bbmcTimerState.thread = ret;
 	state = &g_bbmcTimerState;
-	ret = ksceKernelStartThread(ret, sizeof(state), &state);
+	ret = sceKernelStartThread(ret, sizeof(state), &state);
 	if (ret < 0)
 		goto fail;
 	g_bbmcTimer = &g_bbmcTimerState;
@@ -156,9 +156,9 @@ int bbmcInitializeTimer(void)
 
 fail:
 	if (g_bbmcTimerState.thread > 0)
-		ksceKernelDeleteThread(g_bbmcTimerState.thread);
+		sceKernelDeleteThread(g_bbmcTimerState.thread);
 	if (g_bbmcTimerState.semaphore > 0)
-		ksceKernelDeleteSema(g_bbmcTimerState.semaphore);
+		sceKernelDeleteSema(g_bbmcTimerState.semaphore);
 	if (mutexReady != 0)
 		bbmcFinalizeFastMutex(&g_bbmcTimerState.mutex);
 	return ret;
@@ -177,9 +177,9 @@ int bbmcFinalizeTimer(void)
 		g_bbmcTimerState.alarm = 0;
 	}
 	sceKernelCancelSema(g_bbmcTimerState.semaphore, 0, NULL);
-	ksceKernelWaitThreadEnd(g_bbmcTimerState.thread, NULL, NULL);
-	ksceKernelDeleteThread(g_bbmcTimerState.thread);
-	ksceKernelDeleteSema(g_bbmcTimerState.semaphore);
+	sceKernelWaitThreadEnd(g_bbmcTimerState.thread, NULL, NULL);
+	sceKernelDeleteThread(g_bbmcTimerState.thread);
+	sceKernelDeleteSema(g_bbmcTimerState.semaphore);
 	bbmcFinalizeFastMutex(&g_bbmcTimerState.mutex);
 	for (node = g_bbmcTimerState.head; node != NULL; node = next) {
 		next = node->next;
@@ -316,7 +316,7 @@ link_after:
 register_alarm:
 	deadline = (SceUInt32)head->deadline;
 	now = sceKernelGetSystemTimeWide();
-	ret = ksceKernelRegisterTimer("SceBbmcTimerEvent", deadline - (SceUInt32)now,
+	ret = SceThreadmgrForDriver_C58DF384("SceBbmcTimerEvent", deadline - (SceUInt32)now,
 				      alarmHandler, g_bbmcTimer);
 	if (ret >= 0) {
 		g_bbmcTimer->alarm = ret;
@@ -360,7 +360,7 @@ int bbmcTimerCancelHandler(int id)
 			delay = (SceUInt32)(g_bbmcTimer->head->deadline - now);
 		else
 			delay = 200;
-		ret = ksceKernelRegisterTimer("SceBbmcTimerEvent", delay, alarmHandler,
+		ret = SceThreadmgrForDriver_C58DF384("SceBbmcTimerEvent", delay, alarmHandler,
 					      g_bbmcTimer);
 		if (ret < 0) {
 			SCE_DBG_ASSERT(0, 640);
@@ -387,7 +387,7 @@ int bbmcTimerCancelHandler(int id)
 	if (delay == 0)
 		goto clear_alarm;
 register_alarm:
-	ret = ksceKernelRegisterTimer("SceBbmcTimerEvent", delay, alarmHandler, g_bbmcTimer);
+	ret = SceThreadmgrForDriver_C58DF384("SceBbmcTimerEvent", delay, alarmHandler, g_bbmcTimer);
 	if (ret < 0) {
 		SCE_DBG_ASSERT(0, 659);
 	} else {

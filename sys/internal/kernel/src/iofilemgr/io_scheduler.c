@@ -42,13 +42,13 @@ int sceIoSetProcessDefaultPriorityInternal(SceInt32 priority, int fromKernel)
 	SceUID pid;
 	int nonGame, ret;
 
-	pid = ksceKernelGetProcessIdFromTLS();
+	pid = SceThreadmgrForDriver_FA54D49A();
 	syscall = sceSyscallEnter();
-	if (SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(ksceKernelGetProcessIdFromTLS()) == 1 ||
+	if (SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(SceThreadmgrForDriver_FA54D49A()) == 1 ||
 	    isSystemIoProcess(pid)) {
 		defaultPriority = &g_ioDefaultPriority;
 	} else {
-		ret = ksceKernelGetProcessLocalStorageAddrForPid(ksceKernelGetProcessIdFromTLS(),
+		ret = ksceKernelGetProcessLocalStorageAddrForPid(SceThreadmgrForDriver_FA54D49A(),
 								 g_iofilemgrKplsKey, (void **)&kpls,
 								 1);
 		if (ret < 0)
@@ -56,7 +56,7 @@ int sceIoSetProcessDefaultPriorityInternal(SceInt32 priority, int fromKernel)
 		defaultPriority = &kpls->priority;
 	}
 
-	if (SceSblACMgrForKernel_570D6AD3(ksceKernelGetProcessIdFromTLS()) == 1) {
+	if (SceSblACMgrForKernel_570D6AD3(SceThreadmgrForDriver_FA54D49A()) == 1) {
 		if (fromKernel == 1) {
 			if (SceThreadmgrForDriver_1096042E(0) == 0 &&
 			    !IO_PRIORITY_IS_CDIALOG(priority)) {
@@ -71,7 +71,7 @@ int sceIoSetProcessDefaultPriorityInternal(SceInt32 priority, int fromKernel)
 				goto set;
 			}
 		} else {
-			nonGame = SceSblACMgrForKernel_3F99279F(ksceKernelGetProcessIdFromTLS());
+			nonGame = SceSblACMgrForKernel_3F99279F(SceThreadmgrForDriver_FA54D49A());
 			priority += IO_PRIORITY_GAME_BASE;
 			if (nonGame == 1) {
 				if (priority != IO_PRIORITY_NON_GAME)
@@ -110,12 +110,12 @@ SceInt32 sceIoGetProcessDefaultPriorityInternal(int fromKernel)
 	SceInt32 priority;
 
 	syscall = sceSyscallEnter();
-	if (SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(ksceKernelGetProcessIdFromTLS()) == 1 ||
-	    ksceKernelGetProcessIdFromTLS() == SCE_KERNEL_DUMMY_PROCESS_GAME_ID ||
-	    ksceKernelGetProcessIdFromTLS() == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID) {
+	if (SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(SceThreadmgrForDriver_FA54D49A()) == 1 ||
+	    SceThreadmgrForDriver_FA54D49A() == SCE_KERNEL_DUMMY_PROCESS_GAME_ID ||
+	    SceThreadmgrForDriver_FA54D49A() == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID) {
 		priority = g_ioDefaultPriority;
 	} else {
-		priority = ksceKernelGetProcessLocalStorageAddrForPid(ksceKernelGetProcessIdFromTLS(),
+		priority = ksceKernelGetProcessLocalStorageAddrForPid(SceThreadmgrForDriver_FA54D49A(),
 								      g_iofilemgrKplsKey,
 								      (void **)&kpls, 1);
 		if (priority < 0) {
@@ -125,11 +125,11 @@ SceInt32 sceIoGetProcessDefaultPriorityInternal(int fromKernel)
 		priority = kpls->priority;
 	}
 
-	if (SceSblACMgrForKernel_570D6AD3(ksceKernelGetProcessIdFromTLS()) == 1) {
+	if (SceSblACMgrForKernel_570D6AD3(SceThreadmgrForDriver_FA54D49A()) == 1) {
 		if (fromKernel == 1) {
 			SCE_DBG_ASSERT(IO_PRIORITY_IS_SYSTEM(priority) ||
 				       (SceUInt32)(priority - 6) <= 8, 183);
-		} else if (SceSblACMgrForKernel_3F99279F(ksceKernelGetProcessIdFromTLS()) == 1) {
+		} else if (SceSblACMgrForKernel_3F99279F(SceThreadmgrForDriver_FA54D49A()) == 1) {
 			SCE_DBG_ASSERT(priority == IO_PRIORITY_NON_GAME, 198);
 			priority -= IO_PRIORITY_GAME_BASE;
 		} else {
@@ -156,7 +156,7 @@ int sceIoSetThreadDefaultPriorityInternal(SceInt32 priority, int fromKernel)
 
 	syscall = sceSyscallEnter();
 	tls = getIofilemgrTls();
-	if (SceSblACMgrForKernel_570D6AD3(ksceKernelGetProcessIdFromTLS()) == 1) {
+	if (SceSblACMgrForKernel_570D6AD3(SceThreadmgrForDriver_FA54D49A()) == 1) {
 		if (fromKernel == 1) {
 			if (SceThreadmgrForDriver_1096042E(0) == 0 &&
 			    !IO_PRIORITY_IS_CDIALOG(priority)) {
@@ -171,7 +171,7 @@ int sceIoSetThreadDefaultPriorityInternal(SceInt32 priority, int fromKernel)
 				goto set;
 			}
 		} else {
-			nonGame = SceSblACMgrForKernel_3F99279F(ksceKernelGetProcessIdFromTLS());
+			nonGame = SceSblACMgrForKernel_3F99279F(SceThreadmgrForDriver_FA54D49A());
 			priority += IO_PRIORITY_GAME_BASE;
 			if (nonGame == 1) {
 				if (priority != IO_PRIORITY_NON_GAME)
@@ -209,7 +209,7 @@ SceInt32 sceIoGetThreadDefaultPriorityInternal(int fromKernel)
 	SceInt32 priority;
 	SceUID pid;
 
-	pid = ksceKernelGetProcessIdFromTLS();
+	pid = SceThreadmgrForDriver_FA54D49A();
 	syscall = sceSyscallEnter();
 	tls = getIofilemgrTls();
 	if (tls == NULL || (priority = tls->priority) == IO_PRIORITY_UNSET) {
@@ -217,7 +217,7 @@ SceInt32 sceIoGetThreadDefaultPriorityInternal(int fromKernel)
 			priority = g_ioDefaultPriority;
 		} else {
 			priority = ksceKernelGetProcessLocalStorageAddrForPid(
-				ksceKernelGetProcessIdFromTLS(), g_iofilemgrKplsKey, (void **)&kpls, 1);
+				SceThreadmgrForDriver_FA54D49A(), g_iofilemgrKplsKey, (void **)&kpls, 1);
 			if (priority < 0) {
 				sceSyscallLeave(syscall);
 				return priority;
@@ -230,7 +230,7 @@ SceInt32 sceIoGetThreadDefaultPriorityInternal(int fromKernel)
 		if (fromKernel == 1) {
 			if (!IO_PRIORITY_IS_SYSTEM(priority) && (SceUInt32)(priority - 6) > 8)
 				priority = SCE_ERROR_ERRNO_EINVAL;
-		} else if (SceSblACMgrForKernel_3F99279F(ksceKernelGetProcessIdFromTLS()) == 1) {
+		} else if (SceSblACMgrForKernel_3F99279F(SceThreadmgrForDriver_FA54D49A()) == 1) {
 			SCE_DBG_ASSERT(priority == IO_PRIORITY_NON_GAME, 334);
 			priority -= IO_PRIORITY_GAME_BASE;
 		} else {
@@ -261,7 +261,7 @@ int sceIoSetPriorityInternal(SceUID fd, SceInt32 priority, int fromKernel)
 	if (ret != 0)
 		goto out;
 
-	if (SceSblACMgrForKernel_570D6AD3(ksceKernelGetProcessIdFromTLS()) == 1) {
+	if (SceSblACMgrForKernel_570D6AD3(SceThreadmgrForDriver_FA54D49A()) == 1) {
 		if (fromKernel == 1) {
 			if (SceThreadmgrForDriver_1096042E(0) == 0 &&
 			    !IO_PRIORITY_IS_CDIALOG(priority)) {
@@ -271,7 +271,7 @@ int sceIoSetPriorityInternal(SceUID fd, SceInt32 priority, int fromKernel)
 			}
 			if (!IO_PRIORITY_IS_SYSTEM(priority) && (SceUInt32)(priority - 6) > 8)
 				goto invalid;
-		} else if (SceSblACMgrForKernel_3F99279F(ksceKernelGetProcessIdFromTLS()) == 1) {
+		} else if (SceSblACMgrForKernel_3F99279F(SceThreadmgrForDriver_FA54D49A()) == 1) {
 			if (priority + IO_PRIORITY_GAME_BASE != IO_PRIORITY_NON_GAME) {
 				ret = SCE_ERROR_ERRNO_EINVAL;
 				SCE_DBG_ASSERT(info.priority == IO_PRIORITY_NON_GAME, 401);
@@ -312,13 +312,13 @@ SceInt32 sceIoGetPriorityInternal(SceUID fd, int fromKernel)
 	syscall = sceSyscallEnter();
 	ret = getFileSchedParam(fd, &info, 0);
 	if (ret == 0) {
-		if (SceSblACMgrForKernel_570D6AD3(ksceKernelGetProcessIdFromTLS()) == 1) {
+		if (SceSblACMgrForKernel_570D6AD3(SceThreadmgrForDriver_FA54D49A()) == 1) {
 			if (fromKernel == 1) {
 				SCE_DBG_ASSERT(IO_PRIORITY_IS_SYSTEM(info.priority) ||
 					       (SceUInt32)(info.priority - 6) <= 8, 452);
 				ret = info.priority;
 			} else {
-				if (SceSblACMgrForKernel_3F99279F(ksceKernelGetProcessIdFromTLS()) == 1)
+				if (SceSblACMgrForKernel_3F99279F(SceThreadmgrForDriver_FA54D49A()) == 1)
 					SCE_DBG_ASSERT(info.priority == IO_PRIORITY_NON_GAME, 472);
 				else
 					SCE_DBG_ASSERT((SceUInt32)(info.priority - IO_PRIORITY_GAME_BASE) <=
@@ -374,12 +374,12 @@ SceInt32 getThreadIoPriority(void)
 	if (tls != NULL && tls->priority != IO_PRIORITY_UNSET)
 		return tls->priority;
 
-	if (SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(ksceKernelGetProcessIdFromTLS()) == 1 ||
-	    ksceKernelGetProcessIdFromTLS() == SCE_KERNEL_DUMMY_PROCESS_GAME_ID ||
-	    ksceKernelGetProcessIdFromTLS() == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID)
+	if (SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(SceThreadmgrForDriver_FA54D49A()) == 1 ||
+	    SceThreadmgrForDriver_FA54D49A() == SCE_KERNEL_DUMMY_PROCESS_GAME_ID ||
+	    SceThreadmgrForDriver_FA54D49A() == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID)
 		return g_ioDefaultPriority;
 
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(ksceKernelGetProcessIdFromTLS(),
+	ret = ksceKernelGetProcessLocalStorageAddrForPid(SceThreadmgrForDriver_FA54D49A(),
 							 g_iofilemgrKplsKey, (void **)&kpls, 1);
 	if (ret < 0)
 		return ret;
@@ -441,7 +441,7 @@ int getPathMntOpt(const char *path, int full)
 				return 0;
 		} else if (full == 1) {
 			param.path = devName;
-			return ksceKernelRunWithStack(0x2000,
+			return SceThreadmgrForDriver_E54FD746(0x2000,
 						      (int (*)(void *))vfs_get_vnode_mnt_opt,
 						      &param);
 		}
@@ -458,12 +458,12 @@ int getPathMntOpt(const char *path, int full)
 		strncpy(dir, path, len);
 		param.path = dir;
 		dir[len] = '\0';
-		ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfs_get_vnode_mnt_opt, &param);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfs_get_vnode_mnt_opt, &param);
 		sceKernelFreeHeapMemory(g_ioSchedHeap, dir);
 		return ret;
 	}
 	param.path = path;
-	return ksceKernelRunWithStack(0x2000, (int (*)(void *))vfs_get_vnode_mnt_opt, &param);
+	return SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfs_get_vnode_mnt_opt, &param);
 }
 
 int sceIoSchedulerMkdir(const char *dir, SceMode mode, int mntOpt)

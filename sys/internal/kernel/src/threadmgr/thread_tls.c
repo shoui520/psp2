@@ -11,14 +11,13 @@
 #include <sysmem/sysmem.h>
 #include "syscall_context.h"
 #include <sysmem/sysroot.h>
+#include <threadmgr/threadmgr.h>
 
 #define TLS_SLOT_FIRST			2
 #define TLS_SLOT_COUNT			8
 #define SCE_KERNEL_ERROR_TLS_FULL	0x80028081	/* PLACEHOLDER: names */
 #define SCE_KERNEL_ERROR_TLS_NOT_ACTIVE	0x80028082
 #define SCE_KERNEL_ERROR_TLS_BUSY	0x80028083
-
-extern SceUID ksceKernelGetThreadId(void);
 
 _Static_assert(sizeof(struct ThreadmgrTlsSlot) == 0x14, "TLS descriptor stride");
 
@@ -94,7 +93,7 @@ void *SceThreadmgrForDriver_89CA5698(uint32_t slot, SceUID threadId, int create)
 		memory = currentThreadContext()->tlsSlotMemory.slot[slot];
 		if (memory != NULL)
 			return memory;
-		threadId = ksceKernelGetThreadId();
+		threadId = sceKernelGetThreadId();
 	}
 	intr = SceCpuForDriver_821FC0EE();
 	if (SceSysmemForDriver_00ED6C14(threadId,

@@ -54,7 +54,7 @@ int bbmcCreateMailbox(BbmcMailbox **mailbox)
 		return 0x80330005;
 	g_bbmcMailboxSlot.allocated = 1;
 	*mailbox = &g_bbmcMailboxSlot.mailbox;
-	ret = ksceKernelCreateSema("SceBbmcMbx", 0, 0, 0xffff, NULL);
+	ret = sceKernelCreateSema("SceBbmcMbx", 0, 0, 0xffff, NULL);
 	if (ret < 0) {
 		g_bbmcMailboxSlot.allocated = 0;
 	} else {
@@ -74,7 +74,7 @@ unsigned int bbmcDeleteMailbox(BbmcMailbox *mailbox)
 	if (mailbox != &g_bbmcMailboxSlot.mailbox)
 		return 0x80330002;
 	g_bbmcMailboxSlot.allocated = 0;
-	ksceKernelDeleteSema(g_bbmcMailboxSlot.mailbox.semaphore);
+	sceKernelDeleteSema(g_bbmcMailboxSlot.mailbox.semaphore);
 	return 0;
 }
 
@@ -95,7 +95,7 @@ int bbmcSendMailbox(BbmcMailbox *mailbox, BbmcQueueEntry *entry)
 		mailbox->tail = entry;
 	}
 	mailbox->count++;
-	ksceKernelSignalSema(mailbox->semaphore, 1);
+	sceKernelSignalSema(mailbox->semaphore, 1);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&mailbox->lock, intr);
 	return 0;
 }
@@ -108,7 +108,7 @@ int bbmcReceiveMailbox(BbmcMailbox *mailbox, BbmcQueueEntry **entry, SceUInt *ti
 
 	if (entry == NULL)
 		return 0x80330002;
-	ret = ksceKernelWaitSema(mailbox->semaphore, 1, timeout);
+	ret = sceKernelWaitSema(mailbox->semaphore, 1, timeout);
 	if (ret < 0)
 		return ret;
 	intr = SceCpuForDriver_D32ACE9E(&mailbox->lock);

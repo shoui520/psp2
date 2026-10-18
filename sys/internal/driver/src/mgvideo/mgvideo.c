@@ -15,11 +15,11 @@ int SceMgVideo_C62CA5A7(int type, int flags, int options)
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = createVideoContext(type, flags, options);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -40,11 +40,11 @@ int SceMgVideo_D6EE7B53(int handle)
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = releaseVideoContext(handle);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -65,11 +65,11 @@ int waitUserVideoRecord(int handle, int index, int flags)
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = waitVideoRecord(handle, index, flags);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -90,11 +90,11 @@ int signalUserVideoRecord(int handle, int index)
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = signalVideoRecord(handle, index);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -115,11 +115,11 @@ int initializeUserVideoKeyring(int handle)
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = initializeVideoKeyring(handle);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -141,11 +141,11 @@ int SceMgVideo_18D553EB(int handle, MgVideoFileGroupInfo *output,
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = enumerateVideoFileGroups(handle, output, size);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -168,12 +168,12 @@ int authorizeVideoRecord(int handle, unsigned int index,
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = authorizeUserVideoRecord(handle, index,
 							     recordInput, input);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -197,13 +197,13 @@ int openUserVideoRecordStream(int handle, unsigned int index, int blockNumber,
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = openVideoRecordStream(handle, index,
 							  blockNumber, keyring,
 							  recordInput, input);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -224,11 +224,11 @@ int closeUserVideoRecordStream(int handle)
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = closeVideoRecordStream(handle);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -249,11 +249,11 @@ int openUserVideoCipherChannel(int handle, const MgVideoBoxHeader *input, int si
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = openVideoCipherChannel(handle, input, size);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -274,11 +274,11 @@ int closeUserVideoCipherChannel(int handle)
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = closeVideoCipherChannel(handle);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -299,11 +299,11 @@ int isUserVideoCipherKeySelected(int handle, unsigned int selection)
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = isVideoCipherKeySelected(handle, selection);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -325,12 +325,12 @@ int decryptUserVideoCipherBuffer(unsigned int handle, void *output,
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = decryptVideoCipherBuffer(handle, output,
 							     input, size);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -353,13 +353,13 @@ int decryptUserVideoCipherStream(unsigned int handle, void *output,
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = decryptVideoCipherStream(handle, output,
 							     input, size, totalSize,
 							     processed);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -382,12 +382,12 @@ int encryptUserVideoCipherBuffer(unsigned int handle, void *output,
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = encryptVideoCipherBuffer(handle, output,
 							     input, size, blockIndex);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -411,13 +411,13 @@ int encryptUserVideoCipherStream(unsigned int handle, void *output,
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = encryptVideoCipherStream(handle, output,
 							     input, size, totalSize,
 							     processed, blockIndex);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -441,13 +441,13 @@ int removeVideoRecordBlocks(int handle, unsigned int index,
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = removeUserVideoRecordBlocks(handle, index,
 								recordInput, blockNumbers,
 								blockCount, input);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -468,11 +468,11 @@ int saveUserVideoKeyring(int handle)
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = saveVideoKeyring(handle);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -493,11 +493,11 @@ int resetUserVideoKeyring(int handle)
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = resetVideoKeyring(handle);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -518,11 +518,11 @@ int SceMgVideo_22D74C37(int handle, const MagicGateFileIdentity *input)
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = selectVideoFileGroup(handle, input);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -544,12 +544,12 @@ int queryUserVideoPlaybackInfo(int handle, void *output, unsigned int outputSize
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = getUserVideoPlaybackInfo(handle, output,
 							     outputSize, input, mode);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -570,11 +570,11 @@ int exportUserVideoEkb2Record(int handle, const MgVideoUserBuffer *output)
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = copyVideoEkb2RecordToUser(handle, output);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -599,13 +599,13 @@ int createUserVideoKeyring(int handle, const MgVideoUserBuffer *output,
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = generateUserVideoKeyring(handle, output,
 							     protection, avOut,
 							     parameters, mode);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -630,14 +630,14 @@ int replaceVideoKeyring(int handle, unsigned int index, int blockNumber,
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = replaceUserVideoKeyring(handle, index,
 							    blockNumber, keyring,
 							    input, recordInput,
 							    replacementInput);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -664,7 +664,7 @@ int updateVideoPlaybackPeriod(int handle, unsigned int index, int blockNumber,
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = updateUserVideoPlaybackPeriod(handle, index,
 								 blockNumber, keyring,
@@ -672,7 +672,7 @@ int updateVideoPlaybackPeriod(int handle, unsigned int index, int blockNumber,
 								 replacementInput,
 								 optionInput, extensionInput);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -693,11 +693,11 @@ int SceMgVideoForMiniApp_3EBD4502(int type, int flags, int options)
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = createVideoContext(type, flags, options);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -718,11 +718,11 @@ int SceMgVideoForMiniApp_02E5F373(int handle)
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = releaseVideoContext(handle);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -744,11 +744,11 @@ int SceMgVideoForMiniApp_EA3A897A(int handle, MgVideoFileGroupInfo *output,
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = enumerateVideoFileGroups(handle, output, size);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;
@@ -769,11 +769,11 @@ int SceMgVideoForMiniApp_CF0D2A06(int handle, const MagicGateFileIdentity *input
 	if (SceSblACMgrForDriver_A27E47A7(0)) {
 		status = lockVideoDriver();
 		if (status >= 0) {
-			status = ksceKernelSetPermission(64);
+			status = sceKernelSetThreadAccessLevel(64);
 			if (status >= 0) {
 				int result = selectVideoFileGroup(handle, input);
 
-				ksceKernelSetPermission(status);
+				sceKernelSetThreadAccessLevel(status);
 				unlockVideoDriver();
 				sceSyscallLeave(user);
 				return result;

@@ -86,22 +86,22 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	__strlcpy_chk
 	strlen
-	ksceKernelDeleteMutex
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
+	sceKernelDeleteMutex
+	sceKernelLockMutex
+	sceKernelUnlockMutex
 	SceThreadmgrForDriver_332E127C
-	ksceKernelGetThreadId
-	ksceKernelSignalCondAll
+	sceKernelGetThreadId
+	sceKernelSignalCondAll
 	SceThreadmgrForDriver_89CA5698
 	SceThreadmgrForDriver_8C3C1F78
 	sceKernelExtendKernelStackWide
-	ksceKernelSignalCond
-	ksceKernelDeleteCond
+	sceKernelSignalCond
+	sceKernelDeleteCond
 	SceThreadmgrForDriver_B645C7EF
-	ksceKernelWaitCond
-	ksceKernelCreateCond
-	ksceKernelGetProcessIdFromTLS
-	ksceKernelCreateMutex
+	sceKernelWaitCond
+	sceKernelCreateCond
+	SceThreadmgrForDriver_FA54D49A
+	sceKernelCreateMutex
 	ksceKernelCreateProcessLocalStorage
 	SceProcessmgrForDriver_5468892A
 	sceKernelFreeRemoteProcessHeap

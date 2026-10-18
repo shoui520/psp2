@@ -133,15 +133,15 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelRegisterIntrHandler
 	ksceKernelEnableSubIntr
 	ksceKernelRegisterSubIntrHandler
-	ksceKernelWaitEventFlag
-	ksceKernelFinalizeFastMutex
-	ksceKernelStartThread
-	ksceKernelCreateEventFlag
-	ksceKernelLockFastMutex
-	ksceKernelInitializeFastMutex
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
+	sceKernelWaitEventFlag
+	sceKernelFinalizeFastMutex
+	sceKernelStartThread
+	sceKernelCreateEventFlag
+	lockFastMutex
+	sceKernelInitializeFastMutex
+	sceKernelCreateThread
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
 	ksceIoUmount
 	sceIoSetMountEvent
 	vfsNotifyDeviceStatus

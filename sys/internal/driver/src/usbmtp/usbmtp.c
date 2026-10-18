@@ -249,7 +249,7 @@ static void detach(void *userData)
 {
 	unsigned int intr;
 
-	ksceKernelClearEventFlag(s_mtp.event, ~MTP_EVENT_ATTACHED);
+	sceKernelClearEventFlag(s_mtp.event, ~MTP_EVENT_ATTACHED);
 	intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
 	s_mtp.busFlags &= ~(MTP_BUS_ATTACHED | MTP_BUS_RESET | MTP_BUS_CANCEL);
 	s_mtp.transferFlags &= ~(MTP_TRANSFER_SENDING | MTP_TRANSFER_RECEIVING |
@@ -298,10 +298,10 @@ static int Start(int size, void *args, void *userData)
 {
 	SceUInt32 param[16];
 
-	ksceKernelClearEventFlag(s_mtp.event, ~MTP_EVENT_CONFIGURED);
-	ksceKernelClearEventFlag(s_mtp.event, ~MTP_EVENT_SEND_FAILED);
-	ksceKernelClearEventFlag(s_mtp.event, ~MTP_EVENT_RECV_FAILED);
-	ksceKernelClearEventFlag(s_mtp.event, ~MTP_EVENT_NOTIFY_FAILED);
+	sceKernelClearEventFlag(s_mtp.event, ~MTP_EVENT_CONFIGURED);
+	sceKernelClearEventFlag(s_mtp.event, ~MTP_EVENT_SEND_FAILED);
+	sceKernelClearEventFlag(s_mtp.event, ~MTP_EVENT_RECV_FAILED);
+	sceKernelClearEventFlag(s_mtp.event, ~MTP_EVENT_NOTIFY_FAILED);
 	initializeRequests();
 	s_mtp.ready = 1;
 	s_mtp.transferFlags |= MTP_TRANSFER_STARTED;
@@ -333,9 +333,9 @@ static int attach(int usbVersion, void *userData)
 	s_mtp.phase = MTP_PHASE_IDLE;
 	s_mtp.busFlags = MTP_BUS_ATTACHED;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
-	ksceKernelSetEventFlag(s_mtp.event, MTP_EVENT_ATTACHED);
-	ksceKernelSetEventFlag(s_mtp.event, MTP_EVENT_CONFIGURED);
-	ret = ksceKernelClearEventFlag(s_mtp.event, ~MTP_EVENT_CONFIGURED);
+	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_ATTACHED);
+	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_CONFIGURED);
+	ret = sceKernelClearEventFlag(s_mtp.event, ~MTP_EVENT_CONFIGURED);
 	s_mtp.transaction = -1;
 	s_mtp.cancelled = -1;
 	s_mtp.cancelPending = 0;
@@ -383,30 +383,30 @@ static void completeCancel(SceUdcdDeviceRequest *req)
 static void completeNotify(SceUdcdDeviceRequest *req)
 {
 	if (req->returnCode >= 0) {
-		ksceKernelSetEventFlag(s_mtp.event, MTP_EVENT_NOTIFIED);
+		sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_NOTIFIED);
 		return;
 	}
-	ksceKernelSetEventFlag(s_mtp.event, MTP_EVENT_NOTIFY_FAILED);
+	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_NOTIFY_FAILED);
 	req->returnCode = 0;
 }
 
 static void completeRecv(SceUdcdDeviceRequest *req)
 {
 	if (req->returnCode >= 0) {
-		ksceKernelSetEventFlag(s_mtp.event, MTP_EVENT_RECEIVED);
+		sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_RECEIVED);
 		return;
 	}
-	ksceKernelSetEventFlag(s_mtp.event, MTP_EVENT_RECV_FAILED);
+	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_RECV_FAILED);
 	req->returnCode = 0;
 }
 
 static void completeSend(SceUdcdDeviceRequest *req)
 {
 	if (req->returnCode >= 0) {
-		ksceKernelSetEventFlag(s_mtp.event, MTP_EVENT_SENT);
+		sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_SENT);
 		return;
 	}
-	ksceKernelSetEventFlag(s_mtp.event, MTP_EVENT_SEND_FAILED);
+	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_SEND_FAILED);
 	req->returnCode = 0;
 }
 
@@ -471,7 +471,7 @@ static int _sceUsbMtpInitTask(void *args)
 	s_mtp.controlBuffer = base + 192;
 	s_mtp.data = (MtpContainer *)(base + 320);
 	s_mtp.receiveBuffer = base + 832;
-	ksceKernelSetEventFlag(s_mtp.event, MTP_EVENT_INITIALIZED);
+	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_INITIALIZED);
 	return 1;
 }
 
@@ -487,7 +487,7 @@ static inline int WaitTransfer(SceUdcdDeviceRequest *req, SceUdcdEndpoint *endpo
 	unsigned int bits;
 	int ret;
 
-	ret = ksceKernelWaitEventFlag(s_mtp.event, done | failed,
+	ret = sceKernelWaitEventFlag(s_mtp.event, done | failed,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL,
 				      &bits, bounded ? &timeout : NULL);
@@ -500,7 +500,7 @@ static inline int WaitTransfer(SceUdcdDeviceRequest *req, SceUdcdEndpoint *endpo
 	timeout = MTP_WAIT_TIMEOUT;
 	ksceUdcdClearFIFO(endpoint);
 	if (ksceUdcdReqCancelAll(endpoint) == SCE_UDCD_ERROR_DRIVER_IN_PROGRESS)
-		ksceKernelWaitEventFlag(s_mtp.event, failed, SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL,
+		sceKernelWaitEventFlag(s_mtp.event, failed, SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL,
 					NULL, &timeout);
 	return MTP_TIMEOUT;
 }
@@ -1217,7 +1217,7 @@ int SceUsbMtpForDriver_76D707B1(SceUInt32 timeout)
 	if (!s_mtp.ready)
 		return MTP_UNAVAILABLE;
 	uint32_t bits;
-	int ret = ksceKernelWaitEventFlag(s_mtp.event, MTP_EVENT_ATTACHED | MTP_EVENT_CONFIGURED,
+	int ret = sceKernelWaitEventFlag(s_mtp.event, MTP_EVENT_ATTACHED | MTP_EVENT_CONFIGURED,
 					  SCE_KERNEL_EVF_WAITMODE_OR, &bits, &timeout);
 	if (bits & MTP_EVENT_CONFIGURED)
 		return MTP_CANCELLED;
@@ -1265,7 +1265,7 @@ int sceUsbMtpStart(void)
 {
 	if (s_mtp.ready)
 		return MTP_BUSY;
-	if (ksceKernelWaitEventFlag(s_mtp.event, MTP_EVENT_INITIALIZED, SCE_KERNEL_EVF_WAITMODE_OR,
+	if (sceKernelWaitEventFlag(s_mtp.event, MTP_EVENT_INITIALIZED, SCE_KERNEL_EVF_WAITMODE_OR,
 				    NULL, NULL) < 0)
 		return MTP_TIMEOUT;
 	const char *driver = "USBDeviceControllerDriver";
@@ -1302,16 +1302,16 @@ int SceUsbMtpForDriver_08CD359F(void)
 	if (ksceUdcdStop("USB_MTP_Driver", 0, 0) < 0)
 		return MTP_PROTOCOL;
 	ksceUdcdStop("USBDeviceControllerDriver", 0, 0);
-	ksceKernelSetEventFlag(s_mtp.event, MTP_EVENT_SEND_FAILED);
-	ksceKernelSetEventFlag(s_mtp.event, MTP_EVENT_RECV_FAILED);
-	ksceKernelSetEventFlag(s_mtp.event, MTP_EVENT_NOTIFY_FAILED);
-	ksceKernelSetEventFlag(s_mtp.event, MTP_EVENT_CONFIGURED);
+	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_SEND_FAILED);
+	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_RECV_FAILED);
+	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_NOTIFY_FAILED);
+	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_CONFIGURED);
 	s_mtp.transferFlags &= ~(MTP_TRANSFER_SENDING | MTP_TRANSFER_RECEIVING |
 				 MTP_TRANSFER_IN_STALLED | MTP_TRANSFER_OUT_STALLED);
 	s_mtp.busFlags &= ~7U;
 	s_mtp.status &= ~1U;
-	ksceKernelClearEventFlag(s_mtp.event, ~1U);
-	ksceKernelClearEventFlag(s_mtp.event, ~MTP_EVENT_CONFIGURED);
+	sceKernelClearEventFlag(s_mtp.event, ~1U);
+	sceKernelClearEventFlag(s_mtp.event, ~MTP_EVENT_CONFIGURED);
 	return 0;
 }
 
@@ -1320,7 +1320,7 @@ int _sceUsbMtpModuleStart(unsigned arglen, const char *argp)
 	memset(&s_mtp.port, 0, offsetof(struct UsbMtp, interface) - offsetof(struct UsbMtp, port));
 	s_mtp.port = 2;
 	s_mtp.product = 0x4e4;
-	s_mtp.event = ksceKernelCreateEventFlag("SceUsbMtp", 0x9000, 0, 0);
+	s_mtp.event = sceKernelCreateEventFlag("SceUsbMtp", 0x9000, 0, 0);
 	if (s_mtp.event < 0) {
 		SCE_DBG_PRINTF(0, 2570, "[%s%-28s] Err(%4d) cannot create event flag\n",
 			"usbmtp:", __func__, 2570);
@@ -1372,9 +1372,9 @@ int _sceUsbMtpModuleStart(unsigned arglen, const char *argp)
 	if (ksceUdcdRegister(&s_mtp.driver) < 0) {
 		SCE_DBG_PRINTF(0, 2594, "[%s%-28s] Err(%4d) cannot register protocol driver\n",
 			"usbmtp:", __func__, 2594);
-		ksceKernelDeleteEventFlag(s_mtp.event);
+		sceKernelDeleteEventFlag(s_mtp.event);
 		return 2;
 	}
-	ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceUsbMtpInit", _sceUsbMtpInitTask, 0);
+	sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceUsbMtpInit", _sceUsbMtpInitTask, 0);
 	return 0;
 }

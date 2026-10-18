@@ -31,7 +31,7 @@ int removeVideoRecord(MgVideoContext *context, int index, void *record)
 
 int module_start(SceSize arglen, const void *argp)
 {
-	int mutex = ksceKernelCreateMutex("SceMgVideoDrv", 0x8002, 0, 0);
+	int mutex = sceKernelCreateMutex("SceMgVideoDrv", 0x8002, 0, 0);
 
 	if (mutex < 0)
 		return 2;
@@ -42,7 +42,7 @@ int module_start(SceSize arglen, const void *argp)
 int module_stop(SceSize arglen, const void *argp)
 {
 	if (driverMutex > 0) {
-		ksceKernelDeleteMutex(driverMutex);
+		sceKernelDeleteMutex(driverMutex);
 		driverMutex = -1;
 	}
 	return 0;
@@ -139,7 +139,7 @@ int createVideoContext(int type, int flags, int options)
 		contextHeaps[owner] = -1;
 		goto unreference;
 	}
-	result = ksceKernelCreateEventFlag("SceMgVideoDrv", 0x9000, -1, 0);
+	result = sceKernelCreateEventFlag("SceMgVideoDrv", 0x9000, -1, 0);
 	if (result < 0) {
 		sceKernelFreeHeapMemory(heap, context);
 		sceKernelDeleteHeap(heap);
@@ -232,7 +232,7 @@ destroy:
 		owner = 1;
 	else
 		goto unreference;
-	ksceKernelDeleteEventFlag(context->eventFlag);
+	sceKernelDeleteEventFlag(context->eventFlag);
 	videoContexts[owner] = 0;
 	sceKernelFreeHeapMemory(contextHeaps[owner], context);
 	sceKernelDeleteHeap(contextHeaps[owner]);
@@ -310,7 +310,7 @@ unreference:
 					owner = 1;
 				else
 					goto reload;
-				ksceKernelDeleteEventFlag(context->eventFlag);
+				sceKernelDeleteEventFlag(context->eventFlag);
 				videoContexts[owner] = 0;
 				sceKernelFreeHeapMemory(contextHeaps[owner], context);
 				sceKernelDeleteHeap(contextHeaps[owner]);
@@ -379,7 +379,7 @@ int waitVideoRecord(int handle, int index, int flags)
 	}
 	shift = (uint8_t)index;
 	eventBits = shift < 32 ? 1U << shift : 0;
-	result = ksceKernelWaitEventFlag(context->eventFlag, eventBits, 5, 0,
+	result = sceKernelWaitEventFlag(context->eventFlag, eventBits, 5, 0,
 				       waitTimeout);
 	if (result >= 0)
 		return 0;
@@ -407,7 +407,7 @@ int signalVideoRecord(int handle, int index)
 		return (int)0x8050c002;
 	shift = (uint8_t)index;
 	eventBits = shift < 32 ? 1U << shift : 0;
-	result = ksceKernelSetEventFlag(context->eventFlag, eventBits);
+	result = sceKernelSetEventFlag(context->eventFlag, eventBits);
 	return result & (result >> 31);
 }
 

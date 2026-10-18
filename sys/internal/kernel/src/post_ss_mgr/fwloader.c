@@ -55,7 +55,7 @@ int fwLoaderClearPath(void)	/* name unknown */
 
 int sceSblFwLoaderInit(void)
 {
-	ksceKernelInitializeFastMutex(&g_fwLoaderMutex, "SceSblFwLoader", 0, NULL);
+	sceKernelInitializeFastMutex(&g_fwLoaderMutex, "SceSblFwLoader", 0, NULL);
 	fwLoaderClearPath();
 	return 0;
 }
@@ -70,7 +70,7 @@ int sceSblFwLoaderSetPath(const char *path, int flags)
 
 	if (path == NULL || flags != 0)
 		return SCE_SBL_ERROR_FWLOADER_INVALID_ARGUMENT;
-	ret = ksceKernelLockFastMutex(&g_fwLoaderMutex);
+	ret = lockFastMutex(&g_fwLoaderMutex);
 	if (ret < 0)
 		return ret;
 	fwLoaderClearPath();
@@ -145,7 +145,7 @@ int sceSblFwLoaderSetPath(const char *path, int flags)
 	return 0;
 
 fail:
-	ksceKernelUnlockFastMutex(&g_fwLoaderMutex);
+	sceKernelUnlockFastMutex(&g_fwLoaderMutex);
 	return SCE_SBL_ERROR_FWLOADER_INVALID_ARGUMENT;
 }
 
@@ -155,7 +155,7 @@ int ksceSblFwLoaderUnlock(void)
 		return SCE_SBL_ERROR_FWLOADER_NOT_LOCKED;
 	fwLoaderClearPath();
 	g_fwLoaderState = FWLOADER_STATE_UNLOCKED;
-	ksceKernelUnlockFastMutex(&g_fwLoaderMutex);
+	sceKernelUnlockFastMutex(&g_fwLoaderMutex);
 	return 0;
 }
 

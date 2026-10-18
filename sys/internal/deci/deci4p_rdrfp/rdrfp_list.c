@@ -12,7 +12,7 @@ int rdrfpInitList(RdrfpList *list)
 
 	list->head.next = &list->head;
 	list->head.prev = &list->head;
-	ret = ksceKernelCreateMutex("SceDeci4pRDrfp", 0x2000, 0, NULL);
+	ret = sceKernelCreateMutex("SceDeci4pRDrfp", 0x2000, 0, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 38, "CreateMutex failed (0x%08X)\n", ret);
 		return ret;
@@ -24,7 +24,7 @@ int rdrfpInitList(RdrfpList *list)
 
 int rdrfpDeleteList(RdrfpList *list)
 {
-	ksceKernelDeleteMutex(list->mutex);
+	sceKernelDeleteMutex(list->mutex);
 	return 0;
 }
 
@@ -39,7 +39,7 @@ RdrfpListElem *rdrfpAddToList(RdrfpList *list, void *data)
 	elem->link.next = &elem->link;
 	elem->link.prev = &elem->link;
 	elem->data = data;
-	ksceKernelLockMutex(list->mutex, 1, NULL);
+	sceKernelLockMutex(list->mutex, 1, NULL);
 	SCE_DBG_ASSERT_LEVEL(0, &elem->link == elem->link.next, 81);
 	count = list->count;
 	elem->link.next = &list->head;
@@ -47,13 +47,13 @@ RdrfpListElem *rdrfpAddToList(RdrfpList *list, void *data)
 	list->head.prev = &elem->link;
 	elem->link.prev->next = &elem->link;
 	list->count = count + 1;
-	ksceKernelUnlockMutex(list->mutex, 1);
+	sceKernelUnlockMutex(list->mutex, 1);
 	return elem;
 }
 
 void rdrfpRemoveFromList(RdrfpList *list, RdrfpListElem *elem)
 {
-	ksceKernelLockMutex(list->mutex, 1, NULL);
+	sceKernelLockMutex(list->mutex, 1, NULL);
 	if (&elem->link != elem->link.next) {
 		elem->link.next->prev = elem->link.prev;
 		elem->link.prev->next = elem->link.next;
@@ -61,7 +61,7 @@ void rdrfpRemoveFromList(RdrfpList *list, RdrfpListElem *elem)
 		elem->link.prev = &elem->link;
 		list->count--;
 	}
-	ksceKernelUnlockMutex(list->mutex, 1);
+	sceKernelUnlockMutex(list->mutex, 1);
 	rdrfpFree(elem);
 }
 
@@ -72,11 +72,11 @@ RdrfpListElem *rdrfpGetListElem(RdrfpList *list, int index)
 
 	if (list->count == 0 || index >= list->count)
 		return NULL;
-	ksceKernelLockMutex(list->mutex, 1, NULL);
+	sceKernelLockMutex(list->mutex, 1, NULL);
 	link = list->head.next;
 	for (i = 0; i < index; i++)
 		link = link->next;
-	ksceKernelUnlockMutex(list->mutex, 1);
+	sceKernelUnlockMutex(list->mutex, 1);
 	SCE_DBG_ASSERT_LEVEL(0, link != &list->head, 121);
 	return (RdrfpListElem *)link;
 }
@@ -88,13 +88,13 @@ RdrfpListElem *rdrfpFindListElem(RdrfpListCompare compare, RdrfpList *list, cons
 
 	if (list->count == 0)
 		return NULL;
-	ksceKernelLockMutex(list->mutex, 1, NULL);
+	sceKernelLockMutex(list->mutex, 1, NULL);
 	for (link = list->head.next; link != &list->head; link = link->next) {
 		if (compare(((RdrfpListElem *)link)->data, key) == 0)
 			goto out;
 	}
 	link = NULL;
 out:
-	ksceKernelUnlockMutex(list->mutex, 1);
+	sceKernelUnlockMutex(list->mutex, 1);
 	return (RdrfpListElem *)link;
 }

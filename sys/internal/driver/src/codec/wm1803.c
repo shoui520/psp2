@@ -120,9 +120,9 @@ static int codecEvent(int resume, int event, void *arg, void *opt)
 	(void)arg;
 	(void)opt;
 	if (!resume && event == SYSEVENT_SUSPEND_PREPARE(0)) {
-		if (ksceKernelLockFastMutex(&s_codec.mutex) >= 0) {
+		if (lockFastMutex(&s_codec.mutex) >= 0) {
 			wm1803WriteRegister(0x5a, 0x9b);
-			ksceKernelUnlockFastMutex(&s_codec.mutex);
+			sceKernelUnlockFastMutex(&s_codec.mutex);
 		}
 	} else if (resume == 1 && event == SYSEVENT_RESUME_DEVICE(0)) {
 		s_codec.initialized = 0;
@@ -135,7 +135,7 @@ static int codecEvent(int resume, int event, void *arg, void *opt)
 /* name unknown */
 static int getCached(int *level0, int *level1)
 {
-	int ret = ksceKernelLockFastMutex(&s_codec.mutex);
+	int ret = lockFastMutex(&s_codec.mutex);
 
 	if (ret >= 0) {
 		if (level0)
@@ -145,7 +145,7 @@ static int getCached(int *level0, int *level1)
 		ret = ((s_codec.flags & 0x10) ? 0x1000 : 0) |
 		      ((s_codec.flags & 8) ? 0x400 : 0) |
 		      ((s_codec.flags & 4) ? 0x100 : 0);
-		ksceKernelUnlockFastMutex(&s_codec.mutex);
+		sceKernelUnlockFastMutex(&s_codec.mutex);
 	}
 	return ret;
 }
@@ -161,7 +161,7 @@ static int setVolume(unsigned int volume)
 	value = 121 - s_curves[curve][volume];
 	if (value >= 128)
 		return 0x80261001;
-	ret = ksceKernelLockFastMutex(&s_codec.mutex);
+	ret = lockFastMutex(&s_codec.mutex);
 	if (ret < 0)
 		return ret;
 	if (value < 0)
@@ -172,11 +172,11 @@ static int setVolume(unsigned int volume)
 		if (ret >= 0)
 			s_codec.level1 = value - 121;
 	}
-	ksceKernelUnlockFastMutex(&s_codec.mutex);
+	sceKernelUnlockFastMutex(&s_codec.mutex);
 	if (ret < 0)
 		return ret;
 	value = 121 - s_curves[1][volume];
-	if (value >= 128 || ksceKernelLockFastMutex(&s_codec.mutex) < 0)
+	if (value >= 128 || lockFastMutex(&s_codec.mutex) < 0)
 		return 1;
 	if (value < 0)
 		value = 0;
@@ -186,7 +186,7 @@ static int setVolume(unsigned int volume)
 		if (ret >= 0)
 			s_codec.level0 = value - 121;
 	}
-	ksceKernelUnlockFastMutex(&s_codec.mutex);
+	sceKernelUnlockFastMutex(&s_codec.mutex);
 	if (ret < 0)
 		return 1;
 	s_codec.volume = volume;
@@ -276,7 +276,7 @@ static int startCodec(void)
 	s_curves[0] = s_curve0;
 	s_curves[1] = s_codec.hardware2 == 0x20 ? s_curveDolce : s_curve1;
 	s_curves[2] = s_curve2;
-	ret = ksceKernelInitializeFastMutex(&s_codec.mutex, "SceCodec", 0x2000, 0);
+	ret = sceKernelInitializeFastMutex(&s_codec.mutex, "SceCodec", 0x2000, 0);
 	if (ret < 0)
 		return 2;
 	initializeCodec(1);
@@ -423,9 +423,9 @@ static int configureRoutes(int output0, int output1, int output2,
 	s_codec.flags = flags;
 	if (flags & 0x1c) {
 		if (changed & 0xc) {
-			ksceKernelUnlockFastMutex(&s_codec.mutex);
+			sceKernelUnlockFastMutex(&s_codec.mutex);
 			ret = setVolume(s_codec.volume);
-			ksceKernelLockFastMutex(&s_codec.mutex);
+			lockFastMutex(&s_codec.mutex);
 			if (ret < 0)
 				return ret;
 		}
@@ -437,13 +437,13 @@ static int configureRoutes(int output0, int output1, int output2,
 /* name unknown */
 static int setOutputs(unsigned int outputs)
 {
-	int ret = ksceKernelLockFastMutex(&s_codec.mutex);
+	int ret = lockFastMutex(&s_codec.mutex);
 
 	if (ret >= 0) {
 		ret = configureRoutes(outputs & 0x100 ? 1 : -1,
 				      outputs & 0x400 ? 1 : -1,
 				      outputs & 0x1000 ? 1 : -1, 0, 1);
-		ksceKernelUnlockFastMutex(&s_codec.mutex);
+		sceKernelUnlockFastMutex(&s_codec.mutex);
 	}
 	return ret;
 }
@@ -456,7 +456,7 @@ static int setMode(int mode)
 
 	if (mode >= 3)
 		return 0x80261000;
-	ret = ksceKernelLockFastMutex(&s_codec.mutex);
+	ret = lockFastMutex(&s_codec.mutex);
 	if (ret < 0)
 		return ret;
 	if (mode < 0) {
@@ -485,7 +485,7 @@ static int setMode(int mode)
 			}
 		}
 	}
-	ksceKernelUnlockFastMutex(&s_codec.mutex);
+	sceKernelUnlockFastMutex(&s_codec.mutex);
 	return ret;
 }
 
@@ -496,7 +496,7 @@ static int selectRoute(unsigned int mode)
 
 	if (SceSblAIMgrForDriver_C6E83F34())
 		return 0;
-	ret = ksceKernelLockFastMutex(&s_codec.mutex);
+	ret = lockFastMutex(&s_codec.mutex);
 	if (ret < 0)
 		return ret;
 	route = (mode & 0xff00) == 0x100 ? 1 :
@@ -512,14 +512,14 @@ static int selectRoute(unsigned int mode)
 			}
 		}
 	}
-	ksceKernelUnlockFastMutex(&s_codec.mutex);
+	sceKernelUnlockFastMutex(&s_codec.mutex);
 	return ret;
 }
 
 /* name unknown: preserve the wait result if the following register read fails. */
 static int setEnabled(int enable)
 {
-	int value, ret = ksceKernelLockFastMutex(&s_codec.mutex);
+	int value, ret = lockFastMutex(&s_codec.mutex);
 
 	if (ret < 0)
 		return ret;
@@ -549,18 +549,18 @@ static int setEnabled(int enable)
 		}
 	}
 out:
-	ksceKernelUnlockFastMutex(&s_codec.mutex);
+	sceKernelUnlockFastMutex(&s_codec.mutex);
 	return ret;
 }
 
 /* name unknown */
 static int getStatus(void)
 {
-	int ret = ksceKernelLockFastMutex(&s_codec.mutex);
+	int ret = lockFastMutex(&s_codec.mutex);
 
 	if (ret >= 0) {
 		ret = wm1803ReadRegister(0x30);
-		ksceKernelUnlockFastMutex(&s_codec.mutex);
+		sceKernelUnlockFastMutex(&s_codec.mutex);
 		if (ret >= 0)
 			ret &= 0x80;
 	}

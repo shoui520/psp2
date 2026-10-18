@@ -34,12 +34,12 @@
 static const BbmcSetupDescriptor bbmcSetupDescriptors[8];
 
 extern int bbmcLockFastMutex(struct ThreadmgrFastMutex *mutex)
-	__asm__("ksceKernelLockFastMutex");
+	__asm__("lockFastMutex");
 extern int bbmcUnlockFastMutex(struct ThreadmgrFastMutex *mutex)
-	__asm__("ksceKernelUnlockFastMutex");
+	__asm__("sceKernelUnlockFastMutex");
 extern int bbmcInitializeFastMutex(struct ThreadmgrFastMutex *mutex,
 	const char *name, int attr, void *opt)
-	__asm__("ksceKernelInitializeFastMutex");
+	__asm__("sceKernelInitializeFastMutex");
 int bbmcAcquireGpio(int *previous);
 int bbmcReleaseGpio(int *previous);
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int command);
@@ -542,7 +542,7 @@ int module_start(SceSize argumentSize, const void *arguments)
 		SCE_DBG_ASSERT_FUNC(0, 1322, "bbmcCreateCS");
 	if (bbmcCreateMailbox(&control->mailbox) < 0)
 		goto deleteHeap;
-	result = ksceKernelCreateThread("SceBbmcMain", managerThread, 96,
+	result = sceKernelCreateThread("SceBbmcMain", managerThread, 96,
 		0x2000, 0x10000000, 0x80000, NULL);
 	if (result < 0)
 		goto deleteMailbox;
@@ -562,7 +562,7 @@ int module_start(SceSize argumentSize, const void *arguments)
 	if (SceSysconForDriver_4E88B4D9(bbmcSysconNotification, control) < 0)
 		goto disablePower;
 	g_bbmcControl = control;
-	if (ksceKernelStartThread(control->threadId, sizeof(g_bbmcControl),
+	if (sceKernelStartThread(control->threadId, sizeof(g_bbmcControl),
 		&g_bbmcControl) >= 0)
 		return 0;
 	SceSysconForDriver_4E88B4D9(NULL, NULL);
@@ -573,7 +573,7 @@ unregisterProcessEvent:
 unregisterSystemEvent:
 	sceKernelUnregisterSysEventHandler(control->eventFlag);
 deleteThread:
-	ksceKernelDeleteThread(control->threadId);
+	sceKernelDeleteThread(control->threadId);
 deleteMailbox:
 	bbmcDeleteMailbox(control->mailbox);
 deleteHeap:
@@ -731,7 +731,7 @@ int sceBbmcSubscribeFeatureIdForDriver(BbmcSubscribeFeatureIdParam *parameters)
 		break;
 	}
 	do {
-		identifier = ksceKernelGetSystemTimeLow();
+		identifier = SceThreadmgrForDriver_47F6DE49();
 	} while (identifier == 0);
 	bbmcEnterCS(&control->mutex);
 	if (count == 0)

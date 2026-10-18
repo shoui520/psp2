@@ -7,7 +7,7 @@ int UpdateUtilReleaseAllBuffers(SceUID pid)
 	UpdateUtilBufferEntry *entry;
 	int result;
 
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&updateTableMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	if (result)
 		return result;
 	for (entry = updateBufferTable; entry != updateBufferTable + 4; entry++) {
@@ -26,6 +26,6 @@ int UpdateUtilReleaseAllBuffers(SceUID pid)
 			entry->pid = 0;
 		}
 	}
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&updateTableMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	return result;
 }

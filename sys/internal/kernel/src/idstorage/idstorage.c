@@ -160,18 +160,18 @@ int ksceIdStorageFlush(void)
 
 	if (!storage.formatted)
 		return ID_NOT_FORMATTED;
-	ret = ksceKernelLockMutex(storage.mutex, 1, NULL);
+	ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	if (ksceIdStorageIsDirty()) {
 		ret = commitStorage();
 		if (ret < 0) {
-			ksceKernelUnlockMutex(storage.mutex, 1);
+			sceKernelUnlockMutex(storage.mutex, 1);
 			return ret;
 		}
 	}
 	clearCache();
-	ksceKernelUnlockMutex(storage.mutex, 1);
+	sceKernelUnlockMutex(storage.mutex, 1);
 	return 0;
 }
 
@@ -236,7 +236,7 @@ static int initializeStorage(void)
 		SceSysmemForDriver_009E1C61(storage.memblock);
 		return ret;
 	}
-	ret = ksceKernelCreateMutex(name, 2, 0, NULL);
+	ret = sceKernelCreateMutex(name, 2, 0, NULL);
 	if (ret < 0) {
 		SceSysmemForDriver_009E1C61(storage.memblock);
 		return ret;
@@ -276,7 +276,7 @@ int ksceIdStorageRestart(int flush)
 		return ID_INVALID_ARGUMENT;
 	if (flush)
 		ksceIdStorageFlush();
-	ksceKernelDeleteMutex(storage.mutex);
+	sceKernelDeleteMutex(storage.mutex);
 	SceSysmemForDriver_009E1C61(storage.memblock);
 	if (storage.index)
 		sceKernelFreeHeapMemory(heap, storage.index);
@@ -364,7 +364,7 @@ static int readLeaf(uint32_t leaf, void *buffer, int lock)
 	if (ret < 0)
 		return ret;
 	if (lock) {
-		ret = ksceKernelLockMutex(storage.mutex, 1, NULL);
+		ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 		if (ret < 0)
 			return ret;
 	}
@@ -390,7 +390,7 @@ static int readLeaf(uint32_t leaf, void *buffer, int lock)
 	ret = 0;
 unlock:
 	if (lock)
-		ksceKernelUnlockMutex(storage.mutex, 1);
+		sceKernelUnlockMutex(storage.mutex, 1);
 	return ret;
 }
 
@@ -410,7 +410,7 @@ static int writeLeaf(uint32_t leaf, const void *buffer, int lock)
 	if (ret < 0)
 		return ret;
 	if (lock) {
-		ret = ksceKernelLockMutex(storage.mutex, 1, NULL);
+		ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 		if (ret < 0)
 			return ret;
 	}
@@ -424,7 +424,7 @@ static int writeLeaf(uint32_t leaf, const void *buffer, int lock)
 	ret = 0;
 unlock:
 	if (lock)
-		ksceKernelUnlockMutex(storage.mutex, 1);
+		sceKernelUnlockMutex(storage.mutex, 1);
 	return ret;
 }
 
@@ -454,13 +454,13 @@ int ksceIdStorageLookup(SceUInt32 leaf, SceUInt32 offset, void *buffer, SceUInt3
 		return ID_INVALID_ARGUMENT;
 	if (!storage.formatted)
 		return ID_NOT_FORMATTED;
-	ret = ksceKernelLockMutex(storage.mutex, 1, NULL);
+	ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	ret = readLeaf(leaf, size == LEAF_SIZE ? buffer : data, 0);
 	if (!ret && size != LEAF_SIZE && size)
 		memcpy(buffer, data + offset, size);
-	ksceKernelUnlockMutex(storage.mutex, 1);
+	sceKernelUnlockMutex(storage.mutex, 1);
 	return ret < 0 ? ret : 0;
 }
 
@@ -482,7 +482,7 @@ int ksceIdStorageUpdate(uint32_t leaf, uint32_t offset, const void *buffer, uint
 		return ID_NOT_FORMATTED;
 	if (storage.readOnly)
 		return -1;
-	ret = ksceKernelLockMutex(storage.mutex, 1, NULL);
+	ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	if (size == LEAF_SIZE) {
@@ -494,7 +494,7 @@ int ksceIdStorageUpdate(uint32_t leaf, uint32_t offset, const void *buffer, uint
 			ret = writeLeaf(leaf, data, 0);
 		}
 	}
-	ksceKernelUnlockMutex(storage.mutex, 1);
+	sceKernelUnlockMutex(storage.mutex, 1);
 	return ret < 0 ? ret : 0;
 }
 
@@ -508,7 +508,7 @@ int ksceIdStorageFormat(void)
 		return ret;
 	if (!mode)
 		return ID_INVALID_ARGUMENT;
-	ret = ksceKernelLockMutex(storage.mutex, 1, NULL);
+	ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	SceKernelSuspendForDriver_4DF40893(0);
@@ -525,7 +525,7 @@ int ksceIdStorageFormat(void)
 		ret = 0;
 	}
 	SceKernelSuspendForDriver_2BB92967(0);
-	ksceKernelUnlockMutex(storage.mutex, 1);
+	sceKernelUnlockMutex(storage.mutex, 1);
 	return ret;
 }
 
@@ -541,7 +541,7 @@ int ksceIdStorageUnformat(void)
 	if (!mode)
 		return ID_INVALID_ARGUMENT;
 	memset(data, 0, sizeof(data));
-	ret = ksceKernelLockMutex(storage.mutex, 1, NULL);
+	ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	SceKernelSuspendForDriver_4DF40893(0);
@@ -549,7 +549,7 @@ int ksceIdStorageUnformat(void)
 		transfer(storage.fd, storage.offset + (SceOff)i * LEAF_SIZE, data, sizeof(data), 1);
 	SceKernelSuspendForDriver_2BB92967(0);
 	storage.formatted = 0;
-	ksceKernelUnlockMutex(storage.mutex, 1);
+	sceKernelUnlockMutex(storage.mutex, 1);
 	return 0;
 }
 
@@ -560,7 +560,7 @@ int ksceIdStorageGetFreeLeaves(void)
 
 	if (!storage.formatted)
 		return ID_NOT_FORMATTED;
-	ret = ksceKernelLockMutex(storage.mutex, 1, NULL);
+	ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	intr = SceCpuForDriver_821FC0EE();
@@ -569,16 +569,16 @@ int ksceIdStorageGetFreeLeaves(void)
 		if (storage.index[i] == INDEX_FREE)
 			ret++;
 	sceKernelCpuResumeIntr(intr);
-	ksceKernelUnlockMutex(storage.mutex, 1);
+	sceKernelUnlockMutex(storage.mutex, 1);
 	return ret;
 }
 
 int ksceIdStorageEnumId(void)
 {
-	int ret = ksceKernelLockMutex(storage.mutex, 1, NULL);
+	int ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 
 	if (ret >= 0) {
-		ksceKernelUnlockMutex(storage.mutex, 1);
+		sceKernelUnlockMutex(storage.mutex, 1);
 		ret = 0;
 	}
 	return ret;
@@ -615,7 +615,7 @@ int ksceIdStorageCreateLeaf(uint32_t leaf)
 	ret = SceSblACMgrForDriver_BE5667C5(sceKernelGetProcessId(), &accessAttr, 2);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelLockMutex(storage.mutex, 1, NULL);
+	ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	intr = SceCpuForDriver_821FC0EE();
@@ -655,7 +655,7 @@ int ksceIdStorageCreateLeaf(uint32_t leaf)
 	ret = 0;
 done:
 	sceKernelCpuResumeIntr(intr);
-	ksceKernelUnlockMutex(storage.mutex, 1);
+	sceKernelUnlockMutex(storage.mutex, 1);
 	return ret;
 }
 
@@ -679,7 +679,7 @@ int ksceIdStorageCreateAtomicLeaves(const uint16_t *leaves, int count)
 	ret = SceSblACMgrForDriver_BE5667C5(sceKernelGetProcessId(), &accessAttr, 2);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelLockMutex(storage.mutex, 1, NULL);
+	ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	intr = SceCpuForDriver_821FC0EE();
@@ -711,7 +711,7 @@ int ksceIdStorageCreateAtomicLeaves(const uint16_t *leaves, int count)
 	}
 done:
 	sceKernelCpuResumeIntr(intr);
-	ksceKernelUnlockMutex(storage.mutex, 1);
+	sceKernelUnlockMutex(storage.mutex, 1);
 	return ret;
 }
 
@@ -735,7 +735,7 @@ int ksceIdStorageDeleteLeaf(uint32_t leaf)
 	ret = SceSblACMgrForDriver_BE5667C5(sceKernelGetProcessId(), &accessAttr, 2);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelLockMutex(storage.mutex, 1, NULL);
+	ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	intr = SceCpuForDriver_821FC0EE();
@@ -748,7 +748,7 @@ int ksceIdStorageDeleteLeaf(uint32_t leaf)
 		ret = 0;
 	}
 	sceKernelCpuResumeIntr(intr);
-	ksceKernelUnlockMutex(storage.mutex, 1);
+	sceKernelUnlockMutex(storage.mutex, 1);
 	return ret;
 }
 

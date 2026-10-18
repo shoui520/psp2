@@ -37,8 +37,8 @@ static void multiInputChanged(int value) /* name unknown */
 static void codecInputChanged(int value) /* name unknown */
 {
 	remote.codecInput = value;
-	ksceKernelClearEventFlag(remote.event, value ? ~0x40u : ~4u);
-	ksceKernelSetEventFlag(remote.event, value ? 4 : 0x40);
+	sceKernelClearEventFlag(remote.event, value ? ~0x40u : ~4u);
+	sceKernelSetEventFlag(remote.event, value ? 4 : 0x40);
 }
 
 static int pollInputs(void *arg, void *ctx, unsigned char priority) /* name unknown */
@@ -56,8 +56,8 @@ static int pollInputs(void *arg, void *ctx, unsigned char priority) /* name unkn
 		remote.status[0] = input ? 1 : 0;
 		remote.status[1] = remote.status[2] = input ? -1 : 0;
 		remote.changed = 1;
-		ksceKernelClearEventFlag(remote.event, input ? ~2u : ~1u);
-		ksceKernelSetEventFlag(remote.event, input ? 1 : 2);
+		sceKernelClearEventFlag(remote.event, input ? ~2u : ~1u);
+		sceKernelSetEventFlag(remote.event, input ? 1 : 2);
 	}
 	multi = remote.rawMultiInput;
 	remote.multiHistory = (remote.multiHistory << 1) | (multi & 1);
@@ -78,7 +78,7 @@ static int pollInputs(void *arg, void *ctx, unsigned char priority) /* name unkn
 		       ((remote.status[2] == 1) << 2);
 		for (i = 0; i < 32; i++)
 			if (remote.callbacks[i] >= 0)
-				ksceKernelNotifyCallback(remote.callbacks[i], bits);
+				sceKernelNotifyCallback(remote.callbacks[i], bits);
 	}
 	return -1;
 }
@@ -97,21 +97,21 @@ static int remoteThread(SceSize args, void *argp) /* name unknown */
 	for (;;) {
 		events = 0;
 		if (!timeout)
-			ksceKernelPollEventFlag(remote.event, 0xc0000008,
+			sceKernelPollEventFlag(remote.event, 0xc0000008,
 						SCE_KERNEL_EVF_WAITMODE_OR, &events);
 		else
-			ksceKernelWaitEventFlag(remote.event, mask | 0xc0000008,
+			sceKernelWaitEventFlag(remote.event, mask | 0xc0000008,
 					       SCE_KERNEL_EVF_WAITMODE_OR, &events,
 					       (int32_t)timeout < 0 ? NULL : &timeout);
 		if (events & 0x40000000) {
 			remote.state = 0;
-			ksceKernelClearEventFlag(remote.event, ~0x40000000u);
+			sceKernelClearEventFlag(remote.event, ~0x40000000u);
 		} else if (events & 8) {
 			if (SceSysconForDriver_142D5E82()) {
 				remote.state = 5;
 			} else {
 				remote.state = 4;
-				ksceKernelClearEventFlag(remote.event, ~8u);
+				sceKernelClearEventFlag(remote.event, ~8u);
 			}
 		} else if (remote.state > 4 &&
 			   ((events & 2) || (remote.state > 11 && (events & 0x40 & mask)))) {
@@ -161,7 +161,7 @@ static int remoteThread(SceSize args, void *argp) /* name unknown */
 			}
 			break;
 		case 5:
-			ksceKernelClearEventFlag(remote.event, ~8u);
+			sceKernelClearEventFlag(remote.event, ~8u);
 			mask = 0;
 			if (remote.hardwareFlags & 2) {
 				SceSysconForDriver_5CDDA14D(0);
@@ -282,13 +282,13 @@ static int sysEvent(int resume, int event, void *args, void *opt) /* name unknow
 {
 	if (resume != 1 || event != SYSEVENT_RESUME_DEVICE(12))
 		return 0;
-	ksceKernelSetEventFlag(remote.event, 8);
+	sceKernelSetEventFlag(remote.event, 8);
 	codecInputChanged(0);
 	remote.input = SceSysconForDriver_142D5E82();
 	remote.rawInput = remote.input;
 	remote.inputHistory = remote.input ? ~0u : 0;
-	ksceKernelClearEventFlag(remote.event, remote.input ? ~2u : ~1u);
-	ksceKernelSetEventFlag(remote.event, remote.input ? 1 : 2);
+	sceKernelClearEventFlag(remote.event, remote.input ? ~2u : ~1u);
+	sceKernelSetEventFlag(remote.event, remote.input ? 1 : 2);
 	remote.rawMultiInput = SceSysconForDriver_ACC7F71E();
 	remote.multiInput = !remote.rawMultiInput;
 	remote.multiHistory = remote.multiInput ? ~0u : 0;
@@ -305,14 +305,14 @@ int module_start(SceSize args, void *argp)
 
 	memset(&remote, 0, sizeof(remote));
 	memset(remote.callbacks, -1, sizeof(remote.callbacks));
-	uid = ksceKernelCreateEventFlag("SceHprm", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
+	uid = sceKernelCreateEventFlag("SceHprm", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (uid < 0)
 		return 0;
 	remote.event = uid;
 	remote.input = SceSysconForDriver_142D5E82();
 	remote.rawInput = remote.input;
 	remote.inputHistory = remote.input ? ~0u : 0;
-	ksceKernelSetEventFlag(remote.event, remote.input == 1 ? 1 : 2);
+	sceKernelSetEventFlag(remote.event, remote.input == 1 ? 1 : 2);
 	remote.status[0] = remote.input == 1;
 	remote.status[1] = remote.status[2] = remote.input == 1 ? -1 : 0;
 	remote.changed = 1;
@@ -323,7 +323,7 @@ int module_start(SceSize args, void *argp)
 		remote.hardwareFlags = 5;
 	}
 	remote.codecInput = SceSysconForDriver_C3504ADE();
-	ksceKernelSetEventFlag(remote.event, remote.codecInput == 1 ? 4 : 0x40);
+	sceKernelSetEventFlag(remote.event, remote.codecInput == 1 ? 4 : 0x40);
 	remote.multiInput = SceSysconForDriver_ACC7F71E();
 	remote.rawMultiInput = remote.multiInput;
 	remote.multiHistory = remote.multiInput ? ~0u : 0;
@@ -334,11 +334,11 @@ int module_start(SceSize args, void *argp)
 	SceSysconForDriver_63352A39(inputChanged, NULL);
 	SceSysconForDriver_DE613081(codecInputChanged, NULL);
 	SceSysconForDriver_35E1689F(multiInputChanged, NULL);
-	uid = ksceKernelCreateThread("SceHpRemote", remoteThread, 0x40, 0x1000, 0, 0x80000, NULL);
+	uid = sceKernelCreateThread("SceHpRemote", remoteThread, 0x40, 0x1000, 0, 0x80000, NULL);
 	if (uid < 0)
 		return 0;
 	remote.thread = uid;
-	ksceKernelStartThread(uid, 0, NULL);
+	sceKernelStartThread(uid, 0, NULL);
 	ksceKernelRegisterSubIntrHandler(8, 24, "SceHprmVblank", pollInputs, NULL);
 	ksceKernelEnableSubIntr(8, 24);
 	sceKernelRegisterSysEventHandler("SceHprm", sysEvent, NULL);
@@ -412,13 +412,13 @@ int SceHpremoteForDriver_219C58F1(void)
 
 int SceHpremoteForDriver_7735C403(void)
 {
-	ksceKernelSetEventFlag(remote.event, 0x40000000);
+	sceKernelSetEventFlag(remote.event, 0x40000000);
 	return 0;
 }
 
 int SceHpremoteForDriver_4D1E622C(void)
 {
-	ksceKernelSetEventFlag(remote.event, 8);
+	sceKernelSetEventFlag(remote.event, 8);
 	return 0;
 }
 

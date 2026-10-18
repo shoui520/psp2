@@ -168,28 +168,28 @@ set(MODULE_IMPORT_FUNCS
 	snprintf
 	__stack_chk_fail
 	strnlen
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
 	sceKernelExitThread
-	ksceKernelDeleteSema
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelStartThread
-	ksceKernelCreateSema
-	ksceKernelWaitSema
-	ksceKernelWaitThreadEnd
-	ksceKernelCreateEventFlag
+	sceKernelDeleteSema
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelStartThread
+	sceKernelCreateSema
+	sceKernelWaitSema
+	sceKernelWaitThreadEnd
+	sceKernelCreateEventFlag
 	sceKernelCancelAlarm
-	ksceKernelGetSystemTimeLow
+	SceThreadmgrForDriver_47F6DE49
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelDeleteEventFlag
-	ksceKernelDeleteThread
-	ksceKernelRegisterTimer
-	ksceKernelCreateThread
-	ksceKernelSignalSema
-	ksceKernelSetEventFlag
-	ksceKernelCreateMutex
+	sceKernelClearEventFlag
+	sceKernelDeleteEventFlag
+	sceKernelDeleteThread
+	SceThreadmgrForDriver_C58DF384
+	sceKernelCreateThread
+	sceKernelSignalSema
+	sceKernelSetEventFlag
+	sceKernelCreateMutex
 	ksceIoOpen
 	ksceIoRead
 	ksceIoClose

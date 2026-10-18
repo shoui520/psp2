@@ -14,7 +14,7 @@
 
 int avConfigSetEventFlag(unsigned int bits)
 {
-	return ksceKernelSetEventFlag(avConfigState.eventFlag, bits);
+	return sceKernelSetEventFlag(avConfigState.eventFlag, bits);
 }
 
 void avConfigGetVolumeControlState(int *mode, int *muted)
@@ -67,7 +67,7 @@ int avConfigNotifyCallback(int events)
 	int result = avConfigState.callbackMask & events;
 
 	if (result != 0)
-		return ksceKernelNotifyCallback(avConfigState.callback, events);
+		return sceKernelNotifyCallback(avConfigState.callback, events);
 	return result;
 }
 

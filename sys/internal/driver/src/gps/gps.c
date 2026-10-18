@@ -32,13 +32,13 @@ static int stateError(unsigned code)
 __attribute__((noinline)) void gpsLock(unsigned which)
 {
 	if (s_gps.active && (which == 1 || which == 2))
-		ksceKernelLockMutex(which == 1 ? s_gps.active->apiMutex : s_gps.active->dataMutex, 1, NULL);
+		sceKernelLockMutex(which == 1 ? s_gps.active->apiMutex : s_gps.active->dataMutex, 1, NULL);
 }
 
 __attribute__((noinline)) void gpsUnlock(unsigned which)
 {
 	if (s_gps.active && (which == 1 || which == 2))
-		ksceKernelUnlockMutex(which == 1 ? s_gps.active->apiMutex : s_gps.active->dataMutex, 1);
+		sceKernelUnlockMutex(which == 1 ? s_gps.active->apiMutex : s_gps.active->dataMutex, 1);
 }
 
 unsigned gpsState(void)
@@ -131,11 +131,11 @@ static int notify(unsigned event, unsigned result)
 	if (s_gps.active->suspended)
 		return GPS_ERROR(12);
 	if (!s_gps.active->queuedCallbacks)
-		return s_gps.active->callback > 0 ? ksceKernelNotifyCallback(s_gps.active->callback, value) : 0;
-	ksceKernelLockFastMutex(&s_gps.activeQueue->mutex);
+		return s_gps.active->callback > 0 ? sceKernelNotifyCallback(s_gps.active->callback, value) : 0;
+	lockFastMutex(&s_gps.activeQueue->mutex);
 	if (!s_gps.active->callbackPending) {
 		if (s_gps.active->callback > 0) {
-			ret = ksceKernelNotifyCallback(s_gps.active->callback, value);
+			ret = sceKernelNotifyCallback(s_gps.active->callback, value);
 			s_gps.active->callbackPending = 1;
 		}
 	} else {
@@ -182,7 +182,7 @@ static int notify(unsigned event, unsigned result)
 			}
 		}
 	}
-	ksceKernelUnlockFastMutex(&s_gps.activeQueue->mutex);
+	sceKernelUnlockFastMutex(&s_gps.activeQueue->mutex);
 	return ret;
 }
 
@@ -191,17 +191,17 @@ static int resumeCallback(void)
 	int ret = 0;
 	if (!s_gps.active)
 		return GPS_ERROR(1);
-	ksceKernelLockFastMutex(&s_gps.activeQueue->mutex);
+	lockFastMutex(&s_gps.activeQueue->mutex);
 	GpsNotice *notice = s_gps.activeQueue->head;
 	if (s_gps.active->callback > 0 && notice) {
 		unsigned event = notice->event, result = notice->result;
 		removeNotice(notice);
 		if (s_gps.active)
 			sceKernelFreeHeapMemory(s_gps.active->heap, notice);
-		ret = ksceKernelNotifyCallback(s_gps.active->callback, event | (result & 0xff));
+		ret = sceKernelNotifyCallback(s_gps.active->callback, event | (result & 0xff));
 	}
 	s_gps.active->callbackPending = 0;
-	ksceKernelUnlockFastMutex(&s_gps.activeQueue->mutex);
+	sceKernelUnlockFastMutex(&s_gps.activeQueue->mutex);
 	return ret;
 }
 
@@ -221,7 +221,7 @@ static int signal(unsigned command, unsigned mode)
 		flag = 1;
 	} else
 		return GPS_ERROR(32);
-	ksceKernelSetEventFlag(s_gps.active->event, flag);
+	sceKernelSetEventFlag(s_gps.active->event, flag);
 	return 0;
 }
 
@@ -384,7 +384,7 @@ int SceGpsForDriver_7F001760(unsigned device)
 	if (ret == GPS_ERROR(1))
 		return ret;
 	if (ret)
-		ksceKernelSetEventFlag(s_gps.active->event, 0x20000000);
+		sceKernelSetEventFlag(s_gps.active->event, 0x20000000);
 	resetDevices(device);
 	return 0;
 }
@@ -408,7 +408,7 @@ int SceGpsForDriver_BE3EB4E9(unsigned device, unsigned mode, const GpsLocation *
 			s_gps.active->setClock = 0;
 	}
 	gpsDataUnlock();
-	ksceKernelSetEventFlag(s_gps.active->event, 8);
+	sceKernelSetEventFlag(s_gps.active->event, 8);
 	return 0;
 }
 
@@ -422,7 +422,7 @@ int SceGpsForDriver_8D5688DA(unsigned device, const GpsSatellites *satellites)
 	gpsDataLock();
 	memcpy(&s_gps.satellites, satellites, sizeof(s_gps.satellites));
 	gpsDataUnlock();
-	ksceKernelSetEventFlag(s_gps.active->event, 0x10);
+	sceKernelSetEventFlag(s_gps.active->event, 0x10);
 	return 0;
 }
 
@@ -446,7 +446,7 @@ int SceGpsForDriver_F2049C02(unsigned type, unsigned event)
 			else
 				s_gps.active->stopResult = result;
 			gpsDataUnlock();
-			ksceKernelSetEventFlag(s_gps.active->event, event == 0x10000 ? 2 : 0x40);
+			sceKernelSetEventFlag(s_gps.active->event, event == 0x10000 ? 2 : 0x40);
 			return 0;
 		}
 		if (event != 0x60000)
@@ -527,7 +527,7 @@ static int stopDevice(unsigned mode)
 				gpsDataLock();
 				s_gps.active->stopResult = 0;
 				gpsDataUnlock();
-				ksceKernelSetEventFlag(s_gps.active->event, 0x40);
+				sceKernelSetEventFlag(s_gps.active->event, 0x40);
 			}
 			clearData();
 		}
@@ -570,7 +570,7 @@ static int acquisitionWorker(SceSize arglen, void *argp)
 	unsigned events = 0, info[2];
 	gpsSetState(1);
 	for (;;) {
-		if (ksceKernelWaitEventFlag(context->event, 0xe003007f,
+		if (sceKernelWaitEventFlag(context->event, 0xe003007f,
 					    SCE_KERNEL_EVF_WAITMODE_OR |
 					    SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &events, NULL) < 0)
 			return 0;
@@ -657,20 +657,20 @@ int module_start(SceSize arglen, void *argp)
 	GpsContext *context = &s_gps.context;
 	int ret = 0;
 	memset(context, 0, 0x40);
-	context->event = ksceKernelCreateEventFlag("SceGps", 0, 0, NULL);
+	context->event = sceKernelCreateEventFlag("SceGps", 0, 0, NULL);
 	if (context->event < 0)
 		goto failed;
-	context->apiMutex = ksceKernelCreateMutex("SceGpsApi", 2, 0, NULL);
+	context->apiMutex = sceKernelCreateMutex("SceGpsApi", 2, 0, NULL);
 	if (context->apiMutex < 0)
 		goto event;
-	context->dataMutex = ksceKernelCreateMutex("SceGpsData", 2, 0, NULL);
+	context->dataMutex = sceKernelCreateMutex("SceGpsData", 2, 0, NULL);
 	if (context->dataMutex < 0)
 		goto api;
 	ret = SceSysmemForDriver_9328E0E8("SceGps", 0x2000, NULL);
 	if (ret < 0)
 		goto mutex;
 	context->heap = ret;
-	ret = ksceKernelCreateThread("SceGpsd", acquisitionWorker, 0x5f, 0x2000, 0x10000000, 0x80000, NULL);
+	ret = sceKernelCreateThread("SceGpsd", acquisitionWorker, 0x5f, 0x2000, 0x10000000, 0x80000, NULL);
 	if (ret < 0)
 		goto heap;
 	context->callback = 0;
@@ -686,28 +686,28 @@ int module_start(SceSize arglen, void *argp)
 	s_gps.active = context;
 	context->setClock = 1;
 	context->systemHandler = ret;
-	ret = ksceKernelInitializeFastMutex(&s_gps.queue.mutex, "SceGps", 2, NULL);
+	ret = sceKernelInitializeFastMutex(&s_gps.queue.mutex, "SceGps", 2, NULL);
 	if (ret < 0)
 		goto thread;
 	s_gps.activeQueue = &s_gps.queue;
-	ret = ksceKernelStartThread(context->thread, 4, &s_gps.active);
+	ret = sceKernelStartThread(context->thread, 4, &s_gps.active);
 	if (ret >= 0)
 		return ret;
 	clearNotices();
-	ksceKernelFinalizeFastMutex(&s_gps.activeQueue->mutex);
+	sceKernelFinalizeFastMutex(&s_gps.activeQueue->mutex);
 	s_gps.activeQueue = NULL;
 thread:
-	ksceKernelDeleteThread(context->thread);
+	sceKernelDeleteThread(context->thread);
 handler:
 	sceKernelUnregisterSysEventHandler(context->systemHandler);
 heap:
 	sceKernelDeleteHeap(context->heap);
 mutex:
-	ksceKernelDeleteMutex(context->dataMutex);
+	sceKernelDeleteMutex(context->dataMutex);
 api:
-	ksceKernelDeleteMutex(context->apiMutex);
+	sceKernelDeleteMutex(context->apiMutex);
 event:
-	ksceKernelDeleteEventFlag(context->event);
+	sceKernelDeleteEventFlag(context->event);
 failed:
 	resetDevices(0);
 	s_gps.active = NULL;
@@ -745,7 +745,7 @@ static int openCallback(int callback)
 		return ret;
 	gpsLock(1);
 	ret = GPS_ERROR(33);
-	if (ksceKernelGetThreadmgrUIDClass(uid) == 8) {
+	if (sceKernelGetThreadmgrUIDClass(uid) == 8) {
 		s_gps.active->callback = uid;
 		gpsSetState(3);
 		ret = 0;

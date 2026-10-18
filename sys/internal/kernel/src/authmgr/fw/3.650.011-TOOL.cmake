@@ -71,18 +71,18 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_D75D4F37
 	sceKernelSysrootDisableAutoClockDown
 	sceKernelSysrootEnableAutoClockDown
-	ksceKernelWaitEventFlag
-	ksceKernelFinalizeFastMutex
-	ksceKernelDeleteSema
-	ksceKernelCreateSema
-	ksceKernelWaitSema
-	ksceKernelCreateEventFlag
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
-	ksceKernelInitializeFastMutex
-	ksceKernelSignalSema
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
+	sceKernelWaitEventFlag
+	sceKernelFinalizeFastMutex
+	sceKernelDeleteSema
+	sceKernelCreateSema
+	sceKernelWaitSema
+	sceKernelCreateEventFlag
+	lockFastMutex
+	sceKernelDeleteEventFlag
+	sceKernelInitializeFastMutex
+	sceKernelSignalSema
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
 	ksceSblSmSchedProxyWriteCry2Arm
 	ksceSblSmSchedProxyInvoke
 	ksceSblSmSchedProxyGetStatus

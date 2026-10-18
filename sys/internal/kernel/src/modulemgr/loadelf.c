@@ -352,7 +352,7 @@ int LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, ModuleAuthInfo *auth, SceU
 			if (ph->p_type == PT_LOAD || ph->p_type == PT_SCE_RELA)
 				timing.totalSize += ph->p_filesz;
 		}
-		timing.start = ksceKernelGetSystemTimeLow();
+		timing.start = SceThreadmgrForDriver_47F6DE49();
 		t = &timing;
 		timing.loadedSize = 0;
 	}
@@ -445,9 +445,9 @@ int LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, ModuleAuthInfo *auth, SceU
 							if (t == NULL) {
 								ret = RelocatorRelSegment(ctx, buf, ph->p_filesz);
 							} else {
-								t0 = ksceKernelGetSystemTimeLow();
+								t0 = SceThreadmgrForDriver_47F6DE49();
 								ret = RelocatorRelSegment(ctx, buf, ph->p_filesz);
-								t->relocUsec += ksceKernelGetSystemTimeLow() - t0;
+								t->relocUsec += SceThreadmgrForDriver_47F6DE49() - t0;
 							}
 #else
 							ret = RelocatorRelSegment(ctx, buf, ph->p_filesz);

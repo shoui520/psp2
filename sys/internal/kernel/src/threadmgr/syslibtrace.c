@@ -8,11 +8,10 @@
 #include <sysmem/sysmem.h>
 #include "syscall_context.h"
 #include <sysmem/sysclib.h>
+#include <threadmgr/threadmgr.h>
 
 #define THREAD_ID_LIST_ALL		0x00010021	/* PLACEHOLDER: name */
 #define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
-
-extern int ksceKernelGetThreadIdList(SceUID type, SceUID *ids, SceSize size, SceSize *count);
 
 /* allocates a thread's syslibtrace state if it has none (its lock held) */
 int syslibtraceThreadCBInit(struct ThreadCB *thread)
@@ -53,7 +52,7 @@ int sceKernelSetSyslibtraceThreadCBEnable(int enable)
 		&s_threadmgrRuntime.manager->threadMgrCBLock, intr);
 	if (!enable)
 		return 0;
-	ret = ksceKernelGetThreadIdList(THREAD_ID_LIST_ALL, NULL, 0, NULL);
+	ret = sceKernelGetThreadIdList(THREAD_ID_LIST_ALL, NULL, 0, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 32, "error: failed to get thread id count (0x%08x)\n", ret);
 		return ret;
@@ -66,7 +65,7 @@ int sceKernelSetSyslibtraceThreadCBEnable(int enable)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	}
 	memset(ids, 0, count * sizeof(SceUID));
-	ret = ksceKernelGetThreadIdList(THREAD_ID_LIST_ALL, ids, count * sizeof(SceUID), &count);
+	ret = sceKernelGetThreadIdList(THREAD_ID_LIST_ALL, ids, count * sizeof(SceUID), &count);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 47, "error: failed to get thread id list (0x%08x)\n", ret);
 		goto free;

@@ -69,13 +69,13 @@ BbcmdCommandEntry g_bbcmdCommands[52] = {
 _Static_assert(sizeof(BbcmdCommandEntry) == 8, "command entry size");
 
 extern int bbmcLockFastMutex(struct ThreadmgrFastMutex *mutex)
-	__asm__("ksceKernelLockFastMutex");
+	__asm__("lockFastMutex");
 extern int bbmcUnlockFastMutex(struct ThreadmgrFastMutex *mutex)
-	__asm__("ksceKernelUnlockFastMutex");
+	__asm__("sceKernelUnlockFastMutex");
 extern int bbmcInitializeFastMutex(struct ThreadmgrFastMutex *mutex, const char *name,
-				 int attr, void *opt) __asm__("ksceKernelInitializeFastMutex");
+				 int attr, void *opt) __asm__("sceKernelInitializeFastMutex");
 extern int bbmcFinalizeFastMutex(struct ThreadmgrFastMutex *mutex)
-	__asm__("ksceKernelFinalizeFastMutex");
+	__asm__("sceKernelFinalizeFastMutex");
 
 void bbcmdInternalEnterCS(void)
 {
@@ -98,7 +98,7 @@ int bbcmdWorker(SceSize args, void *argp)
 
 	(void)args;
 	for (;;) {
-		if (ksceKernelWaitEventFlag(control->event, 0x8000000f, 1,
+		if (sceKernelWaitEventFlag(control->event, 0x8000000f, 1,
 					    &events, NULL) < 0 ||
 		    (events & 0x80000000) != 0)
 			break;
@@ -120,7 +120,7 @@ int bbcmdWorker(SceSize args, void *argp)
 			if (node->request.handler == NULL)
 				return 0;
 			if (((events >> node->index) & 1) != 0) {
-				ksceKernelClearEventFlag(control->event,
+				sceKernelClearEventFlag(control->event,
 							~(1U << node->index));
 				node->request.handler(&node->request);
 			}
@@ -129,7 +129,7 @@ int bbcmdWorker(SceSize args, void *argp)
 				if (node->request.handler == NULL)
 					return 0;
 				if (((events >> node->index) & 1) != 0) {
-					ksceKernelClearEventFlag(control->event,
+					sceKernelClearEventFlag(control->event,
 								~(1U << node->index));
 					node->request.handler(&node->request);
 				}
@@ -138,7 +138,7 @@ int bbcmdWorker(SceSize args, void *argp)
 					if (node->request.handler == NULL)
 						return 0;
 					if (((events >> node->index) & 1) != 0) {
-						ksceKernelClearEventFlag(control->event,
+						sceKernelClearEventFlag(control->event,
 									~(1U << node->index));
 						node->request.handler(&node->request);
 					}
@@ -147,7 +147,7 @@ int bbcmdWorker(SceSize args, void *argp)
 						if (node->request.handler == NULL)
 							return 0;
 						if (((events >> node->index) & 1) != 0) {
-							ksceKernelClearEventFlag(control->event,
+							sceKernelClearEventFlag(control->event,
 										~(1U << node->index));
 							node->request.handler(&node->request);
 						}
@@ -242,24 +242,24 @@ int bbcmdInitialize(unsigned int protocolKind)
 		g_bbcmdStorage.tail = &g_bbcmdStorage.nodes[3];
 		g_bbcmdStorage.nodes[3].index = 3;
 		g_bbcmdStorage.freeCount = 4;
-		ret = ksceKernelCreateThread("SceBbmcBbcmd", bbcmdWorker, 96, 0x2000,
+		ret = sceKernelCreateThread("SceBbmcBbcmd", bbcmdWorker, 96, 0x2000,
 					    0x10000000, 0x80000, NULL);
 		if (ret >= 0) {
 			g_bbcmdStorage.thread = ret;
-			ret = ksceKernelCreateEventFlag("SceBbmcBbcmd", 0, 0, NULL);
+			ret = sceKernelCreateEventFlag("SceBbmcBbcmd", 0, 0, NULL);
 			if (ret >= 0) {
 				g_bbcmdStorage.event = ret;
 				g_bbcmdStorage.state = 1;
 				g_bbcmdStorage.channelState[0] = 0;
 				g_bbcmdStorage.channelState[1] = 0;
 				g_bbcmdControl = &g_bbcmdStorage;
-				ret = ksceKernelStartThread(g_bbcmdStorage.thread, 4,
+				ret = sceKernelStartThread(g_bbcmdStorage.thread, 4,
 							   &g_bbcmdControl);
 				if (ret >= 0)
 					return ret;
-				ksceKernelDeleteEventFlag(g_bbcmdStorage.event);
+				sceKernelDeleteEventFlag(g_bbcmdStorage.event);
 			}
-			ksceKernelDeleteThread(g_bbcmdStorage.thread);
+			sceKernelDeleteThread(g_bbcmdStorage.thread);
 		}
 	}
 	if (bbmcFinalizeFastMutex(&g_bbcmdStorage.mutex) < 0)
@@ -276,10 +276,10 @@ int bbcmdFinalize(void)
 
 	if (g_bbcmdControl == NULL)
 		return (int)0x80330003;
-	ksceKernelSetEventFlag(g_bbcmdControl->event, 0x80000000);
-	ksceKernelWaitThreadEnd(g_bbcmdControl->thread, NULL, &timeout);
-	ksceKernelDeleteThread(g_bbcmdControl->thread);
-	ksceKernelDeleteEventFlag(g_bbcmdControl->event);
+	sceKernelSetEventFlag(g_bbcmdControl->event, 0x80000000);
+	sceKernelWaitThreadEnd(g_bbcmdControl->thread, NULL, &timeout);
+	sceKernelDeleteThread(g_bbcmdControl->thread);
+	sceKernelDeleteEventFlag(g_bbcmdControl->event);
 	if (bbmcFinalizeFastMutex(&g_bbcmdStorage.mutex) < 0)
 		SCE_PANIC_FUNC(1829, "bbcmdInternalTermCS");
 	memset(g_bbcmdControl, 0, sizeof(*g_bbcmdControl));
@@ -345,7 +345,7 @@ int bbcmdExecute(unsigned int channel, unsigned int command,
 			if (node->state != 1)
 				continue;
 			node->control->cancelMask |= 1U << node->index;
-			ret = ksceKernelSetEventFlag(node->control->event,
+			ret = sceKernelSetEventFlag(node->control->event,
 						    1U << node->index);
 			if ((mode == 1 && selected == node->request.command) || ret < 0)
 				goto cancel_unlock;
@@ -815,7 +815,7 @@ cancel_unlock:
 	node->request.handler = handler;
 	control->freeHead = node->next;
 	control->freeCount--;
-	ret = ksceKernelSetEventFlag(control->event, 1U << node->index);
+	ret = sceKernelSetEventFlag(control->event, 1U << node->index);
 	goto done;
 invalid_protocol:
 	ret = (int)0x80330001;

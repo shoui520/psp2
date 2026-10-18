@@ -21,7 +21,6 @@
 #include <sysmem/sysroot.h>
 
 int ksceKernelIsGameBudget(void);
-int ksceKernelUnregisterThreadEventHandler(SceUID handlerId);
 int sceNetPsProcessCreateHandler(SceUID processId, const void *param,
 				SceNetPsProcessHooks *hooks);
 int sceNetPsProcessExitHandler(SceUID processId, const void *param,
@@ -95,10 +94,10 @@ int sceNetPsProcessAffinityHandler(int event, SceUID processId, void *args,
 {
 	switch (event) {
 	case 16:
-		return ksceKernelChangeThreadCpuAffinityMask(hooks->softThread,
+		return sceKernelChangeThreadCpuAffinityMask(hooks->softThread,
 							   0x80000);
 	case 17:
-		return ksceKernelChangeThreadCpuAffinityMask(hooks->softThread,
+		return sceKernelChangeThreadCpuAffinityMask(hooks->softThread,
 							   0xf0000);
 	default:
 		return 0;
@@ -221,13 +220,13 @@ int sceNetPsCreateThread(SceUID *threadId, SceNetPsThreadParam *param,
 	SceUID createdThread;
 	int result;
 
-	createdThread = ksceKernelCreateThread(name,
+	createdThread = sceKernelCreateThread(name,
 					     (SceKernelThreadEntry)sceNetPsThreadEntry,
 					     param->initPriority, param->stackSize,
 					     0, param->cpuAffinityMask, NULL);
 	if (createdThread < 0)
 		return createdThread;
-	result = ksceKernelStartThread(createdThread, sizeof(*param), param);
+	result = sceKernelStartThread(createdThread, sizeof(*param), param);
 	if (result >= 0)
 		*threadId = createdThread;
 	return result;
@@ -238,7 +237,7 @@ SceUID sceNetPsGetThreadId(void)
 	SceUID threadId;
 	SceUID result;
 
-	threadId = ksceKernelGetThreadId();
+	threadId = sceKernelGetThreadId();
 	result = threadId & ~(threadId >> 31);
 	if (threadId < 0)
 		return -1;
@@ -266,7 +265,7 @@ int sce_psnet_bnet_mutex_create(SceNetPsMutex *mutex, const char *name)
 {
 	SceUID eventFlag;
 
-	eventFlag = ksceKernelCreateEventFlag(name, 0x1000, 0, NULL);
+	eventFlag = sceKernelCreateEventFlag(name, 0x1000, 0, NULL);
 	if (eventFlag >= 0) {
 		mutex->eventFlag = eventFlag;
 		mutex->available = 1;
@@ -294,7 +293,7 @@ int sce_psnet_bnet_mutex_lock(SceNetPsMutex *mutex, unsigned int *timeout)
 		} while (netPsStoreExclusive(&mutex->available, 0));
 		if (available)
 			break;
-		result = ksceKernelWaitEventFlag(mutex->eventFlag, 1, 5,
+		result = sceKernelWaitEventFlag(mutex->eventFlag, 1, 5,
 					       &resultBits, timeout);
 		if (result < 0) {
 			if (result != (int)0x80028005 &&
@@ -322,7 +321,7 @@ int sce_psnet_bnet_mutex_unlock(SceNetPsMutex *mutex)
 		available = netPsLoadExclusive(&mutex->available);
 	} while (netPsStoreExclusive(&mutex->available, available | 1));
 	if (mutex->waiters)
-		return ksceKernelSetEventFlag(mutex->eventFlag, 1);
+		return sceKernelSetEventFlag(mutex->eventFlag, 1);
 	return 0;
 }
 
@@ -331,7 +330,7 @@ int sce_psnet_bnet_sync_create(SceNetPsSync *sync, unsigned int events,
 {
 	SceUID eventFlag;
 
-	eventFlag = ksceKernelCreateEventFlag(name, 0x9000, 0, NULL);
+	eventFlag = sceKernelCreateEventFlag(name, 0x9000, 0, NULL);
 	if (eventFlag < 0)
 		return eventFlag;
 	sync->eventFlag = eventFlag;
@@ -360,7 +359,7 @@ int sce_psnet_bnet_sync_delete(SceNetPsSync *sync)
 		sync->prev->next = next;
 	else
 		gNetPsSyncList.head = next;
-	ksceKernelDeleteEventFlag(sync->eventFlag);
+	sceKernelDeleteEventFlag(sync->eventFlag);
 	return 0;
 }
 
@@ -383,10 +382,10 @@ int sce_psnet_bnet_sync_wait(SceNetPsSync *sync,
 		if (events)
 			break;
 		if (flags & 1)
-			result = ksceKernelWaitEventFlagCB(sync->eventFlag, 1, 5,
+			result = SceThreadmgrForDriver_8A35F714(sync->eventFlag, 1, 5,
 						 NULL, timeout);
 		else
-			result = ksceKernelWaitEventFlag(sync->eventFlag, 1, 5,
+			result = sceKernelWaitEventFlag(sync->eventFlag, 1, 5,
 					       NULL, timeout);
 		if (result < 0) {
 			if (result != (int)0x80028005 &&
@@ -425,7 +424,7 @@ int sce_psnet_bnet_sync_signal(SceNetPsSync *sync, unsigned int mask)
 		events = netPsLoadExclusive(&sync->events);
 	} while (netPsStoreExclusive(&sync->events, events | mask));
 	if (sync->waiters)
-		return ksceKernelSetEventFlag(sync->eventFlag, 1);
+		return sceKernelSetEventFlag(sync->eventFlag, 1);
 	return 0;
 }
 
@@ -444,7 +443,7 @@ void sceNetPsUnbindCallback(SceNetPsDriverCallback *callback)
 int sceNetPsNotifyCallback(SceNetPsDriverCallback *callback,
 			  unsigned int argument)
 {
-	return ksceKernelNotifyCallback(callback->globalCallbackId, argument);
+	return sceKernelNotifyCallback(callback->globalCallbackId, argument);
 }
 
 SceUID bnet_puid_to_guid(SceUID puid)
@@ -529,7 +528,7 @@ int sceNetPsInitializePlatform(int (*initialize)(SceUID, void *, int,
 unregisterProcess:
 	SceProcEventForDriver_3DED57CC(processId);
 unregisterThread:
-	ksceKernelUnregisterThreadEventHandler(threadId);
+	sceKernelUnregisterThreadEventHandler(threadId);
 unregisterSystem:
 	sceKernelUnregisterSysEventHandler(systemId);
 freeMemory:

@@ -114,15 +114,15 @@ set(MODULE_IMPORT_FUNCS
 	memcmp
 	SceDebugForDriver_35A35322
 	SceDebugForDriver_D9703808
-	ksceKernelFinalizeFastMutex
+	sceKernelFinalizeFastMutex
 	SceThreadmgrForDriver_332E127C
-	ksceKernelGetSystemTimeLow
-	ksceKernelLockFastMutex
-	ksceKernelTryLockFastMutex
-	ksceKernelInitializeFastMutex
-	ksceKernelUnlockFastMutex
-	ksceKernelEnqueueWorkQueue
-	ksceKernelGetProcessIdFromTLS
+	SceThreadmgrForDriver_47F6DE49
+	lockFastMutex
+	sceKernelTryLockFastMutex
+	sceKernelInitializeFastMutex
+	sceKernelUnlockFastMutex
+	sceKernelScheduleWorkTask
+	SceThreadmgrForDriver_FA54D49A
 	ksceVopCleanup
 	ksceIoDevctl
 	ksceIoUmount

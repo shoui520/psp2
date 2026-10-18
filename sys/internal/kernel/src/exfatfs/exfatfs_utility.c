@@ -152,7 +152,7 @@ int isShortNameCharacter(unsigned int character, int allowExtended)
 
 int shortNameTimeCharacter(void)
 {
-	unsigned char value = ksceKernelGetSystemTimeLow() % 36;
+	unsigned char value = SceThreadmgrForDriver_47F6DE49() % 36;
 
 	if (value > 9)
 		return (unsigned char)(value + 'A' - 10);

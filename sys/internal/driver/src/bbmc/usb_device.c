@@ -140,7 +140,7 @@ int bbmcUsbSerialDeviceThread(SceSize argumentSize, void *arguments)
 		return 0;
 	device = g_usbSerialDevice;
 	for (;;) {
-		if (ksceKernelWaitEventFlag(device->event, 0x800007ffu, 5,
+		if (sceKernelWaitEventFlag(device->event, 0x800007ffu, 5,
 					    &events, NULL) < 0 || (int)events < 0)
 			goto finished;
 		if (events & 512) {
@@ -310,52 +310,52 @@ void bbmcUsbDeviceAtOutCompleted(SceUdcdDeviceRequest *request)
 {
 	BbmcUsbSerialDevice *device = request->unused;
 
-	ksceKernelSetEventFlag(device->event, 64);
+	sceKernelSetEventFlag(device->event, 64);
 }
 
 void bbmcUsbDeviceAtInCompleted(SceUdcdDeviceRequest *request)
 {
 	BbmcUsbSerialDevice *device = request->unused;
 
-	ksceKernelSetEventFlag(device->event, 128);
+	sceKernelSetEventFlag(device->event, 128);
 }
 
 void bbmcUsbDeviceAtInterruptCompleted(SceUdcdDeviceRequest *request)
 {
 	BbmcUsbSerialDevice *device = request->unused;
 
-	ksceKernelSetEventFlag(device->event, 256);
+	sceKernelSetEventFlag(device->event, 256);
 }
 
 void bbmcUsbDeviceQcomOutCompleted(SceUdcdDeviceRequest *request)
 {
 	BbmcUsbSerialDevice *device = request->unused;
 
-	ksceKernelSetEventFlag(device->event, 16);
+	sceKernelSetEventFlag(device->event, 16);
 }
 
 void bbmcUsbDeviceQcomInCompleted(SceUdcdDeviceRequest *request)
 {
 	BbmcUsbSerialDevice *device = request->unused;
 
-	ksceKernelSetEventFlag(device->event, 32);
+	sceKernelSetEventFlag(device->event, 32);
 }
 
 void bbmcUsbDeviceControlOutCompleted(SceUdcdDeviceRequest *request)
 {
-	ksceKernelSetEventFlag(g_usbSerialDevice->event, 8);
+	sceKernelSetEventFlag(g_usbSerialDevice->event, 8);
 }
 
 void bbmcUsbDeviceDetached(void *context)
 {
 	g_usbSerialDeviceStorage.connected = 0;
-	ksceKernelSetEventFlag(g_usbSerialDevice->event, 2);
+	sceKernelSetEventFlag(g_usbSerialDevice->event, 2);
 }
 
 int bbmcUsbDeviceAttached(int usbVersion, void *context)
 {
 	g_usbSerialDevice->connected = 1;
-	return ksceKernelSetEventFlag(g_usbSerialDevice->event, 1);
+	return sceKernelSetEventFlag(g_usbSerialDevice->event, 1);
 }
 
 int bbmcUsbDeviceProcessRequest(int recipient, int endpoint,
@@ -371,7 +371,7 @@ int bbmcUsbDeviceProcessRequest(int recipient, int endpoint,
 	device = g_usbSerialDevice;
 	if (setup->bmRequestType & 0x80) {
 		__builtin_memcpy(&device->controlInSetup, setup, sizeof(*setup));
-		ksceKernelSetEventFlag(device->event, 4);
+		sceKernelSetEventFlag(device->event, 4);
 		return 0;
 	}
 	__builtin_memcpy(&device->controlOutSetup, setup, sizeof(*setup));
@@ -382,7 +382,7 @@ int bbmcUsbDeviceProcessRequest(int recipient, int endpoint,
 		SceCpuForDriver_02796361(device->controlOut.request.data, 128);
 		return ksceUdcdReqRecvInternal(&device->controlOut.request, bus);
 	}
-	ksceKernelSetEventFlag(device->event, 8);
+	sceKernelSetEventFlag(device->event, 8);
 	return 0;
 }
 
@@ -537,11 +537,11 @@ int bbmcInitializeUsbSerial(SceSize argumentSize, const void *arguments)
 
 	__builtin_memset(&g_usbSerialDeviceStorage, 0, sizeof(g_usbSerialDeviceStorage));
 	g_usbSerialDeviceStorage.bus = *(const int *)arguments;
-	result = ksceKernelCreateEventFlag("SceBbmcUsbSerial", 0, 0, NULL);
+	result = sceKernelCreateEventFlag("SceBbmcUsbSerial", 0, 0, NULL);
 	if (result < 0)
 		goto failed;
 	g_usbSerialDeviceStorage.event = result;
-	result = ksceKernelCreateThread("SceBbmcUsbSerial", bbmcUsbSerialDeviceThread,
+	result = sceKernelCreateThread("SceBbmcUsbSerial", bbmcUsbSerialDeviceThread,
 				       97, 8192, 0x10000000, 0x80000, NULL);
 	if (result < 0)
 		goto failed;
@@ -552,11 +552,11 @@ int bbmcInitializeUsbSerial(SceSize argumentSize, const void *arguments)
 	return 0;
 failed:
 	if (g_usbSerialDeviceStorage.thread > 0) {
-		ksceKernelDeleteThread(g_usbSerialDeviceStorage.thread);
+		sceKernelDeleteThread(g_usbSerialDeviceStorage.thread);
 		g_usbSerialDeviceStorage.thread = 0;
 	}
 	if (g_usbSerialDeviceStorage.event > 0) {
-		ksceKernelDeleteEventFlag(g_usbSerialDeviceStorage.event);
+		sceKernelDeleteEventFlag(g_usbSerialDeviceStorage.event);
 		g_usbSerialDeviceStorage.event = 0;
 	}
 	return 2;
@@ -566,11 +566,11 @@ int bbmcFinalizeUsbSerial(void)
 {
 	g_usbSerialDevice = NULL;
 	if (g_usbSerialDeviceStorage.thread > 0) {
-		ksceKernelDeleteThread(g_usbSerialDeviceStorage.thread);
+		sceKernelDeleteThread(g_usbSerialDeviceStorage.thread);
 		g_usbSerialDeviceStorage.thread = 0;
 	}
 	if (g_usbSerialDeviceStorage.event > 0) {
-		ksceKernelDeleteEventFlag(g_usbSerialDeviceStorage.event);
+		sceKernelDeleteEventFlag(g_usbSerialDeviceStorage.event);
 		g_usbSerialDeviceStorage.event = 0;
 	}
 	ksceUdcdUnregisterInternal(&g_usbSerialDriver, g_usbSerialDeviceStorage.bus);
@@ -580,11 +580,11 @@ int bbmcFinalizeUsbSerial(void)
 void bbmcCloseUsbSerialChannels(void)
 {
 	if (g_usbSerialDevice)
-		ksceKernelSetEventFlag(g_usbSerialDevice->event, 512);
+		sceKernelSetEventFlag(g_usbSerialDevice->event, 512);
 }
 
 void bbmcWakeUsbSerial(void)
 {
 	if (g_usbSerialDevice)
-		ksceKernelSetEventFlag(g_usbSerialDevice->event, 1024);
+		sceKernelSetEventFlag(g_usbSerialDevice->event, 1024);
 }

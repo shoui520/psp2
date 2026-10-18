@@ -21,7 +21,7 @@ int UVFAT_InitLockMountPoint(SceExfatfsFileSystem *fileSystem)
 		} while (character != '0' && end < &name[31]);
 	}
 	end[1] = 0;
-	result = ksceKernelInitializeFastMutex((SceKernelFastMutex *)&fileSystem->rootFastMutex,
+	result = sceKernelInitializeFastMutex((SceKernelFastMutex *)&fileSystem->rootFastMutex,
 		name, 0x2002, NULL);
 	if (result < 0) {
 		SCE_DBG_PRINTF_LEVEL(2, 0, 246,
@@ -38,7 +38,7 @@ int UVFAT_FinalizeLockMountPoint(SceExfatfsFileSystem *fileSystem)
 	int result;
 
 	if (mutex) {
-		result = ksceKernelFinalizeFastMutex(mutex);
+		result = sceKernelFinalizeFastMutex(mutex);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL(2, 0, 262,
 				"%s: sceKernelFinalizeFastMutex failed[%#x]\n",
@@ -54,7 +54,7 @@ int UVFAT_LockMountPoint(SceExfatfsFileSystem *fileSystem)
 
 	if (!mutex)
 		return 0;
-	result = ksceKernelLockFastMutex(mutex);
+	result = lockFastMutex(mutex);
 	if (result >= 0)
 		return 0;
 	SCE_DBG_PRINTF_LEVEL(2, 0, 282,
@@ -70,7 +70,7 @@ int UVFAT_UnlockMountPoint(SceExfatfsFileSystem *fileSystem)
 
 	if (!mutex)
 		return 0;
-	result = ksceKernelUnlockFastMutex(mutex);
+	result = sceKernelUnlockFastMutex(mutex);
 	if (result >= 0)
 		return 0;
 	SCE_DBG_PRINTF_LEVEL(2, 0, 308,

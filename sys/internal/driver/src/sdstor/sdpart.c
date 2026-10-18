@@ -196,7 +196,7 @@ int sdpart_init(void)
 	for (;;) {
 		SCE_DBG_ASSERT(1, 207);
 		SCE_DBG_ASSERT_FUNC(1, 192, "sdpart_get_table");
-		result = ksceKernelInitializeFastMutex(&table->fastmutex,
+		result = sceKernelInitializeFastMutex(&table->fastmutex,
 				"SceSdStorPartitionTable", 0, 0);
 		if (result != 0)
 			break;
@@ -225,7 +225,7 @@ int sdpart_close(unsigned int port)
 	SCE_DBG_ASSERT(port <= 4, 321);
 	SCE_DBG_ASSERT_FUNC(port <= 4, 192, "sdpart_get_table");
 	table = port <= 4 ? &sdpartTables[port] : NULL;
-	result = ksceKernelLockFastMutex(&table->fastmutex);
+	result = lockFastMutex(&table->fastmutex);
 	if (result < 0)
 		return result;
 	if (table->stat) {
@@ -238,7 +238,7 @@ int sdpart_close(unsigned int port)
 		table->mediaInfo.eraseBlockCount = 0;
 		memset(table->pentry, 0, sizeof(table->pentry));
 	}
-	result = ksceKernelUnlockFastMutex(&table->fastmutex);
+	result = sceKernelUnlockFastMutex(&table->fastmutex);
 	return result < 0 ? result : 0;
 }
 
@@ -251,12 +251,12 @@ int sdpart_remove(unsigned int port)
 	SCE_DBG_ASSERT_FUNC(port <= 4, 258, "sdpart_suspend_stat");
 	SCE_DBG_ASSERT_FUNC(port <= 4, 192, "sdpart_get_table");
 	table = port <= 4 ? &sdpartTables[port] : NULL;
-	result = ksceKernelLockFastMutex(&table->fastmutex);
+	result = lockFastMutex(&table->fastmutex);
 	if (result >= 0) {
 		previous = table->stat;
 		table->stat = 2;
 		table->prev_stat = previous;
-		result = ksceKernelUnlockFastMutex(&table->fastmutex);
+		result = sceKernelUnlockFastMutex(&table->fastmutex);
 		if (result >= 0)
 			return 0;
 	}
@@ -273,7 +273,7 @@ int sdpart_insert(unsigned int port)
 	SCE_DBG_ASSERT_FUNC(port <= 4, 321, "sdpart_close");
 	SCE_DBG_ASSERT_FUNC(port <= 4, 192, "sdpart_get_table");
 	table = port <= 4 ? &sdpartTables[port] : NULL;
-	result = ksceKernelLockFastMutex(&table->fastmutex);
+	result = lockFastMutex(&table->fastmutex);
 	if (result >= 0) {
 		if (table->stat) {
 			table->externalFormat = 0;
@@ -285,7 +285,7 @@ int sdpart_insert(unsigned int port)
 			table->mediaInfo.eraseBlockCount = 0;
 			memset(table->pentry, 0, sizeof(table->pentry));
 		}
-		result = ksceKernelUnlockFastMutex(&table->fastmutex);
+		result = sceKernelUnlockFastMutex(&table->fastmutex);
 		if (result >= 0)
 			return 0;
 	}
@@ -302,12 +302,12 @@ int sdpart_suspend(unsigned int port)
 	SCE_DBG_ASSERT_FUNC(port <= 4, 258, "sdpart_suspend_stat");
 	SCE_DBG_ASSERT_FUNC(port <= 4, 192, "sdpart_get_table");
 	table = port <= 4 ? &sdpartTables[port] : NULL;
-	result = ksceKernelLockFastMutex(&table->fastmutex);
+	result = lockFastMutex(&table->fastmutex);
 	if (result >= 0) {
 		previous = table->stat;
 		table->stat = 2;
 		table->prev_stat = previous;
-		result = ksceKernelUnlockFastMutex(&table->fastmutex);
+		result = sceKernelUnlockFastMutex(&table->fastmutex);
 		if (result >= 0)
 			return 0;
 	}
@@ -324,10 +324,10 @@ int sdpart_resume_stat(unsigned int port)
 	SCE_DBG_ASSERT(port <= 4, 275);
 	SCE_DBG_ASSERT_FUNC(port <= 4, 192, "sdpart_get_table");
 	table = port <= 4 ? &sdpartTables[port] : NULL;
-	result = ksceKernelLockFastMutex(&table->fastmutex);
+	result = lockFastMutex(&table->fastmutex);
 	if (result >= 0) {
 		table->stat = table->prev_stat;
-		result = ksceKernelUnlockFastMutex(&table->fastmutex);
+		result = sceKernelUnlockFastMutex(&table->fastmutex);
 		if (result >= 0)
 			return 0;
 	}
@@ -673,7 +673,7 @@ unsigned int sdpart_open(unsigned int port)
 	SCE_DBG_ASSERT(port <= 4, 291);
 	SCE_DBG_ASSERT_FUNC(port <= 4, 192, "sdpart_get_table");
 	table = port <= 4 ? &sdpartTables[port] : NULL;
-	result = ksceKernelLockFastMutex(&table->fastmutex);
+	result = lockFastMutex(&table->fastmutex);
 	if (result < 0)
 		return result;
 	if (table->stat == 2) {
@@ -770,7 +770,7 @@ sd:
 		result = 0;
 	}
 unlock:
-	unlockResult = ksceKernelUnlockFastMutex(&table->fastmutex);
+	unlockResult = sceKernelUnlockFastMutex(&table->fastmutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
 
@@ -802,7 +802,7 @@ SceSdstorPartitionEntry *sdpart_get_object(const char *name, int length)
 			return NULL;
 		SCE_DBG_ASSERT_FUNC(port <= 4, 192, "sdpart_get_table");
 		table = &sdpartTables[port];
-		if (ksceKernelLockFastMutex(&table->fastmutex) < 0)
+		if (lockFastMutex(&table->fastmutex) < 0)
 			return NULL;
 		entry = NULL;
 		if (table->stat == 1) {
@@ -810,7 +810,7 @@ SceSdstorPartitionEntry *sdpart_get_object(const char *name, int length)
 			if (entry->sdpart && strncmp(entry->numeric_name, name, 3))
 				entry = NULL;
 		}
-		if (ksceKernelUnlockFastMutex(&table->fastmutex) < 0)
+		if (sceKernelUnlockFastMutex(&table->fastmutex) < 0)
 			return NULL;
 		return entry;
 	}
@@ -880,7 +880,7 @@ resolved:
 		return NULL;
 	SCE_DBG_ASSERT_FUNC(sdinst.port <= 4, 192, "sdpart_get_table");
 	table = sdinst.port <= 4 ? &sdpartTables[sdinst.port] : NULL;
-	if (ksceKernelLockFastMutex(&table->fastmutex) < 0)
+	if (lockFastMutex(&table->fastmutex) < 0)
 		return NULL;
 	entry = NULL;
 	if (table->stat != 1)
@@ -918,7 +918,7 @@ resolved:
 		}
 	}
 unlock:
-	if (ksceKernelUnlockFastMutex(&table->fastmutex) < 0)
+	if (sceKernelUnlockFastMutex(&table->fastmutex) < 0)
 		return NULL;
 	return entry;
 }

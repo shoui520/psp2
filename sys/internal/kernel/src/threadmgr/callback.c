@@ -21,6 +21,7 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/uid_class.h>
 #include <intrmgr/intrmgr.h>
+#include <threadmgr/threadmgr.h>
 
 #define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define THREAD_ATTR_USER		0x80000000
@@ -73,8 +74,6 @@ extern void SceIntrmgrForKernel_08FDB0CE(struct ThreadRegisterContext *context, 
 extern int SceIntrmgrForKernel_71C5F42F(struct ThreadRegisterContext *context, uintptr_t vfp)
 	__attribute__((returns_twice));
 extern void SceIntrmgrForDriver_C568F145(uint32_t code);
-extern int SceThreadmgrForDriver_D74F66BD(void);
-int sceKernelIsUserModeThread(void);
 int sceKernelCheckThreadUserStackSelf(void);
 int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result,
 				    uint32_t request);
@@ -661,7 +660,8 @@ int callbackProcessExit(SceProcessObject *process)
 	return 0;
 }
 
-SceUID ksceKernelCreateCallback(const char *name, SceUInt32 attr, uintptr_t entry, void *common)
+SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallbackFunction entry,
+			       void *common)
 {
 	UIDCreateOpt opt;
 	struct ThreadCB *thread;
@@ -748,7 +748,7 @@ SceUID ksceKernelCreateCallback(const char *name, SceUInt32 attr, uintptr_t entr
 	callback->ownerPid = ThreadmgrInSyscall() ? thread->processId : THREADMGR_KERNEL_PID;
 	callback->cb.guid = uid;
 	callback->cb.attr = limit;
-	callback->cb.entry = entry;
+	callback->cb.entry = (uintptr_t)entry;
 	callback->cb.common = common;
 	callback->cb.threadId = thread->threadId;
 	callback->cb.user = user;
@@ -787,7 +787,7 @@ restore:
 	return uid;
 }
 
-int ksceKernelDeleteCallback(SceUID callbackId)
+int sceKernelDeleteCallback(SceUID callbackId)
 {
 	struct ThreadmgrCallback *callback;
 	struct ThreadmgrThreadObject *object;
@@ -849,7 +849,7 @@ restore:
 }
 
 /* counts a notification of the callback and wakes its thread if it waits with callbacks */
-int ksceKernelNotifyCallback(SceUID callbackId, int arg)
+int sceKernelNotifyCallback(SceUID callbackId, int arg)
 {
 	struct ThreadmgrCallback *callback;
 	struct ThreadmgrThreadObject *object;
@@ -972,7 +972,7 @@ int sceKernelCheckCallback(void)
 	return ret;
 }
 
-int ksceKernelCancelCallback(SceUID callbackId)
+int SceThreadmgrForDriver_C040EC1C(SceUID callbackId)
 {
 	struct ThreadmgrCallback *callback;
 	struct ThreadmgrThreadObject *object;
@@ -1006,7 +1006,7 @@ resume:
 	return ret;
 }
 
-int ksceKernelGetCallbackCount(SceUID callbackId)
+int SceThreadmgrForDriver_0892D8DF(SceUID callbackId)
 {
 	struct ThreadmgrCallback *callback;
 	struct ThreadmgrThreadObject *object;
@@ -1182,7 +1182,7 @@ int SceThreadmgrForDriver_FF8DA217(SceUID pid, int level, SceKernelCallbackInfo 
 }
 
 /* registers the callback on the object (an event): notified with notifyId when it is set */
-int ksceKernelRegisterCallbackToEvent(SceUID eventId, SceUID callbackId, uint32_t notifyId)
+int sceKernelRegisterCallbackToEventForDriver(SceUID eventId, SceUID callbackId, uint32_t notifyId)
 {
 	ThreadmgrEventCallback *entry, *pos, *head;
 	struct ThreadmgrCallback *callback;
@@ -1250,7 +1250,7 @@ resume:
 	return ret;
 }
 
-int ksceKernelUnregisterCallbackFromEvent(SceUID eventId, SceUID callbackId)
+int sceKernelUnregisterCallbackFromEvent(SceUID eventId, SceUID callbackId)
 {
 	ThreadmgrEventCallback *entry, *head;
 	ThreadmgrEvent *event;
@@ -1292,7 +1292,7 @@ resume:
 	return ret;
 }
 
-int ksceKernelUnregisterCallbackFromEventAll(SceUID eventId)
+int sceKernelUnregisterCallbackFromEventAll(SceUID eventId)
 {
 	ThreadmgrEventCallback *entry, *head;
 	ThreadmgrEvent *event;

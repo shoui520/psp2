@@ -226,7 +226,7 @@ void powerLowBatterySuspendCallback(int enable, void *argp)
 				    enable ? 0 : POWER_CALLBACKARG_LOW_BATTERY_SUSPEND,
 				    enable ? POWER_CALLBACKARG_LOW_BATTERY_SUSPEND : 0, 0);
 	if (enable)
-		ksceKernelRegisterTimer("ScePowerLowBatterySuspend", 5000000,
+		SceThreadmgrForDriver_C58DF384("ScePowerLowBatterySuspend", 5000000,
 					powerSuspendTimerCallback, NULL);
 }
 
@@ -249,7 +249,7 @@ void powerThermalCallback(int enable, void *argp)
 				    enable ? 0 : POWER_CALLBACKARG_THERMAL_SUSPEND,
 				    enable ? POWER_CALLBACKARG_THERMAL_SUSPEND : 0, 0);
 	if (enable)
-		ksceKernelRegisterTimer("ScePowerThermalAlertSuspend", 5000000,
+		SceThreadmgrForDriver_C58DF384("ScePowerThermalAlertSuspend", 5000000,
 					powerSuspendTimerCallback, NULL);
 }
 
@@ -288,7 +288,7 @@ int powerInitializeModule(void)
 	ksceSysconSetThermalAlertCallback(powerThermalCallback, NULL);
 	sceKernelRegisterSysEventHandler("ScePower", powerSysEventHandler, NULL);
 	sceKernelRegisterProcEventHandler("ScePower", &s_powerProcessEventHandlers, 0);
-	ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "ScePowerInit", powerStartupWorker, NULL);
+	sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "ScePowerInit", powerStartupWorker, NULL);
 	s_powerDebugNotifier0 = SceSysrootForDriver_10788257();
 	s_powerDebugNotifier1 = SceSysrootForDriver_0A52A59C();
 	return 0;
@@ -313,7 +313,7 @@ int kscePowerRegisterCallback(SceUID callback)
 	uint32_t permittedMask;
 	int result;
 
-	if (ksceKernelGetThreadmgrUIDClass(callback) != 8)
+	if (sceKernelGetThreadmgrUIDClass(callback) != 8)
 		return (int)0xc00280a1;
 	permittedMask = 0xfcf71f80;
 	if (sceKernelGetProcessId() != SCE_KERNEL_PROCESS_ID && !sceSblACMgrIsSystemProgram(0))
@@ -334,7 +334,7 @@ int kscePowerRegisterCallback(SceUID callback)
 			goto fail;
 		}
 	}
-	result = ksceKernelNotifyCallback(callback,
+	result = sceKernelNotifyCallback(callback,
 			s_powerCallbackControl.notificationMask &
 			s_powerCallbackControl.stateFlags & permittedMask);
 	if (result < 0)
@@ -366,7 +366,7 @@ inline __attribute__((always_inline)) int kscePowerUnregisterCallback(SceUID cal
 	struct PowerCallbackRecord *record, *previous = NULL;
 	SceKernelIntrStatus intrState;
 
-	if (ksceKernelGetThreadmgrUIDClass(callback) != 8)
+	if (sceKernelGetThreadmgrUIDClass(callback) != 8)
 		return (int)0xc00280a1;
 	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	for (record = s_powerCallbackControl.head; record; record = record->next) {
@@ -429,14 +429,14 @@ static void _scePowerNotifyCallbackProc(SceUID pid, uint32_t clearMask,
 		}
 		callback = record->callback;
 		if (callback >= 0) {
-			count = ksceKernelGetCallbackCount(callback);
+			count = SceThreadmgrForDriver_0892D8DF(callback);
 			if (count >= 0) {
 				pending = count ? record->pendingEvents & ~clearMask : 0;
 				pending |= events;
 				notification = state | pending;
 				record->pendingEvents = pending;
 				record->lastNotification = notification;
-				result = ksceKernelNotifyCallback(callback,
+				result = sceKernelNotifyCallback(callback,
 						notification & record->permittedMask &
 						s_powerCallbackControl.notificationMask);
 				if (result >= 0) {
@@ -546,7 +546,7 @@ int powerHasBusyCallback(uint32_t mask, SceUID *callback)
 	     record = record->next) {
 		if (record->callback >= 0 &&
 		    (record->lastNotification & mask) && record->notified &&
-		    ksceKernelGetCallbackCount(record->callback) > 0) {
+		    SceThreadmgrForDriver_0892D8DF(record->callback) > 0) {
 			if (callback)
 				*callback = record->callback;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(

@@ -86,7 +86,7 @@ static int Finalize(void)
 
 	if (!SceSblACMgrForDriver_A27E47A7(0))
 		goto out;
-	permission = ksceKernelSetPermission(0x40);
+	permission = sceKernelSetThreadAccessLevel(0x40);
 	if (permission < 0) {
 		ret = permission == SCE_ERROR_ERRNO_ENOSYS ? 0 : permission;
 		goto out;
@@ -100,7 +100,7 @@ static int Finalize(void)
 		SceMagicGateForDriver_6D3B42E6();
 	}
 	SceSysmemForDriver_009E1C61(s_mg.memblock);
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 out:
 	LeaveContext(context);
 	return ret;
@@ -507,7 +507,7 @@ static int Initialize(void)
 
 	if (!SceSblACMgrForDriver_A27E47A7(0))
 		goto disabled;
-	permission = ksceKernelSetPermission(0x40);
+	permission = sceKernelSetThreadAccessLevel(0x40);
 	if (permission < 0) {
 		if (permission == SCE_ERROR_ERRNO_ENOSYS)
 			goto disabled;
@@ -568,7 +568,7 @@ freeBlock:
 		s_mg.memblock = -1;
 	}
 permissionOut:
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	goto out;
 disabled:
 	s_mg.flags |= MG_DISABLED;

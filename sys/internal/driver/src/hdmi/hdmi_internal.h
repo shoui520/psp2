@@ -250,7 +250,7 @@ typedef struct HdmiIntrRegs {
 #define HDMI_INTR_STATUS1	4	/* 0x96 */
 #define HDMI_INTR_STATUS2	5	/* 0x97 */
 
-/* What ksceKernelCreateThread is given for the interrupt thread (size 8). */
+/* What sceKernelCreateThread is given for the interrupt thread (size 8). */
 typedef struct HdmiThreadOptParam {
 	SceSize size;
 	SceUInt32 attr;

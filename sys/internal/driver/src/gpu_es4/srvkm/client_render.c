@@ -15,6 +15,7 @@
 #include <string.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <psp2/kernel/error.h>
+#include <threadmgr/threadmgr.h>
 
 PVRSRV_ERROR ResManFreeResByPtr(struct Resource *resource,
 		IMG_BOOL forceCleanup);
@@ -47,7 +48,6 @@ PVRSRV_ERROR SGXUnregisterHW2DContextKM(IMG_HANDLE hHW2DContext,
 		IMG_BOOL bForceCleanup);
 extern SceUID exitingProcess;
 extern IMG_UINT32 gpuSuspended;
-SceUID ksceKernelGetProcessId(void);
 int WaitSignalCounterKernel(volatile IMG_UINT32 *counter, IMG_UINT32 timeout);
 PVRSRV_ERROR PVRSRVGetDeviceMemHeapInfoKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 		GpuMemoryContext *context, IMG_UINT32 *pui32ClientHeapCount,
@@ -111,21 +111,21 @@ IMG_VOID *OSMemCopy(IMG_VOID *destination, const IMG_VOID *source,
 PVRSRV_ERROR DestroyRenderContextMutexCallback(IMG_VOID *pvParam,
 		IMG_UINT32 ui32Param, IMG_BOOL bForceCleanup)
 {
-	ksceKernelDeleteMutex(ui32Param);
+	sceKernelDeleteMutex(ui32Param);
 	return PVRSRV_OK;
 }
 
 PVRSRV_ERROR DestroyRenderTargetMutexCallback(IMG_VOID *pvParam,
 		IMG_UINT32 ui32Param, IMG_BOOL bForceCleanup)
 {
-	ksceKernelDeleteMutex(ui32Param);
+	sceKernelDeleteMutex(ui32Param);
 	return PVRSRV_OK;
 }
 
 PVRSRV_ERROR DestroyTransferQueueMutexCallback(IMG_VOID *pvParam,
 		IMG_UINT32 ui32Param, IMG_BOOL bForceCleanup)
 {
-	ksceKernelDeleteMutex(ui32Param);
+	sceKernelDeleteMutex(ui32Param);
 	return PVRSRV_OK;
 }
 
@@ -142,7 +142,7 @@ PVRSRV_ERROR DestroyRenderContext(struct SGX_RENDERCONTEXT *psRenderContext,
 	if (psRenderContext->mutexResource)
 		ResManFreeResByPtr(psRenderContext->mutexResource, IMG_FALSE);
 	else
-		ksceKernelDeleteMutex(psRenderContext->hMutex);
+		sceKernelDeleteMutex(psRenderContext->hMutex);
 	eError = SGXUnregisterHWRenderContextKM(psRenderContext->hHWRenderContext,
 			bForceCleanup);
 	if (eError != PVRSRV_OK)
@@ -399,7 +399,7 @@ PVRSRV_ERROR CreateRenderContext(PVRSRV_DEVICE_NODE *psDeviceNode,
 			psRenderContext, 24, 0);
 	if (eError != PVRSRV_OK)
 		goto failure;
-	psRenderContext->hMutex = ksceKernelCreateMutex("SceGpuRcMutex", 0x2000, 0, NULL);
+	psRenderContext->hMutex = sceKernelCreateMutex("SceGpuRcMutex", 0x2000, 0, NULL);
 	if (psRenderContext->hMutex < 0)
 		goto outOfMemory;
 	psRenderContext->mutexResource = ResManRegisterRes(psPerProc->hResManContext,
@@ -451,7 +451,7 @@ failure:
 		if (psRenderContext->mutexResource)
 			ResManFreeResByPtr(psRenderContext->mutexResource, IMG_FALSE);
 		else
-			ksceKernelDeleteMutex(psRenderContext->hMutex);
+			sceKernelDeleteMutex(psRenderContext->hMutex);
 	}
 	FreeProcessGpuMemory(psRenderContext);
 	*phRenderContext = 0;
@@ -543,7 +543,7 @@ int FreeRenderTargetResources(SGX_RTDATASET *psRTDataSet)
 		if (psRTDataSet->mutexResource)
 			ResManFreeResByPtr(psRTDataSet->mutexResource, IMG_FALSE);
 		else
-			ksceKernelDeleteMutex(psRTDataSet->hMutex);
+			sceKernelDeleteMutex(psRTDataSet->hMutex);
 	}
 	FreeProcessGpuMemory(psRTDataSet->psRTData);
 	return FreeProcessGpuMemory(psRTDataSet);
@@ -889,7 +889,7 @@ PVRSRV_ERROR RemoveRenderTarget(PVRSRV_DEVICE_NODE *psDeviceNode,
 	SGX_RTDATASET *psScan;
 
 	LinuxUnLockMutex(&gPVRSRVLock);
-	ksceKernelLockMutex(psRenderContext->hMutex, 1, NULL);
+	sceKernelLockMutex(psRenderContext->hMutex, 1, NULL);
 	bLastReference = --psRTDataSet->ui32RefCount == 0;
 	if (bLastReference) {
 		LinuxLockMutexForPid(&gPVRSRVLock, pid);
@@ -911,7 +911,7 @@ PVRSRV_ERROR RemoveRenderTarget(PVRSRV_DEVICE_NODE *psDeviceNode,
 	} else {
 		eError = PVRSRV_OK;
 	}
-	ksceKernelUnlockMutex(psRenderContext->hMutex, 1);
+	sceKernelUnlockMutex(psRenderContext->hMutex, 1);
 	LinuxLockMutexForPid(&gPVRSRVLock, pid);
 	if (bLastReference)
 		FreeRenderTargetResources(psRTDataSet);
@@ -1073,19 +1073,19 @@ PVRSRV_ERROR AddRenderTarget(PVRSRV_DEVICE_NODE *psDeviceNode,
 			psAddRT->hMemBlockProcRef, psRenderContext, psRTDataSet);
 	if (eError != PVRSRV_OK)
 		goto failure;
-	psRTDataSet->hMutex = ksceKernelCreateMutex("SceGpuRtMutex", 0x2000, 0, NULL);
+	psRTDataSet->hMutex = sceKernelCreateMutex("SceGpuRtMutex", 0x2000, 0, NULL);
 	if (psRTDataSet->hMutex < 0)
 		goto outOfMemory;
 	psRTDataSet->mutexResource = ResManRegisterRes(psPerProc->hResManContext,
 			22, NULL, psRTDataSet->hMutex, DestroyRenderTargetMutexCallback);
 	pid = GetRemoteAllocProcess();
 	LinuxUnLockMutex(&gPVRSRVLock);
-	ksceKernelLockMutex(psRenderContext->hMutex, 1, NULL);
+	sceKernelLockMutex(psRenderContext->hMutex, 1, NULL);
 	psRTDataSet->psNext = psRenderContext->psRTDataSets;
 	psRenderContext->psRTDataSets = psRTDataSet;
 	psRTDataSet->psRenderContext = psRenderContext;
 	psRTDataSet->ui32RefCount++;
-	ksceKernelUnlockMutex(psRenderContext->hMutex, 1);
+	sceKernelUnlockMutex(psRenderContext->hMutex, 1);
 	LinuxLockMutexForPid(&gPVRSRVLock, pid);
 	eError = PVRSRVAllocHandle(psPerProc->psHandleBase, phRenderTarget,
 			psRTDataSet, 25, 0);
@@ -1126,7 +1126,7 @@ PVRSRV_ERROR DestroyCommandContext(GpuTransferQueueContext *context,
 			if (context->mutexResource)
 				ResManFreeResByPtr(context->mutexResource, IMG_FALSE);
 			else
-				ksceKernelDeleteMutex(context->mutex);
+				sceKernelDeleteMutex(context->mutex);
 		}
 		FreeProcessGpuMemory(context);
 	}
@@ -1193,7 +1193,7 @@ PVRSRV_ERROR CreateTransferQueue(PVRSRV_DEVICE_NODE *psDeviceNode,
 		goto failure;
 	psHWContext->ui32Priority = 1;
 	psHWContext->ui32ProcessID = OSGetCurrentProcessIDKM();
-	context->mutex = ksceKernelCreateMutex("SceGpuTqMutex", 0x2000, 0, NULL);
+	context->mutex = sceKernelCreateMutex("SceGpuTqMutex", 0x2000, 0, NULL);
 	if (context->mutex < 0)
 		goto failure;
 	context->mutexResource = ResManRegisterRes(psPerProc->hResManContext,
@@ -1224,7 +1224,7 @@ PVRSRV_ERROR SubmitTransferCommands(IMG_UINT32 *commands, IMG_UINT32 numCommands
 	ring = context->commandRing;
 	pid = GetRemoteAllocProcess();
 	LinuxUnLockMutex(&gPVRSRVLock);
-	ksceKernelLockMutex(context->mutex, 1, NULL);
+	sceKernelLockMutex(context->mutex, 1, NULL);
 	psCommand = AcquireCommandRingSpace(ring, 256, &context->waitGeneration);
 	if (psCommand) {
 		OSMemSet(&sKick, 0, sizeof(sKick));
@@ -1257,7 +1257,7 @@ PVRSRV_ERROR SubmitTransferCommands(IMG_UINT32 *commands, IMG_UINT32 numCommands
 	} else {
 		eError = PVRSRV_ERROR_OUT_OF_MEMORY;
 	}
-	ksceKernelUnlockMutex(context->mutex, 1);
+	sceKernelUnlockMutex(context->mutex, 1);
 	LinuxLockMutexForPid(&gPVRSRVLock, pid);
 	return eError;
 }
@@ -1272,9 +1272,9 @@ PVRSRV_ERROR WaitTransferQueueIdle(GpuTransferQueueContext *context)
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	GetRemoteAllocProcess();
 	LinuxUnLockMutex(&gPVRSRVLock);
-	ksceKernelLockMutex(context->mutex, 1, NULL);
+	sceKernelLockMutex(context->mutex, 1, NULL);
 	ring = context->commandRing;
-	pid = ksceKernelGetProcessId();
+	pid = sceKernelGetProcessId();
 	for (;;) {
 		if (*ring->pui32ReadOffset == *ring->pui32WriteOffset) {
 			result = PVRSRV_OK;
@@ -1288,7 +1288,7 @@ PVRSRV_ERROR WaitTransferQueueIdle(GpuTransferQueueContext *context)
 		if (result != 0 && result != SCE_KERNEL_ERROR_WAIT_TIMEOUT)
 			break;
 	}
-	ksceKernelUnlockMutex(context->mutex, 1);
+	sceKernelUnlockMutex(context->mutex, 1);
 	LinuxLockMutexForPid(&gPVRSRVLock, pid);
 	return result;
 }

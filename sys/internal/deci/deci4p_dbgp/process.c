@@ -20,7 +20,7 @@ int procSuspendProcess(DbgpProcCB *proc, SceUID pid, SceUID thid,
 	case 0:
 		switch (reason) {
 		case 1:
-			result = ksceKernelChangeThreadSuspendStatus(thid, 0x800);
+			result = SceThreadmgrForDriver_04C6764B(thid, 0x800);
 			if (result < 0) {
 				SCE_PRINTF_WITH_INFO(15, 63, "0x%08x\n", result);
 				return result;
@@ -57,7 +57,7 @@ int procSuspendProcess(DbgpProcCB *proc, SceUID pid, SceUID thid,
 			newStatus = 0;
 			threadStatus = reason - 0x28 <= 1 ? 0x4002 : 0x1002;
 		}
-		result = ksceKernelChangeThreadSuspendStatus(thid, threadStatus);
+		result = SceThreadmgrForDriver_04C6764B(thid, threadStatus);
 		if (result < 0) {
 			SCE_PRINTF_WITH_INFO(15, 129, "0x%08x:0x%08x\n",
 					     result, threadStatus);
@@ -81,7 +81,7 @@ int procSuspendProcess(DbgpProcCB *proc, SceUID pid, SceUID thid,
 		}
 		goto update_status;
 	case 0x40:
-		result = ksceKernelChangeThreadSuspendStatus(thid, 0x1002);
+		result = SceThreadmgrForDriver_04C6764B(thid, 0x1002);
 		if (result < 0) {
 			SCE_PRINTF_WITH_INFO(15, 145, "0x%08x\n", result);
 			return result;
@@ -92,7 +92,7 @@ int procSuspendProcess(DbgpProcCB *proc, SceUID pid, SceUID thid,
 		goto debug_suspend;
 	case 0x50:
 		threadStatus = status == PROCESS_STATE_RUNNING ? 0x2000 : 0x2002;
-		result = ksceKernelChangeThreadSuspendStatus(thid, threadStatus);
+		result = SceThreadmgrForDriver_04C6764B(thid, threadStatus);
 		if (result < 0) {
 			SCE_PRINTF_WITH_INFO(15, 168, "0x%08x:0x%08x\n",
 					     result, threadStatus);

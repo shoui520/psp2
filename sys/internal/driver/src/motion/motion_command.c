@@ -116,7 +116,7 @@ int motionCommandWorker(SceSize args, void *argp)
 		void *arg;
 		int result;
 
-		while (ksceKernelWaitEventFlag(motionWorker.event, 1, 5,
+		while (sceKernelWaitEventFlag(motionWorker.event, 1, 5,
 			NULL, NULL) < 0)
 			;
 		completion = motionWorker.completion;
@@ -310,7 +310,7 @@ int motionQueueRequest(const MotionSensorResponse *request,
 	motionWorker.completion = completion;
 	motionWorker.transferMode = 2;
 	motionWorker.arg = arg;
-	result = ksceKernelSetEventFlag(motionWorker.event, 1);
+	result = sceKernelSetEventFlag(motionWorker.event, 1);
 	if (result < 0)
 		goto failed;
 	return result;
@@ -328,7 +328,7 @@ immediate:
 queue_completion:
 	motionWorker.completion = completion;
 	motionWorker.arg = arg;
-	result = ksceKernelSetEventFlag(motionWorker.event, 1);
+	result = sceKernelSetEventFlag(motionWorker.event, 1);
 	if (result < 0)
 		goto failed;
 	return result;
@@ -346,7 +346,7 @@ ordinary:
 	motionWorker.delay = delay;
 	motionWorker.completion = completion;
 	motionWorker.arg = arg;
-	result = ksceKernelSetEventFlag(motionWorker.event, 1);
+	result = sceKernelSetEventFlag(motionWorker.event, 1);
 	if (result >= 0)
 		return result;
 failed:
@@ -396,7 +396,7 @@ void motionCommandIdentityComplete(int result, void *arg)
 				motionWorker.delay = 0;
 				motionWorker.completion = motionCommandIdentityComplete;
 				motionWorker.arg = arg;
-				count = ksceKernelSetEventFlag(motionWorker.event, 1);
+				count = sceKernelSetEventFlag(motionWorker.event, 1);
 				if (count >= 0) {
 					--motionCommand.retries;
 					return;
@@ -483,7 +483,7 @@ void motionCommandDeviceInfoComplete(int result, void *arg)
 	motionWorker.delay = 0;
 	motionWorker.completion = motionCommandDeviceInfoComplete;
 	motionWorker.arg = arg;
-	count = ksceKernelSetEventFlag(motionWorker.event, 1);
+	count = sceKernelSetEventFlag(motionWorker.event, 1);
 	if (count >= 0) {
 		--motionCommand.retries;
 		return;
@@ -644,7 +644,7 @@ void motionCommandReadBlockComplete(int result, void *arg)
 	motionWorker.delay = 0;
 	motionWorker.completion = motionCommandReadBlockComplete;
 	motionWorker.arg = arg;
-	if (ksceKernelSetEventFlag(motionWorker.event, 1) >= 0)
+	if (sceKernelSetEventFlag(motionWorker.event, 1) >= 0)
 		return;
 queue_failed:
 	motionCommand.busy = 0;
@@ -736,18 +736,18 @@ int motionCommandInitialize(void)
 	motionWorker.arg = NULL;
 	option.size = 0;
 	option.attr = 0;
-	result = ksceKernelCreateEventFlag("SceMotionDev", 0x1000, 0, NULL);
+	result = sceKernelCreateEventFlag("SceMotionDev", 0x1000, 0, NULL);
 	motionWorker.event = result;
 	if (result < 0)
 		return result;
 	option.size = 8;
-	result = ksceKernelCreateThread("SceMotionDev", motionCommandWorker,
+	result = sceKernelCreateThread("SceMotionDev", motionCommandWorker,
 		42, 0x2000, 0x10000000, 0x80000,
 		(const SceKernelThreadOptParam *)&option);
 	motionWorker.thread = result;
 	if (result < 0)
 		return result;
-	return ksceKernelStartThread(result, 0, NULL);
+	return sceKernelStartThread(result, 0, NULL);
 }
 
 int motionQueuePowerOff(void (*completion)(int result, void *arg), void *arg)
@@ -757,7 +757,7 @@ int motionQueuePowerOff(void (*completion)(int result, void *arg), void *arg)
 	motionWorker.completion = completion;
 	motionWorker.arg = arg;
 	motionWorker.command = 2;
-	return ksceKernelSetEventFlag(motionWorker.event, 1);
+	return sceKernelSetEventFlag(motionWorker.event, 1);
 }
 
 int motionQueuePowerOn(int activeLow,
@@ -769,7 +769,7 @@ int motionQueuePowerOn(int activeLow,
 	motionWorker.completion = completion;
 	motionWorker.arg = arg;
 	motionWorker.command = 3;
-	return ksceKernelSetEventFlag(motionWorker.event, 1);
+	return sceKernelSetEventFlag(motionWorker.event, 1);
 }
 
 int motionSetActivePolarity(int activeLow)
@@ -815,7 +815,7 @@ int motionReadCalibrationBlock(uint32_t block, MotionCalibrationBuffer *buffer,
 		motionWorker.completion = completion;
 		motionWorker.arg = arg;
 		motionWorker.command = 4;
-		return ksceKernelSetEventFlag(motionWorker.event, 1);
+		return sceKernelSetEventFlag(motionWorker.event, 1);
 	}
 	if (motionCommand.busy == 1)
 		return (int)0x80360003U;
@@ -839,7 +839,7 @@ int motionReadCalibrationBlock(uint32_t block, MotionCalibrationBuffer *buffer,
 		motionWorker.delay = 0;
 		motionWorker.completion = motionCommandReadBlockComplete;
 		motionWorker.arg = arg;
-		result = ksceKernelSetEventFlag(motionWorker.event, 1);
+		result = sceKernelSetEventFlag(motionWorker.event, 1);
 	} else {
 		memset(&motionCommand.response, 0, sizeof(motionCommand.response));
 		delay = 10000;
@@ -854,7 +854,7 @@ int motionReadCalibrationBlock(uint32_t block, MotionCalibrationBuffer *buffer,
 		motionWorker.completion = motionCommandReadBlockComplete;
 		motionWorker.arg = arg;
 		motionWorker.transferMode = 2;
-		result = ksceKernelSetEventFlag(motionWorker.event, 1);
+		result = sceKernelSetEventFlag(motionWorker.event, 1);
 	}
 	if (result < 0)
 		motionCommand.busy = 0;
@@ -898,7 +898,7 @@ int motionRequestDeviceInfo(SceMotionDevDeviceInfo *info,
 		motionWorker.completion = motionCommandDeviceInfoComplete;
 		motionWorker.arg = arg;
 		motionWorker.transferMode = 2;
-		result = ksceKernelSetEventFlag(motionWorker.event, 1);
+		result = sceKernelSetEventFlag(motionWorker.event, 1);
 	} else {
 		memset(&motionCommand.response, 0, sizeof(motionCommand.response));
 		if (motionWorker.command != 0)
@@ -910,7 +910,7 @@ int motionRequestDeviceInfo(SceMotionDevDeviceInfo *info,
 		motionWorker.delay = 0;
 		motionWorker.completion = motionCommandDeviceInfoComplete;
 		motionWorker.arg = arg;
-		result = ksceKernelSetEventFlag(motionWorker.event, 1);
+		result = sceKernelSetEventFlag(motionWorker.event, 1);
 	}
 	if (result < 0)
 		motionCommand.busy = 0;
@@ -954,7 +954,7 @@ int motionRequestIdentity(SceMotionDevDeviceInfo *info,
 		motionWorker.completion = motionCommandIdentityComplete;
 		motionWorker.arg = arg;
 		motionWorker.transferMode = 2;
-		result = ksceKernelSetEventFlag(motionWorker.event, 1);
+		result = sceKernelSetEventFlag(motionWorker.event, 1);
 	} else {
 		memset(&motionCommand.response, 0, sizeof(motionCommand.response));
 		if (motionWorker.command != 0)
@@ -966,7 +966,7 @@ int motionRequestIdentity(SceMotionDevDeviceInfo *info,
 		motionWorker.delay = 0;
 		motionWorker.completion = motionCommandIdentityComplete;
 		motionWorker.arg = arg;
-		result = ksceKernelSetEventFlag(motionWorker.event, 1);
+		result = sceKernelSetEventFlag(motionWorker.event, 1);
 	}
 	if (result < 0)
 		motionCommand.busy = 0;
@@ -1008,7 +1008,7 @@ int motionSendSensorControl(int control,
 		motionWorker.completion = motionCommandComplete;
 		motionWorker.arg = arg;
 		motionWorker.transferMode = 2;
-		result = ksceKernelSetEventFlag(motionWorker.event, 1);
+		result = sceKernelSetEventFlag(motionWorker.event, 1);
 	} else {
 		memset(&motionCommand.response, 0, sizeof(motionCommand.response));
 		if (motionWorker.command != 0)
@@ -1020,7 +1020,7 @@ int motionSendSensorControl(int control,
 		motionWorker.delay = 0;
 		motionWorker.completion = motionCommandComplete;
 		motionWorker.arg = arg;
-		result = ksceKernelSetEventFlag(motionWorker.event, 1);
+		result = sceKernelSetEventFlag(motionWorker.event, 1);
 	}
 	if (result < 0)
 		motionCommand.busy = 0;
@@ -1067,7 +1067,7 @@ int motionRequestReset(int resetCommand,
 		motionWorker.completion = motionCommandResetComplete;
 		motionWorker.arg = arg;
 		motionWorker.transferMode = 2;
-		result = ksceKernelSetEventFlag(motionWorker.event, 1);
+		result = sceKernelSetEventFlag(motionWorker.event, 1);
 	} else {
 		memset(&motionCommand.response, 0, sizeof(motionCommand.response));
 		if (motionWorker.command != 0)
@@ -1079,7 +1079,7 @@ int motionRequestReset(int resetCommand,
 		motionWorker.delay = 0;
 		motionWorker.completion = motionCommandResetComplete;
 		motionWorker.arg = arg;
-		result = ksceKernelSetEventFlag(motionWorker.event, 1);
+		result = sceKernelSetEventFlag(motionWorker.event, 1);
 	}
 	if (result < 0)
 		motionCommand.busy = 0;
@@ -1125,7 +1125,7 @@ int motionRequestSensorReset(void (*completion)(int result, void *arg), void *ar
 		motionWorker.completion = motionCommandResetComplete;
 		motionWorker.arg = arg;
 		motionWorker.transferMode = 2;
-		result = ksceKernelSetEventFlag(motionWorker.event, 1);
+		result = sceKernelSetEventFlag(motionWorker.event, 1);
 	} else if (request.type == 0x82 || request.type == 0x81) {
 		memset(&motionCommand.response, 0, sizeof(motionCommand.response));
 		if (motionWorker.command != 0)
@@ -1137,7 +1137,7 @@ int motionRequestSensorReset(void (*completion)(int result, void *arg), void *ar
 		motionWorker.delay = 0;
 		motionWorker.completion = motionCommandResetComplete;
 		motionWorker.arg = arg;
-		result = ksceKernelSetEventFlag(motionWorker.event, 1);
+		result = sceKernelSetEventFlag(motionWorker.event, 1);
 	} else {
 		memset(&motionCommand.response, 0, sizeof(motionCommand.response));
 		if (motionWorker.command != 0)
@@ -1149,7 +1149,7 @@ int motionRequestSensorReset(void (*completion)(int result, void *arg), void *ar
 		motionWorker.delay = 10000;
 		motionWorker.completion = motionCommandResetComplete;
 		motionWorker.arg = arg;
-		result = ksceKernelSetEventFlag(motionWorker.event, 1);
+		result = sceKernelSetEventFlag(motionWorker.event, 1);
 	}
 	if (result < 0)
 		motionCommand.busy = 0;
@@ -1202,7 +1202,7 @@ encode:
 		motionWorker.completion = motionCommandSamplesComplete;
 		motionWorker.arg = arg;
 		motionWorker.command = 1;
-		result = ksceKernelSetEventFlag(motionWorker.event, 1);
+		result = sceKernelSetEventFlag(motionWorker.event, 1);
 	}
 	if (result >= 0)
 		return result;
@@ -1246,7 +1246,7 @@ packet_transfer:
 			motionWorker.input.packet = &motionCommand.request;
 			motionWorker.completion = motionCommandResponseComplete;
 			motionWorker.arg = arg;
-			result = ksceKernelSetEventFlag(motionWorker.event, 1);
+			result = sceKernelSetEventFlag(motionWorker.event, 1);
 		}
 		if (result >= 0)
 			return result;
@@ -1266,7 +1266,7 @@ packet_transfer:
 		motionWorker.delay = 0;
 		motionWorker.completion = motionCommandResponseComplete;
 		motionWorker.arg = arg;
-		result = ksceKernelSetEventFlag(motionWorker.event, 1);
+		result = sceKernelSetEventFlag(motionWorker.event, 1);
 	} else if (request->type != 0x83) {
 		motionCommand.busy = 1;
 		memset(&motionCommand.response, 0, sizeof(motionCommand.response));
@@ -1279,7 +1279,7 @@ packet_transfer:
 		motionWorker.transferMode = 0;
 		motionWorker.delay = 0;
 		motionWorker.command = 1;
-		result = ksceKernelSetEventFlag(motionWorker.event, 1);
+		result = sceKernelSetEventFlag(motionWorker.event, 1);
 	} else {
 		motionCommand.busy = 1;
 		memset(&motionCommand.response, 0, sizeof(motionCommand.response));
@@ -1295,7 +1295,7 @@ packet_transfer:
 		motionWorker.completion = motionCommandResponseComplete;
 		motionWorker.arg = arg;
 		motionWorker.transferMode = 2;
-		result = ksceKernelSetEventFlag(motionWorker.event, 1);
+		result = sceKernelSetEventFlag(motionWorker.event, 1);
 	}
 	if (result >= 0)
 		return result;
@@ -1334,7 +1334,7 @@ int motionRequestPacket(const MotionSensorPacket *request,
 	motionWorker.delay = 0;
 	motionWorker.completion = motionCommandBufferComplete;
 	motionWorker.arg = arg;
-	result = ksceKernelSetEventFlag(motionWorker.event, 1);
+	result = sceKernelSetEventFlag(motionWorker.event, 1);
 	if (result >= 0)
 		return result;
 failed:

@@ -67,13 +67,13 @@ void videocodecNotifyProcessChange(void)
 /* The preceding decoder helpers await their complete CodecEngine owner. */
 int SceAvcodecForDriver_C84AFFC4(void (*callback)(void))
 {
-	ksceKernelLockFastMutex((SceKernelFastMutex *)&videocodecResident.allMutex);
+	lockFastMutex((SceKernelFastMutex *)&videocodecResident.allMutex);
 	if (videocodecResident.notifyProcessChange != 0) {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&videocodecResident.allMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&videocodecResident.allMutex);
 		return (int)0x80620808;
 	}
 	videocodecResident.notifyProcessChange = callback;
-	return ksceKernelUnlockFastMutex((SceKernelFastMutex *)&videocodecResident.allMutex);
+	return sceKernelUnlockFastMutex((SceKernelFastMutex *)&videocodecResident.allMutex);
 }
 
 void *_GetVideocodecGlobal(SceUID pid)
@@ -104,16 +104,16 @@ int initializeVideocodec(void)
 	if (ret < 0)
 		goto out;
 	videocodecResident.processLocalStorageId = ret;
-	ret = ksceKernelInitializeFastMutex(
+	ret = sceKernelInitializeFastMutex(
 		(SceKernelFastMutex *)&videocodecResident.allMutex,
 		"SceVideocodecAll", 0x8002, 0);
 	if (ret < 0)
 		goto out;
-	ret = ksceKernelInitializeFastMutex(
+	ret = sceKernelInitializeFastMutex(
 		(SceKernelFastMutex *)&videocodecTileRegMutex,
 		"SceVideocodecTileReg", 2, 0);
 	if (ret < 0) {
-		ksceKernelFinalizeFastMutex(
+		sceKernelFinalizeFastMutex(
 			(SceKernelFastMutex *)&videocodecResident.allMutex);
 		goto out;
 	}
@@ -130,10 +130,10 @@ out:
 /* Process create/exit await the complete process-local decoder owner. */
 int videocodecProcessSuspend(SceUID pid)
 {
-	ksceKernelLockFastMutex((SceKernelFastMutex *)&videocodecResident.allMutex);
+	lockFastMutex((SceKernelFastMutex *)&videocodecResident.allMutex);
 	if (videocodecResident.activeProcessId == pid)
 		videocodecResident.activeProcessId = -1;
-	return ksceKernelUnlockFastMutex((SceKernelFastMutex *)&videocodecResident.allMutex);
+	return sceKernelUnlockFastMutex((SceKernelFastMutex *)&videocodecResident.allMutex);
 }
 
 int videocodecProcessResume(SceUID pid)
@@ -141,7 +141,7 @@ int videocodecProcessResume(SceUID pid)
 	SceUID owner;
 	int ret, unlockRet;
 
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)&videocodecResident.allMutex);
+	ret = lockFastMutex((SceKernelFastMutex *)&videocodecResident.allMutex);
 	if ((owner = videocodecResident.ownerProcessIds[0]) == pid ||
 	    (owner = videocodecResident.ownerProcessIds[1]) == pid ||
 	    (owner = videocodecResident.ownerProcessIds[2]) == pid ||
@@ -152,7 +152,7 @@ int videocodecProcessResume(SceUID pid)
 		else
 			ret = (int)0x80620808;
 	}
-	unlockRet = ksceKernelUnlockFastMutex(
+	unlockRet = sceKernelUnlockFastMutex(
 		(SceKernelFastMutex *)&videocodecResident.allMutex);
 	return unlockRet < 0 ? unlockRet : ret;
 }

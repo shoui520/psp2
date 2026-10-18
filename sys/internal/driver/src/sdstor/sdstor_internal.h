@@ -7,6 +7,7 @@
 #include <sdstor/sdstor.h>
 #include <sdstor/mbr.h>
 #include <sysmem/sysroot.h>
+#include <threadmgr/threadmgr.h>
 
 typedef struct SceSdstorSddev SceSdstorSddev;
 typedef struct SceSdstorSdpart SceSdstorSdpart;
@@ -88,11 +89,6 @@ _Static_assert(sizeof(SceSdstorPartitionEntry) == 28, "SceSdstorPartitionEntry")
 _Static_assert(sizeof(SceSdstorSdpart) == 568, "SceSdstorSdpart");
 _Static_assert(sizeof(SceSdstorFd) == 88, "SceSdstorFd");
 
-int ksceKernelInitializeFastMutex(struct ThreadmgrFastMutex *mutex,
-				const char *name, int attr, int flags);
-int ksceKernelFinalizeFastMutex(struct ThreadmgrFastMutex *mutex);
-int ksceKernelLockFastMutex(struct ThreadmgrFastMutex *mutex);
-int ksceKernelUnlockFastMutex(struct ThreadmgrFastMutex *mutex);
 int sddev_get_port(SceSdstorSddev *device);
 SceSdstorSddev *sddev_get_object(unsigned int port);
 int sddev_power_on(SceSdstorSddev *device);

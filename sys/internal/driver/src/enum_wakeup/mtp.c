@@ -15,10 +15,10 @@ int mtpThread(SceSize args, void *argp)
 		if ((ctx->flags & MTP_CTX_STOPPED) || port == 0)
 			return 0;
 		if (SceMtpIfForDriver_2D9318E1(port) == 0) {
-			ksceKernelLockMutex(ctx->mutex, 1, NULL);
+			sceKernelLockMutex(ctx->mutex, 1, NULL);
 			ctx->state = MTP_STATE_DISCONNECTED;
 			ctx->stateParam = -1;
-			ksceKernelUnlockMutex(ctx->mutex, 1);
+			sceKernelUnlockMutex(ctx->mutex, 1);
 			if (ctx->sessionId) {
 				mtpCloseSession(ctx);
 				SceMtpIfForDriver_92CD107E(port);
@@ -41,11 +41,11 @@ int mtpThread(SceSize args, void *argp)
 			continue;
 		}
 		SceMtpIfForDriver_8D16B997(port, 1);
-		ksceKernelLockMutex(ctx->mutex, 1, NULL);
+		sceKernelLockMutex(ctx->mutex, 1, NULL);
 		ctx->state = MTP_STATE_BUSY;
 		ctx->stateParam = -1;
-		ksceKernelUnlockMutex(ctx->mutex, 1);
-		ksceKernelWaitSema(ctx->sema, 1, NULL);
+		sceKernelUnlockMutex(ctx->mutex, 1);
+		sceKernelWaitSema(ctx->sema, 1, NULL);
 		mtpSetResponse(PTP_RC_OK, NULL, 0, &ctx->request, &ctx->response);
 
 		op = ctx->request.code;
@@ -73,11 +73,11 @@ int mtpThread(SceSize args, void *argp)
 		}
 done:
 		if (err < 0) {
-			ksceKernelSignalSema(ctx->sema, 1);
+			sceKernelSignalSema(ctx->sema, 1);
 			continue;
 		}
 respond:
-		ksceKernelSignalSema(ctx->sema, 1);
+		sceKernelSignalSema(ctx->sema, 1);
 		SceMtpIfForDriver_8D16B997(port, 8);
 		for (tries = 4; tries; tries--) {
 			err = SceMtpIfForDriver_5766D257(port, &ctx->response);
@@ -104,11 +104,11 @@ int mtpStart(int portId, MtpDeviceStringsProvider provider)
 		ret = MTP_ERROR_NOT_CONNECTED;
 	} else {
 		ewg.mtp.flags &= ~MTP_CTX_STOPPED;
-		ksceKernelLockMutex(ewg.mtp.mutex, 1, NULL);
+		sceKernelLockMutex(ewg.mtp.mutex, 1, NULL);
 		ewg.mtp.state = MTP_STATE_STARTED;
 		ewg.mtp.stateParam = -1;
-		ksceKernelUnlockMutex(ewg.mtp.mutex, 1);
-		if (ewg.mtp.thread > 0 && ksceKernelStartThread(ewg.mtp.thread, sizeof(ctx), &ctx) >= 0)
+		sceKernelUnlockMutex(ewg.mtp.mutex, 1);
+		if (ewg.mtp.thread > 0 && sceKernelStartThread(ewg.mtp.thread, sizeof(ctx), &ctx) >= 0)
 			return ret;
 		ret = MTP_ERROR_FAILED;
 	}
@@ -123,19 +123,19 @@ int mtpInit(void)
 
 	memset(&ewg.mtp, 0, sizeof(ewg.mtp));
 	ewg.mtp.flags = MTP_CTX_STOPPED;
-	mutex = ksceKernelCreateMutex("SceMtpMutex", 2, 0, NULL);
+	mutex = sceKernelCreateMutex("SceMtpMutex", 2, 0, NULL);
 	if (mutex < 0)
 		return mutex;
 	ewg.mtp.mutex = mutex;
-	ksceKernelLockMutex(mutex, 1, NULL);
+	sceKernelLockMutex(mutex, 1, NULL);
 	ewg.mtp.state = MTP_STATE_NONE;
 	ewg.mtp.stateParam = -1;
-	ksceKernelUnlockMutex(ewg.mtp.mutex, 1);
-	ewg.mtp.sema = ksceKernelCreateSema("SceMtpSema", 0, 1, 1, NULL);
+	sceKernelUnlockMutex(ewg.mtp.mutex, 1);
+	ewg.mtp.sema = sceKernelCreateSema("SceMtpSema", 0, 1, 1, NULL);
 	if (ewg.mtp.sema < 1) {
 		ret = MTP_ERROR_FAILED;
 	} else {
-		ewg.mtp.thread = ksceKernelCreateThread("SceMtpThread", mtpThread, 0x10000102, 0x8000,
+		ewg.mtp.thread = sceKernelCreateThread("SceMtpThread", mtpThread, 0x10000102, 0x8000,
 						    0x20000000, 0x80000, NULL);
 		if (ewg.mtp.thread < 0) {
 			ret = MTP_ERROR_FAILED;
@@ -149,10 +149,10 @@ int mtpInit(void)
 					return mutex;
 				mtpHeapDelete();
 			}
-			ksceKernelDeleteThread(ewg.mtp.thread);
+			sceKernelDeleteThread(ewg.mtp.thread);
 		}
-		ksceKernelDeleteSema(ewg.mtp.sema);
+		sceKernelDeleteSema(ewg.mtp.sema);
 	}
-	ksceKernelDeleteMutex(ewg.mtp.mutex);
+	sceKernelDeleteMutex(ewg.mtp.mutex);
 	return ret;
 }

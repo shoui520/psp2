@@ -23,10 +23,10 @@ int initVeneziaRpcCommunicationMemory(void)
 	int ret;
 
 	g_veneziaCommunicationMemory.event = -1;
-	ret = ksceKernelInitializeFastMutex(&g_veneziaCommunicationMemory.mutex,
+	ret = sceKernelInitializeFastMutex(&g_veneziaCommunicationMemory.mutex,
 		"SceVeneziaRpcCommunicationMemory", 0, NULL);
 	if (ret >= 0) {
-		ret = ksceKernelCreateEventFlag("SceVeneziaRpcCommunicationMemory",
+		ret = sceKernelCreateEventFlag("SceVeneziaRpcCommunicationMemory",
 			0, 0, NULL);
 		if (ret >= 0) {
 			g_veneziaCommunicationMemory.event = ret;
@@ -44,29 +44,29 @@ int initVeneziaRpcCommunicationMemory(void)
 int finalizeVeneziaRpcCommunicationMemory(void)
 {
 	if (g_veneziaCommunicationMemory.event >= 0) {
-		ksceKernelDeleteEventFlag(g_veneziaCommunicationMemory.event);
+		sceKernelDeleteEventFlag(g_veneziaCommunicationMemory.event);
 		g_veneziaCommunicationMemory.event = -1;
 	}
-	ksceKernelFinalizeFastMutex(&g_veneziaCommunicationMemory.mutex);
+	sceKernelFinalizeFastMutex(&g_veneziaCommunicationMemory.mutex);
 	return 0;
 }
 
 /* name unknown: serialize access to communication allocations. */
 int lockVeneziaCommunicationMemory(void)
 {
-	return ksceKernelLockFastMutex(&g_veneziaCommunicationMemory.mutex);
+	return lockFastMutex(&g_veneziaCommunicationMemory.mutex);
 }
 
 /* name unknown: release communication-allocation serialization. */
 int unlockVeneziaCommunicationMemory(void)
 {
-	return ksceKernelUnlockFastMutex(&g_veneziaCommunicationMemory.mutex);
+	return sceKernelUnlockFastMutex(&g_veneziaCommunicationMemory.mutex);
 }
 
 /* name unknown: notify waiters that a channel freed communication memory. */
 int signalVeneziaCommunicationMemory(unsigned int channel)
 {
-	return ksceKernelSetEventFlag(g_veneziaCommunicationMemory.event, 1U << channel);
+	return sceKernelSetEventFlag(g_veneziaCommunicationMemory.event, 1U << channel);
 }
 
 #if FW_DEBUG
@@ -98,7 +98,7 @@ void *_sceVeneziaAllocCommunicationMemory(SceSize size)
 			SCE_DBGINFO_FUNC(163, "_sceVeneziaAllocCommunicationMemory"),
 			__builtin_return_address(0));
 #endif
-		ksceKernelWaitEventFlag(g_veneziaCommunicationMemory.event, ~0U,
+		sceKernelWaitEventFlag(g_veneziaCommunicationMemory.event, ~0U,
 			SCE_KERNEL_EVF_WAITMODE_OR | SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, NULL);
 	}
 	return memory;

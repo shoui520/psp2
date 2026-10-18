@@ -79,9 +79,9 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	ksceKernelGetModuleCBByAddr
-	ksceKernelSignalSema
-	ksceKernelSetEventFlag
-	ksceKernelGetThreadContextInfo
+	sceKernelSignalSema
+	sceKernelSetEventFlag
+	SceThreadmgrForKernel_6C1F092F
 	ksceKernelDisableIntr
 	ksceKernelIsIntrAllowedInCurrentContext
 	ksceKernelTriggerSGI

@@ -60,18 +60,18 @@ set(MODULE_IMPORT_FUNCS
 	memset
 	memcpy
 	__stack_chk_fail
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelCreateEventFlag
-	ksceKernelGetSystemTimeLow
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelCreateEventFlag
+	SceThreadmgrForDriver_47F6DE49
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelDeleteEventFlag
-	ksceKernelCancelMutex
-	ksceKernelSetEventFlag
-	ksceKernelCreateMutex
+	sceKernelClearEventFlag
+	sceKernelDeleteEventFlag
+	sceKernelCancelMutex
+	sceKernelSetEventFlag
+	sceKernelCreateMutex
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_A841EDDA
 	SceSysmemForDriver_C94850C9

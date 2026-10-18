@@ -281,7 +281,7 @@ restore:
 	return ret;
 }
 
-/* an event flag's information (ksceKernelGetEventFlagInfo's core) */
+/* an event flag's information (SceThreadmgrForDriver_612277C9's core) */
 int getEventFlagInfo(SceUID evfId, SceKernelEventFlagInfo *info)
 {
 	ThreadmgrEventFlag *evf;
@@ -411,8 +411,8 @@ int eventFlagProcessExit(SceProcessObject *process)
  * Sony's failed-create path decrements the process's cond count, not the
  * event flag count it raised; kept.
  */
-SceUID ksceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initPattern,
-				 const SceKernelEventFlagOptParam *option)
+SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initPattern,
+				const SceKernelEventFlagOptParam *option)
 {
 	struct ThreadCB *thread;
 	SceProcessObject *process = NULL;
@@ -531,7 +531,7 @@ restore:
 	return uid;
 }
 
-int ksceKernelDeleteEventFlag(SceUID evfId)
+int sceKernelDeleteEventFlag(SceUID evfId)
 {
 	uint32_t saved;
 	int intr, ret;
@@ -555,19 +555,19 @@ int ksceKernelDeleteEventFlag(SceUID evfId)
 	return ret;
 }
 
-int ksceKernelWaitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern,
-			    SceUInt32 *timeout)
+int sceKernelWaitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern,
+			   SceUInt32 *timeout)
 {
 	return waitEventFlag(evfId, pattern, mode, outPattern, timeout, 0);
 }
 
-int ksceKernelWaitEventFlagCB(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern,
-			      SceUInt32 *timeout)
+int SceThreadmgrForDriver_8A35F714(SceUID evfId, uint32_t pattern, uint32_t mode,
+				   uint32_t *outPattern, SceUInt32 *timeout)
 {
 	return waitEventFlag(evfId, pattern, mode, outPattern, timeout, 1);
 }
 
-int ksceKernelPollEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern)
+int sceKernelPollEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern)
 {
 	struct ThreadCB *thread;
 	ThreadmgrEventFlag *evf;
@@ -632,7 +632,7 @@ restore:
 }
 
 /* ORs pattern in and wakes, in queue order, every waiter it satisfies */
-int ksceKernelSetEventFlag(SceUID evfId, uint32_t pattern)
+int sceKernelSetEventFlag(SceUID evfId, uint32_t pattern)
 {
 	struct ThreadmgrWaitNode *node, *next;
 	struct ThreadCB *waiter;
@@ -704,7 +704,7 @@ resume:
 }
 
 /* ANDs the pattern with mask */
-int ksceKernelClearEventFlag(SceUID evfId, uint32_t mask)
+int sceKernelClearEventFlag(SceUID evfId, uint32_t mask)
 {
 	ThreadmgrEventFlag *evf;
 	uint32_t saved;
@@ -770,7 +770,7 @@ int sceKernelCancelEventFlag(SceUID evfId, uint32_t setPattern, int *numWaitThre
 	return ret;
 }
 
-int ksceKernelGetEventFlagInfo(SceUID evfId, SceKernelEventFlagInfo *info)
+int SceThreadmgrForDriver_612277C9(SceUID evfId, SceKernelEventFlagInfo *info)
 {
 	SceKernelEventFlagInfo local;
 	SceSize size;

@@ -133,14 +133,14 @@ static __attribute__((noinline)) int waitVblank(SceUInt32 head, SceUInt32 count,
 	bits = (1 << head) | 8;
 	if (!(flags & 1)) {
 		do {
-			ret = ksceKernelWaitEvent(heads[head].vblankEvent, bits, &outBits, NULL, NULL);
+			ret = SceThreadmgrForDriver_C529EA32(heads[head].vblankEvent, bits, &outBits, NULL, NULL);
 			if (ret < 0)
 				goto error;
 			vcount = heads[head].vcount;
 		} while (((vcount - start) & 0xffff) < count);
 	} else {
 		do {
-			ret = ksceKernelWaitEventCB(heads[head].vblankEvent, bits, &outBits, NULL, NULL);
+			ret = SceThreadmgrForDriver_360C655C(heads[head].vblankEvent, bits, &outBits, NULL, NULL);
 			if (ret < 0)
 				goto error;
 			vcount = heads[head].vcount;
@@ -171,7 +171,7 @@ static int vblankSubIntrHandler(void *subintrArg, void *userCtx, unsigned char p
 	SceUInt32 bits = h->eventBits;
 
 	h->vcount++;
-	ksceKernelPulseEventWithNotifyCallback(h->vblankEvent, bits, 0, 0);
+	sceKernelPulseEventWithNotifyCallback(h->vblankEvent, bits, 0, 0);
 	if (devStatus != NULL && bits == 1)
 		*devStatus = (h->vcount & ~0xff000000) | 0x11000000;
 	if ((1 << startupHead) & bits)
@@ -188,7 +188,7 @@ static void vblankTimerHandler(SceSysTimerId timer, void *pUserData) /* name unk
 		SceUInt32 b = heads[0].eventBits;
 
 		heads[0].vcount++;
-		ksceKernelPulseEventWithNotifyCallback(heads[0].vblankEvent, b, 0, 0);
+		sceKernelPulseEventWithNotifyCallback(heads[0].vblankEvent, b, 0, 0);
 		bits = b | 8;
 	}
 	if (devStatus != NULL && primaryHead == 0)
@@ -197,7 +197,7 @@ static void vblankTimerHandler(SceSysTimerId timer, void *pUserData) /* name unk
 		SceUInt32 b = heads[1].eventBits;
 
 		heads[1].vcount++;
-		ksceKernelPulseEventWithNotifyCallback(heads[1].vblankEvent, b, 0, 0);
+		sceKernelPulseEventWithNotifyCallback(heads[1].vblankEvent, b, 0, 0);
 		bits |= b;
 	}
 	if (devStatus != NULL && primaryHead == 1)
@@ -507,7 +507,7 @@ int ksceDisplayRegisterVblankStartCallbackInternal(int head, SceUID uid)
 {
 	if ((SceUInt32)head > 2)
 		return SCE_DISPLAY_ERROR_INVALID_HEAD;
-	return ksceKernelRegisterCallbackToEvent(heads[head].vblankEvent, uid, heads[head].vblankEvent);
+	return sceKernelRegisterCallbackToEventForDriver(heads[head].vblankEvent, uid, heads[head].vblankEvent);
 }
 
 int ksceDisplayRegisterVblankStartCallback(SceUID uid)
@@ -516,7 +516,7 @@ int ksceDisplayRegisterVblankStartCallback(SceUID uid)
 
 	if (head > 2)
 		return SCE_DISPLAY_ERROR_INVALID_HEAD;
-	return ksceKernelRegisterCallbackToEvent(heads[head].vblankEvent, uid, heads[head].vblankEvent);
+	return sceKernelRegisterCallbackToEventForDriver(heads[head].vblankEvent, uid, heads[head].vblankEvent);
 }
 
 int sceDisplayRegisterVblankStartCallback(SceUID uid)
@@ -530,7 +530,7 @@ int sceDisplayRegisterVblankStartCallback(SceUID uid)
 		sceSyscallLeave(t);
 		return 0xc00280a1;
 	}
-	ret = ksceKernelRegisterCallbackToEvent(heads[primaryHead].vblankEvent, uid, -1);
+	ret = sceKernelRegisterCallbackToEventForDriver(heads[primaryHead].vblankEvent, uid, -1);
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -539,7 +539,7 @@ int ksceDisplayUnregisterVblankStartCallbackInternal(int head, SceUID uid)
 {
 	if ((SceUInt32)head > 2)
 		return SCE_DISPLAY_ERROR_INVALID_HEAD;
-	return ksceKernelUnregisterCallbackFromEvent(heads[head].vblankEvent, uid);
+	return sceKernelUnregisterCallbackFromEvent(heads[head].vblankEvent, uid);
 }
 
 int ksceDisplayUnregisterVblankStartCallback(SceUID uid)
@@ -548,7 +548,7 @@ int ksceDisplayUnregisterVblankStartCallback(SceUID uid)
 
 	if (head > 2)
 		return SCE_DISPLAY_ERROR_INVALID_HEAD;
-	return ksceKernelUnregisterCallbackFromEvent(heads[head].vblankEvent, uid);
+	return sceKernelUnregisterCallbackFromEvent(heads[head].vblankEvent, uid);
 }
 
 int sceDisplayUnregisterVblankStartCallback(SceUID uid)
@@ -568,7 +568,7 @@ int sceDisplayUnregisterVblankStartCallback(SceUID uid)
 		sceSyscallLeave(t);
 		return SCE_DISPLAY_ERROR_INVALID_HEAD;
 	}
-	ret = ksceKernelUnregisterCallbackFromEvent(heads[head].vblankEvent, uid);
+	ret = sceKernelUnregisterCallbackFromEvent(heads[head].vblankEvent, uid);
 	sceSyscallLeave(t);
 	return ret;
 }

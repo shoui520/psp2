@@ -425,9 +425,9 @@ static int removePhysicalProcess(int pid) /* name unknown */
 				bit = process->ports[i].eventBit;
 				touch.ports[i].stopped &= ~bit;
 				if (touch.ports[i].allocated & bit)
-					ksceKernelClearEventFlag(touch.ports[i].events[0], ~bit);
+					sceKernelClearEventFlag(touch.ports[i].events[0], ~bit);
 				if (touch.ports[i].allocated & bit)
-					ksceKernelClearEventFlag(touch.ports[i].events[1], ~bit);
+					sceKernelClearEventFlag(touch.ports[i].events[1], ~bit);
 				touch.ports[i].allocated &= ~bit;
 			}
 			memset(process, 0, sizeof(*process));
@@ -455,7 +455,7 @@ static int removeVirtualProcess(int pid) /* name unknown */
 				bit = process->ports[i].eventBit;
 				pad.ports[i].stopped &= ~bit;
 				if (pad.ports[i].allocated & bit)
-					ksceKernelClearEventFlag(pad.ports[i].event, ~bit);
+					sceKernelClearEventFlag(pad.ports[i].event, ~bit);
 				pad.ports[i].allocated &= ~bit;
 			}
 			memset(process, 0, sizeof(*process));
@@ -486,12 +486,12 @@ static int virtualProcessEvent(int pid, unsigned event) /* name unknown */
 			process->state =
 				process->ports[0].ring.samples[(process->ports[0].ring.writeIndex - 1) & 63].reportNum ||
 				process->ports[1].ring.samples[(process->ports[1].ring.writeIndex - 1) & 63].reportNum ? 1 : 2;
-			process->timestamp = ksceKernelGetSystemTimeLow();
+			process->timestamp = SceThreadmgrForDriver_47F6DE49();
 			process->generation = pad.generation;
 		} else if (event == 0x202) {
 			if (process->state != 2) {
 				if (process->generation == pad.generation &&
-				    (unsigned)(ksceKernelGetSystemTimeLow() - process->timestamp) < 34001)
+				    (unsigned)(SceThreadmgrForDriver_47F6DE49() - process->timestamp) < 34001)
 					ret = -1;
 				else
 					process->state = 2;
@@ -523,13 +523,13 @@ static int processEvent(int pid, unsigned event) /* name unknown */
 			process->state =
 				process->ports[0].ring.samples[(process->ports[0].ring.writeIndex - 1) & 63].data.reportNum ||
 				process->ports[1].ring.samples[(process->ports[1].ring.writeIndex - 1) & 63].data.reportNum ? 1 : 2;
-			process->timestamp = ksceKernelGetSystemTimeLow();
+			process->timestamp = SceThreadmgrForDriver_47F6DE49();
 			process->generation = touch.generation;
 		} else if (event == 0x202) {
 			ret = 0;
 			if (process->state != 2) {
 				if (process->generation == touch.generation &&
-				    (unsigned)(ksceKernelGetSystemTimeLow() - process->timestamp) < 34001)
+				    (unsigned)(SceThreadmgrForDriver_47F6DE49() - process->timestamp) < 34001)
 					ret = -1;
 				else
 					process->state = 2;
@@ -610,7 +610,7 @@ static int sampleVirtual(TouchVirtualSampleCallback driver) /* name unknown */
 		}
 	}
 	for (i = 0; i < 4; i++)
-		ksceKernelSetEventFlag(pad.ports[i].event, pad.ports[i].allocated & ~pad.ports[i].stopped);
+		sceKernelSetEventFlag(pad.ports[i].event, pad.ports[i].allocated & ~pad.ports[i].stopped);
 	return 0;
 }
 
@@ -673,7 +673,7 @@ static int samplingTimer(void *args) /* name unknown */
 	}
 	for (i = 0; i < 2; i++)
 		for (j = 0; j < 2; j++)
-			ksceKernelSetEventFlag(touch.ports[i].events[j], touch.ports[i].allocated & ~touch.ports[i].stopped);
+			sceKernelSetEventFlag(touch.ports[i].events[j], touch.ports[i].allocated & ~touch.ports[i].stopped);
 	touch.generation++;
 	for (i = 0; i < 2; i++)
 		if (touch.ports[i].enableState == 1)
@@ -690,7 +690,7 @@ static int noOpAlarm(void *args) /* name unknown */
 
 static int vblankCallback(void *args, void *context, unsigned char priority) /* name unknown */
 {
-	touch.timer = ksceKernelRegisterTimer("SceTouchAlarm0", 1000, samplingTimer, NULL);
+	touch.timer = SceThreadmgrForDriver_C58DF384("SceTouchAlarm0", 1000, samplingTimer, NULL);
 	if (touch.timer < 0)
 		touch.timer = -1;
 	return -1;
@@ -731,7 +731,7 @@ static int systemEvent(int resume, int event, void *args, void *opt) /* name unk
 			ksceKernelEnableSubIntr(8, 5);
 		} else if (event == 0x100000) {
 			touch.state = 1;
-			ksceKernelRegisterTimer("SceTouchAlarm1", 100000, noOpAlarm, NULL);
+			SceThreadmgrForDriver_C58DF384("SceTouchAlarm1", 100000, noOpAlarm, NULL);
 		}
 	}
 	return 0;
@@ -794,25 +794,25 @@ int module_start(unsigned arglen, void *argp)
 	touch.ports[0].reportMax = 6;
 	touch.ports[1].reportMax = 4;
 	touch.idleMask = 3;
-	touch.ports[0].events[0] = ksceKernelCreateEventFlag("SceTouchFront", 0x9000, 0, NULL);
+	touch.ports[0].events[0] = sceKernelCreateEventFlag("SceTouchFront", 0x9000, 0, NULL);
 	if (touch.ports[0].events[0] >= 0)
-		touch.ports[0].events[1] = ksceKernelCreateEventFlag("SceTouchFrontExt", 0x9000, 0, NULL);
+		touch.ports[0].events[1] = sceKernelCreateEventFlag("SceTouchFrontExt", 0x9000, 0, NULL);
 	touch.ports[1].allocated = 0;
 	touch.ports[1].stopped = 0;
-	touch.ports[1].events[0] = ksceKernelCreateEventFlag("SceTouchBack", 0x9000, 0, NULL);
+	touch.ports[1].events[0] = sceKernelCreateEventFlag("SceTouchBack", 0x9000, 0, NULL);
 	if (touch.ports[1].events[0] >= 0)
-		touch.ports[1].events[1] = ksceKernelCreateEventFlag("SceTouchBackExt", 0x9000, 0, NULL);
+		touch.ports[1].events[1] = sceKernelCreateEventFlag("SceTouchBackExt", 0x9000, 0, NULL);
 	initializeTracking(&touch.ports[0].tracking);
 	initializeTracking(&touch.ports[1].tracking);
 	touch.lock = 0;
-	ksceKernelEnqueueWorkQueue(0x10023, "SceTouchInit", initializePhysical, NULL);
+	sceKernelScheduleWorkTask(0x10023, "SceTouchInit", initializePhysical, NULL);
 	memset(&pad, 0, sizeof(pad));
 	memset(pad.pids, 255, 0x40);
 	memset(pad.priorities, 255, 0x40);
 	for (i = 0; i < 4; i++) {
 		pad.ports[i].allocated = 0;
 		pad.ports[i].stopped = 0;
-		pad.ports[i].event = ksceKernelCreateEventFlag(names[i], 0x9000, 0, NULL);
+		pad.ports[i].event = sceKernelCreateEventFlag(names[i], 0x9000, 0, NULL);
 		if (pad.ports[i].event < 0)
 			break;
 	}
@@ -822,16 +822,16 @@ int module_start(unsigned arglen, void *argp)
 		return 2;
 	storage.readMutex = -1;
 	storage.peekMutex = -1;
-	storage.readMutex = ksceKernelCreateMutex("SceTouch1", 0, 0, NULL);
+	storage.readMutex = sceKernelCreateMutex("SceTouch1", 0, 0, NULL);
 	if (storage.readMutex >= 0) {
-		storage.peekMutex = ksceKernelCreateMutex("SceTouch2", 0, 0, NULL);
+		storage.peekMutex = sceKernelCreateMutex("SceTouch2", 0, 0, NULL);
 		if (storage.peekMutex >= 0)
 			return 0;
 		if (storage.readMutex >= 0)
-			ksceKernelDeleteMutex(storage.readMutex);
+			sceKernelDeleteMutex(storage.readMutex);
 	}
 	if (storage.peekMutex >= 0)
-		ksceKernelDeleteMutex(storage.peekMutex);
+		sceKernelDeleteMutex(storage.peekMutex);
 	return 2;
 }
 
@@ -910,14 +910,14 @@ static int readPhysical(unsigned port, SceTouchData *out, unsigned count,
 			bit = process->ports[port].eventBit;
 			if (!(bit & touch.ports[port].allocated))
 				return TOUCH_ERROR(1);
-			ret = ksceKernelWaitEventFlag(touch.ports[port].events[kind], bit,
+			ret = sceKernelWaitEventFlag(touch.ports[port].events[kind], bit,
 						      SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 			if (ret < 0)
 				return ret;
 			intr = SceCpuForDriver_D32ACE9E(&touch.lock);
 			bit = process->ports[port].eventBit;
 			if (bit & touch.ports[port].allocated)
-				ksceKernelClearEventFlag(touch.ports[port].events[kind], ~bit);
+				sceKernelClearEventFlag(touch.ports[port].events[kind], ~bit);
 		}
 		flags = peek ? 2 : 1;
 		if (touch.priorityEnabled)
@@ -974,7 +974,7 @@ static int setSampling(unsigned port, unsigned state, unsigned kind) /* name unk
 				process->ports[port].ring.readers[kind] = process->ports[port].ring.writeIndex;
 				bit = process->ports[port].eventBit;
 				if (bit & touch.ports[port].allocated)
-					ksceKernelClearEventFlag(touch.ports[port].events[kind], ~bit);
+					sceKernelClearEventFlag(touch.ports[port].events[kind], ~bit);
 			}
 			process->sampling[kind] = (process->sampling[kind] & ~(1U << port)) | (state << port);
 		}
@@ -1335,18 +1335,18 @@ static int userRead(unsigned port, void *out, unsigned count, unsigned regions,
 	if (!out || count - 1 >= 64 || port >= 2) {
 		ret = TOUCH_ERROR(1);
 	} else {
-		ret = ksceKernelLockMutex(mutex, 1, NULL);
+		ret = sceKernelLockMutex(mutex, 1, NULL);
 		if (ret >= 0) {
 			ret = readPhysical(port, buffer, count, regions, kind, peek);
 			if (ret > 0) {
 				copied = SceSysmemForDriver_6D88EF8A(out, buffer, ret * 0x90);
 				if (copied < 0) {
-					ksceKernelUnlockMutex(mutex, 1);
+					sceKernelUnlockMutex(mutex, 1);
 					sceSyscallLeave(t);
 					return copied;
 				}
 			}
-			unlocked = ksceKernelUnlockMutex(mutex, 1);
+			unlocked = sceKernelUnlockMutex(mutex, 1);
 			if (unlocked < 0)
 				ret = unlocked;
 		}
@@ -1627,14 +1627,14 @@ static int readVirtual(unsigned device, void *out, unsigned count, int peek) /* 
 			bit = process->ports[device].eventBit;
 			if (!(bit & pad.ports[device].allocated))
 				return TOUCH_ERROR(1);
-			ret = ksceKernelWaitEventFlag(pad.ports[device].event, bit,
+			ret = sceKernelWaitEventFlag(pad.ports[device].event, bit,
 						      SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 			if (ret < 0)
 				return ret;
 			intr = SceCpuForDriver_D32ACE9E(&pad.lock);
 			bit = process->ports[device].eventBit;
 			if (bit & pad.ports[device].allocated)
-				ksceKernelClearEventFlag(pad.ports[device].event, ~bit);
+				sceKernelClearEventFlag(pad.ports[device].event, ~bit);
 		}
 		ring = &process->ports[device].ring;
 		available = peek ? 64 : (ring->writeIndex - ring->reader) & 63;

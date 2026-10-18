@@ -78,11 +78,11 @@ int pfsCryptBufferInit(void)
 		g_pfsCryptBufMutex[i] = -1;
 		pool->block = -1;
 		pool->sharedBlock = -1;
-		ret = ksceKernelCreateMutex(g_pfsCryptBufMutexNames[i], 0, 0, NULL);
+		ret = sceKernelCreateMutex(g_pfsCryptBufMutexNames[i], 0, 0, NULL);
 		if (ret < 0)
 			goto fail;
 		g_pfsCryptBufMutex[i] = ret;
-		ret = ksceKernelCreateCond(g_pfsCryptBufCondNames[i], 0, ret, NULL);
+		ret = sceKernelCreateCond(g_pfsCryptBufCondNames[i], 0, ret, NULL);
 		if (ret < 0)
 			goto fail;
 		g_pfsCryptBufCond[i] = ret;
@@ -131,11 +131,11 @@ fail:
 			pool->base = NULL;
 		}
 		if (g_pfsCryptBufCond[i] != -1) {
-			ksceKernelDeleteCond(g_pfsCryptBufCond[i]);
+			sceKernelDeleteCond(g_pfsCryptBufCond[i]);
 			g_pfsCryptBufCond[i] = -1;
 		}
 		if (g_pfsCryptBufMutex[i] != -1) {
-			ksceKernelDeleteMutex(g_pfsCryptBufMutex[i]);
+			sceKernelDeleteMutex(g_pfsCryptBufMutex[i]);
 			g_pfsCryptBufMutex[i] = -1;
 		}
 	}
@@ -147,8 +147,8 @@ void pfsCryptBufferTerm(void)
 	int i;
 
 	for (i = 0; i < PFS_CRYPT_BUF_POOLS; i++) {
-		ksceKernelDeleteCond(g_pfsCryptBufCond[i]);
-		ksceKernelDeleteMutex(g_pfsCryptBufMutex[i]);
+		sceKernelDeleteCond(g_pfsCryptBufCond[i]);
+		sceKernelDeleteMutex(g_pfsCryptBufMutex[i]);
 		SceSysmemForDriver_009E1C61(g_pfsCryptBufPools[i].block);
 		SceSysmemForDriver_009E1C61(g_pfsCryptBufPools[i].sharedBlock);
 	}
@@ -210,7 +210,7 @@ int pfsCryptBufferAlloc(SceInt32 weight, SceInt32 priority, SceUInt32 count, voi
 	if (p >= PFS_CRYPT_BUF_POOLS)
 		return SCE_ERROR_ERRNO_EINVAL;
 	pool = &g_pfsCryptBufPools[p];
-	ret = ksceKernelLockMutex(g_pfsCryptBufMutex[p], 1, NULL);
+	ret = sceKernelLockMutex(g_pfsCryptBufMutex[p], 1, NULL);
 	if (ret != 0)
 		return ret;
 	for (;;) {
@@ -225,7 +225,7 @@ int pfsCryptBufferAlloc(SceInt32 weight, SceInt32 priority, SceUInt32 count, voi
 			break;
 		if (run >= count)
 			goto take;
-		ret = ksceKernelWaitCond(g_pfsCryptBufCond[p], NULL);
+		ret = sceKernelWaitCond(g_pfsCryptBufCond[p], NULL);
 		if (ret != 0)
 			goto unlock;
 	}
@@ -264,7 +264,7 @@ take:
 	*icvs = &g_pfsCryptBufIcvs[p][shift];
 	ret = 0;
 unlock:
-	ksceKernelUnlockMutex(g_pfsCryptBufMutex[p], 1);
+	sceKernelUnlockMutex(g_pfsCryptBufMutex[p], 1);
 	return ret;
 }
 
@@ -281,7 +281,7 @@ int pfsCryptBufferFree(SceInt32 weight, SceInt32 priority, SceUInt32 count, void
 	if (p >= PFS_CRYPT_BUF_POOLS)
 		return SCE_ERROR_ERRNO_EINVAL;
 	pool = &g_pfsCryptBufPools[p];
-	ret = ksceKernelLockMutex(g_pfsCryptBufMutex[p], 1, NULL);
+	ret = sceKernelLockMutex(g_pfsCryptBufMutex[p], 1, NULL);
 	if (ret != 0)
 		return ret;
 	shift = ((char *)plain - (char *)pool->base) / PFS_CRYPT_BUF_BLOCK_SIZE;
@@ -290,7 +290,7 @@ int pfsCryptBufferFree(SceInt32 weight, SceInt32 priority, SceUInt32 count, void
 		if ((mask & ~pool->freeMask) == mask) {
 			pool->freeMask |= mask;
 			SceIofilemgrForDriver_C722DF35(weight | 0x10000);
-			ret = ksceKernelSignalCond(g_pfsCryptBufCond[p]);
+			ret = sceKernelSignalCond(g_pfsCryptBufCond[p]);
 			if (ret != 0)
 				return ret;
 			ret = 0;
@@ -300,7 +300,7 @@ int pfsCryptBufferFree(SceInt32 weight, SceInt32 priority, SceUInt32 count, void
 	} else {
 		ret = SCE_ERROR_ERRNO_EINVAL;
 	}
-	ksceKernelUnlockMutex(g_pfsCryptBufMutex[p], 1);
+	sceKernelUnlockMutex(g_pfsCryptBufMutex[p], 1);
 	return ret;
 }
 

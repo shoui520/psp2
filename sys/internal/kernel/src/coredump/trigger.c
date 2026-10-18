@@ -146,7 +146,7 @@ int _notifySyncTriggerResultCallback(int requestId, SceUID pid, int result,
 		destination[copySize] = '\0';
 	}
 	syncDumpPath = NULL;
-	return ksceKernelSetEventFlag(syncDumpEvent, 1);
+	return sceKernelSetEventFlag(syncDumpEvent, 1);
 }
 
 int _notifyShutdownResultCallback(int result, CoredumpShutdownContext *context)
@@ -424,15 +424,15 @@ int ksceCoredumpCreateDump(SceUID pid, const char *titleid, int titleidLength,
 	param.crash_thid = -1;
 	param.size = sizeof(param);
 	param.triggerFlags = 1;
-	eventFlag = ksceKernelCreateEventFlag("SceCreatedCoreDumpEvent", 0, 0, NULL);
+	eventFlag = sceKernelCreateEventFlag("SceCreatedCoreDumpEvent", 0, 0, NULL);
 	if (eventFlag < 0)
 		return eventFlag;
 	syncDumpEvent = eventFlag;
 	dumpResult = sceCoredumpTrigger(pid, NULL,
 		_notifySyncTriggerResultCallback, &param);
 	if (dumpResult >= 0)
-		dumpResult = ksceKernelWaitEventFlag(eventFlag, 1, 1, NULL, NULL);
-	result = ksceKernelDeleteEventFlag(eventFlag);
+		dumpResult = sceKernelWaitEventFlag(eventFlag, 1, 1, NULL, NULL);
+	result = sceKernelDeleteEventFlag(eventFlag);
 	if (result == 0)
 		result = dumpResult;
 	return result;

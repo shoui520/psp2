@@ -12,7 +12,7 @@ int PupUtilVerifyPupSegment(SceUID fd, uint64_t segment_index,
 	int status = 0;
 	int permission, result;
 
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
 	args.reserved = 0;
@@ -25,19 +25,19 @@ int PupUtilVerifyPupSegment(SceUID fd, uint64_t segment_index,
 		(SceKernelThreadEntry)PupUtilVerifyPupSegmentMain,
 		96, 8192, 0x50000, 0x80000, NULL);
 	if (thread < 0) {
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		return thread;
 	}
-	result = ksceKernelStartThread(thread, sizeof(args), &args);
+	result = sceKernelStartThread(thread, sizeof(args), &args);
 	if (result) {
-		ksceKernelDeleteThread(thread);
-		ksceKernelSetPermission(permission);
+		sceKernelDeleteThread(thread);
+		sceKernelSetThreadAccessLevel(permission);
 		return result;
 	}
-	result = ksceKernelWaitThreadEnd(thread, &status, NULL);
+	result = sceKernelWaitThreadEnd(thread, &status, NULL);
 	if (result)
 		status = result;
-	ksceKernelDeleteThread(thread);
-	ksceKernelSetPermission(permission);
+	sceKernelDeleteThread(thread);
+	sceKernelSetThreadAccessLevel(permission);
 	return status;
 }

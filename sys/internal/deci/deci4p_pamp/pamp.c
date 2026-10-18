@@ -139,8 +139,8 @@ static inline __attribute__((always_inline)) PampPacket *pampReserveBuffer(PampC
 {
 	unsigned index, bit;
 
-	if (ksceKernelWaitSema(ctx->bufferSema, 1, NULL) < 0 ||
-	    ksceKernelLockFastMutex(&ctx->controlLock) < 0)
+	if (sceKernelWaitSema(ctx->bufferSema, 1, NULL) < 0 ||
+	    lockFastMutex(&ctx->controlLock) < 0)
 		return NULL;
 	if (!(ctx->used & 1)) {
 		index = 0;
@@ -152,7 +152,7 @@ static inline __attribute__((always_inline)) PampPacket *pampReserveBuffer(PampC
 		bit = 2;
 	}
 	ctx->used |= bit;
-	if (ksceKernelUnlockFastMutex(&ctx->controlLock) < 0)
+	if (sceKernelUnlockFastMutex(&ctx->controlLock) < 0)
 		return NULL;
 	return &ctx->buffers[index];
 }
@@ -162,26 +162,26 @@ static inline __attribute__((always_inline)) void pampReleaseBuffer(PampContext 
 {
 	unsigned mask;
 
-	if (ksceKernelLockFastMutex(&ctx->controlLock) < 0)
+	if (lockFastMutex(&ctx->controlLock) < 0)
 		return;
 	if (packet == &ctx->buffers[0])
 		mask = ~1u;
 	else if (packet == &ctx->buffers[1])
 		mask = ~2u;
 	else {
-		ksceKernelUnlockFastMutex(&ctx->controlLock);
+		sceKernelUnlockFastMutex(&ctx->controlLock);
 		return;
 	}
 	ctx->used &= mask;
-	if (ksceKernelUnlockFastMutex(&ctx->controlLock) >= 0)
-		ksceKernelSignalSema(ctx->bufferSema, 1);
+	if (sceKernelUnlockFastMutex(&ctx->controlLock) >= 0)
+		sceKernelSignalSema(ctx->bufferSema, 1);
 }
 
 /* name unknown */
 static void pampPaCallback(int flags, PampContext *ctx)
 {
 	if (ctx && (flags & 1))
-		ksceKernelSetEventFlag(ctx->event, 4);
+		sceKernelSetEventFlag(ctx->event, 4);
 }
 
 /* name unknown */
@@ -190,7 +190,7 @@ static int pampNotify(PampContext *ctx, SceUInt32 command, SceUInt32 value)
 	PampPacket *packet;
 	int ret;
 
-	if (ksceKernelLockFastMutex(&ctx->controlLock) < 0)
+	if (lockFastMutex(&ctx->controlLock) < 0)
 		return PAMP_STATUS_INTERNAL_ERROR;
 	if (command == PAMP_NOTIFY_STARTED) {
 		if (ctx->state == PAMP_STATE_TRACING) {
@@ -227,15 +227,15 @@ static int pampNotify(PampContext *ctx, SceUInt32 command, SceUInt32 value)
 	packet->status = 0;
 	packet->words[0] = value;
 	SceDeci4pDfMgrForDebugger_6D26CC56(&packet->hdr, 0x24);
-	ret = ksceKernelWaitSema(ctx->sendSema, 1, NULL);
+	ret = sceKernelWaitSema(ctx->sendSema, 1, NULL);
 	if (ret >= 0) {
 		ctx->sendPacket = ctx->notification;
 		ret = sceDfMgrReqSend(ctx->handle);
 		if (ret >= 0)
-			return ksceKernelUnlockFastMutex(&ctx->controlLock) < 0 ? PAMP_STATUS_INTERNAL_ERROR : 0;
+			return sceKernelUnlockFastMutex(&ctx->controlLock) < 0 ? PAMP_STATUS_INTERNAL_ERROR : 0;
 	}
 out:
-	ksceKernelUnlockFastMutex(&ctx->controlLock);
+	sceKernelUnlockFastMutex(&ctx->controlLock);
 	return ret;
 }
 
@@ -377,16 +377,16 @@ static int pampOpen(PampContext *ctx)
 	if (key < 0)
 		return pampProtocolError(key);
 	ctx->key = key;
-	if (ksceKernelLockFastMutex(&ctx->controlLock) < 0) {
+	if (lockFastMutex(&ctx->controlLock) < 0) {
 		ret = PAMP_STATUS_INTERNAL_ERROR;
 		goto unregister;
 	}
 	if (ctx->state != PAMP_STATE_CLOSED && ctx->state != PAMP_STATE_STOPPED) {
-		ret = ksceKernelUnlockFastMutex(&ctx->controlLock) < 0 ? PAMP_STATUS_INTERNAL_ERROR : PAMP_STATUS_WRONG_STATE;
+		ret = sceKernelUnlockFastMutex(&ctx->controlLock) < 0 ? PAMP_STATUS_INTERNAL_ERROR : PAMP_STATUS_WRONG_STATE;
 		goto unregister;
 	}
 	ctx->state = PAMP_STATE_OPEN;
-	if (ksceKernelUnlockFastMutex(&ctx->controlLock) < 0) {
+	if (sceKernelUnlockFastMutex(&ctx->controlLock) < 0) {
 		ret = PAMP_STATUS_INTERNAL_ERROR;
 		goto unregister;
 	}
@@ -439,18 +439,18 @@ static int pampClose(PampContext *ctx)
 {
 	if (ScePamgrForDriver_FB04BBEF(ctx->key))
 		return PAMP_STATUS_WRONG_STATE;
-	if (ksceKernelLockFastMutex(&ctx->controlLock) < 0)
+	if (lockFastMutex(&ctx->controlLock) < 0)
 		return PAMP_STATUS_INTERNAL_ERROR;
 	if (ctx->state - 1u < 3) {
 		ctx->state = PAMP_STATE_CLOSED;
-		if (ksceKernelUnlockFastMutex(&ctx->controlLock) < 0)
+		if (sceKernelUnlockFastMutex(&ctx->controlLock) < 0)
 			return PAMP_STATUS_INTERNAL_ERROR;
 		ScePamgrForDriver_1A7733E0(ctx->key);
 		sceKernelPaUnregister(ctx->key);
 		ctx->key = -1;
 		return 0;
 	}
-	return ksceKernelUnlockFastMutex(&ctx->controlLock) < 0 ? PAMP_STATUS_INTERNAL_ERROR : PAMP_STATUS_WRONG_STATE;
+	return sceKernelUnlockFastMutex(&ctx->controlLock) < 0 ? PAMP_STATUS_INTERNAL_ERROR : PAMP_STATUS_WRONG_STATE;
 }
 
 /* name unknown */
@@ -522,7 +522,7 @@ static int pampStop(PampContext *ctx)
 
 	if (ctx->state != PAMP_STATE_TRACING)
 		return PAMP_STATUS_NOT_TRACING;
-	if (ksceKernelLockFastMutex(&ctx->controlLock) < 0)
+	if (lockFastMutex(&ctx->controlLock) < 0)
 		return PAMP_STATUS_INTERNAL_ERROR;
 	if (ctx->state != PAMP_STATE_TRACING) {
 		ret = PAMP_STATUS_NOT_TRACING;
@@ -538,12 +538,12 @@ static int pampStop(PampContext *ctx)
 	packet->status = 0;
 	packet->words[0] = 0;
 	SceDeci4pDfMgrForDebugger_6D26CC56(&packet->hdr, 0x24);
-	ret = ksceKernelWaitSema(ctx->sendSema, 1, NULL);
+	ret = sceKernelWaitSema(ctx->sendSema, 1, NULL);
 	if (ret >= 0) {
 		ctx->sendPacket = ctx->notification;
 		ret = sceDfMgrReqSend(ctx->handle);
 		if (ret >= 0) {
-			if (ksceKernelUnlockFastMutex(&ctx->controlLock) < 0)
+			if (sceKernelUnlockFastMutex(&ctx->controlLock) < 0)
 				return PAMP_STATUS_INTERNAL_ERROR;
 			ret = ScePamgrForDriver_1A7733E0(ctx->key);
 			if (!ret) {
@@ -555,7 +555,7 @@ static int pampStop(PampContext *ctx)
 		}
 	}
 out:
-	ksceKernelUnlockFastMutex(&ctx->controlLock);
+	sceKernelUnlockFastMutex(&ctx->controlLock);
 	return ret;
 }
 
@@ -721,12 +721,12 @@ static int scePerfArmPmonOpen(int event, void *arg, void *opaque)
 	switch (event) {
 	case SCE_DFMGR_EVENT_RECV:
 		dst = NULL;
-		if (!ctx->receiving && ksceKernelLockFastMutex(&ctx->controlLock) >= 0) {
+		if (!ctx->receiving && lockFastMutex(&ctx->controlLock) >= 0) {
 			if (!ctx->receiving) {
 				ctx->receiving = 1;
 				dst = (void *)ctx;
 			}
-			ksceKernelUnlockFastMutex(&ctx->controlLock);
+			sceKernelUnlockFastMutex(&ctx->controlLock);
 		}
 		received = 0;
 		size = (SceUIntPtr)arg;
@@ -740,7 +740,7 @@ static int scePerfArmPmonOpen(int event, void *arg, void *opaque)
 		ctx->received = size;
 		break;
 	case SCE_DFMGR_EVENT_REQ_DONE:
-		if (ksceKernelLockFastMutex(&ctx->commandLock) < 0)
+		if (lockFastMutex(&ctx->commandLock) < 0)
 			break;
 		packet = pampReserveBuffer(ctx);
 		ctx->reply = packet;
@@ -861,21 +861,21 @@ static int scePerfArmPmonOpen(int event, void *arg, void *opaque)
 		packet->status = status;
 		packet->sequence = sequence;
 		SceDeci4pDfMgrForDebugger_6D26CC56(&packet->hdr, packet->length + 0x20);
-		if (ksceKernelLockFastMutex(&ctx->controlLock) >= 0) {
+		if (lockFastMutex(&ctx->controlLock) >= 0) {
 			ctx->receiving = 0;
-			ksceKernelUnlockFastMutex(&ctx->controlLock);
+			sceKernelUnlockFastMutex(&ctx->controlLock);
 		}
-		if (ksceKernelWaitSema(ctx->sendSema, 1, NULL) >= 0) {
+		if (sceKernelWaitSema(ctx->sendSema, 1, NULL) >= 0) {
 			ctx->sendPacket = ctx->reply;
 			if (ctx->kickWorker) {
 				ctx->kickWorker = 0;
-				if (ksceKernelSetEventFlag(ctx->event, 1) < 0)
+				if (sceKernelSetEventFlag(ctx->event, 1) < 0)
 					goto unlock;
 			}
 			sceDfMgrReqSend(ctx->handle);
 		}
 	unlock:
-		ksceKernelUnlockFastMutex(&ctx->commandLock);
+		sceKernelUnlockFastMutex(&ctx->commandLock);
 		break;
 	case SCE_DFMGR_EVENT_SEND:
 		packet = ctx->sendPacket;
@@ -888,23 +888,23 @@ static int scePerfArmPmonOpen(int event, void *arg, void *opaque)
 			ctx->finalPacket = 0;
 		}
 		pampReleaseBuffer(ctx, ctx->sendPacket);
-		ksceKernelSignalSema(ctx->sendSema, 1);
+		sceKernelSignalSema(ctx->sendSema, 1);
 		break;
 	case SCE_DFMGR_EVENT_STATUS: {
 		SceDfMgrStatus *info = arg;
 
 		if (info->kind == 1 && !info->enabled && ctx->state &&
 		    !ScePamgrForDriver_FB04BBEF(ctx->key) &&
-		    ksceKernelLockFastMutex(&ctx->controlLock) >= 0) {
+		    lockFastMutex(&ctx->controlLock) >= 0) {
 			if (ctx->state - 1u < 3) {
 				ctx->state = PAMP_STATE_CLOSED;
-				if (ksceKernelUnlockFastMutex(&ctx->controlLock) >= 0) {
+				if (sceKernelUnlockFastMutex(&ctx->controlLock) >= 0) {
 					ScePamgrForDriver_1A7733E0(ctx->key);
 					sceKernelPaUnregister(ctx->key);
 					ctx->key = -1;
 				}
 			} else {
-				ksceKernelUnlockFastMutex(&ctx->controlLock);
+				sceKernelUnlockFastMutex(&ctx->controlLock);
 			}
 		}
 		break;
@@ -920,12 +920,12 @@ static int pampSendThread(SceSize arglen, void *argp)
 	int ret;
 
 	for (;;) {
-		if ((ret = ksceKernelWaitEventFlag(s_pamp.event, 2, SCE_KERNEL_EVF_WAITMODE_OR,
+		if ((ret = sceKernelWaitEventFlag(s_pamp.event, 2, SCE_KERNEL_EVF_WAITMODE_OR,
 						   &bits, NULL)) < 0)
 			break;
 		if (!(bits & 2))
 			continue;
-		if ((ret = ksceKernelClearEventFlag(s_pamp.event, ~2u)) < 0)
+		if ((ret = sceKernelClearEventFlag(s_pamp.event, ~2u)) < 0)
 			break;
 		ret = sceDfMgrReqSend(s_pamp.handle);
 		if (ret < 0 && (SceUInt32)ret != DFMGR_ERROR_NOT_CONNECTED)
@@ -944,7 +944,7 @@ static int pampMainThread(SceSize arglen, void *argp)
 	int ret;
 
 	for (;;) {
-		if ((ret = ksceKernelWaitEventFlag(ctx->event, 5, SCE_KERNEL_EVF_WAITMODE_OR, &bits,
+		if ((ret = sceKernelWaitEventFlag(ctx->event, 5, SCE_KERNEL_EVF_WAITMODE_OR, &bits,
 						   NULL)) < 0)
 			break;
 		if (bits & 1) {
@@ -960,7 +960,7 @@ static int pampMainThread(SceSize arglen, void *argp)
 					pampReadTrace(ctx, packet->chunk.bytes,
 						ctx->traceUnit != 0, ctx->traceOffset, size);
 					ctx->traceRemaining = 0;
-					if ((ret = ksceKernelClearEventFlag(ctx->event, ~1u)) < 0)
+					if ((ret = sceKernelClearEventFlag(ctx->event, ~1u)) < 0)
 						break;
 				} else {
 					packet->length = 0x10004;
@@ -972,38 +972,38 @@ static int pampMainThread(SceSize arglen, void *argp)
 				}
 			} else {
 				pampCompress(ctx, packet, 0);
-				if (ctx->zfinished && (ret = ksceKernelClearEventFlag(ctx->event, ~1u)) < 0)
+				if (ctx->zfinished && (ret = sceKernelClearEventFlag(ctx->event, ~1u)) < 0)
 					break;
 			}
 			packet->command = PAMP_CMD_STREAM_TRACE;
 			packet->status = 0;
 			packet->sequence = ctx->traceSequence;
 			SceDeci4pDfMgrForDebugger_6D26CC56(&packet->hdr, packet->length + 0x20);
-			if ((ret = ksceKernelWaitSema(ctx->sendSema, 1, NULL)) < 0)
+			if ((ret = sceKernelWaitSema(ctx->sendSema, 1, NULL)) < 0)
 				return ret;
 			if (!packet->chunk.more)
 				ctx->finalPacket = 1;
 			ctx->sendPacket = ctx->workerPacket;
 			if (ctx->state == PAMP_STATE_CLOSED) {
-				if ((ret = ksceKernelClearEventFlag(ctx->event, ~1u)) < 0)
+				if ((ret = sceKernelClearEventFlag(ctx->event, ~1u)) < 0)
 					break;
 				pampReleaseBuffer(ctx, ctx->sendPacket);
 				ctx->streaming = 0;
-				if ((ret = ksceKernelSignalSema(ctx->sendSema, 1)) < 0)
+				if ((ret = sceKernelSignalSema(ctx->sendSema, 1)) < 0)
 					return ret;
-			} else if (ksceKernelSetEventFlag(ctx->event, 2) < 0) {
+			} else if (sceKernelSetEventFlag(ctx->event, 2) < 0) {
 				return PAMP_STATUS_INTERNAL_ERROR;
 			}
 		} else if (bits & 4) {
-			if ((ret = ksceKernelClearEventFlag(ctx->event, ~4u)) < 0 ||
-			    (ret = ksceKernelLockFastMutex(&ctx->commandLock)) < 0)
+			if ((ret = sceKernelClearEventFlag(ctx->event, ~4u)) < 0 ||
+			    (ret = lockFastMutex(&ctx->commandLock)) < 0)
 				break;
 			if (ctx->state == PAMP_STATE_TRACING && !pampNotify(ctx, PAMP_NOTIFY_STOPPED, 3) &&
 			    !ScePamgrForDriver_1A7733E0(ctx->key)) {
 				flags = ctx->flags;
 				ctx->flags = flags | ScePamgrForDriver_3ACF4316();
 			}
-			if ((ret = ksceKernelUnlockFastMutex(&ctx->commandLock)) < 0)
+			if ((ret = sceKernelUnlockFastMutex(&ctx->commandLock)) < 0)
 				break;
 		}
 	}
@@ -1026,18 +1026,18 @@ int PampModuleStart(SceSize arglen, void *argp)
 	if (!SceDipswForDriver_A98FC2FD(0xd4))
 		return 1;
 	memset(ctx, 0, sizeof(*ctx));
-	if (ksceKernelInitializeFastMutex(&ctx->controlLock, "SceDeci4pPampControlLock", 2, NULL) < 0 ||
-	    ksceKernelInitializeFastMutex(&ctx->commandLock, "SceDeci4pPampProcessCommandLock", 0, NULL) < 0)
+	if (sceKernelInitializeFastMutex(&ctx->controlLock, "SceDeci4pPampControlLock", 2, NULL) < 0 ||
+	    sceKernelInitializeFastMutex(&ctx->commandLock, "SceDeci4pPampProcessCommandLock", 0, NULL) < 0)
 		return 2;
-	ret = ksceKernelCreateSema("SceDeci4pPampBuffer", 0, 2, 2, NULL);
+	ret = sceKernelCreateSema("SceDeci4pPampBuffer", 0, 2, 2, NULL);
 	if (ret < 0)
 		return 2;
 	ctx->bufferSema = ret;
-	ret = ksceKernelCreateSema("SceDeci4pPampSend", 0, 1, 1, NULL);
+	ret = sceKernelCreateSema("SceDeci4pPampSend", 0, 1, 1, NULL);
 	if (ret < 0)
 		return 2;
 	ctx->sendSema = ret;
-	ret = ksceKernelCreateEventFlag("SceDeci4pPamp", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceDeci4pPamp", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (ret < 0)
 		return 2;
 	ctx->event = ret;
@@ -1060,17 +1060,17 @@ int PampModuleStart(SceSize arglen, void *argp)
 	threadopt.uTLSMemType = 0;
 	threadopt.uStackMemid = 0;
 	threadopt.handedExceptions = 0;
-	ret = ksceKernelCreateThread("SceDeci4pPampMain", pampMainThread, 0x1e, 0x4000, 0, 0xf, &threadopt);
+	ret = sceKernelCreateThread("SceDeci4pPampMain", pampMainThread, 0x1e, 0x4000, 0, 0xf, &threadopt);
 	if (ret < 0)
 		return 2;
 	ctx->mainThread = ret;
-	if (ksceKernelStartThread(ret, 0, NULL) < 0)
+	if (sceKernelStartThread(ret, 0, NULL) < 0)
 		return 2;
-	ret = ksceKernelCreateThread("SceDeci4pPampSend", pampSendThread, 0x1e, 0x4000, 0, 0xf, &threadopt);
+	ret = sceKernelCreateThread("SceDeci4pPampSend", pampSendThread, 0x1e, 0x4000, 0, 0xf, &threadopt);
 	if (ret < 0)
 		return 2;
 	ctx->sendThread = ret;
-	if (ksceKernelStartThread(ret, 0, NULL) < 0)
+	if (sceKernelStartThread(ret, 0, NULL) < 0)
 		return 2;
 	protocol.size = sizeof(protocol);
 	protocol.protocol = PAMP_PROTOCOL;

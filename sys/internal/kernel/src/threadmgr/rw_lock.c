@@ -664,7 +664,7 @@ int SceThreadmgrForDriver_CFA2FFAF(SceUID rwLockId, SceUInt32 *timeout)
 	return lockRWLock(rwLockId, timeout, RW_LOCK_MODE_READ, 1);
 }
 
-int ksceKernelTryLockReadRWLock(SceUID rwLockId)
+int sceKernelTryLockReadRWLock(SceUID rwLockId)
 {
 	ThreadmgrRWLock *rwLock;
 	uint32_t saved;
@@ -709,7 +709,7 @@ resume:
 }
 
 /* drops one reader; the last one hands the lock to the first waiting writer */
-int ksceKernelUnlockReadRWLock(SceUID rwLockId)
+int sceKernelUnlockReadRWLock(SceUID rwLockId)
 {
 	struct ThreadmgrWaitNode *node;
 	struct ThreadCB *waiter;
@@ -790,7 +790,7 @@ int SceThreadmgrForDriver_54566860(SceUID rwLockId, SceUInt32 *timeout)
 	return lockRWLock(rwLockId, timeout, RW_LOCK_MODE_WRITE, 1);
 }
 
-int ksceKernelTryLockWriteRWLock(SceUID rwLockId)
+int sceKernelTryLockWriteRWLock(SceUID rwLockId)
 {
 	struct ThreadCB *thread;
 	ThreadmgrRWLock *rwLock;
@@ -852,7 +852,7 @@ restore:
  * The writer's last unlock hands the lock on: to every waiter as readers
  * when no writer waits, else to the first waiting writer.
  */
-int ksceKernelUnlockWriteRWLock(SceUID rwLockId)
+int sceKernelUnlockWriteRWLock(SceUID rwLockId)
 {
 	struct ThreadCB *thread, *waiter;
 	struct ThreadmgrWaitNode *node, *next;

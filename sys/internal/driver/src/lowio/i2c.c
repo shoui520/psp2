@@ -78,7 +78,7 @@ int ksceI2cInit(unsigned bus)
 		;
 	base->interruptStatus = base->interruptStatus;
 	base->interruptEnable = 0x01000000;
-	ksceKernelClearEventFlag(s_i2c[bus].event, 0xffff04f0);
+	sceKernelClearEventFlag(s_i2c[bus].event, 0xffff04f0);
 	return 0;
 }
 
@@ -99,13 +99,13 @@ int SceI2cForDriver_30CF9469(unsigned bus, uint32_t first, uint32_t second)
 int ksceI2cReset(int enable)
 {
 	if (enable == 0)
-		return ksceKernelClearEventFlag(s_i2c[1].event, 0x7fffffff);
-	return ksceKernelSetEventFlag(s_i2c[1].event, 0x80000000);
+		return sceKernelClearEventFlag(s_i2c[1].event, 0x7fffffff);
+	return sceKernelSetEventFlag(s_i2c[1].event, 0x80000000);
 }
 
 static int I2cWaitReady(I2cContext *ctx)
 {
-	int ret = ksceKernelWaitEventFlag(ctx->event, 0x80000000, 0, NULL, NULL);
+	int ret = sceKernelWaitEventFlag(ctx->event, 0x80000000, 0, NULL, NULL);
 
 	return ret < 0 ? ret : 0;
 }
@@ -121,7 +121,7 @@ static int I2cBegin(unsigned bus, unsigned address)
 			return ret;
 	}
 	if (ctx->noLock == 0) {
-		ret = ksceKernelLockMutex(ctx->mutex, 1, NULL);
+		ret = sceKernelLockMutex(ctx->mutex, 1, NULL);
 		if (ret < 0)
 			return ret;
 	}
@@ -131,13 +131,13 @@ static int I2cBegin(unsigned bus, unsigned address)
 
 static void I2cEnd(I2cContext *ctx)
 {
-	if (ctx->noLock != 0 || ksceKernelUnlockMutex(ctx->mutex, 1) >= 0)
+	if (ctx->noLock != 0 || sceKernelUnlockMutex(ctx->mutex, 1) >= 0)
 		ctx->busy = 0;
 }
 
 static int I2cWait(I2cContext *ctx, uint32_t *status)
 {
-	return ksceKernelWaitEventFlag(ctx->event, I2C_STATUS_MASK,
+	return sceKernelWaitEventFlag(ctx->event, I2C_STATUS_MASK,
 		SCE_KERNEL_EVF_WAITMODE_OR | SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, status, NULL);
 }
 
@@ -355,7 +355,7 @@ static int I2cIntrHandler(int intrCode, void *arg)
 	ctx->base->interruptStatus = status;
 	LowioDmb();
 	ctx->intrPending |= 1;
-	ksceKernelSetEventFlag(ctx->event, status);
+	sceKernelSetEventFlag(ctx->event, status);
 	return -1;
 }
 
@@ -386,7 +386,7 @@ static int I2cSysEvent(int resume, int event, void *args, void *opt)
 				s_i2c[bus].base->interruptEnable = 0x01000000;
 				ksceKernelEnableIntr(s_i2c[bus].intrCode);
 			}
-			ksceKernelSetEventFlag(s_i2c[1].event, 0x80000000);
+			sceKernelSetEventFlag(s_i2c[1].event, 0x80000000);
 		}
 	} else if (event == 0x402) {
 		if (s_i2c[0].busy || s_i2c[1].busy)
@@ -427,10 +427,10 @@ static __attribute__((noinline)) int I2cInit(void)
 		SceSysmemForDriver_A841EDDA(ret, &base);
 		s_i2c[bus].base = base;
 	}
-	s_i2c[0].mutex = ksceKernelCreateMutex("SceI2c0", 0, 0, NULL);
-	s_i2c[1].mutex = ksceKernelCreateMutex("SceI2c1", 0, 0, NULL);
-	s_i2c[0].event = ksceKernelCreateEventFlag("SceI2c0", 0, 0, NULL);
-	s_i2c[1].event = ksceKernelCreateEventFlag("SceI2c1", 0, 0, NULL);
+	s_i2c[0].mutex = sceKernelCreateMutex("SceI2c0", 0, 0, NULL);
+	s_i2c[1].mutex = sceKernelCreateMutex("SceI2c1", 0, 0, NULL);
+	s_i2c[0].event = sceKernelCreateEventFlag("SceI2c0", 0, 0, NULL);
+	s_i2c[1].event = sceKernelCreateEventFlag("SceI2c1", 0, 0, NULL);
 	s_i2c[0].intrCode = 0x8e;
 	s_i2c[1].intrCode = 0x8f;
 	ksceKernelRegisterIntrHandler(0x8e, "SceI2c0", 0, I2cIntrHandler,
@@ -452,7 +452,7 @@ static __attribute__((noinline)) int I2cInit(void)
 		I2cHardwareTiming(ctx);
 		ctx->base->interruptEnable = 0x01000000;
 	}
-	ksceKernelSetEventFlag(s_i2c[1].event, 0x80000000);
+	sceKernelSetEventFlag(s_i2c[1].event, 0x80000000);
 	sceKernelRegisterSysEventHandler("SceI2c", I2cSysEvent, NULL);
 	return 0;
 }

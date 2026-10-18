@@ -118,13 +118,13 @@ void gpsUnlock(unsigned which);
 static inline __attribute__((always_inline)) void gpsDataLock(void)
 {
 	if (s_gps.active)
-		ksceKernelLockMutex(s_gps.active->dataMutex, 1, NULL);
+		sceKernelLockMutex(s_gps.active->dataMutex, 1, NULL);
 }
 
 static inline __attribute__((always_inline)) void gpsDataUnlock(void)
 {
 	if (s_gps.active)
-		ksceKernelUnlockMutex(s_gps.active->dataMutex, 1);
+		sceKernelUnlockMutex(s_gps.active->dataMutex, 1);
 }
 unsigned gpsState(void);
 int gpsSetState(unsigned state);

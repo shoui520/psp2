@@ -85,9 +85,9 @@ static inline __attribute__((always_inline)) int iofilemgrProcessFinalize(SceUID
 	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
 	if (ret < 0)
 		return ret;
-	oldPid = ksceKernelSetProcessIdToTLS(pid);
+	oldPid = SceThreadmgrForDriver_0486F239(pid);
 	kpls->phase = IOFILEMGR_KPLS_PHASE_FINALIZED;
-	ksceKernelSetProcessIdToTLS(oldPid);
+	SceThreadmgrForDriver_0486F239(oldPid);
 	sceIoAsyncProcessFinalize(pid);
 	vfs_process_finalize(pid);
 	ioerror_process_finalize(pid);
@@ -171,13 +171,13 @@ int IofilemgrModuleProcCreate(SceUID pid, ProcEventCreateParam *param, int unuse
 				     limit.size, limit.limit0, limit.limit1);
 	if (limit.budgetType == 0x2000000) {
 		if (g_iofilemgrResourceLimitSet == 0) {
-			ksceKernelLockFastMutex(&g_iofilemgrMutex);
+			lockFastMutex(&g_iofilemgrMutex);
 			if (g_iofilemgrResourceLimitSet == 0) {
 				sceKernelObjectHeapSetResourceLimit(pid, 0, 3, 0x170, 0x170);
 				sceKernelObjectHeapSetResourceLimit(pid, 0, 4, 0x5c, 0x5c);
 				g_iofilemgrResourceLimitSet = 1;
 			}
-			ksceKernelUnlockFastMutex(&g_iofilemgrMutex);
+			sceKernelUnlockFastMutex(&g_iofilemgrMutex);
 		}
 	} else {
 		sceKernelObjectHeapSetResourceLimit(pid, 0, 3, limit.limit0 * 4, limit.limit0 * 4);
@@ -224,7 +224,7 @@ int ksceIoClose(SceUID fd)
 	if (getFileSchedParam(fd, &info, 1) != 0) {
 		info.priority = 8;
 		info.mntOpt = 0;
-		info.pid = ksceKernelGetProcessIdFromTLS();
+		info.pid = SceThreadmgrForDriver_FA54D49A();
 	}
 	if (g_ioSchedEnabled == 1 && info.mntOpt >= 0) {
 		ret = sceIoSchedulerClose(fd, &info);
@@ -232,7 +232,7 @@ int ksceIoClose(SceUID fd)
 		param.fd = fd;
 		vfs_increment_io_count();
 		vfs_set_sync_pending();
-		ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsClose, &param);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsClose, &param);
 		vfs_decrement_io_count();
 	}
 	sceSyscallLeave(tls);
@@ -257,7 +257,7 @@ SceUID ksceIoOpen(const char *path, int flags, SceMode mode)
 			param.mode = mode;
 			vfs_increment_io_count();
 			vfs_set_sync_pending();
-			ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsOpen, &param);
+			ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsOpen, &param);
 			vfs_decrement_io_count();
 		} else {
 			ret = sceIoSchedulerOpen(path, flags, mode, ret);
@@ -289,7 +289,7 @@ int ksceIoRead(SceUID fd, void *data, SceSize size)
 		param.size = size;
 		vfs_increment_io_count();
 		vfs_set_sync_pending();
-		ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsRead, &param);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsRead, &param);
 		vfs_decrement_io_count();
 	}
 	sceSyscallLeave(tls);
@@ -317,7 +317,7 @@ int ksceIoWrite(SceUID fd, const void *data, SceSize size)
 		param.size = size;
 		vfs_increment_io_count();
 		vfs_set_sync_pending();
-		ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsWrite, &param);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsWrite, &param);
 		vfs_decrement_io_count();
 	}
 	sceSyscallLeave(tls);
@@ -392,7 +392,7 @@ int ksceIoIoctl(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen, 
 	SceUInt32 tls;
 	int ret;
 
-	impersonateId = ksceKernelGetProcessIdFromTLS();
+	impersonateId = SceThreadmgrForDriver_FA54D49A();
 	tls = sceSyscallEnter();
 	ret = getFileSchedParam(fd, &info, 0);
 	if (g_ioSchedEnabled == 1 && ret >= 0 && info.mntOpt >= 0) {
@@ -496,7 +496,7 @@ int ksceIoIoctl(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen, 
 		param.outlen = outlen;
 		vfs_increment_io_count();
 		vfs_set_sync_pending();
-		ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsIoctl, &param);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsIoctl, &param);
 		vfs_decrement_io_count();
 	}
 	sceSyscallLeave(tls);
@@ -519,7 +519,7 @@ SceUID ksceIoDopen(const char *dirname)
 			param.dirname = dirname;
 			vfs_increment_io_count();
 			vfs_set_sync_pending();
-			ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsDopen, &param);
+			ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsDopen, &param);
 			vfs_decrement_io_count();
 		} else {
 			ret = sceIoSchedulerDopen(dirname, ret);
@@ -550,7 +550,7 @@ int ksceIoDread(SceUID fd, SceIoDirent *dir)
 		param.preserveAttributes = 0;
 		vfs_increment_io_count();
 		vfs_set_sync_pending();
-		ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsDread, &param);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsDread, &param);
 		vfs_decrement_io_count();
 	}
 	sceSyscallLeave(tls);
@@ -576,7 +576,7 @@ int ksceIoDclose(SceUID fd)
 		param.fd = fd;
 		vfs_increment_io_count();
 		vfs_set_sync_pending();
-		ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsDclose, &param);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsDclose, &param);
 		vfs_decrement_io_count();
 	}
 	sceSyscallLeave(tls);
@@ -600,7 +600,7 @@ int ksceIoRemove(const char *file)
 			param.flags = 0;
 			vfs_increment_io_count();
 			vfs_set_sync_pending();
-			ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsRemove, &param);
+			ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsRemove, &param);
 			vfs_decrement_io_count();
 		} else {
 			ret = sceIoSchedulerRemove(file, ret);
@@ -627,7 +627,7 @@ int ksceIoMkdir(const char *dir, SceMode mode)
 			param.mode = mode;
 			vfs_increment_io_count();
 			vfs_set_sync_pending();
-			ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsMkdir, &param);
+			ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsMkdir, &param);
 			vfs_decrement_io_count();
 		} else {
 			ret = sceIoSchedulerMkdir(dir, mode, ret);
@@ -653,7 +653,7 @@ int ksceIoRmdir(const char *path)
 			param.path = path;
 			vfs_increment_io_count();
 			vfs_set_sync_pending();
-			ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsRmdir, &param);
+			ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsRmdir, &param);
 			vfs_decrement_io_count();
 		} else {
 			ret = sceIoSchedulerRmdir(path, ret);
@@ -681,7 +681,7 @@ int ksceIoGetstat(const char *file, SceIoStat *stat)
 			param.preserveAttributes = 0;
 			vfs_increment_io_count();
 			vfs_set_sync_pending();
-			ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsGetstat, &param);
+			ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsGetstat, &param);
 			vfs_decrement_io_count();
 		} else {
 			ret = sceIoSchedulerGetstat(file, stat, ret);
@@ -710,7 +710,7 @@ int ksceIoChstat(const char *file, SceIoStat *stat, int bits)
 			param.forVshbridge = 0;
 			vfs_increment_io_count();
 			vfs_set_sync_pending();
-			ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsChstat, &param);
+			ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsChstat, &param);
 			vfs_decrement_io_count();
 		} else {
 			ret = sceIoSchedulerChstat(file, stat, bits, ret);
@@ -737,7 +737,7 @@ int ksceIoRename(const char *oldname, const char *newname)
 			param.newname = newname;
 			vfs_increment_io_count();
 			vfs_set_sync_pending();
-			ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsRename, &param);
+			ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsRename, &param);
 			vfs_decrement_io_count();
 		} else {
 			ret = sceIoSchedulerRename(oldname, newname, ret);
@@ -758,7 +758,7 @@ int ksceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, voi
 	SceUInt32 tls;
 	int ret;
 
-	impersonateId = ksceKernelGetProcessIdFromTLS();
+	impersonateId = SceThreadmgrForDriver_FA54D49A();
 	tls = sceSyscallEnter();
 	ret = getPathMntOpt(dev, 0);
 	if (ret < 0) {
@@ -851,7 +851,7 @@ int ksceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, voi
 		param.outlen = outlen;
 		vfs_increment_io_count();
 		vfs_set_sync_pending();
-		ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsDevctl,
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsDevctl,
 					     &param);
 		vfs_decrement_io_count();
 	}
@@ -877,7 +877,7 @@ int ksceIoSync(const char *device, unsigned int flag)
 			param.flag = flag;
 			vfs_increment_io_count();
 			vfs_set_sync_pending();
-			ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsSync, &param);
+			ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsSync, &param);
 			vfs_decrement_io_count();
 		} else {
 			ret = sceIoSchedulerSync(device, flag, ret);
@@ -1056,7 +1056,7 @@ int IofilemgrModuleStart(SceSize args, void *argp)
 {
 	SceKernelProcEventHandler handler;
 
-	if (ksceKernelInitializeFastMutex(&g_iofilemgrMutex, "SceIofile", 0, 0) < 0)
+	if (sceKernelInitializeFastMutex(&g_iofilemgrMutex, "SceIofile", 0, 0) < 0)
 		SCE_PANIC(1475);
 	if (init_iofm() < 0)
 		SCE_PANIC(1481);
@@ -1098,7 +1098,7 @@ int ksceIoPread(SceUID fd, void *data, SceSize size, SceOff offset)
 		param.offset = offset;
 		vfs_increment_io_count();
 		vfs_set_sync_pending();
-		ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsPread, &param);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsPread, &param);
 		vfs_decrement_io_count();
 	}
 	sceSyscallLeave(tls);
@@ -1127,7 +1127,7 @@ int ksceIoPwrite(SceUID fd, const void *data, SceSize size, SceOff offset)
 		param.offset = offset;
 		vfs_increment_io_count();
 		vfs_set_sync_pending();
-		ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsPwrite, &param);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsPwrite, &param);
 		vfs_decrement_io_count();
 	}
 	sceSyscallLeave(tls);
@@ -1153,7 +1153,7 @@ int ksceIoGetstatByFd(SceUID fd, SceIoStat *stat)
 		param.stat = stat;
 		vfs_increment_io_count();
 		vfs_set_sync_pending();
-		ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsGetstatByFd, &param);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsGetstatByFd, &param);
 		vfs_decrement_io_count();
 	}
 	sceSyscallLeave(tls);
@@ -1177,7 +1177,7 @@ int ksceIoChstatByFd(SceUID fd, SceIoStat *stat, int bits)
 		param.bits = bits;
 		vfs_increment_io_count();
 		vfs_set_sync_pending();
-		ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsChstatByFd, &param);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsChstatByFd, &param);
 		vfs_decrement_io_count();
 	}
 	sceSyscallLeave(tls);
@@ -1200,7 +1200,7 @@ int ksceIoSyncByFd2(SceUID fd, int flag)
 		param.flag = flag;
 		vfs_increment_io_count();
 		vfs_set_sync_pending();
-		ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsSyncByFd, &param);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsSyncByFd, &param);
 		vfs_decrement_io_count();
 	}
 	sceSyscallLeave(tls);
@@ -1216,7 +1216,7 @@ int ksceIoFlock(SceUID fd, int op)
 	param.op = op;
 	vfs_increment_io_count();
 	vfs_set_sync_pending();
-	ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsFlock, &param);
+	ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsFlock, &param);
 	vfs_decrement_io_count();
 	return ret;
 }
@@ -1236,7 +1236,7 @@ int ksceIoGetstatForVshbridge(const char *file, SceIoStat *stat)
 			param.preserveAttributes = 1;
 			vfs_increment_io_count();
 			vfs_set_sync_pending();
-			ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsGetstat, &param);
+			ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsGetstat, &param);
 			vfs_decrement_io_count();
 		} else {
 			ret = sceIoSchedulerGetstatForVsh(file, stat, ret);
@@ -1265,7 +1265,7 @@ int ksceIoChstatForVshbridge(const char *file, SceIoStat *stat, int bits)
 			param.forVshbridge = 1;
 			vfs_increment_io_count();
 			vfs_set_sync_pending();
-			ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsChstat, &param);
+			ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsChstat, &param);
 			vfs_decrement_io_count();
 		} else {
 			ret = sceIoSchedulerChstatForVsh(file, stat, bits, ret);
@@ -1296,7 +1296,7 @@ int ksceIoDreadForVshbridge(SceUID fd, SceIoDirent *dir)
 		param.preserveAttributes = 1;
 		vfs_increment_io_count();
 		vfs_set_sync_pending();
-		ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfsDread, &param);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsDread, &param);
 		vfs_decrement_io_count();
 	}
 	sceSyscallLeave(tls);

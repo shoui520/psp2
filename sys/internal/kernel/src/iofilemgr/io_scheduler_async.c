@@ -59,7 +59,7 @@ SceUID sceIoAsyncEventCreate(IoAsyncEvent **event)
 	SceUID pid, uid;
 	int ret, closed;
 
-	pid = ksceKernelGetProcessIdFromTLS();
+	pid = SceThreadmgrForDriver_FA54D49A();
 	switch (pid) {
 	case SCE_KERNEL_PROCESS_ID:
 	case SCE_KERNEL_DUMMY_PROCESS_GAME_ID:

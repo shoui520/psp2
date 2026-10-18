@@ -88,10 +88,10 @@ SceUInt32 vshKernelShutdownSystemForUser(const SceKernelShutdownParam *param)
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	perm = ksceKernelSetPermission(0x80);
+	perm = sceKernelSetThreadAccessLevel(0x80);
 	if (param != NULL) {
 		if (param->size != 4 && param->size != 8) {
-			ksceKernelSetPermission(perm);
+			sceKernelSetThreadAccessLevel(perm);
 			sceSyscallLeave(t);
 			return SCE_ERROR_ERRNO_EINVAL;
 		}
@@ -108,7 +108,7 @@ SceUInt32 vshKernelShutdownSystemForUser(const SceKernelShutdownParam *param)
 	}
 	if (ret != 0)
 		sceKernelExitDeleteThread(0);
-	ksceKernelSetPermission(perm);
+	sceKernelSetThreadAccessLevel(perm);
 	sceSyscallLeave(t);
 	return 0;
 }

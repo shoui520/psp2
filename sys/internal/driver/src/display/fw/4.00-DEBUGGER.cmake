@@ -239,31 +239,31 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelSysTimerSetInterval
 	ksceKernelSysTimerSetHandler
 	ksceKernelSysTimerAlloc
-	ksceKernelGetThreadmgrUIDClass
-	ksceKernelFinalizeFastMutex
+	sceKernelGetThreadmgrUIDClass
+	sceKernelFinalizeFastMutex
 	SceThreadmgrForDriver_20C228E4
-	ksceKernelPulseEvent
+	sceKernelPulseEvent
 	sceKernelEventObjectInit
 	sceKernelDeleteSimpleEvent
-	ksceKernelUnregisterCallbackFromEvent
-	ksceKernelCreateSimpleEvent
-	ksceKernelWaitEventCB
+	sceKernelUnregisterCallbackFromEvent
+	sceKernelCreateSimpleEvent
+	SceThreadmgrForDriver_360C655C
 	SceThreadmgrForDriver_3A72C6D8
 	sceKernelDelayThread
-	ksceKernelLockFastMutex
-	ksceKernelPulseEventWithNotifyCallback
-	ksceKernelRegisterCallbackToEvent
+	lockFastMutex
+	sceKernelPulseEventWithNotifyCallback
+	sceKernelRegisterCallbackToEventForDriver
 	SceThreadmgrForDriver_8C3C1F78
 	sceKernelIsUserModeThread
 	sceKernelGetProcessId
-	ksceKernelInitializeFastMutex
+	sceKernelInitializeFastMutex
 	SceThreadmgrForDriver_B645C7EF
-	ksceKernelNotifyCallback
-	ksceKernelWaitEvent
+	sceKernelNotifyCallback
+	SceThreadmgrForDriver_C529EA32
 	sceKernelCheckWaitableStatus
-	ksceKernelUnlockFastMutex
+	sceKernelUnlockFastMutex
 	sceKernelUIDInheritedEventClassInit
-	ksceKernelEnqueueWorkQueue
+	sceKernelScheduleWorkTask
 	ksceKernelDmaOpSetupChain
 	ksceKernelDmaOpSync
 	ksceKernelDmaOpEnQueue

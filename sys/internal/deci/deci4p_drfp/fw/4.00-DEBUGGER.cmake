@@ -84,15 +84,15 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
 	SceDipswForDriver_A98FC2FD
-	ksceKernelWaitEventFlag
-	ksceKernelDeleteSema
-	ksceKernelCreateSema
-	ksceKernelWaitSema
-	ksceKernelCreateEventFlag
+	sceKernelWaitEventFlag
+	sceKernelDeleteSema
+	sceKernelCreateSema
+	sceKernelWaitSema
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelSignalSema
-	ksceKernelSetEventFlag
+	sceKernelClearEventFlag
+	sceKernelSignalSema
+	sceKernelSetEventFlag
 	ksceVfsAddVfs
 	vfsUmount
 	ksceVfsDeleteVfs

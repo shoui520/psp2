@@ -69,7 +69,7 @@ static const SceKernelProcEventHandler usbdProcEventHandler = {
 /* doubly linked lists kept as head/tail pairs */
 static __always_inline void usbdLock(void)
 {
-	int result = ksceKernelLockFastMutex(&s_mutex);
+	int result = lockFastMutex(&s_mutex);
 
 	if (result < 0) {
 		SCE_DBG_PRINTF(15, 111, "result=%x\n", result);
@@ -79,7 +79,7 @@ static __always_inline void usbdLock(void)
 
 static __always_inline void usbdUnlock(void)
 {
-	int result = ksceKernelUnlockFastMutex(&s_mutex);
+	int result = sceKernelUnlockFastMutex(&s_mutex);
 
 	if (result < 0) {
 		SCE_DBG_PRINTF(15, 122, "result=%x\n", result);
@@ -90,7 +90,7 @@ static __always_inline void usbdUnlock(void)
 static __always_inline int usbdWaitDeviceResponse(void)
 {
 	SceUInt32 timeout = USBD_RESPONSE_TIMEOUT;
-	int result = ksceKernelWaitSema(s_enumerationSemaId, 1, &timeout);
+	int result = sceKernelWaitSema(s_enumerationSemaId, 1, &timeout);
 
 	if (result < 0)
 		SCE_DBG_PRINTF(15, 135, "result=%x\n", result);
@@ -100,14 +100,14 @@ static __always_inline int usbdWaitDeviceResponse(void)
 static __always_inline void usbdSignalDeviceResponse(void)
 {
 #if FW_SINCE(0x04000000)
-	int result = ksceKernelSignalSema(s_enumerationSemaId, 1);
+	int result = sceKernelSignalSema(s_enumerationSemaId, 1);
 
 	if (result < 0) {
 		SCE_DBG_PRINTF(15, 150, "result=%x\n", result);
 		SCE_DBG_ASSERT(0, 151);
 	}
 #else
-	ksceKernelSignalSema(s_enumerationSemaId, 1);
+	sceKernelSignalSema(s_enumerationSemaId, 1);
 #endif
 }
 
@@ -249,7 +249,7 @@ static void usbdCompleteRequest(UsbdRequest *request)
 	event->arg0 = (unsigned int)request;
 	event->type = USBD_EVENT_COMPLETE;
 	usbdQueueEvent(&s_callbackEvents, event);
-	ksceKernelSignalSema(s_callbackSemaId, 1);
+	sceKernelSignalSema(s_callbackSemaId, 1);
 }
 
 /* the enumeration's control transfers, each waited for by usbdWaitDeviceResponse */
@@ -346,7 +346,7 @@ static __always_inline int usbdReleaseClient(SceUID pid)
 		result = SCE_USBD_ERROR_NOT_INITIALIZED;
 		goto out;
 	}
-	result = ksceKernelDeleteSema(client->semaId);
+	result = sceKernelDeleteSema(client->semaId);
 	if (result >= 0) {
 		USBD_LIST_REMOVE(s_clientHead, s_clientTail, client);
 		result = 0;
@@ -389,7 +389,7 @@ static void usbdNotifyClients(UsbdDevice *device, UsbdBus *bus, int type)
 		event->bus = bus->index;
 		USBD_LIST_APPEND(client->eventHead, client->eventTail, event);
 		usbdUnlock();
-		ksceKernelSignalSema(client->semaId, 1);
+		sceKernelSignalSema(client->semaId, 1);
 		usbdLock();
 	}
 }
@@ -503,7 +503,7 @@ static int usbdDetachBus(unsigned int busIndex)
 				event->address = device->address;
 				event->bus = bus->index;
 				USBD_LIST_APPEND(client->eventHead, client->eventTail, event);
-				ksceKernelSignalSema(client->semaId, 1);
+				sceKernelSignalSema(client->semaId, 1);
 			}
 		}
 		bus->device[device->address] = NULL;
@@ -905,7 +905,7 @@ static void usbdAttachDevice(unsigned int hubId, unsigned int port, unsigned int
 				event->driverKind = kind;
 				event->address = device->address;
 				USBD_LIST_APPEND(client->eventHead, client->eventTail, event);
-				ksceKernelSignalSema(client->semaId, 1);
+				sceKernelSignalSema(client->semaId, 1);
 			}
 			continue;
 		}
@@ -1007,7 +1007,7 @@ static void usbdDetachDevice(unsigned int hubId, unsigned int port)
 				event->address = device->address;
 				USBD_LIST_APPEND(client->eventHead, client->eventTail, event);
 				usbdUnlock();
-				ksceKernelSignalSema(client->semaId, 1);
+				sceKernelSignalSema(client->semaId, 1);
 				usbdLock();
 			}
 			continue;
@@ -1031,7 +1031,7 @@ static int usbdEventThread(SceSize args, void *argp)
 	UsbdEvent *queued, event;
 
 	for (;;) {
-		if (ksceKernelWaitSema(s_deviceEventSemaId, 1, NULL) < 0)
+		if (sceKernelWaitSema(s_deviceEventSemaId, 1, NULL) < 0)
 			continue;
 		queued = usbdDequeueEvent(&s_deviceEvents);
 		if (queued == NULL)
@@ -1134,7 +1134,7 @@ static int usbdCallbackThread(SceSize args, void *argp)
 	UsbdPipe *pipe;
 
 	for (;;) {
-		if (ksceKernelWaitSema(s_callbackSemaId, 1, NULL) < 0)
+		if (sceKernelWaitSema(s_callbackSemaId, 1, NULL) < 0)
 			continue;
 		queued = usbdDequeueEvent(&s_callbackEvents);
 		if (queued == NULL)
@@ -1181,7 +1181,7 @@ static int usbdCallbackThread(SceSize args, void *argp)
 				goto unlock;
 			}
 			USBD_LIST_APPEND(client->eventHead, client->eventTail, clientEvent);
-			ksceKernelSignalSema(client->semaId, 1);
+			sceKernelSignalSema(client->semaId, 1);
 			goto unlock;
 		}
 		if (pipe->type == SCE_USBD_ENDPOINT_TRANSFER_TYPE_ISOCHRONOUS) {
@@ -1225,7 +1225,7 @@ void usbdNotifyAttach(unsigned int hubId, unsigned int port, unsigned int speed)
 	event->type = USBD_EVENT_ATTACH;
 	event->arg2 = speed;
 	usbdQueueEvent(&s_deviceEvents, event);
-	ksceKernelSignalSema(s_deviceEventSemaId, 1);
+	sceKernelSignalSema(s_deviceEventSemaId, 1);
 }
 
 void usbdNotifyDetach(unsigned int hubId, unsigned int port)
@@ -1239,7 +1239,7 @@ void usbdNotifyDetach(unsigned int hubId, unsigned int port)
 	event->arg2 = 0;
 	event->type = USBD_EVENT_DETACH;
 	usbdQueueEvent(&s_deviceEvents, event);
-	ksceKernelSignalSema(s_deviceEventSemaId, 1);
+	sceKernelSignalSema(s_deviceEventSemaId, 1);
 }
 
 /* the free list in index order, each entry's index set */
@@ -1261,8 +1261,8 @@ static __always_inline void usbdQuitThread(UsbdEventQueue *queue, SceUID semaId,
 		return;
 	event->type = USBD_EVENT_QUIT;
 	usbdQueueEvent(queue, event);
-	ksceKernelSignalSema(semaId, 1);
-	ksceKernelWaitThreadEnd(threadId, NULL, NULL);
+	sceKernelSignalSema(semaId, 1);
+	sceKernelWaitThreadEnd(threadId, NULL, NULL);
 }
 
 int _sceUsbdInit(void)
@@ -1279,7 +1279,7 @@ int _sceUsbdInit(void)
 	if (s_initialized)
 		return SCE_USBD_ERROR_ALREADY_INITIALIZED;
 	s_queueLock = 0;
-	s_eventId = ksceKernelCreateSimpleEvent("SceUsbd", 0, 0, NULL);
+	s_eventId = sceKernelCreateSimpleEvent("SceUsbd", 0, 0, NULL);
 	s_callbackFlags = 0;
 	s_callbackId = -1;
 	s_callbackPid = -1;
@@ -1389,35 +1389,35 @@ int _sceUsbdInit(void)
 	s_callbackEvents.tail = NULL;
 	s_clientHead = NULL;
 	s_clientTail = NULL;
-	result = ksceKernelInitializeFastMutex(&s_mutex, "SceUsbd", 0x2002, NULL);
+	result = sceKernelInitializeFastMutex(&s_mutex, "SceUsbd", 0x2002, NULL);
 	if (result < 0)
 		goto delete_heap;
-	result = ksceKernelCreateSema("SceUsbdDeviceEvent", 0, 0, 20, NULL);
+	result = sceKernelCreateSema("SceUsbdDeviceEvent", 0, 0, 20, NULL);
 	if (result < 0)
 		goto finalize_mutex;
 	s_deviceEventSemaId = result;
-	result = ksceKernelCreateSema("SceUsbdCallback", 0, 0, 20, NULL);
+	result = sceKernelCreateSema("SceUsbdCallback", 0, 0, 20, NULL);
 	if (result < 0)
 		goto delete_device_event_sema;
 	s_callbackSemaId = result;
-	result = ksceKernelCreateSema("SceUsbdEnumeration", 0, 0, 1, NULL);
+	result = sceKernelCreateSema("SceUsbdEnumeration", 0, 0, 1, NULL);
 	if (result < 0)
 		goto delete_callback_sema;
 	s_enumerationSemaId = result;
-	result = ksceKernelCreateThread("SceUsbdEvent", usbdEventThread, 60, 0x2000, 0,
+	result = sceKernelCreateThread("SceUsbdEvent", usbdEventThread, 60, 0x2000, 0,
 					0x80000, NULL);
 	if (result < 0)
 		goto delete_enumeration_sema;
 	s_eventThreadId = result;
-	result = ksceKernelCreateThread("SceUsbdCallback", usbdCallbackThread, 60, 0x2000, 0,
+	result = sceKernelCreateThread("SceUsbdCallback", usbdCallbackThread, 60, 0x2000, 0,
 					0x80000, NULL);
 	if (result < 0)
 		goto delete_event_thread;
 	s_callbackThreadId = result;
-	result = ksceKernelStartThread(s_eventThreadId, 0, NULL);
+	result = sceKernelStartThread(s_eventThreadId, 0, NULL);
 	if (result < 0)
 		goto delete_callback_thread;
-	result = ksceKernelStartThread(s_callbackThreadId, 0, NULL);
+	result = sceKernelStartThread(s_callbackThreadId, 0, NULL);
 	if (result < 0)
 		goto quit_event_thread;
 
@@ -1472,22 +1472,22 @@ quit_callback_thread:
 quit_event_thread:
 	usbdQuitThread(&s_deviceEvents, s_deviceEventSemaId, s_eventThreadId);
 delete_callback_thread:
-	if (ksceKernelDeleteThread(s_callbackThreadId) < 0)
+	if (sceKernelDeleteThread(s_callbackThreadId) < 0)
 		SCE_DBG_ASSERT(0, 2128);
 delete_event_thread:
-	if (ksceKernelDeleteThread(s_eventThreadId) < 0)
+	if (sceKernelDeleteThread(s_eventThreadId) < 0)
 		SCE_DBG_ASSERT(0, 2131);
 delete_enumeration_sema:
-	if (ksceKernelDeleteSema(s_enumerationSemaId) < 0)
+	if (sceKernelDeleteSema(s_enumerationSemaId) < 0)
 		SCE_DBG_ASSERT(0, 2134);
 delete_callback_sema:
-	if (ksceKernelDeleteSema(s_callbackSemaId) < 0)
+	if (sceKernelDeleteSema(s_callbackSemaId) < 0)
 		SCE_DBG_ASSERT(0, 2137);
 delete_device_event_sema:
-	if (ksceKernelDeleteSema(s_deviceEventSemaId) < 0)
+	if (sceKernelDeleteSema(s_deviceEventSemaId) < 0)
 		SCE_DBG_ASSERT(0, 2140);
 finalize_mutex:
-	if (ksceKernelFinalizeFastMutex(&s_mutex) < 0)
+	if (sceKernelFinalizeFastMutex(&s_mutex) < 0)
 		SCE_DBG_ASSERT(0, 2143);
 	goto delete_heap;
 
@@ -2342,7 +2342,7 @@ int sceUsbdInit(SceUID *uid)
 			goto out;
 		}
 	}
-	result = ksceKernelCreateSema("SceUsbdSemaUser", 0, 0, 10, NULL);
+	result = sceKernelCreateSema("SceUsbdSemaUser", 0, 0, 10, NULL);
 	if (result < 0)
 		goto out;
 	client->semaId = result;
@@ -2375,7 +2375,7 @@ int sceUsbdEnd(SceUID uid)
 		result = SCE_USBD_ERROR_NOT_INITIALIZED;
 		goto out;
 	}
-	result = ksceKernelDeleteSema(client->semaId);
+	result = sceKernelDeleteSema(client->semaId);
 	if (result >= 0) {
 		USBD_LIST_REMOVE(s_clientHead, s_clientTail, client);
 		result = 0;
@@ -2741,7 +2741,7 @@ int sceUsbdReceiveEvent(SceUID uid, UsbdClientEvent *userEvent)
 		goto out;
 	}
 	usbdUnlock();
-	result = ksceKernelWaitSema(client->semaId, 1, NULL);
+	result = sceKernelWaitSema(client->semaId, 1, NULL);
 	usbdLock();
 	if (result < 0)
 		goto out;
@@ -3200,25 +3200,25 @@ int sceUsbdRegisterCallback(SceUID cbid, int flag)
 	result = guid = SceSysmemForDriver_45D22597(pid, cbid);
 	if (result < 0)
 		goto out;
-	result = ksceKernelGetThreadmgrUIDClass(guid);
+	result = sceKernelGetThreadmgrUIDClass(guid);
 	if (result < 0)
 		goto out;
 	if (result != SCE_KERNEL_THREADMGR_UID_CLASS_CALLBACK) {
 		result = SCE_USBD_ERROR_INVALID_PARAM;
 		goto out;
 	}
-	result = ksceKernelLockFastMutex(&s_mutex);
+	result = lockFastMutex(&s_mutex);
 	if (result < 0)
 		goto out;
 	if (s_callbackId != -1) {
-		ksceKernelUnlockFastMutex(&s_mutex);
+		sceKernelUnlockFastMutex(&s_mutex);
 		result = SCE_USBD_ERROR_NO_MEMORY;
 		goto out;
 	}
 	s_callbackId = guid;
 	s_callbackPid = pid;
 	s_callbackFlags = flag;
-	result = ksceKernelRegisterCallbackToEvent(s_eventId, guid, guid);
+	result = sceKernelRegisterCallbackToEventForDriver(s_eventId, guid, guid);
 	if (result >= 0) {
 		if ((s_callbackFlags & 1) && s_bus[0] != NULL) {
 			for (address = 0; address < USBD_DEVICES_PER_BUS; address++) {
@@ -3231,7 +3231,7 @@ int sceUsbdRegisterCallback(SceUID cbid, int flag)
 		}
 		result = 0;
 	}
-	ksceKernelUnlockFastMutex(&s_mutex);
+	sceKernelUnlockFastMutex(&s_mutex);
 out:
 	sceSyscallLeave(state);
 	return result;
@@ -3250,16 +3250,16 @@ int sceUsbdUnregisterCallback(SceUID cbid)
 	result = SceSysmemForDriver_45D22597(pid, cbid);
 	if (result < 0)
 		goto out;
-	result = ksceKernelLockFastMutex(&s_mutex);
+	result = lockFastMutex(&s_mutex);
 	if (result < 0)
 		goto out;
 	if (pid == s_callbackPid && cbid == s_callbackId) {
 		s_callbackId = -1;
 		s_callbackPid = -1;
 		s_callbackFlags = 0;
-		ksceKernelUnregisterCallbackFromEvent(s_eventId, -1);
+		sceKernelUnregisterCallbackFromEvent(s_eventId, -1);
 	}
-	ksceKernelUnlockFastMutex(&s_mutex);
+	sceKernelUnlockFastMutex(&s_mutex);
 	result = 0;
 out:
 	sceSyscallLeave(state);

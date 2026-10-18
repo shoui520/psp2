@@ -657,7 +657,7 @@ static inline int BtRegisterCallback(SceUID callback, uint64_t eventMask,
 
 	if (ksceKernelIsIntrAllowedInCurrentContext())
 		return (int)0x802f1901;
-	threadId = ksceKernelGetThreadId();
+	threadId = sceKernelGetThreadId();
 	result = BtLockTransport();
 	if (result != 0)
 		return result;
@@ -721,7 +721,7 @@ static inline int BtUnregisterCallback(void)
 
 	if (ksceKernelIsIntrAllowedInCurrentContext())
 		return (int)0x802f1901;
-	threadId = ksceKernelGetThreadId();
+	threadId = sceKernelGetThreadId();
 	result = BtLockTransport();
 	if (result != 0)
 		return result;
@@ -764,7 +764,7 @@ static inline int BtReadEvent(SceBtEvent *events, int maxCount, int userMode)
 
 	if (ksceKernelIsIntrAllowedInCurrentContext())
 		return (int)0x802f1901;
-	threadId = ksceKernelGetThreadId();
+	threadId = sceKernelGetThreadId();
 	result = BtLockTransport();
 	if (result != 0)
 		return result;
@@ -1740,7 +1740,7 @@ static inline int BtRegisterHidVuApi(SceUID callback, int vendorId, int productI
 		return (int)0x802f1503;
 	if (vendorId != 0xe6f || productId != 0x329)
 		return (int)0x802f4001;
-	threadId = ksceKernelGetThreadId();
+	threadId = sceKernelGetThreadId();
 	result = BtLockTransport();
 	if (result)
 		return result;
@@ -1805,7 +1805,7 @@ int sceBtHidVuRegisterCallback(SceUID callback, int vendorId, int productId)
 
 static inline int BtUnregisterHidVuApi(void)
 {
-	SceUID threadId = ksceKernelGetThreadId();
+	SceUID threadId = sceKernelGetThreadId();
 	int result = BtLockTransport();
 
 	if (result)
@@ -1837,7 +1837,7 @@ static inline int BtReadHidVuEventsApi(void *buffer, int maxCount, int userMode)
 {
 	BtHidVuSubscriber *subscriber = &gBtStack.hidVuSubscriber;
 	BtHidVuEvent *output = buffer;
-	SceUID threadId = ksceKernelGetThreadId();
+	SceUID threadId = sceKernelGetThreadId();
 	int result = BtLockTransport();
 
 	if (result)

@@ -158,7 +158,7 @@ static int Iftu2IntrHandler(int intrCode, void *arg)
 	regs->interruptStatus = 0;
 	(void)regs->interruptStatus;
 	LowioDsb();
-	ksceKernelSetEventFlag(plane->eventFlag, 1);
+	sceKernelSetEventFlag(plane->eventFlag, 1);
 	return -1;
 }
 
@@ -620,7 +620,7 @@ int ksceIftuCsc(SceIftuFrameBuf *dst, SceIftuPlaneState *src,
 	}
 	if (!IftuValidSourceFormat(src->fb.pixelformat))
 		return SCE_IFTU_ERROR_INVALID_PIXELFORMAT;
-	ret = ksceKernelLockFastMutex(&s_iftuFastMutex);
+	ret = lockFastMutex(&s_iftuFastMutex);
 	if (ret < 0)
 		return ret;
 	intr = SceCpuForDriver_D32ACE9E(&converter->lock);
@@ -707,9 +707,9 @@ int ksceIftuCsc(SceIftuFrameBuf *dst, SceIftuPlaneState *src,
 	}
 	LowioDmb();
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&converter->lock, intr);
-	ksceKernelWaitEventFlag(converter->eventFlag, 1, 5, NULL, NULL);
+	sceKernelWaitEventFlag(converter->eventFlag, 1, 5, NULL, NULL);
 	ScePervasiveForDriver_5AFE0AF0();
-	ret = ksceKernelUnlockFastMutex(&s_iftuFastMutex);
+	ret = sceKernelUnlockFastMutex(&s_iftuFastMutex);
 	return ret < 0 ? ret : 0;
 }
 
@@ -745,7 +745,7 @@ static __attribute__((noinline)) int IftuInit(void)
 		plane->mergeSetting = IFTU_NO_MERGE;
 		plane->bilinear = 1;
 		if (i == IFTU_CONVERTER)
-			plane->eventFlag = ksceKernelCreateEventFlag("SceIftu2",
+			plane->eventFlag = sceKernelCreateEventFlag("SceIftu2",
 				0x1000, 0, NULL);
 		else
 			plane->eventFlag = -1;
@@ -806,7 +806,7 @@ static __attribute__((noinline)) int IftuInit(void)
 	(void)converter->registers->pathConfig;
 	LowioDsb();
 	ScePervasiveForDriver_5AFE0AF0();
-	ksceKernelInitializeFastMutex(&s_iftuFastMutex, "SceIftu2", 2, NULL);
+	sceKernelInitializeFastMutex(&s_iftuFastMutex, "SceIftu2", 2, NULL);
 	sceKernelRegisterSysEventHandler("SceIftu", IftuSysEvent, NULL);
 	return 0;
 }

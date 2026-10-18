@@ -243,7 +243,7 @@ int initializeJpeg(void)
 	if (key < 0)
 		return 2;
 	jpegResident.processStorageKey = key;
-	if (ksceKernelInitializeFastMutex((SceKernelFastMutex *)&jpegResident.mutex,
+	if (sceKernelInitializeFastMutex((SceKernelFastMutex *)&jpegResident.mutex,
 					  "SceJpeg", 0x8000, NULL) < 0)
 		return 2;
 	jpegResident.channel = SceCodecEngineWrapperForDriver_6A1184EA(0);
@@ -263,13 +263,13 @@ int jpegProcessExitEntry(SceUID pid, SceUInt32 type)
 	unsigned int context;
 	int ret;
 
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		return ret;
 	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, jpegResident.processStorageKey,
 						     (void **)&process, 0);
 	if (ret < 0) {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 		return ret;
 	}
 	if (process != NULL) {
@@ -331,7 +331,7 @@ int jpegProcessExitEntry(SceUID pid, SceUInt32 type)
 							     process->maxSplitDecoder << 13);
 		memset(process, 0, sizeof(*process));
 	}
-	return ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	return sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 }
 
 /* Name unknown: user-facing MJPEG initialization behind the SDK wrapper. */
@@ -351,7 +351,7 @@ int SceAvcodecForDriver_48247A20(unsigned int maxSplitDecoder)
 		sceSyscallLeave(syscallState);
 		return 0x80650062;
 	}
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0) {
 		_unlockProcessSuspendCore();
 		sceSyscallLeave(syscallState);
@@ -379,12 +379,12 @@ int SceAvcodecForDriver_48247A20(unsigned int maxSplitDecoder)
 	process->busyDecoders = 0;
 	process->option = 0;
 	process->state = 1;
-	ret = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	_unlockProcessSuspendCore();
 	sceSyscallLeave(syscallState);
 	return ret;
 error:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	_unlockProcessSuspendCore();
 	sceSyscallLeave(syscallState);
 	return ret;
@@ -417,7 +417,7 @@ int SceAvcodecForDriver_6F1CF77F(const SceJpegMJpegInitParam *pInitParam)
 		sceSyscallLeave(syscallState);
 		return 0x80650062;
 	}
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0) {
 		_unlockProcessSuspendCore();
 		sceSyscallLeave(syscallState);
@@ -445,12 +445,12 @@ int SceAvcodecForDriver_6F1CF77F(const SceJpegMJpegInitParam *pInitParam)
 	process->allocatedDecoders = 0;
 	process->busyDecoders = 0;
 	process->state = 1;
-	ret = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	_unlockProcessSuspendCore();
 	sceSyscallLeave(syscallState);
 	return ret;
 error:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	_unlockProcessSuspendCore();
 	sceSyscallLeave(syscallState);
 	return ret;
@@ -468,7 +468,7 @@ int SceAvcodecForDriver_04080710(void)
 		sceSyscallLeave(syscallState);
 		return ret;
 	}
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
 	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
@@ -483,10 +483,10 @@ int SceAvcodecForDriver_04080710(void)
 			goto unlock;
 	}
 	memset(process, 0, sizeof(*process));
-	ret = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	goto finish;
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 finish:
 	_unlockProcessSuspendCore();
 	sceSyscallLeave(syscallState);
@@ -530,16 +530,16 @@ int SceAvcodecForDriver_80F63723(const unsigned char *pJpeg, SceSize isize,
 		ret = 0x80650060;
 		goto finish;
 	}
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
 	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
 	if (process == NULL || process->state != 1) {
 		ret = 0x80650039;
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 		goto finish;
 	}
-	ret = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
 	if (pTempBuffer == NULL || pJpeg == NULL ||
@@ -763,16 +763,16 @@ int SceAvcodecForDriver_2A0AF392(const unsigned char *pJpeg, SceSize isize,
 		sceSyscallLeave(syscallState);
 		return ret;
 	}
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
 	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
 	if (process == NULL || process->state != 1) {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 		ret = 0x80650039;
 		goto finish;
 	}
-	ret = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
 	if (pYCbCr == NULL || pJpeg == NULL ||
@@ -860,16 +860,16 @@ int SceAvcodecForDriver_EAAE7737(void *pRGBA, const unsigned char *pYCbCr,
 	int format = colorOption & 15;
 	int bytesShift, pixelFormat, ret;
 
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
 	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
 	if (process == NULL || (bytesShift = process->state) != 1) {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 		ret = 0x80650039;
 		goto finish;
 	}
-	ret = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
 	height = ((unsigned short)xysize + 7) & ~7U;
@@ -983,16 +983,16 @@ int jpegCscForUser(void *pRGBA, const unsigned char *pYCbCr, int xysize,
 		sceSyscallLeave(syscallState);
 		return ret;
 	}
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
 	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
 	if (process == NULL || process->state != 1) {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 		ret = 0x80650039;
 		goto finish;
 	}
-	ret = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
 	if (pRGBA == NULL || ((unsigned int)pRGBA & 255) ||
@@ -1093,16 +1093,16 @@ int SceAvcodecForDriver_F305E3B3(const unsigned char *pJpeg, SceSize isize,
 		downscale = 1;
 	else if (((downscale - 1) & downscale) || (unsigned int)(downscale - 1) > 7)
 		goto invalidMode;
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
 	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
 	if (process == NULL || process->state != 1) {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 		ret = 0x80650039;
 		goto finish;
 	}
-	ret = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
 	ret = jpegLockDecodeBuffer(&jpegPhysical, pJpeg, isize, 16, 1, process->option);
@@ -1161,7 +1161,7 @@ int SceAvcodecForDriver_361238E2(SceJpegSplitDecodeCtrl *pCtrl)
 		sceSyscallLeave(syscallState);
 		return 0x80650010;
 	}
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
 	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
@@ -1185,10 +1185,10 @@ int SceAvcodecForDriver_361238E2(SceJpegSplitDecodeCtrl *pCtrl)
 	pCtrl->internalData[2] = index;
 	process->decoderContexts[index] = pCtrl->internalData[1];
 	process->allocatedDecoders |= 1U << index;
-	ret = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	goto finish;
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 finish:
 	_unlockProcessSuspendCore();
 	sceSyscallLeave(syscallState);
@@ -1214,7 +1214,7 @@ int SceAvcodecForDriver_864FC454(SceJpegSplitDecodeCtrl *pCtrl)
 		sceSyscallLeave(syscallState);
 		return 0x80650010;
 	}
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
 	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
@@ -1241,10 +1241,10 @@ int SceAvcodecForDriver_864FC454(SceJpegSplitDecodeCtrl *pCtrl)
 	pCtrl->internalData[2] = 8;
 	process->decoderContexts[index] = 0;
 	process->allocatedDecoders &= ~(1U << index);
-	ret = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	goto finish;
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 finish:
 	_unlockProcessSuspendCore();
 	sceSyscallLeave(syscallState);
@@ -1290,7 +1290,7 @@ int SceAvcodecForDriver_B6882013(SceJpegSplitDecodeCtrl *pCtrl)
 	if (writeBase != 0 && (streamBase > writeBase || writeBase > streamEnd ||
 			       streamEnd < writeBase + pCtrl->writeBufferSize))
 		goto invalidBuffer;
-	ret = ksceKernelLockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
 	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
@@ -1308,7 +1308,7 @@ int SceAvcodecForDriver_B6882013(SceJpegSplitDecodeCtrl *pCtrl)
 		goto unlock;
 	}
 	process->busyDecoders |= 1U << index;
-	lockRet = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	lockRet = sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret == 0)
 		ret = lockRet;
 	if (ret < 0)
@@ -1390,16 +1390,16 @@ cleanup:
 	if (command.pStreamBuffer != NULL)
 		SceSysmemForDriver_22CBE925(48, (void *)((unsigned int)pCtrl->pStreamBuffer & ~255U),
 			(pCtrl->streamBufferSize + 255 + ((unsigned int)pCtrl->pStreamBuffer & 255)) & ~255U);
-	lockRet = ksceKernelLockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	lockRet = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (lockRet == 0) {
 		process->busyDecoders &= ~(1U << index);
-		lockRet = ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+		lockRet = sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	}
 	if ((ret >= 0) & ((unsigned int)lockRet >> 31))
 		ret = lockRet;
 	goto finish;
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 finish:
 	_unlockProcessSuspendCore();
 	sceSyscallLeave(syscallState);

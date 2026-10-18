@@ -37,7 +37,7 @@ static const SceKernelDebugInfo waitObjectClearPanicInfo = {
 
 int appmgrUtilWaitObjectInitialize(void)
 {
-	SceUID eventFlag = ksceKernelCreateEventFlag("SceAppMgrEv", 0xa000, 0, NULL);
+	SceUID eventFlag = sceKernelCreateEventFlag("SceAppMgrEv", 0xa000, 0, NULL);
 
 	if (eventFlag <= 0) {
 #if FW_DEBUG
@@ -79,7 +79,7 @@ struct AppmgrWaitObject *appmgrUtilGetWaitObject(int index)
 
 void appmgrUtilWaitObjectClear(struct AppmgrWaitObject *waitObject)
 {
-	int result = ksceKernelClearEventFlag(waitObject->eventFlag, ~waitObject->bits);
+	int result = sceKernelClearEventFlag(waitObject->eventFlag, ~waitObject->bits);
 
 	if (result != 0) {
 #if FW_DEBUG
@@ -97,7 +97,7 @@ void appmgrUtilWaitObjectClear(struct AppmgrWaitObject *waitObject)
 
 void appmgrUtilWaitObjectNotify(struct AppmgrWaitObject *waitObject)
 {
-	int result = ksceKernelSetEventFlag(waitObject->eventFlag, waitObject->bits);
+	int result = sceKernelSetEventFlag(waitObject->eventFlag, waitObject->bits);
 
 	if (result != 0) {
 #if FW_DEBUG
@@ -115,7 +115,7 @@ void appmgrUtilWaitObjectNotify(struct AppmgrWaitObject *waitObject)
 
 int appmgrUtilWaitObjectWait(struct AppmgrWaitObject *waitObject, SceUInt32 *timeout)
 {
-	int result = ksceKernelWaitEventFlag(waitObject->eventFlag, waitObject->bits,
+	int result = sceKernelWaitEventFlag(waitObject->eventFlag, waitObject->bits,
 		3, NULL, timeout);
 
 	if ((SceUInt32)result + 0x7ffd7fd4U > 1 &&

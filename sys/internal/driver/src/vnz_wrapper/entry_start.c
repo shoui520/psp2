@@ -16,7 +16,7 @@ int module_start(SceSize arglen, const void *argp)
 		return 2;
 	if (initCodecEngine() < 0)
 		return 2;
-	if (ksceKernelEnqueueWorkQueue(0x10023, "SceCodecEngineBoot",
+	if (sceKernelScheduleWorkTask(0x10023, "SceCodecEngineBoot",
 		(SceKernelWorkQueueWorkFunction)codecEngineStartPhase2, NULL) < 0)
 		return 2;
 	if (sceKernelRegisterSysEventHandler("SceVenezia",

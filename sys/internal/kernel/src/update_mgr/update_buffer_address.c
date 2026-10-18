@@ -8,7 +8,7 @@ int UpdateUtilKA2UA(const void *kernelBuffer, SceUID pid, void **userBuffer)
 
 	if (!userBuffer || !kernelBuffer || pid <= 0)
 		return (int)0x800f0216;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&updateTableMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	if (result)
 		return result;
 	index = 0;
@@ -25,7 +25,7 @@ int UpdateUtilKA2UA(const void *kernelBuffer, SceUID pid, void **userBuffer)
 	*userBuffer = updateBufferTable[index].userBuffer;
 	result = 0;
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&updateTableMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	return result;
 }
 
@@ -36,7 +36,7 @@ int UpdateUtilUA2KA(const void *userBuffer, SceUID pid, void **kernelBuffer)
 
 	if (!userBuffer || !kernelBuffer || pid <= 0)
 		return (int)0x800f0216;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&updateTableMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	if (result)
 		return result;
 	index = 0;
@@ -53,6 +53,6 @@ int UpdateUtilUA2KA(const void *userBuffer, SceUID pid, void **kernelBuffer)
 	*kernelBuffer = updateBufferTable[index].kernelBuffer;
 	result = 0;
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&updateTableMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	return result;
 }

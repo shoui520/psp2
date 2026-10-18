@@ -36,9 +36,9 @@ set(MODULE_IMPORT_FUNCS
 	memset
 	__stack_chk_fail
 	sceKernelDelayThread
-	ksceKernelLockFastMutex
-	ksceKernelInitializeFastMutex
-	ksceKernelUnlockFastMutex
+	lockFastMutex
+	sceKernelInitializeFastMutex
+	sceKernelUnlockFastMutex
 	sceKernelRegisterSysEventHandler
 	SceSblAIMgrForDriver_71608CA3
 	SceSblAIMgrForDriver_C6E83F34

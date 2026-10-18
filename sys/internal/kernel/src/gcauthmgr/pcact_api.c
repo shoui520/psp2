@@ -26,7 +26,7 @@ int GcAuthPcactEncryptChallengeWithStack(unsigned char mode,
 	request.rtcSeconds = rtcSeconds;
 	request.output = output;
 	request.random = random;
-	return ksceKernelRunWithStack(8192,
+	return SceThreadmgrForDriver_E54FD746(8192,
 		(int (*)(void *))GcAuthPcactEncryptChallenge, &request);
 }
 
@@ -38,7 +38,7 @@ int GcAuthPcactGetAesDecryptKeyWithStack(const GcAuthPcactActivationBlock *activ
 	request.random = random;
 	request.activation = activation;
 	request.outputKey = outputKey;
-	return ksceKernelRunWithStack(8192,
+	return SceThreadmgrForDriver_E54FD746(8192,
 		(int (*)(void *))GcAuthPcactGetAesDecryptKey, &request);
 }
 
@@ -52,7 +52,7 @@ int sceSblGcAuthMgrMlnpsnlAuth1ForDriver(const unsigned char *entropy,
 	request.entropy = entropy;
 	request.output = output;
 	request.random = random;
-	return ksceKernelRunWithStack(8192,
+	return SceThreadmgrForDriver_E54FD746(8192,
 		(int (*)(void *))GcAuthPcactCreateChallenge, &request);
 }
 
@@ -64,7 +64,7 @@ int sceSblGcAuthMgrMlnpsnlAuth2ForDriver(const GcAuthPcactActivationBlock *activ
 	request.random = random;
 	request.activation = activation;
 	request.outputKey = outputKey;
-	return ksceKernelRunWithStack(8192,
+	return SceThreadmgrForDriver_E54FD746(8192,
 		(int (*)(void *))GcAuthPcactGetAuthenticatedAesKey, &request);
 }
 
@@ -76,7 +76,7 @@ int GcAuthPcactCreateRtcChallengeWithStack(SceSblGcAuthMgrSclkData1 *output)
 
 	state = sceSyscallEnter();
 	request.output = output;
-	result = ksceKernelRunWithStack(8192,
+	result = SceThreadmgrForDriver_E54FD746(8192,
 		(int (*)(void *))GcAuthPcactCreateRtcChallenge, &request);
 	sceSyscallLeave(state);
 	return result;
@@ -87,7 +87,7 @@ int sceSblGcAuthMgrSclkGetData1ForDriver(SceSblGcAuthMgrSclkData1 *output)
 	GcAuthPcactRtcChallengeRequest request;
 
 	request.output = output;
-	return ksceKernelRunWithStack(8192,
+	return SceThreadmgrForDriver_E54FD746(8192,
 		(int (*)(void *))GcAuthPcactCreateRtcChallenge, &request);
 }
 
@@ -99,7 +99,7 @@ int GcAuthPcactApplyRtcActivationWithStack(const SceSblGcAuthMgrSclkData2 *activ
 
 	state = sceSyscallEnter();
 	request.activation = activation;
-	result = ksceKernelRunWithStack(8192,
+	result = SceThreadmgrForDriver_E54FD746(8192,
 		(int (*)(void *))GcAuthPcactApplyRtcActivation, &request);
 	sceSyscallLeave(state);
 	return result;
@@ -110,7 +110,7 @@ int sceSblGcAuthMgrSclkSetData2ForDriver(const SceSblGcAuthMgrSclkData2 *activat
 	GcAuthPcactRtcActivationRequest request;
 
 	request.activation = activation;
-	return ksceKernelRunWithStack(8192,
+	return SceThreadmgrForDriver_E54FD746(8192,
 		(int (*)(void *))GcAuthPcactApplyRtcActivation, &request);
 }
 
@@ -119,7 +119,7 @@ int SceSblGcAuthMgrPsmactForDriver_39222A58(unsigned char *output)
 	GcAuthPcactCertificateRequest request;
 
 	request.output = output;
-	return ksceKernelRunWithStack(8192,
+	return SceThreadmgrForDriver_E54FD746(8192,
 		(int (*)(void *))GcAuthPcactGetCertificate, &request);
 }
 
@@ -133,7 +133,7 @@ int GcAuthPsmactCreateChallengeWithStack(unsigned char mode,
 	request.mode = mode;
 	request.output = output;
 	request.random = random;
-	return ksceKernelRunWithStack(8192,
+	return SceThreadmgrForDriver_E54FD746(8192,
 		(int (*)(void *))GcAuthPsmactCreateChallenge, &request);
 }
 
@@ -145,6 +145,6 @@ int GcAuthPsmactVerifyActivationWithStack(const GcAuthPsmactActivation *activati
 	request.random = random;
 	request.activation = activation;
 	request.output = output;
-	return ksceKernelRunWithStack(8192,
+	return SceThreadmgrForDriver_E54FD746(8192,
 		(int (*)(void *))GcAuthPsmactVerifyActivation, &request);
 }

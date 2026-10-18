@@ -40,7 +40,7 @@ static int setupWake(struct RtlAdapter *a)
 	/* The error path also unlocks if enableReceive failed before this lock. */
 	if (ret < 0)
 		goto out;
-	ksceKernelLockFastMutex(&a->mutex);
+	lockFastMutex(&a->mutex);
 	ret = resetReceive(a);
 	if (ret < 0)
 		goto out;
@@ -81,7 +81,7 @@ static int setupWake(struct RtlAdapter *a)
 	if (ret >= 0)
 		ret = rtlWakeFeature(a);
 out:
-	ksceKernelUnlockFastMutex(&a->mutex);
+	sceKernelUnlockFastMutex(&a->mutex);
 	return ret;
 }
 
@@ -93,7 +93,7 @@ static int lowPower(struct RtlAdapter *a)
 
 	ksceGpioSetPortMode(1, 2, 0);
 	ksceGpioPortSet(1, 2);
-	ksceKernelLockFastMutex(&a->mutex);
+	lockFastMutex(&a->mutex);
 	ret = rtlWriteUsb16(a, 0xe436, 4000);
 	if (ret < 0)
 		goto out;
@@ -110,7 +110,7 @@ static int lowPower(struct RtlAdapter *a)
 	if (ret >= 0)
 		ret = rtlWriteUsb8(a, 0xc2f8, byte | 1);
 out:
-	ksceKernelUnlockFastMutex(&a->mutex);
+	sceKernelUnlockFastMutex(&a->mutex);
 	return ret;
 }
 
@@ -321,9 +321,9 @@ static int initializeAdapter(struct RtlAdapter *a)
 	void *base;
 	int ret;
 
-	ksceKernelLockFastMutex(&a->mutex);
+	lockFastMutex(&a->mutex);
 	ret = initializeHardware(a);
-	ksceKernelUnlockFastMutex(&a->mutex);
+	sceKernelUnlockFastMutex(&a->mutex);
 	if (ret < 0)
 		return 0;
 	ret = rtlReadRegister(a, 0xc000, 0x100, 4, &value);
@@ -356,7 +356,7 @@ static int initializeAdapter(struct RtlAdapter *a)
 	ret = rtlReceiveBuffer(a, a->rxBuffer, a->rxBufferSize);
 	if (ret < 0)
 		return 0;
-	ksceKernelLockFastMutex(&a->mutex);
+	lockFastMutex(&a->mutex);
 	ret = rtlReadPla16(a, 0xc0b6, &word);
 	if (ret < 0)
 		goto out;
@@ -373,7 +373,7 @@ static int initializeAdapter(struct RtlAdapter *a)
 	if (ret >= 0)
 		rtlWritePla8(a, 0xe84f, byte & ~0x80);
 out:
-	ksceKernelUnlockFastMutex(&a->mutex);
+	sceKernelUnlockFastMutex(&a->mutex);
 	__atomic_fetch_or(&a->flags, 4, __ATOMIC_SEQ_CST);
 	a->state |= 1;
 	ScePowerForDriver_B24263F0(2, rtlPowerEvent);
@@ -400,11 +400,11 @@ static void startReceive(struct RtlAdapter *a, int *retries)
 		sceKernelDelayThread(1000000);
 	}
 	if ((a->flags & 4) && (a->link & 1)) {
-		ksceKernelLockFastMutex(&a->mutex);
+		lockFastMutex(&a->mutex);
 		ret = rtlReadPla8(a, 0xe813, &byte);
 		if (ret >= 0)
 			ret = rtlWritePla8(a, 0xe813, byte | 4);
-		ksceKernelUnlockFastMutex(&a->mutex);
+		sceKernelUnlockFastMutex(&a->mutex);
 		if (ret < 0)
 			goto errorReset;
 		ret = rtlEnableReceive(a);
@@ -419,7 +419,7 @@ static void startReceive(struct RtlAdapter *a, int *retries)
 		a->driver.notify(&a->driver, a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_ERROR, &ret, 4);
 		rtlUpdateLink(a);
 	} else {
-		ksceKernelSetEventFlag(a->workerEvent, 2);
+		sceKernelSetEventFlag(a->workerEvent, 2);
 		(*retries)++;
 		sceKernelDelayThread(1000000);
 	}
@@ -441,14 +441,14 @@ static void stopReceive(struct RtlAdapter *a)
 		return;
 	}
 	__atomic_fetch_and(&a->flags, ~8U, __ATOMIC_SEQ_CST);
-	ksceKernelLockFastMutex(&a->mutex);
+	lockFastMutex(&a->mutex);
 	ret = rtlReadRegister(a, 0xe810, 0x100, 4, &value);
 	if (ret >= 0)
 		ret = rtlWriteRegister(a, 0xe810, 0x10f, 4, value & ~0x04000000);
-	ksceKernelUnlockFastMutex(&a->mutex);
+	sceKernelUnlockFastMutex(&a->mutex);
 	if (ret < 0)
 		goto out;
-	ksceKernelLockFastMutex(&a->mutex);
+	lockFastMutex(&a->mutex);
 	ret = rtlReadRegister(a, 0xe810, 0x100, 4, &value);
 	if (ret < 0)
 		goto unlock;
@@ -465,7 +465,7 @@ static void stopReceive(struct RtlAdapter *a)
 	if (ret >= 0)
 		ret = rtlWriteRegister(a, 0xc010, 0x10f, 4, value & ~11U);
 unlock:
-	ksceKernelUnlockFastMutex(&a->mutex);
+	sceKernelUnlockFastMutex(&a->mutex);
 out:
 	if (ret < 0)
 		a->driver.notify(&a->driver, a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_ERROR, &ret, 4);
@@ -531,7 +531,7 @@ static void transmit(struct RtlAdapter *a)
 	}
 	ret = __atomic_fetch_sub(&a->pendingTx, 1, __ATOMIC_SEQ_CST);
 	if (ret > 1)
-		ksceKernelSetEventFlag(a->workerEvent, 8);
+		sceKernelSetEventFlag(a->workerEvent, 8);
 }
 
 /* name unknown */
@@ -611,7 +611,7 @@ int rtlWorker(SceSize length, void *arg)
 		bits = 0;
 		if (a->flags & 4)
 			timeout = 3000000;
-		ret = ksceKernelWaitEventFlag(a->workerEvent, 0x7f,
+		ret = sceKernelWaitEventFlag(a->workerEvent, 0x7f,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits,
 					    a->flags & 4 ? &timeout : NULL);

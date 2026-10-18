@@ -107,21 +107,21 @@ set(MODULE_IMPORT_FUNCS
 	strncpy
 	__stack_chk_fail
 	SceDebugForDriver_D9703808
-	ksceKernelWaitEventFlag
+	sceKernelWaitEventFlag
 	sceKernelExitThread
 	sceKernelPMonSetControlRegister
-	ksceKernelStartThread
-	ksceKernelCreateSema
-	ksceKernelWaitSema
-	ksceKernelCreateEventFlag
-	ksceKernelClearEventFlag
+	sceKernelStartThread
+	sceKernelCreateSema
+	sceKernelWaitSema
+	sceKernelCreateEventFlag
+	sceKernelClearEventFlag
 	sceKernelPMonSetUserEnableRegister
-	ksceKernelLockFastMutex
-	ksceKernelInitializeFastMutex
-	ksceKernelCreateThread
-	ksceKernelSignalSema
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
+	lockFastMutex
+	sceKernelInitializeFastMutex
+	sceKernelCreateThread
+	sceKernelSignalSema
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
 	ScePamgrForDriver_0B7F6F53
 	ScePamgrForDriver_0BCD4966
 	ScePamgrForDriver_16A24732

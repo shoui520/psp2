@@ -90,12 +90,12 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelRegisterIntrHandler
 	ksceKernelEnableIntr
 	ksceKernelReleaseIntrHandler
-	ksceKernelWaitEventFlag
-	ksceKernelCreateEventFlag
+	sceKernelWaitEventFlag
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelDeleteEventFlag
-	ksceKernelPollEventFlag
-	ksceKernelSetEventFlag
+	sceKernelDeleteEventFlag
+	sceKernelPollEventFlag
+	sceKernelSetEventFlag
 	SceDebugForDriver_35A35322
 	SceDebugForDriver_374B7868
 	SceDebugForDriver_391B5B74

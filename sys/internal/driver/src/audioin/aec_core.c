@@ -16,7 +16,7 @@ extern int configureAudioInAecContextRpc(AudioInAecRpcContext *context,
 
 int initializeAudioInAecMutex(void)
 {
-	int result = ksceKernelInitializeFastMutex((SceKernelFastMutex *)&g_audioInAecLock,
+	int result = sceKernelInitializeFastMutex((SceKernelFastMutex *)&g_audioInAecLock,
 			g_audioInAecMutexName, 0x8000, NULL);
 
 	if (result >= 0)
@@ -37,7 +37,7 @@ int createAudioInAecContext(AudioInAecContext *context)
 	result = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (result < 0)
 		return result;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&g_audioInAecLock);
+	result = lockFastMutex((SceKernelFastMutex *)&g_audioInAecLock);
 	if (result >= 0) {
 		request = (AudioInAecRpcContext){ { NULL, NULL }, { 0, 0 }, NULL, 0 };
 		result = queryAudioInAecWorkspace(&request);
@@ -63,7 +63,7 @@ int createAudioInAecContext(AudioInAecContext *context)
 				}
 			}
 		}
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInAecLock);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInAecLock);
 	}
 	_unlockProcessSuspendCore();
 	return result;
@@ -89,7 +89,7 @@ int processAudioInAecContext(AudioInAecContext *context, int gain,
 	result = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (result < 0)
 		return result;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&g_audioInAecLock);
+	result = lockFastMutex((SceKernelFastMutex *)&g_audioInAecLock);
 	if (result >= 0) {
 		request.sampleBuffers[0] = context->sampleBuffers[0];
 		request.workspace = g_audioInAecWorkspace;
@@ -103,7 +103,7 @@ int processAudioInAecContext(AudioInAecContext *context, int gain,
 			context->context[1] = request.context[1];
 			result = 0;
 		}
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInAecLock);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInAecLock);
 	}
 	_unlockProcessSuspendCore();
 	return result;
@@ -123,7 +123,7 @@ int configureAudioInAecContext(AudioInAecContext *context, const void *control)
 	result = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (result < 0)
 		return result;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&g_audioInAecLock);
+	result = lockFastMutex((SceKernelFastMutex *)&g_audioInAecLock);
 	if (result >= 0) {
 		request.workspaceSize = g_audioInAecWorkspaceSize;
 		request.sampleBuffers[0] = context->sampleBuffers[0];
@@ -137,7 +137,7 @@ int configureAudioInAecContext(AudioInAecContext *context, const void *control)
 			context->context[1] = request.context[1];
 			result = 0;
 		}
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInAecLock);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInAecLock);
 	}
 	_unlockProcessSuspendCore();
 	return result;

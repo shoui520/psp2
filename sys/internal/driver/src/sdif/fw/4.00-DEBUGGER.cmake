@@ -98,17 +98,17 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelEnableIntr
 	ksceKernelTriggerSubIntr
 	ksceKernelReleaseIntrHandler
-	ksceKernelWaitEventFlag
-	ksceKernelFinalizeFastMutex
-	ksceKernelCreateEventFlag
+	sceKernelWaitEventFlag
+	sceKernelFinalizeFastMutex
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
-	ksceKernelInitializeFastMutex
-	ksceKernelNotifyCallback
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
+	sceKernelClearEventFlag
+	lockFastMutex
+	sceKernelDeleteEventFlag
+	sceKernelInitializeFastMutex
+	sceKernelNotifyCallback
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
 	sceKernelGetSystemTimeWide
 	sceKernelRegisterSysEventHandler
 	sceKernelUnregisterSysEventHandler

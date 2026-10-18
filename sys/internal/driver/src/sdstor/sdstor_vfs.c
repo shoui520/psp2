@@ -2,15 +2,15 @@
 #include <sysmem/sysroot.h>
 #include "sdstor_internal.h"
 /* VFS carries the SDK's opaque mutex declarations; use our complete owner. */
-#define ksceKernelInitializeFastMutex ksceKernelInitializeFastMutex_vitasdk
-#define ksceKernelFinalizeFastMutex ksceKernelFinalizeFastMutex_vitasdk
-#define ksceKernelLockFastMutex ksceKernelLockFastMutex_vitasdk
-#define ksceKernelUnlockFastMutex ksceKernelUnlockFastMutex_vitasdk
+#define sceKernelInitializeFastMutex ksceKernelInitializeFastMutex_vitasdk
+#define sceKernelFinalizeFastMutex ksceKernelFinalizeFastMutex_vitasdk
+#define lockFastMutex ksceKernelLockFastMutex_vitasdk
+#define sceKernelUnlockFastMutex ksceKernelUnlockFastMutex_vitasdk
 #include <iofilemgr/vfs.h>
-#undef ksceKernelInitializeFastMutex
-#undef ksceKernelFinalizeFastMutex
-#undef ksceKernelLockFastMutex
-#undef ksceKernelUnlockFastMutex
+#undef sceKernelInitializeFastMutex
+#undef sceKernelFinalizeFastMutex
+#undef lockFastMutex
+#undef sceKernelUnlockFastMutex
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
 #include <acmgr/acmgr.h>
@@ -188,14 +188,14 @@ SceSSize dev_sdstor_vfs_pwrite(SceVopPwriteArgs *args)
 		vnode, size, offset, buffer);
 	if (!vnode->core.node_data)
 		return 0x80010013;
-	result = ksceKernelLockFastMutex(&handle->fastmutex);
+	result = lockFastMutex(&handle->fastmutex);
 	if (result < 0)
 		return result;
 	flags = handle->flags;
 	handle->flags = file->flags;
 	result = sdstor_write(handle, offset, buffer, size);
 	handle->flags = flags;
-	unlockResult = ksceKernelUnlockFastMutex(&handle->fastmutex);
+	unlockResult = sceKernelUnlockFastMutex(&handle->fastmutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
 
@@ -211,13 +211,13 @@ SceOff dev_sdstor_vfs_lseek(SceVopLseekArgs *args)
 
 	if (!args->vp->core.node_data)
 		return (int)0x80010013;
-	result = ksceKernelLockFastMutex(&handle->fastmutex);
+	result = lockFastMutex(&handle->fastmutex);
 	if (result < 0)
 		return result;
 	blockSize = handle->blockSize;
 	sectorCount = handle->n_sectors;
 	if (offset & (blockSize - 1)) {
-		result = ksceKernelUnlockFastMutex(&handle->fastmutex);
+		result = sceKernelUnlockFastMutex(&handle->fastmutex);
 		return result < 0 ? result : (int)0x80010022;
 	}
 	capacity = (uint64_t)blockSize * sectorCount;
@@ -239,7 +239,7 @@ SceOff dev_sdstor_vfs_lseek(SceVopLseekArgs *args)
 			file->position = position;
 	}
 unlock:
-	result = ksceKernelUnlockFastMutex(&handle->fastmutex);
+	result = sceKernelUnlockFastMutex(&handle->fastmutex);
 	if (result < 0)
 		return result;
 	SCE_DBG_PRINTF_LEVEL(2, 15, 551,
@@ -263,7 +263,7 @@ SceSSize dev_sdstor_vfs_write(SceVopWriteArgs *args)
 		vnode, size, buffer, file->position);
 	if (!vnode->core.node_data)
 		return 0x80010013;
-	result = ksceKernelLockFastMutex(&handle->fastmutex);
+	result = lockFastMutex(&handle->fastmutex);
 	if (result < 0)
 		return result;
 	flags = handle->flags;
@@ -272,7 +272,7 @@ SceSSize dev_sdstor_vfs_write(SceVopWriteArgs *args)
 	if (result > 0)
 		file->position += result;
 	handle->flags = flags;
-	unlockResult = ksceKernelUnlockFastMutex(&handle->fastmutex);
+	unlockResult = sceKernelUnlockFastMutex(&handle->fastmutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
 
@@ -292,14 +292,14 @@ SceSSize dev_sdstor_vfs_pread(SceVopPreadArgs *args)
 		vnode, size, offset, buffer);
 	if (!vnode->core.node_data)
 		return 0x80010013;
-	result = ksceKernelLockFastMutex(&handle->fastmutex);
+	result = lockFastMutex(&handle->fastmutex);
 	if (result < 0)
 		return result;
 	flags = handle->flags;
 	handle->flags = file->flags;
 	result = sdstor_read(handle, offset, buffer, size);
 	handle->flags = flags;
-	unlockResult = ksceKernelUnlockFastMutex(&handle->fastmutex);
+	unlockResult = sceKernelUnlockFastMutex(&handle->fastmutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
 
@@ -318,7 +318,7 @@ SceSSize dev_sdstor_vfs_read(SceVopReadArgs *args)
 		vnode, size, buffer, file->position);
 	if (!vnode->core.node_data)
 		return 0x80010013;
-	result = ksceKernelLockFastMutex(&handle->fastmutex);
+	result = lockFastMutex(&handle->fastmutex);
 	if (result < 0)
 		return result;
 	flags = handle->flags;
@@ -327,7 +327,7 @@ SceSSize dev_sdstor_vfs_read(SceVopReadArgs *args)
 	if (result > 0)
 		file->position += result;
 	handle->flags = flags;
-	unlockResult = ksceKernelUnlockFastMutex(&handle->fastmutex);
+	unlockResult = sceKernelUnlockFastMutex(&handle->fastmutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
 
@@ -347,12 +347,12 @@ int dev_sdstor_vfs_remove(SceVopRemoveArgs *args)
 	entry = data->pentry;
 	table = entry->sdpart;
 	if (table) {
-		result = ksceKernelLockFastMutex(&table->fastmutex);
+		result = lockFastMutex(&table->fastmutex);
 		if (result < 0)
 			return result;
 		if (table->stat != 2)
 			memset(entry, 0, sizeof(*entry));
-		result = ksceKernelUnlockFastMutex(&table->fastmutex);
+		result = sceKernelUnlockFastMutex(&table->fastmutex);
 		if (result < 0)
 			return result;
 	}
@@ -402,11 +402,11 @@ int dev_sdstor_vfs_lookup(SceVopLookupArgs *args)
 		}
 		return 0x80010013;
 	}
-	result = ksceKernelLockFastMutex(&table->fastmutex);
+	result = lockFastMutex(&table->fastmutex);
 	if (result < 0)
 		return result;
 	if (table->stat == 2) {
-		result = ksceKernelUnlockFastMutex(&table->fastmutex);
+		result = sceKernelUnlockFastMutex(&table->fastmutex);
 		if (result < 0)
 			return result;
 		result = sceKernelFreeHeapMemory(heap, data);
@@ -419,7 +419,7 @@ int dev_sdstor_vfs_lookup(SceVopLookupArgs *args)
 	blockSize = table->blockSize;
 	data->sddev = table->sddev;
 	sectorCount = data->pentry->n_sectors;
-	result = ksceKernelUnlockFastMutex(&table->fastmutex);
+	result = sceKernelUnlockFastMutex(&table->fastmutex);
 	if (result < 0)
 		return result;
 	port = sddev_get_port(data->sddev);
@@ -483,16 +483,16 @@ int dev_sdstor_vfs_open(SceVopOpenArgs *args)
 	table = data->pentry->sdpart;
 	if (!table)
 		return 0x80010013;
-	result = ksceKernelLockFastMutex(&table->fastmutex);
+	result = lockFastMutex(&table->fastmutex);
 	if (result < 0)
 		return result;
 	if (table->stat == 2) {
-		result = ksceKernelUnlockFastMutex(&table->fastmutex);
+		result = sceKernelUnlockFastMutex(&table->fastmutex);
 		return result < 0 ? result : (int)0x80010013;
 	}
 	access.flags = entry->flags;
 	access.mode = entry->mode;
-	result = ksceKernelUnlockFastMutex(&table->fastmutex);
+	result = sceKernelUnlockFastMutex(&table->fastmutex);
 	if (result < 0)
 		return result;
 	attr.type = 8;
@@ -525,17 +525,17 @@ int dev_sdstor_vfs_decode_path_elem(SceVfsOpDecodePathElemArgs *args)
 	entry = sdpart_get_object(path, length);
 	if (!entry || !(table = entry->sdpart))
 		goto unchanged;
-	result = ksceKernelLockFastMutex(&table->fastmutex);
+	result = lockFastMutex(&table->fastmutex);
 	if (result < 0)
 		return result;
 	if (table->stat == 2) {
-		result = ksceKernelUnlockFastMutex(&table->fastmutex);
+		result = sceKernelUnlockFastMutex(&table->fastmutex);
 		if (result < 0)
 			return result;
 		goto unchanged;
 	}
 	strncpy(args->buf, entry->numeric_name, 3);
-	result = ksceKernelUnlockFastMutex(&table->fastmutex);
+	result = sceKernelUnlockFastMutex(&table->fastmutex);
 	if (result < 0)
 		return result;
 	args->buf[3] = 0;
@@ -643,18 +643,18 @@ eraseAccess:
 			return 0x80010013;
 		if (!buffer || bufferSize != sizeof(*info))
 			return 0x80010016;
-		result = ksceKernelLockFastMutex(&table->fastmutex);
+		result = lockFastMutex(&table->fastmutex);
 		if (result < 0)
 			return result;
 		if (table->stat == 2) {
-			result = ksceKernelUnlockFastMutex(&table->fastmutex);
+			result = sceKernelUnlockFastMutex(&table->fastmutex);
 			return result < 0 ? result : (int)0x80010013;
 		}
 		access.flags = entry->flags;
 		access.mode = entry->mode;
 		result = SceSblACMgrForDriver_BE5667C5(0, &attr, 4);
 		if (result < 0) {
-			unlockResult = ksceKernelUnlockFastMutex(&table->fastmutex);
+			unlockResult = sceKernelUnlockFastMutex(&table->fastmutex);
 			return unlockResult < 0 ? unlockResult : result;
 		}
 		info = buffer;
@@ -665,7 +665,7 @@ eraseAccess:
 					   entry->n_sectors, &info->writeProtected);
 		info->reserved[0] = 0;
 		info->reserved[1] = 0;
-		result = ksceKernelUnlockFastMutex(&table->fastmutex);
+		result = sceKernelUnlockFastMutex(&table->fastmutex);
 		if (result < 0)
 			return result;
 		info->memoryCardPort = sdpart_get_mc_port();

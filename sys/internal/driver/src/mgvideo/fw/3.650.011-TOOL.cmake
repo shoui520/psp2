@@ -125,17 +125,17 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_9328E0E8
 	SceSysmemForDriver_BC996A7A
 	sceKernelDeleteHeap
-	ksceKernelSetPermission
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelCreateEventFlag
-	ksceKernelDeleteEventFlag
+	sceKernelSetThreadAccessLevel
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelCreateEventFlag
+	sceKernelDeleteEventFlag
 	sceKernelGetProcessId
-	ksceKernelSetEventFlag
-	ksceKernelRunWithStack
-	ksceKernelCreateMutex
+	sceKernelSetEventFlag
+	SceThreadmgrForDriver_E54FD746
+	sceKernelCreateMutex
 	SceCpuForDriver_821FC0EE
 	sceKernelCpuResumeIntr
 	SceKernelSuspendForDriver_2BB92967

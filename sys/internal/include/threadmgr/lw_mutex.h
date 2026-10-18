@@ -7,6 +7,10 @@
 
 #include <threadmgr/threadmgr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct ThreadmgrLwMutexWork {
 	SceUID owner;
 	uint32_t reserved0;
@@ -20,6 +24,10 @@ typedef struct ThreadmgrLwMutexWork {
 _Static_assert(sizeof(ThreadmgrLwMutexWork) == 0x20, "lw mutex work size");
 #endif
 
-int ksceKernelGetLwMutexInfo(SceUID lwMutexId, SceKernelLwMutexInfo *info);
+int sceKernelGetLwMutexInfoById(SceUID lwMutexId, SceKernelLwMutexInfo *info);
 int sceKernelGetLwCondInfo(SceUID condId, SceKernelLwCondInfo *info);
-int ksceKernelGetLwCondInfo(SceUID condId, SceKernelLwCondInfo *info);
+int SceThreadmgrForDriver_C2AFFBD0(SceUID condId, SceKernelLwCondInfo *info);
+
+#ifdef __cplusplus
+}
+#endif

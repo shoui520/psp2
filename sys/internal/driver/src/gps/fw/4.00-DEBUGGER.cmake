@@ -71,24 +71,24 @@ set(MODULE_IMPORT_FUNCS
 	__memcpy_chk
 	strtol
 	__stack_chk_fail
-	ksceKernelGetThreadmgrUIDClass
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
-	ksceKernelFinalizeFastMutex
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelStartThread
-	ksceKernelWaitThreadEnd
-	ksceKernelCreateEventFlag
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
-	ksceKernelDeleteThread
-	ksceKernelInitializeFastMutex
-	ksceKernelNotifyCallback
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
-	ksceKernelCreateMutex
+	sceKernelGetThreadmgrUIDClass
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
+	sceKernelFinalizeFastMutex
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelStartThread
+	sceKernelWaitThreadEnd
+	sceKernelCreateEventFlag
+	lockFastMutex
+	sceKernelDeleteEventFlag
+	sceKernelDeleteThread
+	sceKernelInitializeFastMutex
+	sceKernelNotifyCallback
+	sceKernelCreateThread
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
+	sceKernelCreateMutex
 	sceKernelRegisterSysEventHandler
 	sceKernelUnregisterSysEventHandler
 	SceQafMgrForDriver_BFD5E463

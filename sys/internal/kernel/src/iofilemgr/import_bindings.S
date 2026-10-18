@@ -4,33 +4,33 @@
 #if FW_VERSION >= 0x04000000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelGetThreadCurrentPriority
-.type ksceKernelGetThreadCurrentPriority, %function
-ksceKernelGetThreadCurrentPriority:
+.global sceKernelGetThreadCurrentPriority
+.type sceKernelGetThreadCurrentPriority, %function
+sceKernelGetThreadCurrentPriority:
 .word 0x10, 0xe2c40624, 0x1414f0b, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelSetPermission
-.type ksceKernelSetPermission, %function
-ksceKernelSetPermission:
+.global sceKernelSetThreadAccessLevel
+.type sceKernelSetThreadAccessLevel, %function
+sceKernelSetThreadAccessLevel:
 .word 0x10, 0xe2c40624, 0x2eedf17, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelSetProcessIdToTLS
-.type ksceKernelSetProcessIdToTLS, %function
-ksceKernelSetProcessIdToTLS:
+.global SceThreadmgrForDriver_0486F239
+.type SceThreadmgrForDriver_0486F239, %function
+SceThreadmgrForDriver_0486F239:
 .word 0x10, 0xe2c40624, 0x486f239, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelDeleteMutex
-.type ksceKernelDeleteMutex, %function
-ksceKernelDeleteMutex:
+.global sceKernelDeleteMutex
+.type sceKernelDeleteMutex, %function
+sceKernelDeleteMutex:
 .word 0x10, 0xe2c40624, 0xa912340, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelWaitEventFlag
-.type ksceKernelWaitEventFlag, %function
-ksceKernelWaitEventFlag:
+.global sceKernelWaitEventFlag
+.type sceKernelWaitEventFlag, %function
+sceKernelWaitEventFlag:
 .word 0x10, 0xe2c40624, 0xc1d3f20, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -46,27 +46,27 @@ SceThreadmgrForDriver_1096042E:
 .word 0x10, 0xe2c40624, 0x1096042e, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelFinalizeFastMutex
-.type ksceKernelFinalizeFastMutex, %function
-ksceKernelFinalizeFastMutex:
+.global sceKernelFinalizeFastMutex
+.type sceKernelFinalizeFastMutex, %function
+sceKernelFinalizeFastMutex:
 .word 0x10, 0xe2c40624, 0x11fe84a1, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelLockMutex
-.type ksceKernelLockMutex, %function
-ksceKernelLockMutex:
+.global sceKernelLockMutex
+.type sceKernelLockMutex, %function
+sceKernelLockMutex:
 .word 0x10, 0xe2c40624, 0x16ac80c5, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelUnlockMutex
-.type ksceKernelUnlockMutex, %function
-ksceKernelUnlockMutex:
+.global sceKernelUnlockMutex
+.type sceKernelUnlockMutex, %function
+sceKernelUnlockMutex:
 .word 0x10, 0xe2c40624, 0x1e82e5d0, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelStartThread
-.type ksceKernelStartThread, %function
-ksceKernelStartThread:
+.global sceKernelStartThread
+.type sceKernelStartThread, %function
+sceKernelStartThread:
 .word 0x10, 0xe2c40624, 0x21f5419b, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -76,9 +76,9 @@ sceKernelEventObjectInit:
 .word 0x10, 0xe2c40624, 0x25ab8f6b, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelTryLockMutex
-.type ksceKernelTryLockMutex, %function
-ksceKernelTryLockMutex:
+.global sceKernelTryLockMutex
+.type sceKernelTryLockMutex, %function
+sceKernelTryLockMutex:
 .word 0x10, 0xe2c40624, 0x270993a6, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -94,15 +94,15 @@ sceKernelChangeThreadPriorityAndCpuAffinityMask:
 .word 0x10, 0xe2c40624, 0x3857c94e, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelWaitThreadEnd
-.type ksceKernelWaitThreadEnd, %function
-ksceKernelWaitThreadEnd:
+.global sceKernelWaitThreadEnd
+.type sceKernelWaitThreadEnd, %function
+sceKernelWaitThreadEnd:
 .word 0x10, 0xe2c40624, 0x3e20216f, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelCreateEventFlag
-.type ksceKernelCreateEventFlag, %function
-ksceKernelCreateEventFlag:
+.global sceKernelCreateEventFlag
+.type sceKernelCreateEventFlag, %function
+sceKernelCreateEventFlag:
 .word 0x10, 0xe2c40624, 0x4336baa4, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -118,57 +118,57 @@ sceKernelDelayThread:
 .word 0x10, 0xe2c40624, 0x4b675d05, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelClearEventFlag
-.type ksceKernelClearEventFlag, %function
-ksceKernelClearEventFlag:
+.global sceKernelClearEventFlag
+.type sceKernelClearEventFlag, %function
+sceKernelClearEventFlag:
 .word 0x10, 0xe2c40624, 0x4f1da3be, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelGetThreadId
-.type ksceKernelGetThreadId, %function
-ksceKernelGetThreadId:
+.global sceKernelGetThreadId
+.type sceKernelGetThreadId, %function
+sceKernelGetThreadId:
 .word 0x10, 0xe2c40624, 0x59d06540, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelSignalCondTo
-.type ksceKernelSignalCondTo, %function
-ksceKernelSignalCondTo:
+.global sceKernelSignalCondTo
+.type sceKernelSignalCondTo, %function
+sceKernelSignalCondTo:
 .word 0x10, 0xe2c40624, 0x61533da9, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelGetMutexInfo
-.type ksceKernelGetMutexInfo, %function
-ksceKernelGetMutexInfo:
+.global sceKernelGetMutexInfo
+.type sceKernelGetMutexInfo, %function
+sceKernelGetMutexInfo:
 .word 0x10, 0xe2c40624, 0x69b78a12, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelSignalCondAll
-.type ksceKernelSignalCondAll, %function
-ksceKernelSignalCondAll:
+.global sceKernelSignalCondAll
+.type sceKernelSignalCondAll, %function
+sceKernelSignalCondAll:
 .word 0x10, 0xe2c40624, 0x6ec78cd0, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelLockFastMutex
-.type ksceKernelLockFastMutex, %function
-ksceKernelLockFastMutex:
+.global lockFastMutex
+.type lockFastMutex, %function
+lockFastMutex:
 .word 0x10, 0xe2c40624, 0x70627f3a, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelDeleteEventFlag
-.type ksceKernelDeleteEventFlag, %function
-ksceKernelDeleteEventFlag:
+.global sceKernelDeleteEventFlag
+.type sceKernelDeleteEventFlag, %function
+sceKernelDeleteEventFlag:
 .word 0x10, 0xe2c40624, 0x71ecb352, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelTryLockFastMutex
-.type ksceKernelTryLockFastMutex, %function
-ksceKernelTryLockFastMutex:
+.global sceKernelTryLockFastMutex
+.type sceKernelTryLockFastMutex, %function
+sceKernelTryLockFastMutex:
 .word 0x10, 0xe2c40624, 0x741f4707, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelGetThreadCpuAffinityMask
-.type ksceKernelGetThreadCpuAffinityMask, %function
-ksceKernelGetThreadCpuAffinityMask:
+.global sceKernelGetThreadCpuAffinityMask
+.type sceKernelGetThreadCpuAffinityMask, %function
+sceKernelGetThreadCpuAffinityMask:
 .word 0x10, 0xe2c40624, 0x83dc703d, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -184,9 +184,9 @@ sceKernelGetProcessId:
 .word 0x10, 0xe2c40624, 0x9dcb4b7a, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelSetEvent
-.type ksceKernelSetEvent, %function
-ksceKernelSetEvent:
+.global sceKernelSetEvent
+.type sceKernelSetEvent, %function
+sceKernelSetEvent:
 .word 0x10, 0xe2c40624, 0x9ea3a45c, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -196,21 +196,21 @@ sceKernelExtendKernelStackWide:
 .word 0x10, 0xe2c40624, 0xa2c801a5, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelDeleteThread
-.type ksceKernelDeleteThread, %function
-ksceKernelDeleteThread:
+.global sceKernelDeleteThread
+.type sceKernelDeleteThread, %function
+sceKernelDeleteThread:
 .word 0x10, 0xe2c40624, 0xac834f3f, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelDeleteCond
-.type ksceKernelDeleteCond, %function
-ksceKernelDeleteCond:
+.global sceKernelDeleteCond
+.type sceKernelDeleteCond, %function
+sceKernelDeleteCond:
 .word 0x10, 0xe2c40624, 0xaee0d27c, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelInitializeFastMutex
-.type ksceKernelInitializeFastMutex, %function
-ksceKernelInitializeFastMutex:
+.global sceKernelInitializeFastMutex
+.type sceKernelInitializeFastMutex, %function
+sceKernelInitializeFastMutex:
 .word 0x10, 0xe2c40624, 0xaf8e1266, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -226,45 +226,45 @@ sceKernelSetEventWithNotifyCallback:
 .word 0x10, 0xe2c40624, 0xb7df3edf, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelRegisterTimer
-.type ksceKernelRegisterTimer, %function
-ksceKernelRegisterTimer:
+.global SceThreadmgrForDriver_C58DF384
+.type SceThreadmgrForDriver_C58DF384, %function
+SceThreadmgrForDriver_C58DF384:
 .word 0x10, 0xe2c40624, 0xc58df384, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelCreateThread
-.type ksceKernelCreateThread, %function
-ksceKernelCreateThread:
+.global sceKernelCreateThread
+.type sceKernelCreateThread, %function
+sceKernelCreateThread:
 .word 0x10, 0xe2c40624, 0xc6674e7d, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelWaitCond
-.type ksceKernelWaitCond, %function
-ksceKernelWaitCond:
+.global sceKernelWaitCond
+.type sceKernelWaitCond, %function
+sceKernelWaitCond:
 .word 0x10, 0xe2c40624, 0xcc7e027d, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelSetEventFlag
-.type ksceKernelSetEventFlag, %function
-ksceKernelSetEventFlag:
+.global sceKernelSetEventFlag
+.type sceKernelSetEventFlag, %function
+sceKernelSetEventFlag:
 .word 0x10, 0xe2c40624, 0xd4780c3e, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelGetFastMutexInfo
-.type ksceKernelGetFastMutexInfo, %function
-ksceKernelGetFastMutexInfo:
+.global sceKernelGetFastMutexInfo
+.type sceKernelGetFastMutexInfo, %function
+sceKernelGetFastMutexInfo:
 .word 0x10, 0xe2c40624, 0xd7af2e58, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelUnlockFastMutex
-.type ksceKernelUnlockFastMutex, %function
-ksceKernelUnlockFastMutex:
+.global sceKernelUnlockFastMutex
+.type sceKernelUnlockFastMutex, %function
+sceKernelUnlockFastMutex:
 .word 0x10, 0xe2c40624, 0xdb395782, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelCreateCond
-.type ksceKernelCreateCond, %function
-ksceKernelCreateCond:
+.global sceKernelCreateCond
+.type sceKernelCreateCond, %function
+sceKernelCreateCond:
 .word 0x10, 0xe2c40624, 0xdb6cd34a, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -274,9 +274,9 @@ sceKernelUIDInheritedEventClassInit:
 .word 0x10, 0xe2c40624, 0xdbb77032, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelRunWithStack
-.type ksceKernelRunWithStack, %function
-ksceKernelRunWithStack:
+.global SceThreadmgrForDriver_E54FD746
+.type SceThreadmgrForDriver_E54FD746, %function
+SceThreadmgrForDriver_E54FD746:
 .word 0x10, 0xe2c40624, 0xe54fd746, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -286,15 +286,15 @@ sceKernelGetSystemTimeWide:
 .word 0x10, 0xe2c40624, 0xf4ee4fa9, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelGetProcessIdFromTLS
-.type ksceKernelGetProcessIdFromTLS, %function
-ksceKernelGetProcessIdFromTLS:
+.global SceThreadmgrForDriver_FA54D49A
+.type SceThreadmgrForDriver_FA54D49A, %function
+SceThreadmgrForDriver_FA54D49A:
 .word 0x10, 0xe2c40624, 0xfa54d49a, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelCreateMutex
-.type ksceKernelCreateMutex, %function
-ksceKernelCreateMutex:
+.global sceKernelCreateMutex
+.type sceKernelCreateMutex, %function
+sceKernelCreateMutex:
 .word 0x10, 0xe2c40624, 0xfbaa026e, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
@@ -905,33 +905,33 @@ SceFios2KernelForDriver_DD7627EC:
 #else
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelGetThreadCurrentPriority
-.type ksceKernelGetThreadCurrentPriority, %function
-ksceKernelGetThreadCurrentPriority:
+.global sceKernelGetThreadCurrentPriority
+.type sceKernelGetThreadCurrentPriority, %function
+sceKernelGetThreadCurrentPriority:
 .word 0x10, 0xe2c40624, 0x1414f0b, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelSetPermission
-.type ksceKernelSetPermission, %function
-ksceKernelSetPermission:
+.global sceKernelSetThreadAccessLevel
+.type sceKernelSetThreadAccessLevel, %function
+sceKernelSetThreadAccessLevel:
 .word 0x10, 0xe2c40624, 0x2eedf17, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelSetProcessIdToTLS
-.type ksceKernelSetProcessIdToTLS, %function
-ksceKernelSetProcessIdToTLS:
+.global SceThreadmgrForDriver_0486F239
+.type SceThreadmgrForDriver_0486F239, %function
+SceThreadmgrForDriver_0486F239:
 .word 0x10, 0xe2c40624, 0x486f239, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelDeleteMutex
-.type ksceKernelDeleteMutex, %function
-ksceKernelDeleteMutex:
+.global sceKernelDeleteMutex
+.type sceKernelDeleteMutex, %function
+sceKernelDeleteMutex:
 .word 0x10, 0xe2c40624, 0xa912340, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelWaitEventFlag
-.type ksceKernelWaitEventFlag, %function
-ksceKernelWaitEventFlag:
+.global sceKernelWaitEventFlag
+.type sceKernelWaitEventFlag, %function
+sceKernelWaitEventFlag:
 .word 0x10, 0xe2c40624, 0xc1d3f20, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -947,27 +947,27 @@ SceThreadmgrForDriver_1096042E:
 .word 0x10, 0xe2c40624, 0x1096042e, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelFinalizeFastMutex
-.type ksceKernelFinalizeFastMutex, %function
-ksceKernelFinalizeFastMutex:
+.global sceKernelFinalizeFastMutex
+.type sceKernelFinalizeFastMutex, %function
+sceKernelFinalizeFastMutex:
 .word 0x10, 0xe2c40624, 0x11fe84a1, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelLockMutex
-.type ksceKernelLockMutex, %function
-ksceKernelLockMutex:
+.global sceKernelLockMutex
+.type sceKernelLockMutex, %function
+sceKernelLockMutex:
 .word 0x10, 0xe2c40624, 0x16ac80c5, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelUnlockMutex
-.type ksceKernelUnlockMutex, %function
-ksceKernelUnlockMutex:
+.global sceKernelUnlockMutex
+.type sceKernelUnlockMutex, %function
+sceKernelUnlockMutex:
 .word 0x10, 0xe2c40624, 0x1e82e5d0, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelStartThread
-.type ksceKernelStartThread, %function
-ksceKernelStartThread:
+.global sceKernelStartThread
+.type sceKernelStartThread, %function
+sceKernelStartThread:
 .word 0x10, 0xe2c40624, 0x21f5419b, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -977,9 +977,9 @@ sceKernelEventObjectInit:
 .word 0x10, 0xe2c40624, 0x25ab8f6b, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelTryLockMutex
-.type ksceKernelTryLockMutex, %function
-ksceKernelTryLockMutex:
+.global sceKernelTryLockMutex
+.type sceKernelTryLockMutex, %function
+sceKernelTryLockMutex:
 .word 0x10, 0xe2c40624, 0x270993a6, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -995,15 +995,15 @@ sceKernelChangeThreadPriorityAndCpuAffinityMask:
 .word 0x10, 0xe2c40624, 0x3857c94e, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelWaitThreadEnd
-.type ksceKernelWaitThreadEnd, %function
-ksceKernelWaitThreadEnd:
+.global sceKernelWaitThreadEnd
+.type sceKernelWaitThreadEnd, %function
+sceKernelWaitThreadEnd:
 .word 0x10, 0xe2c40624, 0x3e20216f, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelCreateEventFlag
-.type ksceKernelCreateEventFlag, %function
-ksceKernelCreateEventFlag:
+.global sceKernelCreateEventFlag
+.type sceKernelCreateEventFlag, %function
+sceKernelCreateEventFlag:
 .word 0x10, 0xe2c40624, 0x4336baa4, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -1019,57 +1019,57 @@ sceKernelDelayThread:
 .word 0x10, 0xe2c40624, 0x4b675d05, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelClearEventFlag
-.type ksceKernelClearEventFlag, %function
-ksceKernelClearEventFlag:
+.global sceKernelClearEventFlag
+.type sceKernelClearEventFlag, %function
+sceKernelClearEventFlag:
 .word 0x10, 0xe2c40624, 0x4f1da3be, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelGetThreadId
-.type ksceKernelGetThreadId, %function
-ksceKernelGetThreadId:
+.global sceKernelGetThreadId
+.type sceKernelGetThreadId, %function
+sceKernelGetThreadId:
 .word 0x10, 0xe2c40624, 0x59d06540, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelSignalCondTo
-.type ksceKernelSignalCondTo, %function
-ksceKernelSignalCondTo:
+.global sceKernelSignalCondTo
+.type sceKernelSignalCondTo, %function
+sceKernelSignalCondTo:
 .word 0x10, 0xe2c40624, 0x61533da9, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelGetMutexInfo
-.type ksceKernelGetMutexInfo, %function
-ksceKernelGetMutexInfo:
+.global sceKernelGetMutexInfo
+.type sceKernelGetMutexInfo, %function
+sceKernelGetMutexInfo:
 .word 0x10, 0xe2c40624, 0x69b78a12, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelSignalCondAll
-.type ksceKernelSignalCondAll, %function
-ksceKernelSignalCondAll:
+.global sceKernelSignalCondAll
+.type sceKernelSignalCondAll, %function
+sceKernelSignalCondAll:
 .word 0x10, 0xe2c40624, 0x6ec78cd0, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelLockFastMutex
-.type ksceKernelLockFastMutex, %function
-ksceKernelLockFastMutex:
+.global lockFastMutex
+.type lockFastMutex, %function
+lockFastMutex:
 .word 0x10, 0xe2c40624, 0x70627f3a, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelDeleteEventFlag
-.type ksceKernelDeleteEventFlag, %function
-ksceKernelDeleteEventFlag:
+.global sceKernelDeleteEventFlag
+.type sceKernelDeleteEventFlag, %function
+sceKernelDeleteEventFlag:
 .word 0x10, 0xe2c40624, 0x71ecb352, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelTryLockFastMutex
-.type ksceKernelTryLockFastMutex, %function
-ksceKernelTryLockFastMutex:
+.global sceKernelTryLockFastMutex
+.type sceKernelTryLockFastMutex, %function
+sceKernelTryLockFastMutex:
 .word 0x10, 0xe2c40624, 0x741f4707, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelGetThreadCpuAffinityMask
-.type ksceKernelGetThreadCpuAffinityMask, %function
-ksceKernelGetThreadCpuAffinityMask:
+.global sceKernelGetThreadCpuAffinityMask
+.type sceKernelGetThreadCpuAffinityMask, %function
+sceKernelGetThreadCpuAffinityMask:
 .word 0x10, 0xe2c40624, 0x83dc703d, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -1085,9 +1085,9 @@ sceKernelGetProcessId:
 .word 0x10, 0xe2c40624, 0x9dcb4b7a, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelSetEvent
-.type ksceKernelSetEvent, %function
-ksceKernelSetEvent:
+.global sceKernelSetEvent
+.type sceKernelSetEvent, %function
+sceKernelSetEvent:
 .word 0x10, 0xe2c40624, 0x9ea3a45c, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -1097,21 +1097,21 @@ sceKernelExtendKernelStackWide:
 .word 0x10, 0xe2c40624, 0xa2c801a5, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelDeleteThread
-.type ksceKernelDeleteThread, %function
-ksceKernelDeleteThread:
+.global sceKernelDeleteThread
+.type sceKernelDeleteThread, %function
+sceKernelDeleteThread:
 .word 0x10, 0xe2c40624, 0xac834f3f, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelDeleteCond
-.type ksceKernelDeleteCond, %function
-ksceKernelDeleteCond:
+.global sceKernelDeleteCond
+.type sceKernelDeleteCond, %function
+sceKernelDeleteCond:
 .word 0x10, 0xe2c40624, 0xaee0d27c, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelInitializeFastMutex
-.type ksceKernelInitializeFastMutex, %function
-ksceKernelInitializeFastMutex:
+.global sceKernelInitializeFastMutex
+.type sceKernelInitializeFastMutex, %function
+sceKernelInitializeFastMutex:
 .word 0x10, 0xe2c40624, 0xaf8e1266, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -1127,45 +1127,45 @@ sceKernelSetEventWithNotifyCallback:
 .word 0x10, 0xe2c40624, 0xb7df3edf, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelRegisterTimer
-.type ksceKernelRegisterTimer, %function
-ksceKernelRegisterTimer:
+.global SceThreadmgrForDriver_C58DF384
+.type SceThreadmgrForDriver_C58DF384, %function
+SceThreadmgrForDriver_C58DF384:
 .word 0x10, 0xe2c40624, 0xc58df384, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelCreateThread
-.type ksceKernelCreateThread, %function
-ksceKernelCreateThread:
+.global sceKernelCreateThread
+.type sceKernelCreateThread, %function
+sceKernelCreateThread:
 .word 0x10, 0xe2c40624, 0xc6674e7d, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelWaitCond
-.type ksceKernelWaitCond, %function
-ksceKernelWaitCond:
+.global sceKernelWaitCond
+.type sceKernelWaitCond, %function
+sceKernelWaitCond:
 .word 0x10, 0xe2c40624, 0xcc7e027d, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelSetEventFlag
-.type ksceKernelSetEventFlag, %function
-ksceKernelSetEventFlag:
+.global sceKernelSetEventFlag
+.type sceKernelSetEventFlag, %function
+sceKernelSetEventFlag:
 .word 0x10, 0xe2c40624, 0xd4780c3e, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelGetFastMutexInfo
-.type ksceKernelGetFastMutexInfo, %function
-ksceKernelGetFastMutexInfo:
+.global sceKernelGetFastMutexInfo
+.type sceKernelGetFastMutexInfo, %function
+sceKernelGetFastMutexInfo:
 .word 0x10, 0xe2c40624, 0xd7af2e58, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelUnlockFastMutex
-.type ksceKernelUnlockFastMutex, %function
-ksceKernelUnlockFastMutex:
+.global sceKernelUnlockFastMutex
+.type sceKernelUnlockFastMutex, %function
+sceKernelUnlockFastMutex:
 .word 0x10, 0xe2c40624, 0xdb395782, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelCreateCond
-.type ksceKernelCreateCond, %function
-ksceKernelCreateCond:
+.global sceKernelCreateCond
+.type sceKernelCreateCond, %function
+sceKernelCreateCond:
 .word 0x10, 0xe2c40624, 0xdb6cd34a, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -1175,9 +1175,9 @@ sceKernelUIDInheritedEventClassInit:
 .word 0x10, 0xe2c40624, 0xdbb77032, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelRunWithStack
-.type ksceKernelRunWithStack, %function
-ksceKernelRunWithStack:
+.global SceThreadmgrForDriver_E54FD746
+.type SceThreadmgrForDriver_E54FD746, %function
+SceThreadmgrForDriver_E54FD746:
 .word 0x10, 0xe2c40624, 0xe54fd746, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
@@ -1187,15 +1187,15 @@ sceKernelGetSystemTimeWide:
 .word 0x10, 0xe2c40624, 0xf4ee4fa9, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelGetProcessIdFromTLS
-.type ksceKernelGetProcessIdFromTLS, %function
-ksceKernelGetProcessIdFromTLS:
+.global SceThreadmgrForDriver_FA54D49A
+.type SceThreadmgrForDriver_FA54D49A, %function
+SceThreadmgrForDriver_FA54D49A:
 .word 0x10, 0xe2c40624, 0xfa54d49a, 0xe320f000
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelCreateMutex
-.type ksceKernelCreateMutex, %function
-ksceKernelCreateMutex:
+.global sceKernelCreateMutex
+.type sceKernelCreateMutex, %function
+sceKernelCreateMutex:
 .word 0x10, 0xe2c40624, 0xfbaa026e, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4

@@ -111,7 +111,7 @@ static inline int drfpCancelQueue(DrfpQueue *queue)
 		if (req == NULL)
 			return 0;
 		drfpRemoveRequest(req);
-		ksceKernelSetEventFlag(req->evf, DRFP_EVF_CANCEL);
+		sceKernelSetEventFlag(req->evf, DRFP_EVF_CANCEL);
 	}
 }
 
@@ -243,7 +243,7 @@ int ReadDoneHandler(DrfpProtocol *ctx)
 		return 0;
 	}
 	if (req->flags & (DRFP_REQ_DONE | DRFP_REQ_ERROR))
-		ksceKernelSetEventFlag(req->evf, DRFP_EVF_RESPONSE);
+		sceKernelSetEventFlag(req->evf, DRFP_EVF_RESPONSE);
 	ctx->readRequest = NULL;
 	return 0;
 }
@@ -298,7 +298,7 @@ static inline __attribute__((always_inline))
 int WriteDoneHandler(DrfpProtocol *ctx)
 {
 	if (ctx->writeRequest != NULL) {
-		ksceKernelSetEventFlag(ctx->writeRequest->evf, DRFP_EVF_SENT);
+		sceKernelSetEventFlag(ctx->writeRequest->evf, DRFP_EVF_SENT);
 		ctx->writeRequest = NULL;
 	}
 	if (drfpQueueFirst(&s_drfpSendQueue) != NULL)
@@ -378,7 +378,7 @@ int sceDeci4pDrfpInit(void)
 		return ret;
 	}
 	s_drfpHeap = ret;
-	s_drfpRequestSema = ksceKernelCreateSema(DRFP_NAME, SCE_KERNEL_ATTR_TH_PRIO,
+	s_drfpRequestSema = sceKernelCreateSema(DRFP_NAME, SCE_KERNEL_ATTR_TH_PRIO,
 						 DRFP_REQUEST_COUNT, DRFP_REQUEST_COUNT, NULL);
 	if (s_drfpRequestSema < 0)
 		return -1;
@@ -401,7 +401,7 @@ int sceDeci4pDrfpInit(void)
 		req->size = 0;
 		req->result = 0;
 		snprintf(name, sizeof(name), DRFP_NAME "%d", i);
-		req->evf = ksceKernelCreateEventFlag(name, 0, 0, NULL);
+		req->evf = sceKernelCreateEventFlag(name, 0, 0, NULL);
 	}
 	s_drfpSendQueue.next = &s_drfpSendQueue;
 	s_drfpSendQueue.prev = &s_drfpSendQueue;
@@ -415,7 +415,7 @@ int sceDeci4pDrfpInit(void)
 						     pool->size, NULL);
 		SceSysmemForDriver_A841EDDA(pool->memBlock, &pool->base);
 		snprintf(name, sizeof(name), DRFP_NAME "%d", i);
-		pool->sema = ksceKernelCreateSema(name, SCE_KERNEL_ATTR_TH_PRIO, pool->count,
+		pool->sema = sceKernelCreateSema(name, SCE_KERNEL_ATTR_TH_PRIO, pool->count,
 						  pool->count, NULL);
 	}
 
@@ -451,7 +451,7 @@ DrfpBufferPool *drfpGetBuffer(int index)
 {
 	DrfpBufferPool *pool = &s_drfpBuffer[index];
 
-	if (ksceKernelWaitSema(pool->sema, 1, NULL) != 0)
+	if (sceKernelWaitSema(pool->sema, 1, NULL) != 0)
 		return NULL;
 	return pool;
 }
@@ -459,7 +459,7 @@ DrfpBufferPool *drfpGetBuffer(int index)
 /* name unknown */
 void drfpReleaseBuffer(int index)
 {
-	ksceKernelSignalSema(s_drfpBuffer[index].sema, 1);
+	sceKernelSignalSema(s_drfpBuffer[index].sema, 1);
 }
 
 int sceDeci4pDrfpSend(void *packet, SceSize size, void *info)
@@ -470,7 +470,7 @@ int sceDeci4pDrfpSend(void *packet, SceSize size, void *info)
 	SceUInt32 timeout, bits, *pTimeout;
 	int ret, retries, i, index;
 
-	if (ksceKernelWaitSema(s_drfpRequestSema, 1, NULL) != 0)
+	if (sceKernelWaitSema(s_drfpRequestSema, 1, NULL) != 0)
 		SCE_PANIC(460);
 
 	s = SceCpuForDriver_D32ACE9E(&s_drfpLock);
@@ -524,7 +524,7 @@ int sceDeci4pDrfpSend(void *packet, SceSize size, void *info)
 	pTimeout = &timeout;
 	for (;;) {
 		bits = 0;
-		ret = ksceKernelWaitEventFlag(req->evf,
+		ret = sceKernelWaitEventFlag(req->evf,
 					      DRFP_EVF_RESPONSE | DRFP_EVF_SENT | DRFP_EVF_CANCEL,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits,
@@ -562,7 +562,7 @@ int sceDeci4pDrfpSend(void *packet, SceSize size, void *info)
 
 done:
 	drfpRemoveRequest(req);
-	ksceKernelClearEventFlag(req->evf, 0);
+	sceKernelClearEventFlag(req->evf, 0);
 	s = SceCpuForDriver_D32ACE9E(&s_drfpLock);
 	req->flags = 0;
 	req->code = 0;
@@ -573,7 +573,7 @@ done:
 	req->link.next = &req->link;
 	req->link.prev = &req->link;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
-	ksceKernelSignalSema(s_drfpRequestSema, 1);
+	sceKernelSignalSema(s_drfpRequestSema, 1);
 	return ret;
 }
 
@@ -593,6 +593,6 @@ int DrfpModuleStart(SceSize args, void *argp)
 	s_drfpProtocol.handle = -1;
 	if (handle > 0)
 		sceDfMgrClose(handle);
-	ksceKernelDeleteSema(s_drfpRequestSema);
+	sceKernelDeleteSema(s_drfpRequestSema);
 	return SCE_KERNEL_START_FAILED;
 }

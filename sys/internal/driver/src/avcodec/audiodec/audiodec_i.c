@@ -333,7 +333,7 @@ int _audiodecInternalDeleteDecoder(AudiodecWorkManager *manager,
 	index = audiodecGetHandleIndex(ctrl->handle);
 	if (audiodecIsResidentHandle(ctrl->handle)) {
 		SceUID owner = _audiodecGetResidentDecoderOwner(index);
-		if (owner != ksceKernelGetProcessId())
+		if (owner != sceKernelGetProcessId())
 			return SCE_AUDIODEC_ERROR_INVALID_HANDLE;
 	}
 	ret = audiodecPrepareCommand(1, &command, manager, ctrl);

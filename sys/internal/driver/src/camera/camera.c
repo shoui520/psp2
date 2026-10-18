@@ -198,8 +198,8 @@ int sce_camera_init(void)
 	driver = cameraDriver;
 	driver->spinlock = 0;
 	driver->hardwareInfo = ksceSysconGetHardwareInfo();
-	driver->device[0].mutexId = ksceKernelCreateMutex("SceCameraDev0", 0, 0, NULL);
-	cameraDriver->device[1].mutexId = ksceKernelCreateMutex("SceCameraDev1", 0, 0, NULL);
+	driver->device[0].mutexId = sceKernelCreateMutex("SceCameraDev0", 0, 0, NULL);
+	cameraDriver->device[1].mutexId = sceKernelCreateMutex("SceCameraDev1", 0, 0, NULL);
 	hardwareInfo = cameraDriver->hardwareInfo;
 	if ((hardwareInfo & 0xdf0000) == 0x100000 ||
 	    (hardwareInfo & 0xff0000) == 0x310000 ||
@@ -208,25 +208,25 @@ int sce_camera_init(void)
 				cameraSubIntrHandler, &cameraDriver->device[1]);
 		ksceKernelRegisterSubIntrHandler(168, 0, "SceCif1Camera",
 				cameraSubIntrHandler, &cameraDriver->device[0]);
-		cameraDriver->device[0].eventFlagId = ksceKernelCreateEventFlag(
+		cameraDriver->device[0].eventFlagId = sceKernelCreateEventFlag(
 				"SceCif1", 0x1000, 0, &cameraDriver->device[0].eventFlagOption);
-		cameraDriver->device[1].eventFlagId = ksceKernelCreateEventFlag(
+		cameraDriver->device[1].eventFlagId = sceKernelCreateEventFlag(
 				"SceCif0", 0x1000, 0, &cameraDriver->device[1].eventFlagOption);
 	} else {
 		ksceKernelRegisterSubIntrHandler(166, 0, "SceCif0Camera",
 				cameraSubIntrHandler, &cameraDriver->device[0]);
 		ksceKernelRegisterSubIntrHandler(168, 0, "SceCif1Camera",
 				cameraSubIntrHandler, &cameraDriver->device[1]);
-		cameraDriver->device[0].eventFlagId = ksceKernelCreateEventFlag(
+		cameraDriver->device[0].eventFlagId = sceKernelCreateEventFlag(
 				"SceCif0", 0x1000, 0, &cameraDriver->device[0].eventFlagOption);
-		cameraDriver->device[1].eventFlagId = ksceKernelCreateEventFlag(
+		cameraDriver->device[1].eventFlagId = sceKernelCreateEventFlag(
 				"SceCif1", 0x1000, 0, &cameraDriver->device[1].eventFlagOption);
 	}
-	cameraDriver->eventFlagId = ksceKernelCreateEventFlag("SceCameraDrv", 0x1000,
+	cameraDriver->eventFlagId = sceKernelCreateEventFlag("SceCameraDrv", 0x1000,
 			0, &cameraDriver->eventFlagOption);
 	driver = cameraDriver;
 	driver->threadOption.size = sizeof(driver->threadOption);
-	driver->threadId = ksceKernelCreateThread("SceCameraDrv", cameraDriverThread,
+	driver->threadId = sceKernelCreateThread("SceCameraDrv", cameraDriverThread,
 			30, 0x2000, 0x10000000, 0x80000,
 			(const SceKernelThreadOptParam *)&driver->threadOption);
 	result = cameraDriver->threadId;
@@ -235,8 +235,8 @@ int sce_camera_init(void)
 		ksceKernelEnableSubIntr(168, 0);
 		sceKernelRegisterSysEventHandler("SceCamera", cameraSysEventHandler, NULL);
 		sceKernelRegisterProcEventHandler("SceCamera", &cameraProcessEventHandler, 0);
-		cameraDriver->mutexId = ksceKernelCreateMutex("SceCameraDrv", 0, 0, NULL);
-		result = ksceKernelStartThread(cameraDriver->threadId, 0, NULL);
+		cameraDriver->mutexId = sceKernelCreateMutex("SceCameraDrv", 0, 0, NULL);
+		result = sceKernelStartThread(cameraDriver->threadId, 0, NULL);
 		if (result == 0) {
 			cameraDriver->powerEnabled = 1;
 			cameraDriver->activeEnabled = 1;
@@ -260,12 +260,12 @@ void cameraRequestActiveState(int active, void *argument)
 	}
 	if (active) {
 		driver->activeEventState = 3;
-		ksceKernelSetEventFlag(driver->eventFlagId, 0x10000);
+		sceKernelSetEventFlag(driver->eventFlagId, 0x10000);
 		unlockDriver = cameraDriver;
 		goto out;
 	}
 	driver->activeEventState = 1;
-	ksceKernelSetEventFlag(driver->eventFlagId, 0x8000);
+	sceKernelSetEventFlag(driver->eventFlagId, 0x8000);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intr);
 	return;
 out:
@@ -280,10 +280,10 @@ int cameraPowerEventHandler(int eventId, int eventCount, int flags, void *argume
 	intr = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
 	if (flags & 0x800000) {
 		cameraDriver->powerEventState = 3;
-		ksceKernelSetEventFlag(cameraDriver->eventFlagId, 0x4000);
+		sceKernelSetEventFlag(cameraDriver->eventFlagId, 0x4000);
 	} else if (flags & 0x400000) {
 		cameraDriver->powerEventState = 1;
-		ksceKernelSetEventFlag(cameraDriver->eventFlagId, 0x2000);
+		sceKernelSetEventFlag(cameraDriver->eventFlagId, 0x2000);
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intr);
 	return 0;
@@ -483,11 +483,11 @@ int cameraSubIntrHandler(void *subintrArg, void *registerArg,
 		device->irqFrameCounter++;
 		if (device->waitingForReverseFrame) {
 			device->waitingForReverseFrame = 0;
-			ksceKernelSetEventFlag(device->eventFlagId, 2);
+			sceKernelSetEventFlag(device->eventFlagId, 2);
 		} else {
-			ksceKernelPollEventFlag(device->eventFlagId, 7, 1, &eventBits);
+			sceKernelPollEventFlag(device->eventFlagId, 7, 1, &eventBits);
 			if (eventBits & 4) {
-				ksceKernelSetEventFlag(device->eventFlagId, 1);
+				sceKernelSetEventFlag(device->eventFlagId, 1);
 			} else {
 				cameraPreviousFrameTimestamp[devnum] = device->timestamp;
 				if (cameraAdvanceProcessFrame(devnum, device->activeProcessId) >= 0) {
@@ -500,7 +500,7 @@ int cameraSubIntrHandler(void *subintrArg, void *registerArg,
 					if (frameInterval > 0)
 						cameraMeasuredFramerate[devnum] = 1000000000 / frameInterval;
 					device->irqFrameIndex = frameIndex;
-					ksceKernelSetEventFlag(device->eventFlagId, 1);
+					sceKernelSetEventFlag(device->eventFlagId, 1);
 				}
 			}
 		}
@@ -590,21 +590,21 @@ int cameraSetBusClockFrequency(int frequency)
 	CameraDriver *driver;
 	int result;
 
-	result = ksceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &timeout);
+	result = sceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &timeout);
 	if (result < 0)
 		return result;
 	timeout = 0xffffffff;
-	result = ksceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &timeout);
+	result = sceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &timeout);
 	if (result < 0) {
-		ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+		sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 		return result;
 	}
 	result = kscePowerSetCameraBusClockFrequency(frequency);
 	driver = cameraDriver;
 	if (result >= 0)
 		driver->busClockFast = frequency == 166;
-	ksceKernelUnlockMutex(driver->device[0].mutexId, 1);
-	ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+	sceKernelUnlockMutex(driver->device[0].mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 	return result;
 }
 
@@ -613,13 +613,13 @@ int cameraSetSensorClockEnabled(int enabled)
 	SceUInt32 timeout = 0xffffffff;
 	int result;
 
-	result = ksceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &timeout);
+	result = sceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &timeout);
 	if (result < 0)
 		return result;
 	timeout = 0xffffffff;
-	result = ksceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &timeout);
+	result = sceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &timeout);
 	if (result < 0) {
-		ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+		sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 		return result;
 	}
 	if (enabled) {
@@ -630,8 +630,8 @@ int cameraSetSensorClockEnabled(int enabled)
 	}
 	if (result >= 0)
 		cameraDriver->clockEnabled = enabled;
-	ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
-	ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 	return result;
 }
 
@@ -648,8 +648,8 @@ int cameraWaitForDeviceReads(void)
 			break;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&driver->spinlock, intrStatus);
 		timeout = 8000;
-		ksceKernelClearEventFlag(cameraDriver->eventFlagId, ~0x60000U);
-		ksceKernelWaitEventFlagCB(cameraDriver->eventFlagId, 0x60000, 5, NULL, &timeout);
+		sceKernelClearEventFlag(cameraDriver->eventFlagId, ~0x60000U);
+		SceThreadmgrForDriver_8A35F714(cameraDriver->eventFlagId, 0x60000, 5, NULL, &timeout);
 	}
 	driver->device[0].busy = 1;
 	driver->device[1].busy = 1;
@@ -669,7 +669,7 @@ int cameraProcessStartEvent(SceUID pid, int eventType,
 		if (pid >= 0) {
 			intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
 			cameraDriver->pendingSuspendProcessId = pid;
-			ksceKernelSetEventFlag(cameraDriver->eventFlagId, 0x20);
+			sceKernelSetEventFlag(cameraDriver->eventFlagId, 0x20);
 			cameraSetProcessRequestedSuspendState(0, pid, 3);
 			result = 0;
 			cameraSetProcessRequestedSuspendState(1, pid, 3);
@@ -698,7 +698,7 @@ int cameraProcessCreateEvent(SceUID pid, ProcEventCreateParam *param, int arg)
 	int intrStatus;
 	int result = pid;
 
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) >= 0) {
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) >= 0) {
 		if (pid >= 0) {
 			intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
 			if (cameraGetProcessStorage(pid, 0) == NULL) {
@@ -711,7 +711,7 @@ int cameraProcessCreateEvent(SceUID pid, ProcEventCreateParam *param, int arg)
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 			}
 		}
-		ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+		sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	} else {
 		result = (int)0x802e000a;
 	}
@@ -750,10 +750,10 @@ int cameraSysEventHandler(int resume, int eventid, void *args, void *opt)
 	} else {
 		if (eventid == 0x401) {
 			timeout = 3000000;
-			if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
+			if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
 				result = (int)0x802e000a;
 			else
-				ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 			return result;
 		}
 		if (eventid == 0x402) {
@@ -776,7 +776,7 @@ int cameraSysEventHandler(int resume, int eventid, void *args, void *opt)
 		driver->device[1].suspendState = 1;
 	}
 	driver->device[1].requestedSuspendState = requestedState;
-	ksceKernelSetEventFlag(driver->eventFlagId, eventBits);
+	sceKernelSetEventFlag(driver->eventFlagId, eventBits);
 	driver = cameraDriver;
 unlock:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&driver->spinlock, intrStatus);
@@ -800,7 +800,7 @@ int cameraProcessStopEvent(SceUID pid, int eventType,
 		if (pid < 0)
 			break;
 		wait.timeout = 3000000;
-		if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &wait.timeout) < 0) {
+		if (sceKernelLockMutex(cameraDriver->mutexId, 1, &wait.timeout) < 0) {
 			pid = (int)0x802e000a;
 			break;
 		}
@@ -813,7 +813,7 @@ int cameraProcessStopEvent(SceUID pid, int eventType,
 				status = (int)0x802e0013;
 		}
 		pid = status;
-		ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+		sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 		break;
 	case 0x202:
 		if (pid < 0)
@@ -845,7 +845,7 @@ int cameraProcessStopEvent(SceUID pid, int eventType,
 		cameraSetProcessRequestedSuspendState(1, pid, 1);
 		cameraDriver->pendingSuspendProcessId = pid;
 		pid = 0;
-		ksceKernelSetEventFlag(cameraDriver->eventFlagId, 8);
+		sceKernelSetEventFlag(cameraDriver->eventFlagId, 8);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 		break;
 	default:
@@ -865,9 +865,9 @@ int cameraTerminate(void)
 
 	if (!cameraDriver->initialized)
 		return (int)0x802e0002;
-	ksceKernelDeleteMutex(cameraDriver->mutexId);
-	ksceKernelDeleteEventFlag(cameraDriver->device[0].eventFlagId);
-	ksceKernelDeleteEventFlag(cameraDriver->device[1].eventFlagId);
+	sceKernelDeleteMutex(cameraDriver->mutexId);
+	sceKernelDeleteEventFlag(cameraDriver->device[0].eventFlagId);
+	sceKernelDeleteEventFlag(cameraDriver->device[1].eventFlagId);
 	ksceKernelReleaseSubIntrHandler(166, 0);
 	ksceKernelReleaseSubIntrHandler(168, 0);
 	driver = cameraDriver;
@@ -876,7 +876,7 @@ int cameraTerminate(void)
 	       (hardwareInfo & 0xff0000) == 0x310000 ||
 	       (hardwareInfo & 0xfe0000) == 0x400000;
 	if (driver->busClockFast) {
-		ksceKernelClearEventFlag(driver->device[0].eventFlagId, ~3u);
+		sceKernelClearEventFlag(driver->device[0].eventFlagId, ~3u);
 		SceCsiForDriver_A1D1805D(head);
 		driver->device[0].setPowerState(0, 0);
 		SceCsiForDriver_4AE39F26(head);
@@ -888,7 +888,7 @@ int cameraTerminate(void)
 	       (hardwareInfo & 0xff0000) != 0x310000 &&
 	       (hardwareInfo & 0xfe0000) != 0x400000;
 	if (driver->busClockFast) {
-		ksceKernelClearEventFlag(driver->device[1].eventFlagId, ~3u);
+		sceKernelClearEventFlag(driver->device[1].eventFlagId, ~3u);
 		SceCsiForDriver_A1D1805D(head);
 		driver->device[1].setPowerState(1, 0);
 		SceCsiForDriver_4AE39F26(head);
@@ -917,30 +917,30 @@ int cameraTerminate(void)
 	cameraSramFrameBufferBase[1][2] = NULL;
 	cameraSramMemBlockId = -1;
 	timeout = ~0u;
-	result = ksceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &timeout);
+	result = sceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &timeout);
 	if (result < 0)
 		return result;
 	timeout = ~0u;
-	result = ksceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &timeout);
+	result = sceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &timeout);
 	if (result < 0) {
-		ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+		sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 		return result;
 	}
 	result = SceClockgenForDriver_82F39378();
 	driver = cameraDriver;
 	if (result < 0) {
-		ksceKernelUnlockMutex(driver->device[0].mutexId, 1);
-		ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+		sceKernelUnlockMutex(driver->device[0].mutexId, 1);
+		sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 		return result;
 	}
 	driver->clockEnabled = 0;
-	ksceKernelUnlockMutex(driver->device[0].mutexId, 1);
-	ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
-	ksceKernelSetEventFlag(cameraDriver->eventFlagId, 0x100000);
+	sceKernelUnlockMutex(driver->device[0].mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+	sceKernelSetEventFlag(cameraDriver->eventFlagId, 0x100000);
 	sceKernelDelayThread(100000);
-	ksceKernelDeleteEventFlag(cameraDriver->eventFlagId);
-	ksceKernelDeleteMutex(cameraDriver->device[0].mutexId);
-	ksceKernelDeleteMutex(cameraDriver->device[1].mutexId);
+	sceKernelDeleteEventFlag(cameraDriver->eventFlagId);
+	sceKernelDeleteMutex(cameraDriver->device[0].mutexId);
+	sceKernelDeleteMutex(cameraDriver->device[1].mutexId);
 	return cameraResetConfig();
 }
 
@@ -970,29 +970,29 @@ int cameraResumeDevice(int devnum)
 	if (!started)
 		return 0;
 	device = &driver->device[devnum];
-	ksceKernelClearEventFlag(device->eventFlagId, ~3u);
+	sceKernelClearEventFlag(device->eventFlagId, ~3u);
 	result = cameraSetSensorClockEnabled(1);
 	if (result < 0)
 		return result;
 	option.timeout = ~0u;
-	result = ksceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &option.timeout);
+	result = sceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &option.timeout);
 	if (result < 0)
 		return result;
 	option.timeout = ~0u;
-	result = ksceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &option.timeout);
+	result = sceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &option.timeout);
 	if (result < 0) {
-		ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+		sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 		return result;
 	}
 	result = kscePowerSetCameraBusClockFrequency(166);
 	if (result < 0) {
-		ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
-		ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+		sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+		sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 		return result;
 	}
 	cameraDriver->busClockFast = 1;
-	ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
-	ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 	result = cameraCsiStart(devnum);
 	if (result < 0)
 		return result;
@@ -1105,7 +1105,7 @@ int cameraResumeDevice(int devnum)
 	attributeDevice->waitingForReverseFrame = 1;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 	option.timeout = device->config.frameTimeout;
-	ksceKernelWaitEventFlag(device->eventFlagId, 3, 1, &eventPattern, &option.timeout);
+	sceKernelWaitEventFlag(device->eventFlagId, 3, 1, &eventPattern, &option.timeout);
 	return result;
 }
 
@@ -1132,14 +1132,14 @@ int cameraResumeDevices(int eventType)
 			    enabled && (result = cameraResumeDevice(devnum),
 					driver = cameraDriver, result < 0)) {
 				intrStatus = SceCpuForDriver_D32ACE9E(&driver->spinlock);
-				ksceKernelClearEventFlag(device->eventFlagId, ~4u);
+				sceKernelClearEventFlag(device->eventFlagId, ~4u);
 				driver = cameraDriver;
 				device->busy = 0;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&driver->spinlock, intrStatus);
 				driver = cameraDriver;
 			} else {
 				intrStatus = SceCpuForDriver_D32ACE9E(&driver->spinlock);
-				ksceKernelClearEventFlag(device->eventFlagId, ~4u);
+				sceKernelClearEventFlag(device->eventFlagId, ~4u);
 				driver = cameraDriver;
 				device->suspendState = 0;
 				device->busy = 0;
@@ -1152,11 +1152,11 @@ int cameraResumeDevices(int eventType)
 	driver = cameraDriver;
 	if (eventType == 1) {
 		if (driver->powerEventState == 1) {
-			ksceKernelSetEventFlag(driver->eventFlagId, 0x2000);
+			sceKernelSetEventFlag(driver->eventFlagId, 0x2000);
 			driver = cameraDriver;
 		}
 	} else if (eventType == 2 && driver->activeEventState == 1) {
-		ksceKernelSetEventFlag(driver->eventFlagId, 0x8000);
+		sceKernelSetEventFlag(driver->eventFlagId, 0x8000);
 		driver = cameraDriver;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&driver->spinlock, intrStatus);
@@ -1197,7 +1197,7 @@ int cameraStopProcess(int devnum, SceUID processId)
 	driver = cameraDriver;
 	if (driver->busClockFast) {
 		device = &driver->device[devnum];
-		ksceKernelClearEventFlag(device->eventFlagId, ~3u);
+		sceKernelClearEventFlag(device->eventFlagId, ~3u);
 		SceCsiForDriver_A1D1805D(head);
 		device->setPowerState(devnum, 0);
 		SceCsiForDriver_4AE39F26(head);
@@ -1210,36 +1210,36 @@ int cameraStopProcess(int devnum, SceUID processId)
 	if (started)
 		goto setStopped;
 	timeout = ~0u;
-	result = ksceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &timeout);
+	result = sceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &timeout);
 	if (result < 0)
 		return result;
 	timeout = ~0u;
-	result = ksceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &timeout);
+	result = sceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &timeout);
 	if (result < 0) {
-		ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+		sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 		return result;
 	}
 	result = kscePowerSetCameraBusClockFrequency(0);
 	if (result < 0) {
-		ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
-		ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+		sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+		sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 		return result;
 	}
 	driver = cameraDriver;
 	driver->busClockFast = 0;
-	ksceKernelUnlockMutex(driver->device[0].mutexId, 1);
-	ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+	sceKernelUnlockMutex(driver->device[0].mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 	timeout = ~0u;
-	if (ksceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &timeout) >= 0) {
+	if (sceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &timeout) >= 0) {
 		timeout = ~0u;
-		if (ksceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &timeout) < 0) {
-			ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+		if (sceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &timeout) < 0) {
+			sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 		} else {
 			result = SceClockgenForDriver_82F39378();
 			if (result >= 0)
 				cameraDriver->clockEnabled = 0;
-			ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
-			ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+			sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+			sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 		}
 	}
 setStopped:
@@ -1266,8 +1266,8 @@ int cameraReleaseProcess(SceUID processId)
 		intrStatus = SceCpuForDriver_D32ACE9E(&driver->spinlock);
 		if (cameraIsProcessActive(devnum, processId)) {
 			device = &cameraDriver->device[devnum];
-			ksceKernelClearEventFlag(device->eventFlagId, ~7u);
-			ksceKernelSetEventFlag(device->eventFlagId, 4);
+			sceKernelClearEventFlag(device->eventFlagId, ~7u);
+			sceKernelSetEventFlag(device->eventFlagId, 4);
 		}
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 		process = cameraGetProcess(devnum, processId);
@@ -1306,10 +1306,10 @@ int cameraProcessKillEvent(SceUID pid, ProcEventParam *param, int arg)
 	SceUInt32 timeout = 3000000;
 	int result;
 
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
 		return (int)0x802e000a;
 	result = cameraReleaseProcess(pid);
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	return result;
 }
 
@@ -1318,10 +1318,10 @@ int cameraProcessExitEvent(SceUID pid, ProcEventParam *param, int arg)
 	SceUInt32 timeout = 3000000;
 	int result;
 
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
 		return (int)0x802e000a;
 	result = cameraReleaseProcess(pid);
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	return result;
 }
 
@@ -1353,8 +1353,8 @@ int cameraSuspendDevices(int eventType)
 		result = cameraHasStartedProcess(devnum, 0);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 		if (enabled && result) {
-			ksceKernelClearEventFlag(device->eventFlagId, ~7u);
-			ksceKernelSetEventFlag(device->eventFlagId, 4);
+			sceKernelClearEventFlag(device->eventFlagId, ~7u);
+			sceKernelSetEventFlag(device->eventFlagId, 4);
 			driver = cameraDriver;
 			if (driver->activeProcessId == device->pendingProcessId) {
 				hardwareInfo = driver->hardwareInfo;
@@ -1367,7 +1367,7 @@ int cameraSuspendDevices(int eventType)
 				if (result) {
 					device = &driver->device[devnum];
 					result = 0;
-					ksceKernelClearEventFlag(device->eventFlagId, ~3u);
+					sceKernelClearEventFlag(device->eventFlagId, ~3u);
 					SceCsiForDriver_A1D1805D(head);
 					device->setPowerState(devnum, 0);
 					SceCsiForDriver_4AE39F26(head);
@@ -1386,18 +1386,18 @@ int cameraSuspendDevices(int eventType)
 	if ((!startedFront || !startedBack) && enabled) {
 		cameraSetBusClockFrequency(0);
 		timeout = 0xffffffff;
-		result = ksceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &timeout);
+		result = sceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &timeout);
 		if (result >= 0) {
 			timeout = 0xffffffff;
-			result = ksceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &timeout);
+			result = sceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &timeout);
 			if (result < 0) {
-				ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 			} else {
 				result = SceClockgenForDriver_82F39378();
 				if (result >= 0)
 					cameraDriver->clockEnabled = 0;
-				ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
-				ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 			}
 		}
 	}
@@ -1412,11 +1412,11 @@ int cameraSuspendDevices(int eventType)
 	driver = cameraDriver;
 	if (eventType == 1) {
 		if (driver->powerEventState == 3) {
-			ksceKernelSetEventFlag(driver->eventFlagId, 0x4000);
+			sceKernelSetEventFlag(driver->eventFlagId, 0x4000);
 			driver = cameraDriver;
 		}
 	} else if (eventType == 2 && driver->activeEventState == 3) {
-		ksceKernelSetEventFlag(driver->eventFlagId, 0x10000);
+		sceKernelSetEventFlag(driver->eventFlagId, 0x10000);
 		driver = cameraDriver;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&driver->spinlock, intrStatus);
@@ -1470,19 +1470,19 @@ int cameraDriverThread(SceSize args, void *argp)
 		}
 	}
 	work.timeout = 0xffffffff;
-	if (ksceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &work.timeout) < 0)
+	if (sceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &work.timeout) < 0)
 		goto registerCallback;
 	work.timeout = 0xffffffff;
-	if (ksceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &work.timeout) < 0) {
-		ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+	if (sceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &work.timeout) < 0) {
+		sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 		goto registerCallback;
 	}
 	result = SceClockgenForDriver_82F39378();
 	driver = cameraDriver;
 	if (result >= 0)
 		driver->clockEnabled = 0;
-	ksceKernelUnlockMutex(driver->device[0].mutexId, 1);
-	ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+	sceKernelUnlockMutex(driver->device[0].mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 	if (result < 0 || failed)
 		goto registerCallback;
 	memset(&frameOption, 0, sizeof(frameOption));
@@ -1565,7 +1565,7 @@ int cameraDriverThread(SceSize args, void *argp)
 	cameraDriver->initialized = 1;
 registerCallback:
 	driver = cameraDriver;
-	result = ksceKernelCreateCallback("SceCameraDrv", 0, cameraPowerEventHandler, NULL);
+	result = sceKernelCreateCallback("SceCameraDrv", 0, cameraPowerEventHandler, NULL);
 	driver->callbackId = result;
 	result = cameraDriver->callbackId;
 	if (result < 0)
@@ -1573,7 +1573,7 @@ registerCallback:
 	scePowerRegisterCallback(result);
 	ScePowerForDriver_FE35B73D(cameraRequestActiveState, NULL);
 	for (;;) {
-		ksceKernelWaitEventFlagCB(cameraDriver->eventFlagId, 0x11ffff, 5, &events, NULL);
+		SceThreadmgrForDriver_8A35F714(cameraDriver->eventFlagId, 0x11ffff, 5, &events, NULL);
 		if (events & 0x100000)
 			return sceKernelExitThread(0);
 		if (!(events & 0x1fffc)) {
@@ -1592,7 +1592,7 @@ registerCallback:
 		if (events & 8) {
 			cameraWaitForDeviceReads();
 			work.timeout = 3000000;
-			if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
+			if (sceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
 				for (devnum = 0; devnum != 2; devnum++) {
 					driver = cameraDriver;
 					device = &driver->device[devnum];
@@ -1601,8 +1601,8 @@ registerCallback:
 						result = cameraIsProcessActive(devnum, cameraDriver->pendingSuspendProcessId);
 						sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 						if (result) {
-							ksceKernelClearEventFlag(device->eventFlagId, ~7u);
-							ksceKernelSetEventFlag(device->eventFlagId, 4);
+							sceKernelClearEventFlag(device->eventFlagId, ~7u);
+							sceKernelSetEventFlag(device->eventFlagId, 4);
 							driver = cameraDriver;
 							hardwareInfo = driver->hardwareInfo;
 							head = devnum;
@@ -1612,7 +1612,7 @@ registerCallback:
 								head = 1 - devnum;
 							if (driver->busClockFast) {
 								CameraDevice *activeDevice = &driver->device[devnum];
-								ksceKernelClearEventFlag(activeDevice->eventFlagId, ~3u);
+								sceKernelClearEventFlag(activeDevice->eventFlagId, ~3u);
 								SceCsiForDriver_A1D1805D(head);
 								activeDevice->setPowerState(devnum, 0);
 								SceCsiForDriver_4AE39F26(head);
@@ -1620,27 +1620,27 @@ registerCallback:
 							}
 							if (!cameraHasStartedProcess(1 - devnum, 1)) {
 								work.timeout = 0xffffffff;
-								if (ksceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &work.timeout) < 0)
+								if (sceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &work.timeout) < 0)
 									goto suspendProcessDone;
 								work.timeout = 0xffffffff;
-								if (ksceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &work.timeout) < 0)
+								if (sceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &work.timeout) < 0)
 									goto suspendProcessUnlockFront;
 								if (kscePowerSetCameraBusClockFrequency(0) < 0)
 									goto suspendProcessUnlockBoth;
 								cameraDriver->busClockFast = 0;
-								ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
-								ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+								sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+								sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 								work.timeout = 0xffffffff;
-								if (ksceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &work.timeout) < 0)
+								if (sceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &work.timeout) < 0)
 									goto suspendProcessDone;
 								work.timeout = 0xffffffff;
-								if (ksceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &work.timeout) < 0)
+								if (sceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &work.timeout) < 0)
 									goto suspendProcessUnlockFront;
 								if (SceClockgenForDriver_82F39378() < 0)
 									goto suspendProcessUnlockBoth;
 								cameraDriver->clockEnabled = 0;
-								ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
-								ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+								sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+								sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 							}
 						}
 					}
@@ -1651,19 +1651,19 @@ registerCallback:
 				}
 				goto suspendProcessDone;
 suspendProcessUnlockBoth:
-				ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
-				ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 				goto suspendProcessDone;
 suspendProcessUnlockFront:
-				ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 suspendProcessDone:
-				ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 			}
 		}
 		if (events & 0x20) {
 			cameraWaitForDeviceReads();
 			work.timeout = 3000000;
-			if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
+			if (sceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
 				requested = 0;
 				work.state = 0;
 				for (devnum = 0; devnum != 2; devnum++) {
@@ -1683,7 +1683,7 @@ suspendProcessDone:
 						}
 					}
 					intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
-					ksceKernelClearEventFlag(device->eventFlagId, ~4u);
+					sceKernelClearEventFlag(device->eventFlagId, ~4u);
 					cameraSetProcessSuspendState(devnum, cameraDriver->pendingSuspendProcessId, 0);
 					device->busy = 0;
 					if (cameraGetProcessRequestedSuspendState(devnum, cameraDriver->pendingSuspendProcessId,
@@ -1692,14 +1692,14 @@ suspendProcessDone:
 					sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 				}
 				if (requested)
-					ksceKernelSetEventFlag(cameraDriver->eventFlagId, 8);
-				ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+					sceKernelSetEventFlag(cameraDriver->eventFlagId, 8);
+				sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 			}
 		}
 		if (events & 0x100) {
 			cameraWaitForDeviceReads();
 			work.timeout = 3000000;
-			if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
+			if (sceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
 				for (devnum = 0; devnum != 2; devnum++) {
 					driver = cameraDriver;
 					device = &driver->device[devnum];
@@ -1708,8 +1708,8 @@ suspendProcessDone:
 						result = cameraHasStartedProcess(devnum, 0);
 						sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 						if (result) {
-							ksceKernelClearEventFlag(device->eventFlagId, ~7u);
-							ksceKernelSetEventFlag(device->eventFlagId, 4);
+							sceKernelClearEventFlag(device->eventFlagId, ~7u);
+							sceKernelSetEventFlag(device->eventFlagId, 4);
 							driver = cameraDriver;
 							hardwareInfo = driver->hardwareInfo;
 							head = devnum;
@@ -1719,7 +1719,7 @@ suspendProcessDone:
 								head = 1 - devnum;
 							if (driver->busClockFast) {
 								CameraDevice *activeDevice = &driver->device[devnum];
-								ksceKernelClearEventFlag(activeDevice->eventFlagId, ~3u);
+								sceKernelClearEventFlag(activeDevice->eventFlagId, ~3u);
 								SceCsiForDriver_A1D1805D(head);
 								activeDevice->setPowerState(devnum, 0);
 								SceCsiForDriver_4AE39F26(head);
@@ -1739,43 +1739,43 @@ suspendProcessDone:
 					sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 				}
 				work.timeout = 0xffffffff;
-				if (ksceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &work.timeout) < 0)
+				if (sceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &work.timeout) < 0)
 					goto suspendDevicesDone;
 				work.timeout = 0xffffffff;
-				if (ksceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &work.timeout) < 0)
+				if (sceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &work.timeout) < 0)
 					goto suspendDevicesUnlockFront;
 				if (kscePowerSetCameraBusClockFrequency(0) < 0)
 					goto suspendDevicesUnlockBoth;
 				cameraDriver->busClockFast = 0;
-				ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
-				ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 				work.timeout = 0xffffffff;
-				if (ksceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &work.timeout) < 0)
+				if (sceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &work.timeout) < 0)
 					goto suspendDevicesDone;
 				work.timeout = 0xffffffff;
-				if (ksceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &work.timeout) < 0)
+				if (sceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &work.timeout) < 0)
 					goto suspendDevicesUnlockFront;
 				if (SceClockgenForDriver_82F39378() < 0)
 					goto suspendDevicesUnlockBoth;
 				cameraDriver->clockEnabled = 0;
-				ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
-				ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 				cameraDriver->suspendState = 2;
 				goto suspendDevicesDone;
 suspendDevicesUnlockBoth:
-				ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
-				ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 				goto suspendDevicesDone;
 suspendDevicesUnlockFront:
-				ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 suspendDevicesDone:
-				ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 			}
 		}
 		if (events & 0x400) {
 			cameraWaitForDeviceReads();
 			work.timeout = 3000000;
-			if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
+			if (sceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
 				requested = 0;
 				for (devnum = 0; devnum != 2; devnum++) {
 					driver = cameraDriver;
@@ -1794,7 +1794,7 @@ suspendDevicesDone:
 					if (driver->activeEnabled && driver->powerEnabled && cameraResumeDevice(devnum) < 0)
 						continue;
 					intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
-					ksceKernelClearEventFlag(device->eventFlagId, ~4u);
+					sceKernelClearEventFlag(device->eventFlagId, ~4u);
 					device->suspendState = 0;
 					device->busy = 0;
 					if (device->requestedSuspendState == 1)
@@ -1802,15 +1802,15 @@ suspendDevicesDone:
 					sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 				}
 				if (requested)
-					ksceKernelSetEventFlag(cameraDriver->eventFlagId, 0x100);
+					sceKernelSetEventFlag(cameraDriver->eventFlagId, 0x100);
 				cameraDriver->suspendState = 0;
-				ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 			}
 		}
 		if (events & 0x1000) {
 			cameraWaitForDeviceReads();
 			work.timeout = 3000000;
-			if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
+			if (sceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
 				processId = cameraDriver->activeProcessId;
 				intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
 				processStatus = cameraGetProcessDeviceStatus(processId);
@@ -1835,7 +1835,7 @@ suspendDevicesDone:
 								    (hardwareInfo & 0xfe0000) == 0x400000)
 									head = 1 - devnum;
 								if (driver->busClockFast) {
-									ksceKernelClearEventFlag(device->eventFlagId, ~3u);
+									sceKernelClearEventFlag(device->eventFlagId, ~3u);
 									SceCsiForDriver_A1D1805D(head);
 									device->setPowerState(devnum, 0);
 									SceCsiForDriver_4AE39F26(head);
@@ -1857,7 +1857,7 @@ suspendDevicesDone:
 							    (hardwareInfo & 0xfe0000) == 0x400000)
 								head = 1 - devnum;
 							if (driver->busClockFast) {
-								ksceKernelClearEventFlag(device->eventFlagId, ~3u);
+								sceKernelClearEventFlag(device->eventFlagId, ~3u);
 								SceCsiForDriver_A1D1805D(head);
 								device->setPowerState(devnum, 0);
 								SceCsiForDriver_4AE39F26(head);
@@ -1866,15 +1866,15 @@ suspendDevicesDone:
 							if (!cameraHasStartedProcess(1 - devnum, 1)) {
 								cameraSetBusClockFrequency(0);
 								work.timeout = 0xffffffff;
-								if (ksceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &work.timeout) >= 0) {
+								if (sceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &work.timeout) >= 0) {
 									work.timeout = 0xffffffff;
-									if (ksceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &work.timeout) >= 0) {
+									if (sceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &work.timeout) >= 0) {
 										if (SceClockgenForDriver_82F39378() >= 0)
 											cameraDriver->clockEnabled = 0;
-										ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
-										ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+										sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+										sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 									} else {
-										ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+										sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 									}
 								}
 							}
@@ -1901,7 +1901,7 @@ suspendDevicesDone:
 							if (deviceFlags & 0x10)
 								cameraSetProcessState(processId, devnum, 2);
 							sceCameraConfigSetActiveStatusPid(devnum, processId, 0);
-							ksceKernelClearEventFlag(device->eventFlagId, ~4u);
+							sceKernelClearEventFlag(device->eventFlagId, ~4u);
 							device->pendingProcessId = processId;
 							sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 						}
@@ -1916,56 +1916,56 @@ switchedDevice:
 				driver->processSwitchInProgress = 0;
 				if (hasProcessStatus && driver->queuedActiveProcessId > 0) {
 					driver->activeProcessId = driver->queuedActiveProcessId;
-					ksceKernelSetEventFlag(driver->eventFlagId, 0x1000);
+					sceKernelSetEventFlag(driver->eventFlagId, 0x1000);
 					driver = cameraDriver;
 					driver->queuedActiveProcessId = -1;
 				}
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&driver->spinlock, intrStatus);
-				ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 			}
 		}
 		if (events & 0x2000) {
 			cameraWaitForDeviceReads();
 			work.timeout = 3000000;
-			if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
+			if (sceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
 				intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
 				cameraDriver->powerEnabled = 0;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 				cameraSuspendDevices(1);
-				ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 			}
 		}
 		if (events & 0x4000) {
 			cameraWaitForDeviceReads();
 			work.timeout = 3000000;
-			if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
+			if (sceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
 				cameraResumeDevices(1);
 				intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
 				cameraDriver->powerEnabled = 1;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
-				ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 			}
 		}
 		if (events & 0x8000) {
 			cameraWaitForDeviceReads();
 			work.timeout = 3000000;
-			if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
+			if (sceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
 				intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
 				cameraDriver->activeEnabled = 0;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 				cameraSuspendDevices(2);
-				ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 			}
 		}
 		if (events & 0x10000) {
 			cameraWaitForDeviceReads();
 			work.timeout = 3000000;
-			if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
+			if (sceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
 				cameraResumeDevices(2);
 				intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
 				cameraDriver->activeEnabled = 1;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
-				ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+				sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 			}
 		}
 	}
@@ -2036,7 +2036,7 @@ int cameraSetAlternateFrameBuffers(unsigned int mode)
 	callerContext = sceSyscallEnter();
 	processId = cameraGetCallerProcessId();
 	timeout = 3000000;
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
 		sceSyscallLeave(callerContext);
 		return (int)0x802e000a;
 	}
@@ -2049,7 +2049,7 @@ int cameraSetAlternateFrameBuffers(unsigned int mode)
 			__builtin_memcpy(cameraFrameBufferBase, cameraSramFrameBufferBase, sizeof(cameraSramFrameBufferBase));
 		result = 0;
 	}
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	sceSyscallLeave(callerContext);
 	return result;
 }
@@ -2060,7 +2060,7 @@ int SceCameraForDriver_D259707C(SceUID processId, unsigned int mode)
 	void *(*frameBuffers)[3];
 	int result;
 
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
 		return (int)0x802e000a;
 	if (mode > 1) {
 		result = (int)0x802e0000;
@@ -2072,7 +2072,7 @@ int SceCameraForDriver_D259707C(SceUID processId, unsigned int mode)
 		__builtin_memcpy(cameraFrameBufferBase, frameBuffers, sizeof(cameraSramFrameBufferBase));
 		result = 0;
 	}
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	return result;
 }
 
@@ -2100,7 +2100,7 @@ int SceCameraForDriver_E487870A(int devnum, SceCameraInfo *pInfo)
 
 	context = sceSyscallEnter();
 	timeout = 3000000;
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
 		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
@@ -2235,12 +2235,12 @@ setSize:
 			}
 		}
 	}
-	ksceKernelClearEventFlag(driver->device[devnum].eventFlagId, ~7u);
+	sceKernelClearEventFlag(driver->device[devnum].eventFlagId, ~7u);
 	goto out;
 badFramerate:
 	result = (int)0x802e0009;
 out:
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	sceSyscallLeave(context);
 	return result;
 }
@@ -2257,7 +2257,7 @@ int SceCameraForDriver_0E9B4B9E(int devnum)
 	context = sceSyscallEnter();
 	processId = cameraGetCallerProcessId();
 	timeout = 3000000;
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
 		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
@@ -2302,7 +2302,7 @@ int SceCameraForDriver_0E9B4B9E(int devnum)
 	}
 	result = 0;
 out:
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	sceSyscallLeave(context);
 	return result;
 }
@@ -2321,7 +2321,7 @@ int SceCameraForDriver_5338BE86(int devnum)
 	context = sceSyscallEnter();
 	processId = cameraGetCallerProcessId();
 	timeout = 3000000;
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
 		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
@@ -2384,24 +2384,24 @@ int SceCameraForDriver_5338BE86(int devnum)
 		if (result < 0)
 			goto cleanup;
 		timeout = -1;
-		result = ksceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &timeout);
+		result = sceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &timeout);
 		if (result < 0)
 			goto cleanup;
 		timeout = -1;
-		result = ksceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &timeout);
+		result = sceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &timeout);
 		if (result < 0) {
-			ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+			sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 			goto cleanup;
 		}
 		result = kscePowerSetCameraBusClockFrequency(166);
 		if (result < 0) {
-			ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
-			ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+			sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+			sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 			goto cleanup;
 		}
 		cameraDriver->busClockFast = 1;
-		ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
-		ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+		sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+		sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 	}
 	result = cameraCsiStart(devnum);
 	if (result < 0)
@@ -2444,7 +2444,7 @@ int SceCameraForDriver_5338BE86(int devnum)
 	result = sceCameraConfigSetStartedPid(devnum, processId, 1);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intr);
 	timeout = driver->device[devnum].config.frameTimeout;
-	ksceKernelWaitEventFlag(driver->device[devnum].eventFlagId, 3, 1, &eventPattern, &timeout);
+	sceKernelWaitEventFlag(driver->device[devnum].eventFlagId, 3, 1, &eventPattern, &timeout);
 	if (result >= 0)
 		goto out;
 cleanup:
@@ -2455,12 +2455,12 @@ cleanup:
 			cameraUnlockFrameBufferRanges(devnum, process, NULL, 0, 0);
 	}
 out:
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	sceSyscallLeave(context);
 	return result;
 earlyError:
 	sceSyscallLeave(context);
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	return result;
 }
 
@@ -2474,7 +2474,7 @@ int SceCameraForDriver_8C3354E5(int devnum)
 	context = sceSyscallEnter();
 	processId = cameraGetCallerProcessId();
 	timeout = 3000000;
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
 		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
@@ -2500,7 +2500,7 @@ int SceCameraForDriver_8C3354E5(int devnum)
 			result = (int)0x802e0000;
 		}
 	}
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	sceSyscallLeave(context);
 	return result;
 }
@@ -2573,7 +2573,7 @@ int SceCameraForDriver_2D12FDF3(int devnum, SceCameraReadV2 *read)
 	cameraDriver->device[devnum].readInProgress = 1;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 	timeout = 3000000;
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
 		if (process->config.wBuffer == 1)
 			cameraUnlockFrameBufferRanges(devnum, process, read, 0, 0);
 		result = (int)0x802e000a;
@@ -2583,7 +2583,7 @@ int SceCameraForDriver_2D12FDF3(int devnum, SceCameraReadV2 *read)
 	read->dwStatus = device->irqFrameCounter < 11 ? 2 : 0;
 	previousFrame = sceCameraConfigGetProcPrevFrame(devnum, processId);
 	currentFrame = sceCameraConfigGetProcFrame(devnum, processId);
-	ksceKernelClearEventFlag(device->eventFlagId, ~3u);
+	sceKernelClearEventFlag(device->eventFlagId, ~3u);
 	reverseFrame = device->waitingForReverseFrame;
 	sampleExposure = 0;
 	timestamp = device->timestamp;
@@ -2615,7 +2615,7 @@ int SceCameraForDriver_2D12FDF3(int devnum, SceCameraReadV2 *read)
 			if (result < 0) {
 				intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
 				cameraDriver->device[devnum].readInProgress = 0;
-				ksceKernelSetEventFlag(cameraDriver->eventFlagId,
+				sceKernelSetEventFlag(cameraDriver->eventFlagId,
 						devnum ? 0x40000 : 0x20000);
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 				if (process->config.wBuffer == 1)
@@ -2629,7 +2629,7 @@ int SceCameraForDriver_2D12FDF3(int devnum, SceCameraReadV2 *read)
 		result = 0;
 	}
 	if (sampleColor) {
-		ksceKernelSetEventFlag(cameraDriver->eventFlagId, devnum ? 2 : 1);
+		sceKernelSetEventFlag(cameraDriver->eventFlagId, devnum ? 2 : 1);
 		result = 0;
 	}
 	if (read->sizeThis > 47 && previousFrame == currentFrame) {
@@ -2641,22 +2641,22 @@ int SceCameraForDriver_2D12FDF3(int devnum, SceCameraReadV2 *read)
 			read->qwFrame = device->frame;
 			read->qwTimestamp = sceCameraConfigGetProcTimestamp(devnum, processId);
 			cameraDriver->device[devnum].readInProgress = 0;
-			ksceKernelSetEventFlag(cameraDriver->eventFlagId, devnum ? 0x40000 : 0x20000);
+			sceKernelSetEventFlag(cameraDriver->eventFlagId, devnum ? 0x40000 : 0x20000);
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 			result = 0;
 			if (process->config.wBuffer == 1)
 				result = cameraUnlockFrameBufferRanges(devnum, process, read, 0, 0);
-			ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+			sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 			sceKernelDelayThread(2000);
 			goto out;
 		}
 		timeout = cameraDriver->device[devnum].config.frameTimeout;
 		if (reverseFrame) {
-			ksceKernelWaitEventFlag(cameraDriver->device[devnum].eventFlagId, 2, 1,
+			sceKernelWaitEventFlag(cameraDriver->device[devnum].eventFlagId, 2, 1,
 					&events, &timeout);
-			ksceKernelClearEventFlag(cameraDriver->device[devnum].eventFlagId, ~2u);
+			sceKernelClearEventFlag(cameraDriver->device[devnum].eventFlagId, ~2u);
 		}
-		result = ksceKernelWaitEventFlag(cameraDriver->device[devnum].eventFlagId,
+		result = sceKernelWaitEventFlag(cameraDriver->device[devnum].eventFlagId,
 				7, 1, &events, &timeout);
 		if ((events & 4) != 0 || result < 0) {
 			intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
@@ -2670,11 +2670,11 @@ int SceCameraForDriver_2D12FDF3(int devnum, SceCameraReadV2 *read)
 				result = 0;
 			}
 			cameraDriver->device[devnum].readInProgress = 0;
-			ksceKernelSetEventFlag(cameraDriver->eventFlagId, devnum ? 0x40000 : 0x20000);
+			sceKernelSetEventFlag(cameraDriver->eventFlagId, devnum ? 0x40000 : 0x20000);
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 			if (process->config.wBuffer == 1)
 				cameraUnlockFrameBufferRanges(devnum, process, read, 0, 0);
-			ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+			sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 			if (delay)
 				sceKernelDelayThread(delay);
 			goto out;
@@ -2809,10 +2809,10 @@ transferFrame:
 finishRead:
 	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
 	cameraDriver->device[devnum].readInProgress = 0;
-	ksceKernelSetEventFlag(cameraDriver->eventFlagId, devnum ? 0x40000 : 0x20000);
+	sceKernelSetEventFlag(cameraDriver->eventFlagId, devnum ? 0x40000 : 0x20000);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 unlock:
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 out:
 	sceSyscallLeave(context);
 	return result;
@@ -2830,7 +2830,7 @@ int SceCameraForDriver_C2E71BE8(int devnum, int attribute, int *pValue, int flag
 
 	context = sceSyscallEnter();
 	work.timeout = 3000000;
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) < 0) {
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) < 0) {
 		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
@@ -2851,7 +2851,7 @@ int SceCameraForDriver_C2E71BE8(int devnum, int attribute, int *pValue, int flag
 			result &= result >> 31;
 		}
 	}
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	sceSyscallLeave(context);
 	return result;
 }
@@ -2867,7 +2867,7 @@ int SceCameraForDriver_FE3C170C(int devnum, int attribute, int *pValue, int flag
 
 	context = sceSyscallEnter();
 	work.timeout = 3000000;
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) < 0) {
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) < 0) {
 		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
@@ -2888,7 +2888,7 @@ int SceCameraForDriver_FE3C170C(int devnum, int attribute, int *pValue, int flag
 			result &= result >> 31;
 		}
 	}
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	sceSyscallLeave(context);
 	return result;
 }
@@ -2900,7 +2900,7 @@ int SceCameraForDriver_D56A12BD(int devnum, int attribute, int value, int flags)
 
 	context = sceSyscallEnter();
 	timeout = 3000000;
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
 		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
@@ -2908,7 +2908,7 @@ int SceCameraForDriver_D56A12BD(int devnum, int attribute, int value, int flags)
 		result = (int)0x802e0000;
 	else
 		result = sce_camera_set_attribute(devnum, attribute, value, flags);
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	sceSyscallLeave(context);
 	return result;
 }
@@ -2920,7 +2920,7 @@ int SceCameraForDriver_B312CE90(int devnum, int attribute, int value, int flags)
 
 	context = sceSyscallEnter();
 	timeout = 3000000;
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
 		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
@@ -2928,7 +2928,7 @@ int SceCameraForDriver_B312CE90(int devnum, int attribute, int value, int flags)
 		result = sce_camera_set_attribute(devnum, attribute, value, flags);
 	else
 		result = (int)0x802e0000;
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	sceSyscallLeave(context);
 	return result;
 }
@@ -2944,7 +2944,7 @@ int SceCameraForDriver_E81EADE1(SceUID processId)
 		cameraDriver->queuedActiveProcessId = processId;
 	else
 		cameraDriver->activeProcessId = processId;
-	ksceKernelSetEventFlag(cameraDriver->eventFlagId, 0x1000);
+	sceKernelSetEventFlag(cameraDriver->eventFlagId, 0x1000);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 	return 0;
 }
@@ -2955,7 +2955,7 @@ int SceCameraForDriver_93477709(int devnum, SceUInt16 address, SceUInt8 value)
 	CameraDriver *driver;
 	int result, intrStatus;
 
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
 		return (int)0x802e000a;
 	if ((devnum & ~1u) != 0) {
 		result = (int)0x802e0000;
@@ -2969,7 +2969,7 @@ int SceCameraForDriver_93477709(int devnum, SceUInt16 address, SceUInt8 value)
 			result &= result >> 31;
 		}
 	}
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	return result;
 }
 
@@ -2979,7 +2979,7 @@ int SceCameraForDriver_B241F11F(int devnum, SceUInt16 address, SceUInt8 *value)
 	CameraDriver *driver;
 	int result, intrStatus;
 
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
 		return (int)0x802e000a;
 	if ((devnum & ~1u) != 0) {
 		result = (int)0x802e0000;
@@ -2993,7 +2993,7 @@ int SceCameraForDriver_B241F11F(int devnum, SceUInt16 address, SceUInt8 *value)
 			result &= result >> 31;
 		}
 	}
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	return result;
 }
 
@@ -3003,7 +3003,7 @@ int SceCameraForDriver_36C164BE(int devnum, const void *registers, unsigned int 
 	CameraDriver *driver;
 	int result, intrStatus;
 
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
 		return (int)0x802e000a;
 	if ((devnum & ~1u) != 0) {
 		result = (int)0x802e0000;
@@ -3017,7 +3017,7 @@ int SceCameraForDriver_36C164BE(int devnum, const void *registers, unsigned int 
 			result &= result >> 31;
 		}
 	}
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	return result;
 }
 
@@ -3028,7 +3028,7 @@ int SceCameraForDriver_6443EEDB(int devnum)
 	CameraDriver *driver;
 	int result, intrStatus, started;
 
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
 		return (int)0x802e000a;
 	if ((devnum & ~1u) != 0) {
 		result = (int)0x802e0000;
@@ -3070,28 +3070,28 @@ int SceCameraForDriver_6443EEDB(int devnum)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 	if (!started) {
 		timeout = ~0u;
-		result = ksceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &timeout);
+		result = sceKernelLockMutex(cameraDriver->device[0].mutexId, 1, &timeout);
 		if (result < 0)
 			goto out;
 		timeout = ~0u;
-		result = ksceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &timeout);
+		result = sceKernelLockMutex(cameraDriver->device[1].mutexId, 1, &timeout);
 		if (result < 0) {
-			ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+			sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
 			goto out;
 		}
 		result = SceClockgenForDriver_82F39378();
 		if (result < 0) {
-			ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
-			ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+			sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+			sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 			goto out;
 		}
 		cameraDriver->clockEnabled = 0;
-		ksceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
-		ksceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
+		sceKernelUnlockMutex(cameraDriver->device[0].mutexId, 1);
+		sceKernelUnlockMutex(cameraDriver->device[1].mutexId, 1);
 	}
 	result = driver->device[devnum].sensorType;
 out:
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	return result;
 }
 
@@ -3101,7 +3101,7 @@ int SceCameraForDriver_3590BB9B(int devnum, int enabled)
 	CameraDriver *driver;
 	int result, intrStatus;
 
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0)
 		return (int)0x802e000a;
 	if ((devnum & ~1u) != 0) {
 		result = (int)0x802e0000;
@@ -3115,7 +3115,7 @@ int SceCameraForDriver_3590BB9B(int devnum, int enabled)
 			result &= result >> 31;
 		}
 	}
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	return result;
 }
 
@@ -3179,7 +3179,7 @@ int SceCameraForDriver_EE3D4B1C(int devnum, SceFVector3 *pLocation)
 
 	context = sceSyscallEnter();
 	timeout = 3000000;
-	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
+	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
 		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
@@ -3194,7 +3194,7 @@ int SceCameraForDriver_EE3D4B1C(int devnum, SceFVector3 *pLocation)
 	} else {
 		result = (int)0x802e0002;
 	}
-	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
+	sceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	sceSyscallLeave(context);
 	return result;
 }

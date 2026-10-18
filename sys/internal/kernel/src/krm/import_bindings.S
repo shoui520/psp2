@@ -137,11 +137,11 @@ SceKernelUtilsForDriver_EDA97D6D:
 .size SceKernelUtilsForDriver_EDA97D6D, .-SceKernelUtilsForDriver_EDA97D6D
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelLockFastMutex
-.type ksceKernelLockFastMutex, %function
-ksceKernelLockFastMutex:
+.global lockFastMutex
+.type lockFastMutex, %function
+lockFastMutex:
 	.word 0x10, 0xe2c40624, 0x70627f3a, 0xe320f000
-.size ksceKernelLockFastMutex, .-ksceKernelLockFastMutex
+.size lockFastMutex, .-lockFastMutex
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
 .global sceKernelGetProcessId
@@ -151,18 +151,18 @@ sceKernelGetProcessId:
 .size sceKernelGetProcessId, .-sceKernelGetProcessId
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelInitializeFastMutex
-.type ksceKernelInitializeFastMutex, %function
-ksceKernelInitializeFastMutex:
+.global sceKernelInitializeFastMutex
+.type sceKernelInitializeFastMutex, %function
+sceKernelInitializeFastMutex:
 	.word 0x10, 0xe2c40624, 0xaf8e1266, 0xe320f000
-.size ksceKernelInitializeFastMutex, .-ksceKernelInitializeFastMutex
+.size sceKernelInitializeFastMutex, .-sceKernelInitializeFastMutex
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelUnlockFastMutex
-.type ksceKernelUnlockFastMutex, %function
-ksceKernelUnlockFastMutex:
+.global sceKernelUnlockFastMutex
+.type sceKernelUnlockFastMutex, %function
+sceKernelUnlockFastMutex:
 	.word 0x10, 0xe2c40624, 0xdb395782, 0xe320f000
-.size ksceKernelUnlockFastMutex, .-ksceKernelUnlockFastMutex
+.size sceKernelUnlockFastMutex, .-sceKernelUnlockFastMutex
 .section .vitalink.fstubs.SceSblSsMgrForDriver, "ax", %progbits
 .balign 4
 .global ksceSblSsDecryptWithPortability
@@ -348,11 +348,11 @@ SceKernelUtilsForDriver_EDA97D6D:
 .size SceKernelUtilsForDriver_EDA97D6D, .-SceKernelUtilsForDriver_EDA97D6D
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelLockFastMutex
-.type ksceKernelLockFastMutex, %function
-ksceKernelLockFastMutex:
+.global lockFastMutex
+.type lockFastMutex, %function
+lockFastMutex:
 	.word 0x10, 0xe2c40624, 0x70627f3a, 0xe320f000
-.size ksceKernelLockFastMutex, .-ksceKernelLockFastMutex
+.size lockFastMutex, .-lockFastMutex
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
 .global sceKernelGetProcessId
@@ -362,18 +362,18 @@ sceKernelGetProcessId:
 .size sceKernelGetProcessId, .-sceKernelGetProcessId
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelInitializeFastMutex
-.type ksceKernelInitializeFastMutex, %function
-ksceKernelInitializeFastMutex:
+.global sceKernelInitializeFastMutex
+.type sceKernelInitializeFastMutex, %function
+sceKernelInitializeFastMutex:
 	.word 0x10, 0xe2c40624, 0xaf8e1266, 0xe320f000
-.size ksceKernelInitializeFastMutex, .-ksceKernelInitializeFastMutex
+.size sceKernelInitializeFastMutex, .-sceKernelInitializeFastMutex
 .section .vitalink.fstubs.SceThreadmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelUnlockFastMutex
-.type ksceKernelUnlockFastMutex, %function
-ksceKernelUnlockFastMutex:
+.global sceKernelUnlockFastMutex
+.type sceKernelUnlockFastMutex, %function
+sceKernelUnlockFastMutex:
 	.word 0x10, 0xe2c40624, 0xdb395782, 0xe320f000
-.size ksceKernelUnlockFastMutex, .-ksceKernelUnlockFastMutex
+.size sceKernelUnlockFastMutex, .-sceKernelUnlockFastMutex
 .section .vitalink.fstubs.SceSblSsMgrForDriver, "ax", %progbits
 .balign 4
 .global ksceSblSsDecryptWithPortability

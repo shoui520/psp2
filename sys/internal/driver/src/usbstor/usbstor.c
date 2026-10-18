@@ -282,8 +282,8 @@ static int stopStorage(int size, void *args, void *ctx)
 {
 	if (s.flags & FLAG_ATTACHED)
 		return STOR_ERROR_BUSY;
-	ksceKernelSetEventFlag(s.eventFlag, EVF_STOP);
-	ksceKernelWaitEventFlag(s.eventFlag, EVF_STOPPED, SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL,
+	sceKernelSetEventFlag(s.eventFlag, EVF_STOP);
+	sceKernelWaitEventFlag(s.eventFlag, EVF_STOPPED, SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL,
 				NULL);
 	for (int i = s.count - 1; i >= 0; i--) {
 		if (s.functions[i]->stop)
@@ -344,7 +344,7 @@ static int startStorage(int type, void *args, void *ctx)
 		}
 	}
 	s.status |= STATUS_STARTED;
-	ksceKernelSetEventFlag(s.eventFlag, EVF_START);
+	sceKernelSetEventFlag(s.eventFlag, EVF_START);
 	info[1] = s.type == USBSTOR_TYPE_DISK ? 5 : 0xffff;
 	SceUdcdForDriver_78BF2A28(info);
 	return result;
@@ -360,7 +360,7 @@ static int attachStorage(int version, void *ctx)
 	s.flags |= FLAG_ATTACHED;
 	initializeRequests();
 	s.status = STATUS_READY | STATUS_STARTED;
-	ksceKernelSetEventFlag(s.eventFlag, EVF_ATTACH);
+	sceKernelSetEventFlag(s.eventFlag, EVF_ATTACH);
 	return ksceUdcdGetDeviceInfo(&info);
 }
 
@@ -368,13 +368,13 @@ static void detachStorage(void *ctx)
 {
 	notifyFunctions(USBSTOR_EVENT_DETACH);
 	s.flags &= ~FLAG_ATTACHED;
-	ksceKernelSetEventFlag(s.eventFlag, EVF_DETACH);
+	sceKernelSetEventFlag(s.eventFlag, EVF_DETACH);
 }
 
 static int changeSetting(int number, int alternate, int bus)
 {
 	s.flags |= FLAG_SETTING;
-	return ksceKernelSetEventFlag(s.eventFlag, EVF_SETTING);
+	return sceKernelSetEventFlag(s.eventFlag, EVF_SETTING);
 }
 
 static int processRequest(int recipient, int number, SceUdcdEP0DeviceRequest *req, void *ctx)
@@ -396,7 +396,7 @@ static int processRequest(int recipient, int number, SceUdcdEP0DeviceRequest *re
 			ksceUdcdReqCancelAll(&s.endpoints[2]);
 			ksceUdcdClearFIFO(&s.endpoints[1]);
 			ksceUdcdClearFIFO(&s.endpoints[2]);
-			ksceKernelSetEventFlag(s.eventFlag, EVF_RESET);
+			sceKernelSetEventFlag(s.eventFlag, EVF_RESET);
 			return 0;
 		}
 		if (req->bmRequestType == (USB_CTRLTYPE_DIR_DEVICE2HOST | USB_CTRLTYPE_TYPE_CLASS |
@@ -418,46 +418,46 @@ static void completeControl(SceUdcdDeviceRequest *req)
 static void completeSend(SceUdcdDeviceRequest *req)
 {
 	if (req->returnCode >= 0) {
-		ksceKernelSetEventFlag(s.eventFlag, EVF_SENT);
+		sceKernelSetEventFlag(s.eventFlag, EVF_SENT);
 		req->returnCode = REQUEST_IDLE;
 	} else if (req->returnCode == SCE_UDCD_RETCODE_CANCEL_TRANSMISSION) {
-		ksceKernelSetEventFlag(s.eventFlag, EVF_IN_CANCELLED);
-		ksceKernelClearEventFlag(s.eventFlag, ~EVF_IN_CANCELLED);
+		sceKernelSetEventFlag(s.eventFlag, EVF_IN_CANCELLED);
+		sceKernelClearEventFlag(s.eventFlag, ~EVF_IN_CANCELLED);
 	}
 }
 
 static void completeReceive(SceUdcdDeviceRequest *req)
 {
 	if (req->returnCode >= 0) {
-		ksceKernelSetEventFlag(s.eventFlag, EVF_RECEIVED);
+		sceKernelSetEventFlag(s.eventFlag, EVF_RECEIVED);
 		req->returnCode = REQUEST_IDLE;
 	} else if (req->returnCode == SCE_UDCD_RETCODE_CANCEL_TRANSMISSION) {
-		ksceKernelSetEventFlag(s.eventFlag, EVF_OUT_CANCELLED);
-		ksceKernelClearEventFlag(s.eventFlag, ~EVF_OUT_CANCELLED);
+		sceKernelSetEventFlag(s.eventFlag, EVF_OUT_CANCELLED);
+		sceKernelClearEventFlag(s.eventFlag, ~EVF_OUT_CANCELLED);
 	}
 }
 
 static void completeCbw(SceUdcdDeviceRequest *req)
 {
 	if (req->returnCode >= 0) {
-		ksceKernelSetEventFlag(s.eventFlag, EVF_CBW_RECEIVED);
+		sceKernelSetEventFlag(s.eventFlag, EVF_CBW_RECEIVED);
 		req->returnCode = REQUEST_IDLE;
 	} else if (s.flags & FLAG_SETTING) {
-		ksceKernelSetEventFlag(s.eventFlag, EVF_SETTING);
+		sceKernelSetEventFlag(s.eventFlag, EVF_SETTING);
 	} else {
-		ksceKernelSetEventFlag(s.eventFlag, EVF_OUT_CANCELLED);
-		ksceKernelClearEventFlag(s.eventFlag, ~EVF_OUT_CANCELLED);
+		sceKernelSetEventFlag(s.eventFlag, EVF_OUT_CANCELLED);
+		sceKernelClearEventFlag(s.eventFlag, ~EVF_OUT_CANCELLED);
 	}
 }
 
 static void completeCsw(SceUdcdDeviceRequest *req)
 {
 	if (req->returnCode >= 0) {
-		ksceKernelSetEventFlag(s.eventFlag, EVF_CSW_SENT);
+		sceKernelSetEventFlag(s.eventFlag, EVF_CSW_SENT);
 		req->returnCode = REQUEST_IDLE;
 	} else if (req->returnCode == SCE_UDCD_RETCODE_CANCEL_TRANSMISSION) {
-		ksceKernelSetEventFlag(s.eventFlag, EVF_IN_CANCELLED);
-		ksceKernelClearEventFlag(s.eventFlag, ~EVF_IN_CANCELLED);
+		sceKernelSetEventFlag(s.eventFlag, EVF_IN_CANCELLED);
+		sceKernelClearEventFlag(s.eventFlag, ~EVF_IN_CANCELLED);
 	}
 }
 
@@ -465,7 +465,7 @@ static void cancelEndpoint(int ep, unsigned cancelled)
 {
 	unsigned timeout = TRANSFER_TIMEOUT;
 	if (ksceUdcdReqCancelAll(&s.endpoints[ep]) != (int)SCE_UDCD_ERROR_DRIVER_IN_PROGRESS ||
-	    ksceKernelWaitEventFlag(s.eventFlag, cancelled, SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL,
+	    sceKernelWaitEventFlag(s.eventFlag, cancelled, SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL,
 				    &timeout) >= 0)
 		ksceUdcdClearFIFO(&s.endpoints[ep]);
 }
@@ -482,7 +482,7 @@ static int flushSend(unsigned timeout)
 	result = ksceUdcdReqSend(&s.send.request);
 	if (result < 0)
 		return result;
-	result = ksceKernelWaitEventFlag(s.eventFlag, EVF_IN_CANCELLED | EVF_SENT,
+	result = sceKernelWaitEventFlag(s.eventFlag, EVF_IN_CANCELLED | EVF_SENT,
 					 SCE_KERNEL_EVF_WAITMODE_OR |
 					 SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, &timeout);
 	s.send.request.size = 0;
@@ -579,7 +579,7 @@ int SceUsbstorForDriver_F1A690DC(void *buffer, unsigned size, unsigned timeout)
 	result = ksceUdcdReqRecv(&s.receive.request);
 	if (result < 0)
 		return result;
-	result = ksceKernelWaitEventFlag(s.eventFlag, EVF_OUT_CANCELLED | EVF_RECEIVED,
+	result = sceKernelWaitEventFlag(s.eventFlag, EVF_OUT_CANCELLED | EVF_RECEIVED,
 					 SCE_KERNEL_EVF_WAITMODE_OR |
 					 SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, &timeout);
 	if (!(bits & EVF_OUT_CANCELLED) && s.receive.request.returnCode >= 0) {
@@ -830,7 +830,7 @@ static int initializeDescriptors(void)
 	s.product.bDescriptorType = USB_DT_STRING;
 	copyBytes((uint8_t *)s.product.bString, (const uint8_t *)names[s.type == USBSTOR_TYPE_CDROM],
 		  sizeof(names[0]));
-	s.eventFlag = ksceKernelCreateEventFlag("SceUsbstor", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
+	s.eventFlag = sceKernelCreateEventFlag("SceUsbstor", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (s.eventFlag < 0) {
 		SceSysmemForDriver_009E1C61(s.memblock);
 		return STOR_ERROR_GENERAL;
@@ -874,7 +874,7 @@ static int storageThread(SceSize size, void *args)
 	}
 	copyBytes((uint8_t *)s.serial.bString, s.identity + 31, 34);
 start:
-	ksceKernelWaitEventFlag(s.eventFlag, EVF_START,
+	sceKernelWaitEventFlag(s.eventFlag, EVF_START,
 				SCE_KERNEL_EVF_WAITMODE_OR | SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 				&bits, NULL);
 next:
@@ -896,14 +896,14 @@ sendCsw:
 	goto waitNormal;
 waitTimed:
 	timeout = 1000;
-	if (ksceKernelWaitEventFlag(s.eventFlag, EVF_TRANSPORT,
+	if (sceKernelWaitEventFlag(s.eventFlag, EVF_TRANSPORT,
 				    SCE_KERNEL_EVF_WAITMODE_OR | SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 				    &bits, &timeout) < 0)
 		goto next;
 	goto events;
 waitNormal:
 	timeout = 1000;
-	if (ksceKernelWaitEventFlag(s.eventFlag, EVF_TRANSPORT,
+	if (sceKernelWaitEventFlag(s.eventFlag, EVF_TRANSPORT,
 				    SCE_KERNEL_EVF_WAITMODE_OR | SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 				    &bits, NULL) < 0)
 		goto wake;
@@ -1141,7 +1141,7 @@ receive:
 		timeout = TRANSFER_TIMEOUT;
 		result = ksceUdcdReqCancelAll(&s.endpoints[2]);
 		if (result != (int)SCE_UDCD_ERROR_DRIVER_IN_PROGRESS ||
-		    ksceKernelWaitEventFlag(s.eventFlag, EVF_OUT_CANCELLED,
+		    sceKernelWaitEventFlag(s.eventFlag, EVF_OUT_CANCELLED,
 					    SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					    NULL, &timeout) >= 0)
 			ksceUdcdClearFIFO(&s.endpoints[2]);
@@ -1150,7 +1150,7 @@ receive:
 		goto waitTimed;
 	goto waitNormal;
 wake:
-	ksceKernelSetEventFlag(s.eventFlag, EVF_STOPPED);
+	sceKernelSetEventFlag(s.eventFlag, EVF_STOPPED);
 	goto start;
 }
 
@@ -1180,17 +1180,17 @@ int module_start(SceSize size, void *args)
 	s.driver.stringDescriptorSerial = &s.serial;
 	/* everything from deviceClass up to the driver */
 	memset(&s.deviceClass, 0, offsetof(__typeof__(s), driver) - offsetof(__typeof__(s), deviceClass));
-	s.thread = ksceKernelCreateThread("SceUsbstor", storageThread, 0x1f, 4096, 0,
+	s.thread = sceKernelCreateThread("SceUsbstor", storageThread, 0x1f, 4096, 0,
 					  STORAGE_THREAD_CPU, NULL);
 	if (s.thread < 0)
 		return SCE_KERNEL_START_FAILED;
-	if (ksceKernelStartThread(s.thread, 0, NULL) < 0) {
+	if (sceKernelStartThread(s.thread, 0, NULL) < 0) {
 		s.status &= ~(STATUS_READY | STATUS_STARTED);
-		ksceKernelDeleteThread(s.thread);
+		sceKernelDeleteThread(s.thread);
 		return SCE_KERNEL_START_FAILED;
 	}
 	if (ksceUdcdRegister(&s.driver) < 0) {
-		ksceKernelDeleteThread(s.thread);
+		sceKernelDeleteThread(s.thread);
 		return SCE_KERNEL_START_FAILED;
 	}
 	return SCE_KERNEL_START_SUCCESS;
@@ -1198,9 +1198,9 @@ int module_start(SceSize size, void *args)
 
 int module_stop(SceSize size, void *args)
 {
-	ksceKernelDeleteThread(s.thread);
-	ksceKernelWaitThreadEnd(s.thread, NULL, NULL);
-	ksceKernelDeleteEventFlag(s.eventFlag);
+	sceKernelDeleteThread(s.thread);
+	sceKernelWaitThreadEnd(s.thread, NULL, NULL);
+	sceKernelDeleteEventFlag(s.eventFlag);
 	SceSysmemForDriver_009E1C61(s.memblock);
 	s.status = (s.status & ~(STATUS_READY | STATUS_STARTED)) | STATUS_STOPPED;
 	return ksceUdcdUnregister(&s.driver) < 0 ? SCE_KERNEL_STOP_FAIL : SCE_KERNEL_STOP_SUCCESS;

@@ -442,11 +442,11 @@ static int DeleteProcess(SceProcessObject *process)
 {
 	int ret;
 
-	ksceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_NOT_DEBUG_SUSPENDED);
+	sceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_NOT_DEBUG_SUSPENDED);
 	if (process->type != PROCESS_TYPE_SHELL || SceDipswForDriver_A98FC2FD(0xc2) != 0)
 		ksceKernelUnloadProcessModules(process->pid);
 	process->status = (process->status & ~PROCESS_STATE_MASK) | PROCESS_STATE_EXITED;
-	ksceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_DELETED);
+	sceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_DELETED);
 	ret = sceKernelThreadMgrProcessDeleteBeforePUIDClose(process);
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 4180,
@@ -487,19 +487,19 @@ static int ProcessThreadSuspend(SceUID thid, SceUInt32 state)
 		}
 		return 0;
 	case 0x11:
-		ret = ksceKernelDebugSuspendThread(thid, 2);
+		ret = sceKernelDebugSuspendThread(thid, 2);
 		break;
 	case 0x12:
-		ret = ksceKernelDebugSuspendThread(thid, 0x1000);
+		ret = sceKernelDebugSuspendThread(thid, 0x1000);
 		break;
 	case 0x13:
-		ret = ksceKernelDebugSuspendThread(thid, 0x100);
+		ret = sceKernelDebugSuspendThread(thid, 0x100);
 		break;
 	case 0x14:
-		ret = ksceKernelDebugSuspendThread(thid, 0x200);
+		ret = sceKernelDebugSuspendThread(thid, 0x200);
 		break;
 	case 0x15:
-		ret = ksceKernelDebugSuspendThread(thid, 0x400);
+		ret = sceKernelDebugSuspendThread(thid, 0x400);
 		break;
 	default:
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 773, "unexpected status 0x%08x\n", state);
@@ -524,7 +524,7 @@ static int ProcessResourceRecovery(SceProcessObject *process, int destroyed)
 
 	intr = SceCpuForDriver_D32ACE9E(&process->callbackLock);
 	for (callback = process->callbacks; callback != NULL; callback = callback->next)
-		ksceKernelNotifyCallback(callback->cb, process->pid);
+		sceKernelNotifyCallback(callback->cb, process->pid);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->callbackLock, intr);
 
 	if (process->entryHeap != -1) {
@@ -637,7 +637,7 @@ static int ProcessResourceRecovery(SceProcessObject *process, int destroyed)
 		}
 	}
 	if (process->msgPipeLock.next != NULL)
-		ksceKernelFinalizeFastMutex((SceKernelFastMutex *)&process->msgPipeLock);
+		sceKernelFinalizeFastMutex((SceKernelFastMutex *)&process->msgPipeLock);
 	if (process->objectHeap[0] != NULL && process->type != PROCESS_TYPE_MINI_APP) {
 		ret = SceSysmemForKernel_2F526AB8(process->objectHeap[0]);
 		if (ret < 0) {
@@ -660,7 +660,7 @@ static int ProcessResourceRecovery(SceProcessObject *process, int destroyed)
 		}
 	}
 	if (process->eventSema != -1) {
-		ret = ksceKernelDeleteSema(process->eventSema);
+		ret = sceKernelDeleteSema(process->eventSema);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xf, 2988, "sceKernelDeleteSema failed. 0x%08x\n", ret);
 			SCE_DBG_ASSERT_FAIL(2989);
@@ -668,7 +668,7 @@ static int ProcessResourceRecovery(SceProcessObject *process, int destroyed)
 		}
 	}
 	if (process->lockSema != -1) {
-		ret = ksceKernelDeleteSema(process->lockSema);
+		ret = sceKernelDeleteSema(process->lockSema);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xf, 2997, "sceKernelDeleteSema failed. 0x%08x\n", ret);
 			SCE_DBG_ASSERT_FAIL(2998);
@@ -676,7 +676,7 @@ static int ProcessResourceRecovery(SceProcessObject *process, int destroyed)
 		}
 	}
 	if (process->eventFlag != -1) {
-		ret = ksceKernelDeleteEventFlag(process->eventFlag);
+		ret = sceKernelDeleteEventFlag(process->eventFlag);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 3006, "sceKernelDeleteEventFlag failed. 0x%08x\n", ret);
 			SCE_DBG_ASSERT_FAIL(3007);
@@ -718,7 +718,7 @@ static int sceKernelProcessResourceRecovery(SceSize args, void *argp)
 
 	(void)args;
 	(void)argp;
-	while ((ret = ksceKernelWaitEventFlag(g_recoveryEventFlag, 1, 5, NULL, NULL)) >= 0) {
+	while ((ret = sceKernelWaitEventFlag(g_recoveryEventFlag, 1, 5, NULL, NULL)) >= 0) {
 		for (;;) {
 			intr = SceCpuForDriver_D32ACE9E(&g_recoveryLock);
 			node = g_recoveryList.next;
@@ -746,7 +746,7 @@ static SceUInt32 ProcessEventTimeupHandler(SceUID timer, void *arg)
 	SCE_DBG_PRINTF_LEVEL(1, 0xb, 671,
 		"process terminate processing has timed out(%d sec). priority change %d => %d\n",
 		10, 0x60, 0x3f);
-	ksceKernelChangeThreadPriority(g_eventThread, 0x3f);
+	sceKernelChangeThreadPriority2(g_eventThread, 0x3f);
 	return 0;
 }
 
@@ -756,8 +756,8 @@ static void CloseStdio(SceProcessObject *process)
 	SceUID pid;
 	int permission;
 
-	permission = ksceKernelSetPermission(0x80);
-	pid = ksceKernelSetProcessIdToTLS(KERNEL_PID);
+	permission = sceKernelSetThreadAccessLevel(0x80);
+	pid = SceThreadmgrForDriver_0486F239(KERNEL_PID);
 	if (process->stdioPuid[0] != -1)
 		SceSysmemForDriver_84A4AF5E(process->pid, process->stdioPuid[0]);
 	if (process->stdioFd[0] != -1)
@@ -774,8 +774,8 @@ static void CloseStdio(SceProcessObject *process)
 		SceSysmemForDriver_84A4AF5E(process->pid, process->stdioPuid[3]);
 	if (process->stdioFd[3] != -1)
 		ksceIoClose(process->stdioFd[3]);
-	ksceKernelSetProcessIdToTLS(pid);
-	ksceKernelSetPermission(permission);
+	SceThreadmgrForDriver_0486F239(pid);
+	sceKernelSetThreadAccessLevel(permission);
 }
 
 /* SGI 6: every other core waits here while _SuspendProcess scans the threads */
@@ -877,7 +877,7 @@ inline __attribute__((always_inline)) SceProcessObject *GetCurrentProcess(void)
 /* name unknown: a free slot in the event thread's request permission */
 static int PollRequestPermission(void)
 {
-	return ksceKernelPollSema(g_requestSema, 1);
+	return sceKernelPollSema(g_requestSema, 1);
 }
 
 static int UIDtoProcessAndRefer(SceUID pid, SceProcessObject **process)
@@ -1115,7 +1115,7 @@ static int sceKernelPermitProcEvent(SceUID pid)
 	}
 	sema = process->eventSema;
 	sceGUIDReleaseObject(process->pid);
-	ret = ksceKernelSignalSema(sema, 1);
+	ret = sceKernelSignalSema(sema, 1);
 	return ret < 0 ? ret : 0;
 }
 
@@ -1135,7 +1135,7 @@ static int sceKernelInhibitProcEvent(SceUID pid)
 	}
 	sema = process->eventSema;
 	sceGUIDReleaseObject(process->pid);
-	ret = ksceKernelWaitSema(sema, 1, NULL);
+	ret = sceKernelWaitSema(sema, 1, NULL);
 	return ret < 0 ? ret : 0;
 }
 
@@ -1196,7 +1196,7 @@ static int ProcessTerminationCallbackCore(SceUID pid, SceUID cb, int unregister)
 		sceGUIDReleaseObject(process->pid);
 		goto out;
 	}
-	ret = ksceKernelGetThreadmgrUIDClass(guid);
+	ret = sceKernelGetThreadmgrUIDClass(guid);
 	if (ret < 0) {
 		sceGUIDReleaseObject(process->pid);
 		goto out;
@@ -1304,7 +1304,7 @@ static int Destructor(SceProcessObject *process)
 		intr = SceCpuForDriver_D32ACE9E(&g_recoveryLock);
 		ListAddTail(&g_recoveryList, &process->recoveryNode);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_recoveryLock, intr);
-		ret = ksceKernelSetEventFlag(g_recoveryEventFlag, 1);
+		ret = sceKernelSetEventFlag(g_recoveryEventFlag, 1);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 2788,
 				"sceKernelSetEventFlag(ResourceRecoveryThread) failed. 0x%08x\n", ret);
@@ -1487,14 +1487,14 @@ static int ProcessThreadResume(SceUID thid, SceUInt32 state)
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 804, "sceKernelResumeThread(0x%08x) failed 0x%08x\n",
 					     thid, ret);
 	} else if (state == PROCESS_STATE_DEBUG_SUSPENDED) {
-		ret = ksceKernelDebugResumeThread(thid, 2);
+		ret = sceKernelDebugResumeThread(thid, 2);
 		if (ret < 0)
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 812,
 					     "sceKernelDebugResumeThread(0x%08x) failed 0x%08x\n", thid, ret);
 	} else {
 		ret = 0;
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 819, "sceKernelDebugResumeThread(0x%08x): %d\n", thid,
-				     ksceKernelIsThreadDebugSuspended(thid));
+				     SceThreadmgrForDriver_A0B1AB21(thid));
 	}
 	return ret;
 }
@@ -1547,7 +1547,7 @@ static int sceKernelProcessPreloadModule(SceSize args, void *argp)
 		process->status = (process->status & ~PROCESS_STATE_MASK) | PROCESS_STATE_RUNNING;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 	} else {
-		ret = ksceKernelWaitEventFlag(process->eventFlag, PROCESS_EVF_DEBUG_RESUME, 5, NULL, NULL);
+		ret = sceKernelWaitEventFlag(process->eventFlag, PROCESS_EVF_DEBUG_RESUME, 5, NULL, NULL);
 		if (ret < 0)
 			goto out;
 		intr = SceCpuForDriver_D32ACE9E(&process->lock);
@@ -1606,9 +1606,9 @@ static int sceKernelProcessPreloadModule(SceSize args, void *argp)
 		budget = process->budget;
 	}
 	BudgetUnlock(budget);
-	ret = ksceKernelStartThread(process->mainThread, param->args, param->argp);
+	ret = sceKernelStartThread(process->mainThread, param->args, param->argp);
 	if (ret >= 0) {
-		ksceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_STARTED);
+		sceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_STARTED);
 		intr = SceCpuForDriver_D32ACE9E(&process->lock);
 		process->status &= ~PROCESS_FLAG_STARTING;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
@@ -1755,7 +1755,7 @@ static inline __attribute__((always_inline)) int OpenStdio(SceProcessObject *pro
 	SceUID pid;
 	int ret;
 
-	pid = ksceKernelSetProcessIdToTLS(KERNEL_PID);
+	pid = SceThreadmgrForDriver_0486F239(KERNEL_PID);
 	ret = OpenStdioFile(process, "tty0:", 0);
 	if (ret < 0)
 		goto out;
@@ -1768,7 +1768,7 @@ static inline __attribute__((always_inline)) int OpenStdio(SceProcessObject *pro
 	if (SceDipswForDriver_A98FC2FD(0xb8) != 0)
 		ret = OpenStdioFile(process, "tty7:", 3);
 out:
-	ksceKernelSetProcessIdToTLS(pid);
+	SceThreadmgrForDriver_0486F239(pid);
 	return ret;
 }
 
@@ -1846,20 +1846,20 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 	process->type = type;
 	process->randomLock = 0;
 
-	ret = ksceKernelCreateEventFlag("SceKernelProcessmgrProc", 0x9000,
+	ret = sceKernelCreateEventFlag("SceKernelProcessmgrProc", 0x9000,
 					PROCESS_EVF_NOT_DEBUG_SUSPENDED, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 3483, "Create EventFlag failed 0x%08x\n", ret);
 		goto failed;
 	}
 	process->eventFlag = ret;
-	ret = ksceKernelCreateSema("SceKernelProcessmgrProcLock", 0x8000, 1, 1, NULL);
+	ret = sceKernelCreateSema("SceKernelProcessmgrProcLock", 0x8000, 1, 1, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 3494, "Create Semaphore failed 0x%08x\n", ret);
 		goto failed;
 	}
 	process->lockSema = ret;
-	ret = ksceKernelCreateSema("SceKernelProcessmgrEventLock", 0x8000, 4, 4, NULL);
+	ret = sceKernelCreateSema("SceKernelProcessmgrEventLock", 0x8000, 4, 4, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 3505, "Create Event Semaphore failed 0x%08x\n", ret);
 		goto failed;
@@ -2181,7 +2181,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 	optParam = process->image.mainThreadOptParam;
 	if (*(const SceSize *)optParam == 0)
 		optParam = NULL;
-	permission = ksceKernelSetPermission(0x80);
+	permission = sceKernelSetThreadAccessLevel(0x80);
 	ret = ksceKernelGetModuleIdByPid(process->pid);
 	if (ret < 0) {
 		deleteThreads = 1;
@@ -2191,7 +2191,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 	ret = SceThreadmgrForDriver_C8E57BB4(process->pid, threadName, ksceKernelGetModuleEntryPoint(ret),
 					     priority, stackSize, threadAttr | 0x80000000, cpu,
 					     (void *)optParam);
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	if (ret < 0) {
 		deleteThreads = 1;
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 4024, "sceKernelCreateRemoteThread failed. 0x%08x\n", ret);
@@ -2244,7 +2244,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 	else
 		process->status = (process->status & ~PROCESS_STATE_MASK) | PROCESS_STATE_CREATED;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
-	ksceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_CREATED);
+	sceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_CREATED);
 	budget->processCount++;
 	for (i = 0; i != PROCESS_MAX; i++) {
 		if (budget->process[i] == 0) {
@@ -2258,7 +2258,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 
 failed:
 	if (process->mainThread != -1) {
-		i = ksceKernelDeleteThread(process->mainThread);
+		i = sceKernelDeleteThread(process->mainThread);
 		SCE_DBG_ASSERT_LEVEL(0, i == 0, 4140);
 	}
 	if (deleteThreads) {
@@ -2484,7 +2484,7 @@ static int _SuspendProcess(SceProcessObject *process, SceUInt32 state, SceUInt32
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1101, "sceKernelGetThreadIdVector failed. 0x%08x\n", ret);
 	for (i = 0; i < count; i++) {
 		for (n = 1;; n++) {
-			ret = ksceKernelGetThreadInfo(g_threadIdVector.id[i], &info);
+			ret = sceKernelGetThreadInfo(g_threadIdVector.id[i], &info);
 			if (ThreadGone(ret))
 				break;
 			if (ret < 0) {
@@ -2516,8 +2516,8 @@ static int _SuspendProcess(SceProcessObject *process, SceUInt32 state, SceUInt32
 	process->prevState = 0;
 	process->status = (process->status & ~(PROCESS_FLAG_SUSPENDING | PROCESS_STATE_MASK))
 			| PROCESS_STATE_SUSPENDED;
-	ksceKernelClearEventFlag(process->eventFlag, ~PROCESS_EVF_RESUMED);
-	ksceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_SUSPENDED);
+	sceKernelClearEventFlag(process->eventFlag, ~PROCESS_EVF_RESUMED);
+	sceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_SUSPENDED);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 	sceKernelInvokeProcEventHandler(process->pid, PROC_EVENT_SUSPEND, 0x1000, &param, NULL, 0);
 	SCE_DBG_PRINTF_LEVEL(1, 0xb, 1239, "Process [%s] is SUSPENDED!\n", SceSysmemForDriver_E655852F(process->pid));
@@ -2563,10 +2563,10 @@ static int _KillProcess(SceProcessObject *process, SceUInt32 state, SceUInt32 ki
 				     process->status & PROCESS_STATE_MASK);
 		return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
 	}
-	timer = ksceKernelRegisterTimer("SceProcessEvent", 10000000, ProcessEventTimeupHandler, NULL);
+	timer = SceThreadmgrForDriver_C58DF384("SceProcessEvent", 10000000, ProcessEventTimeupHandler, NULL);
 	if (timer < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1847, "set alarm failed. 0x%08x\n", timer);
-	ksceKernelChangeThreadPriority(0, 0x60);
+	sceKernelChangeThreadPriority2(0, 0x60);
 	param.size = sizeof(param);
 	param.state = state;
 	param.kind = kind;
@@ -2588,8 +2588,8 @@ static int _KillProcess(SceProcessObject *process, SceUInt32 state, SceUInt32 ki
 				SCE_DBG_ASSERT_FAIL(1895);
 			}
 		}
-		ksceKernelWaitThreadEnd(g_threadIdVector.id[i], NULL, NULL);
-		ret = ksceKernelDeleteThread(g_threadIdVector.id[i]);
+		sceKernelWaitThreadEnd(g_threadIdVector.id[i], NULL, NULL);
+		ret = sceKernelDeleteThread(g_threadIdVector.id[i]);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 1901, "sceKernelDeleteThread failed 0x%08x, tid 0x%08x\n",
 					     ret, g_threadIdVector.id[i]);
@@ -2601,7 +2601,7 @@ static int _KillProcess(SceProcessObject *process, SceUInt32 state, SceUInt32 ki
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1910, "Delete process(0x%08x) failed 0x%08x\n",
 				     process->pid, ret);
-	ksceKernelChangeThreadPriority(0, 0x3f);
+	sceKernelChangeThreadPriority2(0, 0x3f);
 	sceKernelCancelAlarm(timer);
 	k_sceEventLogPut(0x2711, 3, 0, &log, sizeof(log));
 	return 0;
@@ -2628,7 +2628,7 @@ static int ProcessSendRequest(SceProcessObject *process, SceUInt32 request)
 	g_requestCount++;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_requestLock, intr);
 	process->pendingRequests++;
-	return ksceKernelSetEventFlag(g_eventFlag, 1);
+	return sceKernelSetEventFlag(g_eventFlag, 1);
 }
 
 /* kind 0: exit, 1: force kill, 2: exit spawn */
@@ -2673,7 +2673,7 @@ static int KillProcessCommon(SceUID pid, int kind)
 		} else {
 			process->status |= PROCESS_FLAG_EXIT | PROCESS_FLAG_FORCE_KILL;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
-			ksceKernelSetEventFlag(g_eventFlag, 1);
+			sceKernelSetEventFlag(g_eventFlag, 1);
 			ret = 0;
 		}
 		sceGUIDReleaseObject(process->pid);
@@ -2841,8 +2841,8 @@ static inline __attribute__((always_inline)) void _ResumeProcess(SceProcessObjec
 	intr = SceCpuForDriver_D32ACE9E(&process->lock);
 	process->prevState = 0;
 	process->status = (process->status & ~PROCESS_STATE_MASK) | PROCESS_STATE_RUNNING;
-	ksceKernelClearEventFlag(process->eventFlag, ~PROCESS_EVF_SUSPENDED);
-	ksceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_RESUMED);
+	sceKernelClearEventFlag(process->eventFlag, ~PROCESS_EVF_SUSPENDED);
+	sceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_RESUMED);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 	sceKernelInvokeProcEventHandler(process->pid, PROC_EVENT_RESUME, 0x40000, &param, NULL, 0);
 	intr = SceCpuForDriver_D32ACE9E(&process->timeLock);
@@ -2944,10 +2944,10 @@ static inline __attribute__((always_inline)) void _ExitProcess(SceProcessObject 
 				     process->status & PROCESS_STATE_MASK);
 		return;
 	}
-	timer = ksceKernelRegisterTimer("SceProcessEvent", 10000000, ProcessEventTimeupHandler, NULL);
+	timer = SceThreadmgrForDriver_C58DF384("SceProcessEvent", 10000000, ProcessEventTimeupHandler, NULL);
 	if (timer < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1706, "set alarm failed. 0x%08x\n", timer);
-	ksceKernelChangeThreadPriority(0, 0x60);
+	sceKernelChangeThreadPriority2(0, 0x60);
 	param.size = sizeof(param);
 	param.state = state;
 	param.kind = 0;
@@ -2969,8 +2969,8 @@ static inline __attribute__((always_inline)) void _ExitProcess(SceProcessObject 
 				SCE_DBG_ASSERT_FAIL(1754);
 			}
 		}
-		ksceKernelWaitThreadEnd(g_threadIdVector.id[i], NULL, NULL);
-		ret = ksceKernelDeleteThread(g_threadIdVector.id[i]);
+		sceKernelWaitThreadEnd(g_threadIdVector.id[i], NULL, NULL);
+		ret = sceKernelDeleteThread(g_threadIdVector.id[i]);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 1760, "sceKernelDeleteThread failed 0x%08x, tid 0x%08x\n",
 					     ret, g_threadIdVector.id[i]);
@@ -2982,7 +2982,7 @@ static inline __attribute__((always_inline)) void _ExitProcess(SceProcessObject 
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1769, "Delete process(0x%08x) failed 0x%08x\n",
 				     process->pid, ret);
-	ksceKernelChangeThreadPriority(0, 0x3f);
+	sceKernelChangeThreadPriority2(0, 0x3f);
 	sceKernelCancelAlarm(timer);
 	k_sceEventLogPut(0x2711, 2, 0, &log, sizeof(log));
 }
@@ -3006,7 +3006,7 @@ static inline __attribute__((always_inline)) ListNode *PurgeRequests(SceProcessO
 
 	*intr = SceCpuForDriver_D32ACE9E(&g_requestLock);
 	if (g_requestList.next == &g_requestList) {
-		ksceKernelSignalSema(g_requestSema, 1);
+		sceKernelSignalSema(g_requestSema, 1);
 		return &g_requestList;
 	}
 	first = NULL;
@@ -3023,7 +3023,7 @@ static inline __attribute__((always_inline)) ListNode *PurgeRequests(SceProcessO
 	}
 	if (first == NULL)
 		first = &g_requestList;
-	ksceKernelSignalSema(g_requestSema, 1);
+	sceKernelSignalSema(g_requestSema, 1);
 	return first;
 }
 
@@ -3043,7 +3043,7 @@ static int sceKernelProcessEventThread(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 	for (;;) {
-		ret = ksceKernelWaitEventFlag(g_eventFlag, 1, 5, NULL, NULL);
+		ret = sceKernelWaitEventFlag(g_eventFlag, 1, 5, NULL, NULL);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(1964);
 			return ret;
@@ -3086,7 +3086,7 @@ next_request:
 				goto next_request;
 			}
 		}
-		ret = ksceKernelWaitSema(process->lockSema, 1, NULL);
+		ret = sceKernelWaitSema(process->lockSema, 1, NULL);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(2041);
 			goto make_busy;
@@ -3119,7 +3119,7 @@ next_request:
 			kind = 0;
 			break;
 		}
-		ret = ksceKernelWaitSema(process->eventSema, 4, NULL);
+		ret = sceKernelWaitSema(process->eventSema, 4, NULL);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(2091);
 		} else {
@@ -3131,10 +3131,10 @@ next_request:
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 2099, "Process(0x%08x) PowerLock is acquired. num %d\n",
 					     process->pid, process->powerLockCount);
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&process->powerLock, intr);
-			ksceKernelSignalSema(process->eventSema, 4);
+			sceKernelSignalSema(process->eventSema, 4);
 		}
 unlock_busy:
-		ksceKernelSignalSema(process->lockSema, 1);
+		sceKernelSignalSema(process->lockSema, 1);
 make_busy:
 		intr = SceCpuForDriver_D32ACE9E(&g_requestLock);
 		ListAddTail(&busy, &process->recoveryNode);
@@ -3148,7 +3148,7 @@ dispatch:
 						     SceSysmemForDriver_E655852F(process->pid));
 				goto signal_event;
 			}
-			ksceKernelSignalSema(process->eventSema, 4);
+			sceKernelSignalSema(process->eventSema, 4);
 			_ResumeProcess(process, state);
 			goto done;
 		}
@@ -3184,7 +3184,7 @@ dispatch:
 				SceSysrootForDriver_8498E23F(pid, exitStatus, now);
 				SceSysrootForDriver_9D058A32(pid, exitStatus, now);
 			}
-			ksceKernelSignalSema(g_requestSema, 1);
+			sceKernelSignalSema(g_requestSema, 1);
 			goto remove;
 		case PROCESS_REQUEST_KILL:
 		case PROCESS_REQUEST_EXIT_SPAWN:
@@ -3223,7 +3223,7 @@ dispatch:
 			}
 			if (request == PROCESS_REQUEST_EXIT_SPAWN)
 				k_sceEventLogPut(0x2711, 6, 0, &spawnLog, sizeof(spawnLog));
-			ksceKernelSignalSema(g_requestSema, 1);
+			sceKernelSignalSema(g_requestSema, 1);
 			goto remove;
 		case PROCESS_REQUEST_FORCE_SUSPEND:
 			intr = SceCpuForDriver_D32ACE9E(&process->lock);
@@ -3237,16 +3237,16 @@ dispatch:
 		}
 
 signal_event:
-		ksceKernelSignalSema(process->eventSema, 4);
+		sceKernelSignalSema(process->eventSema, 4);
 done:
-		ksceKernelSignalSema(process->lockSema, 1);
+		sceKernelSignalSema(process->lockSema, 1);
 		intr = SceCpuForDriver_D32ACE9E(&process->lock);
 		if (process->status & PROCESS_FLAG_FORCE_KILL)
 			goto force_kill;
 		if (process->status & PROCESS_FLAG_FORCE_SUSPEND)
 			goto force_suspend;
 		if (--process->pendingRequests == 0)
-			ksceKernelSignalSema(g_requestSema, 1);
+			sceKernelSignalSema(g_requestSema, 1);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 remove:
 		intr = SceCpuForDriver_D32ACE9E(&g_requestLock);
@@ -3380,7 +3380,7 @@ int sceKernelProcessDebugSuspend(SceUID pid, SceUInt32 state)
 		intr = SceCpuForDriver_D32ACE9E(&process->lock);
 		if (process->status & (PROCESS_FLAG_FORCE_KILL | PROCESS_FLAG_FORCE_SUSPEND))
 			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
-		ret = ksceKernelClearEventFlag(process->eventFlag, ~PROCESS_EVF_NOT_DEBUG_SUSPENDED);
+		ret = sceKernelClearEventFlag(process->eventFlag, ~PROCESS_EVF_NOT_DEBUG_SUSPENDED);
 		if (ret < 0)
 			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
 		process->status |= PROCESS_FLAG_DEBUG_SUSPENDING;
@@ -3400,13 +3400,13 @@ int sceKernelProcessDebugSuspend(SceUID pid, SceUInt32 state)
 		return ret;
 	}
 	if (getCurrentThreadCB() == NULL) {
-		ret = ksceKernelPollSema(process->lockSema, 1);
+		ret = sceKernelPollSema(process->lockSema, 1);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 6191, "process lock failed. 0x%08x\n", ret);
 			return ret;
 		}
 	} else {
-		ret = ksceKernelWaitSema(process->lockSema, 1, NULL);
+		ret = sceKernelWaitSema(process->lockSema, 1, NULL);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 6184, "process lock failed. 0x%08x\n", ret);
 			return ret;
@@ -3418,13 +3418,13 @@ int sceKernelProcessDebugSuspend(SceUID pid, SceUInt32 state)
 	    || prev == PROCESS_STATE_SUSPENDED) {
 		if (!(process->status & PROCESS_FLAG_PRELOAD)) {
 			intr = SceCpuForDriver_D32ACE9E(&process->lock);
-			ret = ksceKernelClearEventFlag(process->eventFlag, ~PROCESS_EVF_NOT_DEBUG_SUSPENDED);
+			ret = sceKernelClearEventFlag(process->eventFlag, ~PROCESS_EVF_NOT_DEBUG_SUSPENDED);
 			if (ret < 0) {
 #if FW_DEBUG
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
-				ksceKernelSignalSema(process->lockSema, 1);
+				sceKernelSignalSema(process->lockSema, 1);
 #else
-				ksceKernelSignalSema(process->lockSema, 1);
+				sceKernelSignalSema(process->lockSema, 1);
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 #endif
 				return ret;
@@ -3439,11 +3439,11 @@ int sceKernelProcessDebugSuspend(SceUID pid, SceUInt32 state)
 			}
 			process->status &= ~PROCESS_FLAG_DEBUG_SUSPENDING;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
-			ksceKernelSignalSema(process->lockSema, 1);
+			sceKernelSignalSema(process->lockSema, 1);
 			return ret;
 		}
 	}
-	ksceKernelSignalSema(process->lockSema, 1);
+	sceKernelSignalSema(process->lockSema, 1);
 	return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
 }
 
@@ -3611,7 +3611,7 @@ static int SuspendProcessCommon(SceUID pid, SceUInt32 flags, SceUInt32 *timeout)
 		request = PROCESS_REQUEST_FORCE_SUSPEND;
 		if (process->pendingRequests != 0) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
-			ksceKernelSetEventFlag(g_eventFlag, 1);
+			sceKernelSetEventFlag(g_eventFlag, 1);
 			ret = 0;
 			goto out;
 		}
@@ -3629,7 +3629,7 @@ static int SuspendProcessCommon(SceUID pid, SceUInt32 flags, SceUInt32 *timeout)
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 	if (flags & 1) {
-		ret = ksceKernelWaitEventFlag(process->eventFlag, PROCESS_EVF_SUSPENDED, 4, NULL, timeout);
+		ret = sceKernelWaitEventFlag(process->eventFlag, PROCESS_EVF_SUSPENDED, 4, NULL, timeout);
 		if (ret < 0)
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 6055, "sceKernelWaitEventFlag failed. 0x%08x\n", ret);
 		else
@@ -3671,7 +3671,7 @@ static int StartProcessCommon(SceUID pid, int waitDebugger, SceSize args, void *
 	}
 	pid = process->pid;
 	ProcessEventLogInit(&log, process);
-	ret = ksceKernelWaitSema(process->lockSema, 1, NULL);
+	ret = sceKernelWaitSema(process->lockSema, 1, NULL);
 	if (ret < 0) {
 		log.result = ret;
 		k_sceEventLogPut(0x2711, 1, 0, &log, sizeof(log));
@@ -3702,7 +3702,7 @@ static int StartProcessCommon(SceUID pid, int waitDebugger, SceSize args, void *
 			debug = 1;
 		}
 	}
-	thread = ksceKernelCreateThread("SceKernelProcessPreload", sceKernelProcessPreloadModule, 0x3f,
+	thread = sceKernelCreateThread("SceKernelProcessPreload", sceKernelProcessPreloadModule, 0x3f,
 					0x2000, 0, 0x80000, NULL);
 	ret = thread;
 	if (thread < 0)
@@ -3730,7 +3730,7 @@ static int StartProcessCommon(SceUID pid, int waitDebugger, SceSize args, void *
 		process->status = PROCESS_FLAG_PRELOAD | PROCESS_STATE_DEBUG_SUSPENDED;
 		process->prevState = PROCESS_STATE_RUNNING;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
-		ksceKernelSignalSema(process->lockSema, 1);
+		sceKernelSignalSema(process->lockSema, 1);
 		if (!(status & PROCESS_FLAG_PRELOAD_SUSPEND)) {
 			now = sceKernelGetSystemTimeWide();
 			SceSysrootForDriver_571E5B79(process->parentPid, pid, 0, process, now);
@@ -3741,7 +3741,7 @@ static int StartProcessCommon(SceUID pid, int waitDebugger, SceSize args, void *
 		param.waitDebugger = 1;
 		param.args = args;
 		param.argp = argp;
-		ret = ksceKernelStartThread(thread, sizeof(param), &param);
+		ret = sceKernelStartThread(thread, sizeof(param), &param);
 		if (ret >= 0)
 			goto done;
 		goto delete_thread;
@@ -3757,10 +3757,10 @@ static int StartProcessCommon(SceUID pid, int waitDebugger, SceSize args, void *
 	param.process = process;
 	param.args = args;
 	param.argp = argp;
-	ret = ksceKernelStartThread(thread, sizeof(param), &param);
+	ret = sceKernelStartThread(thread, sizeof(param), &param);
 	if (ret < 0)
 		goto delete_thread;
-	ret = ksceKernelWaitThreadEnd(thread, &exitStatus, NULL);
+	ret = sceKernelWaitThreadEnd(thread, &exitStatus, NULL);
 	if (ret < 0) {
 		if (ret == (int)SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID) {
 			ret = 0;
@@ -3769,20 +3769,20 @@ static int StartProcessCommon(SceUID pid, int waitDebugger, SceSize args, void *
 			SCE_DBG_ASSERT_LEVEL(0, 0, 4957);
 		}
 	} else {
-		ksceKernelDeleteThread(thread);
+		sceKernelDeleteThread(thread);
 		ret = exitStatus;
 	}
-	ksceKernelSignalSema(process->lockSema, 1);
+	sceKernelSignalSema(process->lockSema, 1);
 done:
 	k_sceEventLogPut(0x2711, 1, 0, &log, sizeof(log));
 	sceGUIDReleaseObject(process->pid);
 	return ret;
 delete_thread:
-	ksceKernelDeleteThread(thread);
+	sceKernelDeleteThread(thread);
 failed:
 	log.result = ret;
 	k_sceEventLogPut(0x2711, 1, 0, &log, sizeof(log));
-	ksceKernelSignalSema(process->lockSema, 1);
+	sceKernelSignalSema(process->lockSema, 1);
 	sceGUIDReleaseObject(process->pid);
 	return ret;
 }
@@ -3795,12 +3795,12 @@ SceClass *ksceKernelGetUIDProcessClass(void)
 /* name unknown: hold off / allow the process requests (all 16 permissions) */
 int SceProcessmgrForKernel_8321B827(SceUInt32 *timeout)
 {
-	return ksceKernelWaitSema(g_requestSema, PROCESS_MAX, timeout);
+	return sceKernelWaitSema(g_requestSema, PROCESS_MAX, timeout);
 }
 
 int SceProcessmgrForKernel_D5DF895D(void)
 {
-	return ksceKernelSignalSema(g_requestSema, PROCESS_MAX);
+	return sceKernelSignalSema(g_requestSema, PROCESS_MAX);
 }
 
 
@@ -3958,7 +3958,7 @@ SceUID sceKernelCreateProcess(const char *name, SceUInt32 type, const char *path
 		BudgetUnlock(budget);
 		return SCE_KERNEL_ERROR_ILLEGAL_CPU_AFFINITY;
 	}
-	ret = ksceKernelWaitSema(g_requestSema, 1, NULL);
+	ret = sceKernelWaitSema(g_requestSema, 1, NULL);
 	if (ret < 0) {
 		BudgetUnlock(budget);
 		return ret;
@@ -3968,11 +3968,11 @@ SceUID sceKernelCreateProcess(const char *name, SceUInt32 type, const char *path
 			     &process);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 4584, "_CreateProcess(%s) failed. 0x%08x\n", name, ret);
-		ksceKernelSignalSema(g_requestSema, 1);
+		sceKernelSignalSema(g_requestSema, 1);
 		BudgetUnlock(budget);
 		return ret;
 	}
-	ksceKernelSignalSema(g_requestSema, 1);
+	sceKernelSignalSema(g_requestSema, 1);
 	BudgetUnlock(budget);
 	return process->pid;
 }
@@ -3982,11 +3982,11 @@ int SceProcessmgrForKernel_5137B783(SceUID pid, int waitDebugger, SceSize args, 
 {
 	int ret;
 
-	ksceKernelWaitSema(g_requestSema, 1, NULL);
+	sceKernelWaitSema(g_requestSema, 1, NULL);
 	SceKernelSuspendForDriver_4DF40893(0);
 	ret = StartProcessCommon(pid, waitDebugger, args, argp, 0);
 	SceKernelSuspendForDriver_2BB92967(0);
-	ksceKernelSignalSema(g_requestSema, 1);
+	sceKernelSignalSema(g_requestSema, 1);
 	return ret;
 }
 
@@ -3995,11 +3995,11 @@ int sceKernelStartProcessExt(SceUID pid, int waitDebugger, SceSize args, void *a
 	int ret;
 
 	SCE_DBG_ASSERT_LEVEL(0, (flags & ~3) == 0, 5005);
-	ksceKernelWaitSema(g_requestSema, 1, NULL);
+	sceKernelWaitSema(g_requestSema, 1, NULL);
 	SceKernelSuspendForDriver_4DF40893(0);
 	ret = StartProcessCommon(pid, waitDebugger, args, argp, flags);
 	SceKernelSuspendForDriver_2BB92967(0);
-	ksceKernelSignalSema(g_requestSema, 1);
+	sceKernelSignalSema(g_requestSema, 1);
 	return ret;
 }
 
@@ -4031,7 +4031,7 @@ int sceKernelExitProcess(int status)
 			if (ret == 0) {
 				process->exitStatus = status;
 				process->status |= PROCESS_FLAG_EXIT;
-				process->exitThread = ksceKernelGetThreadId();
+				process->exitThread = sceKernelGetThreadId();
 				break;
 			}
 			if (ret < 0) {
@@ -4468,21 +4468,21 @@ int sceKernelProcessDebugResume(SceUID pid)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 6406, "UIDtoProcess(pid 0x%08X) failed 0x%08x\n", pid, ret);
 		return ret;
 	}
-	ret = ksceKernelPollSema(process->lockSema, 1);
+	ret = sceKernelPollSema(process->lockSema, 1);
 	if (ret == 0) {
 		if (!(process->status & 0x10)) {
-			ksceKernelSignalSema(process->lockSema, 1);
+			sceKernelSignalSema(process->lockSema, 1);
 			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
 		}
 		if (process->prevState == PROCESS_STATE_RUNNING) {
 			if (process->status & PROCESS_FLAG_PRELOAD) {
 				/* not started yet: let the preload thread go on */
-				ksceKernelSignalSema(process->lockSema, 1);
+				sceKernelSignalSema(process->lockSema, 1);
 				intr = SceCpuForDriver_D32ACE9E(&process->lock);
 				if ((process->status & PROCESS_STATE_MASK) == PROCESS_STATE_DEBUG_SUSPENDED
 				    && !(process->status & (PROCESS_FLAG_FORCE_SUSPEND | PROCESS_FLAG_EXIT))) {
 					sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
-					return ksceKernelSetEventFlag(process->eventFlag,
+					return sceKernelSetEventFlag(process->eventFlag,
 								      PROCESS_EVF_DEBUG_RESUME);
 				}
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
@@ -4491,7 +4491,7 @@ int sceKernelProcessDebugResume(SceUID pid)
 			intr = SceCpuForDriver_D32ACE9E(&process->lock);
 			if (process->status & (PROCESS_FLAG_FORCE_KILL | PROCESS_FLAG_FORCE_SUSPEND)) {
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
-				ksceKernelSignalSema(process->lockSema, 1);
+				sceKernelSignalSema(process->lockSema, 1);
 				return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
 			}
 			process->status = (process->status & ~PROCESS_STATE_MASK) | PROCESS_STATE_RUNNING;
@@ -4502,28 +4502,28 @@ int sceKernelProcessDebugResume(SceUID pid)
 						     &process->threadActionCursor);
 			if (ret < 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 6440, "ProcessAllThreadAction failed 0x%08x\n", ret);
-				ksceKernelSignalSema(process->lockSema, 1);
+				sceKernelSignalSema(process->lockSema, 1);
 				return ret;
 			}
 			ClearResuming(process);
-			ret = ksceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_NOT_DEBUG_SUSPENDED);
+			ret = sceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_NOT_DEBUG_SUSPENDED);
 			if (ret < 0) {
-				ksceKernelSignalSema(process->lockSema, 1);
+				sceKernelSignalSema(process->lockSema, 1);
 				return ret;
 			}
 		} else if (process->prevState == PROCESS_STATE_SUSPENDED) {
 			ret = DebugResumeThreads(process, PROCESS_STATE_SUSPENDED, NULL);
 			if (ret < 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 6494, "ProcessAllThreadAction failed 0x%08x\n", ret);
-				ksceKernelSignalSema(process->lockSema, 1);
+				sceKernelSignalSema(process->lockSema, 1);
 				return ret;
 			}
 			ClearResuming(process);
 		} else {
-			ksceKernelSignalSema(process->lockSema, 1);
+			sceKernelSignalSema(process->lockSema, 1);
 			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
 		}
-		ksceKernelSignalSema(process->lockSema, 1);
+		sceKernelSignalSema(process->lockSema, 1);
 	} else if (ret == (int)SCE_KERNEL_ERROR_SEMA_ZERO) {
 		/* the process lock is held: the event thread works on it */
 		if (!(process->status & 0x10))
@@ -4549,7 +4549,7 @@ int sceKernelProcessDebugResume(SceUID pid)
 		return ret;
 	}
 	if (process->pendingRequests != 0)
-		ksceKernelSetEventFlag(g_eventFlag, 1);
+		sceKernelSetEventFlag(g_eventFlag, 1);
 	return 0;
 }
 
@@ -4566,7 +4566,7 @@ int sceKernelWaitProcessEnd(SceUID pid, int *exitStatus, SceUInt32 *timeout)
 				     pid, ret);
 		return ret;
 	}
-	ret = ksceKernelWaitEventFlag(process->eventFlag, PROCESS_EVF_DELETED, 0, NULL, timeout);
+	ret = sceKernelWaitEventFlag(process->eventFlag, PROCESS_EVF_DELETED, 0, NULL, timeout);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 6583, "sceKernelWaitEventFlag failed. 0x%08x\n", ret);
 		sceGUIDReleaseObject(process->pid);
@@ -4594,7 +4594,7 @@ int sceKernelWaitProcessEventCompletion(SceUID pid, SceUInt32 event, SceUInt32 *
 				     pid, ret);
 		return ret;
 	}
-	ret = ksceKernelWaitEventFlag(process->eventFlag, event, 1, NULL, timeout);
+	ret = sceKernelWaitEventFlag(process->eventFlag, event, 1, NULL, timeout);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 6628, "sceKernelWaitEventFlag failed. 0x%08x\n", ret);
 		sceGUIDReleaseObject(process->pid);
@@ -5297,10 +5297,10 @@ SceUInt32 ksceKernelGetProcessTimeLowCore(void)
 
 	if (cb != NULL) {
 		process = cb->process;
-		return ksceKernelGetSystemTimeLow() - (SceUInt32)process->time;
+		return SceThreadmgrForDriver_47F6DE49() - (SceUInt32)process->time;
 	}
 	process = SceSysmemForKernel_FA6C098C(KERNEL_PID);
-	return ksceKernelGetSystemTimeLow() - (SceUInt32)process->time;
+	return SceThreadmgrForDriver_47F6DE49() - (SceUInt32)process->time;
 }
 
 SceUInt32 sceKernelGetProcessTimeLowCore(void)
@@ -5492,7 +5492,7 @@ int SceProcessmgrForKernel_BC110987(SceUID pid, SceUInt32 event)
 	ret = UIDtoProcessAndRefer(pid, &process);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelWaitEventFlag(process->eventFlag, PROCESS_EVF_NOT_DEBUG_SUSPENDED, 1, NULL, NULL);
+	ret = sceKernelWaitEventFlag(process->eventFlag, PROCESS_EVF_NOT_DEBUG_SUSPENDED, 1, NULL, NULL);
 	if (ret >= 0) {
 		intr = SceCpuForDriver_D32ACE9E(&process->lock);
 		if (process->status & PROCESS_FLAG_EXIT)
@@ -5635,7 +5635,7 @@ int sceKernelPowerLock(int type)
 
 	state = ProcessSyscallEnter();
 	process = GetCurrentProcess();
-	ret = ksceKernelWaitSema(process->eventSema, 1, NULL);
+	ret = sceKernelWaitSema(process->eventSema, 1, NULL);
 	if (ret < 0) {
 		ProcessSyscallLeave(state);
 		return ret;
@@ -5643,7 +5643,7 @@ int sceKernelPowerLock(int type)
 	intr = SceCpuForDriver_D32ACE9E(&process->powerLock);
 	process->powerLockCount++;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->powerLock, intr);
-	ksceKernelSignalSema(process->eventSema, 1);
+	sceKernelSignalSema(process->eventSema, 1);
 	SceKernelSuspendForDriver_254525F8(type);
 	ProcessSyscallLeave(state);
 	return 0;
@@ -5666,7 +5666,7 @@ int sceKernelProcessPowerUnlockForUser(int type)
 	if (process->powerLockCount == 0) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&process->powerLock, intr);
 #if FW_DEBUG
-		threadId = ksceKernelGetThreadId();
+		threadId = sceKernelGetThreadId();
 		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(8964),
 			"*** error: sceKernelPowerUnlock() nest borken 0x%08X [%s]\n",
 			threadId, SceSysmemForDriver_E655852F(threadId));
@@ -5683,7 +5683,7 @@ int sceKernelProcessPowerUnlockForUser(int type)
 	process->powerLockCount--;
 	SceKernelSuspendForDriver_230495ED(type);
 	if (process->powerLockCount == 0 && process->pendingRequests != 0) {
-		ret = ksceKernelSetEventFlag(g_eventFlag, 1);
+		ret = sceKernelSetEventFlag(g_eventFlag, 1);
 		if (ret < 0) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&process->powerLock, intr);
 			ProcessSyscallLeave(state);
@@ -5892,14 +5892,14 @@ int sceKernelCallAbortHandlerForUser(SceUInt32 code, const void *opt)
 		if (SceDipswForDriver_A98FC2FD(0x9f) == 0 || SceSysrootForDriver_6050A467(pid) == 0) {
 			if (SceCpuForDriver_CDA96E81((SceInt32 *)&process->abortRequested, 0, 1) == 0) {
 				process->abortCode = code;
-				process->abortThread = ksceKernelGetThreadId();
-				ret = ksceKernelSetEventFlag(process->abortEventFlag, 1);
+				process->abortThread = sceKernelGetThreadId();
+				ret = sceKernelSetEventFlag(process->abortEventFlag, 1);
 				if (ret < 0)
 					SCE_DBG_PRINTF_LEVEL(1, 0, 9427,
 						"*** error: sceKernelCallAbortHandlerForUser() -> sceKernelSetEventFlag(0x%08X)=0x%08X\n",
 						process->abortEventFlag, ret);
 			}
-			sema = ksceKernelCreateSema("SceKernelCallAbortHandler", 0x8000, 0, 1, NULL);
+			sema = sceKernelCreateSema("SceKernelCallAbortHandler", 0x8000, 0, 1, NULL);
 			if (sema < 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0, 9433,
 					"*** error: sceKernelCallAbortHandlerForUser() -> sceKernelCreateSema()=0x%08X\n",
@@ -5907,12 +5907,12 @@ int sceKernelCallAbortHandlerForUser(SceUInt32 code, const void *opt)
 				ProcessSyscallLeave(state);
 				return sema;
 			}
-			ret = ksceKernelWaitSema(sema, 1, NULL);
+			ret = sceKernelWaitSema(sema, 1, NULL);
 			if ((SceUInt32)ret + 0x7ffd7fd4 > 1)
 				SCE_DBG_PRINTF_LEVEL(1, 0, 9439,
 					"*** error: sceKernelCallAbortHandlerForUser() -> sceKernelWaitSema()=0x%08X\n",
 					ret);
-			ret = ksceKernelDeleteSema(sema);
+			ret = sceKernelDeleteSema(sema);
 			if (ret < 0)
 				SCE_DBG_PRINTF_LEVEL(1, 0, 9443,
 					"*** error: sceKernelCallAbortHandlerForUser() -> sceKernelDeleteSema()=0x%08X\n",
@@ -6128,17 +6128,17 @@ SceUID sceKernelCallCoredumpHandler(SceUID pid)
 	ret = SceSysmemForKernel_0E43E113(thid, g_threadClass, &thread);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(10151);
-		ksceKernelDeleteThread(ret);
+		sceKernelDeleteThread(ret);
 		goto release;
 	}
 	param.handler = process->coredumpHandler;
 	process->coredumpStack = -1;
 	param.arg = process->coredumpArg;
-	ret = ksceKernelStartThread(thid, sizeof(param), &param);
+	ret = sceKernelStartThread(thid, sizeof(param), &param);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 10166, "error: sceKernelStartThread(0x%08X, 0x%08X, %p)=0x%08X\n",
 				     thid, sizeof(param), &param, ret);
-		ksceKernelDeleteThread(ret);
+		sceKernelDeleteThread(ret);
 		goto release;
 	}
 	ret = thid;
@@ -6205,13 +6205,13 @@ static int ProcessmgrModuleStart2(void)
 	int ret;
 
 	SceSysrootForKernel_733C243E(&g_sysrootOps2);
-	ret = ksceKernelCreateEventFlag("SceKernelProcessmgrProcEvent", 0x1000, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceKernelProcessmgrProcEvent", 0x1000, 0, NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(9751);
 		return ret;
 	}
 	g_eventFlag = ret;
-	ret = ksceKernelCreateSema("SceKernelProcRequestPermission", 0x8000, PROCESS_MAX, PROCESS_MAX,
+	ret = sceKernelCreateSema("SceKernelProcRequestPermission", 0x8000, PROCESS_MAX, PROCESS_MAX,
 				   NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(9762);
@@ -6227,34 +6227,34 @@ static int ProcessmgrModuleStart2(void)
 		SCE_DBG_ASSERT_FAIL(9782);
 		return ret;
 	}
-	ret = ksceKernelCreateThread("SceKernelProcessEvent", sceKernelProcessEventThread, 0x3f, 0x2000,
+	ret = sceKernelCreateThread("SceKernelProcessEvent", sceKernelProcessEventThread, 0x3f, 0x2000,
 				     0, 0x80000, NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(9796);
 		return ret;
 	}
 	g_eventThread = ret;
-	ret = ksceKernelStartThread(ret, 0, NULL);
+	ret = sceKernelStartThread(ret, 0, NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(9803);
 		return ret;
 	}
 	ListInit(&g_recoveryList);
 	g_recoveryLock = 0;
-	ret = ksceKernelCreateEventFlag("SceKernelProcResourceRecovery", 0x1000, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceKernelProcResourceRecovery", 0x1000, 0, NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(9817);
 		return ret;
 	}
 	g_recoveryEventFlag = ret;
-	ret = ksceKernelCreateThread("SceKernelResourceRecovery", sceKernelProcessResourceRecovery, 0xe7,
+	ret = sceKernelCreateThread("SceKernelResourceRecovery", sceKernelProcessResourceRecovery, 0xe7,
 				     0x2000, 0, 0x80000, NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(9831);
 		return ret;
 	}
 	g_recoveryThread = ret;
-	ret = ksceKernelStartThread(ret, 0, NULL);
+	ret = sceKernelStartThread(ret, 0, NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(9838);
 		return ret;

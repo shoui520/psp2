@@ -891,7 +891,7 @@ int replace_flat_path(const char *path, char *flat, VfsPathElem *elem, int *num,
 		ret = vfs_split_path(colon + 1, relem, &rnum);
 		if (ret < 0)
 			goto free;
-		pid = ksceKernelGetProcessIdFromTLS();
+		pid = SceThreadmgrForDriver_FA54D49A();
 		if ((pid & ~0x10) != SCE_KERNEL_PROCESS_ID &&
 		    pid != SCE_KERNEL_DUMMY_PROCESS_GAME_ID) {
 			ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey,
@@ -3190,7 +3190,7 @@ int vfsDevctl(IofilemgrDevctlParam *param)
 			goto release;
 	}
 	if (cmd == VFS_DEVCTL_SYSTEM_ONLY) {
-		pid = ksceKernelGetProcessIdFromTLS();
+		pid = SceThreadmgrForDriver_FA54D49A();
 		if (SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(pid) == 0 && SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(pid) == 0) {
 			ret = SCE_ERROR_ERRNO_EUNSUP;
 			goto release;
@@ -3356,7 +3356,7 @@ SceUID vfsAllocateFileDummy(int flags, int isDir, const char *path)
 	else
 		file->is_dir = 0;
 	file->fd = 0;
-	file->pid = ksceKernelGetProcessIdFromTLS();
+	file->pid = SceThreadmgrForDriver_FA54D49A();
 	file->fd_lock = &g_vfsDummyFdLock;
 	file->flock_busy_count = 0;
 	file->has_flock_ent = 0;
@@ -3803,7 +3803,7 @@ int vfsIoctl(IofilemgrIoctlParam *param)
 		return SCE_ERROR_ERRNO_EINVAL;
 	if (cmd - VFS_IOCTL_BUFFCTL_SET <= VFS_IOCTL_VFS_MAX - VFS_IOCTL_BUFFCTL_SET) {
 		if ((int)cmd > VFS_IOCTL_BUFFCTL_MAX) {
-			pid = ksceKernelGetProcessIdFromTLS();
+			pid = SceThreadmgrForDriver_FA54D49A();
 			if (SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(pid) == 0 && SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(pid) == 0)
 				return SCE_ERROR_ERRNO_EUNSUP;
 			if (cmd == VFS_IOCTL_SET_INTERNAL)
@@ -3978,7 +3978,7 @@ int vfs_system_event_handler(int resume, int eventid, void *args, void *opt)
 	}
 	switch (eventid) {
 	case VFS_SYSEVENT_SUSPEND:
-		ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfs_sync_all_mount_point,
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfs_sync_all_mount_point,
 					     NULL);
 		if (g_vfsSuspendQueryCount == 0) {
 			g_vfsSuspended++;
@@ -4164,7 +4164,7 @@ SceUID vfsOpen(IofilemgrOpenParam *param)
 		flags &= 0x0fffffff;
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 3051, "flag = %x\n", param->flags);
 	}
-	pid = ksceKernelGetProcessIdFromTLS();
+	pid = SceThreadmgrForDriver_FA54D49A();
 	if ((flags & SCE_O_NOBUF) != 0 && SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(pid) == 0 &&
 	    SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(pid) == 0)
 		flags &= ~SCE_O_NOBUF;

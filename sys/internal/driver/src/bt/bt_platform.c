@@ -65,13 +65,13 @@ int BtInitializeServices(const char *logName, const char *timerThreadName)
 SceUID BtCreateThread(SceKernelThreadEntry entry, SceSize argumentSize,
 		     void *argument, const char *name, int priority)
 {
-	SceUID thread = ksceKernelCreateThread(name, entry, priority, 0x2000,
+	SceUID thread = sceKernelCreateThread(name, entry, priority, 0x2000,
 					     0, 0x80000, NULL);
 	int result;
 
 	if (thread < 0)
 		return thread;
-	result = ksceKernelStartThread(thread, argumentSize, argument);
+	result = sceKernelStartThread(thread, argumentSize, argument);
 	if (result < 0)
 		return result;
 	return thread;

@@ -128,7 +128,7 @@ int BtStartTransport(void)
 
 	stack->lastError = 0;
 	stack->mode = mode & ~0x8040U;
-	if (ksceKernelGetThreadId() == gBtTransport.lockOwner) {
+	if (sceKernelGetThreadId() == gBtTransport.lockOwner) {
 		if (gBtTransport.lockDepth != 0) {
 			gBtTransport.lockDepth--;
 		} else {
@@ -139,7 +139,7 @@ int BtStartTransport(void)
 			} while (AtomicStoreReserved32(&gBtTransport.lockSignal.events,
 				events | 1));
 			if (gBtTransport.lockSignal.waiters != 0)
-				ksceKernelSetEventFlag(gBtTransport.lockSignal.eventFlag, 1);
+				sceKernelSetEventFlag(gBtTransport.lockSignal.eventFlag, 1);
 		}
 	}
 	attempts = 100;

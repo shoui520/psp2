@@ -516,13 +516,13 @@ int regCloseCategory(int handle)
 	int ret;
 
 	state = regPlatformLock();
-	if (ksceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
+	if (sceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
 		regPlatformUnlock(state);
 		return REG_ERROR_LOCK;
 	}
 
 	ret = regCloseCategoryUnlocked(handle);
-	if (ksceKernelUnlockMutex(g_regMutex, 1) != 0)
+	if (sceKernelUnlockMutex(g_regMutex, 1) != 0)
 		ret = REG_ERROR_UNLOCK;
 	regPlatformUnlock(state);
 
@@ -546,7 +546,7 @@ int regGetCategoryNum(int registry, int *num)
 		return REG_ERROR_BAD_PATH;
 	}
 
-	if (ksceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
+	if (sceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
 		regPlatformUnlock(state);
 		return REG_ERROR_LOCK;
 	}
@@ -566,7 +566,7 @@ int regGetCategoryNum(int registry, int *num)
 		ret = 0;
 	}
 
-	if (ksceKernelUnlockMutex(g_regMutex, 1) != 0)
+	if (sceKernelUnlockMutex(g_regMutex, 1) != 0)
 		ret = REG_ERROR_UNLOCK;
 	regPlatformUnlock(state);
 
@@ -590,7 +590,7 @@ int regGetCategoryNames(int registry, char (*names)[REG_CATEGORY_NAME_LEN + 1], 
 		return REG_ERROR_BAD_PATH;
 	}
 
-	if (ksceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
+	if (sceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
 		regPlatformUnlock(state);
 		return REG_ERROR_LOCK;
 	}
@@ -612,7 +612,7 @@ int regGetCategoryNames(int registry, char (*names)[REG_CATEGORY_NAME_LEN + 1], 
 		ret = 0;
 	}
 
-	if (ksceKernelUnlockMutex(g_regMutex, 1) != 0)
+	if (sceKernelUnlockMutex(g_regMutex, 1) != 0)
 		ret = REG_ERROR_UNLOCK;
 	regPlatformUnlock(state);
 
@@ -716,7 +716,7 @@ int regOpenCategory(int registry, const char *path, int mode, int *handle)
 		regPlatformUnlock(state);
 		return REG_ERROR_BAD_PATH;
 	}
-	if (ksceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
+	if (sceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
 		regPlatformUnlock(state);
 		return REG_ERROR_LOCK;
 	}
@@ -903,7 +903,7 @@ free:
 	memset(name, 0, REG_CATEGORY_NAME_LEN + 1);
 	regMemFree(name);
 unlock:
-	if (ksceKernelUnlockMutex(g_regMutex, 1) != 0)
+	if (sceKernelUnlockMutex(g_regMutex, 1) != 0)
 		ret = REG_ERROR_UNLOCK;
 	regPlatformUnlock(state);
 
@@ -938,7 +938,7 @@ int regRemoveCategory(int registry, const char *path, int flags)
 		regPlatformUnlock(state);
 		return REG_ERROR_BAD_PATH;
 	}
-	if (ksceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
+	if (sceKernelLockMutex(g_regMutex, 1, NULL) != 0) {
 		regPlatformUnlock(state);
 		return REG_ERROR_LOCK;
 	}
@@ -1026,7 +1026,7 @@ int regRemoveCategory(int registry, const char *path, int flags)
 	regRemoveOpenCategory((int)entry);
 
 unlock:
-	if (ksceKernelUnlockMutex(g_regMutex, 1) != 0)
+	if (sceKernelUnlockMutex(g_regMutex, 1) != 0)
 		ret = REG_ERROR_UNLOCK;
 	regPlatformUnlock(state);
 

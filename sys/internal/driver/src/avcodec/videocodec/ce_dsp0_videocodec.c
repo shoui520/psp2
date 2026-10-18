@@ -383,13 +383,13 @@ int initializeDsp0Videocodec(void)
 			global = storage;
 			mutex = &global->mutex;
 			memset(storage, 0, sizeof(*global));
-			ret = ksceKernelInitializeFastMutex((SceKernelFastMutex *)mutex,
+			ret = sceKernelInitializeFastMutex((SceKernelFastMutex *)mutex,
 						   "SceDsp0Vcodec", 2, NULL);
 			if (ret < 0) {
 				SceKernelIntrStatus intr;
 
 				if (global->pMutex != NULL) {
-					ksceKernelFinalizeFastMutex(
+					sceKernelFinalizeFastMutex(
 						(SceKernelFastMutex *)global->pMutex);
 					global->pMutex = NULL;
 				}
@@ -425,13 +425,13 @@ int _sceDsp0VideocodecProcessCreateEntry(SceUID pid)
 		global = storage;
 		mutex = &global->mutex;
 		memset(storage, 0, sizeof(*global));
-		ret = ksceKernelInitializeFastMutex((SceKernelFastMutex *)mutex,
+		ret = sceKernelInitializeFastMutex((SceKernelFastMutex *)mutex,
 						   "SceDsp0Vcodec", 2, NULL);
 		if (ret < 0) {
 			SceKernelIntrStatus intr;
 
 			if (global->pMutex != NULL) {
-				ksceKernelFinalizeFastMutex((SceKernelFastMutex *)global->pMutex);
+				sceKernelFinalizeFastMutex((SceKernelFastMutex *)global->pMutex);
 				global->pMutex = NULL;
 			}
 			intr = SceCpuForDriver_D32ACE9E(&global->statusLock);
@@ -462,7 +462,7 @@ int _sceDsp0VideocodecProcessExitEntry(SceUID pid)
 #endif
 		global = storage;
 		if (global->pMutex != NULL) {
-			ksceKernelFinalizeFastMutex((SceKernelFastMutex *)global->pMutex);
+			sceKernelFinalizeFastMutex((SceKernelFastMutex *)global->pMutex);
 			global->pMutex = NULL;
 		}
 		intr = SceCpuForDriver_D32ACE9E(&global->statusLock);
@@ -609,11 +609,11 @@ int dsp0VideocodecQueryLibraryMemory(const Dsp0VideocodecInitParam *param,
 		return (int)0x80620201;
 	ret = _lockProcessSuspendCore();
 	if (ret >= 0) {
-		ksceKernelLockFastMutex((SceKernelFastMutex *)global->pMutex);
+		lockFastMutex((SceKernelFastMutex *)global->pMutex);
 		ret = dsp0VideocodecCalculateLibraryMemory(param, &requiredSize, &librarySize);
 		if (ret >= 0)
 			*memorySize = requiredSize;
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);
 		_unlockProcessSuspendCore();
 	}
 	return ret;
@@ -644,7 +644,7 @@ int dsp0VideocodecTermLibraryForProcess(unsigned int codecType, SceUID pid)
 		return (int)0x8062020c;
 	ret = _lockProcessSuspendCore();
 	if (ret >= 0) {
-		ksceKernelLockFastMutex((SceKernelFastMutex *)global->pMutex);
+		lockFastMutex((SceKernelFastMutex *)global->pMutex);
 		ret = dsp0VideocodecDeleteDecoder(global->library);
 		if (ret < 0)
 			ret = (int)0x8062020d;
@@ -660,7 +660,7 @@ int dsp0VideocodecTermLibraryForProcess(unsigned int codecType, SceUID pid)
 		intr = SceCpuForDriver_D32ACE9E(&global->statusLock);
 		global->status = 0;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&global->statusLock, intr);
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);
 		_unlockProcessSuspendCore();
 	}
 	return ret;

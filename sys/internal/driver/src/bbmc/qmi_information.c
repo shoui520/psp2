@@ -451,7 +451,7 @@ completed:
 	if (!finalResponse) {
 		BbcmdRequestNode *node = request->node;
 
-		result = ksceKernelSetEventFlag(node->control->event, 1U << node->index);
+		result = sceKernelSetEventFlag(node->control->event, 1U << node->index);
 		if (result < 0)
 			request->state = 11;
 	}

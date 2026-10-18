@@ -210,7 +210,7 @@ typedef struct IoRequest {
 	SceInt8 isFinished;			/* not yet traced */
 	SceUID pid;				/* sceKernelGetProcessId */
 	SceUID thid;				/* 0 for an asynchronous request */
-	SceUID processId;			/* ksceKernelGetProcessIdFromTLS */
+	SceUID processId;			/* SceThreadmgrForDriver_FA54D49A */
 	SceUID threadAcl;			/* SceThreadmgrForDriver_332E127C (not yet traced) */
 	int cpuAffinityMask;
 	int threadPriority;

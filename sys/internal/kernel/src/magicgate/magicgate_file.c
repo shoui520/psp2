@@ -374,7 +374,7 @@ int SceMagicGateForDriver_1BCE34AD(int handle, unsigned int index,
 	request.handle = handle;
 	request.record = record;
 	request.size = size;
-	return ksceKernelRunWithStack(4096, (int (*)(void *))readFileRecord, &request);
+	return SceThreadmgrForDriver_E54FD746(4096, (int (*)(void *))readFileRecord, &request);
 }
 
 int SceMagicGateForDriver_75B445DA(int handle, unsigned int index,
@@ -386,7 +386,7 @@ int SceMagicGateForDriver_75B445DA(int handle, unsigned int index,
 	request.handle = handle;
 	request.record = (MagicGateFileRecord *)record;
 	request.size = size;
-	return ksceKernelRunWithStack(4096, (int (*)(void *))writeFileRecord, &request);
+	return SceThreadmgrForDriver_E54FD746(4096, (int (*)(void *))writeFileRecord, &request);
 }
 
 int SceMagicGateForDriver_3EDD73EB(int handle, int index)
@@ -483,8 +483,8 @@ void terminateFileService(void)
 	magicGateFileService.flags = 0;
 	if (mutex > 0) {
 		magicGateFileService.mutex = -1;
-		ksceKernelUnlockMutex(mutex, 1);
-		ksceKernelDeleteMutex(mutex);
+		sceKernelUnlockMutex(mutex, 1);
+		sceKernelDeleteMutex(mutex);
 	}
 }
 
@@ -510,7 +510,7 @@ int SceMagicGateForDriver_30DF2E82(void)
 		return 0;
 	}
 	if (magicGateFileService.mutex <= 0) {
-		result = ksceKernelCreateMutex("SceMagicGateEmDrv", 0, 1, NULL);
+		result = sceKernelCreateMutex("SceMagicGateEmDrv", 0, 1, NULL);
 		if (result < 0) {
 			SceMagicGateForDriver_492EE950();
 			return result;
@@ -575,7 +575,7 @@ createDirectory:
 	recoverFileGroups();
 	magicGateFileService.references = 1;
 	magicGateFileService.flags = 1;
-	ksceKernelUnlockMutex(magicGateFileService.mutex, 1);
+	sceKernelUnlockMutex(magicGateFileService.mutex, 1);
 	return 0;
 
 ioFailed:
@@ -590,8 +590,8 @@ failed:
 	magicGateFileService.flags = 0;
 	if (mutex > 0) {
 		magicGateFileService.mutex = -1;
-		ksceKernelUnlockMutex(mutex, 1);
-		ksceKernelDeleteMutex(mutex);
+		sceKernelUnlockMutex(mutex, 1);
+		sceKernelDeleteMutex(mutex);
 	}
 	return result;
 }
@@ -625,7 +625,7 @@ int SceMagicGateForDriver_8E2E577E(void)
 	SceUID mutex;
 	int result;
 
-	result = ksceKernelLockMutex(magicGateFileService.mutex, 1, NULL);
+	result = sceKernelLockMutex(magicGateFileService.mutex, 1, NULL);
 	if (result == (int)0x80024504)
 		return 0x80501001;
 	if (result < 0)
@@ -635,12 +635,12 @@ int SceMagicGateForDriver_8E2E577E(void)
 		magicGateFileService.flags = 0;
 		if (mutex > 0) {
 			magicGateFileService.mutex = -1;
-			ksceKernelUnlockMutex(mutex, 1);
-			ksceKernelDeleteMutex(mutex);
+			sceKernelUnlockMutex(mutex, 1);
+			sceKernelDeleteMutex(mutex);
 		}
 		return 0;
 	}
-	ksceKernelUnlockMutex(magicGateFileService.mutex, 1);
+	sceKernelUnlockMutex(magicGateFileService.mutex, 1);
 	return 0;
 }
 

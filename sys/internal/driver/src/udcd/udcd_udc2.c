@@ -171,7 +171,7 @@ static inline void _sceUdcdDoCommand(volatile struct udcdControllerRegisters *re
 	registers->command = command;
 	number = (command & 0xff) >> 4;
 	command &= 0xf;
-	start = ksceKernelGetSystemTimeLow();
+	start = SceThreadmgrForDriver_47F6DE49();
 	if (!((1 << command) & (1 << UDC2_COMMAND_SETUP_DONE | 1 << UDC2_COMMAND_FLUSH | 1 << UDC2_COMMAND_STALL |
 				 1 << UDC2_COMMAND_RESET | 1 << UDC2_COMMAND_ENABLE | 1 << UDC2_COMMAND_DISABLE |
 				 1 << 9 | 1 << UDC2_COMMAND_ABORT | 1 << UDC2_COMMAND_FIFO_CLEAR)))
@@ -216,7 +216,7 @@ static inline void _sceUdcdDoCommand(volatile struct udcdControllerRegisters *re
 		default:
 			return;
 		}
-	} while (ksceKernelGetSystemTimeLow() - start <= UDC2_COMMAND_TIMEOUT);
+	} while (SceThreadmgrForDriver_47F6DE49() - start <= UDC2_COMMAND_TIMEOUT);
 	SCE_DBG_PRINTF_LEVEL(1, 6, 149, "USB#%d Command[%08x] timeout\n", number, command);
 }
 
@@ -585,7 +585,7 @@ int udcdDetectCookie(int wake)
 			controller->savedConnectionState = 1;
 			controller->registers->endpoints[0].config = 0x40;
 			_sceUdcdDoCommand(controller->registers, 2, 10);
-			controller->cookieTimer = ksceKernelRegisterTimer("SceUdcdAlarmCookieDetect", 500000,
+			controller->cookieTimer = SceThreadmgrForDriver_C58DF384("SceUdcdAlarmCookieDetect", 500000,
 									  udcdCookieAlarm, NULL);
 			if (controller->board == 1)
 				ksceGpioPortSet(0, 0x18);

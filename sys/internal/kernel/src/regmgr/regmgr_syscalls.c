@@ -241,7 +241,7 @@ int regMgrSysParamGetInt(int id, int *value, int mode)
 	if (value == NULL) {
 		err = SCE_REGMGR_ERROR_INVALID_ARGUMENT;
 	} else {
-		err = ksceKernelSetPermission(0x40);
+		err = sceKernelSetThreadAccessLevel(0x40);
 		if (err >= 0) {
 			regMgrSetStatus(REGMGR_STATUS_FLAGS);
 			err = sceRegMgrGetKeyInt(g_regMgrSysParamCategory[param->categoryNo],
@@ -255,7 +255,7 @@ int regMgrSysParamGetInt(int id, int *value, int mode)
 			}
 		}
 	}
-	ksceKernelSetPermission(perm);
+	sceKernelSetThreadAccessLevel(perm);
 	ret = err;
 out:
 	regMgrComApiEpilogue(lock);
@@ -287,7 +287,7 @@ static inline __attribute__((always_inline)) int regMgrSysParamGet(int id, void 
 	if (buf == NULL) {
 		err = SCE_REGMGR_ERROR_INVALID_ARGUMENT;
 	} else {
-		err = ksceKernelSetPermission(0x40);
+		err = sceKernelSetThreadAccessLevel(0x40);
 		if (err >= 0) {
 			if (size >= REGMGR_SYS_DATA_SIZE)
 				size = REGMGR_SYS_DATA_SIZE;
@@ -311,7 +311,7 @@ static inline __attribute__((always_inline)) int regMgrSysParamGet(int id, void 
 			}
 		}
 	}
-	ksceKernelSetPermission(perm);
+	sceKernelSetThreadAccessLevel(perm);
 	ret = err;
 out:
 	regMgrComApiEpilogue(lock);
@@ -960,7 +960,7 @@ static inline __attribute__((always_inline)) int regMgrSysParamSet(int id, int v
 	if (perm < 0)
 		goto out;
 	if (type == REGMGR_TYPE_INT) {
-		err = ksceKernelSetPermission(0x40);
+		err = sceKernelSetThreadAccessLevel(0x40);
 		if (err >= 0) {
 			regMgrSetStatus(REGMGR_STATUS_FLAGS);
 			err = sceRegMgrSetKeyInt(g_regMgrSysParamCategory[param->categoryNo],
@@ -971,7 +971,7 @@ static inline __attribute__((always_inline)) int regMgrSysParamSet(int id, int v
 		err = SCE_REGMGR_ERROR_INVALID_ARGUMENT;
 	} else {
 		err = SceSysmemForDriver_BC996A7A(g_regMgrSysData, buf, size);
-		if (err == 0 && (err = ksceKernelSetPermission(0x40)) >= 0) {
+		if (err == 0 && (err = sceKernelSetThreadAccessLevel(0x40)) >= 0) {
 			regMgrSetStatus(REGMGR_STATUS_FLAGS);
 			if (type == REGMGR_TYPE_BIN)
 				err = sceRegMgrSetKeyBin(g_regMgrSysParamCategory[param->categoryNo],
@@ -984,7 +984,7 @@ static inline __attribute__((always_inline)) int regMgrSysParamSet(int id, int v
 			regMgrClearStatus();
 		}
 	}
-	ksceKernelSetPermission(perm);
+	sceKernelSetThreadAccessLevel(perm);
 	ret = err;
 out:
 	regMgrComApiEpilogue(lock);

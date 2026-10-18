@@ -99,8 +99,8 @@ int bbmcAttachUsbSerialInterface(int deviceId, unsigned int index)
 		} while (interface->bNumEndpoints > count);
 	}
 	SceCpuForDriver_BF82DEB2(&g_usbSerialHost->lock);
-	ksceKernelClearEventFlag(g_usbSerialHost->event, ~g_usbSerialDetachedEvents[index]);
-	ksceKernelSetEventFlag(g_usbSerialHost->event, g_usbSerialAttachedEvents[index]);
+	sceKernelClearEventFlag(g_usbSerialHost->event, ~g_usbSerialDetachedEvents[index]);
+	sceKernelSetEventFlag(g_usbSerialHost->event, g_usbSerialAttachedEvents[index]);
 	g_usbSerialHost->attached[index] = 1;
 	subscriber = 0;
 	do {
@@ -124,8 +124,8 @@ int bbmcDetachUsbQcom(int deviceId)
 		return -1;
 	SceCpuForDriver_BF82DEB2(&g_usbSerialHost->lock);
 	g_usbSerialHost->attached[0] = 0;
-	ksceKernelClearEventFlag(g_usbSerialHost->event, ~1u);
-	ksceKernelSetEventFlag(g_usbSerialHost->event, 2);
+	sceKernelClearEventFlag(g_usbSerialHost->event, ~1u);
+	sceKernelSetEventFlag(g_usbSerialHost->event, 2);
 	if (g_usbSerialHost->stateChanged[0] != NULL)
 		g_usbSerialHost->stateChanged[0](2, g_usbSerialHost->stateContext[0]);
 	if (g_usbSerialHost->stateChanged[1] != NULL)
@@ -524,8 +524,8 @@ int bbmcDetachUsbQedl(int deviceId)
 		return -1;
 	SceCpuForDriver_BF82DEB2(&g_usbSerialHost->lock);
 	g_usbSerialHost->attached[2] = 0;
-	ksceKernelClearEventFlag(g_usbSerialHost->event, ~16u);
-	ksceKernelSetEventFlag(g_usbSerialHost->event, 32);
+	sceKernelClearEventFlag(g_usbSerialHost->event, ~16u);
+	sceKernelSetEventFlag(g_usbSerialHost->event, 32);
 	if (g_usbSerialHost->stateChanged[0] != NULL)
 		g_usbSerialHost->stateChanged[0](32, g_usbSerialHost->stateContext[0]);
 	if (g_usbSerialHost->stateChanged[1] != NULL)
@@ -572,8 +572,8 @@ int bbmcDetachUsbQdl(int deviceId)
 		return -1;
 	SceCpuForDriver_BF82DEB2(&g_usbSerialHost->lock);
 	g_usbSerialHost->attached[3] = 0;
-	ksceKernelClearEventFlag(g_usbSerialHost->event, ~64u);
-	ksceKernelSetEventFlag(g_usbSerialHost->event, 128);
+	sceKernelClearEventFlag(g_usbSerialHost->event, ~64u);
+	sceKernelSetEventFlag(g_usbSerialHost->event, 128);
 	if (g_usbSerialHost->stateChanged[0] != NULL)
 		g_usbSerialHost->stateChanged[0](128, g_usbSerialHost->stateContext[0]);
 	if (g_usbSerialHost->stateChanged[1] != NULL)
@@ -620,8 +620,8 @@ int bbmcDetachUsbQmodem(int deviceId)
 		return -1;
 	SceCpuForDriver_BF82DEB2(&g_usbSerialHost->lock);
 	g_usbSerialHost->attached[1] = 0;
-	ksceKernelClearEventFlag(g_usbSerialHost->event, ~4u);
-	ksceKernelSetEventFlag(g_usbSerialHost->event, 8);
+	sceKernelClearEventFlag(g_usbSerialHost->event, ~4u);
+	sceKernelSetEventFlag(g_usbSerialHost->event, 8);
 	if (g_usbSerialHost->stateChanged[0] != NULL)
 		g_usbSerialHost->stateChanged[0](8, g_usbSerialHost->stateContext[0]);
 	if (g_usbSerialHost->stateChanged[1] != NULL)
@@ -672,7 +672,7 @@ int bbmcInitializeUsbSerialHost(void)
 	g_usbSerialChannels[1].pipes[1].lock = 0;
 	g_usbSerialChannels[1].pipes[2].lock = 0;
 	g_usbSerialHostStorage.lock = 0;
-	event = ksceKernelCreateEventFlag("SceUsbBbmcComm", 0x1000, 10, NULL);
+	event = sceKernelCreateEventFlag("SceUsbBbmcComm", 0x1000, 10, NULL);
 	if (event < 0)
 		goto fail;
 	g_usbSerialHostStorage.event = event;
@@ -692,7 +692,7 @@ unregisterQcom:
 	ksceUsbdUnregisterCompositeLdd(&g_usbSerialQcomDriver);
 fail:
 	if (g_usbSerialHostStorage.event > 0) {
-		ksceKernelDeleteEventFlag(g_usbSerialHostStorage.event);
+		sceKernelDeleteEventFlag(g_usbSerialHostStorage.event);
 		g_usbSerialHostStorage.event = 0;
 	}
 	g_usbSerialHost = NULL;
@@ -702,12 +702,12 @@ fail:
 int bbmcFinalizeUsbSerialHost(void)
 {
 	if (g_usbSerialHost != NULL) {
-		ksceKernelSetEventFlag(g_usbSerialHost->event, ~0u);
+		sceKernelSetEventFlag(g_usbSerialHost->event, ~0u);
 		ksceUsbdUnregisterCompositeLdd(&g_usbSerialQedlDriver);
 		ksceUsbdUnregisterCompositeLdd(&g_usbSerialQdlDriver);
 		ksceUsbdUnregisterCompositeLdd(&g_usbSerialQmodemDriver);
 		ksceUsbdUnregisterCompositeLdd(&g_usbSerialQcomDriver);
-		ksceKernelDeleteEventFlag(g_usbSerialHost->event);
+		sceKernelDeleteEventFlag(g_usbSerialHost->event);
 		g_usbSerialHost = NULL;
 	}
 	return 0;
@@ -721,7 +721,7 @@ int bbmcPollUsbSerialHost(SceUInt32 *events)
 		return (int)0x80332201;
 	if (events == NULL)
 		return (int)0x80330002;
-	ret = ksceKernelPollEventFlag(g_usbSerialHost->event, ~0u, 1, events);
+	ret = sceKernelPollEventFlag(g_usbSerialHost->event, ~0u, 1, events);
 	if ((*events & 0x80000000u) != 0) {
 		*events &= ~0x80000000u;
 		return (int)0x80332202;
@@ -738,7 +738,7 @@ int bbmcWaitUsbSerialHost(SceUInt32 events, SceUInt8 waitMode, SceUInt *timeout)
 		return (int)0x80332201;
 	if ((waitMode & 1) != 0)
 		events |= 0x80000000u;
-	ret = ksceKernelWaitEventFlag(g_usbSerialHost->event, events, waitMode & 1,
+	ret = sceKernelWaitEventFlag(g_usbSerialHost->event, events, waitMode & 1,
 		&received, timeout);
 	ret &= ~((SceInt32)received >> 31);
 	if ((SceInt32)received < 0)

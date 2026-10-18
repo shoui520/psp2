@@ -96,21 +96,21 @@ set(MODULE_IMPORT_FUNCS
 	memcmp
 	SceSysrootForDriver_834439A7
 	SceSysrootForDriver_B0E1FC67
-	ksceKernelWaitEventFlag
-	ksceKernelCreateCallback
-	ksceKernelStartThread
-	ksceKernelCreateEventFlag
+	sceKernelWaitEventFlag
+	sceKernelCreateCallback
+	sceKernelStartThread
+	sceKernelCreateEventFlag
 	sceKernelCancelAlarm
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelLockFastMutex
-	ksceKernelWaitEventFlagCB
+	sceKernelClearEventFlag
+	lockFastMutex
+	SceThreadmgrForDriver_8A35F714
 	sceKernelGetProcessId
-	ksceKernelInitializeFastMutex
-	ksceKernelRegisterTimer
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
+	sceKernelInitializeFastMutex
+	SceThreadmgrForDriver_C58DF384
+	sceKernelCreateThread
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
 	sceKernelGetSystemTimeWide
 	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_E0489831

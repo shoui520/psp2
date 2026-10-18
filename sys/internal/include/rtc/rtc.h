@@ -84,13 +84,9 @@ int ksceRtcFormatRFC3339LocalTime(char *buf, const SceRtcTick *tick);
 
 /*
  * Imports of SceRtc that no other header declares yet (their exporters'
- * headers: syscon/syscon.h, threadmgr/threadmgr.h, processmgr/processmgr.h, sysmem/qafmgr.h).
+ * headers: syscon/syscon.h, processmgr/processmgr.h, sysmem/qafmgr.h).
  */
 
-/* syscon RTC counter, in units of 0.5 s since boot */
-/* threadmgr: a one-shot alarm calling handler(argp) after *delay microseconds */
-SceUID SceThreadmgrForDriver_10517330(const char *name, const SceUInt64 *delay,
-				      int (*handler)(void *argp), void *argp);
 /* processmgr: the C library time functions for processes */
 int SceProcessmgrForDriver_4140D633(const void *functions);
 int ksceSblUtMgrHasStoreFlag(void);

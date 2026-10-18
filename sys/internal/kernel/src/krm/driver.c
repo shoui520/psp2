@@ -268,12 +268,12 @@ SceOpenPsId g_krmProvisionedAlternateKeyIv KRM_PROVISIONED = { .open_psid = { 0x
 /* Internal names unknown; the debug build identifies this file as driver.c. */
 int KrmDriverLock(void)
 {
-	return ksceKernelLockFastMutex(&g_krmDriverMutex);
+	return lockFastMutex(&g_krmDriverMutex);
 }
 
 int KrmDriverUnlock(void)
 {
-	return ksceKernelUnlockFastMutex(&g_krmDriverMutex);
+	return sceKernelUnlockFastMutex(&g_krmDriverMutex);
 }
 
 void sceKrmDriverSetPID(SceUID pid)
@@ -323,7 +323,7 @@ int KrmDriverInitialize(void)
 
 	g_krmDriverState = 0;
 	g_krmDriverPid = -1;
-	ret = ksceKernelInitializeFastMutex(&g_krmDriverMutex,
+	ret = sceKernelInitializeFastMutex(&g_krmDriverMutex,
 					   g_krmDriverMutexName, 0, NULL);
 	return ret < 0 ? ret : 0;
 }

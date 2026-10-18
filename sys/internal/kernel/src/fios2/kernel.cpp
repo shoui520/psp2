@@ -20,12 +20,12 @@ static inline SceFiosKernelThreadState *fiosThreadState(int create)	/* name unkn
 	if (slot == -1)
 		return NULL;
 	return (SceFiosKernelThreadState *)SceThreadmgrForDriver_89CA5698(slot,
-		ksceKernelGetThreadId(), create);
+		sceKernelGetThreadId(), create);
 }
 
 int ksceFiosKernelOverlayAdd(SceFiosOverlay *overlay, SceFiosOverlayID *outId)
 {
-	SceUID pid = overlay != NULL ? overlay->pid : ksceKernelGetProcessIdFromTLS();
+	SceUID pid = overlay != NULL ? overlay->pid : SceThreadmgrForDriver_FA54D49A();
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
 
@@ -52,7 +52,7 @@ int ksceFiosKernelOverlayAddForProcess(SceUID pid, SceFiosOverlay *overlay, SceF
 
 int ksceFiosKernelOverlayRemove(SceFiosOverlayID id)
 {
-	SceUID pid = ksceKernelGetProcessIdFromTLS();
+	SceUID pid = SceThreadmgrForDriver_FA54D49A();
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
 
@@ -73,7 +73,7 @@ int ksceFiosKernelOverlayRemoveForProcess(SceUID pid, SceFiosOverlayID id)
 
 int ksceFiosKernelOverlayGetInfo(SceFiosOverlayID id, SceFiosOverlay *outOverlay)
 {
-	SceUID pid = ksceKernelGetProcessIdFromTLS();
+	SceUID pid = SceThreadmgrForDriver_FA54D49A();
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
 
@@ -100,7 +100,7 @@ int ksceFiosKernelOverlayGetInfoForProcess(SceUID pid, SceFiosOverlayID id, SceF
 
 int ksceFiosKernelOverlayModify(SceFiosOverlayID id, SceFiosOverlay *overlay)
 {
-	SceUID pid = ksceKernelGetProcessIdFromTLS();
+	SceUID pid = SceThreadmgrForDriver_FA54D49A();
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
 
@@ -157,7 +157,8 @@ int ksceFiosKernelOverlayResolveSync(SceUID pid, int resolveFlag, const char *in
 	if (inPath == NULL || outPath == NULL)
 		ret = SCE_FIOS_ERROR_BAD_PTR;
 	else
-		ret = sceKernelExtendKernelStackWide(0x2000, sceFiosKernelOverlayResolveCallback, &args);
+		ret = (int)sceKernelExtendKernelStackWide(0x2000,
+			(ThreadmgrStackFunction)sceFiosKernelOverlayResolveCallback, &args);
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -184,7 +185,8 @@ int ksceFiosKernelOverlayResolveWithRangeSync(SceUID pid, int resolveFlag, const
 	if (inPath == NULL || outPath == NULL)
 		ret = SCE_FIOS_ERROR_BAD_PTR;
 	else
-		ret = sceKernelExtendKernelStackWide(0x2000, sceFiosKernelOverlayResolveCallback, &args);
+		ret = (int)sceKernelExtendKernelStackWide(0x2000,
+			(ThreadmgrStackFunction)sceFiosKernelOverlayResolveCallback, &args);
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -203,7 +205,7 @@ int SceFios2KernelForDriver_3B329E86(SceFiosKernelDH **outDH, const char *path, 
 		goto out;
 	}
 	*outDH = NULL;
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(ksceKernelGetProcessIdFromTLS(), g_fiosPlsKey,
+	ret = ksceKernelGetProcessLocalStorageAddrForPid(SceThreadmgrForDriver_FA54D49A(), g_fiosPlsKey,
 							 (void **)&storage, 1);
 	if (ret != 0)
 		goto out;
@@ -215,7 +217,7 @@ int SceFios2KernelForDriver_3B329E86(SceFiosKernelDH **outDH, const char *path, 
 		if (SceCpuForDriver_CDA96E81((SceInt32 *)&storage->dh[i], 0, -1) != 0)
 			continue;
 		/* the first pass measures, the second builds */
-		size = sceFiosKernelDHOpenInternal(ksceKernelGetProcessIdFromTLS(), outDH, path,
+		size = sceFiosKernelDHOpenInternal(SceThreadmgrForDriver_FA54D49A(), outDH, path,
 						   minOrder, maxOrder, NULL, 0, NULL);
 		ret = size;
 		if (size >= 0) {
@@ -223,7 +225,7 @@ int SceFios2KernelForDriver_3B329E86(SceFiosKernelDH **outDH, const char *path, 
 			if (buffer == NULL) {
 				ret = SCE_FIOS_ERROR_CANT_ALLOCATE_DH;
 			} else {
-				ret = sceFiosKernelDHOpenInternal(ksceKernelGetProcessIdFromTLS(), outDH,
+				ret = sceFiosKernelDHOpenInternal(SceThreadmgrForDriver_FA54D49A(), outDH,
 								  path, minOrder, maxOrder, buffer,
 								  size, NULL);
 				if (ret >= 0) {
@@ -265,7 +267,7 @@ static inline int fiosDHForget(SceFiosKernelDH *dh)	/* name unknown */
 	SceFiosKernelProcessStorage *storage = NULL;
 	int i;
 
-	if (ksceKernelGetProcessLocalStorageAddrForPid(ksceKernelGetProcessIdFromTLS(), g_fiosPlsKey,
+	if (ksceKernelGetProcessLocalStorageAddrForPid(SceThreadmgrForDriver_FA54D49A(), g_fiosPlsKey,
 						       (void **)&storage, 1) == 0) {
 		if (storage == NULL)
 			return 0;

@@ -531,7 +531,7 @@ void DmacIntrHandler(DmaChannel *channel)
 	}
 
 	op->head = next;
-	ksceKernelSetEventFlag(op->evfId, 1);
+	sceKernelSetEventFlag(op->evfId, 1);
 	if (!busy) {
 		reg->intrStatus = DMAC_INTR_COMPLETE;
 		dsb();
@@ -866,7 +866,7 @@ SceKernelDmaOpId ksceKernelDmaOpAlloc(const char *name)
 	opid = getDmaOpId(op);
 	memset(op, 0, __builtin_offsetof(DmaOp, magic));
 	op->magic = DMA_OP_MAGIC;
-	evfId = ksceKernelCreateEventFlag(name, 0, 0, NULL);
+	evfId = sceKernelCreateEventFlag(name, 0, 0, NULL);
 	if (evfId < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 708, "sceKernelDmaOpAlloc",
 				    "Open event flag failed. 0x%08x\n", evfId);
@@ -920,7 +920,7 @@ int ksceKernelDmaOpFree(SceKernelDmaOpId opid)
 	}
 	if (op->status & DMA_OP_QUEUED)
 		RemoveQueuedDmaOperation(op);
-	ksceKernelDeleteEventFlag(op->evfId);
+	sceKernelDeleteEventFlag(op->evfId);
 	op->status = 0;
 	op->magic = 0;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
@@ -1307,7 +1307,7 @@ static inline int dmacMemcpySub(DmaOp *op, void *dst, const void *src, SceSize s
 					    "Enqueue operation failed. 0x%08x\n", res);
 			break;
 		}
-		res = ksceKernelWaitEventFlag(op->evfId, 1,
+		res = sceKernelWaitEventFlag(op->evfId, 1,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      NULL, NULL);
@@ -1319,7 +1319,7 @@ static inline int dmacMemcpySub(DmaOp *op, void *dst, const void *src, SceSize s
 		dst = (char *)dst + n;
 		src = (const char *)src + n;
 	}
-	ksceKernelDeleteEventFlag(op->evfId);
+	sceKernelDeleteEventFlag(op->evfId);
 	/* wait until the interrupt handler is done with the operation */
 	SceCpuForDriver_BF82DEB2(&op->lock);
 	if (cmd & (SCE_KERNEL_DMAC_CMD_COHERENT_SRC | SCE_KERNEL_DMAC_CMD_COHERENT_DST))
@@ -1341,7 +1341,7 @@ int ksceDmacMemcpy(void *dst, const void *src, SceSize size)
 	memset(&op, 0, __builtin_offsetof(DmaOp, lock));
 	op.lock = 0;
 	op.magic = DMA_OP_MAGIC;
-	evfId = ksceKernelCreateEventFlag("SceDmacMemcpy", 0, 0, NULL);
+	evfId = sceKernelCreateEventFlag("SceDmacMemcpy", 0, 0, NULL);
 	op.evfId = evfId;
 	if (evfId < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 515, "sceKernelDmacMemcpy",
@@ -1387,7 +1387,7 @@ static inline int dmacMemsetSub(DmaOp *op, SceKernelDmaOpChainParam *param,
 					    "Enqueue operation failed. 0x%08x\n", res);
 			break;
 		}
-		res = ksceKernelWaitEventFlag(op->evfId, 1,
+		res = sceKernelWaitEventFlag(op->evfId, 1,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      NULL, NULL);
@@ -1398,7 +1398,7 @@ static inline int dmacMemsetSub(DmaOp *op, SceKernelDmaOpChainParam *param,
 			break;
 		dst = (char *)dst + n;
 	}
-	ksceKernelDeleteEventFlag(op->evfId);
+	sceKernelDeleteEventFlag(op->evfId);
 	/* wait until the interrupt handler is done with the operation */
 	SceCpuForDriver_BF82DEB2(&op->lock);
 	if (tag->cmd & SCE_KERNEL_DMAC_CMD_COHERENT_DST)
@@ -1429,7 +1429,7 @@ int ksceDmacMemset(void *dst, int c, SceSize size)
 	tag.blockSize = 0;
 	tag.pNext = SCE_KERNEL_DMAC_CHAIN_END;
 	param.size = sizeof(param);
-	evfId = ksceKernelCreateEventFlag("SceDmacMemset", 0, 0, NULL);
+	evfId = sceKernelCreateEventFlag("SceDmacMemset", 0, 0, NULL);
 	op.evfId = evfId;
 	if (evfId < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 644, "sceKernelDmacMemset",
@@ -1511,19 +1511,19 @@ int ksceKernelDmaOpSync(SceKernelDmaOpId opid, SceKernelDmaOpSyncMode syncMode,
 	case SCE_KERNEL_DMA_OP_SYNC_POLL:
 		if (!(status & DMA_OP_DONE))
 			return 1;
-		res = ksceKernelPollEventFlag(evfId, 1,
+		res = sceKernelPollEventFlag(evfId, 1,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      NULL);
 		break;
 	case SCE_KERNEL_DMA_OP_SYNC_WAIT:
-		res = ksceKernelWaitEventFlag(evfId, 1,
+		res = sceKernelWaitEventFlag(evfId, 1,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      NULL, NULL);
 		break;
 	case SCE_KERNEL_DMA_OP_SYNC_TIMED_WAIT:
-		res = ksceKernelWaitEventFlag(evfId, 1,
+		res = sceKernelWaitEventFlag(evfId, 1,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      NULL, &timeout);

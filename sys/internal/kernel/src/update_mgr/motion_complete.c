@@ -10,7 +10,7 @@ void MotionUtilCommandComplete(int result,
 
 	context->result = result;
 	if (result)
-		ksceKernelSetEventFlag(context->eventFlagId, 2);
+		sceKernelSetEventFlag(context->eventFlagId, 2);
 	else
-		ksceKernelSetEventFlag(context->eventFlagId, 1);
+		sceKernelSetEventFlag(context->eventFlagId, 1);
 }

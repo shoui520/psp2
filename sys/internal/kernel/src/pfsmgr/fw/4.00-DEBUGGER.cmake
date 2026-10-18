@@ -235,26 +235,26 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	strlen
-	ksceKernelSetPermission
-	ksceKernelSetProcessIdToTLS
-	ksceKernelDeleteMutex
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelStartThread
+	sceKernelSetThreadAccessLevel
+	SceThreadmgrForDriver_0486F239
+	sceKernelDeleteMutex
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelStartThread
 	SceThreadmgrForDriver_3A72C6D8
-	ksceKernelWaitThreadEnd
-	ksceKernelGetSystemTimeLow
-	ksceKernelGetThreadId
-	ksceKernelSignalCondTo
+	sceKernelWaitThreadEnd
+	SceThreadmgrForDriver_47F6DE49
+	sceKernelGetThreadId
+	sceKernelSignalCondTo
 	SceThreadmgrForDriver_8C3C1F78
-	ksceKernelSignalCond
-	ksceKernelDeleteCond
+	sceKernelSignalCond
+	sceKernelDeleteCond
 	SceThreadmgrForDriver_B645C7EF
-	ksceKernelCreateThread
-	ksceKernelWaitCond
-	ksceKernelCreateCond
-	ksceKernelGetProcessIdFromTLS
-	ksceKernelCreateMutex
+	sceKernelCreateThread
+	sceKernelWaitCond
+	sceKernelCreateCond
+	SceThreadmgrForDriver_FA54D49A
+	sceKernelCreateMutex
 	ksceSblDmac5AesEcbEncNP
 	ksceSblDmac5AesCbcDec
 	ksceSblDmac5AesCbcDecNP

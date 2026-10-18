@@ -213,11 +213,11 @@ static inline __attribute__((always_inline)) int ctrlReadBuffer(
 	eventBit = process->ports[port].eventBit;
 	ring = process->ports[port].ring;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
-	result = ksceKernelWaitEventFlag(event, eventBit, SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
+	result = sceKernelWaitEventFlag(event, eventBit, SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 	if (result < 0)
 		return result;
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
-	ksceKernelClearEventFlag(event, ~eventBit);
+	sceKernelClearEventFlag(event, ~eventBit);
 	lookup = NULL;
 	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
 			ctrlStorage.processStorageKey, (void **)&lookup, 0) < 0 ||
@@ -320,7 +320,7 @@ static inline __attribute__((always_inline)) int ctrlUserBuffer(
 		result = SCE_CTRL_ERROR_INVALID_ARG;
 		goto out;
 	}
-	result = ksceKernelLockMutex(buffer->mutex, 1, NULL);
+	result = sceKernelLockMutex(buffer->mutex, 1, NULL);
 	if (result < 0)
 		goto out;
 	if (extended) {
@@ -359,12 +359,12 @@ static inline __attribute__((always_inline)) int ctrlUserBuffer(
 		copied = SceSysmemForDriver_6D88EF8A(samples, buffer->samples,
 					    result * sizeof(*samples));
 		if (copied < 0) {
-			ksceKernelUnlockMutex(buffer->mutex, 1);
+			sceKernelUnlockMutex(buffer->mutex, 1);
 			result = copied;
 			goto out;
 		}
 	}
-	unlocked = ksceKernelUnlockMutex(buffer->mutex, 1);
+	unlocked = sceKernelUnlockMutex(buffer->mutex, 1);
 	if (unlocked < 0)
 		result = unlocked;
 out:
@@ -553,8 +553,8 @@ int ctrlSampleComplete(SceSysconPacket *packet, void *arg)
 	     port < (SceSysrootForDriver_8AA268D6(1) ? 5 : 1);
 	     port++) {
 		events = ctrlStorage.ports[port].active & ~ctrlStorage.ports[port].blocked;
-		ksceKernelSetEventFlag(ctrlStorage.ports[port].positive, events);
-		ksceKernelSetEventFlag(ctrlStorage.ports[port].negative, events);
+		sceKernelSetEventFlag(ctrlStorage.ports[port].positive, events);
+		sceKernelSetEventFlag(ctrlStorage.ports[port].negative, events);
 	}
 out:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
@@ -1122,7 +1122,7 @@ int ksceCtrlRegisterNotifyCallBack(SceUID callback)
 	SceKernelIntrStatus intr;
 	int result, index;
 
-	result = ksceKernelGetCallbackCount(callback);
+	result = SceThreadmgrForDriver_0892D8DF(callback);
 	if (result < 0)
 		return result;
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
@@ -1142,7 +1142,7 @@ int ksceCtrlUnregisterNotifyCallBack(SceUID callback)
 	SceKernelIntrStatus intr;
 	int result, index;
 
-	result = ksceKernelGetCallbackCount(callback);
+	result = SceThreadmgrForDriver_0892D8DF(callback);
 	if (result < 0)
 		return result;
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
@@ -1162,7 +1162,7 @@ int ctrlRegisterBdRMCCallback(SceUID callback)
 	SceKernelIntrStatus intr;
 	int result, index;
 
-	result = ksceKernelGetCallbackCount(callback);
+	result = SceThreadmgrForDriver_0892D8DF(callback);
 	if (result < 0)
 		return SCE_CTRL_ERROR_FATAL;
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
@@ -1182,7 +1182,7 @@ int ctrlUnregisterBdRMCCallback(SceUID callback)
 	SceKernelIntrStatus intr;
 	int result, index;
 
-	result = ksceKernelGetCallbackCount(callback);
+	result = SceThreadmgrForDriver_0892D8DF(callback);
 	if (result < 0)
 		return SCE_CTRL_ERROR_FATAL;
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
@@ -1546,8 +1546,8 @@ int ctrlPublishCachedSample(void)
 	     port++) {
 		events = ctrlStorage.ports[port].active &
 			 ~ctrlStorage.ports[port].blocked;
-		ksceKernelSetEventFlag(ctrlStorage.ports[port].positive, events);
-		ksceKernelSetEventFlag(ctrlStorage.ports[port].negative, events);
+		sceKernelSetEventFlag(ctrlStorage.ports[port].positive, events);
+		sceKernelSetEventFlag(ctrlStorage.ports[port].negative, events);
 	}
 	return 0;
 }
@@ -1596,7 +1596,7 @@ int ctrlVblankCallback(void *arg, void *context, unsigned char priority)
 		sample->tx[2] = 1;
 		ctrlStorage.samplePending = ctrlStorage.vblankSampling;
 	} else if (ctrlStorage.samplingTimer == -1) {
-		ctrlStorage.samplingTimer = ksceKernelRegisterTimer("SceCtrlAlarm0",
+		ctrlStorage.samplingTimer = SceThreadmgrForDriver_C58DF384("SceCtrlAlarm0",
 					700, ctrlAlarmCallback, NULL);
 	}
 	if (!ctrlStorage.samplingModePending) {
@@ -1711,9 +1711,9 @@ int ctrlCreateProcess(SceUID pid)
 	for (port = 0;
 	     port < (SceSysrootForDriver_8AA268D6(1) ? 5U : 1U);
 	     port++) {
-		ksceKernelClearEventFlag(ctrlStorage.ports[port].positive,
+		sceKernelClearEventFlag(ctrlStorage.ports[port].positive,
 					 ~process->ports[port].eventBit);
-		ksceKernelClearEventFlag(ctrlStorage.ports[port].negative,
+		sceKernelClearEventFlag(ctrlStorage.ports[port].negative,
 					 ~process->ports[port].eventBit);
 	}
 	for (slot = 0; slot < 16; slot++) {
@@ -1770,9 +1770,9 @@ int ctrlDestroyProcess(SceUID pid)
 		capability = SceSysrootForDriver_8AA268D6(1);
 	}
 	for (port = 0; port < (capability ? 5U : 1U); port++) {
-		ksceKernelClearEventFlag(ctrlStorage.ports[port].positive,
+		sceKernelClearEventFlag(ctrlStorage.ports[port].positive,
 					 ~process->ports[port].eventBit);
-		ksceKernelClearEventFlag(ctrlStorage.ports[port].negative,
+		sceKernelClearEventFlag(ctrlStorage.ports[port].negative,
 					 ~process->ports[port].eventBit);
 		ctrlStorage.ports[port].blocked &= ~process->ports[port].eventBit;
 		ctrlStorage.ports[port].active &= ~process->ports[port].eventBit;
@@ -1862,7 +1862,7 @@ int _sceCtrlBdRMCForceReleaseCallback(SceUID pid)
 		mode = ctrlStorage.remoconReleaseStates[slot] & 0x0f000000;
 		if (mode == 0x1000000 || mode == 0x2000000)
 			notify |= mode;
-		result = ksceKernelNotifyCallback(ctrlStorage.remoconReleaseCallbacks[slot],
+		result = sceKernelNotifyCallback(ctrlStorage.remoconReleaseCallbacks[slot],
 						 notify);
 		ctrlStorage.remoconReleaseStates[slot] = notify;
 		if (result < 0) {
@@ -1935,7 +1935,7 @@ int _sceCtrlBdRemoconSendNotify(uint32_t notify)
 		    ctrlStorage.remoconReleaseOwners[slot] != owner ||
 		    !((ctrlStorage.remoconReleaseStates[slot] ^ notify) >> 28))
 			continue;
-		if (ksceKernelNotifyCallback(ctrlStorage.remoconReleaseCallbacks[slot],
+		if (sceKernelNotifyCallback(ctrlStorage.remoconReleaseCallbacks[slot],
 					     notify) < 0) {
 			ctrlStorage.remoconReleaseCallbacks[slot] = -1;
 			ctrlStorage.remoconReleaseOwners[slot] = -1;
@@ -2074,9 +2074,9 @@ int ctrlInitialize(void)
 		ctrlStorage.ports[port].active = 0;
 		ctrlStorage.ports[port].blocked = 0;
 		ctrlStorage.ports[port].positive =
-			ksceKernelCreateEventFlag(eventNames[port], 0x9000, 0, NULL);
+			sceKernelCreateEventFlag(eventNames[port], 0x9000, 0, NULL);
 		ctrlStorage.ports[port].negative =
-			ksceKernelCreateEventFlag(extendedEventNames[port], 0x9000, 0, NULL);
+			sceKernelCreateEventFlag(extendedEventNames[port], 0x9000, 0, NULL);
 	}
 	ctrlStorage.systemEvents = sceKernelRegisterSysEventHandler("SceCtrl",
 						ctrlSystemEventCallback, NULL);
@@ -2136,17 +2136,17 @@ int ctrlInitializeUserBuffers(void)
 {
 	ctrlStorage.userBuffers[0].mutex = -1;
 	ctrlStorage.userBuffers[1].mutex = -1;
-	ctrlStorage.userBuffers[0].mutex = ksceKernelCreateMutex("SceCtrl1", 0, 0, NULL);
+	ctrlStorage.userBuffers[0].mutex = sceKernelCreateMutex("SceCtrl1", 0, 0, NULL);
 	if (ctrlStorage.userBuffers[0].mutex < 0)
 		goto fail;
-	ctrlStorage.userBuffers[1].mutex = ksceKernelCreateMutex("SceCtrl2", 0, 0, NULL);
+	ctrlStorage.userBuffers[1].mutex = sceKernelCreateMutex("SceCtrl2", 0, 0, NULL);
 	if (ctrlStorage.userBuffers[1].mutex >= 0)
 		return 0;
 	if (ctrlStorage.userBuffers[0].mutex >= 0)
-		ksceKernelDeleteMutex(ctrlStorage.userBuffers[0].mutex);
+		sceKernelDeleteMutex(ctrlStorage.userBuffers[0].mutex);
 fail:
 	if (ctrlStorage.userBuffers[1].mutex >= 0)
-		ksceKernelDeleteMutex(ctrlStorage.userBuffers[1].mutex);
+		sceKernelDeleteMutex(ctrlStorage.userBuffers[1].mutex);
 	return SCE_CTRL_ERROR_FATAL;
 }
 
@@ -2247,7 +2247,7 @@ int ksceCtrlNotifyCallBacks(int notification)
 	for (slot = 0; slot < 16; slot++) {
 		if (ctrlStorage.bdRemoconCallbacks[slot] != -1 &&
 		    ctrlStorage.bdRemoconCallbackOwners[slot] != -1 &&
-		    ksceKernelNotifyCallback(ctrlStorage.bdRemoconCallbacks[slot],
+		    sceKernelNotifyCallback(ctrlStorage.bdRemoconCallbacks[slot],
 				     notification) < 0)
 			ctrlStorage.bdRemoconCallbacks[slot] = -1;
 	}

@@ -498,7 +498,7 @@ int BtRequestHidVuReport(BtStack *stack, uint64_t deviceAddress,
 		       uint8_t command, uint8_t reportId, const void *data,
 		       int length, int userMode)
 {
-	SceUID threadId = ksceKernelGetThreadId();
+	SceUID threadId = sceKernelGetThreadId();
 	BtHidVuSubscriber *subscriber;
 	BtConnection *connection;
 	BtChannel *channel;

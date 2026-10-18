@@ -48,7 +48,7 @@ int PamgrProcKill(SceUID process)
 {
 	int result;
 
-	result = ksceKernelLockFastMutex(&pamgrState.registrationMutex);
+	result = lockFastMutex(&pamgrState.registrationMutex);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0, 82,
 			"FATAL: sceKernelLockFastMutex failed (ret=0x%08x)\n", result);
@@ -58,7 +58,7 @@ int PamgrProcKill(SceUID process)
 		pamgrState.registrationId = 0;
 		pamgrState.registrationShared = 0;
 	}
-	result = ksceKernelUnlockFastMutex(&pamgrState.registrationMutex);
+	result = sceKernelUnlockFastMutex(&pamgrState.registrationMutex);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0, 95,
 			"FATAL: sceKernelUnlockFastMutex failed (ret=0x%08x)\n", result);
@@ -71,7 +71,7 @@ int PamgrProcExit(SceUID process)
 {
 	int result;
 
-	result = ksceKernelLockFastMutex(&pamgrState.registrationMutex);
+	result = lockFastMutex(&pamgrState.registrationMutex);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0, 52,
 			"FATAL: sceKernelLockFastMutex failed (ret=0x%08x)\n", result);
@@ -81,7 +81,7 @@ int PamgrProcExit(SceUID process)
 		pamgrState.registrationId = 0;
 		pamgrState.registrationShared = 0;
 	}
-	result = ksceKernelUnlockFastMutex(&pamgrState.registrationMutex);
+	result = sceKernelUnlockFastMutex(&pamgrState.registrationMutex);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0, 65,
 			"FATAL: sceKernelUnlockFastMutex failed (ret=0x%08x)\n", result);
@@ -118,7 +118,7 @@ int sceKernelPaInitPamgrWrapper(void)
 	}
 	memset(&pamgrState.registrationMutex, 0,
 	       sizeof(pamgrState) - offsetof(struct PamgrState, registrationMutex));
-	result = ksceKernelInitializeFastMutex(&pamgrState.registrationMutex,
+	result = sceKernelInitializeFastMutex(&pamgrState.registrationMutex,
 					      "SceKernelPaControlLock", 2, NULL);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0, 130,
@@ -311,7 +311,7 @@ int sceKernelPaRegister(void)
 {
 	int result, unlocked;
 
-	result = ksceKernelLockFastMutex(&pamgrState.registrationMutex);
+	result = lockFastMutex(&pamgrState.registrationMutex);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0, 146,
 			"FATAL: sceKernelLockFastMutex failed (ret=0x%08x)\n", result);
@@ -324,7 +324,7 @@ int sceKernelPaRegister(void)
 		pamgrState.registrationProcess = sceKernelGetProcessId();
 		pamgrState.registrationShared = 0;
 	}
-	unlocked = ksceKernelUnlockFastMutex(&pamgrState.registrationMutex);
+	unlocked = sceKernelUnlockFastMutex(&pamgrState.registrationMutex);
 	if (unlocked < 0) {
 		SCE_DBG_PRINTF(0, 164,
 			"FATAL: sceKernelUnlockFastMutex failed (ret=0x%08x)\n", unlocked);
@@ -337,7 +337,7 @@ int sceKernelPaUnregister(uint32_t registration)
 {
 	int result, unlocked;
 
-	result = ksceKernelLockFastMutex(&pamgrState.registrationMutex);
+	result = lockFastMutex(&pamgrState.registrationMutex);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0, 180,
 			"FATAL: sceKernelLockFastMutex failed (ret=0x%08x)\n", result);
@@ -349,7 +349,7 @@ int sceKernelPaUnregister(uint32_t registration)
 		pamgrState.registrationShared = 0;
 		result = 0;
 	}
-	unlocked = ksceKernelUnlockFastMutex(&pamgrState.registrationMutex);
+	unlocked = sceKernelUnlockFastMutex(&pamgrState.registrationMutex);
 	if (unlocked < 0) {
 		SCE_DBG_PRINTF(0, 195,
 			"FATAL: sceKernelUnlockFastMutex failed (ret=0x%08x)\n", unlocked);
@@ -362,7 +362,7 @@ int sceKernelPaRegisterShared(uint32_t first, uint32_t second)
 {
 	int result, unlocked;
 
-	result = ksceKernelLockFastMutex(&pamgrState.registrationMutex);
+	result = lockFastMutex(&pamgrState.registrationMutex);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0, 211,
 			"FATAL: sceKernelLockFastMutex failed (ret=0x%08x)\n", result);
@@ -377,7 +377,7 @@ int sceKernelPaRegisterShared(uint32_t first, uint32_t second)
 		pamgrState.sharedKeyFirst = first;
 		pamgrState.sharedKeySecond = second;
 	}
-	unlocked = ksceKernelUnlockFastMutex(&pamgrState.registrationMutex);
+	unlocked = sceKernelUnlockFastMutex(&pamgrState.registrationMutex);
 	if (unlocked < 0) {
 		SCE_DBG_PRINTF(0, 230,
 			"FATAL: sceKernelUnlockFastMutex failed (ret=0x%08x)\n", unlocked);

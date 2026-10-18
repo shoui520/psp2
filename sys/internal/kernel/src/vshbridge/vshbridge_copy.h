@@ -12,7 +12,7 @@
 
 #include <intrmgr/syscall_copy.h>
 
-/* the stack of the requests that run on their own (ksceKernelRunWithStack) */
+/* the stack of the requests that run on their own (SceThreadmgrForDriver_E54FD746) */
 #define VSH_STACK_SIZE			0x2000
 
 /* Marlin personalization (SceVshBridge and SceDrmBridge) */

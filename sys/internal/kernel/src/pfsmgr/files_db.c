@@ -24,13 +24,13 @@ int pfsDbCreate(ScePfsPmi *pmi, ScePfsNode *node)
 	int ret;
 
 	info = pfsModeInfo(pmi->mode);
-	ksceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
+	sceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
 	ret = pfsNodeCreate(node, info->fileMode);
 	if (ret != 0)
 		goto unlock;
-	pid = ksceKernelSetProcessIdToTLS(PFS_KERNEL_PID);
+	pid = SceThreadmgrForDriver_0486F239(PFS_KERNEL_PID);
 	ret = pfsLowerOpen(&pmi->filesDb, node, -1, info->icvOpenFlags | PFS_OPEN_KERNEL);
-	ksceKernelSetProcessIdToTLS(pid);
+	SceThreadmgrForDriver_0486F239(pid);
 	if (ret == 0) {
 		pfsDeriveKey(&key, pmi->klicensee, pmi->a8, pmi->flags, 0, pmi->a6);
 		fsType = pfsModeFsType(pmi->mode);
@@ -53,7 +53,7 @@ int pfsDbCreate(ScePfsPmi *pmi, ScePfsNode *node)
 	pfsNodeRemove(&dir, node);
 	pfsNodeInactive(node);
 unlock:
-	ksceKernelUnlockMutex(pmi->filesDbMutex, 1);
+	sceKernelUnlockMutex(pmi->filesDbMutex, 1);
 	return ret;
 }
 
@@ -67,10 +67,10 @@ int pfsDbOpen(ScePfsPmi *pmi, ScePfsNode *node)
 	int ret;
 
 	info = pfsModeInfo(pmi->mode);
-	ksceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
-	pid = ksceKernelSetProcessIdToTLS(PFS_KERNEL_PID);
+	sceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
+	pid = SceThreadmgrForDriver_0486F239(PFS_KERNEL_PID);
 	ret = pfsLowerOpen(&pmi->filesDb, node, -1, info->icvOpenFlags | PFS_OPEN_KERNEL);
-	ksceKernelSetProcessIdToTLS(pid);
+	SceThreadmgrForDriver_0486F239(pid);
 	if (ret != 0)
 		goto unlock;
 	ret = pfsDbTableReadInfo(&pmi->filesDb, &type, &pmi->a8, &pmi->a6);
@@ -122,7 +122,7 @@ term:
 close:
 	pfsLowerClose(&pmi->filesDb);
 unlock:
-	ksceKernelUnlockMutex(pmi->filesDbMutex, 1);
+	sceKernelUnlockMutex(pmi->filesDbMutex, 1);
 	return ret;
 }
 
@@ -133,7 +133,7 @@ int pfsDbGetUsage(ScePfsPmi *pmi, SceUInt64 *usage)
 	int ret;
 
 	pfsDeriveKey(&key, pmi->klicensee, pmi->a8, pmi->flags, 0, pmi->a6);
-	ksceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
+	sceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
 	pfsDbTableInit(&table, &pmi->filesDbLru);
 	ret = pfsDbTableOpen(&table, &pmi->filesDb, &key);
 	if (ret == 0) {
@@ -143,7 +143,7 @@ int pfsDbGetUsage(ScePfsPmi *pmi, SceUInt64 *usage)
 			*usage = table.header.usage;
 	}
 	pfsDbTableTerm(&table);
-	ksceKernelUnlockMutex(pmi->filesDbMutex, 1);
+	sceKernelUnlockMutex(pmi->filesDbMutex, 1);
 	return ret;
 }
 
@@ -155,7 +155,7 @@ int pfsDbAddUsage(ScePfsPmi *pmi, SceInt64 delta)
 	int ret;
 
 	pfsDeriveKey(&key, pmi->klicensee, pmi->a8, pmi->flags, 0, pmi->a6);
-	ksceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
+	sceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
 	pfsDbTableInit(&table, &pmi->filesDbLru);
 	ret = pfsDbTableOpen(&table, &pmi->filesDb, &key);
 	if (ret == 0) {
@@ -173,7 +173,7 @@ int pfsDbAddUsage(ScePfsPmi *pmi, SceInt64 delta)
 		}
 	}
 	pfsDbTableTerm(&table);
-	ksceKernelUnlockMutex(pmi->filesDbMutex, 1);
+	sceKernelUnlockMutex(pmi->filesDbMutex, 1);
 	return ret;
 }
 
@@ -184,7 +184,7 @@ int pfsDbGetSize(ScePfsPmi *pmi, SceUInt64 *size)
 	int ret;
 
 	pfsDeriveKey(&key, pmi->klicensee, pmi->a8, pmi->flags, 0, pmi->a6);
-	ksceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
+	sceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
 	pfsDbTableInit(&table, &pmi->filesDbLru);
 	ret = pfsDbTableOpen(&table, &pmi->filesDb, &key);
 	if (ret == 0) {
@@ -194,7 +194,7 @@ int pfsDbGetSize(ScePfsPmi *pmi, SceUInt64 *size)
 			ret = pfsDbTableGetSize(&table, size);
 	}
 	pfsDbTableTerm(&table);
-	ksceKernelUnlockMutex(pmi->filesDbMutex, 1);
+	sceKernelUnlockMutex(pmi->filesDbMutex, 1);
 	return ret;
 }
 
@@ -209,7 +209,7 @@ int pfsDbDump(ScePfsPmi *pmi, void *buf, SceSize len)
 	int ret, count;
 
 	pfsDeriveKey(&key, pmi->klicensee, pmi->a8, pmi->flags, 0, pmi->a6);
-	ksceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
+	sceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
 	memset(name, 0, sizeof(name));
 	pfsDbTableInit(&table, &pmi->filesDbLru);
 	ret = pfsDbTableOpen(&table, &pmi->filesDb, &key);
@@ -237,7 +237,7 @@ int pfsDbDump(ScePfsPmi *pmi, void *buf, SceSize len)
 	}
 out:
 	pfsDbTableTerm(&table);
-	ksceKernelUnlockMutex(pmi->filesDbMutex, 1);
+	sceKernelUnlockMutex(pmi->filesDbMutex, 1);
 	return ret;
 }
 
@@ -249,7 +249,7 @@ int pfsDbInsert(ScePfsPmi *pmi, ScePfsDbKey *key, const void *hash, SceUInt32 in
 	int ret;
 
 	pfsDeriveKey(&dbKey, pmi->klicensee, pmi->a8, pmi->flags, 0, pmi->a6);
-	ksceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
+	sceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
 	pfsDbTableInit(&table, &pmi->filesDbLru);
 	ret = pfsDbTableOpen(&table, &pmi->filesDb, &dbKey);
 	if (ret == 0) {
@@ -262,7 +262,7 @@ int pfsDbInsert(ScePfsPmi *pmi, ScePfsDbKey *key, const void *hash, SceUInt32 in
 		}
 	}
 	pfsDbTableTerm(&table);
-	ksceKernelUnlockMutex(pmi->filesDbMutex, 1);
+	sceKernelUnlockMutex(pmi->filesDbMutex, 1);
 	return ret;
 }
 
@@ -274,7 +274,7 @@ int pfsDbFind(ScePfsPmi *pmi, ScePfsDbKey *key, void *hash, SceUInt32 *index,
 	int ret;
 
 	pfsDeriveKey(&dbKey, pmi->klicensee, pmi->a8, pmi->flags, 0, pmi->a6);
-	ksceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
+	sceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
 	pfsDbTableInit(&table, &pmi->filesDbLru);
 	ret = pfsDbTableOpen(&table, &pmi->filesDb, &dbKey);
 	if (ret == 0) {
@@ -289,7 +289,7 @@ int pfsDbFind(ScePfsPmi *pmi, ScePfsDbKey *key, void *hash, SceUInt32 *index,
 		}
 	}
 	pfsDbTableTerm(&table);
-	ksceKernelUnlockMutex(pmi->filesDbMutex, 1);
+	sceKernelUnlockMutex(pmi->filesDbMutex, 1);
 	return ret;
 }
 
@@ -302,7 +302,7 @@ int pfsDbUpdate(ScePfsPmi *pmi, ScePfsDbKey *key, const void *hash, SceUInt16 *a
 	int ret;
 
 	pfsDeriveKey(&dbKey, pmi->klicensee, pmi->a8, pmi->flags, 0, pmi->a6);
-	ksceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
+	sceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
 	pfsDbTableInit(&table, &pmi->filesDbLru);
 	ret = pfsDbTableOpen(&table, &pmi->filesDb, &dbKey);
 	if (ret == 0) {
@@ -323,7 +323,7 @@ int pfsDbUpdate(ScePfsPmi *pmi, ScePfsDbKey *key, const void *hash, SceUInt16 *a
 		}
 	}
 	pfsDbTableTerm(&table);
-	ksceKernelUnlockMutex(pmi->filesDbMutex, 1);
+	sceKernelUnlockMutex(pmi->filesDbMutex, 1);
 	return ret;
 }
 
@@ -334,7 +334,7 @@ int pfsDbRemove(ScePfsPmi *pmi, ScePfsDbKey *key)
 	int ret;
 
 	pfsDeriveKey(&dbKey, pmi->klicensee, pmi->a8, pmi->flags, 0, pmi->a6);
-	ksceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
+	sceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
 	pfsDbTableInit(&table, &pmi->filesDbLru);
 	ret = pfsDbTableOpen(&table, &pmi->filesDb, &dbKey);
 	if (ret == 0) {
@@ -347,7 +347,7 @@ int pfsDbRemove(ScePfsPmi *pmi, ScePfsDbKey *key)
 		}
 	}
 	pfsDbTableTerm(&table);
-	ksceKernelUnlockMutex(pmi->filesDbMutex, 1);
+	sceKernelUnlockMutex(pmi->filesDbMutex, 1);
 	return ret;
 }
 
@@ -372,7 +372,7 @@ int pfsDbCheck(ScePfsPmi *pmi)
 	int ret, err;
 
 	pfsDeriveKey(&key, pmi->klicensee, pmi->a8, pmi->flags, 0, pmi->a6);
-	ksceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
+	sceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
 	pfsDbTableInit(&table, &pmi->filesDbLru);
 	ret = pfsDbTableOpen(&table, &pmi->filesDb, &key);
 	err = ret;
@@ -403,6 +403,6 @@ int pfsDbCheck(ScePfsPmi *pmi)
 	}
 out:
 	pfsDbTableTerm(&table);
-	ksceKernelUnlockMutex(pmi->filesDbMutex, 1);
+	sceKernelUnlockMutex(pmi->filesDbMutex, 1);
 	return err;
 }

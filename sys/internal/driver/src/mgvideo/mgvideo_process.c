@@ -12,7 +12,7 @@ int releaseProcessVideoContexts(int processId)
 	int result, slot, intr, owner;
 	unsigned int index, handle;
 
-	result = ksceKernelLockMutex(driverMutex, 1, 0);
+	result = sceKernelLockMutex(driverMutex, 1, 0);
 	if (result < 0)
 		return result;
 	if (videoReferences <= 0)
@@ -59,7 +59,7 @@ int releaseProcessVideoContexts(int processId)
 						slot = 1;
 					else
 						goto unreference;
-					ksceKernelDeleteEventFlag(context->eventFlag);
+					sceKernelDeleteEventFlag(context->eventFlag);
 					videoContexts[slot] = 0;
 					sceKernelFreeHeapMemory(contextHeaps[slot], context);
 					sceKernelDeleteHeap(contextHeaps[slot]);
@@ -93,7 +93,7 @@ unreference:
 		reference->contextHandle = -1;
 	}
 unlock:
-	ksceKernelUnlockMutex(driverMutex, 1);
+	sceKernelUnlockMutex(driverMutex, 1);
 	return 0;
 }
 

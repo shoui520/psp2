@@ -142,7 +142,7 @@ int audioCleanupProcess(SceUID pid, ProcEventParam *param, int reason)
 						   (void **)&storage, 1) >= 0) {
 		AudioProcessLocalStorage *process = storage;
 
-		ksceKernelWaitEventFlag(audioEventFlag, 48, 4, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, 48, 4, NULL, NULL);
 		if (audioProcessList != NULL && process->link.prev != NULL) {
 			ListNode *previous = process->link.prev;
 			ListNode *next = process->link.next;
@@ -159,9 +159,9 @@ int audioCleanupProcess(SceUID pid, ProcEventParam *param, int reason)
 			process->link.next = NULL;
 			process->link.prev = NULL;
 		}
-		ksceKernelSetEventFlag(audioEventFlag, 48);
+		sceKernelSetEventFlag(audioEventFlag, 48);
 		if (process->eventFlag > 0)
-			ksceKernelDeleteEventFlag(process->eventFlag);
+			sceKernelDeleteEventFlag(process->eventFlag);
 		port = process->main;
 		for (count = 9; count != 0; --count, ++port) {
 			if (port->current.mapping > 0)
@@ -357,7 +357,7 @@ int audioProcessEventHandler(SceUID pid, int event, ProcEventParam *param,
 		return 0;
 	}
 	process = storage;
-	result = ksceKernelWaitEventFlag(audioEventFlag, 240, 4, NULL, NULL);
+	result = sceKernelWaitEventFlag(audioEventFlag, 240, 4, NULL, NULL);
 	if (result < 0)
 		return result;
 	process->adopt = 0;
@@ -421,7 +421,7 @@ voice:
 updateVoice:
 	audioUpdateAdoption(port);
 done:
-	ksceKernelSetEventFlag(audioEventFlag, 240);
+	sceKernelSetEventFlag(audioEventFlag, 240);
 	return 0;
 }
 
@@ -442,7 +442,7 @@ int sceAudioOutSetCompress(int port, unsigned int mode)
 		result = (int)0x80260220;
 		goto out;
 	}
-	result = ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
+	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
 	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
@@ -455,7 +455,7 @@ int sceAudioOutSetCompress(int port, unsigned int mode)
 		result = (int)0xc0260001;
 		goto unlock;
 	}
-	ksceKernelWaitEventFlag(audioEventFlag, direct->eventMask, 5, NULL, NULL);
+	sceKernelWaitEventFlag(audioEventFlag, direct->eventMask, 5, NULL, NULL);
 	direct->compress = mode;
 	adopted = audioAdoptedPorts[direct->channel];
 	if (adopted == NULL) {
@@ -466,9 +466,9 @@ int sceAudioOutSetCompress(int port, unsigned int mode)
 		else
 			SceCodecForDriver_CCDE1B04(512);
 	}
-	ksceKernelSetEventFlag(audioEventFlag, direct->eventMask);
+	sceKernelSetEventFlag(audioEventFlag, direct->eventMask);
 unlock:
-	ksceKernelSetEventFlag(audioEventFlag, 16);
+	sceKernelSetEventFlag(audioEventFlag, 16);
 out:
 	sceSyscallLeave(syscall);
 	return result;
@@ -485,7 +485,7 @@ int SceAudioForDriver_3440C1CA(SceUID pid, int type, int adopt,
 	int started;
 	int tries;
 
-	result = ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
+	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		return result;
 	result = SceSysmemForDriver_0F5C84B7(pid, NULL);
@@ -501,17 +501,17 @@ int SceAudioForDriver_3440C1CA(SceUID pid, int type, int adopt,
 			goto release;
 		}
 		port = &storage->direct[type - 1];
-		ksceKernelWaitEventFlag(audioEventFlag, port->eventMask, 5, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, port->eventMask, 5, NULL, NULL);
 		if (audioSetAdoption(port, adopt, duration) != 0) {
-			ksceKernelSetEventFlag(audioEventFlag, port->eventMask);
+			sceKernelSetEventFlag(audioEventFlag, port->eventMask);
 			goto release;
 		}
-		ksceKernelSetEventFlag(audioEventFlag, port->eventMask);
+		sceKernelSetEventFlag(audioEventFlag, port->eventMask);
 		if (adopt != 0 || wait == 0)
 			goto release;
 		started = 0;
 		tries = 421;
-		ksceKernelSetEventFlag(audioEventFlag, 16);
+		sceKernelSetEventFlag(audioEventFlag, 16);
 		do {
 			if (port->len == 0)
 				break;
@@ -538,7 +538,7 @@ delay:
 		} while (--tries > 0);
 	} else {
 		process = storage;
-		ksceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 		if ((int8_t)process->adopt == adopt ||
 		    (adopt == 0 && audioMixerIdle != 0) ||
 		    (process->main[8].current.cursor == NULL &&
@@ -551,23 +551,23 @@ delay:
 		     process->main[1].current.cursor == NULL &&
 		     process->main[0].current.cursor == NULL)) {
 			process->adopt = adopt;
-			ksceKernelSetEventFlag(audioEventFlag, 32);
+			sceKernelSetEventFlag(audioEventFlag, 32);
 			goto release;
 		}
 		samples = audioSetVolumeRamp(&process->ramp, 48000, adopt, duration);
 		process->adopt = adopt;
-		ksceKernelSetEventFlag(audioEventFlag, 32);
+		sceKernelSetEventFlag(audioEventFlag, 32);
 		if (adopt != 0 || wait == 0 || process->ramp.direction != -1)
 			goto release;
-		ksceKernelSetEventFlag(audioEventFlag, 16);
+		sceKernelSetEventFlag(audioEventFlag, 16);
 		audioWaitForDrain(samples);
 	}
 waited:
-	ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
+	sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 release:
 	sceGUIDReleaseObject(pid);
 unlock:
-	ksceKernelSetEventFlag(audioEventFlag, 16);
+	sceKernelSetEventFlag(audioEventFlag, 16);
 	return result;
 }
 
@@ -583,7 +583,7 @@ int sceAudioOutSetAdopt_forUser(int type, int adopt, int duration, int wait)
 	int started;
 	int tries;
 
-	result = ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
+	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
 	result = SceSysmemForDriver_0F5C84B7(pid, NULL);
@@ -599,17 +599,17 @@ int sceAudioOutSetAdopt_forUser(int type, int adopt, int duration, int wait)
 			goto release;
 		}
 		port = &storage->direct[type - 1];
-		ksceKernelWaitEventFlag(audioEventFlag, port->eventMask, 5, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, port->eventMask, 5, NULL, NULL);
 		if (audioSetAdoption(port, adopt, duration) != 0) {
-			ksceKernelSetEventFlag(audioEventFlag, port->eventMask);
+			sceKernelSetEventFlag(audioEventFlag, port->eventMask);
 			goto release;
 		}
-		ksceKernelSetEventFlag(audioEventFlag, port->eventMask);
+		sceKernelSetEventFlag(audioEventFlag, port->eventMask);
 		if (adopt != 0 || wait == 0)
 			goto release;
 		started = 0;
 		tries = 421;
-		ksceKernelSetEventFlag(audioEventFlag, 16);
+		sceKernelSetEventFlag(audioEventFlag, 16);
 		do {
 			if (port->len == 0)
 				break;
@@ -636,7 +636,7 @@ delay:
 		} while (--tries > 0);
 	} else {
 		process = storage;
-		ksceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 		if ((int8_t)process->adopt == adopt ||
 		    (adopt == 0 && audioMixerIdle != 0) ||
 		    (process->main[8].current.cursor == NULL &&
@@ -649,23 +649,23 @@ delay:
 		     process->main[1].current.cursor == NULL &&
 		     process->main[0].current.cursor == NULL)) {
 			process->adopt = adopt;
-			ksceKernelSetEventFlag(audioEventFlag, 32);
+			sceKernelSetEventFlag(audioEventFlag, 32);
 			goto release;
 		}
 		samples = audioSetVolumeRamp(&process->ramp, 48000, adopt, duration);
 		process->adopt = adopt;
-		ksceKernelSetEventFlag(audioEventFlag, 32);
+		sceKernelSetEventFlag(audioEventFlag, 32);
 		if (adopt != 0 || wait == 0 || process->ramp.direction != -1)
 			goto release;
-		ksceKernelSetEventFlag(audioEventFlag, 16);
+		sceKernelSetEventFlag(audioEventFlag, 16);
 		audioWaitForDrain(samples);
 	}
 waited:
-	ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
+	sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 release:
 	sceGUIDReleaseObject(pid);
 unlock:
-	ksceKernelSetEventFlag(audioEventFlag, 16);
+	sceKernelSetEventFlag(audioEventFlag, 16);
 out:
 	sceSyscallLeave(syscall);
 	return result;
@@ -689,7 +689,7 @@ int sceAudioOutOpenPort(SceAudioOutPortType type, int len, int freq,
 	if (((unsigned int)len << 26) != 0 || (unsigned int)len - 1 > 0xffbf)
 		return (int)0x80260006;
 	syscall = sceSyscallEnter();
-	result = ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
+	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
 	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
@@ -703,7 +703,7 @@ int sceAudioOutOpenPort(SceAudioOutPortType type, int len, int freq,
 			result = (int)0x80260008;
 			goto unlock;
 		}
-		ksceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 		main = &storage->main[7];
 		if (main->config.len == 0 && main->current.cursor == NULL) {
 			index = 7;
@@ -789,7 +789,7 @@ selectedMain:
 		goto unlock;
 	}
 	direct = &storage->direct[index];
-	ksceKernelWaitEventFlag(audioEventFlag, direct->eventMask, 5, NULL, NULL);
+	sceKernelWaitEventFlag(audioEventFlag, direct->eventMask, 5, NULL, NULL);
 	if (freq != 48000 && freq != 44100 && freq != 32000 && freq != 24000 &&
 	    freq != 22050 && freq != 16000 && freq != 12000 && freq != 11025 && freq != 8000) {
 		if (SceSblACMgrForDriver_FD00C72A(0) != 1 || freq != 44184) {
@@ -831,21 +831,21 @@ selectedMain:
 			SceCodecForDriver_CCDE1B04(512);
 	}
 	result = (int)((unsigned int)(direct->channel + 1) << 8);
-	ksceKernelSetEventFlag(audioEventFlag, direct->eventMask);
+	sceKernelSetEventFlag(audioEventFlag, direct->eventMask);
 	if (result >= 0) {
-		ksceKernelSetEventFlag(audioEventFlag, 16);
+		sceKernelSetEventFlag(audioEventFlag, 16);
 		if (callback != NULL)
 			callback(sceKernelGetProcessId());
 		goto out;
 	}
 	goto unlock;
 unlockDirect:
-	ksceKernelSetEventFlag(audioEventFlag, direct->eventMask);
+	sceKernelSetEventFlag(audioEventFlag, direct->eventMask);
 	goto unlock;
 unlockMain:
-	ksceKernelSetEventFlag(audioEventFlag, 32);
+	sceKernelSetEventFlag(audioEventFlag, 32);
 unlock:
-	ksceKernelSetEventFlag(audioEventFlag, 16);
+	sceKernelSetEventFlag(audioEventFlag, 16);
 out:
 	sceSyscallLeave(syscall);
 	return result;
@@ -863,7 +863,7 @@ int sceAudioOutOpenExtPort(int len, int mode)
 	if (((unsigned int)len << 26) != 0 || (unsigned int)len - 1 > 0xffbf)
 		return (int)0x80260006;
 	syscall = sceSyscallEnter();
-	result = ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
+	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
 	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
@@ -871,7 +871,7 @@ int sceAudioOutOpenExtPort(int len, int mode)
 		result = (int)0x80260230;
 		goto unlock;
 	}
-	ksceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
+	sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 	port = &storage->main[8];
 	if (port->config.len != 0 || port->current.cursor != NULL) {
 		result = (int)0x80260005;
@@ -895,9 +895,9 @@ int sceAudioOutOpenExtPort(int len, int mode)
 	port->volume[0] = 0x8000;
 	result = 8;
 unlockMain:
-	ksceKernelSetEventFlag(audioEventFlag, 32);
+	sceKernelSetEventFlag(audioEventFlag, 32);
 unlock:
-	ksceKernelSetEventFlag(audioEventFlag, 16);
+	sceKernelSetEventFlag(audioEventFlag, 16);
 out:
 	sceSyscallLeave(syscall);
 	return result;
@@ -916,7 +916,7 @@ int sceAudioOutReleasePort(int port)
 	SceUInt32 sdkVersion;
 	int result;
 
-	result = ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
+	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
 	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
@@ -928,7 +928,7 @@ int sceAudioOutReleasePort(int port)
 		if (type == 2)
 			callback = audioPortCloseCallback;
 		direct = &storage->direct[type - 1];
-		ksceKernelWaitEventFlag(audioEventFlag, direct->eventMask, 5, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, direct->eventMask, 5, NULL, NULL);
 		if (direct->len == 0) {
 			result = (int)0xc0260001;
 			goto unlockDirect;
@@ -943,8 +943,8 @@ int sceAudioOutReleasePort(int port)
 		adopted = audioAdoptedPorts[(int)index];
 		if (adopted == NULL || adopted == direct)
 			SceCodecForDriver_CCDE1B04(512);
-		ksceKernelSetEventFlag(audioEventFlag, direct->eventMask);
-		ksceKernelSetEventFlag(audioEventFlag, 16);
+		sceKernelSetEventFlag(audioEventFlag, direct->eventMask);
+		sceKernelSetEventFlag(audioEventFlag, 16);
 		result = 0;
 		if (callback != NULL)
 			callback(sceKernelGetProcessId());
@@ -959,7 +959,7 @@ int sceAudioOutReleasePort(int port)
 		goto unlock;
 	}
 	main = &storage->main[index];
-	ksceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
+	sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 	if (main->config.len == 0) {
 		result = (int)0xc0260001;
 		goto unlockMain;
@@ -978,9 +978,9 @@ int sceAudioOutReleasePort(int port)
 			goto unlockMain;
 		}
 		while (main->current.mapping > 0 || main->queued.mapping > 0) {
-			ksceKernelSetEventFlag(audioEventFlag, 32);
+			sceKernelSetEventFlag(audioEventFlag, 32);
 			sceKernelDelayThread(1000);
-			ksceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
+			sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 		}
 	}
 	result = 0;
@@ -1012,12 +1012,12 @@ int sceAudioOutReleasePort(int port)
 		storage->link.prev = NULL;
 	}
 unlockMain:
-	ksceKernelSetEventFlag(audioEventFlag, 32);
+	sceKernelSetEventFlag(audioEventFlag, 32);
 	goto unlock;
 unlockDirect:
-	ksceKernelSetEventFlag(audioEventFlag, direct->eventMask);
+	sceKernelSetEventFlag(audioEventFlag, direct->eventMask);
 unlock:
-	ksceKernelSetEventFlag(audioEventFlag, 16);
+	sceKernelSetEventFlag(audioEventFlag, 16);
 out:
 	sceSyscallLeave(syscall);
 	return result;
@@ -1047,11 +1047,11 @@ int _audioSetptrMain(int port, const void *buf)
 	uint16_t *rate;
 	int transferResult;
 
-	result = ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
+	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
 	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
-	ksceKernelSetEventFlag(audioEventFlag, 16);
+	sceKernelSetEventFlag(audioEventFlag, 16);
 	if (storage == NULL) {
 		result = (int)0x80260230;
 		goto out;
@@ -1063,7 +1063,7 @@ int _audioSetptrMain(int port, const void *buf)
 		}
 		main = &storage->main[index];
 		result = (int)0xc0260001;
-		ksceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 		if (main->config.len == 0)
 			goto unlockMain;
 		result = (int)0x80260002;
@@ -1073,7 +1073,7 @@ int _audioSetptrMain(int port, const void *buf)
 			if (storage->eventFlag <= 0) {
 				snprintf(eventName, sizeof(eventName), "SceAudioMixProc%08x",
 					 sceKernelGetProcessId());
-				result = ksceKernelCreateEventFlag(eventName, 0x1000, 0, NULL);
+				result = sceKernelCreateEventFlag(eventName, 0x1000, 0, NULL);
 				if (result < 0)
 					goto unlockMain;
 				storage->eventFlag = result;
@@ -1100,7 +1100,7 @@ int _audioSetptrMain(int port, const void *buf)
 			main->queued.remaining = len;
 			main->queued.cursor = (int16_t *)((char *)kernelPage + kernelOffset);
 			if (audioMixerIdle != 0) {
-				ksceKernelSetEventFlag(audioEventFlag, 1);
+				sceKernelSetEventFlag(audioEventFlag, 1);
 				audioMixerIdle = 0;
 				mapping = main->queued.mapping;
 				result = main->config.len;
@@ -1125,10 +1125,10 @@ int _audioSetptrMain(int port, const void *buf)
 			for (;;) {
 				int waitResult;
 
-				ksceKernelSetEventFlag(audioEventFlag, 32);
-				waitResult = ksceKernelWaitEventFlag(storage->eventFlag,
+				sceKernelSetEventFlag(audioEventFlag, 32);
+				waitResult = sceKernelWaitEventFlag(storage->eventFlag,
 					bits, 4, NULL, NULL);
-				ksceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
+				sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 				if (waitResult < 0) {
 					result = waitResult;
 					break;
@@ -1156,7 +1156,7 @@ int _audioSetptrMain(int port, const void *buf)
 	result = (int)0x80260002;
 	if (direct->remaining != 0)
 		goto out;
-	ksceKernelWaitEventFlag(audioEventFlag, mask, 5, NULL, NULL);
+	sceKernelWaitEventFlag(audioEventFlag, mask, 5, NULL, NULL);
 	bytesPerFrame = direct->bytesPerFrame;
 	freq = direct->freq;
 	if (buf != NULL) {
@@ -1199,7 +1199,7 @@ int _audioSetptrMain(int port, const void *buf)
 		}
 		audioUpdateAdoption(direct);
 		if (mapped == NULL) {
-			ksceKernelSetEventFlag(audioEventFlag, mask);
+			sceKernelSetEventFlag(audioEventFlag, mask);
 			if ((direct->adoptState & 1) != 0) {
 				result = 0;
 				direct->deadline = audioWaitForPlaybackDeadline(direct->deadline,
@@ -1268,7 +1268,7 @@ int _audioSetptrMain(int port, const void *buf)
 				if (transferResult < 0)
 					goto unmapDirect;
 			}
-			ksceKernelSetEventFlag(audioEventFlag, mask);
+			sceKernelSetEventFlag(audioEventFlag, mask);
 			transferResult = audioDispatchDmaBuffer(
 				audioOutputPhysicalAddress[channel][audioOutputBufferIndex[channel]],
 				channel + 1, samples);
@@ -1277,14 +1277,14 @@ int _audioSetptrMain(int port, const void *buf)
 
 				direct->deadline = time + (1000000U * samples) / freq;
 			}
-			ksceKernelWaitEventFlag(audioEventFlag, mask, 5, NULL, NULL);
+			sceKernelWaitEventFlag(audioEventFlag, mask, 5, NULL, NULL);
 			audioOutputBufferIndex[channel] ^= 1;
 		} else {
 			transferResult = 0;
-			ksceKernelSetEventFlag(audioEventFlag, mask);
+			sceKernelSetEventFlag(audioEventFlag, mask);
 			direct->deadline = audioWaitForPlaybackDeadline(direct->deadline,
 				freq, samples);
-			ksceKernelWaitEventFlag(audioEventFlag, mask, 5, NULL, NULL);
+			sceKernelWaitEventFlag(audioEventFlag, mask, 5, NULL, NULL);
 		}
 		remaining -= samples;
 		direct->remaining = remaining;
@@ -1295,7 +1295,7 @@ int _audioSetptrMain(int port, const void *buf)
 		result = transferResult;
 		goto unlockDirect;
 	}
-	ksceKernelSetEventFlag(audioEventFlag, mask);
+	sceKernelSetEventFlag(audioEventFlag, mask);
 	if (result >= 0)
 		result = direct->len;
 	goto out;
@@ -1303,10 +1303,10 @@ unmapDirect:
 	sceKernelUserUnmap(mapping, userBuffer, 0);
 	result = transferResult;
 unlockDirect:
-	ksceKernelSetEventFlag(audioEventFlag, mask);
+	sceKernelSetEventFlag(audioEventFlag, mask);
 	goto out;
 unlockMain:
-	ksceKernelSetEventFlag(audioEventFlag, 32);
+	sceKernelSetEventFlag(audioEventFlag, 32);
 out:
 	sceSyscallLeave(syscall);
 	return result;
@@ -1327,7 +1327,7 @@ int sceAudioOutSetVolume(int port, SceAudioOutChannelFlag ch, int *vol)
 	if (vol == NULL)
 		return (int)0x80260004;
 	syscall = sceSyscallEnter();
-	result = ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
+	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
 	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
@@ -1344,7 +1344,7 @@ int sceAudioOutSetVolume(int port, SceAudioOutChannelFlag ch, int *vol)
 			goto unlock;
 		}
 		direct = &storage->direct[type - 1];
-		ksceKernelWaitEventFlag(audioEventFlag, direct->eventMask, 5, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, direct->eventMask, 5, NULL, NULL);
 		if (direct->len == 0) {
 			result = (int)0xc0260001;
 			goto unlockDirect;
@@ -1367,9 +1367,9 @@ int sceAudioOutSetVolume(int port, SceAudioOutChannelFlag ch, int *vol)
 			direct->volume[1] = volume[1];
 		}
 unlockDirect:
-		ksceKernelSetEventFlag(audioEventFlag, direct->eventMask);
+		sceKernelSetEventFlag(audioEventFlag, direct->eventMask);
 	} else {
-		ksceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 		if (index > 8) {
 			result = (int)0x80260003;
 			goto unlockMain;
@@ -1397,10 +1397,10 @@ unlockDirect:
 			main->volume[1] = volume[1];
 		}
 unlockMain:
-		ksceKernelSetEventFlag(audioEventFlag, 32);
+		sceKernelSetEventFlag(audioEventFlag, 32);
 	}
 unlock:
-	ksceKernelSetEventFlag(audioEventFlag, 16);
+	sceKernelSetEventFlag(audioEventFlag, 16);
 out:
 	sceSyscallLeave(syscall);
 	return result;
@@ -1417,7 +1417,7 @@ int sceAudioOutSetConfig(int port, SceSize len, int freq, SceAudioOutMode mode)
 	unsigned char bytesPerFrame;
 	int result;
 
-	result = ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
+	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
 	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
@@ -1431,7 +1431,7 @@ int sceAudioOutSetConfig(int port, SceSize len, int freq, SceAudioOutMode mode)
 			goto unlock;
 		}
 		direct = &storage->direct[type - 1];
-		ksceKernelWaitEventFlag(audioEventFlag, direct->eventMask, 5, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, direct->eventMask, 5, NULL, NULL);
 		if (direct->len == 0) {
 			result = (int)0xc0260001;
 			goto unlockDirect;
@@ -1472,9 +1472,9 @@ int sceAudioOutSetConfig(int port, SceSize len, int freq, SceAudioOutMode mode)
 		direct->len = len;
 		direct->freq = freq;
 unlockDirect:
-		ksceKernelSetEventFlag(audioEventFlag, direct->eventMask);
+		sceKernelSetEventFlag(audioEventFlag, direct->eventMask);
 	} else {
-		ksceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 		if (index > 8) {
 			result = (int)0x80260003;
 			goto unlockMain;
@@ -1507,10 +1507,10 @@ unlockDirect:
 		main->config.len = len;
 		result = 0;
 unlockMain:
-		ksceKernelSetEventFlag(audioEventFlag, 32);
+		sceKernelSetEventFlag(audioEventFlag, 32);
 	}
 unlock:
-	ksceKernelSetEventFlag(audioEventFlag, 16);
+	sceKernelSetEventFlag(audioEventFlag, 16);
 out:
 	sceSyscallLeave(syscall);
 	return result;
@@ -1532,9 +1532,9 @@ int sceAudioOutGetAdopt(SceAudioOutPortType type)
 	}
 	switch (type) {
 	case 0:
-		ksceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 		result = storage->adopt != 0 || storage->ramp.direction == -1;
-		ksceKernelSetEventFlag(audioEventFlag, 32);
+		sceKernelSetEventFlag(audioEventFlag, 32);
 		goto out;
 	case 1:
 	case 2:
@@ -1551,7 +1551,7 @@ int sceAudioOutGetAdopt(SceAudioOutPortType type)
 		result = (int)0xc026000a;
 		goto out;
 	}
-	ksceKernelWaitEventFlag(audioEventFlag, port->eventMask, 5, NULL, NULL);
+	sceKernelWaitEventFlag(audioEventFlag, port->eventMask, 5, NULL, NULL);
 	channel = port->channel;
 	if (port->remaining == 0)
 		audioUpdateAdoption(port);
@@ -1559,7 +1559,7 @@ int sceAudioOutGetAdopt(SceAudioOutPortType type)
 	if (adopted == NULL)
 		adopted = audioAdoptingPorts[channel];
 	result = port == adopted;
-	ksceKernelSetEventFlag(audioEventFlag, port->eventMask);
+	sceKernelSetEventFlag(audioEventFlag, port->eventMask);
 out:
 	sceSyscallLeave(syscall);
 	return result;
@@ -1587,7 +1587,7 @@ int sceAudioOutGetConfig(int port, SceAudioOutConfigType type)
 			goto out;
 		}
 		direct = &storage->direct[portType - 1];
-		ksceKernelWaitEventFlag(audioEventFlag, direct->eventMask, 5, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, direct->eventMask, 5, NULL, NULL);
 		result = direct->len;
 		bytesPerFrame = direct->bytesPerFrame;
 		if (result == 0)
@@ -1607,9 +1607,9 @@ int sceAudioOutGetConfig(int port, SceAudioOutConfigType type)
 				break;
 			}
 		}
-		ksceKernelSetEventFlag(audioEventFlag, direct->eventMask);
+		sceKernelSetEventFlag(audioEventFlag, direct->eventMask);
 	} else {
-		ksceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 		if (index > 8) {
 			result = (int)0x80260003;
 			goto unlockMain;
@@ -1634,7 +1634,7 @@ int sceAudioOutGetConfig(int port, SceAudioOutConfigType type)
 			}
 		}
 unlockMain:
-		ksceKernelSetEventFlag(audioEventFlag, 32);
+		sceKernelSetEventFlag(audioEventFlag, 32);
 	}
 out:
 	sceSyscallLeave(syscall);
@@ -1662,13 +1662,13 @@ int sceAudioOutGetRestSample(int port)
 			goto out;
 		}
 		direct = &storage->direct[type - 1];
-		ksceKernelWaitEventFlag(audioEventFlag, direct->eventMask, 5, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, direct->eventMask, 5, NULL, NULL);
 		result = (int)0xc0260001;
 		if (direct->len != 0)
 			result = direct->remaining;
-		ksceKernelSetEventFlag(audioEventFlag, direct->eventMask);
+		sceKernelSetEventFlag(audioEventFlag, direct->eventMask);
 	} else {
-		ksceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
+		sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 		if (index > 8) {
 			result = (int)0x80260003;
 			goto unlockMain;
@@ -1681,7 +1681,7 @@ int sceAudioOutGetRestSample(int port)
 				result += main->queued.remaining;
 		}
 unlockMain:
-		ksceKernelSetEventFlag(audioEventFlag, 32);
+		sceKernelSetEventFlag(audioEventFlag, 32);
 	}
 out:
 	sceSyscallLeave(syscall);
@@ -1700,34 +1700,34 @@ int SceAudioForDriver_629261CD(SceUID pid, int mask, unsigned int volume,
 		return 0;
 	if (volume > 256)
 		return -1;
-	result = ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
+	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		return result;
 	result = ksceKernelGetProcessLocalStorageAddrForPid(pid, audioStorageKey,
 							 (void **)&storage, 1);
 	if (result >= 0) {
 		if ((mask & 2) != 0) {
-			ksceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
+			sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 			audioSetVolumeRampTarget(&storage->ramp, 48000,
 						 storage->adopt, volume, duration);
-			ksceKernelSetEventFlag(audioEventFlag, 32);
+			sceKernelSetEventFlag(audioEventFlag, 32);
 		}
 		if ((mask & 4) != 0) {
 			port = &storage->direct[0];
-			ksceKernelWaitEventFlag(audioEventFlag, port->eventMask, 5, NULL, NULL);
+			sceKernelWaitEventFlag(audioEventFlag, port->eventMask, 5, NULL, NULL);
 			adopt = (port->adoptState & 1) == 0 && (port->adoptState & 6) != 6;
 			audioSetVolumeRampTarget(&port->ramp, port->freq, adopt, volume, duration);
-			ksceKernelSetEventFlag(audioEventFlag, port->eventMask);
+			sceKernelSetEventFlag(audioEventFlag, port->eventMask);
 		}
 		if ((mask & 8) != 0) {
 			port = &storage->direct[1];
-			ksceKernelWaitEventFlag(audioEventFlag, port->eventMask, 5, NULL, NULL);
+			sceKernelWaitEventFlag(audioEventFlag, port->eventMask, 5, NULL, NULL);
 			adopt = (port->adoptState & 1) == 0 && (port->adoptState & 6) != 6;
 			audioSetVolumeRampTarget(&port->ramp, port->freq, adopt, volume, duration);
-			ksceKernelSetEventFlag(audioEventFlag, port->eventMask);
+			sceKernelSetEventFlag(audioEventFlag, port->eventMask);
 		}
 	}
-	ksceKernelSetEventFlag(audioEventFlag, 16);
+	sceKernelSetEventFlag(audioEventFlag, 16);
 	return result;
 }
 
@@ -1737,7 +1737,7 @@ int SceAudioForDriver_B05D5B28(SceUID pid, int type)
 	AudioVolumeRamp *ramp;
 	int result;
 
-	result = ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
+	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		return result;
 	result = ksceKernelGetProcessLocalStorageAddrForPid(pid, audioStorageKey,
@@ -1756,7 +1756,7 @@ int SceAudioForDriver_B05D5B28(SceUID pid, int type)
 		result = ramp->volume;
 	}
 unlock:
-	ksceKernelSetEventFlag(audioEventFlag, 16);
+	sceKernelSetEventFlag(audioEventFlag, 16);
 	return result;
 }
 
@@ -1777,34 +1777,34 @@ int sceAudioOutSetPortVolume_forUser(int mask, unsigned int volume, int duration
 		result = -1;
 		goto out;
 	}
-	result = ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
+	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
 	result = ksceKernelGetProcessLocalStorageAddrForPid(pid, audioStorageKey,
 							 (void **)&storage, 1);
 	if (result >= 0) {
 		if ((mask & 2) != 0) {
-			ksceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
+			sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 			audioSetVolumeRampTarget(&storage->ramp, 48000,
 						 storage->adopt, volume, duration);
-			ksceKernelSetEventFlag(audioEventFlag, 32);
+			sceKernelSetEventFlag(audioEventFlag, 32);
 		}
 		if ((mask & 4) != 0) {
 			port = &storage->direct[0];
-			ksceKernelWaitEventFlag(audioEventFlag, port->eventMask, 5, NULL, NULL);
+			sceKernelWaitEventFlag(audioEventFlag, port->eventMask, 5, NULL, NULL);
 			adopt = (port->adoptState & 1) == 0 && (port->adoptState & 6) != 6;
 			audioSetVolumeRampTarget(&port->ramp, port->freq, adopt, volume, duration);
-			ksceKernelSetEventFlag(audioEventFlag, port->eventMask);
+			sceKernelSetEventFlag(audioEventFlag, port->eventMask);
 		}
 		if ((mask & 8) != 0) {
 			port = &storage->direct[1];
-			ksceKernelWaitEventFlag(audioEventFlag, port->eventMask, 5, NULL, NULL);
+			sceKernelWaitEventFlag(audioEventFlag, port->eventMask, 5, NULL, NULL);
 			adopt = (port->adoptState & 1) == 0 && (port->adoptState & 6) != 6;
 			audioSetVolumeRampTarget(&port->ramp, port->freq, adopt, volume, duration);
-			ksceKernelSetEventFlag(audioEventFlag, port->eventMask);
+			sceKernelSetEventFlag(audioEventFlag, port->eventMask);
 		}
 	}
-	ksceKernelSetEventFlag(audioEventFlag, 16);
+	sceKernelSetEventFlag(audioEventFlag, 16);
 out:
 	sceSyscallLeave(syscall);
 	return result;
@@ -1818,7 +1818,7 @@ int sceAudioOutGetPortVolume_forUser(int type)
 	AudioVolumeRamp *ramp;
 	int result;
 
-	result = ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
+	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
 	result = ksceKernelGetProcessLocalStorageAddrForPid(pid, audioStorageKey,
@@ -1837,7 +1837,7 @@ int sceAudioOutGetPortVolume_forUser(int type)
 		result = ramp->volume;
 	}
 unlock:
-	ksceKernelSetEventFlag(audioEventFlag, 16);
+	sceKernelSetEventFlag(audioEventFlag, 16);
 out:
 	sceSyscallLeave(syscall);
 	return result;
@@ -1887,7 +1887,7 @@ int audioModuleStart(SceSize arglen, const void *argp)
 	(void)argp;
 	memset(&audioWork, 0, sizeof(audioWork));
 	audioHardwareVolume = 0x8000;
-	result = ksceKernelCreateEventFlag("SceAudio", 0x1000, 0xf0, NULL);
+	result = sceKernelCreateEventFlag("SceAudio", 0x1000, 0xf0, NULL);
 	audioEventFlag = result;
 	if (result < 0)
 		return result;
@@ -1899,11 +1899,11 @@ int audioModuleStart(SceSize arglen, const void *argp)
 	audioStorageKey = result;
 	if (result < 0)
 		return result;
-	result = ksceKernelCreateThread("SceAudioMixer", _sceAudiodrvMixer,
+	result = sceKernelCreateThread("SceAudioMixer", _sceAudiodrvMixer,
 		18, 4096, 0, 0x80000, NULL);
 	if (result < 0)
 		return result;
-	result = ksceKernelStartThread(result, 0, NULL);
+	result = sceKernelStartThread(result, 0, NULL);
 	if (result < 0)
 		return result;
 	audioInitializeEffects();
@@ -1924,9 +1924,9 @@ int SceAudioForDriver_134C96C1(int freq)
 {
 	if (freq != 8000 && freq != 48000)
 		return (int)0x80260008;
-	ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
+	sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	audioEightKhzMode = freq == 8000;
-	ksceKernelSetEventFlag(audioEventFlag, 16);
+	sceKernelSetEventFlag(audioEventFlag, 16);
 	return 0;
 }
 
@@ -1934,10 +1934,10 @@ int SceAudioForDriver_FC375BAC(int mode)
 {
 	if ((unsigned int)mode - 1 > 1)
 		return (int)0x80260007;
-	ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
+	sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	audioModeOneEnabled = mode == 1;
 	SceClockgenForDriver_820D3516(48000);
-	ksceKernelSetEventFlag(audioEventFlag, 16);
+	sceKernelSetEventFlag(audioEventFlag, 16);
 	return 0;
 }
 

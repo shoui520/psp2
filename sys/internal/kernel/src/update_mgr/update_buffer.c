@@ -22,7 +22,7 @@ int UpdateUtilAllocateBuffer(SceSize size, void **buffer, SceUID pid)
 
 	if (!buffer || !size)
 		return (int)0x800f0216;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&updateTableMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	if (result)
 		return result;
 	index = 0;
@@ -85,7 +85,7 @@ int UpdateUtilAllocateBuffer(SceSize size, void **buffer, SceUID pid)
 failed:
 	result = (int)0x800f020c;
 unlock:
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&updateTableMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	return result;
 }
 
@@ -96,7 +96,7 @@ int UpdateUtilReleaseBuffer(void *buffer, SceUID pid)
 
 	if (!buffer)
 		return (int)0x800f0216;
-	result = ksceKernelLockFastMutex((SceKernelFastMutex *)&updateTableMutex);
+	result = lockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	if (result)
 		return result;
 	result = (int)0x800f0202;
@@ -126,6 +126,6 @@ int UpdateUtilReleaseBuffer(void *buffer, SceUID pid)
 	}
 	if (freeResult)
 		result = freeResult;
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&updateTableMutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	return result;
 }

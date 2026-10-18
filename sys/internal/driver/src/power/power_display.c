@@ -131,7 +131,7 @@ uint32_t powerSwitchDisplay(uint32_t enabled, uint32_t reason)
 	if (s_powerDisplayState.ledWorkEnabled && reason &&
 	    s_powerDisplayState.ledReason != reason) {
 		s_powerDisplayState.ledReason = reason;
-		return ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "ScePowerDisplayLed",
+		return sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "ScePowerDisplayLed",
 						powerDisplayLedWorker, NULL);
 	}
 	return previous;
@@ -307,6 +307,6 @@ int powerPermitChargeTimer(void *argp)
 {
 	(void)argp;
 	s_powerBatteryBase.chargingAlarm = -1;
-	ksceKernelSetEventFlag(s_powerBatteryBase.eventFlag, 0x200);
+	sceKernelSetEventFlag(s_powerBatteryBase.eventFlag, 0x200);
 	return 0;
 }

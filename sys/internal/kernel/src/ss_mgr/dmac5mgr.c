@@ -190,7 +190,7 @@ int sceSblDmac5Init(void)
 		SCE_DBG_ASSERT_FAIL(176);
 	SceSysmemForDriver_A841EDDA(block, &base);
 	dmacKeyringRegisters = base;
-	ret = ksceKernelInitializeFastMutex(&dmacKeyringMutex,
+	ret = sceKernelInitializeFastMutex(&dmacKeyringMutex,
 		"SceSblDmac5KeyRing", 0, NULL);
 	if (ret != 0)
 		return (int)0x800f1528;

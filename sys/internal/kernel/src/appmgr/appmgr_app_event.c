@@ -42,14 +42,14 @@ _Noreturn void appmgrAppEventMutexPanic(void)
 
 #if FW_DEBUG
 #define APP_EVENT_LOCK(_line) do { \
-	int lockResult = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL); \
+	int lockResult = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL); \
 	if (lockResult != 0) { \
 		SCE_DBG_PRINTF(0, _line, "Failed to lock ret=0x%08x\n", lockResult); \
 		sceAppMgrDump(); \
 		dumpBgmState(); \
 		SCE_DBG_ASSERT_FAIL(_line); \
 	} else { \
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId(); \
+		g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
 	} \
 } while (0)
 
@@ -57,7 +57,7 @@ _Noreturn void appmgrAppEventMutexPanic(void)
 	int unlockResult; \
 	SceUID mutex = g_appmgrMainMutex; \
 	g_appmgrMainMutexOwner = -1; \
-	unlockResult = ksceKernelUnlockMutex(mutex, 1); \
+	unlockResult = sceKernelUnlockMutex(mutex, 1); \
 	if (unlockResult != 0) { \
 		sceAppMgrDump(); \
 		dumpBgmState(); \
@@ -68,15 +68,15 @@ _Noreturn void appmgrAppEventMutexPanic(void)
 } while (0)
 #else
 #define APP_EVENT_LOCK(_line) do { \
-	if (ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL) != 0) \
+	if (sceKernelLockMutex(g_appmgrMainMutex, 1, NULL) != 0) \
 		appmgrAppEventMutexPanic(); \
-	g_appmgrMainMutexOwner = ksceKernelGetThreadId(); \
+	g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
 } while (0)
 
 #define APP_EVENT_UNLOCK(_line) do { \
 	SceUID mutex = g_appmgrMainMutex; \
 	g_appmgrMainMutexOwner = -1; \
-	if (ksceKernelUnlockMutex(mutex, 1) != 0) \
+	if (sceKernelUnlockMutex(mutex, 1) != 0) \
 		appmgrAppEventMutexPanic(); \
 } while (0)
 #endif
@@ -340,7 +340,7 @@ int sceAppMgrSendEventInternal(const SceAppMgrSystemEvent *event, SceUID pid)
 	int result;
 
 	if (!sceSblACMgrIsSystemProgram(0) &&
-	    ksceKernelGetProcessId() != 0x10005) {
+	    sceKernelGetProcessId() != 0x10005) {
 		result = (int)0x8080201f;
 		goto leave;
 	}

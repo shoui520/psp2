@@ -130,7 +130,7 @@ int kscePfsMount2(const char *path, const char *name, const void *klicensee, Sce
 	if (!pfsNameIsValid(name) || path == NULL)
 		return SCE_ERROR_ERRNO_EINVAL;
 
-	ksceKernelLockMutex(g_pfsPmiListMutex, 1, NULL);
+	sceKernelLockMutex(g_pfsPmiListMutex, 1, NULL);
 	ret = pfsPmiFind(&g_pfsPmiList, name, &pmi);
 	if (ret != 0)
 		goto out;
@@ -193,7 +193,7 @@ destroy:
 	pmi->link.prev->next = &pmi->link;
 	ret = 0;
 out:
-	ksceKernelUnlockMutex(g_pfsPmiListMutex, 1);
+	sceKernelUnlockMutex(g_pfsPmiListMutex, 1);
 	return ret;
 }
 
@@ -207,7 +207,7 @@ int kscePfsUnmount(const char *name)
 	if (!pfsNameIsValid(name))
 		return SCE_ERROR_ERRNO_EINVAL;
 
-	ksceKernelLockMutex(g_pfsPmiListMutex, 1, NULL);
+	sceKernelLockMutex(g_pfsPmiListMutex, 1, NULL);
 	ret = pfsPmiFind(&g_pfsPmiList, name, &pmi);
 	if (ret != 0)
 		goto out;
@@ -227,7 +227,7 @@ int kscePfsUnmount(const char *name)
 
 	mounted = pmi;
 	if (pfsModeIsAc(mounted->mode)) {
-		ksceKernelLockMutex(mounted->mutex, 1, NULL);
+		sceKernelLockMutex(mounted->mutex, 1, NULL);
 		node = mounted->acidDirs.next;
 		while (node != NULL && node != &mounted->acidDirs) {
 			next = node->next;
@@ -236,14 +236,14 @@ int kscePfsUnmount(const char *name)
 			pfsPmiDestroy((ScePfsPmi *)node);
 			node = next;
 		}
-		ksceKernelUnlockMutex(mounted->mutex, 1);
+		sceKernelUnlockMutex(mounted->mutex, 1);
 	}
 	next = mounted->link.next;
 	next->prev = mounted->link.prev;
 	mounted->link.prev->next = next;
 	pfsPmiDestroy(mounted);
 out:
-	ksceKernelUnlockMutex(g_pfsPmiListMutex, 1);
+	sceKernelUnlockMutex(g_pfsPmiListMutex, 1);
 	return ret;
 }
 
@@ -253,7 +253,7 @@ int kscePfsApprove(const char *name, SceUInt64 authId)
 	int ret;
 
 	if (pfsNameIsValid(name)) {
-		ksceKernelLockMutex(g_pfsPmiListMutex, 1, NULL);
+		sceKernelLockMutex(g_pfsPmiListMutex, 1, NULL);
 		ret = pfsPmiFind(&g_pfsPmiList, name, &pmi);
 		if (ret == 0) {
 			if (pmi == NULL) {
@@ -264,7 +264,7 @@ int kscePfsApprove(const char *name, SceUInt64 authId)
 					pmi->flags &= ~PFS_PMI_NOT_APPROVED;
 			}
 		}
-		ksceKernelUnlockMutex(g_pfsPmiListMutex, 1);
+		sceKernelUnlockMutex(g_pfsPmiListMutex, 1);
 	} else {
 		ret = SCE_ERROR_ERRNO_EINVAL;
 	}
@@ -279,7 +279,7 @@ int kscePfsDisapprove(const char *name, SceUInt64 authId)
 	if (!pfsNameIsValid(name))
 		return SCE_ERROR_ERRNO_EINVAL;
 
-	ksceKernelLockMutex(g_pfsPmiListMutex, 1, NULL);
+	sceKernelLockMutex(g_pfsPmiListMutex, 1, NULL);
 	ret = pfsPmiFind(&g_pfsPmiList, name, &pmi);
 	if (ret == 0) {
 		if (pmi == NULL)
@@ -287,7 +287,7 @@ int kscePfsDisapprove(const char *name, SceUInt64 authId)
 		else
 			ret = pfsPmiDisapprove(pmi, authId);
 	}
-	ksceKernelUnlockMutex(g_pfsPmiListMutex, 1);
+	sceKernelUnlockMutex(g_pfsPmiListMutex, 1);
 	return ret;
 }
 
@@ -307,17 +307,17 @@ int kscePfsMount(const char *path, const char *name, SceUInt64 authId, const voi
 
 	if (name == NULL || strnlen(name, PFS_MOUNT_NAME_MAX) > PFS_MOUNT_NAME_MAX - 1)
 		return SCE_ERROR_ERRNO_EINVAL;
-	ksceKernelLockMutex(g_pfsPmiListMutex, 1, NULL);
+	sceKernelLockMutex(g_pfsPmiListMutex, 1, NULL);
 	ret = pfsPmiFind(&g_pfsPmiList, name, &pmi);
 	if (ret == 0) {
 		if (pmi != NULL && pfsPmiIsApproved(pmi, authId)) {
 			ret = pmi->mode;
-			ksceKernelUnlockMutex(g_pfsPmiListMutex, 1);
+			sceKernelUnlockMutex(g_pfsPmiListMutex, 1);
 			return ret;
 		}
 		ret = SCE_ERROR_ERRNO_ENODEV;
 	}
-	ksceKernelUnlockMutex(g_pfsPmiListMutex, 1);
+	sceKernelUnlockMutex(g_pfsPmiListMutex, 1);
 	return ret;
 }
 
@@ -449,10 +449,10 @@ int module_start(SceSize args, void *argp)
 	if (ret != 0)
 		goto vd;
 
-	pfsRandomInit(ksceKernelGetSystemTimeLow());
+	pfsRandomInit(SceThreadmgrForDriver_47F6DE49());
 	g_pfsPmiList.next = &g_pfsPmiList;
 	g_pfsPmiList.prev = &g_pfsPmiList;
-	ret = ksceKernelCreateMutex("ScePfsThePmi", 0x2000, 0, NULL);
+	ret = sceKernelCreateMutex("ScePfsThePmi", 0x2000, 0, NULL);
 	g_pfsPmiListMutex = ret;
 	if (ret < 0)
 		goto lru;
@@ -470,7 +470,7 @@ int module_start(SceSize args, void *argp)
 redirect:
 	ksceVfsDeleteVfs(g_pfsRedirectVfsInfo.vfs_name, NULL);
 mutex:
-	ksceKernelDeleteMutex(g_pfsPmiListMutex);
+	sceKernelDeleteMutex(g_pfsPmiListMutex);
 lru:
 	pfsLruTerm();
 vd:

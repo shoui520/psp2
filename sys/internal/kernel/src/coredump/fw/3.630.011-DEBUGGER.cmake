@@ -328,55 +328,55 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_CC5365D3
 	sceKernelGetLwMutexInfoAllProc
 	SceThreadmgrForDriver_09346D1A
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
 	sceKernelExitThread
 	SceThreadmgrForDriver_0EB0ABF0
-	ksceKernelGetLwMutexInfo
-	ksceKernelLockMutex
+	sceKernelGetLwMutexInfoById
+	sceKernelLockMutex
 	SceThreadmgrForDriver_19F3E92A
 	sceKernelExitDeleteThread
-	ksceKernelUnlockMutex
-	ksceKernelGetMsgPipeInfo
-	ksceKernelStartThread
+	sceKernelUnlockMutex
+	SceThreadmgrForDriver_207E0E18
+	sceKernelStartThread
 	sceKernelGetMutexInfoAllProc
 	sceKernelGetRWLockInfo
-	ksceKernelWaitThreadEnd
-	ksceKernelCreateEventFlag
+	sceKernelWaitThreadEnd
+	sceKernelCreateEventFlag
 	SceThreadmgrForDriver_477F7C8A
-	ksceKernelGetThreadCpuRegisters
-	ksceKernelGetThreadId
-	ksceKernelGetVfpRegisterForDebugger
-	ksceKernelGetEventFlagInfo
-	ksceKernelSignalCondTo
-	ksceKernelChangeThreadPriority
+	SceThreadmgrForDriver_5022689D
+	sceKernelGetThreadId
+	SceThreadmgrForDriver_5CDE387A
+	SceThreadmgrForDriver_612277C9
+	sceKernelSignalCondTo
+	sceKernelChangeThreadPriority2
 	sceKernelGetRWLockInfoAllProc
-	ksceKernelGetThreadTLSAddr
-	ksceKernelGetMutexInfo
-	ksceKernelSignalCondAll
-	ksceKernelDeleteEventFlag
+	SceThreadmgrForDriver_66EEA46A
+	sceKernelGetMutexInfo
+	sceKernelSignalCondAll
+	sceKernelDeleteEventFlag
 	sceKernelGetProcessId
-	ksceKernelIsThreadDebugSuspended
-	ksceKernelSignalCond
-	ksceKernelDeleteThread
-	ksceKernelDeleteCond
+	SceThreadmgrForDriver_A0B1AB21
+	sceKernelSignalCond
+	sceKernelDeleteThread
+	sceKernelDeleteCond
 	sceKernelGetWaitingThreadList
-	ksceKernelGetLwCondInfo
+	SceThreadmgrForDriver_C2AFFBD0
 	SceThreadmgrForDriver_C327CA7C
-	ksceKernelCreateThread
-	ksceKernelGetSemaInfo
+	sceKernelCreateThread
+	SceThreadmgrForDriver_C99DCF0D
 	SceThreadmgrForDriver_CA704239
 	SceThreadmgrForDriver_CBA7FAAA
-	ksceKernelWaitCond
+	sceKernelWaitCond
 	SceThreadmgrForDriver_D1FBDFA6
-	ksceKernelSetEventFlag
-	ksceKernelCreateCond
-	ksceKernelGetThreadInfoForDebugger
+	sceKernelSetEventFlag
+	sceKernelCreateCond
+	SceThreadmgrForDriver_DD8D9429
 	SceThreadmgrForDriver_E0C7BCBB
 	SceThreadmgrForDriver_E9E50096
-	ksceKernelGetThreadIdList
-	ksceKernelGetUserThreadId
-	ksceKernelCreateMutex
+	sceKernelGetThreadIdList
+	SceThreadmgrForDriver_F311808F
+	sceKernelCreateMutex
 	SceThreadmgrForDriver_FDC044AC
 	SceThreadmgrForDriver_FF8DA217
 	sceSblACMgrIsKernelProgram

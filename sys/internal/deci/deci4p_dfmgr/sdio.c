@@ -58,7 +58,7 @@ static int _recvThread(SceSize args, void *argp)
 
 	for (;;) {
 		bits = 0;
-		ret = ksceKernelWaitEventFlag(s_sdioRecvEvf, 1,
+		ret = sceKernelWaitEventFlag(s_sdioRecvEvf, 1,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      &bits, NULL);
@@ -81,7 +81,7 @@ static int _sendThread(SceSize args, void *argp)
 
 	for (;;) {
 		bits = 0;
-		ret = ksceKernelWaitEventFlag(s_sdioSendEvf, 1,
+		ret = sceKernelWaitEventFlag(s_sdioSendEvf, 1,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      &bits, NULL);
@@ -113,7 +113,7 @@ int sdioInit(DfMgrLinkCB *link, DfMgrLinkCallback sendCallback, DfMgrLinkCallbac
 	s_sdioSendCallback = sendCallback;
 	s_sdioLink = link;
 
-	ret = ksceKernelCreateEventFlag("SceDeci4pDfMgrSdioSend", SCE_KERNEL_EVF_ATTR_MULTI, 0,
+	ret = sceKernelCreateEventFlag("SceDeci4pDfMgrSdioSend", SCE_KERNEL_EVF_ATTR_MULTI, 0,
 					NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_LEVEL(0, 0, 89);
@@ -121,7 +121,7 @@ int sdioInit(DfMgrLinkCB *link, DfMgrLinkCallback sendCallback, DfMgrLinkCallbac
 	}
 	*pSendEvf = ret;
 	s_sdioSendEvf = ret;
-	ret = ksceKernelCreateEventFlag("SceDeci4pDfMgrSdioRecv", SCE_KERNEL_EVF_ATTR_MULTI, 0,
+	ret = sceKernelCreateEventFlag("SceDeci4pDfMgrSdioRecv", SCE_KERNEL_EVF_ATTR_MULTI, 0,
 					NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_LEVEL(0, 0, 103);
@@ -135,20 +135,20 @@ int sdioInit(DfMgrLinkCB *link, DfMgrLinkCallback sendCallback, DfMgrLinkCallbac
 		return ret;
 	}
 
-	ret = ksceKernelCreateThread("SceDeci4pDfMgrSdioSend", _sendThread, 0x1e, 0x4000, 0, 0xf,
+	ret = sceKernelCreateThread("SceDeci4pDfMgrSdioSend", _sendThread, 0x1e, 0x4000, 0, 0xf,
 				     &opt);
 	if (ret < 0)
 		return ret;
 	s_sdioSendThread = ret;
-	ret = ksceKernelCreateThread("SceDeci4pDfMgrSdioRecv", _recvThread, 0x1e, 0x4000, 0, 0xf,
+	ret = sceKernelCreateThread("SceDeci4pDfMgrSdioRecv", _recvThread, 0x1e, 0x4000, 0, 0xf,
 				     &opt);
 	if (ret < 0)
 		return ret;
 	s_sdioRecvThread = ret;
-	ret = ksceKernelStartThread(s_sdioSendThread, 0, NULL);
+	ret = sceKernelStartThread(s_sdioSendThread, 0, NULL);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelStartThread(s_sdioRecvThread, 0, NULL);
+	ret = sceKernelStartThread(s_sdioRecvThread, 0, NULL);
 	if (ret < 0)
 		return ret;
 
@@ -168,19 +168,19 @@ int sdioTerm(DfMgrLinkCB *link)
 	ret = dfmgrSetLinkStatus(link, DFMGR_LINK_READY, 0);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(15, 181, "0x%08X\n", ret);
-	ret = ksceKernelDeleteThread(s_sdioRecvThread);
+	ret = sceKernelDeleteThread(s_sdioRecvThread);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(15, 188, "0x%08X\n", ret);
-	ret = ksceKernelDeleteThread(s_sdioSendThread);
+	ret = sceKernelDeleteThread(s_sdioSendThread);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(15, 195, "0x%08X\n", ret);
 	ret = SceDbgSdioForDriver_361E1BB6(SDIO_CHANNEL);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(15, 202, "0x%08X\n", ret);
-	ret = ksceKernelDeleteEventFlag(s_sdioRecvEvf);
+	ret = sceKernelDeleteEventFlag(s_sdioRecvEvf);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(15, 209, "0x%08X\n", ret);
-	ret = ksceKernelDeleteEventFlag(s_sdioSendEvf);
+	ret = sceKernelDeleteEventFlag(s_sdioSendEvf);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(15, 216, "0x%08X\n", ret);
 	return 0;

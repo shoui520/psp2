@@ -777,20 +777,20 @@ int SDeci2pModuleStart(SceSize args, void *argp)
 	opt.size = sizeof(opt);
 	opt.attr = 1;
 	opt.kStackMemType = SceDeci4pSDfMgrForKernel_35238B8A();
-	thid = ksceKernelCreateThread("SceDeci4pSDeci2p", initThread, 0x1e, 0x2000, 0, 0x80000, &opt);
+	thid = sceKernelCreateThread("SceDeci4pSDeci2p", initThread, 0x1e, 0x2000, 0, 0x80000, &opt);
 	if (thid < 0) {
 		SDECI2P_PRINTF(0xf, 304, "CreateThread failed (0x%08X)\n", thid);
 		return thid;
 	}
-	ret = ksceKernelStartThread(thid, sizeof(ctx), &ctx);
+	ret = sceKernelStartThread(thid, sizeof(ctx), &ctx);
 	if (ret < 0) {
 		SDECI2P_PRINTF(0xf, 312, "StartThread failed (0x%08X)\n", ret);
 		return ret;
 	}
-	ret = ksceKernelWaitThreadEnd(thid, &status, NULL);
+	ret = sceKernelWaitThreadEnd(thid, &status, NULL);
 	if (ret < 0)
 		SDECI2P_PRINTF(0xf, 319, "WaitThreadEnd failed (0x%08X)\n", ret);
-	ret = ksceKernelDeleteThread(thid);
+	ret = sceKernelDeleteThread(thid);
 	if (ret < 0)
 		SDECI2P_PRINTF(0xf, 326, "DeleteThread failed (0x%08X)\n", ret);
 	if (status < 0) {

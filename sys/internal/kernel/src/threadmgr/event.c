@@ -528,7 +528,7 @@ int sceKernelEventObjectInit(SceUID eventId, uint32_t attr, uint64_t userData, u
 	return sceGUIDReleaseObject(eventId);
 }
 
-int ksceKernelSetEvent(SceUID eventId, uint32_t pattern, uint64_t userData)
+int sceKernelSetEvent(SceUID eventId, uint32_t pattern, uint64_t userData)
 {
 	struct ThreadmgrWaitNode *queue, *node, *next;
 	struct ThreadCB *thread;
@@ -666,7 +666,7 @@ uint32_t setEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t u
 	return notifyCallbackAllAfterSetEvent(eventId, event, arg) | wake;
 }
 
-/* sceKernelSetEventWithNotifyCallback: ksceKernelSetEvent with the callbacks told */
+/* sceKernelSetEventWithNotifyCallback: sceKernelSetEvent with the callbacks told */
 int sceKernelSetEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t userData,
 				   uint32_t arg)
 {
@@ -697,7 +697,7 @@ int sceKernelSetEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64
 }
 
 /* keeps only the bits of keep */
-int ksceKernelClearEvent(SceUID eventId, uint32_t keep)
+int sceKernelClearEvent(SceUID eventId, uint32_t keep)
 {
 	ThreadmgrEvent *event;
 	uint32_t saved;
@@ -731,7 +731,7 @@ int ksceKernelClearEvent(SceUID eventId, uint32_t keep)
 }
 
 /* sets pattern's bits for the waiters there now, then clears them again */
-int ksceKernelPulseEvent(SceUID eventId, uint32_t pattern, uint64_t userData)
+int sceKernelPulseEvent(SceUID eventId, uint32_t pattern, uint64_t userData)
 {
 	struct ThreadmgrWaitNode *queue, *node, *next;
 	struct ThreadCB *thread;
@@ -814,7 +814,7 @@ resume:
 	return ret;
 }
 
-/* ksceKernelPulseEvent with the callbacks told; called like setEventWithNotifyCallback */
+/* sceKernelPulseEvent with the callbacks told; called like setEventWithNotifyCallback */
 uint32_t pulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t userData,
 				      uint32_t arg, ThreadmgrEvent *event)
 {
@@ -867,8 +867,8 @@ uint32_t pulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t
 	return notifyCallbackAllAfterSetEvent(eventId, event, arg) | wake;
 }
 
-int ksceKernelPulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t userData,
-					   uint32_t arg)
+int sceKernelPulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t userData,
+					  uint32_t arg)
 {
 	ThreadmgrEvent *event;
 	uint32_t saved, wake;
@@ -1022,13 +1022,13 @@ resume:
 	return ret;
 }
 
-int ksceKernelWaitEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
+int SceThreadmgrForDriver_C529EA32(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 			uint64_t *outUserData, SceUInt32 *timeout)
 {
 	return waitEvent(eventId, pattern, outPattern, outUserData, timeout, 0);
 }
 
-int ksceKernelWaitEventCB(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
+int SceThreadmgrForDriver_360C655C(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 			  uint64_t *outUserData, SceUInt32 *timeout)
 {
 	return waitEvent(eventId, pattern, outPattern, outUserData, timeout, 1);

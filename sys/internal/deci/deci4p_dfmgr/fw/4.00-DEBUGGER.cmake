@@ -97,22 +97,22 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_FD753E7A
 	ksceKernelDisableIntr
 	ksceKernelEnableIntr
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
-	ksceKernelDeleteSema
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelStartThread
-	ksceKernelCreateSema
-	ksceKernelWaitSema
-	ksceKernelCreateEventFlag
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
+	sceKernelDeleteSema
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelStartThread
+	sceKernelCreateSema
+	sceKernelWaitSema
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelDeleteEventFlag
-	ksceKernelDeleteThread
-	ksceKernelCreateThread
-	ksceKernelSignalSema
-	ksceKernelSetEventFlag
-	ksceKernelCreateMutex
+	sceKernelDeleteEventFlag
+	sceKernelDeleteThread
+	sceKernelCreateThread
+	sceKernelSignalSema
+	sceKernelSetEventFlag
+	sceKernelCreateMutex
 	SceProcessmgrForDriver_C715591F
 	ksceKernelSearchModuleByName
 	SceDipswForDriver_A98FC2FD

@@ -12,6 +12,7 @@
 #include "syscall_context.h"
 #include <sysmem/sysclib.h>
 #include <sysmem/uid_class.h>
+#include <threadmgr/threadmgr.h>
 
 #define LW_COND_ITEM_SIZE		0x80	/* the class's object allocation size */
 #define LW_COND_ATTR_MASK		0x00002000
@@ -40,7 +41,6 @@ typedef struct ThreadmgrLwCondOptParam {
 	SceSize size;
 } ThreadmgrLwCondOptParam;
 
-extern int SceThreadmgrForDriver_20C228E4(void);
 int callCallbackAll(struct ThreadCB *thread);
 int sceKernelCheckThreadUserStackSelf(void);
 int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
@@ -704,7 +704,7 @@ int sceKernelGetLwCondInfo(SceUID condId, SceKernelLwCondInfo *info)
 	return ret;
 }
 
-int ksceKernelGetLwCondInfo(SceUID condId, SceKernelLwCondInfo *info)
+int SceThreadmgrForDriver_C2AFFBD0(SceUID condId, SceKernelLwCondInfo *info)
 {
 	return sceKernelGetLwCondInfo(condId, info);
 }

@@ -37,7 +37,7 @@ finishRelease:
 	if (packetType != 1)
 		return 0;
 	if (g_qmiBackendControl == NULL ||
-	    ksceKernelLockMutex(g_qmiBackendControl->instanceMutex, 1, NULL) != 0) {
+	    sceKernelLockMutex(g_qmiBackendControl->instanceMutex, 1, NULL) != 0) {
 		instance->state = 0;
 		instance->client = NULL;
 		return 0;
@@ -47,6 +47,6 @@ finishRelease:
 	instance->client = NULL;
 	if (control == NULL)
 		return 0;
-	ksceKernelUnlockMutex(control->instanceMutex, 1);
+	sceKernelUnlockMutex(control->instanceMutex, 1);
 	return 0;
 }

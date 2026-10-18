@@ -33,7 +33,7 @@ static const SceKernelDebugInfo s_fsPanic =
 void _sceKernelBsodDummyFsError(const char *name)
 {
 	uint32_t identifier = (uint32_t)name;
-	int pid = ksceKernelGetProcessIdFromTLS();
+	int pid = SceThreadmgrForDriver_FA54D49A();
 
 	if (pid == SCE_KERNEL_PROCESS_ID)
 		return;

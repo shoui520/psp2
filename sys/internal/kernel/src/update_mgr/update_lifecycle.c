@@ -50,12 +50,12 @@ checkDownloader:
 	if (SceSysrootForDriver_55392965() || SceSysrootForDriver_B0E1FC67())
 		updateInitializeAsync = 0;
 	if (updateInitializeAsync) {
-		thread = ksceKernelCreateThread("SceSblUsInitialize",
+		thread = sceKernelCreateThread("SceSblUsInitialize",
 			sceSblUpdateMgrInitPeripheralsPhase2, 253, 8192, 0x50000, 2, 0);
 		if (thread < 0)
 			goto finish;
-		if (ksceKernelStartThread(thread, 4, &updateThreadArgument) != 0) {
-			ksceKernelDeleteThread(thread);
+		if (sceKernelStartThread(thread, 4, &updateThreadArgument) != 0) {
+			sceKernelDeleteThread(thread);
 			goto finish;
 		}
 	} else if (sceSblUpdateMgrInitPeripheralsPhase2(4, &updateThreadArgument) != 0) {
@@ -74,10 +74,10 @@ checkDownloader:
 		}
 	}
 	if (updateInitializeAsync) {
-		thread = ksceKernelCreateThread("SceSblUsInvalidateVersion",
+		thread = sceKernelCreateThread("SceSblUsInvalidateVersion",
 			invalidate_prev_system_info, 253, 8192, 0x50000, 2, 0);
-		if (thread >= 0 && ksceKernelStartThread(thread, 4, &updateThreadArgument) != 0)
-			ksceKernelDeleteThread(thread);
+		if (thread >= 0 && sceKernelStartThread(thread, 4, &updateThreadArgument) != 0)
+			sceKernelDeleteThread(thread);
 	} else {
 		invalidate_prev_system_info(4, &updateThreadArgument);
 	}

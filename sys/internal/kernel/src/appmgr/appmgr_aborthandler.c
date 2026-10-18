@@ -82,7 +82,7 @@ int sceAppMgrSetFakeSettingBug51800ForUser(int abortCurrentProcess,
 
 void _sceAppMgrNotifyAppMgrHandler(void)
 {
-	if (ksceKernelSetEventFlag(g_appmgrAbortEventFlag, 1) != 0) {
+	if (sceKernelSetEventFlag(g_appmgrAbortEventFlag, 1) != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
 		dumpBgmState();
@@ -114,30 +114,30 @@ int _sceAppMgrAbortHandlerInitialize(void)
 
 	if (result < 0)
 		return result;
-	result = ksceKernelCreateEventFlag("SceAppMgrAbort", 0, 0, NULL);
+	result = sceKernelCreateEventFlag("SceAppMgrAbort", 0, 0, NULL);
 	if (result < 0)
 		return result;
 	g_appmgrAbortEventFlag = result;
-	result = ksceKernelCreateEventFlag("SceAppMgrCoredump", 0, 0, NULL);
+	result = sceKernelCreateEventFlag("SceAppMgrCoredump", 0, 0, NULL);
 	if (result < 0) {
-		result = ksceKernelDeleteEventFlag(g_appmgrAbortEventFlag);
+		result = sceKernelDeleteEventFlag(g_appmgrAbortEventFlag);
 		ABORT_INITIALIZE_CHECK(result, 1032, deleteAbortAfterCreatePanicInfo);
 		return result;
 	}
 	g_appmgrCoredumpEventFlag = result;
 	g_appmgrShellCrashed = 0;
 	dmb();
-	result = ksceKernelCreateThread("SceAppMgrAbortHandler", handleAbortedApp,
+	result = sceKernelCreateThread("SceAppMgrAbortHandler", handleAbortedApp,
 				       31, 4096, 0, 0x80000, NULL);
 	if (result < 0) {
-		result = ksceKernelDeleteEventFlag(g_appmgrAbortEventFlag);
+		result = sceKernelDeleteEventFlag(g_appmgrAbortEventFlag);
 		ABORT_INITIALIZE_CHECK(result, 1052, deleteAbortPanicInfo);
-		result = ksceKernelDeleteEventFlag(g_appmgrCoredumpEventFlag);
+		result = sceKernelDeleteEventFlag(g_appmgrCoredumpEventFlag);
 		ABORT_INITIALIZE_CHECK(result, 1054, deleteCoredumpPanicInfo);
 		return result;
 	}
 	g_appmgrAbortThreadId = result;
-	result = ksceKernelStartThread(result, 0, NULL);
+	result = sceKernelStartThread(result, 0, NULL);
 	ABORT_INITIALIZE_CHECK(result, 1059, startAbortPanicInfo);
 	result = SceThreadmgrForDriver_5311CFB5(
 		(uintptr_t)appmgrProcessDebugSuspendHandler, 0);

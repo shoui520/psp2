@@ -82,10 +82,10 @@ set(MODULE_IMPORT_FUNCS
 	SceDipswForDriver_A98FC2FD
 	SceQafMgrForDriver_382C71E8
 	sceKernelExitThread
-	ksceKernelStartThread
-	ksceKernelWaitThreadEnd
-	ksceKernelDeleteThread
-	ksceKernelCreateThread
+	sceKernelStartThread
+	sceKernelWaitThreadEnd
+	sceKernelDeleteThread
+	sceKernelCreateThread
 	SceDeci4pSDfMgrForKernel_35238B8A
 	SceDeci4pSDfMgrForKernel_3A25594F
 	SceDeci4pSDfMgrForKernel_59C077B3

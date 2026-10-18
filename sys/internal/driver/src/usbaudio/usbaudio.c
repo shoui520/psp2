@@ -24,19 +24,19 @@ static SceUID s_heap = -1;
 
 static int lockAudio(void)
 {
-	return ksceKernelLockFastMutex(&s_audio.lock);
+	return lockFastMutex(&s_audio.lock);
 }
 static int unlockAudio(void)
 {
-	return ksceKernelUnlockFastMutex(&s_audio.lock);
+	return sceKernelUnlockFastMutex(&s_audio.lock);
 }
 static int lockDevices(void)
 {
-	return ksceKernelLockFastMutex(&s_audio.deviceLock);
+	return lockFastMutex(&s_audio.deviceLock);
 }
 static int unlockDevices(void)
 {
-	return ksceKernelUnlockFastMutex(&s_audio.deviceLock);
+	return sceKernelUnlockFastMutex(&s_audio.deviceLock);
 }
 static void *allocate(unsigned size)
 {
@@ -72,7 +72,7 @@ static void notifyDevices(void)
 	struct AudioCallback *head = &s_audio.callbacks;
 	if (head->next && head->prev)
 		for (struct AudioCallback *p = head->next; p != head; p = p->next)
-			ksceKernelNotifyCallback(p->callback, 0);
+			sceKernelNotifyCallback(p->callback, 0);
 }
 
 static int probeAudio(int id, SceUsbdInterfaceDescriptor **descriptor);
@@ -101,7 +101,7 @@ static int cleanupProcess(int process)
 			continue;
 		stream->opened = 0;
 		stream->process = -1;
-		int error = ksceKernelClearEventFlag(stream->event, 0);
+		int error = sceKernelClearEventFlag(stream->event, 0);
 		if (error)
 			ret = error;
 		error = lockAudio();
@@ -125,9 +125,9 @@ static __attribute__((noipa)) int processKill(SceUID pid, ProcEventParam *param,
 
 static int initializeAudio(void)
 {
-	int ret = ksceKernelInitializeFastMutex(&s_audio.lock, "SceUsbAudio", 0x2000, 0);
+	int ret = sceKernelInitializeFastMutex(&s_audio.lock, "SceUsbAudio", 0x2000, 0);
 	if (!ret)
-		ret = ksceKernelInitializeFastMutex(&s_audio.deviceLock,
+		ret = sceKernelInitializeFastMutex(&s_audio.deviceLock,
 			"SceUsbAudioDeviceLock", 0x2000, 0);
 	if (ret) {
 		SceDebugForDriver_391B74B7("USBAUDIO: sceKernelInitializeFastMutex() failed! => 0x%x", ret);
@@ -196,7 +196,7 @@ int ksceUsbAudioRegisterCallback(int callback)
 	p->next = head;
 	head->prev->next = p;
 	head->prev = p;
-	ksceKernelNotifyCallback(callback, 0);
+	sceKernelNotifyCallback(callback, 0);
 out:
 	unlockAudio();
 	return ret;
@@ -242,7 +242,7 @@ static void completeVolume(int result, int length, void *arg)
 {
 	AudioDevice *dev = arg;
 	dev->controlResult = result;
-	ksceKernelSetEventFlag(dev->event, 1);
+	sceKernelSetEventFlag(dev->event, 1);
 }
 static int volumeRequest(unsigned id, unsigned request, unsigned value, int *out)
 {
@@ -254,7 +254,7 @@ static int volumeRequest(unsigned id, unsigned request, unsigned value, int *out
 		return AUDIO_ERROR(DEVICE_NOT_FOUND);
 	if (dev->port.volumeUnit == UAC_NO_UNIT)
 		return AUDIO_ERROR(NOT_SUPPORTED);
-	int ret = ksceKernelLockFastMutex(&dev->mutex);
+	int ret = lockFastMutex(&dev->mutex);
 	int volume = 0;
 	if (!ret) {
 		uint8_t *buffer = controlBuffer(dev);
@@ -272,12 +272,12 @@ static int volumeRequest(unsigned id, unsigned request, unsigned value, int *out
 		dev->controlResult = 0;
 		ret = ksceUsbdControlTransfer(dev->port.controlPipe, &req, buffer, completeVolume, dev);
 		unsigned timeout = 1000000;
-		int wait = ksceKernelWaitEventFlag(dev->event, 1,
+		int wait = sceKernelWaitEventFlag(dev->event, 1,
 						   SCE_KERNEL_EVF_WAITMODE_OR |
 						   SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL, 0, &timeout);
 		if (request & SCE_USBD_REQTYPE_DIR_TO_HOST)
 			volume = *(int16_t *)buffer;
-		ksceKernelUnlockFastMutex(&dev->mutex);
+		sceKernelUnlockFastMutex(&dev->mutex);
 		if (!ret)
 			ret = wait ? wait : dev->controlResult;
 	}
@@ -381,7 +381,7 @@ static void completeInput(int result, ksceUsbdIsochTransfer *packet, void *arg)
 		return;
 	AudioStream *stream = dma->stream;
 	if (result == 8) {
-		ksceKernelSetEventFlag(stream->event, 8);
+		sceKernelSetEventFlag(stream->event, 8);
 		return;
 	}
 	unsigned *done = (void *)packet;
@@ -390,7 +390,7 @@ static void completeInput(int result, ksceUsbdIsochTransfer *packet, void *arg)
 	AudioPort *port = findPort(stream->device);
 	if (!stream->opened || port->halted) {
 		if (!stream->active)
-			ksceKernelSetEventFlag(stream->event, STREAM_STOPPED);
+			sceKernelSetEventFlag(stream->event, STREAM_STOPPED);
 		return;
 	}
 	AudioRing *ring = &stream->ring[stream->write];
@@ -402,10 +402,10 @@ static void completeInput(int result, ksceUsbdIsochTransfer *packet, void *arg)
 			ring->used = 0;
 			stream->ready = stream->write;
 			stream->write = (stream->write + 1) % 3;
-			ksceKernelSetEventFlag(stream->event, STREAM_DATA_READY);
+			sceKernelSetEventFlag(stream->event, STREAM_DATA_READY);
 		}
 	} else {
-		ksceKernelSetEventFlag(stream->event, STREAM_SUBMIT_FAILED);
+		sceKernelSetEventFlag(stream->event, STREAM_SUBMIT_FAILED);
 	}
 }
 SceInt32 sceUsbAudioInOpenDevice(SceUInt32 id, int bits, int rate)
@@ -429,7 +429,7 @@ SceInt32 sceUsbAudioInOpenDevice(SceUInt32 id, int bits, int rate)
 		goto unlock;
 	}
 	AudioStream *stream = port->stream;
-	if (ksceKernelTryLockMutex(stream->mutex, 1) < 0) {
+	if (sceKernelTryLockMutex(stream->mutex, 1) < 0) {
 		ret = AUDIO_ERROR(CANNOT_GET_PORT_OWNERSHIP);
 		goto unlock;
 	}
@@ -442,7 +442,7 @@ SceInt32 sceUsbAudioInOpenDevice(SceUInt32 id, int bits, int rate)
 	stream->process = sceKernelGetProcessId();
 	stream->frameBytes = 2;
 	stream->frames = 48;
-	ksceKernelClearEventFlag(stream->event, 0);
+	sceKernelClearEventFlag(stream->event, 0);
 	for (unsigned i = 0; i < 3; i++) {
 		AudioDma *dma = stream->dma[i];
 		dma->request.buffer = dma;
@@ -467,12 +467,12 @@ SceInt32 sceUsbAudioInOpenDevice(SceUInt32 id, int bits, int rate)
 	}
 	s_audio.opened++;
 	unsigned flags[2] = { 0 }, timeout = 1000000;
-	ret = ksceKernelWaitEventFlag(stream->event, STREAM_DATA_READY | STREAM_HALTED,
+	ret = sceKernelWaitEventFlag(stream->event, STREAM_DATA_READY | STREAM_HALTED,
 				      SCE_KERNEL_EVF_WAITMODE_OR, flags, &timeout);
 	ret = ret == (int)SCE_KERNEL_ERROR_WAIT_TIMEOUT ? AUDIO_ERROR(TIMEOUT) :
 		ret ? AUDIO_ERROR(FAILED_TO_READ_STREAM) : 0;
  unlockPort:
-	ksceKernelUnlockMutex(stream->mutex, 1);
+	sceKernelUnlockMutex(stream->mutex, 1);
  unlock:
 	unlockAudio();
  out:
@@ -490,10 +490,10 @@ SceInt32 sceUsbAudioInCloseDevice(SceUInt32 id)
 		if (!ret) {
 			unsigned flags[2] = { 0 }, timeout = 1000000;
 			stream->opened = 0;
-			ksceKernelWaitEventFlag(stream->event, 4,
+			sceKernelWaitEventFlag(stream->event, 4,
 						SCE_KERNEL_EVF_WAITMODE_AND |
 						SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, flags, &timeout);
-			ksceKernelClearEventFlag(stream->event, 0);
+			sceKernelClearEventFlag(stream->event, 0);
 			stream->process = -1;
 			ret = lockAudio();
 			if (!ret) {
@@ -525,7 +525,7 @@ SceInt32 sceUsbAudioInInput(SceUInt32 id, void *buffer)
 	if (ret)
 		goto out;
 	unsigned flags[2] = { 0 }, timeout = 64000;
-	ret = ksceKernelWaitEventFlag(stream->event, 10,
+	ret = sceKernelWaitEventFlag(stream->event, 10,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, flags, &timeout);
 	if (ret) {
@@ -1173,8 +1173,8 @@ static int addDevice(unsigned id)
 	unlockDevices();
 	dev->event = -1;
 	dev->id = id;
-	dev->event = ksceKernelCreateEventFlag("SceUsbAudioIn", 0, 0, 0);
-	if (ksceKernelInitializeFastMutex(&dev->mutex, "SceUsbAudioIn", 0x2000, 0))
+	dev->event = sceKernelCreateEventFlag("SceUsbAudioIn", 0, 0, 0);
+	if (sceKernelInitializeFastMutex(&dev->mutex, "SceUsbAudioIn", 0x2000, 0))
 		return 0;
 	const SceUsbdDeviceDescriptor *descriptor = scan(id, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
 	if (descriptor) {
@@ -1252,9 +1252,9 @@ static int attachAudio(int id)
 			stream->dma[i]->stream = stream;
 		}
 		stream->device = id;
-		stream->event = ksceKernelCreateEventFlag("SceUsbAudio", 0, 0, 0);
+		stream->event = sceKernelCreateEventFlag("SceUsbAudio", 0, 0, 0);
 		if (stream->event >= 0) {
-			stream->mutex = ksceKernelCreateMutex("SceUsbAudio", 0, 0, 0);
+			stream->mutex = sceKernelCreateMutex("SceUsbAudio", 0, 0, 0);
 			if (stream->mutex < 0)
 				ret = 2;
 			else {
@@ -1288,7 +1288,7 @@ static int removeDevice(unsigned id)
 		release(dev->port.outputFormat.rates);
 		dev->port.outputFormat.rates = NULL;
 	}
-	ksceKernelDeleteEventFlag(dev->event);
+	sceKernelDeleteEventFlag(dev->event);
 	release(dev);
 	for (unsigned i = 0; i < 8; i++)
 		if (s_audio.device[i] == dev) {

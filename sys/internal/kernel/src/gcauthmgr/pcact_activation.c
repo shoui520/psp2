@@ -55,7 +55,7 @@ int GcAuthPcactGetAuthenticatedAesKey(const GcAuthPcactKeyRequest *request)
 	int result;
 	int difference;
 
-	if (ksceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
 		return (int)0x808a0206;
 	if (random == NULL || activation == NULL || outputKey == NULL) {
 		result = (int)0x808a0200;
@@ -147,7 +147,7 @@ finish:
 	do {
 		*cursor++ = 0;
 	} while (cursor != (unsigned char *)&gcAuthPcactScratch + 184);
-	if (ksceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
 		result = (int)0x808a0206;
 	return result;
 }
@@ -165,9 +165,9 @@ int GcAuthPcactCreateChallenge(const GcAuthPcactChallengeRequest *request)
 	int permission;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
 		return (int)0x808a0206;
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0) {
 		result = (int)0x808a0300;
 		goto signal;
@@ -291,9 +291,9 @@ finish:
 	cursor = (unsigned char *)&gcAuthPcactScratch;
 	for (index = 0; index != 184; index++)
 		cursor[index] = 0;
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 signal:
-	if (ksceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
 		result = (int)0x808a0206;
 	return result;
 }
@@ -310,7 +310,7 @@ int GcAuthPcactEncryptChallenge(const GcAuthPcactEncryptChallengeRequest *reques
 	unsigned int index;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
 		return (int)0x808a0306;
 	if (rtcSeconds == NULL || input == NULL || random == NULL || output == NULL) {
 		result = (int)0x808a0300;
@@ -380,7 +380,7 @@ finish:
 	cursor = (unsigned char *)&gcAuthPcactScratch;
 	for (index = 0; index != 184; index++)
 		cursor[index] = 0;
-	if (ksceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
 		result = (int)0x808a0306;
 	return result;
 }
@@ -395,7 +395,7 @@ int GcAuthPcactCreateRtcChallenge(const GcAuthPcactRtcChallengeRequest *request)
 	unsigned int blockBytes;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
 		return (int)0x808a0605;
 	if (output == NULL) {
 		result = (int)0x808a0600;
@@ -445,7 +445,7 @@ finish:
 	cursor = (unsigned char *)&gcAuthPcactScratch;
 	for (index = 0; index != 184; index++)
 		cursor[index] = 0;
-	if (ksceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
 		result = (int)0x808a0605;
 	return result;
 }
@@ -468,7 +468,7 @@ int GcAuthPcactApplyRtcActivation(const GcAuthPcactRtcActivationRequest *request
 	unsigned long long seconds;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthPcactSemaphore, 1, NULL) != 0)
 		return (int)0x808a0605;
 	if (activation == NULL) {
 		result = (int)0x808a0600;
@@ -562,7 +562,7 @@ finish:
 	cursor = (unsigned char *)&gcAuthPcactScratch;
 	for (index = 0; index != 184; index++)
 		cursor[index] = 0;
-	if (ksceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthPcactSemaphore, 1) != 0)
 		result = (int)0x808a0605;
 	return result;
 }
@@ -576,7 +576,7 @@ int GcAuthInitializePcact(void)
 		*cursor++ = 0;
 	} while (cursor != (unsigned char *)&gcAuthPcactScratch +
 		 sizeof(gcAuthPcactScratch));
-	semaphore = ksceKernelCreateSema("ScePcact", 0, 1, 1, NULL);
+	semaphore = sceKernelCreateSema("ScePcact", 0, 1, 1, NULL);
 	gcAuthPcactSemaphore = semaphore;
 	return semaphore <= 0;
 }

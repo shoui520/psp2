@@ -99,10 +99,10 @@ void sdifCompleteSyncCommand(SdifCommand *command)
 {
 	if (command->context->port.polling == 0) {
 		if (command->errorCode != 0) {
-			ksceKernelSetEventFlag(command->eventFlag, 16);
+			sceKernelSetEventFlag(command->eventFlag, 16);
 			return;
 		}
-		ksceKernelSetEventFlag(command->eventFlag, 1);
+		sceKernelSetEventFlag(command->eventFlag, 1);
 	}
 }
 
@@ -369,8 +369,8 @@ int SceSdifForDriver_E5E5F42E(void)
 			interrupt = port->index + 220;
 			ksceKernelDisableIntr(interrupt);
 			ksceKernelReleaseIntrHandler(interrupt);
-			ksceKernelDeleteEventFlag(port->eventFlag);
-			ksceKernelFinalizeFastMutex(&port->mutex);
+			sceKernelDeleteEventFlag(port->eventFlag);
+			sceKernelFinalizeFastMutex(&port->mutex);
 			SceSysmemForDriver_009E1C61(port->descriptorMemblock);
 			SceSysmemForDriver_009E1C61(port->registerMemblock);
 			ScePervasiveForDriver_3D8A8712(index);
@@ -393,14 +393,14 @@ int sdifLockPort(SdifContextGlobal *context)
 {
 	if (context->port.polling)
 		return 0;
-	return ksceKernelLockFastMutex(&context->port.mutex);
+	return lockFastMutex(&context->port.mutex);
 }
 
 int sdifUnlockPort(SdifContextGlobal *context)
 {
 	if (context->port.polling)
 		return 0;
-	return ksceKernelUnlockFastMutex(&context->port.mutex);
+	return sceKernelUnlockFastMutex(&context->port.mutex);
 }
 
 int _sceSdifReset(SdifContextGlobal *context, int flags)
@@ -633,10 +633,10 @@ int sceSdifInit(void)
 			goto freeRegisters;
 		port->descriptorMemblock = result;
 		SceSysmemForDriver_A841EDDA(result, &port->descriptorBuffer);
-		result = ksceKernelInitializeFastMutex(&port->mutex, name, 2, NULL);
+		result = sceKernelInitializeFastMutex(&port->mutex, name, 2, NULL);
 		if (result < 0)
 			goto freeDescriptors;
-		result = ksceKernelCreateEventFlag(name, 0, 0, NULL);
+		result = sceKernelCreateEventFlag(name, 0, 0, NULL);
 		port->eventFlag = result;
 		if (result < 0)
 			goto finalizeMutex;
@@ -702,9 +702,9 @@ addressError:
 #endif
 	ksceKernelReleaseIntrHandler(interrupt);
 deleteEventFlag:
-	ksceKernelDeleteEventFlag(port->eventFlag);
+	sceKernelDeleteEventFlag(port->eventFlag);
 finalizeMutex:
-	ksceKernelFinalizeFastMutex(&port->mutex);
+	sceKernelFinalizeFastMutex(&port->mutex);
 freeDescriptors:
 	SceSysmemForDriver_009E1C61(port->descriptorMemblock);
 freeRegisters:
@@ -719,8 +719,8 @@ cleanupPorts:
 			__builtin_prefetch(&context[3].port.index);
 			ksceKernelDisableIntr(interrupt);
 			ksceKernelReleaseIntrHandler(interrupt);
-			ksceKernelDeleteEventFlag(port->eventFlag);
-			ksceKernelFinalizeFastMutex(&port->mutex);
+			sceKernelDeleteEventFlag(port->eventFlag);
+			sceKernelFinalizeFastMutex(&port->mutex);
 			SceSysmemForDriver_009E1C61(port->descriptorMemblock);
 			SceSysmemForDriver_009E1C61(port->registerMemblock);
 			context++;
@@ -1266,7 +1266,7 @@ int sceSdifWaitCmdCompletionCore(SdifCommand *command)
 		SceUInt timeout = 5000000;
 
 		SCE_DBG_ASSERT(command->secondaryCommand == NULL, 2617);
-		result = ksceKernelWaitEventFlag(command->eventFlag, 0x11, 5, NULL, &timeout);
+		result = sceKernelWaitEventFlag(command->eventFlag, 0x11, 5, NULL, &timeout);
 		if (result < 0) {
 			SceKernelIntrStatus intrState;
 			SdifCommand *current;
@@ -1278,7 +1278,7 @@ int sceSdifWaitCmdCompletionCore(SdifCommand *command)
 				current->flags |= 0x40000000;
 				port->currentCommand = NULL;
 			} else {
-				int clearResult = ksceKernelClearEventFlag(command->eventFlag, 0);
+				int clearResult = sceKernelClearEventFlag(command->eventFlag, 0);
 
 #if FW_DEBUG
 				if (clearResult)
@@ -1294,7 +1294,7 @@ int sceSdifWaitCmdCompletionCore(SdifCommand *command)
 			SceDebugForDriver_02B04343(0, SCE_DBGINFO(2648), "0x%x\n", result);
 		}
 	} else
-		result = ksceKernelWaitEventFlag(command->eventFlag, 0x11, 5, NULL, NULL);
+		result = sceKernelWaitEventFlag(command->eventFlag, 0x11, 5, NULL, NULL);
 	if (result)
 		goto checkResult;
 completed:
@@ -1364,7 +1364,7 @@ int sceSdifSendSyncCmd(SdifContextGlobal *context, SdifCommand *command,
 			break;
 	}
 	if (!port->polling)
-		ksceKernelUnlockFastMutex(&port->mutex);
+		sceKernelUnlockFastMutex(&port->mutex);
 	if (secondary && (secondary->flags & 0x400))
 		freeAdmaDescriptorArea(secondary);
 	if (command->flags & 0x400)
@@ -1403,7 +1403,7 @@ int sdifWaitPendingCommand(SdifContextGlobal *context, unsigned int index,
 		sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
 		return 0x80320012;
 	}
-	eventFlag = ksceKernelCreateEventFlag("SceSdif", 0, 0, NULL);
+	eventFlag = sceKernelCreateEventFlag("SceSdif", 0, 0, NULL);
 	if (eventFlag < 0) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
 		return eventFlag;
@@ -1417,7 +1417,7 @@ int sdifWaitPendingCommand(SdifContextGlobal *context, unsigned int index,
 	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
 	result = sceSdifWaitCmdCompletionCore(completion);
 	*completed = completion;
-	ksceKernelDeleteEventFlag(eventFlag);
+	sceKernelDeleteEventFlag(eventFlag);
 	return result;
 }
 
@@ -1518,7 +1518,7 @@ int sdifPrepareSyncCommand(SdifContextGlobal *context, SdifCommand *command,
 	int result;
 
 	if (!port->polling) {
-		result = ksceKernelLockFastMutex(&port->mutex);
+		result = lockFastMutex(&port->mutex);
 		if (result < 0)
 			return result;
 	}
@@ -1557,7 +1557,7 @@ int sdifPrepareSyncCommand(SdifContextGlobal *context, SdifCommand *command,
 	return sceSdifSendSyncCmd(context, command, secondary, retries, checkCard);
 unlock:
 	if (!port->polling)
-		ksceKernelUnlockFastMutex(&port->mutex);
+		sceKernelUnlockFastMutex(&port->mutex);
 	return result;
 }
 
@@ -1570,7 +1570,7 @@ int sdifSendCheckedSyncCommand(SdifContextGlobal *context, SdifCommand *command,
 	int result;
 
 	if (!port->polling) {
-		result = ksceKernelLockFastMutex(&port->mutex);
+		result = lockFastMutex(&port->mutex);
 		if (result < 0)
 			return result;
 	}
@@ -1603,7 +1603,7 @@ int sdifSendCheckedSyncCommand(SdifContextGlobal *context, SdifCommand *command,
 		freeAdmaDescriptorArea(command);
 	}
 	if (!port->polling)
-		ksceKernelUnlockFastMutex(&port->mutex);
+		sceKernelUnlockFastMutex(&port->mutex);
 	return result;
 }
 
@@ -1623,7 +1623,7 @@ int sdifSendCheckedApplicationCommand(SdifContextGlobal *context, SdifCommand *s
 	command->size = sizeof(*command);
 	command->argument = (uint32_t)port->relativeCardAddress << 16;
 	if (!port->polling) {
-		result = ksceKernelLockFastMutex(&port->mutex);
+		result = lockFastMutex(&port->mutex);
 		if (result < 0)
 			return result;
 	}
@@ -1662,7 +1662,7 @@ int sdifSendCheckedApplicationCommand(SdifContextGlobal *context, SdifCommand *s
 	return sceSdifSendSyncCmd(context, command, secondary, retries, 1);
 unlock:
 	if (!port->polling)
-		ksceKernelUnlockFastMutex(&port->mutex);
+		sceKernelUnlockFastMutex(&port->mutex);
 	return result;
 }
 
@@ -1682,7 +1682,7 @@ int sdifSendApplicationCommand(SdifContextGlobal *context, SdifCommand *secondar
 	command->size = sizeof(*command);
 	command->argument = (uint32_t)port->relativeCardAddress << 16;
 	if (!port->polling) {
-		result = ksceKernelLockFastMutex(&port->mutex);
+		result = lockFastMutex(&port->mutex);
 		if (result < 0)
 			return result;
 	}
@@ -1721,7 +1721,7 @@ int sdifSendApplicationCommand(SdifContextGlobal *context, SdifCommand *secondar
 	return sceSdifSendSyncCmd(context, command, secondary, retries, 0);
 unlock:
 	if (!port->polling)
-		ksceKernelUnlockFastMutex(&port->mutex);
+		sceKernelUnlockFastMutex(&port->mutex);
 	return result;
 }
 
@@ -1742,7 +1742,7 @@ int sdifResetCard(SdifContextGlobal *context)
 	command->command = 0;
 	command->argument = 0;
 	if (!port->polling) {
-		result = ksceKernelLockFastMutex(&port->mutex);
+		result = lockFastMutex(&port->mutex);
 		if (result < 0)
 			return result;
 	}
@@ -1758,7 +1758,7 @@ int sdifResetCard(SdifContextGlobal *context)
 		result = setAdmaDescriptorsForAlignedData(command);
 		if (result) {
 			if (!port->polling)
-				ksceKernelUnlockFastMutex(&port->mutex);
+				sceKernelUnlockFastMutex(&port->mutex);
 			goto complete;
 		}
 	}
@@ -1805,7 +1805,7 @@ int sdifReadCid(SdifContextGlobal *context, uint32_t cid[4])
 	command->command = 2;
 	command->argument = 0;
 	if (!port->polling) {
-		result = ksceKernelLockFastMutex(&port->mutex);
+		result = lockFastMutex(&port->mutex);
 		if (result < 0)
 			return result;
 	}
@@ -1821,7 +1821,7 @@ int sdifReadCid(SdifContextGlobal *context, uint32_t cid[4])
 		result = setAdmaDescriptorsForAlignedData(command);
 		if (result) {
 			if (!port->polling)
-				ksceKernelUnlockFastMutex(&port->mutex);
+				sceKernelUnlockFastMutex(&port->mutex);
 			goto complete;
 		}
 	}
@@ -1848,7 +1848,7 @@ int sdifReadCsd(SdifContextGlobal *context, uint32_t csd[4])
 	command->argument = (uint32_t)port->relativeCardAddress << 16;
 	command->buffer = NULL;
 	if (!port->polling) {
-		result = ksceKernelLockFastMutex(&port->mutex);
+		result = lockFastMutex(&port->mutex);
 		if (result < 0)
 			return result;
 	}
@@ -1864,7 +1864,7 @@ int sdifReadCsd(SdifContextGlobal *context, uint32_t csd[4])
 		result = setAdmaDescriptorsForAlignedData(command);
 		if (result) {
 			if (!port->polling)
-				ksceKernelUnlockFastMutex(&port->mutex);
+				sceKernelUnlockFastMutex(&port->mutex);
 			goto complete;
 		}
 	}
@@ -1895,7 +1895,7 @@ int sdifSelectCard(SdifContextGlobal *context, int select)
 	command->command = 7;
 	command->argument = select;
 	if (!port->polling) {
-		result = ksceKernelLockFastMutex(&port->mutex);
+		result = lockFastMutex(&port->mutex);
 		if (result < 0)
 			return result;
 	}
@@ -1911,7 +1911,7 @@ int sdifSelectCard(SdifContextGlobal *context, int select)
 		result = setAdmaDescriptorsForAlignedData(command);
 		if (result) {
 			if (!port->polling)
-				ksceKernelUnlockFastMutex(&port->mutex);
+				sceKernelUnlockFastMutex(&port->mutex);
 			goto complete;
 		}
 	}
@@ -1957,7 +1957,7 @@ int SceSdifForDriver_53518827(SdifContextGlobal *context, uint32_t *status)
 	command->argument = (uint32_t)port->relativeCardAddress << 16;
 	command->buffer = NULL;
 	if (!port->polling) {
-		result = ksceKernelLockFastMutex(&port->mutex);
+		result = lockFastMutex(&port->mutex);
 		if (result < 0)
 			return result;
 	}
@@ -1973,7 +1973,7 @@ int SceSdifForDriver_53518827(SdifContextGlobal *context, uint32_t *status)
 		result = setAdmaDescriptorsForAlignedData(command);
 		if (result) {
 			if (!port->polling)
-				ksceKernelUnlockFastMutex(&port->mutex);
+				sceKernelUnlockFastMutex(&port->mutex);
 			goto complete;
 		}
 	}
@@ -2009,7 +2009,7 @@ int sdifSetBlockLength(SdifContextGlobal *context, uint32_t blockLength)
 	command->command = 16;
 	command->buffer = NULL;
 	if (!port->polling) {
-		result = ksceKernelLockFastMutex(&port->mutex);
+		result = lockFastMutex(&port->mutex);
 		if (result < 0)
 			return result;
 	}
@@ -2025,7 +2025,7 @@ int sdifSetBlockLength(SdifContextGlobal *context, uint32_t blockLength)
 		result = setAdmaDescriptorsForAlignedData(command);
 		if (result) {
 			if (!port->polling)
-				ksceKernelUnlockFastMutex(&port->mutex);
+				sceKernelUnlockFastMutex(&port->mutex);
 			goto complete;
 		}
 	}
@@ -2108,7 +2108,7 @@ int SceSdifForDriver_6CC8E28D(unsigned int index)
 	port = &context->port;
 	registers = port->registers;
 	if (!port->polling)
-		ksceKernelLockFastMutex(&port->mutex);
+		lockFastMutex(&port->mutex);
 	sceKernelDelayThread(25000);
 	if (!(registers->presentState & 0x10000))
 		goto unlock;
@@ -2121,7 +2121,7 @@ int SceSdifForDriver_6CC8E28D(unsigned int index)
 	registers->powerControl |= 1;
 	command->argument = (uint32_t)port->relativeCardAddress << 16;
 	if (!port->polling) {
-		result = ksceKernelLockFastMutex(&port->mutex);
+		result = lockFastMutex(&port->mutex);
 		if (result < 0)
 			goto restore;
 	}
@@ -2137,7 +2137,7 @@ int SceSdifForDriver_6CC8E28D(unsigned int index)
 		result = setAdmaDescriptorsForAlignedData(command);
 		if (result) {
 			if (!port->polling)
-				ksceKernelUnlockFastMutex(&port->mutex);
+				sceKernelUnlockFastMutex(&port->mutex);
 			goto restore;
 		}
 	}
@@ -2152,14 +2152,14 @@ int SceSdifForDriver_6CC8E28D(unsigned int index)
 		}
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 		if (!port->polling)
-			ksceKernelUnlockFastMutex(&port->mutex);
+			sceKernelUnlockFastMutex(&port->mutex);
 		return result;
 	}
 restore:
 	registers->powerControl = powerControl;
 unlock:
 	if (!port->polling)
-		ksceKernelUnlockFastMutex(&port->mutex);
+		sceKernelUnlockFastMutex(&port->mutex);
 	return 0x80320020;
 }
 
@@ -2190,7 +2190,7 @@ int SceSdifForDriver_B83F7518(unsigned int index, SdifCommandInfo *info)
 	command->endTime = 0;
 	command->size = sizeof(*command);
 	if (!port->polling) {
-		result = ksceKernelLockFastMutex(&port->mutex);
+		result = lockFastMutex(&port->mutex);
 		if (result < 0)
 			goto release;
 	}
@@ -2206,7 +2206,7 @@ int SceSdifForDriver_B83F7518(unsigned int index, SdifCommandInfo *info)
 		result = setAdmaDescriptorsForAlignedData(command);
 		if (result) {
 			if (!port->polling)
-				ksceKernelUnlockFastMutex(&port->mutex);
+				sceKernelUnlockFastMutex(&port->mutex);
 			goto complete;
 		}
 	}

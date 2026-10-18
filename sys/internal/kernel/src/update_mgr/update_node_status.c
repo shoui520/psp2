@@ -12,7 +12,7 @@ int UpdateUtilInitializeNodeStatus(unsigned int nodeType,
 	if (nodeType - 1 > 2 || !status)
 		return (int)0x800f0216;
 	node = &updateNodes[nodeType];
-	ksceKernelLockFastMutex((SceKernelFastMutex *)&node->mutex);
+	lockFastMutex((SceKernelFastMutex *)&node->mutex);
 	result = status->result;
 	progress = status->progress;
 	requestId = status->requestId;
@@ -26,7 +26,7 @@ int UpdateUtilInitializeNodeStatus(unsigned int nodeType,
 	node->status.seq_no = sequence;
 	node->status.result = result;
 	node->status.buffer = buffer;
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&node->mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&node->mutex);
 	return 0;
 }
 
@@ -38,9 +38,9 @@ int UpdateUtilUpdateNodeStatus(unsigned int nodeType,
 	if (nodeType - 1 > 2 || !status)
 		return (int)0x800f0216;
 	node = &updateNodes[nodeType];
-	ksceKernelLockFastMutex((SceKernelFastMutex *)&node->mutex);
+	lockFastMutex((SceKernelFastMutex *)&node->mutex);
 	if (node->status.requestId != status->requestId || !node->initialized) {
-		ksceKernelUnlockFastMutex((SceKernelFastMutex *)&node->mutex);
+		sceKernelUnlockFastMutex((SceKernelFastMutex *)&node->mutex);
 		return (int)0x800f0216;
 	}
 	node->status.seq_no = status->seq_no;
@@ -48,6 +48,6 @@ int UpdateUtilUpdateNodeStatus(unsigned int nodeType,
 	node->status.progress = status->progress;
 	node->status.written_rates = status->written_rates;
 	node->status.buffer = status->buffer;
-	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&node->mutex);
+	sceKernelUnlockFastMutex((SceKernelFastMutex *)&node->mutex);
 	return 0;
 }

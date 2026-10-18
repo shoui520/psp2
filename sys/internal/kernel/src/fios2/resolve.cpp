@@ -93,7 +93,7 @@ int sceFiosKernelOverlayResolve(SceFiosKernelResolveParam *param, int index, cha
 			goto out;
 		}
 	}
-	caller = ksceKernelGetProcessIdFromTLS();
+	caller = SceThreadmgrForDriver_FA54D49A();
 	if (!fiosCallerIsPrivileged(caller) && param->pid != -1 && caller != param->pid) {
 		ret = 0;
 		goto out;

@@ -66,7 +66,7 @@ static __attribute__((noinline)) int PervasiveInit(void)
 	unsigned i;
 	int ret;
 
-	ret = ksceKernelInitializeFastMutex(&s_pervasiveMutex, "ScePervasive",
+	ret = sceKernelInitializeFastMutex(&s_pervasiveMutex, "ScePervasive",
 		2, NULL);
 	if (ret < 0)
 		return ret;
@@ -84,7 +84,7 @@ static __attribute__((noinline)) int PervasiveInit(void)
 			/* Sony frees the whole UID array, including untouched entries. */
 			for (j = 0; j < 16; j++)
 				SceSysmemForDriver_009E1C61(s_pervasiveUids[j]);
-			ksceKernelFinalizeFastMutex(&s_pervasiveMutex);
+			sceKernelFinalizeFastMutex(&s_pervasiveMutex);
 			return ret;
 		}
 		s_pervasiveUids[i] = ret;

@@ -42,10 +42,10 @@ int udcdRegisterCallback(SceUID callback, SceUID process, unsigned int mask)
 	SceKernelIntrStatus status;
 	SceUID thread;
 
-	thread = ksceKernelGetThreadId();
+	thread = sceKernelGetThreadId();
 	if (thread < 0)
 		return UDCD_ERROR_NO_THREAD;
-	if (ksceKernelGetThreadmgrUIDClass(callback) != UDCD_THREADMGR_CLASS_CALLBACK)
+	if (sceKernelGetThreadmgrUIDClass(callback) != UDCD_THREADMGR_CLASS_CALLBACK)
 		return UDCD_ERROR_INVALID_ARGUMENT;
 	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	if (state->callbackThread != -1 && thread != state->callbackThread) {
@@ -56,7 +56,7 @@ int udcdRegisterCallback(SceUID callback, SceUID process, unsigned int mask)
 	state->callbackProcess = process;
 	state->callbackThread = thread;
 	state->callbackMask = mask;
-	ksceKernelRegisterCallbackToEvent(state->callbackEvent, callback, callback);
+	sceKernelRegisterCallbackToEventForDriver(state->callbackEvent, callback, callback);
 	if (state->activationState == SCE_UDCD_STATUS_ACTIVATED) {
 		sceKernelSetEventWithNotifyCallback(state->callbackEvent, 0x1000000, 0, 0x200);
 		state->notifiedMask = 0x200;
@@ -82,7 +82,7 @@ int udcdUnregisterCallback(SceUID process, SceUID thread)
 	state->callbackProcess = -1;
 	state->callbackThread = -1;
 	state->callbackMask = 0;
-	ksceKernelUnregisterCallbackFromEvent(state->callbackEvent, 0);
+	sceKernelUnregisterCallbackFromEvent(state->callbackEvent, 0);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return 0;
 }
@@ -143,7 +143,7 @@ int sceUdcdUnregisterCallback(SceUID callback)
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	process = sceKernelGetProcessId();
-	thread = ksceKernelGetThreadId();
+	thread = sceKernelGetThreadId();
 	if ((process | thread) < 0) {
 		sceSyscallLeave(t);
 		return UDCD_ERROR_NO_THREAD;

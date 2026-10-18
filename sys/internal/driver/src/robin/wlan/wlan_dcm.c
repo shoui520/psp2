@@ -130,7 +130,7 @@ int _rxMessage(SceWlanBtRobinWlanDcm *dcm, WlanSdioMessageHeader *message,
 		unsigned int sequence = response->sequence.number;
 		SceWlanBtRobinWlanCommand *command;
 
-		ksceKernelLockFastMutex(&dcm->commandMutex);
+		lockFastMutex(&dcm->commandMutex);
 		wlanBtNotifyMonitor(0x20002, messageType, response->commandSize, response);
 		command = dcm->currentCommand;
 		if (command) {
@@ -164,7 +164,7 @@ int _rxMessage(SceWlanBtRobinWlanDcm *dcm, WlanSdioMessageHeader *message,
 		dcm->context->driver.releaseTx(&dcm->context->driver, packet);
 		command = dcm->currentCommand;
 		if (command) {
-			ksceKernelUnlockFastMutex(&dcm->commandMutex);
+			sceKernelUnlockFastMutex(&dcm->commandMutex);
 			return 0;
 		}
 nextCommand:
@@ -176,12 +176,12 @@ nextCommand:
 			dcm->pendingCommands = next;
 			robinWlanNotifyWorker(256);
 		}
-		ksceKernelUnlockFastMutex(&dcm->commandMutex);
+		sceKernelUnlockFastMutex(&dcm->commandMutex);
 		if (command) {
 			if (command->callback)
 				command->callback(dcm->context, command);
 			else
-				ksceKernelSetEventFlag(dcm->commandEventFlag, command->eventMask);
+				sceKernelSetEventFlag(dcm->commandEventFlag, command->eventMask);
 		}
 		return 0;
 	}
@@ -545,11 +545,11 @@ int robinWlanInitializeDcm(SceWlanBtRobinWlanDcm *dcm)
 	uint8_t *base;
 	int result;
 
-	result = ksceKernelCreateEventFlag("SceWlanBtRobinWlanCommand", 0, 0, NULL);
+	result = sceKernelCreateEventFlag("SceWlanBtRobinWlanCommand", 0, 0, NULL);
 	if (result < 0)
 		return result;
 	dcm->commandEventFlag = result;
-	result = ksceKernelInitializeFastMutex(&dcm->commandMutex,
+	result = sceKernelInitializeFastMutex(&dcm->commandMutex,
 					     "SceWlanBtRobinWlanCommand", 0x2000, NULL);
 	if (result < 0)
 		return result;
@@ -658,7 +658,7 @@ int _commandClear(SceWlanBtRobinWlanDcm *dcm)
 	SceWlanBtRobinWlanCommand *command, *next, *slot;
 	SceWlanBtRobinWlanContext *context;
 
-	ksceKernelLockFastMutex(&dcm->commandMutex);
+	lockFastMutex(&dcm->commandMutex);
 	command = dcm->currentCommand;
 	if (command) {
 #if FW_DEBUG
@@ -714,7 +714,7 @@ int _commandClear(SceWlanBtRobinWlanDcm *dcm)
 		}
 		command = next;
 	}
-	return ksceKernelUnlockFastMutex(&dcm->commandMutex);
+	return sceKernelUnlockFastMutex(&dcm->commandMutex);
 }
 
 int robinWlanStartDcm(SceWlanBtRobinWlanDcm *dcm)
@@ -813,7 +813,7 @@ SceWlanBtRobinWlanCommand *robinWlanAllocateCommand(SceWlanBtRobinWlanContext *c
 	WlanFirmwareCommandHeader *header;
 	unsigned int index;
 
-	ksceKernelLockFastMutex(&dcm->commandMutex);
+	lockFastMutex(&dcm->commandMutex);
 	if (!dcm->commands[0].requestBuffer)
 		index = 0;
 	else if (!dcm->commands[1].requestBuffer)
@@ -853,7 +853,7 @@ SceWlanBtRobinWlanCommand *robinWlanAllocateCommand(SceWlanBtRobinWlanContext *c
 	if (size)
 		memset(command->requestPayload, 0, size);
 unlock:
-	ksceKernelUnlockFastMutex(&dcm->commandMutex);
+	sceKernelUnlockFastMutex(&dcm->commandMutex);
 	return command;
 }
 
@@ -864,7 +864,7 @@ int robinWlanReleaseCommand(SceWlanBtRobinWlanContext *context,
 	SceWlanBtRobinWlanCommand *slot = &dcm->commands[0];
 	SceWlanBtRobinWlanContext *owner;
 
-	ksceKernelLockFastMutex(&dcm->commandMutex);
+	lockFastMutex(&dcm->commandMutex);
 	if (command == slot || (slot = &dcm->commands[1], command == slot) ||
 	    (slot = &dcm->commands[2], command == slot) ||
 	    (slot = &dcm->commands[3], command == slot) ||
@@ -880,7 +880,7 @@ int robinWlanReleaseCommand(SceWlanBtRobinWlanContext *context,
 		}
 		memset(slot, 0, sizeof(*slot));
 	}
-	return ksceKernelUnlockFastMutex(&dcm->commandMutex);
+	return sceKernelUnlockFastMutex(&dcm->commandMutex);
 }
 
 int robinWlanSubmitCommand(SceWlanBtRobinWlanContext *context,
@@ -894,7 +894,7 @@ int robinWlanSubmitCommand(SceWlanBtRobinWlanContext *context,
 	unsigned int eventIndex, nextEventIndex, eventMask;
 	int result;
 
-	ksceKernelLockFastMutex(&dcm->commandMutex);
+	lockFastMutex(&dcm->commandMutex);
 	sequence = dcm->sequence;
 	message = command->requestBuffer;
 	command->commandId = commandId;
@@ -932,7 +932,7 @@ int robinWlanSubmitCommand(SceWlanBtRobinWlanContext *context,
 		dcm->currentCommand = command;
 		result = robinWlanNotifyWorker(256);
 	}
-	ksceKernelUnlockFastMutex(&dcm->commandMutex);
+	sceKernelUnlockFastMutex(&dcm->commandMutex);
 	return result;
 }
 
@@ -945,7 +945,7 @@ int robinWlanWaitCommand(SceWlanBtRobinWlanContext *context,
 	unsigned int timeout = 10000000;
 	int result;
 
-	result = ksceKernelWaitEventFlag(dcm->commandEventFlag,
+	result = sceKernelWaitEventFlag(dcm->commandEventFlag,
 			command->eventMask | 0x80000000U, 5, &events, &timeout);
 	if (result >= 0) {
 		if (!(events & 0x80000000U)) {
@@ -955,7 +955,7 @@ int robinWlanWaitCommand(SceWlanBtRobinWlanContext *context,
 		}
 		result = 0x80418004;
 	}
-	ksceKernelLockFastMutex(&dcm->commandMutex);
+	lockFastMutex(&dcm->commandMutex);
 	if (command == dcm->currentCommand) {
 		dcm->currentCommand = NULL;
 	} else {
@@ -974,7 +974,7 @@ int robinWlanWaitCommand(SceWlanBtRobinWlanContext *context,
 			}
 		}
 	}
-	ksceKernelUnlockFastMutex(&dcm->commandMutex);
+	sceKernelUnlockFastMutex(&dcm->commandMutex);
 	return result;
 }
 
@@ -991,7 +991,7 @@ int robinWlanSubmitAndWaitCommand(SceWlanBtRobinWlanContext *context,
 	unsigned int events, timeout;
 	int result;
 
-	ksceKernelLockFastMutex(&dcm->commandMutex);
+	lockFastMutex(&dcm->commandMutex);
 	sequence = dcm->sequence;
 	message = command->requestBuffer;
 	command->commandId = commandId;
@@ -1024,16 +1024,16 @@ int robinWlanSubmitAndWaitCommand(SceWlanBtRobinWlanContext *context,
 		} else {
 			dcm->pendingCommands = command;
 		}
-		ksceKernelUnlockFastMutex(&dcm->commandMutex);
+		sceKernelUnlockFastMutex(&dcm->commandMutex);
 	} else {
 		dcm->currentCommand = command;
 		result = robinWlanNotifyWorker(256);
-		ksceKernelUnlockFastMutex(&dcm->commandMutex);
+		sceKernelUnlockFastMutex(&dcm->commandMutex);
 		if (result < 0)
 			return result;
 	}
 	timeout = 10000000;
-	result = ksceKernelWaitEventFlag(dcm->commandEventFlag,
+	result = sceKernelWaitEventFlag(dcm->commandEventFlag,
 			command->eventMask | 0x80000000U, 5, &events, &timeout);
 	if (result >= 0) {
 		if (!(events & 0x80000000U)) {
@@ -1043,7 +1043,7 @@ int robinWlanSubmitAndWaitCommand(SceWlanBtRobinWlanContext *context,
 		}
 		result = 0x80418004;
 	}
-	ksceKernelLockFastMutex(&dcm->commandMutex);
+	lockFastMutex(&dcm->commandMutex);
 	if (command == dcm->currentCommand) {
 		dcm->currentCommand = NULL;
 	} else {
@@ -1062,7 +1062,7 @@ int robinWlanSubmitAndWaitCommand(SceWlanBtRobinWlanContext *context,
 			}
 		}
 	}
-	ksceKernelUnlockFastMutex(&dcm->commandMutex);
+	sceKernelUnlockFastMutex(&dcm->commandMutex);
 	return result;
 }
 

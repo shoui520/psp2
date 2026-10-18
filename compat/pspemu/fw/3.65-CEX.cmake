@@ -268,7 +268,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelWaitSema
 	sceClibMemcmpConstTime
 	sceKernelWaitSemaCB
-	sceKernelCreateSema
+	SceThreadmgrForKernel_sceKernelCreateSema
 	sceKernelPollEventFlag
 	sceKernelDeleteLwMutex
 	sceKernelAtomicGetAndSet8
@@ -326,8 +326,8 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetProcessId
 	sceKernelCreateCallback
 	sceKernelDeleteCallback
-	sceKernelDeleteSema
-	sceKernelSignalSema
+	SceThreadmgrForKernel_sceKernelDeleteSema
+	SceThreadmgrForKernel_sceKernelSignalSema
 	sceKernelSetEventFlag
 	sceWlanGetConfiguration
 	sceRegMgrSrvGetRegion

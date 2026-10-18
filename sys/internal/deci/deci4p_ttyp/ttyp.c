@@ -64,12 +64,12 @@ TTYP_RESOURCE_HELPER TtypResource *ttypReserveResource(void)
 	TtypResource *r;
 	int ret, i;
 
-	ret = ksceKernelWaitSema(s_sema, 1, NULL);
+	ret = sceKernelWaitSema(s_sema, 1, NULL);
 	if (ret < 0) {
 		TTYP_PRINTF(369, "WaitSema failed (0x%08x)\n", ret);
 		return NULL;
 	}
-	ret = ksceKernelLockMutex(s_mutex, 1, NULL);
+	ret = sceKernelLockMutex(s_mutex, 1, NULL);
 	if (ret < 0) {
 		TTYP_PRINTF(376, "LockMutex failed (0x%08X)\n", ret);
 		return NULL;
@@ -90,7 +90,7 @@ TTYP_RESOURCE_HELPER TtypResource *ttypReserveResource(void)
 	r = &s_resource[i];
 	r->state = 1;
 out:
-	ksceKernelUnlockMutex(s_mutex, 1);
+	sceKernelUnlockMutex(s_mutex, 1);
 	return r;
 }
 
@@ -102,14 +102,14 @@ TTYP_INLINE void ttypReleaseResource(TtypResource *r)
 	intr = SceCpuForDriver_D32ACE9E(&s_resourceLock);
 	memset(r, 0, sizeof(*r));
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_resourceLock, intr);
-	ksceKernelSignalSema(s_sema, 1);
+	sceKernelSignalSema(s_sema, 1);
 }
 
 TTYP_INLINE void ttypAddPendingRequest(TtypChannel *ch, TtypResource *r)
 {
 	int ret;
 
-	ret = ksceKernelLockMutex(s_mutex, 1, NULL);
+	ret = sceKernelLockMutex(s_mutex, 1, NULL);
 	if (ret < 0) {
 		TTYP_PRINTF(422, "LockMutex failed (0x%08X)\n", ret);
 		return;
@@ -119,7 +119,7 @@ TTYP_INLINE void ttypAddPendingRequest(TtypChannel *ch, TtypResource *r)
 	ch->tail->next = r;
 	ch->tail = r;
 	r->next = NULL;
-	ksceKernelUnlockMutex(s_mutex, 1);
+	sceKernelUnlockMutex(s_mutex, 1);
 }
 
 /* take r off the queue and release it */
@@ -128,7 +128,7 @@ TTYP_INLINE void ttypCancelRequest(TtypChannel *ch, TtypResource *r)
 	TtypResource *prev, *p;
 	int ret;
 
-	ret = ksceKernelLockMutex(s_mutex, 1, NULL);
+	ret = sceKernelLockMutex(s_mutex, 1, NULL);
 	if (ret < 0) {
 		TTYP_PRINTF(445, "LockMutex failed (0x%08X)\n", ret);
 	} else {
@@ -143,7 +143,7 @@ TTYP_INLINE void ttypCancelRequest(TtypChannel *ch, TtypResource *r)
 				break;
 			}
 		}
-		ksceKernelUnlockMutex(s_mutex, 1);
+		sceKernelUnlockMutex(s_mutex, 1);
 	}
 	ttypReleaseResource(r);
 }
@@ -165,13 +165,13 @@ static TtypResource *ttypCheckPendingRequest(TtypChannel *ch)
 	TtypResource *r;
 	int ret;
 
-	ret = ksceKernelLockMutex(s_mutex, 1, NULL);
+	ret = sceKernelLockMutex(s_mutex, 1, NULL);
 	if (ret < 0) {
 		TTYP_PRINTF(478, "LockMutex failed (0x%08X)\n", ret);
 		return NULL;
 	}
 	r = ch->head.next;
-	ksceKernelUnlockMutex(s_mutex, 1);
+	sceKernelUnlockMutex(s_mutex, 1);
 	return r;
 }
 
@@ -181,7 +181,7 @@ TTYP_INLINE TtypResource *ttypFindPendingRequest(TtypChannel *ch)
 	TtypResource *r;
 	int ret;
 
-	ret = ksceKernelLockMutex(s_mutex, 1, NULL);
+	ret = sceKernelLockMutex(s_mutex, 1, NULL);
 	if (ret < 0) {
 		TTYP_PRINTF(497, "LockMutex failed (0x%08X)\n", ret);
 		return NULL;
@@ -193,7 +193,7 @@ TTYP_INLINE TtypResource *ttypFindPendingRequest(TtypChannel *ch)
 			ch->tail = &ch->head;
 		r->next = NULL;
 	}
-	ksceKernelUnlockMutex(s_mutex, 1);
+	sceKernelUnlockMutex(s_mutex, 1);
 	return r;
 }
 
@@ -248,7 +248,7 @@ TTYP_INLINE int ttypInput(TtypChannel *ch)
 	if (n == 0 || ch->rlen <= sizeof(TtypHeader))
 		return 0;
 	ch->rdata = 0;
-	ret = ksceKernelLockMutex(s_mutex, 1, NULL);
+	ret = sceKernelLockMutex(s_mutex, 1, NULL);
 	if (ret < 0) {
 		TTYP_PRINTF_IN("TtyHandler", 583, "LockMutex failed (0x%08X)\n", ret);
 		return ret;
@@ -289,7 +289,7 @@ next:
 		n--;
 		p++;
 	} while (n != 0);
-	ksceKernelUnlockMutex(s_mutex, 1);
+	sceKernelUnlockMutex(s_mutex, 1);
 	return 0;
 }
 
@@ -308,7 +308,7 @@ static int TtyHandler(int event, void *arg, void *ctx)
 		if (ttypInput(ch) < 0)
 			return 0;
 		if (event == SCE_DFMGR_EVENT_REQ_DONE) {
-			ksceKernelSetEventFlag(ch->evf, 3);
+			sceKernelSetEventFlag(ch->evf, 3);
 			_prepareAck(ch);
 			ch->rlen = 0;
 		} else {
@@ -352,22 +352,22 @@ static int TtyHandler(int event, void *arg, void *ctx)
 		if (status->kind == 0) {
 			if (status->connected == 0) {
 				in->flags |= TTYP_IN_STOPPED;
-				ksceKernelSetEventFlag(ch->evf, 2);
+				sceKernelSetEventFlag(ch->evf, 2);
 				ttypFlushPendingRequests(ch);
 			} else if (status->connected == 1) {
 				in->flags &= ~TTYP_IN_STOPPED;
-				ksceKernelSetEventFlag(ch->evf, 2);
+				sceKernelSetEventFlag(ch->evf, 2);
 			} else {
 				TTYP_PRINTF(657, "unknown packet\n");
 			}
 		} else if (status->kind == 1) {
 			if (status->enabled == 0) {
 				ch->flags &= ~TTYP_CH_ENABLED;
-				ksceKernelSetEventFlag(ch->evf, 2);
+				sceKernelSetEventFlag(ch->evf, 2);
 				ttypFlushPendingRequests(ch);
 			} else if (status->enabled == 1) {
 				ch->flags |= TTYP_CH_ENABLED;
-				ksceKernelSetEventFlag(ch->evf, 2);
+				sceKernelSetEventFlag(ch->evf, 2);
 			} else {
 				TTYP_PRINTF(676, "unknown packet\n");
 			}
@@ -378,10 +378,10 @@ static int TtyHandler(int event, void *arg, void *ctx)
 	case 6:
 		if (status->kind == 1) {
 			in->flags |= TTYP_IN_STOPPED;
-			ksceKernelSetEventFlag(ch->evf, 2);
+			sceKernelSetEventFlag(ch->evf, 2);
 		} else if (status->kind == 2) {
 			ch->flags &= ~TTYP_CH_ENABLED;
-			ksceKernelSetEventFlag(ch->evf, 2);
+			sceKernelSetEventFlag(ch->evf, 2);
 		}
 		break;
 	default:
@@ -455,13 +455,13 @@ TTYP_INLINE int TtypInit(void)
 		return uid;
 	}
 	s_heap = uid;
-	uid = ksceKernelCreateMutex("SceDeci4pTtyp", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
+	uid = sceKernelCreateMutex("SceDeci4pTtyp", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 	if (uid < 0) {
 		TTYP_PRINTF(250, "CreateMutex failed (0x%08X)\n", uid);
 		return uid;
 	}
 	s_mutex = uid;
-	s_sema = ksceKernelCreateSema("SceDeci4pTtyp", SCE_KERNEL_ATTR_TH_PRIO,
+	s_sema = sceKernelCreateSema("SceDeci4pTtyp", SCE_KERNEL_ATTR_TH_PRIO,
 				      TTYP_RESOURCES, TTYP_RESOURCES, NULL);
 	if (s_sema < 0) {
 		TTYP_PRINTF(262, "CreateSema failed (0x%08X)\n", s_sema);
@@ -479,7 +479,7 @@ TTYP_INLINE int TtypInit(void)
 		snprintf(proto.name, sizeof(proto.name), "TTYP%d", i);
 		s_input[i].flags = 0;
 		snprintf(name, sizeof(name), "SceDeci4pTtyp%d", i);
-		s_channel[i].evf = ksceKernelCreateEventFlag(name, 0x9000, 0, NULL);
+		s_channel[i].evf = sceKernelCreateEventFlag(name, 0x9000, 0, NULL);
 		if (s_channel[i].evf < 0)
 			TTYP_PRINTF(286, "CreateEventFlag failed (0x%08x)\n", s_channel[i].evf);
 		s_input[i].rp = s_input[i].data;
@@ -514,13 +514,13 @@ int TtypModuleStart(SceSize args, void *argp)
 /* name unknown */
 int ttypLock(void)
 {
-	return ksceKernelLockMutex(s_mutex, 1, NULL);
+	return sceKernelLockMutex(s_mutex, 1, NULL);
 }
 
 /* name unknown */
 void ttypUnlock(void)
 {
-	ksceKernelUnlockMutex(s_mutex, 1);
+	sceKernelUnlockMutex(s_mutex, 1);
 }
 
 /* name unknown */
@@ -544,19 +544,19 @@ int TtypOpen(int unit)
 		in = ch->in;
 		in->wp = in->data;
 		in->rp = in->data;
-		uid = ksceKernelCreateMutex("SceDeci4pTtyRead", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
+		uid = sceKernelCreateMutex("SceDeci4pTtyRead", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 		if (uid < 0) {
 			TTYP_PRINTF(707, "sceKernelCreateMutex[r] failed 0x%x\n", uid);
-			ksceKernelUnlockMutex(s_mutex, 1);
+			sceKernelUnlockMutex(s_mutex, 1);
 			return uid;
 		}
 		ch->readMutex = uid;
-		uid = ksceKernelCreateMutex("SceDeci4pTtyWrite", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
+		uid = sceKernelCreateMutex("SceDeci4pTtyWrite", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 		if (uid < 0) {
 			TTYP_PRINTF(715, "sceKernelCreateMutex[w] failed 0x%x\n", uid);
-			ksceKernelDeleteMutex(ch->readMutex);
+			sceKernelDeleteMutex(ch->readMutex);
 			ch->readMutex = -1;
-			ksceKernelUnlockMutex(s_mutex, 1);
+			sceKernelUnlockMutex(s_mutex, 1);
 			return uid;
 		}
 		n = ch->openCount;
@@ -581,11 +581,11 @@ int TtypClose(int unit)
 	ch->readMutex = 0;
 	ch->writeMutex = 0;
 	if (r > 0)
-		ksceKernelDeleteMutex(r);
+		sceKernelDeleteMutex(r);
 	if (w > 0)
-		ksceKernelDeleteMutex(w);
-	ksceKernelSetEventFlag(ch->evf, 4);
-	ksceKernelClearEventFlag(ch->evf, ~4);
+		sceKernelDeleteMutex(w);
+	sceKernelSetEventFlag(ch->evf, 4);
+	sceKernelClearEventFlag(ch->evf, ~4);
 	return 0;
 }
 
@@ -616,7 +616,7 @@ int TtypRead(int unit, void *buf, SceSize size, SceUInt32 flags)
 		TTYP_PRINTF(792, "invalid size (%d)\n", size);
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
-	ret = ksceKernelLockMutex(ch->readMutex, 1, NULL);
+	ret = sceKernelLockMutex(ch->readMutex, 1, NULL);
 	if (ret < 0) {
 		TTYP_PRINTF(797, "LockMutex failed (0x%08X)\n", ret);
 		return ret;
@@ -630,27 +630,27 @@ int TtypRead(int unit, void *buf, SceSize size, SceUInt32 flags)
 		ret = n;
 		if (!(flags & 4) && in->wp == in->rp) {
 			do {
-				c = ksceKernelWaitEventFlag(ch->evf, 5, SCE_KERNEL_EVF_WAITMODE_OR,
+				c = sceKernelWaitEventFlag(ch->evf, 5, SCE_KERNEL_EVF_WAITMODE_OR,
 							    &outBits, NULL);
 				if (c < 0) {
 					if (c != SCE_KERNEL_ERROR_THREAD_SUSPENDED)
 						TTYP_PRINTF(814, "WaitEventFlag failed (0x%08X)\n", c);
 					goto out;
 				}
-				ksceKernelClearEventFlag(ch->evf, ~1);
+				sceKernelClearEventFlag(ch->evf, ~1);
 			} while (!(outBits & 4) && in->wp == in->rp);
 		}
 		if (in->rp == in->wp)
 			break;
 
-		ret = ksceKernelLockMutex(s_mutex, 1, NULL);
+		ret = sceKernelLockMutex(s_mutex, 1, NULL);
 		if (ret < 0) {
 			/* (returns with the read lock held) */
 			TTYP_PRINTF(836, "LockMutex failed (0x%08X)\n", ret);
 			return ret;
 		}
 		c = _circgetc(in);
-		ksceKernelUnlockMutex(s_mutex, 1);
+		sceKernelUnlockMutex(s_mutex, 1);
 
 		if (!sceKernelIsUserModeThread() || (in->flags & TTYP_IN_RAW) || c == 0)
 			goto store;
@@ -698,7 +698,7 @@ next:
 		n = ret;
 	} while ((unsigned int)ret < size);
 out:
-	ksceKernelUnlockMutex(ch->readMutex, 1);
+	sceKernelUnlockMutex(ch->readMutex, 1);
 	return ret;
 }
 
@@ -725,9 +725,9 @@ TTYP_INLINE void consput(TtypChannel *ch, const signed char *buf, SceSize size, 
 			}
 		} else {
 			r->hdr.port = TTYP_PORT_PROCESS;
-			ksceKernelGetThreadContextInfo(&info);
+			SceThreadmgrForKernel_6C1F092F(&info);
 			r->hdr.pid = info.process_id;
-			r->hdr.tid = ksceKernelGetUserThreadId(info.thread_id);
+			r->hdr.tid = SceThreadmgrForDriver_F311808F(info.thread_id);
 		}
 		time = 0;
 		if (ScePamgrForDriver_FE9BFD27 != NULL)
@@ -771,7 +771,7 @@ int TtypWrite(int unit, const void *data, SceSize size, const SceUID *pid)
 		TTYP_PRINTF(902, "invalid size (%d)\n", size);
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
-	ret = ksceKernelLockMutex(ch->writeMutex, 1, NULL);
+	ret = sceKernelLockMutex(ch->writeMutex, 1, NULL);
 	if (ret < 0) {
 		TTYP_PRINTF(909, "LockMutex failed (0x%08X)\n", ret);
 		return ret;
@@ -800,6 +800,6 @@ int TtypWrite(int unit, const void *data, SceSize size, const SceUID *pid)
 		SceDebugForDriver_391B74B7("unknown mode %x\n", mode);
 		SCE_DBG_ASSERT_LEVEL(0, 0, 937);
 	}
-	ksceKernelUnlockMutex(ch->writeMutex, 1);
+	sceKernelUnlockMutex(ch->writeMutex, 1);
 	return size;
 }

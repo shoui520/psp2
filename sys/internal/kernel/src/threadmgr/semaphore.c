@@ -129,7 +129,7 @@ static int uidSemaphore_Destructor(void *object)
 	return 0;
 }
 
-/* a semaphore's information (ksceKernelGetSemaInfo's core) */
+/* a semaphore's information (SceThreadmgrForDriver_C99DCF0D's core) */
 int getSemaInfo(SceUID semaId, SceKernelSemaInfo *info)
 {
 	ThreadmgrSemaphore *sema;
@@ -458,8 +458,8 @@ resume:
  * The early errors return with TPIDRURO still shifted, as Sony's code does
  * (both create functions).
  */
-SceUID ksceKernelCreateSema(const char *name, SceUInt32 attr, int initCount, int maxCount,
-			    const SceKernelSemaOptParam *option)
+SceUID sceKernelCreateSema(const char *name, SceUInt32 attr, int initCount, int maxCount,
+			   const SceKernelSemaOptParam *option)
 {
 	uint32_t saved;
 	SceUID uid;
@@ -523,7 +523,7 @@ SceUID sceKernelCreateSema_16XX(const char *name, SceUInt32 attr, int initCount,
 	return uid;
 }
 
-int ksceKernelDeleteSema(SceUID semaId)
+int sceKernelDeleteSema(SceUID semaId)
 {
 	uint32_t saved;
 	int intr, ret;
@@ -548,7 +548,7 @@ int ksceKernelDeleteSema(SceUID semaId)
 }
 
 /* SceThreadmgrForKernel_EFD7439D, SceThreadmgrForDriver_3C8B55A9 */
-int ksceKernelWaitSema(SceUID semaId, int needCount, SceUInt32 *timeout)
+int sceKernelWaitSema(SceUID semaId, int needCount, SceUInt32 *timeout)
 {
 	return waitSema(semaId, needCount, timeout, 0);
 }
@@ -559,7 +559,7 @@ int SceThreadmgrForDriver_F55E4D86(SceUID semaId, int needCount, SceUInt32 *time
 	return waitSema(semaId, needCount, timeout, 1);
 }
 
-int ksceKernelPollSema(SceUID semaId, int needCount)
+int sceKernelPollSema(SceUID semaId, int needCount)
 {
 	struct ThreadCB *thread;
 	ThreadmgrSemaphore *sema;
@@ -608,7 +608,7 @@ restore:
 	return ret;
 }
 
-int ksceKernelSignalSema(SceUID semaId, int signalCount)
+int sceKernelSignalSema(SceUID semaId, int signalCount)
 {
 	struct ThreadCB *thread, *waiter;
 	struct ThreadmgrWaitNode *node, *next;
@@ -755,7 +755,7 @@ resume:
 	return ret;
 }
 
-int ksceKernelGetSemaInfo(SceUID semaId, SceKernelSemaInfo *info)
+int SceThreadmgrForDriver_C99DCF0D(SceUID semaId, SceKernelSemaInfo *info)
 {
 	SceKernelSemaInfo local;
 	uint32_t saved;

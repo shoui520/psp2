@@ -57,18 +57,18 @@ int _sceAppMgrSendSysOrientation(int orientation)
 	struct AppState *app;
 	int result;
 
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 		SCE_DBG_PRINTF(0, 1141, "Failed to lock ret=0x%08x\n", result);
 		sceAppMgrDumpInline();
 		SCE_DBG_ASSERT_FAIL(1141);
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
 	if (!app) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 			sceAppMgrDumpInline();
 			SCE_DBG_ASSERT_PRINTF(0, 1145,
@@ -79,7 +79,7 @@ int _sceAppMgrSendSysOrientation(int orientation)
 	}
 	app->systemOrientation = orientation;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 		sceAppMgrDumpInline();
 		SCE_DBG_ASSERT_PRINTF(0, 1151,
@@ -121,7 +121,7 @@ SceUID sceAppMgrGetShellPidForDriver(void)
 	SceUID pid;
 	int result;
 
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 47, "Failed to lock ret=0x%08x\n", result);
@@ -131,11 +131,11 @@ SceUID sceAppMgrGetShellPidForDriver(void)
 		appmgrAppListPanic();
 #endif
 	} else {
-		(void)ksceKernelGetThreadId();
+		(void)sceKernelGetThreadId();
 	}
 	g_appmgrMainMutexOwner = -1;
 	pid = g_appmgrShellPid;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDumpInline();
@@ -163,7 +163,7 @@ int sceAppMgrGetNameById(SceUID pid, char *appName)
 		sceSyscallLeave(syscall);
 		return 0x80802016;
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 83, "Failed to lock ret=0x%08x\n", result);
@@ -173,12 +173,12 @@ int sceAppMgrGetNameById(SceUID pid, char *appName)
 		appmgrAppListPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	app = appmgrFindAppByProcessId(g_appmgrAppStates, pid);
 	if (!app) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDumpInline();
@@ -194,7 +194,7 @@ int sceAppMgrGetNameById(SceUID pid, char *appName)
 	}
 	strncpy(appName, app->process.appName, 32);
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDumpInline();
@@ -226,7 +226,7 @@ int sceAppMgrGetAppIdByAppId(int appId)
 	pid = app->process.processId;
 	if (pid != sceKernelGetProcessId())
 		goto denied;
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 117, "Failed to lock ret=0x%08x\n", result);
@@ -236,14 +236,14 @@ int sceAppMgrGetAppIdByAppId(int appId)
 		appmgrAppListPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	id = -1;
 	app = appmgrFindAppById(appId);
 	if (app != NULL)
 		id = app->appId;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDumpInline();
@@ -277,7 +277,7 @@ int sceAppMgrGetIdByName(SceUID *pid, const char *appName)
 		sceSyscallLeave(syscall);
 		return 0x80802016;
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 155, "Failed to lock ret=0x%08x\n", result);
@@ -287,7 +287,7 @@ int sceAppMgrGetIdByName(SceUID *pid, const char *appName)
 		appmgrAppListPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	app = appmgrFindAppByName(g_appmgrAppStates, appName);
 	if (app != NULL) {
@@ -298,7 +298,7 @@ int sceAppMgrGetIdByName(SceUID *pid, const char *appName)
 		*pid = -1;
 	}
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDumpInline();
@@ -328,7 +328,7 @@ SceUID sceAppMgrGetProcessIdByAppIdForShell(SceInt32 appId)
 	pid = app->process.processId;
 	if (pid != sceKernelGetProcessId())
 		goto denied;
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 204, "Failed to lock ret=0x%08x\n", result);
@@ -338,12 +338,12 @@ SceUID sceAppMgrGetProcessIdByAppIdForShell(SceInt32 appId)
 		appmgrAppListPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	app = appmgrFindAppById(appId);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDump();
@@ -362,7 +362,7 @@ SceUID sceAppMgrGetProcessIdByAppIdForShell(SceInt32 appId)
 	if (pid == -1)
 		sceKernelApiDeclareTypeRaw();
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDumpInline();
@@ -396,7 +396,7 @@ int sceAppMgrGetStatusById(SceUID id, void *appStatus)
 		sceSyscallLeave(syscall);
 		return 0x80802016;
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 244, "Failed to lock ret=0x%08x\n", result);
@@ -406,12 +406,12 @@ int sceAppMgrGetStatusById(SceUID id, void *appStatus)
 		appmgrAppListPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	app = appmgrFindAppByProcessId(g_appmgrAppStates, id);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDumpInline();
@@ -427,7 +427,7 @@ int sceAppMgrGetStatusById(SceUID id, void *appStatus)
 	}
 	statusResult = _appListGetAppStatus(app, appStatus);
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDumpInline();
@@ -457,7 +457,7 @@ int sceAppMgrGetStatusByAppId(int appId, void *appStatus)
 		sceSyscallLeave(syscall);
 		return 0x80802016;
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 284, "Failed to lock ret=0x%08x\n", result);
@@ -467,12 +467,12 @@ int sceAppMgrGetStatusByAppId(int appId, void *appStatus)
 		appmgrAppListPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	app = appmgrFindAppById(appId);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDumpInline();
@@ -488,7 +488,7 @@ int sceAppMgrGetStatusByAppId(int appId, void *appStatus)
 	}
 	statusResult = _appListGetAppStatus(app, appStatus);
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDumpInline();
@@ -518,7 +518,7 @@ int sceAppMgrGetStatusByName(const char *appName, void *appStatus)
 		sceSyscallLeave(syscall);
 		return 0x80802016;
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 327, "Failed to lock ret=0x%08x\n", result);
@@ -528,12 +528,12 @@ int sceAppMgrGetStatusByName(const char *appName, void *appStatus)
 		appmgrAppListPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	app = appmgrFindAppByName(g_appmgrAppStates, appName);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDumpInline();
@@ -549,7 +549,7 @@ int sceAppMgrGetStatusByName(const char *appName, void *appStatus)
 	}
 	statusResult = _appListGetAppStatus(app, appStatus);
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDumpInline();
@@ -580,7 +580,7 @@ SceInt32 sceAppMgrGetAppInfo(const char *appName, SceAppMgrAppState *output)
 		sceSyscallLeave(syscall);
 		return 0x80802016;
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 361, "Failed to lock ret=0x%08x\n", result);
@@ -590,12 +590,12 @@ SceInt32 sceAppMgrGetAppInfo(const char *appName, SceAppMgrAppState *output)
 		appmgrAppListPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	app = appmgrFindAppByName(g_appmgrAppStates, appName);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDumpInline();
@@ -613,7 +613,7 @@ SceInt32 sceAppMgrGetAppInfo(const char *appName, SceAppMgrAppState *output)
 	mutex = g_appmgrMainMutex;
 	info->processRunRequested = app->process.requestedProcessState == 2;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(mutex, 1);
+	result = sceKernelUnlockMutex(mutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDumpInline();
@@ -644,7 +644,7 @@ int sceAppMgrGetFgAppInfo(void *output)
 		sceSyscallLeave(syscall);
 		return 0x80802016;
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 395, "Failed to lock ret=0x%08x\n", result);
@@ -654,12 +654,12 @@ int sceAppMgrGetFgAppInfo(void *output)
 		appmgrAppListPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	app = appmgrFindAppByProcessId(g_appmgrAppStates, -2);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDumpInline();
@@ -677,7 +677,7 @@ int sceAppMgrGetFgAppInfo(void *output)
 				app->process.content.foregroundLookupName);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDumpInline();
@@ -695,7 +695,7 @@ int sceAppMgrGetFgAppInfo(void *output)
 	mutex = g_appmgrMainMutex;
 	info->processRunRequested = app->process.requestedProcessState == 2;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(mutex, 1);
+	result = sceKernelUnlockMutex(mutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDumpInline();
@@ -725,7 +725,7 @@ int sceAppMgrSendLiveBoardMode(int mode)
 		sceSyscallLeave(syscall);
 		return 0x8080201f;
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 446, "Failed to lock ret=0x%08x\n", result);
@@ -735,12 +735,12 @@ int sceAppMgrSendLiveBoardMode(int mode)
 		appmgrAppListPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	shell = appmgrGetShellApp();
 	if (shell == NULL) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDumpInline();
@@ -758,7 +758,7 @@ int sceAppMgrSendLiveBoardMode(int mode)
 				     sceKernelGetProcessId());
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDumpInline();
@@ -774,7 +774,7 @@ int sceAppMgrSendLiveBoardMode(int mode)
 	}
 	shellPid = shell->process.processId;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDumpInline();
@@ -819,7 +819,7 @@ int sceAppMgrNotifyLiveBoardModeForShell(int appId, int mode)
 	shellPid = app->process.processId;
 	if (shellPid != sceKernelGetProcessId())
 		goto denied;
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 509, "Failed to lock ret=0x%08x\n", result);
@@ -829,12 +829,12 @@ int sceAppMgrNotifyLiveBoardModeForShell(int appId, int mode)
 		appmgrAppListPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	app = appmgrFindAppById(appId);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDumpInline();
@@ -855,7 +855,7 @@ int sceAppMgrNotifyLiveBoardModeForShell(int appId, int mode)
 		event.systemEvent = 0x10000102;
 	} else {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDumpInline();
@@ -871,7 +871,7 @@ int sceAppMgrNotifyLiveBoardModeForShell(int appId, int mode)
 	}
 	eventResult = _appListPushEvent(app, &event);
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDumpInline();
@@ -910,7 +910,7 @@ int sceAppMgrGetRawPathOfApp0ByAppIdForShell(int appId, char path[292])
 		sceSyscallLeave(syscall);
 		return 0x80802016;
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 937, "Failed to lock ret=0x%08x\n", result);
@@ -920,12 +920,12 @@ int sceAppMgrGetRawPathOfApp0ByAppIdForShell(int appId, char path[292])
 		appmgrAppListPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	app = appmgrFindAppById(appId);
 	if (!app) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDumpInline();
@@ -946,7 +946,7 @@ int sceAppMgrGetRawPathOfApp0ByAppIdForShell(int appId, char path[292])
 	pid = app->process.processId;
 	g_appmgrMainMutexOwner = -1;
 #endif
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDumpInline();
@@ -981,7 +981,7 @@ int sceAppMgrGetRawPathOfApp0ByPidForShell(SceUID pid, char *path)
 		sceSyscallLeave(syscall);
 		return 0x80802016;
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 968, "Failed to lock ret=0x%08x\n", result);
@@ -991,12 +991,12 @@ int sceAppMgrGetRawPathOfApp0ByPidForShell(SceUID pid, char *path)
 		appmgrAppListPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	app = appmgrFindAppByProcessId(g_appmgrAppStates, pid);
 	g_appmgrMainMutexOwner = -1;
 	if (!app) {
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDumpInline();
@@ -1010,7 +1010,7 @@ int sceAppMgrGetRawPathOfApp0ByPidForShell(SceUID pid, char *path)
 		sceSyscallLeave(syscall);
 		return 0x80802012;
 	}
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDumpInline();

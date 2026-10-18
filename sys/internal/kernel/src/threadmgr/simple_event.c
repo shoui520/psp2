@@ -176,10 +176,10 @@ int simpleEventProcessExit(SceProcessObject *process)
 
 /*
  * The early errors return with TPIDRURO still shifted, as Sony's code
- * does (see ksceKernelCreateSema).
+ * does (see sceKernelCreateSema).
  */
-SceUID ksceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t initPattern,
-				   const SceKernelSimpleEventOptParam *option)
+SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t initPattern,
+				  const SceKernelSimpleEventOptParam *option)
 {
 	struct ThreadCB *thread =
 		currentThreadContext();

@@ -58,15 +58,15 @@ set(MODULE_IMPORT_FUNCS
 	memmove
 	strncpy
 	__stack_chk_fail
-	ksceKernelWaitEventFlag
-	ksceKernelStartThread
-	ksceKernelWaitThreadEnd
-	ksceKernelCreateEventFlag
-	ksceKernelClearEventFlag
-	ksceKernelDeleteEventFlag
-	ksceKernelDeleteThread
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
+	sceKernelWaitEventFlag
+	sceKernelStartThread
+	sceKernelWaitThreadEnd
+	sceKernelCreateEventFlag
+	sceKernelClearEventFlag
+	sceKernelDeleteEventFlag
+	sceKernelDeleteThread
+	sceKernelCreateThread
+	sceKernelSetEventFlag
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_D0E11C89
 	ksceIdStorageLookup

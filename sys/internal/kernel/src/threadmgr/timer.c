@@ -666,12 +666,12 @@ int SceThreadmgrForDriver_419E6736(SceUInt64 *time)
 	return 0;
 }
 
-SceInt64 ksceKernelGetSystemTimeWide(void)
+SceInt64 sceKernelGetSystemTimeWide(void)
 {
 	return ReadSystemTime();
 }
 
-SceUInt32 ksceKernelGetSystemTimeLow(void)
+SceUInt32 SceThreadmgrForDriver_47F6DE49(void)
 {
 	return s_threadmgrRuntime.manager->systemTime->countLo;
 }
@@ -1094,7 +1094,7 @@ int timerProcessExit(SceProcessObject *process)
 
 /*
  * The early errors return with TPIDRURO still shifted, as Sony's code
- * does (see ksceKernelCreateSema).
+ * does (see sceKernelCreateSema).
  */
 SceUID sceKernelCreateTimer(const char *name, SceUInt32 attr,
 			    const SceKernelTimerOptParam *option)
@@ -1274,7 +1274,7 @@ static inline int lockTimerQueueCpuSuspendIntr(void)
 }
 
 /* starts counting; returns 1 if it already was */
-int ksceKernelStartTimer(SceUID timerId)
+int sceKernelStartTimer(SceUID timerId)
 {
 	struct SceKernelThreadmgrPrivate *manager = s_threadmgrRuntime.manager;
 	ThreadmgrUidTimer *uidTimer;
@@ -1329,7 +1329,7 @@ resume:
 }
 
 /* stops counting; returns 1 if it was counting */
-int ksceKernelStopTimer(SceUID timerId)
+int sceKernelStopTimer(SceUID timerId)
 {
 	struct SceKernelThreadmgrPrivate *manager = s_threadmgrRuntime.manager;
 	ThreadmgrUidTimer *uidTimer;
@@ -1418,7 +1418,7 @@ restore:
 	return ret;
 }
 
-SceUInt64 ksceKernelGetTimerBaseWide(SceUID timerId)
+SceUInt64 SceThreadmgrForDriver_A6D11DD3(SceUID timerId)
 {
 	ThreadmgrUidTimer *uidTimer;
 	SceUInt64 base = (SceUInt64)-1;
@@ -1481,7 +1481,7 @@ restore:
 	return ret;
 }
 
-SceUInt64 ksceKernelGetTimerTimeWide(SceUID timerId)
+SceUInt64 SceThreadmgrForDriver_C1286004(SceUID timerId)
 {
 	ThreadmgrUidTimer *uidTimer;
 	SceUInt64 time;
@@ -1572,7 +1572,7 @@ restore:
 }
 
 /* the same with the count by value; returns the old count, or -1 */
-SceUInt64 ksceKernelSetTimerTimeWide(SceUID timerId, SceUInt64 time)
+SceUInt64 SceThreadmgrForDriver_85195A16(SceUID timerId, SceUInt64 time)
 {
 	ThreadmgrUidTimer *uidTimer;
 	uint64_t now, elapsed, previous = (uint64_t)-1;
@@ -2059,15 +2059,15 @@ restore:
 	return ret;
 }
 
-SceUID ksceKernelRegisterTimer(const char *name, SceUInt32 delay, ThreadmgrAlarmHandler handler,
-			       void *arg)
+SceUID SceThreadmgrForDriver_C58DF384(const char *name, SceUInt32 delay,
+				      ThreadmgrAlarmHandler handler, void *arg)
 {
 	if (name == NULL || handler == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	return setAlarmWithName(name, delay, handler, arg);
 }
 
-/* SceThreadmgrForDriver_10517330: ksceKernelRegisterTimer with a 64-bit delay */
+/* SceThreadmgrForDriver_10517330: SceThreadmgrForDriver_C58DF384 with a 64-bit delay */
 SceUID SceThreadmgrForDriver_10517330(const char *name, const SceUInt64 *delay,
 				      ThreadmgrAlarmHandler handler, void *arg)
 {

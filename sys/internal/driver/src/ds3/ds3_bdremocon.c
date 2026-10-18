@@ -42,7 +42,7 @@ int ds3BdRemoconThread(SceSize args, void *argp)
 	SceUInt32 outBits;
 	int result;
 
-	callback = ksceKernelCreateCallback("SceBdRemocon", 0,
+	callback = sceKernelCreateCallback("SceBdRemocon", 0,
 					    ds3BdRemoconCallback, NULL);
 	ds3BdRemocon.callback = callback;
 	if (callback < 0)
@@ -51,11 +51,11 @@ int ds3BdRemoconThread(SceSize args, void *argp)
 	if (result < 0)
 		return result;
 	sceKernelRegisterSysEventHandler("SceBdRemocon", ds3BdRemoconSysEvent, NULL);
-	event = ksceKernelCreateEventFlag("SceBdRemocon", 0x1000, 0, NULL);
+	event = sceKernelCreateEventFlag("SceBdRemocon", 0x1000, 0, NULL);
 	if (event < 0)
 		return event;
 	for (;;)
-		ksceKernelWaitEventFlagCB(event, 1, 5, &outBits, NULL);
+		SceThreadmgrForDriver_8A35F714(event, 1, 5, &outBits, NULL);
 }
 
 int ds3BdRemoconSysEvent(int resume, int eventId, void *args, void *opt)
@@ -153,7 +153,7 @@ int ds3BdRemoconCallback(int notifyId, int notifyCount, int notifyArg, void *use
 				} else {
 					ds3BdRemocon.inputReady = 1;
 					if (ScePowerForDriver_394DE492() == 0) {
-						timer = ksceKernelRegisterTimer("SceBDRmcPS", 40000,
+						timer = SceThreadmgrForDriver_C58DF384("SceBDRmcPS", 40000,
 									       ds3BdRemoconReleaseTimer, NULL);
 						if (timer >= 0)
 							ds3BdRemocon.releaseTimer = timer;
@@ -209,13 +209,13 @@ int ds3InitializeBdRemocon(void)
 		else if (buttonAssign == 1)
 			ds3BdRemocon.buttonAssign = 1;
 	}
-	result = ksceKernelCreateThread("SceBdRemocon", ds3BdRemoconThread,
+	result = sceKernelCreateThread("SceBdRemocon", ds3BdRemoconThread,
 		60, 0x1000, 0x10000000, 0x80000,
 		(const SceKernelThreadOptParam *)&option);
 	ds3BdRemocon.workerThread = result;
 	if (result < 0)
 		return result;
-	result = ksceKernelStartThread(result, 0, NULL);
+	result = sceKernelStartThread(result, 0, NULL);
 	if (result < 0)
 		return result;
 	return 0;

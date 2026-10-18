@@ -407,7 +407,7 @@ static int killProcess(SceUID pid, ProcEventParam *param, int flags)
 static inline void registerTimer(void)
 {
 	if (motion.timer == -1)
-		motion.timer = ksceKernelRegisterTimer("SceMotionAlarm", motion.period,
+		motion.timer = SceThreadmgrForDriver_C58DF384("SceMotionAlarm", motion.period,
 						       sampleTimer, NULL);
 }
 

@@ -24,11 +24,11 @@ int UpdateUtilWritePartition(const void *buffer, uint64_t size, uint64_t offset,
 	int permission, result, written;
 	unsigned int error;
 
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
 	if (!size || !buffer || !mbr) {
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		return (int)0x800f0216;
 	}
 	result = StorageUtilGetPartitionPath(partition, 0, path, sizeof(path));
@@ -118,6 +118,6 @@ free:
 close:
 	ksceIoClose(fd);
 restorePermission:
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }

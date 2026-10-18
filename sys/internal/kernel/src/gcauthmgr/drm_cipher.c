@@ -195,7 +195,7 @@ int GcAuthInitializeDrmBb(void)
 {
 	SceUID semaphore;
 
-	semaphore = ksceKernelCreateSema("SceDrmBB", 0, 1, 1, NULL);
+	semaphore = sceKernelCreateSema("SceDrmBB", 0, 1, 1, NULL);
 	gcAuthDrmBbSemaphore = semaphore;
 	return semaphore <= 0;
 }
@@ -228,7 +228,7 @@ int SceSblGcAuthMgrDrmBBForDriver_500F5157(GcAuthDrmBbMacContext *context,
 	int keyId;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthDrmBbSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthDrmBbSemaphore, 1, NULL) != 0)
 		return (int)0x808a0008;
 	if (data == NULL || context == NULL) {
 		result = (int)0x808a040a;
@@ -282,7 +282,7 @@ int SceSblGcAuthMgrDrmBBForDriver_500F5157(GcAuthDrmBbMacContext *context,
 		result = GcAuthDrmEncryptCbc(gcAuthDrmWorkBuffer, used,
 					context->chainingValue, keyId);
 out:
-	if (ksceKernelSignalSema(gcAuthDrmBbSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthDrmBbSemaphore, 1) != 0)
 		return (int)0x808a0008;
 	return result;
 }
@@ -300,7 +300,7 @@ int SceSblGcAuthMgrDrmBBForDriver_6EF3C9DB(GcAuthDrmBbMacContext *context,
 	int keyId;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthDrmBbSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthDrmBbSemaphore, 1, NULL) != 0)
 		return (int)0x808a0008;
 	if (mac == NULL || context == NULL) {
 		result = (int)0x808a040a;
@@ -375,7 +375,7 @@ int SceSblGcAuthMgrDrmBBForDriver_6EF3C9DB(GcAuthDrmBbMacContext *context,
 	context->mode = 0;
 	context->tailSize = 0;
 out:
-	if (ksceKernelSignalSema(gcAuthDrmBbSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthDrmBbSemaphore, 1) != 0)
 		return (int)0x808a0008;
 	return result;
 }
@@ -394,7 +394,7 @@ int SceSblGcAuthMgrDrmBBForDriver_3C25F9FA(GcAuthDrmBbMacContext *context,
 	result = SceSblGcAuthMgrDrmBBForDriver_6EF3C9DB(context, calculated, key);
 	if (result != 0)
 		return result;
-	if (ksceKernelWaitSema(gcAuthDrmBbSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthDrmBbSemaphore, 1, NULL) != 0)
 		return (int)0x808a0008;
 	if (mode == 3) {
 		for (index = 0; index != 16; index++)
@@ -413,7 +413,7 @@ int SceSblGcAuthMgrDrmBBForDriver_3C25F9FA(GcAuthDrmBbMacContext *context,
 	} while (first != calculated + 16);
 	result = result != 0 ? (int)0x808a0408 : 0;
 out:
-	if (ksceKernelSignalSema(gcAuthDrmBbSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthDrmBbSemaphore, 1) != 0)
 		return (int)0x808a0008;
 	return result;
 }
@@ -431,7 +431,7 @@ int SceSblGcAuthMgrDrmBBForDriver_E950BE32(GcAuthDrmBbMacContext *context,
 	int keyId;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthDrmBbSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthDrmBbSemaphore, 1, NULL) != 0)
 		return (int)0x808a0008;
 	if (data == NULL || context == NULL) {
 		result = (int)0x808a040a;
@@ -492,7 +492,7 @@ int SceSblGcAuthMgrDrmBBForDriver_E950BE32(GcAuthDrmBbMacContext *context,
 	result = GcAuthDrmEncryptCbc(gcAuthDrmWorkBuffer, total - copied,
 				context->chainingValue, keyId);
 out:
-	if (ksceKernelSignalSema(gcAuthDrmBbSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthDrmBbSemaphore, 1) != 0)
 		return (int)0x808a0008;
 	return result;
 }
@@ -505,7 +505,7 @@ int SceSblGcAuthMgrDrmBBForDriver_7F98E4E2(
 	int index;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthDrmBbSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthDrmBbSemaphore, 1, NULL) != 0)
 		return (int)0x808a0008;
 	if (seed == NULL || context == NULL) {
 		result = (int)0x808a040a;
@@ -559,7 +559,7 @@ int SceSblGcAuthMgrDrmBBForDriver_7F98E4E2(
 	}
 	result = 0;
 out:
-	if (ksceKernelSignalSema(gcAuthDrmBbSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthDrmBbSemaphore, 1) != 0)
 		return (int)0x808a0008;
 	return result;
 }
@@ -570,7 +570,7 @@ int SceSblGcAuthMgrDrmBBForDriver_C0F37F18(
 	unsigned int offset;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthDrmBbSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthDrmBbSemaphore, 1, NULL) != 0)
 		return (int)0x808a0008;
 	if (data == NULL || context == NULL) {
 		result = (int)0x808a040a;
@@ -601,7 +601,7 @@ int SceSblGcAuthMgrDrmBBForDriver_C0F37F18(
 	else
 		result = 0;
 out:
-	if (ksceKernelSignalSema(gcAuthDrmBbSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthDrmBbSemaphore, 1) != 0)
 		return (int)0x808a0008;
 	return result;
 }
@@ -625,7 +625,7 @@ int SceSblGcAuthMgrDrmBBForDriver_B13577E2(
 	unsigned int offset;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthDrmBbSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthDrmBbSemaphore, 1, NULL) != 0)
 		return (int)0x808a0008;
 	if (data == NULL || context == NULL) {
 		result = (int)0x808a040a;
@@ -657,7 +657,7 @@ int SceSblGcAuthMgrDrmBBForDriver_B13577E2(
 	else
 		result = 0;
 out:
-	if (ksceKernelSignalSema(gcAuthDrmBbSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthDrmBbSemaphore, 1) != 0)
 		return (int)0x808a0008;
 	return result;
 }

@@ -63,7 +63,7 @@ int module_start(SceSize arglen, const void *argp)
 	memset(&gWlanBtConfig, 0, sizeof(gWlanBtConfig));
 	gWlanBtConfig.wlanState = 4;
 	gWlanBtConfig.bluetoothState = 4;
-	if (ksceKernelInitializeFastMutex(&gWlanBtConfig.mutex,
+	if (sceKernelInitializeFastMutex(&gWlanBtConfig.mutex,
 					"SceWlanBtRobinConfig", 0x2000, NULL) < 0)
 		return 2;
 	result = ksceSblSsGetNvsData(1, &availability, 1);
@@ -217,10 +217,10 @@ unsigned int ksceWlanBtGetConfiguration(void)
 	unsigned int configuration;
 	int result;
 
-	result = ksceKernelLockFastMutex(&gWlanBtConfig.mutex);
+	result = lockFastMutex(&gWlanBtConfig.mutex);
 	SCE_DBG_ASSERT_FUNC(result == 0, 428, "sceWlanBtGetConfiguration");
 	configuration = gWlanBtConfig.configuration;
-	result = ksceKernelUnlockFastMutex(&gWlanBtConfig.mutex);
+	result = sceKernelUnlockFastMutex(&gWlanBtConfig.mutex);
 	SCE_DBG_ASSERT_FUNC(result == 0, 433, "sceWlanBtGetConfiguration");
 	return configuration;
 }
@@ -231,7 +231,7 @@ int ksceWlanBtSetConfiguration(int request)
 	int result;
 	int lockResult;
 
-	lockResult = ksceKernelLockFastMutex(&gWlanBtConfig.mutex);
+	lockResult = lockFastMutex(&gWlanBtConfig.mutex);
 	SCE_DBG_ASSERT_FUNC(lockResult == 0, 446, "sceWlanBtSetConfiguration");
 	if (ksceSysconIsDownLoaderMode()) {
 		result = 0x80418004;
@@ -411,7 +411,7 @@ goWakeWaitState:
 		gWlanBtConfig.configuration = 0;
 	}
 done:
-	lockResult = ksceKernelUnlockFastMutex(&gWlanBtConfig.mutex);
+	lockResult = sceKernelUnlockFastMutex(&gWlanBtConfig.mutex);
 	SCE_DBG_ASSERT_FUNC(lockResult == 0, 615, "sceWlanBtSetConfiguration");
 	return result;
 }
@@ -497,11 +497,11 @@ int wlanSetConfiguration(int request)
 
 int wlanRegisterCallback(SceUID callbackId)
 {
-	SceUID threadId = ksceKernelGetThreadId();
+	SceUID threadId = sceKernelGetThreadId();
 	int slot;
 	int result;
 
-	ksceKernelLockFastMutex(&gWlan.mutex);
+	lockFastMutex(&gWlan.mutex);
 	if (gWlan.callbacks[0].threadId == threadId) {
 		result = 0x80418002;
 		goto done;
@@ -524,16 +524,16 @@ int wlanRegisterCallback(SceUID callbackId)
 	gWlan.callbacks[slot].callbackId = callbackId;
 	result = 0;
 done:
-	ksceKernelUnlockFastMutex(&gWlan.mutex);
+	sceKernelUnlockFastMutex(&gWlan.mutex);
 	return result;
 }
 
 int wlanUnregisterCallback(void)
 {
-	SceUID threadId = ksceKernelGetThreadId();
+	SceUID threadId = sceKernelGetThreadId();
 	int slot;
 
-	ksceKernelLockFastMutex(&gWlan.mutex);
+	lockFastMutex(&gWlan.mutex);
 	if (gWlan.callbacks[0].threadId == threadId)
 		slot = 0;
 	else if (gWlan.callbacks[1].threadId == threadId)
@@ -543,7 +543,7 @@ int wlanUnregisterCallback(void)
 	gWlan.callbacks[slot].threadId = 0;
 	gWlan.callbacks[slot].callbackId = 0;
 done:
-	ksceKernelUnlockFastMutex(&gWlan.mutex);
+	sceKernelUnlockFastMutex(&gWlan.mutex);
 	return 0;
 }
 
@@ -569,7 +569,7 @@ int wlanBtInitializeRobin(void)
 		productMode = 0;
 	else if (productMode == 1)
 		gWlan.region.channelMask = 0x1fff;
-	result = ksceKernelInitializeFastMutex(&gWlan.mutex, "SceWlan", 0x2000, NULL);
+	result = sceKernelInitializeFastMutex(&gWlan.mutex, "SceWlan", 0x2000, NULL);
 	if (result < 0)
 		return result;
 	if (robinInitialize() < 0)
@@ -612,9 +612,9 @@ int wlanIsActiveScanChannel(int channel)
 
 int wlanNotifyCallbacks(int argument)
 {
-	ksceKernelLockFastMutex(&gWlan.mutex);
+	lockFastMutex(&gWlan.mutex);
 	if (gWlan.callbacks[0].threadId) {
-		ksceKernelNotifyCallback(gWlan.callbacks[0].callbackId, argument);
+		sceKernelNotifyCallback(gWlan.callbacks[0].callbackId, argument);
 		if (!gWlan.callbacks[1].threadId)
 			goto done;
 		goto notifySecond;
@@ -624,8 +624,8 @@ int wlanNotifyCallbacks(int argument)
 	goto done;
 
 notifySecond:
-	ksceKernelNotifyCallback(gWlan.callbacks[1].callbackId, argument);
+	sceKernelNotifyCallback(gWlan.callbacks[1].callbackId, argument);
 done:
-	ksceKernelUnlockFastMutex(&gWlan.mutex);
+	sceKernelUnlockFastMutex(&gWlan.mutex);
 	return 0;
 }

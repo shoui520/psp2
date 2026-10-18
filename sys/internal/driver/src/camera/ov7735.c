@@ -1762,12 +1762,12 @@ int cameraLockDevice(int devnum)
 {
 	SceUInt32 timeout = (SceUInt32)-1;
 
-	return ksceKernelLockMutex(cameraDriver->device[devnum].mutexId, 1, &timeout);
+	return sceKernelLockMutex(cameraDriver->device[devnum].mutexId, 1, &timeout);
 }
 
 int cameraUnlockDevice(int devnum)
 {
-	return ksceKernelUnlockMutex(cameraDriver->device[devnum].mutexId, 1);
+	return sceKernelUnlockMutex(cameraDriver->device[devnum].mutexId, 1);
 }
 
 int cameraWriteSensorByte(int devnum, SceUInt16 address, const SceUInt8 *value)

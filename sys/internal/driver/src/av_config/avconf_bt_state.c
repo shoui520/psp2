@@ -5,7 +5,7 @@
 #include <bt/bt_event.h>
 #include <bt/bt_audio.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2/kernel/threadmgr/callback.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/cpu.h>
 
 void avConfigReadBtDevice(AvConfigBtAudioState *bt, SceUInt64 address)

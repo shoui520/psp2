@@ -8,10 +8,10 @@
 #include <sysmem/sysroot.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <lowio/pervasive.h>
+#include <threadmgr/threadmgr.h>
 
 VeneziaRpcState g_veneziaRpcState;
 
-extern SceUID ksceKernelGetProcessId(void) __asm__("sceKernelGetProcessId");
 extern int _sceVeneziaRunInBackground(void);
 extern int _sceVeneziaStopInBackground(void);
 extern unsigned int getVeneziaClockLockCount(void);
@@ -91,7 +91,7 @@ int _callGenericThunk(unsigned int command, const unsigned int *input,
 			 __builtin_return_address(0));
 #endif
 	if (clockDown) {
-		ret = ksceKernelWaitSema(g_veneziaRpcState.semaphore, 1, NULL);
+		ret = sceKernelWaitSema(g_veneziaRpcState.semaphore, 1, NULL);
 		if (ret < 0)
 			return ret;
 	}
@@ -172,7 +172,7 @@ allocationDone:
 	}
 	arg->result = 0;
 	arg->resultFlags = 0;
-	arg->pid = ksceKernelGetProcessId();
+	arg->pid = sceKernelGetProcessId();
 	if (g_veneziaRpcTrace)
 		g_veneziaRpcTrace(0, 12, thunk.channel, command, input[0], input[1],
 			input[2], input[3], arg->arguments[0], arg->arguments[1],
@@ -192,7 +192,7 @@ allocationDone:
 	if (!(g_veneziaRpcState.channels[thunk.channel].flags & 0x20000)) {
 		_freeRpcCh(thunk.channel, clockDown);
 		if (clockDown)
-			ksceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
+			sceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
 	}
 	if (g_veneziaRpcState.channels[thunk.channel].flags & 0x40000) {
 		completed = getCompletedVeneziaRpc();
@@ -200,35 +200,35 @@ allocationDone:
 		if (clockDown) {
 			if (completed & (1U << 0)) {
 				_freeRpcCh(0, clockDown);
-				ksceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
+				sceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
 			}
 			if (completed & (1U << 1)) {
 				_freeRpcCh(1, clockDown);
-				ksceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
+				sceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
 			}
 			if (completed & (1U << 2)) {
 				_freeRpcCh(2, clockDown);
-				ksceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
+				sceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
 			}
 			if (completed & (1U << 3)) {
 				_freeRpcCh(3, clockDown);
-				ksceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
+				sceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
 			}
 			if (completed & (1U << 4)) {
 				_freeRpcCh(4, clockDown);
-				ksceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
+				sceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
 			}
 			if (completed & (1U << 5)) {
 				_freeRpcCh(5, clockDown);
-				ksceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
+				sceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
 			}
 			if (completed & (1U << 6)) {
 				_freeRpcCh(6, clockDown);
-				ksceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
+				sceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
 			}
 			if (completed & (1U << 7)) {
 				_freeRpcCh(7, clockDown);
-				ksceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
+				sceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
 			}
 		} else {
 			if (completed & (1U << 0))
@@ -253,7 +253,7 @@ allocationDone:
 			if (completed & (1U << i)) {
 				_freeRpcCh(i, clockDown);
 				if (clockDown)
-					ksceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
+					sceKernelSignalSema(g_veneziaRpcState.semaphore, 1);
 			}
 		}
 #endif
@@ -293,7 +293,7 @@ _callDebugThunk(unsigned int command, const unsigned int *input, VeneziaRpcPack 
 	SceDebugForDriver_35A35322(command <= 31, SCE_DBGINFO_FUNC(1062, "_callDebugThunk"),
 			 __builtin_return_address(0));
 #endif
-	ret = ksceKernelWaitSema(g_veneziaRpcState.debugSemaphore, 1, NULL);
+	ret = sceKernelWaitSema(g_veneziaRpcState.debugSemaphore, 1, NULL);
 	if (ret < 0)
 		return ret;
 	channel = -1;
@@ -339,7 +339,7 @@ _callDebugThunk(unsigned int command, const unsigned int *input, VeneziaRpcPack 
 	}
 	arg->result = 0;
 	arg->resultFlags = 0;
-	arg->pid = ksceKernelGetProcessId();
+	arg->pid = sceKernelGetProcessId();
 	submitVeneziaRpc(thunk.channel);
 	ret = 0;
 	if (g_veneziaRpcState.channels[thunk.channel].flags & 0x10000) {
@@ -359,7 +359,7 @@ _callDebugThunk(unsigned int command, const unsigned int *input, VeneziaRpcPack 
 	g_veneziaRpcState.channels[channel].inUse = 0;
 	g_veneziaRpcState.freeDebugChannels++;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaRpcState.debugLock, intr);
-	ksceKernelSignalSema(g_veneziaRpcState.debugSemaphore, 1);
+	sceKernelSignalSema(g_veneziaRpcState.debugSemaphore, 1);
 	return ret;
 }
 
@@ -409,11 +409,11 @@ int initVeneziaRpc(void)
 	ret = initVeneziaRpcDma();
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelCreateSema("SceCodecEngineDsp0Rpc", 0x2000, 8, 8, NULL);
+	ret = sceKernelCreateSema("SceCodecEngineDsp0Rpc", 0x2000, 8, 8, NULL);
 	if (ret < 0)
 		return ret;
 	g_veneziaRpcState.semaphore = ret;
-	ret = ksceKernelCreateSema("SceCodecEngineDsp0RpcDebug", 0x2000, 1, 1, NULL);
+	ret = sceKernelCreateSema("SceCodecEngineDsp0RpcDebug", 0x2000, 1, 1, NULL);
 	if (ret < 0)
 		return ret;
 	g_veneziaRpcState.debugSemaphore = ret;
@@ -494,8 +494,8 @@ int waitVeneziaRpcSemas(void)
 {
 	int ret, debugRet;
 
-	ret = ksceKernelWaitSema(g_veneziaRpcState.semaphore, 8, NULL);
-	debugRet = ksceKernelWaitSema(g_veneziaRpcState.debugSemaphore, 1, NULL);
+	ret = sceKernelWaitSema(g_veneziaRpcState.semaphore, 8, NULL);
+	debugRet = sceKernelWaitSema(g_veneziaRpcState.debugSemaphore, 1, NULL);
 	if (debugRet < 0)
 		return debugRet;
 	return ret < 0 ? ret : 0;
@@ -506,8 +506,8 @@ int signalVeneziaRpcSemas(void)
 {
 	int ret, debugRet;
 
-	ret = ksceKernelSignalSema(g_veneziaRpcState.semaphore, 8);
-	debugRet = ksceKernelSignalSema(g_veneziaRpcState.debugSemaphore, 1);
+	ret = sceKernelSignalSema(g_veneziaRpcState.semaphore, 8);
+	debugRet = sceKernelSignalSema(g_veneziaRpcState.debugSemaphore, 1);
 	if (debugRet < 0)
 		return debugRet;
 	return ret < 0 ? ret : 0;

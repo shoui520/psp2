@@ -122,7 +122,7 @@ int sceExfatInitPhase1(SceSize arglen, const void *argp)
 			goto mountGameMedia;
 	}
 enqueue:
-	ksceKernelEnqueueWorkQueue(0x10023, "SceExfatInit", sceExfatInitPhase2, NULL);
+	sceKernelScheduleWorkTask(0x10023, "SceExfatInit", sceExfatInitPhase2, NULL);
 	return 0;
 mountGameMedia:
 	result = ksceIoMount(0x900, NULL, 0, 0, 0, 0);

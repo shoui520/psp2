@@ -151,10 +151,10 @@ int controlHdmiModuleStart(void)
 		chipId[i] = 0;
 	chipIdLength = HDMI_CHIP_ID_UNKNOWN;
 	eventHandleManagerInitialize();
-	if (ksceKernelInitializeFastMutex(&mutex, "SceHdmi", 2, 0) < 0 ||
+	if (sceKernelInitializeFastMutex(&mutex, "SceHdmi", 2, 0) < 0 ||
 	    sceKernelRegisterSysEventHandler("SceHdmi", _sceHdmiSysEventHandler, NULL) < 0)
 		return 7;
-	ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceHdmiInit", initWork, NULL);
+	sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceHdmiInit", initWork, NULL);
 	return 0;
 }
 
@@ -216,14 +216,14 @@ int controlHdmiCecPowerOn(void)
 
 int _sceHdmiLockMutex(void)
 {
-	if (ksceKernelLockFastMutex(&mutex) < 0)
+	if (lockFastMutex(&mutex) < 0)
 		return 7;
 	return 0;
 }
 
 int _sceHdmiUnlockMutex(void)
 {
-	if (ksceKernelUnlockFastMutex(&mutex) < 0)
+	if (sceKernelUnlockFastMutex(&mutex) < 0)
 		return 7;
 	return 0;
 }

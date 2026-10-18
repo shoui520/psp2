@@ -138,24 +138,24 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelEnableSubIntr
 	ksceKernelRegisterSubIntrHandler
 	ksceKernelReleaseIntrHandler
-	ksceKernelGetThreadmgrUIDClass
-	ksceKernelWaitEventFlag
+	sceKernelGetThreadmgrUIDClass
+	sceKernelWaitEventFlag
 	SceThreadmgrForDriver_20C228E4
 	sceKernelDeleteSimpleEvent
-	ksceKernelUnregisterCallbackFromEvent
-	ksceKernelCreateSimpleEvent
-	ksceKernelCreateEventFlag
+	sceKernelUnregisterCallbackFromEvent
+	sceKernelCreateSimpleEvent
+	sceKernelCreateEventFlag
 	sceKernelCancelAlarm
-	ksceKernelGetSystemTimeLow
-	ksceKernelClearEventFlag
-	ksceKernelGetThreadId
-	ksceKernelDeleteEventFlag
-	ksceKernelRegisterCallbackToEvent
+	SceThreadmgrForDriver_47F6DE49
+	sceKernelClearEventFlag
+	sceKernelGetThreadId
+	sceKernelDeleteEventFlag
+	sceKernelRegisterCallbackToEventForDriver
 	sceKernelIsUserModeThread
 	sceKernelGetProcessId
 	sceKernelSetEventWithNotifyCallback
-	ksceKernelRegisterTimer
-	ksceKernelSetEventFlag
+	SceThreadmgrForDriver_C58DF384
+	sceKernelSetEventFlag
 	sceKernelCancelEventFlag
 	sceKernelRegisterProcEventHandler
 	SceSblACMgrForDriver_062CAEB2

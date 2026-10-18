@@ -17,13 +17,13 @@
 
 extern int bbmcInitializeFastMutex(struct ThreadmgrFastMutex *mutex,
 	const char *name, int attr, void *opt)
-	__asm__("ksceKernelInitializeFastMutex");
+	__asm__("sceKernelInitializeFastMutex");
 extern int bbmcFinalizeFastMutex(struct ThreadmgrFastMutex *mutex)
-	__asm__("ksceKernelFinalizeFastMutex");
+	__asm__("sceKernelFinalizeFastMutex");
 extern int bbmcLockFastMutex(struct ThreadmgrFastMutex *mutex)
-	__asm__("ksceKernelLockFastMutex");
+	__asm__("lockFastMutex");
 extern int bbmcUnlockFastMutex(struct ThreadmgrFastMutex *mutex)
-	__asm__("ksceKernelUnlockFastMutex");
+	__asm__("sceKernelUnlockFastMutex");
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int message);
 int ConnectNetwork(struct NetDriver *driver, int argument);
 int bbmcCloseNetworkLink(struct NetDriver *driver, int argument);
@@ -32,8 +32,6 @@ int GetCommRate(struct NetDriver *driver, unsigned int command,
 	int *argument, unsigned int size);
 int SceNetPsForDriver_F5788FF8(void *driver);
 /* The module's original import table uses this symbol for driver NID 4B675D05. */
-extern int ksceKernelDelayThread(SceUInt delay)
-	__asm__("sceKernelDelayThread");
 
 BbmcPacketInterface g_bbmcPacketInterfaceStorage;
 BbmcPacketInterface *g_bbmcPacketInterface;
@@ -636,7 +634,7 @@ int bbmcUnregisterNetworkInterface(void)
 	for (i = 3000; i != 0; --i) {
 		if (control->activeCalls == 0)
 			break;
-		ksceKernelDelayThread(1000);
+		sceKernelDelayThread(1000);
 	}
 	return SceNetPsForDriver_F5788FF8(&control->driver);
 }
@@ -655,8 +653,8 @@ int bbmcStopUsbSerialDevice(int argumentSize, void *arguments, void *context)
 {
 	BbmcUsbSerialDevice *device;
 
-	ksceKernelSetEventFlag(g_usbSerialDevice->event, 0x80000000u);
-	ksceKernelWaitThreadEnd(g_usbSerialDevice->thread, NULL, NULL);
+	sceKernelSetEventFlag(g_usbSerialDevice->event, 0x80000000u);
+	sceKernelWaitThreadEnd(g_usbSerialDevice->thread, NULL, NULL);
 	device = g_usbSerialDevice;
 	if (device->memoryBlock > 0) {
 		SceSysmemForDriver_009E1C61(device->memoryBlock);
@@ -776,7 +774,7 @@ int bbmcStartUsbSerialDevice(int argumentSize, void *arguments, void *context)
 	device->atIn.request.onComplete = bbmcUsbDeviceAtInCompleted;
 	device->atOut.request.attributes = 0;
 	device->atOut.request.onComplete = bbmcUsbDeviceAtOutCompleted;
-	result = ksceKernelStartThread(device->thread, 0, NULL);
+	result = sceKernelStartThread(device->thread, 0, NULL);
 	if (result >= 0)
 		return result;
 reload:

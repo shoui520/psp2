@@ -2,15 +2,15 @@
 #include <sysmem/sysroot.h>
 #include "sdstor_internal.h"
 /* VFS carries SDK opaque mutex declarations; keep our complete owner ABI. */
-#define ksceKernelInitializeFastMutex ksceKernelInitializeFastMutex_vitasdk
-#define ksceKernelFinalizeFastMutex ksceKernelFinalizeFastMutex_vitasdk
-#define ksceKernelLockFastMutex ksceKernelLockFastMutex_vitasdk
-#define ksceKernelUnlockFastMutex ksceKernelUnlockFastMutex_vitasdk
+#define sceKernelInitializeFastMutex ksceKernelInitializeFastMutex_vitasdk
+#define sceKernelFinalizeFastMutex ksceKernelFinalizeFastMutex_vitasdk
+#define lockFastMutex ksceKernelLockFastMutex_vitasdk
+#define sceKernelUnlockFastMutex ksceKernelUnlockFastMutex_vitasdk
 #include <iofilemgr/vfs.h>
-#undef ksceKernelInitializeFastMutex
-#undef ksceKernelFinalizeFastMutex
-#undef ksceKernelLockFastMutex
-#undef ksceKernelUnlockFastMutex
+#undef sceKernelInitializeFastMutex
+#undef sceKernelFinalizeFastMutex
+#undef lockFastMutex
+#undef sceKernelUnlockFastMutex
 #include <intrmgr/intrmgr.h>
 #include <sysmem/debug.h>
 #include <sdstor/mbr.h>
@@ -185,7 +185,7 @@ int sdintr_hdr_remove_handler(void *subintrArg, void *registerArg,
 	SceSdstorIntr *interrupt = registerArg;
 	int result;
 
-	result = ksceKernelSetEventFlag(interrupt->requestEvent, 1);
+	result = sceKernelSetEventFlag(interrupt->requestEvent, 1);
 	if (result)
 		SCE_DBG_PRINTF_LEVEL(1, 15, 2481, "0x%08x\n", result);
 	return result;
@@ -197,7 +197,7 @@ int sdintr_hdr_insert_handler(void *subintrArg, void *registerArg,
 	SceSdstorIntr *interrupt = registerArg;
 	int result;
 
-	result = ksceKernelSetEventFlag(interrupt->requestEvent, 0x10);
+	result = sceKernelSetEventFlag(interrupt->requestEvent, 0x10);
 	if (result)
 		SCE_DBG_PRINTF_LEVEL(1, 15, 2463, "0x%08x\n", result);
 	return result;
@@ -623,32 +623,32 @@ int sdctrl_system_event_handler(int resume, int eventId, void *eventArgs, void *
 		SCE_DBG_ASSERT_FUNC(1, 755, "sdintr_get_object");
 		SCE_DBG_ASSERT_FUNC(1, 755, "sdintr_get_object");
 		SCE_DBG_ASSERT_FUNC(1, 755, "sdintr_get_object");
-		result = ksceKernelSetEventFlag(sdintrObjects[1].requestEvent, 0x100);
+		result = sceKernelSetEventFlag(sdintrObjects[1].requestEvent, 0x100);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 585, "sdctrl_suspend",
 				"sceKernelSetEventFlag() returns 0x%08x\n", result);
-		result = ksceKernelSetEventFlag(sdintrObjects[2].requestEvent, 0x100);
+		result = sceKernelSetEventFlag(sdintrObjects[2].requestEvent, 0x100);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 590, "sdctrl_suspend",
 				"sceKernelSetEventFlag() returns 0x%08x\n", result);
 		if (SceSysrootForDriver_8AA268D6(11)) {
-			result = ksceKernelSetEventFlag(sdintrObjects[4].requestEvent, 0x100);
+			result = sceKernelSetEventFlag(sdintrObjects[4].requestEvent, 0x100);
 			if (result < 0)
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 596, "sdctrl_suspend",
 					"sceKernelSetEventFlag() returns 0x%08x\n", result);
 		}
-		result = ksceKernelWaitEventFlag(sdintrObjects[1].syncEvent, 0x100,
+		result = sceKernelWaitEventFlag(sdintrObjects[1].syncEvent, 0x100,
 						5, NULL, NULL);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 607, "sdctrl_suspend",
 				"sceKernelWaitEventFlag() returns 0x%08x\n", result);
-		result = ksceKernelWaitEventFlag(sdintrObjects[2].syncEvent, 0x100,
+		result = sceKernelWaitEventFlag(sdintrObjects[2].syncEvent, 0x100,
 						5, NULL, NULL);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 617, "sdctrl_suspend",
 				"sceKernelWaitEventFlag() returns 0x%08x\n", result);
 		if (SceSysrootForDriver_8AA268D6(11)) {
-			result = ksceKernelWaitEventFlag(sdintrObjects[4].syncEvent,
+			result = sceKernelWaitEventFlag(sdintrObjects[4].syncEvent,
 							0x100, 5, NULL, NULL);
 			if (result < 0)
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 628, "sdctrl_suspend",
@@ -699,32 +699,32 @@ resumeEvents:
 		SCE_DBG_ASSERT_FUNC(1, 755, "sdintr_get_object");
 		SCE_DBG_ASSERT_FUNC(1, 755, "sdintr_get_object");
 		SCE_DBG_ASSERT_FUNC(1, 755, "sdintr_get_object");
-		result = ksceKernelSetEventFlag(sdintrObjects[1].requestEvent, 0x1000);
+		result = sceKernelSetEventFlag(sdintrObjects[1].requestEvent, 0x1000);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 649, "sdctrl_resume",
 				"sceKernelSetEventFlag() returns 0x%08x\n", result);
-		result = ksceKernelSetEventFlag(sdintrObjects[2].requestEvent, 0x1000);
+		result = sceKernelSetEventFlag(sdintrObjects[2].requestEvent, 0x1000);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 654, "sdctrl_resume",
 				"sceKernelSetEventFlag() returns 0x%08x\n", result);
 		if (SceSysrootForDriver_8AA268D6(11)) {
-			result = ksceKernelSetEventFlag(sdintrObjects[4].requestEvent, 0x1000);
+			result = sceKernelSetEventFlag(sdintrObjects[4].requestEvent, 0x1000);
 			if (result < 0)
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 660, "sdctrl_resume",
 					"sceKernelSetEventFlag() returns 0x%08x\n", result);
 		}
-		result = ksceKernelWaitEventFlag(sdintrObjects[1].syncEvent, 0x1000,
+		result = sceKernelWaitEventFlag(sdintrObjects[1].syncEvent, 0x1000,
 						5, NULL, NULL);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 671, "sdctrl_resume",
 				"sceKernelWaitEventFlag() returns 0x%08x\n", result);
-		result = ksceKernelWaitEventFlag(sdintrObjects[2].syncEvent, 0x1000,
+		result = sceKernelWaitEventFlag(sdintrObjects[2].syncEvent, 0x1000,
 						5, NULL, NULL);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 681, "sdctrl_resume",
 				"sceKernelWaitEventFlag() returns 0x%08x\n", result);
 		if (SceSysrootForDriver_8AA268D6(11)) {
-			result = ksceKernelWaitEventFlag(sdintrObjects[4].syncEvent,
+			result = sceKernelWaitEventFlag(sdintrObjects[4].syncEvent,
 							0x1000, 5, NULL, NULL);
 			if (result < 0)
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 692, "sdctrl_resume",
@@ -889,7 +889,7 @@ int sdintr_thr_entry(SceSize args, void *argp)
 		state = interrupt->stat;
 		waitPattern = sdintrStateRequests[state];
 		returned = 0;
-		result = ksceKernelWaitEventFlag(interrupt->requestEvent, 0x1113,
+		result = sceKernelWaitEventFlag(interrupt->requestEvent, 0x1113,
 						5, &returned, NULL);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 849, "sdintr_entry",
@@ -1072,7 +1072,7 @@ acknowledge:
 			if (!processed)
 				processed = returned;
 			returned &= ~processed;
-			result = ksceKernelSetEventFlag(interrupt->syncEvent, processed);
+			result = sceKernelSetEventFlag(interrupt->syncEvent, processed);
 			if (result)
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 941, "sdintr_entry",
 					"0x%08x\n", result);
@@ -1446,7 +1446,7 @@ int sdctrl_initialize(void)
 		thread->stackSize = 0x2000;
 		thread->attr = 0;
 		thread->affinity = 0x80000;
-		result = ksceKernelCreateThread("SceSdstorIntr", sdintr_thr_entry,
+		result = sceKernelCreateThread("SceSdstorIntr", sdintr_thr_entry,
 						28, 0x2000, 0, 0x80000, NULL);
 		if (result < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2551, "sdintr_thr_init", "0x%08x\n", result);
@@ -1473,13 +1473,13 @@ int sdctrl_initialize(void)
 		interrupt = &sdintrObjects[port];
 		threadArg = port;
 		SCE_DBG_ASSERT_FUNC(1, 773, "sdintr_init");
-		requestEvent = ksceKernelCreateEventFlag("SceSdstorRequest", 0, 0, NULL);
+		requestEvent = sceKernelCreateEventFlag("SceSdstorRequest", 0, 0, NULL);
 		if (requestEvent < 0) {
 			result = requestEvent;
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 784, "sdintr_init", "0x%08x\n", result);
 			goto interruptFailed;
 		}
-		syncEvent = ksceKernelCreateEventFlag("SceSdstorOpSync", 0, 0, NULL);
+		syncEvent = sceKernelCreateEventFlag("SceSdstorOpSync", 0, 0, NULL);
 		if (syncEvent < 0) {
 			result = syncEvent;
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 794, "sdintr_init", "0x%08x\n", result);
@@ -1534,7 +1534,7 @@ int sdctrl_initialize(void)
 			goto registerFailed;
 		}
 		SCE_DBG_ASSERT_FUNC(1, 2562, "sdintr_thr_start");
-		result = ksceKernelStartThread(thread->threadId, 1, &threadArg);
+		result = sceKernelStartThread(thread->threadId, 1, &threadArg);
 		if (result < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2569, "sdintr_thr_start", "0x%08x\n", result);
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 816, "sdintr_init", "0x%08x\n", result);
@@ -1563,7 +1563,7 @@ int sdctrl_remove(unsigned int port)
 	interrupt = &sdintrObjects[port];
 	if (port == 4 && !SceSysrootForDriver_8AA268D6(11))
 		return 0;
-	result = ksceKernelSetEventFlag(interrupt->requestEvent, 2);
+	result = sceKernelSetEventFlag(interrupt->requestEvent, 2);
 	if (result < 0)
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 502, "sdctrl_remove",
 			"sceKernelSetEventFlag() returns 0x%08x\n", result);
@@ -1580,7 +1580,7 @@ int sdctrl_insert(unsigned int port)
 	interrupt = &sdintrObjects[port];
 	if (port == 4 && !SceSysrootForDriver_8AA268D6(11))
 		return 0;
-	result = ksceKernelSetEventFlag(interrupt->requestEvent, 0x10);
+	result = sceKernelSetEventFlag(interrupt->requestEvent, 0x10);
 	if (result < 0)
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 523, "sdctrl_insert",
 			"sceKernelSetEventFlag() returns 0x%08x\n", result);

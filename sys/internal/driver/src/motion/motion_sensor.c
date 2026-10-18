@@ -251,7 +251,7 @@ int motionResetSensorFifo(void)
 	motionSensorTransfer.accelSum[2] = 0;
 	motionSensorTransfer.statusSum = 0;
 	motionSensorTransfer.statusCount = 0;
-	motionSensorTransfer.startTime = ksceKernelGetSystemTimeLow();
+	motionSensorTransfer.startTime = SceThreadmgrForDriver_47F6DE49();
 	memset(&motionSensorTransfer.request, 0,
 		sizeof(motionSensorTransfer.request));
 	memset(&motionSensorTransfer.response, 0,
@@ -505,7 +505,7 @@ int motionReadSensorFifo(SceMotionDevData *data)
 		samples = 6;
 	}
 	if (motionSensorTransfer.startTime != 0) {
-		uint32_t elapsed = ksceKernelGetSystemTimeLow() -
+		uint32_t elapsed = SceThreadmgrForDriver_47F6DE49() -
 			motionSensorTransfer.startTime;
 
 		motionSensorTransfer.startTime = 0;
@@ -621,7 +621,7 @@ int motionSensorThread(SceSize args, void *argp)
 		void (*completion)(int result, void *arg);
 
 		do {
-			result = ksceKernelWaitEventFlag(motionSensorWorker.event,
+			result = sceKernelWaitEventFlag(motionSensorWorker.event,
 				0xff, 5, &events, NULL);
 		} while (result < 0);
 		completion = motionSensorWorker.completion;
@@ -808,17 +808,17 @@ int motionInitializeDirect(void)
 
 	memset(&motionSensorWorker, 0, sizeof(motionSensorWorker));
 	motionSensorWorker.mode = 3;
-	result = ksceKernelCreateEventFlag("SceMotionDev", 0x1000, 0, NULL);
+	result = sceKernelCreateEventFlag("SceMotionDev", 0x1000, 0, NULL);
 	motionSensorWorker.event = result;
 	if (result >= 0) {
 		option.size = sizeof(option);
 		option.attr = 0;
-		result = ksceKernelCreateThread("SceMotionDev", motionSensorThread,
+		result = sceKernelCreateThread("SceMotionDev", motionSensorThread,
 			42, 0x2000, 0x10000000, 0x80000,
 			(const SceKernelThreadOptParam *)&option);
 		motionSensorWorker.thread = result;
 		if (result >= 0)
-			result = ksceKernelStartThread(result, 0, NULL);
+			result = sceKernelStartThread(result, 0, NULL);
 	}
 	return result;
 }
@@ -829,7 +829,7 @@ int motionQueueDirectDeviceInfo(SceMotionDevDeviceInfo *info, void (*completion)
 		return (int)0x80360001U;
 	motionSensorWorker.completion = completion;
 	motionSensorWorker.deviceInfo = info;
-	return ksceKernelSetEventFlag(motionSensorWorker.event, 1);
+	return sceKernelSetEventFlag(motionSensorWorker.event, 1);
 }
 
 int motionQueueDirectCalibration(uint32_t slot, MotionCalibrationBuffer *buffer, void (*completion)(int result, void *arg))
@@ -839,7 +839,7 @@ int motionQueueDirectCalibration(uint32_t slot, MotionCalibrationBuffer *buffer,
 	motionSensorWorker.completion = completion;
 	motionSensorWorker.calibration = buffer;
 	motionSensorWorker.calibrationSlot = slot;
-	return ksceKernelSetEventFlag(motionSensorWorker.event, 4);
+	return sceKernelSetEventFlag(motionSensorWorker.event, 4);
 }
 
 int motionQueueDirectCommand(uint32_t command, void (*completion)(int result, void *arg))
@@ -848,7 +848,7 @@ int motionQueueDirectCommand(uint32_t command, void (*completion)(int result, vo
 		return (int)0x80360001U;
 	motionSensorWorker.completion = completion;
 	motionSensorWorker.command = command;
-	return ksceKernelSetEventFlag(motionSensorWorker.event, 2);
+	return sceKernelSetEventFlag(motionSensorWorker.event, 2);
 }
 
 int motionQueueDirectSamples(SceMotionDevData *data, uint32_t mode, void (*completion)(int result, void *arg))
@@ -858,7 +858,7 @@ int motionQueueDirectSamples(SceMotionDevData *data, uint32_t mode, void (*compl
 	motionSensorWorker.completion = completion;
 	motionSensorWorker.samples = data;
 	motionSensorWorker.mode = mode;
-	return ksceKernelSetEventFlag(motionSensorWorker.event, 128);
+	return sceKernelSetEventFlag(motionSensorWorker.event, 128);
 }
 
 int motionQueueDirectStart(uint32_t mode, void (*completion)(int result, void *arg))
@@ -867,7 +867,7 @@ int motionQueueDirectStart(uint32_t mode, void (*completion)(int result, void *a
 		return (int)0x80360001U;
 	motionSensorWorker.completion = completion;
 	motionSensorWorker.mode = mode;
-	return ksceKernelSetEventFlag(motionSensorWorker.event, 8);
+	return sceKernelSetEventFlag(motionSensorWorker.event, 8);
 }
 
 int motionQueueDirectStop(void (*completion)(int result, void *arg))
@@ -876,7 +876,7 @@ int motionQueueDirectStop(void (*completion)(int result, void *arg))
 		return (int)0x80360001U;
 	motionSensorWorker.completion = completion;
 	motionSensorWorker.mode = 3;
-	return ksceKernelSetEventFlag(motionSensorWorker.event, 16);
+	return sceKernelSetEventFlag(motionSensorWorker.event, 16);
 }
 
 int motionQueueDirectSuspend(void (*completion)(int result, void *arg))
@@ -885,7 +885,7 @@ int motionQueueDirectSuspend(void (*completion)(int result, void *arg))
 		return (int)0x80360001U;
 	motionSensorWorker.completion = completion;
 	motionSensorWorker.mode = 3;
-	return ksceKernelSetEventFlag(motionSensorWorker.event, 32);
+	return sceKernelSetEventFlag(motionSensorWorker.event, 32);
 }
 
 int motionQueueDirectResume(void (*completion)(int result, void *arg))
@@ -893,5 +893,5 @@ int motionQueueDirectResume(void (*completion)(int result, void *arg))
 	if (completion == NULL)
 		return (int)0x80360001U;
 	motionSensorWorker.completion = completion;
-	return ksceKernelSetEventFlag(motionSensorWorker.event, 64);
+	return sceKernelSetEventFlag(motionSensorWorker.event, 64);
 }

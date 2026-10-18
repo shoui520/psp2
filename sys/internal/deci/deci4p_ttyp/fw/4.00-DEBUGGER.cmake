@@ -82,19 +82,19 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
 	SceDebugForKernel_3A21194E
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelCreateSema
-	ksceKernelWaitSema
-	ksceKernelCreateEventFlag
-	ksceKernelClearEventFlag
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelCreateSema
+	sceKernelWaitSema
+	sceKernelCreateEventFlag
+	sceKernelClearEventFlag
 	sceKernelIsUserModeThread
-	ksceKernelSignalSema
-	ksceKernelSetEventFlag
-	ksceKernelGetUserThreadId
-	ksceKernelCreateMutex
+	sceKernelSignalSema
+	sceKernelSetEventFlag
+	SceThreadmgrForDriver_F311808F
+	sceKernelCreateMutex
 	vfsUnlockVnode
 	ksceVfsAddVfs
 	vfsUmount
@@ -102,7 +102,7 @@ set(MODULE_IMPORT_FUNCS
 	vfsMount
 	vfsGetNewVnode
 	ScePamgrForDriver_FE9BFD27
-	ksceKernelGetThreadContextInfo
+	SceThreadmgrForKernel_6C1F092F
 	sceKernelRegisterProcEventHandler
 	ScePmMgrForDriver_2AC815A2
 	SceDipswForDriver_A98FC2FD

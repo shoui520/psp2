@@ -98,7 +98,7 @@ wait:
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 		if (running <= threshold)
 			return 0;
-		ksceKernelWaitEventFlag(state->eventFlag, 2, 5, NULL, NULL);
+		sceKernelWaitEventFlag(state->eventFlag, 2, 5, NULL, NULL);
 	}
 unlock:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
@@ -343,7 +343,7 @@ concatenate:
 		state->captureState = 0;
 notify:
 	if (state != &audioDmaStates[0])
-		ksceKernelSetEventFlag(state->eventFlag, 4);
+		sceKernelSetEventFlag(state->eventFlag, 4);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return 0;
 }
@@ -363,7 +363,7 @@ int audioDmaTransferCallback(SceKernelDmaOpId opId, unsigned int status,
 	running = (status & 1) ||
 		ksceKernelDmaOpSync(opId, 1, 0, 0) > 0;
 	state->transfers[stream].state = running;
-	ksceKernelSetEventFlag(state->eventFlag, stream + 1);
+	sceKernelSetEventFlag(state->eventFlag, stream + 1);
 	if (state == &audioDmaStates[2] && (running & (stream ^ 1)) &&
 	    state->captureState > 0) {
 		struct AudioDmaTransfer *transfer = &state->transfers[0];
@@ -507,7 +507,7 @@ notify:
 		state->registers->auxiliaryTransmitControl = 0;
 		(void)state->registers->status;
 	}
-	ksceKernelSetEventFlag(state->eventFlag, 4);
+	sceKernelSetEventFlag(state->eventFlag, 4);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return 0;
 }
@@ -771,7 +771,7 @@ queue:
 	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	while (state->pendingCaptureBuffer) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
-		ksceKernelWaitEventFlag(state->eventFlag, 4, 5, NULL, NULL);
+		sceKernelWaitEventFlag(state->eventFlag, 4, 5, NULL, NULL);
 		intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	}
 	state->pendingCaptureBuffer = buffer;
@@ -817,7 +817,7 @@ int audioQueueSingleHardwareBuffer(void *buffer, unsigned int wordCount)
 	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	while (state->pendingTransmitBuffer) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
-		ksceKernelWaitEventFlag(state->eventFlag, 1, 5, NULL, NULL);
+		sceKernelWaitEventFlag(state->eventFlag, 1, 5, NULL, NULL);
 		intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	}
 	state->pendingTransmitBuffer = buffer;
@@ -892,7 +892,7 @@ wait:
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 		if (running <= threshold)
 			return 0;
-		ksceKernelWaitEventFlag(state->eventFlag, stream + 1, 5, NULL, NULL);
+		sceKernelWaitEventFlag(state->eventFlag, stream + 1, 5, NULL, NULL);
 	}
 unlock:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
@@ -959,7 +959,7 @@ wait:
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 		if (running <= threshold)
 			return 0;
-		ksceKernelWaitEventFlag(state->eventFlag, 4, 5, NULL, NULL);
+		sceKernelWaitEventFlag(state->eventFlag, 4, 5, NULL, NULL);
 	}
 unlock:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
@@ -1282,7 +1282,7 @@ int audioInitializeSrcMix(void)
 					state->captureTags[1].pNext = SCE_KERNEL_DMAC_CHAIN_END;
 					state->captureState = 0;
 					state->previousSourceMode = -1;
-					state->eventFlag = ksceKernelCreateEventFlag(name, 0x1000, 0, NULL);
+					state->eventFlag = sceKernelCreateEventFlag(name, 0x1000, 0, NULL);
 				} else {
 					tags[0].blockSize = 0x100000;
 					tags[1].blockSize = 0x100000;
@@ -1336,8 +1336,8 @@ finalUploadError:
 				break;
 			}
 		}
-		started = ksceKernelGetSystemTimeLow();
-		while ((uint32_t)(ksceKernelGetSystemTimeLow() - started) <= 67)
+		started = SceThreadmgrForDriver_47F6DE49();
+		while ((uint32_t)(SceThreadmgrForDriver_47F6DE49() - started) <= 67)
 			;
 		{
 			int volume = channel == 1 ? audioHardwareVolume : 0x8000;
@@ -1407,8 +1407,8 @@ int audioShutdownHardware(void)
 		eventFlag = state[-1].eventFlag;
 		state[-1].previousSourceMode = -1;
 		state[-1].captureState = 0;
-		ksceKernelSetEventFlag(eventFlag, 3);
-		ksceKernelClearEventFlag(state[-1].eventFlag, ~3U);
+		sceKernelSetEventFlag(eventFlag, 3);
+		sceKernelClearEventFlag(state[-1].eventFlag, ~3U);
 	} while (state != audioDmaStates + 3);
 	return 0;
 }

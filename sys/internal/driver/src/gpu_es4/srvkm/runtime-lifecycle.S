@@ -115,7 +115,7 @@ GpuRuntimeDeviceAcquire:
 	strd sb, r4, [sp, #4]
 	ldr r0, GpuRuntimeDeviceAcquireLiteralc8
 	ldr r1, GpuRuntimeDeviceAcquireLiteralcc
-	bl ksceKernelCreateThread
+	bl sceKernelCreateThread
 	ldr r3, [sp, #0x10]
 	str r0, [r5, #0x14]
 	ldr r3, [r3, #0x14]
@@ -153,21 +153,21 @@ GpuRuntimeDeviceAcquire:
 	mov r3, r5
 	strd r6, r7, [r4, #0xc]
 	ldr r0, GpuRuntimeDeviceAcquireLiterale4
-	bl ksceKernelCreateEventFlag
+	bl sceKernelCreateEventFlag
 	ldr r3, [sp, #0x10]
 	str r0, [r4, #0x18]
 	ldrd r0, r2, [r3, #0x14]
 	cmp r2, #0
 	bge .LGpuRuntimeDeviceAcquire9c
 .LGpuRuntimeDeviceAcquire94:
-	bl ksceKernelDeleteThread
+	bl sceKernelDeleteThread
 .LGpuRuntimeDeviceAcquire98:
 	movs r0, #0x5e
 	b .LGpuRuntimeDeviceAcquireb0
 .LGpuRuntimeDeviceAcquire9c:
 	movs r1, #4
 	add r2, sp, #0x10
-	bl ksceKernelStartThread
+	bl sceKernelStartThread
 	mov r0, r6
 	bl ksceKernelEnableIntr
 	mov r0, r5
@@ -229,7 +229,7 @@ GpuRuntimeDeviceAcquire:
 	strd sb, r4, [sp, #4]
 	ldr r0, GpuRuntimeDeviceAcquireLiteralb8
 	ldr r1, GpuRuntimeDeviceAcquireLiteralbc
-	bl ksceKernelCreateThread
+	bl sceKernelCreateThread
 	ldr r3, [sp, #0x10]
 	str r0, [r5, #0x14]
 	ldr r3, [r3, #0x14]
@@ -258,19 +258,19 @@ GpuRuntimeDeviceAcquire:
 	mov r3, r5
 	strd r6, r7, [r4, #0xc]
 	ldr r0, GpuRuntimeDeviceAcquireLiteralc8
-	bl ksceKernelCreateEventFlag
+	bl sceKernelCreateEventFlag
 	ldr r3, [sp, #0x10]
 	str r0, [r4, #0x18]
 	ldrd r0, r2, [r3, #0x14]
 	cmp r2, #0
 	bge .LGpuRuntimeDeviceAcquire86
 .LGpuRuntimeDeviceAcquire80:
-	bl ksceKernelDeleteThread
+	bl sceKernelDeleteThread
 	b .LGpuRuntimeDeviceAcquire9c
 .LGpuRuntimeDeviceAcquire86:
 	movs r1, #4
 	add r2, sp, #0x10
-	bl ksceKernelStartThread
+	bl sceKernelStartThread
 	mov r0, r6
 	bl ksceKernelEnableIntr
 	mov r0, r5
@@ -320,13 +320,13 @@ GpuRuntimeDeviceRelease:
 	str r5, [r4, #0x1c]
 	movs r1, #1
 	ldr r0, [r4, #0x18]
-	bl ksceKernelSetEventFlag
+	bl sceKernelSetEventFlag
 	mov r1, r5
 	mov r2, r5
 	ldr r0, [r4, #0x14]
-	bl ksceKernelWaitThreadEnd
+	bl sceKernelWaitThreadEnd
 	ldr r0, [r4, #0x18]
-	bl ksceKernelDeleteEventFlag
+	bl sceKernelDeleteEventFlag
 	str r5, [r4, #4]
 	mov r0, r5
 	pop {r3, r4, r5, pc}
@@ -384,7 +384,7 @@ GpuRuntimeStateSignal:
 	cbz r2, .LGpuRuntimeStateSignal10
 	ldr r0, [r3, #0x18]
 	movs r1, #1
-	bl ksceKernelSetEventFlag
+	bl sceKernelSetEventFlag
 .LGpuRuntimeStateSignal10:
 	movs r0, #0
 	pop {r3, pc}
@@ -413,7 +413,7 @@ GpuRuntimeWorker:
 	mov r1, r5
 	ldr r0, [r4, #0x18]
 	movs r2, #5
-	bl ksceKernelWaitEventFlag
+	bl sceKernelWaitEventFlag
 	ldr r3, [r4, #0x1c]
 	cbz r3, .LGpuRuntimeWorker46
 	cbnz r0, .LGpuRuntimeWorker32
@@ -474,7 +474,7 @@ GpuRuntimeWorker:
 	str r3, [sp]
 	add r3, sp, #8
 	ldr r0, [r4, #0x18]
-	bl ksceKernelWaitEventFlag
+	bl sceKernelWaitEventFlag
 	ldr r3, [r4, #0x1c]
 	cbz r3, .LGpuRuntimeWorker32
 	cmp r0, #0
@@ -529,7 +529,7 @@ GpuRuntimeInterrupt:
 	ldr r3, [r4, #0x38]
 	movs r1, #1
 	ldr r0, [r3, #0x18]
-	bl ksceKernelSetEventFlag
+	bl sceKernelSetEventFlag
 .LGpuRuntimeInterrupt18:
 	mov.w r0, #-1
 	pop {r4, pc}
@@ -852,7 +852,7 @@ GpuSignalEventSet:
 	ble .LGpuSignalEventSet10
 	cbz r1, .LGpuSignalEventSet10
 	ldr r1, [r1, #0x3c]
-	bl ksceKernelSetEventFlag
+	bl sceKernelSetEventFlag
 	pop {r3, pc}
 .LGpuSignalEventSet10:
 	movs r0, #0

@@ -55,7 +55,7 @@ void RecordGpuLockup(SceGpuRegisterDump *dump, unsigned reason,
 	process = &lockupHistory->processes[processIndex];
 	recordIndex = process->recordCount & 7;
 	record = &process->records[recordIndex];
-	record->timestamp = ksceKernelGetSystemTimeWide();
+	record->timestamp = sceKernelGetSystemTimeWide();
 	record = &lockupHistory->processes[processIndex].records[recordIndex];
 	record->reason = reason;
 	sceGpuCollectFrameNumSceneIndexInfo(dump);

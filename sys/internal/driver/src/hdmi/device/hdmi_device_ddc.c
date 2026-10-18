@@ -39,10 +39,10 @@ static HdmiDdcWork ddcWork;
 int hdmiDeviceDdcInitialize(HdmiDevice *device)
 {
 	ddcWork = (HdmiDdcWork){ 0 };
-	ddcWork.eventFlag = ksceKernelCreateEventFlag("SceHdmiDeviceDdc", SCE_KERNEL_EVF_ATTR_MULTI,
+	ddcWork.eventFlag = sceKernelCreateEventFlag("SceHdmiDeviceDdc", SCE_KERNEL_EVF_ATTR_MULTI,
 						      0,
 						      &ddcWork.eventFlagOpt);
-	ddcWork.mutex = ksceKernelCreateMutex("SceHdmiDeviceDdc", 0x2002, 0, NULL);
+	ddcWork.mutex = sceKernelCreateMutex("SceHdmiDeviceDdc", 0x2002, 0, NULL);
 	if (ddcWork.mutex < 0)
 		return SCE_HDMI_ERROR_DEVICE;
 	return 0;
@@ -50,12 +50,12 @@ int hdmiDeviceDdcInitialize(HdmiDevice *device)
 
 int hdmiDeviceDdcClearAbort(HdmiDevice *device)
 {
-	return ksceKernelClearEventFlag(ddcWork.eventFlag, ~HDMI_DDC_EVENT_ABORT);
+	return sceKernelClearEventFlag(ddcWork.eventFlag, ~HDMI_DDC_EVENT_ABORT);
 }
 
 int hdmiDeviceDdcAbort(void)
 {
-	return ksceKernelSetEventFlag(ddcWork.eventFlag, HDMI_DDC_EVENT_ABORT);
+	return sceKernelSetEventFlag(ddcWork.eventFlag, HDMI_DDC_EVENT_ABORT);
 }
 
 /* Wait for one of the events in pattern and clear those that came. */
@@ -65,10 +65,10 @@ inline int hdmiDeviceDdcWaitEvent(SceUInt32 *events, SceUInt32 pattern, SceUInt3
 	int ret;
 
 	HDMI_PRINTF(HDMI_DBG_DDC, "[hdmiDDC ] ", "WaitSystemEvent Ptn:0x%08X\n", pattern);
-	ret = ksceKernelWaitEventFlag(ddcWork.eventFlag, pattern, SCE_KERNEL_EVF_WAITMODE_OR,
+	ret = sceKernelWaitEventFlag(ddcWork.eventFlag, pattern, SCE_KERNEL_EVF_WAITMODE_OR,
 				      events, timeout);
 	cleared = pattern & *events;
-	ksceKernelClearEventFlag(ddcWork.eventFlag, ~cleared);
+	sceKernelClearEventFlag(ddcWork.eventFlag, ~cleared);
 	HDMI_PRINTF(HDMI_DBG_DDC, "[hdmiDDC ] ", "Event Occure :0x%08X\n", *events);
 	HDMI_PRINTF(HDMI_DBG_DDC, "[hdmiDDC ] ", "Event Clear  :0x%08X\n", cleared);
 	return ret;
@@ -76,12 +76,12 @@ inline int hdmiDeviceDdcWaitEvent(SceUInt32 *events, SceUInt32 pattern, SceUInt3
 
 int hdmiDeviceDdcSetEvent(SceUInt32 bits)
 {
-	return ksceKernelSetEventFlag(ddcWork.eventFlag, bits);
+	return sceKernelSetEventFlag(ddcWork.eventFlag, bits);
 }
 
 int hdmiDeviceDdcClearEvent(SceUInt32 bits)
 {
-	return ksceKernelClearEventFlag(ddcWork.eventFlag, ~bits);
+	return sceKernelClearEventFlag(ddcWork.eventFlag, ~bits);
 }
 
 /*
@@ -98,7 +98,7 @@ int sceHdmiDeviceDdcRead(HdmiDevice *device, const HdmiDdcRequest *request, SceU
 
 	HDMI_PRINTF(HDMI_DBG_EDID, "[hdmiEDID] ", "sceHdmiDeviceDdcRead(block%d)\n", block);
 	waitTimeout = 0xffffffff;
-	ksceKernelLockMutex(ddcWork.mutex, 1, &waitTimeout);
+	sceKernelLockMutex(ddcWork.mutex, 1, &waitTimeout);
 	if (request->mode == HDMI_DDC_MODE_EDID &&
 	    (block == 0 ? request->size == 8 : !(block & 1))) {
 		HdmiDeviceHwSetEdidSegment(device, block >> 1);
@@ -126,7 +126,7 @@ int sceHdmiDeviceDdcRead(HdmiDevice *device, const HdmiDdcRequest *request, SceU
 	if (ret >= 0 && request->mode == HDMI_DDC_MODE_KSV_FIFO)
 		ret = HdmiDeviceAD80244ClearBksvFlag(1);
 out:
-	ksceKernelUnlockMutex(ddcWork.mutex, 1);
+	sceKernelUnlockMutex(ddcWork.mutex, 1);
 	return ret;
 }
 

@@ -55,7 +55,7 @@ void hidNotifyMouseEnumeration(void)
 		hidIsProcessStopped(entry->pid);
 		callbackId = entry->callbackId;
 		if (hidGetFlags(0x10) == 0)
-			ksceKernelNotifyCallback(callbackId, 0);
+			sceKernelNotifyCallback(callbackId, 0);
 	}
 }
 
@@ -73,7 +73,7 @@ void hidNotifyMouseRead(void)
 		if (hidIsProcessStopped(entry->pid) == 0) {
 			callbackId = entry->callbackId;
 			if (hidGetFlags(0x10) == 0)
-				ksceKernelNotifyCallback(callbackId, 0);
+				sceKernelNotifyCallback(callbackId, 0);
 		}
 	}
 }
@@ -92,7 +92,7 @@ void hidNotifyKeyboardEnumeration(void)
 		hidIsProcessStopped(entry->pid);
 		callbackId = entry->callbackId;
 		if (hidGetFlags(0x10) == 0)
-			ksceKernelNotifyCallback(callbackId, 0);
+			sceKernelNotifyCallback(callbackId, 0);
 	}
 }
 
@@ -110,7 +110,7 @@ void hidNotifyKeyboardRead(void)
 		if (hidIsProcessStopped(entry->pid) == 0) {
 			callbackId = entry->callbackId;
 			if (hidGetFlags(0x10) == 0)
-				ksceKernelNotifyCallback(callbackId, 0);
+				sceKernelNotifyCallback(callbackId, 0);
 		}
 	}
 }
@@ -129,7 +129,7 @@ void hidNotifyConsumerEnumeration(void)
 		hidIsProcessStopped(entry->pid);
 		callbackId = entry->callbackId;
 		if (hidGetFlags(0x10) == 0)
-			ksceKernelNotifyCallback(callbackId, 0);
+			sceKernelNotifyCallback(callbackId, 0);
 	}
 }
 
@@ -147,7 +147,7 @@ void hidNotifyConsumerRead(void)
 		if (hidIsProcessStopped(entry->pid) == 0) {
 			callbackId = entry->callbackId;
 			if (hidGetFlags(0x10) == 0)
-				ksceKernelNotifyCallback(callbackId, 0);
+				sceKernelNotifyCallback(callbackId, 0);
 		}
 	}
 }
@@ -208,7 +208,7 @@ int ksceHidMouseRegisterEnumHintCallback(SceUID callbackId)
 		entry->pid = SCE_KERNEL_PROCESS_ID;
 		hidMouseCallbacks.enumeration.link.prev = &entry->link;
 		if (hidGetFlags(0x10) == 0)
-			ksceKernelNotifyCallback(callbackId, 0);
+			sceKernelNotifyCallback(callbackId, 0);
 	}
 unlock:
 	hidUnlock();
@@ -249,7 +249,7 @@ int sceHidMouseRegisterEnumHintCallback(SceUID callbackId)
 			entry->pid = pid;
 			hidMouseCallbacks.enumeration.link.prev = &entry->link;
 			if (hidGetFlags(0x10) == 0)
-				ksceKernelNotifyCallback(kernelId, 0);
+				sceKernelNotifyCallback(kernelId, 0);
 		}
 unlock:
 		hidUnlock();
@@ -341,7 +341,7 @@ int ksceHidMouseRegisterReadHintCallback(SceUID callbackId)
 		entry->pid = SCE_KERNEL_PROCESS_ID;
 		hidMouseCallbacks.read.link.prev = &entry->link;
 		if (hidGetFlags(0x10) == 0)
-			ksceKernelNotifyCallback(callbackId, 0);
+			sceKernelNotifyCallback(callbackId, 0);
 	}
 unlock:
 	hidUnlock();
@@ -382,7 +382,7 @@ int sceHidMouseRegisterReadHintCallback(SceUID callbackId)
 			entry->pid = pid;
 			hidMouseCallbacks.read.link.prev = &entry->link;
 			if (hidGetFlags(0x10) == 0)
-				ksceKernelNotifyCallback(kernelId, 0);
+				sceKernelNotifyCallback(kernelId, 0);
 		}
 unlock:
 		hidUnlock();
@@ -474,7 +474,7 @@ int ksceHidKeyboardRegisterEnumHintCallback(SceUID callbackId)
 		entry->pid = SCE_KERNEL_PROCESS_ID;
 		hidKeyboardCallbacks.enumeration.link.prev = &entry->link;
 		if (hidGetFlags(0x10) == 0)
-			ksceKernelNotifyCallback(callbackId, 0);
+			sceKernelNotifyCallback(callbackId, 0);
 	}
 unlock:
 	hidUnlock();
@@ -515,7 +515,7 @@ int sceHidKeyboardRegisterEnumHintCallback(SceUID callbackId)
 			entry->pid = pid;
 			hidKeyboardCallbacks.enumeration.link.prev = &entry->link;
 			if (hidGetFlags(0x10) == 0)
-				ksceKernelNotifyCallback(kernelId, 0);
+				sceKernelNotifyCallback(kernelId, 0);
 		}
 unlock:
 		hidUnlock();
@@ -609,7 +609,7 @@ int ksceHidKeyboardRegisterReadHintCallback(SceUID callbackId)
 		entry->pid = SCE_KERNEL_PROCESS_ID;
 		hidKeyboardCallbacks.read.link.prev = &entry->link;
 		if (hidGetFlags(0x10) == 0)
-			ksceKernelNotifyCallback(callbackId, 0);
+			sceKernelNotifyCallback(callbackId, 0);
 	}
 unlock:
 	hidUnlock();
@@ -650,7 +650,7 @@ int sceHidKeyboardRegisterReadHintCallback(SceUID callbackId)
 			entry->pid = pid;
 			hidKeyboardCallbacks.read.link.prev = &entry->link;
 			if (hidGetFlags(0x10) == 0)
-				ksceKernelNotifyCallback(kernelId, 0);
+				sceKernelNotifyCallback(kernelId, 0);
 		}
 unlock:
 		hidUnlock();
@@ -742,7 +742,7 @@ int ksceHidConsumerControlRegisterEnumHintCallback(SceUID callbackId)
 		entry->pid = SCE_KERNEL_PROCESS_ID;
 		hidConsumerCallbacks.enumeration.link.prev = &entry->link;
 		if (hidGetFlags(0x10) == 0)
-			ksceKernelNotifyCallback(callbackId, 0);
+			sceKernelNotifyCallback(callbackId, 0);
 	}
 unlock:
 	hidUnlock();
@@ -783,7 +783,7 @@ int sceHidConsumerControlRegisterEnumHintCallback(SceUID callbackId)
 			entry->pid = pid;
 			hidConsumerCallbacks.enumeration.link.prev = &entry->link;
 			if (hidGetFlags(0x10) == 0)
-				ksceKernelNotifyCallback(kernelId, 0);
+				sceKernelNotifyCallback(kernelId, 0);
 		}
 unlock:
 		hidUnlock();
@@ -875,7 +875,7 @@ int ksceHidConsumerControlRegisterReadHintCallback(SceUID callbackId)
 		entry->pid = SCE_KERNEL_PROCESS_ID;
 		hidConsumerCallbacks.read.link.prev = &entry->link;
 		if (hidGetFlags(0x10) == 0)
-			ksceKernelNotifyCallback(callbackId, 0);
+			sceKernelNotifyCallback(callbackId, 0);
 	}
 unlock:
 	hidUnlock();
@@ -916,7 +916,7 @@ int sceHidConsumerControlRegisterReadHintCallback(SceUID callbackId)
 			entry->pid = pid;
 			hidConsumerCallbacks.read.link.prev = &entry->link;
 			if (hidGetFlags(0x10) == 0)
-				ksceKernelNotifyCallback(kernelId, 0);
+				sceKernelNotifyCallback(kernelId, 0);
 		}
 unlock:
 		hidUnlock();

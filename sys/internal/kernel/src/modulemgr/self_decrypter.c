@@ -250,7 +250,7 @@ int selfDecrypterWaitBlock(int slot)
 {
 	int ret;
 
-	ret = ksceKernelWaitEventFlag(g_commEvf, SELF_EVF_DONE, 5, NULL, NULL);
+	ret = sceKernelWaitEventFlag(g_commEvf, SELF_EVF_DONE, 5, NULL, NULL);
 	return ret < 0 ? ret : g_slot[slot].result;
 }
 
@@ -263,8 +263,8 @@ void *selfDecrypterRefill(SelfInflateStream *stream)
 
 	g_slot[stream->slot].result = 0;
 	g_slot[stream->slot].state = 3;
-	ksceKernelSetEventFlag(g_commEvf, SELF_EVF_DONE);
-	ksceKernelWaitEventFlag(g_commEvf, SELF_EVF_SLOT0 | SELF_EVF_SLOT1,
+	sceKernelSetEventFlag(g_commEvf, SELF_EVF_DONE);
+	sceKernelWaitEventFlag(g_commEvf, SELF_EVF_SLOT0 | SELF_EVF_SLOT1,
 				5, &bits, NULL);
 	g_stream.slot = (bits & SELF_EVF_SLOT0) ^ 1;
 	slot = &g_slot[g_stream.slot];
@@ -292,7 +292,7 @@ int selfDecrypter_thread_entry(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 	for (;;) {
-		ksceKernelWaitEventFlag(g_commEvf, SELF_EVF_SLOT0 | SELF_EVF_SLOT1,
+		sceKernelWaitEventFlag(g_commEvf, SELF_EVF_SLOT0 | SELF_EVF_SLOT1,
 					5, &bits, NULL);
 		slot = &g_slot[(bits & SELF_EVF_SLOT0) ^ 1];
 		if (slot->state < 0) {
@@ -347,13 +347,13 @@ int selfDecrypter_thread_entry(SceSize args, void *argp)
 		}
 complete:
 		slot->result = ret;
-		ksceKernelSetEventFlag(g_commEvf, SELF_EVF_DONE);
+		sceKernelSetEventFlag(g_commEvf, SELF_EVF_DONE);
 	}
 }
 
 int SelfDecrypterSuspend(SceUInt32 mask)
 {
-	return ksceKernelChangeThreadCpuAffinityMask(g_decrypterThread, mask);
+	return sceKernelChangeThreadCpuAffinityMask(g_decrypterThread, mask);
 }
 
 int SelfDecrypterInit(void)
@@ -362,19 +362,19 @@ int SelfDecrypterInit(void)
 
 	g_slot[1].buf = g_buffer[1];
 	g_slot[0].buf = g_buffer[0];
-	ret = ksceKernelCreateEventFlag("SceModuleMgrSelfDecryptComm", 0x3000, SELF_EVF_UNLOCKED,
+	ret = sceKernelCreateEventFlag("SceModuleMgrSelfDecryptComm", 0x3000, SELF_EVF_UNLOCKED,
 					NULL);
 	g_commEvf = ret;
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelCreateThread("SceModuleMgrSelfDecrypter", selfDecrypter_thread_entry, 0x6e,
+	ret = sceKernelCreateThread("SceModuleMgrSelfDecrypter", selfDecrypter_thread_entry, 0x6e,
 				     0x1000, 0, 0xf, NULL);
 	g_decrypterThread = ret;
 	if (ret < 0)
 		return ret;
 	g_stream.refill = selfDecrypterRefill;
 	g_stream.flags = 0x10;
-	return ksceKernelStartThread(ret, 0, NULL);
+	return sceKernelStartThread(ret, 0, NULL);
 }
 
 int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTiming *timing)
@@ -415,10 +415,10 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 		g_reader = reader;
 		g_destination = dst;
 		g_segmentSize = length;
-		ksceKernelSetEventFlag(g_commEvf, SELF_EVF_SLOT1);
+		sceKernelSetEventFlag(g_commEvf, SELF_EVF_SLOT1);
 #if FW_DEBUG
 		if (timing != NULL)
-			start = ksceKernelGetSystemTimeLow();
+			start = SceThreadmgrForDriver_47F6DE49();
 #endif
 		for (;;) {
 			next = previous ^ 1;
@@ -429,7 +429,7 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 			g_slot[next].size = chunk;
 #if FW_DEBUG
 			if (timing != NULL)
-				readStart = ksceKernelGetSystemTimeLow();
+				readStart = SceThreadmgrForDriver_47F6DE49();
 #endif
 			bytesRead = ksceIoRead(reader->fd, g_slot[next].buf, chunk);
 			if ((SceSize)bytesRead != chunk) {
@@ -442,7 +442,7 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 			}
 #if FW_DEBUG
 			if (timing != NULL)
-				timing->readUsec += ksceKernelGetSystemTimeLow() - readStart;
+				timing->readUsec += SceThreadmgrForDriver_47F6DE49() - readStart;
 #endif
 			g_slot[next].state = 1;
 			if (g_slot[previous].state == 2) {
@@ -455,10 +455,10 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 			ret = selfDecrypterWaitBlock(previous);
 			if (ret < 0)
 				return ret;
-			ksceKernelSetEventFlag(g_commEvf, next + 1);
+			sceKernelSetEventFlag(g_commEvf, next + 1);
 			if (timing != NULL && timing->path != NULL) {
 				timing->loadedSize += chunk;
-				now = ksceKernelGetSystemTimeLow();
+				now = SceThreadmgrForDriver_47F6DE49();
 				if (now - timing->start > 1000000 ||
 				    (timing->loadedSize >= timing->totalSize && consumed >= length)) {
 					percent = (SceUInt64)timing->loadedSize * 100 / timing->totalSize;
@@ -480,7 +480,7 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 	finish:
 #if FW_DEBUG
 		if (timing != NULL)
-			timing->loadUsec += ksceKernelGetSystemTimeLow() - start;
+			timing->loadUsec += SceThreadmgrForDriver_47F6DE49() - start;
 #endif
 		return ret;
 	}
@@ -491,7 +491,7 @@ void SelfDecrypterLock(void)
 {
 	int ret;
 
-	ret = ksceKernelWaitEventFlag(g_commEvf, SELF_EVF_UNLOCKED, 5, NULL, NULL);
+	ret = sceKernelWaitEventFlag(g_commEvf, SELF_EVF_UNLOCKED, 5, NULL, NULL);
 	SCE_DBG_ASSERT_LEVEL(0, ret == 0, 428);
 	(void)ret;
 }
@@ -500,7 +500,7 @@ void SelfDecrypterUnlock(void)
 {
 	int ret;
 
-	ret = ksceKernelSetEventFlag(g_commEvf, SELF_EVF_UNLOCKED);
+	ret = sceKernelSetEventFlag(g_commEvf, SELF_EVF_UNLOCKED);
 	SCE_DBG_ASSERT_LEVEL(0, ret == 0, 435);
 	(void)ret;
 }

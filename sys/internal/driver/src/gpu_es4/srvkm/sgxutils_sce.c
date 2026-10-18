@@ -222,7 +222,7 @@ PVRSRV_ERROR SGXCleanupRequest(PVRSRV_DEVICE_NODE *psDeviceNode,
 		goto complete;
 	pid = GetRemoteAllocProcess();
 	LinuxUnLockMutex(&gPVRSRVLock);
-	lockResult = ksceKernelLockMutex(gSGXCleanupMutex, 1, NULL);
+	lockResult = sceKernelLockMutex(gSGXCleanupMutex, 1, NULL);
 	LinuxLockMutexForPid(&gPVRSRVLock, pid);
 	if (lockResult < 0)
 		return PVRSRV_ERROR_UNABLE_TO_LOCK_RESOURCE;
@@ -231,7 +231,7 @@ PVRSRV_ERROR SGXCleanupRequest(PVRSRV_DEVICE_NODE *psDeviceNode,
 	eError = SGXScheduleCCBCommandKM(psDeviceNode, SGXMKIF_CMD_CLEANUP,
 			&sCommand, 0xffffffffU, 0, NULL, IMG_FALSE);
 	if (eError != PVRSRV_OK) {
-		ksceKernelUnlockMutex(gSGXCleanupMutex, 1);
+		sceKernelUnlockMutex(gSGXCleanupMutex, 1);
 		return eError;
 	}
 	LinuxUnLockMutex(&gPVRSRVLock);
@@ -239,7 +239,7 @@ PVRSRV_ERROR SGXCleanupRequest(PVRSRV_DEVICE_NODE *psDeviceNode,
 			5000000, 1000, IMG_TRUE) == PVRSRV_OK ?
 		PVRSRV_OK : PVRSRV_ERROR_TIMEOUT;
 	LinuxLockMutexForPid(&gPVRSRVLock, pid);
-	ksceKernelUnlockMutex(gSGXCleanupMutex, 1);
+	sceKernelUnlockMutex(gSGXCleanupMutex, 1);
 	if (eError != PVRSRV_OK)
 		return eError;
 complete:
@@ -465,6 +465,6 @@ PVRSRV_ERROR SGXSetRenderContextPriorityKM(IMG_HANDLE hHWRenderContext,
 
 SceUID SGXCleanupMutexInit(IMG_VOID)
 {
-	gSGXCleanupMutex = ksceKernelCreateMutex("SceGpuCleanupMutex", 0, 0, NULL);
+	gSGXCleanupMutex = sceKernelCreateMutex("SceGpuCleanupMutex", 0, 0, NULL);
 	return gSGXCleanupMutex;
 }

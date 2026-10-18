@@ -293,21 +293,21 @@ static inline int _setRegValue(int id, SceUInt8 value)
 
 int _intrTxReady(SceUInt32 status)
 {
-	ksceKernelSetEventFlag(cecDev.eventFlag, CEC_DEV_EVENT_TX_READY);
+	sceKernelSetEventFlag(cecDev.eventFlag, CEC_DEV_EVENT_TX_READY);
 	_setRegValue(CEC_REG_INTR_TX_READY, 1);
 	return 0;
 }
 
 int _intrTxArbitration(SceUInt32 status)
 {
-	ksceKernelSetEventFlag(cecDev.eventFlag, CEC_DEV_EVENT_TX_ARBITRATION);
+	sceKernelSetEventFlag(cecDev.eventFlag, CEC_DEV_EVENT_TX_ARBITRATION);
 	_setRegValue(CEC_REG_INTR_TX_ARBITRATION, 1);
 	return 0;
 }
 
 int _intrTxRetryTimeout(SceUInt32 status)
 {
-	ksceKernelSetEventFlag(cecDev.eventFlag, CEC_DEV_EVENT_TX_RETRY_TIMEOUT);
+	sceKernelSetEventFlag(cecDev.eventFlag, CEC_DEV_EVENT_TX_RETRY_TIMEOUT);
 	_setRegValue(CEC_REG_INTR_TX_RETRY_TIMEOUT, 1);
 	return 0;
 }
@@ -352,7 +352,7 @@ int cecDevInitialize(const CecDevCallbacks *callbacks)
 	cecDev.physicalAddress[0] = 0xff;
 	cecDev.physicalAddress[1] = 0xff;
 	cecDev.available = 1;
-	eventFlag = ksceKernelCreateEventFlag("SceHdmiCECDev", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
+	eventFlag = sceKernelCreateEventFlag("SceHdmiCECDev", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (eventFlag < 0) {
 		SCE_DBG_ASSERT_FAIL(954);
 		return eventFlag;
@@ -538,7 +538,7 @@ int cecDevTx(const SceUInt8 *frame, SceUInt32 length)
 	if (ret < 0)
 		return ret;
 	timeout = CEC_DEV_TX_TIMEOUT;
-	ret = ksceKernelWaitEventFlag(cecDev.eventFlag, CEC_DEV_EVENT_TX_READY |
+	ret = sceKernelWaitEventFlag(cecDev.eventFlag, CEC_DEV_EVENT_TX_READY |
 				      CEC_DEV_EVENT_TX_RETRY_TIMEOUT | CEC_DEV_EVENT_TX_ARBITRATION,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL, &events, &timeout);

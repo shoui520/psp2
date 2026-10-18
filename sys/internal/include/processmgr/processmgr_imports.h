@@ -65,19 +65,6 @@ int sceKernelThreadMgrProcessCreate(void *process);
 int sceKernelGetDefaultCpuAffinityMask(void *budget);
 
 /* SceThreadmgrForDriver */
-int ksceKernelStartThread(SceUID thid, SceSize arglen, void *argp);
-int ksceKernelGetThreadInfo(SceUID thid, void *info);
-int SceThreadmgrForDriver_33E85E9E(void *info);
-int ksceKernelWaitThreadEnd(SceUID thid, int *stat, SceUInt32 *timeout);
-SceUID ksceKernelGetThreadId(void);
-int ksceKernelChangeThreadPriority(SceUID thid, int priority);
-int ksceKernelDeleteThread(SceUID thid);
-SceUID ksceKernelCreateThread(const char *name, int (*entry)(SceSize args, void *argp),
-			      int priority, SceSize stackSize, SceUInt32 attr, int cpuAffinity,
-			      void *opt);
-SceUID SceThreadmgrForDriver_C8E57BB4(SceUID pid, const char *name, void *entry, int priority,
-				      SceSize stackSize, SceUInt32 attr, int cpuAffinity,
-				      void *opt);		/* sceKernelCreateRemoteThread */
 
 /* SceSysmemForKernel / SceSysmemForDriver */
 

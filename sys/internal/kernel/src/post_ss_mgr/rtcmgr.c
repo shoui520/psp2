@@ -62,7 +62,7 @@ int _sceSblRtcMgrSetCpRtc(SceUInt32 time, int physical, const void *key)	/* name
 	SceKernelSuspendForDriver_2BB92967(0);
 	if (ret != 0)
 		return SCE_SBL_ERROR_RTC_CP_VERSION;
-	ret = ksceKernelLockMutex(g_rtcMgrCpMutex, 1, NULL);
+	ret = sceKernelLockMutex(g_rtcMgrCpMutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	SceKernelSuspendForDriver_4DF40893(0);
@@ -71,7 +71,7 @@ int _sceSblRtcMgrSetCpRtc(SceUInt32 time, int physical, const void *key)	/* name
 	else if (version >= RTC_CP_KEY_VERSION)
 		SceDeci4pCpupForDriver_4939DA45(time, physical, key);
 	SceKernelSuspendForDriver_2BB92967(0);
-	return ksceKernelUnlockMutex(g_rtcMgrCpMutex, 1);
+	return sceKernelUnlockMutex(g_rtcMgrCpMutex, 1);
 }
 
 int rtcMgrSetCpActivationKey(void)	/* name unknown */
@@ -140,7 +140,7 @@ int rtcMgrGetCpSerialId(void *serialId)	/* name unknown */
 
 int sceSblRtcMgrInit(void)
 {
-	g_rtcMgrCpMutex = ksceKernelCreateMutex("SceSblRtcmgrCp", 0, 0, NULL);
+	g_rtcMgrCpMutex = sceKernelCreateMutex("SceSblRtcmgrCp", 0, 0, NULL);
 	return g_rtcMgrCpMutex >> 31;
 }
 

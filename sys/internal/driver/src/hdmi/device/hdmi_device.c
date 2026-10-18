@@ -105,7 +105,7 @@ static const HdmiIntrHandler intrHandlers[6] = {
 /* "SceHdmiIntr": wakes the interrupt thread. */
 static int intrHandler(void *subintrArg, void *registerArg, unsigned char priority)
 {
-	ksceKernelSetEventFlag(intrWork.eventFlag, HDMI_INTR_EVENT_INTR);
+	sceKernelSetEventFlag(intrWork.eventFlag, HDMI_INTR_EVENT_INTR);
 	return -2;
 }
 
@@ -214,13 +214,13 @@ static inline void lock(void)
 {
 	SceUInt32 timeout = 0xffffffff;
 
-	if (ksceKernelLockMutex(intrWork.mutex, 1, &timeout) != 0)
+	if (sceKernelLockMutex(intrWork.mutex, 1, &timeout) != 0)
 		SCE_DBG_ASSERT_LEVEL_FUNC(0, 0, 152, "lock");
 }
 
 static inline void unlock(void)
 {
-	ksceKernelUnlockMutex(intrWork.mutex, 1);
+	sceKernelUnlockMutex(intrWork.mutex, 1);
 }
 
 /* "SceHdmiDeviceIntr": runs the handlers of the interrupts that are raised. */
@@ -234,10 +234,10 @@ static int intrThread(SceSize args, void *argp)
 	HDMI_ITRS_PRINTF("[hdmiITRS]  *** Interrupt Task Wake Up ***\n");
 	do {
 		for (;;) {
-			ksceKernelWaitEventFlag(intrWork.eventFlag,
+			sceKernelWaitEventFlag(intrWork.eventFlag,
 						HDMI_INTR_EVENT_INTR | HDMI_INTR_EVENT_EXIT,
 						SCE_KERNEL_EVF_WAITMODE_OR, &bits, NULL);
-			ksceKernelClearEventFlag(intrWork.eventFlag, ~bits);
+			sceKernelClearEventFlag(intrWork.eventFlag, ~bits);
 			if (bits & HDMI_INTR_EVENT_EXIT) {
 				sceKernelExitThread(0);
 				return 0;
@@ -335,20 +335,20 @@ int _sceHdmiDeviceModuleStart(void)
 		return 2;
 	}
 	intrWork = (HdmiIntrWork){ 0 };
-	ret = ksceKernelCreateMutex("SceHdmiDeviceIntr", 0x2002, 0, NULL);
+	ret = sceKernelCreateMutex("SceHdmiDeviceIntr", 0x2002, 0, NULL);
 	if (ret < 0)
 		goto error;
 	intrWork.mutex = ret;
-	intrWork.eventFlag = ksceKernelCreateEventFlag("SceHdmiDeviceIntr",
+	intrWork.eventFlag = sceKernelCreateEventFlag("SceHdmiDeviceIntr",
 						       SCE_KERNEL_EVF_ATTR_MULTI, 0,
 						       &intrWork.eventFlagOpt);
 	intrWork.threadOpt.size = 8;
-	ret = ksceKernelCreateThread("SceHdmiDeviceIntr", intrThread, 0x19, 0x2000, 0x10000000,
+	ret = sceKernelCreateThread("SceHdmiDeviceIntr", intrThread, 0x19, 0x2000, 0x10000000,
 				     0x80000, (SceKernelThreadOptParam *)&intrWork.threadOpt);
 	if (ret < 0)
 		goto error;
 	intrWork.thread = ret;
-	if (ksceKernelStartThread(ret, 0, NULL) < 0)
+	if (sceKernelStartThread(ret, 0, NULL) < 0)
 		goto error;
 	if (ksceGpioSetPortMode(0, HDMI_INTR_GPIO_PORT, 1) < 0)
 		goto error;

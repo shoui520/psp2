@@ -191,7 +191,7 @@ int sceKernelPaAddCounterTraceForUser(const struct PamgrCounterTraceConfig *conf
 
 	if (config == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	permission = ksceKernelSetPermission(PAMGR_ACCESS_LEVEL);
+	permission = sceKernelSetThreadAccessLevel(PAMGR_ACCESS_LEVEL);
 	if (permission < 0) {
 		SCE_DBG_PRINTF(0, 2449,
 			"[Error]  sceKernelSetThreadAccessLevel(ret = 0x%08x)\n",
@@ -199,7 +199,7 @@ int sceKernelPaAddCounterTraceForUser(const struct PamgrCounterTraceConfig *conf
 		return permission;
 	}
 	result = configureCounterTrace(config);
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }
 
@@ -1469,13 +1469,13 @@ int initializeTraceHardware(void)
 	pfm->traceConfigHalf = 0;
 	pfm->traceConfig = 0;
 	pfm->traceControl = PFM_TRACE_ENABLED;
-	affinity = ksceKernelGetThreadCpuAffinityMask(0);
+	affinity = sceKernelGetThreadCpuAffinityMask(0);
 	for (i = 0; i < 4; i++) {
-		ksceKernelChangeThreadCpuAffinityMask(0, 1 << i);
+		sceKernelChangeThreadCpuAffinityMask(0, 1 << i);
 		/* Each core's PMCR requires an actual privileged CP15 write. */
 		writePmcr(control);
 	}
-	ksceKernelChangeThreadCpuAffinityMask(0, affinity);
+	sceKernelChangeThreadCpuAffinityMask(0, affinity);
 	SceSysrootForDriver_C94C76FA(&provider);
 	SceKernelSuspendForDriver_CE7A2207(0xb, suspendTraceHardware, NULL);
 	SceKernelSuspendForDriver_105C5752(0xb, resumeTraceHardware, NULL);

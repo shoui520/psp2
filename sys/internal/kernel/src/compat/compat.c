@@ -285,7 +285,7 @@ int compatReturnIntrHandler(int intrcode, void *context)
 	SceUID sema = (SceUID)context;
 	int result;
 
-	result = ksceKernelSignalSema(sema, 1);
+	result = sceKernelSignalSema(sema, 1);
 	if (result)
 		SCE_DBG_PRINTF(0, 392,
 			"Failed to signal(error=0x%08x), intrcode [%d](ret)\n",
@@ -322,7 +322,7 @@ int compatCallIntrHandler(int intrcode, void *context)
 	} else {
 		queue->overflow = 1;
 	}
-	result = ksceKernelSignalSema(gCompatHandlerSema[queueId], 1);
+	result = sceKernelSignalSema(gCompatHandlerSema[queueId], 1);
 #if FW_DEBUG
 	if (result)
 		SCE_DBG_PRINTF(0, 373,
@@ -336,7 +336,7 @@ int compatUnlockMutex(void)
 {
 	int result;
 
-	result = ksceKernelUnlockMutex(gCompatMutex, 1);
+	result = sceKernelUnlockMutex(gCompatMutex, 1);
 	return result < 0 ? result : 0;
 }
 
@@ -387,7 +387,7 @@ int compatEnterRunningState(void)
 	result = ksceNpDrmReadActData(&gCompatActivationData);
 	if (result < 0 && !SceSblAIMgrForDriver_F4B98F66())
 		return result;
-	if (!ksceKernelRunWithStack(0x4000, compatCheckRif, NULL) &&
+	if (!SceThreadmgrForDriver_E54FD746(0x4000, compatCheckRif, NULL) &&
 		!SceSblAIMgrForDriver_F4B98F66())
 		return (int)0x8001000d;
 	if (ksceDisplayGetPrimaryHead() == 1) {
@@ -488,7 +488,7 @@ int compatProcessKillHandler(SceUID pid, ProcEventParam *param,
 		{
 			SceUInt timeout = 5000000;
 
-			ksceKernelLockMutex(gCompatMutex, 1, &timeout);
+			sceKernelLockMutex(gCompatMutex, 1, &timeout);
 		}
 		if (gCompatState == 2) {
 			int (*volatile deci2pAvailable)(void *, void *, SceSize);
@@ -503,7 +503,7 @@ int compatProcessKillHandler(SceUID pid, ProcEventParam *param,
 		gCompatRequestsEnabled = 0;
 		gCompatState = 1;
 		kscePowerSetCompatClockFrequency(0);
-		ksceKernelUnlockMutex(gCompatMutex, 1);
+		sceKernelUnlockMutex(gCompatMutex, 1);
 		memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 		gCompatMainDdr = NULL;
 		group = gCompatMemoryBlocks;
@@ -541,7 +541,7 @@ int compatProcessExitHandler(SceUID pid, ProcEventParam *param,
 		{
 			SceUInt timeout = 5000000;
 
-			ksceKernelLockMutex(gCompatMutex, 1, &timeout);
+			sceKernelLockMutex(gCompatMutex, 1, &timeout);
 		}
 		if (gCompatState == 2) {
 			int (*volatile deci2pAvailable)(void *, void *, SceSize);
@@ -556,7 +556,7 @@ int compatProcessExitHandler(SceUID pid, ProcEventParam *param,
 		gCompatRequestsEnabled = 0;
 		gCompatState = 1;
 		kscePowerSetCompatClockFrequency(0);
-		ksceKernelUnlockMutex(gCompatMutex, 1);
+		sceKernelUnlockMutex(gCompatMutex, 1);
 		memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 		gCompatMainDdr = NULL;
 		group = gCompatMemoryBlocks;
@@ -658,21 +658,21 @@ int module_start(SceSize arglen, const void *argp)
 		goto cleanup;
 	mutexOpt.size = sizeof(mutexOpt);
 	mutexOpt.ceilingPriority = 32;
-	gCompatMutex = ksceKernelCreateMutex("SceCompat", 4, 0, &mutexOpt);
+	gCompatMutex = sceKernelCreateMutex("SceCompat", 4, 0, &mutexOpt);
 	if (gCompatMutex < 0 ||
-		(gCompatExitMutex = ksceKernelCreateMutex("SceCompatExitCheck",
+		(gCompatExitMutex = sceKernelCreateMutex("SceCompatExitCheck",
 			0, 0, NULL)) < 0) {
 		SceProcEventForDriver_3DED57CC(procHandler);
 		goto cleanup;
 	}
-	result = ksceKernelCreateSema("SceCompatVirtualHandler", 0xa000,
+	result = sceKernelCreateSema("SceCompatVirtualHandler", 0xa000,
 		1, 1, NULL);
 	if (result < 0)
 		goto cleanup;
 	gCompatHandlerSema[0] = result;
 	for (i = 1; i != 16; ++i) {
 		snprintf(name, sizeof(name), "SceCompatHandler%d", i);
-		result = ksceKernelCreateSema(name, 0x8000, 0, 0x7fffffff, NULL);
+		result = sceKernelCreateSema(name, 0x8000, 0, 0x7fffffff, NULL);
 		if (result < 0)
 			goto cleanup;
 		gCompatHandlerSema[i] = result;
@@ -685,7 +685,7 @@ int module_start(SceSize arglen, const void *argp)
 			config->target_cpu, &gCompatInterruptOptions) ||
 			ksceKernelEnableIntr(config->intrcode))
 			goto cleanup;
-		result = ksceKernelCreateSema(config[3].name, 0x8000, 1, 1, NULL);
+		result = sceKernelCreateSema(config[3].name, 0x8000, 1, 1, NULL);
 		if (result < 0)
 			goto cleanup;
 		*sema++ = result;
@@ -706,14 +706,14 @@ cleanup:
 	do {
 		result = *sema++;
 		if (result > 0)
-			ksceKernelDeleteSema(result);
+			sceKernelDeleteSema(result);
 	} while (sema != gCompatHandlerSema + 16);
 	sema = gCompatReturnSema;
 	config = gCompatInterruptConfig;
 	do {
 		result = *sema++;
 		if (result > 0)
-			ksceKernelDeleteSema(result);
+			sceKernelDeleteSema(result);
 		ksceKernelReleaseIntrHandler(config->intrcode);
 		++config;
 		ksceKernelReleaseIntrHandler(config[2].intrcode);
@@ -911,7 +911,7 @@ int compatStart(void)
 		{
 			SceUInt timeout = 5000000;
 
-			ksceKernelLockMutex(gCompatMutex, 1, &timeout);
+			sceKernelLockMutex(gCompatMutex, 1, &timeout);
 		}
 		if (gCompatState == 2) {
 			int (*volatile deci2pAvailable)(void *, void *, SceSize);
@@ -926,7 +926,7 @@ int compatStart(void)
 		gCompatRequestsEnabled = 0;
 		gCompatState = 1;
 		kscePowerSetCompatClockFrequency(0);
-		ksceKernelUnlockMutex(gCompatMutex, 1);
+		sceKernelUnlockMutex(gCompatMutex, 1);
 		memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 		return result;
 	}
@@ -940,7 +940,7 @@ int compatStop(void)
 	{
 		SceUInt timeout = 5000000;
 
-		ksceKernelLockMutex(gCompatMutex, 1, &timeout);
+		sceKernelLockMutex(gCompatMutex, 1, &timeout);
 	}
 	if (gCompatState == 2) {
 		int (*volatile deci2pAvailable)(void *, void *, SceSize);
@@ -955,7 +955,7 @@ int compatStop(void)
 	gCompatRequestsEnabled = 0;
 	gCompatState = 1;
 	kscePowerSetCompatClockFrequency(0);
-	ksceKernelUnlockMutex(gCompatMutex, 1);
+	sceKernelUnlockMutex(gCompatMutex, 1);
 	memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 	return result;
 }
@@ -982,11 +982,11 @@ int compatWaitAndGetRequest(int mode, int id)
 		goto invalid;
 	if ((unsigned int)id > 2)
 		goto invalid;
-	result = ksceKernelWaitSema(gCompatHandlerSema[mode], 1, NULL);
+	result = sceKernelWaitSema(gCompatHandlerSema[mode], 1, NULL);
 	if (result < 0)
 		goto out;
 	timeout = 5000000;
-	if (ksceKernelLockMutex(gCompatMutex, 1, &timeout) < 0) {
+	if (sceKernelLockMutex(gCompatMutex, 1, &timeout) < 0) {
 		result = (int)0x80028005;
 		goto out;
 	}
@@ -998,7 +998,7 @@ int compatWaitAndGetRequest(int mode, int id)
 	queue->readIndex = (readIndex + 1) & 15;
 	if (!count) {
 		sceKernelCpuResumeIntr(intrState);
-		ksceKernelUnlockMutex(gCompatMutex, 1);
+		sceKernelUnlockMutex(gCompatMutex, 1);
 		result = (int)0x80010016;
 		goto out;
 	}
@@ -1017,7 +1017,7 @@ int compatWaitAndGetRequest(int mode, int id)
 		queue->overflow = 0;
 	}
 	sceKernelCpuResumeIntr(intrState);
-	ksceKernelUnlockMutex(gCompatMutex, 1);
+	sceKernelUnlockMutex(gCompatMutex, 1);
 	SceCpuForDriver_8B4C26DF(
 		(char *)gCompatMainDdr + (request & 0x3ffffff), 128);
 	__asm__ volatile("dsb sy" ::: "memory");
@@ -1056,16 +1056,16 @@ int compatWaitSpecialRequest(int mode)
 				goto terminated;
 		}
 		timeout = 5000000;
-		result = ksceKernelLockMutex(gCompatMutex, 1, &timeout);
+		result = sceKernelLockMutex(gCompatMutex, 1, &timeout);
 		if (result < 0)
 			goto timedOut;
 		result = compatSecureResume();
 		if (result != 0) {
-			ksceKernelUnlockMutex(gCompatMutex, 1);
+			sceKernelUnlockMutex(gCompatMutex, 1);
 			goto out;
 		}
 		gCompatRequestsEnabled = 1;
-		ksceKernelUnlockMutex(gCompatMutex, 1);
+		sceKernelUnlockMutex(gCompatMutex, 1);
 		for (intrcode = 64; intrcode != 96; ++intrcode) {
 			if (intrcode != 65 && intrcode != 78)
 				gCompatMailbox->enableInterrupt[intrcode - 64] = ~0U;
@@ -1113,11 +1113,11 @@ int compatWaitSpecialRequest(int mode)
 	start = ksceKernelGetProcessTimeWideCore();
 	while (state != 1) {
 		sceKernelDelayThread(100);
-		result = ksceKernelLockMutex(gCompatExitMutex, 1, NULL);
+		result = sceKernelLockMutex(gCompatExitMutex, 1, NULL);
 		if (result < 0)
 			goto out;
 		if (!gCompatMainDdr) {
-			result = ksceKernelUnlockMutex(gCompatExitMutex, 1);
+			result = sceKernelUnlockMutex(gCompatExitMutex, 1);
 			if (result < 0)
 				goto out;
 			goto terminated;
@@ -1126,7 +1126,7 @@ int compatWaitSpecialRequest(int mode)
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = *requestState;
-		result = ksceKernelUnlockMutex(gCompatExitMutex, 1);
+		result = sceKernelUnlockMutex(gCompatExitMutex, 1);
 		if (result < 0)
 			goto out;
 		if (ksceKernelGetProcessTimeWideCore() - start > 30000000)
@@ -1134,11 +1134,11 @@ int compatWaitSpecialRequest(int mode)
 		if (!gCompatProcessId)
 			goto terminated;
 	}
-	result = ksceKernelLockMutex(gCompatExitMutex, 1, NULL);
+	result = sceKernelLockMutex(gCompatExitMutex, 1, NULL);
 	if (result < 0)
 		goto out;
 	if (!gCompatMainDdr) {
-		result = ksceKernelUnlockMutex(gCompatExitMutex, 1);
+		result = sceKernelUnlockMutex(gCompatExitMutex, 1);
 		if (result < 0)
 			goto out;
 		goto terminated;
@@ -1148,7 +1148,7 @@ int compatWaitSpecialRequest(int mode)
 	__builtin_memcpy(requestState, &state, sizeof(state));
 	SceCpuForDriver_9CB9F0CE(
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
-	result = ksceKernelUnlockMutex(gCompatExitMutex, 1);
+	result = sceKernelUnlockMutex(gCompatExitMutex, 1);
 	if (result < 0)
 		goto out;
 verified:
@@ -1177,7 +1177,7 @@ int sceCompatWaitIntr(unsigned int index)
 	if (index > 2)
 		return (int)0x80020005;
 	savedContext = sceSyscallEnter();
-	result = ksceKernelWaitSema(gCompatReturnSema[index], 1, NULL);
+	result = sceKernelWaitSema(gCompatReturnSema[index], 1, NULL);
 	sceSyscallLeave(savedContext);
 	return result;
 }
@@ -1194,7 +1194,7 @@ int compatReturnValueEx(SceUInt32 channel, const SceUInt32 values[2],
 	if (channel > 2)
 		return (int)0x80020005;
 	timeout = 5000000;
-	if (ksceKernelLockMutex(gCompatMutex, 1, &timeout) < 0)
+	if (sceKernelLockMutex(gCompatMutex, 1, &timeout) < 0)
 		return (int)0x80028005;
 	if (!gCompatRequestsEnabled) {
 		result = (int)0x80027205;
@@ -1221,7 +1221,7 @@ int compatReturnValueEx(SceUInt32 channel, const SceUInt32 values[2],
 	__asm__ volatile("dsb sy" ::: "memory");
 	result = 0;
 unlock:
-	ksceKernelUnlockMutex(gCompatMutex, 1);
+	sceKernelUnlockMutex(gCompatMutex, 1);
 	return result;
 }
 
@@ -1274,17 +1274,17 @@ int compatAllocCdramWithHole(SceCompatCdram *cdram)
 		return result;
 #endif
 	timeout = 5000000;
-	if (ksceKernelLockMutex(gCompatMutex, 1, &timeout) < 0)
+	if (sceKernelLockMutex(gCompatMutex, 1, &timeout) < 0)
 		return (int)0x80028005;
 	if (gCompatProcessId) {
-		ksceKernelUnlockMutex(gCompatMutex, 1);
+		sceKernelUnlockMutex(gCompatMutex, 1);
 		return (int)0x80010078;
 	}
 	gCompatProcessId = sceKernelGetProcessId();
 #if FW_VERSION >= 0x03650000
 	gCompatBootRandom = bootRandom;
 #endif
-	ksceKernelUnlockMutex(gCompatMutex, 1);
+	sceKernelUnlockMutex(gCompatMutex, 1);
 	for (i = 0; i != 3; ++i) {
 		memset(&opt, 0, sizeof(opt));
 		size = i ? 0x1000000 : 0x2000000;
@@ -1363,12 +1363,12 @@ int compatInterrupt(int intrCode)
 		goto out;
 	}
 	timeout = 5000000;
-	if (ksceKernelLockMutex(gCompatMutex, 1, &timeout) < 0) {
+	if (sceKernelLockMutex(gCompatMutex, 1, &timeout) < 0) {
 		result = (int)0x80028005;
 		goto out;
 	}
 	if (!gCompatRequestsEnabled) {
-		ksceKernelUnlockMutex(gCompatMutex, 1);
+		sceKernelUnlockMutex(gCompatMutex, 1);
 		result = (int)0x80010086;
 		goto out;
 	}
@@ -1387,7 +1387,7 @@ int compatInterrupt(int intrCode)
 	gCompatMailbox->raiseInterrupt[intrCode + 16] = ~0U;
 	(void)gCompatMailbox->raiseInterrupt[intrCode + 16];
 	__asm__ volatile("dsb sy" ::: "memory");
-	ksceKernelUnlockMutex(gCompatMutex, 1);
+	sceKernelUnlockMutex(gCompatMutex, 1);
 	result = 0;
 out:
 	return result;
@@ -1406,15 +1406,15 @@ int compatProcessStopHandler(SceUID pid, int event,
 	if (pid != gCompatProcessId || event != 0x400)
 		return 0;
 	if (gCompatSuspendSema &&
-		ksceKernelSignalSema(gCompatSuspendSema, 1) == 0 &&
+		sceKernelSignalSema(gCompatSuspendSema, 1) == 0 &&
 		gCompatResumeSema)
-		ksceKernelWaitSema(gCompatResumeSema, 1, NULL);
+		sceKernelWaitSema(gCompatResumeSema, 1, NULL);
 	if (gCompatState != 2)
 		goto color;
 	gCompatResumeCookie = 0;
 	if (gCompatFrameBuffer) {
 		timeout = 5000000;
-		if (ksceKernelLockMutex(gCompatMutex, 1, &timeout) < 0)
+		if (sceKernelLockMutex(gCompatMutex, 1, &timeout) < 0)
 			goto color;
 		if (!gCompatRequestsEnabled) {
 			compatUnlockMutex();
@@ -1445,7 +1445,7 @@ int compatProcessStopHandler(SceUID pid, int event,
 				goto hardwareFailed;
 		}
 		result = ksceDisplaySetFrameBuf(NULL, 1);
-		ksceKernelUnlockMutex(gCompatMutex, 1);
+		sceKernelUnlockMutex(gCompatMutex, 1);
 		if (result != 0)
 			goto color;
 	}
@@ -1458,7 +1458,7 @@ int compatProcessStopHandler(SceUID pid, int event,
 	start = ksceKernelGetProcessTimeWideCore();
 	while (state != 1) {
 		sceKernelDelayThread(100);
-		if (ksceKernelLockMutex(gCompatExitMutex, 1, NULL) < 0)
+		if (sceKernelLockMutex(gCompatExitMutex, 1, NULL) < 0)
 			goto color;
 		if (!gCompatMainDdr)
 			goto unavailable;
@@ -1466,13 +1466,13 @@ int compatProcessStopHandler(SceUID pid, int event,
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = *requestState;
-		if (ksceKernelUnlockMutex(gCompatExitMutex, 1) < 0)
+		if (sceKernelUnlockMutex(gCompatExitMutex, 1) < 0)
 			goto color;
 		if (ksceKernelGetProcessTimeWideCore() - start > 30000000 ||
 			!gCompatProcessId)
 			goto color;
 	}
-	if (ksceKernelLockMutex(gCompatExitMutex, 1, NULL) < 0)
+	if (sceKernelLockMutex(gCompatExitMutex, 1, NULL) < 0)
 		goto color;
 	if (!gCompatMainDdr)
 		goto unavailable;
@@ -1481,7 +1481,7 @@ int compatProcessStopHandler(SceUID pid, int event,
 	__builtin_memcpy(requestState, &state, sizeof(state));
 	SceCpuForDriver_9CB9F0CE(
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
-	if (ksceKernelUnlockMutex(gCompatExitMutex, 1) < 0)
+	if (sceKernelUnlockMutex(gCompatExitMutex, 1) < 0)
 		goto color;
 #if FW_DEBUG
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
@@ -1490,13 +1490,13 @@ int compatProcessStopHandler(SceUID pid, int event,
 		__builtin_return_address(0));
 #endif
 	timeout = 5000000;
-	if (ksceKernelLockMutex(gCompatMutex, 1, &timeout) < 0)
+	if (sceKernelLockMutex(gCompatMutex, 1, &timeout) < 0)
 		goto color;
 	gCompatResumeCookie = gCompatSharedSram->runtime.resumeCookie;
-	ksceKernelUnlockMutex(gCompatMutex, 1);
+	sceKernelUnlockMutex(gCompatMutex, 1);
 	if (gCompatResumeCookie) {
 		timeout = 5000000;
-		ksceKernelLockMutex(gCompatMutex, 1, &timeout);
+		sceKernelLockMutex(gCompatMutex, 1, &timeout);
 		if (gCompatState == 2) {
 			int (*volatile deci2pAvailable)(void *, void *, SceSize);
 
@@ -1510,17 +1510,17 @@ int compatProcessStopHandler(SceUID pid, int event,
 		gCompatRequestsEnabled = 0;
 		gCompatState = 1;
 		kscePowerSetCompatClockFrequency(0);
-		ksceKernelUnlockMutex(gCompatMutex, 1);
+		sceKernelUnlockMutex(gCompatMutex, 1);
 		memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 	}
 color:
 	ksceDisplaySetColorSpaceMode(0, gCompatColorSpaceMode);
 	return 0;
 hardwareFailed:
-	ksceKernelUnlockMutex(gCompatMutex, 1);
+	sceKernelUnlockMutex(gCompatMutex, 1);
 	goto color;
 unavailable:
-	ksceKernelUnlockMutex(gCompatExitMutex, 1);
+	sceKernelUnlockMutex(gCompatExitMutex, 1);
 	goto color;
 }
 
@@ -1569,24 +1569,24 @@ int compatFrameBufferInit(SceUID frameBuffer)
 	SceUID guid;
 	int result;
 
-	if (ksceKernelLockMutex(gCompatMutex, 1, &timeout) < 0)
+	if (sceKernelLockMutex(gCompatMutex, 1, &timeout) < 0)
 		return (int)0x80028005;
 	if (gCompatFrameBuffer) {
-		ksceKernelUnlockMutex(gCompatMutex, 1);
+		sceKernelUnlockMutex(gCompatMutex, 1);
 		return (int)0x80010078;
 	}
 	guid = SceSysmemForDriver_45D22597(0, frameBuffer);
 	if (guid < 0) {
-		ksceKernelUnlockMutex(gCompatMutex, 1);
+		sceKernelUnlockMutex(gCompatMutex, 1);
 		return guid;
 	}
 	result = SceSysmemForDriver_0F5C84B7(guid, NULL);
 	if (result < 0) {
-		ksceKernelUnlockMutex(gCompatMutex, 1);
+		sceKernelUnlockMutex(gCompatMutex, 1);
 		return result;
 	}
 	gCompatFrameBuffer = guid;
-	ksceKernelUnlockMutex(gCompatMutex, 1);
+	sceKernelUnlockMutex(gCompatMutex, 1);
 	return 0;
 }
 
@@ -1619,7 +1619,7 @@ int compatReadShared32(int location, int *value)
 	SceUInt timeout = 5000000;
 	int result;
 
-	if (ksceKernelLockMutex(gCompatMutex, 1, &timeout) < 0)
+	if (sceKernelLockMutex(gCompatMutex, 1, &timeout) < 0)
 		return (int)0x80028005;
 	result = (int)0x80027205;
 	if (gCompatRequestsEnabled) {
@@ -1657,7 +1657,7 @@ int compatReadShared32(int location, int *value)
 			break;
 		}
 	}
-	ksceKernelUnlockMutex(gCompatMutex, 1);
+	sceKernelUnlockMutex(gCompatMutex, 1);
 	return result;
 }
 
@@ -1669,7 +1669,7 @@ int compatWriteSharedCtrl(const SceCtrlDataPsp *padData)
 	SceUInt32 timestamp;
 	int result;
 
-	if (ksceKernelLockMutex(gCompatMutex, 1, &timeout) < 0)
+	if (sceKernelLockMutex(gCompatMutex, 1, &timeout) < 0)
 		return (int)0x80028005;
 	if (gCompatRequestsEnabled) {
 		timestamp = padData->TimeStamp;
@@ -1691,7 +1691,7 @@ int compatWriteSharedCtrl(const SceCtrlDataPsp *padData)
 	} else {
 		result = (int)0x80027205;
 	}
-	ksceKernelUnlockMutex(gCompatMutex, 1);
+	sceKernelUnlockMutex(gCompatMutex, 1);
 	return result;
 }
 
@@ -1701,7 +1701,7 @@ int compatWriteShared32(int location, int value)
 	SceUInt timeout = 5000000;
 	int result;
 
-	if (ksceKernelLockMutex(gCompatMutex, 1, &timeout) < 0)
+	if (sceKernelLockMutex(gCompatMutex, 1, &timeout) < 0)
 		return (int)0x80028005;
 	result = (int)0x80027205;
 	if (gCompatRequestsEnabled) {
@@ -1774,7 +1774,7 @@ int compatWriteShared32(int location, int value)
 			break;
 		}
 	}
-	ksceKernelUnlockMutex(gCompatMutex, 1);
+	sceKernelUnlockMutex(gCompatMutex, 1);
 	return result;
 }
 
@@ -1863,7 +1863,7 @@ int compatSuspendResume(int mode)
 cleanup:
 		timeout = 5000000;
 		gCompatResumeCookie = 0;
-		ksceKernelLockMutex(gCompatMutex, 1, &timeout);
+		sceKernelLockMutex(gCompatMutex, 1, &timeout);
 		if (gCompatState == 2) {
 			int (*volatile deci2pAvailable)(void *, void *, SceSize);
 
@@ -1877,7 +1877,7 @@ cleanup:
 		gCompatRequestsEnabled = 0;
 		gCompatState = 1;
 		kscePowerSetCompatClockFrequency(0);
-		ksceKernelUnlockMutex(gCompatMutex, 1);
+		sceKernelUnlockMutex(gCompatMutex, 1);
 		memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 		goto out;
 	}
@@ -1899,7 +1899,7 @@ cleanup:
 			goto terminated;
 	}
 	timeout = 5000000;
-	result = ksceKernelLockMutex(gCompatMutex, 1, &timeout);
+	result = sceKernelLockMutex(gCompatMutex, 1, &timeout);
 	if (result < 0)
 		goto timedOut;
 	result = compatSecureResume();

@@ -177,9 +177,9 @@ int writeAudioInLegacyQueue(const int16_t *samples, int count);
 		if (g_audioInPorts[index].eventFlag != 0) { \
 			if (g_audioInPorts[index].flags & 0x10) { \
 				g_audioInPorts[index].flags &= 0xffffff79; \
-				ksceKernelSetEventFlag(g_audioInPorts[index].eventFlag, 1024); \
+				sceKernelSetEventFlag(g_audioInPorts[index].eventFlag, 1024); \
 			} else { \
-				ksceKernelDeleteEventFlag(g_audioInPorts[index].eventFlag); \
+				sceKernelDeleteEventFlag(g_audioInPorts[index].eventFlag); \
 				g_audioInPorts[index].eventFlag = 0; \
 			} \
 		} \

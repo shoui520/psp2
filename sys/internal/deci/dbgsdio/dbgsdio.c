@@ -154,12 +154,12 @@ static int sceDbgSdioMboxInterrupt(int code, void *arg)
 	*c->status = bits & STATUS_PENDING;
 	(void)*c->status;
 	barrier();
-	ret = ksceKernelSetEventFlag(c->event, bits & ~STATUS_RX_NOTIFY);
+	ret = sceKernelSetEventFlag(c->event, bits & ~STATUS_RX_NOTIFY);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(0, 1674, "0x%x %d 0x%x\n", DBGSDIO_ERROR, 1674, ret);
 	state = SceCpuForDriver_D32ACE9E(&sdio->lock);
 	if (c->active && (bits & STATUS_RX_NOTIFY)) {
-		ret = ksceKernelSetEventFlag(c->notify, 1);
+		ret = sceKernelSetEventFlag(c->notify, 1);
 		if (ret < 0)
 			SCE_PRINTF_WITH_INFO(0, 1685, "0x%x %d 0x%x\n", DBGSDIO_ERROR, 1685, ret);
 	}
@@ -199,7 +199,7 @@ int sceDbgSdioInit(void)
 	SceSysmemForDriver_A841EDDA(ret, (void **)&shm);
 	s_sdio.memblock = ret;
 
-	ret = ksceKernelInitializeFastMutex(&s_sdio.mutex, "SceDbgSdio1", 2, 0);
+	ret = sceKernelInitializeFastMutex(&s_sdio.mutex, "SceDbgSdio1", 2, 0);
 	if (ret < 0)
 		goto freeBlock;
 
@@ -252,7 +252,7 @@ int sceDbgSdioInit(void)
 freeTx:
 	ksceKernelDmaOpFree(tx);
 freeMutex:
-	ksceKernelFinalizeFastMutex(&s_sdio.mutex);
+	sceKernelFinalizeFastMutex(&s_sdio.mutex);
 freeBlock:
 	SceSysmemForDriver_009E1C61(s_sdio.memblock);
 	return ret;
@@ -286,7 +286,7 @@ int SceDbgSdioForDriver_3D3FAF3A(SceUInt32 index, SceUID notify)
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdio.lock, state);
 		return DBGSDIO_ERROR_BUSY;
 	}
-	event = ksceKernelCreateEventFlag("SceDbgSdio1", 0, 0, NULL);
+	event = sceKernelCreateEventFlag("SceDbgSdio1", 0, 0, NULL);
 	if (event < 0) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdio.lock, state);
 		return event;
@@ -294,7 +294,7 @@ int SceDbgSdioForDriver_3D3FAF3A(SceUInt32 index, SceUID notify)
 	ret = ksceKernelRegisterIntrHandler(DBGSDIO_INTR_BASE + index, "SceDbgSdio1Mbox0", 0,
 					    sceDbgSdioMboxInterrupt, c, 0x80, 0xf, NULL);
 	if (ret < 0) {
-		ksceKernelDeleteEventFlag(event);
+		sceKernelDeleteEventFlag(event);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdio.lock, state);
 		return ret;
 	}
@@ -320,7 +320,7 @@ int SceDbgSdioForDriver_361E1BB6(SceUInt32 index)
 	if (c->active) {
 		ksceKernelDisableIntr(DBGSDIO_INTR_BASE + index);
 		ksceKernelReleaseIntrHandler(DBGSDIO_INTR_BASE + index);
-		ksceKernelDeleteEventFlag(c->event);
+		sceKernelDeleteEventFlag(c->event);
 		c->active = 0;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdio.lock, state);
@@ -492,7 +492,7 @@ int receiveData(SceUInt32 index, void *buffer, SceSize size)
 	unsigned int bits;
 	int ret, virtual;
 
-	ret = ksceKernelLockFastMutex(&s_sdio.mutex);
+	ret = lockFastMutex(&s_sdio.mutex);
 	if (ret < 0)
 		return ret;
 
@@ -513,7 +513,7 @@ int receiveData(SceUInt32 index, void *buffer, SceSize size)
 		goto done;
 	}
 
-	ret = ksceKernelWaitEventFlag(c->event, STATUS_ERROR | STATUS_RX_MESSAGE,
+	ret = sceKernelWaitEventFlag(c->event, STATUS_ERROR | STATUS_RX_MESSAGE,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	if (ret < 0 || (bits & STATUS_ERROR)) {
@@ -530,7 +530,7 @@ int receiveData(SceUInt32 index, void *buffer, SceSize size)
 			ret = DBGSDIO_ERROR_ARGUMENT;
 			goto done;
 		}
-		ret = ksceKernelWaitEventFlag(c->event, STATUS_ERROR | STATUS_RX_DATA,
+		ret = sceKernelWaitEventFlag(c->event, STATUS_ERROR | STATUS_RX_DATA,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 		if (ret < 0 || (bits & STATUS_ERROR)) {
@@ -574,7 +574,7 @@ int receiveData(SceUInt32 index, void *buffer, SceSize size)
 	copyBytes(c->rx.reply, &reply, sizeof(reply));
 	*c->rxControl = CTRL_RX_REQUEST;
 
-	ret = ksceKernelWaitEventFlag(c->event, STATUS_ERROR | STATUS_RX_DATA,
+	ret = sceKernelWaitEventFlag(c->event, STATUS_ERROR | STATUS_RX_DATA,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	if (ret < 0 || (bits & STATUS_ERROR)) {
@@ -591,7 +591,7 @@ int receiveData(SceUInt32 index, void *buffer, SceSize size)
 			dst += n;
 			if (!left)
 				break;
-			ret = ksceKernelWaitEventFlag(c->event, STATUS_ERROR | STATUS_RX_DATA,
+			ret = sceKernelWaitEventFlag(c->event, STATUS_ERROR | STATUS_RX_DATA,
 						      SCE_KERNEL_EVF_WAITMODE_OR |
 						      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 						      &bits, NULL);
@@ -667,7 +667,7 @@ result:
 	if (ret >= 0)
 		ret += used;
 done:
-	ksceKernelUnlockFastMutex(&s_sdio.mutex);
+	sceKernelUnlockFastMutex(&s_sdio.mutex);
 	return ret;
 }
 
@@ -679,7 +679,7 @@ int sceDbgSdioWrite(SceUInt32 index, const void *buffer, SceSize size)
 	unsigned int i;
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&s_sdio.mutex);
+	ret = lockFastMutex(&s_sdio.mutex);
 	if (ret < 0)
 		return ret;
 	if (size < DBGSDIO_DMA_MIN) {
@@ -714,6 +714,6 @@ int sceDbgSdioWrite(SceUInt32 index, const void *buffer, SceSize size)
 	}
 	ret = size;
 done:
-	ksceKernelUnlockFastMutex(&s_sdio.mutex);
+	sceKernelUnlockFastMutex(&s_sdio.mutex);
 	return ret;
 }

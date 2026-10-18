@@ -164,7 +164,7 @@ int qmiUartInterrupt(unsigned int interrupt, QmiUartPort *port)
 			port->transmitContext = NULL;
 			completed(id, count, flags, context);
 		} else if (port->transmitSema > 0) {
-			ksceKernelSignalSema(port->transmitSema, 1);
+			sceKernelSignalSema(port->transmitSema, 1);
 		}
 	}
 	if (receiveDone) {
@@ -183,7 +183,7 @@ int qmiUartInterrupt(unsigned int interrupt, QmiUartPort *port)
 			port->receiveContext = NULL;
 			completed(id, count, flags, context);
 		} else if (port->receiveSema > 0) {
-			ksceKernelSignalSema(port->receiveSema, 1);
+			sceKernelSignalSema(port->receiveSema, 1);
 		}
 	}
 	result = -1;
@@ -417,7 +417,7 @@ int qmiUartTransmit(QmiUartPort *port, const void *data, SceSize length,
 		g_qmiUartPort.transmitCompleted = completed;
 		g_qmiUartPort.transmitContext = context;
 	} else {
-		result = ksceKernelCreateSema("SceQmiUartSendSync", 0, 0, 1, NULL);
+		result = sceKernelCreateSema("SceQmiUartSendSync", 0, 0, 1, NULL);
 		if (result < 0) {
 			g_qmiUartPort.transmitFlags |= 0x80000000;
 			goto unlockTransmit;
@@ -489,7 +489,7 @@ int qmiUartReceive(QmiUartPort *port, void *data, SceSize length,
 		g_qmiUartPort.receiveCompleted = completed;
 		g_qmiUartPort.receiveContext = context;
 	} else {
-		result = ksceKernelCreateSema("SceQmiUartRecvSync", 0, 0, 1, NULL);
+		result = sceKernelCreateSema("SceQmiUartRecvSync", 0, 0, 1, NULL);
 		if (result < 0) {
 			g_qmiUartPort.receiveFlags |= 0x80000000;
 			goto unlockReceive;

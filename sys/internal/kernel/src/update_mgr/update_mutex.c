@@ -3,30 +3,30 @@
 
 int UpdateUtilLockPupHeader(void)
 {
-	return ksceKernelLockFastMutex((SceKernelFastMutex *)&updateMutex);
+	return lockFastMutex((SceKernelFastMutex *)&updateMutex);
 }
 
 int UpdateUtilUnlockPupHeader(void)
 {
-	return ksceKernelUnlockFastMutex((SceKernelFastMutex *)&updateMutex);
+	return sceKernelUnlockFastMutex((SceKernelFastMutex *)&updateMutex);
 }
 
 int UpdateUtilLockMbr(void)
 {
-	return ksceKernelLockFastMutex((SceKernelFastMutex *)&updateMbrMutex);
+	return lockFastMutex((SceKernelFastMutex *)&updateMbrMutex);
 }
 
 int UpdateUtilUnlockMbr(void)
 {
-	return ksceKernelUnlockFastMutex((SceKernelFastMutex *)&updateMbrMutex);
+	return sceKernelUnlockFastMutex((SceKernelFastMutex *)&updateMbrMutex);
 }
 
 int UpdateUtilLockCom(void)
 {
-	return ksceKernelLockFastMutex((SceKernelFastMutex *)&updateComMutex);
+	return lockFastMutex((SceKernelFastMutex *)&updateComMutex);
 }
 
 int UpdateUtilUnlockCom(void)
 {
-	return ksceKernelUnlockFastMutex((SceKernelFastMutex *)&updateComMutex);
+	return sceKernelUnlockFastMutex((SceKernelFastMutex *)&updateComMutex);
 }

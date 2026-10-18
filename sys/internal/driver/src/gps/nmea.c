@@ -54,7 +54,7 @@ int gpsPublishNavigation(void)
 	location->noClock = 0;
 	gpsDataUnlock();
 	int ret = gpsResetParser(PARSER_NAVIGATION);
-	ksceKernelSetEventFlag(s_gps.active->event, 8);
+	sceKernelSetEventFlag(s_gps.active->event, 8);
 	return ret;
 }
 
@@ -88,7 +88,7 @@ int gpsPublishSatellites(void)
 	}
 	gpsDataUnlock();
 	int ret = gpsResetParser(PARSER_SATELLITES);
-	ksceKernelSetEventFlag(s_gps.active->event, 0x10);
+	sceKernelSetEventFlag(s_gps.active->event, 0x10);
 	return ret;
 }
 

@@ -14,12 +14,12 @@ int StorageUtilSwitchBLBank(SceUID heapId, SceMbr *mbr)
 	uint32_t index, entryCount, sectorCount, loaderSector, bank;
 	int permission, result;
 
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
 	header = SceSysmemForDriver_7B4CB60A(heapId, 4096);
 	if (!header) {
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		return (int)0x800f020c;
 	}
 	memset(header, 0, 4096);
@@ -75,6 +75,6 @@ int StorageUtilSwitchBLBank(SceUID heapId, SceMbr *mbr)
 cleanup:
 	sceKernelFreeHeapMemory(heapId, header);
 	ksceIoClose(fd);
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }

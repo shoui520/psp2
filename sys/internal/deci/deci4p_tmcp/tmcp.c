@@ -123,12 +123,12 @@ static inline __attribute__((always_inline)) void TmcpDeliverCompletion(TmcpSlot
 	rec[7] = 0;
 
 	sceKernelCopyToUserProc(slot->pid, slot->user, rec, sizeof(rec));
-	ksceKernelNotifyCallback(slot->callback, (int)slot->user);
+	sceKernelNotifyCallback(slot->callback, (int)slot->user);
 	slot->notified = 1;
 	if (slot->abandoned) {
 		if (slot == s_link.cur)
 			s_link.cur = NULL;
-		ksceKernelDeleteEventFlag(slot->evf);
+		sceKernelDeleteEventFlag(slot->evf);
 		memset(slot, 0, sizeof(*slot));
 		slot->pid = -1;
 		slot->callback = -1;
@@ -138,7 +138,7 @@ static inline __attribute__((always_inline)) void TmcpDeliverCompletion(TmcpSlot
 
 static inline __attribute__((always_inline)) void TmcpFreeSlot(TmcpSlot *slot)
 {
-	ksceKernelDeleteEventFlag(slot->evf);
+	sceKernelDeleteEventFlag(slot->evf);
 	memset(slot, 0, sizeof(*slot));
 	slot->pid = -1;
 	slot->callback = -1;
@@ -152,7 +152,7 @@ static inline __attribute__((always_inline)) int TmcpReleaseProcessSlots(SceUID 
 	TmcpSlot *slot;
 	int i = 0;
 
-	ksceKernelLockMutex(link->mutex, 1, NULL);
+	sceKernelLockMutex(link->mutex, 1, NULL);
 	while (i < TMCP_SLOTS) {
 		slot = &s_slot[i++];
 		if (!slot->used || pid != slot->pid)
@@ -162,7 +162,7 @@ static inline __attribute__((always_inline)) int TmcpReleaseProcessSlots(SceUID 
 		TmcpFreeSlot(slot);
 		i = 0;
 	}
-	ksceKernelUnlockMutex(link->mutex, 1);
+	sceKernelUnlockMutex(link->mutex, 1);
 	return 0;
 }
 
@@ -210,21 +210,21 @@ static int TmcpRecv(TmcpLink *link)
 		cur = link->cur;
 		if ((ret = sceDfMgrRecv(link->handle, w, sizeof(w))) < 0)
 			return ret;
-		ksceKernelLockMutex(link->mutex, 1, NULL);
+		sceKernelLockMutex(link->mutex, 1, NULL);
 		link->busy = 0;
 		link->cur = NULL;
-		ksceKernelSetEventFlag(link->evf, EVF_ACK);
+		sceKernelSetEventFlag(link->evf, EVF_ACK);
 		if (busy && cur != NULL && link->pkt.seq == reply.seq) {
 			cur->acked = 1;
 			cur->ack[0] = w[0];
 			cur->ack[1] = w[1];
 			cur->ack[2] = w[2];
-			ksceKernelSetEventFlag(cur->evf, EVF_ACK);
+			sceKernelSetEventFlag(cur->evf, EVF_ACK);
 		}
 	} else if (reply.code == TMCP_CMD_DONE) {
 		if ((ret = sceDfMgrRecv(link->handle, w, sizeof(w))) < 0)
 			return ret;
-		ksceKernelLockMutex(link->mutex, 1, NULL);
+		sceKernelLockMutex(link->mutex, 1, NULL);
 		for (slot = s_slot; slot != &s_slot[TMCP_SLOTS]; slot++) {
 			if (!slot->used || !slot->acked || slot->ack[0] != TMCP_STATUS_OK ||
 			    w[0] != slot->ack[2] || slot->done)
@@ -233,7 +233,7 @@ static int TmcpRecv(TmcpLink *link)
 			slot->result[0] = w[0];
 			slot->result[1] = w[1];
 			slot->result[2] = w[2];
-			ksceKernelSetEventFlag(slot->evf, EVF_DONE);
+			sceKernelSetEventFlag(slot->evf, EVF_DONE);
 			if (slot->used && slot->async && slot->acked && slot->ack[0] == TMCP_STATUS_OK) {
 				if (w[1] == 0) {
 					if (!slot->notified)
@@ -248,7 +248,7 @@ static int TmcpRecv(TmcpLink *link)
 		return 0;
 	}
 
-	ksceKernelUnlockMutex(link->mutex, 1);
+	sceKernelUnlockMutex(link->mutex, 1);
 	return 0;
 }
 
@@ -257,17 +257,17 @@ static int TmcpStatus(TmcpLink *link, const SceDfMgrStatus *st)
 {
 	TmcpSlot *slot;
 
-	ksceKernelLockMutex(link->mutex, 1, NULL);
+	sceKernelLockMutex(link->mutex, 1, NULL);
 	if (st->kind == 1) {
 		if (st->enabled == 0) {
 			link->connected = 0;
 			link->busy = 0;
 			link->cur = NULL;
-			ksceKernelSetEventFlag(link->evf, EVF_LINK_DOWN);
+			sceKernelSetEventFlag(link->evf, EVF_LINK_DOWN);
 			for (slot = s_slot; slot != &s_slot[TMCP_SLOTS]; slot++) {
 				if (!slot->used)
 					continue;
-				ksceKernelSetEventFlag(slot->evf, EVF_LINK_DOWN);
+				sceKernelSetEventFlag(slot->evf, EVF_LINK_DOWN);
 				if (slot->used && slot->async && slot->acked &&
 				    slot->ack[0] == TMCP_STATUS_OK && !slot->notified)
 					TmcpDeliverCompletion(slot, SCE_KERNEL_ERROR_DECI4P_INTERRUPTED,
@@ -275,11 +275,11 @@ static int TmcpStatus(TmcpLink *link, const SceDfMgrStatus *st)
 			}
 		} else if (st->enabled == 1) {
 			link->connected = 1;
-			ksceKernelClearEventFlag(link->evf, 0);
-			ksceKernelSetEventFlag(link->evf, EVF_ACK);
+			sceKernelClearEventFlag(link->evf, 0);
+			sceKernelSetEventFlag(link->evf, EVF_ACK);
 		}
 	}
-	ksceKernelUnlockMutex(link->mutex, 1);
+	sceKernelUnlockMutex(link->mutex, 1);
 	return 0;
 }
 
@@ -341,8 +341,8 @@ static int TmcpCommand(SceUInt32 arg, const char *s1, const char *s2, const char
 	int ret, seq;
 
 	pid = sceKernelGetProcessId();
-	tid = ksceKernelGetThreadId();
-	if (ksceKernelLockMutex(s_link.mutex, 1, NULL) < 0)
+	tid = sceKernelGetThreadId();
+	if (sceKernelLockMutex(s_link.mutex, 1, NULL) < 0)
 		return SCE_KERNEL_ERROR_DECI4P_UNKNOWN;
 
 	/* a command of this thread is still pending: wait for it */
@@ -355,7 +355,7 @@ static int TmcpCommand(SceUInt32 arg, const char *s1, const char *s2, const char
 			ret = SCE_KERNEL_ERROR_DECI4P_HOST_TOOMANY_PROCESS;
 			goto out;
 		}
-	evf = ksceKernelCreateEventFlag("SceDeci4pTmcpRcv",
+	evf = sceKernelCreateEventFlag("SceDeci4pTmcpRcv",
 					SCE_KERNEL_ATTR_TH_PRIO | EVF_ATTR_UNK8000, 0, NULL);
 	if (evf < 0) {
 		ret = SCE_KERNEL_ERROR_DECI4P_UNKNOWN;
@@ -381,11 +381,11 @@ static int TmcpCommand(SceUInt32 arg, const char *s1, const char *s2, const char
 	if (!s_link.connected)
 		goto no_link;
 	while (s_link.busy && s_link.connected) {
-		ksceKernelUnlockMutex(s_link.mutex, 1);
-		ret = ksceKernelWaitEventFlag(s_link.evf, EVF_LINK_DOWN | EVF_ACK,
+		sceKernelUnlockMutex(s_link.mutex, 1);
+		ret = sceKernelWaitEventFlag(s_link.evf, EVF_LINK_DOWN | EVF_ACK,
 					      SCE_KERNEL_EVF_WAITMODE_OR,
 					      &bits, NULL);
-		ksceKernelLockMutex(s_link.mutex, 1, NULL);
+		sceKernelLockMutex(s_link.mutex, 1, NULL);
 		if (ret < 0)
 			break;
 	}
@@ -398,7 +398,7 @@ static int TmcpCommand(SceUInt32 arg, const char *s1, const char *s2, const char
 	if (!s_link.connected)
 		goto no_link;
 
-	ksceKernelClearEventFlag(s_link.evf, ~EVF_ACK);
+	sceKernelClearEventFlag(s_link.evf, ~EVF_ACK);
 	s_link.busy = 1;
 	s_link.cur = slot;
 	SceDeci4pDfMgrForDebugger_6D26CC56(&s_link.pkt.hdr, 0x18);
@@ -420,10 +420,10 @@ static int TmcpCommand(SceUInt32 arg, const char *s1, const char *s2, const char
 	}
 
 wait_ack:
-	ksceKernelUnlockMutex(s_link.mutex, 1);
-	ret = ksceKernelWaitEventFlag(slot->evf, EVF_LINK_DOWN | EVF_ACK,
+	sceKernelUnlockMutex(s_link.mutex, 1);
+	ret = sceKernelWaitEventFlag(slot->evf, EVF_LINK_DOWN | EVF_ACK,
 				      SCE_KERNEL_EVF_WAITMODE_OR, &bits, NULL);
-	ksceKernelLockMutex(s_link.mutex, 1, NULL);
+	sceKernelLockMutex(s_link.mutex, 1, NULL);
 	if (ret == SCE_KERNEL_ERROR_THREAD_SUSPENDED)
 		goto out;
 	if (ret < 0) {
@@ -454,11 +454,11 @@ wait_ack:
 	}
 
 	if (ret == 0 && !async) {
-		ksceKernelUnlockMutex(s_link.mutex, 1);
-		ret = ksceKernelWaitEventFlag(slot->evf, EVF_LINK_DOWN | EVF_DONE,
+		sceKernelUnlockMutex(s_link.mutex, 1);
+		ret = sceKernelWaitEventFlag(slot->evf, EVF_LINK_DOWN | EVF_DONE,
 					      SCE_KERNEL_EVF_WAITMODE_OR,
 					      &bits, NULL);
-		ksceKernelLockMutex(s_link.mutex, 1, NULL);
+		sceKernelLockMutex(s_link.mutex, 1, NULL);
 		if (ret == SCE_KERNEL_ERROR_THREAD_SUSPENDED)
 			goto out;
 		if (ret < 0) {
@@ -492,7 +492,7 @@ abandon:
 		s_link.cur = NULL;
 	TmcpFreeSlot(slot);
 out:
-	ksceKernelUnlockMutex(s_link.mutex, 1);
+	sceKernelUnlockMutex(s_link.mutex, 1);
 	return ret;
 }
 
@@ -506,12 +506,12 @@ int module_start(SceSize args, void *argp)
 	if (!SceDipswForDriver_A98FC2FD(0xc2))
 		return SCE_KERNEL_START_NO_RESIDENT;
 
-	mutex = ksceKernelCreateMutex("SceDeci4pTmcpComm", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
+	mutex = sceKernelCreateMutex("SceDeci4pTmcpComm", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 	if (mutex < 0)
 		return SCE_KERNEL_START_FAILED;
 	s_link.mutex = mutex;
 	s_link.seq = 0;
-	s_link.evf = ksceKernelCreateEventFlag("SceDeci4pTmcpCmd",
+	s_link.evf = sceKernelCreateEventFlag("SceDeci4pTmcpCmd",
 					       SCE_KERNEL_ATTR_TH_PRIO | SCE_KERNEL_EVF_ATTR_MULTI |
 					       EVF_ATTR_UNK8000, EVF_ACK, NULL);
 	for (slot = s_slot; slot != &s_slot[TMCP_SLOTS]; slot++) {

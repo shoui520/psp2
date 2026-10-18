@@ -253,7 +253,7 @@ static inline void SendSerialState(void)
 		return;
 	}
 
-	ksceKernelClearEventFlag(s_serial.event, ~SERIAL_EVENT_NOTIFY_IDLE);
+	sceKernelClearEventFlag(s_serial.event, ~SERIAL_EVENT_NOTIFY_IDLE);
 	s_serial.notificationPending = 0;
 	s_serial.notificationBuffer->header = (CdcNotificationHeader){
 		.bmRequestType = 0xa1,
@@ -275,7 +275,7 @@ static void completeControl(SceUdcdDeviceRequest *req)
 
 static int Stop(int size, void *args, void *ctx)
 {
-	ksceKernelDeleteEventFlag(s_serial.event);
+	sceKernelDeleteEventFlag(s_serial.event);
 	SceSysmemForDriver_009E1C61(s_serial.memblock);
 	return 0;
 }
@@ -291,10 +291,10 @@ static void detachSerial(void *ctx)
 	for (unsigned int i = 0; i < 4; i++)
 		s_config.endpoints[i].transmittedBytes = 0;
 	s_serial.serialState = 0;
-	ksceKernelClearEventFlag(s_serial.event,
+	sceKernelClearEventFlag(s_serial.event,
 				 ~(SERIAL_EVENT_RX_READY | SERIAL_EVENT_NOTIFY_IDLE | SERIAL_EVENT_CANCEL |
 				   SERIAL_EVENT_DTR_ON | SERIAL_EVENT_RESERVED));
-	ksceKernelSetEventFlag(s_serial.event,
+	sceKernelSetEventFlag(s_serial.event,
 			       SERIAL_EVENT_DETACHED | SERIAL_EVENT_DTR_OFF | SERIAL_EVENT_TX_EMPTY);
 }
 
@@ -316,11 +316,11 @@ static int DevReqHdlr(int recipient, int index, SceUdcdEP0DeviceRequest *req, vo
 		return 0;
 	case CDC_SET_CONTROL_LINE_STATE:
 		if (req->wValue & CDC_LINE_STATE_DTR) {
-			ksceKernelClearEventFlag(s_serial.event, ~SERIAL_EVENT_DTR_OFF);
-			ksceKernelSetEventFlag(s_serial.event, SERIAL_EVENT_DTR_ON);
+			sceKernelClearEventFlag(s_serial.event, ~SERIAL_EVENT_DTR_OFF);
+			sceKernelSetEventFlag(s_serial.event, SERIAL_EVENT_DTR_ON);
 		} else {
-			ksceKernelClearEventFlag(s_serial.event, ~SERIAL_EVENT_DTR_ON);
-			ksceKernelSetEventFlag(s_serial.event, SERIAL_EVENT_DTR_OFF);
+			sceKernelClearEventFlag(s_serial.event, ~SERIAL_EVENT_DTR_ON);
+			sceKernelSetEventFlag(s_serial.event, SERIAL_EVENT_DTR_OFF);
 		}
 		return 0;
 	case CDC_SEND_BREAK:
@@ -343,7 +343,7 @@ static void BulkINDone(SceUdcdDeviceRequest *req)
 		s_serial.txRead = (s_serial.txRead + req->transmitted) & (TX_SIZE - 1);
 	if (s_serial.attached && s_serial.openCount) {
 		if (txPending() == 0) {
-			ksceKernelSetEventFlag(s_serial.event, SERIAL_EVENT_TX_EMPTY);
+			sceKernelSetEventFlag(s_serial.event, SERIAL_EVENT_TX_EMPTY);
 		} else {
 			req->size = transmitSize();
 			memcpy(req->data, s_serial.txRing + s_serial.txRead, req->size);
@@ -374,7 +374,7 @@ static void BulkOUTDone(SceUdcdDeviceRequest *req)
 			memcpy(s_serial.rxRing, (uint8_t *)req->data + tail, req->transmitted - tail);
 		}
 		s_serial.rxWrite = (s_serial.rxWrite + req->transmitted) & (RX_SIZE - 1);
-		ksceKernelSetEventFlag(s_serial.event, SERIAL_EVENT_RX_READY);
+		sceKernelSetEventFlag(s_serial.event, SERIAL_EVENT_RX_READY);
 	}
 	if (s_serial.attached && s_serial.openCount && (unsigned int)req->size <= rxFree() &&
 	    ksceUdcdReqRecvInternal(req, s_config.bus) >= 0)
@@ -516,7 +516,7 @@ static int Start(int size, void *args, void *ctx)
 	s_serial.txRing = memory->txRing;
 	s_serial.rxRing = memory->rxRing;
 
-	s_serial.event = ksceKernelCreateEventFlag("SceUsbSerial", SCE_KERNEL_EVF_ATTR_MULTI,
+	s_serial.event = sceKernelCreateEventFlag("SceUsbSerial", SCE_KERNEL_EVF_ATTR_MULTI,
 						   SERIAL_EVENT_DETACHED | SERIAL_EVENT_CLOSED, NULL);
 	if (s_serial.event <= 0)
 		goto fail;
@@ -562,7 +562,7 @@ static void completeNotification(SceUdcdDeviceRequest *req)
 	if (s_serial.notificationPending)
 		SendSerialState();
 	else
-		ksceKernelSetEventFlag(s_serial.event, SERIAL_EVENT_NOTIFY_IDLE);
+		sceKernelSetEventFlag(s_serial.event, SERIAL_EVENT_NOTIFY_IDLE);
 }
 
 /* raise DCD/DSR, empty both rings and start receiving */
@@ -573,8 +573,8 @@ static inline int StartTransfer(void)
 	s_serial.serialState |= CDC_SERIAL_STATE_DCD | CDC_SERIAL_STATE_DSR;
 	ksceUdcdReqCancelAll(&s_config.endpoints[3]);
 	ksceUdcdReqCancelAll(&s_config.endpoints[1]);
-	ksceKernelClearEventFlag(s_serial.event, ~(SERIAL_EVENT_CLOSED | SERIAL_EVENT_RX_READY));
-	ksceKernelSetEventFlag(s_serial.event, SERIAL_EVENT_TX_EMPTY);
+	sceKernelClearEventFlag(s_serial.event, ~(SERIAL_EVENT_CLOSED | SERIAL_EVENT_RX_READY));
+	sceKernelSetEventFlag(s_serial.event, SERIAL_EVENT_TX_EMPTY);
 	SendSerialState();
 	s_serial.txWrite = s_serial.txRead = 0;
 	s_serial.rxWrite = s_serial.rxRead = 0;
@@ -590,7 +590,7 @@ static int Configured(int version, void *ctx)
 
 	s_serial.attached = 1;
 	s_serial.receive.request.size = version == 2 ? 512 : 64;
-	ret = ksceKernelClearEventFlag(s_serial.event, ~SERIAL_EVENT_DETACHED);
+	ret = sceKernelClearEventFlag(s_serial.event, ~SERIAL_EVENT_DETACHED);
 	if (s_serial.openCount > 0)
 		ret = StartTransfer();
 	return ret;
@@ -710,8 +710,8 @@ int SceUsbDevSerial_F0C3F3D4(void)
 		if (s_serial.attached) {
 			s_serial.serialState &= ~(CDC_SERIAL_STATE_DCD | CDC_SERIAL_STATE_DSR);
 			SendSerialState();
-			ksceKernelSetEventFlag(s_serial.event, SERIAL_EVENT_CLOSED);
-			ksceKernelClearEventFlag(s_serial.event,
+			sceKernelSetEventFlag(s_serial.event, SERIAL_EVENT_CLOSED);
+			sceKernelClearEventFlag(s_serial.event,
 						 ~(SERIAL_EVENT_RESERVED | SERIAL_EVENT_CANCEL));
 			ksceUdcdReqCancelAll(&s_config.endpoints[2]);
 		}
@@ -746,7 +746,7 @@ int SceUsbDevSerial_57FBB08C(void *buffer, unsigned int size)
 	}
 	pending = rxPending();
 	if (pending == 0) {
-		ksceKernelPollEventFlag(s_serial.event, ~0U, SCE_KERNEL_EVF_WAITMODE_OR, &bits);
+		sceKernelPollEventFlag(s_serial.event, ~0U, SCE_KERNEL_EVF_WAITMODE_OR, &bits);
 		if (s_serial.requireCarrier == 1 && (bits & SERIAL_EVENT_DTR_OFF)) {
 			ret = SCE_UDCD_ERROR_BUS_DRIVER_NOT_STARTED;
 			goto unlock;
@@ -762,7 +762,7 @@ int SceUsbDevSerial_57FBB08C(void *buffer, unsigned int size)
 				  SERIAL_EVENT_CANCEL | SERIAL_EVENT_RX_READY;
 			if (requireCarrier)
 				pattern |= SERIAL_EVENT_DTR_OFF;
-			ret = ksceKernelWaitEventFlagCB(s_serial.event, pattern,
+			ret = SceThreadmgrForDriver_8A35F714(s_serial.event, pattern,
 							SCE_KERNEL_EVF_WAITMODE_OR,
 							&bits, timeoutp);
 			if (ret < 0)
@@ -776,7 +776,7 @@ int SceUsbDevSerial_57FBB08C(void *buffer, unsigned int size)
 				goto out;
 			}
 			if (bits & SERIAL_EVENT_CANCEL) {
-				ksceKernelClearEventFlag(s_serial.event, ~SERIAL_EVENT_CANCEL);
+				sceKernelClearEventFlag(s_serial.event, ~SERIAL_EVENT_CANCEL);
 				ret = SCE_KERNEL_ERROR_WAIT_CANCEL;
 				goto out;
 			}
@@ -784,7 +784,7 @@ int SceUsbDevSerial_57FBB08C(void *buffer, unsigned int size)
 
 		state = SceCpuForDriver_D32ACE9E(&s_serial.lock);
 		pending = rxPending();
-		ksceKernelClearEventFlag(s_serial.event, ~SERIAL_EVENT_RX_READY);
+		sceKernelClearEventFlag(s_serial.event, ~SERIAL_EVENT_RX_READY);
 	}
 
 	if (pending < size)
@@ -834,7 +834,7 @@ int SceUsbDevSerial_4437FF2D(const void *buffer, unsigned int size)
 		ret = SCE_ERROR_ERRNO_ENODEV;
 		goto unlock;
 	}
-	ksceKernelPollEventFlag(s_serial.event, ~0U, SCE_KERNEL_EVF_WAITMODE_OR, &bits);
+	sceKernelPollEventFlag(s_serial.event, ~0U, SCE_KERNEL_EVF_WAITMODE_OR, &bits);
 	if (s_serial.requireCarrier == 1 && (bits & SERIAL_EVENT_DTR_OFF)) {
 		ret = SCE_UDCD_ERROR_BUS_DRIVER_NOT_STARTED;
 		goto unlock;
@@ -847,7 +847,7 @@ int SceUsbDevSerial_4437FF2D(const void *buffer, unsigned int size)
 				  SERIAL_EVENT_NOTIFY_IDLE;
 			if (requireCarrier)
 				pattern |= SERIAL_EVENT_DTR_OFF;
-			ret = ksceKernelWaitEventFlagCB(s_serial.event, pattern,
+			ret = SceThreadmgrForDriver_8A35F714(s_serial.event, pattern,
 							SCE_KERNEL_EVF_WAITMODE_OR,
 							&bits, NULL);
 			if (ret < 0)
@@ -883,7 +883,7 @@ int SceUsbDevSerial_4437FF2D(const void *buffer, unsigned int size)
 	if (ret < 0)
 		goto unlock;
 	s_serial.txWrite = (s_serial.txWrite + size) & (TX_SIZE - 1);
-	ksceKernelClearEventFlag(s_serial.event, ~SERIAL_EVENT_TX_EMPTY);
+	sceKernelClearEventFlag(s_serial.event, ~SERIAL_EVENT_TX_EMPTY);
 	if (!s_serial.txActive) {
 		s_serial.transmit.request.size = transmitSize();
 		memcpy(s_serial.transmit.request.data, s_serial.txRing + s_serial.txRead,

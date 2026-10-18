@@ -38,7 +38,7 @@ int ngsPlatformInitialize(void)
 	if (key < 0)
 		return key;
 	ngsPlatformState.processStorageKey = key;
-	ngsPlatformState.globalMutex = ksceKernelCreateMutex(
+	ngsPlatformState.globalMutex = sceKernelCreateMutex(
 		"SceLibNgsGlobalMutex", 0x2000, 0, NULL);
 	if (ngsPlatformState.globalMutex == 0)
 		return SCE_NGS_ERROR;
@@ -53,7 +53,7 @@ int ngsPlatformInitialize(void)
 
 int ngsPlatformShutdown(void)
 {
-	ksceKernelDeleteMutex(ngsPlatformState.globalMutex);
+	sceKernelDeleteMutex(ngsPlatformState.globalMutex);
 	ngsPlatformState.globalMutex = 0;
 	if (ngsPlatformState.sharedMemory != NULL)
 		SceCodecEngineWrapperForDriver_3C5E9CC3(1,
@@ -275,7 +275,7 @@ foundStorage:
 			result = SCE_NGS_ERROR_OUT_OF_ASSETS;
 	} else {
 		system->systemId = result;
-		result = ksceKernelInitializeFastMutex(
+		result = sceKernelInitializeFastMutex(
 			(SceKernelFastMutex *)&system->context->systemMutex,
 			"SceNgsProcMutex", 0x8000, NULL);
 		if (result >= 0) {
@@ -300,7 +300,7 @@ foundStorage:
 			ngsLockCodec(system->context);
 			SceCodecEngineWrapperForDriver_391BD4FD(322, &command, 0, 0);
 			ngsUnlockCodec(system->context);
-			ksceKernelFinalizeFastMutex(
+			sceKernelFinalizeFastMutex(
 				(SceKernelFastMutex *)&system->context->systemMutex);
 		}
 	}
@@ -376,7 +376,7 @@ foundStorage:
 	ngsUnlockCodec(system->context);
 	if (result != 0)
 		return result;
-	ksceKernelFinalizeFastMutex(
+	sceKernelFinalizeFastMutex(
 		(SceKernelFastMutex *)&system->context->systemMutex);
 	SceCodecEngineWrapperForDriver_3C5E9CC3(1,
 		system->context->systemHeap, 0x40000);
@@ -622,7 +622,7 @@ int ngsCheckContextUnlocked(NgsPlatformContext *context)
 		result = (int)0x804a0008;
 	} else {
 		info.size = sizeof(info);
-		result = ksceKernelGetFastMutexInfo(
+		result = sceKernelGetFastMutexInfo(
 			(SceKernelFastMutex *)&context->systemMutex, &info);
 		if (result >= 0)
 			result = info.lockCount > 0 ? (int)0x804a0008 : 0;

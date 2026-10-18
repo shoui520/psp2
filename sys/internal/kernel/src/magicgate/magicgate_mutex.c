@@ -6,7 +6,7 @@ MagicGateDriver magicGateDriver;
 
 int createDriverMutex(void)
 {
-	int result = ksceKernelCreateMutex("SceMagicGateDrv", 2, 0, NULL);
+	int result = sceKernelCreateMutex("SceMagicGateDrv", 2, 0, NULL);
 
 	if (result >= 0) {
 		magicGateDriver.mutex = result;
@@ -20,7 +20,7 @@ int deleteDriverMutex(void)
 	int result = magicGateDriver.mutex;
 
 	if (result > 0) {
-		result = ksceKernelDeleteMutex(result);
+		result = sceKernelDeleteMutex(result);
 		magicGateDriver.mutex = 0;
 	}
 	return result;
@@ -28,7 +28,7 @@ int deleteDriverMutex(void)
 
 int SceMagicGateForDriver_A49B9D70(void)
 {
-	int result = ksceKernelLockMutex(magicGateDriver.mutex, 1, NULL);
+	int result = sceKernelLockMutex(magicGateDriver.mutex, 1, NULL);
 
 	if (result == (int)0x80024504)
 		result = (int)0x80501001;
@@ -39,7 +39,7 @@ int SceMagicGateForDriver_A49B9D70(void)
 
 int SceMagicGateForDriver_43518F19(void)
 {
-	int result = ksceKernelTryLockMutex(magicGateDriver.mutex, 1);
+	int result = sceKernelTryLockMutex(magicGateDriver.mutex, 1);
 
 	if (result == (int)0x80028145)
 		return (int)0x80502001;
@@ -50,7 +50,7 @@ int SceMagicGateForDriver_43518F19(void)
 
 int SceMagicGateForDriver_492EE950(void)
 {
-	return ksceKernelUnlockMutex(magicGateDriver.mutex, 1);
+	return sceKernelUnlockMutex(magicGateDriver.mutex, 1);
 }
 
 int SceMagicGateForDriver_38AE3ACA(void)
@@ -60,7 +60,7 @@ int SceMagicGateForDriver_38AE3ACA(void)
 
 int SceMagicGateForDriver_46A28FAA(void)
 {
-	int result = ksceKernelLockMutex(magicGateDriver.mutex, 1, NULL);
+	int result = sceKernelLockMutex(magicGateDriver.mutex, 1, NULL);
 
 	if (result == (int)0x80024504)
 		return (int)0x80501001;
@@ -69,11 +69,11 @@ int SceMagicGateForDriver_46A28FAA(void)
 			magicGateDriver.references = 1;
 			initializeSlots();
 			result = loadDriverKeyTable();
-			ksceKernelUnlockMutex(magicGateDriver.mutex, 1);
+			sceKernelUnlockMutex(magicGateDriver.mutex, 1);
 			return result & (result >> 31);
 		}
 		++magicGateDriver.references;
-		ksceKernelUnlockMutex(magicGateDriver.mutex, 1);
+		sceKernelUnlockMutex(magicGateDriver.mutex, 1);
 		return 0;
 	}
 	return result;
@@ -83,20 +83,20 @@ void terminateDriver(void)
 {
 	clearSlotState();
 	magicGateDriver.references = 0;
-	ksceKernelUnlockMutex(magicGateDriver.mutex, 1);
+	sceKernelUnlockMutex(magicGateDriver.mutex, 1);
 }
 
 int SceMagicGateForDriver_6D3B42E6(void)
 {
-	int result = ksceKernelLockMutex(magicGateDriver.mutex, 1, NULL);
+	int result = sceKernelLockMutex(magicGateDriver.mutex, 1, NULL);
 
 	if (result < 0)
 		return result;
 	if (magicGateDriver.references > 1) {
 		--magicGateDriver.references;
-		return ksceKernelUnlockMutex(magicGateDriver.mutex, 1);
+		return sceKernelUnlockMutex(magicGateDriver.mutex, 1);
 	}
 	clearSlotState();
 	magicGateDriver.references = 0;
-	return ksceKernelUnlockMutex(magicGateDriver.mutex, 1);
+	return sceKernelUnlockMutex(magicGateDriver.mutex, 1);
 }

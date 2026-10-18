@@ -64,8 +64,8 @@ static void PixelClockDelay(void)
 	uint32_t start;
 
 	if (sceKernelCheckWaitableStatus() < 0) {
-		start = ksceKernelGetSystemTimeLow();
-		while ((uint32_t)(ksceKernelGetSystemTimeLow() - start) < 1000)
+		start = SceThreadmgrForDriver_47F6DE49();
+		while ((uint32_t)(SceThreadmgrForDriver_47F6DE49() - start) < 1000)
 			;
 	} else {
 		sceKernelDelayThread(1000);

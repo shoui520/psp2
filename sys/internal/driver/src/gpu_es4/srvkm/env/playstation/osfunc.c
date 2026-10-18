@@ -42,7 +42,7 @@ int MISRTaskletThread(SceSize argSize, IMG_VOID *pvArgs)
 	int res;
 
 	while (psEnvData->misrRunning == IMG_TRUE) {
-		res = ksceKernelWaitEventFlag(psEnvData->misrEventFlag, 1, 5,
+		res = sceKernelWaitEventFlag(psEnvData->misrEventFlag, 1, 5,
 				&outBits, NULL);
 		if (psEnvData->misrRunning == IMG_FALSE)
 			break;
@@ -55,7 +55,7 @@ int MISRTaskletThread(SceSize argSize, IMG_VOID *pvArgs)
 #endif
 		}
 	}
-	ksceKernelExitDeleteThread(0);
+	sceKernelExitDeleteThread(0);
 	return 0;
 }
 
@@ -77,7 +77,7 @@ int SystemISRWrapper(int irq, IMG_VOID *pvSysData)
 	SYS_DATA *psSysData = pvSysData;
 
 	if (psSysData && PVRSRVSystemLISR(psSysData))
-		ksceKernelSetEventFlag(psSysData->pvEnvSpecificData->misrEventFlag, 1);
+		sceKernelSetEventFlag(psSysData->pvEnvSpecificData->misrEventFlag, 1);
 	return -1;
 }
 
@@ -168,25 +168,25 @@ PVRSRV_ERROR OSDeInitEnvData(IMG_VOID *pvEnvSpecificData)
 /* SCE clock is already in microseconds. */
 IMG_UINT32 OSClockus(IMG_VOID)
 {
-	return ksceKernelGetSystemTimeLow();
+	return SceThreadmgrForDriver_47F6DE49();
 }
 
 IMG_VOID OSWaitus(IMG_UINT32 ui32Timeus)
 {
-	IMG_UINT32 ui32Start = ksceKernelGetSystemTimeLow();
+	IMG_UINT32 ui32Start = SceThreadmgrForDriver_47F6DE49();
 
 	do {
-	} while (ksceKernelGetSystemTimeLow() - ui32Start < ui32Timeus);
+	} while (SceThreadmgrForDriver_47F6DE49() - ui32Start < ui32Timeus);
 }
 
 IMG_VOID OSSleepms(IMG_UINT32 ui32Timems)
 {
-	ksceKernelDelayThread(ui32Timems * 1000);
+	sceKernelDelayThread(ui32Timems * 1000);
 }
 
 IMG_UINT32 OSGetCurrentProcessIDKM(IMG_VOID)
 {
-	return ksceKernelGetProcessId();
+	return sceKernelGetProcessId();
 }
 
 /* SCE replaces request_irq/tasklets with a native interrupt and MISR thread. */
@@ -197,7 +197,7 @@ PVRSRV_ERROR OSInstallSystemLISR(IMG_VOID *pvSysData, IMG_UINT32 ui32Irq)
 
 	if (psEnvData->bLISRInstalled)
 		return PVRSRV_ERROR_ISR_ALREADY_INSTALLED;
-	psEnvData->misrThread = ksceKernelCreateThread("SceGpuMisr",
+	psEnvData->misrThread = sceKernelCreateThread("SceGpuMisr",
 			MISRTaskletThread, 20, 0x2000, 0, 15, NULL);
 	if (psEnvData->misrThread < 0) {
 #if FW_DEBUG
@@ -214,15 +214,15 @@ PVRSRV_ERROR OSInstallSystemLISR(IMG_VOID *pvSysData, IMG_UINT32 ui32Irq)
 	psEnvData->misrRunning = IMG_TRUE;
 	psEnvData->ui32IRQ = ui32Irq;
 	psEnvData->pvISRCookie = psSysData;
-	psEnvData->misrEventFlag = ksceKernelCreateEventFlag("SceGpuIsr", 0, 0, NULL);
+	psEnvData->misrEventFlag = sceKernelCreateEventFlag("SceGpuIsr", 0, 0, NULL);
 	if (psEnvData->misrEventFlag < 0)
 		goto deleteThread;
-	ksceKernelStartThread(psEnvData->misrThread, sizeof(psEnvData), &psEnvData);
+	sceKernelStartThread(psEnvData->misrThread, sizeof(psEnvData), &psEnvData);
 	ksceKernelEnableIntr(ui32Irq);
 	return PVRSRV_OK;
 
 deleteThread:
-	ksceKernelDeleteThread(psEnvData->misrThread);
+	sceKernelDeleteThread(psEnvData->misrThread);
 	return PVRSRV_ERROR_UNABLE_TO_INSTALL_ISR;
 }
 
@@ -235,9 +235,9 @@ PVRSRV_ERROR OSUninstallSystemLISR(IMG_VOID *pvSysData)
 		return PVRSRV_ERROR_ISR_NOT_INSTALLED;
 	ksceKernelReleaseIntrHandler(psEnvData->ui32IRQ);
 	psEnvData->misrRunning = IMG_FALSE;
-	ksceKernelSetEventFlag(psEnvData->misrEventFlag, 1);
-	ksceKernelWaitThreadEnd(psEnvData->misrThread, NULL, NULL);
-	ksceKernelDeleteEventFlag(psEnvData->misrEventFlag);
+	sceKernelSetEventFlag(psEnvData->misrEventFlag, 1);
+	sceKernelWaitThreadEnd(psEnvData->misrThread, NULL, NULL);
+	sceKernelDeleteEventFlag(psEnvData->misrEventFlag);
 	psEnvData->bLISRInstalled = IMG_FALSE;
 	return PVRSRV_OK;
 }
@@ -275,7 +275,7 @@ PVRSRV_ERROR OSScheduleMISR(IMG_VOID *pvSysData)
 	ENV_DATA *psEnvData = psSysData->pvEnvSpecificData;
 
 	if (psEnvData->bMISRInstalled)
-		ksceKernelSetEventFlag(psEnvData->misrEventFlag, 1);
+		sceKernelSetEventFlag(psEnvData->misrEventFlag, 1);
 	return PVRSRV_OK;
 }
 

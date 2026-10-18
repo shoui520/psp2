@@ -104,7 +104,7 @@ int pfsFacadeReadMapped(SceUID fd, void *buf, SceSize nbyte, SceOff offset, int 
 			maps = i;
 			goto mapped;
 		}
-		jobs[i].thread = ksceKernelGetThreadId();
+		jobs[i].thread = sceKernelGetThreadId();
 		jobs[i].waiting = 0;
 		jobs[i].req = &reqs[i];
 		jobs[i].result = 0;

@@ -21,6 +21,7 @@
 #include "syscall_context.h"
 #include <sysmem/dipsw.h>
 #include <sysmem/uid_class.h>
+#include <threadmgr/threadmgr.h>
 
 #define THREAD_ATTR_USER		0x80000000
 #define THREAD_ATTR_UNK10000000		0x10000000	/* PLACEHOLDER: its stack is only measured with DIPSW 0xd8 */
@@ -63,16 +64,6 @@
 
 #define THREAD_CLASS()		(s_threadmgrRuntime.manager->threadClass)
 
-/* the registers as the debugger sees them (SceArmCpuRegisters, 0x48) */
-typedef struct ThreadmgrDebugRegisters {
-	uint32_t r[13];				/* 0x00 */
-	uint32_t sp;				/* 0x34 */
-	uint32_t lr;				/* 0x38 */
-	uint32_t pc;				/* 0x3c */
-	uint32_t cpsr;				/* 0x40 */
-	uint32_t fpscr;				/* 0x44 */
-} ThreadmgrDebugRegisters;
-
 #define DEBUG_REG_PC			15	/* mask bits: r0-r14, then these */
 #define DEBUG_REG_CPSR			16
 #define DEBUG_REG_FPSCR			17
@@ -100,19 +91,12 @@ _Static_assert(sizeof(ThreadmgrThreadInfoForDebugger) == 0x128 &&
 	       offsetof(ThreadmgrThreadInfoForDebugger, waitDetail) == 0x108,
 	       "thread info for debugger layout");
 
-/* ksceKernelGetThreadContextInfo's output (SceKernelThreadContextInfo) */
-typedef struct ThreadCBInfo {
-	SceUID processId;
-	SceUID threadId;
-} ThreadCBInfo;
-
 /* getThreadNameListProc's entries (0x24) */
 typedef struct ThreadmgrThreadName {
 	SceUID threadId;
 	char name[32];
 } ThreadmgrThreadName;
 
-SceUID ksceKernelGetThreadId(void);
 void runningThreadPreemptByIntr(struct ThreadCB *context, uint32_t reason);
 void issueDebugSuspendThreadIntrRequest(unsigned int cpuId, SceUID threadId, uint32_t reason,
 					int *result, SceKernelSpinlock *done);
@@ -134,7 +118,7 @@ static inline void dataMemoryBarrier(void)
 static inline int isSelfOrNone(SceUID threadId)
 {
 	return threadId == 0 || (currentThreadContext() != NULL &&
-				 ksceKernelGetThreadId() == threadId);
+				 sceKernelGetThreadId() == threadId);
 }
 
 /*
@@ -573,7 +557,7 @@ static inline void convertWaitObjectsCond(ThreadmgrThreadInfoForDebugger *info)
 	}
 }
 
-/* the information in the IDs its process uses (ksceKernelGetThreadInfoForDebugger) */
+/* the information in the IDs its process uses (SceThreadmgrForDriver_DD8D9429) */
 int getThreadInfoForDebuggerForUser(SceUID threadId, SceUInt32 level, uint32_t flags,
 				    ThreadmgrThreadInfoForDebugger *info)
 {
@@ -1184,8 +1168,8 @@ done:
 	return ret;
 }
 
-/* ksceKernelDebugSuspendThread: suspends the thread for reason (added to any others) */
-int ksceKernelDebugSuspendThread(SceUID threadId, uint32_t reason)
+/* sceKernelDebugSuspendThread: suspends the thread for reason (added to any others) */
+int sceKernelDebugSuspendThread(SceUID threadId, uint32_t reason)
 {
 	struct SceKernelThreadmgrPrivate *manager;
 	struct ThreadMgrCpuCB *cpu;
@@ -1281,7 +1265,7 @@ resume:
 }
 
 /* takes reason off the thread's suspend reasons; with none left it runs again */
-int ksceKernelDebugResumeThread(SceUID threadId, uint32_t reason)
+int sceKernelDebugResumeThread(SceUID threadId, uint32_t reason)
 {
 	struct SceKernelThreadmgrPrivate *manager;
 	struct ThreadmgrThreadObject *object;
@@ -1337,7 +1321,7 @@ resume:
 }
 
 /* replaces a debug-suspended thread's reasons; returns the old ones */
-int ksceKernelChangeThreadSuspendStatus(SceUID threadId, uint32_t reason)
+int SceThreadmgrForDriver_04C6764B(SceUID threadId, uint32_t reason)
 {
 	struct ThreadmgrThreadObject *object;
 	int intr, ret;
@@ -1365,7 +1349,7 @@ int ksceKernelChangeThreadSuspendStatus(SceUID threadId, uint32_t reason)
 }
 
 /* the thread's debug suspend reasons */
-int ksceKernelIsThreadDebugSuspended(SceUID threadId)
+int SceThreadmgrForDriver_A0B1AB21(SceUID threadId)
 {
 	struct ThreadmgrThreadObject *object;
 	int intr, ret;
@@ -1513,7 +1497,7 @@ int SceThreadmgrForKernel_C4735A7E(SceUID threadId, ThreadmgrDebugRegisters *reg
 	return _sceKernelGetCpuRegisterForDebugger(threadId, regs, 0);
 }
 
-int ksceKernelGetThreadCpuRegisters(SceUID threadId, ThreadmgrDebugRegisters *regs)
+int SceThreadmgrForDriver_5022689D(SceUID threadId, ThreadmgrDebugRegisters *regs)
 {
 	return _sceKernelGetCpuRegisterForDebugger(threadId, regs, 1);
 }
@@ -1632,13 +1616,13 @@ int SceThreadmgrForKernel_444CE648(SceUID threadId, uint32_t *vfp)
 	return _sceKernelGetVfpRegisterForDebugger(threadId, vfp, 0);
 }
 
-int ksceKernelGetVfpRegisterForDebugger(SceUID threadId, uint32_t *vfp)
+int SceThreadmgrForDriver_5CDE387A(SceUID threadId, uint32_t *vfp)
 {
 	return _sceKernelGetVfpRegisterForDebugger(threadId, vfp, 1);
 }
 
 /* the process and thread this CPU runs (from an exception handler) */
-int ksceKernelGetThreadContextInfo(ThreadCBInfo *info)
+int SceThreadmgrForKernel_6C1F092F(ThreadCBInfo *info)
 {
 	struct ThreadMgrCpuCB *cpu;
 	int intr;
@@ -1671,7 +1655,7 @@ int SceThreadmgrForKernel_BFF892B4(SceUID threadId, uint32_t flags,
 	return getThreadInfoForDebuggerForUser(threadId, 5, flags, info);
 }
 
-int ksceKernelGetThreadInfoForDebugger(SceUID threadId, uint32_t flags,
+int SceThreadmgrForDriver_DD8D9429(SceUID threadId, uint32_t flags,
 				       ThreadmgrThreadInfoForDebugger *info)
 {
 	return getThreadInfoForDebuggerForUser(threadId, 3, flags, info);
@@ -1715,7 +1699,7 @@ int SceThreadmgrForDriver_FD87586C(SceUID pid, ThreadmgrThreadName *names, SceSi
 	return getThreadNameListProc(pid, 3, names, size, count);
 }
 
-SceUID ksceKernelGetUserThreadId(SceUID threadId)
+SceUID SceThreadmgrForDriver_F311808F(SceUID threadId)
 {
 	struct ThreadmgrThreadObject *object;
 	int intr;

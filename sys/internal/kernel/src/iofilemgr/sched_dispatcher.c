@@ -35,10 +35,10 @@ int sceIoSchedDispatcherInitializeSchedDispatcher(SchedDispatcher *dispatcher)
 	IoSchedulerAttr other;
 	int ret;
 
-	ret = ksceKernelInitializeFastMutex(&dispatcher->mutex, "SceIoSchedulerDispatcher",
+	ret = sceKernelInitializeFastMutex(&dispatcher->mutex, "SceIoSchedulerDispatcher",
 					    SCE_KERNEL_MUTEX_ATTR_RECURSIVE | 0x2000, 0);
 	SCE_DBG_ASSERT(ret == 0, 52);
-	dispatcher->evf = ksceKernelCreateEventFlag("SceIoSchedulerDispatcher", 0x1000, 0, NULL);
+	dispatcher->evf = sceKernelCreateEventFlag("SceIoSchedulerDispatcher", 0x1000, 0, NULL);
 	SCE_DBG_ASSERT(dispatcher->evf > 0, 60);
 
 	__builtin_memset(&gameCard, 0, sizeof(gameCard));
@@ -203,12 +203,12 @@ int sceIoSchedDispatcherFsResourceAvailable(SchedDispatcher *dispatcher, SceUInt
 {
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&dispatcher->mutex);
+	ret = lockFastMutex(&dispatcher->mutex);
 	SCE_DBG_ASSERT(ret == 0, 426);
 	if (weight & SCHED_FS_RESOURCE_COUNTED)
 		dispatcher->fsResourceNum++;
 	dispatcher->fsResource |= weight;
-	ret = ksceKernelUnlockFastMutex(&dispatcher->mutex);
+	ret = sceKernelUnlockFastMutex(&dispatcher->mutex);
 	SCE_DBG_ASSERT(ret == 0, 435);
 	return 0;
 }
@@ -217,14 +217,14 @@ int sceIoSchedDispatcherFsResourceUnavailable(SchedDispatcher *dispatcher, SceUI
 {
 	int ret;
 
-	ret = ksceKernelLockFastMutex(&dispatcher->mutex);
+	ret = lockFastMutex(&dispatcher->mutex);
 	SCE_DBG_ASSERT(ret == 0, 444);
 	if (weight & SCHED_FS_RESOURCE_COUNTED) {
 		SCE_DBG_ASSERT(dispatcher->fsResourceNum > 0, 447);
 		dispatcher->fsResourceNum--;
 	}
 	dispatcher->fsResource &= ~weight;
-	ret = ksceKernelUnlockFastMutex(&dispatcher->mutex);
+	ret = sceKernelUnlockFastMutex(&dispatcher->mutex);
 	SCE_DBG_ASSERT(ret == 0, 456);
 	return 0;
 }
@@ -244,7 +244,7 @@ void sceIoSchedDispatcherWorker(SchedDispatcher *dispatcher, IoScheduler *sched)
 
 	for (;;) {
 		bits = 0;
-		ret = ksceKernelWaitEventFlag(dispatcher->evf, sched->eventBits | SCHED_EVENT_HELP_MASK,
+		ret = sceKernelWaitEventFlag(dispatcher->evf, sched->eventBits | SCHED_EVENT_HELP_MASK,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 		SCE_DBG_ASSERT(ret == 0, 508);
@@ -255,12 +255,12 @@ void sceIoSchedDispatcherWorker(SchedDispatcher *dispatcher, IoScheduler *sched)
 			/* both kinds of work: leave one for another worker */
 			if (bits & SCHED_EVENT_HELP_MASK) {
 				if (bits == sched->eventBits) {
-					ret = ksceKernelSetEventFlag(dispatcher->evf,
+					ret = sceKernelSetEventFlag(dispatcher->evf,
 								     bits & SCHED_EVENT_HELP_MASK);
 					SCE_DBG_ASSERT(ret == 0, 526);
 					bits &= ~SCHED_EVENT_HELP_MASK;
 				} else {
-					ret = ksceKernelSetEventFlag(dispatcher->evf,
+					ret = sceKernelSetEventFlag(dispatcher->evf,
 								     bits & SCHED_EVENT_OWN_MASK);
 					SCE_DBG_ASSERT(ret == 0, 534);
 					bits &= ~SCHED_EVENT_OWN_MASK;
@@ -276,17 +276,17 @@ void sceIoSchedDispatcherWorker(SchedDispatcher *dispatcher, IoScheduler *sched)
 		} else if (bits & SCHED_EVENT_HELP_MASK) {
 			target = sceIoSchedDispatcherGetIoSchedulerByEvent(dispatcher, bits);
 			SCE_DBG_ASSERT(target != NULL, 550);
-			ret = ksceKernelLockFastMutex(&dispatcher->mutex);
+			ret = lockFastMutex(&dispatcher->mutex);
 			SCE_DBG_ASSERT(ret == 0, 553);
 			if (target->workerNum >= SCHED_WORKER_MAX) {
 				getIofilemgrTls()->isCountedWorker = 0;
-				ret = ksceKernelUnlockFastMutex(&dispatcher->mutex);
+				ret = sceKernelUnlockFastMutex(&dispatcher->mutex);
 				SCE_DBG_ASSERT(ret == 0, 563);
 				continue;
 			}
 			target->workerNum++;
 			getIofilemgrTls()->isCountedWorker = 1;
-			ret = ksceKernelUnlockFastMutex(&dispatcher->mutex);
+			ret = sceKernelUnlockFastMutex(&dispatcher->mutex);
 			SCE_DBG_ASSERT(ret == 0, 572);
 		} else {
 			SCE_DBG_ASSERT(0, 574);
@@ -295,14 +295,14 @@ void sceIoSchedDispatcherWorker(SchedDispatcher *dispatcher, IoScheduler *sched)
 		if (sceIoSchedulerExecuteIoRequestWorkerForDispatcher(target) == 1)
 			break;
 
-		ret = ksceKernelLockFastMutex(&dispatcher->mutex);
+		ret = lockFastMutex(&dispatcher->mutex);
 		SCE_DBG_ASSERT(ret == 0, 584);
 		if (getIofilemgrTls()->isCountedWorker == 1) {
 			SCE_DBG_ASSERT(target->workerNum > 0, 587);
 			target->workerNum--;
 			getIofilemgrTls()->isCountedWorker = 0;
 		}
-		ret = ksceKernelUnlockFastMutex(&dispatcher->mutex);
+		ret = sceKernelUnlockFastMutex(&dispatcher->mutex);
 		SCE_DBG_ASSERT(ret == 0, 593);
 	}
 }

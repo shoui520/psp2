@@ -58,9 +58,9 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	SceSysrootForDriver_46E72428
 	SceSysrootForDriver_930B1342
-	ksceKernelGetSystemTimeLow
+	SceThreadmgrForDriver_47F6DE49
 	sceKernelDelayThread
-	ksceKernelEnqueueWorkQueue
+	sceKernelScheduleWorkTask
 	ksceKernelSearchModuleByName
 	sceKernelRegisterSysEventHandler
 	kscePervasiveSpiResetEnable

@@ -116,25 +116,25 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelReleaseSubIntrHandler
 	ksceKernelEnableSubIntr
 	ksceKernelRegisterSubIntrHandler
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
 	sceKernelExitThread
-	ksceKernelLockMutex
-	ksceKernelCreateCallback
-	ksceKernelUnlockMutex
-	ksceKernelStartThread
-	ksceKernelCreateEventFlag
+	sceKernelLockMutex
+	sceKernelCreateCallback
+	sceKernelUnlockMutex
+	sceKernelStartThread
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelDeleteEventFlag
-	ksceKernelPollEventFlag
-	ksceKernelWaitEventFlagCB
+	sceKernelClearEventFlag
+	sceKernelDeleteEventFlag
+	sceKernelPollEventFlag
+	SceThreadmgrForDriver_8A35F714
 	sceKernelIsUserModeThread
 	sceKernelGetProcessId
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
+	sceKernelCreateThread
+	sceKernelSetEventFlag
 	sceKernelGetSystemTimeWide
-	ksceKernelCreateMutex
+	sceKernelCreateMutex
 	ksceKernelCreateProcessLocalStorage
 	SceProcessmgrForDriver_8CB01675
 	ksceKernelGetProcessLocalStorageAddrForPid

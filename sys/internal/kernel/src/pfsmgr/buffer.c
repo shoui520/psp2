@@ -21,7 +21,7 @@ int pfsBufferListInit(ScePfsBufferList *list, const char *name, SceSize elementS
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.alignment = PFS_BUFFER_MEMBLOCK_ALIGN;
-	list->mutex = ksceKernelCreateMutex(name, PFS_MUTEX_ATTR, 0, NULL);
+	list->mutex = sceKernelCreateMutex(name, PFS_MUTEX_ATTR, 0, NULL);
 	if (list->mutex < 0)
 		return list->mutex;
 
@@ -57,32 +57,32 @@ int pfsBufferListInit(ScePfsBufferList *list, const char *name, SceSize elementS
 	return 0;
 
 deleteMutex:
-	ksceKernelDeleteMutex(list->mutex);
+	sceKernelDeleteMutex(list->mutex);
 	return ret;
 }
 
 void pfsBufferListTerm(ScePfsBufferList *list)
 {
 	SceSysmemForDriver_009E1C61(list->memBlock);
-	ksceKernelDeleteMutex(list->mutex);
+	sceKernelDeleteMutex(list->mutex);
 }
 
 void *pfsBufferListAlloc(ScePfsBufferList *list)
 {
 	void **element;
 
-	ksceKernelLockMutex(list->mutex, 1, NULL);
+	sceKernelLockMutex(list->mutex, 1, NULL);
 	element = list->freeList;
 	if (element != NULL)
 		list->freeList = *element;
-	ksceKernelUnlockMutex(list->mutex, 1);
+	sceKernelUnlockMutex(list->mutex, 1);
 	return element;
 }
 
 void pfsBufferListFree(ScePfsBufferList *list, void *element)
 {
-	ksceKernelLockMutex(list->mutex, 1, NULL);
+	sceKernelLockMutex(list->mutex, 1, NULL);
 	*(void **)element = list->freeList;
 	list->freeList = element;
-	ksceKernelUnlockMutex(list->mutex, 1);
+	sceKernelUnlockMutex(list->mutex, 1);
 }

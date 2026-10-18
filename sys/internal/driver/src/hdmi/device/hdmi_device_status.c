@@ -22,7 +22,7 @@ static SceUID statusMutex;
 int hdmiDeviceStatusInitialize(HdmiDevice *device)
 {
 	statusMutex = 0;
-	statusMutex = ksceKernelCreateMutex("SceHdmiDeviceStatus", 0x2002, 0, NULL);
+	statusMutex = sceKernelCreateMutex("SceHdmiDeviceStatus", 0x2002, 0, NULL);
 	return statusMutex < 0 ? SCE_HDMI_ERROR_DEVICE : 0;
 }
 
@@ -30,12 +30,12 @@ int hdmiDeviceSmLock(void)
 {
 	SceUInt32 timeout = 0xffffffff;
 
-	return ksceKernelLockMutex(statusMutex, 1, &timeout);
+	return sceKernelLockMutex(statusMutex, 1, &timeout);
 }
 
 int hdmiDeviceSmUnlock(void)
 {
-	return ksceKernelUnlockMutex(statusMutex, 1);
+	return sceKernelUnlockMutex(statusMutex, 1);
 }
 
 int hdmiDeviceStatusIsStopRequested(HdmiDevice *device)
@@ -57,9 +57,9 @@ int hdmiDeviceStatusHasRequest(HdmiDevice *device)
 	SceUInt32 timeout = 0xffffffff;
 	int ret;
 
-	ksceKernelLockMutex(statusMutex, 1, &timeout);
+	sceKernelLockMutex(statusMutex, 1, &timeout);
 	ret = device->request != 0;
-	ksceKernelUnlockMutex(statusMutex, 1);
+	sceKernelUnlockMutex(statusMutex, 1);
 	return ret;
 }
 
@@ -68,9 +68,9 @@ int hdmiDeviceStatusIsResetRequested(HdmiDevice *device)
 	SceUInt32 timeout = 0xffffffff;
 	int ret;
 
-	ksceKernelLockMutex(statusMutex, 1, &timeout);
+	sceKernelLockMutex(statusMutex, 1, &timeout);
 	ret = device->request == HDMI_REQUEST_RESET;
-	ksceKernelUnlockMutex(statusMutex, 1);
+	sceKernelUnlockMutex(statusMutex, 1);
 	return ret;
 }
 
@@ -79,9 +79,9 @@ int hdmiDeviceStatusIsModeRequested(HdmiDevice *device)
 	SceUInt32 timeout = 0xffffffff;
 	int ret;
 
-	ksceKernelLockMutex(statusMutex, 1, &timeout);
+	sceKernelLockMutex(statusMutex, 1, &timeout);
 	ret = device->request == HDMI_REQUEST_MODE;
-	ksceKernelUnlockMutex(statusMutex, 1);
+	sceKernelUnlockMutex(statusMutex, 1);
 	return ret;
 }
 
@@ -89,8 +89,8 @@ int hdmiDeviceStatusIsReady(HdmiDevice *device)
 {
 	SceUInt32 timeout = 0xffffffff;
 
-	ksceKernelLockMutex(statusMutex, 1, &timeout);
-	ksceKernelUnlockMutex(statusMutex, 1);
+	sceKernelLockMutex(statusMutex, 1, &timeout);
+	sceKernelUnlockMutex(statusMutex, 1);
 	return 1;
 }
 
@@ -98,8 +98,8 @@ int hdmiDeviceStatusNeedsReauth(HdmiDevice *device)
 {
 	SceUInt32 timeout = 0xffffffff;
 
-	ksceKernelLockMutex(statusMutex, 1, &timeout);
-	ksceKernelUnlockMutex(statusMutex, 1);
+	sceKernelLockMutex(statusMutex, 1, &timeout);
+	sceKernelUnlockMutex(statusMutex, 1);
 	return 0;
 }
 
@@ -109,10 +109,10 @@ int hdmiDeviceStatusIsChanged(HdmiDevice *device)
 	SceUInt32 timeout = 0xffffffff;
 	int status;
 
-	ksceKernelLockMutex(statusMutex, 1, &timeout);
+	sceKernelLockMutex(statusMutex, 1, &timeout);
 	status = device->pendingStatus;
 	device->pendingStatus = HDMI_STATUS_SEEN;
-	ksceKernelUnlockMutex(statusMutex, 1);
+	sceKernelUnlockMutex(statusMutex, 1);
 	return status == HDMI_STATUS_CHANGED;
 }
 

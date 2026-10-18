@@ -66,7 +66,7 @@ int _sceCodecEngineProcessCreateEntry(SceUID pid, SceUInt32 type)
 		storage->unmapMemBlocks[2].guid = -1;
 		storage->unmapMemBlocks[3].puid = -1;
 		storage->unmapMemBlocks[3].guid = -1;
-		ret = ksceKernelInitializeFastMutex(&storage->mutex, "SceCodecEngine", 0x8000, 0);
+		ret = sceKernelInitializeFastMutex(&storage->mutex, "SceCodecEngine", 0x8000, 0);
 	}
 	return ret;
 }
@@ -85,7 +85,7 @@ int _sceCodecEngineProcessExitEntry(SceUID pid, SceUInt32 type)
 	ret = _closeUnmapMemBlockAll(pid);
 	if (ret >= 0)
 		ret = storageResult & (storageResult >> 31);
-	finalResult = ksceKernelFinalizeFastMutex(&storage->mutex);
+	finalResult = sceKernelFinalizeFastMutex(&storage->mutex);
 	if (finalResult >= 0)
 		finalResult = ret;
 	else

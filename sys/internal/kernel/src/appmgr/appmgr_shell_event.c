@@ -103,7 +103,7 @@ static void _shellEventQueueRemoveEventAll(int eventType)
 {
 	SceUID owner = g_appmgrMainMutexOwner;
 
-	if (owner != ksceKernelGetThreadId()) {
+	if (owner != sceKernelGetThreadId()) {
 #if FW_DEBUG
 		sceAppMgrDump();
 		dumpBgmState();
@@ -279,7 +279,7 @@ int _shellEventQueuePush(const AppmgrShellEvent *event)
 {
 	SceUID owner = g_appmgrMainMutexOwner;
 
-	if (owner != ksceKernelGetThreadId()) {
+	if (owner != sceKernelGetThreadId()) {
 #if FW_DEBUG
 		sceAppMgrDump();
 		dumpBgmState();
@@ -316,7 +316,7 @@ void _shellEventOnAppLoadedQueuePush(SceUID processId, int appId)
 	event.data.loaded.processId = processId;
 	event.data.loaded.appId = appId;
 	event.event = 2;
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 356, "Failed to lock ret=0x%08x\n", result);
@@ -327,7 +327,7 @@ void _shellEventOnAppLoadedQueuePush(SceUID processId, int appId)
 		appmgrShellEventMutexPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	result = _shellEventQueuePush(&event);
 	if (result != 0) {
@@ -343,7 +343,7 @@ void _shellEventOnAppLoadedQueuePush(SceUID processId, int appId)
 	}
 	mutex = g_appmgrMainMutex;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(mutex, 1);
+	result = sceKernelUnlockMutex(mutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -487,7 +487,7 @@ static const SceKernelDebugInfo debuggerShellEventCountPanicInfo = {
 
 static inline void signalSemaForDebuggerShellEventCount(void)
 {
-	if (ksceKernelSignalSema(g_appmgrDebugShellEventSemaphore, 1) == 0)
+	if (sceKernelSignalSema(g_appmgrDebugShellEventSemaphore, 1) == 0)
 		return;
 #if FW_DEBUG
 	sceAppMgrDump();
@@ -517,7 +517,7 @@ void _shellEventStartLaunchAppFromDebuggerQueuePush(SceUID processId,
 	event.data.debuggerStart.liveareaType = liveareaType;
 	event.data.debuggerStart.appId = appId;
 	event.event = 9;
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 455, "Failed to lock ret=0x%08x\n", result);
@@ -528,7 +528,7 @@ void _shellEventStartLaunchAppFromDebuggerQueuePush(SceUID processId,
 		appmgrShellEventMutexPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	result = _shellEventQueuePush(&event);
 	if (result != 0) {
@@ -544,7 +544,7 @@ void _shellEventStartLaunchAppFromDebuggerQueuePush(SceUID processId,
 	}
 	mutex = g_appmgrMainMutex;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(mutex, 1);
+	result = sceKernelUnlockMutex(mutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -572,7 +572,7 @@ void _shellEventResultLaunchAppFromDebuggerQueuePush(SceUID processId,
 	event.data.debuggerResult.result = launchResult;
 	event.data.debuggerResult.appId = appId;
 	event.event = 10;
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 477, "Failed to lock ret=0x%08x\n", result);
@@ -583,7 +583,7 @@ void _shellEventResultLaunchAppFromDebuggerQueuePush(SceUID processId,
 		appmgrShellEventMutexPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	result = _shellEventQueuePush(&event);
 	if (result != 0) {
@@ -599,7 +599,7 @@ void _shellEventResultLaunchAppFromDebuggerQueuePush(SceUID processId,
 	}
 	mutex = g_appmgrMainMutex;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(mutex, 1);
+	result = sceKernelUnlockMutex(mutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -655,7 +655,7 @@ void _shellEventVoiceChatAppChangedQueuePush(int oldAppId, int newAppId,
 	event.data.voiceChat.oldProcessId = oldProcessId;
 	event.data.voiceChat.newProcessId = newProcessId;
 	event.event = 12;
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 516, "Failed to lock ret=0x%08x\n", result);
@@ -666,7 +666,7 @@ void _shellEventVoiceChatAppChangedQueuePush(int oldAppId, int newAppId,
 		appmgrShellEventMutexPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	result = _shellEventQueuePush(&event);
 	if (result != 0) {
@@ -682,7 +682,7 @@ void _shellEventVoiceChatAppChangedQueuePush(int oldAppId, int newAppId,
 	}
 	mutex = g_appmgrMainMutex;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(mutex, 1);
+	result = sceKernelUnlockMutex(mutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -710,7 +710,7 @@ void _shellEventLiveareaModeChangedQueuePush(SceUID processId, int appId,
 	event.data.liveareaMode.appId = appId;
 	event.data.liveareaMode.mode = mode;
 	event.event = 13;
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 536, "Failed to lock ret=0x%08x\n", result);
@@ -721,7 +721,7 @@ void _shellEventLiveareaModeChangedQueuePush(SceUID processId, int appId,
 		appmgrShellEventMutexPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	result = _shellEventQueuePush(&event);
 	if (result != 0) {
@@ -737,7 +737,7 @@ void _shellEventLiveareaModeChangedQueuePush(SceUID processId, int appId,
 	}
 	mutex = g_appmgrMainMutex;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(mutex, 1);
+	result = sceKernelUnlockMutex(mutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -787,7 +787,7 @@ void _shellEventActivateAppRequestQueuePush(int appId)
 	memset(&event, 0, sizeof(event));
 	event.event = 15;
 	event.data.appRequest.appId = appId;
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 571, "Failed to lock ret=0x%08x\n", result);
@@ -798,7 +798,7 @@ void _shellEventActivateAppRequestQueuePush(int appId)
 		appmgrShellEventMutexPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	_shellEventQueueRemoveEventAll(15);
 	_shellEventQueueRemoveEventAll(16);
@@ -816,7 +816,7 @@ void _shellEventActivateAppRequestQueuePush(int appId)
 	}
 	mutex = g_appmgrMainMutex;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(mutex, 1);
+	result = sceKernelUnlockMutex(mutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -841,7 +841,7 @@ void _shellEventDeactivateAppRequestQueuePush(int appId)
 	memset(&event, 0, sizeof(event));
 	event.event = 16;
 	event.data.appRequest.appId = appId;
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 593, "Failed to lock ret=0x%08x\n", result);
@@ -852,7 +852,7 @@ void _shellEventDeactivateAppRequestQueuePush(int appId)
 		appmgrShellEventMutexPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	_shellEventQueueRemoveEventAll(15);
 	_shellEventQueueRemoveEventAll(16);
@@ -870,7 +870,7 @@ void _shellEventDeactivateAppRequestQueuePush(int appId)
 	}
 	mutex = g_appmgrMainMutex;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(mutex, 1);
+	result = sceKernelUnlockMutex(mutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -894,7 +894,7 @@ void _shellEventRecommendedScreenOrientationStatusChangedQueuePush(void)
 		return;
 	memset(&event, 0, sizeof(event));
 	event.event = 17;
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 614, "Failed to lock ret=0x%08x\n", result);
@@ -905,7 +905,7 @@ void _shellEventRecommendedScreenOrientationStatusChangedQueuePush(void)
 		appmgrShellEventMutexPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	result = _shellEventQueuePush(&event);
 	if (result != 0) {
@@ -921,7 +921,7 @@ void _shellEventRecommendedScreenOrientationStatusChangedQueuePush(void)
 	}
 	mutex = g_appmgrMainMutex;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(mutex, 1);
+	result = sceKernelUnlockMutex(mutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -949,7 +949,7 @@ void _shellEventLiveAreaOperationQueuePush(int operation, const char *appName)
 	strncpy(event.data.liveArea.appName, appName,
 		sizeof(event.data.liveArea.appName));
 	event.data.liveArea.appName[31] = '\0';
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 634, "Failed to lock ret=0x%08x\n", result);
@@ -960,7 +960,7 @@ void _shellEventLiveAreaOperationQueuePush(int operation, const char *appName)
 		appmgrShellEventMutexPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	result = _shellEventQueuePush(&event);
 	if (result != 0) {
@@ -976,7 +976,7 @@ void _shellEventLiveAreaOperationQueuePush(int operation, const char *appName)
 	}
 	mutex = g_appmgrMainMutex;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(mutex, 1);
+	result = sceKernelUnlockMutex(mutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -1000,7 +1000,7 @@ void _shellEventAppRunningStatusChangedQueuePush(void)
 		return;
 	memset(&event, 0, sizeof(event));
 	event.event = 18;
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 651, "Failed to lock ret=0x%08x\n", result);
@@ -1011,7 +1011,7 @@ void _shellEventAppRunningStatusChangedQueuePush(void)
 		appmgrShellEventMutexPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	result = _shellEventQueuePush(&event);
 	if (result != 0) {
@@ -1027,7 +1027,7 @@ void _shellEventAppRunningStatusChangedQueuePush(void)
 	}
 	mutex = g_appmgrMainMutex;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(mutex, 1);
+	result = sceKernelUnlockMutex(mutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -1056,9 +1056,9 @@ int sceAppMgrReceiveShellEventNum(void)
 	if (!shell)
 		goto denied;
 	processId = shell->process.processId;
-	if (processId != ksceKernelGetProcessId())
+	if (processId != sceKernelGetProcessId())
 		goto denied;
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 688, "Failed to lock ret=0x%08x\n", result);
@@ -1069,13 +1069,13 @@ int sceAppMgrReceiveShellEventNum(void)
 		appmgrShellEventMutexPanic();
 #endif
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	count = g_appmgrShellEventQueue.count;
 	(void)appmgrUpdateShellWatchDogActivity();
 	mutex = g_appmgrMainMutex;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(mutex, 1);
+	result = sceKernelUnlockMutex(mutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -1114,13 +1114,13 @@ int sceAppMgrReceiveShellEvent(AppmgrShellEvent *event)
 	if (!shell)
 		goto denied;
 	processId = shell->process.processId;
-	if (processId != ksceKernelGetProcessId())
+	if (processId != sceKernelGetProcessId())
 		goto denied;
 	if (!event) {
 		sceSyscallLeave(syscall);
 		return (int)0x80802016;
 	}
-	lockResult = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	lockResult = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (lockResult != 0) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF(0, 714, "Failed to lock ret=0x%08x\n", lockResult);
@@ -1131,7 +1131,7 @@ int sceAppMgrReceiveShellEvent(AppmgrShellEvent *event)
 		appmgrShellEventMutexPanic();
 #endif
 	} else {
-		(void)ksceKernelGetThreadId();
+		(void)sceKernelGetThreadId();
 	}
 	count = g_appmgrShellEventQueue.count;
 	if (count != 0) {
@@ -1146,7 +1146,7 @@ int sceAppMgrReceiveShellEvent(AppmgrShellEvent *event)
 	}
 	mutex = g_appmgrMainMutex;
 	g_appmgrMainMutexOwner = -1;
-	unlockResult = ksceKernelUnlockMutex(mutex, 1);
+	unlockResult = sceKernelUnlockMutex(mutex, 1);
 	if (unlockResult != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -1176,7 +1176,7 @@ int sceAppMgrCheckAppLaunchLimitToAvoidQueueOverflow(void)
 	int first;
 	int index;
 
-	if (owner != ksceKernelGetThreadId()) {
+	if (owner != sceKernelGetThreadId()) {
 #if FW_DEBUG
 		sceAppMgrDump();
 		dumpBgmState();

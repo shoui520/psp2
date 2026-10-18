@@ -14,13 +14,13 @@ int GcAuthAdhocVerifyRequest160(const GcAuthAdhocSign160Request *request)
 
 	if (request->keyId != 0)
 		return (int)0x808a040a;
-	if (ksceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
 		return (int)0x808a0008;
 	result = (int)0x808a040d;
 	if (GcAuthAdhocVerify160(&gcAuthAdhocPublicKey160Key0, request->digest,
 			request->signature) == 0)
 		result = 0;
-	if (ksceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
 		result = (int)0x808a0008;
 	return result;
 }
@@ -31,7 +31,7 @@ int GcAuthAdhocVerifyFixed160(const GcAuthAdhocVerifyPair160 *request)
 	const GcAuthAdhocSignature160 *signature = request->signature;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
 		return (int)0x808a0008;
 	if (digest == NULL || signature == NULL ||
 			GcAuthAdhocVerify160(&gcAuthAdhocPublicKey160Fixed,
@@ -39,7 +39,7 @@ int GcAuthAdhocVerifyFixed160(const GcAuthAdhocVerifyPair160 *request)
 		result = (int)0x808a000c;
 	else
 		result = 0;
-	if (ksceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
 		result = (int)0x808a0008;
 	return result;
 }

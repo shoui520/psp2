@@ -32,9 +32,9 @@ int pfsAcidFind(ScePfsPmi **acid, ScePfsPmi *pmi, SceVfsVnode *vp)
 
 	if (vd->slot == -1)
 		return SCE_PFS_ERROR_INVALID_ARG;
-	ksceKernelLockMutex(pmi->mutex, 1, NULL);
+	sceKernelLockMutex(pmi->mutex, 1, NULL);
 	ret = pfsAcidFindLocked(acid, pmi, vp);
-	ksceKernelUnlockMutex(pmi->mutex, 1);
+	sceKernelUnlockMutex(pmi->mutex, 1);
 	return ret;
 }
 
@@ -88,7 +88,7 @@ int pfsAcidDirMount(ScePfsPmi *pmi, SceVfsVnode *vp, const void *klicensee, SceS
 
 	if (!((SceUInt16)vp->core.acl_data[0] & PFS_ATTR_ACID_DIR))
 		return SCE_PFS_ERROR_INVALID_ARG;
-	ksceKernelLockMutex(pmi->mutex, 1, NULL);
+	sceKernelLockMutex(pmi->mutex, 1, NULL);
 	if (pfsAcidFindLocked(&acid, pmi, vp) == 0) {
 		ret = SCE_PFS_ERROR_ACID_EXISTS;
 		goto unlock;
@@ -132,7 +132,7 @@ int pfsAcidDirMount(ScePfsPmi *pmi, SceVfsVnode *vp, const void *klicensee, SceS
 	}
 	pfsPmiDestroy(acid);
 unlock:
-	ksceKernelUnlockMutex(pmi->mutex, 1);
+	sceKernelUnlockMutex(pmi->mutex, 1);
 	return ret;
 }
 
@@ -142,7 +142,7 @@ int pfsAcidGetDirs(ScePfsPmi *pmi, ScePfsAcidDirs *dirs)
 	int ret;
 
 	dirs->count = 0;
-	ksceKernelLockMutex(pmi->mutex, 1, NULL);
+	sceKernelLockMutex(pmi->mutex, 1, NULL);
 	node = pmi->acidDirs.next;
 	if (node == NULL)
 		goto notInList;
@@ -161,7 +161,7 @@ int pfsAcidGetDirs(ScePfsPmi *pmi, ScePfsAcidDirs *dirs)
 notInList:
 	ret = SCE_PFS_ERROR_NOT_IN_LIST;
 unlock:
-	ksceKernelUnlockMutex(pmi->mutex, 1);
+	sceKernelUnlockMutex(pmi->mutex, 1);
 	return ret;
 }
 
@@ -172,17 +172,17 @@ int pfsAcidDirSeal(ScePfsPmi *pmi, SceVfsVnode *vp)
 
 	if (!((SceUInt16)vp->core.acl_data[0] & PFS_ATTR_ACID_DIR))
 		return SCE_PFS_ERROR_INVALID_ARG;
-	ksceKernelLockMutex(pmi->mutex, 1, NULL);
+	sceKernelLockMutex(pmi->mutex, 1, NULL);
 	ret = pfsAcidFindLocked(&acid, pmi, vp);
 	if (ret == 0) {
-		ksceKernelLockMutex(acid->mutex, 1, NULL);
+		sceKernelLockMutex(acid->mutex, 1, NULL);
 		if (acid->mode == PFS_MODE_ACID)
 			acid->mode = PFS_MODE_ACID_SEALED;
 		else
 			ret = SCE_PFS_ERROR_ACID_SEALED;
-		ksceKernelUnlockMutex(acid->mutex, 1);
+		sceKernelUnlockMutex(acid->mutex, 1);
 	}
-	ksceKernelUnlockMutex(pmi->mutex, 1);
+	sceKernelUnlockMutex(pmi->mutex, 1);
 	return ret;
 }
 
@@ -193,22 +193,22 @@ int pfsAcidDirUmount(ScePfsPmi *pmi, SceVfsVnode *vp)
 
 	if (!((SceUInt16)vp->core.acl_data[0] & PFS_ATTR_ACID_DIR))
 		return SCE_PFS_ERROR_INVALID_ARG;
-	ksceKernelLockMutex(pmi->mutex, 1, NULL);
+	sceKernelLockMutex(pmi->mutex, 1, NULL);
 	ret = pfsAcidFindLocked(&acid, pmi, vp);
 	if (ret == 0) {
-		ksceKernelLockMutex(acid->mutex, 1, NULL);
+		sceKernelLockMutex(acid->mutex, 1, NULL);
 		if (acid->openCount < 1) {
 			acid->link.next->prev = acid->link.prev;
 			acid->link.prev->next = acid->link.next;
-			ksceKernelUnlockMutex(acid->mutex, 1);
+			sceKernelUnlockMutex(acid->mutex, 1);
 			pfsCoreUmount(acid, 0);
 			pfsPmiDestroy(acid);
 		} else {
-			ksceKernelUnlockMutex(acid->mutex, 1);
+			sceKernelUnlockMutex(acid->mutex, 1);
 			ret = SCE_PFS_ERROR_ACID_BUSY;
 		}
 	}
-	ksceKernelUnlockMutex(pmi->mutex, 1);
+	sceKernelUnlockMutex(pmi->mutex, 1);
 	return ret;
 }
 

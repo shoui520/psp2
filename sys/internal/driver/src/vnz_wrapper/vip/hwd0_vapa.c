@@ -88,7 +88,7 @@ int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request)
 			__builtin_prefetch(&tags[3].dst);
 		index++;
 	} while (index != count);
-	ksceKernelLockFastMutex(g_veneziaHwdDmaState.activeMutex);
+	lockFastMutex(g_veneziaHwdDmaState.activeMutex);
 	ret = ksceKernelDmaOpSetupChain(g_veneziaHwdDmaState.operations[channel], tags,
 		&g_veneziaHwdDmaChainParam, 17);
 	if (ret >= 0) {
@@ -96,7 +96,7 @@ int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request)
 		if (ret >= 0)
 			ksceKernelDmaOpSync(g_veneziaHwdDmaState.operations[channel], 2, 0, 0);
 	}
-	ksceKernelUnlockFastMutex(g_veneziaHwdDmaState.activeMutex);
+	sceKernelUnlockFastMutex(g_veneziaHwdDmaState.activeMutex);
 	return ret;
 }
 
@@ -181,7 +181,7 @@ int initializeVeneziaHwdDma(void)
 
 	g_veneziaHwdDmaState.activeMutex = NULL;
 	g_veneziaHwdDmaState.operations[0] = -1;
-	ret = ksceKernelInitializeFastMutex(&g_veneziaHwdDmaState.mutex,
+	ret = sceKernelInitializeFastMutex(&g_veneziaHwdDmaState.mutex,
 		"SceHwd0Dma", 2, 0);
 	if (ret >= 0) {
 		g_veneziaHwdDmaState.activeMutex = &g_veneziaHwdDmaState.mutex;
@@ -328,7 +328,7 @@ int SceCodecEngineWrapperForDriver_FAF590A6(void *destination,
 	tags[0].pNext = SCE_KERNEL_DMAC_CHAIN_END;
 	tags[0].len = size;
 	tags[0].cmd = command;
-	ksceKernelLockFastMutex(g_veneziaHwdDmaState.activeMutex);
+	lockFastMutex(g_veneziaHwdDmaState.activeMutex);
 	ret = ksceKernelDmaOpSetupChain(g_veneziaHwdDmaState.operations[0], tags,
 		&g_veneziaHwdDmaChainParam, 17);
 	if (ret >= 0) {
@@ -336,7 +336,7 @@ int SceCodecEngineWrapperForDriver_FAF590A6(void *destination,
 		if (ret >= 0)
 			ksceKernelDmaOpSync(g_veneziaHwdDmaState.operations[0], 2, 0, 0);
 	}
-	ksceKernelUnlockFastMutex(g_veneziaHwdDmaState.activeMutex);
+	sceKernelUnlockFastMutex(g_veneziaHwdDmaState.activeMutex);
 	return ret;
 #endif
 }

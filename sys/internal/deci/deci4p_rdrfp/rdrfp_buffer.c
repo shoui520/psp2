@@ -35,13 +35,13 @@ int rdrfpInitBufferTable(void)
 
 	for (type = 0; type < RDRFP_BUF_TYPES; type++) {
 		table = &rdrfpBufferTable[type];
-		ret = ksceKernelCreateMutex("SceDeci4pRDrfp", 0x2000, 0, NULL);
+		ret = sceKernelCreateMutex("SceDeci4pRDrfp", 0x2000, 0, NULL);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_WITH_INFO(0xf, 79, "CreateMutex failed (0x%08X)\n", ret);
 			goto failed;
 		}
 		table->mutex = ret;
-		ret = ksceKernelCreateEventFlag("SceDeci4pRDrfp", 0, 0, NULL);
+		ret = sceKernelCreateEventFlag("SceDeci4pRDrfp", 0, 0, NULL);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_WITH_INFO(0xf, 89, "CreateCond failed (0x%08X)\n", ret);
 			goto failed;
@@ -67,9 +67,9 @@ int rdrfpInitBufferTable(void)
 failed:
 	for (table = rdrfpBufferTable; table != &rdrfpBufferTable[RDRFP_BUF_TYPES]; table++) {
 		if (table->mutex)
-			ksceKernelDeleteMutex(table->mutex);
+			sceKernelDeleteMutex(table->mutex);
 		if (table->evf)
-			ksceKernelDeleteEventFlag(table->evf);
+			sceKernelDeleteEventFlag(table->evf);
 		for (i = 0; i < table->count; i++) {
 			if (table->buffers[i].block)
 				SceSysmemForDriver_009E1C61(table->buffers[i].block);
@@ -84,7 +84,7 @@ int rdrfpReserveBuffer(int type, int wait)
 	RdrfpBufferTable *table = &rdrfpBufferTable[type];
 	int i, ret;
 
-	ksceKernelLockMutex(table->mutex, 1, NULL);
+	sceKernelLockMutex(table->mutex, 1, NULL);
 	for (;;) {
 		for (i = 0; i < table->count; i++) {
 			if (!(table->buffers[i].flags & 1)) {
@@ -96,30 +96,30 @@ int rdrfpReserveBuffer(int type, int wait)
 			i = -1;
 			goto out;
 		}
-		ksceKernelUnlockMutex(table->mutex, 1);
-		ret = ksceKernelWaitEventFlagCB(table->evf, 1,
+		sceKernelUnlockMutex(table->mutex, 1);
+		ret = SceThreadmgrForDriver_8A35F714(table->evf, 1,
 						SCE_KERNEL_EVF_WAITMODE_OR |
 						SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 						NULL, NULL);
-		ksceKernelLockMutex(table->mutex, 1, NULL);
+		sceKernelLockMutex(table->mutex, 1, NULL);
 		if (ret < 0)
 			break;
 	}
 	i = -1;
 	SCE_DBG_PRINTF_WITH_INFO(0xf, 216, "WaitCond failed (0x%08X)\n", ret);
 out:
-	ksceKernelUnlockMutex(table->mutex, 1);
+	sceKernelUnlockMutex(table->mutex, 1);
 	return i;
 }
 
 void rdrfpReleaseBuffer(int type, int index)
 {
 	SCE_DBG_ASSERT_LEVEL(0, index >= 0 && (unsigned int)type < RDRFP_BUF_TYPES, 235);
-	ksceKernelLockMutex(rdrfpBufferTable[type].mutex, 1, NULL);
+	sceKernelLockMutex(rdrfpBufferTable[type].mutex, 1, NULL);
 	SCE_DBG_ASSERT_LEVEL(0, index < rdrfpBufferTable[type].count, 239);
 	rdrfpBufferTable[type].buffers[index].flags = 0;
-	ksceKernelSetEventFlag(rdrfpBufferTable[type].evf, 1);
-	ksceKernelUnlockMutex(rdrfpBufferTable[type].mutex, 1);
+	sceKernelSetEventFlag(rdrfpBufferTable[type].evf, 1);
+	sceKernelUnlockMutex(rdrfpBufferTable[type].mutex, 1);
 }
 
 void *rdrfpBufferAddr(int type, int index)

@@ -207,7 +207,7 @@ static void onControlTransferCompletion(int result, int count, void *arg)
 	struct SceUsbEtherSmscContext *a = arg;
 
 	(void)count;
-	ksceKernelSetEventFlag(a->controlEvent, result < 0 ? CONTROL_FAILED : CONTROL_DONE);
+	sceKernelSetEventFlag(a->controlEvent, result < 0 ? CONTROL_FAILED : CONTROL_DONE);
 }
 
 static int readRegister(struct SceUsbEtherSmscContext *a, unsigned short reg, unsigned int *value)
@@ -223,7 +223,7 @@ static int readRegister(struct SceUsbEtherSmscContext *a, unsigned short reg, un
 	s_readValue = 0;
 	ret = ksceUsbdControlTransfer(a->controlPipe, &s_readRequest, (unsigned char *)&s_readValue, onControlTransferCompletion, a);
 	if (ret >= 0) {
-		ret = ksceKernelWaitEventFlag(a->controlEvent, CONTROL_FAILED | CONTROL_DONE,
+		ret = sceKernelWaitEventFlag(a->controlEvent, CONTROL_FAILED | CONTROL_DONE,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 		if (ret >= 0) {
@@ -249,7 +249,7 @@ static int writeRegister(struct SceUsbEtherSmscContext *a, unsigned short reg, u
 	s_writeValue = value;
 	ret = ksceUsbdControlTransfer(a->controlPipe, &s_writeRequest, (unsigned char *)&s_writeValue, onControlTransferCompletion, a);
 	if (ret >= 0) {
-		ret = ksceKernelWaitEventFlag(a->controlEvent, CONTROL_FAILED | CONTROL_DONE,
+		ret = sceKernelWaitEventFlag(a->controlEvent, CONTROL_FAILED | CONTROL_DONE,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 		if (ret >= 0 && (bits & CONTROL_FAILED))
@@ -264,7 +264,7 @@ static void usbEtherSmscOnTxTransferCompletion(int result, int count, void *arg)
 
 	(void)count;
 	if (result >= 0)
-		ksceKernelSetEventFlag(a->workerEvent, WORKER_TX);
+		sceKernelSetEventFlag(a->workerEvent, WORKER_TX);
 }
 static void usbEtherSmscOnRxTransferCompletion(int result, int count, void *arg)
 {
@@ -272,7 +272,7 @@ static void usbEtherSmscOnRxTransferCompletion(int result, int count, void *arg)
 
 	if (result >= 0) {
 		a->rxCount = count;
-		ksceKernelSetEventFlag(a->workerEvent, WORKER_RX);
+		sceKernelSetEventFlag(a->workerEvent, WORKER_RX);
 	}
 }
 static int sendBuffer(struct SceUsbEtherSmscContext *a, void *data, unsigned int length)
@@ -287,19 +287,19 @@ static int receiveBuffer(struct SceUsbEtherSmscContext *a, void *data, unsigned 
 static int connected(struct SceUsbEtherSmscContext *a)
 {
 	__atomic_fetch_or(&a->flags, SMSC_FLAG_ATTACHED, __ATOMIC_SEQ_CST);
-	return ksceKernelSetEventFlag(a->workerEvent, WORKER_ATTACHED);
+	return sceKernelSetEventFlag(a->workerEvent, WORKER_ATTACHED);
 }
 static int disconnected(struct SceUsbEtherSmscContext *a)
 {
 	__atomic_fetch_and(&a->flags, ~SMSC_FLAG_ATTACHED, __ATOMIC_SEQ_CST);
-	ksceKernelSetEventFlag(a->workerEvent, WORKER_DETACH);
+	sceKernelSetEventFlag(a->workerEvent, WORKER_DETACH);
 	a->link = 0;
 	return 0;
 }
 static int detachDevice(int device)
 {
 	(void)device;
-	if (ksceKernelSetEventFlag(s_context.controlEvent, CONTROL_FAILED) >= 0)
+	if (sceKernelSetEventFlag(s_context.controlEvent, CONTROL_FAILED) >= 0)
 		return disconnected(&s_context) >> 31;
 	return -1;
 }
@@ -340,7 +340,7 @@ static int onAttach(int device)
 	int ret, i;
 
 	a->controlPipe = a->rxPipe = a->txPipe = -1;
-	ret = ksceKernelClearEventFlag(a->controlEvent, 0);
+	ret = sceKernelClearEventFlag(a->controlEvent, 0);
 	if (ret < 0)
 		return ret;
 	scan = ksceUsbdScanStaticDescriptor(device, NULL, 1);
@@ -377,7 +377,7 @@ static int onAttach(int device)
 	ret = ksceUsbdControlTransfer(a->controlPipe, &request, NULL, onControlTransferCompletion, a);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelWaitEventFlag(a->controlEvent, CONTROL_FAILED | CONTROL_DONE,
+	ret = sceKernelWaitEventFlag(a->controlEvent, CONTROL_FAILED | CONTROL_DONE,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	if (ret < 0)
@@ -388,7 +388,7 @@ static int onAttach(int device)
 	ret = ksceUsbdControlTransfer(a->controlPipe, &request, NULL, onControlTransferCompletion, a);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelWaitEventFlag(a->controlEvent, CONTROL_FAILED | CONTROL_DONE,
+	ret = sceKernelWaitEventFlag(a->controlEvent, CONTROL_FAILED | CONTROL_DONE,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	if (ret < 0)
@@ -406,7 +406,7 @@ static int initializeUsb(struct SceUsbEtherSmscContext *a)
 	unsigned int hardware;
 	int ret, n;
 
-	ret = ksceKernelCreateEventFlag("SceSmscControlTransfer", 0, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceSmscControlTransfer", 0, 0, NULL);
 	if (ret < 0)
 		return ret;
 	a->controlEvent = ret;
@@ -497,7 +497,7 @@ static int updateLink(struct SceUsbEtherSmscContext *a)
 	unsigned int data, advertised, mac;
 	int ret;
 
-	ksceKernelLockFastMutex(&a->mutex);
+	lockFastMutex(&a->mutex);
 	ret = readPhy(a, MII_BMSR, (unsigned short *)&data);
 	if (ret < 0)
 		goto out;
@@ -541,7 +541,7 @@ static int updateLink(struct SceUsbEtherSmscContext *a)
 	if (ret >= 0)
 		a->driver.notify(&a->driver, (void *)a->driver.notify, NET_DRIVER_EVENT_LINK_UP, 0, NULL, 0);
 out:
-	ksceKernelUnlockFastMutex(&a->mutex);
+	sceKernelUnlockFastMutex(&a->mutex);
 	return ret;
 }
 static int setLink(struct SceUsbEtherSmscContext *a, unsigned int mode)
@@ -549,7 +549,7 @@ static int setLink(struct SceUsbEtherSmscContext *a, unsigned int mode)
 	unsigned int control, advertisement = 0, data;
 	int ret, n;
 
-	ksceKernelLockFastMutex(&a->mutex);
+	lockFastMutex(&a->mutex);
 	switch (mode) {
 	case 0:
 		control = BMCR_PDOWN;
@@ -615,7 +615,7 @@ static int setLink(struct SceUsbEtherSmscContext *a, unsigned int mode)
 	}
 	ret = SMSC_ERROR_TIMEOUT;
 out:
-	ksceKernelUnlockFastMutex(&a->mutex);
+	sceKernelUnlockFastMutex(&a->mutex);
 	return ret;
 }
 
@@ -628,7 +628,7 @@ static int setMulticast(struct NetDriver *driver, const unsigned char *addresses
 	if (!a->active)
 		return SMSC_ERROR_NOT_READY;
 	SceCpuForDriver_5F6A8743(&a->references, 1);
-	ksceKernelLockFastMutex(&a->mutex);
+	lockFastMutex(&a->mutex);
 	if (!addresses) {
 		if (length) {
 			ret = SMSC_ERROR_INVALID_ARGUMENT;
@@ -668,7 +668,7 @@ static int setMulticast(struct NetDriver *driver, const unsigned char *addresses
 			ret = writeRegister(a, SMSC_HASHL, lower);
 	}
 out:
-	ksceKernelUnlockFastMutex(&a->mutex);
+	sceKernelUnlockFastMutex(&a->mutex);
 	SceCpuForDriver_A4884C4E(&a->references, 1);
 	return ret;
 }
@@ -682,7 +682,7 @@ static int kickTx(struct NetDriver *driver, int argument)
 		return SMSC_ERROR_NOT_READY;
 	SceCpuForDriver_5F6A8743(&a->references, 1);
 	if (__atomic_fetch_add(&a->pendingTx, 1, __ATOMIC_SEQ_CST) == 0)
-		ksceKernelSetEventFlag(a->workerEvent, WORKER_TX);
+		sceKernelSetEventFlag(a->workerEvent, WORKER_TX);
 	SceCpuForDriver_A4884C4E(&a->references, 1);
 	return 0;
 }
@@ -708,7 +708,7 @@ static int interfaceClose(struct NetDriver *driver, int argument)
 
 	(void)argument;
 	if (a->state & SMSC_STATE_USB_POWER)
-		ksceKernelSetEventFlag(a->workerEvent, WORKER_CLOSE);
+		sceKernelSetEventFlag(a->workerEvent, WORKER_CLOSE);
 	else
 		driver->notify(driver, (void *)driver->notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_STOPPED, NULL, 0);
 	return 0;
@@ -720,7 +720,7 @@ static int interfaceOpen(struct NetDriver *driver, int argument)
 
 	(void)argument;
 	if (a->state & SMSC_STATE_USB_POWER)
-		ksceKernelSetEventFlag(a->workerEvent, WORKER_OPEN);
+		sceKernelSetEventFlag(a->workerEvent, WORKER_OPEN);
 	else
 		driver->notify(driver, &error, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_ERROR, &error, 4);
 	return 0;
@@ -745,13 +745,13 @@ static int interfaceControl(struct NetDriver *driver, unsigned int command,
 			ret = setLink(a, *value);
 			break;
 		case NET_DRIVER_CTL_SET_PROMISCUOUS:
-			ksceKernelLockFastMutex(&a->mutex);
+			lockFastMutex(&a->mutex);
 			if (*value == 1)
 				a->macControl |= MAC_CR_PRMS;
 			else
 				a->macControl &= ~MAC_CR_PRMS;
 			ret = writeRegister(a, SMSC_MAC_CR, a->macControl);
-			ksceKernelUnlockFastMutex(&a->mutex);
+			sceKernelUnlockFastMutex(&a->mutex);
 			break;
 		case NET_DRIVER_CTL_GET_PROMISCUOUS:
 			*value = !!(a->macControl & MAC_CR_PRMS);
@@ -773,9 +773,9 @@ static int processEvent(int event, int type, ProcEventCreateParam *param, int co
 	(void)type;
 	(void)param;
 	if (event == PROC_EVENT_EXCLUSIVE)
-		return ksceKernelChangeThreadCpuAffinityMask(a->thread, 0x80000);
+		return sceKernelChangeThreadCpuAffinityMask(a->thread, 0x80000);
 	if (event == PROC_EVENT_SHARED)
-		return ksceKernelChangeThreadCpuAffinityMask(a->thread, 0xf0000);
+		return sceKernelChangeThreadCpuAffinityMask(a->thread, 0xf0000);
 	return 0;
 }
 static int systemEvent(int resume, int event, void *param, void *context)
@@ -788,7 +788,7 @@ static int systemEvent(int resume, int event, void *param, void *context)
 			if (s_suspend && !s_suspending) {
 				if (!(a->flags & SMSC_FLAG_INITIALIZED))
 					return -2;
-				ksceKernelSetEventFlag(a->workerEvent, WORKER_DETACH);
+				sceKernelSetEventFlag(a->workerEvent, WORKER_DETACH);
 				s_suspending = 1;
 				return 0;
 			}
@@ -824,7 +824,7 @@ static int initializeAdapter(struct SceUsbEtherSmscContext *a)
 	unsigned short phy;
 	int ret, count, uid;
 
-	ksceKernelLockFastMutex(&a->mutex);
+	lockFastMutex(&a->mutex);
 	ret = writeRegister(a, SMSC_HW_CFG, HW_CFG_BIR | HW_CFG_LRST);
 	if (ret < 0)
 		goto unlock;
@@ -887,7 +887,7 @@ static int initializeAdapter(struct SceUsbEtherSmscContext *a)
 	if (ret < 0)
 		goto unlock;
 	ret = writePhy(a, PHY_INT_MASK, PHY_INT_ANEG_COMPLETE | PHY_INT_LINK_DOWN);
-	ksceKernelUnlockFastMutex(&a->mutex);
+	sceKernelUnlockFastMutex(&a->mutex);
 	if (ret < 0)
 		return ret;
 	ret = setLink(a, NET_DRIVER_LINK_ANY);
@@ -1001,7 +1001,7 @@ static int initializeAdapter(struct SceUsbEtherSmscContext *a)
 	}
 	return 0;
 unlock:
-	ksceKernelUnlockFastMutex(&a->mutex);
+	sceKernelUnlockFastMutex(&a->mutex);
 	return ret;
 }
 
@@ -1018,18 +1018,18 @@ static int startInterface(struct SceUsbEtherSmscContext *a, int *retries)
 	goto error;
 attached:
 	if ((a->flags & SMSC_FLAG_INITIALIZED) && (a->link & NET_DRIVER_LINK_UP)) {
-		ksceKernelLockFastMutex(&a->mutex);
+		lockFastMutex(&a->mutex);
 		a->macControl |= MAC_CR_TXEN;
 		ret = writeRegister(a, SMSC_MAC_CR, a->macControl);
 		if (ret >= 0)
 			ret = writeRegister(a, SMSC_TX_CFG, TX_CFG_ON);
-		ksceKernelUnlockFastMutex(&a->mutex);
+		sceKernelUnlockFastMutex(&a->mutex);
 		if (ret < 0)
 			goto error;
-		ksceKernelLockFastMutex(&a->mutex);
+		lockFastMutex(&a->mutex);
 		a->macControl |= MAC_CR_RXEN;
 		ret = writeRegister(a, SMSC_MAC_CR, a->macControl);
-		ksceKernelUnlockFastMutex(&a->mutex);
+		sceKernelUnlockFastMutex(&a->mutex);
 		if (ret < 0)
 			goto error;
 		a->driver.notify(&a->driver, (void *)a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_STARTED, NULL, 0);
@@ -1041,7 +1041,7 @@ attached:
 		a->driver.notify(&a->driver, (void *)a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_ERROR, &ret, 4);
 		updateLink(a);
 	} else {
-		ksceKernelSetEventFlag(a->workerEvent, WORKER_OPEN);
+		sceKernelSetEventFlag(a->workerEvent, WORKER_OPEN);
 		(*retries)++;
 		sceKernelDelayThread(1000000);
 	}
@@ -1062,7 +1062,7 @@ static int stopInterface(struct SceUsbEtherSmscContext *a)
 		return 0;
 	}
 	__atomic_fetch_and(&a->flags, ~SMSC_FLAG_OPEN, __ATOMIC_SEQ_CST);
-	ksceKernelLockFastMutex(&a->mutex);
+	lockFastMutex(&a->mutex);
 	ret = writeRegister(a, SMSC_TX_CFG, TX_CFG_STOP);
 	if (ret < 0)
 		goto errorUnlock;
@@ -1090,8 +1090,8 @@ static int stopInterface(struct SceUsbEtherSmscContext *a)
 		ret = SMSC_ERROR_NOT_READY;
 		goto errorUnlock;
 	}
-	ksceKernelUnlockFastMutex(&a->mutex);
-	ksceKernelLockFastMutex(&a->mutex);
+	sceKernelUnlockFastMutex(&a->mutex);
+	lockFastMutex(&a->mutex);
 	ret = writeRegister(a, SMSC_INT_STS, INT_STS_RX_STOP);
 	if (ret < 0)
 		goto errorUnlock;
@@ -1122,11 +1122,11 @@ static int stopInterface(struct SceUsbEtherSmscContext *a)
 		ret = SMSC_ERROR_NOT_READY;
 		goto errorUnlock;
 	}
-	ksceKernelUnlockFastMutex(&a->mutex);
+	sceKernelUnlockFastMutex(&a->mutex);
 	a->driver.notify(&a->driver, (void *)a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_STOPPED, NULL, 0);
 	return 0;
 errorUnlock:
-	ksceKernelUnlockFastMutex(&a->mutex);
+	sceKernelUnlockFastMutex(&a->mutex);
 	a->driver.notify(&a->driver, (void *)a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_ERROR, &ret, 4);
 	return ret;
 }
@@ -1187,7 +1187,7 @@ static void startTx(struct SceUsbEtherSmscContext *a)
 	}
 	old = __atomic_fetch_sub(&a->pendingTx, 1, __ATOMIC_SEQ_CST);
 	if (old > 1)
-		ksceKernelSetEventFlag(a->workerEvent, WORKER_TX);
+		sceKernelSetEventFlag(a->workerEvent, WORKER_TX);
 }
 static void startRx(struct SceUsbEtherSmscContext *a)
 {
@@ -1267,7 +1267,7 @@ static int workerEntry(SceSize arglen, void *argp)
 			timeout = SMSC_LINK_POLL;
 			wait = &timeout;
 		}
-		ret = ksceKernelWaitEventFlag(a->workerEvent, WORKER_EVENTS,
+		ret = sceKernelWaitEventFlag(a->workerEvent, WORKER_EVENTS,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, wait);
 		now = sceKernelGetSystemTimeWide();
@@ -1321,18 +1321,18 @@ int module_start(unsigned int arglen, void *argp)
 	if (SceSblAIMgrForDriver_D78B04A2() && !(hardware & 0x80))
 		return 0;
 	memset(a, 0, sizeof(*a));
-	ret = ksceKernelInitializeFastMutex(&a->mutex, "SceUsbEtherSmscControl", 0x2000, NULL);
+	ret = sceKernelInitializeFastMutex(&a->mutex, "SceUsbEtherSmscControl", 0x2000, NULL);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelCreateEventFlag("SceUsbEtherSmscWorker", 0, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceUsbEtherSmscWorker", 0, 0, NULL);
 	if (ret < 0)
 		return ret;
 	a->workerEvent = ret;
-	ret = ksceKernelCreateThread("SceNetDrvEther", workerEntry, 0x3e, 0x2000, 0, 0xf0000, NULL);
+	ret = sceKernelCreateThread("SceNetDrvEther", workerEntry, 0x3e, 0x2000, 0, 0xf0000, NULL);
 	if (ret < 0)
 		return ret;
 	a->thread = ret;
-	ret = ksceKernelStartThread(ret, 4, &a);
+	ret = sceKernelStartThread(ret, 4, &a);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelRegisterSysEventHandler("SceUsbEtherSmsc", systemEvent, a);

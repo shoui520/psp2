@@ -164,7 +164,7 @@ void rfs_table_initialize(void)
 	g_rfsTable[0].child = NULL;
 	g_rfsTable[0].name[0] = '/';
 	g_rfsTable[0].flags = RFS_ENTRY_TOP | RFS_ENTRY_VALID;
-	if (ksceKernelInitializeFastMutex(&g_rfsLock, "SceVfsRfsLock", 2, NULL) != 0)
+	if (sceKernelInitializeFastMutex(&g_rfsLock, "SceVfsRfsLock", 2, NULL) != 0)
 		SCE_DBG_ASSERT(0, 193);
 }
 
@@ -237,17 +237,17 @@ SceVfsVnode *rfs_remove_entry(const VfsPathElem *elem, int num)
 
 void rfs_lock(void)
 {
-	if (ksceKernelLockFastMutex(&g_rfsLock) != 0)
+	if (lockFastMutex(&g_rfsLock) != 0)
 		SCE_DBG_ASSERT(0, 548);
 }
 
 void rfs_unlock(void)
 {
-	if (ksceKernelUnlockFastMutex(&g_rfsLock) != 0)
+	if (sceKernelUnlockFastMutex(&g_rfsLock) != 0)
 		SCE_DBG_ASSERT(0, 552);
 }
 
 int rfs_trylock(void)
 {
-	return ksceKernelTryLockFastMutex(&g_rfsLock);
+	return sceKernelTryLockFastMutex(&g_rfsLock);
 }

@@ -43,7 +43,7 @@ int MotionUtilWriteFirmware(uint64_t hardwareInfo, const void *buffer,
 	status->seq_no++;
 	chunkSize = motionFlashChunkSizes[kind];
 	UpdateUtilUpdateNodeStatus(nodeType, status);
-	eventFlag = ksceKernelCreateEventFlag("SceSblUsUpdateMgr", 0, 0, NULL);
+	eventFlag = sceKernelCreateEventFlag("SceSblUsUpdateMgr", 0, 0, NULL);
 	if (eventFlag < 0)
 		return (int)0x800f020c;
 	updateMotionEvent.eventFlagId = eventFlag;
@@ -117,7 +117,7 @@ int MotionUtilWriteFirmware(uint64_t hardwareInfo, const void *buffer,
 	result = MotionUtilSendCommand();
 out:
 	if (eventFlag)
-		ksceKernelDeleteEventFlag(eventFlag);
+		sceKernelDeleteEventFlag(eventFlag);
 	if (!result) {
 		if (SceMotionDevForDriver_A75976EE())
 			return (int)0x800f0205;

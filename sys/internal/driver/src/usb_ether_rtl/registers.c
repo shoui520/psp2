@@ -24,7 +24,7 @@ void rtlControlDone(int result, int count, void *context)
 	struct RtlAdapter *a = context;
 
 	(void)count;
-	ksceKernelSetEventFlag(a->controlEvent, result < 0 ? 1 : 2);
+	sceKernelSetEventFlag(a->controlEvent, result < 0 ? 1 : 2);
 }
 
 /* name unknown */
@@ -36,7 +36,7 @@ static int transfer(struct RtlAdapter *a, SceUsbdDeviceRequest *request, void *d
 	ret = ksceUsbdControlTransfer(a->controlPipe, request, data, rtlControlDone, a);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelWaitEventFlag(a->controlEvent, 3,
+	ret = sceKernelWaitEventFlag(a->controlEvent, 3,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	if (ret >= 0 && (bits & 1))

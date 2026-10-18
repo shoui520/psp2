@@ -17,7 +17,7 @@ int SpkgUtilApplyMBR(void)
 	SceMbr mbr;
 	int permission, result;
 
-	permission = ksceKernelSetPermission(128);
+	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
 	UpdateUtilLockMbr();
@@ -45,6 +45,6 @@ int SpkgUtilApplyMBR(void)
 	spkgVshChunkMask = 0;
 unlock:
 	UpdateUtilUnlockMbr();
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }

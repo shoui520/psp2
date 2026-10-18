@@ -31,7 +31,7 @@ int sdstor_construct(SceSdstorPartitionEntry *partition, int flags,
 	handle = SceSysmemForDriver_7B4CB60A(sdstorHeapId, sizeof(*handle));
 	if (!handle)
 		return 0x8001000c;
-	result = ksceKernelInitializeFastMutex(&handle->fastmutex,
+	result = sceKernelInitializeFastMutex(&handle->fastmutex,
 			"SceSdStorDeviceHandle", 0, 0);
 	if (result != 0) {
 		SCE_DBG_PRINTF(15, 89, "0x%08x\n", result);
@@ -41,7 +41,7 @@ int sdstor_construct(SceSdstorPartitionEntry *partition, int flags,
 	table = partition->sdpart;
 	handle->flags = flags;
 	handle->pentry = partition;
-	result = ksceKernelLockFastMutex(&table->fastmutex);
+	result = lockFastMutex(&table->fastmutex);
 	if (result < 0)
 		return result;
 	handle->n_sectors = partition->n_sectors;
@@ -51,7 +51,7 @@ int sdstor_construct(SceSdstorPartitionEntry *partition, int flags,
 	port = sddev_get_port(handle->sddev);
 	SCE_DBG_ASSERT(port <= 4, 107);
 	++sdstorOpenCount[port];
-	result = ksceKernelUnlockFastMutex(&table->fastmutex);
+	result = sceKernelUnlockFastMutex(&table->fastmutex);
 	if (result < 0)
 		return result;
 	*resultHandle = handle;
@@ -63,7 +63,7 @@ int sdstor_destruct(SceSdstorFd *handle)
 	int result, port;
 
 	SCE_DBG_ASSERT(handle != NULL, 122);
-	result = ksceKernelFinalizeFastMutex(&handle->fastmutex);
+	result = sceKernelFinalizeFastMutex(&handle->fastmutex);
 	if (result != 0) {
 		SCE_DBG_PRINTF(15, 126, "0x%08x\n", result);
 		return result;

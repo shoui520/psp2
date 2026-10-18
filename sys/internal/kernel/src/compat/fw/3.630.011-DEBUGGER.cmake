@@ -131,16 +131,16 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_BC996A7A
 	SceSysmemForDriver_C94850C9
 	SceSysmemForDriver_FFCD9B60
-	ksceKernelDeleteSema
-	ksceKernelLockMutex
-	ksceKernelUnlockMutex
-	ksceKernelCreateSema
-	ksceKernelWaitSema
+	sceKernelDeleteSema
+	sceKernelLockMutex
+	sceKernelUnlockMutex
+	sceKernelCreateSema
+	sceKernelWaitSema
 	sceKernelDelayThread
 	sceKernelGetProcessId
-	ksceKernelSignalSema
-	ksceKernelRunWithStack
-	ksceKernelCreateMutex
+	sceKernelSignalSema
+	SceThreadmgrForDriver_E54FD746
+	sceKernelCreateMutex
 	SceCpuForDriver_821FC0EE
 	SceCpuForDriver_8B4C26DF
 	SceCpuForDriver_9CB9F0CE

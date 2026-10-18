@@ -128,7 +128,7 @@ int appmgrInitializeAppState(struct AppState *app)
 	SceUID mutex;
 
 	_appListClearAppState(app);
-	mutex = ksceKernelCreateMutex("SceAppMgrAppMutex", 0x8000, 0, NULL);
+	mutex = sceKernelCreateMutex("SceAppMgrAppMutex", 0x8000, 0, NULL);
 	if (mutex >= 0) {
 		app->mutex = mutex;
 		app->mutexOwner = -1;
@@ -142,7 +142,7 @@ int _appListGetAppStatus(struct AppState *app, SceAppMgrAppStatus *status)
 	if (sceKernelGetProcessId() != 0x10005) {
 		SceUID owner = g_appmgrMainMutexOwner;
 
-		if (owner != ksceKernelGetThreadId()) {
+		if (owner != sceKernelGetThreadId()) {
 #if FW_DEBUG
 			sceAppMgrDump();
 			dumpBgmState();
@@ -194,7 +194,7 @@ int appmgrClearFailedAppLaunch(struct AppState *app, int launchResult,
 	callback = app->launchCallbackId;
 	if ((SceUInt32)callback + 1 > 1 &&
 	    (SceUInt32)launchResult + 0x7ffd7fd4u > 1 && callback > 0)
-		ksceKernelNotifyCallback(callback, launchResult);
+		sceKernelNotifyCallback(callback, launchResult);
 	if (creatorPid != NULL && app->resumeCreatorOnLaunchFailure != 0)
 		*creatorPid = app->creatorPid;
 	_appListClearAppState(app);
@@ -271,7 +271,7 @@ struct AppState *appmgrFindCurrentApp(struct AppState *apps)
 #if FW_DEBUG
 #define appListCheckOwner() do { \
 	SceUID owner = g_appmgrMainMutexOwner; \
-	if (owner != ksceKernelGetThreadId()) { \
+	if (owner != sceKernelGetThreadId()) { \
 		sceAppMgrDump(); \
 		dumpBgmState(); \
 		SCE_DBG_ASSERT_FAIL(339); \
@@ -286,7 +286,7 @@ struct AppState *_appListGetBigApp(struct AppState *apps)
 #else
 #define appListCheckOwner() do { \
 	SceUID owner = g_appmgrMainMutexOwner; \
-	if (owner != ksceKernelGetThreadId()) \
+	if (owner != sceKernelGetThreadId()) \
 		appmgrAppListOwnerPanic(); \
 } while (0)
 #define appListReturnBigApp() APP_LIST_BIG_APP_BODY()
@@ -499,7 +499,7 @@ void _appListDeclareShellProcess(struct AppState *apps)
 	SceUID pid;
 	int index;
 
-	if (owner != ksceKernelGetThreadId()) {
+	if (owner != sceKernelGetThreadId()) {
 #if FW_DEBUG
 		sceAppMgrDump();
 		dumpBgmState();
@@ -705,19 +705,19 @@ void appmgrMaskAppStateFlags(struct AppState *app, unsigned int mask)
 #define APP_LIST_ASSERT_UNLOCKED(line) do { \
 	if (SceDebugForDriver_374B7868() > 0) { \
 		SceUID owner = g_appmgrMainMutexOwner; \
-		SCE_DBG_ASSERT_LEVEL(1, owner != ksceKernelGetThreadId(), line); \
+		SCE_DBG_ASSERT_LEVEL(1, owner != sceKernelGetThreadId(), line); \
 	} \
 } while (0)
 #define APP_LIST_ASSERT_SLOT_LOCK_ORDER(line) do { \
 	SceUID owner = g_appmgrCore2MutexOwner; \
-	if (owner != ksceKernelGetThreadId()) { \
+	if (owner != sceKernelGetThreadId()) { \
 		int slot; \
 		for (slot = 0; slot < 20; ++slot) { \
 			int level = SceDebugForDriver_374B7868(); \
 			__builtin_prefetch(&g_appmgrAppStates[slot + 5].mutexOwner); \
 			if (level > 0) { \
 				SceUID slotOwner = g_appmgrAppStates[slot].mutexOwner; \
-				SCE_DBG_ASSERT_LEVEL(1, slotOwner != ksceKernelGetThreadId(), line); \
+				SCE_DBG_ASSERT_LEVEL(1, slotOwner != sceKernelGetThreadId(), line); \
 			} \
 		} \
 	} \
@@ -726,7 +726,7 @@ void appmgrMaskAppStateFlags(struct AppState *app, unsigned int mask)
 #define APP_LIST_LOCK_ERROR(result, line) appmgrAppListLockPanic()
 #define APP_LIST_MUTEX_ERROR(result, line) appmgrAppListLockPanic()
 #define APP_LIST_ASSERT_UNLOCKED(line) do { } while (0)
-#define APP_LIST_ASSERT_SLOT_LOCK_ORDER(line) ((void)ksceKernelGetThreadId())
+#define APP_LIST_ASSERT_SLOT_LOCK_ORDER(line) ((void)sceKernelGetThreadId())
 #endif
 
 int _appListReserveAndLockApp(struct AppState **output)
@@ -747,15 +747,15 @@ int _appListReserveAndLockApp(struct AppState **output)
 #endif
 	}
 	for (;;) {
-		result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+		result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 		if (result == 0)
-			g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+			g_appmgrMainMutexOwner = sceKernelGetThreadId();
 		else
 			APP_LIST_LOCK_ERROR(result, 575);
 		error = sceAppMgrCheckAppLaunchLimitToAvoidQueueOverflow();
 		if (error != 0) {
 			g_appmgrMainMutexOwner = -1;
-			result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 			if (result != 0)
 				APP_LIST_MUTEX_ERROR(result, 580);
 			return error;
@@ -765,14 +765,14 @@ int _appListReserveAndLockApp(struct AppState **output)
 			++index;
 			if (index == 20) {
 				g_appmgrMainMutexOwner = -1;
-				result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+				result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 				if (result != 0)
 					APP_LIST_MUTEX_ERROR(result, 592);
 				return (int)0x80802012;
 			}
 		}
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		app = &g_appmgrAppStates[index];
 		if (result != 0) {
 #if FW_DEBUG
@@ -792,16 +792,16 @@ int _appListReserveAndLockApp(struct AppState **output)
 checkSlotOrder:
 #endif
 		APP_LIST_ASSERT_SLOT_LOCK_ORDER(598);
-		result = ksceKernelLockMutex(app->mutex, 1, NULL);
+		result = sceKernelLockMutex(app->mutex, 1, NULL);
 		if (result != 0) {
 			if ((SceUInt32)result + 0x7ffd7fd4u > 1)
 				APP_LIST_MUTEX_ERROR(result, 598);
 			return result;
 		}
-		app->mutexOwner = ksceKernelGetThreadId();
-		result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+		app->mutexOwner = sceKernelGetThreadId();
+		result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 		if (result == 0)
-			g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+			g_appmgrMainMutexOwner = sceKernelGetThreadId();
 		else
 			APP_LIST_LOCK_ERROR(result, 603);
 		if (app->appId == -1) {
@@ -810,14 +810,14 @@ checkSlotOrder:
 			appListGeneration = (generation + 1) & 0x7fff;
 			app->appId = ((generation << 16) & 0x7fff0000) | (2 * index + 2);
 			g_appmgrMainMutexOwner = -1;
-			result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 			if (result != 0)
 				APP_LIST_MUTEX_ERROR(result, 615);
 			*output = app;
 			return 0;
 		}
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDump();
@@ -839,7 +839,7 @@ unlockSlot:
 			SceUID mutex = app->mutex;
 
 			app->mutexOwner = -1;
-			result = ksceKernelUnlockMutex(mutex, 1);
+			result = sceKernelUnlockMutex(mutex, 1);
 			if (result != 0)
 				APP_LIST_MUTEX_ERROR(result, 608);
 		}
@@ -875,21 +875,21 @@ int _appListFindAndLockAppByAppId(int appId, struct AppState **output)
 		appmgrAppListOwnerPanic();
 #endif
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result == 0)
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	else
 		APP_LIST_LOCK_ERROR(result, 631);
 	APP_LIST_FIND_BY_ID(app, appId);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0)
 			APP_LIST_MUTEX_ERROR(result, 635);
 		return (int)0x80802012;
 	}
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -908,16 +908,16 @@ int _appListFindAndLockAppByAppId(int appId, struct AppState **output)
 checkSlotOrder:
 #endif
 	APP_LIST_ASSERT_SLOT_LOCK_ORDER(642);
-	result = ksceKernelLockMutex(app->mutex, 1, NULL);
+	result = sceKernelLockMutex(app->mutex, 1, NULL);
 	if (result != 0) {
 		if ((SceUInt32)result + 0x7ffd7fd4u > 1)
 			APP_LIST_MUTEX_ERROR(result, 642);
 		return result;
 	}
-	app->mutexOwner = ksceKernelGetThreadId();
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	app->mutexOwner = sceKernelGetThreadId();
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result == 0)
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	else
 		APP_LIST_LOCK_ERROR(result, 648);
 	APP_LIST_FIND_BY_ID(current, appId);
@@ -925,7 +925,7 @@ checkSlotOrder:
 		SceUID mutex;
 
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDump();
@@ -945,13 +945,13 @@ unlockSlot:
 #endif
 		mutex = app->mutex;
 		app->mutexOwner = -1;
-		result = ksceKernelUnlockMutex(mutex, 1);
+		result = sceKernelUnlockMutex(mutex, 1);
 		if (result != 0)
 			APP_LIST_MUTEX_ERROR(result, 653);
 		return (int)0x80802012;
 	}
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0)
 		APP_LIST_MUTEX_ERROR(result, 657);
 	*output = app;
@@ -974,21 +974,21 @@ int _appListFindAndLockAppByName(const char *name, struct AppState **output)
 		appmgrAppListOwnerPanic();
 #endif
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result == 0)
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	else
 		APP_LIST_LOCK_ERROR(result, 669);
 	APP_LIST_FIND_NAME(app, g_appmgrAppStates, name);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0)
 			APP_LIST_MUTEX_ERROR(result, 673);
 		return (int)0x80802012;
 	}
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -1007,16 +1007,16 @@ int _appListFindAndLockAppByName(const char *name, struct AppState **output)
 checkSlotOrder:
 #endif
 	APP_LIST_ASSERT_SLOT_LOCK_ORDER(680);
-	result = ksceKernelLockMutex(app->mutex, 1, NULL);
+	result = sceKernelLockMutex(app->mutex, 1, NULL);
 	if (result != 0) {
 		if ((SceUInt32)result + 0x7ffd7fd4u > 1)
 			APP_LIST_MUTEX_ERROR(result, 680);
 		return result;
 	}
-	app->mutexOwner = ksceKernelGetThreadId();
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	app->mutexOwner = sceKernelGetThreadId();
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result == 0)
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	else
 		APP_LIST_LOCK_ERROR(result, 688);
 #if FW_DEBUG
@@ -1029,7 +1029,7 @@ checkSlotOrder:
 	if (changed) {
 		SceUID mutex;
 
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDump();
@@ -1049,12 +1049,12 @@ unlockSlot:
 #endif
 		mutex = app->mutex;
 		app->mutexOwner = -1;
-		result = ksceKernelUnlockMutex(mutex, 1);
+		result = sceKernelUnlockMutex(mutex, 1);
 		if (result != 0)
 			APP_LIST_MUTEX_ERROR(result, 693);
 		return (int)0x80802012;
 	}
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0)
 		APP_LIST_MUTEX_ERROR(result, 698);
 	*output = app;
@@ -1103,21 +1103,21 @@ int _appListFindAndLockAppByName2(const char *name, struct AppState **output,
 		appmgrAppListOwnerPanic();
 #endif
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result == 0)
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	else
 		APP_LIST_LOCK_ERROR(result, 711);
 	APP_LIST_FIND_NAME_EXCEPT(app, name, excludedAppId);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0)
 			APP_LIST_MUTEX_ERROR(result, 715);
 		return (int)0x80802012;
 	}
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -1136,16 +1136,16 @@ int _appListFindAndLockAppByName2(const char *name, struct AppState **output,
 checkSlotOrder:
 #endif
 	APP_LIST_ASSERT_SLOT_LOCK_ORDER(722);
-	result = ksceKernelLockMutex(app->mutex, 1, NULL);
+	result = sceKernelLockMutex(app->mutex, 1, NULL);
 	if (result != 0) {
 		if ((SceUInt32)result + 0x7ffd7fd4u > 1)
 			APP_LIST_MUTEX_ERROR(result, 722);
 		return result;
 	}
-	app->mutexOwner = ksceKernelGetThreadId();
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	app->mutexOwner = sceKernelGetThreadId();
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result == 0)
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	else
 		APP_LIST_LOCK_ERROR(result, 730);
 	APP_LIST_FIND_NAME_EXCEPT(current, name, excludedAppId);
@@ -1153,7 +1153,7 @@ checkSlotOrder:
 		SceUID mutex;
 
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDump();
@@ -1173,13 +1173,13 @@ unlockSlot:
 #endif
 		mutex = app->mutex;
 		app->mutexOwner = -1;
-		result = ksceKernelUnlockMutex(mutex, 1);
+		result = sceKernelUnlockMutex(mutex, 1);
 		if (result != 0)
 			APP_LIST_MUTEX_ERROR(result, 735);
 		return (int)0x80802012;
 	}
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0)
 		APP_LIST_MUTEX_ERROR(result, 740);
 	*output = app;
@@ -1225,21 +1225,21 @@ int _appListFindAndLockActiveApp(struct AppState **output)
 		appmgrAppListOwnerPanic();
 #endif
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result == 0)
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	else
 		APP_LIST_LOCK_ERROR(result, 756);
 	APP_LIST_FIND_ACTIVE(app, index);
 	if (index > 19) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0)
 			APP_LIST_MUTEX_ERROR(result, 760);
 		return (int)0x80802012;
 	}
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -1258,16 +1258,16 @@ int _appListFindAndLockActiveApp(struct AppState **output)
 checkSlotOrder:
 #endif
 	APP_LIST_ASSERT_SLOT_LOCK_ORDER(766);
-	result = ksceKernelLockMutex(app->mutex, 1, NULL);
+	result = sceKernelLockMutex(app->mutex, 1, NULL);
 	if (result != 0) {
 		if ((SceUInt32)result + 0x7ffd7fd4u > 1)
 			APP_LIST_MUTEX_ERROR(result, 766);
 		return result;
 	}
-	app->mutexOwner = ksceKernelGetThreadId();
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	app->mutexOwner = sceKernelGetThreadId();
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result == 0)
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	else
 		APP_LIST_LOCK_ERROR(result, 772);
 	APP_LIST_FIND_ACTIVE(current, index);
@@ -1275,7 +1275,7 @@ checkSlotOrder:
 		SceUID mutex;
 
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDump();
@@ -1295,13 +1295,13 @@ unlockSlot:
 #endif
 		mutex = app->mutex;
 		app->mutexOwner = -1;
-		result = ksceKernelUnlockMutex(mutex, 1);
+		result = sceKernelUnlockMutex(mutex, 1);
 		if (result != 0)
 			APP_LIST_MUTEX_ERROR(result, 777);
 		return (int)0x80802012;
 	}
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0)
 		APP_LIST_MUTEX_ERROR(result, 781);
 	*output = app;
@@ -1324,20 +1324,20 @@ int _appListFindAndLockAppByProcessId(SceUID pid, struct AppState **output)
 		appmgrAppListOwnerPanic();
 #endif
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result == 0)
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	else
 		APP_LIST_LOCK_ERROR(result, 793);
 	app = appmgrFindSpecialApp(g_appmgrAppStates, pid);
 	g_appmgrMainMutexOwner = -1;
 	if (app == NULL) {
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0)
 			APP_LIST_MUTEX_ERROR(result, 797);
 		return (int)0x80802012;
 	}
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -1356,16 +1356,16 @@ int _appListFindAndLockAppByProcessId(SceUID pid, struct AppState **output)
 checkSlotOrder:
 #endif
 	APP_LIST_ASSERT_SLOT_LOCK_ORDER(803);
-	result = ksceKernelLockMutex(app->mutex, 1, NULL);
+	result = sceKernelLockMutex(app->mutex, 1, NULL);
 	if (result != 0) {
 		if ((SceUInt32)result + 0x7ffd7fd4u > 1)
 			APP_LIST_MUTEX_ERROR(result, 803);
 		return result;
 	}
-	app->mutexOwner = ksceKernelGetThreadId();
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	app->mutexOwner = sceKernelGetThreadId();
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result == 0)
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	else
 		APP_LIST_LOCK_ERROR(result, 809);
 	current = appmgrFindSpecialApp(g_appmgrAppStates, pid);
@@ -1374,7 +1374,7 @@ checkSlotOrder:
 	if (changed) {
 		SceUID mutex;
 
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDump();
@@ -1394,12 +1394,12 @@ unlockSlot:
 #endif
 		mutex = app->mutex;
 		app->mutexOwner = -1;
-		result = ksceKernelUnlockMutex(mutex, 1);
+		result = sceKernelUnlockMutex(mutex, 1);
 		if (result != 0)
 			APP_LIST_MUTEX_ERROR(result, 814);
 		return (int)0x80802012;
 	}
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0)
 		APP_LIST_MUTEX_ERROR(result, 818);
 	*output = app;
@@ -1412,7 +1412,7 @@ int _appListUnlockApp(struct AppState *app)
 
 	APP_LIST_ASSERT_UNLOCKED(928);
 	app->mutexOwner = -1;
-	result = ksceKernelUnlockMutex(app->mutex, 1);
+	result = sceKernelUnlockMutex(app->mutex, 1);
 	if (result != 0)
 		APP_LIST_MUTEX_ERROR(result, 928);
 	return result;

@@ -31,8 +31,3 @@ int SceUsbMtpForDriver_08CD359F(void);
 int SceUsbMtpForDriver_6F7DF4B8(void);
 int SceUsbMtpForDriver_E64513A9(int phase);
 
-int ksceKernelInitializeFastMutex(void *mutex, const char *name,
-				SceUInt32 attributes, SceUInt32 unk);
-int ksceKernelLockFastMutex(void *mutex);
-int ksceKernelUnlockFastMutex(void *mutex);
-int ksceKernelFinalizeFastMutex(void *mutex);

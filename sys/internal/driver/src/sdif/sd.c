@@ -419,7 +419,7 @@ int SceSdifForDriver_35BA9DF8(unsigned int index, SceUID callback)
 
 				if (total)
 					progress = (uint32_t)(100ULL * (total - remaining) / total) | 0x640000;
-				if (ksceKernelNotifyCallback(callback, progress) == (int)0x800280a1)
+				if (sceKernelNotifyCallback(callback, progress) == (int)0x800280a1)
 					callback = -1;
 			}
 			if (!remaining)

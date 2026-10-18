@@ -9,7 +9,7 @@ int sceFatfsACSetFSAttributeByPermission(SceExfatfsDrive *drive,
 				      SceUInt32 permission,
 				      unsigned char *attribute)
 {
-	SceUID pid = ksceKernelGetProcessIdFromTLS();
+	SceUID pid = SceThreadmgrForDriver_FA54D49A();
 	SceSblACMgrValue value;
 
 	value.value = attribute;
@@ -30,7 +30,7 @@ int sceFatfsACSetFSAttributeByAttribute(SceExfatfsDrive *drive,
 				     unsigned char attribute,
 				     unsigned char *output)
 {
-	SceUID pid = ksceKernelGetProcessIdFromTLS();
+	SceUID pid = SceThreadmgrForDriver_FA54D49A();
 	SceSblACMgrValue inputValue;
 	SceSblACMgrValue outputValue;
 
@@ -98,7 +98,7 @@ static inline int set_attr_info_for_check(SceExfatfsDrive *drive,
 		if (!drive || !drive->deviceInfo.mount_misc)
 			return (int)0x8001000e;
 		specialAcl = *attribute;
-		pid = ksceKernelGetProcessIdFromTLS();
+		pid = SceThreadmgrForDriver_FA54D49A();
 		inputValue.value = &specialAcl;
 		if (drive->state & 0x1000) {
 			inputValue.type = 3;
@@ -151,7 +151,7 @@ int sceFatfsACCheckRDirEntry(SceExfatfsDrive *drive, unsigned char attribute)
 	int result;
 
 	attrInfo[0] = attribute;
-	pid = ksceKernelGetProcessIdFromTLS();
+	pid = SceThreadmgrForDriver_FA54D49A();
 	result = set_attr_info_for_check(drive, attrInfo, &value);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0, 197, "%s: set_attr_info_for_check failed[%#x]\n",
@@ -186,7 +186,7 @@ int sceFatfsACGetRootDirAttribute(SceExfatfsDrive *drive, unsigned char *attribu
 
 	{
 		SceInt32 queriedPermission = 0;
-		SceUID pid = ksceKernelGetProcessIdFromTLS();
+		SceUID pid = SceThreadmgrForDriver_FA54D49A();
 
 		result = SceSblACMgrForDriver_FF7125DE(pid, drive->assignName,
 						    &queriedPermission);
@@ -196,7 +196,7 @@ int sceFatfsACGetRootDirAttribute(SceExfatfsDrive *drive, unsigned char *attribu
 		if (permission >= 0) {
 			/* Sony inlines sceFatfsACSetFSAttributeByPermission here. */
 			{
-				SceUID pid = ksceKernelGetProcessIdFromTLS();
+				SceUID pid = SceThreadmgrForDriver_FA54D49A();
 				SceSblACMgrValue value;
 
 				value.value = attribute;

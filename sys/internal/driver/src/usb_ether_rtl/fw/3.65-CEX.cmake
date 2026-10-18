@@ -83,19 +83,19 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_D78B04A2
 	sceKernelRegisterProcEventHandler
 	SceProcEventForDriver_3DED57CC
-	ksceKernelWaitEventFlag
+	sceKernelWaitEventFlag
 	sceKernelExitThread
-	ksceKernelStartThread
-	ksceKernelCreateEventFlag
+	sceKernelStartThread
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelChangeThreadCpuAffinityMask
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
-	ksceKernelInitializeFastMutex
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
+	sceKernelClearEventFlag
+	sceKernelChangeThreadCpuAffinityMask
+	lockFastMutex
+	sceKernelDeleteEventFlag
+	sceKernelInitializeFastMutex
+	sceKernelCreateThread
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
 	sceKernelGetSystemTimeWide
 	sceKernelRegisterSysEventHandler
 	ksceGpioSetPortMode

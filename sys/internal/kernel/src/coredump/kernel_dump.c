@@ -37,7 +37,7 @@ int SceCoredumpForDriver_13EF8516(SceSize payloadSize)
 {
 	int result;
 
-	if (ksceKernelLockMutex(dumpBufferMutexId, 1, NULL) < 0)
+	if (sceKernelLockMutex(dumpBufferMutexId, 1, NULL) < 0)
 		goto error;
 	dumpBufferTriggerParam.titleid_len = 10;
 	dumpBufferTriggerParam.titleid = "NPXS19998";
@@ -75,7 +75,7 @@ int SceCoredumpForDriver_10863B61(int requestId)
 
 	if (requestId == dumpBufferRequestId)
 		generatorEndKernelDump();
-	while ((result = ksceKernelUnlockMutex(dumpBufferMutexId, 1)) < 0)
+	while ((result = sceKernelUnlockMutex(dumpBufferMutexId, 1)) < 0)
 		dumpBufferRequestId = -2;
 	return result;
 }

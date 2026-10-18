@@ -44,7 +44,7 @@ int GcAuthAdhocAnswerChallenge224(const GcAuthAdhocAnswerChallenge224Request *re
 	unsigned int index;
 	int result;
 
-	if (ksceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
+	if (sceKernelWaitSema(gcAuthAdhocSemaphore, 1, NULL) != 0)
 		return 0x808A010A;
 	if (packet == NULL || context == NULL || output == NULL) {
 		result = 0x808A0124;
@@ -157,7 +157,7 @@ finish:
 	do {
 		*cursor++ = 0;
 	} while (cursor != end);
-	if (ksceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
+	if (sceKernelSignalSema(gcAuthAdhocSemaphore, 1) != 0)
 		result = 0x808A010A;
 	return result;
 }

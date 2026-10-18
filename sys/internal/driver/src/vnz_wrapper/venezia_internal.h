@@ -10,6 +10,7 @@
 #include <psp2kern/kernel/dmac.h>
 #include <sysmem/uid_class.h>
 #include <vnz_wrapper/venezia_debug.h>
+#include <threadmgr/threadmgr.h>
 
 /* name unknown: per-process Venezia suspend and clock bookkeeping. */
 typedef struct VeneziaProcessStorage {
@@ -22,8 +23,6 @@ typedef struct VeneziaProcessStorage {
 } VeneziaProcessStorage;
 
 _Static_assert(sizeof(VeneziaProcessStorage) == 0x54, "Venezia process storage size");
-
-
 
 /* name unknown: adjacent global process-storage and clock state. */
 typedef struct VeneziaState {
@@ -52,13 +51,6 @@ typedef struct VeneziaKernelMemory {
 } VeneziaKernelMemory; /* name unknown */
 
 extern VeneziaKernelMemory g_veneziaKernelMemory; /* name unknown */
-
-
-int ksceKernelInitializeFastMutex(struct ThreadmgrFastMutex *mutex,
-				  const char *name, int attr, void *opt);
-int ksceKernelUnlockFastMutex(struct ThreadmgrFastMutex *mutex);
-int ksceKernelLockFastMutex(struct ThreadmgrFastMutex *mutex);
-int ksceKernelFinalizeFastMutex(struct ThreadmgrFastMutex *mutex);
 
 /* name unknown: DSP RPC argument packets and channel allocation state. */
 typedef struct VeneziaRpcArg {
@@ -264,7 +256,6 @@ typedef struct VeneziaVipProcessorRequest {
 	uint32_t resultFlags;
 } VeneziaVipProcessorRequest;
 
-
 typedef struct VeneziaDebugChannelRecord {
 	uint32_t header[2];
 	uint32_t flags;
@@ -392,7 +383,6 @@ typedef struct VeneziaDebugEventCounter {
 	uint32_t count;
 	uint32_t unidentifiedControl;
 } VeneziaDebugEventCounter;
-
 
 typedef struct VeneziaDebugCallbackState {
 	VeneziaDebugEventCounter counters[13];

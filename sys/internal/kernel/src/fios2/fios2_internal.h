@@ -16,7 +16,7 @@
 #include <psp2kern/io/dirent.h>
 #include <acmgr/acmgr.h>
 #include <psp2kern/kernel/rtc.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2common/fios2.h>
 #include <sysmem/compiler.h>
 #include <sysmem/sysclib.h>
@@ -82,7 +82,6 @@ int SceProcessmgrForDriver_D141C076(SceUID pid, SceUInt32 *sdkVersion);
 void *SceProcessmgrForDriver_5468892A(SceSize size, void *opt);	/* the caller's process heap */
 int SceProcessmgrForDriver_FC2A424E(void *ptr);
 int sceKernelFreeRemoteProcessHeap(SceUID pid, void *ptr);
-int sceKernelExtendKernelStackWide(SceSize size, int (*func)(void *), void *argument);
 
 /* a process's overlays and directory handles, in its process local storage */
 typedef struct SceFiosKernelProcessStorage {	/* name unknown */

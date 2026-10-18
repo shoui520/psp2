@@ -3,4 +3,12 @@
 
 #include <threadmgr/threadmgr.h>
 
-int ksceKernelGetMutexInfo(SceUID mutexId, SceKernelMutexInfo *info);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int sceKernelGetMutexInfo(SceUID mutexId, SceKernelMutexInfo *info);
+
+#ifdef __cplusplus
+}
+#endif

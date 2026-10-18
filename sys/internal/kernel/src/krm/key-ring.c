@@ -732,13 +732,13 @@ int KrmLockChallenge(void)
 	if (!g_krmChallengeInitialized)
 		return (int)0x80a0000a;
 	if (KrmDriverGetAuthorization(0) != 0)
-		return ksceKernelLockFastMutex(&g_krmChallengeMutex);
+		return lockFastMutex(&g_krmChallengeMutex);
 	return (int)0x80a00006;
 }
 
 int KrmUnlockChallenge(void)
 {
-	return ksceKernelUnlockFastMutex(&g_krmChallengeMutex);
+	return sceKernelUnlockFastMutex(&g_krmChallengeMutex);
 }
 
 
@@ -752,7 +752,7 @@ int KrmInitializeChallenge(void)
 	int alternateCheck;
 
 	g_krmChallengeInitialized = 0;
-	ret = ksceKernelInitializeFastMutex(&g_krmChallengeMutex,
+	ret = sceKernelInitializeFastMutex(&g_krmChallengeMutex,
 					   g_krmChallengeMutexName, 0, 0);
 	ret |= KrmDriverDecryptPortable(g_krmProvisionedChallengePrimaryKeyIv,
 		&g_krmProvisionedChallengePrimaryKey, &g_krmProvisionedChallengePrimaryKey);

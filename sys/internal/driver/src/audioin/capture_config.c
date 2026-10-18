@@ -208,7 +208,7 @@ int audioInProcessStopHandler(SceUID pid, int eventType,
 #define NOTIFY_STOP(index) do { \
 	if (pid == g_audioInPorts[index].pid && \
 	    g_audioInPorts[index].eventFlag != 0) { \
-		ksceKernelSetEventFlag(g_audioInPorts[index].eventFlag, 512); \
+		sceKernelSetEventFlag(g_audioInPorts[index].eventFlag, 512); \
 		g_audioInPorts[index].flags |= 0x40; \
 	} \
 } while (0)

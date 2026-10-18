@@ -1231,7 +1231,7 @@ static __always_inline void ohciRoothubStatusChange(Ohci *ohci)
 	}
 	if (ohci->portState == OHCI_PORT_POWERED) {
 		ohci->portState = OHCI_PORT_CONNECTED;
-		ksceKernelRegisterTimer("SceUsbdAlarm0", 200000, ohciConnectDone, ohci);
+		SceThreadmgrForDriver_C58DF384("SceUsbdAlarm0", 200000, ohciConnectDone, ohci);
 		return;
 	}
 	if ((status & OHCI_PORT_RESET_CHANGE) && !(status & OHCI_PORT_RESET) &&

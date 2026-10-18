@@ -10,6 +10,7 @@
 #include "private.h"
 #include <threadmgr/uid_waitable.h>
 #include "mutex.h"
+#include <threadmgr/threadmgr.h>
 
 #define EVF_ATTR_LW			0x00000080
 #define EVF_ATTR_MULTI			0x00001000	/* several threads may wait at once */
@@ -53,11 +54,5 @@ int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPa
 		  SceUInt32 *timeout, int callbacks);
 void releaseAllEventFlag(struct ThreadCB *thread);
 int eventFlagProcessExit(SceProcessObject *process);
-int ksceKernelDeleteEventFlag(SceUID evfId);
-int ksceKernelPollEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern);
-int ksceKernelSetEventFlag(SceUID evfId, uint32_t pattern);
-int ksceKernelClearEventFlag(SceUID evfId, uint32_t pattern);
-int sceKernelCancelEventFlag(SceUID evfId, uint32_t setPattern, int *numWaitThreads);
-int ksceKernelGetEventFlagInfo(SceUID evfId, SceKernelEventFlagInfo *info);
 
 #endif

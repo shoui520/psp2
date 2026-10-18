@@ -107,29 +107,29 @@ set(MODULE_IMPORT_FUNCS
 	strnlen
 	SceDebugForDriver_02B04343
 	SceDebugForDriver_391B5B74
-	ksceKernelSetPermission
-	ksceKernelSetProcessIdToTLS
-	ksceKernelDeleteMutex
-	ksceKernelLockMutex
-	ksceKernelCreateCallback
-	ksceKernelUnlockMutex
-	ksceKernelStartThread
-	ksceKernelDeleteCallback
-	ksceKernelCreateEventFlag
-	ksceKernelStopTimer
+	sceKernelSetThreadAccessLevel
+	SceThreadmgrForDriver_0486F239
+	sceKernelDeleteMutex
+	sceKernelLockMutex
+	sceKernelCreateCallback
+	sceKernelUnlockMutex
+	sceKernelStartThread
+	sceKernelDeleteCallback
+	sceKernelCreateEventFlag
+	sceKernelStopTimer
 	sceKernelDelayThread
-	ksceKernelDeleteEventFlag
-	ksceKernelRegisterCallbackToEvent
-	ksceKernelStartTimer
-	ksceKernelWaitEventFlagCB
+	sceKernelDeleteEventFlag
+	sceKernelRegisterCallbackToEventForDriver
+	sceKernelStartTimer
+	SceThreadmgrForDriver_8A35F714
 	sceKernelCreateTimer
 	SceThreadmgrForDriver_91A8F38B
 	sceKernelSetTimerEvent
-	ksceKernelDeleteThread
-	ksceKernelWaitEvent
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
-	ksceKernelCreateMutex
+	sceKernelDeleteThread
+	SceThreadmgrForDriver_C529EA32
+	sceKernelCreateThread
+	sceKernelSetEventFlag
+	sceKernelCreateMutex
 	ksceIoRemove
 	ksceIoDevctl
 	ksceIoDclose

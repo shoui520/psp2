@@ -167,7 +167,7 @@ int sceAppMgrInit(void)
 	uid = SceSysmemForDriver_9328E0E8("SceAppMgrApp", 4096, &heapOpt);
 	INIT_ASSERT(uid >= 0, 175, coreHeapPanicInfo);
 	g_appmgrCoreHeap = uid;
-	uid = ksceKernelCreateMutex("SceAppMgrApp", 0, 0, NULL);
+	uid = sceKernelCreateMutex("SceAppMgrApp", 0, 0, NULL);
 	INIT_ASSERT(uid >= 0, 180, appMutexPanicInfo);
 	g_appmgrAppMutex = uid;
 	result = appmgrInitializeBgdlQueueStorage();
@@ -180,22 +180,22 @@ int sceAppMgrInit(void)
 	uid = SceSysmemForDriver_9328E0E8("SceAppMgrMount", 0x10000, &heapOpt);
 	INIT_ASSERT(uid >= 0, 189, mountHeapPanicInfo);
 	g_appmgrMountHeap = uid;
-	uid = ksceKernelCreateMutex("SceAppMgrMount", 0, 0, NULL);
+	uid = sceKernelCreateMutex("SceAppMgrMount", 0, 0, NULL);
 	INIT_ASSERT(uid >= 0, 193, mountMutexPanicInfo);
 	g_appmgrMountMutex = uid;
 	uid = SceSysmemForDriver_9328E0E8("SceAppMgrSaveData", 40960, &heapOpt);
 	INIT_ASSERT(uid >= 0, 200, saveDataHeapPanicInfo);
 	g_appmgrSaveDataHeap = uid;
-	uid = ksceKernelCreateMutex("SceAppMgrSaveData", 0, 0, NULL);
+	uid = sceKernelCreateMutex("SceAppMgrSaveData", 0, 0, NULL);
 	INIT_ASSERT(uid >= 0, 205, saveDataMutexPanicInfo);
 	g_appmgrSaveDataMutex = uid;
-	uid = ksceKernelCreateMutex("SceAppMgrPhoto", 0, 0, NULL);
+	uid = sceKernelCreateMutex("SceAppMgrPhoto", 0, 0, NULL);
 	INIT_ASSERT(uid >= 0, 214, photoMutexPanicInfo);
 	g_appmgrPhotoMutex = uid;
 	result = ksceKernelCreateProcessLocalStorage("SceAppMgrSafeMemory", 0x10000);
 	INIT_ASSERT(result >= 0, 224, safeMemoryStoragePanicInfo);
 	g_appmgrSafeMemoryKey = result;
-	uid = ksceKernelCreateMutex("SceAppMgrSafeMemory", 0, 0, NULL);
+	uid = sceKernelCreateMutex("SceAppMgrSafeMemory", 0, 0, NULL);
 	INIT_ASSERT(uid >= 0, 229, safeMemoryMutexPanicInfo);
 	g_appmgrSafeMemoryMutex = uid;
 	result = ksceKernelCreateProcessLocalStorage("SceAppMgrAppInfoCache", 1024);
@@ -207,19 +207,19 @@ int sceAppMgrInit(void)
 	}
 	result = appMgrLockInitialize();
 	INIT_ASSERT(result == 0, 250, lockInitializePanicInfo);
-	uid = ksceKernelCreateSema("SceAppMgrDbgShellEventCount", 0, 5, 5, NULL);
+	uid = sceKernelCreateSema("SceAppMgrDbgShellEventCount", 0, 5, 5, NULL);
 	INIT_ASSERT(uid >= 0, 258, debugShellSemaphorePanicInfo);
 	g_appmgrDebugShellEventSemaphore = uid;
-	g_appmgrBottomSemaphore = ksceKernelCreateSema("SceAppMgrBottomSema",
+	g_appmgrBottomSemaphore = sceKernelCreateSema("SceAppMgrBottomSema",
 		0x8000, 0, 1, NULL);
 	INIT_ASSERT(g_appmgrBottomSemaphore != 0, 265, bottomSemaphorePanicInfo);
-	uid = ksceKernelCreateMutex("SceAppMgrLiveAreaOperation", 0x8000, 0, NULL);
+	uid = sceKernelCreateMutex("SceAppMgrLiveAreaOperation", 0x8000, 0, NULL);
 	INIT_ASSERT(uid >= 0, 269, liveAreaOperationPanicInfo);
 	g_appmgrLiveAreaOperationMutex = uid;
-	uid = ksceKernelCreateMutex("SceAppMgrLiveAreaOpeResultMx", 0x8000, 0, NULL);
+	uid = sceKernelCreateMutex("SceAppMgrLiveAreaOpeResultMx", 0x8000, 0, NULL);
 	INIT_ASSERT(uid >= 0, 273, liveAreaResultMutexPanicInfo);
 	g_appmgrLiveAreaResultMutex = uid;
-	uid = ksceKernelCreateCond("SceAppMgrLiveAreaOpeResultCd", 0x8000, uid, NULL);
+	uid = sceKernelCreateCond("SceAppMgrLiveAreaOpeResultCd", 0x8000, uid, NULL);
 	INIT_ASSERT(uid >= 0, 280, liveAreaResultConditionPanicInfo);
 	g_appmgrLiveAreaResultCondition = uid;
 	initProcessStateUpdaterThread();

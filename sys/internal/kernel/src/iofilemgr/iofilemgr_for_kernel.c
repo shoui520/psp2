@@ -73,8 +73,8 @@ int ksceIoGetMediaType(SceUID pid, const char *path, int unused, SceUInt32 *type
 
 SceUID sceIoDopenInternal(const char *dirname)
 {
-	SceUID thid = ksceKernelGetThreadId();
-	SceUID pid = ksceKernelGetProcessIdFromTLS();
+	SceUID thid = sceKernelGetThreadId();
+	SceUID pid = SceThreadmgrForDriver_FA54D49A();
 	SceUInt32 syscall = sceSyscallEnter();
 	IofilemgrSchedInfo param;
 	SceInt32 priority, old;
@@ -200,8 +200,8 @@ int sceIoDcloseInternal(SceUID fd)
 		ret = ksceIoDclose(fd);
 	}
 	if (ret == 0) {
-		pid = ksceKernelGetProcessIdFromTLS();
-		decrement_user_fd_count(pid, ksceKernelGetThreadId(), 1);
+		pid = SceThreadmgrForDriver_FA54D49A();
+		decrement_user_fd_count(pid, sceKernelGetThreadId(), 1);
 	}
 	return ret;
 }

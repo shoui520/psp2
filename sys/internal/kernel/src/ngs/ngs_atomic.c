@@ -14,7 +14,7 @@ int ngsAtomicSet(int *value, int replacement, int expected)
 
 int ngsLockSystemMutex(NgsPlatformContext *context)
 {
-	if (ksceKernelLockFastMutex(
+	if (lockFastMutex(
 	    (SceKernelFastMutex *)&context->systemMutex) != 0)
 		return (int)0x804a0001;
 	return 0;
@@ -24,7 +24,7 @@ int ngsUnlockSystemMutex(NgsPlatformContext *context)
 {
 	int result;
 
-	result = ksceKernelUnlockFastMutex(
+	result = sceKernelUnlockFastMutex(
 		(SceKernelFastMutex *)&context->systemMutex);
 	if (result != 0)
 		return -1;
@@ -134,7 +134,7 @@ int ngsLockCodec(NgsPlatformContext *context)
 {
 	int result;
 
-	result = ksceKernelLockMutex(context->codecMutex, 1, NULL);
+	result = sceKernelLockMutex(context->codecMutex, 1, NULL);
 	if (result != 0)
 		return -1;
 	return result;
@@ -144,7 +144,7 @@ int ngsUnlockCodec(NgsPlatformContext *context)
 {
 	int result;
 
-	result = ksceKernelUnlockMutex(context->codecMutex, 1);
+	result = sceKernelUnlockMutex(context->codecMutex, 1);
 	if (result != 0)
 		return -1;
 	return result;

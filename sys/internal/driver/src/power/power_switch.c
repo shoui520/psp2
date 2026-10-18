@@ -64,7 +64,7 @@ void powerSysconWakeupCallback(uint32_t value)
 void powerHdmiCecCallback(int event)
 {
 	(void)event;
-	ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x800);
+	sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x800);
 }
 
 int powerSwitchInterrupt(void *argument)
@@ -104,10 +104,10 @@ int scePowerRequestSuspend(void)
 	int result = 0;
 
 	if (SceSysrootForDriver_834439A7() || SceSysrootForDriver_B0E1FC67()) {
-		ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x10);
+		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x10);
 	} else if (!SceSysrootForDriver_89D19090() &&
 		   !SceSysrootForDriver_7918D44E()) {
-		ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x20);
+		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x20);
 	} else {
 		result = SCE_POWER_ERROR_CANT_SUSPEND;
 	}
@@ -121,7 +121,7 @@ int kscePowerRequestShutdown(uint32_t argument)
 	SceUID eventFlag = s_powerSwitchState.eventFlag;
 
 	s_powerSwitchState.shutdownArgument = argument;
-	ksceKernelSetEventFlag(eventFlag, 0x200);
+	sceKernelSetEventFlag(eventFlag, 0x200);
 	sceSyscallLeave(context);
 	return 0;
 }
@@ -132,13 +132,13 @@ static inline int powerAcquireSwitchProcessLockCount(volatile uint32_t *count)
 
 	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	if (!s_powerSwitchState.processLockCount && !s_powerSwitchState.systemLockCount)
-		ksceKernelClearEventFlag(s_powerSwitchState.eventFlag, ~0x10000U);
+		sceKernelClearEventFlag(s_powerSwitchState.eventFlag, ~0x10000U);
 	SceCpuForDriver_5F6A8743((int32_t *)count, 1);
 	s_powerSwitchState.processLockCount++;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	if (!s_powerSwitchState.suspendInProgress)
 		return 0;
-	return ksceKernelWaitEventFlag(s_powerSwitchState.eventFlag, 0x40000,
+	return sceKernelWaitEventFlag(s_powerSwitchState.eventFlag, 0x40000,
 				       SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 }
 
@@ -164,7 +164,7 @@ inline __attribute__((always_inline)) int powerAcquireSystemSwitchLock(uint32_t 
 		return SCE_POWER_ERROR_INVALID_VALUE;
 	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	if (!s_powerSwitchState.processLockCount && !s_powerSwitchState.systemLockCount)
-		ksceKernelClearEventFlag(s_powerSwitchState.eventFlag, ~0x10000U);
+		sceKernelClearEventFlag(s_powerSwitchState.eventFlag, ~0x10000U);
 	s_powerSwitchState.systemLockCount++;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	return 0;
@@ -180,7 +180,7 @@ static inline int powerReleaseSwitchProcessLock(volatile uint32_t *count)
 		s_powerSwitchState.processLockCount--;
 	}
 	if (!s_powerSwitchState.processLockCount && !s_powerSwitchState.systemLockCount)
-		ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x10000);
+		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x10000);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	return 0;
 }
@@ -207,7 +207,7 @@ int powerReleaseSystemSwitchLock(uint32_t kind)
 	if ((int32_t)s_powerSwitchState.systemLockCount > 0)
 		s_powerSwitchState.systemLockCount--;
 	if (!s_powerSwitchState.processLockCount && !s_powerSwitchState.systemLockCount)
-		ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x10000);
+		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x10000);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	return 0;
 }
@@ -219,7 +219,7 @@ int scePowerRequestStandby(void)
 	if (sceKernelGetProcessId() == SCE_KERNEL_PROCESS_ID ||
 	    SceSysrootForDriver_834439A7() || SceSysrootForDriver_B0E1FC67() ||
 	    SceSysrootForDriver_55392965() || sceSblACMgrIsSystemProgram(0))
-		ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x10);
+		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x10);
 	sceSyscallLeave(context);
 	return 0;
 }
@@ -232,7 +232,7 @@ int scePowerRequestColdReset(void)
 	    SceSysrootForDriver_834439A7() || SceSysrootForDriver_B0E1FC67() ||
 	    SceSysrootForDriver_55392965() ||
 	    sceSblACMgrIsSystemProgram(0))
-		ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x80);
+		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x80);
 	sceSyscallLeave(context);
 	return 0;
 }
@@ -278,7 +278,7 @@ int powerSwitchTransition(uint32_t mode)
 		powerDispatchSwitchEvent(0, SYSEVENT_SUSPEND_CANCEL, suspend.sleepMode, &suspend,
 					 NULL);
 		sceKernelCpuResumeIntr(intrState);
-		ksceKernelClearEventFlag(s_powerSwitchState.eventFlag,
+		sceKernelClearEventFlag(s_powerSwitchState.eventFlag,
 					 0xfffff102);
 		return ret;
 	}
@@ -312,7 +312,7 @@ int powerSwitchTransition(uint32_t mode)
 	for (i = SYSEVENT_SUSPEND_PREPARE(15); i >= SYSEVENT_SUSPEND_PREPARE(0); i--)
 		powerDispatchSwitchEvent(0, i, suspend.sleepMode, &suspend,
 					 NULL);
-	ksceKernelClearEventFlag(s_powerSwitchState.eventFlag, ~0x40000U);
+	sceKernelClearEventFlag(s_powerSwitchState.eventFlag, ~0x40000U);
 	SceSysconForDriver_D7BEFF8B(&sysconStatus);
 	intrState = SceCpuForDriver_821FC0EE();
 	powerDispatchSwitchEvent(0, SYSEVENT_SUSPEND_IDLE_ENTER, suspend.sleepMode, &suspend, NULL);
@@ -344,9 +344,9 @@ int powerSwitchTransition(uint32_t mode)
 		s_powerSwitchState.interruptState = 1;
 		dsb();
 		ksceKernelTriggerSGI(10, 0, 7);
-		started = ksceKernelGetSystemTimeLow();
+		started = SceThreadmgrForDriver_47F6DE49();
 		while ((seen = s_powerSwitchState.interruptCpuMask) != 7) {
-			now = ksceKernelGetSystemTimeLow();
+			now = SceThreadmgrForDriver_47F6DE49();
 			if (now - started > 999999) {
 				SceDebugForDriver_391B74B7("[ScePower]: SGI interrupt "
 						 "busy: %s%s%s\n",
@@ -451,7 +451,7 @@ int powerSwitchTransition(uint32_t mode)
 	for (i = SYSEVENT_RESUME_DEVICE(0); i <= SYSEVENT_RESUME_DEVICE(15); i++)
 		powerDispatchSwitchEvent(1, i, 0, &resume, NULL);
 	ksceLedSetMode(2, SCE_LED_MODE_OFF, NULL);
-	ksceKernelClearEventFlag(s_powerSwitchState.eventFlag, 0xfffff102);
+	sceKernelClearEventFlag(s_powerSwitchState.eventFlag, 0xfffff102);
 	powerNotifyCallback(SCE_POWER_CB_SYSTEM_SUSPEND, SCE_POWER_CB_SYSTEM_RESUMING, 0);
 	/* some wakeup factors resume with the display off */
 	switch (s_powerSwitchState.wakeupFactor & 0x7f) {
@@ -523,7 +523,7 @@ int powerSwitchWorker(SceSize args, void *argp)
 	held = (s_powerSwitchState.controllerButtons & s_powerSwitchState.controllerMask) != 0;
 
 	for (;;) {
-		ksceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
+		sceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
 					POWER_SWITCH_EVENT_EXIT | POWER_SWITCH_EVENT_HDMI_CEC |
 					POWER_SWITCH_EVENT_REQUESTS | POWER_SWITCH_EVENT_BUTTONS,
 					SCE_KERNEL_EVF_WAITMODE_OR, &pattern, NULL);
@@ -563,7 +563,7 @@ buttonsDown:
 		}
 		if (buttons & SCE_CTRL_POWER) {
 			timeout = s_powerSwitchState.standbyButtonPushTime;
-			ret = ksceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
+			ret = sceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
 						      POWER_SWITCH_EVENT_EXIT |
 						      POWER_SWITCH_EVENT_REQUESTS |
 						      POWER_SWITCH_EVENT_BUTTONS,
@@ -604,7 +604,7 @@ buttonsDown:
 				else
 					timeout = 4000000;
 				for (;;) {
-					ret = ksceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
+					ret = sceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
 								      POWER_SWITCH_EVENT_EXIT |
 								      POWER_SWITCH_EVENT_REQUESTS |
 								      POWER_SWITCH_EVENT_BUTTONS,
@@ -630,7 +630,7 @@ buttonsDown:
 			}
 		} else if (buttons & SCE_CTRL_PSBUTTON) {
 			timeout = s_powerSwitchState.psButtonPushTime;
-			ret = ksceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
+			ret = sceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
 						      POWER_SWITCH_EVENT_EXIT |
 						      POWER_SWITCH_EVENT_REQUESTS |
 						      POWER_SWITCH_EVENT_BUTTONS,
@@ -661,7 +661,7 @@ buttonsDown:
 			}
 		} else if (pattern & POWER_SWITCH_EVENT_HDMI_CEC) {
 			/* the TV's power key: a short press of the power button */
-			ksceKernelClearEventFlag(s_powerSwitchState.eventFlag,
+			sceKernelClearEventFlag(s_powerSwitchState.eventFlag,
 						 ~POWER_SWITCH_EVENT_HDMI_CEC);
 			modes = s_powerSwitchState.primaryMode | s_powerSwitchState.secondaryMode;
 			if (modes & POWER_SW_MODE_PRESS_DISPLAY_OFF) {
@@ -691,12 +691,12 @@ request:
 		} else if (pattern & POWER_SWITCH_EVENT_HIBERNATE) {
 			s_powerSwitchState.pendingRequest = POWER_REQUEST_HIBERNATE;
 		} else if (pattern & POWER_SWITCH_EVENT_DISPLAY_ON) {
-			ksceKernelClearEventFlag(s_powerSwitchState.eventFlag,
+			sceKernelClearEventFlag(s_powerSwitchState.eventFlag,
 						 ~POWER_SWITCH_EVENT_DISPLAY_ON);
 			powerSwitchDisplay(1, 1);
 			continue;
 		} else if (pattern & POWER_SWITCH_EVENT_DISPLAY_OFF) {
-			ksceKernelClearEventFlag(s_powerSwitchState.eventFlag,
+			sceKernelClearEventFlag(s_powerSwitchState.eventFlag,
 						 ~POWER_SWITCH_EVENT_DISPLAY_OFF);
 			powerSwitchDisplay(0, 2);
 			continue;
@@ -706,14 +706,14 @@ request:
 			continue;
 
 		/* wait until no process holds the switch lock */
-		ksceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
+		sceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
 					POWER_SWITCH_EVENT_EXIT | POWER_SWITCH_EVENT_UNLOCKED,
 					SCE_KERNEL_EVF_WAITMODE_OR, &pattern, NULL);
 		if (pattern & POWER_SWITCH_EVENT_EXIT)
 			break;
 		if (pattern & POWER_SWITCH_EVENT_COLD_RESET)
 			s_powerSwitchState.pendingRequest = POWER_REQUEST_COLD_RESET;
-		ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, POWER_SWITCH_EVENT_BUSY);
+		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, POWER_SWITCH_EVENT_BUSY);
 		switch (s_powerSwitchState.pendingRequest) {
 		case POWER_REQUEST_COLD_RESET:
 			powerSwitchTransition(0x404);
@@ -742,8 +742,8 @@ request:
 		}
 		s_powerSwitchState.buttonRequest = POWER_REQUEST_NONE;
 		s_powerSwitchState.pendingRequest = POWER_REQUEST_NONE;
-		ksceKernelClearEventFlag(s_powerSwitchState.eventFlag, ~POWER_SWITCH_EVENT_BUSY);
-		ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, POWER_SWITCH_EVENT_IDLE);
+		sceKernelClearEventFlag(s_powerSwitchState.eventFlag, ~POWER_SWITCH_EVENT_BUSY);
+		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, POWER_SWITCH_EVENT_IDLE);
 
 		/* woken by the power button: it may still be down */
 		if (ksceCtrlPeekBufferPositive(0, &ctrl, 1) < 0)
@@ -777,7 +777,7 @@ static inline __attribute__((always_inline)) void powerReleaseSwitchInitHold(voi
 	if ((int32_t)s_powerSwitchState.systemLockCount > 0)
 		s_powerSwitchState.systemLockCount--;
 	if (!s_powerSwitchState.processLockCount && !s_powerSwitchState.systemLockCount)
-		ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x10000);
+		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x10000);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 }
 
@@ -797,8 +797,8 @@ void powerControllerCallback(uint32_t buttons, uint32_t previous)
 		else if (!(buttons & 8))
 			ksceCtrlUpdateMaskForNonShell(8, 0);
 	}
-	ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 1);
-	ksceKernelClearEventFlag(s_powerSwitchState.eventFlag, ~1U);
+	sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 1);
+	sceKernelClearEventFlag(s_powerSwitchState.eventFlag, ~1U);
 }
 
 int powerSwitchInitPhase8(uint32_t kind, void *argument)
@@ -841,12 +841,12 @@ int powerInitializeSwitchControl(void)
 		10, "ScePowerMain", 0,
 		(SceKernelIntrHandler)powerSwitchInterrupt, NULL, 0x50, 0xf,
 		NULL);
-	s_powerSwitchState.eventFlag = ksceKernelCreateEventFlag(
+	s_powerSwitchState.eventFlag = sceKernelCreateEventFlag(
 		"ScePowerMain", SCE_KERNEL_EVF_ATTR_MULTI, 0x50000, NULL);
 	s_powerSwitchState.mainThread =
-		ksceKernelCreateThread("ScePowerMain", powerSwitchWorker, 0x10,
+		sceKernelCreateThread("ScePowerMain", powerSwitchWorker, 0x10,
 				       0x2000, 0, 0x80000, NULL);
-	ksceKernelStartThread(s_powerSwitchState.mainThread, 0, NULL);
+	sceKernelStartThread(s_powerSwitchState.mainThread, 0, NULL);
 	s_powerSwitchState.controllerMask = 0x40010008;
 	s_powerSwitchState.controllerCallback = SceCtrlForDriver_FF9D4DD4(
 		0x40010008, powerControllerCallback, NULL, 0);
@@ -942,7 +942,7 @@ static inline int powerReleaseSwitchProcessLockCount(volatile uint32_t *count)
 		s_powerSwitchState.processLockCount -= locks;
 	}
 	if (!s_powerSwitchState.processLockCount && !s_powerSwitchState.systemLockCount)
-		ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x10000);
+		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x10000);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	return 0;
 }
@@ -988,9 +988,9 @@ int scePowerRequestDisplayOff(void)
 
 	if (sceKernelGetProcessId() == SCE_KERNEL_PROCESS_ID ||
 	    sceSblACMgrIsSystemProgram(0)) {
-		ksceKernelClearEventFlag(s_powerSwitchState.eventFlag,
+		sceKernelClearEventFlag(s_powerSwitchState.eventFlag,
 				       ~UINT32_C(4));
-		ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 8);
+		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 8);
 	}
 	sceSyscallLeave(context);
 	return 0;
@@ -1002,9 +1002,9 @@ int scePowerRequestDisplayOn(void)
 
 	if (sceKernelGetProcessId() == SCE_KERNEL_PROCESS_ID ||
 	    sceSblACMgrIsSystemProgram(0)) {
-		ksceKernelClearEventFlag(s_powerSwitchState.eventFlag,
+		sceKernelClearEventFlag(s_powerSwitchState.eventFlag,
 				       ~UINT32_C(8));
-		ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 4);
+		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 4);
 	}
 	sceSyscallLeave(context);
 	return 0;
@@ -1014,7 +1014,7 @@ int kscePowerRequestSoftReset(void)
 {
 	uint32_t context = sceSyscallEnter();
 
-	ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x40);
+	sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x40);
 	sceSyscallLeave(context);
 	return 0;
 }
@@ -1023,7 +1023,7 @@ int kscePowerRequestHibernate(void)
 {
 	uint32_t context = sceSyscallEnter();
 
-	ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x400);
+	sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x400);
 	sceSyscallLeave(context);
 	return 0;
 }
@@ -1039,7 +1039,7 @@ int kscePowerEncodeUBattery(void)
 	uint32_t pattern;
 	int result;
 
-	result = ksceKernelPollEventFlag(s_powerSwitchState.eventFlag,
+	result = sceKernelPollEventFlag(s_powerSwitchState.eventFlag,
 				       UINT32_MAX, SCE_KERNEL_EVF_WAITMODE_OR, &pattern);
 	/* Native Poll writes the current pattern before its no-match error. */
 	if (result < 0 && result != SCE_KERNEL_ERROR_EVF_COND)
@@ -1047,12 +1047,12 @@ int kscePowerEncodeUBattery(void)
 	if (!(pattern & 0x6f0))
 		return 0;
 	if (!(pattern & 0x20000)) {
-		result = ksceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
+		result = sceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
 					       0x20000, SCE_KERNEL_EVF_WAITMODE_OR, &pattern, NULL);
 		if (result < 0)
 			return result;
 	}
-	result = ksceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
+	result = sceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
 				       0x40000, SCE_KERNEL_EVF_WAITMODE_OR, &pattern, NULL);
 	return result < 0 ? result : 0;
 }

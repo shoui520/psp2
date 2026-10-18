@@ -73,11 +73,11 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	sceKernelApiDeclareTypeUInt64
-	ksceKernelGetThreadmgrUIDClass
+	sceKernelGetThreadmgrUIDClass
 	SceThreadmgrForDriver_10517330
 	sceKernelCancelAlarm
-	ksceKernelNotifyCallback
-	ksceKernelEnqueueWorkQueue
+	sceKernelNotifyCallback
+	sceKernelScheduleWorkTask
 	sceKernelGetSystemTimeWide
 	SceProcessmgrForDriver_4140D633
 	sceKernelRegisterSysEventHandler

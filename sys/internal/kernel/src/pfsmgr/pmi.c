@@ -72,17 +72,17 @@ int pfsPmiCreate(ScePfsPmi **outPmi, const char *path, const char *name, const v
 	pmi = pfsBufferListAlloc(&g_pfsPmiBufferList);
 	if (pmi == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
-	mutex = ksceKernelCreateMutex("ScePfsPmi", PFS_MUTEX_ATTR, 0, NULL);
+	mutex = sceKernelCreateMutex("ScePfsPmi", PFS_MUTEX_ATTR, 0, NULL);
 	pmi->mutex = mutex;
 	if (mutex < 0) {
 		pfsBufferListFree(&g_pfsPmiBufferList, pmi);
 		return mutex;
 	}
-	mutex = ksceKernelCreateMutex("ScePfsFilesDb", PFS_MUTEX_ATTR, 0, NULL);
+	mutex = sceKernelCreateMutex("ScePfsFilesDb", PFS_MUTEX_ATTR, 0, NULL);
 	pmi->filesDbMutex = mutex;
 	if (mutex < 0) {
 		pfsBufferListFree(&g_pfsPmiBufferList, pmi);
-		ksceKernelDeleteMutex(pmi->mutex);
+		sceKernelDeleteMutex(pmi->mutex);
 		return mutex;
 	}
 
@@ -130,8 +130,8 @@ int pfsPmiCreate(ScePfsPmi **outPmi, const char *path, const char *name, const v
 
 int pfsPmiDestroy(ScePfsPmi *pmi)
 {
-	ksceKernelDeleteMutex(pmi->filesDbMutex);
-	ksceKernelDeleteMutex(pmi->mutex);
+	sceKernelDeleteMutex(pmi->filesDbMutex);
+	sceKernelDeleteMutex(pmi->mutex);
 	pfsBufferListFree(&g_pfsPmiBufferList, pmi);
 	return 0;
 }
@@ -151,7 +151,7 @@ int pfsPmiApprove(ScePfsPmi *pmi, SceUInt64 authId)
 {
 	int i, ret;
 
-	ksceKernelLockMutex(pmi->mutex, 1, NULL);
+	sceKernelLockMutex(pmi->mutex, 1, NULL);
 	if (pmi->approved[pfsPmiApprovedIndex(pmi, authId)] == authId) {
 		ret = SCE_ERROR_ERRNO_EEXIST;
 	} else {
@@ -165,7 +165,7 @@ int pfsPmiApprove(ScePfsPmi *pmi, SceUInt64 authId)
 			ret = 0;
 		}
 	}
-	ksceKernelUnlockMutex(pmi->mutex, 1);
+	sceKernelUnlockMutex(pmi->mutex, 1);
 	return ret;
 }
 
@@ -173,7 +173,7 @@ int pfsPmiDisapprove(ScePfsPmi *pmi, SceUInt64 authId)
 {
 	int i, ret;
 
-	ksceKernelLockMutex(pmi->mutex, 1, NULL);
+	sceKernelLockMutex(pmi->mutex, 1, NULL);
 	if (pmi->approved[pfsPmiApprovedIndex(pmi, authId)] != authId) {
 		ret = SCE_ERROR_ERRNO_ENOENT;
 	} else {
@@ -189,7 +189,7 @@ int pfsPmiDisapprove(ScePfsPmi *pmi, SceUInt64 authId)
 		}
 		ret = 0;
 	}
-	ksceKernelUnlockMutex(pmi->mutex, 1);
+	sceKernelUnlockMutex(pmi->mutex, 1);
 	return ret;
 }
 
@@ -197,9 +197,9 @@ int pfsPmiIsApproved(ScePfsPmi *pmi, SceUInt64 authId)
 {
 	int found;
 
-	ksceKernelLockMutex(pmi->mutex, 1, NULL);
+	sceKernelLockMutex(pmi->mutex, 1, NULL);
 	found = pmi->approved[pfsPmiApprovedIndex(pmi, authId)] == authId;
-	ksceKernelUnlockMutex(pmi->mutex, 1);
+	sceKernelUnlockMutex(pmi->mutex, 1);
 	return found;
 }
 

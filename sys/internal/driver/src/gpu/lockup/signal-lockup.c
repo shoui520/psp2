@@ -45,16 +45,16 @@ int CreateSignalWaitObjects(void)
 {
 	int ret;
 
-	ret = ksceKernelCreateMutex("SceGpuSignalMutex", 0, 0, 0);
+	ret = sceKernelCreateMutex("SceGpuSignalMutex", 0, 0, 0);
 	signalMutex = ret;
 	if (ret < 0) {
 		signalMutex = -1;
 		return ret;
 	}
-	ret = ksceKernelCreateCond("SceGpuSignalCond", 0, signalMutex, 0);
+	ret = sceKernelCreateCond("SceGpuSignalCond", 0, signalMutex, 0);
 	signalCond = ret;
 	if (ret < 0) {
-		ksceKernelDeleteMutex(signalMutex);
+		sceKernelDeleteMutex(signalMutex);
 		ret = signalCond;
 		signalMutex = -1;
 		signalCond = -1;
@@ -69,12 +69,12 @@ int SignalWaitCounter(void)
 
 	if (signalMutex < 0 || signalCond < 0)
 		return (int)0x804c0007;
-	ret = ksceKernelLockMutex(signalMutex, 1, 0);
+	ret = sceKernelLockMutex(signalMutex, 1, 0);
 	if (ret < 0)
 		return ret;
 	signalCounter++;
-	ksceKernelUnlockMutex(signalMutex, 1);
-	return ksceKernelSignalCondAll(signalCond);
+	sceKernelUnlockMutex(signalMutex, 1);
+	return sceKernelSignalCondAll(signalCond);
 }
 
 int WaitSignalCounter(unsigned *counter, unsigned timeout, int user)
@@ -88,7 +88,7 @@ int WaitSignalCounter(unsigned *counter, unsigned timeout, int user)
 		return (int)0x804c0000;
 	context = ReadThreadContext();
 	WriteThreadContext(context << 16);
-	ret = ksceKernelLockMutex(signalMutex, 1, 0);
+	ret = sceKernelLockMutex(signalMutex, 1, 0);
 	if (ret >= 0) {
 		if (user) {
 			ret = SceSysmemForDriver_BC996A7A(&observed, counter, 4);
@@ -99,7 +99,7 @@ int WaitSignalCounter(unsigned *counter, unsigned timeout, int user)
 		}
 		if (observed == signalCounter) {
 			waitTimeout = timeout ? &timeout : 0;
-			ret = ksceKernelWaitCond(signalCond, waitTimeout);
+			ret = sceKernelWaitCond(signalCond, waitTimeout);
 		}
 		if (ret == 0) {
 			if (user)
@@ -108,7 +108,7 @@ int WaitSignalCounter(unsigned *counter, unsigned timeout, int user)
 				*counter = signalCounter;
 		}
 	unlock:
-		ksceKernelUnlockMutex(signalMutex, 1);
+		sceKernelUnlockMutex(signalMutex, 1);
 	}
 	WriteThreadContext(context);
 	return ret;
@@ -133,10 +133,10 @@ int ksceGpuSignalWaitLockup(void)
 		return (int)0x804c0007;
 	context = ReadThreadContext();
 	WriteThreadContext(context << 16);
-	ret = ksceKernelLockMutex(lockupMutex, 1, 0);
+	ret = sceKernelLockMutex(lockupMutex, 1, 0);
 	if (ret >= 0) {
-		ret = ksceKernelWaitCond(lockupCond, &timeout);
-		ksceKernelUnlockMutex(lockupMutex, 1);
+		ret = sceKernelWaitCond(lockupCond, &timeout);
+		sceKernelUnlockMutex(lockupMutex, 1);
 	}
 	WriteThreadContext(context);
 	return ret;
@@ -149,14 +149,14 @@ static int LockRegisterDump(void)
 	if (registerDumpMutex < 0)
 		return (int)0x804c0007;
 	timeout = 100000;
-	return ksceKernelLockMutex(registerDumpMutex, 1, &timeout);
+	return sceKernelLockMutex(registerDumpMutex, 1, &timeout);
 }
 
 static int UnlockRegisterDump(void)
 {
 	if (registerDumpMutex < 0)
 		return (int)0x804c0007;
-	return ksceKernelUnlockMutex(registerDumpMutex, 1);
+	return sceKernelUnlockMutex(registerDumpMutex, 1);
 }
 
 unsigned GetRegisterDumpAllocationSize(void);
@@ -174,46 +174,46 @@ int CreateLockupWaitObjects(void)
 	ret = StoreRegisterDump(NULL);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelCreateMutex("SceGpuLockupMutex", 0, 0, NULL);
+	ret = sceKernelCreateMutex("SceGpuLockupMutex", 0, 0, NULL);
 	lockupMutex = ret;
 	if (ret < 0) {
 		lockupMutex = -1;
 		return ret;
 	}
-	ret = ksceKernelCreateCond("SceGpuLockupCond", 0, lockupMutex, NULL);
+	ret = sceKernelCreateCond("SceGpuLockupCond", 0, lockupMutex, NULL);
 	lockupCond = ret;
 	if (ret < 0)
 		goto deleteCond;
-	ret = ksceKernelCreateEventFlag("SceGpuLockupEventFlag", 0, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceGpuLockupEventFlag", 0, 0, NULL);
 	lockupEventUid = ret;
 	if (ret < 0)
 		goto deleteLockupMutex;
-	ret = ksceKernelCreateMutex("SceGpuLockupMutex2", 0, 0, NULL);
+	ret = sceKernelCreateMutex("SceGpuLockupMutex2", 0, 0, NULL);
 	registerDumpMutex = ret;
 	if (ret < 0)
 		goto deleteRegisterMutex;
-	ret = ksceKernelCreateThread("SceGpuLockupThread", LockupThread, 20,
+	ret = sceKernelCreateThread("SceGpuLockupThread", LockupThread, 20,
 			((dumpSize + 0x1fff) & ~0x1fffU) + 0x2000, 0, 0x80000, NULL);
 	lockupThreadUid = ret;
 	if (ret < 0)
 		goto deleteEvent;
 	lockupThreadRunning = 1;
-	ret = ksceKernelStartThread(lockupThreadUid, 0, NULL);
+	ret = sceKernelStartThread(lockupThreadUid, 0, NULL);
 	if (ret >= 0)
 		return 0;
-	ksceKernelDeleteThread(lockupThreadUid);
+	sceKernelDeleteThread(lockupThreadUid);
 	lockupThreadUid = -1;
 deleteEvent:
-	ksceKernelDeleteEventFlag(lockupEventUid);
+	sceKernelDeleteEventFlag(lockupEventUid);
 	lockupEventUid = -1;
 deleteRegisterMutex:
-	ksceKernelDeleteMutex(registerDumpMutex);
+	sceKernelDeleteMutex(registerDumpMutex);
 	registerDumpMutex = -1;
 deleteLockupMutex:
-	ksceKernelDeleteMutex(lockupMutex);
+	sceKernelDeleteMutex(lockupMutex);
 	lockupMutex = -1;
 deleteCond:
-	ksceKernelDeleteCond(lockupCond);
+	sceKernelDeleteCond(lockupCond);
 	lockupCond = -1;
 	lockupThreadRunning = 0;
 	return ret;
@@ -347,7 +347,7 @@ int LockupThread(SceSize args, void *argp)
 	ordered->size = sizeof(*ordered);
 	while (lockupThreadRunning) {
 		eventPattern = 0;
-		result = ksceKernelWaitEventFlag(lockupEventUid, 3,
+		result = sceKernelWaitEventFlag(lockupEventUid, 3,
 				SCE_KERNEL_EVF_WAITMODE_OR | SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 				&eventPattern, NULL);
 		if (!lockupThreadRunning)
@@ -409,7 +409,7 @@ int LockupThread(SceSize args, void *argp)
 			salvage = salvageUid;
 			UnlockRegisterDump();
 			if (salvage != -1) {
-				ksceKernelSignalCondAll(lockupCond);
+				sceKernelSignalCondAll(lockupCond);
 				break;
 			}
 		}
@@ -417,11 +417,11 @@ int LockupThread(SceSize args, void *argp)
 			OSEnableTimer(device->hTimer);
 		} else {
 			gpuHalted = 1;
-			ksceKernelSignalCondAll(lockupCond);
+			sceKernelSignalCondAll(lockupCond);
 			SceThreadmgrForDriver_37F51E91(0x10005, 0);
 		}
 	}
-	ksceKernelExitDeleteThread(0);
+	sceKernelExitDeleteThread(0);
 	return 0;
 }
 

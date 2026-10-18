@@ -34,7 +34,7 @@ int _sceAppMgrSetPowerSaveModeInternal(int mode, int suspendBackgroundApps)
 {
 	int result;
 
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result) {
 #if FW_DEBUG
 		SCE_DBG_PRINTF_FUNC(0, 296, "_sceAppMgrSetPowerSaveModeInternal",
@@ -46,12 +46,12 @@ int _sceAppMgrSetPowerSaveModeInternal(int mode, int suspendBackgroundApps)
 		appmgrShellMutexPanic();
 #endif
 	} else {
-		ksceKernelGetThreadId();
+		sceKernelGetThreadId();
 	}
 	g_appmgrPowerSaveMode = mode;
 	g_appmgrPowerSaveSuspendBackgroundApps = suspendBackgroundApps;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result) {
 #if FW_DEBUG
 		sceAppMgrDump();

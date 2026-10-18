@@ -18,43 +18,43 @@ int qmiCreateBackend(void)
 	ret = qmiInitializeDeviceDriver();
 	if (ret < 0)
 		goto failed;
-	ret = ksceKernelCreateMutex("SceBbmcProtDrvInst", 2, 0, NULL);
+	ret = sceKernelCreateMutex("SceBbmcProtDrvInst", 2, 0, NULL);
 	if (ret < 0)
 		goto driver;
 	g_qmiBackendStorage.instanceMutex = ret;
-	ret = ksceKernelCreateMutex("SceBbmcProtDrvFifo", 2, 0, NULL);
+	ret = sceKernelCreateMutex("SceBbmcProtDrvFifo", 2, 0, NULL);
 	if (ret < 0)
 		goto instance;
 	g_qmiBackendStorage.fifoMutex = ret;
-	ret = ksceKernelCreateEventFlag("SceBbmcProtDrvIf", 0x1000, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceBbmcProtDrvIf", 0x1000, 0, NULL);
 	if (ret < 0)
 		goto fifo;
 	g_qmiBackendStorage.interfaceEvent = ret;
-	ret = ksceKernelCreateEventFlag("SceBbmcProtDrvCtrl", 0x1000, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceBbmcProtDrvCtrl", 0x1000, 0, NULL);
 	if (ret < 0)
 		goto interface;
 	g_qmiBackendStorage.controlEvent = ret;
-	ret = ksceKernelCreateThread("SceBbmcProtDrv", qmiControlThread, 96,
+	ret = sceKernelCreateThread("SceBbmcProtDrv", qmiControlThread, 96,
 		0x2000, 0x10000000, 0x80000, NULL);
 	if (ret < 0)
 		goto control;
 	g_qmiBackendStorage.thread = ret;
 	g_qmiBackendControl = &g_qmiBackendStorage;
 	g_qmiBackendStorage.state = 1;
-	ksceKernelStartThread(ret, sizeof(g_qmiBackendControl), &g_qmiBackendControl);
+	sceKernelStartThread(ret, sizeof(g_qmiBackendControl), &g_qmiBackendControl);
 	return ret;
 control:
 	if (g_qmiBackendControl->controlEvent > 0)
-		ksceKernelDeleteEventFlag(g_qmiBackendControl->controlEvent);
+		sceKernelDeleteEventFlag(g_qmiBackendControl->controlEvent);
 interface:
 	if (g_qmiBackendControl->interfaceEvent > 0)
-		ksceKernelDeleteEventFlag(g_qmiBackendControl->interfaceEvent);
+		sceKernelDeleteEventFlag(g_qmiBackendControl->interfaceEvent);
 fifo:
 	if (g_qmiBackendStorage.fifoMutex > 0)
-		ksceKernelDeleteMutex(g_qmiBackendStorage.fifoMutex);
+		sceKernelDeleteMutex(g_qmiBackendStorage.fifoMutex);
 instance:
 	if (g_qmiBackendStorage.instanceMutex > 0)
-		ksceKernelDeleteMutex(g_qmiBackendStorage.instanceMutex);
+		sceKernelDeleteMutex(g_qmiBackendStorage.instanceMutex);
 driver:
 	qmiFinalizeDeviceDriver();
 failed:
@@ -69,20 +69,20 @@ int qmiDestroyBackend(void)
 	SceUInt32 timeout = 1000000;
 	int ret;
 
-	ret = ksceKernelSetEventFlag(g_qmiBackendControl->controlEvent, 0x80000000);
+	ret = sceKernelSetEventFlag(g_qmiBackendControl->controlEvent, 0x80000000);
 	g_qmiBackendControl->state = 0;
 	if (ret >= 0)
-		ret = ksceKernelWaitThreadEnd(g_qmiBackendControl->thread, NULL, &timeout);
+		ret = sceKernelWaitThreadEnd(g_qmiBackendControl->thread, NULL, &timeout);
 	if (g_qmiBackendControl->fifoMutex > 0)
-		ksceKernelDeleteMutex(g_qmiBackendControl->fifoMutex);
+		sceKernelDeleteMutex(g_qmiBackendControl->fifoMutex);
 	if (g_qmiBackendControl->instanceMutex > 0)
-		ksceKernelDeleteMutex(g_qmiBackendControl->instanceMutex);
+		sceKernelDeleteMutex(g_qmiBackendControl->instanceMutex);
 	if (g_qmiBackendControl->controlEvent > 0)
-		ksceKernelDeleteEventFlag(g_qmiBackendControl->controlEvent);
+		sceKernelDeleteEventFlag(g_qmiBackendControl->controlEvent);
 	if (g_qmiBackendControl->interfaceEvent > 0)
-		ksceKernelDeleteEventFlag(g_qmiBackendControl->interfaceEvent);
+		sceKernelDeleteEventFlag(g_qmiBackendControl->interfaceEvent);
 	if (g_qmiBackendControl->thread > 0)
-		ksceKernelDeleteThread(g_qmiBackendControl->thread);
+		sceKernelDeleteThread(g_qmiBackendControl->thread);
 	qmiFinalizeDeviceDriver();
 	memset(&g_qmiBackendStorage, 0, sizeof(g_qmiBackendStorage));
 	g_qmiBackendControl = NULL;
@@ -94,10 +94,10 @@ int qmiLockBackend(unsigned int kind)
 {
 	if (g_qmiBackendControl != NULL) {
 		if (kind == 1)
-			return ksceKernelLockMutex(g_qmiBackendControl->instanceMutex,
+			return sceKernelLockMutex(g_qmiBackendControl->instanceMutex,
 				1, NULL) == 0;
 		return kind == 2 &&
-			ksceKernelLockMutex(g_qmiBackendControl->fifoMutex, 1, NULL) == 0;
+			sceKernelLockMutex(g_qmiBackendControl->fifoMutex, 1, NULL) == 0;
 	}
 	return 0;
 }
@@ -107,9 +107,9 @@ int qmiUnlockBackend(unsigned int kind, int locked)
 {
 	if (locked == 1 && g_qmiBackendControl != NULL) {
 		if (kind == 1)
-			return ksceKernelUnlockMutex(g_qmiBackendControl->instanceMutex, 1);
+			return sceKernelUnlockMutex(g_qmiBackendControl->instanceMutex, 1);
 		if (kind == 2)
-			return ksceKernelUnlockMutex(g_qmiBackendControl->fifoMutex, 1);
+			return sceKernelUnlockMutex(g_qmiBackendControl->fifoMutex, 1);
 	}
 	return kind;
 }

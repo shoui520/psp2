@@ -54,19 +54,19 @@ static int DriverStartStop(int size, void *args, void *user) /* name unknown */
 
 static int Attach(int version, void *user) /* name unknown */
 {
-	return ksceKernelSetEventFlag(s_status, 0x10000010);
+	return sceKernelSetEventFlag(s_status, 0x10000010);
 }
 
 static void Detach(void *user) /* name unknown */
 {
-	ksceKernelClearEventFlag(s_status, ~0x10u);
-	ksceKernelSetEventFlag(s_status, 0x10000000);
+	sceKernelClearEventFlag(s_status, ~0x10u);
+	sceKernelSetEventFlag(s_status, 0x10000000);
 }
 
 static void WriteComplete(SceUdcdDeviceRequest *req) /* name unknown */
 {
-	ksceKernelClearEventFlag(s_status, ~0x100u);
-	ksceKernelSetEventFlag(s_status, 0x1000);
+	sceKernelClearEventFlag(s_status, ~0x100u);
+	sceKernelSetEventFlag(s_status, 0x1000);
 }
 
 static SceUdcdEndpointDescriptor s_epHi[3] = {
@@ -130,7 +130,7 @@ static void QueuePut(DbgUsbQueue *queue, DbgUsbBuffer *buffer) /* name unknown *
 	buffer->prev = queue->prev;
 	queue->prev = buffer;
 	buffer->prev->next = buffer;
-	ksceKernelSetEventFlag(queue->event, 1);
+	sceKernelSetEventFlag(queue->event, 1);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&queue->lock, state);
 }
 
@@ -148,7 +148,7 @@ static DbgUsbBuffer *QueueGet(DbgUsbQueue *queue) /* name unknown */
 		buffer->prev = buffer;
 	}
 	if (queue->next == (DbgUsbBuffer *)queue)
-		ksceKernelClearEventFlag(queue->event, ~1u);
+		sceKernelClearEventFlag(queue->event, ~1u);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&queue->lock, state);
 	return buffer;
 }
@@ -159,15 +159,15 @@ static int __attribute__((noreturn)) StatusWorker(SceSize size, void *args) /* n
 
 	for (;;) {
 		bits = 0;
-		if (ksceKernelWaitEventFlag(s_status, 0x10000000,
+		if (sceKernelWaitEventFlag(s_status, 0x10000000,
 					    SCE_KERNEL_EVF_WAITMODE_OR |
 					    SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					  &bits, NULL) >= 0) {
 			changed = previous ^ bits;
 			if ((changed & 0x10) && (bits & 1))
-				ksceKernelSetEventFlag(s_notify, bits & 0x10 ? 4 : 8);
+				sceKernelSetEventFlag(s_notify, bits & 0x10 ? 4 : 8);
 			if ((changed & 1) && (bits & 0x11) == 0x11)
-				ksceKernelSetEventFlag(s_notify, 4);
+				sceKernelSetEventFlag(s_notify, 4);
 		}
 		previous = bits;
 	}
@@ -179,11 +179,11 @@ static int __attribute__((noreturn)) _sceDbgUsbReadQueueWorker(SceSize size, voi
 	int ret;
 
 	for (;;) {
-		ksceKernelWaitEventFlag(s_free.event, 1, SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
+		sceKernelWaitEventFlag(s_free.event, 1, SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 		buffer = QueueGet(&s_free);
 		if (!buffer)
 			continue;
-		ret = ksceKernelWaitEventFlag(s_status, 0x10, SCE_KERNEL_EVF_WAITMODE_OR, NULL,
+		ret = sceKernelWaitEventFlag(s_status, 0x10, SCE_KERNEL_EVF_WAITMODE_OR, NULL,
 					      NULL);
 		if (ret >= 0) {
 			SCE_DBG_ASSERT(buffer->remaining == 0, 449);
@@ -205,7 +205,7 @@ static void ReadComplete(SceUdcdDeviceRequest *req) /* name unknown */
 	unsigned int bits = 0;
 
 	info.size = sizeof(info);
-	if (ksceKernelGetEventFlagInfo(s_status, &info) >= 0)
+	if (SceThreadmgrForDriver_612277C9(s_status, &info) >= 0)
 		bits = info.currentPattern;
 	if (req->returnCode == 0 && (unsigned int)req->transmitted > 3 &&
 	    ((unsigned char *)req->data)[3] == 0x40) {
@@ -213,7 +213,7 @@ static void ReadComplete(SceUdcdDeviceRequest *req) /* name unknown */
 		buffer->remaining = req->transmitted;
 		QueuePut(&s_done, buffer);
 		if ((bits & 0x11) == 0x11)
-			ksceKernelSetEventFlag(s_notify, 2);
+			sceKernelSetEventFlag(s_notify, 2);
 	} else {
 		buffer->remaining = 0;
 		QueuePut(&s_free, buffer);
@@ -225,11 +225,11 @@ int SceDbgUsbForDriver_A6BFCC0A(SceUID event)
 	SceKernelEventFlagInfo info;
 
 	info.size = sizeof(info);
-	if (ksceKernelGetEventFlagInfo(s_status, &info) >= 0 &&
+	if (SceThreadmgrForDriver_612277C9(s_status, &info) >= 0 &&
 	    (info.currentPattern & 1))
 		return ERR_REGISTERED;
 	s_notify = event;
-	ksceKernelSetEventFlag(s_status, 0x10000001);
+	sceKernelSetEventFlag(s_status, 0x10000001);
 	return 0;
 }
 
@@ -238,10 +238,10 @@ int SceDbgUsbForDriver_08CF16D1(void)
 	SceKernelEventFlagInfo info;
 
 	info.size = sizeof(info);
-	if (ksceKernelGetEventFlagInfo(s_status, &info) < 0 ||
+	if (SceThreadmgrForDriver_612277C9(s_status, &info) < 0 ||
 	    !(info.currentPattern & 1))
 		return ERR_UNREGISTERED;
-	ksceKernelClearEventFlag(s_status, ~1u);
+	sceKernelClearEventFlag(s_status, ~1u);
 	s_notify = -1;
 	return 0;
 }
@@ -253,9 +253,9 @@ int _sceDbgUsbPullData(void *data, unsigned int size)
 	unsigned int left = size, count;
 	int ret = 0, state, ready;
 
-	ksceKernelLockMutex(s_readMutex, 1, NULL);
+	sceKernelLockMutex(s_readMutex, 1, NULL);
 	info.size = sizeof(info);
-	if (ksceKernelGetEventFlagInfo(s_status, &info) < 0 ||
+	if (SceThreadmgrForDriver_612277C9(s_status, &info) < 0 ||
 	    !(info.currentPattern & 1)) {
 		ret = ERR_UNREGISTERED;
 		goto out;
@@ -268,7 +268,7 @@ int _sceDbgUsbPullData(void *data, unsigned int size)
 	while (left) {
 		buffer = s_pending;
 		while (!buffer) {
-			ksceKernelWaitEventFlag(s_done.event, 1, SCE_KERNEL_EVF_WAITMODE_OR, NULL,
+			sceKernelWaitEventFlag(s_done.event, 1, SCE_KERNEL_EVF_WAITMODE_OR, NULL,
 						NULL);
 			buffer = QueueGet(&s_done);
 		}
@@ -291,10 +291,10 @@ int _sceDbgUsbPullData(void *data, unsigned int size)
 		ready = s_done.next != (DbgUsbBuffer *)&s_done;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_done.lock, state);
 		if (ready)
-			ksceKernelSetEventFlag(s_notify, 2);
+			sceKernelSetEventFlag(s_notify, 2);
 	}
 out:
-	ksceKernelUnlockMutex(s_readMutex, 1);
+	sceKernelUnlockMutex(s_readMutex, 1);
 	return ret;
 }
 
@@ -303,10 +303,10 @@ int SceDbgUsbForDriver_40C65DB2(const void *data, unsigned int size)
 	SceKernelEventFlagInfo info;
 	int ret;
 
-	ksceKernelLockMutex(s_writeMutex, 1, NULL);
+	sceKernelLockMutex(s_writeMutex, 1, NULL);
 	info.size = sizeof(info);
 	ret = ERR_UNREGISTERED;
-	if (ksceKernelGetEventFlagInfo(s_status, &info) < 0 ||
+	if (SceThreadmgrForDriver_612277C9(s_status, &info) < 0 ||
 	    !(info.currentPattern & 1))
 		goto out;
 	ret = ERR_DETACHED;
@@ -325,18 +325,18 @@ int SceDbgUsbForDriver_40C65DB2(const void *data, unsigned int size)
 	s_write.request.transmitted = 0;
 	s_write.request.returnCode = 1;
 	s_write.request.next = NULL;
-	ksceKernelClearEventFlag(s_status, ~0x1000u);
-	ksceKernelSetEventFlag(s_status, 0x100);
+	sceKernelClearEventFlag(s_status, ~0x1000u);
+	sceKernelSetEventFlag(s_status, 0x100);
 	ret = ksceUdcdReqSendInternal(&s_write.request, 1);
 	if (ret >= 0) {
-		ret = ksceKernelWaitEventFlag(s_status, 0x1000, SCE_KERNEL_EVF_WAITMODE_OR, NULL,
+		ret = sceKernelWaitEventFlag(s_status, 0x1000, SCE_KERNEL_EVF_WAITMODE_OR, NULL,
 					      NULL);
 		if (ret >= 0 && s_write.request.returnCode >= 0 &&
 		    s_write.request.transmitted == size)
 			ret = size;
 	}
 out:
-	ksceKernelUnlockMutex(s_writeMutex, 1);
+	sceKernelUnlockMutex(s_writeMutex, 1);
 	return ret;
 }
 
@@ -401,27 +401,27 @@ int sceDbgUsbModuleStart(SceSize arglen, void *argp)
 	}
 	s_write.capacity = BUFFER_SIZE;
 	s_write.request.size = BUFFER_SIZE;
-	ret = ksceKernelCreateMutex("SceDbgUsbRead", 0, 0, NULL);
+	ret = sceKernelCreateMutex("SceDbgUsbRead", 0, 0, NULL);
 	if (ret < 0)
 		goto readMutexFail;
 	s_readMutex = ret;
-	ret = ksceKernelCreateMutex("SceDbgUsbWrite", 0, 0, NULL);
+	ret = sceKernelCreateMutex("SceDbgUsbWrite", 0, 0, NULL);
 	if (ret < 0)
 		goto writeMutexFail;
 	s_writeMutex = ret;
-	ret = ksceKernelCreateEventFlag("SceDbgUsbStatus", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
+	ret = sceKernelCreateEventFlag("SceDbgUsbStatus", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (ret < 0)
 		goto statusFail;
 	s_status = ret;
 	s_free.next = s_free.prev = (DbgUsbBuffer *)&s_free;
 	s_free.lock = 0;
-	s_free.event = ksceKernelCreateEventFlag("SceDbgUsbFreeFifo", SCE_KERNEL_EVF_ATTR_MULTI, 0,
+	s_free.event = sceKernelCreateEventFlag("SceDbgUsbFreeFifo", SCE_KERNEL_EVF_ATTR_MULTI, 0,
 						 NULL);
 	if (s_free.event < 0)
 		goto freeFail;
 	s_done.next = s_done.prev = (DbgUsbBuffer *)&s_done;
 	s_done.lock = 0;
-	s_done.event = ksceKernelCreateEventFlag("SceDbgUsbDoneFifo", SCE_KERNEL_EVF_ATTR_MULTI, 0,
+	s_done.event = sceKernelCreateEventFlag("SceDbgUsbDoneFifo", SCE_KERNEL_EVF_ATTR_MULTI, 0,
 						 NULL);
 	if (s_done.event < 0)
 		goto doneFail;
@@ -433,12 +433,12 @@ int sceDbgUsbModuleStart(SceSize arglen, void *argp)
 	threadOpt[4] = 0;
 	threadOpt[5] = 0x1000;
 	threadOpt[6] = 0;
-	ret = ksceKernelCreateThread("SceDbgUsbStatus", StatusWorker, 0x1d,
+	ret = sceKernelCreateThread("SceDbgUsbStatus", StatusWorker, 0x1d,
 				     0x4000, 0, 0xf, (void *)threadOpt);
 	if (ret < 0)
 		goto statusThreadFail;
 	s_statusThread = ret;
-	ret = ksceKernelCreateThread("SceDbgUsbReadQueue", _sceDbgUsbReadQueueWorker,
+	ret = sceKernelCreateThread("SceDbgUsbReadQueue", _sceDbgUsbReadQueueWorker,
 				     0x1d, 0x4000, 0, 0xf, (void *)threadOpt);
 	if (ret < 0)
 		goto readThreadFail;
@@ -449,11 +449,11 @@ int sceDbgUsbModuleStart(SceSize arglen, void *argp)
 	s_write.request.isControlRequest = 1;
 	for (i = 0; i < 2; i++)
 		QueuePut(&s_free, &s_read[i]);
-	if (ksceKernelStartThread(s_statusThread, 0, NULL) < 0) {
-		ksceKernelDeleteThread(s_readThread);
+	if (sceKernelStartThread(s_statusThread, 0, NULL) < 0) {
+		sceKernelDeleteThread(s_readThread);
 		goto readThreadFail;
 	}
-	ksceKernelStartThread(s_readThread, 0, NULL);
+	sceKernelStartThread(s_readThread, 0, NULL);
 	if (ksceUsbServMacSelect(1, 1) < 0)
 		return 2;
 	if (ksceUdcdRegisterInternal(&s_driver, 1) < 0)
@@ -469,17 +469,17 @@ int sceDbgUsbModuleStart(SceSize arglen, void *argp)
 	ksceUdcdUnregisterInternal(&s_driver, 1);
 	return 2;
 readThreadFail:
-	ksceKernelDeleteThread(s_statusThread);
+	sceKernelDeleteThread(s_statusThread);
 statusThreadFail:
-	ksceKernelDeleteEventFlag(s_done.event);
+	sceKernelDeleteEventFlag(s_done.event);
 doneFail:
-	ksceKernelDeleteEventFlag(s_free.event);
+	sceKernelDeleteEventFlag(s_free.event);
 freeFail:
-	ksceKernelDeleteEventFlag(s_status);
+	sceKernelDeleteEventFlag(s_status);
 statusFail:
-	ksceKernelDeleteMutex(s_writeMutex);
+	sceKernelDeleteMutex(s_writeMutex);
 writeMutexFail:
-	ksceKernelDeleteMutex(s_readMutex);
+	sceKernelDeleteMutex(s_readMutex);
 readMutexFail:
 	SceSysmemForDriver_009E1C61(s_write.memblock);
 writeFail:

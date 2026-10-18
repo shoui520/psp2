@@ -18,7 +18,7 @@ int GcAuthAdhocCreateContext224ForUser(GcAuthAdhocContext224 *context,
 	state = sceSyscallEnter();
 	request.context = context;
 	request.packet = packet;
-	result = ksceKernelRunWithStack(8192,
+	result = SceThreadmgrForDriver_E54FD746(8192,
 		(int (*)(void *))GcAuthAdhocCreateContext224, &request);
 	sceSyscallLeave(state);
 	return result;
@@ -35,7 +35,7 @@ int GcAuthAdhocAnswerChallenge224ForUser(GcAuthAdhocContext224 *context,
 	request.context = context;
 	request.packet = packet;
 	request.output = output;
-	result = ksceKernelRunWithStack(8192,
+	result = SceThreadmgrForDriver_E54FD746(8192,
 		(int (*)(void *))GcAuthAdhocAnswerChallenge224, &request);
 	sceSyscallLeave(state);
 	return result;
@@ -52,7 +52,7 @@ int GcAuthAdhocAuthenticateResponse224ForUser(GcAuthAdhocContext224 *context,
 	request.context = context;
 	request.packet = packet;
 	request.output = output;
-	result = ksceKernelRunWithStack(8192,
+	result = SceThreadmgrForDriver_E54FD746(8192,
 		(int (*)(void *))GcAuthAdhocAuthenticateResponse224, &request);
 	sceSyscallLeave(state);
 	return result;

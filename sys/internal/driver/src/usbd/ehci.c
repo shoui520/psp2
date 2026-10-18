@@ -503,7 +503,7 @@ static SceUInt32 ehciConnectDone(void *arg)
 		} else if (portSc == EHCI_PORTSC_LINE_J) {
 			ehci->portState = EHCI_PORT_RESETTING;
 			regs->portSc |= EHCI_PORTSC_RESET;
-			ksceKernelRegisterTimer("SceUsbdAlarm1", 100000, ehciResetDone, ehci);
+			SceThreadmgrForDriver_C58DF384("SceUsbdAlarm1", 100000, ehciResetDone, ehci);
 		}
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ehci->lock, state);
@@ -522,7 +522,7 @@ static SceUInt32 ehciResetDone(void *arg)
 	if (ehci->portState == EHCI_PORT_RESETTING) {
 		ehci->regs->portSc &= ~EHCI_PORTSC_RESET;
 		ehci->portState = EHCI_PORT_RESET;
-		ksceKernelRegisterTimer("SceUsbdAlarm1", 50000, ehciRecoveryDone, ehci);
+		SceThreadmgrForDriver_C58DF384("SceUsbdAlarm1", 50000, ehciRecoveryDone, ehci);
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ehci->lock, state);
 	return 0;
@@ -1575,7 +1575,7 @@ static __always_inline void ehciDetectPortChange(Ehci *ehci)
 		if (ehci->portState != EHCI_PORT_POWERED)
 			usbdNotifyDetach(USBD_ID(ehci->bus, 0), 0);
 		ehci->portState = EHCI_PORT_CONNECTED;
-		ksceKernelRegisterTimer("SceUsbdAlarm1", 100000, ehciConnectDone, ehci);
+		SceThreadmgrForDriver_C58DF384("SceUsbdAlarm1", 100000, ehciConnectDone, ehci);
 	}
 	if (portSc & EHCI_PORTSC_OVER_CURRENT_CHANGE)
 		SCE_DBG_PRINTF_FUNC(15, 1729, "ehciDetectPortChange", "#### Detect Over-current\n");

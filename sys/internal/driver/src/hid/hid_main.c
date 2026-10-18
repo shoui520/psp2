@@ -26,21 +26,21 @@ int hidBluetoothThread(SceSize args, void *argp)
 	int result;
 	unsigned int pattern;
 
-	eventFlag = ksceKernelCreateEventFlag("SceHid", 0x1000, 0, NULL);
+	eventFlag = sceKernelCreateEventFlag("SceHid", 0x1000, 0, NULL);
 	if (eventFlag < 0) {
 		SceDebugForDriver_391B74B7("HID: sceKernelCreateEventFlag() failed! => 0x%x",
 				 eventFlag);
 		SceDebugForDriver_391B74B7("!!\n");
 		return eventFlag;
 	}
-	result = ksceKernelCreateCallback("SceBtHid", 0,
+	result = sceKernelCreateCallback("SceBtHid", 0,
 					 hidBluetoothCallback, NULL);
 	if (result < 0)
 		goto callbackError;
 	result = ksceBtRegisterCallback(result, UINT64_C(0x1c60));
 	if (result < 0)
 		goto registerError;
-	result = ksceKernelCreateCallback("SceBtHidDisp", 0,
+	result = sceKernelCreateCallback("SceBtHidDisp", 0,
 					 hidDisplayCallback, NULL);
 	if (result < 0)
 		goto callbackError;
@@ -48,7 +48,7 @@ int hidBluetoothThread(SceSize args, void *argp)
 	if (result < 0)
 		goto registerError;
 	for (;;)
-		ksceKernelWaitEventFlagCB(eventFlag, 1, 5, &pattern, NULL);
+		SceThreadmgrForDriver_8A35F714(eventFlag, 1, 5, &pattern, NULL);
 
 registerError:
 	SceDebugForDriver_391B74B7("HID: sceBtRegisterCallback() failed! => 0x%x", result);
@@ -58,7 +58,7 @@ callbackError:
 	SceDebugForDriver_391B74B7("HID: sceKernelCreateCallback(Bt) failed! => 0x%x", result);
 	SceDebugForDriver_391B74B7("!!\n");
 out:
-	ksceKernelDeleteEventFlag(eventFlag);
+	sceKernelDeleteEventFlag(eventFlag);
 	return result;
 }
 
@@ -195,13 +195,13 @@ int module_start(SceSize args, const void *argp)
 	hidInitializeProcessList();
 	hidFlags = 0;
 	hidSpinlock = 0;
-	result = ksceKernelCreateThread("SceHid", hidBluetoothThread, 60,
+	result = sceKernelCreateThread("SceHid", hidBluetoothThread, 60,
 				       0x2000, 0, 0x80000, NULL);
 	if (result < 0) {
 		SceDebugForDriver_391B74B7("HID: sceKernelCreateThread() failed! => 0x%x", result);
 		goto error;
 	}
-	result = ksceKernelStartThread(result, args, (void *)argp);
+	result = sceKernelStartThread(result, args, (void *)argp);
 	if (result < 0) {
 		SceDebugForDriver_391B74B7("HID: sceKernelStartThread() failed! => 0x%x", result);
 		goto error;

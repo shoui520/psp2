@@ -394,49 +394,49 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	ksceKernelSetPermission
-	ksceKernelDeleteMutex
-	ksceKernelWaitEventFlag
-	ksceKernelFinalizeFastMutex
-	ksceKernelDeleteSema
-	ksceKernelLockMutex
-	ksceKernelCreateCallback
+	sceKernelSetThreadAccessLevel
+	sceKernelDeleteMutex
+	sceKernelWaitEventFlag
+	sceKernelFinalizeFastMutex
+	sceKernelDeleteSema
+	sceKernelLockMutex
+	sceKernelCreateCallback
 	sceKernelExitDeleteThread
-	ksceKernelUnlockMutex
-	ksceKernelStartThread
-	ksceKernelCreateSema
+	sceKernelUnlockMutex
+	sceKernelStartThread
+	sceKernelCreateSema
 	SceThreadmgrForDriver_332E127C
 	SceThreadmgrForDriver_36F8E58A
 	sceKernelChangeThreadPriorityAndCpuAffinityMask
-	ksceKernelDeleteCallback
-	ksceKernelWaitSema
-	ksceKernelWaitThreadEnd
-	ksceKernelCreateEventFlag
+	sceKernelDeleteCallback
+	sceKernelWaitSema
+	sceKernelWaitThreadEnd
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelPollSema
+	sceKernelClearEventFlag
+	sceKernelPollSema
 	SceThreadmgrForDriver_5311CFB5
-	ksceKernelGetThreadId
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
-	ksceKernelClearEvent
-	ksceKernelGetProcessId
-	ksceKernelSignalCond
-	ksceKernelDeleteThread
-	ksceKernelDeleteCond
-	ksceKernelInitializeFastMutex
-	ksceKernelNotifyCallback
-	ksceKernelCreateThread
-	ksceKernelWaitCond
-	ksceKernelSignalSema
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
-	ksceKernelCreateCond
-	ksceKernelRunWithStack
+	sceKernelGetThreadId
+	lockFastMutex
+	sceKernelDeleteEventFlag
+	sceKernelClearEvent
+	sceKernelGetProcessId
+	sceKernelSignalCond
+	sceKernelDeleteThread
+	sceKernelDeleteCond
+	sceKernelInitializeFastMutex
+	sceKernelNotifyCallback
+	sceKernelCreateThread
+	sceKernelWaitCond
+	sceKernelSignalSema
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
+	sceKernelCreateCond
+	SceThreadmgrForDriver_E54FD746
 	SceThreadmgrForDriver_E9A99C50
 	sceKernelGetSystemTimeWide
 	SceThreadmgrForDriver_F55E4D86
-	ksceKernelCreateMutex
+	sceKernelCreateMutex
 	ksceIoRemove
 	ksceIoDevctl
 	ksceIoDclose

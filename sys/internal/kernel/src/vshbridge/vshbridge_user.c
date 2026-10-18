@@ -3,7 +3,7 @@
  * the caller's buffers into kernel memory, calls the bridge in vshbridge.c
  * and copies the results out. Buffers of variable size take their size from
  * an argument block the caller passes last; the larger requests run on a
- * separate kernel stack (ksceKernelRunWithStack).
+ * separate kernel stack (SceThreadmgrForDriver_E54FD746).
  */
 #include <psp2kern/types.h>
 #include <vshbridge/vshbridge_imports.h>
@@ -597,7 +597,7 @@ int _vshNpDrmGetLegacyDocKey(const void *a, const void *key, void *c, const void
 {
 	NpDrmGetLegacyDocKeyParam param = { a, key, c, uargs };
 
-	return ksceKernelRunWithStack(VSH_STACK_SIZE, npDrmGetLegacyDocKeyOnStack, &param);
+	return SceThreadmgrForDriver_E54FD746(VSH_STACK_SIZE, npDrmGetLegacyDocKeyOnStack, &param);
 }
 
 /* the argument block of the EBOOT signature generators */
@@ -640,7 +640,7 @@ int _vshNpDrmEbootSigConvert(const char *path, const void *oldSignature, void *n
 {
 	NpDrmEbootSigConvertParam param = { path, oldSignature, newSignature, uargs };
 
-	return ksceKernelRunWithStack(VSH_STACK_SIZE, npDrmEbootSigConvertOnStack, &param);
+	return SceThreadmgrForDriver_E54FD746(VSH_STACK_SIZE, npDrmEbootSigConvertOnStack, &param);
 }
 
 int _vshNpDrmEbootSigVerify(const char *path, const void *b, const SyscallUnusedArgs *uargs)
@@ -773,7 +773,7 @@ int _vshAppMgrCloudDataCreateHeader(const void *a, int b, const void *c, void *h
 {
 	AppMgrCloudDataCreateHeaderParam param = { a, b, c, header };
 
-	return ksceKernelRunWithStack(VSH_STACK_SIZE, appMgrCloudDataCreateHeaderOnStack, &param);
+	return SceThreadmgrForDriver_E54FD746(VSH_STACK_SIZE, appMgrCloudDataCreateHeaderOnStack, &param);
 }
 
 int _vshAppMgrCloudDataSrcMount(int a, const void *b, void *mount)
@@ -798,7 +798,7 @@ int _vshAppMgrCloudDataVerifyHeader(const void *header)
 {
 	const void *arg = header;
 
-	return ksceKernelRunWithStack(VSH_STACK_SIZE, appMgrCloudDataVerifyHeaderOnStack, &arg);
+	return SceThreadmgrForDriver_E54FD746(VSH_STACK_SIZE, appMgrCloudDataVerifyHeaderOnStack, &arg);
 }
 
 int _vshAppMgrCloudDataSetupKey(void *key)
@@ -848,7 +848,7 @@ int _vshAppMgrAcInstGetAcdirParam(const void *a, const void *b, void *param)
 {
 	AppMgrAcInstGetAcdirParamParam stackParam = { a, b, param };
 
-	return ksceKernelRunWithStack(VSH_STACK_SIZE, appMgrAcInstGetAcdirParamOnStack, &stackParam);
+	return SceThreadmgrForDriver_E54FD746(VSH_STACK_SIZE, appMgrAcInstGetAcdirParamOnStack, &stackParam);
 }
 
 int _vshAppMgrSaveDataLocalBackupTargetGetList(void *list)
@@ -897,7 +897,7 @@ int _vshAppMgrLocalBackupVerifyOfflineHeader(const void *header)
 {
 	const void *arg = header;
 
-	return ksceKernelRunWithStack(VSH_STACK_SIZE, appMgrLocalBackupVerifyOfflineHeaderOnStack, &arg);
+	return SceThreadmgrForDriver_E54FD746(VSH_STACK_SIZE, appMgrLocalBackupVerifyOfflineHeaderOnStack, &arg);
 }
 
 int _vshAppMgrSaveDataNotifyBackupFinished(const void *a)

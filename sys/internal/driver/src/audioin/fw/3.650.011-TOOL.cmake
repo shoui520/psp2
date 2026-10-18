@@ -71,19 +71,19 @@ set(MODULE_IMPORT_FUNCS
 	__aeabi_uidivmod
 	snprintf
 	__stack_chk_fail
-	ksceKernelWaitEventFlag
-	ksceKernelFinalizeFastMutex
-	ksceKernelStartThread
-	ksceKernelCreateEventFlag
+	sceKernelWaitEventFlag
+	sceKernelFinalizeFastMutex
+	sceKernelStartThread
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelClearEventFlag
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
+	sceKernelClearEventFlag
+	lockFastMutex
+	sceKernelDeleteEventFlag
 	sceKernelGetProcessId
-	ksceKernelInitializeFastMutex
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
+	sceKernelInitializeFastMutex
+	sceKernelCreateThread
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
 	ksceKernelGetProcessTimeLowCore
 	SceProcessmgrForDriver_D141C076
 	sceKernelRegisterSysEventHandler

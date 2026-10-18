@@ -89,7 +89,7 @@ int powerInitializeClockControl(void)
 	/* Native initializes the original 240-byte prefix, then process flags. */
 	memset(&s_powerClockControl, 0, sizeof(s_powerClockControl));
 	s_powerClockControl.frequencies.gpuClockFrequency[0] = 111;
-	mutex = ksceKernelCreateMutex("ScePowerFreq", 6, 0, &option);
+	mutex = sceKernelCreateMutex("ScePowerFreq", 6, 0, &option);
 	if (mutex < 0)
 		return mutex;
 	s_powerClockControl.mutex = mutex;
@@ -231,7 +231,7 @@ inline __attribute__((always_inline)) int powerLockClockControl(void)
 	int ret;
 
 	if (!s_powerClockControl.lockBypass) {
-		ret = ksceKernelLockMutex(s_powerClockControl.mutex, 1, NULL);
+		ret = sceKernelLockMutex(s_powerClockControl.mutex, 1, NULL);
 		if (ret < 0)
 			return ret;
 	}
@@ -241,7 +241,7 @@ inline __attribute__((always_inline)) int powerLockClockControl(void)
 inline __attribute__((always_inline)) void powerUnlockClockControl(void)
 {
 	if (!s_powerClockControl.lockBypass)
-		ksceKernelUnlockMutex(s_powerClockControl.mutex, 1);
+		sceKernelUnlockMutex(s_powerClockControl.mutex, 1);
 }
 
 static inline __attribute__((always_inline)) int raiseClockVoltage(unsigned int rail, uint32_t demand)
@@ -507,8 +507,8 @@ int kscePowerSetGpuClockFrequencyInternal(int first, int second)
 	} else {
 		irqState = SceCpuForDriver_821FC0EE();
 		SceGrabForDriver_B22EE8BC(0xf00, 0);
-		start = ksceKernelGetSystemTimeLow();
-		while ((uint32_t)(ksceKernelGetSystemTimeLow() - start) < 3)
+		start = SceThreadmgrForDriver_47F6DE49();
+		while ((uint32_t)(SceThreadmgrForDriver_47F6DE49() - start) < 3)
 			;
 		ScePervasiveForDriver_6AF0196F(firstSelector, secondSelector);
 		SceGrabForDriver_B22EE8BC(0xf00, 1);
@@ -571,7 +571,7 @@ int powerInitializeClockRuntime(void)
 	}
 
 	if (!s_powerClockControl.lockBypass)
-		ksceKernelLockMutex(s_powerClockControl.mutex, 1, NULL);
+		sceKernelLockMutex(s_powerClockControl.mutex, 1, NULL);
 
 	SceSysconForDriver_7F198FA2(1, 0x8a - s_powerClockControl.busVoltageTable[0]);
 	s_powerClockControl.railVoltage[0] = s_powerClockControl.busVoltageTable[0];
@@ -615,7 +615,7 @@ int powerInitializeClockRuntime(void)
 	kscePowerSetCompatClockFrequency(0);
 
 	if (!s_powerClockControl.lockBypass)
-		ksceKernelUnlockMutex(s_powerClockControl.mutex, 1);
+		sceKernelUnlockMutex(s_powerClockControl.mutex, 1);
 	return 0;
 }
 

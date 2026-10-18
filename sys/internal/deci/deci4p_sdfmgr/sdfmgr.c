@@ -281,7 +281,7 @@ int _threadKicker(void)
 		if (!protocol->handler)
 			continue;
 		if (protocol->semaphore > 0) {
-			result = ksceKernelSignalSema(protocol->semaphore,
+			result = sceKernelSignalSema(protocol->semaphore,
 						      protocol->semaphoreCount);
 #if FW_DEBUG
 			if (result < 0)
@@ -297,7 +297,7 @@ int _threadKicker(void)
 			protocol->semaphoreCount = 0;
 		}
 		if (protocol->eventFlag > 0) {
-			result = ksceKernelSetEventFlag(protocol->eventFlag,
+			result = sceKernelSetEventFlag(protocol->eventFlag,
 							protocol->eventPattern);
 #if FW_DEBUG
 			if (result < 0)
@@ -778,7 +778,7 @@ int sdfMgrPrefetchAbortHandler(SceExcpmgrContext *context,
 	uint32_t fault;
 	int result = 2;
 
-	ksceKernelGetThreadContextInfo(&thread);
+	SceThreadmgrForKernel_6C1F092F(&thread);
 	cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
 	fault = readIfsr();
 	sdfMgrFormatCpsr(status, cpsr);
@@ -804,7 +804,7 @@ int sdfMgrDataAbortHandler(SceExcpmgrContext *context,
 	uint32_t fault;
 	int result = 2;
 
-	ksceKernelGetThreadContextInfo(&thread);
+	SceThreadmgrForKernel_6C1F092F(&thread);
 	cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
 	fault = readDfsr();
 	sdfMgrFormatCpsr(status, cpsr);
@@ -829,7 +829,7 @@ int sdfMgrUndefinedHandler(SceExcpmgrContext *context,
 	SdfMgrExceptionHook hook;
 	int result = 2;
 
-	ksceKernelGetThreadContextInfo(&thread);
+	SceThreadmgrForKernel_6C1F092F(&thread);
 	sdfMgrFormatCpsr(status, cpsr);
 	cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
 	if (thread.process_id == SCE_KERNEL_PROCESS_ID)

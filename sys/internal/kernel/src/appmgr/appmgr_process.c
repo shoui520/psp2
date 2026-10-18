@@ -139,7 +139,7 @@ void vcStateChangedPanic(void)
 		dumpBgmState(); \
 		SCE_DBG_ASSERT_CHECK_FUNC(0, _line, _func); \
 	} else { \
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId(); \
+		g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
 	} \
 } while (0)
 
@@ -174,7 +174,7 @@ void vcStateChangedPanic(void)
 	if ((_result) != 0) \
 		vcStateChangedPanic(); \
 	else \
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId(); \
+		g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
 } while (0)
 #define VC_UNLOCK_CHECK(_result, _line, _func) do { \
 	if ((_result) != 0) \
@@ -194,7 +194,7 @@ int vcStateChanged(SceUID pid, int enabled)
 	int index, value, leastValue, result, usage, retry;
 
 	/* Sony inlines vcUsingProcessCountCheck here. */
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	VC_LOCK_CHECK(result, 1330, "vcUsingProcessCountCheck");
 	app = appmgrFindAppByProcessId(g_appmgrAppStates, pid);
 	if (app != NULL && app->videoCodecUsage != 0) {
@@ -220,7 +220,7 @@ int vcStateChanged(SceUID pid, int enabled)
 			}
 		} while (++index <= 19);
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		VC_UNLOCK_CHECK(result, 1369, "vcUsingProcessCountCheck");
 		if (count > 3 && evictPid != -1) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1372,
@@ -231,7 +231,7 @@ int vcStateChanged(SceUID pid, int enabled)
 		}
 	} else {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		if (app == NULL)
 			VC_UNLOCK_CHECK(result, 1333, "vcUsingProcessCountCheck");
 		else
@@ -239,12 +239,12 @@ int vcStateChanged(SceUID pid, int enabled)
 	}
 
 	for (;;) {
-		result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+		result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 		VC_LOCK_CHECK(result, 1385, "vcStateChanged");
 		app = appmgrFindAppByProcessId(g_appmgrAppStates, pid);
 		if (app == NULL) {
 			g_appmgrMainMutexOwner = -1;
-			result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 			VC_RETURN_UNLOCK(result, 1388);
 		}
 		usage = app->videoCodecUsage;
@@ -261,27 +261,27 @@ int vcStateChanged(SceUID pid, int enabled)
 			if (g_appmgrVideoCodecPid == pid)
 				g_appmgrVideoCodecPid = -1;
 			g_appmgrMainMutexOwner = -1;
-			result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 			VC_RETURN_UNLOCK(result, 1433);
 		}
 		ownerPid = g_appmgrVideoCodecPid;
 		if (ownerPid == -1) {
 			g_appmgrVideoCodecPid = pid;
 			g_appmgrMainMutexOwner = -1;
-			result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 			VC_RETURN_UNLOCK(result, 1426);
 		}
 		g_appmgrMainMutexOwner = -1;
 		if (ownerPid == pid) {
-			result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 			VC_RETURN_UNLOCK(result, 1420);
 		}
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		VC_UNLOCK_CHECK(result, 1436, "vcStateChanged");
 		retry = 9;
-		ksceKernelDelayThread(100000);
+		sceKernelDelayThread(100000);
 		while (ownerPid == g_appmgrVideoCodecPid) {
-			ksceKernelDelayThread(100000);
+			sceKernelDelayThread(100000);
 			if (--retry != 0)
 				continue;
 			if (ownerPid != g_appmgrVideoCodecPid)
@@ -298,16 +298,16 @@ int vcStateChanged(SceUID pid, int enabled)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1455, "vcStateChanged",
 				"-------------------------------------------------------------------------------\n");
 			sceKernelKillProcess(ownerPid, 0);
-			result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+			result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 			if (result != 0) {
 				VC_LOCK_CHECK(result, 1457, "vcStateChanged");
 			} else {
-				ksceKernelGetThreadId();
+				sceKernelGetThreadId();
 			}
 			if (ownerPid == g_appmgrVideoCodecPid)
 				g_appmgrVideoCodecPid = -1;
 			g_appmgrMainMutexOwner = -1;
-			result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 			VC_UNLOCK_CHECK(result, 1461, "vcStateChanged");
 			break;
 		}
@@ -325,7 +325,7 @@ int _sceAppMgrProcTerminatedHandler(SceUID pid)
 	int alreadyLocked, result;
 
 	app = appmgrFindAppByProcessId(g_appmgrAppStates, pid);
-	if (app != NULL && app->mutexOwner == ksceKernelGetThreadId()) {
+	if (app != NULL && app->mutexOwner == sceKernelGetThreadId()) {
 		alreadyLocked = 1;
 	} else {
 		result = _appListFindAndLockAppByProcessId(pid, &app);
@@ -346,7 +346,7 @@ int _sceAppMgrProcTerminatedHandler(SceUID pid)
 #endif
 		alreadyLocked = 0;
 	}
-	if (app == NULL || app->mutexOwner != ksceKernelGetThreadId()) {
+	if (app == NULL || app->mutexOwner != sceKernelGetThreadId()) {
 #if FW_DEBUG
 		sceAppMgrDump();
 		dumpBgmState();
@@ -355,7 +355,7 @@ int _sceAppMgrProcTerminatedHandler(SceUID pid)
 		appmgrProcessPanic();
 #endif
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 #if FW_DEBUG
 	if (result != 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 330, "_sceAppMgrProcTerminatedHandler",
@@ -364,12 +364,12 @@ int _sceAppMgrProcTerminatedHandler(SceUID pid)
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 330, "_sceAppMgrProcTerminatedHandler");
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 #else
 	if (result != 0)
 		vcStateChangedPanic();
-	g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+	g_appmgrMainMutexOwner = sceKernelGetThreadId();
 #endif
 	shell = appmgrGetShellApp();
 	shellPid = shell != NULL ? shell->process.processId : 0;
@@ -381,7 +381,7 @@ int _sceAppMgrProcTerminatedHandler(SceUID pid)
 		(app->launchMode & 0x40000) ? app->launchSourceAppId : -1,
 		(short)app->relaunchPending, app->process.appName);
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 #if FW_DEBUG
 	if (result != 0) {
 		sceAppMgrDump();
@@ -481,7 +481,7 @@ int _sceAppMgrProcSuspendHandler(SceUID pid, int eventType,
 	} else if (eventType == 0x1000) {
 		if (_appListFindAndLockAppByProcessId(pid, &app) == (int)0x80802012)
 			return 0;
-		result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+		result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 #if FW_DEBUG
 		if (result != 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 232, "_sceAppMgrProcSuspendHandler",
@@ -491,19 +491,19 @@ int _sceAppMgrProcSuspendHandler(SceUID pid, int eventType,
 			SCE_DBG_ASSERT_CHECK_FUNC(0, 232, "_sceAppMgrProcSuspendHandler");
 			owner = g_appmgrMainMutexOwner;
 		} else {
-			owner = ksceKernelGetThreadId();
+			owner = sceKernelGetThreadId();
 			g_appmgrMainMutexOwner = owner;
 		}
 #else
 		if (result != 0)
 			vcStateChangedPanic();
-		owner = ksceKernelGetThreadId();
+		owner = sceKernelGetThreadId();
 		g_appmgrMainMutexOwner = owner;
 #endif
 		lockedApp = app;
 		lockedApp->process.notifiedProcessState = 3;
 		/* Sony inlines sceAppMgrProcessNotifySuspendWaiter here. */
-		if (owner != ksceKernelGetThreadId()) {
+		if (owner != sceKernelGetThreadId()) {
 #if FW_DEBUG
 			sceAppMgrDump();
 			dumpBgmState();
@@ -517,7 +517,7 @@ int _sceAppMgrProcSuspendHandler(SceUID pid, int eventType,
 			appmgrUtilWaitObjectNotify(waiter);
 		lockedApp->process.suspendWaiters = NULL;
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 #if FW_DEBUG
 		PROCESS_SUSPEND_RESULT(result, 237);
 #else
@@ -537,7 +537,7 @@ int videocodecUsageChangedCallback2(SceUID pid, unsigned int usage)
 	struct AppState *app;
 	int result;
 
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 #if FW_DEBUG
 	if (result != 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1475, "videocodecUsageChangedCallback2",
@@ -546,18 +546,18 @@ int videocodecUsageChangedCallback2(SceUID pid, unsigned int usage)
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 1475, "videocodecUsageChangedCallback2");
 	} else {
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 #else
 	if (result != 0)
 		vcStateChangedPanic();
-	g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+	g_appmgrMainMutexOwner = sceKernelGetThreadId();
 #endif
 	app = appmgrFindAppByProcessId(g_appmgrAppStates, pid);
 	if (app != NULL) {
 		app->videoCodecUsage = usage;
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 #if FW_DEBUG
 		if (result != 0) {
 			sceAppMgrDump();
@@ -574,7 +574,7 @@ int videocodecUsageChangedCallback2(SceUID pid, unsigned int usage)
 		return vcStateChanged(pid, 1);
 	}
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		int assertLevel;
@@ -629,7 +629,7 @@ int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
 	} else if (eventType == 0x40000) {
 		if (_appListFindAndLockAppByProcessId(pid, &app) == (int)0x80802012)
 			return 0;
-		result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+		result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 #if FW_DEBUG
 		if (result != 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 265, "_sceAppMgrProcResumeHandler",
@@ -638,12 +638,12 @@ int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
 			dumpBgmState();
 			SCE_DBG_ASSERT_CHECK_FUNC(0, 265, "_sceAppMgrProcResumeHandler");
 		} else {
-			g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+			g_appmgrMainMutexOwner = sceKernelGetThreadId();
 		}
 #else
 		if (result != 0)
 			vcStateChangedPanic();
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId();
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 #endif
 		if ((app->process.content.contentFlags & 0x30) != 0) {
 			result = ksceNpDrmPackageSetGameExist(1);
@@ -671,7 +671,7 @@ int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
 		/* Sony inlines sceAppMgrProcessNotifyRunningWaiter here. */
 		owner = g_appmgrMainMutexOwner;
 		lockedApp = app;
-		if (owner != ksceKernelGetThreadId()) {
+		if (owner != sceKernelGetThreadId()) {
 #if FW_DEBUG
 			sceAppMgrDump();
 			dumpBgmState();
@@ -685,7 +685,7 @@ int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
 			appmgrUtilWaitObjectNotify(waiter);
 		lockedApp->process.runningWaiters = NULL;
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 #if FW_DEBUG
 		PROCESS_RESUME_RESULT(result, 283);
 #else
@@ -724,7 +724,7 @@ int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
 			"Failed to lock ret=0x%08x\n", (_result)); \
 		PROCESS_EXIT_ASSERT(0, _line, _func); \
 	} else { \
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId(); \
+		g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
 	} \
 } while (0)
 #else
@@ -740,7 +740,7 @@ int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
 	if ((_result) != 0) \
 		vcStateChangedPanic(); \
 	else \
-		g_appmgrMainMutexOwner = ksceKernelGetThreadId(); \
+		g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
 } while (0)
 #endif
 
@@ -757,13 +757,13 @@ int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, int flags)
 	(void)param;
 	(void)flags;
 	/* Sony inlines videocodecUsageChangedCallback2 here. */
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	PROCESS_EXIT_LOCK(result, 1475, "videocodecUsageChangedCallback2");
 	codecApp = appmgrFindAppByProcessId(g_appmgrAppStates, pid);
 	if (codecApp != NULL) {
 		codecApp->videoCodecUsage = 0;
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 #if FW_DEBUG
 		PROCESS_EXIT_RESULT(result, 1482, "videocodecUsageChangedCallback2");
 #else
@@ -773,7 +773,7 @@ int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, int flags)
 		vcStateChanged(pid, 0);
 	} else {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 #if FW_DEBUG
 		PROCESS_EXIT_RESULT(result, 1478, "videocodecUsageChangedCallback2");
 #else
@@ -796,7 +796,7 @@ int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, int flags)
 		PROCESS_EXIT_RESULT(result, 125, "_sceAppMgrProcExitHandler");
 		return result;
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	PROCESS_EXIT_LOCK(result, 130, "_sceAppMgrProcExitHandler");
 	result = _paramQueueCancelAll(&app->params);
 	PROCESS_EXIT_RESULT(result, 133, "_sceAppMgrProcExitHandler");
@@ -804,7 +804,7 @@ int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, int flags)
 	_deviceSetRunStatus(app->appId, 0);
 	owner = g_appmgrMainMutexOwner;
 	lockedApp = app;
-	PROCESS_EXIT_ASSERT(owner == ksceKernelGetThreadId(), 1611,
+	PROCESS_EXIT_ASSERT(owner == sceKernelGetThreadId(), 1611,
 			    "sceAppMgrProcessNotifyRunningWaiter");
 	for (waitObject = lockedApp->process.runningWaiters;
 	     waitObject != NULL; waitObject = waitObject->next)
@@ -812,7 +812,7 @@ int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, int flags)
 	owner = g_appmgrMainMutexOwner;
 	lockedApp->process.runningWaiters = NULL;
 	lockedApp = app;
-	PROCESS_EXIT_ASSERT(owner == ksceKernelGetThreadId(), 1585,
+	PROCESS_EXIT_ASSERT(owner == sceKernelGetThreadId(), 1585,
 			    "sceAppMgrProcessNotifySuspendWaiter");
 	for (waitObject = lockedApp->process.suspendWaiters;
 	     waitObject != NULL; waitObject = waitObject->next)
@@ -820,7 +820,7 @@ int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, int flags)
 	appId = app->appId;
 	lockedApp->process.suspendWaiters = NULL;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 #if FW_DEBUG
 	PROCESS_EXIT_RESULT(result, 146, "_sceAppMgrProcExitHandler");
 #else
@@ -831,11 +831,11 @@ int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, int flags)
 	_updateDeviceArbitration2();
 	result = _appListUnlockApp(app);
 	PROCESS_EXIT_RESULT(result, 152, "_sceAppMgrProcExitHandler");
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	PROCESS_EXIT_LOCK(result, 155, "_sceAppMgrProcExitHandler");
 	shellApp = appmgrGetShellApp();
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 #if FW_DEBUG
 	PROCESS_EXIT_RESULT(result, 157, "_sceAppMgrProcExitHandler");
 #else
@@ -849,12 +849,12 @@ int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, int flags)
 		if (SceDebugForDriver_374B7868() > 0) {
 			__builtin_prefetch(&g_appmgrAppStates[index + 5].mutexOwner);
 			owner = g_appmgrAppStates[index].mutexOwner;
-			SCE_DBG_ASSERT_CHECK_FUNC(owner != ksceKernelGetThreadId(),
+			SCE_DBG_ASSERT_CHECK_FUNC(owner != sceKernelGetThreadId(),
 				161, "_sceAppMgrProcExitHandler");
 		}
 	}
 #endif
-	result = ksceKernelLockMutex(g_appmgrCore2Mutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrCore2Mutex, 1, NULL);
 	if (result != 0) {
 #if FW_DEBUG
 		PROCESS_EXIT_RESULT((unsigned int)(result + 0x7ffd7fd4) <= 1 ?
@@ -866,14 +866,14 @@ int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, int flags)
 		appmgrProcessPanic();
 #endif
 	} else {
-		g_appmgrCore2MutexOwner = ksceKernelGetThreadId();
+		g_appmgrCore2MutexOwner = sceKernelGetThreadId();
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	PROCESS_EXIT_LOCK(result, 163, "_sceAppMgrProcExitHandler");
 	result = _destroyOtherApp(app);
 	PROCESS_EXIT_RESULT(result, 166, "_sceAppMgrProcExitHandler");
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 #if FW_DEBUG
 	PROCESS_EXIT_RESULT(result, 168, "_sceAppMgrProcExitHandler");
 #else
@@ -881,7 +881,7 @@ int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, int flags)
 		vcStateChangedPanic();
 #endif
 	g_appmgrCore2MutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrCore2Mutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrCore2Mutex, 1);
 #if FW_DEBUG
 	PROCESS_EXIT_RESULT(result, 169, "_sceAppMgrProcExitHandler");
 #else
@@ -921,25 +921,25 @@ int _appmgrProcessSuspendProcess(struct AppState *app, int flags,
 		PROCESS_EXIT_ASSERT(0, 681, "_appmgrProcessSuspendProcess");
 	} else {
 		owner = app->mutexOwner;
-		PROCESS_EXIT_ASSERT(owner == ksceKernelGetThreadId(), 681,
+		PROCESS_EXIT_ASSERT(owner == sceKernelGetThreadId(), 681,
 			"_appmgrProcessSuspendProcess");
 	}
 	owner = g_appmgrMainMutexOwner;
-	PROCESS_EXIT_ASSERT(owner != ksceKernelGetThreadId(), 682,
+	PROCESS_EXIT_ASSERT(owner != sceKernelGetThreadId(), 682,
 		"_appmgrProcessSuspendProcess");
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	PROCESS_EXIT_LOCK(result, 684, "_appmgrProcessSuspendProcess");
 	state = app->process.requestedProcessState;
 	if (state == 1) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		PROCESS_SUSPEND_RESULT(result, 688);
 		return 0;
 	}
 	_deviceSetRunStatus(app->appId, 0);
 	app->process.requestedProcessState = 3;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	PROCESS_SUSPEND_RESULT(result, 696);
 	if (app->launchOrigin == 2) {
 		result = sceKernelWaitProcessEventCompletion(app->process.processId,
@@ -971,10 +971,10 @@ int _appmgrProcessSuspendProcess(struct AppState *app, int flags,
 		if (suspendResult != 0) {
 			appmgrUtilWaitObjectNotify(waiter);
 		} else {
-			result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+			result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 			PROCESS_EXIT_LOCK(result, 713, "_appmgrProcessSuspendProcess");
 			owner = g_appmgrMainMutexOwner;
-			PROCESS_EXIT_ASSERT(owner == ksceKernelGetThreadId(), 1572,
+			PROCESS_EXIT_ASSERT(owner == sceKernelGetThreadId(), 1572,
 				"sceAppMgrProcessAddSuspendWaiter");
 			waiter->next = NULL;
 			tail = &app->process.suspendWaiters;
@@ -982,7 +982,7 @@ int _appmgrProcessSuspendProcess(struct AppState *app, int flags,
 				tail = &(*tail)->next;
 			*tail = waiter;
 			g_appmgrMainMutexOwner = -1;
-			result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 			PROCESS_SUSPEND_RESULT(result, 715);
 		}
 	}
@@ -1013,23 +1013,23 @@ int _suspendAppForDebugger(struct AppState *app,
 	if ((attributes & 3) != 0) {
 		/* Sony inlines the existing suspend operation with no waiter. */
 		owner = app->mutexOwner;
-		PROCESS_EXIT_ASSERT(owner == ksceKernelGetThreadId(), 681,
+		PROCESS_EXIT_ASSERT(owner == sceKernelGetThreadId(), 681,
 			"_appmgrProcessSuspendProcess");
 		owner = g_appmgrMainMutexOwner;
-		PROCESS_EXIT_ASSERT(owner != ksceKernelGetThreadId(), 682,
+		PROCESS_EXIT_ASSERT(owner != sceKernelGetThreadId(), 682,
 			"_appmgrProcessSuspendProcess");
-		result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+		result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 		PROCESS_EXIT_LOCK(result, 684, "_appmgrProcessSuspendProcess");
 		state = app->process.requestedProcessState;
 		if (state == 1) {
 			g_appmgrMainMutexOwner = -1;
-			result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 			PROCESS_SUSPEND_RESULT(result, 688);
 		} else {
 			_deviceSetRunStatus(app->appId, 0);
 			app->process.requestedProcessState = 3;
 			g_appmgrMainMutexOwner = -1;
-			result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 			PROCESS_SUSPEND_RESULT(result, 696);
 			if (app->launchOrigin == 2) {
 				result = sceKernelWaitProcessEventCompletion(
@@ -1068,14 +1068,14 @@ int _suspendAppForDebugger(struct AppState *app,
 		attributes = app->processAttr;
 	}
 	if ((attributes & 1) == 0 && appmgrGetAppRunState(app) == 2) {
-		result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+		result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 		PROCESS_EXIT_LOCK(result, 1076, "_suspendAppForDebugger");
 		if (app->process.notifiedProcessState != 3) {
 			*waitObject = appmgrUtilGetWaitObject(5);
 			appmgrUtilWaitObjectClear(*waitObject);
 			owner = g_appmgrMainMutexOwner;
 			waiter = *waitObject;
-			PROCESS_EXIT_ASSERT(owner == ksceKernelGetThreadId(), 1572,
+			PROCESS_EXIT_ASSERT(owner == sceKernelGetThreadId(), 1572,
 				"sceAppMgrProcessAddSuspendWaiter");
 			waiter->next = NULL;
 			tail = &app->process.suspendWaiters;
@@ -1084,7 +1084,7 @@ int _suspendAppForDebugger(struct AppState *app,
 			*tail = waiter;
 		}
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 #if FW_DEBUG
 		PROCESS_EXIT_RESULT(result, 1082, "_suspendAppForDebugger");
 #else
@@ -1104,12 +1104,12 @@ int _appmgrProcessResumeProcess(struct AppState *app)
 	int resumeResult;
 
 	if (app == NULL ||
-	    (owner = app->mutexOwner) != ksceKernelGetThreadId())
+	    (owner = app->mutexOwner) != sceKernelGetThreadId())
 		PROCESS_EXIT_ASSERT(0, 736, "_appmgrProcessResumeProcess");
 	owner = g_appmgrMainMutexOwner;
-	PROCESS_EXIT_ASSERT(owner != ksceKernelGetThreadId(), 737,
+	PROCESS_EXIT_ASSERT(owner != sceKernelGetThreadId(), 737,
 		"_appmgrProcessResumeProcess");
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	PROCESS_EXIT_LOCK(result, 739, "_appmgrProcessResumeProcess");
 	_appListSetRunStatus(app, 16);
 	_deviceSetRunStatus(app->appId, 1);
@@ -1121,7 +1121,7 @@ int _appmgrProcessResumeProcess(struct AppState *app)
 	mutex = g_appmgrMainMutex;
 #endif
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(mutex, 1);
+	result = sceKernelUnlockMutex(mutex, 1);
 #if FW_DEBUG
 	PROCESS_EXIT_RESULT(result, 746, "_appmgrProcessResumeProcess");
 #else
@@ -1157,17 +1157,17 @@ int _appmgrProcessStartProcess(struct AppState *app)
 	int startResult;
 
 	if (app == NULL ||
-	    (owner = app->mutexOwner) != ksceKernelGetThreadId())
+	    (owner = app->mutexOwner) != sceKernelGetThreadId())
 		PROCESS_EXIT_ASSERT(0, 761, "_appmgrProcessRunProcess");
 	owner = g_appmgrMainMutexOwner;
-	PROCESS_EXIT_ASSERT(owner != ksceKernelGetThreadId(), 762,
+	PROCESS_EXIT_ASSERT(owner != sceKernelGetThreadId(), 762,
 		"_appmgrProcessRunProcess");
 	vcStateChanged(app->process.processId, 1);
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	PROCESS_EXIT_LOCK(result, 767, "_appmgrProcessRunProcess");
 	g_appmgrMainMutexOwner = -1;
 	state = app->process.requestedProcessState;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 #if FW_DEBUG
 	PROCESS_EXIT_RESULT(result, 769, "_appmgrProcessRunProcess");
 #else
@@ -1179,10 +1179,10 @@ int _appmgrProcessStartProcess(struct AppState *app)
 	if (state != 1)
 		return 0;
 	owner = app->mutexOwner;
-	PROCESS_EXIT_ASSERT(owner == ksceKernelGetThreadId(), 621,
+	PROCESS_EXIT_ASSERT(owner == sceKernelGetThreadId(), 621,
 		"_appmgrProcessStartProcess");
 	owner = g_appmgrMainMutexOwner;
-	PROCESS_EXIT_ASSERT(owner != ksceKernelGetThreadId(), 622,
+	PROCESS_EXIT_ASSERT(owner != sceKernelGetThreadId(), 622,
 		"_appmgrProcessStartProcess");
 	if ((app->process.content.contentFlags & 0x30) != 0) {
 		result = ksceNpDrmPackageSetGameExist(1);
@@ -1214,7 +1214,7 @@ int _appmgrProcessStartProcess(struct AppState *app)
 		}
 		return startResult;
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	PROCESS_EXIT_LOCK(result, 640, "_appmgrProcessStartProcess");
 	SCE_DBG_PRINTF_FUNC(0, 641, "_appmgrProcessStartProcess",
 		"[SceAppMgr] Start process : %s, appid=0x%08x, pid=0x%08x.\n",
@@ -1222,21 +1222,21 @@ int _appmgrProcessStartProcess(struct AppState *app)
 	app->process.notifiedProcessState = 2;
 	app->process.requestedProcessState = 2;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	PROCESS_START_RESULT(result, 644);
 	_shellEventAppRunningStatusChangedQueuePush();
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	PROCESS_EXIT_LOCK(result, 649, "_appmgrProcessStartProcess");
 	_appListSetRunStatus(app, 16);
 	owner = g_appmgrMainMutexOwner;
-	PROCESS_EXIT_ASSERT(owner == ksceKernelGetThreadId(), 1611,
+	PROCESS_EXIT_ASSERT(owner == sceKernelGetThreadId(), 1611,
 		"sceAppMgrProcessNotifyRunningWaiter");
 	for (waiter = app->process.runningWaiters; waiter != NULL;
 	     waiter = waiter->next)
 		appmgrUtilWaitObjectNotify(waiter);
 	app->process.runningWaiters = NULL;
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	PROCESS_START_RESULT(result, 652);
 	if (app->launchOrigin == 2 && app->relaunchInProgress == 0 &&
 	    app->notifyBootComplete != 0) {
@@ -1250,11 +1250,11 @@ int _appmgrProcessStartProcess(struct AppState *app)
 #endif
 		app->notifyBootComplete = 0;
 	}
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	PROCESS_EXIT_LOCK(result, 661, "_appmgrProcessStartProcess");
 	_deviceSetRunStatus(app->appId, 1);
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	PROCESS_START_RESULT(result, 665);
 	return startResult;
 }
@@ -1279,14 +1279,14 @@ int _resumeAppForDebugger(struct AppState *app,
 		return started;
 	if (appmgrGetAppRunState(app) == 2)
 		return started;
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	PROCESS_EXIT_LOCK(result, 1152, "_resumeAppForDebugger");
 	if (app->process.notifiedProcessState != 2) {
 		*waitObject = appmgrUtilGetWaitObject(5);
 		appmgrUtilWaitObjectClear(*waitObject);
 		owner = g_appmgrMainMutexOwner;
 		waiter = *waitObject;
-		PROCESS_EXIT_ASSERT(owner == ksceKernelGetThreadId(), 1598,
+		PROCESS_EXIT_ASSERT(owner == sceKernelGetThreadId(), 1598,
 			"sceAppMgrProcessAddRunningWaiter");
 		waiter->next = NULL;
 		tail = &app->process.runningWaiters;
@@ -1295,7 +1295,7 @@ int _resumeAppForDebugger(struct AppState *app,
 		*tail = waiter;
 	}
 	g_appmgrMainMutexOwner = -1;
-	result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 #if FW_DEBUG
 	PROCESS_EXIT_RESULT(result, 1158, "_resumeAppForDebugger");
 #else
@@ -1326,37 +1326,37 @@ int _appmgrProcessQuitProcess(struct AppState *app, int exitReason,
 	locked = app != NULL;
 	if (locked) {
 		owner = app->mutexOwner;
-		locked = owner == ksceKernelGetThreadId();
+		locked = owner == sceKernelGetThreadId();
 	}
 	PROCESS_EXIT_ASSERT(locked, 835, "_appmgrProcessQuitProcess");
 	owner = g_appmgrMainMutexOwner;
-	PROCESS_EXIT_ASSERT(owner != ksceKernelGetThreadId(), 836,
+	PROCESS_EXIT_ASSERT(owner != sceKernelGetThreadId(), 836,
 		"_appmgrProcessQuitProcess");
 	if (retry != 0)
 		PROCESS_EXIT_ASSERT(app->quitRequested != 0, 842,
 			"_appmgrProcessQuitProcess");
 	if (relaunch == 0)
 		_sceAppMgrDeactivateAppInternal(app, 0, 0, 0);
-	result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	PROCESS_EXIT_LOCK(result, 849, "_appmgrProcessQuitProcess");
 	_deviceSetRunStatus(app->appId, 0);
 	if (app->process.processId <= 0) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		PROCESS_QUIT_RESULT(result, 855);
 		return 0;
 	}
 	state = appmgrGetAppRunStatus(app);
 	if (state == 0x300) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		PROCESS_QUIT_RESULT(result, 865);
 		return 0x80802013;
 	}
 	if (app->quitRequested != 0 && retry == 0) {
 		if ((app->processAttr & 2) != 0) {
 			g_appmgrMainMutexOwner = -1;
-			result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 			PROCESS_QUIT_RESULT(result, 871);
 			result = _appmgrProcessStartProcess(app);
 			if (result != 0)
@@ -1364,27 +1364,27 @@ int _appmgrProcessQuitProcess(struct AppState *app, int exitReason,
 					"_appmgrProcessQuitProcess",
 					"[SceAppMgr:Error] _appmgrProcessRunProcess() failed 0x%08x.\n",
 					result);
-			result = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+			result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 			PROCESS_EXIT_LOCK(result, 876, "_appmgrProcessQuitProcess");
 		}
-		if ((SceUInt64)(ksceKernelGetSystemTimeWide() -
+		if ((SceUInt64)(sceKernelGetSystemTimeWide() -
 		    app->quitStartTime) <= 14999999 && state != 0x700) {
 			if (app->relaunchPending != 0 && relaunch == 0) {
 				app->relaunchPending = 0;
 				app->exitReason = exitReason;
-				app->selfQuit = ksceKernelGetProcessId() ==
+				app->selfQuit = sceKernelGetProcessId() ==
 					app->process.processId;
 			}
 			g_appmgrMainMutexOwner = -1;
-			result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 			PROCESS_QUIT_RESULT(result, 890);
 			return 0;
 		}
 	} else {
 		app->quitRequested = 1;
-		app->quitStartTime = ksceKernelGetSystemTimeWide();
+		app->quitStartTime = sceKernelGetSystemTimeWide();
 		app->exitReason = exitReason;
-		app->selfQuit = ksceKernelGetProcessId() == app->process.processId;
+		app->selfQuit = sceKernelGetProcessId() == app->process.processId;
 		if (retry != 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 900,
 				"_appmgrProcessQuitProcess",
@@ -1413,7 +1413,7 @@ int _appmgrProcessQuitProcess(struct AppState *app, int exitReason,
 	}
 	if (state == 0x700) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		PROCESS_QUIT_RESULT(result, 932);
 		result = _appmgrProcessKillProcess(app, 1);
 		if (result < 0)
@@ -1423,7 +1423,7 @@ int _appmgrProcessQuitProcess(struct AppState *app, int exitReason,
 				result);
 	} else if (state == 128) {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		PROCESS_QUIT_RESULT(result, 946);
 		result = _appmgrProcessKillProcess(app, 0);
 		if (result < 0)
@@ -1436,12 +1436,12 @@ int _appmgrProcessQuitProcess(struct AppState *app, int exitReason,
 		event.systemEvent = 0x20000001;
 		_appListPushEvent(app, &event);
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		PROCESS_QUIT_RESULT(result, 971);
 		result = _appmgrProcessStartProcess(app);
 	} else {
 		g_appmgrMainMutexOwner = -1;
-		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 		PROCESS_QUIT_RESULT(result, 983);
 		result = _appmgrProcessKillProcess(app, relaunch != 0 ? 2 : 0);
 		if (result < 0)
@@ -1466,7 +1466,7 @@ int sceAppMgrSuspendAppForDebugger(SceUID pid)
 	struct AppState *app;
 	int result, suspendResult, unlockResult;
 
-	if (ksceKernelGetProcessId() == 0x10005) {
+	if (sceKernelGetProcessId() == 0x10005) {
 		waitObject = NULL;
 		result = _appListFindAndLockAppByProcessId(pid, &app);
 		if (result == 0) {
@@ -1514,7 +1514,7 @@ int sceAppMgrSuspendAppByNameForDebugger(const char *appName)
 	struct AppState *app;
 	int result, suspendResult, unlockResult;
 
-	if (ksceKernelGetProcessId() == 0x10005) {
+	if (sceKernelGetProcessId() == 0x10005) {
 		waitObject = NULL;
 		result = _appListFindAndLockAppByName(appName, &app);
 		if (result == 0) {
@@ -1562,7 +1562,7 @@ int sceAppMgrResumeAppForDebugger(SceUID pid)
 	struct AppState *app;
 	int result, resumeResult, unlockResult;
 
-	if (ksceKernelGetProcessId() == 0x10005) {
+	if (sceKernelGetProcessId() == 0x10005) {
 		waitObject = NULL;
 		result = _appListFindAndLockAppByProcessId(pid, &app);
 		if (result == 0) {
@@ -1597,7 +1597,7 @@ int sceAppMgrResumeAppByNameForDebugger(const char *appName)
 	struct AppState *app;
 	int result, resumeResult, unlockResult;
 
-	if (ksceKernelGetProcessId() == 0x10005) {
+	if (sceKernelGetProcessId() == 0x10005) {
 		waitObject = NULL;
 		result = _appListFindAndLockAppByName(appName, &app);
 		if (result == 0) {

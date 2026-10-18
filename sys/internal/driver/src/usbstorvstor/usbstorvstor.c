@@ -173,11 +173,11 @@ static int transferThread(SceSize size, void *args)
 	unsigned bits;
 
 	for (;;) {
-		ksceKernelWaitEventFlag(s.eventFlag, EVF_OPEN,
+		sceKernelWaitEventFlag(s.eventFlag, EVF_OPEN,
 					SCE_KERNEL_EVF_WAITMODE_OR |
 					SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					&bits, NULL);
-		while (ksceKernelWaitEventFlag(s.eventFlag, EVF_EXIT | EVF_CLOSE | EVF_WRITE | EVF_SEND,
+		while (sceKernelWaitEventFlag(s.eventFlag, EVF_EXIT | EVF_CLOSE | EVF_WRITE | EVF_SEND,
 					       SCE_KERNEL_EVF_WAITMODE_OR |
 					       SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits,
 					       NULL) >= 0) {
@@ -190,10 +190,10 @@ static int transferThread(SceSize size, void *args)
 			if (bits & EVF_SEND) {
 				s.transferResult = SceUsbstorForDriver_D3C7EE70(s.transfer,
 						 s.transferSize, TRANSFER_TIMEOUT);
-				ksceKernelSetEventFlag(s.eventFlag, EVF_SENT);
+				sceKernelSetEventFlag(s.eventFlag, EVF_SENT);
 			} else if (bits & EVF_WRITE) {
 				s.transferResult = ksceIoWrite(s.fd, s.transfer, s.transferSize);
-				ksceKernelSetEventFlag(s.eventFlag, EVF_WRITTEN);
+				sceKernelSetEventFlag(s.eventFlag, EVF_WRITTEN);
 			}
 		}
 	}
@@ -201,7 +201,7 @@ static int transferThread(SceSize size, void *args)
 
 static int closeImage(void)
 {
-	ksceKernelSetEventFlag(s.eventFlag, EVF_CLOSE);
+	sceKernelSetEventFlag(s.eventFlag, EVF_CLOSE);
 	if (s.fd >= 0)
 		ksceIoClose(s.fd);
 	s.fd = -1;
@@ -267,7 +267,7 @@ static int openImage(void)
 	}
 	result = VSTOR_ERROR_PATH;
 	if (s.type == USBSTOR_TYPE_DISK) {
-		permission = ksceKernelSetPermission(0x40);
+		permission = sceKernelSetThreadAccessLevel(0x40);
 		s.fd = ksceIoOpen(s.path, SCE_O_RDWR, SCE_S_IWSYS | SCE_S_IRSYS);
 		length = ksceIoLseek(s.fd, 0, SCE_SEEK_SET);
 		if (length >= 0 && ksceIoRead(s.fd, image.sector, sizeof(image.sector)) >= 0 &&
@@ -279,7 +279,7 @@ static int openImage(void)
 			if (length >= 0)
 				result = 0;
 		}
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 	} else if (s.type == USBSTOR_TYPE_CDROM) {
 		s.fd = ksceIoOpen(s.path, SCE_O_RDONLY, SCE_S_IRSYS);
 		length = ksceIoLseek(s.fd, ISO_VD_OFFSET, SCE_SEEK_SET);
@@ -299,7 +299,7 @@ static int openImage(void)
 	if (result >= 0) {
 		/* The original accepts short images when open() returned a valid fd. */
 		if (length / s.blockSize >= s.blocks || s.fd >= 0) {
-			ksceKernelSetEventFlag(s.eventFlag, EVF_OPEN);
+			sceKernelSetEventFlag(s.eventFlag, EVF_OPEN);
 			return 0;
 		}
 	}
@@ -318,7 +318,7 @@ freeCommand:
 static int waitTransfer(unsigned bit)
 {
 	if (s.pending) {
-		if (ksceKernelWaitEventFlag(s.eventFlag, bit,
+		if (sceKernelWaitEventFlag(s.eventFlag, bit,
 					    SCE_KERNEL_EVF_WAITMODE_OR |
 					    SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					    NULL, NULL) < 0)
@@ -352,7 +352,7 @@ static int transferBlocks(unsigned block, unsigned count, struct UsbstorSense *s
 		result = write ? SceUsbstorForDriver_F1A690DC(s.buffers[index], bytes, TRANSFER_TIMEOUT) :
 				 ksceIoRead(s.fd, s.buffers[index], bytes);
 		if (result < 0) {
-			if (s.pending && ksceKernelWaitEventFlag(s.eventFlag, completion,
+			if (s.pending && sceKernelWaitEventFlag(s.eventFlag, completion,
 								 SCE_KERNEL_EVF_WAITMODE_OR |
 								 SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 								 NULL, NULL) >= 0)
@@ -368,7 +368,7 @@ static int transferBlocks(unsigned block, unsigned count, struct UsbstorSense *s
 		s.pending = 1;
 		s.transfer = s.buffers[index];
 		s.transferSize = bytes;
-		ksceKernelSetEventFlag(s.eventFlag, mask);
+		sceKernelSetEventFlag(s.eventFlag, mask);
 		if (!(s.pipeline & mask)) {
 			if (waitTransfer(completion) < 0)
 				goto failed;
@@ -833,26 +833,26 @@ int module_start(SceSize size, void *args)
 	s.driver.unit = s.driver.requestSense = s.driver.busy = 0;
 	if (SceUsbstorForDriver_C0944A04(&s.driver) < 0)
 		return SCE_KERNEL_START_FAILED;
-	s.eventFlag = ksceKernelCreateEventFlag("SceUsbstorVStorCmd", SCE_KERNEL_EVF_ATTR_MULTI, 0,
+	s.eventFlag = sceKernelCreateEventFlag("SceUsbstorVStorCmd", SCE_KERNEL_EVF_ATTR_MULTI, 0,
 						NULL);
 	if (s.eventFlag <= 0)
 		return SCE_KERNEL_START_FAILED;
-	s.thread = ksceKernelCreateThread("SceUsbstorVstor", transferThread, 0x1f, 0x800, 0, 0x80000, NULL);
+	s.thread = sceKernelCreateThread("SceUsbstorVstor", transferThread, 0x1f, 0x800, 0, 0x80000, NULL);
 	if (s.thread > 0) {
-		if (ksceKernelStartThread(s.thread, 0, NULL) >= 0)
+		if (sceKernelStartThread(s.thread, 0, NULL) >= 0)
 			return SCE_KERNEL_START_SUCCESS;
-		ksceKernelDeleteThread(s.thread);
+		sceKernelDeleteThread(s.thread);
 	}
-	ksceKernelDeleteEventFlag(s.eventFlag);
+	sceKernelDeleteEventFlag(s.eventFlag);
 	return SCE_KERNEL_START_FAILED;
 }
 
 int module_stop(SceSize size, void *args)
 {
-	ksceKernelSetEventFlag(s.eventFlag, EVF_EXIT);
-	ksceKernelWaitThreadEnd(s.thread, NULL, NULL);
-	ksceKernelDeleteThread(s.thread);
-	ksceKernelDeleteEventFlag(s.eventFlag);
+	sceKernelSetEventFlag(s.eventFlag, EVF_EXIT);
+	sceKernelWaitThreadEnd(s.thread, NULL, NULL);
+	sceKernelDeleteThread(s.thread);
+	sceKernelDeleteEventFlag(s.eventFlag);
 	return (unsigned)SceUsbstorForDriver_EAC08C24(&s.driver) >> 31;
 }
 

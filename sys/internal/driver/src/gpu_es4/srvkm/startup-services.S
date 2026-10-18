@@ -162,7 +162,7 @@ CreateRegisterDumpMutex:
 	mov r2, r1
 	mov r3, r1
 	ldr r0, CreateRegisterDumpMutexLiteral14
-	bl ksceKernelCreateMutex
+	bl sceKernelCreateMutex
 	ldr r3, CreateRegisterDumpMutexLiteral18
 	str r0, [r3]
 	pop {r3, pc}
@@ -195,7 +195,7 @@ CreateGpuSuspendWaitEvent:
 	ldr r0, CreateGpuSuspendWaitEventLiteral1c
 	mov.w r1, #0x9000
 	mov r3, r2
-	bl ksceKernelCreateEventFlag
+	bl sceKernelCreateEventFlag
 	cmp r0, #0
 	blt .LCreateGpuSuspendWaitEvent1a
 	ldr r3, CreateGpuSuspendWaitEventLiteral20

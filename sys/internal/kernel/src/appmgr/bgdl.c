@@ -19,7 +19,7 @@ void *g_appmgrBgdlQueueStorage;
 int appmgrInitializeBgdlQueueStorage(void)
 {
 	SceAllocOpt opt;
-	int result = ksceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
+	int result = sceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
 
 	if (result >= 0) {
 		if (g_appmgrBgdlQueueStorage != NULL)
@@ -36,7 +36,7 @@ int appmgrInitializeBgdlQueueStorage(void)
 			memset(g_appmgrBgdlQueueStorage, 0, BGDL_QUEUE_STORAGE_SIZE);
 		else
 			result = (int)0x80801006;
-		ksceKernelUnlockMutex(g_appmgrAppMutex, 1);
+		sceKernelUnlockMutex(g_appmgrAppMutex, 1);
 	}
 	return result;
 }
@@ -44,14 +44,14 @@ int appmgrInitializeBgdlQueueStorage(void)
 int ksceAppMgrBgdlSetQueueStatus(const void *status)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
-	int result = ksceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
+	int result = sceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
 
 	if (result >= 0) {
 		if (status != NULL)
 			memcpy(g_appmgrBgdlQueueStorage, status, BGDL_QUEUE_DATA_SIZE);
 		else
 			result = (int)0x80801001;
-		ksceKernelUnlockMutex(g_appmgrAppMutex, 1);
+		sceKernelUnlockMutex(g_appmgrAppMutex, 1);
 	}
 	sceSyscallLeave(syscallState);
 	return result;

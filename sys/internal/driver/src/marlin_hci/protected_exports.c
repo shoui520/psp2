@@ -124,7 +124,7 @@ int MarlinHciExportStoredListChecked(void *outputHandles, unsigned int *outputCo
 	if (ret >= 0) {
 		MarlinFillMemory(list.handles, 0, sizeof(list.handles));
 		list.count = 0;
-		ret = ksceKernelRunWithStack(0x4000,
+		ret = SceThreadmgrForDriver_E54FD746(0x4000,
 					   (int (*)(void *))MarlinKernelExportStoredList, &list);
 		if (ret >= 0) {
 			ret = SceSysmemForDriver_6D88EF8A(outputCount, &list.count,
@@ -175,7 +175,7 @@ int MarlinHciImportWrappedKeyChecked(MarlinWrappedKeyImport *userRequest)
 	}
 	request.kind = input.kind;
 	request.outputHandle = 0;
-	ret = ksceKernelRunWithStack(0x4000,
+	ret = SceThreadmgrForDriver_E54FD746(0x4000,
 				   (int (*)(void *))MarlinKernelImportWrappedKey, &request);
 	if (ret >= 0)
 		ret = SceSysmemForDriver_6D88EF8A(&userRequest->outputHandle,
@@ -317,7 +317,7 @@ int MarlinHciSignChecked(unsigned int handle, unsigned int algorithm,
 		}
 	}
 	request.outputHandle = 0;
-	ret = ksceKernelRunWithStack(0x4000,
+	ret = SceThreadmgrForDriver_E54FD746(0x4000,
 				   (int (*)(void *))MarlinKernelSign, &request);
 	if (ret >= 0)
 		ret = SceSysmemForDriver_6D88EF8A(outputHandle, &request.outputHandle,
@@ -373,7 +373,7 @@ int MarlinHciDecryptChecked(MarlinKeyDecryptRequest *userRequest)
 		request.encryptedData = NULL;
 	}
 	request.outputHandle = 0;
-	ret = ksceKernelRunWithStack(0x4000,
+	ret = SceThreadmgrForDriver_E54FD746(0x4000,
 				   (int (*)(void *))MarlinKernelDecrypt, &request);
 	if (ret >= 0)
 		ret = SceSysmemForDriver_6D88EF8A(&userRequest->outputHandle,
@@ -433,7 +433,7 @@ int MarlinHciWrapRsaChecked(unsigned int handle, const MarlinUserDataInput *modu
 		}
 	}
 	request.outputHandle = 0;
-	ret = ksceKernelRunWithStack(0x4000,
+	ret = SceThreadmgrForDriver_E54FD746(0x4000,
 				   (int (*)(void *))MarlinKernelWrapRsa, &request);
 	if (ret >= 0)
 		ret = SceSysmemForDriver_6D88EF8A(outputHandle, &request.outputHandle,
@@ -480,7 +480,7 @@ int MarlinHciVerifyMacChecked(MarlinKeyVerifyRequest *userRequest)
 		request.expectedData = NULL;
 	}
 	request.verified = 0;
-	ret = ksceKernelRunWithStack(0x4000,
+	ret = SceThreadmgrForDriver_E54FD746(0x4000,
 				   (int (*)(void *))MarlinKernelVerifyMac, &request);
 	if (ret >= 0)
 		ret = SceSysmemForDriver_6D88EF8A(&userRequest->verified, &request.verified,
@@ -527,7 +527,7 @@ int MarlinHciVerifyDigestChecked(MarlinKeyVerifyRequest *userRequest)
 		request.expectedData = NULL;
 	}
 	request.verified = 0;
-	ret = ksceKernelRunWithStack(0x4000,
+	ret = SceThreadmgrForDriver_E54FD746(0x4000,
 				   (int (*)(void *))MarlinKernelVerifyDigest, &request);
 	if (ret >= 0)
 		ret = SceSysmemForDriver_6D88EF8A(&userRequest->verified, &request.verified,

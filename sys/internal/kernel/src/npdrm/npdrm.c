@@ -152,7 +152,7 @@ int module_start(SceSize arglen, const void *argp)
 		NpDrmDeleteMutex();
 		return ret;
 	}
-	ksceKernelEnqueueWorkQueue(0x10023, "SceNpDrmInit", SceNpDrmInit, NULL);
+	sceKernelScheduleWorkTask(0x10023, "SceNpDrmInit", SceNpDrmInit, NULL);
 	return 0;
 }
 
@@ -168,7 +168,7 @@ int NpDrmRemoveActivationFile(SceUInt64 *accountId)
 	} else {
 		gNpDrmActivationValid = 0;
 	}
-	permission = ksceKernelSetPermission(0x80);
+	permission = sceKernelSetThreadAccessLevel(0x80);
 	fd = ksceIoOpen("tm0:/npdrm/act.dat", 0x04000003, 6);
 	if (fd >= 0) {
 		if (accountId && ksceIoPread(fd, &gNpDrmActivationCache.data,
@@ -186,7 +186,7 @@ int NpDrmRemoveActivationFile(SceUInt64 *accountId)
 	if (ret == (int)0x80010002)
 		ret = 0;
 	NpDrmClearMemory(&gNpDrmActivationCache, sizeof(gNpDrmActivationCache));
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	return ret;
 }
 
@@ -300,7 +300,7 @@ int NpDrmGetRifKey(const SceNpDrmLicense *license, void *klicense,
 		return (int)0x80870005;
 	if (drmType == 13 && !vita)
 		return (int)0x80870005;
-	ret = ksceKernelLockMutex(gNpDrmMutex, 1, NULL);
+	ret = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	if (drmType != 13 && !drmType && !gNpDrmIsDevelopment) {
@@ -394,7 +394,7 @@ clear:
 	NpDrmClearMemory(&rif, sizeof(rif));
 	NpDrmClearMemory(gNpDrmActivationCache.data.secondary_key_table, 256);
 unlock:
-	ksceKernelUnlockMutex(gNpDrmMutex, 1);
+	sceKernelUnlockMutex(gNpDrmMutex, 1);
 	return ret;
 }
 
@@ -409,33 +409,33 @@ int NpDrmLoadActivationFile(void)
 	int size;
 
 	gNpDrmActivationValid = 0;
-	permission = ksceKernelSetPermission(0x80);
-	statPermission = ksceKernelSetPermission(0x80);
+	permission = sceKernelSetThreadAccessLevel(0x80);
+	statPermission = sceKernelSetThreadAccessLevel(0x80);
 	ret = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
-	ksceKernelSetPermission(statPermission);
+	sceKernelSetThreadAccessLevel(statPermission);
 	if (ret) {
 		ret = (int)0x80870006;
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		goto clear;
 	}
 	fd = ksceIoOpen("tm0:/npdrm/act.dat", 0x04000001, 0);
 	if (fd < 0) {
 		ret = fd;
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		goto clear;
 	}
 	size = ksceIoRead(fd, &gNpDrmActivationCache.data,
 		sizeof(gNpDrmActivationCache.data));
 	ksceIoClose(fd);
 	if (size != sizeof(gNpDrmActivationCache.data)) {
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		ret = size < 0 ? size : (int)0x80870002;
 clear:
 		NpDrmClearMemory(&gNpDrmActivationCache.data,
 			sizeof(gNpDrmActivationCache.data));
 		goto out;
 	}
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	ret = NpDrmVerifyActivationSignature(&gNpDrmActivationCache.data);
 	if (ret < 0) {
 		NpDrmClearMemory(&gNpDrmActivationCache.data,
@@ -478,31 +478,31 @@ int PsmDrmLoadActivationFile(void)
 	int size;
 
 	gPsmDrmActivationValid = 0;
-	permission = ksceKernelSetPermission(0x80);
-	statPermission = ksceKernelSetPermission(0x80);
+	permission = sceKernelSetThreadAccessLevel(0x80);
+	statPermission = sceKernelSetThreadAccessLevel(0x80);
 	ret = ksceIoGetstat("tm0:/psmdrm/act.dat", &stat);
-	ksceKernelSetPermission(statPermission);
+	sceKernelSetThreadAccessLevel(statPermission);
 	if (ret) {
 		ret = (int)0x80870006;
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		goto clear;
 	}
 	fd = ksceIoOpen("tm0:/psmdrm/act.dat", 0x04000001, 0);
 	if (fd < 0) {
 		ret = fd;
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		goto clear;
 	}
 	size = ksceIoRead(fd, &gPsmDrmWorkingData, sizeof(gPsmDrmWorkingData));
 	ksceIoClose(fd);
 	if (size != sizeof(gPsmDrmWorkingData)) {
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		ret = size < 0 ? size : (int)0x80870002;
 clear:
 		NpDrmClearMemory(&gPsmDrmWorkingData, sizeof(gPsmDrmWorkingData));
 		return ret;
 	}
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	ret = PsmDrmVerifyActivation();
 	if (ret < 0) {
 		NpDrmClearMemory(&gPsmDrmWorkingData, sizeof(gPsmDrmWorkingData));
@@ -540,7 +540,7 @@ clear:
 
 int NpDrmCreateMutex(void)
 {
-	SceUID uid = ksceKernelCreateMutex("SceNpDrm", 0, 0, NULL);
+	SceUID uid = sceKernelCreateMutex("SceNpDrm", 0, 0, NULL);
 
 	if (uid >= 0) {
 		gNpDrmMutex = uid;
@@ -561,7 +561,7 @@ int NpDrmInitializeActivation(void)
 	if (ret < 0)
 		return ret;
 	gNpDrmIsDevelopment = SceSblAIMgrForDriver_274663A0() || SceSblAIMgrForDriver_F4B98F66();
-	ret = ksceKernelLockMutex(gNpDrmMutex, 1, NULL);
+	ret = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	memcpy(&gNpDrmActivationKeyMaterial, &gNpDrmEncryptedActivationKeyMaterial,
@@ -572,19 +572,19 @@ int NpDrmInitializeActivation(void)
 		sizeof(gNpDrmActivationKeyMaterial.activationKey), &consoleId, NULL);
 	NpDrmClearMemory(&consoleId, sizeof(consoleId));
 	if (ret < 0) {
-		ksceKernelUnlockMutex(gNpDrmMutex, 1);
+		sceKernelUnlockMutex(gNpDrmMutex, 1);
 		return ret;
 	}
 	if (NpDrmLoadActivationFile() < 0 || !gNpDrmActivationValid)
 		NpDrmClearMemory(&gNpDrmActivationCache, sizeof(gNpDrmActivationCache));
-	ksceKernelUnlockMutex(gNpDrmMutex, 1);
+	sceKernelUnlockMutex(gNpDrmMutex, 1);
 	return 0;
 }
 
 int NpDrmDeleteMutex(void)
 {
 	if (gNpDrmMutex >= 0) {
-		ksceKernelDeleteMutex(gNpDrmMutex);
+		sceKernelDeleteMutex(gNpDrmMutex);
 		gNpDrmMutex = -1;
 	}
 	return 0;
@@ -592,12 +592,12 @@ int NpDrmDeleteMutex(void)
 
 int ksceNpDrmUpdateAccountId(SceUInt64 accountId)
 {
-	int ret = ksceKernelLockMutex(gNpDrmMutex, 1, NULL);
+	int ret = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 
 	if (ret >= 0) {
 		int result = NpDrmUpdateAccountId(accountId);
 
-		ksceKernelUnlockMutex(gNpDrmMutex, 1);
+		sceKernelUnlockMutex(gNpDrmMutex, 1);
 		return result;
 	}
 	return ret;
@@ -605,12 +605,12 @@ int ksceNpDrmUpdateAccountId(SceUInt64 accountId)
 
 int ksceNpDrmUpdateDebugSettings(void)
 {
-	int ret = ksceKernelLockMutex(gNpDrmMutex, 1, NULL);
+	int ret = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 
 	if (ret >= 0) {
 		int result = NpDrmUpdateDebugSettings();
 
-		ksceKernelUnlockMutex(gNpDrmMutex, 1);
+		sceKernelUnlockMutex(gNpDrmMutex, 1);
 		return result;
 	}
 	return ret;
@@ -704,7 +704,7 @@ int ksceNpDrmWriteActData(const struct NpDrmActivationCache *activation,
 
 	if (!activation)
 		return (int)0x80870001;
-	result = ksceKernelLockMutex(gNpDrmMutex, 1, NULL);
+	result = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 	if (result < 0)
 		return result;
 	gNpDrmActivationValid = 0;
@@ -717,7 +717,7 @@ int ksceNpDrmWriteActData(const struct NpDrmActivationCache *activation,
 	if (verifyResult < 0) {
 		NpDrmClearMemory(&gNpDrmActivationCache,
 			sizeof(gNpDrmActivationCache));
-		ksceKernelUnlockMutex(gNpDrmMutex, 1);
+		sceKernelUnlockMutex(gNpDrmMutex, 1);
 		return verifyResult;
 	}
 	NpDrmGetAccountId(&accountId);
@@ -731,12 +731,12 @@ int ksceNpDrmWriteActData(const struct NpDrmActivationCache *activation,
 		result = (int)0x80870009;
 		goto clear;
 	}
-	permission = ksceKernelSetPermission(0x80);
+	permission = sceKernelSetThreadAccessLevel(0x80);
 	if (ksceIoGetstat("tm0:/npdrm", &stat) < 0)
 		ksceIoMkdir("tm0:/npdrm", 6);
 	result = ksceIoOpen("tm0:/npdrm/act.dat", 0x04000602, 6);
 	if (result < 0) {
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		goto clear;
 	}
 	written = ksceIoWrite(result, &gNpDrmActivationCache.data,
@@ -744,7 +744,7 @@ int ksceNpDrmWriteActData(const struct NpDrmActivationCache *activation,
 	ksceIoClose(result);
 	if (written < (int)sizeof(gNpDrmActivationCache.data)) {
 		gNpDrmActivationValid = 0;
-		cleanupPermission = ksceKernelSetPermission(0x80);
+		cleanupPermission = sceKernelSetThreadAccessLevel(0x80);
 		result = ksceIoOpen("tm0:/npdrm/act.dat", 0x04000003, 6);
 		if (result >= 0) {
 			NpDrmClearMemory(&gNpDrmActivationCache,
@@ -758,18 +758,18 @@ int ksceNpDrmWriteActData(const struct NpDrmActivationCache *activation,
 		ksceIoSync("tm0:", 0);
 		NpDrmClearMemory(&gNpDrmActivationCache,
 			sizeof(gNpDrmActivationCache));
-		ksceKernelSetPermission(cleanupPermission);
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(cleanupPermission);
+		sceKernelSetThreadAccessLevel(permission);
 		goto clear;
 	}
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	result = NpDrmLoadActivationFile();
-	ksceKernelUnlockMutex(gNpDrmMutex, 1);
+	sceKernelUnlockMutex(gNpDrmMutex, 1);
 	return result;
 
 clear:
 	NpDrmClearMemory(&gNpDrmActivationCache, sizeof(gNpDrmActivationCache));
-	ksceKernelUnlockMutex(gNpDrmMutex, 1);
+	sceKernelUnlockMutex(gNpDrmMutex, 1);
 	return result;
 }
 
@@ -780,12 +780,12 @@ int ksceNpDrmRemoveActData(SceUInt64 *accountId)
 	int result;
 	int ret;
 
-	ret = ksceKernelLockMutex(gNpDrmMutex, 1, NULL);
+	ret = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 	if (ret < 0)
 		return ret;
-	permission = ksceKernelSetPermission(0x80);
+	permission = sceKernelSetThreadAccessLevel(0x80);
 	result = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	if (result) {
 		if (accountId)
 			*accountId = 0;
@@ -794,11 +794,11 @@ int ksceNpDrmRemoveActData(SceUInt64 *accountId)
 				sizeof(gNpDrmActivationCache));
 			gNpDrmActivationValid = 0;
 		}
-		ksceKernelUnlockMutex(gNpDrmMutex, 1);
+		sceKernelUnlockMutex(gNpDrmMutex, 1);
 		return (int)0x80870006;
 	}
 	result = NpDrmRemoveActivationFile(accountId);
-	ksceKernelUnlockMutex(gNpDrmMutex, 1);
+	sceKernelUnlockMutex(gNpDrmMutex, 1);
 	return result;
 }
 
@@ -811,14 +811,14 @@ int ksceNpDrmUpdateActData(void)
 	int readSize;
 	int result;
 
-	result = ksceKernelLockMutex(gNpDrmMutex, 1, NULL);
+	result = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 	if (result < 0)
 		return result;
 	gNpDrmActivationValid = 0;
-	permission = ksceKernelSetPermission(0x80);
-	statPermission = ksceKernelSetPermission(0x80);
+	permission = sceKernelSetThreadAccessLevel(0x80);
+	statPermission = sceKernelSetThreadAccessLevel(0x80);
 	result = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
-	ksceKernelSetPermission(statPermission);
+	sceKernelSetThreadAccessLevel(statPermission);
 	if (result) {
 		result = (int)0x80870006;
 		goto restore;
@@ -833,7 +833,7 @@ int ksceNpDrmUpdateActData(void)
 		result = readSize < 0 ? readSize : (int)0x80870002;
 		goto restore;
 	}
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	result = NpDrmVerifyActivationSignature(&gNpDrmActivationCache.data);
 	if (result < 0)
 		goto clear;
@@ -852,15 +852,15 @@ int ksceNpDrmUpdateActData(void)
 	NpDrmAesDecrypt(gNpDrmActivationCache.data.primary_key_table, 0x800,
 		gNpDrmActivationKeyMaterial.activationKey, NULL);
 	gNpDrmActivationValid = 1;
-	ksceKernelUnlockMutex(gNpDrmMutex, 1);
+	sceKernelUnlockMutex(gNpDrmMutex, 1);
 	return 0;
 
 restore:
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 clear:
 	NpDrmClearMemory(&gNpDrmActivationCache.data,
 		sizeof(gNpDrmActivationCache.data));
-	ksceKernelUnlockMutex(gNpDrmMutex, 1);
+	sceKernelUnlockMutex(gNpDrmMutex, 1);
 	return result;
 }
 
@@ -875,13 +875,13 @@ int ksceNpDrmReadActData(SceNpDrmActivationData *activation)
 
 	if (!activation)
 		return (int)0x80870001;
-	result = ksceKernelLockMutex(gNpDrmMutex, 1, NULL);
+	result = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 	if (result < 0)
 		return result;
-	permission = ksceKernelSetPermission(0x80);
-	statPermission = ksceKernelSetPermission(0x80);
+	permission = sceKernelSetThreadAccessLevel(0x80);
+	statPermission = sceKernelSetThreadAccessLevel(0x80);
 	result = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
-	ksceKernelSetPermission(statPermission);
+	sceKernelSetThreadAccessLevel(statPermission);
 	if (result) {
 		result = (int)0x80870006;
 		goto restore;
@@ -895,7 +895,7 @@ int ksceNpDrmReadActData(SceNpDrmActivationData *activation)
 		result = readSize < 0 ? readSize : (int)0x80870002;
 		goto restore;
 	}
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	result = NpDrmVerifyActivationSignature(activation);
 	if (result < 0)
 		goto clear;
@@ -909,14 +909,14 @@ int ksceNpDrmReadActData(SceNpDrmActivationData *activation)
 		result = (int)0x80870009;
 		goto clear;
 	}
-	ksceKernelUnlockMutex(gNpDrmMutex, 1);
+	sceKernelUnlockMutex(gNpDrmMutex, 1);
 	return 0;
 
 restore:
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 clear:
 	NpDrmClearMemory(activation, sizeof(*activation));
-	ksceKernelUnlockMutex(gNpDrmMutex, 1);
+	sceKernelUnlockMutex(gNpDrmMutex, 1);
 	return result;
 }
 
@@ -1202,7 +1202,7 @@ finishValidation:
 		*drmType = type;
 	if (result)
 		return result;
-	result = ksceKernelLockMutex(gNpDrmMutex, 1, NULL);
+	result = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 	if (result < 0)
 		return result;
 	result = 0;
@@ -1225,7 +1225,7 @@ finishValidation:
 			result = (int)0x80870007;
 	}
 unlock:
-	ksceKernelUnlockMutex(gNpDrmMutex, 1);
+	sceKernelUnlockMutex(gNpDrmMutex, 1);
 	return result;
 }
 
@@ -1249,21 +1249,21 @@ int NpDrmCheckDrmResetForDriver(const void *in_addr, unsigned int size,
 	mode = input[1];
 	if (pReset)
 		*pReset = 0;
-	if (!input[0] || ksceKernelLockMutex(gNpDrmMutex, 1, NULL) < 0)
+	if (!input[0] || sceKernelLockMutex(gNpDrmMutex, 1, NULL) < 0)
 		return 0;
 	if (!gNpDrmActivationValid) {
 		if (NpDrmLoadActivationFile() < 0)
 			gNpDrmActivationValid = 0;
 		else if (gNpDrmActivationValid)
 			goto activationLoaded;
-		permission = ksceKernelSetPermission(0x80);
+		permission = sceKernelSetThreadAccessLevel(0x80);
 		result = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		if (!result) {
-			readPermission = ksceKernelSetPermission(0x80);
-			permission = ksceKernelSetPermission(0x80);
+			readPermission = sceKernelSetThreadAccessLevel(0x80);
+			permission = sceKernelSetThreadAccessLevel(0x80);
 			result = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
-			ksceKernelSetPermission(permission);
+			sceKernelSetThreadAccessLevel(permission);
 			if (!result) {
 				fd = ksceIoOpen("tm0:/npdrm/act.dat", 0x04000001, result);
 				if (fd >= 0) {
@@ -1271,12 +1271,12 @@ int NpDrmCheckDrmResetForDriver(const void *in_addr, unsigned int size,
 						sizeof(gNpDrmActivationCache));
 					ksceIoClose(fd);
 					if (readSize == sizeof(gNpDrmActivationCache)) {
-						ksceKernelSetPermission(readPermission);
+						sceKernelSetThreadAccessLevel(readPermission);
 						goto activationLoaded;
 					}
 				}
 			}
-			ksceKernelSetPermission(readPermission);
+			sceKernelSetThreadAccessLevel(readPermission);
 		}
 		NpDrmClearMemory(&gNpDrmActivationCache, sizeof(gNpDrmActivationCache));
 	}
@@ -1284,19 +1284,19 @@ activationLoaded:
 	activationType = __builtin_bswap16((unsigned short)gNpDrmActivationCache.data.act_type);
 	activationAccountId = gNpDrmActivationCache.data.account_id;
 	if (!gNpDrmActivationValid) {
-		permission = ksceKernelSetPermission(0x80);
+		permission = sceKernelSetThreadAccessLevel(0x80);
 		result = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
-		ksceKernelSetPermission(permission);
+		sceKernelSetThreadAccessLevel(permission);
 		if (!result && gNpDrmActivationCache.data.account_id) {
 			NpDrmGetAccountId(&currentAccountId);
 			if (gNpDrmActivationCache.data.account_id != currentAccountId)
 				NpDrmIsLooseAccountBind();
 		}
-		ksceKernelUnlockMutex(gNpDrmMutex, 1);
+		sceKernelUnlockMutex(gNpDrmMutex, 1);
 		return 0;
 	}
 	mode &= 0xc0;
-	ksceKernelUnlockMutex(gNpDrmMutex, 1);
+	sceKernelUnlockMutex(gNpDrmMutex, 1);
 	if (mode == 0x80) {
 		if (!activationType)
 			return 0;
@@ -1307,42 +1307,42 @@ activationLoaded:
 		return 0;
 	if (pReset)
 		*pReset = 1;
-	if (ksceKernelLockMutex(gNpDrmMutex, 1, NULL) < 0)
+	if (sceKernelLockMutex(gNpDrmMutex, 1, NULL) < 0)
 		goto retryRemoval;
-	permission = ksceKernelSetPermission(0x80);
+	permission = sceKernelSetThreadAccessLevel(0x80);
 	result = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	if (result) {
 		activationAccountId = 0;
 		if (gNpDrmActivationValid) {
 			NpDrmClearMemory(&gNpDrmActivationCache, sizeof(gNpDrmActivationCache));
 			gNpDrmActivationValid = 0;
 		}
-		ksceKernelUnlockMutex(gNpDrmMutex, 1);
+		sceKernelUnlockMutex(gNpDrmMutex, 1);
 		goto retryRemoval;
 	}
 	result = NpDrmRemoveActivationFile(&activationAccountId);
-	ksceKernelUnlockMutex(gNpDrmMutex, 1);
+	sceKernelUnlockMutex(gNpDrmMutex, 1);
 	if (result >= 0)
 		return 0;
 retryRemoval:
-	result = ksceKernelLockMutex(gNpDrmMutex, 1, NULL);
+	result = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 	if (result < 0)
 		return result;
-	permission = ksceKernelSetPermission(0x80);
+	permission = sceKernelSetThreadAccessLevel(0x80);
 	result = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
-	ksceKernelSetPermission(permission);
+	sceKernelSetThreadAccessLevel(permission);
 	if (result) {
 		activationAccountId = 0;
 		if (gNpDrmActivationValid) {
 			NpDrmClearMemory(&gNpDrmActivationCache, sizeof(gNpDrmActivationCache));
 			gNpDrmActivationValid = 0;
 		}
-		ksceKernelUnlockMutex(gNpDrmMutex, 1);
+		sceKernelUnlockMutex(gNpDrmMutex, 1);
 		return (int)0x80870006;
 	}
 	result = NpDrmRemoveActivationFile(&activationAccountId);
-	ksceKernelUnlockMutex(gNpDrmMutex, 1);
+	sceKernelUnlockMutex(gNpDrmMutex, 1);
 	return result < 0 ? result : 0;
 }
 
@@ -1352,12 +1352,12 @@ int ksceNpDrmEbootSigGenPsp(const char *ebootPath, const void *sha256,
 	int result;
 	int signatureResult;
 
-	result = ksceKernelLockMutex(gNpDrmMutex, 1, NULL);
+	result = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 	if (result >= 0) {
 		signatureResult = NpDrmEbootSigGenerate(ebootPath, sha256, 2,
 			signature, swVersion, gNpDrmActivationCache.data.secondary_key_table,
 			0x7c0);
-		ksceKernelUnlockMutex(gNpDrmMutex, 1);
+		sceKernelUnlockMutex(gNpDrmMutex, 1);
 		return signatureResult;
 	}
 	return result;
@@ -1369,12 +1369,12 @@ int ksceNpDrmEbootSigGenPs1(const char *ebootPath, const void *sha256,
 	int result;
 	int signatureResult;
 
-	result = ksceKernelLockMutex(gNpDrmMutex, 1, NULL);
+	result = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 	if (result >= 0) {
 		signatureResult = NpDrmEbootSigGenerate(ebootPath, sha256, 3,
 			signature, swVersion, gNpDrmActivationCache.data.secondary_key_table,
 			0x7c0);
-		ksceKernelUnlockMutex(gNpDrmMutex, 1);
+		sceKernelUnlockMutex(gNpDrmMutex, 1);
 		return signatureResult;
 	}
 	return result;
@@ -1386,12 +1386,12 @@ int ksceNpDrmEbootSigGenMultiDisc(const char *ebootPath, const void *discInfo,
 	int result;
 	int signatureResult;
 
-	result = ksceKernelLockMutex(gNpDrmMutex, 1, NULL);
+	result = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 	if (result >= 0) {
 		signatureResult = NpDrmEbootSigGenerateMultiDisc(ebootPath, discInfo,
 			signature, swVersion, gNpDrmActivationCache.data.secondary_key_table,
 			0x7c0);
-		ksceKernelUnlockMutex(gNpDrmMutex, 1);
+		sceKernelUnlockMutex(gNpDrmMutex, 1);
 		return signatureResult;
 	}
 	return result;
@@ -1403,12 +1403,12 @@ int ksceNpDrmEbootSigConvert(const char *ebootPath, const void *signature,
 	int result;
 	int signatureResult;
 
-	result = ksceKernelLockMutex(gNpDrmMutex, 1, NULL);
+	result = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 	if (result >= 0) {
 		signatureResult = NpDrmEbootSigConvert(ebootPath, signature,
 			newSignature, gNpDrmActivationCache.data.secondary_key_table,
 			0x7c0);
-		ksceKernelUnlockMutex(gNpDrmMutex, 1);
+		sceKernelUnlockMutex(gNpDrmMutex, 1);
 		return signatureResult;
 	}
 	return result;
@@ -1419,11 +1419,11 @@ int ksceNpDrmEbootSigVerify(const char *ebootPath, const void *signature)
 	int result;
 	int signatureResult;
 
-	result = ksceKernelLockMutex(gNpDrmMutex, 1, NULL);
+	result = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 	if (result >= 0) {
 		signatureResult = NpDrmEbootSigVerify(ebootPath, signature, 512,
 			gNpDrmActivationCache.data.secondary_key_table, 0x7c0);
-		ksceKernelUnlockMutex(gNpDrmMutex, 1);
+		sceKernelUnlockMutex(gNpDrmMutex, 1);
 		return signatureResult;
 	}
 	return result;
@@ -1435,11 +1435,11 @@ int ksceNpDrmPspEbootSigGen(const char *ebootPath, const void *sha256,
 	int result;
 	int signatureResult;
 
-	result = ksceKernelLockMutex(gNpDrmMutex, 1, NULL);
+	result = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 	if (result >= 0) {
 		signatureResult = NpDrmPspEbootSigGenerate(ebootPath, sha256,
 			signature, gNpDrmActivationCache.data.secondary_key_table, 0x7c0);
-		ksceKernelUnlockMutex(gNpDrmMutex, 1);
+		sceKernelUnlockMutex(gNpDrmMutex, 1);
 		return signatureResult;
 	}
 	return result;

@@ -397,6 +397,6 @@ static int powerLedSysEventHandler(int resume, int eventid, void *args, void *op
 int powerStartLedControl(void)
 {
 	powerInitializeLedControl();
-	ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceLedInit", powerLedInitWorker, NULL);
+	sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceLedInit", powerLedInitWorker, NULL);
 	return 0;
 }

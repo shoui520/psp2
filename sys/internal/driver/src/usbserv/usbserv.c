@@ -27,7 +27,7 @@ static struct {
 
 static inline __attribute__((always_inline)) void lock(void)
 {
-	int ret = ksceKernelLockMutex(s_serv.mutex, 1, NULL);
+	int ret = sceKernelLockMutex(s_serv.mutex, 1, NULL);
 	(void)ret;
 #if FW_DEBUG
 	if (ret < 0 && SceDebugForDriver_374B7868() > 0)
@@ -37,7 +37,7 @@ static inline __attribute__((always_inline)) void lock(void)
 }
 static inline __attribute__((always_inline)) void unlock(void)
 {
-	int ret = ksceKernelUnlockMutex(s_serv.mutex, 1);
+	int ret = sceKernelUnlockMutex(s_serv.mutex, 1);
 	(void)ret;
 #if FW_DEBUG
 	if (ret < 0 && SceDebugForDriver_374B7868() > 0)
@@ -297,7 +297,7 @@ int ksceUsbServEtherEnable(void)
 	if (!s_serv.ether) {
 		ksceSysconCtrlDolceUsbPower(1);
 		s_serv.ether = 1;
-		ksceKernelSetEventFlag(s_serv.event, 2);
+		sceKernelSetEventFlag(s_serv.event, 2);
 		DEBUG(6, 1239, "sceUsbServEtherEnable", "USB Ether is just enabled.\n");
 	} else {
 		DEBUG(6, 1241, "sceUsbServEtherEnable", "USB Ether is already enabled.\n");
@@ -315,7 +315,7 @@ int ksceUsbServEtherDisable(void)
 	if (s_serv.ether) {
 		ksceSysconCtrlDolceUsbPower(0);
 		s_serv.ether = 0;
-		ksceKernelSetEventFlag(s_serv.event, 4);
+		sceKernelSetEventFlag(s_serv.event, 4);
 		DEBUG(6, 1268, "sceUsbServEtherDisable", "USB Ether is just disabled.\n");
 	} else {
 		DEBUG(6, 1270, "sceUsbServEtherDisable", "USB Ether is already disabled.\n");
@@ -372,7 +372,7 @@ static int tickTimer(void *arg)
 	s_timer = -1;
 	if (s_serv.attached > 0) {
 		SceKernelSuspendForDriver_E0489831(1);
-		s_timer = ksceKernelRegisterTimer("SceUsbservTickTimer", 5000000, tickTimer, NULL);
+		s_timer = SceThreadmgrForDriver_C58DF384("SceUsbservTickTimer", 5000000, tickTimer, NULL);
 	}
 	return 0;
 }
@@ -399,7 +399,7 @@ static int usb_attach(int id)
 	if (!type)
 		return -1;
 	if (s_timer < 1)
-		s_timer = ksceKernelRegisterTimer("SceUsbservTickTimer", 0, tickTimer, NULL);
+		s_timer = SceThreadmgrForDriver_C58DF384("SceUsbservTickTimer", 0, tickTimer, NULL);
 	uint8_t *configuration = ksceUsbdScanStaticDescriptor(id, NULL, 2);
 	if (!configuration) { ERROR(1494, "usb_attach"); return -1; }
 	int pipe = ksceUsbdOpenPipe(id, NULL);
@@ -422,15 +422,15 @@ static int usb_detach(int id)
 }
 static void accessoryChanged(unsigned info, void *arg)
 {
-	ksceKernelSetEventFlag(s_serv.event, info ? 8 : 16);
+	sceKernelSetEventFlag(s_serv.event, info ? 8 : 16);
 }
 static void microUsbChanged(unsigned info, void *arg)
 {
-	ksceKernelSetEventFlag(s_serv.event, (info & 0xff00) == 0x200 ? 64 : 128);
+	sceKernelSetEventFlag(s_serv.event, (info & 0xff00) == 0x200 ? 64 : 128);
 }
 static void multiCnChanged(unsigned info, void *arg)
 {
-	ksceKernelSetEventFlag(s_serv.event, info & 0xfb00 ? 4 : 2);
+	sceKernelSetEventFlag(s_serv.event, info & 0xfb00 ? 4 : 2);
 }
 static void registerConnectors(void)
 {
@@ -476,7 +476,7 @@ static int _sceUsbServSysEventHandler(int phase, int event, void *arg)
 	} else if (phase == 1) {
 		if (event == SYSEVENT_RESUME_START) {
 			s_serv.resumed = 0;
-			return ksceKernelSetEventFlag(s_serv.event, 32);
+			return sceKernelSetEventFlag(s_serv.event, 32);
 		}
 		if (event == SYSEVENT_RESUME_IDLE_QUERY)
 			return s_serv.resumed ? 0 : -1;
@@ -551,7 +551,7 @@ static int UsbServThread(unsigned arglen, void *arg)
 	registerConnectors();
 	for (;;) {
 		unsigned flags;
-		int ret = ksceKernelWaitEventFlag(s_serv.event, 0xfe,
+		int ret = sceKernelWaitEventFlag(s_serv.event, 0xfe,
 						  SCE_KERNEL_EVF_WAITMODE_OR |
 						  SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &flags, NULL);
 		if (ret < 0) {
@@ -639,23 +639,23 @@ int _sceUsbServInit(unsigned arglen, const void *argp)
 	ScePervasiveForDriver_BB67EF58(2);
 	usb2_mac_select(1, 1);
 	unsigned options[2] = { 8, 32 };
-	int ret = ksceKernelCreateMutex("SceUsbServ", 6, 0, (void *)options);
+	int ret = sceKernelCreateMutex("SceUsbServ", 6, 0, (void *)options);
 	if (ret < 0) {
 		DEBUG(6, 1056, "_sceUsbServInit", "# ERROR # sceKernelCreateMutex 0x%08x\n", ret);
 		return 1;
 	}
 	s_serv.mutex = ret;
-	s_serv.event = ksceKernelCreateEventFlag("SceUsbserv", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
+	s_serv.event = sceKernelCreateEventFlag("SceUsbserv", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (s_serv.event < 0) {
 		DEBUG(6, 1064, "_sceUsbServInit", "# ERROR # sceKernelCreateEventFlag 0x%08x\n", s_serv.event);
 		goto deleteMutex;
 	}
-	s_serv.thread = ksceKernelCreateThread("SceUsbServ", UsbServThread, 60, 0x2000, 0, 0x80000, NULL);
+	s_serv.thread = sceKernelCreateThread("SceUsbServ", UsbServThread, 60, 0x2000, 0, 0x80000, NULL);
 	if (s_serv.thread < 0) {
 		DEBUG(6, 1073, "_sceUsbServInit", "# ERROR # sceKernelCreateThread 0x%08x\n", s_serv.thread);
 		goto deleteEvent;
 	}
-	ksceKernelStartThread(s_serv.thread, 0, NULL);
+	sceKernelStartThread(s_serv.thread, 0, NULL);
 	s_serv.systemHandler = sceKernelRegisterSysEventHandler("SceUsbServ", _sceUsbServSysEventHandler, NULL);
 	if (s_serv.systemHandler < 0) {
 		DEBUG(6, 1083, "_sceUsbServInit", "# ERROR # sceKernelRegisterSysEventHandler 0x%08x\n", s_serv.systemHandler);
@@ -671,10 +671,10 @@ int _sceUsbServInit(unsigned arglen, const void *argp)
 		ksceUsbdRegisterDriver(&driver);
 	return 0;
 deleteThread:
-	ksceKernelDeleteThread(s_serv.thread);
+	sceKernelDeleteThread(s_serv.thread);
 deleteEvent:
-	ksceKernelDeleteEventFlag(s_serv.event);
+	sceKernelDeleteEventFlag(s_serv.event);
 deleteMutex:
-	ksceKernelDeleteMutex(s_serv.mutex);
+	sceKernelDeleteMutex(s_serv.mutex);
 	return 1;
 }

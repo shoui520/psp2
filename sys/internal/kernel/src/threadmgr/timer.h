@@ -41,9 +41,6 @@ typedef struct ThreadmgrDelay {
 	struct ThreadCB *thread;	/* 0x5c */
 } ThreadmgrDelay;
 
-/* an alarm's handler: returns the delay to the next call, 0 to end */
-typedef SceUInt32 (*ThreadmgrAlarmHandler)(void *arg);
-
 /* SceUIDAlarmObject (0x80) */
 typedef struct ThreadmgrAlarm {
 	ThreadmgrCpuTimer base;

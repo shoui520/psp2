@@ -118,7 +118,7 @@ static inline uint32_t *PacketWords(struct AuthPacket *packet)
 }
 static NOINLINE int authMgrWaitSelfSemaphore(void)
 {
-	return ErrorOnly(ksceKernelWaitSema(s_state.selfSemaphore, 1, NULL));
+	return ErrorOnly(sceKernelWaitSema(s_state.selfSemaphore, 1, NULL));
 }
 static NOINLINE int authMgrIntrHandlerforInvoke(SceUID id, int channel,
 	void *argument, uint32_t status, uint32_t result)
@@ -138,7 +138,7 @@ static NOINLINE int authMgrIntrHandlerforInvoke(SceUID id, int channel,
 		AUTH_PANIC(1273, 1279);
 	}
 	bits = (status & ~8U) == 2 ? 1 : (result << 16) | 1;
-	ksceKernelSetEventFlag(s_state.eventFlag, bits);
+	sceKernelSetEventFlag(s_state.eventFlag, bits);
 	return 0;
 }
 static NOINLINE int authMgrWaitSM(void)
@@ -148,7 +148,7 @@ static NOINLINE int authMgrWaitSM(void)
 	int result;
 
 	sceKernelSysrootDisableAutoClockDown();
-	result = ksceKernelWaitEventFlag(s_state.eventFlag, 1, 5, &bits, NULL);
+	result = sceKernelWaitEventFlag(s_state.eventFlag, 1, 5, &bits, NULL);
 	sceKernelSysrootEnableAutoClockDown();
 	if (result < 0) {
 		SCE_DBG_PRINTF(0xb, 976, "ERROR: sceKernelWaitEventFlag ret = 0x%08x\n", result);
@@ -213,7 +213,7 @@ static NOINLINE void authMgrIntrHandler(SceUID id, int channel,
 				SCE_DBG_PRINTF(0xb, 1065, "ERROR: Intr Handler : mailval = 0x%08x\n", value);
 				AUTH_PANIC(1064, 1065);
 			}
-			ksceKernelSetEventFlag(s_state.eventFlag, value == 1 ? 1 : 0x20001);
+			sceKernelSetEventFlag(s_state.eventFlag, value == 1 ? 1 : 0x20001);
 		}
 	}
 	CheckStackGuard(guard);
@@ -247,7 +247,7 @@ static NOINLINE int authMgrSendPacketCore(struct AuthPacket *packet,
 		return AM_EINVAL;
 	packet->size = size;
 	packet->command = (command << 16) | 1;
-	result = ksceKernelLockFastMutex(&s_state.sendMutex);
+	result = lockFastMutex(&s_state.sendMutex);
 	if (result < 0)
 		return result;
 	result = ksceSblSmSchedProxyEnableCry2ArmInterrupt(s_state.requestId, 1,
@@ -274,7 +274,7 @@ static NOINLINE int authMgrSendPacketCore(struct AuthPacket *packet,
 		SCE_DBG_PRINTF(0xb, 1599, "ERROR: ReleaseHandler ret = 0x%08x\n", releaseResult);
 		result = releaseResult;
 	}
-	unlockResult = ksceKernelUnlockFastMutex(&s_state.sendMutex);
+	unlockResult = sceKernelUnlockFastMutex(&s_state.sendMutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
 static NOINLINE int authMgrStopSM(SceUID id)
@@ -422,22 +422,22 @@ int module_start(SceSize args, const void *argument)
 	(void)args;
 	(void)argument;
 	sceSblAuthMgrStart();
-	s_state.eventFlag = ksceKernelCreateEventFlag("SceSblAuthMgr", 0, 0, NULL);
+	s_state.eventFlag = sceKernelCreateEventFlag("SceSblAuthMgr", 0, 0, NULL);
 	if (s_state.eventFlag < 0) {
 		AUTH_DBG_PRINTF("sceSblAuthMgrModuleStart", 283, "ERROR: sceKernelCreateEventFlag fail\n");
 		return AM_ENOMEM;
 	}
-	result = ksceKernelInitializeFastMutex(&s_state.sendMutex, "SceSblAuthMgrSendCmd", 0, NULL);
+	result = sceKernelInitializeFastMutex(&s_state.sendMutex, "SceSblAuthMgrSendCmd", 0, NULL);
 	if (result < 0) {
 		AUTH_DBG_PRINTF("sceSblAuthMgrModuleStart", 291, "ERROR: sceKernelInitializeFastMutex ret = 0x%08x\n", result);
 		return result;
 	}
-	result = ksceKernelInitializeFastMutex(&s_state.npdrmMutex, "SceSblAuthMgrNpdrmApi", 0, NULL);
+	result = sceKernelInitializeFastMutex(&s_state.npdrmMutex, "SceSblAuthMgrNpdrmApi", 0, NULL);
 	if (result < 0) {
 		AUTH_DBG_PRINTF("sceSblAuthMgrModuleStart", 299, "ERROR: sceKernelInitializeFastMutex ret = 0x%08x\n", result);
 		return result;
 	}
-	s_state.selfSemaphore = ksceKernelCreateSema("SceSblAuthMgrSelfApi", 0, 1, 1, NULL);
+	s_state.selfSemaphore = sceKernelCreateSema("SceSblAuthMgrSelfApi", 0, 1, 1, NULL);
 	if (s_state.selfSemaphore < 0) {
 		AUTH_DBG_PRINTF("sceSblAuthMgrModuleStart", 308, "ERROR: sceKernelCreateSema ret = 0x%08x\n", s_state.selfSemaphore);
 		return result;
@@ -454,7 +454,7 @@ int ksceSblAuthMgrOpen(int *handle)
 	SceKernelSuspendForDriver_4DF40893(0);
 	result = authMgrWaitSelfSemaphore();
 	if (result >= 0) {
-		result = ksceKernelLockFastMutex(&s_state.npdrmMutex);
+		result = lockFastMutex(&s_state.npdrmMutex);
 		if (result >= 0) {
 			if (s_state.selfHandle == 1) {
 				operationResult = (int)0x800f0501;
@@ -463,7 +463,7 @@ int ksceSblAuthMgrOpen(int *handle)
 				if (operationResult == 0) {
 					*handle = 1;
 					s_state.selfHandle = 1;
-					result = ksceKernelUnlockFastMutex(&s_state.npdrmMutex);
+					result = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
 					if (result >= 0)
 						return 0;
 					SceKernelSuspendForDriver_2BB92967(0);
@@ -473,16 +473,16 @@ int ksceSblAuthMgrOpen(int *handle)
 			} else {
 				operationResult = AM_EINVAL;
 			}
-			result = ksceKernelUnlockFastMutex(&s_state.npdrmMutex);
+			result = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
 			if (result >= 0) {
-				signalResult = ksceKernelSignalSema(s_state.selfSemaphore, 1);
+				signalResult = sceKernelSignalSema(s_state.selfSemaphore, 1);
 				if (signalResult >= 0)
 					return operationResult;
 				SceKernelSuspendForDriver_2BB92967(0);
 				return signalResult;
 			}
 		}
-		signalResult = ksceKernelSignalSema(s_state.selfSemaphore, 1);
+		signalResult = sceKernelSignalSema(s_state.selfSemaphore, 1);
 		if (signalResult < 0)
 			result = signalResult;
 	}
@@ -495,7 +495,7 @@ int ksceSblAuthMgrClose(int handle)
 
 	if (handle != 1)
 		return AM_EHANDLE;
-	result = ksceKernelLockFastMutex(&s_state.npdrmMutex);
+	result = lockFastMutex(&s_state.npdrmMutex);
 	if (result >= 0) {
 		stopResult = authMgrStopSM(s_state.requestId);
 		if (stopResult == 0) {
@@ -504,9 +504,9 @@ int ksceSblAuthMgrClose(int handle)
 		} else {
 			AUTH_DBG_PRINTF("sceSblAuthMgrClose", 483, "ERROR: authMgrStopSM ret = 0x%08x\n", stopResult);
 		}
-		result = ErrorOnly(ksceKernelUnlockFastMutex(&s_state.npdrmMutex));
+		result = ErrorOnly(sceKernelUnlockFastMutex(&s_state.npdrmMutex));
 	}
-	signalResult = ksceKernelSignalSema(s_state.selfSemaphore, 1);
+	signalResult = sceKernelSignalSema(s_state.selfSemaphore, 1);
 	SceKernelSuspendForDriver_2BB92967(0);
 	return signalResult < 0 ? signalResult : result;
 }
@@ -608,7 +608,7 @@ int ksceSblAuthMgrGetEKc(void *buffer, uint32_t size, uint32_t type)
 
 	if (buffer == NULL || type >= 3 || (size & 0xf) || size - 1 >= 0x100)
 		return AM_EINVAL;
-	result = ksceKernelLockFastMutex(&s_state.npdrmMutex);
+	result = lockFastMutex(&s_state.npdrmMutex);
 	if (result < 0)
 		return result;
 	packet = s_state.keyPacket;
@@ -626,7 +626,7 @@ int ksceSblAuthMgrGetEKc(void *buffer, uint32_t size, uint32_t type)
 			result = AM_EINVAL;
 		}
 	}
-	unlockResult = ksceKernelUnlockFastMutex(&s_state.npdrmMutex);
+	unlockResult = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
 int ksceSblAuthMgrSetDmac5Key(const void *key, uint32_t size, int slot, int keyId)
@@ -638,7 +638,7 @@ int ksceSblAuthMgrSetDmac5Key(const void *key, uint32_t size, int slot, int keyI
 	if (key == NULL || (keyId != 0 && keyId != 0x10000 && keyId != 0x10001 &&
 	    keyId != 0x20000 && keyId != 0x20001) || (size & 0xf) || size - 1 >= 0x20)
 		return AM_EINVAL;
-	result = ksceKernelLockFastMutex(&s_state.npdrmMutex);
+	result = lockFastMutex(&s_state.npdrmMutex);
 	if (result < 0)
 		return result;
 	packet = s_state.keyPacket;
@@ -649,7 +649,7 @@ int ksceSblAuthMgrSetDmac5Key(const void *key, uint32_t size, int slot, int keyI
 	words[82] = slot;
 	words[83] = 0;
 	result = authMgrSendPacket(packet, 0x150, 5);
-	unlockResult = ksceKernelUnlockFastMutex(&s_state.npdrmMutex);
+	unlockResult = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
 	return unlockResult < 0 ? unlockResult : ErrorOnly(result);
 }
 int ksceSblAuthMgrClearDmac5Key(int slot, int value)
@@ -660,7 +660,7 @@ int ksceSblAuthMgrClearDmac5Key(int slot, int value)
 
 	if (value != 0)
 		return AM_EINVAL;
-	result = ksceKernelLockFastMutex(&s_state.npdrmMutex);
+	result = lockFastMutex(&s_state.npdrmMutex);
 	if (result < 0)
 		return result;
 	packet = s_state.keyPacket;
@@ -669,7 +669,7 @@ int ksceSblAuthMgrClearDmac5Key(int slot, int value)
 	words[80] = words[81] = words[83] = 0;
 	words[82] = slot;
 	result = authMgrSendPacket(packet, 0x150, 6);
-	unlockResult = ksceKernelUnlockFastMutex(&s_state.npdrmMutex);
+	unlockResult = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
 	return unlockResult < 0 ? unlockResult : ErrorOnly(result);
 }
 int ksceSblAuthMgrDecBindData(void *input, uint32_t inputSize,
@@ -686,7 +686,7 @@ int ksceSblAuthMgrDecBindData(void *input, uint32_t inputSize,
 		result = AM_EINVAL;
 		goto out;
 	}
-	result = ksceKernelLockFastMutex(&s_state.npdrmMutex);
+	result = lockFastMutex(&s_state.npdrmMutex);
 	if (result < 0)
 		goto out;
 	packet = s_state.bindPacket;
@@ -719,7 +719,7 @@ int ksceSblAuthMgrDecBindData(void *input, uint32_t inputSize,
 			SceCpuForDriver_02796361(input, RoundCacheSize(inputSize));
 	}
 unlock:
-	unlockResult = ksceKernelUnlockFastMutex(&s_state.npdrmMutex);
+	unlockResult = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
 	if (unlockResult < 0)
 		result = unlockResult;
 out:
@@ -744,7 +744,7 @@ int ksceSblAuthMgrVerifySpfsoCtx(struct SpsfoContext *context)
 	result = authMgrWaitSelfSemaphore();
 	if (result < 0)
 		return result;
-	result = ksceKernelLockFastMutex(&s_state.npdrmMutex);
+	result = lockFastMutex(&s_state.npdrmMutex);
 	if (result < 0)
 		goto signal;
 	result = authMgrSetupSrcPARanges(context->buffer, context->size);
@@ -773,14 +773,14 @@ int ksceSblAuthMgrVerifySpfsoCtx(struct SpsfoContext *context)
 			}
 		}
 	}
-	unlockResult = ksceKernelUnlockFastMutex(&s_state.npdrmMutex);
+	unlockResult = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
 	if (unlockResult >= 0) {
-		signalResult = ksceKernelSignalSema(s_state.selfSemaphore, 1);
+		signalResult = sceKernelSignalSema(s_state.selfSemaphore, 1);
 		return signalResult < 0 ? signalResult : result;
 	}
 	result = unlockResult;
 signal:
-	signalResult = ksceKernelSignalSema(s_state.selfSemaphore, 1);
+	signalResult = sceKernelSignalSema(s_state.selfSemaphore, 1);
 	return signalResult < 0 ? signalResult : result;
 }
 int ksceSblAuthMgrCompareSwVersion(uint32_t version)

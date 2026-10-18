@@ -3,8 +3,16 @@
 
 #include <threadmgr/threadmgr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int SceThreadmgrForDriver_36F8E58A(const SceKernelWaitEvent *events,
 		uint32_t count, uint32_t mode, SceKernelResultEvent *results,
 		SceUInt32 *timeout);
 
 int SceThreadmgrForDriver_CBA7FAAA(SceUID eventId, SceKernelEventInfo *info);
+
+#ifdef __cplusplus
+}
+#endif

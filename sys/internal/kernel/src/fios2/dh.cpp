@@ -93,7 +93,7 @@ int sceFiosKernelDHReadInternal(SceFiosKernelDH *dh, SceIoDirent *dirent, SceIoS
 	int ret;
 
 	if (dh == (SceFiosKernelDH *)-1 || dh->magic != SCE_FIOS_KERNEL_DH_MAGIC ||
-	    dh->pid != ksceKernelGetProcessIdFromTLS())
+	    dh->pid != SceThreadmgrForDriver_FA54D49A())
 		return SCE_FIOS_ERROR_BAD_DH;
 
 	if (dh->next != NULL) {
@@ -447,10 +447,10 @@ free:
 
 int sceFiosKernelDHClose(SceFiosKernelDH *dh)
 {
-	int privileged = fiosCallerIsPrivileged(ksceKernelGetProcessIdFromTLS());
+	int privileged = fiosCallerIsPrivileged(SceThreadmgrForDriver_FA54D49A());
 
 	if (dh == (SceFiosKernelDH *)-1 || dh->magic != SCE_FIOS_KERNEL_DH_MAGIC ||
-	    (!privileged && dh->pid != ksceKernelGetProcessIdFromTLS()))
+	    (!privileged && dh->pid != SceThreadmgrForDriver_FA54D49A()))
 		return SCE_FIOS_ERROR_BAD_DH;
 	if (dh->fd != -1) {
 		sceFiosKernelPlatformDclose(dh->fd);

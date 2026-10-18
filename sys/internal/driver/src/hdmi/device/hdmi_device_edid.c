@@ -43,7 +43,7 @@ static SceUID edidMutex;
 int hdmiDeviceEdidInitialize(HdmiDevice *device)
 {
 	edidMutex = 0;
-	edidMutex = ksceKernelCreateMutex("SceHdmiDeviceEdid", 0x2002, 0, NULL);
+	edidMutex = sceKernelCreateMutex("SceHdmiDeviceEdid", 0x2002, 0, NULL);
 	if (edidMutex < 0)
 		return SCE_HDMI_ERROR_DEVICE;
 	return 0;
@@ -53,9 +53,9 @@ void hdmiDeviceEdidClear(HdmiDevice *device)
 {
 	SceUInt32 timeout = 0xffffffff;
 
-	ksceKernelLockMutex(edidMutex, 1, &timeout);
+	sceKernelLockMutex(edidMutex, 1, &timeout);
 	device->edidBlockCount = 0;
-	ksceKernelUnlockMutex(edidMutex, 1);
+	sceKernelUnlockMutex(edidMutex, 1);
 }
 
 int hdmiDeviceEdidSetDviMode(HdmiDevice *device)
@@ -149,7 +149,7 @@ int hdmiDeviceEdidRead(HdmiDevice *device)
 		return 1;
 	}
 	timeout = 0xffffffff;
-	ksceKernelLockMutex(edidMutex, 1, &timeout);
+	sceKernelLockMutex(edidMutex, 1, &timeout);
 	device->edidBlockCount = 0;
 	ret = hdmiDeviceEdidReadBlock(device, 0, device->edid);
 	if (ret != 0) {
@@ -175,7 +175,7 @@ int hdmiDeviceEdidRead(HdmiDevice *device)
 			device->edidBlockCount++;
 	}
 out:
-	ksceKernelUnlockMutex(edidMutex, 1);
+	sceKernelUnlockMutex(edidMutex, 1);
 	return ret;
 }
 
@@ -184,7 +184,7 @@ int hdmiDeviceEdidGetPhysicalAddress(HdmiDevice *device, SceUInt8 *address)
 	SceUInt32 timeout = 0xffffffff;
 	int ret;
 
-	ksceKernelLockMutex(edidMutex, 1, &timeout);
+	sceKernelLockMutex(edidMutex, 1, &timeout);
 	if (device->sinkType == HDMI_SINK_HDMI &&
 	    (!hdmiDeviceIsEdidOn() || !hdmiDeviceIsEdidNotForced())) {
 		if (address == NULL) {
@@ -197,7 +197,7 @@ int hdmiDeviceEdidGetPhysicalAddress(HdmiDevice *device, SceUInt8 *address)
 	} else {
 		ret = SCE_ERROR_NOT_SUPPORTED;
 	}
-	ksceKernelUnlockMutex(edidMutex, 1);
+	sceKernelUnlockMutex(edidMutex, 1);
 	return ret;
 }
 

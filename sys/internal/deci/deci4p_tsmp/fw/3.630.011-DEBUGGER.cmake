@@ -88,19 +88,19 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	SceDebugForDriver_02B04343
-	ksceKernelWaitEventFlag
+	sceKernelWaitEventFlag
 	sceKernelExitThread
-	ksceKernelStartThread
-	ksceKernelCreateEventFlag
+	sceKernelStartThread
+	sceKernelCreateEventFlag
 	sceKernelDelayThread
-	ksceKernelLockFastMutex
-	ksceKernelDeleteEventFlag
-	ksceKernelDeleteThread
-	ksceKernelInitializeFastMutex
-	ksceKernelCreateThread
-	ksceKernelSetEventFlag
-	ksceKernelUnlockFastMutex
-	ksceKernelEnqueueWorkQueue
+	lockFastMutex
+	sceKernelDeleteEventFlag
+	sceKernelDeleteThread
+	sceKernelInitializeFastMutex
+	sceKernelCreateThread
+	sceKernelSetEventFlag
+	sceKernelUnlockFastMutex
+	sceKernelScheduleWorkTask
 	ksceSblPostSsMgrActivate
 	ksceSblPostSsMgrGetExpireDate
 	SceDipswForDriver_A98FC2FD

@@ -308,11 +308,11 @@ _callProtocolHandler(DfMgrProtocolCB *pd, int event, void *arg)
 		SCE_PRINTF_WITH_INFO(15, 2330, "\n");
 		return DFMGR_ERROR_INVALID_ARGUMENT;
 	}
-	ret = ksceKernelWaitSema(pd->link->eventSema, 1, NULL);
+	ret = sceKernelWaitSema(pd->link->eventSema, 1, NULL);
 	if (ret < 0)
 		return ret;
 	ret = pd->handler(event, arg, pd->arg);
-	ksceKernelSignalSema(pd->link->eventSema, 1);
+	sceKernelSignalSema(pd->link->eventSema, 1);
 	return ret;
 }
 
@@ -435,21 +435,21 @@ int sceDfMgrInit(void)
 
 	for (i = 0, link = s_dfmgrLink; i < DFMGR_LINK_COUNT; i++, link++) {
 		pd = _getPdCB(s_dfmgrLinkTable[i].pd);
-		ret = ksceKernelCreateMutex("SceDeci4pDfMgrSend", SCE_KERNEL_ATTR_TH_PRIO, 0,
+		ret = sceKernelCreateMutex("SceDeci4pDfMgrSend", SCE_KERNEL_ATTR_TH_PRIO, 0,
 					    NULL);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_LEVEL(0, 0, 228);
 			return ret;
 		}
 		link->sendMutex = ret;
-		ret = ksceKernelCreateMutex("SceDeci4pDfMgrRecv", SCE_KERNEL_ATTR_TH_PRIO, 0,
+		ret = sceKernelCreateMutex("SceDeci4pDfMgrRecv", SCE_KERNEL_ATTR_TH_PRIO, 0,
 					    NULL);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_LEVEL(0, 0, 238);
 			return ret;
 		}
 		link->recvMutex = ret;
-		ret = ksceKernelCreateSema("SceDeci4pDfMgrEvent", SCE_KERNEL_ATTR_TH_PRIO, 2, 2,
+		ret = sceKernelCreateSema("SceDeci4pDfMgrEvent", SCE_KERNEL_ATTR_TH_PRIO, 2, 2,
 					   NULL);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_LEVEL(0, 0, 251);
@@ -606,7 +606,7 @@ int sceDfMgrClose(SceUID handle)
 			return DFMGR_ERROR_INVALID_ARGUMENT;
 		}
 	}
-	ret = ksceKernelWaitSema(pd->link->eventSema, 2, NULL);
+	ret = sceKernelWaitSema(pd->link->eventSema, 2, NULL);
 	if (ret < 0)
 		return ret;
 	s = SceCpuForDriver_D32ACE9E(&s_dfmgrLock);
@@ -615,7 +615,7 @@ int sceDfMgrClose(SceUID handle)
 	link = pd->link;
 	memset(pd, 0, sizeof(*pd));
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_dfmgrLock, s);
-	ksceKernelSignalSema(link->eventSema, 2);
+	sceKernelSignalSema(link->eventSema, 2);
 	dcmpSendStatusProtocol(linkIndex, 0, &info);
 	return 0;
 }
@@ -667,7 +667,7 @@ int sceDfMgrReqSend(SceUID handle)
 			link->req[write] = handle;
 			link->reqWrite = next;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&link->reqLock, rs);
-			ret = ksceKernelSetEventFlag(link->sendEvf, 1);
+			ret = sceKernelSetEventFlag(link->sendEvf, 1);
 			if (ret < 0)
 				SCE_DBG_ASSERT(0, 1032);
 		}
@@ -703,7 +703,7 @@ int sceDfMgrSend(SceUID handle, const void *data, SceSize size)
 	    (!(link->flags & DFMGR_LINK_READY) || !(link->flags & DFMGR_LINK_ATTACHED) ||
 	     !(link->flags & DFMGR_LINK_CONNECTED) || !(pd->flags & DFMGR_PD_STARTED)))
 		return DFMGR_ERROR_NOT_CONNECTED;
-	ret = ksceKernelLockMutex(link->sendMutex, 1, NULL);
+	ret = sceKernelLockMutex(link->sendMutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 
@@ -741,14 +741,14 @@ int sceDfMgrSend(SceUID handle, const void *data, SceSize size)
 			ret = DFMGR_ERROR_INVALID_ARGUMENT;
 		}
 	}
-	ksceKernelUnlockMutex(link->sendMutex, 1);
+	sceKernelUnlockMutex(link->sendMutex, 1);
 	return ret;
 
 send:
 	ret = link->send(buf, size);
 	if (ret >= 0)
 		link->sendRemaining -= size;
-	ksceKernelUnlockMutex(link->sendMutex, 1);
+	sceKernelUnlockMutex(link->sendMutex, 1);
 	return ret;
 }
 
@@ -798,7 +798,7 @@ static void sendCallback(DfMgrLinkCB *link)
 	_callProtocolHandler(pd, SCE_DFMGR_EVENT_SENT, NULL);
 	dfmgrSetProtocolStatus(pd, DFMGR_PD_SENT | DFMGR_PD_HEADER_SENT, 0);
 	if (link->reqCount > 0)
-		ksceKernelSetEventFlag(link->sendEvf, 1);
+		sceKernelSetEventFlag(link->sendEvf, 1);
 	return;
 
 error:
@@ -835,7 +835,7 @@ int sceDfMgrRecv(SceUID handle, void *buf, SceSize size)
 		}
 	}
 	link = pd->link;
-	ret = ksceKernelLockMutex(link->recvMutex, 1, NULL);
+	ret = sceKernelLockMutex(link->recvMutex, 1, NULL);
 	if (ret < 0)
 		return ret;
 	n = size < link->recvRemaining ? size : link->recvRemaining;
@@ -853,12 +853,12 @@ int sceDfMgrRecv(SceUID handle, void *buf, SceSize size)
 	ret = link->recv(buf, rest);
 	if (ret >= 0) {
 		link->recvRemaining -= n;
-		ksceKernelUnlockMutex(link->recvMutex, 1);
+		sceKernelUnlockMutex(link->recvMutex, 1);
 		return n;
 	}
 	dfmgrSetLinkStatus(link, DFMGR_LINK_RECV_ERROR, 1);
 out:
-	ksceKernelUnlockMutex(link->recvMutex, 1);
+	sceKernelUnlockMutex(link->recvMutex, 1);
 	return ret;
 }
 
@@ -926,9 +926,9 @@ static inline void dfmgrNotifyConnection(DfMgrLinkCB *link, SceUInt32 connected)
 	dcmpMakeStatusConnection(connected, &status);
 	for (pd = &s_dfmgrPd[DFMGR_LINK_COUNT]; pd != &s_dfmgrPd[DFMGR_PROTOCOL_COUNT]; pd++) {
 		if ((pd->flags & DFMGR_PD_OPEN) && pd->link == link &&
-		    ksceKernelWaitSema(link->eventSema, 1, NULL) >= 0) {
+		    sceKernelWaitSema(link->eventSema, 1, NULL) >= 0) {
 			pd->handler(SCE_DFMGR_EVENT_STATUS, &status, pd->arg);
-			ksceKernelSignalSema(pd->link->eventSema, 1);
+			sceKernelSignalSema(pd->link->eventSema, 1);
 		}
 	}
 }
