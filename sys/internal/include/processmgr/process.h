@@ -5,7 +5,9 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/spinlock.h>
+#include <authmgr/sblauthmgr.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <sysmem/list.h>
 

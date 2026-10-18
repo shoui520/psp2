@@ -2,7 +2,7 @@
 #define BBMC_QMI_GPS_REPORT_H
 
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* PDS event-report wire values are byte aligned and little endian. */
 typedef struct QmiPdsPositionWire {

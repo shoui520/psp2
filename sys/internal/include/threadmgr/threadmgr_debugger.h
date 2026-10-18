@@ -6,7 +6,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <threadmgr/threadcb.h>
 
 /*

@@ -4,7 +4,7 @@
  * the main map at 0x7a, the CEC map at 0x7c and the packet memory at 0x70.
  * Internal names are ours unless a comment says otherwise.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <fw.h>
 #include <sysmem/debug.h>
 #include "../../hdmi_internal.h"

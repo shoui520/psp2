@@ -6,7 +6,8 @@
  * Internal names are ours unless a comment says otherwise; Sony's come from
  * the debug records (cec.c) and the thread, timer and event flag names.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/spinlock.h>
 #include <sysmem/cpu.h>
 #include <fw.h>
 #include <sysmem/debug.h>

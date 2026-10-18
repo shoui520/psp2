@@ -5,6 +5,7 @@
  */
 
 #include "sysmem_internal.h"
+#include <sysmem/uid_guid.h>
 
 /* the globals are not static: the unconverted part of the file sets them */
 

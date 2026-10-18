@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <processmgr/processmgr.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/qafmgr.h>

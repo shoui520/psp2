@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* load the modules named in paths (os0:kd/ relative), UIDs to uids */
 int SceKblForKernel_6D7A1F18(const char *const *paths, SceUID *uids, int count, int flags);

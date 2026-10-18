@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 struct AppmgrWaitObject {
 	SceUID eventFlag;

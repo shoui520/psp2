@@ -2,7 +2,8 @@
  * SceDisplay: the boot logo shown until a process sets a frame buffer.
  * File name unknown; the module links its parts in this order.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/memblock.h>
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>

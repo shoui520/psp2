@@ -3,7 +3,8 @@
  * user-mode syscalls (Sony's file name unknown). A user caller must be a
  * system program, the QA mini settings, or allowed USB serial.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/spinlock.h>
 #include <intrmgr/syscall.h>
 #include <kernel/error.h>
 #include <threadmgr/threadmgr.h>

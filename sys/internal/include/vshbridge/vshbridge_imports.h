@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <idstorage/idstorage.h>
 #include <sdif/sdif.h>
 #include <lowio/pervasive.h>

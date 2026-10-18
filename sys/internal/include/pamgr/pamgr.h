@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* name unknown: a 64-bit timestamp (os0:kd/deci4p_ttyp.skprx output packets) */
 SceUInt64 ScePamgrForDriver_FE9BFD27(void);

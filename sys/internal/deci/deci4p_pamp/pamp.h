@@ -1,7 +1,7 @@
 /* PAMP wire and private state layouts. Internal field names are inferred. */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <deci4p_dfmgr/deci4p.h>

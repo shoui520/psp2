@@ -1,6 +1,6 @@
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <stdint.h>
 
 /* the random drive name a PFS mount is reached by (vitasdk's name; no Sony name found) */

@@ -3,7 +3,7 @@
  * AES block entries and their lookup data are in aes_block.c.
  */
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/utils.h>
 #include <kernel/error.h>
 #include "sha2.h"

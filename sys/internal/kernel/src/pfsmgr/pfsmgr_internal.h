@@ -11,7 +11,7 @@
 #ifndef PFSMGR_INTERNAL_H
 #define PFSMGR_INTERNAL_H
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 #include <psp2kern/kernel/sysclib.h>
 #include <string.h>

@@ -1,7 +1,8 @@
 #pragma once
 
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <authmgr/sblauthmgr.h>
 
 /* Process-manager services registered with Sysroot by NID733C243E. */
 typedef struct SysrootProcessmgrOps {

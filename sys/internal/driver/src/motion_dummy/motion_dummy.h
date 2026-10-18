@@ -9,7 +9,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <motion/motion_dev.h>
 
 #define MOTION_PROCESS_MAX	16

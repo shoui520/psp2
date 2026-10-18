@@ -1,7 +1,9 @@
 /*
  * SceDeci4pTsmp (Sony's tsmp.c): see tsmp.h.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/memblock.h>
+#include <sysmem/uid_guid.h>
 #include <sysmem/dipsw.h>
 #include <rtc/rtc.h>
 #include <sysmem/sysmem.h>

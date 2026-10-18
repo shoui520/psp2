@@ -1,7 +1,7 @@
 /* SceSysmem UID class and object interfaces. */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <vitasdk/build_utils.h>
 
 #ifdef __cplusplus
@@ -24,7 +24,9 @@ typedef struct SceClass {
 	SceClassCallback destroy_cb;
 	unsigned int magic;
 } SceClass;
-VITASDK_BUILD_ASSERT_EQ(0x2c, SceClass);
+#ifndef __cplusplus
+_Static_assert(sizeof(SceClass) == 0x2c, "SceClass");
+#endif
 
 typedef struct SceObjectBase {
 	union {
@@ -36,7 +38,9 @@ typedef struct SceObjectBase {
 	};
 	uint32_t data[];
 } SceObjectBase;
-VITASDK_BUILD_ASSERT_EQ(8, SceObjectBase);
+#ifndef __cplusplus
+_Static_assert(sizeof(SceObjectBase) == 8, "SceObjectBase");
+#endif
 
 SceClass *SceSysmemForDriver_85336A1C(void);	/* vitasdk: ksceKernelGetUIDClass */
 SceClass *SceSysmemForKernel_E4193EB6(void);	/* vitasdk: ksceKernelGetUIDDLinkClass */

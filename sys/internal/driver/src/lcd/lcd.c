@@ -2,6 +2,7 @@
  * Internal names are unknown: no debug name records exist in this module.
  */
 #include <stdint.h>
+#include <sysmem/uid_guid.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>

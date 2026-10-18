@@ -9,7 +9,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 struct SceKblParam;
 struct SceCorelockContext;

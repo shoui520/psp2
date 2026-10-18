@@ -3,7 +3,7 @@
  * KSV FIFO), serialized by the "SceHdmiDeviceDdc" mutex, and the check of
  * each EDID block read. Internal names are ours unless a comment says otherwise.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <fw.h>
 #include <sysmem/debug.h>
 #include "../hdmi_internal.h"

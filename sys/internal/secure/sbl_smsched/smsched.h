@@ -41,7 +41,9 @@
 
 #include <stdint.h>
 #include <fw.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/memblock.h>
+#include <sysmem/spinlock.h>
 #include <sysmem/sysmem.h>
 #include <kernel_boot_loader/kbl_param.h>
 #include <sysmem/debug.h>

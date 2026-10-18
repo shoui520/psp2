@@ -60,7 +60,7 @@ typedef struct SceVopZerofillArgs {
 	SceUInt64 forwardedValue3;
 } SceVopZerofillArgs;
 
-VITASDK_BUILD_ASSERT_EQ(0x20, SceVopZerofillArgs);
+_Static_assert(sizeof(SceVopZerofillArgs) == 0x20, "SceVopZerofillArgs");
 
 int SceIofilemgrForDriver_0D8A806E(SceVfsVnode *fvp, SceVfsVnode *tvp);	/* vitasdk: ksceVopUnlink */
 int SceIofilemgrForDriver_942AA61F(SceVfsVnode *fvp, SceVfsVnode *tvp);	/* vitasdk: ksceVopLink */

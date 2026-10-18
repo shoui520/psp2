@@ -1,5 +1,6 @@
 /* Descriptive filename; these callbacks have no source-file debug records. */
 #include "hid_internal.h"
+#include <sysmem/uid_guid.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include <intrmgr/syscall.h>

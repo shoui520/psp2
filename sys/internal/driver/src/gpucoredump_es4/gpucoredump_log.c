@@ -3,7 +3,7 @@
  * name unknown).
  */
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <iofilemgr/iofilemgr.h>
 #include <stdarg.h>
 #include <stdio.h>

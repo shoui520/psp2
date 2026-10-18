@@ -3,7 +3,7 @@
 #define SCE_NETPS_H
 
 #include <psp2/net/net.h>
-#include <psp2/types.h>
+#include <scetypes.h>
 #include <stddef.h>
 
 /* Shared allocator adapters; implementations retain each module's heap. */

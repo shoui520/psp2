@@ -5,7 +5,7 @@
  * the CEC physical address. Internal names are ours unless a comment says
  * otherwise.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <threadmgr/threadmgr.h>
 #include <fw.h>
 #include <sysmem/debug.h>

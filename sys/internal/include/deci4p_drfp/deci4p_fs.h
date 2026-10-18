@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* host modes */
 #define DECI4P_FS_MODE_IFREG		0x8000

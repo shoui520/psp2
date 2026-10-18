@@ -3,7 +3,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <modulemgr/module_library.h>
 #include <coredump/coredump.h>
 #include <ss_mgr/ss_mgr.h>

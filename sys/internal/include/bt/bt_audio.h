@@ -1,7 +1,8 @@
 /* Bluetooth audio and AVRCP device interfaces. */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <stdint.h>
 
 int SceBtForDriver_E9936446(SceUInt64 deviceAddress);	/* vitasdk: ksceBtGetConnectingInfo */
 /* vitasdk: ksceBtAvrcpSendButton */

@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 typedef SceInt32 SceSysTimerId;
 typedef void (*SceSysTimerCallback)(SceSysTimerId timer, void *arg);

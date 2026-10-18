@@ -19,7 +19,7 @@
 #pragma once
 
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/debug.h>
 #include <lowio/pervasive_regs.h>
 #include <compat/grab_regs.h>

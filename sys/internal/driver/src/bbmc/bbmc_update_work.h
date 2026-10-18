@@ -2,7 +2,7 @@
 #define BBMC_UPDATE_WORK_H
 
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 typedef struct BbmcUpdateFilePair {
 	SceUID firstFile;

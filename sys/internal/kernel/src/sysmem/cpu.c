@@ -1,5 +1,6 @@
 /* CPU identity and debug-context diagnostics. */
 #include <sysmem/cp15.h>
+#include <sysmem/uid_guid.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <sysmem/barrier.h>

@@ -1,7 +1,7 @@
 #ifndef SCE_CODEC_H
 #define SCE_CODEC_H
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <lowio/pervasive.h>
 #include <clockgen/clockgen.h>
 

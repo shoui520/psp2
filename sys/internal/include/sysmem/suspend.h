@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/sysevent.h>
 
 int SceKernelSuspendForDriver_4DF40893(int argument);

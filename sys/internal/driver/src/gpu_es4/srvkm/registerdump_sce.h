@@ -2,7 +2,7 @@
 #ifndef GPU_REGISTERDUMP_SCE_H
 #define GPU_REGISTERDUMP_SCE_H
 
-#include <psp2common/types.h>
+#include <scetypes.h>
 
 #define GPU_DUMP_MASTER_REGISTER_COUNT 266
 #define GPU_DUMP_CORE_REGISTER_COUNT 399

@@ -1,5 +1,6 @@
 /* Controller sampling, per-process rings and remote-control notification. */
 #include <sysmem/sysmem.h>
+#include <sysmem/uid_guid.h>
 #include "ctrl_internal.h"
 #include <psp2kern/kernel/processmgr.h>
 #include <intrmgr/intrmgr.h>

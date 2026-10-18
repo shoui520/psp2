@@ -3,7 +3,7 @@
  */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/cpu.h>
 
 /* reset.S: the boot save area */

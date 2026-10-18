@@ -12,7 +12,7 @@
 + * -1 instead of asserting.
 + */
 +#define MEXP 19937
-+#include <psp2kern/types.h>
++#include <scetypes.h>
 +#include <psp2kern/kernel/sysclib.h>
  #include "SFMT.h"
  #include "SFMT-params.h"

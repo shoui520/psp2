@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* name unknown: nonzero when the QA flag allowing debug consoles is set */
 int SceQafMgrForDriver_382C71E8(void);

@@ -11,7 +11,7 @@
 #ifndef SDFCTL_H
 #define SDFCTL_H
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <deci4p_dfmgr/deci4p.h>
 
 #if FW_DEBUG

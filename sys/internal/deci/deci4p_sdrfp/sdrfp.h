@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <deci4p_dfmgr/deci4p.h>
 #include <deci4p_drfp/deci4p_fs.h>
 

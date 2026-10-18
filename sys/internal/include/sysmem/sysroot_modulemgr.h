@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* info of the library function a stub address calls (sysroot callback) */
 struct ModulemgrStubInfo {

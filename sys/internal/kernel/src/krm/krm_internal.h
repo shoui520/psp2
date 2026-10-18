@@ -3,7 +3,7 @@
 
 #ifndef __ASSEMBLER__
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <threadmgr/fast_mutex.h>
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>

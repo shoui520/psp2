@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <psp2common/types.h>
+#include <scetypes.h>
 
 /* The position a driver reports, and _sceGpsGetData returns. */
 typedef struct GpsLocation {

@@ -7,7 +7,7 @@
 #ifndef PROCESSMGR_IMPORTS_H
 #define PROCESSMGR_IMPORTS_H
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/cpu.h>

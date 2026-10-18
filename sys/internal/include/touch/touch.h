@@ -1,7 +1,7 @@
 /* SceTouch (os0:kd/bootimage/touch) imports absent from the public kernel headers. */
 #pragma once
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <syscon/syscon.h>
 #include <sysmem/suspend.h>
 #include <threadmgr/threadmgr.h>

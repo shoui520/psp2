@@ -6,6 +6,7 @@
  */
 
 #include "sysmem_internal.h"
+#include <sysmem/uid_guid.h>
 #include <sysmem/compiler.h>
 
 /* name unknown */

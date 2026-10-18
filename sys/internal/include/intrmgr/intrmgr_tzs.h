@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* an SMC service of the secure monitor: the caller's r0-r3 */
 typedef int (*SceKernelMonitorCallHandler)(int arg0, int arg1, int arg2, int arg3);

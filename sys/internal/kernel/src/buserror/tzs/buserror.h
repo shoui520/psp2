@@ -6,7 +6,7 @@
 #define SceDebugForDriver_374B7868		SceDebugForTZS_F851BA4F
 #define SceDebugForDriver_FD753E7A			SceDebugForTZS_618F89E6
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <modulemgr/modulemgr.h>
 #include <sysmem/debug.h>
 #include <intrmgr/intrmgr_tzs.h>

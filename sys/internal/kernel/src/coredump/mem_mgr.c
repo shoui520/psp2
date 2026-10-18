@@ -1,6 +1,6 @@
 /* Coredump persistent backing blocks and per-dump heaps. */
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <stddef.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>

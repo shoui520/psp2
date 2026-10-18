@@ -4,7 +4,7 @@
  */
 
 #include <fw.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include "gpucoredump.h"
 
 /* the captured values, each a dump segment */

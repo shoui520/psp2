@@ -1,7 +1,7 @@
 #ifndef SCE_NETPS_RESOURCE_H
 #define SCE_NETPS_RESOURCE_H
 
-#include <psp2/types.h>
+#include <scetypes.h>
 
 struct socket;
 struct SceNetPsEpoll;

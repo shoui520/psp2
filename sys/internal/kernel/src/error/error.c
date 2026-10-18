@@ -11,6 +11,7 @@
  */
 
 #include <psp2kern/kernel/sysclib.h>
+#include <sysmem/uid_guid.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include <rtc/rtc.h>

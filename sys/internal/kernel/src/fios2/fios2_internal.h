@@ -11,7 +11,7 @@
 #ifndef FIOS2_INTERNAL_H
 #define FIOS2_INTERNAL_H
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <iofilemgr/iofilemgr.h>
 #include <acmgr/acmgr.h>
 #include <processmgr/processmgr.h>

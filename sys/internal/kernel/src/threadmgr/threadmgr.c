@@ -18,7 +18,9 @@
 #include "event_flag.h"
 #include "mutex.h"
 #include "affinity.h"
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/memblock.h>
+#include <sysmem/spinlock.h>
 #include <modulemgr/modulemgr.h>
 #include <sysmem/dipsw.h>
 #include <sysmem/suspend.h>

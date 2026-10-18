@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* System-software tool progress services registered by NID 579CC758. */
 typedef struct SysrootDfmgrOps {

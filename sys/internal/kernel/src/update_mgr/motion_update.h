@@ -1,6 +1,6 @@
 #pragma once
 
-#include <psp2/types.h>
+#include <scetypes.h>
 #include <motion/motion_command.h>
 #include <motion/motion_dev.h>
 

@@ -1,5 +1,6 @@
 /* Sysroot state, descriptor and shared time services. */
 #include <stddef.h>
+#include <sysmem/uid_guid.h>
 #include <stdint.h>
 #include <kernel_boot_loader/kbl_param.h>
 #include <systimer/timer_regs.h>

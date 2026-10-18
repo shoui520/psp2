@@ -6,7 +6,8 @@
  */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/spinlock.h>
 #include <sysmem/cpu.h>
 #include <kernel/error.h>
 #include <intrmgr/gic_regs.h>

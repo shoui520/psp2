@@ -1,7 +1,7 @@
 /* Complete AppMgr formatter owners recovered from original constructors/readers. */
 #pragma once
 
-#include <psp2common/types.h>
+#include <scetypes.h>
 #include <stdint.h>
 
 typedef struct AppmgrFatFormatArguments {

@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <psp2/types.h>
+#include <scetypes.h>
 #include <net/header/ip.h>
 #include "udp.h"
 #include "tcp.h"

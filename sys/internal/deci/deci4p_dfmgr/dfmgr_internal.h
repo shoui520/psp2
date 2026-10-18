@@ -11,7 +11,8 @@
 
 #include <fw.h>
 #include <string.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/spinlock.h>
 #include <sysmem/cpu.h>
 #include <sysmem/debug.h>
 /* deci4p_dfmgr/deci4p.h declares sceDfMgrClose void; it returns an error code */

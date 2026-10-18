@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <gpu/gpu_es4_trace.h>
 #include <pamgr/pamgr_trace.h>
 #include <lowio/pervasive.h>

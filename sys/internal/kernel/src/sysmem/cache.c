@@ -8,7 +8,7 @@
 #include <sysmem/cp15.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <fw.h>
 #include <sysmem/debug.h>
 #include <sysmem/cpu.h>

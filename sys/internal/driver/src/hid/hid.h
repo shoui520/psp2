@@ -2,7 +2,7 @@
 #pragma once
 
 #include <stddef.h>
-#include <psp2/types.h>
+#include <scetypes.h>
 
 typedef struct SceHidKeyboardReport {
 	SceUInt8 error;

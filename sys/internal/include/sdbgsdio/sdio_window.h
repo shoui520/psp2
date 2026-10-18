@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* the windows' physical addresses: SceSDbgSdio0 and SceDbgSdio1 */
 #define SDIO_WINDOW_PADDR(n)	(0xe5800000 + (n) * SDIO_WINDOW_SIZE)

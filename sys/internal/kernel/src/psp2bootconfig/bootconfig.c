@@ -8,6 +8,7 @@
  */
 
 #include <fw.h>
+#include <stddef.h>
 #include <kernel_boot_loader/kbl.h>
 
 #define ARRAY_SIZE(a)	(sizeof(a) / sizeof((a)[0]))

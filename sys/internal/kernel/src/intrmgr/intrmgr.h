@@ -3,7 +3,7 @@
 
 #include <sysmem/cp15.h>
 #include <sysmem/barrier.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/debug.h>

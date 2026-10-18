@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <psp2/types.h>
+#include <scetypes.h>
 
 typedef struct VeneziaDebugTraceEvent {
 	uint32_t marked;

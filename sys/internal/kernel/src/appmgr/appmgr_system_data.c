@@ -1,6 +1,8 @@
 /* System-data files and their PlayReady information and payload. */
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <kernel/types.h>
+#include <sysmem/uid_guid.h>
 #include <iofilemgr/iofilemgr.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysmem.h>

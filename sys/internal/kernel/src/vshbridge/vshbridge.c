@@ -5,7 +5,7 @@
  * program. The exports taking user pointers are wrapped in
  * vshbridge_user.c, which copies the data in and out.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <sysmem/debug.h>

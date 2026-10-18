@@ -8,7 +8,7 @@
 int SceHdmiForDriver_99A3CABE(int mute);
 int SceHdmiForDriver_08AFFB03(int mute);
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 int SceHdmiForDriver_B04F5B6A(void);
 int SceHdmiForDriver_D929E4E5(void);

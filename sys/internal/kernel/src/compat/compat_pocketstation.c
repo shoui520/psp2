@@ -1,6 +1,6 @@
 /* PocketStation title syscall; source filename inferred. */
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <acmgr/acmgr.h>
 #include <intrmgr/syscall.h>
 #include <sysmem/sysmem.h>

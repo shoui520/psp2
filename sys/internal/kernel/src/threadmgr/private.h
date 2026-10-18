@@ -3,7 +3,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/spinlock.h>
 #include <kernel/error.h>
 #include <threadmgr/threadcb.h>
 #include <threadmgr/threadmgr_debugger.h>

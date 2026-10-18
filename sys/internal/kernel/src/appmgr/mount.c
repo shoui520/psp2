@@ -1,6 +1,8 @@
 /* Application content mounts. */
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <kernel/types.h>
+#include <authmgr/sblauthmgr.h>
 #include <sysmem/sysmem.h>
 #include <ss_mgr/ss_mgr.h>
 #include <psp2kern/kernel/processmgr.h>

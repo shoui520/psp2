@@ -2,7 +2,7 @@
  * SceHdmi EDID manager (Sony's edid_manager.c): reads the sink's EDID and
  * parses what SceHdmi uses from it into SceHdmiEdidInfo.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <fw.h>
 #include <sysmem/debug.h>
 #include "hdmi_internal.h"

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stddef.h>
-#include <psp2/types.h>
+#include <scetypes.h>
 
 typedef struct BbmcGpsCellInfo {
 	SceUInt32 radioInterface;

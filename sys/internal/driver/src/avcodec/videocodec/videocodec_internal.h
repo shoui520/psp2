@@ -1,7 +1,7 @@
 #pragma once
 
-#include <psp2/types.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/spinlock.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <vnz_wrapper/venezia_debug.h>
 #include <avcdec.h>

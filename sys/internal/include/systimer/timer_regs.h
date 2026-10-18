@@ -9,7 +9,8 @@
 #pragma once
 
 #include <stddef.h>
-#include <psp2common/types.h>
+#include <scetypes.h>
+#include <stdint.h>
 
 #define TIMER_LONG_REG_BASE(n)		(0xe20b1000 + (n) * 0x1000)
 #define TIMER_WORD_REG_BASE(n)		(0xe20b7000 + (n) * 0x1000)

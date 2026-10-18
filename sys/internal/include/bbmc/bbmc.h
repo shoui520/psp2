@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stddef.h>
-#include <psp2common/types.h>
+#include <scetypes.h>
 
 typedef struct BbmcSubscribeFeatureIdParam {
 	SceInt32 subscriberId;

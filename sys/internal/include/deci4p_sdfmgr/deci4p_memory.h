@@ -3,7 +3,7 @@
 #define SCE_DECI4P_MEMORY_H
 
 #include <stdint.h>
-#include <psp2/types.h>
+#include <scetypes.h>
 
 static inline void deci4pCopyBytes(void *destination, const void *source,
 				 SceSize size)

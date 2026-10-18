@@ -1,6 +1,6 @@
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* Access-manager callback registered through NID BE1EF51C. */
 typedef struct SysrootAcmgrOps {

@@ -2,7 +2,7 @@
 #pragma once
 #include <stddef.h>
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <ss_mgr/ss_mgr.h>
 #include <dmacmgr/dmac_regs.h>
 #include <threadmgr/threadmgr.h>

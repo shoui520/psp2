@@ -9,7 +9,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <threadmgr/threadmgr_event.h>
 #include <threadmgr/event.h>
 #include "private.h"

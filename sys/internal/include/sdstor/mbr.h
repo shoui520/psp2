@@ -5,7 +5,7 @@
  */
 #pragma once
 
-#include <psp2common/types.h>
+#include <scetypes.h>
 #include <stddef.h>
 
 #define SCE_MBR_MAGIC		"Sony Computer Entertainment Inc."

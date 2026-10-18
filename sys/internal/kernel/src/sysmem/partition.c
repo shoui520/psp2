@@ -6,6 +6,7 @@
  */
 
 #include "sysmem_internal.h"
+#include <sysmem/uid_guid.h>
 #include "memblock_obj_module.h"
 #include "memblock/status_module.h"
 

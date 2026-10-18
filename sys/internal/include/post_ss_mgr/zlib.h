@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 #define SCE_ZLIB_VERSION	"1.2.5"
 

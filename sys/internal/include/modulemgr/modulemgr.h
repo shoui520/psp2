@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <kernel/modulemgr.h>
 #include <modulemgr/modulemgr_control.h>
 
@@ -56,9 +56,11 @@ typedef struct SceKernelSystemSwVersion {
 	SceUInt versionExtra;		/* 0 */
 } SceKernelSystemSwVersion;
 
+#ifndef __cplusplus
 _Static_assert(sizeof(SceKernelSegmentInfo) == 0x18, "SceKernelSegmentInfo size");
 _Static_assert(sizeof(SceKernelModuleInfo) == 0x1b8, "SceKernelModuleInfo size");
 _Static_assert(sizeof(SceKernelSystemSwVersion) == 0x28, "SceKernelSystemSwVersion size");
+#endif
 
 int sceKernelGetSystemSwVersion(SceKernelSystemSwVersion *info);
 

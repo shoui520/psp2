@@ -7,6 +7,7 @@
  */
 
 #include <sysmem/sysroot.h>
+#include <sysmem/uid_guid.h>
 #include "power_private.h"
 
 /* LED 2 across a suspend */

@@ -8,7 +8,7 @@
  */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <hdmi/hdmi.h>
 
 #define SCE_HDMI_ERROR_INVALID_ARGUMENT	0x80370001

@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* Process events (deci4p_loadp registers the table, NID 0F07C3FC; processmgr and modulemgr raise them). */
 typedef struct SysrootProcessEventOps {

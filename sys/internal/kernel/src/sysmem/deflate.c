@@ -11,7 +11,7 @@
  * Huffman codes are decoded canonically instead of through Sony's tables.
  */
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/utils.h>
 #include <kernel/error.h>
 #include <sysmem/sysclib.h>

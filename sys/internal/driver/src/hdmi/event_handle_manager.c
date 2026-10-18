@@ -4,7 +4,8 @@
  * SceHdmiForDriver. Device events 0 and 1 are the unplug and plug of the sink
  * ("%s Ch UnPluged", "%s Ch Pluged"); the EDID is dropped or read first.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <stddef.h>
 #include <fw.h>
 #include <sysmem/debug.h>
 #include "hdmi_internal.h"

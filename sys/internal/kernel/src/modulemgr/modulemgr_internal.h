@@ -10,7 +10,8 @@
 #ifndef MODULEMGR_INTERNAL_H
 #define MODULEMGR_INTERNAL_H
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/spinlock.h>
 #include <authmgr/sblauthmgr.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysmem.h>

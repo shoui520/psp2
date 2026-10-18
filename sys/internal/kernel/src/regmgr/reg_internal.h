@@ -7,7 +7,7 @@
 #ifndef REG_INTERNAL_H
 #define REG_INTERNAL_H
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <string.h>
 #include <sysmem/utils.h>

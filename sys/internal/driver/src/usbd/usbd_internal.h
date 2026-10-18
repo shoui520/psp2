@@ -11,7 +11,7 @@
 #define USBD_INTERNAL_H
 
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <usbd/usbd.h>
 #include <sysmem/procevent.h>
 

@@ -2,7 +2,7 @@
 #pragma once
 
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 typedef struct AppmgrExtraAppParam {
 	unsigned char arguments[6144];

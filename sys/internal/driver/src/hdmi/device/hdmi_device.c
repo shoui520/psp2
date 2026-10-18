@@ -5,7 +5,7 @@
  * HdmiDeviceHw* layer that forwards them to the AD80244 driver.
  * Internal names are ours unless a comment says otherwise.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <lowio/gpio.h>
 #include <fw.h>

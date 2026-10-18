@@ -2,7 +2,7 @@
 #pragma once
 
 #include <vitasdk/build_utils.h>
-#include <psp2/types.h>
+#include <scetypes.h>
 
 typedef struct SceJpegMJpegInitParam {
 	SceSize size;
@@ -38,7 +38,7 @@ typedef struct SceJpegSplitDecodeCtrl {
 	unsigned int internalData[3];
 } SceJpegSplitDecodeCtrl;
 
-VITASDK_BUILD_ASSERT_EQ(12, SceJpegMJpegInitParam);
-VITASDK_BUILD_ASSERT_EQ(8, SceJpegPitch);
-VITASDK_BUILD_ASSERT_EQ(52, SceJpegOutputInfo);
-VITASDK_BUILD_ASSERT_EQ(96, SceJpegSplitDecodeCtrl);
+_Static_assert(sizeof(SceJpegMJpegInitParam) == 12, "SceJpegMJpegInitParam");
+_Static_assert(sizeof(SceJpegPitch) == 8, "SceJpegPitch");
+_Static_assert(sizeof(SceJpegOutputInfo) == 52, "SceJpegOutputInfo");
+_Static_assert(sizeof(SceJpegSplitDecodeCtrl) == 96, "SceJpegSplitDecodeCtrl");

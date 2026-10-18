@@ -3,6 +3,7 @@
  */
 
 #include "power_private.h"
+#include <sysmem/uid_guid.h>
 
 void powerDisplayIdleExpired(uint32_t timerId, uint32_t elapsed,
 			     void *argument, uint32_t elapsedHigh);

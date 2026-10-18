@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* a mount point, e.g. "ux0:..." as SceAppMgr returns it */
 typedef struct SceAppMgrRdrfpMountPoint {

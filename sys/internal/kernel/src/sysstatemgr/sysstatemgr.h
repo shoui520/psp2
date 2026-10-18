@@ -1,7 +1,8 @@
 /* SceSysStateMgr private interfaces and configuration-reader state. */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/memblock.h>
 #include <iofilemgr/iofilemgr.h>
 #include <modulemgr/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>

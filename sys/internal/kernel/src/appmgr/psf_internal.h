@@ -1,7 +1,7 @@
 #ifndef APPMGR_PSF_INTERNAL_H
 #define APPMGR_PSF_INTERNAL_H
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <stddef.h>
 
 typedef struct AppmgrPsfDiskEntry {

@@ -1,7 +1,7 @@
 /* Complete SCE PowerVR miscellaneous-query and client-registration records. */
 #pragma once
 
-#include <psp2/types.h>
+#include <scetypes.h>
 #include <gpu/img_bool.h>
 
 typedef struct PVRSRV_EVENTOBJECT {

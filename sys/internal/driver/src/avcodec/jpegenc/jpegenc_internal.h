@@ -1,6 +1,6 @@
 #pragma once
 
-#include <psp2/types.h>
+#include <scetypes.h>
 #include <scejpegenc.h>
 
 /* The syscall setters copy this complete 40-byte host control record.

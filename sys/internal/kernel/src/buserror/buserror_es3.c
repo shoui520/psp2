@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <psp2kern/kernel/sysclib.h>
 #if FW_DEBUG
 #define SCE_BUSERROR_TABLES_ONLY

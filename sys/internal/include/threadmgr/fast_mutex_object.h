@@ -2,7 +2,8 @@
 #pragma once
 
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/spinlock.h>
 
 struct ThreadCB;
 struct ThreadmgrWaitQueue;

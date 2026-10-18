@@ -1,6 +1,6 @@
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* sceKernelGetProcessInfo's output (os0:kd/processmgr.skprx) */
 typedef struct SceKernelProcessInfo {

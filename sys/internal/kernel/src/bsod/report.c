@@ -1,5 +1,6 @@
 /* Register and stack reports from the captured ARM exception frame. */
 #include <sysmem/cp15.h>
+#include <sysmem/uid_guid.h>
 #include "bsod_internal.h"
 #include <stdio.h>
 #include "report_data.h"

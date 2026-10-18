@@ -5,7 +5,7 @@
  * to a PSM developer assistant). The user-pointer exports are wrapped in
  * drmbridge_user.c.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <intrmgr/syscall.h>
 #include <vshbridge/vshbridge_imports.h>
 #include "vshbridge.h"

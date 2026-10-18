@@ -3,7 +3,9 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <kernel/types.h>
+#include <sysmem/memblock.h>
 #include <sysmem/cpu.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>

@@ -1,6 +1,6 @@
 /* SceNgs memory-size alignment. Internal Sony names are unavailable. */
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <stdint.h>
 #include "ngs_voice_definition.h"
 

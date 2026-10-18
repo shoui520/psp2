@@ -2,7 +2,7 @@
 #pragma once
 
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* SceUartReg: seven ports, one 0x10000-byte window each; SceUartClkgenReg */
 #define UART_PORTS			7

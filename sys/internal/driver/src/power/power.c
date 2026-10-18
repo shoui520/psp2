@@ -5,6 +5,7 @@
 
 #include "power_private.h"
 #include <power/power.h>
+#include <sysmem/uid_guid.h>
 
 static inline __attribute__((always_inline)) int powerCreateProcessStorage(void);
 

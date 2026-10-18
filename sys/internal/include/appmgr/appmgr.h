@@ -1,6 +1,6 @@
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <stdint.h>
 
 /* SceAppMgr's error codes beyond the SDK's (appmgr.h): the henkaku wiki's and vitasdk's names */

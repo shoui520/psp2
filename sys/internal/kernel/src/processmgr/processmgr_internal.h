@@ -9,7 +9,7 @@
 #ifndef PROCESSMGR_INTERNAL_H
 #define PROCESSMGR_INTERNAL_H
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
 #include <sysmem/procevent.h>

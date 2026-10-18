@@ -7,7 +7,7 @@
 #define THREADMGR_SYSCALL_CONTEXT_H
 
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include "private.h"
 #include <sysmem/sysroot.h>
 

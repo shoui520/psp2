@@ -5,7 +5,9 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <stdint.h>
+#include <kernel/types.h>
 #include <kernel/iofilemgr.h>
 
 /*

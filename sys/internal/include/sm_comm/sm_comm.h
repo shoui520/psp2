@@ -1,7 +1,8 @@
 /* SceSblSmCommForKernel: secure-module communication. */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <authmgr/sblauthmgr.h>
 
 /* Both words are returned by scheduler wait. Callers return result as status;
  * additionalResult is preserved without assigning it a more specific meaning.

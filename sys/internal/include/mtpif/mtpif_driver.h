@@ -5,7 +5,7 @@
  */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 const void *SceMtpIfForDriver_16D7DBCC(int port);		/* the port (1) */
 int SceMtpIfForDriver_5245D237(const void *port);		/* start the driver */

@@ -7,7 +7,11 @@
  * each with its own data, as in the original. Internal names are unknown unless
  * a comment says otherwise.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <kernel/types.h>
+#include <sysmem/memblock.h>
+#include <sysmem/spinlock.h>
+#include <sysmem/uid_guid.h>
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>

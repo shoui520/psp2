@@ -1,6 +1,7 @@
 /* Process capability queries used by Sysroot and DIP-switch services. */
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <authmgr/sblauthmgr.h>
 #include <acmgr/acmgr.h>
 
 /* Names unknown; capabilities are numbered most-significant bit first. */

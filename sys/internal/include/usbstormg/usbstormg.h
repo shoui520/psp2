@@ -1,7 +1,7 @@
 /* SceUsbstorMg: undocumented driver imports, named by their original NIDs. */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <magicgate/magicgate.h>
 #include <acmgr/acmgr.h>
 

@@ -5,6 +5,7 @@
  */
 
 #include "sysmem_internal.h"
+#include <sysmem/uid_guid.h>
 
 /* the object heap of the kernel, set from the boot parameters */
 static ObjectHeap *s_kernelObjectHeap;

@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <modulemgr/modulemgr.h>
 #include <sysmem/des.h>
 #include <gpu/sgxmkif_sce.h>

@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <hdmi/hdmi.h>
 #include <stdint.h>
 #include <lowio/pervasive.h>

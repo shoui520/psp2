@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <stddef.h>
 
 /* ===== display ===== */

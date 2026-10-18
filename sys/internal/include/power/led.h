@@ -2,7 +2,7 @@
 #define SCE_LED_H
 
 #include <stddef.h>
-#include <psp2common/types.h>
+#include <scetypes.h>
 
 /* SceLedForDriver_EA24BE03's option for every mode but SCE_LED_MODE_SCRIPT. */
 typedef struct LedModeParam {

@@ -2,6 +2,7 @@
  * SceDeci4pLoadp (Sony's loadp.c): see loadp.h.
  */
 #include <sysmem/sysroot.h>
+#include <sysmem/uid_guid.h>
 #include <appmgr/appmgr_launch.h>
 #include <appmgr/appmgr.h>
 #include <sysmem/cpu.h>

@@ -1,7 +1,7 @@
 /* Audio driver interfaces absent from the pinned public SDK. */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 int SceAudioForDriver_134C96C1(int freq);
 int SceAudioForDriver_FC375BAC(int mode);

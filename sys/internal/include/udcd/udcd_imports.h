@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <power/power.h>
 #include <lowio/pervasive.h>
 #include <syscon/syscon.h>

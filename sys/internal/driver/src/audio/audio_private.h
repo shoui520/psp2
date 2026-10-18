@@ -4,7 +4,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/list.h>
 
 typedef struct AudioVolumeRamp {

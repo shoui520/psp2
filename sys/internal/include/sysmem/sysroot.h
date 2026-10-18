@@ -4,7 +4,8 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <authmgr/sblauthmgr.h>
 #include <sysmem/sysroot_init.h>
 #include <sysmem/sysroot_netps.h>
 #include <sysmem/sysroot_appmgr.h>

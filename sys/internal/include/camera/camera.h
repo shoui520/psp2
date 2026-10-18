@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* The extended Sony camera-read parameter; the earlier SDK revision is smaller. */
 typedef struct SceCameraReadV2 {

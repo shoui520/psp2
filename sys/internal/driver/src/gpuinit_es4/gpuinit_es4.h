@@ -1,7 +1,7 @@
 /* SceGpuEs4 services that SceGpuEs4Init (the SGX init server) imports. */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <gpu/sgxmkif_sce.h>
 #include "../gpu_es4/srvkm/sgxutils_sce.h"
 #include "../gpu_es4/srvkm/perproc_sce.h"

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 typedef struct GpuTraceInfo {
 	SceUInt32 socRevision;

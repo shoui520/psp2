@@ -7,7 +7,8 @@
 #define THREADMGR_MUTEX_H
 
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/spinlock.h>
 #include <threadmgr/mutex.h>
 #include "private.h"
 #include <threadmgr/uid_waitable.h>

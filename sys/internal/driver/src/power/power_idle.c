@@ -3,6 +3,7 @@
  */
 
 #include "power_private.h"
+#include <sysmem/uid_guid.h>
 #include <power/power.h>
 
 /* exported, and inlined in this unit as in the original */

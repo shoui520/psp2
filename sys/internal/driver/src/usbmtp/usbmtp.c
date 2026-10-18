@@ -4,6 +4,7 @@
  * requests on the control pipe.
  */
 #include "usbmtp.h"
+#include <sysmem/uid_guid.h>
 
 /* Error names unknown; the SDK error index does not name this range. */
 #define MTP_PROTOCOL ((int)0x80543601)

@@ -5,6 +5,7 @@
  */
 
 #include <sysmem/cp15.h>
+#include <sysmem/uid_guid.h>
 #include <systimer/timer_regs.h>
 #include <pamgr/perfmon_regs.h>
 #include "sysmem_internal.h"

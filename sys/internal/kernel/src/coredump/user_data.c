@@ -5,7 +5,7 @@
  * not Sony's (unknown).
  */
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/sysmem.h>
 #include <coredump/coredump.h>
 #include <intrmgr/syscall.h>

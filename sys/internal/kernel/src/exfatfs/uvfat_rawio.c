@@ -2,7 +2,7 @@
 #include <sysmem/debug.h>
 #include <string.h>
 #include "exfatfs_internal.h"
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <threadmgr/threadmgr.h>
 
 extern void *allocateFatBuffer(SceSize size);

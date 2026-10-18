@@ -2,7 +2,8 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/memblock.h>
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>

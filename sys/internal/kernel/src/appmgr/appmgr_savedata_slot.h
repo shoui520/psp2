@@ -1,7 +1,7 @@
 #ifndef APPMGR_SAVEDATA_SLOT_H
 #define APPMGR_SAVEDATA_SLOT_H
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <appmgr/appmgr_savedata.h>
 #include <stddef.h>
 

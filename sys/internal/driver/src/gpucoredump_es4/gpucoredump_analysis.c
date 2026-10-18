@@ -3,7 +3,8 @@
  * the console and into the dump (Sony's file name unknown).
  */
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <kernel/types.h>
 #include "gpucoredump.h"
 #include <gpucoredump_es4/gpucoredump_es4_imports.h>
 

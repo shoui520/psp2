@@ -3,7 +3,7 @@
  * edid_info.c's accessors, so this is a file of its own; no debug record names
  * it, the name is ours.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include "hdmi_internal.h"
 #include <sysmem/sysclib.h>
 

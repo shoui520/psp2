@@ -2,7 +2,7 @@
 #define BBMC_MODEM_CONFIGURATION_H
 
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /*
  * The complete 512-byte IdStorage leaf 0x113. Only configurationMode is

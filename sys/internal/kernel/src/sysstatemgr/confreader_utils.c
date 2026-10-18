@@ -1,5 +1,6 @@
 /* Buffers, loaded-object records, and parser stacks for the boot reader. */
 #include "sysstatemgr.h"
+#include <sysmem/uid_guid.h>
 
 int ConfReaderUtilsAllocConfBuf(ConfReader *reader, SceSize size)
 {

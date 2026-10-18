@@ -1,7 +1,7 @@
 /* User-level object records returned to the coredump. */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 typedef struct UlobjFiberInfo {
 	char name[32];

@@ -2,7 +2,7 @@
 #ifndef SCE_NETPS_THREAD_H
 #define SCE_NETPS_THREAD_H
 
-#include <psp2/types.h>
+#include <scetypes.h>
 #include <stddef.h>
 
 typedef struct SceNetPsMutex {

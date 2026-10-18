@@ -2,7 +2,7 @@
 #define BBMC_SIM_REFRESH_H
 
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 typedef struct BbmcRefreshedFile {
 	SceUInt16 fileId;

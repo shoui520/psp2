@@ -1,7 +1,7 @@
 #ifndef SCE_NETPS_PROCESS_H
 #define SCE_NETPS_PROCESS_H
 
-#include <psp2/types.h>
+#include <scetypes.h>
 
 /* A configuration query records each process until the next link change. */
 typedef struct SceNetPsConfigSubscriber {

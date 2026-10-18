@@ -5,7 +5,7 @@
  * rotates by 15; the rest is the upstream algorithm.
  */
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 static inline SceUInt32 rotl32(SceUInt32 x, int r)
 {

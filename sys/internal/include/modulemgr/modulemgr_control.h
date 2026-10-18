@@ -1,7 +1,7 @@
 /* Module control blocks shared with kernel debugger consumers. */
 #pragma once
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 struct SceModuleExports;
 struct SceModuleImports;
@@ -74,6 +74,7 @@ typedef struct SceModuleCB {
 	SceUInt32 reserved3;
 } SceModuleCB;
 
+#ifndef __cplusplus
 _Static_assert(sizeof(SceModuleSegment) == 0x14, "module segment record");
 _Static_assert(sizeof(SceModuleCB) == 0xec, "module control record");
 _Static_assert(offsetof(SceModuleCB, modid) == 0xc, "module ID");
@@ -83,3 +84,4 @@ _Static_assert(offsetof(SceModuleCB, fingerprint) == 0x30, "module fingerprint")
 _Static_assert(offsetof(SceModuleCB, path) == 0x68, "module path");
 _Static_assert(offsetof(SceModuleCB, nSegments) == 0x6c, "module segment count");
 _Static_assert(offsetof(SceModuleCB, segment) == 0x70, "module segments");
+#endif

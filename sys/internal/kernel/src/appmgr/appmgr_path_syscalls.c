@@ -1,6 +1,6 @@
 /* Dispatch for application and user-directory path queries. */
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <appmgr/appmgr.h>
 
 extern int appmgrConvertVs0UserDrivePath(const char *path, char *output,

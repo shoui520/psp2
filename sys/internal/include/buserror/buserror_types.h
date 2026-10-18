@@ -2,7 +2,7 @@
 #ifndef SCE_BUSERROR_TYPES_H
 #define SCE_BUSERROR_TYPES_H
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* the record in the sysroot shared memory (+0x6000) */
 typedef struct BusErrorRecord {

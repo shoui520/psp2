@@ -9,6 +9,7 @@
  */
 
 #include <sysmem/cpu.h>
+#include <sysmem/uid_guid.h>
 #include <sysmem/dipsw.h>
 #include <syscon/syscon.h>
 #include <acmgr/acmgr.h>

@@ -3,7 +3,8 @@
  * event handler, the transmitter's packet enables, HDCP/EDID modes, the chip
  * id and the CEC power. Internal names are ours unless a comment says otherwise.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/uid_guid.h>
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <lowio/gpio.h>

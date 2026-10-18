@@ -8,7 +8,7 @@
  */
 
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/debug.h>
 
 /* the next test value: an LCG whose increment is its multiplier */

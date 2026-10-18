@@ -4,7 +4,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <psp2/types.h>
+#include <scetypes.h>
 #include <magicgate/magicgate.h>
 
 typedef struct MagicGateDriver {

@@ -1,7 +1,7 @@
 #ifndef SCE_NET_PS_INTERNAL_H
 #define SCE_NET_PS_INTERNAL_H
 
-#include <psp2/types.h>
+#include <scetypes.h>
 #include <psp2/net/net.h>
 #include <net_ps/netdrv.h>
 #include <net_ps/netps_gateway.h>

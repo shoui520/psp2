@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <stdint.h>
 
 int SceSblAIMgrForDriver_6D5A3FC9(void);	/* vitasdk: ksceSblAimgrIsJapaneseFat */

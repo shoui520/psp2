@@ -1,5 +1,8 @@
 /* SceDeci4pSDfMgr: Sony's sdfmgr.c translation unit. */
-#include <psp2/types.h>
+#include <scetypes.h>
+#include <sysmem/memblock.h>
+#include <sysmem/spinlock.h>
+#include <sysmem/uid_guid.h>
 #include "sdfmgr_internal.h"
 #include <intrmgr/intrmgr.h>
 #include <sysmem/sysroot.h>

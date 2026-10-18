@@ -2,7 +2,7 @@
 #pragma once
 
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* name unknown: one argument buffer transferred by an RPC thunk. */
 typedef struct VeneziaRpcMemoryTransfer {

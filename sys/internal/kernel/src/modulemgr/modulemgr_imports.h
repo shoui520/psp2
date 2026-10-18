@@ -7,7 +7,7 @@
 #ifndef MODULEMGR_IMPORTS_H
 #define MODULEMGR_IMPORTS_H
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/dipsw.h>

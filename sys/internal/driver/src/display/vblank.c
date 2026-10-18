@@ -2,7 +2,8 @@
  * SceDisplay: vblank interrupts, vcounts and the waits on them.
  * File name unknown; the module links its parts in this order.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/spinlock.h>
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>

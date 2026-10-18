@@ -14,7 +14,8 @@
 #endif
 #define _PSP2KERN_KERNEL_KBL_KBL_H_
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/memblock.h>
 #include <sysmem/dipsw.h>
 #include <ss_mgr/ss_mgr.h>
 #include <stdint.h>

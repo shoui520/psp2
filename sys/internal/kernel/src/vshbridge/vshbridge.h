@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <kernel/error.h>
 #include <modulemgr/modulemgr.h>
 #include <iofilemgr/iofilemgr.h>

@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <excpmgr/excpmgr.h>
 #include <excpmgr/excpmgr_cpu.h>
 

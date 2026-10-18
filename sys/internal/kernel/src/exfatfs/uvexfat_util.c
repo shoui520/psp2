@@ -1,4 +1,4 @@
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <sysmem/debug.h>

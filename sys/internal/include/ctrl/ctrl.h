@@ -3,7 +3,7 @@
  */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <syscon/syscon.h>
 #include <sysmem/sysroot.h>
 #include <acmgr/acmgr.h>

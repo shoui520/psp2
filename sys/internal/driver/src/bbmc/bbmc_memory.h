@@ -1,6 +1,6 @@
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <syscon/syscon.h>
 
 typedef struct BbmcControl BbmcControl;

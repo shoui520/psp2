@@ -5,7 +5,8 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <authmgr/sblauthmgr.h>
 
 /* the process event parameters processmgr passes to the handlers: sysmem/procevent.h */
 #include <sysmem/procevent.h>

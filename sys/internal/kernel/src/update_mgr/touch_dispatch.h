@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <syscon/syscon.h>
 
 /* The updater's complete front/back panel operation table. */

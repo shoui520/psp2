@@ -2,7 +2,7 @@
 #pragma once
 
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <appmgr/appmgr_launch.h>
 #include "appmgr_event.h"
 #include "appmgr_internal_util.h"

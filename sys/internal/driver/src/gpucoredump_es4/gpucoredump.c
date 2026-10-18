@@ -6,7 +6,8 @@
  */
 
 #include <fw.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/uid_guid.h>
 #include <iofilemgr/iofilemgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/dipsw.h>

@@ -1,7 +1,7 @@
 #ifndef SCE_SELF_H
 #define SCE_SELF_H
 
-#include <psp2/types.h>
+#include <scetypes.h>
 #include <modulemgr/certified_file.h>
 
 /* The certified-file envelope and complete SELF extended header. */

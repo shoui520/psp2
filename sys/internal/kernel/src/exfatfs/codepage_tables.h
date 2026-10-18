@@ -1,7 +1,7 @@
 /* Unicode mappings for bytes 0x80..0xff; zero denotes no character. */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 static const SceUInt16 cp1258ToUnicode[128] = {
 	0x20ac, 0x0000, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021, /* 80-87: € · ‚ ƒ „ … † ‡ */

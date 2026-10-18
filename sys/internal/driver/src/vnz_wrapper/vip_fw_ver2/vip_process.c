@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/cpu.h>
 #include <sysmem/debug.h>
 #include <lowio/pervasive_regs.h>

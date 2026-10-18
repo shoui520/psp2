@@ -3,6 +3,7 @@
  */
 
 #include <sysmem/sysroot.h>
+#include <sysmem/uid_guid.h>
 #include <sysmem/cp15.h>
 #include "power_private.h"
 #include <syscon/syscon_scratchpad.h>

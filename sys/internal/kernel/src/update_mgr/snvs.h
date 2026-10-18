@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <psp2common/types.h>
+#include <scetypes.h>
 
 typedef struct SpkgSnvsSector {
 	uint32_t words[8];

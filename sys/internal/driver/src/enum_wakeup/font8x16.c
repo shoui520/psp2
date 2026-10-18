@@ -2,7 +2,8 @@
  * The 8x16 console font: 128 glyphs (ASCII), 16 rows each, the leftmost
  * pixel in bit 0.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <kernel/types.h>
 
 const SceUInt8 ewFont8x16[128 * 16] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,	/* 0x00 */

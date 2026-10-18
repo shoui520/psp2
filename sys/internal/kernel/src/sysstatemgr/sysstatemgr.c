@@ -1,5 +1,6 @@
 /* SceSysStateMgr: complete the kernel bootstrap and execute its configuration. */
 #include "sysstatemgr.h"
+#include <sysmem/uid_guid.h>
 
 const char *s_bootimage;
 int s_noRemoteRpath;

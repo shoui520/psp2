@@ -1,7 +1,7 @@
 #ifndef SCE_NETPS_DUMP_H
 #define SCE_NETPS_DUMP_H
 
-#include <psp2/types.h>
+#include <scetypes.h>
 #include <stddef.h>
 
 /* Sony's private capture ring: the complete allocation precedes its buffer. */

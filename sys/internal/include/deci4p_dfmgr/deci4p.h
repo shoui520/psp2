@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 #define SCE_DECI4P_VERSION		0x40
 #define SCE_DECI4P_PORT_TARGET		0x8000

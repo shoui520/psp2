@@ -3,6 +3,7 @@
  * subbudget and VM domain syscalls and the module start.
  */
 #include <sysmem/cp15.h>
+#include <sysmem/uid_guid.h>
 #include "sysmem_internal.h"
 #include "memblock_obj_module.h"
 #include "sysmem_boot.h"

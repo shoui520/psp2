@@ -1,5 +1,5 @@
 /* Variable-length CBC counter stream. */
-#include <psp2/types.h>
+#include <scetypes.h>
 #include "adhoc.h"
 #include "drm_crypto.h"
 #include <sysmem/utils.h>

@@ -1,6 +1,6 @@
 /* Standalone UTF16 utilities; Sony's source filename is not in debug records. */
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <psp2kern/kernel/sysclib.h>
 
 int utf16Length(const SceUInt16 *string)

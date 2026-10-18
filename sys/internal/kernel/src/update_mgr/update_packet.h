@@ -1,7 +1,8 @@
 #ifndef UPDATE_MGR_PACKET_H
 #define UPDATE_MGR_PACKET_H
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/memblock.h>
 #include <stddef.h>
 #include "pup.h"
 #include "spkg.h"

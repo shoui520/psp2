@@ -1,6 +1,6 @@
 /* SceUsbMass driver entry points identified by the original diagnostic strings. */
 #pragma once
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <stddef.h>
 #include <threadmgr/threadmgr.h>
 

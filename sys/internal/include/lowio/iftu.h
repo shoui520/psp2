@@ -2,7 +2,7 @@
 #pragma once
 
 #include <vitasdk/build_utils.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -81,10 +81,12 @@ typedef struct SceIftuPlaneState {
 	unsigned int hright_padding;
 } SceIftuPlaneState;
 
-VITASDK_BUILD_ASSERT_EQ(60, SceIftuCscParams);
-VITASDK_BUILD_ASSERT_EQ(40, SceIftuConvParams);
-VITASDK_BUILD_ASSERT_EQ(32, SceIftuFrameBuf);
-VITASDK_BUILD_ASSERT_EQ(84, SceIftuPlaneState);
+#ifndef __cplusplus
+_Static_assert(sizeof(SceIftuCscParams) == 60, "SceIftuCscParams");
+_Static_assert(sizeof(SceIftuConvParams) == 40, "SceIftuConvParams");
+_Static_assert(sizeof(SceIftuFrameBuf) == 32, "SceIftuFrameBuf");
+_Static_assert(sizeof(SceIftuPlaneState) == 84, "SceIftuPlaneState");
+#endif
 
 int SceIftuForDriver_67E37EFC(SceIftuFrameBuf *dst, SceIftuPlaneState *src,
 	      SceIftuConvParams *params);	/* vitasdk: ksceIftuCsc */

@@ -1,7 +1,7 @@
 #ifndef BUSERROR_SMC_H
 #define BUSERROR_SMC_H
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 void busErrorSmc10C(void);
 void busErrorSmc10D(void);

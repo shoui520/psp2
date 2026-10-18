@@ -2,7 +2,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/mmu.h>
 
 /* a memblock type code: access in bits 7:0, memory type in 15:8 (henkaku wiki "memtype bit value") */

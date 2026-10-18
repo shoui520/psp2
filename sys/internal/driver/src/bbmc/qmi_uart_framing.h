@@ -2,7 +2,7 @@
 #define BBMC_QMI_UART_FRAMING_H
 
 #include <stddef.h>
-#include <psp2/types.h>
+#include <scetypes.h>
 
 typedef struct QmiUartDataHeader {
 	SceUInt8 startMarkerHigh;

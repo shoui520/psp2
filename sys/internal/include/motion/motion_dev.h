@@ -2,7 +2,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 typedef struct MotionMagnDeviceInfo {
 	uint16_t deviceId;

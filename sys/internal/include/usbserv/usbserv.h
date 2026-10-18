@@ -1,6 +1,6 @@
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <stdint.h>
 
 /* SceUsbServ's errors (vitasdk's names: no Sony header or record names them) */

@@ -2,7 +2,8 @@
  * SceHdmi: the video and audio modes of the transmitter (output and audio
  * configuration, mutes). Internal names are unknown unless a comment says otherwise.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <stddef.h>
 #include "hdmi_internal.h"
 
 HdmiVideoMode videoMode;

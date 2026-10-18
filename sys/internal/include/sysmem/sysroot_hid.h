@@ -1,7 +1,7 @@
 #pragma once
 
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* hid's dumps for the debugger (NID 34281746): its device table and its internal lists */
 typedef struct SysrootHidOps {

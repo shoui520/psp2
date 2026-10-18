@@ -1,5 +1,5 @@
 /* Sony entry.c: module initialization and callback registration. */
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/procevent.h>
 #include <sysmem/suspend.h>
 #include <threadmgr/threadmgr.h>

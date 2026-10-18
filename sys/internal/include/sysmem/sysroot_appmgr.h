@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 typedef int (*SysrootAppMgrSpawnProcess)(const char *name, int type, const char *path,
 					 SceSize length, const void *args, void *opt,

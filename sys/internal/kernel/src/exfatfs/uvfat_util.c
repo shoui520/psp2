@@ -1,4 +1,4 @@
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <string.h>
 #include <sysmem/debug.h>
 #include "exfatfs_internal.h"

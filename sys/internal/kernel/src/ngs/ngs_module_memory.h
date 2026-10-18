@@ -1,7 +1,7 @@
 #ifndef NGS_MODULE_MEMORY_H
 #define NGS_MODULE_MEMORY_H
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 typedef union NgsParamValue {
 	int integer;

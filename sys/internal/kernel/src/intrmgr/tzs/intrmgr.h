@@ -26,7 +26,7 @@
 #define SceSysmemForDriver_009E1C61			SceSysmemForTZS_658EACE3
 
 #include <fw.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/utils.h>
 #include <sysmem/pmmgr.h>

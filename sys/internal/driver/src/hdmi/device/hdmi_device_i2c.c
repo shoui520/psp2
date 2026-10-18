@@ -3,7 +3,7 @@
  * device/hdmi_device_i2c.c). Transfers longer than the controller takes are
  * split into 8-byte pieces.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <lowio/i2c.h>
 #include <fw.h>
 #include <sysmem/debug.h>

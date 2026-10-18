@@ -6,7 +6,7 @@
  */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 typedef struct SceDtraceProbe {
 	int *enabled;			/* 0x00 */

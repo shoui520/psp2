@@ -3,7 +3,9 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/memblock.h>
+#include <sysmem/spinlock.h>
 #include <sysmem/cpu.h>
 #include <sdif/sdif.h>
 #include "sdif_regs.h"

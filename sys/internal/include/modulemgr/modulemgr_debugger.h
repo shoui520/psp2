@@ -1,7 +1,7 @@
 /* Variable-size records returned by sceKernelGetModuleInfoForDebugger. */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <modulemgr/module_library.h>
 #include <modulemgr/modulemgr_control.h>
 

@@ -5,7 +5,7 @@
 #ifndef RTC_INTERNAL_H
 #define RTC_INTERNAL_H
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <excpmgr/excpmgr_cpu.h>
 #include <rtc/rtc.h>
 #include <syscon/syscon_scratchpad.h>

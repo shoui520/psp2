@@ -40,7 +40,7 @@
 #ifndef SCE_NETPS_SOCKET_H
 #define SCE_NETPS_SOCKET_H
 
-#include <psp2/types.h>
+#include <scetypes.h>
 #include <sys/types.h>
 #include <sys/queue.h>
 #include <stddef.h>

@@ -1,5 +1,5 @@
 /* SceSdstor module initialization. */
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 int sdstorRegisterUsbMassInterrupt(void);
 int sddev_init(void);

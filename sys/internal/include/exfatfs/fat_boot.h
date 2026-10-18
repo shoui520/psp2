@@ -1,7 +1,7 @@
 /* FAT/exFAT boot-sector wire records shared by filesystem and media drivers. */
 #pragma once
 
-#include <psp2/types.h>
+#include <scetypes.h>
 
 typedef struct __attribute__((packed)) SceExfatfsFatBootParameters {
 	unsigned char jump[3];

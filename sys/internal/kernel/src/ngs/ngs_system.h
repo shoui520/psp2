@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <psp2/ngs_internal.h>
 #include <stddef.h>
 

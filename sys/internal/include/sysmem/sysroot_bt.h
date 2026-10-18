@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* bt's services for the debugger (NID 5A4A7F7E) */
 typedef struct SysrootBtOps {

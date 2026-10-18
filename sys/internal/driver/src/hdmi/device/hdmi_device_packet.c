@@ -5,7 +5,8 @@
  * DTrace probes __hdmi__hdmi_set_packet_direct and __hdmi__hdmi_set_packet.
  * Internal names are ours unless a comment says otherwise.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <stddef.h>
 #include <fw.h>
 #include <sysmem/debug.h>
 #include <dtrace/sce/dtrace.h>

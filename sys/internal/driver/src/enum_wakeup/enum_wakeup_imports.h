@@ -7,7 +7,7 @@
 #include <display/display.h>
 #include <ctrl/ctrl.h>
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <idstorage/idstorage.h>
 #include <lowio/pervasive.h>
 #include <lowio/gpio.h>

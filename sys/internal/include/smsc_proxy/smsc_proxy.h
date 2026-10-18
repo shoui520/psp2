@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* interrupt message flags */
 #define MSG_SET_EVENT		0x1

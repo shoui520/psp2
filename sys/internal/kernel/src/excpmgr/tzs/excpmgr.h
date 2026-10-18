@@ -24,7 +24,7 @@
 /* the TZS parts of the shared excpmgr declarations */
 #define EXCPMGR_TZS	1
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/cpu.h>
 #include <sysmem/debug.h>
 #include <excpmgr/excpmgr.h>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <stdint.h>
 
 int sceSblRtcMgrGetCpRtcPhysicalForUser(SceUInt32 *time);

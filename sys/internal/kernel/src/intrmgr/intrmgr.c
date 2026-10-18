@@ -1,5 +1,6 @@
 /* SceKernelIntrMgr: GIC interrupts, subinterrupts and CPU exception state. */
 #include "intrmgr.h"
+#include <sysmem/uid_guid.h>
 #include "intrmgr_readonly.h"
 #include <threadmgr/fast_mutex.h>
 #include <sysmem/compiler.h>

@@ -6,7 +6,8 @@
  * cecDevTx waits for and into the callbacks cec.c registered. Internal names
  * are ours unless a comment says otherwise.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/spinlock.h>
 #include <sysmem/cpu.h>
 #include <fw.h>
 #include <sysmem/debug.h>

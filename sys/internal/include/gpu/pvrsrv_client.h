@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <psp2/types.h>
+#include <scetypes.h>
 #include <gpu/pvrsrv_misc.h>
 
 /*

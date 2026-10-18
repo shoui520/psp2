@@ -9,7 +9,9 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <kernel/constant.h>
+#include <sysmem/spinlock.h>
 #include <kernel/types.h>
 #include <stdint.h>
 

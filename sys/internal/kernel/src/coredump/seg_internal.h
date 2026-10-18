@@ -3,7 +3,7 @@
 #pragma once
 
 #include <elf.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 typedef struct SegIf SegIf;
 typedef struct SegIfMethod SegIfMethod;

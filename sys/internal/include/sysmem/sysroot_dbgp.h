@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /*
  * The debugger's table (deci4p_dbgp registers it, NID 3999F917): the process

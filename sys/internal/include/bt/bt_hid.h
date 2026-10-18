@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 typedef struct _SceBtHidRequest {
 	struct _SceBtHidRequest *next;

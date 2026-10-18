@@ -1,5 +1,6 @@
 /* SceOled: packed nine-bit SPI panel commands and deferred display sequences. */
 #include <stdint.h>
+#include <sysmem/uid_guid.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysroot.h>
 #include <sysmem/sysmem.h>

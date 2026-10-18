@@ -5,7 +5,7 @@
  * letter or a "\\" share) may follow.
  */
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include "fios2_internal.h"
 
 #define IS_SEP(c)	((c) == '/' || (c) == '\\')

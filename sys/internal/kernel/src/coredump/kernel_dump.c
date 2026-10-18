@@ -6,7 +6,7 @@
  * Not Sony's names (unknown).
  */
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <threadmgr/threadmgr.h>
 #include <coredump/coredump.h>
 

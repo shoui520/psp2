@@ -5,7 +5,8 @@
 
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <stdint.h>
 #include <display.h>
 #include <stddef.h>
 

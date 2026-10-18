@@ -1,6 +1,7 @@
 /* SceIdStorage kernel interfaces absent from the pinned public SDK. */
 #pragma once
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <stdint.h>
 
 /* Leaf 0x114: physical camera, accelerometer and gyro locations. */
 typedef struct DeviceLocation {

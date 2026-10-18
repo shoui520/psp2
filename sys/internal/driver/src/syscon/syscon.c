@@ -5,6 +5,7 @@
  */
 
 #include <sysmem/sysmem.h>
+#include <sysmem/uid_guid.h>
 #include <excpmgr/moncall.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/cpu.h>

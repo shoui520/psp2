@@ -1,6 +1,7 @@
 /* Standalone memory, string and ordering utilities used by the PSF library. */
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/uid_guid.h>
 #include <sysmem/sysmem.h>
 #include <arm_neon.h>
 #include <stdint.h>

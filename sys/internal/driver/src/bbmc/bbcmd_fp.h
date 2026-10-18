@@ -1,6 +1,6 @@
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /* Little-endian IEEE representations used by the byte-oriented QMI encoder. */
 typedef struct BbcmdDoubleEncoding {

@@ -1,7 +1,7 @@
 /* Descriptive source name: the original module has no debug records. */
 #include <stddef.h>
 #include <string.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include "drm_crypto.h"
 #include <sysmem/utils.h>
 #include <ss_mgr/ss_mgr.h>

@@ -2,6 +2,7 @@
 #define UPDATE_MGR_INTERNAL_H
 
 #include <stdint.h>
+#include <sysmem/memblock.h>
 #include <stddef.h>
 #include <sysmem/procevent.h>
 #include <motion/motion_dev.h>

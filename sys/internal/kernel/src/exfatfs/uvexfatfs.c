@@ -1,6 +1,6 @@
 /* Mounts which do not use the per-file cluster cache. */
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <string.h>
 #include <sysmem/debug.h>
 #include <iofilemgr/iofilemgr.h>

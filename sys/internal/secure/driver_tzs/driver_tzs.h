@@ -31,7 +31,7 @@
 
 #include <fw.h>
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/cpu.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>

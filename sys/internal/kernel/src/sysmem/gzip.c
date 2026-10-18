@@ -4,7 +4,7 @@
  */
 
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/utils.h>
 #include <kernel/error.h>
 

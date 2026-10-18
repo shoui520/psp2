@@ -2,7 +2,7 @@
  * SceHdmi: video identification codes and the transmitter timings each one
  * needs. Internal names are unknown unless a comment says otherwise.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <lowio/i2c.h>
 #include "hdmi_internal.h"
 

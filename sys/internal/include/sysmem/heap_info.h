@@ -1,7 +1,7 @@
 /* Kernel heap information and the dlmalloc segment ranges it reports. */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 struct malloc_segment_range {
 	void *base;

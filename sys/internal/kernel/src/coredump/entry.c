@@ -1,6 +1,6 @@
 /* SceCoredump module initialization. */
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysroot.h>
 #include <coredump/coredump.h>

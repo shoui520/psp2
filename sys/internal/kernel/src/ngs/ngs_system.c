@@ -1,6 +1,6 @@
 /* SceNgs system memory sizing. */
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <intrmgr/syscall.h>
 
 typedef struct SceNgsSystemInitParams {

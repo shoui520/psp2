@@ -7,7 +7,7 @@
  */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 #define TZS_BRIDGE_AREA_SIZE		0x80
 #define TZS_BRIDGE_AREAS		8

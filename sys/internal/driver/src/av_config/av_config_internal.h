@@ -1,7 +1,8 @@
 #pragma once
 #include <hdmi/hdmi.h>
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <sysmem/spinlock.h>
 
 typedef struct AvConfigScalingRatio {
 	SceSize size;

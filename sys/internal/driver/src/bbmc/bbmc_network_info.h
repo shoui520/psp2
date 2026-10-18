@@ -2,7 +2,7 @@
 #define BBMC_NETWORK_INFO_H
 
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 typedef struct BbmcRoamingIndicator {
 	SceUInt32 radioInterface;

@@ -7,7 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <scetypes.h>
-#include <psp2kern/types.h>
+#include <kernel/types.h>
 #include <sysmem/memblock.h>
 #include <sysmem/mmu.h>
 

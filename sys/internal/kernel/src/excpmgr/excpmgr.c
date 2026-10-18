@@ -1,6 +1,7 @@
 /* ARM exception vectors, handler chains and saved-context diagnostics. */
 #define SCE_DBGINFO_SECTION ".rodata"
 #include "excpmgr.h"
+#include <sysmem/uid_guid.h>
 #include "excpmgr_readonly.h"
 #include <sysmem/compiler.h>
 

@@ -1,5 +1,6 @@
 /* SceUsbSerial: boot USB CDC serial driver. Private names are unknown. */
 #include "usbserial.h"
+#include <sysmem/uid_guid.h>
 #include <intrmgr/syscall.h>
 #include <stddef.h>
 

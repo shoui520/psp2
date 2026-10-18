@@ -4,7 +4,7 @@
  */
 #pragma once
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 /*
  * The DMA operations' records and constants. No Sony header or record names them; the names are

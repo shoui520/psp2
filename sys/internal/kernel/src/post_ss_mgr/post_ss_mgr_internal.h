@@ -7,7 +7,7 @@
 #ifndef POST_SS_MGR_INTERNAL_H
 #define POST_SS_MGR_INTERNAL_H
 
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <sysmem/cpu.h>
 #include <ss_mgr/ss_mgr.h>
 #include <post_ss_mgr/sblpostssmgr.h>

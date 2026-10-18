@@ -2,7 +2,7 @@
  * SceDrmBridge user-pointer exports (Sony's file name unknown): the copies
  * around the bridges in drmbridge.c, as in vshbridge_user.c.
  */
-#include <psp2kern/types.h>
+#include <scetypes.h>
 #include <vshbridge/vshbridge_imports.h>
 #include "vshbridge.h"
 #include "vshbridge_copy.h"

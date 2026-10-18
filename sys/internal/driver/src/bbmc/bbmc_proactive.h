@@ -2,7 +2,7 @@
 #define BBMC_PROACTIVE_H
 
 #include <stddef.h>
-#include <psp2kern/types.h>
+#include <scetypes.h>
 
 typedef struct BbmcProactiveText {
 	SceUInt32 encoding;

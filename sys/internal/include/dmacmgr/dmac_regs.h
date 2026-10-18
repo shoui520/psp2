@@ -8,7 +8,7 @@
 #pragma once
 
 #include <stddef.h>
-#include <psp2common/types.h>
+#include <scetypes.h>
 
 #define DMAC0_REG_BASE			0xe3000000
 #define DMAC1_REG_BASE			0xe3010000

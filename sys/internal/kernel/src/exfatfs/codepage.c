@@ -1,5 +1,6 @@
 /* Sony: codepage.c */
-#include <psp2kern/types.h>
+#include <scetypes.h>
+#include <kernel/types.h>
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>

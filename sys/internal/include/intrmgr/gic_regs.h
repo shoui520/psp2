@@ -7,7 +7,7 @@
  */
 #pragma once
 
-#include <psp2common/types.h>
+#include <scetypes.h>
 
 #define PERIPH_REG_BASE			0x1a000000
 #define PERIPH_REG_SIZE			0x2000
