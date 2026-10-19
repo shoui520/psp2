@@ -13,29 +13,15 @@
 #define SERVICE_CORE			(VNZ_FIRST_CORE_ID + 7)
 #define SERVICE_PRIORITY		3
 
-/* a request's code (the codecs' SERVICE_*) */
-#define SERVICE_OPEN			1
-#define SERVICE_CLOSE			2
-#define SERVICE_NONE			3
-#define SERVICE_AU			19
-#define SERVICE_DECODE			20
-
-/* a reply's kind */
-#define SERVICE_REPLY_AU		2
-#define SERVICE_REPLY_PICTURES		8
-#define SERVICE_REPLY_DONE		2048
-
-/* the codecs (the request's codec byte) */
-#define SERVICE_CODEC_AVCDEC		0
-#define SERVICE_CODEC_M4VDEC		1
-#define SERVICE_CODEC_AVCENC		2
-
 /* the thread flags the service waits on */
 #define SERVICE_FLAG_ENGINE		0x0002
 #define SERVICE_FLAG_ENGINE2		0x0008
 #define SERVICE_FLAG_REQUEST		0x0200
 #define SERVICE_FLAG_RELEASE		0x2000
 #define SERVICE_FLAG_EXIT		0x8000
+
+/* a request's size: the service's, the engines' and the helper's */
+#define REQUEST_SIZE			128
 
 /* a codec's slot: its engine's threads and queues, the client's queue */
 typedef struct VideoServiceSlot {
@@ -247,6 +233,9 @@ typedef struct VideoServiceReply {
 #define VIDEO_BITS_POSITION		4
 #define VIDEO_BITS_STATUS		5
 #define VIDEO_BITS_STATE6		6
+#define VIDEO_BITS_GET(reg)		(VIDEO_BITS_READ + (reg))
+#define VIDEO_BITS_SET(reg)		(VIDEO_BITS_WRITE + (reg))
+#define VIDEO_BITS_END			5	/* VIDEO_BITS_STATUS: nothing more to push */
 
 #define VIDEO_DSP(code, a, b) \
 	__asm__ __volatile__("dsp %0,%1,%2" : "+r"(a) : "r"(b), "i"(code))
@@ -332,6 +321,7 @@ void videoCacheDrop2(VideoParameterCache *cache, uint32_t index);		/* 0x862ef2 *
 /* the parser's errors: below 16384 noted, otherwise fatal (back to the job's jump,
  * after closing what the stage has open) */
 #define VIDEO_ERROR_FATAL		16384
+#define ERROR_SLICES_ENDED		8201	/* the picture's slices ended */
 #define VIDEO_STAGE_NONE		0
 #define VIDEO_STAGE_ADD_SET		1	/* the parameter set being added */
 #define VIDEO_STAGE_BUFFER		2
@@ -341,10 +331,12 @@ void videoCacheDrop2(VideoParameterCache *cache, uint32_t index);		/* 0x862ef2 *
 #define VIDEO_STAGE_SETS2		6
 #define VIDEO_STAGE_SLICE		7
 
-/* the NAL unit types the helper and the parser look at */
+/* the NAL unit types the helper, the parser and the encoder look at */
 #define NAL_SLICE			1
 #define NAL_IDR				5
 #define NAL_SEI				6
+#define NAL_SPS				7
+#define NAL_PPS				8
 #define NAL_AUD				9
 #define NAL_FILLER			12
 
@@ -660,6 +652,35 @@ uint32_t m4vdecBitsValidStuffing(VideoBitstream *bits);
 uint32_t m4vdecBitsByteAlign(VideoBitstream *bits);
 uint32_t m4vdecBitsNextStartCode(const VideoM4vStream *stream, VideoM4vJob *job);
 
+/* the helper's thread flags (helper.c), which the codecs' helpers set too */
+#define HELPER_FLAG_JOB			0x00000002	/* the job queue */
+#define HELPER_FLAG_ENCODER		0x00000008	/* the encoder's queue */
+#define HELPER_FLAG_IDLE		0x00000100
+#define HELPER_FLAG_JOBS_DONE		0x00004000	/* the VThread jobs */
+#define HELPER_FLAG_EXIT		0x00008000
+#define HELPER_FLAG_START		0x00010000	/* the start queue */
+#define HELPER_FLAG_FINISH		0x00020000
+#define HELPER_FLAG_UNIT		0x00040000	/* the unit's interrupt */
+#define HELPER_FLAG_RESTART		0x00080000
+#define HELPER_FLAG_STOP		0x00100000
+#define HELPER_FLAG_RESTARTED		0x00200000
+#define HELPER_FLAG_FINISHED		0x00400000
+#define HELPER_FLAG_ENCODER_FINISH	0x00800000
+#define HELPER_FLAG_ENCODER_STOP	0x01000000
+#define HELPER_FLAGS			0x01ffc10a
+
+/* the codecs' helpers (avchelper.c, m4vhelper.c, avcenchelper.c): the sizes of what
+ * they share with the helper and of a job, their commands and slices */
+#define SHARED_SIZE		128
+#define JOB_SIZE		128
+#define COMMANDS		2
+#define COMMAND_SIZE		64
+#define SLICES			4
+
+/* the VThread jobs, by the slot's index on the context */
+#define JOB_INDEX_PREPARE(slot)	((slot) * 8 + 1)
+#define JOB_INDEX_SLICE(slot)	((slot) * 8 + 3)
+
 /* a job the engines give the helper (a 128-byte message) */
 typedef struct VideoHelperRequest {
 	uint32_t stream;
@@ -867,6 +888,11 @@ typedef struct VideoAvcWriter {
 	uint8_t cabacState[52];		/* the job's, while the helper holds the unit */
 } VideoAvcWriter;
 
+/* a writer's noUnit, and the error its job jumps back with: the buffer is full, the stream ended */
+#define WRITER_OVERFLOW		4096
+#define WRITER_ENDED		0x8001
+
+#define NALS_SIZE		192	/* a VideoAvcNalList */
 /* the NAL units written for a picture */
 #define VIDEO_AVC_NALS		12
 typedef struct VideoAvcNalList {

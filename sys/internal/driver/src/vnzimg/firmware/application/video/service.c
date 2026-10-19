@@ -11,8 +11,6 @@
 #define SERVICE_SIZE			192
 #define DECODER_SIZE			128
 #define ENCODER_SIZE			64
-#define REQUEST_SIZE			128
-#define REPLY_SIZE			64
 
 #define SERVICE_RUNNING			2
 #define SERVICE_STACK			512

@@ -42,8 +42,7 @@
 #define PES_SPACE_MINIMUM	0x200
 #define PES_HEADER_MINIMUM	6	/* bytes after the stream id: length, flags, size */
 
-/* where DMA lists put a piece of input for the scanner; the scanner's output */
-#define SCAN_INPUT_DMA		0x1a00
+/* the scanner's output */
 #define SCAN_OUTPUT		(VIP_BANK1 + 0x1800)
 #define SCAN_OUTPUT_SIZE	0x200
 
@@ -100,10 +99,6 @@ static uint32_t g_streamStart VIP_PROGRAM_LOCAL;	/* the elementary stream ring's
 static uint32_t g_streamSize VIP_PROGRAM_LOCAL;
 static uint32_t g_pesListed VIP_PROGRAM_LOCAL;	/* bytes of input in the piece */
 static VipDmaDescriptor g_lists[2] VIP_PROGRAM_LOCAL __attribute__((aligned(8)));
-
-/* the loader: its image in DRAM and its place in local RAM (fw2/parser.ld) */
-extern const uint8_t g_loaderImage[], g_loaderStart[], g_loaderSize[];
-#define VIP_PROGRAM_LOADER	__attribute__((section(".loader.program"), noinline))
 
 static void continueNalPass(void);
 static void suspendScan(void);

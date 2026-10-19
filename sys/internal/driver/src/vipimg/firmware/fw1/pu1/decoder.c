@@ -8,26 +8,13 @@
 #include "../common/debug.h"
 #include "codec.h"
 
-/* the commands of the debug point */
-#define COMMAND_NONE		0
-#define COMMAND_OPEN		1
-#define COMMAND_CLOSE		2
+/* the debug point's commands besides common/debug.h's */
 #define COMMAND_QUERY		3
 
-/* their results, and the command task's states */
-#define RESULT_DONE		1
-#define RESULT_BAD_ACTION	3
-#define RESULT_BAD_COUNT	4
-#define RESULT_BAD_STATE	5
+/* their sizes */
 #define COMMAND_OPEN_COUNT	0x34
-#define COMMAND_CLOSE_COUNT	8
 #define COMMAND_QUERY_COUNT	0x14
 #define COMMAND_QUERY_ARGUMENT	2
-
-#define DECODER_CLOSED		0
-#define DECODER_OPENING		1
-#define DECODER_OPEN		2
-#define DECODER_CLOSING		3
 
 /* the open command's values */
 #define VALUE_WORK_MEMORY	5

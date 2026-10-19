@@ -174,6 +174,22 @@ static inline uint64_t recordPts(uint32_t flags, uint32_t low)
 #define VIP_VUI_VCL_HRD			VIP_HRD_WORDS
 #define VIP_VUI_FIRST			(2 * VIP_HRD_WORDS)
 
+/* the parameter sets: how many there may be */
+#define VIP_SPS_COUNT			32
+#define VIP_PPS_COUNT			256
+
+/* the words of their parse results: the optional tables follow the fixed words */
+#define SPS_WORDS			7
+#define PPS_WORDS			2
+#define SCALING_LIST_WORDS		0x39
+#define REF_FRAME_OFFSET_WORDS		0xff
+
+/* dec_ref_pic_marking()'s words */
+#define MARKING_OPERATION_SHIFT		29
+#define MARKING_DIFFERENCE_SHIFT	11	/* difference_of_pic_nums_minus1, 18 bits */
+#define MARKING_LONG_TERM_IDX_SHIFT	6
+#define MARKING_MAX_LONG_TERM_SHIFT	1
+
 /* the SEI records' parse results */
 #define VIP_BUFFERING_PERIOD_WORDS	130
 #define VIP_PICTURE_TIMING_WORDS	12

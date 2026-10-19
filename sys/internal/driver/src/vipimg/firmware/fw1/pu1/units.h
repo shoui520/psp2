@@ -276,9 +276,69 @@ typedef union VipMotionBuffer {
 /* the macroblock loop's DMA descriptors, the picture's writes among them (g_codecDma.loop) */
 #define VIP_LOOP_DESCRIPTORS	13
 
-/* the read stream (stream.h): its buffer halves, read in from the slice's segments */
-#define VIP_STREAM_SEGMENTS	2
-#define VIP_STREAM_HALF		512	/* bytes */
+/* the read stream (stream.h): its buffer halves (vip.h), read in from the slice's segments */
 #define VIP_STREAM_DMA		(VIP_DMA_LIST | VIP_DMA_BANK1 | VIP_DMA_READ)
 #define VIP_CB_SLICE_READY0	0x7019
 #define VIP_CB_SLICE_READY1	0x701a
+
+/*
+ * how PU1 (picture.c, slice.c, codec.c, layout.c) and FW2's codec (fw2/codec) set
+ * the units up for a picture
+ */
+
+/* the parameters of the picture's slices, by slice type (VIP_CB_SLICE_PARAMETERS) */
+#define PARAMETER_CHROMA_SHIFT		31	/* chroma_format_idc != 0 */
+#define PARAMETER_MBAFF_SHIFT		30
+#define PARAMETER_WIDTH_SHIFT		23	/* pic_width_in_mbs_minus1 */
+#define PARAMETER_HEIGHT_SHIFT		16	/* pic_height_in_map_units_minus1 */
+#define PARAMETER_FRAME_MBS_SHIFT	15	/* frame_mbs_only_flag */
+#define PARAMETER_DIRECT_8X8_SHIFT	14	/* direct_8x8_inference_flag */
+#define PARAMETER_WEIGHTING_SHIFT	12	/* weighted_pred_flag, weighted_bipred_idc */
+#define PARAMETER_CHROMA_QP_SHIFT	7	/* chroma_qp_index_offset */
+#define PARAMETER_TRANSFORM_8X8_SHIFT	6
+#define PARAMETER_CONSTRAINED_SHIFT	5	/* constrained_intra_pred_flag */
+					/* second_chroma_qp_index_offset in 0-4 */
+
+/* the scaling lists in the units' RAM: of each kind, Y, Cb and Cr 4x4, then Y 8x8 */
+#define SCALING_KIND_SIZE	0x70
+#define SCALING_4X4		16
+#define SCALING_8X8		64
+#define SCALING_SIZE		(2 * SCALING_KIND_SIZE)
+#define FLAT_SCALING		0x10101010	/* Flat_4x4_16, Flat_8x8_16 */
+#define NO_SCALING		0x01010101	/* a profile without scaling matrices */
+#define GREY			0x80808080	/* a monochrome picture's chroma */
+
+#define SCALING_DMA		(VIP_DMA_LIST | VIP_DMA_BANK1 | VIP_DMA_READ)
+#define FILL_DMA		(VIP_DMA_LIST | VIP_DMA_FILL | VIP_DMA_EXTERNAL_LOCAL)
+
+/* the macroblock loop's writes, their local offset and length */
+#define LOOP_LOCAL(offset, length)	((offset) << 16 | (length))
+
+/* the picture's base in DRAM for the units' row above and its writes */
+#define NEIGHBOUR_FRAME		0x400048
+#define PICTURE_FRAME		0x3fffe8
+#define NEIGHBOUR_FIELD		0x400078	/* a field's, or an MBAFF frame's */
+#define PICTURE_FIELD		0x3fffb8
+#define FRAME_STRIDE		96
+#define FIELD_STRIDE		192
+#define CHANNEL_LAYOUT		2
+
+/* the entropy decoding's unit 0 commands */
+#define ENTROPY_CAVLC		3
+#define ENTROPY_CABAC		4
+
+/* the slice's tables go from local RAM to the units' */
+#define SLICE_TABLE_DMA		(VIP_DMA_LIST | VIP_DMA_EXTERNAL_LOCAL)
+
+/* the picture units' settings at reset */
+#define PREDICTION_SETUP	3	/* VIP_CB_PREDICTION_MODE (provisional) */
+
+/* the motion data's place before the stream is laid out */
+#define DEFAULT_COLOCATED	0x4ce0
+
+/* the work memory's rows (layout.c) */
+#define VIP_WORK_PITCH		0x2000
+
+/* clearing a picture's motion data: a fill of DRAM from local RAM (the bits above
+   VIP_DMA_LIST are not known) */
+#define CLEAR_MOTION_DMA	(VIP_DMA_LIST | VIP_DMA_FILL | 0x31000)

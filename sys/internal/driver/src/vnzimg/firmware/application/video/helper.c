@@ -8,8 +8,6 @@
 #include "service.h"
 
 #define HELPER_SIZE			64
-#define SHARED_SIZE			128
-#define REQUEST_SIZE			128
 
 #define HELPER_IDLE			2
 #define HELPER_WAITING			3
@@ -18,23 +16,6 @@
 
 #define HELPER_INTERRUPT		21	/* the bitstream unit's */
 #define HELPER_INTERRUPT_LEVEL		15
-
-/* the helper's thread flags */
-#define HELPER_FLAG_JOB			0x00000002	/* the job queue */
-#define HELPER_FLAG_ENCODER		0x00000008	/* the encoder's queue */
-#define HELPER_FLAG_IDLE		0x00000100
-#define HELPER_FLAG_JOBS_DONE		0x00004000	/* the VThread jobs */
-#define HELPER_FLAG_EXIT		0x00008000
-#define HELPER_FLAG_START		0x00010000	/* the start queue */
-#define HELPER_FLAG_FINISH		0x00020000
-#define HELPER_FLAG_UNIT		0x00040000	/* the unit's interrupt */
-#define HELPER_FLAG_RESTART		0x00080000
-#define HELPER_FLAG_STOP		0x00100000
-#define HELPER_FLAG_RESTARTED		0x00200000
-#define HELPER_FLAG_FINISHED		0x00400000
-#define HELPER_FLAG_ENCODER_FINISH	0x00800000
-#define HELPER_FLAG_ENCODER_STOP	0x01000000
-#define HELPER_FLAGS			0x01ffc10a
 
 /* the engine thread's flags the helper sets */
 #define ENGINE_FLAG_HELPER		0x00000002
@@ -389,7 +370,6 @@ typedef struct HelperDescriptor {
 } HelperDescriptor;
 
 #define DESCRIPTOR_LAST			2
-#define UNIT_LOAD			6
 
 static uint32_t streamAddress(const VideoHelperShared *shared, uint32_t address)
 {
@@ -432,7 +412,7 @@ void videoHelperLoad(const VideoHelperShared *shared, const VideoStream *stream,
 		unit[0] = descriptor[0];
 	}
 	VIDEO_UNIT[VIDEO_UNIT_DESCRIPTORS] = shared->descriptors;
-	VIDEO_UNIT[VIDEO_UNIT_COMMAND] = UNIT_LOAD;
+	VIDEO_UNIT[VIDEO_UNIT_COMMAND] = VIDEO_UNIT_LOAD;
 	vnzThreadWaitFlags(HELPER_FLAG_UNIT);
 	VIDEO_UNIT[VIDEO_UNIT_COMMAND] = ((bitOffset & 7) + 7) << 8 & 0xff00;
 	vnzThreadWaitFlags(HELPER_FLAG_UNIT);

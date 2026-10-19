@@ -10,45 +10,6 @@
  */
 #include "video.h"
 
-#define INSTANCE_SIZE			128
-#define REPLY_SIZE			64
-
-#define STATE_NONE			0
-#define STATE_INITIALIZED		3
-#define STATE_READY			4
-#define STATE_DECODING			5
-
-#define REQUEST_INITIALIZE		0
-#define REQUEST_TERMINATE		1
-#define REQUEST_AU			3
-#define REQUEST_DECODE			4
-
-#define SERVICE_INITIALIZE		1
-#define SERVICE_TERMINATE		2
-#define SERVICE_AU			19
-#define SERVICE_DECODE			20
-
-#define CODEC_M4V			1
-
-/* what an access unit request asks */
-#define MODE_DECODE			0
-#define MODE_SEQUENCE			1
-#define MODE_CONTEXT			2
-#define MODE_DRAIN			3
-#define MODE_RESTART			4
-
-/* the unit's own modes (VideoAu.advance) */
-#define AU_END				0
-#define AU_NORMAL			1
-#define AU_SKIP				3
-#define AU_RESET			7
-
-#define REPLY_PICTURES			8
-#define REPLY_AU			2
-#define WAIT_AU				1
-#define WAIT_DECODE			2
-#define WAIT_DONE			4
-
 #define FRAME_RATE_UNKNOWN		255
 
 #define M4VDEC_VERSION			0x02010a97
@@ -233,7 +194,7 @@ static void requestBuild(M4vdecInstance *instance, uint32_t type, const VideoAu 
 	M4vdecRequest *request;
 
 	request = (M4vdecRequest *)vnzPublicOpenPrivate(instance->request, sizeof(*request));
-	request->codec = CODEC_M4V;
+	request->codec = SERVICE_CODEC_M4VDEC;
 	request->serviceState = instance->serviceState;
 	if (type == REQUEST_DECODE) {
 		request->code = SERVICE_DECODE;
@@ -265,7 +226,7 @@ static void requestBuild(M4vdecInstance *instance, uint32_t type, const VideoAu 
 		}
 	} else if (type == REQUEST_INITIALIZE) {
 		request->instance = instance;
-		request->code = SERVICE_INITIALIZE;
+		request->code = SERVICE_OPEN;
 		request->thread = vnzThreadCurrent();
 		request->queue = instance->queue;
 		request->frames = instance->frames;
@@ -275,7 +236,7 @@ static void requestBuild(M4vdecInstance *instance, uint32_t type, const VideoAu 
 		request->option4[0] = param->option4[0];
 		request->option4[1] = param->option4[1];
 	} else if (type == REQUEST_TERMINATE) {
-		request->code = SERVICE_TERMINATE;
+		request->code = SERVICE_CLOSE;
 	}
 	vnzPublicClosePrivate((uint32_t)request, sizeof(*request));
 }
@@ -296,12 +257,12 @@ static void replyRead(M4vdecInstance *instance, uint32_t address)
 
 	reply = (M4vdecReply *)vnzPublicOpenProtected(address, REPLY_SIZE);
 	kind = reply->kind;
-	if (kind == REPLY_PICTURES) {
+	if (kind == SERVICE_REPLY_PICTURES) {
 		instance->numOfPictures = reply->numOfPictures;
 		instance->pictures = reply->pictures;
 		goto close;
 	}
-	if (kind == REPLY_AU) {
+	if (kind == SERVICE_REPLY_AU) {
 		if (reply->sequence) {
 			param = (M4vdecParam *)instance->pictures;
 			param->horizontal = reply->horizontal;
@@ -335,8 +296,8 @@ static void replyDone(M4vdecInstance *instance)
 {
 	uint32_t bit = WAIT_AU;
 
-	if (instance->replyKind != REPLY_PICTURES)
-		bit = instance->replyKind == REPLY_AU ? WAIT_DECODE : WAIT_DONE;
+	if (instance->replyKind != SERVICE_REPLY_PICTURES)
+		bit = instance->replyKind == SERVICE_REPLY_AU ? WAIT_DECODE : WAIT_DONE;
 	if (instance->waitToggle & bit) {
 		instance->waitToggle &= ~bit;
 		instance->waitReady |= bit;

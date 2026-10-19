@@ -13,23 +13,14 @@
  */
 #include "codec.h"
 
-#define VIP_WORK_PITCH		0x2000
 #define WORK_AT(column, row)	((uint32_t)(column) / 8 << 19 | (uint32_t)(row) * 8)
 #define WORK_COLUMN(bytes)	((uint32_t)(bytes) / 8 << 19)
 #define WORK_ROWS(rows)		((uint32_t)(rows) * 8)
-
-/* the most a picture may be, in macroblocks */
-#define MAX_WIDTH_MBS		120
-#define MAX_HEIGHT_MBS		68
 
 /* queryWorkMemory: the most frame stores and work memory */
 #define QUERY_MAX_FRAMES	20
 #define QUERY_MAX_SIZE		0x2000000
 #define QUERY_MARGIN		64	/* bytes kept at the end of each 8 KB row */
-
-/* clearing a picture's motion data: a fill of DRAM from local RAM (the bits above
-   VIP_DMA_LIST are not known) */
-#define CLEAR_MOTION_DMA	(VIP_DMA_LIST | VIP_DMA_FILL | 0x31000)
 
 #define AT WORK_AT
 

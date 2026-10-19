@@ -6,26 +6,11 @@
  */
 #include "service.h"
 
-#define SHARED_SIZE		128
-#define JOB_SIZE		128
 #define INFO_SIZE		64
 #define WRITER_SIZE		192
 #define ENCODE_JOB_SIZE		256
-#define COMMAND_SIZE		64
-#define NALS_SIZE		192
-
-#define COMMANDS		2
-#define SLICES			4
-
-#define FLAG_JOBS_DONE		0x00004000
-#define FLAG_FINISH		0x00020000
-#define FLAG_UNIT		0x00040000
-#define FLAG_ENCODER_FINISH	0x00800000
-
-#define CODEC_AVCENC		2
 
 /* the VThread jobs, by the slot's index on the context */
-#define JOB_INDEX_PREPARE(slot)	((slot) * 8 + 1)
 #define JOB_INDEX_ENCODE(slot)	((slot) * 8 + 2)
 #define JOB_INDEX_STEP(slot)	((slot) * 8 + 3)
 
@@ -49,12 +34,7 @@
 
 #define UNIT_MODE_ENCODE	0x000f0100
 #define UNIT_PICTURE_ENABLE	0x01000000
-#define UNIT_COMMAND_RUN	16
 #define UNIT_STATUS_OVERFLOW	16
-#define UNIT_STATUS_ENDED	129
-
-#define WRITER_OVERFLOW		4096
-#define WRITER_ENDED		0x8001
 
 void avcencJobPrepare(uint32_t shared, uint32_t info, uint32_t job, uint32_t unused);
 void avcencJobEncode(uint32_t shared, uint32_t info, uint32_t job, uint32_t request);
@@ -190,7 +170,7 @@ void avcencHelperRun(VideoHelper *helper, uint32_t job)
 	argument = shared->argument;
 	runJob(helper->context, index, avcencJobPrepare,
 		vnzPublicClosePrivate((uint32_t)shared, SHARED_SIZE),
-		argument, argument2, 0, FLAG_FINISH);
+		argument, argument2, 0, HELPER_FLAG_FINISH);
 }
 
 /* the engine's message: encode the job (on the encoder's queue) */
@@ -208,7 +188,7 @@ void avcencHelperEncode(uint32_t helperAddress, uint32_t argument)
 	sharedArgument = shared->argument;
 	runJob(helper->context, index, avcencJobEncode,
 		vnzPublicCloseProtected((uint32_t)shared, SHARED_SIZE),
-		sharedArgument, sharedArgument2, argument, FLAG_ENCODER_FINISH);
+		sharedArgument, sharedArgument2, argument, HELPER_FLAG_ENCODER_FINISH);
 }
 
 /* the job is encoded: the unit takes the stream and runs, or is not needed */
@@ -228,10 +208,10 @@ void avcencHelperFinish(VideoHelper *helper, uint32_t argument)
 	if (!helper->hold && run->load)
 		avcencUnitLoad(shared, info, writer);
 	if (writer->noUnit || helper->hold) {
-		vnzThreadSetFlags(thread, FLAG_UNIT);
+		vnzThreadSetFlags(thread, HELPER_FLAG_UNIT);
 	} else {
 		VIDEO_UNIT[UNIT_COUNT] = (uint16_t)run->count;
-		VIDEO_UNIT[UNIT_RUN] = UNIT_COMMAND_RUN;
+		VIDEO_UNIT[UNIT_RUN] = VIDEO_UNIT_RUN;
 	}
 	vnzPublicCloseProtected((uint32_t)run, JOB_SIZE);
 	vnzPublicClosePrivate((uint32_t)writer, WRITER_SIZE);
@@ -253,7 +233,7 @@ void avcencHelperStep(VideoHelper *helper)
 	argument = shared->argument;
 	runJob(helper->context, index, avcencJobStep,
 		vnzPublicClosePrivate((uint32_t)shared, SHARED_SIZE),
-		argument, argument2, 0, FLAG_JOBS_DONE);
+		argument, argument2, 0, HELPER_FLAG_JOBS_DONE);
 }
 
 /* the encoder stops: the unit's NAL unit ends */
@@ -311,7 +291,7 @@ void avcencJobPrepare(uint32_t sharedAddress, uint32_t infoAddress, uint32_t job
 		slice->command = shared->command;
 		vnzPublicClosePrivate((uint32_t)slice, VIDEO_HELPER_SLICE_SIZE);
 	}
-	run->codec = CODEC_AVCENC;
+	run->codec = SERVICE_CODEC_AVCENC;
 	run->first = first;
 	run->firstX = 0;
 	run->firstY = writer->row;
@@ -481,7 +461,7 @@ void avcencJobStep(uint32_t sharedAddress, uint32_t infoAddress, uint32_t jobAdd
 		(void)VIDEO_UNIT[UNIT_RUN_DONE];
 		if (status == UNIT_STATUS_OVERFLOW)
 			writer->noUnit = WRITER_OVERFLOW;
-		else if (status == UNIT_STATUS_ENDED)
+		else if (status == VIDEO_UNIT_ENDED)
 			writer->noUnit = WRITER_ENDED;
 	}
 	sliceDone = run->sliceUsed != 0;

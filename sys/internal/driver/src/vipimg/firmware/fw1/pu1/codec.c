@@ -16,12 +16,6 @@
 #define WORK_SPACE_MASK		0xe0000000
 #define WORK_SPACE_SHIFT	24
 
-/* the picture units' settings at reset */
-#define PREDICTION_SETUP	3	/* VIP_CB_PREDICTION_MODE (provisional) */
-
-/* the motion data's place before the stream is laid out */
-#define DEFAULT_COLOCATED	0x4ce0
-
 VipFrameHandle *g_frameHandles[VIP_DECODER_FRAMES];
 VipRingHandle *g_ringHandles[VIP_DECODER_RINGS];
 

@@ -7,9 +7,6 @@
  */
 #include "codec.h"
 
-#define PREDICTION_SETUP	3	/* VIP_CB_PREDICTION_MODE (provisional) */
-#define DEFAULT_COLOCATED	0x4ce0
-
 VipRingHandle *g_ringHandles[VIP_CODEC_RING_HANDLES] VIP_GLOBAL;
 VipFrameHandle *g_frameHandles[VIP_CODEC_FRAMES] VIP_GLOBAL;
 uint32_t g_workBase VIP_GLOBAL;

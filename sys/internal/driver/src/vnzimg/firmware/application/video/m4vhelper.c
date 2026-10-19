@@ -8,8 +8,6 @@
  */
 #include "service.h"
 
-#define SHARED_SIZE		128
-#define JOB_SIZE		128
 #define STREAM_SIZE		64
 #define UNIT_SIZE		256
 #define VOP_SIZE		64
@@ -24,26 +22,12 @@
 #define TABLE_DECODED		4
 #define FIELDS_FRAME		2
 
-#define COMMANDS		2
-#define COMMAND_SIZE		64
-
-#define FLAG_JOBS_DONE		0x00004000
-#define FLAG_FINISH		0x00020000
-#define FLAG_UNIT		0x00040000
-#define FLAG_FINISHED		0x00400000
-
-#define UNIT_RUN		16
-
-#define UNIT_ENDED		129	/* the unit's status: the stream ended */
 #define RUN_ENDED		3
 #define ERROR_RESYNC		8192	/* the parser lost its place: on to a resync marker */
-#define ERROR_SLICES_ENDED	8201
 #define ERROR_PACKET		0x8007
 #define ERROR_TIME		8229	/* the first times are negative */
 #define ERROR_TIME_ORDER	8230	/* the pts is before the dts */
 #define ERRORS_FATAL		0xc000
-
-#define CODEC_M4V		1
 
 /* the markers looked for, by their bits */
 #define SHORT_VIDEO_START_BITS	22
@@ -54,8 +38,6 @@
 #define RESYNC_BITS(packet)	((packet)->predicted ? (packet)->fcode + 16 : 17)
 
 /* the VThread jobs, by the slot's index on the context */
-#define JOB_INDEX_PREPARE(slot)	((slot) * 8 + 1)
-#define JOB_INDEX_SLICE(slot)	((slot) * 8 + 3)
 
 void m4vdecJobPrepare(uint32_t shared, uint32_t stream, uint32_t job, uint32_t unused);
 void m4vdecJobSlice(uint32_t shared, uint32_t stream, uint32_t job, uint32_t unused);
@@ -174,7 +156,7 @@ void m4vdecHelperRun(VideoHelper *helper, uint32_t job)
 	argument = shared->argument;
 	runJob(helper->context, index, m4vdecJobPrepare,
 		vnzPublicClosePrivate((uint32_t)shared, SHARED_SIZE),
-		argument, argument2, FLAG_FINISH);
+		argument, argument2, HELPER_FLAG_FINISH);
 }
 
 /* the job is prepared: run the unit on its macroblocks, or not */
@@ -190,7 +172,7 @@ void m4vdecHelperFinish(VideoHelper *helper)
 	stream = (const VideoM4vStream *)vnzPublicOpenProtected(shared->argument, STREAM_SIZE);
 	unit = (VideoM4vUnit *)vnzPublicOpenPrivate(stream->unit, UNIT_SIZE);
 	if (unit->failed || unit->vop->notCoded || !unit->packet->unitRuns) {
-		vnzThreadSetFlags(shared->thread, FLAG_UNIT);
+		vnzThreadSetFlags(shared->thread, HELPER_FLAG_UNIT);
 	} else {
 		load = unit->load;
 		if (load)
@@ -199,9 +181,9 @@ void m4vdecHelperFinish(VideoHelper *helper)
 		if (unit->vop->shortHeader && unit->packet->runEnd < count)
 			count = unit->packet->runEnd;
 		VIDEO_UNIT[VIDEO_UNIT_DESCRIPTORS] = count;
-		VIDEO_UNIT[VIDEO_UNIT_COMMAND] = UNIT_RUN;
+		VIDEO_UNIT[VIDEO_UNIT_COMMAND] = VIDEO_UNIT_RUN;
 	}
-	vnzThreadSetFlags(shared->thread, FLAG_FINISHED);
+	vnzThreadSetFlags(shared->thread, HELPER_FLAG_FINISHED);
 	vnzPublicClosePrivate((uint32_t)unit, UNIT_SIZE);
 	vnzPublicCloseProtected((uint32_t)stream, STREAM_SIZE);
 	vnzPublicClosePrivate((uint32_t)shared, SHARED_SIZE);
@@ -225,7 +207,7 @@ void m4vdecHelperStep(VideoHelper *helper)
 	argument = shared->argument;
 	runJob(helper->context, index, m4vdecJobSlice,
 		vnzPublicClosePrivate((uint32_t)shared, SHARED_SIZE),
-		argument, argument2, FLAG_JOBS_DONE);
+		argument, argument2, HELPER_FLAG_JOBS_DONE);
 }
 
 /*
@@ -381,9 +363,9 @@ static void gobAlign(VideoBitstream *bits)
 static void requestFill(VideoHelperJob *request, const VideoHelperShared *shared,
 	VideoM4vUnit *unit, int32_t status)
 {
-	request->codec = CODEC_M4V;
+	request->codec = SERVICE_CODEC_M4VDEC;
 	request->sliceUsed = status != 0;
-	request->ended = status == UNIT_ENDED;
+	request->ended = status == VIDEO_UNIT_ENDED;
 	request->load = unit->load;
 	request->slice = shared->context;
 	request->command = shared->command;
@@ -459,13 +441,13 @@ void m4vdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 	} else {
 		status = VIDEO_UNIT[VIDEO_UNIT_RUN_STATUS];
 		done = VIDEO_UNIT[VIDEO_UNIT_RUN_DONE];
-		if (status == UNIT_ENDED) {
+		if (status == VIDEO_UNIT_ENDED) {
 			m4vdecBitsSkipUnit(shared, bits);
 			VIDEO_UNIT[0] = 1;
 		}
 	}
 	if (unit->vop->shortHeader) {
-		if (status != UNIT_ENDED) {
+		if (status != VIDEO_UNIT_ENDED) {
 			count = unit->packet->runEnd - done;
 			if (unit->firstMacroblock + count >= unit->macroblocks) {
 				status = RUN_ENDED;
@@ -482,7 +464,7 @@ void m4vdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 	} else {
 		count = unit->runMacroblocks - done;
 	}
-	ended = unit->failed || status == UNIT_ENDED;
+	ended = unit->failed || status == VIDEO_UNIT_ENDED;
 	resync = RESYNC_BITS(unit->packet);
 	if (ended) {
 		if (unit->runOffset)
@@ -590,7 +572,7 @@ void m4vdecJobSliceSoftware(uint32_t sharedAddress, uint32_t streamAddress, uint
 	} else {
 		count = unit->runMacroblocks - done;
 	}
-	ended = unit->failed || status == UNIT_ENDED;
+	ended = unit->failed || status == VIDEO_UNIT_ENDED;
 	resync = RESYNC_BITS(packet);
 	if (ended) {
 		status = RUN_ENDED;

@@ -7,22 +7,13 @@
  */
 #include "service.h"
 
-#define NALS_SIZE		192
 #define PICTURE_REFERENCE_SIZE	64
 #define BLOCK_SIZE		512
 
-#define OVERFLOW		4096	/* the job's error when the buffer is full */
 #define JUMP_OFFSET		164	/* of the job's jump */
 
 #define NAL_REF_IDC		2
-#define NAL_SLICE		1
-#define NAL_IDR			5
-#define NAL_SEI			6
-#define NAL_SPS			7
-#define NAL_PPS			8
-#define NAL_AUD			9
 
-#define PROFILE_BASELINE	66
 #define EXTENDED_SAR		255
 
 #define SLICE_TYPE_P		0
@@ -36,7 +27,6 @@
 
 /* the unit's commands */
 #define UNIT_FINISH		5
-#define UNIT_LOAD		6
 #define UNIT_FLUSH		18
 #define UNIT_FLAG		0x40000	/* the unit's interrupt, on the helper */
 
@@ -55,7 +45,7 @@ static const int8_t numClockTs[9] = { 1, 1, 1, 2, 2, 3, 3, 2, 3 };
 
 static void overflow(const VideoAvcWriter *writer)
 {
-	videoLongJump((uint32_t *)(writer->job + JUMP_OFFSET), OVERFLOW);
+	videoLongJump((uint32_t *)(writer->job + JUMP_OFFSET), WRITER_OVERFLOW);
 }
 
 /* a NAL unit starts here in the list, and ends */
@@ -153,7 +143,7 @@ void avcencUnitLoad(VideoHelperShared *shared, const VideoAvcStreamInfo *info,
 	for (i = 0; i < 4; i++)
 		table[i] = descriptor[i];
 	VIDEO_UNIT[VIDEO_UNIT_DESCRIPTORS] = shared->descriptors;
-	VIDEO_UNIT[VIDEO_UNIT_COMMAND] = UNIT_LOAD;
+	VIDEO_UNIT[VIDEO_UNIT_COMMAND] = VIDEO_UNIT_LOAD;
 	vnzThreadWaitFlags(UNIT_FLAG);
 	if (bitPosition) {
 		VIDEO_UNIT[VIDEO_UNIT_DESCRIPTORS] = writer->pendingBits >> (8 - bitPosition);

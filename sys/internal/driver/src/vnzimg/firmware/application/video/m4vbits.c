@@ -7,14 +7,6 @@
  */
 #include "service.h"
 
-#define BITS(reg)			(VIDEO_BITS_READ + (reg))
-#define SET_BITS(reg)			(VIDEO_BITS_WRITE + (reg))
-
-#define STATUS_END			5	/* nothing more to push */
-
-#define UNIT_LOAD			6
-#define FLAG_UNIT			0x40000
-
 uint32_t m4vdecBitsRead(VideoBitstream *bits, uint32_t count);
 
 /* the unit set on a unit of the stream: after its first byte, the first word read */
@@ -30,36 +22,36 @@ uint32_t m4vdecBitsBegin(const VideoM4vStream *stream, VideoM4vJob *job)
 	else
 		bits->read = unit->start + 1;
 	bits->remaining = unit->size - 1;
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_CONTROL), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_WORD), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE2), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE3), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_POSITION), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATUS), 1);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE6), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_CONTROL), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_WORD), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE2), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE3), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_POSITION), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATUS), 1);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE6), 0);
 	return m4vdecBitsRead(bits, 32);
 }
 
 void m4vdecBitsSave(VideoBitsRegisters *registers)
 {
-	registers->control = VIDEO_DSP_READ(BITS(VIDEO_BITS_CONTROL));
-	registers->word = VIDEO_DSP_READ(BITS(VIDEO_BITS_WORD));
-	registers->state2 = VIDEO_DSP_READ(BITS(VIDEO_BITS_STATE2));
-	registers->state3 = VIDEO_DSP_READ(BITS(VIDEO_BITS_STATE3));
-	registers->position = VIDEO_DSP_READ(BITS(VIDEO_BITS_POSITION));
-	registers->status = VIDEO_DSP_READ(BITS(VIDEO_BITS_STATUS));
-	registers->state6 = VIDEO_DSP_READ(BITS(VIDEO_BITS_STATE6));
+	registers->control = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_CONTROL));
+	registers->word = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_WORD));
+	registers->state2 = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_STATE2));
+	registers->state3 = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_STATE3));
+	registers->position = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_POSITION));
+	registers->status = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_STATUS));
+	registers->state6 = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_STATE6));
 }
 
 void m4vdecBitsRestore(const VideoBitsRegisters *registers)
 {
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_CONTROL), registers->control);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_WORD), registers->word);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE2), registers->state2);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE3), registers->state3);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_POSITION), registers->position);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATUS), registers->status);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE6), registers->state6);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_CONTROL), registers->control);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_WORD), registers->word);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE2), registers->state2);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE3), registers->state3);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_POSITION), registers->position);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATUS), registers->status);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE6), registers->state6);
 }
 
 /*
@@ -68,7 +60,7 @@ void m4vdecBitsRestore(const VideoBitsRegisters *registers)
  */
 int32_t m4vdecBitsTell(const VideoM4vStream *stream, VideoM4vUnit *unit)
 {
-	int32_t bits = VIDEO_DSP_READ(BITS(VIDEO_BITS_POSITION)) - 32;
+	int32_t bits = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_POSITION)) - 32;
 	int32_t bytes = bits >> 3;
 	uint32_t read;
 
@@ -127,12 +119,12 @@ void m4vdecUnitLoad(const VideoHelperShared *shared, const VideoM4vStream *strea
 		list[1] = descriptors[1];
 	}
 	VIDEO_UNIT[VIDEO_UNIT_DESCRIPTORS] = (uint32_t)list;
-	VIDEO_UNIT[VIDEO_UNIT_COMMAND] = UNIT_LOAD;
-	vnzThreadWaitFlags(FLAG_UNIT);
+	VIDEO_UNIT[VIDEO_UNIT_COMMAND] = VIDEO_UNIT_LOAD;
+	vnzThreadWaitFlags(HELPER_FLAG_UNIT);
 	if (bitOffset) {
 		command = ((bitOffset - 1) & 0xff) << 8;
 		VIDEO_UNIT[VIDEO_UNIT_COMMAND] = command;
-		vnzThreadWaitFlags(FLAG_UNIT);
+		vnzThreadWaitFlags(HELPER_FLAG_UNIT);
 	}
 	VIDEO_UNIT[VIDEO_UNIT_BITS] = 0;
 }
@@ -140,7 +132,7 @@ void m4vdecUnitLoad(const VideoHelperShared *shared, const VideoM4vStream *strea
 /* the reader set after the bits the unit read (VIDEO_UNIT_BITS) */
 void m4vdecBitsSkipUnit(const VideoHelperShared *shared, VideoBitstream *bits)
 {
-	int32_t position = VIDEO_DSP_READ(BITS(VIDEO_BITS_POSITION)) - 32;
+	int32_t position = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_POSITION)) - 32;
 	uint32_t unitBits = VIDEO_UNIT[VIDEO_UNIT_BITS];
 	uint32_t bytes = ((position & 7) + unitBits) >> 3;
 
@@ -149,12 +141,12 @@ void m4vdecBitsSkipUnit(const VideoHelperShared *shared, VideoBitstream *bits)
 	if (bits->ringEnd < bits->read)
 		bits->read = bits->ringStart + (bits->read - bits->ringEnd) - 1;
 	position += unitBits;
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_WORD), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE2), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE3), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_POSITION), position & ~7);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATUS), 1);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE6), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_WORD), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE2), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE3), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_POSITION), position & ~7);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATUS), 1);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE6), 0);
 	m4vdecBitsRead(bits, 32);
 	if (position & 7)
 		m4vdecBitsRead(bits, position & 7);
@@ -172,7 +164,7 @@ void m4vdecBitsRefill(VideoBitstream *bits, uint32_t wanted)
 		if (remaining < 1) {
 			byte = 0;
 			VIDEO_DSP(VIDEO_BITS_PUSH, wanted, byte);
-			VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATUS), STATUS_END);
+			VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATUS), VIDEO_BITS_END);
 		} else {
 			remaining--;
 			byte = *(const uint8_t *)read;
@@ -209,12 +201,12 @@ uint32_t m4vdecBitsPeek(VideoBitstream *bits, uint32_t count)
  */
 uint32_t m4vdecBitsPeekAligned(VideoBitstream *bits, uint32_t count)
 {
-	uint32_t word = VIDEO_DSP_READ(BITS(VIDEO_BITS_WORD));
-	uint32_t state2 = VIDEO_DSP_READ(BITS(VIDEO_BITS_STATE2));
-	uint32_t state3 = VIDEO_DSP_READ(BITS(VIDEO_BITS_STATE3));
-	uint32_t position = VIDEO_DSP_READ(BITS(VIDEO_BITS_POSITION));
-	uint32_t state6 = VIDEO_DSP_READ(BITS(VIDEO_BITS_STATE6));
-	uint32_t status = VIDEO_DSP_READ(BITS(VIDEO_BITS_STATUS));
+	uint32_t word = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_WORD));
+	uint32_t state2 = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_STATE2));
+	uint32_t state3 = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_STATE3));
+	uint32_t position = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_POSITION));
+	uint32_t state6 = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_STATE6));
+	uint32_t status = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_STATUS));
 	uint32_t read = bits->read;
 	int32_t remaining = bits->remaining;
 	uint32_t value;
@@ -223,25 +215,25 @@ uint32_t m4vdecBitsPeekAligned(VideoBitstream *bits, uint32_t count)
 	bits->remaining = remaining;
 	bits->read = read;
 	value = VIDEO_DSP_GET(VIDEO_BITS_PEEK, count);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_WORD), word);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE2), state2);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE3), state3);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_POSITION), position);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATUS), status);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE6), state6);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_WORD), word);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE2), state2);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE3), state3);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_POSITION), position);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATUS), status);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE6), state6);
 	return value;
 }
 
 /* the bits read past the last byte boundary */
 uint32_t m4vdecBitsOffset(const VideoBitstream *bits)
 {
-	return VIDEO_DSP_READ(BITS(VIDEO_BITS_POSITION)) & 7;
+	return VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_POSITION)) & 7;
 }
 
 /* the stuffing to the next byte boundary is a zero and ones */
 uint32_t m4vdecBitsValidStuffing(VideoBitstream *bits)
 {
-	uint32_t offset = VIDEO_DSP_READ(BITS(VIDEO_BITS_POSITION)) & 7;
+	uint32_t offset = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_POSITION)) & 7;
 	uint32_t count = 8 - offset;
 
 	return VIDEO_DSP_GET(VIDEO_BITS_PEEK, count) == (0x7fu >> offset);
@@ -250,7 +242,7 @@ uint32_t m4vdecBitsValidStuffing(VideoBitstream *bits)
 /* the stuffing read: returns its bits */
 uint32_t m4vdecBitsByteAlign(VideoBitstream *bits)
 {
-	uint32_t count = 8 - (VIDEO_DSP_READ(BITS(VIDEO_BITS_POSITION)) & 7);
+	uint32_t count = 8 - (VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_POSITION)) & 7);
 
 	m4vdecBitsRead(bits, count);
 	return count;

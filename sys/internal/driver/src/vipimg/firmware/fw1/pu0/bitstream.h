@@ -11,10 +11,27 @@
 
 #include "../common/parsed.h"
 
-#define VIP_STREAM_SEGMENTS	2
-#define VIP_STREAM_HALF		512	/* bytes */
-#define VIP_READ_BUFFER		0	/* bank 1 offsets of the buffers */
-#define VIP_WRITE_BUFFER	1024
+/* the size of the CABAC state the unit keeps, by chroma */
+#define CABAC_ROW_SIZE		0x100
+#define CABAC_ROW_SIZE_CHROMA	0x180
+
+/* the CABAC state the unit clears before a slice: 0x1c0 bytes at its 0x800 */
+#define CABAC_STATE		0x800
+#define CABAC_STATE_SIZE	0x1c0
+
+/* the output space a NAL unit needs, by its type */
+#define SPACE_SPS		0x800
+#define SPACE_PPS		0x100
+#define SPACE_MARKER		0x10
+#define SPACE_OTHER		0x1000
+#define SPACE_RECORDS		0x40
+
+/* with less input space than this and no record, the input is stuck */
+#define INPUT_STUCK		0x280
+
+/* parsed records go out three at a time while an SEI unit is parsed */
+#define SEI_RECORDS		3
+#define SEI_COPY_WORDS		0x80
 
 /* local RAM bank 1: the bitstream unit's buffers */
 #define VIP_BANK1		(VIP_LOCAL_RAM | VIP_LOCAL_BANK1)
@@ -145,9 +162,6 @@ typedef struct VipPps {
 	uint8_t deblockingFilterControlPresent;
 	uint8_t reserved;
 } VipPps;
-
-#define VIP_SPS_COUNT	32
-#define VIP_PPS_COUNT	256
 
 /* the slice header's fields slice data needs */
 typedef struct VipSliceInfo {

@@ -13,6 +13,7 @@
 #pragma once
 
 #define VIP_LOCAL_RAM		0x200000	/* each core's own */
+#define VIP_INTERRUPT_VECTORS	(VIP_LOCAL_RAM + 0x30)
 #define VIP_IMAGE		0x800000	/* the firmware image in DRAM */
 #define VIP_MAILBOX_BASE	0xe3106000	/* the pervasive mailbox (lowio/mailbox_regs.h) */
 
@@ -123,6 +124,12 @@
 #define VIP_CB_WRITE_STREAM_READY0	0x701e
 #define VIP_CB_WRITE_STREAM_READY1	0x701f
 
+/* each stream buffer's halves, and the buffers' offsets in local RAM bank 1 */
+#define VIP_STREAM_SEGMENTS	2
+#define VIP_STREAM_HALF		512	/* bytes */
+#define VIP_READ_BUFFER		0
+#define VIP_WRITE_BUFFER	1024
+
 #ifndef __ASSEMBLER__
 
 #include <stddef.h>
@@ -162,6 +169,10 @@
 
 #define vipAcknowledgeInterrupt(interrupt) \
 	vipWriteControlBus(VIP_CB_INTERRUPT_CLEAR, ~(1u << (interrupt)))
+
+/* code and data the core runs from its local RAM (its runtime copies them in) */
+#define VIP_LRAM_TEXT		__attribute__((section(".lram.text")))
+#define VIP_LRAM_DATA		__attribute__((section(".lram.data")))
 
 /* the C library's pieces the codecs build in (fw1/pu1/memory.c) */
 void *memcpy(void *destination, const void *source, size_t size);

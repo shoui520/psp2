@@ -24,8 +24,7 @@
 #define SCAN_UNIT		0	/* a start code and the NAL header after it */
 #define SCAN_UNIT_END		1	/* the next start code, or zero bytes */
 
-/* a piece of input: where DMA lists put it for the scanner, and its size */
-#define SCAN_INPUT_DMA		0x1a00
+/* a piece of input for the scanner (parser.h SCAN_INPUT_DMA): its size */
 #define SCAN_PIECE		512
 
 /*
@@ -73,10 +72,6 @@ static uint32_t g_listedBytes VIP_PROGRAM_LOCAL;	/* of the input in the next pie
 static uint32_t g_inputStart VIP_PROGRAM_LOCAL;	/* the input ring's */
 static uint32_t g_inputSize VIP_PROGRAM_LOCAL;
 static VipDmaDescriptor g_scanLists[2][2] VIP_PROGRAM_LOCAL __attribute__((aligned(8)));
-
-/* the loader: its image in DRAM and its place in local RAM (fw2/parser.ld) */
-extern const uint8_t g_loaderImage[], g_loaderStart[], g_loaderSize[];
-#define VIP_PROGRAM_LOADER	__attribute__((section(".loader.program"), noinline))
 
 int scannerStep(void);
 static void enableScannerInterrupt(void);

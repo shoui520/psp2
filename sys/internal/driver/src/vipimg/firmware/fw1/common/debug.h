@@ -81,3 +81,23 @@ void setPauseFlag(uint32_t flag, uint32_t set);
 int notifyDebugger(uint32_t mode, uint32_t events);
 int takeDebugSemaphore(uint32_t mode);
 void releaseDebugSemaphore(uint32_t mode);
+
+/* the decoder tasks' debug point commands (pu0/decoder.c, pu1/decoder.c) */
+#define COMMAND_NONE		0
+#define COMMAND_OPEN		1
+#define COMMAND_CLOSE		2
+#define COMMAND_CLOSE_COUNT	8	/* the close command's size */
+
+/* their results, and the command task's states */
+#define RESULT_DONE		1
+#define RESULT_BAD_ACTION	3
+#define RESULT_BAD_COUNT	4
+#define RESULT_BAD_STATE	5
+
+#define DECODER_CLOSED		0
+#define DECODER_OPENING		1
+#define DECODER_OPEN		2
+#define DECODER_CLOSING		3
+
+/* how long the reset of the hardware (vipSaveHardware) waits for the DMA to stop */
+#define RESET_POLLS		0x8000000

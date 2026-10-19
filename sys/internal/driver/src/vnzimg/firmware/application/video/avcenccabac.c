@@ -40,8 +40,6 @@
 #define SLICE_HEADER		((volatile uint32_t *)0x4e9000)
 #define SLICE_HEADER_WORDS	8
 
-#define WRITER_ENDED		0x8001
-
 #define I_TYPES			26
 #define P_TYPES			5
 #define PREFIX_INTRA_IN_P	(I_TYPES + P_TYPES)

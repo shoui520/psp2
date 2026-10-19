@@ -9,40 +9,14 @@
  */
 #include "parser.h"
 
-/* the parameter sets' parse results: optional tables after the fixed words */
-#define SPS_WORDS		7
-#define PPS_WORDS		2
-#define SCALING_LIST_WORDS	0x39
-#define REF_FRAME_OFFSET_WORDS	0xff
-
 /* hrd_parameters(): the CPB specifications kept (cpb_cnt_minus1 is cut to fit) */
 #define HRD_CPBS		32
 
 /* pan_scan_rect(): the rectangles kept */
 #define PAN_SCAN_RECTANGLES	3
 
-/* the size of the CABAC state the unit keeps, by chroma */
-#define CABAC_ROW_SIZE		0x100
-#define CABAC_ROW_SIZE_CHROMA	0x180
-
-/* the CABAC state the unit clears before a slice: 0x1c0 bytes at its 0x800 */
-#define CABAC_STATE		0x800
-#define CABAC_STATE_SIZE	0x1c0
-
-/* the output space a NAL unit needs, by its type */
-#define SPACE_SPS		0x800
-#define SPACE_PPS		0x100
-#define SPACE_MARKER		0x10
-#define SPACE_OTHER		0x1000
-#define SPACE_RECORDS		0x40
-
-/* with less input space than this and no record, the input is stuck */
-#define INPUT_STUCK		0x280
-
-/* parsed records go out three at a time while an SEI unit is parsed */
-#define SEI_RECORDS		3
-#define SEI_MAX_BITS		0x40	/* of a message's type or size */
-#define SEI_COPY_WORDS		0x80
+/* the most bits of an SEI message's type or size */
+#define SEI_MAX_BITS		0x40
 
 /* SEI payload types parsed here, besides fw1's */
 #define SEI_FRAME_PACKING	45

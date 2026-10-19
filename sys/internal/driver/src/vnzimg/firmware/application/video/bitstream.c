@@ -7,10 +7,6 @@
  */
 #include "service.h"
 
-#define BITS(reg)			(VIDEO_BITS_READ + (reg))
-#define SET_BITS(reg)			(VIDEO_BITS_WRITE + (reg))
-
-#define STATUS_END			5	/* nothing more to push */
 #define START_FOUND			0	/* the status after a start code */
 #define START_ZEROS			3	/* the status after zero bytes */
 
@@ -29,36 +25,36 @@ uint32_t videoBitsBegin(const VideoStream *stream, VideoParser *parser)
 	else
 		bits->read = nal->start + 1;
 	bits->remaining = nal->size - 1;
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_CONTROL), 1);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_WORD), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE2), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE3), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_POSITION), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATUS), 1);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE6), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_CONTROL), 1);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_WORD), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE2), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE3), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_POSITION), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATUS), 1);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE6), 0);
 	return videoBitsRead(bits, 32);
 }
 
 void videoBitsSave(VideoBitsState *state)
 {
-	state->control = VIDEO_DSP_READ(BITS(VIDEO_BITS_CONTROL));
-	state->word = VIDEO_DSP_READ(BITS(VIDEO_BITS_WORD));
-	state->state2 = VIDEO_DSP_READ(BITS(VIDEO_BITS_STATE2));
-	state->state3 = VIDEO_DSP_READ(BITS(VIDEO_BITS_STATE3));
-	state->position = VIDEO_DSP_READ(BITS(VIDEO_BITS_POSITION));
-	state->status = VIDEO_DSP_READ(BITS(VIDEO_BITS_STATUS));
-	state->state6 = VIDEO_DSP_READ(BITS(VIDEO_BITS_STATE6));
+	state->control = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_CONTROL));
+	state->word = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_WORD));
+	state->state2 = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_STATE2));
+	state->state3 = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_STATE3));
+	state->position = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_POSITION));
+	state->status = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_STATUS));
+	state->state6 = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_STATE6));
 }
 
 void videoBitsRestore(const VideoBitsState *state)
 {
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_CONTROL), state->control);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_WORD), state->word);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE2), state->state2);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE3), state->state3);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_POSITION), state->position);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATUS), state->status);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE6), state->state6);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_CONTROL), state->control);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_WORD), state->word);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE2), state->state2);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE3), state->state3);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_POSITION), state->position);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATUS), state->status);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE6), state->state6);
 }
 
 /*
@@ -69,8 +65,8 @@ void videoBitsRestore(const VideoBitsState *state)
  */
 int32_t videoBitsSeek(const VideoStream *stream, VideoNal *nal)
 {
-	uint32_t word = VIDEO_DSP_READ(BITS(VIDEO_BITS_WORD));
-	int32_t bits = VIDEO_DSP_READ(BITS(VIDEO_BITS_POSITION)) - 32;
+	uint32_t word = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_WORD));
+	int32_t bits = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_POSITION)) - 32;
 	int32_t bytes = bits >> 3, tries;
 	uint32_t read = nal->start + 1 + bytes;
 
@@ -78,15 +74,15 @@ int32_t videoBitsSeek(const VideoStream *stream, VideoNal *nal)
 		read = read - stream->ringEnd + stream->ringStart - 1;
 	nal->bits.read = read;
 	nal->bits.remaining = nal->size - 1 - bytes;
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_WORD), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE2), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE3), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_POSITION), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATUS), 1);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_WORD), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE2), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE3), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_POSITION), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATUS), 1);
 	videoBitsRead(&nal->bits, 32);
 	if (bits & 7)
 		videoBitsRead(&nal->bits, bits & 7);
-	for (tries = 3; VIDEO_DSP_READ(BITS(VIDEO_BITS_WORD)) != word && tries >= 1; tries--) {
+	for (tries = 3; VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_WORD)) != word && tries >= 1; tries--) {
 		if (!nal->escaped)
 			nal->bits.remaining++;
 		videoBitsRead(&nal->bits, 8);
@@ -116,7 +112,7 @@ uint32_t videoBitsHasBytes(const VideoBitstream *bits)
 
 uint32_t videoBitsAligned(const VideoBitstream *bits)
 {
-	int32_t position = VIDEO_DSP_READ(BITS(VIDEO_BITS_POSITION));
+	int32_t position = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_POSITION));
 
 	return position % 8 == 0;
 }
@@ -133,7 +129,7 @@ void videoBitsRefill(VideoBitstream *bits, uint32_t wanted)
 		if (remaining < 1) {
 			byte = 0;
 			VIDEO_DSP(VIDEO_BITS_PUSH, wanted, byte);
-			VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATUS), STATUS_END);
+			VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATUS), VIDEO_BITS_END);
 		} else {
 			remaining--;
 			byte = *(const uint8_t *)read;
@@ -272,13 +268,13 @@ uint32_t videoNalFind(const VideoStream *stream, VideoParser *parser, uint32_t w
 	int32_t left;
 	uint32_t status = 0, last;
 
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_CONTROL), 3);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_WORD), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE2), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE3), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_POSITION), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATE6), 0);
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATUS), 1);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_CONTROL), 3);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_WORD), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE2), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE3), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_POSITION), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATE6), 0);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATUS), 1);
 	read = nal->search;
 	left = nal->searchLeft;
 
@@ -290,7 +286,7 @@ uint32_t videoNalFind(const VideoStream *stream, VideoParser *parser, uint32_t w
 		next = ringStart ? ringNext(stream, read) : read + 1;
 		read = next;
 		left--;
-		status = VIDEO_DSP_READ(BITS(VIDEO_BITS_STATUS)) & 7;
+		status = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_STATUS)) & 7;
 		if (status == START_FOUND) {
 			start = next;
 			if (!whole) {
@@ -303,7 +299,7 @@ uint32_t videoNalFind(const VideoStream *stream, VideoParser *parser, uint32_t w
 	}
 
 	/* its end: the next start code, or zero bytes before it */
-	VIDEO_DSP_WRITE(SET_BITS(VIDEO_BITS_STATUS), 1);
+	VIDEO_DSP_WRITE(VIDEO_BITS_SET(VIDEO_BITS_STATUS), 1);
 	while (left >= 1) {
 		last = status;
 		byte = *(const uint8_t *)read;
@@ -312,7 +308,7 @@ uint32_t videoNalFind(const VideoStream *stream, VideoParser *parser, uint32_t w
 		next = ringStart ? ringNext(stream, read) : read + 1;
 		read = next;
 		left--;
-		status = VIDEO_DSP_READ(BITS(VIDEO_BITS_STATUS)) & 7;
+		status = VIDEO_DSP_READ(VIDEO_BITS_GET(VIDEO_BITS_STATUS)) & 7;
 		if (last == START_ZEROS && (status == START_FOUND || status == START_ZEROS)) {
 			left += 4;
 			if (ringStart && (next < base || ringEnd < next) && next < ringStart + 4)

@@ -11,6 +11,7 @@
 #define VIP_RING_CURSORS	4
 #define VIP_RING_WRITER		1	/* VipRingHandle.cursor; readers are 2 to 4 */
 #define VIP_RING_GAP		8
+#define SEMAPHORE_TRIES		50	/* ring.c: the tries for a ring's semaphore */
 
 typedef struct VipRingCursor {
 	int8_t open;

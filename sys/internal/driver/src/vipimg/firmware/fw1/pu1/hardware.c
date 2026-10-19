@@ -5,8 +5,6 @@
 #include "codec.h"
 #include "../common/debug.h"
 
-#define RESET_POLLS		0x8000000
-
 /* the local RAM data vipSaveHardware keeps (fw1-pu1.ld checks the section fits) */
 #define LOCAL_DATA_WORDS	0x50
 

@@ -42,6 +42,15 @@
 #define VIDEO_UNIT_BITS			13	/* the bits a run wrote; cleared after */
 #define VIDEO_UNIT_STATUS		20	/* read and cleared by the interrupt */
 
+/* VIDEO_UNIT_COMMAND's commands, and VIDEO_UNIT_RUN_STATUS's end */
+#define VIDEO_UNIT_LOAD			6
+#define VIDEO_UNIT_RUN			16	/* run the slice */
+#define VIDEO_UNIT_ENDED		129	/* the stream ended */
+
+/* the AVC profiles (profile_idc) */
+#define PROFILE_BASELINE		66
+#define PROFILE_MAIN			77
+
 /* a server thread, in the first 40 bytes of its context */
 typedef struct VideoServer {
 	uint32_t command;
@@ -94,6 +103,44 @@ typedef struct VideoLibrary {
 	int16_t active;
 } VideoLibrary;
 
+/* the codec service's requests (service.c): a request's code */
+#define SERVICE_OPEN			1
+#define SERVICE_CLOSE			2
+#define SERVICE_NONE			3
+#define SERVICE_AU			19
+#define SERVICE_DECODE			20
+
+/* a reply's kind */
+#define SERVICE_REPLY_AU		2
+#define SERVICE_REPLY_PICTURES		8
+#define SERVICE_REPLY_DONE		2048
+
+/* the codecs (the request's codec byte) */
+#define SERVICE_CODEC_AVCDEC		0
+#define SERVICE_CODEC_M4VDEC		1
+#define SERVICE_CODEC_AVCENC		2
+
+/* a codec instance (avcdec.c, m4vdec.c, avcenc.c): its memory, and a reply's */
+#define INSTANCE_SIZE			128
+#define REPLY_SIZE			64
+
+/* its states (the encoder's STATE_ENCODING is STATE_DECODING) */
+#define STATE_NONE			0
+#define STATE_INITIALIZED		3
+#define STATE_READY			4
+#define STATE_DECODING			5
+
+/* the requests to its server thread (the encoder's picture and encode are the AU and decode) */
+#define REQUEST_INITIALIZE		0
+#define REQUEST_TERMINATE		1
+#define REQUEST_AU			3
+#define REQUEST_DECODE			4
+
+/* the reply bits a request waits for */
+#define WAIT_AU				1
+#define WAIT_DECODE			2
+#define WAIT_DONE			4
+
 /*
  * An access unit's stream as the ARM gives it: the buffer it lies in and
  * the unit's own range, physical; the decoder's copy has them mapped.
@@ -110,6 +157,19 @@ typedef struct VideoAu {
 	uint32_t numOfOutput;		/* pictures given back */
 	uint32_t status;
 } VideoAu;
+
+/* what an access unit request asks */
+#define MODE_DECODE			0
+#define MODE_SEQUENCE			1
+#define MODE_CONTEXT			2
+#define MODE_DRAIN			3
+#define MODE_RESTART			4
+
+/* the unit's own modes (VideoAu.advance) */
+#define AU_END				0
+#define AU_NORMAL			1
+#define AU_SKIP				3
+#define AU_RESET			7
 
 /* a decoder command (Dsp0VideocodecDecoderCommand's first 208 bytes) */
 typedef struct VideoDecoderCommand {

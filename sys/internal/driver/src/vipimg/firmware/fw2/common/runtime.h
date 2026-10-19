@@ -32,7 +32,6 @@
 
 /* local RAM */
 #define VIP_LOCAL_VECTORS	(VIP_LOCAL_RAM + 0x00)	/* $cfg VIP_CFG_LOCAL_VECTORS */
-#define VIP_INTERRUPT_VECTORS	(VIP_LOCAL_RAM + 0x30)
 #define VIP_PROGRAM_CODE	(VIP_LOCAL_RAM + 0x40)	/* the program's code overlay */
 #define VIP_HALT_CODE		(VIP_LOCAL_RAM + 0x90)	/* vipHalt's last instructions */
 #define VIP_RUNTIME_STACK	(VIP_LOCAL_RAM + 0x2400)
@@ -95,10 +94,6 @@
 	.endm
 
 #else /* !__ASSEMBLER__ */
-
-/* the runtime's code and data in local RAM, which it copies in at start */
-#define VIP_LRAM_TEXT		__attribute__((section(".lram.text")))
-#define VIP_LRAM_DATA		__attribute__((section(".lram.data")))
 
 /*
  * A command block, one per core, in the image. The ARM side writes a command and

@@ -7,36 +7,19 @@
  */
 #include "service.h"
 
-#define SHARED_SIZE		128
-#define JOB_SIZE		128
 #define CONTEXT_SIZE		64
 #define STREAM_SIZE		128
 #define NAL_SIZE		1216
-
-#define COMMANDS		2
-#define COMMAND_SIZE		64
-#define SLICES			4
-
-#define FLAG_JOBS_DONE		0x00004000
-#define FLAG_FINISH		0x00020000
-#define FLAG_UNIT		0x00040000
-#define FLAG_FINISHED		0x00400000
-
-#define UNIT_RUN		16
 
 #define SLICE_JOB_SIZE		192
 #define PARAMETER_SET_SIZE	1088
 
 #define NAL_IDLE		0x200000	/* nal->flags: nothing for the unit */
-#define UNIT_ENDED		129		/* the unit's status: the stream ended */
 #define RUN_SLICE_ENDED		3
-#define ERROR_SLICES_ENDED	8201
 
 #define ALIGN64(size)		(((size) + 63) & ~63)
 
 /* the VThread jobs, by the slot's index on the context */
-#define JOB_INDEX_PREPARE(slot)	((slot) * 8 + 1)
-#define JOB_INDEX_SLICE(slot)	((slot) * 8 + 3)
 
 void avcdecJobPrepare(uint32_t shared, uint32_t stream, uint32_t job, uint32_t unused);
 void avcdecJobLoad(uint32_t shared, uint32_t stream, uint32_t job, uint32_t unused);
@@ -173,7 +156,7 @@ void avcdecHelperRun(VideoHelper *helper, uint32_t job)
 	argument2 = shared->argument2;
 	runJob(helper->context, index, avcdecJobPrepare,
 		vnzPublicClosePrivate((uint32_t)shared, SHARED_SIZE),
-		argument, argument2, FLAG_FINISH);
+		argument, argument2, HELPER_FLAG_FINISH);
 }
 
 /* the job is prepared: load its slice into the unit and run it, or skip it */
@@ -193,12 +176,12 @@ void avcdecHelperFinish(VideoHelper *helper)
 	if (!nal->skip)
 		load = nal->load;
 	if (nal->skip || (nal->flags & 0x200000)) {
-		vnzThreadSetFlags(thread, FLAG_UNIT);
+		vnzThreadSetFlags(thread, HELPER_FLAG_UNIT);
 	} else {
 		if (load)
 			videoHelperLoad(shared, stream, nal);
 		VIDEO_UNIT[VIDEO_UNIT_DESCRIPTORS] = nal->runMacroblocks;
-		VIDEO_UNIT[VIDEO_UNIT_COMMAND] = UNIT_RUN;
+		VIDEO_UNIT[VIDEO_UNIT_COMMAND] = VIDEO_UNIT_RUN;
 	}
 	vnzPublicClosePrivate((uint32_t)nal, NAL_SIZE);
 	vnzPublicCloseProtected((uint32_t)stream, STREAM_SIZE);
@@ -208,9 +191,9 @@ void avcdecHelperFinish(VideoHelper *helper)
 	address = vnzPublicClosePrivate((uint32_t)shared, SHARED_SIZE);
 	if (load)
 		runJob(helper->context, index, avcdecJobLoad, address,
-			argument, argument2, FLAG_FINISHED);
+			argument, argument2, HELPER_FLAG_FINISHED);
 	else
-		vnzThreadSetFlags(thread, FLAG_FINISHED);
+		vnzThreadSetFlags(thread, HELPER_FLAG_FINISHED);
 }
 
 /* the unit has run: the job after it, with the unit's status */
@@ -226,7 +209,7 @@ void avcdecHelperStep(VideoHelper *helper)
 	argument = shared->argument;
 	runJob(helper->context, index, avcdecJobSlice,
 		vnzPublicClosePrivate((uint32_t)shared, SHARED_SIZE),
-		argument, argument2, FLAG_JOBS_DONE);
+		argument, argument2, HELPER_FLAG_JOBS_DONE);
 }
 
 /* a context's memory, the same for both */
@@ -457,7 +440,7 @@ void avcdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 		status = VIDEO_UNIT[VIDEO_UNIT_RUN_STATUS];
 		done = VIDEO_UNIT[VIDEO_UNIT_RUN_DONE];
 	}
-	ended = nal->skip || status == UNIT_ENDED;
+	ended = nal->skip || status == VIDEO_UNIT_ENDED;
 	if (nal->failed || ended) {
 		done = 0;
 		status = RUN_SLICE_ENDED;

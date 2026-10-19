@@ -18,8 +18,6 @@
 #define VIP_TASK0_DATA		__attribute__((section(".task0.data")))
 #define VIP_TASK0_BSS		__attribute__((section(".task0.bss")))
 
-#define VIP_READ_BUFFER		0	/* the bank 1 offset of the buffer */
-
 typedef struct VipReadStream {
 	VipRingSegment segments[VIP_STREAM_SEGMENTS];	/* in stream order */
 	uint32_t cursor;		/* the next DRAM address to read */

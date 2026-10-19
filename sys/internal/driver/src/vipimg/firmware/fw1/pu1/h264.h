@@ -123,8 +123,23 @@ typedef struct VipPps {
 
 _Static_assert(sizeof(VipPps) == 0xf8, "VipPps");
 
-#define VIP_SPS_COUNT		32
-#define VIP_PPS_COUNT		256
+#define EXTENDED_SAR		255	/* aspect_ratio_idc: Extended_SAR */
+
+/* the largest picture, in macroblocks */
+#define MAX_WIDTH_MBS		120
+#define MAX_HEIGHT_MBS		68
+
+/* the levels at which wide pictures are not SD */
+#define LEVEL_3_1		31
+#define SD_MAX_WIDTH_MBS	45	/* PicWidthInMbs - 1 below it: 720 pixels at most */
+#define LOW_LEVEL_MAX_WIDTH_MBS	75	/* and at most it: 1216 pixels */
+
+/* g_drainState: the pictures are shown out before the decode goes on */
+#define VIP_DRAIN_NONE		0
+#define VIP_DRAIN_RESTART	1	/* the stream starts over; FW2: laid out again */
+#define VIP_DRAIN_LAYOUT	2	/* a new size: until every frame came back */
+
+#define VIP_NO_FIELD		10	/* g_lastBottomField after a frame */
 
 /* a 64-bit time as the codec's structures keep it, at word alignment */
 typedef uint64_t VipTime __attribute__((aligned(4)));

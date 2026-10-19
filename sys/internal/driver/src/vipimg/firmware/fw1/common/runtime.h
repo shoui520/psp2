@@ -55,10 +55,6 @@
 
 #ifndef __ASSEMBLER__
 
-/* code and data the core runs from its local RAM (copied in by loadLocalRam) */
-#define VIP_LRAM_TEXT		__attribute__((section(".lram.text")))
-#define VIP_LRAM_DATA		__attribute__((section(".lram.data")))
-
 /* the local RAM sections: where they are loaded from, where they run, their size */
 extern char __lram_text_load[], __lram_text_start[], __lram_text_size[];
 extern char __lram_data_load[], __lram_data_start[], __lram_data_size[];

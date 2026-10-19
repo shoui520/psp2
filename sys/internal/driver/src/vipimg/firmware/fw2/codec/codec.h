@@ -217,13 +217,6 @@ extern uint32_t g_pictureCount VIP_GLOBAL;
 extern uint32_t g_outputCount VIP_GLOBAL;
 extern VipSliceHeader g_sliceHeader VIP_GLOBAL;
 
-/* g_drainState */
-#define VIP_DRAIN_NONE		0
-#define VIP_DRAIN_RESTART	1	/* the frame stores were laid out again */
-#define VIP_DRAIN_LAYOUT	2	/* a new size: until every frame came back */
-
-#define VIP_NO_FIELD		10	/* g_lastBottomField after a frame */
-
 /* g_outputState: where the output starts after a random access */
 #define VIP_OUTPUT_WAITING	0	/* for the picture with g_outputStartFrame */
 #define VIP_OUTPUT_STARTING	1
@@ -489,5 +482,4 @@ void readStreamInterrupt(void);
 void rescaleClock(uint32_t oldScale, uint32_t newScale);
 int takePictureTime(uint32_t noDecodeTimePts, uint32_t option, uint32_t flags,
 	uint32_t ptsLow, uint32_t dtsLow, const VipTime *fallback);
-
 

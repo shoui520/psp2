@@ -51,6 +51,16 @@ typedef struct VipFrameInfo {
 #define VIP_FRAME_NAL_REFERENCE		12	/* nal_ref_idc != 0 */
 #define VIP_FRAME_DAMAGED		11
 
+/* the same, as masks (picture.c, fw2/codec/info.c) */
+#define SCAN_MASK		(0xfu << VIP_FRAME_REPEAT_FIRST_FIELD)
+#define PROGRESSIVE_SEQUENCE	(1u << VIP_FRAME_PROGRESSIVE_SEQUENCE)
+#define PROGRESSIVE_FRAME	(1u << VIP_FRAME_PROGRESSIVE_FRAME)
+#define TOP_FIELD_FIRST		(1u << VIP_FRAME_TOP_FIELD_FIRST)
+#define REPEAT_FIRST_FIELD	(1u << VIP_FRAME_REPEAT_FIRST_FIELD)
+#define TYPE_MASK		(7u << VIP_FRAME_TYPE_SHIFT)
+#define ASPECT_MASK		(0xfu << VIP_FRAME_ASPECT_SHIFT)
+#define PICTURE_FLAGS		0xfffu	/* cleared for each picture */
+
 /* VIP_FRAME_ASPECT_SHIFT: the nearest MPEG-2 aspect_ratio_information */
 #define VIP_FRAME_ASPECT_1_1		1
 #define VIP_FRAME_ASPECT_4_3		2
@@ -71,6 +81,10 @@ typedef struct VipFrameInfo {
 /* VipFrameInfo.colour without colour_description */
 #define VIP_COLOUR_UNSPECIFIED	(0xffu << VIP_FRAME_COLOUR_PRIMARIES_SHIFT | \
 	0xffu << VIP_FRAME_TRANSFER_SHIFT | 0xffu << VIP_FRAME_MATRIX_SHIFT)
+
+/* VipFrameExtension.chromaSampleLoc, in both firmwares' extensions */
+#define VIP_EXTENSION_CHROMA_TOP_SHIFT		29
+#define VIP_EXTENSION_CHROMA_BOTTOM_SHIFT	26
 
 #ifndef VIP_FW2	/* FW2 has its own extension (fw2/common/frame.h) */
 /*
@@ -107,8 +121,6 @@ typedef struct VipFrameExtension {
 
 #define VIP_EXTENSION_SIZE		0x548
 _Static_assert(sizeof(VipFrameExtension) == VIP_EXTENSION_SIZE, "VipFrameExtension");
-#define VIP_EXTENSION_CHROMA_TOP_SHIFT		29	/* VipFrameExtension.chromaSampleLoc */
-#define VIP_EXTENSION_CHROMA_BOTTOM_SHIFT	26
 #define VIP_EXTENSION_STATE_SHIFT	29	/* VipFrameExtension.state */
 
 /* VipFrameExtension's SEI counts */

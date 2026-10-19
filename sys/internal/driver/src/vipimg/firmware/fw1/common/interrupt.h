@@ -14,6 +14,7 @@
 #define INTERRUPT_SLOTS			16
 
 #define INTERRUPT_SLOT_DMA		0
+#define INTERRUPT_SLOT_MAILBOX		12
 
 #ifdef __ASSEMBLER__
 

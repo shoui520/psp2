@@ -10,38 +10,23 @@
  */
 #include "video.h"
 
-#define INSTANCE_SIZE			128
 #define SEQUENCE_SIZE			128
 #define NAL_TABLE_SIZE			192
-#define REPLY_SIZE			64
 
-#define PROFILE_BASELINE		66
-#define PROFILE_MAIN			77
+/* video.h's states, requests and waits under the encoder's names */
+#define STATE_ENCODING			STATE_DECODING
 
-/* the instance's states */
-#define STATE_NONE			0
-#define STATE_INITIALIZED		3
-#define STATE_READY			4
-#define STATE_ENCODING			5
+#define REQUEST_PICTURE			REQUEST_AU
+#define REQUEST_ENCODE			REQUEST_DECODE
 
-/* the requests to the service */
-#define REQUEST_INITIALIZE		0
-#define REQUEST_TERMINATE		1
-#define REQUEST_PICTURE			3
-#define REQUEST_ENCODE			4
-
-/* the service's codes for them */
-#define SERVICE_INITIALIZE		1
-#define SERVICE_TERMINATE		2
-#define SERVICE_PICTURE			19
-#define SERVICE_ENCODE			20
+#define SERVICE_PICTURE			SERVICE_AU
+#define SERVICE_ENCODE			SERVICE_DECODE
 
 /* the replies, and the bit each toggles */
 #define REPLY_PICTURE			8
 #define REPLY_TERMINATE			2
-#define WAIT_PICTURE			1
-#define WAIT_ENCODE			2
-#define WAIT_DONE			4
+#define WAIT_PICTURE			WAIT_AU
+#define WAIT_ENCODE			WAIT_DECODE
 
 /* the frame types */
 #define FRAME_NONE			0
@@ -365,7 +350,7 @@ static void requestBuild(AvcencInstance *instance, uint32_t type, uint32_t data)
 		instance->sequence = 1 - instance->sequence;
 	} else if (type == REQUEST_INITIALIZE) {
 		request->instance = instance;
-		request->code = SERVICE_INITIALIZE;
+		request->code = SERVICE_OPEN;
 		request->value = (uint32_t)vnzThreadCurrent();
 		request->queue = instance->queue;
 		request->seiArea = instance->seiArea;
@@ -373,7 +358,7 @@ static void requestBuild(AvcencInstance *instance, uint32_t type, uint32_t data)
 		request->initialize = 1;
 		request->sequences = (uint32_t)instance->sequences;
 	} else if (type == REQUEST_TERMINATE) {
-		request->code = SERVICE_TERMINATE;
+		request->code = SERVICE_CLOSE;
 	}
 	vnzPublicClosePrivate((uint32_t)request, sizeof(*request));
 }

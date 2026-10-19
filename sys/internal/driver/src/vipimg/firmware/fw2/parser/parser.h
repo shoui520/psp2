@@ -221,5 +221,12 @@ static inline uint32_t vipNalRecordType(uint32_t header, uint32_t next)
 #define VIP_PARSER_IDLE_ROUNDS		4
 #define VIP_PARSER_IDLE_WAIT		0x2000	/* timer ticks */
 
+/* where DMA lists put a piece of input for the scanner */
+#define SCAN_INPUT_DMA		0x1a00
+
+/* the loader: its image in DRAM and its place in local RAM (fw2/parser.ld) */
+extern const uint8_t g_loaderImage[], g_loaderStart[], g_loaderSize[];
+#define VIP_PROGRAM_LOADER	__attribute__((section(".loader.program"), noinline))
+
 /* the program's: the scanner's state, which resetScanner clears */
 extern uint32_t g_scannerState;

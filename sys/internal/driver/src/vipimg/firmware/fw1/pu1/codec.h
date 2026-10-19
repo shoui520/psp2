@@ -81,7 +81,6 @@ typedef struct VipMemoryQuery {
 
 extern VipMemoryQuery g_memoryQuery;
 
-
 extern VipSps g_sps[VIP_SPS_COUNT];
 extern VipPps g_pps[VIP_PPS_COUNT];
 extern VipSps *g_currentSps;
@@ -135,14 +134,7 @@ extern int8_t g_extensionState;
 extern uint8_t g_lastBottomField;
 extern int8_t g_retryCount;
 
-/* g_drainState: the pictures are shown out before the decode goes on */
-#define VIP_DRAIN_NONE		0
-#define VIP_DRAIN_RESTART	1	/* the stream starts over: show the rest, then stop */
-#define VIP_DRAIN_LAYOUT	2	/* a new size: until every frame came back */
-
-#define VIP_NO_FIELD		10	/* g_lastBottomField after a frame */
 extern uint8_t g_lastFieldMacroblock;	/* VIP_CB_FIELD_MACROBLOCK at the slice's end */
-
 
 /* what follows the picture, seen ahead in the records (lookahead.c) */
 extern int8_t g_nextTimingSeen;		/* the other field's pic_timing() */

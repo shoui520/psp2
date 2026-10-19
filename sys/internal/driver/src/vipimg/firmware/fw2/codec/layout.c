@@ -13,7 +13,6 @@
  */
 #include "codec.h"
 
-#define VIP_WORK_PITCH		0x2000
 #define VIP_WORK_ROW_SHIFT	13
 #define WORK_REGION		0xe0000000
 #define WORK_COLUMNS		0x1ff80000	/* column / 8 << 19 */
@@ -24,8 +23,6 @@
 #define MAX_BANDS		19	/* the original's room; it writes past it beyond */
 
 /* the largest picture, in macroblocks */
-#define MAX_WIDTH_MBS		120
-#define MAX_HEIGHT_MBS		68
 #define MAX_FRAME_MBS		0x2000
 
 /* the frame stores when the open names none: level 4.1's DPB, and 3 more */
@@ -36,9 +33,6 @@
 /* the rows of motion data per macroblock row: with direct_8x8_inference_flag, 4 */
 #define MOTION_ROWS_DIRECT_8X8	4
 #define MOTION_ROWS		5
-
-/* clearing a picture's motion data: a fill of DRAM from local RAM (fw1's) */
-#define CLEAR_MOTION_DMA	(VIP_DMA_LIST | VIP_DMA_FILL | 0x31000)
 
 VipPictureBuffer g_buffers[VIP_CODEC_FRAMES] VIP_GLOBAL;
 uint32_t g_motionData[VIP_CODEC_FRAMES - 1] VIP_GLOBAL;

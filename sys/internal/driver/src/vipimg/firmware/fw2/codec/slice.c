@@ -8,19 +8,6 @@
  */
 #include "codec.h"
 
-/* dec_ref_pic_marking()'s words */
-#define MARKING_OPERATION_SHIFT		29
-#define MARKING_DIFFERENCE_SHIFT	11	/* difference_of_pic_nums_minus1, 18 bits */
-#define MARKING_LONG_TERM_IDX_SHIFT	6
-#define MARKING_MAX_LONG_TERM_SHIFT	1
-
-/* the slice's tables go from local RAM to the units' */
-#define SLICE_TABLE_DMA		(VIP_DMA_LIST | VIP_DMA_EXTERNAL_LOCAL)
-
-/* the largest picture a slice is decoded at, in macroblocks */
-#define MAX_WIDTH_MBS		120
-#define MAX_HEIGHT_MBS		68
-
 VipSliceHeader g_sliceHeader VIP_GLOBAL;
 volatile uint32_t g_listsDone VIP_CODEC_LOCAL;
 uint16_t g_pictureMbs VIP_CODEC_LOCAL;

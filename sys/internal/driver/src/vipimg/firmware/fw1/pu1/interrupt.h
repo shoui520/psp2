@@ -7,7 +7,6 @@
 #include "../common/interrupt.h"
 
 #define INTERRUPT_SLOT_READ_STREAM	1
-#define INTERRUPT_SLOT_MAILBOX		12
 
 #ifndef __ASSEMBLER__
 

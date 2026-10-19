@@ -34,8 +34,6 @@
 #define VUI_NUM_UNITS_IN_TICK		3
 #define VUI_TIME_SCALE			4
 
-#define EXTENDED_SAR		255
-
 /* the frame rates of VipFrameInfo.flags, an MPEG frame_rate_code */
 #define RATE_23_976		1
 #define RATE_24			2

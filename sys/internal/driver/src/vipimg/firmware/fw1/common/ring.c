@@ -6,8 +6,6 @@
 #include "ring.h"
 #include "dma.h"
 
-#define SEMAPHORE_TRIES		50
-
 /*
  * Take a semaphore shared with the other processors, with interrupts off; -1 if
  * it stays taken. Reading the semaphore takes it when it reads 0.

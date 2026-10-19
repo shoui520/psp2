@@ -42,8 +42,6 @@ _Static_assert(sizeof(VipFrameExtension) == 0x7f8, "VipFrameExtension");
 /* VipFrameExtension.seiPresent besides the VIP_SEI_* bits (fw2/codec) */
 #define VIP_EXTENSION_PTS_VALID		0x1
 
-#define VIP_EXTENSION_CHROMA_TOP_SHIFT		29	/* VipFrameExtension.chromaSampleLoc */
-#define VIP_EXTENSION_CHROMA_BOTTOM_SHIFT	26
 #define VIP_EXTENSION_TYPE_SHIFT		29	/* VipFrameExtension.pictureType */
 
 static inline VipFrameExtension *frameExtension(VipFrameHandle *handle)

@@ -9,64 +9,21 @@
  * with the next. Most steps run from the DMA-complete or the decoder interrupt,
  * and let higher interrupts in while they run (beginNesting).
  */
+#include "../common/debug.h"
 #include "decoder.h"
 #include "interrupt.h"
 
 /* how long to wait for a bitstream command */
 #define BITSTREAM_POLLS		2000
 
-/* the parameter sets' parse results: optional tables after the fixed words */
-#define SPS_WORDS		7
-#define PPS_WORDS		2
-#define SCALING_LIST_WORDS	0x39
-#define REF_FRAME_OFFSET_WORDS	0xff
-
-/* the size of the CABAC state the unit keeps, by chroma */
-#define CABAC_ROW_SIZE		0x100
-#define CABAC_ROW_SIZE_CHROMA	0x180
-
-/* the CABAC state the unit clears before a slice: 0x1c0 bytes at its 0x800 */
-#define CABAC_STATE		0x800
-#define CABAC_STATE_SIZE	0x1c0
-
-/* the output space a NAL unit needs, by its type */
-#define SPACE_SPS		0x800
-#define SPACE_PPS		0x100
-#define SPACE_MARKER		0x10
-#define SPACE_OTHER		0x1000
-#define SPACE_RECORDS		0x40
-
-/* with less input space than this and no record, the demultiplexer is stuck */
-#define INPUT_STUCK		0x280
-
-/* parsed records go out three at a time while an SEI unit is parsed */
-#define SEI_RECORDS		3
+/* the most bits an SEI message's type and size take together */
 #define SEI_MAX_BITS		0x1f40
-#define SEI_COPY_WORDS		0x80
 
-/* the commands of debug point 1 */
-#define COMMAND_NONE		0
-#define COMMAND_OPEN		1
-#define COMMAND_CLOSE		2
-
-/* their results, and what the command task's state is */
-#define RESULT_DONE		1
-#define RESULT_BAD_ACTION	3
-#define RESULT_BAD_COUNT	4
-#define RESULT_BAD_STATE	5
+/* the open command's size */
 #define COMMAND_OPEN_COUNT	0x18
-#define COMMAND_CLOSE_COUNT	8
-
-#define DECODER_CLOSED		0
-#define DECODER_OPENING		1
-#define DECODER_OPEN		2
-#define DECODER_CLOSING		3
 
 /* the debugger's event: PU1 finished a frame */
 #define EVENT_PU1_FRAME		0x8000000
-
-/* how long the reset waits for the DMA to stop */
-#define RESET_POLLS		0x8000000
 
 /* the local RAM data vipSaveHardware keeps (fw1-pu0.ld checks the section fits) */
 #define LOCAL_DATA_WORDS	0x90

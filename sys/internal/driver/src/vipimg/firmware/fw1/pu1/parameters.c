@@ -19,11 +19,9 @@
 #define SPS_ID_SHIFT		2
 #define SPS_CHROMA_FORMAT	0x3
 #define SPS_FRAME_CROPPING	(1u << 1)	/* word 4 */
-#define SPS_WORDS		7
 
 #define PPS_SCALING_MATRIX	(1u << 31)	/* word 0 */
 #define PPS_ID_SHIFT		23
-#define PPS_WORDS		2
 
 #define CROP_MASK		0x7ff
 

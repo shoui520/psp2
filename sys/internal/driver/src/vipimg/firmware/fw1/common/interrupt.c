@@ -5,8 +5,6 @@
  */
 #include "runtime.h"
 
-#define VIP_INTERRUPT_VECTORS	(VIP_LOCAL_RAM + 0x30)
-
 #if defined(VIP_PROGRAM_fw1_pu0)
 #define VIP_INTERRUPT_LEVELS1	0x3333
 #else

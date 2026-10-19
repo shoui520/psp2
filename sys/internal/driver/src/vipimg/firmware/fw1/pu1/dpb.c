@@ -28,7 +28,7 @@
  * them, their fields not known)
  */
 #define FILL_ROW_WORDS			12
-#define FILL_DMA			(VIP_DMA_LIST | VIP_DMA_BANK1 | 0x31100)
+#define FILL_MACROBLOCKS_DMA		(VIP_DMA_LIST | VIP_DMA_BANK1 | 0x31100)
 #define FILL_FRAME_DESCRIPTOR		0x64000004
 #define FILL_FIELD_DESCRIPTOR		0x65800002
 #define FILL_PAIR_SECOND_DESCRIPTOR	0x67000004
@@ -650,7 +650,7 @@ void fillMacroblocks(uint32_t count, uint32_t colour)
 			while (done == 1)
 				;
 			g_fillDescriptor.external = address;
-			queueListDma(FILL_DMA, (uint32_t)&g_fillDescriptor << 16 |
+			queueListDma(FILL_MACROBLOCKS_DMA, (uint32_t)&g_fillDescriptor << 16 |
 				sizeof(g_fillDescriptor), length, size, NULL, &done);
 		}
 	} else {
@@ -663,7 +663,7 @@ void fillMacroblocks(uint32_t count, uint32_t colour)
 				;
 			g_fillPair[0].external = address + FILL_FIELD_OFFSET;
 			g_fillPair[1].external = address + FILL_PAIR_SECOND_OFFSET;
-			queueListDma(FILL_DMA, (uint32_t)g_fillPair << 16 | sizeof(g_fillPair),
+			queueListDma(FILL_MACROBLOCKS_DMA, (uint32_t)g_fillPair << 16 | sizeof(g_fillPair),
 				FILL_FRAME_LENGTH, FILL_FRAME_SIZE, NULL, &done);
 		}
 	}

@@ -8,17 +8,6 @@
  */
 #include "codec.h"
 
-#define SCAN_MASK		(0xfu << VIP_FRAME_REPEAT_FIRST_FIELD)
-#define PROGRESSIVE_SEQUENCE	(1u << VIP_FRAME_PROGRESSIVE_SEQUENCE)
-#define PROGRESSIVE_FRAME	(1u << VIP_FRAME_PROGRESSIVE_FRAME)
-#define TOP_FIELD_FIRST		(1u << VIP_FRAME_TOP_FIELD_FIRST)
-#define REPEAT_FIRST_FIELD	(1u << VIP_FRAME_REPEAT_FIRST_FIELD)
-#define TYPE_MASK		(7u << VIP_FRAME_TYPE_SHIFT)
-#define ASPECT_MASK		(0xfu << VIP_FRAME_ASPECT_SHIFT)
-#define PICTURE_FLAGS		0xfffu	/* cleared for each picture */
-
-#define EXTENDED_SAR		255
-
 /* Table E-1's sample aspect ratios, aspect_ratio_idc 1 on */
 static const struct {
 	uint8_t width;

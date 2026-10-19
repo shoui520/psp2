@@ -9,52 +9,8 @@
  */
 #include "codec.h"
 
-/* the parameters of the picture's slices, by slice type (VIP_CB_SLICE_PARAMETERS) */
-#define PARAMETER_CHROMA_SHIFT		31	/* chroma_format_idc != 0 */
-#define PARAMETER_MBAFF_SHIFT		30
-#define PARAMETER_WIDTH_SHIFT		23	/* pic_width_in_mbs_minus1 */
-#define PARAMETER_HEIGHT_SHIFT		16	/* pic_height_in_map_units_minus1 */
-#define PARAMETER_FRAME_MBS_SHIFT	15	/* frame_mbs_only_flag */
-#define PARAMETER_DIRECT_8X8_SHIFT	14	/* direct_8x8_inference_flag */
-#define PARAMETER_WEIGHTING_SHIFT	12	/* weighted_pred_flag, weighted_bipred_idc */
-#define PARAMETER_CHROMA_QP_SHIFT	7	/* chroma_qp_index_offset */
-#define PARAMETER_TRANSFORM_8X8_SHIFT	6
-#define PARAMETER_CONSTRAINED_SHIFT	5	/* constrained_intra_pred_flag */
-					/* second_chroma_qp_index_offset in 0-4 */
-
-/* the scaling lists in the units' RAM: of each kind, Y, Cb and Cr 4x4, then Y 8x8 */
-#define SCALING_KIND_SIZE	0x70
-#define SCALING_4X4		16
-#define SCALING_8X8		64
-#define SCALING_SIZE		(2 * SCALING_KIND_SIZE)
-#define FLAT_SCALING		0x10101010	/* Flat_4x4_16, Flat_8x8_16 */
-#define NO_SCALING		0x01010101	/* a profile without scaling matrices */
-#define GREY			0x80808080	/* a monochrome picture's chroma */
-
-#define SCALING_DMA		(VIP_DMA_LIST | VIP_DMA_BANK1 | VIP_DMA_READ)
-#define FILL_DMA		(VIP_DMA_LIST | VIP_DMA_FILL | VIP_DMA_EXTERNAL_LOCAL)
-
-/* the macroblock loop's writes, their local offset and length */
-#define LOOP_LOCAL(offset, length)	((offset) << 16 | (length))
-
-/* the levels at which wide pictures are not SD */
-#define LEVEL_3_1		31
-#define SD_MAX_WIDTH_MBS	45	/* PicWidthInMbs - 1 below it: 720 pixels at most */
-#define LOW_LEVEL_MAX_WIDTH_MBS	75	/* and at most it: 1216 pixels */
-
-/* the picture's base in DRAM for the units' row above and its writes */
-#define NEIGHBOUR_FRAME		0x400048
-#define PICTURE_FRAME		0x3fffe8
-#define NEIGHBOUR_FIELD		0x400078	/* a field's, or an MBAFF frame's */
-#define PICTURE_FIELD		0x3fffb8
-#define FRAME_STRIDE		96
-#define FIELD_STRIDE		192
-#define CHANNEL_LAYOUT		2
-#define MOTION_LAYOUT		1	/* the work memory's, by fields */
-
-/* the entropy decoding's unit 0 commands */
-#define ENTROPY_CAVLC		3
-#define ENTROPY_CABAC		4
+/* the work memory's layout for the units: by fields */
+#define MOTION_LAYOUT		1
 
 /* the motion saved of a macroblock: its size in DRAM, and in DMA units */
 #define MOTION_SIZE		32

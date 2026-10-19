@@ -6,15 +6,6 @@
  */
 #include "codec.h"
 
-/* dec_ref_pic_marking()'s words */
-#define MARKING_OPERATION_SHIFT		29
-#define MARKING_DIFFERENCE_SHIFT	11	/* difference_of_pic_nums_minus1, 18 bits */
-#define MARKING_LONG_TERM_IDX_SHIFT	6
-#define MARKING_MAX_LONG_TERM_SHIFT	1
-
-/* the slice's tables go from local RAM to the units' */
-#define SLICE_TABLE_DMA		(VIP_DMA_LIST | VIP_DMA_EXTERNAL_LOCAL)
-
 #define WEIGHTED_BIPRED_IMPLICIT	2
 
 /* the most a picture may be in VIP_MEMORY_STANDARD, in macroblocks */
