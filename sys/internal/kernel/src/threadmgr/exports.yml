@@ -374,7 +374,7 @@ SceKernelThreadMgr:
         - sceKernelStartThreadForUser: 0x21F5419B
         - _sceKernelExitCallback: 0x2682E6ED
         - sceKernelTryLockMutexForUser: 0x270993A6
-        - sceKernelSetTimerTimeWide: 0x273B4A4D
+        - sceKernelSetTimerTimeWideForUser: 0x273B4A4D
         - sceKernelOpenMutex: 0x2928D2EC
         - _sceKernelCancelEvent: 0x29483405
         - _sceKernelCreateMsgPipeWithLR: 0x2AAC8BFD
@@ -388,7 +388,7 @@ SceKernelThreadMgr:
         - _sceKernelReceiveMsgPipeVector: 0x3DD9E4AB
         - _sceKernelPulseEventWithNotifyCallback: 0x3E49D3F1
         - sceKernelUnlockReadRWLockForUser: 0x3EF91145
-        - sceKernelGetTimerTimeWide: 0x3EFD3165
+        - sceKernelGetTimerTimeWideForUser: 0x3EFD3165
         - _sceKernelWaitEventFlagCB: 0x401E0C68
         - _sceKernelWaitCondCB: 0x452B0AB3
         - _sceKernelWaitSema: 0x45389B6B
@@ -405,7 +405,7 @@ SceKernelThreadMgr:
         - sceKernelOpenMutex: 0x52E17182
         - sceKernelDeleteEventFlagForUser: 0x5840162C
         - _sceKernelLockReadRWLockCB: 0x5D86D763
-        - sceKernelGetTimerBaseWide: 0x5DBC1960
+        - sceKernelGetTimerBaseWideForUser: 0x5DBC1960
         - _sceKernelGetThreadEventInfo: 0x5DE0B7E9
         - _sceKernelSendMsgPipeVector: 0x5E65E454
         - _sceKernelWaitExceptionCB: 0x5E7876F2
@@ -457,16 +457,16 @@ SceKernelThreadMgr:
         - sceKernelNotifyCallbackForUser: 0xA4683592
         - sceKernelDeleteTimerForUser: 0xAB1E42C4
         - _sceKernelGetTimerInfo: 0xAC7FE4F3
-        - sceKernelCloseTimer: 0xACE60E4A
+        - sceKernelCloseTimerForUser: 0xACE60E4A
         - _sceKernelCreateRWLock: 0xB1877F5E
         - sceKernelCreateCallbackForUser: 0xB19CF7E9
         - _sceKernelGetThreadInfo: 0xB373D8A1
         - _sceKernelGetEventInfo: 0xB395BBF1
         - _sceKernelTrySendMsgPipeVector: 0xB3D600AB
         - sceKernelUnlockWriteRWLockForUser: 0xB4151397
-        - sceKernelOpenTimer: 0xB6E286E7
+        - sceKernelOpenTimerForUser: 0xB6E286E7
         - _sceKernelGetSystemTime: 0xB70EBAE9
-        - sceKernelGetThreadTLSAddr: 0xBACA6891
+        - sceKernelGetThreadTLSAddrForUser: 0xBACA6891
         - sceKernelOpenEventFlag: 0xBC19F8A1
         - sceKernelChangeThreadPriorityForUser: 0xBD0139F2
         - _sceKernelCreateSema_16XX: 0xBD06F27C

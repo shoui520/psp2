@@ -307,23 +307,23 @@ SceSysmem:
         - sceKernelGetMemBlockInfoByRange: 0x006F3DB4
         - sceKernelCheckModelCapability: 0x0144FBD9
         - sceKernelIsPSVitaTV: 0x1453A5E5
-        - sceKernelSyncVMDomain: 0x19D2A81A
-        - sceKernelGetMemBlockInfoByAddr: 0x4010AD65
-        - sceKernelFreeMemBlockForVM: 0x4EA13FEA
+        - sceKernelSyncVMDomainForUser: 0x19D2A81A
+        - sceKernelGetMemBlockInfoByAddrForUser: 0x4010AD65
+        - sceKernelFreeMemBlockForVMForUser: 0x4EA13FEA
         - sceKernelGetSubbudgetInfo: 0x832B4A65
         - sceKernelGetFreeMemorySize: 0x87CC580B
-        - sceKernelOpenMemBlock: 0x8EB8DFBB
-        - sceKernelOpenVMDomain: 0x9CA3EB2B
+        - sceKernelOpenMemBlockForUser: 0x8EB8DFBB
+        - sceKernelOpenVMDomainForUser: 0x9CA3EB2B
         - sceKernelGetModelForCDialog: 0xA2CB322F
-        - sceKernelFindMemBlockByAddr: 0xA33B99D1
-        - sceKernelFreeMemBlock: 0xA91E15EE
+        - sceKernelFindMemBlockByAddrForUser: 0xA33B99D1
+        - sceKernelFreeMemBlockForUser: 0xA91E15EE
         - sceKernelCloseMemBlock: 0xB680E3A0
         - sceKernelGetMemBlockBaseForUser: 0xB8EF5818
-        - sceKernelAllocMemBlock: 0xB9D5EBDE
+        - sceKernelAllocMemBlockForUser: 0xB9D5EBDE
         - sceKernelGetModel: 0xD0D4F729
-        - sceKernelCloseVMDomain: 0xD6CA56CA
-        - sceKernelAllocMemBlockForVM: 0xE2D7E137
-        - sceKernelAllocUnmapMemBlock: 0xEC636BCB
+        - sceKernelCloseVMDomainForUser: 0xD6CA56CA
+        - sceKernelAllocMemBlockForVMForUser: 0xE2D7E137
+        - sceKernelAllocUnmapMemBlockForUser: 0xEC636BCB
     SceDebugLed:
       syscall: true
       version: 1
@@ -352,7 +352,7 @@ SceSysmem:
       version: 1
       nid: 0xB36D5922
       functions:
-        - sceKernelCheckDipsw: 0x1C783FB2
+        - sceKernelCheckDipswForUser: 0x1C783FB2
         - sceKernelClearDipsw: 0x800EDCC1
         - sceKernelSetDipsw: 0x817053D4
     SceDipswForDriver:

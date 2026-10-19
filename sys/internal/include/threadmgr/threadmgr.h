@@ -498,7 +498,7 @@ int sceKernelCloseMutex(SceUID mutexId);
 int sceKernelCloseRWLock(SceUID rwLockId);
 int sceKernelCloseSema(SceUID semaId);
 int sceKernelCloseSimpleEvent(SceUID simpleEventId);
-int sceKernelCloseTimer(SceUID uid);
+int sceKernelCloseTimerForUser(SceUID uid);
 int sceKernelCountWaitingThreadsProc(SceUID pid, SceUID waitId);
 SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallbackFunction entry,
 			       void *common);
@@ -547,13 +547,13 @@ SceUID sceKernelGetThreadId(void);
 int sceKernelGetThreadIdList(SceUID pid, SceUID *ids, SceSize size, SceSize *count);
 int sceKernelGetThreadInfo(SceUID threadId, SceKernelThreadInfo *output);
 int sceKernelGetThreadStackFreeSize(SceUID threadId);
-void *sceKernelGetThreadTLSAddr(SceUID threadId, unsigned int index);
+void *sceKernelGetThreadTLSAddrForUser(SceUID threadId, unsigned int index);
 int sceKernelGetThreadmgrUIDClass(SceUID uid);
 int sceKernelGetTimerBase(SceUID timerId, SceUInt64 *base);
-uint64_t sceKernelGetTimerBaseWide(SceUID uid);
+uint64_t sceKernelGetTimerBaseWideForUser(SceUID uid);
 int sceKernelGetTimerEventRemainingTime(SceUID timerId, SceUInt64 *remaining);
 int sceKernelGetTimerTime(SceUID timerId, SceUInt64 *time);
-uint64_t sceKernelGetTimerTimeWide(SceUID uid);
+uint64_t sceKernelGetTimerTimeWideForUser(SceUID uid);
 int sceKernelInitializeFastMutex(struct ThreadmgrFastMutex *mutex, const char *name, SceUInt32 attr,
 				 const ThreadmgrFastMutexOptParam *option);
 int sceKernelLockMutex(SceUID mutexId, int count, SceUInt32 *timeout);
@@ -564,7 +564,7 @@ int sceKernelOpenEventFlag(const char *userName);
 SceUID sceKernelOpenMutex(const char *userName);
 SceUID sceKernelOpenRWLock(const char *userName);
 SceUID sceKernelOpenSema(const char *userName);
-int sceKernelOpenTimer(const char *userName);
+int sceKernelOpenTimerForUser(const char *userName);
 int sceKernelPollEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 		       uint64_t *outUserData);
 int sceKernelPollEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern);
@@ -580,7 +580,7 @@ int sceKernelSetTHBP(SceUID threadId, int selector, uint32_t value0, uint32_t va
 int sceKernelSetThreadAccessLevel(int permission);
 int sceKernelSetThreadMgrTestMode(void);
 int sceKernelSetTimerTime(SceUID timerId, SceUInt64 *time);
-uint64_t sceKernelSetTimerTimeWide(SceUID uid, uint64_t value);
+uint64_t sceKernelSetTimerTimeWideForUser(SceUID uid, uint64_t value);
 int sceKernelSignalCond(SceUID condId);
 int sceKernelSignalCondAll(SceUID condId);
 int sceKernelSignalCondTo(SceUID condId, SceUID threadId);

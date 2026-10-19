@@ -2127,7 +2127,7 @@ static inline int MemBlockAuthDenied(SceUInt32 authLow, SceUInt32 authHigh)
 	       (authHigh == 0x28000000 && authLow == 0x15);
 }
 
-SceUID sceKernelAllocMemBlock(const char *name, SceKernelMemBlockType type, SceSize size,
+SceUID sceKernelAllocMemBlockForUser(const char *name, SceKernelMemBlockType type, SceSize size,
 			      const SceKernelAllocMemBlockOpt *opt)
 {
 	SceSelfAuthInfo auth;
@@ -2195,7 +2195,7 @@ SceUID sceKernelAllocMemBlock(const char *name, SceKernelMemBlockType type, SceS
 #define DOMAIN_VM			2
 
 /* a block of the VM domain, listed in the process's VM blocks */
-SceUID sceKernelAllocMemBlockForVM(const char *userName, SceSize size)
+SceUID sceKernelAllocMemBlockForVMForUser(const char *userName, SceSize size)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	SysmemProcessStorage *storage;
@@ -2299,7 +2299,7 @@ fail:
 }
 
 /* a VM block left unmapped and locked, for the process to map itself */
-SceUID sceKernelAllocUnmapMemBlock(const char *userName, SceSize size)
+SceUID sceKernelAllocUnmapMemBlockForUser(const char *userName, SceSize size)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	SceUInt32 attr, restype;
@@ -2353,7 +2353,7 @@ SceUID sceKernelAllocUnmapMemBlock(const char *userName, SceSize size)
 }
 
 /* a VM block's range written back to memory and the I-cache dropped */
-int sceKernelSyncVMDomain(SceUID puid, uintptr_t va, SceSize size)
+int sceKernelSyncVMDomainForUser(SceUID puid, uintptr_t va, SceSize size)
 {
 	SysmemProcessStorage *storage;
 	SysmemVMBlock *entry;
@@ -2443,7 +2443,7 @@ static inline SceUInt32 MemBlockRestype(SceUInt32 type, SceUInt32 attr)
 }
 
 /* a block of the caller freed by its PUID, the PUID closed */
-int sceKernelFreeMemBlock(SceUID puid)
+int sceKernelFreeMemBlockForUser(SceUID puid)
 {
 	SceUInt32 attr = 0, type = 0;
 	MemBlockObject *block = NULL, *base = NULL;
@@ -2481,7 +2481,7 @@ int sceKernelFreeMemBlock(SceUID puid)
 }
 
 /* a VM block freed and taken off the process's list */
-int sceKernelFreeMemBlockForVM(SceUID puid)
+int sceKernelFreeMemBlockForVMForUser(SceUID puid)
 {
 	SysmemProcessStorage *storage;
 	SysmemVMBlock *entry, *end;
@@ -2504,7 +2504,7 @@ int sceKernelFreeMemBlockForVM(SceUID puid)
 	}
 	SceCpuForDriver_A4884C4E((SceInt32 *)&storage->vmSize, entry->size);
 	entry->puid = -1;
-	return sceKernelFreeMemBlock(puid);
+	return sceKernelFreeMemBlockForUser(puid);
 }
 
 #define MEMBLOCK_OPEN_RO		0x10
@@ -2514,7 +2514,7 @@ int sceKernelFreeMemBlockForVM(SceUID puid)
  * A mirror of a named shared block for the caller: the block's clients
  * must hold all the capabilities its client info lists.
  */
-SceUID sceKernelOpenMemBlock(const char *userName, SceUInt32 flags)
+SceUID sceKernelOpenMemBlockForUser(const char *userName, SceUInt32 flags)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	MemBlockClientInfo *client;
@@ -2662,7 +2662,7 @@ fail:
 
 int sceKernelCloseMemBlock(SceUID puid)
 {
-	return sceKernelFreeMemBlock(puid);
+	return sceKernelFreeMemBlockForUser(puid);
 }
 
 /* the base of a block user code may see */
@@ -2705,7 +2705,7 @@ none:
 }
 
 /* the caller's PUID of the block holding [addr, addr + size) */
-SceUID sceKernelFindMemBlockByAddr(void *addr, SceSize size)
+SceUID sceKernelFindMemBlockByAddrForUser(void *addr, SceSize size)
 {
 	MemBlockObject *block;
 	SceUID guid;
@@ -2724,7 +2724,7 @@ SceUID sceKernelFindMemBlockByAddr(void *addr, SceSize size)
 	return PUIDFindByGUID(0, guid);
 }
 
-int sceKernelGetMemBlockInfoByAddr(void *addr, SceKernelMemBlockInfo *info)
+int sceKernelGetMemBlockInfoByAddrForUser(void *addr, SceKernelMemBlockInfo *info)
 {
 	int ret;
 

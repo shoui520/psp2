@@ -60,7 +60,7 @@ int CheckDipswAccess(void)
 		SCE_KERNEL_ERROR_ILLEGAL_DIPSW_NUMBER;
 }
 
-int sceKernelCheckDipsw(unsigned int bit)
+int sceKernelCheckDipswForUser(unsigned int bit)
 {
 	int result;
 

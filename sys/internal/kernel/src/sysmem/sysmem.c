@@ -534,7 +534,7 @@ SceUInt32 SceSysmemForKernel_4E6D8BC3(void)
 #define VM_DOMAIN_CLIENT		0x10
 
 /* the current process takes domain 2 as manager (its VM blocks become accessible) */
-int sceKernelOpenVMDomain(void)
+int sceKernelOpenVMDomainForUser(void)
 {
 	SysmemProcessStorage *storage;
 	ThreadCB *thread;
@@ -569,7 +569,7 @@ fail:
 }
 
 /* domain 2 back to client */
-int sceKernelCloseVMDomain(void)
+int sceKernelCloseVMDomainForUser(void)
 {
 	SysmemProcessStorage *storage;
 	ThreadCB *thread;

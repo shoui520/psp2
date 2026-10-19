@@ -1718,8 +1718,8 @@ int sceKernelPMonThreadGetCounterForUser(SceUID threadId, uint32_t counter, uint
 	return SceThreadmgrForKernel_170F69D6(guid, counter, value);
 }
 
-/* sceKernelGetThreadTLSAddr (user): NULL for a thread it does not know */
-void *sceKernelGetThreadTLSAddr(SceUID threadId, unsigned int index)
+/* sceKernelGetThreadTLSAddrForUser (user): NULL for a thread it does not know */
+void *sceKernelGetThreadTLSAddrForUser(SceUID threadId, unsigned int index)
 {
 	SceUID guid;
 
@@ -3897,7 +3897,7 @@ int getTimerInfoForUser(SceUID uid, SceKernelTimerInfo *output)
 	return result;
 }
 
-int sceKernelOpenTimer(const char *userName)
+int sceKernelOpenTimerForUser(const char *userName)
 {
 	struct ThreadCB *thread = currentThreadContext();
 	char name[32];
@@ -3922,7 +3922,7 @@ int sceKernelOpenTimer(const char *userName)
 	return result;
 }
 
-int sceKernelCloseTimer(SceUID uid)
+int sceKernelCloseTimerForUser(SceUID uid)
 {
 	SceKernelIntrStatus intrState = SceCpuForDriver_821FC0EE();
 	ThreadmgrUidTimer *object;
@@ -3989,7 +3989,7 @@ int getTimerTimeForUser(SceUID uid, uint64_t *value)
 	return sceKernelGetTimerTime(guid, value);
 }
 
-uint64_t sceKernelGetTimerBaseWide(SceUID uid)
+uint64_t sceKernelGetTimerBaseWideForUser(SceUID uid)
 {
 	int guid;
 
@@ -4002,7 +4002,7 @@ uint64_t sceKernelGetTimerBaseWide(SceUID uid)
 	return UINT64_MAX;
 }
 
-uint64_t sceKernelGetTimerTimeWide(SceUID uid)
+uint64_t sceKernelGetTimerTimeWideForUser(SceUID uid)
 {
 	int guid;
 
@@ -4048,7 +4048,7 @@ int setTimerTimeForUser(SceUID uid, uint64_t *userValue)
 	return result;
 }
 
-uint64_t sceKernelSetTimerTimeWide(SceUID uid, uint64_t value)
+uint64_t sceKernelSetTimerTimeWideForUser(SceUID uid, uint64_t value)
 {
 	int guid;
 
