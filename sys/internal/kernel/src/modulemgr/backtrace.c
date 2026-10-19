@@ -19,16 +19,6 @@
 
 #define UNWIND_FAILED			9
 
-#define SCE_KERNEL_ERROR_ILLEGAL_ADDR		0x80020006
-#define SCE_KERNEL_ERROR_ILLEGAL_PERMISSION	0x80020008
-#define SCE_KERNEL_ERROR_ILLEGAL_SIZE		0x8002000b
-#define SCE_KERNEL_ERROR_BACKTRACE_FLAGS	0x80020010	/* name unknown */
-#define SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID	0x80024501	/* name unknown */
-#define SCE_KERNEL_ERROR_NOT_IN_EXCEPTION	0x80027101	/* name unknown */
-#define SCE_KERNEL_ERROR_NO_MEMORY_BACKTRACE	0x8002710b	/* name unknown */
-#define SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID	0x80028021
-#define SCE_KERNEL_ERROR_THREAD_TERMINATED	0x80028029	/* name unknown */
-
 enum { REG_SP = 13, REG_LR = 14, REG_PC = 15 };
 
 typedef struct SceKernelBacktraceFrame {
@@ -366,7 +356,7 @@ int _sceKernelBacktraceCore(SceUID thid, SceKernelBacktraceFrame *frames, SceSiz
 	}
 	if ((flags & ~BACKTRACE_FLAGS) != 0 ||
 	    ((flags & BACKTRACE_FLAG_KERNEL_STACK) != 0 && !SceQafMgrForDriver_382C71E8())) {
-		ret = SCE_KERNEL_ERROR_BACKTRACE_FLAGS;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_MODE;
 		goto leave;
 	}
 
@@ -391,7 +381,7 @@ int _sceKernelBacktraceCore(SceUID thid, SceKernelBacktraceFrame *frames, SceSiz
 
 	/* another thread */
 	if (sceKernelGetThreadmgrUIDClass(thid) != 1) {
-		ret = SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
+		ret = SCE_KERNEL_ERROR_INVALID_UID;
 		goto resume;
 	}
 	ret = sceGUIDReferObject(thid, (void **)&obj);
@@ -401,7 +391,7 @@ int _sceKernelBacktraceCore(SceUID thid, SceKernelBacktraceFrame *frames, SceSiz
 	sceKernelSpinlockLowLock(&ctx->lock);
 	refer = 1;
 	if ((ctx->status & 1) != 0) {
-		ret = SCE_KERNEL_ERROR_THREAD_TERMINATED;
+		ret = SCE_KERNEL_ERROR_RUNNING;
 		goto unlock;
 	}
 	if ((flags & BACKTRACE_FLAG_KERNEL_STACK) != 0 || ctx->userFrame != NULL)
@@ -410,14 +400,14 @@ int _sceKernelBacktraceCore(SceUID thid, SceKernelBacktraceFrame *frames, SceSiz
 
 exception:
 	if (excp == 0) {
-		ret = SCE_KERNEL_ERROR_NOT_IN_EXCEPTION;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto resume;
 	}
 	/* the frame of the current exception ends at the top of the CPU's stack */
 	exc = (const SceExcpmgrContext *)SceExcpmgrForKernel_5420ED8F(sceKernelCpuId()) - 1;
 	BacktraceCopyException(regs, exc);
 	if (excp > 1) {
-		ret = SCE_KERNEL_ERROR_NOT_IN_EXCEPTION;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto resume;
 	}
 	if (inIntr) {
@@ -425,7 +415,7 @@ exception:
 			thid = BACKTRACE_THID_EXCEPTION;
 			goto kernel;
 		}
-		ret = SCE_KERNEL_ERROR_BACKTRACE_FLAGS;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_MODE;
 		goto resume;
 	}
 	ctx = exc->thread;
@@ -445,7 +435,7 @@ current:
 
 intr_context:
 	if ((flags & BACKTRACE_FLAG_KERNEL_STACK) == 0) {
-		ret = SCE_KERNEL_ERROR_BACKTRACE_FLAGS;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_MODE;
 		goto resume;
 	}
 kernel:
@@ -469,11 +459,11 @@ locked:
 			pid = KERNEL_PID;
 			goto walk;
 		}
-		ret = SCE_KERNEL_ERROR_BACKTRACE_FLAGS;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_MODE;
 		goto unlock;
 	}
 	if ((int)ctx->currentAttr >= 0) {
-		ret = SCE_KERNEL_ERROR_BACKTRACE_FLAGS;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_MODE;
 		goto unlock;
 	}
 	u = ctx->userFrame;
@@ -543,7 +533,7 @@ int _sceKernelBacktraceForKernelCore(SceUID thid, SceKernelBacktraceFrameForKern
 		goto leave;
 	}
 	if ((flags & ~BACKTRACE_FLAGS) != 0) {
-		ret = SCE_KERNEL_ERROR_BACKTRACE_FLAGS;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_MODE;
 		goto leave;
 	}
 
@@ -569,7 +559,7 @@ int _sceKernelBacktraceForKernelCore(SceUID thid, SceKernelBacktraceFrameForKern
 
 	/* another thread */
 	if (sceKernelGetThreadmgrUIDClass(thid) != 1) {
-		ret = SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
+		ret = SCE_KERNEL_ERROR_INVALID_UID;
 		goto resume;
 	}
 	ret = sceGUIDReferObject(thid, (void **)&obj);
@@ -579,7 +569,7 @@ int _sceKernelBacktraceForKernelCore(SceUID thid, SceKernelBacktraceFrameForKern
 	locked = SceCpuForDriver_5AC9D394(&ctx->lock) >= 0;
 	refer = 1;
 	if ((ctx->status & 1) != 0) {
-		ret = SCE_KERNEL_ERROR_THREAD_TERMINATED;
+		ret = SCE_KERNEL_ERROR_RUNNING;
 		goto unlock;
 	}
 	if ((flags & BACKTRACE_FLAG_KERNEL_STACK) != 0 || ctx->userFrame != NULL)
@@ -588,14 +578,14 @@ int _sceKernelBacktraceForKernelCore(SceUID thid, SceKernelBacktraceFrameForKern
 
 exception:
 	if (excp == 0) {
-		ret = SCE_KERNEL_ERROR_NOT_IN_EXCEPTION;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto resume;
 	}
 	/* the frame of the current exception ends at the top of the CPU's stack */
 	exc = (const SceExcpmgrContext *)SceExcpmgrForKernel_5420ED8F(sceKernelCpuId()) - 1;
 	BacktraceCopyException(regs, exc);
 	if (excp > 1) {
-		ret = SCE_KERNEL_ERROR_NOT_IN_EXCEPTION;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto resume;
 	}
 	if (inIntr) {
@@ -603,7 +593,7 @@ exception:
 			thid = BACKTRACE_THID_EXCEPTION;
 			goto kernel;
 		}
-		ret = SCE_KERNEL_ERROR_BACKTRACE_FLAGS;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_MODE;
 		goto resume;
 	}
 	ctx = exc->thread;
@@ -623,7 +613,7 @@ current:
 
 intr_context:
 	if ((flags & BACKTRACE_FLAG_KERNEL_STACK) == 0) {
-		ret = SCE_KERNEL_ERROR_BACKTRACE_FLAGS;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_MODE;
 		goto resume;
 	}
 kernel:
@@ -647,11 +637,11 @@ check:
 			pid = KERNEL_PID;
 			goto walk;
 		}
-		ret = SCE_KERNEL_ERROR_BACKTRACE_FLAGS;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_MODE;
 		goto unlock;
 	}
 	if ((int)ctx->currentAttr >= 0) {
-		ret = SCE_KERNEL_ERROR_BACKTRACE_FLAGS;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_MODE;
 		goto unlock;
 	}
 	u = ctx->userFrame;
@@ -731,7 +721,7 @@ int sceKernelBacktraceForUser(SceUID thid, SceKernelBacktraceFrame *ubuf, SceSiz
 	if (ubuf != NULL) {
 		kbuf = SceSysmemForKernel_85571907(size);
 		if (kbuf == NULL)
-			return SCE_KERNEL_ERROR_NO_MEMORY_BACKTRACE;
+			return SCE_KERNEL_ERROR_NO_MEMORY;
 	} else {
 		kbuf = NULL;
 	}

@@ -23,19 +23,8 @@
 #define THREAD_ATTR_CHECK_STACK		0x80000000
 #define WAIT_TYPE_LW_COND		0x00200000
 #define WAIT_TYPE_LW_COND_MUTEX		0x00400000
-#define THREADMGR_ERROR_WAIT_CANCEL	0x800280a2	/* PLACEHOLDER: name */
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 #define SDK_VERSION_SIGNAL_TO_STRICT	0x02000000
-#define SCE_KERNEL_ERROR_ILLEGAL_ATTR	0x8002000e
-#define SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID 0x80028021
-#define SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID 0x80028022
-#define SCE_KERNEL_ERROR_WAIT_TIMEOUT	0x80028005
-#define SCE_KERNEL_ERROR_WAIT_DELETE	0x80028006
-#define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
-#define SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID 0x80028181
-#define SCE_KERNEL_ERROR_UNKNOWN_LW_COND_ID 0x800281c1
-#define SCE_KERNEL_ERROR_WAIT_DELETE_LW_MUTEX 0x800281c2
-#define SCE_KERNEL_ERROR_WAIT_DELETE_LW_COND 0x800281c3	/* PLACEHOLDER: name */
 
 /* SceUIDLwCondClass's constructor */
 static int uidLwCond_Constructor(void *object)
@@ -411,7 +400,7 @@ int __sceKernelWaitLwCond(SceUID condId, SceUInt32 *timeout, int callbacks)
 		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (ret != 0 && ret != SCE_KERNEL_ERROR_WAIT_TIMEOUT) {
-			if (ret == (int)THREADMGR_ERROR_WAIT_CANCEL)
+			if (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK)
 				goto next;
 			if (ret == SCE_KERNEL_ERROR_WAIT_DELETE)
 				ret = SCE_KERNEL_ERROR_WAIT_DELETE_LW_COND;
@@ -446,7 +435,7 @@ next:
 		}
 		if (!locked)
 			goto done;
-	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
+	} while (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 	sceKernelSpinlockLowUnlock(&cond->lock);
 	sceGUIDReleaseObject(condId);
 done:

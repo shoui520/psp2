@@ -503,7 +503,7 @@ int sceSblLicMgrGetIssueNoForUser(SceUInt32 *issueNo, int fromNvs)
 	int ret;
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	if (issueNo == NULL)
 		return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
 	state = sceSyscallEnter();
@@ -521,7 +521,7 @@ int sceSblLicMgrGetActivationKeyForUser(SceActivationKey *key)
 	int ret;
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	if (key == NULL)
 		return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
 	state = sceSyscallEnter();
@@ -537,7 +537,7 @@ int sceSblLicMgrGetLicenseStatus(void)
 	SceUInt32 state;
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	state = sceSyscallEnter();
 	sceSyscallLeave(state);
 	return g_licMgrLicenseStatus;
@@ -551,7 +551,7 @@ int sceSblLicMgrGetUsageTimeLimit(SceUInt32 *limit)
 	int ret;
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	if (limit == NULL)
 		return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
 	state = sceSyscallEnter();
@@ -590,7 +590,7 @@ int sceSblLicMgrGetExpireDateForUser(SceUInt32 *date, int fromNvs)
 	int ret;
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	if (date == NULL)
 		return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
 	state = sceSyscallEnter();
@@ -612,7 +612,7 @@ int sceSblLicMgrActivateDevkitForUser(const char *path)
 	int ret;
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	if (path == NULL)
 		return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
 	state = sceSyscallEnter();
@@ -636,7 +636,7 @@ int sceSblLicMgrClearActivationData(void)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	ret = licMgrClearActivationData();
 	sceSyscallLeave(state);
@@ -650,7 +650,7 @@ int sceSblLicMgrActivateFromFs(void)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 #if FW_VERSION >= 0x04000000
 	ret = SceThreadmgrForDriver_E54FD746(0x1000, licMgrActivateFromFs, NULL);
@@ -755,7 +755,7 @@ SceSSize licMgrReadAll(SceUID fd, void *data, SceSize size)	/* name unknown */
 	for (done = 0; done < size; ) {
 		n = sceIoRead(fd, (char *)data + done, size - done);
 		done += n;
-		if (n <= 0 && n != SCE_ERROR_ERRNO_EAGAIN)
+		if (n <= 0 && n != SCE_ERROR_ERRNO_ENMFILE)
 			return SCE_ERROR_ERRNO_EIO;
 	}
 	return done;

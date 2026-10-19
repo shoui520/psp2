@@ -29,12 +29,6 @@
 #define TRAP_REQUEST_UNK2000000		0x02000000	/* PLACEHOLDER: name */
 #define WAIT_TYPE_WORK_QUEUE		0x04000000
 #define WAIT_TYPE_WORK_TASK		0x08000000
-#define THREADMGR_ERROR_WAIT_CANCEL	0x800280a2	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_WAIT_DELETE	0x80028006
-#define SCE_KERNEL_ERROR_UNKNOWN_WORK_QUEUE_ID	0x80028301	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_UNKNOWN_WORK_TASK_ID	0x80028302	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
-#define SCE_KERNEL_ERROR_ILLEGAL_COUNT	0x8002000f
 
 #define WORK_QUEUE_ATTR_THREADS		0x00000001	/* the option's thread count */
 #define WORK_QUEUE_ATTR_PRIORITY	0x00000002	/* the option's thread priority */
@@ -422,7 +416,7 @@ int waitWorkQueue(SceUID workQueueId, SceUInt32 *timeout, int callbacks)
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (!locked)
 			goto callbacks;
-	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
+	} while (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 	sceKernelSpinlockLowUnlock(&queue->lock);
 	sceGUIDReleaseObject(workQueueId);
 	if (!callbacks)
@@ -531,7 +525,7 @@ int waitWorkTask(SceUID workTaskId, SceUInt32 *timeout, int callbacks)
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (!locked)
 			goto callbacks;
-	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
+	} while (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 	sceKernelSpinlockLowUnlock(&task->lock);
 	sceGUIDReleaseObject(workTaskId);
 	if (!callbacks)

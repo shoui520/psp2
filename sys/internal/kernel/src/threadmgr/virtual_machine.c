@@ -27,14 +27,6 @@
 #define THREAD_CPU_NONE			0x7fff
 #define WAIT_TYPE_THREAD_SUSPEND	0x00000008	/* PLACEHOLDER: woken when the thread is suspended */
 #define WAIT_TYPE_EXCEPTION		0x01000000
-#define THREADMGR_ERROR_WAIT_CANCEL	0x800280a2	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_WAIT_DELETE	0x80028006
-#define SCE_KERNEL_ERROR_ILLEGAL_ARG	0x80020008	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_ILLEGAL_MASK	0x8002000c	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_THREAD_DELETED	0x8002802a	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_NOT_VM_SUSPENDED	0x8002802e	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_VM_NOT_SUSPENDED	0x80028033	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_EXCEPTION_BUSY	0x80028321	/* PLACEHOLDER: name */
 #define EXCEPTION_MASK_VALID		0x00000301
 #define CPSR_DEBUGGER_MASK		0xf90ffe20
 #define CPSR_KEEP_MASK			0x06f001df
@@ -60,7 +52,7 @@ int uidException_ReleaseMethod(void *cls, void *object, struct ThreadCB *thread)
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1447);
 	SCE_DBG_ASSERT_CHECK(exception->lock != 0, 1450);
-	if (thread->waitResult != (int)THREADMGR_ERROR_WAIT_CANCEL) {
+	if (thread->waitResult != (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK) {
 		SCE_DBG_ASSERT_CHECK(exception->owner == thread->threadId, 1454);
 		if (--exception->waiters == 0) {
 			exception->owner = -1;
@@ -175,7 +167,7 @@ int suspendThreadForVM(SceUID threadId, int *result, SceKernelSpinlock *done)
 	thread = &object->context;
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (!(thread->currentAttr & THREAD_ATTR_VM) && !isVirtualMachineTitle(thread)) {
-		ret = SCE_KERNEL_ERROR_ILLEGAL_ARG;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_PERMISSION;
 		goto unlock;
 	}
 	count = thread->vmSuspendCount;
@@ -203,7 +195,7 @@ int suspendThreadForVM(SceUID threadId, int *result, SceKernelSpinlock *done)
 			} else if (state & SCE_KERNEL_THREAD_STATUS_DORMANT) {
 				ret = SCE_KERNEL_ERROR_DORMANT;
 			} else if (state & SCE_KERNEL_THREAD_STATUS_DELETED) {
-				ret = SCE_KERNEL_ERROR_THREAD_DELETED;
+				ret = SCE_KERNEL_ERROR_DELETED;
 			} else {
 				if (!(state & SCE_KERNEL_THREAD_STATUS_SUSPENDED)) {
 					SCE_PRINTF_WITH_INFO(0, 639, "error: unexpected thread status\n");
@@ -326,7 +318,7 @@ int resumeThreadForVM(SceUID threadId)
 	}
 	thread = &object->context;
 	if (!(thread->currentAttr & THREAD_ATTR_VM) && !isVirtualMachineTitle(thread)) {
-		ret = SCE_KERNEL_ERROR_ILLEGAL_ARG;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_PERMISSION;
 		goto release;
 	}
 	exception = thread->process->exception;
@@ -336,7 +328,7 @@ int resumeThreadForVM(SceUID threadId)
 	if ((state & 0xffff) == SCE_KERNEL_THREAD_STATUS_DORMANT) {
 		ret = SCE_KERNEL_ERROR_DORMANT;
 	} else if (thread->vmSuspendCount == 0) {
-		ret = SCE_KERNEL_ERROR_VM_NOT_SUSPENDED;
+		ret = SCE_KERNEL_ERROR_SUSPEND_COUNT_UDF;
 	} else {
 		ret = --thread->vmSuspendCount;
 		if (ret < 1) {
@@ -400,7 +392,7 @@ int waitException(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt32 *timeou
 	}
 	if (mask & ~EXCEPTION_MASK_VALID) {
 		SCE_DBG_ASSERT_FAIL(168);
-		ret = SCE_KERNEL_ERROR_ILLEGAL_MASK;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_TYPE;
 		goto restore;
 	}
 	if (info != NULL && info->size > sizeof(*info)) {
@@ -433,7 +425,7 @@ int waitException(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt32 *timeou
 		exception->owner = thread->threadId;
 		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_EXCEPTION_WAITER);
 	} else if (exception->owner != thread->threadId) {
-		ret = SCE_KERNEL_ERROR_EXCEPTION_BUSY;
+		ret = SCE_KERNEL_ERROR_EXCEPTION_MULTI;
 		goto unlock;
 	}
 	exception->waiters++;
@@ -492,7 +484,7 @@ int waitException(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt32 *timeou
 					 timeout, NULL, &locked);
 		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-		if (!locked || ret != (int)THREADMGR_ERROR_WAIT_CANCEL)
+		if (!locked || ret != (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK)
 			break;
 	}
 	SCE_DBG_ASSERT_CHECK(locked != 0, 308);
@@ -643,10 +635,10 @@ int sceKernelSetThreadContextForVM(SceUID threadId, const ThreadmgrVmCpuContext 
 	thread = &object->context;
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (!(thread->currentAttr & THREAD_ATTR_VM)) {
-		ret = SCE_KERNEL_ERROR_ILLEGAL_ARG;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_PERMISSION;
 		goto unlock;
 	}
-	ret = SCE_KERNEL_ERROR_NOT_VM_SUSPENDED;
+	ret = SCE_KERNEL_ERROR_NOT_SUSPENDED;
 	if (thread->vmSuspendCount == 0)
 		goto unlock;
 	if (cpu != NULL) {
@@ -732,10 +724,10 @@ int sceKernelGetThreadContextForVM(SceUID threadId, ThreadmgrVmCpuContext *cpu,
 	thread = &object->context;
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (!(thread->currentAttr & THREAD_ATTR_VM) && !isVirtualMachineTitle(thread)) {
-		ret = SCE_KERNEL_ERROR_ILLEGAL_ARG;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_PERMISSION;
 		goto unlock;
 	}
-	ret = SCE_KERNEL_ERROR_NOT_VM_SUSPENDED;
+	ret = SCE_KERNEL_ERROR_NOT_SUSPENDED;
 	if (thread->vmSuspendCount == 0)
 		goto unlock;
 	if (cpu != NULL) {

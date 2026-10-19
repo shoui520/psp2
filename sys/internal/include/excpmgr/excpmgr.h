@@ -6,16 +6,9 @@
 #pragma once
 
 #include <scetypes.h>
+#include <kernel/error.h>
 #include <threadmgr/threadcb.h>
 #include <processmgr/process.h>
-
-/* Official SDK exception error names */
-#define SCE_KERNEL_ERROR_ILLEGAL_ADDR		0x80020006
-#define SCE_KERNEL_ERROR_ILLEGAL_EXCPCODE	0x80027001
-#define SCE_KERNEL_ERROR_ILLEGAL_EXCPHANDLER	0x80027002
-#define SCE_KERNEL_ERROR_NOTFOUND_EXCPHANDLER	0x80027003
-#define SCE_KERNEL_ERROR_ILLEGAL_PRIORITY	0x80028023
-#define SCE_KERNEL_ERROR_INVALID_MEMORY_ACCESS	0x80022005
 
 /* exception codes: the vector slot (0x100 + code * 4 on the vector page) */
 #define SCE_EXCP_RESET		0
@@ -93,7 +86,6 @@ typedef struct SceExcpmgrContext {
 	SceExcpmgrWaypoint waypoint[32];	/* 0x200 */
 } SceExcpmgrContext;
 
-
 /* the block SceExcpmgrForKernel_96C2869C returns (also given to sysroot slot 4) */
 typedef struct SceExcpmgrData {
 	unsigned int nestCount[4];		/* 0x00 exception depth per core */
@@ -105,7 +97,6 @@ typedef struct SceExcpmgrData {
 	ProcessHwWatchpoints *kernelWatchpoints;	/* 0x48 */
 	unsigned int reserved1[13];
 } SceExcpmgrData;
-
 
 /*
  * The "SceVfpIntRegs" block, one 0x1000 page per core (physical 0xe3320000):

@@ -150,7 +150,7 @@ int sceSblRtcMgrSetCpActivationKeyForUser(void)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	ret = rtcMgrSetCpActivationKey();
 	sceSyscallLeave(state);
@@ -177,7 +177,7 @@ int sceSblRtcMgrSetCpRtcPhysicalAndKeyForUser(SceUInt32 time)
 		}
 	}
 	sceSyscallLeave(state);
-	return SCE_KERNEL_ERROR_NOT_ALLOWED;
+	return SCE_ERROR_ERRNO_ENOSYS;
 }
 
 int sceSblRtcMgrGetCpSerialIdForUser(void *serialId)
@@ -202,7 +202,7 @@ int sceSblRtcMgrGetCpSerialIdForUser(void *serialId)
 		}
 	}
 	sceSyscallLeave(state);
-	return SCE_KERNEL_ERROR_NOT_ALLOWED;
+	return SCE_ERROR_ERRNO_ENOSYS;
 }
 
 int sceSblRtcMgrSetCpRtcPhysicalForUser(SceUInt32 time)
@@ -225,7 +225,7 @@ int sceSblRtcMgrSetCpRtcPhysicalForUser(SceUInt32 time)
 		}
 	}
 	sceSyscallLeave(state);
-	return SCE_KERNEL_ERROR_NOT_ALLOWED;
+	return SCE_ERROR_ERRNO_ENOSYS;
 }
 
 int sceSblRtcMgrGetCpRtcPhysicalForUser(SceUInt32 *time)
@@ -250,7 +250,7 @@ int sceSblRtcMgrGetCpRtcPhysicalForUser(SceUInt32 *time)
 		}
 	}
 	sceSyscallLeave(state);
-	return SCE_KERNEL_ERROR_NOT_ALLOWED;
+	return SCE_ERROR_ERRNO_ENOSYS;
 }
 
 int sceSblRtcMgrSetCpRtcLogicalForUser(SceUInt32 time)
@@ -259,7 +259,7 @@ int sceSblRtcMgrSetCpRtcLogicalForUser(SceUInt32 time)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	sceSyscallLeave(state);
 	if (time >= RTC_CP_LOGICAL_MIN && time <= RTC_CP_LOGICAL_MAX)
@@ -275,7 +275,7 @@ int sceSblRtcMgrGetCpRtcLogicalForUser(SceUInt32 *time)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	if (time == NULL) {
 		sceSyscallLeave(state);

@@ -14,11 +14,6 @@
 #include <acmgr/acmgr.h>
 #include <rtc/rtc.h>
 #include <post_ss_mgr/sblpostssmgr.h>
-/* Official SDK name, not yet present in the shared error header. */
-#ifndef SCE_KERNEL_ERROR_NO_MEMORY
-#define SCE_KERNEL_ERROR_NO_MEMORY 0x8002710b
-#endif
-
 int SceGpsForDriver_092AD9BF(unsigned device, const char *sentence, unsigned size);
 int _sceGpsOpen(int callback);
 int _sceGpsClose(void);

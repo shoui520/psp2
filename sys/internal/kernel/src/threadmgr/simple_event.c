@@ -45,9 +45,6 @@ __attribute__((section(SCE_DBGSRC_SECTION), used)) = {
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 #define UID_MAX_PER_PROCESS		0x800
 #define UID_LW_MAX_PER_PROCESS		0x100
-#define SCE_KERNEL_ERROR_ILLEGAL_ATTR	0x8002000e
-#define SCE_KERNEL_ERROR_UNKNOWN_SIMPLE_EVENT_ID 0x80028261	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
 
 /* SceUIDSimpleEventObject (0x3c) */
 typedef struct ThreadmgrSimpleEvent {

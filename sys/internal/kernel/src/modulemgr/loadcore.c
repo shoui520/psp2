@@ -180,7 +180,7 @@ int LoadcoreLinkClient(LibEntCB *ent, LibStubCB *stub, const ModulemgrLibraryPat
 			"          libname  : %s\n"
 			"   Caller (shared) : %s\n\n",
 			lib->path, ent->exports->libname, client->path);
-		return SCE_KERNEL_ERROR_MODULEMGR_SHARED_TEXT;
+		return SCE_KERNEL_ERROR_MODULEMGR_CANNOT_EXPORT_LIB_TO_SHARED;
 	}
 	pid = client->pid;
 #if FW_DEBUG

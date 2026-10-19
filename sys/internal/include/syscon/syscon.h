@@ -1,9 +1,6 @@
 /*
- * SceSyscon (os0:kd/syscon.skprx) driver interface additions to vitasdk.
- *
- * The packet is syscon's own layout with its fields named; vitasdk's
- * psp2kern/kernel/syscon.h declares the same structure with offset names,
- * so a file includes one header or the other.
+ * SceSyscon (os0:kd/syscon.skprx): the driver's interface. The packet is syscon's own
+ * layout, with its fields named.
  */
 
 #pragma once
@@ -11,6 +8,23 @@
 #include <scetypes.h>
 #include <stddef.h>
 #include <stdint.h>
+
+/* SceSyscon's error codes (names from the henkaku wiki's SceSyscon page) */
+#define SCE_KERNEL_ERROR_SYSCON_ERROR		0x80250000
+#define SCE_SYSCON_ERROR_INVALID_SIZE		0x80250001
+#define SCE_SYSCON_ERROR_INVALID_ARGUMENT	0x80250002
+#define SCE_SYSCON_ERROR_INVALID_POINTER	0x80250003
+#define SCE_SYSCON_ERROR_INVALID_STATUS		0x80250004
+#define SCE_SYSCON_ERROR_NOT_INTR_ALLOWED	0x80250005
+#define SCE_SYSCON_ERROR_TX_SIZE_TOO_LONG	0x80250006
+#define SCE_SYSCON_ERROR_ILLEGAL_SIZE		0x80250100
+#define SCE_SYSCON_ERROR_ILLEGAL_STATUS		0x80250101
+#define SCE_SYSCON_ERROR_NOEXEC			0x80250102
+#define SCE_SYSCON_ERROR_INVALID_FLAGS		0x80250105
+/* name unknown: | the result code syscon replied with (6 bits) */
+#define SCE_SYSCON_ERROR_REPLY			0x80250200
+/* name unknown: | the command of a packet still queued at suspend */
+#define SCE_SYSCON_ERROR_PACKET_PENDING		0x80258000
 
 /* sceSysconCmdExec/ExecAsync flags; they become the low half of the status */
 #define SCE_SYSCON_PACKET_FLAG_PRIORITY		0x0001	/* to the head of its queue */

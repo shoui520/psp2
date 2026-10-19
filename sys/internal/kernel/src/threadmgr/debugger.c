@@ -57,12 +57,6 @@
 #define WAIT_TYPE_USER			0x80000000	/* PLACEHOLDER: the same wait from a user object */
 #define WAIT_ID_MULTIPLE_EVENTS		((SceUID)0x80000000)
 
-#define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
-#define SCE_KERNEL_ERROR_ILLEGAL_ARG	0x80020008	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_UNKNOWN_WAIT_ID	0x80028001	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_NOT_SUSPENDABLE	0x8002802b	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_ALREADY_DEBUG_SUSPENDED	0x8002802f	/* PLACEHOLDER: name */
-
 #define THREAD_CLASS()		(s_threadmgrRuntime.manager->threadClass)
 
 #define DEBUG_REG_PC			15	/* mask bits: r0-r14, then these */
@@ -892,7 +886,7 @@ int _sceKernelSetVfpRegisterForDebugger(SceUID threadId, const uint32_t *vfp, ui
 			"error: _sceKernelSetVfpRegisterForDebugger(0x%08X), deleted thread\n",
 			threadId);
 	} else if (mode != 0 && object->context.userFrame != NULL) {
-		result = SCE_KERNEL_ERROR_ILLEGAL_ARG;
+		result = SCE_KERNEL_ERROR_ILLEGAL_PERMISSION;
 	} else if (object->context.status & THREAD_STATE_DEBUG_SUSPENDED) {
 		cpu = sceKernelCpuId();
 		if ((object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) &&
@@ -956,7 +950,7 @@ int _sceKernelGetVfpRegisterForDebugger(SceUID threadId, uint32_t *vfp, int mode
 			"error: _sceKernelGetVfpRegisterForDebugger(0x%08X), deleted thread\n",
 			threadId);
 	} else if (mode != 0 && object->context.userFrame != NULL) {
-		result = SCE_KERNEL_ERROR_ILLEGAL_ARG;
+		result = SCE_KERNEL_ERROR_ILLEGAL_PERMISSION;
 	} else if (object->context.status & THREAD_STATE_DEBUG_SUSPENDED) {
 		cpu = sceKernelCpuId();
 		if ((object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) &&
@@ -1170,7 +1164,7 @@ int sceKernelDebugSuspendThread(SceUID threadId, uint32_t reason)
 			goto refused;
 	if (manager->cleanerThread->threadId == threadId) {
 refused:
-		result = SCE_KERNEL_ERROR_NOT_SUSPENDABLE;
+		result = SCE_KERNEL_ERROR_CAN_NOT_SUSPEND;
 		goto resume;
 	}
 	cpuId = sceKernelCpuId();
@@ -1710,7 +1704,7 @@ int sceKernelGetWaitingThreadList(SceUID waitId, ThreadmgrWaitingThread *list, S
 	if (sceGUIDReferObjectWithSubclass(waitId,
 			s_threadmgrRuntime.manager->waitableClass,
 			(SceObjectBase **)&object) < 0) {
-		ret = SCE_KERNEL_ERROR_UNKNOWN_WAIT_ID;
+		ret = SCE_KERNEL_ERROR_UNKNOWN_UID;
 		goto resume;
 	}
 	sceKernelSpinlockLowLock(&object->lock);

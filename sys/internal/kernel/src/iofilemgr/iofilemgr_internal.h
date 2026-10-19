@@ -461,8 +461,6 @@ typedef struct VfsLookupPath {
 	const char *elem;
 } VfsLookupPath;
 
-#define SCE_KERNEL_ERROR_FAST_MUTEX_FAILED_TO_OWN	0x80028164
-
 /* SceVfsMount.fumount (in the mount's opaque2): a mount whose device can go away */
 struct Fumount {
 	SceVopTable *vops;		/* the vops that fail while the device is gone */
@@ -532,7 +530,6 @@ _Static_assert(sizeof(SceUIDVfsFileObject) == 0x48, "SceUIDVfsFileObject");
 #define VDLOCK_OWNER_HANDOVER		(-3)	/* the owner while the lock passes to a waiter */
 #define FDLOCK_STATE_BUSY		1
 #define FDLOCK_STATE_UMOUNTING		0x10
-#define SCE_KERNEL_ERROR_MUTEX_FAILED_TO_OWN	0x80028145
 
 /* SceVfsMount.fd_lock (in the mount's opaque): the lock of the mount's files */
 struct FdLock {

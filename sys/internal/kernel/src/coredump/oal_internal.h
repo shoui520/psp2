@@ -3,6 +3,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <kernel/error.h>
 #include <scetypes.h>
 #include <sysmem/sysmem.h>
 #include <modulemgr/module_library.h>

@@ -144,12 +144,12 @@ int apply_reftable(SceModuleCB *cb, const void *reftable, SceUInt32 value, int m
 
 	debugger = SceSysrootForKernel_6050A467(pid);
 	if (!ModuleCBIsInReadOnly(cb, (SceUInt32)reftable, 4))
-		return SCE_KERNEL_ERROR_MODULEMGR_BAD_REFTABLE;
+		return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REF_INFO;
 	ret = StubLinkerCopyIn(pid, &hdr, reftable, 4);
 	if (ret < 0 || (hdr & REFTABLE_HDR_MASK) != 0)
-		return SCE_KERNEL_ERROR_MODULEMGR_BAD_REFTABLE;
+		return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REF_INFO;
 	if (!ModuleCBIsInReadOnly(cb, (SceUInt32)reftable, REFTABLE_SIZE(hdr)))
-		return SCE_KERNEL_ERROR_MODULEMGR_BAD_REFTABLE;
+		return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REF_INFO;
 
 	if (pid != KERNEL_PID) {
 		if (REFTABLE_SIZE(hdr) < sizeof(buf)) {
@@ -174,7 +174,7 @@ int apply_reftable(SceModuleCB *cb, const void *reftable, SceUInt32 value, int m
 	for (;;) {
 		next = p + 2;
 		if (next > end) {
-			ret = p == end ? 0 : SCE_KERNEL_ERROR_MODULEMGR_BAD_REFTABLE;
+			ret = p == end ? 0 : SCE_KERNEL_ERROR_MODULEMGR_INVALID_REF_INFO;
 			break;
 		}
 		w = p[0];
@@ -182,7 +182,7 @@ int apply_reftable(SceModuleCB *cb, const void *reftable, SceUInt32 value, int m
 			addend = (SceInt32)w >> 16;
 		} else if ((w & 0xf) == 2) {
 			if (p + 3 > end) {
-				ret = SCE_KERNEL_ERROR_MODULEMGR_BAD_REFTABLE;
+				ret = SCE_KERNEL_ERROR_MODULEMGR_INVALID_REF_INFO;
 				break;
 			}
 			addend = p[2];
@@ -190,25 +190,25 @@ int apply_reftable(SceModuleCB *cb, const void *reftable, SceUInt32 value, int m
 		} else {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 869, "unknown form=%d, addr=0x%08x\n", w & 0xf,
 					     next);
-			ret = SCE_KERNEL_ERROR_MODULEMGR_BAD_REFTABLE;
+			ret = SCE_KERNEL_ERROR_MODULEMGR_INVALID_REF_INFO;
 			break;
 		}
 
 		segno = (w >> 4) & 0xf;
 		if (segno == 0xf) {
-			ret = SCE_KERNEL_ERROR_MODULEMGR_BAD_REFTABLE;
+			ret = SCE_KERNEL_ERROR_MODULEMGR_INVALID_REF_INFO;
 			break;
 		}
 		if (segno != last) {
 			if ((int)segno >= cb->nSegments) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 882, "not found a segment (%d)\n", segno);
-				ret = SCE_KERNEL_ERROR_MODULEMGR_BAD_REFTABLE;
+				ret = SCE_KERNEL_ERROR_MODULEMGR_INVALID_REF_INFO;
 				break;
 			}
 			seg = &cb->segment[segno];
 			memsz = seg->memsz;
 			if (memsz < 4) {
-				ret = SCE_KERNEL_ERROR_MODULEMGR_BAD_REFTABLE;
+				ret = SCE_KERNEL_ERROR_MODULEMGR_INVALID_REF_INFO;
 				break;
 			}
 		} else {
@@ -216,7 +216,7 @@ int apply_reftable(SceModuleCB *cb, const void *reftable, SceUInt32 value, int m
 		}
 		offset = p[1];
 		if (offset > memsz - 4) {
-			ret = SCE_KERNEL_ERROR_MODULEMGR_BAD_REFTABLE;
+			ret = SCE_KERNEL_ERROR_MODULEMGR_INVALID_REF_INFO;
 			break;
 		}
 		type = (w >> 8) & 0xff;
@@ -328,7 +328,7 @@ text:
 
 		default:
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 933, "Unknown rel type (%d)\n", type);
-			ret = SCE_KERNEL_ERROR_MODULEMGR_BAD_REFTABLE;
+			ret = SCE_KERNEL_ERROR_MODULEMGR_INVALID_REF_INFO;
 			goto out;
 		}
 		if (ret < 0)

@@ -21,11 +21,6 @@
 #define WAIT_TYPE_DELAY			0x00000001	/* only the timed-wait flag */
 #define EVENT_ATTR_PRIORITY		0x00002000	/* waiters queue by priority */
 #define EVENT_DELETED_PATTERN		0x00000010	/* PLACEHOLDER: the pattern a cut wait reports */
-#define THREADMGR_ERROR_WAIT_CANCEL	0x800280a2	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_WAIT_DELETE	0x80028006
-#define SCE_KERNEL_ERROR_WAIT_CANCEL	0x80028007
-#define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
-#define SCE_KERNEL_ERROR_ILLEGAL_MODE	0x80020010
 
 int uidRegisterCallbackClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
 	SceClass *parent, SceSize size, SceClassCallback create, SceClassCallback destroy,
@@ -160,7 +155,7 @@ restart:
 			self->prev->next = self->next;
 			sceKernelSpinlockLowUnlock(
 				&s_threadmgrRuntime.manager->timedWaitLock);
-			releaseThreadWaitState(thread, 0, THREADMGR_ERROR_WAIT_CANCEL);
+			releaseThreadWaitState(thread, 0, SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 			wake |= distributeThread(selectExecCpu(thread), thread);
 		} else {
 			waitId = thread->waitId;
@@ -189,7 +184,7 @@ restart:
 				}
 			}
 			SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_CALLBACKS);
-			wake |= wakeupAndDistributeThread(thread, waitable, THREADMGR_ERROR_WAIT_CANCEL);
+			wake |= wakeupAndDistributeThread(thread, waitable, SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 		}
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 #if !FW_DEBUG
@@ -302,7 +297,7 @@ static int waitEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (!locked)
 			goto callbacks;
-	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
+	} while (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 	sceKernelSpinlockLowUnlock(&event->lock);
 	sceGUIDReleaseObject(eventId);
 	if (!callbacks)
@@ -1403,11 +1398,11 @@ int waitMultipleEvents(ThreadmgrWaitMultipleEvents *wme, SceUInt32 *timeout,
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		continue;
 cancelled:
-		thread->waitResult = THREADMGR_ERROR_WAIT_CANCEL;
+		thread->waitResult = SCE_KERNEL_ERROR_NOTIFY_CALLBACK;
 		cancelWME(wme);
 		ret = thread->waitResult;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL && callbacks);
+	} while (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK && callbacks);
 	if (callbacks && (thread->flags & THREAD_FLAG_CALLBACKS)) {
 		i = callCallbackAll(thread);
 		if ((int)i < 0)

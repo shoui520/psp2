@@ -15,17 +15,6 @@
 #include <appmgr/appmgr_rdrfp.h>
 #include "rdrfp.h"
 
-#define SCE_ERROR_ERRNO_ENOENT		0x80010002
-#define SCE_ERROR_ERRNO_EBADF		0x80010009
-#define SCE_ERROR_ERRNO_ENOMEM		0x8001000c
-#define SCE_ERROR_ERRNO_EACCES		0x8001000d
-#define SCE_ERROR_ERRNO_EBUSY		0x80010010
-#define SCE_ERROR_ERRNO_EEXIST		0x80010011
-#define SCE_ERROR_ERRNO_ENODEV		0x80010013
-#define SCE_ERROR_ERRNO_EISDIR		0x80010015
-#define SCE_ERROR_ERRNO_EINVAL		0x80010016
-#define SCE_APPMGR_ERROR_NOT_FOUND	0x8001008f	/* name unknown */
-
 /* the host's file system calls run as (names unknown) */
 #define RDRFP_PID			0x10013
 #define RDRFP_PERMISSION		0x20
@@ -1136,7 +1125,7 @@ int rdrfpMountAppData(int type, const char *titleId, void *arg)
 		passcode = *passcodeArg;
 		ret = sceAppMgrRdrfpMount(RDRFP_MOUNT_APP, path, &passcode, &mountPoint);
 		if (ret < 0) {
-			if (ret != (int)SCE_APPMGR_ERROR_NOT_FOUND) {
+			if (ret != (int)SCE_ERROR_ERRNO_EICV) {
 				SCE_DBG_PRINTF_WITH_INFO(0xf, 1741, "sceAppMgrRdrfpMount ret = 0x%x\n", ret);
 				goto out;
 			}

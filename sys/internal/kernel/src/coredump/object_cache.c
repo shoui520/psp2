@@ -20,9 +20,6 @@
 /* set on a cached SCE_KERNEL_WAITTYPE_EVENT/MP_EVENTS object that is a timer */
 #define COREDUMP_CACHE_TYPE_TIMER	0x10000000U
 
-#define COREDUMP_CACHE_ERROR_NOT_FOUND		0x8001003D
-#define COREDUMP_CACHE_ERROR_INVALID_ARGUMENT	0x80010069
-
 typedef struct CoredumpCachedThread {
 	SceUID pid;
 	CoredumpThreadInfo info;
@@ -82,7 +79,7 @@ int coredumpGetCachedThreadInfo(SceUID pid, SceUID threadId,
 	unsigned int i;
 
 	if (info == NULL)
-		return COREDUMP_CACHE_ERROR_INVALID_ARGUMENT;
+		return SCE_ERROR_ERRNO_ENOBUFS;
 	for (i = 0; i < coredumpCache.numThreads; i++) {
 		if (coredumpCache.threads[i].pid == pid &&
 		    coredumpCache.threads[i].info.threadId == threadId) {
@@ -90,7 +87,7 @@ int coredumpGetCachedThreadInfo(SceUID pid, SceUID threadId,
 			return 0;
 		}
 	}
-	return COREDUMP_CACHE_ERROR_NOT_FOUND;
+	return SCE_ERROR_ERRNO_ENODATA;
 }
 
 int coredumpGetCachedSemaphoreInfo(SceUID pid, SceUID semaId,
@@ -99,7 +96,7 @@ int coredumpGetCachedSemaphoreInfo(SceUID pid, SceUID semaId,
 	unsigned int i;
 
 	if (info == NULL)
-		return COREDUMP_CACHE_ERROR_INVALID_ARGUMENT;
+		return SCE_ERROR_ERRNO_ENOBUFS;
 	for (i = 0; i < coredumpCache.numObjects; i++) {
 		if ((coredumpCache.objects[i].type & ~SCE_KERNEL_WAITTYPE_CB) ==
 			SCE_KERNEL_WAITTYPE_SEMAPHORE &&
@@ -109,7 +106,7 @@ int coredumpGetCachedSemaphoreInfo(SceUID pid, SceUID semaId,
 			return 0;
 		}
 	}
-	return COREDUMP_CACHE_ERROR_NOT_FOUND;
+	return SCE_ERROR_ERRNO_ENODATA;
 }
 
 int coredumpGetCachedEventFlagInfo(SceUID pid, SceUID eventFlagId,
@@ -118,7 +115,7 @@ int coredumpGetCachedEventFlagInfo(SceUID pid, SceUID eventFlagId,
 	unsigned int i;
 
 	if (info == NULL)
-		return COREDUMP_CACHE_ERROR_INVALID_ARGUMENT;
+		return SCE_ERROR_ERRNO_ENOBUFS;
 	for (i = 0; i < coredumpCache.numObjects; i++) {
 		if ((coredumpCache.objects[i].type & ~SCE_KERNEL_WAITTYPE_CB) ==
 			SCE_KERNEL_WAITTYPE_EVENTFLAG &&
@@ -128,7 +125,7 @@ int coredumpGetCachedEventFlagInfo(SceUID pid, SceUID eventFlagId,
 			return 0;
 		}
 	}
-	return COREDUMP_CACHE_ERROR_NOT_FOUND;
+	return SCE_ERROR_ERRNO_ENODATA;
 }
 
 int coredumpGetCachedMutexInfo(SceUID pid, SceUID mutexId,
@@ -137,7 +134,7 @@ int coredumpGetCachedMutexInfo(SceUID pid, SceUID mutexId,
 	unsigned int i;
 
 	if (info == NULL)
-		return COREDUMP_CACHE_ERROR_INVALID_ARGUMENT;
+		return SCE_ERROR_ERRNO_ENOBUFS;
 	for (i = 0; i < coredumpCache.numObjects; i++) {
 		if ((coredumpCache.objects[i].type & ~SCE_KERNEL_WAITTYPE_CB) ==
 			SCE_KERNEL_WAITTYPE_MUTEX &&
@@ -147,7 +144,7 @@ int coredumpGetCachedMutexInfo(SceUID pid, SceUID mutexId,
 			return 0;
 		}
 	}
-	return COREDUMP_CACHE_ERROR_NOT_FOUND;
+	return SCE_ERROR_ERRNO_ENODATA;
 }
 
 int coredumpGetCachedLwMutexInfo(SceUID pid, SceUID lwMutexId,
@@ -156,7 +153,7 @@ int coredumpGetCachedLwMutexInfo(SceUID pid, SceUID lwMutexId,
 	unsigned int i;
 
 	if (info == NULL)
-		return COREDUMP_CACHE_ERROR_INVALID_ARGUMENT;
+		return SCE_ERROR_ERRNO_ENOBUFS;
 	for (i = 0; i < coredumpCache.numObjects; i++) {
 		if ((coredumpCache.objects[i].type & ~SCE_KERNEL_WAITTYPE_CB) ==
 			SCE_KERNEL_WAITTYPE_LW_MUTEX &&
@@ -166,7 +163,7 @@ int coredumpGetCachedLwMutexInfo(SceUID pid, SceUID lwMutexId,
 			return 0;
 		}
 	}
-	return COREDUMP_CACHE_ERROR_NOT_FOUND;
+	return SCE_ERROR_ERRNO_ENODATA;
 }
 
 int coredumpGetCachedCondInfo(SceUID pid, SceUID condId, CoredumpCondInfo *info)
@@ -174,7 +171,7 @@ int coredumpGetCachedCondInfo(SceUID pid, SceUID condId, CoredumpCondInfo *info)
 	unsigned int i;
 
 	if (info == NULL)
-		return COREDUMP_CACHE_ERROR_INVALID_ARGUMENT;
+		return SCE_ERROR_ERRNO_ENOBUFS;
 	for (i = 0; i < coredumpCache.numObjects; i++) {
 		if ((coredumpCache.objects[i].type & ~SCE_KERNEL_WAITTYPE_CB) ==
 			SCE_KERNEL_WAITTYPE_COND_SIGNAL &&
@@ -184,7 +181,7 @@ int coredumpGetCachedCondInfo(SceUID pid, SceUID condId, CoredumpCondInfo *info)
 			return 0;
 		}
 	}
-	return COREDUMP_CACHE_ERROR_NOT_FOUND;
+	return SCE_ERROR_ERRNO_ENODATA;
 }
 
 int coredumpGetCachedLwCondInfo(SceUID pid, SceUID lwCondId,
@@ -193,7 +190,7 @@ int coredumpGetCachedLwCondInfo(SceUID pid, SceUID lwCondId,
 	unsigned int i;
 
 	if (info == NULL)
-		return COREDUMP_CACHE_ERROR_INVALID_ARGUMENT;
+		return SCE_ERROR_ERRNO_ENOBUFS;
 	for (i = 0; i < coredumpCache.numObjects; i++) {
 		if ((coredumpCache.objects[i].type & ~SCE_KERNEL_WAITTYPE_CB) ==
 			SCE_KERNEL_WAITTYPE_LW_COND_SIGNAL &&
@@ -205,7 +202,7 @@ int coredumpGetCachedLwCondInfo(SceUID pid, SceUID lwCondId,
 			return 0;
 		}
 	}
-	return COREDUMP_CACHE_ERROR_NOT_FOUND;
+	return SCE_ERROR_ERRNO_ENODATA;
 }
 
 int coredumpGetCachedMsgPipeInfo(SceUID pid, SceUID msgPipeId,
@@ -214,7 +211,7 @@ int coredumpGetCachedMsgPipeInfo(SceUID pid, SceUID msgPipeId,
 	unsigned int i;
 
 	if (info == NULL)
-		return COREDUMP_CACHE_ERROR_INVALID_ARGUMENT;
+		return SCE_ERROR_ERRNO_ENOBUFS;
 	for (i = 0; i < coredumpCache.numObjects; i++) {
 		if ((coredumpCache.objects[i].type & ~SCE_KERNEL_WAITTYPE_CB) ==
 			SCE_KERNEL_WAITTYPE_MSG_PIPE &&
@@ -224,7 +221,7 @@ int coredumpGetCachedMsgPipeInfo(SceUID pid, SceUID msgPipeId,
 			return 0;
 		}
 	}
-	return COREDUMP_CACHE_ERROR_NOT_FOUND;
+	return SCE_ERROR_ERRNO_ENODATA;
 }
 
 /*
@@ -237,7 +234,7 @@ int coredumpGetCachedRWLockInfo(SceUID pid, SceUID rwLockId,
 	unsigned int i;
 
 	if (info == NULL)
-		return COREDUMP_CACHE_ERROR_INVALID_ARGUMENT;
+		return SCE_ERROR_ERRNO_ENOBUFS;
 	for (i = 0; i < coredumpCache.numObjects; i++) {
 		if ((coredumpCache.objects[i].type & ~SCE_KERNEL_WAITTYPE_CB) ==
 			SCE_KERNEL_WAITTYPE_MSG_PIPE &&
@@ -247,7 +244,7 @@ int coredumpGetCachedRWLockInfo(SceUID pid, SceUID rwLockId,
 			return 0;
 		}
 	}
-	return COREDUMP_CACHE_ERROR_NOT_FOUND;
+	return SCE_ERROR_ERRNO_ENODATA;
 }
 
 int coredumpGetCachedSimpleEventInfo(SceUID pid, SceUID eventId,
@@ -257,7 +254,7 @@ int coredumpGetCachedSimpleEventInfo(SceUID pid, SceUID eventId,
 	unsigned int i;
 
 	if (info == NULL)
-		return COREDUMP_CACHE_ERROR_INVALID_ARGUMENT;
+		return SCE_ERROR_ERRNO_ENOBUFS;
 	for (i = 0; i < coredumpCache.numObjects; i++) {
 		type = coredumpCache.objects[i].type & ~SCE_KERNEL_WAITTYPE_CB;
 		if ((type == SCE_KERNEL_WAITTYPE_EVENT ||
@@ -268,7 +265,7 @@ int coredumpGetCachedSimpleEventInfo(SceUID pid, SceUID eventId,
 			return 0;
 		}
 	}
-	return COREDUMP_CACHE_ERROR_NOT_FOUND;
+	return SCE_ERROR_ERRNO_ENODATA;
 }
 
 int coredumpGetCachedTimerInfo(SceUID pid, SceUID timerId,
@@ -278,7 +275,7 @@ int coredumpGetCachedTimerInfo(SceUID pid, SceUID timerId,
 	unsigned int i;
 
 	if (info == NULL)
-		return COREDUMP_CACHE_ERROR_INVALID_ARGUMENT;
+		return SCE_ERROR_ERRNO_ENOBUFS;
 	for (i = 0; i < coredumpCache.numObjects; i++) {
 		type = coredumpCache.objects[i].type & ~SCE_KERNEL_WAITTYPE_CB;
 		if ((type == (COREDUMP_CACHE_TYPE_TIMER | SCE_KERNEL_WAITTYPE_EVENT) ||
@@ -289,7 +286,7 @@ int coredumpGetCachedTimerInfo(SceUID pid, SceUID timerId,
 			return 0;
 		}
 	}
-	return COREDUMP_CACHE_ERROR_NOT_FOUND;
+	return SCE_ERROR_ERRNO_ENODATA;
 }
 
 /* the wait types whose object the cache can hold, as case labels */
@@ -353,10 +350,10 @@ int coredumpGetCachedWaitingThreadList(SceUID pid, SceUID waitId,
 	SceSize count, i;
 
 	if (capacity == 0 || list == NULL)
-		return COREDUMP_CACHE_ERROR_INVALID_ARGUMENT;
+		return SCE_ERROR_ERRNO_ENOBUFS;
 	count = cachedWaitingThreadCount(pid, waitId);
 	if (count == 0)
-		return COREDUMP_CACHE_ERROR_NOT_FOUND;
+		return SCE_ERROR_ERRNO_ENODATA;
 	for (i = 0; i < coredumpCache.numObjects; i++) {
 		switch (coredumpCache.objects[i].type) {
 		CASE_CACHED_OBJECT_TYPES:
@@ -366,7 +363,7 @@ int coredumpGetCachedWaitingThreadList(SceUID pid, SceUID waitId,
 			break;
 		}
 	}
-	return COREDUMP_CACHE_ERROR_NOT_FOUND;
+	return SCE_ERROR_ERRNO_ENODATA;
 found:
 	thread = coredumpCache.objects[i].waitingThreads;
 	if (capacity < count)
@@ -454,7 +451,7 @@ int SceCoredumpForDriver_EF20949F(const CoredumpThreadSnapshot *snapshot)
 	int count;
 
 	if (snapshot == NULL)
-		return COREDUMP_CACHE_ERROR_INVALID_ARGUMENT;
+		return SCE_ERROR_ERRNO_ENOBUFS;
 	coredumpCache.threads[coredumpCache.numThreads].pid = snapshot->info.processId;
 	coredumpCache.threads[coredumpCache.numThreads].info.threadId =
 		snapshot->info.threadId;

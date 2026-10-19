@@ -13,7 +13,6 @@
 
 #define THREAD_ATTR_USER		0x80000000
 #define THREAD_NAME_SIZE		0x20
-#define SCE_KERNEL_ERROR_ILLEGAL_SIZE	0x8002000b
 
 /* what sceKernelCreateThread passes past its third argument */
 struct ThreadmgrCreateThreadExtArgs {

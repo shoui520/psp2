@@ -1026,8 +1026,6 @@ deferred:
 #define WAIT_TYPE_FAST_MUTEX_SPIN	0x2000
 #define WAIT_ATTR_UNINTERRUPTIBLE	0x00008000
 #define SPIN_RETRY_DELAY		10
-#define SCE_KERNEL_ERROR_WAIT_EXITING	0x8002802c	/* PLACEHOLDER: names */
-#define SCE_KERNEL_ERROR_WAIT_SUSPENDED	0x8002802d
 
 /* callThreadmgrBeforeIntrHandler: thread (running here) was spinning on a fast mutex */
 void callThreadmgrBeforeIntrHandler(uintptr_t unused, struct ThreadCB *context)
@@ -1092,9 +1090,9 @@ void callThreadmgrBeforeIntrHandler(uintptr_t unused, struct ThreadCB *context)
 		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAIT_CLEAR);
 		request = thread->flags & THREAD_FLAG_REQUEST_MASK;
 		if (request == THREAD_FLAG_REQUEST_EXIT_DELETE || request == THREAD_FLAG_REQUEST_EXIT)
-			thread->waitResult = SCE_KERNEL_ERROR_WAIT_EXITING;
+			thread->waitResult = SCE_KERNEL_ERROR_THREAD_STOPPED;
 		else if (request == THREAD_FLAG_REQUEST_SUSPEND)
-			thread->waitResult = SCE_KERNEL_ERROR_WAIT_SUSPENDED;
+			thread->waitResult = SCE_KERNEL_ERROR_THREAD_SUSPENDED;
 		else
 			SCE_DBG_ASSERT_LEVEL(0, 0, 865);
 		thread->spinMutex = NULL;

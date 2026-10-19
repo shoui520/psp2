@@ -29,21 +29,7 @@
 #define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define THREAD_ATTR_CHECK_STACK		0x80000000
 #define WAIT_TYPE_RW_LOCK		0x80
-#define THREADMGR_ERROR_WAIT_CANCEL	0x800280a2	/* PLACEHOLDER: name */
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_ILLEGAL_TYPE	0x8002000a
-#define SCE_KERNEL_ERROR_ILLEGAL_ATTR	0x8002000e
-#define SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS 0x80028002
-#define SCE_KERNEL_ERROR_WAIT_DELETE	0x80028006
-#define SCE_KERNEL_ERROR_WAIT_CANCEL	0x80028007
-#define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
-#define SCE_KERNEL_ERROR_UNKNOWN_RW_LOCK_ID 0x800281e1
-#define SCE_KERNEL_ERROR_RW_LOCK_RECURSIVE 0x800281e2
-#define SCE_KERNEL_ERROR_RW_LOCK_LOCK_OVF 0x800281e3
-#define SCE_KERNEL_ERROR_RW_LOCK_NOT_OWNED 0x800281e4
-#define SCE_KERNEL_ERROR_RW_LOCK_UNLOCK_UDF 0x800281e5
-#define SCE_KERNEL_ERROR_RW_LOCK_FAILED_TO_LOCK 0x800281e6
-#define SCE_KERNEL_ERROR_RW_LOCK_FAILED_TO_UNLOCK 0x800281e7
 
 /* the rw lock state proper (0x20), cleared by the constructor; releaseRWLock works on it */
 typedef struct ThreadmgrRWLockCore {
@@ -338,7 +324,7 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 		}
 		if (!locked)
 			goto callbacks;
-	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
+	} while (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 	sceKernelSpinlockLowUnlock(&rwLock->lock);
 	sceGUIDReleaseObject(rwLockId);
 	if (!callbacks)
@@ -968,9 +954,9 @@ int sceKernelCancelRWLock(SceUID rwLockId, int *numReadWaitThreads, int *numWrit
 	}
 	if (type > 1) {
 		SCE_DBG_PRINTF(0, 1450, "*** error: sceKernelCancelRWLock(0x%08X[%s])=0x%08X, "
-			"type=0x%08X\n", rwLockId, SceSysmemForDriver_E655852F(rwLockId), SCE_KERNEL_ERROR_ILLEGAL_TYPE,
+			"type=0x%08X\n", rwLockId, SceSysmemForDriver_E655852F(rwLockId), SCE_KERNEL_ERROR_INVALID_FLAGS,
 			type);
-		return SCE_KERNEL_ERROR_ILLEGAL_TYPE;
+		return SCE_KERNEL_ERROR_INVALID_FLAGS;
 	}
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(rwLockId,

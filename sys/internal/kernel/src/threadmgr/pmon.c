@@ -15,8 +15,6 @@
 #define PMON_COUNTER_MASK		0x8000003f	/* event counters 0..5 and the cycle counter */
 #define PMON_CYCLE_COUNTER		31
 #define PMON_EVENT_COUNTERS		6
-#define SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID 0x80028021
-#define SCE_KERNEL_ERROR_NOT_IMPLEMENTED 0x80020002
 
 static inline int PmonCounterValid(uint32_t counter)
 {

@@ -44,15 +44,6 @@
 #define ALARM_HOOK_CANCEL		6
 #define ALARM_HOOK_CALL			7
 #define ALARM_HOOK_END			8
-#define SCE_KERNEL_ERROR_ILLEGAL_ATTR	0x8002000e
-#define SCE_KERNEL_ERROR_ILLEGAL_TYPE	0x8002000c	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_WAIT_CANCEL	0x80028007
-#define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
-#define SCE_KERNEL_ERROR_UNKNOWN_ALARM_ID	0x800280c1	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_ALARM_BUSY	0x800280c2	/* PLACEHOLDER: name; cancelled from its own handler */
-#define SCE_KERNEL_ERROR_UNKNOWN_TIMER_ID	0x80028241	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_NOT_SETTED	0x80028242	/* PLACEHOLDER: name; no event time */
-#define SCE_KERNEL_ERROR_TIMER_BUSY	0x80024501	/* PLACEHOLDER: name; from its own handler */
 
 #define TIMER_LOCK()	(&s_threadmgrRuntime.manager->timerLock)
 #define PROCESS_CLASS()	(s_threadmgrRuntime.manager->processClass)
@@ -1286,7 +1277,7 @@ int sceKernelStartTimer(SceUID timerId)
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = lockTimerQueueCpuSuspendIntr();
 	if (manager->timerHandlingId == timerId && manager->timerCpuId == (int)sceKernelCpuId()) {
-		ret = SCE_KERNEL_ERROR_TIMER_BUSY;
+		ret = SCE_KERNEL_ERROR_INVALID_UID;
 		sceKernelSpinlockLowUnlock(TIMER_LOCK());
 		goto resume;
 	}
@@ -1341,7 +1332,7 @@ int sceKernelStopTimer(SceUID timerId)
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = lockTimerQueueCpuSuspendIntr();
 	if (manager->timerHandlingId == timerId && manager->timerCpuId == (int)sceKernelCpuId()) {
-		ret = SCE_KERNEL_ERROR_TIMER_BUSY;
+		ret = SCE_KERNEL_ERROR_INVALID_UID;
 		sceKernelSpinlockLowUnlock(TIMER_LOCK());
 		goto resume;
 	}
@@ -2039,7 +2030,7 @@ int sceKernelGetTimerEventRemainingTime(SceUID timerId, SceUInt64 *remaining)
 	if (ret >= 0) {
 		sceKernelSpinlockLowLock(&uidTimer->base.event.lock);
 		if (!(uidTimer->flags & TIMER_FLAG_EVENT)) {
-			ret = SCE_KERNEL_ERROR_NOT_SETTED;
+			ret = SCE_KERNEL_ERROR_EVENT_NOT_SET;
 		} else if (!(uidTimer->flags & TIMER_FLAG_RUNNING)) {
 			*remaining = uidTimer->eventTime - uidTimer->time;
 			ret = 0;
@@ -2086,7 +2077,7 @@ int sceKernelCancelAlarm(SceUID alarmId)
 
 	intr = SceCpuForDriver_821FC0EE();
 	if (manager->timerCpuId == (int)sceKernelCpuId() && manager->timerHandlingId == alarmId) {
-		ret = SCE_KERNEL_ERROR_ALARM_BUSY;
+		ret = SCE_KERNEL_ERROR_ALARM_CAN_NOT_CANCEL;
 		goto resume;
 	}
 	ret = sceGUIDReferObjectWithClass(alarmId, manager->alarmClass,

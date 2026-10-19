@@ -10,11 +10,6 @@
 #define BUDGET_ID_GAME			2
 #define BUDGET_ID_SHELL			3
 
-#define SCE_KERNEL_ERROR_UNKNOWN_UID		0x80028002	/* name unknown */
-#define SCE_KERNEL_ERROR_ILLEGAL_PERMISSION	0x80010058	/* name unknown */
-#define SCE_KERNEL_ERROR_NO_MEMORY_SYSMEM	0x8001000c
-#define SCE_KERNEL_ERROR_PROCESSMGR_BUDGET_SIZE	0x80029007	/* name unknown */
-
 static SceClass g_budgetClass;
 ProcessBudget *g_kernelBudget;
 ProcessBudget *g_gameBudget;
@@ -131,25 +126,25 @@ int SceProcessmgrForKernel_459A223B(SceUID budgetId)
 
 	ret = SceThreadmgrForDriver_332E127C();
 	if (ret != 0x40 && ret != 0x80)
-		return SCE_KERNEL_ERROR_ILLEGAL_PERMISSION;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	isDefault = budgetId == BUDGET_ID_CURRENT || budgetId == BUDGET_ID_GAME
 		 || budgetId == BUDGET_ID_SHELL;
 	if (isDefault || budgetId == g_kernelBudgetId || budgetId == g_gameBudgetId
 	    || budgetId == g_shellBudgetId)
-		return SCE_KERNEL_ERROR_PROCESSMGR_BUDGET_BUSY;
+		return SCE_KERNEL_ERROR_INVALID_BUDGET_ID;
 	if (SceSysmemForKernel_368F1C36(budgetId) != &g_budgetClass)
-		return SCE_KERNEL_ERROR_UNKNOWN_UID;
+		return SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS;
 	budget = SceSysmemForKernel_FA6C098C(budgetId);
 	if (budget == NULL)
-		return SCE_KERNEL_ERROR_PROCESSMGR_BUDGET_BUSY;
+		return SCE_KERNEL_ERROR_INVALID_BUDGET_ID;
 	ret = sceKernelLockMutex(budget->mutex, 1, (SceUInt32 *)isDefault);
 	if (ret < 0)
 		return ret;
 	if (budget->processCount != 0) {
 		sceKernelUnlockMutex(budget->mutex, 1);
-		return SCE_KERNEL_ERROR_PROCESSMGR_BUDGET_IN_USE;
+		return SCE_KERNEL_ERROR_PROCESS_REMAINING;
 	}
 	return sceGUIDClose(budgetId);
 }
@@ -214,7 +209,7 @@ int sceKernelGetBudgetInfoForDebugger(SceUID budgetId, SceUInt32 level,
 		break;
 	default:
 		sceGUIDReleaseObject(budgetId);
-		return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+		return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 	}
 	strncpy(info->name, name, sizeof(info->name));
 	n = 0;
@@ -298,14 +293,14 @@ int sceKernelGetBudgetInfo(SceUID budgetId, SceKernelBudgetInfo *info)
 		case PROCESS_TYPE_MINI_APP:
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 561,
 				"SCE_KERNEL_PROCESS_CURRENT_PROCESS_BUDGET, but current is mini application process\n");
-			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+			return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 		case PROCESS_TYPE_KERNEL:
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 555,
 				"SCE_KERNEL_PROCESS_CURRENT_PROCESS_BUDGET, but current is kernel process\n");
-			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+			return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 		default:
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 567, "Unknown process type 0x%08x\n", process->type);
-			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+			return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 		}
 	} else {
 		ret = sceGUIDReferObjectWithClassLevel(budgetId, &g_budgetClass, 7, &budget);
@@ -429,14 +424,14 @@ int BudgetIDtoBudgetObj(SceUID budgetId, ProcessBudget **budget)
 		case PROCESS_TYPE_MINI_APP:
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 819,
 				"SCE_KERNEL_PROCESS_CURRENT_PROCESS_BUDGET, but current is mini application process\n");
-			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+			return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 		case PROCESS_TYPE_KERNEL:
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 813,
 				"SCE_KERNEL_PROCESS_CURRENT_PROCESS_BUDGET, but current is kernel process\n");
-			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+			return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 		default:
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 825, "Unknown process type 0x%08x\n", process->type);
-			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+			return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 		}
 	}
 	if (SceSysmemForKernel_368F1C36(budgetId) == &g_budgetClass) {
@@ -444,7 +439,7 @@ int BudgetIDtoBudgetObj(SceUID budgetId, ProcessBudget **budget)
 		if (*budget != NULL)
 			return 0;
 	}
-	return SCE_KERNEL_ERROR_UNKNOWN_UID;
+	return SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS;
 }
 
 /* uid -1: a new UID; else the fixed UID of a default budget */
@@ -477,7 +472,7 @@ static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 				return ret;
 			}
 		}
-		ret = SCE_KERNEL_ERROR_PROCESSMGR_BUDGET_SIZE;
+		ret = SCE_KERNEL_ERROR_INVALID_BUDGET_SIZE;
 		if (opt->mainSize == 0)
 			goto delete_cdram;
 		snprintf(partName, 0x1f, "ddrmain: %s", name);
@@ -508,7 +503,7 @@ static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 		}
 	} else if (type == PROCESS_TYPE_GAME) {
 		if (g_gameBudgetId != 0)
-			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+			return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 		mainSize = 0;
 		mainPart = g_gamePart;
 		cdialogPart = g_gameCDialogPart;
@@ -516,18 +511,18 @@ static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 		cdramPart = g_gameCdramPart;
 	} else if (type == PROCESS_TYPE_SHELL) {
 		if (g_shellBudgetId != 0)
-			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+			return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 		mainSize = 0;
 		mainPart = g_shellPart;
 		cdramPart = g_shellCdramPart;
 	} else if (type == PROCESS_TYPE_KERNEL) {
 		if (g_kernelBudgetId != 0)
-			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+			return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 		mainSize = 0;
 		mainPart = g_kernelPart;
 	} else {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 231, "Unknown process type 0x%08x\n", type);
-		return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+		return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 	}
 
 	if (uid == -1) {
@@ -539,7 +534,7 @@ static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 	} else {
 		budget = SceSysmemForKernel_85571907(sizeof(*budget));
 		if (budget == NULL) {
-			ret = SCE_KERNEL_ERROR_NO_MEMORY_SYSMEM;
+			ret = SCE_ERROR_ERRNO_ENOMEM;
 			goto failed;
 		}
 		ProcessBudgetConstructor(budget);
@@ -593,7 +588,7 @@ SceUID SceProcessmgrForKernel_DC18FCEF(const char *name, SceUInt32 type, const P
 
 	ret = SceThreadmgrForDriver_332E127C();
 	if (ret != 0x40 && ret != 0x80)
-		return SCE_KERNEL_ERROR_ILLEGAL_PERMISSION;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (opt == NULL || name == NULL)
@@ -683,10 +678,10 @@ int SetBudget(SceUInt32 type, SceUID addressSpace, ProcessBudget *budget)
 		return 0;
 	case PROCESS_TYPE_KERNEL:
 		SCE_DBG_ASSERT_FAIL(890);
-		return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+		return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 	default:
 		SCE_DBG_ASSERT_FAIL(996);
-		return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+		return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 	}
 }
 

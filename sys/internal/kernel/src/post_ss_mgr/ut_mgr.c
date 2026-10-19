@@ -507,7 +507,7 @@ int sceSblUtMgrUpdateUtoken(const void *utoken, SceSize size)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	if (utoken == NULL || size < UT_SIZE) {
 		sceSyscallLeave(state);
@@ -534,7 +534,7 @@ int sceSblUtMgrReadUtoken(void *utoken, SceSize size)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	if (utoken == NULL || size < UT_SIZE) {
 		sceSyscallLeave(state);
@@ -560,7 +560,7 @@ int sceSblUtMgrResetUtokenFile(void)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	ret = SceSblPostSsMgrForDriver_1FF699DD();
 	sceSyscallLeave(state);
@@ -576,7 +576,7 @@ int sceSblUtMgrGetCurrentSecureTick(SceUInt32 *left)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	if (left == NULL) {
 		sceSyscallLeave(state);
@@ -614,7 +614,7 @@ int sceSblUtMgrIsTrilithiumFlagEnabled(char *flag, SceSize size)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	if (size == 0 || flag == NULL) {
 		sceSyscallLeave(state);

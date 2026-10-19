@@ -8,6 +8,7 @@
 #define POST_SS_MGR_INTERNAL_H
 
 #include <scetypes.h>
+#include <kernel/error.h>
 #include <sysmem/cpu.h>
 #include <ss_mgr/ss_mgr.h>
 #include <post_ss_mgr/sblpostssmgr.h>
@@ -36,14 +37,8 @@
 #define SCE_SBL_ERROR_PM_TIMEOUT		0x800f0a23	/* name unknown */
 #define SCE_SBL_ERROR_PM_SM			0x800f0a28	/* name unknown */
 #define SCE_SBL_ERROR_PM_UNSUPPORTED		0x800f0a25	/* name unknown */
-#define SCE_KERNEL_ERROR_NOT_ALLOWED		0x80010058	/* name unknown */
 
 /* a deferred placeholder stays a call, as the routine it stands for is */
-#define SCE_ERROR_ERRNO_ENOENT		0x80010002
-#define SCE_ERROR_ERRNO_EIO		0x80010005
-#define SCE_ERROR_ERRNO_EEXIST		0x80010011
-#define SCE_ERROR_ERRNO_EAGAIN		0x80010059	/* name unknown */
-
 #define POST_SS_DEFERRED	__attribute__((noinline))
 
 /* the self authentication the module's secure modules (pm_sm, act_sm, utoken_sm) run with */

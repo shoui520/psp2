@@ -34,7 +34,6 @@
 #define MSG_PIPE_ATTR_UNLIMITED		0x00004000
 #define EVENT_PATTERN_RESERVED_BIT	0x00010000
 #define SDK_VERSION_MSG_PIPE_EMPTY	0x03100000	/* PLACEHOLDER: from here an empty pipe ... */
-#define SCE_KERNEL_ERROR_UNKNOWN_MSG_PIPE_ID	0x80028221	/* PLACEHOLDER: name */
 
 /* the ring buffer (pipe +0x38) */
 struct ThreadmgrMsgPipeRing {
@@ -604,8 +603,6 @@ stop:
 #define WAIT_ATTR_PRIORITY		0x00002000
 #define MSG_PIPE_EVENT_SENT		0x00000001	/* the pipe's event bits a transfer sets */
 #define MSG_PIPE_EVENT_ERROR		0x00000010
-#define THREADMGR_ERROR_WAIT_CANCEL	0x800280a2	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_MSG_PIPE_DELETED	0x80028224	/* PLACEHOLDER: name */
 
 /* what a syscall restarted after a suspend carries over of its transfer */
 typedef struct ThreadmgrMsgPipeRestart {
@@ -939,7 +936,7 @@ decided:
 			goto fail;
 		if (!locked)
 			goto callbacks;
-	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
+	} while (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 	goto report;
 fail:
 	if (!locked)
@@ -1310,7 +1307,7 @@ decided:
 			goto fail;
 		if (!locked)
 			goto callbacks;
-	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
+	} while (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 	goto report;
 unlockFail:
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
@@ -1371,10 +1368,6 @@ callbacks:
 #define MSG_PIPE_ASYNC_PRIORITY		0x40
 #define SDK_VERSION_ASYNC_NO_RESULT	0x01ffffff	/* newer SDKs get no async result */
 #define THREAD_ATTR_CHECK_STACK		0x80000000
-#define SCE_KERNEL_ERROR_ILLEGAL_COUNT	0x8002000f
-#define SCE_KERNEL_ERROR_ILLEGAL_MODE	0x80020010
-#define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
-#define SCE_KERNEL_ERROR_MSG_PIPE_ASYNC_FULL	0x80028225	/* PLACEHOLDER: name */
 
 /* a send or receive queued to the async threads (0x30, in the process's heap) */
 typedef struct ThreadmgrMsgPipeAsyncRequest {
@@ -1581,7 +1574,7 @@ static inline __attribute__((always_inline)) int recvMsgPipeVectorAsync(Threadmg
 	/* Sony's: the process is read through the thread even without one */
 	process = thread->process;
 	if (SceCpuForDriver_1F157DC3((SceInt32 *)&process->msgPipeAsyncCount, 1, MSG_PIPE_ASYNC_MAX) != 0)
-		return SCE_KERNEL_ERROR_MSG_PIPE_ASYNC_FULL;
+		return SCE_KERNEL_ERROR_MSG_PIPE_ASYNC_REQUEST_OVF;
 	vector = sceKernelSysrootAllocRemoteProcessHeap(call->pid, call->count * sizeof(*vector), NULL);
 	if (vector == NULL) {
 		SCE_DBG_PRINTF(0xf, 3729,
@@ -1732,7 +1725,7 @@ static inline __attribute__((always_inline)) int sendMsgPipeVectorAsync(Threadmg
 	/* Sony's: the process is read through the thread even without one */
 	process = thread->process;
 	if (SceCpuForDriver_1F157DC3((SceInt32 *)&process->msgPipeAsyncCount, 1, MSG_PIPE_ASYNC_MAX) != 0)
-		return SCE_KERNEL_ERROR_MSG_PIPE_ASYNC_FULL;
+		return SCE_KERNEL_ERROR_MSG_PIPE_ASYNC_REQUEST_OVF;
 	vector = sceKernelSysrootAllocRemoteProcessHeap(call->pid, call->count * sizeof(*vector), NULL);
 	if (vector == NULL) {
 		SCE_DBG_PRINTF(0xf, 2415,
@@ -1929,7 +1922,6 @@ int startMsgPipeAfterProcess(void)
 }
 
 #define MSG_PIPE_EVENT_PROCESS_EXITED	0x00000200
-#define SCE_KERNEL_ERROR_WAIT_CANCEL	0x80028007
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 #define MSG_PIPE_FROM_PROCESS_LINK(link) \
 	((ThreadmgrMsgPipe *)((uintptr_t)(link) - offsetof(ThreadmgrMsgPipe, processLink)))
@@ -2165,9 +2157,6 @@ int msgPipeProcessExit(SceProcessObject *process)
 #define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define UID_MAX_PER_PROCESS		0x800
 #define UID_LW_MAX_PER_PROCESS		0x100
-#define SCE_KERNEL_ERROR_ILLEGAL_ATTR	0x8002000e
-#define SCE_KERNEL_ERROR_ILLEGAL_TYPE	0x8002000c	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_ILLEGAL_HEAP	0x80020011	/* PLACEHOLDER: name */
 
 /*
  * The buffer (bufferSize rounded up to pages, in memory of memType) and
@@ -2273,7 +2262,7 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 att
 	sceKernelGetMemBlockBase(blockId, &base);
 	if (param.flags & MSG_PIPE_OPT_FLAG_HEAP) {
 		if (param.heapKind >= 0x80) {
-			ret = SCE_KERNEL_ERROR_ILLEGAL_HEAP;
+			ret = SCE_KERNEL_ERROR_ILLEGAL_OPEN_LIMIT;
 			goto restore;
 		}
 		heapAttr |= param.heapKind + (ThreadmgrInSyscall() ? 2 : 1);
@@ -2668,8 +2657,6 @@ int SceThreadmgrForDriver_D0262C55(SceUID msgPipeId, void *buffer, SceSize size,
 	return SceThreadmgrForDriver_DA5C9AC6(msgPipeId, &vector, 1, mode, result, timeout);
 }
 
-#define SCE_KERNEL_ERROR_MSG_PIPE_FULL	0x80028222	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_MSG_PIPE_EMPTY	0x80028223	/* PLACEHOLDER: name */
 #define SDK_VERSION_TRY_EVENT		0x02100000	/* from here a try sets the pipe's event */
 
 /*

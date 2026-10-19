@@ -12,6 +12,7 @@
 #pragma once
 
 #include <scetypes.h>
+#include <kernel/error.h>
 #include <kernel/types.h>
 #include <iofilemgr/iofilemgr.h>
 #include <sysmem/debug.h>

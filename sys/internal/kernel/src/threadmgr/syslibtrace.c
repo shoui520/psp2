@@ -11,7 +11,6 @@
 #include <threadmgr/threadmgr.h>
 
 #define THREAD_ID_LIST_ALL		0x00010021	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
 
 /* allocates a thread's syslibtrace state if it has none (its lock held) */
 int syslibtraceThreadCBInit(struct ThreadCB *thread)

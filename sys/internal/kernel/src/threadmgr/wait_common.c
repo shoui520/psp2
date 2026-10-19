@@ -122,9 +122,6 @@ typedef void (*ThreadmgrSchedSleepHandler)(const struct ThreadmgrSchedProbeDescr
 #define WAIT_TYPE_WORK_QUEUE		0x04000000
 #define WAIT_TYPE_WORK_TASK		0x08000000
 
-#define THREADMGR_ERROR_WAIT_CANCEL	0x800280a2	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_WAIT_DELETE	0x80028006
-
 /* the class a wait type's object belongs to */
 static inline SceClass *WaitTypeClass(uint32_t waitType)
 {
@@ -293,7 +290,7 @@ int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 	}
 	if ((thread->flags & THREAD_FLAG_CALLBACK_WAKEUP) == THREAD_FLAG_CALLBACK_WAKEUP) {
 cancelled:
-		thread->waitResult = THREADMGR_ERROR_WAIT_CANCEL;
+		thread->waitResult = SCE_KERNEL_ERROR_NOTIFY_CALLBACK;
 		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, 1);
 		goto abandon;
 	}
@@ -333,7 +330,7 @@ cancelled:
 		ret = sceGUIDReferObjectWithClass(waitId, WaitTypeClass(waitType), NULL);
 	if (ret < 0) {
 		sceKernelSpinlockLowLock(&thread->lock);
-		if (thread->waitResult == (int)THREADMGR_ERROR_WAIT_CANCEL)
+		if (thread->waitResult == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK)
 			thread->waitResult = SCE_KERNEL_ERROR_WAIT_DELETE;
 		return thread->waitResult;
 	}

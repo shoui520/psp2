@@ -26,9 +26,6 @@
 #define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define THREAD_ATTR_USER		0x80000000
 #define WAIT_TYPE_DELAY			0x00000001
-#define THREADMGR_ERROR_WAIT_CANCEL	0x800280a2	/* PLACEHOLDER: name */
-#define THREADMGR_ERROR_CALLBACK_NOT_REGISTERED	0x800280a3	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
 #define EVENT_CALLBACK_ALLOC_SIZE	0x20	/* a ThreadmgrEventCallback's heap block */
 
 #define CALLBACK_STACK_MIN_FREE		0x708	/* the kernel stack a callback needs left */
@@ -890,7 +887,7 @@ int sceKernelNotifyCallback(SceUID callbackId, int arg)
 			self->prev->next = self->next;
 			sceKernelSpinlockLowUnlock(
 				&s_threadmgrRuntime.manager->timedWaitLock);
-			releaseThreadWaitState(&object->context, 0, THREADMGR_ERROR_WAIT_CANCEL);
+			releaseThreadWaitState(&object->context, 0, SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 			wake = distributeThread(selectExecCpu(&object->context), &object->context);
 			break;
 		}
@@ -913,7 +910,7 @@ int sceKernelNotifyCallback(SceUID callbackId, int arg)
 		}
 		SceCpuForDriver_BC248C30((SceInt32 *)&object->context.flags, THREAD_FLAG_CALLBACKS);
 		wake = wakeupAndDistributeThread(&object->context, EVENT_WAIT_QUEUE(waitObject),
-						 THREADMGR_ERROR_WAIT_CANCEL);
+						 SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 		break;
 	}
 	hook = s_threadmgrRuntime.threadTraceHook;
@@ -1265,7 +1262,7 @@ int sceKernelUnregisterCallbackFromEvent(SceUID eventId, SceUID callbackId)
 		goto resume;
 	}
 	sceKernelSpinlockLowLock(&event->lock);
-	ret = THREADMGR_ERROR_CALLBACK_NOT_REGISTERED;
+	ret = SCE_KERNEL_ERROR_CALLBACK_NOT_REGISTERED;
 	head = EVENT_CALLBACK_HEAD(event);
 	for (entry = head->next; entry != head; entry = entry->next) {
 		if (entry->callbackId == callbackId) {

@@ -23,17 +23,7 @@
 #define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define THREAD_ATTR_CHECK_STACK		0x80000000
 #define WAIT_TYPE_EVENT_FLAG		0x10
-#define THREADMGR_ERROR_WAIT_CANCEL	0x800280a2	/* PLACEHOLDER: name */
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_ILLEGAL_ATTR	0x8002000e
-#define SCE_KERNEL_ERROR_ILLEGAL_MODE	0x80020010
-#define SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS 0x80028002
-#define SCE_KERNEL_ERROR_WAIT_DELETE	0x80028006
-#define SCE_KERNEL_ERROR_WAIT_CANCEL	0x80028007
-#define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
-#define SCE_KERNEL_ERROR_UNKNOWN_EVF_ID	0x800280e1
-#define SCE_KERNEL_ERROR_EVF_MULTI	0x800280e2
-#define SCE_KERNEL_ERROR_EVF_COND	0x800280e3
 
 /* whether pattern satisfies a waiter's request under mode */
 static inline int EventFlagMatches(uint32_t pattern, uint32_t request, uint32_t mode)
@@ -61,7 +51,7 @@ static int uidEventFlag_ReleaseMethod(void *cls, void *object, struct ThreadCB *
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1746);
 	SCE_DBG_ASSERT_CHECK(evf->lock != 0, 1749);
-	if (thread->waitResult != (int)THREADMGR_ERROR_WAIT_CANCEL)
+	if (thread->waitResult != (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK)
 		EventFlagDropHolder(evf);
 	SCE_DBG_ASSERT_CHECK(evf->waiting != 0, 1764);
 	evf->waiting--;
@@ -253,7 +243,7 @@ int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPa
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (!locked)
 			goto callbacks;
-	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
+	} while (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 	sceKernelSpinlockLowUnlock(&evf->lock);
 	sceGUIDReleaseObject(evfId);
 	if (!callbacks)

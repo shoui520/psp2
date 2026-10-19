@@ -30,10 +30,6 @@
 #define WME_MODE_ALL			2	/* the wait ends when every event has come */
 #define WME_MAX_EVENTS			64
 
-#define SCE_KERNEL_ERROR_UNKNOWN_EVENT_ID	0x80028201
-#define SCE_KERNEL_ERROR_EVENT_COND		0x80028202
-#define SCE_KERNEL_ERROR_ILLEGAL_PATTERN	0x8002000d
-
 #define EVENT_CALLBACK_HEAD(event)	((ThreadmgrEventCallback *)&(event)->callbackNext)
 #define EVENT_WAIT_QUEUE(event)		((uintptr_t)&(event)->next)
 
@@ -72,7 +68,6 @@ _Static_assert(sizeof(ThreadmgrEventWaitNode) == 0x40, "WME node size");
 
 #define EVENT_WAIT_NODE_FROM_LINK(link) \
 	((ThreadmgrEventWaitNode *)((uintptr_t)(link) - offsetof(ThreadmgrEventWaitNode, wmeLink)))
-
 
 void notifyCallbackToThreadBeforeSetEvent(ThreadmgrEventCallback *head,
 					  struct ThreadCB *thread, uint32_t arg);

@@ -247,7 +247,7 @@ int sceKernelRegisterKPLS(const char *name, SceSize size)
 			goto out;
 		}
 	}
-	i = SCE_KERNEL_ERROR_PROCESSMGR_NO_LOCAL_STORAGE;
+	i = SCE_KERNEL_ERROR_PLS_FULL;
 out:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_localStorageLock, intr);
 	return i;
@@ -467,7 +467,7 @@ static int PPMAllocSlot(void)
 		return slot;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_ppmLock, intr);
-	return SCE_KERNEL_ERROR_PROCESSMGR_NO_SLOT;
+	return SCE_KERNEL_ERROR_NO_PROCESS_DATA;
 }
 
 static int ProcessThreadSuspend(SceUID thid, SceUInt32 state)
@@ -811,7 +811,7 @@ static PROCESSMGR_RELEASE_NOINLINE int CurrentProcess(SceProcessObject **process
 	ThreadCB *cb = getCurrentThreadCB();
 
 	if (cb == NULL)
-		return SCE_KERNEL_ERROR_PROCESSMGR_UNKNOWN_UID;
+		return SCE_KERNEL_ERROR_INVALID_PID;
 	*process = cb->process;
 	return 0;
 }
@@ -838,8 +838,8 @@ static int UIDtoProcess(SceUID pid, SceProcessObject **process)
 		cls = &g_processClass;
 	}
 	if (sceGUIDGetObjectWithClass(pid, cls, process) < 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_UNKNOWN_UID;
-	return *process != NULL ? 0 : SCE_KERNEL_ERROR_PROCESSMGR_UNKNOWN_UID;
+		return SCE_KERNEL_ERROR_INVALID_PID;
+	return *process != NULL ? 0 : SCE_KERNEL_ERROR_INVALID_PID;
 }
 
 static inline __attribute__((always_inline)) int AssertProcess(SceProcessObject *process)
@@ -884,7 +884,7 @@ static int UIDtoProcessAndRefer(SceUID pid, SceProcessObject **process)
 	if (pid == 0) {
 		cb = getCurrentThreadCB();
 		if (cb == NULL)
-			return SCE_KERNEL_ERROR_PROCESSMGR_UNKNOWN_UID;
+			return SCE_KERNEL_ERROR_INVALID_PID;
 	} else {
 		if (pid == KERNEL_PID) {
 			p = g_processmgr.kernelProcess;
@@ -900,7 +900,7 @@ static int UIDtoProcessAndRefer(SceUID pid, SceProcessObject **process)
 			cls = &g_processClass;
 refer_class:
 			if (sceGUIDReferObjectWithClass(pid, cls, (SceObjectBase **)process) < 0)
-				return SCE_KERNEL_ERROR_PROCESSMGR_UNKNOWN_UID;
+				return SCE_KERNEL_ERROR_INVALID_PID;
 			return 0;
 		}
 	}
@@ -908,7 +908,7 @@ refer_class:
 	*process = p;
 refer:
 	if (sceGUIDReferObjectWithClass(p->pid, &g_processClass, NULL) < 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_UNKNOWN_UID;
+		return SCE_KERNEL_ERROR_INVALID_PID;
 	return 0;
 }
 
@@ -955,7 +955,7 @@ int SceProcessmgrForDriver_AF80F39C(SceUID pid, SceUInt32 key, void **addr, int 
 			} else {
 				storage = sceKernelAllocHeapMemory(process->kplsHeap, size);
 				if (storage == NULL) {
-					ret = SCE_KERNEL_ERROR_NO_FREE_HEAP;
+					ret = SCE_KERNEL_ERROR_NO_MEMORY;
 				} else {
 					memset(storage, 0, size);
 					ret = 0;
@@ -1206,7 +1206,7 @@ static int ProcessTerminationCallbackCore(SceUID pid, SceUID cb, int unregister)
 		if (callback == NULL) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&process->callbackLock, intr);
 			sceGUIDReleaseObject(process->pid);
-			ret = SCE_KERNEL_ERROR_NO_FREE_HEAP;
+			ret = SCE_KERNEL_ERROR_NO_MEMORY;
 			goto out;
 		}
 		callback->next = process->callbacks;
@@ -1238,7 +1238,7 @@ static int ProcessTerminationCallbackCore(SceUID pid, SceUID cb, int unregister)
 not_found:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->callbackLock, intr);
 	sceGUIDReleaseObject(process->pid);
-	ret = SCE_KERNEL_ERROR_PROCESSMGR_NO_CALLBACK;
+	ret = SCE_KERNEL_ERROR_PROCESS_CALLBACK_NOTFOUND;
 	goto out;
 invalid:
 	ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -1549,7 +1549,7 @@ static int sceKernelProcessPreloadModule(SceSize args, void *argp)
 		process->prevState = process->status & PROCESS_STATE_MASK;
 		if (process->status & PROCESS_FLAG_EXIT) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
-			ret = SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+			ret = SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 			goto out;
 		}
 		process->status &= ~PROCESS_FLAG_PRELOAD;
@@ -1672,7 +1672,7 @@ static inline __attribute__((always_inline)) int AllocAddressSpace(SceProcessObj
 		ret = -1;
 		goto failed;
 	default:
-		ret = SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+		ret = SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 		goto failed;
 	}
 	process->addressSpace = addressSpace;
@@ -1798,7 +1798,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 3408,
 				"<ExitSpawn> inherited pid(0x%08x) is differ from prev_pid(0x%08x)\n",
 				g_exitSpawn.pid, prevPid);
-			return SCE_KERNEL_ERROR_PROCESSMGR_INHERIT_PID;
+			return SCE_KERNEL_ERROR_INVALID_PID;
 		}
 		process = g_exitSpawn.process;
 		pid = process->pid;
@@ -1813,7 +1813,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 		process = PPMAllocMemory(slot, sizeof(*process));
 		if (process == NULL) {
 			PPMFreeSlot(slot);
-			return SCE_KERNEL_ERROR_NO_FREE_HEAP;
+			return SCE_KERNEL_ERROR_NO_MEMORY;
 		}
 		memset(process, 0, sizeof(*process));
 		uidOpt.flags = UID_CREATE_OPT_OBJECT | UID_CREATE_OPT_ATTR;
@@ -2020,7 +2020,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 #if FW_VERSION >= 0x04000000
 		process->toolMemory = sceKernelAllocHeapMemory(TOOL_HEAP, 0x80);
 		if (process->toolMemory == NULL) {
-			ret = SCE_KERNEL_ERROR_NO_FREE_HEAP;
+			ret = SCE_KERNEL_ERROR_NO_MEMORY;
 			goto failed;
 		}
 		opt.attr = HEAP_AUTO_EXTEND | HEAP_HAS_MEMTYPE | HEAP_HAS_PID | HEAP_HAS_HEAPCB;
@@ -2551,11 +2551,11 @@ static int _KillProcess(SceProcessObject *process, SceUInt32 state, SceUInt32 ki
 
 	ProcessEventLogInit(&log, process);
 	if ((process->status & PROCESS_STATE_MASK) == PROCESS_STATE_RUNNING) {
-		log.result = SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+		log.result = SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 		k_sceEventLogPut(0x2711, 3, 0, &log, sizeof(log));
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1824, "illegal process status. 0x%08x\n",
 				     process->status & PROCESS_STATE_MASK);
-		return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+		return SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 	}
 	timer = SceThreadmgrForDriver_C58DF384("SceProcessEvent", 10000000, ProcessEventTimeupHandler, NULL);
 	if (timer < 0)
@@ -2609,13 +2609,13 @@ static int ProcessSendRequest(SceProcessObject *process, SceUInt32 request)
 
 	req = SceSysmemForKernel_85571907(sizeof(*req));
 	if (req == NULL)
-		return SCE_KERNEL_ERROR_NO_MEMORY;
+		return SCE_ERROR_ERRNO_ENOMEM;
 	ListInit(&req->node);
 	req->process = process;
 	req->request = request;
 	if (process->pendingRequests == 0 && PollRequestPermission() < 0) {
 		SceSysmemForKernel_4233C16D(req);
-		return SCE_KERNEL_ERROR_PROCESSMGR_NO_REQUEST;
+		return SCE_KERNEL_ERROR_PROCESS_EVENT_INHIBITED;
 	}
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&g_requestLock);
 	ListAddTail(&g_requestList, &req->node);
@@ -2642,21 +2642,21 @@ static int KillProcessCommon(SceUID pid, int kind)
 	pid = process->pid;
 	if (process->type == PROCESS_TYPE_KERNEL) {
 		sceGUIDReleaseObject(pid);
-		return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+		return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 	}
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->lock);
 	if ((process->status & PROCESS_STATE_MASK) == PROCESS_STATE_EXITED
 	    || (process->status & PROCESS_STATE_MASK) == PROCESS_STATE_NONE) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 		sceGUIDReleaseObject(process->pid);
-		return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+		return SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 	if (kind == 1) {
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->lock);
 		if (process->status & PROCESS_FLAG_FORCE_KILL) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
-			ret = SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+			ret = SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 		} else if (process->pendingRequests == 0) {
 			ret = ProcessSendRequest(process, PROCESS_REQUEST_FORCE_KILL);
 			if (ret < 0)
@@ -2687,7 +2687,7 @@ static int KillProcessCommon(SceUID pid, int kind)
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 5224, "PPMAllocMemory failed\n");
 			PPMFreeSlot(slot);
 			sceGUIDReleaseObject(process->pid);
-			return SCE_KERNEL_ERROR_NO_FREE_HEAP;
+			return SCE_KERNEL_ERROR_NO_MEMORY;
 		}
 		memset(spawn, 0, sizeof(*spawn));
 		uidOpt.flags = UID_CREATE_OPT_OBJECT | UID_CREATE_OPT_ATTR;
@@ -2715,7 +2715,7 @@ static int KillProcessCommon(SceUID pid, int kind)
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->lock);
 	if ((process->status & (PROCESS_FLAG_PRELOAD | PROCESS_FLAG_EXIT | PROCESS_FLAG_FORCE_SUSPEND))) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
-		ret = SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+		ret = SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 		if (kind == 2 && spawnPid > 0) {
 			memset(&g_exitSpawn, 0, sizeof(g_exitSpawn));
 			sceGUIDClose(spawnPid);
@@ -2932,7 +2932,7 @@ static inline __attribute__((always_inline)) void _ExitProcess(SceProcessObject 
 
 	ProcessEventLogInit(&log, process);
 	if ((process->status & PROCESS_STATE_MASK) == PROCESS_STATE_RUNNING) {
-		log.result = SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+		log.result = SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 		k_sceEventLogPut(0x2711, 2, 0, &log, sizeof(log));
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1683, "illegal process status. 0x%08x\n",
 				     process->status & PROCESS_STATE_MASK);
@@ -3355,7 +3355,7 @@ int sceKernelProcessDebugSuspend(SceUID pid, SceUInt32 state)
 		return ret;
 	}
 	if (process->type == PROCESS_TYPE_KERNEL)
-		return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+		return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 	if (!(state & 0x10))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (SceExcpmgrForKernel_B615A7DA() != 0) {
@@ -3364,19 +3364,19 @@ int sceKernelProcessDebugSuspend(SceUID pid, SceUInt32 state)
 			prev = process->status & PROCESS_STATE_MASK;
 #if FW_DEBUG
 			if (prev == PROCESS_STATE_EXITED)
-				return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+				return SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 #endif
 			if (prev != PROCESS_STATE_RUNNING) {
 				SCE_DBG_PRINTF_LEVEL(2, 0xb, 6268, "invalid status 0x%08x\n", prev);
-				return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+				return SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 			}
 		} while (process->status & PROCESS_FLAG_RESUMING);
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->lock);
 		if (process->status & (PROCESS_FLAG_FORCE_KILL | PROCESS_FLAG_FORCE_SUSPEND))
-			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+			return SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 		ret = sceKernelClearEventFlag(process->eventFlag, ~PROCESS_EVF_NOT_DEBUG_SUSPENDED);
 		if (ret < 0)
-			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+			return SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 		process->status |= PROCESS_FLAG_DEBUG_SUSPENDING;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 		ret = _SuspendAllThread(process);
@@ -3438,7 +3438,7 @@ int sceKernelProcessDebugSuspend(SceUID pid, SceUInt32 state)
 		}
 	}
 	sceKernelSignalSema(process->lockSema, 1);
-	return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+	return SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 }
 
 /* free/alloc in the unique heap of the current process */
@@ -3539,7 +3539,7 @@ static int ResumeProcessCommon(SceUID pid)
 	}
 	pid = process->pid;
 	if (process->type == PROCESS_TYPE_KERNEL) {
-		ret = SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+		ret = SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 		goto out;
 	}
 	current = GetCurrentProcess();
@@ -3553,7 +3553,7 @@ static int ResumeProcessCommon(SceUID pid)
 	    || (process->status & PROCESS_STATE_MASK) == PROCESS_STATE_NONE
 	    || (process->status & (PROCESS_FLAG_PRELOAD | PROCESS_FLAG_FORCE_SUSPEND | PROCESS_FLAG_EXIT))) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
-		ret = SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+		ret = SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 	} else {
 		ret = ProcessSendRequest(process, PROCESS_REQUEST_RESUME);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
@@ -3584,7 +3584,7 @@ static int SuspendProcessCommon(SceUID pid, SceUInt32 flags, SceUInt32 *timeout)
 	}
 	pid = process->pid;
 	if (process->type == PROCESS_TYPE_KERNEL) {
-		ret = SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+		ret = SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 		goto out;
 	}
 	if (flags & 1) {
@@ -3634,7 +3634,7 @@ static int SuspendProcessCommon(SceUID pid, SceUInt32 flags, SceUInt32 *timeout)
 	goto out;
 invalid:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
-	ret = SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+	ret = SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 out:
 	sceGUIDReleaseObject(process->pid);
 	return ret;
@@ -3677,7 +3677,7 @@ static int StartProcessCommon(SceUID pid, int waitDebugger, SceSize args, void *
 	if ((process->status & PROCESS_STATE_MASK) != PROCESS_STATE_CREATED
 	    || (process->status & (PROCESS_FLAG_STARTING | PROCESS_FLAG_EXIT))) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
-		ret = SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+		ret = SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 		goto failed;
 	}
 	process->status |= PROCESS_FLAG_STARTING;
@@ -3797,11 +3797,6 @@ int SceProcessmgrForKernel_D5DF895D(void)
 	return sceKernelSignalSema(g_requestSema, PROCESS_MAX);
 }
 
-#define SCE_KERNEL_ERROR_PROCESS_LIMIT		0x80010082	/* name unknown */
-#define SCE_KERNEL_ERROR_ILLEGAL_CPU_AFFINITY	0x80022004	/* name unknown */
-#define SCE_KERNEL_ERROR_CANNOT_SELF		0x80024001	/* name unknown */
-#define SCE_KERNEL_ERROR_SEMA_ZERO		0x80028102	/* name unknown */
-
 static int g_firstCreate;
 
 SceUID sceKernelCreateProcess(const char *name, SceUInt32 type, const char *path,
@@ -3826,10 +3821,10 @@ SceUID sceKernelCreateProcess(const char *name, SceUInt32 type, const char *path
 	if (path == NULL || name == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (g_processCount > 15)
-		return SCE_KERNEL_ERROR_PROCESS_LIMIT;
+		return SCE_ERROR_ERRNO_EPROCLIM;
 	attr = type & 0x1f000000;
 	if (attr != PROCESS_TYPE_MINI_APP && attr != PROCESS_TYPE_SHELL && attr != PROCESS_TYPE_GAME)
-		return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+		return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 	if (opt == NULL) {
 		powerConfigFlags = 3;
 		limit1 = 10;
@@ -3854,10 +3849,10 @@ SceUID sceKernelCreateProcess(const char *name, SceUInt32 type, const char *path
 		cpuAffinity = 0;
 		if ((attr & 0x1000) && (cpuAffinity = opt->cpuAffinity) != 0) {
 			if (cpuAffinity & 0xfff0fff0)
-				return SCE_KERNEL_ERROR_ILLEGAL_CPU_AFFINITY;
+				return SCE_KERNEL_ERROR_INVALID_CPU_AFFINITY;
 			if (cpuAffinity & 0xf0000) {
 				if (cpuAffinity & 0xf)
-					return SCE_KERNEL_ERROR_ILLEGAL_CPU_AFFINITY;
+					return SCE_KERNEL_ERROR_INVALID_CPU_AFFINITY;
 				cpuAffinity = (SceInt32)cpuAffinity >> 16;
 			}
 		}
@@ -3939,17 +3934,17 @@ SceUID sceKernelCreateProcess(const char *name, SceUInt32 type, const char *path
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 4535, "ERROR: Budget has %d processes\n",
 				     budget->processCount);
 		BudgetUnlock(budget);
-		return SCE_KERNEL_ERROR_PROCESSMGR_TOO_MANY_PROCESSES;
+		return SCE_KERNEL_ERROR_EXCEEDED_MAX_PROCESSES;
 	}
 	if ((type ^ budget->type) & 0x1f000000) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 4543, "budget type is different with process type\n");
 		BudgetUnlock(budget);
-		return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+		return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 	}
 	if (cpuAffinity != 0 && (cpuAffinity &= 0xf) == 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 4552, "cpu affinity is invalid. 0x%x\n", 0);
 		BudgetUnlock(budget);
-		return SCE_KERNEL_ERROR_ILLEGAL_CPU_AFFINITY;
+		return SCE_KERNEL_ERROR_INVALID_CPU_AFFINITY;
 	}
 	ret = sceKernelWaitSema(g_requestSema, 1, NULL);
 	if (ret < 0) {
@@ -4137,13 +4132,13 @@ int sceKernelChangeProcessCpuAffinity(SceUID pid, SceUInt32 cpuAffinity)
 	if (cpuAffinity & 0xfff0fff0) {
 		sceGUIDReleaseObject(process->pid);
 		SCE_DBG_ASSERT_FAIL(5563);
-		return SCE_KERNEL_ERROR_ILLEGAL_CPU_AFFINITY;
+		return SCE_KERNEL_ERROR_INVALID_CPU_AFFINITY;
 	}
 	if (cpuAffinity & 0xf0000) {
 		if (cpuAffinity & 0xf) {
 			sceGUIDReleaseObject(process->pid);
 			SCE_DBG_ASSERT_FAIL(5570);
-			return SCE_KERNEL_ERROR_ILLEGAL_CPU_AFFINITY;
+			return SCE_KERNEL_ERROR_INVALID_CPU_AFFINITY;
 		}
 		cpuAffinity >>= 16;
 	}
@@ -4465,7 +4460,7 @@ int sceKernelProcessDebugResume(SceUID pid, SceUInt32 reserved)
 	if (ret == 0) {
 		if (!(process->status & 0x10)) {
 			sceKernelSignalSema(process->lockSema, 1);
-			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+			return SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 		}
 		if (process->prevState == PROCESS_STATE_RUNNING) {
 			if (process->status & PROCESS_FLAG_PRELOAD) {
@@ -4479,13 +4474,13 @@ int sceKernelProcessDebugResume(SceUID pid, SceUInt32 reserved)
 								      PROCESS_EVF_DEBUG_RESUME);
 				}
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
-				return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+				return SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 			}
 			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->lock);
 			if (process->status & (PROCESS_FLAG_FORCE_KILL | PROCESS_FLAG_FORCE_SUSPEND)) {
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 				sceKernelSignalSema(process->lockSema, 1);
-				return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+				return SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 			}
 			process->status = (process->status & ~PROCESS_STATE_MASK) | PROCESS_STATE_RUNNING;
 			process->status |= PROCESS_FLAG_RESUMING;
@@ -4514,22 +4509,22 @@ int sceKernelProcessDebugResume(SceUID pid, SceUInt32 reserved)
 			ClearResuming(process);
 		} else {
 			sceKernelSignalSema(process->lockSema, 1);
-			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+			return SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 		}
 		sceKernelSignalSema(process->lockSema, 1);
 	} else if (ret == (int)SCE_KERNEL_ERROR_SEMA_ZERO) {
 		/* the process lock is held: the event thread works on it */
 		if (!(process->status & 0x10))
-			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+			return SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 		if (process->prevState != PROCESS_STATE_RUNNING) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 6519, "invalid process status: prev_status 0x%08x\n",
 					     process->prevState);
-			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+			return SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 		}
 		if (process->status & PROCESS_FLAG_PRELOAD) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 6524,
 					     "invalid process status: process havn't started yet\n");
-			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+			return SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 		}
 		ret = DebugResumeThreads(process, PROCESS_STATE_RUNNING, &process->threadActionCursor);
 		if (ret < 0) {
@@ -4648,11 +4643,6 @@ void *sceKernelAllocOwnProcessHeap(SceSize size, void *opt)
 					   __builtin_return_address(0));
 }
 
-#define SCE_KERNEL_ERROR_NO_HEAP		0x80020004	/* name unknown */
-#define SCE_KERNEL_ERROR_NO_CDIALOG_HEAP	0x8001000e	/* name unknown */
-#define SCE_KERNEL_ERROR_MODULE_COUNT_OVER	0x8002450d	/* name unknown */
-#define SCE_KERNEL_ERROR_MODULE_COUNT_UNDER	0x8002000f	/* name unknown */
-
 void *sceKernelAllocRemoteProcessHeap(SceUID pid, SceSize size, void *opt)
 {
 	SceProcessObject *process;
@@ -4688,7 +4678,7 @@ int SceProcessmgrForDriver_11BEFBBE(void *ptr)
 	SceProcessObject *process = GetCurrentProcess();
 
 	if (process->cdialogHeap == -1)
-		return SCE_KERNEL_ERROR_NO_CDIALOG_HEAP;
+		return SCE_ERROR_ERRNO_EFAULT;
 	return sceKernelFreeHeapMemory(process->cdialogHeap, ptr);
 }
 
@@ -4740,7 +4730,7 @@ int sceKernelFreeRemoteCDialogHeap(SceUID pid, void *ptr)
 	}
 	if (process->cdialogHeap == -1) {
 		sceGUIDReleaseObject(process->pid);
-		return SCE_KERNEL_ERROR_NO_HEAP;
+		return SCE_KERNEL_ERROR_UNSUP;
 	}
 	ret = sceKernelFreeHeapMemory(process->cdialogHeap, ptr);
 	sceGUIDReleaseObject(process->pid);
@@ -4778,7 +4768,7 @@ int sceKernelFreeRemoteToolHeap(SceUID pid, void *ptr)
 	int ret;
 
 	if (sceKernelCheckDipsw(0xd2) == 0)
-		return SCE_KERNEL_ERROR_NO_HEAP;
+		return SCE_KERNEL_ERROR_UNSUP;
 	ret = UIDtoProcessAndRefer(pid, &process);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 7215, "UIDtoProcessAndRefer(pid 0x%08x) failed 0x%08x\n",
@@ -4788,7 +4778,7 @@ int sceKernelFreeRemoteToolHeap(SceUID pid, void *ptr)
 	}
 	if (process->toolHeap == -1) {
 		sceGUIDReleaseObject(process->pid);
-		return SCE_KERNEL_ERROR_NO_HEAP;
+		return SCE_KERNEL_ERROR_UNSUP;
 	}
 	ret = sceKernelFreeHeapMemory(process->toolHeap, ptr);
 	sceGUIDReleaseObject(process->pid);
@@ -4883,7 +4873,7 @@ void SceProcessmgrForKernel_344DDE0B(SceUID pid, SceUID prevPid)
 int SceProcessmgrForKernel_1197DB8A(SceUInt32 index, SceUInt32 value, SceUInt32 control)
 {
 	if (sceKernelCheckDipsw(0xe4) == 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_NOT_TOOL;
+		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index >= ARRAY_SIZE(g_defaultPhbp))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	g_defaultPhbp[index].value = value;
@@ -4894,7 +4884,7 @@ int SceProcessmgrForKernel_1197DB8A(SceUInt32 index, SceUInt32 value, SceUInt32 
 int SceProcessmgrForKernel_6DEC45C3(SceUInt32 index, SceUInt32 *value, SceUInt32 *control)
 {
 	if (sceKernelCheckDipsw(0xe4) == 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_NOT_TOOL;
+		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index >= ARRAY_SIZE(g_defaultPhbp))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (value == NULL || control == NULL)
@@ -4935,7 +4925,7 @@ int sceKernelSetPHBP(SceUID pid, SceUInt32 index, SceUInt32 value, SceUInt32 con
 	int intr, ret;
 
 	if (sceKernelCheckDipsw(0xe4) == 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_NOT_TOOL;
+		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index > 4)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	ret = UIDtoProcessAndRefer(pid, &process);
@@ -4962,7 +4952,7 @@ int sceKernelGetPHBP(SceUID pid, SceUInt32 index, SceUInt32 *value, SceUInt32 *c
 	int intr, ret;
 
 	if (sceKernelCheckDipsw(0xe4) == 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_NOT_TOOL;
+		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index >= 5)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (value == NULL || control == NULL)
@@ -4988,7 +4978,7 @@ int SceProcessmgrForKernel_FC80A606(SceUID pid, int index, SceUInt32 value, SceU
 	int ret;
 
 	if (sceKernelCheckDipsw(0xe4) == 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_NOT_TOOL;
+		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index != 5)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	ret = UIDtoProcessAndRefer(pid, &process);
@@ -5008,7 +4998,7 @@ int SceProcessmgrForKernel_E025F5A9(SceUID pid, int index, SceUInt32 *value, Sce
 	int ret;
 
 	if (sceKernelCheckDipsw(0xe4) == 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_NOT_TOOL;
+		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index != 5)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (value == NULL || control == NULL)
@@ -5026,7 +5016,7 @@ int SceProcessmgrForKernel_E025F5A9(SceUID pid, int index, SceUInt32 *value, Sce
 int SceProcessmgrForKernel_DDE282CF(SceUInt32 index, SceUInt32 value, SceUInt32 control)
 {
 	if (sceKernelCheckDipsw(0xe4) == 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_NOT_TOOL;
+		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index >= ARRAY_SIZE(g_defaultPhwp))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	g_defaultPhwp[index].value = value;
@@ -5037,7 +5027,7 @@ int SceProcessmgrForKernel_DDE282CF(SceUInt32 index, SceUInt32 value, SceUInt32 
 int SceProcessmgrForKernel_9FA66773(SceUInt32 index, SceUInt32 *value, SceUInt32 *control)
 {
 	if (sceKernelCheckDipsw(0xe4) == 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_NOT_TOOL;
+		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index >= ARRAY_SIZE(g_defaultPhwp))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (value == NULL || control == NULL)
@@ -5054,7 +5044,7 @@ int sceKernelSetPHWP(SceUID pid, SceUInt32 index, SceUInt32 value, SceUInt32 con
 	int intr, ret;
 
 	if (sceKernelCheckDipsw(0xe4) == 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_NOT_TOOL;
+		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index > 3)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	ret = UIDtoProcessAndRefer(pid, &process);
@@ -5081,7 +5071,7 @@ int sceKernelGetPHWP(SceUID pid, SceUInt32 index, SceUInt32 *value, SceUInt32 *c
 	int intr, ret;
 
 	if (sceKernelCheckDipsw(0xe4) == 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_NOT_TOOL;
+		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index >= 4)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (value == NULL || control == NULL)
@@ -5106,7 +5096,7 @@ int sceKernelEnablePHWP(SceUID pid, SceUInt32 index)
 	int intr, ret;
 
 	if (sceKernelCheckDipsw(0xe4) == 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_NOT_TOOL;
+		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index > 3)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	ret = UIDtoProcessAndRefer(pid, &process);
@@ -5132,7 +5122,7 @@ int sceKernelDisablePHWP(SceUID pid, SceUInt32 index)
 	int intr, ret;
 
 	if (sceKernelCheckDipsw(0xe4) == 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_NOT_TOOL;
+		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index > 3)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	ret = UIDtoProcessAndRefer(pid, &process);
@@ -5158,7 +5148,7 @@ int SceProcessmgrForDriver_B1C3EFCA(SceUID pid, SceUInt32 value)
 	int ret;
 
 	if (sceKernelCheckDipsw(0xe4) == 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_NOT_TOOL;
+		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	ret = UIDtoProcessAndRefer(pid, &process);
 	if (ret < 0)
 		return ret;
@@ -5173,7 +5163,7 @@ int SceProcessmgrForDriver_1C70501E(SceUID pid)
 	int ret;
 
 	if (sceKernelCheckDipsw(0xe4) == 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_NOT_TOOL;
+		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	ret = UIDtoProcessAndRefer(pid, &process);
 	if (ret < 0)
 		return ret;
@@ -5189,7 +5179,7 @@ int SceProcessmgrForDriver_61B9B6FA(SceUID pid, SceUInt32 value)
 	int ret;
 
 	if (sceKernelCheckDipsw(0xe4) == 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_NOT_TOOL;
+		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	ret = UIDtoProcessAndRefer(pid, &process);
 	if (ret < 0)
 		return ret;
@@ -5204,7 +5194,7 @@ int SceProcessmgrForDriver_594319C7(SceUID pid)
 	int ret;
 
 	if (sceKernelCheckDipsw(0xe4) == 0)
-		return SCE_KERNEL_ERROR_PROCESSMGR_NOT_TOOL;
+		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	ret = UIDtoProcessAndRefer(pid, &process);
 	if (ret < 0)
 		return ret;
@@ -5386,12 +5376,12 @@ int SceProcessmgrForKernel_8B4086AF(SceUID pid, int kind)
 	if (process->type == PROCESS_TYPE_KERNEL
 	    || (process->type == PROCESS_TYPE_SHELL && kind == 1)) {
 		sceGUIDReleaseObject(process->pid);
-		return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+		return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 	}
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->lock);
 	if (process->type != PROCESS_TYPE_SHELL && kind == 1) {
 		if (process->moduleCount[1] >= 0x20) {
-			ret = SCE_KERNEL_ERROR_MODULE_COUNT_OVER;
+			ret = SCE_KERNEL_ERROR_UID_RL_OVERFLOW;
 		} else {
 			process->moduleCount[1]++;
 			ret = 0;
@@ -5400,7 +5390,7 @@ int SceProcessmgrForKernel_8B4086AF(SceUID pid, int kind)
 		ret = 0;
 		process->moduleCount[0]++;
 	} else {
-		ret = SCE_KERNEL_ERROR_MODULE_COUNT_OVER;
+		ret = SCE_KERNEL_ERROR_UID_RL_OVERFLOW;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 	sceGUIDReleaseObject(process->pid);
@@ -5418,18 +5408,18 @@ int SceProcessmgrForKernel_F160B4D8(SceUID pid, int kind)
 	if (process->type == PROCESS_TYPE_KERNEL
 	    || (process->type == PROCESS_TYPE_SHELL && kind == 1)) {
 		sceGUIDReleaseObject(process->pid);
-		return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
+		return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 	}
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->lock);
 	if (process->type != PROCESS_TYPE_SHELL && kind == 1) {
 		if (process->moduleCount[1] == 0) {
-			ret = SCE_KERNEL_ERROR_MODULE_COUNT_UNDER;
+			ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		} else {
 			process->moduleCount[1]--;
 			ret = 0;
 		}
 	} else if (process->moduleCount[0] == 0) {
-		ret = SCE_KERNEL_ERROR_MODULE_COUNT_UNDER;
+		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 	} else {
 		ret = 0;
 		process->moduleCount[0]--;
@@ -5482,7 +5472,7 @@ int SceProcessmgrForKernel_BC110987(SceUID pid, SceUInt32 event)
 	if (ret >= 0) {
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->lock);
 		if (process->status & PROCESS_FLAG_EXIT)
-			ret = SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS;
+			ret = SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 	}
 	sceGUIDReleaseObject(process->pid);
@@ -5901,7 +5891,7 @@ int sceKernelCDialogSessionClose(void)
 	if (ret < 0)
 		return ret;
 	if (process->cdialogHeap == -1) {
-		ret = SCE_KERNEL_ERROR_NO_HEAP;
+		ret = SCE_KERNEL_ERROR_UNSUP;
 	} else {
 		ret = sceKernelShrinkHeap(process->cdialogHeap);
 		if (ret >= 0) {
@@ -5915,8 +5905,6 @@ int sceKernelCDialogSessionClose(void)
 	return ret;
 }
 
-#define SCE_KERNEL_ERROR_ILLEGAL_LEASE_LIMIT	0x80024b0b	/* name unknown */
-
 int sceKernelCDialogSetLeaseLimit(SceUInt32 limit)
 {
 	SceProcessObject *process;
@@ -5924,12 +5912,12 @@ int sceKernelCDialogSetLeaseLimit(SceUInt32 limit)
 	int intr, ret;
 
 	if (limit > 0x800)
-		return SCE_KERNEL_ERROR_ILLEGAL_LEASE_LIMIT;
+		return SCE_KERNEL_ERROR_MEMBLOCK_OVERFLOW;
 	process = GetCurrentProcess();
 	resource = &process->resource[2];
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&resource->lock);
 	if (limit < resource->count) {
-		ret = SCE_KERNEL_ERROR_ILLEGAL_LEASE_LIMIT;
+		ret = SCE_KERNEL_ERROR_MEMBLOCK_OVERFLOW;
 	} else {
 		resource->limit = limit;
 		ret = 0;

@@ -15,9 +15,6 @@
 
 #define TLS_SLOT_FIRST			2
 #define TLS_SLOT_COUNT			8
-#define SCE_KERNEL_ERROR_TLS_FULL	0x80028081	/* PLACEHOLDER: names */
-#define SCE_KERNEL_ERROR_TLS_NOT_ACTIVE	0x80028082
-#define SCE_KERNEL_ERROR_TLS_BUSY	0x80028083
 
 _Static_assert(sizeof(struct ThreadmgrTlsSlot) == 0x14, "TLS descriptor stride");
 
@@ -48,7 +45,7 @@ int SceThreadmgrForDriver_B645C7EF(uint32_t size, void (*destructor)(void *, uin
 		return slot;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intr);
-	return SCE_KERNEL_ERROR_TLS_FULL;
+	return SCE_KERNEL_ERROR_KERNEL_TLS_FULL;
 }
 
 /* SceThreadmgrForDriver_8C3C1F78: a slot no thread uses any more goes back */
@@ -60,13 +57,13 @@ int SceThreadmgrForDriver_8C3C1F78(uint32_t slot)
 	int result;
 
 	if (!driverSlot(slot))
-		return SCE_KERNEL_ERROR_TLS_NOT_ACTIVE;
+		return SCE_KERNEL_ERROR_ILLEGAL_KERNEL_TLS_INDEX;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
 	descriptor = &s_threadmgrRuntime.manager->tlsSlots[slot];
 	if (!descriptor->active) {
-		result = SCE_KERNEL_ERROR_TLS_NOT_ACTIVE;
+		result = SCE_KERNEL_ERROR_ILLEGAL_KERNEL_TLS_INDEX;
 	} else if (descriptor->liveCount != 0) {
-		result = SCE_KERNEL_ERROR_TLS_BUSY;
+		result = SCE_KERNEL_ERROR_KERNEL_TLS_BUSY;
 	} else {
 		descriptor->active = 0;
 		result = 0;

@@ -36,8 +36,6 @@
 #define TRACE_T32			0x00000200
 #define TRACE_LINK			0x00000100
 
-#define SCE_KERNEL_ERROR_NOT_DEBUG_SUSPENDED	0x80028030
-
 /* the CPU's VFP exception state (VBAR +0x24) */
 struct ThreadmgrVfpExceptionArea {
 	uint32_t exceptionMask;			/* 0x00: the running thread's */

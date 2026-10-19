@@ -10,8 +10,6 @@
 #include <threadmgr/threadmgr.h>
 #include "rdrfp.h"
 
-#define SCE_ERROR_ERRNO_EACCES		0x8001000d
-#define SCE_ERROR_ERRNO_EUNSUP		0x80010086
 #define RDRFP_DFMGR_ERROR_REQUESTED	0x80080007
 
 /* host errors: 0x12000 + the errno */
@@ -181,7 +179,6 @@ static __attribute__((noinline)) void convertStat(RdrfpStat *out, const SceIoSta
 {
 	setStat(out, stat);
 }
-
 
 /* ===== commands ===== */
 
@@ -1085,5 +1082,5 @@ unknown:
 	ret = rdrfpSendPacket(req);
 	if (ret < 0)
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 189, "rdrfpSendPacket failed? (0x%08x)\n", ret);
-	return SCE_ERROR_ERRNO_EUNSUP;
+	return SCE_ERROR_ERRNO_ENOTSUP;
 }

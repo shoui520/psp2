@@ -88,7 +88,6 @@ static int uidSemaphore_Constructor(void *object)
 
 #define SEMA_ATTR_LW			0x00000080	/* PLACEHOLDER: name */
 #define SEMA_ATTR_UNLIMITED		0x00004000	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_WAIT_DELETE	0x80028006
 
 /* SceUIDSemaphoreClass's destructor: the waiters wake with WAIT_DELETE, the owner's count drops */
 static int uidSemaphore_Destructor(void *object)
@@ -174,8 +173,6 @@ bool isWaitOnly(struct ThreadmgrWaitQueue *queue, int priority)
 
 #define WAIT_TYPE_SEMAPHORE		0x20
 #define THREAD_ATTR_CHECK_STACK		0x80000000
-#define THREADMGR_ERROR_WAIT_CANCEL	0x800280a2	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_ILLEGAL_COUNT	0x8002000f
 
 /* takes needCount from the semaphore, waiting for it (optionally running callbacks) */
 int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
@@ -276,7 +273,7 @@ int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 		sceKernelSpinlockLowUnlock(&thread->lock);
 		if (!locked)
 			goto callbacks;
-	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
+	} while (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 	sceKernelSpinlockLowUnlock(&sema->lock);
 	sceGUIDReleaseObject(semaId);
 	if (!callbacks)
@@ -299,10 +296,6 @@ restore:
 	return ret;
 }
 
-#define SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS	0x80028002
-#define SCE_KERNEL_ERROR_WAIT_CANCEL		0x80028007
-#define SCE_KERNEL_ERROR_NO_MEMORY		0x8002710b
-#define SCE_KERNEL_ERROR_SEMA_OVF		0x80028103
 #define SDK_VERSION_NO_NEGATIVE_SIGNAL		0x02000000	/* from here a signal must not lower the count */
 
 #define SEMA_KERNEL_ATTR_MASK		0x0000a080	/* what kernel callers may pass */
@@ -312,7 +305,6 @@ restore:
 #define UID_LW_MAX_PER_PROCESS		0x100
 #define SEMA_UID_ATTR_LW		0x0000c000	/* PLACEHOLDER: name */
 #define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_ILLEGAL_ATTR	0x8002000e
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 
 /* closes every semaphore PUID a process still holds */

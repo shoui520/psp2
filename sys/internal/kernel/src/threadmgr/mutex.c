@@ -21,8 +21,6 @@
 #define THREAD_ATTR_USER		0x80000000
 #define USER_TLS_PRIORITY_OFFSET	(-0x7e0)	/* the priority word below the user TLS */
 #define SDK_VERSION_BOOST_LIMITS_END	0x01800000	/* from here a boost may cross the user range */
-#define SCE_KERNEL_ERROR_WAIT_DELETE	0x80028006
-#define SCE_KERNEL_ERROR_WAIT_DELETE_MUTEX 0x800281a2
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 
 /* SceUIDMutexClass's constructor */
@@ -415,23 +413,10 @@ int mutexProcessExit(SceProcessObject *process)
 #define THREAD_ATTR_CHECK_STACK		0x80000000
 #define WAIT_TYPE_MUTEX			0x40
 #define WAIT_TYPE_COND_MUTEX		0x200	/* a cond waiter relocking its mutex */
-#define THREADMGR_ERROR_WAIT_CANCEL	0x800280a2	/* PLACEHOLDER: name */
 #define CEILING_OFFSET_FLAG		0x10000000	/* the ceiling is an offset from the default */
 #define CEILING_OFFSET_BASE		0x10000100
 #define CEILING_OFFSET_MIN		(-0x20)
 #define CEILING_OFFSET_RANGE		0x40
-#define SCE_KERNEL_ERROR_ILLEGAL_ATTR	0x8002000e
-#define SCE_KERNEL_ERROR_ILLEGAL_COUNT	0x8002000f
-#define SCE_KERNEL_ERROR_ILLEGAL_PRIORITY 0x80028023
-#define SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS 0x80028002
-#define SCE_KERNEL_ERROR_WAIT_CANCEL	0x80028007
-#define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
-#define SCE_KERNEL_ERROR_UNKNOWN_MUTEX_ID 0x80028141
-#define SCE_KERNEL_ERROR_MUTEX_RECURSIVE 0x80028142
-#define SCE_KERNEL_ERROR_MUTEX_LOCK_OVF	0x80028143
-#define SCE_KERNEL_ERROR_MUTEX_UNLOCK_UDF 0x80028144
-#define SCE_KERNEL_ERROR_MUTEX_FAILED_TO_OWN 0x80028145
-#define SCE_KERNEL_ERROR_MUTEX_NOT_OWNED 0x80028146
 
 static inline SceUID OpenByGUID(SceUID pid, SceUID guid)
 {
@@ -816,7 +801,7 @@ int lockMutex(SceUID mutexId, int count, SceUInt32 *timeout, int callbacks)
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (!locked)
 			goto callbacks;
-	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
+	} while (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 	sceKernelSpinlockLowUnlock(&mutex->lock);
 	sceGUIDReleaseObject(mutexId);
 	if (!callbacks)
@@ -1287,7 +1272,7 @@ int lockMutexForCond(SceUID mutexId, int count, SceUInt32 *timeout, int callback
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (!locked)
 			goto deleted;
-	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
+	} while (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 	sceKernelSpinlockLowUnlock(&mutex->lock);
 	sceGUIDReleaseObject(mutexId);
 deleted:

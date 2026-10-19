@@ -68,7 +68,7 @@ int sceKernelMountBootimageFS(const char *path)
 #endif
 
 	if (g_bootimage != NULL)
-		return SCE_KERNEL_ERROR_MODULEMGR_EXIST;
+		return SCE_KERNEL_ERROR_MODULEMGR_ALREADY_LOADED;
 	modid = SceModulemgrForDriver_189BFBBB(path, 0, NULL, 0x100, NULL, NULL);
 	if (modid < 0)
 		return modid;

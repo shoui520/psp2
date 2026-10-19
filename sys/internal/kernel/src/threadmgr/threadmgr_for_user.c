@@ -43,21 +43,14 @@ int __attribute__((noinline)) sceKernelWaitSignalCB(uint32_t arg0, uint32_t arg1
 #define USER_ERROR_UNKNOWN_MUTEX_ID	0xc0028141
 #define USER_ERROR_UNKNOWN_CALLBACK_ID	0xc00280a1
 #define USER_ERROR_UNKNOWN_THREAD_EVENT_ID	0xc0028061
-#define SCE_KERNEL_ERROR_UNKNOWN_EVENT_ID	0x80028201
-#define SCE_KERNEL_ERROR_ILLEGAL_ADDR	0x80020006
-#define SCE_KERNEL_ERROR_ILLEGAL_SIZE	0x8002000b
-#define SCE_KERNEL_ERROR_ILLEGAL_MODE	0x80020010
-#define SCE_KERNEL_ERROR_ILLEGAL_PATTERN	0x8002000d
 #define USER_ERROR_UNKNOWN_COND_ID	0xc00281a1
 #define USER_ERROR_UNKNOWN_LW_MUTEX_ID	0xc0028181
 #define USER_ERROR_UNKNOWN_LW_COND_ID	0xc00281c1
 #define USER_ERROR_ILLEGAL_ADDR		(SCE_KERNEL_ERROR_ILLEGAL_ADDR | SYSCALL_ERROR_BIT)
 #define MSG_PIPE_CLOSE_DELETE		0x00000008	/* closeMsgPipeForUser's patterns */
 #define MSG_PIPE_CLOSE_CLOSE		0x00000200
-#define SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS	0x80028002
 #define UID_NAME_CHECK_LENGTH		0x80	/* copyinUIDNameWithAttr: a name too long is an error */
 #define EVENT_PATTERN_KERNEL_MASK	0x00ffffff	/* bits the user may not pulse or set */
-#define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
 #define USER_ERROR_UNKNOWN_RW_LOCK_ID	0xc00281e1
 #define USER_ERROR_UNKNOWN_MSG_PIPE_ID	0xc0028221
 #define USER_ERROR_UNKNOWN_SIMPLE_EVENT_ID	0xc0028261
@@ -4060,9 +4053,6 @@ uint64_t sceKernelSetTimerTimeWideForUser(SceUID uid, uint64_t value)
 		"*** error: sceKernelSetTimerTimeWideForUser(0x%08X), scePUIDtoGUID()=0x%08X\n", uid, guid);
 	return UINT64_MAX;
 }
-
-#define SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID	0x80028022
-#define SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID	0x80028021
 
 /* the cores of _sceKernelWaitSignal and _sceKernelWaitSignalCB */
 int sceKernelWaitSignalForUser(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout)

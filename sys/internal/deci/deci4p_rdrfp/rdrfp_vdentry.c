@@ -9,9 +9,6 @@
 #include <sysmem/sysclib.h>
 #include "rdrfp.h"
 
-#define SCE_ERROR_ERRNO_ENOENT		0x80010002
-#define SCE_ERROR_ERRNO_ENOMEM		0x8001000c
-
 #define RDRFP_VDENTRY_NAME_MAX		0xff
 #define RDRFP_MOUNT_POINT_MAX		0x10
 

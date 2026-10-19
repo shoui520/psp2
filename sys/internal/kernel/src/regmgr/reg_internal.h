@@ -13,8 +13,11 @@
 #include <sysmem/utils.h>
 #include "reg.h"
 
-/* 4.00 builds the reg library with _FORTIFY_SOURCE=1: whole-object sizes */
+/* 4.00 builds the reg library with _FORTIFY_SOURCE=1: whole-object sizes (over regmgr's
+ * _FORTIFY_SOURCE=2 ones where a file includes both) */
 #if FW_VERSION >= 0x04000000
+#undef strncpy
+#undef strncat
 #define memcpy(dst, src, len)	__builtin___memcpy_chk(dst, src, len, __builtin_object_size(dst, 0))
 #define memset(dst, c, len)	__builtin___memset_chk(dst, c, len, __builtin_object_size(dst, 0))
 #define strncpy(dst, src, len)	__builtin___strncpy_chk(dst, src, len, __builtin_object_size(dst, 0))

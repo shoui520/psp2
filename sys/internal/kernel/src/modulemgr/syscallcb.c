@@ -33,7 +33,7 @@ static inline void SyscallCBWrite(SceUInt32 index, void *func)
 int func_noentry(void)
 {
 	SCE_DBG_PRINTF_LEVEL(1, 0, 55, "invalid syscall num\n");
-	return SCE_KERNEL_ERROR_SYSCALL_NOENTRY;
+	return SCE_KERNEL_ERROR_ILLEGAL_SYSCALL_NUMBER;
 }
 
 int SyscallCBInit(void)

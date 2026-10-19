@@ -8,7 +8,6 @@
 #include <kernel/modulemgr.h>
 #include "rdrfp.h"
 
-#define SCE_ERROR_ERRNO_ENOMEM			0x8001000c
 #define RDRFP_DFMGR_ERROR_REQUESTED		0x80080007	/* name unknown: already requested */
 
 #define RDRFP_DIPSW			0xc2

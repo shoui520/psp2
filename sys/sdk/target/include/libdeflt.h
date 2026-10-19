@@ -18,4 +18,10 @@ typedef struct SceDeflatePartialInputParam {
 	SceDeflateDecompressPartialInputCallback *callback;
 } SceDeflatePartialInputParam;
 
+#define SCE_DEFLATE_ERROR_INVALID_FORMAT	-2141847296	/* 0x80560100 */
+#define SCE_DEFLATE_ERROR_INVALID_SIZE		-2141847295	/* 0x80560101 */
+#define SCE_DEFLATE_ERROR_NOT_SUPPORTED		-2141847294	/* 0x80560102 */
+#define SCE_DEFLATE_ERROR_INVALID_POINTER	-2141847293	/* 0x80560103 */
+#define SCE_DEFLATE_ERROR_INVALID_CBINFO	-2141847292	/* 0x80560104 */
+
 #endif /* SCE_LIBDEFLT_H */

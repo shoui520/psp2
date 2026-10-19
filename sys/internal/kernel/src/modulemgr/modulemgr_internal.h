@@ -11,6 +11,7 @@
 #define MODULEMGR_INTERNAL_H
 
 #include <scetypes.h>
+#include <kernel/error.h>
 #include <sysmem/spinlock.h>
 #include <authmgr/sblauthmgr.h>
 #include <threadmgr/threadmgr.h>
@@ -106,52 +107,6 @@
 #define LOAD_FLAG_TIMING		0x00010000
 #define LOAD_FLAG_FOR_PID		0x08000000	/* entry points get the arguments of a user call */
 
-/* error codes (official names from the SDK; "name unknown" where none exists) */
-#define SCE_KERNEL_ERROR_ERROR				0x80020001
-#define SCE_KERNEL_ERROR_UNSUP				0x80020004
-#define SCE_KERNEL_ERROR_INVALID_ARGUMENT		0x80020005
-#define SCE_KERNEL_ERROR_INVALID_FLAGS			0x8002000a
-#define SCE_KERNEL_ERROR_ILLEGAL_ELF_HEADER		0x80025001
-#define SCE_KERNEL_ERROR_ILLEGAL_SELF_HEADER		0x80025002
-#define SCE_KERNEL_ERROR_MODULEMGR_START_FAILED		0x8002d000
-#define SCE_KERNEL_ERROR_MODULEMGR_STOP_FAIL		0x8002d001
-#define SCE_KERNEL_ERROR_MODULEMGR_IN_USE		0x8002d002
-#define SCE_KERNEL_ERROR_MODULEMGR_NO_LIB		0x8002d003
-#define SCE_KERNEL_ERROR_MODULEMGR_SYSCALL_REG		0x8002d004
-#define SCE_KERNEL_ERROR_MODULEMGR_NOMEM_LIB		0x8002d005
-#define SCE_KERNEL_ERROR_MODULEMGR_NOMEM_STUB		0x8002d006
-#define SCE_KERNEL_ERROR_MODULEMGR_NOMEM_SELF		0x8002d007
-#define SCE_KERNEL_ERROR_MODULEMGR_NOMEM		0x8002d008
-#define SCE_KERNEL_ERROR_MODULEMGR_INVALID_LIB		0x8002d009
-#define SCE_KERNEL_ERROR_MODULEMGR_INVALID_STUB		0x8002d00a
-#define SCE_KERNEL_ERROR_MODULEMGR_INVALID_TYPE		0x8002d00d
-#define SCE_KERNEL_ERROR_MODULEMGR_NO_MOD_ENTRY		0x8002d00e
-#define SCE_KERNEL_ERROR_MODULEMGR_INVALID_PROC_PARAM	0x8002d00f
-#define SCE_KERNEL_ERROR_MODULEMGR_NO_MOD		0x8002d011
-#define SCE_KERNEL_ERROR_MODULEMGR_NO_PROCESS		0x8002d012
-#define SCE_KERNEL_ERROR_MODULEMGR_OLD_LIB		0x8002d013
-#define SCE_KERNEL_ERROR_MODULEMGR_STARTED		0x8002d014
-#define SCE_KERNEL_ERROR_MODULEMGR_NOT_STARTED		0x8002d015
-#define SCE_KERNEL_ERROR_MODULEMGR_NOT_STOPPED		0x8002d016
-#define SCE_KERNEL_ERROR_MODULEMGR_BAD_PID		0x8002d017	/* name unknown */
-#define SCE_KERNEL_ERROR_MODULEMGR_SHARED_TEXT		0x8002d018	/* name unknown */
-#define SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC		0x8002d019	/* name unknown */
-#define SCE_KERNEL_ERROR_MODULEMGR_BAD_REFTABLE	0x8002d01a	/* name unknown */
-#define SCE_KERNEL_ERROR_MODULEMGR_NOENT		0x8002d01c
-#define SCE_KERNEL_ERROR_MODULEMGR_BUSY			0x8002d01d
-#define SCE_KERNEL_ERROR_MODULEMGR_NOEXEC		0x8002d01e
-#define SCE_KERNEL_ERROR_MODULEMGR_NAMETOOLONG		0x8002d01f
-#define SCE_KERNEL_ERROR_MODULEMGR_CANNOT_STOP		0x8002d020	/* name unknown */
-#define SCE_KERNEL_ERROR_MODULEMGR_EXIST		0x8002d021	/* name unknown */
-#define SCE_KERNEL_ERROR_MODULEMGR_STOPPED		0x8002d022	/* name unknown */
-#define SCE_KERNEL_ERROR_MODULEMGR_NO_PROCPARAM		0x8002d023	/* name unknown */
-#define SCE_KERNEL_ERROR_LIBRARYDB_NOENT		0x8002d080
-#define SCE_KERNEL_ERROR_LIBRARYDB_NO_LIB		0x8002d081
-#define SCE_KERNEL_ERROR_LIBRARYDB_NO_MOD		0x8002d082
-#define SCE_KERNEL_ERROR_MODULEMGR_INHIBITED		0x8002d0f3	/* name unknown */
-#define SCE_KERNEL_ERROR_AUTHFAIL			0x8002f000
-#define SCE_KERNEL_ERROR_SYSCALL_NOENTRY		0x8002710c	/* name unknown */
-
 struct SceModuleCB;
 struct LibEntCB;
 struct SceKernelBacktraceFrame;
@@ -219,7 +174,6 @@ typedef struct SceModuleImports34 {
 	void **tlsent;
 } SceModuleImports34;
 
-
 /* entry of the list of original shared modules (kernel heap) */
 typedef struct SharedModuleEntry {
 	struct SharedModuleEntry *next;
@@ -232,8 +186,6 @@ typedef struct SceModuleProbesInfo {
 	SceUInt32 version;		/* 1 */
 	SceUInt32 count;
 } SceModuleProbesInfo;
-
-
 
 typedef struct SceModuleObject {
 	SceUInt32 base[2];		/* SceObjectBase */
@@ -365,8 +317,6 @@ typedef struct Elf32Phdr {
 #define PT_SCE_VERSION		0x6fffff01
 #define ET_SCE_FIXEDEXEC	0xfe04
 
-
-
 /* bootimage_fs.c */
 typedef struct BootimageEntry {
 	const char *name;
@@ -431,8 +381,6 @@ typedef struct SceProcessParam {
 
 #define SCE_PROCESS_PARAM_MAGIC		0x32505350
 
-
-
 /* one module sceKernelLoadPreloadingModules loads into a process */
 typedef struct PreloadModule {
 	const char *depend;		/* needed library, or NULL */
@@ -455,8 +403,6 @@ typedef struct PreloadModule {
 
 /* info of the library function a stub address calls (sysmem/sysroot_modulemgr.h) */
 typedef struct ModulemgrStubInfo ModulemgrStubInfo;
-
-
 
 /* globals */
 extern SceUID g_mutex;
@@ -639,7 +585,6 @@ void SelfDecrypterLock(void);
 void SelfDecrypterUnlock(void);
 
 /* loadcore.c */
-
 
 /* the tables of an import and of the library it links to */
 typedef struct StubLinkerInfo {

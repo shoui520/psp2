@@ -12,6 +12,7 @@
 #define FIOS2_INTERNAL_H
 
 #include <scetypes.h>
+#include <kernel/error.h>
 #include <iofilemgr/iofilemgr.h>
 #include <acmgr/acmgr.h>
 #include <processmgr/processmgr.h>
@@ -42,12 +43,6 @@ extern "C" {
 #define SCE_FIOS_ERROR_BAD_OVERLAY		0x8082001A
 #define SCE_FIOS_ERROR_BAD_ORDER		0x8082001B
 #define SCE_FIOS_ERROR_BAD_RESOLVE_TYPE		0x80820020
-
-#define SCE_KERNEL_ERROR_NO_MEMORY		0x8002710B
-#define SCE_ERROR_ERRNO_ENOENT			0x80010002
-#define SCE_ERROR_ERRNO_ENODEV			0x80010013
-#define SCE_ERROR_ERRNO_ENOTDIR			0x80010014
-#define SCE_ERROR_ERRNO_EICV			0x8001008F
 
 #define SCE_FIOS_OVERLAY_ORDER_USER_LAST	127	/* SDK SceFiosOverlayOrder */
 #define SCE_FIOS_OVERLAY_MAX_OVERLAYS		64	/* SDK SceFiosOverlayLimits */

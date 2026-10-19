@@ -216,7 +216,7 @@ int sceSblPmMgrSetProductModeOffForUser(void)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	ret = SceSblPostSsMgrForDriver_ADF92824(0);
 	if (ret == 0)
@@ -233,7 +233,7 @@ int sceSblPmMgrGetProductModeForUser(SceUInt8 *mode)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	if (mode == NULL) {
 		sceSyscallLeave(state);
@@ -253,7 +253,7 @@ int sceSblPmMgrGetProductModeFromNVSForUser(SceUInt8 *mode)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	if (mode == NULL) {
 		sceSyscallLeave(state);
@@ -274,7 +274,7 @@ int sceSblPmMgrGetCurrentMode(SceUInt8 *mode)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	if (mode == NULL) {
 		sceSyscallLeave(state);
@@ -293,7 +293,7 @@ int sceSblPmMgrAuthEtoIForUser(void)	/* name unknown */
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
-		return SCE_KERNEL_ERROR_NOT_ALLOWED;
+		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	ret = sceSblPmMgrAuthEtoI();
 	sceSyscallLeave(state);

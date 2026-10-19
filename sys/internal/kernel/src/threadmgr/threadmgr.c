@@ -70,13 +70,6 @@ int SceThreadmgrForDriver_5311CFB5(uintptr_t hook, uintptr_t arg)
 
 #define WAIT_TYPE_SIGNAL		0x00000004
 #define WAIT_ATTR_UNINTERRUPTIBLE	0x00008000	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_CAN_NOT_WAIT	0x80028004
-#define SCE_KERNEL_ERROR_WAIT_TIMEOUT	0x80028005
-#define SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID	0x80028021
-#define SCE_KERNEL_ERROR_THREAD_STOPPED	0x8002802c
-#define SCE_KERNEL_ERROR_THREAD_SUSPENDED	0x8002802d
-#define SCE_KERNEL_ERROR_SIGNAL_PENDING	0x80028121	/* PLACEHOLDER: name */
-#define THREADMGR_ERROR_WAIT_CANCEL	0x800280a2	/* PLACEHOLDER: name */
 
 typedef void (*ThreadmgrSchedSleepHandler)(const struct ThreadmgrSchedProbeDescriptor *probe);
 
@@ -234,10 +227,10 @@ int waitSignal(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout, int callbacks)
 		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		ret = thread->waitResult;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-		again = ret == (int)THREADMGR_ERROR_WAIT_CANCEL;
+		again = ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK;
 		goto next;
 cancelled:
-		ret = THREADMGR_ERROR_WAIT_CANCEL;
+		ret = SCE_KERNEL_ERROR_NOTIFY_CALLBACK;
 		thread->waitResult = ret;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		again = 1;
@@ -301,7 +294,7 @@ int sendSignal(SceUID threadId)
 			SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_SIGNALED);
 			ret = 0;
 		} else {
-			ret = SCE_KERNEL_ERROR_SIGNAL_PENDING;
+			ret = SCE_KERNEL_ERROR_ALREADY_SENT;
 		}
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		sceKernelSpinlockLowUnlock(&signal->lock);
@@ -528,8 +521,6 @@ int uidExtendedClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
 #define CPSR_SYS_THUMB			0x7f
 #define REGISTER_CONTEXT_ALIGN		0x40
 #define SYSCALL_RESTART_SLOT_SIZE	0x10
-#define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
-#define SCE_KERNEL_ERROR_NOT_DORMANT	0x80028028
 
 /* what the bootloader passes: per CPU, the stack it is running on */
 struct ThreadmgrBootArgs {
@@ -1430,9 +1421,6 @@ int SceThreadmgrForDriver_84EB1EA4(int value)
 #define DIPSW_FREE_RETRY_LOG		0x9f
 #define FREE_RETRY_LIMIT		100000
 #define FREE_RETRY_LOG_EVERY		1000
-#define SCE_KERNEL_ERROR_WAIT_DELETE	0x80028006
-#define SCE_KERNEL_ERROR_WAIT_CANCEL	0x80028007
-#define SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID	0x80028022
 void __attribute__((noreturn)) exitDeleteThread(int delete, int intr, int status);
 
 /* the thread goes from the list it is on to the manager's closed list */
@@ -2239,7 +2227,6 @@ unlock:
 #define DELAY200_MIN_USEC		201
 #define SDK_VERSION_DELAY_ZERO_ERROR	0x02100000	/* from 2.10 a delay of 0 is an error */
 #define SDK_VERSION_DELAY_JITTER	0x03100000	/* from 3.10 a user delay gets a little jitter */
-#define SCE_KERNEL_ERROR_ILLEGAL_CONTEXT_ARG	0x80020005	/* PLACEHOLDER: name */
 
 /* the __sched_:sleep probe of a delay */
 static uint32_t s_delaySleepProbeId;
@@ -2389,7 +2376,7 @@ int delayThread(SceUInt32 usec, uint32_t flags, SceUInt32 *remaining, int callba
 		if (callbacks && (thread->flags & THREAD_FLAG_CALLBACKS)) {
 			/* callbacks came in meanwhile: run them first */
 			cancelDelayTimer(ret, NULL);
-			thread->waitResult = THREADMGR_ERROR_WAIT_CANCEL;
+			thread->waitResult = SCE_KERNEL_ERROR_NOTIFY_CALLBACK;
 			thread->delayId = -1;
 			thread->timeoutOutput = 0;
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -2428,7 +2415,7 @@ int delayThread(SceUInt32 usec, uint32_t flags, SceUInt32 *remaining, int callba
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		}
 		ret = result;
-	} while (callbacks && result == (int)THREADMGR_ERROR_WAIT_CANCEL);
+	} while (callbacks && result == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 resume:
 	sceKernelCpuResumeIntr(intr);
 restore:
@@ -2436,13 +2423,13 @@ restore:
 	return ret;
 zero:
 	if (ThreadmgrInSyscall()) {
-		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT_ARG | SYSCALL_ERROR_BIT;
+		ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT | SYSCALL_ERROR_BIT;
 	} else {
 		SCE_DBG_ASSERT_PRINTF(0, 2055,
 			"*** error: delayThread(0), processId=0x%08X[%s], threadId=0x%08X[%s]\n",
 			thread->processId, SceSysmemForDriver_E655852F(thread->processId),
 			thread->threadId, SceSysmemForDriver_E655852F(thread->threadId));
-		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT_ARG;
+		ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	goto restore;
 }
@@ -2642,9 +2629,6 @@ void issueChangeThreadPriorityAndCpuAffinityIntrRequest(unsigned int cpuId, SceU
 #define WORKER_CPU_AFFINITY		0xf
 #define PERMISSION_WORKER		0x80		/* PLACEHOLDER: the permission it is created with */
 #define PROCESS_DEBUG_SUSPEND_EXCEPTION	0x11		/* PLACEHOLDER: SceSysrootForKernel_1247A825's reason */
-#define SCE_KERNEL_ERROR_DORMANT	0x80028027
-#define SCE_KERNEL_ERROR_NOT_SUSPENDED	0x8002802e
-#define SCE_KERNEL_ERROR_UNKNOWN_UID	0x80028001	/* PLACEHOLDER: name */
 
 typedef void (*ThreadmgrProcessDebugSuspendHook)(SceUID pid, SceUID threadId, int kind,
 						 uintptr_t arg);
@@ -3839,7 +3823,6 @@ out:
 #define USER_CONTEXT_ALIGN		0x40
 #define ACCESS_KERNEL			0x10	/* PLACEHOLDER: sceKernelIsAccessibleRange: kernel memory */
 #define SDK_VERSION_DEFAULT_AFFINITY	0x02100000
-#define SCE_KERNEL_ERROR_ILLEGAL_ARGUMENT	0x80020005	/* PLACEHOLDER: name */
 void __attribute__((noreturn)) threadEntry(void);
 
 /* what a kernel argument copied to a user stack is replaced with (cleared at boot) */
@@ -3914,7 +3897,7 @@ int startThread(SceUID threadId, SceSize argSize, const void *arg, int checkSour
 	}
 	stackSize = (int)thread->currentAttr < 0 ? thread->uStackSize : thread->kStackSize;
 	if (stackSize < argSize) {
-		ret = SCE_KERNEL_ERROR_ILLEGAL_ARGUMENT;
+		ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 		goto unlock;
 	}
 	/* the thread ID marks the bottom of its stacks */
@@ -4575,7 +4558,6 @@ exiting:
 
 #define AFFINITY_CURRENT_CPU		0x40000000	/* the mask: the calling CPU */
 #define SDK_VERSION_AFFINITY_CHECK	0x01800000
-#define SCE_KERNEL_ERROR_ILLEGAL_THREAD_PARAM_COMBINATION	0x80028026
 #define USER_ERROR_UNKNOWN_THREAD_ID	(SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT)
 
 extern void notifyThreadPriorityChange(struct ThreadCB *thread, int oldPriority,
@@ -5033,7 +5015,6 @@ int SceThreadmgrForKernel_CBADD6B3(SceUID threadId, SceSize argSize, const void 
 					 ALLOC_ATTR_HAS_EXTRA_LOW)
 #define TRACE_EVENT_EXTEND_STACK	0x10
 #define TRACE_EVENT_EXTEND_STACK_END	0x11
-#define SCE_KERNEL_ERROR_ILLEGAL_STACK_SIZE	0x80028024
 
 /* kernel_stack.S */
 extern int64_t callWithStack(void *arg, uintptr_t stackTop, int *intrState,
@@ -5567,7 +5548,6 @@ out:
 #define PERMISSION_SYSTEM		0x40	/* PLACEHOLDER: names of the permissions allowed */
 #define PERMISSION_ROOT			0x80
 #define DEACTIVATE_SWITCH		3	/* deactivateCpu: the running thread moved away */
-#define SCE_KERNEL_ERROR_ILLEGAL_CPU_AFFINITY_MASK	0x80028025
 
 /*
  * This CPU leaves the active set: its threads go to the others. Returns
@@ -5847,8 +5827,6 @@ int sceKernelGetThreadExitStatus(SceUID uid, int *status)
  * list), which exitDeleteThread and the suspension paths wake.
  */
 
-#define SCE_KERNEL_ERROR_DELETED	0x8002802a
-
 /* the error for a thread ID the caller cannot name */
 static inline int unknownThreadError(void)
 {
@@ -5935,7 +5913,7 @@ int waitThreadEnd(SceUID threadId, int *status, SceUInt32 *timeout, int callback
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(self));
 		if (!locked)
 			goto resume;
-	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
+	} while (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 	sceKernelSpinlockLowUnlock(&object->waitLock);
 release:
 	sceGUIDReleaseObject(threadId);
@@ -6039,7 +6017,7 @@ int waitThreadSuspend(SceUID threadId, SceUInt32 *timeout, int callbacks)
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(self));
 		if (!locked)
 			goto resume;
-	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
+	} while (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 	sceKernelSpinlockLowUnlock(&object->waitLock);
 release:
 	sceGUIDReleaseObject(threadId);
@@ -6122,9 +6100,6 @@ int checkThreadUserStack(struct ThreadCB *thread)
 #define UID_VECTOR_LEVEL		7		/* PLACEHOLDER: name */
 #define STACK_FILL_WORD			0xffffffff
 #define SDK_VERSION_RUN_STATUS_PUID	0x01800000	/* newer SDKs see PUIDs in the run status */
-#define SCE_KERNEL_ERROR_ILLEGAL_ADDR	0x80020006
-#define SCE_KERNEL_ERROR_ILLEGAL_SIZE	0x8002000b
-#define SCE_KERNEL_ERROR_NOT_SUPPORTED	0x80020004	/* PLACEHOLDER: name */
 
 /* the calling process's SDK version (kernel callers count as the newest) */
 static inline void getCallerSdkVersion(SceUInt32 *version)
@@ -6164,7 +6139,7 @@ int SceThreadmgrForDriver_7B278A0B(SceUID threadId)
 	thread = &object->context;
 	if ((thread->currentAttr & THREAD_ATTR_UNK10000000) &&
 	    !sceKernelCheckDipsw(DIPSW_STACK_CHECK)) {
-		ret = SCE_KERNEL_ERROR_NOT_SUPPORTED;
+		ret = SCE_KERNEL_ERROR_UNSUP;
 		goto release;
 	}
 	if ((int)thread->currentAttr < 0) {
@@ -6437,7 +6412,7 @@ int sceKernelGetThreadIdList(SceUID pid, SceUID *ids, SceSize size, SceSize *cou
 	int ret, i;
 
 	if (size >= sizeof(SceUID) && ids == NULL)
-		return SCE_KERNEL_ERROR_ILLEGAL_ARGUMENT;
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (pid == THREAD_ID_LIST_ALL)
 		return sceGUIDGetUIDVectorByClass(
 			s_threadmgrRuntime.manager->threadClass, UID_VECTOR_LEVEL, ids,
@@ -6678,8 +6653,6 @@ int SceThreadmgrForDriver_1096042E(SceUID uid)
 #define DEBUG_THREAD_EVENT_CREATE	0
 #define TRACE_EVENT_THREAD_CREATE	0
 
-#define SCE_KERNEL_ERROR_ILLEGAL_TYPE		0x8002000c
-#define SCE_KERNEL_ERROR_ALREADY_DEBUG_SUSPENDED	0x8002802f
 #define SCE_KERNEL_ERROR_UID_RL_OVERFLOW_SYSCALL	0xc002450d	/* 0x8002450d | SYSCALL_ERROR_BIT */
 
 typedef void (*ThreadmgrLwpCreateProbe)(const struct ThreadmgrSchedProbeDescriptor *probe,
@@ -7501,7 +7474,6 @@ SceUID sceKernelCreateRemoteThread(SceUID pid, const char *name, SceKernelThread
 #define WAIT_TYPE_LW_MUTEX_2		0x00400000
 #define EVENT_ATTR_PRIORITY		WAIT_ATTR_PRIORITY
 #define EVENT_DELETED_PATTERN		0x00000010	/* PLACEHOLDER: the pattern a cut wait reports */
-#define SCE_KERNEL_ERROR_ILLEGAL_PRIORITY	0x80028023
 void setupThreadExit(struct ThreadCB *thread, uint32_t request);
 
 /* the thread leaves the manager list it is on */
@@ -8260,7 +8232,6 @@ uint32_t sceKernelGetCurrentThreadVfpException(void)
 #define PREEMPT_REASON_EXCEPTION	8	/* PLACEHOLDER: name */
 #define CPU_STOP_ALL_STOPPED		3	/* each of the other CPUs counted itself in */
 #define PROCESS_DEBUG_SUSPEND_CPU	0	/* the processDebugSuspendHook kind */
-#define SCE_KERNEL_ERROR_NOT_DEBUG_SUSPENDED	0x80028030	/* PLACEHOLDER: name */
 
 /*
  * threadMgrExcpHandlerCfunc_0: an abort or undefined instruction of the

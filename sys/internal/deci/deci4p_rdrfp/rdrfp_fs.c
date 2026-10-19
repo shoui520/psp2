@@ -9,8 +9,6 @@
 #include <threadmgr/threadmgr.h>
 #include "rdrfp.h"
 
-#define SCE_ERROR_ERRNO_ENODEV		0x80010013
-#define SCE_ERROR_ERRNO_EACCES		0x8001000d
 #define RDRFP_DFMGR_ERROR_REQUESTED	0x80080007
 
 #define RDRFP_MOUNT_EVENT_MOUNTED	1

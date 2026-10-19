@@ -21,10 +21,6 @@
 #define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define THREAD_ATTR_NO_THREAD_EVENTS	0x00800000	/* PLACEHOLDER: name */
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID 0x80028021
-#define SCE_KERNEL_ERROR_UNKNOWN_THREAD_EVENT_ID 0x80028061	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_PROCESS_MISMATCH 0x80029001	/* PLACEHOLDER: name */
-#define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
 
 /* SceUIDThreadEventObject (0x38) */
 typedef struct ThreadmgrThreadEvent {
@@ -334,7 +330,7 @@ SceUID registerThreadEventHandler(const char *name, SceUID target, SceUID pid, u
 		}
 		eventPid = THREADMGR_KERNEL_PID;
 		if (pid != THREADMGR_KERNEL_PID && pid != -1) {
-			ret = SCE_KERNEL_ERROR_PROCESS_MISMATCH;
+			ret = SCE_KERNEL_ERROR_INVALID_PID;
 			goto restore;
 		}
 	} else if (target != 0 && thread->threadId != target) {
@@ -347,12 +343,12 @@ SceUID registerThreadEventHandler(const char *name, SceUID target, SceUID pid, u
 		eventPid = targetThread->context.processId;
 		sceGUIDReleaseObject(target);
 		if (pid != -1 && eventPid != pid) {
-			ret = SCE_KERNEL_ERROR_PROCESS_MISMATCH;
+			ret = SCE_KERNEL_ERROR_INVALID_PID;
 			goto restore;
 		}
 	} else {
 		if (pid != -1 && thread->processId != pid) {
-			ret = SCE_KERNEL_ERROR_PROCESS_MISMATCH;
+			ret = SCE_KERNEL_ERROR_INVALID_PID;
 			goto restore;
 		}
 		if (mask != THREAD_EVENT_MASK_SELF) {

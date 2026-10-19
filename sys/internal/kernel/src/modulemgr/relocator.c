@@ -12,7 +12,6 @@ typedef struct RelocSegment {
 	SceUInt8 *kaddr;		/* kernel mapping */
 } RelocSegment;
 
-
 SceUInt32 g_relocFormCount[12];
 SceUInt32 g_relocForms;
 LoadelfTiming *g_loadTiming;
@@ -167,7 +166,7 @@ int apply_one_relocation(SceUInt32 *where, SceUInt32 type, SceUInt32 offset,
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 85,
 			"Unsupported r_type(%d) r_offset=0x%08x, S=0x%08x, A=0x%08x, P=0x%08x\n",
 			type, offset, S, A, offset + base);
-		ret = SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC;
+		ret = SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 		break;
 	}
 	return ret;
@@ -208,7 +207,7 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 	h = *rel;
 	if ((h & 0xf) > 1) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 199, "Relocation Error! Segment top must form0 or form1");
-		return SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC;
+		return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 	}
 
 	end = (SceUInt32 *)((SceUInt8 *)rel + size);
@@ -241,7 +240,7 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 			d1 = (h << 12) >> 28;
 			if (d1 >= nseg) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 411, "wrong patch segment (%d)\n", d1);
-				return SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC;
+				return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 			}
 			if (symSeg >= nseg)
 				goto wrong_sym;
@@ -271,7 +270,7 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 			}
 			if (h >> 27 == 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 231, "form0 - r_type2 or dist_2 invalid\n");
-				return SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC;
+				return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 			}
 			off2 = offset + (h >> 27);
 			if (off2 > limit - 4)
@@ -289,7 +288,7 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 			S = seg[symSeg].base;
 			if (h >> 16 == 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 274, "form2 - dist_1 == 0\n");
-				return SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC;
+				return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 			}
 			offset += h >> 16;
 			if (offset > limit - 4)
@@ -315,7 +314,7 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 			S = seg[symSeg].base;
 			if (h >> 27 == 0 || d1 == 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 299, "form3 - dist_1 == 0 or dist_2 == 0\n");
-				return SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC;
+				return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 			}
 			offset += d1;
 			if (offset > limit - 4)
@@ -332,12 +331,12 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 			d1 = (h << 5) >> 9;
 			if (d1 == 0 || h >> 27 == 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 314, "form4 - dist_1 == 0 or dist_2 == 0\n");
-				return SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC;
+				return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 			}
 			if (!IS_MOVW_MOVT(type1, type2)) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 320, "form4 - invalid r_type1,r_type2 %d,%d\n",
 						     type1, type2);
-				return SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC;
+				return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 			}
 			offset += d1;
 			if (offset > limit - 4)
@@ -357,12 +356,12 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 			d4 = h >> 27;
 			if (d2 == 0 || d1 == 0 || d4 == 0 || d3 == 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 337, "form5 - dist_x == 0\n");
-				return SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC;
+				return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 			}
 			if (!IS_MOVW_MOVT(type1, type2)) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 343, "form5 - invalid r_type1,r_type2 %d, %d\n",
 						     type1, type2);
-				return SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC;
+				return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 			}
 			offset += d1;
 			if (offset > limit - 4)
@@ -386,11 +385,11 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 		case 6:
 			if (h >> 4 == 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 364, "form6 - dist_1 == 0\n");
-				return SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC;
+				return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 			}
 			offset += h >> 4;
 			if (!get_addend(seg, nseg, patchSeg, offset, &addend, &symSeg))
-				return SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC;
+				return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 			S = seg[symSeg].base;
 			if (offset > limit - 4)
 				goto wrong_offset;
@@ -409,11 +408,11 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 				d1 = (bits << (32 - width)) >> (32 - width);
 				if (d1 == 0) {
 					SCE_DBG_PRINTF_LEVEL(1, 0xb, 388, "form%d - dist_x == 0\n", form);
-					return SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC;
+					return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 				}
 				offset += d1 * 4;
 				if (!get_addend(seg, nseg, patchSeg, offset, &addend, &symSeg))
-					return SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC;
+					return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 				S = seg[symSeg].base;
 				if (offset > limit - 4)
 					goto wrong_offset;
@@ -427,7 +426,7 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 			break;
 		default:
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 401, "illegal form code (%d)\n", form);
-			return SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC;
+			return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 		}
 		rel = (SceUInt32 *)((SceUInt8 *)rel + step);
 		if (rel >= end)
@@ -438,10 +437,10 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 
 wrong_offset:
 	SCE_DBG_PRINTF_LEVEL(1, 0xb, 408, "wrong r_offset (0x%08x)\n", offset);
-	return SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC;
+	return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 wrong_sym:
 	SCE_DBG_PRINTF_LEVEL(1, 0xb, 414, "wrong sym segment (%d)\n", symSeg);
-	return SCE_KERNEL_ERROR_MODULEMGR_BAD_RELOC;
+	return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 }
 
 /* name unknown: count the forms used by the last module */

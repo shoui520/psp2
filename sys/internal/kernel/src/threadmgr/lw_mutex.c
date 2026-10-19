@@ -22,21 +22,8 @@
 #define THREAD_ATTR_CHECK_STACK		0x80000000
 #define WAIT_TYPE_LW_MUTEX		0x00100000
 #define WAIT_TYPE_LW_COND_MUTEX		0x00400000	/* a lw cond waiter relocking its lw mutex */
-#define THREADMGR_ERROR_WAIT_CANCEL	0x800280a2	/* PLACEHOLDER: name */
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 #define USER_THREAD_ID_KERNEL_FLAG	0x40000000	/* PLACEHOLDER: an owner that is no user thread */
-#define SCE_KERNEL_ERROR_ILLEGAL_ALIGNMENT 0x80020007
-#define SCE_KERNEL_ERROR_ILLEGAL_ATTR	0x8002000e
-#define SCE_KERNEL_ERROR_ILLEGAL_COUNT	0x8002000f
-#define SCE_KERNEL_ERROR_WAIT_DELETE	0x80028006
-#define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
-#define SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID 0x80028181
-#define SCE_KERNEL_ERROR_LW_MUTEX_RECURSIVE 0x80028182
-#define SCE_KERNEL_ERROR_LW_MUTEX_LOCK_OVF 0x80028183
-#define SCE_KERNEL_ERROR_LW_MUTEX_UNLOCK_UDF 0x80028184
-#define SCE_KERNEL_ERROR_LW_MUTEX_NOT_OWNED 0x80028186
-#define SCE_KERNEL_ERROR_LW_MUTEX_WORK	0x80028187	/* PLACEHOLDER: name; the work area is unreadable */
-#define SCE_KERNEL_ERROR_WAIT_DELETE_LW_MUTEX 0x800281c2
 #define UID_CREATE_OPT_PID		0x00000008	/* PLACEHOLDER: name; opt.pid owns the object */
 
 /* SceUIDLwMutexClass's constructor */
@@ -90,9 +77,9 @@ static int getLwMutexInfo(SceUID lwMutexId, SceKernelLwMutexInfo *info)
 		info->currentCount = -1;
 		info->currentOwnerId = -1;
 		if (ThreadmgrInSyscall()) {
-			ret = SCE_KERNEL_ERROR_LW_MUTEX_WORK | SYSCALL_ERROR_BIT;
+			ret = SCE_KERNEL_ERROR_LW_MUTEX_CAN_NOT_ACCESS | SYSCALL_ERROR_BIT;
 		} else {
-			ret = SCE_KERNEL_ERROR_LW_MUTEX_WORK;
+			ret = SCE_KERNEL_ERROR_LW_MUTEX_CAN_NOT_ACCESS;
 			info->pWork = (ThreadmgrLwMutexWork *)((uintptr_t)info->pWork | 1);
 		}
 	} else {
@@ -661,7 +648,7 @@ int _sceKernelLockLwMutex(ThreadmgrLwMutexWork *work, int count, SceUInt32 *time
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (!locked)
 			goto callbacks;
-	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
+	} while (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 	sceKernelSpinlockLowUnlock(&lwMutex->lock);
 	sceGUIDReleaseObject(guid);
 	if (!callbacks)
@@ -833,7 +820,7 @@ int sceKernelGetLwMutexInfoById(SceUID lwMutexId, SceKernelLwMutexInfo *info)
 		goto restore;
 	}
 	ret = getLwMutexInfo(lwMutexId, &local);
-	if (ret != SCE_KERNEL_ERROR_LW_MUTEX_WORK) {
+	if (ret != SCE_KERNEL_ERROR_LW_MUTEX_CAN_NOT_ACCESS) {
 		if (ret < 0)
 			goto restore;
 		if (ThreadmgrInSyscall() && local.currentOwnerId > 0 &&
@@ -886,7 +873,7 @@ int SceThreadmgrForDriver_C2DA6286(int level, SceKernelLwMutexInfo *infos, SceSi
 	got = 0;
 	for (i = 0; i < total; i++) {
 		err = getLwMutexInfo(vector[i], &info);
-		if (err != 0 && err != SCE_KERNEL_ERROR_LW_MUTEX_WORK)
+		if (err != 0 && err != SCE_KERNEL_ERROR_LW_MUTEX_CAN_NOT_ACCESS)
 			continue;
 		ret++;
 		if (size < ret * sizeof(info)) {
@@ -932,7 +919,7 @@ int sceKernelGetLwMutexInfoAllProc(SceUID pid, int level, SceKernelLwMutexInfo *
 	got = 0;
 	for (i = 0; i < total; i++) {
 		err = getLwMutexInfo(SceSysmemForDriver_45D22597(pid, vector[i]), &info);
-		if (err != 0 && err != SCE_KERNEL_ERROR_LW_MUTEX_WORK)
+		if (err != 0 && err != SCE_KERNEL_ERROR_LW_MUTEX_CAN_NOT_ACCESS)
 			continue;
 		info.uid = vector[i];
 		if (info.currentOwnerId > 0 && !(info.currentOwnerId & USER_THREAD_ID_KERNEL_FLAG)) {
@@ -1057,7 +1044,7 @@ int lockLwMutexForLwCond(SceUID lwMutexId, int count, SceUInt32 *timeout, int ca
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (!locked)
 			goto deleted;
-	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
+	} while (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 	sceKernelSpinlockLowUnlock(&lwMutex->lock);
 	sceGUIDReleaseObject(lwMutexId);
 deleted:
