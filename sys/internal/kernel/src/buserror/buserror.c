@@ -16,11 +16,10 @@
 #include <sysmem/sysroot.h>
 #include <buserror/buserror_types.h>
 #include "buserror_smc.h"
+#include "buserror.h"
 
 #define BUSERROR_INTR		0x20
 #define BUSERROR_SUSPEND_IDX	0x1c
-
-int RegisterBusErrorHandler_ES3(void);
 
 /* Secure monitor hardware entry points: nine instructions, original order. */
 __asm__(

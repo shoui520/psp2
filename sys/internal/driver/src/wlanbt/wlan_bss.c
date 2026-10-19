@@ -1,6 +1,7 @@
 /* BSS descriptor methods; this filename is inferred from the function family. */
 #include "wlanbt_internal.h"
 #include <string.h>
+#include "wlan_util.h"
 
 /* Sony's 4.00 BSS stack-buffer copies use the checked object-size interface. */
 #if FW_VERSION >= 0x04000000
@@ -25,12 +26,6 @@ _Static_assert(offsetof(WlanBackgroundScanResponse, bssCount) == 6,
 	       "background scan record count");
 _Static_assert(offsetof(WlanBackgroundScanResponse, records) == 7,
 	       "background scan variable records");
-
-int wlanParseSecurityInformationElement(WlanSecurityInfo *security,
-				       const WlanInformationElement *element);
-int wlanCopyInformationElement(const void *buffer, unsigned int length,
-			       unsigned int id, void *output,
-			       unsigned int *outputSize, unsigned int *offset);
 
 int wlanBssHasPrivacy(const WlanBssDesc *descriptor)
 {

@@ -7,6 +7,7 @@
 #if FW_DEBUG
 #define SCE_BUSERROR_TABLES_ONLY
 #include "buserror_es3.h"
+#include "buserror.h"
 #undef SCE_BUSERROR_TABLES_ONLY
 #include <sysmem/debug.h>
 #include <intrmgr/intrmgr.h>

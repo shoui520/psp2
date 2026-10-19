@@ -1,5 +1,5 @@
 /* WLAN utility methods; the original does not record a source filename. */
-#include "wlanbt_internal.h"
+#include "wlan_util.h"
 #include <sysmem/atomic.h>
 #include <string.h>
 

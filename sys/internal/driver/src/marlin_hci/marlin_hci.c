@@ -1,5 +1,6 @@
 #include "handles.h"
 #include "key.h"
+#include "marlin_hci.h"
 /*
  * SceMarlinHci module entry points.
  */

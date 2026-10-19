@@ -4,9 +4,7 @@
 #include <kernel/error.h>
 #include "kernel_wrappers.h"
 #include "buffer.h"
-
-int module_start(void);
-int module_stop(void);
+#include "marlin_hci.h"
 
 int MarlinHciCheckAccess(void)
 {
