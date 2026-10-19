@@ -35,10 +35,11 @@ static inline void LowioDsb(void)
 	__asm__ volatile("dsb sy" : : : "memory");
 }
 
-uint32_t Smc110(uint32_t, uint32_t, uint32_t, uint32_t);
+/* smc.S: the monitor gets r2 and r3 as the caller left them */
+uint32_t Smc110(uint32_t bus, uint32_t state);
 int Smc111(volatile uint32_t *reg, int value);
 int Smc113(volatile uint32_t *reg, int value);
-uint32_t Smc114(uint32_t, uint32_t, uint32_t, uint32_t);
+uint32_t Smc114(uint32_t clock, uint32_t level);
 
 /* module_start's stages, in its order */
 int LowioPervasiveInit(SceSize arglen, const void *argp);

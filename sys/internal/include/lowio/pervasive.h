@@ -7,6 +7,22 @@
 #include <stdint.h>
 #include <lowio/pervasive_regs.h>
 
+/*
+ * The monitor's bus and clock services: SMC 0x110 sets a bus's state, SMC 0x114 a clock's level.
+ * The monitor also gets r2 and r3 as the caller left them.
+ */
+uint32_t ScePervasiveForDriver_84EAB5BC(void);		/* bus 0 (the GPU) on */
+uint32_t ScePervasiveForDriver_E8656ADF(void);		/* bus 0 off */
+uint32_t ScePervasiveForDriver_D58E3A30(void);		/* bus 1 (Venezia) on */
+uint32_t ScePervasiveForDriver_E0711D42(void);		/* bus 1 off */
+uint32_t ScePervasiveForDriver_B2F232E5(uint32_t mode);	/* bus 2: state 1, or 2 */
+uint32_t ScePervasiveForDriver_A7855D3A(void);		/* bus 2: state 3 */
+uint32_t ScePervasiveForDriver_4712740D(void);		/* bus 2 off */
+uint32_t ScePervasiveForDriver_C0F7CC39(uint32_t level);	/* clock 0 */
+uint32_t ScePervasiveForDriver_09C35980(void);		/* clock 1: level 0 */
+uint32_t ScePervasiveForDriver_7D02215D(uint32_t level);	/* clock 2 */
+uint32_t ScePervasiveForDriver_ECA675E0(void);		/* clock 3: level 0 */
+
 /* Names unknown: set and clear the lowio miscellaneous control bit. */
 uint32_t ScePervasiveForDriver_FDD445C3(void);
 uint32_t ScePervasiveForDriver_132E514A(void);
@@ -76,7 +92,6 @@ int ScePervasiveForDriver_FB01A2DD(void);
 
 uint32_t ScePervasiveForDriver_03EA9418(void);
 int ScePervasiveForDriver_07F2A738(void);
-uint32_t ScePervasiveForDriver_09C35980(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3);
 uint32_t ScePervasiveForDriver_0C1A7FFA(void);
 int ScePervasiveForDriver_0EBBE8DE(void);
 int ScePervasiveForDriver_1068C067(int port);
@@ -99,7 +114,6 @@ int ScePervasiveForDriver_3F3E1AEA(int port);
 uint32_t ScePervasiveForDriver_41C3C299(void);
 int ScePervasiveForDriver_41F9E1C3(int port);
 uint32_t ScePervasiveForDriver_443E2A3F(void);
-uint32_t ScePervasiveForDriver_4712740D(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3);
 int ScePervasiveForDriver_4B223AF5(int port);
 int ScePervasiveForDriver_4CCD40E6(void);
 /* vitasdk: kscePervasiveRemovableMemoryGetCardInsertState */
@@ -135,13 +149,11 @@ int ScePervasiveForDriver_9BB7B932(void);
 uint32_t ScePervasiveForDriver_9E81E057(void);
 int ScePervasiveForDriver_A10583FF(int port);
 int ScePervasiveForDriver_A3569FF1(void);	/* vitasdk: kscePervasiveMsifResetEnable */
-uint32_t ScePervasiveForDriver_A7855D3A(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3);
 int ScePervasiveForDriver_A7CE7DCC(int port);	/* vitasdk: kscePervasiveUartResetDisable */
 int ScePervasiveForDriver_A85BF98A(int port);	/* vitasdk: kscePervasiveSpiClockDisable */
 uint32_t ScePervasiveForDriver_A96642E3(unsigned value);
 int ScePervasiveForDriver_AC475961(int port);
 int ScePervasiveForDriver_B2EE45C9(void);
-uint32_t ScePervasiveForDriver_B2F232E5(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3);
 int ScePervasiveForDriver_B68254AD(void);
 int ScePervasiveForDriver_B9904983(void);
 /* vitasdk: kscePervasiveDsiClockEnable */
@@ -159,7 +171,6 @@ int ScePervasiveForDriver_E40BED0F(void);
 int ScePervasiveForDriver_E4B145AE(int port);	/* vitasdk: kscePervasiveSpiResetDisable */
 int ScePervasiveForDriver_E92E28FF(void);
 int ScePervasiveForDriver_EB176898(void);	/* vitasdk: kscePervasiveGpioClockDisable */
-uint32_t ScePervasiveForDriver_ECA675E0(uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3);
 int ScePervasiveForDriver_EFD084D8(int port);	/* vitasdk: kscePervasiveUartClockEnable */
 uint32_t ScePervasiveForDriver_F1908D3C(unsigned head);
 uint32_t ScePervasiveForDriver_F58EF3A5(void);

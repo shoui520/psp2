@@ -6,6 +6,7 @@
 #include <sysmem/suspend.h>
 #include <sysmem/sysclib.h>
 #include <hpremote/hpremote.h>
+#include <codec/codec.h>
 #include <sysmem/sysevent_ids.h>
 
 /* Field and internal function names are unknown; names describe observed use. */

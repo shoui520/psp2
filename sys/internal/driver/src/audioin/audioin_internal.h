@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <threadmgr/fast_mutex.h>
 #include <processmgr/processmgr.h>
+#include <codec/codec.h>
 
 /* Complete module-owned port record. Unidentified members remain explicit. */
 typedef struct AudioInPort {
@@ -170,6 +171,23 @@ int audioInCaptureThread(SceSize size, void *argument) __attribute__((noreturn))
 int audioInAecThread(SceSize size, void *argument);
 void *initializeAudioInCaptureBuffers(void);
 int writeAudioInLegacyQueue(const int16_t *samples, int count);
+
+/* aec.c */
+int initializeAudioInAecLibrary(void);
+int startAudioInAec(AudioInAecContext *context);
+int processAudioInAecBuffers(AudioInAecContext *context, int16_t *first,
+		int16_t *second, int gain, unsigned int flags);
+int configureAudioInAec(AudioInAecContext *context, const void *control);
+
+/* legacy.c */
+void initializeAudioInLegacyQueue(void);
+int readAudioInLegacyQueue(int16_t *samples, unsigned int count);
+void resetAudioInLegacyQueue(void);
+
+/* resampler.c */
+void initializeAudioInResampler(void);
+void resampleAudioInCapture(unsigned int stream, const int16_t *input,
+		int16_t *output, unsigned int count, int channel);
 
 /* Process port teardown shared by the kill and exit callbacks. */
 #define CLOSE_PROCESS_PORT(index) do { \

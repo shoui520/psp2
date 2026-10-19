@@ -21,69 +21,58 @@ uint32_t ScePervasiveForDriver_2A563E35(void)
 	return (uintptr_t)s_pervasive2;
 }
 
-uint32_t ScePervasiveForDriver_84EAB5BC(uint32_t a0, uint32_t a1,
-	uint32_t a2, uint32_t a3)
+uint32_t ScePervasiveForDriver_84EAB5BC(void)
 {
-	return Smc110(0, 1, a2, a3);
+	return Smc110(0, 1);
 }
 
-uint32_t ScePervasiveForDriver_E8656ADF(uint32_t a0, uint32_t a1,
-	uint32_t a2, uint32_t a3)
+uint32_t ScePervasiveForDriver_E8656ADF(void)
 {
-	return Smc110(0, 0, a2, a3);
+	return Smc110(0, 0);
 }
 
-uint32_t ScePervasiveForDriver_D58E3A30(uint32_t a0, uint32_t a1,
-	uint32_t a2, uint32_t a3)
+uint32_t ScePervasiveForDriver_D58E3A30(void)
 {
-	return Smc110(1, 1, a2, a3);
+	return Smc110(1, 1);
 }
 
-uint32_t ScePervasiveForDriver_E0711D42(uint32_t a0, uint32_t a1,
-	uint32_t a2, uint32_t a3)
+uint32_t ScePervasiveForDriver_E0711D42(void)
 {
-	return Smc110(1, 0, a2, a3);
+	return Smc110(1, 0);
 }
 
-uint32_t ScePervasiveForDriver_B2F232E5(uint32_t a0, uint32_t a1,
-	uint32_t a2, uint32_t a3)
+uint32_t ScePervasiveForDriver_B2F232E5(uint32_t mode)
 {
-	return Smc110(2, (a0 == 0 ? 1 : 2), a2, a3);
+	return Smc110(2, (mode == 0 ? 1 : 2));
 }
 
-uint32_t ScePervasiveForDriver_A7855D3A(uint32_t a0, uint32_t a1,
-	uint32_t a2, uint32_t a3)
+uint32_t ScePervasiveForDriver_A7855D3A(void)
 {
-	return Smc110(2, 3, a2, a3);
+	return Smc110(2, 3);
 }
 
-uint32_t ScePervasiveForDriver_4712740D(uint32_t a0, uint32_t a1,
-	uint32_t a2, uint32_t a3)
+uint32_t ScePervasiveForDriver_4712740D(void)
 {
-	return Smc110(2, 0, a2, a3);
+	return Smc110(2, 0);
 }
 
-uint32_t ScePervasiveForDriver_C0F7CC39(uint32_t a0, uint32_t a1,
-	uint32_t a2, uint32_t a3)
+uint32_t ScePervasiveForDriver_C0F7CC39(uint32_t level)
 {
-	return Smc114(0, a0, a2, a3);
+	return Smc114(0, level);
 }
 
-uint32_t ScePervasiveForDriver_09C35980(uint32_t a0, uint32_t a1,
-	uint32_t a2, uint32_t a3)
+uint32_t ScePervasiveForDriver_09C35980(void)
 {
-	return Smc114(1, 0, a2, a3);
+	return Smc114(1, 0);
 }
 
-uint32_t ScePervasiveForDriver_7D02215D(uint32_t a0, uint32_t a1,
-	uint32_t a2, uint32_t a3)
+uint32_t ScePervasiveForDriver_7D02215D(uint32_t level)
 {
-	return Smc114(2, a0, a2, a3);
+	return Smc114(2, level);
 }
 
-uint32_t ScePervasiveForDriver_ECA675E0(uint32_t a0, uint32_t a1,
-	uint32_t a2, uint32_t a3)
+uint32_t ScePervasiveForDriver_ECA675E0(void)
 {
-	return Smc114(3, 0, a2, a3);
+	return Smc114(3, 0);
 }
 

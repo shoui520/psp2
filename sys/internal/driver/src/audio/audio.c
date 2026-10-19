@@ -22,9 +22,8 @@
 #include <sysmem/sysroot.h>
 #include <clockgen/clockgen.h>
 #include <audio/audio.h>
+#include <codec/codec.h>
 
-/* This caller preserves the three arguments of the original call interface. */
-int SceCodecForDriver_CCDE1B04(int mode);
 int sceAudioOutSetEffectType(int type);
 int audioInitializeHardware(void);
 int audioInitializeEffects(void);

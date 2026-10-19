@@ -6,6 +6,7 @@
 #include <intrmgr/intrmgr.h>
 #include <power/power.h>
 #include <gpu/osfunc_sce.h>
+#include <lowio/pervasive.h>
 
 PVRSRV_ERROR OSUninstallSystemLISR(IMG_VOID *pvSysData);
 PVRSRV_ERROR OSUninstallMISR(IMG_VOID *pvSysData);
@@ -23,8 +24,6 @@ PVRSRV_ERROR PVRSRVRegisterDevice(SYS_DATA *psSysData,
 PVRSRV_ERROR SGXRegisterDevice(PVRSRV_DEVICE_NODE *psDeviceNode);
 PVRSRV_ERROR PVRSRVInitialiseDevice(IMG_UINT32 ui32DevIndex);
 int MapGpuRegisters(IMG_VOID);
-IMG_VOID ScePervasiveForDriver_E8656ADF(IMG_VOID);
-IMG_VOID ScePervasiveForDriver_84EAB5BC(IMG_VOID);
 
 SYS_DATA gsSysData;
 

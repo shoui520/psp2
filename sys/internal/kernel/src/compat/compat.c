@@ -18,6 +18,8 @@
 #include <sysmem/sysroot.h>
 #include <sm_comm/sm_comm.h>
 #include <compat/compat_regs.h>
+#include <lowio/grab.h>
+#include <hpremote/hpremote.h>
 #include <iofilemgr/iofilemgr.h>
 #include <npdrm/npdrm.h>
 #include <string.h>
@@ -213,13 +215,8 @@ SCE_DBGINFO_DEFINE(static, gCompatMapMainDdrTranslationInfo, 751, "mapMainDDR");
 SCE_DBGINFO_DEFINE(static, gCompatMapMainDdrBankInfo, 753, "mapMainDDR");
 #endif
 
-int SceGrabForDriver_F13C63DD(void);
-int SceGrabForDriver_379130B2(void);
-int SceGrabForDriver_E9C25A28(SceUInt32 bank, uintptr_t paddr);
-int SceGrabForDriver_072B8D93(int mode);
 int sceDeci2pTermForCompat(void);
 int SceDeci2pForDriver_F6427E0F(void *regs, void *shm, SceSize size);
-int SceHpremoteForDriver_7E69EDA4(void);
 
 int compatLcdcIntrHandler(int intrcode, void *context)
 {

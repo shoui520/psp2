@@ -13,7 +13,26 @@
 #include <stddef.h>
 #include <kernel/modulemgr.h>
 
-#include "enum_wakeup_imports.h"
+#include <display/display.h>
+#include <ctrl/ctrl.h>
+#include <idstorage/idstorage.h>
+#include <lowio/pervasive.h>
+#include <lowio/gpio.h>
+#include <syscon/syscon.h>
+#include <sysmem/sysroot.h>
+#include <sysmem/qafmgr.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysclib.h>
+#include <power/led.h>
+#include <power/power.h>
+#include <modulemgr/modulemgr.h>
+#include <clockgen/clockgen.h>
+#include <motion/motion_dev.h>
+#include <udcd/udcd.h>
+#include <regmgr/regmgr.h>
+#include <oled/oled.h>
+#include <lcd/lcd.h>
+#include <hpremote/hpremote.h>
 #include <mtpif/mtpif_driver.h>
 
 #define EW_MEMTYPE_FB		SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW	/* uncached, physically contiguous */
@@ -110,7 +129,7 @@ extern const MtpPropDesc ewPropDescs[2];
 /* the module's data in Sony's order: a file cache miss uses the word after the
    cache, so the layout matters */
 typedef struct EwGlobals {
-	EwCtrlData ctrl[8];
+	SceCtrlData ctrl[8];
 	MtpContext mtp;
 	SceUInt32 cacheMiss;			/* cache[MTP_CACHE_ENTRIES] starts here */
 	char version[16];

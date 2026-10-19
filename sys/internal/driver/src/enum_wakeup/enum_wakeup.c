@@ -6,6 +6,12 @@
 #include <kernel/error.h>
 #include <syscon/syscon_scratchpad.h>
 
+/* display brightness: the OLED or the LCD driver, whichever is present */
+#pragma weak SceOledForDriver_F9624C47
+#pragma weak SceOledForDriver_3C990F53
+#pragma weak SceLcdForDriver_581D3A87
+#pragma weak SceLcdForDriver_8C965153
+
 EwGlobals ewg;
 
 /* ===== power off ===== */
@@ -166,11 +172,11 @@ void ewInitDisplay(void)
 	ewg.ew.blank = 0;
 	if (SceOledForDriver_F9624C47) {
 		ewg.ew.haveBrightness = 1;
-		ewg.ew.setBrightness = SceOledForDriver_F9624C47;
+		ewg.ew.setBrightness = (int (*)(int))SceOledForDriver_F9624C47;
 		ewg.ew.displayOn = SceOledForDriver_3C990F53;
 	} else if (SceLcdForDriver_581D3A87) {
 		ewg.ew.haveBrightness = 1;
-		ewg.ew.setBrightness = SceLcdForDriver_581D3A87;
+		ewg.ew.setBrightness = (int (*)(int))SceLcdForDriver_581D3A87;
 		ewg.ew.displayOn = SceLcdForDriver_8C965153;
 	} else {
 		ewg.ew.haveBrightness = 1;

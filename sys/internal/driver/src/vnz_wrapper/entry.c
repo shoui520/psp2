@@ -5,14 +5,13 @@
 #include <sysmem/procevent.h>
 #include <sysmem/suspend.h>
 #include <threadmgr/threadmgr.h>
+#include <lowio/pervasive.h>
 
 extern const SceKernelProcEventHandler codecEngineProcessEvents; /* name unknown */
 
 typedef int (*CodecEngineProcExitHandler)(SceUID pid, ProcEventParam *param,
 					void *common); /* name unknown */
 
-extern int ScePervasiveForDriver_D58E3A30(void);
-extern int ScePervasiveForDriver_E0711D42(void);
 extern int sceCodecEngineDsp0IsProcessSuspended(SceUID pid);
 
 #if FW_VERSION >= 0x04000000

@@ -593,7 +593,7 @@ int SceCodecForDriver_41CFFE48(int *level0, int *level1)
 {
 	return s_ops ? s_ops->getCached(level0, level1) : 0;
 }
-int SceCodecForDriver_C1DB7BAF(int mode)
+int SceCodecForDriver_C1DB7BAF(unsigned int mode)
 {
 	return s_ops ? s_ops->setMode(mode) : 0;
 }
@@ -617,7 +617,7 @@ int SceCodecForDriver_E483B663(int enable)
 {
 	return s_ops ? s_ops->setEnabled(enable) : 0;
 }
-int SceCodecForDriver_23BF8884(int reg, unsigned int value)
+int SceCodecForDriver_23BF8884(unsigned int reg, unsigned int value)
 {
 	return s_ops ? s_ops->write(reg, value) : 0;
 }
