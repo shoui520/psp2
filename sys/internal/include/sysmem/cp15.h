@@ -60,6 +60,9 @@
 #define readDacr()		CP_READ(p15, 0, c3, c0, 0)
 #define writeDacr(v)		CP_WRITE(p15, 0, c3, c0, 0, v)
 #define DACR_ALL_CLIENT		0x55555555	/* every domain checked against the page tables */
+#define DACR_ALL_MANAGER	0xffff0000	/* domains 8-15 unchecked: vector page writable */
+#define DACR_KERNEL		0x15450000	/* the kernel's domains (8, 9, 11-14) checked */
+#define DACR_USER		0x15455551	/* and the user's (0, 2-7) */
 #define readDfsr()		CP_READ(p15, 0, c5, c0, 0)
 #define writeDfsr(v)		CP_WRITE(p15, 0, c5, c0, 0, v)
 #define readIfsr()		CP_READ(p15, 0, c5, c0, 1)

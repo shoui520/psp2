@@ -104,8 +104,8 @@ void *SceThreadmgrForDriver_89CA5698(uint32_t slot, SceUID threadId, int create)
 					&s_threadmgrRuntime.manager->threadMgrCBLock);
 				descriptor = &s_threadmgrRuntime.manager->tlsSlots[slot];
 				if (descriptor->active && create) {
-					memory = sceKernelSysrootAllocRemoteProcessHeap(THREADMGR_KERNEL_PID,
-									    descriptor->size, NULL);
+					memory = sceKernelSysrootAllocRemoteProcessHeap(
+						SCE_KERNEL_PROCESS_ID, descriptor->size, NULL);
 					if (memory != NULL) {
 						memset(memory, 0, descriptor->size);
 						descriptor->liveCount++;
@@ -145,7 +145,7 @@ int releaseThreadTlsSlots(struct ThreadCB *thread)
 		descriptor = &s_threadmgrRuntime.manager->tlsSlots[slot];
 		if (descriptor->destructor != NULL)
 			descriptor->destructor(memory, descriptor->destructorArgument);
-		SceSysrootForKernel_7968F091(THREADMGR_KERNEL_PID, memory);
+		SceSysrootForKernel_7968F091(SCE_KERNEL_PROCESS_ID, memory);
 		thread->tlsSlotMemory.slot[slot] = NULL;
 		descriptor->liveCount--;
 	}

@@ -36,8 +36,7 @@
 #include <excpmgr/excpmgr.h>
 #include <modulemgr/modulemgr_control.h>
 #include <sysmem/sysroot_modulemgr.h>
-
-#define KERNEL_PID			0x10005
+#include <sysmem/uid_guid.h>
 
 /* the kernel heap; the debug build calls the heap API directly */
 #if FW_DEBUG

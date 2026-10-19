@@ -42,7 +42,7 @@ int copyWord(SceUID pid, SceUInt32 *dst, const SceUInt32 *src)
 {
 	int ret;
 
-	if (pid == KERNEL_PID) {
+	if (pid == SCE_KERNEL_PROCESS_ID) {
 		*dst = *src;
 		return 0;
 	}
@@ -84,7 +84,7 @@ int copyStack(SceUID pid, SceUInt32 *dst, const SceUInt32 *src)
 	SceUInt32 pa;
 	int ret;
 
-	if (pid == KERNEL_PID) {
+	if (pid == SCE_KERNEL_PROCESS_ID) {
 		ret = SceCpuForKernel_14E0B0C4((uintptr_t)src, &pa);
 		if (ret > 0)
 			ret = 0;
@@ -265,8 +265,9 @@ int SceBacktraceForDriver_7C878F90(SceUID pid, const SceKernelBacktraceFrameForK
 	}
 	if (pid == 0)
 		pid = sceKernelGetProcessId();
-	SceDebugForDriver_391B74B7(pid == KERNEL_PID ? "[%d]=== Print Backtrace(Kernel stack) ===\n" :
-					     "[%d]=== Print Backtrace(User stack) =====\n", cpu);
+	SceDebugForDriver_391B74B7(pid == SCE_KERNEL_PROCESS_ID ?
+				   "[%d]=== Print Backtrace(Kernel stack) ===\n" :
+				   "[%d]=== Print Backtrace(User stack) =====\n", cpu);
 	for (i = 0, f = frames; i != count; i++, f++) {
 		fingerprint = 0;
 		textBase = NULL;
@@ -277,7 +278,7 @@ int SceBacktraceForDriver_7C878F90(SceUID pid, const SceKernelBacktraceFrameForK
 				"[%d](%d) PC:0x%08X, SP:0x%08X(size=0x%08X byte) [no module info]\n",
 				cpu, i, f->pc, f->sp, size);
 		} else {
-			if (pid == KERNEL_PID && !SceQafMgrForDriver_382C71E8())
+			if (pid == SCE_KERNEL_PROCESS_ID && !SceQafMgrForDriver_382C71E8())
 				snprintf(name, 0x1b, "0x%08X", fingerprint);
 			size = i == count - 1 ? 0 : f[1].sp - f->sp;
 			SceDebugForDriver_391B74B7(
@@ -441,12 +442,12 @@ intr_context:
 kernel:
 	refer = 0;
 	ctx = NULL;
-	pid = KERNEL_PID;
+	pid = SCE_KERNEL_PROCESS_ID;
 	goto walk;
 
 locked:
 	if (ctx == NULL) {
-		pid = KERNEL_PID;
+		pid = SCE_KERNEL_PROCESS_ID;
 		goto walk;
 	}
 	SCE_DBG_ASSERT_CHECK(ctx->lock != 0, 817);
@@ -456,7 +457,7 @@ locked:
 	}
 	if ((flags & BACKTRACE_FLAG_KERNEL_STACK) != 0) {
 		if ((int)ctx->currentAttr >= 0 || ctx->userFrame != NULL) {
-			pid = KERNEL_PID;
+			pid = SCE_KERNEL_PROCESS_ID;
 			goto walk;
 		}
 		ret = SCE_KERNEL_ERROR_ILLEGAL_MODE;
@@ -620,12 +621,12 @@ kernel:
 	locked = 0;
 	refer = 0;
 	ctx = NULL;
-	pid = KERNEL_PID;
+	pid = SCE_KERNEL_PROCESS_ID;
 	goto walk;
 
 check:
 	if (ctx == NULL) {
-		pid = KERNEL_PID;
+		pid = SCE_KERNEL_PROCESS_ID;
 		goto walk;
 	}
 	if ((ctx->status & 0x20) != 0) {
@@ -634,7 +635,7 @@ check:
 	}
 	if ((flags & BACKTRACE_FLAG_KERNEL_STACK) != 0) {
 		if ((int)ctx->currentAttr >= 0 || ctx->userFrame != NULL) {
-			pid = KERNEL_PID;
+			pid = SCE_KERNEL_PROCESS_ID;
 			goto walk;
 		}
 		ret = SCE_KERNEL_ERROR_ILLEGAL_MODE;

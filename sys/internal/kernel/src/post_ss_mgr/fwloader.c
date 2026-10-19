@@ -10,12 +10,12 @@
 #include <sysmem/sysroot.h>
 #include "post_ss_mgr_internal.h"
 #include <sysmem/qafmgr.h>
+#include <sysmem/uid_guid.h>
 #include <post_ss_mgr/sblfwloader.h>
 
 #define SCE_SBL_ERROR_FWLOADER_INVALID_ARGUMENT	0x800f0e16	/* names unknown */
 #define SCE_SBL_ERROR_FWLOADER_NOT_LOCKED	0x800f0e29
 
-#define FWLOADER_HEAP		0x1000b		/* name unknown: the kernel heap */
 #define FWLOADER_PATH_MAX	0x100		/* names unknown */
 #define FWLOADER_BUF_SIZE	0x200
 
@@ -44,7 +44,7 @@ int g_fwLoaderState;
 int fwLoaderClearPath(void)	/* name unknown */
 {
 	if (g_fwLoaderBuf != NULL)
-		sceKernelFreeHeapMemory(FWLOADER_HEAP, g_fwLoaderBuf);
+		sceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, g_fwLoaderBuf);
 	g_fwLoaderBuf = NULL;
 	g_fwLoaderOverridePath = NULL;
 	g_fwLoaderOverridePathSize = 0;
@@ -129,7 +129,7 @@ int sceSblFwLoaderSetPath(const char *path, int flags)
 	if (g_fwLoaderPathSize + g_fwLoaderOverridePathSize > FWLOADER_BUF_SIZE)
 		goto fail;
 
-	buf = sceKernelAllocHeapMemory(FWLOADER_HEAP, FWLOADER_BUF_SIZE);
+	buf = sceKernelAllocHeapMemory(SCE_KERNEL_HEAP_ID, FWLOADER_BUF_SIZE);
 	g_fwLoaderBuf = buf;
 	if (prefix != NULL) {
 		g_fwLoaderOverridePath = buf;

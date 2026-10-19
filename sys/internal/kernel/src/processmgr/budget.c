@@ -701,15 +701,15 @@ static inline __attribute__((always_inline)) int initializeBudget(void)
 
 static inline __attribute__((always_inline)) void SetKernelPhyMemPart(void)
 {
-	if (SceSysmemForKernel_7DF07D60(KERNEL_ADDRESS_SPACE, 5, g_gamePart) < 0)
+	if (SceSysmemForKernel_7DF07D60(SCE_KERNEL_ADDRESS_SPACE_ID, 5, g_gamePart) < 0)
 		SCE_DBG_ASSERT_FAIL(768);
-	if (SetKernelGamePhyMemPart(KERNEL_ADDRESS_SPACE) < 0)
+	if (SetKernelGamePhyMemPart(SCE_KERNEL_ADDRESS_SPACE_ID) < 0)
 		SCE_DBG_ASSERT_FAIL(775);
-	if (SceSysmemForKernel_7DF07D60(KERNEL_ADDRESS_SPACE, 12, g_gameCdramPart) < 0)
+	if (SceSysmemForKernel_7DF07D60(SCE_KERNEL_ADDRESS_SPACE_ID, 12, g_gameCdramPart) < 0)
 		SCE_DBG_ASSERT_FAIL(782);
-	if (SceSysmemForKernel_7DF07D60(KERNEL_ADDRESS_SPACE, 13, g_gameCdramPart) < 0)
+	if (SceSysmemForKernel_7DF07D60(SCE_KERNEL_ADDRESS_SPACE_ID, 13, g_gameCdramPart) < 0)
 		SCE_DBG_ASSERT_FAIL(789);
-	if (SceSysmemForKernel_7DF07D60(KERNEL_ADDRESS_SPACE, 14, g_shellCdramPart) < 0)
+	if (SceSysmemForKernel_7DF07D60(SCE_KERNEL_ADDRESS_SPACE_ID, 14, g_shellCdramPart) < 0)
 		SCE_DBG_ASSERT_FAIL(796);
 }
 

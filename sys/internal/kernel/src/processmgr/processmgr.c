@@ -615,7 +615,7 @@ static int ProcessResourceRecovery(SceProcessObject *process, int destroyed)
 		}
 #if FW_VERSION >= 0x04000000
 		if (process->toolMemory != NULL)
-			sceKernelFreeHeapMemory(TOOL_HEAP, process->toolMemory);
+			sceKernelFreeHeapMemory(SCE_KERNEL_HEAP_TOOL_ID, process->toolMemory);
 #endif
 	}
 	if (process->cdialogHeap != -1) {
@@ -752,7 +752,7 @@ static void CloseStdio(SceProcessObject *process)
 	int permission;
 
 	permission = sceKernelSetThreadAccessLevel(0x80);
-	pid = SceThreadmgrForDriver_0486F239(KERNEL_PID);
+	pid = SceThreadmgrForDriver_0486F239(SCE_KERNEL_PROCESS_ID);
 	if (process->stdioPuid[0] != -1)
 		SceSysmemForDriver_84A4AF5E(process->pid, process->stdioPuid[0]);
 	if (process->stdioFd[0] != -1)
@@ -823,11 +823,11 @@ static int UIDtoProcess(SceUID pid, SceProcessObject **process)
 
 	if (pid == 0)
 		return CurrentProcess(process);
-	if (pid == KERNEL_PID) {
+	if (pid == SCE_KERNEL_PROCESS_ID) {
 		*process = g_processmgr.kernelProcess;
 		return 0;
 	}
-	if (pid == SHELL_DUMMY_PID || pid == NPDRM_DUMMY_PID) {
+	if (pid == SCE_KERNEL_DUMMY_PROCESS_GAME_ID || pid == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID) {
 		cls = SceSysmemForDriver_85336A1C();
 	} else {
 		cb = getCurrentThreadCB();
@@ -886,12 +886,13 @@ static int UIDtoProcessAndRefer(SceUID pid, SceProcessObject **process)
 		if (cb == NULL)
 			return SCE_KERNEL_ERROR_INVALID_PID;
 	} else {
-		if (pid == KERNEL_PID) {
+		if (pid == SCE_KERNEL_PROCESS_ID) {
 			p = g_processmgr.kernelProcess;
 			*process = p;
 			goto refer;
 		}
-		if (pid == SHELL_DUMMY_PID || pid == NPDRM_DUMMY_PID) {
+		if (pid == SCE_KERNEL_DUMMY_PROCESS_GAME_ID ||
+		    pid == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID) {
 			cls = SceSysmemForDriver_85336A1C();
 			goto refer_class;
 		}
@@ -1044,7 +1045,7 @@ static int GetUIDEntryHeap(SceUID pid, void **entryHeap)
 			goto found;
 	} else {
 		process = g_processmgr.kernelProcess;
-		if (pid == KERNEL_PID)
+		if (pid == SCE_KERNEL_PROCESS_ID)
 			goto found;
 		cb = getCurrentThreadCB();
 		if (cb != NULL && cb->processId == pid && (process = cb->process) != NULL) {
@@ -1260,7 +1261,7 @@ static int PIDtoAddressSpaceCB(SceUID pid, void **addressSpaceCB)
 			return 0;
 		}
 	} else {
-		if (pid == KERNEL_PID) {
+		if (pid == SCE_KERNEL_PROCESS_ID) {
 			*addressSpaceCB = g_processmgr.kernelProcess->addressSpaceCB;
 			return 0;
 		}
@@ -1319,12 +1320,12 @@ static int CreateKernelProcessCommon(SceProcessObject *process, SceUID pid)
 	int ret;
 
 	process->type = PROCESS_TYPE_KERNEL;
-	process->addressSpace = KERNEL_ADDRESS_SPACE;
-	ret = sceGUIDGetObject(KERNEL_ADDRESS_SPACE, &process->addressSpaceCB);
+	process->addressSpace = SCE_KERNEL_ADDRESS_SPACE_ID;
+	ret = sceGUIDGetObject(SCE_KERNEL_ADDRESS_SPACE_ID, &process->addressSpaceCB);
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 9512, "sceGUIDGetObject(0x%08x) failed\n",
 				     process->addressSpace);
-	if (pid == KERNEL_PID)
+	if (pid == SCE_KERNEL_PROCESS_ID)
 		cls = &g_processClass;
 	else
 		cls = SceSysmemForDriver_85336A1C();
@@ -1402,7 +1403,7 @@ static inline __attribute__((always_inline)) SceProcessObject *_CreateProcessRaw
 		return NULL;
 	}
 	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART) != 0)
-		process->toolHeap = TOOL_HEAP;
+		process->toolHeap = SCE_KERNEL_HEAP_TOOL_ID;
 	process->entryHeap = 0x10003;
 	process->entryHeapObject = SceSysmemForKernel_FA6C098C(0x10003);
 	return process;
@@ -1414,13 +1415,13 @@ static int CreateKernelProcess(void)
 	int ret;
 
 	process = _CreateProcessRaw();
-	ret = CreateKernelProcessCommon(process, KERNEL_PID);
+	ret = CreateKernelProcessCommon(process, SCE_KERNEL_PROCESS_ID);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 9552, "CreateKernelProcessCommon failed 0x%08x\n", ret);
 		return ret;
 	}
 	PROCESS_PROBE("create", process->pid);
-	SceSysmemForKernel_5E772E19(process->addressSpace, KERNEL_PID);
+	SceSysmemForKernel_5E772E19(process->addressSpace, SCE_KERNEL_PROCESS_ID);
 	g_processmgr.kernelProcess = process;
 	memcpy(&process->authInfo, &g_kernelAuthInfo, sizeof(process->authInfo));
 	process->threadPermission = 0x80;
@@ -1750,7 +1751,7 @@ static inline __attribute__((always_inline)) int OpenStdio(SceProcessObject *pro
 	SceUID pid;
 	int ret;
 
-	pid = SceThreadmgrForDriver_0486F239(KERNEL_PID);
+	pid = SceThreadmgrForDriver_0486F239(SCE_KERNEL_PROCESS_ID);
 	ret = OpenStdioFile(process, "tty0:", 0);
 	if (ret < 0)
 		goto out;
@@ -2018,7 +2019,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 
 	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART) != 0) {
 #if FW_VERSION >= 0x04000000
-		process->toolMemory = sceKernelAllocHeapMemory(TOOL_HEAP, 0x80);
+		process->toolMemory = sceKernelAllocHeapMemory(SCE_KERNEL_HEAP_TOOL_ID, 0x80);
 		if (process->toolMemory == NULL) {
 			ret = SCE_KERNEL_ERROR_NO_MEMORY;
 			goto failed;
@@ -4286,7 +4287,7 @@ static int ProcessGetList(int level, void *buf, SceSize size, SceSize *count, in
 		if (sceGUIDReferObjectWithClass(pid, &g_processClass, NULL) >= 0) {
 			if (SceSysmemForKernel_4E923101(pid) <= level && i < max) {
 				if (kind == 0) {
-					if (PROCESS_FROM_NODE(node)->pid == KERNEL_PID)
+					if (PROCESS_FROM_NODE(node)->pid == SCE_KERNEL_PROCESS_ID)
 						goto release;
 					goto info;
 				} else if (kind == 1) {
@@ -4685,7 +4686,7 @@ int SceProcessmgrForDriver_11BEFBBE(void *ptr)
 
 static inline int ProcessIsKernelLike(SceUID pid)
 {
-	return pid == SHELL_DUMMY_PID || (pid & ~0x10) == KERNEL_PID;
+	return pid == SCE_KERNEL_DUMMY_PROCESS_GAME_ID || (pid & ~0x10) == SCE_KERNEL_PROCESS_ID;
 }
 
 void *sceKernelAllocRemoteCDialogHeap(SceUID pid, SceSize size, void *opt)
@@ -4695,7 +4696,7 @@ void *sceKernelAllocRemoteCDialogHeap(SceUID pid, SceSize size, void *opt)
 	int ret;
 
 	if (ProcessIsKernelLike(pid))
-		return SceSysmemForDriver_B415B5A8(KERNEL_HEAP, size, opt,
+		return SceSysmemForDriver_B415B5A8(SCE_KERNEL_HEAP_ID, size, opt,
 						   __builtin_return_address(0));
 	ptr = NULL;
 	ret = UIDtoProcessAndRefer(pid, &process);
@@ -4834,7 +4835,7 @@ int SceProcessmgrForDriver_54D469E2(SceUInt32 *flag)
 		*flag = cb->process->syscallTraceFlag;
 		return 0;
 	}
-	process = SceSysmemForKernel_FA6C098C(KERNEL_PID);
+	process = SceSysmemForKernel_FA6C098C(SCE_KERNEL_PROCESS_ID);
 	*flag = process->syscallTraceFlag;
 	return 0;
 }
@@ -4901,7 +4902,7 @@ static inline __attribute__((always_inline)) int ProcessUpdateDebugRegs(SceUID p
 	SceKernelThreadRunStatus info;
 	int ret, i;
 
-	if (pid == KERNEL_PID) {
+	if (pid == SCE_KERNEL_PROCESS_ID) {
 		SceThreadmgrForKernel_8D53CA9B(0);
 		SceThreadmgrForKernel_8D53CA9B(1);
 		SceThreadmgrForKernel_8D53CA9B(2);
@@ -5246,7 +5247,7 @@ int SceProcessmgrForDriver_EC283166(SceUInt64 *time)
 	if (time == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	if (cb == NULL)
-		process = SceSysmemForKernel_FA6C098C(KERNEL_PID);
+		process = SceSysmemForKernel_FA6C098C(SCE_KERNEL_PROCESS_ID);
 	else
 		process = cb->process;
 	*time = sceKernelGetSystemTimeWide() - process->time;
@@ -5276,7 +5277,7 @@ SceUInt32 SceProcessmgrForDriver_02179E12(void)
 		process = cb->process;
 		return SceThreadmgrForDriver_47F6DE49() - (SceUInt32)process->time;
 	}
-	process = SceSysmemForKernel_FA6C098C(KERNEL_PID);
+	process = SceSysmemForKernel_FA6C098C(SCE_KERNEL_PROCESS_ID);
 	return SceThreadmgrForDriver_47F6DE49() - (SceUInt32)process->time;
 }
 
@@ -5297,7 +5298,7 @@ SceUInt64 SceProcessmgrForDriver_82D94BE9(void)
 	SceProcessObject *process;
 
 	if (cb == NULL)
-		process = SceSysmemForKernel_FA6C098C(KERNEL_PID);
+		process = SceSysmemForKernel_FA6C098C(SCE_KERNEL_PROCESS_ID);
 	else
 		process = cb->process;
 	return sceKernelGetSystemTimeWide() - process->time;
@@ -5643,7 +5644,7 @@ int sceKernelProcessPowerUnlockForUser(int type)
 			threadId, SceSysmemForDriver_E655852F(threadId));
 		memset(frames, 0, sizeof(frames));
 		if (sceKernelSysrootBacktrace(0, frames, sizeof(frames), &len, 3) >= 0)
-			sceKernelSysrootPrintBacktrace(KERNEL_PID, frames, len, 0);
+			sceKernelSysrootPrintBacktrace(SCE_KERNEL_PROCESS_ID, frames, len, 0);
 		memset(frames, 0, sizeof(frames));
 		if (sceKernelSysrootBacktrace(0, frames, sizeof(frames), &len, 2) >= 0)
 			sceKernelSysrootPrintBacktrace(0, frames, len, 0);
@@ -6325,10 +6326,12 @@ static inline __attribute__((always_inline)) int ProcessmgrModuleStart(void)
 		if (CreateKernelProcess() < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 9711, "CreateKernelProcess failed\n");
 		} else if (sceKernelCheckDipsw(DIPSW_DECI) != 0) {
-			CreateDummyProcessWithUID(SHELL_DUMMY_PID, &g_shellDummyProcess,
-						  &g_shellDummyAuthInfo, 0x20);
-			CreateDummyProcessWithUID(NPDRM_DUMMY_PID, &g_npdrmDummyProcess,
-						  &g_npdrmDummyAuthInfo, 0x40);
+			CreateDummyProcessWithUID(SCE_KERNEL_DUMMY_PROCESS_GAME_ID,
+						  &g_shellDummyProcess, &g_shellDummyAuthInfo,
+						  0x20);
+			CreateDummyProcessWithUID(SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID,
+						  &g_npdrmDummyProcess, &g_npdrmDummyAuthInfo,
+						  0x40);
 		}
 	}
 	SceSysrootForKernel_D29BCA77(&g_sysrootOps);

@@ -116,7 +116,7 @@ int uidCallback_Destructor(struct ThreadmgrCallback *callback)
 	pid = callback->ownerPid;
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
-		if (process->pid != THREADMGR_KERNEL_PID) {
+		if (process->pid != SCE_KERNEL_PROCESS_ID) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (callback->cb.attr & THREAD_ATTR_UNLIMITED)
 				process->uidUnlimitedCount--;
@@ -720,7 +720,7 @@ SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallba
 				    " error: sceGUIDKernelCreate(0x%08X)\n", uid);
 		goto unaccount;
 	}
-	callback->ownerPid = ThreadmgrInSyscall() ? thread->processId : THREADMGR_KERNEL_PID;
+	callback->ownerPid = ThreadmgrInSyscall() ? thread->processId : SCE_KERNEL_PROCESS_ID;
 	callback->cb.guid = uid;
 	callback->cb.attr = limit;
 	callback->cb.entry = (uintptr_t)entry;

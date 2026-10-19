@@ -32,7 +32,7 @@ void LoadelfFreeMem(SceModuleCB *cb, void **vaddr, SceUID *memblk, LoadelfSegmen
 		cb, cb->modid, cb->name, cb->path, cb->path != NULL ? cb->path : "(null)",
 		vaddr, segx);
 
-	if (cb->pid == KERNEL_PID) {
+	if (cb->pid == SCE_KERNEL_PROCESS_ID) {
 		sceKernelFreeMemBlock(*memblk);
 		*vaddr = NULL;
 		*memblk = 0;
@@ -138,7 +138,7 @@ int LoadelfLoadSegment(LoadelfContext *ctx, SelfReader *reader, int index, Loade
 		opt.size = sizeof(opt);
 		type = flags & MODULE_FLAG_TYPE_MASK;
 
-		if (pid == KERNEL_PID) {
+		if (pid == SCE_KERNEL_PROCESS_ID) {
 			memtype = 0x1020d006;
 			if (type == 2)
 				memtype = 0x10f0d006;
@@ -203,7 +203,7 @@ int LoadelfLoadSegment(LoadelfContext *ctx, SelfReader *reader, int index, Loade
 		ctx->seg[index].kaddr = seg->vaddr;
 		seg->vaddr = (char *)seg->vaddr + pageOff;
 
-		if (cb->pid != KERNEL_PID) {
+		if (cb->pid != SCE_KERNEL_PROCESS_ID) {
 			if ((seg->perms & SEGMENT_PERM_WRITE) == 0 &&
 			    (cb->flags & MODULE_FLAG_SHARED_COPY) != 0) {
 				ctx->seg[index].kaddr = NULL;
@@ -275,7 +275,7 @@ static int LoadelfAllocRelaTmp(SceModuleCB *cb, SceSize size)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 0x400000;
-	if (cb->pid == KERNEL_PID) {
+	if (cb->pid == SCE_KERNEL_PROCESS_ID) {
 		memtype = type == 2 ? 0x10f0d006 : 0x1020d006;
 	} else {
 		if (type == 1)
@@ -383,7 +383,7 @@ int LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, Sce
 			if (seg->memsz != 0 || seg->extraPages != 0) {
 				if ((cb->flags & MODULE_FLAG_SELF_FIXED) != 0) {
 					if (LibraryDBIsAslr(pid)) {
-						if (cb->pid == KERNEL_PID)
+						if (cb->pid == SCE_KERNEL_PROCESS_ID)
 							SceKernelUtilsForDriver_875B2A1C(&rnd, sizeof(rnd));
 						else
 							SceProcessmgrForDriver_2CEB1C7A(pid, &rnd, sizeof(rnd));
@@ -517,7 +517,7 @@ int LoadelfMapImage(LoadelfContext *ctx)
 		    (cb->flags & MODULE_FLAG_SHARED_COPY) == 0)
 			sceKernelDcacheCleanRange((void *)PAGE_TRUNC((SceUInt32)segx->kaddr),
 				PAGE_ROUND(seg->memsz + ((SceUInt32)seg->vaddr & 0xfff)));
-		if (cb->pid == KERNEL_PID) {
+		if (cb->pid == SCE_KERNEL_PROCESS_ID) {
 			if ((seg->perms & SEGMENT_PERM_MASK) != SEGMENT_PERM_TEXT)
 				continue;
 			ret = SceSysmemForDriver_DFE2C8CB(seg->memblk, memtype);
@@ -563,7 +563,7 @@ int sceKernelLoadPtLoadSegForFwloader(const char *path, int index, void *dst, Sc
 	fd = sceIoOpen(path, 1, 0);
 	if (fd < 0)
 		return fd;
-	ret = SelfReaderOpen(&reader, KERNEL_PID, fd, &auth);
+	ret = SelfReaderOpen(&reader, SCE_KERNEL_PROCESS_ID, fd, &auth);
 	if (ret >= 0) {
 		type = SelfReaderGetType(&reader);
 		ret = type;
@@ -599,7 +599,7 @@ int sceKernelGetProgramIdentificationInfo(const char *path, SceUInt64 *authId, S
 	fd = sceIoOpen(path, 1, 0);
 	if (fd < 0)
 		return fd;
-	ret = SelfReaderOpen(&reader, KERNEL_PID, fd, NULL);
+	ret = SelfReaderOpen(&reader, SCE_KERNEL_PROCESS_ID, fd, NULL);
 	if (ret >= 0) {
 		*authId = SelfReaderGetProgramAuthId(&reader);
 		*version = SelfReaderGetProgramVersion(&reader);

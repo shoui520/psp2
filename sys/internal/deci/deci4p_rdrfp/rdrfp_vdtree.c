@@ -12,13 +12,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <sysmem/sysclib.h>
+#include <sysmem/uid_guid.h>
 #include <appmgr/appmgr_rdrfp.h>
 #include "rdrfp.h"
 
-/* the host's file system calls run as (names unknown) */
-#define RDRFP_PID			0x10013
+/* the access levels the host's file system calls run with, in a dummy process (names unknown) */
 #define RDRFP_PERMISSION		0x20
-#define RDRFP_PID_SCE_SYS		0x10015
 #define RDRFP_PERMISSION_SCE_SYS	0x40
 
 /* SceAppMgr mount types (names unknown) */
@@ -57,10 +56,10 @@ static const char *const rdrfpSceSysFiles[] = { "sdslot.dat", "safemem.dat", NUL
 static inline __attribute__((always_inline)) void beginIo(RdrfpIoContext *ctx, int elevated)
 {
 	if (elevated) {
-		ctx->pid = SceThreadmgrForDriver_0486F239(RDRFP_PID_SCE_SYS);
+		ctx->pid = SceThreadmgrForDriver_0486F239(SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID);
 		ctx->permission = sceKernelSetThreadAccessLevel(RDRFP_PERMISSION_SCE_SYS);
 	} else {
-		ctx->pid = SceThreadmgrForDriver_0486F239(RDRFP_PID);
+		ctx->pid = SceThreadmgrForDriver_0486F239(SCE_KERNEL_DUMMY_PROCESS_GAME_ID);
 		ctx->permission = sceKernelSetThreadAccessLevel(RDRFP_PERMISSION);
 	}
 }

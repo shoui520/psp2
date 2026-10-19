@@ -27,9 +27,6 @@
 #include <excpmgr/excpmgr.h>
 #include <excpmgr/excpmgr_cpu.h>
 
-/* DACR the exception code runs the kernel with */
-#define DACR_KERNEL	0x15450000
-
 void excpReturnToAbortMode(SceExcpmgrContext *context) __attribute__((noreturn));
 void sceKernelPanicHandlerReturnFromNestedExceptionCfunc(SceExcpmgrContext *context);
 

@@ -33,7 +33,6 @@
 #define WORK_QUEUE_MAX_THREADS		4
 #define WORK_QUEUE_THREAD_PRIORITY	0xbf
 #define WORK_QUEUE_THREAD_STACK		0x2000
-#define GLOBAL_WORK_QUEUE_UID		0x10023	/* SceKernelGlobalWorkQueue's fixed UID */
 
 #define TASK_VFP_SAVE_SIZE		0x48
 
@@ -909,17 +908,17 @@ int createGlobalWorkQueue(void)
 	queue = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*queue));
 	if (queue == NULL)
 		SCE_PANIC(285);
-	if (sceGUIDSet(GLOBAL_WORK_QUEUE_UID, WORK_QUEUE_CLASS(),
+	if (sceGUIDSet(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, WORK_QUEUE_CLASS(),
 					"SceKernelGlobalWorkQueue", (SceObjectBase *)queue) < 0)
 		SCE_PANIC(292);
 	uidWorkQueue_Constructor(queue);
 	uidWaitableConstructor(queue);
 	queue->attr = 0;
 	queue->threadCount = WORK_QUEUE_MAX_THREADS;
-	queue->uid = GLOBAL_WORK_QUEUE_UID;
+	queue->uid = SCE_KERNEL_GLOBAL_WORK_QUEUE_ID;
 	queue->threads = threads;
 	queue->sema = sema;
-	queue->creatorPid = THREADMGR_KERNEL_PID;
+	queue->creatorPid = SCE_KERNEL_PROCESS_ID;
 	queue->reservedId = -1;
 	for (i = 0; i < WORK_QUEUE_MAX_THREADS; i++) {
 		ret = sceKernelStartThread(threads[i], sizeof(queue), &queue);
@@ -1020,7 +1019,7 @@ SceUID sceKernelCreateWorkQueue(const char *name, SceUInt32 attr,
 	intr = SceCpuForDriver_821FC0EE();
 	uid = sceGUIDKernelCreateWithOpt(WORK_QUEUE_CLASS(), name, &opt,
 					  (SceObjectBase **)&queue);
-	queue->ownerPid = ThreadmgrInSyscall() ? thread->processId : THREADMGR_KERNEL_PID;
+	queue->ownerPid = ThreadmgrInSyscall() ? thread->processId : SCE_KERNEL_PROCESS_ID;
 	queue->uid = ret;
 	queue->attr = objectAttr;
 	queue->creatorPid = sceKernelGetProcessId();
@@ -1101,7 +1100,7 @@ SceUID sceKernelScheduleWorkTask(SceUID workQueueId, const char *name, int (*ent
 		opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;
 		opt.pid = creatorPid;
 	} else {
-		creatorPid = THREADMGR_KERNEL_PID;
+		creatorPid = SCE_KERNEL_PROCESS_ID;
 	}
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDKernelCreateWithOpt(WORK_TASK_CLASS(), name, &opt,
@@ -1112,7 +1111,7 @@ SceUID sceKernelScheduleWorkTask(SceUID workQueueId, const char *name, int (*ent
 		sceGUIDReleaseObject(workQueueId);
 		goto resume;
 	}
-	task->ownerPid = ThreadmgrInSyscall() ? thread->processId : THREADMGR_KERNEL_PID;
+	task->ownerPid = ThreadmgrInSyscall() ? thread->processId : SCE_KERNEL_PROCESS_ID;
 	task->cb.user = user;
 	task->cb.guid = ret;
 	task->cb.entry = (uintptr_t)entry;
@@ -1128,7 +1127,7 @@ SceUID sceKernelScheduleWorkTask(SceUID workQueueId, const char *name, int (*ent
 		task->cb.ioFlags = 0;
 		task->cb.priority = 0x10000100;
 		task->cb.permission = 0x80;
-		task->cb.tlsProcessId = THREADMGR_KERNEL_PID;
+		task->cb.tlsProcessId = SCE_KERNEL_PROCESS_ID;
 	} else {
 		task->cb.priority = thread->currentPriority;
 		task->cb.permission = thread->permission;

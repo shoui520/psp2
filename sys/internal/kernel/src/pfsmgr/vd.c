@@ -78,7 +78,7 @@ int pfsUnicvOpen(ScePfsPmi *pmi, ScePfsNode *node, int create)
 		if (ret < 0)
 			return ret;
 	}
-	pid = SceThreadmgrForDriver_0486F239(PFS_KERNEL_PID);
+	pid = SceThreadmgrForDriver_0486F239(SCE_KERNEL_PROCESS_ID);
 	ret = pfsLowerOpen(&pmi->unicvDb, node, 0, info->unicvOpenFlags | PFS_OPEN_KERNEL);
 	SceThreadmgrForDriver_0486F239(pid);
 	if (ret == 0) {

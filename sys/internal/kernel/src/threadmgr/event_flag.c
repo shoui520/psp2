@@ -85,7 +85,7 @@ static int uidEventFlag_Destructor(void *object)
 	pid = evf->ownerPid;
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
-		if (process->pid != THREADMGR_KERNEL_PID) {
+		if (process->pid != SCE_KERNEL_PROCESS_ID) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (evf->attr & SCE_KERNEL_ATTR_OPENABLE)
 				process->uidOpenableCount--;
@@ -496,7 +496,7 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 			sceKernelSpinlockLowUnlock(&process->resourceLock);
 		}
 	} else {
-		evf->ownerPid = ThreadmgrInSyscall() ? thread->processId : THREADMGR_KERNEL_PID;
+		evf->ownerPid = ThreadmgrInSyscall() ? thread->processId : SCE_KERNEL_PROCESS_ID;
 		evf->attr = attr;
 		evf->core.pattern = initPattern;
 		evf->core.initPattern = initPattern;

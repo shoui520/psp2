@@ -98,7 +98,7 @@ static int uidCond_Destructor(void *object)
 	pid = cond->ownerPid;
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
-		if (process->pid != THREADMGR_KERNEL_PID) {
+		if (process->pid != SCE_KERNEL_PROCESS_ID) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (cond->attr & SCE_KERNEL_ATTR_OPENABLE)
 				process->uidOpenableCount--;
@@ -413,7 +413,8 @@ SceUID sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 			goto restore;
 		}
 		if (attr & SCE_KERNEL_ATTR_OPENABLE) {
-			SCE_DBG_ASSERT_CHECK_FUNC(thread->processId != THREADMGR_KERNEL_PID, 236, "sceKernelCreateCond");
+			SCE_DBG_ASSERT_CHECK_FUNC(thread->processId != SCE_KERNEL_PROCESS_ID, 236,
+						  "sceKernelCreateCond");
 			if (SceSysrootForDriver_CAE820B2(thread->processId, &sdkVersion) >= 0 &&
 			    sdkVersion >= SDK_VERSION_LW_COND_END) {
 				SCE_DBG_PRINTF_FUNC(0, 241, "sceKernelCreateCond", " k: error: sceKernelCreateCond(%s), "
@@ -498,7 +499,7 @@ SceUID sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 		sceGUIDReleaseObject(mutexId);
 		goto unaccount;
 	}
-	cond->ownerPid = ThreadmgrInSyscall() ? thread->processId : THREADMGR_KERNEL_PID;
+	cond->ownerPid = ThreadmgrInSyscall() ? thread->processId : SCE_KERNEL_PROCESS_ID;
 	cond->option = option;
 	cond->mutexId = mutexId;
 	cond->mutexLink.next = &mutex->core.conds;
@@ -725,7 +726,7 @@ restore:
 static inline SceUInt32 CondCallerSdkVersion(struct ThreadCB *thread,
 					     SceUInt32 *version)
 {
-	if (thread->processId == THREADMGR_KERNEL_PID)
+	if (thread->processId == SCE_KERNEL_PROCESS_ID)
 		*version = SDK_VERSION_KERNEL;
 	else if (SceSysrootForDriver_CAE820B2(0, version) < 0)
 		*version = SDK_VERSION_SIGNAL_TO_STRICT;

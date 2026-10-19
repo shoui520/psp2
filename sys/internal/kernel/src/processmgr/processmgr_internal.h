@@ -21,6 +21,7 @@
 #include <sysmem/suspend.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/uid_class.h>
+#include <sysmem/uid_guid.h>
 #include <intrmgr/intrmgr.h>
 #include <acmgr/acmgr.h>
 #include <iofilemgr/iofilemgr.h>
@@ -32,13 +33,6 @@
 #include <processmgr/processmgr.h>
 
 #define ARRAY_SIZE(a)			(sizeof(a) / sizeof((a)[0]))
-
-#define KERNEL_PID			0x10005
-#define KERNEL_ADDRESS_SPACE		0x10007
-#define KERNEL_HEAP			0x1000b
-#define TOOL_HEAP			0x1002b	/* the tool heap (dipsw 0xd2) */
-#define SHELL_DUMMY_PID			0x10013	/* dummy processes (dipsw 0xc2) */
-#define NPDRM_DUMMY_PID			0x10015
 
 /* SceProcessObject.attr */
 #define PROCESS_ATTR_LOAD_DEBUG		0x00010000	/* name unknown: LoadProcessImage flag */

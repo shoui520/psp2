@@ -28,7 +28,7 @@ int pfsDbCreate(ScePfsPmi *pmi, ScePfsNode *node)
 	ret = pfsNodeCreate(node, info->fileMode);
 	if (ret != 0)
 		goto unlock;
-	pid = SceThreadmgrForDriver_0486F239(PFS_KERNEL_PID);
+	pid = SceThreadmgrForDriver_0486F239(SCE_KERNEL_PROCESS_ID);
 	ret = pfsLowerOpen(&pmi->filesDb, node, -1, info->icvOpenFlags | PFS_OPEN_KERNEL);
 	SceThreadmgrForDriver_0486F239(pid);
 	if (ret == 0) {
@@ -68,7 +68,7 @@ int pfsDbOpen(ScePfsPmi *pmi, ScePfsNode *node)
 
 	info = pfsModeInfo(pmi->mode);
 	sceKernelLockMutex(pmi->filesDbMutex, 1, NULL);
-	pid = SceThreadmgrForDriver_0486F239(PFS_KERNEL_PID);
+	pid = SceThreadmgrForDriver_0486F239(SCE_KERNEL_PROCESS_ID);
 	ret = pfsLowerOpen(&pmi->filesDb, node, -1, info->icvOpenFlags | PFS_OPEN_KERNEL);
 	SceThreadmgrForDriver_0486F239(pid);
 	if (ret != 0)

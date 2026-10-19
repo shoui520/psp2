@@ -63,7 +63,7 @@ static int uidThreadEvent_Destructor(void *object)
 	pid = event->ownerPid;
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
-		if (process->pid != THREADMGR_KERNEL_PID) {
+		if (process->pid != SCE_KERNEL_PROCESS_ID) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (event->attr & THREAD_EVENT_ATTR_UNLIMITED)
 				process->uidUnlimitedCount--;
@@ -325,8 +325,8 @@ SceUID registerThreadEventHandler(const char *name, SceUID target, SceUID pid, u
 			ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 			goto restore;
 		}
-		eventPid = THREADMGR_KERNEL_PID;
-		if (pid != THREADMGR_KERNEL_PID && pid != -1) {
+		eventPid = SCE_KERNEL_PROCESS_ID;
+		if (pid != SCE_KERNEL_PROCESS_ID && pid != -1) {
 			ret = SCE_KERNEL_ERROR_INVALID_PID;
 			goto restore;
 		}
@@ -367,7 +367,7 @@ checked:
 		accounting = process;
 	} else {
 		process = thread->process;
-		ownerPid = THREADMGR_KERNEL_PID;
+		ownerPid = SCE_KERNEL_PROCESS_ID;
 		accounting = s_threadmgrRuntime.manager->kernelProcess;
 	}
 	ret = sceKernelIsEqualAccessibleRangeProcBySW(process->pid, user ? 0x50 : 5, (const void *)handler, 4);
@@ -377,7 +377,7 @@ checked:
 		ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 		goto restore;
 	}
-	if (ownerPid == THREADMGR_KERNEL_PID) {
+	if (ownerPid == SCE_KERNEL_PROCESS_ID) {
 		opt.flags = UID_CREATE_OPT_ATTR;
 		opt.pid = 0;
 		attr = 0;
@@ -427,7 +427,7 @@ checked:
 		sceKernelSpinlockLowUnlock(&accounting->resourceLock);
 	}
 	event->guid = uid;
-	event->ownerPid = ThreadmgrInSyscall() ? thread->processId : THREADMGR_KERNEL_PID;
+	event->ownerPid = ThreadmgrInSyscall() ? thread->processId : SCE_KERNEL_PROCESS_ID;
 	event->handler = handler;
 	event->mask = mask;
 	event->pid = eventPid;

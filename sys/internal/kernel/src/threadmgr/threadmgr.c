@@ -464,8 +464,6 @@ int uidExtendedClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
  * their register contexts in that process.
  */
 
-#define PARTITION_KERNEL		0x10009		/* PLACEHOLDER: name */
-#define MEMBLOCK_TYPE_KERNEL		0x1020d006	/* PLACEHOLDER: name */
 #define SWITCH_STACK_SIZE		0x1000		/* per CPU */
 #define CB_BLOCK_SIZE			0x3000
 #define CB_HEAP_SIZE			0xf000
@@ -473,8 +471,7 @@ int uidExtendedClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
 #define GLOBAL_READY_QUEUES		0x7c
 #define CPU_READY_QUEUES		0x100
 
-#define CLEANER_THREAD_ID		0x10017		/* fixed UIDs */
-#define IDLE_THREAD_ID(cpu)		(0x10019 + (cpu) * 2)
+#define IDLE_THREAD_ID(cpu)		(SCE_KERNEL_IDLE_THREAD_0_ID + (cpu) * 2)
 #define CLEANER_STACK_SIZE		0x1000
 #define CLEANER_STACK_BLOCK		0x2000
 #define CLEANER_PRIORITY		1
@@ -506,10 +503,8 @@ int uidExtendedClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
 #define SUSPEND_ORDER_THREADMGR		0x13	/* PLACEHOLDER: SceKernelSuspendForDriver's order */
 #define SYSROOT_SLOT_THREADMGR		6	/* sceKernelSysrootSetModulePrivate */
 #define DBGDSCR_MDBGEN			0x8000	/* monitor debug-mode enable */
-#define DACR_ALL_MANAGER		0xffff0000
 #define CACHE_LINE			0x20
 
-#define DACR_KERNEL			0x15450000
 #define CPACR_VFP_FULL			0x00f00000
 #define CPSR_SYS_ARM			0x5f
 #define CPSR_SYS_THUMB			0x7f
@@ -674,8 +669,9 @@ int sceKernelThreadMgrModuleBoot(SceSize arglen, const struct ThreadmgrBootArgs 
 		goto per_cpu;
 
 	/* the manager */
-	block = sceKernelAllocPartitionMemBlock(PARTITION_KERNEL, "SceThreadMgrCBBlock",
-						 MEMBLOCK_TYPE_KERNEL, CB_BLOCK_SIZE, NULL);
+	block = sceKernelAllocPartitionMemBlock(
+		SCE_KERNEL_PARTITION_ROOT_ID, "SceThreadMgrCBBlock",
+		SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW, CB_BLOCK_SIZE, NULL);
 	if (block < 0)
 		SCE_PANIC(365);
 	sceKernelGetMemBlockVBase(block, (void **)&s_threadmgrRuntime.manager);
@@ -775,7 +771,7 @@ int sceKernelThreadMgrModuleBoot(SceSize arglen, const struct ThreadmgrBootArgs 
 	object = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, THREAD_OBJECT_SIZE);
 	if (object == NULL)
 		SCE_PANIC(506);
-	if (sceGUIDSet(CLEANER_THREAD_ID,
+	if (sceGUIDSet(SCE_KERNEL_CLEANER_THREAD_ID,
 					s_threadmgrRuntime.manager->threadClass,
 					"SceKernelCleanerThread", (SceObjectBase *)object) < 0)
 		SCE_PANIC(515);
@@ -783,9 +779,9 @@ int sceKernelThreadMgrModuleBoot(SceSize arglen, const struct ThreadmgrBootArgs 
 	uidWaitableConstructor(object);
 	uidThread_Constructor(object);
 	thread = &object->context;
-	thread->threadId = CLEANER_THREAD_ID;
-	thread->stackMemBlockType = MEMBLOCK_TYPE_KERNEL;
-	thread->processId = THREADMGR_KERNEL_PID;
+	thread->threadId = SCE_KERNEL_CLEANER_THREAD_ID;
+	thread->stackMemBlockType = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW;
+	thread->processId = SCE_KERNEL_PROCESS_ID;
 	thread->kStackSize = CLEANER_STACK_SIZE;
 	thread->kStackMemblkId = SceSysmemForKernel_40870E74("SceKernelCleanerThread",
 							      CLEANER_STACK_BLOCK, CLEANER_STACK_SIZE);
@@ -873,8 +869,8 @@ int sceKernelThreadMgrModuleBoot(SceSize arglen, const struct ThreadmgrBootArgs 
 	SceKernelSuspendForDriver_CE7A2207(SUSPEND_ORDER_THREADMGR, threadmgrSuspendHandler, NULL);
 	SceKernelSuspendForDriver_105C5752(SUSPEND_ORDER_THREADMGR, threadmgrResumeHandler, NULL);
 	s_threadmgrRuntime.manager->switchStackBlockId = sceKernelAllocPartitionMemBlock(
-		PARTITION_KERNEL, "SceThreadMgrSwitchStackBlock", MEMBLOCK_TYPE_KERNEL,
-		CPU_COUNT * SWITCH_STACK_SIZE, NULL);
+		SCE_KERNEL_PARTITION_ROOT_ID, "SceThreadMgrSwitchStackBlock",
+		SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW, CPU_COUNT * SWITCH_STACK_SIZE, NULL);
 	manager = s_threadmgrRuntime.manager;
 	if (manager->switchStackBlockId < 0)
 		SCE_PANIC(671);
@@ -929,7 +925,7 @@ per_cpu:
 	uidThread_Constructor(object);
 	thread = &object->context;
 	mask = (1 << cpuId) & CPU_MASK_ALL;
-	thread->processId = THREADMGR_KERNEL_PID;
+	thread->processId = SCE_KERNEL_PROCESS_ID;
 	thread->boostPriority = BOOST_PRIORITY_NONE;
 	thread->initCpuAffinityMask = mask;
 	thread->entry = (uintptr_t)idleThreadEntry;
@@ -978,9 +974,9 @@ per_cpu:
 		SCE_PANIC(803);
 	thread = &object->context;
 	thread->threadId = uid;
-	thread->processId = THREADMGR_KERNEL_PID;
+	thread->processId = SCE_KERNEL_PROCESS_ID;
 	thread->kStackSize = INITIAL_STACK_SIZE;
-	thread->stackMemBlockType = MEMBLOCK_TYPE_KERNEL;
+	thread->stackMemBlockType = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW;
 	thread->kStackMemblkId = argp->cpu[cpuId].stackMemBlockId;
 	ret = sceKernelGetMemBlockMappedBase(thread->kStackMemblkId, (void **)&thread->pKStack);
 	*(SceUID *)thread->pKStack = thread->threadId;
@@ -1041,7 +1037,7 @@ static inline int initKernelThreadRegisters(struct ThreadCB *thread,
 
 	opt->size = sizeof(*opt);
 	opt->align = REGISTER_CONTEXT_ALIGN;
-	regs = sceKernelSysrootAllocRemoteProcessHeap(THREADMGR_KERNEL_PID, sizeof(*regs), opt);
+	regs = sceKernelSysrootAllocRemoteProcessHeap(SCE_KERNEL_PROCESS_ID, sizeof(*regs), opt);
 	thread->pRegisterContext = regs;
 	if (regs == NULL)
 		return -1;
@@ -1060,7 +1056,7 @@ static inline int initKernelThreadRegisters(struct ThreadCB *thread,
 static inline void listProcessThread(SceProcessObject *process,
 				     struct ThreadCB *thread)
 {
-	THREAD_OBJECT(thread)->ownerPid = THREADMGR_KERNEL_PID;
+	THREAD_OBJECT(thread)->ownerPid = SCE_KERNEL_PROCESS_ID;
 	thread->processLink.next = &process->threads;
 	thread->processLink.prev = process->threads.prev;
 	process->threads.prev = &thread->processLink;
@@ -1086,14 +1082,15 @@ int sceKernelThreadMgrStartAfterProcess(void)
 	int ret, i;
 
 	cpuId = sceKernelCpuId();
-	process = SceSysmemForKernel_FA6C098C(THREADMGR_KERNEL_PID);
-	addressSpace = SceSysmemForKernel_FA6C098C(SceSysrootForKernel_7334F1E8(THREADMGR_KERNEL_PID));
-	ret = SceSysrootForKernel_88DE85EF(THREADMGR_KERNEL_PID, &heap);
+	process = SceSysmemForKernel_FA6C098C(SCE_KERNEL_PROCESS_ID);
+	addressSpace = SceSysmemForKernel_FA6C098C(
+		SceSysrootForKernel_7334F1E8(SCE_KERNEL_PROCESS_ID));
+	ret = SceSysrootForKernel_88DE85EF(SCE_KERNEL_PROCESS_ID, &heap);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(963);
 		return ret;
 	}
-	ret = SceSysmemForDriver_2ECF7944(THREADMGR_KERNEL_PID, &context);
+	ret = SceSysmemForDriver_2ECF7944(SCE_KERNEL_PROCESS_ID, &context);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(969);
 		return ret;
@@ -1105,13 +1102,13 @@ int sceKernelThreadMgrStartAfterProcess(void)
 		thread->process = process;
 		thread->addressSpace = addressSpace;
 		thread->pUIDEntryHeap = heap;
-		thread->tlsProcessId = THREADMGR_KERNEL_PID;
+		thread->tlsProcessId = SCE_KERNEL_PROCESS_ID;
 		if (initKernelThreadRegisters(thread, context, &opt) < 0) {
 			SCE_DBG_ASSERT_FAIL(995);
 			return SCE_KERNEL_ERROR_NO_MEMORY;
 		}
-		thread->pVfpRegisterContext = (uintptr_t)sceKernelSysrootAllocRemoteProcessHeap(THREADMGR_KERNEL_PID,
-			sizeof(struct ThreadmgrVfpContext), &opt);
+		thread->pVfpRegisterContext = (uintptr_t)sceKernelSysrootAllocRemoteProcessHeap(
+			SCE_KERNEL_PROCESS_ID, sizeof(struct ThreadmgrVfpContext), &opt);
 		if (thread->pVfpRegisterContext == 0) {
 			SCE_DBG_ASSERT_FAIL(1027);
 			return SCE_KERNEL_ERROR_NO_MEMORY;
@@ -1122,12 +1119,12 @@ int sceKernelThreadMgrStartAfterProcess(void)
 		s_threadmgrRuntime.manager->kernelAddressSpace = addressSpace;
 		s_threadmgrRuntime.manager->kernelUidEntryHeap = heap;
 		listProcessThread(process, thread);
-		s_threadmgrRuntime.manager->signalObject->ownerPid = THREADMGR_KERNEL_PID;
+		s_threadmgrRuntime.manager->signalObject->ownerPid = SCE_KERNEL_PROCESS_ID;
 	}
 
 	/* the idle thread */
 	thread = cpu->idleThread;
-	thread->tlsProcessId = THREADMGR_KERNEL_PID;
+	thread->tlsProcessId = SCE_KERNEL_PROCESS_ID;
 	thread->process = process;
 	thread->addressSpace = addressSpace;
 	thread->pUIDEntryHeap = heap;
@@ -1141,11 +1138,11 @@ int sceKernelThreadMgrStartAfterProcess(void)
 	thread = (struct ThreadCB *)cpu->runningThread;
 	thread->process = process;
 	thread->pUIDEntryHeap = heap;
-	thread->tlsProcessId = THREADMGR_KERNEL_PID;
+	thread->tlsProcessId = SCE_KERNEL_PROCESS_ID;
 	thread->addressSpace = addressSpace;
 	opt.size = sizeof(opt);
 	opt.align = REGISTER_CONTEXT_ALIGN;
-	thread->pRegisterContext = sceKernelSysrootAllocRemoteProcessHeap(THREADMGR_KERNEL_PID,
+	thread->pRegisterContext = sceKernelSysrootAllocRemoteProcessHeap(SCE_KERNEL_PROCESS_ID,
 						       sizeof(*thread->pRegisterContext), &opt);
 	if (thread->pRegisterContext == NULL) {
 		SCE_DBG_ASSERT_FAIL(1115);
@@ -1170,16 +1167,16 @@ int sceKernelThreadMgrStartAfterProcess(void)
 		: "memory");
 	opt.size = sizeof(opt);
 	opt.align = REGISTER_CONTEXT_ALIGN;
-	thread->pVfpRegisterContext = (uintptr_t)sceKernelSysrootAllocRemoteProcessHeap(THREADMGR_KERNEL_PID,
-		sizeof(struct ThreadmgrVfpContext), &opt);
+	thread->pVfpRegisterContext = (uintptr_t)sceKernelSysrootAllocRemoteProcessHeap(
+		SCE_KERNEL_PROCESS_ID, sizeof(struct ThreadmgrVfpContext), &opt);
 	if (thread->pVfpRegisterContext == 0) {
 		SCE_DBG_ASSERT_FAIL(1141);
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	}
 	initVfpContext(thread->pVfpRegisterContext);
 	listProcessThread(process, thread);
-	cpu->processId = THREADMGR_KERNEL_PID;
-	cpu->runningProcessId = THREADMGR_KERNEL_PID;
+	cpu->processId = SCE_KERNEL_PROCESS_ID;
+	cpu->runningProcessId = SCE_KERNEL_PROCESS_ID;
 	sceKernelSysrootCorelockUnlock();
 	SceIntrmgrForKernel_BCD3BB05();
 
@@ -2260,7 +2257,7 @@ int delayThread(SceUInt32 usec, uint32_t flags, SceUInt32 *remaining, int callba
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	if (thread->processId == THREADMGR_KERNEL_PID) {
+	if (thread->processId == SCE_KERNEL_PROCESS_ID) {
 		version = SDK_VERSION_KERNEL_THREAD;
 		if (usec == 0)
 			goto zero;
@@ -2285,7 +2282,7 @@ int delayThread(SceUInt32 usec, uint32_t flags, SceUInt32 *remaining, int callba
 	if (intr & 0x80) {
 		memset(frames, 0, sizeof(frames));
 		if (sceKernelSysrootBacktrace(0, frames, sizeof(frames), &length, 3) >= 0)
-			sceKernelSysrootPrintBacktrace(THREADMGR_KERNEL_PID, frames, length, 0);
+			sceKernelSysrootPrintBacktrace(SCE_KERNEL_PROCESS_ID, frames, length, 0);
 		SCE_DBG_PRINTF(0, 2088, " k: error: delayThread(usec 0x%08X) irq suspended\n", delay);
 		SCE_DBG_ASSERT_FAIL(2090);
 		ret = SCE_KERNEL_ERROR_CAN_NOT_WAIT;
@@ -2755,7 +2752,7 @@ int processWorkerThread(SceSize argSize, void *arg)
 			/* idle: refill the caches */
 			if ((*state & PROCESS_STATE_RUNNING) &&
 			    !(*state & PROCESS_FLAG_EXIT)) {
-				if (process->pid == THREADMGR_KERNEL_PID) {
+				if (process->pid == SCE_KERNEL_PROCESS_ID) {
 					ret = uidDelay_ManageCache(0x60, 0x20, 0x40);
 					if (ret < 0)
 						SCE_DBG_PRINTF(0, 10277,
@@ -2777,7 +2774,7 @@ int processWorkerThread(SceSize argSize, void *arg)
 			continue;
 		}
 		if (pattern & WORKER_EVENT_EXIT) {
-			if (process->pid != THREADMGR_KERNEL_PID)
+			if (process->pid != SCE_KERNEL_PROCESS_ID)
 				uidLwMutex_DeleteCache(process, 0);
 			return 0;
 		}
@@ -3959,7 +3956,7 @@ int startThread(SceUID threadId, SceSize argSize, const void *arg, int checkSour
 		goto unlock;
 	if (thread->initCpuAffinityMask != 0) {
 		mask = thread->initCpuAffinityMask << 16;
-	} else if (self->processId == THREADMGR_KERNEL_PID ||
+	} else if (self->processId == SCE_KERNEL_PROCESS_ID ||
 		   (SceSysrootForDriver_CAE820B2(self->processId, &version) >= 0 &&
 		    version >= SDK_VERSION_DEFAULT_AFFINITY)) {
 		mask = 0;
@@ -4532,7 +4529,7 @@ static inline uint32_t callerSdkVersion(void)
 	uint32_t version;
 
 	if (currentThreadContext() == NULL ||
-	    currentThreadContext()->processId == THREADMGR_KERNEL_PID)
+	    currentThreadContext()->processId == SCE_KERNEL_PROCESS_ID)
 		return SDK_VERSION_KERNEL;
 	if (SceSysrootForDriver_CAE820B2(currentThreadContext()->processId, &version) < 0)
 		return 0;
@@ -4601,7 +4598,7 @@ int changeThreadPriorityAndCpuAffinityMask(struct ThreadCB *thread,
 		*previousPriority = oldPriority;
 	version = SDK_VERSION_KERNEL;
 	if (currentThreadContext() != NULL &&
-	    currentThreadContext()->processId != THREADMGR_KERNEL_PID) {
+	    currentThreadContext()->processId != SCE_KERNEL_PROCESS_ID) {
 		if (SceSysrootForDriver_CAE820B2(currentThreadContext()->processId,
 					      &version) < 0)
 			version = 0;
@@ -5135,7 +5132,7 @@ int sceKernelGetThreadCpuAffinityMask(SceUID uid)
 		result = object->context.currentCpuAffinityMask;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 		if (result == 0 && currentThreadContext() != NULL &&
-		    currentThreadContext()->processId != THREADMGR_KERNEL_PID &&
+		    currentThreadContext()->processId != SCE_KERNEL_PROCESS_ID &&
 		    (SceSysrootForDriver_CAE820B2(currentThreadContext()->processId, &version) < 0 ||
 		     version < SDK_VERSION_DEFAULT_AFFINITY))
 			result = (object->context.process)->
@@ -5261,7 +5258,7 @@ int sceKernelChangeThreadPriority2(SceUID uid, uint32_t priority)
 			goto unlock;
 		}
 	}
-	if (thread->processId == THREADMGR_KERNEL_PID)
+	if (thread->processId == SCE_KERNEL_PROCESS_ID)
 		version = THREADMGR_KERNEL_SYSVER;
 	else if (SceSysrootForDriver_CAE820B2(thread->processId, &version) < 0)
 		version = 0;
@@ -6036,7 +6033,7 @@ int checkThreadUserStack(struct ThreadCB *thread)
 		return 0;
 	if (sp <= bounds[0] && bounds[1] < sp)
 		return sp - bounds[1];
-	if (thread->processId != THREADMGR_KERNEL_PID &&
+	if (thread->processId != SCE_KERNEL_PROCESS_ID &&
 	    (SceSysrootForDriver_CAE820B2(thread->processId, &version) < 0 ||
 	     version < SDK_VERSION_DEFAULT_AFFINITY))
 		return 1;
@@ -6064,7 +6061,7 @@ int checkThreadUserStack(struct ThreadCB *thread)
 static inline void getCallerSdkVersion(SceUInt32 *version)
 {
 	if (currentThreadContext() == NULL ||
-	    currentThreadContext()->processId == THREADMGR_KERNEL_PID)
+	    currentThreadContext()->processId == SCE_KERNEL_PROCESS_ID)
 		*version = SDK_VERSION_KERNEL_THREAD;
 	else if (SceSysrootForDriver_CAE820B2(currentThreadContext()->processId, version) < 0)
 		*version = 0;
@@ -6280,7 +6277,7 @@ int SceThreadmgrForDriver_33E85E9E(SceKernelThreadRunStatus *output)
 	intr = SceCpuForDriver_821FC0EE();
 	cpu = s_threadmgrRuntime.manager->cpuCB;
 	if (currentThreadContext() == NULL ||
-	    currentThreadContext()->processId == THREADMGR_KERNEL_PID)
+	    currentThreadContext()->processId == SCE_KERNEL_PROCESS_ID)
 		version = SDK_VERSION_KERNEL_THREAD;
 	else if (SceSysrootForDriver_CAE820B2(0, &version) < 0)
 		version = 0;
@@ -6600,7 +6597,6 @@ int SceThreadmgrForDriver_1096042E(SceUID uid)
 #define USER_TLS_AREA_MAX		0xffffe800
 #define USER_TLS_ROUND			(USER_TLS_OFFSET + STACK_PAGE - 1)
 #define EXCEPTION_ENTRY_ALIGN		8
-#define DACR_USER			0x15455551	/* and its userDacr */
 #define USER_FRAME_FPSCR		0x03000000
 #define USER_FRAME_UNK40		4		/* PLACEHOLDER: meaning */
 #define USER_FRAME_POISON_COUNT		13
@@ -6786,9 +6782,9 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 		if ((int)attr < 0 && (self = currentThreadContext()) != NULL)
 			pid = self->processId;
 		else
-			pid = THREADMGR_KERNEL_PID;
+			pid = SCE_KERNEL_PROCESS_ID;
 	}
-	if (pid == THREADMGR_KERNEL_PID)
+	if (pid == SCE_KERNEL_PROCESS_ID)
 		sdkVersion = SDK_VERSION_KERNEL;
 	else if (SceSysrootForDriver_CAE820B2(pid, &sdkVersion) < 0)
 		sdkVersion = 0;
@@ -6916,7 +6912,7 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 		.flags = UID_CREATE_OPT_ATTR,
 		.attr = attr & THREAD_ATTR_UID_ATTR_MASK,
 	};
-	if (pid != THREADMGR_KERNEL_PID) {
+	if (pid != SCE_KERNEL_PROCESS_ID) {
 		uidOpt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;
 		uidOpt.pid = pid;
 		if (attr & THREAD_ATTR_UNLIMITED)
@@ -7393,7 +7389,7 @@ SceUID sceKernelCreateRemoteThread(SceUID pid, const char *name, SceKernelThread
 {
 	SceUID ret;
 
-	if (pid == THREADMGR_KERNEL_PID || pid == 0)
+	if (pid == SCE_KERNEL_PROCESS_ID || pid == 0)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	ret = sceGUIDReferObjectWithClass(pid,
 		s_threadmgrRuntime.manager->processClass, NULL);

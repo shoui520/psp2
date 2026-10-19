@@ -103,7 +103,7 @@ int LibStub_checkStubTable(LoadelfContext *ctx)
 			    !ModuleCBIsInReadOnly(cb, (SceUInt32)imp->varent, n))
 				return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 		}
-		if (cb->pid != KERNEL_PID || esize != sizeof(SceModuleImports))
+		if (cb->pid != SCE_KERNEL_PROCESS_ID || esize != sizeof(SceModuleImports))
 			ctx->libstubSize = count * sizeof(SceModuleImports);
 		p += *p;
 		if (end <= p) {
@@ -131,7 +131,7 @@ int LibStubCBInit(LoadelfContext *ctx)
 	void **copy;
 	SceUID pid;
 
-	if (cb->pid == KERNEL_PID) {
+	if (cb->pid == SCE_KERNEL_PROCESS_ID) {
 		p = cb->libstubTop;
 		end = cb->libstubBtm;
 		if (p == end || *p == sizeof(SceModuleImports)) {
@@ -186,7 +186,7 @@ int LibStubCBInit(LoadelfContext *ctx)
 		stub->cb = cb;
 		stub->guid = 0;
 		stub->toolCopy = NULL;
-		if (cb->pid == KERNEL_PID)
+		if (cb->pid == SCE_KERNEL_PROCESS_ID)
 			continue;
 		c = ctx->cb;
 		pid = c->pid;
@@ -231,7 +231,7 @@ void LibStubFree(SceModuleCB *cb)
 		return;
 	imp = cb->libstub;
 	count = cb->libStubCount;
-	if (imp != NULL && pid != KERNEL_PID) {
+	if (imp != NULL && pid != SCE_KERNEL_PROCESS_ID) {
 		for (i = 0; i < count; i++, imp++) {
 			if (imp->libname != NULL)
 				SceSysmemForKernel_634D0D0C(imp->libname, 0x1000000);
@@ -305,7 +305,7 @@ int LibStubGetNidTable(LibStubCB *stub, LibStubNidTable *info)
 	info->nfunc = nfunc;
 	info->nvar = nvar;
 	info->copy = NULL;
-	if (cb->pid == KERNEL_PID || nfunc + nvar == 0)
+	if (cb->pid == SCE_KERNEL_PROCESS_ID || nfunc + nvar == 0)
 		return 0;
 
 	copy = ModulemgrAlloc(cb->pid, (nfunc + nvar) * 8);
@@ -459,7 +459,8 @@ int sceKernelGetStubInfoForDebugger(SceUID pid, SceUID stubid,
 			info->nfunc = imp->nfunc;
 			info->nvar = imp->nvar;
 			info->ntls = 0;
-			info->modid = pid == KERNEL_PID ? stub->cb->modid : stub->cb->puid;
+			info->modid = pid == SCE_KERNEL_PROCESS_ID ? stub->cb->modid :
+							     stub->cb->puid;
 			ent = stub->linked;
 			if (ent == NULL) {
 				info->libPid = 0;
@@ -468,7 +469,8 @@ int sceKernelGetStubInfoForDebugger(SceUID pid, SceUID stubid,
 			} else {
 				lcb = ent->cb;
 				info->libPid = lcb->pid;
-				info->libModid = lcb->pid == KERNEL_PID ? lcb->modid : lcb->puid;
+				info->libModid = lcb->pid == SCE_KERNEL_PROCESS_ID ? lcb->modid :
+										 lcb->puid;
 				info->libid = ent->puid != 0 ? ent->puid : ent->guid;
 			}
 			info->libname[0xff] = '\0';
@@ -518,7 +520,7 @@ static inline int getStubNidTableInfoForDebugger(SceUID pid, SceUID stubid,
 		if (i + 1 < start)
 			continue;
 		if (i < nfunc) {
-			if (pid == KERNEL_PID) {
+			if (pid == SCE_KERNEL_PROCESS_ID) {
 				table[n].nid = imp->funcnid[i];
 				table[n].entry = imp->funcent[i];
 			} else {
@@ -531,7 +533,7 @@ static inline int getStubNidTableInfoForDebugger(SceUID pid, SceUID stubid,
 			}
 		} else {
 			j = i - nfunc;
-			if (pid == KERNEL_PID) {
+			if (pid == SCE_KERNEL_PROCESS_ID) {
 				table[n].nid = imp->varnid[j];
 				table[n].entry = imp->varent[j];
 			} else {

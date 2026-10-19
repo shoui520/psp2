@@ -73,7 +73,7 @@ static inline int MsgPipeUnknownIdError(void)
 /* tells a waiter how much it has moved (in its own process's memory) */
 static inline int setMsgPipeResult(struct ThreadCB *thread, SceSize *moved)
 {
-	if (thread->timeoutProcessId == THREADMGR_KERNEL_PID) {
+	if (thread->timeoutProcessId == SCE_KERNEL_PROCESS_ID) {
 		*thread->msgPipeResult = *moved;
 		return 0;
 	}
@@ -158,7 +158,7 @@ static int uidMsgPipe_Destructor(void *object)
 	pid = pipe->event.ownerPid;
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
-		if (process->pid != THREADMGR_KERNEL_PID) {
+		if (process->pid != SCE_KERNEL_PROCESS_ID) {
 			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
 			if (pipe->event.attr & SCE_KERNEL_ATTR_OPENABLE)
 				process->uidOpenableCount--;
@@ -218,7 +218,7 @@ static inline __attribute__((always_inline)) int copyToKernel(SceUID pid, void *
 
 	if (pid == 0)
 		pid = sceKernelGetProcessId();
-	if (pid == THREADMGR_KERNEL_PID) {
+	if (pid == SCE_KERNEL_PROCESS_ID) {
 		__builtin_memcpy(dst, src, size);
 		return 0;
 	}
@@ -238,7 +238,7 @@ static inline __attribute__((always_inline)) int copyFromKernel(SceUID pid, void
 
 	if (pid == 0)
 		pid = sceKernelGetProcessId();
-	if (pid == THREADMGR_KERNEL_PID) {
+	if (pid == SCE_KERNEL_PROCESS_ID) {
 		memcpy(dst, src, size);
 		return 0;
 	}
@@ -435,7 +435,7 @@ static inline void updateMsgPipeDataPattern(ThreadmgrMsgPipe *pipe)
 
 	if (pipe->ring.write == pipe->ring.read &&
 	    (pipe->ring.used == 0 ||
-	     (pipe->creatorPid != THREADMGR_KERNEL_PID &&
+	     (pipe->creatorPid != SCE_KERNEL_PROCESS_ID &&
 	      SceSysrootForDriver_CAE820B2(pipe->creatorPid, &version) >= 0 &&
 	      version < SDK_VERSION_MSG_PIPE_EMPTY)))
 		pipe->event.pattern &= ~EVENT_PATTERN_RESERVED_BIT;
@@ -622,7 +622,7 @@ static inline uint32_t MsgPipeTransferPattern(ThreadmgrMsgPipe *pipe, SceSize si
 		return 0;
 	if (pipe->ring.write == pipe->ring.read &&
 	    (pipe->ring.used == 0 ||
-	     (pipe->creatorPid != THREADMGR_KERNEL_PID &&
+	     (pipe->creatorPid != SCE_KERNEL_PROCESS_ID &&
 	      SceSysrootForDriver_CAE820B2(pipe->creatorPid, &version) >= 0 &&
 	      version < SDK_VERSION_MSG_PIPE_EMPTY)))
 		return MSG_PIPE_EVENT_SENT;
@@ -662,7 +662,7 @@ int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 	sceKernelSpinlockLowLock(&pipe->event.lock);
 	locked = 1;
 	wait = timeout;
-	if (timeout != NULL && pid != THREADMGR_KERNEL_PID) {
+	if (timeout != NULL && pid != SCE_KERNEL_PROCESS_ID) {
 		ret = sceKernelCopyFromUserProc(pid, &timeoutValue, timeout, sizeof(timeoutValue));
 		if (ret < 0) {
 			wake = 0;
@@ -686,7 +686,7 @@ int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 		remaining = state->remaining;
 		index = state->index;
 		offset = state->offset;
-	} else if (!(mode & MSG_PIPE_MODE_KERNEL_VECTOR) && pid != THREADMGR_KERNEL_PID) {
+	} else if (!(mode & MSG_PIPE_MODE_KERNEL_VECTOR) && pid != SCE_KERNEL_PROCESS_ID) {
 		for (i = 0; i < count; i++) {
 			ret = sceKernelCopyFromUserProc(pid, &buffer, &vector[i], sizeof(buffer));
 			if (ret < 0) {
@@ -739,7 +739,7 @@ int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 		wake = 0;
 		ret = 0;
 		if (result != NULL) {
-			if (pid == THREADMGR_KERNEL_PID) {
+			if (pid == SCE_KERNEL_PROCESS_ID) {
 				*result = 0;
 			} else {
 				ret = sceKernelCopyToUserProc(pid, result, &remaining, sizeof(remaining));
@@ -886,7 +886,7 @@ ring:
 decided:
 		if (result != NULL) {
 			moved = total - remaining;
-			if (pid == THREADMGR_KERNEL_PID) {
+			if (pid == SCE_KERNEL_PROCESS_ID) {
 				*result = moved;
 			} else {
 				ret = sceKernelCopyToUserProc(pid, result, &moved, sizeof(moved));
@@ -1016,7 +1016,7 @@ int recvMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 	sceKernelSpinlockLowLock(&pipe->event.lock);
 	locked = 1;
 	wait = timeout;
-	if (timeout != NULL && pid != THREADMGR_KERNEL_PID) {
+	if (timeout != NULL && pid != SCE_KERNEL_PROCESS_ID) {
 		ret = sceKernelCopyFromUserProc(pid, &timeoutValue, timeout, sizeof(timeoutValue));
 		if (ret < 0) {
 			wake = 0;
@@ -1040,7 +1040,7 @@ int recvMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 		remaining = state->remaining;
 		index = state->index;
 		offset = state->offset;
-	} else if (!(mode & MSG_PIPE_MODE_KERNEL_VECTOR) && pid != THREADMGR_KERNEL_PID) {
+	} else if (!(mode & MSG_PIPE_MODE_KERNEL_VECTOR) && pid != SCE_KERNEL_PROCESS_ID) {
 		for (i = 0; i < count; i++) {
 			ret = sceKernelCopyFromUserProc(pid, &buffer, &vector[i], sizeof(buffer));
 			if (ret < 0) {
@@ -1093,7 +1093,7 @@ int recvMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 		wake = 0;
 		ret = 0;
 		if (result != NULL) {
-			if (pid == THREADMGR_KERNEL_PID) {
+			if (pid == SCE_KERNEL_PROCESS_ID) {
 				*result = 0;
 			} else {
 				ret = sceKernelCopyToUserProc(pid, result, &remaining, sizeof(remaining));
@@ -1255,7 +1255,7 @@ restore:
 decided:
 		if (result != NULL) {
 			moved = total - remaining;
-			if (pid == THREADMGR_KERNEL_PID) {
+			if (pid == SCE_KERNEL_PROCESS_ID) {
 				*result = moved;
 			} else {
 				ret = sceKernelCopyToUserProc(pid, result, &moved, sizeof(moved));
@@ -1602,7 +1602,7 @@ static inline __attribute__((always_inline)) int recvMsgPipeVectorAsync(Threadmg
 	request->mode = call->mode;
 	request->result = call->result;
 	request->timeout = call->timeout;
-	if (request->pid == THREADMGR_KERNEL_PID) {
+	if (request->pid == SCE_KERNEL_PROCESS_ID) {
 		version = SDK_VERSION_KERNEL;
 		request->result = NULL;
 	} else if (SceSysrootForDriver_CAE820B2(request->pid, &version) < 0) {
@@ -1753,7 +1753,7 @@ static inline __attribute__((always_inline)) int sendMsgPipeVectorAsync(Threadmg
 	request->mode = call->mode;
 	request->result = call->result;
 	request->timeout = call->timeout;
-	if (request->pid == THREADMGR_KERNEL_PID) {
+	if (request->pid == SCE_KERNEL_PROCESS_ID) {
 		version = SDK_VERSION_KERNEL;
 		request->result = NULL;
 	} else if (SceSysrootForDriver_CAE820B2(request->pid, &version) < 0) {
@@ -2238,7 +2238,7 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 att
 		   !SceSblACMgrForKernel_570D6AD3(0)) {
 		blockOpt.attr = 0x70000000;
 		blockType = 0x1020d006;
-		pid = THREADMGR_KERNEL_PID;
+		pid = SCE_KERNEL_PROCESS_ID;
 	} else {
 		if (memType == MSG_PIPE_MEMORY_KERNEL && ThreadmgrInSyscall())
 			SCE_DBG_ASSERT_FAIL(1181);
@@ -2293,7 +2293,7 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 att
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
 		memory = process->msgPipeMemory + size;
 		if (memory > MSG_PIPE_MEMORY_MAX) {
-			if (thread->processId == THREADMGR_KERNEL_PID) {
+			if (thread->processId == SCE_KERNEL_PROCESS_ID) {
 				version = SDK_VERSION_KERNEL;
 				goto tooMuch;
 			}
@@ -2353,7 +2353,7 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 att
 		}
 		goto unlockOwner;
 	}
-	pipe->event.ownerPid = ThreadmgrInSyscall() ? thread->processId : THREADMGR_KERNEL_PID;
+	pipe->event.ownerPid = ThreadmgrInSyscall() ? thread->processId : SCE_KERNEL_PROCESS_ID;
 	pipe->processLink.next = &owner->msgPipes;
 	pipe->processLink.prev = owner->msgPipes.prev;
 	owner->msgPipes.prev = &pipe->processLink;
@@ -2698,7 +2698,7 @@ int sceKernelTrySendMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVector
 		ret = SCE_KERNEL_ERROR_ILLEGAL_MODE;
 		goto report;
 	}
-	if (sceKernelGetProcessId() == THREADMGR_KERNEL_PID) {
+	if (sceKernelGetProcessId() == SCE_KERNEL_PROCESS_ID) {
 		for (i = 0; i < count; i++) {
 			if (vector[i].pBase == NULL) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
@@ -2862,7 +2862,7 @@ send:
 done:
 	if (result != NULL) {
 		moved = total - remaining;
-		if (sceKernelGetProcessId() == THREADMGR_KERNEL_PID) {
+		if (sceKernelGetProcessId() == SCE_KERNEL_PROCESS_ID) {
 			*result = moved;
 		} else {
 			ret = sceKernelCopyToUser(result, &moved, sizeof(moved));
@@ -2884,7 +2884,7 @@ unlockReport:
 report:
 	/* older SDKs' callers get no event */
 	if (currentThreadContext() == NULL ||
-	    currentThreadContext()->processId == THREADMGR_KERNEL_PID) {
+	    currentThreadContext()->processId == SCE_KERNEL_PROCESS_ID) {
 		version = SDK_VERSION_KERNEL;
 	} else if (SceSysrootForDriver_CAE820B2(currentThreadContext()->processId, &version) < 0 ||
 		   version < SDK_VERSION_TRY_EVENT) {
@@ -2977,7 +2977,7 @@ int sceKernelTryReceiveMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVec
 		ret = SCE_KERNEL_ERROR_ILLEGAL_MODE;
 		goto report;
 	}
-	if (sceKernelGetProcessId() == THREADMGR_KERNEL_PID) {
+	if (sceKernelGetProcessId() == SCE_KERNEL_PROCESS_ID) {
 		for (i = 0; i < count; i++) {
 			if (vector[i].pBase == NULL) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
@@ -3152,7 +3152,7 @@ next:
 	}
 	if (result != NULL) {
 		moved = total - remaining;
-		if (sceKernelGetProcessId() == THREADMGR_KERNEL_PID) {
+		if (sceKernelGetProcessId() == SCE_KERNEL_PROCESS_ID) {
 			*result = moved;
 		} else {
 			ret = sceKernelCopyToUser(result, &moved, sizeof(moved));
@@ -3175,7 +3175,7 @@ report:
 	updateMsgPipeDataPattern(pipe);
 	/* older SDKs' callers get no event */
 	if (currentThreadContext() != NULL &&
-	    currentThreadContext()->processId != THREADMGR_KERNEL_PID &&
+	    currentThreadContext()->processId != SCE_KERNEL_PROCESS_ID &&
 	    (SceSysrootForDriver_CAE820B2(currentThreadContext()->processId, &version) < 0 ||
 	     version < SDK_VERSION_TRY_EVENT))
 		goto unlock;

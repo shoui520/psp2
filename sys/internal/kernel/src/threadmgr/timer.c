@@ -392,7 +392,7 @@ static int uidTimer_Destructor(void *object)
 #endif
 	pid = uidTimer->base.event.ownerPid;
 	if (sceGUIDReferObjectWithClass(pid, PROCESS_CLASS(), (SceObjectBase **)&process) >= 0) {
-		if (process->pid != THREADMGR_KERNEL_PID) {
+		if (process->pid != SCE_KERNEL_PROCESS_ID) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (uidTimer->base.event.attr & SCE_KERNEL_ATTR_OPENABLE)
 				process->uidOpenableCount--;
@@ -526,11 +526,11 @@ static SceUID setAlarmWithName(const char *name, SceUInt64 delay, ThreadmgrAlarm
 				   (SceObjectBase **)&alarm);
 	if (uid >= 0) {
 		sceKernelSpinlockLowUnlock(&alarm->base.event.lock);
-		alarm->base.event.ownerPid = THREADMGR_KERNEL_PID;
+		alarm->base.event.ownerPid = SCE_KERNEL_PROCESS_ID;
 		alarm->base.timer.deleted = 0;
 		alarm->base.timer.uid = uid;
 		alarm->base.timer.expiry = SceSysrootForKernel_E20F6FC8() + delay;
-		alarm->base.timer.pid = thread == NULL ? THREADMGR_KERNEL_PID : thread->processId;
+		alarm->base.timer.pid = thread == NULL ? SCE_KERNEL_PROCESS_ID : thread->processId;
 		alarm->base.timer.process = process;
 		alarm->handler = handler;
 		alarm->arg = arg;
@@ -881,7 +881,7 @@ int uidDelay_AllocObject(const uint64_t *wakeup, uintptr_t callback)
 
 	now = SceSysrootForKernel_E20F6FC8() - process->time;
 	if (*wakeup <= now) {
-		if (thread->processId == THREADMGR_KERNEL_PID)
+		if (thread->processId == SCE_KERNEL_PROCESS_ID)
 			return SCE_KERNEL_ERROR_WAIT_TIMEOUT;
 		if (SceSysrootForDriver_CAE820B2(thread->processId, &version) < 0)
 			version = 0;
@@ -902,7 +902,7 @@ int uidDelay_AllocObject(const uint64_t *wakeup, uintptr_t callback)
 				"*** error: uidDelay_AllocObject() -> sceGUIDKernelCreate()=0x%08X\n", uid);
 		} else {
 			sceKernelSpinlockLowUnlock(&delay->base.event.lock);
-			delay->base.event.ownerPid = THREADMGR_KERNEL_PID;
+			delay->base.event.ownerPid = SCE_KERNEL_PROCESS_ID;
 			ret = sceGUIDGetEntry(uid, &delay->base.event.uidEntry);
 			if (ret < 0) {
 				SCE_DBG_PRINTF(0, 3871,
@@ -958,7 +958,7 @@ void cancelDelayTimer(SceUID delayId, struct ThreadCB *thread)
 		thread->remainingTimeHigh = 0;
 		if (timeout != NULL) {
 			if (thread->waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE &&
-			    thread->timeoutProcessId != THREADMGR_KERNEL_PID) {
+			    thread->timeoutProcessId != SCE_KERNEL_PROCESS_ID) {
 				ret = sceKernelCopyToUserProc(thread->timeoutProcessId, timeout,
 							       &remaining, sizeof(remaining));
 				if (ret < 0)
@@ -1193,7 +1193,7 @@ SceUID sceKernelCreateTimer(const char *name, SceUInt32 attr,
 	syscall = ThreadmgrInSyscall();
 	process = thread->process;
 	uidTimer->base.timer.process = process;
-	uidTimer->base.event.ownerPid = syscall ? thread->processId : THREADMGR_KERNEL_PID;
+	uidTimer->base.event.ownerPid = syscall ? thread->processId : SCE_KERNEL_PROCESS_ID;
 	uidTimer->base.timer.uid = uid;
 	uidTimer->base.timer.pid = thread->processId;
 	uidTimer->base.timer.deleted = 0;
@@ -2188,7 +2188,7 @@ static inline __attribute__((always_inline)) int uidDelay_CreateCache(int target
 			return uid;
 		}
 		sceKernelSpinlockLowUnlock(&delay->base.event.lock);
-		delay->base.event.ownerPid = THREADMGR_KERNEL_PID;
+		delay->base.event.ownerPid = SCE_KERNEL_PROCESS_ID;
 		ret = sceGUIDGetEntry(uid, &delay->base.event.uidEntry);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0, 3766,

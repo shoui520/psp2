@@ -105,7 +105,7 @@ void acquireMutex(ThreadmgrMutex *mutex, struct ThreadCB *thread, int count)
 	oldPriority = thread->currentPriority;
 	if (oldPriority <= priority)
 		return;
-	if (thread->processId == THREADMGR_KERNEL_PID)
+	if (thread->processId == SCE_KERNEL_PROCESS_ID)
 		sdkVersion = SDK_VERSION_KERNEL;
 	else if (SceSysrootForDriver_CAE820B2(thread->processId, &sdkVersion) < 0)
 		sdkVersion = 0;
@@ -179,7 +179,7 @@ int findNextCeilingPriority(struct ThreadCB *thread)
 
 	SCE_DBG_ASSERT_CHECK(thread->lock != 0, 284);
 	SCE_DBG_ASSERT_CHECK_FUNC(thread->lock != 0, 234, "findMutexNextBoostPriority");
-	if (thread->processId == THREADMGR_KERNEL_PID)
+	if (thread->processId == SCE_KERNEL_PROCESS_ID)
 		sdkVersion = SDK_VERSION_KERNEL;
 	else if (SceSysrootForDriver_CAE820B2(thread->processId, &sdkVersion) < 0)
 		sdkVersion = 0;
@@ -266,7 +266,7 @@ retry:
 	pid = mutex->ownerPid;
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
-		if (process->pid != THREADMGR_KERNEL_PID) {
+		if (process->pid != SCE_KERNEL_PROCESS_ID) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (mutex->attr & SCE_KERNEL_ATTR_OPENABLE)
 				process->uidOpenableCount--;
@@ -601,7 +601,7 @@ create:
 			goto unaccount;
 		goto resume;
 	}
-	mutex->ownerPid = (userRo & USERRO_IN_SYSCALL) ? thread->processId : THREADMGR_KERNEL_PID;
+	mutex->ownerPid = (userRo & USERRO_IN_SYSCALL) ? thread->processId : SCE_KERNEL_PROCESS_ID;
 	mutex->core.initCount = initCount;
 	mutex->core.lockCount = initCount;
 	mutex->attr = attr;

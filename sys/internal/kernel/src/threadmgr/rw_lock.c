@@ -177,7 +177,7 @@ static int uidRWLock_Destructor(void *object)
 	pid = rwLock->ownerPid;
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
-		if (process->pid != THREADMGR_KERNEL_PID) {
+		if (process->pid != SCE_KERNEL_PROCESS_ID) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (rwLock->attr & SCE_KERNEL_ATTR_OPENABLE)
 				process->uidOpenableCount--;
@@ -585,7 +585,7 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 		}
 	} else {
 		rwLock->core.readWaiters = 0;
-		rwLock->ownerPid = ThreadmgrInSyscall() ? thread->processId : THREADMGR_KERNEL_PID;
+		rwLock->ownerPid = ThreadmgrInSyscall() ? thread->processId : SCE_KERNEL_PROCESS_ID;
 		rwLock->attr = attr;
 		rwLock->core.option = option;
 		rwLock->core.lockCount = 0;

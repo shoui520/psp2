@@ -19,6 +19,7 @@
 
 #include <kernel/error.h>
 #include <iofilemgr/iofilemgr.h>
+#include <sysmem/uid_guid.h>
 
 /* PFS's own errors; vfs operations turn them into errno codes (pfsErrorToErrno) */
 #define SCE_PFS_ERROR_BAD_MODE		0x80142109	/* name unknown */
@@ -758,7 +759,6 @@ int pfsLruGet(ScePfsLru *lru, ScePfsLruEntry **out, ScePfsLowerFile *lf, SceUInt
 	      SceOff base, SceOff offset);
 int pfsLruFlush(ScePfsLru *lru, ScePfsLowerFile *lf, int invalidate);
 
-#define PFS_KERNEL_PID		0x10005		/* name unknown */
 #define PFS_OPEN_KERNEL		0x10000000	/* name unknown */
 
 #define SCE_PFS_ERROR_HASH		0x80142002	/* name unknown */

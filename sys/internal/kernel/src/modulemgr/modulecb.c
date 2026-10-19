@@ -16,7 +16,7 @@ int ModuleObjNew(SceUID pid, SceUInt32 flags, SceModuleObject **out)
 	SceUID uid;
 	int ret;
 
-	if (pid == KERNEL_PID) {
+	if (pid == SCE_KERNEL_PROCESS_ID) {
 		optp = NULL;
 	} else {
 		opt.flags = UID_CREATE_OPT_PROCESS_HEAP;
@@ -37,13 +37,13 @@ int ModuleObjNew(SceUID pid, SceUInt32 flags, SceModuleObject **out)
 	uid = sceGUIDKernelCreateWithOpt(g_moduleClass, "SceModuleMgrNewModule", optp, (SceObjectBase **)&obj);
 	if (uid < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 78, "UIDcreate failed 0x%08x\n", uid);
-		if (pid != KERNEL_PID)
+		if (pid != SCE_KERNEL_PROCESS_ID)
 			SceProcessmgrForKernel_F160B4D8(pid, opt.heapKind);
 		return uid;
 	}
 
 	obj->cb.pid = pid;
-	obj->cb.sdkVersion = pid == KERNEL_PID ? 0xffffffff : MODULE_OBJECT_VERSION;
+	obj->cb.sdkVersion = pid == SCE_KERNEL_PROCESS_ID ? 0xffffffff : MODULE_OBJECT_VERSION;
 	obj->cb.modid = uid;
 	if (out != NULL)
 		*out = obj;
@@ -231,7 +231,7 @@ void ModuleCBDumpLoadAddress(SceModuleCB *cb)
 
 void ModuleCBShowStartMessage(SceModuleCB *cb, int noResident, SceUInt32 usec)
 {
-	if (!SceSblACMgrForKernel_BBA13D9C() && cb->pid != KERNEL_PID)
+	if (!SceSblACMgrForKernel_BBA13D9C() && cb->pid != SCE_KERNEL_PROCESS_ID)
 		return;
 	if (noResident < 1)
 		SCE_PRINTF_WITH_INFO(0, 354, "[%-27s]:Starting...  OK   %8uusec\n", cb->name, usec);

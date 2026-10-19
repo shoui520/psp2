@@ -17,6 +17,7 @@
 
 #include "private_errors.h"
 #include <sysmem/sysroot.h>
+#include <sysmem/uid_guid.h>
 
 /* a PUID attribute: the PUID came from an open, not a create */
 #define PUID_ATTR_OPENED		0x00080000
@@ -64,7 +65,6 @@
 #define SDK_VERSION_SIGNAL_TO_STRICT	0x02000000
 
 /* the UIDs of a process */
-#define THREADMGR_KERNEL_PID		0x10005
 #define UID_MAX_PER_PROCESS		0x800
 #define UID_OPENABLE_MAX_PER_PROCESS	0x100	/* SCE_KERNEL_ATTR_OPENABLE objects */
 #define UID_ATTR_OPENABLE		0x0000c000	/* PLACEHOLDER: name; openable UIDs */

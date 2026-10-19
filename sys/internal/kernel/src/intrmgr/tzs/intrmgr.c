@@ -9,6 +9,7 @@
 #include <sysmem/pl310_regs.h>
 #include <threadmgr/threadcb.h>
 #include <sysmem/cp15.h>
+#include <sysmem/uid_guid.h>
 
 #define INTR_MONCALL_SET_SHARED_MEMORY	0x101	/* SCE_MONCALL_SET_SHARED_MEMORY */
 #define INTR_MONCALL_UNMAP_KBL		0x103	/* SCE_MONCALL_UNMAP_KBL */
@@ -19,9 +20,6 @@
 #define MONCALL_FIRST			0x100
 #define MONCALL_LAST			0x500
 #define MONCALL_TABLE_SIZE		0x1000
-
-/* the kernel's boot area, which the kernel no longer needs once it runs */
-#define KBL_AREA_ADDRESS_SPACE		0x10007
 
 IntrState g_intrState;
 volatile GicCpuInterface *volatile g_intrCpuInterface;
@@ -53,13 +51,13 @@ void SetPriority(unsigned int intrCode, unsigned char priority)
 
 static int UnmapKblArea(int arg0, int arg1, int arg2, int arg3)
 {
-	if (sceKernelAddressSpaceUnmap(KBL_AREA_ADDRESS_SPACE, 0xf7, 0xc,
+	if (sceKernelAddressSpaceUnmap(SCE_KERNEL_ADDRESS_SPACE_ID, 0xf7, 0xc,
 					     (void *)0x40000000, 0x100000) < 0)
 		SCE_DBG_ASSERT_FAIL(1673);
-	if (sceKernelAddressSpaceUnmap(KBL_AREA_ADDRESS_SPACE, 0xf7, 0xc,
+	if (sceKernelAddressSpaceUnmap(SCE_KERNEL_ADDRESS_SPACE_ID, 0xf7, 0xc,
 					     (void *)0x50000000, 0x1000000) < 0)
 		SCE_DBG_ASSERT_FAIL(1684);
-	if (sceKernelAddressSpaceUnmap(KBL_AREA_ADDRESS_SPACE, 0xf7, 0xc,
+	if (sceKernelAddressSpaceUnmap(SCE_KERNEL_ADDRESS_SPACE_ID, 0xf7, 0xc,
 					     (void *)0x51000000, 0x1000000) < 0)
 		SCE_DBG_ASSERT_FAIL(1694);
 	return 0;

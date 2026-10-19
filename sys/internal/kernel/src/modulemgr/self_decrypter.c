@@ -381,7 +381,7 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 	if (filesz == 0)
 		return 0;
 	if (reader->type == 1) {
-		if (reader->fd == BOOTIMAGE_FD && reader->pid == KERNEL_PID) {
+		if (reader->fd == BOOTIMAGE_FD && reader->pid == SCE_KERNEL_PROCESS_ID) {
 			if (sceLoadcoreIoReadFrom(dst, filesz,
 						  SelfReaderGetSegmentOffset(reader, index)) != filesz)
 				return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;

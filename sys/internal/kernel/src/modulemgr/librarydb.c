@@ -124,7 +124,7 @@ int LibraryDBUsesPUID(SceUID pid)
 static SceUID GetLibGUIDByLibUID(SceUID pid, SceUID uid)
 {
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 149);
-	if (pid != KERNEL_PID && LibraryDBUsesPUID(pid) == 1)
+	if (pid != SCE_KERNEL_PROCESS_ID && LibraryDBUsesPUID(pid) == 1)
 		return SceSysmemForDriver_45D22597(pid, uid);
 	return uid;
 }
@@ -148,7 +148,7 @@ SceLibraryObject *LibraryDBReferLibrary(SceUID pid, SceUID uid)
 static SceUID GetLibUIDByLibEntCB(SceUID pid, const SceUID *guid, const SceUID *puid)
 {
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 190);
-	if (pid != KERNEL_PID && LibraryDBUsesPUID(pid) == 1)
+	if (pid != SCE_KERNEL_PROCESS_ID && LibraryDBUsesPUID(pid) == 1)
 		return *puid;
 	return *guid;
 }
@@ -210,7 +210,7 @@ LibraryDB *LibraryDBInitializeAddr2ModuleTable(SceUID pid)
 	db->pid = pid;
 
 	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
-		SCE_DBG_ASSERT(pid != KERNEL_PID, 405);
+		SCE_DBG_ASSERT(pid != SCE_KERNEL_PROCESS_ID, 405);
 		tbl = sceKernelAllocRemoteToolHeap(pid, sizeof(*tbl));
 		if (tbl != NULL) {
 			memset(tbl, 0, sizeof(*tbl));
@@ -365,7 +365,7 @@ void LibraryDBReleaseModule(SceModuleCB *cb)
 		return;
 	}
 
-	if (cb->pid != KERNEL_PID) {
+	if (cb->pid != SCE_KERNEL_PROCESS_ID) {
 		if ((cb->flags & MODULE_FLAG_SHARED_MASK) != 0) {
 			SharedModuleRelease(cb->shared);
 		} else if ((cb->flags & MODULE_FLAG_SHARED_ORIGINAL) != 0) {
@@ -518,7 +518,7 @@ int LibraryDBRegisterLib(SceUID pid, LibEntCB *ent)
 
 	usePuid = 0;
 	optp = NULL;
-	if (pid != KERNEL_PID && LibraryDBUsesPUID(pid)) {
+	if (pid != SCE_KERNEL_PROCESS_ID && LibraryDBUsesPUID(pid)) {
 		opt.flags = UID_CREATE_OPT_PROCESS_HEAP;
 		opt.object = NULL;
 		opt.heapGuid = 0;
@@ -625,12 +625,13 @@ LibEntCB *LibraryDBFindLib(LibStubCB *stub)
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 1019);
 	version = stub->imports->version;
 	libnid = stub->imports->libnid;
-	for (target = pid;; target = KERNEL_PID) {
+	for (target = pid;; target = SCE_KERNEL_PROCESS_ID) {
 		lib = findLib(target, libnid, stub->imports->libname);
 		if (lib != NULL && lib->exports->version >= version &&
-		    (pid != KERNEL_PID || (lib->exports->attr & LIBRARY_ATTR_SYSCALL) == 0))
+		    (pid != SCE_KERNEL_PROCESS_ID ||
+		     (lib->exports->attr & LIBRARY_ATTR_SYSCALL) == 0))
 			return lib;
-		if (target == KERNEL_PID)
+		if (target == SCE_KERNEL_PROCESS_ID)
 			return NULL;
 	}
 }
@@ -642,7 +643,7 @@ LibEntCB *LibraryDBFindSyscallLib(const char *name)
 	LibraryDB *db;
 	int intr;
 
-	db = LibraryDBLock(KERNEL_PID, &intr);
+	db = LibraryDBLock(SCE_KERNEL_PROCESS_ID, &intr);
 	if (db == NULL) {
 		SCE_DBG_ASSERT_LEVEL(0, 0, 1057);
 		return NULL;
@@ -732,7 +733,7 @@ int LibraryDBGetModuleInfoById(SceUID pid, SceUID modid, SceKernelModuleInfo *in
 		ret = SCE_KERNEL_ERROR_LIBRARYDB_NO_MOD;
 		goto release;
 	}
-	info->modid = pid == KERNEL_PID ? modid : cb->puid;
+	info->modid = pid == SCE_KERNEL_PROCESS_ID ? modid : cb->puid;
 	info->modattr = cb->attr;
 	info->modver[0] = cb->version[0];
 	info->modver[1] = cb->version[1];
@@ -821,7 +822,7 @@ int sceKernelGetLostLibraryInfo(SceUID pid, SceUID modid, SceNID libnid,
 	if (db == NULL)
 		return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
 	for (stub = db->lostClients; stub != NULL; stub = stub->next) {
-		id = pid == KERNEL_PID ? stub->cb->modid : stub->cb->puid;
+		id = pid == SCE_KERNEL_PROCESS_ID ? stub->cb->modid : stub->cb->puid;
 		if (stub->imports->libnid != libnid || id != modid)
 			continue;
 		info->libname[0xff] = 0;
@@ -926,7 +927,7 @@ SceUID LibraryDBGetModuleIdByAddr(SceUID pid, SceUInt32 addr)
 	if (pid == 0)
 		pid = sceKernelGetProcessId();
 	modid = LibraryDBGetModuleUIDByAddr(pid, addr);
-	if (pid != KERNEL_PID && modid > 0) {
+	if (pid != SCE_KERNEL_PROCESS_ID && modid > 0) {
 		obj = ModulemgrReferModule(modid);
 		if (obj == NULL)
 			return SCE_KERNEL_ERROR_MODULEMGR_NO_MOD;
@@ -966,7 +967,7 @@ SceUID sceKernelGetModuleIdByPid(SceUID pid)
 	int ret, intr;
 
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 2031);
-	if (pid == KERNEL_PID || (db = LibraryDBLock(pid, &intr)) == NULL)
+	if (pid == SCE_KERNEL_PROCESS_ID || (db = LibraryDBLock(pid, &intr)) == NULL)
 		return SCE_KERNEL_ERROR_LIBRARYDB_NO_MOD;
 	obj = ModulemgrReferModule(db->mainModid);
 	if (obj == NULL) {
@@ -1174,7 +1175,7 @@ int sceKernelGetLibEntCBListForSyslibtrace(LibEntCB **list, SceSize *num)
 	int intr;
 
 	SCE_DBG_ASSERT(list != NULL, 2233);
-	db = LibraryDBLock(KERNEL_PID, &intr);
+	db = LibraryDBLock(SCE_KERNEL_PROCESS_ID, &intr);
 	if (db == NULL)
 		return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
 	n = 0;
@@ -1201,7 +1202,7 @@ static inline int getNumOfLostLibrariesInModule(SceUID pid, SceUID modid)
 		return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
 	n = 0;
 	for (stub = db->lostClients; stub != NULL; stub = stub->next) {
-		id = pid == KERNEL_PID ? stub->cb->modid : stub->cb->puid;
+		id = pid == SCE_KERNEL_PROCESS_ID ? stub->cb->modid : stub->cb->puid;
 		if (id == modid)
 			n++;
 	}
@@ -1223,7 +1224,7 @@ static inline int getLostLibrariesInModule(SceUID pid, SceUID modid,
 		return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
 	n = 0;
 	for (stub = db->lostClients; n < *num && stub != NULL; stub = stub->next) {
-		id = pid == KERNEL_PID ? stub->cb->modid : stub->cb->puid;
+		id = pid == SCE_KERNEL_PROCESS_ID ? stub->cb->modid : stub->cb->puid;
 		if (id == modid) {
 			list[n].libnid = stub->imports->libnid;
 			list[n].modid = modid;
@@ -1264,7 +1265,7 @@ int sceKernelGetLostLibraryList(SceUID pid, SceKernelLostLibraryEntry *list, Sce
 	n = 0;
 	for (stub = db->lostClients; n < *num && stub != NULL; stub = stub->next) {
 		list[n].libnid = stub->imports->libnid;
-		list[n].modid = pid == KERNEL_PID ? stub->cb->modid : stub->cb->puid;
+		list[n].modid = pid == SCE_KERNEL_PROCESS_ID ? stub->cb->modid : stub->cb->puid;
 		n++;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
@@ -1313,7 +1314,7 @@ static inline int getNumOfModulesWithType(SceUID pid, SceUInt32 flags)
 		return 0;
 	n = 0;
 	for (cb = db->modules; cb != NULL; cb = cb->next) {
-		if (pid != KERNEL_PID) {
+		if (pid != SCE_KERNEL_PROCESS_ID) {
 			if ((flags & 1) != 0 && (cb->flags & MODULE_FLAG_1000) == 0)
 				n++;
 			if ((flags & 0x80) == 0 || (cb->flags & MODULE_FLAG_1000) == 0)
@@ -1348,7 +1349,7 @@ static inline int getModuleList(SceUID pid, SceUInt32 flags, SceUInt32 type, Sce
 		return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
 	n = 0;
 	for (cb = db->modules; n < *num && cb != NULL; cb = cb->next) {
-		if (pid != KERNEL_PID) {
+		if (pid != SCE_KERNEL_PROCESS_ID) {
 			if ((flags & 1) != 0 && (cb->flags & MODULE_FLAG_1000) == 0)
 				n = putModuleId(list, n, cb, type);
 			if ((flags & 0x80) == 0 || (cb->flags & MODULE_FLAG_1000) == 0)
@@ -1375,10 +1376,10 @@ int SceModulemgrForDriver_1D9E0F7E(SceUInt32 addr, SceKernelModuleInfo *info)
 {
 	SceUID modid;
 
-	modid = LibraryDBGetModuleIdByAddr(KERNEL_PID, addr);
+	modid = LibraryDBGetModuleIdByAddr(SCE_KERNEL_PROCESS_ID, addr);
 	if (modid < 0)
 		return modid;
-	return LibraryDBGetModuleInfoById(KERNEL_PID, modid, info);
+	return LibraryDBGetModuleInfoById(SCE_KERNEL_PROCESS_ID, modid, info);
 }
 
 int SceModulemgrForKernel_DAA90093(SceUID pid, SceUID modid, SceKernelModuleInfo *info)
@@ -1417,7 +1418,7 @@ int sceKernelGetModuleInfoForDebugger(SceUID pid, SceKernelModuleInfoForDebugger
 		return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
 	cb = db->modules;
 	for (n = 0; n < *num && cb != NULL; n++, cb = cb->next) {
-		info->modid = pid == KERNEL_PID ? cb->modid : cb->puid;
+		info->modid = pid == SCE_KERNEL_PROCESS_ID ? cb->modid : cb->puid;
 		info->sdkVersion = cb->sdkVersion;
 		info->version = cb->version[0] | cb->version[1] << 8;
 		info->reserved0 = 0;
@@ -1487,7 +1488,7 @@ int sceKernelGetExportedLibraryListInModule(SceUID pid, SceUID modid, SceUID *li
 		n = 0;
 		for (lib = db->libList; lib != NULL; lib = lib->next) {
 			for (ver = lib; ver != NULL; ver = ver->older) {
-				id = pid == KERNEL_PID ? ver->cb->modid : ver->cb->puid;
+				id = pid == SCE_KERNEL_PROCESS_ID ? ver->cb->modid : ver->cb->puid;
 				if (id == modid)
 					n++;
 			}
@@ -1501,7 +1502,7 @@ int sceKernelGetExportedLibraryListInModule(SceUID pid, SceUID modid, SceUID *li
 	n = 0;
 	for (lib = db->libList; n < *num && lib != NULL; lib = lib->next) {
 		for (ver = lib; n < *num && ver != NULL; ver = ver->older) {
-			id = pid == KERNEL_PID ? ver->cb->modid : ver->cb->puid;
+			id = pid == SCE_KERNEL_PROCESS_ID ? ver->cb->modid : ver->cb->puid;
 			if (id == modid)
 				list[n++] = GetLibUIDByLibEntCB(pid, &ver->guid, &ver->puid);
 		}
@@ -1599,7 +1600,7 @@ int sceKernelGetLibraryInfoForDebugger(SceUID pid, SceUID libid,
 		info->nvar = exports->nvar;
 		info->ntls = 0;
 		info->clientCount = ent->clientCount;
-		info->modid = pid == KERNEL_PID ? ent->cb->modid : ent->cb->puid;
+		info->modid = pid == SCE_KERNEL_PROCESS_ID ? ent->cb->modid : ent->cb->puid;
 		info->libname[0xff] = 0;
 		strncpy(info->libname, ent->exports->libname, 0xff);
 		ModulemgrReleaseModule(obj->modid);

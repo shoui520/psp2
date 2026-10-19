@@ -76,7 +76,7 @@ int BacktraceFindExidx(SceUID pid, SceUInt32 addr, SceUInt32 *out, SceUInt32 fla
 	addr &= ~1;
 	hi = n - 1;
 	e = &copy[hi];
-	base = pid == KERNEL_PID ? (SceUInt32)e : top + hi * 8;
+	base = pid == SCE_KERNEL_PROCESS_ID ? (SceUInt32)e : top + hi * 8;
 	if (addr < ((prel31(e->fn) + base) & ~1)) {
 		lo = 0;
 		mid = hi >> 1;
@@ -88,7 +88,7 @@ int BacktraceFindExidx(SceUID pid, SceUInt32 addr, SceUInt32 *out, SceUInt32 fla
 			e = &copy[mid];
 			fn = prel31(e[0].fn);
 			fnNext = prel31(e[1].fn);
-			if (pid == KERNEL_PID) {
+			if (pid == SCE_KERNEL_PROCESS_ID) {
 				base = (SceUInt32)&e[0];
 				baseNext = (SceUInt32)&e[1];
 			} else {
@@ -115,7 +115,7 @@ int BacktraceFindExidx(SceUID pid, SceUInt32 addr, SceUInt32 *out, SceUInt32 fla
 	out[0] = w;
 	if ((SceInt32)w < 0 || w == EXIDX_CANTUNWIND) {
 		out[1] = -1;
-	} else if (pid == KERNEL_PID) {
+	} else if (pid == SCE_KERNEL_PROCESS_ID) {
 		out[1] = prel31(w) + (SceUInt32)&e->insn;
 	} else {
 		out[1] = prel31(w) + top + ((SceUInt32)&e->insn - (SceUInt32)copy);

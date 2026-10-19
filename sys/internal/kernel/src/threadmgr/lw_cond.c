@@ -261,7 +261,8 @@ int __sceKernelCreateLwCond(void *work, const char *name, SceUInt32 attr, SceUID
 			name, &opt, (SceObjectBase **)&cond);
 		ret = uid;
 		if (uid >= 0) {
-			cond->ownerPid = ThreadmgrInSyscall() ? thread->processId : THREADMGR_KERNEL_PID;
+			cond->ownerPid = ThreadmgrInSyscall() ? thread->processId :
+								SCE_KERNEL_PROCESS_ID;
 			cond->attr = attr;
 			cond->option = option;
 			cond->lwMutexId = lwMutexId;
@@ -562,7 +563,7 @@ resume:
 static inline SceUInt32 LwCondCallerSdkVersion(struct ThreadCB *thread,
 					       SceUInt32 *version)
 {
-	if (thread->processId == THREADMGR_KERNEL_PID)
+	if (thread->processId == SCE_KERNEL_PROCESS_ID)
 		*version = SDK_VERSION_KERNEL;
 	else if (SceSysrootForDriver_CAE820B2(0, version) < 0)
 		*version = SDK_VERSION_SIGNAL_TO_STRICT;

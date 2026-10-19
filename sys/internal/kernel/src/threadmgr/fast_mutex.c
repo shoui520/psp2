@@ -295,7 +295,7 @@ int sceKernelInitializeFastMutex(struct ThreadmgrFastMutex *mutex, const char *n
 				   (SceObjectBase **)&uidMutex);
 	if (ret < 0)
 		goto resume;
-	uidMutex->ownerPid = THREADMGR_KERNEL_PID;
+	uidMutex->ownerPid = SCE_KERNEL_PROCESS_ID;
 	uidMutex->attr = attr;
 	mutex->ceilingPriority = ceiling;
 	mutex->uid = ret;

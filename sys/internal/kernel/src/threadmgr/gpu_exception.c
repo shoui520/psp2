@@ -73,7 +73,7 @@ int threadmgrGpuExceptionHandler(SceUID pid)
 		}
 	}
 	if (SceCpuForDriver_CDA96E81((SceInt32 *)&process->abortRequested, 0, 1) == 0) {
-		if (pid != THREADMGR_KERNEL_PID) {
+		if (pid != SCE_KERNEL_PROCESS_ID) {
 			ret = SceSysrootForKernel_1247A825(pid, PROCESS_DEBUG_SUSPEND_EXCEPTION);
 			if (ret < 0) {
 				SCE_DBG_PRINTF(0xf, 102,

@@ -46,7 +46,7 @@ static inline int ThreadmgrInSyscall(void)
 static inline void ThreadmgrCallerSdkVersion(struct ThreadCB *thread,
 					     SceUInt32 *version)
 {
-	if (thread == NULL || thread->processId == THREADMGR_KERNEL_PID)
+	if (thread == NULL || thread->processId == SCE_KERNEL_PROCESS_ID)
 		*version = SDK_VERSION_KERNEL;
 	else if (SceSysrootForDriver_CAE820B2(thread->processId, version) < 0)
 		*version = 0;

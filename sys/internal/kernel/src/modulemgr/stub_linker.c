@@ -58,7 +58,7 @@ typedef struct StubLinkerInsn {
 /* name unknown */
 int StubLinkerCopyIn(SceUID pid, void *dst, const void *src, SceSize len)
 {
-	if (pid != KERNEL_PID)
+	if (pid != SCE_KERNEL_PROCESS_ID)
 		return sceKernelCopyFromUser(dst, src, len);
 	memcpy(dst, src, len);
 	return 0;
@@ -151,7 +151,7 @@ int apply_reftable(SceModuleCB *cb, const void *reftable, SceUInt32 value, int m
 	if (!ModuleCBIsInReadOnly(cb, (SceUInt32)reftable, REFTABLE_SIZE(hdr)))
 		return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REF_INFO;
 
-	if (pid != KERNEL_PID) {
+	if (pid != SCE_KERNEL_PROCESS_ID) {
 		if (REFTABLE_SIZE(hdr) < sizeof(buf)) {
 			ret = StubLinkerCopyIn(pid, buf, reftable, REFTABLE_SIZE(hdr));
 			if (ret < 0)
@@ -236,7 +236,7 @@ int apply_reftable(SceModuleCB *cb, const void *reftable, SceUInt32 value, int m
 		case R_ARM_PREL31:
 			in.insn = mode != 0 ? 0 : (addend - (SceUInt32)where + value) & 0x7fffffff;
 data:
-			if (pid == KERNEL_PID) {
+			if (pid == SCE_KERNEL_PROCESS_ID) {
 				StubLinkerWriteKernelWord(where, in.insn);
 				ret = 0;
 				continue;
@@ -315,7 +315,7 @@ arm:
 			if (debugger)
 				StubLinkerKeepThumbBkpt(pid, (SceUInt32)where, &in);
 text:
-			if (pid == KERNEL_PID) {
+			if (pid == SCE_KERNEL_PROCESS_ID) {
 				StubLinkerWriteKernelWord(where, in.insn);
 				ret = 0;
 				continue;
@@ -495,7 +495,7 @@ noentry:
 		if (cur[0] != STUB_SUB_R12_PC_8 && cur[0] != STUB_MVN_R0_0 &&
 		    (cur[0] & 0xfff0f000) != STUB_MOVW_R12)
 			return SCE_KERNEL_ERROR_MODULEMGR_INVALID_STUB;
-		if (pid == KERNEL_PID) {
+		if (pid == SCE_KERNEL_PROCESS_ID) {
 			dacr = readDacr();
 			writeDacr(STUBLINKER_DACR_WRITABLE);
 			memcpy((void *)addr, code, size);

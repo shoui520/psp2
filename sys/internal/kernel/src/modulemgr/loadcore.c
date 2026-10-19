@@ -38,7 +38,7 @@ static inline int LoadcoreSwitchProcess(SceUID pid, LoadcoreProcessContext *pc)
 {
 	int ret;
 
-	if (pid == KERNEL_PID)
+	if (pid == SCE_KERNEL_PROCESS_ID)
 		return 0;
 	ret = SceSysmemForDriver_2ECF7944(pid, &pc->ctx);
 	if (ret < 0)
@@ -48,7 +48,7 @@ static inline int LoadcoreSwitchProcess(SceUID pid, LoadcoreProcessContext *pc)
 
 static inline void LoadcoreRestoreProcess(SceUID pid, LoadcoreProcessContext *pc)
 {
-	if (pid != KERNEL_PID)
+	if (pid != SCE_KERNEL_PROCESS_ID)
 		SceSysmemForDriver_2D711589(pc->saved, NULL);
 }
 
@@ -125,19 +125,19 @@ int LoadcoreSetModuleEntry(SceNID nid, void *entry, int type, void *arg)
 			return 0;
 		if (!ModuleCBIsInReadOnly(cb, (SceUInt32)entry, 4))
 			return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
-		if (cb->pid == KERNEL_PID) {
+		if (cb->pid == SCE_KERNEL_PROCESS_ID) {
 			cb->sdkVersion = *(SceUInt32 *)entry;
 			return 0;
 		}
 		ret = sceKernelCopyFromUserProc(cb->pid, &cb->sdkVersion, entry, 4);
 		return ret < 0 ? ret : 0;
 	case NID_MODULE_PROBES_INFO:
-		if (cb->pid == KERNEL_PID)
+		if (cb->pid == SCE_KERNEL_PROCESS_ID)
 			cb->probesInfo = entry;
 		size = 1;
 		break;
 	case NID_MODULE_PROBES:
-		if (cb->pid == KERNEL_PID)
+		if (cb->pid == SCE_KERNEL_PROCESS_ID)
 			cb->probes = entry;
 		size = 1;
 		break;
@@ -172,7 +172,7 @@ int LoadcoreLinkClient(LibEntCB *ent, LibStubCB *stub, const ModulemgrLibraryPat
 	SceUID pid;
 	int ret;
 
-	if (lib->pid != KERNEL_PID && (client->flags & MODULE_FLAG_SHARED_ANY) != 0 &&
+	if (lib->pid != SCE_KERNEL_PROCESS_ID && (client->flags & MODULE_FLAG_SHARED_ANY) != 0 &&
 	    (lib->flags & MODULE_FLAG_SHARED_ANY) == 0) {
 		SCE_DBG_PRINTF_LEVEL(1, lib->flags & MODULE_FLAG_SHARED_ANY, 174,
 			"\nSceModulemgr : cannot export lib to a shared text module\n"
@@ -185,7 +185,7 @@ int LoadcoreLinkClient(LibEntCB *ent, LibStubCB *stub, const ModulemgrLibraryPat
 	pid = client->pid;
 #if FW_DEBUG
 	if (pid != lib->pid &&
-	    (pid == KERNEL_PID || (ent->exports->attr & LIBRARY_ATTR_SYSCALL) == 0)) {
+	    (pid == SCE_KERNEL_PROCESS_ID || (ent->exports->attr & LIBRARY_ATTR_SYSCALL) == 0)) {
 		SCE_DBG_ASSERT_LEVEL(0, 0, 183);
 		pid = stub->cb->pid;
 	}
@@ -215,7 +215,7 @@ int LoadcoreAssignSyscalls(LibEntCB *ent)
 
 	if ((ent->exports->attr & LIBRARY_ATTR_SYSCALL) == 0)
 		return 0;
-	if (ent->cb->pid != KERNEL_PID)
+	if (ent->cb->pid != SCE_KERNEL_PROCESS_ID)
 		return SCE_KERNEL_ERROR_MODULEMGR_INVALID_LIB;
 	if (!SyscallCBIsInitialized() || ent->syscallIndex != 0)
 		return 0;
@@ -234,7 +234,7 @@ static inline void LoadcoreRegisterModulesAfterBoot(void)
 	LibEntCB *ent;
 	int intr;
 
-	db = LibraryDBLock(KERNEL_PID, &intr);
+	db = LibraryDBLock(SCE_KERNEL_PROCESS_ID, &intr);
 	if (db == NULL)
 		SCE_PANIC(528);
 	for (ent = db->libList; ent != NULL; ent = ent->next) {
@@ -557,7 +557,7 @@ int LoadcoreLinkLibraryEntries(SceModuleCB *cb, SceUInt32 flags, const Modulemgr
 			if ((imp->attr & IMPORT_ATTR_WEAK) == 0)
 				SCE_PRINTF_WITH_INFO(0, 371, "# Library not found: [%s, ver=%d]\n",
 						     imp->libname, imp->version);
-			if (cb->pid != KERNEL_PID &&
+			if (cb->pid != SCE_KERNEL_PROCESS_ID &&
 			    strncmp(stub->imports->libname, "SceDTrace", 0x100) == 0)
 				goto lost;
 			goto missing;
@@ -574,7 +574,7 @@ int LoadcoreLinkLibraryEntries(SceModuleCB *cb, SceUInt32 flags, const Modulemgr
 
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 405, "link client failed (0x%08x)\n", ret);
 		imp = stub->imports;
-		if (cb->pid != KERNEL_PID) {
+		if (cb->pid != SCE_KERNEL_PROCESS_ID) {
 			if (strncmp(imp->libname, "SceDTrace", 0x100) == 0)
 				goto lost;
 			if (ret == SCE_KERNEL_ERROR_MODULEMGR_NO_LIB)

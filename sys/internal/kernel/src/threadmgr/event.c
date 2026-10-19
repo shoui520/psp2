@@ -1431,7 +1431,7 @@ static inline __attribute__((always_inline)) int waitMultipleEventsWith(
 	opt.align = 4;
 	opt.mmapBase = 0;
 	opt.mmapSize = 0;
-	wme = sceKernelSysrootAllocRemoteProcessHeap(THREADMGR_KERNEL_PID, WME_SIZE(count), &opt);
+	wme = sceKernelSysrootAllocRemoteProcessHeap(SCE_KERNEL_PROCESS_ID, WME_SIZE(count), &opt);
 	if (wme == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	memset(wme, 0, offsetof(ThreadmgrWaitMultipleEvents, nodes));
@@ -1451,7 +1451,7 @@ static inline __attribute__((always_inline)) int waitMultipleEventsWith(
 	wme->events = events;
 	ret = waitMultipleEvents(wme, timeout, callbacks, NULL);
 	i = wme->resultCount;
-	SceSysrootForKernel_7968F091(THREADMGR_KERNEL_PID, wme);
+	SceSysrootForKernel_7968F091(SCE_KERNEL_PROCESS_ID, wme);
 	return ret < 0 ? ret : (int)i;
 }
 

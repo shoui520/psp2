@@ -3,10 +3,6 @@
 
 #include <excpmgr/excpmgr_cpu.h>
 
-/* The vector page is read-only; domain manager access permits patching it. */
-#define DACR_ALL_MANAGER	0xffff0000
-#define DACR_KERNEL	0x15450000
-
 static inline unsigned int cacheLineDown(unsigned int address)
 {
 	return address & ~31U;

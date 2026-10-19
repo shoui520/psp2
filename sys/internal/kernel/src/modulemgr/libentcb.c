@@ -47,14 +47,14 @@ int LibEnt_checkEntTable(LoadelfContext *ctx)
 						  strnlen(name + bias, 0x100)))
 				return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 			if ((ent->attr & LIBRARY_ATTR_SYSCALL) != 0) {
-				if (cb->pid != KERNEL_PID || ent->nvar != 0)
+				if (cb->pid != SCE_KERNEL_PROCESS_ID || ent->nvar != 0)
 					return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 				cb->flags |= MODULE_FLAG_NO_STOP;
 			}
 		}
 		ent = (SceModuleExports *)((SceUInt8 *)ent + ent->size);
 	}
-	if (cb->pid == KERNEL_PID || (cb->flags & MODULE_FLAG_SHARED_MASK) != 0) {
+	if (cb->pid == SCE_KERNEL_PROCESS_ID || (cb->flags & MODULE_FLAG_SHARED_MASK) != 0) {
 		libentSize = ctx->libentSize;
 	} else {
 		libentSize = count * sizeof(SceModuleExports);
@@ -95,7 +95,7 @@ int LibEntCBInit(LoadelfContext *ctx)
 	const char *name;
 	char *interned;
 
-	if (cb->pid == KERNEL_PID) {
+	if (cb->pid == SCE_KERNEL_PROCESS_ID) {
 		cb->libent = NULL;
 	} else if (local) {
 		bias = Loadelf_GetAddrBias(ctx, cb->libentTop);
@@ -228,7 +228,7 @@ int LibEntGetNidTable(LibEntCB *ent, LibEntNidTable *info)
 	info->nvar = nvar;
 	info->varHashBits = g_hashShift[exports->hashinfo >> 4];
 
-	if (cb->pid != KERNEL_PID) {
+	if (cb->pid != SCE_KERNEL_PROCESS_ID) {
 		nidSize = n * 4;
 		size = nidSize + ((4 << (30 - info->varHashBits)) + funcHash) * 2;
 		if ((ent->flags & LIBENT_FLAG_SHARED) == 0 &&

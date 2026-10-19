@@ -103,7 +103,7 @@ static int uidSemaphore_Destructor(void *object)
 	pid = sema->ownerPid;
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
-		if (process->pid != THREADMGR_KERNEL_PID) {
+		if (process->pid != SCE_KERNEL_PROCESS_ID) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (sema->attr & SCE_KERNEL_ATTR_OPENABLE)
 				process->uidOpenableCount--;
@@ -415,7 +415,7 @@ static inline __attribute__((always_inline)) SceUID sceKernelCreateSemaCore(cons
 			sceKernelSpinlockLowUnlock(&process->resourceLock);
 		}
 	} else {
-		sema->ownerPid = ThreadmgrInSyscall() ? thread->processId : THREADMGR_KERNEL_PID;
+		sema->ownerPid = ThreadmgrInSyscall() ? thread->processId : SCE_KERNEL_PROCESS_ID;
 		sema->attr = attr;
 		sema->option = option;
 		sema->count = initCount;
