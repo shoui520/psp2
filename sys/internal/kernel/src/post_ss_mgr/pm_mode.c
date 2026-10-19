@@ -5,10 +5,6 @@
 
 #include "post_ss_mgr_internal.h"
 
-#define PM_SM_PATH		"os0:sm/pm_sm.self"
-
-#define SYSCON_STATUS_NO_SM_MODE	0x40	/* name unknown */
-
 static int g_pmNoSmMode;		/* name unknown */
 static int g_pmNoSmModeKnown;		/* name unknown */
 

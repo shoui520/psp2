@@ -8,6 +8,7 @@
 
 #include <scetypes.h>
 #include <rtc.h>
+#include <rtc/rtc_tick.h>
 #include <syscon/syscon.h>
 #include <sysmem/qafmgr.h>
 #include <sysmem/sysroot.h>

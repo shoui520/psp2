@@ -12,7 +12,6 @@ static IMG_BOOL gbInitSuccessful = IMG_FALSE;
 static IMG_BOOL gbInitServerRan = IMG_FALSE;
 
 #define ISR_ID 0xfffffffdU
-#define KERNEL_ID 0xffffffffU
 
 static IMG_BOOL _IsSystemStatePowered(PVRSRV_SYS_POWER_STATE eSystemPowerState)
 {

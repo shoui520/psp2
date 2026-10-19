@@ -89,4 +89,8 @@ static inline unsigned int rtcContext(void)
 int sceRtcSynchronizeCold(void);
 void rtcRegisterLibcTime(void);
 
+/* the exports calendar.c and format.c call, by the user library's names */
+#define sceRtcCheckValid		SceRtcForDriver_ADF63D7C
+#define sceRtcTickAddMinutes		SceRtcForDriver_0F9E02EF
+
 #endif

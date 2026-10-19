@@ -79,3 +79,7 @@ static inline __attribute__((always_inline)) int TargetMask(unsigned int target,
 	}
 	return 0;
 }
+
+/* g_intrState's fields, by the names intrmgr.c and its TrustZone build use */
+#define g_intrCpu		(g_intrState.cpu)
+#define g_intrHandlers		(g_intrState.handlers)

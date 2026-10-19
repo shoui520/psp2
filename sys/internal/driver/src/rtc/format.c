@@ -8,8 +8,6 @@
 
 #define sceRtcParseRFC3339	SceRtcForDriver_A1F41AE2
 #define sceRtcParseDateTime	SceRtcForDriver_0E7091D6
-#define sceRtcCheckValid	SceRtcForDriver_ADF63D7C
-#define sceRtcTickAddMinutes	SceRtcForDriver_0F9E02EF
 
 int rtcGetTickUnchecked(const SceDateTime *time, SceRtcTick *tick);
 

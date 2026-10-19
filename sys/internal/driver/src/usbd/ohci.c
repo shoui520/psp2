@@ -287,15 +287,6 @@ typedef struct Ohci {
 	unsigned int interruptCount[8];	/* per HcInterruptStatus bit: only start of frame */
 } Ohci;
 
-/* sceKernelGetMemBlockMemtypeByAddr of uncached memory: no cache maintenance */
-#define USBD_MEMTYPE_UNCACHED		0x8000
-
-#define USBD_CACHE_LINE			64
-#define USBD_CACHE_BASE(addr)		((SceUIntPtr)(addr) & ~(USBD_CACHE_LINE - 1))
-#define USBD_CACHE_SIZE(addr, size)	\
-	((((SceUIntPtr)(addr) + (size) + USBD_CACHE_LINE - 1) & ~(USBD_CACHE_LINE - 1)) - \
-	 USBD_CACHE_BASE(addr))
-
 static const OhciDescriptorCount s_ohciDescriptorCount[USBD_BUS_COUNT] = {
 	{ 16, 32, 64 },
 	{ 16, 32, 0 },

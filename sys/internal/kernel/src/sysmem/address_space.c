@@ -525,9 +525,6 @@ int AddressSpaceVAtoPAWithMode(AddressSpaceObject *as, uint32_t mode, uintptr_t 
 	return ret;
 }
 
-#define PARTITION_NOT_IN		7	/* the partitions' answer for addresses outside them */
-#define MMU_L1_IS_L2			5
-
 /* name unknown: va's physical address from the page tables */
 int AddressSpaceVAtoPABySW(AddressSpaceObject *as, uintptr_t va, uintptr_t *pa)
 {
@@ -538,11 +535,11 @@ int AddressSpaceVAtoPABySW(AddressSpaceObject *as, uintptr_t va, uintptr_t *pa)
 		if (as->partition[i] == NULL)
 			continue;
 		ret = PartitionVAtoPABySW(as->partition[i], va, pa);
-		if (ret != PARTITION_NOT_IN)
+		if (ret != PARTITION_WALK_NOT_IN)
 			goto out;
 	}
 	ret = L1PageTableVAtoPABySW(as->context->l1pt, va, pa);
-	if (ret == MMU_L1_IS_L2)
+	if (ret == MMU_WALK_PAGE_TABLE)
 		ret = SCE_KERNEL_ERROR_VA2PA_FAULT;
 out:
 	AddressSpaceRelease(as);
@@ -1304,7 +1301,7 @@ int AddressSpaceIsEqualAccessibleBySW(SceUID guid, SceUInt32 perm, uintptr_t va,
 		case 4:
 		case 6:
 			goto out;
-		case PARTITION_NOT_IN:
+		case PARTITION_WALK_NOT_IN:
 			break;
 		default:
 			SCE_DBG_PRINTF(0xb, 2244, "PartitionIsEqualAccessibleBySW failed 0x%08x\n",
@@ -1313,7 +1310,7 @@ int AddressSpaceIsEqualAccessibleBySW(SceUID guid, SceUInt32 perm, uintptr_t va,
 		}
 	}
 	ret = L1PageTableIsEqualAccessibleBySW(as->context->l1pt, perm, va, pa);
-	if (ret == MMU_L1_IS_L2)
+	if (ret == MMU_WALK_PAGE_TABLE)
 		ret = SCE_KERNEL_ERROR_VA2PA_FAULT;
 out:
 	AddressSpaceRelease(as);

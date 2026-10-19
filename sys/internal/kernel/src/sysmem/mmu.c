@@ -910,18 +910,6 @@ int SceCpuForKernel_14E0B0C4(uintptr_t va, uintptr_t *pa)
 	return MMUVAtoPACore(MMU_ACCESS_ANY, 0, va, pa, NULL);
 }
 
-/*
- * Walking the tables. These return 3 for a section, 4 for a supersection,
- * 5 for an L1 entry pointing to an L2 table and 6 for a fault entry; the L2
- * walkers 1 for a small page, 2 for a large page and 6 for a fault entry.
- */
-#define MMU_WALK_SMALL_PAGE		1
-#define MMU_WALK_LARGE_PAGE		2
-#define MMU_WALK_SECTION		3
-#define MMU_WALK_SUPERSECTION		4
-#define MMU_WALK_PAGE_TABLE		5
-#define MMU_WALK_FAULT			6
-
 int sceKernelMMUL1VAtoPABySW(const uint32_t *l1, uintptr_t va, uintptr_t *pa)
 {
 	uint32_t entry = l1[va >> 20];

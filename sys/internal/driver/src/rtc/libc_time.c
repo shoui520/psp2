@@ -4,8 +4,6 @@
 
 #include "rtc_internal.h"
 
-#define RTC_TICK_UNIX_EPOCH	62135596800000000LL
-
 /* struct tm, with tm_year the full year */
 typedef struct RtcLibcTm {
 	int sec;

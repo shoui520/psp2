@@ -9,9 +9,6 @@
 #include "modulemgr_internal.h"
 #include <modulemgr/self.h>
 
-
-#define BOOTIMAGE_FD		0x7f7f7f7f	/* reads come from the boot image */
-
 #define ET_SCE_EXEC		0xfe00
 
 /* the communication event flag */

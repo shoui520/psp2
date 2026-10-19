@@ -44,8 +44,6 @@
 
 /* intrmgr.c */
 extern IntrState g_intrState;
-#define g_intrHandlers (g_intrState.handlers)
-#define g_intrCpu (g_intrState.cpu)
 extern volatile GicCpuInterface *volatile g_intrCpuInterface;
 extern SceKernelMonitorCallHandler *g_moncallTable;
 extern SceUID g_moncallTableUid;

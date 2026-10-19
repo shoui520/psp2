@@ -309,15 +309,6 @@ typedef struct Ehci {
 	EhciPipeEntry *pipeTail;
 } Ehci;
 
-/* sceKernelGetMemBlockMemtypeByAddr of uncached memory: no cache maintenance */
-#define USBD_MEMTYPE_UNCACHED		0x8000
-
-#define USBD_CACHE_LINE			64
-#define USBD_CACHE_BASE(addr)		((SceUIntPtr)(addr) & ~(USBD_CACHE_LINE - 1))
-#define USBD_CACHE_SIZE(addr, size)	\
-	((((SceUIntPtr)(addr) + (size) + USBD_CACHE_LINE - 1) & ~(USBD_CACHE_LINE - 1)) - \
-	 USBD_CACHE_BASE(addr))
-
 #define EHCI_PAGE(pa)			((pa) >> 12 << 12)
 
 /* bInterval - 1 of a high speed interrupt endpoint: its start mask */

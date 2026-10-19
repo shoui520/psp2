@@ -355,8 +355,14 @@ typedef struct UsbdTransferStatusParam {
 	void *count;
 } UsbdTransferStatusParam;
 
-/* the module's state */
+/* sceKernelGetMemBlockMemtypeByAddr of uncached memory: no cache maintenance */
+#define USBD_MEMTYPE_UNCACHED		0x8000
 
+#define USBD_CACHE_LINE			64
+#define USBD_CACHE_BASE(addr)		((SceUIntPtr)(addr) & ~(USBD_CACHE_LINE - 1))
+#define USBD_CACHE_SIZE(addr, size)	\
+	((((SceUIntPtr)(addr) + (size) + USBD_CACHE_LINE - 1) & ~(USBD_CACHE_LINE - 1)) - \
+	 USBD_CACHE_BASE(addr))
 
 /* usbd.c */
 void usbdNotifyAttach(unsigned int hubId, unsigned int port, unsigned int speed);

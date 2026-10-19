@@ -23,7 +23,6 @@
 #include "sgxkick_sce.h"
 #include <gpu/power_sce.h>
 
-#define SGXMKIF_CC_INVAL_BIF_SL 0x4U
 #define DEVICE_MEMORY_HEAP_KERNEL 1
 #define DEVICE_MEMORY_HEAP_SHARED 2
 #define DEVICE_MEMORY_HEAP_SHARED_EXPORTED 3
@@ -33,7 +32,6 @@
 #define PVRSRV_USSE_MISCINFO_READY 1U
 #define PVRSRV_USSE_MISCINFO_GET_STRUCT_SIZES 2U
 #define SGXMKIF_CMD_GETMISCINFO 6
-#define KERNEL_ID 0xffffffffU
 
 IMG_VOID SGX_MISRHandler(IMG_VOID *pvData);
 SceUID GetLockupEventUid(void);

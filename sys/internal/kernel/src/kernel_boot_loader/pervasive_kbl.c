@@ -19,7 +19,6 @@
 #define PERVASIVE_ERROR		((int)0x803f0000)
 
 #define PERVASIVE_MISC		((volatile ScePervasiveMiscRegisters *)PERVASIVE_MISC_BASE)
-#define PERVASIVE_RESET		((ScePervasiveResetRegisters *)PERVASIVE_RESET_BASE)
 #define PERVASIVE_GATE		((ScePervasiveGateRegisters *)PERVASIVE_GATE_BASE)
 #define PERVASIVE_BASECLK	((volatile ScePervasiveBaseClkRegisters *)PERVASIVE_BASECLK_BASE)
 
@@ -32,7 +31,6 @@ static inline void PervasiveDsb(void)
 {
 	__asm__ volatile("dsb sy" : : : "memory");
 }
-
 
 /* ===== reset ===== */
 

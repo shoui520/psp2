@@ -34,7 +34,6 @@
 #define SCE_SBL_ERROR_LIC_NO_SECURE_TICK	0x800f1331
 #define SCE_SBL_ERROR_LIC_NOT_DEVELOPMENT2	0x800f1333
 #define SCE_SBL_ERROR_LIC_OTHER_CONSOLE		0x800f1339
-#define SCE_SBL_ERROR_RTC_NO_CP			0x800f1002	/* name unknown */
 
 #define ACT_DIR			"tm0:activate"
 #define ACT_DAT_PATH		"tm0:activate/act.dat"
@@ -56,9 +55,6 @@
 #define ACT_SM_DECRYPT_NVS	4
 #define ACT_SM_ACTIVATE		10
 #define ACT_SM_CHECK		11
-
-/* SceRtcTick of 1970-01-01 (name unknown) */
-#define RTC_TICK_UNIX_EPOCH	0xdcbffeff2bc000ULL
 
 /* the activation kept in the NVS (names unknown) */
 typedef struct SceActNvsData {

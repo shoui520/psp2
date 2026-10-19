@@ -37,6 +37,7 @@
 #define SCE_SBL_ERROR_PM_TIMEOUT		0x800f0a23	/* name unknown */
 #define SCE_SBL_ERROR_PM_SM			0x800f0a28	/* name unknown */
 #define SCE_SBL_ERROR_PM_UNSUPPORTED		0x800f0a25	/* name unknown */
+#define SCE_SBL_ERROR_RTC_NO_CP			0x800f1002	/* name unknown: no CP clock */
 
 /* a deferred placeholder stays a call, as the routine it stands for is */
 #define POST_SS_DEFERRED	__attribute__((noinline))
@@ -85,6 +86,10 @@ int postSsMgrDecryptKeySet(const void *const *encA, const void *ivA, const void 
 void *postSsMgrGetKeySetA(void);
 void *postSsMgrGetKeySetB(void);
 int postSsMgrLoadCloudKeys(void);
+
+/* pm_sm, which keeps the product mode where the syscon cannot */
+#define PM_SM_PATH			"os0:sm/pm_sm.self"
+#define SYSCON_STATUS_NO_SM_MODE	0x40	/* name unknown */
 
 /* pm_mode.c */
 int pmMgrIsNoSmMode(void);			/* name unknown */

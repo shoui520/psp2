@@ -40,7 +40,6 @@
 #define BOOT_GPO(code)		(0x80 | (code))
 #endif
 
-#define PERVASIVE_RESET		((ScePervasiveResetRegisters *)PERVASIVE_RESET_BASE)
 #define SSX_REGISTER_TARGET(xbar) ((SceSsxRegisterTarget *)SSX_REGISTER_TARGET_BASE(xbar))
 #define LPDDR0_FIREWALL		((SceSsxFirewallRegisters *)SSX_FIREWALL_LPDDR0_BASE)
 #define LPDDR1_FIREWALL		((SceSsxFirewallRegisters *)SSX_FIREWALL_LPDDR1_BASE)

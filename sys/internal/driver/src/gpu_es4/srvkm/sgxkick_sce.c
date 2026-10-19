@@ -8,7 +8,6 @@
 
 #define SGXMKIF_CMDTA_CTRLFLAGS_READY 1U
 #define SGXMKIF_CMD_TA 0
-#define KERNEL_ID 0xffffffffU
 
 extern int gPVRSRVLock;
 /* NID is absent from the pinned vitasdk vocabulary. */

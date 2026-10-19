@@ -11,7 +11,6 @@
 #define sceRtcGetDaysInMonth		SceRtcForDriver_C2DC38D9
 #define sceRtcGetDayOfWeek		SceRtcForDriver_0F800878
 #define sceRtcGetDayOfYear		SceRtcForDriver_9097EF0D
-#define sceRtcCheckValid		SceRtcForDriver_ADF63D7C
 #define sceRtcSetDosTime		SceRtcForDriver_EB27F94E
 #define sceRtcGetDosTime		SceRtcForDriver_09AF419B
 #define sceRtcSetWin32FileTime		SceRtcForDriver_BA14600F
@@ -25,7 +24,6 @@
 #define sceRtcTickAddTicks		SceRtcForDriver_A82AC5B3
 #define sceRtcTickAddMicroseconds	SceRtcForDriver_CE51C2A1
 #define sceRtcTickAddSeconds		SceRtcForDriver_9C8AF264
-#define sceRtcTickAddMinutes		SceRtcForDriver_0F9E02EF
 #define sceRtcTickAddHours		SceRtcForDriver_32E50C36
 #define sceRtcTickAddDays		SceRtcForDriver_0CB72FAF
 #define sceRtcTickAddWeeks		SceRtcForDriver_24209FBF

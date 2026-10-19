@@ -10,8 +10,7 @@
 #include <post_ss_mgr/sblrtcmgr.h>
 #include <deci4p_cpup/cpup.h>
 
-#define SCE_SBL_ERROR_RTC_NO_CP			0x800f1002	/* names unknown */
-#define SCE_SBL_ERROR_RTC_CP			0x800f1005
+#define SCE_SBL_ERROR_RTC_CP			0x800f1005	/* names unknown */
 #define SCE_SBL_ERROR_RTC_INVALID_ARGUMENT	0x800f1016
 #define SCE_SBL_ERROR_RTC_UNSUPPORTED		0x800f1025
 #define SCE_SBL_ERROR_RTC_CP_VERSION		0x800f1028

@@ -12,14 +12,12 @@
 #include "post_ss_mgr_internal.h"
 #include <post_ss_mgr/sblpmmgr.h>
 
-#define PM_SM_PATH		"os0:sm/pm_sm.self"
 #define PM_SM_SD_PATH		"sd0:sm/pm_sm_sd.self"
 
 #define PM_MODE_ON		4	/* names unknown */
 #define PM_MODE_OFF		5
 #define PM_MODE_OFF_NVS		7
 
-#define SYSCON_STATUS_NO_SM_MODE	0x40	/* name unknown */
 #define BOOT_TYPE_PRODUCT_MODE		0x4
 
 static SceUInt32 g_pmBaryonVersion;	/* name unknown */

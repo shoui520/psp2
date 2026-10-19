@@ -983,6 +983,8 @@ int PartitionUnmapL2PageTable(Partition *partition, uintptr_t va, SceSize size, 
 			      SceUInt32 flags);
 void PartitionFindAndTryRemoveL2PageTable(Partition *partition, uintptr_t va, SceSize size);
 int PartitionGetMemoryType(Partition *partition, uintptr_t va);
+/* the partitions' answer for an address outside them; otherwise they answer as the walks do */
+#define PARTITION_WALK_NOT_IN		7	/* name unknown */
 int PartitionVAtoPABySW(Partition *partition, uintptr_t va, uintptr_t *pa);
 int PartitionIsEqualAccessibleBySW(Partition *partition, SceUInt32 perm, uintptr_t va,
 				   uintptr_t *pa);

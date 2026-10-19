@@ -32,9 +32,6 @@
 #define UT_SM_SEAL		1
 #define UT_SM_OPEN		2
 
-/* SceRtcTick of 1970-01-01 (name unknown) */
-#define RTC_TICK_UNIX_EPOCH	0xdcbffeff2bc000ULL
-
 /* the flags of a utoken (names unknown) */
 #define UT_FLAG_COM_TEST_AUTH_ID	(1 << 0)
 #define UT_FLAG_22599675		(1 << 1)

@@ -123,4 +123,7 @@ PVRSRV_ERROR SysDevicePostPowerState(IMG_UINT32 ui32DeviceIndex,
 		PVRSRV_DEV_POWER_STATE eNewPowerState,
 		PVRSRV_DEV_POWER_STATE eCurrentPowerState);
 
+/* the lock owner of the kernel's own requests (PowerVR's osfunc.h) */
+#define KERNEL_ID 0xffffffffU
+
 #endif

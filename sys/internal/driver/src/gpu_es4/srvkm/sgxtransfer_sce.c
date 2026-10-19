@@ -9,7 +9,6 @@
 #include "sgxkick_sce.h"
 
 #define SGXMKIF_CMD_2D 2
-#define KERNEL_ID 0xffffffffU
 
 extern int gPVRSRVLock;
 

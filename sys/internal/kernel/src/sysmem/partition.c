@@ -2393,11 +2393,6 @@ void PartitionFindAndTryRemoveL2PageTable(Partition *partition, uintptr_t va, Sc
 	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->mapLock, intr);
 }
 
-/* the L1 queries' answer for a page mapped through an L2 table */
-#define MMU_L1_IS_L2			5
-
-#define PARTITION_ERROR_NOT_IN		7	/* PLACEHOLDER: name; va is not in the partition */
-
 static inline int TinyPartitionHasAddr(const TinyPartition *tiny, uintptr_t va)
 {
 	return va >= tiny->vbase && va - tiny->vbase <= tiny->size;
@@ -2453,9 +2448,9 @@ int PartitionVAtoPABySW(Partition *partition, uintptr_t va, uintptr_t *pa)
 	int ret;
 
 	if (!TinyPartitionHasAddr(&partition->tiny, va))
-		return PARTITION_ERROR_NOT_IN;
+		return PARTITION_WALK_NOT_IN;
 	ret = L1PageTableVAtoPABySW(partition->tiny.context->l1pt, va, pa);
-	if (ret != MMU_L1_IS_L2)
+	if (ret != MMU_WALK_PAGE_TABLE)
 		return ret;
 	l2pt = PartitionGetL2PageTable(partition, va);
 	if (l2pt == NULL)
@@ -2471,14 +2466,14 @@ int PartitionIsEqualAccessibleBySW(Partition *partition, SceUInt32 perm, uintptr
 	int ret;
 
 	if (!TinyPartitionHasAddr(&partition->tiny, va))
-		return PARTITION_ERROR_NOT_IN;
+		return PARTITION_WALK_NOT_IN;
 	if (partition->tiny.context == NULL) {
 		SCE_DBG_PRINTF(0xb, 6670, "PartitionGetAC(%p) is NULL\n", partition);
 		SCE_DBG_ASSERT_FAIL(6671);
 		return SCE_KERNEL_ERROR_PARTITION_ERROR;
 	}
 	ret = L1PageTableIsEqualAccessibleBySW(partition->tiny.context->l1pt, perm, va, pa);
-	if (ret != MMU_L1_IS_L2)
+	if (ret != MMU_WALK_PAGE_TABLE)
 		return ret;
 	l2pt = PartitionGetL2PageTable(partition, va);
 	if (l2pt == NULL)

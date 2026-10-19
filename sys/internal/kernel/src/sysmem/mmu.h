@@ -61,6 +61,17 @@ int sceKernelMMUUnmapSmallPagesWithFlags(uint32_t *l2, uint32_t asid, uintptr_t 
 					 uintptr_t offset, SceSize size, uint32_t flags);
 int MMUVAtoPAWithFlags(uint32_t mode, uint32_t flags, uintptr_t va, uintptr_t *pa);
 int MMUVAtoPAWithMemoryType(uint32_t mode, uintptr_t va, uintptr_t *pa, int *memoryType);
+/*
+ * Walking the tables. These return 3 for a section, 4 for a supersection,
+ * 5 for an L1 entry pointing to an L2 table and 6 for a fault entry; the L2
+ * walkers 1 for a small page, 2 for a large page and 6 for a fault entry.
+ */
+#define MMU_WALK_SMALL_PAGE		1
+#define MMU_WALK_LARGE_PAGE		2
+#define MMU_WALK_SECTION		3
+#define MMU_WALK_SUPERSECTION		4
+#define MMU_WALK_PAGE_TABLE		5
+#define MMU_WALK_FAULT			6
 int sceKernelMMUL1VAtoPABySW(const uint32_t *l1, uintptr_t va, uintptr_t *pa);
 int sceKernelMMUL1IsEqualAccessibleBySW(const uint32_t *l1, uint32_t perm, uintptr_t va,
 					uintptr_t *pa);

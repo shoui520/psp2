@@ -27,7 +27,6 @@ static struct {
 	volatile uint32_t hardwareInfo[5];		/* revision, cacheStatus, hardwareInfo[3] */
 } s_pervasive;
 
-
 int PervasiveInit(void)
 {
 	unsigned int i;

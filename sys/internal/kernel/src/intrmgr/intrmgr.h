@@ -57,8 +57,6 @@ typedef struct SceSyscallTable {
 } SceSyscallTable;
 
 extern IntrState g_intrState;
-#define g_intrHandlers (g_intrState.handlers)
-#define g_intrCpu (g_intrState.cpu)
 extern void *g_intrSysroot;
 extern SceUInt32 g_intrReserved2[15];
 extern ProcessHwBreakpoints *g_intrKernelBreakpoints;
