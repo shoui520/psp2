@@ -130,6 +130,7 @@ int GUIDApplyWithClass(SceUID guid, SceClass *cls, int (*func)(SceObjectBase *ob
 /* the block's state field (flags bits 20..22): 3 = mapped with user map info */
 #define MEMBLOCK_OPT_MASK		0x700000
 #define MEMBLOCK_OPT_USER_MAP		0x300000
+#define MEMBLOCK_OPT_CLIENT_INFO	0x500000	/* it carries a MemBlockClientInfo */
 
 static inline __attribute__((always_inline)) void MemBlockSetFreeCodeRaw(MemBlockObject *block)
 {
@@ -187,6 +188,12 @@ static inline void MemBlockSetPartialInfoRaw(MemBlockObject *block, struct Parti
 	}
 	block->virPages = info;
 }
+
+/* L2 page table blocks (a simple memblock of four L2 tables): flags bit 28, bits 24..27 the
+ * quarters still free */
+#define MEMBLOCK_L2PT			0x10000000
+#define MEMBLOCK_L2PT_FREE_MASK		0x0f000000
+#define MEMBLOCK_L2PT_FREE(_quarter)	(0x01000000 << (_quarter))
 
 /* kind 4: a list of virtual pages (memblock_vpl.c) */
 #define MEMBLOCK_KIND_VPL		0x40000

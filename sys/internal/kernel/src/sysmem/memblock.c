@@ -660,8 +660,6 @@ int VARangeToPAVectorForPID(SceUID pid, uint32_t mode, const SceKernelPARange *r
 #undef __FILE_NAME__
 #define __FILE_NAME__ "memblock_obj_module.h"
 
-#define MEMBLOCK_OPT_CLIENT_INFO	0x500000
-
 /* name from the record: pid leaves the block's clients */
 void MemBlockOptGetClientInfo(MemBlockObject *block, SceUID pid)
 {

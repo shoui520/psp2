@@ -12,7 +12,6 @@
 #include <sysmem/debug.h>
 #include "../hdmi_internal.h"
 
-#define HDMI_EDID_BLOCK_SIZE	128
 #define HDMI_EDID_MAX_BLOCKS	4
 
 /* the base block's extension count, and an extension's tag */
@@ -23,9 +22,6 @@
 #define CEA_REVISION		1
 #define CEA_DTD_OFFSET		2
 #define CEA_DATA_BLOCKS		4
-#define CEA_TAG_MASK		0xe0
-#define CEA_TAG_VENDOR		0x60
-#define CEA_LENGTH_MASK		0x1f
 
 /* the HDMI Licensing IEEE OUI, 00-0c-03, as the VSDB stores it */
 #define HDMI_OUI_0		0x03
@@ -86,7 +82,7 @@ int hdmiDeviceEdidCheckSinkType(HdmiDevice *device)
 		HDMI_PRINTF(HDMI_DBG_EDID, "[hdmiEDID] ", "EDID Block Size is %d.\n",
 			    device->edidBlockCount);
 	for (block = 1; block < device->edidBlockCount; block++) {
-		base = block * HDMI_EDID_BLOCK_SIZE;
+		base = block * EDID_BLOCK_SIZE;
 		if (device->edid[base] != EDID_TAG_CEA)
 			continue;
 		HDMI_PRINTF(HDMI_DBG_EDID, "[hdmiEDID] ", "ATD Block Revision %d.\n",
@@ -99,7 +95,8 @@ int hdmiDeviceEdidCheckSinkType(HdmiDevice *device)
 		     offset += (device->edid[base + offset] & CEA_LENGTH_MASK) + 1) {
 			HDMI_PRINTF(HDMI_DBG_EDID, "[hdmiEDID] ", "ATD CEA Tag Code [%02x].\n",
 				    device->edid[base + offset]);
-			if ((device->edid[base + offset] & CEA_TAG_MASK) != CEA_TAG_VENDOR)
+			if ((device->edid[base + offset] & CEA_TAG_MASK) !=
+			    CEA_TAG_VENDOR << CEA_TAG_SHIFT)
 				continue;
 			HDMI_PRINTF(HDMI_DBG_EDID, "[hdmiEDID] ", "VSDB Code [%02x][%02x][%02x].\n",
 				    device->edid[base + offset + 1], device->edid[base + offset + 2],
@@ -157,7 +154,7 @@ int hdmiDeviceEdidRead(HdmiDevice *device)
 		HDMI_PRINTF(HDMI_DBG_EDID, "[hdmiEDID] ", "DDCEDID Read Error 1\n");
 		goto out;
 	}
-	extensions = (SceUInt8)(device->edid[device->edidBlockCount * HDMI_EDID_BLOCK_SIZE +
+	extensions = (SceUInt8)(device->edid[device->edidBlockCount * EDID_BLOCK_SIZE +
 					     EDID_EXTENSION_COUNT] + 1);
 	device->edidBlockCount++;
 	if (extensions < 2 || device->edidBlockCount >= HDMI_EDID_MAX_BLOCKS)
@@ -165,14 +162,14 @@ int hdmiDeviceEdidRead(HdmiDevice *device)
 	for (block = 1; block < extensions && device->edidBlockCount < HDMI_EDID_MAX_BLOCKS;
 	     block++) {
 		ret2 = hdmiDeviceEdidReadBlock(device, block, device->edid +
-					       device->edidBlockCount * HDMI_EDID_BLOCK_SIZE);
+					       device->edidBlockCount * EDID_BLOCK_SIZE);
 		if (ret2 != 0) {
 			HDMI_PRINTF(HDMI_DBG_EDID, "[hdmiEDID] ", "DDCEDID Read Error 2\n");
 			ret = ret2;
 			break;
 		}
 		/* only CEA extensions are kept */
-		if (device->edid[device->edidBlockCount * HDMI_EDID_BLOCK_SIZE] == EDID_TAG_CEA)
+		if (device->edid[device->edidBlockCount * EDID_BLOCK_SIZE] == EDID_TAG_CEA)
 			device->edidBlockCount++;
 	}
 out:

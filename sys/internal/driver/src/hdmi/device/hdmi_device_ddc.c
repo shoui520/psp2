@@ -10,10 +10,7 @@
 #include "../hdmi_internal.h"
 #include <threadmgr/threadmgr.h>
 
-/* The DDC event flag's bits */
-#define HDMI_DDC_EVENT_ABORT		0x01	/* hdmiDeviceDdcAbort */
-#define HDMI_DDC_EVENT_EDID_READY	0x02	/* the transmitter read an EDID segment */
-#define HDMI_DDC_EVENT_ERROR		0x10	/* the transmitter's DDC controller failed */
+/* the DDC events an EDID read waits for */
 #define HDMI_DDC_EVENT_EDID		(HDMI_DDC_EVENT_ABORT | HDMI_DDC_EVENT_EDID_READY | \
 					 HDMI_DDC_EVENT_ERROR)
 
@@ -24,7 +21,6 @@
 #define HDMI_DDC_MODE_EDID		0x00
 #define HDMI_DDC_MODE_KSV_FIFO		0x21
 
-#define HDMI_EDID_BLOCK_SIZE		128
 #define HDMI_EDID_SEGMENT_TIMEOUT	500000	/* us */
 #define HDMI_EDID_RETRY_DELAY		100000	/* us */
 
@@ -138,7 +134,7 @@ static inline SceUInt8 edidBlockSum(const SceUInt8 *data, SceUInt16 *crc)
 	int i, bit;
 
 	*crc = 0;
-	for (i = 0; i < HDMI_EDID_BLOCK_SIZE; i++) {
+	for (i = 0; i < EDID_BLOCK_SIZE; i++) {
 		value = data[i];
 		sum += value;
 		for (bit = 0; bit < 8; bit++) {
@@ -162,8 +158,8 @@ int hdmiDeviceEdidReadBlock(HdmiDevice *device, int block, SceUInt8 *data)
 	int ret;
 
 	request.address = block / 2;
-	request.offset = (block & 1) ? HDMI_EDID_BLOCK_SIZE : 0;
-	request.size = HDMI_EDID_BLOCK_SIZE;
+	request.offset = (block & 1) ? EDID_BLOCK_SIZE : 0;
+	request.size = EDID_BLOCK_SIZE;
 	request.mode = HDMI_DDC_MODE_EDID;
 	request.buffer = data;
 	ret = sceHdmiDeviceDdcRead(device, &request, 200000, block);

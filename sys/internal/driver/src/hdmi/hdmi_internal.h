@@ -127,6 +127,15 @@ int hdmiSendSpdInfoFrame(void);
 int hdmiSendAviInfoFrame(const HdmiVideoMode *mode);
 int hdmiSendAudioInfoFrame(const SceHdmiAudioMode *mode);
 
+/* EDID blocks, and the CEA-861 extension's data blocks: the tag in bits 5..7, the length below */
+#define EDID_BLOCK_SIZE			128
+#define CEA_TAG_SHIFT			5
+#define CEA_TAG_MASK			0xe0
+#define CEA_LENGTH_MASK			0x1f
+#define CEA_TAG_VIDEO			2
+#define CEA_TAG_VENDOR			3
+#define CEA_TAG_EXTENDED		7
+
 /* The sink's EDID and what was learnt from it (edid_manager.c's _getEdidManager). */
 typedef struct EdidManager {
 	SceUInt8 edid[0x200];		/* 0x000: up to four 128-byte blocks */
@@ -299,6 +308,36 @@ typedef struct HdmiVideoTiming {
 	int syncPolarity;		/* 0x00: 0, 2, 3; 0xff: unknown */
 	int pixelRepetition;		/* 0x04: 0xff: unknown */
 } HdmiVideoTiming;
+
+/* hdmiDeviceEnableIntr/hdmiDeviceDisableIntr: which interrupts */
+#define HDMI_INTR_MASK_HPD		1
+#define HDMI_INTR_MASK_HPD2		2
+#define HDMI_INTR_MASK_EDID		4
+#define HDMI_INTR_MASK_EDID2		5
+#define HDMI_INTR_MASK_AUTH		6
+#define HDMI_INTR_MASK_CEC		0x80fe
+
+/* The transmitter's frame (packet) ids, HdmiDevice.packetCtrl bits */
+#define HDMI_FRAME_ACR		0x0002	/* packet type 1 */
+#define HDMI_FRAME_TYPE2	0x0004
+#define HDMI_FRAME_GC		0x0008	/* general control */
+#define HDMI_FRAME_ISRC1	0x0010
+#define HDMI_FRAME_ISRC2	0x0020
+#define HDMI_FRAME_TYPE6	0x0040
+#define HDMI_FRAME_TYPE10	0x0400
+#define HDMI_FRAME_VS		0x0800	/* vendor specific InfoFrame */
+#define HDMI_FRAME_AVI		0x1000
+#define HDMI_FRAME_SPD		0x2000
+#define HDMI_FRAME_AUDIO	0x4000
+#define HDMI_FRAME_MPEG		0x8000
+#define HDMI_FRAME_ALL		0xffff
+
+/* The DDC event flag's bits */
+#define HDMI_DDC_EVENT_ABORT		0x01	/* hdmiDeviceDdcAbort */
+#define HDMI_DDC_EVENT_EDID_READY	0x02	/* the transmitter read an EDID segment */
+#define HDMI_DDC_EVENT_BKSV		0x04	/* the receiver's KSV is in */
+#define HDMI_DDC_EVENT_HDCP		0x08	/* authentication done */
+#define HDMI_DDC_EVENT_ERROR		0x10	/* the transmitter's DDC controller failed */
 
 /* device/hdmi_device.c */
 extern SceUInt8 edidMode;

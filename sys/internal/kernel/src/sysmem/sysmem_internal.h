@@ -536,8 +536,12 @@ typedef struct AddressSpaceObject {
 	SceUID userIOTimer;			/* 0x160: the "SceUserIOTimer" block */
 	uintptr_t userIOTimerBase;		/* 0x164 */
 	const SceKernelHeapHook *heap;		/* 0x168 */
-	SceUInt32 magic;			/* 0x16c */
+	SceUInt32 magic;			/* 0x16c: ADDRESS_SPACE_MAGIC */
 } AddressSpaceObject;
+
+/* the address space object's magic, and the fill it is destroyed with */
+#define ADDRESS_SPACE_MAGIC		0x4d95aeec
+#define ADDRESS_SPACE_DEAD_FILL		0x07fd9f97
 
 /* a subbudget's size and free size (sceKernelGetSubbudgetInfo) */
 typedef struct AddressSpaceSubbudgetInfo {

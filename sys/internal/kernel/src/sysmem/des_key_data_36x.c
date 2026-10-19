@@ -1,7 +1,6 @@
 /* PC-2 selections are zero-based bit indices in the older key schedule. */
 #include "des_internal.h"
 
-#define KEY_SELECTION(low, high) (((high) << 8) | (low))
 const uint16_t desKeySelection[24] = {
 	KEY_SELECTION(1, 3), KEY_SELECTION(12, 0),
 	KEY_SELECTION(19, 7), KEY_SELECTION(26, 21),

@@ -772,7 +772,6 @@ int sceKernelAddressSpaceCtrSetObjectHeap(AddressSpaceObject *as, ObjectHeap *he
 	return 0;
 }
 
-#define ADDRESS_SPACE_MAGIC		0x4d95aeec
 #define AS_PARTITION_TOOL_A		20
 #define AS_PARTITION_TOOL_B		21
 

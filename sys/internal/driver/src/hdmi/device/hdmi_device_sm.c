@@ -31,12 +31,8 @@
 #define HDMI_SM_EVENT_START	0x4000	/* _sceHdmiDeviceSmRestart */
 #define HDMI_SM_EVENT_EXIT	0x8000
 
-/* The DDC event flag's bits the authentication waits for */
-#define HDMI_DDC_EVENT_ABORT	0x01
-#define HDMI_DDC_EVENT_HDCP	0x08	/* authentication done */
-#define HDMI_DDC_EVENT_ERROR	0x10
-#define HDMI_DDC_EVENT_BKSV	0x04	/* the receiver's KSV is in */
-#define HDMI_DDC_EVENT_EDID	0x1c	/* what a restart clears */
+/* the DDC events of the authentication, which a restart clears */
+#define HDMI_DDC_EVENT_AUTH	(HDMI_DDC_EVENT_BKSV | HDMI_DDC_EVENT_HDCP | HDMI_DDC_EVENT_ERROR)
 
 /* HdmiDevice.state */
 #define HDMI_SM_STATE_STOPPED		0
@@ -65,10 +61,6 @@
 #define HDMI_AUTH_FAILED	1
 #define HDMI_AUTH_CONTINUE	2
 #define HDMI_AUTH_SKIPPED	3
-
-/* the interrupts hdmiDeviceEnableIntr/DisableIntr take */
-#define HDMI_INTR_MASK_HPD2	2
-#define HDMI_INTR_MASK_AUTH	6
 
 #define HDMI_SM_CALLBACK_COUNT	6
 
@@ -358,7 +350,7 @@ static inline void _smPowerDown(HdmiDevice *device)
 	HdmiDeviceHwSetTMDSPower(device, 0);
 	hdmiDeviceSmClearEvent(HDMI_SM_EVENT_UNPLUG);
 	hdmiDeviceSmClearEvent(HDMI_SM_EVENT_AUTH_ERR);
-	hdmiDeviceDdcClearEvent(HDMI_DDC_EVENT_EDID);
+	hdmiDeviceDdcClearEvent(HDMI_DDC_EVENT_AUTH);
 	hdmiDeviceEdidClear(device);
 	hdmiDeviceEdidSetDviMode(device);
 	hdmiDeviceSmLock();
@@ -386,7 +378,7 @@ static inline int _smStopOutput(HdmiDevice *device, int state)
 	hdmiDeviceSmAuthReset(device);
 	HdmiDeviceHwSetTMDSPower(device, 0);
 	hdmiDeviceSmClearEvent(HDMI_SM_EVENT_AUTH_ERR);
-	hdmiDeviceDdcClearEvent(HDMI_DDC_EVENT_EDID);
+	hdmiDeviceDdcClearEvent(HDMI_DDC_EVENT_AUTH);
 	device->aksvValid = 0;
 	device->ksvCount = 0;
 	return state;

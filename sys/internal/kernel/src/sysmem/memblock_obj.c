@@ -479,11 +479,6 @@ cleared:
 
 #pragma pop_macro("__FILE_NAME__")
 
-/* L2 page table blocks: flags bit 28, bits 24..27 the quarters still free */
-#define MEMBLOCK_L2PT			0x10000000
-#define MEMBLOCK_L2PT_FREE_MASK		0x0f000000
-#define MEMBLOCK_L2PT_FREE(_quarter)	(0x01000000 << (_quarter))
-
 /* name unknown: whether every quarter of an L2 page table block is free */
 int MemBlockL2PageTableIsAllFree(const MemBlockObject *block)
 {

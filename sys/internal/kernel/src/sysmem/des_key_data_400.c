@@ -1,7 +1,6 @@
 /* PC-2 selections are one-based because the original consumes shift carry. */
 #include "des_internal.h"
 
-#define KEY_SELECTION(low, high) (((high) << 8) | (low))
 const uint16_t desKeySelection[24] = {
 	KEY_SELECTION(2, 4), KEY_SELECTION(13, 1),
 	KEY_SELECTION(20, 8), KEY_SELECTION(27, 22),

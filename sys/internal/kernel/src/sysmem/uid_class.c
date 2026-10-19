@@ -8,13 +8,6 @@
 #include <sysmem/sysclib.h>
 #include "sysmem_internal.h"
 
-#define SCE_CLASS_MAGIC			0xabce9da5
-
-/* the address space object's magic, and the fill it is destroyed with */
-#define ADDRESS_SPACE_MAGIC		0x4d95aeec
-#define ADDRESS_SPACE_DEAD_FILL		0x07fd9f97
-
-
 /* SceUIDHeapClass and SceUIDClass */
 static UIDHeapClass *s_uidHeapClass;
 static SceClass *s_uidClass;

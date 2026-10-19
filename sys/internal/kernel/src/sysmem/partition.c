@@ -1987,9 +1987,6 @@ int AddressSpaceContextAllocL2Tables(AddressSpaceContext *context)
 #define PARTITION_L2C_LOCKED		0x02
 #define PARTITION_L2C_CACHE_MIN		3
 
-#define MEMBLOCK_L2PT			0x10000000	/* a simple memblock of four L2 tables */
-#define MEMBLOCK_L2PT_FREE_ALL		0x0f000000
-
 /* a block with a free quarter: one on the partition's list, else a new one */
 static inline MemBlockObject *PartitionL2CAllocMemBlockForL2PageTableRaw(Partition *partition,
 									 SceUInt32 flags)
@@ -2033,7 +2030,7 @@ static inline MemBlockObject *PartitionL2CAllocMemBlockForL2PageTableRaw(Partiti
 				__builtin_return_address(0));
 	}
 	block->flags |= MEMBLOCK_L2PT;
-	MemBlockL2PageTableSetFreeRaw(block, MEMBLOCK_L2PT_FREE_ALL);
+	MemBlockL2PageTableSetFreeRaw(block, MEMBLOCK_L2PT_FREE_MASK);
 	block->lock = 0;
 	return block;
 }
@@ -2686,8 +2683,6 @@ int AddressSpaceContextFreeL2Tables(AddressSpaceContext *context)
 	context->l2TablesBlock = NULL;
 	return ret;
 }
-
-#define MEMBLOCK_OPT_CLIENT_INFO	0x500000
 
 /* every block of a dying process's partition freed, then the list itself */
 int TinyPartitionFreeAllMemBlock(Partition *partition, TinyPartitionClientInfoList *list)

@@ -33,9 +33,6 @@
 #define UID_ERROR_NAME_TOO_LONG		SCE_KERNEL_ERROR_UID_NAME_TOO_LONG
 /* names unknown */
 
-/* the class magic (SceClass.magic) */
-#define SCE_CLASS_MAGIC			0xabce9da5
-
 /* SceUIDDLinkClass, SceUIDEntryHeapClass and the default "heap" of registered objects */
 static SceClass *s_dlinkClass;
 static FixedHeapClass *s_entryHeapClass;

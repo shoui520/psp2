@@ -9,15 +9,10 @@
 #include <sysmem/sblaimgr.h>
 #include <sysmem/sysclib.h>
 
-#define EDID_BLOCK_SIZE			128
 #define EDID_DESCRIPTOR_COUNT		4
 #define EDID_DESCRIPTOR_SIZE		18
 #define EDID_TAG_MONITOR_NAME		0xfc
 #define EDID_TAG_RANGE_LIMITS		0xfd
-
-#define CEA_TAG_VIDEO			2
-#define CEA_TAG_VENDOR			3
-#define CEA_TAG_EXTENDED		7
 
 static inline int _getEdidManager(void)
 {
@@ -131,10 +126,10 @@ static inline void parseCeaExtension(SceHdmiEdidInfo *info, const SceUInt8 *bloc
 	end = block[2] - 1;
 	offset = 4;
 	header = block[offset];
-	len = header & 0x1f;
+	len = header & CEA_LENGTH_MASK;
 	while (offset + len <= end && header != 0) {
 		p = &block[offset + 1];
-		switch (header >> 5) {
+		switch (header >> CEA_TAG_SHIFT) {
 		case CEA_TAG_VENDOR:
 			if (p != NULL && len >= 3 && p[0] == 0x03 && p[1] == 0x0c && p[2] == 0x00 &&
 			    len >= 8)
@@ -151,7 +146,7 @@ static inline void parseCeaExtension(SceHdmiEdidInfo *info, const SceUInt8 *bloc
 		}
 		offset += 1 + len;
 		header = block[offset];
-		len = header & 0x1f;
+		len = header & CEA_LENGTH_MASK;
 	}
 }
 

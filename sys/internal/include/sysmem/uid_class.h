@@ -27,6 +27,8 @@ typedef struct SceClass {
 _Static_assert(sizeof(SceClass) == 0x2c, "SceClass");
 #endif
 
+#define SCE_CLASS_MAGIC		0xabce9da5	/* SceClass.magic */
+
 typedef struct SceObjectBase {
 	union {
 		uint32_t sce_reserved[2];

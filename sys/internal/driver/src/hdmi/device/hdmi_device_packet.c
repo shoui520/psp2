@@ -16,21 +16,6 @@
 
 #define SCE_ERROR_INVALID_TYPE	0x80000021
 
-/* The transmitter's frame (packet) ids, HdmiDevice.packetCtrl bits */
-#define HDMI_FRAME_ACR		0x0002	/* packet type 1 */
-#define HDMI_FRAME_TYPE2	0x0004
-#define HDMI_FRAME_GC		0x0008	/* general control */
-#define HDMI_FRAME_ISRC1	0x0010
-#define HDMI_FRAME_ISRC2	0x0020
-#define HDMI_FRAME_TYPE6	0x0040
-#define HDMI_FRAME_TYPE10	0x0400
-#define HDMI_FRAME_VS		0x0800	/* vendor specific InfoFrame */
-#define HDMI_FRAME_AVI		0x1000
-#define HDMI_FRAME_SPD		0x2000
-#define HDMI_FRAME_AUDIO	0x4000
-#define HDMI_FRAME_MPEG		0x8000
-#define HDMI_FRAME_ALL		0xffff
-
 /* .bss: the DTrace hooks */
 #if FW_SINCE(0x04000000)
 void (*setPacketDirectProbeHook)(const SceDtraceProbe *probe, ...);

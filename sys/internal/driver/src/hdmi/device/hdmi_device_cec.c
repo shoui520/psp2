@@ -19,8 +19,6 @@
 #define CEC_SLAVE_MAIN		0x7a
 #define CEC_SLAVE_CEC		0x7c
 
-#define HDMI_INTR_MASK_CEC	0x80fe
-
 /* the event flag's bits: how a transmission ended */
 #define CEC_DEV_EVENT_TX_READY		0x1
 #define CEC_DEV_EVENT_TX_RETRY_TIMEOUT	0x2

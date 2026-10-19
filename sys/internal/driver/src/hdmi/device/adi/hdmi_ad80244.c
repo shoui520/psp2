@@ -53,9 +53,6 @@
 /* AD80244_REG_INTR_STATUS2 */
 #define AD80244_INTR_BKSV_FLAG		0x40
 
-/* HdmiDeviceAD80244SetFrame/SetPacketCtrl: the frame (packet) ids */
-#define HDMI_FRAME_ALL			0xffff
-
 /* SetFrame/SetPacketCtrl: the device needs an HDMI sink */
 #define AD80244_ERROR_NOT_HDMI_PACKET	0x80000022
 #define AD80244_ERROR_NOT_HDMI_FRAME	0x80000023

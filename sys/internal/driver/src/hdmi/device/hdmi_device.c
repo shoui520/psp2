@@ -23,14 +23,6 @@
 #define HDMI_INTR_EVENT_INTR	0x000001	/* the transmitter raised its interrupt */
 #define HDMI_INTR_EVENT_EXIT	0x100000
 
-/* hdmiDeviceEnableIntr/hdmiDeviceDisableIntr: which interrupts */
-#define HDMI_INTR_MASK_HPD		1
-#define HDMI_INTR_MASK_HPD2		2
-#define HDMI_INTR_MASK_EDID		4
-#define HDMI_INTR_MASK_EDID2		5
-#define HDMI_INTR_MASK_AUTH		6
-#define HDMI_INTR_MASK_CEC		0x80fe
-
 /* edidMode, hdcpMode */
 #define HDMI_MODE_DEFAULT	0xff
 #define HDMI_EDID_MODE_ON	0x80
