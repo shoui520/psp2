@@ -11,6 +11,8 @@
  * Every API entry stores TPIDRURO << 16 while it runs and restores it on exit.
  */
 
+#include <fw.h>
+#include <stddef.h>
 #include <sysmem/cpu.h>
 #include <sysmem/debug.h>
 #include <smsc_proxy/smsc_proxy.h>
@@ -57,11 +59,18 @@ enum {
 	LOOKUP_NO_MUTEX,
 };
 
+/*
+ * A word of the invoke argument area. The area is filled as words, after every load from the
+ * caller's context: both are plain memory to the compiler, so the order of the loads and stores
+ * is the order written here.
+ */
+#define INVOKE_AREA_WORD(field, n) \
+	(((SceUInt32 *)buf)[offsetof(SceSblSmSchedProxyInvokeArg, field) / sizeof(SceUInt32) + (n)])
+
 typedef struct Channel {
 	SceSblSmSchedCry2ArmHandler handler;
 	void *arg;
-	SceUInt32 pendingB;		/* message words held until a handler exists */
-	SceUInt32 pendingA;
+	SmschedIntrStatus pending;	/* held until a handler exists */
 } Channel;
 
 typedef struct Session {
@@ -75,16 +84,25 @@ typedef struct Session {
 
 int SmcCall(SceUInt32 r0, SceUInt32 r1, SceUInt32 r2, SceUInt32 r3, SceUInt32 command);
 
-static SceUID s_heap;
-static SceUID s_lastId;
-static int s_state;
-static Session *s_session;
-static SceKernelSpinlock s_lock;
+/*
+ * The sessions are read in place: Sony's code loads a field again wherever it uses it again, so the
+ * table is volatile. The id counter starts at 0 and is incremented before use in 4.00; the 3.6x
+ * builds start it at 1 and increment it after.
+ */
+SceUID s_heap;
+#if FW_SINCE(0x04000000)
+volatile SceUID s_lastId;
+#else
+SceUID s_lastId = 1;
+#endif
+int s_state;
+volatile Session *s_session;
+SceKernelSpinlock s_lock;
 
 /* name unknown */
-static Session *SessionLookup(SceUID id, int *status)
+static volatile Session *SessionLookup(SceUID id, int *status)
 {
-	Session *s;
+	volatile Session *s;
 	int i;
 
 	if (status == NULL)
@@ -127,12 +145,14 @@ static Session *SessionLookup(SceUID id, int *status)
 static int softIntrHandler(int intrCode, void *userCtx)
 {
 	SceSblSmSchedCry2ArmHandler handler;
-	SmschedIntrMessage *msg;
-	Session *s;
 	SceSize size;
-	SceUInt32 handle, flags, channel, a, b;
+	volatile SmschedIntrMessage *msg;
+	SmschedIntrStatus status;
+	volatile Session *s;
+	SceUID id;
+	SceUInt32 handle, flags, channel, eventBits, a, b;
 	void *arg;
-	int state, status, ret;
+	int state, lookup, ret;
 
 	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	if (sceSblTzsBridgePopIntrArea((void **)&msg, &size) < 0)
@@ -141,22 +161,31 @@ static int softIntrHandler(int intrCode, void *userCtx)
 		SCE_PANIC(968);
 
 	channel = msg->channel;
+	id = msg->id;
 	flags = msg->flags;
-	b = msg->status.result;
-	a = msg->status.state;
+	eventBits = msg->eventBits;
+	status = msg->status;
+	b = status.result;
+	a = status.state;
 
-	s = SessionLookup(msg->id, &status);
+	s = SessionLookup(id, &lookup);
 	if (s == NULL) {
-		switch (status) {
-		case LOOKUP_ID_INVALID:		SCE_PANIC(993);
-		case LOOKUP_ID_ZERO:		SCE_PANIC(996);
-		case LOOKUP_NOT_FOUND:		SCE_PANIC(999);
-		case LOOKUP_4:			SCE_PANIC(1002);
-		case LOOKUP_ID_CLEARED:		SCE_PANIC(1005);
-		case LOOKUP_NO_EVENT_FLAG:	SCE_PANIC(1009);
-		case LOOKUP_NO_MUTEX:		SCE_PANIC(1012);
-		default:			SCE_PANIC(1015);
-		}
+		if (lookup == LOOKUP_ID_INVALID)
+			SCE_PANIC(993);
+		else if (lookup == LOOKUP_ID_ZERO)
+			SCE_PANIC(996);
+		else if (lookup == LOOKUP_NOT_FOUND)
+			SCE_PANIC(999);
+		else if (lookup == LOOKUP_4)
+			SCE_PANIC(1002);
+		else if (lookup == LOOKUP_ID_CLEARED)
+			SCE_PANIC(1005);
+		else if (lookup == LOOKUP_NO_EVENT_FLAG)
+			SCE_PANIC(1009);
+		else if (lookup == LOOKUP_NO_MUTEX)
+			SCE_PANIC(1012);
+		else
+			SCE_PANIC(1015);
 	}
 
 	handle = s->handle;
@@ -165,10 +194,8 @@ static int softIntrHandler(int intrCode, void *userCtx)
 	if (flags & MSG_CALL_HANDLER) {
 		handler = s->channel[channel].handler;
 		arg = s->channel[channel].arg;
-		if (handler == NULL) {
-			s->channel[channel].pendingB = b;
-			s->channel[channel].pendingA = a;
-		}
+		if (handler == NULL)
+			s->channel[channel].pending = status;
 	}
 	if (flags & MSG_HANDLER_ONLY) {
 		handler = s->channel[channel].handler;
@@ -176,7 +203,7 @@ static int softIntrHandler(int intrCode, void *userCtx)
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
 
-	if ((flags & MSG_SET_EVENT) && sceKernelSetEventFlag(s->eventFlag, msg->eventBits) < 0)
+	if ((flags & MSG_SET_EVENT) && sceKernelSetEventFlag(s->eventFlag, eventBits) < 0)
 		SCE_PANIC(1045);
 
 	if (handler == NULL) {
@@ -188,13 +215,13 @@ static int softIntrHandler(int intrCode, void *userCtx)
 		}
 	} else {
 		if (flags & MSG_CALL_HANDLER)
-			handler(msg->id, channel, arg, a, b);
+			handler(id, channel, arg, a, b);
 		if (!(flags & MSG_HANDLER_ONLY)) {
 			ret = SmcCall(handle, channel, msg->ack, 0, SMC_INTR_DONE);
 			if (ret == SCE_SBL_ERROR_SMSCHED_NO_REQUEST)
 				return -1;
 		} else {
-			handler(msg->id, channel, arg, 0, 0);
+			handler(id, channel, arg, 0, 0);
 			ret = SmcCall(handle, channel, msg->ack, 0, SMC_INTR_DONE);
 			if (ret == SCE_SBL_ERROR_SMSCHED_NO_REQUEST)
 				SCE_PANIC(1081);
@@ -206,9 +233,9 @@ static int softIntrHandler(int intrCode, void *userCtx)
 }
 
 /* name unknown: SMC command on a session channel (channel 1-3) */
-static int SessionCall(SceUInt32 command, SceUID id, int channel, SceUInt32 value)
+static int updateMailbox(SceUInt32 command, SceUID id, int channel, SceUInt32 value)
 {
-	Session *s;
+	volatile Session *s;
 	int status;
 
 	if (s_state != STATE_READY)
@@ -224,9 +251,9 @@ static int SessionCall(SceUInt32 command, SceUID id, int channel, SceUInt32 valu
 
 static int accessMailbox(SceUInt32 command, SceUID id, int channel, SceUInt32 *value)
 {
-	SceUInt32 *buf;
 	SceSize size;
-	Session *s;
+	SceUInt32 *buf;
+	volatile Session *s;
 	int status, index, ret, result;
 
 	if (s_state != STATE_READY)
@@ -263,7 +290,7 @@ static int accessMailbox(SceUInt32 command, SceUID id, int channel, SceUInt32 *v
 /* name unknown */
 static void SessionFree(SceUID id)
 {
-	Session *s;
+	volatile Session *s;
 	int status;
 
 	s = SessionLookup(id, &status);
@@ -282,14 +309,17 @@ static void SessionFree(SceUID id)
 }
 
 /* name unknown */
-static int SysEventHandler(int resume, int eventId, void *args, void *opt)
+static int sysEventHandler(int resume, int eventId, void *args, void *opt)
 {
 	int ret;
 
-	if (eventId != SYSEVENT_RESUME_DEVICE(4))
-		return 0;
-	ret = sceSblTzsBridgeStart();
-	return ret < 0 ? ret : 0;
+	if (resume == 1) {
+		if (eventId == SYSEVENT_RESUME_DEVICE(4)) {
+			ret = sceSblTzsBridgeStart();
+			return ret < 0 ? ret : 0;
+		}
+	}
+	return 0;
 }
 
 int sceSblSmSchedProxyModuleStart(SceSize args, void *argp)
@@ -316,7 +346,7 @@ int sceSblSmSchedProxyModuleStart(SceSize args, void *argp)
 					    NULL, 0x80, 0xf, NULL);
 	if (ret < 0)
 		return ret;
-	ret = sceKernelRegisterSysEventHandler("SceSblSmSchedProxy", SysEventHandler, NULL);
+	ret = sceKernelRegisterSysEventHandler("SceSblSmSchedProxy", sysEventHandler, NULL);
 	if (ret < 0)
 		return ret;
 
@@ -333,14 +363,14 @@ int SceSblSmSchedProxyForKernel_A488D604(void)
 }
 
 /* name unknown */
-static int Terminate(void)
+__attribute__((noinline)) static int Terminate(void)
 {
 	int ret;
 
 	ret = SmcCall(0, 0, 0, 0, SMC_STOP);
 	if (s_heap > 0) {
 		if (s_session != NULL) {
-			sceKernelFreeHeapMemory(s_heap, s_session);
+			sceKernelFreeHeapMemory(s_heap, (void *)s_session);
 			s_session = NULL;
 		}
 		sceKernelDeleteHeap(s_heap);
@@ -358,13 +388,15 @@ int SceSblSmSchedProxyForKernel_33A3A1E2(void)
 }
 
 int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUInt32 *in,
-			     const void *param, SceUID *id)
+			     const SelfAuthRequest *param, SceUID *id)
 {
-	const SceUInt32 *p = param;
-	SceUInt32 tls, *buf;
+	SceUInt32 tls;
+	SceSblSmSchedProxyInvokeArg *buf;
 	SceSize size;
-	Session *s;
-	SceUID prev, newId;
+	volatile Session *s;
+	SceUID newId;
+	const SceUInt32 *programAuthorityId, *capability;
+	SceUInt32 selfType, mediaType, paid0, paid1, cap0, cap1, cap2, cap3;
 	int state, i, index, ret, result;
 
 	tls = sceSyscallEnter();
@@ -388,8 +420,11 @@ int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUIn
 	}
 	s = &s_session[i];
 	s->used = 1;
-	prev = s_lastId;
+#if FW_SINCE(0x04000000)
 	newId = ++s_lastId;
+#else
+	newId = s_lastId++;
+#endif
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
 
 	s->id = newId;
@@ -397,8 +432,8 @@ int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUIn
 	for (i = 0; i < CHANNEL_COUNT; i++) {
 		s->channel[i].handler = NULL;
 		s->channel[i].arg = NULL;
-		s->channel[i].pendingB = 0;
-		s->channel[i].pendingA = 0;
+		s->channel[i].pending.result = 0;
+		s->channel[i].pending.state = 0;
 	}
 	s->eventFlag = -1;
 	s->mutex = -1;
@@ -411,7 +446,7 @@ int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUIn
 	if (ret < 0)
 		goto fail_session;
 	s->mutex = ret;
-	if (prev == -2) {
+	if (newId == -1) {
 		sceSyscallLeave(tls);
 		return SCE_SBL_ERROR_SMSCHED_NO_MEMORY;
 	}
@@ -423,15 +458,44 @@ int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUIn
 		sceSyscallLeave(tls);
 		return index;
 	}
-	for (i = 0; i < 4; i++)
-		buf[i] = in != NULL ? in[i] : 0;
-	buf[4] = newId;
-	buf[6] = p[0x4 / 4];
-	buf[7] = p[0x128 / 4];
-	buf[8] = p[0x8 / 4];
-	buf[9] = p[0xc / 4];
-	for (i = 0; i < 8; i++)
-		buf[10 + i] = p[0x18 / 4 + i];
+	if (in != NULL) {
+		buf->arg2Low = in[0];
+		buf->arg2High = in[1];
+		buf->arg3 = in[2];
+		buf->arg4 = in[3];
+	} else {
+		buf->arg2Low = 0;
+		buf->arg2High = 0;
+		buf->arg3 = 0;
+		buf->arg4 = 0;
+	}
+	programAuthorityId = (const SceUInt32 *)&param->caller.programAuthorityId;
+	capability = (const SceUInt32 *)&param->caller.capability;
+	selfType = param->selfType;
+	mediaType = param->mediaType;
+	paid0 = programAuthorityId[0];
+	paid1 = programAuthorityId[1];
+	cap0 = capability[0];
+	cap1 = capability[1];
+	cap2 = capability[2];
+	cap3 = capability[3];
+	INVOKE_AREA_WORD(proxyId, 0) = newId;
+	INVOKE_AREA_WORD(invokeArg.selfType, 0) = selfType;
+	INVOKE_AREA_WORD(invokeArg.mediaType, 0) = mediaType;
+	INVOKE_AREA_WORD(invokeArg.programAuthorityId, 0) = paid0;
+	INVOKE_AREA_WORD(invokeArg.programAuthorityId, 1) = paid1;
+	INVOKE_AREA_WORD(invokeArg.capability, 0) = cap0;
+	INVOKE_AREA_WORD(invokeArg.capability, 1) = cap1;
+	INVOKE_AREA_WORD(invokeArg.capability, 2) = cap2;
+	INVOKE_AREA_WORD(invokeArg.capability, 3) = cap3;
+	cap0 = capability[4];
+	cap1 = capability[5];
+	cap2 = capability[6];
+	cap3 = capability[7];
+	INVOKE_AREA_WORD(invokeArg.capability, 4) = cap0;
+	INVOKE_AREA_WORD(invokeArg.capability, 5) = cap1;
+	INVOKE_AREA_WORD(invokeArg.capability, 6) = cap2;
+	INVOKE_AREA_WORD(invokeArg.capability, 7) = cap3;
 
 	ret = sceSblTzsBridgePushArgArea(index);
 	if (ret < 0)
@@ -442,7 +506,7 @@ int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUIn
 		goto fail_buffer;
 	if (size < 0x48)
 		SCE_PANIC(302);
-	s->handle = buf[5];
+	s->handle = buf->requestId;
 
 	ret = sceSblTzsBridgeFreeArgArea(index);
 	if (ret >= 0) {
@@ -467,9 +531,10 @@ fail_session:
 
 int sceSblSmSchedProxyWait(SceUID id, SceUInt32 *result)
 {
-	SceUInt32 tls, *buf;
+	SceUInt32 tls;
 	SceSize size;
-	Session *s;
+	SmschedIntrStatus *buf;
+	volatile Session *s;
 	int status, index, ret, value;
 
 	tls = sceSyscallEnter();
@@ -504,8 +569,7 @@ int sceSblSmSchedProxyWait(SceUID id, SceUInt32 *result)
 		if (ret >= 0) {
 			if (size < 8)
 				SCE_PANIC(421);
-			result[0] = buf[0];
-			result[1] = buf[1];
+			*(SmschedIntrStatus *)result = *buf;
 			ret = sceSblTzsBridgeFreeArgArea(index);
 			ret = ret < 0 ? ret : value;
 			goto out;
@@ -524,9 +588,10 @@ invalid:
 
 int sceSblSmSchedProxyGetStatus(SceUID id, SceUInt32 *status)
 {
-	SceUInt32 tls, *buf;
+	SceUInt32 tls;
 	SceSize size;
-	Session *s;
+	SmschedIntrStatus *buf;
+	volatile Session *s;
 	int st, index, ret, value;
 
 	tls = sceSyscallEnter();
@@ -556,11 +621,14 @@ int sceSblSmSchedProxyGetStatus(SceUID id, SceUInt32 *status)
 		if (ret >= 0) {
 			if (size < 8)
 				SCE_PANIC(523);
-			status[0] = buf[0];
-			status[1] = buf[1];
+			*(SmschedIntrStatus *)status = *buf;
 			ret = sceSblTzsBridgeFreeArgArea(index);
+			if (ret < 0) {
+				sceSyscallLeave(tls);
+				return ret;
+			}
 			sceSyscallLeave(tls);
-			return ret < 0 ? ret : value;
+			return value;
 		}
 	}
 	sceSblTzsBridgeFreeArgArea(index);
@@ -571,7 +639,7 @@ int sceSblSmSchedProxyGetStatus(SceUID id, SceUInt32 *status)
 int SceSblSmSchedProxyForKernel_DE4EAC3C(SceUID id)
 {
 	SceUInt32 tls = sceSyscallEnter();
-	Session *s;
+	volatile Session *s;
 	int status, ret;
 
 	if (s_state != STATE_READY) {
@@ -602,7 +670,7 @@ int SceSblSmSchedProxyForKernel_1DFC8624(void)
 int SceSblSmSchedProxyForKernel_723B382F(SceUID id, int channel, SceUInt32 value)
 {
 	SceUInt32 tls = sceSyscallEnter();
-	int ret = SessionCall(SMC_CALL_FUNC, id, channel, value);
+	int ret = updateMailbox(SMC_CALL_FUNC, id, channel, value);
 
 	sceSyscallLeave(tls);
 	return ret;
@@ -620,7 +688,7 @@ int SceSblSmSchedProxyForKernel_F70C04EC(SceUID id, int channel, SceUInt32 *valu
 int SceSblSmSchedProxyForKernel_3CE17233(SceUID id, int channel, SceUInt32 value)
 {
 	SceUInt32 tls = sceSyscallEnter();
-	int ret = SessionCall(SMC_3CE17233, id, channel, value);
+	int ret = updateMailbox(SMC_3CE17233, id, channel, value);
 
 	sceSyscallLeave(tls);
 	return ret;
@@ -629,7 +697,7 @@ int SceSblSmSchedProxyForKernel_3CE17233(SceUID id, int channel, SceUInt32 value
 int sceSblSmSchedProxyWriteCry2Arm(SceUID id, int channel, SceUInt32 value)
 {
 	SceUInt32 tls = sceSyscallEnter();
-	int ret = SessionCall(SMC_WRITE_CRY2ARM, id, channel, value);
+	int ret = updateMailbox(SMC_WRITE_CRY2ARM, id, channel, value);
 
 	sceSyscallLeave(tls);
 	return ret;
@@ -648,45 +716,45 @@ int sceSblSmSchedProxyRegisterIntrHandler(SceUID id, int channel,
 					      SceSblSmSchedCry2ArmHandler handler, void *arg)
 {
 	SceUInt32 tls = sceSyscallEnter();
-	SceUInt32 a, b;
-	Channel *ch;
-	Session *s;
+	SmschedIntrStatus pending;
+	volatile Session *s;
 	int state, status, ret;
 
 	if (s_state != STATE_READY) {
-		ret = SCE_SBL_ERROR_SMSCHED_NOT_READY;
-		goto out;
+		sceSyscallLeave(tls);
+		return SCE_SBL_ERROR_SMSCHED_NOT_READY;
 	}
-	if ((unsigned int)channel >= CHANNEL_COUNT || handler == NULL) {
-		ret = SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
-		goto out;
+	if ((unsigned int)channel >= CHANNEL_COUNT) {
+		sceSyscallLeave(tls);
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
+	}
+	if (handler == NULL) {
+		sceSyscallLeave(tls);
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	}
 
 	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	s = SessionLookup(id, &status);
 	if (s == NULL) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
-		ret = SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
-		goto out;
+		sceSyscallLeave(tls);
+		return SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
 	}
-	ch = &s->channel[channel];
-	if (ch->handler != NULL) {
+	if (s->channel[channel].handler != NULL) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
-		ret = SCE_SBL_ERROR_SMSCHED_BUSY;
-		goto out;
+		sceSyscallLeave(tls);
+		return SCE_SBL_ERROR_SMSCHED_BUSY;
 	}
-	ch->handler = handler;
-	ch->arg = arg;
-	b = ch->pendingB;
-	a = ch->pendingA;
-	ch->pendingB = 0;
-	ch->pendingA = 0;
+	s->channel[channel].handler = handler;
+	s->channel[channel].arg = arg;
+	pending = s->channel[channel].pending;
+	s->channel[channel].pending.result = 0;
+	s->channel[channel].pending.state = 0;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
 
-	if (a != 0)
-		handler(id, channel, arg, a, b);
+	if (pending.state != 0)
+		handler(id, channel, arg, pending.state, pending.result);
 	ret = SmcCall(s->handle, channel, 0, 0, SMC_ENABLE_CRY2ARM);
-out:
 	sceSyscallLeave(tls);
 	return ret;
 }
@@ -694,7 +762,7 @@ out:
 int SceSblSmSchedProxyForKernel_85EDA5FC(SceUID id, int channel)
 {
 	SceUInt32 tls = sceSyscallEnter();
-	Session *s;
+	volatile Session *s;
 	int state, status, ret;
 
 	if (s_state != STATE_READY) {

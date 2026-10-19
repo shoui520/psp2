@@ -8,6 +8,7 @@
 #pragma once
 
 #include <scetypes.h>
+#include <authmgr/sblauthmgr.h>
 
 /*
  * The secure module scheduler's errors (names unknown): SceSblSmsched returns them through
@@ -51,7 +52,7 @@ typedef struct SmschedIntrMessage {
 } SmschedIntrMessage;
 
 /* the secure module start arguments the Non-secure kernel passes, from
- * its SceSblSmCommContext130 (names from the henkaku wiki) */
+ * the SelfAuthRequest (the henkaku wiki's SceSblSmCommContext130) */
 typedef struct SmschedInvokeArg {
 	SceUInt32 selfType;
 	SceUInt32 mediaType;
@@ -85,9 +86,9 @@ typedef void (*SceSblSmSchedCry2ArmHandler)(SceUID id, int channel, void *arg,
 int SceSblSmSchedProxyForKernel_A488D604(void);	/* vitasdk: ksceSblSmSchedProxyInitialize */
 int SceSblSmSchedProxyForKernel_33A3A1E2(void);	/* vitasdk: ksceSblSmSchedProxyUninitialize */
 int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUInt32 *in,
-			     const void *param, SceUID *id);
-int sceSblSmSchedProxyWait(SceUID id, SceUInt32 *result);
-int sceSblSmSchedProxyGetStatus(SceUID id, SceUInt32 *status);
+			     const SelfAuthRequest *param, SceUID *id);
+int sceSblSmSchedProxyWait(SceUID id, SceUInt32 *result);	/* a SmschedIntrStatus */
+int sceSblSmSchedProxyGetStatus(SceUID id, SceUInt32 *status);	/* a SmschedIntrStatus */
 /* vitasdk: ksceSblSmSchedProxyChangeF00DStatus */
 int SceSblSmSchedProxyForKernel_DE4EAC3C(SceUID id);
 /* vitasdk: ksceSblSmSchedCallFunc */

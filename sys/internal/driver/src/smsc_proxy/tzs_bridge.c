@@ -21,10 +21,15 @@
 #include <smsc_proxy/smsc_proxy.h>
 #include <smsc_proxy/tzs_bridge.h>
 
+/* name unknown: the links of a circular list of free areas */
+typedef struct BridgeLink {
+	struct BridgeLink *next;
+	struct BridgeLink *prev;
+} BridgeLink;
+
 /* name unknown: a free list entry for one area */
 typedef struct BridgeNode {
-	struct BridgeNode *next;
-	struct BridgeNode *prev;
+	BridgeLink link;
 	void *area;
 	SceUInt32 reserved;
 } BridgeNode;
@@ -35,22 +40,22 @@ static void *s_intrArea;
 static BridgeNode s_argNode[TZS_BRIDGE_AREAS];
 static void *s_argArea;
 static SceUInt32 *s_intrIndex;
-static BridgeNode s_intrFree;
+static BridgeLink s_intrFree;
 #if !TZS_BRIDGE_SECURE
 static int s_savedIntr[4];		/* by CPU, while an argument area is held */
 #endif
-static BridgeNode s_argFree;
+static BridgeLink s_argFree;
 static SceSblTzsBridgeMemory *s_memory;
 
-static inline void ListInit(BridgeNode *head)
+static inline void ListInit(BridgeLink *head)
 {
 	head->next = head;
 	head->prev = head;
 }
 
-static inline void ListAddTail(BridgeNode *head, BridgeNode *node)
+static inline void ListAddTail(BridgeLink *head, BridgeLink *node)
 {
-	BridgeNode *tail = head->prev;
+	BridgeLink *tail = head->prev;
 
 	node->next = head;
 	head->prev = node;
@@ -76,8 +81,8 @@ int sceSblTzsBridgeInit(void)
 		s_argNode[i].area = (char *)memory + i * TZS_BRIDGE_AREA_SIZE;
 		s_intrNode[i].area = (char *)memory + offsetof(SceSblTzsBridgeMemory, intrArea) +
 				     i * TZS_BRIDGE_AREA_SIZE;
-		ListAddTail(&s_argFree, &s_argNode[i]);
-		ListAddTail(&s_intrFree, &s_intrNode[i]);
+		ListAddTail(&s_argFree, &s_argNode[i].link);
+		ListAddTail(&s_intrFree, &s_intrNode[i].link);
 	}
 	s_listLock = 0;
 	return 0;
@@ -100,7 +105,8 @@ int sceSblTzsBridgeStart(void)
 /* a free area of a set taken; its index returned */
 int sceSblTzsBridgeAlloc(void *areas, SceSize size, void **area, SceSize *areaSize)
 {
-	BridgeNode *head, *node;
+	BridgeLink *head;
+	BridgeNode *node;
 	void *nodeArea;
 
 	if (areas == NULL)
@@ -112,14 +118,14 @@ int sceSblTzsBridgeAlloc(void *areas, SceSize size, void **area, SceSize *areaSi
 	if (areaSize == NULL)
 		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	head = (areas == s_argArea) ? &s_argFree : &s_intrFree;
-	node = head->next;
-	if (node == head)
+	node = (BridgeNode *)head->next;
+	if (&node->link == head)
 		return SCE_SBL_ERROR_SMSCHED_NO_MEMORY;
 	nodeArea = node->area;
-	node->next->prev = node->prev;
-	node->prev->next = node->next;
-	node->next = node;
-	node->prev = node;
+	node->link.next->prev = node->link.prev;
+	node->link.prev->next = node->link.next;
+	node->link.next = &node->link;
+	node->link.prev = &node->link;
 	*area = nodeArea;
 	*areaSize = size;
 	sceKernelDcacheInvalidateRange(nodeArea, TZS_BRIDGE_AREA_SIZE);
@@ -229,7 +235,8 @@ int sceSblTzsBridgePopIntrArea(void **area, SceSize *areaSize)
 /* an area back on its set's free list */
 int sceSblTzsBridgeFree(void *areas, int index)
 {
-	BridgeNode *head, *nodes;
+	BridgeLink *head;
+	BridgeNode *nodes;
 
 	if (s_memory == NULL) {
 		SCE_DBG_ASSERT(0, 411);
@@ -243,7 +250,7 @@ int sceSblTzsBridgeFree(void *areas, int index)
 	nodes = (areas == s_argArea) ? s_argNode : s_intrNode;
 	sceKernelDcacheCleanRange((char *)areas + index * TZS_BRIDGE_AREA_SIZE,
 				   TZS_BRIDGE_AREA_SIZE);
-	ListAddTail(head, &nodes[index]);
+	ListAddTail(head, &nodes[index].link);
 	return 0;
 }
 
