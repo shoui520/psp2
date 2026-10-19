@@ -1,5 +1,6 @@
 /* Ordered lockup history snapshots; native process and record counts wrap. */
 #include "lockup-history.h"
+#include <gpu/lockup.h>
 #include "registerdump_sce.h"
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>

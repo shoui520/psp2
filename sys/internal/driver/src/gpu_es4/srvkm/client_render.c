@@ -15,6 +15,8 @@
 #include <string.h>
 #include <kernel/error.h>
 #include <threadmgr/threadmgr.h>
+#include <gpu/memory_sce.h>
+#include <gpu/osfunc_sce.h>
 
 PVRSRV_ERROR ResManFreeResByPtr(struct Resource *resource,
 		IMG_BOOL forceCleanup);
@@ -22,8 +24,6 @@ PVRSRV_ERROR SGXUnregisterHWRenderContextKM(IMG_HANDLE hHWRenderContext,
 		IMG_BOOL bForceCleanup);
 int DestroyCommandRing(struct GpuCommandRing *ring);
 PVRSRV_ERROR PVRSRVFreeSyncInfoKM(PVRSRV_KERNEL_SYNC_INFO *psSyncInfo);
-PVRSRV_ERROR PVRSRVFreeDeviceMemKM(IMG_HANDLE hDevCookie,
-		PVRSRV_KERNEL_MEM_INFO *psMemInfo);
 IMG_VOID DestroyPrivateParameterBuffer(SGX_CLIENTPBDESC *psClientPBDesc);
 PVRSRV_ERROR UnreferenceClientParameterBuffer(SGX_CLIENTPBDESC *psClientPBDesc);
 int FreeProcessGpuMemory(void *address);
@@ -34,7 +34,6 @@ int LinuxUnLockMutex(int *psPVRSRVMutex);
 PVRSRV_ERROR SGXFlushHWRenderTargetKM(IMG_HANDLE psDeviceNode,
 		IMG_DEV_VIRTADDR sHWRTDataSetDevVAddr, IMG_BOOL bForceCleanup);
 IMG_VOID *AllocProcessGpuMemory(IMG_SIZE_T size);
-IMG_VOID *OSMemSet(IMG_VOID *address, IMG_INT value, IMG_SIZE_T size);
 struct Resource *ResManRegisterRes(struct ResourceContext *context,
 		IMG_UINT32 resourceType, IMG_VOID *param, IMG_UINT32 value,
 		PVRSRV_ERROR (*callback)(IMG_VOID *, IMG_UINT32, IMG_BOOL));
@@ -51,10 +50,6 @@ int WaitSignalCounterKernel(volatile IMG_UINT32 *counter, IMG_UINT32 timeout);
 PVRSRV_ERROR PVRSRVGetDeviceMemHeapInfoKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 		GpuMemoryContext *context, IMG_UINT32 *pui32ClientHeapCount,
 		PVRSRV_HEAP_INFO *psHeapInfo, IMG_BOOL *pbSharedDeviceMemHeap);
-PVRSRV_ERROR _PVRSRVAllocDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		PVRSRV_PER_PROCESS_DATA *psPerProc, GpuHeap *heap,
-		IMG_UINT32 ui32Attribs, IMG_SIZE_T ui32Size, IMG_SIZE_T ui32Alignment,
-		IMG_INT32 hMemBlockProcRef, PVRSRV_KERNEL_MEM_INFO **ppsMemInfo);
 PVRSRV_ERROR PVRSRVAllocSyncInfoKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 		GpuMemoryContext *hDevMemContext, PVRSRV_KERNEL_SYNC_INFO **ppsSyncInfo);
 int CreatePrivateParameterBuffer(PVRSRV_DEVICE_NODE *psDeviceNode,
@@ -94,7 +89,6 @@ IMG_HANDLE SGXRegisterHWRenderContextKM(IMG_HANDLE hDeviceNode,
 		IMG_DEV_VIRTADDR *psHWRenderContextDevVAddr,
 		PVRSRV_KERNEL_MEM_INFO *psHWRenderContextMemInfo,
 		PVRSRV_PER_PROCESS_DATA *psPerProc);
-IMG_UINT32 OSGetCurrentProcessIDKM(IMG_VOID);
 PVRSRV_ERROR FreeSyncInfoCallback(IMG_VOID *pvParam, IMG_UINT32 ui32Param);
 IMG_HANDLE SGXRegisterHW2DContextKM(IMG_HANDLE hDeviceNode,
 		IMG_DEV_VIRTADDR *psHW2DContextDevVAddr,
@@ -104,8 +98,6 @@ IMG_VOID *AcquireCommandRingSpace(struct GpuCommandRing *psRing,
 		IMG_UINT32 ui32Size, volatile IMG_UINT32 *pui32SignalCounter);
 PVRSRV_ERROR SGXSubmit2DKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 		PVRSRV_2D_SGX_KICK *psKick);
-IMG_VOID *OSMemCopy(IMG_VOID *destination, const IMG_VOID *source,
-		IMG_SIZE_T size);
 
 PVRSRV_ERROR DestroyRenderContextMutexCallback(IMG_VOID *pvParam,
 		IMG_UINT32 ui32Param, IMG_BOOL bForceCleanup)

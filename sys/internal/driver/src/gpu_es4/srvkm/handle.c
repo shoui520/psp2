@@ -2,13 +2,12 @@
  * contrib/img-sgx-ddk-1.7.862890/services4/srvkm/common/handle.c.
  */
 #include "handle-types.h"
+#include <gpu/osfunc_sce.h>
 
 PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 flags, IMG_SIZE_T size,
 		IMG_VOID **ppvLinAddr, IMG_HANDLE *phBlockAlloc);
 PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 flags, IMG_SIZE_T size,
 		IMG_VOID *pvLinAddr, IMG_HANDLE hBlockAlloc);
-IMG_VOID *OSMemCopy(IMG_VOID *destination, const IMG_VOID *source,
-		IMG_SIZE_T size);
 IMG_UINT32 GetRemoteAllocProcess(void);
 IMG_UINT32 SetRemoteAllocProcess(IMG_UINT32 owner);
 extern PVRSRV_HANDLE_BASE *gpsKernelHandleBase;
@@ -601,7 +600,6 @@ PVRSRV_ERROR PVRSRVFreeHandleBase(PVRSRV_HANDLE_BASE *psBase)
 	return FreeHandleBase(psBase);
 }
 
-IMG_VOID *OSMemSet(IMG_VOID *pvDest, IMG_INT32 value, IMG_SIZE_T size);
 typedef IMG_UINT32 (*HashCallback)(IMG_UINT32 bytes, const IMG_VOID *key,
 		IMG_UINT32 count);
 typedef IMG_UINT32 (*KeyEqualCallback)(IMG_UINT32 bytes,

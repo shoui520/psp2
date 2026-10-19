@@ -14,8 +14,6 @@ extern void *AllocProcessGpuMemory(unsigned size);
 extern int DestroyGpuHeap(GpuHeap *heap);
 int FreeProcessGpuMemory(void *memory);
 int DestroyGpuMmuContext(GpuMmuContext *context);
-int sceGpuMmuUnmapMemory(GpuMmuContext *context, unsigned address,
-		unsigned size);
 
 GpuMemoryContext *kernelMemoryContext;
 GpuMemoryContext *processMemoryContexts;

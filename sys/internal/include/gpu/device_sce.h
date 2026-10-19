@@ -204,4 +204,13 @@ _Static_assert(sizeof(PVRSRV_DEVICE_NODE) == 112, "SCE device node");
 _Static_assert(sizeof(PVRSRV_SGXDEV_INFO) == 2144, "SCE SGX device info");
 _Static_assert(sizeof(SGX_CLIENT_INFO) == 256, "SCE SGX client info");
 
+/* common/pvrsrv.c */
+PVRSRV_ERROR PVRSRVEnumerateDevicesKM(IMG_UINT32 *pui32NumDevices,
+		PVRSRV_DEVICE_IDENTIFIER *psDevIdList);
+PVRSRV_ERROR PVRSRVFinaliseSystem(IMG_BOOL bInitSuccessful);
+PVRSRV_ERROR PVRSRVAcquireDeviceDataKM(IMG_UINT32 ui32DevIndex,
+		PVRSRV_DEVICE_TYPE eDeviceType, IMG_HANDLE *phDevCookie);
+PVRSRV_ERROR PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo);
+
+
 #endif

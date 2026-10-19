@@ -23,8 +23,6 @@ int lockupThreadUid = -1;
 unsigned lockupThreadRunning;
 unsigned gpuHalted;
 unsigned lockupRecoveryCount;
-typedef unsigned (*GpuLockupBeginCallback)(void);
-typedef void (*GpuLockupEndCallback)(unsigned token);
 GpuLockupBeginCallback lockupBeginCallback;
 GpuLockupEndCallback lockupEndCallback;
 

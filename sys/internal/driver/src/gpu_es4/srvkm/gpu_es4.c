@@ -15,12 +15,12 @@
 #include <sysmem/sysclib.h>
 #include <power/power.h>
 #include <processmgr/processmgr.h>
+#include <gpu/osfunc_sce.h>
 
 /* SCE stores the services mutex UID in the native module's zeroed state. */
 SceUID gPVRSRVLock;
 IMG_VOID LinuxLockMutex(int *psMutex);
 IMG_VOID LinuxUnLockMutex(int *psMutex);
-IMG_UINT32 OSGetCurrentProcessIDKM(IMG_VOID);
 PVRSRV_ERROR PVRSRVProcessConnect(IMG_UINT32 ui32PID, IMG_UINT32 ui32Flags);
 IMG_VOID PVRSRVProcessDisconnect(IMG_UINT32 ui32PID);
 

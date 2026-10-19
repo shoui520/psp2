@@ -13,6 +13,8 @@
 #include <sysmem/debug.h>
 #include <string.h>
 #include <threadmgr/threadmgr.h>
+#include <gpu/memory_sce.h>
+#include <gpu/power_sce.h>
 
 /* IMG shared-heap classification table, zero-initialized in both TOOL originals. */
 static IMG_BOOL abSharedDeviceMemHeap[32];
@@ -813,7 +815,6 @@ OpFlushedComplete:
 	return PVRSRV_OK;
 }
 
-
 typedef struct PVRSRV_BRIDGE_IN_GET_MISC_INFO {
 	IMG_UINT32 ui32BridgeFlags;
 	PVRSRV_MISC_INFO sMiscInfo;
@@ -824,10 +825,8 @@ typedef struct PVRSRV_BRIDGE_OUT_GET_MISC_INFO {
 	PVRSRV_MISC_INFO sMiscInfo;
 } PVRSRV_BRIDGE_OUT_GET_MISC_INFO;
 
-IMG_VOID *OSMemCopy(IMG_VOID *destination, const IMG_VOID *source, IMG_SIZE_T size);
 PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
 		IMG_VOID **ppvLinAddr, IMG_HANDLE *phBlockAlloc);
-PVRSRV_ERROR PVRSRVGetMiscInfoKM(PVRSRV_MISC_INFO *psMiscInfo);
 PVRSRV_ERROR CopyToUserWrapper(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		IMG_VOID *destination, const IMG_VOID *source, IMG_SIZE_T size);
 
@@ -994,8 +993,6 @@ typedef struct PVRSRV_BRIDGE_OUT_ACQUIRE_DEVICEINFO {
 	IMG_SID hDevCookie;
 } PVRSRV_BRIDGE_OUT_ACQUIRE_DEVICEINFO;
 
-PVRSRV_ERROR PVRSRVAcquireDeviceDataKM(IMG_UINT32 uiDevIndex,
-		PVRSRV_DEVICE_TYPE eDeviceType, PVRSRV_DEVICE_NODE **ppsDeviceNode);
 PVRSRV_ERROR PVRSRVAllocHandle(struct _PVRSRV_HANDLE_BASE_ *base, IMG_SID *output,
 		IMG_VOID *data, IMG_UINT32 type, IMG_UINT32 flags);
 
@@ -1005,14 +1002,14 @@ IMG_INT PVRSRVAcquireDeviceDataBW(IMG_UINT32 ui32BridgeID,
 		PVRSRV_BRIDGE_OUT_ACQUIRE_DEVICEINFO *psBridgeOut,
 		PVRSRV_PER_PROCESS_DATA *psPerProc)
 {
-	PVRSRV_DEVICE_NODE *psDeviceNode;
+	IMG_HANDLE hDevCookieInt;
 
 	psBridgeOut->eError = PVRSRVAcquireDeviceDataKM(psBridgeIn->uiDevIndex,
-			psBridgeIn->eDeviceType, &psDeviceNode);
+			psBridgeIn->eDeviceType, &hDevCookieInt);
 	if (psBridgeOut->eError != PVRSRV_OK)
 		return 0;
 	psBridgeOut->eError = PVRSRVAllocHandle(psPerProc->psHandleBase,
-			&psBridgeOut->hDevCookie, psDeviceNode, 2, 1);
+			&psBridgeOut->hDevCookie, hDevCookieInt, 2, 1);
 	return 0;
 }
 
@@ -1021,9 +1018,6 @@ typedef struct PVRSRV_BRIDGE_OUT_ENUMDEVICE {
 	IMG_UINT32 ui32NumDevices;
 	PVRSRV_DEVICE_IDENTIFIER asDeviceIdentifier[16];
 } PVRSRV_BRIDGE_OUT_ENUMDEVICE;
-
-PVRSRV_ERROR PVRSRVEnumerateDevicesKM(IMG_UINT32 *pui32NumDevices,
-		PVRSRV_DEVICE_IDENTIFIER *psDeviceIdentifier);
 
 /* IMG enumeration bridge; SCE compiles out the command assertion. */
 IMG_INT PVRSRVEnumerateDevicesBW(IMG_UINT32 ui32BridgeID, IMG_VOID *psBridgeIn,
@@ -1040,9 +1034,6 @@ typedef struct PVRSRV_BRIDGE_IN_FREEDEVICEMEM {
 	IMG_SID hDevCookie;
 	IMG_SID hKernelMemInfo;
 } PVRSRV_BRIDGE_IN_FREEDEVICEMEM;
-
-PVRSRV_ERROR PVRSRVFreeDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		PVRSRV_KERNEL_MEM_INFO *psMemInfo);
 
 /* IMG free-device-memory bridge; SCE disables upstream diagnostics. */
 IMG_INT PVRSRVFreeDeviceMemBW(IMG_UINT32 ui32BridgeID,
@@ -1131,7 +1122,6 @@ IMG_INT PVRSRVGetDeviceMemHeapInfoBW(IMG_UINT32 ui32BridgeID,
 	psBridgeOut->eError = PVRSRVCommitHandleBatch(psPerProc->psHandleBase);
 	return 0;
 }
-
 
 typedef struct PVRSRV_BRIDGE_OUT_CREATE_SYNC_INFO_MOD_OBJ {
 	PVRSRV_ERROR eError;
@@ -1338,12 +1328,6 @@ typedef struct PVRSRV_BRIDGE_OUT_ALLOCDEVICEMEM {
 	IMG_SID hKernelMemInfo;
 	PVRSRV_CLIENT_MEM_INFO sClientMemInfo;
 } PVRSRV_BRIDGE_OUT_ALLOCDEVICEMEM;
-
-PVRSRV_ERROR _PVRSRVAllocDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		PVRSRV_PER_PROCESS_DATA *psPerProc, struct GpuHeap *heap,
-		IMG_UINT32 ui32Attribs, IMG_SIZE_T ui32Size, IMG_SIZE_T ui32Alignment,
-		IMG_INT32 hMemBlockProcRef, PVRSRV_KERNEL_MEM_INFO **ppsMemInfo);
-IMG_VOID *OSMemSet(IMG_VOID *pvDest, IMG_INT value, IMG_SIZE_T size);
 
 static const SceKernelDebugInfo dbg_PVRSRVAllocDeviceMemBW_L816 = {
 	0x1399193b, 0xc915e7fa, 0x532a2c10,
@@ -1581,7 +1565,6 @@ IMG_VOID sceGpuBridgeDeInit(IMG_VOID)
 {
 }
 
-IMG_BOOL PVRSRVGetInitServerState(IMG_UINT32 eInitServerState);
 PVRSRV_ERROR CopyFromUserWrapper(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		IMG_VOID *destination, const IMG_VOID *source, IMG_SIZE_T size);
 PVRSRV_ERROR CopyToUserWrapper(PVRSRV_PER_PROCESS_DATA *psPerProc,

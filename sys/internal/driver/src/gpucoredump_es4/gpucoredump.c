@@ -89,7 +89,7 @@ GpuCoreDumpHeader gpuCoreDumpHeader;
 static int s_traceKey = -1;
 
 /* SceGpuEs4: ends a running PA trace before the dump, 1 if one was */
-static int gpuCoreDumpStopTrace(void)
+static unsigned gpuCoreDumpStopTrace(void)
 {
 	int key, stopped;
 
@@ -429,9 +429,9 @@ out:
 }
 
 /* SceGpuEs4: the GPU stopped */
-static void gpuCoreDumpOnLockup(int dumpTrace)
+static void gpuCoreDumpOnLockup(unsigned dumpTrace)
 {
-	PvrsrvDeviceIdentifier ids[1], *sgx;
+	PVRSRV_DEVICE_IDENTIFIER ids[1], *sgx;
 	PVRSRV_DEVICE_NODE *node = NULL;
 	SceUInt32 count, i;
 
@@ -439,9 +439,9 @@ static void gpuCoreDumpOnLockup(int dumpTrace)
 		return;
 	sgx = NULL;
 	for (i = 0; i != count; i++)
-		if (ids[i].cls == PVRSRV_DEVICE_CLASS_3D && ids[i].type == PVRSRV_DEVICE_TYPE_SGX)
+		if (ids[i].eDeviceClass == PVRSRV_DEVICE_CLASS_3D && ids[i].eDeviceType == PVRSRV_DEVICE_TYPE_SGX)
 			sgx = &ids[i];
-	if (sgx == NULL || PVRSRVAcquireDeviceDataKM(sgx->index, 0, (void **)&node) != 0 || node == NULL)
+	if (sgx == NULL || PVRSRVAcquireDeviceDataKM(sgx->ui32DeviceIndex, PVRSRV_DEVICE_TYPE_UNKNOWN, (IMG_HANDLE *)&node) != 0 || node == NULL)
 		return;
 	if (node->pvDevice == NULL)
 		SceDebugForDriver_391B74B7("%s: psDevInfo is NULL\n", gpuCoreDumpModuleInfo.module_name);

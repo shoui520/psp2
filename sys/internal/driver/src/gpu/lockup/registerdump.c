@@ -10,6 +10,7 @@
 #include <gpu/sgx_regs.h>
 #include "sgxmpdefs.h"
 #include <power/power.h>
+#include <gpu/gpu-mmu.h>
 
 /* Pristine SGX MP register-bank selection, services4/include/sgx_mkif_km.h. */
 #define SGX_REG_BANK_SHIFT 14
@@ -163,7 +164,6 @@ static const unsigned masterDirectoryRegisters[8] = {
 
 PVRSRV_DEVICE_NODE *GetGpuDeviceNode(void);
 /* The existing module import uses the user spelling for driver NID 0A750DEE. */
-int SceGpuEs4ForDriver_7AA79658(unsigned physical, unsigned *pid);
 
 #define GPU_REGISTER(base, offset) (*(volatile unsigned *)((unsigned char *)(base) + (offset)))
 

@@ -5,6 +5,7 @@
 #include "gpu-dump.h"
 #include <intrmgr/intrmgr.h>
 #include <power/power.h>
+#include <gpu/osfunc_sce.h>
 
 PVRSRV_ERROR OSUninstallSystemLISR(IMG_VOID *pvSysData);
 PVRSRV_ERROR OSUninstallMISR(IMG_VOID *pvSysData);
@@ -14,7 +15,6 @@ IMG_VOID PVRSRVDeInit(SYS_DATA *psSysData);
 PVRSRV_ERROR OSDestroyResource(PVRSRV_RESOURCE *psResource);
 PVRSRV_ERROR OSInstallMISR(IMG_VOID *pvSysData);
 PVRSRV_ERROR OSInstallSystemLISR(IMG_VOID *pvSysData, IMG_UINT32 ui32Irq);
-IMG_VOID *OSMemSet(IMG_VOID *destination, IMG_INT value, IMG_SIZE_T size);
 PVRSRV_ERROR OSInitEnvData(IMG_VOID **ppvEnvSpecificData);
 PVRSRV_ERROR PVRSRVInit(SYS_DATA *psSysData);
 PVRSRV_ERROR PVRSRVRegisterDevice(SYS_DATA *psSysData,

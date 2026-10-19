@@ -2,6 +2,7 @@
 #include "../../gpu_es4/srvkm/registerdump_sce.h"
 #include <sysmem/debug.h>
 #include "sgx543_v1.164defs.h"
+#include <gpu/gpu-mmu.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/lockup/registerdump_analysis.c"
@@ -10,7 +11,6 @@ int GetRegisterDumpCoreRegister(const SceGpuRegisterDump *dump,
 		unsigned *value, unsigned address, unsigned core);
 int GetRegisterDumpMasterRegister(const SceGpuRegisterDump *dump,
 		unsigned *value, unsigned address);
-int SceGpuEs4ForDriver_7AA79658(unsigned physical, unsigned *pid);
 int SceGpuRegisterDumpCoreExtendedPerfRegisters(const SceGpuRegisterDump *dump,
 		unsigned *value, unsigned selector, unsigned core);
 

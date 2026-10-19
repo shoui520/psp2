@@ -6,6 +6,7 @@
 #include "pb_sce.h"
 #include <gpu/device_sce.h>
 #include <stddef.h>
+#include <gpu/memory_sce.h>
 
 #define PVRSRV_CLEANUPCMD_PB 0x5U
 #define CLEANUP_WITH_POLL IMG_FALSE
@@ -19,8 +20,6 @@ RESMAN_ITEM *ResManRegisterRes(RESMAN_CONTEXT *psResManContext,
 		RESMAN_FREE_FN pfnFreeResource);
 PVRSRV_ERROR ResManFreeResByPtr(RESMAN_ITEM *psResItem,
 		IMG_BOOL bForceCleanup);
-PVRSRV_ERROR PVRSRVFreeDeviceMemKM(IMG_HANDLE hDevCookie,
-		PVRSRV_KERNEL_MEM_INFO *psMemInfo);
 PVRSRV_ERROR PVRSRVFreeSharedSysMemoryKM(PVRSRV_KERNEL_MEM_INFO *psMemInfo);
 PVRSRV_ERROR PVRSRVDissociateMemFromResmanKM(PVRSRV_KERNEL_MEM_INFO *psMemInfo);
 PVRSRV_ERROR SGXCleanupRequest(PVRSRV_DEVICE_NODE *psDeviceNode,

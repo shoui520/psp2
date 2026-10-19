@@ -1,9 +1,8 @@
 /* IMG hash implementation with explicitly marked SCE portability changes. */
 #include "hash_sce.h"
+#include <gpu/osfunc_sce.h>
 typedef unsigned u32;
 typedef int s32;
-
-
 
 /* IMG 1.7 default hash; SCE assertion disabled. ARM pointer words are 32-bit. */
 u32 HASH_Func_Default(u32 uKeySize, void *pKey, u32 uHashTabLen)
@@ -117,14 +116,12 @@ HASH_TABLE *HASH_Create_Extended(IMG_UINT32 uInitialLen, IMG_SIZE_T uKeySize,
 	return pHash;
 }
 
-
 /* IMG single-word hash constructor. */
 HASH_TABLE *HASH_Create(IMG_UINT32 uInitialLen)
 {
 	return HASH_Create_Extended(uInitialLen, sizeof(IMG_UINTPTR_T),
 			HASH_Func_Default, (HASH_KEY_COMP *)HASH_Key_Comp_Default);
 }
-
 
 /* IMG deletion; SCE leak diagnostics/assertion disabled. */
 IMG_VOID HASH_Delete(HASH_TABLE *pHash)
@@ -136,9 +133,6 @@ IMG_VOID HASH_Delete(HASH_TABLE *pHash)
 		OSFreeMem_Impl(1, sizeof(*pHash), pHash, 0);
 	}
 }
-
-
-IMG_VOID *OSMemCopy(IMG_VOID *destination, const IMG_VOID *source, IMG_SIZE_T size);
 
 /* IMG insertion with _ChainInsert inlined; SCE skips equal-size growth. */
 IMG_BOOL HASH_Insert_Extended(HASH_TABLE *pHash, IMG_VOID *pKey, IMG_UINTPTR_T v)

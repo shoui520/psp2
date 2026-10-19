@@ -4,6 +4,7 @@
 #include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysclib.h>
+#include <gpu/osfunc_sce.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/misc/waitmodobj.c"
@@ -36,7 +37,6 @@ void UnlockWaitModObjList(void)
 int sceGpuModObjPoll(MODIFY_SYNC_OP_INFO *psModSyncOpInfo);
 int sceGpuWaitModObjSignal(int waitEventFlag,
 		MODIFY_SYNC_OP_INFO *psModSyncOpInfo);
-void *OSAllocMem(unsigned size);
 
 void sceGpuWaitModObjPollAll(void)
 {
@@ -76,8 +76,6 @@ int sceGpuWaitModObjAdd(MODIFY_SYNC_OP_INFO *psModSyncOpInfo,
 	UnlockWaitModObjList();
 	return 0;
 }
-
-int OSFreeMem(void *memory);
 
 int sceGpuWaitModObjRemove(MODIFY_SYNC_OP_INFO *psModSyncOpInfo)
 {

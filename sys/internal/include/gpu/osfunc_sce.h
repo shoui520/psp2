@@ -25,4 +25,15 @@ typedef struct TIMER_CALLBACK_DATA_TAG {
 
 _Static_assert(sizeof(TIMER_CALLBACK_DATA) == 16, "SCE timer owner");
 
+/* the services' memory helpers (gpu_es4.c) */
+int OSProcHasPrivSrvInit(void);
+void *OSAllocMem(unsigned size);
+int OSFreeMem(void *address);
+void *OSMemCopy(void *destination, const void *source, unsigned size);
+void *OSMemSet(void *destination, int value, unsigned size);
+
+/* env/playstation/osfunc.c */
+IMG_UINT32 OSGetCurrentProcessIDKM(IMG_VOID);
+
+
 #endif

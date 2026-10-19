@@ -5,11 +5,11 @@
 #include <sysmem/sysclib.h>
 #include <processmgr/processmgr.h>
 #include <sysmem/sysmem.h>
+#include <gpu/osfunc_sce.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/memory/hostmem.c"
 
-extern void *OSAllocMem(unsigned size);
 int InitKernelMemBlockHeap(void);
 
 unsigned remoteAllocProcess = (unsigned)-1;

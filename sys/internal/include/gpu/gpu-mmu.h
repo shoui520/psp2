@@ -56,4 +56,14 @@ _Static_assert(offsetof(GpuMemoryContext, mmu.pageTablePool.uid) == 0x10,
 _Static_assert(offsetof(GpuMmuContext, pageTables) == 0x14,
 	       "native page-table object pointers");
 
+/* driver/src/gpu/memory/mmu.c */
+int sceGpuMmuMapMemory(GpuMmuContext *context, unsigned gpuAddress,
+		unsigned backingAddress, unsigned size, unsigned permissions);
+int sceGpuMmuUnmapMemory(GpuMmuContext *context, unsigned address,
+		unsigned size);
+
+/* driver/src/gpu/memory/memorycontext.c: the process of a GPU memory context, -1 if none */
+int SceGpuEs4ForDriver_7AA79658(unsigned physical, unsigned *pid);
+
+
 #endif

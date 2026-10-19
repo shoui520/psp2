@@ -71,4 +71,13 @@ typedef struct _SGX_DEVICE_MAP_ {
 
 _Static_assert(sizeof(SGX_DEVICE_MAP) == 60, "SGX platform device map");
 
+struct SGX_BRIDGE_INIT_INFO;
+
+/* sgxinit_sce.c */
+PVRSRV_ERROR DevInitSGXPart2KM(PVRSRV_PER_PROCESS_DATA *psPerProc,
+		IMG_HANDLE hDevHandle, struct SGX_BRIDGE_INIT_INFO *psInitInfo);
+PVRSRV_ERROR SGXGetInfoForSrvinitKM(IMG_HANDLE hDevHandle,
+		SGX_BRIDGE_INFO_FOR_SRVINIT *psInitInfo);
+
+
 #endif

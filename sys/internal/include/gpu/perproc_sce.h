@@ -48,4 +48,10 @@ struct _PVRSRV_PER_PROCESS_DATA_ {
 
 _Static_assert(sizeof(PVRSRV_PER_PROCESS_DATA) == 0x21c, "SCE per-process state");
 
+/* common/perproc.c */
+PVRSRV_ERROR PVRSRVPerProcessDataConnect(IMG_UINT32 ui32PID, IMG_UINT32 ui32Flags);
+PVRSRV_PER_PROCESS_DATA *PVRSRVPerProcessData(IMG_UINT32 ui32PID);
+PVRSRV_ERROR PVRSRVPerProcessDataDisconnect(IMG_UINT32 ui32PID);
+
+
 #endif

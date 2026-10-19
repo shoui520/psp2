@@ -5,20 +5,15 @@
 #include "render_sce.h"
 #include <stddef.h>
 #include <string.h>
+#include <gpu/memory_sce.h>
+#include <gpu/osfunc_sce.h>
 
-PVRSRV_ERROR PVRSRVFreeDeviceMemKM(IMG_HANDLE hDevCookie,
-		PVRSRV_KERNEL_MEM_INFO *psMemInfo);
 PVRSRV_ERROR PVRSRVFreeSharedSysMemoryKM(PVRSRV_KERNEL_MEM_INFO *psMemInfo);
 int FreeProcessGpuMemory(void *address);
 void *AllocProcessGpuMemory(unsigned size);
-IMG_VOID *OSMemSet(IMG_VOID *destination, IMG_INT32 value, IMG_SIZE_T size);
 PVRSRV_ERROR PVRSRVAllocSharedSysMemoryKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		IMG_SID hMemBlockProcRef, IMG_UINT32 ui32Flags, IMG_SIZE_T uSize,
 		PVRSRV_KERNEL_MEM_INFO **ppsKernelMemInfo);
-PVRSRV_ERROR _PVRSRVAllocDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		PVRSRV_PER_PROCESS_DATA *psPerProc, struct GpuHeap *heap,
-		IMG_UINT32 ui32Attribs, IMG_SIZE_T ui32Size, IMG_SIZE_T ui32Alignment,
-		IMG_INT32 hMemBlockProcRef, PVRSRV_KERNEL_MEM_INFO **ppsMemInfo);
 PVRSRV_ERROR SGXAddSharedPBDescKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		IMG_HANDLE hDevCookie, PVRSRV_KERNEL_MEM_INFO *psSharedPBDescKernelMemInfo,
 		PVRSRV_KERNEL_MEM_INFO *psHWPBDescKernelMemInfo,

@@ -4,6 +4,7 @@
 #include "sgxtransfer_sce.h"
 #include <stddef.h>
 #include <string.h>
+#include <gpu/osfunc_sce.h>
 
 #define SGXMKIF_CMD_2D 2
 #define KERNEL_ID 0xffffffffU
@@ -11,7 +12,6 @@
 extern int gPVRSRVLock;
 int LinuxLockMutex(int *mutex);
 int LinuxUnLockMutex(int *mutex);
-IMG_VOID OSMemSet(IMG_VOID *pvDest, IMG_UINT8 ui8Value, IMG_SIZE_T ui32Size);
 PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 		IMG_UINT32 eCmdType, SGXMKIF_COMMAND *psCommand,
 		IMG_UINT32 ui32CallerID, IMG_UINT32 ui32PDumpFlags,

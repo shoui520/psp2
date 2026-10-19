@@ -17,7 +17,6 @@ int RemoveMemoryContextFromList(GpuMemoryContext *context, unsigned pid);
 int GetMemoryContext(GpuMemoryContext **output, unsigned pid);
 int sceGpuMmuAllocatePageTablePool(GpuPageTablePool *pool, unsigned pid);
 int sceGpuUnregisterSalvage(int eventUid);
-PVRSRV_PER_PROCESS_DATA *PVRSRVPerProcessData(IMG_UINT32 ui32PID);
 IMG_VOID PVRSRVProcessDisconnect(IMG_UINT32 ui32PID);
 PVRSRV_ERROR SGXPerProcessContextSuspend(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		IMG_BOOL bResume);
@@ -193,5 +192,4 @@ int sceGpuSysEventHandler(int eventId, int eventType)
 	}
 	return 0;
 }
-
 

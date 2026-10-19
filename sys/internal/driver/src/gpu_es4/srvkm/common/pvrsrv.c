@@ -13,6 +13,9 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>
 #include <power/power.h>
+#include <gpu/gpu-mmu.h>
+#include <gpu/osfunc_sce.h>
+#include <gpu/perproc_sce.h>
 
 static IMG_UINT32 g_ui32InitFlags = 0;
 #define INIT_DATA_ENABLE_PDUMPINIT 0x1U
@@ -33,7 +36,6 @@ PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
 		IMG_VOID **ppvLinAddr, IMG_HANDLE *phBlockAlloc);
 PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
 		IMG_VOID *pvLinAddr, IMG_HANDLE hBlockAlloc);
-IMG_VOID OSMemSet(IMG_VOID *pvDest, IMG_UINT8 ui8Value, IMG_SIZE_T ui32Size);
 IMG_VOID List_PVRSRV_DEVICE_NODE_Insert(PVRSRV_DEVICE_NODE **ppsHead,
 		PVRSRV_DEVICE_NODE *psDeviceNode);
 IMG_VOID *List_PVRSRV_DEVICE_NODE_Any_va(PVRSRV_DEVICE_NODE *psHead,
@@ -58,15 +60,12 @@ IMG_INT32 OSSNPrintf(IMG_CHAR *pszStr, IMG_UINT32 ui32Size,
 		const IMG_CHAR *pszFormat, ...);
 PVRSRV_DEVICE_NODE *GetGpuDeviceNode(IMG_VOID);
 IMG_UINT32 OSReadHWReg(IMG_VOID *pvLinRegBaseAddr, IMG_UINT32 ui32Offset);
-int SceGpuEs4ForDriver_7AA79658(unsigned physical, unsigned *pid);
 IMG_UINT32 SysGetInterruptSource(IMG_VOID);
 IMG_VOID SysClearInterrupts(SYS_DATA *psSysData, IMG_UINT32 ui32ClearBits);
 IMG_VOID List_PVRSRV_DEVICE_NODE_ForEach(PVRSRV_DEVICE_NODE *psHead,
 		IMG_VOID (*pfnCallBack)(PVRSRV_DEVICE_NODE *psNode));
 int SignalWaitCounter(void);
 void sceGpuWaitModObjPollAll(void);
-PVRSRV_ERROR PVRSRVPerProcessDataConnect(IMG_UINT32 ui32PID, IMG_UINT32 ui32Flags);
-PVRSRV_ERROR PVRSRVPerProcessDataDisconnect(IMG_UINT32 ui32PID);
 
 /* SCE directory-bank selection, in the native trace slot order. */
 static const IMG_UINT32 aui32TraceDirectoryRegisters[8] = {

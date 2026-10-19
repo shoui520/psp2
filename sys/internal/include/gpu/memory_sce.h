@@ -25,4 +25,15 @@ typedef struct PVRSRV_KERNEL_MEM_INFO {
 
 _Static_assert(sizeof(PVRSRV_KERNEL_MEM_INFO) == 40, "SCE kernel memory info");
 
+struct PVRSRV_DEVICE_NODE;
+
+/* common/memorymanager.c */
+PVRSRV_ERROR _PVRSRVAllocDeviceMemKM(struct PVRSRV_DEVICE_NODE *psDeviceNode,
+		PVRSRV_PER_PROCESS_DATA *psPerProc, struct GpuHeap *heap,
+		IMG_UINT32 ui32Attribs, IMG_SIZE_T ui32Size, IMG_SIZE_T ui32Alignment,
+		IMG_INT32 hMemBlockProcRef, PVRSRV_KERNEL_MEM_INFO **ppsMemInfo);
+PVRSRV_ERROR PVRSRVFreeDeviceMemKM(struct PVRSRV_DEVICE_NODE *psDeviceNode,
+		PVRSRV_KERNEL_MEM_INFO *psMemInfo);
+
+
 #endif

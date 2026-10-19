@@ -45,11 +45,6 @@
 #include <regmgr/regmgr.h>
 
 extern void *memMgrLocalAlloc(SceSize size);
-extern unsigned int SceGpuEs4ForDriver_F001AE90(void);
-extern unsigned int SceGpuEs4ForDriver_395F7689(void);
-extern unsigned int SceGpuEs4ForDriver_18C90B42(void);
-extern unsigned int SceGpuEs4ForDriver_8A3929D2(void *destination,
-	unsigned int size);
 /* imports under the names of our NID db (tools/nids/kernel.yml) */
 extern int coredumpGetCachedRWLockInfo(SceUID pid, SceUID rwLockId,
 	CoredumpRWLockInfo *info);

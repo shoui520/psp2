@@ -2,16 +2,11 @@
 #include "client_ccb.h"
 #include <gpu/device_sce.h>
 #include <stddef.h>
+#include <gpu/memory_sce.h>
+#include <gpu/osfunc_sce.h>
 
 void *AllocProcessGpuMemory(unsigned size);
 int FreeProcessGpuMemory(void *address);
-IMG_VOID *OSMemSet(IMG_VOID *destination, IMG_INT32 value, IMG_SIZE_T size);
-PVRSRV_ERROR _PVRSRVAllocDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		PVRSRV_PER_PROCESS_DATA *psPerProc, struct GpuHeap *heap,
-		IMG_UINT32 ui32Attribs, IMG_SIZE_T ui32Size, IMG_SIZE_T ui32Alignment,
-		IMG_INT32 hMemBlockProcRef, PVRSRV_KERNEL_MEM_INFO **ppsMemInfo);
-PVRSRV_ERROR PVRSRVFreeDeviceMemKM(IMG_HANDLE hDevCookie,
-		PVRSRV_KERNEL_MEM_INFO *psMemInfo);
 IMG_UINT32 OSClockus(IMG_VOID);
 IMG_VOID OSWaitus(IMG_UINT32 ui32Timeus);
 int WaitSignalCounterKernel(volatile IMG_UINT32 *counter, IMG_UINT32 timeout);

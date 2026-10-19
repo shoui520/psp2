@@ -13,6 +13,7 @@
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysclib.h>
 #include <acmgr/acmgr.h>
+#include <gpu/osfunc_sce.h>
 
 int RemoveMemoryContextFromList(GpuMemoryContext *context, unsigned pid);
 int InsertMappedMemoryLegacy(GpuMappedMemoryList *list, IMG_VOID *address,
@@ -77,8 +78,6 @@ int sceGpuHeapAlloc(GpuHeap *heap, IMG_SIZE_T size, IMG_SIZE_T alignment,
 		GpuHeapAllocation *output, IMG_SIZE_T boundary);
 int sceGpuHeapFreeByGpuVA(GpuHeap *heap, IMG_UINT32 address,
 		GpuHeapAllocation *output);
-int sceGpuMmuMapMemory(GpuMmuContext *context, IMG_UINT32 gpuAddress,
-		IMG_UINT32 backingAddress, IMG_UINT32 size, IMG_UINT32 permissions);
 int ShareKernelMappingWithProcesses(IMG_UINT32 address, IMG_SIZE_T size);
 GpuMemBlockHeap *GetProcessMemBlockHeap(void);
 
@@ -148,9 +147,6 @@ fail:
 	return PVRSRV_ERROR_OUT_OF_MEMORY;
 }
 
-int sceGpuMmuUnmapMemory(GpuMmuContext *context, IMG_UINT32 gpuAddress,
-		IMG_SIZE_T size);
-
 /* SCE frees native heap spans. The later TOOL source adds descriptor references;
  * the 3.650 original releases the descriptor on every invocation.
  */
@@ -204,7 +200,6 @@ PVRSRV_ERROR FreeDeviceMemCallBack(IMG_VOID *pvParam, IMG_UINT32 ui32Param)
 }
 
 PVRSRV_DEVICE_NODE *GetGpuDeviceNode(void);
-IMG_VOID *OSMemSet(IMG_VOID *destination, IMG_INT32 value, IMG_SIZE_T size);
 
 /* Pristine devicemem.c heap enumeration with SCE's single-device lookup/assert. */
 PVRSRV_ERROR PVRSRVGetDeviceMemHeapsKM(IMG_HANDLE hDevCookie,
@@ -237,8 +232,6 @@ PVRSRV_ERROR PVRSRVGetDeviceMemHeapsKM(IMG_HANDLE hDevCookie,
 int GetKernelMemoryContext(GpuMemoryContext **output);
 int FindGpuHeapInMemoryContext(GpuMemoryContext *context, unsigned lookupKey,
 		GpuHeap **output);
-IMG_VOID *OSAllocMem(IMG_SIZE_T size);
-int OSFreeMem(IMG_VOID *address);
 
 /* IMG sync initialization with the SCE kernel-only heap/allocation policy. */
 PVRSRV_ERROR PVRSRVAllocSyncInfoKM(PVRSRV_DEVICE_NODE *psDeviceNode,

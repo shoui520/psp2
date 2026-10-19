@@ -28,4 +28,10 @@ typedef struct _PVRSRV_POWER_DEV_TAG_ {
 	struct _PVRSRV_POWER_DEV_TAG_ **ppsThis;
 } PVRSRV_POWER_DEV;
 
+/* common/power.c */
+PVRSRV_ERROR PVRSRVSetInitServerState(PVRSRV_INIT_SERVER_STATE eInitServerState,
+		IMG_BOOL bState);
+IMG_BOOL PVRSRVGetInitServerState(PVRSRV_INIT_SERVER_STATE eInitServerState);
+
+
 #endif

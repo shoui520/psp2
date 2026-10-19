@@ -8,6 +8,10 @@
 
 #include <scetypes.h>
 #include <gpu/gpu_es4_trace.h>
+#include <gpu/lockup.h>
+#include <gpu/gpu-mmu.h>
+#include <gpu/device_sce.h>
+#include <gpu/osfunc_sce.h>
 #include <pamgr/pamgr_trace.h>
 #include <lowio/pervasive.h>
 #include <sysmem/sysclib.h>
@@ -17,27 +21,6 @@
 #include <modulemgr/modulemgr.h>
 #include <rtc/rtc.h>
 #include <regmgr/regmgr.h>
-
-/* SceGpuEs4ForDriver */
-/* registers the PA-trace stop and the core-dump callbacks */
-int SceGpuEs4ForDriver_26B03DCE(int (*stopTrace)(void), void (*coreDump)(int dumpTrace));
-/* the process of a GPU memory context, -1 if none */
-int SceGpuEs4ForDriver_7AA79658(SceUInt32 context, SceUID *pid);
-/* the PowerVR services of SceGpuEs4 */
-typedef struct PvrsrvDeviceIdentifier {
-	SceUInt32 type;				/* 7: SGX */
-	SceUInt32 cls;				/* 0: 3D */
-	SceUInt32 index;
-	const char *pdumpDevName;
-	const char *pdumpRegName;
-} PvrsrvDeviceIdentifier;
-
-#define PVRSRV_DEVICE_TYPE_SGX		7
-#define PVRSRV_DEVICE_CLASS_3D		0
-
-int PVRSRVEnumerateDevicesKM(SceUInt32 *count, PvrsrvDeviceIdentifier *devices);
-int PVRSRVAcquireDeviceDataKM(SceUInt32 index, SceUInt32 type, void **node);
-void *OSMemSet(void *ptr, int value, SceSize size);
 
 /* ScePamgrForDriver: the running PA trace */
 int ScePamgrForDriver_0D04B52A(SceUInt64 id);		/* the trace key of id, < 0: none */

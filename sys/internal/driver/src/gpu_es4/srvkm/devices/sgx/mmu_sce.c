@@ -5,8 +5,7 @@
 #include <sysmem/debug.h>
 #include <gpu/device_sce.h>
 #include <stddef.h>
-
-IMG_VOID *OSMemSet(IMG_VOID *pvDest, IMG_INT32 iValue, IMG_SIZE_T ui32Size);
+#include <gpu/osfunc_sce.h>
 
 #if FW_DEBUG
 static const SceKernelDebugInfo dbg_MMU_BIFResetPDAlloc_L25 = {

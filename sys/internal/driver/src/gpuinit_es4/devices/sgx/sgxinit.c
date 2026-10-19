@@ -154,7 +154,7 @@ static void sceGpuMapPARegisters(IMG_HANDLE device, PVRSRV_HEAP_INFO *heap)
 	IMG_UINT32 *bookmark = NULL;
 	GpuHeap *gpuHeap;
 	GpuMmuContext *context;
-	void *perfmon;
+	unsigned perfmon;
 	SceUInt32 flags;
 	SceUID uid;
 	int ret;
@@ -181,10 +181,10 @@ static void sceGpuMapPARegisters(IMG_HANDLE device, PVRSRV_HEAP_INFO *heap)
 		bookmark[i] = SGX_BOOKMARK_FILL;
 
 	if (SceSblAIMgrForDriver_274663A0() && SceSblACMgrForDriver_E87D1777()) {
-		perfmon = (void *)PERFMON_REG_BASE;
+		perfmon = PERFMON_REG_BASE;
 		flags = 0x80000008;
 	} else {
-		perfmon = bookmark;
+		perfmon = (unsigned)bookmark;
 		flags = 0;
 	}
 	gpuHeap = heap->hDevMemHeap;
@@ -195,7 +195,7 @@ static void sceGpuMapPARegisters(IMG_HANDLE device, PVRSRV_HEAP_INFO *heap)
 		goto unmap;
 	}
 	ret = sceGpuMmuMapMemory(context, SGX_PERFMON_KERNEL_VADDR,
-				  (SceUInt8 *)perfmon + SGX_PERFMON_PAGE_SIZE, SGX_PERFMON_PAGE_SIZE, flags | 0x10);
+				  perfmon + SGX_PERFMON_PAGE_SIZE, SGX_PERFMON_PAGE_SIZE, flags | 0x10);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 5377, "%s: Failed to map kernel-land Perfmon registers with error %08x.\n", __func__, ret);
 		goto unmap;
@@ -204,7 +204,7 @@ static void sceGpuMapPARegisters(IMG_HANDLE device, PVRSRV_HEAP_INFO *heap)
 	flags = 0;
 	if (SceSblAIMgrForDriver_274663A0() && SceSblACMgrForDriver_E87D1777())
 		flags = 8;
-	ret = sceGpuMmuMapMemory(context, SGX_BOOKMARK_VADDR, bookmark, SGX_BOOKMARK_SIZE, flags);
+	ret = sceGpuMmuMapMemory(context, SGX_BOOKMARK_VADDR, (unsigned)bookmark, SGX_BOOKMARK_SIZE, flags);
 	if (ret >= 0)
 		return;
 	SCE_DBG_PRINTF(0, 5388, "%s: Failed to map 32K for GPU Bookmark emit workaround with error %08x.\n", __func__, ret);

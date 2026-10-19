@@ -16,6 +16,7 @@
 #include <processmgr/processmgr.h>
 #include <sysmem/sysroot.h>
 #include <display/display.h>
+#include <gpu/osfunc_sce.h>
 
 #define SGXMKIF_CC_INVAL_BIF_SL 0x4U
 #define DEVICE_MEMORY_HEAP_KERNEL 1
@@ -44,7 +45,6 @@ IMG_VOID OSWriteHWReg(IMG_VOID *pvLinRegBaseAddr, IMG_UINT32 ui32Offset,
 		IMG_UINT32 ui32Value);
 PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
 		IMG_VOID **ppvLinAddr, IMG_HANDLE *phBlockAlloc);
-IMG_VOID OSMemSet(IMG_VOID *pvDest, IMG_UINT8 ui8Value, IMG_SIZE_T ui32Size);
 IMG_HANDLE BM_CreateContext(PVRSRV_DEVICE_NODE *psDeviceNode,
 		IMG_DEV_PHYADDR *psPDDevPAddr, PVRSRV_PER_PROCESS_DATA *psPerProc,
 		IMG_BOOL *pbCreated);
@@ -64,8 +64,6 @@ IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bHardwareRecovery,
 PVRSRV_ERROR PollForValueKM(volatile IMG_UINT32 *pui32LinMemAddr,
 		IMG_UINT32 ui32Value, IMG_UINT32 ui32Mask, IMG_UINT32 ui32Timeoutus,
 		IMG_UINT32 ui32PollPeriodus, IMG_BOOL bAllowPreemption);
-IMG_UINT32 OSGetCurrentProcessIDKM(IMG_VOID);
-IMG_VOID *OSMemCopy(IMG_VOID *pvDest, const IMG_VOID *pvSrc, IMG_SIZE_T ui32Size);
 IMG_VOID VBAppend(const IMG_CHAR *pszFormat, ...);
 IMG_VOID SGX_MISRHandler(IMG_VOID *pvData);
 SceUID GetLockupEventUid(void);

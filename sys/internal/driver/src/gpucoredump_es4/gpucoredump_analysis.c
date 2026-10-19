@@ -161,7 +161,7 @@ void gpuCoreDumpPrintDrawNumber(GpuCoreDumpAnalysis *analysis, const char *name,
 static SceUID gpuCoreDumpDmProcess(SceUInt32 dm, SceUInt32 core)
 {
 	SceUInt32 context;
-	SceUID pid;
+	unsigned pid;
 	int ok;
 
 	if (dm >= GPU_COREDUMP_DATA_MASTERS)

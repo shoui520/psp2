@@ -3,6 +3,7 @@
 #include <gpu/perproc_sce.h>
 #include <intrmgr/syscall.h>
 #include <stddef.h>
+#include <gpu/osfunc_sce.h>
 
 extern int gPVRSRVLock;
 extern IMG_UINT32 gpuSuspended;
@@ -10,8 +11,6 @@ extern SceUID exitingProcess;
 extern struct _PVRSRV_HANDLE_BASE_ *gpsKernelHandleBase;
 unsigned LinuxLockMutex(int *psMutex);
 int LinuxUnLockMutex(int *psMutex);
-IMG_UINT32 OSGetCurrentProcessIDKM(IMG_VOID);
-PVRSRV_PER_PROCESS_DATA *PVRSRVPerProcessData(IMG_UINT32 ui32PID);
 PVRSRV_ERROR PVRSRVLookupHandle(struct _PVRSRV_HANDLE_BASE_ *psBase,
 		IMG_VOID **ppvData, IMG_SID hHandle, IMG_UINT32 eType);
 PVRSRV_ERROR CopyFromUserWrapper(PVRSRV_PER_PROCESS_DATA *psPerProc,

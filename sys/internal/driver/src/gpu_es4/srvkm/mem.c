@@ -3,6 +3,7 @@
  */
 #include <gpu/memory_sce.h>
 #include <gpu/perproc_sce.h>
+#include <gpu/osfunc_sce.h>
 
 /* IMG services.h allocation flags. */
 #define PVRSRV_HAP_MAPTYPE_MASK 0x000f8000U
@@ -30,7 +31,6 @@ PVRSRV_ERROR FreeSharedSysMemCallBack(IMG_VOID *pvParam, IMG_UINT32 ui32Param,
 
 PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 flags, IMG_SIZE_T size,
 		IMG_VOID **output, IMG_HANDLE *handle);
-IMG_VOID *OSMemSet(IMG_VOID *destination, IMG_INT32 value, IMG_SIZE_T size);
 IMG_VOID *AllocProcessGpuMemory(IMG_SIZE_T size);
 struct Resource *ResManRegisterRes(struct ResourceContext *context,
 		IMG_UINT32 resourceType, IMG_VOID *param, IMG_UINT32 value,
