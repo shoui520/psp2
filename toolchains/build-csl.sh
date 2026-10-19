@@ -299,6 +299,59 @@ i = s.index('(define_insn "*thumb2_movsi_vfp"')
 assert s.count(old, i, i + 3000) == 1, 'thumb2_movsi_vfp template'
 open(p, 'w').write(s[:i] + s[i:].replace(old, new, 1))
 PYEOF
+	# A DImode and with a constant is split into its SImode halves when it is expanded if each
+	# half is an and/bic immediate (or 0 or -1), so a half the constant decides needs no load
+	# (buserror busErrorIntrHandler tests a 64-bit flag with ldr r3, [r6, #0x18]; movs r5, #0;
+	# and r4, r3, #3; orrs.w r3, r4, r5). Any other constant goes into a register pair and the
+	# and stays whole until reload (acmgr SceSblACMgrForDriver_5F9AF49C: ldm.w sp, {r1, r2};
+	# and.w r4, r1, r0; movt r3, #0xfff0; and.w r5, r2, r3).
+	python3 - $A/arm.md <<'PYEOF'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+old = """(define_expand "anddi3"
+  [(set (match_operand:DI         0 "s_register_operand" "")
+	(and:DI (match_operand:DI 1 "s_register_operand" "")
+		(match_operand:DI 2 "neon_inv_logic_op2" "")))]
+  "TARGET_32BIT"
+  ""
+)"""
+new = """(define_expand "anddi3"
+  [(set (match_operand:DI         0 "s_register_operand" "")
+	(and:DI (match_operand:DI 1 "s_register_operand" "")
+		(match_operand:DI 2 "nonmemory_operand" "")))]
+  "TARGET_32BIT"
+  "
+  if (!CONST_INT_P (operands[2]))
+    {
+      if (!neon_inv_logic_op2 (operands[2], DImode))
+	operands[2] = force_reg (DImode, operands[2]);
+    }
+  else if (!TARGET_IWMMXT)
+    {
+      rtx lo = gen_lowpart (SImode, operands[2]);
+      rtx hi = gen_highpart_mode (SImode, DImode, operands[2]);
+
+      if (const_ok_for_op (INTVAL (lo), AND) && const_ok_for_op (INTVAL (hi), AND))
+	{
+	  rtx low  = simplify_gen_binary (AND, SImode,
+					  gen_lowpart (SImode, operands[1]), lo);
+	  rtx high = simplify_gen_binary (AND, SImode,
+					  gen_highpart (SImode, operands[1]), hi);
+
+	  emit_insn (gen_rtx_SET (VOIDmode, gen_lowpart (SImode, operands[0]), low));
+	  emit_insn (gen_rtx_SET (VOIDmode, gen_highpart (SImode, operands[0]), high));
+	  DONE;
+	}
+      operands[2] = force_reg (DImode, operands[2]);
+    }
+  else
+    operands[2] = force_reg (DImode, operands[2]);
+  "
+)"""
+assert s.count(old) == 1
+open(p, 'w').write(s.replace(old, new))
+PYEOF
 }
 
 if [ ! -x $AS ]; then
