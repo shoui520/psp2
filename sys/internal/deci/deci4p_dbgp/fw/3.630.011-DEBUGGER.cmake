@@ -307,7 +307,7 @@ set(MODULE_IMPORT_FUNCS
 	SceUlobjMgrForDriver_6F868221
 	sceUlobjMgrReleaseInfoArray
 	sceUlobjMgrRetainInfoArray
-	getUltMutexInfo
+	SceUlobjMgrForDriver_B978DB70
 	sceUlobjMgrGetIdForFiber
 	SceUlobjMgrForDriver_CDAD91AD
 	sceRegMgrGetKeyInt

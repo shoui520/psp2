@@ -417,7 +417,7 @@ set(MODULE_IMPORT_FUNCS
 	SceUlobjMgrForDriver_6BCB4568
 	SceUlobjMgrForDriver_6D2C8928
 	SceUlobjMgrForDriver_74B9199C
-	copy64b
+	SceUlobjMgrForDriver_8E200387
 	SceUlobjMgrForDriver_ADAAA961
 	sceUlobjMgrGetIdForFiber
 	SceUlobjMgrForDriver_FFC8C811
