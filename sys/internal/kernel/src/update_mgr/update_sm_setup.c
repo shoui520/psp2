@@ -18,15 +18,13 @@ static const UpdateUtilSmPath updateSmPaths[] = {
 
 static const SceSelfAuthInfo updateSmAuthInfo = {
 	.programAuthorityId = 0x2808000000000001ULL,
-	.capability = {
-		[0] = 0x80, [4] = 0xc0, [6] = 0xf0,
-		[12] = 0xff, [13] = 0xff, [14] = 0xff, [15] = 0xff
-	},
-	.attribute = {
-		[0] = 0x80, [1] = 0x09, [2] = 0x80, [3] = 0x03,
-		[6] = 0xc3, [10] = 0x80, [11] = 0x09, [12] = 0x80,
-		[28] = 0xff, [29] = 0xff, [30] = 0xff, [31] = 0xff
-	}
+	.capability = { { 0x00f000c000000080ULL, 0xffffffff00000000ULL } },
+	.attribute = { {
+		0x00c3000003800980ULL,
+		0x0000008009800000ULL,
+		0x0000000000000000ULL,
+		0xffffffff00000000ULL,
+	} }
 };
 
 int UpdateUtilSetupSm(unsigned int type, int *smId, int commandId)

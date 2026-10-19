@@ -158,7 +158,7 @@ int setFatfsAttributeByAttributeWithMountPoint(const SceSelfAuthInfo *info, SceS
 	paid = info->programAuthorityId;
 	if (paid == 0x220000101cc73883ULL || paid == 0x280000000000001eULL ||
 	    paid == 0x2800000000000010ULL || paid == 0x2800000000000031ULL ||
-	    (info->capability[16] & 0x20))
+	    (info->capability.bytes[16] & 0x20))
 		value = 0;
 	else
 		value = 4;

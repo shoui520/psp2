@@ -1,12 +1,16 @@
 /*
- * SceSblAuthMgr: SELF authentication and secure-module command packets.
- * Native debug names and source lines are retained across firmware variants.
- * PLACEHOLDER: secure-world payload flags not named by native records remain unk.
+ * SceSblAuthMgr: passes SELF authentication and key requests to the secure processor's
+ * authentication module (kprx_auth_sm), through the secure module scheduler's proxy.
+ *
+ * A request is a packet in uncached memory: a 0x40-byte header (size, command, result) and the
+ * command's data. The module started by sceSblAuthMgrOpen stays running until
+ * sceSblAuthMgrClose; the key and bind commands start one for each request when none runs.
  */
 #include <stdint.h>
 #include <stddef.h>
 #include <sysmem/suspend.h>
 #include <sysmem/sysclib.h>
+#include <sysmem/barrier.h>
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <sysmem/cpu.h>
@@ -15,770 +19,853 @@
 #include <sysmem/debug.h>
 #include <smsc_proxy/smsc_proxy.h>
 #include <post_ss_mgr/sblpostssmgr.h>
+#include <post_ss_mgr/sblutmgr.h>
 #include <kernel_boot_loader/kbl_param.h>
+#include <authmgr/sblauthmgr.h>
 
-#define AM_EINVAL ((int)0x800f0516)
-#define AM_EHANDLE ((int)0x800f0509)
-#define AM_ENOMEM ((int)0x800f050c)
-#define AM_EPHYSICAL ((int)0x800f0528)
-#define AM_NO_REQUEST 0x0fffffff
+#define AUTHMGR_NO_REQUEST	0x0fffffff	/* s_req_id while no module runs */
+#define AUTHMGR_HANDLE		1		/* the one handle sceSblAuthMgrOpen gives */
 
-#if FW_DEBUG
-#define AUTH_DBG_PRINTF(function, line, format, ...) \
-	SceDebugForDriver_D9703808(1, 0xb, SCE_DBGINFO_FUNC(line, function), format, ##__VA_ARGS__)
-#define AUTH_DBG_ASSERT(function, condition, line) \
-	sceKernelAssert(condition, SCE_DBGINFO_FUNC(line, function), __builtin_return_address(0))
-#else
-#define AUTH_DBG_PRINTF(function, line, format, ...) do { } while (0)
-#define AUTH_DBG_ASSERT(function, condition, line) do { } while (0)
-#endif
+/* the mailboxes of the module's session */
+#define AUTHMGR_MAILBOX_INVOKE	0
+#define AUTHMGR_MAILBOX_COMMAND	1
 
-#define AUTH_PANIC(debugLine, releaseLine) \
-	SceDebugForDriver_391B5B74(SCE_DBGINFO(FW_DEBUG ? debugLine : releaseLine), __builtin_return_address(0))
+/* the event flag's bits: done, and the module's status in the upper half */
+#define AUTHMGR_EVENT_DONE	0x1
+#define AUTHMGR_EVENT_ERROR	0x20001
 
-typedef void (*AuthCryHandler)(SceUID, int, void *, uint32_t, uint32_t);
-extern uint32_t __stack_chk_guard;
+/* the module's states (SmschedIntrStatus.state) */
+#define AUTHMGR_SM_STATE_EXITED	3
+#define AUTHMGR_SM_STATE_IDLE	10
 
-/* Uncached wire packets: the first 0x40 bytes are the native command header. */
-struct AuthPacket {
-	uint32_t size;
-	uint32_t command;
-	volatile int result;
-	uint32_t reserved[13];			/* rest of the 0x40-byte header */
-	uint8_t payload[];
-};
-struct AuthMgrState {
-#if FW_DEBUG
-	SceKernelFastMutex sendMutex;
-	uint32_t sourcePhysicalAddress;
-	struct AuthPacket *arena;
-	struct AuthPacket *stopPacket;
-	SceUID selfSemaphore;
-	struct AuthPacket *keyPacket;
-	struct AuthPacket *bindPacket;
-	uint8_t cachedSpsfoAuth[0x200];
-	struct AuthPacket *verifyPacket;
-	uint8_t reserved[0x24];
-	SceKernelPARange sourceRanges[16];
-	volatile SceUID requestId;
-	SceUID eventFlag;
-	int selfHandle;
-	SceKernelFastMutex npdrmMutex;
-#else
-	volatile SceUID requestId;
-	uint8_t reserved[0x3c];
-	SceKernelPARange sourceRanges[16];
-	SceKernelFastMutex npdrmMutex;
-	SceUID eventFlag;
-	struct AuthPacket *bindPacket;
-	struct AuthPacket *verifyPacket;
-	int selfHandle;
-	struct AuthPacket *arena;
-	struct AuthPacket *stopPacket;
-	uint8_t cachedSpsfoAuth[0x200];
-	struct AuthPacket *keyPacket;
-	SceKernelFastMutex sendMutex;
-	uint32_t sourcePhysicalAddress;
-	SceUID selfSemaphore;
-#endif
-};
-static struct AuthMgrState s_state;
-_Static_assert(offsetof(struct AuthPacket, payload) == 0x40, "packet header");
-#if FW_DEBUG
-_Static_assert(sizeof(s_state) == 0x34c, "debug state");
-_Static_assert(offsetof(struct AuthMgrState, requestId) == 0x300, "request offset");
-#else
-_Static_assert(sizeof(s_state) == 0x364, "release state");
-#endif
+/* the commands */
+#define AUTHMGR_CMD_AUTH_HEADER		1
+#define AUTHMGR_CMD_SETUP_SEGMENT	2
+#define AUTHMGR_CMD_AUTH_SEGMENT	3
+#define AUTHMGR_CMD_GET_EKC		4
+#define AUTHMGR_CMD_SET_DMAC5_KEY	5
+#define AUTHMGR_CMD_CLEAR_DMAC5_KEY	6
+#define AUTHMGR_CMD_DEC_BIND_DATA	7
+#define AUTHMGR_CMD_VERIFY_SPFSO	8
+#define AUTHMGR_CMD_STOP		0xffffffff
 
-static inline int ErrorOnly(int result)
-{
-	return result < 0 ? result : 0;
-}
-static inline uint32_t RoundCacheSize(uint32_t size)
-{
-	return (size + 0x3f) & ~0x3fU;
-}
-static inline void CheckStackGuard(uint32_t guard)
-{
-	if (guard != __stack_chk_guard)
-		__stack_chk_fail();
-}
-static inline uint32_t *PacketWords(struct AuthPacket *packet)
-{
-	return (uint32_t *)(void *)packet;
-}
+#define AUTHMGR_SPFSO_SIZE	0x200
+
+/* the header of every packet */
+typedef struct AuthMgrPacketHeader {
+	SceSize size;
+	SceUInt32 command;			/* (command << 16) | 1 */
+	volatile int result;			/* -1 until the module answers */
+	SceUInt32 reserved[13];
+} AuthMgrPacketHeader;
+
+/* AUTHMGR_CMD_AUTH_HEADER */
+typedef struct AuthMgrAuthHeaderPacket {
+	AuthMgrPacketHeader header;
+	SelfAuthRequest auth;
+	SceUInt32 rangeCount;			/* the header's physical ranges */
+	SceUInt32 rangesPA;
+	SceUInt32 reserved[6];
+} AuthMgrAuthHeaderPacket;
+
+/* AUTHMGR_CMD_SETUP_SEGMENT */
+typedef struct AuthMgrSegmentPacket {
+	AuthMgrPacketHeader header;
+	SceUInt32 segment;
+	int result;
+	SceUInt32 reserved[2];
+} AuthMgrSegmentPacket;
+
+/* AUTHMGR_CMD_AUTH_SEGMENT, AUTHMGR_CMD_VERIFY_SPFSO: a buffer the module reads and writes */
+typedef struct AuthMgrBufferPacket {
+	AuthMgrPacketHeader header;
+	SceUInt32 srcRangeCount;
+	SceUInt32 srcRangesPA;
+	SceUInt32 dstRangeCount;
+	SceUInt32 dstRangesPA;
+} AuthMgrBufferPacket;
+
+/* AUTHMGR_CMD_GET_EKC, AUTHMGR_CMD_SET_DMAC5_KEY, AUTHMGR_CMD_CLEAR_DMAC5_KEY */
+typedef struct AuthMgrKeyPacket {
+	AuthMgrPacketHeader header;
+	SceUInt8 data[0x100];
+	SceSize size;
+	SceUInt32 type;
+	SceUInt32 slot;
+	SceUInt32 reserved;
+} AuthMgrKeyPacket;
+
+/* AUTHMGR_CMD_DEC_BIND_DATA */
+typedef struct AuthMgrBindPacket {
+	AuthMgrPacketHeader header;
+	SceKernelPARange input;
+	SceKernelPARange output;
+	SceUInt32 flags;
+	SceUInt32 reserved;
+} AuthMgrBindPacket;
+
+/* the SELF commands share one packet */
+typedef union AuthMgrSelfPacket {
+	AuthMgrPacketHeader header;
+	AuthMgrAuthHeaderPacket authHeader;
+	AuthMgrSegmentPacket segment;
+	AuthMgrBufferPacket block;
+} AuthMgrSelfPacket;
+
+/* the packets, in one uncached allocation */
+typedef struct AuthMgrPacketArea {
+	AuthMgrSelfPacket self;
+	SceUInt8 reserved[0x30];
+	AuthMgrPacketHeader stop;
+	SceUInt32 stopReserved[4];
+	AuthMgrKeyPacket key;
+	AuthMgrBindPacket bind;
+	AuthMgrBufferPacket spfso;
+} AuthMgrPacketArea;
+
+_Static_assert(sizeof(AuthMgrPacketHeader) == 0x40, "AuthMgrPacketHeader");
+_Static_assert(sizeof(AuthMgrAuthHeaderPacket) == 0x190, "AuthMgrAuthHeaderPacket");
+_Static_assert(sizeof(AuthMgrKeyPacket) == 0x150, "AuthMgrKeyPacket");
+_Static_assert(sizeof(AuthMgrBindPacket) == 0x58, "AuthMgrBindPacket");
+_Static_assert(sizeof(AuthMgrPacketArea) == 0x408, "AuthMgrPacketArea");
+
+static int authMgrWaitSelfSemaphore(void);
+static int authMgrIntrHandlerforInvoke(SceUID reqId, int mailbox, void *argp, SceUInt32 status,
+				       SceUInt32 result);
+static int authMgrWaitSM(void);
+static int authMgrSetupSrcPARanges(const void *addr, SceSize size);
+static int authMgrIntrHandler(SceUID reqId, int mailbox, void *argp, SceUInt32 status,
+			      SceUInt32 result);
+static int authMgrSendRequest(SceUID reqId, AuthMgrPacketHeader *packet);
+static int authMgrSendPacketCore(AuthMgrPacketHeader *packet, SceSize size, SceUInt32 command);
+static int authMgrStopSM(SceUID reqId);
+static int authMgrInvokeSM(void);
+static int authMgrSendPacket(AuthMgrPacketHeader *packet, SceSize size, SceUInt32 command);
+static int sceSblAuthMgrStart(void);
+
+static SceKernelFastMutex s_send_cmd_mutex;
+static SceUInt32 s_src_pa_ranges_pa;
+static AuthMgrSelfPacket *s_self_packet;
+static AuthMgrPacketHeader *s_stop_packet;
+static SceUID s_self_api_sema;
+static AuthMgrKeyPacket *s_key_packet;
+static AuthMgrBindPacket *s_bind_packet;
+static SceUInt8 s_spfso_auth[AUTHMGR_SPFSO_SIZE];
+static AuthMgrBufferPacket *s_spfso_packet;
+static SceKernelPARange s_src_pa_ranges[16] __attribute__((aligned(64)));
+static SceUID s_req_id;
+static SceUID s_evf_id;
+static int s_self_handle;
+static SceKernelFastMutex s_npdrm_api_mutex;
+
 static __attribute__((noinline)) int authMgrWaitSelfSemaphore(void)
 {
-	return ErrorOnly(sceKernelWaitSema(s_state.selfSemaphore, 1, NULL));
-}
-static __attribute__((noinline)) int authMgrIntrHandlerforInvoke(SceUID id, int channel,
-	void *argument, uint32_t status, uint32_t result)
-{
-	uint32_t bits;
+	int ret;
 
-	(void)argument;
-	if (channel != 0) {
-		SCE_DBG_PRINTF(0xb, 1270, "ERROR: invalid mailbox id [%d]\n", channel);
-		AUTH_PANIC(1269, 1270);
+	ret = sceKernelWaitSema(s_self_api_sema, 1, NULL);
+	if (ret > 0)
+		ret = 0;
+	return ret;
+}
+
+/* the module's start: it answers on the invoke mailbox */
+static __attribute__((noinline)) int authMgrIntrHandlerforInvoke(SceUID reqId, int mailbox,
+	void *argp, SceUInt32 status, SceUInt32 result)
+{
+	SceUInt32 bits;
+
+	(void)argp;
+	if (mailbox != AUTHMGR_MAILBOX_INVOKE) {
+		SCE_DBG_PRINTF(0xb, 1269, "ERROR: invalid mailbox id [%d]\n", mailbox);
+		SCE_PANIC(1270);
 	}
-	if (id != s_state.requestId) {
-		SCE_DBG_PRINTF(0xb, 1279, "ERROR: req_id [%d] != s_req_id [%d]\n",
-			id, s_state.requestId);
-		if (s_state.requestId == AM_NO_REQUEST)
-			AUTH_PANIC(1283, 1283);
-		AUTH_PANIC(1273, 1279);
+	if (reqId != s_req_id) {
+		SCE_DBG_PRINTF(0xb, 1273, "ERROR: req_id [%d] != s_req_id [%d]\n", reqId, s_req_id);
+		if (s_req_id == AUTHMGR_NO_REQUEST)
+			SCE_PANIC(1279);
+		SCE_PANIC(1283);
 	}
-	bits = (status & ~8U) == 2 ? 1 : (result << 16) | 1;
-	sceKernelSetEventFlag(s_state.eventFlag, bits);
+	if ((status & ~8U) == 2)
+		bits = AUTHMGR_EVENT_DONE;
+	else
+		bits = result << 16 | AUTHMGR_EVENT_DONE;
+	sceKernelSetEventFlag(s_evf_id, bits);
 	return 0;
 }
+
 static __attribute__((noinline)) int authMgrWaitSM(void)
 {
-	uint32_t guard = __stack_chk_guard;
-	uint32_t bits;
-	int result;
+	SceUInt32 bits;
+	int ret;
 
 	sceKernelSysrootDisableAutoClockDown();
-	result = sceKernelWaitEventFlag(s_state.eventFlag, 1, 5, &bits, NULL);
+	ret = sceKernelWaitEventFlag(s_evf_id, AUTHMGR_EVENT_DONE, 5, &bits, NULL);
 	sceKernelSysrootEnableAutoClockDown();
-	if (result < 0) {
-		SCE_DBG_PRINTF(0xb, 976, "ERROR: sceKernelWaitEventFlag ret = 0x%08x\n", result);
-	} else if ((bits >> 16) != 0) {
-		SCE_DBG_PRINTF(0xb, 984, "ERROR: authMgr status = 0x%08x\n", bits >> 16);
-		result = (int)0x800f052a;
-	} else {
-		result = 0;
+	if (ret < 0) {
+		SCE_DBG_PRINTF(0xb, 976, "ERROR: sceKernelWaitEventFlag ret = 0x%08x\n", ret);
+		return ret;
 	}
-	CheckStackGuard(guard);
-	return result;
+	ret = bits >> 16;
+	if (ret != 0) {
+		SCE_DBG_PRINTF(0xb, 984, "ERROR: authMgr status = 0x%08x\n", ret);
+		ret = SCE_SBL_ERROR_AM_SM_FAILED;
+	}
+	return ret;
 }
-static __attribute__((noinline)) int authMgrSetupSrcPARanges(const void *address, uint32_t size)
-{
-	uint32_t guard = __stack_chk_guard;
-	SceKernelVARange range = { .addr = (uintptr_t)address, .size = size };
-	SceKernelPAVector vector;
-	int result;
 
+/* the physical ranges of a buffer, in s_src_pa_ranges: returns their count */
+static __attribute__((noinline)) int authMgrSetupSrcPARanges(const void *addr, SceSize size)
+{
+	SceKernelVARange range;
+	SceKernelPAVector vector;
+	int ret, count;
+
+	range.addr = (uintptr_t)addr;
+	range.size = size;
 	vector.size = sizeof(vector);
 	vector.capacity = 16;
-	vector.pRanges = s_state.sourceRanges;
-	result = sceKernelVARangeToPAVector(&range, &vector);
-	if (result < 0) {
-		SCE_DBG_PRINTF(0xb, 1113, "ERROR: authMgrSetupSrcPARanges failed ! ret = 0x%08x\n", result);
-		result = AM_EPHYSICAL;
-	} else {
-		sceKernelDcacheCleanRange(s_state.sourceRanges,
-			(vector.total * 8 + 0x1f) & ~0x1fU);
-		result = vector.total;
+	vector.pRanges = s_src_pa_ranges;
+	ret = sceKernelVARangeToPAVector(&range, &vector);
+	if (ret < 0) {
+		SCE_DBG_PRINTF(0xb, 1113, "ERROR: authMgrSetupSrcPARanges failed ! ret = 0x%08x\n", ret);
+		return SCE_SBL_ERROR_AM_NO_PHYSICAL_ADDRESS;
 	}
-	CheckStackGuard(guard);
-	return result;
+	count = vector.total;
+	sceKernelDcacheCleanRange(s_src_pa_ranges, (count * sizeof(SceKernelPARange) + 0x1f) & ~0x1f);
+	return count;
 }
-static __attribute__((noinline)) void authMgrIntrHandler(SceUID id, int channel,
-	void *argument, uint32_t status, uint32_t resultWord)
-{
-	uint32_t guard = __stack_chk_guard;
-	uint32_t value = 0;
-	int result;
 
-	(void)argument;
-	(void)status;
-	(void)resultWord;
-	if (id != s_state.requestId) {
-		SCE_DBG_PRINTF(0xb, 1020, "ERROR: req_id [%d] != s_req_id [%d]\n", id, s_state.requestId);
-		AUTH_PANIC(1019, 1020);
-	}
-	if (channel != 1) {
-		SCE_DBG_PRINTF(0xb, 1024, "ERROR: invalid mailbox id [0x%08x]\n", channel);
-		AUTH_PANIC(1023, 1024);
-	}
-	result = sceSblSmSchedProxyReadCry2Arm(id, 1, &value);
-	if (result != 0) {
-		SCE_DBG_PRINTF(0xb, 1052, "ERRORR: sceSblSmSchedProxyReadCry2Arm ret = 0x%08x\n", result);
-	} else {
-		result = sceSblSmSchedProxyWriteCry2Arm(id, 1, value);
-		if (result != 0) {
-			SCE_DBG_PRINTF(0xb, 1047, "ERROR: sceSblSmSchedProxyWriteCry2Arm ret = 0x%08x\n", result);
-		} else {
-			if (!(value & 1)) {
-				SCE_DBG_PRINTF(0xb, 1065, "ERROR: Intr Handler : mailval = 0x%08x\n", value);
-				AUTH_PANIC(1064, 1065);
-			}
-			sceKernelSetEventFlag(s_state.eventFlag, value == 1 ? 1 : 0x20001);
-		}
-	}
-	CheckStackGuard(guard);
-}
-static __attribute__((noinline)) int authMgrSendRequest(SceUID id, struct AuthPacket *packet)
+/* a command's answer, on the command mailbox */
+static __attribute__((noinline)) int authMgrIntrHandler(SceUID reqId, int mailbox, void *argp,
+	SceUInt32 status, SceUInt32 result)
 {
-	uint32_t guard = __stack_chk_guard;
-	uint32_t physicalAddress;
-	int result;
+	SceUInt32 mailval = 0;
+	int ret;
+
+	(void)argp;
+	(void)status;
+	(void)result;
+	if (reqId != s_req_id) {
+		SCE_DBG_PRINTF(0xb, 1019, "ERROR: req_id [%d] != s_req_id [%d]\n", reqId, s_req_id);
+		SCE_PANIC(1020);
+	}
+	if (mailbox != AUTHMGR_MAILBOX_COMMAND) {
+		SCE_DBG_PRINTF(0xb, 1023, "ERROR: invalid mailbox id [0x%08x]\n", mailbox);
+		SCE_PANIC(1024);
+	}
+	ret = sceSblSmSchedProxyReadCry2Arm(reqId, mailbox, &mailval);
+	if (ret != 0) {
+		SCE_DBG_PRINTF(0xb, 1047, "ERRORR: sceSblSmSchedProxyReadCry2Arm ret = 0x%08x\n", ret);
+		return ret;
+	}
+	ret = sceSblSmSchedProxyWriteCry2Arm(reqId, mailbox, mailval);
+	if (ret != 0) {
+		SCE_DBG_PRINTF(0xb, 1052, "ERROR: sceSblSmSchedProxyWriteCry2Arm ret = 0x%08x\n", ret);
+		return ret;
+	}
+	if (!(mailval & 1)) {
+		SCE_DBG_PRINTF(0xb, 1064, "ERROR: Intr Handler : mailval = 0x%08x\n", mailval);
+		SCE_PANIC(1065);
+	}
+	sceKernelSetEventFlag(s_evf_id, mailval == 1 ? AUTHMGR_EVENT_DONE : AUTHMGR_EVENT_ERROR);
+	return ret;
+}
+
+static __attribute__((noinline)) int authMgrSendRequest(SceUID reqId, AuthMgrPacketHeader *packet)
+{
+	uintptr_t pa;
+	int ret;
 
 	packet->result = -1;
-	__asm__ volatile("dmb sy" : : : "memory");
+	dmb();
 	(void)packet->result;
-	__asm__ volatile("dsb sy" : : : "memory");
-	result = sceKernelVAtoPA(packet, &physicalAddress);
-	if (result < 0) {
-		SCE_DBG_PRINTF(0xb, 1250, "ERROR: sceKernelVAtoPA ret = 0x%08x\n", result);
-		result = AM_EPHYSICAL;
-	} else {
-		result = SceSblSmSchedProxyForKernel_723B382F(id, 1, physicalAddress | 1);
+	dsb();
+	ret = sceKernelVAtoPA(packet, &pa);
+	if (ret < 0) {
+		SCE_DBG_PRINTF(0xb, 1250, "ERROR: sceKernelVAtoPA ret = 0x%08x\n", ret);
+		return SCE_SBL_ERROR_AM_NO_PHYSICAL_ADDRESS;
 	}
-	CheckStackGuard(guard);
-	return result;
+	return SceSblSmSchedProxyForKernel_723B382F(reqId, AUTHMGR_MAILBOX_COMMAND, pa | 1);
 }
-static __attribute__((noinline)) int authMgrSendPacketCore(struct AuthPacket *packet,
-	uint32_t size, uint32_t command)
+
+static __attribute__((noinline)) int authMgrSendPacketCore(AuthMgrPacketHeader *packet, SceSize size,
+	SceUInt32 command)
 {
-	int result, releaseResult, unlockResult;
+	int ret, releaseRet, unlockRet;
 
 	if (packet == NULL)
-		return AM_EINVAL;
+		return SCE_SBL_ERROR_AM_EINVAL;
 	packet->size = size;
-	packet->command = (command << 16) | 1;
-	result = lockFastMutex(&s_state.sendMutex);
-	if (result < 0)
-		return result;
-	result = sceSblSmSchedProxyRegisterIntrHandler(s_state.requestId, 1,
-		authMgrIntrHandler, NULL);
-	if (result < 0) {
-		SCE_DBG_PRINTF(0xb, 1562, "ERROR: authMgrSetupIntrHandler ret = 0x%08x\n", result);
+	packet->command = command << 16 | 1;
+	ret = lockFastMutex(&s_send_cmd_mutex);
+	if (ret < 0)
+		return ret;
+	ret = sceSblSmSchedProxyRegisterIntrHandler(s_req_id, AUTHMGR_MAILBOX_COMMAND,
+		(SceSblSmSchedCry2ArmHandler)authMgrIntrHandler, NULL);
+	if (ret < 0) {
+		SCE_DBG_PRINTF(0xb, 1562, "ERROR: authMgrSetupIntrHandler ret = 0x%08x\n", ret);
 	} else {
-		result = authMgrSendRequest(s_state.requestId, packet);
-		if (result < 0) {
-			SCE_DBG_PRINTF(0xb, 1571, "ERROR: authMgrSendRequest ret = 0x%08x\n", result);
+		ret = authMgrSendRequest(s_req_id, packet);
+		if (ret < 0) {
+			SCE_DBG_PRINTF(0xb, 1571, "ERROR: authMgrSendRequest ret = 0x%08x\n", ret);
 		} else {
-			result = authMgrWaitSM();
-			if (result == 0) {
-				result = packet->result;
-				if (result == -1) {
-					SCE_DBG_PRINTF(0xb, 1588, "ERROR: return value is not updated.\n");
-					AUTH_PANIC(1587, 1588);
+			ret = authMgrWaitSM();
+			if (ret == 0) {
+				ret = packet->result;
+				if (ret == -1) {
+					SCE_DBG_PRINTF(0xb, 1587, "ERROR: return value is not updated.\n");
+					SCE_PANIC(1588);
 				}
 			}
 		}
 	}
-	releaseResult = SceSblSmSchedProxyForKernel_85EDA5FC(s_state.requestId, 1);
-	if (releaseResult != 0) {
-		SCE_DBG_PRINTF(0xb, 1599, "ERROR: ReleaseHandler ret = 0x%08x\n", releaseResult);
-		result = releaseResult;
+	releaseRet = SceSblSmSchedProxyForKernel_85EDA5FC(s_req_id, AUTHMGR_MAILBOX_COMMAND);
+	if (releaseRet != 0) {
+		ret = releaseRet;
+		SCE_DBG_PRINTF(0xb, 1599, "ERROR: ReleaseHandler ret = 0x%08x\n", releaseRet);
 	}
-	unlockResult = sceKernelUnlockFastMutex(&s_state.sendMutex);
-	return unlockResult < 0 ? unlockResult : result;
+	unlockRet = sceKernelUnlockFastMutex(&s_send_cmd_mutex);
+	if (unlockRet < 0)
+		return unlockRet;
+	return ret;
 }
-static __attribute__((noinline)) int authMgrStopSM(SceUID id)
-{
-	uint32_t guard = __stack_chk_guard;
-	uint32_t status[2];
-	struct AuthPacket *packet = s_state.stopPacket;
-	int result;
 
-	memset(packet, 0, 0x50);
+static __attribute__((noinline)) int authMgrStopSM(SceUID reqId)
+{
+	AuthMgrPacketHeader *packet = s_stop_packet;
+	SmschedIntrStatus status;
+	int ret;
+
+	memset(packet, 0, sizeof(*packet) + sizeof(((AuthMgrPacketArea *)NULL)->stopReserved));
 	packet->size = 0x50;
-	packet->command = UINT32_MAX;
-	result = authMgrSendRequest(id, packet);
-	if (result == 0) {
-		result = sceSblSmSchedProxyWait(id, status);
-		if (result != 0) {
-			SCE_DBG_PRINTF(0xb, 1207, "ERROR: sceSblSmSchedProxyWait ret = 0x%08x\n", result);
-		} else if (status[1] != 3) {
-			SCE_DBG_PRINTF(0xb, 1155, "warning: SM status is not exit [0x%08x]\n", status[1]);
-		}
-	} else if (result == (int)0x800f0429) {
-		result = sceSblSmSchedProxyGetStatus(id, status);
-		if (result != 0) {
-			SCE_DBG_PRINTF(0xb, 1197, "ERROR: sceSblSmSchedProxyGetStatus ret = 0x%08x\n", result);
-		} else if (status[1] != 10 && status[1] != 3) {
-			result = (int)0x800f0529;
-		}
+	packet->command = AUTHMGR_CMD_STOP;
+	ret = authMgrSendRequest(reqId, packet);
+	if (ret == 0) {
+		ret = sceSblSmSchedProxyWait(reqId, &status);
+		if (ret != 0)
+			SCE_DBG_PRINTF(0xb, 1197, "ERROR: sceSblSmSchedProxyWait ret = 0x%08x\n", ret);
+		else if (status.state != AUTHMGR_SM_STATE_EXITED)
+			SCE_DBG_PRINTF(0xb, 1207, "warning: SM status is not exit [0x%08x]\n", status.state);
+	} else if (ret == SCE_SBL_ERROR_SMSCHED_ILLEGAL_STATE) {
+		ret = sceSblSmSchedProxyGetStatus(reqId, &status);
+		if (ret != 0)
+			SCE_DBG_PRINTF(0xb, 1172, "ERROR: sceSblSmSchedProxyGetStatus ret = 0x%08x\n", ret);
+		else if (status.state != AUTHMGR_SM_STATE_EXITED && status.state != AUTHMGR_SM_STATE_IDLE)
+			ret = SCE_SBL_ERROR_AM_SM_NOT_STOPPED;
 	} else {
-		SCE_DBG_PRINTF(0xb, 1172, "ERROR: authMgrSendRequest ret = 0x%08x\n", result);
+		SCE_DBG_PRINTF(0xb, 1155, "ERROR: authMgrSendRequest ret = 0x%08x\n", ret);
 	}
-	CheckStackGuard(guard);
-	return result;
+	return ret;
 }
+
+/* starts kprx_auth_sm, the scheduler's own instance, as the kernel */
 static __attribute__((noinline)) int authMgrInvokeSM(void)
 {
-	uint32_t guard = __stack_chk_guard;
-	const SceKblParam *kblParam = sceKernelSysrootGetKblParam();
+	const struct SceKblParam *kblParam = sceKernelSysrootGetKblParam();
 	SelfAuthRequest auth;
-	uint32_t *words = (uint32_t *)(void *)&auth;
-	int result;
+	int ret;
 
 	memset(&auth, 0, sizeof(auth));
 	memset(&auth.caller, 0, sizeof(auth.caller));
-	auth.selfType = 0x1002;
-	words[2] = 1;
-	words[3] = 0x28080000;
-	words[6] = 0x80;
-	words[7] = 0xf000c0;
-	words[8] = 0;
-	words[9] = UINT32_MAX;
-	words[14] = 0x03800980;
-	words[15] = 0x00c30000;
-	words[16] = 0x09800000;
-	words[17] = 0x80;
-	words[20] = 0;
-	words[21] = UINT32_MAX;
 	auth.mediaType = (kblParam->boot_type_indicator_1 & BOOT_TYPE_SPECIAL_MEDIA) ? 1 : 10;
-	result = sceSblSmSchedProxyInvoke(0, 0, 0, NULL, &auth, (SceUID *)&s_state.requestId);
-	if (result != 0) {
-		SCE_DBG_PRINTF(0xb, 909, "ERROR: sceSblSmSchedProxyInvoke ret = 0x%08x\n", result);
+	auth.caller.programAuthorityId = 0x2808000000000001ULL;
+	auth.caller.capability.bits[0] = 0x00f000c000000080ULL;
+	auth.caller.capability.bits[1] = 0xffffffff00000000ULL;
+	auth.caller.attribute.bits[0] = 0x00c3000003800980ULL;
+	auth.caller.attribute.bits[1] = 0x0000008009800000ULL;
+	auth.caller.attribute.bits[3] = 0xffffffff00000000ULL;
+	auth.selfType = SMSCHED_INVOKE_SELF_INSTANCE | 2;
+	ret = sceSblSmSchedProxyInvoke(0, 0, 0, NULL, &auth, &s_req_id);
+	if (ret != 0) {
+		SCE_DBG_PRINTF(0xb, 909, "ERROR: sceSblSmSchedProxyInvoke ret = 0x%08x\n", ret);
 	} else {
-		result = sceSblSmSchedProxyRegisterIntrHandler(s_state.requestId, 0,
-			(AuthCryHandler)authMgrIntrHandlerforInvoke, NULL);
-		if (result != 0) {
-			SCE_DBG_PRINTF(0xb, 920, "ERROR: authMgrSetupIntrHandler ret = 0x%08x\n", result);
+		ret = sceSblSmSchedProxyRegisterIntrHandler(s_req_id, AUTHMGR_MAILBOX_INVOKE,
+			(SceSblSmSchedCry2ArmHandler)authMgrIntrHandlerforInvoke, NULL);
+		if (ret != 0) {
+			SCE_DBG_PRINTF(0xb, 920, "ERROR: authMgrSetupIntrHandler ret = 0x%08x\n", ret);
 		} else {
-			result = authMgrWaitSM();
-			if (result != 0) {
-				SCE_DBG_PRINTF(0xb, 933, "ERROR: Invoke SM ret = 0x%08x\n", result);
+			ret = authMgrWaitSM();
+			if (ret != 0) {
+				SCE_DBG_PRINTF(0xb, 933, "ERROR: Invoke SM ret = 0x%08x\n", ret);
 			} else {
-				result = SceSblSmSchedProxyForKernel_85EDA5FC(s_state.requestId, 0);
-				if (result != 0)
-					SCE_DBG_PRINTF(0xb, 942, "ERROR: authMgrReleaseHandler err = 0x%08x\n", result);
+				ret = SceSblSmSchedProxyForKernel_85EDA5FC(s_req_id, AUTHMGR_MAILBOX_INVOKE);
+				if (ret == 0)
+					return 0;
+				SCE_DBG_PRINTF(0xb, 942, "ERROR: authMgrReleaseHandler err = 0x%08x\n", ret);
 			}
 		}
 	}
-	if (result < 0)
-		s_state.requestId = AM_NO_REQUEST;
-	CheckStackGuard(guard);
-	return result;
+	if (ret < 0)
+		s_req_id = AUTHMGR_NO_REQUEST;
+	return ret;
 }
-static __attribute__((noinline)) int authMgrSendPacket(struct AuthPacket *packet,
-	uint32_t size, uint32_t command)
+
+/* sends a packet, starting the module for it when none runs */
+static __attribute__((noinline)) int authMgrSendPacket(AuthMgrPacketHeader *packet, SceSize size,
+	SceUInt32 command)
 {
-	SceUID previousId;
-	int result, stopResult;
+	int ret, stopRet;
 
 	SceKernelSuspendForDriver_4DF40893(0);
-	previousId = s_state.requestId;
-	if (previousId == AM_NO_REQUEST) {
-		result = authMgrInvokeSM();
-		if (result < 0) {
-			SCE_DBG_PRINTF(0xb, 1470, "ERROR: Invoke sm fail ret = 0x%08x\n", result);
-			previousId = s_state.requestId;
-		} else {
-			result = ErrorOnly(authMgrSendPacketCore(packet, size, command));
-			stopResult = authMgrStopSM(s_state.requestId);
-			if (stopResult < 0) {
-				SCE_DBG_PRINTF(0xb, 1493, ">>> Stop SM fail ret = 0x%08x\n", stopResult);
-				SceKernelSuspendForDriver_2BB92967(0);
-				return stopResult;
-			}
-		}
+	if (s_req_id != AUTHMGR_NO_REQUEST) {
+		ret = authMgrSendPacketCore(packet, size, command);
+		if (ret > 0)
+			ret = 0;
 	} else {
-		result = ErrorOnly(authMgrSendPacketCore(packet, size, command));
-		previousId = s_state.requestId;
+		ret = authMgrInvokeSM();
+		if (ret < 0) {
+			SCE_DBG_PRINTF(0xb, 1470, "ERROR: Invoke sm fail ret = 0x%08x\n", ret);
+		} else {
+			ret = authMgrSendPacketCore(packet, size, command);
+			if (ret > 0)
+				ret = 0;
+			stopRet = authMgrStopSM(s_req_id);
+			if (stopRet < 0) {
+				SCE_DBG_PRINTF(0xb, 1493, ">>> Stop SM fail ret = 0x%08x\n", stopRet);
+				SceKernelSuspendForDriver_2BB92967(0);
+				return stopRet;
+			}
+			s_req_id = AUTHMGR_NO_REQUEST;
+		}
 	}
-	s_state.requestId = previousId;
 	SceKernelSuspendForDriver_2BB92967(0);
-	return result;
+	return ret;
 }
+
 static __attribute__((noinline)) int sceSblAuthMgrStart(void)
 {
-	uint32_t guard = __stack_chk_guard;
-	uint32_t option[5] = { 0x14, 0, 0x40, 0, 0 };
-	uint8_t *arena;
-	int result;
+	AuthMgrPacketArea *area;
+	SceAllocOpt opt;
+	int ret;
 
-	s_state.selfHandle = -1;
-	s_state.requestId = AM_NO_REQUEST;
-	result = sceKernelVAtoPA(s_state.sourceRanges, &s_state.sourcePhysicalAddress);
-	if (result < 0) {
-		SCE_DBG_PRINTF(0xb, 239, "ERROR: sceKernelVAtoPA ret = 0x%08x\n", result);
-		result = AM_EPHYSICAL;
-	} else {
-		arena = SceSysmemForDriver_0B4ED16A(0x408, (SceAllocOpt *)option);
-		if (arena == NULL) {
-			result = AM_ENOMEM;
-		} else {
-			s_state.arena = (void *)arena;
-			s_state.stopPacket = (void *)(arena + 0x1c0);
-			s_state.keyPacket = (void *)(arena + 0x210);
-			s_state.bindPacket = (void *)(arena + 0x360);
-			s_state.verifyPacket = (void *)(arena + 0x3b8);
-			result = 0;
-		}
+	s_self_handle = -1;
+	s_req_id = AUTHMGR_NO_REQUEST;
+	ret = sceKernelVAtoPA(s_src_pa_ranges, &s_src_pa_ranges_pa);
+	if (ret < 0) {
+		SCE_DBG_PRINTF(0xb, 239, "ERROR: sceKernelVAtoPA ret = 0x%08x\n", ret);
+		return SCE_SBL_ERROR_AM_NO_PHYSICAL_ADDRESS;
 	}
-	CheckStackGuard(guard);
-	return result;
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 0x40;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	area = SceSysmemForDriver_0B4ED16A(sizeof(*area), &opt);
+	if (area == NULL)
+		return SCE_SBL_ERROR_AM_ENOMEM;
+	s_self_packet = &area->self;
+	s_stop_packet = &area->stop;
+	s_key_packet = &area->key;
+	s_bind_packet = &area->bind;
+	s_spfso_packet = &area->spfso;
+	return 0;
 }
-int module_start(SceSize args, const void *argument)
+
+int sceSblAuthMgrModuleStart(SceSize args, const void *argp)
 {
-	int result;
+	int ret;
 
 	(void)args;
-	(void)argument;
+	(void)argp;
 	sceSblAuthMgrStart();
-	s_state.eventFlag = sceKernelCreateEventFlag("SceSblAuthMgr", 0, 0, NULL);
-	if (s_state.eventFlag < 0) {
-		AUTH_DBG_PRINTF("sceSblAuthMgrModuleStart", 283, "ERROR: sceKernelCreateEventFlag fail\n");
-		return AM_ENOMEM;
+	s_evf_id = sceKernelCreateEventFlag("SceSblAuthMgr", 0, 0, NULL);
+	if (s_evf_id < 0) {
+		SCE_DBG_PRINTF(0xb, 283, "ERROR: sceKernelCreateEventFlag fail\n");
+		return SCE_SBL_ERROR_AM_ENOMEM;
 	}
-	result = sceKernelInitializeFastMutex(&s_state.sendMutex, "SceSblAuthMgrSendCmd", 0, NULL);
-	if (result < 0) {
-		AUTH_DBG_PRINTF("sceSblAuthMgrModuleStart", 291, "ERROR: sceKernelInitializeFastMutex ret = 0x%08x\n", result);
-		return result;
+	ret = sceKernelInitializeFastMutex(&s_send_cmd_mutex, "SceSblAuthMgrSendCmd", 0, NULL);
+	if (ret < 0) {
+		SCE_DBG_PRINTF(0xb, 291, "ERROR: sceKernelInitializeFastMutex ret = 0x%08x\n", ret);
+		return ret;
 	}
-	result = sceKernelInitializeFastMutex(&s_state.npdrmMutex, "SceSblAuthMgrNpdrmApi", 0, NULL);
-	if (result < 0) {
-		AUTH_DBG_PRINTF("sceSblAuthMgrModuleStart", 299, "ERROR: sceKernelInitializeFastMutex ret = 0x%08x\n", result);
-		return result;
+	ret = sceKernelInitializeFastMutex(&s_npdrm_api_mutex, "SceSblAuthMgrNpdrmApi", 0, NULL);
+	if (ret < 0) {
+		SCE_DBG_PRINTF(0xb, 299, "ERROR: sceKernelInitializeFastMutex ret = 0x%08x\n", ret);
+		return ret;
 	}
-	s_state.selfSemaphore = sceKernelCreateSema("SceSblAuthMgrSelfApi", 0, 1, 1, NULL);
-	if (s_state.selfSemaphore < 0) {
-		AUTH_DBG_PRINTF("sceSblAuthMgrModuleStart", 308, "ERROR: sceKernelCreateSema ret = 0x%08x\n", s_state.selfSemaphore);
-		return result;
+	s_self_api_sema = sceKernelCreateSema("SceSblAuthMgrSelfApi", 0, 1, 1, NULL);
+	if (s_self_api_sema < 0) {
+		SCE_DBG_PRINTF(0xb, 308, "ERROR: sceKernelCreateSema ret = 0x%08x\n", s_self_api_sema);
+		return ret;
 	}
-	memset(s_state.cachedSpsfoAuth, 0, sizeof(s_state.cachedSpsfoAuth));
+	memset(s_spfso_auth, 0, sizeof(s_spfso_auth));
 	return 0;
 }
+
+/* starts the module for a SELF; it runs, and the caller holds the SELF API, until Close */
 int sceSblAuthMgrOpen(int *handle)
 {
-	int result, operationResult, signalResult;
+	int ret, result, signalRet;
 
 	if (handle == NULL)
-		return AM_EINVAL;
+		return SCE_SBL_ERROR_AM_EINVAL;
 	SceKernelSuspendForDriver_4DF40893(0);
-	result = authMgrWaitSelfSemaphore();
-	if (result >= 0) {
-		result = lockFastMutex(&s_state.npdrmMutex);
-		if (result >= 0) {
-			if (s_state.selfHandle == 1) {
-				operationResult = (int)0x800f0501;
-			} else if (s_state.requestId == AM_NO_REQUEST) {
-				operationResult = authMgrInvokeSM();
-				if (operationResult == 0) {
-					*handle = 1;
-					s_state.selfHandle = 1;
-					result = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
-					if (result >= 0)
-						return 0;
-					SceKernelSuspendForDriver_2BB92967(0);
-					return result;
-				}
-				AUTH_DBG_PRINTF("sceSblAuthMgrOpen", 410, "ERROR: authMgrInvokeSM ret = 0x%08x\n", operationResult);
-			} else {
-				operationResult = AM_EINVAL;
-			}
-			result = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
-			if (result >= 0) {
-				signalResult = sceKernelSignalSema(s_state.selfSemaphore, 1);
-				if (signalResult >= 0)
-					return operationResult;
-				SceKernelSuspendForDriver_2BB92967(0);
-				return signalResult;
-			}
+	ret = authMgrWaitSelfSemaphore();
+	if (ret < 0)
+		goto resume;
+	ret = lockFastMutex(&s_npdrm_api_mutex);
+	if (ret < 0)
+		goto signal;
+	if (s_self_handle == AUTHMGR_HANDLE) {
+		result = SCE_SBL_ERROR_AM_EPERM;
+	} else if (s_req_id != AUTHMGR_NO_REQUEST) {
+		result = SCE_SBL_ERROR_AM_EINVAL;
+	} else {
+		result = authMgrInvokeSM();
+		if (result == 0) {
+			*handle = AUTHMGR_HANDLE;
+			s_self_handle = AUTHMGR_HANDLE;
+			ret = sceKernelUnlockFastMutex(&s_npdrm_api_mutex);
+			if (ret < 0)
+				goto resume;
+			return 0;
 		}
-		signalResult = sceKernelSignalSema(s_state.selfSemaphore, 1);
-		if (signalResult < 0)
-			result = signalResult;
+		SCE_DBG_PRINTF(0xb, 410, "ERROR: authMgrInvokeSM ret = 0x%08x\n", result);
 	}
+	ret = sceKernelUnlockFastMutex(&s_npdrm_api_mutex);
+	if (ret >= 0) {
+		signalRet = sceKernelSignalSema(s_self_api_sema, 1);
+		if (signalRet >= 0)
+			return result;
+		SceKernelSuspendForDriver_2BB92967(0);
+		return signalRet;
+	}
+signal:
+	signalRet = sceKernelSignalSema(s_self_api_sema, 1);
+	if (signalRet < 0) {
+		SceKernelSuspendForDriver_2BB92967(0);
+		return signalRet;
+	}
+resume:
 	SceKernelSuspendForDriver_2BB92967(0);
-	return result;
+	return ret;
 }
+
 int sceSblAuthMgrClose(int handle)
 {
-	int result, stopResult, signalResult;
+	int ret, stopRet, signalRet;
 
-	if (handle != 1)
-		return AM_EHANDLE;
-	result = lockFastMutex(&s_state.npdrmMutex);
-	if (result >= 0) {
-		stopResult = authMgrStopSM(s_state.requestId);
-		if (stopResult == 0) {
-			s_state.requestId = AM_NO_REQUEST;
-			s_state.selfHandle = -1;
+	if (handle != AUTHMGR_HANDLE)
+		return SCE_SBL_ERROR_AM_EBADF;
+	ret = lockFastMutex(&s_npdrm_api_mutex);
+	if (ret >= 0) {
+		stopRet = authMgrStopSM(s_req_id);
+		if (stopRet == 0) {
+			s_req_id = AUTHMGR_NO_REQUEST;
+			s_self_handle = -1;
 		} else {
-			AUTH_DBG_PRINTF("sceSblAuthMgrClose", 483, "ERROR: authMgrStopSM ret = 0x%08x\n", stopResult);
+			SCE_DBG_PRINTF(0xb, 483, "ERROR: authMgrStopSM ret = 0x%08x\n", stopRet);
 		}
-		result = ErrorOnly(sceKernelUnlockFastMutex(&s_state.npdrmMutex));
+		ret = sceKernelUnlockFastMutex(&s_npdrm_api_mutex);
+		if (ret > 0)
+			ret = 0;
 	}
-	signalResult = sceKernelSignalSema(s_state.selfSemaphore, 1);
+	signalRet = sceKernelSignalSema(s_self_api_sema, 1);
+	if (signalRet < 0) {
+		SceKernelSuspendForDriver_2BB92967(0);
+		return signalRet;
+	}
 	SceKernelSuspendForDriver_2BB92967(0);
-	return signalResult < 0 ? signalResult : result;
+	return ret;
 }
-int sceSblAuthMgrAuthHeader(int handle, const void *header, uint32_t size, SelfAuthRequest *auth)
-{
-	uint32_t guard = __stack_chk_guard;
-	struct AuthPacket *packet = s_state.arena;
-	uint32_t *words = PacketWords(packet);
-	uint32_t fselfAuth[22];
-	uint32_t mode;
-	int result;
 
-	if (handle != 1) {
-		result = AM_EHANDLE;
-	} else if (auth == NULL || header == NULL) {
-		AUTH_DBG_PRINTF("sceSblAuthMgrAuthHeader", 565, "sceSblAuthMgrAuthHeader SCE_SBL_ERROR_AM_EINVAL\n");
-		AUTH_DBG_PRINTF("sceSblAuthMgrAuthHeader", 566, "\n self_header_addr : %p\n", header);
-		AUTH_DBG_PRINTF("sceSblAuthMgrAuthHeader", 567, "\n auth_info : %p\n", auth);
-		result = AM_EINVAL;
-	} else {
-		memset(packet, 0, 0x190);
-		result = authMgrSetupSrcPARanges(header, size);
-		if (result >= 0) {
-			mode = SceSysrootForKernel_377895EB();
-			if (mode == 1 || mode == 2 || mode == UINT32_MAX)
-				auth->selfType = (auth->selfType & 0xfffff0ff) | 0x100;
-			*(uint64_t *)(void *)auth->module.padding =
-				auth->mediaType - 13 < 2 ?
-				(uint64_t)*(uint32_t *)(void *)(s_state.cachedSpsfoAuth + 0xc) << 16 : 0;
-			memcpy(packet->payload, auth, sizeof(*auth));
-			words[0x170 / 4] = result;
-			words[0x174 / 4] = s_state.sourcePhysicalAddress;
-			sceKernelDcacheCleanRange((void *)header, size);
-			result = authMgrSendPacketCore(packet, 0x190, 1);
-			if (result >= 0) {
-				memcpy(&auth->module, (uint8_t *)packet + 0xd8, sizeof(auth->module));
-				if ((auth->module.programAuthorityId >> 32 & 0xfff00000) == 0x2f000000) {
-					result = SceSysrootForDriver_D75D4F37(fselfAuth);
-					if (result == 0) {
-						/* Native overwrite preserves response.padding (license bits). */
-						auth->module.programAuthorityId = (uint64_t)fselfAuth[0] | (uint64_t)fselfAuth[1] << 32;
-						for (unsigned i = 0; i < 20; i++)
-							((uint32_t *)(void *)auth->module.capability)[i] = fselfAuth[i + 2];
-					} else if (result < 0 && result != (int)0x800f1a02) {
-						AUTH_DBG_PRINTF("sceSblAuthMgrAuthHeader", 659, "[ERROR] overwrite fself authinfo\n");
-						goto out;
-					}
-				}
-				result = 0;
+int sceSblAuthMgrAuthHeader(int handle, const void *header, SceSize size, SelfAuthRequest *auth)
+{
+	AuthMgrAuthHeaderPacket *packet;
+	SceSblUtMgrTrilithiumBuffer trilithium;
+	int ret, count, mode;
+
+	if (handle != AUTHMGR_HANDLE)
+		return SCE_SBL_ERROR_AM_EBADF;
+	if (header == NULL || auth == NULL) {
+		SCE_DBG_PRINTF(0xb, 565, "sceSblAuthMgrAuthHeader SCE_SBL_ERROR_AM_EINVAL\n");
+		SCE_DBG_PRINTF(0xb, 566, "\n self_header_addr : %p\n", header);
+		SCE_DBG_PRINTF(0xb, 567, "\n auth_info : %p\n", auth);
+		return SCE_SBL_ERROR_AM_EINVAL;
+	}
+	packet = &s_self_packet->authHeader;
+	memset(packet, 0, sizeof(*packet));
+	count = authMgrSetupSrcPARanges(header, size);
+	if (count < 0)
+		return count;
+	mode = SceSysrootForKernel_377895EB();
+	if (mode == 1 || mode == 2 || mode == -1)
+		auth->selfType = (auth->selfType & ~0xf00) | 0x100;
+	if (auth->mediaType - 13 <= 1)
+		auth->module.spfsoInfo = (SceUInt64)*(SceUInt32 *)&s_spfso_auth[0xc] << 16;
+	else
+		auth->module.spfsoInfo = 0;
+	memcpy(&packet->auth, auth, sizeof(*auth));
+	packet->rangeCount = count;
+	packet->rangesPA = s_src_pa_ranges_pa;
+	sceKernelDcacheCleanRange(header, size);
+	ret = authMgrSendPacketCore(&packet->header, sizeof(*packet), AUTHMGR_CMD_AUTH_HEADER);
+	if (ret < 0)
+		return ret;
+	memcpy(&auth->module, &packet->auth.module, sizeof(auth->module));
+	if ((auth->module.programAuthorityId & 0xfff0000000000000ULL) == 0x2f00000000000000ULL) {
+		/* an fself: the utoken's authentication replaces the one it carries */
+		ret = SceSysrootForDriver_D75D4F37(&trilithium);
+		if (ret != (int)0x800f1a02) {
+			if (ret == 0) {
+				auth->module.programAuthorityId = trilithium.programAuthorityId;
+				__builtin_memcpy(&auth->module.capability, &trilithium.capability, sizeof(trilithium.capability));
+				__builtin_memcpy(&auth->module.attribute, &trilithium.attribute, sizeof(trilithium.attribute));
+				__builtin_memcpy(&auth->module.sharedSecret0, &trilithium.sharedSecret0, sizeof(trilithium.sharedSecret0));
+			} else if (ret < 0) {
+				SCE_DBG_PRINTF(0xb, 659, "[ERROR] overwrite fself authinfo\n");
+				return ret;
 			}
 		}
 	}
-out:
-	CheckStackGuard(guard);
-	return result;
-}
-int SceSblAuthMgrForKernel_89CCDA2C(int handle, uint32_t segmentIndex)
-{
-	struct AuthPacket *packet = s_state.arena;
-	int result;
-
-	if (handle != 1)
-		return AM_EHANDLE;
-	memset(packet, 0, 0x50);
-	PacketWords(packet)[0x40 / 4] = segmentIndex;
-	result = authMgrSendPacketCore(packet, 0x50, 2);
-	return result < 0 ? result : (int)PacketWords(packet)[0x44 / 4];
-}
-int SceSblAuthMgrForKernel_BC422443(int handle, void *buffer, uint32_t size)
-{
-	struct AuthPacket *packet;
-	uint32_t *words;
-	int result;
-
-	if (handle != 1)
-		return AM_EHANDLE;
-	if (buffer == NULL || size == 0 || ((uintptr_t)buffer & 0x1f))
-		return AM_EINVAL;
-	result = authMgrSetupSrcPARanges(buffer, size);
-	if (result < 0)
-		return result;
-	packet = s_state.arena;
-	words = PacketWords(packet);
-	memset(packet, 0, 0x50);
-	words[16] = words[18] = result;
-	words[17] = words[19] = s_state.sourcePhysicalAddress;
-	sceKernelDcacheCleanRange(buffer, RoundCacheSize(size));
-	result = authMgrSendPacketCore(packet, 0x50, 3);
-	if (result < 0)
-		return result;
-	sceKernelDcacheInvalidateRange(buffer, RoundCacheSize(size));
 	return 0;
 }
-int sceSblAuthMgrGetEKc(void *buffer, uint32_t size, uint32_t type)
-{
-	struct AuthPacket *packet;
-	uint32_t *words;
-	int result, unlockResult;
 
-	if (buffer == NULL || type >= 3 || (size & 0xf) || size - 1 >= 0x100)
-		return AM_EINVAL;
-	result = lockFastMutex(&s_state.npdrmMutex);
-	if (result < 0)
-		return result;
-	packet = s_state.keyPacket;
-	words = PacketWords(packet);
-	memcpy(packet->payload, buffer, size);
-	words[80] = size;
-	words[81] = type;
-	words[82] = words[83] = 0;
-	result = authMgrSendPacket(packet, 0x150, 4);
-	if (result >= 0) {
-		if (words[80] <= 0x100) {
-			memcpy(buffer, packet->payload, words[80]);
-			result = 0;
+/* vitasdk: ksceSblAuthMgrSetupAuthSegment */
+int SceSblAuthMgrForKernel_89CCDA2C(int handle, SceUInt32 segment)
+{
+	AuthMgrSegmentPacket *packet;
+	int ret;
+
+	if (handle != AUTHMGR_HANDLE)
+		return SCE_SBL_ERROR_AM_EBADF;
+	packet = &s_self_packet->segment;
+	memset(packet, 0, sizeof(*packet));
+	packet->segment = segment;
+	ret = authMgrSendPacketCore(&packet->header, sizeof(*packet), AUTHMGR_CMD_SETUP_SEGMENT);
+	if (ret < 0)
+		return ret;
+	return packet->result;
+}
+
+/* vitasdk: ksceSblAuthMgrLoadBlock */
+int SceSblAuthMgrForKernel_BC422443(int handle, void *buffer, SceSize size)
+{
+	AuthMgrBufferPacket *packet;
+	SceSize cacheSize;
+	int ret, count;
+
+	if (handle != AUTHMGR_HANDLE)
+		return SCE_SBL_ERROR_AM_EBADF;
+	if (buffer == NULL || size == 0 || ((uintptr_t)buffer & 0x1f))
+		return SCE_SBL_ERROR_AM_EINVAL;
+	count = authMgrSetupSrcPARanges(buffer, size);
+	if (count < 0)
+		return count;
+	packet = &s_self_packet->block;
+	cacheSize = (size + 0x3f) & ~0x3f;
+	memset(packet, 0, sizeof(*packet));
+	packet->srcRangeCount = count;
+	packet->srcRangesPA = s_src_pa_ranges_pa;
+	packet->dstRangeCount = count;
+	packet->dstRangesPA = s_src_pa_ranges_pa;
+	sceKernelDcacheCleanRange(buffer, cacheSize);
+	ret = authMgrSendPacketCore(&packet->header, sizeof(*packet), AUTHMGR_CMD_AUTH_SEGMENT);
+	if (ret < 0)
+		return ret;
+	sceKernelDcacheInvalidateRange(buffer, cacheSize);
+	return 0;
+}
+
+int sceSblAuthMgrGetEKc(void *buffer, SceSize size, SceUInt32 type)
+{
+	AuthMgrKeyPacket *packet;
+	int ret, unlockRet;
+
+	if (buffer == NULL)
+		return SCE_SBL_ERROR_AM_EINVAL;
+	if (type > 2 || (size & 0xf) || size - 1 > 0xff)
+		return SCE_SBL_ERROR_AM_EINVAL;
+	ret = lockFastMutex(&s_npdrm_api_mutex);
+	if (ret < 0)
+		return ret;
+	packet = s_key_packet;
+	memcpy(packet->data, buffer, size);
+	packet->size = size;
+	packet->type = type;
+	packet->slot = 0;
+	packet->reserved = 0;
+	ret = authMgrSendPacket(&packet->header, sizeof(*packet), AUTHMGR_CMD_GET_EKC);
+	if (ret >= 0) {
+		if (packet->size > sizeof(packet->data)) {
+			ret = SCE_SBL_ERROR_AM_EINVAL;
 		} else {
-			result = AM_EINVAL;
+			ret = 0;
+			memcpy(buffer, packet->data, packet->size);
 		}
 	}
-	unlockResult = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
-	return unlockResult < 0 ? unlockResult : result;
+	unlockRet = sceKernelUnlockFastMutex(&s_npdrm_api_mutex);
+	if (unlockRet < 0)
+		return unlockRet;
+	return ret;
 }
-int sceSblAuthMgrSetDmac5Key(const void *key, uint32_t size, int slot, int keyId)
+
+int sceSblAuthMgrSetDmac5Key(const void *key, SceSize size, int slot, int keyId)
 {
-	struct AuthPacket *packet;
-	uint32_t *words;
-	int result, unlockResult;
+	AuthMgrKeyPacket *packet;
+	int ret, unlockRet;
 
 	if (key == NULL || (keyId != 0 && keyId != 0x10000 && keyId != 0x10001 &&
 	    keyId != 0x20000 && keyId != 0x20001) || (size & 0xf) || size - 1 >= 0x20)
-		return AM_EINVAL;
-	result = lockFastMutex(&s_state.npdrmMutex);
-	if (result < 0)
-		return result;
-	packet = s_state.keyPacket;
-	words = PacketWords(packet);
-	memcpy(packet->payload, key, size);
-	words[80] = size;
-	words[81] = keyId;
-	words[82] = slot;
-	words[83] = 0;
-	result = authMgrSendPacket(packet, 0x150, 5);
-	unlockResult = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
-	return unlockResult < 0 ? unlockResult : ErrorOnly(result);
+		return SCE_SBL_ERROR_AM_EINVAL;
+	ret = lockFastMutex(&s_npdrm_api_mutex);
+	if (ret < 0)
+		return ret;
+	packet = s_key_packet;
+	memcpy(packet->data, key, size);
+	packet->size = size;
+	packet->type = keyId;
+	packet->slot = slot;
+	packet->reserved = 0;
+	ret = authMgrSendPacket(&packet->header, sizeof(*packet), AUTHMGR_CMD_SET_DMAC5_KEY);
+	unlockRet = sceKernelUnlockFastMutex(&s_npdrm_api_mutex);
+	if (unlockRet < 0)
+		return unlockRet;
+	if (ret > 0)
+		ret = 0;
+	return ret;
 }
+
 int sceSblAuthMgrClearDmac5Key(int slot, int value)
 {
-	struct AuthPacket *packet;
-	uint32_t *words;
-	int result, unlockResult;
+	AuthMgrKeyPacket *packet;
+	int ret, unlockRet;
 
 	if (value != 0)
-		return AM_EINVAL;
-	result = lockFastMutex(&s_state.npdrmMutex);
-	if (result < 0)
-		return result;
-	packet = s_state.keyPacket;
-	words = PacketWords(packet);
-	memset(packet->payload, 0, 0x100);
-	words[80] = words[81] = words[83] = 0;
-	words[82] = slot;
-	result = authMgrSendPacket(packet, 0x150, 6);
-	unlockResult = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
-	return unlockResult < 0 ? unlockResult : ErrorOnly(result);
-}
-int sceSblAuthMgrDecBindData(void *input, uint32_t inputSize,
-	void *output, uint32_t outputSize, int flags)
-{
-	uint32_t guard = __stack_chk_guard;
-	struct AuthPacket *packet;
-	SceKernelVARange range;
-	int result, unlockResult;
-
-	if (input == NULL || output == NULL || outputSize - 1 >= 0x1000 || flags != 0 ||
-	    (((uintptr_t)input | (uintptr_t)output) & 0x3f) ||
-	    ((inputSize | outputSize) & 0xf) || inputSize > 0x1000) {
-		result = AM_EINVAL;
-		goto out;
-	}
-	result = lockFastMutex(&s_state.npdrmMutex);
-	if (result < 0)
-		goto out;
-	packet = s_state.bindPacket;
-	memset(packet, 0, 0x58);
-	/* Explicit wrap checks retain the native pointer-addition branches. */
-	if ((uint32_t)(uintptr_t)packet == 0xffffffc0) {
-		result = AM_EINVAL;
-		goto unlock;
-	}
-	if (inputSize != 0) {
-		range.addr = (uintptr_t)input;
-		range.size = inputSize;
-		result = SceSysmemForDriver_AE36C775(&range, (void *)packet->payload);
-		if (result < 0)
-			goto unlock;
-	}
-	if ((uint32_t)(uintptr_t)packet == 0xffffffb8) {
-		result = AM_EINVAL;
-		goto unlock;
-	}
-	range.addr = (uintptr_t)output;
-	range.size = outputSize;
-	result = SceSysmemForDriver_AE36C775(&range, (void *)(packet->payload + 8));
-	if (result >= 0) {
-		PacketWords(packet)[20] = 0;
-		sceKernelDcacheCleanRange(input, RoundCacheSize(inputSize));
-		sceKernelDcacheCleanRange(output, RoundCacheSize(outputSize));
-		result = authMgrSendPacket(packet, 0x58, 7);
-		if (result >= 0)
-			sceKernelDcacheInvalidateRange(input, RoundCacheSize(inputSize));
-	}
-unlock:
-	unlockResult = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
-	if (unlockResult < 0)
-		result = unlockResult;
-out:
-	CheckStackGuard(guard);
-	return result;
+		return SCE_SBL_ERROR_AM_EINVAL;
+	ret = lockFastMutex(&s_npdrm_api_mutex);
+	if (ret < 0)
+		return ret;
+	packet = s_key_packet;
+	memset(packet->data, 0, sizeof(packet->data));
+	packet->size = 0;
+	packet->type = 0;
+	packet->reserved = 0;
+	packet->slot = slot;
+	ret = authMgrSendPacket(&packet->header, sizeof(*packet), AUTHMGR_CMD_CLEAR_DMAC5_KEY);
+	unlockRet = sceKernelUnlockFastMutex(&s_npdrm_api_mutex);
+	if (unlockRet < 0)
+		return unlockRet;
+	if (ret > 0)
+		ret = 0;
+	return ret;
 }
 
-int sceSblAuthMgrVerifySpsfo(SceSblSpfsoCtx *context)
+/* a buffer's one physical range; an empty buffer has none */
+static inline int authMgrSetupPARange(const void *addr, SceSize size, SceKernelPARange *range)
 {
-	struct AuthPacket *packet;
-	uint32_t *words;
-	uint64_t offset;
-	int result, unlockResult, signalResult;
+	SceKernelVARange va;
 
-	if (context == NULL || context->base == NULL || context->size > 0x8000 ||
-	    ((uintptr_t)context->base & 0x1f))
-		return AM_EINVAL;
-	result = authMgrWaitSelfSemaphore();
-	if (result < 0)
-		return result;
-	result = lockFastMutex(&s_state.npdrmMutex);
-	if (result < 0)
+	if (range == NULL)
+		return SCE_SBL_ERROR_AM_EINVAL;
+	if (size == 0)
+		return 0;
+	va.addr = (uintptr_t)addr;
+	va.size = size;
+	return SceSysmemForDriver_AE36C775(&va, range);
+}
+
+int sceSblAuthMgrDecBindData(void *input, SceSize inputSize, void *output, SceSize outputSize,
+	int flags)
+{
+	AuthMgrBindPacket *packet;
+	int ret, unlockRet;
+
+	if (input == NULL || output == NULL)
+		return SCE_SBL_ERROR_AM_EINVAL;
+	if (flags != 0 || outputSize - 1 >= 0x1000)
+		return SCE_SBL_ERROR_AM_EINVAL;
+	if ((((uintptr_t)input | (uintptr_t)output) & 0x3f) || ((inputSize | outputSize) & 0xf) ||
+	    inputSize > 0x1000)
+		return SCE_SBL_ERROR_AM_EINVAL;
+	ret = lockFastMutex(&s_npdrm_api_mutex);
+	if (ret < 0)
+		return ret;
+	packet = s_bind_packet;
+	memset(packet, 0, sizeof(*packet));
+	ret = authMgrSetupPARange(input, inputSize, &packet->input);
+	if (ret >= 0) {
+		ret = authMgrSetupPARange(output, outputSize, &packet->output);
+		if (ret >= 0) {
+			packet->flags = 0;
+			sceKernelDcacheCleanRange(input, (inputSize + 0x3f) & ~0x3f);
+			sceKernelDcacheCleanRange(output, (outputSize + 0x3f) & ~0x3f);
+			ret = authMgrSendPacket(&packet->header, sizeof(*packet), AUTHMGR_CMD_DEC_BIND_DATA);
+			if (ret >= 0)
+				sceKernelDcacheInvalidateRange(input, (inputSize + 0x3f) & ~0x3f);
+		}
+	}
+	unlockRet = sceKernelUnlockFastMutex(&s_npdrm_api_mutex);
+	if (unlockRet < 0)
+		return unlockRet;
+	return ret;
+}
+
+/* has the module check an SPFSO file, and keeps its authentication data */
+int sceSblAuthMgrVerifySpsfo(SceSblSpfsoCtx *ctx)
+{
+	AuthMgrBufferPacket *packet;
+	SceUInt64 offset;
+	int ret, result;
+
+	if (ctx == NULL || ctx->base == NULL || ctx->size > 0x8000 || ((uintptr_t)ctx->base & 0x1f))
+		return SCE_SBL_ERROR_AM_EINVAL;
+	ret = authMgrWaitSelfSemaphore();
+	if (ret < 0)
+		return ret;
+	ret = lockFastMutex(&s_npdrm_api_mutex);
+	if (ret < 0)
 		goto signal;
-	result = authMgrSetupSrcPARanges(context->base, context->size);
+	result = authMgrSetupSrcPARanges(ctx->base, ctx->size);
 	if (result < 0) {
-		AUTH_DBG_ASSERT("sceSblAuthMgrVerifySpsfo", 0, 1984);
+		SCE_DBG_ASSERT(0, 1984);
 	} else {
-		packet = s_state.verifyPacket;
-		words = PacketWords(packet);
-		memset(packet, 0, 0x50);
-		words[16] = result;
-		words[17] = s_state.sourcePhysicalAddress;
-		sceKernelDcacheCleanRange(context->base, RoundCacheSize(context->size));
-		result = authMgrSendPacket(packet, 0x50, 8);
+		packet = s_spfso_packet;
+		memset(packet, 0, sizeof(*packet));
+		packet->srcRangeCount = result;
+		packet->srcRangesPA = s_src_pa_ranges_pa;
+		sceKernelDcacheCleanRange(ctx->base, (ctx->size + 0x3f) & ~0x3f);
+		result = authMgrSendPacket(&packet->header, sizeof(*packet), AUTHMGR_CMD_VERIFY_SPFSO);
 		if (result >= 0) {
-			sceKernelDcacheInvalidateRange(context->base,
-						       RoundCacheSize(context->size));
-			if (context->base == NULL || context->size == 0) {
-				result = AM_EINVAL;
+			sceKernelDcacheInvalidateRange(ctx->base, (ctx->size + 0x3f) & ~0x3f);
+			if (ctx->base == NULL || ctx->size == 0) {
+				result = SCE_SBL_ERROR_AM_EINVAL;
 			} else {
-				offset = *(uint64_t *)(void *)((uint8_t *)context->base + 0x10);
-				if (offset >= 0x30 && context->size >= 0x200 && offset <= context->size - 0x200) {
-					memcpy(s_state.cachedSpsfoAuth,
-					       (uint8_t *)context->base + (uint32_t)offset, 0x200);
-					result = 0;
+				offset = *(SceUInt64 *)((SceUInt8 *)ctx->base + 0x10);
+				if (offset < 0x30 || ctx->size < AUTHMGR_SPFSO_SIZE ||
+				    (SceUInt64)ctx->size - AUTHMGR_SPFSO_SIZE < offset) {
+					result = SCE_SBL_ERROR_AM_INVALID_SPFSO;
 				} else {
-					result = (int)0x800f0524;
+					result = 0;
+					memcpy(s_spfso_auth, (SceUInt8 *)ctx->base + (SceUInt32)offset,
+					       AUTHMGR_SPFSO_SIZE);
 				}
 			}
 		}
 	}
-	unlockResult = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
-	if (unlockResult >= 0) {
-		signalResult = sceKernelSignalSema(s_state.selfSemaphore, 1);
-		return signalResult < 0 ? signalResult : result;
+	ret = sceKernelUnlockFastMutex(&s_npdrm_api_mutex);
+	if (ret >= 0) {
+		ret = sceKernelSignalSema(s_self_api_sema, 1);
+		if (ret < 0)
+			return ret;
+		return result;
 	}
-	result = unlockResult;
 signal:
-	signalResult = sceKernelSignalSema(s_state.selfSemaphore, 1);
-	return signalResult < 0 ? signalResult : result;
+	result = sceKernelSignalSema(s_self_api_sema, 1);
+	if (result < 0)
+		return result;
+	return ret;
 }
-int SceSblAuthMgrForKernel_ABAB8466(uint32_t version)
+
+/* vitasdk: ksceSblAuthMgrCompareSwVersion */
+int SceSblAuthMgrForKernel_ABAB8466(SceUInt32 version)
 {
-	return version == UINT32_MAX || (version & 0xfffff000) <= (FW_SDK_VERSION & 0xfffff000) ? 0 : (int)0x800f0537;
+	if (version != 0xffffffff && (version & 0xfffff000) > (FW_SDK_VERSION & 0xfffff000))
+		return SCE_SBL_ERROR_AM_NEWER_SYSTEM_VERSION;
+	return 0;
 }
+
 int SceSblAuthMgrForKernel_2A83A012(void)
 {
-	/* Native body is exactly a constant-zero return; purpose is unknown. */
 	return 0;
 }

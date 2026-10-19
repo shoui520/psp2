@@ -12,7 +12,7 @@ int CheckProcessCapability(SceUID processId, unsigned int capability)
 
 	if (SceSysrootForKernel_4F0A4066(processId, &info))
 		return 0;
-	return (info.capability[(int32_t)capability >> 3] >> (~capability & 7)) & 1;
+	return (info.capability.bytes[(int32_t)capability >> 3] >> (~capability & 7)) & 1;
 }
 
 /* only these capabilities can be checked this way */

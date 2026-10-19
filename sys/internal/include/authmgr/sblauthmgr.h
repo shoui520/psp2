@@ -4,15 +4,43 @@
 #include <stdint.h>
 
 /*
+ * SceSblAuthMgr's errors. SCE_SBL_ERROR_AM_EINVAL is Sony's (sceSblAuthMgrAuthHeader's message);
+ * names unknown for the others, named after it by their errno (the low byte) or by what returns them.
+ */
+#define SCE_SBL_ERROR_AM_EPERM			((int)0x800f0501)	/* a SELF is open already */
+#define SCE_SBL_ERROR_AM_EBADF			((int)0x800f0509)
+#define SCE_SBL_ERROR_AM_ENOMEM			((int)0x800f050c)
+#define SCE_SBL_ERROR_AM_EINVAL			((int)0x800f0516)
+#define SCE_SBL_ERROR_AM_INVALID_SPFSO		((int)0x800f0524)
+#define SCE_SBL_ERROR_AM_NO_PHYSICAL_ADDRESS	((int)0x800f0528)
+#define SCE_SBL_ERROR_AM_SM_NOT_STOPPED		((int)0x800f0529)
+#define SCE_SBL_ERROR_AM_SM_FAILED		((int)0x800f052a)	/* its status */
+#define SCE_SBL_ERROR_AM_NEWER_SYSTEM_VERSION	((int)0x800f0537)
+
+/*
  * A SELF's authentication information, as the secure kernel returns it (Sony's "SelfAuthInfo":
  * modulemgr's "get SelfAuthInfo failed", processmgr's sceKernelGetProcessSelfAuthInfo).
  */
+/*
+ * a capability or attribute set (names unknown): authmgr stores its words, acmgr tests its bits
+ * byte by byte, and both copy it whole
+ */
+typedef union SceSelfAuthBits {
+	SceUInt64 bits[4];
+	SceUInt8 bytes[0x20];
+} SceSelfAuthBits;
+
+/* a shared secret, copied whole */
+typedef struct SceSelfAuthSecret {
+	SceUInt32 data[4];
+} SceSelfAuthSecret;
+
 typedef struct SceSelfAuthInfo {
 	SceUInt64 programAuthorityId;
-	SceUInt8 padding[8];
-	SceUInt8 capability[0x20];
-	SceUInt8 attribute[0x20];
-	SceUInt8 sharedSecret0[0x10];
+	SceUInt64 spfsoInfo;			/* media 13 and 14: the SPFSO's word 3 << 16 */
+	SceSelfAuthBits capability;
+	SceSelfAuthBits attribute;
+	SceSelfAuthSecret sharedSecret0;
 	SceUInt32 klicensee[4];
 	SceUInt8 sharedSecret2[0x10];
 	SceUInt32 sharedSecret3[4];
@@ -35,18 +63,19 @@ _Static_assert(sizeof(SelfAuthRequest) == 0x130, "SelfAuthRequest");
 
 struct SceSblSpfsoCtx;
 
-int sceSblAuthMgrDecBindData(void *input, uint32_t inputSize, void *output, uint32_t outputSize, int flags);
-int sceSblAuthMgrGetEKc(void *buffer, uint32_t size, uint32_t type);
-int sceSblAuthMgrSetDmac5Key(const void *key, uint32_t size, int slot, int keyId);
-int SceSblAuthMgrForKernel_2A83A012(void);
-/* vitasdk: ksceSblAuthMgrSetupAuthSegment */
-int SceSblAuthMgrForKernel_89CCDA2C(int handle, uint32_t segmentIndex);
-/* vitasdk: ksceSblAuthMgrCompareSwVersion */
-int SceSblAuthMgrForKernel_ABAB8466(uint32_t version);
-/* vitasdk: ksceSblAuthMgrLoadBlock */
-int SceSblAuthMgrForKernel_BC422443(int handle, void *buffer, uint32_t size);
-int sceSblAuthMgrClearDmac5Key(int slot, int value);
-int sceSblAuthMgrAuthHeader(int handle, const void *header, uint32_t size, SelfAuthRequest *auth);
-int sceSblAuthMgrClose(int handle);
 int sceSblAuthMgrOpen(int *handle);
-int sceSblAuthMgrVerifySpsfo(struct SceSblSpfsoCtx *context);
+int sceSblAuthMgrClose(int handle);
+int sceSblAuthMgrAuthHeader(int handle, const void *header, SceSize size, SelfAuthRequest *auth);
+/* vitasdk: ksceSblAuthMgrSetupAuthSegment */
+int SceSblAuthMgrForKernel_89CCDA2C(int handle, SceUInt32 segment);
+/* vitasdk: ksceSblAuthMgrLoadBlock */
+int SceSblAuthMgrForKernel_BC422443(int handle, void *buffer, SceSize size);
+int sceSblAuthMgrGetEKc(void *buffer, SceSize size, SceUInt32 type);
+int sceSblAuthMgrSetDmac5Key(const void *key, SceSize size, int slot, int keyId);
+int sceSblAuthMgrClearDmac5Key(int slot, int value);
+int sceSblAuthMgrDecBindData(void *input, SceSize inputSize, void *output, SceSize outputSize,
+			     int flags);
+int sceSblAuthMgrVerifySpsfo(struct SceSblSpfsoCtx *ctx);
+/* vitasdk: ksceSblAuthMgrCompareSwVersion */
+int SceSblAuthMgrForKernel_ABAB8466(SceUInt32 version);
+int SceSblAuthMgrForKernel_2A83A012(void);

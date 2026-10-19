@@ -127,16 +127,13 @@ const char gCompatBootFirmwarePath[] = "os0:kd/pcbc.skprx";
 const char gCompatSecureModulePath[] = "os0:sm/compat_sm.self";
 const SceSelfAuthInfo gCompatSecureModuleAuth = {
 	.programAuthorityId = 0x2808000000000001ULL,
-	.capability = {
-		0x80, 0, 0, 0, 0xc0, 0, 0xf0, 0,
-		0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff,
-	},
-	.attribute = {
-		0x80, 0x09, 0x80, 0x03, 0, 0, 0xc3, 0,
-		0, 0, 0x80, 0x09, 0x80, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff,
-	},
+	.capability = { { 0x00f000c000000080ULL, 0xffffffff00000000ULL } },
+	.attribute = { {
+		0x00c3000003800980ULL,
+		0x0000008009800000ULL,
+		0x0000000000000000ULL,
+		0xffffffff00000000ULL,
+	} },
 };
 
 _Static_assert(sizeof(SceCompatMailboxRegisters) == 0x1000,

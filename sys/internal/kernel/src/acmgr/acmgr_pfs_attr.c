@@ -38,7 +38,7 @@ static const PfsModeAttribute pfsKernelModes[6] = {
 /* name unknown: the program's access level (see above) */
 static inline const SceInt32 *pfsGetLevel(const SceSelfAuthInfo *info)
 {
-	return (const SceInt32 *)&info->capability[0];
+	return (const SceInt32 *)&info->capability.bytes[0];
 }
 
 static int pfsSetAttr(const SceSelfAuthInfo *info, unsigned char **ppValue, SceSize *pSize,

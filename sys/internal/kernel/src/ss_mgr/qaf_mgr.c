@@ -554,16 +554,13 @@ __attribute__((noinline)) int sceSblQafManagerSetQaFlagVersion(unsigned int vers
 
 const SceSelfAuthInfo qafSmAuthInfo = {
 	.programAuthorityId = UINT64_C(0x2808000000000001),
-	.capability = {
-		0x80, 0, 0, 0, 0xc0, 0, 0xf0, 0,
-		0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff
-	},
-	.attribute = {
-		0x80, 0x09, 0x80, 0x03, 0, 0, 0xc3, 0,
-		0, 0, 0x80, 0x09, 0x80, 0, 0, 0,
-		0, 0, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff
-	}
+	.capability = { { 0x00f000c000000080ULL, 0xffffffff00000000ULL } },
+	.attribute = { {
+		0x00c3000003800980ULL,
+		0x0000008009800000ULL,
+		0x0000000000000000ULL,
+		0xffffffff00000000ULL,
+	} }
 };
 
 int qafLoadSecureModule(const char *path)

@@ -255,8 +255,8 @@ int SceSblACMgrForDriver_5F9AF49C(SceUID pid, const SceChar8 *path)
 		return 0;
 	group = info.programAuthorityId & 0xfff0000000000000ULL;
 	if (group == 0x2100000000000000ULL || group == 0x2f00000000000000ULL)
-		restricted = (info.attribute[16] >> 6) & 1;
-	else if (info.attribute[16] & 0x40)
+		restricted = (info.attribute.bytes[16] >> 6) & 1;
+	else if (info.attribute.bytes[16] & 0x40)
 		restricted = 1;
 	else
 		return 1;
@@ -418,7 +418,7 @@ int sceSblACMgrHasCapability(SceUID pid, int bit)
 
 	if (SceSysrootForKernel_4F0A4066(pid, &info) != 0)
 		return 0;
-	return (info.capability[bit >> 3] >> (~bit & 7)) & 1;
+	return (info.capability.bytes[bit >> 3] >> (~bit & 7)) & 1;
 }
 
 int SceSblACMgrForKernel_8241AB5C(SceUID pid, int bit)
@@ -437,7 +437,7 @@ static int __attribute__((noinline)) hasAttribute(SceUID pid, int bit)
 
 	if (SceSysrootForKernel_4F0A4066(pid, &info) != 0)
 		return 0;
-	return (info.attribute[bit >> 3] >> (~bit & 7)) & 1;
+	return (info.attribute.bytes[bit >> 3] >> (~bit & 7)) & 1;
 }
 
 int sceSblACMgrGetPaid(SceUID pid, SceUInt64 *paid)
