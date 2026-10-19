@@ -1354,4 +1354,13 @@ int pfsGdsdWhiteout(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPat
 int pfsGdsdCleanup(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceUInt32 a2,
 		   SceUInt32 a3);
 
+/* constants several of the module's files use */
+#define PFS_MAP			0x4420	/* name unknown */
+#define PFS_MAP_SEQUENTIAL	0x4421	/* name unknown: maps at the file position */
+#define PFS_NAME_MAX		0x40
+#define PFS_PAGE_SIZE		0x8000	/* name unknown */
+#define PFS_UNMAP		0x4422	/* name unknown */
+#define SCE_PFS_ERROR_ICV_COUNT		0x80141102	/* name unknown */
+#define SCE_PFS_ERROR_LRU_ALIGN		0x80140509	/* name unknown */
+
 #endif

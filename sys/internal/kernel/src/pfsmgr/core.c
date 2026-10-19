@@ -7,11 +7,7 @@
 #include <sysmem/sysclib.h>
 #include "pfsmgr_internal.h"
 
-#define PFS_PAGE_SIZE		0x8000
 #define PFS_ATTR_ICV_RENAMED	0x0800	/* name unknown */
-#define PFS_NAME_MAX		0x40
-#define PFS_MAP			0x4420	/* name unknown */
-#define PFS_MAP_SEQUENTIAL	0x4421	/* name unknown: maps at the file position */
 
 #define SCE_PFS_ERROR_READ_ONLY		0x80142010	/* name unknown */
 #define SCE_PFS_ERROR_NOT_FILE		0x80142012	/* name unknown */
@@ -19,7 +15,6 @@
 #define SCE_PFS_ERROR_QUOTA		0x80142019	/* name unknown */
 #define SCE_PFS_ERROR_MAPPED		0x80142318	/* name unknown */
 #define SCE_PFS_ERROR_LOOKUP_CLEANED	0x8014001a	/* name unknown */
-#define SCE_PFS_ERROR_LRU_ALIGN		0x80140509
 #define SCE_PFS_ERROR_NO_LRU		0x8014050b	/* name unknown */
 
 ScePfsBufferList g_pfsFiBufferList;

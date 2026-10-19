@@ -5,8 +5,6 @@
 
 #include "pfsmgr_internal.h"
 
-#define SCE_PFS_ERROR_ICV_COUNT		0x80141102	/* name unknown */
-
 #define PFS_HASH_TREE_HEADER_SIZE	0x40	/* name unknown */
 
 static inline SceUInt64 pfsRoundUp64(SceUInt64 x, SceUInt64 align)	/* name unknown */

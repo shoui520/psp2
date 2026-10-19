@@ -8,7 +8,6 @@
 
 #define SCE_PFS_ERROR_LRU_FULL		0x80140504	/* name unknown */
 #define SCE_PFS_ERROR_LRU_OTHER_FILE	0x80140506	/* name unknown */
-#define SCE_PFS_ERROR_LRU_ALIGN		0x80140509	/* name unknown */
 #define SCE_PFS_ERROR_LRU_READ		0x8014050a	/* name unknown */
 #define SCE_PFS_ERROR_LRU_NOT_BUSY	0x8014050c	/* name unknown */
 

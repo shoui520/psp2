@@ -7,11 +7,6 @@
 #include <threadmgr/threadmgr.h>
 #include "pfsmgr_internal.h"
 
-#define PFS_MAP			0x4420	/* name unknown */
-#define PFS_MAP_SEQUENTIAL	0x4421	/* name unknown */
-#define PFS_UNMAP		0x4422	/* name unknown */
-#define PFS_NAME_MAX		0x40
-
 #define SCE_PFS_ERROR_NOT_PERMITTED	0x80142010	/* name unknown */
 #define SCE_PFS_ERROR_BAD_ICV_TYPE	0x80142009	/* name unknown */
 

@@ -7,9 +7,6 @@
 
 #include "pfsmgr_internal.h"
 
-#define SCE_PFS_ERROR_UNICV_BROKEN	0x80140e0a	/* name unknown */
-#define SCE_PFS_ERROR_UNICV_VERSION	0x80140e15	/* name unknown */
-
 #define PFS_UNICV_PAGE_SIZE	0x200	/* name unknown: what the header is read in */
 #define PFS_UNICV_HEADER_PAGE	0x400	/* name unknown */
 
@@ -28,7 +25,7 @@ int pfsUnicvReadHeader(ScePfsLowerFile *lf, ScePfsUnicvHeader *header)
 	if (ret != 0)
 		return ret;
 	if (n != sizeof(page))
-		return SCE_PFS_ERROR_UNICV_BROKEN;
+		return SCE_PFS_ERROR_ICV_BROKEN;
 	__builtin_memcpy(header, page.bytes, sizeof(*header));
 	return 0;
 }
@@ -43,7 +40,7 @@ int pfsUnicvWriteHeader(ScePfsLowerFile *lf, const ScePfsUnicvHeader *header)
 	if (ret != 0)
 		return ret;
 	if (n != sizeof(page))
-		return SCE_PFS_ERROR_UNICV_BROKEN;
+		return SCE_PFS_ERROR_ICV_BROKEN;
 	__builtin_memcpy(page.bytes, header, sizeof(*header));
 	return pfsLowerPwrite(lf, &page, n, 0, &n);
 }
@@ -77,12 +74,12 @@ int pfsUnicvInit(ScePfsUnicv *unicv, ScePfsLru *lru, ScePfsLowerFile *lf, SceUIn
 	if (ret != 0)
 		return ret;
 	if (unicv->header.magic != PFS_UNICV_MAGIC)
-		return SCE_PFS_ERROR_UNICV_BROKEN;
+		return SCE_PFS_ERROR_ICV_BROKEN;
 	if (unicv->header.version != version)
-		return SCE_PFS_ERROR_UNICV_VERSION;
+		return SCE_PFS_ERROR_ICV_VERSION;
 	if (pageSize != unicv->header.pageSize || unicv->header.freeHead != (SceUInt64)-1 ||
 	    unicv->header.end != size - PFS_UNICV_HEADER_PAGE)
-		return SCE_PFS_ERROR_UNICV_BROKEN;
+		return SCE_PFS_ERROR_ICV_BROKEN;
 	pfsPageAllocatorSet(&unicv->pages, unicv->header.freeHead, unicv->header.end);
 	return ret;
 }

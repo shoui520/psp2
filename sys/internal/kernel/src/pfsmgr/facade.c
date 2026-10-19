@@ -12,9 +12,6 @@
 
 #define SCE_PFS_ERROR_FACADE_UNSUPPORTED	0x8014231c	/* name unknown */
 
-#define PFS_MAP			0x4420	/* name unknown */
-#define PFS_UNMAP		0x4422	/* name unknown */
-
 #define PFS_FACADE_CHUNK	0x8000	/* name unknown: what reads are cut at */
 #define PFS_FACADE_MAP_MAX	0x40000	/* name unknown: larger reads are mapped */
 #define PFS_FACADE_MAP_BLOCKS	4	/* name unknown: blocks one mapping holds */

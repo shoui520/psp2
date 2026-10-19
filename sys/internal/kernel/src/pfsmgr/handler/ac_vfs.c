@@ -5,7 +5,6 @@
  * redirect layer with a stand-in pmi.
  */
 
-
 #include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>
 #include "../pfsmgr_internal.h"

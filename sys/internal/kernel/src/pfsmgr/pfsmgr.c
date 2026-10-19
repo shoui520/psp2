@@ -14,8 +14,6 @@
 #include "pfsmgr_internal.h"
 #include <pfsmgr/pfsmgr.h>
 
-#define PFS_IOCTL_ACID_DIR_SET		0x4401
-#define PFS_IOCTL_ACID_DIR_MOUNT	0x4402
 #define PFS_IOCTL_ACID_DIR_APPROVE	0x4403
 #define PFS_IOCTL_ACID_DIR_UNMOUNT	0x4404
 

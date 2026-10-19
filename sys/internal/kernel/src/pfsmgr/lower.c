@@ -7,10 +7,8 @@
 #include <sysmem/sysclib.h>
 #include "pfsmgr_internal.h"
 
-#define PFS_PAGE_SIZE		0x8000	/* name unknown */
 #define PFS_ICV_FANOUT		23	/* name unknown: icv entries per tree node */
 #define PFS_ICV_SIZE		0x400	/* name unknown */
-#define PFS_NAME_MAX		0x40
 #define PFS_LOOKUP_FLAGS	0xfffff	/* name unknown */
 #define SCE_PFS_ERROR_NAME_TOO_LONG	0x8014011d	/* name unknown */
 
