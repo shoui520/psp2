@@ -1,5 +1,4 @@
 /* ARM exception vectors, handler chains and saved-context diagnostics. */
-#define SCE_DBGINFO_SECTION ".rodata"
 #include "excpmgr.h"
 #include <sysmem/uid_guid.h>
 #include "excpmgr_readonly.h"
@@ -121,8 +120,8 @@ void printVfpRegisters(SceExcpmgrContext *context)
 void printWPT(SceExcpmgrContext *context)
 {
 	ThreadCB *thread = context->thread;
-	SceExcpmgrWaypoint *wp;
-	unsigned int first, i, index, flags;
+	volatile SceExcpmgrWaypoint *wp;
+	unsigned int first, last, i, flags, type;
 	void *moduleBase;
 	const char *encoding;
 	char name[28];
@@ -133,57 +132,55 @@ void printWPT(SceExcpmgrContext *context)
 	SCE_PRINTF_WITH_INFO(0, 998,
 		EXCP_REPORT_TEXT(waypointHeader, "=== Print Waypoint ===\n"));
 	first = (context->waypointControl >> 8 & 31) + 1;
-	for (i = first; i != first + 32; i++) {
-		index = i & 31;
-		wp = &context->waypoint[index];
+	last = first + 32;
+	i = first;
+	do {
+		wp = &context->waypoint[i & 31];
 		flags = wp->flags;
-		if (!(flags & 0x80000000))
-			continue;
-		if ((flags & 7) == 2) {
-			SCE_PRINTF_WITH_INFO(0, 1015,
-				EXCP_REPORT_TEXT(waypointExceptionFormat, "(%2d) PC:0x%08X, TARGETPC:0x%08X <<< %s Exception >>>\n"),
-				index, wp->pc, wp->targetPc, exceptionNames[flags >> 4 & 15]);
-			if ((flags & 0xf0) != 0x50)
-				break;
-			continue;
+		if ((int)flags < 0) {
+			type = flags & 7;
+			if (type == 2) {
+				SCE_PRINTF_WITH_INFO(0, 1015,
+					EXCP_REPORT_TEXT(waypointExceptionFormat, "(%2d) PC:0x%08X, TARGETPC:0x%08X <<< %s Exception >>>\n"),
+					i & 31, wp->pc, wp->targetPc, exceptionNames[flags >> 4 & 15]);
+				if ((flags & 0xf0) != 0x50)
+					break;
+			} else if (type <= 1) {
+				if ((flags & 0x1800) == 0x800) {
+					encoding = EXCP_REPORT_TEXT(jazelle, "Jzl");
+				} else if ((flags & 0x1800) == 0x1000) {
+					encoding = flags & 0x200 ? EXCP_REPORT_TEXT(thumb32, "T32") :
+						EXCP_REPORT_TEXT(thumb16, "T16");
+				} else if ((flags & 0x1800) != 0) {
+					encoding = flags & 0x200 ? EXCP_REPORT_TEXT(thumbEE32, "E32") :
+						EXCP_REPORT_TEXT(thumbEE16, "E16");
+				} else {
+					encoding = EXCP_REPORT_TEXT(arm, "ARM");
+				}
+				if (SceSysrootForKernel_1D84C4D4(wp->targetPc < 0x40000000 ? SCE_KERNEL_PROCESS_ID : pid,
+						wp->targetPc, &fingerprint, &moduleBase, name) < 0) {
+					SCE_PRINTF_WITH_INFO(0, 1078,
+						EXCP_REPORT_TEXT(waypointNoModuleFormat, "(%2d) PC:0x%08X, TARGETPC:0x%08X %s%c%c [no module info]\n"),
+						i & 31, wp->pc, wp->targetPc, encoding,
+						flags & 0x100 ? 'L' : 'B', flags & 0x400 ? 't' : 'n');
+				} else {
+					if ((pid == SCE_KERNEL_PROCESS_ID || wp->targetPc < 0x4000000) && !SceQafMgrForDriver_382C71E8())
+						snprintf(name, 27, EXCP_REPORT_TEXT(fingerprintFormat, "0x%08X"),
+							 fingerprint);
+					SCE_PRINTF_WITH_INFO(0, 1069,
+						EXCP_REPORT_TEXT(waypointModuleFormat, "(%2d) PC:0x%08X, TARGETPC:0x%08X %s%c%c [%s + 0x%08X]\n"),
+						i & 31, wp->pc, wp->targetPc, encoding,
+						flags & 0x100 ? 'L' : 'B', flags & 0x400 ? 't' : 'n',
+						name, wp->targetPc - (uintptr_t)moduleBase);
+				}
+			} else {
+				SCE_PRINTF_WITH_INFO(0, 1026,
+					EXCP_REPORT_TEXT(waypointEventFormat, "(%2d) PC:0x%08X, TARGETPC:0x%08X <<< %s >>>\n"),
+					i & 31, wp->pc, wp->targetPc, waypointNames[type]);
+			}
 		}
-		if ((flags & 7) > 1) {
-			SCE_PRINTF_WITH_INFO(0, 1026,
-				EXCP_REPORT_TEXT(waypointEventFormat, "(%2d) PC:0x%08X, TARGETPC:0x%08X <<< %s >>>\n"),
-				index, wp->pc, wp->targetPc, waypointNames[flags & 7]);
-			continue;
-		}
-		switch (flags & 0x1800) {
-		case 0:
-			encoding = EXCP_REPORT_TEXT(arm, "ARM");
-			break;
-		case 0x800:
-			encoding = EXCP_REPORT_TEXT(jazelle, "Jzl");
-			break;
-		case 0x1000:
-			encoding = flags & 0x200 ? EXCP_REPORT_TEXT(thumb32, "T32") : EXCP_REPORT_TEXT(thumb16, "T16");
-			break;
-		default:
-			encoding = flags & 0x200 ? EXCP_REPORT_TEXT(thumbEE32, "E32") : EXCP_REPORT_TEXT(thumbEE16, "E16");
-			break;
-		}
-		if (SceSysrootForKernel_1D84C4D4(wp->targetPc < 0x40000000 ? SCE_KERNEL_PROCESS_ID : pid,
-				wp->targetPc, &fingerprint, &moduleBase, name) < 0) {
-			SCE_PRINTF_WITH_INFO(0, 1078,
-				EXCP_REPORT_TEXT(waypointNoModuleFormat, "(%2d) PC:0x%08X, TARGETPC:0x%08X %s%c%c [no module info]\n"),
-				index, wp->pc, wp->targetPc, encoding,
-				flags & 0x100 ? 'L' : 'B', flags & 0x400 ? 't' : 'n');
-			continue;
-		}
-		if ((pid == SCE_KERNEL_PROCESS_ID || wp->targetPc < 0x4000000) && !SceQafMgrForDriver_382C71E8())
-			snprintf(name, 27, EXCP_REPORT_TEXT(fingerprintFormat, "0x%08X"),
-				 fingerprint);
-		SCE_PRINTF_WITH_INFO(0, 1069,
-			EXCP_REPORT_TEXT(waypointModuleFormat, "(%2d) PC:0x%08X, TARGETPC:0x%08X %s%c%c [%s + 0x%08X]\n"),
-			index, wp->pc, wp->targetPc, encoding,
-			flags & 0x100 ? 'L' : 'B', flags & 0x400 ? 't' : 'n',
-			name, wp->targetPc - (uintptr_t)moduleBase);
-	}
+		i++;
+	} while (i != last);
 }
 
 void _sceKernelPanicHandlerCommon(SceExcpmgrContext *context, unsigned int reason,
@@ -191,10 +188,10 @@ void _sceKernelPanicHandlerCommon(SceExcpmgrContext *context, unsigned int reaso
 {
 #if FW_DEBUG
 	ThreadCB *thread = context->thread;
-	const char *processName, *threadName;
+	const char *threadName, *processName;
 	SceUID id;
 
-	if (thread != NULL) {
+	if (__builtin_expect(thread != NULL, 1)) {
 		id = thread->processId;
 		if (sceGUIDGetName(id, &processName) < 0)
 			SCE_DBG_PRINTF(0, 1135, EXCP_REPORT_TEXT(processIdFormat, "ProcessId: 0x%08X\n"), id);
@@ -219,7 +216,7 @@ void _sceKernelPanicHandlerCommon(SceExcpmgrContext *context, unsigned int reaso
 	printVfpRegisters(context);
 	printWPT(context);
 #endif
-	if (readTpidrprw() == 0 && (int)g_excpData.nestCount[SceCpuId()] > 1)
+	if (unlikely(readTpidrprw() == 0 && (int)g_excpData.nestCount[SceCpuId()] > 1))
 		for (;;)
 			;
 	SceDebugForKernel_CCABDD98(info, context, reason, message);
@@ -245,8 +242,7 @@ void SceExcpmgrForKernel_1FBF5654(SceExcpmgrCallback callback)
 
 int sceKernelReleaseExceptionHandler(unsigned int code, SceExcpmgrHandler *handler)
 {
-	SceExcpmgrHandler **first;
-	SceExcpmgrHandler *head, *last, *prev, *next;
+	SceExcpmgrHandler *head, *next, *prev, *last, *cur, *after;
 	unsigned int *words;
 	unsigned int i, j;
 	int flags;
@@ -268,7 +264,6 @@ int sceKernelReleaseExceptionHandler(unsigned int code, SceExcpmgrHandler *handl
 	}
 
 	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&g_excpHandlers.lock);
-	first = g_excpHandlers.first[code];
 	head = g_excpHandlers.head[code];
 	if (head == NULL) {
 		SCE_DBG_ASSERT_FAIL(295);
@@ -276,44 +271,55 @@ int sceKernelReleaseExceptionHandler(unsigned int code, SceExcpmgrHandler *handl
 	}
 	if (handler == head) {
 		next = (SceExcpmgrHandler *)words[0];
-		for (i = 0; i < 8; i++)
-			if (first[i] == handler) {
-				first[i] = NULL;
+		for (i = 0; i != 8; i++)
+			if (g_excpHandlers.first[code][i] == handler) {
+				g_excpHandlers.first[code][i] = NULL;
 				break;
 			}
 		g_excpHandlers.head[code] = next;
 		excpSetVector(code, next);
-	} else {
-		/* the chain of this code ends at its last registered handler */
-		last = head;
-		for (i = 0; i < 8; i++)
-			if (first[i] != NULL)
-				last = first[i];
+		goto released;
+	}
+	next = *(SceExcpmgrHandler **)((unsigned int)head & ~3U);
+	cur = head;
+	for (i = 0; i != 8; i++) {
+		last = g_excpHandlers.first[code][i];
+		if (last == NULL)
+			last = cur;
+		cur = last;
+	}
+	if (last == head)
+		goto notFound;
+	if (handler == next) {
 		prev = head;
+	} else {
+		prev = next;
 		for (;;) {
-			if (prev == last)
+			after = *(SceExcpmgrHandler **)((unsigned int)prev & ~3U);
+			if (last == prev)
 				goto notFound;
-			next = *(SceExcpmgrHandler **)((unsigned int)prev & ~3U);
-			if (next == handler)
+			if (handler == after)
 				break;
-			prev = next;
-		}
-		excpPokeWord((unsigned int)prev, words[0]);
-		for (i = 0; i < 8; i++)
-			if (first[i] == handler)
-				break;
-		if (i < 8) {
-			/* prev takes over the slot unless it already starts its own */
-			for (j = 0; j <= i; j++) {
-				if (first[j] == prev) {
-					first[i] = NULL;
-					break;
-				}
-				if (j == i)
-					first[i] = prev;
-			}
+			prev = after;
 		}
 	}
+	excpPokeWord((unsigned int)prev, words[0]);
+	for (i = 0; i != 8; i++)
+		if (g_excpHandlers.first[code][i] == handler)
+			break;
+	if (i != 8) {
+		for (j = 0; ; j++) {
+			if (g_excpHandlers.first[code][j] == prev) {
+				g_excpHandlers.first[code][i] = NULL;
+				break;
+			}
+			if (j == i)
+				g_excpHandlers.first[code][j] = prev;
+			if (j + 1 > i)
+				break;
+		}
+	}
+released:
 	excpPokeWord((unsigned int)handler, 0);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_excpHandlers.lock, flags);
 	return 0;
@@ -428,9 +434,10 @@ void SceExcpmgrForKernel_E7487AFD(ProcessHwWatchpoints *regs)
 int Init(SceSize args, void *argp)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
+	void *trace;
 	unsigned int dacr, code, cpu, offset, value;
 	unsigned int start, size, i;
-	char *trace;
+	ExcpTraceArea *area, *areaWord;
 	unsigned char *stack;
 	unsigned int *vectors;
 	SceUID uid;
@@ -473,11 +480,17 @@ int Init(SceSize args, void *argp)
 		excpPokeVector((unsigned int *)((char *)g_excpHandlers.vectors + offset), &value);
 	}
 	stack = g_excpStack[0];
-	for (cpu = 0; cpu < 4; cpu++) {
+	cpu = 0;
+	for (;;) {
+		unsigned int *entry;
+
 		g_excpData.nestCount[cpu] = 0;
-		g_excpData.stackBase[cpu] = stack;
+		entry = &g_excpData.nestCount[cpu++];
+		((unsigned char **)entry)[8] = stack;
+		((unsigned char **)entry)[12] = stack + EXCP_STACK_SIZE;
+		if (cpu == 4)
+			break;
 		stack += EXCP_STACK_SIZE;
-		g_excpData.stackTop[cpu] = stack;
 	}
 	g_excpData.kernelMmu = SceSysrootForKernel_118657C6();
 	g_excpData.kernelBreakpoints = NULL;
@@ -492,11 +505,13 @@ int Init(SceSize args, void *argp)
 	if (uid < 0)
 		SCE_DBG_ASSERT_FAIL(1649);
 	else
-		sceKernelGetMemBlockBase(uid, (void **)&trace);
-	for (i = 0, offset = 0x24; i < 0x4000; i += 0x1000, offset += 0x40) {
-		value = (unsigned int)(trace + i);
-		((ExcpTraceArea *)value)->control = 1;
-		excpPokeVector((unsigned int *)((char *)g_excpHandlers.vectors + offset), &value);
+		sceKernelGetMemBlockBase(uid, &trace);
+	for (cpu = 0; cpu != 4; cpu++) {
+		area = (ExcpTraceArea *)((char *)trace + cpu * 0x1000);
+		area->control = 1;
+		areaWord = area;
+		excpPokeVector((unsigned int *)((char *)g_excpHandlers.vectors + 0x24 + cpu * 0x40),
+			(const volatile unsigned int *)&areaWord);
 	}
 	SceKernelSuspendForDriver_CE7A2207(0x1e, excpSuspend, NULL);
 	SceKernelSuspendForDriver_105C5752(0x1e, excpResume, NULL);
@@ -635,8 +650,7 @@ void sceKernelInitialHandlerDebugDabtCfunc(SceExcpmgrContext *context)
 
 	SCE_DBG_PRINTF(0, 1982,
 		EXCP_REPORT_TEXT(dabtHeader, "\n*** DABT Exception at CPU%d\n"), SceCpuId());
-	if (unlikely(readTpidrprw() == 0) &&
-	    (int)g_excpData.nestCount[SceCpuId()] > 1)
+	if (readTpidrprw() == 0 && (int)g_excpData.nestCount[SceCpuId()] > 1)
 		for (;;)
 			;
 	dacr = readDacr();

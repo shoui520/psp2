@@ -8,6 +8,27 @@
 #include "excpmgr_it_names.h"
 #include "excpmgr_debug_events.h"
 
+#ifndef EXCP_IT_TEXT
+#define EXCP_IT_TEXT(_index) SCE_EXCP_IT_TEXT_##_index
+#endif
+
+#define EXCP_IT_THEN { \
+	EXCP_IT_TEXT(0), EXCP_IT_TEXT(15), EXCP_IT_TEXT(14), EXCP_IT_TEXT(13), \
+	EXCP_IT_TEXT(12), EXCP_IT_TEXT(11), EXCP_IT_TEXT(10), EXCP_IT_TEXT(9), \
+	EXCP_IT_TEXT(8), EXCP_IT_TEXT(7), EXCP_IT_TEXT(6), EXCP_IT_TEXT(5), \
+	EXCP_IT_TEXT(4), EXCP_IT_TEXT(3), EXCP_IT_TEXT(2), EXCP_IT_TEXT(1), \
+}
+#define EXCP_IT_ELSE { \
+	EXCP_IT_TEXT(0), EXCP_IT_TEXT(1), EXCP_IT_TEXT(2), EXCP_IT_TEXT(3), \
+	EXCP_IT_TEXT(4), EXCP_IT_TEXT(5), EXCP_IT_TEXT(6), EXCP_IT_TEXT(7), \
+	EXCP_IT_TEXT(8), EXCP_IT_TEXT(9), EXCP_IT_TEXT(10), EXCP_IT_TEXT(11), \
+	EXCP_IT_TEXT(12), EXCP_IT_TEXT(13), EXCP_IT_TEXT(14), EXCP_IT_TEXT(15), \
+}
+#define EXCP_CONDITION_NAMES { \
+	"EQ", "NE", "CS", "CC", "MI", "PL", "VS", "VC", \
+	"HI", "LS", "GE", "LT", "GT", "LE", "AL", "  ", \
+}
+
 #if FW_DEBUG
 typedef struct ExcpFaultStatus {
 	const char *name;
@@ -15,9 +36,6 @@ typedef struct ExcpFaultStatus {
 	unsigned short domainValid;
 } ExcpFaultStatus;
 
-#ifndef EXCP_IT_TEXT
-#define EXCP_IT_TEXT(_index) SCE_EXCP_IT_TEXT_##_index
-#endif
 #ifndef EXCP_DEBUG_EVENT_ENTRY
 #define EXCP_DEBUG_EVENT_ENTRY(_index, _text) _text,
 #endif
@@ -104,38 +122,26 @@ typedef struct ExcpFaultStatus {
 
 #define EXCP_DEBUG_EVENT_NAMES { SCE_EXCP_DEBUG_EVENTS(EXCP_DEBUG_EVENT_ENTRY) }
 #define EXCP_DOMAIN_NAMES { "No access", "Client", "Reserved", "Manager" }
-#define EXCP_IT_THEN { \
-	EXCP_IT_TEXT(0), EXCP_IT_TEXT(15), EXCP_IT_TEXT(14), EXCP_IT_TEXT(13), \
-	EXCP_IT_TEXT(12), EXCP_IT_TEXT(11), EXCP_IT_TEXT(10), EXCP_IT_TEXT(9), \
-	EXCP_IT_TEXT(8), EXCP_IT_TEXT(7), EXCP_IT_TEXT(6), EXCP_IT_TEXT(5), \
-	EXCP_IT_TEXT(4), EXCP_IT_TEXT(3), EXCP_IT_TEXT(2), EXCP_IT_TEXT(1), \
-}
-#define EXCP_IT_ELSE { \
-	EXCP_IT_TEXT(0), EXCP_IT_TEXT(1), EXCP_IT_TEXT(2), EXCP_IT_TEXT(3), \
-	EXCP_IT_TEXT(4), EXCP_IT_TEXT(5), EXCP_IT_TEXT(6), EXCP_IT_TEXT(7), \
-	EXCP_IT_TEXT(8), EXCP_IT_TEXT(9), EXCP_IT_TEXT(10), EXCP_IT_TEXT(11), \
-	EXCP_IT_TEXT(12), EXCP_IT_TEXT(13), EXCP_IT_TEXT(14), EXCP_IT_TEXT(15), \
-}
-#define EXCP_CONDITION_NAMES { \
-	"EQ", "NE", "CS", "CC", "MI", "PL", "VS", "VC", \
-	"HI", "LS", "GE", "LT", "GT", "LE", "AL", "  ", \
-}
-
 #ifdef EXCP_REPORT_EXTERNAL_DATA
 extern const char *const ifsrNames[33];
 extern const ExcpFaultStatus dfsrStatus[33];
 extern const char *const debugEventNames[16];
 extern const char *const domainNames[4];
-extern const char *const itThen[16];
-extern const char *const itElse[16];
-extern const char *const conditionNames[16];
 #else
 static const char *const ifsrNames[] = EXCP_IFSR_NAMES;
 static const ExcpFaultStatus dfsrStatus[] = EXCP_DFSR_STATUS;
 static const char *const debugEventNames[] = EXCP_DEBUG_EVENT_NAMES;
 static const char *const domainNames[] = EXCP_DOMAIN_NAMES;
+#endif
+#endif
+
+/* the CPSR text is formatted in every build */
+#if defined(EXCP_REPORT_EXTERNAL_DATA) && FW_DEBUG
+extern const char *const itThen[16];
+extern const char *const itElse[16];
+extern const char *const conditionNames[16];
+#else
 static const char *const itThen[] = EXCP_IT_THEN;
 static const char *const itElse[] = EXCP_IT_ELSE;
 static const char *const conditionNames[] = EXCP_CONDITION_NAMES;
-#endif
 #endif

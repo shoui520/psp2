@@ -62,33 +62,17 @@ EXCP_REPORT_LINKAGE void __attribute__((unused)) printDFSR(SceExcpmgrContext *co
 
 #define PUT(c)	(*out++ = (c))
 
-EXCP_REPORT_LINKAGE void __attribute__((unused)) printExcpSavedRegisters(SceExcpmgrContext *context)
+/*
+ * name unknown: format the CPSR as text ("nzcvq GE____ ... ARM Svc"). Sony's
+ * register dump asks for it in every build; the release builds keep the call
+ * though nothing prints the text.
+ */
+static char *formatCpsr(char *text, unsigned int cpsr)
 {
-#if FW_DEBUG
-	char text[64], *out;
+	char *out;
 	const char *s;
-	unsigned int cpsr, it;
+	unsigned int it;
 
-	if (context == NULL) {
-		SCE_DBG_PRINTF(0xb, 681,
-			EXCP_REPORT_TEXT(invalidContextFormat, "  illegal base addr\n"));
-		return;
-	}
-	SCE_DBG_PRINTF(0, 689,
-		EXCP_REPORT_TEXT(r0Format, "r0-r3 : 0x%08X 0x%08X 0x%08X 0x%08X\n"),
-		context->r[0], context->r[1], context->r[2], context->r[3]);
-	SCE_DBG_PRINTF(0, 694,
-		EXCP_REPORT_TEXT(r4Format, "r4-r7 : 0x%08X 0x%08X 0x%08X 0x%08X\n"),
-		context->r[4], context->r[5], context->r[6], context->r[7]);
-	SCE_DBG_PRINTF(0, 699,
-		EXCP_REPORT_TEXT(r8Format, "r8-r11: 0x%08X 0x%08X 0x%08X 0x%08X\n"),
-		context->r[8], context->r[9], context->r[10], context->r[11]);
-	SCE_DBG_PRINTF(0, 701, EXCP_REPORT_TEXT(r12Format, "r12   : 0x%08X\n"), context->r[12]);
-	SCE_DBG_PRINTF(0, 703, EXCP_REPORT_TEXT(spFormat, "SP    : 0x%08X\n"), context->sp);
-	SCE_DBG_PRINTF(0, 705, EXCP_REPORT_TEXT(lrFormat, "LR    : 0x%08X\n"), context->lr);
-	SCE_DBG_PRINTF(0, 709, EXCP_REPORT_TEXT(pcFormat, "PC    : 0x%08X\n"), context->pc);
-
-	cpsr = context->cpsr;
 	out = text;
 	if ((int)cpsr < 0)
 		PUT('N');
@@ -211,6 +195,38 @@ EXCP_REPORT_LINKAGE void __attribute__((unused)) printExcpSavedRegisters(SceExcp
 		break;
 	}
 	*out = '\0';
+	return text;
+}
+
+EXCP_REPORT_LINKAGE void __attribute__((unused)) printExcpSavedRegisters(SceExcpmgrContext *context)
+{
+	char text[64];
+	unsigned int cpsr;
+
+#if FW_DEBUG
+	if (context == NULL) {
+		SCE_DBG_PRINTF(0xb, 681,
+			EXCP_REPORT_TEXT(invalidContextFormat, "  illegal base addr\n"));
+		return;
+	}
+	SCE_DBG_PRINTF(0, 689,
+		EXCP_REPORT_TEXT(r0Format, "r0-r3 : 0x%08X 0x%08X 0x%08X 0x%08X\n"),
+		context->r[0], context->r[1], context->r[2], context->r[3]);
+	SCE_DBG_PRINTF(0, 694,
+		EXCP_REPORT_TEXT(r4Format, "r4-r7 : 0x%08X 0x%08X 0x%08X 0x%08X\n"),
+		context->r[4], context->r[5], context->r[6], context->r[7]);
+	SCE_DBG_PRINTF(0, 699,
+		EXCP_REPORT_TEXT(r8Format, "r8-r11: 0x%08X 0x%08X 0x%08X 0x%08X\n"),
+		context->r[8], context->r[9], context->r[10], context->r[11]);
+	SCE_DBG_PRINTF(0, 701, EXCP_REPORT_TEXT(r12Format, "r12   : 0x%08X\n"), context->r[12]);
+	SCE_DBG_PRINTF(0, 703, EXCP_REPORT_TEXT(spFormat, "SP    : 0x%08X\n"), context->sp);
+	SCE_DBG_PRINTF(0, 705, EXCP_REPORT_TEXT(lrFormat, "LR    : 0x%08X\n"), context->lr);
+	SCE_DBG_PRINTF(0, 709, EXCP_REPORT_TEXT(pcFormat, "PC    : 0x%08X\n"), context->pc);
+#endif
+
+	cpsr = context->cpsr;
+	formatCpsr(text, cpsr);
+#if FW_DEBUG
 	SCE_DBG_PRINTF(0, 713,
 		EXCP_REPORT_TEXT(cpsrFormat, "CPSR  : 0x%08X [%s]\n"), cpsr, text);
 	SCE_DBG_PRINTF(0, 716,
