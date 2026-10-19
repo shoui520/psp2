@@ -187,29 +187,13 @@ int SceKernelUtilsForDriver_87DC7F2F(const void *plain, SceSize len, void *diges
 int SceKernelUtilsForDriver_C762EA6D(SceSha224Context *context)
 {
 	SceKernelSha2Context *ctx = (SceKernelSha2Context *)context;
-	uint32_t first, second, third, fourth;
 
 	if (ctx == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	first = sha224InitialState[0];
-	second = sha224InitialState[1];
-	third = sha224InitialState[2];
-	fourth = sha224InitialState[3];
 	ctx->ullTotalLen = 0;
 	/* The original uses the final buffer byte for count/computed state. */
 	ctx->buf[SCE_SHA224_BLOCK_SIZE - 1] = 0;
-	ctx->h[0] = first;
-	ctx->h[1] = second;
-	ctx->h[2] = third;
-	ctx->h[3] = fourth;
-	first = sha224InitialState[4];
-	second = sha224InitialState[5];
-	third = sha224InitialState[6];
-	fourth = sha224InitialState[7];
-	ctx->h[4] = first;
-	ctx->h[5] = second;
-	ctx->h[6] = third;
-	ctx->h[7] = fourth;
+	__builtin_memcpy(ctx->h, sha224InitialState, sizeof(ctx->h));
 	return 0;
 }
 
@@ -312,29 +296,13 @@ int SceKernelUtilsForDriver_9EA9D4DC(const void *plain, SceSize len, void *diges
 int SceKernelUtilsForDriver_D909FA2C(SceSha256Context *context)
 {
 	SceKernelSha2Context *ctx = (SceKernelSha2Context *)context;
-	uint32_t first, second, third, fourth;
 
 	if (ctx == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	first = sha256InitialState[0];
-	second = sha256InitialState[1];
-	third = sha256InitialState[2];
-	fourth = sha256InitialState[3];
 	ctx->ullTotalLen = 0;
 	/* The original uses the final buffer byte for count/computed state. */
 	ctx->buf[SCE_SHA256_BLOCK_SIZE - 1] = 0;
-	ctx->h[0] = first;
-	ctx->h[1] = second;
-	ctx->h[2] = third;
-	ctx->h[3] = fourth;
-	first = sha256InitialState[4];
-	second = sha256InitialState[5];
-	third = sha256InitialState[6];
-	fourth = sha256InitialState[7];
-	ctx->h[4] = first;
-	ctx->h[5] = second;
-	ctx->h[6] = third;
-	ctx->h[7] = fourth;
+	__builtin_memcpy(ctx->h, sha256InitialState, sizeof(ctx->h));
 	return 0;
 }
 
