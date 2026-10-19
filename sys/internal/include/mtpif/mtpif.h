@@ -1,33 +1,29 @@
-/* SceMtpIfDriver transport interface additions. Names not in the NID
- * database remain NID-named; signatures follow the module's call sites.
+/*
+ * SceMtpIfDriver (os0:kd/bootimage/mtpif): SceMtpIfForDriver, the MTP
+ * interface between the USB transport (SceUsbMtp) and its kernel clients.
+ * Names are not known; the comments give the roles.
  */
 #pragma once
 
 #include <scetypes.h>
-#include <threadmgr/threadmgr.h>
-#include <acmgr/acmgr.h>
-#include <sysmem/procevent.h>
-#include <sysmem/sysroot.h>
+#include <usbmtp/usbmtp.h>
 
-/* USB MTP data phase: a buffer and its progress */
-typedef struct MtpIfTransfer {
-	SceUInt32 reserved;
-	void *buffer;
-	SceUInt64 size;
-	SceUInt64 totalSize;		/* of the data phase, -1 when unknown */
-	SceUInt64 transferred;
-} MtpIfTransfer;
-
-int SceUsbMtpForDriver_B958E5DE(void);
-int SceUsbMtpForDriver_576A266F(void *command, MtpIfTransfer *transfer);
-int SceUsbMtpForDriver_4463009B(const void *response);
-int sceUsbMtpSendData(MtpIfTransfer *transfer);
-int sceUsbMtpRecvData(MtpIfTransfer *transfer);
-int SceUsbMtpForDriver_5FA86BA4(void *event);
-int SceUsbMtpForDriver_151947D2(void);
-int SceUsbMtpForDriver_76D707B1(SceUInt32 timeout);
-int sceUsbMtpStart(void);
-int SceUsbMtpForDriver_08CD359F(void);
-int SceUsbMtpForDriver_6F7DF4B8(void);
-int SceUsbMtpForDriver_E64513A9(int phase);
-
+int SceMtpIfForDriver_92CD107E(const void *port);	/* reset */
+int SceMtpIfForDriver_117F7519(const void *port, void *command);	/* receive a command */
+int SceMtpIfForDriver_5766D257(const void *port, const void *response);	/* send the response */
+/* send data */
+int SceMtpIfForDriver_EDC3AB26(const void *port, void *buffer,
+			     SceUInt32 size, SceUInt32 totalSize);
+int SceMtpIfForDriver_33F1826F(const void *port, MtpIfTransfer *transfer);
+int SceMtpIfForDriver_F0FA2D86(const void *port, void *buffer, SceUInt32 size);	/* receive data */
+int SceMtpIfForDriver_27D40294(const void *port, MtpIfTransfer *transfer);
+int SceMtpIfForDriver_B5E78858(const void *port, const SceUInt32 *command, SceUInt32 *event);
+int SceMtpIfForDriver_F1EC5992(const void *port);
+int SceMtpIfForDriver_05408B5B(const void *port, SceUInt32 timeout);	/* wait to connect */
+int SceMtpIfForDriver_2D9318E1(const void *port);	/* connected? */
+int SceMtpIfForDriver_8D16B997(const void *port, int phase);	/* change phase */
+const void *SceMtpIfForDriver_16D7DBCC(int port);	/* the port (1) */
+int SceMtpIfForDriver_5245D237(const void *port);	/* start the driver */
+int SceMtpIfForDriver_E6453F21(const void *port);	/* stop the driver */
+int SceMtpIfForDriver_CB685AC0(int port);
+int SceMtpIfForDriver_FDF8C3C0(int port);

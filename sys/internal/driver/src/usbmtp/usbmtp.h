@@ -11,7 +11,7 @@
 #include <kernel/error.h>
 #include <sysmem/sysmem.h>
 #include <usbstor/usbstor.h>
-#include <mtpif/mtpif.h>
+#include <usbmtp/usbmtp.h>
 #include <udcd/udcd.h>
 
 /* the generic MTP container on the bulk pipes */

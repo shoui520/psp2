@@ -2,7 +2,8 @@
 
 #include "mgvideo_private.h"
 #include <intrmgr/syscall.h>
-#include <usbstormg/usbstormg.h>
+#include <magicgate/magicgate.h>
+#include <acmgr/acmgr.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>

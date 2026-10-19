@@ -33,7 +33,7 @@
 #include <oled/oled.h>
 #include <lcd/lcd.h>
 #include <hpremote/hpremote.h>
-#include <mtpif/mtpif_driver.h>
+#include <mtpif/mtpif.h>
 
 #define EW_MEMTYPE_FB		SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW	/* uncached, physically contiguous */
 

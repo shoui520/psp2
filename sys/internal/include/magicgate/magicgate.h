@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <scetypes.h>
 
 typedef struct MagicGateDeviceIdentity {
 	uint8_t prefix[8];
@@ -132,19 +133,28 @@ int SceMagicGateForDriver_0B01FE3F(const void *tag, const MagicGateRecordHeader 
 				   unsigned int size, int slot);
 int SceMagicGateForDriver_0EBA5958(void *output, unsigned int size);
 int SceMagicGateForDriver_144BFA76(int index);
+int SceMagicGateForDriver_1BCE34AD(int handle, unsigned int index, void *record, SceSize size);
 int SceMagicGateForDriver_2B026FFF(void *output, const void *input, unsigned int size, int slot,
 				   const void *iv);
 int SceMagicGateForDriver_2D5069DE(int slot, const MagicGateRecordHeader *record,
 				   unsigned int size);
 int SceMagicGateForDriver_30DF2E82(void);
 int SceMagicGateForDriver_3EDD73EB(int handle, int index);
+struct MagicGateInstalledRecord;
+int SceMagicGateForDriver_42A9D74E(int slot, void *output, const uint64_t *info,
+				   const uint64_t *challenge, const uint64_t *response,
+				   const struct MagicGateInstalledRecord *record);
 int SceMagicGateForDriver_46A28FAA(void);
 int SceMagicGateForDriver_4E8B4EB5(int slot, const void *input, int sourceSlot);
 int SceMagicGateForDriver_4F4B2DC9(void *output, const void *input, void *iv, unsigned int size,
 				   int slot);
+int SceMagicGateForDriver_593016E1(void *output, const void *input, void *iv, unsigned int size,
+				   int slot);
 int SceMagicGateForDriver_6A240950(void *output, const void *input, void *iv, unsigned int size,
 				   int slot);
 int SceMagicGateForDriver_6D3B42E6(void);
+int SceMagicGateForDriver_75B445DA(int handle, unsigned int index, const void *record,
+				   SceSize size);
 int SceMagicGateForDriver_758D7158(void *output, unsigned int size);
 int SceMagicGateForDriver_7B052A10(void);
 int SceMagicGateForDriver_8E2E577E(void);

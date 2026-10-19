@@ -1,6 +1,6 @@
 /* Descriptive source name: the original has no source-file debug records. */
 #include "mgvideo_private.h"
-#include <usbstormg/usbstormg.h>
+#include <magicgate/magicgate.h>
 #include <sysmem/procevent.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysmem.h>

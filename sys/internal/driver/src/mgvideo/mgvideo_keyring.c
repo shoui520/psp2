@@ -2,7 +2,7 @@
 #include "mgvideo_private.h"
 #include "mgvideo_result.h"
 #include <sysmem/sysclib.h>
-#include <usbstormg/usbstormg.h>
+#include <magicgate/magicgate.h>
 
 int loadVideoKeyring(MgVideoContext *context)
 {

@@ -9,7 +9,8 @@
 #include <kernel/error.h>
 #include <sysmem/sysmem.h>
 #include <usbstor/usbstor.h>
-#include <usbstormg/usbstormg.h>
+#include <magicgate/magicgate.h>
+#include <acmgr/acmgr.h>
 
 #define MG_ERROR_MEMORY	((int)0x8024410a)
 #define MG_ERROR_INIT	((int)0x80244101)
