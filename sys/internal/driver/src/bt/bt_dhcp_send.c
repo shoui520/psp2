@@ -3,15 +3,6 @@
 #include <string.h>
 #include <sysmem/sysclib.h>
 
-unsigned int BtInternetChecksum(unsigned int initialSum,
-				const uint16_t *words, int length);
-unsigned int BtTransportChecksum(unsigned int protocol,
-				 unsigned int sourceAddress,
-				 unsigned int destinationAddress,
-				 const void *packet, unsigned int length);
-int BtSendBnepFrame(BtConnection *connection, const void *frame, int length,
-		    int userMode);
-
 static inline uint8_t *BtWriteDhcpAddressOption(uint8_t *cursor, uint8_t code,
 					      const uint32_t *address)
 {

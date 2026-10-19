@@ -1,12 +1,8 @@
 /* HCI command transmission; original source filename unavailable. */
 #include <stdarg.h>
 #include "bt_internal.h"
+#include "bt_transport.h"
 
-int BtVPack(uint8_t *destination, int remaining, const char *format,
-	    va_list arguments);
-int BtPack(uint8_t *destination, int remaining, const char *format, ...);
-int BtQueueTransmit(unsigned int packetType, const uint8_t *data, int length,
-		    void (*completion)(void *argument), void *argument);
 void BtHciCommandTransmitted(void *argument);
 
 void BtHciCommandTransmitted(void *argument)

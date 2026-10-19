@@ -1,10 +1,6 @@
 /* L2CAP signalling; original source filename unavailable. */
 #include "bt_internal.h"
 
-int BtSendL2capPacket(BtConnection *connection, int channelId,
-		     const char *format, ...);
-int BtPack(uint8_t *destination, int remaining, const char *format, ...);
-
 int BtSendL2capConnectionResponse(BtConnection *connection, BtChannel *channel,
 				  int result, int status)
 {

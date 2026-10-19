@@ -1,12 +1,7 @@
 /* Bluetooth SCO transmission; original source filename unavailable. */
 #include <string.h>
 #include "bt_internal.h"
-
-BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector,
-			int identifier);
-void BtWriteLe16(uint8_t *destination, unsigned int value);
-int BtQueueTransmit(unsigned int packetType, const uint8_t *data, int length,
-		    void (*completion)(void *argument), void *argument);
+#include "bt_transport.h"
 
 int BtSendScoPacket(BtConnection *connection, const void *data, int length,
 		    int userMode)

@@ -1,9 +1,6 @@
 /* RFCOMM profile adapters; original source filename unavailable. */
 #include "bt_internal.h"
 
-int BtInitializeRfcomm(BtConnection *connection, BtChannel *channel,
-		      unsigned int profile, unsigned int dlci);
-
 int BtInitializeImagingSession(BtConnection *connection, BtChannel *channel,
 			       unsigned int profile)
 {

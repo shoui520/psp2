@@ -1,9 +1,6 @@
 /* HCI retry timers; original source filename unavailable. */
 #include "bt_internal.h"
 
-int BtSendHciCommand(BtStack *stack, unsigned int opcode,
-		     const char *format, ...);
-
 void BtRoleSwitchTimedOut(void *argument)
 {
 	BtConnection *connection = argument;

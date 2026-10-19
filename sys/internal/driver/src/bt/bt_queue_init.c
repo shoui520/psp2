@@ -1,9 +1,6 @@
 /* Transport queue initialization; original source filename unavailable. */
 #include "bt_internal.h"
 
-int BtSendHciCommand(BtStack *stack, unsigned int opcode,
-		     const char *format, ...);
-
 int BtInitializeQueues(BtStack *stack)
 {
 	unsigned int controllerType;

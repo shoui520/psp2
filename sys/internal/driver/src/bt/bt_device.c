@@ -2,12 +2,8 @@
 #include "bt_internal.h"
 #include <string.h>
 
-int BtWriteRegisteredDevices(BtStack *stack, int notifyChange);
 BtDevice *BtGetOrCreateDevice(BtStack *stack, uint64_t deviceAddress,
 			    unsigned int create);
-int BtReadLe16(const uint8_t *source);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-		       unsigned int argument, uint64_t deviceAddress);
 
 BtDevice gBtUncachedInquiryDevice;
 BtDeviceHistory gBtDeviceHistory[8];

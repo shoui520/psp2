@@ -2,9 +2,6 @@
 #include <string.h>
 #include "bt_internal.h"
 
-int BtReadFile(SceUID file, void *destination, SceSize length);
-int BtSeekFile(SceUID file, int offset, int whence);
-
 int BtReadJpegDimensions(int *width, int *height, int *imageSize)
 {
 	uint8_t marker;

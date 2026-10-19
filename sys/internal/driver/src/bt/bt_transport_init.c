@@ -6,15 +6,6 @@
 #include "bt_transport.h"
 #include <sdif/sdif.h>
 
-int BtReadLe16(const uint8_t *source);
-int BtReadLe24(const uint8_t *source);
-void BtPollTransport(void *argument);
-int BtQueueTimer(unsigned int *timer, void (*callback)(void *argument),
-		 void *argument, SceInt64 delay);
-int BtHandleSdioInterrupt(void *subInterruptArgument, void *registerArgument,
-			unsigned char priority);
-int BtLockTransport(void);
-
 int BtSetupSdioTransport(void)
 {
 	SdifSdioFunctionIdentifier identifier;

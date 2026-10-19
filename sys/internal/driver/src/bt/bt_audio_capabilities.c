@@ -1,11 +1,6 @@
 /* Bluetooth audio capabilities; original source filename unavailable. */
 #include "bt_internal.h"
 
-int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
-int BtFlushConnectionDevice(BtConnection *connection);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-		       unsigned int argument, uint64_t deviceAddress);
-
 int BtSelectAudioCapabilities(BtConnection *connection, unsigned int profile,
 			      uint8_t *capabilities, int length)
 {

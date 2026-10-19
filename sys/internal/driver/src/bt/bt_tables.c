@@ -20,13 +20,6 @@ BtInquiryResultForTest gBtTestInquiryResult;
 int gBtPanUserEnabled;
 int gBtNetworkAccessPointEnabled;
 
-int BtProcessExit(SceUID processId, ProcEventParam *param, void *common);
-int BtProcessKill(SceUID processId, ProcEventParam *param, void *common);
-int BtProcessSuspend(SceUID processId, int eventType,
-		     ProcEventParam *param, void *common);
-int BtProcessResume(SceUID processId, int eventType,
-		    ProcEventParam *param, void *common);
-
 const SceKernelProcEventHandler gBtProcEventHandler = {
 	.size = sizeof(SceKernelProcEventHandler),
 	.create = NULL,

@@ -2,22 +2,6 @@
 #include "bt_internal.h"
 #include <string.h>
 
-int BtBeginAvrcpRequest(BtChannel *channel);
-int BtCancelTimer(unsigned int timer);
-int BtQueueTimer(unsigned int *timer, void (*callback)(void *argument),
-		 void *argument, SceInt64 delay);
-void BtAvrcpReleaseButton(void *argument);
-void BtAvrcpReleaseTranslatedButton(void *argument);
-void BtAvrcpRepeatButton(void *argument);
-int BtSendL2capPacket(BtConnection *connection, int channelId,
-		     const char *format, ...);
-int BtPack(uint8_t *destination, int remaining, const char *format, ...);
-int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
-BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector,
-			 int identifier);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-			unsigned int argument, uint64_t deviceAddress);
-
 uint32_t gBtAvrcpTitleLength;
 int gBtAvrcpPlayStatusKnown;
 int gBtAvrcpPlayStatus;

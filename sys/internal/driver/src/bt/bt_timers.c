@@ -1,15 +1,7 @@
 /* Bluetooth delta timers; original source filename unavailable. */
 #include <threadmgr/threadmgr.h>
 #include "bt_internal.h"
-
-int BtLockTransport(void);
-int BtUnlockTransport(int result);
-int BtWaitSignal(BtSignal *signal, uint32_t timeout);
-int BtSetSignal(BtSignal *signal);
-int BtCreateSignal(BtSignal *signal, unsigned int events, const char *name);
-int BtDeleteSignal(BtSignal *signal);
-SceUID BtCreateThread(SceKernelThreadEntry entry, SceSize argumentSize,
-		     void *argument, const char *name, int priority);
+#include "bt_transport.h"
 
 int BtTimerThread(SceSize argumentSize, void *argument)
 {

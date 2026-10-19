@@ -5,17 +5,6 @@
 #include <threadmgr/threadmgr.h>
 #include "bt_internal.h"
 
-SceUID BtOpenFile(const char *path, int mode);
-int BtCloseFile(SceUID file);
-int BtWriteFile(SceUID file, const void *source, SceSize length);
-int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-		       unsigned int argument, uint64_t deviceAddress);
-int BtReadJpegDimensions(int *width, int *height, int *imageSize);
-int BtPack(uint8_t *destination, int remaining, const char *format, ...);
-int BtSendRfcommData(BtConnection *connection, unsigned int dlci,
-		     const void *data, int length, int userMode);
-
 BtImageSendState gBtImageSend;
 BtImageReceiveState gBtImageReceive;
 

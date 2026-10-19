@@ -1,23 +1,6 @@
 /* Bluetooth packet adapters; original source filename unavailable. */
 #include "bt_internal.h"
 
-void BtDispatchHciEvent(BtStack *stack, uint8_t *packet, int length);
-void BtDispatchAclPacket(BtStack *stack, uint8_t *packet, int length);
-int BtReadLe16(const uint8_t *source);
-int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
-BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector,
-			 int identifier);
-int BtSendL2capPacket(BtConnection *connection, int channel,
-		     const char *format, ...);
-BtConnection *BtFindConnection(BtStack *stack, unsigned char selector,
-			       uint64_t deviceAddress);
-void BtDeliverConnectionData(BtConnection *connection, uint32_t profile,
-			    uint8_t *packet, unsigned int length);
-uintptr_t BtCompleteAudioPacket(BtConnection *connection);
-uintptr_t BtContinueHidControl(BtConnection *connection, unsigned int argument);
-uintptr_t BtContinueHidInterrupt(BtConnection *connection, unsigned int argument);
-uintptr_t BtContinueSerialPacket(BtConnection *connection);
-
 uintptr_t BtNotifyPacketCompletion(BtConnection *connection, uint32_t profile,
 				   unsigned int argument)
 {

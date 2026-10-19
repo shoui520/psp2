@@ -3,54 +3,7 @@
 #include <syscon/syscon.h>
 #include <string.h>
 #include "bt_internal.h"
-
-int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
-int BtPack(uint8_t *destination, int remaining, const char *format, ...);
-int BtSendHciCommand(BtStack *stack, unsigned int opcode,
-		     const char *format, ...);
-BtConnection *BtFindConnection(BtStack *stack, unsigned char selector,
-			       uint64_t deviceAddress);
-BtDevice *BtGetOrCreateDevice(BtStack *stack, uint64_t deviceAddress, int create);
-int BtProcessInquiryResult(BtStack *stack, uint64_t deviceAddress,
-			  uint8_t pageScanRepetitionMode, uint32_t deviceClass,
-			  uint16_t clockOffset, int8_t rssi,
-			  const uint8_t *extendedInquiryResponse);
-void BtProcessRemoteNameResponse(BtStack *stack, int status,
-				uint64_t deviceAddress, uint32_t deviceClass,
-				int8_t rssi, const uint8_t *name);
-void BtSetDeviceAuthenticationFailed(BtStack *stack, BtConnection *connection,
-				     int failed);
-int BtReadDeviceLinkKey(BtStack *stack, uint64_t deviceAddress, uint8_t *key);
-int BtWriteDeviceLinkKey(BtStack *stack, uint64_t deviceAddress,
-			 const uint8_t *key);
-int BtFlushRegisteredDevices(BtStack *stack);
-void BtNotifyConnectionComplete(BtConnection *connection, int status,
-				uint32_t argument);
-int BtAdvanceConnection(BtConnection *connection);
-int BtBeginDisconnect(BtConnection *connection);
-BtConnection *BtClearConnection(BtConnection *connection, int status);
-int BtAcceptScoConnection(BtConnection *connection);
-int BtNotifyScoConnection(BtConnection *connection, int status, int handle);
-int BtInitializeSdpChannel(BtConnection *connection, BtChannel *channel);
-void BtContinueHciCommands(BtStack *stack);
-int BtPumpAclQueue(BtStack *stack);
-void BtCompleteAclPackets(BtStack *stack, unsigned int handle, int packetCount);
-int BtInitializeNetworkInterface(BtStack *stack, uint64_t localAddress);
-int BtInitializeNetwork(void);
-int BtIsNewCardRevision(void);
-unsigned int BtCancelTimer(unsigned int id);
-int BtQueueTimer(unsigned int *timer, void (*callback)(void *argument),
-		 void *argument, SceInt64 delay);
-void BtRoleSwitchTimedOut(void *argument);
-void BtRemoteNameTimedOut(void *argument);
-void BtReadAddressRetry(void *argument);
-uintptr_t BtAdvanceShutdown(BtStack *stack);
-uintptr_t BtCompleteConfiguration(BtStack *stack);
-int BtConfigureAutoAcceptDevices(BtStack *stack);
-BtStack *BtResetAutoAcceptDevices(BtStack *stack);
-int BtCompleteControllerSleep(BtStack *stack);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-			unsigned int argument, uint64_t deviceAddress);
+#include "bt_transport.h"
 
 void BtDispatchHciEvent(BtStack *stack, uint8_t *packet, int length)
 {

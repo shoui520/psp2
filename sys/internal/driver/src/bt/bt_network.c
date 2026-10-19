@@ -2,6 +2,7 @@
 #include "bt_internal.h"
 #include <net_ps/netps_gateway.h>
 #include <string.h>
+#include "bt_transport.h"
 
 #if FW_VERSION < 0x04000000
 struct SceNetKernelGateway gBtNetworkGateway;
@@ -18,19 +19,11 @@ struct SceNetKernelGateway gBtNetworkGateway;
 #endif
 
 extern int gBtNetworkAccessPointEnabled;
-unsigned int BtTransportChecksum(unsigned int protocol,
-				 unsigned int sourceAddress,
-				 unsigned int destinationAddress,
-				 const void *packet, unsigned int length);
 int BtProcessIcmpPacket(BtNetworkPacketContext *context, const void *packet,
-			int length);
-int BtProcessDhcpPacket(BtNetworkPacketContext *context, const void *packet,
 			int length);
 int BtForwardNetworkPacket(BtNetworkPacketContext *context, int protocol,
 			   const void *packet, int length,
 			   const void *header, unsigned int headerLength);
-int BtSendBnepFrame(BtConnection *connection, const void *packet, int length,
-		    int userMode);
 int BtReceiveGatewayPacket(struct SceNetKernelGateway *interface,
 			   struct NetDriver *driver,
 			   struct NetDriverPacket *packet);
@@ -46,8 +39,6 @@ int BtMatchNetworkMac(const unsigned char *bytes, uint64_t address)
 
 int BtNotifyGateway(struct SceNetKernelGateway *interface, int event,
 		    const SceNetPsDnsConfig *config, int length);
-unsigned int BtInternetChecksum(unsigned int initialSum,
-				const uint16_t *words, int length);
 
 static inline unsigned int BtReadNetwork16(const void *field)
 {
@@ -158,9 +149,6 @@ int BtNotifyGateway(struct SceNetKernelGateway *interface, int event,
 	gBtNetworkDnsServers[1] = secondaryAddress;
 	return 0;
 }
-
-int BtLockTransport(void);
-int BtUnlockTransport(int result);
 
 int BtForwardNetworkPacket(BtNetworkPacketContext *context, int protocol,
 			   const void *packet, int length,

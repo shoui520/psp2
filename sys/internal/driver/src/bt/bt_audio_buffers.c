@@ -6,19 +6,8 @@ extern int gBtPendingAudioPackets;
 extern int gBtAudioUnderruns;
 extern int gBtAudioOverruns;
 extern int gBtAudioLastSequence;
-BtConnection *BtFindConnection(BtStack *stack, unsigned char selector,
-			       uint64_t deviceAddress);
-int BtSendScoPacket(BtConnection *connection, const void *data, int length,
-		    int userMode);
-int BtPack(uint8_t *destination, int remaining, const char *format, ...);
 int BtSendAvdtpMedia(BtConnection *connection, const void *packet, int length,
 		    int mode);
-int BtSendHciCommand(BtStack *stack, unsigned int opcode,
-		     const char *format, ...);
-int BtSendL2capPacket(BtConnection *connection, int channelId,
-		     const char *format, ...);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-		       unsigned int argument, uint64_t deviceAddress);
 
 uint8_t gBtSbcSilenceFrame[21];
 BtAudioSendState gBtAudioSend;

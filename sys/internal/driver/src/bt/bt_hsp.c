@@ -3,12 +3,6 @@
 #include <string.h>
 #include <sysmem/sysclib.h>
 
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-			unsigned int argument, uint64_t deviceAddress);
-int BtSendHspResponse(BtConnection *connection, const char *format, ...);
-uintptr_t BtSetConnectedProfiles(BtConnection *connection, BtChannel *channel,
-				 unsigned int profiles);
-
 int BtHspSetSpeakerGain(BtConnection *connection, int command,
 			const char *text, const char *end)
 {

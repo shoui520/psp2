@@ -1,17 +1,6 @@
 /* Bluetooth profile data delivery; original source filename unavailable. */
 #include "bt_internal.h"
 
-int BtReceiveHsp(BtConnection *connection, const char *packet, int length);
-void BtReceiveAudioPacket(BtConnection *connection, unsigned int profile,
-			  const uint8_t *packet, int length);
-int BtReceiveImageResponse(BtConnection *connection, const uint8_t *packet,
-			   int length);
-int BtReceiveImage(BtConnection *connection, uint8_t *packet, int length);
-int BtReceiveNetworkPacket(BtStack *stack, uint64_t deviceAddress,
-			   const void *data, unsigned int length);
-int BtReceiveSerialPort(BtConnection *connection, const uint8_t *packet,
-			int length);
-
 void BtDeliverConnectionData(BtConnection *connection, unsigned int profile,
 			     uint8_t *packet, int length)
 {

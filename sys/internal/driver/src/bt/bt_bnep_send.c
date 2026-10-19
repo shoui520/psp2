@@ -2,13 +2,6 @@
 #include "bt_internal.h"
 #include <string.h>
 
-BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector,
-			 int identifier);
-int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
-int BtSendL2capPacket(BtConnection *connection, int channelId,
-		     const char *format, ...);
-unsigned int BtCancelTimer(unsigned int timer);
-
 void BtCancelBnepTimers(BtConnection *connection)
 {
 	BtChannel *channel = connection->channels;

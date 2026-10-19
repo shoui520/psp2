@@ -28,32 +28,6 @@ _Static_assert(offsetof(BtL2capSignalPacket, parameters) == 4, "L2CAP signal par
 _Static_assert(sizeof(BtL2capOption) == 2, "L2CAP option header");
 _Static_assert(offsetof(BtL2capOption, value) == 2, "L2CAP option value");
 
-int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
-int BtPack(uint8_t *destination, int remaining, const char *format, ...);
-BtConnection *BtFindConnection(BtStack *stack, unsigned char selector,
-			       uint64_t identifier);
-BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector,
-			 int identifier);
-int BtSendL2capPacket(BtConnection *connection, int channelId,
-		     const char *format, ...);
-int BtSendL2capConnectionResponse(BtConnection *connection, BtChannel *channel,
-				  int result, int status);
-int BtSendL2capConfigurationRequest(BtConnection *connection, BtChannel *channel);
-int BtInitializeSdpChannel(BtConnection *connection, BtChannel *channel);
-int BtInitializeRfcomm(BtConnection *connection, BtChannel *channel,
-		      unsigned int profile, unsigned int dlci);
-int BtInitializeBnep(BtConnection *connection, BtChannel *channel,
-		     unsigned int profile);
-int BtInitializeHidChannels(BtConnection *connection, BtChannel *channel);
-int BtInitializeAvrcp(BtConnection *connection, BtChannel *channel);
-int BtInitializeAvdtp(BtConnection *connection, BtChannel *channel,
-		      unsigned int profile);
-int BtInitializeAvrcpBrowsing(BtConnection *connection, BtChannel *channel);
-int BtAdvanceConnection(BtConnection *connection);
-int BtDisconnectConnection(BtStack *stack, BtConnection *connection);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-			unsigned int argument, uint64_t deviceAddress);
-
 void BtDispatchAclPacket(BtStack *stack, uint8_t *packet, int length)
 {
 	BtAclPacket *acl = (BtAclPacket *)packet;

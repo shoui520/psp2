@@ -2,15 +2,7 @@
 #include <string.h>
 #include "bt_internal.h"
 
-BtConnection *BtReleaseOutstandingAclPackets(BtConnection *connection);
-uintptr_t BtClearAvrcpConnection(BtConnection *connection);
-void BtClearAudioConnection(BtConnection *connection);
 unsigned int BtClearHidConnection(BtConnection *connection);
-uintptr_t BtNotifyBnepDisconnected(BtConnection *connection);
-void BtCancelBnepTimers(BtConnection *connection);
-unsigned int BtCancelTimer(unsigned int timer);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-		       unsigned int argument, uint64_t deviceAddress);
 
 BtConnection *BtClearConnection(BtConnection *connection, int status)
 {

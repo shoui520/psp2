@@ -2,17 +2,6 @@
 #include "bt_internal.h"
 #include <string.h>
 
-int BtPack(uint8_t *destination, int capacity, const char *format, ...);
-int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
-int BtSendL2capPacket(BtConnection *connection, int channelId,
-		     const char *format, ...);
-unsigned int BtCancelTimer(unsigned int timer);
-uintptr_t BtSetConnectedProfiles(BtConnection *connection, BtChannel *channel,
-				uint32_t profiles);
-void BtDeliverConnectionData(BtConnection *connection, uint32_t profile,
-				 uint8_t *packet, unsigned int length);
-int BtProcessNetworkPacket(BtConnection *connection, const void *packet,
-			   int length);
 extern const uint8_t gBtSdpBaseUuidSuffix[12];
 extern int gBtPanUserEnabled;
 extern int gBtNetworkAccessPointEnabled;

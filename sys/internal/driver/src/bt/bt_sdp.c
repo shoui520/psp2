@@ -3,10 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-
-int BtReadBe16(const uint8_t *source);
-uint32_t BtReadBe32(const uint8_t *source);
-int BtPack(uint8_t *destination, int capacity, const char *format, ...);
+#include "bt_internal.h"
 
 extern const uint8_t gBtSdpBaseUuidSuffix[12];
 extern const uint8_t gBtSdpServiceRecords[696];

@@ -3,16 +3,6 @@
 #include <string.h>
 #include "bt_internal.h"
 
-int BtPack(uint8_t *destination, int remaining, const char *format, ...);
-int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
-int BtReadFile(SceUID file, void *destination, SceSize length);
-int BtCloseFile(SceUID file);
-int BtSeekFile(SceUID file, int offset, int whence);
-int BtSendRfcommData(BtConnection *connection, unsigned int dlci,
-		     const void *data, int length, int userMode);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-		       unsigned int argument, uint64_t deviceAddress);
-
 int BtReceiveImageResponse(BtConnection *connection, const uint8_t *packet,
 			  int length)
 {

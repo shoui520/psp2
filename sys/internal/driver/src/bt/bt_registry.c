@@ -3,9 +3,8 @@
 #include <intrmgr/intrmgr.h>
 #include <bt/bt_registered.h>
 #include "bt_internal.h"
+#include "bt_transport.h"
 
-int BtLockTransport(void);
-int BtUnlockTransport(int result);
 extern BtRegisteredOutput gBtRegisteredInfo;
 
 int GetRegisteredInfo(uint64_t deviceAddress, void *buffer, int maxCount,

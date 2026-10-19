@@ -5,12 +5,6 @@
 #include "bt_transport.h"
 #include <sysmem/sysclib.h>
 
-void BtWriteLe24(uint8_t *destination, unsigned int value);
-void BtPollTransport(void *argument);
-int BtTransportThread(SceSize argumentSize, void *argument);
-int BtQueueTimer(unsigned int *timer, void (*callback)(void *argument),
-		 void *argument, SceInt64 delay);
-
 #if FW_VERSION >= 0x04000000
 #define TRANSPORT_COPY(destination, source, length) \
 	__memcpy_chk(destination, source, length, 2044)

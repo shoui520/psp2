@@ -5,44 +5,11 @@
 #include <bt/bt_pairing.h>
 #include "bt_internal.h"
 #include <bt/bt.h>
+#include "bt_transport.h"
 
 extern BtStack gBtStack;
-int BtSendHciCommand(BtStack *stack, unsigned int opcode,
-		     const char *format, ...);
-int BtSendL2capDisconnectRequest(BtConnection *connection, BtChannel *channel);
-unsigned int BtCancelTimer(unsigned int timer);
-int BtQueueTimer(unsigned int *timer, void (*callback)(void *argument),
-		 void *argument, SceInt64 delay);
-int BtInitializeHsp(BtConnection *connection, BtChannel *channel);
-int BtInitializeAvdtp(BtConnection *connection, BtChannel *channel,
-		      unsigned int profile);
-int BtInitializeAvrcp(BtConnection *connection, BtChannel *channel);
-int BtInitializeHidChannels(BtConnection *connection, BtChannel *channel);
-int BtInitializeBnep(BtConnection *connection, BtChannel *channel,
-		     unsigned int profile);
-int BtInitializeImagingProfile(BtConnection *connection, BtChannel *channel,
-			       unsigned int profile);
-int BtInitializeImagingSession(BtConnection *connection, BtChannel *channel,
-			       unsigned int profile);
-int BtInitializeSerialPort(BtConnection *connection, BtChannel *channel);
-int BtNotifyPendingProfilesConnected(BtConnection *connection, BtChannel *channel,
-				     unsigned int profiles);
-int BtNotifyBnepConnected(BtConnection *connection);
-int BtInitializeSdpChannel(BtConnection *connection, BtChannel *channel);
-uintptr_t BtReplyPendingL2capConnection(BtConnection *connection);
-int BtRegisterDevice(BtStack *stack, uint64_t deviceAddress);
 void BtNotifyConnectionComplete(BtConnection *connection, int status,
 				uint32_t argument);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-			unsigned int argument, uint64_t deviceAddress);
-int BtLockTransport(void);
-int BtUnlockTransport(int result);
-BtConnection *BtFindConnection(BtStack *stack, unsigned char selector,
-			       uint64_t deviceAddress);
-BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector,
-			uint16_t identifier);
-int BtSendL2capPacket(BtConnection *connection, int channelId,
-		     const char *format, ...);
 
 void BtDisconnectTimedOut(void *argument)
 {

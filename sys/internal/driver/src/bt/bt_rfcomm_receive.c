@@ -1,22 +1,9 @@
 /* RFCOMM frame reception; original source filename unavailable. */
 #include "bt_internal.h"
 
-int BtSendRfcommFrame(BtConnection *connection, BtChannel *channel,
-		      unsigned int address, ...);
-int BtSendL2capDisconnectRequest(BtConnection *connection, BtChannel *channel);
-BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector,
-			 int identifier);
-int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
-uintptr_t BtSetConnectedProfiles(BtConnection *connection, BtChannel *channel,
-				unsigned int profiles);
-void BtDeliverConnectionData(BtConnection *connection, uint32_t profile,
-				 uint8_t *packet, unsigned int length);
-uintptr_t BtHspOpened(BtConnection *connection);
 uintptr_t BtSerialPortOpened(BtConnection *connection);
 int BtSendRfcommData(BtConnection *connection, unsigned int dlci,
 		     const void *data, int length, int userMode);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-			unsigned int argument, uint64_t deviceAddress);
 
 uintptr_t BtCompleteRfcommConnection(BtConnection *connection,
 				    BtChannel *channel)

@@ -4,17 +4,6 @@
 #include <wlanbt/wlanbt.h>
 #include "bt_transport.h"
 
-unsigned int BtCancelTimer(unsigned int timer);
-int BtUnlockTransport(int result);
-int BtLockTransport(void);
-int BtApplyConfiguration(BtStack *stack);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-			unsigned int argument, uint64_t deviceAddress);
-int BtSetupSdioTransport(void);
-int BtSendHciCommand(BtStack *stack, unsigned int opcode,
-		     const char *format, ...);
-int BtQueueTimer(unsigned int *timer, void (*callback)(void *),
-		 void *argument, SceInt64 delay);
 void BtControllerResetTimedOut(void *argument);
 int BtCompleteControllerSleep(BtStack *stack);
 

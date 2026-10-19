@@ -3,7 +3,6 @@
 #include "bt_internal.h"
 #include <sysmem/utils.h>
 
-int BtPack(uint8_t *destination, int remaining, const char *format, ...);
 extern const uint8_t gBtRandomKey[16];
 
 SceAesFullContext gBtRandomContext;

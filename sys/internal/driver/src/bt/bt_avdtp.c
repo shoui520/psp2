@@ -1,21 +1,6 @@
 /* AVDTP channels; original source filename unavailable. */
 #include "bt_internal.h"
 
-uintptr_t BtSetConnectedProfiles(BtConnection *connection, BtChannel *channel,
-				unsigned int profiles);
-int BtDisconnectConnection(BtStack *stack, BtConnection *connection);
-int BtSendL2capPacket(BtConnection *connection, int channelId,
-		     const char *format, ...);
-BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector,
-			 int identifier);
-int BtSendL2capConnectionRequest(BtConnection *connection, BtChannel *channel);
-int BtSelectAudioCapabilities(BtConnection *connection, unsigned int profile,
-			      uint8_t *capabilities, int length);
-uintptr_t BtNotifyAudioStarted(BtConnection *connection, int status,
-			     unsigned int profiles);
-uintptr_t BtNotifyAudioStopped(BtConnection *connection, int status,
-			     unsigned int profiles);
-
 void BtAvdtpClosed(BtConnection *connection, BtChannel *channel)
 {
 	BtAvdtpState *avdtp = &connection->avdtp;

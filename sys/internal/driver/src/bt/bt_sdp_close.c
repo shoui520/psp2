@@ -1,14 +1,6 @@
 /* SDP connection policy; original source filename unavailable. */
 #include "bt_internal.h"
 
-int BtDisconnectConnection(BtStack *stack, BtConnection *connection);
-int BtBeginDisconnect(BtConnection *connection);
-void BtNotifyConnectionComplete(BtConnection *connection, int status,
-				unsigned int profiles);
-int BtRegisterDevice(BtStack *stack, uint64_t deviceAddress);
-int BtFlushConnectionDevice(BtConnection *connection);
-int BtAdvanceConnection(BtConnection *connection);
-
 void BtSdpClosed(BtConnection *connection, BtChannel *channel)
 {
 	BtDevice *device;

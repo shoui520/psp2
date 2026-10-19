@@ -2,38 +2,13 @@
 #include "bt_internal.h"
 #include <threadmgr/threadmgr.h>
 #include <string.h>
+#include "bt_transport.h"
 
-BtConnection *BtFindConnection(BtStack *stack, unsigned char selector,
-			       uint64_t identifier);
-BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector,
-			 int identifier);
-int BtLockTransport(void);
-int BtUnlockTransport(int result);
-int BtSendL2capPacket(BtConnection *connection, int channel,
-		     const char *format, ...);
-int BtQueueTimer(unsigned int *timer, void (*callback)(void *argument),
-		 void *argument, SceInt64 delay);
-void BtHidVuRequestTimedOut(void *argument);
 void BtHidRequestTimedOut(void *argument);
-int BtPack(uint8_t *destination, int remaining, const char *format, ...);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-			unsigned int argument, uint64_t deviceAddress);
-void BtPollHidAuthenticationResponse(void *argument);
 int BtQueueHidTransfer(BtStack *stack, uint64_t deviceAddress,
 		       SceBtHidRequest *request);
-int BtSendHciCommand(BtStack *stack, unsigned int opcode,
-		     const char *format, ...);
-uintptr_t BtSetConnectedProfiles(BtConnection *connection, BtChannel *channel,
-				 unsigned int profiles);
-uintptr_t BtNotifyHidVuEvent(uint64_t deviceAddress, uint8_t eventId,
-			   uint8_t status, const void *data, uint16_t length);
-void BtHidKeepaliveTimedOut(void *argument);
-void BtPollHidStatus(void *argument);
 uintptr_t BtCompleteHidRequest(BtChannel *channel, BtHidQueue *queue,
 			      SceBtHidRequest *request, int status);
-int BtCancelTimer(unsigned int timer);
-int BtBeginDisconnect(BtConnection *connection);
-int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
 
 extern int gBtHidCaptureCapacity;
 extern uint8_t *gBtHidCaptureBuffer;
@@ -557,7 +532,7 @@ unlock:
 	return BtUnlockTransport(result);
 }
 
-uintptr_t BtContinueHidInterrupt(BtConnection *connection)
+uintptr_t BtContinueHidInterrupt(BtConnection *connection, unsigned int argument)
 {
 	BtChannel *channel;
 	BtHidQueue *queue;
@@ -601,7 +576,7 @@ uintptr_t BtContinueHidInterrupt(BtConnection *connection)
 	return result;
 }
 
-uintptr_t BtContinueHidControl(BtConnection *connection)
+uintptr_t BtContinueHidControl(BtConnection *connection, unsigned int argument)
 {
 	BtChannel *channel;
 	BtHidQueue *queue;

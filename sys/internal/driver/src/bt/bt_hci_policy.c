@@ -1,9 +1,6 @@
 /* Controller device policy; original source filename unavailable. */
 #include "bt_internal.h"
 
-int BtSendHciCommand(BtStack *stack, unsigned int opcode,
-		     const char *format, ...);
-
 int BtConfigureAutoAcceptDevices(BtStack *stack)
 {
 	BtDevice *device = stack->devices;

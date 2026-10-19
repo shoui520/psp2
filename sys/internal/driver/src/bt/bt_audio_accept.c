@@ -1,11 +1,6 @@
 /* Incoming synchronous audio connection; original filename unavailable. */
 #include "bt_internal.h"
 
-BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector,
-			uint16_t identifier);
-int BtSendHciCommand(BtStack *stack, unsigned int opcode,
-		     const char *format, ...);
-
 int BtAcceptScoConnection(BtConnection *connection)
 {
 	unsigned int profiles = connection->connectedProfiles;

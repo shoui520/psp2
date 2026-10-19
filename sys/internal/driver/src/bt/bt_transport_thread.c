@@ -3,18 +3,6 @@
 #include <threadmgr/threadmgr.h>
 #include "bt_transport.h"
 
-int BtLockTransport(void);
-int BtUnlockTransport(int result);
-int BtWaitSignal(BtSignal *signal, uint32_t timeout);
-int BtStartTransport(void);
-int BtReadRegisteredDevices(BtStack *stack);
-int BtInitializeQueues(BtStack *stack);
-int BtReadLe24(const uint8_t *source);
-int BtPumpTransmit(BtTransport *transport);
-unsigned int BtCancelTimer(unsigned int timer);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-		       unsigned int argument, uint64_t deviceAddress);
-
 int BtTransportThread(SceSize argumentSize, void *argument)
 {
 	BtTransport *transport = &gBtTransport;

@@ -92,4 +92,29 @@ extern BtSdioPacketBuffer gBtTransmitPacket;
 extern BtTransport gBtTransport;
 extern BtSdioPacketBuffer gBtReceivePacket;
 
+/* bt_transport.c */
+int BtPumpTransmit(BtTransport *transport);
+int BtHandleSdioInterrupt(void *subInterruptArgument, void *registerArgument,
+			unsigned char priority);
+int BtIsAsleep(void);
+int BtUnlockTransport(int result);
+int BtQueueTransmit(unsigned int packetType, const uint8_t *data, int length,
+		    void (*completion)(void *argument), void *argument);
+int BtIsNewCardRevision(void);
+void BtWakeTransport(void);
+
+/* bt_transport_init.c */
+int BtSetupSdioTransport(void);
+int BtStartTransport(void);
+
+/* bt_transport_poll.c */
+void BtPollTransport(void *argument);
+
+/* bt_transport_sleep.c */
+int BtCompleteControllerSleep(BtStack *stack);
+int BtPowerOffTransport(void);
+
+/* bt_transport_thread.c */
+int BtTransportThread(SceSize argumentSize, void *argument);
+
 #endif

@@ -2,25 +2,6 @@
 #include "bt_internal.h"
 #include <string.h>
 
-int BtSendL2capPacket(BtConnection *connection, int channelId,
-		     const char *format, ...);
-BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector,
-			 int identifier);
-int BtSendL2capConnectionRequest(BtConnection *connection, BtChannel *channel);
-int BtSendL2capDisconnectRequest(BtConnection *connection, BtChannel *channel);
-int BtSelectAudioCapabilities(BtConnection *connection, unsigned int profile,
-			      uint8_t *capabilities, int length);
-uintptr_t BtNotifyAudioStarted(BtConnection *connection, int status,
-			     unsigned int profiles);
-uintptr_t BtNotifyAudioStopped(BtConnection *connection, int status,
-			     unsigned int profiles);
-uintptr_t BtSetConnectedProfiles(BtConnection *connection, BtChannel *channel,
-				unsigned int profiles);
-int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
-int BtQueueTimer(unsigned int *timer, void (*callback)(void *argument),
-		 void *argument, SceInt64 delay);
-void BtDisconnectTimedOut(void *argument);
-
 void BtReceiveAvdtpSignaling(BtConnection *connection, BtChannel *channel,
 				uint8_t *packet, int length)
 {

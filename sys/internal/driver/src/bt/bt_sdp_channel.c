@@ -1,12 +1,6 @@
 /* Bluetooth SDP channel methods; original source filename unavailable. */
 #include "bt_internal.h"
 
-int BtSendL2capPacket(BtConnection *connection, int channel,
-		     const char *format, ...);
-BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector,
-			 int identifier);
-int BtSendL2capConnectionRequest(BtConnection *connection, BtChannel *channel);
-
 uintptr_t BtSdpOpened(BtConnection *connection, BtChannel *channel)
 {
 	uintptr_t result = (uintptr_t)connection;

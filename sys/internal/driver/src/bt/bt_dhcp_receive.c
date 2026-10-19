@@ -2,8 +2,6 @@
 #include "bt_internal.h"
 #include <string.h>
 
-int BtMatchNetworkMac(const unsigned char *bytes, uint64_t address);
-
 int BtProcessDhcpPacket(BtNetworkPacketContext *context, const void *packet,
 			int length)
 {

@@ -1,12 +1,6 @@
 /* Bluetooth SDIO receive polling; original source filename unavailable. */
 #include "bt_transport.h"
 
-int BtReadLe24(const uint8_t *source);
-int BtQueueTimer(unsigned int *timer, void (*callback)(void *argument),
-		 void *argument, SceInt64 delay);
-unsigned int BtCancelTimer(unsigned int timer);
-int BtPumpTransmit(BtTransport *transport);
-
 void BtPollTransport(void *argument)
 {
 	BtTransport *transport = argument;

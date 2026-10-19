@@ -9,10 +9,6 @@
 #include "bt_internal.h"
 #include <sysmem/sysroot.h>
 
-int BtInitializeTimers(const char *threadName);
-int BtInitializeAudio(void);
-void BtInitializeHidCapture(void);
-int BtSystemEvent(int resume, int eventId, void *args, void *opt);
 extern SceUID gBtSysEventHandlerId;
 extern const SceKernelProcEventHandler gBtProcEventHandler;
 extern const SysrootBtOps gBtSysrootOps;

@@ -1,21 +1,8 @@
 /* Audio profiles and packet accounting; original source filename unavailable. */
 #include "bt_internal.h"
 
-int BtStartAvdtpStream(BtConnection *connection, unsigned int profile);
 int BtStartScoConnection(BtConnection *connection);
 int BtStopScoConnection(BtConnection *connection);
-int BtStopAvdtpStream(BtConnection *connection, unsigned int profile);
-BtConnection *BtFindConnection(BtStack *stack, unsigned char selector,
-			       uint64_t deviceAddress);
-BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector,
-			 int identifier);
-int BtSendHciCommand(BtStack *stack, unsigned int opcode,
-		     const char *format, ...);
-uintptr_t BtNotifyAudioStarted(BtConnection *connection, int status,
-			     unsigned int profiles);
-uintptr_t BtNotifyAudioStopped(BtConnection *connection, int status,
-			     unsigned int profiles);
-int BtDisconnectConnection(BtStack *stack, BtConnection *connection);
 
 int gBtAudioUnderruns;
 int gBtAudioOverruns;

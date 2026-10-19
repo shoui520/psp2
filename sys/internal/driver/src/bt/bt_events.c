@@ -4,9 +4,6 @@
 #include <threadmgr/threadmgr.h>
 #include "bt_internal.h"
 
-BtConnection *BtFindConnection(BtStack *stack, unsigned char selector,
-			       uint64_t deviceAddress);
-
 uintptr_t BtNotifyHidVuEvent(uint64_t deviceAddress, uint8_t eventId,
 			   uint8_t status, const void *data, uint16_t length)
 {

@@ -15,76 +15,14 @@
 #include <sysmem/sysmem.h>
 #include "bt_internal.h"
 #include <bt/bt.h>
+#include "bt_transport.h"
 
 /* Name unknown; the final argument selects user-buffer copying. */
-int GetRegisteredInfo(uint64_t deviceAddress, void *buffer, int maxCount,
-		      int userMode);
-int BtLockTransport(void);
-int BtUnlockTransport(int result);
-int BtGetHidReportDescriptor(BtStack *stack, uint64_t deviceAddress,
-			     void *buffer, int capacity);
-const char *BtLookupDeviceName(BtStack *stack, uint64_t deviceAddress);
-int BtGetDeviceId(BtStack *stack, uint64_t deviceAddress, void *buffer,
-		  int userMode);
-BtConnection *BtFindConnection(BtStack *stack, unsigned char selector,
-			       uint64_t deviceAddress);
-int BtDeleteRegisteredDevice(BtStack *stack, uint64_t deviceAddress);
-int BtPushImage(BtConnection *connection, const char *path);
-int BtSetImageReceivePath(const char *path);
-int BtSendSerialData(BtConnection *connection, const void *data,
-		     unsigned int length);
-int BtSendEchoRequest(BtConnection *connection, const void *data,
-		      unsigned int length);
-int BtProcessInquiryResult(BtStack *stack, uint64_t deviceAddress,
-			  uint8_t pageScanRepetitionMode, uint32_t deviceClass,
-			  uint16_t clockOffset, int8_t rssi,
-			  const uint8_t *extendedInquiryResponse);
-BtChannel *BtFindChannel(BtConnection *connection, uint8_t selector,
-			 int identifier);
-uintptr_t BtNotifyHidVuEvent(uint64_t deviceAddress, uint8_t eventId,
-			   uint8_t status, const void *data, uint16_t length);
-int BtRequestHidVuReport(BtStack *stack, uint64_t deviceAddress, uint8_t command,
-			 uint8_t reportId, const void *data, int length,
-			 int userMode);
-void BtConfigureAsynchronously(void *argument);
-int BtQueueTimer(unsigned int *timer, void (*callback)(void *argument),
-		 void *argument, SceInt64 delay);
-uint64_t BtRecordInquiryProgress(BtStack *stack);
-int BtSendHciCommand(BtStack *stack, unsigned int opcode,
-		     const char *format, ...);
-int BtFlushRegisteredDevices(BtStack *stack);
-int BtCountRegisteredDevices(BtStack *stack);
-BtDevice *BtGetOrCreateDevice(BtStack *stack, uint64_t deviceAddress,
-			    unsigned int create);
-int BtSetAvrcpTitle(BtStack *stack, const void *title, unsigned int length);
-int BtSetAvrcpPlayStatus(BtStack *stack, int status);
-int BtSendAvrcpButton(BtConnection *connection, int button);
-int BtSendAvrcpVolume(BtConnection *connection, int volume);
-int BtGetAvrcpVolume(BtConnection *connection);
-int BtQueueHidTransfer(BtStack *stack, uint64_t deviceAddress,
-		       SceBtHidRequest *request);
-int BtGetAudioStatistics(void *buffer);
-int BtAdjustAudioReceiveBuffer(int operation);
-int BtSetHidCaptureBuffer(SceUID processId, uint8_t *buffer, int capacity);
-int BtInjectHidPacket(BtStack *stack, const void *buffer, unsigned int length,
-		      int userMode);
 extern int gBtAudioUnderruns;
 extern int gBtAudioOverruns;
 extern int gBtPendingAudioPackets;
 extern int gBtPanUserEnabled;
 extern int gBtNetworkAccessPointEnabled;
-int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
-int BtPack(uint8_t *destination, int remaining, const char *format, ...);
-int BtRegisterDevice(BtStack *stack, uint64_t deviceAddress);
-int BtBeginDisconnect(BtConnection *connection);
-int BtStartAudio(BtStack *stack, uint64_t deviceAddress, unsigned int profile);
-int BtStopAudio(BtStack *stack, uint64_t deviceAddress, unsigned int profile);
-int BtSendAudio(BtStack *stack, uint64_t deviceAddress, void *buffer,
-		unsigned int size, int userMode);
-int BtRecvAudio(BtStack *stack, uint64_t deviceAddress, void *buffer,
-		unsigned int size, int userMode);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-			unsigned int argument, uint64_t deviceAddress);
 
 int SceBtForDriver_E9936446(uint64_t deviceAddress)
 {

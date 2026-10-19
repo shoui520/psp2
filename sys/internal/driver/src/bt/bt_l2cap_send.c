@@ -2,11 +2,6 @@
 #include <stdarg.h>
 #include "bt_internal.h"
 
-int BtVPack(uint8_t *destination, int remaining, const char *format,
-	    va_list arguments);
-int BtPack(uint8_t *destination, int remaining, const char *format, ...);
-int BtPumpAclQueue(BtStack *stack);
-
 int BtSendL2capPacket(BtConnection *connection, int channelId,
 		     const char *format, ...)
 {

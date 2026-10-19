@@ -4,26 +4,13 @@
 #include <sysmem/sysevent.h>
 #include <wlanbt/wlanbt.h>
 #include "bt_internal.h"
+#include "bt_transport.h"
 
 extern uint64_t gBtBusyDumpTime;
-int BtLockTransport(void);
-int BtUnlockTransport(int result);
-int BtQueueTimer(unsigned int *timer, void (*callback)(void *argument),
-		 void *argument, SceInt64 delay);
+/* BtWakeTransport as this file's callers use it: they pass on what it leaves in r0 */
+uintptr_t BtWakeTransportResult(void) __asm__("BtWakeTransport");
 void BtConfigureAsynchronously(void *argument);
-int BtSendHciCommand(BtStack *stack, unsigned int opcode,
-		     const char *format, ...);
-int BtIsAsleep(void);
-unsigned int BtCancelTimer(unsigned int timer);
-int BtPowerOffTransport(void);
 void BtPowerOffTimedOut(void *argument);
-void BtDisconnectTimedOut(void *argument);
-int BtDisconnectConnection(BtStack *stack, BtConnection *connection);
-BtConnection *BtClearConnection(BtConnection *connection, int status);
-int BtStartTransport(void);
-uintptr_t BtWakeTransport(void);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-			unsigned int argument, uint64_t deviceAddress);
 
 static inline void bt_busy_dump(int result)
 {
@@ -343,7 +330,7 @@ uintptr_t BtCompleteConfiguration(BtStack *stack)
 		stack->mode = (mode & ~0x10u) | 0x18;
 		BtNotifyEvent(21, 0, (unsigned char)stack->mode, 0);
 		if (stack->mode & 0x100)
-			return BtWakeTransport();
+			return BtWakeTransportResult();
 		started = BtStartTransport();
 		if (started < 0)
 			goto failed;

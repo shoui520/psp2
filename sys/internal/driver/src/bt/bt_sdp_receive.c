@@ -2,16 +2,6 @@
 #include <string.h>
 #include "bt_internal.h"
 
-int BtReadBe16(const uint8_t *source);
-uint32_t BtReadBe32(const uint8_t *source);
-int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
-int BtPack(uint8_t *destination, int remaining, const char *format, ...);
-int BtSendL2capPacket(BtConnection *connection, int channel,
-		     const char *format, ...);
-int BtSendL2capDisconnectRequest(BtConnection *connection, BtChannel *channel);
-int BtSetDeviceHidDescriptor(BtConnection *connection,
-			     const uint8_t *descriptor, unsigned int length);
-int BtFlushConnectionDevice(BtConnection *connection);
 extern const uint8_t gBtSdpBaseUuidSuffix[12];
 extern const uint8_t gBtSdpServiceRecords[696];
 

@@ -2,21 +2,8 @@
 #include "bt_internal.h"
 #include <string.h>
 
-int BtQueueTimer(unsigned int *timer, void (*callback)(void *argument),
-		 void *argument, SceInt64 delay);
 void BtAvrcpRequestTimedOut(void *argument);
 void BtAvrcpRepeatButton(void *argument);
-BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector,
-			 int identifier);
-unsigned int BtCancelTimer(unsigned int timer);
-int BtSendL2capPacket(BtConnection *connection, int channelId,
-		     const char *format, ...);
-int BtSendL2capConnectionRequest(BtConnection *connection, BtChannel *channel);
-int BtDisconnectConnection(BtStack *stack, BtConnection *connection);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-			unsigned int argument, uint64_t deviceAddress);
-uintptr_t BtSetConnectedProfiles(BtConnection *connection, BtChannel *channel,
-				unsigned int profiles);
 
 uintptr_t BtOpenAvrcpBrowsing(BtConnection *connection, BtChannel *channel)
 {

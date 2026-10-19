@@ -1,16 +1,7 @@
 /* BNEP network driver callbacks; original source filename unavailable. */
 #include "bt_internal.h"
 #include <string.h>
-
-int BtLockTransport(void);
-int BtUnlockTransport(int result);
-BtConnection *BtFindConnection(BtStack *stack, unsigned char selector,
-			       uint64_t deviceAddress);
-int BtSendHciCommand(BtStack *stack, unsigned int opcode,
-		     const char *format, ...);
-int BtSendBnepFrame(BtConnection *connection, const void *frame, int length,
-		    int userMode);
-int BtPack(uint8_t *destination, int remaining, const char *format, ...);
+#include "bt_transport.h"
 
 BtBnepInterface gBtBnepInterface;
 

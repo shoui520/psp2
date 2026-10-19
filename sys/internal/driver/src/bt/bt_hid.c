@@ -2,21 +2,7 @@
 #include "bt_internal.h"
 #include <string.h>
 
-BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector,
-			 int identifier);
-int BtSendL2capConnectionRequest(BtConnection *connection, BtChannel *channel);
-int BtSendL2capDisconnectRequest(BtConnection *connection, BtChannel *channel);
-int BtDisconnectConnection(BtStack *stack, BtConnection *connection);
-int BtBeginDisconnect(BtConnection *connection);
-uintptr_t BtNotifyHidVuEvent(uint64_t deviceAddress, uint8_t eventId,
-			   uint8_t status, const void *data, uint16_t length);
-BtConnection *BtFindConnection(BtStack *stack, unsigned char selector,
-			       uint64_t identifier);
-int BtQueueTimer(unsigned int *timer, void (*callback)(void *argument),
-		 void *argument, SceInt64 delay);
-int BtStartHidRequest(BtChannel *channel, BtHidQueue *queue);
 void BtPollHidChallenge(void *argument);
-int BtPack(uint8_t *destination, int remaining, const char *format, ...);
 
 int gBtHidCaptureCapacity;
 uint8_t *gBtHidCaptureBuffer;

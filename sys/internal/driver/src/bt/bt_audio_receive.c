@@ -1,10 +1,6 @@
 /* Bluetooth audio packet reception; original source filename unavailable. */
 #include "bt_internal.h"
 
-int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-		       unsigned int argument, uint64_t deviceAddress);
-
 extern int gBtAudioLastSequence;
 extern uint64_t gBtAudioContiguousPackets;
 extern uint64_t gBtAudioIntervalStartUs;

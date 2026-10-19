@@ -1,14 +1,9 @@
 /* ACL transmit queue; original source filename unavailable. */
 #include "bt_internal.h"
+#include "bt_transport.h"
 
-int BtPack(uint8_t *destination, int remaining, const char *format, ...);
-int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
 void BtSendAclPacket(BtStack *stack, uint8_t *packet, int length);
-int BtQueueTransmit(unsigned int packetType, const uint8_t *data, int length,
-		    void (*completion)(void *argument), void *argument);
 void BtAclPacketTransmitted(void *argument);
-uintptr_t BtNotifyPacketCompletion(BtConnection *connection, uint32_t profile,
-				  unsigned int argument);
 
 int BtPumpAclQueue(BtStack *stack)
 {

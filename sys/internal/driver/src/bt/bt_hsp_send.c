@@ -3,9 +3,6 @@
 #include <stdarg.h>
 #include "bt_internal.h"
 
-int BtSendRfcommData(BtConnection *connection, unsigned int dlci,
-		     const void *data, int length, int userMode);
-
 int BtSendHspResponse(BtConnection *connection, const char *format, ...)
 {
 	va_list arguments;

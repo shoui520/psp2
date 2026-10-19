@@ -1,9 +1,12 @@
 #ifndef BT_INTERNAL_H
 #define BT_INTERNAL_H
 
+#include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <scetypes.h>
+#include <sysmem/procevent.h>
+#include <threadmgr/threadmgr.h>
 #include <net/header/ip.h>
 #include "udp.h"
 #include "tcp.h"
@@ -1964,5 +1967,292 @@ _Static_assert(offsetof(BtAvrcpPlayerListResponse, features) == 18,
 _Static_assert(offsetof(BtAvrcpPlayerListResponse, name) == 38,
 	       "AVRCP player name offset");
 extern const BtAvrcpPlayerListResponse gBtAvrcpPlayerListResponse;
+
+/* bt_acl_queue.c */
+int BtPumpAclQueue(BtStack *stack);
+void BtCompleteAclPackets(BtStack *stack, unsigned int handle, int packetCount);
+
+/* bt_audio.c */
+int BtNotifyPendingProfilesConnected(BtConnection *connection, BtChannel *channel,
+				     unsigned int profiles);
+int BtStartAudio(BtStack *stack, uint64_t deviceAddress, unsigned int profile);
+int BtStopAudio(BtStack *stack, uint64_t deviceAddress, unsigned int profile);
+uintptr_t BtCompleteAudioPacket(BtConnection *connection);
+int BtNotifyScoConnection(BtConnection *connection, int status, int handle);
+
+/* bt_audio_accept.c */
+int BtAcceptScoConnection(BtConnection *connection);
+
+/* bt_audio_buffers.c */
+void BtClearAudioConnection(BtConnection *connection);
+uintptr_t BtNotifyAudioStarted(BtConnection *connection, int status, unsigned int profiles);
+uintptr_t BtNotifyAudioStopped(BtConnection *connection, int status, unsigned int profiles);
+int BtSendAudio(BtStack *stack, uint64_t deviceAddress, void *buffer,
+		unsigned int size, int userMode);
+int BtRecvAudio(BtStack *stack, uint64_t deviceAddress, void *buffer,
+		unsigned int size, int userMode);
+
+/* bt_audio_capabilities.c */
+int BtSelectAudioCapabilities(BtConnection *connection, unsigned int profile,
+			      uint8_t *capabilities, int length);
+
+/* bt_audio_receive.c */
+void BtReceiveAudioPacket(BtConnection *connection, unsigned int profile,
+			  const uint8_t *packet, int length);
+int BtGetAudioStatistics(void *buffer);
+int BtAdjustAudioReceiveBuffer(int operation);
+int BtInitializeAudio(void);
+
+/* bt_avdtp.c */
+int BtInitializeAvdtp(BtConnection *connection, BtChannel *channel, unsigned int profile);
+int BtStartAvdtpStream(BtConnection *connection, unsigned int profile);
+int BtStopAvdtpStream(BtConnection *connection, unsigned int profile);
+
+/* bt_avrcp.c */
+void BtAvrcpReleaseTranslatedButton(void *argument);
+void BtAvrcpReleaseButton(void *argument);
+void BtAvrcpRepeatButton(void *argument);
+int BtBeginAvrcpRequest(BtChannel *channel);
+int BtInitializeAvrcp(BtConnection *connection, BtChannel *channel);
+int BtSendAvrcpButton(BtConnection *connection, int button);
+int BtSendAvrcpVolume(BtConnection *connection, int volume);
+int BtGetAvrcpVolume(BtConnection *connection);
+int BtInitializeAvrcpBrowsing(BtConnection *connection, BtChannel *channel);
+
+/* bt_avrcp_receive.c */
+int BtSetAvrcpTitle(BtStack *stack, const void *title, unsigned int length);
+int BtSetAvrcpPlayStatus(BtStack *stack, int status);
+uintptr_t BtClearAvrcpConnection(BtConnection *connection);
+
+/* bt_bnep.c */
+int BtInitializeBnep(BtConnection *connection, BtChannel *channel, unsigned int profile);
+
+/* bt_bnep_send.c */
+void BtCancelBnepTimers(BtConnection *connection);
+int BtSendBnepFrame(BtConnection *connection, const void *data, int length, int userMode);
+
+/* bt_connection.c */
+void BtDisconnectTimedOut(void *argument);
+int BtProcessResume(SceUID processId, int eventType, ProcEventParam *param, void *common);
+int BtProcessSuspend(SceUID processId, int eventType, ProcEventParam *param, void *common);
+int BtProcessExit(SceUID processId, ProcEventParam *param, void *common);
+int BtProcessKill(SceUID processId, ProcEventParam *param, void *common);
+int BtDisconnectConnection(BtStack *stack, BtConnection *connection);
+int BtBeginDisconnect(BtConnection *connection);
+void BtNotifyConnectionComplete(BtConnection *connection, int status, uint32_t argument);
+uintptr_t BtSetConnectedProfiles(BtConnection *connection, BtChannel *channel,
+				unsigned int profiles);
+int BtAdvanceConnection(BtConnection *connection);
+
+/* bt_connection_cleanup.c */
+BtConnection *BtClearConnection(BtConnection *connection, int status);
+
+/* bt_connection_data.c */
+void BtDeliverConnectionData(BtConnection *connection, unsigned int profile,
+			     uint8_t *packet, int length);
+
+/* bt_device.c */
+int BtFlushRegisteredDevices(BtStack *stack);
+int BtCountRegisteredDevices(BtStack *stack);
+BtDevice *BtGetOrCreateDevice(BtStack *stack, uint64_t deviceAddress, unsigned int create);
+int BtProcessInquiryResult(BtStack *stack, uint64_t deviceAddress,
+			  uint8_t pageScanRepetitionMode, uint32_t deviceClass,
+			  uint16_t clockOffset, int8_t rssi,
+			  const uint8_t *extendedInquiryResponse);
+void BtProcessRemoteNameResponse(BtStack *stack, int status,
+				 uint64_t deviceAddress, uint32_t deviceClass,
+				 int8_t rssi, const uint8_t *name);
+int BtRegisterDevice(BtStack *stack, uint64_t deviceAddress);
+int BtFlushConnectionDevice(BtConnection *connection);
+void BtSetDeviceAuthenticationFailed(BtStack *stack, BtConnection *connection, int failed);
+int BtReadDeviceLinkKey(BtStack *stack, uint64_t deviceAddress, uint8_t *key);
+int BtWriteDeviceLinkKey(BtStack *stack, uint64_t deviceAddress, const uint8_t *key);
+int BtDeleteRegisteredDevice(BtStack *stack, uint64_t deviceAddress);
+int BtSetDeviceHidDescriptor(BtConnection *connection,
+			     const uint8_t *descriptor, unsigned int length);
+int BtGetHidReportDescriptor(BtStack *stack, uint64_t deviceAddress, void *buffer, int capacity);
+const char *BtLookupDeviceName(BtStack *stack, uint64_t deviceAddress);
+BtStack *BtResetAutoAcceptDevices(BtStack *stack);
+int BtGetDeviceId(BtStack *stack, uint64_t deviceAddress, void *buffer, int userMode);
+
+/* bt_device_registry.c */
+int BtWriteRegisteredDevices(BtStack *stack, int notifyChange);
+int BtReadRegisteredDevices(BtStack *stack);
+
+/* bt_dhcp_receive.c */
+int BtProcessDhcpPacket(BtNetworkPacketContext *context, const void *packet, int length);
+
+/* bt_events.c */
+uintptr_t BtNotifyHidVuEvent(uint64_t deviceAddress, uint8_t eventId,
+			   uint8_t status, const void *data, uint16_t length);
+uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
+			unsigned int argument, uint64_t deviceAddress);
+
+/* bt_hci_callbacks.c */
+void BtRoleSwitchTimedOut(void *argument);
+void BtRemoteNameTimedOut(void *argument);
+void BtReadAddressRetry(void *argument);
+
+/* bt_hci_dispatch.c */
+void BtDispatchHciEvent(BtStack *stack, uint8_t *packet, int length);
+
+/* bt_hci_policy.c */
+int BtConfigureAutoAcceptDevices(BtStack *stack);
+
+/* bt_hci_send.c */
+void BtContinueHciCommands(BtStack *stack);
+int BtSendHciCommand(BtStack *stack, unsigned int opcode, const char *format, ...);
+
+/* bt_hid.c */
+void BtHidVuRequestTimedOut(void *argument);
+void BtHidKeepaliveTimedOut(void *argument);
+void BtPollHidStatus(void *argument);
+void BtPollHidAuthenticationResponse(void *argument);
+void BtInitializeHidCapture(void);
+int BtSetHidCaptureBuffer(SceUID processId, uint8_t *buffer, int capacity);
+int BtInitializeHidChannels(BtConnection *connection, BtChannel *channel);
+
+/* bt_hid_transfer.c */
+int BtStartHidRequest(BtChannel *channel, BtHidQueue *queue);
+int BtRequestHidVuReport(BtStack *stack, uint64_t deviceAddress,
+		       uint8_t command, uint8_t reportId, const void *data,
+		       int length, int userMode);
+uintptr_t BtContinueHidInterrupt(BtConnection *connection, unsigned int argument);
+uintptr_t BtContinueHidControl(BtConnection *connection, unsigned int argument);
+int BtQueueHidTransfer(BtStack *stack, uint64_t deviceAddress, SceBtHidRequest *request);
+
+/* bt_hsp.c */
+uintptr_t BtHspOpened(BtConnection *connection);
+int BtReceiveHsp(BtConnection *connection, const char *packet, int length);
+
+/* bt_hsp_send.c */
+int BtSendHspResponse(BtConnection *connection, const char *format, ...);
+
+/* bt_image.c */
+int BtPushImage(BtConnection *connection, const char *path);
+int BtSetImageReceivePath(const char *path);
+int BtReceiveImage(BtConnection *connection, uint8_t *incoming, int length);
+
+/* bt_image_jpeg.c */
+int BtReadJpegDimensions(int *width, int *height, int *imageSize);
+
+/* bt_image_send.c */
+int BtReceiveImageResponse(BtConnection *connection, const uint8_t *packet, int length);
+
+/* bt_l2cap.c */
+int BtSendL2capConnectionResponse(BtConnection *connection, BtChannel *channel,
+				  int result, int status);
+int BtSendL2capConfigurationRequest(BtConnection *connection, BtChannel *channel);
+int BtSendL2capConnectionRequest(BtConnection *connection, BtChannel *channel);
+int BtSendL2capDisconnectRequest(BtConnection *connection, BtChannel *channel);
+int BtSendEchoRequest(BtConnection *connection, const void *data, unsigned int length);
+uintptr_t BtReplyPendingL2capConnection(BtConnection *connection);
+
+/* bt_l2cap_decode.c */
+void BtDispatchAclPacket(BtStack *stack, uint8_t *packet, int length);
+
+/* bt_l2cap_send.c */
+int BtSendL2capPacket(BtConnection *connection, int channelId, const char *format, ...);
+
+/* bt_lookup.c */
+BtConnection *BtFindConnection(BtStack *stack, unsigned char selector, uint64_t deviceAddress);
+BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector, int identifier);
+
+/* bt_network.c */
+int BtMatchNetworkMac(const unsigned char *bytes, uint64_t address);
+int BtProcessNetworkPacket(BtConnection *connection, const void *packet, int length);
+int BtInitializeNetwork(void);
+
+/* bt_network_checksum.c */
+unsigned int BtInternetChecksum(unsigned int initialSum, const uint16_t *words, int length);
+unsigned int BtTransportChecksum(unsigned int protocol,
+				 unsigned int sourceAddress,
+				 unsigned int destinationAddress,
+				 const void *packet, unsigned int length);
+
+/* bt_packet.c */
+uintptr_t BtNotifyPacketCompletion(BtConnection *connection, uint32_t profile,
+				   unsigned int argument);
+BtConnection *BtReleaseOutstandingAclPackets(BtConnection *connection);
+int BtInjectHidPacket(BtStack *stack, const void *buffer, unsigned int length, int userMode);
+
+/* bt_packet_backend.c */
+uintptr_t BtNotifyBnepDisconnected(BtConnection *connection);
+int BtNotifyBnepConnected(BtConnection *connection);
+uintptr_t BtContinueSerialPacket(BtConnection *connection);
+int BtReceiveNetworkPacket(BtStack *stack, uint64_t deviceAddress,
+			   const void *data, unsigned int length);
+int BtInitializeNetworkInterface(BtStack *stack, uint64_t localAddress);
+
+/* bt_platform.c */
+SceUID BtCreateThread(SceKernelThreadEntry entry, SceSize argumentSize,
+		     void *argument, const char *name, int priority);
+SceUID BtOpenFile(const char *path, int mode);
+int BtCloseFile(SceUID file);
+int BtReadFile(SceUID file, void *destination, SceSize length);
+int BtWriteFile(SceUID file, const void *source, SceSize length);
+int BtSeekFile(SceUID file, int offset, int whence);
+
+/* bt_power.c */
+int BtSystemEvent(int resume, int eventId, void *args, void *opt);
+uintptr_t BtAdvanceShutdown(BtStack *stack);
+int BtApplyConfiguration(BtStack *stack);
+void BtConfigureAsynchronously(void *argument);
+uintptr_t BtCompleteConfiguration(BtStack *stack);
+
+/* bt_profile_adapters.c */
+int BtInitializeImagingSession(BtConnection *connection, BtChannel *channel, unsigned int profile);
+int BtInitializeImagingProfile(BtConnection *connection, BtChannel *channel, unsigned int profile);
+int BtInitializeHsp(BtConnection *connection, BtChannel *channel);
+int BtInitializeSerialPort(BtConnection *connection, BtChannel *channel);
+
+/* bt_queue_init.c */
+int BtInitializeQueues(BtStack *stack);
+
+/* bt_registry.c */
+/* name unknown; the final argument selects user-buffer copying */
+int GetRegisteredInfo(uint64_t deviceAddress, void *buffer, int maxCount, int userMode);
+uint64_t BtRecordInquiryProgress(BtStack *stack);
+
+/* bt_rfcomm.c */
+int BtSendRfcommFrame(BtConnection *connection, BtChannel *channel, unsigned int address, ...);
+int BtInitializeRfcomm(BtConnection *connection, BtChannel *channel,
+		       unsigned int profile, unsigned int dlci);
+
+/* bt_rfcomm_receive.c */
+int BtSendRfcommData(BtConnection *connection, unsigned int dlci,
+		     const void *data, int length, int userMode);
+int BtSendSerialData(BtConnection *connection, const void *data, unsigned int length);
+int BtReceiveSerialPort(BtConnection *connection, const uint8_t *packet, int length);
+
+/* bt_sco_transfer.c */
+int BtSendScoPacket(BtConnection *connection, const void *data, int length, int userMode);
+
+/* bt_sdp_channel.c */
+int BtInitializeSdpChannel(BtConnection *connection, BtChannel *channel);
+
+/* bt_sync.c */
+int BtCreateSignal(BtSignal *signal, unsigned int events, const char *name);
+int BtDeleteSignal(BtSignal *signal);
+int BtSetSignal(BtSignal *signal);
+int BtWaitSignal(BtSignal *signal, uint32_t timeout);
+int BtLockTransport(void);
+
+/* bt_timers.c */
+unsigned int BtCancelTimer(unsigned int id);
+int BtQueueTimer(unsigned int *id, void (*callback)(void *argument),
+		 void *argument, SceInt64 delay);
+int BtInitializeTimers(const char *threadName);
+
+/* bt_wire.c */
+void BtWriteLe16(uint8_t *destination, unsigned int value);
+void BtWriteLe24(uint8_t *destination, unsigned int value);
+int BtReadBe16(const uint8_t *source);
+uint32_t BtReadBe32(const uint8_t *source);
+int BtReadLe16(const uint8_t *source);
+int BtReadLe24(const uint8_t *source);
+int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
+int BtVPack(uint8_t *destination, int remaining, const char *format, va_list arguments);
+int BtPack(uint8_t *destination, int remaining, const char *format, ...);
 
 #endif

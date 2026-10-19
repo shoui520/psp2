@@ -2,15 +2,6 @@
 #include <stdarg.h>
 #include "bt_internal.h"
 
-BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector,
-			 int identifier);
-int BtSendL2capConnectionRequest(BtConnection *connection, BtChannel *channel);
-
-int BtSendL2capPacket(BtConnection *connection, int channelId,
-		     const char *format, ...);
-int BtDisconnectConnection(BtStack *stack, BtConnection *connection);
-int BtSendL2capDisconnectRequest(BtConnection *connection, BtChannel *channel);
-
 /* Control is the first unnamed word; only UIH frames have payload arguments. */
 int BtSendRfcommFrame(BtConnection *connection, BtChannel *channel,
 		      unsigned int address, ...)

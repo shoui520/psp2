@@ -4,9 +4,6 @@
 #include <regmgr/regmgr.h>
 #include "bt_internal.h"
 
-uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
-			unsigned int argument, uint64_t deviceAddress);
-
 int BtWriteRegisteredDevices(BtStack *stack, int notifyChange)
 {
 	BtDevice *device = stack->devices;
