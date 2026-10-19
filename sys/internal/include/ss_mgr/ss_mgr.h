@@ -6,6 +6,14 @@
 #include <sysmem/memblock.h>
 #include <sysmem/pmmgr.h>
 
+/* the SBL facility's general errors (names unknown) */
+#define SCE_SBL_ERROR_UNSUPPORTED		0x800f0002
+#define SCE_SBL_ERROR_NO_MEMORY			0x800f000c
+#define SCE_SBL_ERROR_INVALID_ARGUMENT		0x800f0016
+#define SCE_SBL_ERROR_BAD_MAGIC			0x800f0024
+#define SCE_SBL_ERROR_MISMATCH			0x800f0027	/* a hash differs */
+#define SCE_SBL_ERROR_BAD_VERSION		0x800f0037
+
 /*
  * The console's identifiers (the henkaku wiki's names; no Sony name found). The console ID
  * (IDPS) leads with the PS code's fields; the chassis check's top six bits are its factory code.

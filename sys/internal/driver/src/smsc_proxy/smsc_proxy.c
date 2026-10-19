@@ -45,13 +45,6 @@
 #define SMC_STOP		0x13b
 #define SMC_EXECUTE_F00D	0x13c
 
-#define SCE_SBL_ERROR_NO_MEMORY		0x800F040C
-#define SCE_SBL_ERROR_INVALID_ARGUMENT	0x800F0416
-#define SCE_SBL_ERROR_NOT_SUPPORTED	0x800F0425
-#define SCE_SBL_ERROR_NOT_READY		0x800F0426
-#define SCE_SBL_ERROR_NO_SESSION	0x800F042B
-#define SCE_SBL_ERROR_BUSY		0x800F042E
-
 /* SessionLookup status */
 enum {
 	LOOKUP_OK,
@@ -194,7 +187,7 @@ static int softIntrHandler(int intrCode, void *userCtx)
 
 	if (handler == NULL) {
 		ret = SmcCall(handle, channel, msg->ack, 0, SMC_INTR_DONE);
-		if (ret == SCE_SBL_ERROR_NO_SESSION) {
+		if (ret == SCE_SBL_ERROR_SMSCHED_NO_REQUEST) {
 			if (flags & MSG_HANDLER_ONLY)
 				SCE_PANIC(1081);
 			return -1;
@@ -204,12 +197,12 @@ static int softIntrHandler(int intrCode, void *userCtx)
 			handler(msg->id, channel, arg, a, b);
 		if (!(flags & MSG_HANDLER_ONLY)) {
 			ret = SmcCall(handle, channel, msg->ack, 0, SMC_INTR_DONE);
-			if (ret == SCE_SBL_ERROR_NO_SESSION)
+			if (ret == SCE_SBL_ERROR_SMSCHED_NO_REQUEST)
 				return -1;
 		} else {
 			handler(msg->id, channel, arg, 0, 0);
 			ret = SmcCall(handle, channel, msg->ack, 0, SMC_INTR_DONE);
-			if (ret == SCE_SBL_ERROR_NO_SESSION)
+			if (ret == SCE_SBL_ERROR_SMSCHED_NO_REQUEST)
 				SCE_PANIC(1081);
 		}
 	}
@@ -225,13 +218,13 @@ static int SessionCall(SceUInt32 command, SceUID id, int channel, SceUInt32 valu
 	int status;
 
 	if (s_state != STATE_READY)
-		return SCE_SBL_ERROR_NOT_READY;
+		return SCE_SBL_ERROR_SMSCHED_NOT_READY;
 	if ((unsigned int)(channel - 1) >= 3)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 
 	s = SessionLookup(id, &status);
 	if (s == NULL)
-		return SCE_SBL_ERROR_NO_SESSION;
+		return SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
 	return SmcCall(s->handle, channel, value, 0, command);
 }
 
@@ -243,13 +236,13 @@ static int accessMailbox(SceUInt32 command, SceUID id, int channel, SceUInt32 *v
 	int status, index, ret, result;
 
 	if (s_state != STATE_READY)
-		return SCE_SBL_ERROR_NOT_READY;
+		return SCE_SBL_ERROR_SMSCHED_NOT_READY;
 	if ((unsigned int)(channel - 1) >= 3)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 
 	s = SessionLookup(id, &status);
 	if (s == NULL)
-		return SCE_SBL_ERROR_NO_SESSION;
+		return SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
 
 	index = sceSblTzsBridgeAllocArgArea(4, (void **)&buf, &size);
 	if (index < 0)
@@ -318,7 +311,7 @@ int sceSblSmSchedProxyModuleStart(SceSize args, void *argp)
 
 	s_session = sceKernelAllocHeapMemory(s_heap, SESSION_COUNT * sizeof(Session));
 	if (s_session == NULL)
-		return SCE_SBL_ERROR_NO_MEMORY;
+		return SCE_SBL_ERROR_SMSCHED_NO_MEMORY;
 	for (i = 0; i < SESSION_COUNT; i++)
 		s_session[i].used = 0;
 
@@ -383,11 +376,11 @@ int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUIn
 	tls = sceSyscallEnter();
 	if (s_state != STATE_READY) {
 		sceSyscallLeave(tls);
-		return SCE_SBL_ERROR_NOT_READY;
+		return SCE_SBL_ERROR_SMSCHED_NOT_READY;
 	}
 	if (id == NULL) {
 		sceSyscallLeave(tls);
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	}
 
 	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
@@ -397,7 +390,7 @@ int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUIn
 	if (i == SESSION_COUNT) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
 		sceSyscallLeave(tls);
-		return SCE_SBL_ERROR_NO_MEMORY;
+		return SCE_SBL_ERROR_SMSCHED_NO_MEMORY;
 	}
 	s = &s_session[i];
 	s->used = 1;
@@ -426,7 +419,7 @@ int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUIn
 	s->mutex = ret;
 	if (prev == -2) {
 		sceSyscallLeave(tls);
-		return SCE_SBL_ERROR_NO_MEMORY;
+		return SCE_SBL_ERROR_SMSCHED_NO_MEMORY;
 	}
 	*id = newId;
 
@@ -475,7 +468,7 @@ fail_buffer:
 fail_session:
 	SessionFree(newId);
 	sceSyscallLeave(tls);
-	return SCE_SBL_ERROR_NO_MEMORY;
+	return SCE_SBL_ERROR_SMSCHED_NO_MEMORY;
 }
 
 int sceSblSmSchedProxyWait(SceUID id, SceUInt32 *result)
@@ -488,7 +481,7 @@ int sceSblSmSchedProxyWait(SceUID id, SceUInt32 *result)
 	tls = sceSyscallEnter();
 	if (s_state != STATE_READY) {
 		sceSyscallLeave(tls);
-		return SCE_SBL_ERROR_NOT_READY;
+		return SCE_SBL_ERROR_SMSCHED_NOT_READY;
 	}
 	if (result == NULL)
 		goto invalid;
@@ -496,7 +489,7 @@ int sceSblSmSchedProxyWait(SceUID id, SceUInt32 *result)
 	s = SessionLookup(id, &status);
 	if (s == NULL) {
 		sceSyscallLeave(tls);
-		return SCE_SBL_ERROR_NO_SESSION;
+		return SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
 	}
 	if (sceKernelTryLockMutex(s->mutex, 1) < 0)
 		goto invalid;
@@ -532,7 +525,7 @@ out:
 
 invalid:
 	sceSyscallLeave(tls);
-	return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 }
 
 int sceSblSmSchedProxyGetStatus(SceUID id, SceUInt32 *status)
@@ -545,16 +538,16 @@ int sceSblSmSchedProxyGetStatus(SceUID id, SceUInt32 *status)
 	tls = sceSyscallEnter();
 	if (s_state != STATE_READY) {
 		sceSyscallLeave(tls);
-		return SCE_SBL_ERROR_NOT_READY;
+		return SCE_SBL_ERROR_SMSCHED_NOT_READY;
 	}
 	if (status == NULL) {
 		sceSyscallLeave(tls);
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	}
 	s = SessionLookup(id, &st);
 	if (s == NULL) {
 		sceSyscallLeave(tls);
-		return SCE_SBL_ERROR_NO_SESSION;
+		return SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
 	}
 
 	index = sceSblTzsBridgeAllocArgArea(8, (void **)&buf, &size);
@@ -588,11 +581,11 @@ int SceSblSmSchedProxyForKernel_DE4EAC3C(SceUID id)
 	int status, ret;
 
 	if (s_state != STATE_READY) {
-		ret = SCE_SBL_ERROR_NOT_READY;
+		ret = SCE_SBL_ERROR_SMSCHED_NOT_READY;
 	} else {
 		s = SessionLookup(id, &status);
 		if (s == NULL)
-			ret = SCE_SBL_ERROR_NO_SESSION;
+			ret = SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
 		else
 			ret = SmcCall(s->handle, 0, 0, 0, SMC_CHANGE_F00D_STATUS);
 	}
@@ -603,13 +596,13 @@ int SceSblSmSchedProxyForKernel_DE4EAC3C(SceUID id)
 int SceSblSmSchedProxyForKernel_984EC9D1(void)
 {
 	sceSyscallLeave(sceSyscallEnter());
-	return SCE_SBL_ERROR_NOT_SUPPORTED;
+	return SCE_SBL_ERROR_SMSCHED_NOT_SUPPORTED;
 }
 
 int SceSblSmSchedProxyForKernel_1DFC8624(void)
 {
 	sceSyscallLeave(sceSyscallEnter());
-	return SCE_SBL_ERROR_NOT_SUPPORTED;
+	return SCE_SBL_ERROR_SMSCHED_NOT_SUPPORTED;
 }
 
 int SceSblSmSchedProxyForKernel_723B382F(SceUID id, int channel, SceUInt32 value)
@@ -667,11 +660,11 @@ int sceSblSmSchedProxyRegisterIntrHandler(SceUID id, int channel,
 	int state, status, ret;
 
 	if (s_state != STATE_READY) {
-		ret = SCE_SBL_ERROR_NOT_READY;
+		ret = SCE_SBL_ERROR_SMSCHED_NOT_READY;
 		goto out;
 	}
 	if ((unsigned int)channel >= CHANNEL_COUNT || handler == NULL) {
-		ret = SCE_SBL_ERROR_INVALID_ARGUMENT;
+		ret = SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 		goto out;
 	}
 
@@ -679,13 +672,13 @@ int sceSblSmSchedProxyRegisterIntrHandler(SceUID id, int channel,
 	s = SessionLookup(id, &status);
 	if (s == NULL) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
-		ret = SCE_SBL_ERROR_NO_SESSION;
+		ret = SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
 		goto out;
 	}
 	ch = &s->channel[channel];
 	if (ch->handler != NULL) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
-		ret = SCE_SBL_ERROR_BUSY;
+		ret = SCE_SBL_ERROR_SMSCHED_BUSY;
 		goto out;
 	}
 	ch->handler = handler;
@@ -711,11 +704,11 @@ int SceSblSmSchedProxyForKernel_85EDA5FC(SceUID id, int channel)
 	int state, status, ret;
 
 	if (s_state != STATE_READY) {
-		ret = SCE_SBL_ERROR_NOT_READY;
+		ret = SCE_SBL_ERROR_SMSCHED_NOT_READY;
 		goto out;
 	}
 	if ((unsigned int)channel >= CHANNEL_COUNT) {
-		ret = SCE_SBL_ERROR_INVALID_ARGUMENT;
+		ret = SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 		goto out;
 	}
 
@@ -723,7 +716,7 @@ int SceSblSmSchedProxyForKernel_85EDA5FC(SceUID id, int channel)
 	s = SessionLookup(id, &status);
 	if (s == NULL) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
-		ret = SCE_SBL_ERROR_NO_SESSION;
+		ret = SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
 		goto out;
 	}
 	s->channel[channel].handler = NULL;
@@ -743,7 +736,7 @@ int SceSblSmSchedProxyForKernel_7894B6F0(SceUInt32 a, SceUInt32 b, SceUInt32 c, 
 	if (s_state == STATE_READY)
 		ret = SmcCall(a, b, c, d, SMC_EXECUTE_F00D);
 	else
-		ret = SCE_SBL_ERROR_NOT_READY;
+		ret = SCE_SBL_ERROR_SMSCHED_NOT_READY;
 	sceSyscallLeave(tls);
 	return ret;
 }

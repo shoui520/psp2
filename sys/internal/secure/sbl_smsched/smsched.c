@@ -41,7 +41,7 @@ int sceSblSmSchedEnableIntr(int mailbox)
 		return sceKernelEnableIntr(SMSCHED_INTR_CRY2ARM0 + 2);
 	else if (mailbox == 3)
 		return sceKernelEnableIntr(SMSCHED_INTR_CRY2ARM0 + 3);
-	return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 }
 
 int sceSblSmSchedRegisterIntrHandlerInternal(SceUInt32 id, SceUInt32 mailbox,
@@ -51,16 +51,16 @@ int sceSblSmSchedRegisterIntrHandlerInternal(SceUInt32 id, SceUInt32 mailbox,
 	int intr, ret;
 
 	if (s_initialized != 1)
-		return SCE_SBL_ERROR_NOT_READY;
+		return SCE_SBL_ERROR_SMSCHED_NOT_READY;
 	if (mailbox > 3)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	request = SmschedGetRequest(id);
 	if (request == NULL) {
-		ret = SCE_SBL_ERROR_NO_REQUEST;
+		ret = SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
 	} else {
 		if (request->intr[mailbox].handler != NULL) {
-			ret = SCE_SBL_ERROR_BUSY;
+			ret = SCE_SBL_ERROR_SMSCHED_BUSY;
 		} else {
 			request->intr[mailbox].handler = handler;
 			request->intr[mailbox].arg = arg;
@@ -91,7 +91,7 @@ int sceSblSmSchedDisableIntr(int mailbox)
 		return sceKernelDisableIntr(SMSCHED_INTR_CRY2ARM0 + 2);
 	else if (mailbox == 3)
 		return sceKernelDisableIntr(SMSCHED_INTR_CRY2ARM0 + 3);
-	return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 }
 
 /* name unknown: tell the Non-secure kernel through an interrupt area and
@@ -103,7 +103,7 @@ int sendIntrMessage(const SmschedIntrMessage *message)
 	int index, ret, mailbox;
 
 	if (message->id == -1)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	index = sceSblTzsBridgeAllocIntrArea(sizeof(*area), (void **)&area, &areaSize);
 	if (index < 0)
 		return 0;
@@ -189,13 +189,13 @@ int sceSblSmSchedReleaseIntrHandlerInternal(SceUInt32 id, SceUInt32 mailbox)
 	int intr, ret;
 
 	if (s_initialized != 1)
-		return SCE_SBL_ERROR_NOT_READY;
+		return SCE_SBL_ERROR_SMSCHED_NOT_READY;
 	if (mailbox > 3)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	request = SmschedGetRequest(id);
 	if (request == NULL) {
-		ret = SCE_SBL_ERROR_NO_REQUEST;
+		ret = SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
 	} else {
 		request->intr[mailbox].handler = NULL;
 		request->intr[mailbox].arg = NULL;
@@ -261,7 +261,7 @@ int ackCry2Arm(int mailbox, SceUInt32 bits, SmschedRequest *request)
 			return 0;
 		}
 	}
-	return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 }
 
 /* name unknown: s_lock dropped until the request leaves state (the Cmep's
@@ -301,14 +301,14 @@ int updateMailbox(SceUInt32 id, int mailbox, SceUInt32 value, SmschedMailboxOp o
 	int intr, ret;
 
 	if (s_initialized != 1)
-		return SCE_SBL_ERROR_NOT_READY;
+		return SCE_SBL_ERROR_SMSCHED_NOT_READY;
 	if (mailbox < 1 || mailbox > 3)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	request = SmschedGetRequest(id);
 	if (request == NULL) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
-		return SCE_SBL_ERROR_NO_REQUEST;
+		return SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
 	}
 	sceKernelSpinlockLowLock(&request->lock);
 	state = request->status.state;
@@ -316,7 +316,7 @@ int updateMailbox(SceUInt32 id, int mailbox, SceUInt32 value, SmschedMailboxOp o
 	case SMSCHED_STATE_SUSPENDING:
 		waitStateChange(SMSCHED_STATE_SUSPENDING, &intr, request, &state);
 		if (state != SMSCHED_STATE_READY) {
-			ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+			ret = SCE_SBL_ERROR_SMSCHED_ILLEGAL_STATE;
 			break;
 		}
 		/* fall through */
@@ -328,7 +328,7 @@ int updateMailbox(SceUInt32 id, int mailbox, SceUInt32 value, SmschedMailboxOp o
 	case SMSCHED_STATE_STARTING:
 		waitStateChange(SMSCHED_STATE_STARTING, &intr, request, &state);
 		if (state != SMSCHED_STATE_RUNNING) {
-			ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+			ret = SCE_SBL_ERROR_SMSCHED_ILLEGAL_STATE;
 			break;
 		}
 		/* fall through */
@@ -339,7 +339,7 @@ int updateMailbox(SceUInt32 id, int mailbox, SceUInt32 value, SmschedMailboxOp o
 			SCE_PANIC(2663);
 		break;
 	default:
-		ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+		ret = SCE_SBL_ERROR_SMSCHED_ILLEGAL_STATE;
 		break;
 	}
 	sceKernelSpinlockLowUnlock(&request->lock);
@@ -373,14 +373,14 @@ int accessMailbox(SceUInt32 id, int mailbox, SceUInt32 *value, SmschedMailboxRea
 	int intr, ret;
 
 	if (s_initialized != 1)
-		return SCE_SBL_ERROR_NOT_READY;
+		return SCE_SBL_ERROR_SMSCHED_NOT_READY;
 	if (mailbox < 1 || mailbox > 3)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	request = SmschedGetRequest(id);
 	if (request == NULL) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
-		return SCE_SBL_ERROR_NO_REQUEST;
+		return SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
 	}
 	sceKernelSpinlockLowLock(&request->lock);
 	state = request->status.state;
@@ -388,7 +388,7 @@ int accessMailbox(SceUInt32 id, int mailbox, SceUInt32 *value, SmschedMailboxRea
 	case SMSCHED_STATE_SUSPENDING:
 		waitStateChange(SMSCHED_STATE_SUSPENDING, &intr, request, &state);
 		if (state != SMSCHED_STATE_READY) {
-			ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+			ret = SCE_SBL_ERROR_SMSCHED_ILLEGAL_STATE;
 			break;
 		}
 		/* fall through */
@@ -400,7 +400,7 @@ int accessMailbox(SceUInt32 id, int mailbox, SceUInt32 *value, SmschedMailboxRea
 	case SMSCHED_STATE_STARTING:
 		waitStateChange(SMSCHED_STATE_STARTING, &intr, request, &state);
 		if (state != SMSCHED_STATE_RUNNING) {
-			ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+			ret = SCE_SBL_ERROR_SMSCHED_ILLEGAL_STATE;
 			break;
 		}
 		/* fall through */
@@ -411,7 +411,7 @@ int accessMailbox(SceUInt32 id, int mailbox, SceUInt32 *value, SmschedMailboxRea
 			SCE_PANIC(2785);
 		break;
 	default:
-		ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+		ret = SCE_SBL_ERROR_SMSCHED_ILLEGAL_STATE;
 		break;
 	}
 	sceKernelSpinlockLowUnlock(&request->lock);
@@ -433,7 +433,7 @@ int sceSblSmSchedReadArm2CryMonitorCall(SceUInt32 id, int mailbox, unsigned int 
 #if FW_SINCE(0x04000000)
 		SCE_DBG_ASSERT_FAIL(1053);
 #endif
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	}
 	ret = accessMailbox(id, mailbox, &value, readArm2Cry);
 	*area = value;
@@ -457,7 +457,7 @@ int sceSblSmSchedReadCry2ArmMonitorCall(SceUInt32 id, int mailbox, unsigned int 
 #if FW_SINCE(0x04000000)
 		SCE_DBG_ASSERT_FAIL(1114);
 #endif
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	}
 	ret = accessMailbox(id, mailbox, &value, readCry2Arm);
 	*area = value;
@@ -471,7 +471,7 @@ int sceSblSmSchedReadCry2ArmMonitorCall(SceUInt32 id, int mailbox, unsigned int 
 int sceSblSmSchedGenerateMonitorIntr(int intr)
 {
 	if (s_initialized != 1)
-		return SCE_SBL_ERROR_NOT_READY;
+		return SCE_SBL_ERROR_SMSCHED_NOT_READY;
 	if (intr == 0)
 		return smsSecureKernelProxyGenerateIntr0();
 	else if (intr == 1)
@@ -482,7 +482,7 @@ int sceSblSmSchedGenerateMonitorIntr(int intr)
 		return smsSecureKernelProxyGenerateIntr3();
 	else if (intr == 4)
 		return smsSecureKernelProxyGenerateIntr4();
-	return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 }
 
 /* name unknown: set bits of an Arm2Cry mailbox */
@@ -511,7 +511,7 @@ int setArm2Cry(int mailbox, SceUInt32 bits, SmschedRequest *request)
 			return 0;
 		}
 	}
-	return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 }
 
 /* name unknown: read an Arm2Cry mailbox */
@@ -540,7 +540,7 @@ int readArm2Cry(int mailbox, SceUInt32 *value, SmschedRequest *request)
 			return 0;
 		}
 	}
-	return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 }
 
 /* name unknown: clear bits of an Arm2Cry mailbox */
@@ -569,7 +569,7 @@ int clearArm2Cry(int mailbox, SceUInt32 bits, SmschedRequest *request)
 			return 0;
 		}
 	}
-	return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 }
 
 void disableMbox123(void)
@@ -639,7 +639,7 @@ int readCry2Arm(int mailbox, SceUInt32 *value, SmschedRequest *request)
 			return 0;
 		}
 	}
-	return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 }
 
 /* name unknown: the saved context dropped; the module runs anew */
@@ -706,7 +706,7 @@ int deleteAllRequest(int onlyProxied)
 		case SMSCHED_STATE_STARTING:
 			waitStateChange(SMSCHED_STATE_STARTING, &intr, running, &state);
 			if (state != SMSCHED_STATE_RUNNING) {
-				ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+				ret = SCE_SBL_ERROR_SMSCHED_ILLEGAL_STATE;
 				goto out;
 			}
 			/* fall through */
@@ -720,7 +720,7 @@ int deleteAllRequest(int onlyProxied)
 		case SMSCHED_STATE_SUSPENDING:
 			waitStateChange(SMSCHED_STATE_SUSPENDING, &intr, running, &state);
 			if (state != SMSCHED_STATE_READY) {
-				ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+				ret = SCE_SBL_ERROR_SMSCHED_ILLEGAL_STATE;
 				goto out;
 			}
 			ret = atomicCompareAndSet8(&running->waitFlag, 0, 1);
@@ -737,7 +737,7 @@ int deleteAllRequest(int onlyProxied)
 		case SMSCHED_STATE_EXITING:
 			waitStateChange(state, &intr, running, &state);
 			if (state < SMSCHED_STATE_EXITED || state > SMSCHED_STATE_STOPPED) {
-				ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+				ret = SCE_SBL_ERROR_SMSCHED_ILLEGAL_STATE;
 				goto out;
 			}
 			ret = atomicCompareAndSet8(&running->waitFlag, 0, 1);
@@ -750,7 +750,7 @@ int deleteAllRequest(int onlyProxied)
 			break;
 		default:
 			SCE_PANIC(657);
-			ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+			ret = SCE_SBL_ERROR_SMSCHED_ILLEGAL_STATE;
 			goto out;
 		}
 	}
@@ -1232,28 +1232,28 @@ int sceSblSmSchedInvokeInternal(SceUInt32 priority, uintptr_t selfPA, SceUInt32 
 	int intr;
 
 	if (s_initialized != 1)
-		return SCE_SBL_ERROR_NOT_READY;
+		return SCE_SBL_ERROR_SMSCHED_NOT_READY;
 	if (priority > 1)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	if (invokeArg == NULL)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	if (id == NULL)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	switch (invokeArg->selfType & SMSCHED_INVOKE_SELF_MASK) {
 	case SMSCHED_INVOKE_SELF_PA:
 		if (selfPA == 0)
-			return SCE_SBL_ERROR_INVALID_ARGUMENT;
+			return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 		break;
 	case SMSCHED_INVOKE_SELF_INSTANCE:
 		if (selfPA != 0)
-			return SCE_SBL_ERROR_INVALID_ARGUMENT;
+			return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 		if (arg1 != 0)
-			return SCE_SBL_ERROR_INVALID_ARGUMENT;
+			return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 		selfPA = s_instance->selfPA;
 		arg1 = 1;
 		break;
 	default:
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	}
 
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
@@ -1333,7 +1333,7 @@ int sceSblSmSchedInvokeInternal(SceUInt32 priority, uintptr_t selfPA, SceUInt32 
 	return 0;
 nomem:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
-	return SCE_SBL_ERROR_NO_MEMORY;
+	return SCE_SBL_ERROR_SMSCHED_NO_MEMORY;
 }
 
 /* name unknown: a PA the Non-secure kernel may pass (0 for none): DRAM above
@@ -1369,10 +1369,10 @@ int sceSblSmSchedInvokeMonitorCall(SceUInt32 priority, uintptr_t selfPA, SceUInt
 #if FW_SINCE(0x04000000)
 		SCE_DBG_ASSERT_FAIL(860);
 #endif
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	}
 	if (!SmschedIsNonSecurePA(selfPA))
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	ret = sceSblSmSchedInvokeInternal(priority, selfPA, arg1, area->arg2Low, area->arg2High,
 					  area->arg3, area->arg4, area->proxyId,
 					  &area->invokeArg, &area->requestId);
@@ -1412,7 +1412,7 @@ int sceSblSmSchedIntrDoneMonitorCall(SceUInt32 id, int mailbox, unsigned int ind
 		goto out;
 	request = SmschedGetRequest(id);
 	if (request == NULL) {
-		ret = SCE_SBL_ERROR_NO_REQUEST;
+		ret = SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
 		goto out;
 	}
 	if (SmschedStateOnCmep(request->status.state)) {
@@ -1434,16 +1434,16 @@ int sceSblSmSchedReserved131MonitorCall(SceUInt32 arg0, uintptr_t pa)
 {
 	(void)arg0;
 	if (!SmschedIsNonSecurePA(pa))
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
-	return SCE_SBL_ERROR_NOT_SUPPORTED;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
+	return SCE_SBL_ERROR_SMSCHED_NOT_SUPPORTED;
 }
 
 /* smc 0x132, reserved: the same */
 int sceSblSmSchedReserved132MonitorCall(uintptr_t pa)
 {
 	if (!SmschedIsNonSecurePA(pa))
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
-	return SCE_SBL_ERROR_NOT_SUPPORTED;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
+	return SCE_SBL_ERROR_SMSCHED_NOT_SUPPORTED;
 }
 
 int sceSblSmSchedWaitMonitorCall(SceUInt32 id, unsigned int index);
@@ -1505,7 +1505,7 @@ int sceSblSmSchedModuleStart(SceSize args, void *argp)
 	rvkSize = kblParam->prog_rvk.size;
 	kprxAuthSm = kblParam->kprx_auth_sm;
 	if (s_initialized) {
-		ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+		ret = SCE_SBL_ERROR_SMSCHED_ILLEGAL_STATE;
 		goto fail;
 	}
 
@@ -1518,7 +1518,7 @@ int sceSblSmSchedModuleStart(SceSize args, void *argp)
 	}
 	instance = sceKernelAllocHeapMemory(heap, sizeof(*instance));
 	if (instance == NULL) {
-		ret = SCE_SBL_ERROR_NO_MEMORY;
+		ret = SCE_SBL_ERROR_SMSCHED_NO_MEMORY;
 		sceKernelDeleteHeap(heap);
 		goto fail;
 	}
@@ -1633,7 +1633,7 @@ int sceSblSmSchedModuleStart(SceSize args, void *argp)
 	return ret;
 
 nomem:
-	ret = SCE_SBL_ERROR_NO_MEMORY;
+	ret = SCE_SBL_ERROR_SMSCHED_NO_MEMORY;
 fail:
 	sceSblSmSchedFini(0);
 	return ret;
@@ -1661,14 +1661,14 @@ int sceSblSmSchedWait(SceUInt32 id, SmschedIntrStatus *status)
 	int intr;
 
 	if (s_initialized != 1)
-		return SCE_SBL_ERROR_NOT_READY;
+		return SCE_SBL_ERROR_SMSCHED_NOT_READY;
 	if (status == NULL)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	request = SmschedGetRequest(id);
 	if (request == NULL)
-		return SCE_SBL_ERROR_NO_REQUEST;
+		return SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
 	if (atomicCompareAndSet8(&request->waitFlag, 0, 1) != 0)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	state = request->status.state;
 	switch (state) {
@@ -1688,7 +1688,7 @@ int sceSblSmSchedWait(SceUInt32 id, SmschedIntrStatus *status)
 		if (state != SMSCHED_STATE_EXITED && state != SMSCHED_STATE_KILLED &&
 		    state != SMSCHED_STATE_STOPPED) {
 			SCE_PANIC(289);
-			return SCE_SBL_ERROR_NOT_READY;
+			return SCE_SBL_ERROR_SMSCHED_NOT_READY;
 		}
 		/* fall through */
 	case SMSCHED_STATE_EXITED:
@@ -1718,7 +1718,7 @@ int sceSblSmSchedWaitMonitorCall(SceUInt32 id, unsigned int index)
 #if FW_SINCE(0x04000000)
 		SCE_DBG_ASSERT_FAIL(923);
 #endif
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	}
 	ret = sceSblSmSchedWait(id, &status);
 	*area = status;
@@ -1735,13 +1735,13 @@ int sceSblSmSchedGetStatus(SceUInt32 id, SmschedIntrStatus *status)
 	int intr, ret;
 
 	if (s_initialized != 1)
-		return SCE_SBL_ERROR_NOT_READY;
+		return SCE_SBL_ERROR_SMSCHED_NOT_READY;
 	if (status == NULL)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	request = SmschedGetRequest(id);
 	if (request == NULL) {
-		ret = SCE_SBL_ERROR_NO_REQUEST;
+		ret = SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
 	} else {
 		*status = request->status;
 		ret = 0;
@@ -1764,7 +1764,7 @@ int sceSblSmSchedGetStatusMonitorCall(SceUInt32 id, unsigned int index)
 #if FW_SINCE(0x04000000)
 		SCE_DBG_ASSERT_FAIL(963);
 #endif
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	}
 	ret = sceSblSmSchedGetStatus(id, &status);
 	*area = status;
@@ -1789,7 +1789,7 @@ int sceSblSmSchedKill(SceUInt32 id)
 	int intr, ret;
 
 	if (s_initialized != 1)
-		return SCE_SBL_ERROR_NOT_READY;
+		return SCE_SBL_ERROR_SMSCHED_NOT_READY;
 	message.channel = 0;
 	message.id = -1;
 	message.flags = 0;
@@ -1801,7 +1801,7 @@ int sceSblSmSchedKill(SceUInt32 id)
 	request = SmschedGetRequest(id);
 	if (request == NULL) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
-		return SCE_SBL_ERROR_NO_REQUEST;
+		return SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
 	}
 	sceKernelSpinlockLowLock(&request->lock);
 	state = request->status.state;
@@ -1840,7 +1840,7 @@ int sceSblSmSchedKill(SceUInt32 id)
 	default:
 		handler = NULL;
 		arg = NULL;
-		ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+		ret = SCE_SBL_ERROR_SMSCHED_ILLEGAL_STATE;
 		break;
 	}
 	if (message.id != -1) {
@@ -1856,7 +1856,7 @@ int sceSblSmSchedKill(SceUInt32 id)
 	return ret;
 
 illegal:
-	ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+	ret = SCE_SBL_ERROR_SMSCHED_ILLEGAL_STATE;
 unlock:
 	sceKernelSpinlockLowUnlock(&request->lock);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);

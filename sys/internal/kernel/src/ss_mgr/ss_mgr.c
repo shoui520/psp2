@@ -37,9 +37,6 @@ typedef struct SsPortabilityRequest {
 
 _Static_assert(sizeof(SsPortabilityRequest) == 0x5c, "Portability request ABI");
 
-#define SS_ERROR_INVALID_ARGUMENT	0x800F0016
-#define SS_ERROR_NO_MEMORY		0x800F000C
-
 #define SS_NVS_AREA_MAX			5
 #define SS_NVS_CHUNK			0x10
 #define SS_NVS_PROTECTED_END		0x400	/* below: not reachable through areas */
@@ -139,7 +136,7 @@ int sceSblSsInfraAllocatePARangeVector(void *addr, SceSize size, SceUID heap,
 	ranges = sceKernelAllocHeapMemoryWithOption(heap,
 			(vector->total * sizeof(*ranges) + 0x1f) & ~0x1f, &opt);
 	if (!ranges)
-		return SS_ERROR_NO_MEMORY;
+		return SCE_SBL_ERROR_NO_MEMORY;
 
 	vector->pRanges = ranges;
 	vector->capacity = vector->total;
@@ -150,7 +147,7 @@ int sceSblSsInfraAllocatePARangeVector(void *addr, SceSize size, SceUID heap,
 
 	if (vector->nDataInVector != vector->total) {
 		SCE_DBG_ASSERT(0, 145);
-		return SS_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	}
 	return 0;
 }
@@ -160,7 +157,7 @@ SS_MGR_CORE(SceSblSsMgrForDriver_C38D0CEA)
 int SceSblSsMgrForDriver_C38D0CEA(SceUID heap, SceKernelPAVector *vector)
 {
 	if (sceKernelFreeHeapMemory(heap, vector->pRanges) != 0)
-		return SS_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	return 0;
 }
 
@@ -172,26 +169,26 @@ int sceSblSsGetNvsData(uint32_t area, void *buffer, SceSize size)
 	int ret;
 
 	if ((area > SS_NVS_AREA_MAX) | (buffer == NULL))
-		return SS_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 
 	offset = ssNvsAreas[area].offset;
 	remaining = ssNvsAreas[area].size;
 	if (offset < SS_NVS_PROTECTED_END) {
 		SCE_DBG_ASSERT_FUNC(0, 188, "sceSblSsGetNvsData");
-		return SS_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	}
 
 	if (!SceSblAIMgrForDriver_274663A0() && !SceSblAIMgrForDriver_3B638885()) {
 		if (offset >= SS_NVS_RETAIL_END)
-			return SS_ERROR_INVALID_ARGUMENT;
+			return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	} else if (offset >= SS_NVS_TOOL_END) {
-		return SS_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	}
 
 	if (remaining > size)
-		return SS_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	if (size != 4 && size - 1 > 1 && size != 8 && size != 0x10 && size != 0x20)
-		return SS_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 
 	SceKernelSuspendForDriver_4DF40893(0);
 	while (remaining) {
@@ -218,19 +215,19 @@ int sceSblSsSetNvsData(uint32_t area, const void *buffer, SceSize size)
 	int ret;
 
 	if ((area > SS_NVS_AREA_MAX) | (buffer == NULL))
-		return SS_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 
 	offset = ssNvsAreas[area].offset;
 	remaining = ssNvsAreas[area].size;
 	if (offset < SS_NVS_PROTECTED_END) {
 		SCE_DBG_ASSERT_FUNC(0, 260, "sceSblSsSetNvsData");
-		return SS_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	}
 
 	if (remaining > size)
-		return SS_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	if (size != 4 && size - 1 > 1 && size != 8 && size != 0x10 && size != 0x20)
-		return SS_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 
 	SceKernelSuspendForDriver_4DF40893(0);
 	while (remaining) {
@@ -317,7 +314,7 @@ secure:
 		ret = SceSysrootForKernel_F10AB792(SCE_KERNEL_SYSROOT_SELF_INDEX_ENCDEC_W_PORTABILITY_SM,
 					   &selfInfo);
 		if (__builtin_expect(ret < 0, 0)) {
-			ret = SS_ERROR_INVALID_ARGUMENT;
+			ret = SCE_SBL_ERROR_INVALID_ARGUMENT;
 			goto stop;
 		}
 		SceSblSsMgrForDriver_CD98CC92(&auth, 0, sizeof(auth));

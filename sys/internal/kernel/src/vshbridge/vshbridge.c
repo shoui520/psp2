@@ -14,9 +14,7 @@
 #include <intrmgr/syscall.h>
 #include "vshbridge.h"
 
-#define SCE_SBL_ERROR_INVALID_ARGUMENT		0x800f0016
 #define SCE_SBL_ERROR_NO_CAPABILITY		0x800f0902	/* name unknown */
-#define SCE_SBL_ERROR_SPFSO_TOO_LARGE		0x800f1b16	/* name unknown */
 #define SCE_SYSCON_ERROR_NOT_PRODUCT_MODE	0x80250005	/* name unknown */
 #define SCE_HDMI_ERROR_NOT_PRODUCT_MODE		0x8037000e	/* name unknown */
 
@@ -1462,7 +1460,7 @@ SceUInt32 vshSblAuthMgrVerifySpsfo(const char *path, void *buf, SceSize size)
 		ret = SceSblPostSsMgrForDriver_BDF18922(path, &ctx);
 		if (ret >= 0 && (ret = SceSblPostSsMgrForDriver_686B9461(&ctx, &data, &dataSize)) >= 0) {
 			if (dataSize == 0 || dataSize > size)
-				ret = SCE_SBL_ERROR_SPFSO_TOO_LARGE;
+				ret = SCE_SBL_ERROR_SPFSO_INVALID_ARGUMENT;
 			else
 				ret = sceKernelCopyToUser(buf, data, dataSize);
 		}

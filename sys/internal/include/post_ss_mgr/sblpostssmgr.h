@@ -4,6 +4,11 @@
 #include <stdint.h>
 #include <kernel/openpsid.h>
 
+/* the SPFSO file's errors (names unknown) */
+#define SCE_SBL_ERROR_SPFSO_NO_MEMORY		0x800f1b0c
+#define SCE_SBL_ERROR_SPFSO_INVALID_ARGUMENT	0x800f1b16
+#define SCE_SBL_ERROR_SPFSO_INVALID_FORMAT	0x800f1b24
+
 /* a context: the file, in a memory block */
 typedef struct SceSblSpfsoCtx {
 	SceUID uid;

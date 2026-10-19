@@ -144,7 +144,7 @@ int smsSecureKernelProxyStartSecureKernel(uintptr_t enpPA, SceSize enpSize)
 	while (!(status & CMEP_BOOT_WAITING));
 	status &= CMEP_BOOT_STATE_MASK;
 	if (status == CMEP_BOOT_STATE_ERROR) {
-		return SCE_SBL_ERROR_SECURE_KERNEL_START;
+		return SCE_SBL_ERROR_SMSCHED_SK_START;
 	} else if (status == CMEP_BOOT_STATE_ACKNOWLEDGE) {
 		CMEP_MAILBOX_REG(cry2Arm[0]) = CMEP_MAILBOX_REG(cry2Arm[0]);
 	} else if (status == CMEP_BOOT_STATE_KERNEL) {
@@ -158,7 +158,7 @@ int smsSecureKernelProxyStartSecureKernel(uintptr_t enpPA, SceSize enpSize)
 		for (;;) {
 			reply = CMEP_MAILBOX_REG(cry2Arm[0]);
 			if (reply == CMEP_BOOT_KERNEL_REJECTED)
-				return SCE_SBL_ERROR_SECURE_KERNEL_START;
+				return SCE_SBL_ERROR_SMSCHED_SK_START;
 			if (reply == CMEP_BOOT_KERNEL_ACCEPTED)
 				break;
 		}
@@ -197,7 +197,7 @@ int smsSecureKernelProxyInstallRevokeList(uintptr_t listPA, SceSize listSize)
 	opt.mmapSize = 0;
 	list = sceKernelAllocUncacheHeapMemoryWithOption(sizeof(*list), &opt);
 	if (list == NULL)
-		return SCE_SBL_ERROR_NO_MEMORY;
+		return SCE_SBL_ERROR_SMSCHED_NO_MEMORY;
 	list->pa = listPA;
 	list->size = listSize;
 	SkFlushArea(list, sizeof(*list));

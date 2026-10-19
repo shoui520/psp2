@@ -18,12 +18,8 @@
 
 #include <stddef.h>
 #include <sysmem/debug.h>
+#include <smsc_proxy/smsc_proxy.h>
 #include <smsc_proxy/tzs_bridge.h>
-
-#ifndef SCE_SBL_ERROR_NO_MEMORY
-#define SCE_SBL_ERROR_NO_MEMORY		((int)0x800f040c)
-#define SCE_SBL_ERROR_INVALID_ARGUMENT	((int)0x800f0416)
-#endif
 
 /* name unknown: a free list entry for one area */
 typedef struct BridgeNode {
@@ -70,7 +66,7 @@ int sceSblTzsBridgeInit(void)
 	memory = sceKernelSysrootGetSharedMemory();
 	s_memory = memory;
 	if (memory == NULL)
-		return SCE_SBL_ERROR_NO_MEMORY;
+		return SCE_SBL_ERROR_SMSCHED_NO_MEMORY;
 	s_argArea = memory->argArea;
 	s_intrArea = memory->intrArea;
 	s_intrIndex = &memory->intrIndex;
@@ -108,17 +104,17 @@ int sceSblTzsBridgeAlloc(void *areas, SceSize size, void **area, SceSize *areaSi
 	void *nodeArea;
 
 	if (areas == NULL)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	if (size > TZS_BRIDGE_AREA_SIZE)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	if (area == NULL)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	if (areaSize == NULL)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	head = (areas == s_argArea) ? &s_argFree : &s_intrFree;
 	node = head->next;
 	if (node == head)
-		return SCE_SBL_ERROR_NO_MEMORY;
+		return SCE_SBL_ERROR_SMSCHED_NO_MEMORY;
 	nodeArea = node->area;
 	node->next->prev = node->prev;
 	node->prev->next = node->next;
@@ -167,12 +163,12 @@ int sceSblTzsBridgePush(void *areas, int index)
 {
 	if (s_memory == NULL) {
 		SCE_DBG_ASSERT(0, 338);
-		return SCE_SBL_ERROR_NO_MEMORY;
+		return SCE_SBL_ERROR_SMSCHED_NO_MEMORY;
 	}
 	if (areas == NULL)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	if ((unsigned int)index >= TZS_BRIDGE_AREAS)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	sceKernelDcacheCleanRange((char *)areas + index * TZS_BRIDGE_AREA_SIZE,
 				   TZS_BRIDGE_AREA_SIZE);
 	return 0;
@@ -196,13 +192,13 @@ int sceSblTzsBridgePushIntrArea(int index)
 int sceSblTzsBridgePop(void *areas, int index, void **area, SceSize *areaSize)
 {
 	if (areas == NULL)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	if ((unsigned int)index >= TZS_BRIDGE_AREAS)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	if (area == NULL)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	if (areaSize == NULL)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	*area = (char *)areas + index * TZS_BRIDGE_AREA_SIZE;
 	*areaSize = TZS_BRIDGE_AREA_SIZE;
 	sceKernelDcacheInvalidateRange(*area, TZS_BRIDGE_AREA_SIZE);
@@ -237,12 +233,12 @@ int sceSblTzsBridgeFree(void *areas, int index)
 
 	if (s_memory == NULL) {
 		SCE_DBG_ASSERT(0, 411);
-		return SCE_SBL_ERROR_NO_MEMORY;
+		return SCE_SBL_ERROR_SMSCHED_NO_MEMORY;
 	}
 	if (areas == NULL)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	if ((unsigned int)index >= TZS_BRIDGE_AREAS)
-		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT;
 	head = (areas == s_argArea) ? &s_argFree : &s_intrFree;
 	nodes = (areas == s_argArea) ? s_argNode : s_intrNode;
 	sceKernelDcacheCleanRange((char *)areas + index * TZS_BRIDGE_AREA_SIZE,

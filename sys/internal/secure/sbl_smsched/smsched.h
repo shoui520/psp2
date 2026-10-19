@@ -27,14 +27,7 @@
 #include <smsc_proxy/smsc_proxy.h>
 #include <sysmem/cpu.h>
 
-#define SCE_SBL_ERROR_NO_MEMORY			((int)0x800f040c)
-#define SCE_SBL_ERROR_INVALID_ARGUMENT		((int)0x800f0416)
-#define SCE_SBL_ERROR_NOT_SUPPORTED		((int)0x800f0425)
-#define SCE_SBL_ERROR_ILLEGAL_STATE		((int)0x800f0429)
-#define SCE_SBL_ERROR_NOT_READY			((int)0x800f0426)
-#define SCE_SBL_ERROR_NO_REQUEST		((int)0x800f042b)
-#define SCE_SBL_ERROR_BUSY			((int)0x800f042e)
-#define SCE_SBL_ERROR_SECURE_KERNEL_START	((int)0x800f0427)	/* the Cmep refused the kernel */
+/* a message the Cmep answered with (name unknown) */
 #define SCE_SBL_ERROR_CMEP(message)		((int)(0x800f0300 | ((message) & 0xff)))
 
 #define SMSCHED_DEBUG_AREA_SIZE			0x80

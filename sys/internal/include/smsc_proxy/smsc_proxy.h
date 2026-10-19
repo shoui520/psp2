@@ -9,6 +9,19 @@
 
 #include <scetypes.h>
 
+/*
+ * The secure module scheduler's errors (names unknown): SceSblSmsched returns them through
+ * the monitor calls, and the proxy returns them for its own checks.
+ */
+#define SCE_SBL_ERROR_SMSCHED_NO_MEMORY		((int)0x800f040c)
+#define SCE_SBL_ERROR_SMSCHED_INVALID_ARGUMENT	((int)0x800f0416)
+#define SCE_SBL_ERROR_SMSCHED_NOT_SUPPORTED	((int)0x800f0425)
+#define SCE_SBL_ERROR_SMSCHED_NOT_READY		((int)0x800f0426)
+#define SCE_SBL_ERROR_SMSCHED_SK_START		((int)0x800f0427)	/* refused by the Cmep */
+#define SCE_SBL_ERROR_SMSCHED_ILLEGAL_STATE	((int)0x800f0429)
+#define SCE_SBL_ERROR_SMSCHED_NO_REQUEST	((int)0x800f042b)	/* no such request */
+#define SCE_SBL_ERROR_SMSCHED_BUSY		((int)0x800f042e)
+
 /* interrupt message flags */
 #define MSG_SET_EVENT		0x1
 #define MSG_CALL_HANDLER	0x2

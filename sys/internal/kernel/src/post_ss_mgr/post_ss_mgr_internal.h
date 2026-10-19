@@ -24,11 +24,6 @@
 #include <sysmem/suspend.h>
 #include <acmgr/acmgr.h>
 
-#define SCE_SBL_ERROR_UNSUPPORTED		0x800f0002	/* name unknown */
-#define SCE_SBL_ERROR_INVALID_ARGUMENT		0x800f0016
-#define SCE_SBL_ERROR_BAD_MAGIC			0x800f0024	/* name unknown */
-#define SCE_SBL_ERROR_MISMATCH			0x800f0027	/* name unknown: a hash differs */
-#define SCE_SBL_ERROR_BAD_VERSION		0x800f0037	/* name unknown */
 #define SCE_SBL_ERROR_KEYS_INVALID_ARGUMENT	0x800f1716	/* name unknown */
 #define SCE_SBL_ERROR_KEYS_UNAVAILABLE		0x800f1727	/* name unknown */
 #define SCE_SBL_ERROR_KEYS_LOCK			0x800f1729	/* name unknown */

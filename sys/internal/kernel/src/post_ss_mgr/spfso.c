@@ -10,10 +10,6 @@
 #include <sysmem/qafmgr.h>
 #include <authmgr/sblauthmgr.h>
 
-#define SCE_SBL_ERROR_SPFSO_NO_MEMORY		0x800f1b0c	/* names unknown */
-#define SCE_SBL_ERROR_SPFSO_INVALID_ARGUMENT	0x800f1b16
-#define SCE_SBL_ERROR_SPFSO_INVALID_FORMAT	0x800f1b24
-
 #define SPFSO_SIZE_MAX		0x8000	/* names unknown */
 #define SPFSO_MEMBLOCK_TYPE	0x1020d006
 #define SPFSO_PATH_MAX		0x100
