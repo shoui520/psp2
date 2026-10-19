@@ -10,10 +10,10 @@
 #include "app_state_internal.h"
 #include "appmgr_app_event.h"
 #include <appmgr/appmgr.h>
+#include "appmgr_device.h"
 
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
-extern int dumpBgmState(void);
 extern int sceAppMgrAppParamGetString(int pid, int param, char *string, SceSize length);
 
 #if !FW_DEBUG

@@ -4,14 +4,13 @@
 #include <sysmem/debug.h>
 #include <threadmgr/threadmgr.h>
 #include <appmgr/appmgr.h>
+#include "appmgr_device.h"
 
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
 extern int g_appmgrPowerSaveMode;
 extern int g_appmgrPowerSaveSuspendBackgroundApps;
-extern int dumpBgmState(void);
 extern int _updatePowerTickStateForNonSuspendableApp(void);
-extern void _deviceRefreshAudioPort(SceUID pid);
 extern int _updateDeviceArbitration2(void);
 
 SceInt64 g_appmgrShellWatchDogLastActivity;

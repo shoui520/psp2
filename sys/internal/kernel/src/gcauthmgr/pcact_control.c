@@ -7,6 +7,7 @@
 #include <rtc/rtc.h>
 #include <npdrm/npdrm.h>
 #include <npdrm/psmdrm.h>
+#include "drm_crypto.h"
 
 SceRtcTick gcAuthActivationCurrentTick;
 SceNpDrmActivationData gcAuthNpDrmActivation;
@@ -16,18 +17,6 @@ SceRtcTick gcAuthActivationRetryDeadline;
 GcAuthActivationWorkspace gcAuthActivationWorkspace;
 GcAuthActivationRandom gcAuthActivationRandom;
 GcAuthPcactChallengeInput gcAuthPcactActivationInput;
-
-int GcAuthPcactEncryptChallengeWithStack(unsigned char mode,
-		const GcAuthPcactChallengeInput *input,
-		const unsigned char *rtcSeconds, GcAuthPcactEncryptedChallenge *output,
-		GcAuthPcactRandomRecord *random);
-int GcAuthPcactGetAesDecryptKeyWithStack(const GcAuthPcactActivationBlock *activation,
-		const GcAuthPcactRandomRecord *random, unsigned char *outputKey);
-int GcAuthPsmactCreateChallengeWithStack(unsigned char mode,
-		const unsigned char *rtcSeconds, GcAuthPsmactChallenge *output,
-		GcAuthPsmactRandomRecord *random);
-int GcAuthAesDecrypt(unsigned char *data, size_t size,
-		const void *key, const unsigned char *iv);
 
 int GcAuthPcactBeginActivation(const GcAuthPcactBeginActivationRequest *request)
 {

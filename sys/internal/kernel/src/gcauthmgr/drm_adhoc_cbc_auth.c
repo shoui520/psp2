@@ -1,13 +1,6 @@
 /* CBC counter-stream authentication. */
 #include "adhoc.h"
 
-int GcAuthAdhocGenerateCbcCounterStream(GcAuthAdhocCounterStream *stream,
-		unsigned int size, uint64_t *counter, const unsigned int *seed);
-int GcAuthAdhocHashSpans(GcAuthAdhocHashMessage *message,
-		const unsigned char *first, unsigned int firstSize,
-		const unsigned char *second, unsigned int secondSize,
-		const unsigned char *third, unsigned int thirdSize);
-
 int GcAuthAdhocEncryptCbcAuthData(GcAuthAdhocWorkspace *scratch,
 		unsigned char *data, unsigned int size, uint64_t *counter,
 		const unsigned int *seed, GcAuthAdhocAuthTag *tag, int encrypt)

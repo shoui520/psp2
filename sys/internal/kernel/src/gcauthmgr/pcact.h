@@ -461,3 +461,39 @@ extern const unsigned char gcAuthPcactActivationMask[16];
 extern GcAuthActivationWorkspace gcAuthActivationWorkspace;
 extern GcAuthActivationRandom gcAuthActivationRandom;
 int GcAuthPcactDecryptChallenge(size_t size, int keyId);
+
+/* drm_pcact.c */
+int GcAuthPcactGetAesDecryptKey(const GcAuthPcactKeyRequest *request);
+int GcAuthPcactGetCertificate(const GcAuthPcactCertificateRequest *request);
+int GcAuthPsmactCreateChallenge(const GcAuthPsmactChallengeRequest *request);
+int GcAuthPsmactVerifyActivation(const GcAuthPsmactVerifyRequest *request);
+
+/* pcact_activation.c */
+int GcAuthPcactGetAuthenticatedAesKey(const GcAuthPcactKeyRequest *request);
+int GcAuthPcactCreateChallenge(const GcAuthPcactChallengeRequest *request);
+int GcAuthPcactEncryptChallenge(const GcAuthPcactEncryptChallengeRequest *request);
+int GcAuthPcactCreateRtcChallenge(const GcAuthPcactRtcChallengeRequest *request);
+int GcAuthPcactApplyRtcActivation(const GcAuthPcactRtcActivationRequest *request);
+int GcAuthInitializePcact(void);
+
+/* pcact_api.c */
+int GcAuthPcactEncryptChallengeWithStack(unsigned char mode,
+		const GcAuthPcactChallengeInput *input,
+		const unsigned char *rtcSeconds, GcAuthPcactEncryptedChallenge *output,
+		GcAuthPcactRandomRecord *random);
+int GcAuthPcactGetAesDecryptKeyWithStack(const GcAuthPcactActivationBlock *activation,
+		const GcAuthPcactRandomRecord *random, unsigned char *outputKey);
+int GcAuthPsmactCreateChallengeWithStack(unsigned char mode,
+		const unsigned char *rtcSeconds, GcAuthPsmactChallenge *output,
+		GcAuthPsmactRandomRecord *random);
+int GcAuthPsmactVerifyActivationWithStack(const GcAuthPsmactActivation *activation,
+		const GcAuthPsmactRandomRecord *random, GcAuthPsmactDerivedKeys *output);
+
+/* pcact_control.c */
+int GcAuthPcactBeginActivation(const GcAuthPcactBeginActivationRequest *request);
+int GcAuthPcactApplyActivation(const GcAuthPcactApplyActivationRequest *request);
+int GcAuthPsmactBeginActivation(const GcAuthPsmactBeginActivationRequest *request);
+int GcAuthPsmactDecryptActivation(const GcAuthPsmactDerivedKeys *keys);
+
+/* pcact_finish.c */
+int GcAuthResetState(void);

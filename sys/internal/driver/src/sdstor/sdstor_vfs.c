@@ -45,24 +45,6 @@ int dev_sdstor_vfs_close(SceVopCloseArgs *args);
 int dev_sdstor_vfs_open(SceVopOpenArgs *args);
 int dev_sdstor_vfs_decode_path_elem(SceVfsOpDecodePathElemArgs *args);
 int dev_sdstor_vfs_devctl(SceVfsOpDevctlArg *args);
-int sdstor_read(SceSdstorFd *handle, int64_t offset, void *buffer, uint32_t size);
-int sdstor_write(SceSdstorFd *handle, int64_t offset, const void *buffer,
-		 uint32_t size);
-SceSdstorPartitionEntry *sdpart_get_object(const char *name, int length);
-int sdstor_destruct(SceSdstorFd *handle);
-int sdstor_construct(SceSdstorPartitionEntry *partition, int flags,
-		     SceSdstorFd **resultHandle);
-int sddev_is_read_write(SceSdstorSddev *device);
-int sddev_format_rm(SceSdstorSddev *device);
-int sddev_erase_sd(SceSdstorSddev *device, SceUID callback);
-int sddev_has_write_protect_area(SceSdstorSddev *device, uint32_t sector,
-				 uint32_t count, uint8_t *writeProtected);
-unsigned int sdpart_get_mc_port(void);
-int sdpart_write_sd_mbr(unsigned int port);
-int sdctrl_remove(unsigned int port);
-int sdctrl_insert(unsigned int port);
-int sdctrl_disable_mount(unsigned int port);
-int sdctrl_invalidate_partition(unsigned int port);
 extern uint32_t sdstorOpenCount[5];
 
 #if FW_DEBUG

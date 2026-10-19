@@ -5,14 +5,12 @@
 #include <string.h>
 #include "app_state_internal.h"
 #include <appmgr/appmgr.h>
+#include "appmgr_device.h"
 
 extern SceUID g_appmgrMainMutexOwner;
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrCore2MutexOwner;
-extern int sceAppMgrCheckAppLaunchLimitToAvoidQueueOverflow(void);
 extern SceUID g_appmgrShellPid;
-extern int dumpBgmState(void);
-extern void _deviceGetBgmProxyAppName(int appId, char *name);
 
 static inline SceUInt32 appListLoadStateExclusive(SceUInt32 *state);
 static inline unsigned int appListStoreStateExclusive(SceUInt32 *state,

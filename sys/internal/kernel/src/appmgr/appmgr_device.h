@@ -50,3 +50,18 @@ typedef struct AppmgrSoundOutExclusiveArguments {
 
 _Static_assert(sizeof(AppmgrSoundOutExclusiveArguments) == 16,
 	"sound acquisition argument copy");
+
+/* appmgr_device.c */
+int dumpBgmState(void);
+void _deviceSetRunStatus(int appId, int isRunning);
+void _deviceGetBgmProxyAppName(int appId, char *name);
+int appmgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode);
+int appmgrReleaseSoundOutExclusive(void);
+int appmgrAcquireSoundOutExclusive2(int priority, SceUInt32 displayEnabled,
+		SceUInt32 displayMode, int displayRequest);
+int appmgrReleaseSoundOutExclusive2(void);
+int appmgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
+		SceUInt32 displayMode, int displayBlanked, SceUInt32 unsupportedOptions);
+int appmgrReleaseSoundOutExclusive3(void);
+int sceAppMgrSetBgmProxyApp(const char *appName);
+void _deviceRefreshAudioPort(SceUID pid);

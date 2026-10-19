@@ -8,28 +8,6 @@ extern GcAuthAdhocWorkspace gcAuthAdhocWorkspace;
 extern unsigned char gcAuthAdhocRandom[32];
 extern uint64_t gcAuthAdhocCounter;
 extern GcAuthAdhocHashScratch gcAuthAdhocHashScratch;
-int GcAuthAdhocDecryptPacket(const unsigned char *data, unsigned int size);
-int GcAuthAdhocHash224Spans(const unsigned char *first, unsigned int firstSize,
-		const unsigned char *second, unsigned int secondSize);
-int GcAuthAdhocVerify224(const GcAuthAdhocPublicKey224 *publicKey,
-		const unsigned char *digest, const GcAuthAdhocSignature224 *signature);
-void GcAuthAdhocBuildExtendedMessage(unsigned char *output,
-		const unsigned char *first, unsigned int firstSize,
-		const unsigned char *second, unsigned int secondSize,
-		const unsigned char *third, unsigned int thirdSize,
-		const unsigned char *fourth, unsigned int fourthSize);
-int GcAuthAdhocDecryptAuthData(GcAuthAdhocAuthScratch *scratch,
-		GcAuthAdhocAuthData *data, uint64_t *counter, int unused,
-		const unsigned int *seed, const GcAuthAdhocAuthTag *tag);
-int GcAuthAdhocEncryptAuthData(GcAuthAdhocAuthScratch *scratch,
-		GcAuthAdhocAuthData *data, uint64_t *counter,
-		const unsigned int *seed, GcAuthAdhocAuthTag *tag);
-int GcAuthAdhocEncryptPacket(const unsigned char *first, unsigned int firstSize,
-		const unsigned char *second, unsigned int secondSize,
-		const unsigned char *third, unsigned int thirdSize,
-		const unsigned char *fourth, unsigned int fourthSize,
-		const unsigned char *fifth, unsigned int fifthSize,
-		const unsigned char *sixth, unsigned int sixthSize);
 
 int GcAuthAdhocVerifyResponse224(const GcAuthAdhocVerifyResponse224Request *request)
 {

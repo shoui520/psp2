@@ -151,3 +151,11 @@ _Static_assert(offsetof(SceNetSyscallSysctlParam, newLength) == 20,
 #endif
 
 int SceNetPsForDriver_8C4346CA(struct SceNetKernelGateway *interface);
+
+/* net_ps_glue.c */
+int SceNetPsForDriver_AB746734(int socket, const void *buffer, unsigned int length, int flags,
+		  const SceNetSockaddr *to, unsigned int toLength);
+int SceNetPsForDriver_4BF5FAB4(int socket, int level, int option, const void *value,
+		     unsigned int length);
+int SceNetPsForDriver_EB95B024(const char *name, int domain, int type, int protocol);
+int SceNetPsForDriver_21F4428D(int socket);

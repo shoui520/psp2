@@ -220,8 +220,6 @@ int __attribute__((noinline, noclone)) dmac5ReleaseNpKey(unsigned int keyRingInd
 	return decKeyRingKeyUseCount(keyRingIndex);
 }
 
-SceKernelDmaOpId dmac5AllocOperation(void);
-
 int __attribute__((noinline, noclone)) dmac5InitNpKeyContext(
 	Dmac5Context *context, uint32_t command, unsigned int keyBits,
 	int coherent, const void *key, int keyId)
@@ -308,11 +306,6 @@ int SceSblSsMgrForDriver_197ACF6F(const void *src, void *dst, int size,
 		keyId, coherent, 2);
 }
 
-int dmac5HashCrypt(Dmac5Context *context, const void *src, void *dst,
-	SceSize size, uint32_t flags, const void *key);
-int dmac5LoadIv(Dmac5Context *context, const void *iv);
-int dmac5StoreIv(Dmac5Context *context, void *iv);
-
 int __attribute__((noinline, noclone)) sceSblDmac5HmacTransformNP(
 	const void *src, void *dst, SceSize size, const void *key,
 	unsigned int keyBits, void *iv, int keyId, int coherent,
@@ -355,9 +348,6 @@ int SceSblSsMgrForDriver_83B058F5(const void *src, void *dst, SceSize size,
 	return sceSblDmac5HmacTransformNP(src, dst, size, key, keyBits, iv,
 		keyId, coherent, 0x3b, flags);
 }
-
-int dmac5LockUserBuffers(const void *src, SceSize srcSize, void *dst, SceSize dstSize);
-int dmac5UnlockUserBuffers(const void *src, SceSize srcSize, void *dst, SceSize dstSize);
 
 int sceSblDmac5EncDecKeyGen(SceSblDmac5EncDecParam *param, int keyId,
 	uint32_t command)

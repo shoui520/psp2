@@ -34,13 +34,8 @@ extern unsigned int gcAuthPcactRtcRsaModulus[64];
 extern unsigned int gcAuthPcactRtcRsaExponent[64];
 extern const unsigned char gcAuthPsmAesIv[16];
 
-int GcAuthDrmEncrypt(unsigned char *data, size_t size, int keyId);
-int GcAuthGenerateRandom20(void *data);
 int GcAuthExecuteKirkCommand(void *output, const void *input, int command,
 			    size_t size, int keyId);
-int GcAuthRsaVerify2048(const MarlinRsaData *signature,
-		      const MarlinRsaData *digest,
-		      const MarlinRsaExponentKey *key, int algorithm);
 
 int GcAuthPcactGetAuthenticatedAesKey(const GcAuthPcactKeyRequest *request)
 {

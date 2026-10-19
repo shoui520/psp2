@@ -6,8 +6,6 @@
 #include <lowio/gpio.h>
 #include <string.h>
 
-int cameraHasStartedProcess(int devnum, int activeOnly);
-
 typedef struct CameraSensorInfo {
 	SceUInt16 chipId;
 	SceUInt16 revision;
@@ -390,7 +388,6 @@ static const CameraSensorTiming cameraFramerate25Registers = {{
 	{0x3632, 0x29, 0xff},
 	{0x100, 0x0, 0xff},
 }};
-
 
 static const CameraSensorRegister cameraAntiflickerAutoRegisters[2] = {
 	{0x3c01, 0x0, 0x80},
@@ -2421,7 +2418,6 @@ int cameraWriteRegistersOV7735(int devnum, const void *registers, unsigned int c
 {
 	return cameraWriteSensorRegisters(devnum, registers, count);
 }
-
 
 int cameraProbeOV7735(int devnum)
 {
@@ -6249,5 +6245,4 @@ int cameraSetSensorRegistersOV7735(int devnum, const SceUInt8 *values)
 		state->registers[i].value = values[i];
 	return 0;
 }
-
 

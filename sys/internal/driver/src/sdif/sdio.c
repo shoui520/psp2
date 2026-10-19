@@ -2,15 +2,6 @@
 #include "sdif_internal.h"
 #include <string.h>
 
-int sdifSendAsyncCommand(SdifContextGlobal *context, SdifCommand *command,
-			void (*callback)(SdifCommand *), SdifCommand *secondary,
-			void (*secondaryCallback)(SdifCommand *));
-SdifCommand *sdifRemovePendingCommand(SdifContextGlobal *context, uint32_t index);
-int sdifWaitPendingCommand(SdifContextGlobal *context, uint32_t index,
-			  uint32_t reserved, SdifCommand **completed);
-int sdifGetCommandState(SdifContextGlobal *context, uint32_t index);
-int sdifDeselectCard(SdifContextGlobal *context);
-
 SdifSdioContext gSdioContexts[3];
 
 static const int sdioClockHighSpeed[3] __attribute__((aligned(16))) = {

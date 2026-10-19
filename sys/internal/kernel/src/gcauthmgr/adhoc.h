@@ -529,4 +529,87 @@ _Static_assert(sizeof(GcAuthAdhocWorkspace) == 0x938, "workspace size");
 _Static_assert(offsetof(GcAuthAdhocCipherInput, payload) == 36,
 	"packet payload offset");
 
+/* drm_adhoc.c */
+void GcAuthAdhocBuildMessage(unsigned char *output,
+		const unsigned char *first, unsigned int firstSize,
+		const unsigned char *second, unsigned int secondSize,
+		const unsigned char *third, unsigned int thirdSize,
+		const unsigned char *fourth, unsigned int fourthSize);
+void GcAuthAdhocBuildExtendedMessage(unsigned char *output,
+		const unsigned char *first, unsigned int firstSize,
+		const unsigned char *second, unsigned int secondSize,
+		const unsigned char *third, unsigned int thirdSize,
+		const unsigned char *fourth, unsigned int fourthSize);
+
+/* drm_adhoc_authenticate224.c */
+int GcAuthAdhocAuthenticateResponse224(const GcAuthAdhocAuthenticateResponse224Request *request);
+
+/* drm_adhoc_cbc_auth.c */
+int GcAuthAdhocEncryptCbcAuthData(GcAuthAdhocWorkspace *scratch,
+		unsigned char *data, unsigned int size, uint64_t *counter,
+		const unsigned int *seed, GcAuthAdhocAuthTag *tag, int encrypt);
+int GcAuthAdhocDecryptCbcAuthData(GcAuthAdhocWorkspace *scratch,
+		unsigned char *data, unsigned int size, uint64_t *counter,
+		const uint64_t *minimumCounter, const unsigned int *seed,
+		const GcAuthAdhocAuthTag *tag, int decrypt, int checkCounter);
+
+/* drm_adhoc_cert.c */
+int GcAuthAdhocReadCertificate224(void);
+
+/* drm_adhoc_cert160.c */
+int GcAuthAdhocReadCertificate160(void);
+
+/* drm_adhoc_challenge224.c */
+int GcAuthAdhocAnswerChallenge224(const GcAuthAdhocAnswerChallenge224Request *request);
+
+/* drm_adhoc_clear.c */
+int GcAuthAdhocClearState(void);
+
+/* drm_adhoc_counter.c */
+int GcAuthAdhocGenerateCbcCounterStream(GcAuthAdhocCounterStream *stream,
+		unsigned int size, uint64_t *counter, const unsigned int *seed);
+
+/* drm_adhoc_create224.c */
+int GcAuthAdhocCreateContext224(const GcAuthAdhocCreateContext224Request *request);
+
+/* drm_adhoc_hash224.c */
+int GcAuthAdhocHash224Spans(const unsigned char *first,
+		unsigned int firstSize, const unsigned char *second,
+		unsigned int secondSize);
+
+/* drm_adhoc_init.c */
+int GcAuthInitializeAdhocBb(void);
+
+/* drm_adhoc_packet.c */
+int GcAuthAdhocDecryptPacket(const unsigned char *data, unsigned int size);
+
+/* drm_adhoc_sign.c */
+int GcAuthAdhocHashSpans(GcAuthAdhocHashMessage *message,
+		const unsigned char *first, unsigned int firstSize,
+		const unsigned char *second, unsigned int secondSize,
+		const unsigned char *third, unsigned int thirdSize);
+int GcAuthAdhocEncryptAuthData(GcAuthAdhocAuthScratch *scratch,
+		GcAuthAdhocAuthData *data, uint64_t *counter,
+		const unsigned int *seed, GcAuthAdhocAuthTag *tag);
+int GcAuthAdhocDecryptAuthData(GcAuthAdhocAuthScratch *scratch,
+		GcAuthAdhocAuthData *data, uint64_t *counter, int unused,
+		const unsigned int *seed, const GcAuthAdhocAuthTag *tag);
+int GcAuthAdhocEncryptPacket(const unsigned char *first, unsigned int firstSize,
+		const unsigned char *second, unsigned int secondSize,
+		const unsigned char *third, unsigned int thirdSize,
+		const unsigned char *fourth, unsigned int fourthSize,
+		const unsigned char *fifth, unsigned int fifthSize,
+		const unsigned char *sixth, unsigned int sixthSize);
+
+/* drm_adhoc_state.c */
+int GcAuthAdhocInitializeState(void);
+
+/* drm_adhoc_verify160.c */
+int GcAuthAdhocVerify160(const GcAuthAdhocPublicKey160 *publicKey,
+		const unsigned char *digest, const GcAuthAdhocSignature160 *signature);
+
+/* drm_adhoc_verify224.c */
+int GcAuthAdhocVerify224(const GcAuthAdhocPublicKey224 *publicKey,
+		const unsigned char *digest, const GcAuthAdhocSignature224 *signature);
+
 #endif

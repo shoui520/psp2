@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <scetypes.h>
+#include "appmgr_shell_event.h"
 
 typedef struct AppmgrExtraAppParam {
 	unsigned char arguments[6144];
@@ -62,3 +63,16 @@ int _appmgrQueuePop(AppmgrNotificationRequest *request);
 int appmgrParamQueueInit(AppmgrParamQueue *queue);
 int appmgrParamQueuePush(AppmgrParamQueue *queue, const char *param,
 		SceUID callbackId, SceUID sourcePid, const char *sourceAppName);
+
+/* appmgr_event.c */
+int sceAppMgrPeekLaunchParamForShell(int appId, char *param);
+int sceAppMgrOverwriteLaunchParamForShell(int appId, const char *param);
+int _paramQueueCancelAll(AppmgrParamQueue *queue);
+int _appmgrQueueInit(void);
+
+/* appmgr_event_syscalls.c */
+int appmgrReceiveEventNumSyscall(int *eventNum);
+int appmgrReceiveShellEventSyscall(AppmgrShellEvent *event);
+int appmgrReceiveEventSyscall(void *appEvent);
+int appmgrSendSystemEventSyscall(const char *appName, int event);
+int appmgrSendSystemEvent2Syscall(const char *appName, const char *titleId, int event);

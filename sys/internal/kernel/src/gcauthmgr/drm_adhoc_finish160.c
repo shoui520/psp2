@@ -5,16 +5,6 @@
 extern SceUID gcAuthAdhocSemaphore;
 extern int gcAuthAdhocInitialized;
 extern GcAuthAdhocWorkspace gcAuthAdhocWorkspace;
-int GcAuthAdhocDecryptPacket(const unsigned char *data, unsigned int size);
-void GcAuthAdhocBuildMessage(unsigned char *output,
-		const unsigned char *first, unsigned int firstSize,
-		const unsigned char *second, unsigned int secondSize,
-		const unsigned char *third, unsigned int thirdSize,
-		const unsigned char *fourth, unsigned int fourthSize);
-int GcAuthAdhocDecryptCbcAuthData(GcAuthAdhocWorkspace *scratch,
-		unsigned char *data, unsigned int size, uint64_t *counter,
-		const uint64_t *minimumCounter, const unsigned int *seed,
-		const GcAuthAdhocAuthTag *tag, int decrypt, int checkCounter);
 
 int GcAuthAdhocFinishContext160(const GcAuthAdhocFinishContext160Request *request)
 {

@@ -211,3 +211,13 @@ int sdifSendCheckedSyncCommand(SdifContextGlobal *context, SdifCommand *command,
 int sdifLockPort(SdifContextGlobal *context);
 int sdifUnlockPort(SdifContextGlobal *context);
 int sdifSetBlockLength(SdifContextGlobal *context, uint32_t blockLength);
+
+/* sdif.c */
+SdifCommand *sdifRemovePendingCommand(SdifContextGlobal *context, unsigned int index);
+int sdifWaitPendingCommand(SdifContextGlobal *context, unsigned int index,
+			  unsigned int reserved, SdifCommand **completed);
+int sdifGetCommandState(SdifContextGlobal *context, unsigned int index);
+int sdifSendAsyncCommand(SdifContextGlobal *context, SdifCommand *command,
+			void (*callback)(SdifCommand *), SdifCommand *secondary,
+			void (*secondaryCallback)(SdifCommand *));
+int sdifDeselectCard(SdifContextGlobal *context);

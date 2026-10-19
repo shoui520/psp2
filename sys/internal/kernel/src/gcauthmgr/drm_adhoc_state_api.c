@@ -1,8 +1,7 @@
 /* Adhoc session syscall entry. */
 #include <sysmem/cpu.h>
 #include <intrmgr/syscall.h>
-
-int GcAuthAdhocInitializeState(void);
+#include "adhoc.h"
 
 int GcAuthAdhocInitializeStateForUser(void)
 {

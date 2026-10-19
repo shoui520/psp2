@@ -10,13 +10,12 @@
 #include "appmgr_internal_util.h"
 #include "appmgr_event.h"
 #include <appmgr/appmgr.h>
+#include "appmgr_app_event.h"
+#include "debug_setting.h"
+#include "appmgr_device.h"
 
-extern int dumpBgmState(void);
-extern int appmgrIsTrcCheckNotifyEnabled(void);
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
-extern int _appListPushEvent(struct AppState *app,
-			     const SceAppMgrSystemEvent *event);
 
 AppmgrNotificationQueue g_appmgrNotificationQueue;
 unsigned char g_appmgrNotificationBuffer[4][64];

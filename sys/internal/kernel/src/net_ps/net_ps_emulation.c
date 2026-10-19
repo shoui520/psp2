@@ -4,17 +4,12 @@
 #include <string.h>
 
 extern SceNetPsPacketService gNetPsPacketService;
-int sceNetPsStartBandwidthTimer(struct ifnet *interface);
 extern int gNetPsSoftTick;
 void callout_reset(struct callout *timer, int ticks,
 		   void (*callback)(void *), void *argument);
 void sceNetPsDelayTimer(void *argument);
 extern SceNetPsMutex gNetPsPktMutex;
 extern SceNetPsMutex gNetPsDevSendMutex;
-int sceNetPsIsApplicationProgram(int *error);
-int sceNetPsIsCEX(void);
-int sceNetPsIsDevelopmentMode(void);
-int sceNetPsIsSdkVersion2OrLater(void);
 int sceNetPsSeedEmulationRandom(unsigned int seed);
 unsigned int sceNetPsGetEmulationSeed(void);
 unsigned int sceNetPsEmulationRandom(void);

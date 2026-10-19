@@ -16,10 +16,12 @@
 #include <power/power.h>
 #include <appmgr/appmgr.h>
 #include <appmgr/appmgr_rdrfp.h>
+#include "debug_setting.h"
+#include "appmgr_savedata_slot.h"
+#include "appmgr_device.h"
 
 extern int _sceAppMgrSystemResume(void);
 extern int _sceAppMgrSystemSuspend(void);
-extern int sharedFbInitialize(void);
 extern int sceAppMgrInit(void);
 extern SceUID g_appmgrCoreHeap;
 extern SceUID g_appmgrMountHeap;
@@ -27,20 +29,9 @@ extern SceUID g_appmgrMountMutex;
 extern SceUID g_appmgrSaveDataHeap;
 extern SceUID g_appmgrSaveDataMutex;
 extern int g_appmgrAppInfoCacheKey;
-extern int appmgrInitializeBgdlQueueStorage(void);
-extern int appMgrLockInitialize(void);
-extern void initProcessStateUpdaterThread(void);
-extern int _sceAppMgrAbortHandlerInitialize(void);
-extern int _appmgrProcessInitialize(int (*callback)(struct AppState *app));
 extern int _appArbitrationOnProcessUnloaded(struct AppState *app);
 extern void initializeAppMgrDevice(void);
-extern int _appmgrQueueInit(void);
-extern int appmgrInitializeDebugSettings(void);
-extern int appmgrRegisterMountDebugSettingCallback(void);
-extern int appmgrInitializeSaveDataSlotCache(void);
 extern int appmgrMountShellExternalDirectories(SceUID pid);
-extern int dumpBgmState(void);
-extern void appmgrRegisterDebuggerCallbacks(void);
 extern int appmgrMapPath(const char *path, SceUID pid, char *mapped, SceSize size);
 
 int g_appmgrPowerSaveMode;

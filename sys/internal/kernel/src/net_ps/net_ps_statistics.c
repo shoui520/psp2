@@ -2,7 +2,6 @@
 
 #include "net_ps_internal.h"
 
-unsigned int sceNetPsGetFreeMemory(int lowest);
 extern int gNetPsPacketCount;
 extern int gNetPsQosPacketCount;
 

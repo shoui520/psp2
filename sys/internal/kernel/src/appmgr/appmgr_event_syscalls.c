@@ -1,12 +1,7 @@
 /* Application system-event syscall dispatch. */
 
 #include "appmgr_shell_event.h"
-
-extern int sceAppMgrReceiveEventNum(int *eventNum);
-extern int sceAppMgrReceiveEventInternal(void *appEvent);
-extern int sceAppMgrSendSystemEvent(const char *appName, int event);
-extern int sceAppMgrSendSystemEvent2(const char *appName, const char *titleId,
-				  int event);
+#include "appmgr_app_event.h"
 
 int appmgrReceiveEventNumSyscall(int *eventNum)
 {

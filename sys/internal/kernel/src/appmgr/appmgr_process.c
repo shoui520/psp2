@@ -15,6 +15,9 @@
 #include <npdrm/npdrm.h>
 #include <avcodec/avcodec.h>
 #include <appmgr/appmgr_rdrfp.h>
+#include "appmgr_app_event.h"
+#include "appmgr_device.h"
+#include "appmgr_savedata_slot.h"
 
 extern int appmgrUsesGxmDebugger(SceUID pid);
 
@@ -22,14 +25,9 @@ extern int _suspendAppForDebugger(struct AppState *app,
 				 struct AppmgrWaitObject **waitObject);
 extern int _resumeAppForDebugger(struct AppState *app,
 				struct AppmgrWaitObject **waitObject);
-extern int dumpBgmState(void);
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
-extern void _shellEventOnAppUnloadedQueuePush(SceUID pid, int appId,
-		int exitReason, SceUID sourcePid, int sourceAppId,
-		int relaunchPending, const char *appName);
 extern int _updateDeviceArbitration2(void);
-extern int appmgrReturnSuccess(void);
 extern int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, void *common);
 int appmgrProcKillHandler(SceUID pid, ProcEventParam *param, void *common);
 extern int _sceAppMgrProcSuspendHandler(SceUID pid, int eventType,
@@ -39,29 +37,16 @@ extern int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
 extern int appmgrSaveSafeMemoryForProcess(SceUID pid);
 extern int appmgrUpdateSaveDataOnSuspend(SceUID pid, AppmgrProcessContent *content);
 extern int appmgrPrepareSafeMemoryForProcess(SceUID pid);
-extern int _appListPushEvent(struct AppState *app, const SceAppMgrSystemEvent *event);
-extern void _deviceRefreshAudioPort(SceUID pid);
 extern SceUID g_appmgrCore2Mutex;
 extern SceUID g_appmgrCore2MutexOwner;
-extern int appmgrResetSaveDataSlotCache(SceUID pid);
 extern int appmgrRemoveContentCache(SceUID pid, const AppmgrProcessContent *content);
 extern int appmgrRemoveTemporaryPhoto(SceUID pid);
 extern int appmgrRemoveAppWorkDirectory(const AppmgrProcessContent *content);
 extern int appmgrUnmountProcessContent(SceUID pid);
-extern int _paramQueueCancelAll(AppmgrParamQueue *queue);
-extern int _deviceSetRunStatus(int appId, int status);
 extern int _deviceSetProcessId(int appId, SceUID pid);
 extern int _destroyOtherApp(struct AppState *app);
-extern void _shellEventAppRunningStatusChangedQueuePush(void);
-extern void _shellEventDeactivateAppRequestQueuePush(int appId);
-extern void _shellEventActivateAppRequestQueuePush(int appId);
-extern void _shellEventOnAppUnloadingQueuePush(SceUID processId, int appId,
-		int exitReason, int selfQuit, SceUID sourcePid, int sourceAppId,
-		int relaunchPending, const char *appName);
 extern int _sceAppMgrDeactivateAppInternal(struct AppState *app, int, int, int);
 extern int _appmgrProcessKillProcess(struct AppState *app, int flags);
-extern int _appListPushEvent(struct AppState *app,
-			     const SceAppMgrSystemEvent *event);
 extern int appmgrUsesDefaultLibrary(void);
 
 SceUID g_appmgrVideoCodecPid = -1;

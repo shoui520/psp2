@@ -3,13 +3,8 @@
 #include "../netps_dump.h"
 #include "../netps_resource.h"
 #include <net_ps/netps_thread.h>
+#include "../net_ps_internal.h"
 
-int sce_psnet_bnet_mutex_lock(SceNetPsMutex *mutex, unsigned int *timeout);
-int sce_psnet_bnet_mutex_unlock(SceNetPsMutex *mutex);
-int sceNetPsCopyInString(const char *source, char *destination, size_t length,
-			 size_t *copied);
-void sceNetPsSetDump(unsigned int dumpId, SceNetPsDump *dump);
-void sceNetPsWriteDump(SceNetPsDump *dump, const void *data, int length);
 extern int gNetPsPacketCaptureActive;
 
 int sceNetPsDumpCreate(const char *name, int length, int flags)

@@ -3,6 +3,7 @@
 #include <string.h>
 #include <threadmgr/threadmgr.h>
 #include "drm_bb.h"
+#include "drm_crypto.h"
 
 SceUID gcAuthDrmBbSemaphore;
 unsigned char gcAuthDrmWorkBuffer[2048];
@@ -21,16 +22,6 @@ const unsigned char gcAuthDrmDecryptInputMask[16] = {
 	0x67, 0x8d, 0x7f, 0xa3, 0x2a, 0x9c, 0xa0, 0xd1,
 	0x50, 0x8a, 0xd8, 0x38, 0x5e, 0x4b, 0x01, 0x7e
 };
-
-int GcAuthDrmDecrypt(unsigned char *data, size_t size, int keyId);
-int GcAuthDrmDecryptPrivate(unsigned char *data, size_t size);
-int GcAuthDrmDecryptCbc(unsigned char *data, size_t size,
-			unsigned char *iv, int keyId);
-int GcAuthDrmEncryptCbc(unsigned char *data, size_t size,
-			unsigned char *iv, int keyId);
-int GcAuthDrmEncrypt(unsigned char *data, size_t size, int keyId);
-int GcAuthDrmEncryptPrivate(unsigned char *data, size_t size);
-int GcAuthGenerateRandom20(unsigned char *data);
 
 int GcAuthDrmDecryptCounterBlocks(unsigned char *work, unsigned char *data,
 		size_t size, const unsigned char *key, unsigned int *counter,
@@ -286,7 +277,6 @@ out:
 		return (int)0x808a0008;
 	return result;
 }
-
 
 int SceSblGcAuthMgrDrmBBForDriver_6EF3C9DB(GcAuthDrmBbMacContext *context,
 				      unsigned char *mac,

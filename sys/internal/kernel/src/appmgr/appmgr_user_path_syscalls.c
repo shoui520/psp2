@@ -4,6 +4,7 @@
 #include <string.h>
 #include <sysmem/sysclib.h>
 #include <appmgr/appmgr.h>
+#include "app_state_internal.h"
 
 typedef struct AppmgrRawPathArguments {
 	unsigned char reserved[16];
@@ -19,16 +20,6 @@ typedef struct AppmgrUserDirPathArguments {
 
 _Static_assert(sizeof(AppmgrUserDirPathArguments) == 16,
 	"user directory argument block");
-
-extern int appmgrConvertVs0UserDrivePathSyscall(const char *path, char *output,
-	SceSize size);
-extern int appmgrGetRawPathSyscall(char *path, char *resolvedPath, int capacity);
-extern int appmgrGetUserDirPathSyscall(int partitionId, char *path,
-	unsigned int capacity);
-extern int appmgrGetUserDirPathByIdSyscall(int userId, int partitionId,
-	char *path, unsigned int capacity);
-extern int appmgrGetRawPathOfApp0ByAppIdForShellSyscall(int appId, char *path);
-extern int appmgrGetRawPathOfApp0ByPidForShellSyscall(SceUID pid, char *path);
 
 int _sceAppMgrConvertVs0UserDrivePath(const char *path, char *convertedPath,
 	SceSize capacity, const AppmgrRawPathArguments *userArguments)

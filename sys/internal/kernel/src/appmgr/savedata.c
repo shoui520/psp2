@@ -17,9 +17,8 @@
 #include <acmgr/acmgr.h>
 #include <pfsmgr/pfsmgr.h>
 #include <appmgr/appmgr_rdrfp.h>
-
-int appmgrExtractSaveDataDeviceName(const char *path, char *device,
-				    SceSize capacity);
+#include "mount.h"
+#include "debug_setting.h"
 
 extern SceUID g_appmgrSaveDataHeap;
 extern SceUID g_appmgrSaveDataMutex;
@@ -33,15 +32,10 @@ extern int appmgrOverwriteSaveDataSlot(unsigned int slotId,
 				     int status, const char *mountPoint);
 extern int appmgrSetSaveDataSlotStatus(unsigned int slotId, int status,
 				     const char *mountPoint);
-extern int appmgrResolvePath(const char *path, SceUID pid, char *output,
-			     SceSize size);
 extern int appmgrValidateSaveDataMountPoint(const char *mountPoint,
 					  int requirePrimary);
 extern int appmgrCheckSaveDataSlot(unsigned int slotId, const char *mountPoint,
 				  int status);
-extern int appmgrGetFakeSdSlotBroken(void);
-#if FW_VERSION >= 0x04000000
-#endif
 
 extern int appmgrValidateSaveDataFile(const SceAppUtilSaveDataDataSaveItem *file,
 				     const char *path);

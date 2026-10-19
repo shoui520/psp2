@@ -12,30 +12,8 @@ extern GcAuthAdhocCertificate gcAuthAdhocCertificate;
 extern GcAuthAdhocSigningScratch gcAuthAdhocSigningScratch;
 GcAuthAdhocMultiplyScratch gcAuthAdhocMultiplyScratch;
 
-int GcAuthAdhocDecryptPacket(const unsigned char *data, unsigned int size);
-int GcAuthAdhocReadCertificate160(void);
-int GcAuthAdhocHashSpans(GcAuthAdhocHashMessage *message,
-		const unsigned char *first, unsigned int firstSize,
-		const unsigned char *second, unsigned int secondSize,
-		const unsigned char *third, unsigned int thirdSize);
-int GcAuthAdhocVerify160(const GcAuthAdhocPublicKey160 *publicKey,
-		const unsigned char *digest, const GcAuthAdhocSignature160 *signature);
 int GcAuthExecuteKirkCommand(void *output, const void *input,
 		unsigned int command, unsigned int size, unsigned int keyId);
-void GcAuthAdhocBuildMessage(unsigned char *output,
-		const unsigned char *first, unsigned int firstSize,
-		const unsigned char *second, unsigned int secondSize,
-		const unsigned char *third, unsigned int thirdSize,
-		const unsigned char *fourth, unsigned int fourthSize);
-int GcAuthAdhocEncryptCbcAuthData(GcAuthAdhocWorkspace *scratch,
-		unsigned char *data, unsigned int size, uint64_t *counter,
-		const unsigned int *seed, GcAuthAdhocAuthTag *tag, int encrypt);
-int GcAuthAdhocEncryptPacket(const unsigned char *first, unsigned int firstSize,
-		const unsigned char *second, unsigned int secondSize,
-		const unsigned char *third, unsigned int thirdSize,
-		const unsigned char *fourth, unsigned int fourthSize,
-		const unsigned char *fifth, unsigned int fifthSize,
-		const unsigned char *sixth, unsigned int sixthSize);
 
 int GcAuthAdhocAuthenticateResponse160(
 		const GcAuthAdhocAuthenticateResponse160Request *request)

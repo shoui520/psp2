@@ -1,8 +1,7 @@
 #include "netps_socket.h"
 #include "netps_resource.h"
 #include "netps_process.h"
-
-SceUID sceNetPsGetProcessId(void);
+#include "net_ps_internal.h"
 
 void sceNetPsSetSocket(unsigned int socketId, struct socket *socket)
 {

@@ -30,6 +30,7 @@
 
 #include "net_ps_internal.h"
 #include <net_ps/netps_gateway.h>
+#include <net_ps/netps.h>
 #include <string.h>
 
 struct mbuf *m_get(int how, int type);
@@ -45,9 +46,6 @@ int sceNetPsStackControl(int flags, int command, void *data, int length);
 int sceNetPsRoutingSysctl(const int *name, unsigned int nameLength, void *oldData,
 			  unsigned int *oldLength, const void *newData,
 			  unsigned int newLength);
-
-int sceNetPsGetDnsConfig(SceNetPsDnsConfig *config, int networkOrder,
-			int addressesOnly);
 
 /* SCE: the public query exposes the DNS addresses and configuration flags. */
 int sceNetPsQueryDnsConfig(int flags, void *buffer, unsigned int length)
@@ -86,8 +84,6 @@ void *sceNetPsGatewayAllocate(struct SceNetKernelGateway *interface,
 }
 
 extern SceNetPsGatewayState *gNetPsGatewayInterfaceSlot;
-int SceNetPsForDriver_AB746734(int socket, const void *buffer, unsigned int length, int flags,
-		 const SceNetSockaddr *address, unsigned int addressLength);
 
 /* SCE: release the jumbo lock before the socket send may block. */
 int sceNetPsGatewaySend(struct SceNetKernelGateway *interface, const void *data,
@@ -136,10 +132,6 @@ int sceNetPsNotifyGatewayDns(const SceNetPsDnsConfig *config)
 
 extern SceNetPsMutex gNetPsDevSendMutex;
 extern SceNetPsMutex gNetPsDevRecvMutex;
-int SceNetPsForDriver_EB95B024(const char *name, int domain, int type, int protocol);
-int SceNetPsForDriver_4BF5FAB4(int socket, int level, int option, const void *value,
-		     unsigned int length);
-int SceNetPsForDriver_21F4428D(int socket);
 
 /* Reviewed export name: Sony's gateway socket string and prototype candidate. */
 int SceNetKernelGateway(struct SceNetKernelGateway *interface)

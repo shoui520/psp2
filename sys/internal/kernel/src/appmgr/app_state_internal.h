@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <scetypes.h>
 #include <appmgr/appmgr_launch.h>
+#include <appmgr/appmgr_savedata.h>
+#include <appmgr.h>
 #include "appmgr_event.h"
 #include "appmgr_internal_util.h"
 #include "mount_holder_internal.h"
@@ -212,3 +214,123 @@ void appmgrProcessIdleCallback(SceUID pid, unsigned int elapsed, void *argument)
 int videocodecUsageChangedCallback2(SceUID pid, unsigned int usage);
 int _sceAppMgrProcTerminatedHandler(SceUID pid);
 extern int (*g_appmgrProcTerminatedCallback)(struct AppState *app);
+
+/* app_arbitration.c */
+void initProcessStateUpdaterThread(void);
+
+/* appmgr.c */
+int appmgrReturnSuccess(void);
+
+/* appmgr_aborthandler.c */
+void _sceAppMgrNotifyAppMgrHandler(void);
+int _sceAppMgrAbortHandlerInitialize(void);
+
+/* appmgr_control.c */
+int appmgrSetBackRenderPortOwnerSyscall(int appId);
+int appmgrIsCameraActiveSyscall(int appId, int *active);
+int appmgrSetPowerSaveModeSyscall(int mode, int suspendBackgroundApps);
+int appmgrSetShellScreenOrientationSyscall(int orientation);
+int appmgrSetRecommendedScreenOrientationForShellSyscall(int orientation);
+
+/* appmgr_for_debugger.c */
+void appmgrRegisterDebuggerCallbacks(void);
+
+/* appmgr_lock.c */
+int appMgrLockInitialize(void);
+
+/* appmgr_path_syscalls.c */
+int appmgrConvertVs0UserDrivePathSyscall(const char *path, char *output, SceSize size);
+int appmgrGetRawPathSyscall(char *path, char *resolvedPath, int capacity);
+int appmgrGetUserDirPathSyscall(int partitionId, char *path, unsigned int capacity);
+int appmgrGetUserDirPathByIdSyscall(int userId, int partitionId, char *path, unsigned int capacity);
+int appmgrGetRawPathOfApp0ByAppIdForShellSyscall(int appId, char *path);
+int appmgrGetRawPathOfApp0ByPidForShellSyscall(SceUID pid, char *path);
+
+/* appmgr_process.c */
+int _appmgrProcessInitialize(int (*callback)(struct AppState *app));
+
+/* appmgr_query_syscalls.c */
+int appmgrGetBootParamSyscall(SceUInt32 request, void *bootParam);
+int appmgrAppParamGetIntSyscall(int pid, int param, int *value);
+int appmgrAppParamGetStringSyscall(int pid, int param, char *string, SceSize length);
+int appmgrGetSystemDataFilePlayReadySyscall(SceUInt32 location, void *information,
+					  void *userData, SceSize dataSize);
+int appmgrSetSystemDataFilePlayReadySyscall(SceUInt32 location,
+		const void *information, const void *userData, SceSize dataSize);
+int appmgrSetSystemDataFileSyscall(SceUInt32 location, const void *userData, SceSize dataSize);
+int appmgrGetNameByIdSyscall(SceUID id, char *appName);
+int appmgrGetIdByNameSyscall(SceUID *id, const char *appName);
+int appmgrGetAppStateSyscall(SceAppMgrAppState *appState, SceSize size, SceUInt32 buildVersion);
+int appmgrReceiveSystemEventSyscall(SceAppMgrSystemEvent *event);
+int appmgrSetNetworkDisconnectionWarningDialogStateSyscall(SceBool enable, const void *optParam);
+int appmgrGetCurrentBgmStateSyscall(void *currentBgmId, void *currentBgmState);
+int appmgrGetCurrentBgmState2Syscall(void *bgmState);
+int appmgrGetStatusByIdSyscall(SceUID id, void *appStatus);
+int appmgrGetStatusByAppIdSyscall(int appId, void *appStatus);
+int appmgrGetStatusByNameSyscall(const char *appName, void *appStatus);
+int appmgrReceiveNotificationRequestForShellSyscall(AppmgrNotificationRequest *request);
+int appmgrPeekLaunchParamForShellSyscall(int appId, char *param);
+int appmgrOverwriteLaunchParamForShellSyscall(int appId, const char *param);
+int appmgrGetAppParamSyscall(char *param);
+int appmgrGetAppParam2Syscall(void *appParam);
+int appmgrGetAppMgrStateSyscall(void *appMgrState);
+int appmgrGetAppInfoSyscall(const char *appName, SceAppMgrAppState *appInfo);
+int appmgrGetFgAppInfoSyscall(void *appInfo);
+int appmgrGetRecommendedScreenOrientationSyscall(int *orientation);
+int appmgrGetRunningAppIdListForShellSyscall(SceInt32 *appIds, int count);
+
+/* appmgr_savedata_syscalls.c */
+int appmgrSaveDataSlotInitSyscall(void *slot);
+int appmgrSaveDataSlotCreateSyscall(SceAppMgrSaveDataSlot *slot);
+int appmgrSaveDataSlotDeleteSyscall(SceAppMgrSaveDataSlotDelete *slot);
+int appmgrSaveDataSlotSetParamSyscall(SceAppMgrSaveDataSlot *slot);
+int appmgrSaveDataSlotGetParamSyscall(SceAppMgrSaveDataSlot *slot);
+int appmgrSaveDataSlotSetStatusSyscall(void *status);
+int appmgrSaveDataSlotGetStatusSyscall(void *status);
+int appmgrSaveDataSlotFileGetParamSyscall(unsigned int slotId, void *param);
+
+/* appmgr_service.c */
+int sceAppMgrGetNameById(SceUID pid, char *appName);
+int sceAppMgrGetIdByName(SceUID *pid, const char *appName);
+SceUID sceAppMgrGetProcessIdByAppIdForShell(SceInt32 appId);
+int sceAppMgrGetStatusById(SceUID id, void *appStatus);
+int sceAppMgrGetStatusByAppId(int appId, void *appStatus);
+int sceAppMgrGetStatusByName(const char *appName, void *appStatus);
+SceInt32 sceAppMgrGetAppInfo(const char *appName, SceAppMgrAppState *output);
+int sceAppMgrGetFgAppInfo(void *output);
+int sceAppMgrGetRawPathOfApp0ByAppIdForShell(int appId, char path[292]);
+int sceAppMgrGetRawPathOfApp0ByPidForShell(SceUID pid, char *path);
+
+/* appmgr_syscalls.c */
+int appmgrSystemParamDateTimeGetConfSyscall(void *conf);
+int appmgrSystemParamGetIntSyscall(int parameter, int *value);
+int appmgrSystemParamGetStringSyscall(int parameter, char *value, SceSize size);
+int appmgrCountPfsMountReferencesSyscall(unsigned int mountId, int flags);
+int appmgrGetVs0UserModuleDriveSyscall(char *mountPoint);
+int appmgrGetVs0UserDataDriveSyscall(char *mountPoint);
+int appmgrSendNotificationRequest(const AppmgrNotificationRequest *request, int wait);
+int appmgrAcquireSoundOutExclusive3Syscall(int priority, SceUInt32 displayEnabled,
+		SceUInt32 displayMode, int displayBlanked, SceUInt32 unsupportedOptions);
+int appmgrSetBgmProxyAppSyscall(const char *appName);
+
+/* appmgr_system_data.c */
+int appmgrReadPlayReadySystemData(SceUInt32 location, void *information,
+				void *userData, SceSize dataSize);
+int appmgrWritePlayReadySystemData(SceUInt32 location, const void *information,
+				 const void *userData, SceSize dataSize);
+int appmgrSetSystemDataFile(SceUInt32 location, const void *userData, SceSize dataSize);
+
+/* bgdl.c */
+int appmgrInitializeBgdlQueueStorage(void);
+
+/* savedata.c */
+int appmgrCreateSaveDataSlotFile(SceUID pid, const char *path, SceUInt32 slotCount);
+int appmgrSaveDataSlotFileGetParam(unsigned int slotId, void *param);
+
+/* sharedfb.c */
+int sharedFbInitialize(void);
+
+/* system_param.c */
+int appmgrSystemParamDateTimeGetConf(void *conf);
+int appmgrSystemParamGetInt(int parameter, int *value);
+int appmgrSystemParamGetString(int parameter, char *value, SceSize size);

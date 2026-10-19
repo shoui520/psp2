@@ -13,10 +13,6 @@ SceDmac5KeyringRegisters *dmacKeyringRegisters;
 SceKernelFastMutex dmacKeyringMutex;
 SceSblDmac5KeyRing dmacKeyringStorage[32];
 
-int dmac5SetExternalKey(SceKernelDmaOpDirectParam *param,
-	const void *key, uint32_t command);
-int dmac5SetKeyRingIndex(SceKernelDmaOpDirectParam *param,
-	unsigned int keyRingIndex);
 int dmac5LoadIv(Dmac5Context *context, const void *iv);
 int dmac5StoreIv(Dmac5Context *context, void *iv);
 int decKeyRingKeyUseCount(unsigned int keyRingIndex);

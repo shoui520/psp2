@@ -268,4 +268,13 @@ int regCloseCategoryUnlocked(int handle);
 int regUpdateCategoryCheck(int handle);
 int regDeleteKeyUnlocked(int handle, const char *name);
 
+/* reg_category.c */
+int regGetCategoryNum(int registry, int *num);
+int regGetCategoryNames(int registry, char (*names)[REG_CATEGORY_NAME_LEN + 1], int num);
+
+/* reg_key.c */
+int regGetKeyInfo(int handle, const char *name, int *type, int *size);
+int regGetKeyNum(int handle, int *num);
+int regGetKeyNames(int handle, char (*names)[REG_CATEGORY_NAME_LEN + 1], int num);
+
 #endif

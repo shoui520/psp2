@@ -10,17 +10,12 @@
 #include "appmgr_shell_event.h"
 #include <sysmem/sysroot.h>
 #include <appmgr/appmgr_rdrfp.h>
+#include "appmgr_app_event.h"
+#include "appmgr_device.h"
 
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
 extern SceUID g_appmgrShellPid;
-extern int appmgrResolvePath(const char *path, SceUID pid, char *output,
-			     SceSize size);
-extern int dumpBgmState(void);
-extern int sceAppMgrSendEventInternal(const SceAppMgrSystemEvent *event,
-				     SceUID pid);
-extern int _appListPushEvent(struct AppState *app,
-			     const SceAppMgrSystemEvent *event);
 
 #if FW_DEBUG
 SCE_DBGINFO_DEFINE(static, appmgrDumpSeparatorInfo, 31, "sceAppMgrDump");

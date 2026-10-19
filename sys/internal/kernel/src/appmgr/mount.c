@@ -35,6 +35,7 @@
 #include <iofilemgr/iofilemgr.h>
 #include <post_ss_mgr/sblpostssmgr.h>
 #include <pfsmgr/pfsmgr.h>
+#include "app_state_internal.h"
 
 /* SceSblPostSsMgr (ut_mgr.c): declared here until its exporter's header declares it */
 
@@ -1951,9 +1952,6 @@ out:
 	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }
-
-extern int appmgrCreateSaveDataSlotFile(SceUID pid, const char *path,
-				      SceUInt32 slotCount);
 
 int appmgrCreateSaveDataMetadata(SceUID pid, const char *path,
 				const char *parentDirectory, unsigned int mountId,

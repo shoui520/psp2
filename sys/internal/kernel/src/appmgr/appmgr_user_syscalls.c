@@ -6,6 +6,7 @@
 #include <sysmem/sysclib.h>
 #include "appmgr_shell_event.h"
 #include "appmgr_event.h"
+#include "app_state_internal.h"
 
 typedef struct AppmgrAppParamStringArguments {
 	SceSize length;
@@ -14,41 +15,6 @@ typedef struct AppmgrAppParamStringArguments {
 
 _Static_assert(sizeof(AppmgrAppParamStringArguments) == 16,
 	       "application parameter string argument block");
-
-extern int appmgrAppParamGetIntSyscall(int pid, int param, int *value);
-extern int appmgrAppParamGetStringSyscall(int pid, int param, char *string,
-					SceSize length);
-
-extern int appmgrGetAppStateSyscall(SceAppMgrAppState *appState, SceSize size,
-				  SceUInt32 buildVersion);
-extern int appmgrReceiveSystemEventSyscall(SceAppMgrSystemEvent *event);
-extern int appmgrReceiveShellEventSyscall(AppmgrShellEvent *event);
-extern int appmgrPeekLaunchParamForShellSyscall(int appId, char *param);
-extern int appmgrOverwriteLaunchParamForShellSyscall(int appId, const char *param);
-extern int appmgrReceiveNotificationRequestForShellSyscall(AppmgrNotificationRequest *request);
-extern int appmgrSetNetworkDisconnectionWarningDialogStateSyscall(SceBool enable,
-							const void *optParam);
-extern int appmgrGetAppInfoSyscall(const char *appName, SceAppMgrAppState *appInfo);
-extern int appmgrGetFgAppInfoSyscall(void *appInfo);
-extern int appmgrGetStatusByNameSyscall(const char *appName, void *appStatus);
-extern int appmgrGetStatusByAppIdSyscall(int appId, void *appStatus);
-extern int appmgrGetRecommendedScreenOrientationSyscall(int *orientation);
-extern int appmgrGetStatusByIdSyscall(SceUID id, void *appStatus);
-extern int appmgrGetRunningAppIdListForShellSyscall(SceInt32 *appIds, int count);
-extern int appmgrGetNameByIdSyscall(SceUID id, char *appName);
-extern int appmgrGetIdByNameSyscall(SceUID *id, const char *appName);
-extern int appmgrGetCurrentBgmStateSyscall(void *currentBgmId, void *currentBgmState);
-extern int appmgrGetCurrentBgmState2Syscall(void *bgmState);
-extern int appmgrGetAppParamSyscall(char *param);
-extern int appmgrGetAppParam2Syscall(void *appParam);
-extern int appmgrGetBootParamSyscall(SceUInt32 request, void *bootParam);
-extern int appmgrGetAppMgrStateSyscall(void *appMgrState);
-extern int appmgrGetSystemDataFilePlayReadySyscall(SceUInt32 location,
-			void *information, void *userData, SceSize dataSize);
-extern int appmgrSetSystemDataFilePlayReadySyscall(SceUInt32 location,
-		const void *information, const void *userData, SceSize dataSize);
-extern int appmgrSetSystemDataFileSyscall(SceUInt32 location,
-		const void *userData, SceSize dataSize);
 
 int __sceAppMgrGetAppState(SceAppMgrAppState *appState, SceSize size,
 			 SceUInt32 buildVersion)

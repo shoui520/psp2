@@ -2012,10 +2012,6 @@ release:
 	return result;
 }
 
-int validateVideoBindingPolicy(int dialect, const void *input, unsigned int size);
-int copyVideoDataFromUser(void *destination, const void *source, unsigned int size);
-int copyVideoDataToUser(void *destination, const void *source, unsigned int size);
-
 int replaceUserVideoKeyring(int handle, unsigned int index, int blockNumber,
 			   const MgVideoUserBuffer *keyring,
 			   const MgVideoUserBuffer *input,
@@ -2204,10 +2200,6 @@ release:
 		context->state = 1;
 	return result;
 }
-
-unsigned int measureVideoTaggedData(const void *input, unsigned int size);
-int extendVideoPlaybackPeriod(int dialect, void *input, unsigned int size,
-			     unsigned int capacity);
 
 int updateUserVideoPlaybackPeriod(int handle, unsigned int index, int blockNumber,
 				 const MgVideoUserBuffer *keyring,

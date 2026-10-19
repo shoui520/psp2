@@ -3,37 +3,22 @@
 #include <appmgr.h>
 #include "appmgr_event.h"
 #include <appmgr/appmgr.h>
+#include "app_state_internal.h"
+#include "appmgr_app_event.h"
 
-extern int sceAppMgrGetNameById(SceUID pid, char *appName);
-extern int sceAppMgrGetIdByName(SceUID *pid, const char *appName);
-extern SceUID sceAppMgrGetProcessIdByAppIdForShell(SceInt32 appId);
-extern SceInt32 sceAppMgrGetAppInfo(const char *appName, SceAppMgrAppState *output);
-extern int sceAppMgrReceiveSystemEvent(SceAppMgrSystemEvent *event);
 extern int sceAppMgrAppParamGetString(int pid, int param, char *string, SceSize length);
 extern SceInt32 _sceAppMgrGetAppState(SceAppMgrAppState *appState,
 				      SceUInt32 sizeofSceAppMgrAppState, SceUInt32 buildVersion);
 extern int sceAppMgrGetRunningAppIdListForShell(SceInt32 *appIds, int count);
-extern int sceAppMgrPeekLaunchParamForShell(int appId, char *param);
-extern int sceAppMgrOverwriteLaunchParamForShell(int appId, const char *param);
 
 extern int sceAppMgrSetNetworkDisconnectionWarningDialogState(SceBool enable,
 							   const void *optParam);
-extern int sceAppMgrGetStatusById(SceUID id, void *appStatus);
-extern int sceAppMgrGetStatusByAppId(int appId, void *appStatus);
-extern int sceAppMgrGetStatusByName(const char *appName, void *appStatus);
 extern int sceAppMgrGetRecommendedScreenOrientation(int *orientation);
 extern int sceAppMgrGetCurrentBgmState(void *currentBgmId, void *currentBgmState);
 extern int sceAppMgrGetCurrentBgmState2(void *bgmState);
 extern int _sceAppMgrGetParam(char *param);
 extern int sceAppMgrGetAppParam2(void *appParam);
 extern int sceAppMgrGetAppMgrState(void *appMgrState);
-extern int sceAppMgrGetFgAppInfo(void *appInfo);
-extern int appmgrReadPlayReadySystemData(SceUInt32 location, void *information,
-				       void *userData, SceSize dataSize);
-extern int appmgrWritePlayReadySystemData(SceUInt32 location,
-		const void *information, const void *userData, SceSize dataSize);
-extern int appmgrSetSystemDataFile(SceUInt32 location, const void *userData,
-				 SceSize dataSize);
 
 int appmgrGetBootParamSyscall(SceUInt32 request, void *bootParam)
 {

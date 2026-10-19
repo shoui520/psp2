@@ -2,13 +2,13 @@
 #include <threadmgr/threadmgr.h>
 #include <sysmem/utils.h>
 #include "adhoc.h"
+#include "drm_crypto.h"
 
 extern GcAuthAdhocWorkspace gcAuthAdhocWorkspace;
 extern SceUID gcAuthAdhocSemaphore;
 extern GcAuthAdhocSigningScratch gcAuthAdhocSigningScratch;
 int GcAuthExecuteKirkCommand(void *output, const void *input, int command,
 		size_t size, int keyId);
-int GcAuthGenerateRandom20(unsigned char *data);
 
 int GcAuthAdhocSign160(const GcAuthAdhocSign160Request *request)
 {

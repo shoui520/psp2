@@ -29,32 +29,15 @@ int sceNetPsSetsockopt(int socket, int level, int option, const void *value,
 int sceNetPsShutdown(int socket, int how, int kernel);
 int sceNetPsSocket(const char *name, int domain, int type, int protocol, int kernel);
 int sceNetPsClose(int socket, int kernel);
-unsigned int sceNetPsSyscallEnter(void);
-void sceNetPsSyscallLeave(unsigned int state);
-unsigned int sceNetPsGetSockinfo(int socket, void *buffer, int count, int flags);
 int sceNetPsSocketAbort(int socket, int flags);
 int sceNetPsIcmConnect(int socket, int flags);
 int sceNetPsSendmsg(int socket, const SceNetMsghdr *message, int flags);
 int sceNetPsRecvmsg(int socket, SceNetMsghdr *message, int flags);
 int sceNetPsIoctl(int socket, unsigned int command, void *data);
-int sceNetPsEpollCreate(const char *name, int flags);
 int sceNetPsEpollCtl(int epoll, int operation, int socket, SceNetEpollEvent *event);
-int sceNetPsEpollClose(int epoll);
-int sceNetPsEpollAbort(int epoll, int flags);
-int sceNetPsDumpCreate(const char *name, int length, int flags);
-int sceNetPsDumpRead(int dump, void *buffer, int length, int *flags);
-int sceNetPsDumpClose(int dump);
-int sceNetPsDumpAbort(int dump, int flags);
-int sceNetPsDescriptorCreate(const char *name, int flags);
 int sceNetPsDescriptorCtl(int descriptor, int operation, int socket, void *info);
-int sceNetPsDescriptorClose(int descriptor);
-int sceNetPsGetIfList(void *list, int count);
-int sceNetPsControl(int interfaceIndex, int command, void *data, int length);
 struct mbuf *m_get(int how, int type);
 extern struct malloc_type *mbtypes[8];
-int sceNetPsSysctl(const int *name, unsigned int nameLength, void *oldData,
-		   unsigned int *oldLength, const void *newData,
-		   unsigned int newLength);
 int sceNetPsRoutingSysctl(const int *name, unsigned int nameLength, void *oldData,
 			  unsigned int *oldLength, const void *newData,
 			  unsigned int newLength);
@@ -108,11 +91,6 @@ int sceNetPsDestroyProcessDescriptors(SceUID processId);
 int sceNetPsDestroyProcessDumps(SceUID processId);
 int sceNetPsUnregisterProcessNetworkState(SceUID processId);
 int sceNetPsReleaseProcessProtocol(SceUID processId);
-int sceNetPsNotifyCallback(SceNetPsDriverCallback *callback,
-			  unsigned int argument);
-int sceNetPsBindCallback(SceNetPsDriverCallback *callback, SceUID callbackId,
-			const char *name);
-void sceNetPsUnbindCallback(SceNetPsDriverCallback *callback);
 int sceNetPsNotifyDriverCallbacks(struct SceNetPsDriverContext *context,
 				  SceUInt64 events);
 int sceNetPsDriverHasPendingEvents(struct SceNetPsDriverContext *context,
@@ -131,16 +109,7 @@ extern volatile struct timeval mono_time;
 extern int gNetPsStartTime;
 extern int gNetPsInitialized;
 
-SceInt64 sceNetPsGetSystemTime(SceUInt64 *value);
-int sceNetPsExitThread(void);
-SceUID sceNetPsGetProcessId(void);
-SceUID sceNetPsGetThreadId(void);
-int sceNetPsFormatUidName(SceUID uid, char *name, int length);
-int sce_psnet_bnet_sync_create(SceNetPsSync *sync, unsigned int events,
-			     const char *name);
-int sce_psnet_bnet_mutex_create(SceNetPsMutex *mutex, const char *name);
 void sceNetPsSeedRandom(void);
-int init_crypto(void *(*allocate)(SceSize size), void (*release)(void *ptr));
 void callout_startup(void);
 void mbinit(void);
 void ifinit(void);
@@ -148,10 +117,6 @@ void domaininit(void);
 void if_attachdomain(void);
 void loopattach(int count);
 void pppoeattach(int count);
-int sceNetPsCreateThread(SceUID *threadId, SceNetPsThreadParam *param,
-			const char *name);
-int sceNetPsIsApplicationProgram(int *error);
-int sceNetPsIsGameBudget(void);
 int callout_hardclock(void);
 void softclock(void *arg);
 int sceNetPsPollDevices(void);
@@ -159,10 +124,6 @@ void sceNetPsReceivePackets(void);
 void sceNetPsIsdnInterrupt(void);
 void arpintr(void);
 void ipintr(void);
-int sce_psnet_bnet_sync_delete(SceNetPsSync *sync);
-int sce_psnet_bnet_sync_wait(SceNetPsSync *sync, unsigned int *timeout,
-			   unsigned int flags);
-unsigned int sce_psnet_bnet_sync_clear(SceNetPsSync *sync);
 void sce_psnet_panic(const char *message, ...) __attribute__((noreturn));
 
 /* bnet_socket_sanity_check still requires the original text/data range owners. */
@@ -281,12 +242,6 @@ int sceNetPsDeliverRxPacket(struct NetDriver *driver,
 }
 
 extern int gNetPsPacketCaptureActive;
-int sceNetPsFilterTxMbuf(struct SceNetPsDriverContext *context,
-		       struct mbuf *mbuf, int *duplicates);
-int sceNetPsSetTxEmulation(struct SceNetPsDriverContext *context,
-			   struct mbuf *mbuf, struct NetDriverPacket *packet);
-int sceNetPsCanTransmit(struct SceNetPsDriverContext *context,
-		       struct ifnet *interface);
 void sceNetPsCaptureTxPacket(struct NetDriverPacket *packet);
 void m_copydata(struct mbuf *mbuf, int offset, int length, void *destination);
 
@@ -601,9 +556,6 @@ int sceNetPsSetSocketSuspendPolicy(unsigned int policy)
 	return 0;
 }
 
-int sceNetPsGetKernelStatistics(SceNetPsKernelStatistics *statistics,
-			     int networkOrder);
-
 /* SCE: querying DNS records subscribes the process to configuration changes. */
 int sceNetPsGetDnsConfig(SceNetPsDnsConfig *config, int networkOrder,
 			int addressesOnly)
@@ -644,8 +596,6 @@ int sceNetPsGetDnsConfig(SceNetPsDnsConfig *config, int networkOrder,
 	config->flags |= 1;
 	return 0;
 }
-
-int sceNetPsNotifyGatewayDns(const SceNetPsDnsConfig *config);
 
 /* SCE: save the complete configuration and notify the registered gateway. */
 int sceNetPsSetDnsConfig(const SceNetPsDnsConfig *config)
@@ -940,7 +890,6 @@ unlock:
 	return result;
 }
 
-int sceNetPsStopDriverEmulation(struct NetDriver *driver);
 void ether_ifdetach(struct ifnet *interface);
 void if_detach(struct ifnet *interface);
 
@@ -998,9 +947,6 @@ unlock:
 	return result;
 }
 
-int sceNetPsGetDriverEmulation(struct SceNetPsDriverContext *context,
-			     SceNetEmulationParam *parameters, int flags);
-
 unsigned int sceNetPsQueryDebugEmulation(
 		const SceNetPsDebugEmulationSelector *selector,
 		unsigned int selectorSize, SceNetPsDebugEmulationInfo *info,
@@ -1038,10 +984,6 @@ unsigned int sceNetPsQueryDebugEmulation(
 	info->interfaceType = selector->interfaceType;
 	return sizeof(*info);
 }
-
-int sceNetPsSetDriverEmulation(struct SceNetPsDriverContext *context,
-			     SceNetEmulationParam *parameters,
-			     int networkOrder, int privileged);
 
 int sceNetPsSetDebugEmulation(SceNetPsDebugEmulationRequest *request,
 			    unsigned int requestSize, int flags)
@@ -1106,13 +1048,7 @@ int sceNetPsQueryDebugSockInfo(const SceUID *processId, unsigned int processSize
 	return result;
 }
 
-int sceNetPsStartModule(SceUID memoryId, void *base, int size,
-		SceNetPsThreadParam *thread, SceUID systemId, SceUID threadId,
-		SceUID processId);
 int sceNetPsSuspendDrivers(void);
-int sceNetPsInitializePacketCallbacks(struct NetDriverPacket *(*prepare)(
-		SceNetPsPacketQueue *, int, int),
-		int (*kick)(struct NetDriver *, int));
 
 /* Name unknown; connect the complete network-owned platform hook records. */
 int sceNetPsInitializeModule(void)
@@ -1551,8 +1487,6 @@ int sceNetPsIsHeapAddress(const void *address)
 		(uintptr_t)address <= (uintptr_t)gNetPsHeapLastByte;
 }
 
-int sceNetPsCopyUserString(const char *source, char *destination, size_t length);
-
 /* Name unknown; copy a terminated string from a kernel or user address. */
 int sceNetPsCopyString(const char *source, char *destination, size_t length,
 		       size_t *copied, int kernel)
@@ -1586,9 +1520,6 @@ complete:
 	*copied = cursor - (signed char *)destination;
 	return 0;
 }
-
-int sceNetPsCopyUserOut(const void *source, void *destination, size_t length);
-int sceNetPsCopyUserIn(const void *source, void *destination, size_t length);
 
 /* Name unknown; copy kernel bytes to a user or kernel destination. */
 int sceNetPsCopyOut(const void *source, void *destination, size_t length,

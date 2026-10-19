@@ -6,16 +6,6 @@
 #include <intrmgr/syscall.h>
 #include <gcauthmgr/sblgcauthmgrpsmact.h>
 
-int GcAuthPcactEncryptChallenge(const GcAuthPcactEncryptChallengeRequest *request);
-int GcAuthPcactGetAesDecryptKey(const GcAuthPcactKeyRequest *request);
-int GcAuthPcactCreateChallenge(const GcAuthPcactChallengeRequest *request);
-int GcAuthPcactGetAuthenticatedAesKey(const GcAuthPcactKeyRequest *request);
-int GcAuthPcactCreateRtcChallenge(const GcAuthPcactRtcChallengeRequest *request);
-int GcAuthPcactApplyRtcActivation(const GcAuthPcactRtcActivationRequest *request);
-int GcAuthPcactGetCertificate(const GcAuthPcactCertificateRequest *request);
-int GcAuthPsmactCreateChallenge(const GcAuthPsmactChallengeRequest *request);
-int GcAuthPsmactVerifyActivation(const GcAuthPsmactVerifyRequest *request);
-
 int GcAuthPcactEncryptChallengeWithStack(unsigned char mode,
 		const GcAuthPcactChallengeInput *input,
 		const unsigned char *rtcSeconds, GcAuthPcactEncryptedChallenge *output,

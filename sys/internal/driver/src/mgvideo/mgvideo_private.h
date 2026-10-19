@@ -826,4 +826,19 @@ int openVideoRecordStream(int handle, unsigned int index, int blockNumber,
 			  const MgVideoUserBuffer *recordInput,
 			  const MgVideoUserBuffer *input);
 
+/* mgvideo_callbacks.c */
+void notifyContextFinalized(void);
+
+/* mgvideo_cipher.c */
+int readVideoEkb2Record(void *output, unsigned int capacity);
+
+/* mgvideo_parser.c */
+int validateVideoBindingPolicy(int dialect, const void *input, unsigned int size);
+int extendVideoPlaybackPeriod(int dialect, void *input, unsigned int size, unsigned int capacity);
+unsigned int measureVideoTaggedData(const void *input, unsigned int size);
+
+/* mgvideo_usercopy.c */
+int copyVideoDataFromUser(void *destination, const void *source, SceSize size);
+int copyVideoDataToUser(void *destination, const void *source, SceSize size);
+
 #endif

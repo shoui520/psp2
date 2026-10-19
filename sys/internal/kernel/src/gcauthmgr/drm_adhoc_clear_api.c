@@ -1,8 +1,7 @@
 /* Adhoc session syscall exit. */
 #include <sysmem/cpu.h>
 #include <intrmgr/syscall.h>
-
-int GcAuthAdhocClearState(void);
+#include "adhoc.h"
 
 int GcAuthAdhocClearStateForUser(void)
 {

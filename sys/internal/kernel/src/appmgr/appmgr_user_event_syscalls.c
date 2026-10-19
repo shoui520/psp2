@@ -2,6 +2,7 @@
 
 #include <intrmgr/syscall_copy.h>
 #include <appmgr/appmgr.h>
+#include "appmgr_event.h"
 
 typedef struct AppmgrSystemEventArguments {
 	SceUInt32 reserved[4];
@@ -9,12 +10,6 @@ typedef struct AppmgrSystemEventArguments {
 
 _Static_assert(sizeof(AppmgrSystemEventArguments) == 16,
 	       "system event argument block");
-
-extern int appmgrSendSystemEventSyscall(const char *appName, int event);
-extern int appmgrReceiveEventNumSyscall(int *eventNum);
-extern int appmgrReceiveEventSyscall(void *appEvent);
-extern int appmgrSendSystemEvent2Syscall(const char *appName, const char *titleId,
-					int event);
 
 int _sceAppMgrReceiveEventNum(int *eventNum)
 {

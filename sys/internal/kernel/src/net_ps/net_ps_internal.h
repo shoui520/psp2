@@ -250,4 +250,72 @@ int sceNetPsInitializePlatform(int (*initialize)(SceUID, void *, int,
 		SceNetPsThreadEventHooks *threadHooks,
 		SceNetPsProcessHooks *processHooks);
 
+/* net_ps_emulation.c */
+void sceNetPsSwapEmulationParam(SceNetEmulationParam *parameters);
+int sceNetPsSetEmulationPreset(SceNetEmulationParam *parameters);
+void sceNetPsBandwidthTimer(void *argument);
+int sceNetPsProcessDelayedPackets(struct ifnet *interface);
+int sceNetPsSetDriverEmulation(struct SceNetPsDriverContext *context,
+			       SceNetEmulationParam *parameters,
+			       int networkOrder, int privileged);
+int sceNetPsFilterTxMbuf(struct SceNetPsDriverContext *context,
+			struct mbuf *mbuf, unsigned int *duplicates);
+int sceNetPsSetTxEmulation(struct SceNetPsDriverContext *context,
+			  struct mbuf *mbuf, struct NetDriverPacket *packet);
+
+/* net_ps_glue.c */
+int sceNetPsPollDevices(void);
+int sceNetPsGetDnsConfig(SceNetPsDnsConfig *config, int networkOrder, int addressesOnly);
+int sceNetPsInitializeDebugInterface(void *slot, struct NetDriver *driver);
+int sceNetPsInitializeGateway(SceNetPsGatewayState *slot, struct NetDriver *driver);
+int sceNetPsNotifyDriverCallbacks(struct SceNetPsDriverContext *context, SceUInt64 events);
+unsigned int sceNetPsGetFreeMemory(int lowest);
+int sceNetPsInitializeHeap(void *base, int size);
+
+/* net_ps_packet.c */
+int sceNetPsStartBandwidthTimer(struct ifnet *interface);
+int sceNetPsGetDriverEmulation(struct SceNetPsDriverContext *context,
+			       SceNetEmulationParam *parameters, int networkOrder);
+int sceNetPsCanTransmit(struct SceNetPsDriverContext *context, struct ifnet *interface);
+int sceNetPsStopDriverEmulation(struct NetDriver *driver);
+int sceNetPsInitializePacketCallbacks(struct NetDriverPacket *(*prepare)(
+		SceNetPsPacketQueue *, int, int),
+		int (*kick)(struct NetDriver *, int));
+
+/* net_ps_startup.c */
+int sceNetPsStartModule(SceUID memoryId, void *base, int size,
+		SceNetPsThreadParam *thread, SceUID systemId,
+		SceUID threadId, SceUID processId);
+
+/* net_ps_statistics.c */
+int sceNetPsGetKernelStatistics(SceNetPsKernelStatistics *statistics, int networkOrder);
+
+/* src/ps/osdependence/ngp/system_os.c */
+int init_crypto(void *(*allocate)(SceSize), void (*release)(void *));
+void sce_psnet_panic(const char *message, ...);
+int sceNetPsIsApplicationProgram(int *error);
+int sceNetPsIsGameBudget(void);
+int sceNetPsIsDevelopmentMode(void);
+int sceNetPsIsCEX(void);
+int sceNetPsIsSdkVersion2OrLater(void);
+int sceNetPsCopyUserOut(const void *source, void *destination, size_t length);
+int sceNetPsCopyUserIn(const void *source, void *destination, size_t length);
+int sceNetPsCopyUserString(const char *source, char *destination, size_t length);
+SceInt64 sceNetPsGetSystemTime(SceUInt64 *value);
+int sceNetPsFormatUidName(SceUID uid, char *name, int length);
+int sceNetPsCreateThread(SceUID *threadId, SceNetPsThreadParam *param, const char *name);
+SceUID sceNetPsGetThreadId(void);
+SceUID sceNetPsGetProcessId(void);
+int sceNetPsExitThread(void);
+int sce_psnet_bnet_mutex_create(SceNetPsMutex *mutex, const char *name);
+int sce_psnet_bnet_sync_create(SceNetPsSync *sync, unsigned int events, const char *name);
+int sce_psnet_bnet_sync_delete(SceNetPsSync *sync);
+int sce_psnet_bnet_sync_wait(SceNetPsSync *sync, unsigned int *timeout, unsigned int flags);
+unsigned int sce_psnet_bnet_sync_clear(SceNetPsSync *sync);
+int sceNetPsBindCallback(SceNetPsDriverCallback *callback, SceUID callbackId, const char *name);
+void sceNetPsUnbindCallback(SceNetPsDriverCallback *callback);
+int sceNetPsNotifyCallback(SceNetPsDriverCallback *callback, unsigned int argument);
+unsigned int sceNetPsSyscallEnter(void);
+void sceNetPsSyscallLeave(unsigned int state);
+
 #endif

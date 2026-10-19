@@ -11,6 +11,7 @@
 #include <string.h>
 #include <threadmgr/threadmgr.h>
 #include <smsc_proxy/smsc_proxy.h>
+#include "dmac5mgr.h"
 
 const SceSelfAuthInfo ssPortabilityAuthInfo = {
 	.programAuthorityId = UINT64_C(0x2808000000000001),
@@ -36,11 +37,6 @@ typedef struct SsPortabilityRequest {
 } SsPortabilityRequest;
 
 _Static_assert(sizeof(SsPortabilityRequest) == 0x5c, "Portability request ABI");
-
-/* Sysevent and start hooks of the DMAC5 and RNG parts. */
-int dmac5ClearKeyring(void);	/* clears the cached DMAC5 keyring on resume */
-int sceSblDmac5Init(void);
-int sceSblRngInit(void);
 
 #define SS_ERROR_INVALID_ARGUMENT	0x800F0016
 #define SS_ERROR_NO_MEMORY		0x800F000C

@@ -12,18 +12,17 @@
 #include "app_state_internal.h"
 #include <processmgr/processmgr.h>
 #include <appmgr/appmgr.h>
+#include "appmgr_app_event.h"
+#include "appmgr_device.h"
 
-extern int dumpBgmState(void);
 extern SceUID g_appmgrMainMutexOwner;
 
 struct AppState;
-extern int _appListPushEvent(struct AppState *app, const SceAppMgrSystemEvent *event);
 extern int _processUpdateThreadEntry(SceSize args, void *argp);
 extern int _gcListenerThreadEntry(SceSize args, void *argp);
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrCore2Mutex;
 extern SceUID g_appmgrCore2MutexOwner;
-extern void _sceAppMgrNotifyAppMgrHandler(void);
 
 SceUID g_appmgrUpdateNotifySemaphore = -1;
 SceUID g_appmgrProcessStateUpdaterThread = -1;

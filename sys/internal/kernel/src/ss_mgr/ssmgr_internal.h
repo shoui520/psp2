@@ -70,3 +70,9 @@ int aimgrReadConsoleId(SceConsoleId *consoleId);
 int aimgrReadVisibleId(void *visibleId);
 int aimgrInit(void);
 int qafInit(void);
+
+/* aimgr_secure_module_comm.c */
+int aimgrCreatePassPhrase(const uint32_t *parameters, void *passPhrase);
+
+/* rng.c */
+int sceSblRngInit(void);

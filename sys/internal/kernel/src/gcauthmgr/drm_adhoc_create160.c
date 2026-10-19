@@ -7,20 +7,8 @@ extern int gcAuthAdhocInitialized;
 extern GcAuthAdhocCertificate gcAuthAdhocCertificate;
 extern GcAuthAdhocWorkspace gcAuthAdhocWorkspace;
 extern GcAuthAdhocGeneratedKeyPair gcAuthAdhocGeneratedKeyPair;
-int GcAuthAdhocReadCertificate160(void);
 int GcAuthExecuteKirkCommand(void *output, const void *input, int command,
 		size_t size, int keyId);
-void GcAuthAdhocBuildMessage(unsigned char *output,
-		const unsigned char *first, unsigned int firstSize,
-		const unsigned char *second, unsigned int secondSize,
-		const unsigned char *third, unsigned int thirdSize,
-		const unsigned char *fourth, unsigned int fourthSize);
-int GcAuthAdhocEncryptPacket(const unsigned char *first, unsigned int firstSize,
-		const unsigned char *second, unsigned int secondSize,
-		const unsigned char *third, unsigned int thirdSize,
-		const unsigned char *fourth, unsigned int fourthSize,
-		const unsigned char *fifth, unsigned int fifthSize,
-		const unsigned char *sixth, unsigned int sixthSize);
 
 int GcAuthAdhocCreateContext160(const GcAuthAdhocCreateContext160Request *request)
 {

@@ -116,4 +116,11 @@ int appmgrPsfCreate(void **object);
 int appmgrPsfInitializeHeader(void *object, const void *magic,
 	unsigned int majorVersion, unsigned int minorVersion);
 
+/* psf.c */
+int appmgrPsfSetEntryLength(void *object, void *entryObject, SceSize length);
+int appmgrPsfGetEntryData(void *object, void *entryObject, void **data);
+int appmgrPsfFindEntry(void *object, const char *key, void **entry);
+int appmgrPsfSetEntry(void *object, const char *key, const void *value,
+	SceUInt16 format, SceSize length, SceSize capacity);
+
 #endif

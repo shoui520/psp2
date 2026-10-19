@@ -1,12 +1,6 @@
 /* SceSdstor module initialization. */
 #include <scetypes.h>
-
-int sdstorRegisterUsbMassInterrupt(void);
-int sddev_init(void);
-int sdpart_init(void);
-int sdstor_initialize(void);
-int sdstor_vfs_initialize(void);
-int sdctrl_initialize(void);
+#include "sdstor_internal.h"
 
 int module_start(SceSize arglen, const void *argp)
 {

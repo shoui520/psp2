@@ -4,6 +4,7 @@
 #include <threadmgr/threadmgr.h>
 #include <intrmgr/syscall_copy.h>
 #include <string.h>
+#include "app_state_internal.h"
 
 typedef struct AppmgrSaveDataSlotGetParamArguments {
 	SceAppMgrSaveDataSlot *slot;
@@ -12,15 +13,6 @@ typedef struct AppmgrSaveDataSlotGetParamArguments {
 
 _Static_assert(sizeof(AppmgrSaveDataSlotGetParamArguments) == 8,
 	       "save-data slot stack arguments");
-
-extern int appmgrSaveDataSlotInitSyscall(void *slot);
-extern int appmgrSaveDataSlotCreateSyscall(SceAppMgrSaveDataSlot *slot);
-extern int appmgrSaveDataSlotGetParamSyscall(SceAppMgrSaveDataSlot *slot);
-extern int appmgrSaveDataSlotDeleteSyscall(SceAppMgrSaveDataSlotDelete *slot);
-extern int appmgrSaveDataSlotSetParamSyscall(SceAppMgrSaveDataSlot *slot);
-extern int appmgrSaveDataSlotSetStatusSyscall(void *status);
-extern int appmgrSaveDataSlotGetStatusSyscall(void *status);
-extern int appmgrSaveDataSlotFileGetParamSyscall(unsigned int slotId, void *param);
 
 int appmgrSaveDataSlotGetParamForUser(SceAppMgrSaveDataSlot *userSlot,
 				    const SyscallSizeArgs *userArguments)

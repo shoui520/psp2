@@ -6,8 +6,6 @@ extern SceUID gcAuthAdhocSemaphore;
 extern const GcAuthAdhocPublicKey224 gcAuthAdhocPublicKey224Key1;
 extern const GcAuthAdhocPublicKey224 gcAuthAdhocPublicKey224Key0;
 extern const GcAuthAdhocPublicKey224 gcAuthAdhocPublicKey224Key1000;
-int GcAuthAdhocVerify224(const GcAuthAdhocPublicKey224 *publicKey,
-		const unsigned char *digest, const GcAuthAdhocSignature224 *signature);
 
 int GcAuthAdhocVerifyRequest224(const GcAuthAdhocSign224Request *request)
 {

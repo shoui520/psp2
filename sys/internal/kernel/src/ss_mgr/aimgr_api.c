@@ -11,8 +11,6 @@ ScePsCode aimgrPscode;
 SceKernelOpenPsId aimgrOpenPsId;
 SceUID aimgrMutex;
 
-int aimgrCreatePassPhrase(const uint32_t *parameters, void *passPhrase);
-
 #define AIMGR_ERROR_INVALID_ARGUMENT	0x800F0C16
 #define AIMGR_ERROR_PRODUCT_MODE	0x800F0C01
 #define AIMGR_ERROR_NOT_PRODUCTION	0x800F0C29

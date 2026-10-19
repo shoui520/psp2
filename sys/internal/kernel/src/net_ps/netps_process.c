@@ -4,8 +4,7 @@
 #include <net_ps/netps_thread.h>
 #include "netps_process.h"
 #include <stddef.h>
-
-extern SceUID sceNetPsGetProcessId(void);
+#include "net_ps_internal.h"
 
 SceNetPsProcess *gNetPsProcessHead;
 SceNetPsProcess *gNetPsProcessTail;

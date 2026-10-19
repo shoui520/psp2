@@ -25,16 +25,7 @@ extern volatile struct timeval mono_time;
 extern int gNetPsStartTime;
 extern int gNetPsInitialized;
 
-SceInt64 sceNetPsGetSystemTime(SceUInt64 *value);
-int sceNetPsExitThread(void);
-SceUID sceNetPsGetProcessId(void);
-SceUID sceNetPsGetThreadId(void);
-int sceNetPsFormatUidName(SceUID uid, char *name, int length);
-int sce_psnet_bnet_sync_create(SceNetPsSync *sync, unsigned int events,
-			     const char *name);
-int sce_psnet_bnet_mutex_create(SceNetPsMutex *mutex, const char *name);
 void sceNetPsSeedRandom(void);
-int init_crypto(void *(*allocate)(SceSize size), void (*release)(void *ptr));
 void callout_startup(void);
 void mbinit(void);
 void ifinit(void);
@@ -42,21 +33,12 @@ void domaininit(void);
 void if_attachdomain(void);
 void loopattach(int count);
 void pppoeattach(int count);
-int sceNetPsCreateThread(SceUID *threadId, SceNetPsThreadParam *param,
-			const char *name);
-int sceNetPsIsApplicationProgram(int *error);
-int sceNetPsIsGameBudget(void);
 int callout_hardclock(void);
 void softclock(void *arg);
-int sceNetPsPollDevices(void);
 void sceNetPsReceivePackets(void);
 void sceNetPsIsdnInterrupt(void);
 void arpintr(void);
 void ipintr(void);
-int sce_psnet_bnet_sync_delete(SceNetPsSync *sync);
-int sce_psnet_bnet_sync_wait(SceNetPsSync *sync, unsigned int *timeout,
-			   unsigned int flags);
-unsigned int sce_psnet_bnet_sync_clear(SceNetPsSync *sync);
 void sce_psnet_panic(const char *message, ...) __attribute__((noreturn));
 
 /* Name unknown; signal every network thread waiting on this channel. */

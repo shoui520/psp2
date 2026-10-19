@@ -2,14 +2,8 @@
 
 #include <scetypes.h>
 #include <appmgr/appmgr.h>
-
-extern int appmgrConvertVs0UserDrivePath(const char *path, char *output,
-	SceSize size);
-extern int sceAppMgrGetRawPath(char *path, char *resolvedPath, int capacity);
-extern int appmgrGetUserDirPathById(int userId, int partitionId, char *path,
-	unsigned int capacity);
-extern int sceAppMgrGetRawPathOfApp0ByAppIdForShell(int appId, char *path);
-extern int sceAppMgrGetRawPathOfApp0ByPidForShell(SceUID pid, char *path);
+#include "mount.h"
+#include "app_state_internal.h"
 
 int appmgrConvertVs0UserDrivePathSyscall(const char *path, char *output,
 	SceSize size)

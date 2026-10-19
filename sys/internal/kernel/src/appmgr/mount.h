@@ -48,3 +48,19 @@ _Static_assert(offsetof(AppmgrLicenseInfo, licenseVersion) == 48 &&
 	       offsetof(AppmgrLicenseInfo, licExpTime) == 88 &&
 	       offsetof(AppmgrLicenseInfo, klicense) == 96,
 	       "license information fields");
+
+/* mount.c */
+int appmgrDecodeString(const unsigned char *source, char *destination, SceSize size);
+int appmgrRegisterMountDebugSettingCallback(void);
+int appmgrIsDevelopmentPath(const char *path);
+int appmgrGetVs0UserModuleDrive(char *mountPoint);
+int appmgrGetVs0UserDataDrive(char *mountPoint);
+int appmgrConvertVs0UserDrivePath(const char *path, char *output, SceSize size);
+int appmgrCountPfsMountReferences(unsigned int mountId, int flags);
+int appmgrCheckRifGD(const char *path, AppmgrLicenseInfo *info);
+int appmgrGetUserDirPathById(int userId, int partitionId, char *output, unsigned int capacity);
+int appmgrResolvePath(const char *path, SceUID pid, char *output, SceSize size);
+int sceAppMgrGetRawPath(char *path, char *resolvedPath, int capacity);
+int appmgrExtractSaveDataDeviceName(const char *path, char *device, SceSize capacity);
+void *appmgrAllocMountHeapMemory(SceSize size);
+int appmgrFreeMountHeapMemory(void *memory);

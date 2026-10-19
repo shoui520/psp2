@@ -9,10 +9,6 @@ extern int gNetPsSoftTick;
 void callout_reset(struct callout *timer, int ticks,
 		   void (*callback)(void *), void *argument);
 void callout_stop(struct callout *timer);
-void sceNetPsBandwidthTimer(void *argument);
-void sceNetPsSwapEmulationParam(SceNetEmulationParam *parameters);
-int sceNetPsSetEmulationPreset(SceNetEmulationParam *parameters);
-int sceNetPsProcessDelayedPackets(struct ifnet *interface);
 
 /* SCE: arm the emulated bandwidth timer for the next 100 milliseconds. */
 int sceNetPsStartBandwidthTimer(struct ifnet *interface)

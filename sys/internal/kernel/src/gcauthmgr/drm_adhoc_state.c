@@ -2,12 +2,12 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <threadmgr/threadmgr.h>
+#include "drm_crypto.h"
 
 extern SceUID gcAuthAdhocSemaphore;
 extern uint64_t gcAuthAdhocCounter;
 extern int gcAuthAdhocInitialized;
 extern unsigned char gcAuthAdhocRandom[32];
-int GcAuthGenerateRandom20(unsigned char *data);
 
 int GcAuthAdhocInitializeState(void)
 {

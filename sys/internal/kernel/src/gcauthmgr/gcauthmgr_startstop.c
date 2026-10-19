@@ -1,13 +1,12 @@
 /* Module lifecycle. */
 #include <sysmem/procevent.h>
+#include "adhoc.h"
+#include "drm_crypto.h"
+#include "pcact.h"
 
 unsigned char gcAuthProcessStopBlocked;
 
-int GcAuthInitializeDrmBb(void);
-int GcAuthInitializePcact(void);
-int GcAuthInitializeAdhocBb(void);
 int GcAuthInitializeMsSaveBb(void);
-int GcAuthResetState(void);
 int GcAuthInitializeGcAuth(void);
 
 int GcAuthProcessStopHandler(SceUID pid, int eventType,

@@ -2,6 +2,7 @@
 #pragma once
 
 #include <scetypes.h>
+#include <camera.h>
 #include <sysmem/spinlock.h>
 #include <threadmgr/threadmgr.h>
 
@@ -198,3 +199,75 @@ extern int cameraAllowSimultaneousDevices;
 extern int cameraMeasuredFramerate[2];
 extern SceUInt64 cameraPreviousFrameTimestamp[2];
 extern void *cameraSramFrameBufferBase[2][3];
+
+/* camera.c */
+/* name unknown; same user wrapper family as SceCameraDummy */
+int cameraSetAlternateFrameBuffers(unsigned int mode);
+int SceCameraForDriver_E487870A(int devnum, SceCameraInfo *pInfo);
+int SceCameraForDriver_2D12FDF3(int devnum, SceCameraRead *read);
+int SceCameraForDriver_EE3D4B1C(int devnum, SceFVector3 *pLocation);
+
+/* camera_config.c */
+SceUID cameraGetCallerProcessId(void);
+CameraProcess *cameraGetProcess(int devnum, SceUID processId);
+int cameraInitializeConfig(void);
+int cameraInitializeProcess(SceUID processId);
+int cameraRegisterProcess(SceUID processId);
+int cameraUnregisterProcess(SceUID processId);
+CameraProcess *cameraGetProcessStorage(SceUID processId, int create);
+int sceCameraConfigOpen(int devnum, SceCameraInfo *pInfo);
+int sceCameraConfigStartPid(int devnum, SceUID processId, int force);
+int sceCameraConfigStopPid(int devnum, SceUID processId);
+int cameraHasOpenProcess(int devnum);
+int cameraHasStartedProcess(int devnum, int activeOnly);
+int sceCameraConfigSetStartedPid(int devnum, SceUID processId, int started);
+int sceCameraConfigSetActiveStatusPid(int devnum, SceUID processId, int status);
+int sceCameraConfigClosePid(int devnum, SceUID processId);
+int cameraResetConfig(void);
+int sceCameraConfigRead(int devnum, SceCameraRead *pRead);
+int sceCameraConfigAttribute(int devnum, int checkFormat);
+int cameraCheckActiveProcess(SceUID processId, int devnum, int currentProcess);
+int sceCameraConfigGetAttribute(int devnum, int attribute, int *pValue);
+int sceCameraConfigSetAttribute(int devnum, int attribute, int value, int flags, int updateSensor);
+int cameraGetProcessDeviceStatus(SceUID processId);
+int cameraSetProcessState(SceUID processId, int devnum, int state);
+int cameraHasOtherProcess(int devnum, SceUID processId);
+int cameraIsProcessActive(int devnum, SceUID processId);
+int cameraIsProcessStarted(int devnum, SceUID processId);
+int cameraSetProcessSuspendState(int devnum, SceUID processId, int state);
+int cameraGetProcessSuspendState(int devnum, SceUID processId, int *state);
+int cameraSetProcessRequestedSuspendState(int devnum, SceUID processId, int state);
+int cameraGetProcessRequestedSuspendState(int devnum, SceUID processId, int *state);
+int cameraAdvanceProcessFrame(int devnum, SceUID processId);
+int sceCameraConfigSetProcPrevFrame(int devnum, SceUID processId, SceUInt64 frame);
+int cameraRestoreProcessSensorRegisters(int devnum);
+SceUInt64 sceCameraConfigGetProcFrame(int devnum, SceUID processId);
+SceUInt64 sceCameraConfigGetProcPrevFrame(int devnum, SceUID processId);
+SceUInt64 sceCameraConfigGetProcTimestamp(int devnum, SceUID processId);
+int cameraSetProcessAlternateFrameBuffers(int devnum, SceUID processId, int alternate);
+int cameraGetProcessAlternateFrameBuffers(int devnum, SceUID processId, int *alternate);
+int cameraSetProcessRangesLocked(int devnum, SceUID processId, int locked);
+
+/* ov7735.c */
+int cameraWriteRegisterOV7735(int devnum, SceUInt16 address, SceUInt8 value);
+int cameraReadRegisterOV7735(int devnum, SceUInt16 address, SceUInt8 *value);
+int cameraWriteRegistersOV7735(int devnum, const void *registers, unsigned int count);
+int cameraProbeOV7735(int devnum);
+int cameraSetControlModeOV7735(int devnum, int command, int mode);
+int cameraGetProbeResultOV7735(int devnum, int command, SceUInt16 *result);
+int cameraInitializeOV7735(int devnum);
+int cameraResetOV7735(int devnum);
+int cameraSetFormatOV7735(int devnum, int format);
+int cameraSetFramerateOV7735(int devnum, int framerate, int resolution);
+int cameraSetResolutionOV7735(int devnum, int resolution, int framerate);
+int cameraSetRangeOV7735(int devnum, int range);
+int cameraSetPowerStateOV7735(int devnum, int enabled);
+int cameraGetAttributeOV7735(int devnum, int attribute, int *value, int flags, void *option);
+int cameraGetCsiFormatOV7735(int devnum, int framerate, int format);
+int sceCameraGetExposureTimeOV7735(int devnum, int framerate, unsigned int *exposure);
+int cameraGetRaw8FormatOV7735(int devnum, int format, unsigned int *value);
+int cameraHasColorChangeOV7735(int devnum);
+int cameraSetAttributeOV7735(int devnum, int attribute, int value, int flags, void *argument);
+int cameraRecoverOV7735(int devnum);
+int cameraGetSensorRegistersOV7735(int devnum, SceUInt8 *values, int defaults);
+int cameraSetSensorRegistersOV7735(int devnum, const SceUInt8 *values);

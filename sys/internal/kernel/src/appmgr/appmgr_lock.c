@@ -4,9 +4,9 @@
 #include <sysmem/debug.h>
 #include <threadmgr/threadmgr.h>
 #include <appmgr/appmgr.h>
+#include "appmgr_device.h"
 
 extern SceUID g_appmgrMainMutex;
-extern int dumpBgmState(void);
 
 SceUID g_appmgrCore2Mutex = -1;
 SceUID g_appmgrCore2MutexOwner = -1;

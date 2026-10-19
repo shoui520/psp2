@@ -3,10 +3,7 @@
 #include "netps_process.h"
 #include "netps_resource.h"
 #include <stddef.h>
-
-int sceNetPsIsApplicationProgram(int *error);
-int sceNetPsIsGameBudget(void);
-SceUID sceNetPsGetProcessId(void);
+#include "net_ps_internal.h"
 
 int gNetPsOtherDumpCursor = 3;
 int gNetPsOtherSocketCursor = 895;

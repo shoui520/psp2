@@ -49,4 +49,10 @@ _Static_assert(offsetof(SceNetPsPcapHeader, snapshotLength) == 16,
 	       "PCAP capture limit");
 _Static_assert(offsetof(SceNetPsPcapHeader, linkType) == 20, "PCAP link type");
 
+/* dev/net_ps_dump.c */
+int sceNetPsDumpCreate(const char *name, int length, int flags);
+
+/* netps_dump_reader.c */
+int sceNetPsDumpRead(int dumpId, void *buffer, int length, int *flags);
+
 #endif

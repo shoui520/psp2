@@ -134,3 +134,6 @@ void _shellEventOnAppUnloadedQueuePush(SceUID pid, int appId, int exitReason,
 
 int sceAppMgrCheckAppLaunchLimitToAvoidQueueOverflow(void);
 int sceAppMgrReceiveShellEvent(AppmgrShellEvent *event);
+
+/* appmgr_shell.c */
+SceInt64 appmgrUpdateShellWatchDogActivity(void);

@@ -2,12 +2,7 @@
 
 #include <intrmgr/syscall_copy.h>
 #include <appmgr/appmgr.h>
-
-extern int appmgrSetBackRenderPortOwnerSyscall(int appId);
-extern int appmgrIsCameraActiveSyscall(int appId, int *active);
-extern int appmgrSetPowerSaveModeSyscall(int mode, int suspendBackgroundApps);
-extern int appmgrSetShellScreenOrientationSyscall(int orientation);
-extern int appmgrSetRecommendedScreenOrientationForShellSyscall(int orientation);
+#include "app_state_internal.h"
 
 int _sceAppMgrSetBackRenderPortOwner(int appId)
 {

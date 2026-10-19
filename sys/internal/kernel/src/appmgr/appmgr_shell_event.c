@@ -8,12 +8,11 @@
 #include "app_state_internal.h"
 #include "appmgr_shell_event.h"
 #include <appmgr/appmgr.h>
+#include "appmgr_device.h"
 
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
 extern SceUID g_appmgrDebugShellEventSemaphore;
-extern int dumpBgmState(void);
-extern SceInt64 appmgrUpdateShellWatchDogActivity(void);
 extern int appmgrCoalesceShellEvent(const AppmgrShellEvent *event);
 extern int appmgrHasLoadExecShellEvents(int appId);
 extern int _deleteDuplicatedShellEventQueueByLoadExec(int appId);

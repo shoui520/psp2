@@ -3,13 +3,11 @@
 #include <camera.h>
 #include <sysmem/sysmem.h>
 #include <camera/camera.h>
+#include "camera_config.h"
 
-int SceCameraForDriver_E487870A(int devnum, SceCameraInfo *pInfo);
-int SceCameraForDriver_2D12FDF3(int devnum, SceCameraRead *pRead);
-int SceCameraForDriver_EE3D4B1C(int devnum, SceFVector3 *pLocation);
+/* the attribute set and get, as SceCameraDummy defines them: the wrappers pass three
+ * arguments, camera.c's definitions take a fourth (flags) */
 int SceCameraForDriver_D56A12BD(int devnum, int attribute, int value);
-/* Name unknown; same user wrapper family as SceCameraDummy. */
-int cameraSetAlternateFrameBuffers(unsigned int mode);
 int SceCameraForDriver_B312CE90(int devnum, int attribute, int value);
 
 int sceCameraOpen(int devnum, SceCameraInfo *pInfo)

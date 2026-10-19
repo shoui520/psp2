@@ -3,8 +3,7 @@
 #include <appmgr/appmgr_savedata.h>
 #include <appmgr/appmgr_rdrfp.h>
 #include <appmgr/appmgr.h>
-
-extern int appmgrSaveDataSlotFileGetParam(unsigned int slotId, void *param);
+#include "app_state_internal.h"
 
 int appmgrSaveDataSlotInitSyscall(void *slot)
 {

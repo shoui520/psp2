@@ -4,22 +4,7 @@
 #include "appmgr_event.h"
 #include "mount.h"
 #include <appmgr/appmgr.h>
-
-extern int appmgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
-		SceUInt32 displayMode, int displayBlanked, SceUInt32 unsupportedOptions);
-extern int appmgrReleaseSoundOutExclusive2(void);
-extern int appmgrReleaseSoundOutExclusive(void);
-extern int appmgrReleaseSoundOutExclusive3(void);
-extern int appmgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode);
-extern int appmgrAcquireSoundOutExclusive2(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode, int displayRequest);
-extern int sceAppMgrSetBgmProxyApp(const char *appName);
-extern int appmgrSystemParamGetInt(int parameter, int *value);
-extern int appmgrSystemParamDateTimeGetConf(void *conf);
-extern int appmgrSystemParamGetString(int parameter, char *value, SceSize size);
-extern int appmgrGetVs0UserModuleDrive(char *mountPoint);
-extern int appmgrGetVs0UserDataDrive(char *mountPoint);
-extern int appmgrCheckRifGD(const char *path, AppmgrLicenseInfo *info);
-extern int appmgrCountPfsMountReferences(unsigned int mountId, int flags);
+#include "app_state_internal.h"
 
 int appmgrSystemParamDateTimeGetConfSyscall(void *conf)
 {

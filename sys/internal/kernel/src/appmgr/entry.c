@@ -13,13 +13,7 @@
 #include "appmgr_event.h"
 #include <appmgr/appmgr.h>
 #include <appmgr/appmgr_savedata.h>
-
-extern int appmgrSystemParamGetIntSyscall(int parameter, int *value);
-extern int appmgrSystemParamGetStringSyscall(int parameter, char *value, SceSize size);
-extern int appmgrSystemParamDateTimeGetConfSyscall(void *conf);
-extern int appmgrCountPfsMountReferencesSyscall(unsigned int mountId, int flags);
-extern int appmgrGetVs0UserModuleDriveSyscall(char *mountPoint);
-extern int appmgrGetVs0UserDataDriveSyscall(char *mountPoint);
+#include "app_state_internal.h"
 
 int _sceAppMgrSystemParamDateTimeGetConf(void *conf)
 {
@@ -155,11 +149,6 @@ STUB(_sceAppMgrAddContMount)
 STUB(_sceAppMgrUmountByPid)
 STUB(_sceAppMgrWorkDirMount)
 STUB(sceAppMgrQuitApp)
-extern int appmgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
-		SceUInt32 displayMode, int displayBlanked, SceUInt32 unsupportedOptions);
-
-extern int appmgrAcquireSoundOutExclusive3Syscall(int priority, SceUInt32 displayEnabled,
-		SceUInt32 displayMode, int displayBlanked, SceUInt32 unsupportedOptions);
 
 int _sceAppMgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
 		SceUInt32 displayMode, const void *userArguments)
@@ -176,14 +165,12 @@ STUB(sceAppMgrSetSystemImposeState2)
 STUB(_sceAppMgrForceUmount)
 STUB(_sceAppMgrLaunchVideoStreamingApp)
 STUB(_sceAppMgrGetPidListForShell)
-extern int appmgrReleaseSoundOutExclusive2(void);
 
 STUB(_sceAppMgrAppUmount)
 STUB(sceAppMgrEnableCoredumpForTest)
 STUB(_sceAppMgrLoopBackMount)
 STUB(sceAppMgrIsOtherAppPresent)
 STUB(_sceAppMgrLaunchAppByUri)
-extern int appmgrReleaseSoundOutExclusive(void);
 
 STUB(_sceAppMgrTrophyMountById)
 
@@ -211,7 +198,6 @@ STUB(_sceAppMgrAppParamSetString)
 STUB(sceAppMgrSuspendBgAppByShell)
 STUB(sceAppMgrReturnLiveAreaOperationResultForShell)
 STUB(sceAppMgrIsNonGameProgram)
-extern int appmgrReleaseSoundOutExclusive3(void);
 
 STUB(sceAppMgrResumeBgAppByShell)
 STUB(_sceAppMgrGetSaveDataInfo)
@@ -235,15 +221,12 @@ STUB(_sceAppMgrLoadSaveDataSystemFile)
 STUB(_sceAppMgrPspSaveDataRootMount)
 STUB(_sceAppMgrDrmOpen)
 
-extern int appmgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode);
-
 STUB(sceAppMgrSetInfobarState)
 STUB(_sceAppMgrLaunchAppByName2)
 STUB(sceAppMgrSetAppProtectionModeOnMemoryShortage)
 
 STUB(_sceAppMgrPhotoUmount)
 STUB(_sceAppMgrSaveDataDataSave)
-extern int appmgrAcquireSoundOutExclusive2(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode, int displayRequest);
 
 STUB(_sceAppMgrDeclareShellProcess2)
 STUB(sceAppMgrIsPidShellAndCrashed)
@@ -282,8 +265,6 @@ STUB(_sceAppMgrAppDataMount)
 STUB(_sceAppMgrSaveDataGetQuota)
 STUB(_sceAppMgrCaptureFrameBufIFTUByAppId)
 
-extern int appmgrSendNotificationRequest(const AppmgrNotificationRequest *request, int wait);
-
 int _sceAppMgrSendNotificationRequest(const AppmgrNotificationRequest *request, int wait)
 {
 	AppmgrNotificationRequest *kernelRequest = NULL;
@@ -293,9 +274,6 @@ int _sceAppMgrSendNotificationRequest(const AppmgrNotificationRequest *request, 
 	return appmgrSendNotificationRequest(kernelRequest, wait);
 }
 STUB(_sceAppMgrUpdateSaveDataParam)
-extern int sceAppMgrSetBgmProxyApp(const char *appName);
-
-extern int appmgrSetBgmProxyAppSyscall(const char *appName);
 
 int _sceAppMgrSetBgmProxyApp(const char *appName, const SyscallUnusedArgs *userArguments)
 {

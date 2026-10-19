@@ -9,13 +9,7 @@
 
 GcAuthPsmactActivationFile gcAuthPsmactActivationFile;
 
-int GcAuthPsmactVerifyActivationWithStack(const GcAuthPsmactActivation *activation,
-		const GcAuthPsmactRandomRecord *random, GcAuthPsmactDerivedKeys *output);
-int GcAuthPsmactDecryptActivation(const GcAuthPsmactDerivedKeys *keys);
 extern SceRtcTick gcAuthActivationRetryDeadline;
-int GcAuthPcactBeginActivation(const GcAuthPcactBeginActivationRequest *request);
-int GcAuthPcactApplyActivation(const GcAuthPcactApplyActivationRequest *request);
-int GcAuthPsmactBeginActivation(const GcAuthPsmactBeginActivationRequest *request);
 
 int GcAuthPsmactApplyActivation(const GcAuthPsmactApplyActivationRequest *request)
 {

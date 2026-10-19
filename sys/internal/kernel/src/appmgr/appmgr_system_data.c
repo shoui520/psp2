@@ -14,6 +14,7 @@
 #include <string.h>
 #include <sysmem/sysclib.h>
 #include <acmgr/acmgr.h>
+#include "mount.h"
 
 typedef struct AppmgrPlayReadyFileHeader {
 	char magic[4];
@@ -39,8 +40,6 @@ _Static_assert(offsetof(AppmgrPlayReadyFileHeader, payloadSize) == 16,
 _Static_assert(offsetof(AppmgrPlayReadyFileHeader, reserved) == 20,
 	       "PlayReady reserved bytes");
 
-extern int appmgrDecodeString(const unsigned char *source, char *destination,
-			      SceSize size);
 extern SceUID g_appmgrCoreHeap;
 SceUID appmgrOpenTemporaryCopy(const char *path, int flags, void *copyBuffer,
 			      SceSize capacity);

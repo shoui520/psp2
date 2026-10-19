@@ -99,3 +99,24 @@ void motionInitializeComplete(int result, void *arg);
 
 int motionCreateHeap(void);
 int motionInitializeManager(void *arg);
+
+/* motion_manager.c */
+int SceMotionDevForDriver_3B23DF55(unsigned int block, SceMotionDevCalibrationHeader *header);
+int SceMotionDevForDriver_F0251700(unsigned int block, SceMotionDevCalibrationData *data,
+	unsigned int count);
+int motionRead(SceMotionDevData *data, int count, unsigned int *info);
+int motionReadForMagnCalib(SceMotionDevData *data, int count);
+int motionMagnSamplingStart(void);
+int motionMagnSamplingStop(void);
+int motionUpdateMagnCalibData(const SceMotionDevMagnCalibData *data, uint32_t *tag);
+int motionGetCurrentMagnCalibData(SceMotionDevMagnCalibData *data);
+int motionGetFactoryMagnCalibData(SceMotionDevMagnCalibData *data);
+int motionUpdateMagnStabilityLevel(uint32_t level);
+int motionGetCurrentMagnStabilityLevel(uint32_t *level);
+int motionGetGyroCalibData(SceMotionDevGyroCalibData *data);
+int motionGetAccCalibData(SceMotionDevAccCalibData *data);
+int motionGetGyroBias(SceMotionDevGyroBiasData *bias);
+int motionGetDeviceLocation(SceMotionDevDeviceLocation *location);
+uint32_t motionGetMeasMode(uint8_t *mode);
+int motionGetControllerType(int port, uint8_t *type);
+int SceMotionDevForDriver_5B53AC26(void *statistics);

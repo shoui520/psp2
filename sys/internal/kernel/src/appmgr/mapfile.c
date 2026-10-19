@@ -8,12 +8,7 @@
 #include <string.h>
 #include <sysmem/sysclib.h>
 #include "mapfile_internal.h"
-
-extern int appmgrResolvePath(const char *path, SceUID pid, char *out,
-			    SceSize size);
-extern void *appmgrAllocMountHeapMemory(SceSize size);
-extern int appmgrFreeMountHeapMemory(void *memory);
-extern int appmgrIsDevelopmentPath(const char *path);
+#include "mount.h"
 
 enum AppmgrMapFileAttributeKind {
 	MAPFILE_BLANK,

@@ -103,4 +103,53 @@ int sddev_read(SceSdstorSddev *device, void *buffer, uint32_t sector,
 int sddev_write(SceSdstorSddev *device, const void *buffer, uint32_t sector,
 		uint32_t sectorCount);
 
+/* sdctrl.c */
+int sdstorRegisterUsbMassInterrupt(void);
+int sdctrl_initialize(void);
+int sdctrl_remove(unsigned int port);
+int sdctrl_insert(unsigned int port);
+int sdctrl_disable_mount(unsigned int port);
+int sdctrl_invalidate_partition(unsigned int port);
+
+/* sddev.c */
+int sddev_power_off(SceSdstorSddev *device);
+int sddev_init(void);
+int sddev_remove(SceSdstorSddev *device);
+int sddev_insert(SceSdstorSddev *device);
+int sddev_suspend(SceSdstorSddev *device);
+int sddev_resume(SceSdstorSddev *device);
+int sddev_check_removal(SceSdstorSddev *device);
+int sddev_has_write_protect_area(SceSdstorSddev *device, uint32_t sector,
+				 uint32_t count, uint8_t *writeProtected);
+int sddev_format_rm(SceSdstorSddev *device);
+int sddev_erase_sd(SceSdstorSddev *device, SceUID callback);
+int sddev_is_read_write(SceSdstorSddev *device);
+
+/* sdpart.c */
+int sdpart_init(void);
+int sdpart_close(unsigned int port);
+int sdpart_remove(unsigned int port);
+int sdpart_insert(unsigned int port);
+int sdpart_suspend(unsigned int port);
+int sdpart_resume_stat(unsigned int port);
+int sdpart_write_sd_mbr(unsigned int port);
+int sdpart_valid_internal_mbr(const SceMbr *mbr);
+SceSdstorPartitionEntry *sdpart_get_object(const char *name, int length);
+unsigned int sdpart_grab_mc(unsigned int port);
+int sdpart_release_mc(unsigned int port);
+unsigned int sdpart_get_mc_port(void);
+int sdpart_grab_xmc(unsigned int port);
+int sdpart_release_xmc(unsigned int port);
+unsigned int sdpart_get_xmc_port(void);
+
+/* sdstor.c */
+int sdstor_initialize(void);
+int sdstor_construct(SceSdstorPartitionEntry *partition, int flags, SceSdstorFd **resultHandle);
+int sdstor_destruct(SceSdstorFd *handle);
+int sdstor_read(SceSdstorFd *handle, int64_t offset, void *buffer, uint32_t size);
+int sdstor_write(SceSdstorFd *handle, int64_t offset, const void *buffer, uint32_t size);
+
+/* sdstor_vfs.c */
+int sdstor_vfs_initialize(void);
+
 #endif

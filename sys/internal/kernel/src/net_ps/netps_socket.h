@@ -44,6 +44,7 @@
 #include <sys/types.h>
 #include <sys/queue.h>
 #include <stddef.h>
+#include <net_ps/netps_gateway.h>
 
 struct socket;
 struct mbuf;
@@ -217,6 +218,22 @@ _Static_assert(offsetof(struct soqhead, tqh_last) == 4, "soqhead last");
 void sceNetPsSetSocket(unsigned int socketId, struct socket *socket);
 struct socket *sceNetPsLookupSocket(unsigned int socketId, int *error,
 				  unsigned int flags);
+
+/* net_ps_socket.c */
+int sceNetPsNotifyGatewayDns(const SceNetPsDnsConfig *config);
+unsigned int sceNetPsGetSockinfo(int socket, void *buffer, int capacity, int flags);
+int sceNetPsGetIfList(void *list, int count);
+int sceNetPsControl(int interfaceIndex, int command, void *data, int length);
+int sceNetPsSysctl(const int *name, unsigned int nameLength, void *oldData,
+		   unsigned int *oldLength, const void *newData,
+		   unsigned int newLength);
+int sceNetPsDescriptorCreate(const char *name, int flags);
+int sceNetPsDescriptorClose(int descriptorId);
+int sceNetPsDumpClose(int dumpId);
+int sceNetPsDumpAbort(int dumpId, int flags);
+int sceNetPsEpollCreate(const char *name, int flags);
+int sceNetPsEpollClose(int epollId);
+int sceNetPsEpollAbort(int epollId, int flags);
 
 #endif
 

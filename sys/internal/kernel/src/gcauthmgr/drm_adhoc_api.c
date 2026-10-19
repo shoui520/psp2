@@ -4,10 +4,6 @@
 #include "adhoc.h"
 #include <intrmgr/syscall.h>
 
-int GcAuthAdhocCreateContext224(const GcAuthAdhocCreateContext224Request *request);
-int GcAuthAdhocAnswerChallenge224(const GcAuthAdhocAnswerChallenge224Request *request);
-int GcAuthAdhocAuthenticateResponse224(const GcAuthAdhocAuthenticateResponse224Request *request);
-
 int GcAuthAdhocCreateContext224ForUser(GcAuthAdhocContext224 *context,
 		unsigned char *packet)
 {

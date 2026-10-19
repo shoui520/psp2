@@ -51,8 +51,6 @@ int module_stop(SceSize arglen, const void *argp)
 
 struct SceKernelProcEventHandler;
 extern const struct SceKernelProcEventHandler videoProcessEventCallbacks;
-void notifyContextFinalized(void);
-int readVideoEkb2Record(void *output, unsigned int capacity);
 
 int createVideoContext(int type, int flags, int options)
 {

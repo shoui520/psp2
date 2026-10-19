@@ -1,9 +1,6 @@
 /* Descriptive source name: the original module has no debug records. */
 #include <stddef.h>
-
-int GcAuthAesCbc(unsigned char *data, size_t size, const void *key,
-		const unsigned char *iv, int decrypt);
-int GcAuthGenerateRandom20(unsigned char *data);
+#include "drm_crypto.h"
 
 int GcAuthAesEncrypt(unsigned char *data, size_t size, const void *key,
 		const unsigned char *iv)

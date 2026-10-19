@@ -5,6 +5,7 @@
  */
 
 #include "regmgr_internal.h"
+#include "reg_internal.h"
 
 #define SCE_REGMGR_ERROR_NOT_ALLOWED	0x800d001e	/* names unknown */
 
@@ -18,12 +19,6 @@
 #define REGMGR_TYPE_CATEGORY		0x10	/* name unknown */
 
 int g_regMgrToolLock;	/* held while the tool has the registry reopened (name unknown) */
-
-int regGetCategoryNum(int registry, int *num);	/* the reg library (names unknown) */
-int regGetCategoryNames(int registry, char (*names)[REGMGR_REG_NAME_SIZE], int num);
-int regGetKeyInfo(int handle, const char *name, int *type, int *size);
-int regGetKeyNum(int handle, int *num);
-int regGetKeyNames(int handle, char (*names)[REGMGR_REG_NAME_SIZE], int num);
 
 /* whether the tool may use the registry files */
 static inline __attribute__((always_inline)) int regMgrToolCheck(void)

@@ -4,9 +4,7 @@
 #include <net_ps/netps_thread.h>
 #include <net_ps/net_ps_bsd.h>
 #include <string.h>
-
-int sceNetPsNotifyDriverCallbacks(struct SceNetPsDriverContext *context,
-				 SceUInt64 events);
+#include "net_ps_internal.h"
 
 /* Name unknown; publish the driver's maximum transmission unit. */
 int sceNetPsSetDriverMtu(struct NetDriver *driver, unsigned int mtu)

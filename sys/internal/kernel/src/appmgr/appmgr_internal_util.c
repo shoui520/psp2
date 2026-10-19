@@ -4,8 +4,7 @@
 #include <threadmgr/threadmgr.h>
 #include "appmgr_internal_util.h"
 #include <appmgr/appmgr.h>
-
-extern int dumpBgmState(void);
+#include "appmgr_device.h"
 
 struct AppmgrWaitObject g_appmgrWaitObjects[7];
 

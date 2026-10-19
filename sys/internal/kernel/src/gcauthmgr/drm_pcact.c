@@ -4,6 +4,7 @@
 #include "pcact.h"
 #include <sysmem/utils.h>
 #include <idstorage/idstorage.h>
+#include "drm_crypto.h"
 
 SceUID gcAuthPcactSemaphore;
 GcAuthPcactScratch gcAuthPcactScratch;
@@ -25,19 +26,9 @@ extern unsigned char gcAuthPsmHmacKey[32];
 
 int GcAuthExecuteKirkCommand(void *output, const void *input, int command,
 		size_t size, int keyId);
-int GcAuthGenerateRandom20(unsigned char *data);
-int GcAuthAesEncrypt(unsigned char *data, size_t size, const void *key,
-		const unsigned char *iv);
-int GcAuthFillRandomBytes(unsigned char *data, int size);
 int MarlinRsaSetRandomGenerator(int (*generator)(unsigned char *, int));
 int MarlinRsaEncrypt2048(MarlinRsaData *output, const MarlinRsaData *input,
 		const MarlinRsaExponentKey *key);
-unsigned int GcAuthRsaSign2048(MarlinRsaData *output,
-		const MarlinRsaData *digest, const MarlinRsaPrivateKey *key,
-		int algorithm);
-int GcAuthDrmDecrypt(unsigned char *data, size_t size, int keyId);
-int GcAuthAesDecrypt(unsigned char *data, size_t size, const void *key,
-		const unsigned char *iv);
 
 int GcAuthPcactGetAesDecryptKey(const GcAuthPcactKeyRequest *request)
 {

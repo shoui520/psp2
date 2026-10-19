@@ -4,21 +4,11 @@
 #include <string.h>
 #include <sysmem/sysclib.h>
 #include "param_sfo.h"
+#include "mount.h"
+#include "psf_internal.h"
 
-extern void *appmgrAllocMountHeapMemory(SceSize size);
-extern int appmgrFreeMountHeapMemory(void *memory);
-extern int appmgrPsfParse(const void *buffer, SceSize size, void **psf);
-extern int appmgrPsfDestroy(void *psf);
-extern int appmgrPsfCreate(void **psf);
-extern int appmgrPsfSetEntry(void *psf, const char *key, const void *value,
-			   SceUInt16 format, SceSize length, SceSize capacity);
-extern int appmgrPsfGetSize(void *psf, SceSize *size);
-extern int appmgrPsfWrite(void *buffer, SceSize capacity, void *psf);
-extern int appmgrPsfFindEntry(void *psf, const char *key, void **entry);
-extern int appmgrPsfGetEntryData(void *psf, void *entry, void **data);
 extern int appmgrPsfGetEntryInfo(void *psf, void *entry, const char **key,
 			       SceSize *length, SceSize *capacity);
-extern int appmgrPsfSetEntryLength(void *psf, void *entry, SceSize length);
 
 static const char emptySfoString[4] = "";
 static const char savedataCategory[4] = "sd";

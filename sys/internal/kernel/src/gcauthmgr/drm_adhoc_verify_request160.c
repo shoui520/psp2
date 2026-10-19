@@ -5,8 +5,6 @@
 extern SceUID gcAuthAdhocSemaphore;
 extern const GcAuthAdhocPublicKey160 gcAuthAdhocPublicKey160Key0;
 extern const GcAuthAdhocPublicKey160 gcAuthAdhocPublicKey160Fixed;
-int GcAuthAdhocVerify160(const GcAuthAdhocPublicKey160 *publicKey,
-		const unsigned char *digest, const GcAuthAdhocSignature160 *signature);
 
 int GcAuthAdhocVerifyRequest160(const GcAuthAdhocSign160Request *request)
 {

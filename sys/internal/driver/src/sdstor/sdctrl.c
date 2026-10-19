@@ -98,27 +98,6 @@ static const uint8_t sdintrHeaderPorts[5] = {0, 1, 2, 3, 4};
 #endif
 static const uint32_t sdintrStateRequests[3] = {0x110, 0x103, 0x1001};
 
-int sdpart_valid_internal_mbr(const SceMbr *mbr);
-int sddev_is_read_write(SceSdstorSddev *device);
-unsigned int sdpart_get_mc_port(void);
-unsigned int sdpart_get_xmc_port(void);
-unsigned int sdpart_grab_mc(unsigned int port);
-unsigned int sdpart_grab_xmc(unsigned int port);
-SceSdstorPartitionEntry *sdpart_get_object(const char *name, int length);
-int sdpart_remove(unsigned int port);
-int sdpart_release_mc(unsigned int port);
-int sdpart_release_xmc(unsigned int port);
-int sddev_suspend(SceSdstorSddev *device);
-int sddev_remove(SceSdstorSddev *device);
-int sddev_power_off(SceSdstorSddev *device);
-int sdpart_resume_stat(unsigned int port);
-int sdpart_insert(unsigned int port);
-int sdpart_suspend(unsigned int port);
-int sdpart_close(unsigned int port);
-int sddev_insert(SceSdstorSddev *device);
-int sddev_check_removal(SceSdstorSddev *device);
-int sddev_resume(SceSdstorSddev *device);
-
 int SceUsbMassForDriver_3C821E99(int intrCode, unsigned int subintrCode)
 	__attribute__((weak));
 int SceUsbMassForDriver_7833D935(int intrCode, unsigned int subintrCode)

@@ -6,8 +6,8 @@
 #include <stdint.h>
 #include <threadmgr/threadmgr.h>
 #include <appmgr/appmgr.h>
+#include "appmgr_device.h"
 
-extern int dumpBgmState(void);
 extern int appmgrDebugConsoleInitialize(void);
 extern int handleAbortedApp(SceSize args, void *argp);
 extern int appmgrProcessDebugSuspendHandler(SceUID pid, SceUID threadId,
