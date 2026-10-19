@@ -898,6 +898,13 @@ int L2PageTableUnmapPages(L2PageTable *l2pt, SceUInt32 asid, uintptr_t va, SceSi
 			  SceUInt32 flags);
 int L2PageTableModuleStart(void);
 
+/* led.c */
+#if defined(SYSMEM_SKBL) || defined(SYSMEM_NSKBL)
+int LedModuleStart(void);
+#else
+int LedModuleStart(const struct SysmemBootContext *context);
+#endif
+
 /* memblock.c */
 int FreeMemBlockByGUID(SceUID guid);
 int MemBlockGetInfoRaw(MemBlockObject *block, SceInt32 level, MemBlockInfoEx *info);

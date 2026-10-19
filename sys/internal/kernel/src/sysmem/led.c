@@ -116,8 +116,6 @@ int LedModuleStart(void)
 	return 0;
 }
 #else
-struct SysmemBootContext;
-
 /* the LED register block, mapped once (CPU 0) */
 int LedModuleStart(const struct SysmemBootContext *context)
 {

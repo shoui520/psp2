@@ -629,8 +629,6 @@ UIDManager *g_uidManager;
 #define DIPSW_DEBUG_PUTCHAR		0xc5	/* PLACEHOLDER: name */
 #define DIPSW_DEBUG_PUTCHAR_ALT		0xc4	/* PLACEHOLDER: name */
 
-int LedModuleStart(const struct SysmemBootContext *context);
-
 int SysmemModuleStart(SceSize args, void *argp)
 {
 	const struct SysmemBootContext *context = argp;
