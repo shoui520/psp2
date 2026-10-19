@@ -17,7 +17,6 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/uid_class.h>
 
-#define THREAD_ATTR_CHECK_STACK		0x80000000
 #define WAIT_TYPE_DELAY			0x00000001	/* only the timed-wait flag */
 #define EVENT_ATTR_PRIORITY		0x00002000	/* waiters queue by priority */
 #define EVENT_DELETED_PATTERN		0x00000010	/* PLACEHOLDER: the pattern a cut wait reports */
@@ -240,7 +239,7 @@ static int waitEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 		ret = SCE_KERNEL_ERROR_CAN_NOT_WAIT;
 		goto resume;
 	}
-	if ((thread->currentAttr & THREAD_ATTR_CHECK_STACK) && !sceKernelCheckThreadUserStackSelf())
+	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 	ret = sceGUIDReferObjectWithSubclass(eventId, EVENT_CLASS(), (SceObjectBase **)&event);
 	if (ret < 0) {
@@ -1224,7 +1223,7 @@ int waitMultipleEvents(ThreadmgrWaitMultipleEvents *wme, SceUInt32 *timeout,
 		ret = SCE_KERNEL_ERROR_CAN_NOT_WAIT;
 		goto restore;
 	}
-	if ((thread->currentAttr & THREAD_ATTR_CHECK_STACK) && !sceKernelCheckThreadUserStackSelf())
+	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 	sceKernelCpuResumeIntr(intr);
 	intr = SceCpuForDriver_821FC0EE();

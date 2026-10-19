@@ -18,7 +18,6 @@
 #include <intrmgr/intrmgr.h>
 
 #define MUTEX_ITEM_SIZE			0x80	/* the class's object allocation size */
-#define THREAD_ATTR_USER		0x80000000
 #define USER_TLS_PRIORITY_OFFSET	(-0x7e0)	/* the priority word below the user TLS */
 #define SDK_VERSION_BOOST_LIMITS_END	0x01800000	/* from here a boost may cross the user range */
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
@@ -409,8 +408,6 @@ int mutexProcessExit(SceProcessObject *process)
 #define MUTEX_USER_ATTR_MASK		0x00002086	/* what a syscall may pass */
 #define MUTEX_OPTION_MAX_SIZE		8
 #define MUTEX_UID_ATTR_LW		0x0000c000	/* PLACEHOLDER: name */
-#define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
-#define THREAD_ATTR_CHECK_STACK		0x80000000
 #define WAIT_TYPE_MUTEX			0x40
 #define WAIT_TYPE_COND_MUTEX		0x200	/* a cond waiter relocking its mutex */
 #define CEILING_OFFSET_FLAG		0x10000000	/* the ceiling is an offset from the default */
@@ -481,9 +478,9 @@ SceUID sceKernelCreateMutex(const char *name, SceUInt32 attr, int initCount,
 		if (!(attr & MUTEX_ATTR_LW)) {
 			opt.pid = thread->processId;
 			opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;
-			if (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS)
+			if (thread->currentAttr & THREAD_ATTR_UNLIMITED)
 				attr |= MUTEX_ATTR_UNLIMITED;
-			opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS) != 0;
+			opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED) != 0;
 		}
 	} else {
 		attr |= MUTEX_ATTR_KERNEL;
@@ -730,7 +727,7 @@ int lockMutex(SceUID mutexId, int count, SceUInt32 *timeout, int callbacks)
 		ret = SCE_KERNEL_ERROR_CAN_NOT_WAIT;
 		goto resume;
 	}
-	if ((thread->currentAttr & THREAD_ATTR_CHECK_STACK) && !sceKernelCheckThreadUserStackSelf())
+	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 	ret = sceGUIDReferObjectWithClass(mutexId,
 		s_threadmgrRuntime.manager->mutexClass, (SceObjectBase **)&mutex);

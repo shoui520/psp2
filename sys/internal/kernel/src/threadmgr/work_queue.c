@@ -24,8 +24,6 @@
 #include "timer.h"
 #include "event.h"
 
-#define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
-#define THREAD_ATTR_USER		0x80000000
 #define TRAP_REQUEST_UNK2000000		0x02000000	/* PLACEHOLDER: name */
 #define WAIT_TYPE_WORK_QUEUE		0x04000000
 #define WAIT_TYPE_WORK_TASK		0x08000000
@@ -1028,9 +1026,9 @@ SceUID sceKernelCreateWorkQueue(const char *name, SceUInt32 attr,
 	if (ThreadmgrInSyscall() && !(attr & WORK_QUEUE_ATTR_KERNEL)) {
 		opt.pid = thread->processId;
 		opt.flags |= UID_CREATE_OPT_PROCESS_HEAP;
-		if (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS)
-			objectAttr = attr | THREAD_ATTR_UNLIMITED_OBJECTS;
-		opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS) != 0;
+		if (thread->currentAttr & THREAD_ATTR_UNLIMITED)
+			objectAttr = attr | THREAD_ATTR_UNLIMITED;
+		opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED) != 0;
 	}
 	intr = SceCpuForDriver_821FC0EE();
 	uid = sceGUIDKernelCreateWithOpt(WORK_QUEUE_CLASS(), name, &opt,
@@ -1112,7 +1110,7 @@ SceUID sceKernelScheduleWorkTask(SceUID workQueueId, const char *name, int (*ent
 	user = ThreadmgrInSyscall();
 	if (user) {
 		creatorPid = thread->processId;
-		opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS) != 0;
+		opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED) != 0;
 		opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;
 		opt.pid = creatorPid;
 	} else {

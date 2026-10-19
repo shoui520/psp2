@@ -23,8 +23,6 @@
 #include <intrmgr/intrmgr.h>
 #include <threadmgr/threadmgr.h>
 
-#define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
-#define THREAD_ATTR_USER		0x80000000
 #define WAIT_TYPE_DELAY			0x00000001
 #define EVENT_CALLBACK_ALLOC_SIZE	0x20	/* a ThreadmgrEventCallback's heap block */
 
@@ -132,7 +130,7 @@ int uidCallback_Destructor(struct ThreadmgrCallback *callback)
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
-			if (callback->cb.attr & THREAD_ATTR_UNLIMITED_OBJECTS)
+			if (callback->cb.attr & THREAD_ATTR_UNLIMITED)
 				process->uidUnlimitedCount--;
 			else
 				process->uidCount--;
@@ -690,10 +688,10 @@ SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallba
 	limit = 0;
 	if (ThreadmgrInSyscall()) {
 		opt.pid = thread->processId;
-		if (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS)
-			limit = THREAD_ATTR_UNLIMITED_OBJECTS;
+		if (thread->currentAttr & THREAD_ATTR_UNLIMITED)
+			limit = THREAD_ATTR_UNLIMITED;
 		opt.flags |= UID_CREATE_OPT_PROCESS_HEAP;
-		opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS) != 0;
+		opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED) != 0;
 	}
 	process = NULL;
 #if FW_DEBUG
@@ -708,7 +706,7 @@ SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallba
 		process = thread->process;
 		sceKernelSpinlockLowLock(&process->resourceLock);
 #endif
-		if (limit & THREAD_ATTR_UNLIMITED_OBJECTS) {
+		if (limit & THREAD_ATTR_UNLIMITED) {
 			if (++process->uidUnlimitedCount > process->uidUnlimitedPeak)
 				process->uidUnlimitedPeak = process->uidUnlimitedCount;
 		} else {
@@ -762,7 +760,7 @@ SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallba
 unaccount:
 	if (ThreadmgrInSyscall()) {
 		sceKernelSpinlockLowLock(&process->resourceLock);
-		if (limit & THREAD_ATTR_UNLIMITED_OBJECTS)
+		if (limit & THREAD_ATTR_UNLIMITED)
 			process->uidUnlimitedCount--;
 		else
 			process->uidCount--;

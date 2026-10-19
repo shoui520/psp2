@@ -73,8 +73,6 @@
 
 _Static_assert(sizeof(ProcessBudget) == 0x74, "ProcessBudget size");
 
-#define THREAD_ATTR_COREDUMP_HANDLER	0x800000	/* name unknown */
-
 /* the system call state in TPIDRURO (see the module manager) */
 static inline SceUInt32 ProcessSyscallEnter(void)
 {

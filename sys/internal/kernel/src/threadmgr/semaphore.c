@@ -172,7 +172,6 @@ bool isWaitOnly(struct ThreadmgrWaitQueue *queue, int priority)
 }
 
 #define WAIT_TYPE_SEMAPHORE		0x20
-#define THREAD_ATTR_CHECK_STACK		0x80000000
 
 /* takes needCount from the semaphore, waiting for it (optionally running callbacks) */
 int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
@@ -216,7 +215,7 @@ int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 		ret = SCE_KERNEL_ERROR_CAN_NOT_WAIT;
 		goto resume;
 	}
-	if ((thread->currentAttr & THREAD_ATTR_CHECK_STACK) && !sceKernelCheckThreadUserStackSelf())
+	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 	ret = sceGUIDReferObjectWithClass(semaId,
 		s_threadmgrRuntime.manager->semaphoreClass, (SceObjectBase **)&sema);
@@ -304,7 +303,6 @@ restore:
 #define UID_MAX_PER_PROCESS		0x800
 #define UID_LW_MAX_PER_PROCESS		0x100
 #define SEMA_UID_ATTR_LW		0x0000c000	/* PLACEHOLDER: name */
-#define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 
 /* closes every semaphore PUID a process still holds */
@@ -370,9 +368,9 @@ static inline __attribute__((always_inline)) SceUID sceKernelCreateSemaCore(cons
 		if (ThreadmgrInSyscall()) {
 			opt.pid = thread->processId;
 			opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;
-			if (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS)
+			if (thread->currentAttr & THREAD_ATTR_UNLIMITED)
 				attr |= SEMA_ATTR_UNLIMITED;
-			opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS) != 0;
+			opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED) != 0;
 		}
 	}
 	if (!ThreadmgrInSyscall()) {

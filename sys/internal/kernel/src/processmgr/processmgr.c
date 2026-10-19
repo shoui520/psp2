@@ -5940,8 +5940,6 @@ SceProcessObject *sceKernelUIDtoProcess(SceUID pid)
 }
 
 /* the coredump handler of the current process */
-#define SCE_COREDUMP_ERROR_NOT_REGISTERED	0x800a0001	/* the SDK's coredump.h */
-#define SCE_COREDUMP_ERROR_ALREADY_REGISTERED	0x800a0002
 
 int sceKernelRegisterCoredumpHandler(void *handler, SceSize stackSize, void *arg)
 {
@@ -6068,7 +6066,8 @@ SceUID sceKernelCallCoredumpHandler(SceUID pid)
 	opt.size = sizeof(opt);
 	opt.attr = 8;			/* uStackMemid is given */
 	thid = sceKernelCreateRemoteThread(pid, "SceKernelCoredumpHandler", process->libkernelAddr[3],
-					      0x40, process->coredumpStackSize, 0x800000, 0, &opt);
+					      0x40, process->coredumpStackSize,
+					      THREAD_ATTR_COREDUMP_HANDLER, 0, &opt);
 	if (thid < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 10146,
 			"error: sceKernelCreateRemoteThread(0x%08X, %s, 0x%08X, 0x%08X, 0x%08X, 0x%08X, 0x%08X, %p)=0x%08X\n",

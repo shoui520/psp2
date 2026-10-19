@@ -33,7 +33,6 @@
 #define TIMER_EVENT_DELETED		0x00000008
 #define TIMER_EVENT_PROCESS_EXITED	0x00000200
 #define TIMER_UID_ATTR_LW		0x0000c000	/* PLACEHOLDER: name */
-#define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define WAIT_TYPE_LW_OBJECT		0x00040000
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 #define SDK_VERSION_DELAY_TIMEOUT	0x020fffff	/* newer SDKs time out a wait already due */
@@ -1134,9 +1133,9 @@ SceUID sceKernelCreateTimer(const char *name, SceUInt32 attr,
 		if (ThreadmgrInSyscall()) {
 			opt.pid = thread->processId;
 			opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;
-			if (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS)
+			if (thread->currentAttr & THREAD_ATTR_UNLIMITED)
 				attr |= TIMER_ATTR_UNLIMITED;
-			opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS) != 0;
+			opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED) != 0;
 		}
 	}
 #if FW_DEBUG

@@ -18,8 +18,6 @@
 #define THREAD_EVENT_MASK_VALID		0x0000000c
 #define THREAD_EVENT_MASK_SELF		0x00000008	/* the only event a thread may watch on itself */
 #define THREAD_EVENT_ATTR_UNLIMITED	0x00004000
-#define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
-#define THREAD_ATTR_NO_THREAD_EVENTS	0x00800000	/* PLACEHOLDER: name */
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 
 /* SceUIDThreadEventObject (0x38) */
@@ -164,7 +162,7 @@ int callThreadEventHandlers(uint32_t mask)
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 162);
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
-	if (thread->currentAttr & THREAD_ATTR_NO_THREAD_EVENTS)
+	if (thread->currentAttr & THREAD_ATTR_COREDUMP_HANDLER)
 		goto unlock;
 	thread->threadEventMask |= mask;
 	sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadEventLock);
@@ -388,7 +386,7 @@ checked:
 	} else {
 		opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;
 		opt.pid = ownerPid;
-		if (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS) {
+		if (thread->currentAttr & THREAD_ATTR_UNLIMITED) {
 			attr = THREAD_EVENT_ATTR_UNLIMITED;
 			opt.heapKind = 1;
 		} else {

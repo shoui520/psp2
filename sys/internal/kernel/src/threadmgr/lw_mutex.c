@@ -18,8 +18,6 @@
 #define LW_MUTEX_ITEM_SIZE		0x80	/* the class's object allocation size */
 #define LW_MUTEX_ATTR_MASK		0x00002002
 #define LW_MUTEX_OPTION_MAX_SIZE	4
-#define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
-#define THREAD_ATTR_CHECK_STACK		0x80000000
 #define WAIT_TYPE_LW_MUTEX		0x00100000
 #define WAIT_TYPE_LW_COND_MUTEX		0x00400000	/* a lw cond waiter relocking its lw mutex */
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
@@ -271,7 +269,7 @@ int _sceKernelCreateLwMutexForUser(ThreadmgrLwMutexWork *work, const char *name,
 		}
 	}
 	sceKernelSpinlockLowLock(&process->resourceLock);
-	if (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS) {
+	if (thread->currentAttr & THREAD_ATTR_UNLIMITED) {
 		attr |= LW_MUTEX_ATTR_UNLIMITED;
 		if (++process->uidUnlimitedCount > process->uidUnlimitedPeak)
 			process->uidUnlimitedPeak = process->uidUnlimitedCount;
@@ -564,7 +562,7 @@ int _sceKernelLockLwMutex(ThreadmgrLwMutexWork *work, int count, SceUInt32 *time
 		ret = SCE_KERNEL_ERROR_CAN_NOT_WAIT;
 		goto resume;
 	}
-	if ((thread->currentAttr & THREAD_ATTR_CHECK_STACK) && !sceKernelCheckThreadUserStackSelf())
+	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 	ret = sceGUIDReferObjectWithClass(guid, s_threadmgrRuntime.manager->lwMutexClass,
 					   (SceObjectBase **)&lwMutex);

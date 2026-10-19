@@ -1367,7 +1367,6 @@ callbacks:
 #define MSG_PIPE_ASYNC_RECEIVE		1
 #define MSG_PIPE_ASYNC_PRIORITY		0x40
 #define SDK_VERSION_ASYNC_NO_RESULT	0x01ffffff	/* newer SDKs get no async result */
-#define THREAD_ATTR_CHECK_STACK		0x80000000
 
 /* a send or receive queued to the async threads (0x30, in the process's heap) */
 typedef struct ThreadmgrMsgPipeAsyncRequest {
@@ -1686,7 +1685,7 @@ int recvMsgPipeVector(ThreadmgrMsgPipeCall *call, int callbacks)
 		ret = SCE_KERNEL_ERROR_CAN_NOT_WAIT;
 	} else {
 		thread = currentThreadContext();
-		if ((thread->currentAttr & THREAD_ATTR_CHECK_STACK) &&
+		if ((thread->currentAttr & THREAD_ATTR_USER) &&
 		    !sceKernelCheckThreadUserStackSelf())
 			debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 		ret = recvMsgPipeVectorCore(call->msgPipeId, call->pid, call->vector, call->count,
@@ -1837,7 +1836,7 @@ int sendMsgPipeVector(ThreadmgrMsgPipeCall *call, int callbacks)
 		ret = SCE_KERNEL_ERROR_CAN_NOT_WAIT;
 	} else {
 		thread = currentThreadContext();
-		if ((thread->currentAttr & THREAD_ATTR_CHECK_STACK) &&
+		if ((thread->currentAttr & THREAD_ATTR_USER) &&
 		    !sceKernelCheckThreadUserStackSelf())
 			debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 		ret = sendMsgPipeVectorCore(call->msgPipeId, call->pid, call->vector, call->count,
@@ -2154,7 +2153,6 @@ int msgPipeProcessExit(SceProcessObject *process)
 #define SDK_VERSION_MSG_PIPE_MEMORY	0x030fffff
 #define MSG_PIPE_UID_ATTR		0x00030000	/* PLACEHOLDER: name */
 #define MSG_PIPE_UID_ATTR_LW		0x0003c000	/* PLACEHOLDER: name */
-#define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define UID_MAX_PER_PROCESS		0x800
 #define UID_LW_MAX_PER_PROCESS		0x100
 
@@ -2286,7 +2284,7 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 att
 	if (ThreadmgrInSyscall() && !(attr & MSG_PIPE_ATTR_LW)) {
 		opt.pid = thread->processId;
 		opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;
-		if (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS) {
+		if (thread->currentAttr & THREAD_ATTR_UNLIMITED) {
 			attr |= MSG_PIPE_ATTR_UNLIMITED;
 			opt.heapKind = 1;
 			opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;

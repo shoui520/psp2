@@ -135,7 +135,7 @@ struct ThreadmgrCallbackCB {
 	SceUID threadId;			/* 0x08 */
 	SceUID guid;				/* 0x0c */
 	SceUID puid;				/* 0x10: -1 for a kernel callback */
-	uint32_t attr;				/* 0x14: THREAD_ATTR_UNLIMITED_OBJECTS of its creator */
+	uint32_t attr;				/* 0x14: THREAD_ATTR_UNLIMITED of its creator */
 	uint32_t deleted;			/* 0x18 */
 	uint32_t user;				/* 0x1c: runs in user mode */
 	uintptr_t entry;			/* 0x20 */

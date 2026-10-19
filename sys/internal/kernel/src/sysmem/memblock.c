@@ -2117,7 +2117,6 @@ invalid:
 
 #define MEMBLOCK_ERROR_OVERFLOW_FATAL	0xc0024b0b
 
-#define THREAD_ATTR_RESOURCE		0x4000	/* the resource counter (and client flag) */
 #define VM_SIZE_MAX			0x1000000
 
 /* the program authority IDs denied SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_GAME_RW */
@@ -2622,7 +2621,7 @@ SceUID sceKernelOpenMemBlockForUser(const char *userName, SceUInt32 flags)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = ALLOC_ATTR_SHARE_PHYPAGE | SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_MIRROR_BLOCKID;
-	if (attr & THREAD_ATTR_RESOURCE)
+	if (attr & THREAD_ATTR_UNLIMITED)
 		opt.attr = ALLOC_ATTR_SHARE_PHYPAGE | ALLOC_ATTR_USER_CLIENT |
 			   SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_MIRROR_BLOCKID;
 	opt.mirror_blockid = guid;

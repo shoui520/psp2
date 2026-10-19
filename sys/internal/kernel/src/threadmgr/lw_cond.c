@@ -19,8 +19,6 @@
 #define LW_COND_ATTR_UNLIMITED		0x00004000
 #define LW_COND_OPTION_MAX_SIZE		4
 #define LW_COND_UID_ATTR		0x00002000	/* PLACEHOLDER: name */
-#define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
-#define THREAD_ATTR_CHECK_STACK		0x80000000
 #define WAIT_TYPE_LW_COND		0x00200000
 #define WAIT_TYPE_LW_COND_MUTEX		0x00400000
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
@@ -234,13 +232,13 @@ int __sceKernelCreateLwCond(void *work, const char *name, SceUInt32 attr, SceUID
 	opt.cls = NULL;
 	opt.pid = thread->processId;
 	opt.type = 0;
-	if (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS)
+	if (thread->currentAttr & THREAD_ATTR_UNLIMITED)
 		attr |= LW_COND_ATTR_UNLIMITED;
 	opt.object = NULL;
 	opt.heapGuid = 0;
 	opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;
 	process = thread->process;
-	opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS) != 0;
+	opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED) != 0;
 	opt.attr = LW_COND_UID_ATTR;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
 	if (!(attr & LW_COND_ATTR_UNLIMITED)) {
@@ -342,7 +340,7 @@ int __sceKernelWaitLwCond(SceUID condId, SceUInt32 *timeout, int callbacks)
 		ret = SCE_KERNEL_ERROR_CAN_NOT_WAIT;
 		goto resume;
 	}
-	if ((thread->currentAttr & THREAD_ATTR_CHECK_STACK) && !sceKernelCheckThreadUserStackSelf())
+	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 	ret = sceGUIDReferObjectWithClass(condId,
 		s_threadmgrRuntime.manager->lwCondClass, (SceObjectBase **)&cond);

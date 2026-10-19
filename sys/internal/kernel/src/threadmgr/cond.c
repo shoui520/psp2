@@ -39,8 +39,6 @@ __attribute__((section(SCE_DBGSRC_SECTION), used)) = {
 #define COND_UID_ATTR_LW		0x0000c000	/* PLACEHOLDER: name */
 #define SDK_VERSION_LW_COND_END		0x02100000	/* lw conds through this syscall end here */
 #define SDK_VERSION_SIGNAL_TO_STRICT	0x02000000
-#define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
-#define THREAD_ATTR_CHECK_STACK		0x80000000
 #define WAIT_TYPE_COND			0x100
 #define WAIT_TYPE_COND_MUTEX		0x200
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
@@ -160,7 +158,7 @@ int waitCond(SceUID condId, SceUInt32 *timeout, int callbacks)
 		ret = SCE_KERNEL_ERROR_CAN_NOT_WAIT;
 		goto resume;
 	}
-	if ((thread->currentAttr & THREAD_ATTR_CHECK_STACK) && !sceKernelCheckThreadUserStackSelf())
+	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 	ret = sceGUIDReferObjectWithClass(condId, s_threadmgrRuntime.manager->condClass,
 					   (SceObjectBase **)&cond);
@@ -445,9 +443,9 @@ SceUID sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 		if (ThreadmgrInSyscall()) {
 			opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;
 			opt.pid = thread->processId;
-			if (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS)
+			if (thread->currentAttr & THREAD_ATTR_UNLIMITED)
 				attr |= COND_ATTR_UNLIMITED;
-			opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS) != 0;
+			opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED) != 0;
 		}
 	}
 	if (!ThreadmgrInSyscall()) {

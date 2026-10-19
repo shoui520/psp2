@@ -22,8 +22,6 @@
 #include "affinity.h"
 #include "event.h"
 
-#define THREAD_ATTR_USER		0x80000000
-#define THREAD_ATTR_VM			0x04000000	/* PLACEHOLDER: a VM's thread */
 #define THREAD_CPU_NONE			0x7fff
 #define WAIT_TYPE_THREAD_SUSPEND	0x00000008	/* PLACEHOLDER: woken when the thread is suspended */
 #define WAIT_TYPE_EXCEPTION		0x01000000

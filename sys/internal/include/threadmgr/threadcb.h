@@ -245,6 +245,16 @@ typedef struct ThreadCB {
 #define THREAD_STATE_DEBUG_SUSPENDED	0x80000000
 #define THREAD_STATE_KEEP_SUSPEND	0x8000ffff
 
+/* ThreadCB.initAttr and currentAttr (no Sony name found for these bits) */
+#define THREAD_ATTR_USER		0x80000000	/* a user thread: it has a user stack */
+#define THREAD_ATTR_NO_STACK_FILL	0x10000000	/* stacks filled and measured only with DIPSW 0xd8 */
+#define THREAD_ATTR_VM			0x04000000	/* a VM's: it gets an exception entry */
+#define THREAD_ATTR_NO_MODULE_TLS	0x02000000	/* no module TLS image is copied */
+#define THREAD_ATTR_COREDUMP_HANDLER	0x00800000	/* processmgr's coredump handler: it runs in its
+							   suspended process, without thread events */
+#define THREAD_ATTR_UNLIMITED		0x00004000	/* counted apart from its process's limits, as
+							   are the objects it creates */
+
 /* ThreadCB.flags (Sony: "flags") */
 #define THREAD_FLAG_WAKE_PENDING	0x00000001	/* in a wait that runs callbacks */
 #define THREAD_FLAG_CALLBACKS		0x00000002	/* callbacks pending */

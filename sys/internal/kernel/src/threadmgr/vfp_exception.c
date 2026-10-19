@@ -19,7 +19,6 @@
 #include <excpmgr/excpmgr.h>
 #include "affinity.h"
 
-#define THREAD_ATTR_USER		0x80000000
 #define PROCESS_DEBUG_SUSPEND_EXCEPTION	0x11	/* PLACEHOLDER: SceSysrootForKernel_1247A825's reason */
 #define PROCESS_DEBUG_SUSPEND_VFP	2	/* the processDebugSuspendHook kind */
 

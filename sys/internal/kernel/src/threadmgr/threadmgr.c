@@ -1411,9 +1411,6 @@ int SceThreadmgrForDriver_84EB1EA4(int value)
  * its UID object's destructor frees what is left.
  */
 
-#define THREAD_ATTR_USER		0x80000000
-#define THREAD_ATTR_VM			0x04000000	/* PLACEHOLDER: a VM's thread */
-#define THREAD_ATTR_UNK4000		0x00004000	/* PLACEHOLDER: counted apart in its process */
 #define THREAD_EVENT_START		0x00000004	/* callThreadEventHandlers */
 #define TRAP_REQUEST_DEBUG_SUSPEND	0x02000000
 #define DEBUG_THREAD_EVENT_DELETE	1
@@ -1445,7 +1442,7 @@ static inline void unlistFromProcess(struct ThreadCB *thread,
 
 	next->prev = thread->processLink.prev;
 	thread->processLink.prev->next = next;
-	if (thread->currentAttr & THREAD_ATTR_UNK4000)
+	if (thread->currentAttr & THREAD_ATTR_UNLIMITED)
 		process->unlimitedThreadCount--;
 	else
 		process->threadCount--;
@@ -2484,7 +2481,6 @@ int SceThreadmgrForDriver_2B60B793(SceUInt32 usec, SceUInt32 *remaining)
 
 #define AFFINITY_MASK			0xf
 #define AFFINITY_SYSTEM_CPU		0x8	/* CPU 3 */
-#define THREAD_ATTR_UNLIMITED		0x00004000
 #define TRACE_EVENT_AFFINITY		0x20
 #define FAST_MUTEX_MAGIC		0xa35db473
 #define PREEMPT_WAIT			4
@@ -5002,7 +4998,6 @@ int SceThreadmgrForKernel_CBADD6B3(SceUID threadId, SceSize argSize, const void 
  * thread's stack for the call.
  */
 
-#define THREAD_ATTR_UNK10000000		0x10000000	/* PLACEHOLDER: its stack is only measured with DIPSW 0xd8 */
 #define DIPSW_STACK_CHECK		0xd8
 #define EXTEND_STACK_MIN			0x200
 #define STACK_PAGE			0x1000
@@ -5091,7 +5086,7 @@ int64_t sceKernelExtendKernelStackWide(SceSize size, ThreadmgrStackFunction func
 	}
 	sceKernelGetMemBlockMappedBase(memBlockId, &base);
 have:
-	if (!(thread->currentAttr & THREAD_ATTR_UNK10000000) || sceKernelCheckDipsw(DIPSW_STACK_CHECK))
+	if (!(thread->currentAttr & THREAD_ATTR_NO_STACK_FILL) || sceKernelCheckDipsw(DIPSW_STACK_CHECK))
 		memset(base, 0xff, pages);
 	*(SceUID *)base = thread->threadId;
 	/* the new stack stands in for the thread's while the function runs */
@@ -6137,7 +6132,7 @@ int SceThreadmgrForDriver_7B278A0B(SceUID threadId)
 		goto resume;
 	}
 	thread = &object->context;
-	if ((thread->currentAttr & THREAD_ATTR_UNK10000000) &&
+	if ((thread->currentAttr & THREAD_ATTR_NO_STACK_FILL) &&
 	    !sceKernelCheckDipsw(DIPSW_STACK_CHECK)) {
 		ret = SCE_KERNEL_ERROR_UNSUP;
 		goto release;
@@ -6588,10 +6583,8 @@ int SceThreadmgrForDriver_1096042E(SceUID uid)
 /* createThread's flags */
 #define CREATE_FLAG_USER		0x00000001	/* PLACEHOLDER: name; not read here */
 #define CREATE_FLAG_PROCESS		0x00000002	/* the thread is for the process given */
-#define THREAD_ATTR_NO_STACK_FILL	0x10000000	/* PLACEHOLDER: its stacks are filled only with DIPSW 0xd8 */
-#define THREAD_ATTR_EXCEPTION_LIST	0x04000000	/* PLACEHOLDER: name; it gets an exception entry */
-#define THREAD_ATTR_NO_MODULE_TLS	0x02000000	/* PLACEHOLDER: name; no module TLS image is copied */
-#define THREAD_ATTR_IN_SUSPENDED	0x00800000	/* PLACEHOLDER: name; may be created in a suspended process */
+
+/* the attributes its UID and its object header keep */
 #define THREAD_ATTR_UID_ATTR_MASK	0x00070000	/* passed on to its UID */
 #define THREAD_ATTR_OBJECT_MASK		0x0000a000	/* kept in the object header */
 
@@ -7152,7 +7145,7 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 	}
 	sceKernelGetMemBlockVBase(tlsMirror, (void **)&userTls);
 
-	if (attr & THREAD_ATTR_EXCEPTION_LIST) {
+	if (attr & THREAD_ATTR_VM) {
 		memset(&heapOpt, 0, sizeof(heapOpt));
 		heapOpt.size = sizeof(heapOpt);
 		heapOpt.align = EXCEPTION_ENTRY_ALIGN;
@@ -7249,7 +7242,7 @@ contexts:
 			}
 		} else if (((process->status & (PROCESS_FLAG_DEBUG_SUSPENDING | PROCESS_STATE_DEBUG)) ||
 			    (process->status & PROCESS_STATE_MASK) == PROCESS_STATE_SUSPENDED) &&
-			   !(attr & THREAD_ATTR_IN_SUSPENDED)) {
+			   !(attr & THREAD_ATTR_COREDUMP_HANDLER)) {
 			ret = SCE_KERNEL_ERROR_ALREADY_DEBUG_SUSPENDED;
 			goto fail_vfp_free;
 		}
@@ -7366,7 +7359,7 @@ fail_registers:
 			SCE_PANIC(SCE_LINE(4063, 4069));
 	}
 fail_puid:
-	if (attr & THREAD_ATTR_EXCEPTION_LIST) {
+	if (attr & THREAD_ATTR_VM) {
 		err = SceSysrootForKernel_7968F091(pid, thread->exceptionEntry);
 		SCE_DBG_PRINTF(0, 4075, "*** free pExceptionList, eRet=0x%08X\n", err);
 		thread->exceptionEntry = NULL;
@@ -8264,8 +8257,8 @@ int threadMgrExcpHandlerCfunc_0(struct ThreadCB *thread, uint32_t excpKind)
 		goto suspend;
 	}
 	action = EXCP_ACTION_DEFAULT;
-	if ((thread->currentAttr & THREAD_ATTR_IN_SUSPENDED) ||
-	    !(thread->currentAttr & THREAD_ATTR_EXCEPTION_LIST))
+	if ((thread->currentAttr & THREAD_ATTR_COREDUMP_HANDLER) ||
+	    !(thread->currentAttr & THREAD_ATTR_VM))
 		goto suspend;
 	switch (excpKind) {
 	case EXCP_KIND_DATA_ABORT:
@@ -8297,7 +8290,7 @@ int threadMgrExcpHandlerCfunc_0(struct ThreadCB *thread, uint32_t excpKind)
 	}
 handed:
 	runningThreadPreemptByIntr(thread, PREEMPT_REASON_EXCEPTION);
-	if (!(thread->currentAttr & THREAD_ATTR_IN_SUSPENDED)) {
+	if (!(thread->currentAttr & THREAD_ATTR_COREDUMP_HANDLER)) {
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		goto deliver;
 	}
@@ -8326,7 +8319,7 @@ debug_suspend:
 		return action;
 
 deliver:
-	if (thread->currentAttr & THREAD_ATTR_IN_SUSPENDED)
+	if (thread->currentAttr & THREAD_ATTR_COREDUMP_HANDLER)
 		return EXCP_ACTION_SUSPENDED;
 	/* VM-suspended, the exception goes to the process's exception object */
 	sceKernelSpinlockLowLock(&thread->process->exception->lock);

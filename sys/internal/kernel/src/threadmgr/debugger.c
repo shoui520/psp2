@@ -24,8 +24,6 @@
 #include <threadmgr/threadmgr.h>
 #include "affinity.h"
 
-#define THREAD_ATTR_USER		0x80000000
-#define THREAD_ATTR_UNK10000000		0x10000000	/* PLACEHOLDER: its stack is only measured with DIPSW 0xd8 */
 #define THREAD_CPU_NONE			0x7fff	/* PLACEHOLDER: cpuId of a thread on no CPU */
 
 #define DEBUG_SUSPEND_REASONS		0x000f7f03	/* the reasons a debugger can give */
@@ -410,7 +408,7 @@ int getThreadInfoForDebugger(SceUID threadId, SceUInt32 level, uint32_t flags,
 		}
 	}
 measured:
-	if (!(flags & 1) || ((thread->currentAttr & THREAD_ATTR_UNK10000000) &&
+	if (!(flags & 1) || ((thread->currentAttr & THREAD_ATTR_NO_STACK_FILL) &&
 			     !sceKernelCheckDipsw(DIPSW_STACK_CHECK))) {
 		ret = 0;
 		info->stackMaxUsed = 0;

@@ -20,8 +20,6 @@
 #define EVF_USER_ATTR_MASK		0x00003080	/* what a syscall may pass */
 #define EVF_OPTION_MAX_SIZE		4
 #define EVF_UID_ATTR_LW			0x0000c000	/* PLACEHOLDER: name */
-#define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
-#define THREAD_ATTR_CHECK_STACK		0x80000000
 #define WAIT_TYPE_EVENT_FLAG		0x10
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 
@@ -160,7 +158,7 @@ int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPa
 		ret = SCE_KERNEL_ERROR_CAN_NOT_WAIT;
 		goto resume;
 	}
-	if ((thread->currentAttr & THREAD_ATTR_CHECK_STACK) && !sceKernelCheckThreadUserStackSelf())
+	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 	ret = sceGUIDReferObjectWithClass(evfId,
 		s_threadmgrRuntime.manager->eventFlagClass, (SceObjectBase **)&evf);
@@ -446,9 +444,9 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 		if (ThreadmgrInSyscall()) {
 			opt.pid = thread->processId;
 			opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;
-			if (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS)
+			if (thread->currentAttr & THREAD_ATTR_UNLIMITED)
 				attr |= EVF_ATTR_UNLIMITED;
-			opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS) != 0;
+			opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED) != 0;
 		}
 	}
 	if (!ThreadmgrInSyscall()) {

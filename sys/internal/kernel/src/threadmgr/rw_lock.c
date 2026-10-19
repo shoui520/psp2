@@ -26,8 +26,6 @@
 #define RW_LOCK_MODE_READ		0
 #define RW_LOCK_MODE_WRITE		1
 #define RW_LOCK_COUNT_MAX		0x7fffffff
-#define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
-#define THREAD_ATTR_CHECK_STACK		0x80000000
 #define WAIT_TYPE_RW_LOCK		0x80
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 
@@ -233,7 +231,7 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 		ret = SCE_KERNEL_ERROR_CAN_NOT_WAIT;
 		goto resume;
 	}
-	if ((thread->currentAttr & THREAD_ATTR_CHECK_STACK) && !sceKernelCheckThreadUserStackSelf())
+	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 	ret = sceGUIDReferObjectWithClass(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
@@ -536,10 +534,10 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 	opt.attr = uidAttr;
 	if (ThreadmgrInSyscall() && !(attr & RW_LOCK_ATTR_LW)) {
 		opt.pid = thread->processId;
-		if (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS)
+		if (thread->currentAttr & THREAD_ATTR_UNLIMITED)
 			attr |= RW_LOCK_ATTR_UNLIMITED;
 		opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;
-		opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS) != 0;
+		opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED) != 0;
 	}
 	if (!ThreadmgrInSyscall()) {
 		intr = SceCpuForDriver_821FC0EE();

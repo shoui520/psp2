@@ -41,7 +41,6 @@ __attribute__((section(SCE_DBGSRC_SECTION), used)) = {
 #define SIMPLE_EVENT_OPENED		0x00000100
 #define SIMPLE_EVENT_PROCESS_EXITED	0x00000200
 #define SIMPLE_EVENT_UID_ATTR_LW	0x0000c000	/* PLACEHOLDER: name */
-#define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 #define UID_MAX_PER_PROCESS		0x800
 #define UID_LW_MAX_PER_PROCESS		0x100
@@ -223,9 +222,9 @@ SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t ini
 		if (ThreadmgrInSyscall()) {
 			opt.pid = thread->processId;
 			opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;
-			if (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS)
+			if (thread->currentAttr & THREAD_ATTR_UNLIMITED)
 				attr |= SIMPLE_EVENT_ATTR_UNLIMITED;
-			opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS) != 0;
+			opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED) != 0;
 		}
 	}
 	if (!ThreadmgrInSyscall()) {
