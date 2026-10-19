@@ -431,7 +431,7 @@ int SceSblACMgrForKernel_8241AB5C(SceUID pid, int bit)
 }
 
 /* name unknown: sceSblACMgrHasCapability for the attribute bits */
-static int hasAttribute(SceUID pid, int bit)
+static int __attribute__((noinline)) hasAttribute(SceUID pid, int bit)
 {
 	SceSelfAuthInfo info;
 
