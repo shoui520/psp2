@@ -289,3 +289,6 @@ int processResumeStart(SceUID pid, int eventType,
 		       ProcEventParam *param, void *common);
 int hidDumpDevices(void *buffer, SceSize size, SceUInt32 *count);
 int hidDumpLists(void *buffer, SceSize size, SceUInt32 *count);
+
+/* hid_bluetooth.c */
+void hidReleaseBluetoothDevices(void);

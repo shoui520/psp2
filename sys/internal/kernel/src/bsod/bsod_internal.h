@@ -51,3 +51,20 @@ void bsodDebugCrashCallback(void) __attribute__((noreturn));
 extern SceExcpmgrHandler bsodPrefetchEntry;
 extern SceExcpmgrHandler bsodDataEntry;
 extern SceExcpmgrHandler bsodUndefinedEntry;
+
+/* console.c */
+void bsodSetFramebuffer(void *pixels, unsigned pitch, unsigned height, unsigned format);
+void bsodSetFont(unsigned width, unsigned height);
+void bsodSetBackground(uint32_t color);
+void bsodResetColors(void);
+void bsodClearGrid(void);
+void bsodRasterize(void);
+void bsodPrintf(const char *format, ...);
+
+/* log.c */
+int bsodFreezeLog(void);
+int bsodPrintLog(const void *frame, uint32_t buttons);
+
+/* syscon.c */
+uint32_t bsodReadButtons(void);
+void bsodPowerOff(void);

@@ -48,8 +48,6 @@ typedef struct UnwindState {
 	SceUID pid;
 } UnwindState;
 
-int BacktraceFindExidx(SceUID pid, SceUInt32 addr, SceUInt32 *out, SceUInt32 flags);
-
 int copyWord(SceUID pid, SceUInt32 *dst, const SceUInt32 *src)
 {
 	int ret;

@@ -589,7 +589,6 @@ int KrmGetKeyCounts(KrmState *state, KrmKeyCounts *counts)
 	return 0;
 }
 
-
 int KrmInitializeWrappingKey(void)
 {
 	KrmSha256Digest digest;
@@ -635,7 +634,6 @@ clear:
 	__builtin_memset(g_krmAlternateWrappingDigestIv, 0, 16);
 	return 0;
 }
-
 
 int KrmCreateSignedNonce(KrmSignedNonce *nonce)
 {
@@ -726,7 +724,6 @@ clear:
 	return ret;
 }
 
-
 int KrmLockChallenge(void)
 {
 	if (!g_krmChallengeInitialized)
@@ -740,7 +737,6 @@ int KrmUnlockChallenge(void)
 {
 	return sceKernelUnlockFastMutex(&g_krmChallengeMutex);
 }
-
 
 int KrmInitializeChallenge(void)
 {
@@ -794,7 +790,6 @@ clear:
 	return 0;
 }
 
-int KrmDriverInitializeService(void);
 int KrmRegisterProcEventHandler(void);
 
 int module_start(SceSize arglen, const void *argp)

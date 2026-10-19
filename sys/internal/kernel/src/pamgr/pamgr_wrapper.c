@@ -8,35 +8,6 @@
 #include <sysmem/procevent.h>
 #include <pamgr/pamgr.h>
 
-uint64_t ScePamgrForDriver_FE9BFD27(void);
-int setTraceWritePointer(uint32_t pointer);
-int setTraceInterruptStatus(uint32_t status);
-int registerTraceInterruptCallback(PamgrTraceInterruptCallback callback, void *arg);
-int unregisterTraceInterruptCallback(void);
-int clearArmTrace(void);
-int setTracePackedFilter(const struct PamgrPackedFilter *filter);
-int clearTracePackedFilter(void);
-int setTraceWordFilter(const uint32_t *filter);
-int clearTraceWordFilter(void);
-int setTraceBuffer1WritePointer(uint32_t pointer);
-int configureTraceBuffer1(const struct PamgrTraceBufferConfig *config);
-int setTraceRecordMask(unsigned int mask, uint32_t selection);
-int setTraceBitControls(const uint32_t *controls);
-int configureTraceSamples(const volatile struct PamgrSampleConfig *config);
-void configureTraceControl(uint32_t config, uint32_t half);
-int configurePrimaryTrace(const volatile struct PamgrPrimaryTraceConfig *config);
-int configureArmTrace(const volatile struct PamgrArmTraceConfig *config);
-int configureArmTraceForUser(const struct PamgrArmTraceConfig *config);
-int configurePrimaryTraceForUser(const struct PamgrPrimaryTraceConfig *config);
-int configureGpuTraceForUser(const struct PamgrGpuTraceConfig *config);
-int clearGpuTraceForUser(void);
-int startPrimaryTrace(void);
-int startSecondaryTrace(void);
-int stopPrimaryTrace(void);
-int stopSecondaryTrace(void);
-int startPrimaryTraceForUser(void);
-int stopPrimaryTraceForUser(void);
-
 int ScePamgrForDriver_5D3D46E4(uint32_t registration,
 			    const struct PamgrArmTraceConfig *config)
 {
@@ -116,10 +87,7 @@ int sceKernelPaInitPamgrWrapper(void)
 	}
 	return 0;
 }
-int configureCounterTrace(const volatile struct PamgrCounterTraceConfig *config);
 int clearCounterTrace(void);
-int configureGpuTrace(const volatile struct PamgrGpuTraceConfig *config);
-int clearGpuTrace(void);
 
 int ScePamgrForDriver_49A43754(uint32_t registration,
 			     const struct PamgrGpuTraceConfig *config)
@@ -436,12 +404,6 @@ int ScePamgrForDriver_1A7733E0(uint32_t registration)
 	return stopSecondaryTrace();
 }
 
-void clearBusErrorLog(void);
-void clearSecureBusErrorLog(void);
-void enableTraceAuxControl0(void);
-void enableTraceAuxControl1(void);
-void disableTraceAuxControl1(void);
-
 int ScePamgrForDriver_E0D151F4(uint32_t registration)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
@@ -481,13 +443,6 @@ int ScePamgrForDriver_5EFEB00D(uint32_t registration)
 	disableTraceAuxControl1();
 	return 0;
 }
-
-int sceKernelPaAddCounterTraceForUser(const struct PamgrCounterTraceConfig *config);
-int clearCounterTraceForUser(void);
-int clearArmTraceForUser(void);
-int setTraceWordFilterForUser(const uint32_t *filter);
-int clearTraceWordFilterForUser(void);
-int setTraceRecordMaskForUser(unsigned int mask, uint32_t selection);
 
 int __attribute__((noinline)) configureRegisteredCounterTraceForUser(uint32_t registration,
 				const struct PamgrCounterTraceConfig *config)
@@ -555,8 +510,6 @@ int sceKernelPaSetBookmarkChannelEnableByKey(uint32_t registration,
 		return SCE_KERNEL_ERROR_PA_INVALID_KEY;
 	return setTraceRecordMaskForUser(mask, selection);
 }
-
-int getGpuSampledDataForUser(uint32_t *values);
 
 int _sceKernelPaGetGpuSampledData(uint32_t *values)
 {

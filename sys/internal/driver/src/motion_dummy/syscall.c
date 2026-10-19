@@ -8,10 +8,6 @@
 #include "motion_dummy.h"
 #include <motion/motion_dev.h>
 
-int SceMotionDevForDriver_5B53AC26(void);
-int SceMotionDevForDriver_3B23DF55(SceUInt32 blockId, uint8_t *header);
-int SceMotionDevForDriver_F0251700(SceUInt32 blockId, void *data, SceUInt32 count);
-
 #define CALIBRATION_DATA_MAX	25
 
 int sceMotionDevIsReady(void)

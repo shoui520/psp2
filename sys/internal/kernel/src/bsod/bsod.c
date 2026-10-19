@@ -74,17 +74,6 @@ int module_start(unsigned arglen, void *argp)
 
 /* Fatal screen loop: real display changes, input edges and reset/power SMCs. */
 extern void (*s_bsodPrinter)(const char *format, ...);
-void bsodPrintf(const char *format, ...);
-int bsodFreezeLog(void);
-int bsodPrintLog(const void *frame, uint32_t buttons);
-void bsodSetFont(unsigned width, unsigned height);
-void bsodSetFramebuffer(void *pixels, unsigned pitch, unsigned height, unsigned format);
-void bsodResetColors(void);
-void bsodSetBackground(uint32_t color);
-void bsodClearGrid(void);
-void bsodRasterize(void);
-uint32_t bsodReadButtons(void);
-void bsodPowerOff(void);
 
 uint32_t s_bsodButtons;
 

@@ -300,3 +300,15 @@ static inline SdfMgrProtocolState *_getPdCB(unsigned index)
 	&info; \
 })
 #endif
+
+/* if_sdio.c */
+int sdioInit(void);
+
+/* pd_dcmp.c */
+int dcmpInit(SdfMgrProtocolState *protocol);
+void dcmpSendStatusSystemError(uint32_t type, SceSize size, const void *source);
+void *dcmpGetSystemErrorBuffer(void);
+SceSize dcmpGetSystemErrorBufferSize(void);
+
+/* pd_tsmp.c */
+int tsmpInit(SdfMgrProtocolState *protocol);

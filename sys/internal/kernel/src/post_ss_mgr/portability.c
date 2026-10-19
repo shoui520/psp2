@@ -193,8 +193,6 @@ static const SceUInt8 g_keySetAOffsets[3] = { 0x20, 0x40, 0x60 };
 static const SceUInt8 g_keySetAKeyOffsets[4] = { 0x00, 0x10, 0x20, 0x30 };
 static const SceUInt8 g_keySetBKeyOffsets[2] = { 0x20, 0x30 };
 
-int postSsCopyKey(void *dst, SceSize size, const void *src, SceSize srcSize);	/* name unknown */
-
 /* PLACEHOLDER: cryptographic routine, deferred: decrypts the two copies
  * of a key set with SceSblSsMgrForDriver_934DB6B5 and keeps the copy that checks */
 POST_SS_DEFERRED int postSsMgrDecryptKeySet(const void *const *encA, const void *ivA, const void *const *encB,

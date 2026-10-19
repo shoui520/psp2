@@ -359,4 +359,7 @@ extern SceUID g_krmProcEventHandler;
 
 #endif
 
+/* driver.c */
+int KrmDriverInitializeService(void);
+
 #endif

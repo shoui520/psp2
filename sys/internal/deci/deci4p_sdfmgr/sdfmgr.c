@@ -614,10 +614,6 @@ extern SceExcpmgrHandler sdfMgrPrefetchAbortEntry;
 extern SceExcpmgrHandler sdfMgrUndefinedEntry;
 
 /* Sysroot keeps these handlers for the bus error, system error and power paths. */
-int dcmpInit(SdfMgrProtocolState *protocol);
-int tsmpInit(SdfMgrProtocolState *protocol);
-int sdioInit(void);
-void dcmpSendStatusSystemError(uint32_t type, SceSize size, const void *source);
 int _threadKicker(void);
 int sdfMgrSuspend(int value, void *args);
 int sdfMgrResume(int value, void *args);
@@ -842,10 +838,6 @@ int sdfMgrUndefinedHandler(SceExcpmgrContext *context,
 		sdfMgrPollBreakHooks(cpu);
 	return result;
 }
-
-void dcmpSendStatusSystemError(uint32_t type, SceSize size, const void *source);
-void *dcmpGetSystemErrorBuffer(void);
-SceSize dcmpGetSystemErrorBufferSize(void);
 
 typedef void (*SdfMgrBusErrorHook)(uint32_t status0, uint32_t status1, uint32_t status2);
 

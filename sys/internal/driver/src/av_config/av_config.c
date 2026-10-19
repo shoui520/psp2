@@ -82,8 +82,6 @@ static const unsigned int avConfigMasterVolumeGain[31] = {
 	0x4026, 0x47fa, 0x50c3, 0x5a9d, 0x65ac, 0x7214, 0x8000
 };
 
-int avConfigBtReceiveThread(SceSize arglen, void *argp);
-int avConfigBtSendThread(SceSize arglen, void *argp);
 int _sceAVConfigThread(SceSize arglen, void *argp);
 int _sceAVConfigResumePhase1Main(int resume, int eventId, void *args, void *opt);
 void avConfigResetConfiguration(void);
@@ -95,8 +93,6 @@ void avConfigHpremoteCallback(int input, int multiType, int headphones,
 			     int microphones, int value, void *argument);
 void avConfigHdmiConnected(void);
 void avConfigHdmiDisconnected(void);
-void sceAVConfigHdmiHdcpDoneIntr(void);
-int avConfigInitializeHdmiOutput(void);
 void avConfigCompleteDisplayUpdate(void);
 int SceAVConfigForDriver_0E60701A(unsigned int active);
 void avConfigEnableAvls(void);

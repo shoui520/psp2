@@ -22,17 +22,7 @@
 #include <power/power.h>
 #include <sysmem/sysclib.h>
 
-int MsproalSleep(void);
-int msproal_init(void);
 int sceMsifInitCallback(uint32_t kind, void *argument);
-int msproal_read(uint32_t sector, int count, const void *transfer);
-int msproal_write(uint32_t sector, int count, const void *transfer);
-int MsproalGetMediaInformation(struct MsproalMediaInformation *information);
-int MsproalFormat(int mode);
-int msproal_start(struct MsproalHandle *handle);
-int msproal_check_media(uint8_t *mediaType);
-int msproal_mount(int busMode);
-int msproal_control_power_supply(uint32_t value, uint32_t preserveMask);
 
 _Static_assert(sizeof(SceMsInfo) == 64, "MSIF media-information result");
 

@@ -67,3 +67,24 @@ _Static_assert(offsetof(AudioProcessLocalStorage, main) == 28, "audio main ports
 _Static_assert(offsetof(AudioProcessLocalStorage, eventFlag) == 316, "audio event");
 _Static_assert(offsetof(AudioProcessLocalStorage, direct) == 320, "audio direct ports");
 _Static_assert(sizeof(AudioProcessLocalStorage) == 400, "audio process storage");
+
+/* i2s.c */
+unsigned int audioGetDmaModeCommand(void);
+unsigned int audioGetI2sDmaCommand(void);
+int audioInitializeI2s(void);
+int audioEnableI2sLocked(int port);
+uintptr_t audioGetI2sDataAddress(int port);
+
+/* mixer.c */
+int _sceAudiodrvMixer(SceSize arglen, void *argp);
+uint32_t audioWaitForPlaybackDeadline(uint32_t deadline, uint32_t freq, uint32_t samples);
+int audioDispatchDmaBuffer(uintptr_t sourceAddress, int channel, unsigned int wordCount);
+int audioTransferDmaBuffer(uintptr_t sourceAddress, unsigned int wordCount);
+int audioInitializeHardware(void);
+int audioPrepareSuspend(void);
+int audioResumeHardware(void);
+int audioSetSuspended(void);
+
+/* spdif.c */
+int audioInitializeSpdif(void);
+int audioPrepareSuspendHook(void);

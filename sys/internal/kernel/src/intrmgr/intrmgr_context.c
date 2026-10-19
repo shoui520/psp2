@@ -9,8 +9,6 @@
 #include <sysmem/barrier.h>
 #include <sysmem/compiler.h>
 
-
-
 /* name unknown: enter the kernel address space while still on the IRQ stack.
  * The acknowledge number occupies the context ID's interrupt-tracing field.
  */
@@ -210,7 +208,6 @@ void intrCallSyscallLeaveHook(ThreadSyscallFrame *frame, SceUInt32 *results)
 		hook(frame, results);
 }
 
-
 /* name unknown: scheduler callbacks registered through the three opaque NIDs. */
 void intrTraceInterruptedThread(SceUInt32 acknowledge, ThreadCB *thread)
 {
@@ -267,8 +264,6 @@ ThreadSyscallFrame *intrPrepareSyscall(IntrSupervisorFrame *supervisor)
 	frame->tpidrurw = readTpidrurw();
 	return frame;
 }
-
-void illegalUserDACRCfunc(const ThreadCB *thread, unsigned int dacr);
 
 /* name unknown: resolve the captured syscall and validate its entry domains. */
 int intrSelectSyscall(ThreadSyscallFrame *frame, SceUInt32 previousDacr)

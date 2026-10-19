@@ -15,7 +15,6 @@ int hidBluetoothCallback(int notifyId, int notifyCount, int notifyArg,
 			 void *userData);
 int hidDisplayCallback(int notifyId, int notifyCount, int notifyArg,
 		       void *userData);
-void hidReleaseBluetoothDevices(void);
 
 int hidBluetoothThread(SceSize args, void *argp)
 {

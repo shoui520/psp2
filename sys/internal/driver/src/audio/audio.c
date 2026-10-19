@@ -25,20 +25,12 @@
 #include <codec/codec.h>
 
 int sceAudioOutSetEffectType(int type);
-int audioInitializeHardware(void);
 int audioInitializeEffects(void);
-int _sceAudiodrvMixer(SceSize arglen, void *argp);
 int audioSetVolumeRamp(AudioVolumeRamp *ramp, int freq, int adopt, int duration);
 int audioSetVolumeRampTarget(AudioVolumeRamp *ramp, int freq, int adopt,
 			     int volume, int duration);
-int audioTransferDmaBuffer(uintptr_t sourceAddress, unsigned int wordCount);
-uint32_t audioWaitForPlaybackDeadline(uint32_t deadline, uint32_t freq,
-				      uint32_t samples);
-int audioDispatchDmaBuffer(uintptr_t sourceAddress, int channel,
-			  unsigned int wordCount);
 int audioProcessDirectPort(AudioDirectPort *port, int16_t *output,
 			   const int16_t *input, unsigned int sampleCount);
-int audioSetHardwareVolume(int channel, int left, int right);
 int audioInitializeProcess(SceUID pid, ProcEventCreateParam *param, void *common);
 int audioProcessExitCallback(SceUID pid, ProcEventParam *param, void *common);
 int audioCleanupProcess(SceUID pid, ProcEventParam *param, void *common);
@@ -90,13 +82,6 @@ int audioSetTitleCompatibility(SceUID pid, signed char enabled)
 	}
 	return result;
 }
-
-int audioShutdownHardware(void);
-int audioPrepareSuspend(void);
-int audioSetSuspended(void);
-int audioResumeHardware(void);
-int SceAudioForDriver_28B3AF10(int channel, int inputRate, int outputRate,
-			     int clockRate);
 
 int audioSystemEventHandler(int phase, int event, void *args, void *opt)
 {

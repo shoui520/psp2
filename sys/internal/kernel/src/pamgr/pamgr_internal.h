@@ -252,4 +252,51 @@ _Static_assert(offsetof(ScePerfmonRegisters, traceControl) == 0x10bc,
 
 extern struct PamgrState pamgrState;
 
+/* pamgr.c */
+int configureGpuTrace(const volatile struct PamgrGpuTraceConfig *config);
+int clearGpuTrace(void);
+int configureCounterTrace(const volatile struct PamgrCounterTraceConfig *config);
+int configurePrimaryTraceForUser(const struct PamgrPrimaryTraceConfig *config);
+int sceKernelPaAddCounterTraceForUser(const struct PamgrCounterTraceConfig *config);
+int clearCounterTraceForUser(void);
+int configurePrimaryTrace(const volatile struct PamgrPrimaryTraceConfig *config);
+int configureArmTraceForUser(const struct PamgrArmTraceConfig *config);
+int clearArmTraceForUser(void);
+int setTraceWordFilterForUser(const uint32_t *filter);
+int clearTraceWordFilterForUser(void);
+void clearBusErrorLog(void);
+void clearSecureBusErrorLog(void);
+void enableTraceAuxControl0(void);
+void enableTraceAuxControl1(void);
+void disableTraceAuxControl1(void);
+int setTraceBitControls(const uint32_t *controls);
+int configureTraceSamples(const volatile struct PamgrSampleConfig *config);
+void configureTraceControl(uint32_t config, uint32_t half);
+int configureTraceBuffer1(const struct PamgrTraceBufferConfig *config);
+int setTraceRecordMask(unsigned int mask, uint32_t selection);
+int setTraceBuffer1WritePointer(uint32_t pointer);
+int clearArmTrace(void);
+int setTracePackedFilter(const struct PamgrPackedFilter *filter);
+int clearTracePackedFilter(void);
+int setTraceWordFilter(const uint32_t *filter);
+int clearTraceWordFilter(void);
+int configureGpuTraceForUser(const struct PamgrGpuTraceConfig *config);
+int clearGpuTraceForUser(void);
+int getGpuSampledDataForUser(uint32_t *values);
+int setTraceWritePointer(uint32_t pointer);
+int startPrimaryTrace(void);
+int startSecondaryTrace(void);
+int stopPrimaryTrace(void);
+int stopSecondaryTrace(void);
+int setTraceInterruptStatus(uint32_t value);
+int unregisterTraceInterruptCallback(void);
+int registerTraceInterruptCallback(PamgrTraceInterruptCallback callback, void *arg);
+int startPrimaryTraceForUser(void);
+int stopPrimaryTraceForUser(void);
+int setTraceRecordMaskForUser(unsigned int mask, uint32_t selection);
+int configureArmTrace(const volatile struct PamgrArmTraceConfig *config);
+
+/* pamgr_wrapper.c */
+int sceKernelPaInitPamgrWrapper(void);
+
 #endif

@@ -116,4 +116,7 @@ int sceSblUtMgrInit(void);		/* name unknown */
 int sceSblFwLoaderInit(void);		/* name unknown */
 int sceSblRsaSetRandom(int (*random)(void *buf, SceSize size));	/* name unknown */
 
+/* rsa.c */
+int postSsCopyKey(void *dst, SceSize count, const void *src, SceSize size);
+
 #endif

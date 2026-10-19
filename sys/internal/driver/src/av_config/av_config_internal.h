@@ -175,3 +175,11 @@ int avConfigHdmiConfigureCec(void);
 int hdmiSetOutput(int vic, unsigned int rangeMode, int flags);
 int avConfigSetHdmiScalingRatio(const AvConfigScalingRatio *ratio);
 int avConfigGetHdmiScalingRatio(AvConfigScalingRatio *ratio);
+
+/* avconf_bt_transfer.c */
+int avConfigBtReceiveThread(SceSize arglen, void *argp);
+int avConfigBtSendThread(SceSize arglen, void *argp);
+
+/* avconf_hdmi.c */
+void sceAVConfigHdmiHdcpDoneIntr(void);
+int avConfigInitializeHdmiOutput(void);

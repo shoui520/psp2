@@ -779,4 +779,7 @@ static inline void ModulemgrSyscallLeave(SceUInt32 t)
 	__asm__ volatile("mcr p15, 0, %0, c13, c0, 3" :: "r"(t) : "memory");
 }
 
+/* exidx.c */
+int BacktraceFindExidx(SceUID pid, SceUInt32 addr, SceUInt32 *out, SceUInt32 flags);
+
 #endif

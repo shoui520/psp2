@@ -649,9 +649,6 @@ int sceIoSchedulerCompleteIoRequest(IoScheduler *sched, IoRequest *req)
 	return 0;
 }
 
-IoRequest *sceIoRequestQueueGetIoRequest(IoRequestQueue *queue, int *waiting);
-int sceIoRequestQueueFinishIoRequest(IoScheduler *sched, IoRequest *req);
-
 /* name unknown: find the highest-priority request or waiting queue. */
 IoRequest *sceIoSchedulerGetIoRequest(IoScheduler *sched)
 {
@@ -742,9 +739,6 @@ int getSchedWorkerName(IoScheduler *sched)
 	sched->worker.cond = sched->cond;
 	return 0;
 }
-
-/* name unknown: allocates one priority queue. */
-IoRequestQueue *sceIoRequestQueueCreateIoRequestQueue(IoScheduler *sched, int priority);
 
 IoScheduler *sceIoSchedulerCreateIoScheduler(SchedDispatcher *dispatcher,
 					   const IoSchedulerAttr *attr)
@@ -861,8 +855,6 @@ void sceIoSchedulerRestoreAcl(IoSchedulerAcl *acl)
 	}
 }
 
-int sceIoRequestQueueRemoveIoRequest(IoRequestQueue *queue, IoRequest *req);
-
 int sceIoSchedulerCancelAsyncIoRequest(IoScheduler *sched, IoRequest *req)
 {
 	IoRequestQueue *queue;
@@ -924,8 +916,6 @@ int sceIoSchedulerNeedsIoChunks(IoScheduler *sched, IoRequest *req)
 		return req->args.rw.size > size;
 	return 0;
 }
-
-int sceIoRequestQueueAddIoRequest(IoRequestQueue *queue, IoRequest *req);
 
 int sceIoSchedulerAddIoRequest(IoScheduler *sched, IoRequest *req)
 {
@@ -1064,9 +1054,6 @@ int sceIoSchedulerNeedsStorageIoChunks(IoScheduler *sched, IoRequest *req)
 
 int sceKernelChangeThreadPriorityAndCpuAffinityMask(SceUID thid, int priority,
 						 int affinity, int reserved, int flags);
-int sceIoRequestQueueChunkIoRequest(IoScheduler *sched, IoRequest *req, int count);
-int sceIoRequestQueueExecuteIoChunk(IoRequest *req, IoChunk *chunk);
-int sceIoRequestQueueFinishAndDestroyIoChunk(IoRequest *req, IoChunk *chunk, int result);
 
 static inline __attribute__((always_inline)) int isDataIoReq(IoRequest *req)
 {

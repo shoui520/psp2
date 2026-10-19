@@ -13,20 +13,7 @@
 #include <processmgr/processmgr.h>
 #include <audio/audio.h>
 
-int audioSubmitDmaBuffer(uintptr_t sourceAddress, unsigned int wordCount,
-			 unsigned int bank, unsigned int stream);
-int audioSubmitSingleDmaBuffer(uintptr_t sourceAddress, unsigned int wordCount);
-int audioSetHardwareTransferMode(unsigned int channel, unsigned int mode);
-int audioSetSingleTransferMode(int mode);
-int audioQueueHardwareBuffer(int channel, void *buffer, unsigned int wordCount);
-int audioQueueSingleHardwareBuffer(void *buffer, unsigned int wordCount);
-int audioInitializeI2s(void);
-int audioInitializeSpdif(void);
-int audioInitializeSrcMix(void);
-int audioPrepareSuspendHook(void);
 int audioSuspendI2s(void);
-int SceAudioForDriver_28B3AF10(int channel, int inputRate, int outputRate,
-			     int clockRate);
 
 uint32_t audioWaitForPlaybackDeadline(uint32_t deadline, uint32_t freq,
 				     uint32_t samples);

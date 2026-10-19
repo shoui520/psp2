@@ -47,7 +47,6 @@ int sceKernelModulemgrStart(SceKernelBootParam *param);
 int ExcpmgrModuleStart(void);
 int sceKernelIntrMgrModuleStart(SceKernelBootParam *param);
 int initDmacSecure(void);
-int KblArchive(SceKernelBootParam *param);
 int sceKernelMMUMapSection(uint32_t *l1, uint32_t type, uint32_t domain, uintptr_t va,
 			   uintptr_t pa);
 int sceKernelMMUUnmapSectionWithFlags(uint32_t *l1, uint32_t asid, uintptr_t va,

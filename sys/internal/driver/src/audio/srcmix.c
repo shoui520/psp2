@@ -24,10 +24,6 @@ const SceKernelDmaOpChainParam audioDmaChainParam = {
 	.setValue = 0
 };
 
-uintptr_t audioGetI2sDataAddress(int port);
-unsigned int audioGetI2sDmaCommand(void);
-unsigned int audioGetDmaModeCommand(void);
-int audioEnableI2sLocked(int port);
 int audioStartCaptureDma(struct AudioDmaState *state);
 int audioStartTransmitDma(struct AudioDmaState *state,
 	SceSrcMixRegisters *registers);

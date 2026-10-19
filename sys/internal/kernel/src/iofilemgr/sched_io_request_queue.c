@@ -8,8 +8,6 @@ int g_ioPfsReadEnabled __attribute__((section(".data"))) = 0;
 int g_ioPfsWriteEnabled __attribute__((section(".data"))) = 0;
 int g_ioPfsPwriteEnabled __attribute__((section(".data"))) = 0;
 #endif
-int sceIoSchedulerIsDataIo(IoRequest *req);
-int sceIoSchedulerIsStorageIo(IoRequest *req);
 
 int readIoChunkByPread(IoRequest *req, IoChunk *chunk)
 {

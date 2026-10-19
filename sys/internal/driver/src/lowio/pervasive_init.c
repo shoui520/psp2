@@ -10,8 +10,6 @@
 #include <lowio/pervasive.h>
 
 extern uint32_t s_hardwareInfo[5];
-int LowioPixelClockInit(void);
-int PervasiveMiscInit(void);
 void LowioIdleEntry(void);
 
 static SceKernelFastMutex s_pervasiveMutex;

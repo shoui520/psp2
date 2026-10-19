@@ -9,9 +9,6 @@
 #include <arm_neon.h>
 #include <string.h>
 
-int MsproalGetSystemInformation(struct MsproalSystemInformation *information);
-int MsproalGetMediaInformation(struct MsproalMediaInformation *information);
-
 static const ScePortabilityData gMsifParameterPrimary = {
 	.msg_size = 32,
 	.msg = {

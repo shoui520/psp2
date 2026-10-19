@@ -51,8 +51,6 @@ int InitializeDipsw(SceDipsw *dipsw);
 int InitializeAssertLevel(void);
 int InitializeDebugBuffer(void);
 int KblGetBuildNumber(void);
-void KblSimpleMemoryTest(uintptr_t start, SceSize size, uint32_t seed, SceSize step,
-			 SceSize blockSize);
 int PervasiveInit(void);
 int TimerGateEnable(void);
 int TimerResetDisable(void);

@@ -313,4 +313,17 @@ void *MsproalInitializeErrorLog(struct MsproalHandle *handle,
 	unsigned int capacity, uint32_t *index,
 	struct MsproalErrorRecord *records);
 
+/* library.c */
+int msproal_init(void);
+int msproal_mount(int busMode);
+int msproal_start(struct MsproalHandle *handle);
+int msproal_check_media(uint8_t *mediaType);
+int MsproalGetMediaInformation(struct MsproalMediaInformation *information);
+int MsproalGetSystemInformation(struct MsproalSystemInformation *information);
+int msproal_read(uint32_t sector, int count, const void *transfer);
+int msproal_write(uint32_t sector, int count, const void *transfer);
+int MsproalFormat(int mode);
+int MsproalSleep(void);
+int msproal_control_power_supply(uint32_t value, uint32_t preserveMask);
+
 #endif

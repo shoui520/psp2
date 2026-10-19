@@ -105,3 +105,6 @@ extern SceUInt16 syscallEnterBranch, syscallLeaveBranch;
 int callIntrEvent(unsigned int event, unsigned int size, void *data);
 void invalidApiStatCfunc(const ThreadSyscallFrame *frame, void *result, unsigned int state);
 void invalidFastMutexOwnerCfunc(void);
+
+/* intrmgr.c */
+void illegalUserDACRCfunc(const ThreadCB *thread, unsigned int dacr);

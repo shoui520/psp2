@@ -22,7 +22,6 @@ int configurePrimaryTrace(const volatile struct PamgrPrimaryTraceConfig *config)
 int configureArmTrace(const volatile struct PamgrArmTraceConfig *config);
 int startTrace(unsigned int channel);
 int stopTrace(unsigned int channel);
-int sceKernelPaInitPamgrWrapper(void);
 
 struct PamgrState pamgrState;
 

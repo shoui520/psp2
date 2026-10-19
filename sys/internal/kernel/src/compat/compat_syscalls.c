@@ -7,31 +7,8 @@
 #include <intrmgr/syscall.h>
 #include <sysmem/sysmem.h>
 #include <rtc/rtc.h>
+#include "compat_internal.h"
 
-int sceCompatCacheInternal(int mode, void *base, int size);
-int compatAllocCdramWithHole(SceCompatCdram *cdram);
-int compatFrameBufferInit(SceUID frameBuffer);
-int compatIdStorageLookup(short leaf, unsigned int offset, void *buffer,
-	unsigned int size);
-int compatReadShared32(int location, int *value);
-int compatWriteSharedCtrl(const SceCtrlDataPsp *padData);
-int compatWriteShared32(int location, int value);
-int compatSetDisplayConfig(int resolution, int colorSpaceMode);
-int compatGetPeripheralState(int mode);
-int compatDatRead(int index, unsigned int offset, void *buffer,
-	unsigned int size);
-int compatGetPspSystemSoftwareVersion(void);
-int compatSuspendResume(int mode);
-int compatGetDevInf(SceIoDevInfo *info);
-int compatGetStatus(void);
-int compatSetRifPath(const signed char *contentId);
-int compatLCDCSync(void);
-int compatSetSuspendSema(SceUID suspendSema, SceUID resumeSema);
-int compatGetUpdateState(void);
-int compatSetUpdateState(int state);
-int compatGetTitleListForVsh(char *buffer, unsigned int size);
-int compatAvailableColorSpaceSetting(void);
-int compatCheckPocketStationRif(void);
 extern unsigned char gCompatActivationReadBuffer[2048];
 extern char gCompatTitleListBuffer[100];
 

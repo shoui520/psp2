@@ -53,4 +53,17 @@ _Static_assert(offsetof(struct AudioDmaState, transmitFrames) == 336,
 
 extern const SceKernelDmaOpChainParam audioDmaChainParam;
 
+/* srcmix.c */
+int audioSetHardwareTransferMode(unsigned int channel, unsigned int mode);
+int audioQueueHardwareBuffer(int channel, void *buffer, unsigned int wordCount);
+int audioSetSingleTransferMode(int mode);
+int audioQueueSingleHardwareBuffer(void *buffer, unsigned int wordCount);
+int audioSubmitDmaBuffer(uintptr_t source, unsigned int wordCount,
+	unsigned int bank, unsigned int stream);
+int audioSubmitSingleDmaBuffer(uintptr_t destination, unsigned int wordCount);
+int SceAudioForDriver_28B3AF10(int channel, int inputRate, int outputRate, int clockRate);
+int audioSetHardwareVolume(int channel, int left, int right);
+int audioInitializeSrcMix(void);
+int audioShutdownHardware(void);
+
 #endif

@@ -20,3 +20,10 @@ extern BootSaveArea bootSaveArea;
 
 /* name unknown: the KBL Param's QA flag "Allow Kernel Debug" */
 int IsAllowKernelDebug(void);
+
+/* archive_tzs.c */
+int KblArchive(SceKernelBootParam *param);
+
+/* memory_test.c */
+void KblSimpleMemoryTest(uintptr_t start, SceSize size, uint32_t seed, SceSize step,
+			 SceSize blockSize);

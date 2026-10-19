@@ -1445,4 +1445,20 @@ int sceIoRequestCreateIoRequestForDreadAsync(IoRequest *req, SceInt32 priority,
 					     SceIoDirent *dir);		/* name unknown */
 
 #endif
+
+/* sched_io_request_queue.c */
+/* name unknown: allocates one priority queue */
+IoRequestQueue *sceIoRequestQueueCreateIoRequestQueue(IoScheduler *sched, int priority);
+int sceIoRequestQueueAddIoRequest(IoRequestQueue *queue, IoRequest *req);
+int sceIoRequestQueueRemoveIoRequest(IoRequestQueue *queue, IoRequest *req);
+IoRequest *sceIoRequestQueueGetIoRequest(IoRequestQueue *queue, int *waiting);
+int sceIoRequestQueueChunkIoRequest(IoScheduler *sched, IoRequest *req, int canChunk);
+int sceIoRequestQueueFinishAndDestroyIoChunk(IoRequest *req, IoChunk *chunk, int result);
+int sceIoRequestQueueFinishIoRequest(IoScheduler *sched, IoRequest *req);
+int sceIoRequestQueueExecuteIoChunk(IoRequest *req, IoChunk *chunk);
+
+/* sched_scheduler.c */
+int sceIoSchedulerIsDataIo(IoRequest *req);
+int sceIoSchedulerIsStorageIo(IoRequest *req);
+
 #endif

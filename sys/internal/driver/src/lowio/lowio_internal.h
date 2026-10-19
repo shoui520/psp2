@@ -51,3 +51,9 @@ int LowioCdramInit(SceSize arglen, const void *argp);
 int LowioDsiInit(SceSize arglen, const void *argp);
 int LowioIftuInit(SceSize arglen, const void *argp);
 int LowioCsiInit(SceSize arglen, const void *argp);
+
+/* pervasive_pixel.c */
+int LowioPixelClockInit(void);
+
+/* pervasive_registers.c */
+int PervasiveMiscInit(void);
