@@ -150,6 +150,18 @@ void SceThreadmgrForKernel_A3975A5A(ThreadmgrOnCpuHook hook);
 void SceThreadmgrForKernel_F885ECCA(ThreadmgrOffCpuHook hook);
 void SceThreadmgrForKernel_9605DF7D(ThreadmgrPriorityChangeHook hook);
 
+/* The process manager's hooks: a process's thread manager state, its timers, its class. */
+struct SceProcessObject;			/* processmgr/process.h */
+struct ProcessBudget;
+struct SceClass;				/* sysmem/uid_class.h */
+int sceKernelThreadMgrProcessCreate(struct SceProcessObject *process);
+int sceKernelThreadMgrProcessDeleteBeforePUIDClose(struct SceProcessObject *process);
+int sceKernelThreadMgrProcessDeleteAfterPUIDClose(struct SceProcessObject *process);
+int SceThreadmgrForKernel_59D1D5B0(struct SceClass *processClass);
+int SceThreadmgrForKernel_7425185E(struct SceProcessObject *process);	/* it stops: timers leave */
+int SceThreadmgrForKernel_89C17825(struct SceProcessObject *process);	/* it runs again */
+uint32_t sceKernelGetDefaultCpuAffinityMask(struct ProcessBudget *budget);
+
 /* Simple events and event callbacks. */
 SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t initPattern,
 				  const SceKernelSimpleEventOptParam *option);

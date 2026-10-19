@@ -14,7 +14,19 @@
 #include <sysmem/debug.h>
 #include <sysmem/procevent.h>
 #include <threadmgr/threadcb.h>
-#include <processmgr/processmgr_imports.h>
+#include <threadmgr/threadmgr.h>
+#include <sysmem/cpu.h>
+#include <sysmem/dipsw.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysclib.h>
+#include <sysmem/uid_class.h>
+#include <intrmgr/intrmgr.h>
+#include <acmgr/acmgr.h>
+#include <iofilemgr/iofilemgr.h>
+#include <sysmem/sysroot.h>
+#include <sysmem/utils.h>
+#include <excpmgr/excpmgr.h>
+#include <modulemgr/modulemgr.h>
 #include <processmgr/process.h>
 #include <processmgr/processmgr.h>
 

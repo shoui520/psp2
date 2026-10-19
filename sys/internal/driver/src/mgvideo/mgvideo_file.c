@@ -1,9 +1,9 @@
 /* Descriptive file name: no source-file debug records exist in the original. */
 #include "mgvideo_private.h"
 #include "mgvideo_result.h"
-#include <processmgr/processmgr_imports.h>
 #include <sysmem/sysclib.h>
 #include <magicgate/magicgate.h>
+#include <sysmem/sysmem.h>
 
 unsigned int copyFileGroupToUser(void *destination, unsigned int size,
 				 const MagicGateFileGroup *group, int status)

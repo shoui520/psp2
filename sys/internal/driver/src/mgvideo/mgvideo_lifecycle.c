@@ -2,11 +2,12 @@
 #include "mgvideo_private.h"
 #include <usbstormg/usbstormg.h>
 #include <sysmem/sysmem.h>
-#include <processmgr/processmgr_imports.h>
 #include <sysmem/sysclib.h>
 #include "mgvideo_result.h"
 #include <magicgate/magicgate.h>
 #include <sysmem/procevent.h>
+#include <threadmgr/threadmgr.h>
+#include <sysmem/cpu.h>
 
 int initializeVideoContext(MgVideoContext *context, uint64_t *challenge)
 {

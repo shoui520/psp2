@@ -9,6 +9,8 @@
 #include <kernel/modulemgr.h>
 #include <modulemgr/module_info.h>
 #include <modulemgr/modulemgr_control.h>
+#include <modulemgr/modulemgr_patch.h>
+#include <authmgr/sblauthmgr.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -105,6 +107,8 @@ int sceKernelGetProgramIdentificationInfo(const char *path, SceUInt64 *authId, S
 int sceKernelGetStubList(SceUID pid, SceUID *list, SceUInt32 *count);
 SceUID sceKernelLoadModule(const char *path, SceUInt32 flags, const SceKernelLoadModuleOpt *opt);
 int sceKernelLoadPreloadingModules(SceUID pid, const ProcessImageInfo *info, SceUInt32 flags);
+SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, SceUInt32 flags,
+				 SceSelfAuthInfo *auth, ProcessImageInfo *info, const ModulemgrTitlePatch *patch);
 int sceKernelLoadPtLoadSegForFwloader(const char *path, int index, void *dst, SceSize size,
 				      int flags, SceSize *out);
 int sceKernelMountBootimageFS(const char *path);

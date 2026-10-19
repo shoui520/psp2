@@ -3,7 +3,6 @@
 #include "scheduler.h"
 
 int checkCpuAffinityMaskPhy(uint32_t mask, uint32_t attributes, SceProcessObject *pProcess);
-uint32_t sceKernelGetDefaultCpuAffinityMask(ProcessBudget *budget);
 void issueChangeThreadCpuAffinityIntrRequest(unsigned int cpuId, SceUID threadId, uint32_t mask);
 void issueChangeThreadPriorityAndCpuAffinityIntrRequest(unsigned int cpuId, SceUID threadId,
 				       int priority, uint32_t mask);

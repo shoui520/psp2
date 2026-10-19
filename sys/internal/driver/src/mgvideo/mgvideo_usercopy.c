@@ -1,5 +1,6 @@
 /* Descriptive file name: no source-file debug records exist in the original. */
-#include <processmgr/processmgr_imports.h>
+#include <scetypes.h>
+#include <sysmem/sysmem.h>
 
 int copyVideoDataFromUser(void *destination, const void *source, SceSize size)
 {

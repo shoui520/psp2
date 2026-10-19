@@ -1,6 +1,5 @@
 /* SceNgs atomic service wrapper; original call boundary is kept. */
 
-#include <processmgr/processmgr_imports.h>
 #include <sysmem/cpu.h>
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/fast_mutex_object.h>
