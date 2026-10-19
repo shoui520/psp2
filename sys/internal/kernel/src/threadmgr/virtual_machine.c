@@ -142,6 +142,7 @@ int suspendThreadForVM(SceUID threadId, int *result, SceKernelSpinlock *done)
 {
 	struct ThreadMgrCpuCB *cpu;
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	struct ThreadCB *thread;
 	struct ThreadmgrWaitNode *self, *node, *next, *head;
 	SceKernelSpinlock wait;
@@ -151,11 +152,12 @@ int suspendThreadForVM(SceUID threadId, int *result, SceKernelSpinlock *done)
 	intr = SceCpuForDriver_821FC0EE();
 	cpuId = sceKernelCpuId();
 	cpu = currentCpuState();
-	ret = sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), (SceObjectBase **)&object);
+	ret = sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
+	object = (struct ThreadmgrThreadObject *)pObject;
 	thread = &object->context;
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (!(thread->currentAttr & THREAD_ATTR_VM) && !isVirtualMachineTitle(thread)) {
@@ -290,6 +292,7 @@ resume:
 int resumeThreadForVM(SceUID threadId)
 {
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	struct ThreadCB *thread;
 	struct ThreadmgrException *exception;
 	struct ThreadmgrExceptionEntry *entry;
@@ -304,10 +307,11 @@ int resumeThreadForVM(SceUID threadId)
 	if (threadId == 0 || currentThreadContext()->threadId == threadId)
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
 	intr = SceCpuForDriver_821FC0EE();
-	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), (SceObjectBase **)&object) < 0) {
+	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
+	object = (struct ThreadmgrThreadObject *)pObject;
 	thread = &object->context;
 	if (!(thread->currentAttr & THREAD_ATTR_VM) && !isVirtualMachineTitle(thread)) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_PERMISSION;
@@ -371,6 +375,7 @@ int waitException(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt32 *timeou
 		currentThreadContext();
 	struct ThreadmgrExceptionEntry *entry;
 	struct ThreadmgrException *exception;
+	SceObjectBase *pObject;
 	uint64_t wakeup;
 	uint32_t saved;
 	int intr, ret, cbRet, locked = 0;
@@ -407,11 +412,12 @@ int waitException(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt32 *timeou
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 	ret = sceGUIDReferObjectWithClass(
 		thread->process->exceptionId, EXCEPTION_CLASS(),
-		(SceObjectBase **)&exception);
+		&pObject);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(203);
 		goto resume;
 	}
+	exception = (struct ThreadmgrException *)pObject;
 	sceKernelSpinlockLowLock(&exception->lock);
 	if (exception->owner == -1) {
 		exception->owner = thread->threadId;
@@ -602,6 +608,7 @@ int sceKernelSetThreadContextForVM(SceUID threadId, const ThreadmgrVmCpuContext 
 				   const ThreadmgrVmVfpContext *vfp)
 {
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	struct ThreadCB *thread;
 	struct ThreadRegisterContext *regs;
 	ThreadSyscallFrame *frame;
@@ -620,10 +627,11 @@ int sceKernelSetThreadContextForVM(SceUID threadId, const ThreadmgrVmCpuContext 
 	if ((cpu != NULL && cpu->size != sizeof(*cpu)) || (vfp != NULL && vfp->size != sizeof(*vfp)))
 		return SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 	intr = SceCpuForDriver_821FC0EE();
-	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), (SceObjectBase **)&object) < 0) {
+	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
+	object = (struct ThreadmgrThreadObject *)pObject;
 	thread = &object->context;
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (!(thread->currentAttr & THREAD_ATTR_VM)) {
@@ -693,6 +701,7 @@ int sceKernelGetThreadContextForVM(SceUID threadId, ThreadmgrVmCpuContext *cpu,
 				   ThreadmgrVmVfpContext *vfp)
 {
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	struct ThreadCB *thread;
 	struct ThreadRegisterContext *regs;
 	ThreadSyscallFrame *frame;
@@ -709,10 +718,11 @@ int sceKernelGetThreadContextForVM(SceUID threadId, ThreadmgrVmCpuContext *cpu,
 	if ((cpu != NULL && cpu->size != sizeof(*cpu)) || (vfp != NULL && vfp->size != sizeof(*vfp)))
 		return SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 	intr = SceCpuForDriver_821FC0EE();
-	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), (SceObjectBase **)&object) < 0) {
+	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
+	object = (struct ThreadmgrThreadObject *)pObject;
 	thread = &object->context;
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (!(thread->currentAttr & THREAD_ATTR_VM) && !isVirtualMachineTitle(thread)) {

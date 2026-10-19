@@ -114,6 +114,7 @@ int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPa
 {
 	struct ThreadCB *thread;
 	ThreadmgrEventFlag *evf;
+	SceObjectBase *pObject;
 	uint32_t saved, current;
 	uint64_t wakeup;
 	int intr, ret, cbRet, locked = 0;
@@ -158,7 +159,7 @@ int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPa
 	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 	ret = sceGUIDReferObjectWithClass(evfId,
-		s_threadmgrRuntime.manager->eventFlagClass, (SceObjectBase **)&evf);
+		s_threadmgrRuntime.manager->eventFlagClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_EVF_ID | SYSCALL_ERROR_BIT;
@@ -169,6 +170,7 @@ int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPa
 		}
 		goto resume;
 	}
+	evf = (ThreadmgrEventFlag *)pObject;
 	sceKernelSpinlockLowLock(&evf->lock);
 	if (!(evf->attr & SCE_KERNEL_EVF_ATTR_MULTI)) {
 		if (evf->core.holder == NULL) {
@@ -265,17 +267,19 @@ restore:
 int getEventFlagInfo(SceUID evfId, SceKernelEventFlagInfo *info)
 {
 	ThreadmgrEventFlag *evf;
+	SceObjectBase *pObject;
 	int intr, ret;
 
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(evfId,
-		s_threadmgrRuntime.manager->eventFlagClass, (SceObjectBase **)&evf);
+		s_threadmgrRuntime.manager->eventFlagClass, &pObject);
 	if (ret < 0) {
-		ret = ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_EVF_ID | SYSCALL_ERROR_BIT :
-					     SCE_KERNEL_ERROR_UNKNOWN_EVF_ID;
+		ret = !ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_EVF_ID :
+			SCE_KERNEL_ERROR_UNKNOWN_EVF_ID | SYSCALL_ERROR_BIT;
 	} else {
+		evf = (ThreadmgrEventFlag *)pObject;
 		info->evfId = evfId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(evfId), sizeof(info->name) - 1);
 		sceKernelSpinlockLowLock(&evf->lock);
@@ -551,6 +555,7 @@ int sceKernelPollEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32
 {
 	struct ThreadCB *thread;
 	ThreadmgrEventFlag *evf;
+	SceObjectBase *pObject;
 	uint32_t saved;
 	int intr, ret;
 
@@ -574,7 +579,7 @@ int sceKernelPollEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32
 	intr = SceCpuForDriver_821FC0EE();
 	thread = currentThreadContext();
 	ret = sceGUIDReferObjectWithClass(evfId,
-		s_threadmgrRuntime.manager->eventFlagClass, (SceObjectBase **)&evf);
+		s_threadmgrRuntime.manager->eventFlagClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_EVF_ID | SYSCALL_ERROR_BIT;
@@ -585,6 +590,7 @@ int sceKernelPollEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32
 		}
 		goto resume;
 	}
+	evf = (ThreadmgrEventFlag *)pObject;
 	sceKernelSpinlockLowLock(&evf->lock);
 	if (!(evf->attr & SCE_KERNEL_EVF_ATTR_MULTI) && evf->core.holder != NULL &&
 	    evf->core.holder != thread) {
@@ -619,6 +625,7 @@ int sceKernelSetEventFlag(SceUID evfId, uint32_t pattern)
 	struct ThreadCB *waiter;
 	struct ThreadmgrWaitQueue *queue;
 	ThreadmgrEventFlag *evf;
+	SceObjectBase *pObject;
 	uint32_t saved, wake, request, mode;
 	int intr, ret;
 
@@ -626,7 +633,7 @@ int sceKernelSetEventFlag(SceUID evfId, uint32_t pattern)
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(evfId,
-		s_threadmgrRuntime.manager->eventFlagClass, (SceObjectBase **)&evf);
+		s_threadmgrRuntime.manager->eventFlagClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_EVF_ID | SYSCALL_ERROR_BIT;
@@ -637,6 +644,7 @@ int sceKernelSetEventFlag(SceUID evfId, uint32_t pattern)
 		}
 		goto resume;
 	}
+	evf = (ThreadmgrEventFlag *)pObject;
 	if (pattern == 0) {
 		sceGUIDReleaseObject(evfId);
 		ret = 0;
@@ -688,6 +696,7 @@ resume:
 int sceKernelClearEventFlag(SceUID evfId, uint32_t mask)
 {
 	ThreadmgrEventFlag *evf;
+	SceObjectBase *pObject;
 	uint32_t saved;
 	int intr, ret;
 
@@ -695,7 +704,7 @@ int sceKernelClearEventFlag(SceUID evfId, uint32_t mask)
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(evfId,
-		s_threadmgrRuntime.manager->eventFlagClass, (SceObjectBase **)&evf);
+		s_threadmgrRuntime.manager->eventFlagClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_EVF_ID | SYSCALL_ERROR_BIT;
@@ -705,6 +714,7 @@ int sceKernelClearEventFlag(SceUID evfId, uint32_t mask)
 			ret = SCE_KERNEL_ERROR_UNKNOWN_EVF_ID;
 		}
 	} else {
+		evf = (ThreadmgrEventFlag *)pObject;
 		sceKernelSpinlockLowLock(&evf->lock);
 		evf->core.pattern &= mask;
 		sceKernelSpinlockLowUnlock(&evf->lock);
@@ -719,6 +729,7 @@ int sceKernelClearEventFlag(SceUID evfId, uint32_t mask)
 int sceKernelCancelEventFlag(SceUID evfId, uint32_t setPattern, int *numWaitThreads)
 {
 	ThreadmgrEventFlag *evf;
+	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	int intr, ret;
 
@@ -726,7 +737,7 @@ int sceKernelCancelEventFlag(SceUID evfId, uint32_t setPattern, int *numWaitThre
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(evfId,
-		s_threadmgrRuntime.manager->eventFlagClass, (SceObjectBase **)&evf);
+		s_threadmgrRuntime.manager->eventFlagClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_EVF_ID | SYSCALL_ERROR_BIT;
@@ -736,6 +747,7 @@ int sceKernelCancelEventFlag(SceUID evfId, uint32_t setPattern, int *numWaitThre
 			ret = SCE_KERNEL_ERROR_UNKNOWN_EVF_ID;
 		}
 	} else {
+		evf = (ThreadmgrEventFlag *)pObject;
 		sceKernelSpinlockLowLock(&evf->lock);
 		evf->core.pattern = setPattern;
 		wake = wakeupWaitObjectAll((uintptr_t)&evf->next, SCE_KERNEL_ERROR_WAIT_CANCEL,

@@ -175,6 +175,7 @@ SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t ini
 	SceProcessObject *process = NULL;
 	UIDCreateOpt opt;
 	ThreadmgrSimpleEvent *simple;
+	SceObjectBase *pObject;
 	uint32_t saved;
 	SceUID uid, threadId;
 	int intr, ret;
@@ -258,7 +259,7 @@ SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t ini
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	}
 	uid = sceGUIDKernelCreateWithOpt(SIMPLE_EVENT_CLASS(), name, &opt,
-					  (SceObjectBase **)&simple);
+					  &pObject);
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
@@ -272,6 +273,7 @@ SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t ini
 			sceKernelSpinlockLowUnlock(&process->resourceLock);
 		}
 	} else {
+		simple = (ThreadmgrSimpleEvent *)pObject;
 		simple->uid = uid;
 		simple->event.ownerPid = ThreadmgrInSyscall() ? thread->processId :
 								SCE_KERNEL_PROCESS_ID;

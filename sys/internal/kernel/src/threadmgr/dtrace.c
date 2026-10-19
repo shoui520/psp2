@@ -49,7 +49,8 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 {
 	struct ThreadmgrThreadObject *object;
 	SceKernelHeapCreateOpt opt;
-	SceSize count, i;
+	SceSize count, size, i;
+	SceObjectBase *pObject;
 	SceUID *ids, id;
 	int intr, ret;
 
@@ -91,8 +92,9 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 		SCE_DBG_PRINTF(0, 51, "error: failed to allocate thread id list\n");
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	}
-	memset(ids, 0, count * sizeof(SceUID));
-	ret = sceKernelGetThreadIdList(THREAD_ID_LIST_ALL, ids, count * sizeof(SceUID), &count);
+	size = count * sizeof(SceUID);
+	memset(ids, 0, size);
+	ret = sceKernelGetThreadIdList(THREAD_ID_LIST_ALL, ids, size, &count);
 	if (ret < 0) {
 		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId, ids);
 		SCE_DBG_PRINTF(0, 60, "error: failed to get thread id list (0x%08x)\n", ret);
@@ -101,12 +103,13 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 	for (i = 0; i < count; i++) {
 		id = ids[i];
 		ret = sceGUIDReferObjectWithClass(id,
-			s_threadmgrRuntime.manager->threadClass, (SceObjectBase **)&object);
+			s_threadmgrRuntime.manager->threadClass, &pObject);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0, 70, "error: failed to lookup thread 0x%08x (0x%08x)\n", id,
 				       ret);
 			continue;
 		}
+		object = (struct ThreadmgrThreadObject *)pObject;
 		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		ret = dtraceThreadCBInit(&object->context);
 		if (ret < 0)

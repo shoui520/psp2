@@ -259,6 +259,7 @@ int SceThreadmgrForKernel_7B3368F1(SceUID threadId, uint32_t counter, uint32_t v
 {
 	struct ThreadCB *thread;
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	struct ThreadmgrPmonRequest request;
 	SceKernelSpinlock done;
 	uint32_t saved;
@@ -298,11 +299,12 @@ int SceThreadmgrForKernel_7B3368F1(SceUID threadId, uint32_t counter, uint32_t v
 		goto resume;
 	}
 	ret = sceGUIDReferObjectWithClass(threadId, s_threadmgrRuntime.manager->threadClass,
-					   (SceObjectBase **)&object);
+					   &pObject);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto resume;
 	}
+	object = (struct ThreadmgrThreadObject *)pObject;
 	sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 	if (object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) {
 		request.result = &ret;
@@ -382,6 +384,7 @@ int SceThreadmgrForKernel_170F69D6(SceUID threadId, uint32_t counter, uint32_t *
 {
 	struct ThreadCB *thread;
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	struct ThreadmgrPmonRequest request;
 	SceKernelSpinlock done;
 	uint32_t saved;
@@ -430,11 +433,12 @@ int SceThreadmgrForKernel_170F69D6(SceUID threadId, uint32_t counter, uint32_t *
 		goto resume;
 	}
 	ret = sceGUIDReferObjectWithClass(threadId, s_threadmgrRuntime.manager->threadClass,
-					   (SceObjectBase **)&object);
+					   &pObject);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto resume;
 	}
+	object = (struct ThreadmgrThreadObject *)pObject;
 	sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 	if (object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) {
 		request.result = &ret;

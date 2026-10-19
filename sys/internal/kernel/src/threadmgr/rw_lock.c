@@ -202,6 +202,7 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 {
 	struct ThreadCB *thread;
 	ThreadmgrRWLock *rwLock;
+	SceObjectBase *pObject;
 	uint64_t wakeup;
 	uint32_t saved;
 	int intr, ret, cbRet, locked = 0;
@@ -229,7 +230,7 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 	ret = sceGUIDReferObjectWithClass(rwLockId,
-		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
+		s_threadmgrRuntime.manager->rwLockClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_RW_LOCK_ID | SYSCALL_ERROR_BIT;
@@ -240,6 +241,7 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 		}
 		goto resume;
 	}
+	rwLock = (ThreadmgrRWLock *)pObject;
 	sceKernelSpinlockLowLock(&rwLock->lock);
 	if (rwLock->core.writer == thread) {
 		ret = SCE_KERNEL_ERROR_RW_LOCK_FAILED_TO_LOCK;
@@ -347,17 +349,19 @@ static int getRWLockInfo(SceUID rwLockId, SceKernelRWLockInfo *info)
 	struct ThreadmgrWaitNode *node;
 	struct ThreadCB *waiter;
 	ThreadmgrRWLock *rwLock;
+	SceObjectBase *pObject;
 	int intr, ret;
 
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(rwLockId,
-		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
+		s_threadmgrRuntime.manager->rwLockClass, &pObject);
 	if (ret < 0) {
-		ret = ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_RW_LOCK_ID | SYSCALL_ERROR_BIT :
-					     SCE_KERNEL_ERROR_UNKNOWN_RW_LOCK_ID;
+		ret = !ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_RW_LOCK_ID :
+			SCE_KERNEL_ERROR_UNKNOWN_RW_LOCK_ID | SYSCALL_ERROR_BIT;
 	} else {
+		rwLock = (ThreadmgrRWLock *)pObject;
 		info->rwLockId = rwLockId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(rwLockId), sizeof(info->name) - 1);
 		queue = (struct ThreadmgrWaitQueue *)&rwLock->next;
@@ -486,6 +490,7 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 	SceProcessObject *process = NULL;
 	UIDCreateOpt opt;
 	ThreadmgrRWLock *rwLock;
+	SceObjectBase *pObject;
 	uint32_t saved, uidAttr;
 	SceUID uid;
 	int intr;
@@ -570,7 +575,7 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	}
 	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->rwLockClass, name,
-		&opt, (SceObjectBase **)&rwLock);
+		&opt, &pObject);
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
@@ -584,6 +589,7 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 			sceKernelSpinlockLowUnlock(&process->resourceLock);
 		}
 	} else {
+		rwLock = (ThreadmgrRWLock *)pObject;
 		rwLock->core.readWaiters = 0;
 		rwLock->ownerPid = ThreadmgrInSyscall() ? thread->processId : SCE_KERNEL_PROCESS_ID;
 		rwLock->attr = attr;
@@ -641,6 +647,7 @@ int SceThreadmgrForDriver_CFA2FFAF(SceUID rwLockId, SceUInt32 *timeout)
 int sceKernelTryLockReadRWLock(SceUID rwLockId)
 {
 	ThreadmgrRWLock *rwLock;
+	SceObjectBase *pObject;
 	uint32_t saved;
 	int intr, ret;
 
@@ -648,7 +655,7 @@ int sceKernelTryLockReadRWLock(SceUID rwLockId)
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(rwLockId,
-		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
+		s_threadmgrRuntime.manager->rwLockClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_RW_LOCK_ID | SYSCALL_ERROR_BIT;
@@ -659,6 +666,7 @@ int sceKernelTryLockReadRWLock(SceUID rwLockId)
 		}
 		goto resume;
 	}
+	rwLock = (ThreadmgrRWLock *)pObject;
 	sceKernelSpinlockLowLock(&rwLock->lock);
 	if (rwLock->core.writer == NULL &&
 	    rwLock->next == (struct ThreadmgrWaitQueue *)&rwLock->next) {
@@ -689,6 +697,7 @@ int sceKernelUnlockReadRWLock(SceUID rwLockId)
 	struct ThreadCB *waiter;
 	struct ThreadmgrWaitQueue *queue;
 	ThreadmgrRWLock *rwLock;
+	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	int intr, ret;
 
@@ -696,7 +705,7 @@ int sceKernelUnlockReadRWLock(SceUID rwLockId)
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(rwLockId,
-		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
+		s_threadmgrRuntime.manager->rwLockClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_RW_LOCK_ID | SYSCALL_ERROR_BIT;
@@ -707,6 +716,7 @@ int sceKernelUnlockReadRWLock(SceUID rwLockId)
 		}
 		goto resume;
 	}
+	rwLock = (ThreadmgrRWLock *)pObject;
 	queue = (struct ThreadmgrWaitQueue *)&rwLock->next;
 	sceKernelSpinlockLowLock(&rwLock->lock);
 	ret = 0;
@@ -768,6 +778,7 @@ int sceKernelTryLockWriteRWLock(SceUID rwLockId)
 {
 	struct ThreadCB *thread;
 	ThreadmgrRWLock *rwLock;
+	SceObjectBase *pObject;
 	uint32_t saved;
 	int intr, ret;
 
@@ -782,7 +793,7 @@ int sceKernelTryLockWriteRWLock(SceUID rwLockId)
 	}
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(rwLockId,
-		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
+		s_threadmgrRuntime.manager->rwLockClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_RW_LOCK_ID | SYSCALL_ERROR_BIT;
@@ -793,6 +804,7 @@ int sceKernelTryLockWriteRWLock(SceUID rwLockId)
 		}
 		goto resume;
 	}
+	rwLock = (ThreadmgrRWLock *)pObject;
 	sceKernelSpinlockLowLock(&rwLock->lock);
 	if (rwLock->core.writer == thread) {
 		if (rwLock->attr & SCE_KERNEL_RW_LOCK_ATTR_RECURSIVE) {
@@ -832,6 +844,7 @@ int sceKernelUnlockWriteRWLock(SceUID rwLockId)
 	struct ThreadmgrWaitNode *node, *next;
 	struct ThreadmgrWaitQueue *queue;
 	ThreadmgrRWLock *rwLock;
+	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	int intr, ret;
 
@@ -846,7 +859,7 @@ int sceKernelUnlockWriteRWLock(SceUID rwLockId)
 	}
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(rwLockId,
-		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
+		s_threadmgrRuntime.manager->rwLockClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_RW_LOCK_ID | SYSCALL_ERROR_BIT;
@@ -857,6 +870,7 @@ int sceKernelUnlockWriteRWLock(SceUID rwLockId)
 		}
 		goto resume;
 	}
+	rwLock = (ThreadmgrRWLock *)pObject;
 	queue = (struct ThreadmgrWaitQueue *)&rwLock->next;
 	sceKernelSpinlockLowLock(&rwLock->lock);
 	if (rwLock->core.writer != thread) {
@@ -934,6 +948,7 @@ int sceKernelCancelRWLock(SceUID rwLockId, int *numReadWaitThreads, int *numWrit
 	struct ThreadmgrWaitNode *node, *next;
 	struct ThreadmgrWaitQueue *queue;
 	ThreadmgrRWLock *rwLock;
+	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	int intr, ret, readers, writers;
 
@@ -953,7 +968,7 @@ int sceKernelCancelRWLock(SceUID rwLockId, int *numReadWaitThreads, int *numWrit
 	}
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(rwLockId,
-		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
+		s_threadmgrRuntime.manager->rwLockClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_RW_LOCK_ID | SYSCALL_ERROR_BIT;
@@ -964,6 +979,7 @@ int sceKernelCancelRWLock(SceUID rwLockId, int *numReadWaitThreads, int *numWrit
 		}
 		goto resume;
 	}
+	rwLock = (ThreadmgrRWLock *)pObject;
 	writers = 0;
 	queue = (struct ThreadmgrWaitQueue *)&rwLock->next;
 	sceKernelSpinlockLowLock(&rwLock->lock);

@@ -127,24 +127,26 @@ static int uidSemaphore_Destructor(void *object)
 int getSemaInfo(SceUID semaId, SceKernelSemaInfo *info)
 {
 	ThreadmgrSemaphore *sema;
+	SceObjectBase *pObject;
 	int intr, ret;
 
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(semaId,
-		s_threadmgrRuntime.manager->semaphoreClass, (SceObjectBase **)&sema);
+		s_threadmgrRuntime.manager->semaphoreClass, &pObject);
 	if (ret < 0) {
 		ret = SEMA_ERROR_UNKNOWN_ID();
 	} else {
+		sema = (ThreadmgrSemaphore *)pObject;
 		info->semaId = semaId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(semaId), sizeof(info->name) - 1);
 		sceKernelSpinlockLowLock(&sema->lock);
 		info->attr = sema->attr;
-		info->initCount = sema->initCount;
+		info->numWaitThreads = sema->waiting;
 		info->currentCount = sema->count;
 		info->maxCount = sema->maxCount;
-		info->numWaitThreads = sema->waiting;
+		info->initCount = sema->initCount;
 		sceKernelSpinlockLowUnlock(&sema->lock);
 		sceGUIDReleaseObject(semaId);
 		ret = 0;
@@ -175,6 +177,7 @@ int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 	struct ThreadCB *thread;
 	struct ThreadmgrWaitQueue *queue;
 	ThreadmgrSemaphore *sema;
+	SceObjectBase *pObject;
 	uint64_t wakeup;
 	uint32_t saved;
 	int intr, ret, cbRet, locked = 0;
@@ -214,7 +217,7 @@ int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 	ret = sceGUIDReferObjectWithClass(semaId,
-		s_threadmgrRuntime.manager->semaphoreClass, (SceObjectBase **)&sema);
+		s_threadmgrRuntime.manager->semaphoreClass, &pObject);
 	if (ret < 0) {
 		if (!(ThreadmgrUserRoWord() & USERRO_IN_SYSCALL)) {
 #if FW_DEBUG
@@ -229,6 +232,7 @@ int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 		}
 		goto resume;
 	}
+	sema = (ThreadmgrSemaphore *)pObject;
 	sceKernelSpinlockLowLock(&sema->lock);
 	if (sema->maxCount < needCount) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
@@ -535,8 +539,8 @@ int SceThreadmgrForDriver_F55E4D86(SceUID semaId, int needCount, SceUInt32 *time
 
 int sceKernelPollSema(SceUID semaId, int needCount)
 {
-	struct ThreadCB *thread;
 	ThreadmgrSemaphore *sema;
+	SceObjectBase *pObject;
 	uint32_t saved;
 	int intr, ret;
 
@@ -548,24 +552,24 @@ int sceKernelPollSema(SceUID semaId, int needCount)
 	}
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(semaId,
-		s_threadmgrRuntime.manager->semaphoreClass, (SceObjectBase **)&sema);
+		s_threadmgrRuntime.manager->semaphoreClass, &pObject);
 	if (ret < 0) {
-		if (ThreadmgrInSyscall()) {
-			ret = 0xc0028101;
-		} else {
+		if (!ThreadmgrInSyscall()) {
 			SCE_DBG_ASSERT_PRINTF_FUNC(0, 760, "sceKernelPollSema",
 				"*** error: unknown semaphore id. semaId=0x%08x\n", semaId);
 			ret = 0x80028101;
+		} else {
+			ret = 0xc0028101;
 		}
 		goto resume;
 	}
+	sema = (ThreadmgrSemaphore *)pObject;
 	sceKernelSpinlockLowLock(&sema->lock);
 	if (sema->maxCount < needCount) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 	} else {
-		thread = currentThreadContext();
 		if (!isWaitOnly((struct ThreadmgrWaitQueue *)&sema->next,
-				thread != NULL ? thread->currentPriority : 1) &&
+				currentThreadContext() != NULL ? currentThreadContext()->currentPriority : 1) &&
 		    needCount <= sema->count) {
 			sema->count -= needCount;
 			ret = 0;
@@ -588,6 +592,7 @@ int sceKernelSignalSema(SceUID semaId, int signalCount)
 	struct ThreadmgrWaitNode *node, *next;
 	struct ThreadmgrWaitQueue *queue;
 	ThreadmgrSemaphore *sema;
+	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	SceUInt32 sdkVersion;
 	int intr, ret, newCount;
@@ -612,7 +617,7 @@ int sceKernelSignalSema(SceUID semaId, int signalCount)
 	}
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(semaId,
-		s_threadmgrRuntime.manager->semaphoreClass, (SceObjectBase **)&sema);
+		s_threadmgrRuntime.manager->semaphoreClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = 0xc0028101;
@@ -623,6 +628,7 @@ int sceKernelSignalSema(SceUID semaId, int signalCount)
 		}
 		goto resume;
 	}
+	sema = (ThreadmgrSemaphore *)pObject;
 	queue = (struct ThreadmgrWaitQueue *)&sema->next;
 	sceKernelSpinlockLowLock(&sema->lock);
 	newCount = sema->count + signalCount;
@@ -687,6 +693,7 @@ restore:
 int sceKernelCancelSema(SceUID semaId, int setCount, int *numWaitThreads)
 {
 	ThreadmgrSemaphore *sema;
+	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	int intr, ret;
 
@@ -694,7 +701,7 @@ int sceKernelCancelSema(SceUID semaId, int setCount, int *numWaitThreads)
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(semaId,
-		s_threadmgrRuntime.manager->semaphoreClass, (SceObjectBase **)&sema);
+		s_threadmgrRuntime.manager->semaphoreClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = 0xc0028101;
@@ -705,6 +712,7 @@ int sceKernelCancelSema(SceUID semaId, int setCount, int *numWaitThreads)
 		}
 		goto resume;
 	}
+	sema = (ThreadmgrSemaphore *)pObject;
 	sceKernelSpinlockLowLock(&sema->lock);
 	if (sema->maxCount < setCount) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;

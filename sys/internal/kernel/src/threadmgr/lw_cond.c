@@ -102,17 +102,19 @@ static int uidLwCond_Destructor(void *object)
 static int getLwCondInfo(SceUID condId, SceKernelLwCondInfo *info)
 {
 	ThreadmgrLwCond *cond;
+	SceObjectBase *pObject;
 	int intr, ret;
 
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(condId,
-		s_threadmgrRuntime.manager->lwCondClass, (SceObjectBase **)&cond);
+		s_threadmgrRuntime.manager->lwCondClass, &pObject);
 	if (ret < 0) {
-		ret = ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_LW_COND_ID | SYSCALL_ERROR_BIT :
-					     SCE_KERNEL_ERROR_UNKNOWN_LW_COND_ID;
+		ret = !ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_LW_COND_ID :
+			SCE_KERNEL_ERROR_UNKNOWN_LW_COND_ID | SYSCALL_ERROR_BIT;
 	} else {
+		cond = (ThreadmgrLwCond *)pObject;
 		info->uid = condId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(condId), sizeof(info->name) - 1);
 		sceKernelSpinlockLowLock(&cond->lock);
@@ -312,6 +314,7 @@ int __sceKernelWaitLwCond(SceUID condId, SceUInt32 *timeout, int callbacks)
 {
 	struct ThreadCB *thread;
 	ThreadmgrLwCond *cond;
+	SceObjectBase *pObject;
 	SceUID lwMutexId;
 	uint64_t wakeup;
 	uint32_t saved, status, keepMutex;
@@ -340,11 +343,12 @@ int __sceKernelWaitLwCond(SceUID condId, SceUInt32 *timeout, int callbacks)
 	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 	ret = sceGUIDReferObjectWithClass(condId,
-		s_threadmgrRuntime.manager->lwCondClass, (SceObjectBase **)&cond);
+		s_threadmgrRuntime.manager->lwCondClass, &pObject);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_COND_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
+	cond = (ThreadmgrLwCond *)pObject;
 	sceKernelSpinlockLowLock(&cond->lock);
 	lwMutexId = cond->lwMutexId;
 	keepMutex = 0;
@@ -461,6 +465,7 @@ int __sceKernelSignalLwCond(SceUID condId)
 {
 	struct ThreadCB *thread, *first;
 	ThreadmgrLwCond *cond;
+	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	int intr, ret;
 
@@ -477,11 +482,12 @@ int __sceKernelSignalLwCond(SceUID condId)
 	}
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	ret = sceGUIDReferObjectWithClass(condId,
-		s_threadmgrRuntime.manager->lwCondClass, (SceObjectBase **)&cond);
+		s_threadmgrRuntime.manager->lwCondClass, &pObject);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_COND_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
+	cond = (ThreadmgrLwCond *)pObject;
 	sceKernelSpinlockLowLock(&cond->lock);
 	first = (struct ThreadCB *)cond->next;
 	if ((struct ThreadmgrWaitQueue *)first == (struct ThreadmgrWaitQueue *)&cond->next) {
@@ -511,6 +517,7 @@ int __sceKernelSignalLwCondAll(SceUID condId)
 	struct ThreadCB *thread, *first;
 	struct ThreadmgrWaitQueue *queue;
 	ThreadmgrLwCond *cond;
+	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	int intr, ret;
 
@@ -527,11 +534,12 @@ int __sceKernelSignalLwCondAll(SceUID condId)
 	}
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	ret = sceGUIDReferObjectWithClass(condId,
-		s_threadmgrRuntime.manager->lwCondClass, (SceObjectBase **)&cond);
+		s_threadmgrRuntime.manager->lwCondClass, &pObject);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_COND_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
+	cond = (ThreadmgrLwCond *)pObject;
 	queue = (struct ThreadmgrWaitQueue *)&cond->next;
 	sceKernelSpinlockLowLock(&cond->lock);
 	if (queue->next == (struct ThreadmgrWaitNode *)queue) {
@@ -580,6 +588,7 @@ int __sceKernelSignalLwCondTo(SceUID condId, SceUID threadId)
 	struct ThreadmgrWaitNode *node, *next;
 	struct ThreadmgrWaitQueue *queue;
 	ThreadmgrLwCond *cond;
+	SceObjectBase *pObject;
 	SceObjectBase *object;
 	SceUInt32 sdkVersion;
 	uint32_t saved, wake;
@@ -611,11 +620,12 @@ int __sceKernelSignalLwCondTo(SceUID condId, SceUID threadId)
 	}
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	ret = sceGUIDReferObjectWithClass(condId,
-		s_threadmgrRuntime.manager->lwCondClass, (SceObjectBase **)&cond);
+		s_threadmgrRuntime.manager->lwCondClass, &pObject);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_COND_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
+	cond = (ThreadmgrLwCond *)pObject;
 	queue = (struct ThreadmgrWaitQueue *)&cond->next;
 	sceKernelSpinlockLowLock(&cond->lock);
 	for (node = queue->next; node != (struct ThreadmgrWaitNode *)queue; node = next) {

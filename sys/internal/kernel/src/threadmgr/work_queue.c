@@ -551,9 +551,8 @@ int getWorkQueueInfo(SceUID workQueueId, ThreadmgrWorkQueueInfo *info)
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithClass(workQueueId, WORK_QUEUE_CLASS(),
 					 (SceObjectBase **)&queue) < 0) {
-		ret = ThreadmgrInSyscall() ?
-			(SCE_KERNEL_ERROR_UNKNOWN_WORK_QUEUE_ID | SYSCALL_ERROR_BIT) :
-			SCE_KERNEL_ERROR_UNKNOWN_WORK_QUEUE_ID;
+		ret = !ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_WORK_QUEUE_ID :
+			SCE_KERNEL_ERROR_UNKNOWN_WORK_QUEUE_ID | SYSCALL_ERROR_BIT;
 	} else {
 		info->workQueueId = workQueueId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(workQueueId), sizeof(info->name) - 1);
@@ -1352,9 +1351,8 @@ int SceThreadmgrForDriver_0B604A3C(SceUID workTaskId, ThreadmgrWorkTaskInfoShort
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithClass(workTaskId, WORK_TASK_CLASS(),
 					 (SceObjectBase **)&task) < 0) {
-		ret = ThreadmgrInSyscall() ?
-			(SCE_KERNEL_ERROR_UNKNOWN_WORK_TASK_ID | SYSCALL_ERROR_BIT) :
-			SCE_KERNEL_ERROR_UNKNOWN_WORK_TASK_ID;
+		ret = !ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_WORK_TASK_ID :
+			SCE_KERNEL_ERROR_UNKNOWN_WORK_TASK_ID | SYSCALL_ERROR_BIT;
 		sceKernelCpuResumeIntr(intr);
 		goto restore;
 	}

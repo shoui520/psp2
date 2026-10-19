@@ -127,6 +127,7 @@ int waitCond(SceUID condId, SceUInt32 *timeout, int callbacks)
 {
 	struct ThreadCB *thread;
 	ThreadmgrCond *cond;
+	SceObjectBase *pObject;
 	SceUID mutexId;
 	uint64_t wakeup;
 	uint32_t saved, status, keepMutex;
@@ -155,7 +156,7 @@ int waitCond(SceUID condId, SceUInt32 *timeout, int callbacks)
 	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 	ret = sceGUIDReferObjectWithClass(condId, s_threadmgrRuntime.manager->condClass,
-					   (SceObjectBase **)&cond);
+					   &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_COND_ID | SYSCALL_ERROR_BIT;
@@ -166,6 +167,7 @@ int waitCond(SceUID condId, SceUInt32 *timeout, int callbacks)
 		}
 		goto resume;
 	}
+	cond = (ThreadmgrCond *)pObject;
 	sceKernelSpinlockLowLock(&cond->lock);
 	mutexId = cond->mutexId;
 	keepMutex = 0;
@@ -275,13 +277,14 @@ restore:
 int getCondInfo(SceUID condId, SceKernelCondInfo *info)
 {
 	ThreadmgrCond *cond;
+	SceObjectBase *pObject;
 	int intr, ret;
 
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(condId, s_threadmgrRuntime.manager->condClass,
-					   (SceObjectBase **)&cond);
+					   &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_COND_ID | SYSCALL_ERROR_BIT;
@@ -291,6 +294,7 @@ int getCondInfo(SceUID condId, SceKernelCondInfo *info)
 			ret = SCE_KERNEL_ERROR_UNKNOWN_COND_ID;
 		}
 	} else {
+		cond = (ThreadmgrCond *)pObject;
 		info->condId = condId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(condId), sizeof(info->name) - 1);
 		sceKernelSpinlockLowLock(&cond->lock);
@@ -598,6 +602,7 @@ int sceKernelSignalCond(SceUID condId)
 {
 	struct ThreadCB *thread, *first;
 	ThreadmgrCond *cond;
+	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	int intr, ret;
 
@@ -612,7 +617,7 @@ int sceKernelSignalCond(SceUID condId)
 	}
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(condId, s_threadmgrRuntime.manager->condClass,
-					   (SceObjectBase **)&cond);
+					   &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_COND_ID | SYSCALL_ERROR_BIT;
@@ -623,6 +628,7 @@ int sceKernelSignalCond(SceUID condId)
 		}
 		goto resume;
 	}
+	cond = (ThreadmgrCond *)pObject;
 	sceKernelSpinlockLowLock(&cond->lock);
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (CondSignalDeferred(thread, cond)) {
@@ -661,6 +667,7 @@ int sceKernelSignalCondAll(SceUID condId)
 	struct ThreadCB *thread, *first;
 	struct ThreadmgrWaitQueue *queue;
 	ThreadmgrCond *cond;
+	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	int intr, ret;
 
@@ -675,7 +682,7 @@ int sceKernelSignalCondAll(SceUID condId)
 	}
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(condId, s_threadmgrRuntime.manager->condClass,
-					   (SceObjectBase **)&cond);
+					   &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_COND_ID | SYSCALL_ERROR_BIT;
@@ -686,6 +693,7 @@ int sceKernelSignalCondAll(SceUID condId)
 		}
 		goto resume;
 	}
+	cond = (ThreadmgrCond *)pObject;
 	sceKernelSpinlockLowLock(&cond->lock);
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (CondSignalDeferred(thread, cond)) {
@@ -744,6 +752,7 @@ int sceKernelSignalCondTo(SceUID condId, SceUID threadId)
 	struct ThreadmgrWaitNode *node, *next;
 	struct ThreadmgrWaitQueue *queue;
 	ThreadmgrCond *cond;
+	SceObjectBase *pObject;
 	SceUInt32 sdkVersion;
 	const char *name;
 	uint32_t saved, wake;
@@ -774,7 +783,7 @@ int sceKernelSignalCondTo(SceUID condId, SceUID threadId)
 	}
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(condId, s_threadmgrRuntime.manager->condClass,
-					   (SceObjectBase **)&cond);
+					   &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_COND_ID | SYSCALL_ERROR_BIT;
@@ -785,6 +794,7 @@ int sceKernelSignalCondTo(SceUID condId, SceUID threadId)
 		}
 		goto resume;
 	}
+	cond = (ThreadmgrCond *)pObject;
 	sceKernelSpinlockLowLock(&cond->lock);
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (CondSignalDeferred(thread, cond)) {

@@ -346,12 +346,13 @@ int SceThreadmgrForKernel_BB56D42F(void)
 	struct ThreadMgrCpuCB *cpu = currentCpuState();
 	uintptr_t current;
 
-	if (cpu->disabledDispatch)
-		return 0;
-	current = cpu->runningThread;
-	if (current)
+	if (cpu->disabledDispatch == 0) {
+		current = cpu->runningThread;
+		if (current == 0)
+			return 1;
 		return current != cpu->nextRunningThread;
-	return 1;
+	}
+	return 0;
 }
 
 SCHED_PROBE(s_schedIntrWait, "__sched_", "wait");

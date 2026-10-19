@@ -642,6 +642,7 @@ SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallba
 	struct ThreadCB *thread;
 	SceProcessObject *process;
 	struct ThreadmgrCallback *callback;
+	SceObjectBase *pObject;
 	uint32_t saved, access, limit;
 	int user, intr, ret;
 	SceUID uid;
@@ -714,12 +715,13 @@ SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallba
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	}
 	uid = sceGUIDKernelCreateWithOpt(CALLBACK_CLASS(), name, &opt,
-					  (SceObjectBase **)&callback);
+					  &pObject);
 	if (uid < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 997, "sceKernelCreateCallback",
 				    " error: sceGUIDKernelCreate(0x%08X)\n", uid);
 		goto unaccount;
 	}
+	callback = (struct ThreadmgrCallback *)pObject;
 	callback->ownerPid = ThreadmgrInSyscall() ? thread->processId : SCE_KERNEL_PROCESS_ID;
 	callback->cb.guid = uid;
 	callback->cb.attr = limit;

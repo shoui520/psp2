@@ -42,6 +42,7 @@ static int getLwMutexInfo(SceUID lwMutexId, SceKernelLwMutexInfo *info)
 {
 	ThreadmgrLwMutexWork work;
 	ThreadmgrLwMutex *lwMutex;
+	SceObjectBase *pObject;
 	SceUID owner;
 	int intr, ret;
 
@@ -49,12 +50,13 @@ static int getLwMutexInfo(SceUID lwMutexId, SceKernelLwMutexInfo *info)
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(lwMutexId,
-		s_threadmgrRuntime.manager->lwMutexClass, (SceObjectBase **)&lwMutex);
+		s_threadmgrRuntime.manager->lwMutexClass, &pObject);
 	if (ret < 0) {
-		ret = ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID | SYSCALL_ERROR_BIT :
-					     SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID;
+		ret = !ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID :
+			SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
+	lwMutex = (ThreadmgrLwMutex *)pObject;
 	if (lwMutex->cacheNext != &lwMutex->uidEntry) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID;
 		goto release;
@@ -412,6 +414,7 @@ int sceKernelDeleteLwMutexForUser(ThreadmgrLwMutexWork *work)
 	SceProcessObject *process;
 	ThreadmgrLwCond *cond;
 	ThreadmgrLwMutex *lwMutex;
+	SceObjectBase *pObject;
 	struct ThreadmgrWaitQueue *queue;
 	volatile int delay;
 	uint32_t saved, attr, wake, wakeOwn;
@@ -442,11 +445,12 @@ int sceKernelDeleteLwMutexForUser(ThreadmgrLwMutexWork *work)
 	}
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(guid, s_threadmgrRuntime.manager->lwMutexClass,
-					   (SceObjectBase **)&lwMutex);
+					   &pObject);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
+	lwMutex = (ThreadmgrLwMutex *)pObject;
 	if (lwMutex->work != work) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR | SYSCALL_ERROR_BIT;
 		sceGUIDReleaseObject(guid);
@@ -520,6 +524,7 @@ int _sceKernelLockLwMutex(ThreadmgrLwMutexWork *work, int count, SceUInt32 *time
 	struct ThreadCB *thread;
 	ThreadmgrLwMutexWork userWork;
 	ThreadmgrLwMutex *lwMutex;
+	SceObjectBase *pObject;
 	uint64_t wakeup;
 	uint32_t saved;
 	SceUID puid, guid, self;
@@ -562,11 +567,12 @@ int _sceKernelLockLwMutex(ThreadmgrLwMutexWork *work, int count, SceUInt32 *time
 	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 	ret = sceGUIDReferObjectWithClass(guid, s_threadmgrRuntime.manager->lwMutexClass,
-					   (SceObjectBase **)&lwMutex);
+					   &pObject);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
+	lwMutex = (ThreadmgrLwMutex *)pObject;
 	if (lwMutex->work != work) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR | SYSCALL_ERROR_BIT;
 		goto release;
@@ -676,6 +682,7 @@ int _sceKernelUnlockLwMutex(ThreadmgrLwMutexWork *work, int count)
 	struct ThreadCB *first;
 	ThreadmgrLwMutexWork userWork;
 	ThreadmgrLwMutex *lwMutex;
+	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	SceUID puid, guid, self, newOwner;
 	int intr, ret, waiters, firstCount;
@@ -709,11 +716,12 @@ int _sceKernelUnlockLwMutex(ThreadmgrLwMutexWork *work, int count)
 		goto resume;
 	}
 	ret = sceGUIDReferObjectWithClass(guid, s_threadmgrRuntime.manager->lwMutexClass,
-					   (SceObjectBase **)&lwMutex);
+					   &pObject);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
+	lwMutex = (ThreadmgrLwMutex *)pObject;
 	if (lwMutex->work != work) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR | SYSCALL_ERROR_BIT;
 		goto release;
@@ -949,6 +957,7 @@ int lockLwMutexForLwCond(SceUID lwMutexId, int count, SceUInt32 *timeout, int ca
 	struct ThreadCB *thread;
 	ThreadmgrLwMutexWork userWork;
 	ThreadmgrLwMutex *lwMutex;
+	SceObjectBase *pObject;
 	uint64_t wakeup;
 	SceUID self;
 	int intr, ret, locked = 0;
@@ -966,11 +975,12 @@ int lockLwMutexForLwCond(SceUID lwMutexId, int count, SceUInt32 *timeout, int ca
 		goto resume;
 	}
 	ret = sceGUIDReferObjectWithClass(lwMutexId,
-		s_threadmgrRuntime.manager->lwMutexClass, (SceObjectBase **)&lwMutex);
+		s_threadmgrRuntime.manager->lwMutexClass, &pObject);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
+	lwMutex = (ThreadmgrLwMutex *)pObject;
 	ret = sceKernelCopyFromUser(&userWork, lwMutex->work, sizeof(userWork));
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xf, 1570, "sceKernelCopyFromUser(%p, 0x%08x, 0x%08x): error 0x%08x\n",
@@ -1061,13 +1071,14 @@ int unlockLwMutexForLwCond(SceUID lwMutexId, int count)
 	struct ThreadCB *first;
 	ThreadmgrLwMutexWork userWork;
 	ThreadmgrLwMutex *lwMutex;
+	SceObjectBase *pObject;
 	SceUID self, newOwner;
 	int ret, waiters, firstCount;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1752);
 	self = currentThreadContext()->userThreadId;
 	ret = sceGUIDReferObjectWithClass(lwMutexId,
-		s_threadmgrRuntime.manager->lwMutexClass, (SceObjectBase **)&lwMutex);
+		s_threadmgrRuntime.manager->lwMutexClass, &pObject);
 	if (ret < 0)
 		return SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID | SYSCALL_ERROR_BIT;
 	ret = sceKernelCopyFromUser(&userWork, lwMutex->work, sizeof(userWork));
@@ -1076,6 +1087,7 @@ int unlockLwMutexForLwCond(SceUID lwMutexId, int count)
 			       &userWork, lwMutex->work, sizeof(userWork), ret);
 		goto release;
 	}
+	lwMutex = (ThreadmgrLwMutex *)pObject;
 	sceKernelSpinlockLowLock(&lwMutex->lock);
 	if (count < 1 || (count != 1 && !(lwMutex->attr & SCE_KERNEL_LW_MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;

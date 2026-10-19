@@ -34,16 +34,18 @@ static int uidMutex_Constructor(void *object)
 int getMutexInfo(SceUID mutexId, SceKernelMutexInfo *info)
 {
 	ThreadmgrMutex *mutex;
+	SceObjectBase *pObject;
 	int intr, ret;
 
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(mutexId,
-		s_threadmgrRuntime.manager->mutexClass, (SceObjectBase **)&mutex);
+		s_threadmgrRuntime.manager->mutexClass, &pObject);
 	if (ret < 0) {
 		ret = ThreadmgrInSyscall() ? 0xc0028141 : 0x80028141;
 	} else {
+		mutex = (ThreadmgrMutex *)pObject;
 		info->mutexId = mutexId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(mutexId), sizeof(info->name) - 1);
 		sceKernelSpinlockLowLock(&mutex->lock);
@@ -235,6 +237,8 @@ int releaseMutex(ThreadmgrMutexCore *core)
 static int uidMutex_Destructor(void *object)
 {
 	ThreadmgrMutex *mutex = object;
+	ThreadmgrMutexCore *core = &mutex->core;
+	uintptr_t queue = (uintptr_t)&mutex->next;
 	ListNode *link, *next;
 	SceProcessObject *process;
 	ThreadmgrCond *cond;
@@ -252,7 +256,7 @@ retry:
 		if (SceCpuForDriver_5AC9D394(&cond->lock) < 0) {
 			/* the cond holds its lock while it takes ours: back off */
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&mutex->lock, intr);
-			for (delay = 10; --delay != 0;)
+			for (delay = 10; delay != 0; delay--)
 				;
 			goto retry;
 		}
@@ -260,8 +264,8 @@ retry:
 		cond->mutexId = -1;
 		sceKernelSpinlockLowUnlock(&cond->lock);
 	}
-	wake = releaseMutex(&mutex->core);
-	wake |= wakeupWaitObjectAll((uintptr_t)&mutex->next, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
+	wake = releaseMutex(core);
+	wake |= wakeupWaitObjectAll(queue, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
 	sceKernelSpinlockLowUnlock(&mutex->lock);
 	pid = mutex->ownerPid;
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
@@ -282,7 +286,7 @@ retry:
 	if ((wake & 1) && currentThreadContext() != NULL)
 		switchThread((intr >> 7) & 1);
 	sceKernelCpuResumeIntr(intr);
-	memset(&mutex->core, 0, sizeof(mutex->core));
+	memset(core, 0, sizeof(*core));
 	return 0;
 }
 
@@ -428,6 +432,7 @@ SceUID sceKernelCreateMutex(const char *name, SceUInt32 attr, int initCount,
 	ProcessBudget *type;
 	UIDCreateOpt opt;
 	ThreadmgrMutex *mutex;
+	SceObjectBase *pObject;
 	uint32_t saved, userRo, uidAttr;
 	SceUID typeId, puid, uid;
 	int ceiling, intr;
@@ -595,12 +600,13 @@ create:
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	}
 	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->mutexClass, name,
-		&opt, (SceObjectBase **)&mutex);
+		&opt, &pObject);
 	if (uid < 0) {
 		if (userRo & USERRO_IN_SYSCALL)
 			goto unaccount;
 		goto resume;
 	}
+	mutex = (ThreadmgrMutex *)pObject;
 	mutex->ownerPid = (userRo & USERRO_IN_SYSCALL) ? thread->processId : SCE_KERNEL_PROCESS_ID;
 	mutex->core.initCount = initCount;
 	mutex->core.lockCount = initCount;
@@ -699,6 +705,7 @@ int lockMutex(SceUID mutexId, int count, SceUInt32 *timeout, int callbacks)
 {
 	struct ThreadCB *thread;
 	ThreadmgrMutex *mutex;
+	SceObjectBase *pObject;
 	uint64_t wakeup;
 	uint32_t saved;
 	int intr, ret, cbRet, locked = 0;
@@ -726,7 +733,7 @@ int lockMutex(SceUID mutexId, int count, SceUInt32 *timeout, int callbacks)
 	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
 	ret = sceGUIDReferObjectWithClass(mutexId,
-		s_threadmgrRuntime.manager->mutexClass, (SceObjectBase **)&mutex);
+		s_threadmgrRuntime.manager->mutexClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_MUTEX_ID | SYSCALL_ERROR_BIT;
@@ -737,6 +744,7 @@ int lockMutex(SceUID mutexId, int count, SceUInt32 *timeout, int callbacks)
 		}
 		goto resume;
 	}
+	mutex = (ThreadmgrMutex *)pObject;
 	sceKernelSpinlockLowLock(&mutex->lock);
 	if (count < 1 || (count != 1 && !(mutex->attr & SCE_KERNEL_MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
@@ -833,6 +841,7 @@ int sceKernelTryLockMutex(SceUID mutexId, int count)
 {
 	struct ThreadCB *thread;
 	ThreadmgrMutex *mutex;
+	SceObjectBase *pObject;
 	uint32_t saved;
 	int intr, ret;
 
@@ -847,7 +856,7 @@ int sceKernelTryLockMutex(SceUID mutexId, int count)
 	intr = SceCpuForDriver_821FC0EE();
 	thread = currentThreadContext();
 	ret = sceGUIDReferObjectWithClass(mutexId,
-		s_threadmgrRuntime.manager->mutexClass, (SceObjectBase **)&mutex);
+		s_threadmgrRuntime.manager->mutexClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_MUTEX_ID | SYSCALL_ERROR_BIT;
@@ -858,6 +867,7 @@ int sceKernelTryLockMutex(SceUID mutexId, int count)
 		}
 		goto resume;
 	}
+	mutex = (ThreadmgrMutex *)pObject;
 	sceKernelSpinlockLowLock(&mutex->lock);
 	if (count < 1 || (count != 1 && !(mutex->attr & SCE_KERNEL_MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
@@ -899,6 +909,7 @@ int sceKernelUnlockMutex(SceUID mutexId, int count)
 {
 	struct ThreadCB *thread, *first;
 	ThreadmgrMutex *mutex;
+	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	int intr, ret;
 
@@ -912,7 +923,7 @@ int sceKernelUnlockMutex(SceUID mutexId, int count)
 	}
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(mutexId,
-		s_threadmgrRuntime.manager->mutexClass, (SceObjectBase **)&mutex);
+		s_threadmgrRuntime.manager->mutexClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_MUTEX_ID | SYSCALL_ERROR_BIT;
@@ -923,6 +934,7 @@ int sceKernelUnlockMutex(SceUID mutexId, int count)
 		}
 		goto resume;
 	}
+	mutex = (ThreadmgrMutex *)pObject;
 	sceKernelSpinlockLowLock(&mutex->lock);
 	thread = currentThreadContext();
 	if (count < 1 || (count != 1 && !(mutex->attr & SCE_KERNEL_MUTEX_ATTR_RECURSIVE))) {
@@ -992,6 +1004,7 @@ int sceKernelCancelMutex(SceUID mutexId, int newCount, int *numWaitThreads)
 {
 	struct ThreadCB *thread;
 	ThreadmgrMutex *mutex;
+	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	int intr, ret;
 
@@ -1006,7 +1019,7 @@ int sceKernelCancelMutex(SceUID mutexId, int newCount, int *numWaitThreads)
 	intr = SceCpuForDriver_821FC0EE();
 	thread = currentThreadContext();
 	ret = sceGUIDReferObjectWithClass(mutexId,
-		s_threadmgrRuntime.manager->mutexClass, (SceObjectBase **)&mutex);
+		s_threadmgrRuntime.manager->mutexClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_MUTEX_ID | SYSCALL_ERROR_BIT;
@@ -1017,6 +1030,7 @@ int sceKernelCancelMutex(SceUID mutexId, int newCount, int *numWaitThreads)
 		}
 		goto resume;
 	}
+	mutex = (ThreadmgrMutex *)pObject;
 	sceKernelSpinlockLowLock(&mutex->lock);
 	if (newCount < 0)
 		newCount = mutex->core.initCount;
@@ -1192,13 +1206,14 @@ int lockMutexForCond(SceUID mutexId, int count, SceUInt32 *timeout, int callback
 {
 	struct ThreadCB *thread;
 	ThreadmgrMutex *mutex;
+	SceObjectBase *pObject;
 	uint64_t wakeup;
 	int ret, pending, locked = 0;
 
 	thread = currentThreadContext();
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1800);
 	ret = sceGUIDReferObjectWithClass(mutexId,
-		s_threadmgrRuntime.manager->mutexClass, (SceObjectBase **)&mutex);
+		s_threadmgrRuntime.manager->mutexClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall())
 			return SCE_KERNEL_ERROR_UNKNOWN_MUTEX_ID | SYSCALL_ERROR_BIT;
@@ -1206,6 +1221,7 @@ int lockMutexForCond(SceUID mutexId, int count, SceUInt32 *timeout, int callback
 				      mutexId);
 		return SCE_KERNEL_ERROR_UNKNOWN_MUTEX_ID;
 	}
+	mutex = (ThreadmgrMutex *)pObject;
 	sceKernelSpinlockLowLock(&mutex->lock);
 	if (count < 1 || (count != 1 && !(mutex->attr & SCE_KERNEL_MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
@@ -1292,11 +1308,12 @@ int unlockMutexForCond(SceUID mutexId, int count)
 {
 	struct ThreadCB *first;
 	ThreadmgrMutex *mutex;
+	SceObjectBase *pObject;
 	int ret;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1973);
 	ret = sceGUIDReferObjectWithClass(mutexId,
-		s_threadmgrRuntime.manager->mutexClass, (SceObjectBase **)&mutex);
+		s_threadmgrRuntime.manager->mutexClass, &pObject);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall())
 			return SCE_KERNEL_ERROR_UNKNOWN_MUTEX_ID | SYSCALL_ERROR_BIT;
@@ -1304,6 +1321,7 @@ int unlockMutexForCond(SceUID mutexId, int count)
 				      mutexId);
 		return SCE_KERNEL_ERROR_UNKNOWN_MUTEX_ID;
 	}
+	mutex = (ThreadmgrMutex *)pObject;
 	sceKernelSpinlockLowLock(&mutex->lock);
 	if (mutex->core.owner != currentThreadContext()) {
 		if (mutex->core.owner == NULL)
