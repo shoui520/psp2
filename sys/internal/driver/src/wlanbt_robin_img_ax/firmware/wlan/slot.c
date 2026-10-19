@@ -6,6 +6,7 @@
 #include "robin/rom.h"
 #include "robin/sys.h"
 #include "robin/wlantask.h"
+#include "robin/mactx.h"
 
 struct WlanSlotScheduler wlanSlotScheduler __attribute__((section(".dtcm.bss")));
 static struct OsaSemaphore *wlanSlotLockHandle __attribute__((section(".dtcm.bss")));
@@ -13,7 +14,6 @@ static uint32_t wlanSlotLockObject[7] __attribute__((section(".dtcm.bss")));
 
 /* Unconverted callees. */
 void wlanReportEvent(struct WlanConnection *connection, const void *data, int code);	/* 0x10316 */
-int macTxPostEvent(uint32_t events);							/* 0x9956 */
 int macMgmtUpdateContext(int a, int b, int c, int d);					/* 0x355d2 */
 void macMgmtValidateContext(void);							/* 0x3565e */
 void macMgmtCheckContext(void);								/* 0x3564a */

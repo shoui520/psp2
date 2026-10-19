@@ -66,25 +66,8 @@ void avcencStreamEnd(const VideoAvcStreamInfo *info, VideoAvcEncodeJob *job);	/*
 void avcencCabacLoad(VideoAvcEncodeJob *job, VideoAvcWriter *writer);		/* 0x874448 */
 void avcencCabacStart(VideoAvcWriter *writer);					/* 0x8744d2 */
 void avcencCabacSave(VideoAvcWriter *writer);					/* 0x874498 */
-void avcencRunOpen(const VideoHelperShared *shared, const VideoAvcStreamInfo *info,
-	VideoHelperJob *run);							/* 0x8661bc */
-void avcencSliceData(VideoAvcEncodeJob *job, const VideoHelperJob *run);	/* 0x865a60 */
-void avcencRunClose(const VideoHelperShared *shared, VideoAvcEncodeJob *job,
-	VideoHelperJob *run);							/* 0x86623a */
-void avcencCabacFlush(VideoAvcEncodeJob *job);					/* 0x866126 */
 
 /* the header writer's (avcencheader.c) */
-void avcencWriterBegin(const VideoAvcOptions *options, VideoAvcEncodeJob *job, uint32_t keepBits);
-void avcencCabacZeroWords(const VideoAvcStreamInfo *info, VideoAvcEncodeJob *job);
-void avcencUnitLoad(VideoHelperShared *shared, const VideoAvcStreamInfo *info,
-	VideoAvcWriter *writer);
-void avcencUnitFinish(VideoHelperShared *shared, const VideoAvcStreamInfo *info,
-	VideoAvcWriter *writer);
-void avcencUnitNalEnd(VideoHelperShared *shared, const VideoAvcStreamInfo *info,
-	VideoAvcWriter *writer);
-void avcencWriteSei(const VideoAvcOptions *options, VideoAvcEncodeJob *job);
-void avcencWriteSliceHeader(const VideoAvcOptions *options, VideoAvcEncodeJob *job,
-	uint32_t firstMb);
 
 /* run a job on the helper's context until the context takes it */
 static void runJob(VkVThreadContext *context, uint32_t index, VkJobFunction function,

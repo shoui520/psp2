@@ -39,4 +39,7 @@ void *mdevOpenDevice(const char *name, unsigned int flags);
 int mdevIoctl(void *device, unsigned int operation, uintptr_t argument);
 void mdevReleaseDevice(void *device);
 
+/* sqram/rom_ram.c */
+int romRamInit(void);
+
 #endif /* ROBIN_ROM_H */

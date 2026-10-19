@@ -353,3 +353,6 @@ int queueStartCodes(VipPesParser *parser, uint32_t position, int32_t distance,
 /* clock.c */
 void enableDemuxClocks(void);
 void gateDemuxClocks(void);
+
+/* demux.c */
+void demuxTask(uint32_t argument);

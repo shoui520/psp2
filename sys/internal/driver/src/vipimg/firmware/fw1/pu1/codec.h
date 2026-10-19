@@ -453,3 +453,6 @@ void clearMemoryQuery(void);
 void enableDecoderClocks(void);
 void gateDecoderClocks(void);
 void setupInterrupt(uint32_t interrupt);
+
+/* decoder.c */
+void decoderTask(uint32_t point);

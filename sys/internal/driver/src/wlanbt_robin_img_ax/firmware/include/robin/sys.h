@@ -175,4 +175,10 @@ int sysIssuePrimaryBbpCommand(uint32_t target, uint32_t value, uint32_t command)
 extern void *wlanSdioDev;			/* mdev "sdio" handle (0x547ac) */
 extern void *btSdioDev;				/* mdev "bt_sdio" handle (0x54c90) */
 
+/* sys/timer_slot.c */
+int sysTimerSlotInit(void);
+
+/* sys/trace.c */
+void sysLogStatistic(unsigned int id, uint32_t value, uint32_t extra);
+
 #endif /* ROBIN_SYS_H */

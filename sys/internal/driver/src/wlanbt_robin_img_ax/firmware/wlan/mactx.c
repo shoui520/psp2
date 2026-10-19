@@ -33,13 +33,11 @@ int romMacStatValidate(unsigned int queue, int a, int b, int c);	/* 0x03f3acdb *
 int romMacStatPrepare(unsigned int queue);				/* 0x03f3ace7 */
 int romMacStatCheck(unsigned int queue);				/* 0x03f3accf */
 
-
 /* Called as the MAC is first woken and when the last wake bit is released. */
 void romMacWakeRequest(void);						/* 0x03f3a917 */
 void romMacSleepNotify(int waited);					/* 0x03f3a907 */
 
 /* Debug statistics hook (a no-op in this firmware). */
-void sysLogStatistic(unsigned int id, uint32_t value, uint32_t extra);
 
 /* Statistics of macWaitBasebandStable() for the wake sequence. */
 static struct {

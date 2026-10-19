@@ -42,22 +42,6 @@
 #define ENGINE_FLAG_HELPER_DONE		0x00010000
 
 /* the codec's parts of the helper */
-void avcdecHelperStart(VideoHelper *helper, VideoHelperShared *shared);	/* 0x861fe4 */
-void avcdecHelperJob(VideoHelper *helper, uint32_t job);		/* 0x861fec */
-void avcdecHelperRun(VideoHelper *helper, uint32_t job);		/* 0x86209a */
-void avcdecHelperFinish(VideoHelper *helper);				/* 0x8621ee */
-void avcdecHelperStep(VideoHelper *helper);				/* 0x8622fa */
-void m4vdecHelperStart(VideoHelper *helper, VideoHelperShared *shared);	/* 0x867564 */
-void m4vdecHelperJob(VideoHelper *helper, uint32_t job);		/* 0x86756c */
-void m4vdecHelperRun(VideoHelper *helper, uint32_t job);		/* 0x8675e4 */
-void m4vdecHelperFinish(VideoHelper *helper);				/* 0x867704 */
-void m4vdecHelperStep(VideoHelper *helper);				/* 0x8677c8 */
-void avcencHelperStart(VideoHelper *helper, VideoHelperShared *shared);	/* 0x86432c */
-void avcencHelperJob(VideoHelper *helper, uint32_t job);		/* 0x864344 */
-void avcencHelperRun(VideoHelper *helper, uint32_t job);		/* 0x8643f4 */
-void avcencHelperFinish(VideoHelper *helper, uint32_t argument);	/* 0x8645de */
-void avcencHelperStep(VideoHelper *helper);				/* 0x86469a */
-void avcencHelperStop(VideoHelper *helper);				/* 0x864732 */
 
 /* the engines' messages: a parsed job back */
 void avcdecDecoderParsed(uint32_t memory, uint32_t job);		/* 0x82cf94 */

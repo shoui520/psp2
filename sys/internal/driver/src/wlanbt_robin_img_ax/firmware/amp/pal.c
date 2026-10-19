@@ -16,7 +16,6 @@
 #include "robin/sys.h"
 #include "robin/wlan.h"
 
-
 /* A message from the PAL driver: a 16-bit code, a 16-bit length and a body. */
 struct AmpPalMessage {
 	uint16_t code;
@@ -107,7 +106,6 @@ int ampPalPostLinkEvent14(uint16_t code, OsaBuffer *buffer, uint32_t argument0, 
 }
 
 /* WLAN stack: wakes whoever waits for a state change (not converted). */
-int wlanReleaseStateSemaphore(void);
 
 /* 0x000222f4: Disconnect Physical Link Complete event. */
 int ampHciDisconnectPhysicalLinkComplete(int status, int physicalHandle)

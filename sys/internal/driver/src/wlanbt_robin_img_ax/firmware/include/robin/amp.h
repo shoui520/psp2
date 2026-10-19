@@ -207,4 +207,7 @@ char ampHexDigit(uint32_t nibble);
 /* Link controller (bt/lmp, not converted). */
 void btLmpLcAcquireContext(int a1);
 
+/* amp/pal.c */
+int ampPalInit(void);
+
 #endif /* ROBIN_AMP_H */

@@ -5,6 +5,7 @@
  * interrupt code, and its data overlay its stack and state. Task 1 is unused.
  */
 #include "../common/runtime.h"
+#include "codec.h"
 
 #define TASK_DECODER		0
 
@@ -13,8 +14,6 @@
  * data, which pu1.ld places after them: __task0_save_size)
  */
 #define TASK_DECODER_DATA_SIZE	0xf00
-
-void decoderTask(uint32_t argument);
 
 /* task 0's overlays as the linker places them (pu1.ld) */
 extern char __task0_text_load[], __task0_text_size[];

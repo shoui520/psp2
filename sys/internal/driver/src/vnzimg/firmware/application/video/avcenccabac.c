@@ -51,10 +51,6 @@ uint32_t avcencBinsPut(VideoAvcEncodeJob *job, uint32_t value, int32_t count);	/
 uint32_t avcencBinsFinish(VideoAvcEncodeJob *job);				/* 0x874692 */
 uint32_t avcencSwap32(uint32_t word);						/* 0x87477e */
 
-void avcencBitsCopyBlock(VideoAvcWriter *writer, const uint32_t *source);
-void avcencBitsCopy(VideoAvcWriter *writer, const uint32_t *source, int32_t size);
-void avcencBitsPut(VideoAvcWriter *writer, int32_t count, uint32_t value);
-
 typedef struct Code {
 	uint32_t code;
 	int32_t length;

@@ -10,6 +10,7 @@
 #ifndef ROBIN_OSA_H
 #define ROBIN_OSA_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include "robin/threadx.h"
 #include "robin/sync.h"

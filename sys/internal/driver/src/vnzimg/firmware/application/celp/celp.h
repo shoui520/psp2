@@ -190,3 +190,18 @@ void celpEncInterpolateLsp(CelpEncoderState *state);
 void celpEncSearchPitch(CelpEncoderState *state);
 void celpEncSearchExcitation(CelpEncoderState *state);
 int32_t celpEncDivide(int64_t remainder, int32_t divisor);
+
+/* application/celp/celpdecoder.c */
+int32_t celpDecoderInit(void *engine, uint32_t size);
+int32_t celpDecoderReset(void *engine);
+int32_t celpDecoderSetBitRate(void *engine, const int32_t *bitRateIndex);
+int32_t celpDecode(void *engine, const uint8_t *es, uint32_t esSize, uint32_t *esUsed,
+	int16_t *pcm, uint32_t *pcmSize, uint32_t lostCount);
+
+/* application/celp/celpencoder.c */
+int32_t celpEncoderInit(void *engine, uint32_t size);
+int32_t celpEncoderReset(void *engine);
+int32_t celpEncoderSetRate(void *engine, CelpEncoderRate *rate);
+int32_t celpEncoderHeader(void *engine, uint8_t *header, uint32_t size, int32_t *bits);
+int32_t celpEncode(void *engine, const int16_t *pcm, uint32_t *pcmSize, uint8_t *es,
+		uint32_t *esSize);

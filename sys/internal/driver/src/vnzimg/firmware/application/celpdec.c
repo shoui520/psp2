@@ -4,6 +4,7 @@
  * ARM gives; the engine runs on the stream's VThread context.
  */
 #include "application.h"
+#include "celp/celp.h"
 
 /* Sony's SDK, audiodec.h */
 #define SCE_AUDIODEC_ERROR_INVALID_PTR			((int32_t)0x807f0008)
@@ -56,11 +57,6 @@ typedef struct CelpCtrl {
 } CelpCtrl;
 
 /* the engine (0x85471a-) */
-int32_t celpDecoderInit(void *engine, uint32_t size);
-int32_t celpDecoderReset(void *engine);
-int32_t celpDecoderSetBitRate(void *engine, const int32_t *bitRateIndex);
-int32_t celpDecode(void *engine, const uint8_t *es, uint32_t esSize, uint32_t *esUsed,
-	int16_t *pcm, uint32_t *pcmSize, uint32_t lostCount);
 
 static uint32_t timerRead(void)
 {

@@ -6,6 +6,8 @@
  * stack. Tasks 0, 3 and 4 are unused.
  */
 #include "../common/runtime.h"
+#include "demux.h"
+#include "decoder.h"
 
 #define TASK_DEMUX		1
 #define TASK_COMMAND		2
@@ -15,9 +17,6 @@
 
 /* the local RAM task 1's data overlay covers: up to the local RAM data */
 #define TASK_DEMUX_DATA_SIZE	0xc50
-
-void demuxTask(uint32_t argument);
-void commandTask(uint32_t argument);
 
 /* task 1's overlays as the linker places them (pu0.ld): the data is its buffers */
 extern char __task1_text_load[], __task1_text_size[];

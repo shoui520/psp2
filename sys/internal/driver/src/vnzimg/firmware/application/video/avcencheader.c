@@ -46,15 +46,6 @@ void avcencBitsUe(VideoAvcWriter *writer, uint32_t value);		/* 0x87478c */
 void avcencBitsSe(VideoAvcWriter *writer, int32_t value);		/* 0x8747d4 */
 
 /* the slice header the unit writes, and CABAC's */
-void avcencCabacBegin(VideoAvcEncodeJob *job);			/* 0x865dec */
-void avcencCabacAlign(VideoAvcEncodeJob *job);			/* 0x865e02 */
-void avcencCabacNalHeader(VideoAvcEncodeJob *job, uint32_t header);	/* 0x865ede */
-void avcencCabacSliceHeader(const VideoAvcOptions *options, VideoAvcEncodeJob *job,
-	uint32_t firstMb);						/* 0x865f3e */
-void avcencCabacSliceInit(VideoAvcEncodeJob *job, uint32_t sliceType);	/* 0x865fea */
-void avcencCabacReset(VideoAvcEncodeJob *job, uint32_t value);		/* 0x8662b8 */
-void avcencCabacInit(VideoAvcEncodeJob *job, uint32_t sliceType);	/* 0x8662dc */
-void avcencCabacSkipped(VideoAvcEncodeJob *job, uint32_t sliceType);	/* 0x8662f6 */
 
 void avcencBitsPut(VideoAvcWriter *writer, int32_t count, uint32_t value);
 void avcencBitsPutByte(VideoAvcWriter *writer, uint32_t byte);

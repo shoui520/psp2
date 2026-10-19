@@ -1069,4 +1069,58 @@ void videoServicePicturesDone(uint32_t service, uint32_t request);
 int32_t videoSetJump(uint32_t *buffer);
 void videoLongJump(uint32_t *buffer, int32_t value);
 
+/* application/video/avcenccabac.c */
+void avcencSliceData(VideoAvcEncodeJob *job, const VideoHelperJob *run);
+void avcencCabacBegin(VideoAvcEncodeJob *job);
+void avcencCabacAlign(VideoAvcEncodeJob *job);
+void avcencCabacNalHeader(VideoAvcEncodeJob *job, uint32_t header);
+void avcencCabacSliceHeader(const VideoAvcOptions *options, VideoAvcEncodeJob *job,
+	uint32_t firstMb);
+void avcencCabacSliceInit(VideoAvcEncodeJob *job, uint32_t sliceType);
+void avcencCabacFlush(VideoAvcEncodeJob *job);
+void avcencRunOpen(const VideoHelperShared *shared, const VideoAvcStreamInfo *info,
+	VideoHelperJob *run);
+void avcencRunClose(const VideoHelperShared *shared, VideoAvcEncodeJob *job, VideoHelperJob *run);
+void avcencCabacReset(VideoAvcEncodeJob *job, uint32_t value);
+void avcencCabacInit(VideoAvcEncodeJob *job, uint32_t sliceType);
+void avcencCabacSkipped(VideoAvcEncodeJob *job, uint32_t sliceType);
+
+/* application/video/avcencheader.c */
+void avcencWriterBegin(const VideoAvcOptions *options, VideoAvcEncodeJob *job, uint32_t keepBits);
+void avcencCabacZeroWords(const VideoAvcStreamInfo *info, VideoAvcEncodeJob *job2);
+void avcencUnitLoad(VideoHelperShared *shared, const VideoAvcStreamInfo *info,
+	VideoAvcWriter *writer);
+void avcencUnitFinish(VideoHelperShared *shared, const VideoAvcStreamInfo *info,
+	VideoAvcWriter *writer);
+void avcencUnitNalEnd(VideoHelperShared *shared, const VideoAvcStreamInfo *info,
+	VideoAvcWriter *writer);
+void avcencBitsPut(VideoAvcWriter *writer, int32_t count, uint32_t value);
+void avcencBitsCopyBlock(VideoAvcWriter *writer, const uint32_t *source);
+void avcencBitsCopy(VideoAvcWriter *writer, const uint32_t *source, int32_t size);
+void avcencWriteSei(const VideoAvcOptions *options, VideoAvcEncodeJob *job);
+void avcencWriteSliceHeader(const VideoAvcOptions *options, VideoAvcEncodeJob *job,
+	uint32_t firstMb);
+
+/* application/video/avcenchelper.c */
+void avcencHelperStart(VideoHelper *helper, VideoHelperShared *shared);
+void avcencHelperJob(VideoHelper *helper, uint32_t address);
+void avcencHelperRun(VideoHelper *helper, uint32_t job);
+void avcencHelperFinish(VideoHelper *helper, uint32_t argument);
+void avcencHelperStep(VideoHelper *helper);
+void avcencHelperStop(VideoHelper *helper);
+
+/* application/video/avchelper.c */
+void avcdecHelperStart(VideoHelper *helper, VideoHelperShared *shared);
+void avcdecHelperJob(VideoHelper *helper, uint32_t address);
+void avcdecHelperRun(VideoHelper *helper, uint32_t job);
+void avcdecHelperFinish(VideoHelper *helper);
+void avcdecHelperStep(VideoHelper *helper);
+
+/* application/video/m4vhelper.c */
+void m4vdecHelperStart(VideoHelper *helper, VideoHelperShared *shared);
+void m4vdecHelperJob(VideoHelper *helper, uint32_t address);
+void m4vdecHelperRun(VideoHelper *helper, uint32_t job);
+void m4vdecHelperFinish(VideoHelper *helper);
+void m4vdecHelperStep(VideoHelper *helper);
+
 #endif
