@@ -36,7 +36,7 @@ endif()
 
 psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	memory_set32.S
-	sha1_transform.c
+	sha1_transform.S
 	oheap.c
 	uid.c
 	murmurhash3.c
@@ -109,6 +109,7 @@ psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	vmaccess.S
 	mmu.c
 	gzip.c
+	mt19937_next.S
 	mt19937.c
 	des_permutation.c
 	des_round.c

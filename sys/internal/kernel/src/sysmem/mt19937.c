@@ -5,7 +5,8 @@
  * SceKernelUtilsForDriver_4C9A5730 discards them.
  *
  * The kernel's own generator (GlobalInit/GlobalUninit) is shared under a
- * spinlock.
+ * spinlock. The step itself, SceKernelUtilsForDriver_92AEDFBC, is Sony's
+ * assembly (mt19937_next.S).
  */
 
 #include <stdint.h>
@@ -23,25 +24,6 @@ _Static_assert(sizeof(SceMt19937Context) == 0x9c4, "MT19937 context size");
 
 static SceMt19937Context s_mt19937;
 static volatile SceKernelSpinlock s_mt19937Lock;
-
-/* note: in the original this one is hand-written assembly */
-SceUInt32 SceKernelUtilsForDriver_92AEDFBC(SceMt19937Context *context)
-{
-	SceUInt32 i = context->count, next, y, value;
-
-	next = i == MT_N - 1 ? 0 : i + 1;
-	value = context->state[i];
-	context->count = next;
-	y = (value & MT_UPPER_MASK) | (context->state[next] & MT_LOWER_MASK);
-	context->state[i] = context->state[(int)i - (MT_N - MT_M) >= 0 ? i - (MT_N - MT_M) :
-					   i + MT_M] ^ (y >> 1) ^ ((y & 1) ? MT_MATRIX_A : 0);
-
-	/* tempering */
-	value ^= value >> 11;
-	value ^= (value << 7) & 0x9d2c5680;
-	value ^= (value << 15) & 0xefc60000;
-	return value ^ (value >> 18);
-}
 
 /* the seed table, then the first 624 outputs (the table itself) dropped */
 int SceKernelUtilsForDriver_4C9A5730(SceMt19937Context *context, SceUInt32 seed)
