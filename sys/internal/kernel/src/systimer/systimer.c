@@ -469,10 +469,13 @@ int SceSystimerForDriver_1B14DFD6(SceSysTimerId id, SceUInt64 count)
 			else
 				info->longReg->control |= CTRL_START_ONESHOT_LONG;
 		} else {
+			SceUInt64 base = info->base;
+			SceUInt64 interval = info->interval;
+
 			info->wordReg->control &= ~TIMER_CONTROL_ENABLE;
 			info->wordReg->count = (SceUInt32)count;
-			info->base += count;
-			if (info->interval != 0)
+			info->base = base + count;
+			if (interval != 0)
 				info->wordReg->control |= CTRL_START_PERIODIC;
 			else
 				info->wordReg->control |= CTRL_START_ONESHOT_WORD;
