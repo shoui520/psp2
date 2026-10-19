@@ -46,7 +46,7 @@ static int pfsSetAttr(const SceSelfAuthInfo *info, unsigned char **ppValue, SceS
 {
 	const SceInt32 *level = pfsGetLevel(info);
 
-	if ((level == NULL || (*level != 0x40 && *level != 0x80)) && (attribute & 4))
+	if ((level == NULL || (*level != 0x80 && *level != 0x40)) && (attribute & 4))
 		return SCE_ERROR_ERRNO_EACCES;
 	if (*pSize == 1)
 		**ppValue = attribute;
