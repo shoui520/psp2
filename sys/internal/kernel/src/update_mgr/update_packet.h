@@ -40,4 +40,19 @@ _Static_assert(offsetof(UpdateDigestPacketPayload, vectorVector) == 40 &&
 	       offsetof(UpdateDigestPacketPayload, descriptors) == 80,
 	       "digest packet layout");
 
+/* update_packet.c */
+int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packetOut,
+		SceKernelPAVector **dataOut, SceKernelPAVector **vectorOut,
+		void *buffer, SceSize size);
+
+/* update_packet_additional_sign.c */
+int UpdateUtilCreatePacketPayloadPupAS(UpdateDigestPacketPayload **packetOut,
+		SceKernelPAVector **dataOut, SceKernelPAVector **vectorOut,
+		const PupHeaderDigest *headerDigest, void *buffer, SceSize size);
+
+/* update_packet_watermark.c */
+int UpdateUtilCreatePacketPayloadPupWM(UpdateDigestPacketPayload **packetOut,
+		SceKernelPAVector **dataOut, SceKernelPAVector **vectorOut,
+		const PupHeaderDigest *headerDigest, void *buffer, SceSize size);
+
 #endif

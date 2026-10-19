@@ -127,3 +127,11 @@ typedef struct JpegInitArguments {
 } JpegInitArguments;
 
 _Static_assert(sizeof(JpegInitArguments) == 8, "JPEG syscall init arguments ABI");
+
+/* jpeg/jpeg.c */
+int jpegLockEncodeBuffer(unsigned int *physicalAddress, const void *buffer,
+			 SceSize size, unsigned int lockMode, int cacheMode,
+			 unsigned int allowCached);
+int initializeJpeg(void);
+int jpegProcessCreateEntry(SceUID pid, SceUInt32 type);
+int jpegProcessExitEntry(SceUID pid, SceUInt32 type);

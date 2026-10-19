@@ -4,11 +4,6 @@
 #include <threadmgr/threadmgr.h>
 #include "update_objects.h"
 
-int StorageUtilGetPartitionPath(uint32_t partition, uint8_t active,
-		char *path, SceSize size);
-int UpdateUtilUpdateNodeStatus(unsigned int nodeType,
-		const UpdateUtilNodeStatus *status);
-
 int UpdateUtilWritePartition(const void *buffer, uint64_t size, uint64_t offset,
 		const SceMbr *mbr, uint8_t partition,
 		int nodeType, UpdateUtilNodeStatus *status)

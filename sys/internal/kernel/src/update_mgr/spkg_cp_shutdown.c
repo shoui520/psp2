@@ -1,9 +1,9 @@
 #include "update_internal.h"
+#include "spkg.h"
 
 extern int updateCpupContext, updateCpupUpdateTriggered;
 int SceDeci4pCpupForDriver_BBB991CD(uint32_t commandId);
 int SceDeci4pCpupForDriver_2BAD7B39(int context);
-int SpkgUtilCpReboot(void);
 
 int SpkgUtilCpShutdown(int mode)
 {

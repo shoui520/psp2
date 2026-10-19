@@ -2,9 +2,6 @@
 
 #include "ngs_module_memory.h"
 
-const struct NgsAudioFormat *ngsGetInputFormat(void);
-int ngsGetInputMemoryInfo(const struct NgsModuleInitParams *params,
-			NgsModuleMemoryInfo *info);
 extern const char *ngsModuleOutputName;
 
 NgsModuleAudioInterface ngsInputOutputs[1];

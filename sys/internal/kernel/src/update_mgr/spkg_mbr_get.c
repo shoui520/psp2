@@ -2,8 +2,6 @@
 
 extern int spkgMbrLoaded;
 extern SceMbr spkgMbr;
-int UpdateUtilLockMbr(void);
-int UpdateUtilUnlockMbr(void);
 
 const SceMbr *SpkgUtilGetMbr(void)
 {

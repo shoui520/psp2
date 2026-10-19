@@ -9,6 +9,7 @@
 #include <touch/touch.h>
 #include <sdstor/mbr.h>
 #include <threadmgr/threadmgr.h>
+#include <sm_comm/sm_comm.h>
 #include "pup.h"
 
 typedef char SceUpdateMode;
@@ -206,5 +207,48 @@ extern int updateUseSysconSnvs;
 extern unsigned int updateSysconFirmwareVersion;
 extern unsigned int updateSysconHardwareInfo;
 extern unsigned int updateSysconDownloaderVersion;
+
+/* cp_board_version.c */
+int CpUtilGetBoardVersion(uint32_t *version);
+
+/* storage_bl_bank.c */
+int StorageUtilSwitchBLBank(SceUID heapId, SceMbr *mbr);
+
+/* storage_os_bank.c */
+int StorageUtilSwitchOSBank(SceUID heapId, SceMbr *mbr);
+
+/* storage_path.c */
+int StorageUtilGetPartitionPath(uint32_t partition, uint8_t active, char *path, SceSize size);
+
+/* update_buffer_check.c */
+int UpdateUtilCheckBuffer(SceSize size, void *buffer);
+
+/* update_buffer_state.c */
+int UpdateUtilSetBufferState(unsigned int state, void *buffer);
+
+/* update_heap.c */
+void *UpdateUtilHeapAllocate(SceUID heapId, SceSize count, SceSize size);
+int UpdateUtilHeapFree(SceUID heapId, void *buffer);
+
+/* update_mutex.c */
+int UpdateUtilLockMbr(void);
+int UpdateUtilUnlockMbr(void);
+int UpdateUtilLockCom(void);
+int UpdateUtilUnlockCom(void);
+
+/* update_node_status.c */
+int UpdateUtilInitializeNodeStatus(unsigned int nodeType, const UpdateUtilNodeStatus *status);
+int UpdateUtilUpdateNodeStatus(unsigned int nodeType, const UpdateUtilNodeStatus *status);
+
+/* update_partition_inflate.c */
+int UpdateUtilInflateWritePartition(const void *input, uint64_t size,
+		uint64_t offset, const SceMbr *mbr, uint8_t partition,
+		unsigned int nodeType, UpdateUtilNodeStatus *status, SceUID pid);
+
+/* update_sm_stop.c */
+int UpdateUtilStopSmWithResult(int *smId, SceSblSmCommPair *result);
+
+/* update_vector.c */
+int UpdateUtilFreePARangeVector(SceUID heapId, SceKernelPAVector *vector);
 
 #endif

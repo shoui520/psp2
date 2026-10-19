@@ -19,9 +19,6 @@ typedef struct SceNgsEnvelopeParams {
 	int nLoopEnd;
 } SceNgsEnvelopeParams;
 
-const struct NgsAudioFormat *ngsGetEnvelopeFormat(void);
-int ngsGetEnvelopeMemoryInfo(const struct NgsModuleInitParams *params,
-			   NgsModuleMemoryInfo *info);
 extern const char *ngsModuleOutputName;
 extern const char *ngsModuleInputName;
 

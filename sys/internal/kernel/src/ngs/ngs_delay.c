@@ -19,9 +19,6 @@ typedef struct SceNgsDelayParams {
 	SceNgsDelayTap taps[4];
 } SceNgsDelayParams;
 
-const struct NgsAudioFormat *ngsGetDelayFormat(void);
-int ngsGetDelayMemoryInfo(const struct NgsModuleInitParams *params,
-			 NgsModuleMemoryInfo *info);
 extern const char *ngsModuleOutputName;
 extern const char *ngsModuleInputName;
 

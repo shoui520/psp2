@@ -12,9 +12,6 @@ typedef struct SceNgsDistortionParams {
 	float fDryGain;
 } SceNgsDistortionParams;
 
-const struct NgsAudioFormat *ngsGetDistortionFormat(void);
-int ngsGetDistortionMemoryInfo(const struct NgsModuleInitParams *params,
-			     NgsModuleMemoryInfo *info);
 extern const char *ngsModuleOutputName;
 extern const char *ngsModuleInputName;
 

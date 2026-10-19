@@ -10,7 +10,6 @@ int SceBbmcForDriver_393E70CB(int subscriber);
 int SceBbmcForDriver_891AFA0C(int subscriber, uint32_t *status);
 int SceBbmcForDriver_6A56F88C(int subscriber, uint32_t *first,
 	uint32_t *second, BbmcDriverInfo *info);
-int UpdateUtilUpdateNodeStatus(unsigned int nodeType, UpdateUtilNodeStatus *status);
 
 int BbmcUtilInitialize(void)
 {

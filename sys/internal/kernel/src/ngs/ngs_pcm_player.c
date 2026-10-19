@@ -27,9 +27,6 @@ typedef struct SceNgsPlayerParams {
 	signed char pad[2];
 } SceNgsPlayerParams;
 
-const struct NgsAudioFormat *ngsGetPcmVagPlayerFormat(void);
-int ngsGetPcmVagPlayerMemoryInfo(const struct NgsModuleInitParams *params,
-			      NgsModuleMemoryInfo *info);
 extern const char *ngsModuleOutputName;
 
 const NgsModuleParamDescription ngsPcmPlayerControlDescriptions[11] = {

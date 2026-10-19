@@ -403,7 +403,7 @@ int initializeDsp0Videocodec(void)
 	return ret;
 }
 
-int _sceDsp0VideocodecProcessCreateEntry(SceUID pid)
+int _sceDsp0VideocodecProcessCreateEntry(SceUID pid, SceUInt32 type)
 {
 	void *storage = NULL;
 	int ret = SceProcessmgrForDriver_AF80F39C(pid,
@@ -441,7 +441,7 @@ int _sceDsp0VideocodecProcessCreateEntry(SceUID pid)
 	return ret;
 }
 
-int _sceDsp0VideocodecProcessExitEntry(SceUID pid)
+int _sceDsp0VideocodecProcessExitEntry(SceUID pid, SceUInt32 type)
 {
 	void *storage = NULL;
 	int ret = SceProcessmgrForDriver_AF80F39C(pid,

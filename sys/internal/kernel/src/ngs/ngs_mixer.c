@@ -9,9 +9,6 @@ typedef struct SceNgsMixerParams {
 	unsigned int uPauseLeadOut;
 } SceNgsMixerParams;
 
-const struct NgsAudioFormat *ngsGetMixerFormat(void);
-int ngsGetMixerMemoryInfo(const struct NgsModuleInitParams *params,
-			NgsModuleMemoryInfo *info);
 extern const char *ngsModuleOutputName;
 extern const char *ngsModuleInput1Name;
 extern const char *ngsModuleInput2Name;

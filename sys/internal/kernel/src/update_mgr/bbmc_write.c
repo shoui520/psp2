@@ -1,10 +1,6 @@
 #include <threadmgr/threadmgr.h>
 #include "bbmc_update.h"
 
-int UpdateUtilLockCom(void);
-int UpdateUtilUnlockCom(void);
-int UpdateUtilUpdateNodeStatus(unsigned int nodeType, UpdateUtilNodeStatus *status);
-
 int BbmcUtilWriteFirmware(const void *buffer, uint64_t size, uint32_t version,
 	uint64_t chunkIndex, uint64_t chunkCount, unsigned int nodeType,
 	UpdateUtilNodeStatus *status)

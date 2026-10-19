@@ -2,27 +2,9 @@
 
 #include <scetypes.h>
 #include <intrmgr/syscall.h>
-
-typedef struct SceNgsSystemInitParams {
-	SceInt32 nMaxRacks;
-	SceInt32 nMaxVoices;
-	SceInt32 nGranularity;
-	SceInt32 nSampleRate;
-	SceInt32 nMaxModules;
-} SceNgsSystemInitParams;
-
-int ngsGetSystemInstanceCount(void);
-int ngsGetSystemExtraMemorySize(SceSize *size);
-SceSize ngsAlignMemorySize(SceSize size);
-int ngsAlignSize(int size, int alignment);
-int ngsGetAlignedMemorySize(SceSize size, int unused, int unused2,
-			  int unused3, SceSize *alignedSize);
-int ngsCopyFromCaller(void *destination, const void *source, SceSize size,
-		     int copyUserData);
-int ngsCopyToCaller(void *destination, const void *source, SceSize size,
-		   int copyUserData);
-int ngsIsCallerRangeAccessible(const void *address, SceSize size,
-			      int copyUserData);
+#include "ngs_module_memory.h"
+#include "ngs_system.h"
+#include "ngs_platform.h"
 
 int sceNgsSystemGetRequiredMemorySizeInternal(
 	const SceNgsSystemInitParams *params, SceUInt32 *size)

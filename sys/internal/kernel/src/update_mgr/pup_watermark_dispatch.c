@@ -1,8 +1,6 @@
 #include <threadmgr/threadmgr.h>
 #include "update_internal.h"
 
-int PupUtilVerifyPupWatermarkMain(SceSize arglen, PupVerifyThreadArgs *args);
-
 int PupUtilVerifyPupWatermark(SceUID fd, int need_header_verify,
 		int load_sm, int resident_sm)
 {

@@ -13,7 +13,6 @@ int SceDeci4pCpupForDriver_02CDA82C(uint32_t context);
 int SceDeci4pCpupForDriver_D78403C8(uint32_t context);
 int SceDeci4pCpupForDriver_7998FFD8(uint32_t context, uint32_t *result,
 	uint32_t *progress, uint32_t *detail);
-int UpdateUtilUpdateNodeStatus(unsigned int nodeType, UpdateUtilNodeStatus *status);
 
 int CpUtilWriteFirmware(const void *buffer, uint64_t size, uint32_t version,
 	unsigned int nodeType, UpdateUtilNodeStatus *status)

@@ -2,9 +2,7 @@
 #include <sysmem/cpu.h>
 #include <threadmgr/threadmgr.h>
 #include "update_internal.h"
-
-int SpkgUtilSpackageTopHalf(unsigned int nodeType, int packageType,
-		void *buffer, SceSize size, int flags, uint32_t *requestId);
+#include "spkg.h"
 
 int SpkgUtilUpdateSpackageSync(SceUID fd, const SceMbr *mbr, int nodeType,
 		int packageType, const PupSegment *segment, int flags)

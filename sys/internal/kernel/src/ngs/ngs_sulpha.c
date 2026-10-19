@@ -5,6 +5,7 @@
 #include <intrmgr/syscall.h>
 
 #include "ngs_module_memory.h"
+#include "ngs_system.h"
 
 typedef union SulphaNgsModuleQuery {
 	struct {
@@ -35,10 +36,6 @@ typedef union SulphaNgsModuleQuery {
 } SulphaNgsModuleQuery;
 
 typedef char SulphaNgsModuleQuerySize[(sizeof(SulphaNgsModuleQuery) == 288) ? 1 : -1];
-
-int ngsFindBuiltinModule(unsigned int moduleId, NgsModuleDefinition **module);
-int ngsCopyToCaller(void *destination, const void *source, SceSize size,
-		    int copyUserData);
 
 int sceNgsSulphaQueryModuleInternal(unsigned int type, SulphaNgsModuleQuery *debug,
 				   unsigned int moduleId, unsigned int index)

@@ -327,3 +327,15 @@ int SceAvcodecForDriver_D46B8463(const SceAvcdecCtrl *pCtrl);
 int SceAvcodecForDriver_16B501C9(SceAvcdecPicture *pDst,
 			       const SceAvcdecPicture *pSrc);
 
+/* videocodec/ce_dsp0_videocodec.c */
+int initializeDsp0Videocodec(void);
+int _sceDsp0VideocodecProcessCreateEntry(SceUID pid, SceUInt32 type);
+int _sceDsp0VideocodecProcessExitEntry(SceUID pid, SceUInt32 type);
+int dsp0VideocodecIsProcessActive(SceUID pid);
+int dsp0VideocodecIsProcessSuspended(SceUID pid);
+int dsp0VideocodecProcessResume(SceUID pid);
+
+/* videocodec/videocodec_init.c */
+int initializeVideocodec(void);
+int videocodecProcessSuspend(SceUID pid);
+int videocodecProcessResume(SceUID pid);

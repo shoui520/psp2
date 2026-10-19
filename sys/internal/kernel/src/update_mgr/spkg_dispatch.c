@@ -1,7 +1,5 @@
 #include "update_internal.h"
-
-int SpkgUtilSpackageTopHalf(unsigned int nodeType, int packageType,
-		void *buffer, SceSize size, int flags, uint32_t *requestId);
+#include "spkg.h"
 
 int SpkgUtilUpdateSpackage(int packageType, void *buffer, SceSize size,
 		uint32_t flags, uint32_t *requestId)

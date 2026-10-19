@@ -2,10 +2,6 @@
 #include "update_internal.h"
 #include "update_packet.h"
 
-int UpdateUtilCreatePacketPayloadPupAS(UpdateDigestPacketPayload **packetOut,
-		SceKernelPAVector **dataOut, SceKernelPAVector **vectorOut,
-		const PupHeaderDigest *headerDigest, void *buffer, SceSize size);
-
 int UpdateUtilCreatePacketPayloadPupASWithBuffer(void **packet,
 		SceKernelPAVector **dataVector, SceKernelPAVector **vectorVector,
 		const PupHeaderDigest *headerDigest, void **bufferOut, SceSize size)

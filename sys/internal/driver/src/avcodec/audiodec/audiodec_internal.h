@@ -211,3 +211,8 @@ int audiodecPackDecodeCommand(VeneziaRpcThunk *thunk, const unsigned int *input,
 			     unsigned int *packed);
 void audiodecFinishCommand(struct VeneziaRpcThunk *thunk);
 int audiodecFinishRpcMemory(struct VeneziaRpcThunk *thunk);
+
+/* audiodec/audiodec.c */
+int initializeAudiodec(void);
+int _sceAudiodecProcessCreateEntry(SceUID pid, SceUInt32 type);
+int _sceAudiodecProcessExitEntry(SceUID pid, SceUInt32 type);

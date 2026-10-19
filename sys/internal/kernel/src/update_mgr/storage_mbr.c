@@ -2,9 +2,6 @@
 #include <threadmgr/threadmgr.h>
 #include "update_internal.h"
 
-int StorageUtilGetPartitionPath(uint32_t partition, uint8_t active,
-		char *path, SceSize size);
-
 int StorageUtilReadMbr(SceMbr *mbr)
 {
 	SceUID fd;

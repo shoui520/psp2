@@ -57,4 +57,7 @@ _Static_assert(sizeof(SysconUpdateSignaturePacket) == 32, "Syscon signature pack
 _Static_assert(sizeof(SysconUpdateSegmentHeader) == 16, "Syscon segment header");
 _Static_assert(sizeof(SysconUpdateChecksumPacket) == 24, "Syscon checksum packet");
 
+/* syscon_versions.c */
+int SysconUtilGetFirmwareVersion(uint32_t *version);
+
 #endif

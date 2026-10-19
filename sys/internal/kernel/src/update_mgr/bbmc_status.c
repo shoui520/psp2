@@ -1,6 +1,5 @@
 #include "bbmc_update.h"
-
-int BbmcUtilGetFirmwareVersion(uint32_t *version);
+#include "spkg_peripherals.h"
 
 int BbmcUtilGetStatus(uint32_t *status)
 {

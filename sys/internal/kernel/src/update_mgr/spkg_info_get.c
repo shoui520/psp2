@@ -1,17 +1,11 @@
 #include "update_internal.h"
 #include <sysmem/sysclib.h>
-
-int SysconUtilGetFirmwareVersion(uint32_t *version);
-int SysconUtilGetConfigVersion(uint32_t *version);
-int SysconUtilGetDownloaderVersion(uint32_t *version);
-int MotionUtilGetFirmwareVersion(uint32_t *version);
-int MotionMagnUtilGetFirmwareVersion(uint32_t *version);
-int TouchUtilGetConfigVersion(unsigned int port, uint32_t *version);
-int BicUtilGetFirmwareVersion(uint32_t *version);
-int BicUtilGetDataFlashVersion(uint32_t *version);
-int CpUtilGetBoardVersion(uint32_t *version);
-int BbmcUtilGetFirmwareVersion(uint32_t *version);
-int BbmcUtilGetStatus(uint32_t *status);
+#include "spkg_peripherals.h"
+#include "bbmc_update.h"
+#include "bic_update.h"
+#include "motion_update.h"
+#include "syscon_update.h"
+#include "touch_update.h"
 
 int SpkgInfoUtilGetSpkgInfo(int packageType, SceSblUsSpkgInfo *info)
 {

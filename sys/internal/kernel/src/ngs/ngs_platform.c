@@ -12,15 +12,12 @@
 
 #include "ngs_platform.h"
 #include "ngs_system.h"
+#include "ngs_module_memory.h"
 
 #define SCE_NGS_ERROR ((int)0x804a0001)
 #define SCE_NGS_ERROR_OUT_OF_ASSETS ((int)0x804a0006)
 
 NgsPlatformState ngsPlatformState;
-
-int ngsAtomicSet(int *value, int replacement, int expected);
-int ngsLockCodec(NgsPlatformContext *context);
-int ngsUnlockCodec(NgsPlatformContext *context);
 
 int ngsPlatformInitialize(void)
 {
@@ -402,16 +399,12 @@ released:
 	return 0;
 }
 
-SceSize ngsAlignMemorySize(SceSize size);
-
 int ngsGetAlignedMemorySize(SceSize size, int unused, int unused2,
 			int unused3, SceSize *alignedSize)
 {
 	*alignedSize = ngsAlignMemorySize(size);
 	return 0;
 }
-
-NgsSynSystem *ngsGetSystemFromHandle(unsigned int handle);
 
 int ngsAllocateProcessMemory(unsigned int handle, SceSize coherentSize,
 	SceSize callbackSize, SceSize dspHeapSize, SceSize systemSize,

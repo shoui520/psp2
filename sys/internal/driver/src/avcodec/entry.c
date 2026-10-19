@@ -3,31 +3,15 @@
 #include <sysmem/procevent.h>
 #include <modulemgr/modulemgr.h>
 #include <vnz_wrapper/vnz_wrapper.h>
+#include "audiodec/audiodec_internal.h"
+#include "audioenc/audioenc_internal.h"
+#include "videocodec/videocodec_internal.h"
+#include "jpeg/jpeg_internal.h"
+#include "jpegenc/jpegenc_internal.h"
 
 extern int _sceVideocodecProcessExitEntry(SceUID pid, SceUInt32 type);
-extern int _sceDsp0VideocodecProcessExitEntry(SceUID pid, SceUInt32 type);
-extern int jpegEncoderProcessExitEntry(SceUID pid, SceUInt32 type);
-extern int jpegProcessExitEntry(SceUID pid, SceUInt32 type);
-extern int _sceAudioencProcessExitEntry(SceUID pid, SceUInt32 type);
-extern int _sceAudiodecProcessExitEntry(SceUID pid, SceUInt32 type);
-extern int _sceAudiodecProcessCreateEntry(SceUID pid, SceUInt32 type);
-extern int _sceAudioencProcessCreateEntry(SceUID pid, SceUInt32 type);
-extern int jpegProcessCreateEntry(SceUID pid, SceUInt32 type);
-extern int jpegEncoderProcessCreateEntry(SceUID pid, SceUInt32 type);
-extern int _sceDsp0VideocodecProcessCreateEntry(SceUID pid, SceUInt32 type);
 extern int _sceVideocodecProcessCreateEntry(SceUID pid, SceUInt32 type);
-extern int videocodecProcessResume(SceUID pid);
-extern int dsp0VideocodecProcessResume(SceUID pid);
-extern int dsp0VideocodecIsProcessSuspended(SceUID pid);
-extern int videocodecProcessSuspend(SceUID pid);
-extern int dsp0VideocodecIsProcessActive(SceUID pid);
 extern int dsp0VideocodecProcessSuspend(SceUID pid);
-extern int initializeAudiodec(void);
-extern int initializeAudioenc(void);
-extern int initializeJpeg(void);
-extern int initializeJpegEncoder(void);
-extern int initializeDsp0Videocodec(void);
-extern int initializeVideocodec(void);
 
 int avcodecProcessExitHandler(SceUID pid, ProcEventParam *param, void *common)
 {

@@ -10,10 +10,6 @@
 #include <lowio/iftu.h>
 #include <string.h>
 
-int jpegLockEncodeBuffer(unsigned int *physicalAddress, const void *buffer,
-			 SceSize size, unsigned int lockMode, int cacheMode,
-			 unsigned int allowCached);
-
 static unsigned int jpegEncoderChannel;
 
 /* Nine-bit fixed-point RGB to JPEG YCbCr coefficients. */

@@ -12,6 +12,7 @@
 #include <sysmem/utils.h>
 #include <sysmem/qafmgr.h>
 #include <post_ss_mgr/sblpostssmgr.h>
+#include "spkg.h"
 
 extern int spkgMbrLoaded;
 extern unsigned int spkgBlSwitchCount, spkgOsSwitchCount;
@@ -19,24 +20,6 @@ extern uint32_t spkgModifiedBanks;
 extern uint64_t spkgOsChunkMask, spkgVshChunkMask;
 extern uint64_t spkgSysdataChunkMask, spkgPidataChunkMask;
 extern SceMbr spkgMbr;
-int UpdateUtilLockMbr(void);
-int UpdateUtilUnlockMbr(void);
-int UpdateUtilUpdateNodeStatus(unsigned int nodeType,
-		const UpdateUtilNodeStatus *status);
-int UpdateUtilSetBufferState(unsigned int state, void *buffer);
-int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packet,
-		SceKernelPAVector **dataVector, SceKernelPAVector **vectorVector,
-		void *buffer, SceSize size);
-int UpdateUtilFreePARangeVector(SceUID heapId, SceKernelPAVector *vector);
-int UpdateUtilInflateWritePartition(const void *buffer, uint64_t size,
-		uint64_t offset, const SceMbr *mbr, uint8_t partition,
-		unsigned int nodeType, UpdateUtilNodeStatus *status, SceUID pid);
-int StorageUtilSwitchOSBank(SceUID heapId, SceMbr *mbr);
-int StorageUtilSwitchBLBank(SceUID heapId, SceMbr *mbr);
-int SpkgUtilDoPersonalizeSLSK(const char *sourceName, const char *destinationName,
-		const char *previousName, const char *retiredName, SceSlb2Header *sbls);
-int SpkgInfoUtilSetDigest(int packageType, int flags, const void *digest,
-		SceSize size, int verify, int updateMode);
 int SceSblSsMgrForKernel_516ECC08(unsigned char *flag);
 
 int sceSblUsUpdateSpackageBH(SceSize arglen, SpkgThreadArgs *args)

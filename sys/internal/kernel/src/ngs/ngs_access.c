@@ -15,11 +15,9 @@
 
 struct SceNgsVoicePreset;
 
-int ngsGetSystemInstanceCount(void);
 int ngsCopyToCaller(void *destination, const void *source, SceSize size,
 		    int copyUserData);
 int ngsIsCallerRangeAccessible(const void *address, SceSize size, int copyUserData);
-int ngsGetProcessStorage(NgsProcessStorage **storage);
 
 SceInt32 sceNgsVoiceDefinitionGetPresetInternal(
 	const struct SceNgsVoiceDefinition *definition, SceUInt32 index,

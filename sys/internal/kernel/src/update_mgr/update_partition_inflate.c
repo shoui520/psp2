@@ -5,10 +5,6 @@
 int SceZlibForDriver_inflateInitNocheck_(SceZlibStream *stream, const char *version, int size);
 int inflate(SceZlibStream *stream, int flush);
 int SceZlibForDriver_inflateEnd(SceZlibStream *stream);
-void *UpdateUtilHeapAllocate(SceUID heapId, SceSize count, SceSize size);
-int UpdateUtilHeapFree(SceUID heapId, void *buffer);
-int UpdateUtilUpdateNodeStatus(unsigned int nodeType,
-		const UpdateUtilNodeStatus *status);
 
 int UpdateUtilInflateWritePartition(const void *input, uint64_t size,
 		uint64_t offset, const SceMbr *mbr, uint8_t partition,

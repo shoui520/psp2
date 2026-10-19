@@ -22,9 +22,6 @@ typedef struct SceNgsReverbParams {
 	float fDryMB;
 } SceNgsReverbParams;
 
-const struct NgsAudioFormat *ngsGetReverbFormat(void);
-int ngsGetReverbMemoryInfo(const struct NgsModuleInitParams *params,
-			 NgsModuleMemoryInfo *info);
 extern const char *ngsModuleInputName;
 
 const char *const ngsReverbPresetNames[31] = {

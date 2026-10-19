@@ -7,9 +7,6 @@ typedef struct SceNgsPitchShiftParams {
 	float fPitchOffsetInCents;
 } SceNgsPitchShiftParams;
 
-const struct NgsAudioFormat *ngsGetPitchShiftFormat(void);
-int ngsGetPitchShiftMemoryInfo(const struct NgsModuleInitParams *params,
-			      NgsModuleMemoryInfo *info);
 extern const char *ngsModuleOutputName;
 extern const char *ngsModuleInputName;
 

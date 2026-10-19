@@ -8,9 +8,6 @@ typedef struct SceNgsPauserParams {
 	unsigned int uPauseLeadOut;
 } SceNgsPauserParams;
 
-const struct NgsAudioFormat *ngsGetPauserFormat(void);
-int ngsGetPauserMemoryInfo(const struct NgsModuleInitParams *params,
-			 NgsModuleMemoryInfo *info);
 extern const char *ngsModuleOutputName;
 extern const char *ngsModuleInputName;
 

@@ -87,4 +87,43 @@ typedef struct NgsModuleDefinition {
 
 typedef char NgsModuleDefinitionSize[(sizeof(NgsModuleDefinition) == 68) ? 1 : -1];
 
+/* ngs_memory.c */
+SceSize ngsAlignMemorySize(SceSize size);
+int ngsAlignSize(int size, int alignment);
+void *ngsAlignVoiceDefinitionAddress(void *address, SceSize alignment);
+void *ngsAllocateMemory(unsigned char **cursor, SceSize size);
+
+/* ngs_module_memory.c */
+int ngsGetCompressorMemoryInfo(const struct NgsModuleInitParams *params, NgsModuleMemoryInfo *info);
+const struct NgsAudioFormat *ngsGetCompressorFormat(void);
+int ngsGetDistortionMemoryInfo(const struct NgsModuleInitParams *params, NgsModuleMemoryInfo *info);
+const struct NgsAudioFormat *ngsGetDistortionFormat(void);
+int ngsGetEnvelopeMemoryInfo(const struct NgsModuleInitParams *params, NgsModuleMemoryInfo *info);
+const struct NgsAudioFormat *ngsGetEnvelopeFormat(void);
+int ngsGetPauserMemoryInfo(const struct NgsModuleInitParams *params, NgsModuleMemoryInfo *info);
+const struct NgsAudioFormat *ngsGetPauserFormat(void);
+int ngsGetPcmVagPlayerMemoryInfo(const struct NgsModuleInitParams *params,
+			       NgsModuleMemoryInfo *info);
+const struct NgsAudioFormat *ngsGetPcmVagPlayerFormat(void);
+int ngsGetSignalGeneratorMemoryInfo(const struct NgsModuleInitParams *params,
+				  NgsModuleMemoryInfo *info);
+const struct NgsAudioFormat *ngsGetSignalGeneratorFormat(void);
+int ngsGetReverbMemoryInfo(const struct NgsModuleInitParams *params, NgsModuleMemoryInfo *info);
+const struct NgsAudioFormat *ngsGetReverbFormat(void);
+int ngsGetMixerMemoryInfo(const struct NgsModuleInitParams *params, NgsModuleMemoryInfo *info);
+const struct NgsAudioFormat *ngsGetMixerFormat(void);
+int ngsGetBiquadFilterMemoryInfo(const struct NgsModuleInitParams *params,
+			       NgsModuleMemoryInfo *info);
+const struct NgsAudioFormat *ngsGetBiquadFilterFormat(void);
+int ngsGetInputMemoryInfo(const struct NgsModuleInitParams *params, NgsModuleMemoryInfo *info);
+const struct NgsAudioFormat *ngsGetInputFormat(void);
+int ngsGetOutputMemoryInfo(const struct NgsModuleInitParams *params, NgsModuleMemoryInfo *info);
+const struct NgsAudioFormat *ngsGetOutputFormat(void);
+int ngsGetAt9PlayerMemoryInfo(const struct NgsModuleInitParams *params, NgsModuleMemoryInfo *info);
+const struct NgsAudioFormat *ngsGetAt9PlayerFormat(void);
+int ngsGetDelayMemoryInfo(const struct NgsModuleInitParams *params, NgsModuleMemoryInfo *info);
+const struct NgsAudioFormat *ngsGetDelayFormat(void);
+int ngsGetPitchShiftMemoryInfo(const struct NgsModuleInitParams *params, NgsModuleMemoryInfo *info);
+const struct NgsAudioFormat *ngsGetPitchShiftFormat(void);
+
 #endif

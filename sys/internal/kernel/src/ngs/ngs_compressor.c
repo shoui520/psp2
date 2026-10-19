@@ -14,10 +14,6 @@ typedef struct SceNgsCompressorParams {
 	float fSoftKnee;
 } SceNgsCompressorParams;
 
-const struct NgsAudioFormat *ngsGetCompressorFormat(void);
-int ngsGetCompressorMemoryInfo(const struct NgsModuleInitParams *params,
-			     NgsModuleMemoryInfo *info);
-
 const char *ngsModuleOutputName = "Output";
 const char *ngsModuleSideChainName = "Side Chain";
 const char *ngsModuleInputName = "Input";

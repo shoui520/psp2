@@ -25,4 +25,7 @@ _Static_assert(offsetof(SysconHandshakeRequest, output) == 48,
 int SysconUtilHandshakeStep(unsigned int phase, int smId,
 		const SysconHandshakeData *input, SysconHandshakeData *output);
 
+/* syscon_handshake.c */
+int SysconUtilHandshake(void);
+
 #endif

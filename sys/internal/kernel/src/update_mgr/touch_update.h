@@ -80,3 +80,6 @@ _Static_assert(__builtin_offsetof(TouchUtilFirmwareRecord, payload) == 6,
 
 int TouchUtilReadFirmwareRecord(const int8_t *buffer, uint64_t *position,
 	TouchUtilFirmwareRecord *record);
+
+/* touch_config_version.c */
+int TouchUtilGetConfigVersion(unsigned int port, uint32_t *version);

@@ -7,15 +7,6 @@
 #include "slsk.h"
 
 extern int slskSmId;
-int StorageUtilSblsSearchEntry(const SceSlb2Header *header,
-		const SceSlb2Entry *entry, const char *name, uint32_t *index,
-		uint32_t *sector, uint32_t *size);
-int StorageUtilSblsRename(const SceSlb2Header *header, SceSlb2Entry *entries,
-		const char *oldName, const char *newName);
-int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packetOut,
-		SceKernelPAVector **dataOut, SceKernelPAVector **vectorOut,
-		void *buffer, SceSize size);
-int UpdateUtilFreePARangeVector(SceUID heapId, SceKernelPAVector *vector);
 
 int SpkgUtilDoPersonalizeSLSK(const char *sourceName,
 		const char *destinationName, const char *previousName,

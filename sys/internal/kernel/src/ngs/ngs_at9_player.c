@@ -26,9 +26,6 @@ typedef struct SceNgsAT9Params {
 	int configData;
 } SceNgsAT9Params;
 
-const struct NgsAudioFormat *ngsGetAt9PlayerFormat(void);
-int ngsGetAt9PlayerMemoryInfo(const struct NgsModuleInitParams *params,
-			    NgsModuleMemoryInfo *info);
 extern const char *ngsModuleOutputName;
 
 const NgsModuleParamDescription ngsAt9PlayerControlDescriptions[9] = {

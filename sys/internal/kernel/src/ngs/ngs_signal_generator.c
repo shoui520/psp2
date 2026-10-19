@@ -16,9 +16,6 @@ typedef struct SceNgsGeneratorParams {
 	SceNgsGeneratorSettings generator;
 } SceNgsGeneratorParams;
 
-const struct NgsAudioFormat *ngsGetSignalGeneratorFormat(void);
-int ngsGetSignalGeneratorMemoryInfo(const struct NgsModuleInitParams *params,
-				  NgsModuleMemoryInfo *info);
 extern const char *ngsModuleOutputName;
 
 const SceNgsGeneratorParams ngsSignalGeneratorPresetParams = {

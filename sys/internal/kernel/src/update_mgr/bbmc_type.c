@@ -1,8 +1,5 @@
 #include "bbmc_update.h"
 
-int UpdateUtilLockCom(void);
-int UpdateUtilUnlockCom(void);
-
 int BbmcUtilCheckFirmwareType(uint64_t hardwareInfo)
 {
 	uint32_t actualHardware;

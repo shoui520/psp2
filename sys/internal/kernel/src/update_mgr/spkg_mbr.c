@@ -7,8 +7,6 @@ extern unsigned int spkgBlSwitchCount, spkgOsSwitchCount;
 extern uint32_t spkgModifiedBanks;
 extern uint64_t spkgOsChunkMask, spkgVshChunkMask;
 extern SceMbr spkgMbr;
-int UpdateUtilLockMbr(void);
-int UpdateUtilUnlockMbr(void);
 
 int SpkgUtilApplyMBR(void)
 {

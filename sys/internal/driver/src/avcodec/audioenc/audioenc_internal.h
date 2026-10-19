@@ -161,3 +161,8 @@ int audioencCreateCommand(AudioencCommand *command);
 int audioencEncodeCommand(AudioencCommand *command, int nFrames);
 int audioencClearContextCommand(AudioencCommand *command);
 int audioencGetOptInfoCommand(AudioencCommand *command);
+
+/* audioenc/audioenc.c */
+int initializeAudioenc(void);
+int _sceAudioencProcessCreateEntry(SceUID pid, SceUInt32 type);
+int _sceAudioencProcessExitEntry(SceUID pid, SceUInt32 type);

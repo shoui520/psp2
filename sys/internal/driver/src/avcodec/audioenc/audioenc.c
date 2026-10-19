@@ -102,7 +102,7 @@ int initializeAudioenc(void)
 	return ret;
 }
 
-int _sceAudioencProcessCreateEntry(SceUID pid)
+int _sceAudioencProcessCreateEntry(SceUID pid, SceUInt32 type)
 {
 	AudioencProcess *process = NULL;
 	unsigned int codec, encoder, channel;
@@ -158,7 +158,7 @@ int _sceAudioencProcessCreateEntry(SceUID pid)
 	return ret;
 }
 
-int _sceAudioencProcessExitEntry(SceUID pid)
+int _sceAudioencProcessExitEntry(SceUID pid, SceUInt32 type)
 {
 	AudioencProcess *process = NULL;
 	unsigned int codec;

@@ -7,6 +7,7 @@
 #include <stddef.h>
 
 #include "ngs_platform.h"
+#include "ngs_module_memory.h"
 
 struct NgsModuleDefinition;
 struct NgsSynRack;
@@ -80,3 +81,60 @@ _Static_assert(offsetof(NgsSynSystem, lockedRanges) == 196, "NgsSynSystem ranges
 _Static_assert(offsetof(NgsSynSystem, compiledSdkVersion) == 8392,
 	"NgsSynSystem compiled SDK");
 _Static_assert(sizeof(NgsSynSystem) == 8400, "NgsSynSystem size");
+
+/* ngs_access.c */
+int ngsCopyToCaller(void *destination, const void *source, SceSize size, int copyUserData);
+int ngsCopyFromCaller(void *destination, const void *source, SceSize size, int copyUserData);
+int ngsIsCallerRangeAccessible(const void *address, SceSize size, int copyUserData);
+unsigned int ngsGetSystemHandle(NgsSynSystem *system);
+NgsSynSystem *ngsGetSystemFromHandle(unsigned int handle);
+
+/* ngs_at9_player.c */
+int ngsGetAt9PlayerModule(NgsModuleDefinition **module);
+
+/* ngs_atomic.c */
+int ngsAtomicSet(int *value, int replacement, int expected);
+int ngsLockCodec(NgsPlatformContext *context);
+int ngsUnlockCodec(NgsPlatformContext *context);
+
+/* ngs_biquad_filter.c */
+int ngsGetBiquadFilterModule(NgsModuleDefinition **module);
+
+/* ngs_builtin.c */
+int ngsFindBuiltinModule(unsigned int moduleId, NgsModuleDefinition **module);
+
+/* ngs_compressor.c */
+int ngsGetCompressorModule(NgsModuleDefinition **module);
+
+/* ngs_delay.c */
+int ngsGetDelayModule(NgsModuleDefinition **module);
+
+/* ngs_distortion.c */
+int ngsGetDistortionModule(NgsModuleDefinition **module);
+
+/* ngs_envelope.c */
+int ngsGetEnvelopeModule(NgsModuleDefinition **module);
+
+/* ngs_input.c */
+int ngsGetInputModule(NgsModuleDefinition **module);
+
+/* ngs_mixer.c */
+int ngsGetMixerModule(NgsModuleDefinition **module);
+
+/* ngs_output.c */
+int ngsGetOutputModule(NgsModuleDefinition **module);
+
+/* ngs_pauser.c */
+int ngsGetPauserModule(NgsModuleDefinition **module);
+
+/* ngs_pcm_player.c */
+int ngsGetPcmVagPlayerModule(NgsModuleDefinition **module);
+
+/* ngs_pitch_shift.c */
+int ngsGetPitchShiftModule(NgsModuleDefinition **module);
+
+/* ngs_reverb.c */
+int ngsGetReverbModule(NgsModuleDefinition **module);
+
+/* ngs_signal_generator.c */
+int ngsGetSignalGeneratorModule(NgsModuleDefinition **module);

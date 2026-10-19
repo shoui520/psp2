@@ -26,4 +26,8 @@ _Static_assert(sizeof(BicUpdateToken) == 4, "battery update token size");
 int BicUtilStringToInt(const int8_t *text, int base);
 int BicUtilWaitCookieStatus(void);
 
+/* bic_versions.c */
+int BicUtilGetFirmwareVersion(uint32_t *version);
+int BicUtilGetDataFlashVersion(uint32_t *version);
+
 #endif

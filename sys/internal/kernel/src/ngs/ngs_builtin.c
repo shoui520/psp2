@@ -13,23 +13,8 @@
 struct NgsSynSystem;
 struct NgsModuleDefinition;
 
-uint32_t ngsGetSystemHandle(struct NgsSynSystem *system);
 int ngsRegisterModule(uint32_t handle, struct NgsModuleDefinition *module);
-int ngsGetCompressorModule(struct NgsModuleDefinition **module);
-int ngsGetDistortionModule(struct NgsModuleDefinition **module);
-int ngsGetEnvelopeModule(struct NgsModuleDefinition **module);
-int ngsGetBiquadFilterModule(struct NgsModuleDefinition **module);
-int ngsGetInputModule(struct NgsModuleDefinition **module);
-int ngsGetMixerModule(struct NgsModuleDefinition **module);
-int ngsGetPauserModule(struct NgsModuleDefinition **module);
-int ngsGetPcmVagPlayerModule(struct NgsModuleDefinition **module);
-int ngsGetSignalGeneratorModule(struct NgsModuleDefinition **module);
-int ngsGetReverbModule(struct NgsModuleDefinition **module);
 int ngsGetParametricEqualizerModule(struct NgsModuleDefinition **module);
-int ngsGetOutputModule(struct NgsModuleDefinition **module);
-int ngsGetAt9PlayerModule(struct NgsModuleDefinition **module);
-int ngsGetPitchShiftModule(struct NgsModuleDefinition **module);
-int ngsGetDelayModule(struct NgsModuleDefinition **module);
 
 typedef int (*NgsModuleGetter)(NgsModuleDefinition **module);
 
@@ -50,12 +35,6 @@ const NgsModuleGetter ngsBuiltinModuleGetters[] = {
 	ngsGetAt9PlayerModule,
 	ngsGetPitchShiftModule,
 };
-
-struct NgsSynSystem *ngsGetSystemFromHandle(unsigned int handle);
-int ngsAllocateDebugBuffer(SceNgsBufferInfo *buffer, SceUID *memBlock, int size);
-int ngsReleaseDebugBuffer(SceNgsBufferInfo *buffer, SceUID memBlock);
-int ngsCopyToCaller(void *destination, const void *source, SceSize size,
-		    int copyUserData);
 
 int ngsRegisterModule(uint32_t handle, struct NgsModuleDefinition *module)
 {

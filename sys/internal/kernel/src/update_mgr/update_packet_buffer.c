@@ -2,10 +2,6 @@
 #include "update_internal.h"
 #include "update_packet.h"
 
-int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packetOut,
-		SceKernelPAVector **dataOut, SceKernelPAVector **vectorOut,
-		void *buffer, SceSize size);
-
 int UpdateUtilCreatePacketPayloadWithBuffer(void **packet,
 		SceKernelPAVector **dataVector, SceKernelPAVector **vectorVector,
 		void **bufferOut, SceSize size)

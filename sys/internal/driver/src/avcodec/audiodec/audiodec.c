@@ -416,7 +416,7 @@ int initializeAudiodec(void)
 	return ret;
 }
 
-int _sceAudiodecProcessCreateEntry(SceUID pid)
+int _sceAudiodecProcessCreateEntry(SceUID pid, SceUInt32 type)
 {
 	AudiodecProcess *process = NULL;
 	unsigned int codec, decoder, channel;
@@ -521,7 +521,7 @@ int _sceAudiodecProcessCreateEntry(SceUID pid)
 	return ret;
 }
 
-int _sceAudiodecProcessExitEntry(SceUID pid)
+int _sceAudiodecProcessExitEntry(SceUID pid, SceUInt32 type)
 {
 	AudiodecProcess *process = NULL;
 	int codec = 0;

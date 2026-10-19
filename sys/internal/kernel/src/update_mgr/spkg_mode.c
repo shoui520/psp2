@@ -1,8 +1,7 @@
 #include <sysmem/sysclib.h>
 #include "update_internal.h"
 #include <syscon/syscon.h>
-
-int SpkgUtilApplyMBR(void);
+#include "spkg.h"
 
 int SpkgUtilGetUpdateMode(SceUpdateMode *mode)
 {

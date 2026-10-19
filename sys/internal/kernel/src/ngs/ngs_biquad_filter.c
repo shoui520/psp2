@@ -10,9 +10,6 @@ typedef struct SceNgsFilterParams {
 	float fGain;
 } SceNgsFilterParams;
 
-const struct NgsAudioFormat *ngsGetBiquadFilterFormat(void);
-int ngsGetBiquadFilterMemoryInfo(const struct NgsModuleInitParams *params,
-			       NgsModuleMemoryInfo *info);
 extern const char *ngsModuleOutputName;
 extern const char *ngsModuleInputName;
 

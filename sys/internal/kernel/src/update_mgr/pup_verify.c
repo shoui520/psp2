@@ -1,8 +1,6 @@
 #include <sm_comm/sm_comm.h>
 #include "update_internal.h"
 
-int UpdateUtilStopSmWithResult(int *smId, SceSblSmCommPair *result);
-
 int PupUtilVerifyPup(SceUID fd)
 {
 	SceSblSmCommPair stopResult;

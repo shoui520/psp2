@@ -2,13 +2,9 @@
 
 #include <sysmem/procevent.h>
 #include <stddef.h>
+#include "ngs_platform.h"
 
 int ngsProcessRelease(SceUID pid);
-int ngsProcessInitialize(SceUID pid);
-int ngsProcessSuspend(SceUID pid);
-int ngsProcessResume(SceUID pid);
-int ngsPlatformInitialize(void);
-int ngsPlatformShutdown(void);
 
 int ngsProcessKill(SceUID pid, ProcEventParam *event, void *common)
 {

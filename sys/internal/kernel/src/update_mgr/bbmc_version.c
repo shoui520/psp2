@@ -1,8 +1,5 @@
 #include "bbmc_update.h"
 
-int UpdateUtilLockCom(void);
-int UpdateUtilUnlockCom(void);
-
 int BbmcUtilGetFirmwareVersion(uint32_t *version)
 {
 	int result;

@@ -4,9 +4,6 @@
 #include <threadmgr/threadmgr.h>
 #include <string.h>
 
-int UpdateUtilUpdateNodeStatus(unsigned int nodeType,
-	UpdateUtilNodeStatus *status);
-
 int MotionUtilWriteFirmware(uint64_t hardwareInfo, const void *buffer,
 	uint64_t size, uint32_t version, unsigned int nodeType,
 	UpdateUtilNodeStatus *status)

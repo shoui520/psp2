@@ -1,8 +1,6 @@
 #include <threadmgr/threadmgr.h>
 #include "update_internal.h"
 
-int PupUtilVerifyPupSegmentMain(SceSize arglen, PupVerifyThreadArgs *args);
-
 int PupUtilVerifyPupSegment(SceUID fd, uint64_t segment_index,
 		int need_header_verify, int load_sm, int resident_sm)
 {

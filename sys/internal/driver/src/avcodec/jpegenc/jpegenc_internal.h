@@ -68,3 +68,8 @@ _Static_assert(sizeof(JpegEncoderCscArguments) == 16, "JPEG encoder CSC argument
 _Static_assert(sizeof(JpegEncoderInitParamArguments) == 16, "JPEG encoder init-param arguments ABI");
 
 int jpegEncoderInitWithParam(void *context, const SceJpegEncoderInitParam *pInitParam);
+
+/* jpegenc/jpegenc.c */
+int initializeJpegEncoder(void);
+int jpegEncoderProcessCreateEntry(SceUID pid, SceUInt32 type);
+int jpegEncoderProcessExitEntry(SceUID pid, SceUInt32 type);

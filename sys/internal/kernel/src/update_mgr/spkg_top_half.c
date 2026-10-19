@@ -4,11 +4,6 @@
 #include "spkg.h"
 #include <sysmem/sblaimgr.h>
 
-int UpdateUtilCheckBuffer(SceSize size, void *buffer);
-int UpdateUtilSetBufferState(unsigned int state, void *buffer);
-int UpdateUtilInitializeNodeStatus(unsigned int nodeType,
-		const UpdateUtilNodeStatus *status);
-int sceSblUsUpdateSpackageBH(SceSize arglen, SpkgThreadArgs *args);
 extern uint32_t updateRequestIdCounter;
 
 enum SpkgPackageOperation {

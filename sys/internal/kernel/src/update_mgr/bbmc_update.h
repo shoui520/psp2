@@ -50,3 +50,6 @@ int SceBbmcForDriver_94A31A9C(int subscriber, const BbmcUpdatePackage *package);
 int SceBbmcForDriver_7CB72009(int subscriber, uint32_t *version)
 	__attribute__((weak));
 int BbmcUtilIsAvailable(void);
+
+/* bbmc_status.c */
+int BbmcUtilGetStatus(uint32_t *status);

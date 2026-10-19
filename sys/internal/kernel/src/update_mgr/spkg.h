@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <scetypes.h>
+#include "sbls.h"
 
 typedef struct SpkgThreadArgs {
 	uint32_t nodeType;
@@ -52,5 +53,33 @@ _Static_assert(sizeof(SpkgChunkInfo) == 64, "s-package chunk information size");
 _Static_assert(offsetof(SpkgChunkInfo, offset) == 16 &&
 	       offsetof(SpkgChunkInfo, chunkCount) == 40,
 	       "s-package chunk information layout");
+
+/* spkg_bottom_half.c */
+int sceSblUsUpdateSpackageBH(SceSize arglen, SpkgThreadArgs *args);
+
+/* spkg_cp_reboot.c */
+int SpkgUtilCpReboot(void);
+
+/* spkg_cp_shutdown.c */
+int SpkgUtilCpShutdown(int mode);
+
+/* spkg_digest_set.c */
+int SpkgInfoUtilSetDigest(int packageType, int flags, const void *digest,
+		SceSize size, int loadSm, int existingSmId);
+
+/* spkg_mbr.c */
+int SpkgUtilApplyMBR(void);
+
+/* spkg_personalize.c */
+int SpkgUtilDoPersonalizeSLSK(const char *sourceName,
+		const char *destinationName, const char *previousName,
+		const char *retiredName, SceSlb2Header *sbls);
+
+/* spkg_top_half.c */
+int SpkgUtilSpackageTopHalf(unsigned int nodeType, int packageType,
+		void *buffer, SceSize size, int flags, uint32_t *requestId);
+
+/* spkg_translate.c */
+int SpkgInfoUtilTranslateParams(int packageType, int flags, uint32_t *purpose, uint32_t *bank);
 
 #endif

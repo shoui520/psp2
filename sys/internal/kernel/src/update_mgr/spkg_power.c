@@ -5,11 +5,10 @@
 #include <sysmem/sblaimgr.h>
 #include <sysmem/dipsw.h>
 #include <power/power.h>
+#include "spkg.h"
 
 extern int updateSysconShutdownWorkaround;
 extern int updateSysconFirmwareUpdateStarted;
-int SpkgUtilCpReboot(void);
-int SpkgUtilCpShutdown(int mode);
 int SceDeci4pCpupForDriver_BBB991CD(uint32_t commandId);
 int SceLedForDriver_EA24BE03(int led, int mode, void *param) __attribute__((weak));
 

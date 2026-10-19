@@ -3,6 +3,7 @@
 #pragma once
 
 #include <scetypes.h>
+#include <ngs/ngs_top.h>
 #include <threadmgr/fast_mutex_object.h>
 
 struct NgsSynSystem;
@@ -55,3 +56,17 @@ typedef struct NgsPlatformState {
 } NgsPlatformState;
 
 _Static_assert(sizeof(NgsPlatformState) == 84, "NgsPlatformState size");
+
+/* ngs_platform.c */
+int ngsPlatformInitialize(void);
+int ngsPlatformShutdown(void);
+int ngsProcessInitialize(SceUID pid);
+int ngsProcessSuspend(SceUID pid);
+int ngsProcessResume(SceUID pid);
+int ngsGetSystemInstanceCount(void);
+int ngsGetSystemExtraMemorySize(SceSize *size);
+int ngsGetProcessStorage(NgsProcessStorage **storage);
+int ngsGetAlignedMemorySize(SceSize size, int unused, int unused2,
+			int unused3, SceSize *alignedSize);
+int ngsReleaseDebugBuffer(SceNgsBufferInfo *buffer, SceUID memBlock);
+int ngsAllocateDebugBuffer(SceNgsBufferInfo *buffer, SceUID *memBlock, int size);

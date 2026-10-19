@@ -3,8 +3,6 @@
 #include "touch_update.h"
 #include "touch_dispatch.h"
 
-int UpdateUtilUpdateNodeStatus(unsigned int nodeType, UpdateUtilNodeStatus *status);
-
 int TouchUtilWriteConfig(uint64_t hardwareInfo, const void *buffer,
 	uint64_t size, uint32_t version, unsigned int nodeType,
 	UpdateUtilNodeStatus *status)

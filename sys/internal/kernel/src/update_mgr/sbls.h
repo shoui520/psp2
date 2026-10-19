@@ -30,4 +30,11 @@ _Static_assert(sizeof(SceSlb2Header) == 32 &&
 	       offsetof(SceSlb2Header, entryList) == 32,
 	       "SLB2 header layout");
 
+/* storage_sbls.c */
+int StorageUtilSblsSearchEntry(const SceSlb2Header *header,
+		const SceSlb2Entry *entry, const char *name, uint32_t *index,
+		uint32_t *sector, uint32_t *size);
+int StorageUtilSblsRename(const SceSlb2Header *header, SceSlb2Entry *entries,
+		const char *oldName, const char *newName);
+
 #endif

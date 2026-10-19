@@ -1,12 +1,11 @@
 #include "spkg_peripherals.h"
 #include "syscon_update.h"
 #include <syscon/syscon.h>
+#include "syscon_handshake.h"
 
 extern int updateSysconFirmwareUpdateStarted;
 extern int updateSysconShutdownWorkaround;
 extern int updateSysconLargeChunks;
-int SysconUtilHandshake(void);
-int UpdateUtilUpdateNodeStatus(unsigned int nodeType, UpdateUtilNodeStatus *status);
 
 int SysconUtilWriteFirmware(int kind, const void *buffer, uint64_t size,
 		unsigned int nodeType, UpdateUtilNodeStatus *status)

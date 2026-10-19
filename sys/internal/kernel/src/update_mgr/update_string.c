@@ -1,6 +1,5 @@
 #include <stdint.h>
-
-int BicUtilStringToInt(const int8_t *text, int base);
+#include "bic_update.h"
 
 int UpdateUtilStringToInt(const int8_t *text, int unused, int base)
 {

@@ -4,9 +4,7 @@
 #include <intrmgr/syscall.h>
 #include <sysmem/sysclib.h>
 #include "ngs_voice_definition.h"
-
-void *ngsAlignVoiceDefinitionAddress(void *address, unsigned int alignment);
-void *ngsAllocateMemory(unsigned char **cursor, unsigned int size);
+#include "ngs_module_memory.h"
 
 unsigned char ngsDelayVoiceDefinitionStorage[160]
 	__attribute__((section(".data"))) = { 0 };
@@ -138,7 +136,6 @@ const struct SceNgsVoiceDefinition *sceNgsVoiceDefGetCompressorBussInternal(void
 	return (const struct SceNgsVoiceDefinition *)
 		((uintptr_t)definition ^ 0x9e28dcce);
 }
-
 
 const struct SceNgsVoiceDefinition *sceNgsVoiceDefGetCompressorSideChainBussInternal(void)
 {

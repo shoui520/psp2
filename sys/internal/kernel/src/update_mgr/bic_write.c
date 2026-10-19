@@ -3,9 +3,6 @@
 #include "bic_update.h"
 #include <syscon/syscon.h>
 
-int UpdateUtilUpdateNodeStatus(unsigned int nodeType,
-		const UpdateUtilNodeStatus *status);
-
 int BicUtilWriteFirmware(const void *buffer, uint64_t size, uint32_t version,
 		unsigned int nodeType, UpdateUtilNodeStatus *status)
 {

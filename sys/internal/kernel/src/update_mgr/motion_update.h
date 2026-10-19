@@ -40,3 +40,7 @@ extern const unsigned int motionFlashChunkSizes[2];
 void MotionUtilCommandComplete(int result,
 	const struct MotionSensorResponse *request,
 	struct MotionSensorResponse *response, void *arg);
+
+/* motion_versions.c */
+int MotionUtilGetFirmwareVersion(uint32_t *version);
+int MotionMagnUtilGetFirmwareVersion(uint32_t *version);

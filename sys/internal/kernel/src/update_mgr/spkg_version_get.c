@@ -1,8 +1,6 @@
 #include "update_internal.h"
 #include "snvs.h"
-
-int SpkgInfoUtilTranslateParams(int packageType, int flags,
-		uint32_t *purpose, uint32_t *bank);
+#include "spkg.h"
 
 int SpkgInfoUtilGetVersion(int packageType, int flags, unsigned int *version,
 		int loadSm, int existingSmId)

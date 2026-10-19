@@ -74,4 +74,16 @@ _Static_assert(sizeof(PupCachedHeader) == 144 &&
 	       offsetof(PupCachedHeader, headerDigest) == 140,
 	       "PUP cached header layout");
 
+/* pup_additional_sign.c */
+int PupUtilVerifyPupAdditionalSignMain(SceSize arglen, PupVerifyThreadArgs *args);
+
+/* pup_header.c */
+int PupUtilVerifyPupHeaderAsync(SceSize arglen, PupVerifyThreadArgs *args);
+
+/* pup_segment.c */
+int PupUtilVerifyPupSegmentMain(SceSize arglen, PupVerifyThreadArgs *args);
+
+/* pup_watermark.c */
+int PupUtilVerifyPupWatermarkMain(SceSize arglen, PupVerifyThreadArgs *args);
+
 #endif

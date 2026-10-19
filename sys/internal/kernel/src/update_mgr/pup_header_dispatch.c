@@ -2,8 +2,6 @@
 #include <sysmem/sysmem.h>
 #include "update_internal.h"
 
-int PupUtilVerifyPupHeaderAsync(SceSize arglen, PupVerifyThreadArgs *args);
-
 int PupUtilVerifyPupHeader(SceUID fd, int load_sm, int resident_sm)
 {
 	PupVerifyThreadArgs args;
