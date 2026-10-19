@@ -13,6 +13,7 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>
 #include <sysmem/debug.h>
+#include <smsc_proxy/smsc_proxy.h>
 
 #define AM_EINVAL ((int)0x800f0516)
 #define AM_EHANDLE ((int)0x800f0509)
@@ -34,18 +35,7 @@
 #define AUTH_PANIC(debugLine, releaseLine) \
 	SceDebugForDriver_391B5B74(SCE_DBGINFO(FW_DEBUG ? debugLine : releaseLine), __builtin_return_address(0))
 
-/* Module-local ABI declarations while shared dependency headers are frozen. */
 typedef void (*AuthCryHandler)(SceUID, int, void *, uint32_t, uint32_t);
-int sceSblSmSchedProxyInvoke(uint32_t, uint32_t, uint32_t,
-	const uint32_t *, const SelfAuthRequest *, SceUID *);
-int sceSblSmSchedProxyWait(SceUID id, uint32_t *result);
-int sceSblSmSchedProxyGetStatus(SceUID id, uint32_t *result);
-int SceSblSmSchedProxyForKernel_723B382F(SceUID id, int channel, uint32_t value);
-int sceSblSmSchedProxyWriteCry2Arm(SceUID id, int channel, uint32_t value);
-int sceSblSmSchedProxyReadCry2Arm(SceUID id, int channel, uint32_t *value);
-int SceSblSmSchedProxyForKernel_8B84AC2A(SceUID id, int channel,
-	AuthCryHandler handler, void *argument);
-int SceSblSmSchedProxyForKernel_85EDA5FC(SceUID id, int channel);
 extern uint32_t __stack_chk_guard;
 
 /* Uncached wire packets: the first 0x40 bytes are the native command header. */

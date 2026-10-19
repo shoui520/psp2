@@ -15,6 +15,7 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/barrier.h>
 #include <intrmgr/syscall.h>
+#include <smsc_proxy/smsc_proxy.h>
 
 #define SM_ERROR_START		((int)0x800f0002)
 #define SM_ERROR_CHANNEL	((int)0x800f0001)
@@ -32,19 +33,8 @@
 #define SM_MEMBLOCK_TYPE	0x10208006U
 #define NOINLINE		__attribute__((noinline))
 
-/* Module-local declarations while the shared dependency headers are frozen.
- * These are the same contracts used by the verified SMSC Proxy and Sysmem.
- */
 typedef void (*SmCry2ArmHandler)(SceUID id, int channel, void *argument,
 	uint32_t status, uint32_t result);
-int sceSblSmSchedProxyInvoke(uint32_t priority, uint32_t physicalVector,
-	uint32_t count, const uint32_t *commandInput, const SelfAuthRequest *auth, SceUID *id);
-int sceSblSmSchedProxyWait(SceUID id, void *result);
-int SceSblSmSchedProxyForKernel_723B382F(SceUID id, int channel, uint32_t value);
-int sceSblSmSchedProxyWriteCry2Arm(SceUID id, int channel, uint32_t value);
-int sceSblSmSchedProxyReadCry2Arm(SceUID id, int channel, uint32_t *value);
-int SceSblSmSchedProxyForKernel_8B84AC2A(SceUID id, int channel,
-	SmCry2ArmHandler handler, void *argument);
 
 struct SmSession {
 	volatile SceUID id;
