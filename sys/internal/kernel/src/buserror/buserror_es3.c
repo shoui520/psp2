@@ -80,16 +80,22 @@ FormatBusErrorInfo_ES3(char *buf, SceSize size, const BusErrorRecord *rec)
 		"[ Bus error occured on target device ]\nBET0:0x%08x, BET1:0x%08x, BEBT:0x%08x\n\n",
 		status0, status1, busStatus);
 	for (i = 0; i < ocp->count; i++) {
-		const BusErrorOcpTarget *target = i < 15 ?
-			&ocpTargets0[i] : &ocpTargets1[i - 15];
-		SceUInt32 combined = i < 15 ? status0 : status1;
-		SceUInt32 first = i < 15 ? ocp->status[0][0] : ocp->status[0][1];
+		const BusErrorOcpTarget *target;
 		const BusErrorOcpError *error = &ocp->target[i].error[0];
 
-		if (!(combined & target->mask))
-			continue;
-		if (!(first & target->mask))
-			error++;
+		if (i < 15) {
+			target = &ocpTargets0[i];
+			if (!(status0 & target->mask))
+				continue;
+			if (!(ocp->status[0][0] & target->mask))
+				error++;
+		} else {
+			target = &ocpTargets1[i - 15];
+			if (!(status1 & target->mask))
+				continue;
+			if (!(ocp->status[0][1] & target->mask))
+				error++;
+		}
 		written = FormatOcpTargetInfo_ES3(buf, size, target->name,
 						error->address, error->attribute);
 		buf += written;
