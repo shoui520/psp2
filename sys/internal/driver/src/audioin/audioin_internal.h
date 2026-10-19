@@ -1,5 +1,4 @@
-#ifndef AUDIOIN_INTERNAL_H
-#define AUDIOIN_INTERNAL_H
+#pragma once
 
 #include <stdint.h>
 #include <threadmgr/fast_mutex.h>
@@ -159,19 +158,31 @@ extern const char g_audioInAecThreadName[];
 extern const char g_audioInModuleName[];
 extern const char g_audioInAecMutexName[];
 
+/* capture_config.c */
 int audioInReturnZero(void);
 unsigned int configureAudioInCaptureBuffers(void);
-int audioInProcessExitHandler(SceUID pid, ProcEventParam *param, void *common);
-int audioInProcessKillHandler(SceUID pid, ProcEventParam *param, void *common);
 int audioInProcessStopHandler(SceUID pid, int eventType, ProcEventParam *param,
 		void *common);
+
+/* capture_process.c */
+int audioInProcessKillHandler(SceUID pid, ProcEventParam *param, void *common);
 int audioInProcessStartHandler(SceUID pid, int eventType, ProcEventParam *param,
 		void *common);
-int audioInSysEventHandler(int resume, int eventId, void *args, void *opt);
-int audioInCaptureThread(SceSize size, void *argument) __attribute__((noreturn));
 int audioInAecThread(SceSize size, void *argument);
+
+/* capture_buffers.c */
 void *initializeAudioInCaptureBuffers(void);
+
+/* capture.c */
+int audioInSysEventHandler(int resume, int eventId, void *args, void *opt);
+int audioInProcessExitHandler(SceUID pid, ProcEventParam *param, void *common);
+int audioInCaptureThread(SceSize size, void *argument) __attribute__((noreturn));
+
+/* legacy.c */
+void initializeAudioInLegacyQueue(void);
+int readAudioInLegacyQueue(int16_t *samples, unsigned int count);
 int writeAudioInLegacyQueue(const int16_t *samples, int count);
+void resetAudioInLegacyQueue(void);
 
 /* aec.c */
 int initializeAudioInAecLibrary(void);
@@ -180,36 +191,10 @@ int processAudioInAecBuffers(AudioInAecContext *context, int16_t *first,
 		int16_t *second, int gain, unsigned int flags);
 int configureAudioInAec(AudioInAecContext *context, const void *control);
 
-/* legacy.c */
-void initializeAudioInLegacyQueue(void);
-int readAudioInLegacyQueue(int16_t *samples, unsigned int count);
-void resetAudioInLegacyQueue(void);
-
 /* resampler.c */
 void initializeAudioInResampler(void);
 void resampleAudioInCapture(unsigned int stream, const int16_t *input,
 		int16_t *output, unsigned int count, int channel);
-
-/* Process port teardown shared by the kill and exit callbacks. */
-#define CLOSE_PROCESS_PORT(index) do { \
-	if (pid == g_audioInPorts[index].pid) { \
-		if (g_audioInPorts[index].eventFlag != 0) { \
-			if (g_audioInPorts[index].flags & 0x10) { \
-				g_audioInPorts[index].flags &= 0xffffff79; \
-				sceKernelSetEventFlag(g_audioInPorts[index].eventFlag, 1024); \
-			} else { \
-				sceKernelDeleteEventFlag(g_audioInPorts[index].eventFlag); \
-				g_audioInPorts[index].eventFlag = 0; \
-			} \
-		} \
-		g_audioInPorts[index].flags = 0; \
-		g_audioInPorts[index].pid = 0; \
-		g_audioInOpenPortCount--; \
-		g_audioInPorts[index].port = 0; \
-		if (g_audioInPortClosed != 0) \
-			g_audioInPortClosed(pid); \
-	} \
-} while (0)
 
 /* aec_core.c */
 int initializeAudioInAecMutex(void);
@@ -222,5 +207,3 @@ int queryAudioInAecWorkspace(AudioInAecRpcContext *context);
 int initializeAudioInAecContextRpc(AudioInAecRpcContext *context);
 int processAudioInAecContextRpc(AudioInAecRpcContext *context, int gain, unsigned int flags);
 int configureAudioInAecContextRpc(AudioInAecRpcContext *context, const void *control);
-
-#endif

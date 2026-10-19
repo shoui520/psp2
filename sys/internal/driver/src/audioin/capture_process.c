@@ -10,6 +10,27 @@
 #include <syscon/syscon.h>
 #include <sysmem/sblaimgr.h>
 
+/* the kill callback's teardown of a port the process holds */
+#define CLOSE_PROCESS_PORT(index) do { \
+	if (pid == g_audioInPorts[index].pid) { \
+		if (g_audioInPorts[index].eventFlag != 0) { \
+			if (g_audioInPorts[index].flags & 0x10) { \
+				g_audioInPorts[index].flags &= 0xffffff79; \
+				sceKernelSetEventFlag(g_audioInPorts[index].eventFlag, 1024); \
+			} else { \
+				sceKernelDeleteEventFlag(g_audioInPorts[index].eventFlag); \
+				g_audioInPorts[index].eventFlag = 0; \
+			} \
+		} \
+		g_audioInPorts[index].flags = 0; \
+		g_audioInPorts[index].pid = 0; \
+		g_audioInOpenPortCount--; \
+		g_audioInPorts[index].port = 0; \
+		if (g_audioInPortClosed != 0) \
+			g_audioInPortClosed(pid); \
+	} \
+} while (0)
+
 int audioInProcessKillHandler(SceUID pid, ProcEventParam *unusedParam,
 		void *common)
 {
