@@ -9,14 +9,7 @@
 #include <sysmem/sysmem.h>
 #include <coredump/coredump.h>
 #include <intrmgr/syscall.h>
-
-extern int oalMutexInit(SceUID *mutexId);
-extern int oalMutexFinal(SceUID mutexId);
-extern int oalMutexLock(SceUID mutexId);
-extern int oalMutexUnlock(SceUID mutexId);
-extern int oalRegisterCoredumpHandler(SceCoredumpHandler handler,
-	SceSize stackSize, void *pCommon);
-extern int oalUnregisterCoredumpHandler(void);
+#include "oal_internal.h"
 
 SceSize userDataCapacity;
 SceSize userDataUsedSize;

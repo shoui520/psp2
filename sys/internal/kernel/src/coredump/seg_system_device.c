@@ -14,9 +14,6 @@ _Static_assert(sizeof(CoredumpSystemDeviceNote) == 208,
 	"system device note size");
 
 extern Writer *currentWriter;
-extern int oalIsSystemProgram(SceUID pid);
-extern void oalGetVitaCardInfo(CoredumpVitaCardInfo *out);
-extern void oalGetMemoryCardInfo(CoredumpMemoryCardInfo *out);
 
 static int _init(SegIf *segment);
 static int _calcSize(SegIf *segment);

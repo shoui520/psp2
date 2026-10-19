@@ -6,13 +6,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern int oalGetNumOfUltObjects(SceUID pid, int type);
-extern void oalGetUltObjIds(SceUID pid, SceUInt32 *ids, SceUInt32 capacity,
-	SceUInt32 skip, int type);
-extern void oalGetUltMutexInfo(SceUID pid, SceUIntPtr address,
-	CoredumpUltMutexInfo *info, SceUInt32 *ids, uint32_t *numIds);
-extern void *memMgrLocalAlloc(SceSize size);
-extern int memMgrLocalFree(void *allocation);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

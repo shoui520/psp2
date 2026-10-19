@@ -3,8 +3,6 @@
 #include "writer_internal.h"
 #include <sysmem/debug.h>
 
-extern void *memMgrAlloc(SceSize size);
-extern int memMgrFreeForWriter(void *allocation);
 extern int deflateInit2Padded_(SceZlibStream *stream, int level,
 	int method, int windowBits, int memLevel, int strategy,
 	const char *version, int streamSize);

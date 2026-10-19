@@ -4,8 +4,11 @@
 
 #include <stdint.h>
 #include <scetypes.h>
+#include <sysmem/sysmem.h>
 #include <modulemgr/module_library.h>
 #include <coredump/coredump.h>
+#include <iofilemgr/iofilemgr.h>
+#include <modulemgr/modulemgr_debugger.h>
 #include <ss_mgr/ss_mgr.h>
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/threadmgr_debugger.h>
@@ -782,3 +785,216 @@ int _getThreadStopReason(SceUID threadId,
 	const CoredumpThreadStopEvent *stopEvent, CoredumpStopReason *stopReason);
 int _getCdnPcAndLrInfo(SceUID pid, const CoredumpThreadStopEvent *stopEvent,
 	CoredumpCdnPcAndLrInfo *location);
+
+/* oal.c */
+int _getBuildVerInfo(void);
+int oalIsPlaintextDumpAllowed(SceUID pid);
+int oalIsSystemProgram(SceUID pid);
+int oalIsRootProgram(SceUID pid);
+int oalIsCEX(void);
+int oalIsToolDipswEnabled(void);
+int oalMemBlockInit(SceUID *blockId, SceSize size);
+int oalMemBlockInitForDevTool(SceUID *blockId, SceSize size);
+int oalMemBlockFinal(SceUID blockId);
+int oalHeapInit(SceUID blockId, SceUID *heapId, SceSize maxSize);
+int oalHeapFinal(SceUID heapId);
+SceSize oalHeapGetFreeSize(SceUID heapId);
+void *oalHeapAlloc(SceUID heapId, SceSize size);
+int oalHeapFree(SceUID heapId, void *allocation);
+int oalGetPartitionOfMemBlock(const CoredumpMemBlockInfo *info);
+SceUID oalGetThreadId(void);
+int oalCreateThread(SceUID *threadId, const char *name, int priority, SceSize stackSize,
+		SceKernelThreadEntry entry);
+int oalDeleteThread(SceUID threadId);
+int oalStartThread(SceUID threadId);
+int oalExitDeleteThread(void);
+int oalWaitThreadEnd(SceUID threadId, SceUInt timeout);
+void oalGetProcessDumpName(SceUID pid, char *name);
+int oalCondInit(SceUID *condId, SceUID mutexId);
+int oalCondFinal(SceUID condId);
+int oalCondWait(SceUID condId);
+int oalCondSignalTo(SceUID condId, SceUID threadId);
+int oalMutexInit(SceUID *mutexId);
+int oalMutexFinal(SceUID mutexId);
+int oalMutexLock(SceUID mutexId);
+int oalMutexUnlock(SceUID mutexId);
+int oalEventQueueInit(CoredumpEventQueue *queue);
+int oalEventQueueFinal(CoredumpEventQueue *queue);
+int oalEventQueueSend(CoredumpEventQueue *queue, const CoredumpEvent *event);
+int oalEventQueueReceive(CoredumpEventQueue *queue, CoredumpEvent *event);
+int oalEventQueueEachElem(CoredumpEventQueue *queue,
+		void (*callback)(CoredumpEvent *event, void *context), void *context);
+unsigned int oalGetUnixTime(void);
+int oalFileOpen(const char *path, SceUID *fd);
+int oalFileReopen(const char *path, SceUID *fd);
+int oalFileSetIoCacheSize(SceUID fd, SceSize cacheSize);
+int oalFileClose(SceUID fd);
+int oalFileRemove(const char *path);
+int oalFileRename(const char *oldPath, const char *newPath);
+int oalFileRead(SceUID fd, void *buffer, SceSize size);
+int oalFileWrite(SceUID fd, const void *buffer, SceSize size);
+SceOff oalFileSeek(SceUID fd, SceOff offset, int whence);
+int oalGetThreadStack(SceUID pid, SceUID threadId, uintptr_t *stackBase, SceSize *stackSize);
+int oalGetThreadTlsStack(SceUID pid, SceUID threadId, uintptr_t *stackBase, SceSize *stackSize);
+int oalProbeThreadInfo(SceUID pid, SceUID threadId);
+int oalIsAccessibleRange(SceUID pid, const void *address, SceSize size);
+void oalCopyFromUserSpace(SceUID pid, void *destination, const void *source, SceSize size);
+void oalGetCorefileInfo(SceUID pid, CoredumpCorefileInfo *info);
+void oalGetSystemInfo(SceUID pid, CoredumpSystemInfo *info);
+int oalGetAppBuildSDKVersion(SceUID pid, SceUInt32 *sdkVersion);
+void oalGetBuildVerInfo(SceUID pid, CoredumpBuildVerInfo *info);
+void oalGetHwInfo(SceUID pid, CoredumpHwInfo *info);
+void oalGetProcessInfo(SceUID pid, CoredumpProcessInfo *info);
+SceUInt64 oalGetProcessTime(SceUID pid);
+int oalGetProcessPath(SceUID pid, char *path, SceSize *pathSize);
+void oalGetProcessArmExInfo(SceUID pid, CoredumpArmExInfo *info);
+unsigned int oalGetNumOfThreads(SceUID pid);
+void oalGetThreadIdList(SceUID pid, SceUID *ids, unsigned int capacity);
+void oalFormatThreadInfo(CoredumpThreadInfo *info, const CoredumpThreadSnapshot *snapshot);
+void oalGetThreadInfo(SceUID pid, SceUID threadId, const CoredumpThreadStopEvent *stopEvent,
+		CoredumpThreadInfo *info);
+int oalGetStackInfo(SceUID pid, SceUID threadId, CoredumpStackInfo *info);
+int oalGetThreadRegInfo(SceUID pid, SceUID threadId, CoredumpThreadRegInfo *info);
+int oalGetNumOfModulesAndSegments(SceUID pid, int *numModules, unsigned int *numSegments,
+		SceKernelModuleInfoForDebugger *modules, SceSize capacity);
+int oalEachModuleInfo(SceUID pid,
+	int (*callback)(CoredumpModuleInfo *info,
+		SceKernelSegmentInfoForDebugger *segments, unsigned int nSegments,
+		SceKernelModuleExidxInfo *exidx, void *context),
+	SceKernelModuleInfoForDebugger *modules, SceSize capacity, void *context);
+int oalGetNumOfLibs(SceUID pid);
+void oalGetLibIdList(SceUID pid, SceUID *ids, SceSize capacity);
+int oalGetLibInfo(SceUID pid, SceUID libraryId, CoredumpLibraryInfo *info);
+unsigned int oalGetLibNumFuncAndVar(SceUID pid, const CoredumpLibraryInfo *info);
+void oalGetLibExportInfo(SceUID pid, SceUID libraryId, SceKernelLibraryExportEntry *entries,
+		SceSize capacity, SceSize skip);
+unsigned int oalGetLibNumClient(SceUID pid, const CoredumpLibraryInfo *info);
+void oalGetLibClientInfo(SceUID pid, SceUID libraryId, SceUID *moduleIds, SceSize capacity);
+void oalGetLibName(SceUID pid, SceUID libraryId, char *name, SceSize *nameSize);
+int oalGetNumOfMemBlocks(SceUID pid);
+void oalGetMemBlockIdList(SceUID pid, SceUID *ids, SceSize capacity);
+void oalGetMemBlockInfo(SceUID pid, SceUID uid, CoredumpMemBlockInfo *info);
+int oalEachOfAllMemBlockInfo(SceUID pid,
+	int (*callback)(CoredumpMemBlockInfo *info, void *context), void *context,
+	MemBlockInfoEx *blocks, SceSize size);
+int oalEachFileInfo(SceUID pid,
+	int (*callback)(CoredumpFileInfo *info, SceSize resolvedPathSize,
+		const char *resolvedPath, SceSize resolvedPathPadding,
+		SceSize openPathSize, const char *openPath, SceSize openPathPadding,
+		void *context),
+	void *context, SceIoFdInfo *fds, SceSize capacity);
+unsigned int oalGetNumOfSyncObj(int type, SceUID pid);
+void oalGetSyncObjIdList(int type, SceUID pid, SceUID *ids, SceSize capacity);
+int oalGetNumOfWaitingThreads(SceUID pid, SceUID waitId);
+void oalGetWaitingThreadList(SceUID pid, SceUID waitId, CoredumpWaitingThread *list,
+		SceSize capacity);
+void oalGetSemaphoreInfo(SceUID pid, SceUID semaId, CoredumpSemaphoreInfo *info);
+void oalGetEventFlagInfo(SceUID pid, SceUID eventFlagId, CoredumpEventFlagInfo *info);
+void oalGetMutexInfo(SceUID pid, SceUID mutexId, CoredumpMutexInfo *info);
+void oalGetLwMutexInfo(SceUID pid, SceUID lwMutexId, CoredumpLwMutexInfo *info);
+void oalGetCondInfo(SceUID pid, SceUID condId, CoredumpCondInfo *info);
+void oalGetLwCondInfo(SceUID pid, SceUID lwCondId, CoredumpLwCondInfo *info, void **work,
+		ThreadmgrLwMutexWork **lwMutexWork);
+void oalGetMsgPipeInfo(SceUID pid, SceUID msgPipeId, CoredumpMsgPipeInfo *info);
+void oalGetCallbackInfo(SceUID pid, SceUID callbackId, CoredumpCallbackInfo *info);
+void oalGetTimerInfo(SceUID pid, SceUID timerId, CoredumpTimerInfo *info);
+void oalGetRWLockInfo(SceUID pid, SceUID rwLockId, CoredumpRWLockInfo *info);
+void oalGetCommonEventInfo(SceUID pid, SceUID eventId, CoredumpCommonEventInfo *info);
+void oalGetSimpleEventInfo(SceUID pid, SceUID eventId, CoredumpSimpleEventInfo *info);
+int oalGetNumAndTotalSizeOfMetaData(SceUID pid, int *numMetaData, SceSize *totalSize,
+		SceKernelModuleInfoForDebugger *modules, SceSize capacity);
+int oalEachMetaDataInfo(SceUID pid,
+	int (*callback)(CoredumpMetaDataInfo *info, void *metadata,
+		SceSize paddingSize, void *context),
+	SceKernelModuleInfoForDebugger *modules, SceSize capacity, void *context);
+int oalGetNumOfFibers(SceUID pid);
+int oalEachFiberInfo(SceUID pid,
+	int (*callback)(CoredumpFiberInfo *info, void *context),
+	SceUInt32 *ids, SceSize capacity, void *context);
+int oalGetNumOfUltRuntimes(SceUID pid);
+int oalEachUltRuntimeInfo(SceUID pid,
+	int (*callback)(SceUInt32 runtimeId, CoredumpUltRuntimeInfo *info,
+		void *context), SceUInt32 *ids, SceSize capacity, void *context);
+int oalEachUltInfo(SceUID pid, SceUIntPtr runtimeId,
+	int (*callback)(CoredumpUltInfo *info, void *context),
+	SceUInt32 *ids, SceSize capacity, void *context);
+int oalGetNumOfUltObjects(SceUID pid, int type);
+void oalGetUltObjIds(SceUID pid, SceUInt32 *ids, SceUInt32 capacity, SceUInt32 skip, int type);
+void oalGetUltMutexInfo(SceUID pid, SceUIntPtr address, CoredumpUltMutexInfo *info, SceUInt32 *ids,
+		uint32_t *numIds);
+void oalGetUltCondInfo(SceUID pid, SceUIntPtr address, CoredumpUltCondInfo *info, SceUInt32 *ids,
+		uint32_t *numIds);
+void oalGetUltSemaInfo(SceUID pid, SceUIntPtr address, CoredumpUltSemaInfo *info, SceUInt32 *ids,
+		uint32_t *numIds);
+void oalGetUltRwlockInfo(SceUID pid, SceUIntPtr address, CoredumpUltRwlockInfo *info,
+		SceUInt32 *writerThreadId, SceUInt32 maxIds, SceUInt32 *ids, SceUInt32 *numReaders,
+		SceUInt32 *numWriters);
+void oalGetUltQueueInfo(SceUID pid, SceUIntPtr address, CoredumpUltQueueInfo *info,
+		SceUInt32 maxIds, SceUInt32 *ids, SceUInt32 *numSenders, SceUInt32 *numReceivers,
+		SceUInt32 *numData);
+void oalGetUltWaitingQueueResourcePoolInfo(SceUID pid, SceUIntPtr address,
+		CoredumpUltWaitingQueueResourcePoolInfo *info);
+void oalGetUltQueueDataResourcePoolInfo(SceUID pid, SceUIntPtr address,
+		CoredumpUltQueueDataResourcePoolInfo *info);
+int oalGetNumOfExtnlProcs(SceUID pid);
+void oalGetExtnlProcIdList(SceUID pid, SceUID *ids, int capacity);
+void oalGetExtnlProcInfo(SceUID pid, SceUID extnlPid, CoredumpExtnlProcInfo *info);
+int oalGetNumOfBudgets(void);
+void oalGetBudgetIdList(SceUID *ids, int capacity);
+void oalGetBudgetInfo(SceUID budgetId, CoredumpBudgetInfo *info, CoredumpPhyMemPartInfo *parts,
+		uint32_t *numParts);
+int oalGetNumOfApp(void);
+void oalGetAppIdList(int *ids, SceSize capacity);
+void oalGetAppInfo(int appId, CoredumpAppInfo *info, char *path);
+void oalGetDeviceInfo(CoredumpDeviceInfo *info, SceUID *renderingPids, SceSize *renderingCount,
+		SceUID *touchPids, SceSize *touchCount);
+SceSize oalGetGpuInfoSize(void);
+void oalGetGpuInfo(void *buffer, SceSize size);
+SceSize oalGetGpuActivitySize(void);
+void oalGetGpuActivity(void *buffer, SceSize size);
+SceUInt32 oalGetGpuRecoveryCount(void);
+int oalCafInit(void);
+int oalCafFinal(void);
+SceUID oalCafContextCreate(void);
+int oalCafContextDestroy(SceUID context);
+int oalCafCreateIV(void *iv);
+int oalCafHeaderInit(SceUID context, int type);
+int oalCafHeaderTransform(SceUID context, const void *data, SceSize size);
+int oalCafHeaderFinal(SceUID context, void *digest);
+int oalCafSegmentInit(SceUID context, int type, const void *iv);
+int oalCafSegmentTransform(SceUID context, const void *source, void *destination, SceSize size);
+int oalCafSegmentFinal(SceUID context, CoredumpCafSectionHash *hash);
+int oalCafMakeHeader(CoredumpCafHeader *header, SceUInt64 segmentCount, SceUInt64 headerSize,
+		SceUInt64 dataSize, int type);
+int oalCafMakeSegmentTable(CoredumpCafSegmentTable *table, SceUInt64 segmentId,
+		SceUInt64 fileOffset, SceUInt32 segmentSize, SceUInt32 segmentIndex, int type,
+		const CoredumpCafIv *iv);
+void oalGetCdnAccessParam(uint32_t appVersion, uint32_t stopReason, CoredumpCdnAccessParam *param,
+		const CoredumpCdnPcAndLrInfo *location);
+int oalGetCdnPcAndLrInfo(SceUID pid, const CoredumpThreadStopEvent *stopEvent,
+		CoredumpCdnPcAndLrInfo *location);
+SceUID oalGetAbortedThreadID(SceUID pid, const CoredumpThreadStopEvent *stopEvent);
+int oalPrintf(const char *fmt, ...);
+uint32_t oalGetDumpLevelFromSettings(void);
+void oalGetDestHostPathFromSettings(char *path);
+int oalUnlinkNormalSyscall(SceUID pid);
+int oalRegisterCoredumpHandler(SceCoredumpHandler handler, SceSize stackSize, void *pCommon);
+int oalUnregisterCoredumpHandler(void);
+SceUID oalCallCoredumpHandler(SceUID pid);
+int oalHasCoredumpHandler(SceUID pid);
+int oalIsCoredumpHandlerAtSyscall(SceUID pid, SceUID threadId);
+int oalGetDebugTailLog(char *buf, SceSize size);
+int oalGetDebugTailLogPid(SceUID pid, char *buf, SceSize size);
+int oalGetFrameBufferInfo(SceUID pid, unsigned int index, unsigned int *vblankcount,
+		unsigned int *width, unsigned int *height, unsigned int *pixelformat);
+int oalGetFrameBuffer(SceUID pid, int index, void **base, unsigned int *pitch);
+int oalGetFrameBufferDetails(SceUID pid, int index, unsigned int *vblankcount, unsigned int *width,
+		unsigned int *height, unsigned int *pixelformat, void **base, unsigned int *pitch);
+int oalReferObject(SceUID guid);
+int oalReleaseObject(SceUID guid);
+int oalChangeThreadPriority(SceUID threadId, int priority);
+int oalGetEventlog(void *buf, SceSize size, SceSize *readBlocks);
+int oalResumeProcess(SceUID pid);
+int oalSuspendProcess(SceUID pid, SceUInt32 *timeout);
+int oalGetVitaCardInfo(CoredumpVitaCardInfo *out);
+int oalGetMemoryCardInfo(CoredumpMemoryCardInfo *out);

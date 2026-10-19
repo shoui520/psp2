@@ -8,14 +8,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern int oalGetNumOfUltObjects(SceUID pid, int type);
-extern void oalGetUltObjIds(SceUID pid, SceUInt32 *ids, SceUInt32 capacity,
-	SceUInt32 skip, int type);
-extern void oalGetUltQueueInfo(SceUID pid, SceUIntPtr address,
-	CoredumpUltQueueInfo *info, SceUInt32 maxIds, SceUInt32 *ids,
-	SceUInt32 *numSenders, SceUInt32 *numReceivers, SceUInt32 *numData);
-extern void *memMgrLocalAlloc(SceSize size);
-extern int memMgrLocalFree(void *allocation);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

@@ -4,18 +4,7 @@
 #include <sysmem/debug.h>
 #include <sysmem/sysroot.h>
 #include <coredump/coredump.h>
-
-/* Private implementations follow in their original source files. */
-extern int coredumpMemoryInit(void);
-extern int triggerInit(void);
-extern int triggerFinal(void);
-extern int generatorInit(void);
-extern int generatorFinal(void);
-extern int dumpBufferInit(void);
-extern int sceCoredumpCafContextClassInit(void);
-extern void _getBuildVerInfo(void);
-extern int sceKernelCoredumpCancelForDriver(void);
-extern int SceCoredumpForDriver_EF20949F(void);
+#include "writer_internal.h"
 
 SCE_DBGINFO_DEFINE(static, startMemoryInfo, 51, "sceCoredumpStart");
 SCE_DBGINFO_DEFINE(static, startTriggerInfo, 58, "sceCoredumpStart");

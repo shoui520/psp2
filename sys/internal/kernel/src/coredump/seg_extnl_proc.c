@@ -6,14 +6,6 @@
 #include "seg_internal.h"
 #include "oal_internal.h"
 
-extern int oalGetNumOfExtnlProcs(SceUID pid);
-extern void oalGetExtnlProcIdList(SceUID pid, SceUID *ids, int capacity);
-extern void oalGetExtnlProcInfo(SceUID pid, SceUID extnlPid,
-	CoredumpExtnlProcInfo *info);
-extern int oalGetProcessPath(SceUID pid, char *path, SceSize *pathSize);
-extern void oalGetProcessArmExInfo(SceUID pid, CoredumpArmExInfo *info);
-extern void *memMgrLocalAlloc(SceSize size);
-extern int memMgrLocalFree(void *allocation);
 extern Writer *currentWriter;
 
 static int _calcSize(SegIf *segment);

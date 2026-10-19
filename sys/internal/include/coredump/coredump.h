@@ -46,10 +46,10 @@ typedef SceInt32 (*SceCoredumpHandler)(void *pCommon);
 #define SCE_COREDUMP_ERROR_ALREADY_REGISTERED	(-2146828286)
 #define SCE_COREDUMP_ERROR_NOT_IN_COREDUMP_HANDLER	(-2146828285)
 
-/* names unknown: a core dump file being written (os0:kd/crashdump.skprx) */
-SceUID SceCoredumpForDriver_13EF8516(SceSize size);				/* open */
-int SceCoredumpForDriver_12392973(SceUID dump, const void *buf, SceSize size);	/* write */
-int SceCoredumpForDriver_10863B61(SceUID dump);					/* close */
+/* names unknown: a core dump file os0:kd/crashdump.skprx opens, writes and closes */
+int SceCoredumpForDriver_13EF8516(SceSize payloadSize);
+int SceCoredumpForDriver_12392973(int requestId, const void *data, SceSize size);
+int SceCoredumpForDriver_10863B61(int requestId);
 
 int SceCoredumpForDriver_097AA37D(void);
 /* vitasdk: ksceCoredumpCreateDump */
@@ -62,6 +62,11 @@ int sceCoredumpRegisterCoredumpHandler(SceCoredumpHandler handler, SceSize stack
 int sceCoredumpTrigger(SceUID pid, SceKernelCoredumpStateUpdateCallback update, SceKernelCoredumpStateFinishCallback finish, SceCoredumpTriggerParam *param);
 int sceCoredumpUnregisterCoredumpHandler(void);
 int sceCoredumpWriteUserData(const void *data, SceSize size);
+int sceKernelCoredumpCancelForDriver(int requestId);
+
+/* each thread of a faulting process, through Sysroot (SceSysrootForDriver_DABD4A47) */
+struct CoredumpThreadSnapshot;
+int SceCoredumpForDriver_EF20949F(const struct CoredumpThreadSnapshot *snapshot);
 
 /* the CAF (crash report) encryption: placeholders, deferred (coredump.c) */
 int SceCoredumpForDriver_9336009B(void);	/* vitasdk: ksceCoredumpCafInit */

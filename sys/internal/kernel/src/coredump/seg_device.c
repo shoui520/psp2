@@ -5,9 +5,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern int oalIsSystemProgram(SceUID pid);
-extern void oalGetDeviceInfo(CoredumpDeviceInfo *info, SceUID *renderingPids,
-	SceSize *renderingCount, SceUID *touchPids, SceSize *touchCount);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

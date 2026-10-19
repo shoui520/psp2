@@ -23,27 +23,6 @@
 #define COREDUMP_CACHE_ERROR_NOT_FOUND		0x8001003D
 #define COREDUMP_CACHE_ERROR_INVALID_ARGUMENT	0x80010069
 
-extern void oalFormatThreadInfo(CoredumpThreadInfo *info,
-	const CoredumpThreadSnapshot *snapshot);
-extern int oalGetNumOfWaitingThreads(SceUID pid, SceUID waitId);
-extern void oalGetSemaphoreInfo(SceUID pid, SceUID semaId,
-	CoredumpSemaphoreInfo *info);
-extern void oalGetEventFlagInfo(SceUID pid, SceUID eventFlagId,
-	CoredumpEventFlagInfo *info);
-extern void oalGetMutexInfo(SceUID pid, SceUID mutexId, CoredumpMutexInfo *info);
-extern void oalGetLwMutexInfo(SceUID pid, SceUID lwMutexId,
-	CoredumpLwMutexInfo *info);
-extern void oalGetCondInfo(SceUID pid, SceUID condId, CoredumpCondInfo *info);
-extern void oalGetLwCondInfo(SceUID pid, SceUID lwCondId,
-	CoredumpLwCondInfo *info, void **work, ThreadmgrLwMutexWork **lwMutexWork);
-extern void oalGetMsgPipeInfo(SceUID pid, SceUID msgPipeId,
-	CoredumpMsgPipeInfo *info);
-extern void oalGetTimerInfo(SceUID pid, SceUID timerId, CoredumpTimerInfo *info);
-extern void oalGetRWLockInfo(SceUID pid, SceUID rwLockId,
-	CoredumpRWLockInfo *info);
-extern void oalGetSimpleEventInfo(SceUID pid, SceUID eventId,
-	CoredumpSimpleEventInfo *info);
-
 typedef struct CoredumpCachedThread {
 	SceUID pid;
 	CoredumpThreadInfo info;

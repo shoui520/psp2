@@ -27,7 +27,6 @@ _Static_assert(offsetof(AppNoteInfo, sdkVersion) == 148,
 	"app note SDK version");
 
 extern Writer *currentWriter;
-extern int oalGetAppBuildSDKVersion(SceUID pid, SceUInt32 *sdkVersion);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

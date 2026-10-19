@@ -6,7 +6,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern int oalGetEventlog(void *buffer, SceSize size, SceSize *readBlocks);
 
 typedef struct CoredumpEventLogNote {
 	CoredumpNoteHeader header;

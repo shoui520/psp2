@@ -3,24 +3,6 @@
 #include "writer_internal.h"
 #include <sysmem/debug.h>
 
-extern int oalCafSegmentTransform(SceUID context, const void *source,
-	void *destination, SceSize size);
-extern void *memMgrAlloc(SceSize size);
-extern int memMgrFreeForWriter(void *allocation);
-extern SceUID oalCafContextCreate(void);
-extern int oalCafContextDestroy(SceUID context);
-extern int oalCafCreateIV(void *iv);
-extern int oalCafSegmentInit(SceUID context, int type, const void *iv);
-extern int oalCafSegmentFinal(SceUID context, CoredumpCafSectionHash *hash);
-extern int oalCafHeaderInit(SceUID context, int type);
-extern int oalCafHeaderTransform(SceUID context, const void *data, SceSize size);
-extern int oalCafHeaderFinal(SceUID context, void *digest);
-extern int oalCafMakeHeader(CoredumpCafHeader *header, SceUInt64 segmentCount,
-	SceUInt64 headerSize, SceUInt64 dataSize, int type);
-extern int oalCafMakeSegmentTable(CoredumpCafSegmentTable *table,
-	SceUInt64 segmentId, SceUInt64 fileOffset, SceUInt32 segmentSize,
-	SceUInt32 segmentIndex, int type, const CoredumpCafIv *iv);
-
 static int _writeDataToDest(Writer *writer, const void *data, SceSize size,
 	SceSize *written);
 static int _setDestOffset(Writer *writer, SceOff offset);

@@ -12,9 +12,6 @@ typedef struct HardwareNote {
 _Static_assert(sizeof(HardwareNote) == 156, "hardware note size");
 
 extern Writer *currentWriter;
-extern void oalGetHwInfo(SceUID pid, CoredumpHwInfo *info);
-extern int oalIsSystemProgram(SceUID pid);
-extern int oalIsRootProgram(SceUID pid);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

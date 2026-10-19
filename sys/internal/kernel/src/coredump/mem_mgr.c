@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
+#include "oal_internal.h"
 
 typedef struct CoredumpLargeAllocation {
 	SceUID blockId;
@@ -20,16 +21,6 @@ SceSize localHeapInitialFreeSize;
 SceUID localHeapBlockId;
 SceSize dumpHeapInitialFreeSize;
 SceUID dumpHeapBlockId;
-
-extern int oalMemBlockInit(SceUID *blockId, SceSize size);
-extern int oalMemBlockFinal(SceUID blockId);
-extern int oalHeapInit(SceUID blockId, SceUID *heapId, SceSize maxSize);
-extern int oalHeapFinal(SceUID heapId);
-extern SceSize oalHeapGetFreeSize(SceUID heapId);
-extern void *oalHeapAlloc(SceUID heapId, SceSize size);
-extern int oalIsToolDipswEnabled(void);
-extern int oalMemBlockInitForDevTool(SceUID *blockId, SceSize size);
-extern int oalHeapFree(SceUID heapId, void *allocation);
 
 int memMgrBootstrap(void)
 {

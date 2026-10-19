@@ -13,7 +13,6 @@ typedef struct CorefileNote {
 _Static_assert(sizeof(CorefileNote) == 68, "corefile note size");
 
 extern Writer *currentWriter;
-extern void oalGetCorefileInfo(SceUID pid, CoredumpCorefileInfo *info);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

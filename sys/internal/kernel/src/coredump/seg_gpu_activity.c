@@ -5,9 +5,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern SceUInt32 oalGetGpuRecoveryCount(void);
-extern SceSize oalGetGpuActivitySize(void);
-extern void oalGetGpuActivity(void *buffer, SceSize size);
 
 typedef struct CoredumpGpuActivityNote {
 	CoredumpNoteHeader header;

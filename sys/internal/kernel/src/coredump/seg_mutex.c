@@ -6,16 +6,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern unsigned int oalGetNumOfSyncObj(int type, SceUID pid);
-extern void oalGetSyncObjIdList(int type, SceUID pid, SceUID *ids,
-	SceSize capacity);
-extern void oalGetMutexInfo(SceUID pid, SceUID mutexId,
-	CoredumpMutexInfo *info);
-extern void oalGetWaitingThreadList(SceUID pid, SceUID waitId,
-	CoredumpWaitingThread *threads, SceSize capacity);
-extern void *memMgrLocalAlloc(SceSize size);
-extern int memMgrLocalFree(void *allocation);
-extern int oalGetNumOfWaitingThreads(SceUID pid, SceUID waitId);
 
 static int _calcSize(SegIf *segment);
 

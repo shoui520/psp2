@@ -6,10 +6,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern SceSize oalGetGpuInfoSize(void);
-extern void oalGetGpuInfo(void *buffer, SceSize size);
-extern void *memMgrLocalAlloc(SceSize size);
-extern int memMgrLocalFree(void *allocation);
 
 static int _init(SegIf *segment);
 static int _calcSize(SegIf *segment);

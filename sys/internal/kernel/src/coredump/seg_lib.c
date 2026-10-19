@@ -8,22 +8,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern int oalGetNumOfLibs(SceUID pid);
-extern void oalGetLibIdList(SceUID pid, SceUID *ids, SceSize capacity);
-extern int oalGetLibInfo(SceUID pid, SceUID libraryId, CoredumpLibraryInfo *info);
-extern unsigned int oalGetLibNumFuncAndVar(SceUID pid,
-	const CoredumpLibraryInfo *info);
-extern void oalGetLibExportInfo(SceUID pid, SceUID libraryId,
-	SceKernelLibraryExportEntry *entries, SceSize capacity, SceSize skip);
-extern unsigned int oalGetLibNumClient(SceUID pid,
-	const CoredumpLibraryInfo *info);
-extern void oalGetLibClientInfo(SceUID pid, SceUID libraryId,
-	SceUID *moduleIds, SceSize capacity);
-extern void oalGetLibName(SceUID pid, SceUID libraryId, char *name,
-	SceSize *nameSize);
-extern void *memMgrLocalAlloc(SceSize size);
-extern void *memMgrLocalAllAlloc(SceSize *size);
-extern int memMgrLocalFree(void *allocation);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

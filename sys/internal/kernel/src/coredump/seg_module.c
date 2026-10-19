@@ -7,16 +7,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern void *memMgrLocalAllAlloc(SceSize *size);
-extern int memMgrLocalFree(void *allocation);
-extern int oalGetNumOfModulesAndSegments(SceUID pid, int *numModules,
-	unsigned int *numSegments, SceKernelModuleInfoForDebugger *modules,
-	SceSize capacity);
-extern int oalEachModuleInfo(SceUID pid,
-	int (*callback)(CoredumpModuleInfo *info,
-		SceKernelSegmentInfoForDebugger *segments, unsigned int nSegments,
-		SceKernelModuleExidxInfo *exidx, void *context),
-	SceKernelModuleInfoForDebugger *modules, SceSize capacity, void *context);
 static int _writeCallback(CoredumpModuleInfo *info,
 	SceKernelSegmentInfoForDebugger *segments, unsigned int nSegments,
 	SceKernelModuleExidxInfo *exidx, void *context);

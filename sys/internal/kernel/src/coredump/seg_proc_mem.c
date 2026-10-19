@@ -71,35 +71,6 @@ typedef struct ProcMemWriteContext {
 } ProcMemWriteContext;
 
 extern Writer *currentWriter;
-extern void *memMgrLocalAlloc(SceSize size);
-extern void *memMgrLocalAllAlloc(SceSize *size);
-extern int memMgrLocalFree(void *allocation);
-extern int oalEachModuleInfo(SceUID pid,
-	int (*callback)(CoredumpModuleInfo *info,
-		SceKernelSegmentInfoForDebugger *segments, unsigned int nSegments,
-		SceKernelModuleExidxInfo *exidx, void *context),
-	SceKernelModuleInfoForDebugger *modules, SceSize capacity, void *context);
-extern int oalEachOfAllMemBlockInfo(SceUID pid,
-	int (*callback)(CoredumpMemBlockInfo *info, void *context), void *context,
-	MemBlockInfoEx *blocks, SceSize size);
-extern unsigned int oalGetNumOfThreads(SceUID pid);
-extern void oalGetThreadIdList(SceUID pid, SceUID *ids, unsigned int capacity);
-extern int oalGetThreadStack(SceUID pid, SceUID threadId, uintptr_t *stackBase,
-	SceSize *stackSize);
-extern int oalGetThreadTlsStack(SceUID pid, SceUID threadId,
-	uintptr_t *stackBase, SceSize *stackSize);
-extern int oalProbeThreadInfo(SceUID pid, SceUID threadId);
-extern int oalIsAccessibleRange(SceUID pid, const void *address, SceSize size);
-extern void oalCopyFromUserSpace(SceUID pid, void *destination,
-	const void *source, SceSize size);
-extern int oalGetNumOfMemBlocks(SceUID pid);
-extern void oalGetMemBlockIdList(SceUID pid, SceUID *ids, int capacity);
-extern void oalGetMemBlockInfo(SceUID pid, SceUID uid, CoredumpMemBlockInfo *info);
-extern int oalGetPartitionOfMemBlock(const CoredumpMemBlockInfo *info);
-extern SceUID oalGetAbortedThreadID(SceUID pid,
-	const CoredumpThreadStopEvent *stopEvent);
-extern int oalGetThreadRegInfo(SceUID pid, SceUID threadId,
-	CoredumpThreadRegInfo *info);
 
 static int _initAsFull(SegIf *segment);
 static int _initAsMini(SegIf *segment);

@@ -5,7 +5,7 @@
 #include <processmgr/processmgr.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
-#include "oal_internal.h"
+#include "writer_internal.h"
 
 typedef struct CoredumpTriggerRequest {
 	int available;
@@ -26,23 +26,6 @@ int isCex;
 SceUID triggerMutexId;
 SceUID triggerCondId;
 CoredumpTriggerRequest triggerRequests[2];
-
-extern uint32_t oalGetDumpLevelFromSettings(void);
-extern int oalMutexLock(SceUID mutexId);
-extern int oalMutexUnlock(SceUID mutexId);
-extern int oalCondSignalTo(SceUID condId, SceUID threadId);
-extern int oalIsCEX(void);
-extern int oalMutexInit(SceUID *mutexId);
-extern int oalMutexFinal(SceUID mutexId);
-extern int oalCondInit(SceUID *condId, SceUID mutexId);
-extern int oalCondFinal(SceUID condId);
-extern SceUID oalGetThreadId(void);
-extern int oalReferObject(SceUID guid);
-extern int oalReleaseObject(SceUID guid);
-extern int generatorSendEvent(const CoredumpEvent *event);
-extern int generatorCancel(int requestId);
-extern int generatorBeginShutdown(void);
-extern int oalCondWait(SceUID condId);
 
 SCE_DBGINFO_DEFINE(static, triggerErrorInfo, 400, "sceCoredumpTrigger");
 SCE_DBGINFO_DEFINE(static, triggerParamErrorInfo, 406, "sceCoredumpTrigger");

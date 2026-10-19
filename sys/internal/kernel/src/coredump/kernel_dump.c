@@ -9,12 +9,7 @@
 #include <scetypes.h>
 #include <threadmgr/threadmgr.h>
 #include <coredump/coredump.h>
-
-extern int oalMutexInit(SceUID *mutexId);
-extern int oalMutexFinal(SceUID mutexId);
-extern int generatorBeginKernelDump(SceCoredumpTriggerParam param, SceSize payloadSize);
-extern int generatorWriteKernelDump(const void *data, SceSize size);
-extern int generatorEndKernelDump(void);
+#include "writer_internal.h"
 
 /* the request id of the dump in progress; -1 none, -2 the end failed to unlock */
 int dumpBufferRequestId = -1;

@@ -34,6 +34,7 @@
 #include <sysmem/sblaimgr.h>
 #include <sysmem/dipsw.h>
 #include "oal_internal.h"
+#include "writer_internal.h"
 #include <threadmgr/threadmgr.h>
 #include <sysmem/utils.h>
 #include <sysmem/debugled.h>
@@ -43,39 +44,6 @@
 #include <gpu/lockup.h>
 #include <acmgr/acmgr.h>
 #include <regmgr/regmgr.h>
-
-extern void *memMgrLocalAlloc(SceSize size);
-/* imports under the names of our NID db (tools/nids/kernel.yml) */
-extern int coredumpGetCachedRWLockInfo(SceUID pid, SceUID rwLockId,
-	CoredumpRWLockInfo *info);
-extern int coredumpGetCachedSimpleEventInfo(SceUID pid, SceUID eventId,
-	CoredumpSimpleEventInfo *info);
-extern void *memMgrLocalAllAlloc(SceSize *size);
-extern int memMgrLocalFree(void *allocation);
-extern int memMgrInit(void);
-extern int memMgrFinal(void);
-extern SceSize memMgrLocalGetFreeSize(void);
-extern int coredumpGetCachedSemaphoreInfo(SceUID pid, SceUID semaId,
-	CoredumpSemaphoreInfo *info);
-extern int coredumpGetCachedEventFlagInfo(SceUID pid, SceUID eventFlagId,
-	CoredumpEventFlagInfo *info);
-extern int coredumpGetCachedWaitingThreadCount(SceUID pid, SceUID waitId);
-extern int coredumpGetCachedWaitingThreadList(SceUID pid, SceUID waitId,
-	CoredumpWaitingThread *list, SceSize capacity);
-extern int coredumpGetCachedCondInfo(SceUID pid, SceUID condId,
-	CoredumpCondInfo *info);
-extern int coredumpGetCachedMutexInfo(SceUID pid, SceUID mutexId,
-	CoredumpMutexInfo *info);
-extern int coredumpGetCachedLwMutexInfo(SceUID pid, SceUID lwMutexId,
-	CoredumpLwMutexInfo *info);
-extern int coredumpGetCachedLwCondInfo(SceUID pid, SceUID lwCondId,
-	CoredumpLwCondInfo *info, void **work, ThreadmgrLwMutexWork **lwMutexWork);
-extern int coredumpGetCachedTimerInfo(SceUID pid, SceUID timerId,
-	CoredumpTimerInfo *info);
-extern int coredumpGetCachedMsgPipeInfo(SceUID pid, SceUID msgPipeId,
-	CoredumpMsgPipeInfo *info);
-extern int coredumpGetCachedThreadInfo(SceUID pid, SceUID threadId,
-	CoredumpThreadInfo *info);
 
 static const CoredumpCafIv openPsIdIv = {
 	.words = { 0xbf0b9e95, 0xc651a66b, 0x49e8533b, 0xa7056463 },

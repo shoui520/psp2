@@ -13,18 +13,6 @@ enum {
 	NUM_COUNTS,
 };
 
-extern void *memMgrLocalAlloc(SceSize size);
-extern int memMgrLocalFree(void *allocation);
-extern int oalGetNumOfUltRuntimes(SceUID pid);
-extern int oalEachUltRuntimeInfo(SceUID pid,
-	int (*callback)(SceUInt32 runtimeId, CoredumpUltRuntimeInfo *info,
-		void *context),
-	SceUInt32 *ids, SceSize capacity, void *context);
-extern int oalEachUltInfo(SceUID pid, SceUIntPtr runtimeId,
-	int (*callback)(CoredumpUltInfo *info, void *context),
-	SceUInt32 *ids, SceSize capacity, void *context);
-extern void *memMgrLocalAllAlloc(SceSize *size);
-
 static int _getSizeCallback(SceUInt32 runtimeId,
 	CoredumpUltRuntimeInfo *info, void *context);
 static int _writeUltRuntimeInfoCallback(SceUInt32 runtimeId,

@@ -15,19 +15,7 @@ typedef struct CoredumpUserDataNote {
 _Static_assert(sizeof(CoredumpUserDataNote) == 40, "user data note size");
 
 extern Writer *currentWriter;
-extern int oalHasCoredumpHandler(SceUID pid);
 extern CoredumpRunContext coredumpRun;
-extern void *memMgrLocalAlloc(SceSize size);
-extern int memMgrLocalFree(void *allocation);
-extern int oalUnlinkNormalSyscall(SceUID pid);
-extern SceUID oalCallCoredumpHandler(SceUID pid);
-extern int oalWaitThreadEnd(SceUID threadId, SceUInt timeout);
-extern int oalIsCoredumpHandlerAtSyscall(SceUID pid, SceUID threadId);
-extern int oalDeleteThread(SceUID threadId);
-extern int oalPrintf(const char *fmt, ...);
-extern int userDataSetBuffer(void *buffer, SceSize capacity);
-extern int userDataGetUsedSize(void);
-extern int userDataClearBuffer(void);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

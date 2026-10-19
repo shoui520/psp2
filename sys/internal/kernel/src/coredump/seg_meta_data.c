@@ -7,15 +7,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern void *memMgrLocalAllAlloc(SceSize *size);
-extern int memMgrLocalFree(void *allocation);
-extern int oalGetNumAndTotalSizeOfMetaData(SceUID pid, int *numMetaData,
-	SceSize *totalSize, SceKernelModuleInfoForDebugger *modules,
-	SceSize capacity);
-extern int oalEachMetaDataInfo(SceUID pid,
-	int (*callback)(CoredumpMetaDataInfo *info, void *metadata,
-		SceSize paddingSize, void *context),
-	SceKernelModuleInfoForDebugger *modules, SceSize capacity, void *context);
 static int _writeCallback(CoredumpMetaDataInfo *info, void *metadata,
 	SceSize paddingSize, void *context);
 

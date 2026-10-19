@@ -26,7 +26,7 @@
 typedef int (*SysrootBusErrorHandler)(SceUInt32 status0, SceUInt32 status1,
 				      SceUInt32 status2);
 typedef SceSize (*SysrootBusErrorGetInfo)(void *buffer, SceSize size);
-typedef int (*SysrootCoredumpAddThread)(void *threadInfo);
+typedef int (*SysrootCoredumpAddThread)(const struct CoredumpThreadSnapshot *snapshot);
 typedef int (*SysrootUtMgrHasAuthId)(SceUInt64 authId);
 typedef int (*SysrootLedSetMode)(SceUInt32 led, SceUInt32 mode, const void *option);
 typedef int (*SysrootSysStateEvent)(int event);

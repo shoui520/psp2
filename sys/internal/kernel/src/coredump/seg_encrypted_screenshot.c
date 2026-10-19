@@ -10,18 +10,6 @@
 extern Writer *currentWriter;
 char encryptedScreenshotFilePath[1330];
 SceSize encryptedScreenshotSize;
-extern int oalFileReopen(const char *path, SceUID *fd);
-extern int oalFileRead(SceUID fd, void *buffer, SceSize size);
-extern SceOff oalFileSeek(SceUID fd, SceOff offset, int whence);
-extern int oalFileClose(SceUID fd);
-extern int oalGetFrameBufferDetails(SceUID pid, int index,
-	unsigned int *vblankcount, unsigned int *width, unsigned int *height,
-	unsigned int *pixelformat, void **base, unsigned int *pitch);
-extern int oalFileRemove(const char *path);
-extern int openDumpFileAtDestination(SceUID *fd, const char *filename,
-	char *path);
-extern int accumulateEncryptedScreenshotSize(SceSize size);
-extern int cafWriterEndSegment(CafWriter *writer);
 
 /* one frame buffer in the encrypted screenshot work file */
 typedef struct EncryptedScreenshotFrame {
@@ -33,9 +21,6 @@ typedef struct EncryptedScreenshotFrame {
 } EncryptedScreenshotFrame;
 
 _Static_assert(sizeof(EncryptedScreenshotFrame) == 20, "screenshot frame size");
-extern int oalGetFrameBufferInfo(SceUID pid, unsigned int index,
-	unsigned int *vblankcount, unsigned int *width, unsigned int *height,
-	unsigned int *pixelformat);
 
 static int _init(SegIf *segment);
 static int _calcSize(SegIf *segment);

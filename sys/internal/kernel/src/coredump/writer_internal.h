@@ -87,3 +87,67 @@ int writerFlush(Writer *writer);
 int writerWritePaddingData(Writer *writer, SceSize size);
 int writerSetDestOffset(Writer *writer, SceOff offset);
 int writerGetDestOffset(Writer *writer, SceOff *offset);
+
+/* caf.c */
+int sceCoredumpCafContextClassInit(void);
+
+/* cafwriter.c */
+int cafWriterEndSegment(CafWriter *writer);
+int cafWriterGetNumSegments(CafWriter *writer);
+
+/* generator.c */
+int accumulateEncryptedScreenshotSize(SceSize size);
+int generatorInit(void);
+int generatorSendEvent(const CoredumpEvent *event);
+int generatorCancel(int requestId);
+int generatorBeginShutdown(void);
+int openDumpFileAtDestination(SceUID *fd, const char *filename, char *path);
+int generatorBeginKernelDump(SceCoredumpTriggerParam param, SceSize payloadSize);
+int generatorWriteKernelDump(const void *data, SceSize size);
+int generatorEndKernelDump(void);
+
+/* kernel_dump.c */
+int dumpBufferInit(void);
+
+/* mem_mgr.c */
+int memMgrBootstrap(void);
+int memMgrTerminate(void);
+int memMgrInit(void);
+int memMgrFinal(void);
+void *memMgrAlloc(SceSize size);
+int memMgrFreeForWriter(void *allocation);
+void *memMgrLocalAlloc(SceSize size);
+void *memMgrLocalAllAlloc(SceSize *size);
+int memMgrLocalFree(void *allocation);
+SceSize memMgrLocalGetFreeSize(void);
+
+/* object_cache.c */
+int coredumpMemoryInit(void);
+int coredumpGetCachedThreadInfo(SceUID pid, SceUID threadId, CoredumpThreadInfo *info);
+int coredumpGetCachedSemaphoreInfo(SceUID pid, SceUID semaId, CoredumpSemaphoreInfo *info);
+int coredumpGetCachedEventFlagInfo(SceUID pid, SceUID eventFlagId, CoredumpEventFlagInfo *info);
+int coredumpGetCachedMutexInfo(SceUID pid, SceUID mutexId, CoredumpMutexInfo *info);
+int coredumpGetCachedLwMutexInfo(SceUID pid, SceUID lwMutexId, CoredumpLwMutexInfo *info);
+int coredumpGetCachedCondInfo(SceUID pid, SceUID condId, CoredumpCondInfo *info);
+int coredumpGetCachedLwCondInfo(SceUID pid, SceUID lwCondId, CoredumpLwCondInfo *info, void **work,
+		ThreadmgrLwMutexWork **lwMutexWork);
+int coredumpGetCachedMsgPipeInfo(SceUID pid, SceUID msgPipeId, CoredumpMsgPipeInfo *info);
+int coredumpGetCachedRWLockInfo(SceUID pid, SceUID rwLockId, CoredumpRWLockInfo *info);
+int coredumpGetCachedSimpleEventInfo(SceUID pid, SceUID eventId, CoredumpSimpleEventInfo *info);
+int coredumpGetCachedTimerInfo(SceUID pid, SceUID timerId, CoredumpTimerInfo *info);
+int coredumpGetCachedWaitingThreadCount(SceUID pid, SceUID waitId);
+int coredumpGetCachedWaitingThreadList(SceUID pid, SceUID waitId, CoredumpWaitingThread *list,
+		SceSize capacity);
+
+/* trigger.c */
+int triggerInit(void);
+int triggerFinal(void);
+int generatorFinal(void);
+int triggerGetNextRequestId(void);
+
+/* user_data.c */
+int userDataInit(void);
+int userDataFinal(void);
+int userDataGetUsedSize(void);
+int userDataSetBuffer(void *buffer, SceSize capacity);
+int userDataClearBuffer(void);

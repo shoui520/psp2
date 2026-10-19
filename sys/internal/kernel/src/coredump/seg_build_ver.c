@@ -12,9 +12,6 @@ typedef struct BuildVersionNote {
 _Static_assert(sizeof(BuildVersionNote) == 544, "build-version note size");
 
 extern Writer *currentWriter;
-extern void oalGetBuildVerInfo(SceUID pid, CoredumpBuildVerInfo *info);
-extern int oalIsSystemProgram(SceUID pid);
-extern int oalIsRootProgram(SceUID pid);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

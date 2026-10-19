@@ -99,3 +99,10 @@ void utilsElf32MakePhent(Elf32_Phdr *header, Elf32_Word type, Elf32_Off offset,
 	Elf32_Word flags, Elf32_Word align);
 void utilsElf32MakePtnote(Elf32_Phdr *header, SceUInt32 fileOffset,
 	SceSize dataSize);
+
+/* seg_coredump.c */
+void segSummarySetSegIfMethodPairTables(const SegIfMethodPair *pairs, SceUInt32 numSegments);
+
+/* seg_encrypted_screenshot.c */
+int writeFrameBuffers(SceUID pid);
+int removeEncryptedScreenshot(void);

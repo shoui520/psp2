@@ -6,12 +6,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern unsigned int oalGetNumOfThreads(SceUID pid);
-extern void oalGetThreadIdList(SceUID pid, SceUID *ids, unsigned int capacity);
-extern int oalGetThreadRegInfo(SceUID pid, SceUID threadId,
-	CoredumpThreadRegInfo *info);
-extern void *memMgrLocalAlloc(SceSize size);
-extern int memMgrLocalFree(void *allocation);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

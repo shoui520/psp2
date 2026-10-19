@@ -6,11 +6,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern int oalGetNumOfMemBlocks(SceUID pid);
-extern void oalGetMemBlockIdList(SceUID pid, SceUID *ids, SceSize capacity);
-extern void oalGetMemBlockInfo(SceUID pid, SceUID uid, CoredumpMemBlockInfo *info);
-extern void *memMgrLocalAlloc(SceSize size);
-extern int memMgrLocalFree(void *allocation);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

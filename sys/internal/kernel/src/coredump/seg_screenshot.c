@@ -6,11 +6,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern int oalGetFrameBufferInfo(SceUID pid, unsigned int index,
-	unsigned int *vblankcount, unsigned int *width, unsigned int *height,
-	unsigned int *pixelformat);
-extern int oalGetFrameBuffer(SceUID pid, int index, void **base,
-	unsigned int *pitch);
 
 typedef struct CoredumpScreenshotNote {
 	CoredumpNoteHeader header;

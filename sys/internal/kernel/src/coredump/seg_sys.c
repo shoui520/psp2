@@ -12,7 +12,6 @@ typedef struct SystemNote {
 _Static_assert(sizeof(SystemNote) == 124, "system note size");
 
 extern Writer *currentWriter;
-extern void oalGetSystemInfo(SceUID pid, CoredumpSystemInfo *info);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

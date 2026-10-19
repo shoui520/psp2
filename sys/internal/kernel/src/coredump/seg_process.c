@@ -14,11 +14,7 @@ typedef struct ProcessInfoNote {
 
 _Static_assert(sizeof(ProcessInfoNote) == 120, "process info note size");
 
-extern int oalGetProcessPath(SceUID pid, char *path, SceSize *pathSize);
 extern Writer *currentWriter;
-extern void oalGetProcessInfo(SceUID pid, CoredumpProcessInfo *info);
-extern void oalGetProcessArmExInfo(SceUID pid, CoredumpArmExInfo *info);
-extern SceUInt64 oalGetProcessTime(SceUID pid);
 
 static int _init(SegIf *segment);
 static int _calcSize(SegIf *segment);

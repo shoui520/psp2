@@ -4,9 +4,6 @@
 #include <sysmem/debug.h>
 #include <string.h>
 
-extern void *memMgrAlloc(SceSize size);
-extern int memMgrFreeForWriter(void *allocation);
-
 static const unsigned char writerPadding[8] = { 0 };
 
 int writerInit(Writer *writer, SceSize bufferSize)

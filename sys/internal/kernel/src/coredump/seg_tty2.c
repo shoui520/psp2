@@ -6,8 +6,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern int oalGetDebugTailLog(char *buffer, SceSize size);
-extern int oalIsToolDipswEnabled(void);
 
 static int _init(SegIf *segment);
 static int _calcSize(SegIf *segment);

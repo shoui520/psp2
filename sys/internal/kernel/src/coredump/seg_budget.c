@@ -6,13 +6,6 @@
 #include "seg_internal.h"
 #include "oal_internal.h"
 
-extern int oalIsSystemProgram(SceUID pid);
-extern int oalGetNumOfBudgets(void);
-extern void oalGetBudgetIdList(SceUID *ids, int capacity);
-extern void oalGetBudgetInfo(SceUID budgetId, CoredumpBudgetInfo *info,
-	CoredumpPhyMemPartInfo *parts, uint32_t *numParts);
-extern void *memMgrLocalAlloc(SceSize size);
-extern int memMgrLocalFree(void *allocation);
 extern Writer *currentWriter;
 
 static int _calcSize(SegIf *segment);

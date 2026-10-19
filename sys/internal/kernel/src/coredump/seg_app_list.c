@@ -6,12 +6,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern int oalIsSystemProgram(SceUID pid);
-extern int oalGetNumOfApp(void);
-extern void oalGetAppIdList(int *ids, SceSize capacity);
-extern void oalGetAppInfo(int appId, CoredumpAppInfo *info, char *path);
-extern void *memMgrLocalAlloc(SceSize size);
-extern int memMgrLocalFree(void *allocation);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

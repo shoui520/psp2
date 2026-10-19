@@ -13,14 +13,6 @@ typedef struct FileSizeContext {
 _Static_assert(sizeof(FileSizeContext) == 8, "file size context");
 
 extern Writer *currentWriter;
-extern void *memMgrLocalAllAlloc(SceSize *size);
-extern int memMgrLocalFree(void *allocation);
-extern int oalEachFileInfo(SceUID pid,
-	int (*callback)(CoredumpFileInfo *info, SceSize resolvedPathSize,
-		const char *resolvedPath, SceSize resolvedPathPadding,
-		SceSize openPathSize, const char *openPath, SceSize openPathPadding,
-		void *context),
-	void *context, void *allocation, SceSize allocationSize);
 static int _writeCallback(CoredumpFileInfo *info, SceSize resolvedPathSize,
 	const char *resolvedPath, SceSize resolvedPathPadding,
 	SceSize openPathSize, const char *openPath, SceSize openPathPadding,

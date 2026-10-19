@@ -6,12 +6,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern void *memMgrLocalAllAlloc(SceSize *size);
-extern int memMgrLocalFree(void *allocation);
-extern int oalGetNumOfFibers(SceUID pid);
-extern int oalEachFiberInfo(SceUID pid,
-	int (*callback)(CoredumpFiberInfo *info, void *context),
-	SceUInt32 *ids, SceSize capacity, void *context);
 static int _writeCallback(CoredumpFiberInfo *info, void *context);
 
 static int _calcSize(SegIf *segment);

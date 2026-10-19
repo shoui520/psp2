@@ -61,62 +61,9 @@ int kernelDumpWritersInitialized;
 SceSize kernelDumpPayloadSize;
 SceSize kernelDumpWrittenSize;
 
-extern int oalIsToolDipswEnabled(void);
 int _getExitFlag(SceSize processedSize);
-extern int oalFileOpen(const char *path, SceUID *fd);
-extern void oalGetDestHostPathFromSettings(char *path);
-extern unsigned int oalGetUnixTime(void);
-extern int oalGetProcessPath(SceUID pid, char *path, SceSize *pathSize);
-extern void oalGetProcessDumpName(SceUID pid, char *name);
-extern int oalFileSetIoCacheSize(SceUID fd, SceSize cacheSize);
-extern int oalIsRootProgram(SceUID pid);
-extern int triggerGetNextRequestId(void);
-extern int oalMutexLock(SceUID mutexId);
-extern int oalMutexUnlock(SceUID mutexId);
-extern int writeFrameBuffers(SceUID pid);
-extern int oalResumeProcess(SceUID pid);
-extern int oalSuspendProcess(SceUID pid, SceUInt32 *timeout);
-extern int oalChangeThreadPriority(SceUID threadId, int priority);
 extern SceSize encryptedScreenshotSize;
-extern int oalIsPlaintextDumpAllowed(SceUID pid);
-extern int oalIsSystemProgram(SceUID pid);
-extern int oalMutexFinal(SceUID mutexId);
-extern int oalEventQueueReceive(CoredumpEventQueue *queue, CoredumpEvent *event);
-extern int oalEventQueueSend(CoredumpEventQueue *queue, const CoredumpEvent *event);
-extern int oalEventQueueEachElem(CoredumpEventQueue *queue,
-	void (*callback)(CoredumpEvent *event, void *context), void *context);
-extern int oalEventQueueFinal(CoredumpEventQueue *queue);
-extern int oalExitDeleteThread(void);
-extern int oalReleaseObject(SceUID objectId);
-extern int oalFileRename(const char *from, const char *to);
-extern int oalCafInit(void);
-extern int oalCafFinal(void);
-extern int memMgrInit(void);
-extern int memMgrFinal(void);
-extern int memMgrTerminate(void);
-extern void *memMgrLocalAlloc(SceSize size);
-extern int memMgrLocalFree(void *allocation);
-extern int removeEncryptedScreenshot(void);
-extern int coredumpMemoryInit(void);
-extern int userDataFinal(void);
-extern int userDataInit(void);
-extern int memMgrBootstrap(void);
-extern int oalEventQueueInit(CoredumpEventQueue *queue);
-extern int oalMutexInit(SceUID *mutexId);
-extern int oalCreateThread(SceUID *threadId, const char *name, int priority,
-	SceSize stackSize, SceKernelThreadEntry entry);
-extern int oalStartThread(SceUID threadId);
-extern int oalDeleteThread(SceUID threadId);
-extern void segSummarySetSegIfMethodPairTables(const SegIfMethodPair *pairs,
-	SceUInt32 numSegments);
 extern SceUID openCorefile(void);
-extern int oalGetCdnPcAndLrInfo(SceUID pid,
-	const CoredumpThreadStopEvent *event, CoredumpCdnPcAndLrInfo *location);
-extern int cafWriterEndSegment(CafWriter *writer);
-extern int cafWriterGetNumSegments(CafWriter *writer);
-extern int oalFileRemove(const char *path);
-extern void oalGetCdnAccessParam(SceUInt32 appVersion, SceUInt32 stopReason,
-	CoredumpCdnAccessParam *param, const CoredumpCdnPcAndLrInfo *location);
 
 /* the segments of a kernel dump and of a process dump, in writing order */
 extern SegIf corefileSegment;
