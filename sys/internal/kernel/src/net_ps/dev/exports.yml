@@ -15,13 +15,13 @@ SceNetPs:
         - SceNetPsForDriver_13491DA1: 0x13491DA1
         - SceNetPsForDriver_1ABF937D: 0x1ABF937D
         - SceNetPsForDriver_21F4428D: 0x21F4428D
-        - SceNetPsForDriver_3D4A1D74: 0x3D4A1D74
+        - SceNetKernelGateway: 0x3D4A1D74
         - SceNetPsForDriver_49B1669C: 0x49B1669C
         - SceNetPsForDriver_4BF5FAB4: 0x4BF5FAB4
         - SceNetPsForDriver_83A12CCC: 0x83A12CCC
         - SceNetPsForDriver_84AB650F: 0x84AB650F
         - SceNetPsForDriver_880A5423: 0x880A5423
-        - SceNetPsForDriver_8C4346CA: 0x8C4346CA
+        - sceNetPsUnregisterGateway: 0x8C4346CA
         - SceNetPsForDriver_8F1BB0E7: 0x8F1BB0E7
         - SceNetPsForDriver_92EE24A6: 0x92EE24A6
         - SceNetPsForDriver_AB746734: 0xAB746734

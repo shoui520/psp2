@@ -49,5 +49,6 @@ _Static_assert(offsetof(struct SceNetKernelGateway, notify) == 24,
 	       "gateway notification");
 
 int SceNetKernelGateway(struct SceNetKernelGateway *interface);
+int sceNetPsUnregisterGateway(struct SceNetKernelGateway *interface);
 
 #endif

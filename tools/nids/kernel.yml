@@ -2146,7 +2146,6 @@ modules:
           SceNetPsForDriver_83A12CCC: 0x83A12CCC
           SceNetPsForDriver_84AB650F: 0x84AB650F
           SceNetPsForDriver_880A5423: 0x880A5423
-          SceNetPsForDriver_8C4346CA: 0x8C4346CA
           SceNetPsForDriver_8F1BB0E7: 0x8F1BB0E7
           SceNetPsForDriver_92EE24A6: 0x92EE24A6
           SceNetPsForDriver_AB746734: 0xAB746734
@@ -2156,6 +2155,7 @@ modules:
           SceNetPsForDriver_EB95B024: 0xEB95B024
           SceNetPsForDriver_EEB19FB6: 0xEEB19FB6
           SceNetPsForDriver_F5788FF8: 0xF5788FF8
+          sceNetPsUnregisterGateway: 0x8C4346CA
   SceNpDrm:
     nid: 0x00000000
     libraries:
