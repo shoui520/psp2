@@ -9,6 +9,7 @@
 #include <iofilemgr/iofilemgr.h>
 #include <string.h>
 #include <stddef.h>
+#include "../../../usermode/src/fsutil/partition.h"
 
 /* Compressed Unicode uppercase mapping. 0xffff followed by a count skips
  * unchanged code points; the final 0xffff maps U+FFFF itself. */
@@ -416,21 +417,6 @@ uint32_t exfatDefaultClusterCount = 7885;
 static const uint16_t fatDefaultReservedSectors[5] = { 32, 1, 1, 32, 24 };
 static const uint32_t fatPartitionSystemIds[4] = { 1, 6, 11, 7 };
 #endif
-
-int _fs_util_get_device_info(const char *blockDeviceName, void *buffer,
-	unsigned int bufferSize);
-int _fs_util_prepare_mbr(const char *blockDeviceName, unsigned char systemId,
-	SceMbr *buffer, unsigned int bufferSize, uint64_t volumeSize);
-int _fs_util_device_format(const char *blockDeviceName);
-int _fs_util_prepare_rm_mbr(const char *blockDeviceName, SceUID file,
-	uint64_t volumeSize, unsigned int sectorSize, SceMbr *buffer,
-	unsigned int bufferSize);
-uint64_t appmgrMbrGetFdiskOffset(const SceSdstorMbr *mbr, unsigned int index);
-uint64_t appmgrMbrGetFdiskSize(const SceSdstorMbr *mbr, unsigned int index);
-uint64_t appmgrMbrGetPartitionOffset(const SceMbr *mbr, int index);
-uint64_t appmgrMbrGetPartitionSize(const SceMbr *mbr, int index);
-unsigned int appmgrMbrGetFormatType(const SceMbr *mbr, int index);
-unsigned int appmgrMbrGetClusterSize(const SceMbr *mbr, int index);
 
 unsigned int appmgrPackFatDateTime(const SceDateTime *time)
 {

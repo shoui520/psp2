@@ -9,6 +9,8 @@
 #include <sysmem/sysclib.h>
 #include "appmgr_device.h"
 #include <display/display.h>
+#include <audio/audio.h>
+#include <audioin/audioin.h>
 #include <appmgr/appmgr.h>
 
 extern SceUID g_appmgrMainMutex;
@@ -18,13 +20,6 @@ extern int dumpBgmState(void);
 extern int _sceAppMgrReleaseSoundOutExclusive(void);
 extern void updateAudioArbitration2NoLock(void);
 extern int _updateDeviceArbitration2(void);
-extern int sceAudioOutSetAdoptMode(int mode);
-extern int SceAudioForDriver_629261CD(SceUID pid, int mask, unsigned int volume,
-		int duration);
-extern int SceAudioForDriver_3440C1CA(SceUID pid, int type, int adopt,
-		int duration, int wait);
-extern int SceAudioInForDriver_E4042F6F(int pid, int unusedArgument1,
-		int unusedArgument2, int delay);
 
 SceUInt32 g_appmgrDisplayMergeAlpha = 256;
 SceUInt32 g_appmgrDisplayMergeSetting = 128;

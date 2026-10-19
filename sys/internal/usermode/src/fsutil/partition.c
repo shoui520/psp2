@@ -6,6 +6,7 @@
 #include <iofilemgr/iofilemgr.h>
 #include <stdint.h>
 #include <string.h>
+#include "partition.h"
 
 /* Sony's debug records retain the source path rather than its basename. */
 #undef __FILE_NAME__
