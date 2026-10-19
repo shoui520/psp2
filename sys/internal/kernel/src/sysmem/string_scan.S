@@ -56,9 +56,9 @@ strnlen:
 3:
 	mov	r0, r1
 	bx	lr
+	.balign	16
 	.size	strnlen, . - strnlen
 
-	.balign	16
 	.global	memchr
 	.type	memchr, %function
 	.thumb_func
