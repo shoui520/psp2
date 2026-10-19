@@ -15,6 +15,7 @@
 #include <npdrm/npdrm.h>
 #include <npdrm/psmdrm.h>
 #include <post_ss_mgr/sblpostssmgr.h>
+#include <gcauthmgr/sblgcauthmgrpkg.h>
 
 /* Extended package file header; multibyte members retain big-endian order. */
 struct NpDrmPackageExtendedHeader {
@@ -166,10 +167,6 @@ int NpDrmRemoveActData(uint64_t *accountId);
 
 _Static_assert(sizeof(struct NpDrmPackageUnwrappedKey) == 144,
 	"package unwrapped key ABI");
-
-/* sceSblGcAuthMgrPkgVryForDriver; the import database retains its NID name. */
-int SceSblGcAuthMgrPkgForDriver_E459A9A8(const char *pHash,
-	const char *pSig);
 
 int NpDrmPackageHashTransform(const void *input, void *digest, unsigned int size,
 	SceSblDmac5HashTransformContext *context, unsigned int flags);

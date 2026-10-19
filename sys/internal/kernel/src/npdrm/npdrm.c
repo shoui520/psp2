@@ -127,7 +127,6 @@ int NpDrmEbootSigVerify(const char *ebootPath, const void *signature,
 int NpDrmPspEbootSigGenerate(const char *ebootPath, const void *sha256,
 	void *signature, void *buffer, unsigned int bufferSize);
 extern const struct NpDrmActivationKeyMaterial gNpDrmEncryptedActivationKeyMaterial;
-int SceSblGcAuthMgrDrmBBForDriver_812B2B5C(int type, unsigned int *value);
 
 static int SceNpDrmInit(void *arg)
 {

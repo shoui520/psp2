@@ -87,8 +87,6 @@ typedef struct SceActSig {
 	SceUInt8 signature[0x100];
 } SceActSig;
 
-int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, SceUInt32 *mediaType);
-
 int licMgrHexDecode(const char *hex, void *data, SceSize size);
 int licMgrGetHeaderValue(const char *header, SceSize size, SceUInt32 *value, const char *key);
 int licMgrParseCodeFile(SceActData *act, SceActSig *sig, const char *path);

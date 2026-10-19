@@ -1052,9 +1052,6 @@ int sceIoSchedulerNeedsStorageIoChunks(IoScheduler *sched, IoRequest *req)
 	}
 }
 
-int sceKernelChangeThreadPriorityAndCpuAffinityMask(SceUID thid, int priority,
-						 int affinity, int reserved, int flags);
-
 static inline __attribute__((always_inline)) int isDataIoReq(IoRequest *req)
 {
 	switch (req->type) {

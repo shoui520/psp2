@@ -1,8 +1,7 @@
 /*
- * SceZlibForDriver (zlib 1.2.5 in the kernel), as used so far.
- *
- * The NIDs are unnamed; their use (with ZLIB_VERSION and sizeof(z_stream))
- * matches deflateInit_, deflate and deflateEnd.
+ * SceZlibForDriver (zlib 1.2.5 in the kernel), as used so far. The library exports each
+ * function twice, under two NIDs; the less imported one's link name is
+ * SceZlibForDriver_<name>.
  */
 
 #pragma once
@@ -39,3 +38,8 @@ typedef struct SceZlibStream {
 int deflateInit_(SceZlibStream *strm, int level, const char *version, int size);	/* deflateInit_ */
 int deflate(SceZlibStream *strm, int flush);					/* deflate */
 int deflateEnd(SceZlibStream *strm);						/* deflateEnd */
+int deflateInit2Padded_(SceZlibStream *strm, int level, int method, int windowBits,
+	int memLevel, int strategy, const char *version, int size);
+int SceZlibForDriver_inflateInitNocheck_(SceZlibStream *strm, const char *version, int size);
+int inflate(SceZlibStream *strm, int flush);
+int SceZlibForDriver_inflateEnd(SceZlibStream *strm);

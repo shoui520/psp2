@@ -6,6 +6,8 @@
 
 /* vitasdk: ksceSblGcAuthMgrDrmBBCheckCartHash */
 int SceSblGcAuthMgrDrmBBForDriver_22FD5D23(const void *hash);
+/* npdrm's use (npdrm.c) */
+int SceSblGcAuthMgrDrmBBForDriver_812B2B5C(int type, unsigned int *value);
 /* vitasdk: ksceSblGcAuthMgrDrmBBClearCartSecret */
 int SceSblGcAuthMgrDrmBBForDriver_BB451E83(void);
 /* vitasdk: ksceSblGcAuthMgrDrmBBGetCartSecret */

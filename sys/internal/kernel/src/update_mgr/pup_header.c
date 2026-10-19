@@ -8,8 +8,7 @@
 #include <threadmgr/threadmgr.h>
 #include <sysmem/qafmgr.h>
 #include <post_ss_mgr/sblpostssmgr.h>
-
-int SceSblSsMgrForKernel_516ECC08(unsigned char *flag);
+#include <ss_mgr/ss_mgr.h>
 
 static const char pupMagic[8] = "SCEUF";
 static const uint32_t pupFallbackVersion = SCE_PSP2_SDK_VERSION;

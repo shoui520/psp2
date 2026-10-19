@@ -46,8 +46,6 @@ typedef struct ScePmSmSysconModeCommand {
 	SceUInt8 response[0x30];
 } ScePmSmSysconModeCommand;
 
-int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, SceUInt32 *mediaType);
-
 static SceSblSmCommId g_pmSmId;	/* name unknown */
 
 /* the self authentication pm_sm.self runs with */

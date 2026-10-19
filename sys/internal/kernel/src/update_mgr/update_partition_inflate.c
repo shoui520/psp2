@@ -2,10 +2,6 @@
 #include <threadmgr/threadmgr.h>
 #include "update_objects.h"
 
-int SceZlibForDriver_inflateInitNocheck_(SceZlibStream *stream, const char *version, int size);
-int inflate(SceZlibStream *stream, int flush);
-int SceZlibForDriver_inflateEnd(SceZlibStream *stream);
-
 int UpdateUtilInflateWritePartition(const void *input, uint64_t size,
 		uint64_t offset, const SceMbr *mbr, uint8_t partition,
 		unsigned int nodeType, UpdateUtilNodeStatus *status, SceUID pid)

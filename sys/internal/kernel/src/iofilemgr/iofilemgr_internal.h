@@ -937,8 +937,6 @@ int rfs_get_root(const VfsPathElem *elem, int num, RfsRootInfo *root, int *depth
 #define VFS_AC_MODE_WRITE		2
 #define VFS_AC_MODE_CHSTAT		8
 
-int SceSblACMgrForKernel_sceSblACMgrSetFSAttributeByAttributeWithMountPoint(SceUID pid, SceSblACMgrValue *in, SceSblACMgrValue *out,
-				  SceUInt32 mntId);	/* sceSblACMgrSetFSAttributeByAttributeWithMountPoint */
 void set_attr_info(SceVfsVnode *vp, SceUInt64 *attr, SceSblACMgrValue *info, SceUID pid);
 int vfs_check_vnode_rw_access(SceVfsVnode *vp);
 int vfs_check_vnode_write_access(SceVfsVnode *vp);

@@ -12,6 +12,7 @@
 #include <sysmem/utils.h>
 #include <sysmem/qafmgr.h>
 #include <post_ss_mgr/sblpostssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 #include "spkg.h"
 
 extern int spkgMbrLoaded;
@@ -20,7 +21,6 @@ extern uint32_t spkgModifiedBanks;
 extern uint64_t spkgOsChunkMask, spkgVshChunkMask;
 extern uint64_t spkgSysdataChunkMask, spkgPidataChunkMask;
 extern SceMbr spkgMbr;
-int SceSblSsMgrForKernel_516ECC08(unsigned char *flag);
 
 int sceSblUsUpdateSpackageBH(SceSize arglen, SpkgThreadArgs *args)
 {

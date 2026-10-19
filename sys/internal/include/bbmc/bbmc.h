@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdint.h>
 #include <scetypes.h>
 
 typedef struct BbmcSubscribeFeatureIdParam {
@@ -88,6 +89,8 @@ int sceBbmcDLUpdaterGetArchiveVersionForDriver(int subscriberId, SceUInt32 *vers
 int sceBbmcDLUpdaterGetSequenceForDriver(int subscriberId, SceUInt32 *firstStatus,
 	SceUInt32 *secondStatus, BbmcDriverInfo *info);
 int sceBbmcDLUpdaterGetPkgIdForDriver(int subscriberId, SceUInt32 *pkgId);
+/* not written in C yet: the prototype follows update_mgr's use (bbmc_status.c) */
+int SceBbmcForDriver_4281E476(int subscriberId, uint32_t *status);
 
 /* usb_extif.c */
 int sceBbmcUsbExtIfStart(int mode);

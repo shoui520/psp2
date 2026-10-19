@@ -39,7 +39,6 @@ extern int updateBbmcInitialized;
 int BbmcUtilCallback(int notifyId, int notifyCount, int notifyArg, void *userData);
 int SceSblUsComUtilCallbackHandler(SceSize args, void *argp);
 int BbmcUtilInitialize(void);
-int SceBbmcForDriver_4281E476(int subscriber, uint32_t *status);
 int BbmcUtilIsAvailable(void);
 
 /* weak imports: the BBMC driver is not always loaded */

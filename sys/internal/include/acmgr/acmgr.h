@@ -38,6 +38,9 @@ int SceSblACMgrForDriver_456DA7AC(SceUID pid);
 int sceSblACMgrSetFSAttributeByAttributeWithMountPoint(SceUID pid, SceSblACMgrValue *attr,
 						       const SceSblACMgrValue *source,
 						       SceUInt32 mountPoint);
+/* the same function, SceSblACMgrForKernel's export */
+int SceSblACMgrForKernel_sceSblACMgrSetFSAttributeByAttributeWithMountPoint(SceUID pid,
+	SceSblACMgrValue *attr, const SceSblACMgrValue *source, SceUInt32 mountPoint);
 int SceSblACMgrForDriver_4CBD6156(SceUID pid);	/* the process may be debugged */
 int SceSblACMgrForDriver_4DB7F512(SceUID pid);	/* vitasdk: ksceSblACMgrIsAllowedExtendedMemory */
 int SceSblACMgrForDriver_5C4BC352(SceUID pid);

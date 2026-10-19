@@ -483,6 +483,8 @@ int sceKernelChangeCurrentThreadAttr(uint32_t clear, uint32_t set);
 int sceKernelChangeThreadPriority(SceUID uid, uint32_t priority);
 int sceKernelChangeThreadPriority2(SceUID uid, uint32_t priority);
 int sceKernelChangeThreadPriority2ForUser(SceUID uid, uint32_t priority);
+int sceKernelChangeThreadPriorityAndCpuAffinityMask(SceUID uid, uint32_t priority,
+	uint32_t mask, int *previousPriority, uint32_t *previousMask);
 int sceKernelChangeThreadPriorityForUser(SceUID uid, uint32_t priority);
 uint32_t sceKernelChangeThreadVfpException(uint32_t clear, uint32_t set);
 int sceKernelChangeThreadVfpExceptionForUser(uint32_t clear, uint32_t set);

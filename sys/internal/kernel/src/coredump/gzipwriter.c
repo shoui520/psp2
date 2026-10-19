@@ -3,10 +3,6 @@
 #include "writer_internal.h"
 #include <sysmem/debug.h>
 
-extern int deflateInit2Padded_(SceZlibStream *stream, int level,
-	int method, int windowBits, int memLevel, int strategy,
-	const char *version, int streamSize);
-
 static int _writeDataToDest(Writer *writer, const void *data, SceSize size,
 	SceSize *written);
 static int _setDestOffset(Writer *writer, SceOff offset);
