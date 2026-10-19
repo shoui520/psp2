@@ -18,12 +18,6 @@
 #define SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID 0x80028021
 #define SCE_KERNEL_ERROR_NOT_IMPLEMENTED 0x80020002
 
-void issuePMonThreadChangeCounterEnableIntrRequest(unsigned int cpuId, SceUID threadId,
-						   uint32_t mask, int enable);
-void issuePMonThreadSetCounterIntrRequest(unsigned int cpuId, const void *request);
-void issuePMonThreadGetCounterIntrRequest(unsigned int cpuId, const void *request);
-void issueSimpleIntrRequestToOtherCpuAndWait(void);
-
 static inline int PmonCounterValid(uint32_t counter)
 {
 	return counter < 32 && ((PMON_COUNTER_MASK >> counter) & 1);

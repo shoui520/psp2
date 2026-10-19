@@ -73,4 +73,19 @@ int lockLwMutexForLwCond(SceUID lwMutexId, int count, SceUInt32 *timeout, int ca
 			 SceUID condId);
 int unlockLwMutexForLwCond(SceUID lwMutexId, int count);
 
+typedef struct ThreadmgrLwMutexOptParam {
+	SceSize size;
+} ThreadmgrLwMutexOptParam;
+
+/* lw_mutex.c */
+void startLwMutex(void);
+int lwMutexProcessExit(SceProcessObject *process);
+int _sceKernelCreateLwMutexForUser(ThreadmgrLwMutexWork *work, const char *name, SceUInt32 attr,
+				   int initCount, const ThreadmgrLwMutexOptParam *option);
+int sceKernelDeleteLwMutexForUser(ThreadmgrLwMutexWork *work);
+int _sceKernelLockLwMutex(ThreadmgrLwMutexWork *work, int count, SceUInt32 *timeout, int callbacks);
+int _sceKernelUnlockLwMutex(ThreadmgrLwMutexWork *work, int count);
+int uidLwMutex_DeleteCache(SceProcessObject *process, int target);
+int uidLwMutex_ManageCache(SceProcessObject *process, int high, int low, int target);
+
 #endif

@@ -172,11 +172,6 @@ bool isWaitOnly(struct ThreadmgrWaitQueue *queue, int priority)
 	return first->currentPriority <= priority;
 }
 
-int callCallbackAll(struct ThreadCB *thread);
-int sceKernelCheckThreadUserStackSelf(void);
-int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
-		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
-
 #define WAIT_TYPE_SEMAPHORE		0x20
 #define THREAD_ATTR_CHECK_STACK		0x80000000
 #define THREADMGR_ERROR_WAIT_CANCEL	0x800280a2	/* PLACEHOLDER: name */

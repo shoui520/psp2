@@ -138,4 +138,7 @@ int mutexProcessExit(SceProcessObject *process);
 int lockMutexForCond(SceUID mutexId, int count, SceUInt32 *timeout, int callbacks, SceUID condId);
 int unlockMutexForCond(SceUID mutexId, int count);
 
+/* mutex.c */
+void startMutex(void);
+
 #endif

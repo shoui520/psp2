@@ -56,4 +56,7 @@ int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPa
 void releaseAllEventFlag(struct ThreadCB *thread);
 int eventFlagProcessExit(SceProcessObject *process);
 
+/* event_flag.c */
+void startEventFlag(void);
+
 #endif

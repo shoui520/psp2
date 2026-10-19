@@ -60,11 +60,6 @@ __attribute__((section(SCE_DBGSRC_SECTION), used)) = {
 #define SCE_KERNEL_ERROR_WAIT_DELETE_COND 0x800281a4
 #define SCE_KERNEL_ERROR_WAIT_CANCEL_COND 0x800281a5
 
-int callCallbackAll(struct ThreadCB *thread);
-int sceKernelCheckThreadUserStackSelf(void);
-int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
-		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
-
 /* SceUIDCondClass's constructor */
 static int uidCond_Constructor(void *object)
 {

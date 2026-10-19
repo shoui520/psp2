@@ -35,11 +35,6 @@
 #define SCE_KERNEL_ERROR_EVF_MULTI	0x800280e2
 #define SCE_KERNEL_ERROR_EVF_COND	0x800280e3
 
-int callCallbackAll(struct ThreadCB *thread);
-int sceKernelCheckThreadUserStackSelf(void);
-int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
-		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
-
 /* whether pattern satisfies a waiter's request under mode */
 static inline int EventFlagMatches(uint32_t pattern, uint32_t request, uint32_t mode)
 {

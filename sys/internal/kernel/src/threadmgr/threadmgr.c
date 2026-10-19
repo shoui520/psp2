@@ -31,8 +31,7 @@
 #include <intrmgr/syscall.h>
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/threadmgr_debugger.h>
-
-void issueChangeThreadPriorityIntrRequest(unsigned int cpuId, SceUID threadId, int priority);
+#include "lw_mutex.h"
 
 /* SceThreadmgrForKernel_59D1D5B0: processmgr's process class */
 int SceThreadmgrForKernel_59D1D5B0(SceClass *processClass)
@@ -82,7 +81,6 @@ int SceThreadmgrForDriver_5311CFB5(uintptr_t hook, uintptr_t arg)
 typedef void (*ThreadmgrSchedSleepHandler)(const struct ThreadmgrSchedProbeDescriptor *probe);
 
 int sceKernelCheckThreadUserStackSelf(void);
-int callCallbackAll(struct ThreadCB *thread);
 
 /* the __sched_:sleep probe of a signal wait */
 static uint32_t s_signalSleepProbeId;
@@ -558,37 +556,10 @@ int uidThread_Destructor(struct ThreadmgrThreadObject *object);
 int uidThread_CancelWait(void *cls, void *uidObject, uint32_t a2);
 void __attribute__((noreturn)) cleanerThread(void);
 void kernelThreadReturnEntry(int status);
-int syslibtraceThreadCBInit(struct ThreadCB *thread);
-int dtraceThreadCBInit(struct ThreadCB *thread);
 void initRegisterContext(struct ThreadRegisterContext *regs);
 void initVfpContext(uintptr_t vfp);
-int intrRequestSGIHandler(int code, void *arg);
-void initIntrRequestPool(void);
 void uidCacheClassInit(void) __attribute__((noreturn));
-void startCpuTimer(struct ThreadMgrCpuCB *cpu);
-void suspendCpuTimer(void);
-void resumeCpuTimer(void);
-void callThreadmgrBeforeIntrHandler(uintptr_t unused, struct ThreadCB *context);
-int registerThreadmgrVfpExceptionIntrHandler(void);
-void suspendThreadmgrVfpException(void);
-void resumeThreadmgrVfpException(void);
-void startFastMutex(void);
-void startCallback(void);
-void startThreadEvent(void);
-void startEventFlag(void);
-void startSemaphore(void);
-void startMutex(void);
-void startCond(void);
-int startMsgPipe(void);
-void startLwMutex(void);
-void startLwCond(void);
-void startRWLock(void);
-int startSimpleEvent(void);
-void startWorkQueue(void);
-void startException(void);
 int waitThreadEnd(SceUID threadId, int *status, SceUInt32 *timeout, int callbacks);
-int createGlobalWorkQueue(void);
-int startMsgPipeAfterProcess(void);
 int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result,
 				    uint32_t request);
 void returnFromExcpToThread(void);
@@ -1462,11 +1433,7 @@ int SceThreadmgrForDriver_84EB1EA4(int value)
 #define SCE_KERNEL_ERROR_WAIT_DELETE	0x80028006
 #define SCE_KERNEL_ERROR_WAIT_CANCEL	0x80028007
 #define SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID	0x80028022
-int callThreadEventHandlers(uint32_t mask);
 void __attribute__((noreturn)) exitDeleteThread(int delete, int intr, int status);
-int releaseThreadTlsSlots(struct ThreadCB *thread);
-int dtraceThreadCBExit(struct ThreadCB *thread);
-int syslibtraceThreadCBExit(struct ThreadCB *thread);
 
 /* the thread goes from the list it is on to the manager's closed list */
 static inline void listClosed(struct ThreadCB *thread)
@@ -2684,19 +2651,6 @@ typedef void (*ThreadmgrProcessDebugSuspendHook)(SceUID pid, SceUID threadId, in
 int stopThread(SceUID threadId, int priority, uint32_t request);
 int deleteThread(struct ThreadCB *thread);
 int startThread(SceUID threadId, SceSize argSize, const void *arg, int checkSource);
-int createException(SceProcessObject *process);
-int deleteException(SceProcessObject *process);
-int uidLwMutex_DeleteCache(SceProcessObject *process, int target);
-int uidLwMutex_ManageCache(SceProcessObject *process, int high, int low, int target);
-int semaphoreProcessExit(SceProcessObject *process);
-int condProcessExit(SceProcessObject *process);
-int rwLockProcessExit(SceProcessObject *process);
-int lwCondProcessExit(SceProcessObject *process);
-int lwMutexProcessExit(SceProcessObject *process);
-int msgPipeProcessExit(SceProcessObject *process);
-int simpleEventProcessExit(SceProcessObject *process);
-int threadEventProcessExit(SceProcessObject *process);
-int callbackProcessExit(SceProcessObject *process);
 
 /* sceKernelStopThread: ends another thread */
 int sceKernelStopThread(SceUID threadId, int priority)
@@ -4173,9 +4127,6 @@ _Static_assert(offsetof(struct SceKernelThreadmgrPrivate, deletedNext) == 0x2218
 	       offsetof(struct SceKernelThreadmgrPrivate, cleanerThread) == 0x2260 &&
 	       offsetof(SceProcessObject, exitThread) == 0x70,
 	       "thread end lists");
-void deleteAllCallback(struct ThreadCB *thread);
-uint32_t releaseAllFastMutex(struct ThreadCB *thread);
-uint32_t releaseAllRWLock(struct ThreadCB *thread);
 
 static uint32_t s_procLwpExitProbeId;
 volatile uintptr_t s_procLwpExitHandler;
@@ -4198,8 +4149,6 @@ const struct ThreadmgrSchedProbeDescriptor s_procExitDescriptor = {
 	.codeSite = s_procExitCodeSite,
 	.handler = &s_procExitHandler,
 };
-
-void notifyDebugThreadEvent(SceUID processId, SceUID threadId, uint32_t event, int *status);
 
 /* the thread goes at the end of one of the manager's lists */
 static inline void listThread(struct ThreadCB *thread, uintptr_t *list)
@@ -5899,8 +5848,6 @@ int sceKernelGetThreadExitStatus(SceUID uid, int *status)
  */
 
 #define SCE_KERNEL_ERROR_DELETED	0x8002802a
-int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
-		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
 
 /* the error for a thread ID the caller cannot name */
 static inline int unknownThreadError(void)
@@ -7556,8 +7503,6 @@ SceUID sceKernelCreateRemoteThread(SceUID pid, const char *name, SceKernelThread
 #define EVENT_DELETED_PATTERN		0x00000010	/* PLACEHOLDER: the pattern a cut wait reports */
 #define SCE_KERNEL_ERROR_ILLEGAL_PRIORITY	0x80028023
 void setupThreadExit(struct ThreadCB *thread, uint32_t request);
-void issueStopThreadIntrRequest(unsigned int cpuId, SceUID threadId, uint32_t arg1,
-				uint32_t arg2);
 
 /* the thread leaves the manager list it is on */
 static inline void unlistThread(struct ThreadCB *thread)

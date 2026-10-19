@@ -25,10 +25,6 @@ struct ThreadmgrCreateThreadExtArgs {
 	const void *callerAddr;			/* 0x14: where the user library was called from */
 };
 
-SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPriority,
-		    SceSize stackSize, uint32_t attr, uint32_t cpuAffinityMask,
-		    const SceKernelThreadOptParam *option, uint32_t flags, const void *callerAddr);
-
 /* sceKernelCreateThreadForUser */
 SceUID sceKernelCreateThreadForUser(const char *name, uintptr_t entry, int initPriority,
 				    const struct ThreadmgrCreateThreadExtArgs *extargs)

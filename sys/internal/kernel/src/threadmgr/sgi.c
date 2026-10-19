@@ -12,6 +12,7 @@
 #include "syscall_context.h"
 #include "event.h"
 #include "timer.h"
+#include "affinity.h"
 
 static inline struct SceKernelThreadmgrPrivate *loadIntrRequestManager(void)
 {
@@ -306,24 +307,6 @@ void issueSuspendThreadForVMIntrRequest(unsigned int cpuId, SceUID threadId, int
 	issueIntrRequest(cpuId, request);
 }
 
-int changeThreadCpuAffinityMask(SceUID threadId, uint32_t mask, uint32_t *previousMask);
-void changeThreadPrioritySGIHandler(SceUID threadId, int priority);
-void changeThreadPriorityAndCpuAffinityMaskSGIHandler(SceUID threadId, int priority,
-						      uint32_t mask);
-int debugSuspendThreadIntr(SceUID threadId, uint32_t reason, int *result,
-			   SceKernelSpinlock *done);
-int stopThread(SceUID threadId, int priority, uint32_t request);
-void suspendThreadForVMIntr(SceUID threadId, int *result, SceKernelSpinlock *done);
-int setCpuRegisterForDebuggerIntr(void *request);
-int getCpuRegisterForDebuggerIntr(void *request);
-int setVfpRegisterForDebuggerIntr(void *request);
-int getVfpRegisterForDebuggerIntr(void *request);
-int pmonThreadChangeEnableCounter(SceUID threadId, uint32_t mask, int enable);
-void pmonThreadSetCounterIntr(struct ThreadmgrPmonRequest *request);
-void pmonThreadGetCounterIntr(struct ThreadmgrPmonRequest *request);
-void dtraceAsyncXCallIntr(void (*fn)(void *), void *arg);
-void dtraceSyncXCallIntr(void (*fn)(void *), void *arg, SceKernelSpinlock *done);
-int deactivateCpu(void);
 /* intrmgr.h gives it an argument it does not take */
 
 typedef int (*ThreadmgrIntrRequestHandler)(SceSize size, void *message);

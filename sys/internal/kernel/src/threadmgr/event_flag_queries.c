@@ -9,11 +9,6 @@
 #include "event_flag.h"
 #include <sysmem/uid_class.h>
 
-int sceKernelCancelEventFlagForUser(SceUID evfId, uint32_t pattern, int *numWaitThreads);
-int sceKernelGetEventFlagInfoForUser(SceUID evfId, SceKernelEventFlagInfo *info);
-int sceKernelPollEventFlagForUser(SceUID evfId, uint32_t pattern, uint32_t mode,
-				  uint32_t *outPattern);
-
 int _sceKernelPollEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern)
 {
 	uint32_t *value;

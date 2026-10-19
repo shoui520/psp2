@@ -15,11 +15,6 @@
 #define THREAD_ID_LIST_ALL		0x00010021	/* PLACEHOLDER: name */
 #define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
 
-void issueDTraceAsyncXCallIntrRequest(unsigned int cpuId, void (*fn)(void *), const void *arg,
-				      SceSize size);
-void issueDTraceSyncXCallIntrRequest(unsigned int cpuId, void (*fn)(void *), void *arg,
-				     SceKernelSpinlock *done);
-
 /* allocates a thread's DTrace state if it has none */
 int dtraceThreadCBInit(struct ThreadCB *thread)
 {

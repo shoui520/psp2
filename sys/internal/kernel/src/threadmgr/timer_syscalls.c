@@ -11,15 +11,6 @@
 #include <sysmem/uid_class.h>
 #include <threadmgr/threadmgr.h>
 
-int cancelTimerForUser(SceUID uid, uint32_t *count);
-int createTimerForUser(const char *name, uint32_t attributes, const uint32_t *options);
-int getTimerBaseForUser(SceUID uid, uint64_t *value);
-int getTimerEventRemainingTimeForUser(SceUID uid, uint64_t *output);
-int getTimerInfoForUser(SceUID uid, SceKernelTimerInfo *output);
-int getTimerTimeForUser(SceUID uid, uint64_t *value);
-int setTimerEventForUser(SceUID uid, uint32_t type, const volatile uint64_t *interval, uint32_t repeat);
-int setTimerTimeForUser(SceUID uid, uint64_t *userValue);
-
 #undef __FILE_NAME__
 #define __FILE_NAME__ "threadmgr_for_user.c"
 
@@ -33,8 +24,6 @@ struct ThreadmgrTimerInfoCopyArgs {
 
 _Static_assert(sizeof(struct ThreadmgrTimerInfoCopyArgs) == 8,
 	       "timer info copy arguments size");
-
-extern int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attributes);
 
 int _sceKernelCancelTimer(SceUID uid, uint32_t *count)
 {

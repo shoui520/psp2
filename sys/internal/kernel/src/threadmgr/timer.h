@@ -110,4 +110,9 @@ void waitTimeoutHandler(struct ThreadCB *context);
 _Static_assert(offsetof(struct ThreadCB, delayId) == 0x118,
 	       "thread delay object identity");
 
+/* timer.c */
+void startCpuTimer(struct ThreadMgrCpuCB *cpu);
+void suspendCpuTimer(void);
+void resumeCpuTimer(void);
+
 #endif

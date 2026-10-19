@@ -22,6 +22,7 @@
 #include <sysmem/dipsw.h>
 #include <sysmem/uid_class.h>
 #include <threadmgr/threadmgr.h>
+#include "affinity.h"
 
 #define THREAD_ATTR_USER		0x80000000
 #define THREAD_ATTR_UNK10000000		0x10000000	/* PLACEHOLDER: its stack is only measured with DIPSW 0xd8 */
@@ -68,24 +69,6 @@
 #define DEBUG_REG_CPSR			16
 #define DEBUG_REG_FPSCR			17
 
-/* a set request for a thread on another CPU (the SGI handler fills result, unlocks done) */
-typedef struct ThreadmgrDebugSetRequest {
-	SceUID threadId;
-	const void *regs;
-	uint32_t mask;
-	int mode;
-	int *result;
-	SceKernelSpinlock *done;
-} ThreadmgrDebugSetRequest;
-
-typedef struct ThreadmgrDebugGetRequest {
-	SceUID threadId;
-	void *regs;
-	int mode;
-	int *result;
-	SceKernelSpinlock *done;
-} ThreadmgrDebugGetRequest;
-
 _Static_assert(sizeof(ThreadmgrThreadInfoForDebugger) == 0x128 &&
 	       offsetof(ThreadmgrThreadInfoForDebugger, timeout) == 0xf4 &&
 	       offsetof(ThreadmgrThreadInfoForDebugger, waitDetail) == 0x108,
@@ -96,14 +79,6 @@ typedef struct ThreadmgrThreadName {
 	SceUID threadId;
 	char name[32];
 } ThreadmgrThreadName;
-
-void runningThreadPreemptByIntr(struct ThreadCB *context, uint32_t reason);
-void issueDebugSuspendThreadIntrRequest(unsigned int cpuId, SceUID threadId, uint32_t reason,
-					int *result, SceKernelSpinlock *done);
-void issueSetCpuRegisterIntrRequest(unsigned int cpuId, void *debugRequest);
-void issueGetCpuRegisterIntrRequest(unsigned int cpuId, void *debugRequest);
-void issueSetVfpRegisterIntrRequest(unsigned int cpuId, void *debugRequest);
-void issueGetVfpRegisterIntrRequest(unsigned int cpuId, void *debugRequest);
 
 /* the VFP save area's FPSCR (initVfpContext's layout) */
 #define VFP_FPSCR(vfp)		(*(uint32_t *)((uintptr_t)(vfp) + 0x100))

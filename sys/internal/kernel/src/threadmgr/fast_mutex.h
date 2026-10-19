@@ -46,4 +46,8 @@ _Static_assert(offsetof(struct ThreadmgrFastMutex, spinWaitCount) == 0x14,
 _Static_assert(offsetof(struct ThreadCB, ownedFastMutexNext) == 0x68,
 	       "thread owned fast-mutex list");
 
+/* fast_mutex.c */
+void startFastMutex(void);
+uint32_t releaseAllFastMutex(struct ThreadCB *thread);
+
 #endif

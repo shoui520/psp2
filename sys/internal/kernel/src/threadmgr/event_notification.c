@@ -6,10 +6,6 @@
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 
-int sceKernelSetEventWithNotifyCallbackForUser(SceUID eventId, uint32_t pattern,
-					       uint32_t userDataLow, uint32_t userDataHigh,
-					       uint32_t arg);
-
 int _sceKernelSetEventWithNotifyCallback(SceUID eventId, uint32_t pattern, const uint32_t *args)
 {
 	uint32_t values[4];

@@ -21,6 +21,8 @@
 #include <intrmgr/intrmgr.h>
 #include <sysmem/sysroot.h>
 #include <threadmgr/threadmgr.h>
+#include "timer.h"
+#include "event.h"
 
 #define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define THREAD_ATTR_USER		0x80000000
@@ -201,19 +203,6 @@ _Static_assert(sizeof(ThreadmgrWorkQueueInfo) == 0x40 && sizeof(ThreadmgrWorkTas
 	       offsetof(ThreadmgrWorkQueueInfoFull, threads) == 0x44,
 	       "work queue info layouts");
 
-int callCallbackAll(struct ThreadCB *thread);
-int sceKernelCheckThreadUserStackSelf(void);
-int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result,
-				    uint32_t request);
-int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
-		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
-void getWakeupTime(uint64_t *wakeup, uint32_t timeout);
-bool wakeupAndDistributeThread(struct ThreadCB *thread, uintptr_t waitable,
-			       int result);
-int revalidateWaitState(uintptr_t waitable);
-uint32_t wakeupWaitObjectAll(uintptr_t waitable, int result, uint32_t *count);
-void initRegisterContext(struct ThreadRegisterContext *regs);
-void initVfpContext(uintptr_t vfp);
 void returnFromWorkTaskEntry(int result) __attribute__((noreturn));
 
 /* a short pause between lock attempts (lock order: task before queue) */

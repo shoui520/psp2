@@ -36,8 +36,6 @@
 #define SDK_VERSION_MSG_PIPE_EMPTY	0x03100000	/* PLACEHOLDER: from here an empty pipe ... */
 #define SCE_KERNEL_ERROR_UNKNOWN_MSG_PIPE_ID	0x80028221	/* PLACEHOLDER: name */
 
-int callCallbackAll(struct ThreadCB *thread);
-
 /* the ring buffer (pipe +0x38) */
 struct ThreadmgrMsgPipeRing {
 	uint8_t *base;				/* 0x38 */
@@ -608,9 +606,6 @@ stop:
 #define MSG_PIPE_EVENT_ERROR		0x00000010
 #define THREADMGR_ERROR_WAIT_CANCEL	0x800280a2	/* PLACEHOLDER: name */
 #define SCE_KERNEL_ERROR_MSG_PIPE_DELETED	0x80028224	/* PLACEHOLDER: name */
-
-int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
-		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
 
 /* what a syscall restarted after a suspend carries over of its transfer */
 typedef struct ThreadmgrMsgPipeRestart {
@@ -1380,8 +1375,6 @@ callbacks:
 #define SCE_KERNEL_ERROR_ILLEGAL_MODE	0x80020010
 #define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
 #define SCE_KERNEL_ERROR_MSG_PIPE_ASYNC_FULL	0x80028225	/* PLACEHOLDER: name */
-
-int sceKernelCheckThreadUserStackSelf(void);
 
 /* a send or receive queued to the async threads (0x30, in the process's heap) */
 typedef struct ThreadmgrMsgPipeAsyncRequest {
@@ -2176,14 +2169,6 @@ int msgPipeProcessExit(SceProcessObject *process)
 #define SCE_KERNEL_ERROR_ILLEGAL_TYPE	0x8002000c	/* PLACEHOLDER: name */
 #define SCE_KERNEL_ERROR_ILLEGAL_HEAP	0x80020011	/* PLACEHOLDER: name */
 
-typedef struct ThreadmgrMsgPipeOptParam {
-	SceSize size;
-	uint32_t flags;				/* MSG_PIPE_OPT_FLAG_* */
-	int capability;				/* 0x08: with MSG_PIPE_OPT_FLAG_CAPABILITY */
-	SceUID pid;				/* 0x0c */
-	uint32_t heapKind;			/* 0x10 */
-} ThreadmgrMsgPipeOptParam;
-
 /*
  * The buffer (bufferSize rounded up to pages, in memory of memType) and
  * the object, counted against the calling process's limits; lr, the
@@ -2446,8 +2431,6 @@ SceUID SceThreadmgrForDriver_BF631145(const char *name, int memType, SceUInt32 a
 
 #define MSG_PIPE_EVENT_DELETED		0x00000008
 #define MSG_PIPE_EVENT_OPENED		0x00000100
-
-extern int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attr);
 
 /* a kernel caller closes the pipe, which sets MSG_PIPE_EVENT_DELETED */
 int sceKernelDeleteMsgPipe(SceUID msgPipeId)

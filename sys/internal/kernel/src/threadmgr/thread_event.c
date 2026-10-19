@@ -48,9 +48,6 @@ _Static_assert(sizeof(ThreadmgrThreadEvent) == 0x38, "SceUIDThreadEventObject si
 #define THREAD_EVENT_FROM_LINK(l) \
 	((ThreadmgrThreadEvent *)((uintptr_t)(l) - offsetof(ThreadmgrThreadEvent, link)))
 
-int callCallbackEntry(struct ThreadCB *thread, int user, uintptr_t entry,
-		      uint32_t arg0, uint32_t arg1, uint32_t arg2, uint32_t arg3);
-
 /* SceUIDThreadEventClass's constructor */
 static int uidThreadEvent_Constructor(void *object)
 {

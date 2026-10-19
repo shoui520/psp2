@@ -18,6 +18,9 @@
 #include "syscall_context.h"
 #include <sysmem/sysclib.h>
 #include <intrmgr/intrmgr.h>
+#include "timer.h"
+#include "affinity.h"
+#include "event.h"
 
 #define THREAD_ATTR_USER		0x80000000
 #define THREAD_ATTR_VM			0x04000000	/* PLACEHOLDER: a VM's thread */
@@ -41,46 +44,9 @@
 #define THREAD_CLASS()		(s_threadmgrRuntime.manager->threadClass)
 #define EXCEPTION_CLASS()	(s_threadmgrRuntime.manager->exceptionClass)
 
-/* the VM's view of a thread's registers (0x58) */
-typedef struct ThreadmgrVmCpuContext {
-	SceSize size;
-	uint32_t cpsr;
-	union {
-		uint32_t r[15];			/* 0x08: r0-r14 */
-		struct {
-			uint32_t gpr[13];
-			uint32_t sp;		/* 0x3c */
-			uint32_t lr;
-		};
-	};
-	uint32_t pc;				/* 0x44 */
-	uint32_t tpidrurw;			/* 0x48 */
-	uint32_t reserved;
-	uint32_t tlsWord[2];			/* 0x50: the user TLS -0x7f8 and -0x7f4 */
-} ThreadmgrVmCpuContext;
-
-/* and its VFP registers (0x108) */
-typedef struct ThreadmgrVmVfpContext {
-	SceSize size;
-	uint32_t fpscr;
-	uint8_t d[0x100];			/* 0x08: d0-d31 */
-} ThreadmgrVmVfpContext;
-
 _Static_assert(sizeof(struct ThreadmgrException) == 0x38 &&
 	       sizeof(ThreadmgrVmCpuContext) == 0x58 && sizeof(ThreadmgrVmVfpContext) == 0x108,
 	       "virtual machine layouts");
-
-int callCallbackAll(struct ThreadCB *thread);
-int sceKernelCheckThreadUserStackSelf(void);
-int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
-		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
-void getWakeupTime(uint64_t *wakeup, uint32_t timeout);
-bool wakeupAndDistributeThread(struct ThreadCB *thread, uintptr_t waitable,
-			       int result);
-uint32_t wakeupWaitObjectAll(uintptr_t waitable, int result, uint32_t *count);
-void runningThreadPreemptByIntr(struct ThreadCB *context, uint32_t reason);
-void issueSuspendThreadForVMIntrRequest(unsigned int cpuId, SceUID threadId, int *result,
-					SceKernelSpinlock *done);
 
 static inline void dataMemoryBarrier(void)
 {

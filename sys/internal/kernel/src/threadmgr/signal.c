@@ -14,9 +14,6 @@
 #include "timer.h"
 #include <threadmgr/uid_waitable.h>
 
-int sceKernelWaitSignalCBForUser(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout);
-int sceKernelWaitSignalForUser(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout);
-
 #undef __FILE_NAME__
 #define __FILE_NAME__ "threadmgr.c"
 
@@ -31,8 +28,6 @@ int sceKernelWaitSignalForUser(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout)
 #define SCE_KERNEL_ERROR_SIGNAL_PENDING	0x80028121	/* PLACEHOLDER: name */
 #define THREADMGR_ERROR_WAIT_CANCEL	0x800280a2	/* PLACEHOLDER: name */
 
-int sceKernelCheckThreadUserStackSelf(void);
-int callCallbackAll(struct ThreadCB *thread);
 extern const char s_signalSleepCodeSite[];
 
 /* _sceKernelWaitSignal: the timeout comes in and goes back out */

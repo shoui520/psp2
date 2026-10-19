@@ -37,15 +37,6 @@
 #define SCE_KERNEL_ERROR_WAIT_DELETE_LW_MUTEX 0x800281c2
 #define SCE_KERNEL_ERROR_WAIT_DELETE_LW_COND 0x800281c3	/* PLACEHOLDER: name */
 
-typedef struct ThreadmgrLwCondOptParam {
-	SceSize size;
-} ThreadmgrLwCondOptParam;
-
-int callCallbackAll(struct ThreadCB *thread);
-int sceKernelCheckThreadUserStackSelf(void);
-int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
-		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
-
 /* SceUIDLwCondClass's constructor */
 static int uidLwCond_Constructor(void *object)
 {

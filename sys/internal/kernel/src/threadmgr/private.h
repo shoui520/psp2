@@ -467,3 +467,225 @@ _Static_assert(offsetof(struct SceKernelThreadmgrPrivate, heapId) == 0x2304,
 	       "interrupt request heap layout");
 _Static_assert(offsetof(struct SceKernelThreadmgrPrivate, freeIntrRequests) == 0x2414,
 	       "interrupt request free-list layout");
+
+/* callback.c */
+void deleteAllCallback(struct ThreadCB *thread);
+int callCallbackEntry(struct ThreadCB *thread, int user, uintptr_t entry,
+		      uint32_t arg0, uint32_t arg1, uint32_t arg2, uint32_t arg3);
+int callCallbackAll(struct ThreadCB *thread);
+int callbackProcessExit(SceProcessObject *process);
+void startCallback(void);
+
+/* cond.c */
+void startCond(void);
+int condProcessExit(SceProcessObject *process);
+int waitCondCB(SceUID condId, SceUInt32 *timeout);
+
+/* debug_thread_event.c */
+void notifyDebugThreadEvent(SceUID processId, SceUID threadId, uint32_t event, int *status);
+
+/* a set request for a thread on another CPU (the SGI handler fills result, unlocks done) */
+typedef struct ThreadmgrDebugSetRequest {
+	SceUID threadId;
+	const void *regs;
+	uint32_t mask;
+	int mode;
+	int *result;
+	SceKernelSpinlock *done;
+} ThreadmgrDebugSetRequest;
+
+typedef struct ThreadmgrDebugGetRequest {
+	SceUID threadId;
+	void *regs;
+	int mode;
+	int *result;
+	SceKernelSpinlock *done;
+} ThreadmgrDebugGetRequest;
+
+/* debugger.c */
+int debugSuspendThreadIntr(SceUID threadId, uint32_t reason, int *result, SceKernelSpinlock *done);
+int setCpuRegisterForDebuggerIntr(ThreadmgrDebugSetRequest *request);
+int getCpuRegisterForDebuggerIntr(ThreadmgrDebugGetRequest *request);
+int setVfpRegisterForDebuggerIntr(ThreadmgrDebugSetRequest *request);
+int getVfpRegisterForDebuggerIntr(ThreadmgrDebugGetRequest *request);
+
+/* dispatch.c */
+void callThreadmgrBeforeIntrHandler(uintptr_t unused, struct ThreadCB *context);
+
+/* dtrace.c */
+int dtraceThreadCBInit(struct ThreadCB *thread);
+int dtraceThreadCBExit(struct ThreadCB *thread);
+void dtraceAsyncXCallIntr(void (*fn)(void *), void *arg);
+void dtraceSyncXCallIntr(void (*fn)(void *), void *arg, SceKernelSpinlock *done);
+
+typedef struct ThreadmgrLwCondOptParam {
+	SceSize size;
+} ThreadmgrLwCondOptParam;
+
+/* lw_cond.c */
+void startLwCond(void);
+int lwCondProcessExit(SceProcessObject *process);
+int __sceKernelCreateLwCond(void *work, const char *name, SceUInt32 attr, SceUID lwMutexPuid,
+			    const ThreadmgrLwCondOptParam *option);
+int __sceKernelWaitLwCond(SceUID condId, SceUInt32 *timeout, int callbacks);
+int __sceKernelSignalLwCond(SceUID condId);
+int __sceKernelSignalLwCondAll(SceUID condId);
+int __sceKernelSignalLwCondTo(SceUID condId, SceUID threadId);
+
+typedef struct ThreadmgrMsgPipeOptParam {
+	SceSize size;
+	uint32_t flags;				/* MSG_PIPE_OPT_FLAG_* */
+	int capability;				/* 0x08: with MSG_PIPE_OPT_FLAG_CAPABILITY */
+	SceUID pid;				/* 0x0c */
+	uint32_t heapKind;			/* 0x10 */
+} ThreadmgrMsgPipeOptParam;
+
+/* message_pipe.c */
+int startMsgPipe(void);
+int startMsgPipeAfterProcess(void);
+int msgPipeProcessExit(SceProcessObject *process);
+SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 attr,
+				    SceSize bufferSize, const ThreadmgrMsgPipeOptParam *option,
+				    const void *lr);
+
+/* pmon.c */
+int pmonThreadChangeEnableCounter(SceUID threadId, uint32_t mask, int enable);
+void pmonThreadSetCounterIntr(struct ThreadmgrPmonRequest *request);
+void pmonThreadGetCounterIntr(struct ThreadmgrPmonRequest *request);
+
+/* rw_lock.c */
+void startRWLock(void);
+uint32_t releaseAllRWLock(struct ThreadCB *thread);
+int rwLockProcessExit(SceProcessObject *process);
+
+/* semaphore.c */
+int semaphoreProcessExit(SceProcessObject *process);
+SceUID sceKernelCreateSema_16XX(const char *name, SceUInt32 attr, int initCount, int maxCount,
+				const SceKernelSemaOptParam *option);
+void startSemaphore(void);
+
+/* sgi.c */
+void issuePMonThreadChangeCounterEnableIntrRequest(unsigned int cpuId, SceUID threadId,
+						   uint32_t mask, int enable);
+void issuePMonThreadSetCounterIntrRequest(unsigned int cpuId, const void *pmonRequest);
+void issuePMonThreadGetCounterIntrRequest(unsigned int cpuId, const void *pmonRequest);
+void issueSimpleIntrRequestToOtherCpuAndWait(void);
+void issueDTraceAsyncXCallIntrRequest(unsigned int cpuId, void (*fn)(void *), const void *arg,
+				      SceSize size);
+void issueDTraceSyncXCallIntrRequest(unsigned int cpuId, void (*fn)(void *), void *arg,
+				     SceKernelSpinlock *done);
+void issueDebugSuspendThreadIntrRequest(unsigned int cpuId, SceUID threadId, uint32_t reason,
+					int *result, SceKernelSpinlock *done);
+void issueSetCpuRegisterIntrRequest(unsigned int cpuId, void *debugRequest);
+void issueGetCpuRegisterIntrRequest(unsigned int cpuId, void *debugRequest);
+void issueSetVfpRegisterIntrRequest(unsigned int cpuId, void *debugRequest);
+void issueGetVfpRegisterIntrRequest(unsigned int cpuId, void *debugRequest);
+void issueSuspendThreadForVMIntrRequest(unsigned int cpuId, SceUID threadId, int *result,
+					SceKernelSpinlock *done);
+int intrRequestSGIHandler(int code, void *arg);
+void issueStopThreadIntrRequest(unsigned int cpuId, SceUID threadId, uint32_t arg1, uint32_t arg2);
+void initIntrRequestPool(void);
+void issueChangeThreadPriorityIntrRequest(unsigned int cpuId, SceUID threadId, int priority);
+
+/* simple_event.c */
+int startSimpleEvent(void);
+int simpleEventProcessExit(SceProcessObject *process);
+
+/* syslibtrace.c */
+int syslibtraceThreadCBInit(struct ThreadCB *thread);
+int syslibtraceThreadCBExit(struct ThreadCB *thread);
+
+/* thread_event.c */
+void startThreadEvent(void);
+int callThreadEventHandlers(uint32_t mask);
+int threadEventProcessExit(SceProcessObject *process);
+SceUID registerThreadEventHandler(const char *name, SceUID target, SceUID pid, uint32_t mask,
+				  uintptr_t handler, uint32_t arg, int user);
+
+/* thread_tls.c */
+int releaseThreadTlsSlots(struct ThreadCB *thread);
+
+/* threadmgr.c */
+int sendSignal(SceUID threadId);
+void changeThreadPrioritySGIHandler(SceUID threadId, int priority);
+int sceKernelCheckThreadUserStackSelf(void);
+void initRegisterContext(struct ThreadRegisterContext *regs);
+void initVfpContext(uintptr_t vfp);
+int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result, uint32_t request);
+void changeThreadPriorityAndCpuAffinityMaskSGIHandler(SceUID threadId, int priority, uint32_t mask);
+int deactivateCpu(void);
+SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPriority,
+		    SceSize stackSize, uint32_t attr, uint32_t cpuAffinityMask,
+		    const SceKernelThreadOptParam *option, uint32_t flags, const void *callerAddr);
+int stopThread(SceUID threadId, int priority, uint32_t request);
+
+/* threadmgr_for_user.c */
+int sceKernelSetEventWithNotifyCallbackForUser(SceUID eventId, uint32_t pattern,
+					       uint32_t userDataLow, uint32_t userDataHigh,
+					       uint32_t arg);
+int sceKernelPollEventFlagForUser(SceUID evfId, uint32_t pattern, uint32_t mode,
+				  uint32_t *outPattern);
+int sceKernelCancelEventFlagForUser(SceUID evfId, uint32_t pattern, int *numWaitThreads);
+int sceKernelGetEventFlagInfoForUser(SceUID evfId, SceKernelEventFlagInfo *info);
+int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attributes);
+int cancelTimerForUser(SceUID uid, uint32_t *count);
+int createTimerForUser(const char *name, uint32_t attributes, const uint32_t *options);
+int setTimerEventForUser(SceUID uid, uint32_t type, const volatile uint64_t *interval,
+		uint32_t repeat);
+int getTimerEventRemainingTimeForUser(SceUID uid, uint64_t *output);
+int getTimerInfoForUser(SceUID uid, SceKernelTimerInfo *output);
+int getTimerBaseForUser(SceUID uid, uint64_t *value);
+int getTimerTimeForUser(SceUID uid, uint64_t *value);
+int setTimerTimeForUser(SceUID uid, uint64_t *userValue);
+int sceKernelWaitSignalForUser(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout);
+int sceKernelWaitSignalCBForUser(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout);
+
+/* vfp_exception.c */
+int registerThreadmgrVfpExceptionIntrHandler(void);
+void suspendThreadmgrVfpException(void);
+void resumeThreadmgrVfpException(void);
+
+/* the VM's view of a thread's registers (0x58) */
+typedef struct ThreadmgrVmCpuContext {
+	SceSize size;
+	uint32_t cpsr;
+	union {
+		uint32_t r[15];			/* 0x08: r0-r14 */
+		struct {
+			uint32_t gpr[13];
+			uint32_t sp;		/* 0x3c */
+			uint32_t lr;
+		};
+	};
+	uint32_t pc;				/* 0x44 */
+	uint32_t tpidrurw;			/* 0x48 */
+	uint32_t reserved;
+	uint32_t tlsWord[2];			/* 0x50: the user TLS -0x7f8 and -0x7f4 */
+} ThreadmgrVmCpuContext;
+
+/* and its VFP registers (0x108) */
+typedef struct ThreadmgrVmVfpContext {
+	SceSize size;
+	uint32_t fpscr;
+	uint8_t d[0x100];			/* 0x08: d0-d31 */
+} ThreadmgrVmVfpContext;
+
+/* virtual_machine.c */
+void startException(void);
+int createException(SceProcessObject *process);
+int deleteException(SceProcessObject *process);
+void suspendThreadForVMIntr(SceUID threadId, int *result, SceKernelSpinlock *done);
+int setThreadContextForVMForUser(SceUID threadId, const ThreadmgrVmCpuContext *cpu,
+				    const ThreadmgrVmVfpContext *vfp);
+int getThreadContextForVMForUser(SceUID threadId, ThreadmgrVmCpuContext *cpu,
+				    ThreadmgrVmVfpContext *vfp);
+int waitExceptionForUser(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt32 *timeout);
+int waitExceptionCBForUser(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt32 *timeout);
+
+/* wait_common.c */
+int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
+		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
+
+/* work_queue.c */
+void startWorkQueue(void);
+int createGlobalWorkQueue(void);

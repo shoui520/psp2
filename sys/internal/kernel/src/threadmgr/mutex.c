@@ -407,11 +407,6 @@ int mutexProcessExit(SceProcessObject *process)
 	return 0;
 }
 
-int callCallbackAll(struct ThreadCB *thread);
-int sceKernelCheckThreadUserStackSelf(void);
-int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
-		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
-
 #define MUTEX_KERNEL_ATTR_MASK		0x0000a086	/* what kernel callers may pass */
 #define MUTEX_USER_ATTR_MASK		0x00002086	/* what a syscall may pass */
 #define MUTEX_OPTION_MAX_SIZE		8

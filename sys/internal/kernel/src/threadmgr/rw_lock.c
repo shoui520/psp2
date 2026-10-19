@@ -76,11 +76,6 @@ _Static_assert(sizeof(ThreadmgrRWLock) == 0x48, "SceUIDRWLockObject size");
 #define RW_LOCK_FROM_OWNER_LINK(link) \
 	((ThreadmgrRWLock *)((uintptr_t)(link) - offsetof(ThreadmgrRWLock, core.ownerLink)))
 
-int callCallbackAll(struct ThreadCB *thread);
-int sceKernelCheckThreadUserStackSelf(void);
-int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
-		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
-
 /* SceUIDRWLockClass's release: a waiter leaves */
 static int uidRWLock_ReleaseMethod(void *cls, void *object, struct ThreadCB *thread)
 {

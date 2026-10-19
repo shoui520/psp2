@@ -32,9 +32,6 @@
 #define SCE_KERNEL_ERROR_FAST_MUTEX_ALREADY_INITIALIZED 0x80028167
 #define SCE_KERNEL_ERROR_FAST_MUTEX_NOT_INITIALIZED 0x80028168
 
-int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
-		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
-
 #define FAST_MUTEX_UID_OBJECT(queue) \
 	((struct ThreadmgrUidFastMutex *)((uintptr_t)(queue) - offsetof(struct ThreadmgrUidFastMutex, next)))
 

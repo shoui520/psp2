@@ -49,8 +49,6 @@ __attribute__((section(SCE_DBGSRC_SECTION), used)) = {
 #define SCE_KERNEL_ERROR_UNKNOWN_SIMPLE_EVENT_ID 0x80028261	/* PLACEHOLDER: name */
 #define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
 
-extern int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attr);
-
 /* SceUIDSimpleEventObject (0x3c) */
 typedef struct ThreadmgrSimpleEvent {
 	ThreadmgrEvent event;

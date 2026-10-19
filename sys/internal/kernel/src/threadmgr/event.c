@@ -31,10 +31,6 @@ int uidRegisterCallbackClassInit(struct ThreadmgrWaitableClass *cls, const char 
 	SceClass *parent, SceSize size, SceClassCallback create, SceClassCallback destroy,
 	ThreadmgrCancelWaitMethod cancelWait, ThreadmgrRevalidateMethod revalidate, ThreadmgrReleaseMethod release);
 void deleteRegisteredCallbackList(ThreadmgrEventCallback *entry);
-int callCallbackAll(struct ThreadCB *thread);
-int sceKernelCheckThreadUserStackSelf(void);
-int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
-		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
 
 #define EVENT_CLASS()	(s_threadmgrRuntime.manager->eventClass)
 

@@ -69,12 +69,7 @@ typedef struct ThreadmgrRegisterCallback {
 	ThreadmgrEventCallback *callbackPrev;
 } ThreadmgrRegisterCallback;
 
-int sceKernelCheckThreadUserStackSelf(void);
-int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result,
-				    uint32_t request);
 void exitDeleteThread(int status, int intr, int error) __attribute__((noreturn));
-void initRegisterContext(struct ThreadRegisterContext *regs);
-void initVfpContext(uintptr_t vfp);
 void returnFromKernelCallbackEntry(int result) __attribute__((noreturn));
 int uidRegisterCallbackClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
 	SceClass *parent, SceSize size, SceClassCallback create, SceClassCallback destroy,

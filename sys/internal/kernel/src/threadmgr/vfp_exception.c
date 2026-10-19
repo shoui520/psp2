@@ -17,6 +17,7 @@
 #include <sysmem/sysroot.h>
 #include <threadmgr/threadmgr.h>
 #include <excpmgr/excpmgr.h>
+#include "affinity.h"
 
 #define THREAD_ATTR_USER		0x80000000
 #define PROCESS_DEBUG_SUSPEND_EXCEPTION	0x11	/* PLACEHOLDER: SceSysrootForKernel_1247A825's reason */
@@ -66,8 +67,6 @@ _Static_assert(sizeof(ThreadmgrVfpExceptionMessage) == 0x210, "VFP exception mes
 
 typedef void (*ThreadmgrProcessDebugSuspendHook)(SceUID pid, SceUID threadId, int kind,
 						 uintptr_t arg);
-
-void runningThreadPreemptByIntr(struct ThreadCB *context, uint32_t reason);
 
 static const char *const s_traceExceptions[16] = {
 	"0", "Halting debug-mode", "Secure Monitor", "3", "Imprecise data abort", "T2EE Trap",

@@ -28,7 +28,6 @@
 
 int __attribute__((noinline)) sceKernelWaitSignal(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout);
 int __attribute__((noinline)) sceKernelWaitSignalCB(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout);
-int sendSignal(SceUID threadId);
 
 /* PUID attribute: the PUID came from an open, not a create */
 #define SDK_VERSION_CLOSE_MISMATCH	0x03100000	/* SDKs before 3.10 may close what they created */
@@ -64,30 +63,6 @@ int sendSignal(SceUID threadId);
 #define USER_ERROR_UNKNOWN_SIMPLE_EVENT_ID	0xc0028261
 
 int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attributes);
-SceUID registerThreadEventHandler(const char *name, SceUID target, SceUID pid, uint32_t mask,
-				  uintptr_t handler, uint32_t arg, int user);
-int waitCondCB(SceUID condId, SceUInt32 *timeout);
-int __sceKernelCreateLwCond(void *work, const char *name, SceUInt32 attr, SceUID lwMutexPuid,
-			    const void *option);
-int __sceKernelWaitLwCond(SceUID condId, SceUInt32 *timeout, int callbacks);
-int __sceKernelSignalLwCond(SceUID condId);
-int __sceKernelSignalLwCondAll(SceUID condId);
-int __sceKernelSignalLwCondTo(SceUID condId, SceUID threadId);
-int _sceKernelLockLwMutex(void *work, int count, SceUInt32 *timeout, int callbacks);
-int _sceKernelUnlockLwMutex(void *work, int count);
-SceUID sceKernelCreateSema_16XX(const char *name, SceUInt32 attr, int initCount, int maxCount,
-				const void *option);
-SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 attr,
-				    SceSize bufferSize, const void *option, const void *lr);
-int _sceKernelCreateLwMutexForUser(void *work, const char *name, SceUInt32 attr, int initCount,
-				   const void *option);
-int sceKernelDeleteLwMutexForUser(void *work);
-int setThreadContextForVMForUser(SceUID threadId, const void *cpu, const void *vfp);
-int getThreadContextForVMForUser(SceUID threadId, void *cpu, void *vfp);
-int waitExceptionForUser(uint32_t mask, void *info, SceUInt32 *timeout);
-int waitExceptionCBForUser(uint32_t mask, void *info, SceUInt32 *timeout);
-int waitMultipleEvents(ThreadmgrWaitMultipleEvents *wme, SceUInt32 *timeout, int callbacks,
-		       uint32_t *outPattern);
 
 /*
  * Deletes (pattern EVENT_CLOSE_DELETE) or closes a user's message pipe; the
@@ -3212,13 +3187,13 @@ int __sceKernelCreateLwMutex(void *work, const char *name, SceUInt32 attr,
 			     const ThreadmgrSyscallArgs *userArgs)
 {
 	ThreadmgrSyscallArgs args;
-	uint32_t *option, *kOption;
+	ThreadmgrLwMutexOptParam *option, *kOption;
 	int ret;
 
 	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
-	option = (uint32_t *)args.arg[1];
+	option = (ThreadmgrLwMutexOptParam *)args.arg[1];
 	kOption = option;
 	if (option != NULL) {
 		kOption = __builtin_alloca(sizeof(*kOption));
@@ -3573,7 +3548,7 @@ int _sceKernelWaitException(uint32_t mask, void *userInfo, SceUInt32 *timeout,
 		if (ret < 0)
 			return ret;
 	}
-	ret = waitExceptionForUser(mask, info, kTimeout);
+	ret = waitExceptionForUser(mask, (ThreadmgrExceptionInfo *)info, kTimeout);
 	if (userInfo != NULL) {
 		err = sceKernelCopyToUser(userInfo, info, args.size);
 		if (err < 0)
@@ -3618,7 +3593,7 @@ int _sceKernelWaitExceptionCB(uint32_t mask, void *userInfo, SceUInt32 *timeout,
 		if (ret < 0)
 			return ret;
 	}
-	ret = waitExceptionCBForUser(mask, info, kTimeout);
+	ret = waitExceptionCBForUser(mask, (ThreadmgrExceptionInfo *)info, kTimeout);
 	if (userInfo != NULL) {
 		err = sceKernelCopyToUser(userInfo, info, args.size);
 		if (err < 0)

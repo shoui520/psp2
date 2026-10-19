@@ -39,15 +39,6 @@
 #define SCE_KERNEL_ERROR_WAIT_DELETE_LW_MUTEX 0x800281c2
 #define UID_CREATE_OPT_PID		0x00000008	/* PLACEHOLDER: name; opt.pid owns the object */
 
-typedef struct ThreadmgrLwMutexOptParam {
-	SceSize size;
-} ThreadmgrLwMutexOptParam;
-
-int callCallbackAll(struct ThreadCB *thread);
-int sceKernelCheckThreadUserStackSelf(void);
-int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
-		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
-
 /* SceUIDLwMutexClass's constructor */
 static int uidLwMutex_Constructor(void *object)
 {

@@ -163,4 +163,8 @@ uint32_t setEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t u
 uint32_t pulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t userData,
 				      uint32_t arg, ThreadmgrEvent *event);
 
+/* event.c */
+int waitMultipleEvents(ThreadmgrWaitMultipleEvents *wme, SceUInt32 *timeout,
+			      int callbacks, uint32_t *outPattern);
+
 #endif
