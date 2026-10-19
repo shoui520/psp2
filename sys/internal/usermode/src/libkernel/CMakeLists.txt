@@ -85,7 +85,11 @@ psp2_module(os0_us_libkernel KIND user COMPILER gcc48 SOURCES
 	"${libkernel_strlcpy_source}"
 	"${libkernel_strtoll_source}"
 	../../../kernel/src/sysmem/search.c
-	../../../kernel/src/sysmem/checked_strings.c
+	../../../kernel/src/sysmem/strncat.c
+	../../../kernel/src/sysmem/strcpy_chk.c
+	../../../kernel/src/sysmem/strncpy_chk.c
+	../../../kernel/src/sysmem/strcat_chk.c
+	../../../kernel/src/sysmem/strncat_chk.c
 	../../../../../contrib/gcc-4.8-2014.05/libgcc/config/arm/lib1funcs.S
 	../../../../../contrib/gcc-4.8-2014.05/libgcc/config/arm/libunwind.S
 	../../../../../toolchains/libgcc/mul.c
@@ -197,7 +201,9 @@ set_source_files_properties(../../../kernel/src/sysmem/search.c PROPERTIES
 	COMPILE_DEFINITIONS
 	"strstr=sceClibStrstr;strchr=sceClibStrchr;memcmp=sceClibMemcmp")
 
-set_property(SOURCE ../../../kernel/src/sysmem/checked_strings.c PROPERTY
+set_property(SOURCE ../../../kernel/src/sysmem/strncat.c ../../../kernel/src/sysmem/strcpy_chk.c
+	../../../kernel/src/sysmem/strncpy_chk.c ../../../kernel/src/sysmem/strcat_chk.c
+	../../../kernel/src/sysmem/strncat_chk.c PROPERTY
 	COMPILE_DEFINITIONS
 	strncat=sceClibStrncat strnlen=sceClibStrnlen
 	strncpy=sceClibStrncpy memcpy=sceClibMemcpy_safe

@@ -72,7 +72,11 @@ psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	deflate.c
 	strings.c
 	search.c
-	checked_strings.c
+	strncat.c
+	strcpy_chk.c
+	strncpy_chk.c
+	strcat_chk.c
+	strncat_chk.c
 	numeric.c
 	"${sysmem_strtoll_source}"
 	ctype.c
@@ -135,6 +139,7 @@ psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	strlcat_chk.c
 	strlcpy_chk.c
 	sprintf_chk.c
+	stack_chk.c
 )
 # strings.c includes the adapted strlcpy-sce.c from the build directory
 target_include_directories(os0_kd_sysmem PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")

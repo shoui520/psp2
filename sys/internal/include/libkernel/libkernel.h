@@ -2,8 +2,8 @@
  * SceLibKernel (os0:us/libkernel.suprx): the C library functions it exports that the SDK does
  * not declare (Sony's SDK has only the memory functions, kernel/libkernel.h). The prototypes
  * are LibKernel's definitions: the string, character and number functions are sysmem's
- * (sysmem/strings.c, ctype.c, search.c, checked_strings.c, ...), compiled again under these
- * names, and the heaps are dlmalloc's mspaces.
+ * (sysmem/strings.c, ctype.c, search.c, strncat.c, the *_chk.c files, ...), compiled again
+ * under these names, and the heaps are dlmalloc's mspaces.
  */
 
 #pragma once

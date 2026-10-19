@@ -68,7 +68,7 @@ char *__strncpy_chk2(char *destination, const char *source, size_t capacity);
 int __vsnprintf_chk(char *destination, size_t size, int flags, size_t capacity,
 		    const char *format, va_list arguments);
 
-/* the stack protector's failure (sprintf_chk.c; noreturn there) */
+/* the stack protector's failure (stack_chk.c; noreturn there) */
 void __stack_chk_fail(void);
 void sceLibSspStackChkFail(void);
 

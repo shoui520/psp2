@@ -25,10 +25,3 @@ int __snprintf_chk(char *destination, size_t size, int flags, size_t capacity,
 	va_end(arguments);
 	return result;
 }
-
-/* a smashed stack canary: stop at a breakpoint */
-void __attribute__((noreturn)) __stack_chk_fail(void)
-{
-	__breakpoint(BKPT_CHECK_FAILED);
-	__builtin_unreachable();
-}
