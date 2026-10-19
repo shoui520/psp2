@@ -57,7 +57,7 @@ void *SceDeci4pSDfMgrForKernel_5996E2DB(void *destination, const void *source,
 	return destination;
 }
 
-int module_start(SceSize args, void *argp)
+int sceSDfMgrModuleStart(SceSize args, void *argp)
 {
 	(void)args;
 	(void)argp;
@@ -648,7 +648,7 @@ static const struct {
 } while (0)
 #endif
 
-int module_bootstart(SceSize args, void *argp)
+int sceSDfMgrModuleBoot(SceSize args, void *argp)
 {
 	SceKernelAllocMemBlockKernelOpt options;
 	uint32_t debugControl;

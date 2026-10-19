@@ -159,8 +159,7 @@ static inline __attribute__((always_inline)) int sceDeci4pRDrfpInit(void)
 	return SCE_KERNEL_START_SUCCESS;
 }
 
-/* Sony's RDrfpModuleStart */
-int module_start(SceSize args, void *argp)
+int RDrfpModuleStart(SceSize args, void *argp)
 {
 	(void)args;
 	(void)argp;

@@ -655,8 +655,8 @@ static const SceKernelIntrRegisterOpt gMsifInsertionOptions = {
 	.handlers = (void *)&gMsifInsertionHandlers,
 };
 
-/* Sony's sceMsifInit, exported as the module entry point. */
-int module_start(SceSize args, const void *argp)
+/* the module entry point */
+int sceMsifInit(SceSize args, const void *argp)
 {
 	SceKernelAllocMemBlockKernelOpt option;
 	int result, libraryResult;

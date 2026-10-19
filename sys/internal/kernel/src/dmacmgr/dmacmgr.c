@@ -1702,7 +1702,7 @@ static inline void InitializeTagCache(void)
 	s_dmacMgr.freeTag = s_tagCache;
 }
 
-int module_start(SceSize args, void *argp)
+int StartDmacmgr(SceSize args, void *argp)
 {
 	SceKernelHeapCreateOpt heapOpt;
 	volatile SceDmac4Reg *reg4;

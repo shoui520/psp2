@@ -1482,7 +1482,7 @@ static const SmschedMonitorCall s_monitorCalls[] = {
  * (with the revocation list the boot loader passed), then the Cmep's
  * interrupts and the monitor calls.
  */
-int module_start(SceSize args, void *argp)
+int sceSblSmSchedModuleStart(SceSize args, void *argp)
 {
 	SceKernelHeapCreateOpt heapOpt;
 	SceAllocOpt opt;

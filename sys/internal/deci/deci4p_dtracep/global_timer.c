@@ -1,6 +1,6 @@
 /*
  * global_timer.c: DTrace's time base, the Cortex-A9 global timer in the
- * private region. module_start maps it and starts it from zero; across a
+ * private region. dtraceModuleStart maps it and starts it from zero; across a
  * suspend the count is saved and the timer restarted from it on resume,
  * and reads in between return the saved count.
  *

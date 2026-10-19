@@ -6,7 +6,7 @@
 
 #include <skeleton.h>
 
-STUB_MAIN(module_start)
+STUB_MAIN(dtraceModuleStart)
 STUB_MAIN(module_stop)
 
 STUB(sceDTraceHelperIoctl)

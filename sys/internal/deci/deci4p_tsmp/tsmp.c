@@ -1654,8 +1654,7 @@ TSMP_INLINE int tsmpInit(void)
 	return 0;
 }
 
-/* Sony's TsmpModuleStart */
-int module_start(SceSize args, void *argp)
+int TsmpModuleStart(SceSize args, void *argp)
 {
 	(void)args;
 	(void)argp;

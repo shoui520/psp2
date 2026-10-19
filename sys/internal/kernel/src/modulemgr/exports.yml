@@ -4,7 +4,7 @@ SceKernelModulemgr:
     major: 1
     minor: 1
   main:
-    start: module_start
+    start: ModulemgrModuleStart
   libraries:
     SceModulemgrForKernel:
       syscall: false

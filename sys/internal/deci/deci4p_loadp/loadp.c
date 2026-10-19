@@ -2206,8 +2206,7 @@ static int _loadpThread(SceSize args, void *argp)
 
 /* ===== start ===== */
 
-/* Sony's LoadpModuleStart */
-int module_start(SceSize args, void *argp)
+int LoadpModuleStart(SceSize args, void *argp)
 {
 	SceKernelHeapCreateOpt heapOpt;
 	SceDfMgrProtocol protocol;

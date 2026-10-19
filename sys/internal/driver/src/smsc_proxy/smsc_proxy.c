@@ -305,7 +305,7 @@ static int SysEventHandler(int resume, int eventId, void *args, void *opt)
 	return ret < 0 ? ret : 0;
 }
 
-int module_start(SceSize args, void *argp)
+int sceSblSmSchedProxyModuleStart(SceSize args, void *argp)
 {
 	HeapOpt opt;
 	int ret, i;
@@ -342,7 +342,7 @@ int SceSblSmSchedProxyForKernel_A488D604(void)
 {
 	if (sceKernelCpuId() != 0)
 		return 0;
-	return module_start(0, NULL);
+	return sceSblSmSchedProxyModuleStart(0, NULL);
 }
 
 /* name unknown */

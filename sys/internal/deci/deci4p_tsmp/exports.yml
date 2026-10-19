@@ -4,4 +4,4 @@ SceDeci4pTsmp:
     major: 2
     minor: 0
   main:
-    start: module_start
+    start: TsmpModuleStart

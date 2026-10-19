@@ -1910,8 +1910,6 @@ int ModulemgrModuleStart(SceSize args, void *argp)
 	return 0;
 }
 
-int module_start(SceSize args, void *argp) __attribute__((alias("ModulemgrModuleStart")));
-
 int SceModulemgrForKernel_E71530D7(SceUID pid)
 {
 	LibraryDB *db;

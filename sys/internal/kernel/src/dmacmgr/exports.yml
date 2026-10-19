@@ -4,7 +4,7 @@ SceKernelDmacMgr:
     major: 1
     minor: 1
   main:
-    start: module_start
+    start: StartDmacmgr
   libraries:
     SceDmacmgrForDriver:
       syscall: false

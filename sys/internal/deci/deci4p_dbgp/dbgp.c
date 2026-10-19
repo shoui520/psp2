@@ -640,7 +640,7 @@ available:
 	return 0;
 }
 
-int module_start(SceSize args, const void *argp)
+int DbgpModuleStart(SceSize args, const void *argp)
 {
 	SceKernelHeapCreateOpt heapOpt;
 	SceDfMgrProtocol protocol;

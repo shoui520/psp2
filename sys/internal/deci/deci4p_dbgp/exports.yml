@@ -4,7 +4,7 @@ SceDeci4pDbgp:
     major: 1
     minor: 8
   main:
-    start: module_start
+    start: DbgpModuleStart
   libraries:
     SceDeci4pDbgpForDriver:
       syscall: false

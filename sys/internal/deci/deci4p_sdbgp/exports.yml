@@ -4,8 +4,8 @@ SceDeci4pSDbgp:
     major: 1
     minor: 2
   main:
-    start: module_start
-    bootstart: module_bootstart
+    start: SDbgpModuleStart
+    bootstart: SDbgpModuleBoot
   libraries:
     SceDeci4pSdbgpForKernel:
       syscall: false
