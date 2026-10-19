@@ -26,7 +26,7 @@ int iofilemgrInitDummyTty(int unused0, void *unused1)
 }
 
 __attribute__((section(".iofilemgrEntry.IofilemgrModuleProcResume")))
-int IofilemgrModuleProcResume(SceUID pid, int phase, ProcEventParam *param, int unused)
+int IofilemgrModuleProcResume(SceUID pid, int phase, ProcEventParam *param, void *common)
 {
 	IofilemgrKpls *kpls;
 	int ret;
@@ -49,7 +49,7 @@ int IofilemgrModuleProcResume(SceUID pid, int phase, ProcEventParam *param, int 
 }
 
 __attribute__((section(".iofilemgrEntry.IofilemgrModuleProcSuspend")))
-int IofilemgrModuleProcSuspend(SceUID pid, int phase, ProcEventParam *param, int unused)
+int IofilemgrModuleProcSuspend(SceUID pid, int phase, ProcEventParam *param, void *common)
 {
 	IofilemgrKpls *kpls;
 	int ret, num;
@@ -103,20 +103,20 @@ static inline __attribute__((always_inline)) int iofilemgrProcessFinalize(SceUID
 
 /* name unknown: the process event handler's exit */
 __attribute__((section(".iofilemgrEntry.IofilemgrModuleProcExit")))
-int IofilemgrModuleProcExit(SceUID pid, ProcEventParam *param, int unused)
+int IofilemgrModuleProcExit(SceUID pid, ProcEventParam *param, void *common)
 {
 	return iofilemgrProcessFinalize(pid);
 }
 
 /* name unknown: the process event handler's kill */
 __attribute__((section(".iofilemgrEntry.IofilemgrModuleProcKill")))
-int IofilemgrModuleProcKill(SceUID pid, ProcEventParam *param, int unused)
+int IofilemgrModuleProcKill(SceUID pid, ProcEventParam *param, void *common)
 {
 	return iofilemgrProcessFinalize(pid);
 }
 
 __attribute__((section(".iofilemgrEntry.IofilemgrModuleProcCreate")))
-int IofilemgrModuleProcCreate(SceUID pid, ProcEventCreateParam *param, int unused)
+int IofilemgrModuleProcCreate(SceUID pid, ProcEventCreateParam *param, void *common)
 {
 	SceKernelProcessResourceLimit limit;
 	IofilemgrKpls *kpls;
@@ -1067,7 +1067,7 @@ int IofilemgrModuleStart(SceSize args, void *argp)
 	handler.suspend = IofilemgrModuleProcSuspend;
 	handler.resume = IofilemgrModuleProcResume;
 	handler.notify = NULL;
-	if (sceKernelRegisterProcEventHandler("SceIofilemgr", &handler, 0) < 0)
+	if (sceKernelRegisterProcEventHandler("SceIofilemgr", &handler, NULL) < 0)
 		SCE_PANIC(1496);
 	if (sceIoSchedulerInitialize() < 0)
 		SCE_PANIC(1503);

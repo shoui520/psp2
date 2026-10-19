@@ -388,7 +388,7 @@ int module_start(SceSize unusedSize, const void *unusedArgument)
 	if (result < 0)
 		return result;
 	sceKernelRegisterSysEventHandler(g_audioInModuleName, audioInSysEventHandler, NULL);
-	sceKernelRegisterProcEventHandler(g_audioInModuleName, &g_audioInProcEventHandler, 0);
+	sceKernelRegisterProcEventHandler(g_audioInModuleName, &g_audioInProcEventHandler, NULL);
 	g_audioInOwnerPid = -2;
 	g_audioInInitialized = 1;
 	g_audioInRequestFlags = 0;

@@ -1866,7 +1866,7 @@ int ModulemgrInhibitLoadingModule(SceUInt32 flags)
 
 int ModulemgrModuleStart(SceSize args, void *argp)
 {
-	ModulemgrProcEvent handler;
+	SceKernelProcEventHandler handler;
 	int ret;
 
 	g_mutex = sceKernelCreateMutex("SceModuleMgr", 0x2000, 0, NULL);
@@ -1900,10 +1900,10 @@ int ModulemgrModuleStart(SceSize args, void *argp)
 	handler.create = NULL;
 	handler.exit = NULL;
 	handler.kill = NULL;
-	handler.stop = NULL;
-	handler.start = NULL;
-	handler.switchProcess = ModulemgrProcEventHandler;
-	ret = sceKernelRegisterProcEventHandler("SceModulemgr", &handler, 0);
+	handler.suspend = NULL;
+	handler.resume = NULL;
+	handler.notify = ModulemgrProcEventHandler;
+	ret = sceKernelRegisterProcEventHandler("SceModulemgr", &handler, NULL);
 	if (ret < 0)
 		SCE_DBG_ASSERT_LEVEL(0, 0, 3689);
 	BacktraceInit();

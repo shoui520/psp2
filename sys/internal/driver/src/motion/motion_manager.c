@@ -403,13 +403,13 @@ int motionInitializeMagnCalibration(int count,
 	return 0;
 }
 
-int motionStopProcess(SceUID pid, int event, ProcEventParam *param, int flags)
+int motionStopProcess(SceUID pid, int event, ProcEventParam *param, void *common)
 {
 	MotionDeviceReader *process;
 	int intr, i;
 
 	(void)param;
-	(void)flags;
+	(void)common;
 	if (event != 0x800)
 		return 0;
 	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
@@ -539,13 +539,13 @@ out:
 	return period;
 }
 
-int motionCreateProcess(SceUID pid, ProcEventCreateParam *param, int flags)
+int motionCreateProcess(SceUID pid, ProcEventCreateParam *param, void *common)
 {
 	MotionDeviceReader *process;
 	int intr, i;
 
 	(void)param;
-	(void)flags;
+	(void)common;
 	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motion.processes[0].pid == -1)
 		i = 0;
@@ -594,13 +594,13 @@ int motionCreateProcess(SceUID pid, ProcEventCreateParam *param, int flags)
 	return 0;
 }
 
-int motionExitProcess(SceUID pid, ProcEventParam *param, int flags)
+int motionExitProcess(SceUID pid, ProcEventParam *param, void *common)
 {
 	MotionDeviceReader *process;
 	int intr, i;
 
 	(void)param;
-	(void)flags;
+	(void)common;
 	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motion.processes[0].pid == pid)
 		i = 0;
@@ -652,13 +652,13 @@ int motionExitProcess(SceUID pid, ProcEventParam *param, int flags)
 	return 0;
 }
 
-int motionKillProcess(SceUID pid, ProcEventParam *param, int flags)
+int motionKillProcess(SceUID pid, ProcEventParam *param, void *common)
 {
 	MotionDeviceReader *process;
 	int intr, i;
 
 	(void)param;
-	(void)flags;
+	(void)common;
 	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motion.processes[0].pid == pid)
 		i = 0;
@@ -711,7 +711,7 @@ int motionKillProcess(SceUID pid, ProcEventParam *param, int flags)
 }
 
 int motionStartProcess(SceUID pid, int event, ProcEventParam *param,
-	int flags);
+	void *common);
 int motionSysEvent(int resume, int event, void *arg, void *param);
 
 static const SceKernelProcEventHandler motionProcessHandlers = {
@@ -868,7 +868,7 @@ int motionInitializeManager(void *arg)
 		motion.sysEventHandler = sceKernelRegisterSysEventHandler(
 			"SceMotion", motionSysEvent, NULL);
 		motion.procEventHandler = sceKernelRegisterProcEventHandler(
-			"SceMotion", &motionProcessHandlers, 0);
+			"SceMotion", &motionProcessHandlers, NULL);
 		SceThreadmgrForDriver_C58DF384("SceMotionAlarm0", 80000,
 			motionInitializeTimer, NULL);
 	}
@@ -928,14 +928,14 @@ void motionResumeComplete(int result, void *arg)
 	}
 }
 
-int motionStartProcess(SceUID pid, int event, ProcEventParam *param, int flags)
+int motionStartProcess(SceUID pid, int event, ProcEventParam *param, void *common)
 {
 	MotionDeviceReader *process;
 	unsigned int mode;
 	int intr, i;
 
 	(void)param;
-	(void)flags;
+	(void)common;
 	if (event != 0x10000)
 		return 0;
 	intr = SceCpuForDriver_D32ACE9E(&motion.lock);

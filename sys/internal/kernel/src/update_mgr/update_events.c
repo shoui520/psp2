@@ -2,7 +2,7 @@
 #include "update_internal.h"
 
 int UpdateMgrProcessStop(SceUID pid, int eventType,
-			ProcEventParam *param, int flags)
+			ProcEventParam *param, void *common)
 {
 	UpdateUtilNodeStatus status;
 	int idle;
@@ -49,7 +49,7 @@ int UpdateMgrRegisterEventHandlers(void)
 	handler.suspend = UpdateMgrProcessStop;
 	handler.resume = UpdateMgrProcessStart;
 	handler.notify = 0;
-	result = sceKernelRegisterProcEventHandler("SceSblUpdateMgr", &handler, 0);
+	result = sceKernelRegisterProcEventHandler("SceSblUpdateMgr", &handler, NULL);
 	if (result >= 0) {
 		result = sceKernelRegisterSysEventHandler("SceSblUpdateMgr",
 							UpdateMgrSystemEvent, 0);

@@ -70,28 +70,27 @@ struct SharedFbManager gSharedFbManager;
 extern int _sceAppMgrIsExistAbortedAppOrDebugSuspendedApp(void);
 extern int _sceAppMgrAbort(SceUID pid);
 
-int sharedFbProcessCreate(SceUID pid, ProcEventCreateParam *param, int flags);
-int sharedFbProcessExit(SceUID pid, ProcEventParam *param, int flags);
-int sharedFbProcessKill(SceUID pid, ProcEventParam *param, int flags);
-int sharedFbProcessStop(SceUID pid, int event, ProcEventParam *param, int flags);
-int sharedFbProcessStart(SceUID pid, int event, ProcEventParam *param, int flags);
+int sharedFbProcessCreate(SceUID pid, ProcEventCreateParam *param, void *common);
+int sharedFbProcessExit(SceUID pid, ProcEventParam *param, void *common);
+int sharedFbProcessKill(SceUID pid, ProcEventParam *param, void *common);
+int sharedFbProcessStop(SceUID pid, int event, ProcEventParam *param, void *common);
+int sharedFbProcessStart(SceUID pid, int event, ProcEventParam *param, void *common);
 
-/* ProcEventParam and the SDK invocation types describe the same provider ABI. */
 const SceKernelProcEventHandler gSharedFbProcessHandler = {
 	.size = sizeof(SceKernelProcEventHandler),
-	.create = (int (*)(SceUID, ProcEventCreateParam *, int))sharedFbProcessCreate,
-	.exit = (int (*)(SceUID, ProcEventParam *, int))sharedFbProcessExit,
-	.kill = (int (*)(SceUID, ProcEventParam *, int))sharedFbProcessKill,
-	.suspend = (int (*)(SceUID, int, ProcEventParam *, int))sharedFbProcessStop,
-	.resume = (int (*)(SceUID, int, ProcEventParam *, int))sharedFbProcessStart,
+	.create = sharedFbProcessCreate,
+	.exit = sharedFbProcessExit,
+	.kill = sharedFbProcessKill,
+	.suspend = sharedFbProcessStop,
+	.resume = sharedFbProcessStart,
 	.notify = NULL,
 };
 
-int sharedFbProcessCreate(SceUID pid, ProcEventCreateParam *param, int flags)
+int sharedFbProcessCreate(SceUID pid, ProcEventCreateParam *param, void *common)
 {
 	(void)pid;
 	(void)param;
-	(void)flags;
+	(void)common;
 	return 0;
 }
 
@@ -131,14 +130,14 @@ int sharedFbProcessCreate(SceUID pid, ProcEventCreateParam *param, int flags)
 	 (port)->processes[index].pid == (processId))
 
 int sharedFbProcessStart(SceUID processId, int event,
-			 ProcEventParam *param, int flags)
+			 ProcEventParam *param, void *common)
 {
 	struct SharedFbPort *port;
 	struct SharedFbProcess *process;
 	unsigned int portIndex, index;
 
 	(void)param;
-	(void)flags;
+	(void)common;
 	if (event != 0x20000)
 		return 0;
 	if (SHARED_FB_CONTAINS_PID(&gSharedFbManager.ports[0], processId))
@@ -189,13 +188,13 @@ int sharedFbProcessStart(SceUID processId, int event,
 }
 
 int sharedFbProcessStop(SceUID processId, int event,
-			ProcEventParam *param, int flags)
+			ProcEventParam *param, void *common)
 {
 	struct SharedFbPort *port;
 	struct SharedFbProcess *process;
 	unsigned int portIndex, index, previous;
 
-	(void)flags;
+	(void)common;
 	if (event != 0x202)
 		return 0;
 	if (param && (param->kind & 0x50)) {
@@ -275,17 +274,17 @@ done:
 	return 0;
 }
 
-int sharedFbProcessKill(SceUID processId, ProcEventParam *param, int flags)
+int sharedFbProcessKill(SceUID processId, ProcEventParam *param, void *common)
 {
 	(void)param;
-	(void)flags;
+	(void)common;
 	return sharedFbReleaseProcess(processId);
 }
 
-int sharedFbProcessExit(SceUID processId, ProcEventParam *param, int flags)
+int sharedFbProcessExit(SceUID processId, ProcEventParam *param, void *common)
 {
 	(void)param;
-	(void)flags;
+	(void)common;
 	return sharedFbReleaseProcess(processId);
 }
 
@@ -811,7 +810,7 @@ int sharedFbInitialize(void)
 		sceKernelFinalizeFastMutex(&gSharedFbManager.mutex);
 		return result;
 	}
-	sceKernelRegisterProcEventHandler("SceSharedFb", &gSharedFbProcessHandler, 0);
+	sceKernelRegisterProcEventHandler("SceSharedFb", &gSharedFbProcessHandler, NULL);
 	return 0;
 }
 

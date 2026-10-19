@@ -46,8 +46,8 @@ static SceUID s_heap;
 static TtypInput s_input[TTYP_CHANNELS];
 static TtypChannel s_channel[TTYP_CHANNELS];
 
-static int procExitHandler(SceUID pid, ProcEventParam *param, int args);
-static int procKillHandler(SceUID pid, ProcEventParam *param, int args);
+static int procExitHandler(SceUID pid, ProcEventParam *param, void *common);
+static int procKillHandler(SceUID pid, ProcEventParam *param, void *common);
 
 static const SceKernelProcEventHandler s_procHandler = {
 	.size = sizeof(SceKernelProcEventHandler),
@@ -419,13 +419,13 @@ TTYP_INLINE int _prepareClose(SceUID pid)
 }
 
 /* name unknown */
-static int procKillHandler(SceUID pid, ProcEventParam *param, int args)
+static int procKillHandler(SceUID pid, ProcEventParam *param, void *common)
 {
 	return _prepareClose(pid);
 }
 
 /* name unknown */
-static int procExitHandler(SceUID pid, ProcEventParam *param, int args)
+static int procExitHandler(SceUID pid, ProcEventParam *param, void *common)
 {
 	return _prepareClose(pid);
 }
@@ -502,7 +502,7 @@ int TtypModuleStart(SceSize args, void *argp)
 	}
 	if (TtypInit() < 0)
 		return SCE_KERNEL_START_FAILED;
-	if (sceKernelRegisterProcEventHandler("SceDeci4pTtyp", &s_procHandler, 0) < 0)
+	if (sceKernelRegisterProcEventHandler("SceDeci4pTtyp", &s_procHandler, NULL) < 0)
 		return SCE_KERNEL_START_FAILED;
 	return SCE_KERNEL_START_SUCCESS;
 }

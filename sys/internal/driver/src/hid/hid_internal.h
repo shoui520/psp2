@@ -280,12 +280,12 @@ void hidNotifyKeyboardRead(void);
 void hidNotifyConsumerEnumeration(void);
 void hidNotifyConsumerRead(void);
 extern HidProcessLink hidProcessHead;
-int hidProcessCreate(SceUID pid, ProcEventCreateParam *param, int arg);
-int hidProcessExit(SceUID pid, ProcEventParam *param, int arg);
-int hidProcessKill(SceUID pid, ProcEventParam *param, int arg);
+int hidProcessCreate(SceUID pid, ProcEventCreateParam *param, void *common);
+int hidProcessExit(SceUID pid, ProcEventParam *param, void *common);
+int hidProcessKill(SceUID pid, ProcEventParam *param, void *common);
 int hidProcessStop(SceUID pid, int eventType, ProcEventParam *param,
-		   int arg);
+		   void *common);
 int processResumeStart(SceUID pid, int eventType,
-		       ProcEventParam *param, int arg);
+		       ProcEventParam *param, void *common);
 int hidDumpDevices(void *buffer, SceSize size, SceUInt32 *count);
 int hidDumpLists(void *buffer, SceSize size, SceUInt32 *count);

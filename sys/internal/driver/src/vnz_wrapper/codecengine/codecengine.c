@@ -88,7 +88,7 @@ int _sceCodecEngineProcessExitEntry(SceUID pid, SceUInt32 type)
 	return finalResult;
 }
 
-typedef int (*CodecEngineProcExitHandler)(SceUID pid, ProcEventParam *param, int flags);
+typedef int (*CodecEngineProcExitHandler)(SceUID pid, ProcEventParam *param, void *common);
 CodecEngineProcExitHandler g_codecEngineProcExitHandlers[4];
 CodecEngineProcExitHandler g_codecEngineProcKillHandlers[4];
 

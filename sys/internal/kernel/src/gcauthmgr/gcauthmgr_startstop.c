@@ -11,7 +11,7 @@ int GcAuthResetState(void);
 int GcAuthInitializeGcAuth(void);
 
 int GcAuthProcessStopHandler(SceUID pid, int eventType,
-			   ProcEventParam *param, int unused)
+			   ProcEventParam *param, void *common)
 {
 	if (eventType != 0x202)
 		return 0;

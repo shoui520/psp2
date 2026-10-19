@@ -98,7 +98,7 @@ int createVideoContext(int type, int flags, int options)
 			return result;
 		}
 		result = sceKernelRegisterProcEventHandler("SceMgVideo",
-						   &videoProcessEventCallbacks, 0);
+						   &videoProcessEventCallbacks, NULL);
 		if (result < 0) {
 			SceMagicGateForDriver_6D3B42E6();
 			return result;

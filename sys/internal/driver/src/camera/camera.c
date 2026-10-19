@@ -64,11 +64,11 @@ int cameraSetProcessAlternateFrameBuffers(int devnum, SceUID processId, int alte
 int cameraSubIntrHandler(void *subintrArg, void *registerArg, unsigned char intrPriority);
 int cameraDriverThread(SceSize args, void *argp);
 int cameraSysEventHandler(int resume, int eventid, void *args, void *opt);
-int cameraProcessCreateEvent(SceUID pid, ProcEventCreateParam *param, int arg);
-int cameraProcessExitEvent(SceUID pid, ProcEventParam *param, int arg);
-int cameraProcessKillEvent(SceUID pid, ProcEventParam *param, int arg);
-int cameraProcessStopEvent(SceUID pid, int eventType, ProcEventParam *param, int arg);
-int cameraProcessStartEvent(SceUID pid, int eventType, ProcEventParam *param, int arg);
+int cameraProcessCreateEvent(SceUID pid, ProcEventCreateParam *param, void *common);
+int cameraProcessExitEvent(SceUID pid, ProcEventParam *param, void *common);
+int cameraProcessKillEvent(SceUID pid, ProcEventParam *param, void *common);
+int cameraProcessStopEvent(SceUID pid, int eventType, ProcEventParam *param, void *common);
+int cameraProcessStartEvent(SceUID pid, int eventType, ProcEventParam *param, void *common);
 
 int cameraInitializeOV7735(int devnum);
 int cameraResetOV7735(int devnum);
@@ -233,7 +233,7 @@ int sce_camera_init(void)
 		sceKernelEnableSubIntr(166, 0);
 		sceKernelEnableSubIntr(168, 0);
 		sceKernelRegisterSysEventHandler("SceCamera", cameraSysEventHandler, NULL);
-		sceKernelRegisterProcEventHandler("SceCamera", &cameraProcessEventHandler, 0);
+		sceKernelRegisterProcEventHandler("SceCamera", &cameraProcessEventHandler, NULL);
 		cameraDriver->mutexId = sceKernelCreateMutex("SceCameraDrv", 0, 0, NULL);
 		result = sceKernelStartThread(cameraDriver->threadId, 0, NULL);
 		if (result == 0) {
@@ -657,7 +657,7 @@ int cameraWaitForDeviceReads(void)
 }
 
 int cameraProcessStartEvent(SceUID pid, int eventType,
-		ProcEventParam *param, int arg)
+		ProcEventParam *param, void *common)
 {
 	int intrStatus;
 	int state;
@@ -691,7 +691,7 @@ int cameraProcessStartEvent(SceUID pid, int eventType,
 	return result;
 }
 
-int cameraProcessCreateEvent(SceUID pid, ProcEventCreateParam *param, int arg)
+int cameraProcessCreateEvent(SceUID pid, ProcEventCreateParam *param, void *common)
 {
 	SceUInt32 timeout = 3000000;
 	int intrStatus;
@@ -783,7 +783,7 @@ unlock:
 }
 
 int cameraProcessStopEvent(SceUID pid, int eventType,
-		ProcEventParam *param, int arg)
+		ProcEventParam *param, void *common)
 {
 	union {
 		SceUInt32 timeout;
@@ -1300,7 +1300,7 @@ int cameraReleaseProcess(SceUID processId)
 	return (int)0x802e00ff;
 }
 
-int cameraProcessKillEvent(SceUID pid, ProcEventParam *param, int arg)
+int cameraProcessKillEvent(SceUID pid, ProcEventParam *param, void *common)
 {
 	SceUInt32 timeout = 3000000;
 	int result;
@@ -1312,7 +1312,7 @@ int cameraProcessKillEvent(SceUID pid, ProcEventParam *param, int arg)
 	return result;
 }
 
-int cameraProcessExitEvent(SceUID pid, ProcEventParam *param, int arg)
+int cameraProcessExitEvent(SceUID pid, ProcEventParam *param, void *common)
 {
 	SceUInt32 timeout = 3000000;
 	int result;

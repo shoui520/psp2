@@ -96,12 +96,12 @@ typedef struct TmcpReply {
 static TmcpSlot s_slot[TMCP_SLOTS];
 static TmcpLink s_link;
 
-static int TmcpProcStop(SceUID pid, int type, ProcEventParam *param, int ctx)
+static int TmcpProcStop(SceUID pid, int type, ProcEventParam *param, void *common)
 {
 	return 0;
 }
 
-static int TmcpProcStart(SceUID pid, int type, ProcEventParam *param, int ctx)
+static int TmcpProcStart(SceUID pid, int type, ProcEventParam *param, void *common)
 {
 	return 0;
 }
@@ -145,9 +145,8 @@ static inline __attribute__((always_inline)) void TmcpFreeSlot(TmcpSlot *slot)
 }
 
 /* name unknown: process exit / kill; drop the process' slots */
-static inline __attribute__((always_inline)) int TmcpReleaseProcessSlots(SceUID pid, int ctx)
+static inline __attribute__((always_inline)) int TmcpReleaseProcessSlots(SceUID pid, TmcpLink *link)
 {
-	TmcpLink *link = (TmcpLink *)ctx;
 	TmcpSlot *slot;
 	int i = 0;
 
@@ -165,9 +164,9 @@ static inline __attribute__((always_inline)) int TmcpReleaseProcessSlots(SceUID 
 	return 0;
 }
 
-static int TmcpProcExit(SceUID pid, ProcEventParam *param, int ctx)
+static int TmcpProcExit(SceUID pid, ProcEventParam *param, void *common)
 {
-	return TmcpReleaseProcessSlots(pid, ctx);
+	return TmcpReleaseProcessSlots(pid, common);
 }
 
 static void __attribute__((noinline)) TmcpNotify(TmcpSlot *slot, SceUInt32 error,
@@ -176,9 +175,9 @@ static void __attribute__((noinline)) TmcpNotify(TmcpSlot *slot, SceUInt32 error
 	TmcpDeliverCompletion(slot, error, id, value);
 }
 
-static int TmcpProcKill(SceUID pid, ProcEventParam *param, int ctx)
+static int TmcpProcKill(SceUID pid, ProcEventParam *param, void *common)
 {
-	return TmcpReleaseProcessSlots(pid, ctx);
+	return TmcpReleaseProcessSlots(pid, common);
 }
 
 static const SceKernelProcEventHandler s_procHandler = {
@@ -536,6 +535,6 @@ int module_start(SceSize args, void *argp)
 	s_link.handle = handle;
 
 	SceSysrootForDriver_1834D482(TmcpCommand);
-	sceKernelRegisterProcEventHandler("SceDeci4pTmcp", &s_procHandler, (int)&s_link);
+	sceKernelRegisterProcEventHandler("SceDeci4pTmcp", &s_procHandler, &s_link);
 	return SCE_KERNEL_START_SUCCESS;
 }

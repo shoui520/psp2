@@ -51,7 +51,7 @@ int audioInSysEventHandler(int resume, int eventId, void *unusedArgs, void *unus
 }
 
 int audioInProcessExitHandler(SceUID pid, ProcEventParam *unusedParam,
-		int unusedArgument)
+		void *common)
 {
 #define CLOSE_EXIT_PORT(index) do { \
 	if (g_audioInPorts[index].eventFlag != 0) { \

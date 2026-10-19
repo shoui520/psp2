@@ -199,7 +199,7 @@ configure8Input:
 }
 
 int audioInProcessStopHandler(SceUID pid, int eventType,
-		ProcEventParam *unusedParam, int unusedArgument)
+		ProcEventParam *unusedParam, void *common)
 {
 	if (eventType == 512) {
 #define NOTIFY_STOP(index) do { \

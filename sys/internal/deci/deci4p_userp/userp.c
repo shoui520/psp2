@@ -396,24 +396,24 @@ static int UserpCloseProcess(SceUID pid)
 	return 0;
 }
 
-static int UserpProcKill(SceUID pid, ProcEventParam *param, int arg)
+static int UserpProcKill(SceUID pid, ProcEventParam *param, void *common)
 {
 	UserpCloseProcess(pid);
 	return 0;
 }
 
-static int UserpProcExit(SceUID pid, ProcEventParam *param, int arg)
+static int UserpProcExit(SceUID pid, ProcEventParam *param, void *common)
 {
 	UserpCloseProcess(pid);
 	return 0;
 }
 
-static int UserpProcStop(SceUID pid, int type, ProcEventParam *param, int arg)
+static int UserpProcStop(SceUID pid, int type, ProcEventParam *param, void *common)
 {
 	return 0;
 }
 
-static int UserpProcStart(SceUID pid, int type, ProcEventParam *param, int arg)
+static int UserpProcStart(SceUID pid, int type, ProcEventParam *param, void *common)
 {
 	return 0;
 }
@@ -434,7 +434,7 @@ int module_start(SceSize args, void *argp)
 
 	if (!SceDipswForDriver_A98FC2FD(0xc2))
 		return 1;
-	uid = sceKernelRegisterProcEventHandler("SceKernelDeci4p", &s_procHandler, 0);
+	uid = sceKernelRegisterProcEventHandler("SceKernelDeci4p", &s_procHandler, NULL);
 	if (uid < 0)
 		return 1;
 	s_procEvent = uid;

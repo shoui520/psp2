@@ -24,7 +24,7 @@ int module_start(SceSize arglen, const void *argp)
 		(SceKernelSysEventHandler)codecEngineSystemEventHandler, NULL) < 0)
 		return 2;
 	if (sceKernelRegisterProcEventHandler("SceVenezia",
-		&codecEngineProcessEvents, 0) < 0)
+		&codecEngineProcessEvents, NULL) < 0)
 		return 2;
 	return 0;
 }

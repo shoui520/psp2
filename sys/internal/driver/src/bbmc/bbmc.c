@@ -65,7 +65,7 @@ static BbmcControl bbmcMainControl;
 int sceBbmcUnsubscribeFeatureForDriver(int subscriberId);
 int sceBbmcTurnOffForDriver(int subscriberId);
 int bbmcProcessKillHandler(SceUID processId,
-	ProcEventParam *parameters, int argument);
+	ProcEventParam *parameters, void *common);
 
 const SceKernelProcEventHandler bbmcProcessEventHandlers = {
 	.size = sizeof(SceKernelProcEventHandler),
@@ -73,7 +73,7 @@ const SceKernelProcEventHandler bbmcProcessEventHandlers = {
 };
 
 int bbmcProcessKillHandler(SceUID processId,
-	ProcEventParam *parameters, int argument)
+	ProcEventParam *parameters, void *common)
 {
 	BbmcControl *control = g_bbmcControl;
 	int keepPower = 0, result = 0;
@@ -551,7 +551,7 @@ int module_start(SceSize argumentSize, const void *arguments)
 		goto deleteThread;
 	control->eventFlag = result;
 	result = sceKernelRegisterProcEventHandler("SceBbmcMain",
-		&bbmcProcessEventHandlers, 0);
+		&bbmcProcessEventHandlers, NULL);
 	if (result < 0)
 		goto unregisterSystemEvent;
 	control->processEventHandler = result;

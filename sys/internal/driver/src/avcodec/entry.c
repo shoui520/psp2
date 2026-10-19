@@ -145,11 +145,11 @@ int module_start(SceSize arglen, const void *argp)
 	    initializeJpeg() < 0 || initializeJpegEncoder() < 0 ||
 	    initializeDsp0Videocodec() < 0 || initializeVideocodec() < 0)
 		return SCE_KERNEL_START_FAILED;
-	handler.create = (int (*)(SceUID, ProcEventCreateParam *, int))
+	handler.create = (ProcEventCreateHandler)
 		avcodecProcessCreateHandler;
-	handler.suspend = (int (*)(SceUID, int, ProcEventParam *, int))
+	handler.suspend = (ProcEventPhaseHandler)
 		avcodecProcessSuspendHandler;
-	handler.resume = (int (*)(SceUID, int, ProcEventParam *, int))
+	handler.resume = (ProcEventPhaseHandler)
 		avcodecProcessResumeHandler;
 	handler.exit = NULL;
 	handler.kill = NULL;
@@ -157,7 +157,7 @@ int module_start(SceSize arglen, const void *argp)
 	handler.size = sizeof(handler);
 	if (sceCodecEngineRegisterProcExitHandler(avcodecProcessExitHandler) < 0 ||
 	    sceCodecEngineRegisterProcKillHandler(avcodecProcessKillHandler) < 0 ||
-	    sceKernelRegisterProcEventHandler("SceAvcodec", &handler, 0) < 0)
+	    sceKernelRegisterProcEventHandler("SceAvcodec", &handler, NULL) < 0)
 		return SCE_KERNEL_START_FAILED;
 	return SCE_KERNEL_START_SUCCESS;
 }

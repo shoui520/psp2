@@ -11,15 +11,15 @@ static inline __attribute__((always_inline)) int powerCreateProcessStorage(void)
 
 /* exported, and inlined in this unit as in the original */
 
-int powerProcessSuspendNotification(SceUID pid, int phase, ProcEventParam *param, int args);
+int powerProcessSuspendNotification(SceUID pid, int phase, ProcEventParam *param, void *common);
 
-int powerProcessKillCallback(SceUID pid, ProcEventParam *param, int args);
+int powerProcessKillCallback(SceUID pid, ProcEventParam *param, void *common);
 
-int powerProcessExitCallback(SceUID pid, ProcEventParam *param, int args);
+int powerProcessExitCallback(SceUID pid, ProcEventParam *param, void *common);
 
-int powerProcessCreateCallback(SceUID pid, ProcEventCreateParam *param, int args);
+int powerProcessCreateCallback(SceUID pid, ProcEventCreateParam *param, void *common);
 
-int powerProcessResumeNotification(SceUID pid, int phase, ProcEventParam *param, int args);
+int powerProcessResumeNotification(SceUID pid, int phase, ProcEventParam *param, void *common);
 
 struct PowerCallbackControl s_powerCallbackControl;
 
@@ -71,7 +71,7 @@ int powerStartupWorker(void *arg)
 	return 1;
 }
 
-int powerProcessSuspendNotification(SceUID pid, int phase, ProcEventParam *param, int args)
+int powerProcessSuspendNotification(SceUID pid, int phase, ProcEventParam *param, void *common)
 {
 	powerProcessSuspendEvent(pid, phase);
 	return 0;
@@ -119,7 +119,7 @@ int _scePowerRemoveProcessCallback(SceUID pid)
 	}
 }
 
-int powerProcessKillCallback(SceUID pid, ProcEventParam *param, int args)
+int powerProcessKillCallback(SceUID pid, ProcEventParam *param, void *common)
 {
 	powerUnlinkKilledProcess(pid);
 	powerReleaseProcessSwitchLocks(pid);
@@ -127,7 +127,7 @@ int powerProcessKillCallback(SceUID pid, ProcEventParam *param, int args)
 	return 0;
 }
 
-int powerProcessExitCallback(SceUID pid, ProcEventParam *param, int args)
+int powerProcessExitCallback(SceUID pid, ProcEventParam *param, void *common)
 {
 	powerUnlinkExitedProcess(pid);
 	powerReleaseProcessSwitchLocks(pid);
@@ -135,7 +135,7 @@ int powerProcessExitCallback(SceUID pid, ProcEventParam *param, int args)
 	return 0;
 }
 
-int powerProcessCreateCallback(SceUID pid, ProcEventCreateParam *param, int args)
+int powerProcessCreateCallback(SceUID pid, ProcEventCreateParam *param, void *common)
 {
 	powerCreateProcessState(pid);
 	return 0;
@@ -287,7 +287,7 @@ int powerInitializeModule(void)
 	SceSysconForDriver_129EA022(powerUsbPowerCallback, NULL);
 	SceSysconForDriver_773B8126(powerThermalCallback, NULL);
 	sceKernelRegisterSysEventHandler("ScePower", powerSysEventHandler, NULL);
-	sceKernelRegisterProcEventHandler("ScePower", &s_powerProcessEventHandlers, 0);
+	sceKernelRegisterProcEventHandler("ScePower", &s_powerProcessEventHandlers, NULL);
 	sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "ScePowerInit", powerStartupWorker, NULL);
 	s_powerDebugNotifier0 = SceSysrootForDriver_10788257();
 	s_powerDebugNotifier1 = SceSysrootForDriver_0A52A59C();
@@ -461,7 +461,7 @@ static void _scePowerNotifyCallbackProc(SceUID pid, uint32_t clearMask,
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 }
 
-int powerProcessResumeNotification(SceUID pid, int phase, ProcEventParam *param, int args)
+int powerProcessResumeNotification(SceUID pid, int phase, ProcEventParam *param, void *common)
 {
 	if (phase == 0x20000)
 		_scePowerNotifyCallbackProc(pid, 0, SCE_POWER_CALLBACKARG_PROCESS_RESUMING, 0);

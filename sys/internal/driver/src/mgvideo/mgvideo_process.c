@@ -100,13 +100,13 @@ unlock:
 struct ProcEventParam;
 
 int onVideoProcessKill(int processId, struct ProcEventParam *event,
-		       int eventType)
+		       void *common)
 {
 	return releaseProcessVideoContexts(processId);
 }
 
 int onVideoProcessExit(int processId, struct ProcEventParam *event,
-		       int eventType)
+		       void *common)
 {
 	return releaseProcessVideoContexts(processId);
 }

@@ -624,7 +624,7 @@ static int ringSyncReader(struct touchRing *ring, int kind)
 	return 0;
 }
 
-static int startProcess(int pid, int event, ProcEventParam *args, int opt) /* name unknown */
+static int startProcess(int pid, int event, ProcEventParam *args, void *common) /* name unknown */
 {
 	struct touchProcess *process;
 	unsigned intr;
@@ -750,12 +750,12 @@ static int removeProcess(int pid) /* name unknown */
 	return ret;
 }
 
-static int killProcess(int pid, ProcEventParam *args, int opt) /* name unknown */
+static int killProcess(int pid, ProcEventParam *args, void *common) /* name unknown */
 {
 	return removeProcess(pid);
 }
 
-static int exitProcess(int pid, ProcEventParam *args, int opt) /* name unknown */
+static int exitProcess(int pid, ProcEventParam *args, void *common) /* name unknown */
 {
 	return removeProcess(pid);
 }
@@ -829,7 +829,7 @@ static int updateOwners(unsigned port, struct touchSample *sample, struct touchT
 	return 0;
 }
 
-static int stopProcess(int pid, int event, ProcEventParam *args, int opt) /* name unknown */
+static int stopProcess(int pid, int event, ProcEventParam *args, void *common) /* name unknown */
 {
 	struct touchProcess *process;
 	unsigned intr;
@@ -959,7 +959,7 @@ title:
 	return 0;
 }
 
-static int createProcessEvent(int pid, ProcEventCreateParam *args, int opt) /* name unknown */
+static int createProcessEvent(int pid, ProcEventCreateParam *args, void *common) /* name unknown */
 {
 	return createProcess(pid);
 }
@@ -1205,7 +1205,7 @@ static int initialize(void *argp)
 	touch.ports[1].forceLevel[1] = 0x10;
 	touch.state = TOUCH_STATE_RUNNING;
 	touch.sysHandler = sceKernelRegisterSysEventHandler("SceTouch", systemEvent, NULL);
-	touch.procHandler = sceKernelRegisterProcEventHandler("SceTouch", &procHandlers, 0);
+	touch.procHandler = sceKernelRegisterProcEventHandler("SceTouch", &procHandlers, NULL);
 	touch.plsId = sceKernelRegisterKPLS("SceTouch", sizeof(struct touchProcess));
 	if (touch.plsId < 0)
 		return 1;

@@ -497,19 +497,19 @@ static int cleanupProcess(int process)
 		SceSysconForDriver_8D1D97E8(0);
 	return 0;
 }
-static __attribute__((noipa)) int processExit(int process)
+static __attribute__((noipa)) int processExit(SceUID pid, ProcEventParam *param, void *common)
 {
-	return cleanupProcess(process);
+	return cleanupProcess(pid);
 }
-static __attribute__((noipa)) int processKill(int process)
+static __attribute__((noipa)) int processKill(SceUID pid, ProcEventParam *param, void *common)
 {
-	return cleanupProcess(process);
+	return cleanupProcess(pid);
 }
-static __attribute__((noipa)) int processSuspend(void)
+static __attribute__((noipa)) int processSuspend(SceUID pid, int phase, ProcEventParam *param, void *common)
 {
 	return 0;
 }
-static __attribute__((noipa)) int processResume(void)
+static __attribute__((noipa)) int processResume(SceUID pid, int phase, ProcEventParam *param, void *common)
 {
 	return 0;
 }
@@ -623,11 +623,15 @@ static int UsbServThread(unsigned arglen, void *arg)
 int _sceUsbServInit(unsigned arglen, const void *argp)
 {
 	static const SceUsbdDriver driver = { "usb_charge", usb_probe, usb_attach, usb_detach };
-	static const struct {
-		unsigned size, unk;
-		int (*exit)(int), (*kill)(int), (*suspend)(void), (*resume)(void);
-		unsigned unused;
-	} events = { 0x1c, 0, processExit, processKill, processSuspend, processResume, 0 };
+	static const SceKernelProcEventHandler events = {
+		.size = sizeof(SceKernelProcEventHandler),
+		.create = NULL,
+		.exit = processExit,
+		.kill = processKill,
+		.suspend = processSuspend,
+		.resume = processResume,
+		.notify = NULL,
+	};
 	SceGpioForDriver_372022A4(1, 3, 0);
 	SceGpioForDriver_F6310435(1, 3);
 	for (unsigned i = 0; i < 3; i++) {
@@ -661,7 +665,7 @@ int _sceUsbServInit(unsigned arglen, const void *argp)
 		DEBUG(6, 1083, "_sceUsbServInit", "# ERROR # sceKernelRegisterSysEventHandler 0x%08x\n", s_serv.systemHandler);
 		goto deleteThread;
 	}
-	s_serv.processHandler = sceKernelRegisterProcEventHandler("SceUsbserv", &events, 0);
+	s_serv.processHandler = sceKernelRegisterProcEventHandler("SceUsbserv", &events, NULL);
 	if (s_serv.processHandler < 0) {
 		DEBUG(6, 1090, "_sceUsbServInit", "# ERROR # sceKernelRegisterProcEventHandler 0x%08x\n", s_serv.processHandler);
 		sceKernelUnregisterSysEventHandler(s_serv.systemHandler);

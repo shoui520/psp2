@@ -159,12 +159,12 @@ extern const char g_audioInAecMutexName[];
 int audioInReturnZero(void);
 int SceAudioForDriver_75915003(uintptr_t bufferAddress, unsigned int wordCount);
 unsigned int configureAudioInCaptureBuffers(void);
-int audioInProcessExitHandler(SceUID pid, ProcEventParam *param, int argument);
-int audioInProcessKillHandler(SceUID pid, ProcEventParam *param, int argument);
+int audioInProcessExitHandler(SceUID pid, ProcEventParam *param, void *common);
+int audioInProcessKillHandler(SceUID pid, ProcEventParam *param, void *common);
 int audioInProcessStopHandler(SceUID pid, int eventType, ProcEventParam *param,
-		int argument);
+		void *common);
 int audioInProcessStartHandler(SceUID pid, int eventType, ProcEventParam *param,
-		int argument);
+		void *common);
 int audioInSysEventHandler(int resume, int eventId, void *args, void *opt);
 int audioInCaptureThread(SceSize size, void *argument) __attribute__((noreturn));
 int audioInAecThread(SceSize size, void *argument);

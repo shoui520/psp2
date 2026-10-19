@@ -114,9 +114,9 @@ static const char s_app[] = "app0:sce_module/";
 
 static int s_storage;
 
-static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, int args);
-static int procExitHandler(SceUID pid, ProcEventParam *param, int args);
-static int procKillHandler(SceUID pid, ProcEventParam *param, int args);
+static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, void *common);
+static int procExitHandler(SceUID pid, ProcEventParam *param, void *common);
+static int procKillHandler(SceUID pid, ProcEventParam *param, void *common);
 
 static const SceKernelProcEventHandler s_procHandler = {
 	.size = sizeof(SceKernelProcEventHandler),
@@ -635,7 +635,7 @@ out:
 
 /* -- process events ----------------------------------------------------- */
 
-static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, int args)
+static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, void *common)
 {
 	SysmoduleProc *proc = NULL;
 
@@ -661,13 +661,13 @@ static inline void sysmoduleProcEnd(SceUID pid)
 	}
 }
 
-static int procExitHandler(SceUID pid, ProcEventParam *param, int args)
+static int procExitHandler(SceUID pid, ProcEventParam *param, void *common)
 {
 	sysmoduleProcEnd(pid);
 	return 0;
 }
 
-static int procKillHandler(SceUID pid, ProcEventParam *param, int args)
+static int procKillHandler(SceUID pid, ProcEventParam *param, void *common)
 {
 	sysmoduleProcEnd(pid);
 	return 0;
@@ -676,7 +676,7 @@ static int procKillHandler(SceUID pid, ProcEventParam *param, int args)
 int module_start(SceSize args, void *argp)
 {
 	s_storage = sceKernelRegisterKPLS("SceSysmodule", 0x1000);
-	sceKernelRegisterProcEventHandler("SceSysmodule", &s_procHandler, 0);
+	sceKernelRegisterProcEventHandler("SceSysmodule", &s_procHandler, NULL);
 	return SCE_KERNEL_START_SUCCESS;
 }
 

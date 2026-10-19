@@ -1793,28 +1793,28 @@ unlock:
 }
 
 /* Names unknown: process lifecycle registration callbacks. */
-int ctrlCreateProcessCallback(SceUID pid, ProcEventCreateParam *args, int flags)
+int ctrlCreateProcessCallback(SceUID pid, ProcEventCreateParam *args, void *common)
 {
 	if (pid < 0)
 		return pid;
 	return ctrlCreateProcess(pid);
 }
 
-int ctrlKillProcessCallback(SceUID pid, ProcEventParam *args, int flags)
+int ctrlKillProcessCallback(SceUID pid, ProcEventParam *args, void *common)
 {
 	if (pid < 0)
 		return pid;
 	return ctrlDestroyProcess(pid);
 }
 
-int ctrlExitProcessCallback(SceUID pid, ProcEventParam *args, int flags)
+int ctrlExitProcessCallback(SceUID pid, ProcEventParam *args, void *common)
 {
 	if (pid < 0)
 		return pid;
 	return ctrlDestroyProcess(pid);
 }
 
-int ctrlActivateProcess(SceUID pid, int event, ProcEventParam *args, int flags)
+int ctrlActivateProcess(SceUID pid, int event, ProcEventParam *args, void *common)
 {
 	struct ctrlProcessStorage *process = NULL;
 	SceKernelIntrStatus intr;
@@ -1875,7 +1875,7 @@ int _sceCtrlBdRMCForceReleaseCallback(SceUID pid)
 	return result;
 }
 
-int ctrlProcessEvent(SceUID pid, int event, ProcEventParam *args, int flags)
+int ctrlProcessEvent(SceUID pid, int event, ProcEventParam *args, void *common)
 {
 	struct ctrlProcessStorage *process = NULL;
 	SceKernelIntrStatus intr;
@@ -2081,7 +2081,7 @@ int ctrlInitialize(void)
 	}
 	ctrlStorage.systemEvents = sceKernelRegisterSysEventHandler("SceCtrl",
 						ctrlSystemEventCallback, NULL);
-	ctrlStorage.processEvents = sceKernelRegisterProcEventHandler("SceCtrl", &events, 0);
+	ctrlStorage.processEvents = sceKernelRegisterProcEventHandler("SceCtrl", &events, NULL);
 	SceSysconForDriver_901D6CD4(0);
 	ctrlStorage.maskForAll = 0x643fffff;
 	ctrlStorage.maskForNonShell = 0x403ffff;

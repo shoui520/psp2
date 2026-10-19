@@ -51,10 +51,10 @@ static SceUID s_callbackId;
 static SceUID s_callbackPid;
 static unsigned int s_callbackFlags;
 
-static int usbdProcessExit(SceUID pid, ProcEventParam *param, int arg);
-static int usbdProcessKill(SceUID pid, ProcEventParam *param, int arg);
-static int usbdProcessStop(SceUID pid, int type, ProcEventParam *param, int arg);
-static int usbdProcessStart(SceUID pid, int type, ProcEventParam *param, int arg);
+static int usbdProcessExit(SceUID pid, ProcEventParam *param, void *common);
+static int usbdProcessKill(SceUID pid, ProcEventParam *param, void *common);
+static int usbdProcessStop(SceUID pid, int type, ProcEventParam *param, void *common);
+static int usbdProcessStart(SceUID pid, int type, ProcEventParam *param, void *common);
 
 static const SceKernelProcEventHandler usbdProcEventHandler = {
 	.size = sizeof(SceKernelProcEventHandler),
@@ -229,12 +229,12 @@ static __always_inline UsbdEvent *usbdDequeueEvent(UsbdEventQueue *queue)
 	return event;
 }
 
-static int usbdProcessStop(SceUID pid, int type, ProcEventParam *param, int arg)
+static int usbdProcessStop(SceUID pid, int type, ProcEventParam *param, void *common)
 {
 	return 0;
 }
 
-static int usbdProcessStart(SceUID pid, int type, ProcEventParam *param, int arg)
+static int usbdProcessStart(SceUID pid, int type, ProcEventParam *param, void *common)
 {
 	return 0;
 }
@@ -363,12 +363,12 @@ out:
 	return result;
 }
 
-static int usbdProcessKill(SceUID pid, ProcEventParam *param, int arg)
+static int usbdProcessKill(SceUID pid, ProcEventParam *param, void *common)
 {
 	return usbdReleaseClient(pid);
 }
 
-static int usbdProcessExit(SceUID pid, ProcEventParam *param, int arg)
+static int usbdProcessExit(SceUID pid, ProcEventParam *param, void *common)
 {
 	return usbdReleaseClient(pid);
 }
@@ -1439,7 +1439,7 @@ int _sceUsbdInit(void)
 	result = ohciInit(s_bus[2]);
 	if (result < 0)
 		goto term_ehci2;
-	result = sceKernelRegisterProcEventHandler("SceUsbd", &usbdProcEventHandler, 0);
+	result = sceKernelRegisterProcEventHandler("SceUsbd", &usbdProcEventHandler, NULL);
 	if (result < 0)
 		goto term_ohci2;
 	s_procEventHandlerId = result;

@@ -39,13 +39,13 @@ int audioDispatchDmaBuffer(uintptr_t sourceAddress, int channel,
 int audioProcessDirectPort(AudioDirectPort *port, int16_t *output,
 			   const int16_t *input, unsigned int sampleCount);
 int audioSetHardwareVolume(int channel, int left, int right);
-int audioInitializeProcess(SceUID pid, ProcEventCreateParam *param, int reason);
-int audioProcessExitCallback(SceUID pid, ProcEventParam *param, int reason);
-int audioCleanupProcess(SceUID pid, ProcEventParam *param, int reason);
+int audioInitializeProcess(SceUID pid, ProcEventCreateParam *param, void *common);
+int audioProcessExitCallback(SceUID pid, ProcEventParam *param, void *common);
+int audioCleanupProcess(SceUID pid, ProcEventParam *param, void *common);
 int audioProcessEventHandler(SceUID pid, int event, ProcEventParam *param,
-			    int reason);
+			    void *common);
 int audioProcessTitleEvent(SceUID pid, int event, ProcEventParam *param,
-			  int reason);
+			  void *common);
 
 const SceKernelProcEventHandler audioProcessEventHandlers = {
 	.size = sizeof(SceKernelProcEventHandler),
@@ -125,7 +125,7 @@ int audioSystemEventHandler(int phase, int event, void *args, void *opt)
 	return 0;
 }
 
-int audioCleanupProcess(SceUID pid, ProcEventParam *param, int reason)
+int audioCleanupProcess(SceUID pid, ProcEventParam *param, void *common)
 {
 	AudioProcessLocalStorage *storage;
 	AudioMainPort *port;
@@ -167,9 +167,9 @@ int audioCleanupProcess(SceUID pid, ProcEventParam *param, int reason)
 	return 0;
 }
 
-int audioProcessExitCallback(SceUID pid, ProcEventParam *param, int reason)
+int audioProcessExitCallback(SceUID pid, ProcEventParam *param, void *common)
 {
-	return audioCleanupProcess(pid, NULL, reason);
+	return audioCleanupProcess(pid, NULL, common);
 }
 
 intptr_t audioUpdateAdoption(AudioDirectPort *port)
@@ -266,7 +266,7 @@ int audioSetAdoption(AudioDirectPort *port, int adopt, int duration)
 }
 
 int audioProcessTitleEvent(SceUID pid, int event, ProcEventParam *param,
-			  int reason)
+			  void *common)
 {
 	char titleId[32];
 
@@ -287,7 +287,7 @@ int audioProcessTitleEvent(SceUID pid, int event, ProcEventParam *param,
 	return 0;
 }
 
-int audioInitializeProcess(SceUID pid, ProcEventCreateParam *param, int reason)
+int audioInitializeProcess(SceUID pid, ProcEventCreateParam *param, void *common)
 {
 	AudioProcessLocalStorage *storage;
 	char titleId[32];
@@ -324,7 +324,7 @@ int audioInitializeProcess(SceUID pid, ProcEventCreateParam *param, int reason)
 }
 
 int audioProcessEventHandler(SceUID pid, int event, ProcEventParam *param,
-			    int reason)
+			    void *common)
 {
 	AudioProcessLocalStorage *storage;
 	AudioProcessLocalStorage *process;
@@ -1900,7 +1900,7 @@ int audioModuleStart(SceSize arglen, const void *argp)
 		return result;
 	audioInitializeEffects();
 	sceKernelRegisterSysEventHandler("SceAudio", audioSystemEventHandler, NULL);
-	sceKernelRegisterProcEventHandler("SceAudio", &audioProcessEventHandlers, 0);
+	sceKernelRegisterProcEventHandler("SceAudio", &audioProcessEventHandlers, NULL);
 	for (index = 0; index < 2; ++index) {
 		result = sceKernelVAtoPA(audioOutputBuffers[0][index],
 			&audioOutputPhysicalAddress[0][index]);

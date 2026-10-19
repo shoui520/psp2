@@ -13,7 +13,7 @@ static SceUID g_ulobjProcEventHandler;
 static SceKernelProcEventHandler g_ulobjProcEvents;
 
 /* name unknown: the process is going away, drop its info array */
-static int ulobjProcessExit(SceUID pid, ProcEventParam *param, int unk)
+static int ulobjProcessExit(SceUID pid, ProcEventParam *param, void *common)
 {
 	UlobjProcCB *procCB = getAndLockUlobjInfoArrayForKernel(pid);
 
@@ -25,7 +25,7 @@ static int ulobjProcessExit(SceUID pid, ProcEventParam *param, int unk)
 }
 
 /* name unknown */
-static int ulobjProcessKill(SceUID pid, ProcEventParam *param, int unk)
+static int ulobjProcessKill(SceUID pid, ProcEventParam *param, void *common)
 {
 	UlobjProcCB *procCB = getAndLockUlobjInfoArrayForKernel(pid);
 
@@ -45,7 +45,7 @@ int registerUlobjProcessEvents(void)
 		.kill = ulobjProcessKill,
 	};
 	g_ulobjProcEventHandler = sceKernelRegisterProcEventHandler("SceUlobjmgr",
-								     &g_ulobjProcEvents, 0);
+								     &g_ulobjProcEvents, NULL);
 	return g_ulobjProcEventHandler & (g_ulobjProcEventHandler >> 31);
 }
 

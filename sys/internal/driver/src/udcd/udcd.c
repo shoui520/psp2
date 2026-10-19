@@ -530,7 +530,7 @@ int udcdAssignEndpointNumbers(int bus)
 }
 
 /* Original name unknown. A process dies: drop its state callback. */
-int udcdProcessKill(SceUID pid, ProcEventParam *param, int unk)
+int udcdProcessKill(SceUID pid, ProcEventParam *param, void *common)
 {
 	udcdUnregisterCallback(pid, 0);
 	return 0;
@@ -1164,7 +1164,7 @@ int module_start(SceSize args, void *argp)
 			handler.suspend = udcdProcessEvent;
 			handler.resume = NULL;
 			handler.notify = NULL;
-			state->procEventHandler = sceKernelRegisterProcEventHandler("SceUdcd", &handler, 0);
+			state->procEventHandler = sceKernelRegisterProcEventHandler("SceUdcd", &handler, NULL);
 			if (state->procEventHandler >= 0)
 				state->mtpProcess = -1;
 			return SCE_KERNEL_START_SUCCESS;
@@ -2340,7 +2340,7 @@ stop_controller:
 }
 
 /* Original name unknown. Restore MTP after its tracked process exits. */
-int udcdProcessEvent(SceUID process, int event, ProcEventParam *param, int flags)
+int udcdProcessEvent(SceUID process, int event, ProcEventParam *param, void *common)
 {
 	struct udcdBusState *state = &udcdState.buses[2];
 	SceKernelIntrStatus status;

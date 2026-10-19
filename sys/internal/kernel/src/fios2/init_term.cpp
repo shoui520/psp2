@@ -22,7 +22,7 @@ static void fiosTlsDestructor(void *addr, uintptr_t argument)
 }
 
 /* the process is killed: its overlays and open directory handles go (name unknown) */
-static int fiosProcessKill(SceUID pid, ProcEventParam *param, int a3)
+static int fiosProcessKill(SceUID pid, ProcEventParam *param, void *common)
 {
 	SceFiosKernelProcessStorage *storage;
 	SceFiosKernelDH *dh;
@@ -44,7 +44,7 @@ static int fiosProcessKill(SceUID pid, ProcEventParam *param, int a3)
 }
 
 /* the process exits: the same (name unknown) */
-static int fiosProcessExit(SceUID pid, ProcEventParam *param, int a3)
+static int fiosProcessExit(SceUID pid, ProcEventParam *param, void *common)
 {
 	SceFiosKernelProcessStorage *storage;
 	SceFiosKernelDH *dh;
@@ -90,7 +90,7 @@ extern "C" int sceFiosKernelInit(SceSize args, void *argp)
 	handler.suspend = NULL;
 	handler.resume = NULL;
 	handler.notify = NULL;
-	ret = sceKernelRegisterProcEventHandler("SceFios", &handler, 0);
+	ret = sceKernelRegisterProcEventHandler("SceFios", &handler, NULL);
 	if (ret < 0) {
 		sceFiosKernelRwlockTerm(&g_fiosOverlayLock);
 		return SCE_KERNEL_START_FAILED;

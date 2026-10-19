@@ -422,23 +422,23 @@ int sceWlanBtDetachMonitor(SceWlanBtMonitorCallback *monitor)
 	gWlanBtConfig.monitor = NULL;
 	return 0;
 }
-int wlanBtSwitchProcess(int eventId, int eventType, void *param, int flags)
+int wlanBtSwitchProcess(int eventId, int eventType, void *param, void *common)
 {
 	return robinWlanSwitchProcess(eventId);
 }
 
 int wlanBtStartProcess(SceUID pid, int eventType,
-		       ProcEventParam *param, int flags)
+		       ProcEventParam *param, void *common)
 {
 	return robinWlanStartProcess(pid, eventType);
 }
 
-int wlanBtKillProcess(SceUID pid, ProcEventParam *param, int flags)
+int wlanBtKillProcess(SceUID pid, ProcEventParam *param, void *common)
 {
 	return robinWlanKillProcess(pid);
 }
 
-int wlanBtExitProcess(SceUID pid, ProcEventParam *param, int flags)
+int wlanBtExitProcess(SceUID pid, ProcEventParam *param, void *common)
 {
 	return robinWlanExitProcess(pid);
 }
@@ -574,7 +574,7 @@ int wlanBtInitializeRobin(void)
 	gWlan.procEventHandler.create = NULL;
 	gWlan.procEventHandler.suspend = NULL;
 	gWlan.procEventHandler.size = sizeof(gWlan.procEventHandler);
-	handlerId = sceKernelRegisterProcEventHandler("SceWlan", &gWlan.procEventHandler, 0);
+	handlerId = sceKernelRegisterProcEventHandler("SceWlan", &gWlan.procEventHandler, NULL);
 	if (handlerId < 0)
 		return 2;
 	gWlan.procEventHandlerId = handlerId;

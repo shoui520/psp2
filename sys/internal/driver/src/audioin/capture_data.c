@@ -36,11 +36,11 @@ const unsigned char g_audioInInternalAecControl[16] = {
 };
 const SceKernelProcEventHandler g_audioInProcEventHandler = {
 	.size = sizeof(SceKernelProcEventHandler),
-	.create = (int (*)(SceUID, ProcEventCreateParam *, int))audioInReturnZero,
-	.exit = (int (*)(SceUID, ProcEventParam *, int))audioInProcessExitHandler,
-	.kill = (int (*)(SceUID, ProcEventParam *, int))audioInProcessKillHandler,
-	.suspend = (int (*)(SceUID, int, ProcEventParam *, int))audioInProcessStopHandler,
-	.resume = (int (*)(SceUID, int, ProcEventParam *, int))audioInProcessStartHandler,
+	.create = (ProcEventCreateHandler)audioInReturnZero,
+	.exit = audioInProcessExitHandler,
+	.kill = audioInProcessKillHandler,
+	.suspend = audioInProcessStopHandler,
+	.resume = audioInProcessStartHandler,
 	.notify = NULL
 };
 

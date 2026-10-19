@@ -103,18 +103,18 @@ int module_start(SceSize arglen, const void *argp)
 	memset(&handler, 0, sizeof(handler));
 	handler.size = sizeof(handler);
 	/* These callbacks consume only the leading arguments of the native ABI. */
-	handler.create = (int (*)(SceUID, ProcEventCreateParam *, int))
+	handler.create = (ProcEventCreateHandler)
 			sceGpuProcessCreateEvent;
-	handler.exit = (int (*)(SceUID, ProcEventParam *, int))
+	handler.exit = (ProcEventHandler)
 			sceGpuProcessExitEvent;
-	handler.kill = (int (*)(SceUID, ProcEventParam *, int))
+	handler.kill = (ProcEventHandler)
 			sceGpuProcessKillEvent;
-	handler.suspend = (int (*)(SceUID, int, ProcEventParam *, int))
+	handler.suspend = (ProcEventPhaseHandler)
 			sceGpuProcessStopEvent;
-	handler.resume = (int (*)(SceUID, int, ProcEventParam *, int))
+	handler.resume = (ProcEventPhaseHandler)
 			sceGpuProcessStartEvent;
 	processHandler = sceKernelRegisterProcEventHandler(
-			"SceGpuProcessEventHandler", &handler, 0);
+			"SceGpuProcessEventHandler", &handler, NULL);
 	if (processHandler < 0) {
 		result = processHandler;
 		goto failure;

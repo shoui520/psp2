@@ -397,7 +397,7 @@ static int createVirtualProcess(int pid) /* name unknown */
 	return ret;
 }
 
-static int createProcess(int pid, ProcEventCreateParam *args, int opt) /* name unknown */
+static int createProcess(int pid, ProcEventCreateParam *args, void *common) /* name unknown */
 {
 	int ret = createPhysicalProcess(pid);
 
@@ -464,7 +464,7 @@ static int removeVirtualProcess(int pid) /* name unknown */
 	return ret;
 }
 
-static int removeProcess(int pid, ProcEventParam *args, int opt) /* name unknown */
+static int removeProcess(int pid, ProcEventParam *args, void *common) /* name unknown */
 {
 	int ret = removePhysicalProcess(pid);
 
@@ -548,14 +548,14 @@ static int processEvent(int pid, unsigned event) /* name unknown */
 	return ret;
 }
 
-static int stopProcess(int pid, int event, ProcEventParam *args, int opt) /* name unknown */
+static int stopProcess(int pid, int event, ProcEventParam *args, void *common) /* name unknown */
 {
 	if (event != 0x200 && event != 0x202 && event != 0x800)
 		return 0;
 	return processEvent(pid, event);
 }
 
-static int startProcess(int pid, int event, ProcEventParam *args, int opt) /* name unknown */
+static int startProcess(int pid, int event, ProcEventParam *args, void *common) /* name unknown */
 {
 	if (event != 0x10000)
 		return 0;
@@ -770,7 +770,7 @@ static int initializePhysical(void *args) /* name unknown */
 	touch.timer = -1;
 	touch.state = 2;
 	touch.sysHandler = sceKernelRegisterSysEventHandler("SceTouch", systemEvent, NULL);
-	touch.procHandler = sceKernelRegisterProcEventHandler("SceTouch", &procHandlers, 0);
+	touch.procHandler = sceKernelRegisterProcEventHandler("SceTouch", &procHandlers, NULL);
 	touch.plsId = sceKernelRegisterKPLS("SceTouch", sizeof(struct touchProcess));
 	if (touch.plsId >= 0) {
 		createPhysicalProcess(0x10005);

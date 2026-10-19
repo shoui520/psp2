@@ -114,11 +114,11 @@ static int cleanupProcess(int process)
 	return ret;
 }
 
-static __attribute__((noipa)) int processExit(SceUID pid, ProcEventParam *param, int arg)
+static __attribute__((noipa)) int processExit(SceUID pid, ProcEventParam *param, void *common)
 {
 	return cleanupProcess(pid);
 }
-static __attribute__((noipa)) int processKill(SceUID pid, ProcEventParam *param, int arg)
+static __attribute__((noipa)) int processKill(SceUID pid, ProcEventParam *param, void *common)
 {
 	return cleanupProcess(pid);
 }
@@ -168,7 +168,7 @@ int module_start(unsigned arglen, const void *argp)
 		SceDebugForDriver_391B74B7("\n");
 		return 2;
 	}
-	return sceKernelRegisterProcEventHandler("SceUsbAudio", &events, 0) < 0 ? 2 : 0;
+	return sceKernelRegisterProcEventHandler("SceUsbAudio", &events, NULL) < 0 ? 2 : 0;
 }
 
 int SceUsbAudioForDriver_974DBE03(int callback)

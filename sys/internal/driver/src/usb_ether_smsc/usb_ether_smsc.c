@@ -1248,7 +1248,7 @@ static int workerEntry(SceSize arglen, void *argp)
 	a->proc.create = NULL;
 	a->proc.suspend = NULL;
 	a->proc.resume = NULL;
-	ret = sceKernelRegisterProcEventHandler("SceNetDrvEther", &a->proc, (int)a);
+	ret = sceKernelRegisterProcEventHandler("SceNetDrvEther", &a->proc, a);
 	if (ret < 0) {
 		if (a->procId > 0) {
 			SceProcEventForDriver_3DED57CC(a->procId);

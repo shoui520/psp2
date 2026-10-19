@@ -132,7 +132,7 @@ int _sceMtpIfModuleStart(SceSize arglen, const char *argp)
 	s_mtp.owner = -1;
 	s_mtp.configuredPort = port;
 	s_mtp.handler = sceKernelRegisterProcEventHandler("SceMtpIf",
-						       (void *)handlers, 0);
+						       (void *)handlers, NULL);
 	return s_mtp.handler < 0 ? 2 : 0;
 }
 

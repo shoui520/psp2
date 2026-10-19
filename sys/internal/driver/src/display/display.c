@@ -292,7 +292,7 @@ set:
 	return 0;
 }
 
-static int _sceDisplayModuleProcessCreate(SceUID pid, ProcEventCreateParam *param, int arg) /* Sony's name (0.990 messages) */
+static int _sceDisplayModuleProcessCreate(SceUID pid, ProcEventCreateParam *param, void *common) /* Sony's name (0.990 messages) */
 {
 	DisplayProcessLocal *pls;
 	SceUID event;
@@ -554,13 +554,13 @@ static inline __attribute__((always_inline)) void releaseProcess(SceUID pid) /* 
 	}
 }
 
-static int procKill(SceUID pid, ProcEventParam *param, int arg) /* name unknown */
+static int procKill(SceUID pid, ProcEventParam *param, void *common) /* name unknown */
 {
 	releaseProcess(pid);
 	return 0;
 }
 
-static int procExit(SceUID pid, ProcEventParam *param, int arg) /* name unknown */
+static int procExit(SceUID pid, ProcEventParam *param, void *common) /* name unknown */
 {
 	releaseProcess(pid);
 	return 0;
@@ -918,7 +918,7 @@ int displayInit(void) /* name unknown */
 	vblankInit();
 	sceKernelRegisterSubIntrHandler(8, 2, "SceDispalyVblank", vblankHandler, NULL);
 	sceKernelRegisterSysEventHandler("SceDisplay", sysEventHandler, NULL);
-	sceKernelRegisterProcEventHandler("SceDisplay", &procEventHandler, 0);
+	sceKernelRegisterProcEventHandler("SceDisplay", &procEventHandler, NULL);
 	sceKernelRegisterInitCallback(initCallback, 8, 0, 0);
 	ret = sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceDisplayInit", initWork, NULL);
 	return ret < 0 ? ret : 0;

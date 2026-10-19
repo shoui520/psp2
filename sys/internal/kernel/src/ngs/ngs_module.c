@@ -10,21 +10,21 @@ int ngsProcessResume(SceUID pid);
 int ngsPlatformInitialize(void);
 int ngsPlatformShutdown(void);
 
-int ngsProcessKill(SceUID pid, ProcEventParam *event, int flags)
+int ngsProcessKill(SceUID pid, ProcEventParam *event, void *common)
 {
 	int result = ngsProcessRelease(pid);
 
 	return result & (result >> 31);
 }
 
-int ngsProcessExit(SceUID pid, ProcEventParam *event, int flags)
+int ngsProcessExit(SceUID pid, ProcEventParam *event, void *common)
 {
 	int result = ngsProcessRelease(pid);
 
 	return result & (result >> 31);
 }
 
-int ngsProcessCreate(SceUID pid, ProcEventCreateParam *event, int flags)
+int ngsProcessCreate(SceUID pid, ProcEventCreateParam *event, void *common)
 {
 	int result = ngsProcessInitialize(pid);
 
@@ -32,7 +32,7 @@ int ngsProcessCreate(SceUID pid, ProcEventCreateParam *event, int flags)
 }
 
 int ngsProcessStart(SceUID pid, int eventType,
-		    ProcEventParam *event, int flags)
+		    ProcEventParam *event, void *common)
 {
 	int result;
 
@@ -43,7 +43,7 @@ int ngsProcessStart(SceUID pid, int eventType,
 }
 
 int ngsProcessStop(SceUID pid, int eventType,
-		   ProcEventParam *event, int flags)
+		   ProcEventParam *event, void *common)
 {
 	int result;
 
@@ -66,7 +66,7 @@ int module_start(SceSize arglen, const void *argp)
 		handler.resume = ngsProcessStart;
 		handler.notify = NULL;
 		handler.size = sizeof(handler);
-		if (sceKernelRegisterProcEventHandler("SceNgs", &handler, 0) >= 0)
+		if (sceKernelRegisterProcEventHandler("SceNgs", &handler, NULL) >= 0)
 			result = 0;
 		else
 			result = 2;

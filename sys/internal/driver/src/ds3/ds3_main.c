@@ -30,11 +30,11 @@ int ds3GetControllerType(int port, uint8_t *type);
 int ds3GetCalibrationData(int port, SceMotionDevDs3CalibData *data);
 int ds3SetAuxiliaryMotor(int port, int level);
 int ds3ReadTouchData(int port, TouchVirtualSampleRequest *request);
-int ds3CreateProcess(SceUID pid, ProcEventCreateParam *params, int event);
-int ds3ExitProcess(SceUID pid, ProcEventParam *params, int event);
-int ds3KillProcess(SceUID pid, ProcEventParam *params, int event);
-int ds3StopProcess(SceUID pid, int eventType, ProcEventParam *params, int event);
-int ds3StartProcess(SceUID pid, int eventType, ProcEventParam *params, int event);
+int ds3CreateProcess(SceUID pid, ProcEventCreateParam *params, void *common);
+int ds3ExitProcess(SceUID pid, ProcEventParam *params, void *common);
+int ds3KillProcess(SceUID pid, ProcEventParam *params, void *common);
+int ds3StopProcess(SceUID pid, int eventType, ProcEventParam *params, void *common);
+int ds3StartProcess(SceUID pid, int eventType, ProcEventParam *params, void *common);
 int ds3ReadButtons(int port, struct ctrlNativeSample *output);
 int ds3SetActuator(int port, const SceCtrlActuator *state);
 int ds3GetBatteryInfo(int port, uint8_t *battery);
@@ -138,12 +138,12 @@ int ds3GetControllerPortMask(void)
 	return mask;
 }
 
-int ds3CreateProcess(SceUID pid, ProcEventCreateParam *params, int event)
+int ds3CreateProcess(SceUID pid, ProcEventCreateParam *params, void *common)
 {
 	return 0;
 }
 
-int ds3StartProcess(SceUID pid, int eventType, ProcEventParam *params, int event)
+int ds3StartProcess(SceUID pid, int eventType, ProcEventParam *params, void *common)
 {
 	return 0;
 }
@@ -1175,7 +1175,7 @@ unlock:
 	return result;
 }
 
-int ds3ExitProcess(SceUID pid, ProcEventParam *params, int event)
+int ds3ExitProcess(SceUID pid, ProcEventParam *params, void *common)
 {
 	int result;
 
@@ -1246,7 +1246,7 @@ int ds3ExitProcess(SceUID pid, ProcEventParam *params, int event)
 	return result;
 }
 
-int ds3KillProcess(SceUID pid, ProcEventParam *params, int event)
+int ds3KillProcess(SceUID pid, ProcEventParam *params, void *common)
 {
 	int result;
 
@@ -1523,7 +1523,7 @@ int ds3BluetoothSendControl(Ds3Device *controller, uint8_t control)
 	return result < 0 ? result : 0;
 }
 
-int ds3StopProcess(SceUID pid, int eventType, ProcEventParam *params, int event)
+int ds3StopProcess(SceUID pid, int eventType, ProcEventParam *params, void *common)
 {
 	Ds3Device *device;
 	uint64_t timestamp;
@@ -3053,7 +3053,7 @@ int module_start(SceSize args, void *argp)
 	ds3State.processColors[5].pid = -1;
 	ds3State.processColors[6].pid = -1;
 	ds3State.processColors[7].pid = -1;
-	sceKernelRegisterProcEventHandler("SceDs", &ds3ProcessHandler, 0);
+	sceKernelRegisterProcEventHandler("SceDs", &ds3ProcessHandler, NULL);
 	return 0;
 }
 

@@ -9,7 +9,7 @@
 extern const SceKernelProcEventHandler codecEngineProcessEvents; /* name unknown */
 
 typedef int (*CodecEngineProcExitHandler)(SceUID pid, ProcEventParam *param,
-					int flags); /* name unknown */
+					void *common); /* name unknown */
 
 extern int ScePervasiveForDriver_D58E3A30(void);
 extern int ScePervasiveForDriver_E0711D42(void);
@@ -73,7 +73,7 @@ extern int _sceVeneziaProcessCreateEntry(void);
 extern int initCodecEngine(void);
 #endif
 
-int _veneziaWrapperModuleProcessExit(SceUID pid, ProcEventParam *param, int flags)
+int _veneziaWrapperModuleProcessExit(SceUID pid, ProcEventParam *param, void *common)
 {
 	CodecEngineProcExitHandler *handlers = getProcExitHandlers();
 	int status = 0, codecStatus, hwdStatus, veneziaStatus;
@@ -85,7 +85,7 @@ int _veneziaWrapperModuleProcessExit(SceUID pid, ProcEventParam *param, int flag
 #endif
 	for (i = 0; i != 4; i++) {
 		if (handlers[i] != NULL) {
-			int ret = handlers[i](pid, param, flags);
+			int ret = handlers[i](pid, param, common);
 
 			if (ret < 0)
 				status = ret;
@@ -103,7 +103,7 @@ int _veneziaWrapperModuleProcessExit(SceUID pid, ProcEventParam *param, int flag
 }
 
 /* name unknown: the registered process-create callback. */
-int codecEngineProcessCreateHandler(SceUID pid, ProcEventCreateParam *param, int flags)
+int codecEngineProcessCreateHandler(SceUID pid, ProcEventCreateParam *param, void *common)
 {
 	SceUInt32 type = param->type;
 	int ret;
@@ -213,7 +213,7 @@ int codecEngineProcessSuspendHandler(SceUID pid, unsigned int event)
 	return 0;
 }
 
-int _veneziaWrapperModuleProcessKill(SceUID pid, ProcEventParam *param, int flags)
+int _veneziaWrapperModuleProcessKill(SceUID pid, ProcEventParam *param, void *common)
 {
 	CodecEngineProcExitHandler *handlers = getProcKillHandlers();
 	int status = 0, codecStatus, hwdStatus, veneziaStatus;
@@ -225,7 +225,7 @@ int _veneziaWrapperModuleProcessKill(SceUID pid, ProcEventParam *param, int flag
 #endif
 	for (i = 0; i != 4; i++) {
 		if (handlers[i] != NULL) {
-			int ret = handlers[i](pid, param, flags);
+			int ret = handlers[i](pid, param, common);
 
 			if (ret < 0)
 				status = ret;
@@ -247,9 +247,9 @@ int _veneziaWrapperModuleProcessKill(SceUID pid, ProcEventParam *param, int flag
 
 const SceKernelProcEventHandler codecEngineProcessEvents = {
 	.size = sizeof(SceKernelProcEventHandler),
-	.create = (int (*)(SceUID, ProcEventCreateParam *, int))codecEngineProcessCreateHandler,
-	.exit = (int (*)(SceUID, ProcEventParam *, int))_veneziaWrapperModuleProcessExit,
-	.kill = (int (*)(SceUID, ProcEventParam *, int))_veneziaWrapperModuleProcessKill,
-	.suspend = (int (*)(SceUID, int, ProcEventParam *, int))codecEngineProcessSuspendHandler,
-	.resume = (int (*)(SceUID, int, ProcEventParam *, int))codecEngineProcessResumeHandler,
+	.create = codecEngineProcessCreateHandler,
+	.exit = _veneziaWrapperModuleProcessExit,
+	.kill = _veneziaWrapperModuleProcessKill,
+	.suspend = (ProcEventPhaseHandler)codecEngineProcessSuspendHandler,
+	.resume = (ProcEventPhaseHandler)codecEngineProcessResumeHandler,
 };

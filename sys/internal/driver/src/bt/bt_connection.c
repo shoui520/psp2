@@ -57,10 +57,10 @@ void BtDisconnectTimedOut(void *argument)
 }
 
 int BtProcessResume(SceUID processId, int eventType,
-		    ProcEventParam *param, int argument)
+		    ProcEventParam *param, void *common)
 {
 	(void)param;
-	(void)argument;
+	(void)common;
 	if (eventType == 0x10000 &&
 	    gBtStack.inquiryCompletionProcessId == processId &&
 	    gBtStack.state == 28 && BtLockTransport() == 0) {
@@ -71,10 +71,10 @@ int BtProcessResume(SceUID processId, int eventType,
 }
 
 int BtProcessSuspend(SceUID processId, int eventType,
-		     ProcEventParam *param, int argument)
+		     ProcEventParam *param, void *common)
 {
 	(void)param;
-	(void)argument;
+	(void)common;
 	if (eventType == 0x100 && gBtStack.inquiryProcessId == processId &&
 	    BtLockTransport() == 0) {
 		switch (gBtStack.state) {
@@ -149,17 +149,17 @@ static inline int BtCleanupProcess(SceUID processId)
 	return 0;
 }
 
-int BtProcessExit(SceUID processId, ProcEventParam *param, int argument)
+int BtProcessExit(SceUID processId, ProcEventParam *param, void *common)
 {
 	(void)param;
-	(void)argument;
+	(void)common;
 	return BtCleanupProcess(processId);
 }
 
-int BtProcessKill(SceUID processId, ProcEventParam *param, int argument)
+int BtProcessKill(SceUID processId, ProcEventParam *param, void *common)
 {
 	(void)param;
-	(void)argument;
+	(void)common;
 	return BtCleanupProcess(processId);
 }
 

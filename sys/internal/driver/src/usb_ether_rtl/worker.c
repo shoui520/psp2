@@ -595,8 +595,8 @@ int rtlWorker(SceSize length, void *arg)
 	a->proc.kill = NULL;
 	a->proc.suspend = NULL;
 	a->proc.resume = NULL;
-	a->proc.notify = (ProcEventNotifyHandler)rtlProcessEvent;
-	ret = sceKernelRegisterProcEventHandler("SceNetDrvEther", &a->proc, (int)a);
+	a->proc.notify = rtlProcessEvent;
+	ret = sceKernelRegisterProcEventHandler("SceNetDrvEther", &a->proc, a);
 	if (ret < 0) {
 		if (a->procId > 0) {
 			SceProcEventForDriver_3DED57CC(a->procId);

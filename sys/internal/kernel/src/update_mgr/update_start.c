@@ -10,13 +10,13 @@ uint32_t updateRequestIdCounter = 1;
 SceUID updateHeapId = -1;
 int slskSmId = -1;
 
-int UpdateMgrProcessCreate(SceUID pid, ProcEventCreateParam *param, int flags)
+int UpdateMgrProcessCreate(SceUID pid, ProcEventCreateParam *param, void *common)
 {
 	return 0;
 }
 
 int UpdateMgrProcessStart(SceUID pid, int eventType,
-			 ProcEventParam *param, int flags)
+			 ProcEventParam *param, void *common)
 {
 	return 0;
 }
@@ -36,12 +36,12 @@ int invalidate_prev_system_info(SceSize arglen, void *argp)
 	return result;
 }
 
-int UpdateMgrProcessExit(SceUID pid, ProcEventParam *param, int flags)
+int UpdateMgrProcessExit(SceUID pid, ProcEventParam *param, void *common)
 {
 	return UpdateUtilReleaseAllBuffers(pid);
 }
 
-int UpdateMgrProcessKill(SceUID pid, ProcEventParam *param, int flags)
+int UpdateMgrProcessKill(SceUID pid, ProcEventParam *param, void *common)
 {
 	return UpdateUtilReleaseAllBuffers(pid);
 }

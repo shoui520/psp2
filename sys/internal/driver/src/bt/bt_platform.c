@@ -26,7 +26,7 @@ int BtInitializeEventHandlers(void)
 	if (result < 0)
 		return result;
 	gBtSysEventHandlerId = result;
-	result = sceKernelRegisterProcEventHandler("SceBt", &gBtProcEventHandler, 0);
+	result = sceKernelRegisterProcEventHandler("SceBt", &gBtProcEventHandler, NULL);
 	if (result < 0)
 		goto unregisterSystem;
 	gBtStack.inquiryProcessId = -1;

@@ -506,7 +506,7 @@ int sceNetPsInitializePlatform(int (*initialize)(SceUID, void *, int,
 	handler.notify =
 		(typeof(handler.notify))sceNetPsProcessAffinityHandler;
 	processId = sceKernelRegisterProcEventHandler("SceNetPs", &handler,
-						     (int)processHooks);
+						     processHooks);
 	if (processId < 0)
 		goto unregisterThread;
 	thread.name = "SceNetSoft";

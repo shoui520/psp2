@@ -338,7 +338,7 @@ int udcdInitializeBusOne(int args, void *argp);
 int udcdInitializeBusTwo(int args, void *argp);
 int udcdCallBusOneOperation(int args, void *argp);
 int udcdCallBusTwoOperation(int args, void *argp);
-int udcdProcessEvent(SceUID process, int event, ProcEventParam *param, int flags);
+int udcdProcessEvent(SceUID process, int event, ProcEventParam *param, void *common);
 
 /* udcd_user.c */
 int udcdRegisterCallback(SceUID callback, SceUID process, unsigned int mask);

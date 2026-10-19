@@ -32,12 +32,12 @@ extern void _shellEventOnAppUnloadedQueuePush(SceUID pid, int appId,
 		int relaunchPending, const char *appName);
 extern int _updateDeviceArbitration2(void);
 extern int appmgrReturnSuccess(void);
-extern int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, int flags);
-int appmgrProcKillHandler(SceUID pid, ProcEventParam *param, int flags);
+extern int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, void *common);
+int appmgrProcKillHandler(SceUID pid, ProcEventParam *param, void *common);
 extern int _sceAppMgrProcSuspendHandler(SceUID pid, int eventType,
-		ProcEventParam *param, int flags);
+		ProcEventParam *param, void *common);
 extern int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
-		ProcEventParam *param, int flags);
+		ProcEventParam *param, void *common);
 extern int appmgrSaveSafeMemoryForProcess(SceUID pid);
 extern int appmgrUpdateSaveDataOnSuspend(SceUID pid, AppmgrProcessContent *content);
 extern int appmgrPrepareSafeMemoryForProcess(SceUID pid);
@@ -72,9 +72,9 @@ SceUID g_appmgrProcEventHandlerUid;
 
 static const SceKernelProcEventHandler processEventHandlers = {
 	.size = sizeof(SceKernelProcEventHandler),
-	.create = (int (*)(SceUID, ProcEventCreateParam *, int))appmgrReturnSuccess,
-	.exit = (int (*)(SceUID, ProcEventParam *, int))_sceAppMgrProcExitHandler,
-	.kill = (int (*)(SceUID, ProcEventParam *, int))appmgrProcKillHandler,
+	.create = (ProcEventCreateHandler)appmgrReturnSuccess,
+	.exit = _sceAppMgrProcExitHandler,
+	.kill = appmgrProcKillHandler,
 	.suspend = _sceAppMgrProcSuspendHandler,
 	.resume = _sceAppMgrProcResumeHandler,
 	.notify = NULL,
@@ -450,7 +450,7 @@ int _sceAppMgrProcTerminatedHandler(SceUID pid)
 #endif
 
 int _sceAppMgrProcSuspendHandler(SceUID pid, int eventType,
-		ProcEventParam *param, int flags)
+		ProcEventParam *param, void *common)
 {
 	struct AppState *app, *lockedApp;
 	struct AppmgrWaitObject *waiter;
@@ -458,7 +458,7 @@ int _sceAppMgrProcSuspendHandler(SceUID pid, int eventType,
 	int result;
 
 	(void)param;
-	(void)flags;
+	(void)common;
 	if (eventType == 0x800) {
 		appmgrSaveSafeMemoryForProcess(pid);
 		if (_appListFindAndLockAppByProcessId(pid, &app) == (int)0x80802012)
@@ -613,7 +613,7 @@ int videocodecUsageChangedCallback2(SceUID pid, unsigned int usage)
 #endif
 
 int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
-		ProcEventParam *param, int flags)
+		ProcEventParam *param, void *common)
 {
 	struct AppState *app, *lockedApp;
 	struct AppmgrWaitObject *waiter;
@@ -622,7 +622,7 @@ int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
 	int result;
 
 	(void)param;
-	(void)flags;
+	(void)common;
 	if (eventType == 0x10000) {
 		appmgrPrepareSafeMemoryForProcess(pid);
 	} else if (eventType == 0x40000) {
@@ -743,7 +743,7 @@ int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
 } while (0)
 #endif
 
-int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, int flags)
+int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, void *common)
 {
 	struct AppState *app, *codecApp, *lockedApp, *shellApp;
 	struct AppmgrWaitObject *waitObject;
@@ -754,7 +754,7 @@ int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, int flags)
 #endif
 
 	(void)param;
-	(void)flags;
+	(void)common;
 	/* Sony inlines videocodecUsageChangedCallback2 here. */
 	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	PROCESS_EXIT_LOCK(result, 1475, "videocodecUsageChangedCallback2");
@@ -890,11 +890,11 @@ int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, int flags)
 	return 0;
 }
 
-int appmgrProcKillHandler(SceUID pid, ProcEventParam *param, int flags)
+int appmgrProcKillHandler(SceUID pid, ProcEventParam *param, void *common)
 {
 	(void)param;
-	(void)flags;
-	return _sceAppMgrProcExitHandler(pid, NULL, 0);
+	(void)common;
+	return _sceAppMgrProcExitHandler(pid, NULL, NULL);
 }
 
 #if FW_DEBUG
@@ -1649,7 +1649,7 @@ int _appmgrProcessInitialize(int (*callback)(struct AppState *app))
 		(void (*)(SceUID, int))_sceAppMgrProcTerminatedHandler);
 	PROCESS_INITIALIZE_CHECK(result != 0, 1496, terminatedRegistrationPanicInfo);
 	g_appmgrProcEventHandlerUid = sceKernelRegisterProcEventHandler(
-		"SceAppMgr", &processEventHandlers, 0);
+		"SceAppMgr", &processEventHandlers, NULL);
 	PROCESS_INITIALIZE_CHECK(g_appmgrProcEventHandlerUid < 0, 1499,
 		processEventRegistrationPanicInfo);
 	result = appmgrUtilWaitObjectInitialize();

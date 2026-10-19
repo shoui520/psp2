@@ -485,17 +485,6 @@ typedef struct PreloadModule {
 typedef struct ModulemgrStubInfo ModulemgrStubInfo;
 
 
-/* the process event handler (SceKernelProcEventHandler) */
-typedef struct ModulemgrProcEvent {
-	SceSize size;			/* 0x1c */
-	void *create;
-	void *exit;
-	void *kill;
-	void *stop;
-	void *start;
-	int (*switchProcess)(int event, int phase, void *param, void *common);
-} ModulemgrProcEvent;
-
 
 /* globals */
 extern SceUID g_mutex;

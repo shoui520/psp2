@@ -176,11 +176,11 @@ unsigned char gCompatActivationReadBuffer[2048];
 char gCompatTitleListBuffer[100];
 
 int compatProcessKillHandler(SceUID pid, ProcEventParam *param,
-	int flags);
+	void *common);
 int compatProcessExitHandler(SceUID pid, ProcEventParam *param,
-	int flags);
+	void *common);
 int compatProcessStopHandler(SceUID pid, int event,
-	ProcEventParam *param, int flags);
+	ProcEventParam *param, void *common);
 int compatCallIntrHandler(int intrcode, void *context);
 int compatEnterRunningState(void);
 int compatInitEx(int mode);
@@ -472,7 +472,7 @@ int mapMainDDR(void)
 #endif
 
 int compatProcessKillHandler(SceUID pid, ProcEventParam *param,
-	int flags)
+	void *common)
 {
 	SceUID (*group)[3];
 	SceUID *block;
@@ -525,7 +525,7 @@ int compatProcessKillHandler(SceUID pid, ProcEventParam *param,
 }
 
 int compatProcessExitHandler(SceUID pid, ProcEventParam *param,
-	int flags)
+	void *common)
 {
 	SceUID (*group)[3];
 	SceUID *block;
@@ -647,7 +647,7 @@ int module_start(SceSize arglen, const void *argp)
 	}
 	sceKernelRegisterSysEventHandler("SceCompat", compatSysEventHandler, NULL);
 	procHandler = sceKernelRegisterProcEventHandler("SceCompat",
-		&gCompatProcessHandlers, 0);
+		&gCompatProcessHandlers, NULL);
 	if (procHandler < 0)
 		goto cleanup;
 	mutexOpt.size = sizeof(mutexOpt);
@@ -1388,7 +1388,7 @@ out:
 }
 
 int compatProcessStopHandler(SceUID pid, int event,
-	ProcEventParam *param, int flags)
+	ProcEventParam *param, void *common)
 {
 	SceCompatLcdDmaRegisters *lcdDma;
 	unsigned int *requestState;

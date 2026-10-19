@@ -44,7 +44,7 @@ int ScePamgrForDriver_5D3D46E4(uint32_t registration,
 	return configureArmTrace(config);
 }
 
-int PamgrProcKill(SceUID process)
+int PamgrProcKill(SceUID process, ProcEventParam *param, void *common)
 {
 	int result;
 
@@ -67,7 +67,7 @@ int PamgrProcKill(SceUID process)
 	return 0;
 }
 
-int PamgrProcExit(SceUID process)
+int PamgrProcExit(SceUID process, ProcEventParam *param, void *common)
 {
 	int result;
 
@@ -90,28 +90,16 @@ int PamgrProcExit(SceUID process)
 	return 0;
 }
 
-/* Exact producer record also used by ModulemgrProcEvent; shared migration
- * belongs to the coordinator. Exit/kill are the only Pamgr callbacks. */
-struct PamgrProcessEvents {
-	SceSize size;
-	void *create;
-	int (*exit)(SceUID process);
-	int (*kill)(SceUID process);
-	void *stop;
-	void *start;
-	void *switchProcess;
-};
-
 int sceKernelPaInitPamgrWrapper(void)
 {
-	struct PamgrProcessEvents events = {
+	SceKernelProcEventHandler events = {
 		.size = sizeof(events),
 		.exit = PamgrProcExit,
 		.kill = PamgrProcKill,
 	};
 	int result;
 
-	result = sceKernelRegisterProcEventHandler("ScePamgr", &events, 0);
+	result = sceKernelRegisterProcEventHandler("ScePamgr", &events, NULL);
 	if (result < 0) {
 		SCE_DBG_ASSERT_LEVEL(0, 0, 121);
 		return result;

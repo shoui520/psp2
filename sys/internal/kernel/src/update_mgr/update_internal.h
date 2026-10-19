@@ -116,11 +116,11 @@ int SpkgInfoUtilSetVersion(int packageType, int flags, unsigned int version,
 			  int loadSm, int existingSmId);
 int UpdateUtilReleaseAllBuffers(int processId);
 int UpdateUtilGetNodeStatus(int nodeType, UpdateUtilNodeStatus *status, int lock);
-int UpdateMgrProcessCreate(SceUID pid, ProcEventCreateParam *param, int flags);
-int UpdateMgrProcessExit(SceUID pid, ProcEventParam *param, int flags);
-int UpdateMgrProcessKill(SceUID pid, ProcEventParam *param, int flags);
+int UpdateMgrProcessCreate(SceUID pid, ProcEventCreateParam *param, void *common);
+int UpdateMgrProcessExit(SceUID pid, ProcEventParam *param, void *common);
+int UpdateMgrProcessKill(SceUID pid, ProcEventParam *param, void *common);
 int UpdateMgrProcessStart(SceUID pid, int eventType,
-			 ProcEventParam *param, int flags);
+			 ProcEventParam *param, void *common);
 int UpdateMgrRegisterEventHandlers(void);
 int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp);
 int invalidate_prev_system_info(SceSize arglen, void *argp);

@@ -82,7 +82,7 @@ static int updateCalibration(int port)
 	return ret;
 }
 
-static int stopProcess(SceUID pid, int event, ProcEventParam *param, int flags)
+static int stopProcess(SceUID pid, int event, ProcEventParam *param, void *common)
 {
 	MotionProcess *process;
 	int intr, i;
@@ -316,7 +316,7 @@ static inline void removeProcess(SceUID pid)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 }
 
-static int exitProcess(SceUID pid, ProcEventParam *param, int flags)
+static int exitProcess(SceUID pid, ProcEventParam *param, void *common)
 {
 	removeProcess(pid);
 	return 0;
@@ -349,7 +349,7 @@ static int sysEvent(int resume, int eventid, void *args, void *opt)
 	return 0;
 }
 
-static int startProcess(SceUID pid, int event, ProcEventParam *param, int flags)
+static int startProcess(SceUID pid, int event, ProcEventParam *param, void *common)
 {
 	MotionProcess *process;
 	int intr, i, port;
@@ -393,12 +393,12 @@ static inline int addProcess(SceUID pid)
 	return 0;
 }
 
-static int createProcess(SceUID pid, ProcEventCreateParam *param, int flags)
+static int createProcess(SceUID pid, ProcEventCreateParam *param, void *common)
 {
 	return addProcess(pid);
 }
 
-static int killProcess(SceUID pid, ProcEventParam *param, int flags)
+static int killProcess(SceUID pid, ProcEventParam *param, void *common)
 {
 	removeProcess(pid);
 	return 0;
@@ -496,7 +496,7 @@ int module_start(SceSize argc, const void *args)
 	}
 	motion.sysEventHandler = sceKernelRegisterSysEventHandler("SceMotion", sysEvent, NULL);
 	motion.procEventHandler = sceKernelRegisterProcEventHandler("SceMotion",
-								     &processEventHandler, 0);
+								     &processEventHandler, NULL);
 	addProcess(sceKernelGetProcessId());
 	return SCE_KERNEL_START_SUCCESS;
 }

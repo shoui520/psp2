@@ -126,7 +126,7 @@ plain:
 	return 0;
 }
 
-static int procStart(SceUID pid, int event, ProcEventParam *param, int arg) /* name unknown */
+static int procStart(SceUID pid, int event, ProcEventParam *param, void *common) /* name unknown */
 {
 	DisplayProcessLocal *pls;
 
@@ -142,7 +142,7 @@ static int procStart(SceUID pid, int event, ProcEventParam *param, int arg) /* n
 	return 0;
 }
 
-static int procStop(SceUID pid, int event, ProcEventParam *param, int arg) /* name unknown */
+static int procStop(SceUID pid, int event, ProcEventParam *param, void *common) /* name unknown */
 {
 	DisplayProcessLocal *pls;
 

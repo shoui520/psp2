@@ -526,9 +526,9 @@ extern MgVideoRecordStream recordStreams[2];
 
 struct ProcEventParam;
 int onVideoProcessKill(int processId, struct ProcEventParam *event,
-		       int eventType);
+		       void *common);
 int onVideoProcessExit(int processId, struct ProcEventParam *event,
-		       int eventType);
+		       void *common);
 
 typedef struct MgVideoFileGroupInfo {
 	MagicGateFileIdentity identity;

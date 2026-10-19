@@ -3,7 +3,7 @@
 #include <hid/hid.h>
 
 int processResumeStart(SceUID pid, int eventType,
-		       ProcEventParam *param, int arg)
+		       ProcEventParam *param, void *common)
 {
 	SceUID handles[8];
 	ListNode *link;

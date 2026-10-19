@@ -1,7 +1,7 @@
 /*
  * SceProcEventForDriver (os0:kd/sysmem.skprx, procevent.c): process event handlers. A driver
  * registers a SceKernelProcEventHandler; processmgr invokes every handler for an event, with
- * the event's parameters, and each handler gets back the value it registered with (args).
+ * the event's parameters, and each handler gets back the pointer it registered with (common).
  */
 #pragma once
 
@@ -37,10 +37,10 @@ typedef struct ProcEventCreateParam {
 	SceUInt32 type;
 } ProcEventCreateParam;
 
-typedef int (*ProcEventCreateHandler)(SceUID pid, ProcEventCreateParam *param, int args);
-typedef int (*ProcEventHandler)(SceUID pid, ProcEventParam *param, int args);
-typedef int (*ProcEventPhaseHandler)(SceUID pid, int phase, ProcEventParam *param, int args);
-typedef int (*ProcEventNotifyHandler)(int event, int phase, void *param, int args);
+typedef int (*ProcEventCreateHandler)(SceUID pid, ProcEventCreateParam *param, void *common);
+typedef int (*ProcEventHandler)(SceUID pid, ProcEventParam *param, void *common);
+typedef int (*ProcEventPhaseHandler)(SceUID pid, int phase, ProcEventParam *param, void *common);
+typedef int (*ProcEventNotifyHandler)(int event, int phase, void *param, void *common);
 
 /* what a driver registers (size 0x18, or 0x1c with notify) */
 typedef struct SceKernelProcEventHandler {
@@ -61,7 +61,7 @@ _Static_assert(sizeof(SceKernelProcEventHandler) == 0x1c, "SceKernelProcEventHan
 
 int SceProcEventForDriver_3DED57CC(SceUID uid);	/* vitasdk: ksceKernelUnregisterProcEventHandler */
 int sceKernelInvokeProcEventHandler(SceUID pid, int event, int phase, void *info, SceUID *failed, SceUID stop);
-SceUID sceKernelRegisterProcEventHandler(const char *name, const SceKernelProcEventHandler *handler, int args);
+SceUID sceKernelRegisterProcEventHandler(const char *name, const SceKernelProcEventHandler *handler, void *common);
 
 #ifdef __cplusplus
 }

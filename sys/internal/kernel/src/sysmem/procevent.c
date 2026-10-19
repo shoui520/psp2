@@ -16,7 +16,7 @@ typedef struct ProcEventLink {
 	struct ProcEventLink *next;
 	struct ProcEventLink *prev;
 	SceUID uid;
-	int args;
+	void *common;
 	ProcEventCreateHandler create;		/* 0x10 */
 	ProcEventHandler exit;
 	ProcEventHandler kill;
@@ -92,7 +92,7 @@ int sceKernelProcessEventInit(void)
 }
 
 SceUID sceKernelRegisterProcEventHandler(const char *name,
-					  const SceKernelProcEventHandler *handler, int args)
+					  const SceKernelProcEventHandler *handler, void *common)
 {
 	ProcEventObject *object;
 	ProcEventLink *link, *tail;
@@ -115,7 +115,7 @@ SceUID sceKernelRegisterProcEventHandler(const char *name,
 	object->link.suspend = handler->suspend;
 	object->link.resume = handler->resume;
 	object->link.uid = uid;
-	object->link.args = args;
+	object->link.common = common;
 	object->link.notify = handler->size == sizeof(*handler) ? handler->notify : NULL;
 	state = SceCpuForDriver_D32ACE9E(&s_procEventLock);
 	link = &object->link;
@@ -160,28 +160,28 @@ int sceKernelInvokeProcEventHandler(SceUID pid, int event, int phase, void *info
 			if (link->create == NULL)
 				goto next;
 			PROC_EVENT_TIMER_START();
-			ret = link->create(pid, info, link->args);
+			ret = link->create(pid, info, link->common);
 			PROC_EVENT_TIMER_CHECK(PROC_EVENT_SLOW, 225, "CREATE");
 			break;
 		case PROC_EVENT_EXIT:
 			if (link->exit == NULL)
 				goto next;
 			PROC_EVENT_TIMER_START();
-			ret = link->exit(pid, info, link->args);
+			ret = link->exit(pid, info, link->common);
 			PROC_EVENT_TIMER_CHECK(PROC_EVENT_SLOW, 233, "EXIT");
 			break;
 		case PROC_EVENT_KILL:
 			if (link->kill == NULL)
 				goto next;
 			PROC_EVENT_TIMER_START();
-			ret = link->kill(pid, info, link->args);
+			ret = link->kill(pid, info, link->common);
 			PROC_EVENT_TIMER_CHECK(PROC_EVENT_SLOW, 241, "KILL");
 			break;
 		case PROC_EVENT_SUSPEND:
 			if (link->suspend == NULL)
 				goto next;
 			PROC_EVENT_TIMER_START();
-			ret = link->suspend(pid, phase, info, link->args);
+			ret = link->suspend(pid, phase, info, link->common);
 			/* the suspend phases 0x200 and 0x202 have tighter limits */
 			if (phase == 0x200)
 				PROC_EVENT_TIMER_CHECK(1000, 251, "SUSPEND");
@@ -194,14 +194,14 @@ int sceKernelInvokeProcEventHandler(SceUID pid, int event, int phase, void *info
 			if (link->resume == NULL)
 				goto next;
 			PROC_EVENT_TIMER_START();
-			ret = link->resume(pid, phase, info, link->args);
+			ret = link->resume(pid, phase, info, link->common);
 			PROC_EVENT_TIMER_CHECK(PROC_EVENT_SLOW, 267, "RESUME");
 			break;
 		default:
 			if (link->notify == NULL)
 				goto next;
 			PROC_EVENT_TIMER_START();
-			ret = link->notify(event, phase, info, link->args);
+			ret = link->notify(event, phase, info, link->common);
 			PROC_EVENT_TIMER_CHECK(PROC_EVENT_SLOW, 275, name);
 			break;
 		}

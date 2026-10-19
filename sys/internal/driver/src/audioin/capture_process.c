@@ -25,7 +25,7 @@ extern void resampleAudioInCapture(unsigned int stream, const int16_t *input,
 		int16_t *output, unsigned int count, int channel);
 
 int audioInProcessKillHandler(SceUID pid, ProcEventParam *unusedParam,
-		int unusedArgument)
+		void *common)
 {
 	lockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 	CLOSE_PROCESS_PORT(0);
@@ -39,7 +39,7 @@ int audioInProcessKillHandler(SceUID pid, ProcEventParam *unusedParam,
 }
 
 int audioInProcessStartHandler(SceUID pid, int unusedEventType,
-		ProcEventParam *unusedParam, int unusedArgument)
+		ProcEventParam *unusedParam, void *common)
 {
 #define RESTART_PROCESS_PORT(index) do { \
 	if (pid == g_audioInPorts[index].pid && \

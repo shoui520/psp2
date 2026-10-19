@@ -211,7 +211,7 @@ int module_start(SceSize args, const void *argp)
 				 result);
 		goto error;
 	}
-	result = sceKernelRegisterProcEventHandler("SceHid", &hidProcessHandlers, 0);
+	result = sceKernelRegisterProcEventHandler("SceHid", &hidProcessHandlers, NULL);
 	if (result < 0) {
 		SceDebugForDriver_391B74B7("HID: sceKernelRegisterProcEventHandler() failed! => 0x%x",
 				 result);

@@ -213,7 +213,7 @@ int hidSetKeyboardIntercept(SceUID pid, HidKeyboardIntercept intercept)
 	return (int)0x803b0006;
 }
 
-int hidProcessCreate(SceUID pid, ProcEventCreateParam *param, int arg)
+int hidProcessCreate(SceUID pid, ProcEventCreateParam *param, void *common)
 {
 	int result = hidLock();
 	ListNode *link;
@@ -237,7 +237,7 @@ add:
 	return result;
 }
 
-int hidProcessExit(SceUID pid, ProcEventParam *param, int arg)
+int hidProcessExit(SceUID pid, ProcEventParam *param, void *common)
 {
 	int result = hidLock();
 	ListNode *link, *previous;
@@ -272,7 +272,7 @@ int hidProcessExit(SceUID pid, ProcEventParam *param, int arg)
 	return result;
 }
 
-int hidProcessKill(SceUID pid, ProcEventParam *param, int arg)
+int hidProcessKill(SceUID pid, ProcEventParam *param, void *common)
 {
 	int result = hidLock();
 	ListNode *link, *previous;
@@ -308,7 +308,7 @@ int hidProcessKill(SceUID pid, ProcEventParam *param, int arg)
 }
 
 int hidProcessStop(SceUID pid, int eventType, ProcEventParam *param,
-		   int arg)
+		   void *common)
 {
 	ListNode *link;
 	HidProcessLink *entry;

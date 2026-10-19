@@ -807,7 +807,7 @@ int module_start(SceSize arglen, const void *argp)
 	return 0;
 }
 
-int KrmProcessKill(SceUID pid, ProcEventParam *param, int flags)
+int KrmProcessKill(SceUID pid, ProcEventParam *param, void *common)
 {
 	int ret = KrmDriverLock();
 
@@ -821,7 +821,7 @@ int KrmProcessKill(SceUID pid, ProcEventParam *param, int flags)
 	return ret;
 }
 
-int KrmProcessExit(SceUID pid, ProcEventParam *param, int flags)
+int KrmProcessExit(SceUID pid, ProcEventParam *param, void *common)
 {
 	int ret = KrmDriverLock();
 
@@ -843,6 +843,6 @@ int KrmRegisterProcEventHandler(void)
 	handler.exit = KrmProcessExit;
 	handler.kill = KrmProcessKill;
 	g_krmProcEventHandler = sceKernelRegisterProcEventHandler(
-		g_krmProcEventHandlerName, &handler, 0);
+		g_krmProcEventHandlerName, &handler, NULL);
 	return g_krmProcEventHandler & (g_krmProcEventHandler >> 31);
 }

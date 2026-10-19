@@ -53,9 +53,9 @@ typedef struct Tty2Control {
 	SceKernelProcEventHandler procHandler;
 } Tty2Control;
 
-static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, int args);
-static int procExitHandler(SceUID pid, ProcEventParam *param, int args);
-static int procKillHandler(SceUID pid, ProcEventParam *param, int args);
+static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, void *common);
+static int procExitHandler(SceUID pid, ProcEventParam *param, void *common);
+static int procKillHandler(SceUID pid, ProcEventParam *param, void *common);
 
 static Tty2Buffer s_buffer[TTY2_BUFFERS];
 static Tty2Control s_control = {
@@ -192,19 +192,19 @@ static int controlClose(SceUID pid)
 	return 0;
 }
 
-static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, int args)
+static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, void *common)
 {
 	TTY2_TRACE(0xb, 300, "(pid 0x%08x)\n", pid);
 	return controlOpen(pid);
 }
 
-static int procExitHandler(SceUID pid, ProcEventParam *param, int args)
+static int procExitHandler(SceUID pid, ProcEventParam *param, void *common)
 {
 	TTY2_TRACE(0xb, 310, "(pid 0x%08x)\n", pid);
 	return controlClose(pid);
 }
 
-static int procKillHandler(SceUID pid, ProcEventParam *param, int args)
+static int procKillHandler(SceUID pid, ProcEventParam *param, void *common)
 {
 	TTY2_TRACE(0xb, 320, "(pid 0x%08x)\n", pid);
 	return controlClose(pid);
@@ -277,7 +277,7 @@ static int startControl(void)
 	for (i = 0; i < s_control.nbuf; i++)
 		tty2bufferStart(&s_control.buf[i]);
 	ret = sceKernelRegisterProcEventHandler("SceTty2UartProcEvent", &s_control.procHandler,
-						 (int)&s_control);
+						 &s_control);
 	if (ret < 0)
 		return ret;		/* (with the control lock held) */
 	s_control.handlerId = ret;
