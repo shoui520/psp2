@@ -35,9 +35,6 @@ SCE_DBGINFO_DEFINE(static, deleteEncoderBudget, 1390, "sceAudioencDeleteEncoderF
 SCE_DBGINFO_DEFINE(static, copyInCtrlInfo, 691, "_copyInSceAudioencCtrl");
 SCE_DBGINFO_DEFINE(static, copyInCtrlInfoDestination, 692, "_copyInSceAudioencCtrl");
 
-int _lockProcessSuspendCore(void);
-int _unlockProcessSuspendCore(void);
-
 int _copyOutSceAudioencCtrl(SceAudioencCtrl *userCtrl, SceAudioencInfo *userInfo,
 			  SceAudioencOptInfo *userOptInfo, SceAudioencCtrl *ctrl)
 {
@@ -241,7 +238,7 @@ int sceAudioencInitLibraryForUser(SceUInt32 codecType, SceAudioencInitParam *use
 		ret = SCE_AUDIOENC_ERROR_UNSUPPORTED;
 		goto leave;
 	}
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 	if (codecType - SCE_AUDIOENC_TYPE_CELP > 1) {
@@ -313,7 +310,7 @@ int sceAudioencTermLibraryForUser(SceUInt32 codecType)
 #endif
 		goto leave;
 	}
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 	process = SceProcessmgrForDriver_EE694840(audioencResident.processStorage);
@@ -360,7 +357,7 @@ int sceAudioencGetContextSizeForUser(const SceAudioencCtrl *userCtrl,
 
 	ctrl.pInfo = &info.publicInfo;
 	ctrl.pOptInfo = &optInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
@@ -498,7 +495,7 @@ int sceAudioencCreateEncoderForUser(SceAudioencCtrl *userCtrl,
 	}
 	ctrl.pInfo = &info.publicInfo;
 	ctrl.pOptInfo = &optInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
@@ -660,7 +657,7 @@ int sceAudioencCreateEncoderResidentForUser(SceAudioencCtrl *userCtrl,
 
 	ctrl.pInfo = &info.publicInfo;
 	ctrl.pOptInfo = &optInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
@@ -819,7 +816,7 @@ int sceAudioencCreateEncoderExternalForUser(SceAudioencCtrl *userCtrl,
 	}
 	ctrl.pInfo = &info.publicInfo;
 	ctrl.pOptInfo = &optInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
@@ -987,7 +984,7 @@ int sceAudioencDeleteEncoderForUser(SceAudioencCtrl *userCtrl)
 #endif
 	ctrl.pInfo = &info.publicInfo;
 	ctrl.pOptInfo = &optInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
@@ -1148,7 +1145,7 @@ int sceAudioencDeleteEncoderResidentForUser(SceAudioencCtrl *userCtrl)
 
 	ctrl.pInfo = &info.publicInfo;
 	ctrl.pOptInfo = &optInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
@@ -1284,7 +1281,7 @@ int sceAudioencDeleteEncoderExternalForUser(SceAudioencCtrl *userCtrl,
 	}
 	ctrl.pInfo = &info.publicInfo;
 	ctrl.pOptInfo = &optInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
@@ -1429,7 +1426,7 @@ int sceAudioencEncodeForUser(SceAudioencCtrl *userCtrl)
 
 	ctrl.pInfo = &info.publicInfo;
 	ctrl.pOptInfo = &optInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
@@ -1638,7 +1635,7 @@ int sceAudioencEncodeNFramesForUser(SceAudioencCtrl *userCtrl, SceUInt32 nFrames
 	}
 	ctrl.pInfo = &info.publicInfo;
 	ctrl.pOptInfo = &optInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
@@ -1849,7 +1846,7 @@ int sceAudioencClearContextForUser(SceAudioencCtrl *userCtrl)
 
 	ctrl.pInfo = &info.publicInfo;
 	ctrl.pOptInfo = &optInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
@@ -2015,7 +2012,7 @@ int sceAudioencGetOptInfoForUser(SceAudioencCtrl *userCtrl)
 
 	ctrl.pInfo = &info.publicInfo;
 	ctrl.pOptInfo = &optInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
@@ -2163,7 +2160,7 @@ int sceAudioencGetInternalErrorForUser(SceAudioencCtrl *userCtrl,
 
 	ctrl.pInfo = &info.publicInfo;
 	ctrl.pOptInfo = &optInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG

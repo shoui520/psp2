@@ -2,7 +2,7 @@
 
 #include <audiodec.h>
 #include <threadmgr/fast_mutex_object.h>
-#include <vnz_wrapper/venezia_rpc.h>
+#include <vnz_wrapper/vnz_wrapper.h>
 
 #define AUDIODEC_TYPE_SILK 0x1007U
 #define AUDIODEC_TYPE_AAC_MULTICHANNEL 0x1008U
@@ -187,27 +187,14 @@ int _audiodecInternalGetInternalError(AudiodecWorkManager *manager,
 SceInt32 audiodecMakeHandle(int external, int resident, SceUInt32 codecType,
 			   SceUInt32 index);
 int audiodecQueryLibraryContext(AudiodecCommand *command);
-void *SceCodecEngineWrapperForDriver_91535820(SceUInt32 heap, SceSize size);
-
-
-
-int SceCodecEngineWrapperForDriver_3A79A935(SceUInt32 heap, void *context, SceSize size);
 
 SceUID _audiodecGetResidentDecoderOwner(unsigned int decoder);
 int _audiodecClearResidentDecoderOwner(unsigned int decoder);
 int audiodecPrepareCommand(int operation, AudiodecCommand *command,
 			  AudiodecWorkManager *manager, const SceAudiodecCtrl *ctrl);
 int audiodecDeleteCommand(AudiodecCommand *command);
-void *SceCodecEngineWrapperForDriver_26FAF6EC(void *context, SceSize size);
-int SceCodecEngineWrapperForDriver_BCDCEA13(SceUID pid, void *physical,
-					 SceUIntVAddr *memory);
-int SceCodecEngineWrapperForDriver_C5478DD5(SceUID pid, SceUIntVAddr memory,
-					 SceSize size);
 int _audiodecSetResidentDecoderOwner(unsigned int decoder);
 int audiodecCreateCommand(AudiodecCommand *command);
-int SceCodecEngineWrapperForDriver_FBD4853E(SceUID pid, SceUIntVAddr memory, SceSize size);
-int SceCodecEngineWrapperForDriver_6D41287F(SceUID pid, SceUIntVAddr memory, void **physical);
-void *SceCodecEngineWrapperForDriver_0F235F44(void *physical, SceSize size);
 int audiodecPrepareDecodeCommand(AudiodecCommand *command,
 				AudiodecWorkManager *manager, const SceAudiodecCtrl *ctrl);
 int audiodecDecodeCommand(AudiodecCommand *command, SceUInt32 nFrames,
@@ -222,14 +209,5 @@ int audiodecPackRpcMemory(VeneziaRpcThunk *thunk, const unsigned int *input,
 			 unsigned int *packed);
 int audiodecPackDecodeCommand(VeneziaRpcThunk *thunk, const unsigned int *input,
 			     unsigned int *packed);
-int SceCodecEngineWrapperForDriver_47AED6FF(VeneziaRpcThunk *thunk, void *base,
-					 SceSize size, const VeneziaMemoryOption *option);
-int SceCodecEngineWrapperForDriver_03EA6C2A(VeneziaRpcThunk *thunk);
-int SceCodecEngineWrapperForDriver_391BD4FD(unsigned int command,
-		const unsigned int *input, VeneziaRpcPack pack, VeneziaRpcUnpack unpack);
-int SceCodecEngineWrapperForDriver_6A1184EA(unsigned int thread);
 void audiodecFinishCommand(struct VeneziaRpcThunk *thunk);
 int audiodecFinishRpcMemory(struct VeneziaRpcThunk *thunk);
-int SceCodecEngineWrapperForDriver_07C53B4E(struct VeneziaRpcThunk *thunk);
-int SceCodecEngineWrapperForDriver_D1F94D9D(struct VeneziaRpcThunk *thunk);
-int SceCodecEngineWrapperForDriver_1C2BC9F7(struct VeneziaRpcThunk *thunk);

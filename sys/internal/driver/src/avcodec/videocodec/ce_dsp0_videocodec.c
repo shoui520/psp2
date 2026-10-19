@@ -29,12 +29,6 @@ typedef struct Dsp0VideocodecRpcBuffers {
 
 _Static_assert(sizeof(Dsp0VideocodecRpcBuffers) == 16, "DSP0 RPC buffers size");
 
-extern int SceCodecEngineWrapperForDriver_0D3BB164(unsigned int command, ...);
-extern unsigned int SceCodecEngineWrapperForDriver_F9495589(unsigned int physical);
-extern int SceCodecEngineWrapperForDriver_3C5E9CC3(unsigned int argument,
-						unsigned int address, SceSize size);
-int _lockProcessSuspendCore(void);
-int _unlockProcessSuspendCore(void);
 int dsp0VideocodecCalculateLibraryMemory(const Dsp0VideocodecInitParam *param,
 				       SceSize *memorySize, SceSize *librarySize);
 int dsp0VideocodecReleaseLibraryBuffers(Dsp0VideocodecGlobal *global);
@@ -50,9 +44,9 @@ int dsp0VideocodecCallEncoderCommand(struct Dsp0VideocodecEncoderCommand *comman
 
 void dsp0VideocodecFinishCommand(VeneziaRpcThunk *thunk)
 {
-	SceCodecEngineWrapperForDriver_07C53B4E(thunk);
-	SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
-	SceCodecEngineWrapperForDriver_1C2BC9F7(thunk);
+	sceCodecEngineDsp0ConvertPhysicalToVirtual(thunk);
+	sceCodecEngineDsp0MemcpyChain(thunk);
+	sceCodecEngineDsp0FreeCommunicationMemories(thunk);
 }
 
 /* The RPC pack ABI serializes Dsp0VideocodecRpcBuffers as four words. */
@@ -66,19 +60,19 @@ int dsp0VideocodecPackCommand(VeneziaRpcThunk *thunk, const unsigned int *input,
 	option.flags = 1;
 	option.allocationSize = input[2];
 	optionalSize = input[3];
-	SceCodecEngineWrapperForDriver_47AED6FF(thunk, (void *)input[0],
+	sceCodecEngineDsp0ConvertVirtualToPhysical(thunk, (void *)input[0],
 					      option.allocationSize, &option);
 	if (optionalSize != 0) {
 		option.allocationSize = optionalSize;
-		SceCodecEngineWrapperForDriver_47AED6FF(thunk, (void *)input[1],
+		sceCodecEngineDsp0ConvertVirtualToPhysical(thunk, (void *)input[1],
 						      optionalSize, &option);
-		SceCodecEngineWrapperForDriver_03EA6C2A(thunk);
-		ret = SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
+		sceCodecEngineDsp0AllocCommunicationMemories(thunk);
+		ret = sceCodecEngineDsp0MemcpyChain(thunk);
 		packed[0] = thunk->memories[0].physicalBase;
 		packed[1] = thunk->memories[1].physicalBase;
 	} else {
-		SceCodecEngineWrapperForDriver_03EA6C2A(thunk);
-		ret = SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
+		sceCodecEngineDsp0AllocCommunicationMemories(thunk);
+		ret = sceCodecEngineDsp0MemcpyChain(thunk);
 		packed[0] = thunk->memories[0].physicalBase;
 		packed[1] = input[1];
 	}
@@ -89,10 +83,10 @@ int dsp0VideocodecPackCommand(VeneziaRpcThunk *thunk, const unsigned int *input,
 
 void *dsp0VideocodecAllocMemory(unsigned int argument, SceSize size)
 {
-	unsigned int physical;
+	uintptr_t physical;
 
-	physical = SceCodecEngineWrapperForDriver_0D3BB164(100, argument, size);
-	return (void *)SceCodecEngineWrapperForDriver_F9495589(physical);
+	physical = veneziaBlockingRpc(100, argument, size);
+	return SceCodecEngineWrapperForDriver_F9495589(physical);
 }
 
 int dsp0VideocodecInitializeMemory(void *memory)
@@ -144,7 +138,7 @@ int dsp0VideocodecCreateDecoder(void *command)
 
 	buffers.bufferAddress = (uintptr_t)command;
 	/* With zero optional size, the packer forwards this channel unchanged. */
-	buffers.optionalBufferAddress = SceCodecEngineWrapperForDriver_6A1184EA(0);
+	buffers.optionalBufferAddress = sceCodecEngineDsp0GetThreadExecGroup(0);
 	buffers.bufferSize = 256;
 	buffers.optionalBufferSize = 0;
 	ret = SceCodecEngineWrapperForDriver_391BD4FD(97,
@@ -359,7 +353,7 @@ int dsp0VideocodecCalculateLibraryMemory(const Dsp0VideocodecInitParam *param,
 			((116 * command->numOfDecoders + 255) & ~255u) +
 			decoderMemory * (2 * command->numOfDecoders)) >> 18 << 18;
 	}
-	SceCodecEngineWrapperForDriver_3C5E9CC3(0, (uintptr_t)command, sizeof(*command));
+	SceCodecEngineWrapperForDriver_3C5E9CC3(0, command, sizeof(*command));
 	return ret;
 }
 
@@ -608,7 +602,7 @@ int dsp0VideocodecQueryLibraryMemory(const Dsp0VideocodecInitParam *param,
 	    ((param->horizontal | param->vertical) & 15) != 0 ||
 	    param->numOfRefFrames - 1 > 15 || param->numOfStreams - 1 > 3)
 		return (int)0x80620201;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret >= 0) {
 		lockFastMutex((SceKernelFastMutex *)global->pMutex);
 		ret = dsp0VideocodecCalculateLibraryMemory(param, &requiredSize, &librarySize);
@@ -643,7 +637,7 @@ int dsp0VideocodecTermLibraryForProcess(unsigned int codecType, SceUID pid)
 		return (int)0x80620201;
 	if (global->initialized != 1)
 		return (int)0x8062020c;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret >= 0) {
 		lockFastMutex((SceKernelFastMutex *)global->pMutex);
 		ret = dsp0VideocodecDeleteDecoder(global->library);

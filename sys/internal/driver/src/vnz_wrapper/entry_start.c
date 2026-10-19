@@ -4,12 +4,7 @@
 #include <sysmem/procevent.h>
 #include <sysmem/suspend.h>
 #include <threadmgr/threadmgr.h>
-
-extern const SceKernelProcEventHandler codecEngineProcessEvents;
-extern int codecEngineStartPhase2(void *arg);
-extern unsigned int codecEngineSystemEventHandler(int phase, unsigned int event);
-extern int _sceVeneziaProcessCreateEntry(void);
-extern int initCodecEngine(void);
+#include "venezia_internal.h"
 
 int module_start(SceSize arglen, const void *argp)
 {

@@ -149,7 +149,8 @@ int _audioencInternalDeleteEncoder(AudioencWorkManager *manager,
 	AudioencChannelContext *channel, *channelEnd;
 	SceUInt32 index, encoderSize, channelSize, usedChannels, totalChannels, totalSize;
 	SceUIntVAddr virtualContext;
-	void *context, *physical;
+	void *context;
+	uintptr_t physical;
 	int external, resident, ret;
 #if FW_DEBUG
 	const void *caller = __builtin_return_address(0);
@@ -252,13 +253,13 @@ releaseExternal:
 	physical = SceCodecEngineWrapperForDriver_26FAF6EC(context, totalSize);
 	if (!physical)
 		return ret;
-	ret = SceCodecEngineWrapperForDriver_BCDCEA13(0, physical, &virtualContext);
+	ret = sceCodecEngineUnmapPAtoUserVA(0, physical, &virtualContext);
 	if (ret < 0)
 		return ret;
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(virtualContext != 0, &deleteEncoderContext, caller);
 #endif
-	ret = SceCodecEngineWrapperForDriver_C5478DD5(0, virtualContext, totalSize);
+	ret = sceCodecEngineUnregisterUnmapMemory(0, virtualContext, totalSize);
 	if (ret < 0)
 		return ret;
 	if (vaContext)
@@ -282,7 +283,7 @@ int _audioencInternalCreateEncoder(AudioencWorkManager *manager,
 	SceUInt32 maxPcmSize = ctrl->maxPcmSize, maxEsSize = ctrl->maxEsSize;
 	SceUInt32 totalEncoders, totalChannels, usedEncoders, index, i, commandIndex;
 	SceUInt8 *context = (SceUInt8 *)vaContext;
-	void *physical;
+	uintptr_t physical;
 	int channels, external, ret;
 #if FW_DEBUG
 	const void *caller = __builtin_return_address(0);
@@ -304,19 +305,19 @@ int _audioencInternalCreateEncoder(AudioencWorkManager *manager,
 	channel = manager->pChannels;
 	work = manager->pWork;
 	if (vaContext) {
-		physical = NULL;
-		ret = SceCodecEngineWrapperForDriver_FBD4853E(0, vaContext, contextSize);
+		physical = 0;
+		ret = sceCodecEngineRegisterUnmapMemory(0, vaContext, contextSize);
 		if (ret < 0)
 			return ret;
-		ret = SceCodecEngineWrapperForDriver_6D41287F(0, vaContext, &physical);
+		ret = sceCodecEngineUnmapUserVAtoPA(0, vaContext, &physical);
 		if (ret >= 0) {
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(physical != NULL, &createEncoderContext, caller);
+			SceDebugForDriver_35A35322(physical != 0, &createEncoderContext, caller);
 #endif
 			context = SceCodecEngineWrapperForDriver_0F235F44(physical, contextSize);
 		}
 		if (ret < 0 || !context) {
-			SceCodecEngineWrapperForDriver_C5478DD5(0, vaContext, contextSize);
+			sceCodecEngineUnregisterUnmapMemory(0, vaContext, contextSize);
 			return SCE_AUDIOENC_ERROR_INVALID_PTR;
 		}
 		usedEncoders = manager->usedEncoders + 1;
@@ -556,7 +557,8 @@ int _audioencInternalExitLibrary(SceUID pid, AudioencWorkManager *manager,
 	SceUInt32 channelSize = channels ? channels->contextSize : 0;
 	SceUInt32 totalChannels, size, i;
 	SceUIntVAddr virtualContext;
-	void *context, *physical;
+	void *context;
+	uintptr_t physical;
 	int ret, result = 0;
 #if FW_DEBUG
 	const void *caller = __builtin_return_address(0);
@@ -580,7 +582,7 @@ int _audioencInternalExitLibrary(SceUID pid, AudioencWorkManager *manager,
 				result = SCE_AUDIOENC_ERROR_INVALID_PTR;
 				continue;
 			}
-			ret = SceCodecEngineWrapperForDriver_BCDCEA13(pid, physical, &virtualContext);
+			ret = sceCodecEngineUnmapPAtoUserVA(pid, physical, &virtualContext);
 			if (ret < 0) {
 				result = ret;
 				continue;
@@ -588,7 +590,7 @@ int _audioencInternalExitLibrary(SceUID pid, AudioencWorkManager *manager,
 #if FW_DEBUG
 			SceDebugForDriver_35A35322(virtualContext != 0, &exitLibraryContext, caller);
 #endif
-			ret = SceCodecEngineWrapperForDriver_C5478DD5(pid, virtualContext, size);
+			ret = sceCodecEngineUnregisterUnmapMemory(pid, virtualContext, size);
 			result &= ~(ret >> 31);
 			if (ret < 0)
 				result = ret;
@@ -632,9 +634,9 @@ void audioencFinishEncodeCommand(VeneziaRpcThunk *thunk)
 {
 	AudioencCommand *command = thunk->memories[0].virtualBase;
 
-	SceCodecEngineWrapperForDriver_07C53B4E(thunk);
-	SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
-	SceCodecEngineWrapperForDriver_1C2BC9F7(thunk);
+	sceCodecEngineDsp0ConvertPhysicalToVirtual(thunk);
+	sceCodecEngineDsp0MemcpyChain(thunk);
+	sceCodecEngineDsp0FreeCommunicationMemories(thunk);
 	command->pInputPcm = thunk->memories[1].virtualBase;
 	command->pOutputEs = thunk->memories[2].virtualBase;
 }
@@ -649,20 +651,20 @@ int audioencPackEncodeCommand(VeneziaRpcThunk *thunk, const unsigned int *input,
 
 	option.flags = 1;
 	option.allocationSize = sizeof(*command);
-	SceCodecEngineWrapperForDriver_47AED6FF(thunk, command, sizeof(*command), &option);
+	sceCodecEngineDsp0ConvertVirtualToPhysical(thunk, command, sizeof(*command), &option);
 	outputEsSize = command->outputEsSize;
 	option.flags = 21;
 	option.allocationSize = command->inputPcmSize;
-	SceCodecEngineWrapperForDriver_47AED6FF(thunk, command->pInputPcm,
+	sceCodecEngineDsp0ConvertVirtualToPhysical(thunk, command->pInputPcm,
 					      command->inputPcmSize, &option);
 	option.flags = 5;
 	option.allocationSize = outputEsSize;
-	SceCodecEngineWrapperForDriver_47AED6FF(thunk, command->pOutputEs,
+	sceCodecEngineDsp0ConvertVirtualToPhysical(thunk, command->pOutputEs,
 					      command->outputEsSize, &option);
-	SceCodecEngineWrapperForDriver_03EA6C2A(thunk);
+	sceCodecEngineDsp0AllocCommunicationMemories(thunk);
 	command->pInputPcm = (void *)thunk->memories[1].physicalBase;
 	command->pOutputEs = (void *)thunk->memories[2].physicalBase;
-	ret = SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
+	ret = sceCodecEngineDsp0MemcpyChain(thunk);
 	packed[0] = thunk->memories[0].physicalBase;
 	packed[1] = input[1];
 	packed[2] = input[2];
@@ -708,7 +710,7 @@ int audioencCreateCommand(AudioencCommand *command)
 		return SCE_AUDIOENC_ERROR_INVALID_TYPE;
 	}
 	input[0] = (unsigned int)command;
-	input[1] = SceCodecEngineWrapperForDriver_6A1184EA(0);
+	input[1] = sceCodecEngineDsp0GetThreadExecGroup(0);
 	return SceCodecEngineWrapperForDriver_391BD4FD(operation, input,
 				 audiodecPackRpcMemory, (VeneziaRpcUnpack)audiodecFinishRpcMemory);
 }

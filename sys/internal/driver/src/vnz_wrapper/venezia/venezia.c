@@ -8,40 +8,6 @@
 
 VeneziaState g_veneziaState = { .processStorageKey = -1 };
 
-extern int SceCodecEngineWrapperForDriver_0D3BB164(int command, ...);
-
-#if FW_VERSION >= 0x04000000
-extern int initVeneziaRpc(void); /* name unknown */
-extern int waitVeneziaRpcSemas(void); /* name unknown */
-extern int allocVeneziaImage(void); /* name unknown */
-extern int bootVeneziaPhase2(void) __asm__("_sceVeneziaBootPhase2");
-extern int veneziaClockSelector(int frequency); /* name unknown */
-extern int initCodecEnginePerformanceMonitor(void); /* name unknown */
-extern int signalVeneziaRpcSemas(void); /* name unknown */
-extern int veneziaRpcClockDown(void) __asm__("_sceVeneziaRpcClockDown");
-extern int startPerformanceMonitorSuspend(void); /* name unknown */
-extern int isPerformanceMonitorSuspended(void); /* name unknown */
-extern int veneziaSuspend(void) __asm__("_sceVeneziaSuspend");
-extern int veneziaResume(void) __asm__("_sceVeneziaResume");
-extern int resumePerformanceMonitor(void); /* name unknown */
-extern void printVeneziaRpcBlockingCalls(SceUID pid) __asm__("_sceVeneziaRpcPrintBlockingCalls");
-#else
-extern int initVeneziaRpc(void);
-extern int waitVeneziaRpcSemas(void);
-extern int allocVeneziaImage(void);
-extern int bootVeneziaPhase2(void) __asm__("_sceVeneziaBootPhase2");
-extern int veneziaClockSelector(int frequency);
-extern int initCodecEnginePerformanceMonitor(void);
-extern int signalVeneziaRpcSemas(void);
-extern int veneziaRpcClockDown(void) __asm__("_sceVeneziaRpcClockDown");
-extern int startPerformanceMonitorSuspend(void);
-extern int isPerformanceMonitorSuspended(void);
-extern int veneziaSuspend(void) __asm__("_sceVeneziaSuspend");
-extern int veneziaResume(void) __asm__("_sceVeneziaResume");
-extern int resumePerformanceMonitor(void);
-extern void printVeneziaRpcBlockingCalls(SceUID pid) __asm__("_sceVeneziaRpcPrintBlockingCalls");
-#endif
-
 int _sceVeneziaProcessCreateEntry(void)
 {
 	VeneziaProcessStorage *storage;
@@ -85,7 +51,7 @@ int _sceVeneziaStartEntryPhase2(void)
 	int ret;
 
 	ScePowerForDriver_621BD8FD(166);
-	ret = bootVeneziaPhase2();
+	ret = _sceVeneziaBootPhase2();
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 118, "_sceVeneziaStartEntryPhase2",
 					  "Warning: _sceVeneziaBootPhase2 failed (0x%08x)\n", ret);
@@ -250,7 +216,7 @@ int _sceVeneziaProcessSuspendPhase0(SceUID pid)
 	intr = SceCpuForDriver_D32ACE9E(&g_veneziaState.clockLock);
 	g_veneziaState.clockLockCount -= storage->clockLockCount;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaState.clockLock, intr);
-	return veneziaRpcClockDown();
+	return _sceVeneziaRpcClockDown();
 }
 
 int sceCodecEngineDsp0IsProcessSuspended(SceUID pid)
@@ -351,7 +317,7 @@ int _sceVeneziaIsSystemSuspended(void)
 int suspendSystem(void)
 {
 	ScePervasiveForDriver_725B4F59(veneziaClockSelector(166));
-	return veneziaSuspend();
+	return _sceVeneziaSuspend();
 }
 
 int _sceVeneziaSystemResumePhase0(void)
@@ -369,7 +335,7 @@ int _sceVeneziaSystemResumePhase0(void)
 			 __builtin_return_address(0));
 #endif
 	ScePervasiveForDriver_725B4F59(veneziaClockSelector(ScePowerForDriver_64641E6A()));
-	ret = veneziaResume();
+	ret = _sceVeneziaResume();
 	if (ret < 0)
 		goto out;
 	ret = sceKernelUnlockFastMutex(&storage->suspendMutex);
@@ -384,7 +350,7 @@ out:
 /* name unknown: system event phase 1 after resume. */
 int resumeSystem(void)
 {
-	return SceCodecEngineWrapperForDriver_0D3BB164(509);
+	return veneziaBlockingRpc(509);
 }
 
 void _sceVeneziaPrintBlockingCalls(SceUID pid)
@@ -404,7 +370,7 @@ void _sceVeneziaPrintBlockingCalls(SceUID pid)
 #endif
 	count = storage->suspendPollCount;
 	if (count != 0 && count % 200 == 0)
-		printVeneziaRpcBlockingCalls(pid);
+		_sceVeneziaRpcPrintBlockingCalls(pid);
 }
 
 /* name unknown: outstanding background clock requests. */

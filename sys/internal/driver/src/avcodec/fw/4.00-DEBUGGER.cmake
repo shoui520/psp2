@@ -183,7 +183,7 @@ set(MODULE_IMPORT_FUNCS
 	SceCodecEngineWrapperForDriver_BB388700
 	sceCodecEngineUnmapPAtoUserVA
 	sceCodecEngineUnregisterUnmapMemory
-	_lockProcessSuspendCore
+	SceCodecEngineWrapperForDriver_CB8703D8
 	sceCodecEngineDsp0MemcpyChain
 	sceCodecEngineRegisterProcExitHandler
 	SceCodecEngineWrapperForDriver_F9495589

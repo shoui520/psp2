@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vnz_wrapper/venezia_rpc.h>
+#include <vnz_wrapper/vnz_wrapper.h>
 #include "../jpeg.h"
 #include <threadmgr/fast_mutex_object.h>
 #include <avcodec/avcodec.h>

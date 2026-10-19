@@ -10,9 +10,6 @@
 #include <intrmgr/syscall.h>
 #include <lowio/iftu.h>
 
-int _lockProcessSuspendCore(void);
-int _unlockProcessSuspendCore(void);
-
 static JpegResident jpegResident;
 
 /* Nine-bit fixed-point JPEG YCbCr to RGB coefficients. */
@@ -44,25 +41,25 @@ static SceIftuCscParams jpegYCbCrToRgb[2] = { {
 
 void jpegFinishSplitDecoderCommand(VeneziaRpcThunk *thunk)
 {
-	SceCodecEngineWrapperForDriver_07C53B4E(thunk);
-	SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
-	SceCodecEngineWrapperForDriver_1C2BC9F7(thunk);
+	sceCodecEngineDsp0ConvertPhysicalToVirtual(thunk);
+	sceCodecEngineDsp0MemcpyChain(thunk);
+	sceCodecEngineDsp0FreeCommunicationMemories(thunk);
 }
 
 void jpegFinishDecodeCommand(VeneziaRpcThunk *thunk)
 {
-	SceCodecEngineWrapperForDriver_07C53B4E(thunk);
-	SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
-	SceCodecEngineWrapperForDriver_1C2BC9F7(thunk);
+	sceCodecEngineDsp0ConvertPhysicalToVirtual(thunk);
+	sceCodecEngineDsp0MemcpyChain(thunk);
+	sceCodecEngineDsp0FreeCommunicationMemories(thunk);
 }
 
 void jpegFinishQueryCommand(VeneziaRpcThunk *thunk)
 {
 	JpegQueryCommand *command = thunk->memories[0].virtualBase;
 
-	SceCodecEngineWrapperForDriver_07C53B4E(thunk);
-	SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
-	SceCodecEngineWrapperForDriver_1C2BC9F7(thunk);
+	sceCodecEngineDsp0ConvertPhysicalToVirtual(thunk);
+	sceCodecEngineDsp0MemcpyChain(thunk);
+	sceCodecEngineDsp0FreeCommunicationMemories(thunk);
 	command->pOutputInfo = thunk->memories[1].virtualBase;
 }
 
@@ -75,9 +72,9 @@ int jpegPackSplitDecoderCommand(VeneziaRpcThunk *thunk, const unsigned int *inpu
 	packed[0] = input[0];
 	option.flags = 1;
 	option.allocationSize = 96;
-	SceCodecEngineWrapperForDriver_47AED6FF(thunk, (void *)input[1], 96, &option);
-	SceCodecEngineWrapperForDriver_03EA6C2A(thunk);
-	ret = SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
+	sceCodecEngineDsp0ConvertVirtualToPhysical(thunk, (void *)input[1], 96, &option);
+	sceCodecEngineDsp0AllocCommunicationMemories(thunk);
+	ret = sceCodecEngineDsp0MemcpyChain(thunk);
 	packed[1] = thunk->memories[0].physicalBase;
 	packed[2] = input[2];
 	return ret;
@@ -92,9 +89,9 @@ int jpegPackDecodeCommand(VeneziaRpcThunk *thunk, const unsigned int *input,
 	packed[0] = input[0];
 	option.flags = 1;
 	option.allocationSize = 44;
-	SceCodecEngineWrapperForDriver_47AED6FF(thunk, (void *)input[1], 44, &option);
-	SceCodecEngineWrapperForDriver_03EA6C2A(thunk);
-	ret = SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
+	sceCodecEngineDsp0ConvertVirtualToPhysical(thunk, (void *)input[1], 44, &option);
+	sceCodecEngineDsp0AllocCommunicationMemories(thunk);
+	ret = sceCodecEngineDsp0MemcpyChain(thunk);
 	packed[1] = thunk->memories[0].physicalBase;
 	return ret;
 }
@@ -110,13 +107,13 @@ int jpegPackQueryCommand(VeneziaRpcThunk *thunk, const unsigned int *input,
 	command = (JpegQueryCommand *)input[1];
 	option.flags = 1;
 	option.allocationSize = sizeof(*command);
-	SceCodecEngineWrapperForDriver_47AED6FF(thunk, command, sizeof(*command), &option);
+	sceCodecEngineDsp0ConvertVirtualToPhysical(thunk, command, sizeof(*command), &option);
 	option.allocationSize = sizeof(*command->pOutputInfo);
-	SceCodecEngineWrapperForDriver_47AED6FF(thunk, command->pOutputInfo,
+	sceCodecEngineDsp0ConvertVirtualToPhysical(thunk, command->pOutputInfo,
 					     sizeof(*command->pOutputInfo), &option);
-	SceCodecEngineWrapperForDriver_03EA6C2A(thunk);
+	sceCodecEngineDsp0AllocCommunicationMemories(thunk);
 	command->pOutputInfo = (SceJpegOutputInfo *)thunk->memories[1].physicalBase;
-	ret = SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
+	ret = sceCodecEngineDsp0MemcpyChain(thunk);
 	packed[1] = thunk->memories[0].physicalBase;
 	return ret;
 }
@@ -247,7 +244,7 @@ int initializeJpeg(void)
 	if (sceKernelInitializeFastMutex((SceKernelFastMutex *)&jpegResident.mutex,
 					  "SceJpeg", 0x8000, NULL) < 0)
 		return 2;
-	jpegResident.channel = SceCodecEngineWrapperForDriver_6A1184EA(0);
+	jpegResident.channel = sceCodecEngineDsp0GetThreadExecGroup(0);
 	return 0;
 }
 
@@ -342,7 +339,7 @@ int SceAvcodecForDriver_48247A20(unsigned int maxSplitDecoder)
 	JpegProcess *process;
 	int ret;
 
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0) {
 		sceSyscallLeave(syscallState);
 		return ret;
@@ -398,7 +395,7 @@ int SceAvcodecForDriver_6F1CF77F(const SceJpegMJpegInitParam *pInitParam)
 	JpegProcess *process;
 	int ret;
 
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0) {
 		sceSyscallLeave(syscallState);
 		return ret;
@@ -464,7 +461,7 @@ int SceAvcodecForDriver_04080710(void)
 	JpegProcess *process;
 	int ret;
 
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0) {
 		sceSyscallLeave(syscallState);
 		return ret;
@@ -522,7 +519,7 @@ int SceAvcodecForDriver_80F63723(const unsigned char *pJpeg, SceSize isize,
 	unsigned int width, height, rgbaSize, lumaSize, chromaSize, ycbcrSize;
 	int coefLocked, decoded, ret;
 
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0) {
 		sceSyscallLeave(syscallState);
 		return ret;
@@ -759,7 +756,7 @@ int SceAvcodecForDriver_2A0AF392(const unsigned char *pJpeg, SceSize isize,
 	int downscale = decodeMode >> 3;
 	int coefLocked, ret;
 
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0) {
 		sceSyscallLeave(syscallState);
 		return ret;
@@ -979,7 +976,7 @@ int jpegCscForUser(void *pRGBA, const unsigned char *pYCbCr, int xysize,
 	unsigned long long outputSize;
 	int ret;
 
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0) {
 		sceSyscallLeave(syscallState);
 		return ret;
@@ -1063,7 +1060,7 @@ int SceAvcodecForDriver_F305E3B3(const unsigned char *pJpeg, SceSize isize,
 	int downscale = decodeMode >> 3;
 	int ret;
 
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0) {
 		sceSyscallLeave(syscallState);
 		return ret;
@@ -1152,7 +1149,7 @@ int SceAvcodecForDriver_361238E2(SceJpegSplitDecodeCtrl *pCtrl)
 	unsigned int allocated;
 	int index, ret;
 
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0) {
 		sceSyscallLeave(syscallState);
 		return ret;
@@ -1205,7 +1202,7 @@ int SceAvcodecForDriver_864FC454(SceJpegSplitDecodeCtrl *pCtrl)
 	unsigned int index;
 	int ret;
 
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0) {
 		sceSyscallLeave(syscallState);
 		return ret;
@@ -1263,7 +1260,7 @@ int SceAvcodecForDriver_B6882013(SceJpegSplitDecodeCtrl *pCtrl)
 	unsigned int streamBase, streamEnd, writeBase;
 	int cacheMode, lockRet, ret;
 
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0) {
 		sceSyscallLeave(syscallState);
 		return ret;

@@ -12,9 +12,6 @@
 
 static AudiodecResident audiodecResident;
 
-int _lockProcessSuspendCore(void);
-int _unlockProcessSuspendCore(void);
-
 static const char *const audiodecMutexNames[6] = {
 	"SceAudiodecAtrac9", "SceAudiodecMp3", "SceAudiodecAac",
 	"SceAudiodecAac6ch", "SceAudiodecCelp", "SceAudiodecSilk"
@@ -610,7 +607,7 @@ int sceAudiodecInitLibraryForUser(SceUInt32 codecType, SceAudiodecInitParam *use
 		ret = SCE_AUDIODEC_ERROR_UNSUPPORTED;
 		goto leave;
 	}
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 	if (codecType - SCE_AUDIODEC_TYPE_AT9 > 5) {
@@ -690,7 +687,7 @@ int sceAudiodecTermLibraryForUser(SceUInt32 codecType)
 #endif
 		goto leave;
 	}
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 	process = SceProcessmgrForDriver_EE694840(audiodecResident.processStorage);
@@ -741,7 +738,7 @@ int sceAudiodecGetContextSizeForUser(const SceAudiodecCtrl *userCtrl,
 #endif
 
 	ctrl.pInfo = &info.publicInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
@@ -940,7 +937,7 @@ int sceAudiodecCreateDecoderForUser(SceAudiodecCtrl *userCtrl, SceUInt32 codecTy
 		goto leave;
 	}
 	ctrl.pInfo = &info.publicInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 	ret = _copyInSceAudiodecCtrl(&ctrl, userCtrl, &userInfo,
@@ -1096,7 +1093,7 @@ int sceAudiodecCreateDecoderResidentForUser(SceAudiodecCtrl *userCtrl, SceUInt32
 #endif
 
 	ctrl.pInfo = &info.publicInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
@@ -1354,7 +1351,7 @@ int sceAudiodecCreateDecoderExternalForUser(SceAudiodecCtrl *userCtrl,
 		goto leave;
 	}
 	ctrl.pInfo = &info.publicInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
@@ -1550,7 +1547,7 @@ int sceAudiodecDeleteDecoderForUser(SceAudiodecCtrl *userCtrl)
 			"Warning: sceAudiodecDeleteDecoder must not be called by non-GAME process\n");
 #endif
 	ctrl.pInfo = &info.publicInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 	ret = _copyInSceAudiodecCtrl(&ctrl, userCtrl, &userInfo, 0);
@@ -1678,7 +1675,7 @@ int sceAudiodecDeleteDecoderResidentForUser(SceAudiodecCtrl *userCtrl)
 #endif
 
 	ctrl.pInfo = &info.publicInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 	ret = _copyInSceAudiodecCtrl(&ctrl, userCtrl, &userInfo, 0);
@@ -1766,7 +1763,7 @@ int sceAudiodecDeleteDecoderExternalForUser(SceAudiodecCtrl *userCtrl,
 		goto leave;
 	}
 	ctrl.pInfo = &info.publicInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 	ret = _copyInSceAudiodecCtrl(&ctrl, userCtrl, &userInfo, 0);
@@ -1879,7 +1876,7 @@ int sceAudiodecDecodeForUser(SceAudiodecCtrl *userCtrl)
 #endif
 
 	ctrl.pInfo = &info.publicInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 	ret = _copyInSceAudiodecCtrl(&ctrl, userCtrl, &userInfo, 0);
@@ -2007,7 +2004,7 @@ int sceAudiodecDecodeNFramesForUser(SceAudiodecCtrl *userCtrl, SceUInt32 nFrames
 		goto leave;
 	}
 	ctrl.pInfo = &info.publicInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 	ret = _copyInSceAudiodecCtrl(&ctrl, userCtrl, &userInfo, 0);
@@ -2132,7 +2129,7 @@ int sceAudiodecPartlyDecodeForUser(SceAudiodecCtrl *userCtrl,
 #endif
 
 	ctrl.pInfo = &info.publicInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 	ret = _copyInSceAudiodecCtrl(&ctrl, userCtrl, &userInfo, 0);
@@ -2273,7 +2270,7 @@ int sceAudiodecDecodeNStreamsForUser(SceAudiodecCtrl *const *userCtrls,
 	ret = sceKernelCopyFromUser(ctrlPtrs, userCtrls, sizeof(*ctrlPtrs) * nStreams);
 	if (ret < 0)
 		goto leave;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 	ret = _copyInSceAudiodecCtrl(&ctrls[0], ctrlPtrs[0], &userInfos[0], 0);
@@ -2454,7 +2451,7 @@ int sceAudiodecClearContextForUser(SceAudiodecCtrl *userCtrl)
 #endif
 
 	ctrl.pInfo = &info.publicInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 	ret = _copyInSceAudiodecCtrl(&ctrl, userCtrl, &userInfo, 0);
@@ -2599,7 +2596,7 @@ int sceAudiodecGetInternalErrorForUser(SceAudiodecCtrl *userCtrl,
 #endif
 
 	ctrl.pInfo = &info.publicInfo;
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG

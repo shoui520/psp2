@@ -9,8 +9,6 @@ typedef struct VeneziaPerformanceCounter {
 	unsigned int total;
 } VeneziaPerformanceCounter;
 
-
-
 typedef struct VeneziaPerformanceMonitorState {
 	struct ThreadmgrFastMutex mutex;
 	VeneziaPerformanceCounter counters[8];
@@ -24,21 +22,6 @@ _Static_assert(sizeof(VeneziaPerformanceMonitorState) == 0xb0, "Performance moni
 VeneziaPerformanceMonitorState g_veneziaPerformanceMonitor = { .rpcArgument = 166 };
 unsigned int g_veneziaThreadExecGroups[1];
 unsigned int g_veneziaPreferredClock = 166;
-int SceCodecEngineWrapperForDriver_0D3BB164(unsigned int command, ...);
-int packVeneziaRpcWord(VeneziaRpcThunk *thunk, const unsigned int *arguments,
-	unsigned int *packed);
-void unpackVeneziaRpcMemory(VeneziaRpcThunk *thunk);
-int packVeneziaRpcBuffer64(VeneziaRpcThunk *thunk, const unsigned int *arguments,
-	unsigned int *packed);
-int callVeneziaRpcThunkWithoutClockLock(unsigned int command, const unsigned int *input,
-	VeneziaRpcPack pack, VeneziaRpcUnpack unpack);
-int veneziaRpcWithoutClockLock(unsigned int command, ...)
-	__asm__("callVeneziaRpcWithoutClockLock");
-int veneziaDebugRpc(unsigned int command, ...) __asm__("callVeneziaDebugRpc");
-int callVeneziaDebugRpcThunk(unsigned int command, const unsigned int *input,
-	VeneziaRpcPack pack, VeneziaRpcUnpack unpack);
-int _lockProcessSuspendCore(void);
-int _unlockProcessSuspendCore(void);
 
 /* name unknown: establish the performance-monitor communication word. */
 int initCodecEnginePerformanceMonitor(void)
@@ -207,7 +190,7 @@ int setVeneziaClockSelector(unsigned int selector)
 
 	if (bounded >= 7)
 		bounded = 7;
-	ret = SceCodecEngineWrapperForDriver_0D3BB164(505, bounded);
+	ret = veneziaBlockingRpc(505, bounded);
 	if (ret < 0)
 		return ret & (ret >> 31);
 	return bounded;

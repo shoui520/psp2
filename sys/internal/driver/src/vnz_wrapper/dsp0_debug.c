@@ -23,17 +23,6 @@
 #include <power/power.h>
 #include <post_ss_mgr/sblfwloader.h>
 
-int _closeUnmapMemBlock(SceUID puid);
-int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request);
-VeneziaVipProcessStorage *_sceVipGetVipProcessResource(SceUID pid);
-void *sceCodecEngineAllocMemoryFromUnmapMemBlockForUser(SceUID puid,
-	SceSize size, SceSize alignment);
-int sceCodecEngineChangeNumWorkerCoresDefaultForUser(void);
-int sceCodecEngineChangeNumWorkerCoresMaxForUser(void);
-int sceCodecEngineFreeMemoryFromUnmapMemBlockForUser(SceUID puid, void *address);
-int sceCodecEngineOpenUnmapMemBlockForUser(void *base, SceSize size);
-int waitVeneziaVipProcessReady(void);
-
 /* Physical addresses handed to or checked for the Venezia: a mailbox word,
  * and the word after the lock in a TAS page */
 #define MAILBOX_PADDR(field) \
@@ -3425,8 +3414,6 @@ int getVeneziaVipCaptureStorageSize(const VeneziaDebugImageGeometry *geometry,
 }
 
 __attribute__((noinline)) int isVeneziaVipImageInMainMemory(uint32_t address, SceSize size);
-extern int setVeneziaVipMemoryRegion(VeneziaVipMemoryRegion *destination,
-	const VeneziaVipMemoryRegion *source, SceSize offset, SceSize size);
 int distributeVeneziaVipCaptureMemory(VeneziaVipProcessStorage *storage,
 	unsigned int processorCount, VeneziaVipMemoryLayout *layout);
 __attribute__((noinline)) int setVeneziaVipCaptureImage(VeneziaDebugProcessCapture *capture,
@@ -6433,12 +6420,6 @@ int initializeVeneziaVipProcessStorage(VeneziaVipProcessStorage *storage)
 	return 0;
 }
 
-extern int allocateVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block,
-	const char *name, unsigned int type, SceSize size, uintptr_t physicalAddress);
-extern int offsetVeneziaVipMemoryRegion(VeneziaVipMemoryRegion *destination,
-	const VeneziaVipMemoryRegion *source, SceSize offset);
-extern ScePervasive2Registers *getVeneziaBootRegisters(void);
-
 /* name unknown: allocate the driver code region and map its peripheral pages. */
 int initializeVeneziaVipResources(void)
 {
@@ -6504,7 +6485,7 @@ int initializeVeneziaVipResources(void)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = PERVASIVE2_BASE;
-	state->bootRegisters = getVeneziaBootRegisters();
+	state->bootRegisters = (ScePervasive2Registers *)getVeneziaBootRegisters();
 	return 0;
 }
 
@@ -6512,9 +6493,7 @@ extern int veneziaVipProcessorThread0(SceSize size, void *arg);
 extern int veneziaVipProcessorThread1(SceSize size, void *arg);
 extern int waitVeneziaVipProcessorResponse(VeneziaVipState *state, unsigned int processor,
 	uint32_t *resultFlags);
-int initializeVeneziaHwdDma(void);
 extern int finishVeneziaVipStartup(VeneziaVipState *state);
-extern int releaseVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block);
 
 /* name unknown: start processor workers and load the VIP firmware. */
 int startVeneziaVipDriver(int mode)
@@ -6951,8 +6930,6 @@ __attribute__((noinline)) int encodeVeneziaVipPesTimestamps(VeneziaVipPesHeader 
 	header->timestampFlags = flags;
 	return 0;
 }
-
-extern unsigned int decodeVeneziaVipNalLength(const uint8_t *bytes, unsigned int size);
 
 /* name unknown: size the Annex B input after replacing length prefixes. */
 int calculateVeneziaVipVideoInputSize(const VeneziaVipVideoInput *input)
@@ -12574,37 +12551,7 @@ int SceCodecEngineWrapperForDriver_8FE370E6(unsigned int processor, SceUID uid)
 	return -2141060856;
 }
 
-extern int initializeCodecEngineMemoryClass(void);
-
-extern int _sceCodecEngineProcessorProcessSuspend(SceUID pid);
-extern int _sceCodecEngineProcessorProcessResume(SceUID pid);
-
-extern int setVeneziaClockSelector(unsigned int selector);
-
-extern int setVeneziaClockSelector(unsigned int selector);
-
-extern int SceCodecEngineWrapperForDriver_CB8703D8(void);
-extern int _unlockProcessSuspendCore(void);
-
 _Static_assert(sizeof(CodecEngineMemory) == 52, "CodecEngine memory object size");
-
-extern int callVeneziaRpcCommand500(unsigned int argument0, unsigned int argument1);
-extern int initVeneziaHeapManager(VeneziaHeapManager *manager, void *base, SceSize size);
-
-extern int isVeneziaHeapManagerRegistered(VeneziaHeapManager *manager);
-
-extern void *_sceVeneziaHeapManagerAllocMemory(VeneziaHeapManager *manager,
-	SceSize size, SceSize alignment);
-
-extern int _procMemory(VeneziaHeapManager *manager, void *memory);
-
-extern int registerVeneziaHeapManagerMemory(VeneziaHeapManager *manager,
-	void *memory, SceSize size);
-
-extern int unregisterVeneziaHeapManagerMemory(VeneziaHeapManager *manager,
-	void *memory, SceSize size);
-
-extern int _sceVeneziaRpcGetHistory(VeneziaRpcHistoryEntry *history);
 
 int SceCodecEngineWrapperForDebugger_771190E7(unsigned int command,
 	VeneziaRpcHistoryEntry *history)
@@ -12647,15 +12594,11 @@ int _sceCodecEngineChangeNumWorkerCoresMax(void)
 	return sceCodecEngineChangeNumWorkerCoresMaxForUser();
 }
 
-extern int startCodecEnginePerformanceMonitor(void);
-
 /* name unknown: preserve the original non-exported monitor wrapper. */
 __attribute__((noinline)) int startCodecEnginePerformanceMonitorThunk(void)
 {
 	return startCodecEnginePerformanceMonitor();
 }
-
-extern int stopCodecEnginePerformanceMonitor(void);
 
 /* name unknown: preserve the original non-exported monitor wrapper. */
 __attribute__((noinline)) int stopCodecEnginePerformanceMonitorThunk(void)
@@ -12668,8 +12611,6 @@ typedef struct CodecEngineProcessorLoad {
 	SceSize size;
 	unsigned int average;
 } CodecEngineProcessorLoad;
-
-extern int getCodecEnginePerformanceResults(VeneziaPerformanceResult *result);
 
 /* name unknown: expose the average from the complete DSP performance result. */
 __attribute__((noinline)) int getCodecEngineAverageProcessorLoad(CodecEngineProcessorLoad *load)
@@ -12685,8 +12626,6 @@ __attribute__((noinline)) int getCodecEngineAverageProcessorLoad(CodecEngineProc
 	load->average = ret < 0 ? 0 : result.average;
 	return ret;
 }
-
-extern int clearCodecEnginePerformanceCounters(void);
 
 /* name unknown: preserve the original counter-reset wrapper. */
 __attribute__((noinline)) int clearCodecEnginePerformanceCountersThunk(void)

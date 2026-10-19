@@ -5,6 +5,7 @@
 #include <threadmgr/fast_mutex.h>
 #include <processmgr/processmgr.h>
 #include <codec/codec.h>
+#include <vnz_wrapper/vnz_wrapper.h>
 
 /* Complete module-owned port record. Unidentified members remain explicit. */
 typedef struct AudioInPort {
@@ -209,5 +210,17 @@ void resampleAudioInCapture(unsigned int stream, const int16_t *input,
 			g_audioInPortClosed(pid); \
 	} \
 } while (0)
+
+/* aec_core.c */
+int initializeAudioInAecMutex(void);
+int createAudioInAecContext(AudioInAecContext *context);
+int processAudioInAecContext(AudioInAecContext *context, int gain, unsigned int flags);
+int configureAudioInAecContext(AudioInAecContext *context, const void *control);
+
+/* aec_rpc.c */
+int queryAudioInAecWorkspace(AudioInAecRpcContext *context);
+int initializeAudioInAecContextRpc(AudioInAecRpcContext *context);
+int processAudioInAecContextRpc(AudioInAecRpcContext *context, int gain, unsigned int flags);
+int configureAudioInAecContextRpc(AudioInAecRpcContext *context, const void *control);
 
 #endif

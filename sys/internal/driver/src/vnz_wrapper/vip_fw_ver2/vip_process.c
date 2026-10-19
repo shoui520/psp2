@@ -18,10 +18,6 @@
 #include <sysmem/sysclib.h>
 #include <threadmgr/threadmgr.h>
 
-int dispatchVeneziaVipProcessReset(VeneziaVipProcessStorage *storage);
-int dispatchVeneziaVipProcessResume(VeneziaVipProcessStorage *storage);
-int dispatchVeneziaVipProcessSuspend(VeneziaVipProcessStorage *storage, int reason);
-int initializeVeneziaVipProcessStorage(VeneziaVipProcessStorage *storage);
 int lockVeneziaVipProcess(struct ThreadmgrFastMutex *mutex);
 int unlockVeneziaVipProcess(struct ThreadmgrFastMutex *mutex);
 
@@ -29,8 +25,6 @@ extern int waitVeneziaVipProcessReady(void);
 extern VeneziaVipProcessStorage *_sceVipGetVipProcessResource(SceUID pid);
 
 int g_veneziaVipProcessStorageKey = -1;
-int initializeVeneziaVipResources(void);
-int startVeneziaVipDriver(int mode);
 
 /* name unknown: allocate the VIP process-storage key and start its driver. */
 int initializeVeneziaVipProcesses(void)
@@ -47,7 +41,7 @@ int initializeVeneziaVipProcesses(void)
 	return ret;
 }
 
-int _sceHwd0ProcessCreateEntry(SceUID pid)
+int _sceHwd0ProcessCreateEntry(SceUID pid, SceUInt32 type)
 {
 	VeneziaVipProcessStorage *storage = NULL;
 	char name[32];
@@ -72,7 +66,7 @@ int _sceHwd0ProcessCreateEntry(SceUID pid)
 }
 
 /* name unknown: cancel waiters and delete the process's VIP suspend semaphore. */
-int releaseVeneziaVipProcessStorage(SceUID pid)
+int releaseVeneziaVipProcessStorage(SceUID pid, SceUInt32 type)
 {
 	VeneziaVipProcessStorage *storage = NULL;
 	int ret;

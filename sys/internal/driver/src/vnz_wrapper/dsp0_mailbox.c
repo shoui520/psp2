@@ -128,37 +128,30 @@ unsigned int getCompletedVeneziaRpc(void)
 	return completed;
 }
 
-extern int veneziaBlockingRpc(unsigned int command, ...)
-	__asm__("SceCodecEngineWrapperForDriver_0D3BB164");
-extern unsigned int SceCodecEngineWrapperForDriver_F9495589(unsigned int physical);
-extern unsigned int SceCodecEngineWrapperForDriver_C7C150AE(unsigned int address);
-
-int SceCodecEngineWrapperForDriver_2DD83BB0(unsigned int argument0, unsigned int argument1)
+void *SceCodecEngineWrapperForDriver_2DD83BB0(unsigned int heap, SceSize size)
 {
-	int physical;
+	uintptr_t physical;
 
-	physical = veneziaBlockingRpc(496, argument0, argument1);
+	physical = veneziaBlockingRpc(496, heap, size);
 	return SceCodecEngineWrapperForDriver_F9495589(physical);
 }
 
-int SceCodecEngineWrapperForDriver_3C5E9CC3(unsigned int argument0, unsigned int address,
-					unsigned int argument2)
+int SceCodecEngineWrapperForDriver_3C5E9CC3(unsigned int heap, void *memory, SceSize size)
 {
-	unsigned int physical;
+	uintptr_t physical;
 
-	physical = SceCodecEngineWrapperForDriver_C7C150AE(address);
-	return veneziaBlockingRpc(497, argument0, physical, argument2);
+	physical = SceCodecEngineWrapperForDriver_C7C150AE(memory);
+	return veneziaBlockingRpc(497, heap, physical, size);
 }
 
-int SceCodecEngineWrapperForDriver_91535820(unsigned int argument0, unsigned int argument1)
+void *SceCodecEngineWrapperForDriver_91535820(unsigned int heap, SceSize size)
 {
-	return veneziaBlockingRpc(498, argument0, argument1);
+	return (void *)veneziaBlockingRpc(498, heap, size);
 }
 
-int SceCodecEngineWrapperForDriver_3A79A935(unsigned int argument0, unsigned int argument1,
-					unsigned int argument2)
+int SceCodecEngineWrapperForDriver_3A79A935(unsigned int heap, void *memory, SceSize size)
 {
-	return veneziaBlockingRpc(499, argument0, argument1, argument2);
+	return veneziaBlockingRpc(499, heap, memory, size);
 }
 
 /* name unknown: internal wrapper for DSP RPC command 500. */
@@ -167,12 +160,12 @@ int callVeneziaRpcCommand500(unsigned int argument0, unsigned int argument1)
 	return veneziaBlockingRpc(500, argument0, argument1);
 }
 
-int SceCodecEngineWrapperForDriver_0F235F44(unsigned int argument0, unsigned int argument1)
+void *SceCodecEngineWrapperForDriver_0F235F44(uintptr_t physical, SceSize size)
 {
-	return veneziaBlockingRpc(501, argument0, argument1);
+	return (void *)veneziaBlockingRpc(501, physical, size);
 }
 
-int SceCodecEngineWrapperForDriver_26FAF6EC(unsigned int argument0, unsigned int argument1)
+uintptr_t SceCodecEngineWrapperForDriver_26FAF6EC(void *memory, SceSize size)
 {
-	return veneziaBlockingRpc(502, argument0, argument1);
+	return veneziaBlockingRpc(502, memory, size);
 }

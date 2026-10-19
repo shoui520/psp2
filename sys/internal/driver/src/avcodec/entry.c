@@ -2,6 +2,7 @@
 #include <processmgr/processmgr.h>
 #include <sysmem/procevent.h>
 #include <modulemgr/modulemgr.h>
+#include <vnz_wrapper/vnz_wrapper.h>
 
 extern int _sceVideocodecProcessExitEntry(SceUID pid, SceUInt32 type);
 extern int _sceDsp0VideocodecProcessExitEntry(SceUID pid, SceUInt32 type);
@@ -21,19 +22,14 @@ extern int dsp0VideocodecIsProcessSuspended(SceUID pid);
 extern int videocodecProcessSuspend(SceUID pid);
 extern int dsp0VideocodecIsProcessActive(SceUID pid);
 extern int dsp0VideocodecProcessSuspend(SceUID pid);
-extern int sceCodecEngineDsp0IsProcessSuspended(SceUID pid);
 extern int initializeAudiodec(void);
 extern int initializeAudioenc(void);
 extern int initializeJpeg(void);
 extern int initializeJpegEncoder(void);
 extern int initializeDsp0Videocodec(void);
 extern int initializeVideocodec(void);
-extern int sceCodecEngineRegisterProcExitHandler(
-	int (*handler)(SceUID pid, const ProcEventParam *param));
-extern int sceCodecEngineRegisterProcKillHandler(
-	int (*handler)(SceUID pid, const ProcEventParam *param));
 
-int avcodecProcessExitHandler(SceUID pid, const ProcEventParam *param)
+int avcodecProcessExitHandler(SceUID pid, ProcEventParam *param, void *common)
 {
 	SceUInt32 type = param->type;
 	int videoStatus, status, ret;
@@ -115,7 +111,7 @@ int avcodecProcessSuspendHandler(SceUID pid, unsigned int event)
 	return 0;
 }
 
-int avcodecProcessKillHandler(SceUID pid, const ProcEventParam *param)
+int avcodecProcessKillHandler(SceUID pid, ProcEventParam *param, void *common)
 {
 	SceUInt32 type = param->type;
 	int videoStatus, status, ret;

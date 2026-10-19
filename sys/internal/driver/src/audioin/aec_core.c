@@ -4,17 +4,6 @@
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/fast_mutex_object.h>
 
-extern int SceCodecEngineWrapperForDriver_CB8703D8(void);
-extern int _unlockProcessSuspendCore(void);
-extern int SceCodecEngineWrapperForDriver_91535820(unsigned int command,
-		unsigned int size);
-extern int queryAudioInAecWorkspace(AudioInAecRpcContext *context);
-extern int initializeAudioInAecContextRpc(AudioInAecRpcContext *context);
-extern int processAudioInAecContextRpc(AudioInAecRpcContext *context, int gain,
-		unsigned int flags);
-extern int configureAudioInAecContextRpc(AudioInAecRpcContext *context,
-		const void *control);
-
 int initializeAudioInAecMutex(void)
 {
 	int result = sceKernelInitializeFastMutex((SceKernelFastMutex *)&g_audioInAecLock,
@@ -44,7 +33,7 @@ int createAudioInAecContext(AudioInAecContext *context)
 		result = queryAudioInAecWorkspace(&request);
 		if (result >= 0) {
 			g_audioInAecWorkspaceSize = request.workspaceSize;
-			workspace = (void *)(uintptr_t)SceCodecEngineWrapperForDriver_91535820(
+			workspace = SceCodecEngineWrapperForDriver_91535820(
 					1, request.workspaceSize);
 			g_audioInAecWorkspace = workspace;
 			result = SCE_AUDIO_IN_ERROR_OUT_OF_MEMORY;

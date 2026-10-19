@@ -5,16 +5,6 @@
 
 VeneziaCommunicationMemory g_veneziaCommunicationMemory;
 
-extern void *getRpcHeapBase(void);
-extern SceSize getRpcHeapSize(void);
-#if FW_VERSION >= 0x04000000
-extern void _sceVeneziaSimpleHeapInit(void *base, SceSize size,
-	VeneziaSimpleHeap *heap, SceSize workSize, SceSize blockSize);
-#else
-extern void _sceVeneziaSimpleHeapInit(void *base, SceSize size,
-	VeneziaSimpleHeap *heap, SceSize workSize, SceSize blockSize);
-#endif
-
 /* name unknown: create the RPC communication-memory synchronization and heap. */
 int initVeneziaRpcCommunicationMemory(void)
 {
@@ -69,14 +59,6 @@ int signalVeneziaCommunicationMemory(unsigned int channel)
 	return sceKernelSetEventFlag(g_veneziaCommunicationMemory.event, 1U << channel);
 }
 
-#if FW_DEBUG
-extern void *_sceVeneziaSimpleHeapAllocMemory(VeneziaSimpleHeap *heap, SceSize size);
-extern unsigned int getRpcFreeChannelCount(void);
-extern unsigned int getRpcFreeDebugChannelCount(void);
-#else
-extern void *_sceVeneziaSimpleHeapAllocMemory(VeneziaSimpleHeap *heap, SceSize size);
-#endif
-
 void *_sceVeneziaAllocCommunicationMemory(SceSize size)
 {
 	SceSize alignedSize = (size + 255) & ~255U;
@@ -103,12 +85,6 @@ void *_sceVeneziaAllocCommunicationMemory(SceSize size)
 	}
 	return memory;
 }
-
-#if FW_DEBUG
-extern int _sceVeneziaSimpleHeapFreeMemory(VeneziaSimpleHeap *heap, void *memory);
-#else
-extern int _sceVeneziaSimpleHeapFreeMemory(VeneziaSimpleHeap *heap, void *memory);
-#endif
 
 /* name unknown: return an allocation to the RPC communication heap. */
 int freeVeneziaCommunicationMemory(void *memory)

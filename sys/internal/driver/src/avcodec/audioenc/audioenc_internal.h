@@ -2,6 +2,7 @@
 
 #include <audioenc.h>
 #include <threadmgr/fast_mutex_object.h>
+#include <vnz_wrapper/vnz_wrapper.h>
 
 #define AUDIOENC_TYPE_SILK 0x2007U
 #define AUDIOENC_SILK_ERROR_INVALID_SAMPLING_RATE ((int)0x80861801)

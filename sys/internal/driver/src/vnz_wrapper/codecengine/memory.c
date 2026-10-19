@@ -20,14 +20,8 @@
 #include <string.h>
 #include <sysmem/sysroot.h>
 
-struct ThreadmgrFastMutex * _sceCodecEngineGetMutex(SceUID pid);
-CodecEngineUnmapMemBlockEntry * _sceCodecEngineGetUnmapMemBlockEntry(SceUID pid, SceUID guid);
-
-
 extern int _closeUnmapMemBlockAll(SceUID pid);
 
-extern int SceCodecEngineWrapperForDriver_CB8703D8(void);
-extern int _unlockProcessSuspendCore(void);
 SceClass g_codecEngineMemoryClass;
 
 int _closeUnmapMemBlockCore(SceUID pid, CodecEngineUnmapMemBlockEntry *entry)
@@ -108,9 +102,6 @@ int isVeneziaPhysicalRangeContiguous(const void *base, SceSize size)
 	ret = sceKernelVARangeToPAVector(&range, &vector);
 	return ret >= 0 && vector.total == 1 && ret == 0;
 }
-
-extern int callVeneziaRpcCommand500(unsigned int argument0, unsigned int argument1);
-extern int initVeneziaHeapManager(VeneziaHeapManager *manager, void *base, SceSize size);
 
 int sceCodecEngineOpenUnmapMemBlockForUser(void *base, SceSize size)
 {
@@ -258,8 +249,6 @@ leave:
 	return ret;
 }
 
-extern int isVeneziaHeapManagerRegistered(VeneziaHeapManager *manager);
-
 int _closeUnmapMemBlock(SceUID puid)
 {
 	SceUInt32 tls = sceSyscallEnter();
@@ -336,9 +325,6 @@ leave:
 	return ret;
 }
 
-extern void *_sceVeneziaHeapManagerAllocMemory(VeneziaHeapManager *manager,
-	SceSize size, SceSize alignment);
-
 void *sceCodecEngineAllocMemoryFromUnmapMemBlockForUser(SceUID puid,
 	SceSize size, SceSize alignment)
 {
@@ -414,8 +400,6 @@ finish:
 	return (void *)result;
 }
 
-extern int _procMemory(VeneziaHeapManager *manager, void *memory);
-
 int sceCodecEngineFreeMemoryFromUnmapMemBlockForUser(SceUID puid, void *address)
 {
 	SceUInt32 tls = sceSyscallEnter();
@@ -479,10 +463,7 @@ leave:
 	return ret;
 }
 
-extern int registerVeneziaHeapManagerMemory(VeneziaHeapManager *manager,
-	void *memory, SceSize size);
-
-int sceCodecEngineRegisterUnmapMemory(SceUID pid, void *address, SceSize size)
+int sceCodecEngineRegisterUnmapMemory(SceUID pid, SceUIntVAddr address, SceSize size)
 {
 	struct ThreadmgrFastMutex *mutex;
 	CodecEngineUnmapMemBlockEntry *entries;
@@ -541,10 +522,7 @@ unlock:
 	return ret;
 }
 
-extern int unregisterVeneziaHeapManagerMemory(VeneziaHeapManager *manager,
-	void *memory, SceSize size);
-
-int sceCodecEngineUnregisterUnmapMemory(SceUID pid, void *address, SceSize size)
+int sceCodecEngineUnregisterUnmapMemory(SceUID pid, SceUIntVAddr address, SceSize size)
 {
 	struct ThreadmgrFastMutex *mutex;
 	CodecEngineUnmapMemBlockEntry *entries;
@@ -658,7 +636,7 @@ unlock:
 	return ret;
 }
 
-int sceCodecEngineUnmapUserVAtoPA(SceUID pid, const void *address, uintptr_t *physicalAddress)
+int sceCodecEngineUnmapUserVAtoPA(SceUID pid, SceUIntVAddr address, uintptr_t *physicalAddress)
 {
 	struct ThreadmgrFastMutex *mutex;
 	CodecEngineUnmapMemBlockEntry *entries;
@@ -714,7 +692,7 @@ unlock:
 	return ret;
 }
 
-int sceCodecEngineUnmapPAtoUserVA(SceUID pid, uintptr_t address, void **userAddress)
+int sceCodecEngineUnmapPAtoUserVA(SceUID pid, uintptr_t address, SceUIntVAddr *userAddress)
 {
 	struct ThreadmgrFastMutex *mutex;
 	CodecEngineUnmapMemBlockEntry *entries;
@@ -753,7 +731,7 @@ int sceCodecEngineUnmapPAtoUserVA(SceUID pid, uintptr_t address, void **userAddr
 				(uintptr_t)address < memory->physicalBase + memory->size) {
 				contains = 1;
 				if (userAddress)
-					*userAddress = (void *)((uintptr_t)memory->userBase - memory->physicalBase + address);
+					*userAddress = (uintptr_t)memory->userBase - memory->physicalBase + address;
 			}
 		}
 		error = sceGUIDReleaseObject(entries[index].guid);

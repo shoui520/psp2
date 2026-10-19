@@ -10,15 +10,6 @@
 
 VeneziaRpcState g_veneziaRpcState;
 
-extern int _sceVeneziaRunInBackground(void);
-extern int _sceVeneziaStopInBackground(void);
-extern unsigned int getVeneziaClockLockCount(void);
-#if FW_VERSION >= 0x04000000
-extern int veneziaClockSelector(int frequency);
-#else
-extern int veneziaClockSelector(int frequency);
-#endif
-
 #if !FW_DEBUG
 static inline
 #endif
@@ -63,17 +54,6 @@ clock:
 }
 
 void (*g_veneziaRpcTrace)(int event, int count, ...);
-#if FW_VERSION >= 0x04000000
-extern int getVeneziaPreferredClock(void);
-extern int submitVeneziaRpc(unsigned int channel);
-extern int waitVeneziaRpc(unsigned int channel);
-extern unsigned int getCompletedVeneziaRpc(void);
-#else
-extern int getVeneziaPreferredClock(void);
-extern int submitVeneziaRpc(unsigned int channel);
-extern int waitVeneziaRpc(unsigned int channel);
-extern unsigned int getCompletedVeneziaRpc(void);
-#endif
 
 int _callGenericThunk(unsigned int command, const unsigned int *input,
 		     VeneziaRpcPack pack, VeneziaRpcUnpack unpack, unsigned int flags)
@@ -260,19 +240,6 @@ allocationDone:
 }
 
 /* Sony venezia/dsp0_rpc.c. */
-#if FW_VERSION >= 0x04000000
-extern int veneziaClockSelector(int frequency);
-#else
-extern int veneziaClockSelector(int frequency);
-#endif
-
-#if FW_VERSION >= 0x04000000
-extern int submitVeneziaRpc(unsigned int channel);
-extern int waitVeneziaRpc(unsigned int channel);
-#else
-extern int submitVeneziaRpc(unsigned int channel);
-extern int waitVeneziaRpc(unsigned int channel);
-#endif
 
 /* Sony's callers call it whole: not split after its first test */
 int __attribute__((noinline))
@@ -363,15 +330,6 @@ _callDebugThunk(unsigned int command, const unsigned int *input, VeneziaRpcPack 
 
 /* Sony venezia/dsp0_rpc.c: RPC initialization. */
 extern void (*g_veneziaRpcTrace)(int event, int count, ...);
-#if FW_VERSION >= 0x04000000
-extern int initVeneziaRpcCommunicationMemory(void);
-extern int initVeneziaRpcDma(void);
-extern int initVeneziaMailbox(void);
-#else
-extern int initVeneziaRpcCommunicationMemory(void);
-extern int initVeneziaRpcDma(void);
-extern int initVeneziaMailbox(void);
-#endif
 
 int initVeneziaRpc(void)
 {
@@ -421,11 +379,6 @@ int initVeneziaRpc(void)
 	g_veneziaRpcTrace = (void (*)(int, int, ...))SceSysrootForDriver_49843C16();
 	return 0;
 }
-#if FW_VERSION >= 0x04000000
-extern int veneziaClockSelector(int frequency);
-#else
-extern int veneziaClockSelector(int frequency);
-#endif
 
 int _sceVeneziaRpcClockDown(void)
 {
@@ -669,12 +622,6 @@ unsigned int getRpcFreeDebugChannelCount(void)
 }
 #endif
 
-#if FW_VERSION >= 0x04000000
-extern int finalizeVeneziaRpcCommunicationMemory(void);
-#else
-extern int finalizeVeneziaRpcCommunicationMemory(void);
-#endif
-
 int _sceVeneziaStoreContext(void)
 {
 	if (g_veneziaRpcState.memory)
@@ -682,14 +629,6 @@ int _sceVeneziaStoreContext(void)
 		       g_veneziaRpcState.memory, sizeof(VeneziaRpcMemory));
 	return finalizeVeneziaRpcCommunicationMemory();
 }
-
-#if FW_VERSION >= 0x04000000
-extern int enableVeneziaMailboxInterrupts(void);
-extern int initVeneziaRpcCommunicationMemory(void);
-#else
-extern int enableVeneziaMailboxInterrupts(void);
-extern int initVeneziaRpcCommunicationMemory(void);
-#endif
 
 int _sceVeneziaLoadContext(void)
 {

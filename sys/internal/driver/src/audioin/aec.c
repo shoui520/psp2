@@ -1,13 +1,6 @@
 /* AEC capture adapters; original source filename unavailable. */
 #include "audioin_internal.h"
 
-extern int initializeAudioInAecMutex(void);
-extern int createAudioInAecContext(AudioInAecContext *context);
-extern int processAudioInAecContext(AudioInAecContext *context, int gain,
-		unsigned int flags);
-extern int configureAudioInAecContext(AudioInAecContext *context,
-		const void *control);
-
 int initializeAudioInAecLibrary(void)
 {
 	return initializeAudioInAecMutex();

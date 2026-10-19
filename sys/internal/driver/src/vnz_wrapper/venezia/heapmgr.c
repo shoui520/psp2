@@ -3,12 +3,6 @@
 #include <sysmem/sysclib.h>
 #include "../venezia_internal.h"
 
-#if FW_DEBUG
-extern void _sceVeneziaHeapInit(void *base, VeneziaHeap *heap, SceSize size, SceSize regionSize);
-#else
-extern void _sceVeneziaHeapInit(void *base, VeneziaHeap *heap, SceSize size, SceSize regionSize);
-#endif
-
 /* name unknown: initialize a heap manager with its first in-buffer heap. */
 int initVeneziaHeapManager(VeneziaHeapManager *manager, void *base, SceSize size)
 {
@@ -43,12 +37,6 @@ int initVeneziaHeapManager(VeneziaHeapManager *manager, void *base, SceSize size
 	}
 	return 0;
 }
-
-#if FW_DEBUG
-extern void *_storeUnitFixedCtrl(VeneziaHeap *heap, SceSize size, SceSize alignment);
-#else
-extern void *_storeUnitFixedCtrl(VeneziaHeap *heap, SceSize size, SceSize alignment);
-#endif
 
 void *_sceVeneziaHeapManagerAllocMemory(VeneziaHeapManager *manager,
 				       SceSize size, SceSize alignment)
@@ -95,12 +83,6 @@ void *_sceVeneziaHeapManagerAllocMemory(VeneziaHeapManager *manager,
 	return memory;
 }
 
-#if FW_DEBUG
-extern int freeVeneziaHeapMemory(VeneziaHeap *heap, void *memory, SceSize size);
-#else
-extern int freeVeneziaHeapMemory(VeneziaHeap *heap, void *memory, SceSize size);
-#endif
-
 int _procMemory(VeneziaHeapManager *manager, void *memory)
 {
 	VeneziaHeapEntry *head, *entry;
@@ -131,12 +113,6 @@ int _procMemory(VeneziaHeapManager *manager, void *memory)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&manager->lock, intr);
 	return ret;
 }
-
-#if FW_DEBUG
-extern int registerVeneziaHeapMemory(VeneziaHeap *heap, void *memory, SceSize size);
-#else
-extern int registerVeneziaHeapMemory(VeneziaHeap *heap, void *memory, SceSize size);
-#endif
 
 /* name unknown: instantiate Sony _procMemory for memory registration. */
 int registerVeneziaHeapManagerMemory(VeneziaHeapManager *manager, void *memory, SceSize size)
@@ -170,12 +146,6 @@ int registerVeneziaHeapManagerMemory(VeneziaHeapManager *manager, void *memory, 
 	return ret;
 }
 
-#if FW_DEBUG
-extern int unregisterVeneziaHeapMemory(VeneziaHeap *heap, void *memory, SceSize size);
-#else
-extern int unregisterVeneziaHeapMemory(VeneziaHeap *heap, void *memory, SceSize size);
-#endif
-
 /* name unknown: instantiate Sony _procMemory for memory unregistration. */
 int unregisterVeneziaHeapManagerMemory(VeneziaHeapManager *manager, void *memory, SceSize size)
 {
@@ -207,12 +177,6 @@ int unregisterVeneziaHeapManagerMemory(VeneziaHeapManager *manager, void *memory
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&manager->lock, intr);
 	return ret;
 }
-
-#if FW_DEBUG
-extern int _sceVeneziaHeapIsRegistered(VeneziaHeap *heap, unsigned int unused0, unsigned int unused1);
-#else
-extern int _sceVeneziaHeapIsRegistered(VeneziaHeap *heap, unsigned int unused0, unsigned int unused1);
-#endif
 
 /* name unknown: instantiate Sony _procMemory for registration-state checks. */
 int isVeneziaHeapManagerRegistered(VeneziaHeapManager *manager)

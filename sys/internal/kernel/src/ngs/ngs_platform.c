@@ -8,6 +8,7 @@
 #include <threadmgr/fast_mutex.h>
 #include <stddef.h>
 #include <string.h>
+#include <vnz_wrapper/vnz_wrapper.h>
 
 #include "ngs_platform.h"
 #include "ngs_system.h"
@@ -16,14 +17,6 @@
 #define SCE_NGS_ERROR_OUT_OF_ASSETS ((int)0x804a0006)
 
 NgsPlatformState ngsPlatformState;
-
-extern void *SceCodecEngineWrapperForDriver_2DD83BB0(unsigned int heap,
-						unsigned int size);
-extern int SceCodecEngineWrapperForDriver_3C5E9CC3(unsigned int heap,
-						void *address, unsigned int size);
-extern unsigned int SceCodecEngineWrapperForDriver_C7C150AE(void *address);
-extern int SceCodecEngineWrapperForDriver_391BD4FD(unsigned int command,
-	const void *parameters, unsigned int unused, unsigned int unused2);
 
 int ngsAtomicSet(int *value, int replacement, int expected);
 int ngsLockCodec(NgsPlatformContext *context);
@@ -266,7 +259,7 @@ foundStorage:
 	command.sharedPhysicalAddress = ngsPlatformState.sharedPhysicalAddress;
 	command.sampleRate = system->SampleRate;
 	ngsLockCodec(context);
-	result = SceCodecEngineWrapperForDriver_391BD4FD(320, &command, 0, 0);
+	result = SceCodecEngineWrapperForDriver_391BD4FD(320, (const unsigned int *)&command, NULL, NULL);
 	ngsUnlockCodec(system->context);
 	if (result < 0) {
 		if (system->compiledSdkVersion < 0x1800000 &&
@@ -297,7 +290,7 @@ foundStorage:
 				ngsPlatformState.sharedPhysicalAddress;
 			command.rackVoiceCounts = system->systemId;
 			ngsLockCodec(system->context);
-			SceCodecEngineWrapperForDriver_391BD4FD(322, &command, 0, 0);
+			SceCodecEngineWrapperForDriver_391BD4FD(322, (const unsigned int *)&command, NULL, NULL);
 			ngsUnlockCodec(system->context);
 			sceKernelFinalizeFastMutex(
 				(SceKernelFastMutex *)&system->context->systemMutex);
@@ -371,7 +364,7 @@ foundStorage:
 	command.sharedPhysicalAddress = ngsPlatformState.sharedPhysicalAddress;
 	command.systemId = system->systemId;
 	ngsLockCodec(system->context);
-	result = SceCodecEngineWrapperForDriver_391BD4FD(322, &command, 0, 0);
+	result = SceCodecEngineWrapperForDriver_391BD4FD(322, (const unsigned int *)&command, NULL, NULL);
 	ngsUnlockCodec(system->context);
 	if (result != 0)
 		return result;

@@ -1,16 +1,5 @@
 /* AEC RPC packing and transfers; original source filename unavailable. */
 #include "audioin_internal.h"
-#include <vnz_wrapper/venezia_rpc.h>
-
-extern int sceCodecEngineDsp0ConvertPhysicalToVirtual(VeneziaRpcThunk *thunk);
-extern int sceCodecEngineDsp0ConvertVirtualToPhysical(VeneziaRpcThunk *thunk,
-		void *base, SceSize size, const VeneziaMemoryOption *option);
-extern int sceCodecEngineDsp0AllocCommunicationMemories(VeneziaRpcThunk *thunk);
-extern int sceCodecEngineDsp0MemcpyChain(VeneziaRpcThunk *thunk);
-extern int sceCodecEngineDsp0FreeCommunicationMemories(VeneziaRpcThunk *thunk);
-extern int sceCodecEngineDsp0GetThreadExecGroup(unsigned int thread);
-extern int SceCodecEngineWrapperForDriver_391BD4FD(unsigned int command,
-		const unsigned int *input, VeneziaRpcPack pack, VeneziaRpcUnpack unpack);
 
 void unpackAudioInAecContext(VeneziaRpcThunk *thunk)
 {

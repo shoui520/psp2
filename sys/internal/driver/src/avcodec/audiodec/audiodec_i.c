@@ -324,7 +324,8 @@ int _audiodecInternalDeleteDecoder(AudiodecWorkManager *manager,
 	SceUInt32 index, codecType, commandIndex, decoderSize, channelSize;
 	SceUInt32 usedChannels, totalChannels, totalSize;
 	SceUIntVAddr virtualContext;
-	void *context, *physical;
+	void *context;
+	uintptr_t physical;
 	int external, resident, ret;
 #if FW_DEBUG
 	const void *caller = __builtin_return_address(0);
@@ -420,13 +421,13 @@ releaseExternal:
 	physical = SceCodecEngineWrapperForDriver_26FAF6EC(context, totalSize);
 	if (!physical)
 		return ret;
-	ret = SceCodecEngineWrapperForDriver_BCDCEA13(0, physical, &virtualContext);
+	ret = sceCodecEngineUnmapPAtoUserVA(0, physical, &virtualContext);
 	if (ret < 0)
 		return ret;
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(virtualContext != 0, &deleteDecoderContext, caller);
 #endif
-	ret = SceCodecEngineWrapperForDriver_C5478DD5(0, virtualContext, totalSize);
+	ret = sceCodecEngineUnregisterUnmapMemory(0, virtualContext, totalSize);
 	if (ret < 0)
 		return ret;
 	if (vaContext)
@@ -451,7 +452,7 @@ int _audiodecInternalCreateDecoder(AudiodecWorkManager *manager,
 	SceUInt32 totalDecoders, totalChannels, usedDecoders, index, i;
 	SceUInt32 codecType, commandIndex;
 	SceUInt8 *context = (SceUInt8 *)vaContext;
-	void *physical;
+	uintptr_t physical;
 	int nChannels, ret;
 #if FW_DEBUG
 	const void *caller = __builtin_return_address(0);
@@ -488,15 +489,15 @@ int _audiodecInternalCreateDecoder(AudiodecWorkManager *manager,
 	channels = manager->pChannels;
 	work = manager->pWork;
 	if (vaContext) {
-		physical = NULL;
-		ret = SceCodecEngineWrapperForDriver_FBD4853E(0, vaContext, contextSize);
+		physical = 0;
+		ret = sceCodecEngineRegisterUnmapMemory(0, vaContext, contextSize);
 		if (ret < 0)
 			return ret;
-		ret = SceCodecEngineWrapperForDriver_6D41287F(0, vaContext, &physical);
+		ret = sceCodecEngineUnmapUserVAtoPA(0, vaContext, &physical);
 		if (ret < 0)
 			goto mappingFailed;
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(physical != NULL, &createDecoderContext, caller);
+		SceDebugForDriver_35A35322(physical != 0, &createDecoderContext, caller);
 #endif
 		context = SceCodecEngineWrapperForDriver_0F235F44(physical, contextSize);
 		if (!context)
@@ -576,7 +577,7 @@ deleteDecoder:
 	_audiodecInternalDeleteDecoder(manager, ctrl, NULL);
 	return ret;
 mappingFailed:
-	SceCodecEngineWrapperForDriver_C5478DD5(0, vaContext, contextSize);
+	sceCodecEngineUnregisterUnmapMemory(0, vaContext, contextSize);
 	return SCE_AUDIODEC_ERROR_INVALID_PTR;
 }
 
@@ -776,7 +777,8 @@ int _audiodecInternalExitLibrary(SceUID pid, AudiodecWorkManager *manager,
 	SceUInt32 channelSize = channels ? channels->contextSize : 0;
 	SceUInt32 totalChannels, size, i;
 	SceUIntVAddr virtualContext;
-	void *context, *physical;
+	void *context;
+	uintptr_t physical;
 	int ret, result = 0;
 #if FW_DEBUG
 	const void *caller = __builtin_return_address(0);
@@ -800,7 +802,7 @@ int _audiodecInternalExitLibrary(SceUID pid, AudiodecWorkManager *manager,
 				result = SCE_AUDIODEC_ERROR_INVALID_PTR;
 				continue;
 			}
-			ret = SceCodecEngineWrapperForDriver_BCDCEA13(pid, physical, &virtualContext);
+			ret = sceCodecEngineUnmapPAtoUserVA(pid, physical, &virtualContext);
 			if (ret < 0) {
 				result = ret;
 				continue;
@@ -808,7 +810,7 @@ int _audiodecInternalExitLibrary(SceUID pid, AudiodecWorkManager *manager,
 #if FW_DEBUG
 			SceDebugForDriver_35A35322(virtualContext != 0, &exitLibraryContext, caller);
 #endif
-			ret = SceCodecEngineWrapperForDriver_C5478DD5(pid, virtualContext, size);
+			ret = sceCodecEngineUnregisterUnmapMemory(pid, virtualContext, size);
 			if (ret < 0)
 				result = ret;
 		}
@@ -948,16 +950,16 @@ int atrac9GetMaxEsSize(const SceUInt8 configData[4])
 
 void audiodecFinishCommand(struct VeneziaRpcThunk *thunk)
 {
-	SceCodecEngineWrapperForDriver_07C53B4E(thunk);
-	SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
-	SceCodecEngineWrapperForDriver_1C2BC9F7(thunk);
+	sceCodecEngineDsp0ConvertPhysicalToVirtual(thunk);
+	sceCodecEngineDsp0MemcpyChain(thunk);
+	sceCodecEngineDsp0FreeCommunicationMemories(thunk);
 }
 
 int audiodecFinishRpcMemory(struct VeneziaRpcThunk *thunk)
 {
-	SceCodecEngineWrapperForDriver_07C53B4E(thunk);
-	SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
-	return SceCodecEngineWrapperForDriver_1C2BC9F7(thunk);
+	sceCodecEngineDsp0ConvertPhysicalToVirtual(thunk);
+	sceCodecEngineDsp0MemcpyChain(thunk);
+	return sceCodecEngineDsp0FreeCommunicationMemories(thunk);
 }
 
 void audiodecFinishDecodeCommand(VeneziaRpcThunk *thunk)
@@ -967,9 +969,9 @@ void audiodecFinishDecodeCommand(VeneziaRpcThunk *thunk)
 	AudiodecCommand *command;
 	SceUInt32 transferIndex;
 
-	SceCodecEngineWrapperForDriver_07C53B4E(thunk);
-	SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
-	SceCodecEngineWrapperForDriver_1C2BC9F7(thunk);
+	sceCodecEngineDsp0ConvertPhysicalToVirtual(thunk);
+	sceCodecEngineDsp0MemcpyChain(thunk);
+	sceCodecEngineDsp0FreeCommunicationMemories(thunk);
 	if (!nStreams)
 		return;
 	command = commands;
@@ -995,10 +997,10 @@ int audiodecPackCommand(VeneziaRpcThunk *thunk, const unsigned int *input,
 
 	option.flags = 1;
 	option.allocationSize = sizeof(AudiodecCommand);
-	SceCodecEngineWrapperForDriver_47AED6FF(thunk, (void *)input[0],
+	sceCodecEngineDsp0ConvertVirtualToPhysical(thunk, (void *)input[0],
 					      sizeof(AudiodecCommand), &option);
-	SceCodecEngineWrapperForDriver_03EA6C2A(thunk);
-	ret = SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
+	sceCodecEngineDsp0AllocCommunicationMemories(thunk);
+	ret = sceCodecEngineDsp0MemcpyChain(thunk);
 	packed[0] = thunk->memories[0].physicalBase;
 	packed[1] = input[1];
 	packed[2] = input[2];
@@ -1014,10 +1016,10 @@ int audiodecPackRpcMemory(VeneziaRpcThunk *thunk, const unsigned int *input,
 
 	option.flags = 1;
 	option.allocationSize = 192;
-	SceCodecEngineWrapperForDriver_47AED6FF(thunk, (void *)input[0],
+	sceCodecEngineDsp0ConvertVirtualToPhysical(thunk, (void *)input[0],
 					      192, &option);
-	SceCodecEngineWrapperForDriver_03EA6C2A(thunk);
-	ret = SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
+	sceCodecEngineDsp0AllocCommunicationMemories(thunk);
+	ret = sceCodecEngineDsp0MemcpyChain(thunk);
 	packed[0] = thunk->memories[0].physicalBase;
 	packed[1] = input[1];
 	packed[2] = input[2];
@@ -1037,7 +1039,7 @@ int audiodecPackDecodeCommand(VeneziaRpcThunk *thunk, const unsigned int *input,
 
 	option.flags = nStreams > 1 ? 3 : 1;
 	option.allocationSize = nStreams * sizeof(AudiodecCommand);
-	SceCodecEngineWrapperForDriver_47AED6FF(thunk, commands,
+	sceCodecEngineDsp0ConvertVirtualToPhysical(thunk, commands,
 					      option.allocationSize, &option);
 	if (nStreams) {
 		command = commands;
@@ -1068,12 +1070,12 @@ int audiodecPackDecodeCommand(VeneziaRpcThunk *thunk, const unsigned int *input,
 			}
 			option.flags = 20;
 			option.allocationSize = 0;
-			SceCodecEngineWrapperForDriver_47AED6FF(thunk, command->pEs,
+			sceCodecEngineDsp0ConvertVirtualToPhysical(thunk, command->pEs,
 							      command->inputEsSize, &option);
 			if (command->outputPcmSize) {
 				option.flags = pcmFlags;
 				option.allocationSize = allocationSize;
-				SceCodecEngineWrapperForDriver_47AED6FF(thunk, command->pPcm,
+				sceCodecEngineDsp0ConvertVirtualToPhysical(thunk, command->pPcm,
 								      command->outputPcmSize, &option);
 				command->outputPcmSize = allocationSize;
 			}
@@ -1081,7 +1083,7 @@ int audiodecPackDecodeCommand(VeneziaRpcThunk *thunk, const unsigned int *input,
 			i++;
 		} while (i != nStreams);
 	}
-	SceCodecEngineWrapperForDriver_03EA6C2A(thunk);
+	sceCodecEngineDsp0AllocCommunicationMemories(thunk);
 	if (nStreams) {
 		command = commands;
 		transferIndex = 1;
@@ -1096,7 +1098,7 @@ int audiodecPackDecodeCommand(VeneziaRpcThunk *thunk, const unsigned int *input,
 			transferIndex = next;
 		} while (command != commands + nStreams);
 	}
-	SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
+	sceCodecEngineDsp0MemcpyChain(thunk);
 	packed[0] = thunk->memories[0].physicalBase;
 	packed[1] = input[1];
 	packed[2] = input[2];
@@ -1166,7 +1168,7 @@ int audiodecCreateCommand(AudiodecCommand *command)
 		return SCE_AUDIODEC_ERROR_INVALID_TYPE;
 	}
 	input[0] = (unsigned int)command;
-	input[1] = SceCodecEngineWrapperForDriver_6A1184EA(0);
+	input[1] = sceCodecEngineDsp0GetThreadExecGroup(0);
 	return SceCodecEngineWrapperForDriver_391BD4FD(operation, input,
 						     audiodecPackCommand, audiodecFinishCommand);
 }

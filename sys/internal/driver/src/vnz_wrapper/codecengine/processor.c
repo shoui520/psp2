@@ -17,9 +17,6 @@
 #include <vnz_wrapper/venezia_debug.h>
 #include <string.h>
 
-unsigned int * _sceCodecEngineGetProcessor(SceUID pid);
-
-extern int setVeneziaClockSelector(unsigned int selector);
 CodecEngineProcessorState g_codecEngineProcessorState;
 
 int initializeCodecEngineProcessor(void)
@@ -80,9 +77,6 @@ unlock:
 	}
 	return ret;
 }
-
-extern int SceCodecEngineWrapperForDriver_CB8703D8(void);
-extern int _unlockProcessSuspendCore(void);
 
 int sceCodecEngineChangeNumWorkerCoresDefaultForUser(void)
 {

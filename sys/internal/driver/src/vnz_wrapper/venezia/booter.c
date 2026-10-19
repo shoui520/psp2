@@ -11,20 +11,6 @@
 VeneziaKernelMemory g_veneziaKernelMemory;
 VeneziaBootMemory g_veneziaBootMemory;
 
-#if FW_VERSION >= 0x04000000
-extern unsigned int getVeneziaRpcBootState(void) __asm__("getRpcBootState"); /* name unknown */
-extern void setVeneziaRpcBootState(unsigned int state) __asm__("setRpcBootState"); /* name unknown */
-extern int callVeneziaRpc(int command, ...); /* name unknown */
-extern int _sceVeneziaStoreContext(void);
-extern int _sceVeneziaLoadContext(void);
-#else
-extern unsigned int getVeneziaRpcBootState(void) __asm__("getRpcBootState");
-extern void setVeneziaRpcBootState(unsigned int state) __asm__("setRpcBootState");
-extern int callVeneziaRpc(int command, ...);
-extern int _sceVeneziaStoreContext(void);
-extern int _sceVeneziaLoadContext(void);
-#endif
-
 /* name unknown: allocate the Venezia image and its register mapping. */
 int allocVeneziaImage(void)
 {
@@ -133,12 +119,12 @@ int _sceVeneziaBootPhase2(void)
 					  "Warning: sceSblFwLoaderClose failed (0x%08x)\n", ret);
 		goto out;
 	}
-	setVeneziaRpcBootState(1);
+	setRpcBootState(1);
 	SceCpuForDriver_E813EBB2();
 	(void)regs->interruptControl;
 	__asm__ volatile("dsb sy" ::: "memory");
 	ScePervasiveForDriver_A7E64C6F();
-	while (getVeneziaRpcBootState() != 8)
+	while (getRpcBootState() != 8)
 		sceKernelDelayThread(100);
 out:
 	return ret;
@@ -153,10 +139,10 @@ int _sceVeneziaSuspend(void)
 {
 	int ret;
 
-	ret = callVeneziaRpc(508);
+	ret = veneziaRpc(508);
 	if (ret < 0)
 		goto out;
-	while (getVeneziaRpcBootState() != 0x10000)
+	while (getRpcBootState() != 0x10000)
 		;
 	ScePervasiveForDriver_28731EC5();
 	ScePervasiveForDriver_2EEBE9AE();
@@ -215,7 +201,7 @@ int _sceVeneziaResume(void)
 	(void)regs->interruptControl;
 	__asm__ volatile("dsb sy" ::: "memory");
 	ScePervasiveForDriver_A7E64C6F();
-	while (getVeneziaRpcBootState() != 0x80000)
+	while (getRpcBootState() != 0x80000)
 		;
 	return ret;
 }

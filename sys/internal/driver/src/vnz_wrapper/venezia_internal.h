@@ -5,6 +5,7 @@
 #include <sysmem/cpu.h>
 #include <threadmgr/fast_mutex.h>
 #include <vnz_wrapper/venezia_rpc.h>
+#include <vnz_wrapper/vnz_wrapper.h>
 #include <lowio/pervasive_regs.h>
 #include <lowio/mailbox_regs.h>
 #include <dmacmgr/dmacmgr.h>
@@ -104,6 +105,14 @@ int _callGenericThunk(unsigned int command, const unsigned int *input,
 		      VeneziaRpcPack pack, VeneziaRpcUnpack unpack, unsigned int flags);
 int _callDebugThunk(unsigned int command, const unsigned int *input,
 		    VeneziaRpcPack pack, VeneziaRpcUnpack unpack);
+
+/*
+ * The RPC calls of dsp0_rpc.c for a caller that passes fewer than four argument words: the DSP
+ * gets the rest as the caller left the registers (names ours).
+ */
+int veneziaRpc(unsigned int command, ...) __asm__("callVeneziaRpc");
+int veneziaRpcWithoutClockLock(unsigned int command, ...) __asm__("callVeneziaRpcWithoutClockLock");
+int veneziaDebugRpc(unsigned int command, ...) __asm__("callVeneziaDebugRpc");
 
 /* name unknown: public snapshot of one RPC channel. */
 typedef struct VeneziaRpcHistoryEntry {
@@ -615,3 +624,174 @@ typedef struct CodecEngineMemory {
 } CodecEngineMemory;
 
 extern VeneziaVipState g_veneziaVipState;
+
+/* codecengine/codecengine.c */
+int initCodecEngine(void);
+int _sceCodecEngineProcessCreateEntry(SceUID pid, SceUInt32 type);
+int _sceCodecEngineProcessExitEntry(SceUID pid, SceUInt32 type);
+CodecEngineProcExitHandler *getProcExitHandlers(void);
+CodecEngineProcExitHandler *getProcKillHandlers(void);
+int _sceCodecEngineProcessSuspendPhase0(SceUID pid);
+int _sceCodecEngineProcessResume(SceUID pid);
+struct ThreadmgrFastMutex *_sceCodecEngineGetMutex(SceUID pid);
+CodecEngineUnmapMemBlockEntry *_sceCodecEngineGetUnmapMemBlockEntry(SceUID pid, SceUID guid);
+unsigned int *_sceCodecEngineGetProcessor(SceUID pid);
+
+/* codecengine/memory.c */
+int initializeCodecEngineMemoryClass(void);
+int isVeneziaPhysicalRangeContiguous(const void *base, SceSize size);
+int sceCodecEngineOpenUnmapMemBlockForUser(void *base, SceSize size);
+int _closeUnmapMemBlock(SceUID puid);
+void *sceCodecEngineAllocMemoryFromUnmapMemBlockForUser(SceUID puid, SceSize size,
+		SceSize alignment);
+int sceCodecEngineFreeMemoryFromUnmapMemBlockForUser(SceUID puid, void *address);
+int _closeUnmapMemBlockAll(SceUID pid);
+
+/* codecengine/processor.c */
+int initializeCodecEngineProcessor(void);
+int _sceCodecEngineProcessorProcessSuspend(SceUID pid);
+int _sceCodecEngineProcessorProcessResume(SceUID pid);
+int sceCodecEngineChangeNumWorkerCoresDefaultForUser(void);
+int sceCodecEngineChangeNumWorkerCoresMaxForUser(void);
+
+/* dsp0_debug.c */
+int resumeHwd(void);
+int initializeVeneziaVipProcessStorage(VeneziaVipProcessStorage *storage);
+int initializeVeneziaVipResources(void);
+int startVeneziaVipDriver(int mode);
+int dispatchVeneziaVipProcessSuspend(VeneziaVipProcessStorage *storage, int reason);
+int dispatchVeneziaVipProcessResume(VeneziaVipProcessStorage *storage);
+int dispatchVeneziaVipProcessReset(VeneziaVipProcessStorage *storage);
+
+/* dsp0_mailbox.c */
+int initVeneziaMailbox(void);
+int enableVeneziaMailboxInterrupts(void);
+int submitVeneziaRpc(unsigned int channel);
+int waitVeneziaRpc(unsigned int channel);
+unsigned int getCompletedVeneziaRpc(void);
+int callVeneziaRpcCommand500(unsigned int argument0, unsigned int argument1);
+
+/* entry.c */
+extern const SceKernelProcEventHandler codecEngineProcessEvents; /* name unknown */
+unsigned int codecEngineSystemEventHandler(int phase, unsigned int event);
+int codecEngineStartPhase2(void *arg);
+
+/* venezia/booter.c */
+int allocVeneziaImage(void);
+int _sceVeneziaBootPhase2(void);
+int _sceVeneziaSuspend(void);
+int _sceVeneziaResume(void);
+volatile ScePervasive2Registers *getVeneziaBootRegisters(void);
+
+/* venezia/dsp0_rpc.c */
+int initVeneziaRpc(void);
+int _sceVeneziaRpcClockDown(void);
+int callVeneziaRpcThunkWithoutClockLock(unsigned int command, const unsigned int *input,
+		VeneziaRpcPack pack, VeneziaRpcUnpack unpack);
+int waitVeneziaRpcSemas(void);
+int signalVeneziaRpcSemas(void);
+unsigned int getRpcFreeChannelCount(void);
+void *getRpcHeapBase(void);
+SceSize getRpcHeapSize(void);
+unsigned int getRpcBootState(void);
+unsigned int setRpcBootState(unsigned int state);
+int _sceVeneziaRpcGetHistory(VeneziaRpcHistoryEntry *history);
+void _sceVeneziaRpcPrintBlockingCalls(SceUID pid);
+int callVeneziaDebugRpcThunk(unsigned int command, const unsigned int *input, VeneziaRpcPack pack,
+		VeneziaRpcUnpack unpack);
+unsigned int getRpcFreeDebugChannelCount(void);
+int _sceVeneziaStoreContext(void);
+int _sceVeneziaLoadContext(void);
+
+/* venezia/heap.c */
+void _sceVeneziaHeapInit(void *base, VeneziaHeap *heap, SceSize size, SceSize regionSize);
+void *_storeUnitFixedCtrl(VeneziaHeap *heap, SceSize size, SceSize alignment);
+int freeVeneziaHeapMemory(VeneziaHeap *heap, void *memory, SceSize unused);
+int registerVeneziaHeapMemory(VeneziaHeap *heap, void *memory, SceSize size);
+int unregisterVeneziaHeapMemory(VeneziaHeap *heap, void *memory, SceSize size);
+int _sceVeneziaHeapIsRegistered(VeneziaHeap *heap, unsigned int unused0, unsigned int unused1);
+
+/* venezia/heapmgr.c */
+int initVeneziaHeapManager(VeneziaHeapManager *manager, void *base, SceSize size);
+void *_sceVeneziaHeapManagerAllocMemory(VeneziaHeapManager *manager, SceSize size,
+		SceSize alignment);
+int _procMemory(VeneziaHeapManager *manager, void *memory);
+int registerVeneziaHeapManagerMemory(VeneziaHeapManager *manager, void *memory, SceSize size);
+int unregisterVeneziaHeapManagerMemory(VeneziaHeapManager *manager, void *memory, SceSize size);
+int isVeneziaHeapManagerRegistered(VeneziaHeapManager *manager);
+
+/* venezia/simple_heap.c */
+void _sceVeneziaSimpleHeapInit(void *base, SceSize size, VeneziaSimpleHeap *heap, SceSize workSize,
+		SceSize blockSize);
+void *_sceVeneziaSimpleHeapAllocMemory(VeneziaSimpleHeap *heap, SceSize size);
+int _sceVeneziaSimpleHeapFreeMemory(VeneziaSimpleHeap *heap, void *memory);
+
+/* venezia/system.c */
+int initCodecEnginePerformanceMonitor(void);
+int resumePerformanceMonitor(void);
+int startPerformanceMonitorSuspend(void);
+int isPerformanceMonitorSuspended(void);
+int startCodecEnginePerformanceMonitor(void);
+int stopCodecEnginePerformanceMonitor(void);
+int getCodecEnginePerformanceResults(VeneziaPerformanceResult *result);
+int clearCodecEnginePerformanceCounters(void);
+int setVeneziaClockSelector(unsigned int selector);
+unsigned int getVeneziaPreferredClock(void);
+int veneziaClockSelector(int frequency);
+
+/* venezia/vapa.c */
+int initVeneziaRpcDma(void);
+void unpackVeneziaRpcMemory(VeneziaRpcThunk *thunk);
+int packVeneziaRpcWord(VeneziaRpcThunk *thunk, const unsigned int *arguments, unsigned int *packed);
+int packVeneziaRpcBuffer64(VeneziaRpcThunk *thunk, const unsigned int *arguments,
+		unsigned int *packed);
+
+/* venezia/venezia.c */
+int _sceVeneziaProcessCreateEntry(void);
+int _sceVeneziaStartEntryPhase2(void);
+int _sceVeneziaProcessCreateEntryInternal2(SceUID pid, SceUInt32 type);
+int _sceVeneziaProcessExitEntry(SceUID pid, SceUInt32 type);
+int _lockProcessSuspendCore(void);
+int _sceVeneziaStartProcessSuspend(SceUID pid);
+int _sceVeneziaProcessSuspendPhase0(SceUID pid);
+int _sceVeneziaProcessResume(SceUID pid);
+int _sceVeneziaStartSystemSuspend(void);
+int _sceVeneziaIsSystemSuspended(void);
+int suspendSystem(void);
+int _sceVeneziaSystemResumePhase0(void);
+int resumeSystem(void);
+void _sceVeneziaPrintBlockingCalls(SceUID pid);
+unsigned int getVeneziaClockLockCount(void);
+int _sceVeneziaRunInBackground(void);
+int _sceVeneziaStopInBackground(void);
+
+/* venezia/vnzmem.c */
+int initVeneziaRpcCommunicationMemory(void);
+int finalizeVeneziaRpcCommunicationMemory(void);
+int lockVeneziaCommunicationMemory(void);
+int unlockVeneziaCommunicationMemory(void);
+int signalVeneziaCommunicationMemory(unsigned int channel);
+void *_sceVeneziaAllocCommunicationMemory(SceSize size);
+int freeVeneziaCommunicationMemory(void *memory);
+
+/* vip/hwd0_vapa.c */
+int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request);
+int allocateVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block, const char *name,
+		unsigned int type, SceSize size, uintptr_t physicalAddress);
+int releaseVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block);
+int offsetVeneziaVipMemoryRegion(VeneziaVipMemoryRegion *destination,
+		const VeneziaVipMemoryRegion *source, SceSize offset);
+int setVeneziaVipMemoryRegion(VeneziaVipMemoryRegion *destination,
+		const VeneziaVipMemoryRegion *source, SceSize offset, SceSize size);
+int initializeVeneziaHwdDma(void);
+unsigned int decodeVeneziaVipNalLength(const uint8_t *bytes, unsigned int size);
+
+/* vip_fw_ver2/vip_process.c */
+int initializeVeneziaVipProcesses(void);
+int _sceHwd0ProcessCreateEntry(SceUID pid, SceUInt32 type);
+int releaseVeneziaVipProcessStorage(SceUID pid, SceUInt32 type);
+VeneziaVipProcessStorage *_sceVipGetVipProcessResource(SceUID pid);
+int waitVeneziaVipProcessReady(void);
+int _sceHwd0StartProcessSuspend(SceUID pid);
+int isHwdProcessSuspended(SceUID pid);
+int _sceHwd0ProcessResume(SceUID pid);

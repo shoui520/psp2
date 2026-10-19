@@ -6,9 +6,9 @@
 #include <dmacmgr/dmacmgr.h>
 #include <sysmem/sysclib.h>
 
-unsigned int SceCodecEngineWrapperForDriver_F9495589(unsigned int physical)
+void *SceCodecEngineWrapperForDriver_F9495589(uintptr_t physical)
 {
-	return veneziaPhysicalToVirtual(physical);
+	return (void *)veneziaPhysicalToVirtual(physical);
 }
 
 static inline __attribute__((always_inline)) unsigned int veneziaVirtualToPhysical(unsigned int address)
@@ -35,16 +35,10 @@ static inline __attribute__((always_inline)) unsigned int veneziaVirtualToPhysic
 	return 0;
 }
 
-unsigned int SceCodecEngineWrapperForDriver_C7C150AE(unsigned int address)
+uintptr_t SceCodecEngineWrapperForDriver_C7C150AE(const void *address)
 {
-	return veneziaVirtualToPhysical(address);
+	return veneziaVirtualToPhysical((uintptr_t)address);
 }
-
-#if FW_DEBUG
-extern int isVeneziaPhysicalRangeContiguous(const void *base, SceSize size);
-#else
-extern int isVeneziaPhysicalRangeContiguous(const void *base, SceSize size);
-#endif
 
 int sceCodecEngineDsp0ConvertVirtualToPhysical(VeneziaRpcThunk *thunk, void *base,
 					     SceSize size, const VeneziaMemoryOption *option)
@@ -177,12 +171,6 @@ int sceCodecEngineDsp0ConvertPhysicalToVirtual(VeneziaRpcThunk *thunk)
 	return 0;
 }
 
-extern int lockVeneziaCommunicationMemory(void);
-extern int unlockVeneziaCommunicationMemory(void);
-extern void *_sceVeneziaAllocCommunicationMemory(SceSize size);
-extern int freeVeneziaCommunicationMemory(void *memory);
-extern int signalVeneziaCommunicationMemory(unsigned int channel);
-
 int sceCodecEngineDsp0AllocCommunicationMemories(VeneziaRpcThunk *thunk)
 {
 	unsigned int count, i;
@@ -253,11 +241,6 @@ SceKernelDmaOpChainParam g_veneziaDmaChainParam = {
 	.size = sizeof(SceKernelDmaOpChainParam),
 	.coherencyMask = 0x3ffff,
 };
-int sceCodecEngineDsp0ConvertPhysicalToVirtual(VeneziaRpcThunk *thunk);
-int sceCodecEngineDsp0ConvertVirtualToPhysical(VeneziaRpcThunk *thunk, void *base,
-	SceSize size, const VeneziaMemoryOption *option);
-int sceCodecEngineDsp0AllocCommunicationMemories(VeneziaRpcThunk *thunk);
-int sceCodecEngineDsp0FreeCommunicationMemories(VeneziaRpcThunk *thunk);
 
 /* name unknown: allocate one DMA operation per RPC channel. */
 int initVeneziaRpcDma(void)

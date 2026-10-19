@@ -6,71 +6,7 @@
 #include <sysmem/suspend.h>
 #include <threadmgr/threadmgr.h>
 #include <lowio/pervasive.h>
-
-extern const SceKernelProcEventHandler codecEngineProcessEvents; /* name unknown */
-
-typedef int (*CodecEngineProcExitHandler)(SceUID pid, ProcEventParam *param,
-					void *common); /* name unknown */
-
-extern int sceCodecEngineDsp0IsProcessSuspended(SceUID pid);
-
-#if FW_VERSION >= 0x04000000
-extern CodecEngineProcExitHandler *getProcExitHandlers(void);
-extern CodecEngineProcExitHandler *getProcKillHandlers(void);
-extern int hwdProcessExit(SceUID pid, SceUInt32 type) __asm__("releaseVeneziaVipProcessStorage");
-extern int _sceCodecEngineProcessExitEntry(SceUID pid, SceUInt32 type);
-extern int _sceVeneziaProcessExitEntry(SceUID pid, SceUInt32 type);
-extern int _sceVeneziaProcessCreateEntryInternal2(SceUID pid, SceUInt32 type);
-extern int _sceHwd0ProcessCreateEntry(SceUID pid, SceUInt32 type);
-extern int _sceCodecEngineProcessCreateEntry(SceUID pid, SceUInt32 type);
-extern int suspendSystem(void); /* name unknown */
-extern int resumeSystem(void); /* name unknown */
-extern int resumeHwd(void) __asm__("resumeHwd"); /* name unknown */
-extern int _sceVeneziaStartSystemSuspend(void);
-extern int _sceVeneziaSystemResumePhase0(void);
-extern int _sceVeneziaIsSystemSuspended(void);
-extern void _sceVeneziaPrintBlockingCalls(SceUID pid);
-extern int _sceVeneziaStartEntryPhase2(void);
-extern int startHwdPhase2(void) __asm__("initializeVeneziaVipProcesses"); /* name unknown */
-extern int _sceCodecEngineProcessResume(SceUID pid);
-extern int _sceVeneziaProcessResume(SceUID pid);
-extern int _sceHwd0ProcessResume(SceUID pid);
-extern int _sceVeneziaStartProcessSuspend(SceUID pid);
-extern int _sceHwd0StartProcessSuspend(SceUID pid);
-extern int _sceVeneziaProcessSuspendPhase0(SceUID pid);
-extern int _sceCodecEngineProcessSuspendPhase0(SceUID pid);
-extern int isHwdProcessSuspended(SceUID pid) __asm__("isHwdProcessSuspended"); /* name unknown */
-extern int _sceVeneziaProcessCreateEntry(void);
-extern int initCodecEngine(void); /* name unknown */
-#else
-extern CodecEngineProcExitHandler *getProcExitHandlers(void);
-extern CodecEngineProcExitHandler *getProcKillHandlers(void);
-extern int hwdProcessExit(SceUID pid, SceUInt32 type) __asm__("releaseVeneziaVipProcessStorage");
-extern int _sceCodecEngineProcessExitEntry(SceUID pid, SceUInt32 type);
-extern int _sceVeneziaProcessExitEntry(SceUID pid, SceUInt32 type);
-extern int _sceVeneziaProcessCreateEntryInternal2(SceUID pid, SceUInt32 type);
-extern int _sceHwd0ProcessCreateEntry(SceUID pid, SceUInt32 type) __asm__("_sceHwd0ProcessCreateEntry");
-extern int _sceCodecEngineProcessCreateEntry(SceUID pid, SceUInt32 type);
-extern int suspendSystem(void);
-extern int resumeSystem(void);
-extern int resumeHwd(void) __asm__("resumeHwd");
-extern int _sceVeneziaStartSystemSuspend(void);
-extern int _sceVeneziaSystemResumePhase0(void);
-extern int _sceVeneziaIsSystemSuspended(void);
-extern void _sceVeneziaPrintBlockingCalls(SceUID pid);
-extern int _sceVeneziaStartEntryPhase2(void);
-extern int startHwdPhase2(void) __asm__("initializeVeneziaVipProcesses");
-extern int _sceCodecEngineProcessResume(SceUID pid);
-extern int _sceVeneziaProcessResume(SceUID pid);
-extern int _sceHwd0ProcessResume(SceUID pid) __asm__("_sceHwd0ProcessResume");
-extern int _sceVeneziaStartProcessSuspend(SceUID pid);
-extern int _sceHwd0StartProcessSuspend(SceUID pid) __asm__("_sceHwd0StartProcessSuspend");
-extern int _sceVeneziaProcessSuspendPhase0(SceUID pid);
-extern int _sceCodecEngineProcessSuspendPhase0(SceUID pid);
-extern int isHwdProcessSuspended(SceUID pid) __asm__("isHwdProcessSuspended");
-extern int _sceVeneziaProcessCreateEntry(void);
-extern int initCodecEngine(void);
-#endif
+#include "venezia_internal.h"
 
 int _veneziaWrapperModuleProcessExit(SceUID pid, ProcEventParam *param, void *common)
 {
@@ -92,7 +28,7 @@ int _veneziaWrapperModuleProcessExit(SceUID pid, ProcEventParam *param, void *co
 	}
 	type = param->type;
 	codecStatus = _sceCodecEngineProcessExitEntry(pid, type);
-	hwdStatus = hwdProcessExit(pid, type);
+	hwdStatus = releaseVeneziaVipProcessStorage(pid, type);
 	if (hwdStatus >= 0)
 		hwdStatus = codecStatus < 0 ? codecStatus : 0;
 	veneziaStatus = _sceVeneziaProcessExitEntry(pid, type);
@@ -166,7 +102,7 @@ int codecEngineStartPhase2(void *arg)
 	ret = _sceVeneziaStartEntryPhase2();
 	if (ret < 0)
 		return ret;
-	return startHwdPhase2();
+	return initializeVeneziaVipProcesses();
 }
 
 /* name unknown: registered process-start callback. */
@@ -232,7 +168,7 @@ int _veneziaWrapperModuleProcessKill(SceUID pid, ProcEventParam *param, void *co
 	}
 	type = param->type;
 	codecStatus = _sceCodecEngineProcessExitEntry(pid, type);
-	hwdStatus = hwdProcessExit(pid, type);
+	hwdStatus = releaseVeneziaVipProcessStorage(pid, type);
 	if (hwdStatus >= 0)
 		hwdStatus = codecStatus < 0 ? codecStatus : 0;
 	if (hwdStatus)
@@ -242,7 +178,6 @@ int _veneziaWrapperModuleProcessKill(SceUID pid, ProcEventParam *param, void *co
 		return veneziaStatus;
 	return status;
 }
-
 
 const SceKernelProcEventHandler codecEngineProcessEvents = {
 	.size = sizeof(SceKernelProcEventHandler),

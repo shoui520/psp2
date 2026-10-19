@@ -17,11 +17,6 @@
 #include <vnz_wrapper/venezia_debug.h>
 #include <string.h>
 
-int _sceCodecEngineProcessorProcessResume(SceUID pid);
-int _sceCodecEngineProcessorProcessSuspend(SceUID pid);
-
-extern int initializeCodecEngineProcessor(void);
-extern int initializeCodecEngineMemoryClass(void);
 int g_codecEngineProcessStorageKey;
 
 /* name unknown: allocate process storage and initialize the processor/memory owners. */
@@ -66,7 +61,6 @@ int _sceCodecEngineProcessCreateEntry(SceUID pid, SceUInt32 type)
 	return ret;
 }
 
-extern int _closeUnmapMemBlockAll(SceUID pid);
 int _sceCodecEngineProcessExitEntry(SceUID pid, SceUInt32 type)
 {
 	CodecEngineProcessStorage *storage = NULL;
@@ -88,7 +82,6 @@ int _sceCodecEngineProcessExitEntry(SceUID pid, SceUInt32 type)
 	return finalResult;
 }
 
-typedef int (*CodecEngineProcExitHandler)(SceUID pid, ProcEventParam *param, void *common);
 CodecEngineProcExitHandler g_codecEngineProcExitHandlers[4];
 CodecEngineProcExitHandler g_codecEngineProcKillHandlers[4];
 

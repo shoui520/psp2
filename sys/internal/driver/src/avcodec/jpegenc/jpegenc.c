@@ -1,6 +1,5 @@
 /* No JPEG encoder source-file name survives in this module's debug records. */
 #include "../audiodec/audiodec_internal.h"
-#include <vnz_wrapper/venezia_rpc.h>
 #include <scejpegenc.h>
 #include "jpegenc_internal.h"
 #include "../jpeg/jpeg_internal.h"
@@ -11,8 +10,6 @@
 #include <lowio/iftu.h>
 #include <string.h>
 
-int _lockProcessSuspendCore(void);
-int _unlockProcessSuspendCore(void);
 int jpegLockEncodeBuffer(unsigned int *physicalAddress, const void *buffer,
 			 SceSize size, unsigned int lockMode, int cacheMode,
 			 unsigned int allowCached);
@@ -36,9 +33,9 @@ static SceIftuCscParams jpegEncoderRgbToYCbCr = {
 
 void jpegEncoderFinishCommand(VeneziaRpcThunk *thunk)
 {
-	SceCodecEngineWrapperForDriver_07C53B4E(thunk);
-	SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
-	SceCodecEngineWrapperForDriver_1C2BC9F7(thunk);
+	sceCodecEngineDsp0ConvertPhysicalToVirtual(thunk);
+	sceCodecEngineDsp0MemcpyChain(thunk);
+	sceCodecEngineDsp0FreeCommunicationMemories(thunk);
 }
 
 int jpegEncoderPackCommand(VeneziaRpcThunk *thunk, const unsigned int *input,
@@ -52,16 +49,16 @@ int jpegEncoderPackCommand(VeneziaRpcThunk *thunk, const unsigned int *input,
 	option.allocationSize = 384;
 	packed[2] = input[2];
 	packed[3] = input[3];
-	SceCodecEngineWrapperForDriver_47AED6FF(thunk, (void *)input[1], 384, &option);
-	SceCodecEngineWrapperForDriver_03EA6C2A(thunk);
-	ret = SceCodecEngineWrapperForDriver_D1F94D9D(thunk);
+	sceCodecEngineDsp0ConvertVirtualToPhysical(thunk, (void *)input[1], 384, &option);
+	sceCodecEngineDsp0AllocCommunicationMemories(thunk);
+	ret = sceCodecEngineDsp0MemcpyChain(thunk);
 	packed[1] = thunk->memories[0].physicalBase;
 	return ret;
 }
 
 int initializeJpegEncoder(void)
 {
-	jpegEncoderChannel = SceCodecEngineWrapperForDriver_6A1184EA(0);
+	jpegEncoderChannel = sceCodecEngineDsp0GetThreadExecGroup(0);
 	return 0;
 }
 
@@ -90,7 +87,7 @@ int SceAvcodecForDriver_468949D7(SceJpegEncoderContext context, const void *pYCb
 	unsigned int alignedOutput;
 	int ret;
 
-	ret = _lockProcessSuspendCore();
+	ret = SceCodecEngineWrapperForDriver_CB8703D8();
 	if (ret < 0) {
 		sceSyscallLeave(syscallState);
 		return ret;
