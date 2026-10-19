@@ -15,14 +15,11 @@
 #include <sysmem/uid_class.h>
 
 #define RW_LOCK_ITEM_SIZE		0x80	/* the class's object allocation size */
-#define RW_LOCK_ATTR_RECURSIVE		0x00000002
 #define RW_LOCK_ATTR_KERNEL		0x00000040
-#define RW_LOCK_ATTR_LW			0x00000080
 #define RW_LOCK_ATTR_UNLIMITED		0x00004000
 #define RW_LOCK_KERNEL_ATTR_MASK	0x0000a086	/* what kernel callers may pass */
 #define RW_LOCK_USER_ATTR_MASK		0x00002086	/* what a syscall may pass */
 #define RW_LOCK_OPTION_MAX_SIZE		4
-#define RW_LOCK_UID_ATTR_LW		0x0000c000	/* PLACEHOLDER: name */
 #define RW_LOCK_MODE_READ		0
 #define RW_LOCK_MODE_WRITE		1
 #define RW_LOCK_COUNT_MAX		0x7fffffff
@@ -182,8 +179,8 @@ static int uidRWLock_Destructor(void *object)
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
-			if (rwLock->attr & RW_LOCK_ATTR_LW)
-				process->uidLwCount--;
+			if (rwLock->attr & SCE_KERNEL_ATTR_OPENABLE)
+				process->uidOpenableCount--;
 			else if (rwLock->attr & RW_LOCK_ATTR_UNLIMITED)
 				process->uidUnlimitedCount--;
 			else
@@ -247,7 +244,7 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 	if (rwLock->core.writer == thread) {
 		ret = SCE_KERNEL_ERROR_RW_LOCK_FAILED_TO_LOCK;
 		if (mode != RW_LOCK_MODE_READ) {
-			if (rwLock->attr & RW_LOCK_ATTR_RECURSIVE) {
+			if (rwLock->attr & SCE_KERNEL_RW_LOCK_ATTR_RECURSIVE) {
 				if (rwLock->core.lockCount == RW_LOCK_COUNT_MAX) {
 					ret = SCE_KERNEL_ERROR_RW_LOCK_LOCK_OVF;
 				} else {
@@ -518,7 +515,7 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 		uid = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 		goto restore;
 	}
-	uidAttr = (attr & RW_LOCK_ATTR_LW) ? RW_LOCK_UID_ATTR_LW : 0;
+	uidAttr = (attr & SCE_KERNEL_ATTR_OPENABLE) ? UID_ATTR_OPENABLE : 0;
 	if (!ThreadmgrInSyscall())
 		attr |= RW_LOCK_ATTR_KERNEL;
 	opt.object = NULL;
@@ -530,7 +527,7 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 	opt.cls = NULL;
 	opt.flags = UID_CREATE_OPT_ATTR;
 	opt.attr = uidAttr;
-	if (ThreadmgrInSyscall() && !(attr & RW_LOCK_ATTR_LW)) {
+	if (ThreadmgrInSyscall() && !(attr & SCE_KERNEL_ATTR_OPENABLE)) {
 		opt.pid = thread->processId;
 		if (thread->currentAttr & THREAD_ATTR_UNLIMITED)
 			attr |= RW_LOCK_ATTR_UNLIMITED;
@@ -542,8 +539,8 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 	} else {
 		process = thread->process;
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
-		if (attr & RW_LOCK_ATTR_LW) {
-			if (process->uidLwCount >= 0x100) {
+		if (attr & SCE_KERNEL_ATTR_OPENABLE) {
+			if (process->uidOpenableCount >= 0x100) {
 				sceKernelSpinlockLowUnlock(&process->resourceLock);
 				SCE_DBG_ASSERT_PRINTF(0, 731, "sceKernelCreateRWLock(), "
 					"SCE_KERNEL_ERROR_UID_RL_OVERFLOW, processId=0x%08X\n",
@@ -551,8 +548,8 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 				uid = SCE_KERNEL_ERROR_UID_RL_OVERFLOW | SYSCALL_ERROR_BIT;
 				goto resume;
 			}
-			if (++process->uidLwCount > process->uidLwPeak)
-				process->uidLwPeak = process->uidLwCount;
+			if (++process->uidOpenableCount > process->uidOpenablePeak)
+				process->uidOpenablePeak = process->uidOpenableCount;
 		} else if (attr & RW_LOCK_ATTR_UNLIMITED) {
 			if (++process->uidUnlimitedCount > process->uidUnlimitedPeak)
 				process->uidUnlimitedPeak = process->uidUnlimitedCount;
@@ -577,8 +574,8 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
-			if (attr & RW_LOCK_ATTR_LW)
-				process->uidLwCount--;
+			if (attr & SCE_KERNEL_ATTR_OPENABLE)
+				process->uidOpenableCount--;
 			else if (attr & RW_LOCK_ATTR_UNLIMITED)
 				process->uidUnlimitedCount--;
 			else
@@ -798,7 +795,7 @@ int sceKernelTryLockWriteRWLock(SceUID rwLockId)
 	}
 	sceKernelSpinlockLowLock(&rwLock->lock);
 	if (rwLock->core.writer == thread) {
-		if (rwLock->attr & RW_LOCK_ATTR_RECURSIVE) {
+		if (rwLock->attr & SCE_KERNEL_RW_LOCK_ATTR_RECURSIVE) {
 			if (rwLock->core.lockCount == RW_LOCK_COUNT_MAX) {
 				ret = SCE_KERNEL_ERROR_RW_LOCK_LOCK_OVF;
 			} else {

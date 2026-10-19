@@ -28,7 +28,6 @@
 #define WORK_QUEUE_ATTR_PRIORITY	0x00000002	/* the option's thread priority */
 #define WORK_QUEUE_ATTR_STACK_SIZE	0x00000004
 #define WORK_QUEUE_ATTR_CPU_AFFINITY	0x00000008
-#define WORK_QUEUE_ATTR_KERNEL		0x00000080	/* PLACEHOLDER: a kernel object even from a syscall */
 #define WORK_QUEUE_ATTR_TASK_PRIORITY	0x00002000	/* tasks run by the scheduler's priority */
 #define WORK_QUEUE_ATTR_VALID		0x0000200f
 #define WORK_QUEUE_MAX_THREADS		4
@@ -1011,7 +1010,7 @@ SceUID sceKernelCreateWorkQueue(const char *name, SceUInt32 attr,
 	}
 	opt = (UIDCreateOpt){ .flags = UID_CREATE_OPT_ATTR };
 	objectAttr = attr;
-	if (ThreadmgrInSyscall() && !(attr & WORK_QUEUE_ATTR_KERNEL)) {
+	if (ThreadmgrInSyscall() && !(attr & SCE_KERNEL_ATTR_OPENABLE)) {
 		opt.pid = thread->processId;
 		opt.flags |= UID_CREATE_OPT_PROCESS_HEAP;
 		if (thread->currentAttr & THREAD_ATTR_UNLIMITED)

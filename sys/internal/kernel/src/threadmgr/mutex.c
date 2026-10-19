@@ -53,7 +53,7 @@ int getMutexInfo(SceUID mutexId, SceKernelMutexInfo *info)
 		info->numWaitThreads = mutex->waiting;
 		if (mutex->core.owner != NULL)
 			info->currentOwnerId = mutex->core.owner->threadId;
-		if (mutex->attr & MUTEX_ATTR_CEILING)
+		if (mutex->attr & SCE_KERNEL_MUTEX_ATTR_CEILING)
 			info->ceilingPriority = mutex->core.ceilingPriority;
 		else
 			info->ceilingPriority = 0;
@@ -84,7 +84,7 @@ void acquireMutex(ThreadmgrMutex *mutex, struct ThreadCB *thread, int count)
 	SCE_DBG_ASSERT_CHECK(thread->lock != 0, 131);
 	mutex->core.lockCount = count;
 	mutex->core.owner = thread;
-	if (!(mutex->attr & MUTEX_ATTR_CEILING)) {
+	if (!(mutex->attr & SCE_KERNEL_MUTEX_ATTR_CEILING)) {
 		mutex->core.ownerLink.next = head;
 		mutex->core.ownerLink.prev = head->prev;
 		head->prev = &mutex->core.ownerLink;
@@ -184,7 +184,7 @@ int findNextCeilingPriority(struct ThreadCB *thread)
 	else if (SceSysrootForDriver_CAE820B2(thread->processId, &sdkVersion) < 0)
 		sdkVersion = 0;
 	first = MUTEX_FROM_OWNER_LINK(head->next);
-	if (head->next == head || !(first->attr & MUTEX_ATTR_CEILING)) {
+	if (head->next == head || !(first->attr & SCE_KERNEL_MUTEX_ATTR_CEILING)) {
 		ceiling = PRIORITY_NONE;
 	} else {
 		ceiling = first->core.ceilingPriority;
@@ -268,8 +268,8 @@ retry:
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
-			if (mutex->attr & MUTEX_ATTR_LW)
-				process->uidLwCount--;
+			if (mutex->attr & SCE_KERNEL_ATTR_OPENABLE)
+				process->uidOpenableCount--;
 			else if (mutex->attr & MUTEX_ATTR_UNLIMITED)
 				process->uidUnlimitedCount--;
 			else
@@ -406,7 +406,6 @@ int mutexProcessExit(SceProcessObject *process)
 #define MUTEX_KERNEL_ATTR_MASK		0x0000a086	/* what kernel callers may pass */
 #define MUTEX_USER_ATTR_MASK		0x00002086	/* what a syscall may pass */
 #define MUTEX_OPTION_MAX_SIZE		8
-#define MUTEX_UID_ATTR_LW		0x0000c000	/* PLACEHOLDER: name */
 #define CEILING_OFFSET_FLAG		0x10000000	/* the ceiling is an offset from the default */
 #define CEILING_OFFSET_BASE		0x10000100
 #define CEILING_OFFSET_MIN		(-0x20)
@@ -459,12 +458,12 @@ SceUID sceKernelCreateMutex(const char *name, SceUInt32 attr, int initCount,
 		uid = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 		goto restore;
 	}
-	uidAttr = (attr & MUTEX_ATTR_LW) ? MUTEX_UID_ATTR_LW : 0;
-	if ((attr & MUTEX_ATTR_CEILING) && option == NULL) {
+	uidAttr = (attr & SCE_KERNEL_ATTR_OPENABLE) ? UID_ATTR_OPENABLE : 0;
+	if ((attr & SCE_KERNEL_MUTEX_ATTR_CEILING) && option == NULL) {
 		uid = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 		goto restore;
 	}
-	if (initCount < 0 || (initCount > 1 && !(attr & MUTEX_ATTR_RECURSIVE))) {
+	if (initCount < 0 || (initCount > 1 && !(attr & SCE_KERNEL_MUTEX_ATTR_RECURSIVE))) {
 		uid = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		goto restore;
 	}
@@ -472,7 +471,7 @@ SceUID sceKernelCreateMutex(const char *name, SceUInt32 attr, int initCount,
 		opt.pid = 0;
 		opt.heapKind = 0;
 		opt.flags = UID_CREATE_OPT_ATTR;
-		if (!(attr & MUTEX_ATTR_LW)) {
+		if (!(attr & SCE_KERNEL_ATTR_OPENABLE)) {
 			opt.pid = thread->processId;
 			opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;
 			if (thread->currentAttr & THREAD_ATTR_UNLIMITED)
@@ -493,7 +492,7 @@ SceUID sceKernelCreateMutex(const char *name, SceUInt32 attr, int initCount,
 	opt.cls = NULL;
 	intr = SceCpuForDriver_821FC0EE();
 	typeId = -1;
-	if (!(attr & MUTEX_ATTR_CEILING)) {
+	if (!(attr & SCE_KERNEL_MUTEX_ATTR_CEILING)) {
 		ceiling = PRIORITY_NONE;
 		goto create;
 	}
@@ -565,8 +564,8 @@ create:
 	if (userRo & USERRO_IN_SYSCALL) {
 		process = thread->process;
 		sceKernelSpinlockLowLock(&process->resourceLock);
-		if (attr & MUTEX_ATTR_LW) {
-			if (process->uidLwCount >= 0x100) {
+		if (attr & SCE_KERNEL_ATTR_OPENABLE) {
+			if (process->uidOpenableCount >= 0x100) {
 				sceKernelSpinlockLowUnlock(&process->resourceLock);
 				SCE_DBG_ASSERT_PRINTF_FUNC(0, 927, "sceKernelCreateMutex", "sceKernelCreateMutex(), "
 					"SCE_KERNEL_ERROR_UID_RL_OVERFLOW, processId=0x%08X\n",
@@ -574,8 +573,8 @@ create:
 				uid = SCE_KERNEL_ERROR_UID_RL_OVERFLOW | SYSCALL_ERROR_BIT;
 				goto resume;
 			}
-			if (++process->uidLwCount > process->uidLwPeak)
-				process->uidLwPeak = process->uidLwCount;
+			if (++process->uidOpenableCount > process->uidOpenablePeak)
+				process->uidOpenablePeak = process->uidOpenableCount;
 		} else if (attr & MUTEX_ATTR_UNLIMITED) {
 			if (++process->uidUnlimitedCount > process->uidUnlimitedPeak)
 				process->uidUnlimitedPeak = process->uidUnlimitedCount;
@@ -634,8 +633,8 @@ create:
 	goto resume;
 unaccount:
 	sceKernelSpinlockLowLock(&process->resourceLock);
-	if (attr & MUTEX_ATTR_LW)
-		process->uidLwCount--;
+	if (attr & SCE_KERNEL_ATTR_OPENABLE)
+		process->uidOpenableCount--;
 	else if (attr & MUTEX_ATTR_UNLIMITED)
 		process->uidUnlimitedCount--;
 	else
@@ -683,7 +682,7 @@ int sceKernelDeleteMutex(SceUID mutexId)
 	} else {									\
 		__first = (struct ThreadCB *)(mutex)->next;		\
 		SCE_DBG_ASSERT_CHECK(__first->magic == THREAD_CB_MAGIC, line);	\
-		if ((mutex)->attr & MUTEX_ATTR_PRIORITY) {				\
+		if ((mutex)->attr & SCE_KERNEL_MUTEX_ATTR_TH_PRIO) {		\
 			sceKernelSpinlockLowLock(THREAD_LOCK(__first));		\
 			__firstPriority = __first->currentPriority;			\
 			__priority = (thread)->currentPriority;				\
@@ -739,12 +738,12 @@ int lockMutex(SceUID mutexId, int count, SceUInt32 *timeout, int callbacks)
 		goto resume;
 	}
 	sceKernelSpinlockLowLock(&mutex->lock);
-	if (count < 1 || (count != 1 && !(mutex->attr & MUTEX_ATTR_RECURSIVE))) {
+	if (count < 1 || (count != 1 && !(mutex->attr & SCE_KERNEL_MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		goto unlock;
 	}
 	if (mutex->core.owner == thread) {
-		if (mutex->attr & MUTEX_ATTR_RECURSIVE) {
+		if (mutex->attr & SCE_KERNEL_MUTEX_ATTR_RECURSIVE) {
 			count += mutex->core.lockCount;
 			if (count < 0) {
 				ret = SCE_KERNEL_ERROR_MUTEX_LOCK_OVF;
@@ -860,10 +859,10 @@ int sceKernelTryLockMutex(SceUID mutexId, int count)
 		goto resume;
 	}
 	sceKernelSpinlockLowLock(&mutex->lock);
-	if (count < 1 || (count != 1 && !(mutex->attr & MUTEX_ATTR_RECURSIVE))) {
+	if (count < 1 || (count != 1 && !(mutex->attr & SCE_KERNEL_MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 	} else if (mutex->core.owner == thread) {
-		if (mutex->attr & MUTEX_ATTR_RECURSIVE) {
+		if (mutex->attr & SCE_KERNEL_MUTEX_ATTR_RECURSIVE) {
 			count += mutex->core.lockCount;
 			if (count < 0) {
 				ret = SCE_KERNEL_ERROR_MUTEX_LOCK_OVF;
@@ -926,7 +925,7 @@ int sceKernelUnlockMutex(SceUID mutexId, int count)
 	}
 	sceKernelSpinlockLowLock(&mutex->lock);
 	thread = currentThreadContext();
-	if (count < 1 || (count != 1 && !(mutex->attr & MUTEX_ATTR_RECURSIVE))) {
+	if (count < 1 || (count != 1 && !(mutex->attr & SCE_KERNEL_MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		goto unlock;
 	}
@@ -1021,7 +1020,7 @@ int sceKernelCancelMutex(SceUID mutexId, int newCount, int *numWaitThreads)
 	sceKernelSpinlockLowLock(&mutex->lock);
 	if (newCount < 0)
 		newCount = mutex->core.initCount;
-	if (newCount > 1 && !(mutex->attr & MUTEX_ATTR_RECURSIVE)) {
+	if (newCount > 1 && !(mutex->attr & SCE_KERNEL_MUTEX_ATTR_RECURSIVE)) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		sceKernelSpinlockLowUnlock(&mutex->lock);
 		sceGUIDReleaseObject(mutexId);
@@ -1208,12 +1207,12 @@ int lockMutexForCond(SceUID mutexId, int count, SceUInt32 *timeout, int callback
 		return SCE_KERNEL_ERROR_UNKNOWN_MUTEX_ID;
 	}
 	sceKernelSpinlockLowLock(&mutex->lock);
-	if (count < 1 || (count != 1 && !(mutex->attr & MUTEX_ATTR_RECURSIVE))) {
+	if (count < 1 || (count != 1 && !(mutex->attr & SCE_KERNEL_MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		goto unlock;
 	}
 	if (mutex->core.owner == thread) {
-		if (mutex->attr & MUTEX_ATTR_RECURSIVE) {
+		if (mutex->attr & SCE_KERNEL_MUTEX_ATTR_RECURSIVE) {
 			count += mutex->core.lockCount;
 			if (count < 0) {
 				ret = SCE_KERNEL_ERROR_MUTEX_LOCK_OVF;

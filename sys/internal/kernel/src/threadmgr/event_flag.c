@@ -19,7 +19,6 @@
 #define EVF_KERNEL_ATTR_MASK		0x0000b080	/* what kernel callers may pass */
 #define EVF_USER_ATTR_MASK		0x00003080	/* what a syscall may pass */
 #define EVF_OPTION_MAX_SIZE		4
-#define EVF_UID_ATTR_LW			0x0000c000	/* PLACEHOLDER: name */
 
 /* whether pattern satisfies a waiter's request under mode */
 static inline int EventFlagMatches(uint32_t pattern, uint32_t request, uint32_t mode)
@@ -88,8 +87,8 @@ static int uidEventFlag_Destructor(void *object)
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
-			if (evf->attr & EVF_ATTR_LW)
-				process->uidLwCount--;
+			if (evf->attr & SCE_KERNEL_ATTR_OPENABLE)
+				process->uidOpenableCount--;
 			else if (evf->attr & EVF_ATTR_UNLIMITED)
 				process->uidUnlimitedCount--;
 			else
@@ -108,7 +107,7 @@ static int uidEventFlag_Destructor(void *object)
 
 /*
  * Waits until the flag's pattern matches (AND or OR of the requested bits),
- * then optionally clears it. Without EVF_ATTR_MULTI only one thread may wait.
+ * then optionally clears it. Without SCE_KERNEL_EVF_ATTR_MULTI only one thread may wait.
  */
 int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern,
 		  SceUInt32 *timeout, int callbacks)
@@ -171,7 +170,7 @@ int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPa
 		goto resume;
 	}
 	sceKernelSpinlockLowLock(&evf->lock);
-	if (!(evf->attr & EVF_ATTR_MULTI)) {
+	if (!(evf->attr & SCE_KERNEL_EVF_ATTR_MULTI)) {
 		if (evf->core.holder == NULL) {
 			ListNode *head =
 				(ListNode *)&thread->heldEventFlagNext;
@@ -432,10 +431,10 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 		uid = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 		goto restore;
 	}
-	if (attr & EVF_ATTR_LW) {
+	if (attr & SCE_KERNEL_ATTR_OPENABLE) {
 		memset(&opt, 0, sizeof(opt));
 		opt.flags = UID_CREATE_OPT_ATTR;
-		opt.attr = EVF_UID_ATTR_LW;
+		opt.attr = UID_ATTR_OPENABLE;
 	} else {
 		memset(&opt, 0, sizeof(opt));
 		opt.flags = UID_CREATE_OPT_ATTR;
@@ -452,8 +451,8 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 	} else {
 		process = thread->process;
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
-		if (attr & EVF_ATTR_LW) {
-			if (process->uidLwCount >= 0x100) {
+		if (attr & SCE_KERNEL_ATTR_OPENABLE) {
+			if (process->uidOpenableCount >= 0x100) {
 				sceKernelSpinlockLowUnlock(&process->resourceLock);
 				SCE_DBG_ASSERT_PRINTF_FUNC(0, 582, "sceKernelCreateEventFlag", "sceKernelCreateEventFlag(), "
 					"SCE_KERNEL_ERROR_UID_RL_OVERFLOW, processId=0x%08X\n",
@@ -461,8 +460,8 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 				uid = SCE_KERNEL_ERROR_UID_RL_OVERFLOW | SYSCALL_ERROR_BIT;
 				goto resume;
 			}
-			if (++process->uidLwCount > process->uidLwPeak)
-				process->uidLwPeak = process->uidLwCount;
+			if (++process->uidOpenableCount > process->uidOpenablePeak)
+				process->uidOpenablePeak = process->uidOpenableCount;
 		} else if (attr & EVF_ATTR_UNLIMITED) {
 			if (++process->uidUnlimitedCount > process->uidUnlimitedPeak)
 				process->uidUnlimitedPeak = process->uidUnlimitedCount;
@@ -487,8 +486,8 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
-			if (attr & EVF_ATTR_LW)
-				process->uidLwCount--;
+			if (attr & SCE_KERNEL_ATTR_OPENABLE)
+				process->uidOpenableCount--;
 			else if (attr & EVF_ATTR_UNLIMITED)
 				process->uidUnlimitedCount--;
 			else
@@ -587,7 +586,8 @@ int sceKernelPollEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32
 		goto resume;
 	}
 	sceKernelSpinlockLowLock(&evf->lock);
-	if (!(evf->attr & EVF_ATTR_MULTI) && evf->core.holder != NULL && evf->core.holder != thread) {
+	if (!(evf->attr & SCE_KERNEL_EVF_ATTR_MULTI) && evf->core.holder != NULL &&
+	    evf->core.holder != thread) {
 		ret = SCE_KERNEL_ERROR_EVF_MULTI;
 	} else {
 		ret = EventFlagMatches(evf->core.pattern, pattern, mode);

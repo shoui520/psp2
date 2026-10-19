@@ -69,7 +69,8 @@
 /* the UIDs of a process */
 #define THREADMGR_KERNEL_PID		0x10005
 #define UID_MAX_PER_PROCESS		0x800
-#define UID_LW_MAX_PER_PROCESS		0x100
+#define UID_OPENABLE_MAX_PER_PROCESS	0x100	/* SCE_KERNEL_ATTR_OPENABLE objects */
+#define UID_ATTR_OPENABLE		0x0000c000	/* PLACEHOLDER: name; openable UIDs */
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 #define THREAD_ID_LIST_ALL		0x00010021	/* PLACEHOLDER: name; every thread */
 #define THREAD_CLASS()			(s_threadmgrRuntime.manager->threadClass)
@@ -444,7 +445,7 @@ _Static_assert(offsetof(SceProcessObject, threads) == 0x2d0 &&
 	       offsetof(SceProcessObject, eventFlagCount) == 0x384 &&
 	       offsetof(SceProcessObject, mutexCount) == 0x3a4 &&
 	       offsetof(SceProcessObject, semaCount) == 0x3b4 &&
-	       offsetof(SceProcessObject, uidLwCount) == 0x3e4,
+	       offsetof(SceProcessObject, uidOpenableCount) == 0x3e4,
 	       "threadmgr process resource counts");
 _Static_assert(offsetof(struct ThreadRegisterContext, pmcntenset) == 0xf0 &&
 	       offsetof(struct ThreadCB, processLink) == 0x90,

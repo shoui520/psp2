@@ -3735,10 +3735,9 @@ int sceKernelClearEventFlagForUser(SceUID evfId, uint32_t pattern)
  */
 
 #define UID_NAME_SIZE			32
-#define UID_ATTR_NAME_CHECKED		0x00000080	/* a name too long is an error */
 #define USER_ERROR_UID_NAME_TOO_LONG	0xc0024002
 
-/* copyinUIDNameWithAttr: a user's object name; with UID_ATTR_NAME_CHECKED, at most 31 chars */
+/* copyinUIDNameWithAttr: a user's object name; with SCE_KERNEL_ATTR_OPENABLE, at most 31 chars */
 int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attributes)
 {
 	int result;
@@ -3753,7 +3752,7 @@ int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attributes)
 			       "sceKernelStrncpyFromUser()=0x%08X\n", result);
 		return result;
 	}
-	if (!(attributes & UID_ATTR_NAME_CHECKED) || result < UID_NAME_SIZE)
+	if (!(attributes & SCE_KERNEL_ATTR_OPENABLE) || result < UID_NAME_SIZE)
 		return 0;
 	name[UID_NAME_SIZE - 1] = '\0';
 	SCE_DBG_PRINTF(0, 129, "***\n***\n***\n*** error: copyinUIDNameWithAttr(\"%s\") = "
@@ -3804,7 +3803,7 @@ int sceKernelOpenEventFlag(const char *userName)
 	char name[UID_NAME_SIZE];
 	int result;
 
-	result = copyinUIDNameWithAttr(name, userName, UID_ATTR_NAME_CHECKED);
+	result = copyinUIDNameWithAttr(name, userName, SCE_KERNEL_ATTR_OPENABLE);
 	if (result < 0)
 		return result;
 	result = SceSysmemForKernel_BDE00106(name);

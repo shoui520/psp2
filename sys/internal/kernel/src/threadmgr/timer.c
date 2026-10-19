@@ -23,7 +23,6 @@
 #define TIMER_INTR			0x8d	/* the LT5's interrupt */
 #define TIMER_MIN_DELAY			200	/* microseconds */
 #define TIMER_ITEM_SIZE			0x80	/* the class's object allocation size */
-#define TIMER_ATTR_LW			0x00000080
 #define TIMER_ATTR_UNLIMITED		0x00004000
 #define TIMER_KERNEL_ATTR_MASK		0x0000a980	/* what kernel callers may pass */
 #define TIMER_USER_ATTR_MASK		0x00002980	/* what a syscall may pass */
@@ -32,7 +31,6 @@
 #define TIMER_EVENT_CREATED		0x00000004
 #define TIMER_EVENT_DELETED		0x00000008
 #define TIMER_EVENT_PROCESS_EXITED	0x00000200
-#define TIMER_UID_ATTR_LW		0x0000c000	/* PLACEHOLDER: name */
 #define SDK_VERSION_DELAY_TIMEOUT	0x020fffff	/* newer SDKs time out a wait already due */
 #define SDK_VERSION_DELETE_CHECK	0x03100000	/* from here delete must match create */
 #define ALARM_HOOK_CREATE		5
@@ -396,8 +394,8 @@ static int uidTimer_Destructor(void *object)
 	if (sceGUIDReferObjectWithClass(pid, PROCESS_CLASS(), (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
-			if (uidTimer->base.event.attr & TIMER_ATTR_LW)
-				process->uidLwCount--;
+			if (uidTimer->base.event.attr & SCE_KERNEL_ATTR_OPENABLE)
+				process->uidOpenableCount--;
 			else if (uidTimer->base.event.attr & TIMER_ATTR_UNLIMITED)
 				process->uidUnlimitedCount--;
 			else
@@ -1119,10 +1117,10 @@ SceUID sceKernelCreateTimer(const char *name, SceUInt32 attr,
 		uid = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 		goto restore;
 	}
-	if (attr & TIMER_ATTR_LW) {
+	if (attr & SCE_KERNEL_ATTR_OPENABLE) {
 		memset(&opt, 0, sizeof(opt));
 		opt.flags = UID_CREATE_OPT_ATTR;
-		opt.attr = TIMER_UID_ATTR_LW;
+		opt.attr = UID_ATTR_OPENABLE;
 	} else {
 		memset(&opt, 0, sizeof(opt));
 		opt.flags = UID_CREATE_OPT_ATTR;
@@ -1146,8 +1144,8 @@ SceUID sceKernelCreateTimer(const char *name, SceUInt32 attr,
 		process = thread->process;
 		sceKernelSpinlockLowLock(&process->resourceLock);
 #endif
-		if (attr & TIMER_ATTR_LW) {
-			if (process->uidLwCount >= UID_LW_MAX_PER_PROCESS) {
+		if (attr & SCE_KERNEL_ATTR_OPENABLE) {
+			if (process->uidOpenableCount >= UID_OPENABLE_MAX_PER_PROCESS) {
 				sceKernelSpinlockLowUnlock(&process->resourceLock);
 				SCE_DBG_ASSERT_PRINTF(0, 1317, "sceKernelCreateTimer(), "
 					"SCE_KERNEL_ERROR_UID_RL_OVERFLOW, processId=0x%08X\n",
@@ -1155,8 +1153,8 @@ SceUID sceKernelCreateTimer(const char *name, SceUInt32 attr,
 				uid = SCE_KERNEL_ERROR_UID_RL_OVERFLOW | SYSCALL_ERROR_BIT;
 				goto resume;
 			}
-			if (++process->uidLwCount > process->uidLwPeak)
-				process->uidLwPeak = process->uidLwCount;
+			if (++process->uidOpenableCount > process->uidOpenablePeak)
+				process->uidOpenablePeak = process->uidOpenableCount;
 		} else if (attr & TIMER_ATTR_UNLIMITED) {
 			if (++process->uidUnlimitedCount > process->uidUnlimitedPeak)
 				process->uidUnlimitedPeak = process->uidUnlimitedCount;
@@ -1181,8 +1179,8 @@ SceUID sceKernelCreateTimer(const char *name, SceUInt32 attr,
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
-			if (attr & TIMER_ATTR_LW)
-				process->uidLwCount--;
+			if (attr & SCE_KERNEL_ATTR_OPENABLE)
+				process->uidOpenableCount--;
 			else if (attr & TIMER_ATTR_UNLIMITED)
 				process->uidUnlimitedCount--;
 			else

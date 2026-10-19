@@ -10,8 +10,6 @@
 #include "mutex.h"
 #include <threadmgr/lw_mutex.h>
 
-#define LW_MUTEX_ATTR_RECURSIVE		0x00000002
-#define LW_MUTEX_ATTR_PRIORITY		0x00002000
 #define LW_MUTEX_ATTR_UNLIMITED		0x00004000
 
 /* the user's SceKernelLwCondWork (0x10) */

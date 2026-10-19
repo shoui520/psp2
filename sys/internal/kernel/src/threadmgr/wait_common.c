@@ -101,8 +101,6 @@ const struct ThreadmgrSchedProbeDescriptor s_schedSleepDescriptor = {
 
 typedef void (*ThreadmgrSchedSleepHandler)(const struct ThreadmgrSchedProbeDescriptor *probe);
 
-#define WAIT_ATTR_PRIORITY		0x00002000
-
 /* the class a wait type's object belongs to */
 static inline SceClass *WaitTypeClass(uint32_t waitType)
 {
@@ -286,7 +284,7 @@ cancelled:
 	queue->waiting++;
 	SCE_DBG_ASSERT_CHECK(queue->waiting != 0, 294);
 	thread->status = (thread->status & 0xffff0000) | SCE_KERNEL_THREAD_STATUS_WAITING;
-	if (queue->attributes & WAIT_ATTR_PRIORITY) {
+	if (queue->attributes & SCE_KERNEL_ATTR_TH_PRIO) {
 		insertPriorityQueue(waitable, thread);
 	} else {
 		self->next = (struct ThreadmgrWaitNode *)queue;

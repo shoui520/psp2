@@ -32,11 +32,9 @@ __attribute__((section(SCE_DBGSRC_SECTION), used)) = {
 #define COND_ITEM_SIZE			0x80	/* the class's object allocation size */
 #define COND_KERNEL_ATTR_MASK		0x0000a080	/* what kernel callers may pass */
 #define COND_USER_ATTR_MASK		0x00002080	/* what a syscall may pass */
-#define COND_ATTR_LW			0x00000080
 #define COND_ATTR_UNINTERRUPTIBLE	0x00008000	/* PLACEHOLDER: name */
 #define COND_ATTR_UNLIMITED		0x00004000
 #define COND_OPTION_MAX_SIZE		4
-#define COND_UID_ATTR_LW		0x0000c000	/* PLACEHOLDER: name */
 #define SDK_VERSION_LW_COND_END		0x02100000	/* lw conds through this syscall end here */
 
 /* SceUIDCondClass's constructor */
@@ -102,8 +100,8 @@ static int uidCond_Destructor(void *object)
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
-			if (cond->attr & COND_ATTR_LW)
-				process->uidLwCount--;
+			if (cond->attr & SCE_KERNEL_ATTR_OPENABLE)
+				process->uidOpenableCount--;
 			else if (cond->attr & COND_ATTR_UNLIMITED)
 				process->uidUnlimitedCount--;
 			else
@@ -414,7 +412,7 @@ SceUID sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 			uid = SCE_KERNEL_ERROR_ILLEGAL_ATTR;
 			goto restore;
 		}
-		if (attr & COND_ATTR_LW) {
+		if (attr & SCE_KERNEL_ATTR_OPENABLE) {
 			SCE_DBG_ASSERT_CHECK_FUNC(thread->processId != THREADMGR_KERNEL_PID, 236, "sceKernelCreateCond");
 			if (SceSysrootForDriver_CAE820B2(thread->processId, &sdkVersion) >= 0 &&
 			    sdkVersion >= SDK_VERSION_LW_COND_END) {
@@ -429,10 +427,10 @@ SceUID sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 		uid = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 		goto restore;
 	}
-	if (attr & COND_ATTR_LW) {
+	if (attr & SCE_KERNEL_ATTR_OPENABLE) {
 		memset(&opt, 0, sizeof(opt));
 		opt.flags = UID_CREATE_OPT_ATTR;
-		opt.attr = COND_UID_ATTR_LW;
+		opt.attr = UID_ATTR_OPENABLE;
 	} else {
 		memset(&opt, 0, sizeof(opt));
 		opt.flags = UID_CREATE_OPT_ATTR;
@@ -449,8 +447,8 @@ SceUID sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 	} else {
 		process = thread->process;
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
-		if (attr & COND_ATTR_LW) {
-			if (process->uidLwCount >= 0x100) {
+		if (attr & SCE_KERNEL_ATTR_OPENABLE) {
+			if (process->uidOpenableCount >= 0x100) {
 				sceKernelSpinlockLowUnlock(&process->resourceLock);
 				SCE_DBG_ASSERT_PRINTF_FUNC(0, 304, "sceKernelCreateCond", "sceKernelCreateCond(), "
 					"SCE_KERNEL_ERROR_UID_RL_OVERFLOW, processId=0x%08X\n",
@@ -458,8 +456,8 @@ SceUID sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 				uid = SCE_KERNEL_ERROR_UID_RL_OVERFLOW | SYSCALL_ERROR_BIT;
 				goto resume;
 			}
-			if (++process->uidLwCount > process->uidLwPeak)
-				process->uidLwPeak = process->uidLwCount;
+			if (++process->uidOpenableCount > process->uidOpenablePeak)
+				process->uidOpenablePeak = process->uidOpenableCount;
 		} else if (attr & COND_ATTR_UNLIMITED) {
 			if (++process->uidUnlimitedCount > process->uidUnlimitedPeak)
 				process->uidUnlimitedPeak = process->uidUnlimitedCount;
@@ -529,8 +527,8 @@ SceUID sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 unaccount:
 	if (ThreadmgrInSyscall()) {
 		sceKernelSpinlockLowLock(&process->resourceLock);
-		if (attr & COND_ATTR_LW)
-			process->uidLwCount--;
+		if (attr & SCE_KERNEL_ATTR_OPENABLE)
+			process->uidOpenableCount--;
 		else if (attr & COND_ATTR_UNLIMITED)
 			process->uidUnlimitedCount--;
 		else

@@ -29,7 +29,6 @@
 #define MSG_PIPE_MODE_ALL		0x00000001	/* move all of it, or nothing */
 #define MSG_PIPE_MODE_KERNEL_VECTOR	0x00000010	/* the vector array is kernel memory */
 #define MSG_PIPE_MODE_PEEK		0x00000100	/* receive without consuming */
-#define MSG_PIPE_ATTR_LW		0x00000080
 #define MSG_PIPE_ATTR_UNLIMITED		0x00004000
 #define EVENT_PATTERN_RESERVED_BIT	0x00010000
 #define SDK_VERSION_MSG_PIPE_EMPTY	0x03100000	/* PLACEHOLDER: from here an empty pipe ... */
@@ -161,8 +160,8 @@ static int uidMsgPipe_Destructor(void *object)
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
 			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
-			if (pipe->event.attr & MSG_PIPE_ATTR_LW)
-				process->uidLwCount--;
+			if (pipe->event.attr & SCE_KERNEL_ATTR_OPENABLE)
+				process->uidOpenableCount--;
 			else if (!(pipe->event.attr & MSG_PIPE_ATTR_UNLIMITED))
 				process->uidCount--;
 			else
@@ -597,9 +596,6 @@ stop:
 	return wake;
 }
 
-#define MSG_PIPE_ATTR_SEND_PRIORITY	0x00000001	/* senders wait by priority */
-#define MSG_PIPE_ATTR_RECEIVE_PRIORITY	0x00000002	/* receivers wait by priority */
-#define WAIT_ATTR_PRIORITY		0x00002000
 #define MSG_PIPE_EVENT_SENT		0x00000001	/* the pipe's event bits a transfer sets */
 #define MSG_PIPE_EVENT_ERROR		0x00000010
 
@@ -776,7 +772,7 @@ int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 		wake = 0;
 		if (pipe->waitDirection == MSG_PIPE_WAIT_SEND) {
 			/* senders already wait: queue behind them unless more urgent */
-			if (!(pipe->event.attr & MSG_PIPE_ATTR_SEND_PRIORITY)) {
+			if (!(pipe->event.attr & SCE_KERNEL_MSG_PIPE_ATTR_TH_PRIO_S)) {
 				queued = true;
 				goto decided;
 			}
@@ -919,10 +915,10 @@ decided:
 			SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags,
 						   THREAD_FLAG_WAKE_PENDING);
 		attr = pipe->event.attr;
-		if (attr & MSG_PIPE_ATTR_SEND_PRIORITY)
-			attr |= WAIT_ATTR_PRIORITY;
+		if (attr & SCE_KERNEL_MSG_PIPE_ATTR_TH_PRIO_S)
+			attr |= SCE_KERNEL_ATTR_TH_PRIO;
 		else
-			attr &= ~WAIT_ATTR_PRIORITY;
+			attr &= ~SCE_KERNEL_ATTR_TH_PRIO;
 		pipe->event.attr = attr;
 		ret = waitWaitableObject(msgPipeId, (uintptr_t)queue, SCE_KERNEL_WAITTYPE_MSG_PIPE, &wakeup,
 					 wait, NULL, &locked);
@@ -1128,7 +1124,7 @@ int recvMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 		wake = 0;
 		if (pipe->waitDirection == MSG_PIPE_WAIT_RECEIVE) {
 			/* receivers already wait: queue behind them unless more urgent */
-			if (!(pipe->event.attr & MSG_PIPE_ATTR_RECEIVE_PRIORITY)) {
+			if (!(pipe->event.attr & SCE_KERNEL_MSG_PIPE_ATTR_TH_PRIO_R)) {
 				progressed = true;
 				goto decided;
 			}
@@ -1290,10 +1286,10 @@ decided:
 			SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags,
 						   THREAD_FLAG_WAKE_PENDING);
 		attr = pipe->event.attr;
-		if (attr & MSG_PIPE_ATTR_RECEIVE_PRIORITY)
-			attr |= WAIT_ATTR_PRIORITY;
+		if (attr & SCE_KERNEL_MSG_PIPE_ATTR_TH_PRIO_R)
+			attr |= SCE_KERNEL_ATTR_TH_PRIO;
 		else
-			attr &= ~WAIT_ATTR_PRIORITY;
+			attr &= ~SCE_KERNEL_ATTR_TH_PRIO;
 		pipe->event.attr = attr;
 		ret = waitWaitableObject(msgPipeId, (uintptr_t)queue, SCE_KERNEL_WAITTYPE_MSG_PIPE, &wakeup,
 					 wait, NULL, &locked);
@@ -2150,7 +2146,7 @@ int msgPipeProcessExit(SceProcessObject *process)
 #define MSG_PIPE_MEMORY_MAX		0x02000000	/* a process's buffers, from SDK 0x03100000 */
 #define SDK_VERSION_MSG_PIPE_MEMORY	0x030fffff
 #define MSG_PIPE_UID_ATTR		0x00030000	/* PLACEHOLDER: name */
-#define MSG_PIPE_UID_ATTR_LW		0x0003c000	/* PLACEHOLDER: name */
+#define MSG_PIPE_UID_ATTR_OPENABLE		0x0003c000	/* PLACEHOLDER: name */
 
 /*
  * The buffer (bufferSize rounded up to pages, in memory of memType) and
@@ -2198,7 +2194,8 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 att
 		ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 		goto restore;
 	}
-	heapAttr = (attr & MSG_PIPE_ATTR_LW) ? MSG_PIPE_UID_ATTR_LW : MSG_PIPE_UID_ATTR;
+	heapAttr = (attr & SCE_KERNEL_ATTR_OPENABLE) ? MSG_PIPE_UID_ATTR_OPENABLE :
+							 MSG_PIPE_UID_ATTR;
 	param.size = 0;
 	param.flags = 0;
 	param.capability = 0;
@@ -2277,7 +2274,7 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 att
 	opt.ownerPid = 0;
 	opt.cls = NULL;
 	opt.flags = UID_CREATE_OPT_ATTR;
-	if (ThreadmgrInSyscall() && !(attr & MSG_PIPE_ATTR_LW)) {
+	if (ThreadmgrInSyscall() && !(attr & SCE_KERNEL_ATTR_OPENABLE)) {
 		opt.pid = thread->processId;
 		opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;
 		if (thread->currentAttr & THREAD_ATTR_UNLIMITED) {
@@ -2308,8 +2305,8 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 att
 		}
 		/* Sony's: not taken back when a limit below fails */
 		process->msgPipeMemory = memory;
-		if (attr & MSG_PIPE_ATTR_LW) {
-			if (process->uidLwCount >= UID_LW_MAX_PER_PROCESS) {
+		if (attr & SCE_KERNEL_ATTR_OPENABLE) {
+			if (process->uidOpenableCount >= UID_OPENABLE_MAX_PER_PROCESS) {
 				sceKernelSpinlockLowUnlock(&process->resourceLock);
 				SCE_DBG_ASSERT_PRINTF(0, 1315, "sceKernelCreateMsgPipeWithLR(), "
 					"SCE_KERNEL_ERROR_UID_RL_OVERFLOW, processId=0x%08X\n",
@@ -2317,8 +2314,8 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 att
 				ret = SCE_KERNEL_ERROR_UID_RL_OVERFLOW | SYSCALL_ERROR_BIT;
 				goto unlockOwner;
 			}
-			if (++process->uidLwCount > process->uidLwPeak)
-				process->uidLwPeak = process->uidLwCount;
+			if (++process->uidOpenableCount > process->uidOpenablePeak)
+				process->uidOpenablePeak = process->uidOpenableCount;
 		} else if (attr & MSG_PIPE_ATTR_UNLIMITED) {
 			if (++process->uidUnlimitedCount > process->uidUnlimitedPeak)
 				process->uidUnlimitedPeak = process->uidUnlimitedCount;
@@ -2344,8 +2341,8 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 att
 		ret = uid;
 		if (ThreadmgrInSyscall()) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
-			if (attr & MSG_PIPE_ATTR_LW)
-				process->uidLwCount--;
+			if (attr & SCE_KERNEL_ATTR_OPENABLE)
+				process->uidOpenableCount--;
 			else if (attr & MSG_PIPE_ATTR_UNLIMITED)
 				process->uidUnlimitedCount--;
 			else
@@ -2480,7 +2477,7 @@ SceUID sceKernelOpenMsgPipeForUser(const char *userName)
 		SCE_DBG_ASSERT_PRINTF(0, 1597, "*** error: illegal context\n");
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	}
-	ret = copyinUIDNameWithAttr(name, userName, MSG_PIPE_ATTR_LW);
+	ret = copyinUIDNameWithAttr(name, userName, SCE_KERNEL_ATTR_OPENABLE);
 	if (ret < 0)
 		return ret;
 	opt.attr = PUID_ATTR_OPENED;
@@ -2746,7 +2743,7 @@ int sceKernelTrySendMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVector
 	if (direction == MSG_PIPE_WAIT_SEND) {
 		/* senders wait: only one more urgent than all of them goes first */
 		if (currentThreadContext() == NULL ||
-		    !(pipe->event.attr & MSG_PIPE_ATTR_SEND_PRIORITY)) {
+		    !(pipe->event.attr & SCE_KERNEL_MSG_PIPE_ATTR_TH_PRIO_S)) {
 			ret = SCE_KERNEL_ERROR_MSG_PIPE_FULL;
 			goto report;
 		}
@@ -3024,7 +3021,7 @@ int sceKernelTryReceiveMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVec
 	if (pipe->waitDirection == MSG_PIPE_WAIT_RECEIVE) {
 		/* receivers wait: only one more urgent than all of them goes first */
 		if (currentThreadContext() == NULL ||
-		    !(pipe->event.attr & MSG_PIPE_ATTR_RECEIVE_PRIORITY)) {
+		    !(pipe->event.attr & SCE_KERNEL_MSG_PIPE_ATTR_TH_PRIO_R)) {
 			ret = SCE_KERNEL_ERROR_MSG_PIPE_EMPTY;
 			goto report;
 		}

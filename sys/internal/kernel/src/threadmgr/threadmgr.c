@@ -1948,7 +1948,6 @@ int uidThread_CancelWait(void *cls, void *uidObject, uint32_t a2)
 #define PRIORITY_SHARED_LOW		0x80
 #define PRIORITY_SHARED_RANGE		0x7c
 #define WAIT_ID_MULTIPLE		((SceUID)0x80000000)
-#define WAIT_ATTR_PRIORITY		0x00002000
 #define USER_TLS_PRIORITY		0x7e0
 #define DEBUG_EVENT_PRIORITY_CHANGE	0x10
 
@@ -2057,7 +2056,7 @@ retry:
 					goto retry_wait;
 				state = event->attr;
 				context->currentPriority = priority;
-				if (state & WAIT_ATTR_PRIORITY) {
+				if (state & SCE_KERNEL_ATTR_TH_PRIO) {
 					node->next->prev = node->prev;
 					node->prev->next = node->next;
 					for (next = event->next;
@@ -2095,7 +2094,7 @@ retry:
 			goto retry_wait;
 		state = waitable->attributes;
 		context->currentPriority = priority;
-		if (state & WAIT_ATTR_PRIORITY) {
+		if (state & SCE_KERNEL_ATTR_TH_PRIO) {
 			unlinkThread(context);
 			insertPriorityQueue((uintptr_t)&waitable->next, thread);
 		}
@@ -4637,7 +4636,7 @@ retry:
 					goto retry_wait;
 				state = event->attr;
 				setPriorityAndAffinity(context, priority, mask);
-				if (state & WAIT_ATTR_PRIORITY) {
+				if (state & SCE_KERNEL_ATTR_TH_PRIO) {
 					node->next->prev = node->prev;
 					node->prev->next = node->next;
 					for (next = event->next;
@@ -4675,7 +4674,7 @@ retry:
 			goto retry_wait;
 		state = waitable->attributes;
 		setPriorityAndAffinity(context, priority, mask);
-		if (state & WAIT_ATTR_PRIORITY) {
+		if (state & SCE_KERNEL_ATTR_TH_PRIO) {
 			unlinkThread(context);
 			insertPriorityQueue((uintptr_t)&waitable->next, thread);
 		}
@@ -7426,7 +7425,6 @@ SceUID sceKernelCreateRemoteThread(SceUID pid, const char *name, SceKernelThread
  * context. A suspension that can happen at once happens here.
  */
 
-#define EVENT_ATTR_PRIORITY		WAIT_ATTR_PRIORITY
 void setupThreadExit(struct ThreadCB *thread, uint32_t request);
 
 /* the thread leaves the manager list it is on */
@@ -7743,7 +7741,7 @@ retry:
 					}
 					if (freeEventWaitNode(thread->processId, eventNode) < 0)
 						SCE_PANIC(SCE_LINE(9169, 9174));
-				} else if (event->attr & EVENT_ATTR_PRIORITY) {
+				} else if (event->attr & SCE_KERNEL_ATTR_TH_PRIO) {
 					/* requeued in front of the first waiter of a lower priority */
 					eventNode->next->prev = eventNode->prev;
 					eventNode->prev->next = eventNode->next;
@@ -7819,7 +7817,7 @@ retry:
 			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags,
 						    THREAD_FLAG_RESUMED_WAIT);
 			wake |= wakeupAndDistributeThread(thread, (uintptr_t)queue, error);
-		} else if (queue != NULL && (queue->attributes & WAIT_ATTR_PRIORITY)) {
+		} else if (queue != NULL && (queue->attributes & SCE_KERNEL_ATTR_TH_PRIO)) {
 			((struct ThreadmgrWaitNode *)thread)->next->prev =
 				((struct ThreadmgrWaitNode *)thread)->prev;
 			((struct ThreadmgrWaitNode *)thread)->prev->next =

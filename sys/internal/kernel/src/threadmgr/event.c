@@ -17,8 +17,6 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/uid_class.h>
 
-#define EVENT_ATTR_PRIORITY		0x00002000	/* waiters queue by priority */
-
 int uidRegisterCallbackClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
 	SceClass *parent, SceSize size, SceClassCallback create, SceClassCallback destroy,
 	ThreadmgrCancelWaitMethod cancelWait, ThreadmgrRevalidateMethod revalidate, ThreadmgrReleaseMethod release);
@@ -48,7 +46,7 @@ static inline uint32_t wakeEventWaiter(ThreadmgrEvent *event, struct ThreadCB *t
 	if (thread->waitEventDataOutput != NULL)
 		*thread->waitEventDataOutput = userData;
 	wake = wakeupAndDistributeThread(thread, EVENT_WAIT_QUEUE(event), 0);
-	if (event->attr & EVENT_ATTR_AUTO_CLEAR)
+	if (event->attr & SCE_KERNEL_EVENT_ATTR_AUTO_RESET)
 		event->pattern &= ~(matched & ~EVENT_PATTERN_RESERVED);
 	return wake;
 }
@@ -268,7 +266,7 @@ static int waitEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 				*outPattern = matched;
 			if (outUserData != NULL)
 				*outUserData = event->userData;
-			if (event->attr & EVENT_ATTR_AUTO_CLEAR)
+			if (event->attr & SCE_KERNEL_EVENT_ATTR_AUTO_RESET)
 				event->pattern &= ~(pattern & ~EVENT_PATTERN_RESERVED);
 			sceKernelSpinlockLowUnlock(&event->lock);
 			goto release;
@@ -577,7 +575,7 @@ int sceKernelSetEvent(SceUID eventId, uint32_t pattern, uint64_t userData)
 			} else {
 				wake |= completeEventWaitNode(event, wait, thread, wme, left, waitId, 0,
 							      matched, userData, 0, 0);
-				if (event->attr & EVENT_ATTR_AUTO_CLEAR)
+				if (event->attr & SCE_KERNEL_EVENT_ATTR_AUTO_RESET)
 					event->pattern &= ~(matched & ~EVENT_PATTERN_RESERVED);
 			}
 			if (freeEventWaitNode(thread->processId, wait) < 0)
@@ -643,7 +641,7 @@ uint32_t setEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t u
 			} else {
 				wake |= completeEventWaitNode(event, wait, thread, wme, left, waitId, 0,
 							      matched, userData, 1, arg);
-				if (event->attr & EVENT_ATTR_AUTO_CLEAR)
+				if (event->attr & SCE_KERNEL_EVENT_ATTR_AUTO_RESET)
 					event->pattern &= ~(matched & ~EVENT_PATTERN_RESERVED);
 			}
 			if (freeEventWaitNode(thread->processId, wait) < 0)
@@ -780,7 +778,7 @@ int sceKernelPulseEvent(SceUID eventId, uint32_t pattern, uint64_t userData)
 			} else {
 				wake |= completeEventWaitNode(event, wait, thread, wme, left, waitId, 0,
 							      matched, userData, 0, 0);
-				if (event->attr & EVENT_ATTR_AUTO_CLEAR)
+				if (event->attr & SCE_KERNEL_EVENT_ATTR_AUTO_RESET)
 					event->pattern &= ~(matched & ~EVENT_PATTERN_RESERVED);
 			}
 			if (freeEventWaitNode(thread->processId, wait) < 0)
@@ -843,7 +841,7 @@ uint32_t pulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t
 			} else {
 				wake |= completeEventWaitNode(event, wait, thread, wme, left, waitId, 0,
 							      matched, userData, 1, arg);
-				if (event->attr & EVENT_ATTR_AUTO_CLEAR)
+				if (event->attr & SCE_KERNEL_EVENT_ATTR_AUTO_RESET)
 					event->pattern &= ~(matched & ~EVENT_PATTERN_RESERVED);
 			}
 			if (freeEventWaitNode(thread->processId, wait) < 0)
@@ -1055,7 +1053,7 @@ int sceKernelPollEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 			if (outUserData != NULL)
 				*outUserData = event->userData;
 			ret = 0;
-			if (event->attr & EVENT_ATTR_AUTO_CLEAR)
+			if (event->attr & SCE_KERNEL_EVENT_ATTR_AUTO_RESET)
 				event->pattern &= ~(pattern & ~EVENT_PATTERN_RESERVED);
 		}
 		sceKernelSpinlockLowUnlock(&event->lock);
@@ -1160,7 +1158,7 @@ static inline void queueEventWaitNode(ThreadmgrEvent *event, ThreadmgrEventWaitN
 	node->wmeLink.prev = head->prev;
 	head->prev = &node->wmeLink;
 	node->wmeLink.prev->next = &node->wmeLink;
-	if (event->attr & EVENT_ATTR_PRIORITY) {
+	if (event->attr & SCE_KERNEL_ATTR_TH_PRIO) {
 		for (pos = event->next; pos != queue; pos = pos->next) {
 			other = EventWaiterIsThread(pos) ? (struct ThreadCB *)pos :
 				(struct ThreadCB *)(pos->owner & ~3u);
@@ -1297,7 +1295,7 @@ int waitMultipleEvents(ThreadmgrWaitMultipleEvents *wme, SceUInt32 *timeout,
 							   event->userData);
 					sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 				}
-				if (event->attr & EVENT_ATTR_AUTO_CLEAR)
+				if (event->attr & SCE_KERNEL_EVENT_ATTR_AUTO_RESET)
 					event->pattern &= ~(wanted->eventPattern &
 							    ~EVENT_PATTERN_RESERVED);
 				markEventReady(wme, i);

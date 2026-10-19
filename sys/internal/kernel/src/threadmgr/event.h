@@ -17,7 +17,6 @@
 #include <sysmem/uid_class.h>
 #include "mutex.h"
 
-#define EVENT_ATTR_AUTO_CLEAR		0x00000100	/* a wait that is satisfied clears its bits */
 #define EVENT_ATTR_UNINTERRUPTIBLE	0x00008000	/* PLACEHOLDER: name; see WAIT_ATTR_UNINTERRUPTIBLE */
 #define EVENT_PATTERN_RESERVED		0x00010000	/* never set or cleared by a caller */
 #define EVENT_PATTERN_KERNEL		0x00ffffff	/* the bits a user caller may not touch */

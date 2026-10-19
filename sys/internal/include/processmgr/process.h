@@ -232,8 +232,8 @@ typedef struct SceProcessObject {
 	SceUInt32 timerCount;
 	SceUInt32 timerPeak;
 	SceUInt32 reserved3[6];
-	SceUInt32 uidLwCount;			/* lightweight objects (attr 0x80), at most 0x100 */
-	SceUInt32 uidLwPeak;
+	SceUInt32 uidOpenableCount;		/* openable objects, at most 0x100 */
+	SceUInt32 uidOpenablePeak;
 	SceKernelSpinlock coredumpLock;
 	void *coredumpHandler;
 	SceSize coredumpStackSize;
@@ -262,7 +262,7 @@ _Static_assert(__builtin_offsetof(SceProcessObject, contextBreakpoint) == 0x288 
 	       __builtin_offsetof(SceProcessObject, threads) == 0x2d0 &&
 	       __builtin_offsetof(SceProcessObject, msgPipeLock) == 0x2f0 &&
 	       __builtin_offsetof(SceProcessObject, exceptionId) == 0x350 &&
-	       __builtin_offsetof(SceProcessObject, uidLwCount) == 0x3e4 &&
+	       __builtin_offsetof(SceProcessObject, uidOpenableCount) == 0x3e4 &&
 	       __builtin_offsetof(SceProcessObject, coredumpLock) == 0x3ec &&
 	       __builtin_offsetof(SceProcessObject, node) == 0x438 &&
 	       __builtin_offsetof(SceProcessObject, TitleId) == 0x4c0, "SceProcessObject layout");

@@ -234,7 +234,7 @@ int _sceKernelCreateLwMutexForUser(ThreadmgrLwMutexWork *work, const char *name,
 		ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 		goto restore;
 	}
-	if (initCount < 0 || (initCount > 1 && !(attr & LW_MUTEX_ATTR_RECURSIVE))) {
+	if (initCount < 0 || (initCount > 1 && !(attr & SCE_KERNEL_LW_MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		goto restore;
 	}
@@ -506,7 +506,7 @@ restore:
 	if ((lwMutex)->waiting != 0) {							\
 		__first = (struct ThreadCB *)(lwMutex)->next;		\
 		SCE_DBG_ASSERT_CHECK(__first->magic == THREAD_CB_MAGIC, line);	\
-		if ((lwMutex)->attr & LW_MUTEX_ATTR_PRIORITY) {				\
+		if ((lwMutex)->attr & SCE_KERNEL_LW_MUTEX_ATTR_TH_PRIO) {	\
 			sceKernelSpinlockLowLock(THREAD_LOCK(__first));		\
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(__first));		\
 		}									\
@@ -578,12 +578,12 @@ int _sceKernelLockLwMutex(ThreadmgrLwMutexWork *work, int count, SceUInt32 *time
 		goto release;
 	}
 	sceKernelSpinlockLowLock(&lwMutex->lock);
-	if (count < 1 || (count != 1 && !(lwMutex->attr & LW_MUTEX_ATTR_RECURSIVE))) {
+	if (count < 1 || (count != 1 && !(lwMutex->attr & SCE_KERNEL_LW_MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		goto unlock;
 	}
 	if (userWork.owner == self) {
-		if (!(lwMutex->attr & LW_MUTEX_ATTR_RECURSIVE)) {
+		if (!(lwMutex->attr & SCE_KERNEL_LW_MUTEX_ATTR_RECURSIVE)) {
 			ret = SCE_KERNEL_ERROR_LW_MUTEX_RECURSIVE;
 		} else if ((count += userWork.lockCount) < 0) {
 			ret = SCE_KERNEL_ERROR_LW_MUTEX_LOCK_OVF;
@@ -725,7 +725,7 @@ int _sceKernelUnlockLwMutex(ThreadmgrLwMutexWork *work, int count)
 		goto release;
 	}
 	sceKernelSpinlockLowLock(&lwMutex->lock);
-	if (count < 1 || (count != 1 && !(lwMutex->attr & LW_MUTEX_ATTR_RECURSIVE))) {
+	if (count < 1 || (count != 1 && !(lwMutex->attr & SCE_KERNEL_LW_MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		goto unlock;
 	}
@@ -978,12 +978,12 @@ int lockLwMutexForLwCond(SceUID lwMutexId, int count, SceUInt32 *timeout, int ca
 		return ret;
 	}
 	sceKernelSpinlockLowLock(&lwMutex->lock);
-	if (count < 1 || (count != 1 && !(lwMutex->attr & LW_MUTEX_ATTR_RECURSIVE))) {
+	if (count < 1 || (count != 1 && !(lwMutex->attr & SCE_KERNEL_LW_MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		goto unlock;
 	}
 	if (userWork.owner == self) {
-		if (!(lwMutex->attr & LW_MUTEX_ATTR_RECURSIVE)) {
+		if (!(lwMutex->attr & SCE_KERNEL_LW_MUTEX_ATTR_RECURSIVE)) {
 			ret = SCE_KERNEL_ERROR_LW_MUTEX_RECURSIVE;
 		} else if ((count += userWork.lockCount) < 0) {
 			ret = SCE_KERNEL_ERROR_LW_MUTEX_LOCK_OVF;
@@ -1077,7 +1077,7 @@ int unlockLwMutexForLwCond(SceUID lwMutexId, int count)
 		goto release;
 	}
 	sceKernelSpinlockLowLock(&lwMutex->lock);
-	if (count < 1 || (count != 1 && !(lwMutex->attr & LW_MUTEX_ATTR_RECURSIVE))) {
+	if (count < 1 || (count != 1 && !(lwMutex->attr & SCE_KERNEL_LW_MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 	} else if (userWork.owner != self) {
 		ret = SCE_KERNEL_ERROR_LW_MUTEX_NOT_OWNED;

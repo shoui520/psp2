@@ -15,7 +15,6 @@
 #include <sysmem/uid_class.h>
 #include <intrmgr/intrmgr.h>
 
-#define SEMA_ATTR_PRIORITY		0x00002000
 #define SEMA_ITEM_SIZE			0x80	/* the class's object allocation size */
 
 /* SceUIDSemaphoreObject (0x38) */
@@ -86,7 +85,6 @@ static int uidSemaphore_Constructor(void *object)
 	return 0;
 }
 
-#define SEMA_ATTR_LW			0x00000080	/* PLACEHOLDER: name */
 #define SEMA_ATTR_UNLIMITED		0x00004000	/* PLACEHOLDER: name */
 
 /* SceUIDSemaphoreClass's destructor: the waiters wake with WAIT_DELETE, the owner's count drops */
@@ -107,8 +105,8 @@ static int uidSemaphore_Destructor(void *object)
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
-			if (sema->attr & SEMA_ATTR_LW)
-				process->uidLwCount--;
+			if (sema->attr & SCE_KERNEL_ATTR_OPENABLE)
+				process->uidOpenableCount--;
 			else if (sema->attr & SEMA_ATTR_UNLIMITED)
 				process->uidUnlimitedCount--;
 			else
@@ -162,7 +160,7 @@ bool isWaitOnly(struct ThreadmgrWaitQueue *queue, int priority)
 
 	if (queue->waiting == 0)
 		return false;
-	if (!(queue->attributes & SEMA_ATTR_PRIORITY))
+	if (!(queue->attributes & SCE_KERNEL_SEMA_ATTR_TH_PRIO))
 		return true;
 	first = (struct ThreadCB *)queue->next;
 	if ((struct ThreadmgrWaitQueue *)first == queue)
@@ -298,7 +296,6 @@ restore:
 #define SEMA_KERNEL_ATTR_MASK		0x0000a080	/* what kernel callers may pass */
 #define SEMA_USER_ATTR_MASK		0x00002080	/* what a syscall may pass */
 #define SEMA_OPTION_MAX_SIZE		4
-#define SEMA_UID_ATTR_LW		0x0000c000	/* PLACEHOLDER: name */
 
 /* closes every semaphore PUID a process still holds */
 int semaphoreProcessExit(SceProcessObject *process)
@@ -352,10 +349,10 @@ static inline __attribute__((always_inline)) SceUID sceKernelCreateSemaCore(cons
 	int intr;
 
 	thread = currentThreadContext();
-	if (attr & SEMA_ATTR_LW) {
+	if (attr & SCE_KERNEL_ATTR_OPENABLE) {
 		memset(&opt, 0, sizeof(opt));
 		opt.flags = UID_CREATE_OPT_ATTR;
-		opt.attr = SEMA_UID_ATTR_LW;
+		opt.attr = UID_ATTR_OPENABLE;
 	} else {
 		memset(&opt, 0, sizeof(opt));
 		opt.flags = UID_CREATE_OPT_ATTR;
@@ -373,8 +370,8 @@ static inline __attribute__((always_inline)) SceUID sceKernelCreateSemaCore(cons
 	} else {
 		process = thread->process;
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
-		if (attr & SEMA_ATTR_LW) {
-			if (process->uidLwCount >= UID_LW_MAX_PER_PROCESS) {
+		if (attr & SCE_KERNEL_ATTR_OPENABLE) {
+			if (process->uidOpenableCount >= UID_OPENABLE_MAX_PER_PROCESS) {
 				sceKernelSpinlockLowUnlock(&process->resourceLock);
 				SCE_DBG_ASSERT_PRINTF_FUNC(0, 451, "sceKernelCreateSemaCore",
 					"sceKernelCreateSemaCore(), SCE_KERNEL_ERROR_UID_RL_OVERFLOW, "
@@ -382,8 +379,8 @@ static inline __attribute__((always_inline)) SceUID sceKernelCreateSemaCore(cons
 				uid = SCE_KERNEL_ERROR_UID_RL_OVERFLOW | SYSCALL_ERROR_BIT;
 				goto resume;
 			}
-			if (++process->uidLwCount > process->uidLwPeak)
-				process->uidLwPeak = process->uidLwCount;
+			if (++process->uidOpenableCount > process->uidOpenablePeak)
+				process->uidOpenablePeak = process->uidOpenableCount;
 		} else if (attr & SEMA_ATTR_UNLIMITED) {
 			if (++process->uidUnlimitedCount > process->uidUnlimitedPeak)
 				process->uidUnlimitedPeak = process->uidUnlimitedCount;
@@ -408,8 +405,8 @@ static inline __attribute__((always_inline)) SceUID sceKernelCreateSemaCore(cons
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
-			if (attr & SEMA_ATTR_LW)
-				process->uidLwCount--;
+			if (attr & SCE_KERNEL_ATTR_OPENABLE)
+				process->uidOpenableCount--;
 			else if (attr & SEMA_ATTR_UNLIMITED)
 				process->uidUnlimitedCount--;
 			else

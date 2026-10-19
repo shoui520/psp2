@@ -14,11 +14,7 @@
 #include <threadmgr/uid_waitable.h>
 #include "priority_change.h"
 
-#define MUTEX_ATTR_RECURSIVE		0x00000002
-#define MUTEX_ATTR_CEILING		0x00000004
 #define MUTEX_ATTR_KERNEL		0x00000040	/* created by the kernel: no boost limits */
-#define MUTEX_ATTR_LW			0x00000080
-#define MUTEX_ATTR_PRIORITY		0x00002000	/* waiters queue by priority */
 #define MUTEX_ATTR_UNLIMITED		0x00004000
 
 /* the mutex state proper (0x30), cleared by the constructor; releaseMutex works on it */

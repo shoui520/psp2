@@ -396,8 +396,8 @@ static int ProcessConstructor(SceProcessObject *process)
 	process->timerPeak = 0;
 	for (i = 0; i != 6; i++)
 		process->reserved3[i] = 0;
-	process->uidLwCount = 0;
-	process->uidLwPeak = 0;
+	process->uidOpenableCount = 0;
+	process->uidOpenablePeak = 0;
 	process->coredumpLock = 0;
 	process->coredumpHandler = NULL;
 	process->coredumpStackSize = 0;

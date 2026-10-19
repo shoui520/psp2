@@ -13,9 +13,6 @@
 #include "mutex.h"
 #include <threadmgr/threadmgr.h>
 
-#define EVF_ATTR_LW			0x00000080
-#define EVF_ATTR_MULTI			0x00001000	/* several threads may wait at once */
-#define EVF_ATTR_PRIORITY		0x00002000
 #define EVF_ATTR_UNLIMITED		0x00004000
 #define EVF_WAITMODE_OR			0x00000001
 #define EVF_WAITMODE_CLEAR_ALL		0x00000002

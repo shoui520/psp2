@@ -30,7 +30,6 @@ __attribute__((section(SCE_DBGSRC_SECTION), used)) = {
 #endif
 
 #define SIMPLE_EVENT_ITEM_SIZE		0x80	/* the class's object allocation size */
-#define SIMPLE_EVENT_ATTR_LW		0x00000080
 #define SIMPLE_EVENT_ATTR_UNLIMITED	0x00004000
 #define SIMPLE_EVENT_KERNEL_ATTR_MASK	0x0000a980	/* what kernel callers may pass */
 #define SIMPLE_EVENT_USER_ATTR_MASK	0x00002980	/* what a syscall may pass */
@@ -40,7 +39,6 @@ __attribute__((section(SCE_DBGSRC_SECTION), used)) = {
 #define SIMPLE_EVENT_DELETED		0x00000008
 #define SIMPLE_EVENT_OPENED		0x00000100
 #define SIMPLE_EVENT_PROCESS_EXITED	0x00000200
-#define SIMPLE_EVENT_UID_ATTR_LW	0x0000c000	/* PLACEHOLDER: name */
 
 /* SceUIDSimpleEventObject (0x3c) */
 typedef struct ThreadmgrSimpleEvent {
@@ -79,8 +77,8 @@ static int uidSimpleEvent_Destructor(void *object)
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
-			if (simple->event.attr & SIMPLE_EVENT_ATTR_LW)
-				process->uidLwCount--;
+			if (simple->event.attr & SCE_KERNEL_ATTR_OPENABLE)
+				process->uidOpenableCount--;
 			else if (simple->event.attr & SIMPLE_EVENT_ATTR_UNLIMITED)
 				process->uidUnlimitedCount--;
 			else
@@ -209,10 +207,10 @@ SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t ini
 		uid = SCE_KERNEL_ERROR_ILLEGAL_PATTERN;
 		goto restore;
 	}
-	if (attr & SIMPLE_EVENT_ATTR_LW) {
+	if (attr & SCE_KERNEL_ATTR_OPENABLE) {
 		memset(&opt, 0, sizeof(opt));
 		opt.flags = UID_CREATE_OPT_ATTR;
-		opt.attr = SIMPLE_EVENT_UID_ATTR_LW;
+		opt.attr = UID_ATTR_OPENABLE;
 	} else {
 		memset(&opt, 0, sizeof(opt));
 		opt.flags = UID_CREATE_OPT_ATTR;
@@ -229,8 +227,8 @@ SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t ini
 	} else {
 		process = thread->process;
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
-		if (attr & SIMPLE_EVENT_ATTR_LW) {
-			if (process->uidLwCount >= UID_LW_MAX_PER_PROCESS) {
+		if (attr & SCE_KERNEL_ATTR_OPENABLE) {
+			if (process->uidOpenableCount >= UID_OPENABLE_MAX_PER_PROCESS) {
 				sceKernelSpinlockLowUnlock(&process->resourceLock);
 				SCE_DBG_ASSERT_PRINTF_FUNC(0, 281, "sceKernelCreateSimpleEvent", "sceKernelCreateSimpleEvent(), "
 					"SCE_KERNEL_ERROR_UID_RL_OVERFLOW, processId=0x%08X\n",
@@ -238,8 +236,8 @@ SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t ini
 				uid = SCE_KERNEL_ERROR_UID_RL_OVERFLOW | SYSCALL_ERROR_BIT;
 				goto resume;
 			}
-			if (++process->uidLwCount > process->uidLwPeak)
-				process->uidLwPeak = process->uidLwCount;
+			if (++process->uidOpenableCount > process->uidOpenablePeak)
+				process->uidOpenablePeak = process->uidOpenableCount;
 		} else if (attr & SIMPLE_EVENT_ATTR_UNLIMITED) {
 			if (++process->uidUnlimitedCount > process->uidUnlimitedPeak)
 				process->uidUnlimitedPeak = process->uidUnlimitedCount;
@@ -264,8 +262,8 @@ SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t ini
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
-			if (attr & SIMPLE_EVENT_ATTR_LW)
-				process->uidLwCount--;
+			if (attr & SCE_KERNEL_ATTR_OPENABLE)
+				process->uidOpenableCount--;
 			else if (attr & SIMPLE_EVENT_ATTR_UNLIMITED)
 				process->uidUnlimitedCount--;
 			else
@@ -358,7 +356,7 @@ SceUID sceKernelOpenSimpleEventForUser(const char *userName)
 		SCE_DBG_ASSERT_PRINTF(0, 509, "*** error: illegal context\n");
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	}
-	ret = copyinUIDNameWithAttr(name, userName, SIMPLE_EVENT_ATTR_LW);
+	ret = copyinUIDNameWithAttr(name, userName, SCE_KERNEL_ATTR_OPENABLE);
 	if (ret < 0)
 		return ret;
 	opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_CLASS;
