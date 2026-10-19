@@ -109,7 +109,7 @@ int sceKernelSuspendIntr(unsigned int intrCode, unsigned int *enabled);
 void SceIntrmgrForKernel_E3B670BF(int (*event)(unsigned int, unsigned int, void *));
 int SceIntrmgrForDriver_C568F145(unsigned int value);
 
-/* intrmgr_stack.c: the thread manager's hooks */
+/* intrmgr_asm.S: the thread manager's hooks */
 struct ThreadMgrCpuCB;				/* threadmgr's per-CPU control block */
 void SceIntrmgrForKernel_BCD3BB05(void);
 void SceIntrmgrForKernel_9CB39268(void *handler);	/* before an interrupt handler */
@@ -117,11 +117,11 @@ void SceIntrmgrForKernel_46F04D82(void *handler);
 void SceIntrmgrForKernel_764F140A(void *handler);	/* the next context after an interrupt */
 void SceIntrmgrForKernel_04E635AA(struct ThreadMgrCpuCB *const *cpu);	/* one per CPU */
 
-/* intrmgr_copy.c: copies 0x200 bytes, returning the end of the copy */
+/* intrmgr_asm.S: copies 0x200 bytes, returning the end of the copy */
 void *SceIntrmgrForKernel_71E08D71(void *destination, const void *source);
 
 /*
- * intrmgr_cpu.S: a context saved like setjmp (0 when saved, nonzero when it is resumed), and
+ * intrmgr_asm.S: a context saved like setjmp (0 when saved, nonzero when it is resumed), and
  * resumed like longjmp.
  */
 struct ThreadRegisterContext;			/* threadmgr/threadcb.h */

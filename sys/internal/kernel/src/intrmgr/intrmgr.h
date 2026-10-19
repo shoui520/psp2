@@ -15,7 +15,25 @@
 #include <threadmgr/threadcb.h>
 #include <processmgr/process.h>
 #include <intrmgr/gic_regs.h>
+/* the addresses of the GIC (integers: a store to a word may change them) */
+extern SceUInt32 g_intrCpuInterface;
+extern SceUInt32 g_intrDistributor;
+#define GICD_WORD(offset) (*(volatile SceUInt32 *)(g_intrDistributor + (offset)))
+#define GICD_BYTE(offset) (*(SceUInt8 *)(g_intrDistributor + (offset)))
+#define GICC_WORD(offset) (*(volatile SceUInt32 *)(g_intrCpuInterface + (offset)))
+#define INTR_GIC_REGISTERS
 #include "intrmgr_state.h"
+
+/* name unknown: update the interrupt configuration field. */
+static inline void SetConfiguration(unsigned int intrCode, unsigned int config)
+{
+	volatile SceUInt32 *configuration = (volatile SceUInt32 *)g_intrDistributor;
+	unsigned int index = 0x300 + (intrCode >> 4);
+	unsigned int shift = (intrCode & 15) * 2;
+	unsigned int value = configuration[index];
+
+	configuration[index] = value ^ (((value >> shift) ^ config) & 3) << shift;
+}
 #include <sysmem/suspend.h>
 
 #define INTR_CPU_STACK_SIZE 0x20000
@@ -72,7 +90,7 @@ extern void *g_intrEnterSubIntr;
 extern void *g_intrLeaveIntr;
 extern void *g_intrEnterSyscall;
 extern void *g_intrLeaveSyscall;
-extern GicCpuInterface *volatile g_intrCpuInterface;
+
 extern SceSyscallTable g_intrSyscall;
 #define g_intrSyscallTable (g_intrSyscall.base)
 #define g_intrSyscallBlock (g_intrSyscall.memBlock)
@@ -83,12 +101,15 @@ extern void (*g_intrRegistered)(unsigned int);
 extern SceUID g_intrHeap;
 extern void (*g_intrReleased)(unsigned int);
 
-/* name unknown: the guard word at the bottom of one per-core nesting stack. */
+/*
+ * name unknown: the guard word at the bottom of one per-core nesting stack.
+ * The stacks of a core run down from g_intrStackGuard (the guard of the
+ * outermost level of core 0), 16 levels of INTR_LEVEL_STACK_SIZE per core.
+ */
 static inline SceUInt32 *StackGuard(unsigned int cpu, unsigned int level)
 {
-	if (!cpu && !level)
-		return &g_intrStackGuard.outermostStackGuard;
-	return &g_intrStacks[(4 - cpu) * 16 - level].guard;
+	return (SceUInt32 *)((char *)&g_intrStackGuard - cpu * INTR_CPU_STACK_SIZE -
+			     level * INTR_LEVEL_STACK_SIZE);
 }
 
 extern SceExcpmgrHandler interruptEntry;
@@ -99,6 +120,9 @@ int intrmgrSmc(unsigned int paddr, unsigned int command);
 extern char intrEnterHook[], intrLeaveHook[], syscallEnterHook[], syscallLeaveHook[];
 extern SceUInt32 intrEnterBranch, intrLeaveBranch;
 extern SceUInt16 syscallEnterBranch, syscallLeaveBranch;
+/* the same slots by the labels the cache clean and the store use */
+extern SceUInt32 intrEnterBranchClean, intrLeaveBranchClean, intrEnterBranchPatch, intrLeaveBranchPatch;
+extern SceUInt16 syscallEnterBranchClean, syscallLeaveBranchClean, syscallEnterBranchPatch, syscallLeaveBranchPatch;
 
 int callIntrEvent(unsigned int event, unsigned int size, void *data);
 void invalidApiStatCfunc(const ThreadSyscallFrame *frame, void *result, unsigned int state);

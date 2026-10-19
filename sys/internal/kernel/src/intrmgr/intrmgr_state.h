@@ -49,17 +49,20 @@ _Static_assert(sizeof(IntrHandler) == 64, "interrupt record ABI");
 _Static_assert(sizeof(IntrState) == 0x4200, "handler and CPU state ABI");
 
 /* the distributor as each build maps it */
+#ifndef INTR_GIC_REGISTERS
 extern GicDistributor *volatile g_intrDistributor;
 
 /* name unknown: update the interrupt configuration field. */
 static inline void SetConfiguration(unsigned int intrCode, unsigned int config)
 {
+	GicDistributor *distributor = g_intrDistributor;
 	unsigned int index = intrCode >> 4;
 	unsigned int shift = (intrCode & 15) * 2;
-	unsigned int value = g_intrDistributor->config[index];
+	unsigned int value = distributor->config[index];
 
-	g_intrDistributor->config[index] = value ^ (((value >> shift) ^ config) & 3) << shift;
+	distributor->config[index] = value ^ (((value >> shift) ^ config) & 3) << shift;
 }
+#endif
 
 /* name unknown: convert the two accepted CPU mask encodings. */
 static inline __attribute__((always_inline)) int TargetMask(unsigned int target, unsigned int *mask)

@@ -1,4 +1,5 @@
 /* SceKernelIntrMgr: GIC interrupts, subinterrupts and CPU exception state. */
+#include <fw.h>
 #include "intrmgr.h"
 #include <sysmem/uid_guid.h>
 #include "intrmgr_readonly.h"
@@ -9,6 +10,17 @@
 
 _Static_assert(sizeof(SceKernelIntrHandlerInfo) == 0x70, "interrupt query ABI");
 _Static_assert(sizeof(IntrIrqFrame) == 64, "IRQ frame ABI");
+/* the offsets intrmgr_asm.h repeats */
+_Static_assert(__builtin_offsetof(IntrIrqFrame, thread) == 0x10, "IRQ frame thread");
+_Static_assert(__builtin_offsetof(IntrIrqFrame, pmuEnabled) == 0x14, "IRQ frame PMU");
+_Static_assert(__builtin_offsetof(IntrIrqFrame, registers) == 0x20, "IRQ frame registers");
+_Static_assert(__builtin_offsetof(IntrIrqFrame, ip) == 0x34, "IRQ frame ip");
+_Static_assert(__builtin_offsetof(IntrIrqFrame, returnAddress) == 0x38, "IRQ frame pc");
+_Static_assert(__builtin_offsetof(IntrIrqFrame, returnStatus) == 0x3c, "IRQ frame cpsr");
+_Static_assert(__builtin_offsetof(IntrHandler, intrCode) == 4, "handler code");
+_Static_assert(__builtin_offsetof(IntrHandler, arg) == 8, "handler arg");
+_Static_assert(__builtin_offsetof(IntrHandler, priority) == 0xc, "handler priority");
+_Static_assert(__builtin_offsetof(IntrHandler, count) == 0x20, "handler count");
 _Static_assert(sizeof(IntrLevelStack) == INTR_LEVEL_STACK_SIZE, "nesting stack ABI");
 
 int CurrentNesting(void);
@@ -19,21 +31,24 @@ static inline int IllegalContext(void)
 	return !getCurrentThreadCB() && CurrentNesting();
 }
 
-/* name unknown: write one instruction into the entry code and clean its lines. */
-static inline __attribute__((always_inline)) void PatchCode(void *address, const void *code,
-							    unsigned int size)
+/*
+ * name unknown: write one instruction into the entry code (through address)
+ * and clean its cache lines (range is the same address, by another label).
+ */
+static inline __attribute__((always_inline)) void PatchCode(void *address, void *range,
+							    const void *code, unsigned int size)
 {
-	unsigned int dacr, start;
+	unsigned int dacr, base = (unsigned int)range, start;
 
-	start = (unsigned int)address & ~31U;
 	dacr = readDacr();
 	writeDacr(0xffff0000);
+	start = base & ~31U;
 	if (size == 2)
 		*(volatile SceUInt16 *)address = *(const SceUInt16 *)code;
 	else
 		*(volatile SceUInt32 *)address = *(const SceUInt32 *)code;
 	sceKernelDcacheCleanRangeForL1WBWA((void *)start,
-		(((unsigned int)address + size + 31) & ~31U) - start);
+		(((unsigned int)base + size + 31) & ~31U) - start);
 	writeDacr(dacr);
 }
 
@@ -48,18 +63,15 @@ void ResetController(void)
 {
 	unsigned int blocks, i;
 
-	g_intrCpuInterface->control = 0;
+	GICC_WORD(0) = 0;
 	if (!sceKernelCpuId())
-		g_intrDistributor->control = 0;
-	blocks = (g_intrDistributor->type & 31) + 1;
-	i = 0;
-	do {
-		g_intrDistributor->clearEnable[i] = ~0U;
-		i++;
-	} while (i != blocks);
-	g_intrCpuInterface->control = 1;
+		GICD_WORD(0) = 0;
+	blocks = (GICD_WORD(4) & 31) + 1;
+	for (i = 0; i != blocks; i++)
+		GICD_WORD(0x180 + i * 4) = ~0U;
+	GICC_WORD(0) = 1;
 	if (!sceKernelCpuId())
-		g_intrDistributor->control = 1;
+		GICD_WORD(0) = 1;
 }
 
 int ResumeController(int value, void *args)
@@ -73,8 +85,8 @@ int ResumeController(int value, void *args)
 	if (!sceKernelCpuId()) {
 		for (unsigned int i = 0; i < INTR_COUNT; i++) {
 			IntrHandler *info = &g_intrHandlers[i];
-			g_intrDistributor->priority[i] = info->priority;
-			g_intrDistributor->target[i] = info->targetCpu;
+			GICD_BYTE(0x400 + (i)) = *(volatile SceUInt16 *)&info->priority;
+			GICD_BYTE(0x800 + (i)) = *(volatile SceUInt16 *)&info->targetCpu;
 			if (info->configuration == 3)
 				SetConfiguration(i, 3);
 		}
@@ -123,10 +135,16 @@ void SceIntrmgrForKernel_217AC350(void *enter, void *leave)
 
 	g_intrEnterSyscall = enter;
 	g_intrLeaveSyscall = leave;
-	code = enter ? THUMB_BRANCH(&syscallEnterBranch, syscallEnterHook) : 0xbf00;
-	PatchCode(&syscallEnterBranch, &code, sizeof(SceUInt16));
-	code = leave ? THUMB_BRANCH(&syscallLeaveBranch, syscallLeaveHook) : 0xbf00;
-	PatchCode(&syscallLeaveBranch, &code, sizeof(SceUInt16));
+	if (enter)
+		code = THUMB_BRANCH(&syscallEnterBranch, syscallEnterHook);
+	else
+		code = 0xbf00;
+	PatchCode(&syscallEnterBranchPatch, &syscallEnterBranchClean, &code, sizeof(SceUInt16));
+	if (leave)
+		code = THUMB_BRANCH(&syscallLeaveBranch, syscallLeaveHook);
+	else
+		code = 0xbf00;
+	PatchCode(&syscallLeaveBranchPatch, &syscallLeaveBranchClean, &code, sizeof(SceUInt16));
 }
 
 void SceIntrmgrForKernel_8D6E1289(void *enter, void *leave)
@@ -135,10 +153,16 @@ void SceIntrmgrForKernel_8D6E1289(void *enter, void *leave)
 
 	g_intrEnterIntr = enter;
 	g_intrLeaveIntr = leave;
-	code = enter ? ARM_BRANCH(&intrEnterBranch, intrEnterHook) : 0xe320f000;
-	PatchCode(&intrEnterBranch, &code, sizeof(code));
-	code = leave ? ARM_BRANCH(&intrLeaveBranch, intrLeaveHook) : 0xe320f000;
-	PatchCode(&intrLeaveBranch, &code, sizeof(code));
+	if (enter)
+		code = ARM_BRANCH(&intrEnterBranch, intrEnterHook);
+	else
+		code = 0xe320f000;
+	PatchCode(&intrEnterBranchPatch, &intrEnterBranchClean, &code, sizeof(code));
+	if (leave)
+		code = ARM_BRANCH(&intrLeaveBranch, intrLeaveHook);
+	else
+		code = 0xe320f000;
+	PatchCode(&intrLeaveBranchPatch, &intrLeaveBranchClean, &code, sizeof(code));
 }
 
 void SceIntrmgrForKernel_04DBA732(void *enter, void *leave)
@@ -180,7 +204,8 @@ int sceKernelRegisterIntrHandler(unsigned int intrCode, const char *name, unsign
 				unsigned int target, const SceKernelIntrRegisterOpt *opt)
 {
 	IntrHandler *info;
-	unsigned int mask, config = 1;
+	unsigned int mask;
+	SceUInt8 config = 1;
 	SceKernelIntrStatus state;
 	int result;
 
@@ -209,10 +234,22 @@ int sceKernelRegisterIntrHandler(unsigned int intrCode, const char *name, unsign
 		SCE_DBG_PRINTF(0xb, 415, INTR_TEXT(g_intrInvalidPriority, "invalid priority. %d\n"), priority);
 		goto Return;
 	}
-	if (TargetMask(target, &mask)) {
-		result = SCE_KERNEL_ERROR_ILLEGAL_TARGET_CPU;
-		SCE_DBG_PRINTF(0xb, 420, INTR_TEXT(g_intrInvalidTargetCpu, "invalid target cpu. %d\n"), target);
-		goto Return;
+	if (!target)
+		goto BadTarget;
+	if (target & 0xf0000) {
+		if (target << 28) {
+BadTarget:
+			result = SCE_KERNEL_ERROR_ILLEGAL_TARGET_CPU;
+			SCE_DBG_PRINTF(0xb, 420, INTR_TEXT(g_intrInvalidTargetCpu, "invalid target cpu. %d\n"), target);
+			goto Return;
+		}
+		mask = target >> 16;
+	} else if (target << 28) {
+		if ((int)target < 0)
+			goto BadTarget;
+		mask = (SceUInt8)target;
+	} else {
+		mask = target >> 16;
 	}
 	if (opt) {
 		if (opt->size != sizeof(*opt)) {
@@ -220,12 +257,14 @@ int sceKernelRegisterIntrHandler(unsigned int intrCode, const char *name, unsign
 			goto Return;
 		}
 		if (opt->attr & SCE_KERNEL_INTR_OPT_HAS_CONFIG) {
-			config = opt->config;
-			if ((config & ~2U) != SCE_KERNEL_INTR_CONFIG_LEVEL) {	/* level or edge */
+			unsigned int value = opt->config;
+
+			if ((value & ~2U) != SCE_KERNEL_INTR_CONFIG_LEVEL) {	/* level or edge */
 				result = SCE_KERNEL_ERROR_ILLEGAL_INTRPARAM;
 				goto Return;
 			}
-			SetConfiguration(intrCode, config);
+			config = value;
+			SetConfiguration(intrCode, value);
 		}
 	}
 	info = &g_intrHandlers[intrCode];
@@ -265,10 +304,10 @@ int sceKernelRegisterIntrHandler(unsigned int intrCode, const char *name, unsign
 		info->subCount = 0;
 	}
 	if ((int)intrCode > 15) {
-		g_intrDistributor->priority[intrCode] = priority;
-		g_intrDistributor->target[intrCode] = mask;
+		GICD_BYTE(0x400 + (intrCode)) = priority;
+		GICD_BYTE(0x800 + (intrCode)) = mask;
 	}
-	info->targetCpu = g_intrDistributor->target[intrCode];
+	info->targetCpu = GICD_BYTE(0x800 + (intrCode));
 	info->configuration = config;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	if (g_intrRegistered)
@@ -277,14 +316,15 @@ Return:
 	return result;
 }
 
-int sceKernelReleaseIntrHandler(unsigned int intrCode)
+int sceKernelReleaseIntrHandler(unsigned int code)
 {
+	int intrCode = code;
 	IntrHandler *info;
 	SceKernelIntrStatus state;
 
 	if (IllegalContext())
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
-	if (intrCode >= INTR_COUNT) {
+	if ((unsigned int)intrCode >= INTR_COUNT) {
 		SCE_DBG_PRINTF(0xb, 533, INTR_TEXT(g_intrUnknownInterruptCode, "Unknown interrupt code. %d\n"), intrCode);
 		return SCE_KERNEL_ERROR_ILLEGAL_INTRCODE;
 	}
@@ -296,7 +336,7 @@ int sceKernelReleaseIntrHandler(unsigned int intrCode)
 		return SCE_KERNEL_ERROR_NOTFOUND_HANDLER;
 	}
 	if (intrCode > 15 && info->priority > 63)
-		g_intrDistributor->clearEnable[intrCode >> 5] = 1U << (intrCode & 31);
+		GICD_WORD(0x180 + ((unsigned int)intrCode >> 5) * 4) = 1U << (intrCode & 31);
 	info->handler = NULL;
 	info->oldHandler = NULL;
 	info->intrCode = 0;
@@ -387,7 +427,7 @@ int sceKernelEnableIntr(unsigned int intrCode)
 		SCE_DBG_PRINTF(0xb, 674, INTR_TEXT(g_intrInterruptHandlerIsNotRegisteredIntrcode, "interrupt handler is not registered. intrcode %d\n"), intrCode);
 		return SCE_KERNEL_ERROR_NOTFOUND_HANDLER;
 	}
-	g_intrDistributor->setEnable[intrCode >> 5] = 1U << (intrCode & 31);
+	GICD_WORD(0x100 + (intrCode >> 5) * 4) = 1U << (intrCode & 31);
 	return 0;
 }
 
@@ -401,7 +441,7 @@ int sceKernelDisableIntr(unsigned int intrCode)
 		SCE_DBG_PRINTF(0xb, 691, INTR_TEXT(g_intrInterruptHandlerIsNotRegistered2, "interrupt handler is not registered\n"));
 		return SCE_KERNEL_ERROR_NOTFOUND_HANDLER;
 	}
-	g_intrDistributor->clearEnable[intrCode >> 5] = 1U << (intrCode & 31);
+	GICD_WORD(0x180 + (intrCode >> 5) * 4) = 1U << (intrCode & 31);
 	return 0;
 }
 
@@ -418,10 +458,10 @@ int sceKernelSuspendIntr(unsigned int intrCode, unsigned int *enabled)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	mask = 1U << (intrCode & 31);
-	active = g_intrDistributor->setEnable[intrCode >> 5] & mask;
+	active = GICD_WORD(0x100 + (intrCode >> 5) * 4) & mask;
 	if (active) {
 		*enabled = 1;
-		g_intrDistributor->clearEnable[intrCode >> 5] = mask;
+		GICD_WORD(0x180 + (intrCode >> 5) * 4) = mask;
 		active = 0;
 	} else {
 		*enabled = active;
@@ -440,9 +480,9 @@ int sceKernelResumeIntr(unsigned int intrCode, unsigned int enabled)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	if (enabled)
-		g_intrDistributor->setEnable[intrCode >> 5] = 1U << (intrCode & 31);
+		GICD_WORD(0x100 + (intrCode >> 5) * 4) = 1U << (intrCode & 31);
 	else
-		g_intrDistributor->clearEnable[intrCode >> 5] = 1U << (intrCode & 31);
+		GICD_WORD(0x180 + (intrCode >> 5) * 4) = 1U << (intrCode & 31);
 	return 0;
 }
 
@@ -476,7 +516,7 @@ int sceKernelSetIntrPriority(unsigned int intrCode, unsigned int priority)
 	}
 	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	info->priority = priority;
-	((GicDistributor *)g_intrDistributor)->priority[intrCode] = priority;
+	GICD_BYTE(0x400 + (intrCode)) = priority;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 Return:
 	return result;
@@ -517,7 +557,7 @@ int sceKernelSetIntrTargetCpu(unsigned int intrCode, unsigned int target)
 	}
 	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	info->targetCpu = mask;
-	((GicDistributor *)g_intrDistributor)->target[intrCode] = mask;
+	GICD_BYTE(0x800 + (intrCode)) = mask;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
@@ -557,7 +597,7 @@ int sceKernelGenerateSoftIntr(unsigned int intrCode, unsigned int filter, unsign
 		}
 		intrCode |= mask << 16;
 	}
-	g_intrDistributor->softIntr = intrCode;
+	GICD_WORD(0xf00) = intrCode;
 	return 0;
 }
 
@@ -567,7 +607,7 @@ int sceKernelGetIntrPendingStatusForDebugger(int intrCode)
 		SCE_DBG_PRINTF(0xb, 927, INTR_TEXT(g_intrUnknownInterruptCode, "Unknown interrupt code. %d\n"), intrCode);
 		return SCE_KERNEL_ERROR_ILLEGAL_INTRCODE;
 	}
-	return g_intrDistributor->setPending[(unsigned int)intrCode >> 5] >> (intrCode & 31) & 1;
+	return GICD_WORD(0x200 + ((unsigned int)intrCode >> 5) * 4) >> (intrCode & 31) & 1;
 }
 
 int sceKernelClearIntrPendingStatusForDebugger(int intrCode)
@@ -576,7 +616,7 @@ int sceKernelClearIntrPendingStatusForDebugger(int intrCode)
 		SCE_DBG_PRINTF(0xb, 937, INTR_TEXT(g_intrUnknownInterruptCode, "Unknown interrupt code. %d\n"), intrCode);
 		return SCE_KERNEL_ERROR_ILLEGAL_INTRCODE;
 	}
-	g_intrDistributor->clearPending[(unsigned int)intrCode >> 5] = 1U << (intrCode & 31);
+	GICD_WORD(0x280 + ((unsigned int)intrCode >> 5) * 4) = 1U << (intrCode & 31);
 	return 0;
 }
 
@@ -813,25 +853,33 @@ int sceKernelQueryIntrHandlerInfo(unsigned int intrCode, unsigned int subCode,
 	if (out->size != sizeof(*out))
 		return SCE_KERNEL_ERROR_ILLEGAL_INTRPARAM;
 	info = &g_intrHandlers[intrCode];
-	if (info->subCount) {
-		if ((int)subCode < 0) {
-			if (subCode != ~0U)
-				return SCE_KERNEL_ERROR_ILLEGAL_INTRCODE;
-		} else {
-			if (subCode >= info->subCount)
-				return SCE_KERNEL_ERROR_ILLEGAL_INTRCODE;
-			if (info->sub)
-				info = &info->sub[subCode];
-			else
-				subCode = 0;
-		}
+	if (!info->subCount)
+		goto NoSub;
+	if ((int)subCode < 0) {
+		if (subCode == ~0U)
+			goto NoSub;
+BadSub:
+		return SCE_KERNEL_ERROR_ILLEGAL_INTRCODE;
 	}
-	if (info->oldHandler)
-		out->handler = info->oldHandler;
-	else
+	if (subCode >= info->subCount)
+		goto BadSub;
+	if (info->sub) {
+		info = &info->sub[subCode];
+		if (info->oldHandler)
+			goto OldHandler;
+		goto Handler;
+	}
+	subCode = 0;
+NoSub:
+	if (!info->oldHandler) {
+Handler:
 		out->handler = info->handler;
+	} else {
+OldHandler:
+		out->handler = info->oldHandler;
+	}
 	out->arg = info->arg;
-	enabled = g_intrDistributor->clearEnable[intrCode >> 5] >> (intrCode & 31) & 1;
+	enabled = GICD_WORD(0x180 + (intrCode >> 5) * 4) >> (intrCode & 31) & 1;
 	out->intrCode = intrCode;
 	out->type = info->type;
 	out->priority = info->priority >> 4;
@@ -940,20 +988,17 @@ int sceKernelIntrMgrStart(void)
 	int result;
 
 	sceKernelSysrootCorelockLock(0);
-	g_intrCpuInterface = cpuInterface;
-	g_intrDistributor = (GicDistributor *)(PERIPH_REG_BASE + GIC_DISTRIBUTOR_OFFSET);
+	g_intrCpuInterface = (SceUInt32)cpuInterface;
+	g_intrDistributor = PERIPH_REG_BASE + GIC_DISTRIBUTOR_OFFSET;
 	cpuInterface->control = 0;
 	if (!sceKernelCpuId())
-		g_intrDistributor->control = 0;
-	blocks = (g_intrDistributor->type & 31) + 1;
-	i = 0;
-	do {
-		g_intrDistributor->clearEnable[i] = ~0U;
-		i++;
-	} while (i != blocks);
-	g_intrCpuInterface->control = 1;
+		GICD_WORD(0) = 0;
+	blocks = (GICD_WORD(4) & 31) + 1;
+	for (i = 0; i != blocks; i++)
+		GICD_WORD(0x180 + i * 4) = ~0U;
+	GICC_WORD(0) = 1;
 	if (!sceKernelCpuId())
-		g_intrDistributor->control = 1;
+		GICD_WORD(0) = 1;
 	g_intrCpu[sceKernelCpuId()].nesting = 0;
 	if (!sceKernelCpuId()) {
 		result = Start();
@@ -991,7 +1036,7 @@ int sceKernelIntrMgrStart(void)
 			sceKernelCpuId() * 0x40;
 		IntrCpuState *volatile state = &g_intrCpu[sceKernelCpuId()];
 
-		PatchCode(vector + 0x28, (const void *)&state, sizeof(state));
+		PatchCode(vector + 0x28, vector + 0x28, (const void *)&state, sizeof(state));
 	}
 	sceKernelSysrootCorelockUnlock();
 	enableInterrupts();
@@ -1052,8 +1097,8 @@ int sceKernelIntrMgrModuleStart(SceSize arglen, void *argp)
 		return result;
 	}
 	sceKernelGetMemBlockBase(result, &base);
-	g_intrCpuInterface = (GicCpuInterface *)((char *)base + GIC_CPU_INTERFACE_OFFSET);
-	g_intrDistributor = (GicDistributor *)((char *)base + GIC_DISTRIBUTOR_OFFSET);
+	g_intrCpuInterface = (SceUInt32)base + GIC_CPU_INTERFACE_OFFSET;
+	g_intrDistributor = (SceUInt32)base + GIC_DISTRIBUTOR_OFFSET;
 	ResetController();
 	cpu = sceKernelCpuId();
 	g_intrCpu[cpu].nesting = 0;
@@ -1085,7 +1130,7 @@ int module_bootstart(SceSize arglen, void *argp)
 	base += sceKernelCpuId() * 0x40;
 	state = &g_intrCpu[sceKernelCpuId()];
 	/* the vector page word 0x28 of this core points at its nesting state */
-	PatchCode(base + 0x28, (const void *)&state, sizeof(state));
+	PatchCode(base + 0x28, base + 0x28, (const void *)&state, sizeof(state));
 	return 0;
 }
 #endif
@@ -1124,69 +1169,4 @@ void illegalUserDACRCfunc(const ThreadCB *thread, unsigned int dacr)
 	SCE_DBG_PRINTF(0, 2352, INTR_TEXT(g_intrThreadIDX, "** ThreadID:  0x%08X [%s]\n"),
 		thread->threadId, SceSysmemForDriver_E655852F(thread->threadId));
 	SCE_PANIC(2354);
-}
-
-/* name unknown: validate the acknowledged GIC interrupt before CPU entry. */
-IntrHandler *intrLookupInterrupt(SceUInt32 *acknowledge)
-{
-	unsigned int code;
-	IntrHandler *info;
-
-	*acknowledge = g_intrCpuInterface->acknowledge;
-	code = *acknowledge & 0x3ff;
-	if (code >= INTR_COUNT)
-		return NULL;
-	info = &g_intrHandlers[code];
-	return info->handler ? info : NULL;
-}
-
-/* name unknown: invoke the registered handler with nested IRQs enabled. */
-int intrDispatchInterrupt(IntrHandler *info)
-{
-	int (*handler)(unsigned int, void *, unsigned int);
-	int result;
-	SceUInt32 apiStat = 0;
-
-	writeTpidruro(apiStat);
-	enableIrq();
-	handler = info->handler;
-	result = handler(info->intrCode, info->arg, info->priority);
-	disableIrq();
-	return result;
-}
-
-/* name unknown: choose a nesting level or the current thread's saved context.
- * Called while still in IRQ mode, before exposing the banked user SP to C.
- */
-unsigned int intrEnterInterrupt(IntrHandler *info, const IntrIrqFrame *frame)
-{
-	unsigned int cpu = readMpidr() & 15;
-	unsigned int nesting;
-
-	info->count[cpu]++;
-	nesting = ++g_intrCpu[cpu].nesting;
-	if ((int)(nesting - 2) < 0 && frame->thread)
-		return 0;
-	return nesting;
-}
-
-/* name unknown: finish one interrupt before deciding whether to reschedule. */
-unsigned int intrCompleteInterrupt(int result, unsigned int acknowledge)
-{
-	unsigned int intrCode = acknowledge & ~0x1c00U;
-	unsigned int cpu, nesting;
-
-	if (result != -1 && intrCode > 31)
-		g_intrDistributor->clearEnable[intrCode >> 5] =
-			1U << (intrCode & 31);
-	g_intrCpuInterface->endOfIntr = acknowledge;
-	cpu = readMpidr() & 15;
-	nesting = g_intrCpu[cpu].nesting;
-	if (*StackGuard(cpu, nesting) != INTR_STACK_MAGIC) {
-		intrStackOverflow(nesting, acknowledge);
-		for (;;)
-			;
-	}
-	g_intrCpu[cpu].nesting = --nesting;
-	return nesting;
 }
