@@ -14,7 +14,6 @@
 #define MG_ERROR_ARGUMENT	((int)0x800f1616)
 #define MG_ERROR_UNSUPPORTED	((int)0x800f1625)
 #define MG_ERROR_OPERATION	((int)0x800f1628)
-#define NOINLINE		__attribute__((noinline))
 
 static SceDmac5KeyringRegisters *s_keyring;
 static SceSblSmCommId s_smId;
@@ -29,7 +28,7 @@ static const uint32_t s_request[0x90 / 4] = {
 };
 
 /* name unknown: map the DMAC5 key-register page. */
-static int NOINLINE MapKeyRegisters(void)
+static int __attribute__((noinline)) MapKeyRegisters(void)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	void *base;
@@ -49,7 +48,7 @@ static int NOINLINE MapKeyRegisters(void)
 }
 
 /* name unknown: start mgkm_sm with the original authorization request. */
-static int NOINLINE StartSecureModule(void)
+static int __attribute__((noinline)) StartSecureModule(void)
 {
 	SelfAuthRequest auth;
 	int ret;
@@ -65,7 +64,7 @@ static int NOINLINE StartSecureModule(void)
 }
 
 /* The secure-module command payload is intentionally not initialized by Sony. */
-static int NOINLINE call_set_key_command(unsigned command)
+static int __attribute__((noinline)) call_set_key_command(unsigned command)
 {
 	SceSblSmCommPair stopResult;
 	uint32_t result = 0;
@@ -83,7 +82,7 @@ static int NOINLINE call_set_key_command(unsigned command)
 }
 
 /* name unknown: stage an aligned AES block before calling DMAC5. */
-static int NOINLINE AesTransform(const void *input, void *output,
+static int __attribute__((noinline)) AesTransform(const void *input, void *output,
 	unsigned size, unsigned slot, unsigned encrypt)
 {
 	uint8_t plain[32] __attribute__((aligned(16)));
@@ -107,7 +106,7 @@ static int NOINLINE AesTransform(const void *input, void *output,
 }
 
 /* name unknown: the DES stage copies words, without a memcpy import. */
-static int NOINLINE DesTransform(const uint32_t *input, uint32_t *output,
+static int __attribute__((noinline)) DesTransform(const uint32_t *input, uint32_t *output,
 	unsigned slot, unsigned encrypt)
 {
 	uint32_t plain[4] __attribute__((aligned(16)));
@@ -141,7 +140,7 @@ static int ValidInputs(const void *first, const void *second, const void *third)
 }
 
 /* Two identical halves form the 32-byte wrapped key. */
-static int NOINLINE InstallDesKey(const uint32_t *key)
+static int __attribute__((noinline)) InstallDesKey(const uint32_t *key)
 {
 	uint32_t wrapped[8];
 
@@ -153,7 +152,7 @@ static int NOINLINE InstallDesKey(const uint32_t *key)
 }
 
 /* name unknown: decode two keys, xor them, and install keyslot 0x1d. */
-static int NOINLINE InstallXorKey(const void *first, const void *second)
+static int __attribute__((noinline)) InstallXorKey(const void *first, const void *second)
 {
 	uint32_t left[4], right[4];
 	int ret;
@@ -176,7 +175,7 @@ int SceSblMgKeyMgrForDriver_B6AC3AE1(const void *input, void *output)
 	return (uintptr_t)input == 0 || !output ? MG_ERROR_ARGUMENT : MG_ERROR_UNSUPPORTED;
 }
 
-static int NOINLINE DesOperation(const uint32_t *key, const void *input,
+static int __attribute__((noinline)) DesOperation(const uint32_t *key, const void *input,
 	void *output, unsigned encrypt)
 {
 	int ret;
@@ -203,7 +202,7 @@ int SceSblMgKeyMgrForDriver_5FECCE03(const uint32_t *key, const void *input, voi
 	return DesOperation(key, input, output, 0);
 }
 
-static int NOINLINE XorKeyOperation(const void *first, const void *second,
+static int __attribute__((noinline)) XorKeyOperation(const void *first, const void *second,
 	const void *input, void *output, unsigned encrypt)
 {
 	int ret;
@@ -233,7 +232,7 @@ int SceSblMgKeyMgrForDriver_DF3B808D(const void *first, const void *second,
 }
 
 /* name unknown: translate between DES and the wrapping AES keyslot. */
-static int NOINLINE TranslateDes(const uint32_t *key, void *wrapped,
+static int __attribute__((noinline)) TranslateDes(const uint32_t *key, void *wrapped,
 	void *plain, unsigned decrypt)
 {
 	uint32_t intermediate[4];
@@ -291,7 +290,7 @@ int SceSblMgKeyMgrForDriver_4C82A466(const uint32_t *key, void *wrapped, void *p
 }
 
 /* name unknown: translate a block using a decoded 128-bit AES key. */
-static int NOINLINE TranslateAes(const void *key, void *wrapped, void *plain,
+static int __attribute__((noinline)) TranslateAes(const void *key, void *wrapped, void *plain,
 	unsigned operation)
 {
 	uint8_t intermediate[16];
@@ -356,7 +355,7 @@ int SceSblMgKeyMgrForDriver_71FA16B0(const void *first, void *second)
 	return ret;
 }
 
-static int NOINLINE RewrapKey(void *first, void *second, unsigned decrypt)
+static int __attribute__((noinline)) RewrapKey(void *first, void *second, unsigned decrypt)
 {
 	uint8_t intermediate[16];
 	int ret;

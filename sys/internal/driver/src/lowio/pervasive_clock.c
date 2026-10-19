@@ -2,8 +2,6 @@
 #include "lowio_internal.h"
 #include "clock_transition_table.h"
 
-#define PERVASIVE_ERROR ((int)0x803f0000)
-
 static int ClockIndex(unsigned mode)
 {
 	if (mode < 2)

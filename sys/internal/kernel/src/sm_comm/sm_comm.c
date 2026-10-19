@@ -31,7 +31,6 @@
 #define SM_PAYLOAD_OFFSET	0x40U
 #define SM_MAX_IMAGE_SIZE	0x20000U
 #define SM_MEMBLOCK_TYPE	0x10208006U
-#define NOINLINE		__attribute__((noinline))
 
 typedef void (*SmCry2ArmHandler)(SceUID id, int channel, void *argument,
 	uint32_t status, uint32_t result);
@@ -70,7 +69,7 @@ static inline void PublishWord(volatile uint32_t *word)
 	dsb();
 }
 
-static int NOINLINE AllocateSessionSlot(void)
+static int __attribute__((noinline)) AllocateSessionSlot(void)
 {
 	uint64_t used, bit;
 	int index;
@@ -91,7 +90,7 @@ static int NOINLINE AllocateSessionSlot(void)
 	return -1;
 }
 
-static int NOINLINE ReleaseSessionSlot(int index)
+static int __attribute__((noinline)) ReleaseSessionSlot(int index)
 {
 	uint64_t used;
 
@@ -116,7 +115,7 @@ static int FindSessionSlot(SceUID id)
 }
 
 /* 0.990 names it in its cry2arm messages. SMSC Proxy supplies five words. */
-static void NOINLINE sceSblSmCommIntHandler(SceUID id, int channel, void *argument,
+static void __attribute__((noinline)) sceSblSmCommIntHandler(SceUID id, int channel, void *argument,
 	uint32_t status, uint32_t result)
 {
 	uint32_t value = 0, eventBits;
@@ -165,7 +164,7 @@ out:
 	return;
 }
 
-static int NOINLINE StartSession(int index, uint32_t priority,
+static int __attribute__((noinline)) StartSession(int index, uint32_t priority,
 	const SceKernelVARange *range, uint32_t command,
 	const SelfAuthRequest *auth, SceUID *id)
 {

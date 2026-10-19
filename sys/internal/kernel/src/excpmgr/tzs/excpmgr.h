@@ -4,15 +4,12 @@
  * Sony built this module from the same excpmgr.c as os0:kd/excpmgr.skprx,
  * against the ForTZS libraries of the secure kernel. The shared parts live in
  * ../excpmgr_context.h and ../excpmgr_handler.h and call the os0 import
- * names; they are mapped to the ForTZS imports here, before any declaration.
+ * names.
  */
 #pragma once
 
-/* ForTZS imports: the os0 name of each one's function */
-#define SceDebugForDriver_02B04343		SceDebugForTZS_0D799DAE
-#define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB
-#define SceDebugForDriver_374B7868		SceDebugForTZS_F851BA4F
-#define SceDebugForDriver_FD753E7A			SceDebugForTZS_618F89E6
+/* the ForTZS imports under their os0 names, before any declaration */
+#include <sysmem/debug_tzs.h>
 
 /* the TZS parts of the shared excpmgr declarations */
 #define EXCPMGR_TZS	1

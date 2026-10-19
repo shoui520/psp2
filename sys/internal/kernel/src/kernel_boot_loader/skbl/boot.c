@@ -84,11 +84,6 @@ _Static_assert(sizeof(BootVectorPage) == 0x100, "vector page");
 /* linker script: the .bss bounds */
 extern uint32_t _fbss[], _end[];
 
-#define PERVASIVE_MISC		((ScePervasiveMiscRegisters *)PERVASIVE_MISC_BASE)
-#define PERVASIVE_BASECLK	((ScePervasiveBaseClkRegisters *)PERVASIVE_BASECLK_BASE)
-#define PERVASIVE2		((ScePervasive2Registers *)PERVASIVE2_BASE)
-#define SONY_REGBUS		((SceSonyRegbusRegisters *)SONY_REGBUS_BASE)
-#define GRAB_NS			((SceGrabRegisters *)GRAB_NS_BASE)
 #define LPDDR2_MAIN		((SceLpddr2Registers *)LPDDR2_MAIN_REG_BASE)
 #define LPDDR2_SUB		((SceLpddr2Registers *)LPDDR2_SUB_REG_BASE)
 #define TIMER_LT5		((SceLongTimerRegisters *)TIMER_LONG_REG_BASE(5))

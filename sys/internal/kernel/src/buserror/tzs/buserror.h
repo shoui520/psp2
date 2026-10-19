@@ -1,10 +1,8 @@
 /* SceKernelBusError, secure-world build (slb2:kbl/SceKernelBusError). */
 #pragma once
 
-/* ForTZS imports: the os0 name of each one's function */
-#define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB
-#define SceDebugForDriver_374B7868		SceDebugForTZS_F851BA4F
-#define SceDebugForDriver_FD753E7A			SceDebugForTZS_618F89E6
+/* the ForTZS imports under their os0 names, before any declaration */
+#include <sysmem/debug_tzs.h>
 
 #include <scetypes.h>
 #include <modulemgr/modulemgr.h>

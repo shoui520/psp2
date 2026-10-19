@@ -10,12 +10,8 @@
  */
 #pragma once
 
-/* ForTZS imports: the os0 name of each one's function */
-#define SceDebugForDriver_02B04343		SceDebugForTZS_0D799DAE
-#define SceDebugForDriver_391B5B74				SceDebugForTZS_563B623D
-#define SceDebugForDriver_FD753E7A			SceDebugForTZS_618F89E6
-#define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB
-#define SceDebugForDriver_374B7868		SceDebugForTZS_F851BA4F
+/* the ForTZS imports under their os0 names, before any declaration */
+#include <sysmem/debug_tzs.h>
 
 #include <stdint.h>
 #include <fw.h>
@@ -30,7 +26,6 @@
 #include "cmep_regs.h"
 #include <smsc_proxy/smsc_proxy.h>
 #include <sysmem/cpu.h>
-
 
 #define SCE_SBL_ERROR_NO_MEMORY			((int)0x800f040c)
 #define SCE_SBL_ERROR_INVALID_ARGUMENT		((int)0x800f0416)

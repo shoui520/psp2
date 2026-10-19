@@ -13,10 +13,6 @@
 #define ACCESS_MODE_MONCALL_PERVASIVE2	0x106
 #define ACCESS_MODE_MONCALL_REGBUS	0x107
 
-#define s_pervasiveMisc	((ScePervasiveMiscRegisters *)PERVASIVE_MISC_BASE)
-#define s_pervasive2	((ScePervasive2Registers *)PERVASIVE2_BASE)
-#define s_sonyRegbus	((SceSonyRegbusRegisters *)SONY_REGBUS_BASE)
-
 /* bits of mask below limit, one at a time */
 static inline unsigned int AccessModeBits(int mask, int limit)
 {
@@ -44,15 +40,15 @@ static int SetRegbusAccessMode(int mask, int mode, int arg2, int arg3)
 	if ((mask & 0x1f) == 0 || (unsigned int)mode > 2)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (mask & 0x01)
-		s_sonyRegbus->accessMode[0] = (s_sonyRegbus->accessMode[0] & ~0xf) | mode | mode << 2;
+		SONY_REGBUS->accessMode[0] = (SONY_REGBUS->accessMode[0] & ~0xf) | mode | mode << 2;
 	if (mask & 0x02)
-		s_sonyRegbus->accessMode[1] = (s_sonyRegbus->accessMode[1] & ~0xf) | mode | mode << 2;
+		SONY_REGBUS->accessMode[1] = (SONY_REGBUS->accessMode[1] & ~0xf) | mode | mode << 2;
 	if (mask & 0x04)
-		s_sonyRegbus->accessMode[2] = (s_sonyRegbus->accessMode[2] & ~0xf) | mode | mode << 2;
+		SONY_REGBUS->accessMode[2] = (SONY_REGBUS->accessMode[2] & ~0xf) | mode | mode << 2;
 	if (mask & 0x08)
-		s_sonyRegbus->accessMode[3] = (s_sonyRegbus->accessMode[3] & ~0xf) | mode | mode << 2;
+		SONY_REGBUS->accessMode[3] = (SONY_REGBUS->accessMode[3] & ~0xf) | mode | mode << 2;
 	if (mask & 0x10)
-		s_sonyRegbus->accessMode[4] = (s_sonyRegbus->accessMode[4] & ~0xf) | mode | mode << 2;
+		SONY_REGBUS->accessMode[4] = (SONY_REGBUS->accessMode[4] & ~0xf) | mode | mode << 2;
 	return 0;
 }
 
@@ -72,9 +68,9 @@ static int SetPervasive2AccessMode(int mask, int mode, int arg2, int arg3)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	bits = AccessModeBits(mask, 18);
 	if (mode == 1)
-		s_pervasive2->accessMode |= bits;
+		PERVASIVE2->accessMode |= bits;
 	else
-		s_pervasive2->accessMode &= ~bits;
+		PERVASIVE2->accessMode &= ~bits;
 	return 0;
 }
 
@@ -93,9 +89,9 @@ static int SetTasAccessMode(int mask, int mode, int arg2, int arg3)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	bits = AccessModeBits(mask, 8);
 	if (mode == 1)
-		s_pervasiveMisc->tasAccessMode |= bits;
+		PERVASIVE_MISC->tasAccessMode |= bits;
 	else
-		s_pervasiveMisc->tasAccessMode &= ~bits;
+		PERVASIVE_MISC->tasAccessMode &= ~bits;
 	return 0;
 }
 
@@ -114,9 +110,9 @@ static int SetPervasiveAccessMode(int mask, int mode, int arg2, int arg3)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	bits = AccessModeBits(mask, 19);
 	if (mode == 1)
-		s_pervasiveMisc->pervasiveAccessMode |= bits;
+		PERVASIVE_MISC->pervasiveAccessMode |= bits;
 	else
-		s_pervasiveMisc->pervasiveAccessMode &= ~bits;
+		PERVASIVE_MISC->pervasiveAccessMode &= ~bits;
 	return 0;
 }
 

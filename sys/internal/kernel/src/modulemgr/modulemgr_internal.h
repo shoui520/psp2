@@ -48,8 +48,6 @@
 #define ModulemgrKernelFree(ptr)	SceSysmemForKernel_4233C16D(ptr)
 #endif
 
-#define ARRAY_SIZE(a)			(sizeof(a) / sizeof((a)[0]))
-
 #define PAGE_TRUNC(x)			((x) / 0x1000 * 0x1000)
 #define PAGE_ROUND(x)			PAGE_TRUNC((x) + 0xfff)
 

@@ -5,13 +5,12 @@
  * secure reset, gate and clock words (monitor calls 0x110-0x114, which
  * SceLowio's ScePervasiveForDriver exports call), the grab and SonyRegbus
  * windows (0x11b-0x121), the CDRAM's controller (0x117-0x119) and the crash
- * dump (0x122). Its ForTZS imports are mapped to the os0 names here, before
- * any declaration.
+ * dump (0x122).
  */
 #pragma once
 
-/* ForTZS imports: the os0 name of each one's function */
-#define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB
+/* the ForTZS imports under their os0 names, before any declaration */
+#include <sysmem/debug_tzs.h>
 
 #include <fw.h>
 #include <stdint.h>
@@ -29,13 +28,6 @@
 #include "emc_regs.h"
 #include <sysmem/dipsw.h>
 
-/* Sony built the 3.6x secure kernel without its debug output */
-#if !FW_SINCE(0x04000000)
-#undef SCE_DBG_PRINTF
-#define SCE_DBG_PRINTF(...)		((void)0)
-#endif
-
-#define PERVASIVE_ERROR			((int)0x803f0000)
 #define ALL_CPUS			0xf	/* an interrupt's target CPUs */
 
 /* the monitor calls this module serves */

@@ -12,6 +12,9 @@
 extern "C" {
 #endif
 
+/* the number of elements of an array (ours) */
+#define ARRAY_SIZE(a)	(sizeof(a) / sizeof((a)[0]))
+
 /* memory */
 void *memchr(const void *buffer, int value, size_t count);
 int memcmp(const void *left, const void *right, size_t size);

@@ -16,12 +16,6 @@
 #include <lowio/pervasive_pixel.h>
 #include "pervasive_kbl.h"
 
-#define PERVASIVE_ERROR		((int)0x803f0000)
-
-#define PERVASIVE_MISC		((volatile ScePervasiveMiscRegisters *)PERVASIVE_MISC_BASE)
-#define PERVASIVE_GATE		((ScePervasiveGateRegisters *)PERVASIVE_GATE_BASE)
-#define PERVASIVE_BASECLK	((volatile ScePervasiveBaseClkRegisters *)PERVASIVE_BASECLK_BASE)
-
 static inline void PervasiveDmb(void)
 {
 	__asm__ volatile("dmb sy");

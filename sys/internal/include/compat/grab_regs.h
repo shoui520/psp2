@@ -75,3 +75,10 @@ _Static_assert(offsetof(SceSonyRegbusRegisters, errorStatus) == 0x108, "regbus e
 _Static_assert(offsetof(SceSonyRegbusRegisters, errorId) == 0x110, "regbus error log");
 _Static_assert(offsetof(SceSonyRegbusRegisters, status) == 0x120, "regbus status");
 _Static_assert(sizeof(SceSonyRegbusRegisters) == GRAB_PAGE_SIZE, "regbus register page");
+
+/* the bridges at their physical addresses (the boot loaders, the secure world, the bus error
+ * handler) */
+#define SONY_REGBUS		((SceSonyRegbusRegisters *)SONY_REGBUS_BASE)
+#define SONY_REGBUS_NS		((SceSonyRegbusRegisters *)SONY_REGBUS_NS_BASE)
+#define GRAB			((SceGrabRegisters *)GRAB_BASE)
+#define GRAB_NS			((SceGrabRegisters *)GRAB_NS_BASE)

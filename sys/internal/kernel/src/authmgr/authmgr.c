@@ -20,7 +20,6 @@
 #define AM_ENOMEM ((int)0x800f050c)
 #define AM_EPHYSICAL ((int)0x800f0528)
 #define AM_NO_REQUEST 0x0fffffff
-#define NOINLINE __attribute__((noinline))
 
 #if FW_DEBUG
 #define AUTH_DBG_PRINTF(function, line, format, ...) \
@@ -107,11 +106,11 @@ static inline uint32_t *PacketWords(struct AuthPacket *packet)
 {
 	return (uint32_t *)(void *)packet;
 }
-static NOINLINE int authMgrWaitSelfSemaphore(void)
+static __attribute__((noinline)) int authMgrWaitSelfSemaphore(void)
 {
 	return ErrorOnly(sceKernelWaitSema(s_state.selfSemaphore, 1, NULL));
 }
-static NOINLINE int authMgrIntrHandlerforInvoke(SceUID id, int channel,
+static __attribute__((noinline)) int authMgrIntrHandlerforInvoke(SceUID id, int channel,
 	void *argument, uint32_t status, uint32_t result)
 {
 	uint32_t bits;
@@ -132,7 +131,7 @@ static NOINLINE int authMgrIntrHandlerforInvoke(SceUID id, int channel,
 	sceKernelSetEventFlag(s_state.eventFlag, bits);
 	return 0;
 }
-static NOINLINE int authMgrWaitSM(void)
+static __attribute__((noinline)) int authMgrWaitSM(void)
 {
 	uint32_t guard = __stack_chk_guard;
 	uint32_t bits;
@@ -152,7 +151,7 @@ static NOINLINE int authMgrWaitSM(void)
 	CheckStackGuard(guard);
 	return result;
 }
-static NOINLINE int authMgrSetupSrcPARanges(const void *address, uint32_t size)
+static __attribute__((noinline)) int authMgrSetupSrcPARanges(const void *address, uint32_t size)
 {
 	uint32_t guard = __stack_chk_guard;
 	SceKernelVARange range = { .addr = (uintptr_t)address, .size = size };
@@ -174,7 +173,7 @@ static NOINLINE int authMgrSetupSrcPARanges(const void *address, uint32_t size)
 	CheckStackGuard(guard);
 	return result;
 }
-static NOINLINE void authMgrIntrHandler(SceUID id, int channel,
+static __attribute__((noinline)) void authMgrIntrHandler(SceUID id, int channel,
 	void *argument, uint32_t status, uint32_t resultWord)
 {
 	uint32_t guard = __stack_chk_guard;
@@ -209,7 +208,7 @@ static NOINLINE void authMgrIntrHandler(SceUID id, int channel,
 	}
 	CheckStackGuard(guard);
 }
-static NOINLINE int authMgrSendRequest(SceUID id, struct AuthPacket *packet)
+static __attribute__((noinline)) int authMgrSendRequest(SceUID id, struct AuthPacket *packet)
 {
 	uint32_t guard = __stack_chk_guard;
 	uint32_t physicalAddress;
@@ -229,7 +228,7 @@ static NOINLINE int authMgrSendRequest(SceUID id, struct AuthPacket *packet)
 	CheckStackGuard(guard);
 	return result;
 }
-static NOINLINE int authMgrSendPacketCore(struct AuthPacket *packet,
+static __attribute__((noinline)) int authMgrSendPacketCore(struct AuthPacket *packet,
 	uint32_t size, uint32_t command)
 {
 	int result, releaseResult, unlockResult;
@@ -268,7 +267,7 @@ static NOINLINE int authMgrSendPacketCore(struct AuthPacket *packet,
 	unlockResult = sceKernelUnlockFastMutex(&s_state.sendMutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
-static NOINLINE int authMgrStopSM(SceUID id)
+static __attribute__((noinline)) int authMgrStopSM(SceUID id)
 {
 	uint32_t guard = __stack_chk_guard;
 	uint32_t status[2];
@@ -299,7 +298,7 @@ static NOINLINE int authMgrStopSM(SceUID id)
 	CheckStackGuard(guard);
 	return result;
 }
-static NOINLINE int authMgrInvokeSM(void)
+static __attribute__((noinline)) int authMgrInvokeSM(void)
 {
 	uint32_t guard = __stack_chk_guard;
 	uint8_t *bootParameters = sceKernelSysrootGetKblParam();
@@ -347,7 +346,7 @@ static NOINLINE int authMgrInvokeSM(void)
 	CheckStackGuard(guard);
 	return result;
 }
-static NOINLINE int authMgrSendPacket(struct AuthPacket *packet,
+static __attribute__((noinline)) int authMgrSendPacket(struct AuthPacket *packet,
 	uint32_t size, uint32_t command)
 {
 	SceUID previousId;
@@ -377,7 +376,7 @@ static NOINLINE int authMgrSendPacket(struct AuthPacket *packet,
 	SceKernelSuspendForDriver_2BB92967(0);
 	return result;
 }
-static NOINLINE int sceSblAuthMgrStart(void)
+static __attribute__((noinline)) int sceSblAuthMgrStart(void)
 {
 	uint32_t guard = __stack_chk_guard;
 	uint32_t option[5] = { 0x14, 0, 0x40, 0, 0 };

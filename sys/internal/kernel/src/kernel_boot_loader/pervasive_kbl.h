@@ -28,6 +28,3 @@ int TimerGateEnable(void);
 int DebugDeviceGateEnable(void);
 int LowioPixelClockInit(void);
 int PervasiveMiscInit(void);
-
-/* the reset registers, which boot.c uses too */
-#define PERVASIVE_RESET		((ScePervasiveResetRegisters *)PERVASIVE_RESET_BASE)

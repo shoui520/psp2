@@ -17,8 +17,6 @@
 
 #include "buserror_text.h"
 
-#define ARRAY_SIZE(a)	(sizeof(a) / sizeof((a)[0]))
-
 static int __attribute__((noinline, noclone))
 FormatOcpTargetInfo_ES3(char *buf, SceSize size, const char *name,
 		      SceUInt32 address, SceUInt32 attribute)

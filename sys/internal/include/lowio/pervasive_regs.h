@@ -12,6 +12,10 @@
 #define PERVASIVE2_BASE			0xe3110000
 #define PERVASIVE_PAGE_SIZE		0x1000
 
+/* the error the pervasive services return: lowio's, the boot loader's and SceDriverTzs's
+ * (name unknown) */
+#define PERVASIVE_ERROR			((int)0x803f0000)
+
 #ifndef __ASSEMBLER__
 #include <stddef.h>
 #include <stdint.h>
@@ -472,5 +476,15 @@ _Static_assert(offsetof(ScePervasive2Registers, mainMemoryPageBase) == 0xf60, "P
 
 _Static_assert(offsetof(ScePervasive2Registers, usbVbus) == 0xf50, "pervasive2 vbus");
 _Static_assert(sizeof(ScePervasive2Registers) == 0x1000, "pervasive2 page");
+
+/*
+ * The blocks at their physical addresses, where the boot loaders, the secure world and the bus
+ * error handler reach them (the kernel maps them elsewhere: lowio's pervasive_init.c)
+ */
+#define PERVASIVE_MISC		((ScePervasiveMiscRegisters *)PERVASIVE_MISC_BASE)
+#define PERVASIVE_RESET		((ScePervasiveResetRegisters *)PERVASIVE_RESET_BASE)
+#define PERVASIVE_GATE		((ScePervasiveGateRegisters *)PERVASIVE_GATE_BASE)
+#define PERVASIVE_BASECLK	((ScePervasiveBaseClkRegisters *)PERVASIVE_BASECLK_BASE)
+#define PERVASIVE2		((ScePervasive2Registers *)PERVASIVE2_BASE)
 
 #endif /* __ASSEMBLER__ */

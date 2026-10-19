@@ -2,8 +2,6 @@
 #include "lowio_internal.h"
 #include "uart_clock_table.h"
 
-#define PERVASIVE_ERROR ((uint32_t)0x803f0000)
-
 /* Hardware-info registers cached by initialization; the final four names unknown. */
 uint32_t s_hardwareInfo[5];
 

@@ -1,8 +1,6 @@
 /* Pervasive register configuration. Private register names remain unresolved. */
 #include "lowio_internal.h"
 
-#define PERVASIVE_ERROR ((uint32_t)0x803f0000)
-
 static uint32_t WriteClock(volatile uint32_t *reg, uint32_t value)
 {
 	*reg = value;

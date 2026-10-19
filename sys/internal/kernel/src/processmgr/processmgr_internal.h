@@ -32,8 +32,6 @@
 #include <processmgr/process.h>
 #include <processmgr/processmgr.h>
 
-#define ARRAY_SIZE(a)			(sizeof(a) / sizeof((a)[0]))
-
 /* SceProcessObject.attr */
 #define PROCESS_ATTR_LOAD_DEBUG		0x00010000	/* name unknown: LoadProcessImage flag */
 #define PROCESS_ATTR_NOT_ACTIVE		0x00400000	/* not counted in the budget's active processes */

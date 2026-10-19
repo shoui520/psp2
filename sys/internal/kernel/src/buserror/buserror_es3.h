@@ -78,16 +78,8 @@
  * and the GRAB and register bus bridges' error logs. The tables below hold
  * each error register's physical address.
  */
-#define PERVASIVE_RESET		((const ScePervasiveResetRegisters *)PERVASIVE_RESET_BASE)
-#define PERVASIVE_GATE		((const ScePervasiveGateRegisters *)PERVASIVE_GATE_BASE)
-#define PERVASIVE2		((const ScePervasive2Registers *)PERVASIVE2_BASE)
-#define PERVASIVE_MISC		((const ScePervasiveMiscRegisters *)PERVASIVE_MISC_BASE)
 #define PERFMON			((const ScePerfmonRegisters *)PERFMON_REG_BASE)
 #define TIMER_BUS_ERROR		((const SceTimerBusErrorRegisters *)TIMER_BUS_ERROR_REG_BASE)
-#define GRAB_SECURE		((const SceGrabRegisters *)GRAB_BASE)
-#define GRAB			((const SceGrabRegisters *)GRAB_NS_BASE)
-#define REGBUS_SECURE		((const SceSonyRegbusRegisters *)SONY_REGBUS_BASE)
-#define REGBUS			((const SceSonyRegbusRegisters *)SONY_REGBUS_NS_BASE)
 
 /* SonicsSX interconnect: a bus, and an initiator/target agent on it */
 typedef struct SsxBusRegs {
@@ -109,8 +101,7 @@ typedef struct SsxAgentRegs {
 #define DEBUG_BUS		0xec500000
 
 #include <buserror/buserror_types.h>
-
-#define ARRAY_SIZE(a)	(sizeof(a) / sizeof((a)[0]))
+#include <sysmem/sysclib.h>
 
 /* is the device out of reset and clocked */
 #define PERVASIVE_IS_ON(device)						\
@@ -750,26 +741,26 @@ static SceSize __attribute__((unused)) CollectBusErrorInfo_ES3(BusErrorRecord *r
 	if (isCompatRamOn()) {
 		grabSize = sizeof(*grab);
 		grab->size = sizeof(*grab);
-		grab->status = GRAB->errorStatus;
-		grab->write[0] = GRAB->writeError[0];
-		grab->write[1] = GRAB->writeError[1];
-		grab->write[2] = GRAB->writeError[2];
-		grab->write[3] = GRAB->writeError[3];
-		grab->read[0] = GRAB->readError[0];
-		grab->read[1] = GRAB->readError[1];
-		grab->read[2] = GRAB->readError[2];
-		grab->read[3] = GRAB->readError[3];
-		grab->secureStatus = GRAB_SECURE->errorStatus;
-		grab->secureWrite[0] = GRAB_SECURE->writeError[0];
-		grab->secureWrite[1] = GRAB_SECURE->writeError[1];
-		grab->secureWrite[2] = GRAB_SECURE->writeError[2];
-		grab->secureWrite[3] = GRAB_SECURE->writeError[3];
-		grab->secureRead[0] = GRAB_SECURE->readError[0];
-		grab->secureRead[1] = GRAB_SECURE->readError[1];
-		grab->secureRead[2] = GRAB_SECURE->readError[2];
-		grab->secureRead[3] = GRAB_SECURE->readError[3];
-		grab->auxiliaryRegisters[0] = GRAB->readBusy;
-		grab->auxiliaryRegisters[1] = GRAB->writeBusy;
+		grab->status = GRAB_NS->errorStatus;
+		grab->write[0] = GRAB_NS->writeError[0];
+		grab->write[1] = GRAB_NS->writeError[1];
+		grab->write[2] = GRAB_NS->writeError[2];
+		grab->write[3] = GRAB_NS->writeError[3];
+		grab->read[0] = GRAB_NS->readError[0];
+		grab->read[1] = GRAB_NS->readError[1];
+		grab->read[2] = GRAB_NS->readError[2];
+		grab->read[3] = GRAB_NS->readError[3];
+		grab->secureStatus = GRAB->errorStatus;
+		grab->secureWrite[0] = GRAB->writeError[0];
+		grab->secureWrite[1] = GRAB->writeError[1];
+		grab->secureWrite[2] = GRAB->writeError[2];
+		grab->secureWrite[3] = GRAB->writeError[3];
+		grab->secureRead[0] = GRAB->readError[0];
+		grab->secureRead[1] = GRAB->readError[1];
+		grab->secureRead[2] = GRAB->readError[2];
+		grab->secureRead[3] = GRAB->readError[3];
+		grab->auxiliaryRegisters[0] = GRAB_NS->readBusy;
+		grab->auxiliaryRegisters[1] = GRAB_NS->writeBusy;
 	}
 
 	/*
@@ -782,16 +773,16 @@ static SceSize __attribute__((unused)) CollectBusErrorInfo_ES3(BusErrorRecord *r
 	if (isCompatRamOn()) {
 		regbus->size = sizeof(*regbus);
 		regbusSize = sizeof(BusErrorRegbusInfo);
-		regbus->status = REGBUS->errorStatus;
-		regbus->write[0] = REGBUS->errorId;
-		regbus->write[1] = REGBUS->errorAddr;
-		regbus->write[2] = REGBUS->errorAttr;
-		regbus->write[3] = REGBUS->errorInfo;
-		regbus->secureStatus = REGBUS_SECURE->errorStatus;
-		regbus->secureWrite[0] = REGBUS_SECURE->errorId;
-		regbus->secureWrite[1] = REGBUS_SECURE->errorAddr;
-		regbus->secureWrite[2] = REGBUS_SECURE->errorAttr;
-		regbus->secureWrite[3] = REGBUS_SECURE->errorInfo;
+		regbus->status = SONY_REGBUS_NS->errorStatus;
+		regbus->write[0] = SONY_REGBUS_NS->errorId;
+		regbus->write[1] = SONY_REGBUS_NS->errorAddr;
+		regbus->write[2] = SONY_REGBUS_NS->errorAttr;
+		regbus->write[3] = SONY_REGBUS_NS->errorInfo;
+		regbus->secureStatus = SONY_REGBUS->errorStatus;
+		regbus->secureWrite[0] = SONY_REGBUS->errorId;
+		regbus->secureWrite[1] = SONY_REGBUS->errorAddr;
+		regbus->secureWrite[2] = SONY_REGBUS->errorAttr;
+		regbus->secureWrite[3] = SONY_REGBUS->errorInfo;
 	}
 
 	vip = (BusErrorVipInfo *)((char *)regbus + regbusSize);
