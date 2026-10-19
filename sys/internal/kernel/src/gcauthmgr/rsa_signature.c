@@ -3,10 +3,6 @@
 
 int GcAuthRsaEncodeDigest(unsigned char *output, int size,
 			const MarlinRsaData *digest, int algorithm);
-int MarlinRsaPrivateOperation(unsigned int *output, const unsigned int *input,
-			     const struct MarlinRsaPrivateKey *key, int count);
-int MarlinRsaExponentOperation(unsigned int *output, const unsigned int *input,
-			      const MarlinRsaExponentKey *key, int count);
 
 unsigned int GcAuthRsaSignBlock(MarlinRsaData *output, const MarlinRsaData *digest,
 		     const struct MarlinRsaPrivateKey *key, int count,

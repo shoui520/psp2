@@ -8,6 +8,7 @@
 #include <usbserv/usbserv.h>
 #include <sysmem/debug.h>
 #include <sysmem/barrier.h>
+#include <dbgusb/dbgusb.h>
 
 #define BUFFER_SIZE 0x12000
 #define ERR_REGISTERED ((int)0x8024fff1)

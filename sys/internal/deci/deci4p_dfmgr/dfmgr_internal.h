@@ -21,6 +21,7 @@
 #include <threadmgr/threadmgr.h>
 #include <processmgr/processmgr.h>
 #include <sysmem/sysroot.h>
+#include <dbgusb/dbgusb.h>
 #undef sceDfMgrClose
 int sceDfMgrClose(SceUID handle);
 
@@ -343,9 +344,3 @@ int usbTerm(DfMgrLinkCB *link);
 /* exports */
 void sceDfMgrDcmpReqSendForLoadp(SceUInt32 result);
 int sceDfMgrInit(void);
-
-/* imports without a declaration elsewhere */
-int SceDbgUsbForDriver_A6BFCC0A(SceUID evf);
-int SceDbgUsbForDriver_08CF16D1(void);
-int SceDbgUsbForDriver_40C65DB2(const void *buf, SceSize size);
-int _sceDbgUsbPullData(void *buf, SceSize size);

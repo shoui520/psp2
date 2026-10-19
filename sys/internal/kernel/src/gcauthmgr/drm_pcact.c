@@ -26,9 +26,6 @@ extern unsigned char gcAuthPsmHmacKey[32];
 
 int GcAuthExecuteKirkCommand(void *output, const void *input, int command,
 		size_t size, int keyId);
-int MarlinRsaSetRandomGenerator(int (*generator)(unsigned char *, int));
-int MarlinRsaEncrypt2048(MarlinRsaData *output, const MarlinRsaData *input,
-		const MarlinRsaExponentKey *key);
 
 int GcAuthPcactGetAesDecryptKey(const GcAuthPcactKeyRequest *request)
 {

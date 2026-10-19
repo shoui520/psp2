@@ -125,14 +125,6 @@ int MarlinRsaPrivate1024(unsigned int *output, const unsigned int *input,
 int MarlinRsaPrivate2048(unsigned int *output, const unsigned int *input,
 			 const MarlinRsaPrivateKey *key);
 
-/* rsa_encrypt.c */
-int MarlinRsaEncrypt512(MarlinRsaData *output, const MarlinRsaData *input,
-			const MarlinRsaExponentKey *key);
-int MarlinRsaEncrypt1024(MarlinRsaData *output, const MarlinRsaData *input,
-			 const MarlinRsaExponentKey *key);
-int MarlinRsaEncrypt2048(MarlinRsaData *output, const MarlinRsaData *input,
-			 const MarlinRsaExponentKey *key);
-
 /* rsa_exponent.c */
 int MarlinRsaExponent512(unsigned int *output, const unsigned int *input,
 			 const MarlinRsaExponentKey *key);
@@ -152,19 +144,6 @@ int MarlinRemoveOaepPadding(const MarlinBuffer *buffer,
 int MarlinRemovePkcs1Padding(const MarlinBuffer *buffer, MarlinBuffer **output);
 int MarlinCreateSignaturePadding(const MarlinBuffer *data, int algorithm,
 				unsigned int size, MarlinBuffer **output);
-
-/* rsa_private.c */
-int MarlinRsaPrivateOperation(unsigned int *output, const unsigned int *input,
-			      const MarlinRsaPrivateKey *key, int count);
-
-/* rsa_public_operation.c */
-int MarlinRsaExponentOperation(unsigned int *output, const unsigned int *input,
-			       const MarlinRsaExponentKey *key, int count);
-
-/* rsa_random.c */
-int MarlinRsaHasRandomGenerator(void);
-void MarlinRsaFillNonzeroRandom(unsigned char *data, int size);
-int MarlinRsaSetRandomGenerator(int (*generator)(unsigned char *data, int size));
 
 /* rsa_sign.c */
 int MarlinRsaSignPrivate512(unsigned int *output, const unsigned int *input,

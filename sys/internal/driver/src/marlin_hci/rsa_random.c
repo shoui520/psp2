@@ -1,4 +1,6 @@
 /* Descriptive source name: the original library has no debug records. */
+#include <marlin_hci/rsa.h>
+
 int MarlinRsaDefaultRandom(unsigned char *data, int size);
 
 int (*randomGenerator)(unsigned char *, int) = MarlinRsaDefaultRandom;

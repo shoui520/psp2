@@ -3,9 +3,6 @@
 #include <marlin_hci/rsa_arithmetic.h>
 
 int MarlinRsaPrivateOperation(unsigned int *output, const unsigned int *input,
-			      const MarlinRsaPrivateKey *key, int count);
-
-int MarlinRsaPrivateOperation(unsigned int *output, const unsigned int *input,
 			      const MarlinRsaPrivateKey *key, int count)
 {
 	unsigned int residueP[32];

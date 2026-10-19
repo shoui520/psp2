@@ -3,9 +3,6 @@
 #include <marlin_hci/rsa_arithmetic.h>
 
 int MarlinRsaExponentOperation(unsigned int *output, const unsigned int *input,
-			       const MarlinRsaExponentKey *key, int count);
-
-int MarlinRsaExponentOperation(unsigned int *output, const unsigned int *input,
 			       const MarlinRsaExponentKey *key, int count)
 {
 	unsigned int temporary[128];
