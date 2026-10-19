@@ -9,13 +9,12 @@ typedef uint32_t StringWord __attribute__((aligned(1), may_alias));
 #if !defined(SYSCLIB_SELECT_STRINGS) || defined(SYSCLIB_WANT_STRCMP)
 int strcmp(const char *left, const char *right)
 {
-	const unsigned char *a = (const unsigned char *)left;
-	const unsigned char *start = (const unsigned char *)right;
-	const unsigned char *b = start;
+	const unsigned char *b = (const unsigned char *)right;
+	ptrdiff_t offset = left - right;	/* left's byte sits this far from right's */
 	int difference;
 
 	do {
-		unsigned int first = a[b - start];
+		unsigned int first = b[offset];
 		unsigned int second = *b++;
 
 		if (second == 0)
@@ -238,24 +237,27 @@ pad:
 #if !defined(SYSCLIB_SELECT_STRINGS) || defined(SYSCLIB_WANT_STRLCAT)
 size_t strlcat(char *destination, const char *source, size_t capacity)
 {
-	const char *start = source;
-	size_t used = 0;
+	char *d = destination;
+	const char *s = source;
+	size_t n = capacity;
+	size_t used;
 
-	while (used < capacity && destination[used])
-		used++;
-	if (used == capacity)
-		return used + strlen(source);
-	destination += used;
-	capacity -= used;
-	while (*source) {
-		if (capacity > 1) {
-			*destination++ = *source;
-			capacity--;
+	/* find the end of the destination, but not past its capacity */
+	while (n-- != 0 && *d != '\0')
+		d++;
+	used = d - destination;
+	n = capacity - used;
+	if (n == 0)
+		return used + strlen(s);
+	while (*s != '\0') {
+		if (n != 1) {
+			*d++ = *s;
+			n--;
 		}
-		source++;
+		s++;
 	}
-	*destination = 0;
-	return used + (source - start);
+	*d = '\0';
+	return used + (s - source);
 }
 #endif
 
@@ -269,7 +271,7 @@ char *strncpy_s(char *destination, const char *source, size_t limit)
 	if (length < limit)
 		destination[length] = '\0';
 	if (length)
-		memcpy(destination, source, length);
+		return memcpy(destination, source, length);
 	return destination;
 }
 #endif
