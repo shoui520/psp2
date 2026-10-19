@@ -304,11 +304,11 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForKernel_50FE3B4D
 	SceSysrootForKernel_55392965
 	SceSysrootForKernel_7968F091
-	SceSysrootForKernel_834439A7
+	SceSysrootForKernel_sceKernelSysrootIsSafeMode
 	SceSysrootForKernel_B0E1FC67
 	SceSysrootForKernel_CBD377B7
 	sceKernelSysrootAllocRemoteProcessHeap
-	SceSysrootForDriver_05093E7B
+	sceKernelSysrootGetShellPid
 	sceKernelRegisterInitCallback
 	sceKernelApiDeclareTypeInt64
 	sceKernelRegisterProcEventHandler

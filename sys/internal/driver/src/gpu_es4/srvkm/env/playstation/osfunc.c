@@ -336,7 +336,7 @@ IMG_HANDLE OSAddTimer(PFN_TIMER_FUNC pfnTimerFunc, IMG_VOID *pvData,
 	psTimerCBData->pfnTimerFunc = pfnTimerFunc;
 	psTimerCBData->pvData = pvData;
 	psTimerCBData->bActive = IMG_FALSE;
-	psTimerCBData->sTimer = SceSystimerForDriver_E2B9D8E9(SCE_SYSTIMER_TYPE_WORD);
+	psTimerCBData->sTimer = sceKernelSysTimerAlloc(SCE_SYSTIMER_TYPE_WORD);
 	if (psTimerCBData->sTimer < 0) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 0, &dbg_OSAddTimer_L1663,

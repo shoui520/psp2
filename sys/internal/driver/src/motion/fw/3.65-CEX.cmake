@@ -79,7 +79,7 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_49D4DD9B
+	sceKernelAllocHeapMemoryWithOption
 	sceKernelCopyToUser
 	sceKernelCreateHeap
 	sceKernelGetMemBlockBase

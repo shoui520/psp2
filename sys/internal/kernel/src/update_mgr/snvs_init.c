@@ -65,7 +65,7 @@ int SpkgInfoUtilInitForUpdater(uint32_t *status, uint32_t *flags)
 		result = UpdateUtilSetupSm(0, &smId, 0);
 		if (result)
 			goto cleanup;
-		result = SceSblSmCommForKernel_DB9FC204(smId, 0xc0002, &serviceResult,
+		result = sceSblSmCommCallFunc(smId, 0xc0002, &serviceResult,
 				&request.snvs, sizeof(request.snvs));
 		if (result)
 			goto cleanup;
@@ -77,7 +77,7 @@ int SpkgInfoUtilInitForUpdater(uint32_t *status, uint32_t *flags)
 		if (result)
 			goto cleanup;
 		request.snvs.mode = 3;
-		result = SceSblSmCommForKernel_DB9FC204(smId, 0xc0002, &serviceResult,
+		result = sceSblSmCommCallFunc(smId, 0xc0002, &serviceResult,
 				&request.snvs, sizeof(request.snvs));
 		if (result)
 			goto cleanup;
@@ -108,7 +108,7 @@ int SpkgInfoUtilInitForUpdater(uint32_t *status, uint32_t *flags)
 		result = UpdateUtilSetupSm(0, &smId, 0);
 		if (result)
 			goto cleanup;
-		if (SceSblSmCommForKernel_DB9FC204(smId, 0x80002, &serviceResult,
+		if (sceSblSmCommCallFunc(smId, 0x80002, &serviceResult,
 				&request.nvs, sizeof(request.nvs))) {
 			result = serviceResult;
 			goto cleanup;

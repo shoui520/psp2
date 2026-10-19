@@ -806,7 +806,7 @@ int sceKernelThreadMgrModuleBoot(SceSize arglen, const struct ThreadmgrBootArgs 
 							      CLEANER_STACK_BLOCK, CLEANER_STACK_SIZE);
 	if (thread->kStackMemblkId < 0)
 		SCE_PANIC(531);
-	SceSysmemForDriver_0B1FD5C3(thread->kStackMemblkId, (void **)&thread->pKStack);
+	sceKernelGetMemBlockMappedBase(thread->kStackMemblkId, (void **)&thread->pKStack);
 	memset((void *)thread->pKStack, STACK_FILL, thread->kStackSize);
 	*(SceUID *)thread->pKStack = thread->threadId;
 	thread->initAttr = 0;
@@ -997,7 +997,7 @@ per_cpu:
 	thread->kStackSize = INITIAL_STACK_SIZE;
 	thread->stackMemBlockType = MEMBLOCK_TYPE_KERNEL;
 	thread->kStackMemblkId = argp->cpu[cpuId].stackMemBlockId;
-	ret = SceSysmemForDriver_0B1FD5C3(thread->kStackMemblkId, (void **)&thread->pKStack);
+	ret = sceKernelGetMemBlockMappedBase(thread->kStackMemblkId, (void **)&thread->pKStack);
 	*(SceUID *)thread->pKStack = thread->threadId;
 	thread->boostPriority = BOOST_PRIORITY_NONE;
 	thread->initCpuAffinityMask = mask;
@@ -5108,7 +5108,7 @@ int64_t sceKernelExtendKernelStackWide(SceSize size, ThreadmgrStackFunction func
 		ret = memBlockId;
 		goto out;
 	}
-	SceSysmemForDriver_0B1FD5C3(memBlockId, &base);
+	sceKernelGetMemBlockMappedBase(memBlockId, &base);
 have:
 	if (!(thread->currentAttr & THREAD_ATTR_UNK10000000) || sceKernelCheckDipsw(DIPSW_STACK_CHECK))
 		memset(base, 0xff, pages);
@@ -7077,7 +7077,7 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 		ret = thread->kStackMemblkId;
 		goto fail_kernel_stack;
 	}
-	SceSysmemForDriver_0B1FD5C3(thread->kStackMemblkId, (void **)&thread->pKStack);
+	sceKernelGetMemBlockMappedBase(thread->kStackMemblkId, (void **)&thread->pKStack);
 
 	if ((int)attr >= 0) {
 		tlsSize = 0;
@@ -7115,7 +7115,7 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 			goto fail_user_stack;
 		}
 	}
-	SceSysmemForDriver_0B1FD5C3(thread->uStackMemblkId,
+	sceKernelGetMemBlockMappedBase(thread->uStackMemblkId,
 					(void **)&thread->pUStack);
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
@@ -7128,7 +7128,7 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 		ret = stackMirror;
 		goto fail_stack_mirror;
 	}
-	SceSysmemForDriver_0B1FD5C3(stackMirror, (void **)&stackMirrorBase);
+	sceKernelGetMemBlockMappedBase(stackMirror, (void **)&stackMirrorBase);
 
 	/* its TLS block: the thread words, then the main module's TLS */
 	moduleId = -1;

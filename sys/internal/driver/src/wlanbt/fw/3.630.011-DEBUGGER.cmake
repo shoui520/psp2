@@ -170,7 +170,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSdifForDriver_855C95E1
 	SceSdifForDriver_AABAA0F0
 	SceSdifForDriver_AB0222F2
-	SceSdifForDriver_BC45C83D
+	sceSdioChangeBusSpeed
 	SceSdifForDriver_D0F78D9B
 	SceSdifForDriver_DECE963B
 	SceSdifForDriver_E80293EF

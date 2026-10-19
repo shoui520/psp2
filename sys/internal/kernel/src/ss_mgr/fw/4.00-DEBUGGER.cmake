@@ -107,7 +107,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_0B4ED16A
 	SceSysmemForDriver_22CBE925
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_49D4DD9B
+	sceKernelAllocHeapMemoryWithOption
 	sceKernelCopyToUser
 	sceKernelVAtoPA
 	sceKernelGetMemBlockBase
@@ -129,7 +129,7 @@ set(MODULE_IMPORT_FUNCS
 	timingsafe_memcmp
 	__stack_chk_fail
 	memcmp
-	SceSysrootForKernel_9DB56D1F
+	sceKernelSysrootGetKblParam
 	SceSysrootForKernel_F10AB792
 	SceSysrootForDriver_A43599E9
 	sceKernelSysrootDisableAutoClockDown
@@ -152,11 +152,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDmaOpAssign
 	SceSblACMgrForKernel_sceSblACMgrIsSystemProgram
 	SceSblACMgrForKernel_sceSblACMgrGetMediaType
-	SceSblAuthMgrForKernel_122ACDEA
+	sceSblAuthMgrSetDmac5Key
 	SceSblSmCommForKernel_039C73B1
-	SceSblSmCommForKernel_0631F8ED
+	sceSblSmCommStopSm
 	SceSblSmCommForKernel_7863A0CC
-	SceSblSmCommForKernel_DB9FC204
+	sceSblSmCommCallFunc
 	sceKernelGetProcessSelfAuthInfo
 	SceSblAIMgrForDriver_274663A0
 	SceSblAIMgrForDriver_3B638885

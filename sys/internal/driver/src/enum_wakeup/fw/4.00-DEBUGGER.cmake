@@ -150,7 +150,7 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_49D4DD9B
+	sceKernelAllocHeapMemoryWithOption
 	sceKernelCreateHeap
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
@@ -254,7 +254,7 @@ set(MODULE_IMPORT_FUNCS
 	SceMtpIfForDriver_117F7519
 	SceMtpIfForDriver_16D7DBCC
 	SceMtpIfForDriver_2D9318E1
-	SceMtpIfForDriver_5245D237
+	sceMtpIfStartPort
 	SceMtpIfForDriver_5766D257
 	SceMtpIfForDriver_8D16B997
 	SceMtpIfForDriver_92CD107E

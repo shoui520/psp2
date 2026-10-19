@@ -222,7 +222,7 @@ static int initializeStorage(void)
 	if ((bytes >> 9) >> 32)
 		return ID_INVALID_ARGUMENT;
 	totalLeaves = indexLeaves = (int)(bytes >> 9);
-	storage.index = SceSysmemForDriver_49D4DD9B(heap, indexLeaves << 1, &allocOpt);
+	storage.index = sceKernelAllocHeapMemoryWithOption(heap, indexLeaves << 1, &allocOpt);
 	if (!storage.index)
 		return ID_NO_SPACE;
 	memset(storage.index, 0, indexLeaves << 1);
@@ -760,10 +760,10 @@ static int commitStorage(void)
 	int i, j, block, destination, ret = 0;
 	int count = storage.blockLeaves;
 
-	index = SceSysmemForDriver_49D4DD9B(heap, indexLeaves << 1, &opt);
+	index = sceKernelAllocHeapMemoryWithOption(heap, indexLeaves << 1, &opt);
 	if (!index)
 		return ID_NO_SPACE;
-	blockData = SceSysmemForDriver_49D4DD9B(heap, 0x4000, &opt);
+	blockData = sceKernelAllocHeapMemoryWithOption(heap, 0x4000, &opt);
 	/* Sony leaks the first allocation when the second fails. */
 	if (!blockData)
 		return ID_NO_SPACE;

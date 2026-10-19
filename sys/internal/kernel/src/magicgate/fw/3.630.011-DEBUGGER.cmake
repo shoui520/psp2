@@ -76,7 +76,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoRemove
 	sceIoDclose
 	sceIoWrite
-	SceIofilemgrForDriver_462F059B
+	sceIoGetstatByFd
 	sceIoDopen
 	sceIoLseek
 	sceIoOpen
@@ -94,7 +94,7 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelUtilsForDriver_F12B6451
 	SceDebugForDriver_391B74B7
 	_set_key_seed
-	SceSblSsMgrForDriver_A5B5D269
+	sceSblAimgrGetOpenPsId
 	SceSblMgKeyMgrForDriver_1263FB04
 	SceSblMgKeyMgrForDriver_DF3B808D
 	sceMsifGetMediaId

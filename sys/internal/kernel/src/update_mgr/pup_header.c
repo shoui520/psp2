@@ -75,7 +75,7 @@ int PupUtilVerifyPupHeaderAsync(SceSize arglen, PupVerifyThreadArgs *args)
 		if (result)
 			goto cleanup;
 	}
-	result = SceSblSmCommForKernel_DB9FC204(pupSmId, 0x10002, &serviceResult, packet, 4032);
+	result = sceSblSmCommCallFunc(pupSmId, 0x10002, &serviceResult, packet, 4032);
 	if (result)
 		goto cleanup;
 	result = serviceResult;

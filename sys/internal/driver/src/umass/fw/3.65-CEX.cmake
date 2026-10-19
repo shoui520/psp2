@@ -75,7 +75,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
-	SceSysrootForDriver_834439A7
+	sceKernelSysrootIsSafeMode
 	sceKernelGenerateSoftIntr
 	sceKernelCallSubIntrHandler
 	SceCpuForDriver_2A40BB93

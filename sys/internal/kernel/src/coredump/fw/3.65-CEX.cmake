@@ -309,12 +309,12 @@ set(MODULE_IMPORT_FUNCS
 	sceIoOpen
 	SceIofilemgrForDriver_A1EF2648
 	sceIoRename
-	SceIofilemgrForDriver_DF57A75F
+	sceIoChstatByFd
 	sceIoRead
 	sceIoClose
 	_set_key_seed
 	SceSblSsMgrForDriver_934DB6B5
-	SceSblSsMgrForDriver_A5B5D269
+	sceSblAimgrGetOpenPsId
 	SceSblSsMgrForKernel_83D254FF
 	SceSblSsMgrForKernel_E2DD0378
 	SceSblPostSsMgrForDriver_2C463AF1

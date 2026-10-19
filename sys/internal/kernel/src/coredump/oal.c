@@ -1206,7 +1206,7 @@ void oalGetSystemInfo(SceUID pid, CoredumpSystemInfo *info)
 	info->isDolceBytes[0] = 0xff;
 	info->isDolceBytes[1] = 0xff;
 	info->isDolce = SceSblAIMgrForDriver_71608CA3() != 0;
-	if (SceSblSsMgrForDriver_A5B5D269(&openPsId) != 0)
+	if (sceSblAimgrGetOpenPsId(&openPsId) != 0)
 		return;
 	titleSize = coredumpRun.trigger.titleid_len;
 	currentPid = coredumpRun.pid;

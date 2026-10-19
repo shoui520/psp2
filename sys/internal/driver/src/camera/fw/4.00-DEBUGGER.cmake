@@ -107,7 +107,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelLockRangeWithMode
 	sceKernelCopyFromUser
 	sceKernelAllocMemBlockForKernel
-	SceSysmemForDriver_F3BBE2E1
+	sceKernelGetMemBlockMemtypeByAddr
 	memset
 	__aeabi_idiv
 	memcpy

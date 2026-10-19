@@ -2690,14 +2690,14 @@ transferFrame:
 			chromaSize = 0;
 		}
 		if (device->cachedFrameBuffer.pvIBase && imageSize &&
-		    SceSysmemForDriver_F3BBE2E1(device->cachedFrameBuffer.pvIBase) != 0x8000)
+		    sceKernelGetMemBlockMemtypeByAddr(device->cachedFrameBuffer.pvIBase) != 0x8000)
 			sceKernelDcacheCleanInvalidateRange(device->cachedFrameBuffer.pvIBase, imageSize);
 		if (yuv420) {
 			if (device->cachedFrameBuffer.pvUBase && chromaSize &&
-			    SceSysmemForDriver_F3BBE2E1(device->cachedFrameBuffer.pvUBase) != 0x8000)
+			    sceKernelGetMemBlockMemtypeByAddr(device->cachedFrameBuffer.pvUBase) != 0x8000)
 				sceKernelDcacheCleanInvalidateRange(device->cachedFrameBuffer.pvUBase, chromaSize);
 			if (device->cachedFrameBuffer.pvVBase && chromaSize &&
-			    SceSysmemForDriver_F3BBE2E1(device->cachedFrameBuffer.pvVBase) != 0x8000)
+			    sceKernelGetMemBlockMemtypeByAddr(device->cachedFrameBuffer.pvVBase) != 0x8000)
 				sceKernelDcacheCleanInvalidateRange(device->cachedFrameBuffer.pvVBase, chromaSize);
 		}
 		conversion.size = sizeof(conversion);
@@ -2713,16 +2713,16 @@ transferFrame:
 		result = SceIftuForDriver_67E37EFC(&destination, &source, &conversion);
 		if (yuv420) {
 			if (device->cachedFrameBuffer.pvIBase && imageSize &&
-			    SceSysmemForDriver_F3BBE2E1(device->cachedFrameBuffer.pvIBase) != 0x8000)
+			    sceKernelGetMemBlockMemtypeByAddr(device->cachedFrameBuffer.pvIBase) != 0x8000)
 				sceKernelDcacheCleanInvalidateRange(device->cachedFrameBuffer.pvIBase, imageSize);
 			if (device->cachedFrameBuffer.pvUBase && chromaSize &&
-			    SceSysmemForDriver_F3BBE2E1(device->cachedFrameBuffer.pvUBase) != 0x8000)
+			    sceKernelGetMemBlockMemtypeByAddr(device->cachedFrameBuffer.pvUBase) != 0x8000)
 				sceKernelDcacheCleanInvalidateRange(device->cachedFrameBuffer.pvUBase, chromaSize);
 			if (device->cachedFrameBuffer.pvVBase && chromaSize &&
-			    SceSysmemForDriver_F3BBE2E1(device->cachedFrameBuffer.pvVBase) != 0x8000)
+			    sceKernelGetMemBlockMemtypeByAddr(device->cachedFrameBuffer.pvVBase) != 0x8000)
 				sceKernelDcacheCleanInvalidateRange(device->cachedFrameBuffer.pvVBase, chromaSize);
 		} else if (device->cachedFrameBuffer.pvIBase && imageSize &&
-			   SceSysmemForDriver_F3BBE2E1(device->cachedFrameBuffer.pvIBase) != 0x8000) {
+			   sceKernelGetMemBlockMemtypeByAddr(device->cachedFrameBuffer.pvIBase) != 0x8000) {
 			sceKernelDcacheInvalidateRange(device->cachedFrameBuffer.pvIBase, imageSize);
 		}
 		if (process->config.wBuffer == 1) {

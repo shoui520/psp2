@@ -124,7 +124,7 @@ set(MODULE_IMPORT_NIDS
 	0x7CFA62CD:F:0x6EBD9E01
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysrootForDriver_834439A7
+	sceKernelSysrootIsSafeMode
 	SceSysrootForDriver_B0E1FC67
 	SceSysmemForDriver_45D22597
 	sceKernelCopyToUser

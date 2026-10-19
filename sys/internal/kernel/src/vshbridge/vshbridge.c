@@ -914,7 +914,7 @@ SceUInt32 vshSblAimgrIsGenuineDolce(void)
 
 SceUInt32 vshSblAimgrGetConsoleId(void *id)
 {
-	VSH_BRIDGE(SceSblSsMgrForDriver_FC6CDD68(id));
+	VSH_BRIDGE(sceSblAimgrGetConsoleId(id));
 }
 
 SceUInt32 vshSblAimgrGetPscode(void *code)
@@ -924,12 +924,12 @@ SceUInt32 vshSblAimgrGetPscode(void *code)
 
 SceUInt32 vshSblAimgrGetPscode2(void *code)
 {
-	VSH_BRIDGE(SceSblSsMgrForDriver_9A9676D0(code));
+	VSH_BRIDGE(sceSblAimgrGetPscode2(code));
 }
 
 SceUInt32 vshSblAimgrGetVisibleId(void *id)
 {
-	VSH_BRIDGE_PRODUCT_MODE(SCE_SBL_ERROR_NOT_PRODUCT_MODE, SceSblSsMgrForDriver_04843835(id));
+	VSH_BRIDGE_PRODUCT_MODE(SCE_SBL_ERROR_NOT_PRODUCT_MODE, sceSblAimgrGetVisibleId(id));
 }
 
 SceUInt32 vshSblSsGetNvsData(SceUInt32 offset, void *buf, SceSize size)
@@ -976,7 +976,7 @@ SceUInt32 vshSblSsEncryptWithPortability(SceUInt32 mode, void *iv, ScePortabilit
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	}
 	out->msg_size = in->msg_size;
-	ret = SceSblSsMgrForDriver_21EC51F6(mode, iv, in, out);
+	ret = sceSblSsEncryptWithPortability(mode, iv, in, out);
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -1140,7 +1140,7 @@ int module_start(SceSize args, void *argp)
 	(void)argp;
 
 	if (getKeyInt("/CONFIG/USB", "usb_charge_enable", &value) >= 0) {
-		if (SceSysrootForDriver_834439A7() || SceSysrootForDriver_B0E1FC67())
+		if (sceKernelSysrootIsSafeMode() || SceSysrootForDriver_B0E1FC67())
 			value = 0;
 		SceUdcdForDriver_2D91F8C3(value);
 	}

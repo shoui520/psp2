@@ -65,7 +65,7 @@ int PupUtilVerifyPupSegmentMain(SceSize arglen, PupVerifyThreadArgs *args)
 		if (result)
 			goto cleanup;
 	}
-	result = SceSblSmCommForKernel_DB9FC204(pupSmId, 0x20002, &serviceResult,
+	result = sceSblSmCommCallFunc(pupSmId, 0x20002, &serviceResult,
 		packet, sizeof(*packet));
 	if (!result)
 		result = serviceResult;

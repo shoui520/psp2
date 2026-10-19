@@ -745,7 +745,7 @@ void *SceSysmemForDriver_B415B5A8(SceUID uid, SceSize size, void *opt, const voi
 	return ptr;
 }
 
-void *SceSysmemForDriver_49D4DD9B(SceUID uid, SceSize size, SceAllocOpt *opt)
+void *sceKernelAllocHeapMemoryWithOption(SceUID uid, SceSize size, SceAllocOpt *opt)
 {
 	void *ptr = sceKernelAllocHeapMemoryWithOptionCore(uid, size, opt);
 
@@ -1022,7 +1022,7 @@ void *sceKernelDlMmap(KernelHeap *heap, SceSize size)
 			}
 		}
 	}
-	if (SceSysrootForKernel_5C426B19() < 3) {
+	if (sceKernelSysrootGetStatus() < 3) {
 		name = sceKernelSysrootAlloc(0x20);
 		strncpy(name, heap->name, 0x1f);
 	} else {

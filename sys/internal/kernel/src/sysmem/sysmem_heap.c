@@ -13,7 +13,7 @@ char *SysmemAllocName(const char *name)
 {
 	char *copy;
 
-	if (SceSysrootForKernel_5C426B19() < 3)
+	if (sceKernelSysrootGetStatus() < 3)
 		copy = sceKernelSysrootAlloc(0x20);
 	else
 		copy = SceSysmemForKernel_85571907(0x20);
@@ -24,7 +24,7 @@ char *SysmemAllocName(const char *name)
 /* name unknown: such a copy given back (the sysroot heap's are kept) */
 void SysmemFreeName(char *name)
 {
-	if (SceSysrootForKernel_5C426B19() > 2)
+	if (sceKernelSysrootGetStatus() > 2)
 		SceSysmemForKernel_4233C16D(name);
 }
 

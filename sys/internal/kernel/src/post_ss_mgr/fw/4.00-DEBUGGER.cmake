@@ -176,7 +176,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_D9703808
 	SceSysrootForKernel_55392965
 	SceSysrootForKernel_71DB83A2
-	SceSysrootForKernel_9DB56D1F
+	sceKernelSysrootGetKblParam
 	SceSysrootForDriver_35875119
 	SceSysrootForDriver_A12C9950
 	SceSysrootForDriver_E25D2FD5
@@ -195,7 +195,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForKernel_85571907
 	sceKernelFreeMemBlock
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_49D4DD9B
+	sceKernelAllocHeapMemoryWithOption
 	sceKernelCopyToUser
 	sceKernelAllocHeapMemory
 	sceKernelVAtoPA
@@ -208,9 +208,9 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForKernel_sceSblACMgrIsSystemProgram
 	SceSblACMgrForKernel_BBA13D9C
 	SceSblACMgrForKernel_sceSblACMgrGetMediaType
-	SceSblSmCommForKernel_0631F8ED
+	sceSblSmCommStopSm
 	SceSblSmCommForKernel_7863A0CC
-	SceSblSmCommForKernel_DB9FC204
+	sceSblSmCommCallFunc
 	memset
 	strncmp
 	strstr
@@ -241,7 +241,7 @@ set(MODULE_IMPORT_FUNCS
 	nvs_write_data
 	_set_key_seed
 	SceSblSsMgrForDriver_934DB6B5
-	SceSblSsMgrForDriver_A5B5D269
+	sceSblAimgrGetOpenPsId
 	SceSblSsMgrForDriver_CD98CC92
 	SceSysconForDriver_0D0B6D25
 	SceSysconForDriver_29CF4335

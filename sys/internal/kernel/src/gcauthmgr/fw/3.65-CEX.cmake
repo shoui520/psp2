@@ -91,10 +91,10 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_E54FD746
 	sceKernelGetSystemTimeWide
 	SceSblSmCommForKernel_039C73B1
-	SceSblSmCommForKernel_0631F8ED
-	SceSblSmCommForKernel_DB9FC204
+	sceSblSmCommStopSm
+	sceSblSmCommCallFunc
 	SceSblSsMgrForDriver_AC57F4F0
-	SceSblSsMgrForDriver_FC6CDD68
+	sceSblAimgrGetConsoleId
 	SceNpDrmForDriver_742EBAF4
 	SceNpDrmForDriver_8B85A509
 	SceNpDrmForDriver_D91C3BCE

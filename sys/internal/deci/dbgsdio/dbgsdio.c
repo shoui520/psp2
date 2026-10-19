@@ -37,7 +37,7 @@
 #define DMA_COMMAND_LAST	0x00001000	/* the last tag of the chain */
 #define DMA_COHERENCY		0x73		/* L2 coherent virtual accesses */
 
-/* SceSysmemForDriver_0AAA4FDD: mapped at its physical address */
+/* sceKernelGetPhysicalMemoryType: mapped at its physical address */
 #define PHYSICAL_MEMORY_TYPE_DIRECT	3
 
 struct DbgSdio;
@@ -271,7 +271,7 @@ int _sceDbgSdioModuleStart(SceSize args, void *argp)
 }
 
 /* name unknown: attach a client event flag to a channel's mailbox interrupt */
-int SceDbgSdioForDriver_3D3FAF3A(SceUInt32 index, SceUID notify)
+int sceDbgSdioOpen(SceUInt32 index, SceUID notify)
 {
 	DbgSdioChannel *c;
 	SceUInt32 state;
@@ -308,7 +308,7 @@ int SceDbgSdioForDriver_3D3FAF3A(SceUInt32 index, SceUID notify)
 }
 
 /* name unknown: detach a channel's client */
-int SceDbgSdioForDriver_361E1BB6(SceUInt32 index)
+int sceDbgSdioClose(SceUInt32 index)
 {
 	DbgSdioChannel *c;
 	SceUInt32 state;
@@ -428,7 +428,7 @@ static int sendData(DbgSdioChannel *c, const SceUInt8 *data, SceSize size)
 	}
 
 	*c->txControl = CTRL_TX_DATA;
-	virtual = SceSysmemForDriver_0AAA4FDD(data) != PHYSICAL_MEMORY_TYPE_DIRECT;
+	virtual = sceKernelGetPhysicalMemoryType(data) != PHYSICAL_MEMORY_TYPE_DIRECT;
 	if (virtual || ((SceUIntPtr)data & (DBGSDIO_DMA_ALIGN - 1)) == 0) {
 		head = whole ? &chain : &tail;
 		if (whole) {
@@ -603,7 +603,7 @@ int receiveData(SceUInt32 index, void *buffer, SceSize size)
 			}
 		}
 	} else {
-		virtual = SceSysmemForDriver_0AAA4FDD(dst) != PHYSICAL_MEMORY_TYPE_DIRECT;
+		virtual = sceKernelGetPhysicalMemoryType(dst) != PHYSICAL_MEMORY_TYPE_DIRECT;
 		if (virtual || ((SceUIntPtr)dst & (DBGSDIO_DMA_ALIGN - 1)) == 0) {
 			whole = amount & ~(DBGSDIO_DMA_ALIGN - 1);
 			rest = amount & (DBGSDIO_DMA_ALIGN - 1);

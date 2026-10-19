@@ -68,7 +68,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_AE36C775
 	sceKernelVARangeToPAVector
 	SceSysrootForKernel_377895EB
-	SceSysrootForKernel_9DB56D1F
+	sceKernelSysrootGetKblParam
 	SceSysrootForDriver_D75D4F37
 	sceKernelSysrootDisableAutoClockDown
 	sceKernelSysrootEnableAutoClockDown
@@ -89,7 +89,7 @@ set(MODULE_IMPORT_FUNCS
 	sceSblSmSchedProxyGetStatus
 	SceSblSmSchedProxyForKernel_723B382F
 	SceSblSmSchedProxyForKernel_85EDA5FC
-	SceSblSmSchedProxyForKernel_8B84AC2A
+	sceSblSmSchedProxyRegisterIntrHandler
 	sceSblSmSchedProxyReadCry2Arm
 	sceSblSmSchedProxyWait
 	SceKernelSuspendForDriver_2BB92967

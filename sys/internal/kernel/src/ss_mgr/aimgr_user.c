@@ -16,7 +16,7 @@ static int aimgrGetOpenPsIdForUser(SceKernelOpenPsId *openPsId)
 		return AIMGR_ERROR_INVALID_ARGUMENT;
 
 	syscallFrame = sceSyscallEnter();
-	ret = SceSblSsMgrForDriver_A5B5D269(openPsId);
+	ret = sceSblAimgrGetOpenPsId(openPsId);
 	sceSyscallLeave(syscallFrame);
 	return ret;
 }

@@ -47,7 +47,7 @@ int mtpHeapDelete(void)
 
 void *mtpAlloc(SceSize size)
 {
-	return SceSysmemForDriver_49D4DD9B(ewg.heap, size, &ewg.allocOpt);
+	return sceKernelAllocHeapMemoryWithOption(ewg.heap, size, &ewg.allocOpt);
 }
 
 void mtpFree(void *p)

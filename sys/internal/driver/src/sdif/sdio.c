@@ -1211,7 +1211,7 @@ SdifSdioFunction *SceSdifForDriver_0C66E36F(SdifSdioContext *sdio,
 	return NULL;
 }
 
-int SceSdifForDriver_BC45C83D(SdifSdioContext *sdio, unsigned int mode)
+int sceSdioChangeBusSpeed(SdifSdioContext *sdio, unsigned int mode)
 {
 	SdifContextGlobal *context;
 	SdifCommand *command;
@@ -1616,7 +1616,7 @@ nextFunction:
 			goto success;
 		if (sdifSetClock(sdio->contextGlobal, 25000000, 0) >= 0)
 			goto success;
-		result = SceSdifForDriver_BC45C83D(sdio, 0);
+		result = sceSdioChangeBusSpeed(sdio, 0);
 	}
 	if (result < 0)
 		goto fail;

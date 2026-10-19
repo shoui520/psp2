@@ -309,7 +309,7 @@ typedef struct Ehci {
 	EhciPipeEntry *pipeTail;
 } Ehci;
 
-/* SceSysmemForDriver_F3BBE2E1 of uncached memory: no cache maintenance */
+/* sceKernelGetMemBlockMemtypeByAddr of uncached memory: no cache maintenance */
 #define USBD_MEMTYPE_UNCACHED		0x8000
 
 #define USBD_CACHE_LINE			64
@@ -889,7 +889,7 @@ static int ehciSubmitItd(Ehci *ehci, UsbdPipe *pipe, UsbdRequest *request)
 			ehciUnwaitPipe(ehci, pipe);
 		return 0;
 	}
-	if (SceSysmemForDriver_F3BBE2E1(request->buffer) != USBD_MEMTYPE_UNCACHED) {
+	if (sceKernelGetMemBlockMemtypeByAddr(request->buffer) != USBD_MEMTYPE_UNCACHED) {
 		if (pipe->direction)
 			sceKernelDcacheCleanInvalidateRange((void *)USBD_CACHE_BASE(request->buffer),
 							     USBD_CACHE_SIZE(request->buffer, request->length));
@@ -963,7 +963,7 @@ static int ehciSubmitSitd(Ehci *ehci, UsbdPipe *pipe, UsbdRequest *request)
 	template = pipe->endpoint.ehci;
 	USBD_LIST_REMOVE(pipe->requestHead, pipe->requestTail, request);
 	pa = usbdVAtoPA(request->isochRequest.buffer);
-	if (SceSysmemForDriver_F3BBE2E1(request->buffer) != USBD_MEMTYPE_UNCACHED) {
+	if (sceKernelGetMemBlockMemtypeByAddr(request->buffer) != USBD_MEMTYPE_UNCACHED) {
 		if (pipe->direction)
 			sceKernelDcacheCleanInvalidateRange((void *)USBD_CACHE_BASE(request->buffer),
 							     USBD_CACHE_SIZE(request->buffer, request->length));
@@ -1074,7 +1074,7 @@ static int ehciSubmitControl(Ehci *ehci, UsbdPipe *pipe, UsbdRequest *request)
 	qh = pipe->endpoint.ehci->hw.qh;
 	if (qh->token & EHCI_QTD_ERRORS)
 		qh->token &= ~EHCI_QTD_ERRORS;
-	if (SceSysmemForDriver_F3BBE2E1(setup) != USBD_MEMTYPE_UNCACHED)
+	if (sceKernelGetMemBlockMemtypeByAddr(setup) != USBD_MEMTYPE_UNCACHED)
 		sceKernelDcacheCleanRange((void *)USBD_CACHE_BASE(setup),
 					   USBD_CACHE_SIZE(setup, sizeof(*setup)));
 
@@ -1116,7 +1116,7 @@ static int ehciSubmitControl(Ehci *ehci, UsbdPipe *pipe, UsbdRequest *request)
 			     EHCI_QTD_ERROR_COUNTER_3 | EHCI_QTD_ACTIVE;
 		ehciFillQtdBuffer(qtd, usbdVAtoPA(request->buffer));
 		ehciQueueQtd(ehci, pipe, dataStage, request);
-		if (SceSysmemForDriver_F3BBE2E1(request->buffer) != USBD_MEMTYPE_UNCACHED) {
+		if (sceKernelGetMemBlockMemtypeByAddr(request->buffer) != USBD_MEMTYPE_UNCACHED) {
 			if (setup->bmRequestType & SCE_USBD_REQTYPE_DIR_BITS)
 				sceKernelDcacheCleanInvalidateRange((void *)USBD_CACHE_BASE(request->buffer),
 								     USBD_CACHE_SIZE(request->buffer, request->length));
@@ -1182,7 +1182,7 @@ static int ehciSubmitBulk(Ehci *ehci, UsbdPipe *pipe, UsbdRequest *request)
 		pa = 0;
 	}
 	if (request->syncCache &&
-	    SceSysmemForDriver_F3BBE2E1(request->buffer) != USBD_MEMTYPE_UNCACHED) {
+	    sceKernelGetMemBlockMemtypeByAddr(request->buffer) != USBD_MEMTYPE_UNCACHED) {
 		if (pipe->direction)
 			sceKernelDcacheCleanInvalidateRange((void *)USBD_CACHE_BASE(request->buffer),
 							     USBD_CACHE_SIZE(request->buffer, request->length));
@@ -1376,7 +1376,7 @@ out:
 
 static __always_inline void ehciInvalidateRequest(UsbdRequest *request)
 {
-	if (SceSysmemForDriver_F3BBE2E1(request->buffer) != USBD_MEMTYPE_UNCACHED &&
+	if (sceKernelGetMemBlockMemtypeByAddr(request->buffer) != USBD_MEMTYPE_UNCACHED &&
 	    request->pipe->direction == SCE_USBD_ENDPOINT_DIRECTION_IN)
 		sceKernelDcacheInvalidateRange((void *)USBD_CACHE_BASE(request->buffer),
 						USBD_CACHE_SIZE(request->buffer, request->length));

@@ -20,7 +20,7 @@ int sceSblPmMgrGetProductMode(SceProductMode *mode)
 
 	if (mode == NULL)
 		return PMMGR_ERROR_INVALID_ARGUMENT;
-	kbl = SceSysrootForKernel_9DB56D1F();
+	kbl = sceKernelSysrootGetKblParam();
 	if (kbl == NULL)
 		return PMMGR_ERROR_NO_KBL_PARAM;
 	*mode = (kbl->boot_type_indicator_1 & BOOT_TYPE_PRODUCT_MODE) != 0;
@@ -29,7 +29,7 @@ int sceSblPmMgrGetProductMode(SceProductMode *mode)
 
 int ScePmMgrForDriver_BD1F193B(void)
 {
-	SceKblParam *kbl = SceSysrootForKernel_9DB56D1F();
+	SceKblParam *kbl = sceKernelSysrootGetKblParam();
 
 	if (kbl == NULL)
 		return PMMGR_ERROR_NO_KBL_PARAM;

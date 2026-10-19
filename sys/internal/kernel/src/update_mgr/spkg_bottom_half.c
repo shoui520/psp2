@@ -126,13 +126,13 @@ int sceSblUsUpdateSpackageBH(SceSize arglen, SpkgThreadArgs *args)
 		result = UpdateUtilSetupSm(1, &smId, 0);
 		if (result)
 			goto releasePacket;
-		result = SceSblSmCommForKernel_DB9FC204(smId, 0xe0002,
+		result = sceSblSmCommCallFunc(smId, 0xe0002,
 				&serviceResult, packet, sizeof(*packet));
 	} else {
 		result = UpdateUtilSetupSm(0, &smId, 0);
 		if (result)
 			goto releasePacket;
-		result = SceSblSmCommForKernel_DB9FC204(smId, 0x40002,
+		result = sceSblSmCommCallFunc(smId, 0x40002,
 				&serviceResult, packet, sizeof(*packet));
 	}
 	if (result)

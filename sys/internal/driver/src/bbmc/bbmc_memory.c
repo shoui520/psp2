@@ -37,7 +37,7 @@ void *bbmcAlloc(SceSize size, SceSize alignment)
 		opt.mmapSize = 0;
 		option = &opt;
 	}
-	return SceSysmemForDriver_49D4DD9B(g_bbmcHeap, size, option);
+	return sceKernelAllocHeapMemoryWithOption(g_bbmcHeap, size, option);
 }
 
 /* name unknown: same heap-release wrapper used in usbd. */

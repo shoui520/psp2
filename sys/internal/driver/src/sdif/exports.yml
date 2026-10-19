@@ -56,7 +56,7 @@ SceSdif:
         - SceSdifForDriver_B83F7518: 0xB83F7518
         - SceSdifForDriver_B9593652: 0xB9593652
         - SceSdifForDriver_B9EA5B1E: 0xB9EA5B1E
-        - SceSdifForDriver_BC45C83D: 0xBC45C83D
+        - sceSdioChangeBusSpeed: 0xBC45C83D
         - SceSdifForDriver_C1271539: 0xC1271539
         - SceSdifForDriver_D0F78D9B: 0xD0F78D9B
         - SceSdifForDriver_D3C1E2B6: 0xD3C1E2B6

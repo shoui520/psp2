@@ -63,7 +63,7 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
-	SceSysmemForDriver_0AAA4FDD
+	sceKernelGetPhysicalMemoryType
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	sceKernelVARangeToPAVector

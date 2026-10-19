@@ -716,7 +716,7 @@ int KrmDriverGetOpenPsId(SceKernelOpenPsId *id)
 
 	if (!id)
 		return (int)0x80a00000;
-	ret = SceSblSsMgrForDriver_A5B5D269(&localId);
+	ret = sceSblAimgrGetOpenPsId(&localId);
 	if (ret == 0)
 		*id = localId;
 	return ret;

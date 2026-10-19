@@ -16,7 +16,7 @@ enum {
 	SCE_SYSTIMER_TYPE_WORD = 2,	/* 7 32-bit word timers */
 };
 
-SceSysTimerId SceSystimerForDriver_E2B9D8E9(int type);	/* vitasdk: ksceKernelSysTimerAlloc */
+SceSysTimerId sceKernelSysTimerAlloc(int type);
 int SceSystimerForDriver_8358611F(SceSysTimerId id);	/* vitasdk: ksceKernelSysTimerFree */
 /* vitasdk: ksceKernelSysTimerSetClockSource */
 int SceSystimerForDriver_0450933B(SceSysTimerId id, SceUInt32 source, SceUInt32 prescale);

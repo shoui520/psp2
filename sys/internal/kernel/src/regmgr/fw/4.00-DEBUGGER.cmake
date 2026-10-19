@@ -104,7 +104,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelScheduleWorkTask
 	sceKernelCreateMutex
 	SceSysrootForDriver_55392965
-	SceSysrootForDriver_834439A7
+	sceKernelSysrootIsSafeMode
 	SceSysrootForDriver_B0E1FC67
 	SceProcessmgrForDriver_02179E12
 	sceIoRemove
@@ -152,7 +152,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_14345161
 	SceSblAIMgrForDriver_71608CA3
 	sceSblSsSetNvsData
-	SceSblSsMgrForDriver_A5B5D269
+	sceSblAimgrGetOpenPsId
 	sceSblSsGetNvsData
 	SceDebugLedForDriver_51C5325A
 	SceDebugForDriver_D9703808

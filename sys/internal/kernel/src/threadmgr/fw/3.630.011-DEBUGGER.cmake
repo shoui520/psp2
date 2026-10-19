@@ -192,7 +192,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
 	sceGUIDReferObjectWithClass
 	sceGUIDClose
-	SceSysmemForDriver_0B1FD5C3
+	sceKernelGetMemBlockMappedBase
 	sceGUIDReferObject
 	sceGUIDGetObject
 	sceGUIDReleaseObject
@@ -200,7 +200,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_2ECF7944
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_49D4DD9B
+	sceKernelAllocHeapMemoryWithOption
 	sceGUIDKernelCreate
 	SceSysmemForDriver_58D21746
 	sceKernelCopyFromUserProc
@@ -222,7 +222,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_BF209859
 	GUIDGetClass
 	sceKernelAllocMemBlockForKernel
-	SceSysmemForDriver_CED1547B
+	scePUIDOpenByGUIDWithFlags
 	GUIDOpenByName
 	sceKernelStrncpyFromUser
 	SceSysmemForDriver_E655852F

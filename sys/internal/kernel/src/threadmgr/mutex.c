@@ -435,7 +435,7 @@ int mutexProcessExit(SceProcessObject *process)
 
 static inline SceUID OpenByGUID(SceUID pid, SceUID guid)
 {
-	SceUID puid = SceSysmemForDriver_CED1547B(pid, guid, 1);
+	SceUID puid = scePUIDOpenByGUIDWithFlags(pid, guid, 1);
 
 	SCE_DBG_PRINTF_LEVEL_FUNC(2, 3, 45, "OpenByGUID", "0x%08x=scePUIDOpenByGUID(0x%08x)\n",
 				  puid, guid);

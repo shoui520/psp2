@@ -346,7 +346,7 @@ void *utMgrAllocUtoken(void)	/* name unknown */
 {
 	SceAllocOpt opt = { .size = sizeof(opt), .align = 0x20 };
 
-	return SceSysmemForDriver_49D4DD9B(g_postSsMgrHeap, UT_SIZE, &opt);
+	return sceKernelAllocHeapMemoryWithOption(g_postSsMgrHeap, UT_SIZE, &opt);
 }
 
 int utMgrReadFile(void *utoken, SceSize *size)	/* name unknown */

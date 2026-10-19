@@ -110,11 +110,11 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForDriver_FC2A424E
 	sceIoDclose
 	sceIoDread
-	SceIofilemgrForDriver_43170575
-	SceIofilemgrForDriver_462F059B
+	sceIoSyncByFd
+	sceIoGetstatByFd
 	sceIoDopen
 	sceIoGetstat
-	SceIofilemgrForDriver_DF57A75F
+	sceIoChstatByFd
 	sceSblACMgrIsKernelProgram
 	sceSblACMgrIsSystemProgram
 	SceRtcForDriver_497B5DC9

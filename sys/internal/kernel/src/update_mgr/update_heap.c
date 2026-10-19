@@ -5,7 +5,7 @@ void *UpdateUtilHeapAllocate(SceUID heapId, SceSize count, SceSize size)
 {
 	if (heapId <= 0)
 		return NULL;
-	return SceSysmemForDriver_49D4DD9B(heapId, count * size, NULL);
+	return sceKernelAllocHeapMemoryWithOption(heapId, count * size, NULL);
 }
 
 int UpdateUtilHeapFree(SceUID heapId, void *buffer)

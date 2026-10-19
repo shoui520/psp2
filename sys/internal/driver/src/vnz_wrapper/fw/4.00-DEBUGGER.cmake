@@ -176,7 +176,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_04059C4B
 	sceGUIDClose
 	sceGUIDReleaseObject
-	SceSysmemForDriver_20C811FA
+	sceKernelMemBlockType2Memtype
 	SceSysmemForDriver_24A99FFF
 	SceSysmemForDriver_45D22597
 	sceGUIDKernelCreate
@@ -185,7 +185,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_84A4AF5E
 	SceSysmemForDriver_85336A1C
 	sceKernelGetPhyMemInfo
-	SceSysmemForDriver_8A1742F6
+	sceKernelFindMemBlockByAddr
 	sceKernelVAtoPA
 	sceKernelIsAccessibleRange
 	sceKernelGetMemBlockBase
@@ -193,7 +193,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_BF209859
 	sceKernelAllocMemBlockForKernel
 	sceKernelVARangeToPAVector
-	SceSysmemForDriver_FFCD9B60
+	sceKernelUnmapMemBlock
 	sceSblFwLoaderLoad
 	sceSblFwLoaderSetPath
 	sceSblFwLoaderClose

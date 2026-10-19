@@ -578,12 +578,12 @@ int rdrfpGetstatByFd(SceUInt32 fd, SceIoStat *stat)
 	}
 	if (!rdrfpFdIsElevated(f)) {
 		beginIo(&ctx, 0);
-		ret = SceIofilemgrForDriver_462F059B(f->uid, stat);
+		ret = sceIoGetstatByFd(f->uid, stat);
 		endIo(&ctx);
 		return ret;
 	}
 	beginIo(&ctx, 1);
-	ret = SceIofilemgrForDriver_462F059B(f->uid, stat);
+	ret = sceIoGetstatByFd(f->uid, stat);
 	endIo(&ctx);
 	if (ret != 0)
 		return ret;
@@ -641,7 +641,7 @@ int rdrfpChstatByFd(SceUInt32 fd, SceIoStat *stat, int bits)
 	beginIo(&ctx, elevated);
 	if (elevated)
 		fixChstatMode(stat);
-	ret = SceIofilemgrForDriver_DF57A75F(f->uid, stat, bits);
+	ret = sceIoChstatByFd(f->uid, stat, bits);
 	endIo(&ctx);
 	return ret;
 }

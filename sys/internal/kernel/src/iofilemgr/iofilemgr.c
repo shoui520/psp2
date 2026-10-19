@@ -1137,7 +1137,7 @@ int sceIoPwrite(SceUID fd, const void *data, SceSize size, SceOff offset)
 	return ret;
 }
 
-int SceIofilemgrForDriver_462F059B(SceUID fd, SceIoStat *stat)
+int sceIoGetstatByFd(SceUID fd, SceIoStat *stat)
 {
 	IofilemgrGetstatByFdParam param;
 	IofilemgrSchedInfo info;
@@ -1160,7 +1160,7 @@ int SceIofilemgrForDriver_462F059B(SceUID fd, SceIoStat *stat)
 	return ret;
 }
 
-int SceIofilemgrForDriver_DF57A75F(SceUID fd, SceIoStat *stat, int bits)
+int sceIoChstatByFd(SceUID fd, SceIoStat *stat, int bits)
 {
 	IofilemgrChstatByFdParam param;
 	IofilemgrSchedInfo info;
@@ -1184,7 +1184,7 @@ int SceIofilemgrForDriver_DF57A75F(SceUID fd, SceIoStat *stat, int bits)
 	return ret;
 }
 
-int SceIofilemgrForDriver_43170575(SceUID fd, int flag)
+int sceIoSyncByFd(SceUID fd, int flag)
 {
 	IofilemgrSyncByFdParam param;
 	IofilemgrSchedInfo info;

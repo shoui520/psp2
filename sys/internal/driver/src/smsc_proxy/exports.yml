@@ -20,7 +20,7 @@ SceSblSmschedProxy:
         - SceSblSmSchedProxyForKernel_723B382F: 0x723B382F
         - SceSblSmSchedProxyForKernel_7894B6F0: 0x7894B6F0
         - SceSblSmSchedProxyForKernel_85EDA5FC: 0x85EDA5FC
-        - SceSblSmSchedProxyForKernel_8B84AC2A: 0x8B84AC2A
+        - sceSblSmSchedProxyRegisterIntrHandler: 0x8B84AC2A
         - sceSblSmSchedProxyReadCry2Arm: 0x973A4A7D
         - SceSblSmSchedProxyForKernel_984EC9D1: 0x984EC9D1
         - SceSblSmSchedProxyForKernel_A488D604: 0xA488D604

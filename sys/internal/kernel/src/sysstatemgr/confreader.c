@@ -461,16 +461,16 @@ static int ConfReaderCmdAppSpawn(ConfReader *reader, int argc, char **argv, unsi
 			return CONF_ERROR(22);
 		}
 	}
-	if (!remote || (pid = SceSysrootForKernel_3ACACD22(
+	if (!remote || (pid = SceSysrootForKernel_sceKernelSysrootAppMgrSpawnProcess(
 		"main", type, remote, 0, NULL, &opt, out)) < 0) {
 		for (i = 0; i < 4; i++) {
 			remote = ConfReaderGetRemoteRpath(reader, path, i);
-			if (remote && (pid = SceSysrootForKernel_3ACACD22(
+			if (remote && (pid = SceSysrootForKernel_sceKernelSysrootAppMgrSpawnProcess(
 				"main", type, remote, 0, NULL, &opt, out)) >= 0)
 				goto spawned;
 		}
 		remote = path;
-		pid = SceSysrootForKernel_3ACACD22(
+		pid = SceSysrootForKernel_sceKernelSysrootAppMgrSpawnProcess(
 			"main", type, path, 0, NULL, &opt, out);
 	}
 spawned:

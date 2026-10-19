@@ -104,7 +104,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateThread
 	sceKernelSetEventFlag
 	sceKernelCreateMutex
-	SceSysrootForDriver_834439A7
+	sceKernelSysrootIsSafeMode
 	SceDebugForDriver_02B04343
 	SceDebugForDriver_374B7868
 	SceDebugForDriver_821A2D59

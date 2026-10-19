@@ -330,10 +330,10 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
 	sceGUIDReferObject
 	sceGUIDReleaseObject
-	SceSysmemForDriver_278BC201
+	sceKernelUserMap
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_49D4DD9B
+	sceKernelAllocHeapMemoryWithOption
 	sceKernelCopyToUser
 	sceKernelAllocHeapMemory
 	SceSysmemForDriver_84A4AF5E
@@ -343,7 +343,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCopyFromUser
 	SceSysmemForDriver_BF209859
 	sceKernelAllocMemBlockForKernel
-	SceSysmemForDriver_CED1547B
+	scePUIDOpenByGUIDWithFlags
 	sceKernelDeleteHeap
 	sceKernelStrncpyFromUser
 	SceDebugForDriver_02B04343
@@ -384,7 +384,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_6050A467
 	sceKernelApiDeclareTypeUInt32
 	SceSysrootForDriver_70AD47A9
-	SceSysrootForDriver_834439A7
+	sceKernelSysrootIsSafeMode
 	SceSysrootForDriver_84C0BE05
 	sceKernelApiDeclareTypeRaw
 	SceSysrootForDriver_9A8871F1
@@ -446,8 +446,8 @@ set(MODULE_IMPORT_FUNCS
 	sceIoWrite
 	sceIoPread
 	sceIoCreateMountEvent
-	SceIofilemgrForDriver_43170575
-	SceIofilemgrForDriver_462F059B
+	sceIoSyncByFd
+	sceIoGetstatByFd
 	sceIoDopen
 	sceIoPwrite
 	sceIoLseek
@@ -459,7 +459,7 @@ set(MODULE_IMPORT_FUNCS
 	SceIofilemgrForDriver_D070BC48
 	sceIoRename
 	sceIoSync
-	SceIofilemgrForDriver_DF57A75F
+	sceIoChstatByFd
 	sceIoRead
 	sceIoClose
 	sceKernelAllocRemoteProcessHeap
@@ -476,7 +476,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterProcEventHandler
 	SceProcEventForDriver_3DED57CC
 	_set_key_seed
-	SceSblSsMgrForDriver_A5B5D269
+	sceSblAimgrGetOpenPsId
 	sceSblSsGetNvsData
 	SceSblAIMgrForDriver_71608CA3
 	SceSblAIMgrForDriver_D78B04A2

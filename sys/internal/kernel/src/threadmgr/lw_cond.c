@@ -293,7 +293,7 @@ int __sceKernelCreateLwCond(void *work, const char *name, SceUInt32 attr, SceUID
 			sceKernelSpinlockLowUnlock(&cond->lock);	/* the class hands it over locked */
 			sceKernelSpinlockLowUnlock(&lwMutex->lock);
 			sceGUIDReleaseObject(lwMutexId);
-			userWork.uid = SceSysmemForDriver_CED1547B(0, uid, 1);
+			userWork.uid = scePUIDOpenByGUIDWithFlags(0, uid, 1);
 			userWork.reserved[0] = 0;
 			userWork.reserved[1] = 0;
 			userWork.lwMutexId = lwMutexPuid;

@@ -11,7 +11,7 @@
 int sceDbgSdioInit(void);
 int _sceDbgSdioModuleStart(SceSize args, void *argp);
 /* Original names unknown: attach/detach a channel's mailbox interrupt. */
-int SceDbgSdioForDriver_3D3FAF3A(SceUInt32 index, SceUID notify);
-int SceDbgSdioForDriver_361E1BB6(SceUInt32 index);
+int sceDbgSdioOpen(SceUInt32 index, SceUID notify);
+int sceDbgSdioClose(SceUInt32 index);
 int receiveData(SceUInt32 index, void *buffer, SceSize size);
 int sceDbgSdioWrite(SceUInt32 index, const void *buffer, SceSize size);

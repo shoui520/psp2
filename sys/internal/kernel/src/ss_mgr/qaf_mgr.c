@@ -100,7 +100,7 @@ int SceSblSsMgrForKernel_E2DD0378(char *name, SceSize size)
 SS_MGR_QAF(qafInit)
 int qafInit(void)
 {
-	const SceKblParam *parameters = SceSysrootForKernel_9DB56D1F();
+	const SceKblParam *parameters = sceKernelSysrootGetKblParam();
 
 	if (parameters)
 		__builtin_memcpy(&qaFlags, parameters->qa_flags, sizeof(qaFlags));
@@ -590,7 +590,7 @@ int qafStopSecureModule(void)
 {
 	SceSblSmCommPair result;
 
-	return SceSblSmCommForKernel_0631F8ED(qafSmId, &result);
+	return sceSblSmCommStopSm(qafSmId, &result);
 }
 
 int qafReadNvsFlags(uint32_t *data, uint32_t *flags)
@@ -601,7 +601,7 @@ int qafReadNvsFlags(uint32_t *data, uint32_t *flags)
 
 	request.command = 0;
 	request.reserved = 0;
-	ret = SceSblSmCommForKernel_DB9FC204(qafSmId, 1, &serviceResult,
+	ret = sceSblSmCommCallFunc(qafSmId, 1, &serviceResult,
 		&request, sizeof(request));
 	if (ret == 0) {
 		ret = serviceResult;
@@ -610,7 +610,7 @@ int qafReadNvsFlags(uint32_t *data, uint32_t *flags)
 				request.response, sizeof(request.response));
 			if (ret == 0) {
 				request.command = 1;
-				ret = SceSblSmCommForKernel_DB9FC204(qafSmId, 1,
+				ret = sceSblSmCommCallFunc(qafSmId, 1,
 					&serviceResult, &request, sizeof(request));
 				if (ret == 0) {
 					ret = serviceResult;
@@ -635,7 +635,7 @@ int qafWriteNvsFlags(const uint32_t *data, const uint32_t *flags)
 	request.flags = *flags;
 	request.command = 2;
 	request.reserved = 0;
-	ret = SceSblSmCommForKernel_DB9FC204(qafSmId, 1, &serviceResult,
+	ret = sceSblSmCommCallFunc(qafSmId, 1, &serviceResult,
 		&request, sizeof(request));
 	if (ret == 0) {
 		ret = serviceResult;
@@ -644,7 +644,7 @@ int qafWriteNvsFlags(const uint32_t *data, const uint32_t *flags)
 				sizeof(request.challenge), request.response, 16);
 			if (ret == 0) {
 				request.command = 3;
-				ret = SceSblSmCommForKernel_DB9FC204(qafSmId, 1,
+				ret = sceSblSmCommCallFunc(qafSmId, 1,
 					&serviceResult, &request, sizeof(request));
 				if (ret == 0)
 					ret = serviceResult;
@@ -664,7 +664,7 @@ __attribute__((noinline)) int qafInvokeTokenService(void *token, unsigned int se
 	if (service - 12 > 1)
 		return (int)0x800f0716;
 	memcpy(buffer, token, sizeof(buffer));
-	ret = SceSblSmCommForKernel_DB9FC204(qafSmId, service,
+	ret = sceSblSmCommCallFunc(qafSmId, service,
 		&serviceResult, buffer, sizeof(buffer));
 	if (ret == 0) {
 		if (service == 13)
@@ -684,7 +684,7 @@ int qafReadSecureNvs(unsigned int slot, QafNvsVersionRecord *record)
 		return (int)0x800f0716;
 	request.command = 0;
 	request.slot = slot;
-	ret = SceSblSmCommForKernel_DB9FC204(qafSmId, 2, &serviceResult,
+	ret = sceSblSmCommCallFunc(qafSmId, 2, &serviceResult,
 		&request, sizeof(request));
 	if (__builtin_expect(ret != 0, 0))
 		return ret;
@@ -696,7 +696,7 @@ int qafReadSecureNvs(unsigned int slot, QafNvsVersionRecord *record)
 	if (ret != 0)
 		return ret;
 	request.command = 1;
-	ret = SceSblSmCommForKernel_DB9FC204(qafSmId, 2,
+	ret = sceSblSmCommCallFunc(qafSmId, 2,
 		&serviceResult, &request, sizeof(request));
 	if (ret != 0)
 		return ret;
@@ -717,7 +717,7 @@ int qafWriteSecureNvs(unsigned int slot, const QafNvsVersionRecord *record)
 	__builtin_memcpy(&request.record, record, sizeof(*record));
 	request.slot = slot;
 	request.command = 2;
-	ret = SceSblSmCommForKernel_DB9FC204(qafSmId, 2, &serviceResult,
+	ret = sceSblSmCommCallFunc(qafSmId, 2, &serviceResult,
 		&request, sizeof(request));
 	if (__builtin_expect(ret == 0, 1)) {
 		ret = serviceResult;
@@ -726,7 +726,7 @@ int qafWriteSecureNvs(unsigned int slot, const QafNvsVersionRecord *record)
 				sizeof(request.challenge), request.response, 16);
 			if (ret == 0) {
 				request.command = 3;
-				ret = SceSblSmCommForKernel_DB9FC204(qafSmId, 2,
+				ret = sceSblSmCommCallFunc(qafSmId, 2,
 					&serviceResult, &request, sizeof(request));
 				if (ret == 0)
 					ret = serviceResult;

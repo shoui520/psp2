@@ -74,7 +74,7 @@ verify:
 		if (result)
 			goto cleanup;
 	}
-	result = SceSblSmCommForKernel_DB9FC204(pupSmId, 0xa0002, &serviceResult, packet, 4032);
+	result = sceSblSmCommCallFunc(pupSmId, 0xa0002, &serviceResult, packet, 4032);
 	if (!result)
 		result = serviceResult;
 cleanup:

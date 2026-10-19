@@ -987,7 +987,7 @@ int sceKernelIntrMgrStart(void)
 	}
 	{
 		/* the vector page word 0x28 of this core points at its nesting state */
-		char *vector = (char *)SceSysrootForKernel_CC85905B() +
+		char *vector = (char *)sceKernelSysrootGetVbaseResetVector() +
 			sceKernelCpuId() * 0x40;
 		IntrCpuState *volatile state = &g_intrCpu[sceKernelCpuId()];
 
@@ -1077,7 +1077,7 @@ int sceKernelIntrMgrModuleStart(SceSize arglen, void *argp)
 
 int module_bootstart(SceSize arglen, void *argp)
 {
-	char *base = SceSysrootForKernel_CC85905B();
+	char *base = sceKernelSysrootGetVbaseResetVector();
 	IntrCpuState *volatile state;
 
 	(void)arglen;

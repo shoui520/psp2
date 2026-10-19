@@ -338,13 +338,13 @@ int SceIofilemgrForDriver_3A79FAC9(SceUID fd);
 /* vitasdk: ksceIoSetThreadDefaultPriorityForSystem */
 int SceIofilemgrForDriver_3F0FF9D5(SceInt32 priority);
 int SceIofilemgrForDriver_40B933C7(SceUID uid);	/* vitasdk: ksceIoClearErrorEvent */
-int SceIofilemgrForDriver_43170575(SceUID fd, int flag);	/* vitasdk: ksceIoSyncByFd2 */
+int sceIoSyncByFd(SceUID fd, int flag);
 /* vitasdk: ksceIoGetRemoteKPLSData */
 int SceIofilemgrForDriver_44EDCE57(SceUID pid, void *dst);
 /* vitasdk: ksceIoOpenAsync */
 SceUID SceIofilemgrForDriver_451001DE(const char *file, int flags, SceMode mode,
 				      IoAsyncParam *asyncParam);
-int SceIofilemgrForDriver_462F059B(SceUID fd, SceIoStat *stat);	/* vitasdk: ksceIoGetstatByFd */
+int sceIoGetstatByFd(SceUID fd, SceIoStat *stat);
 /* vitasdk: ksceIoSyncAsync */
 SceUID SceIofilemgrForDriver_4F9EA8B0(const char *device, unsigned int flag,
 				      IoAsyncParam *asyncParam);
@@ -407,8 +407,7 @@ int SceIofilemgrForDriver_CFAECF18(IoPathMappingFunction func);
 /* vitasdk: ksceIoMount */
 int SceIofilemgrForDriver_D070BC48(int id, const char *path, unsigned int flags, void *data,
 				   uint64_t reserved);
-/* vitasdk: ksceIoChstatByFd */
-int SceIofilemgrForDriver_DF57A75F(SceUID fd, SceIoStat *stat, int bits);
+int sceIoChstatByFd(SceUID fd, SceIoStat *stat, int bits);
 /* vitasdk: ksceIoChstatByFdAsync */
 int SceIofilemgrForDriver_EC974400(SceUID fd, SceIoStat *stat, int bits, IoAsyncParam *asyncParam);
 void SceIofilemgrForDriver_F4F8C59A(void *arg);

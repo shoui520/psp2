@@ -2101,7 +2101,7 @@ int ctrlInitialize(void)
 	ctrlStorage.pendingActiveProcess = -1;
 	ctrlStorage.ctrlpProcess = -1;
 	ctrlStorage.updateMode = SceSysrootForDriver_B0E1FC67();
-	ctrlStorage.safeMode = SceSysrootForDriver_834439A7();
+	ctrlStorage.safeMode = sceKernelSysrootIsSafeMode();
 	ctrlStorage.processCount = 0;
 	memset(ctrlStorage.processes, 0xff, sizeof(ctrlStorage.processes));
 	ctrlStorage.lock = 0;

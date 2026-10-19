@@ -1327,7 +1327,7 @@ int ds3AllocateRequests(Ds3Device *controller)
 		controller->inputRequests[index] = request;
 		option.size = sizeof(option);
 		option.align = 64;
-		buffer = SceSysmemForDriver_49D4DD9B(ds3State.heap, 64, &option);
+		buffer = sceKernelAllocHeapMemoryWithOption(ds3State.heap, 64, &option);
 		if (buffer != NULL)
 			memset(buffer, 0, 64);
 		request->buffer = buffer;
@@ -1338,7 +1338,7 @@ int ds3AllocateRequests(Ds3Device *controller)
 	controller->outputRequests[0] = request;
 	option.align = 64;
 	option.size = sizeof(option);
-	buffer = SceSysmemForDriver_49D4DD9B(ds3State.heap, 64, &option);
+	buffer = sceKernelAllocHeapMemoryWithOption(ds3State.heap, 64, &option);
 	if (buffer != NULL)
 		memset(buffer, 0, 64);
 	request->buffer = buffer;
@@ -1900,7 +1900,7 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 	uint8_t *report, pending, mask, onTime, motor, auxiliaryMotorReport;
 	int result, retries, ds4Usb, index, output, port, processIndex;
 
-	ds3State.safeMode = SceSysrootForDriver_834439A7();
+	ds3State.safeMode = sceKernelSysrootIsSafeMode();
 	if (!ds3State.safeMode) {
 		result = sceKernelCreateCallback("SceDs3", 0, _sceDs3BtCb, NULL);
 		ds3State.bluetoothCallback = result;

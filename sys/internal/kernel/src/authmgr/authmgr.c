@@ -241,7 +241,7 @@ static NOINLINE int authMgrSendPacketCore(struct AuthPacket *packet,
 	result = lockFastMutex(&s_state.sendMutex);
 	if (result < 0)
 		return result;
-	result = SceSblSmSchedProxyForKernel_8B84AC2A(s_state.requestId, 1,
+	result = sceSblSmSchedProxyRegisterIntrHandler(s_state.requestId, 1,
 		authMgrIntrHandler, NULL);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0xb, 1562, "ERROR: authMgrSetupIntrHandler ret = 0x%08x\n", result);
@@ -302,7 +302,7 @@ static NOINLINE int authMgrStopSM(SceUID id)
 static NOINLINE int authMgrInvokeSM(void)
 {
 	uint32_t guard = __stack_chk_guard;
-	uint8_t *bootParameters = SceSysrootForKernel_9DB56D1F();
+	uint8_t *bootParameters = sceKernelSysrootGetKblParam();
 	SelfAuthRequest auth;
 	uint32_t *words = (uint32_t *)(void *)&auth;
 	int result;
@@ -327,7 +327,7 @@ static NOINLINE int authMgrInvokeSM(void)
 	if (result != 0) {
 		SCE_DBG_PRINTF(0xb, 909, "ERROR: sceSblSmSchedProxyInvoke ret = 0x%08x\n", result);
 	} else {
-		result = SceSblSmSchedProxyForKernel_8B84AC2A(s_state.requestId, 0,
+		result = sceSblSmSchedProxyRegisterIntrHandler(s_state.requestId, 0,
 			(AuthCryHandler)authMgrIntrHandlerforInvoke, NULL);
 		if (result != 0) {
 			SCE_DBG_PRINTF(0xb, 920, "ERROR: authMgrSetupIntrHandler ret = 0x%08x\n", result);
@@ -591,7 +591,7 @@ int SceSblAuthMgrForKernel_BC422443(int handle, void *buffer, uint32_t size)
 	sceKernelDcacheInvalidateRange(buffer, RoundCacheSize(size));
 	return 0;
 }
-int SceSblAuthMgrForDriver_868B9E9A(void *buffer, uint32_t size, uint32_t type)
+int sceSblAuthMgrGetEKc(void *buffer, uint32_t size, uint32_t type)
 {
 	struct AuthPacket *packet;
 	uint32_t *words;
@@ -620,7 +620,7 @@ int SceSblAuthMgrForDriver_868B9E9A(void *buffer, uint32_t size, uint32_t type)
 	unlockResult = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
-int SceSblAuthMgrForKernel_122ACDEA(const void *key, uint32_t size, int slot, int keyId)
+int sceSblAuthMgrSetDmac5Key(const void *key, uint32_t size, int slot, int keyId)
 {
 	struct AuthPacket *packet;
 	uint32_t *words;
@@ -643,7 +643,7 @@ int SceSblAuthMgrForKernel_122ACDEA(const void *key, uint32_t size, int slot, in
 	unlockResult = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
 	return unlockResult < 0 ? unlockResult : ErrorOnly(result);
 }
-int SceSblAuthMgrForKernel_F2BB723E(int slot, int value)
+int sceSblAuthMgrClearDmac5Key(int slot, int value)
 {
 	struct AuthPacket *packet;
 	uint32_t *words;
@@ -663,7 +663,7 @@ int SceSblAuthMgrForKernel_F2BB723E(int slot, int value)
 	unlockResult = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
 	return unlockResult < 0 ? unlockResult : ErrorOnly(result);
 }
-int SceSblAuthMgrForDriver_41DAEA12(void *input, uint32_t inputSize,
+int sceSblAuthMgrDecBindData(void *input, uint32_t inputSize,
 	void *output, uint32_t outputSize, int flags)
 {
 	uint32_t guard = __stack_chk_guard;

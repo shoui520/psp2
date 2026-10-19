@@ -346,7 +346,7 @@ int LoadcoreReleaseLibrary(SceModuleCB *cb, int index, SceUInt32 flags)
 		ret = (SceInt16)ent->exports->attr < 0 ? 0 : SCE_KERNEL_ERROR_LIBRARYDB_NO_LIB;
 		goto unlock;
 	}
-	if ((ent->exports->attr & LIBRARY_ATTR_SYSCALL) != 0 && SceSysrootForKernel_5C426B19() > 0xff &&
+	if ((ent->exports->attr & LIBRARY_ATTR_SYSCALL) != 0 && sceKernelSysrootGetStatus() > 0xff &&
 	    !SceSblACMgrForKernel_BBA13D9C()) {
 		ret = SCE_KERNEL_ERROR_MODULEMGR_IN_USE;
 		goto unlock;

@@ -253,7 +253,7 @@ static inline __attribute__((always_inline)) void startVblankTimer(void) /* name
 {
 	SceSysTimerId timer;
 
-	timer = SceSystimerForDriver_E2B9D8E9(2);
+	timer = sceKernelSysTimerAlloc(2);
 	if (timer < 0 || SceSystimerForDriver_CCCD1EE3(timer, vblankTimerHandler, 0xf, NULL) < 0
 	    || SceSystimerForDriver_0450933B(timer, 0x10, 0) < 0
 	    || SceSystimerForDriver_A73351C1(timer, 0x6df92) < 0

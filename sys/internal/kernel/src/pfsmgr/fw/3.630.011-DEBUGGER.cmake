@@ -272,7 +272,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblPostSsMgrForDriver_3DB69911
 	sceKernelGetProcessSelfAuthInfo
 	sceKernelRegisterSysEventHandler
-	SceSysrootForKernel_20009397
+	sceKernelSysrootGetThreadAccessLevel
 	SceSysrootForKernel_CC119171
 )
 set(MODULE_IMPORT_VARS

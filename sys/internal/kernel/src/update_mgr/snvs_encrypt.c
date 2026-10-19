@@ -24,7 +24,7 @@ int SpkgInfoUtilSNVSEncryptSectors(int sectorIndex, const SpkgSnvsSector *input,
 	} else {
 		smId = existingSmId;
 	}
-	result = SceSblSmCommForKernel_DB9FC204(smId, 0x60002, &serviceResult, &request, 40);
+	result = sceSblSmCommCallFunc(smId, 0x60002, &serviceResult, &request, 40);
 	if (result)
 		result = serviceResult;
 	else

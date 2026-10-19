@@ -40,7 +40,7 @@ static int _writeDataToDest(Writer *base, const void *data, SceSize size,
 		writer->fd = fd;
 		if (writer->reservedFileSize != 0) {
 			stat.st_size = writer->reservedFileSize;
-			SceIofilemgrForDriver_DF57A75F(fd, &stat, 4);
+			sceIoChstatByFd(fd, &stat, 4);
 			sceIoLseek(fd, 0, SCE_SEEK_SET);
 		}
 		oalFileSetIoCacheSize(writer->fd, 0x8000);
@@ -121,7 +121,7 @@ int fileWriterFinal(FileWriter *writer)
 	if (writer->reservedFileSize != 0) {
 		fd = writer->fd;
 		stat.st_size = writer->writtenSize;
-		SceIofilemgrForDriver_DF57A75F(fd, &stat, 4);
+		sceIoChstatByFd(fd, &stat, 4);
 		sceIoLseek(fd, 0, SCE_SEEK_SET);
 	}
 	writerFinal(&writer->writer);

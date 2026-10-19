@@ -62,10 +62,10 @@ PVRSRV_ERROR ReleaseDeviceMemBlockCallback(const IMG_VOID *address,
 {
 	SceUID blockUID;
 
-	blockUID = SceSysmemForDriver_857F1D5A(processID, address, 0);
+	blockUID = sceKernelFindProcMemBlockByAddr(processID, address, 0);
 	if (blockUID < 0)
 		return PVRSRV_ERROR_INVALID_PARAMS;
-	SceSysmemForDriver_F50BDC0C(blockUID);
+	sceKernelDecRefCountMemBlock(blockUID);
 	return PVRSRV_OK;
 }
 
@@ -591,7 +591,7 @@ PVRSRV_ERROR PVRSRVMapMemoryToGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		accessFlags |= 0x20;
 	if (sceKernelIsAccessibleRange(accessFlags, cpuAddress, size) < 0)
 		return PVRSRV_ERROR_INVALID_PARAMS;
-	guid = SceSysmemForDriver_8A1742F6(cpuAddress, 0);
+	guid = sceKernelFindMemBlockByAddr(cpuAddress, 0);
 	if (guid < 0)
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	memset(&info, 0, sizeof(info));
@@ -602,7 +602,7 @@ PVRSRV_ERROR PVRSRVMapMemoryToGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	selectedHeap = heap;
 	region = SceSysmemForDriver_CB0F3A33(info.ex.details.type);
 	if (region == 0x200000) {
-		memtype = SceSysmemForDriver_20C811FA(info.ex.details.type);
+		memtype = sceKernelMemBlockType2Memtype(info.ex.details.type);
 		if (memtype == 0x8000) {
 			heapID = 0x07000014;
 			mappingFlags = 0;
@@ -650,7 +650,7 @@ PVRSRV_ERROR PVRSRVMapMemoryToGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	if (ret < 0)
 		return ret == (int)0x804c0006 ? PVRSRV_ERROR_BAD_MAPPING :
 				PVRSRV_ERROR_INVALID_PARAMS;
-	SceSysmemForDriver_EAF3849B(guid);
+	sceKernelIncRefCountMemBlock(guid);
 	if ((flags & 3) == 3) {
 		mappingFlags |= 3;
 	} else {
@@ -671,7 +671,7 @@ PVRSRV_ERROR PVRSRVMapMemoryToGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 			SCE_DBG_PRINTF(0, 833,
 					"%s: Failed to allocate VA with error %08x.\n", __func__, ret);
 			RemoveMappedMemory(list, cpuAddress, NULL, selectedHeap);
-			SceSysmemForDriver_F50BDC0C(guid);
+			sceKernelDecRefCountMemBlock(guid);
 			return PVRSRV_ERROR_OUT_OF_MEMORY;
 		}
 		record->deviceAddress.uiAddr = allocation.releasedSpanBase;
@@ -688,7 +688,7 @@ PVRSRV_ERROR PVRSRVMapMemoryToGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		SCE_DBG_PRINTF(0, 851,
 				"%s: Failed to map memory with error %08x.\n", __func__, ret);
 		RemoveMappedMemory(list, cpuAddress, NULL, selectedHeap);
-		SceSysmemForDriver_F50BDC0C(guid);
+		sceKernelDecRefCountMemBlock(guid);
 		return PVRSRV_ERROR_BAD_MAPPING;
 	}
 	if (deviceAddress)
@@ -840,7 +840,7 @@ PVRSRV_ERROR PVRSRVRegisterMemBlockKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	region = SceSysmemForDriver_CB0F3A33(info.ex.details.type);
 	if (region == 0x200000 || region == 0x400000) {
-		if (SceSysmemForDriver_20C811FA(info.ex.details.type) != 0x8000) {
+		if (sceKernelMemBlockType2Memtype(info.ex.details.type) != 0x8000) {
 #if FW_DEBUG
 			typeDebugInfo = SCE_DBGINFO(1044);
 #endif

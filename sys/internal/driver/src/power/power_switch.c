@@ -99,7 +99,7 @@ int scePowerRequestSuspend(void)
 	uint32_t context = sceSyscallEnter();
 	int result = 0;
 
-	if (SceSysrootForDriver_834439A7() || SceSysrootForDriver_B0E1FC67()) {
+	if (sceKernelSysrootIsSafeMode() || SceSysrootForDriver_B0E1FC67()) {
 		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x10);
 	} else if (!SceSysrootForDriver_89D19090() &&
 		   !SceSysrootForDriver_7918D44E()) {
@@ -213,7 +213,7 @@ int scePowerRequestStandby(void)
 	uint32_t context = sceSyscallEnter();
 
 	if (sceKernelGetProcessId() == SCE_KERNEL_PROCESS_ID ||
-	    SceSysrootForDriver_834439A7() || SceSysrootForDriver_B0E1FC67() ||
+	    sceKernelSysrootIsSafeMode() || SceSysrootForDriver_B0E1FC67() ||
 	    SceSysrootForDriver_55392965() || sceSblACMgrIsSystemProgram(0))
 		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x10);
 	sceSyscallLeave(context);
@@ -225,7 +225,7 @@ int scePowerRequestColdReset(void)
 	uint32_t context = sceSyscallEnter();
 
 	if (sceKernelGetProcessId() == SCE_KERNEL_PROCESS_ID ||
-	    SceSysrootForDriver_834439A7() || SceSysrootForDriver_B0E1FC67() ||
+	    sceKernelSysrootIsSafeMode() || SceSysrootForDriver_B0E1FC67() ||
 	    SceSysrootForDriver_55392965() ||
 	    sceSblACMgrIsSystemProgram(0))
 		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x80);
@@ -823,7 +823,7 @@ int powerInitializeSwitchControl(void)
 	s_powerSwitchState.primaryMode = 2;
 	s_powerSwitchState.standbyButtonPushTime = 2000000;
 	s_powerSwitchState.psButtonPushTime = 1000000;
-	if (SceSysrootForDriver_834439A7()) {
+	if (sceKernelSysrootIsSafeMode()) {
 		s_powerSwitchState.primaryMode = 1;
 		s_powerSwitchState.standbyButtonPushTime = 4000000;
 	} else if (SceSysrootForDriver_B0E1FC67()) {

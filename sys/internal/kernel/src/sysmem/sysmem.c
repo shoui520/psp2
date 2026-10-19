@@ -137,7 +137,7 @@ int VARangeToPARangeBySW(const SceKernelVARange *range, SceKernelPARange *out)
 	int ret;
 
 	for (size = range->size; size != 0; size -= chunk) {
-		ret = AddressSpaceVAtoPABySW(SceSysrootForKernel_63EBB05B(), va, &pa);
+		ret = AddressSpaceVAtoPABySW(sceKernelSysrootGetCurrentAddressSpaceCB(), va, &pa);
 		if (ret < 0)
 			return ret;
 		switch (ret) {
@@ -197,7 +197,7 @@ int VARangeToPAVectorBySWCore(const SceKernelVARange *range, SceKernelPAVector *
 	vector->total = 0;
 	start = 0;
 	while (size != 0) {
-		ret = AddressSpaceVAtoPABySW(SceSysrootForKernel_63EBB05B(), va,
+		ret = AddressSpaceVAtoPABySW(sceKernelSysrootGetCurrentAddressSpaceCB(), va,
 					     &pa);
 		if (ret < 0)
 			return ret;
@@ -300,7 +300,7 @@ int SceSysmemForDriver_9F6E45E3(SceUID pid, SceUInt32 mode, const void *addr, Sc
 	return AddressSpaceCheckAccessibleRange(as, mode, (uintptr_t)addr, size);
 }
 
-int SceSysmemForDriver_61A67D32(SceUID pid, SceUInt32 mode, const void *va, uintptr_t *pa)
+int sceKernelProcModeVAtoPA(SceUID pid, SceUInt32 mode, const void *va, uintptr_t *pa)
 {
 	AddressSpaceObject *as;
 	int ret;
@@ -321,7 +321,7 @@ int sceKernelVAtoPABySW(const void *va, uintptr_t *pa)
 		SCE_DBG_ASSERT_CHECK_FUNC(pa != NULL, 916, "sceKernelVAtoPABySW");
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	ret = AddressSpaceVAtoPABySW(SceSysrootForKernel_63EBB05B(), (uintptr_t)va,
+	ret = AddressSpaceVAtoPABySW(sceKernelSysrootGetCurrentAddressSpaceCB(), (uintptr_t)va,
 				     pa);
 	switch (ret) {
 	case PAGE_KIND_SMALL:
@@ -458,7 +458,7 @@ int sceKernelVARangeToPAVector(const SceKernelVARange *range, SceKernelPAVector 
 }
 
 /* what memory va's physical address is in */
-int SceSysmemForDriver_0AAA4FDD(const void *va)
+int sceKernelGetPhysicalMemoryType(const void *va)
 {
 	uintptr_t pa;
 	int ret;
@@ -478,7 +478,7 @@ int SceSysmemForDriver_0AAA4FDD(const void *va)
 /* name unknown: the memory type va is mapped with in the current address space */
 int SceSysmemForKernel_0B5A3E93(const void *va)
 {
-	return AddressSpaceGetMemoryType(SceSysrootForKernel_63EBB05B(),
+	return AddressSpaceGetMemoryType(sceKernelSysrootGetCurrentAddressSpaceCB(),
 					 (uintptr_t)va);
 }
 
@@ -498,7 +498,7 @@ int sceKernelGetSubbudgetInfo(SceUInt32 subbudget, AddressSpaceSubbudgetInfo *us
 	ret = sceKernelCopyFromUser(&info, userInfo, sizeof(info));
 	if (ret < 0 || info.size != sizeof(info))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = AddressSpaceGetSubbudgetInfo(SceSysrootForKernel_63EBB05B(), subbudget,
+	ret = AddressSpaceGetSubbudgetInfo(sceKernelSysrootGetCurrentAddressSpaceCB(), subbudget,
 					   &info);
 	if (ret < 0)
 		return ret;
@@ -513,7 +513,7 @@ int sceKernelGetFreeMemorySize(SceKernelFreeMemorySizeInfo *userInfo)
 	ret = sceKernelCopyFromUser(&info, userInfo, sizeof(info));
 	if (ret < 0 || info.size != sizeof(info))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = AddressSpaceGetFreeMemorySize(SceSysrootForKernel_63EBB05B(), &info);
+	ret = AddressSpaceGetFreeMemorySize(sceKernelSysrootGetCurrentAddressSpaceCB(), &info);
 	if (ret < 0)
 		return ret;
 	return sceKernelCopyToUser(userInfo, &info, sizeof(info));
@@ -656,7 +656,7 @@ int SysmemModuleStart(SceSize args, void *argp)
 	if (InitializeAssertLevel(context) < 0)
 		SCE_PANIC(1815);
 	SceKernelUtilsForDriver_D428CC2A(SceDipswForDriver_B2AD48BE(3));
-	g_uidManager = SceSysrootForKernel_37EC12BB(3);
+	g_uidManager = sceKernelSysrootGetModulePrivate(3);
 	BitheapModuleStart();
 	PhyMemLowModuleStart(g_uidManager);
 	PhyMemModuleStart(g_uidManager);

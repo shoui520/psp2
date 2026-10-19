@@ -149,10 +149,10 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_274663A0
 	SceSblAIMgrForDriver_D78B04A2
 	SceSblAIMgrForDriver_F4B98F66
-	SceSblAuthMgrForDriver_41DAEA12
-	SceSblAuthMgrForDriver_868B9E9A
+	sceSblAuthMgrDecBindData
+	sceSblAuthMgrGetEKc
 	sceKernelUserUnmap
-	SceSysmemForDriver_278BC201
+	sceKernelUserMap
 	sceKernelCopyToUser
 	SceSysmemForDriver_9F6E45E3
 	sceKernelCopyFromUser
@@ -188,8 +188,8 @@ set(MODULE_IMPORT_FUNCS
 	sceIoClose
 	SceSblSsMgrForDriver_82B5DCEF
 	sceSblDmac5HashTransform
-	SceSblSsMgrForDriver_A5B5D269
-	SceSblSsMgrForDriver_FC6CDD68
+	sceSblAimgrGetOpenPsId
+	sceSblAimgrGetConsoleId
 	sceRegMgrGetKeyBin
 	sceRegMgrGetKeyInt
 	SceRtcForDriver_401C0954

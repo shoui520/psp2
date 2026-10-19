@@ -814,7 +814,7 @@ int module_start(SceSize args, void *argp)
 
 	(void)args;
 	(void)argp;
-	if (!SceSblAIMgrForDriver_71608CA3() || !SceSysrootForDriver_834439A7())
+	if (!SceSblAIMgrForDriver_71608CA3() || !sceKernelSysrootIsSafeMode())
 		return 1;
 	ret = sceKernelCreateMutex("SceUsbMassLock", 0, 0, NULL);
 	if (ret < 0)

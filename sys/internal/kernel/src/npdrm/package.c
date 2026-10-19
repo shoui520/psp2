@@ -1626,7 +1626,7 @@ __attribute__((noinline)) int NpDrmPackageCheckForUser(const void *buffer,
 	ret = SceSysmemForDriver_9F6E45E3(0, 0x10, buffer, size);
 	if (ret < 0)
 		goto out;
-	mapId = SceSysmemForDriver_278BC201("SceNpDrmPackageChk", 1, buffer, size,
+	mapId = sceKernelUserMap("SceNpDrmPackageChk", 1, buffer, size,
 		&kernelPage, &kernelSize, &kernelOffset);
 	if (mapId < 0) {
 		ret = mapId;
@@ -1679,7 +1679,7 @@ __attribute__((noinline)) int NpDrmPackageDecryptForUser(void *buffer,
 	ret = SceSysmemForDriver_9F6E45E3(0, 0x30, buffer, size);
 	if (ret < 0)
 		goto out;
-	mapId = SceSysmemForDriver_278BC201("SceNpDrmPackageDec", 3, buffer, size,
+	mapId = sceKernelUserMap("SceNpDrmPackageDec", 3, buffer, size,
 		&kernelPage, &kernelSize, &kernelOffset);
 	if (mapId < 0) {
 		ret = mapId;
@@ -1729,7 +1729,7 @@ __attribute__((noinline)) int NpDrmPackageTransformForUser(void *buffer,
 	ret = SceSysmemForDriver_9F6E45E3(0, 0x10, buffer, size);
 	if (ret < 0)
 		goto out;
-	mapId = SceSysmemForDriver_278BC201("SceNpDrmPackageTrans", 1, buffer, size,
+	mapId = sceKernelUserMap("SceNpDrmPackageTrans", 1, buffer, size,
 		&kernelPage, &kernelSize, &kernelOffset);
 	if (mapId < 0) {
 		ret = mapId;

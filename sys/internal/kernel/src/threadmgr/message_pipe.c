@@ -2422,7 +2422,7 @@ restore:
 	return ret;
 }
 
-SceUID SceThreadmgrForDriver_BF631145(const char *name, int memType, SceUInt32 attr,
+SceUID sceKernelCreateMsgPipe(const char *name, int memType, SceUInt32 attr,
 				      SceSize bufferSize, const ThreadmgrMsgPipeOptParam *option)
 {
 	return sceKernelCreateMsgPipeWithLR(name, memType, attr, bufferSize, option,

@@ -266,7 +266,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoClose
 	sceKernelFreeMemBlock
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_49D4DD9B
+	sceKernelAllocHeapMemoryWithOption
 	sceKernelCopyToUser
 	sceKernelAllocHeapMemory
 	sceKernelCreateHeap
@@ -473,9 +473,9 @@ set(MODULE_IMPORT_FUNCS
 	SceSblPostSsMgrForDriver_7ACCAA50
 	SceSblPostSsMgrForDriver_9D1D8EE5
 	SceSblPostSsMgrForDriver_9D2E2D39
-	SceSblSmCommForKernel_0631F8ED
+	sceSblSmCommStopSm
 	SceSblSmCommForKernel_7863A0CC
-	SceSblSmCommForKernel_DB9FC204
+	sceSblSmCommCallFunc
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

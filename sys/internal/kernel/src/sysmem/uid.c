@@ -3265,7 +3265,7 @@ SceUID SceSysmemForDriver_BF209859(SceUID pid, SceUID guid)
 	return PUIDOpenByGUID(pid, guid, 0, NULL, 0, UID_ENTRY_ATTR_LEVEL_DEFAULT);
 }
 
-SceUID SceSysmemForDriver_CED1547B(SceUID pid, SceUID guid, SceUInt32 flags)
+SceUID scePUIDOpenByGUIDWithFlags(SceUID pid, SceUID guid, SceUInt32 flags)
 {
 	if (pid == SCE_KERNEL_PROCESS_ID)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;

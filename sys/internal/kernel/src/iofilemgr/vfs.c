@@ -3982,7 +3982,7 @@ int vfs_system_event_handler(int resume, int eventid, void *args, void *opt)
 					     NULL);
 		if (g_vfsSuspendQueryCount == 0) {
 			g_vfsSuspended++;
-			pid = SceSysrootForDriver_05093E7B();
+			pid = sceKernelSysrootGetShellPid();
 			if (pid >= 0) {
 				num = scePUIDGetUIDVectorByClass(pid, &g_vfsFileClass, 7, NULL, 0,
 								  NULL);

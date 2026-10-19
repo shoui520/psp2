@@ -99,7 +99,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUserUnmap
 	sceGUIDReferObject
 	sceGUIDReleaseObject
-	SceSysmemForDriver_278BC201
+	sceKernelUserMap
 	sceKernelVAtoPA
 	sceKernelGetMemBlockBase
 	sceKernelCopyFromUser

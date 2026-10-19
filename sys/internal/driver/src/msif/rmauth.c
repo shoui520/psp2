@@ -64,10 +64,10 @@ int call_get_key_master_gen_no(uint32_t *generation)
 	if (callResult) {
 		result = callResult;
 	} else {
-		if (SceSblSmCommForKernel_DB9FC204(gMsifSmId, 1, &serviceResult, &request,
+		if (sceSblSmCommCallFunc(gMsifSmId, 1, &serviceResult, &request,
 			sizeof(request)))
 			serviceResult = 0x800f1928;
-		callResult = SceSblSmCommForKernel_0631F8ED(gMsifSmId, &stopResult);
+		callResult = sceSblSmCommStopSm(gMsifSmId, &stopResult);
 		if (callResult) {
 			result = callResult;
 		} else {
@@ -94,10 +94,10 @@ int call_set_ind_key(const uint8_t *mediaId)
 	result = invoke_rm_auth_secure_module();
 	if (result)
 		goto unlock;
-	if (SceSblSmCommForKernel_DB9FC204(gMsifSmId, 2, &serviceResult, &request,
+	if (sceSblSmCommCallFunc(gMsifSmId, 2, &serviceResult, &request,
 		sizeof(request)))
 		serviceResult = 0x800f1928;
-	result = SceSblSmCommForKernel_0631F8ED(gMsifSmId, &stopResult);
+	result = sceSblSmCommStopSm(gMsifSmId, &stopResult);
 	if (!result)
 		result = serviceResult;
 unlock:

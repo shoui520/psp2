@@ -702,7 +702,7 @@ static int initWork(void *arg) /* name unknown */
 			setHeadMode(&heads[0], 0x8900, width, height, 0, 0);
 	}
 	if (hdmiOnly != 1) {
-		if (SceSysrootForDriver_834439A7() == 0) {
+		if (sceKernelSysrootIsSafeMode() == 0) {
 			if (SceDsiForDriver_B3A70C05(0x8600, &width, &height) >= 0)
 				setHeadMode(&heads[1], 0x8600, width, height, 1, 0);
 		} else {
@@ -2139,7 +2139,7 @@ int SceDisplayForDriver_3BC165EF(SceUID pid, int head, int plane,
 	paddr = rec->paddr;
 	info->vblankcount = rec->vcountShown;
 	if (paddr == 0)
-		SceSysmemForDriver_61A67D32(pid, 0x10, rec->frameBuf.base, &paddr);
+		sceKernelProcModeVAtoPA(pid, 0x10, rec->frameBuf.base, &paddr);
 	info->paddr = paddr;
 	info->framebuf = pls->frameBuf[head][plane].frameBuf;
 	info->resolution = pls->frameBuf[head][plane].resolution;

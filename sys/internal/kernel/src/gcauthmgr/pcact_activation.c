@@ -176,7 +176,7 @@ int GcAuthPcactCreateChallenge(const GcAuthPcactChallengeRequest *request)
 	cursor = (unsigned char *)random;
 	for (index = 0; index != sizeof(*random); index++)
 		cursor[index] = 0;
-	if (SceSblSsMgrForDriver_FC6CDD68(&gcAuthPcactConsoleId) < 0) {
+	if (sceSblAimgrGetConsoleId(&gcAuthPcactConsoleId) < 0) {
 		result = (int)0x808a0300;
 		goto finish;
 	}

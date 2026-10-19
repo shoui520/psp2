@@ -33,7 +33,7 @@ void *usbdAlloc(SceSize size)
 
 	opt.size = sizeof(opt);
 	opt.align = 64;
-	return SceSysmemForDriver_49D4DD9B(s_heapId, size, &opt);
+	return sceKernelAllocHeapMemoryWithOption(s_heapId, size, &opt);
 }
 
 int usbdFree(void *ptr)

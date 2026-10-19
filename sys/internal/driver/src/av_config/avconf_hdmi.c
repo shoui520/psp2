@@ -426,7 +426,7 @@ int avConfigHdmiSetInitialOutput(void)
 	int vic;
 	unsigned int flags;
 
-	if (SceSysrootForDriver_834439A7() != 0 || SceSysrootForDriver_B0E1FC67() != 0) {
+	if (sceKernelSysrootIsSafeMode() != 0 || SceSysrootForDriver_B0E1FC67() != 0) {
 		vic = 0x8300;
 		flags = 0x80000001;
 	} else if (sceRegMgrGetKeyInt(avConfigDisplayCategory,

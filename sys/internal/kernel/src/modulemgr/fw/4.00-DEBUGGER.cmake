@@ -309,10 +309,10 @@ set(MODULE_IMPORT_FUNCS
 	SceQafMgrForDriver_B9770A13
 	SceSysrootForKernel_20D2A0DF
 	SceSysrootForKernel_256B2394
-	SceSysrootForKernel_37EC12BB
+	sceKernelSysrootGetModulePrivate
 	SceSysrootForKernel_38751FB7
 	SceSysrootForKernel_55392965
-	SceSysrootForKernel_5C426B19
+	sceKernelSysrootGetStatus
 	SceSysrootForKernel_6050A467
 	SceSysrootForKernel_73522F65
 	SceSysrootForKernel_89D19090

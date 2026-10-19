@@ -265,7 +265,7 @@ const void *SceMtpIfForDriver_16D7DBCC(int port)
 	return port == 1 ? &s_port : NULL;
 }
 
-int SceMtpIfForDriver_5245D237(const void *port)
+int sceMtpIfStartPort(const void *port)
 {
 	SceUID pid = s_mtp.owner;
 
@@ -323,7 +323,7 @@ int name(const void *port) \
 MTP_SYSCALL(sceMtpIfReset, SceMtpIfForDriver_92CD107E)
 MTP_SYSCALL(sceMtpIfCancelTransfer, SceMtpIfForDriver_F1EC5992)
 MTP_SYSCALL(sceMtpIfIsConnected, SceMtpIfForDriver_2D9318E1)
-MTP_SYSCALL(sceMtpIfStartPort, SceMtpIfForDriver_5245D237)
+MTP_SYSCALL(sceMtpIfStartPortForUser, sceMtpIfStartPort)
 MTP_SYSCALL(sceMtpIfStopPort, SceMtpIfForDriver_E6453F21)
 
 int sceMtpIfWaitConnect(const void *port, SceUInt32 timeout)

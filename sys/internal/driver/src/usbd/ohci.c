@@ -287,7 +287,7 @@ typedef struct Ohci {
 	unsigned int interruptCount[8];	/* per HcInterruptStatus bit: only start of frame */
 } Ohci;
 
-/* SceSysmemForDriver_F3BBE2E1 of uncached memory: no cache maintenance */
+/* sceKernelGetMemBlockMemtypeByAddr of uncached memory: no cache maintenance */
 #define USBD_MEMTYPE_UNCACHED		0x8000
 
 #define USBD_CACHE_LINE			64
@@ -764,7 +764,7 @@ static __always_inline SceUIntPtr ohciBufferEnd(UsbdRequest *request, SceUIntPtr
 
 static __always_inline void ohciCleanRequest(UsbdPipe *pipe, UsbdRequest *request)
 {
-	if (SceSysmemForDriver_F3BBE2E1(request->buffer) == USBD_MEMTYPE_UNCACHED)
+	if (sceKernelGetMemBlockMemtypeByAddr(request->buffer) == USBD_MEMTYPE_UNCACHED)
 		return;
 	if (pipe->direction)
 		sceKernelDcacheCleanInvalidateRange((void *)USBD_CACHE_BASE(request->buffer),
@@ -882,7 +882,7 @@ static int ohciSubmitControl(Ohci *ohci, UsbdPipe *pipe, UsbdRequest *request)
 	pipe->busy = 1;
 
 	setup = request->setup;
-	if (SceSysmemForDriver_F3BBE2E1(setup) != USBD_MEMTYPE_UNCACHED)
+	if (sceKernelGetMemBlockMemtypeByAddr(setup) != USBD_MEMTYPE_UNCACHED)
 		sceKernelDcacheCleanRange((void *)USBD_CACHE_BASE(setup),
 					   USBD_CACHE_SIZE(setup, sizeof(*setup)));
 	td = setupStage->hw.td;
@@ -902,7 +902,7 @@ static int ohciSubmitControl(Ohci *ohci, UsbdPipe *pipe, UsbdRequest *request)
 		td->bufferEnd = usbdVAtoPA(request->buffer) + request->length - 1;
 		USBD_LIST_APPEND(pipe->descHead.ohci, pipe->descTail.ohci, dataStage);
 		ohci->tdRequest[ohciTdIndex(ohci, td)] = request;
-		if (SceSysmemForDriver_F3BBE2E1(request->buffer) != USBD_MEMTYPE_UNCACHED) {
+		if (sceKernelGetMemBlockMemtypeByAddr(request->buffer) != USBD_MEMTYPE_UNCACHED) {
 			if (setup->bmRequestType & SCE_USBD_ENDPOINT_DIRECTION_IN)
 				sceKernelDcacheCleanInvalidateRange((void *)USBD_CACHE_BASE(request->buffer),
 								     USBD_CACHE_SIZE(request->buffer, request->length));
@@ -1012,7 +1012,7 @@ wait:
 
 static __always_inline void ohciInvalidateRequest(UsbdRequest *request)
 {
-	if (SceSysmemForDriver_F3BBE2E1(request->buffer) != USBD_MEMTYPE_UNCACHED &&
+	if (sceKernelGetMemBlockMemtypeByAddr(request->buffer) != USBD_MEMTYPE_UNCACHED &&
 	    request->pipe->direction == SCE_USBD_ENDPOINT_DIRECTION_IN)
 		sceKernelDcacheInvalidateRange((void *)USBD_CACHE_BASE(request->buffer),
 						USBD_CACHE_SIZE(request->buffer, request->length));

@@ -53,7 +53,7 @@ int recoverFileGroups(void)
 				if (sceIoRead(fd, &magicGateFileService.record,
 					       sizeof(magicGateFileService.record)) < 0)
 					goto nextGroup;
-				if (SceIofilemgrForDriver_462F059B(fd, &stat) < 0)
+				if (sceIoGetstatByFd(fd, &stat) < 0)
 					memset(&stat, 0, sizeof(stat));
 				sceIoClose(fd);
 				memset(iv, group, sizeof(iv));
@@ -330,7 +330,7 @@ int writeFileRecord(MagicGateFileRequest *request)
 	if (result < 0)
 		goto ioErrorClose;
 	if (result == sizeof(magicGateFileService.record)) {
-		if (SceIofilemgrForDriver_462F059B(fd, &stat) >= 0 &&
+		if (sceIoGetstatByFd(fd, &stat) >= 0 &&
 		    SceRtcForDriver_F139E359(&stat.st_mtime, &tick) >= 0)
 			magicGateFileService.groups[group].modificationTick = tick.tick;
 		result = 0;
@@ -540,7 +540,7 @@ createDirectory:
 	result = sceMsifGetMediaId((uint8_t *)&workspace.identity);
 	if (result < 0)
 		goto failed;
-	result = SceSblSsMgrForDriver_A5B5D269((SceKernelOpenPsId *)&workspace.info);
+	result = sceSblAimgrGetOpenPsId((SceKernelOpenPsId *)&workspace.info);
 	if (result < 0)
 		goto failed;
 	result = encryptRecordEcb(&workspace.identityKey, &workspace.info,

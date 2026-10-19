@@ -120,7 +120,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeHeapMemory
 	sceKernelAllocHeapMemory
 	sceKernelGetMemBlockBase
-	SceSysmemForDriver_FFCD9B60
+	sceKernelUnmapMemBlock
 	SceSysmemForKernel_0164D817
 	SceSysmemForKernel_16A54BFE
 	SceSysmemForKernel_4233C16D
@@ -146,12 +146,12 @@ set(MODULE_IMPORT_FUNCS
 	SceQafMgrForDriver_883E9465
 	SceQafMgrForDriver_B9770A13
 	SceSblACMgrForKernel_BBA13D9C
-	SceSysrootForKernel_3ACACD22
+	SceSysrootForKernel_sceKernelSysrootAppMgrSpawnProcess
 	SceSysrootForKernel_4373AC96
 	SceSysrootForKernel_47724459
 	SceSysrootForKernel_55392965
 	SceSysrootForKernel_79C9AE10
-	SceSysrootForKernel_834439A7
+	SceSysrootForKernel_sceKernelSysrootIsSafeMode
 	SceSysrootForKernel_89D19090
 	sceKernelSysrootSetStatus
 	SceSysrootForKernel_B0E1FC67

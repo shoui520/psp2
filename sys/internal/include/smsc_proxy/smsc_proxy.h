@@ -83,8 +83,7 @@ int SceSblSmSchedProxyForKernel_723B382F(SceUID id, int channel, SceUInt32 value
 int SceSblSmSchedProxyForKernel_F70C04EC(SceUID id, int channel, SceUInt32 *value);
 int sceSblSmSchedProxyWriteCry2Arm(SceUID id, int channel, SceUInt32 value);
 int sceSblSmSchedProxyReadCry2Arm(SceUID id, int channel, SceUInt32 *value);
-/* vitasdk: ksceSblSmSchedProxyEnableCry2ArmInterrupt */
-int SceSblSmSchedProxyForKernel_8B84AC2A(SceUID id, int channel,
+int sceSblSmSchedProxyRegisterIntrHandler(SceUID id, int channel,
 					      SceSblSmSchedCry2ArmHandler handler, void *arg);
 /* vitasdk: ksceSblSmSchedProxyDisableCry2ArmInterrupt */
 int SceSblSmSchedProxyForKernel_85EDA5FC(SceUID id, int channel);

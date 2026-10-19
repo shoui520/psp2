@@ -215,10 +215,10 @@ static int NOINLINE StartSession(int index, uint32_t priority,
 	s_sessions[index].result = 0;
 	s_sessions[index].memBlock = memBlock;
 	s_sessions[index].eventFlag = eventFlag;
-	ret = SceSblSmSchedProxyForKernel_8B84AC2A(*id, 0, sceSblSmCommIntHandler, NULL);
+	ret = sceSblSmSchedProxyRegisterIntrHandler(*id, 0, sceSblSmCommIntHandler, NULL);
 	if (ret < 0)
 		goto cleanup;
-	ret = SceSblSmSchedProxyForKernel_8B84AC2A(*id, 1, sceSblSmCommIntHandler, NULL);
+	ret = sceSblSmSchedProxyRegisterIntrHandler(*id, 1, sceSblSmCommIntHandler, NULL);
 	if (ret < 0)
 		goto cleanup;
 	vector.size = 1;
@@ -374,7 +374,7 @@ out:
 	return ret;
 }
 
-int SceSblSmCommForKernel_DB9FC204(SceSblSmCommId id, SceUInt32 service,
+int sceSblSmCommCallFunc(SceSblSmCommId id, SceUInt32 service,
 	SceUInt32 *serviceResult, void *data, SceSize size)
 {
 	uint32_t context = EnterApi();
@@ -434,13 +434,13 @@ out:
 	return ret;
 }
 
-int SceSblSmCommForKernel_0631F8ED(SceSblSmCommId id, SceSblSmCommPair *result)
+int sceSblSmCommStopSm(SceSblSmCommId id, SceSblSmCommPair *result)
 {
 	uint32_t context = EnterApi();
 	struct SmSession *session;
 	int index, ret, waitRet;
 
-	ret = SceSblSmCommForKernel_DB9FC204(id, UINT32_MAX, NULL, NULL, 0);
+	ret = sceSblSmCommCallFunc(id, UINT32_MAX, NULL, NULL, 0);
 	if (ret == 0 || ret == SM_ERROR_STOPPED) {
 		index = FindSessionSlot(id);
 		/* Native cleanup does not reject an unmatched (-1) slot here. */

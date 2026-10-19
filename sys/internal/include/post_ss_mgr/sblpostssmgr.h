@@ -31,8 +31,7 @@ int SceSblPostSsMgrForDriver_2C463AF1(SceUInt32 type, SceSize size, void *key);
 int SceSblPostSsMgrForDriver_3DB69911(const void *signature, const void *hash, const void *key, int type);
 int SceSblPostSsMgrForDriver_3F9BDEDF(SceUInt32 time);	/* vitasdk: ksceSblPostSsMgrSetCpRtc */
 int SceSblPostSsMgrForDriver_4100B9E9(void);
-/* vitasdk: ksceSblPostSsMgrExecutePmSmF00dCommand8 */
-int SceSblPostSsMgrForDriver_4663C195(SceUInt8 *mode);
+int sceSblPmMgrGetProductModeFromNVS(SceUInt8 *mode);
 /* vitasdk: ksceSblPostSsMgrGetExpireDate */
 int SceSblPostSsMgrForDriver_4FF2682F(SceUInt32 *date, int fromNvs);
 int SceSblPostSsMgrForDriver_739C981E(SceUInt32 version, SceUInt32 index, void *keys);

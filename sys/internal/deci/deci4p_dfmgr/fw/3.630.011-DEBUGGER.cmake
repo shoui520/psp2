@@ -104,14 +104,14 @@ set(MODULE_IMPORT_FUNCS
 	SceModulemgrForDriver_BBE1771C
 	sceKernelCheckDipsw
 	sceKernelRegisterSysEventHandler
-	SceDbgSdioForDriver_361E1BB6
+	sceDbgSdioClose
 	receiveData
-	SceDbgSdioForDriver_3D3FAF3A
+	sceDbgSdioOpen
 	sceDbgSdioWrite
 	SceDbgUsbForDriver_08CF16D1
-	SceDbgUsbForDriver_40C65DB2
+	sceDbgUsbWrite
 	_sceDbgUsbPullData
-	SceDbgUsbForDriver_A6BFCC0A
+	sceDbgUsbOpen
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

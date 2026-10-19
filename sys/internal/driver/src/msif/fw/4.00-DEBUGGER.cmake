@@ -146,8 +146,8 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelUtilsForDriver_F12B6451
 	SceSblAIMgrForDriver_C6E83F34
 	SceSblSmCommForKernel_039C73B1
-	SceSblSmCommForKernel_0631F8ED
-	SceSblSmCommForKernel_DB9FC204
+	sceSblSmCommStopSm
+	sceSblSmCommCallFunc
 	SceSysrootForKernel_F10AB792
 	SceSblSsMgrForDriver_37DD5CBF
 	sceSblDmac5Rnd

@@ -22,14 +22,14 @@ SceSblSsMgr:
       nid: 0x61E9428D
       functions:
         - SceSblSsMgrForDriver_01BE0374: 0x01BE0374
-        - SceSblSsMgrForDriver_04843835: 0x04843835
+        - sceSblAimgrGetVisibleId: 0x04843835
         - SceSblSsMgrForDriver_05B38698: 0x05B38698
         - SceSblSsMgrForDriver_0F7D28AF: 0x0F7D28AF
         - SceSblSsMgrForDriver_121FA69F: 0x121FA69F
         - SceSblSsMgrForDriver_1901CB5E: 0x1901CB5E
         - SceSblSsMgrForDriver_197ACF6F: 0x197ACF6F
         - SceSblSsMgrForDriver_1B14658D: 0x1B14658D
-        - SceSblSsMgrForDriver_21EC51F6: 0x21EC51F6
+        - sceSblSsEncryptWithPortability: 0x21EC51F6
         - sceSblSsSetNvsData: 0x249ADB07
         - SceSblSsMgrForDriver_37DD5CBF: 0x37DD5CBF
         - sceSblDmac5Rnd: 0x4DD1B2E5
@@ -47,8 +47,8 @@ SceSblSsMgr:
         - SceSblSsMgrForDriver_92E37656: 0x92E37656
         - SceSblSsMgrForDriver_934DB6B5: 0x934DB6B5
         - sceSblDmac5HashTransform: 0x9641374E
-        - SceSblSsMgrForDriver_9A9676D0: 0x9A9676D0
-        - SceSblSsMgrForDriver_A5B5D269: 0xA5B5D269
+        - sceSblAimgrGetPscode2: 0x9A9676D0
+        - sceSblAimgrGetOpenPsId: 0xA5B5D269
         - SceSblSsMgrForDriver_AC57F4F0: 0xAC57F4F0
         - SceSblSsMgrForDriver_B8B298FD: 0xB8B298FD
         - SceSblSsMgrForDriver_C38D0CEA: 0xC38D0CEA
@@ -59,7 +59,7 @@ SceSblSsMgr:
         - SceSblSsMgrForDriver_E6E1AD15: 0xE6E1AD15
         - SceSblSsMgrForDriver_EA6ACB6D: 0xEA6ACB6D
         - SceSblSsMgrForDriver_EB3AF9B5: 0xEB3AF9B5
-        - SceSblSsMgrForDriver_FC6CDD68: 0xFC6CDD68
+        - sceSblAimgrGetConsoleId: 0xFC6CDD68
         - sceSblSsGetNvsData: 0xFDD6D5DE
     SceSblQafMgr:
       syscall: true

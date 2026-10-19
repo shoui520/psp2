@@ -231,7 +231,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterInitCallback
 	SceSysrootForDriver_7918D44E
 	SceSysrootForDriver_79C9AE10
-	SceSysrootForDriver_834439A7
+	sceKernelSysrootIsSafeMode
 	SceSysrootForDriver_89532E2F
 	SceSysrootForDriver_89D19090
 	SceSysrootForDriver_B0E1FC67

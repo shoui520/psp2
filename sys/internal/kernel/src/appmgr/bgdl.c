@@ -31,7 +31,7 @@ int appmgrInitializeBgdlQueueStorage(void)
 		opt.mmapSize = 0;
 		opt.size = sizeof(opt);
 		opt.align = 32;
-		g_appmgrBgdlQueueStorage = SceSysmemForDriver_49D4DD9B(
+		g_appmgrBgdlQueueStorage = sceKernelAllocHeapMemoryWithOption(
 			g_appmgrCoreHeap, BGDL_QUEUE_STORAGE_SIZE, &opt);
 		if (g_appmgrBgdlQueueStorage != NULL)
 			memset(g_appmgrBgdlQueueStorage, 0, BGDL_QUEUE_STORAGE_SIZE);

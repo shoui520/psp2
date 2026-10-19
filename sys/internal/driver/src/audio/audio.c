@@ -1065,7 +1065,7 @@ int _audioSetptrMain(int port, const void *buf)
 		if (buf != NULL) {
 			int len;
 
-			result = SceSysmemForDriver_278BC201("SceAudioUserMapMain", 1, buf,
+			result = sceKernelUserMap("SceAudioUserMapMain", 1, buf,
 				main->config.bytesPerFrame * main->config.len,
 				&kernelPage, &kernelSize, &kernelOffset);
 			if (result < 0)
@@ -1137,7 +1137,7 @@ int _audioSetptrMain(int port, const void *buf)
 	bytesPerFrame = direct->bytesPerFrame;
 	freq = direct->freq;
 	if (buf != NULL) {
-		result = SceSysmemForDriver_278BC201("SceAudioUserMapBgm", 1, buf,
+		result = sceKernelUserMap("SceAudioUserMapBgm", 1, buf,
 			bytesPerFrame * direct->len, &kernelPage, &kernelSize,
 			&kernelOffset);
 		if (result < 0)

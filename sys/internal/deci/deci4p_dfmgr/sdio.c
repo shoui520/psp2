@@ -128,7 +128,7 @@ int sdioInit(DfMgrLinkCB *link, DfMgrLinkCallback sendCallback, DfMgrLinkCallbac
 		return ret;
 	}
 	s_sdioRecvEvf = ret;
-	ret = SceDbgSdioForDriver_3D3FAF3A(SDIO_CHANNEL, s_sdioRecvEvf);
+	ret = sceDbgSdioOpen(SDIO_CHANNEL, s_sdioRecvEvf);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(15, 111, "0x%08X\n", ret);
 		SCE_DBG_ASSERT_FAIL(112);
@@ -174,7 +174,7 @@ int sdioTerm(DfMgrLinkCB *link)
 	ret = sceKernelDeleteThread(s_sdioSendThread);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(15, 195, "0x%08X\n", ret);
-	ret = SceDbgSdioForDriver_361E1BB6(SDIO_CHANNEL);
+	ret = sceDbgSdioClose(SDIO_CHANNEL);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(15, 202, "0x%08X\n", ret);
 	ret = sceKernelDeleteEventFlag(s_sdioRecvEvf);

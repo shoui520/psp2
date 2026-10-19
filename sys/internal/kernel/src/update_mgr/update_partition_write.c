@@ -47,7 +47,7 @@ int UpdateUtilWritePartition(const void *buffer, uint64_t size, uint64_t offset,
 	option.mmapSize = 0;
 	option.size = sizeof(option);
 	option.align = 4096;
-	readBuffer = SceSysmemForDriver_49D4DD9B(heapId, 0x40000, &option);
+	readBuffer = sceKernelAllocHeapMemoryWithOption(heapId, 0x40000, &option);
 	if (!readBuffer) {
 		result = (int)0x800f020c;
 		goto close;

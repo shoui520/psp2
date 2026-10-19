@@ -47,7 +47,7 @@ int mtpPackString(MtpString *out, const char *str)
 		out->length = 0;
 		return 0;
 	}
-	tmp = SceSysmemForDriver_49D4DD9B(ewg.heap, room * 2, &ewg.allocOpt);
+	tmp = sceKernelAllocHeapMemoryWithOption(ewg.heap, room * 2, &ewg.allocOpt);
 	if (tmp == NULL)
 		return MTP_ERROR_NO_MEMORY;
 	ret = mtpUtf8ToUtf16(tmp, room * 2, (const SceUInt8 *)str);

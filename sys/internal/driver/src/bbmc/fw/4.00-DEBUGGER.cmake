@@ -185,10 +185,10 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_4373AC96
 	sceKernelUserUnmap
 	sceKernelFreeMemBlock
-	SceSysmemForDriver_278BC201
+	sceKernelUserMap
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_49D4DD9B
+	sceKernelAllocHeapMemoryWithOption
 	sceKernelCopyToUser
 	sceKernelAllocHeapMemory
 	sceKernelCreateHeap
@@ -258,7 +258,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateMutex
 	sceIoRemove
 	sceIoWrite
-	SceIofilemgrForDriver_462F059B
+	sceIoGetstatByFd
 	sceIoLseek
 	sceIoOpen
 	sceIoRead

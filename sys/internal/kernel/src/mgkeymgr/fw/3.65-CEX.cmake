@@ -35,9 +35,9 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
-	SceSblSmCommForKernel_0631F8ED
+	sceSblSmCommStopSm
 	SceSblSmCommForKernel_7863A0CC
-	SceSblSmCommForKernel_DB9FC204
+	sceSblSmCommCallFunc
 	memset
 	memcpy
 	__memcpy_chk

@@ -221,7 +221,7 @@ static void ReadComplete(SceUdcdDeviceRequest *req) /* name unknown */
 	}
 }
 
-int SceDbgUsbForDriver_A6BFCC0A(SceUID event)
+int sceDbgUsbOpen(SceUID event)
 {
 	SceKernelEventFlagInfo info;
 
@@ -299,7 +299,7 @@ out:
 	return ret;
 }
 
-int SceDbgUsbForDriver_40C65DB2(const void *data, unsigned int size)
+int sceDbgUsbWrite(const void *data, unsigned int size)
 {
 	SceKernelEventFlagInfo info;
 	int ret;

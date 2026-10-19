@@ -23,7 +23,7 @@ int SceMtpIfForDriver_05408B5B(const void *port, SceUInt32 timeout);	/* wait to 
 int SceMtpIfForDriver_2D9318E1(const void *port);	/* connected? */
 int SceMtpIfForDriver_8D16B997(const void *port, int phase);	/* change phase */
 const void *SceMtpIfForDriver_16D7DBCC(int port);	/* the port (1) */
-int SceMtpIfForDriver_5245D237(const void *port);	/* start the driver */
+int sceMtpIfStartPort(const void *port);	/* start the driver */
 int SceMtpIfForDriver_E6453F21(const void *port);	/* stop the driver */
 int SceMtpIfForDriver_CB685AC0(int port);
 int SceMtpIfForDriver_FDF8C3C0(int port);

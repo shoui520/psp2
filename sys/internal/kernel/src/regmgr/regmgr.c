@@ -2220,7 +2220,7 @@ int regMgrInitWork(void *arg)
 	g_regMgrErrorMasquerade = 0;
 	g_regMgrVolatileMode = 0;
 	g_regMgrDrvErrCallback = -1;
-	if (SceSysrootForDriver_834439A7() != 0)
+	if (sceKernelSysrootIsSafeMode() != 0)
 		g_regMgrVolatileMode = 1;
 	if (SceSysrootForDriver_B0E1FC67() != 0)
 		g_regMgrVolatileMode = 1;
@@ -2469,7 +2469,7 @@ int regMgrMakePsIdToken(SceUInt8 *token)
 	SceUInt32 time;
 	int ret, i;
 
-	ret = SceSblSsMgrForDriver_A5B5D269(&psid);
+	ret = sceSblAimgrGetOpenPsId(&psid);
 	if (ret != 0)
 		return ret;
 	time = SceProcessmgrForDriver_02179E12();
@@ -2490,7 +2490,7 @@ int regMgrCheckPsIdToken(const SceUInt8 *token)
 	SceKernelOpenPsId psid;
 	int ret, i;
 
-	ret = SceSblSsMgrForDriver_A5B5D269(&psid);
+	ret = sceSblAimgrGetOpenPsId(&psid);
 	if (ret != 0)
 		return ret;
 	for (i = 0; i < 32; i++) {

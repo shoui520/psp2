@@ -57,7 +57,7 @@ static inline int AimgrIsDolceHardware(void)
 /* name unknown */
 int AimgrInit(void)
 {
-	SceKblParam *kbl = SceSysrootForKernel_9DB56D1F();
+	SceKblParam *kbl = sceKernelSysrootGetKblParam();
 	const SceUInt32 *psCode;
 
 	if (kbl == NULL) {
@@ -174,7 +174,7 @@ SceUInt16 SceSblAIMgrForDriver_B33CEC8F(void)
 /* the system software version the console left the factory with */
 int SceSblAIMgrForDriver_47D9CF13(SceUInt32 *smi)
 {
-	SceKblParam *kbl = SceSysrootForKernel_9DB56D1F();
+	SceKblParam *kbl = sceKernelSysrootGetKblParam();
 
 	if (smi == NULL || kbl == NULL)
 		return AIMGR_ERROR_INVALID_ARGUMENT;

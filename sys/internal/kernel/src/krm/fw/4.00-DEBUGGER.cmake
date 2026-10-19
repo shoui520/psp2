@@ -74,7 +74,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelInitializeFastMutex
 	sceKernelUnlockFastMutex
 	SceSblSsMgrForDriver_934DB6B5
-	SceSblSsMgrForDriver_A5B5D269
+	sceSblAimgrGetOpenPsId
 	SceSblSsMgrForDriver_AC57F4F0
 	SceDebugForDriver_374B7868
 	SceDebugForDriver_D9703808

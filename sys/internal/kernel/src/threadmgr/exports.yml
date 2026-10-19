@@ -255,7 +255,7 @@ SceKernelThreadMgr:
         - sceKernelCancelEvent: 0xB6FA8305
         - sceKernelSetEventWithNotifyCallback: 0xB7DF3EDF
         - SceThreadmgrForDriver_B92709C4: 0xB92709C4
-        - SceThreadmgrForDriver_BF631145: 0xBF631145
+        - sceKernelCreateMsgPipe: 0xBF631145
         - SceThreadmgrForDriver_C03799E2: 0xC03799E2
         - SceThreadmgrForDriver_C040EC1C: 0xC040EC1C
         - SceThreadmgrForDriver_C1286004: 0xC1286004

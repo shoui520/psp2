@@ -274,7 +274,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_47724459
 	SceSysrootForDriver_67AAB627
 	SceSysrootForDriver_7AAC4EE7
-	SceSysrootForDriver_834439A7
+	sceKernelSysrootIsSafeMode
 	SceSysrootForDriver_8AA268D6
 	SceSysrootForDriver_B0E1FC67
 	sceKernelSysrootDisableAutoClockDown
@@ -308,14 +308,14 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForDriver_C98D82EE
 	SceSblACMgrForDriver_E87D1777
 	SceSblACMgrForDriver_F5AE24AC
-	SceSblSsMgrForDriver_04843835
-	SceSblSsMgrForDriver_21EC51F6
+	sceSblAimgrGetVisibleId
+	sceSblSsEncryptWithPortability
 	sceSblSsSetNvsData
 	SceSblSsMgrForDriver_934DB6B5
-	SceSblSsMgrForDriver_9A9676D0
+	sceSblAimgrGetPscode2
 	SceSblSsMgrForDriver_B8B298FD
 	SceSblSsMgrForDriver_E0DC2587
-	SceSblSsMgrForDriver_FC6CDD68
+	sceSblAimgrGetConsoleId
 	sceSblSsGetNvsData
 	SceSblPostSsMgrForDriver_2646DE64
 	SceSblPostSsMgrForDriver_686B9461

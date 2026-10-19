@@ -23,7 +23,7 @@ static inline unsigned int swap16(unsigned int value)
 /* Internal name inferred: module_start's Aimgr setup. */
 int aimgrInit(void)
 {
-	const SceKblParam *parameters = SceSysrootForKernel_9DB56D1F();
+	const SceKblParam *parameters = sceKernelSysrootGetKblParam();
 	SceUID mutex;
 
 	if (parameters) {
@@ -51,7 +51,7 @@ int SceSblSsMgrForDriver_E0DC2587(ScePsCode *pscode)
 	return 0;
 }
 
-int SceSblSsMgrForDriver_9A9676D0(ScePsCode *pscode)
+int sceSblAimgrGetPscode2(ScePsCode *pscode)
 {
 	uint8_t productMode = 0;
 	ScePsCode value;
@@ -93,7 +93,7 @@ int SceSblSsMgrForDriver_9A9676D0(ScePsCode *pscode)
 	return 0;
 }
 
-int SceSblSsMgrForDriver_FC6CDD68(SceConsoleId *consoleId)
+int sceSblAimgrGetConsoleId(SceConsoleId *consoleId)
 {
 	int ret;
 
@@ -111,7 +111,7 @@ int SceSblSsMgrForDriver_FC6CDD68(SceConsoleId *consoleId)
 	return sceKernelUnlockMutex(aimgrMutex, 1);
 }
 
-int SceSblSsMgrForDriver_A5B5D269(SceKernelOpenPsId *openPsId)
+int sceSblAimgrGetOpenPsId(SceKernelOpenPsId *openPsId)
 {
 	if (!openPsId)
 		return AIMGR_ERROR_INVALID_ARGUMENT;
@@ -120,7 +120,7 @@ int SceSblSsMgrForDriver_A5B5D269(SceKernelOpenPsId *openPsId)
 	return 0;
 }
 
-int SceSblSsMgrForDriver_04843835(void *visibleId)
+int sceSblAimgrGetVisibleId(void *visibleId)
 {
 	int ret;
 

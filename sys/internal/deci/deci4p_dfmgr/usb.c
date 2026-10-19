@@ -45,7 +45,7 @@ static int usbSend(void *buf, SceSize size)
 	int ret;
 
 	while (done < size) {
-		ret = SceDbgUsbForDriver_40C65DB2((SceUInt8 *)buf + done, size - done);
+		ret = sceDbgUsbWrite((SceUInt8 *)buf + done, size - done);
 		done += ret;
 		if (ret < 0) {
 			if (ret == (int)USB_ERROR_DISCONNECTED)
@@ -144,7 +144,7 @@ int usbInit(DfMgrLinkCB *link, DfMgrLinkCallback sendCallback, DfMgrLinkCallback
 		return ret;
 	}
 	s_usbRecvEvf = ret;
-	ret = SceDbgUsbForDriver_A6BFCC0A(s_usbRecvEvf);
+	ret = sceDbgUsbOpen(s_usbRecvEvf);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(15, 112, "0x%08X\n", ret);
 		SCE_DBG_ASSERT_FAIL(113);

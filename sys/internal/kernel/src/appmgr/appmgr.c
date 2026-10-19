@@ -241,7 +241,7 @@ int sceAppMgrInit(void)
 	INIT_RESULT(result, 309);
 	result = appmgrInitializeSaveDataSlotCache();
 	INIT_RESULT(result, 312);
-	if (!SceSysrootForDriver_834439A7() && !SceSysrootForDriver_B0E1FC67() && productMode == 0) {
+	if (!sceKernelSysrootIsSafeMode() && !SceSysrootForDriver_B0E1FC67() && productMode == 0) {
 		result = appmgrMountShellExternalDirectories(sceKernelGetProcessId());
 		INIT_RESULT(result, 320);
 	}

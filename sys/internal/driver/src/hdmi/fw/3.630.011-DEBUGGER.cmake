@@ -118,7 +118,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_71608CA3
 	SceSblAIMgrForDriver_C6E83F34
 	SceQafMgrForDriver_382C71E8
-	SceSysrootForDriver_834439A7
+	sceKernelSysrootIsSafeMode
 	SceSysrootForDriver_B0E1FC67
 	sceKernelCheckDipsw
 	SceI2cForDriver_0A40B7BF

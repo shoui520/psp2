@@ -33,7 +33,7 @@ int L1PageTableCheckMap(Partition *partition, uintptr_t va, SceSize size, uintpt
 	MMUContext *context = NULL;
 
 	if (partition == NULL) {
-		if ((SceUInt32)SceSysrootForKernel_5C426B19() > 3)
+		if ((SceUInt32)sceKernelSysrootGetStatus() > 3)
 			return 0;
 	} else if (partition->addressSpace != NULL) {
 		context = AddressSpaceGetMMUContext(partition->addressSpace);

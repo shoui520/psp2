@@ -150,7 +150,7 @@ static inline int VSlotMap(MemBlockObject *slot, SceUID pid, uintptr_t va, SceSi
 	info->va = va;
 	info->size = size;
 	for (i = 0; i < pages; i++, va += 0x1000) {
-		ret = SceSysmemForDriver_61A67D32(pid, 0x10, (const void *)va, &pa);
+		ret = sceKernelProcModeVAtoPA(pid, 0x10, (const void *)va, &pa);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xb, 423,
 				       "%d/%d:sceKernelProcModeVAtoPA(0x%08x, 0x%08x) failed 0x%08x\n",

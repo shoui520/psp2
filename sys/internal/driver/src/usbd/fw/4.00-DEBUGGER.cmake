@@ -100,7 +100,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_49D4DD9B
+	sceKernelAllocHeapMemoryWithOption
 	sceKernelCopyToUserProc
 	sceKernelCopyToUser
 	SceSysmemForDriver_7750CEA7
@@ -111,7 +111,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelAllocMemBlockForKernel
 	sceKernelDeleteHeap
 	sceKernelStrncpyFromUser
-	SceSysmemForDriver_F3BBE2E1
+	sceKernelGetMemBlockMemtypeByAddr
 	memset
 	strncmp
 	memcpy

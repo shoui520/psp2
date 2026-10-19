@@ -152,7 +152,7 @@ int InitTimerInfo(TimerInfo *info)
 	return 0;
 }
 
-SceSysTimerId SceSystimerForDriver_E2B9D8E9(int type)
+SceSysTimerId sceKernelSysTimerAlloc(int type)
 {
 	TimerInfo *table, *info;
 	unsigned int i, count;

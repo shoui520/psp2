@@ -85,7 +85,7 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_49D4DD9B
+	sceKernelAllocHeapMemoryWithOption
 	sceKernelAllocHeapMemory
 	sceKernelCreateHeap
 	sceKernelSpinlockLowUnlockCpuResumeIntr
@@ -94,7 +94,7 @@ set(MODULE_IMPORT_FUNCS
 	memcpy
 	__stack_chk_fail
 	memcmp
-	SceSysrootForDriver_834439A7
+	sceKernelSysrootIsSafeMode
 	SceSysrootForDriver_B0E1FC67
 	sceKernelWaitEventFlag
 	sceKernelCreateCallback

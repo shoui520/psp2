@@ -366,7 +366,7 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 		SceHdmiForDriver_0F12364A(2, sceAVConfigHdmiHdcpDoneIntr);
 		SceHdmiForDriver_0F12364A(3, sceAVConfigHdmiHdcpDoneIntr);
 		if (SceSblAIMgrForDriver_71608CA3() != 0) {
-			if (SceSysrootForDriver_834439A7() == 0 &&
+			if (sceKernelSysrootIsSafeMode() == 0 &&
 			    SceSysrootForDriver_B0E1FC67() == 0 &&
 			    sceIoRemove("ur0:safemode/force_480p") == 0)
 				sceRegMgrSetKeyInt(avConfigDisplayCategory,
@@ -403,7 +403,7 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 				scaling.ratio = 900000000;
 			else
 				scaling.ratio = registryValue;
-			if (SceSysrootForDriver_834439A7() != 0 || SceSysrootForDriver_B0E1FC67() != 0)
+			if (sceKernelSysrootIsSafeMode() != 0 || SceSysrootForDriver_B0E1FC67() != 0)
 				scaling.ratio = 900000000;
 			result = avConfigApplyHdmiScalingRatio(&scaling);
 			if (result < 0) {

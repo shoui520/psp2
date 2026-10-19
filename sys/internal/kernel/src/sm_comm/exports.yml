@@ -12,6 +12,6 @@ SceSblSsSmComm:
       nid: 0xCD3C89B6
       functions:
         - SceSblSmCommForKernel_039C73B1: 0x039C73B1
-        - SceSblSmCommForKernel_0631F8ED: 0x0631F8ED
+        - sceSblSmCommStopSm: 0x0631F8ED
         - SceSblSmCommForKernel_7863A0CC: 0x7863A0CC
-        - SceSblSmCommForKernel_DB9FC204: 0xDB9FC204
+        - sceSblSmCommCallFunc: 0xDB9FC204

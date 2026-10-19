@@ -100,7 +100,7 @@ int mtpStart(int portId, MtpDeviceStringsProvider provider)
 	ctx = &ewg.mtp;
 	mtpCacheLoad(mtpIconPath(), 0x10000);
 	ewg.mtp.port = SceMtpIfForDriver_16D7DBCC(portId);
-	if (ewg.mtp.port == 0 || (ret = SceMtpIfForDriver_5245D237(ewg.mtp.port)) < 0) {
+	if (ewg.mtp.port == 0 || (ret = sceMtpIfStartPort(ewg.mtp.port)) < 0) {
 		ret = MTP_ERROR_NOT_CONNECTED;
 	} else {
 		ewg.mtp.flags &= ~MTP_CTX_STOPPED;

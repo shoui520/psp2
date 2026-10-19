@@ -36,7 +36,7 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	look_ctype_table
 	memcmp
-	SceSysrootForKernel_20009397
+	sceKernelSysrootGetThreadAccessLevel
 	SceSysrootForKernel_4F0A4066
 	SceSysrootForKernel_BE1EF51C
 	SceSysrootForDriver_26AA237C

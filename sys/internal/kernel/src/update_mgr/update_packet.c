@@ -37,7 +37,7 @@ int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packetOut,
 		result = (int)0x800f0205;
 		goto freeData;
 	}
-	vectorVector = SceSysmemForDriver_49D4DD9B(heapId, 64, &option);
+	vectorVector = sceKernelAllocHeapMemoryWithOption(heapId, 64, &option);
 	if (!vectorVector) {
 		result = (int)0x800f020c;
 		goto freeData;

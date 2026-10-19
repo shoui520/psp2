@@ -575,7 +575,7 @@ int SceSysrootForKernel_79C9AE10(void)
 	return (kbl->wakeup_factor & 0x7f) == 0x0f;
 }
 
-int SceSysrootForKernel_834439A7(void)
+int sceKernelSysrootIsSafeMode(void)
 {
 	const SceKblParam *kbl = s_sysrootState->kblParam;
 	uint32_t wakeupFactor, releasedControls;
@@ -595,7 +595,7 @@ int SceSysrootForKernel_834439A7(void)
 	return (releasedControls & 0xc0) == 0;
 }
 
-int SceSysrootForKernel_20009397(void)
+int sceKernelSysrootGetThreadAccessLevel(void)
 {
 	int (*getThreadAccessLevel)(void) = s_sysrootState->getThreadAccessLevel;
 
@@ -623,7 +623,7 @@ int SceSysrootForKernel_26458702(const SysrootThreadmgrOps *ops)
 	return 0;
 }
 
-void *SceSysrootForKernel_63EBB05B(void)
+void *sceKernelSysrootGetCurrentAddressSpaceCB(void)
 {
 	struct SysrootState *state = s_sysrootState;
 	void *(*getCurrentAddressSpaceCB)(void) = state->getCurrentAddressSpaceCB;
@@ -639,7 +639,7 @@ SceUID SceSysrootForKernel_7385CADE(void)
 	return getProcessId ? getProcessId() : SCE_KERNEL_PROCESS_ID;
 }
 
-int SceSysrootForKernel_7FC7A163(void)
+int sceKernelSysrootIsUserModeThread(void)
 {
 	int (*isUserModeThread)(void) = s_sysrootState->isUserModeThread;
 
@@ -653,7 +653,7 @@ uint32_t sceKernelSysrootGetCurrentProcessCB(void)
 	return callback ? callback() : 0;
 }
 
-void *SceSysrootForKernel_B4C24588(void)
+void *sceKernelSysrootGetCurrentUIDEntryHeapCB(void)
 {
 	void *(*getCurrentUIDEntryHeapCB)(void) = s_sysrootState->getCurrentUIDEntryHeapCB;
 
@@ -695,7 +695,7 @@ uint32_t SceSysrootForKernel_085C2BCB(void)
 	return s_sysrootClass;
 }
 
-void *SceSysrootForKernel_37EC12BB(unsigned int index)
+void *sceKernelSysrootGetModulePrivate(unsigned int index)
 {
 	return s_sysrootState->modulePrivate[index];
 }
@@ -1075,12 +1075,12 @@ struct SysrootState *SceSysrootForKernel_3E455842(void)
 	return s_sysrootState;
 }
 
-void SceSysrootForKernel_36916C30(SceUID uid)
+void sceKernelSysrootSetSysroot(SceUID uid)
 {
 	s_sysrootState->sysrootUid = uid;
 }
 
-SceKblParam *SceSysrootForKernel_9DB56D1F(void)
+SceKblParam *sceKernelSysrootGetKblParam(void)
 {
 	return s_sysrootState->kblParam;
 }
@@ -1230,7 +1230,7 @@ void SceSysrootForKernel_59B76D23(void *value)
 	s_sysrootState->fallbackPUIDEntryHeap = value;
 }
 
-uint32_t SceSysrootForKernel_5C426B19(void)
+uint32_t sceKernelSysrootGetStatus(void)
 {
 	return s_sysrootState->status;
 }
@@ -1301,7 +1301,7 @@ void SceSysrootForKernel_CC119171(SysrootPfsMgrGetMountInfo callback)
 }
 #endif
 
-void *SceSysrootForKernel_CC85905B(void)
+void *sceKernelSysrootGetVbaseResetVector(void)
 {
 	return s_sysrootState->vbaseResetVector;
 }
@@ -1498,12 +1498,12 @@ int SceSysrootForKernel_0B79E220(uint32_t nid, const char **name)
 	return callback(nid, name);
 }
 
-int SceSysrootForKernel_F6A6D205(void)
+int sceKernelSysrootIofilemgrStart(void)
 {
 	return s_sysrootState->iofilemgrStart();
 }
 
-int SceSysrootForDriver_05093E7B(void)
+int sceKernelSysrootGetShellPid(void)
 {
 	int (*callback)(void) = s_sysrootState->getShellPid;
 
@@ -2072,7 +2072,7 @@ int SceSysrootForDriver_38751FB7(SceUID pid, SceUInt32 address, SceUInt32 instru
 	return ops->codeModified(pid, address, instruction);
 }
 
-int SceSysrootForKernel_3ACACD22(const char *name, int type,
+int sceKernelSysrootAppMgrSpawnProcess(const char *name, int type,
 	const char *path, SceSize length, const void *args, void *opt, void *out)
 {
 	return s_sysrootState->appMgrSpawnProcess(name, type, path, length, args, opt, out);
@@ -2461,7 +2461,7 @@ int SceSysrootForDriver_A43599E9(void)
 	return callback();
 }
 
-int SceSysrootForDriver_CD8CD242(SceUID pid,
+int sceKernelSysrootCoredumpTrigger(SceUID pid,
 	SceKernelCoredumpStateUpdateCallback update,
 	SceKernelCoredumpStateFinishCallback finish,
 	SceCoredumpTriggerParam *param)

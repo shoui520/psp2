@@ -358,7 +358,7 @@ int NpDrmGetRifKey(const SceNpDrmLicense *license, void *klicense,
 			gNpDrmActivationKeyMaterial.bindingSeed, 16);
 		__builtin_memcpy(gNpDrmActivationCache.data.secondary_key_table[5],
 			&gNpDrmActivationKeyMaterial.bindingSeed[16], 16);
-		ret = SceSblAuthMgrForDriver_41DAEA12(
+		ret = sceSblAuthMgrDecBindData(
 			gNpDrmActivationCache.data.secondary_key_table, 16,
 			gNpDrmActivationCache.data.secondary_key_table[4], 144, 0);
 		if (ret < 0)
@@ -370,7 +370,7 @@ int NpDrmGetRifKey(const SceNpDrmLicense *license, void *klicense,
 		__builtin_memcpy(gNpDrmActivationCache.data.secondary_key_table[5],
 			gNpDrmActivationCache.data.primary_key_table[1], 16);
 	}
-	ret = SceSblAuthMgrForDriver_41DAEA12(gNpDrmActivationCache.data.secondary_key_table,
+	ret = sceSblAuthMgrDecBindData(gNpDrmActivationCache.data.secondary_key_table,
 		16, gNpDrmActivationCache.data.secondary_key_table[4], 144, 0);
 	if (ret < 0)
 		goto clear;
@@ -549,10 +549,10 @@ int NpDrmInitializeActivation(void)
 	SceConsoleId consoleId;
 	int ret;
 
-	ret = SceSblSsMgrForDriver_FC6CDD68(&consoleId);
+	ret = sceSblAimgrGetConsoleId(&consoleId);
 	if (ret < 0)
 		return ret;
-	ret = SceSblSsMgrForDriver_A5B5D269(&gNpDrmOpenPsId);
+	ret = sceSblAimgrGetOpenPsId(&gNpDrmOpenPsId);
 	if (ret < 0)
 		return ret;
 	gNpDrmIsDevelopment = SceSblAIMgrForDriver_274663A0() || SceSblAIMgrForDriver_F4B98F66();
@@ -561,7 +561,7 @@ int NpDrmInitializeActivation(void)
 		return ret;
 	memcpy(&gNpDrmActivationKeyMaterial, &gNpDrmEncryptedActivationKeyMaterial,
 		sizeof(gNpDrmActivationKeyMaterial));
-	ret = SceSblAuthMgrForDriver_868B9E9A(&gNpDrmActivationKeyMaterial,
+	ret = sceSblAuthMgrGetEKc(&gNpDrmActivationKeyMaterial,
 		sizeof(gNpDrmActivationKeyMaterial), 0);
 	NpDrmAesEncrypt(&gNpDrmActivationKeyMaterial,
 		sizeof(gNpDrmActivationKeyMaterial.activationKey), &consoleId, NULL);

@@ -87,7 +87,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSpinlockLowLockCpuSuspendIntr
 	memset
 	__stack_chk_fail
-	SceSysrootForDriver_834439A7
+	sceKernelSysrootIsSafeMode
 	SceSysrootForDriver_8AA268D6
 	SceSysrootForDriver_B0E1FC67
 	SceIntrmgrForDriver_182EE3E3

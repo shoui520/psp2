@@ -1128,7 +1128,7 @@ int sceKernelAddressSpaceFreeAllMemBlock(SceUID guid)
 			SCE_PRINTF_WITH_INFO_FUNC(0, 3137, "sceKernelAddressSpaceFreeAllMemBlock",
 						  "Force sceKernelUnmapMemBlock(GUID:0x%08x)\n",
 						  guids[j]);
-			SceSysmemForDriver_FFCD9B60(guids[j]);
+			sceKernelUnmapMemBlock(guids[j]);
 		}
 	}
 	if (list->entries != NULL) {
@@ -1412,7 +1412,7 @@ out:
 /* name unknown: the caller's physical memory partition of an index */
 int SceSysmemForKernel_47C55DCC(SceUInt32 index, void **part)
 {
-	return AddressSpaceGetPhyMemPartByIndex(SceSysrootForKernel_63EBB05B(), index,
+	return AddressSpaceGetPhyMemPartByIndex(sceKernelSysrootGetCurrentAddressSpaceCB(), index,
 						part);
 }
 

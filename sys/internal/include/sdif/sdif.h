@@ -241,7 +241,7 @@ _Static_assert(offsetof(SdifSdioContext, masterInterruptEnabled) == 0xd34,
 int SceSdifForDriver_AABAA0F0(unsigned int index, SdifSdioContext **part);
 SdifSdioFunction *SceSdifForDriver_0C66E36F(SdifSdioContext *sdio,
 					const SdifSdioFunctionIdentifier *identifier);
-int SceSdifForDriver_BC45C83D(SdifSdioContext *sdio, unsigned int mode);
+int sceSdioChangeBusSpeed(SdifSdioContext *sdio, unsigned int mode);
 int SceSdifForDriver_733BC373(SdifSdioFunction *function, unsigned int size);
 int SceSdifForDriver_3428884D(SdifSdioFunction *function);
 int SceSdifForDriver_D0F78D9B(SdifSdioFunction *function, uint32_t address,

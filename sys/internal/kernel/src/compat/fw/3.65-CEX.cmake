@@ -132,7 +132,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_AE36C775
 	sceKernelCopyFromUser
 	sceKernelAllocMemBlockForKernel
-	SceSysmemForDriver_FFCD9B60
+	sceKernelUnmapMemBlock
 	sceKernelDeleteSema
 	sceKernelLockMutex
 	sceKernelUnlockMutex
@@ -162,9 +162,9 @@ set(MODULE_IMPORT_FUNCS
 	sceSblFwLoaderLoad
 	sceSblFwLoaderSetPath
 	sceSblFwLoaderClose
-	SceSblSmCommForKernel_0631F8ED
+	sceSblSmCommStopSm
 	SceSblSmCommForKernel_7863A0CC
-	SceSblSmCommForKernel_DB9FC204
+	sceSblSmCommCallFunc
 	SceSblAIMgrForDriver_F4B98F66
 	sceSblACMgrGetMediaType
 	sceSblACMgrIsSystemProgram

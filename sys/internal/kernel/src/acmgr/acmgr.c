@@ -681,7 +681,7 @@ int SceSblACMgrForDriver_D7AD8471(SceUID pid, const SceChar8 *path)
 	int level;
 	int n;
 
-	level = SceSysrootForKernel_20009397();
+	level = sceKernelSysrootGetThreadAccessLevel();
 	paid = 0;
 	if (sceSblACMgrGetPaid(pid, &paid) != 0 || path == NULL)
 		return 0;

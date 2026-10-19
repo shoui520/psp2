@@ -137,7 +137,7 @@ int sceSblSsInfraAllocatePARangeVector(void *addr, SceSize size, SceUID heap,
 	if (ret < 0)
 		return ret;
 
-	ranges = SceSysmemForDriver_49D4DD9B(heap,
+	ranges = sceKernelAllocHeapMemoryWithOption(heap,
 			(vector->total * sizeof(*ranges) + 0x1f) & ~0x1f, &opt);
 	if (!ranges)
 		return SS_ERROR_NO_MEMORY;
@@ -250,8 +250,8 @@ int sceSblSsSetNvsData(uint32_t area, const void *buffer, SceSize size)
 	return 0;
 }
 
-SS_MGR_CORE(SceSblSsMgrForDriver_21EC51F6)
-int SceSblSsMgrForDriver_21EC51F6(SceUInt32 key_type, void *iv,
+SS_MGR_CORE(sceSblSsEncryptWithPortability)
+int sceSblSsEncryptWithPortability(SceUInt32 key_type, void *iv,
 				  ScePortabilityData *src, ScePortabilityData *dst)
 {
 	SceSize msgSize;
@@ -330,7 +330,7 @@ secure:
 	}
 	if (ret != 0)
 		goto stop;
-	ret = SceSblSmCommForKernel_DB9FC204(id, 0x2000a, &serviceResult, &request, sizeof(request));
+	ret = sceSblSmCommCallFunc(id, 0x2000a, &serviceResult, &request, sizeof(request));
 	if (ret != 0)
 		goto stop;
 	ret = serviceResult;
@@ -340,7 +340,7 @@ stop:
 	if (id != -1) {
 		SceSblSmCommPair stopResult = { -1, -1 };
 
-		SceSblSmCommForKernel_0631F8ED(id, &stopResult);
+		sceSblSmCommStopSm(id, &stopResult);
 	}
 	return ret;
 }

@@ -145,7 +145,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoPread
 	sceIoCreateMountEvent
 	sceIoDeleteMountEvent
-	SceIofilemgrForDriver_462F059B
+	sceIoGetstatByFd
 	sceIoDopen
 	sceIoPwrite
 	sceIoOpen
@@ -153,7 +153,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoChstat
 	sceIoMkdir
 	sceIoRename
-	SceIofilemgrForDriver_DF57A75F
+	sceIoChstatByFd
 	sceIoClose
 	sceKernelCheckDipsw
 	sceDfMgrClose

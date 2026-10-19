@@ -267,7 +267,7 @@ int sceKblMain(SceKernelBootParam *param)
 					      "Time taken to load KBL: %d us\n",
 					      param->kblParam->kbl_load_time);
 #endif
-		if (SceSysrootForKernel_834439A7())
+		if (SceSysrootForKernel_sceKernelSysrootIsSafeMode())
 			SceDebugForDriver_1A3F2AA4(IsAllowKernelDebug() ? 0 : 2,
 					      "\tSafe Mode : [ YES ]\n");
 	} else {

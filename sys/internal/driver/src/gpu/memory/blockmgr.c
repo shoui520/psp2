@@ -66,7 +66,7 @@ GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 			return 0;
 		}
 		if (restoreMapping) {
-			ret = SceSysmemForDriver_FFCD9B60(referencedUid);
+			ret = sceKernelUnmapMemBlock(referencedUid);
 			if (ret < 0) {
 				SCE_DBG_PRINTF(0, 120,
 					"Failed to unmap memblock %08x:%08x from usermode with error %08x.\n",
@@ -105,8 +105,8 @@ GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 	range->alternateAddress = alternate;
 	range->size = size;
 	if (!kernel) {
-		SceSysmemForDriver_EAF3849B(referencedUid);
-		SceSysmemForDriver_EAF3849B(mappingUid);
+		sceKernelIncRefCountMemBlock(referencedUid);
+		sceKernelIncRefCountMemBlock(mappingUid);
 	}
 	block->inputUid = uid;
 	block->referencedUid = kernel ? -1 : referencedUid;
@@ -114,7 +114,7 @@ GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 	block->restoreMapping = restoreMapping;
 	block->ranges = range;
 	attributes = SceSysmemForDriver_CB0F3A33(info.ex.details.type);
-	attributes |= SceSysmemForDriver_20C811FA(info.ex.details.type);
+	attributes |= sceKernelMemBlockType2Memtype(info.ex.details.type);
 	block->next = 0;
 	block->allocatedRangeCount = 0;
 	block->attributes = attributes;
@@ -219,11 +219,11 @@ int sceGpuMemBlockDelBlock(GpuMemBlockHeap *heap, int uid, int *referencedOut)
 		}
 		block->ranges = 0;
 		if (block->mappingUid != -1) {
-			SceSysmemForDriver_F50BDC0C(block->mappingUid);
+			sceKernelDecRefCountMemBlock(block->mappingUid);
 			sceKernelFreeMemBlock(block->mappingUid);
 		}
 		if (block->referencedUid != -1)
-			SceSysmemForDriver_F50BDC0C(block->referencedUid);
+			sceKernelDecRefCountMemBlock(block->referencedUid);
 		if (referencedOut)
 			*referencedOut = block->referencedUid;
 		if (block->restoreMapping) {
@@ -257,12 +257,12 @@ int DestroyMemBlockHeap(GpuMemBlockHeap *heap)
 		block->ranges = 0;
 		uid = block->mappingUid;
 		if (uid != -1) {
-			SceSysmemForDriver_F50BDC0C(uid);
+			sceKernelDecRefCountMemBlock(uid);
 			sceKernelFreeMemBlock(block->mappingUid);
 		}
 		uid = block->referencedUid;
 		if (uid != -1)
-			SceSysmemForDriver_F50BDC0C(uid);
+			sceKernelDecRefCountMemBlock(uid);
 		FreeProcessGpuMemory((void *)block);
 	}
 	FreeProcessGpuMemory(heap);

@@ -12,7 +12,7 @@ void *motionAllocHeap(SceSize size)
 
 	opt.size = sizeof(opt);
 	opt.align = 32;
-	return SceSysmemForDriver_49D4DD9B(motionHeap, size, &opt);
+	return sceKernelAllocHeapMemoryWithOption(motionHeap, size, &opt);
 }
 
 int motionFreeHeap(void *ptr)

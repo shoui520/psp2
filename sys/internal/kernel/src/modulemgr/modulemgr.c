@@ -561,7 +561,7 @@ started:
 		ModuleCBSetStatus(cb, MODULE_STATUS_STARTED);
 		return 0;
 	}
-	if ((cb->flags & MODULE_FLAG_NO_STOP) != 0 && SceSysrootForKernel_5C426B19() > 0xff)
+	if ((cb->flags & MODULE_FLAG_NO_STOP) != 0 && sceKernelSysrootGetStatus() > 0xff)
 		SCE_PANIC(1470);
 	ModuleCBShowStartMessage(cb, 1, usec);
 	ModulemgrLockLibDB();
@@ -1877,7 +1877,7 @@ int ModulemgrModuleStart(SceSize args, void *argp)
 	ret = SelfDecrypterInit();
 	SCE_DBG_ASSERT_LEVEL(0, ret >= 0, 3660);
 
-	g_moduleClass = SceSysrootForKernel_37EC12BB(9);
+	g_moduleClass = sceKernelSysrootGetModulePrivate(9);
 	g_moduleClass->name = "SceUIDModuleClass";
 	g_moduleClass->create_cb = ModulemgrConstructor;
 	g_moduleClass->destroy_cb = ModulemgrDestructor;

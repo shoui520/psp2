@@ -300,7 +300,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForKernel_7B7ED1E9
 	SceSysrootForKernel_A9510EFE
 	sceKernelSysrootCoredumpCancel
-	SceSysrootForDriver_CD8CD242
+	sceKernelSysrootCoredumpTrigger
 	SceCpuForKernel_74B7F445
 	SceCpuForKernel_803C84BF
 	sceKernelCheckDipsw

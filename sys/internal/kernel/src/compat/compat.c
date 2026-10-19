@@ -1318,8 +1318,8 @@ int compatAllocCdramWithHole(SceCompatCdram *cdram)
 		&cdram->uncachedCdram);
 	gCompatCacheRangeBase = (uintptr_t)cdram->cachedCdram;
 	sceKernelGetMemBlockBase(gCompatMemoryBlocks[2][0], &gCompatMainDdr);
-	SceSysmemForDriver_FFCD9B60(gCompatMemoryBlocks[0][1]);
-	SceSysmemForDriver_FFCD9B60(gCompatMemoryBlocks[1][1]);
+	sceKernelUnmapMemBlock(gCompatMemoryBlocks[0][1]);
+	sceKernelUnmapMemBlock(gCompatMemoryBlocks[1][1]);
 	return 0;
 failed:
 	gCompatMainDdr = NULL;
@@ -2146,12 +2146,12 @@ int compatSecureInitialize(SceUInt32 argument)
 	if (result == 0) {
 		command.arguments[0] = argument;
 		command.arguments[1] = 0;
-		result = SceSblSmCommForKernel_DB9FC204(gCompatSecureModuleId, 0x10006,
+		result = sceSblSmCommCallFunc(gCompatSecureModuleId, 0x10006,
 			&serviceResult, &command, sizeof(command));
 		if (result == 0) {
 			result = serviceResult;
 			if (result == 0)
-				result = SceSblSmCommForKernel_0631F8ED(gCompatSecureModuleId,
+				result = sceSblSmCommStopSm(gCompatSecureModuleId,
 					&command.stopResult);
 		}
 	}
@@ -2170,12 +2170,12 @@ int compatSecureResume(void)
 	if (result == 0) {
 		command.arguments[0] = 0;
 		command.arguments[1] = 0;
-		result = SceSblSmCommForKernel_DB9FC204(gCompatSecureModuleId, 0x30006,
+		result = sceSblSmCommCallFunc(gCompatSecureModuleId, 0x30006,
 			&serviceResult, &command, sizeof(command));
 		if (result == 0) {
 			result = serviceResult;
 			if (result == 0)
-				result = SceSblSmCommForKernel_0631F8ED(gCompatSecureModuleId,
+				result = sceSblSmCommStopSm(gCompatSecureModuleId,
 					&command.stopResult);
 		}
 	}

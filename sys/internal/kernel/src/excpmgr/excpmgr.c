@@ -433,7 +433,7 @@ int Init(SceSize args, void *argp)
 	SceUID uid;
 
 	g_excpHandlers.lock = 0;
-	vectors = SceSysrootForKernel_CC85905B();
+	vectors = sceKernelSysrootGetVbaseResetVector();
 	g_excpHandlers.vectors = vectors;
 	size = (char *)&defaultHandler - (char *)exceptionVectors;
 	g_excpHandlers.vectorSize = size;
@@ -507,7 +507,7 @@ int module_bootstart(SceSize args, void *argp)
 {
 	unsigned int cpu = sceKernelCpuId();
 
-	writeVbar((unsigned int)SceSysrootForKernel_CC85905B() + cpu * 0x40);
+	writeVbar((unsigned int)sceKernelSysrootGetVbaseResetVector() + cpu * 0x40);
 	return 0;
 }
 

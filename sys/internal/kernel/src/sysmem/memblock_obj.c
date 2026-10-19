@@ -820,7 +820,7 @@ int SceSysmemForKernel_441E6BE9(SceUID uid, struct PhyPage *page)
 	return SCE_KERNEL_ERROR_ILLEGAL_BLOCK_ID;
 }
 
-int SceSysmemForDriver_0B1FD5C3(SceUID uid, void **base)
+int sceKernelGetMemBlockMappedBase(SceUID uid, void **base)
 {
 	GUIDApplyArgs args;
 
@@ -834,7 +834,7 @@ int SceSysmemForDriver_0B1FD5C3(SceUID uid, void **base)
 
 int sceKernelGetMemBlockBase(SceUID uid, void **base)
 {
-	return SceSysmemForDriver_0B1FD5C3(uid, base);
+	return sceKernelGetMemBlockMappedBase(uid, base);
 }
 
 /* name unknown: SceUIDMemBlockClass gets its callbacks, then the simple memblocks start */

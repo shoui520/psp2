@@ -75,10 +75,10 @@ static int NOINLINE call_set_key_command(unsigned command)
 	ret = StartSecureModule();
 	if (ret != 0)
 		return ret;
-	ret = SceSblSmCommForKernel_DB9FC204(s_smId, command, &result, data, sizeof(data));
+	ret = sceSblSmCommCallFunc(s_smId, command, &result, data, sizeof(data));
 	if (ret != 0)
 		result = MG_ERROR_OPERATION;
-	ret = SceSblSmCommForKernel_0631F8ED(s_smId, &stopResult);
+	ret = sceSblSmCommStopSm(s_smId, &stopResult);
 	return ret != 0 ? MG_ERROR_OPERATION : (int)result;
 }
 

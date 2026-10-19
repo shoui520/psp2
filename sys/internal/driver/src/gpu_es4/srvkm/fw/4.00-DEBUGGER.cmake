@@ -171,15 +171,15 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetSystemTimeWide
 	sceKernelCreateMutex
 	sceKernelFreeMemBlock
-	SceSysmemForDriver_20C811FA
+	sceKernelMemBlockType2Memtype
 	SceSysmemForDriver_24A99FFF
 	SceSysmemForDriver_45D22597
 	SceSysmemForDriver_58D21746
 	SceSysmemForDriver_6A0792A3
 	sceKernelCopyToUser
 	SceSysmemForDriver_84A4AF5E
-	SceSysmemForDriver_857F1D5A
-	SceSysmemForDriver_8A1742F6
+	sceKernelFindProcMemBlockByAddr
+	sceKernelFindMemBlockByAddr
 	sceKernelVAtoPA
 	sceKernelCreateHeap
 	sceKernelIsAccessibleRange
@@ -189,9 +189,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelAllocMemBlockForKernel
 	SceSysmemForDriver_CB0F3A33
 	SceSysmemForDriver_E655852F
-	SceSysmemForDriver_EAF3849B
-	SceSysmemForDriver_F50BDC0C
-	SceSysmemForDriver_FFCD9B60
+	sceKernelIncRefCountMemBlock
+	sceKernelDecRefCountMemBlock
+	sceKernelUnmapMemBlock
 	sceKernelDisableIntr
 	sceKernelRegisterIntrHandler
 	sceKernelEnableIntr
@@ -225,7 +225,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSystimerForDriver_A73351C1
 	SceSystimerForDriver_BF8D42B0
 	SceSystimerForDriver_CCCD1EE3
-	SceSystimerForDriver_E2B9D8E9
+	sceKernelSysTimerAlloc
 	ScePowerForDriver_06AF03DB
 	scePowerGetGpuXbarClockFrequency
 	scePowerGetGpuClockFrequencyInternal

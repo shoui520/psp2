@@ -17,7 +17,7 @@ SceMtpIfDriver:
         - SceMtpIfForDriver_27D40294: 0x27D40294
         - SceMtpIfForDriver_2D9318E1: 0x2D9318E1
         - SceMtpIfForDriver_33F1826F: 0x33F1826F
-        - SceMtpIfForDriver_5245D237: 0x5245D237
+        - sceMtpIfStartPort: 0x5245D237
         - SceMtpIfForDriver_5766D257: 0x5766D257
         - SceMtpIfForDriver_8D16B997: 0x8D16B997
         - SceMtpIfForDriver_92CD107E: 0x92CD107E
@@ -33,7 +33,7 @@ SceMtpIfDriver:
       version: 1
       nid: 0x5EFA4138
       functions:
-        - sceMtpIfStartPort: 0x1624280E
+        - sceMtpIfStartPortForUser: 0x1624280E
         - sceMtpIfWaitConnect: 0x1E0156BE
         - sceMtpIfReset: 0x315FDE8E
         - sceMtpIfGetPort: 0x352F61B9

@@ -158,7 +158,7 @@ int pfsAccessBegin(ScePfsPmi *pmi, int op, SceUInt32 arg, int *oldPermission)
 
 	always = (unsigned int)op < 9 && ((1 << op) & 0x1ef) != 0;
 	isRead = pfsOpIsRead(op, arg);
-	level = SceSysrootForKernel_20009397();
+	level = sceKernelSysrootGetThreadAccessLevel();
 	isSystem = sceSblACMgrIsSystemProgram(SceThreadmgrForDriver_FA54D49A());
 	if ((unsigned int)(pmi->mode - 0x1f) < 3) {
 		owner = pmi->parent;

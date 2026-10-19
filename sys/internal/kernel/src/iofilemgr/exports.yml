@@ -57,11 +57,11 @@ SceIofilemgr:
         - SceIofilemgrForDriver_3F0FF9D5: 0x3F0FF9D5
         - sceVopClose: 0x40944C2E
         - SceIofilemgrForDriver_40B933C7: 0x40B933C7
-        - SceIofilemgrForDriver_43170575: 0x43170575
+        - sceIoSyncByFd: 0x43170575
         - sceIoDeleteMountEvent: 0x43DB0AE4
         - SceIofilemgrForDriver_44EDCE57: 0x44EDCE57
         - SceIofilemgrForDriver_451001DE: 0x451001DE
-        - SceIofilemgrForDriver_462F059B: 0x462F059B
+        - sceIoGetstatByFd: 0x462F059B
         - sceIoDopen: 0x463B25CC
         - SceIofilemgrForDriver_4F9EA8B0: 0x4F9EA8B0
         - sceVopGetstat: 0x50A63ACF
@@ -147,7 +147,7 @@ SceIofilemgr:
         - sceIoGetGUIDFdListForDebugger: 0xDCF75F6D
         - sceIoSetErrorEvent: 0xDD46CD63
         - sceIoSync: 0xDDF78594
-        - SceIofilemgrForDriver_DF57A75F: 0xDF57A75F
+        - sceIoChstatByFd: 0xDF57A75F
         - sceIoRead: 0xE17EFC03
         - vfsPwrite: 0xE5DEA6B7
         - SceIofilemgrForDriver_EC974400: 0xEC974400

@@ -181,7 +181,7 @@ int setNewKeyRingKey(const void *key, unsigned int keyBits,
 				sceKernelUnlockFastMutex(&dmacKeyringMutex);
 				return (int)0x800f1510;
 			}
-			ret = SceSblAuthMgrForKernel_122ACDEA(key, keyBits >> 3, oldest, keyId);
+			ret = sceSblAuthMgrSetDmac5Key(key, keyBits >> 3, oldest, keyId);
 			if (ret != 0) {
 				sceKernelUnlockFastMutex(&dmacKeyringMutex);
 				return ret;
@@ -197,7 +197,7 @@ int setNewKeyRingKey(const void *key, unsigned int keyBits,
 			return 0;
 		}
 	}
-	ret = SceSblAuthMgrForKernel_122ACDEA(key, keyBits >> 3, index, keyId);
+	ret = sceSblAuthMgrSetDmac5Key(key, keyBits >> 3, index, keyId);
 	if (ret != 0) {
 		sceKernelUnlockFastMutex(&dmacKeyringMutex);
 		return ret;

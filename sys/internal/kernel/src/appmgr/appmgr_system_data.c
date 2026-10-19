@@ -75,7 +75,7 @@ void *appmgrAllocSaveDataHeapMemory(SceSize size)
 	opt.mmapSize = 0;
 	opt.size = sizeof(opt);
 	opt.align = 32;
-	return SceSysmemForDriver_49D4DD9B(g_appmgrSaveDataHeap, size, &opt);
+	return sceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap, size, &opt);
 }
 
 int appmgrFreeSaveDataHeapMemory(void *memory)
@@ -165,7 +165,7 @@ int appmgrReadPlayReadySystemData(SceUInt32 location, void *information,
 	result = sceKernelIsAccessibleRange(48, userData, 16384);
 	if (result < 0)
 		goto closeFile;
-	mapping = SceSysmemForDriver_278BC201("SceAppMgrGetSystemData", 2, userData, 16384,
+	mapping = sceKernelUserMap("SceAppMgrGetSystemData", 2, userData, 16384,
 				    &kernelPage, &kernelSize, &kernelOffset);
 	result = mapping;
 	if (mapping < 0)
@@ -270,7 +270,7 @@ int appmgrWritePlayReadySystemData(SceUInt32 location, const void *information,
 			sceIoClose(fd);
 			goto unlock;
 		}
-		result = SceIofilemgrForDriver_462F059B(fd, &stat);
+		result = sceIoGetstatByFd(fd, &stat);
 		sceIoClose(fd);
 		if (result < 0)
 			goto unlock;
@@ -316,7 +316,7 @@ int appmgrWritePlayReadySystemData(SceUInt32 location, const void *information,
 				sceIoClose(fd);
 				goto unlockAndFree;
 			}
-			mapping = SceSysmemForDriver_278BC201("SceAppMgrSetSystemData", 1,
+			mapping = sceKernelUserMap("SceAppMgrSetSystemData", 1,
 					userData, dataSize, &kernelPage,
 					&kernelSize, &kernelOffset);
 			result = mapping;
@@ -449,7 +449,7 @@ int appmgrReadSelfControlInfo(const char *path, void *controlInfo)
 	size = header.controlInfoSize;
 	opt.size = sizeof(opt);
 	opt.align = 32;
-	records = SceSysmemForDriver_49D4DD9B(g_appmgrCoreHeap, size, &opt);
+	records = sceKernelAllocHeapMemoryWithOption(g_appmgrCoreHeap, size, &opt);
 	if (records == NULL) {
 		result = (int)0x80801006;
 		goto closeFile;
@@ -536,7 +536,7 @@ SceUID appmgrOpenTemporaryCopy(const char *path, int flags, void *copyBuffer,
 		result = (int)0x80800001;
 		goto copyFailed;
 	}
-	result = SceIofilemgrForDriver_462F059B(source, &stat);
+	result = sceIoGetstatByFd(source, &stat);
 	if (result < 0)
 		goto copyFailed;
 	copied = 0;

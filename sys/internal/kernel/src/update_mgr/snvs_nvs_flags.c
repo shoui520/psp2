@@ -20,7 +20,7 @@ int SpkgInfoUtilGetNVSFlagStatus(uint32_t *status, uint32_t *flags)
 	request.sector = sector;
 	result = UpdateUtilSetupSm(0, &smId, 0);
 	if (!result) {
-		result = SceSblSmCommForKernel_DB9FC204(smId, 0x90002, &serviceResult,
+		result = sceSblSmCommCallFunc(smId, 0x90002, &serviceResult,
 				&request, sizeof(request));
 		if (result)
 			result = serviceResult;

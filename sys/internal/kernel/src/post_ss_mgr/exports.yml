@@ -28,7 +28,7 @@ SceSblPostSsMgr:
         - SceSblPostSsMgrForDriver_3F9BDEDF: 0x3F9BDEDF
         - SceSblPostSsMgrForDriver_4100B9E9: 0x4100B9E9
         - SceSblPostSsMgrForDriver_42474C8B: 0x42474C8B
-        - SceSblPostSsMgrForDriver_4663C195: 0x4663C195
+        - sceSblPmMgrGetProductModeFromNVS: 0x4663C195
         - SceSblPostSsMgrForDriver_4FF2682F: 0x4FF2682F
         - SceSblPostSsMgrForDriver_686B9461: 0x686B9461
         - SceSblPostSsMgrForDriver_739C981E: 0x739C981E
@@ -132,7 +132,7 @@ SceSblPostSsMgr:
       functions:
         - sceSblPmMgrSetProductModeOffForUser: 0x41FE8A37
         - sceSblPmMgrGetProductModeForUser: 0x46EA9FDB
-        - sceSblPmMgrGetProductModeFromNVS: 0x49CE0DDF
+        - sceSblPmMgrGetProductModeFromNVSForUser: 0x49CE0DDF
         - sceSblPmMgrAuthEtoIForUser: 0xBD38B141
         - sceSblPmMgrGetCurrentMode: 0xDA4EDEBF
     SceSblRtcMgr:

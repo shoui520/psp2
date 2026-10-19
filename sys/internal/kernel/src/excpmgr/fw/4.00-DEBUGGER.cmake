@@ -67,7 +67,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForKernel_1D84C4D4
 	sceKernelSysrootPrintBacktrace
 	sceKernelSysrootSetModulePrivate
-	SceSysrootForKernel_CC85905B
+	sceKernelSysrootGetVbaseResetVector
 	sceKernelSysrootBacktrace
 	sceKernelIsColdBoot
 	sceKernelSysrootReturnFromExcpToThread

@@ -20,7 +20,7 @@ int SpkgInfoUtilGetSNVSFlagStatus(uint32_t *status, uint32_t *flags,
 	} else {
 		smId = existingSmId;
 	}
-	result = SceSblSmCommForKernel_DB9FC204(smId, 0xc0002, &serviceResult,
+	result = sceSblSmCommCallFunc(smId, 0xc0002, &serviceResult,
 			&request, sizeof(request));
 	if (result)
 		goto finish;
@@ -32,7 +32,7 @@ int SpkgInfoUtilGetSNVSFlagStatus(uint32_t *status, uint32_t *flags,
 	if (result)
 		goto finish;
 	request.mode = 1;
-	result = SceSblSmCommForKernel_DB9FC204(smId, 0xc0002, &serviceResult,
+	result = sceSblSmCommCallFunc(smId, 0xc0002, &serviceResult,
 			&request, sizeof(request));
 	if (result)
 		goto finish;

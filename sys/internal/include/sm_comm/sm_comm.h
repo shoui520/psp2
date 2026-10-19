@@ -22,7 +22,6 @@ int SceSblSmCommForKernel_7863A0CC(SceUInt32 priority, const char *path,
 /* vitasdk: ksceSblSmCommStartSmFromData */
 int SceSblSmCommForKernel_039C73B1(SceUInt32 priority, const void *data,
 	SceUInt32 size, SceUInt32 command, SelfAuthRequest *auth, SceSblSmCommId *id);
-int SceSblSmCommForKernel_DB9FC204(SceSblSmCommId id, SceUInt32 service,
+int sceSblSmCommCallFunc(SceSblSmCommId id, SceUInt32 service,
 	SceUInt32 *serviceResult, void *data, SceSize size);	/* vitasdk: ksceSblSmCommCallFunc */
-/* vitasdk: ksceSblSmCommStopSm */
-int SceSblSmCommForKernel_0631F8ED(SceSblSmCommId id, SceSblSmCommPair *result);
+int sceSblSmCommStopSm(SceSblSmCommId id, SceSblSmCommPair *result);

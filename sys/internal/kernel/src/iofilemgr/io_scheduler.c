@@ -435,7 +435,7 @@ int getPathMntOpt(const char *path, int full)
 		strncpy(devName, path, len + 1);
 		devName[len + 1] = '\0';
 		if (strncmp("sdstor0:", devName, 9) == 0) {
-			if (SceSysrootForKernel_834439A7() == 1 ||
+			if (SceSysrootForKernel_sceKernelSysrootIsSafeMode() == 1 ||
 			    SceSysrootForKernel_B0E1FC67() == 1)
 				return 0;
 		} else if (full == 1) {

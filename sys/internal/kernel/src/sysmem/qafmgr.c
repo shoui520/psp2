@@ -10,7 +10,7 @@
 /* bit `bit` of qa_flags[index] */
 static inline int QafMgrFlag(unsigned int index, unsigned int bit)
 {
-	return (SceSysrootForKernel_9DB56D1F()->qa_flags[index] >> bit) & 1;
+	return (sceKernelSysrootGetKblParam()->qa_flags[index] >> bit) & 1;
 }
 
 int SceQafMgrForDriver_382C71E8(void)

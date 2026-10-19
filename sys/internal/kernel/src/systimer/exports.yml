@@ -23,5 +23,5 @@ SceSystimer:
         - SceSystimerForDriver_BF8D42B0: 0xBF8D42B0
         - SceSystimerForDriver_C34D7940: 0xC34D7940
         - SceSystimerForDriver_CCCD1EE3: 0xCCCD1EE3
-        - SceSystimerForDriver_E2B9D8E9: 0xE2B9D8E9
+        - sceKernelSysTimerAlloc: 0xE2B9D8E9
         - SceSystimerForDriver_FD5F1742: 0xFD5F1742

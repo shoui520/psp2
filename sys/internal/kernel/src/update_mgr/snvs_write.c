@@ -30,7 +30,7 @@ int SpkgInfoUtilWriteSNVSSector(int sectorIndex, const SpkgSnvsSector *sector,
 	} else {
 		smId = existingSmId;
 	}
-	result = SceSblSmCommForKernel_DB9FC204(smId, 0xb0002, &serviceResult,
+	result = sceSblSmCommCallFunc(smId, 0xb0002, &serviceResult,
 			&request, sizeof(request));
 	if (result) {
 		updateSnvsFailureStage = 9;
@@ -47,7 +47,7 @@ int SpkgInfoUtilWriteSNVSSector(int sectorIndex, const SpkgSnvsSector *sector,
 		goto finish;
 	}
 	request.mode = 3;
-	result = SceSblSmCommForKernel_DB9FC204(smId, 0xb0002, &serviceResult,
+	result = sceSblSmCommCallFunc(smId, 0xb0002, &serviceResult,
 			&request, sizeof(request));
 	if (result) {
 		updateSnvsFailureStage = 12;

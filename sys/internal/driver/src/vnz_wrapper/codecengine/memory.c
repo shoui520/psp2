@@ -172,7 +172,7 @@ int sceCodecEngineOpenUnmapMemBlockForUser(void *base, SceSize size)
 	ret = sceKernelIsAccessibleRange(48, base, size);
 	if (ret < 0)
 		goto close;
-	userMemBlock = SceSysmemForDriver_8A1742F6(base, size);
+	userMemBlock = sceKernelFindMemBlockByAddr(base, size);
 	ret = userMemBlock;
 	if (userMemBlock < 0)
 		goto close;
@@ -180,7 +180,7 @@ int sceCodecEngineOpenUnmapMemBlockForUser(void *base, SceSize size)
 	ret = SceSysmemForDriver_24A99FFF(userMemBlock, &info);
 	if (ret < 0)
 		goto close;
-	if (SceSysmemForDriver_20C811FA(info.ex.details.type) != 0x8000) {
+	if (sceKernelMemBlockType2Memtype(info.ex.details.type) != 0x8000) {
 		ret = (int)0x80600008;
 		goto close;
 	}
@@ -209,7 +209,7 @@ int sceCodecEngineOpenUnmapMemBlockForUser(void *base, SceSize size)
 		info.ex.size = sizeof(info);
 		ret = SceSysmemForDriver_24A99FFF(kernelMemBlock, &info);
 		if (ret >= 0) {
-			ret = SceSysmemForDriver_FFCD9B60(userMemBlock);
+			ret = sceKernelUnmapMemBlock(userMemBlock);
 			if (ret >= 0) {
 				ret = callVeneziaRpcCommand500(query.physicalBase, size);
 				if (ret >= 0) {

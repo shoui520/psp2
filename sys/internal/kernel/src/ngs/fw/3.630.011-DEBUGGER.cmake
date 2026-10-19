@@ -86,7 +86,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_59A4402F
 	sceKernelCopyToUser
 	sceKernelUnlockRange
-	SceSysmemForDriver_8A1742F6
+	sceKernelFindMemBlockByAddr
 	sceKernelIsAccessibleRange
 	sceKernelGetMemBlockBase
 	SceSysmemForDriver_AE36C775

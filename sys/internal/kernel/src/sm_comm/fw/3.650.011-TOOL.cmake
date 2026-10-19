@@ -79,7 +79,7 @@ set(MODULE_IMPORT_FUNCS
 	sceSblSmSchedProxyWriteCry2Arm
 	sceSblSmSchedProxyInvoke
 	SceSblSmSchedProxyForKernel_723B382F
-	SceSblSmSchedProxyForKernel_8B84AC2A
+	sceSblSmSchedProxyRegisterIntrHandler
 	sceSblSmSchedProxyReadCry2Arm
 	sceSblSmSchedProxyWait
 	SceKernelSuspendForDriver_2BB92967

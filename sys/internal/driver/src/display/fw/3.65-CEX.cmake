@@ -192,7 +192,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_22CBE925
 	SceSysmemForDriver_45D22597
 	sceGUIDKernelCreate
-	SceSysmemForDriver_61A67D32
+	sceKernelProcModeVAtoPA
 	sceKernelCopyToUser
 	sceKernelVAtoPA
 	sceKernelGetMemBlockBase
@@ -217,7 +217,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterInitCallback
 	SceSysrootForDriver_7918D44E
 	SceSysrootForDriver_79C9AE10
-	SceSysrootForDriver_834439A7
+	sceKernelSysrootIsSafeMode
 	SceSysrootForDriver_89D19090
 	SceSysrootForDriver_B0E1FC67
 	SceSysrootForKernel_EC3124A3
@@ -234,7 +234,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSystimerForDriver_8358611F
 	SceSystimerForDriver_A73351C1
 	SceSystimerForDriver_CCCD1EE3
-	SceSystimerForDriver_E2B9D8E9
+	sceKernelSysTimerAlloc
 	sceKernelGetThreadmgrUIDClass
 	sceKernelFinalizeFastMutex
 	SceThreadmgrForDriver_20C228E4

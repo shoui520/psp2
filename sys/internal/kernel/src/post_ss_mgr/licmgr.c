@@ -123,7 +123,7 @@ int licMgrGetCurrentTime(SceUInt32 *now)	/* name unknown */
 	int ret;
 
 	if (SceSblAIMgrForDriver_274663A0()) {
-		kbl = SceSysrootForKernel_9DB56D1F();
+		kbl = sceKernelSysrootGetKblParam();
 		if (kbl == NULL)
 			return SCE_SBL_ERROR_LIC_KBL;
 		*now = kbl->dipsw.cp_timestamp_2;
@@ -326,7 +326,7 @@ int licMgrActivate(const char *path)	/* name unknown */
 		return ret;
 	if (memcmp(&act, g_actMagic, sizeof(act.magic)) != 0)
 		return SCE_SBL_ERROR_LIC_INVALID_FILE;
-	ret = SceSblSsMgrForDriver_A5B5D269(&openPsId);
+	ret = sceSblAimgrGetOpenPsId(&openPsId);
 	if (ret != 0)
 		return ret;
 	if (memcmp(&act.openPsId, &openPsId, sizeof(openPsId)) != 0)
@@ -485,7 +485,7 @@ int SceSblPostSsMgrForDriver_F7F1015B(SceActivationKey *key)
 	SceUInt8 sum[4];
 	int ret, i, j;
 
-	ret = SceSblSsMgrForDriver_A5B5D269(&key->openPsId);
+	ret = sceSblAimgrGetOpenPsId(&key->openPsId);
 	if (ret != 0)
 		return ret;
 	*(SceUInt32 *)sum = 0;
@@ -829,7 +829,7 @@ int licMgrParseCodeFile(SceActData *act, SceActSig *sig, const char *path)
 
 	g_licMgrCodeFileExact = 0;
 	g_licMgrNewlineSize = 1;
-	ret = SceSblSsMgrForDriver_A5B5D269(&openPsId);
+	ret = sceSblAimgrGetOpenPsId(&openPsId);
 	if (ret != 0)
 		return ret;
 	fd = sceIoOpen(path, SCE_O_RDONLY, 0);

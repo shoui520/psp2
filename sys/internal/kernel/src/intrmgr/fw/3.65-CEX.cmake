@@ -66,7 +66,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSysrootTrapThreadAfterSyscall
 	sceKernelSysrootCorelockUnlock
 	sceKernelSysrootGetSharedMemory
-	SceSysrootForKernel_CC85905B
+	sceKernelSysrootGetVbaseResetVector
 	sceKernelCpuId
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	sceKernelDcacheCleanRangeForL1WBWA

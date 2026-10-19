@@ -766,9 +766,9 @@ SceSysrootForKernel_7968F091:
 .word 0x10, 0x3691da45, 0x7968f091, 0xe320f000
 .section .vitalink.fstubs.SceSysrootForKernel, "ax", %progbits
 .balign 4
-.global SceSysrootForKernel_834439A7
-.type SceSysrootForKernel_834439A7, %function
-SceSysrootForKernel_834439A7:
+.global SceSysrootForKernel_sceKernelSysrootIsSafeMode
+.type SceSysrootForKernel_sceKernelSysrootIsSafeMode, %function
+SceSysrootForKernel_sceKernelSysrootIsSafeMode:
 .word 0x10, 0x3691da45, 0x834439a7, 0xe320f000
 .section .vitalink.fstubs.SceSysrootForKernel, "ax", %progbits
 .balign 4
@@ -790,9 +790,9 @@ sceKernelSysrootAllocRemoteProcessHeap:
 .word 0x10, 0x3691da45, 0xd351ebc8, 0xe320f000
 .section .vitalink.fstubs.SceSysrootForDriver, "ax", %progbits
 .balign 4
-.global SceSysrootForDriver_05093E7B
-.type SceSysrootForDriver_05093E7B, %function
-SceSysrootForDriver_05093E7B:
+.global sceKernelSysrootGetShellPid
+.type sceKernelSysrootGetShellPid, %function
+sceKernelSysrootGetShellPid:
 .word 0x10, 0x2ed7f97a, 0x5093e7b, 0xe320f000
 .section .vitalink.fstubs.SceSysrootForDriver, "ax", %progbits
 .balign 4
@@ -1637,9 +1637,9 @@ SceSysrootForKernel_7968F091:
 .word 0x10, 0x3691da45, 0x7968f091, 0xe320f000
 .section .vitalink.fstubs.SceSysrootForKernel, "ax", %progbits
 .balign 4
-.global SceSysrootForKernel_834439A7
-.type SceSysrootForKernel_834439A7, %function
-SceSysrootForKernel_834439A7:
+.global SceSysrootForKernel_sceKernelSysrootIsSafeMode
+.type SceSysrootForKernel_sceKernelSysrootIsSafeMode, %function
+SceSysrootForKernel_sceKernelSysrootIsSafeMode:
 .word 0x10, 0x3691da45, 0x834439a7, 0xe320f000
 .section .vitalink.fstubs.SceSysrootForKernel, "ax", %progbits
 .balign 4
@@ -1661,9 +1661,9 @@ sceKernelSysrootAllocRemoteProcessHeap:
 .word 0x10, 0x3691da45, 0xd351ebc8, 0xe320f000
 .section .vitalink.fstubs.SceSysrootForDriver, "ax", %progbits
 .balign 4
-.global SceSysrootForDriver_05093E7B
-.type SceSysrootForDriver_05093E7B, %function
-SceSysrootForDriver_05093E7B:
+.global sceKernelSysrootGetShellPid
+.type sceKernelSysrootGetShellPid, %function
+sceKernelSysrootGetShellPid:
 .word 0x10, 0x2ed7f97a, 0x5093e7b, 0xe320f000
 .section .vitalink.fstubs.SceSysrootForDriver, "ax", %progbits
 .balign 4

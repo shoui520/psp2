@@ -43,7 +43,7 @@ int robinInitializeSdio(void)
 							   &identifier);
 	if (!gRobin.wlanFunction)
 		return 0x80418007;
-	result = SceSdifForDriver_BC45C83D(gRobin.sdioContext, 2);
+	result = sceSdioChangeBusSpeed(gRobin.sdioContext, 2);
 	if (result < 0)
 		return result;
 	result = SceSdifForDriver_733BC373(gRobin.wlanFunction, 256);

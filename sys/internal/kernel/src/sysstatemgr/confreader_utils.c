@@ -199,7 +199,7 @@ static const struct {
 	{ SceSysrootForKernel_79C9AE10, "USB_ENUM_WAKEUP" },
 	{ SceSysrootForKernel_4373AC96, "BSOD_REBOOT" },
 	{ ConfHasUd0, "UD0_EXIST" },
-	{ SceSysrootForKernel_834439A7, "SAFE_MODE" },
+	{ SceSysrootForKernel_sceKernelSysrootIsSafeMode, "SAFE_MODE" },
 	{ ConfDevelopment, "DEVELOPMENT_MODE" },
 	{ ConfConexant, "AU_CODEC_IC_CONEXANT" },
 	{ NULL, NULL },

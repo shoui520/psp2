@@ -246,7 +246,7 @@ char *appmgrAllocMountPath(void)
 	opt.align = 32;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	return SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292, &opt);
+	return sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
 }
 
 int appmgrCheckSaveDataFreeSpace(const char *path, SceUInt64 requiredBytes)
@@ -474,7 +474,7 @@ int appmgrReadRif(const char *path, AppmgrLicenseInfo *info)
 	opt.align = 32;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	license = SceSysmemForDriver_49D4DD9B(g_appmgrCoreHeap, 512, &opt);
+	license = sceKernelAllocHeapMemoryWithOption(g_appmgrCoreHeap, 512, &opt);
 	if (license == NULL) {
 		result = (int)0x80801006;
 		SceKernelSuspendForDriver_2BB92967(0);
@@ -573,7 +573,7 @@ int appmgrCheckPackageLicenseFlag(const char *appPath, int *hasLicense)
 	opt.align = 32;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	path = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292, &opt);
+	path = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
 	if (path == NULL) {
 		result = (int)0x80801006;
 		goto out;
@@ -616,7 +616,7 @@ int appmgrReadKeystone(SceUID pid, const char *driveId, void *keystone)
 	permission = sceKernelSetThreadAccessLevel(128);
 	SceKernelSuspendForDriver_4DF40893(0);
 	opt = (SceAllocOpt) { .size = sizeof(opt), .align = 32 };
-	resolvedPath = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292,
+	resolvedPath = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292,
 							 &opt);
 	if (resolvedPath == NULL) {
 		result = (int)0x80801006;
@@ -684,7 +684,7 @@ int appmgrCloneVirtualMount(SceUID pid, const AppmgrVirtualMount *source,
 	AppmgrPfsMount *pfsMount;
 	int result, status, index;
 
-	mount = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap,
+	mount = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap,
 						 sizeof(*mount), &opt);
 	if (mount == NULL)
 		return (int)0x80801006;
@@ -814,7 +814,7 @@ int appmgrReadSealedKey(const char *appPath, void *key)
 	opt.align = 32;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	path = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292, &opt);
+	path = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
 	if (path != NULL) {
 		snprintf(path, 292, "%s/sce_sys/%s", appPath, "sealedkey");
 		result = sceIoOpen(path, 0x10001, 4);
@@ -862,7 +862,7 @@ int appmgrReadSaveDataMetadata(const char *path, AppmgrProcessContent *content,
 
 	SceKernelSuspendForDriver_4DF40893(0);
 	opt = (SceAllocOpt) { .size = sizeof(opt), .align = 32 };
-	sfoPath = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292, &opt);
+	sfoPath = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
 	if (sfoPath == NULL) {
 		result = (int)0x80801006;
 		goto out;
@@ -940,7 +940,7 @@ readParams:
 				 &currentAccountId, sizeof(currentAccountId));
 	if (result < 0)
 		goto restorePermission;
-	result = SceSblSsMgrForDriver_A5B5D269(&openPsId);
+	result = sceSblAimgrGetOpenPsId(&openPsId);
 	if (result < 0)
 		goto restorePermission;
 	if (sceRegMgrGetKeyInt("/CONFIG/NP2", "current_account2", &accountIndex) < 0 ||
@@ -1066,7 +1066,7 @@ int appmgrUpdateSaveDataParams(const char *path, const char *titleId,
 
 	SceKernelSuspendForDriver_4DF40893(0);
 	opt = (SceAllocOpt) { .size = sizeof(opt), .align = 32 };
-	sfoPath = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292, &opt);
+	sfoPath = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
 	if (sfoPath == NULL) {
 		result = (int)0x80801006;
 		goto out;
@@ -1078,7 +1078,7 @@ int appmgrUpdateSaveDataParams(const char *path, const char *titleId,
 		goto freePath;
 	sceKernelFreeHeapMemory(g_appmgrMountHeap, sfoPath);
 	opt = (SceAllocOpt) { .size = sizeof(opt), .align = 32 };
-	params = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap,
+	params = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap,
 						   sizeof(*params), &opt);
 	if (params == NULL) {
 		result = (int)0x80801006;
@@ -1102,7 +1102,7 @@ int appmgrUpdateSaveDataParams(const char *path, const char *titleId,
 				 &currentAccountId, sizeof(currentAccountId));
 	if (result < 0)
 		goto restorePermission;
-	result = SceSblSsMgrForDriver_A5B5D269(&openPsId);
+	result = sceSblAimgrGetOpenPsId(&openPsId);
 	if (result < 0)
 		goto restorePermission;
 	result = sceRegMgrGetKeyInt("/CONFIG/NP2", "current_account2", &accountIndex);
@@ -1164,7 +1164,7 @@ updateParams:
 		goto out;
 writeFile:
 	opt = (SceAllocOpt) { .size = sizeof(opt), .align = 32 };
-	sfoPath = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292, &opt);
+	sfoPath = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
 	if (sfoPath == NULL) {
 		result = (int)0x80801006;
 		goto out;
@@ -1934,7 +1934,7 @@ int appmgrGetAccountIdentity(SceUInt64 *accountId, SceKernelOpenPsId *openPsId,
 			goto out;
 	}
 	if (openPsId != NULL) {
-		result = SceSblSsMgrForDriver_A5B5D269(openPsId);
+		result = sceSblAimgrGetOpenPsId(openPsId);
 		if (result < 0)
 			goto out;
 	}
@@ -1979,7 +1979,7 @@ int appmgrCreateSaveDataMetadata(SceUID pid, const char *path,
 	permission = sceKernelSetThreadAccessLevel(128);
 	SceKernelSuspendForDriver_4DF40893(0);
 	opt = (SceAllocOpt) { .size = sizeof(opt), .align = 32 };
-	metadataPath = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292, &opt);
+	metadataPath = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
 	if (metadataPath == NULL) {
 		result = (int)0x80801006;
 		goto out;
@@ -2020,10 +2020,10 @@ int appmgrCreateSaveDataMetadata(SceUID pid, const char *path,
 		count = sceIoWrite(fd, sealedKey, 80);
 		if (count != 80)
 			goto closeError;
-		count = SceIofilemgrForDriver_DF57A75F(fd, &stat, 1);
+		count = sceIoChstatByFd(fd, &stat, 1);
 		if (count < 0)
 			goto closeError;
-		count = SceIofilemgrForDriver_43170575(fd, 0);
+		count = sceIoSyncByFd(fd, 0);
 		if (count < 0)
 			goto closeError;
 		result = sceIoClose(fd);
@@ -2043,10 +2043,10 @@ int appmgrCreateSaveDataMetadata(SceUID pid, const char *path,
 		count = sceIoWrite(fd, keystone, 96);
 		if (count != 96)
 			goto closeError;
-		count = SceIofilemgrForDriver_DF57A75F(fd, &stat, 1);
+		count = sceIoChstatByFd(fd, &stat, 1);
 		if (count < 0)
 			goto closeError;
-		count = SceIofilemgrForDriver_43170575(fd, 0);
+		count = sceIoSyncByFd(fd, 0);
 		if (count < 0)
 			goto closeError;
 		result = sceIoClose(fd);
@@ -2074,7 +2074,7 @@ buildSfo:
 	accountPermission = sceKernelSetThreadAccessLevel(64);
 	result = sceRegMgrGetKeyBin("/CONFIG/NP", "account_id", &accountId, 8);
 	if (result >= 0)
-		result = SceSblSsMgrForDriver_A5B5D269(&openPsId);
+		result = sceSblAimgrGetOpenPsId(&openPsId);
 	if (result < 0) {
 		sceKernelSetThreadAccessLevel(accountPermission);
 		goto freePath;
@@ -2086,7 +2086,7 @@ buildSfo:
 #endif
 	input = (AppmgrSavedataSfoParam) {0};
 	opt = (SceAllocOpt) { .size = sizeof(opt), .align = 32 };
-	params = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap,
+	params = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap,
 						  sizeof(*params), &opt);
 	if (params == NULL) {
 		result = (int)0x80801006;
@@ -2119,7 +2119,7 @@ buildSfo:
 		if (fd >= 0) {
 			count = sceIoWrite(fd, file.buffer, file.size);
 			if (count >= 0 && (SceSize)count == file.size) {
-				count = SceIofilemgrForDriver_43170575(fd, 0);
+				count = sceIoSyncByFd(fd, 0);
 				if (count >= 0) {
 					result = sceIoClose(fd);
 					if (result >= 0) {
@@ -2417,7 +2417,7 @@ int appmgrResolveLaunchDirectory(const char *path,
 	opt.align = 32;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	resolved = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292, &opt);
+	resolved = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
 	if (resolved == NULL)
 		return (int)0x80801006;
 	memset(resolved, 0, 292);
@@ -2647,7 +2647,7 @@ void *appmgrAllocMountHeapMemory(SceSize size)
 	opt.align = 32;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	return SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, size, &opt);
+	return sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, size, &opt);
 }
 
 int appmgrFreeMountHeapMemory(void *memory)

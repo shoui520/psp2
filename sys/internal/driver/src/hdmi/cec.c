@@ -171,7 +171,7 @@ static inline void _notifyKey(CecKey *key)
 static inline int _checkCecSupported(void)
 {
 	if (cecSupported == -1) {
-		if (SceSysrootForDriver_834439A7() != 0 || SceSysrootForDriver_B0E1FC67() != 0) {
+		if (sceKernelSysrootIsSafeMode() != 0 || SceSysrootForDriver_B0E1FC67() != 0) {
 			cecSupported = 0;
 			return SCE_HDMI_ERROR_CEC_UNSUPPORTED;
 		}

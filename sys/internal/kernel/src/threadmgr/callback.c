@@ -350,7 +350,7 @@ int callCallbackEntry(struct ThreadCB *thread, int user, uintptr_t entry,
 			SceIntrmgrForDriver_C568F145(INTR_EXCEPTION_NO_CALLBACK_STACK);
 			return blockId;
 		}
-		SceSysmemForDriver_0B1FD5C3(blockId, (void **)&base);
+		sceKernelGetMemBlockMappedBase(blockId, (void **)&base);
 mapped:
 		thread->pKStack = base;
 		stack = base + stackSize;
@@ -746,7 +746,7 @@ SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallba
 	callback->cb.user = user;
 	callback->cb.running = 0;
 	if (ThreadmgrInSyscall()) {
-		callback->cb.puid = SceSysmemForDriver_CED1547B(thread->processId, uid, 1);
+		callback->cb.puid = scePUIDOpenByGUIDWithFlags(thread->processId, uid, 1);
 		uid = callback->cb.puid;
 		if (uid < 0) {
 			SCE_DBG_ASSERT_LEVEL_FUNC(0, 0, 1016, "sceKernelCreateCallback");
@@ -1212,7 +1212,7 @@ int sceKernelRegisterCallbackToEventForDriver(SceUID eventId, SceUID callbackId,
 	sceKernelSpinlockLowLock(&event->lock);
 	opt.size = 0x14;
 	opt.align = 0x40;
-	entry = SceSysmemForDriver_49D4DD9B(s_threadmgrRuntime.manager->heapId,
+	entry = sceKernelAllocHeapMemoryWithOption(s_threadmgrRuntime.manager->heapId,
 						    EVENT_CALLBACK_ALLOC_SIZE, &opt);
 	if (entry == NULL) {
 		ret = SCE_KERNEL_ERROR_NO_MEMORY;

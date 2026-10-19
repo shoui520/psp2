@@ -91,7 +91,7 @@ int DebugLevelEnabled(int level)
 {
 	if ((int32_t)s_debugPrintLevel < level)
 		return 0;
-	if (!SceSysrootForKernel_3E455842() || !SceSysrootForKernel_9DB56D1F())
+	if (!SceSysrootForKernel_3E455842() || !sceKernelSysrootGetKblParam())
 		return 1;
 	return SceQafMgrForDriver_382C71E8() != 0;
 }

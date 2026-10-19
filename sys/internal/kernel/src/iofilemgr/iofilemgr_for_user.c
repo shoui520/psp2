@@ -572,7 +572,7 @@ int sceIoGetstatByFdForUser(SceUID fd, SceIoStat *stat)
 	} else {
 		handle = SceIofilemgrForDriver_338DCD68(guid, &ret);
 		if (handle == 0) {
-			ret = SceIofilemgrForDriver_462F059B(guid, stat);
+			ret = sceIoGetstatByFd(guid, stat);
 		} else {
 			ret = SceFios2KernelForDriver_2649408B(handle, stat);
 			if (ret < 0)
@@ -596,7 +596,7 @@ int sceIoChstatByFdForUser(SceUID fd, const SceIoStat *stat, int bits)
 	} else {
 		handle = SceIofilemgrForDriver_338DCD68(guid, &ret);
 		if (handle == 0) {
-			ret = SceIofilemgrForDriver_DF57A75F(guid, stat, bits);
+			ret = sceIoChstatByFd(guid, stat, bits);
 		} else {
 			ret = SceFios2KernelForDriver_35E7E75C(handle, stat, bits);
 			if (ret < 0)
@@ -620,7 +620,7 @@ int sceIoSyncByFdForUser(SceUID fd, unsigned int flag)
 	} else {
 		handle = SceIofilemgrForDriver_338DCD68(guid, &ret);
 		if (handle == 0) {
-			ret = SceIofilemgrForDriver_43170575(guid, flag);
+			ret = sceIoSyncByFd(guid, flag);
 		} else {
 			ret = SceFios2KernelForDriver_990F46A5(handle, flag);
 			if (ret < 0)

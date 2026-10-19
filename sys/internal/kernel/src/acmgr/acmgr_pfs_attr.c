@@ -134,7 +134,7 @@ int checkPfsAttribute(const SceSelfAuthInfo *info, const SceSblACMgrValue *attr,
 	SceUInt32 attribute, permission;
 	int privileged, i;
 
-	switch (SceSysrootForKernel_20009397()) {
+	switch (sceKernelSysrootGetThreadAccessLevel()) {
 	case 0x40: case 0x80:
 		privileged = 1;
 		break;

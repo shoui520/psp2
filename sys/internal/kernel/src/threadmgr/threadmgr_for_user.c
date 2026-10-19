@@ -603,7 +603,7 @@ typedef struct ThreadmgrSyscallArgs {
 /* the caller's PUID of an object it created */
 static inline SceUID OpenByGUID(SceUID pid, SceUID guid)
 {
-	SceUID puid = SceSysmemForDriver_CED1547B(pid, guid, 1);
+	SceUID puid = scePUIDOpenByGUIDWithFlags(pid, guid, 1);
 
 	SCE_DBG_PRINTF_LEVEL(2, 3, 105, "0x%08x=scePUIDOpenByGUID(0x%08x)\n", puid, guid);
 	return puid;

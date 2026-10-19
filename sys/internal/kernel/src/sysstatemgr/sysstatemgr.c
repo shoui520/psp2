@@ -45,7 +45,7 @@ configured:
 	reserved = sceKernelAllocPartitionMemBlock(SCE_KERNEL_PARTITION_ROOT_ID, "SceSysstatemgrReserved",
 		CONF_MEMTYPE, SYSSTATEMGR_RESERVED_SIZE, NULL);
 	SCE_DBG_ASSERT_LEVEL(0, reserved > 0, 202);
-	SceSysmemForDriver_FFCD9B60(reserved);
+	sceKernelUnmapMemBlock(reserved);
 	if (ret < 0)
 		SceSysrootForKernel_47724459(2);
 	else if (s_appProcess <= 0)

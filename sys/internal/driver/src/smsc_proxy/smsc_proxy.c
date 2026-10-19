@@ -657,7 +657,7 @@ int sceSblSmSchedProxyReadCry2Arm(SceUID id, int channel, SceUInt32 *value)
 	return ret;
 }
 
-int SceSblSmSchedProxyForKernel_8B84AC2A(SceUID id, int channel,
+int sceSblSmSchedProxyRegisterIntrHandler(SceUID id, int channel,
 					      SceSblSmSchedCry2ArmHandler handler, void *arg)
 {
 	SceUInt32 tls = sceSyscallEnter();

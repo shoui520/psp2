@@ -227,7 +227,7 @@ set(MODULE_IMPORT_FUNCS
 	sceGUIDReleaseObject
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_49D4DD9B
+	sceKernelAllocHeapMemoryWithOption
 	sceKernelCopyFromUserProc
 	sceKernelCopyToUserProc
 	sceKernelCopyToUser
@@ -307,7 +307,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSystimerForDriver_A73351C1
 	SceSystimerForDriver_BF8D42B0
 	SceSystimerForDriver_CCCD1EE3
-	SceSystimerForDriver_E2B9D8E9
+	sceKernelSysTimerAlloc
 	sceKernelSetDTraceThreadCBEnable
 	SceThreadmgrForKernel_19440C83
 	SceThreadmgrForKernel_565BD2DA

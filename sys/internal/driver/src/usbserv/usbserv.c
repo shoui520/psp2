@@ -359,7 +359,7 @@ static unsigned is_supported_device(unsigned id)
 			else if (type == 3)
 				hid = 1;
 			else if (type == 6 || type == 8) {
-				if (type == 8 && SceSysrootForDriver_834439A7())
+				if (type == 8 && sceKernelSysrootIsSafeMode())
 					return 0;
 				return type;
 			}

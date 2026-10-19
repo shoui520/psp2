@@ -217,7 +217,7 @@ int pmMgrSetNvsMode(int mode, void *nvs)
 
 	command.nvs = *(const ScePmNvsArea *)nvs;
 	command.mode = mode;
-	ret = SceSblSmCommForKernel_DB9FC204(g_pmSmId, PM_SM_SET_NVS_MODE, &result, &command,
+	ret = sceSblSmCommCallFunc(g_pmSmId, PM_SM_SET_NVS_MODE, &result, &command,
 				    sizeof(command));
 	ret = ret == 0 ? (int)result : SCE_SBL_ERROR_PM_SM;
 	*(ScePmNvsArea *)nvs = command.nvs;
@@ -242,7 +242,7 @@ int stop_pm_secure_module(void)
 {
 	SceSblSmCommPair result;
 
-	return SceSblSmCommForKernel_0631F8ED(g_pmSmId, &result);
+	return sceSblSmCommStopSm(g_pmSmId, &result);
 }
 
 /* PLACEHOLDER: cryptographic routine, deferred: pm_sm service 9 of
@@ -272,13 +272,13 @@ int pmSmGetMode(SceUInt32 *state, SceUInt32 *data)
 
 	command.step = PM_SM_GET_MODE_REQUEST;
 	command.reserved = 0;
-	ret = SceSblSmCommForKernel_DB9FC204(g_pmSmId, PM_SM_SYSCON_MODE, &result, &command,
+	ret = sceSblSmCommCallFunc(g_pmSmId, PM_SM_SYSCON_MODE, &result, &command,
 				    sizeof(command));
 	if (ret == 0 && (ret = result) == 0 &&
 	    (ret = SceSysconForDriver_EBDF88B9(command.request, 0x10, command.response,
 					       0x30)) == 0) {
 		command.step = PM_SM_GET_MODE_RESPONSE;
-		ret = SceSblSmCommForKernel_DB9FC204(g_pmSmId, PM_SM_SYSCON_MODE, &result, &command,
+		ret = sceSblSmCommCallFunc(g_pmSmId, PM_SM_SYSCON_MODE, &result, &command,
 					    sizeof(command));
 		if (ret == 0 && (ret = result) == 0) {
 			*state = command.state;
@@ -299,13 +299,13 @@ int pmSmSetMode(SceUInt32 *state, SceUInt32 *data, int mode)
 	command.data = *data;
 	command.reserved = 0;
 	command.step = mode;
-	ret = SceSblSmCommForKernel_DB9FC204(g_pmSmId, PM_SM_SYSCON_MODE, &result, &command,
+	ret = sceSblSmCommCallFunc(g_pmSmId, PM_SM_SYSCON_MODE, &result, &command,
 				    sizeof(command));
 	if (ret == 0 && (ret = result) == 0 &&
 	    (ret = SceSysconForDriver_63683B9B(command.request, 0x30, command.response,
 					       0x10)) == 0) {
 		command.step = PM_SM_SET_MODE_RESPONSE;
-		ret = SceSblSmCommForKernel_DB9FC204(g_pmSmId, PM_SM_SYSCON_MODE, &result, &command,
+		ret = sceSblSmCommCallFunc(g_pmSmId, PM_SM_SYSCON_MODE, &result, &command,
 					    sizeof(command));
 		if (ret == 0)
 			ret = result;

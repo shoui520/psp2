@@ -54,7 +54,7 @@ static inline int pmMgrHasSmMode(void)	/* name unknown */
 	return 0;
 }
 
-int SceSblPostSsMgrForDriver_4663C195(SceUInt8 *mode)
+int sceSblPmMgrGetProductModeFromNVS(SceUInt8 *mode)
 {
 	if (mode == NULL)
 		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
@@ -186,7 +186,7 @@ int sceSblPmMgrInit(void)
 	SceUInt32 wakeup, hold;
 	int ret;
 
-	kbl = SceSysrootForKernel_9DB56D1F();
+	kbl = sceKernelSysrootGetKblParam();
 	if (kbl == NULL) {
 		g_pmInitialized = 1;
 		return 0;
@@ -245,7 +245,7 @@ int sceSblPmMgrGetProductModeForUser(SceUInt8 *mode)
 	return ret;
 }
 
-int sceSblPmMgrGetProductModeFromNVS(SceUInt8 *mode)
+int sceSblPmMgrGetProductModeFromNVSForUser(SceUInt8 *mode)
 {
 	SceUInt32 state = sceSyscallEnter();
 	SceUInt8 value = 0;
@@ -259,7 +259,7 @@ int sceSblPmMgrGetProductModeFromNVS(SceUInt8 *mode)
 		sceSyscallLeave(state);
 		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
 	}
-	ret = SceSblPostSsMgrForDriver_4663C195(&value);
+	ret = sceSblPmMgrGetProductModeFromNVS(&value);
 	if (ret == 0)
 		ret = sceKernelCopyToUser(mode, &value, sizeof(value));
 	sceSyscallLeave(state);
