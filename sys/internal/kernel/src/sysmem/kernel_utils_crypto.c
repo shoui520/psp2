@@ -1,6 +1,6 @@
 /*
  * SceKernelUtils: SHA-1/224/256, HMAC-SHA and AES.
- * AES block entries and their lookup data are in aes_block.c.
+ * The AES block entries are in aes.S, their lookup data in aes_block.c.
  */
 
 #include <scetypes.h>

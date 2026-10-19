@@ -6,7 +6,3 @@
 #define DesIsWeakKey SceKernelUtilsForDriver_AFD56168
 #include "des_parity.c"
 
-#define AesSubWord SceKernelUtilsForDriver_60ED6EA9
-#define AesInverseMixColumn SceKernelUtilsForDriver_C76A7685
-#include "aes_helpers.c"
-

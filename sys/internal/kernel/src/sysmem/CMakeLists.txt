@@ -123,6 +123,7 @@ psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	des_key.c
 	des_block.c
 	kernel_utils_keys.c
+	aes.S
 	xorshift128.c
 	aes_block.c
 	kernel_utils_crypto.c
