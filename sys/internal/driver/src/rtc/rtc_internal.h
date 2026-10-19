@@ -10,6 +10,7 @@
 #include <rtc/rtc.h>
 #include <syscon/syscon_scratchpad.h>
 #include <post_ss_mgr/sblpostssmgr.h>
+#include <sysmem/sysclib.h>	/* the run-time division helpers, called by name */
 
 /* SceSblPostSsMgr (ut_mgr.c): declared here until its exporter's header declares it */
 
@@ -84,13 +85,6 @@ static inline unsigned int rtcContext(void)
 {
 	return readTpidruro();
 }
-
-/*
- * The run-time division helpers, called by name where a newer compiler
- * would otherwise fold the division into different operands.
- */
-SceUInt64 __aeabi_uldivmod(SceUInt64 n, SceUInt64 d);
-SceInt64 __aeabi_ldivmod(SceInt64 n, SceInt64 d);
 
 int sceRtcSynchronizeCold(void);
 void rtcRegisterLibcTime(void);

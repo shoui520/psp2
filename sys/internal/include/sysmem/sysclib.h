@@ -70,8 +70,16 @@ void __stack_chk_fail(void);
 void sceLibSspStackChkFail(void);
 void SceSysclibForTZS_E5457B97(void);
 
-/* NID 0xAC86B4BA: quotient in r0, signed remainder in r1 (signed_division.S) */
+/* the AEABI division helpers (signed_division.S, unsigned_division.S, signed_division64.S, ...) */
+int __aeabi_idiv(int numerator, int denominator);
+/* NID 0xAC86B4BA: quotient in r0, signed remainder in r1 */
 SceUInt64 __aeabi_idivmod(SceInt32 numerator, SceInt32 denominator);
+unsigned int __aeabi_uidiv(unsigned int numerator, unsigned int denominator);
+/* quotient in r0, remainder in r1 */
+SceUInt64 __aeabi_uidivmod(SceUInt32 numerator, SceUInt32 denominator);
+/* the quotient (the remainder follows in r2, r3) */
+SceInt64 __aeabi_ldivmod(SceInt64 numerator, SceInt64 denominator);
+SceUInt64 __aeabi_uldivmod(SceUInt64 numerator, SceUInt64 denominator);
 
 #ifdef __cplusplus
 }

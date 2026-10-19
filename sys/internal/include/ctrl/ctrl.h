@@ -15,20 +15,6 @@ int SceCtrlForDriver_FF9D4DD4(uint32_t mask,
 /* Notify the registered BD remote callbacks (SceCtrlForDriver NID 6E183B9B). */
 int SceCtrlForDriver_6E183B9B(int notification);	/* vitasdk: ksceCtrlNotifyCallBacks */
 
-/* name unknown: nonzero for a further privileged program class (ctrl's "privileged" test) */
-
-/* name unknown: SceCtrl calls it with 0 at start-up */
-
-/* the BD remote control's state as the HDMI driver reports it */
-typedef struct SceHdmiBdRemoconState {
-	unsigned int buttons;
-	unsigned int state;
-	unsigned int stateExt;
-} SceHdmiBdRemoconState;
-
-/* name unknown: registers the BD remote control callback (weak import in SceCtrl) */
-int SceHdmiForDriver_05174BC2(int (*callback)(const SceHdmiBdRemoconState *state));
-
 #include <ctrl.h>
 
 /* a button beyond the SDK's (the PS button is SCE_CTRL_INTERCEPTED); vitasdk's name, no Sony name found */

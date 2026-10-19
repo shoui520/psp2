@@ -7,6 +7,7 @@
 #include <sysmem/sysmem.h>
 
 struct ThreadmgrWaitNode;
+struct ThreadmgrWaitableClass;		/* threadmgr/uid_waitable.h */
 
 typedef struct ThreadmgrEventCallback {
 	struct ThreadmgrEventCallback *next;
@@ -35,3 +36,8 @@ typedef struct ThreadmgrEvent {
 } ThreadmgrEvent;
 
 _Static_assert(sizeof(ThreadmgrEvent) == 0x38, "SceUIDEventObject size");
+
+/* event.c: a subclass of SceUIDEventClass, and a new object of one (it comes locked) */
+int sceKernelUIDInheritedEventClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
+				   SceSize size, SceClassCallback create, SceClassCallback destroy);
+int sceKernelEventObjectInit(SceUID eventId, uint32_t attr, uint64_t userData, uint32_t pattern);

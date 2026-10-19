@@ -5,15 +5,7 @@
  */
 #pragma once
 
-int SceHdmiForDriver_99A3CABE(int mute);
-int SceHdmiForDriver_08AFFB03(int mute);
-
 #include <scetypes.h>
-
-int SceHdmiForDriver_B04F5B6A(void);
-int SceHdmiForDriver_D929E4E5(void);
-int SceHdmiForDriver_EA486A37(int start);
-int sceHdmiCecCmdOneTouchPlay(int mode);
 
 /* SceHdmiForDriver_5A212BB3: the output mode (16 bytes). */
 typedef struct SceHdmiOutputMode {
@@ -79,14 +71,43 @@ typedef struct CecStatistics {
 	SceUInt32 reserved2;		/* 0x1c */
 } CecStatistics;
 
+/* A remote control key, as the CEC driver hands it to the key callback (SceCtrl's BD remote). */
+typedef struct CecKey {
+	SceUInt32 buttons;		/* 0x00: SceCtrl buttons */
+	SceUInt32 code;			/* 0x04: key code, CEC_KEY_NONE: released */
+	SceUInt32 flags;		/* 0x08: CEC_KEY_PRESSED */
+} CecKey;
+
+#define CEC_KEY_NONE			0xff
+#define CEC_KEY_PRESSED			0x10000000
+
+typedef int (*CecKeyCallback)(const CecKey *key);
+
+/* hdmi.c */
+int SceHdmiForDriver_0686FBD6(int on);
+int SceHdmiForDriver_08AFFB03(int mute);
 int SceHdmiForDriver_0F12364A(SceUInt32 event, HdmiEventCallback callback);
+int SceHdmiForDriver_5A212BB3(const SceHdmiOutputMode *mode);
+int SceHdmiForDriver_7AD0F6C9(void *id, SceSize size, SceUInt8 *len);	/* the chip id */
+int SceHdmiForDriver_854EEB78(const SceHdmiAudioMode *mode);
+int SceHdmiForDriver_8EB0FD9C(SceHdmiEdidInfo *info);
+int SceHdmiForDriver_99A3CABE(int mute);
+int SceHdmiForDriver_B04F5B6A(void);
+int SceHdmiForDriver_E331EC90(SceUInt32 event);
+int SceHdmiForDriver_E66D5A4D(int mute);
+int SceHdmiForDriver_F20529CC(int on);
+int SceHdmiForDriver_FAB3A2E9(int on);
+int SceHdmiForDriver_FF5546D8(void);
+
+/* cec.c */
+int SceHdmiForDriver_05174BC2(CecKeyCallback callback);
 int SceHdmiForDriver_291F000B(void);
 int sceHdmiCecRegisterEventCallback(int event, void (*callback)(int event));
 int SceHdmiForDriver_47894820(int mode);
 int SceHdmiForDriver_47B753EB(void);
+int sceHdmiCecCmdOneTouchPlay(int mode);
 int SceHdmiForDriver_6D2D10D8(void);	/* CEC forced polling message */
-int SceHdmiForDriver_854EEB78(const SceHdmiAudioMode *mode);
-int SceHdmiForDriver_8EB0FD9C(SceHdmiEdidInfo *info);
 int SceHdmiForDriver_93AA48AC(CecStatistics *stats);
+int SceHdmiForDriver_D929E4E5(void);
+int SceHdmiForDriver_EA486A37(int start);
 int sceHdmiCecEnableCec(void);
-

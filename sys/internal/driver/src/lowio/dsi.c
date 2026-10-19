@@ -36,8 +36,6 @@
 #define DSI_SETUP_COMMAND	0x83003c23
 #define DSI_SETUP_COMMAND_3LANE	0x83003c25
 
-uint32_t __aeabi_uidiv(uint32_t numerator, uint32_t denominator);
-
 typedef struct DsiContext {
 	volatile SceDsiRegisters *registers;
 	uint8_t continuousClock;

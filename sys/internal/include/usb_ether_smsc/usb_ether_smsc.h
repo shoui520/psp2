@@ -6,4 +6,3 @@
 #include <threadmgr/threadmgr.h>
 
 int ScePowerForDriver_B24263F0(int kind, void (*handler)(int event, int value));
-unsigned int __aeabi_uidiv(unsigned int numerator, unsigned int denominator);

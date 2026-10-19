@@ -22,6 +22,7 @@
 #include <net_ps/netdrv.h>
 #include <sysmem/sysevent_ids.h>
 #include <usb_ether_smsc/usb_ether_smsc.h>
+#include <sysmem/sysclib.h>
 
 /* names unknown */
 #define SMSC_ERROR_INVALID_ARGUMENT	((int)0x80418001)

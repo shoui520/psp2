@@ -13,7 +13,7 @@
 #include <sysmem/sysmem.h>
 #include "iofilemgr_internal.h"
 
-SceClass g_ioAsyncEventClass;
+struct ThreadmgrWaitableClass g_ioAsyncEventClass;
 
 /* 4.00 builds this file with _FORTIFY_SOURCE; Sony's heap declaration gives the size it checks */
 #if FW_VERSION >= 0x04000000
@@ -63,7 +63,7 @@ SceUID sceIoAsyncEventCreate(IoAsyncEvent **event)
 	case SCE_KERNEL_PROCESS_ID:
 	case SCE_KERNEL_DUMMY_PROCESS_GAME_ID:
 	case SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID:
-		uid = sceGUIDKernelCreate(&g_ioAsyncEventClass, "SceIoAsyncEvent",
+		uid = sceGUIDKernelCreate(&g_ioAsyncEventClass.base, "SceIoAsyncEvent",
 					   (SceObjectBase **)&obj);
 		break;
 	default:
@@ -81,7 +81,7 @@ SceUID sceIoAsyncEventCreate(IoAsyncEvent **event)
 		else
 			opt.heapKind = 0;
 		opt.type = IO_ASYNC_EVENT_UID_TYPE;
-		uid = sceGUIDKernelCreateWithOpt(&g_ioAsyncEventClass, "SceIoAsyncEvent",
+		uid = sceGUIDKernelCreateWithOpt(&g_ioAsyncEventClass.base, "SceIoAsyncEvent",
 						  &opt,
 						  (SceObjectBase **)&obj);
 		break;
@@ -89,7 +89,7 @@ SceUID sceIoAsyncEventCreate(IoAsyncEvent **event)
 	if (uid < 0)
 		return uid;
 
-	ret = sceKernelEventObjectInit(uid, 0x100, 0, 0, 0);
+	ret = sceKernelEventObjectInit(uid, 0x100, 0, 0);
 	if (ret < 0) {
 		closed = sceGUIDClose(uid);
 		SCE_DBG_ASSERT(closed == 0, 117);
@@ -110,7 +110,7 @@ int sceIoAsyncEventDestroy(SceUID uid)
 	if (handle < 0)
 		return handle;
 	if (!SceSysmemForKernel_7F7D5C4A(SceSysmemForKernel_368F1C36(handle),
-					 &g_ioAsyncEventClass))
+					 &g_ioAsyncEventClass.base))
 		return SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS;
 	object = SceSysmemForKernel_FA6C098C(uid);
 	SCE_DBG_ASSERT(object != NULL, 143);
@@ -1007,7 +1007,7 @@ int sceIoCancel(SceUID uid)
 	int ret, released;
 
 	tls = sceSyscallEnter();
-	ret = sceGUIDReferObjectWithClass(uid, &g_ioAsyncEventClass, (SceObjectBase **)&event);
+	ret = sceGUIDReferObjectWithClass(uid, &g_ioAsyncEventClass.base, (SceObjectBase **)&event);
 	if (ret < 0) {
 		sceSyscallLeave(tls);
 		return ret;
@@ -1037,7 +1037,7 @@ int sceIoComplete(SceUID uid)
 			sceSyscallLeave(tls);
 			return SCE_ERROR_ERRNO_EBUSY;
 		}
-		ret = sceGUIDReferObjectWithClass(uid, &g_ioAsyncEventClass,
+		ret = sceGUIDReferObjectWithClass(uid, &g_ioAsyncEventClass.base,
 						   (SceObjectBase **)&event);
 		if (ret >= 0) {
 			released = sceGUIDReleaseObject(uid);

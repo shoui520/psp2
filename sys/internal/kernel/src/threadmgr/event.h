@@ -155,8 +155,6 @@ uint32_t notifyCallbackAllAfterSetEvent(SceUID eventId, ThreadmgrEvent *event, u
 int freeEventWaitNode(SceUID pid, ThreadmgrEventWaitNode *node);
 void cancelWME(ThreadmgrWaitMultipleEvents *wme);
 void startEvent(void);
-int sceKernelUIDInheritedEventClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
-				   SceSize size, SceClassCallback create, SceClassCallback destroy);
 int uidEventSubclassInit(struct ThreadmgrWaitableClass *cls, const char *name, SceClass *parent,
 			 SceSize size, SceClassCallback create, SceClassCallback destroy,
 			 ThreadmgrCancelWaitMethod cancelWait, ThreadmgrRevalidateMethod revalidate, ThreadmgrReleaseMethod release);
@@ -164,6 +162,5 @@ uint32_t setEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t u
 				    uint32_t arg, ThreadmgrEvent *event);
 uint32_t pulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t userData,
 				      uint32_t arg, ThreadmgrEvent *event);
-int sceKernelEventObjectInit(SceUID eventId, uint32_t attr, uint64_t userData, uint32_t pattern);
 
 #endif

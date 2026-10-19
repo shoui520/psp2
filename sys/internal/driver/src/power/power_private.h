@@ -61,6 +61,7 @@
 #include <sysmem/sblaimgr.h>
 #include <sysmem/dipsw.h>
 #include <sysmem/sysmem.h>
+#include <sysmem/sysclib.h>
 #include <processmgr/processmgr.h>
 #include <display/display.h>
 #include <sysmem/procevent.h>
@@ -96,16 +97,6 @@ extern struct PowerIdleState s_powerIdleTimers;
 /* The saved continuation returns through the original caller's LR and SP. */
 extern int powerSaveCpuContext(void *context) __attribute__((returns_twice));
 
-/* Voltage codes decrease as the required voltage increases. */
-
-/* Actual callbacks required by Power's startup registration sequence. */
-
-/* LED callback and script engine; appended after the existing LED state. */
-
-extern int __aeabi_idiv(int numerator, int denominator);
-
-extern uint32_t __aeabi_uidiv(uint32_t numerator, uint32_t denominator);
-extern uint64_t __aeabi_uldivmod(uint64_t numerator, uint64_t denominator);
 extern void powerCpuResumeEntry(void);
 extern void powerRestoreCpuContext(void *context, int value)
 	__attribute__((noreturn));

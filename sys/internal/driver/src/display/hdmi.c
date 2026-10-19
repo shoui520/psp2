@@ -15,7 +15,6 @@
 #include <intrmgr/syscall.h>
 #include <kernel/error.h>
 #include "display_internal.h"
-#include "display_imports.h"
 
 static DisplayHdmiState hdmi;
 
@@ -56,7 +55,7 @@ static inline __attribute__((always_inline)) int hdmiProbe(void) /* name unknown
 
 int _sceDisplaySetupHdmiTx(SceUInt32 vic, SceUInt32 pixelformat, SceUInt32 pixelSize) /* Sony's name (0.990 messages) */
 {
-	DisplayHdmiMode mode;
+	SceHdmiOutputMode mode;
 	int ret;
 
 	if (!hdmiProbe())
@@ -83,61 +82,61 @@ int _sceDisplaySetupHdmiTx(SceUInt32 vic, SceUInt32 pixelformat, SceUInt32 pixel
 		break;
 	}
 	mode.vic = vic;
-	mode.reserved[0] = 0;
-	mode.reserved[2] = 0;
-	mode.reserved[1] = 0;
+	mode.outputFullRange = 0;
+	mode.scanInfo = 0;
+	mode.reserved = 0;
 	switch (pixelformat) {
 	case 0x8000:
 	case 0x108000:
-		mode.format[0] = 1;
-		mode.format[1] = 1;
-		mode.format[2] = 0;
-		mode.format[3] = 1;
+		mode.inputFormat = 1;
+		mode.outputFormat = 1;
+		mode.colorDepth = 0;
+		mode.inputFullRange = 1;
 		break;
 	case 0x60808000:
 	case 0x60908000:
-		mode.format[0] = 1;
-		mode.format[1] = 1;
-		mode.format[2] = 1;
-		mode.format[3] = 1;
+		mode.inputFormat = 1;
+		mode.outputFormat = 1;
+		mode.colorDepth = 1;
+		mode.inputFullRange = 1;
 		break;
 	case 0x60800000:
 	case 0x60900000:
-		mode.format[0] = 0;
-		mode.format[1] = 0;
-		mode.format[2] = 1;
-		mode.format[3] = 1;
+		mode.inputFormat = 0;
+		mode.outputFormat = 0;
+		mode.colorDepth = 1;
+		mode.inputFullRange = 1;
 		break;
 	case 0x100001:
 	case 0x60800001:
 	case 0x60900001:
-		mode.format[0] = 0;
-		mode.format[1] = 0;
-		mode.format[2] = 1;
-		mode.format[3] = 0;
+		mode.inputFormat = 0;
+		mode.outputFormat = 0;
+		mode.colorDepth = 1;
+		mode.inputFullRange = 0;
 		break;
 	case 0:
 	case 0x100000:
-		mode.format[0] = 0;
-		mode.format[1] = 0;
-		mode.format[2] = 0;
-		mode.format[3] = 1;
+		mode.inputFormat = 0;
+		mode.outputFormat = 0;
+		mode.colorDepth = 0;
+		mode.inputFullRange = 1;
 		break;
 	case 1:
-		mode.format[0] = 0;
-		mode.format[1] = 0;
-		mode.format[2] = 0;
-		mode.format[3] = 0;
+		mode.inputFormat = 0;
+		mode.outputFormat = 0;
+		mode.colorDepth = 0;
+		mode.inputFullRange = 0;
 		break;
 	default:
 		return SCE_DISPLAY_ERROR_INVALID_PIXELFORMAT;
 	}
 	if (pixelSize == 30)
-		mode.format[2] = 1;
+		mode.colorDepth = 1;
 	else if (pixelSize == 36)
-		mode.format[2] = 2;
+		mode.colorDepth = 2;
 	else if (pixelSize == 24)
-		mode.format[2] = 0;
+		mode.colorDepth = 0;
 	else
 		return SCE_DISPLAY_ERROR_INVALID_PIXELFORMAT;
 	ret = SceHdmiForDriver_5A212BB3(&mode);

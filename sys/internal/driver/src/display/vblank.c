@@ -16,7 +16,6 @@
 #include <intrmgr/syscall.h>
 #include <kernel/error.h>
 #include "display_internal.h"
-#include "display_imports.h"
 #include <threadmgr/uid_waitable.h>
 
 static DisplaySgiState sgiState[2];	/* SGI 8, 9 */

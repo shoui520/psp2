@@ -16,7 +16,6 @@
 #include <intrmgr/syscall.h>
 #include <kernel/error.h>
 #include "display_internal.h"
-#include "display_imports.h"
 
 static DisplayOledState oled;
 

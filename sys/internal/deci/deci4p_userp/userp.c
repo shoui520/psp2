@@ -62,8 +62,6 @@ typedef struct UserpStrBuf {
 #define EVF_CLOSED		0x20
 #define EVF_ATTR_UNK8000	0x8000		/* meaning unknown */
 
-unsigned long long __aeabi_uidivmod(unsigned int n, unsigned int d);
-
 typedef struct UserpPacket {
 	SceUInt16 size;
 	SceUInt8 sizeHi;

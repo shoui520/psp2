@@ -19,6 +19,7 @@
 #include <kernel/error.h>
 #include <iofilemgr/iofilemgr.h>
 #include <threadmgr/event.h>
+#include <threadmgr/uid_waitable.h>
 #include <threadmgr/fast_mutex.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysclib.h>
@@ -304,11 +305,6 @@ typedef struct IofilemgrSyncParam {
 #define IOFILEMGR_IOCTL_DISABLED	0x200	/* rejected */
 #define IOFILEMGR_IOCTL_ACCESS_SYSTEM	0x400	/* with ACCESS_CHECK: system or root programs only */
 #define IOFILEMGR_IOCTL_ACCESS_CHECK	0x800
-
-/* imports vitasdk does not declare */
-int sceKernelUIDInheritedEventClassInit(SceClass *cls, const char *name, SceSize itemSize,
-					SceClassCallback create, SceClassCallback destroy);
-int sceKernelEventObjectInit(SceUID uid, SceUInt32 attr, SceUInt32 pattern, int a3, int a4);
 
 /*
  * Sony's declaration gives sceKernelUserUnmap the mapped range as well (a cast
@@ -724,7 +720,7 @@ typedef struct IoErrorEvent {
 } IoErrorEvent;
 _Static_assert(sizeof(IoErrorEvent) == 0x50, "IoErrorEvent");
 
-extern SceClass g_ioErrorEventClass;	/* "SceUIDIoErrorEventClass" (name unknown) */
+extern struct ThreadmgrWaitableClass g_ioErrorEventClass;	/* "SceUIDIoErrorEventClass" (name unknown) */
 
 int ioerror_initialize(void);					/* name unknown */
 
@@ -1206,7 +1202,7 @@ extern int g_ioFiosDcloseEnabled;
 extern int g_ioFiosPathEnabled;		/* the path calls of SceIofilemgr (user) */
 extern SchedDispatcher g_schedDispatcher;
 extern SceUID g_ioSchedHeap;		/* "SceIoScheduler" (name unknown) */
-extern SceClass g_ioAsyncEventClass;	/* "SceUIDIoAsyncEventClass" (name unknown) */
+extern struct ThreadmgrWaitableClass g_ioAsyncEventClass;	/* "SceUIDIoAsyncEventClass" (name unknown) */
 /*
  * A hook every vop wrapper calls (set by SceIofilemgrForDriver_F4F8C59A; name unknown):
  * (event, argc, args...) before the vop and (event + 1, 2, vp, result) after it.

@@ -14,6 +14,21 @@
 #include <display.h>
 #include <dtrace/sce/dtrace.h>
 #include <display/display.h>
+#include <oled/oled.h>
+#include <lcd/lcd.h>
+#include <hdmi/hdmi.h>
+#include <sysmem/sysmem.h>
+#include <lowio/dsi.h>
+#include <lowio/pervasive.h>
+#include <threadmgr/event.h>
+#include <threadmgr/uid_waitable.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/utils.h>
+#include <sysmem/sysclib.h>
+#include <sysmem/sysroot_init.h>
+#include <processmgr/processmgr.h>
+#include <acmgr/acmgr.h>
+#include <sysmem/sysroot.h>
 
 #define DISPLAY_HEAD_COUNT	3	/* 0: main panel (OLED/LCD), 1: HDMI, 2: unused */
 #define DISPLAY_PLANE_COUNT	2
@@ -125,13 +140,6 @@ typedef struct DisplayHdmiState {
 	int present;			/* 0x00 */
 	int probed;			/* 0x04 */
 } DisplayHdmiState;
-
-/* SceHdmiForDriver_5A212BB3: output mode. */
-typedef struct DisplayHdmiMode {
-	SceUInt16 vic;			/* 0x00 */
-	SceUInt16 format[4];		/* 0x02: from the pixel format; [2]: colour depth */
-	SceUInt16 reserved[3];		/* 0x0a */
-} DisplayHdmiMode;
 
 /* display.c */
 extern DisplayHead heads[DISPLAY_HEAD_COUNT];

@@ -56,8 +56,6 @@
 #define CEC_EVENT_STANDBY		0x20000
 #define CEC_EVENT_ALL			0x3000f
 
-#define CEC_KEY_NONE			0xff
-#define CEC_KEY_PRESSED			0x10000000
 
 #define CEC_PASS_THROUGH_USEC		500000	/* a key is released when nothing follows */
 #define CEC_ONE_TOUCH_PLAY_USEC		5000000
@@ -86,13 +84,6 @@ typedef struct CecOpcode {
 	int (*receive)(const CecMessage *msg);		/* 0x08 */
 } CecOpcode;
 
-/* A remote control key for the key callback (SceHdmiForDriver_05174BC2). */
-typedef struct CecKey {
-	SceUInt32 buttons;		/* 0x00: SceCtrl buttons */
-	SceUInt32 code;			/* 0x04: key code, CEC_KEY_NONE: released */
-	SceUInt32 flags;		/* 0x08: CEC_KEY_PRESSED */
-} CecKey;
-
 /* CecWork.status */
 #define CEC_STATUS_ENABLED		0x0001	/* sceHdmiCecEnableCec */
 #define CEC_STATUS_ALLOCATED		0x0002	/* a logical address is allocated */
@@ -117,7 +108,7 @@ typedef struct CecWork {
 	SceUID passThroughTimer;	/* 0xf20 */
 	int passThroughMode;		/* 0xf24: 1: circle enters */
 	void (*standbyCallback)(int event);	/* 0xf28: event 1: standby */
-	void (*keyCallback)(CecKey *key);	/* 0xf2c */
+	CecKeyCallback keyCallback;		/* 0xf2c */
 } CecWork;
 
 /* .data */
@@ -1091,7 +1082,7 @@ int SceHdmiForDriver_D929E4E5(void)
 	return 0;
 }
 
-int SceHdmiForDriver_05174BC2(void (*callback)(CecKey *key))
+int SceHdmiForDriver_05174BC2(CecKeyCallback callback)
 {
 	work.keyCallback = callback;
 	return 0;

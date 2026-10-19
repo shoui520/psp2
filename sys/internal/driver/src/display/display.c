@@ -32,7 +32,6 @@
 #include <kernel/error.h>
 #include <sysmem/sysevent_ids.h>
 #include "display_internal.h"
-#include "display_imports.h"
 
 DisplayHead heads[DISPLAY_HEAD_COUNT];
 int hdmiOnly;				/* no main panel: head 0 drives HDMI */

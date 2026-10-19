@@ -21,10 +21,6 @@
 #include <sysmem/suspend.h>
 #include <sysmem/sysroot.h>
 
-/* Sony computes the remainder and quotient through separate runtime calls. */
-unsigned int __aeabi_uidiv(unsigned int numerator, unsigned int denominator);
-SceUInt64 __aeabi_uldivmod(SceUInt64 numerator, SceUInt64 denominator);
-
 #define STTYP_CPUS		4
 #define STTYP_BUF_SIZE		0x100
 #define STTYP_LINE_MAX		0xff

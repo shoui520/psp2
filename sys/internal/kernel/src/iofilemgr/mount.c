@@ -455,7 +455,7 @@ int mnt_get_mount_opt(int id)
 	return ret;
 }
 
-SceClass g_mountEventClass;
+struct ThreadmgrWaitableClass g_mountEventClass;
 
 static inline __attribute__((always_inline)) MountPoint *mntFindFreeMountPoint(void)
 {
@@ -1071,10 +1071,10 @@ SceUID sceIoCreateMountEvent(SceUInt32 id, SceUInt32 pattern)
 			break;
 	}
 	name[sizeof(name) - 1] = '\0';
-	uid = sceGUIDKernelCreate(&g_mountEventClass, name, (SceObjectBase **)&event);
+	uid = sceGUIDKernelCreate(&g_mountEventClass.base, name, (SceObjectBase **)&event);
 	if (uid < 0)
 		return uid;
-	ret = sceKernelEventObjectInit(uid, 0x100, 0, 0, 0);
+	ret = sceKernelEventObjectInit(uid, 0x100, 0, 0);
 	if (ret < 0) {
 		closed = sceGUIDClose(uid);
 		SCE_DBG_ASSERT_FUNC(closed == 0, 1641, "sceIoCreateMountEvent");
@@ -1115,7 +1115,7 @@ int sceIoDeleteMountEvent(SceUID uid)
 	if (handle < 0)
 		return handle;
 	if (!SceSysmemForKernel_7F7D5C4A(SceSysmemForKernel_368F1C36(uid),
-					 &g_mountEventClass))
+					 &g_mountEventClass.base))
 		return 0x80028002;
 	event = SceSysmemForKernel_FA6C098C(uid);
 	sceGUIDClose(handle);
@@ -1167,7 +1167,7 @@ int mount_event_process_finalize(SceUID pid)
 	int ret, i;
 
 	do {
-		ret = scePUIDGetUIDVectorByClass(pid, &g_mountEventClass, 7, puids, 64, &num);
+		ret = scePUIDGetUIDVectorByClass(pid, &g_mountEventClass.base, 7, puids, 64, &num);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xf, 1742,
 				"scePUIDGetUIDVectorByClass failed 0x%x %d\n", ret, ret);

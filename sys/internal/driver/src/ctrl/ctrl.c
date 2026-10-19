@@ -13,6 +13,7 @@
 #include <threadmgr/threadmgr.h>
 #include <intrmgr/syscall.h>
 #include <sysmem/sysmem.h>
+#include <hdmi/hdmi.h>
 
 struct ctrlStorage ctrlStorage = {
 	.bdRemoconNotify = 0xff,
@@ -1948,15 +1949,15 @@ int _sceCtrlBdRemoconSendNotify(uint32_t notify)
 	return 0;
 }
 
-int _sceCtrlBdRemoconSendMergedNotify(const SceHdmiBdRemoconState *state)
+int _sceCtrlBdRemoconSendMergedNotify(const CecKey *key)
 {
 	SceKernelIntrStatus intr;
 	uint32_t notify, current, buttons;
 	int result;
 
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
-	buttons = state->buttons;
-	notify = state->state | state->stateExt;
+	buttons = key->buttons;
+	notify = key->code | key->flags;
 	ctrlStorage.bdRemoconButtons = buttons;
 	SCE_DBG_ASSERT_CHECK(ctrlStorage.lock != 0, 2879);
 	if ((notify & 0xfff) == 0x43)
@@ -2031,8 +2032,7 @@ unlock:
 	return 0;
 }
 
-int SceHdmiForDriver_05174BC2(int (*callback)(const SceHdmiBdRemoconState *state))
-	__attribute__((weak));
+#pragma weak SceHdmiForDriver_05174BC2
 
 /* Name unknown: initializes the controller's kernel sampling state. */
 int ctrlInitialize(void)

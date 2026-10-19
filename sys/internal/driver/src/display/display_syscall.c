@@ -15,7 +15,6 @@
 #include <intrmgr/syscall.h>
 #include <kernel/error.h>
 #include "display_internal.h"
-#include "display_imports.h"
 
 /*
  * Syscalls. A kernel error returned to user mode gets bit 30 set; the user's
