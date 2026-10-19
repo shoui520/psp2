@@ -5940,8 +5940,8 @@ SceProcessObject *sceKernelUIDtoProcess(SceUID pid)
 }
 
 /* the coredump handler of the current process */
-#define SCE_KERNEL_ERROR_COREDUMP_NO_HANDLER	0x800a0001	/* name unknown */
-#define SCE_KERNEL_ERROR_COREDUMP_HANDLER_SET	0x800a0002	/* name unknown */
+#define SCE_COREDUMP_ERROR_NOT_REGISTERED	0x800a0001	/* the SDK's coredump.h */
+#define SCE_COREDUMP_ERROR_ALREADY_REGISTERED	0x800a0002
 
 int sceKernelRegisterCoredumpHandler(void *handler, SceSize stackSize, void *arg)
 {
@@ -5991,7 +5991,7 @@ int sceKernelRegisterCoredumpHandler(void *handler, SceSize stackSize, void *arg
 		process->coredumpArg = arg;
 		ret = 0;
 	} else {
-		ret = SCE_KERNEL_ERROR_COREDUMP_HANDLER_SET;
+		ret = SCE_COREDUMP_ERROR_ALREADY_REGISTERED;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->coredumpLock, intr);
 out:
@@ -6015,7 +6015,7 @@ int SceProcessmgrForDriver_33B3D026(void)
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->coredumpLock);
 		if (process->coredumpHandler == NULL) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&process->coredumpLock, intr);
-			ret = SCE_KERNEL_ERROR_COREDUMP_NO_HANDLER;
+			ret = SCE_COREDUMP_ERROR_NOT_REGISTERED;
 		} else {
 			block = process->coredumpStack;
 			process->coredumpHandler = NULL;
@@ -6057,7 +6057,7 @@ SceUID sceKernelCallCoredumpHandler(SceUID pid)
 		goto out;
 	pid = process->pid;
 	if (process->coredumpHandler == NULL) {
-		ret = SCE_KERNEL_ERROR_COREDUMP_NO_HANDLER;
+		ret = SCE_COREDUMP_ERROR_NOT_REGISTERED;
 		goto release;
 	}
 	opt.uStackMemid = process->coredumpStack;

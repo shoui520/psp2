@@ -35,7 +35,6 @@
 #define SCE_SBL_ERROR_LIC_NOT_DEVELOPMENT2	0x800f1333
 #define SCE_SBL_ERROR_LIC_OTHER_CONSOLE		0x800f1339
 #define SCE_SBL_ERROR_RTC_NO_CP			0x800f1002	/* name unknown */
-#define SCE_RTC_ERROR_BEFORE_EPOCH		0x80251002	/* name unknown */
 
 #define ACT_DIR			"tm0:activate"
 #define ACT_DAT_PATH		"tm0:activate/act.dat"
@@ -140,7 +139,7 @@ int licMgrGetCurrentTime(SceUInt32 *now)	/* name unknown */
 		if (ret != 0)
 			return ret;
 		if (tick.tick < RTC_TICK_UNIX_EPOCH)
-			return SCE_RTC_ERROR_BEFORE_EPOCH;
+			return SCE_RTC_ERROR_NOT_INITIALIZED;
 	}
 	*now = (tick.tick - RTC_TICK_UNIX_EPOCH) / 1000000;
 	return 0;
