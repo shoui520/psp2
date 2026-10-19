@@ -9,8 +9,6 @@
 #include <threadmgr/threadmgr.h>
 #include "rdrfp.h"
 
-#define RDRFP_DFMGR_ERROR_REQUESTED	0x80080007
-
 #define RDRFP_MOUNT_EVENT_MOUNTED	1
 #define RDRFP_MOUNT_EVENT_UNMOUNTED	2
 #define RDRFP_MOUNT_POINT_GAME_CARD	0xa00
@@ -80,7 +78,7 @@ static inline __attribute__((always_inline)) void rdrfpFSMainLoop(void)
 	while ((req = rdrfpDequeueRequest()) != NULL) {
 		packet = req->desc->packet;
 		ret = rdrfpFSCallCommandHandler(req, packet->type, packet, packet + 1);
-		if (ret < 0 && ret != (int)RDRFP_DFMGR_ERROR_REQUESTED)
+		if (ret < 0 && ret != (int)DFMGR_ERROR_BUSY)
 			SCE_DBG_PRINTF_WITH_INFO(0xf, 189, "rdrfpFSCommandHandler failed (0x%08x)\n", ret);
 	}
 	SCE_DBG_PRINTF_WITH_INFO(0xf, 194, "fatal: elem = NULL\n");

@@ -21,6 +21,9 @@ extern BootSaveArea bootSaveArea;
 /* name unknown: the KBL Param's QA flag "Allow Kernel Debug" */
 int IsAllowKernelDebug(void);
 
+/* the secure world's level 1 table */
+#define KBL_L1(_param)		((uint32_t *)(_param)->ttbr0.vbase)
+
 /* archive_tzs.c */
 int KblArchive(SceKernelBootParam *param);
 

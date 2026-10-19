@@ -15,16 +15,6 @@
 #include <threadmgr/threadmgr.h>
 #include "ttyp.h"
 
-#if FW_DEBUG
-#define TTYP_PRINTF(_line, _fmt, ...)	SCE_PRINTF_WITH_INFO(0xf, _line, _fmt, ##__VA_ARGS__)
-/* in code the original inlined into _func */
-#define TTYP_PRINTF_IN(_func, _line, _fmt, ...)	\
-	SceDebugForDriver_02B04343(0xf, SCE_DBGINFO_FUNC(_line, _func), _fmt, ##__VA_ARGS__)
-#else
-#define TTYP_PRINTF(_line, _fmt, ...)	do { } while (0)
-#define TTYP_PRINTF_IN(_func, _line, _fmt, ...)	do { } while (0)
-#endif
-
 /* (inlined as in the original: their assertions report the caller's caller) */
 #define TTYP_INLINE		static inline __attribute__((always_inline))
 

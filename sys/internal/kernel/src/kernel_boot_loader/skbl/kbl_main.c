@@ -64,9 +64,6 @@ extern const char compatSramImage[], compatSramResume[], compatSramResumeEnd[];
 #define NSKBL_ARCHIVE		0x50000004	/* kernel_boot_loader.self segment 3, ARZL */
 
 /* the window the secure world maps the scratchpad at while it fills it */
-/* the secure world's level 1 table */
-#define KBL_L1(_param)		((uint32_t *)(_param)->ttbr0.vbase)
-
 #define SPAD_WINDOW		0x10000000
 #define SPAD_WINDOW_EXEC	0x10100000	/* the same pages, executable */
 #define SPAD_WINDOW_SIZE	0x8000

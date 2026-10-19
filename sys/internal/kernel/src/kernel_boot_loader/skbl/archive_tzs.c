@@ -17,6 +17,7 @@
 #include <sysmem/debug.h>
 #include <kernel_boot_loader/kernel_boot_param.h>
 #include <sysmem/sysroot.h>
+#include "boot.h"
 #include "../../sysmem/sysmem_internal.h"
 
 /* the rest of the TrustZone kernel */
@@ -31,7 +32,6 @@ extern const char tzsSysmemArchive[];
 extern const char tzsExcpmgrImage[], tzsIntrMgrImage[], tzsBusErrorImage[];
 extern const char tzsSmschedImage[], tzsDriverTzsImage[], tzsImagesEnd[];
 
-#define KBL_L1(_param)		((uint32_t *)(_param)->ttbr0.vbase)
 #define ARCHIVE_MAP		0x1061d007	/* read/write/execute, global */
 #define ARCHIVE_DOMAIN		0xc
 #define ARCHIVE_DECODE_SIZE	0x1000000

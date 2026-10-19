@@ -2575,15 +2575,6 @@ void issueChangeThreadPriorityAndCpuAffinityIntrRequest(unsigned int cpuId, SceU
 	issueIntrRequest(cpuId, request);
 }
 
-#define INTR_SCHED_PROBE(symbol, label) \
-	static uint32_t symbol##ProbeId; \
-	volatile uintptr_t symbol##Handler; \
-	extern const char symbol##CodeSite[]; \
-	const struct ThreadmgrSchedProbeDescriptor symbol##Descriptor = { \
-		.probeId = &symbol##ProbeId, .provider = "__sched_", .name = label, \
-		.codeSite = symbol##CodeSite, .handler = &symbol##Handler, \
-	}
-
 /*
  * SceKernelThreadMgr (threadmgr.c): the thread manager's part in a
  * process's life. sceKernelThreadMgrProcessCreate gives a new process its
@@ -3381,21 +3372,12 @@ void setupThreadExit(struct ThreadCB *thread, uint32_t request)
 typedef void (*ThreadmgrQueueProbe)(const struct ThreadmgrSchedProbeDescriptor *probe,
 				    SceUID threadId, SceUID processId, unsigned int cpu);
 
-#define SCHED_PROBE(symbol, probeName)						\
-	static uint32_t symbol##ProbeId;						\
-	volatile uintptr_t symbol##Handler;					\
-	extern const char symbol##CodeSite[];					\
-	const struct ThreadmgrSchedProbeDescriptor symbol##Descriptor = {	\
-		.probeId = &symbol##ProbeId, .provider = "__sched_", .name = probeName, \
-		.codeSite = symbol##CodeSite, .handler = &symbol##Handler,	\
-	}
-
-SCHED_PROBE(s_schedGlobalEnqueue, "enqueue");
-SCHED_PROBE(s_schedCpuEnqueue, "enqueue");
-SCHED_PROBE(s_schedGlobalDequeue, "dequeue");
-SCHED_PROBE(s_schedCpuDequeue, "dequeue");
-SCHED_PROBE(s_schedGlobalEnqueueTop, "enqueue");
-SCHED_PROBE(s_schedCpuEnqueueTop, "enqueue");
+SCHED_PROBE(s_schedGlobalEnqueue, "__sched_", "enqueue");
+SCHED_PROBE(s_schedCpuEnqueue, "__sched_", "enqueue");
+SCHED_PROBE(s_schedGlobalDequeue, "__sched_", "dequeue");
+SCHED_PROBE(s_schedCpuDequeue, "__sched_", "dequeue");
+SCHED_PROBE(s_schedGlobalEnqueueTop, "__sched_", "enqueue");
+SCHED_PROBE(s_schedCpuEnqueueTop, "__sched_", "enqueue");
 
 /* the ID the probes report: the thread's UID in its process, if it has one */
 static inline SceUID probeThreadId(volatile struct ThreadCB *thread)

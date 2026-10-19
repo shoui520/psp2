@@ -10,8 +10,6 @@
 #include <threadmgr/threadmgr.h>
 #include "rdrfp.h"
 
-#define RDRFP_DFMGR_ERROR_REQUESTED	0x80080007
-
 /* host errors: 0x12000 + the errno */
 #define RDRFP_ERROR(errno)		(0x12000 + (errno))
 #define RDRFP_ERROR_ENOENT		RDRFP_ERROR(2)
@@ -963,7 +961,7 @@ static int sendReadRes(RdrfpRequest *req, RdrfpHeader *packet, void *args)
 			rdrfpSetDesc(pieceReq->desc, RDRFP_BUF_READ, index, reply, data, piece, left <= piece);
 			setReadReply(reply, piece, id & 0xffff, 0, multi, total, seq);
 			ret = rdrfpSendPacket(pieceReq);
-			if (ret < 0 && ret != (int)RDRFP_DFMGR_ERROR_REQUESTED) {
+			if (ret < 0 && ret != (int)DFMGR_ERROR_BUSY) {
 				SCE_DBG_PRINTF_WITH_INFO(0xf, 516, "rdrfpSendPacket failed? (0x%08x)\n", ret);
 				if (left > piece)
 					rdrfpReleaseBuffer(RDRFP_BUF_READ, index);
@@ -985,7 +983,7 @@ static int sendReadRes(RdrfpRequest *req, RdrfpHeader *packet, void *args)
 			/* the data ended on a whole packet: an empty one ends it */
 			setReadReply((RdrfpReadReplyPacket *)packet, 0, id & 0xffff, 0, multi, total, seq);
 			ret = rdrfpSendPacket(req);
-			if (ret >= 0 || ret == (int)RDRFP_DFMGR_ERROR_REQUESTED)
+			if (ret >= 0 || ret == (int)DFMGR_ERROR_BUSY)
 				return 0;
 			result = RDRFP_ERROR_EIO;
 			SCE_DBG_PRINTF_WITH_INFO(0xf, 516, "rdrfpSendPacket failed? (0x%08x)\n", ret);
@@ -1010,7 +1008,7 @@ requeue:
 reply_error:
 	setReadReply((RdrfpReadReplyPacket *)packet, 0, id & 0xffff, result, multi, total, seq);
 	ret = rdrfpSendPacket(req);
-	if (ret < 0 && ret != (int)RDRFP_DFMGR_ERROR_REQUESTED)
+	if (ret < 0 && ret != (int)DFMGR_ERROR_BUSY)
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 516, "rdrfpSendPacket failed? (0x%08x)\n", ret);
 	else
 		ret = 0;

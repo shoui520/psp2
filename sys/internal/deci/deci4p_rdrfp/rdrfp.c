@@ -8,8 +8,6 @@
 #include <kernel/modulemgr.h>
 #include "rdrfp.h"
 
-#define RDRFP_DFMGR_ERROR_REQUESTED		0x80080007	/* name unknown: already requested */
-
 static RdrfpQueue rdrfpSendQueue;
 RdrfpContext rdrfp;
 static SceUID rdrfpHeap;
@@ -92,7 +90,7 @@ int rdrfpSendPacket(RdrfpRequest *req)
 
 	rdrfpEnqueue(&rdrfpSendQueue, req);
 	ret = sceDfMgrReqSend(rdrfp.handle);
-	if (ret < 0 && ret != (int)RDRFP_DFMGR_ERROR_REQUESTED) {
+	if (ret < 0 && ret != (int)DFMGR_ERROR_BUSY) {
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 222, "ReqSend failed (0x%08x)\n", ret);
 		rdrfpRemoveFromQueue(&rdrfpSendQueue, req);
 		desc = req->desc;
@@ -414,7 +412,7 @@ static inline __attribute__((always_inline)) int WriteDoneHandler(RdrfpContext *
 	rdrfpCurrentSending = NULL;
 	if (!rdrfpIsQueueEmpty(&rdrfpSendQueue)) {
 		ret = sceDfMgrReqSend(ctx->handle);
-		if (ret < 0 && ret != (int)RDRFP_DFMGR_ERROR_REQUESTED) {
+		if (ret < 0 && ret != (int)DFMGR_ERROR_BUSY) {
 			SCE_PRINTF_WITH_INFO(0xf, 330, "(0x%08x)\n", ret);
 			return 0;
 		}

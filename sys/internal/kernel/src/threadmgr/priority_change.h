@@ -12,6 +12,16 @@ struct ThreadmgrSchedProbeDescriptor {
 	uint32_t reserved[5];
 };
 
+/* a probe site: its ID, its handler and the descriptor that names its code site */
+#define SCHED_PROBE(symbol, providerName, probeName)				\
+	static uint32_t symbol##ProbeId;						\
+	volatile uintptr_t symbol##Handler;					\
+	extern const char symbol##CodeSite[];					\
+	const struct ThreadmgrSchedProbeDescriptor symbol##Descriptor = {	\
+		.probeId = &symbol##ProbeId, .provider = providerName, .name = probeName, \
+		.codeSite = symbol##CodeSite, .handler = &symbol##Handler,	\
+	}
+
 extern volatile uintptr_t s_schedChangePriorityHandler;
 extern const struct ThreadmgrSchedProbeDescriptor s_schedChangePriorityDescriptor;
 

@@ -10,16 +10,27 @@
 
 #pragma once
 
+#include <fw.h>
 #include <scetypes.h>
+#include <sysmem/debug.h>
 #include <deci4p_dfmgr/deci4p.h>
 #include <kernel/error.h>
+
+/* the debug output, in the debug builds only */
+#if FW_DEBUG
+#define TTYP_PRINTF(_line, _fmt, ...)	SCE_PRINTF_WITH_INFO(0xf, _line, _fmt, ##__VA_ARGS__)
+/* in code the original inlined into _func */
+#define TTYP_PRINTF_IN(_func, _line, _fmt, ...)	\
+	SceDebugForDriver_02B04343(0xf, SCE_DBGINFO_FUNC(_line, _func), _fmt, ##__VA_ARGS__)
+#else
+#define TTYP_PRINTF(_line, _fmt, ...)	do { } while (0)
+#define TTYP_PRINTF_IN(_func, _line, _fmt, ...)	do { } while (0)
+#endif
 
 #define TTYP_CHANNELS		8
 #define TTYP_RESOURCES		3
 #define TTYP_DATA_MAX		0x1000
 #define TTYP_IN_SIZE		0x400
-
-
 
 /* an output packet */
 typedef struct TtypResource {

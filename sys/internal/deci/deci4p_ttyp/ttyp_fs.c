@@ -13,12 +13,6 @@
 #define TTYP_IOCTL_SET_PID	0x6400		/* in: 8 bytes, the first word a process id */
 #define TTYP_IOCTL_CLEAR_PID	0x6401
 
-#if FW_DEBUG
-#define TTYP_PRINTF(_line, _fmt, ...)	SCE_PRINTF_WITH_INFO(0xf, _line, _fmt, ##__VA_ARGS__)
-#else
-#define TTYP_PRINTF(_line, _fmt, ...)	do { } while (0)
-#endif
-
 static SceVfsInfo s_vfsInfo;
 
 /* name unknown */

@@ -94,15 +94,6 @@ static inline __attribute__((always_inline)) void distributePreemptedThread(
 
 typedef void (*ThreadmgrOffCpuProbe)(const struct ThreadmgrSchedProbeDescriptor *probe, ...);
 
-#define SCHED_PROBE(symbol, providerName, probeName)				\
-	static uint32_t symbol##ProbeId;						\
-	volatile uintptr_t symbol##Handler;					\
-	extern const char symbol##CodeSite[];					\
-	const struct ThreadmgrSchedProbeDescriptor symbol##Descriptor = {	\
-		.probeId = &symbol##ProbeId, .provider = providerName, .name = probeName, \
-		.codeSite = symbol##CodeSite, .handler = &symbol##Handler,	\
-	}
-
 SCHED_PROBE(s_schedWait, "__sched_", "wait");
 SCHED_PROBE(s_schedPreempt, "__sched_", "preempt");
 SCHED_PROBE(s_schedOffCpu, "__sched_", "off__cpu");
@@ -363,18 +354,9 @@ int SceThreadmgrForKernel_BB56D42F(void)
 	return 1;
 }
 
-#define INTR_SCHED_PROBE(symbol, label) \
-	static uint32_t symbol##ProbeId; \
-	volatile uintptr_t symbol##Handler; \
-	extern const char symbol##CodeSite[]; \
-	const struct ThreadmgrSchedProbeDescriptor symbol##Descriptor = { \
-		.probeId = &symbol##ProbeId, .provider = "__sched_", .name = label, \
-		.codeSite = symbol##CodeSite, .handler = &symbol##Handler, \
-	}
-
-INTR_SCHED_PROBE(s_schedIntrWait, "wait");
-INTR_SCHED_PROBE(s_schedIntrPreempt, "preempt");
-INTR_SCHED_PROBE(s_schedIntrOffCpu, "off__cpu");
+SCHED_PROBE(s_schedIntrWait, "__sched_", "wait");
+SCHED_PROBE(s_schedIntrPreempt, "__sched_", "preempt");
+SCHED_PROBE(s_schedIntrOffCpu, "__sched_", "off__cpu");
 
 /* PLACEHOLDER: name. notifyOffCpu, from an interrupt (its own probe sites) */
 void notifyOffCpuIntr(uint32_t reason)
