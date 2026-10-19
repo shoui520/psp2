@@ -16,6 +16,6 @@ int SceMtpIfForDriver_05408B5B(const void *port, SceUInt32 timeout);	/* wait to 
 int SceMtpIfForDriver_8D16B997(const void *port, int phase);	/* change phase */
 int SceMtpIfForDriver_117F7519(const void *port, void *command);	/* receive a command */
 int SceMtpIfForDriver_5766D257(const void *port, const void *response);	/* send the response */
-int SceMtpIfForDriver_EDC3AB26(const void *port, const void *buffer, SceUInt32 size,
+int SceMtpIfForDriver_EDC3AB26(const void *port, void *buffer, SceUInt32 size,
 			       SceUInt32 total);		/* send data */
 int SceMtpIfForDriver_F0FA2D86(const void *port, void *buffer, SceUInt32 size);	/* receive data */

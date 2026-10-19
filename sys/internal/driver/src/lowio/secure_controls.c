@@ -1,5 +1,6 @@
 /* GRAB secure-monitor services. Their private argument names remain unknown. */
 #include "lowio_internal.h"
+#include <lowio/grab.h>
 
 uint32_t Smc11B(uint32_t, uint32_t, uint32_t, uint32_t);
 uint32_t Smc11C(uint32_t, uint32_t, uint32_t, uint32_t);

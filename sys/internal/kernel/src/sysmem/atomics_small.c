@@ -1,5 +1,6 @@
 /* Shared byte/halfword atomic primitives preserve native signed returns. */
 #include <sysmem/atomic.h>
+#include <sysmem/cpu.h>
 
 void SceCpuForDriver_0836537E(int8_t *address, int8_t value)
 {

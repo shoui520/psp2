@@ -7,6 +7,7 @@
 #include "sysmem_internal.h"
 #include <sysmem/sysevent.h>
 #include "sysevent_internal.h"
+#include <sysmem/suspend.h>
 
 /* a handler's list link */
 typedef struct SysEventLink {

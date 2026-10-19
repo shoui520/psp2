@@ -12,6 +12,7 @@
 #include "post_ss_mgr_internal.h"
 #include <acmgr/acmgr.h>
 #include <sysmem/sysroot.h>
+#include <post_ss_mgr/sblutmgr.h>
 
 #define SCE_SBL_ERROR_UT_NOT_FOUND		0x800f1a02	/* names unknown */
 #define SCE_SBL_ERROR_UT_NO_MEMORY		0x800f1a0c

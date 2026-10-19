@@ -11,6 +11,7 @@
 #include <sysmem/suspend.h>
 #include <lowio/gpio_regs.h>
 #include <lowio/pervasive.h>
+#include <sysmem/debugled.h>
 
 #define LED_GPO_SHIFT			16
 #define LED_GPO_BITS			0xff0000

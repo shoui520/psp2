@@ -1,5 +1,6 @@
 /* Shared64-bit atomic primitives; doubleword exclusives stay in the common header. */
 #include <sysmem/atomic.h>
+#include <sysmem/cpu.h>
 
 uint64_t SceCpuForDriver_4B527009(uint64_t *address, uint64_t expected,
 		uint64_t replacement)

@@ -20,6 +20,7 @@
 #include <sysmem/barrier.h>
 #include <sysmem/cpu_id.h>
 #include <threadmgr/threadcb.h>
+#include <sysmem/cpu.h>
 
 int SceCpuForDriver_821FC0EE(void);
 int sceKernelCpuResumeIntr(int flags);

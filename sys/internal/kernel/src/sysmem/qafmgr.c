@@ -4,6 +4,7 @@
  */
 
 #include <kernel_boot_loader/kbl_param.h>
+#include <sysmem/qafmgr.h>
 
 SceKblParam *SceSysrootForKernel_9DB56D1F(void);
 

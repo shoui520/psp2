@@ -9,6 +9,7 @@
 #include "app_state_internal.h"
 #include "appmgr_shell_event.h"
 #include <sysmem/sysroot.h>
+#include <appmgr/appmgr_rdrfp.h>
 
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;

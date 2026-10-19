@@ -2,6 +2,7 @@
 #include "lowio_internal.h"
 #include <threadmgr/threadmgr.h>
 #include <touch_dummy/touch_dummy.h>
+#include <lowio/cdram.h>
 
 uint32_t Smc117(uint32_t command);
 static volatile uint32_t s_cdramReady;

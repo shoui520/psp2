@@ -9,6 +9,7 @@
 #include <sysmem/uid_class.h>
 #include <string.h>
 #include <iofilemgr/iofilemgr.h>
+#include <coredump/coredump.h>
 
 /* a CAF transform's state behind a UID */
 typedef struct CafContextObject {

@@ -28,6 +28,7 @@
 #if SYSMEM_NSKBL
 #include <string.h>
 #include <kernel_boot_loader/kernel_boot_param.h>
+#include <sysmem/sysmem.h>
 #endif
 
 /* 16 bytes sysroot copies whole (a session ID, the debug flags) */

@@ -10,6 +10,7 @@
 #include <processmgr/processmgr.h>
 #include <processmgr/process_info.h>
 #include <sysmem/sysroot_processmgr.h>
+#include <kernel/processmgr.h>
 
 /* the process private memory (PPM): per slot one 0x4000 byte area for the
  * address space and one 0x1000 byte area for process objects */

@@ -15,6 +15,7 @@
 #include <sysmem/debug.h>
 #include <sysmem/pl310_regs.h>
 #include <sysmem/barrier.h>
+#include <sysmem/cpu.h>
 
 /* physical until sceKernelL2CacheRemap maps the registers; l2cc_maintenance.S reads it */
 ScePl310Registers *volatile s_cpuL2RegisterBase =

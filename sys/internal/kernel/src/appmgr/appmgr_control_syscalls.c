@@ -1,6 +1,7 @@
 /* Public control system calls; the family filename is inferred. */
 
 #include <intrmgr/syscall_copy.h>
+#include <appmgr/appmgr.h>
 
 extern int appmgrSetBackRenderPortOwnerSyscall(int appId);
 extern int appmgrIsCameraActiveSyscall(int appId, int *active);

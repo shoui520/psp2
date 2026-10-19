@@ -5,6 +5,7 @@
 #include <threadmgr/threadmgr.h>
 #include <intrmgr/syscall.h>
 #include <string.h>
+#include <hid/hid.h>
 
 HidHintCallbacks hidMouseCallbacks;
 unsigned int hidCallbacksInitialized;

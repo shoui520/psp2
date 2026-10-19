@@ -14,6 +14,7 @@
 #include <bt/bt_test.h>
 #include <sysmem/sysmem.h>
 #include "bt_internal.h"
+#include <bt/bt.h>
 
 /* Name unknown; the final argument selects user-buffer copying. */
 int GetRegisteredInfo(uint64_t deviceAddress, void *buffer, int maxCount,

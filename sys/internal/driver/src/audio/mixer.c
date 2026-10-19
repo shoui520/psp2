@@ -11,6 +11,7 @@
 #include "audio_private.h"
 #include <lowio/pervasive.h>
 #include <processmgr/processmgr.h>
+#include <audio/audio.h>
 
 int audioSubmitDmaBuffer(uintptr_t sourceAddress, unsigned int wordCount,
 			 unsigned int bank, unsigned int stream);

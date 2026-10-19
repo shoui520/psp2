@@ -7,6 +7,7 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/sysevent.h>
 #include <lowio/pervasive.h>
+#include <lowio/gpio.h>
 
 #define GPIO_ERROR_BANK ((int)0x803f0100)
 #define GPIO_ERROR_PORT ((int)0x803f0101)

@@ -10,6 +10,7 @@
 #include <sysmem/sysroot.h>
 #include "post_ss_mgr_internal.h"
 #include <sysmem/qafmgr.h>
+#include <post_ss_mgr/sblfwloader.h>
 
 #define SCE_SBL_ERROR_FWLOADER_INVALID_ARGUMENT	0x800f0e16	/* names unknown */
 #define SCE_SBL_ERROR_FWLOADER_NOT_LOCKED	0x800f0e29

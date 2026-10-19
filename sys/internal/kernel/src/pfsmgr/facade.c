@@ -8,6 +8,7 @@
 #include <threadmgr/threadmgr.h>
 #include <iofilemgr/iofilemgr.h>
 #include "pfsmgr_internal.h"
+#include <pfsmgr/pfsfacade.h>
 
 #define SCE_PFS_ERROR_FACADE_UNSUPPORTED	0x8014231c	/* name unknown */
 

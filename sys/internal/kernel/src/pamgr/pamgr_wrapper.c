@@ -6,6 +6,7 @@
 #include <threadmgr/threadmgr.h>
 #include <kernel/error.h>
 #include <sysmem/procevent.h>
+#include <pamgr/pamgr.h>
 
 uint64_t ScePamgrForDriver_FE9BFD27(void);
 int setTraceWritePointer(uint32_t pointer);
@@ -346,7 +347,7 @@ int sceKernelPaUnregister(uint32_t registration)
 	return result;
 }
 
-int sceKernelPaRegisterShared(uint32_t first, uint32_t second)
+int sceKernelPaRegisterShared(uint64_t key)
 {
 	int result, unlocked;
 
@@ -362,8 +363,7 @@ int sceKernelPaRegisterShared(uint32_t first, uint32_t second)
 		pamgrState.registrationId = result;
 		pamgrState.registrationProcess = sceKernelGetProcessId();
 		pamgrState.registrationShared = 1;
-		pamgrState.sharedKeyFirst = first;
-		pamgrState.sharedKeySecond = second;
+		pamgrState.sharedKey = key;
 	}
 	unlocked = sceKernelUnlockFastMutex(&pamgrState.registrationMutex);
 	if (unlocked < 0) {
@@ -375,20 +375,20 @@ int sceKernelPaRegisterShared(uint32_t first, uint32_t second)
 }
 
 /* ForUser suffixes distinguish the separate user-library ABI entries. */
-int sceKernelPaGetSharedKey(uint32_t first, uint32_t second)
+int sceKernelPaGetSharedKey(uint64_t key)
 {
 	if (pamgrState.registrationShared != 1)
 		return SCE_KERNEL_ERROR_PA_KEY_IS_NOT_SHARED;
-	if (first != pamgrState.sharedKeyFirst || second != pamgrState.sharedKeySecond)
+	if (key != pamgrState.sharedKey)
 		return SCE_KERNEL_ERROR_PA_INVALID_SIGNATURE;
 	return pamgrState.registrationId;
 }
 
-int ScePamgrForDriver_0D04B52A(uint32_t first, uint32_t second)
+int ScePamgrForDriver_0D04B52A(uint64_t key)
 {
 	if (pamgrState.registrationShared != 1)
 		return SCE_KERNEL_ERROR_PA_KEY_IS_NOT_SHARED;
-	if (first != pamgrState.sharedKeyFirst || second != pamgrState.sharedKeySecond)
+	if (key != pamgrState.sharedKey)
 		return SCE_KERNEL_ERROR_PA_INVALID_SIGNATURE;
 	return pamgrState.registrationId;
 }
@@ -403,9 +403,9 @@ int sceKernelPaUnregisterForUser(uint32_t registration)
 	return sceKernelPaUnregister(registration);
 }
 
-int sceKernelPaRegisterSharedForUser(uint32_t first, uint32_t second)
+int sceKernelPaRegisterSharedForUser(uint64_t key)
 {
-	return sceKernelPaRegisterShared(first, second);
+	return sceKernelPaRegisterShared(key);
 }
 
 int ScePamgrForDriver_50FD85C8(uint32_t registration)

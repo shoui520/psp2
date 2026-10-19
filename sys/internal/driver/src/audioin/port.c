@@ -10,6 +10,7 @@
 #include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/fast_mutex_object.h>
+#include <audioin/audioin.h>
 
 extern const SceKernelProcEventHandler g_audioInProcEventHandler;
 

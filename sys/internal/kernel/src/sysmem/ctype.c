@@ -1,5 +1,6 @@
 /* Sysclib ASCII classifications, identical in all four firmware originals. */
 #include <stdint.h>
+#include <sysmem/sysclib.h>
 
 enum AsciiClass {
 	ASCII_UPPER = 0x01,

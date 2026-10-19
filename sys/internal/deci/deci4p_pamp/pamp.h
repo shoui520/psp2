@@ -129,11 +129,10 @@ typedef struct PampContext {
 	int handle;
 	SceUInt32 state;
 	SceUInt32 received;
-	SceUInt32 paConfig[5];
-	SceUInt32 pmuAddress;
-	SceUInt32 pmuSize;
-	SceUInt16 pmuConfig[2];
-	SceUInt32 sampleConfig[11];
+	struct PamgrPrimaryTraceConfig paConfig;
+	struct PamgrTraceBufferConfig pmuConfig;
+	struct PamgrSampleConfig sampleConfig;
+	SceUInt32 pmuFlags;		/* the last PMU request's flags, reported back */
 	SceUInt32 flags;
 	SceUInt32 traced;
 	SceUInt32 sequence;

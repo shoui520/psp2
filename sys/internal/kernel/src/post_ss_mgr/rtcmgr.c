@@ -7,6 +7,7 @@
 #include <threadmgr/threadmgr.h>
 #include <intrmgr/syscall.h>
 #include "post_ss_mgr_internal.h"
+#include <post_ss_mgr/sblrtcmgr.h>
 
 #define SCE_SBL_ERROR_RTC_NO_CP			0x800f1002	/* names unknown */
 #define SCE_SBL_ERROR_RTC_CP			0x800f1005

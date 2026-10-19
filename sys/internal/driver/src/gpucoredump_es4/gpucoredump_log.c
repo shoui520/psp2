@@ -8,7 +8,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include "gpucoredump.h"
-#include <gpucoredump_es4/gpucoredump_es4_imports.h>
 
 #define GPU_COREDUMP_LINE_MAX		0x200
 

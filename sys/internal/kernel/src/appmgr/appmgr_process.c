@@ -14,6 +14,7 @@
 #include <appmgr/appmgr.h>
 #include <npdrm/npdrm.h>
 #include <avcodec/avcodec.h>
+#include <appmgr/appmgr_rdrfp.h>
 
 extern int appmgrUsesGxmDebugger(SceUID pid);
 

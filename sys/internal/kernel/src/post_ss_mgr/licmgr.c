@@ -18,6 +18,7 @@
 #include <rtc/rtc.h>
 #include <post_ss_mgr/sblpostssmgr.h>
 #include <ss_mgr/ss_mgr.h>
+#include <post_ss_mgr/sbllicmgr.h>
 
 #define SCE_SBL_ERROR_LIC_KBL			0x800f1028	/* names unknown */
 #define SCE_SBL_ERROR_LIC_NOT_FOUND		0x800f1302

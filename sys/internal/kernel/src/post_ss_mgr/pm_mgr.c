@@ -10,6 +10,7 @@
 #include <sysmem/sysmem.h>
 #include <intrmgr/syscall.h>
 #include "post_ss_mgr_internal.h"
+#include <post_ss_mgr/sblpmmgr.h>
 
 #define PM_SM_PATH		"os0:sm/pm_sm.self"
 #define PM_SM_SD_PATH		"sd0:sm/pm_sm_sd.self"

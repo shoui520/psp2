@@ -12,6 +12,7 @@
 #include <iofilemgr/iofilemgr.h>
 #include <sysmem/sblaimgr.h>
 #include "pfsmgr_internal.h"
+#include <pfsmgr/pfsmgr.h>
 
 #define PFS_IOCTL_ACID_DIR_SET		0x4401
 #define PFS_IOCTL_ACID_DIR_MOUNT	0x4402

@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <kernel_boot_loader/kbl_param.h>
 #include <ss_mgr/ss_mgr.h>
+#include <sysmem/sblaimgr.h>
 
 /* name unknown */
 #define AIMGR_ERROR_INVALID_ARGUMENT	0x800f0c16

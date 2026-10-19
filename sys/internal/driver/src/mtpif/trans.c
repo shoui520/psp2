@@ -7,6 +7,7 @@
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <intrmgr/syscall.h>
+#include <mtpif/mtpif_driver.h>
 
 #define MTP_INVALID	((int)0x80543603)
 #define MTP_UNAVAILABLE	((int)0x8054360c)

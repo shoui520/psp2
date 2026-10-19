@@ -7,7 +7,6 @@
 #include <iofilemgr/iofilemgr.h>
 #include <string.h>
 #include "gpucoredump.h"
-#include <gpucoredump_es4/gpucoredump_es4_imports.h>
 
 /* the file of the dump: a header, then each segment with its type and size */
 #define GPU_COREDUMP_FILE_MAGIC		0x01727a72

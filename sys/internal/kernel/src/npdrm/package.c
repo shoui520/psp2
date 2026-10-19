@@ -8,6 +8,7 @@
 #include <sysmem/sysmem.h>
 #include <intrmgr/syscall.h>
 #include <intrmgr/syscall_copy.h>
+#include <npdrm/npdrmpackage.h>
 
 #define NPDRM_BE32(value) \
 	((((value) & 0xff000000U) >> 24) | (((value) & 0x00ff0000U) >> 8) | \

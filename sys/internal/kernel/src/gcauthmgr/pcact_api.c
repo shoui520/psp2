@@ -4,6 +4,7 @@
 #include "pcact.h"
 #include <gcauthmgr/sblgcauthmgrmlnpsnl.h>
 #include <intrmgr/syscall.h>
+#include <gcauthmgr/sblgcauthmgrpsmact.h>
 
 int GcAuthPcactEncryptChallenge(const GcAuthPcactEncryptChallengeRequest *request);
 int GcAuthPcactGetAesDecryptKey(const GcAuthPcactKeyRequest *request);

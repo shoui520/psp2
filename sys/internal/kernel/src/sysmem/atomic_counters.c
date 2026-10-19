@@ -1,5 +1,6 @@
 /* Sysmem-specific counters use the shared exclusive-access primitives. */
 #include <sysmem/atomic.h>
+#include <sysmem/cpu.h>
 
 uint32_t SceCpuForKernel_0E04BD2E(uint32_t *address)
 {

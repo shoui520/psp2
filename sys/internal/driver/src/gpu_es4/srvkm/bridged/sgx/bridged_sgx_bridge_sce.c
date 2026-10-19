@@ -8,7 +8,7 @@
 #include "../../kick_sce.h"
 #include <gpu/misc_sce.h>
 #include <sysmem/debug.h>
-#include <gpucoredump_es4/gpucoredump_es4_imports.h>
+#include <gpu/gpu_es4_trace.h>
 #include <string.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>

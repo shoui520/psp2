@@ -9,6 +9,7 @@
 #include <threadmgr/threadmgr.h>
 #include <oled/oled.h>
 #include <lowio/pervasive.h>
+#include <lowio/i2c.h>
 
 #define I2C_ERROR_BUS ((int)0x803f0300)
 #define I2C_ERROR_SIZE ((int)0x803f0302)

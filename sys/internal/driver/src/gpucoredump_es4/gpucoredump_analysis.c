@@ -6,7 +6,6 @@
 #include <scetypes.h>
 #include <kernel/types.h>
 #include "gpucoredump.h"
-#include <gpucoredump_es4/gpucoredump_es4_imports.h>
 
 /* name unknown: the area of the GPU address space an address is in */
 const char *gpuCoreDumpRangeName(SceUInt32 address)

@@ -16,6 +16,7 @@
 #include <processmgr/processmgr.h>
 #include <acmgr/acmgr.h>
 #include <pfsmgr/pfsmgr.h>
+#include <appmgr/appmgr_rdrfp.h>
 
 int appmgrExtractSaveDataDeviceName(const char *path, char *device,
 				    SceSize capacity);

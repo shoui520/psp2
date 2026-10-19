@@ -4,6 +4,7 @@
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include <string.h>
+#include <appmgr/appmgr_rdrfp.h>
 
 extern SceUID g_appmgrCoreHeap;
 extern SceUID g_appmgrAppMutex;

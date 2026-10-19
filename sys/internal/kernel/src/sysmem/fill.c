@@ -1,5 +1,6 @@
 /* The checked memset; the fill itself is SetMemoryCore (fill_core.S). */
 #include <stddef.h>
+#include <sysmem/sysclib.h>
 
 extern void *SetMemoryCore(void *destination, int value, size_t size);
 

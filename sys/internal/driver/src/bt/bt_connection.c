@@ -4,6 +4,7 @@
 #include <intrmgr/syscall.h>
 #include <bt/bt_pairing.h>
 #include "bt_internal.h"
+#include <bt/bt.h>
 
 extern BtStack gBtStack;
 int BtSendHciCommand(BtStack *stack, unsigned int opcode,

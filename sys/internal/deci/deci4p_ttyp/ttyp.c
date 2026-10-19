@@ -36,7 +36,7 @@
 #endif
 
 /* weak: the timestamp source may be absent */
-SceUInt64 ScePamgrForDriver_FE9BFD27(void) __attribute__((weak));
+#pragma weak ScePamgrForDriver_FE9BFD27
 
 static SceUID s_mutex;			/* queues, rings and resources */
 static SceUID s_sema;			/* free resources */

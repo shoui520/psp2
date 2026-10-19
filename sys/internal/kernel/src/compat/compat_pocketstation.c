@@ -4,6 +4,7 @@
 #include <acmgr/acmgr.h>
 #include <intrmgr/syscall.h>
 #include <sysmem/sysmem.h>
+#include <compat/compat.h>
 
 int compatIsPocketStationTitle(const signed char *titleId);
 

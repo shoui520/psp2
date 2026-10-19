@@ -15,6 +15,7 @@
 #include <processmgr/processmgr.h>
 #include <acmgr/acmgr.h>
 #include <intrmgr/intrmgr.h>
+#include <pamgr/pamgr.h>
 
 int checkDebugPermission(void);
 int configurePrimaryTrace(const volatile struct PamgrPrimaryTraceConfig *config);

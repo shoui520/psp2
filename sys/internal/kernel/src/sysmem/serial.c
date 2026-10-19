@@ -12,6 +12,7 @@
 #include <sysmem/suspend.h>
 #include <lowio/uart_regs.h>
 #include <lowio/pervasive.h>
+#include <sysmem/uart.h>
 
 /* what each build has */
 #if !defined(SYSMEM_TZS) && !defined(SYSMEM_NSKBL)

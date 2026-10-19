@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <fw.h>
 #include <sysmem/debug.h>
+#include <sysmem/sysclib.h>
 
 extern void *SetMemoryCore(void *destination, int value, size_t size);
 

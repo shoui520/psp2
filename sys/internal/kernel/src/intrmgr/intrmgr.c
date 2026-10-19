@@ -87,6 +87,7 @@ int ResumeController(int value, void *args)
 
 #if defined(INTRMGR_NSKBL)
 #include <sysmem/sysroot_init.h>
+#include <intrmgr/intrmgr_tzs.h>
 
 /* the block shared with the secure kernel (intrmgrSmc) */
 #define INTR_SHARED_MEMORY_SIZE	0xa000

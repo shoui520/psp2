@@ -6,6 +6,7 @@
  */
 
 #include <scetypes.h>
+#include <sysmem/sysmem.h>
 
 static inline SceUInt32 rotl32(SceUInt32 x, int r)
 {

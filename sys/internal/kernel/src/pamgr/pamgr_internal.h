@@ -12,32 +12,12 @@
 #include <pamgr/perfmon_regs.h>
 #include <pamgr/coresight_regs.h>
 #include <sysmem/cp15.h>
-#include <pamgr/pamgr_trace.h>
+#include <pamgr/pamgr.h>
 #include <sysmem/sysroot.h>
 
-typedef void (*PamgrTraceInterruptCallback)(uint32_t status, void *arg);
 typedef void (*PamgrSyscallEnterCallback)(ThreadSyscallFrame *frame);
 typedef void (*PamgrSyscallLeaveCallback)(ThreadSyscallFrame *frame,
 					 uint32_t *results);
-
-/* Counter trace configuration, with observed width constraints. */
-struct PamgrCounterTraceConfig {
-	uint16_t selection;
-	uint16_t interval;
-	uint32_t values[3];
-	uint32_t control;
-	uint8_t upperByte;
-	uint8_t lowerByte;
-	uint16_t flags;
-};
-
-/* Two bank controls and two groups of four hardware words. */
-struct PamgrSampleConfig {
-	uint32_t bank0Control;
-	uint32_t bank1Control;
-	uint32_t traceControls[4];
-	uint32_t buffer1Controls[4];
-};
 
 /* ETMLAR unlock key, ETMCR/ETMSR programming bit */
 /* arm_pmon.c: the Cortex-A9 performance monitor, per thread */
@@ -157,24 +137,10 @@ struct PamgrTpiuRegisters {
 	volatile uint32_t lockStatus;
 };
 
-struct PamgrArmTraceConfig {
-	uint32_t control;
-	uint32_t modeAndContext;
-	uint16_t timestampPeriod;	/* counter 1 reload: a timestamp each time it expires */
-	uint16_t counter2Period;	/* counter 2 reload */
-};
-
 /* Packed filter halves, upper limited to 12 bits by hardware. */
 struct PamgrPackedFilter {
 	uint16_t upper;
 	uint16_t lower;
-};
-
-struct PamgrTraceBufferConfig {
-	uint32_t base;
-	uint32_t size;
-	uint16_t eventMask0;
-	uint16_t eventMask1;
 };
 
 /* Remaining storage is kept at its current listing offsets until its users
@@ -255,8 +221,7 @@ struct PamgrState {
 	SceKernelFastMutex registrationMutex;
 	uint32_t registrationId;
 	SceUID registrationProcess;
-	uint32_t sharedKeyFirst;
-	uint32_t sharedKeySecond;
+	uint64_t sharedKey;		/* the 64-bit owner id of a shared registration */
 	int registrationShared;
 	uint8_t reserved[4];
 };

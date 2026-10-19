@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <fw.h>
 #include <sysmem/debug.h>
+#include <sysmem/sysclib.h>
 
 extern void *CopyMemoryForward(void *destination, const void *source, size_t size);
 

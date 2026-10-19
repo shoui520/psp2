@@ -21,6 +21,7 @@
 #include "equalizer.h"
 #include <sysmem/sysroot.h>
 #include <clockgen/clockgen.h>
+#include <audio/audio.h>
 
 /* This caller preserves the three arguments of the original call interface. */
 int SceCodecForDriver_CCDE1B04(int mode);

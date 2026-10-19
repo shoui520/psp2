@@ -4,6 +4,7 @@
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include <string.h>
+#include <hid/hid.h>
 
 int SceHidForDriver_A26B1E1C(SceUID *handle, int count)
 {

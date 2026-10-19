@@ -1,5 +1,6 @@
 /* The checked memcpy; the copy itself is CopyMemoryForward (copy_forward.S). */
 #include <stddef.h>
+#include <sysmem/sysclib.h>
 
 extern void *CopyMemoryForward(void *destination, const void *source, size_t size);
 

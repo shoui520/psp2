@@ -10,6 +10,7 @@
 #include "cpu_irq.h"
 #include <sysmem/sysclib.h>
 #include <sysmem/sysroot.h>
+#include <sysmem/cpu.h>
 
 /* Name unknown; only the callback prefix is accessed by CPU diagnostics. */
 struct CpuLongIrqHandlerRecord {

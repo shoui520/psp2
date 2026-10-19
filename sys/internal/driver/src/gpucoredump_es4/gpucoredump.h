@@ -11,8 +11,21 @@
 #include <scetypes.h>
 #include <modulemgr/modulemgr.h>
 #include <sysmem/des.h>
+#include <sysmem/sysclib.h>
+#include <sysmem/sysmem.h>
 #include <gpu/sgxmkif_sce.h>
 #include <gpu/sgx_regs.h>
+#include <gpu/gpu_es4_trace.h>
+#include <gpu/lockup.h>
+#include <gpu/gpu-mmu.h>
+#include <gpu/device_sce.h>
+#include <gpu/osfunc_sce.h>
+#include <pamgr/pamgr.h>
+#include <lowio/pervasive.h>
+#include <power/power.h>
+#include <iofilemgr/iofilemgr.h>
+#include <rtc/rtc.h>
+#include <regmgr/regmgr.h>
 
 /* what a captured value holds before the capture */
 #define GPU_COREDUMP_POISON		0x5ce0beef

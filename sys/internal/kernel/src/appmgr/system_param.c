@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <acmgr/acmgr.h>
+#include <appmgr/appmgr_rdrfp.h>
 
 extern SceUID g_appmgrAppMutex;
 

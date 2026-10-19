@@ -4,6 +4,7 @@
 #include <regmgr/regmgr.h>
 #include <intrmgr/syscall.h>
 #include <threadmgr/threadmgr.h>
+#include <appmgr/appmgr_rdrfp.h>
 
 extern SceUID g_appmgrAppMutex;
 

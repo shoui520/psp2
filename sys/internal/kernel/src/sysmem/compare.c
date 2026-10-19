@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <sysmem/barrier.h>
+#include <sysmem/sysclib.h>
 
 int timingsafe_memcmp(const void *left, const void *right, size_t count)
 {

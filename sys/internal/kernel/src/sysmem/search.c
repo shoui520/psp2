@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 
 char *strstr(const char *string, const char *substring)
 {
