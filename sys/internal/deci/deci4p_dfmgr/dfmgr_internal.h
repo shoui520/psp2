@@ -337,6 +337,5 @@ int usbInit(DfMgrLinkCB *link, DfMgrLinkCallback sendCallback,
 	    DfMgrLinkCallback recvCallback, SceUID *pSendEvf);
 int usbTerm(DfMgrLinkCB *link);
 
-/* exports */
-void sceDfMgrDcmpReqSendForLoadp(SceUInt32 result);
+/* dfmgr.c */
 int sceDfMgrInit(void);
