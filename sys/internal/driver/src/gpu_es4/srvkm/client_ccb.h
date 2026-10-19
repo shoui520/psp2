@@ -2,7 +2,7 @@
 #ifndef CLIENT_CCB_H
 #define CLIENT_CCB_H
 
-#include "memory_sce.h"
+#include <gpu/memory_sce.h>
 
 struct GpuCommandRing {
 	PVRSRV_KERNEL_MEM_INFO *psBufferMemInfo;

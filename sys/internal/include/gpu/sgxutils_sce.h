@@ -2,8 +2,8 @@
 #ifndef SGXUTILS_SCE_H
 #define SGXUTILS_SCE_H
 
-#include "sgxinit_sce.h"
-#include "resman_sce.h"
+#include <gpu/sgxinit_sce.h>
+#include <gpu/resman_sce.h>
 
 /* SCE: native contexts are supplied by the caller. The DDK cleanup
  * owners retain the device address separately from the memory owner.

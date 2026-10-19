@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <sysmem/debug.h>
 
-#include "../../gpu_es4/srvkm/gpu-heap.h"
+#include <gpu/gpu-heap.h>
 #include "../../gpu_es4/srvkm/gpu-blockheap.h"
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysclib.h>

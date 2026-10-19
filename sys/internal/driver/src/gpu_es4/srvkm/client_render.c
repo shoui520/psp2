@@ -1,15 +1,15 @@
 /* Licensed IMG client middleware recovered from the approved TOOL originals.
  * The released kernel-only DDK does not contain this client component.
  */
-#include "sce_ddk_port.h"
-#include "device_sce.h"
+#include <gpu/sce_ddk_port.h>
+#include <gpu/device_sce.h>
 #include "render_sce.h"
 #include "client_pb.h"
 #include "sync_sce.h"
-#include "perproc_sce.h"
+#include <gpu/perproc_sce.h>
 #include "transfer_sce.h"
 #include "client_ccb.h"
-#include "gpu-mmu.h"
+#include <gpu/gpu-mmu.h>
 #include "sgxtransfer_sce.h"
 #include <stddef.h>
 #include <string.h>

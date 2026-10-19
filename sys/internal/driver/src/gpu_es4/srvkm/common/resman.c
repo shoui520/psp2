@@ -1,5 +1,5 @@
 /* IMG common/resman.c base; native SCE deltas are marked locally. */
-#include "../resman_sce.h"
+#include <gpu/resman_sce.h>
 #include <stddef.h>
 #include <stdarg.h>
 

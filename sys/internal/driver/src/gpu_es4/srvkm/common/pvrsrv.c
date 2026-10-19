@@ -1,7 +1,7 @@
 /* IMG common/pvrsrv.c base; native SCE deltas are marked locally. */
-#include "../device_sce.h"
+#include <gpu/device_sce.h>
 #include "../gpu-dump.h"
-#include "../power_sce.h"
+#include <gpu/power_sce.h>
 #include <gpu/gpu_es4_trace.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/sblaimgr.h>

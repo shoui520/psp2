@@ -1,5 +1,5 @@
 /* Native GPU page-table pool and entry-validation prerequisites. */
-#include "../../gpu_es4/srvkm/gpu-mmu.h"
+#include <gpu/gpu-mmu.h>
 #include "../../gpu_es4/srvkm/gpu-blockheap.h"
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>

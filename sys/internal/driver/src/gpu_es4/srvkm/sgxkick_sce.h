@@ -4,7 +4,7 @@
 #ifndef SGXKICK_SCE_H
 #define SGXKICK_SCE_H
 
-#include "sgxinit_sce.h"
+#include <gpu/sgxinit_sce.h>
 #include "sync_sce.h"
 #include "transfer_sce.h"
 

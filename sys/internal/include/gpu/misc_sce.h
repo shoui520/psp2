@@ -4,7 +4,7 @@
 #ifndef MISC_SCE_H
 #define MISC_SCE_H
 
-#include "sce_ddk_port.h"
+#include <gpu/sce_ddk_port.h>
 
 typedef enum SGX_MISC_INFO_REQUEST {
 	SGX_MISC_INFO_REQUEST_CLOCKSPEED,

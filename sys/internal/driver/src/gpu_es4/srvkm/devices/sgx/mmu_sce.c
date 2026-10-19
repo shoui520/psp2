@@ -3,7 +3,7 @@
  */
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
-#include "../../device_sce.h"
+#include <gpu/device_sce.h>
 #include <stddef.h>
 
 IMG_VOID *OSMemSet(IMG_VOID *pvDest, IMG_INT32 iValue, IMG_SIZE_T ui32Size);

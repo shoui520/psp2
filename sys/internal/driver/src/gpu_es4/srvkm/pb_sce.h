@@ -2,7 +2,7 @@
 #ifndef PB_SCE_H
 #define PB_SCE_H
 
-#include "memory_sce.h"
+#include <gpu/memory_sce.h>
 
 typedef struct PVRSRV_STUB_PBDESC {
 	IMG_UINT32 ui32RefCount;

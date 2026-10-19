@@ -1,7 +1,7 @@
 /* IMG devices/sgx/sgxreset.c, GPL-2.0. Pristine candidate and license
  * remain in contrib/img-sgx-ddk-1.7.862890.
  */
-#include "device_sce.h"
+#include <gpu/device_sce.h>
 #include "sgx543_v1.164defs.h"
 #include "sgxmpdefs.h"
 

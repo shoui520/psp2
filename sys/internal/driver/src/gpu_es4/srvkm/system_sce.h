@@ -4,7 +4,7 @@
 #ifndef GPU_SYSTEM_SCE_H
 #define GPU_SYSTEM_SCE_H
 
-#include "device_sce.h"
+#include <gpu/device_sce.h>
 
 typedef struct _SYS_DATA_TAG_ SYS_DATA;
 typedef struct _PVRSRV_POWER_DEV_TAG_ PVRSRV_POWER_DEV;

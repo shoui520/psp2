@@ -3,10 +3,10 @@
 
 #include <scetypes.h>
 #include <gpu/sgxmkif_sce.h>
-#include "../gpu_es4/srvkm/sgxutils_sce.h"
-#include "../gpu_es4/srvkm/perproc_sce.h"
-#include "../gpu_es4/srvkm/power_sce.h"
-#include "../gpu_es4/srvkm/gpu-mmu.h"
+#include <gpu/sgxutils_sce.h>
+#include <gpu/perproc_sce.h>
+#include <gpu/power_sce.h>
+#include <gpu/gpu-mmu.h>
 #include <lowio/pervasive.h>
 #include <modulemgr/modulemgr.h>
 

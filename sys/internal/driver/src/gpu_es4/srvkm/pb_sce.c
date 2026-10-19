@@ -1,10 +1,10 @@
 /* IMG devices/sgx/pb.c, GPL-2.0; pristine candidate and license are in
  * contrib/img-sgx-ddk-1.7.862890. SCE omits the create-lock assertion.
  */
-#include "perproc_sce.h"
-#include "resman_sce.h"
+#include <gpu/perproc_sce.h>
+#include <gpu/resman_sce.h>
 #include "pb_sce.h"
-#include "device_sce.h"
+#include <gpu/device_sce.h>
 #include <stddef.h>
 
 #define PVRSRV_CLEANUPCMD_PB 0x5U

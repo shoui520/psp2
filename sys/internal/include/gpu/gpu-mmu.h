@@ -2,7 +2,7 @@
 #ifndef GPU_MMU_H
 #define GPU_MMU_H
 
-#include "gpu-heap.h"
+#include <gpu/gpu-heap.h>
 
 typedef struct GpuPageTablePool {
 	int uid;

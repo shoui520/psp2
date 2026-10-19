@@ -2,7 +2,7 @@
 #pragma once
 
 #include <stddef.h>
-#include "sgxinit_sce.h"
+#include <gpu/sgxinit_sce.h>
 #include "system_sce.h"
 #include "registerdump_sce.h"
 

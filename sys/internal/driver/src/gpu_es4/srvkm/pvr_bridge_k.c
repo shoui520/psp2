@@ -1,6 +1,6 @@
 /* IMG pvr_bridge_k.c entry with the SCE native syscall/suspend port. */
 #include "bridge_sce.h"
-#include "perproc_sce.h"
+#include <gpu/perproc_sce.h>
 #include <intrmgr/syscall.h>
 #include <stddef.h>
 

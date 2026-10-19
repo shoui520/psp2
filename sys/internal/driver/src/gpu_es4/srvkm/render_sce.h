@@ -2,7 +2,7 @@
 #ifndef RENDER_SCE_H
 #define RENDER_SCE_H
 
-#include "sce_ddk_port.h"
+#include <gpu/sce_ddk_port.h>
 
 struct PVRSRV_KERNEL_MEM_INFO;
 struct SGXMKIF_HWRTDATASET;

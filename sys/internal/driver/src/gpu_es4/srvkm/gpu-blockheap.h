@@ -2,7 +2,7 @@
 #ifndef GPU_BLOCKHEAP_H
 #define GPU_BLOCKHEAP_H
 
-#include "gpu-heap.h"
+#include <gpu/gpu-heap.h>
 
 typedef struct GpuMemBlockRange {
 	unsigned primaryAddress;

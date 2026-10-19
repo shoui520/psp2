@@ -1,8 +1,8 @@
 /* IMG devices/sgx/sgxinit.c, GPL-2.0. Pristine candidate and license are in
  * contrib/img-sgx-ddk-1.7.862890; SCE port changes are marked below.
  */
-#include "sgxinit_sce.h"
-#include "memory_sce.h"
+#include <gpu/sgxinit_sce.h>
+#include <gpu/memory_sce.h>
 #include "sgx543_v1.164defs.h"
 #include <stddef.h>
 #include <string.h>

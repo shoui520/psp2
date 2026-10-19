@@ -1,9 +1,9 @@
 /* IMG devices/sgx/sgxutils.c, GPL-2.0. Pristine candidate and license
  * remain in contrib/img-sgx-ddk-1.7.862890; SCE deltas marked below.
  */
-#include "sgxutils_sce.h"
+#include <gpu/sgxutils_sce.h>
 #include "gpu-dump.h"
-#include "perproc_sce.h"
+#include <gpu/perproc_sce.h>
 #include "sync_sce.h"
 #include "render_sce.h"
 #include <gpu/sgxmkif_sce.h>

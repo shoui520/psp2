@@ -1,7 +1,7 @@
 /* IMG devices/sgx/sgxpower.c, GPL-2.0; pristine candidate and license
  * remain in contrib/img-sgx-ddk-1.7.862890.
  */
-#include "sgxinit_sce.h"
+#include <gpu/sgxinit_sce.h>
 #include <gpu/sgxmkif_sce.h>
 #include <threadmgr/threadmgr.h>
 #include <string.h>

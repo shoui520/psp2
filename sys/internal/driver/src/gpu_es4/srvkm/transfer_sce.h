@@ -2,7 +2,7 @@
 #ifndef TRANSFER_SCE_H
 #define TRANSFER_SCE_H
 
-#include "sce_ddk_port.h"
+#include <gpu/sce_ddk_port.h>
 
 struct Resource;
 struct PVRSRV_KERNEL_MEM_INFO;

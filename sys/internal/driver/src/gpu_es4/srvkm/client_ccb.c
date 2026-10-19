@@ -1,6 +1,6 @@
 /* Unreleased licensed IMG client component; pristine kernel DDK is separate. */
 #include "client_ccb.h"
-#include "device_sce.h"
+#include <gpu/device_sce.h>
 #include <stddef.h>
 
 void *AllocProcessGpuMemory(unsigned size);

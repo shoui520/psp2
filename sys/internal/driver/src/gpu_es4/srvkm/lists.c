@@ -1,8 +1,8 @@
 /* IMG lists.c expansion under SCE's complete device-node owner layout.
  * Pristine IMPLEMENT_LIST_ANY_2 lives in the vendored include/lists.h.
  */
-#include "device_sce.h"
-#include "power_sce.h"
+#include <gpu/device_sce.h>
+#include <gpu/power_sce.h>
 #include <stdarg.h>
 
 PVRSRV_ERROR List_PVRSRV_DEVICE_NODE_PVRSRV_ERROR_Any(PVRSRV_DEVICE_NODE *psHead,

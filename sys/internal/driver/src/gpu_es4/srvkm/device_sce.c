@@ -1,5 +1,5 @@
 /* SCE device-node accessors; these originals carry no source-file record. */
-#include "device_sce.h"
+#include <gpu/device_sce.h>
 
 static PVRSRV_DEVICE_NODE *psGpuDeviceNode;
 

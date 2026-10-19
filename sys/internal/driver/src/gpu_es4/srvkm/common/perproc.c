@@ -1,5 +1,5 @@
 /* IMG perproc.c base; SCE native mapping/backing teardown deltas below. */
-#include "../perproc_sce.h"
+#include <gpu/perproc_sce.h>
 #include "../handle-types.h"
 #include "../gpu-blockheap.h"
 #include "../mapped_memory_sce.h"

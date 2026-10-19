@@ -1,8 +1,8 @@
 /* IMG shared system memory, with the SCE allocation boundary kept separate
  * from pristine services4/srvkm/common/mem.c in the vendor tree.
  */
-#include "memory_sce.h"
-#include "perproc_sce.h"
+#include <gpu/memory_sce.h>
+#include <gpu/perproc_sce.h>
 
 /* IMG services.h allocation flags. */
 #define PVRSRV_HAP_MAPTYPE_MASK 0x000f8000U

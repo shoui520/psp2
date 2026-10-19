@@ -4,8 +4,8 @@
 #ifndef SGXINIT_SCE_H
 #define SGXINIT_SCE_H
 
-#include "device_sce.h"
-#include "misc_sce.h"
+#include <gpu/device_sce.h>
+#include <gpu/misc_sce.h>
 
 /* Pristine sgxinfo.h owner with the SCE port's complete heap record. */
 typedef struct _SGX_BRIDGE_INFO_FOR_SRVINIT {

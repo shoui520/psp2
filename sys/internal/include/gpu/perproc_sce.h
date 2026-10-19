@@ -2,7 +2,7 @@
 #ifndef PERPROC_SCE_H
 #define PERPROC_SCE_H
 
-#include "sce_ddk_port.h"
+#include <gpu/sce_ddk_port.h>
 
 struct ResourceContext;
 struct _PVRSRV_HANDLE_BASE_;

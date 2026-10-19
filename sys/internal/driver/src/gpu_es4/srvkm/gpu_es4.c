@@ -6,7 +6,7 @@
  */
 
 #include <skeleton.h>
-#include "sce_ddk_port.h"
+#include <gpu/sce_ddk_port.h>
 #include <intrmgr/syscall.h>
 #include <sysmem/procevent.h>
 #include <sysmem/suspend.h>

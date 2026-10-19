@@ -7,7 +7,7 @@
 #ifndef DEVICE_SCE_H
 #define DEVICE_SCE_H
 
-#include "sce_ddk_port.h"
+#include <gpu/sce_ddk_port.h>
 #include <gpu/pvrsrv_misc.h>
 #include "sgxscript.h"
 

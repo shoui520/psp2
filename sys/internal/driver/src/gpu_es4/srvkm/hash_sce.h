@@ -4,7 +4,7 @@
 #ifndef GPU_HASH_SCE_H
 #define GPU_HASH_SCE_H
 
-#include "sce_ddk_port.h"
+#include <gpu/sce_ddk_port.h>
 
 typedef IMG_UINT32 HASH_FUNC(IMG_SIZE_T uKeySize, IMG_VOID *pKey,
 		IMG_UINT32 uHashTabLen);

@@ -4,7 +4,7 @@
 #ifndef SYNC_SCE_H
 #define SYNC_SCE_H
 
-#include "memory_sce.h"
+#include <gpu/memory_sce.h>
 
 typedef struct PVRSRV_KERNEL_SYNC_INFO {
 	PVRSRV_SYNC_DATA *psSyncData;

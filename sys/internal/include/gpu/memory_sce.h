@@ -4,7 +4,7 @@
 #ifndef MEMORY_SCE_H
 #define MEMORY_SCE_H
 
-#include "sce_ddk_port.h"
+#include <gpu/sce_ddk_port.h>
 
 struct GpuHeap;
 struct GpuMemBlockHeap;

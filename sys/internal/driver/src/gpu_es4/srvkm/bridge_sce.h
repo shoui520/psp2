@@ -2,7 +2,7 @@
 #ifndef BRIDGE_SCE_H
 #define BRIDGE_SCE_H
 
-#include "sce_ddk_port.h"
+#include <gpu/sce_ddk_port.h>
 
 /* SCE native command numbers use a compact 0x1000-based bridge namespace. */
 enum {

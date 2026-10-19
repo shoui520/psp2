@@ -1,12 +1,12 @@
 /* SCE bridge extensions; upstream IMG sources remain in contrib. */
-#include "../../sce_ddk_port.h"
-#include "../../perproc_sce.h"
-#include "../../device_sce.h"
+#include <gpu/sce_ddk_port.h>
+#include <gpu/perproc_sce.h>
+#include <gpu/device_sce.h>
 #include "../../transfer_sce.h"
 #include "../../render_sce.h"
-#include "../../memory_sce.h"
+#include <gpu/memory_sce.h>
 #include "../../kick_sce.h"
-#include "../../misc_sce.h"
+#include <gpu/misc_sce.h>
 #include <sysmem/debug.h>
 #include <gpucoredump_es4/gpucoredump_es4_imports.h>
 #include <string.h>

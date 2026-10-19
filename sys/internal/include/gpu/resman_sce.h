@@ -5,7 +5,7 @@
 #ifndef RESMAN_SCE_H
 #define RESMAN_SCE_H
 
-#include "sce_ddk_port.h"
+#include <gpu/sce_ddk_port.h>
 
 #define RESMAN_CRITERIA_ALL 0x00000000U
 #define RESMAN_CRITERIA_RESTYPE 0x00000001U

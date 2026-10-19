@@ -1,7 +1,7 @@
 /* Unreleased licensed IMG client component; see client_pb.h. */
 #include "client_pb.h"
-#include "device_sce.h"
-#include "perproc_sce.h"
+#include <gpu/device_sce.h>
+#include <gpu/perproc_sce.h>
 #include "render_sce.h"
 #include <stddef.h>
 #include <string.h>

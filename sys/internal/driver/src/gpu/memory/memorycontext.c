@@ -1,7 +1,7 @@
 /* GPU process-memory contexts. Verified meanings use native offset evidence. */
 #include <stdint.h>
 #include <stddef.h>
-#include "../../gpu_es4/srvkm/gpu-mmu.h"
+#include <gpu/gpu-mmu.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>

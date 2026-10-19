@@ -3,7 +3,7 @@
  */
 #ifndef GPU_HANDLE_TYPES_H
 #define GPU_HANDLE_TYPES_H
-#include "sce_ddk_port.h"
+#include <gpu/sce_ddk_port.h>
 #include "hash_sce.h"
 typedef unsigned u32;
 typedef int s32;

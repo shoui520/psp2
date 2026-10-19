@@ -4,7 +4,7 @@
 #ifndef GPU_POWER_SCE_H
 #define GPU_POWER_SCE_H
 
-#include "sce_ddk_port.h"
+#include <gpu/sce_ddk_port.h>
 
 typedef enum _PVRSRV_INIT_SERVER_STATE_ {
 	PVRSRV_INIT_SERVER_Unspecified = -1,

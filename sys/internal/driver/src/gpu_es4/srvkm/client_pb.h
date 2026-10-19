@@ -5,7 +5,7 @@
 #ifndef CLIENT_PB_H
 #define CLIENT_PB_H
 
-#include "memory_sce.h"
+#include <gpu/memory_sce.h>
 
 typedef struct SGX_PBDESC SGX_PBDESC;
 
