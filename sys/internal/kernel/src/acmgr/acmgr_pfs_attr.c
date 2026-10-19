@@ -149,8 +149,10 @@ int checkPfsAttribute(const SceSelfAuthInfo *info, const SceSblACMgrValue *attr,
 	attribute = pfsGetAttr(&attr->value, &attr->size) & 7;
 	for (i = 0; i < 6; i++) {
 		if (pfsPermissions[i].attribute == attribute) {
-			permission = privileged ? pfsPermissions[i].permission[0] :
-						  pfsPermissions[i].permission[1];
+			SceUInt32 kernel = pfsPermissions[i].permission[0];
+			SceUInt32 user = pfsPermissions[i].permission[1];
+
+			permission = privileged ? kernel : user;
 			if ((permission & access) != access)
 				return SCE_ERROR_ERRNO_EACCES;
 			return 0;

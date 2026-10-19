@@ -576,16 +576,17 @@ int SceSblACMgrForDriver_84604EED(SceUID pid)
 int SceSblACMgrForDriver_4CBD6156(SceUID pid)
 {
 	SceUInt64 paid = 0;
-	SceUInt64 group;
+	SceUInt64 id, group;
 
 	if (sceSblACMgrGetPaid(pid, &paid) != 0)
 		return 0;
-	group = paid & 0xfff0000000000000ULL;
+	id = paid;
+	group = id & 0xfff0000000000000ULL;
 	if (group == 0x2800000000000000ULL) {
 		if (SceQafMgrForDriver_CAD47130())
 			return 1;
 	} else if (group == 0x2200000000000000ULL || group == 0x2100000000000000ULL) {
-		if (SceQafMgrForDriver_694D1096() || SceSysrootForDriver_56D85EB0(paid))
+		if (SceQafMgrForDriver_694D1096() || SceSysrootForDriver_56D85EB0(id))
 			return 1;
 	}
 	return hasAttribute(pid, 0x10) == 0;
@@ -679,12 +680,13 @@ int SceSblACMgrForDriver_D7AD8471(SceUID pid, const SceChar8 *path)
 	SceUInt64 paid;
 	SceSize nameLen, i;
 	int level;
-	int n;
+	int n, ret;
 
 	level = sceKernelSysrootGetThreadAccessLevel();
 	paid = 0;
 	if (sceSblACMgrGetPaid(pid, &paid) != 0 || path == NULL)
 		return 0;
+	ret = 0;
 	for (n = 0; n < 21; n++) {
 		nameLen = mountPoints[n].nameLen;
 		for (i = 0; i < nameLen; i++)
@@ -692,17 +694,17 @@ int SceSblACMgrForDriver_D7AD8471(SceUID pid, const SceChar8 *path)
 				break;
 		if (i != nameLen)
 			continue;
-		if (sceSblACMgrHasCapability(pid, 1) || level == 0x40 || level == 0x80)
-			return 1;
-		if (sceSblACMgrHasCapability(pid, 3) &&
-		    memcmp(ENC("\x8a\x87\xcf\xc5"), mountPoints[n].name, nameLen) == 0)
-			return 1;
-		if ((paid == 0x220000101cc73883ULL || paid == 0x220000101cc60019ULL) &&
-		    memcmp(ENC("\x93\x92\x9e\xcf\xc5"), mountPoints[n].name, nameLen) == 0)
-			return 1;
-		return 0;
+		ret = sceSblACMgrHasCapability(pid, 1);
+		if (ret == 0 &&
+		    (level == 0x40 || level == 0x80 ||
+		     (sceSblACMgrHasCapability(pid, 3) &&
+		      memcmp(ENC("\x8a\x87\xcf\xc5"), mountPoints[n].name, nameLen) == 0) ||
+		     ((paid == 0x220000101cc73883ULL || paid == 0x220000101cc60019ULL) &&
+		      memcmp(ENC("\x93\x92\x9e\xcf\xc5"), mountPoints[n].name, nameLen) == 0)))
+			ret = 1;
+		break;
 	}
-	return 0;
+	return ret;
 }
 
 int SceSblACMgrForDriver_0B6E6CD7(SceUID pid)
