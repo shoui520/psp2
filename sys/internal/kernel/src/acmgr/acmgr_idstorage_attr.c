@@ -22,7 +22,7 @@ int checkIdStorageAttribute(const SceSelfAuthInfo *info, const SceSblACMgrValue 
 	SceUInt64 paid;
 	int level;
 
-	if (info == NULL || attr == NULL)
+	if (attr == NULL || info == NULL)
 		return ACMGR_ERROR_INVALID_ARGUMENT;
 	switch (access) {
 	case 1:

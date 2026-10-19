@@ -585,7 +585,7 @@ int SceSblACMgrForDriver_4CBD6156(SceUID pid)
 	if (group == 0x2800000000000000ULL) {
 		if (SceQafMgrForDriver_CAD47130())
 			return 1;
-	} else if (group == 0x2200000000000000ULL || group == 0x2100000000000000ULL) {
+	} else if (group == 0x2100000000000000ULL || group == 0x2200000000000000ULL) {
 		if (SceQafMgrForDriver_694D1096() || SceSysrootForDriver_56D85EB0(id))
 			return 1;
 	}
@@ -631,7 +631,7 @@ int SceSblACMgrForDriver_091F7247(SceUID pid)
 
 	if (sceSblACMgrGetPaid(pid, &paid) != 0)
 		return 0;
-	return paid == 0x210000101cd2000aULL || paid == 0x2800c0101cd2000bULL;
+	return paid == 0x2800c0101cd2000bULL || paid == 0x210000101cd2000aULL;
 }
 
 int SceSblACMgrForDriver_5C4BC352(SceUID pid)
@@ -731,14 +731,16 @@ int SceSblACMgrForDriver_6D8A88B7(SceUID pid)
 int SceSblACMgrForDriver_456DA7AC(SceUID pid)
 {
 	SceUInt64 paid = 0;
+	int ret;
 
 	if (sceSblACMgrGetPaid(pid, &paid) != 0)
 		return 0;
-	if (sceSblACMgrHasCapability(pid, 3) || paid - 0x210000101cd20007ULL < 3)
-		return 1;
-	if (SceSblACMgrForDriver_426A4E8C(pid) && SceSysrootForDriver_26AA237C() != 0)
-		return 1;
-	return paid == 0x2800000000000044ULL || paid == 0x280000000000001eULL;
+	ret = 1;
+	if (!sceSblACMgrHasCapability(pid, 3) && paid - 0x210000101cd20007ULL >= 3 &&
+	    !(SceSblACMgrForDriver_426A4E8C(pid) && SceSysrootForDriver_26AA237C() != 0) &&
+	    paid != 0x2800000000000044ULL)
+		ret = paid == 0x280000000000001eULL;
+	return ret;
 }
 
 int SceSblACMgrForDriver_FD00C72A(SceUID pid)
