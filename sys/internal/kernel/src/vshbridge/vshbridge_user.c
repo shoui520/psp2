@@ -323,27 +323,29 @@ int _vshRtcGetSecureAlarmTick(SceRtcTick *tick)
 		  vshRtcGetSecureAlarmTick((SceRtcTick *)k));
 }
 
-int _vshDisplaySetViewportConf(int head, const void *unused, const void *conf, const SyscallSizeArgs *uargs)
+int _vshDisplaySetViewportConf(SceUInt32 head, SceUInt32 plane, const SceDisplayViewportConf *conf,
+			       const SyscallSizeArgs *uargs)
 {
-	SceUInt8 *p = NULL;
+	SceDisplayViewportConf *p = NULL;
 	SyscallSizeArgs args;
 	int ret;
 
 	ARGS_IN(args, uargs);
 	BLOCK_IN_SIZED(p, conf, args.size, 0x14);
-	return vshDisplaySetViewportConf(head, unused, (int)p);
+	return vshDisplaySetViewportConf(head, plane, p);
 }
 
 /* the conf is read in first: its size field passes through */
-int _vshDisplayGetActualViewportConf(int head, void *unused, void *conf, const SyscallSizeArgs *uargs)
+int _vshDisplayGetActualViewportConf(SceUInt32 head, SceUInt32 plane, SceDisplayViewportConf *conf,
+				     const SyscallSizeArgs *uargs)
 {
-	SceUInt8 *kconf;
+	SceDisplayViewportConf *kconf;
 	SyscallSizeArgs args;
 	int ret;
 
 	ARGS_IN(args, uargs);
 	if (conf == NULL)
-		return vshDisplayGetActualViewportConf(head, unused, 0);
+		return vshDisplayGetActualViewportConf(head, plane, NULL);
 	if (args.size > 0x14)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	kconf = __builtin_alloca(0x14);
@@ -351,7 +353,7 @@ int _vshDisplayGetActualViewportConf(int head, void *unused, void *conf, const S
 	ret = sceKernelCopyFromUser(kconf, conf, args.size);
 	if (ret < 0)
 		return ret;
-	ret = vshDisplayGetActualViewportConf(head, unused, (int)kconf);
+	ret = vshDisplayGetActualViewportConf(head, plane, kconf);
 	return copyResult(ret, sceKernelCopyToUser(conf, kconf, args.size));
 }
 
@@ -376,9 +378,9 @@ int _vshLedSetMode(int led, int mode, const void *conf, const SyscallSizeArgs *u
 	return vshLedSetMode(led, mode, p);
 }
 
-int _vshPowerSetBatteryFakeStatus(const void *status, const SyscallSizeArgs *uargs)
+int _vshPowerSetBatteryFakeStatus(const struct PowerBatteryFakeStatus *status, const SyscallSizeArgs *uargs)
 {
-	SceUInt8 *p = NULL;
+	struct PowerBatteryFakeStatus *p = NULL;
 	SyscallSizeArgs args;
 	int ret;
 
@@ -387,19 +389,20 @@ int _vshPowerSetBatteryFakeStatus(const void *status, const SyscallSizeArgs *uar
 	return vshPowerSetBatteryFakeStatus(p);
 }
 
-int _vshSysconGetManufacturesStatus(int *status)
+int _vshSysconGetManufacturesStatus(uint32_t *status)
 {
 	int ret;
 
 	BLOCK_OUT(status, sizeof(*status), vshSysconGetManufacturesStatus(NULL),
-		  vshSysconGetManufacturesStatus((int *)k));
+		  vshSysconGetManufacturesStatus((uint32_t *)k));
 }
 
-int _vshSysconGetManualChargeMode(int *mode)
+int _vshSysconGetManualChargeMode(uint32_t *mode)
 {
 	int ret;
 
-	BLOCK_OUT(mode, sizeof(*mode), vshSysconGetManualChargeMode(NULL), vshSysconGetManualChargeMode((int *)k));
+	BLOCK_OUT(mode, sizeof(*mode), vshSysconGetManualChargeMode(NULL),
+		  vshSysconGetManualChargeMode((uint32_t *)k));
 }
 
 int _vshSysconCtrlManualChargeMode(int mode)
@@ -481,11 +484,11 @@ int _vshIoGetstat(const char *path, void *stat, const SyscallUnusedArgs *uargs)
 	BLOCK_OUT(stat, 0x58, vshIoGetstat(p, NULL), vshIoGetstat(p, k));
 }
 
-int _vshIoChstat(const char *path, const void *stat, int bits, const SyscallUnusedArgs *uargs)
+int _vshIoChstat(const char *path, const SceIoStat *stat, int bits, const SyscallUnusedArgs *uargs)
 {
 	SyscallUnusedArgs args;
 	char *p = NULL;
-	SceUInt8 *kstat = NULL;
+	SceIoStat *kstat = NULL;
 	int ret;
 
 	ARGS_IN(args, uargs);
@@ -562,24 +565,26 @@ int _vshSblSsSetNvsData(SceUInt32 offset, const void *buf, SceSize size, const S
 
 int _vshSblSsEncryptWithPortability(SceUInt32 mode, const void *iv, const void *in, void *out)
 {
-	SceUInt8 *piv = NULL, *pin = NULL;
+	SceUInt8 *piv = NULL;
+	ScePortabilityData *pin = NULL;
 	int ret;
 
 	BLOCK_IN(piv, iv, 0x10);
 	BLOCK_IN(pin, in, 0x24);
-	BLOCK_OUT(out, 0x24, vshSblSsEncryptWithPortability(mode, piv, (const SceSize *)pin, NULL),
-		  vshSblSsEncryptWithPortability(mode, piv, (const SceSize *)pin, (SceSize *)k));
+	BLOCK_OUT(out, 0x24, vshSblSsEncryptWithPortability(mode, piv, pin, NULL),
+		  vshSblSsEncryptWithPortability(mode, piv, pin, (ScePortabilityData *)k));
 }
 
 int _vshSblSsDecryptWithPortability(SceUInt32 mode, const void *iv, const void *in, void *out)
 {
-	SceUInt8 *piv = NULL, *pin = NULL;
+	SceUInt8 *piv = NULL;
+	ScePortabilityData *pin = NULL;
 	int ret;
 
 	BLOCK_IN(piv, iv, 0x10);
 	BLOCK_IN(pin, in, 0x24);
-	BLOCK_OUT(out, 0x24, vshSblSsDecryptWithPortability(mode, piv, (const SceSize *)pin, NULL),
-		  vshSblSsDecryptWithPortability(mode, piv, (const SceSize *)pin, (SceSize *)k));
+	BLOCK_OUT(out, 0x24, vshSblSsDecryptWithPortability(mode, piv, pin, NULL),
+		  vshSblSsDecryptWithPortability(mode, piv, pin, (ScePortabilityData *)k));
 }
 
 int _vshSblGcAuthMgrMlnpsnlAuth1(const void *a, const void *b, void *out, const VshMlnpsnlAuth1Args *uargs)
@@ -601,7 +606,7 @@ int _vshNpDrmGetLegacyDocKey(const void *a, const void *key, void *c, const void
 
 /* the argument block of the EBOOT signature generators */
 typedef struct VshEbootSigArgs {
-	void *d;				/* passed on */
+	int swVersion;				/* passed on */
 	SceUInt32 reserved[3];
 } __attribute__((aligned(8))) VshEbootSigArgs;
 
@@ -615,8 +620,8 @@ typedef struct VshEbootSigArgs {
 	ARGS_IN(args, uargs);						\
 	STRING_IN(ppath, path, 0x100);					\
 	BLOCK_IN(pb, b, (_bsize));					\
-	BLOCK_OUT(sig, 0x200, _impl(ppath, pb, NULL, args.d),		\
-		  _impl(ppath, pb, k, args.d));				\
+	BLOCK_OUT(sig, 0x200, _impl(ppath, pb, NULL, args.swVersion),	\
+		  _impl(ppath, pb, k, args.swVersion));			\
 } while (0)
 
 int _vshNpDrmEbootSigGenPsp(const char *path, const void *b, void *sig, const VshEbootSigArgs *uargs)
@@ -942,26 +947,28 @@ int _vshCoredumpCafCreateIv(void *iv, SceSize size, const SyscallSizeArgs *uargs
 }
 
 typedef struct VshCafSegmentInitArgs {
-	void *d;
-	const void *e;				/* up to 0x10 bytes */
-	void *f;
-	SceSize eSize;
+	SceUInt32 cipherKeySelector;
+	const void *iv;				/* up to 0x10 bytes */
+	SceSize size;
+	SceSize ivSize;
 	SceUInt32 reserved[2];
 } __attribute__((aligned(8))) VshCafSegmentInitArgs;
 
-int _vshCoredumpCafSegmentInit(SceUID ctx, void *b, void *c, const VshCafSegmentInitArgs *uargs)
+int _vshCoredumpCafSegmentInit(SceUID ctx, SceUInt32 hashKeySelector, SceUInt32 cipherMode,
+			       const VshCafSegmentInitArgs *uargs)
 {
 	VshCafSegmentInitArgs args;
-	SceUInt8 *ke = NULL;
+	SceUInt8 *kiv = NULL;
 	int ret;
 
 	ARGS_IN(args, uargs);
-	BLOCK_IN_SIZED(ke, args.e, args.eSize, 0x10);
-	return vshCoredumpCafSegmentInit(ctx, b, c, args.d, ke, args.f);
+	BLOCK_IN_SIZED(kiv, args.iv, args.ivSize, 0x10);
+	return vshCoredumpCafSegmentInit(ctx, hashKeySelector, cipherMode, args.cipherKeySelector, kiv,
+					 args.size);
 }
 
 typedef struct VshCafSegmentTransformArgs {
-	void *d;
+	SceSize size;
 	SceSize inSize;				/* up to 0x400 */
 	SceSize outSize;			/* up to 0x400 */
 	SceUInt32 reserved;
@@ -976,18 +983,18 @@ int _vshCoredumpCafSegmentTransform(SceUID ctx, const void *in, void *out,
 
 	ARGS_IN(args, uargs);
 	BLOCK_IN_SIZED(pin, in, args.inSize, 0x400);
-	BLOCK_OUT_SIZED(out, args.outSize, 0x400, vshCoredumpCafSegmentTransform(ctx, pin, NULL, args.d),
-			vshCoredumpCafSegmentTransform(ctx, pin, k, args.d));
+	BLOCK_OUT_SIZED(out, args.outSize, 0x400, vshCoredumpCafSegmentTransform(ctx, pin, NULL, args.size),
+			vshCoredumpCafSegmentTransform(ctx, pin, k, args.size));
 }
 
-int _vshCoredumpCafSegmentFinal(SceUID ctx, void *buf, void *c, const SyscallSizeArgs *uargs)
+int _vshCoredumpCafSegmentFinal(SceUID ctx, void *buf, SceSize size, const SyscallSizeArgs *uargs)
 {
 	SyscallSizeArgs args;
 	int ret;
 
 	ARGS_IN(args, uargs);
-	BLOCK_OUT_SIZED(buf, args.size, 0x20, vshCoredumpCafSegmentFinal(ctx, NULL, c),
-			vshCoredumpCafSegmentFinal(ctx, k, c));
+	BLOCK_OUT_SIZED(buf, args.size, 0x20, vshCoredumpCafSegmentFinal(ctx, NULL, size),
+			vshCoredumpCafSegmentFinal(ctx, k, size));
 }
 
 typedef struct VshCreateDumpArgs {

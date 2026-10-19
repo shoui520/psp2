@@ -494,8 +494,8 @@ int appmgrReadRif(const char *path, AppmgrLicenseInfo *info)
 		goto out;
 	result = SceNpDrmForDriver_DB406EAE(license, 512, 1, info->contentId,
 		&info->accountId, &info->licenseVersion, &info->licenseFlags,
-		&info->flags, &info->skuFlags, (SceInt64 *)&info->licStartTime,
-		(SceInt64 *)&info->licExpTime, &info->flags2);
+		&info->flags, &info->skuFlags, &info->licStartTime, &info->licExpTime,
+		&info->flags2);
 	if (result < 0)
 		goto out;
 	if ((info->flags & 0x20000) && strncmp(path, "gro0:", 5) != 0) {

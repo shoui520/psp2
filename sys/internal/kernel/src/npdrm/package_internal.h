@@ -180,9 +180,9 @@ struct NpDrmGetRifInfoArgs {
 	int *license_version;
 	int *license_flags;
 	int *flags;
-	int *sku_flags;
-	int64_t *lic_start_time;
-	int64_t *lic_exp_time;
+	unsigned int *sku_flags;
+	uint64_t *lic_start_time;
+	uint64_t *lic_exp_time;
 	uint64_t *flags2;
 	uint32_t reserved;
 };
@@ -192,8 +192,8 @@ _Static_assert(sizeof(struct NpDrmGetRifInfoArgs) == 40,
 
 int NpDrmGetRifInfo(const SceNpDrmLicense *license, unsigned int license_size,
 	int check_sign, char *content_id, uint64_t *account_id, int *license_version,
-	int *license_flags, int *flags, int *sku_flags, int64_t *lic_start_time,
-	int64_t *lic_exp_time, uint64_t *flags2);
+	int *license_flags, int *flags, unsigned int *sku_flags, uint64_t *lic_start_time,
+	uint64_t *lic_exp_time, uint64_t *flags2);
 
 int NpDrmGetRifName(char *name, uint64_t aid);
 int NpDrmGetFixedRifName(char *name, uint64_t aid);

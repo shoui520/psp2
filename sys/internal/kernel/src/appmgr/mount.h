@@ -29,7 +29,7 @@ typedef struct AppmgrLicenseInfo {
 	int licenseVersion;
 	int licenseFlags;
 	int flags;
-	int skuFlags;
+	unsigned int skuFlags;
 	SceUInt64 accountId;
 	SceUInt64 flags2;
 	SceUInt64 licStartTime;

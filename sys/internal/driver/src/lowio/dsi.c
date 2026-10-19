@@ -437,7 +437,7 @@ int SceDsiForDriver_78E6E3CF(unsigned head, unsigned lanes, unsigned pixelSize)
 	return 0;
 }
 
-int SceDsiForDriver_B3A70C05(unsigned vic, int *width, int *height)
+int SceDsiForDriver_B3A70C05(unsigned vic, SceUInt32 *width, SceUInt32 *height)
 {
 	const DsiVicMode *mode = DsiFindVic(vic);
 	int w;

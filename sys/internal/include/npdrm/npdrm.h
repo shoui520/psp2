@@ -116,7 +116,7 @@ int _sceNpDrmCheckActData(int *actType, int *versionFlag, uint64_t *accountId, c
 /* vitasdk: ksceNpDrmGetRifNameForInstall */
 int SceNpDrmForDriver_17573133(char *name, const SceNpDrmLicense *license, unsigned int isFixed);
 /* vitasdk: ksceNpDrmGetRifVitaKey */
-int SceNpDrmForDriver_723322B5(const SceNpDrmLicense *license, void *klicense, int *flags, int *skuFlags, SceUInt64 *startTime, SceUInt64 *expirationTime);
+int SceNpDrmForDriver_723322B5(const SceNpDrmLicense *license, void *klicense, int *flags, unsigned int *skuFlags, SceUInt64 *startTime, SceUInt64 *expirationTime);
 /* vitasdk: ksceNpDrmPresetRifProvisionalFlag */
 int SceNpDrmForDriver_C070FE89(SceNpDrmLicense *license, unsigned int provisional);
 /* vitasdk: ksceNpDrmReadActData */

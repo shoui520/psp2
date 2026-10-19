@@ -433,12 +433,12 @@ SceUInt32 vshPowerRequestHibernate(void)
 
 /* ===== syscon ===== */
 
-SceUInt32 vshSysconGetManufacturesStatus(int *status)
+SceUInt32 vshSysconGetManufacturesStatus(uint32_t *status)
 {
 	VSH_BRIDGE_PRODUCT_MODE(SCE_SYSCON_ERROR_NOT_PRODUCT_MODE, SceSysconForDriver_3E09A1F4(status));
 }
 
-SceUInt32 vshSysconGetManualChargeMode(int *mode)
+SceUInt32 vshSysconGetManualChargeMode(uint32_t *mode)
 {
 	VSH_BRIDGE_PRODUCT_MODE(SCE_SYSCON_ERROR_NOT_PRODUCT_MODE, SceSysconForDriver_4FEC564C(mode));
 }
@@ -470,7 +470,7 @@ SceUInt32 vshSysconGetLogInfo(void *info)
 	} else if (!mode) {
 		ret = SCE_SYSCON_ERROR_NOT_PRODUCT_MODE;
 	} else {
-		ret = SceSysconForDriver_701535FC(buf);
+		ret = SceSysconForDriver_701535FC((uint32_t *)buf);
 		if (ret >= 0)
 			ret = sceKernelCopyToUser(info, buf, sizeof(buf));
 	}
@@ -511,7 +511,7 @@ SceUInt32 vshSysconGetTemperatureLog(SceUInt8 *log)
 		sceSyscallLeave(t);
 		return 0;
 	}
-	ret = SceSysconForDriver_3B354824(log);
+	ret = SceSysconForDriver_3B354824((uint32_t *)log);
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -703,10 +703,10 @@ int vshSysconVerifyConfigstorageScript(int a, const void *script, SceSize size)
 	return ret;
 }
 
-SceUInt32 vshSysconGetBatteryCalibData(int *a, int *b, int *c, int *d)
+SceUInt32 vshSysconGetBatteryCalibData(uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d)
 {
 	SceUInt32 t = sceSyscallEnter();
-	int va = 0, vb = 0, vc = 0, vd = 0;
+	uint32_t va = 0, vb = 0, vc = 0, vd = 0;
 	int ret;
 
 	if (!sceSblACMgrIsSystemProgram(0)) {
@@ -962,8 +962,8 @@ SceUInt32 vshSblSsSetNvsData(SceUInt32 offset, const void *buf, SceSize size)
 }
 
 /* portability mode 0-20; the output size starts as the input size */
-SceUInt32 vshSblSsEncryptWithPortability(SceUInt32 mode, const void *iv, const SceSize *inSize,
-				   SceSize *outSize)
+SceUInt32 vshSblSsEncryptWithPortability(SceUInt32 mode, void *iv, ScePortabilityData *in,
+					 ScePortabilityData *out)
 {
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
@@ -972,18 +972,18 @@ SceUInt32 vshSblSsEncryptWithPortability(SceUInt32 mode, const void *iv, const S
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	if (mode >= 0x15 || iv == NULL || inSize == NULL || outSize == NULL) {
+	if (mode >= 0x15 || iv == NULL || in == NULL || out == NULL) {
 		sceSyscallLeave(t);
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	}
-	*outSize = *inSize;
-	ret = SceSblSsMgrForDriver_21EC51F6(mode, iv, inSize, outSize);
+	out->msg_size = in->msg_size;
+	ret = SceSblSsMgrForDriver_21EC51F6(mode, iv, in, out);
 	sceSyscallLeave(t);
 	return ret;
 }
 
-SceUInt32 vshSblSsDecryptWithPortability(SceUInt32 mode, const void *iv, const SceSize *inSize,
-				   SceSize *outSize)
+SceUInt32 vshSblSsDecryptWithPortability(SceUInt32 mode, void *iv, ScePortabilityData *in,
+					 ScePortabilityData *out)
 {
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
@@ -992,12 +992,12 @@ SceUInt32 vshSblSsDecryptWithPortability(SceUInt32 mode, const void *iv, const S
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	if (mode >= 0x15 || iv == NULL || outSize == NULL || inSize == NULL) {
+	if (mode >= 0x15 || iv == NULL || out == NULL || in == NULL) {
 		sceSyscallLeave(t);
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	}
-	*outSize = *inSize;
-	ret = SceSblSsMgrForDriver_934DB6B5(mode, iv, inSize, outSize);
+	out->msg_size = in->msg_size;
+	ret = SceSblSsMgrForDriver_934DB6B5(mode, iv, in, out);
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -1255,7 +1255,7 @@ SceUInt32 vshIoGetstat(const char *path, void *stat)
 	VSH_BRIDGE(sceIoGetstatForVshbridge(path, stat));
 }
 
-SceUInt32 vshIoChstat(const char *path, const void *stat, int bits)
+SceUInt32 vshIoChstat(const char *path, SceIoStat *stat, int bits)
 {
 	VSH_BRIDGE(sceIoChstatForVshbridge(path, stat, bits));
 }

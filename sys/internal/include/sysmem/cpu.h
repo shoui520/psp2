@@ -31,9 +31,9 @@ typedef struct SceCorelockContext {
 /* written in assembly (cpu_spinlock.S, vmaccess.S): declared here from their importers */
 
 /* spins (wfe) until the lock is free */
-void SceCpuForDriver_BF82DEB2(SceKernelSpinlock *lock);	/* vitasdk: ksceKernelSpinlockLowLock */
+void SceCpuForDriver_BF82DEB2(volatile SceKernelSpinlock *lock);	/* vitasdk: ksceKernelSpinlockLowLock */
 /* 0, or -1 when the lock is taken */
-int SceCpuForDriver_5AC9D394(SceKernelSpinlock *lock);	/* vitasdk: ksceKernelSpinlockLowTrylock */
+int SceCpuForDriver_5AC9D394(volatile SceKernelSpinlock *lock);	/* vitasdk: ksceKernelSpinlockLowTrylock */
 
 /* a user-space lightweight mutex, under the user's page permissions */
 int SceCpuForKernel_75A85059(struct ThreadmgrLwMutexWork *work, SceUID owner);	/* trylockLwMutex */

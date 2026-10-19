@@ -26,6 +26,6 @@ int SceDsiForDriver_97BFEA76(unsigned head, unsigned vic);	/* vitasdk: ksceDsiSe
 /* vitasdk: ksceDsiGenericReadRequest */
 int SceDsiForDriver_98120684(unsigned head, int parameter, void *data, unsigned size);
 /* vitasdk: ksceDsiGetVicResolution */
-int SceDsiForDriver_B3A70C05(unsigned vic, int *width, int *height);
+int SceDsiForDriver_B3A70C05(unsigned vic, SceUInt32 *width, SceUInt32 *height);
 /* vitasdk: ksceDsiDcsShortWrite */
 int SceDsiForDriver_BA6BC89F(unsigned head, int command, int parameter);

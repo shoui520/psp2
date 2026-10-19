@@ -1177,7 +1177,7 @@ __attribute__((noinline)) int NpDrmGetRifNameForInstall(char *rif_name,
 __attribute__((noinline)) int NpDrmGetRifInfo(const SceNpDrmLicense *license,
 	unsigned int license_size, int check_sign, char *content_id,
 	uint64_t *account_id, int *license_version, int *license_flags, int *flags,
-	int *sku_flags, int64_t *lic_start_time, int64_t *lic_exp_time,
+	unsigned int *sku_flags, uint64_t *lic_start_time, uint64_t *lic_exp_time,
 	uint64_t *flags2)
 {
 	unsigned int syscall = sceSyscallEnter();

@@ -1065,10 +1065,9 @@ int SceNpDrmForDriver_C070FE89(SceNpDrmLicense *license,
 }
 
 int SceNpDrmForDriver_723322B5(const SceNpDrmLicense *license, void *klicense,
-	int *flags, int *skuFlags, SceUInt64 *startTime, SceUInt64 *expirationTime)
+	int *flags, unsigned int *skuFlags, SceUInt64 *startTime, SceUInt64 *expirationTime)
 {
-	return NpDrmGetRifKey(license, klicense, flags,
-		(unsigned int *)skuFlags, startTime, expirationTime, 1);
+	return NpDrmGetRifKey(license, klicense, flags, skuFlags, startTime, expirationTime, 1);
 }
 
 int SceNpDrmForDriver_DB406EAE(const SceNpDrmLicense *license, unsigned int licenseSize,
