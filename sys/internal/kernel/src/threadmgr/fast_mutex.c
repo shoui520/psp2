@@ -194,7 +194,7 @@ static int uidFastMutex_RevalidateMethod(void *cls, void *object)
 		"&gpThreadMgrCB->threadMgrCBLock=%p\n", queue, mutex, first, mutex->magic,
 		first->magic, &s_threadmgrRuntime.manager->threadMgrCBLock);
 	if (mutex->owner == NULL) {
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(first));
+		sceKernelSpinlockLowLock(THREAD_LOCK(first));
 		acquireFastMutex(mutex, first);
 		wakeupAndDistributeThread(first, (uintptr_t)queue, 0);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(first));
@@ -216,7 +216,7 @@ uint32_t releaseAllFastMutex(struct ThreadCB *thread)
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 669);
 	for (;;) {
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		for (mutex = head->next; mutex != head; mutex = head->next) {
 			if (SceCpuForDriver_5AC9D394(&mutex->queue->lock) < 0)
 				break;
@@ -230,7 +230,7 @@ uint32_t releaseAllFastMutex(struct ThreadCB *thread)
 			if (mutex->spinWaitCount == 0)
 				wake |= revalidateWaitState((uintptr_t)mutex->queue);
 			sceKernelSpinlockLowUnlock(&mutex->queue->lock);
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		}
 		if (mutex == head)
 			break;
@@ -240,7 +240,7 @@ uint32_t releaseAllFastMutex(struct ThreadCB *thread)
 			;
 	}
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	oldPriority = thread->currentPriority;
 	thread->boostPriority = PRIORITY_NONE;
 	if (oldPriority != thread->basePriority) {
@@ -321,8 +321,8 @@ int sceKernelInitializeFastMutex(struct ThreadmgrFastMutex *mutex, const char *n
 	mutex->spinWaitCount = 0;
 	uidMutex->workArea = mutex;
 	if (attr & FAST_MUTEX_ATTR_LOCKED) {
-		SceCpuForDriver_BF82DEB2(&mutex->lock);
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(&mutex->lock);
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		acquireFastMutex(mutex, thread);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	}
@@ -355,7 +355,7 @@ int sceKernelFinalizeFastMutex(struct ThreadmgrFastMutex *mutex)
 		goto restore;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	SceCpuForDriver_BF82DEB2(&mutex->queue->lock);
+	sceKernelSpinlockLowLock(&mutex->queue->lock);
 	if (mutex->owner == NULL) {
 		sceKernelSpinlockLowUnlock(&mutex->queue->lock);
 		ret = sceGUIDClose(mutex->uid);
@@ -384,7 +384,7 @@ restore:
 	if (sceGUIDReferObjectWithClass(mutex->uid,					\
 			s_threadmgrRuntime.manager->fastMutexClass, NULL) < 0)	\
 		SCE_PANIC_FUNC(panicLine, "lockFastMutex");				\
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));					\
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));					\
 	thread->waitMode = (int)mutex;							\
 	ret = waitWaitableObject(mutex->uid, (uintptr_t)mutex->queue, WAIT_TYPE_FAST_MUTEX,	\
 				 NULL, NULL, NULL, &locked);				\
@@ -447,7 +447,7 @@ int lockFastMutex(struct ThreadmgrFastMutex *mutex)
 		goto resume;
 	}
 	queueLock = &mutex->queue->lock;
-	SceCpuForDriver_BF82DEB2(queueLock);
+	sceKernelSpinlockLowLock(queueLock);
 	if (SceCpuForDriver_5AC9D394(&mutex->lock) >= 0) {
 		if (mutex->owner == NULL)
 			goto take;
@@ -464,7 +464,7 @@ int lockFastMutex(struct ThreadmgrFastMutex *mutex)
 	sceKernelSpinlockLowUnlock(queueLock);
 	sceKernelCpuResumeIntr(intr);
 	for (;;) {
-		intr = SceCpuForDriver_27C0B340(&mutex->lock);
+		intr = sceKernelSpinlockLowTrylockCpuSuspendIntr(&mutex->lock);
 		if (intr < 0) {
 			intr = SceCpuForDriver_821FC0EE();
 			haveLock = 0;
@@ -524,7 +524,7 @@ again:
 	thread->waitMode = 0;
 	thread->waitType = 0;
 take:
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	acquireFastMutex(mutex, thread);
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	sceKernelSpinlockLowUnlock(queueLock);
@@ -569,11 +569,11 @@ int sceKernelTryLockFastMutex(struct ThreadmgrFastMutex *mutex)
 			ret = SCE_KERNEL_ERROR_FAST_MUTEX_RECURSIVE;
 		}
 	} else {
-		SceCpuForDriver_BF82DEB2(&mutex->queue->lock);
+		sceKernelSpinlockLowLock(&mutex->queue->lock);
 		if (SceCpuForDriver_5AC9D394(&mutex->lock) < 0) {
 			ret = SCE_KERNEL_ERROR_FAST_MUTEX_FAILED_TO_OWN;
 		} else if (mutex->owner == NULL) {
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 			acquireFastMutex(mutex, thread);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			ret = 0;
@@ -602,7 +602,7 @@ static inline __attribute__((always_inline)) uint32_t releaseFastMutex(
 	mutex->owner = NULL;
 	if (owner == NULL)
 		return 0;
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(owner));
+	sceKernelSpinlockLowLock(THREAD_LOCK(owner));
 	mutex->next->prev = mutex->prev;
 	mutex->prev->next = mutex->next;
 	priority = findNextCeilingPriority(owner);
@@ -638,7 +638,7 @@ int sceKernelUnlockFastMutex(struct ThreadmgrFastMutex *mutex)
 		goto restore;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	SceCpuForDriver_BF82DEB2(&mutex->queue->lock);
+	sceKernelSpinlockLowLock(&mutex->queue->lock);
 	owner = mutex->owner;
 	if (owner != currentThreadContext()) {
 		SCE_DBG_PRINTF_FUNC(0, 1109, "sceKernelUnlockFastMutex", " k: error: sceKernelUnlockFastMutex %s (%p) not owned\n",
@@ -656,7 +656,7 @@ int sceKernelUnlockFastMutex(struct ThreadmgrFastMutex *mutex)
 	first = (struct ThreadCB *)queue->next;
 	if (mutex->spinWaitCount == 0 && (struct ThreadmgrWaitQueue *)first != queue) {
 		SCE_DBG_ASSERT_CHECK_FUNC(first->magic == THREAD_CB_MAGIC, 1139, "sceKernelUnlockFastMutex");
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(first));
+		sceKernelSpinlockLowLock(THREAD_LOCK(first));
 		acquireFastMutex(mutex, first);
 		wake |= wakeupAndDistributeThread(first, (uintptr_t)queue, 0);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(first));
@@ -698,7 +698,7 @@ int sceKernelGetFastMutexInfo(struct ThreadmgrFastMutex *mutex, ThreadmgrFastMut
 		if (name != NULL)
 			strncpy(local.name, name, sizeof(local.name) - 1);
 		intr = SceCpuForDriver_821FC0EE();
-		SceCpuForDriver_BF82DEB2(&mutex->queue->lock);
+		sceKernelSpinlockLowLock(&mutex->queue->lock);
 		local.uid = mutex->uid;
 		local.attr = mutex->queue->attributes;
 		local.lockCount = mutex->lockCount;
@@ -742,7 +742,7 @@ int SceThreadmgrForDriver_AF302193(SceUID uid, ThreadmgrFastMutexInfo *info)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_FAST_MUTEX_ID;
 	} else {
 		mutex = uidMutex->workArea;
-		intr = SceCpuForDriver_D32ACE9E(&uidMutex->lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&uidMutex->lock);
 		ret = getFastMutexInfo(mutex, &local);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&uidMutex->lock, intr);
 		sceGUIDReleaseObject(uid);
@@ -800,7 +800,7 @@ int SceThreadmgrForDriver_6D4C1EB7(int level, ThreadmgrFastMutexInfo *infos, Sce
 				s_threadmgrRuntime.manager->fastMutexClass,
 				(SceObjectBase **)&uidMutex) < 0)
 			continue;
-		intr = SceCpuForDriver_D32ACE9E(&uidMutex->lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&uidMutex->lock);
 		num = getFastMutexInfo(uidMutex->workArea, &info);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&uidMutex->lock, intr);
 		sceGUIDReleaseObject(vector[i]);

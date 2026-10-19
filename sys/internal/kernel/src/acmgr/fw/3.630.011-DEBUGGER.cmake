@@ -42,7 +42,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCopyToUser
 	SceQafMgrForDriver_694D1096
 	SceQafMgrForDriver_CAD47130
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

@@ -155,7 +155,7 @@ int KblArchive(SceKernelBootParam *param)
 	sceKernelSysrootCorelockLock(1);
 	if (sceKernelCpuId() == 0) {
 		memset((void *)COMPAT_SRAM_BASE, 0, COMPAT_SRAM_SIZE);
-		SceCpuForDriver_364E68A4((void *)COMPAT_SRAM_BASE,
+		sceKernelDcacheCleanInvalidateRange((void *)COMPAT_SRAM_BASE,
 						     COMPAT_SRAM_SIZE);
 		sceKernelMMUUnmapSectionsWithFlags(KBL_L1(param), SceCpuForKernel_FD54A91D(),
 						   COMPAT_SRAM_BASE, COMPAT_SRAM_SIZE, 0);

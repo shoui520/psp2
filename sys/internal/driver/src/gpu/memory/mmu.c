@@ -163,14 +163,14 @@ int sceGpuMmuAllocatePageTablePool(GpuPageTablePool *pool, unsigned pid)
 		SCE_DBG_PRINTF(0, 231,
 			"%s: Failed to get address for memblock %08x with error %08x.\n",
 			__func__, uid, ret);
-		SceSysmemForDriver_009E1C61(uid);
+		sceKernelFreeMemBlock(uid);
 		return ret;
 	}
 	ret = CreateGpuHeap((unsigned)base, size, 0, 0, &pool->heap);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 238, "%s: Failed to create heap with error %08x\n",
 			       __func__, ret);
-		SceSysmemForDriver_009E1C61(uid);
+		sceKernelFreeMemBlock(uid);
 		return ret;
 	}
 	pool->uid = uid;
@@ -192,7 +192,7 @@ int FreeGpuPageTablePool(GpuPageTablePool *pool)
 	}
 	uid = pageTablePool->uid;
 	if (uid != -1) {
-		SceSysmemForDriver_009E1C61(uid);
+		sceKernelFreeMemBlock(uid);
 		pageTablePool->uid = -1;
 	}
 	return 0;
@@ -321,7 +321,7 @@ int sceGpuMmuMapMemory(GpuMmuContext *context, unsigned gpuAddress,
 			pageShift = 12;
 			entryCount = 1024;
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(context->pageTables[directoryIndex] == NULL,
+			sceKernelAssert(context->pageTables[directoryIndex] == NULL,
 					SCE_DBGINFO_FUNC(714, "sceGpuMmuMapMemory"),
 					__builtin_return_address(0));
 #endif
@@ -333,10 +333,10 @@ int sceGpuMmuMapMemory(GpuMmuContext *context, unsigned gpuAddress,
 					return ret;
 			}
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(&context->pageTablePool != NULL,
+			sceKernelAssert(&context->pageTablePool != NULL,
 					SCE_DBGINFO_FUNC(271, "sceGpuMmuCreatePageTable"),
 					__builtin_return_address(0));
-			SceDebugForDriver_35A35322(context->pageTablePool.heap != NULL,
+			sceKernelAssert(context->pageTablePool.heap != NULL,
 					SCE_DBGINFO_FUNC(272, "sceGpuMmuCreatePageTable"),
 					__builtin_return_address(0));
 #endif
@@ -389,7 +389,7 @@ int sceGpuMmuMapMemory(GpuMmuContext *context, unsigned gpuAddress,
 		start = offset >> table->pageShift;
 		end = start + (length >> table->pageShift);
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(end <= table->entryCount,
+		sceKernelAssert(end <= table->entryCount,
 				SCE_DBGINFO_FUNC(442, "sceGpuMmuSetPageTableEntries"),
 				__builtin_return_address(0));
 #endif
@@ -397,7 +397,7 @@ int sceGpuMmuMapMemory(GpuMmuContext *context, unsigned gpuAddress,
 		ret = 0;
 		for (index = start; index < end; index++) {
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(table->entries[index] == 0,
+			sceKernelAssert(table->entries[index] == 0,
 					SCE_DBGINFO_FUNC(456, "sceGpuMmuSetPageTableEntries"),
 					__builtin_return_address(0));
 #endif
@@ -461,14 +461,14 @@ int sceGpuMmuUnmapMemory(GpuMmuContext *context, unsigned address,
 			start = offset >> table->pageShift;
 			end = start + (length >> table->pageShift);
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(end <= table->entryCount,
+			sceKernelAssert(end <= table->entryCount,
 					SCE_DBGINFO_FUNC(442, "sceGpuMmuSetPageTableEntries"),
 					__builtin_return_address(0));
 #endif
 			entriesChanged = 0;
 			for (index = start; index < end; index++) {
 #if FW_DEBUG
-				SceDebugForDriver_35A35322(table->entries[index] != 0,
+				sceKernelAssert(table->entries[index] != 0,
 					SCE_DBGINFO_FUNC(466, "sceGpuMmuSetPageTableEntries"),
 					__builtin_return_address(0));
 #endif

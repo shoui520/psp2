@@ -93,7 +93,7 @@ void intrRestoreSystemContext(const ThreadRegisterContext *context, int irq)
  */
 void intrRestoreBreakpoints(ProcessHwBreakpoints *regs, int synchronize)
 {
-	SceCpuForDriver_BF82DEB2(&regs->lock);
+	sceKernelSpinlockLowLock(&regs->lock);
 	writeDbgbvr(2, regs->reg[2].value);
 	writeDbgbcr(2, regs->reg[2].control);
 	writeDbgbvr(3, regs->reg[3].value);
@@ -108,7 +108,7 @@ void intrRestoreBreakpoints(ProcessHwBreakpoints *regs, int synchronize)
 /* name unknown: restore the corresponding three watchpoint slots. */
 void intrRestoreWatchpoints(ProcessHwWatchpoints *regs, int synchronize)
 {
-	SceCpuForDriver_BF82DEB2(&regs->lock);
+	sceKernelSpinlockLowLock(&regs->lock);
 	writeDbgwvr(1, regs->reg[1].value);
 	writeDbgwcr(1, regs->reg[1].control);
 	writeDbgwvr(2, regs->reg[2].value);

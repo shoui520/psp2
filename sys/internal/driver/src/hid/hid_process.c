@@ -347,7 +347,7 @@ int hidProcessStop(SceUID pid, int eventType, ProcEventParam *param,
 			entry = (HidProcessLink *)link;
 			process = entry->process;
 			if (pid == process->pid) {
-				state = SceCpuForDriver_D32ACE9E(
+				state = sceKernelSpinlockLowLockCpuSuspendIntr(
 					&process->spinlock);
 				entry->process->flags |= 0x10;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(

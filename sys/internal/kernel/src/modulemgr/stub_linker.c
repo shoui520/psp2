@@ -122,7 +122,7 @@ static inline void StubLinkerWriteKernelWord(SceUInt32 *dst, SceUInt32 value)
 	dacr = readDacr();
 	writeDacr(STUBLINKER_DACR_WRITABLE);
 	*dst = value;
-	SceCpuForDriver_9CB9F0CE((void *)start,
+	sceKernelDcacheCleanRangeForL1WBWA((void *)start,
 					    (((SceUInt32)dst + 4 + 0x1f) & ~0x1f) - start);
 	writeDacr(dacr);
 }
@@ -499,7 +499,7 @@ noentry:
 			dacr = readDacr();
 			writeDacr(STUBLINKER_DACR_WRITABLE);
 			memcpy((void *)addr, code, size);
-			SceCpuForDriver_9CB9F0CE((void *)(addr & ~0x1f),
+			sceKernelDcacheCleanRangeForL1WBWA((void *)(addr & ~0x1f),
 				((addr + 0x1f + size) & ~0x1f) - (addr & ~0x1f));
 			writeDacr(dacr);
 		} else {

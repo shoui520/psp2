@@ -252,13 +252,13 @@ void sceKernelIcacheInvalidateRange(const void *start, SceSize size)
 	SceCpuForKernel_2E637B1D(start, size);
 }
 
-void SceCpuForDriver_8B4C26DF(const void *start, SceSize size)
+void sceKernelDcacheInvalidateRangeForL1WBWA(const void *start, SceSize size)
 {
 	_sceKernelDcacheInvalidateRangeCore(start, size, CACHE_RANGE_L1_ONLY
 		CACHE_CALLER("sceKernelDcacheInvalidateRangeForL1WBWA"));
 }
 
-void SceCpuForDriver_02796361(const void *start, SceSize size)
+void sceKernelDcacheInvalidateRange(const void *start, SceSize size)
 {
 	_sceKernelDcacheInvalidateRangeCore(start, size, CACHE_RANGE_SKIP_UNCACHED
 		CACHE_CALLER("sceKernelDcacheInvalidateRange"));
@@ -290,13 +290,13 @@ void CacheInvalidateRangeWithPA(const void *start, uintptr_t pa, SceSize size)
 	SceCpuForKernel_4236E06A(start, size);
 }
 
-void SceCpuForDriver_9CB9F0CE(const void *start, SceSize size)
+void sceKernelDcacheCleanRangeForL1WBWA(const void *start, SceSize size)
 {
 	_sceKernelDcacheCleanRangeCore(start, size, CACHE_RANGE_L1_ONLY
 		CACHE_CALLER("sceKernelDcacheCleanRangeForL1WBWA"));
 }
 
-void SceCpuForDriver_103872A5(const void *start, SceSize size)
+void sceKernelDcacheCleanRange(const void *start, SceSize size)
 {
 	_sceKernelDcacheCleanRangeCore(start, size, CACHE_RANGE_SKIP_UNCACHED
 		CACHE_CALLER("sceKernelDcacheCleanRange"));
@@ -308,13 +308,13 @@ void SceCpuForKernel_A0A70166(void)
 		CachePleFlush();
 }
 
-void SceCpuForDriver_E551F99B(const void *start, SceSize size)
+void sceKernelDcacheCleanInvalidateRangeForL1WBWA(const void *start, SceSize size)
 {
 	_sceKernelDcacheCleanInvalidateRangeCore(start, size, CACHE_RANGE_L1_ONLY
 		CACHE_CALLER("sceKernelDcacheCleanInvalidateRangeForL1WBWA"));
 }
 
-void SceCpuForDriver_364E68A4(const void *start, SceSize size)
+void sceKernelDcacheCleanInvalidateRange(const void *start, SceSize size)
 {
 	_sceKernelDcacheCleanInvalidateRangeCore(start, size, CACHE_RANGE_SKIP_UNCACHED
 		CACHE_CALLER("sceKernelDcacheCleanInvalidateRange"));

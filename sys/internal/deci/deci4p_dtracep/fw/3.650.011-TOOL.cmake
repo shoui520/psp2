@@ -215,7 +215,7 @@ set(MODULE_IMPORT_FUNCS
 	sceGUIDGetObjectWithClass
 	sceKernelGetHeapInfo
 	sceKernelCopyToUserProcTextDomainForDBGP
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceGUIDReferObjectWithClass
 	sceGUIDReferObject
 	sceGUIDReleaseObject
@@ -249,15 +249,15 @@ set(MODULE_IMPORT_FUNCS
 	SceCpuForDriver_6F63F56D
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_821FC0EE
-	SceCpuForDriver_BF82DEB2
+	sceKernelSpinlockLowLock
 	SceCpuForDriver_CDA96E81
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	sceKernelCpuResumeIntr
 	SceDebugForDriver_391B5B74
 	SceDebugForDriver_391B74B7
 	SceDebugForDriver_411C0733
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	tolower
 	memset
 	strcmp

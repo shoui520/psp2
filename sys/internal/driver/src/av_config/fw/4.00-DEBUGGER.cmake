@@ -133,7 +133,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCopyToUser
 	sceKernelCopyFromUser
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893

@@ -197,7 +197,7 @@ int LibStubCBInit(LoadelfContext *ctx)
 		}
 		nfunc = imp->nfunc;
 		nvar = imp->nvar;
-		if (!SceDipswForDriver_A98FC2FD(0xd2) || nfunc + nvar == 0)
+		if (!sceKernelCheckDipsw(0xd2) || nfunc + nvar == 0)
 			continue;
 		copy = sceKernelAllocRemoteToolHeap(pid, (nfunc + nvar) * 8);
 		stub->toolCopy = copy;

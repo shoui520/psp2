@@ -32,7 +32,7 @@ int SceThreadmgrForDriver_B645C7EF(uint32_t size, void (*destructor)(void *, uin
 {
 	SceKernelSpinlock *lock = &s_threadmgrRuntime.manager->threadMgrCBLock;
 	struct ThreadmgrTlsSlot *descriptor;
-	SceKernelIntrStatus intr = SceCpuForDriver_D32ACE9E(lock);
+	SceKernelIntrStatus intr = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
 	uint32_t slot;
 
 	for (slot = TLS_SLOT_FIRST; slot < TLS_SLOT_COUNT; slot++) {
@@ -61,7 +61,7 @@ int SceThreadmgrForDriver_8C3C1F78(uint32_t slot)
 
 	if (!driverSlot(slot))
 		return SCE_KERNEL_ERROR_TLS_NOT_ACTIVE;
-	intr = SceCpuForDriver_D32ACE9E(lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
 	descriptor = &s_threadmgrRuntime.manager->tlsSlots[slot];
 	if (!descriptor->active) {
 		result = SCE_KERNEL_ERROR_TLS_NOT_ACTIVE;
@@ -98,12 +98,12 @@ void *SceThreadmgrForDriver_89CA5698(uint32_t slot, SceUID threadId, int create)
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithClass(threadId,
 	    s_threadmgrRuntime.manager->threadClass, (SceObjectBase **)&object) >= 0) {
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
+		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		if (!(object->context.status & THREAD_STATE_GONE)) {
 			field = &object->context.tlsSlotMemory.slot[slot];
 			memory = *field;
 			if (memory == NULL) {
-				SceCpuForDriver_BF82DEB2(
+				sceKernelSpinlockLowLock(
 					&s_threadmgrRuntime.manager->threadMgrCBLock);
 				descriptor = &s_threadmgrRuntime.manager->tlsSlots[slot];
 				if (descriptor->active && create) {
@@ -140,7 +140,7 @@ int releaseThreadTlsSlots(struct ThreadCB *thread)
 	void *memory;
 	uint32_t slot;
 
-	SceCpuForDriver_BF82DEB2(lock);
+	sceKernelSpinlockLowLock(lock);
 	for (slot = TLS_SLOT_FIRST; slot < TLS_SLOT_COUNT; slot++) {
 		memory = thread->tlsSlotMemory.slot[slot];
 		if (memory == NULL)

@@ -296,7 +296,7 @@ static void resetComplete(SceUdcdDeviceRequest *request);
 static void dataComplete(SceUdcdDeviceRequest *request);
 static unsigned lock(void)
 {
-	return SceCpuForDriver_D32ACE9E(&s.lock);
+	return sceKernelSpinlockLowLockCpuSuspendIntr(&s.lock);
 }
 
 static void unlock(unsigned state)
@@ -331,7 +331,7 @@ static struct Buffer *takeBuffer(struct BufferQueue *queue)
 
 static void receiveHeader(void)
 {
-	SceCpuForDriver_02796361(s.header.data, PCM_ROUND_CACHE(s.header.size));
+	sceKernelDcacheInvalidateRange(s.header.data, PCM_ROUND_CACHE(s.header.size));
 	s.header.returnCode = 1;
 	SceUdcdForDriver_C60A74B2(&s.header);
 }
@@ -348,7 +348,7 @@ static void releaseBuffer(struct Buffer *buffer)
 			s.receive.onComplete = receiveComplete;
 			s.receive.returnCode = 1;
 			s.receive.unused = buffer;
-			SceCpuForDriver_02796361(buffer->data, PCM_ROUND_CACHE(s.receive.size));
+			sceKernelDcacheInvalidateRange(buffer->data, PCM_ROUND_CACHE(s.receive.size));
 			SceUdcdForDriver_C60A74B2(&s.receive);
 			return;
 		}
@@ -425,7 +425,7 @@ static int disconnectChannel(struct Channel *channel, int command)
 	sceKernelClearEventFlag(channel->event, ~PCM_EVENT_COMMAND_DONE);
 	channel->commandBuffer->command = command;
 	channel->commandBuffer->argument = channel->unit;
-	SceCpuForDriver_364E68A4(channel->commandBuffer, PCM_CACHE_LINE);
+	sceKernelDcacheCleanInvalidateRange(channel->commandBuffer, PCM_CACHE_LINE);
 	if (command == PCM_COMMAND_CLOSE) {
 		unsigned state = lock();
 		releaseChannel(channel);
@@ -577,7 +577,7 @@ static void initChannel(struct Channel *channel, unsigned int unit, struct UnitM
 	channel->command.attributes = 0;
 	channel->command.transmitted = 0;
 	channel->command.returnCode = 1;
-	SceCpuForDriver_364E68A4(&memory->resetHeader, PCM_CACHE_LINE);
+	sceKernelDcacheCleanInvalidateRange(&memory->resetHeader, PCM_CACHE_LINE);
 	s.count++;
 	channel->event = s.events[unit];
 }
@@ -614,7 +614,7 @@ static int allocUnits(unsigned int count)
 		return s.unitMemblock;
 	ret = sceKernelGetMemBlockBase(s.unitMemblock, (void **)&units);
 	if (ret < 0) {
-		SceSysmemForDriver_009E1C61(s.unitMemblock);
+		sceKernelFreeMemBlock(s.unitMemblock);
 		return ret;
 	}
 	for (i = 0; (int)i < (int)count; i++)
@@ -723,7 +723,7 @@ failSema:
 	sceKernelCancelSema(s.sema, -1, NULL);
 	sceKernelDeleteSema(s.sema);
 failBlock:
-	SceSysmemForDriver_009E1C61(s.memblock);
+	sceKernelFreeMemBlock(s.memblock);
 	return -1;
 }
 
@@ -757,12 +757,12 @@ static int stopCommunication(int size, void *args, void *context)
 	}
 	s.flags &= ~PCM_STATE_MASK;
 	unlock(state);
-	SceSysmemForDriver_009E1C61(s.unitMemblock);
+	sceKernelFreeMemBlock(s.unitMemblock);
 	sceKernelCancelSema(s.sema, -1, NULL);
 	sceKernelDeleteSema(s.sema);
 	for (i = 0; i < 8; i++)
 		sceKernelDeleteEventFlag(s.events[i]);
-	SceSysmemForDriver_009E1C61(s.memblock);
+	sceKernelFreeMemBlock(s.memblock);
 	return 0;
 }
 
@@ -855,7 +855,7 @@ static void controlComplete(SceUdcdDeviceRequest *request)
 		s.ports = config->ports;
 		if ((unsigned int)config->units != s.count) {
 			if (s.unitMemblock >= 0) {
-				SceSysmemForDriver_009E1C61(s.unitMemblock);
+				sceKernelFreeMemBlock(s.unitMemblock);
 				s.unitMemblock = -1;
 				s.count = 0;
 			}
@@ -881,7 +881,7 @@ static int processRequest(int recipient, int endpoint, SceUdcdEP0DeviceRequest *
 		case PCM_REQUEST_GET_TITLE:
 			s.control.size = s.titleLength;
 			memcpy(s.control.data, s.title, s.titleLength);
-			SceCpuForDriver_103872A5(s.control.data, PCM_ROUND_CACHE(s.control.size));
+			sceKernelDcacheCleanRange(s.control.data, PCM_ROUND_CACHE(s.control.size));
 			SceUdcdForDriver_1ED0E89E(&s.control);
 			return 0;
 		case PCM_REQUEST_ACCEPT:
@@ -903,7 +903,7 @@ static int processRequest(int recipient, int endpoint, SceUdcdEP0DeviceRequest *
 		default:
 			return -1;
 		}
-		SceCpuForDriver_103872A5(s.control.data, PCM_CACHE_LINE);
+		sceKernelDcacheCleanRange(s.control.data, PCM_CACHE_LINE);
 		SceUdcdForDriver_1ED0E89E(&s.control);
 		return 0;
 	}
@@ -911,7 +911,7 @@ static int processRequest(int recipient, int endpoint, SceUdcdEP0DeviceRequest *
 	case PCM_REQUEST_SET_CONFIG:
 		if (request->wLength) {
 			s.control.size = request->wLength < 64 ? request->wLength : 64;
-			SceCpuForDriver_02796361(s.control.data, 64);
+			sceKernelDcacheInvalidateRange(s.control.data, 64);
 			SceUdcdForDriver_C60A74B2(&s.control);
 			return 0;
 		}
@@ -953,7 +953,7 @@ static int processRequest(int recipient, int endpoint, SceUdcdEP0DeviceRequest *
 		return 0;
 	case PCM_REQUEST_SET_VERSION:
 		s.control.size = request->wLength < 64 ? request->wLength : 64;
-		SceCpuForDriver_02796361(s.control.data, 64);
+		sceKernelDcacheInvalidateRange(s.control.data, 64);
 		SceUdcdForDriver_C60A74B2(&s.control);
 		return 0;
 	default:
@@ -993,7 +993,7 @@ static void processHeader(unsigned int unit, unsigned int flags)
 		s.receive.unused = buffer;
 		s.receive.returnCode = 1;
 		s.receive.size = length;
-		SceCpuForDriver_02796361(buffer->data, PCM_ROUND_CACHE(length));
+		sceKernelDcacheInvalidateRange(buffer->data, PCM_ROUND_CACHE(length));
 		SceUdcdForDriver_C60A74B2(&s.receive);
 		return;
 	}
@@ -1246,7 +1246,7 @@ static int connectChannel(const unsigned *args)
 	sceKernelSignalSema(s.sema, 1);
 	channel->commandBuffer->command = PCM_COMMAND_CONNECT;
 	channel->commandBuffer->argument = ((port & 255) << 8) | (channel->unit & 255);
-	SceCpuForDriver_364E68A4(channel->commandBuffer, PCM_CACHE_LINE);
+	sceKernelDcacheCleanInvalidateRange(channel->commandBuffer, PCM_CACHE_LINE);
 	SceUdcdForDriver_1ED0E89E(&channel->command);
 	if (args[2]) {
 		timeout = *(unsigned *)(uintptr_t)args[2];
@@ -1625,9 +1625,9 @@ static int writeChannel(unsigned unit, const uint8_t *data, unsigned size, unsig
 		channel->dataRequest.size = header->length;
 	}
 	if (channel->dataRequest.data)
-		SceCpuForDriver_364E68A4(channel->sendBuffer, PCM_ROUND_CACHE(channel->dataRequest.size));
+		sceKernelDcacheCleanInvalidateRange(channel->sendBuffer, PCM_ROUND_CACHE(channel->dataRequest.size));
 	channel->dataRequest.returnCode = 1;
-	SceCpuForDriver_364E68A4(header, PCM_CACHE_LINE);
+	sceKernelDcacheCleanInvalidateRange(header, PCM_CACHE_LINE);
 	channel->headerRequest.request.returnCode = 1;
 	SceUdcdForDriver_1ED0E89E(&channel->headerRequest.request);
 	for (;;) {
@@ -1670,7 +1670,7 @@ static int writeChannel(unsigned unit, const uint8_t *data, unsigned size, unsig
 			length = PCM_PACKET_MAX;
 		}
 		header->length = length;
-		SceCpuForDriver_364E68A4(header, PCM_CACHE_LINE);
+		sceKernelDcacheCleanInvalidateRange(header, PCM_CACHE_LINE);
 		if (!channel->user)
 			memcpy(channel->sendBuffer, channel->write, length);
 		else {
@@ -1680,7 +1680,7 @@ static int writeChannel(unsigned unit, const uint8_t *data, unsigned size, unsig
 		}
 		channel->dataRequest.data = channel->sendBuffer;
 		channel->dataRequest.size = header->length;
-		SceCpuForDriver_364E68A4(channel->sendBuffer, PCM_ROUND_CACHE(channel->dataRequest.size));
+		sceKernelDcacheCleanInvalidateRange(channel->sendBuffer, PCM_ROUND_CACHE(channel->dataRequest.size));
 		sceKernelClearEventFlag(channel->event, ~PCM_EVENT_SENT);
 		channel->dataRequest.returnCode = 1;
 		channel->headerRequest.request.returnCode = 1;
@@ -1870,7 +1870,7 @@ static int readChannel(unsigned unit, uint8_t *data, unsigned size, unsigned mod
 		length = buffer->size;
 		if (channel->readRemaining <= length) {
 			if (channel->user)
-				SceCpuForDriver_02796361(buffer->data, PCM_ROUND_CACHE(length));
+				sceKernelDcacheInvalidateRange(buffer->data, PCM_ROUND_CACHE(length));
 			copyRead(channel, channel->read, buffer->data, channel->readRemaining);
 			channel->partial = buffer;
 			channel->offset = channel->readRemaining;
@@ -1895,7 +1895,7 @@ static int readChannel(unsigned unit, uint8_t *data, unsigned size, unsigned mod
 			receiveHeader();
 			break;
 		}
-		SceCpuForDriver_02796361(buffer->data, PCM_ROUND_CACHE(length));
+		sceKernelDcacheInvalidateRange(buffer->data, PCM_ROUND_CACHE(length));
 		copyRead(channel, channel->read, buffer->data, length);
 		channel->read += buffer->size;
 		channel->readRemaining -= buffer->size;

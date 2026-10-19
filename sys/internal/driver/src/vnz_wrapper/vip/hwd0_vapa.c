@@ -38,13 +38,13 @@ int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request)
 	int ret;
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(request != NULL, SCE_DBGINFO_FUNC(282, "_hwd0DmacMemcpyBlocking"), __builtin_return_address(0));
+	sceKernelAssert(request != NULL, SCE_DBGINFO_FUNC(282, "_hwd0DmacMemcpyBlocking"), __builtin_return_address(0));
 #endif
 	count = request->count;
 	channel = request->channel;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(channel == 0, SCE_DBGINFO_FUNC(286, "_hwd0DmacMemcpyBlocking"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322(count <= 8, SCE_DBGINFO_FUNC(287, "_hwd0DmacMemcpyBlocking"), __builtin_return_address(0));
+	sceKernelAssert(channel == 0, SCE_DBGINFO_FUNC(286, "_hwd0DmacMemcpyBlocking"), __builtin_return_address(0));
+	sceKernelAssert(count <= 8, SCE_DBGINFO_FUNC(287, "_hwd0DmacMemcpyBlocking"), __builtin_return_address(0));
 #endif
 	if (!count)
 		return 0;
@@ -70,7 +70,7 @@ int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request)
 		if (!isVeneziaHwdUncachedAddress(destination))
 			command += 0x01ffe000;
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(index <= 7, SCE_DBGINFO_FUNC(363, "_dmacMemcpy"), __builtin_return_address(0));
+		sceKernelAssert(index <= 7, SCE_DBGINFO_FUNC(363, "_dmacMemcpy"), __builtin_return_address(0));
 #endif
 		tag->src = transfer->source;
 		tag->dst = transfer->destination;
@@ -129,7 +129,7 @@ int allocateVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block,
 
 int releaseVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block)
 {
-	SceSysmemForDriver_009E1C61(block->uid);
+	sceKernelFreeMemBlock(block->uid);
 	block->uid = -1;
 	block->region.physicalAddress = 0;
 	block->region.virtualAddress = 0;

@@ -77,11 +77,11 @@ PVRSRV_ERROR MMU_BIFResetPDAlloc(PVRSRV_SGXDEV_INFO *psDevInfo)
 	OSMemSet(pui32BIFResetPD + 2048, 0xdb, 0x1000);
 	return PVRSRV_OK;
 fail:
-	SceSysmemForDriver_009E1C61(uid);
+	sceKernelFreeMemBlock(uid);
 	return PVRSRV_ERROR_OUT_OF_MEMORY;
 }
 
 IMG_VOID MMU_BIFResetPDFree(PVRSRV_SGXDEV_INFO *psDevInfo)
 {
-	SceSysmemForDriver_009E1C61((SceUID)psDevInfo->hBIFResetPDOSMemHandle);
+	sceKernelFreeMemBlock((SceUID)psDevInfo->hBIFResetPDOSMemHandle);
 }

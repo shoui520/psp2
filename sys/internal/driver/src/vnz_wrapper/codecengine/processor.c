@@ -34,11 +34,11 @@ int _sceCodecEngineProcessorProcessSuspend(SceUID pid)
 	if (ret >= 0) {
 		processor = _sceCodecEngineGetProcessor(pid);
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(processor != NULL, SCE_DBGINFO_FUNC(70, "_sceCodecEngineProcessorProcessSuspend"), __builtin_return_address(0));
+		sceKernelAssert(processor != NULL, SCE_DBGINFO_FUNC(70, "_sceCodecEngineProcessorProcessSuspend"), __builtin_return_address(0));
 #endif
 		if (*processor) {
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(*processor <= g_codecEngineProcessorState.processorCount,
+			sceKernelAssert(*processor <= g_codecEngineProcessorState.processorCount,
 				SCE_DBGINFO_FUNC(76, "_sceCodecEngineProcessorProcessSuspend"), __builtin_return_address(0));
 #endif
 			if (g_codecEngineProcessorState.processorCount == *processor) {
@@ -62,7 +62,7 @@ int _sceCodecEngineProcessorProcessResume(SceUID pid)
 	if (ret >= 0) {
 		processor = _sceCodecEngineGetProcessor(pid);
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(processor != NULL, SCE_DBGINFO_FUNC(112, "_sceCodecEngineProcessorProcessResume"), __builtin_return_address(0));
+		sceKernelAssert(processor != NULL, SCE_DBGINFO_FUNC(112, "_sceCodecEngineProcessorProcessResume"), __builtin_return_address(0));
 #endif
 		if (*processor) {
 			if (g_codecEngineProcessorState.processorCount == 0) {
@@ -92,11 +92,11 @@ int sceCodecEngineChangeNumWorkerCoresDefaultForUser(void)
 			goto unlockProcess;
 		processor = _sceCodecEngineGetProcessor(0);
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(processor != NULL, SCE_DBGINFO_FUNC(161, "sceCodecEngineChangeNumWorkerCoresDefaultForUser"), __builtin_return_address(0));
+		sceKernelAssert(processor != NULL, SCE_DBGINFO_FUNC(161, "sceCodecEngineChangeNumWorkerCoresDefaultForUser"), __builtin_return_address(0));
 #endif
 		if (*processor) {
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(*processor <= g_codecEngineProcessorState.processorCount,
+			sceKernelAssert(*processor <= g_codecEngineProcessorState.processorCount,
 				SCE_DBGINFO_FUNC(167, "sceCodecEngineChangeNumWorkerCoresDefaultForUser"), __builtin_return_address(0));
 #endif
 			if (g_codecEngineProcessorState.processorCount == 1) {
@@ -131,10 +131,10 @@ int sceCodecEngineChangeNumWorkerCoresMaxForUser(void)
 			goto unlockProcess;
 		processor = _sceCodecEngineGetProcessor(0);
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(processor != NULL, SCE_DBGINFO_FUNC(218, "sceCodecEngineChangeNumWorkerCoresMaxForUser"), __builtin_return_address(0));
+		sceKernelAssert(processor != NULL, SCE_DBGINFO_FUNC(218, "sceCodecEngineChangeNumWorkerCoresMaxForUser"), __builtin_return_address(0));
 #endif
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(*processor <= g_codecEngineProcessorState.processorCount,
+		sceKernelAssert(*processor <= g_codecEngineProcessorState.processorCount,
 			SCE_DBGINFO_FUNC(220, "sceCodecEngineChangeNumWorkerCoresMaxForUser"), __builtin_return_address(0));
 #endif
 		if (g_codecEngineProcessorState.processorCount == 0) {

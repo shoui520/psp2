@@ -196,5 +196,5 @@ void ngsCleanDcacheRange(void *address, int size)
 	start &= ~31U;
 	size = (size + 31) & ~31U;
 	if (size > 0 && start != 0)
-		SceCpuForDriver_103872A5((void *)start, size);
+		sceKernelDcacheCleanRange((void *)start, size);
 }

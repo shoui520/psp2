@@ -43,7 +43,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSysrootSetModulePrivate
 	sceKernelL1DcacheCleanRange
 	sceKernelCpuId
-	SceCpuForTZS_596784E9
+	sceKernelDcacheCleanRangeForL1WBWA
 	sceKernelSpinlockLowLock
 	sceKernelL1IcacheInvalidateEntireAllCore
 	sceKernelL1IcacheInvalidateRange

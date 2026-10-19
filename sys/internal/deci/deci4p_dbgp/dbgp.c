@@ -64,7 +64,7 @@ int _dbgpUpdateUlobjmgrFlagForDbgp(DbgpCB *dbgp, DbgpProcCB *proc,
 	if (dbgp == NULL)
 		SCE_PANIC(3794);
 
-	state = SceCpuForDriver_D32ACE9E(&dbgp->procLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&dbgp->procLock);
 	if (proc != NULL) {
 		value = (proc->ulobjmgrFlag & ~clear) | set;
 		proc->ulobjmgrFlag = value;
@@ -90,7 +90,7 @@ int _dbgpUpdateUlobjmgrFlagForLibfiber(SceUID pid, SceUInt32 *flag)
 	if (flag == NULL)
 		SCE_PANIC(3830);
 
-	state = SceCpuForDriver_D32ACE9E(&g_dbgp.procLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&g_dbgp.procLock);
 	*flag = 0;
 
 	/* Check each registry slot before loading its process pointer. */
@@ -133,21 +133,21 @@ int dbgpSysEventHandler(int resume, int eventid, void *args, void *opt)
 
 	if (resume == 0) {
 		if (eventid == 0x102) {
-			state = SceCpuForDriver_D32ACE9E(&g_dbgp.lock);
+			state = sceKernelSpinlockLowLockCpuSuspendIntr(&g_dbgp.lock);
 			g_dbgp.status |= 4;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&g_dbgp.lock, state);
 		} else if (eventid == 0x4000) {
-			state = SceCpuForDriver_D32ACE9E(&g_dbgp.lock);
+			state = sceKernelSpinlockLowLockCpuSuspendIntr(&g_dbgp.lock);
 			g_dbgp.status &= ~4u;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&g_dbgp.lock, state);
 		}
 	} else if (resume == 1) {
 		if (eventid == 0x10000) {
-			state = SceCpuForDriver_D32ACE9E(&g_dbgp.lock);
+			state = sceKernelSpinlockLowLockCpuSuspendIntr(&g_dbgp.lock);
 			g_dbgp.status |= 8;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&g_dbgp.lock, state);
 		} else if (eventid == 0x400000) {
-			state = SceCpuForDriver_D32ACE9E(&g_dbgp.lock);
+			state = sceKernelSpinlockLowLockCpuSuspendIntr(&g_dbgp.lock);
 			g_dbgp.status &= ~8u;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&g_dbgp.lock, state);
 		}
@@ -181,7 +181,7 @@ void _dbgpFreeWorkBuf(DbgpProcCB *proc)
 	if ((buf->status & 1) == 0)
 		return;
 	if ((buf->status & 0x10) != 0) {
-		result = SceSysmemForDriver_009E1C61(buf->extendedMemBlock);
+		result = sceKernelFreeMemBlock(buf->extendedMemBlock);
 		if (result < 0)
 			SCE_PRINTF_WITH_INFO_FUNC(15, 3051, "_dbgpFreeBuf",
 						  "0x%08x\n", result);
@@ -203,7 +203,7 @@ void _dbgpFreeBuf(DbgpProcCB *proc, unsigned int which)
 	if ((buf->status & 1) == 0)
 		return;
 	if ((buf->status & 0x10) != 0) {
-		result = SceSysmemForDriver_009E1C61(buf->extendedMemBlock);
+		result = sceKernelFreeMemBlock(buf->extendedMemBlock);
 		if (result < 0)
 			SCE_PRINTF_WITH_INFO(15, 3051, "0x%08x\n", result);
 		_dbgpSetBufStatus(buf, 0x10, 0);
@@ -220,14 +220,14 @@ int _dbgpReqSend(DbgpProcCB *proc)
 
 	if ((g_dbgp.status & 2) == 0)
 		return DFMGR_ERROR_NOT_CONNECTED;
-	state = SceCpuForDriver_D32ACE9E(&proc->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&proc->lock);
 	proc->status |= 1;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&proc->lock, state);
 	pid = proc->pid;
-	state = SceCpuForDriver_D32ACE9E(&g_dbgp.sendLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&g_dbgp.sendLock);
 	if (g_dbgp.sendCount > 31) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_dbgp.sendLock, state);
-		state = SceCpuForDriver_D32ACE9E(&proc->lock);
+		state = sceKernelSpinlockLowLockCpuSuspendIntr(&proc->lock);
 		proc->status &= ~1u;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&proc->lock, state);
 		return SCE_ERROR_ERRNO_ENOSPC;
@@ -244,11 +244,11 @@ int _dbgpReqSend(DbgpProcCB *proc)
 	if (result >= 0 || result == DFMGR_ERROR_BUSY)
 		return 0;
 	if (result == DFMGR_ERROR_NOT_CONNECTED) {
-		state = SceCpuForDriver_D32ACE9E(&proc->lock);
+		state = sceKernelSpinlockLowLockCpuSuspendIntr(&proc->lock);
 		proc->status &= ~0x21u;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&proc->lock, state);
 		while (g_dbgp.sendCount > 0) {
-			state = SceCpuForDriver_D32ACE9E(&g_dbgp.sendLock);
+			state = sceKernelSpinlockLowLockCpuSuspendIntr(&g_dbgp.sendLock);
 			if (g_dbgp.sendCount > 0) {
 				--g_dbgp.sendCount;
 				next = g_dbgp.sendRead + 1;
@@ -263,7 +263,7 @@ int _dbgpReqSend(DbgpProcCB *proc)
 		return DFMGR_ERROR_NOT_CONNECTED;
 	}
 	SCE_PRINTF_WITH_INFO(15, 1126, "0x%08x\n", result);
-	state = SceCpuForDriver_D32ACE9E(&proc->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&proc->lock);
 	proc->status &= ~1u;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&proc->lock, state);
 	return result;
@@ -416,7 +416,7 @@ int _dbgpParseProcessInfo(DbgpProcCB *proc)
 	if (result < 0)
 		return result;
 	if (info.type - 1 <= 1) {
-		state = SceCpuForDriver_D32ACE9E(&proc->lock);
+		state = sceKernelSpinlockLowLockCpuSuspendIntr(&proc->lock);
 		proc->status |= 0x40;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&proc->lock, state);
 	}
@@ -453,7 +453,7 @@ freeWork:
 	buf = &proc->buf[2];
 	if ((buf->status & 1) != 0) {
 		if ((buf->status & 0x10) != 0) {
-			result = SceSysmemForDriver_009E1C61(buf->extendedMemBlock);
+			result = sceKernelFreeMemBlock(buf->extendedMemBlock);
 			if (result < 0)
 				SCE_PRINTF_WITH_INFO_FUNC(15, 3051, "_dbgpFreeBuf",
 							  "0x%08x\n", result);
@@ -490,7 +490,7 @@ int dbgpCreateWorkerThread(SceUID pid)
 		SCE_PRINTF_WITH_INFO_FUNC(15, 3681, "_dbgpAllocDbgpProcCB", "\n");
 		return SCE_ERROR_ERRNO_ENOMEM;
 	}
-	state = SceCpuForDriver_D32ACE9E(&g_dbgp.procLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&g_dbgp.procLock);
 	count = g_dbgp.procCount;
 	if (count > 16)
 		goto reject;
@@ -629,7 +629,7 @@ available:
 		return result;
 	}
 	proc->workerThread = result;
-	state = SceCpuForDriver_D32ACE9E(&proc->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&proc->lock);
 	proc->status |= 0x10000000;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&proc->lock, state);
 	result = sceKernelStartThread(proc->workerThread, sizeof(proc), &proc);
@@ -647,7 +647,7 @@ int module_start(SceSize args, const void *argp)
 	SceKernelIntrStatus state;
 	int result;
 
-	if (SceDipswForDriver_A98FC2FD(194) == 0) {
+	if (sceKernelCheckDipsw(194) == 0) {
 #if FW_SINCE(0x04000000)
 		SCE_DBG_PRINTF_FUNC(11, 188, "DbgpModuleStart", "disabled by dipsw\n");
 #endif
@@ -679,10 +679,10 @@ int module_start(SceSize args, const void *argp)
 	protocol.alias = 0;
 	protocol.destination = 0;
 	strncpy(protocol.name, "DBGP", sizeof(protocol.name));
-	state = SceCpuForDriver_D32ACE9E(&g_dbgp.lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&g_dbgp.lock);
 	g_dbgp.status |= 2;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_dbgp.lock, state);
-	if (SceDipswForDriver_A98FC2FD(195) != 0)
+	if (sceKernelCheckDipsw(195) != 0)
 		protocol.flags |= DFMGR_PROTOCOL_SDIO;
 	else
 		protocol.flags |= DFMGR_PROTOCOL_USB;
@@ -742,10 +742,10 @@ found:
 			(SceKernelFastMutex *)&proc->buf[1].mutex), 1367);
 	DELETE_RESOURCE(sceKernelFinalizeFastMutex(
 			(SceKernelFastMutex *)&proc->buf[0].mutex), 1374);
-	DELETE_RESOURCE(SceSysmemForDriver_009E1C61(proc->bufferMemBlock), 1381);
+	DELETE_RESOURCE(sceKernelFreeMemBlock(proc->bufferMemBlock), 1381);
 #undef DELETE_RESOURCE
 
-	state = SceCpuForDriver_D32ACE9E(&g_dbgp.procLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&g_dbgp.procLock);
 #define FIND_PROCESS(index) do {					\
 	if (g_dbgp.procActive[index] != 0) {			\
 		proc = g_dbgp.procCB[index];			\
@@ -956,7 +956,7 @@ int _dbgpEventRecv(int event, void *arg, void *ctx)
 			    (proc->buf[0].status & 1) == 0)
 				continue;
 			_dbgpRecvData(g_dbgp.protocol, &discarded, sizeof(discarded));
-			state = SceCpuForDriver_D32ACE9E(&g_dbgp.lock);
+			state = sceKernelSpinlockLowLockCpuSuspendIntr(&g_dbgp.lock);
 			g_dbgp.status |= 1;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&g_dbgp.lock, state);
 			sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_dbgp.mutex);
@@ -1042,7 +1042,7 @@ int _dbgpEventRecv(int event, void *arg, void *ctx)
 		goto error;
 
 	case SCE_DFMGR_EVENT_SEND:
-		state = SceCpuForDriver_D32ACE9E(&dbgp->sendLock);
+		state = sceKernelSpinlockLowLockCpuSuspendIntr(&dbgp->sendLock);
 		if (dbgp->sendCount <= 0) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&dbgp->sendLock, state);
 			goto empty;
@@ -1161,7 +1161,7 @@ int _dbgpEventRecv(int event, void *arg, void *ctx)
 				goto disconnected;
 			if (linkStatus->connected != 1)
 				goto invalid;
-			state = SceCpuForDriver_D32ACE9E(&dbgp->lock);
+			state = sceKernelSpinlockLowLockCpuSuspendIntr(&dbgp->lock);
 			dbgp->status |= 2;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&dbgp->lock, state);
 			if ((dbgp->status & 8) != 0)
@@ -1174,7 +1174,7 @@ int _dbgpEventRecv(int event, void *arg, void *ctx)
 				goto disconnected;
 			if (linkStatus->enabled != 1)
 				goto invalid;
-			state = SceCpuForDriver_D32ACE9E(&dbgp->lock);
+			state = sceKernelSpinlockLowLockCpuSuspendIntr(&dbgp->lock);
 			dbgp->status |= 2;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&dbgp->lock, state);
 			result = dbgpDetachAllProcess(dbgp);
@@ -1185,7 +1185,7 @@ int _dbgpEventRecv(int event, void *arg, void *ctx)
 			return result;
 		goto error;
 disconnected:
-		state = SceCpuForDriver_D32ACE9E(&dbgp->lock);
+		state = sceKernelSpinlockLowLockCpuSuspendIntr(&dbgp->lock);
 		dbgp->status &= ~2u;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&dbgp->lock, state);
 		return 0;
@@ -1213,7 +1213,7 @@ int dbgpClearPrxDebug(DbgpProcCB *proc)
 	SceKernelIntrStatus state;
 	int result;
 
-	state = SceCpuForDriver_D32ACE9E(&proc->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&proc->lock);
 	proc->status &= ~0x100000u;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&proc->lock, state);
 	result = sceKernelSetEventFlag(proc->prxDebugEventFlag, 0x80000);
@@ -1313,7 +1313,7 @@ void dbgpFreeRecvBuf(DbgpProcCB *proc)
 	buf = &proc->buf[0];
 	if ((buf->status & 1) != 0) {
 		if ((buf->status & 0x10) != 0) {
-			result = SceSysmemForDriver_009E1C61(buf->extendedMemBlock);
+			result = sceKernelFreeMemBlock(buf->extendedMemBlock);
 			if (result < 0)
 				SCE_PRINTF_WITH_INFO_FUNC(15, 3051, "_dbgpFreeBuf",
 							  "0x%08x\n", result);
@@ -1336,7 +1336,7 @@ void dbgpFreeRecvBuf(DbgpProcCB *proc)
 		    (other->buf[0].status & 1) != 0)
 			goto unlock;
 	}
-	state = SceCpuForDriver_D32ACE9E(&g_dbgp.lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&g_dbgp.lock);
 	g_dbgp.status &= ~1u;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_dbgp.lock, state);
 	sceDfMgrSendSpace(g_dbgp.protocol);
@@ -1365,7 +1365,7 @@ int _dbgpWorkerThread(SceSize args, void *argp)
 	proc = *(DbgpProcCB **)argp;
 
 #define UPDATE_STATUS(clear, set) do { \
-	state = SceCpuForDriver_D32ACE9E(&proc->lock); \
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&proc->lock); \
 	proc->status = (proc->status & ~(SceUInt32)(clear)) | (set); \
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&proc->lock, state); \
 } while (0)
@@ -1745,7 +1745,7 @@ void dbgpFreeWorkBuf(DbgpProcCB *proc)
 	if ((buf->status & 1) == 0)
 		return;
 	if ((buf->status & 0x10) != 0) {
-		result = SceSysmemForDriver_009E1C61(buf->extendedMemBlock);
+		result = sceKernelFreeMemBlock(buf->extendedMemBlock);
 		if (result < 0)
 			SCE_PRINTF_WITH_INFO_FUNC(15, 3051, "_dbgpFreeBuf",
 						  "0x%08x\n", result);

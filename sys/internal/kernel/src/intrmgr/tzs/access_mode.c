@@ -36,7 +36,7 @@ static int SetRegbusAccessMode(int mask, int mode, int arg2, int arg3)
 	SceProductMode productMode;
 	int ret;
 
-	ret = ScePmMgrForDriver_2AC815A2(&productMode);
+	ret = sceSblPmMgrGetProductMode(&productMode);
 	if (ret < 0)
 		return ret;
 	if (!productMode)
@@ -63,7 +63,7 @@ static int SetPervasive2AccessMode(int mask, int mode, int arg2, int arg3)
 	unsigned int bits;
 	int ret;
 
-	ret = ScePmMgrForDriver_2AC815A2(&productMode);
+	ret = sceSblPmMgrGetProductMode(&productMode);
 	if (ret < 0)
 		return ret;
 	if (!productMode)
@@ -84,7 +84,7 @@ static int SetTasAccessMode(int mask, int mode, int arg2, int arg3)
 	unsigned int bits;
 	int ret;
 
-	ret = ScePmMgrForDriver_2AC815A2(&productMode);
+	ret = sceSblPmMgrGetProductMode(&productMode);
 	if (ret < 0)
 		return ret;
 	if (!productMode)
@@ -105,7 +105,7 @@ static int SetPervasiveAccessMode(int mask, int mode, int arg2, int arg3)
 	unsigned int bits;
 	int ret;
 
-	ret = ScePmMgrForDriver_2AC815A2(&productMode);
+	ret = sceSblPmMgrGetProductMode(&productMode);
 	if (ret < 0)
 		return ret;
 	if (!productMode)

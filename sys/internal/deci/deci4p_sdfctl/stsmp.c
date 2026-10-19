@@ -111,7 +111,7 @@ static inline __attribute__((always_inline)) void _stsmpSend(void)
 	if (s_stsmp.tx.count == 0)
 		return;
 	for (;;) {
-		intr = SceCpuForDriver_D32ACE9E(&s_stsmpLock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_stsmpLock);
 		if (s_stsmp.tx.count < 1)
 			break;
 		pkt = s_stsmp.tx.buf[s_stsmp.tx.read];
@@ -126,7 +126,7 @@ static inline __attribute__((always_inline)) void _stsmpSend(void)
 		} else {
 			SDFCTL_PRINTF(280, "no route (0x%04x)\n", pkt->hdr.dst);
 		}
-		intr = SceCpuForDriver_D32ACE9E(&s_stsmpLock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_stsmpLock);
 		read = s_stsmp.tx.read;
 		count = s_stsmp.tx.count - 1;
 		next = read + 1;
@@ -188,7 +188,7 @@ static __attribute__((noinline, noclone)) int stsmpQueue(const void *pkt, SceSiz
 
 	if (size > STSMP_PACKET_MAX)
 		return SDFCTL_ERROR_INVALID_ARG;
-	intr = SceCpuForDriver_D32ACE9E(&s_stsmpLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_stsmpLock);
 	if (s_stsmp.tx.count > STSMP_QUEUE - 1) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_stsmpLock, intr);
 		return SDFCTL_ERROR_QUEUE_FULL;

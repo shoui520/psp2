@@ -311,7 +311,7 @@ int SCTtypModuleStart(SceSize args, void *argp)
 	SceUID thid;
 	int ret, status;
 
-	if (!SceDipswForDriver_A98FC2FD(0xc1)) {
+	if (!sceKernelCheckDipsw(0xc1)) {
 		SCE_DBG_PRINTF(0xb, 116, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}

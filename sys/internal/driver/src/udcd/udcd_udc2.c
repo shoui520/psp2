@@ -71,7 +71,7 @@ SceUInt32 udcdCookieAlarm(void *argp)
 	SceKernelIntrStatus status;
 	int cookie = 0;
 
-	status = SceCpuForDriver_D32ACE9E(&state->lock);
+	status = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	if (SceGpioForDriver_129DF5AC(0, 5) == 0)
 		cookie = SceGpioForDriver_129DF5AC(0, 0xc);
 	controller->cookieTimer = -1;
@@ -279,7 +279,7 @@ int udcdSuspendController(int bus)
 
 	if (!udcdIsDriverBus(bus))
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
-	status = SceCpuForDriver_D32ACE9E(&state->lock);
+	status = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	intr = udcdControllerIntr(bus);
 	vbusIntr = udcdVbusIntr(bus);
 	state->controllerResumed = 0;
@@ -352,7 +352,7 @@ int udcdStopController(int bus, SceKernelIntrStatus *status)
 	if (state->controllerResumed == 1)
 		ScePervasiveForDriver_4F64DEF6(bus);
 release:
-	return SceSysmemForDriver_009E1C61(controller->dmaBlock) < 0 ? SCE_UDCD_ERROR_WAIT_CANCEL : 0;
+	return sceKernelFreeMemBlock(controller->dmaBlock) < 0 ? SCE_UDCD_ERROR_WAIT_CANCEL : 0;
 }
 
 /* Original name unknown. The DMA descriptor of an endpoint's first request. */
@@ -539,7 +539,7 @@ int udcdDetectCookie(int wake)
 	volatile struct udcdControllerRegisters *registers;
 	SceKernelIntrStatus status;
 
-	status = SceCpuForDriver_D32ACE9E(&state->lock);
+	status = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	ScePervasiveForDriver_BB67EF58(2);
 	if ((udcdState.registers->usbVbus & 4) && state->cableState == SCE_UDCD_STATUS_CABLE_CONNECTED) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
@@ -652,7 +652,7 @@ void udcdVbusConnected(int bus, SceKernelIntrStatus *status)
 	} else if (state->cableState == SCE_UDCD_STATUS_CABLE_DISCONNECTED && SceGpioForDriver_129DF5AC(0, 5) == 0) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, *status);
 		udcdDetectCookie(0);
-		*status = SceCpuForDriver_D32ACE9E(&state->lock);
+		*status = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	}
 }
 
@@ -687,7 +687,7 @@ int udcdVbusInterrupt(int intr, void *argp)
 		bus = -1;
 	}
 	state = &udcdState.buses[bus];
-	status = SceCpuForDriver_D32ACE9E(&state->lock);
+	status = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	phy = udcdState.registers;
 	if ((phy->usbVbusInterrupt >> shift) & 1) {
 		phy->usbVbusInterrupt = rise;
@@ -718,7 +718,7 @@ int udcdResumeController(int bus)
 
 	if (!udcdIsDriverBus(bus))
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
-	status = SceCpuForDriver_D32ACE9E(&state->lock);
+	status = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	vbusIntr = udcdVbusIntr(bus);
 	state->controllerResumed = 1;
 	ScePervasiveForDriver_4F64DEF6(bus);
@@ -731,7 +731,7 @@ int udcdResumeController(int bus)
 		} else if (SceGpioForDriver_129DF5AC(0, 5) == 0) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 			udcdDetectCookie(0);
-			status = SceCpuForDriver_D32ACE9E(&state->lock);
+			status = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 		}
 		sceKernelEnableIntr(vbusIntr);
 		if (controller->board != 0)
@@ -796,7 +796,7 @@ int udcdDmaInterrupt(int intr, void *argp)
 	bus = udcdIntrBus(intr);
 	state = &udcdState.buses[bus];
 	controller = &udcdState.controllers[bus];
-	status = SceCpuForDriver_D32ACE9E(&state->lock);
+	status = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	if (((udcdState.registers->usbVbus >> bus) & 1) && state->cableState == SCE_UDCD_STATUS_CABLE_CONNECTED) {
 		pending = controller->registers->dmaInterrupt;
 		number = 1;
@@ -1025,7 +1025,7 @@ address:
 						sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, *status);
 						driver->changeSetting(number - driver->interface->interfaceNumber,
 								      alternate, bus);
-						*status = SceCpuForDriver_D32ACE9E(&state->lock);
+						*status = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 					}
 					break;
 				}
@@ -1130,7 +1130,7 @@ int udcdStartController(int bus, SceKernelIntrStatus *status)
 				if (SceGpioForDriver_129DF5AC(0, 5) == 0) {
 					sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, *status);
 					udcdDetectCookie(0);
-					*status = SceCpuForDriver_D32ACE9E(&state->lock);
+					*status = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 				}
 				if (sceKernelEnableSubIntr(0xfa, 5) < 0)
 					return 0x80243307;
@@ -1138,9 +1138,9 @@ int udcdStartController(int bus, SceKernelIntrStatus *status)
 			sceKernelEnableIntr(vbusIntr);
 			return 0;
 		}
-		SceSysmemForDriver_009E1C61(block);
+		sceKernelFreeMemBlock(block);
 	}
-	SceSysmemForDriver_009E1C61(state->deviceMemBlock);
+	sceKernelFreeMemBlock(state->deviceMemBlock);
 	return SCE_UDCD_ERROR_WAIT_TIMEOUT;
 }
 
@@ -1209,7 +1209,7 @@ int udcdControllerInterrupt(int intr, void *argp)
 	state = &udcdState.buses[bus];
 	controller = &udcdState.controllers[bus];
 	control = &state->controlRequest;
-	status = SceCpuForDriver_D32ACE9E(&state->lock);
+	status = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	queue = controller->endpoints[0].queue;
 	if (state->cableState != SCE_UDCD_STATUS_CABLE_CONNECTED)
 		goto unlock;
@@ -1436,7 +1436,7 @@ void udcdSuspendAll(void)
 
 	for (bus = 1; bus != 3; bus++) {
 		state = &udcdState.buses[bus];
-		status = SceCpuForDriver_D32ACE9E(&state->lock);
+		status = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 		state->systemSuspended = 1;
 		if (state->controllerDriverState != UDCD_CONTROLLER_DRIVER_ABSENT) {
 			state->controllerResumed = 0;
@@ -1472,7 +1472,7 @@ void udcdResumeAll(void)
 
 	for (bus = 0; bus != 3; bus++) {
 		state = &udcdState.buses[bus];
-		status = SceCpuForDriver_D32ACE9E(&state->lock);
+		status = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 		if (state->controllerDriverState == UDCD_CONTROLLER_DRIVER_ABSENT) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 			continue;
@@ -1630,7 +1630,7 @@ cleanup:
 	sceKernelReleaseIntrHandler(0xb5);
 	sceKernelReleaseIntrHandler(0xb6);
 	sceKernelReleaseIntrHandler(0xbf);
-	SceSysmemForDriver_009E1C61(udcdState.controllers[0].registerBlock);
+	sceKernelFreeMemBlock(udcdState.controllers[0].registerBlock);
 	if (udcdState.controllers[0].board != 0)
 		sceKernelReleaseSubIntrHandler(0xfa, 5);
 	sceKernelDisableIntr(0xa4);
@@ -1638,7 +1638,7 @@ cleanup:
 	sceKernelReleaseIntrHandler(0x97);
 	sceKernelReleaseIntrHandler(0x98);
 	sceKernelReleaseIntrHandler(0xa5);
-	SceSysmemForDriver_009E1C61(udcdState.controllers[1].registerBlock);
+	sceKernelFreeMemBlock(udcdState.controllers[1].registerBlock);
 	if (udcdState.controllers[1].board != 0)
 		sceKernelReleaseSubIntrHandler(0xfa, 5);
 	sceKernelDisableIntr(0xaa);
@@ -1646,10 +1646,10 @@ cleanup:
 	sceKernelReleaseIntrHandler(0x9b);
 	sceKernelReleaseIntrHandler(0x9c);
 	sceKernelReleaseIntrHandler(0xab);
-	SceSysmemForDriver_009E1C61(udcdState.controllers[2].registerBlock);
+	sceKernelFreeMemBlock(udcdState.controllers[2].registerBlock);
 	if (udcdState.controllers[2].board != 0)
 		sceKernelReleaseSubIntrHandler(0xfa, 5);
 release:
-	SceSysmemForDriver_009E1C61(udcdState.phyRegisterBlock);
+	sceKernelFreeMemBlock(udcdState.phyRegisterBlock);
 	return result;
 }

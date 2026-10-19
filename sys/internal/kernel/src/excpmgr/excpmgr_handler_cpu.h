@@ -23,7 +23,7 @@ static inline void excpPokeWord(unsigned int address, unsigned int value)
 
 	writeDacr(DACR_ALL_MANAGER);
 	*word++ = value;
-	SceCpuForDriver_9CB9F0CE((void *)cacheLineDown(address),
+	sceKernelDcacheCleanRangeForL1WBWA((void *)cacheLineDown(address),
 		cacheLineDown((unsigned int)word + 31) - cacheLineDown(address));
 	writeDacr(dacr);
 }
@@ -36,7 +36,7 @@ static inline void excpPokeVector(unsigned int *slot, const volatile unsigned in
 
 	writeDacr(DACR_ALL_MANAGER);
 	*slot = *value;
-	SceCpuForDriver_9CB9F0CE((void *)cacheLineDown(address),
+	sceKernelDcacheCleanRangeForL1WBWA((void *)cacheLineDown(address),
 		cacheLineDown(address + 4 + 31) - cacheLineDown(address));
 	writeDacr(dacr);
 	dsb();

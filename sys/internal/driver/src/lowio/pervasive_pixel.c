@@ -160,7 +160,7 @@ int ScePervasiveForDriver_4F64DEF6(unsigned head)
 
 	ScePervasiveForDriver_4AF7A01E(head, 0xb);
 	ScePervasiveForDriver_AD1E81EB(head, 0xb);
-	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
 	if (head == 0) {
 		(void)s_misc->usbMode[0];
 		s_misc->usbMode[0] = 1;
@@ -176,7 +176,7 @@ int ScePervasiveForDriver_4F64DEF6(unsigned head)
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	ScePervasiveForDriver_13CC07C9(head, 8);
-	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
 	if (head == 0)
 		s_misc->usbPortControl = (s_misc->usbPortControl & ~3U) | 2;
 	else if (head == 1)

@@ -85,7 +85,7 @@ static int uidSimpleEvent_Destructor(void *object)
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
-			SceCpuForDriver_BF82DEB2(&process->resourceLock);
+			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (simple->event.attr & SIMPLE_EVENT_ATTR_LW)
 				process->uidLwCount--;
 			else if (simple->event.attr & SIMPLE_EVENT_ATTR_UNLIMITED)
@@ -155,7 +155,7 @@ int simpleEventProcessExit(SceProcessObject *process)
 			continue;
 		if (SceSysmemForDriver_84A4AF5E(process->pid, vector[i]) < 0)
 			SCE_PANIC(144);
-		SceCpuForDriver_BF82DEB2(&simple->event.lock);
+		sceKernelSpinlockLowLock(&simple->event.lock);
 		wake = setEventWithNotifyCallback(guid, SIMPLE_EVENT_PROCESS_EXITED,
 			(uint64_t)(int64_t)process->pid, SIMPLE_EVENT_PROCESS_EXITED, &simple->event);
 		sceKernelSpinlockLowUnlock(&simple->event.lock);
@@ -235,7 +235,7 @@ SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t ini
 		intr = SceCpuForDriver_821FC0EE();
 	} else {
 		process = thread->process;
-		intr = SceCpuForDriver_D32ACE9E(&process->resourceLock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
 		if (attr & SIMPLE_EVENT_ATTR_LW) {
 			if (process->uidLwCount >= UID_LW_MAX_PER_PROCESS) {
 				sceKernelSpinlockLowUnlock(&process->resourceLock);
@@ -270,7 +270,7 @@ SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t ini
 					  (SceObjectBase **)&simple);
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {
-			SceCpuForDriver_BF82DEB2(&process->resourceLock);
+			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (attr & SIMPLE_EVENT_ATTR_LW)
 				process->uidLwCount--;
 			else if (attr & SIMPLE_EVENT_ATTR_UNLIMITED)
@@ -329,7 +329,7 @@ int sceKernelDeleteSimpleEvent(SceUID simpleEventId)
 		wake = 0;
 	} else {
 		thread = currentThreadContext();
-		SceCpuForDriver_BF82DEB2(&simple->event.lock);
+		sceKernelSpinlockLowLock(&simple->event.lock);
 		wake = setEventWithNotifyCallback(simpleEventId, SIMPLE_EVENT_DELETED,
 			SimpleEventCaller(thread->threadId, thread->processId), SIMPLE_EVENT_DELETED,
 			&simple->event);

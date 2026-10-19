@@ -306,7 +306,7 @@ leave:
 	} \
 	pid = sceKernelGetProcessId(); \
 	hidGetProcessPrivileges(pid, &privileges); \
-	intrState = SceCpuForDriver_D32ACE9E(&cursor->spinlock); \
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&cursor->spinlock); \
 	copied = cursor->peekCount; \
 	if ((capCount) && copied >= 16) \
 		copied = 16; \

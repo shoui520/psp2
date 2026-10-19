@@ -29,7 +29,7 @@ _Static_assert(sizeof(SceDipsw) == 0x20, "SceDipsw size");
 #endif
 
 void SceDipswForDriver_82E45FBF(unsigned int bit);	/* vitasdk: ksceKernelSetDipsw */
-int SceDipswForDriver_A98FC2FD(unsigned int bit);	/* vitasdk: ksceKernelCheckDipsw */
+int sceKernelCheckDipsw(unsigned int bit);
 /* vitasdk: ksceKernelGetDipswInfo */
 SceUInt32 SceDipswForDriver_B2AD48BE(unsigned int index);
 void SceDipswForDriver_F1F3E9FE(unsigned int bit);	/* vitasdk: ksceKernelClearDipsw */

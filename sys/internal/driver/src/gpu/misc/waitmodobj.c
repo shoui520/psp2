@@ -25,7 +25,7 @@ static SceKernelSpinlock waitModObjSpinlock;
 void LockWaitModObjList(void)
 {
 	waitModObjIntrStatus =
-		SceCpuForDriver_D32ACE9E(&waitModObjSpinlock);
+		sceKernelSpinlockLowLockCpuSuspendIntr(&waitModObjSpinlock);
 }
 
 void UnlockWaitModObjList(void)

@@ -50,8 +50,8 @@ int initDmacSecure(void)
 	for (i = 0; i < 6; i++)
 		StartDmac(i);
 	/* DMAC6 exists on these units only */
-	if (SceDipswForDriver_A98FC2FD(0x9f) || SceDipswForDriver_A98FC2FD(0xc0) ||
-	    SceDipswForDriver_A98FC2FD(0xc1) || SceDipswForDriver_A98FC2FD(0xc2))
+	if (sceKernelCheckDipsw(0x9f) || sceKernelCheckDipsw(0xc0) ||
+	    sceKernelCheckDipsw(0xc1) || sceKernelCheckDipsw(0xc2))
 		StartDmac(6);
 	keyring = mapDmac("SceDmacmgrKeyringReg", DMAC5_KEYRING_REG_BASE);
 	keyring->nonSecureAccess[0] = 0x200000ff;
@@ -131,8 +131,8 @@ int initDmacSecure(void)
 		((SceDmacRegisters *)mapDmac(6, DMAC6_REG_BASE))->accessControl;
 
 	/* DMAC6 exists on these units only */
-	if (SceDipswForDriver_A98FC2FD(0x9f) || SceDipswForDriver_A98FC2FD(0xc0) ||
-	    SceDipswForDriver_A98FC2FD(0xc1) || SceDipswForDriver_A98FC2FD(0xc2))
+	if (sceKernelCheckDipsw(0x9f) || sceKernelCheckDipsw(0xc0) ||
+	    sceKernelCheckDipsw(0xc1) || sceKernelCheckDipsw(0xc2))
 		last = 6;
 	else
 		last = 5;

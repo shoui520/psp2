@@ -198,7 +198,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelAllocSystemCallTable
 	sceKernelUserUnmap
 	SceSysmemForDriver_0091D74D
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceGUIDReferObjectWithClass
 	sceGUIDClose
 	sceGUIDReferObject
@@ -227,14 +227,14 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForKernel_B628B46B
 	sceGUIDKernelCreateWithOpt
 	SceSysmemForKernel_FCB5745A
-	SceCpuForDriver_103872A5
+	sceKernelDcacheCleanRange
 	SceCpuForDriver_5AC9D394
 	sceKernelCpuId
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_821FC0EE
-	SceCpuForDriver_9CB9F0CE
-	SceCpuForDriver_BF82DEB2
-	SceCpuForDriver_D32ACE9E
+	sceKernelDcacheCleanRangeForL1WBWA
+	sceKernelSpinlockLowLock
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	sceKernelCpuResumeIntr
 	SceCpuForKernel_14E0B0C4
@@ -281,7 +281,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelScheduleWorkTask
 	sceKernelGetSystemTimeWide
 	sceKernelCreateMutex
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	sceSblAuthMgrClose
 	SceSblAuthMgrForKernel_89CCDA2C
 	sceSblAuthMgrOpen

@@ -61,7 +61,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCopyFromUser
 	SceCpuForDriver_821FC0EE
 	sceKernelCpuResumeIntr
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	memset
 	memcpy
 	__aeabi_ldivmod

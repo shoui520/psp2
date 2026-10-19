@@ -181,7 +181,7 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_4373AC96
 	sceKernelUserUnmap
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	SceSysmemForDriver_278BC201
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597
@@ -193,13 +193,13 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCopyFromUser
 	sceKernelAllocMemBlockForKernel
 	sceKernelDeleteHeap
-	SceCpuForDriver_02796361
-	SceCpuForDriver_103872A5
+	sceKernelDcacheInvalidateRange
+	sceKernelDcacheCleanRange
 	SceCpuForDriver_5F6A8743
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_A4884C4E
-	SceCpuForDriver_BF82DEB2
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLock
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	SceDebugForDriver_02B04343
 	SceDebugForDriver_391B5B74
@@ -262,7 +262,7 @@ set(MODULE_IMPORT_FUNCS
 	SceModulemgrForDriver_BBE1771C
 	SceQafMgrForDriver_BFD5E463
 	sceSblACMgrIsSystemProgram
-	ScePmMgrForDriver_2AC815A2
+	sceSblPmMgrGetProductMode
 	SceSblPostSsMgrForDriver_128FB35A
 	sceKernelRegisterProcEventHandler
 	SceProcEventForDriver_3DED57CC

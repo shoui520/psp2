@@ -335,7 +335,7 @@ static int createPhysicalProcess(int pid) /* name unknown */
 	struct touchProcess *process;
 	SceTouchPanelInfo *panel;
 	struct touchProcessPort *port;
-	unsigned intr = SceCpuForDriver_D32ACE9E(&touch.lock), i;
+	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock), i;
 	int ret = lookupProcess(pid, touch.plsId, (void **)&process, 1), slot;
 
 	if (ret >= 0 && process) {
@@ -372,7 +372,7 @@ static int createPhysicalProcess(int pid) /* name unknown */
 static int createVirtualProcess(int pid) /* name unknown */
 {
 	struct virtualProcess *process;
-	unsigned intr = SceCpuForDriver_D32ACE9E(&pad.lock), i;
+	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&pad.lock), i;
 	int ret = lookupProcess(pid, pad.plsId, (void **)&process, 1), slot;
 
 	if (ret >= 0 && process) {
@@ -409,7 +409,7 @@ static int createProcess(int pid, ProcEventCreateParam *args, void *common) /* n
 static int removePhysicalProcess(int pid) /* name unknown */
 {
 	struct touchProcess *process;
-	unsigned intr = SceCpuForDriver_D32ACE9E(&touch.lock), i, bit;
+	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock), i, bit;
 	int ret = lookupProcess(pid, touch.plsId, (void **)&process, 0), slot;
 
 	if (ret >= 0 && process) {
@@ -439,7 +439,7 @@ static int removePhysicalProcess(int pid) /* name unknown */
 static int removeVirtualProcess(int pid) /* name unknown */
 {
 	struct virtualProcess *process;
-	unsigned intr = SceCpuForDriver_D32ACE9E(&pad.lock), i, bit;
+	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&pad.lock), i, bit;
 	int ret = lookupProcess(pid, pad.plsId, (void **)&process, 0), slot;
 
 	if (ret >= 0 && process) {
@@ -476,7 +476,7 @@ static int removeProcess(int pid, ProcEventParam *args, void *common) /* name un
 static int virtualProcessEvent(int pid, unsigned event) /* name unknown */
 {
 	struct virtualProcess *process;
-	unsigned intr = SceCpuForDriver_D32ACE9E(&pad.lock), i;
+	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&pad.lock), i;
 	int ret = lookupProcess(pid, pad.plsId, (void **)&process, 0);
 
 	if (ret >= 0 && process) {
@@ -513,7 +513,7 @@ static int virtualProcessEvent(int pid, unsigned event) /* name unknown */
 static int processEvent(int pid, unsigned event) /* name unknown */
 {
 	struct touchProcess *process;
-	unsigned intr = SceCpuForDriver_D32ACE9E(&touch.lock), i;
+	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock), i;
 	int ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
 
 	if (ret >= 0 && process) {
@@ -617,7 +617,7 @@ static SceUInt32 samplingTimer(void *args) /* name unknown */
 	struct touchProcess *process;
 	struct touchSample *samples[2] = { &storage.front, &storage.back }, *dest;
 	struct touchRing *ring;
-	unsigned intr = SceCpuForDriver_D32ACE9E(&touch.lock), i, j, r, processed = 0;
+	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock), i, j, r, processed = 0;
 	uint64_t time;
 	int ret;
 
@@ -701,7 +701,7 @@ static int systemEvent(int resume, int event, void *args, void *opt) /* name unk
 	if (!resume) {
 		switch (event) {
 		case 0x400:
-			intr = SceCpuForDriver_D32ACE9E(&touch.lock);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 			touch.state = 3;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
 			break;
@@ -900,7 +900,7 @@ static int readPhysical(unsigned port, SceTouchData *out, unsigned count,
 	if (port >= 2 || !out || count > 64 || regions & 0xffffff00)
 		return TOUCH_ERROR(1);
 	pid = sceKernelGetProcessId();
-	intr = SceCpuForDriver_D32ACE9E(&touch.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
 	if (ret >= 0 && process) {
 		if (!peek) {
@@ -912,7 +912,7 @@ static int readPhysical(unsigned port, SceTouchData *out, unsigned count,
 						      SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 			if (ret < 0)
 				return ret;
-			intr = SceCpuForDriver_D32ACE9E(&touch.lock);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 			bit = process->ports[port].eventBit;
 			if (bit & touch.ports[port].allocated)
 				sceKernelClearEventFlag(touch.ports[port].events[kind], ~bit);
@@ -963,7 +963,7 @@ static int setSampling(unsigned port, unsigned state, unsigned kind) /* name unk
 	if (port >= 2 || state >= 2)
 		return TOUCH_ERROR(1);
 	pid = sceKernelGetProcessId();
-	intr = SceCpuForDriver_D32ACE9E(&touch.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
 	if (ret >= 0 && process) {
 		old = (process->sampling[kind] >> port) & 1;
@@ -997,7 +997,7 @@ static int getSampling(unsigned port, unsigned *state, unsigned kind) /* name un
 	if (port >= 2 || !state)
 		return TOUCH_ERROR(1);
 	pid = sceKernelGetProcessId();
-	intr = SceCpuForDriver_D32ACE9E(&touch.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
 	if (ret >= 0 && process) {
 		*state = (process->sampling[kind] >> port) & 1;
@@ -1021,7 +1021,7 @@ static int setForce(unsigned port, unsigned enable, unsigned kind) /* name unkno
 	if (port >= 2)
 		return TOUCH_ERROR(1);
 	pid = sceKernelGetProcessId();
-	intr = SceCpuForDriver_D32ACE9E(&touch.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
 	if (ret >= 0 && process) {
 		process->force[kind] = (process->force[kind] & ~(1U << port)) | (enable << port);
@@ -1048,7 +1048,7 @@ int SceTouchForDriver_328E38B0(unsigned port, int enable)
 
 	if (port >= 2)
 		return TOUCH_ERROR(1);
-	intr = SceCpuForDriver_D32ACE9E(&touch.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	tracking = &touch.ports[port].tracking;
 	if (enable)
 		touch.ports[port].enableState = 0;
@@ -1078,7 +1078,7 @@ int SceTouchForDriver_7985B164(unsigned port, unsigned region, const short *rect
 	if (port >= 2 || region >= 8 || !rect || !validRegion(port, rect, 1))
 		return TOUCH_ERROR(1);
 	pid = sceKernelGetProcessId();
-	intr = SceCpuForDriver_D32ACE9E(&touch.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
 	if (ret >= 0 && process) {
 		dest = &process->ports[port].regions[region];
@@ -1101,7 +1101,7 @@ int SceTouchForDriver_E1C5D95F(unsigned port, unsigned region)
 	if (port >= 2 || region >= 8)
 		return TOUCH_ERROR(1);
 	pid = sceKernelGetProcessId();
-	intr = SceCpuForDriver_D32ACE9E(&touch.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
 	if (ret >= 0 && process) {
 		dest = &process->ports[port].regions[region];
@@ -1124,7 +1124,7 @@ int SceTouchForDriver_10A998DE(unsigned port, unsigned region, unsigned attr)
 	if (port >= 2 || region >= 8)
 		return TOUCH_ERROR(1);
 	pid = sceKernelGetProcessId();
-	intr = SceCpuForDriver_D32ACE9E(&touch.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
 	if (ret >= 0 && process) {
 		process->ports[port].regions[region].attr = attr;
@@ -1144,7 +1144,7 @@ int SceTouchForDriver_C7F0DAA0(unsigned port, unsigned region, unsigned enable)
 	if (port >= 2 || region >= 8 || enable >= 2)
 		return TOUCH_ERROR(1);
 	pid = sceKernelGetProcessId();
-	intr = SceCpuForDriver_D32ACE9E(&touch.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
 	if (ret >= 0 && process) {
 		dest = &process->ports[port].regions[region];
@@ -1163,7 +1163,7 @@ int SceTouchForDriver_3F3FBF69(const TouchProcessPriorities *priorities)
 
 	if (!priorities)
 		return TOUCH_ERROR(1);
-	intr = SceCpuForDriver_D32ACE9E(&touch.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	touch.priorityCount = priorities->count;
 	touch.priorityEnabled = 1;
 	for (i = 0; i < touch.priorityCount && i < 16; i++)
@@ -1178,7 +1178,7 @@ int sceTouchSetCtrlpCallback(int (*callback)(unsigned, SceTouchData *))
 
 	if (!callback)
 		return TOUCH_ERROR(1);
-	intr = SceCpuForDriver_D32ACE9E(&touch.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	touch.ctrlCallback = callback;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
 	return 0;
@@ -1235,7 +1235,7 @@ static int setPrivilege(unsigned privilege) /* name unknown */
 	int ret, pid;
 
 	pid = sceKernelGetProcessId();
-	intr = SceCpuForDriver_D32ACE9E(&touch.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
 	if (ret >= 0 && process) {
 		process->privilege = privilege;
@@ -1267,7 +1267,7 @@ int SceTouchForDriver_384F6C68(unsigned port, unsigned timeout)
 
 	if (port >= 2)
 		return TOUCH_ERROR(1);
-	intr = SceCpuForDriver_D32ACE9E(&touch.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	touch.ports[port].timeout = timeout;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
 	return 0;
@@ -1279,7 +1279,7 @@ int SceTouchForDriver_FD2E0278(unsigned port, struct touchDeviceInfo *out)
 
 	if (port >= 2 || !out)
 		return TOUCH_ERROR(1);
-	intr = SceCpuForDriver_D32ACE9E(&touch.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	for (i = 0; i < 12; i++)
 		((unsigned char *)out)[i] = 0;
 	copyWords(out, touch.ports[port].deviceInfo, 8);
@@ -1294,7 +1294,7 @@ int SceTouchForDriver_63DCF2FE(void)
 
 int SceTouchForDriver_A32529B8(const SceTouchData *front, const SceTouchData *back)
 {
-	unsigned intr = SceCpuForDriver_D32ACE9E(&touch.lock);
+	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 
 	memcpy(&storage.emulation[0], front, 0x90);
 	memcpy(&storage.emulation[1], back, 0x90);
@@ -1617,7 +1617,7 @@ static int readVirtual(unsigned device, void *out, unsigned count, int peek) /* 
 		return TOUCH_ERROR(1);
 	device--;
 	pid = sceKernelGetProcessId();
-	intr = SceCpuForDriver_D32ACE9E(&pad.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&pad.lock);
 	ret = lookupProcess(pid, pad.plsId, (void **)&process, 0);
 	if (ret >= 0 && process) {
 		if (!peek) {
@@ -1629,7 +1629,7 @@ static int readVirtual(unsigned device, void *out, unsigned count, int peek) /* 
 						      SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 			if (ret < 0)
 				return ret;
-			intr = SceCpuForDriver_D32ACE9E(&pad.lock);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&pad.lock);
 			bit = process->ports[device].eventBit;
 			if (bit & pad.ports[device].allocated)
 				sceKernelClearEventFlag(pad.ports[device].event, ~bit);

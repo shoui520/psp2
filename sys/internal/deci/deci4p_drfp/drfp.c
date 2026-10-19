@@ -66,7 +66,7 @@ static inline DrfpRequest *drfpQueueFirst(DrfpQueue *queue)
 	SceKernelIntrStatus s;
 	DrfpRequest *req;
 
-	s = SceCpuForDriver_D32ACE9E(&s_drfpLock);
+	s = sceKernelSpinlockLowLockCpuSuspendIntr(&s_drfpLock);
 	if (drfpQueueEmpty(queue)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
 		return NULL;
@@ -80,7 +80,7 @@ static inline void drfpRemoveRequest(DrfpRequest *req)
 {
 	SceKernelIntrStatus s;
 
-	s = SceCpuForDriver_D32ACE9E(&s_drfpLock);
+	s = sceKernelSpinlockLowLockCpuSuspendIntr(&s_drfpLock);
 	drfpRequestUnlink(req);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
 }
@@ -89,7 +89,7 @@ static inline void drfpAddRequest(DrfpQueue *queue, DrfpRequest *req)
 {
 	SceKernelIntrStatus s;
 
-	s = SceCpuForDriver_D32ACE9E(&s_drfpLock);
+	s = sceKernelSpinlockLowLockCpuSuspendIntr(&s_drfpLock);
 	drfpRequestAppend(queue, req);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
 }
@@ -206,7 +206,7 @@ int ReadHandler(DrfpProtocol *ctx, SceSize size)
 		return ret;
 	}
 	seq = h.seq;
-	s = SceCpuForDriver_D32ACE9E(&s_drfpLock);
+	s = sceKernelSpinlockLowLockCpuSuspendIntr(&s_drfpLock);
 	for (req = (DrfpRequest *)s_drfpRecvQueue.next;
 	     &req->link != &s_drfpRecvQueue; req = (DrfpRequest *)req->link.next) {
 		if (req->seq != seq)
@@ -427,7 +427,7 @@ int sceDeci4pDrfpInit(void)
 	proto.destination = 0;
 	proto.flags = DFMGR_PROTOCOL_ALIAS;
 	strncpy(proto.name, "DRFP", sizeof(proto.name));
-	if (SceDipswForDriver_A98FC2FD(0xc3) == 0)
+	if (sceKernelCheckDipsw(0xc3) == 0)
 		proto.flags |= DFMGR_PROTOCOL_USB;
 	s_drfpProtocol.handle = sceDfMgrOpen(drfpHandler, &proto, &s_drfpProtocol);
 	s_drfpSuspended = 0;
@@ -473,7 +473,7 @@ int sceDeci4pDrfpSend(void *packet, SceSize size, void *info)
 	if (sceKernelWaitSema(s_drfpRequestSema, 1, NULL) != 0)
 		SCE_PANIC(460);
 
-	s = SceCpuForDriver_D32ACE9E(&s_drfpLock);
+	s = sceKernelSpinlockLowLockCpuSuspendIntr(&s_drfpLock);
 	index = -1;
 	for (i = 0; i < DRFP_REQUEST_COUNT; i++) {
 		if (!(s_drfpRequest[i].flags & DRFP_REQ_USED)) {
@@ -563,7 +563,7 @@ int sceDeci4pDrfpSend(void *packet, SceSize size, void *info)
 done:
 	drfpRemoveRequest(req);
 	sceKernelClearEventFlag(req->evf, 0);
-	s = SceCpuForDriver_D32ACE9E(&s_drfpLock);
+	s = sceKernelSpinlockLowLockCpuSuspendIntr(&s_drfpLock);
 	req->flags = 0;
 	req->code = 0;
 	req->seq = 0;
@@ -581,7 +581,7 @@ int DrfpModuleStart(SceSize args, void *argp)
 {
 	SceUID handle;
 
-	if (SceDipswForDriver_A98FC2FD(0xc2) == 0) {
+	if (sceKernelCheckDipsw(0xc2) == 0) {
 		SCE_DBG_PRINTF(0xb, 980, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}

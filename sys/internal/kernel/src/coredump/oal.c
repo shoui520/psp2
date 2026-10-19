@@ -625,7 +625,7 @@ int oalIsToolDipswEnabled(void)
 	int result = SceSblAIMgrForDriver_274663A0();
 
 	if (result != 0)
-		return SceDipswForDriver_A98FC2FD(210) != 0;
+		return sceKernelCheckDipsw(210) != 0;
 	return result;
 }
 
@@ -659,7 +659,7 @@ int oalMemBlockInitForDevTool(SceUID *blockId, SceSize size)
 
 int oalMemBlockFinal(SceUID blockId)
 {
-	return SceSysmemForDriver_009E1C61(blockId);
+	return sceKernelFreeMemBlock(blockId);
 }
 
 int oalHeapInit(SceUID blockId, SceUID *heapId, SceSize maxSize)

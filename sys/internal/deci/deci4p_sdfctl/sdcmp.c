@@ -124,7 +124,7 @@ static __attribute__((noinline, noclone)) int sdcmpQueue(SdcmpQueue *q, const vo
 
 	if (size > SDCMP_PACKET_MAX)
 		return SDFCTL_ERROR_INVALID_ARG;
-	intr = SceCpuForDriver_D32ACE9E(&s_sdcmpLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_sdcmpLock);
 	if (q->count < SDCMP_QUEUE) {
 		sdfctlMemcpy(q->buf[q->write], pkt, size);
 		next = q->write + 1;
@@ -343,7 +343,7 @@ static inline __attribute__((always_inline)) void _sdcmpSend(void)
 	int intr, ret, read, next, count;
 
 	while (s_sdcmp.tx.count != 0) {
-		intr = SceCpuForDriver_D32ACE9E(&s_sdcmpLock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_sdcmpLock);
 		if (s_sdcmp.tx.count < 1) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdcmpLock, intr);
 			SDFCTL_PRINTF(213, "error: 0x%08x\n", SDFCTL_ERROR_QUEUE_EMPTY);
@@ -361,7 +361,7 @@ static inline __attribute__((always_inline)) void _sdcmpSend(void)
 		} else {
 			SDFCTL_PRINTF(223, "no route (0x%04x)\n", pkt->hdr.dst);
 		}
-		intr = SceCpuForDriver_D32ACE9E(&s_sdcmpLock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_sdcmpLock);
 		read = s_sdcmp.tx.read;
 		count = s_sdcmp.tx.count - 1;
 		next = read + 1;

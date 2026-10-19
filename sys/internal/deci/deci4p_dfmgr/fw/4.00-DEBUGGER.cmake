@@ -78,11 +78,11 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_55392965
 	SceSysrootForDriver_579CC758
 	SceSysrootForDriver_C5EAF5F7
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	memset
 	__memset_chk
 	memcpy
@@ -92,7 +92,7 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	SceDebugForDriver_02B04343
-	SceDebugForDriver_35A35322
+	sceKernelAssert
 	SceDebugForDriver_374B7868
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
@@ -116,7 +116,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateMutex
 	SceProcessmgrForDriver_C715591F
 	SceModulemgrForDriver_BBE1771C
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	sceKernelRegisterSysEventHandler
 	SceDbgSdioForDriver_361E1BB6
 	receiveData

@@ -34,7 +34,7 @@ static int sysconSetCallback(SceSysconCallback callback, void *argument,
 {
 	uint32_t state;
 
-	state = SceCpuForDriver_D32ACE9E(&s_sysconControl.callbackLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_sysconControl.callbackLock);
 	s_sysconControl.callbacks[slot].callback = callback;
 	s_sysconControl.callbacks[slot].argp = argument;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sysconControl.callbackLock,
@@ -377,7 +377,7 @@ int SceSysconForDriver_C2224E82(SceSysconPacket *packet, uint32_t flags,
 	result = sysconPreparePacket(packet, flags, callback, argument);
 	if (result < 0)
 		return result;
-	state = SceCpuForDriver_D32ACE9E(&s_sysconControl.callbackLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_sysconControl.callbackLock);
 	sysconQueuePacket(packet, flags);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sysconControl.callbackLock, state);
 	return 0;
@@ -401,7 +401,7 @@ int sceSysconCmdSync(SceSysconPacket *packet, int noWait)
 #endif
 				return result;
 			}
-			state = SceCpuForDriver_D32ACE9E(
+			state = sceKernelSpinlockLowLockCpuSuspendIntr(
 						&s_sysconControl.callbackLock);
 			if (!(packet->status & SYSCON_PACKET_DONE)) {
 				semaphore = sceKernelCreateSema("SceSysconSync", 0,
@@ -487,7 +487,7 @@ static int sysconSubmitSynchronousPacket(SceSysconPacket *packet,
 	result = sysconPreparePacket(packet, flags, NULL, NULL);
 	if (result < 0)
 		return result;
-	state = SceCpuForDriver_D32ACE9E(&s_sysconControl.callbackLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_sysconControl.callbackLock);
 	sysconQueuePacket(packet, flags);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sysconControl.callbackLock, state);
 	return 0;
@@ -510,7 +510,7 @@ int SceSysconForDriver_C9DB5BFF(SceSysconPacket *packet)
 	uint32_t state, slot = packet->queue;
 	int result = 0;
 
-	state = SceCpuForDriver_D32ACE9E(&s_sysconControl.callbackLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_sysconControl.callbackLock);
 	current = s_sysconControl.queueHeads[slot];
 	while (current && current != packet) {
 		previous = current;
@@ -1240,7 +1240,7 @@ static int _sceSysconGpioIntr(void *subintrArg, void *registerArg, unsigned char
 	int semaphore = -1, callbackResult = 2, result;
 	const void *caller = __builtin_return_address(0);
 
-	state = SceCpuForDriver_D32ACE9E(&s_sysconControl.callbackLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_sysconControl.callbackLock);
 	packet = s_sysconControl.currentPacket;
 	s_sysconControl.interruptActive = 1;
 	s_sysconControl.currentPacket = NULL;
@@ -1300,7 +1300,7 @@ invalid:
 		sysconDecodePacketResponse(packet, &requestStatus,
 					   &requestCompletions, first);
 	}
-	SceCpuForDriver_BF82DEB2(&s_sysconControl.callbackLock);
+	sceKernelSpinlockLowLock(&s_sysconControl.callbackLock);
 	if (!(packet->status & (SYSCON_PACKET_BAD_CHECKSUM | SCE_SYSCON_PACKET_FLAG_NO_RETRY)) &&
 	    ((packet->reply.result & 0x40) ||
 	     (packet->queue != 17 && (packet->reply.result ^ 0x80) < 2)))
@@ -1328,7 +1328,7 @@ invalid:
 	if (s_sysconControl.logger)
 		s_sysconControl.logger(4, 2, (int16_t)sysconPacketCommand(packet),
 				      callbackResult);
-	SceCpuForDriver_BF82DEB2(&s_sysconControl.callbackLock);
+	sceKernelSpinlockLowLock(&s_sysconControl.callbackLock);
 	if (callbackResult == 1) {
 		packet->next = s_sysconControl.queueHeads[packet->queue];
 		s_sysconControl.queueHeads[packet->queue] = packet;

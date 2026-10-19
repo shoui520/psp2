@@ -79,7 +79,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForKernel_93344755
 	SceSysmemForKernel_ABA5313C
 	SceSysmemForKernel_B628B46B
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	sceKernelSysrootDisableAutoClockDown
 	sceKernelSysrootEnableAutoClockDown
 	sceKernelDisableIntr
@@ -97,9 +97,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelIsUncacheAddressInTmpFsGame
 	sceKernelCpuId
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_BF82DEB2
+	sceKernelSpinlockLowLock
 	SceCpuForDriver_CDA96E81
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	SceKernelSuspendForDriver_105C5752
 	SceKernelSuspendForDriver_CE7A2207

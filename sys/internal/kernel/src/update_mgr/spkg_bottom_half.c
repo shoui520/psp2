@@ -121,7 +121,7 @@ int sceSblUsUpdateSpackageBH(SceSize arglen, SpkgThreadArgs *args)
 			args->buffer, args->size);
 	if (result)
 		goto releasePacket;
-	SceCpuForDriver_103872A5(args->buffer, (args->size + 63) & ~63);
+	sceKernelDcacheCleanRange(args->buffer, (args->size + 63) & ~63);
 	if (args->packageType == 27) {
 		result = UpdateUtilSetupSm(1, &smId, 0);
 		if (result)
@@ -140,7 +140,7 @@ int sceSblUsUpdateSpackageBH(SceSize arglen, SpkgThreadArgs *args)
 	result = serviceResult;
 	if (result)
 		goto releasePacket;
-	SceCpuForDriver_02796361(args->buffer, (args->size + 63) & ~63);
+	sceKernelDcacheInvalidateRange(args->buffer, (args->size + 63) & ~63);
 	info = packet->records.returned.packageInfo;
 	chunk = packet->records.returned.chunkInfo;
 releasePacket:

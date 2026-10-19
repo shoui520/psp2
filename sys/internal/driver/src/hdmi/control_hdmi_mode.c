@@ -112,7 +112,7 @@ static int initWork(void *arg)
 				hdmiResetVicTiming();
 				hdmiInfoFrameInitialize();
 				if (!SceSblAIMgrForDriver_274663A0() ||
-				    (SceQafMgrForDriver_382C71E8() != 0 && SceDipswForDriver_A98FC2FD(0xe5) == 0))
+				    (SceQafMgrForDriver_382C71E8() != 0 && sceKernelCheckDipsw(0xe5) == 0))
 					sceHdmiDeviceSetHdcpMode(1);
 				else
 					sceHdmiDeviceSetHdcpMode(0);

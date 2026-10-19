@@ -359,7 +359,7 @@ static inline void SetHardwareDependent(SceKernelBootParam *param)
 	}
 	if (param->kblParam->boot_flags[0] != 0xff || IsSafeModeBoot())
 		SceDipswForDriver_F1F3E9FE(DIPSW_PLATFORM_DOLCE);
-	if (SceDipswForDriver_A98FC2FD(DIPSW_PLATFORM_DOLCE)) {
+	if (sceKernelCheckDipsw(DIPSW_PLATFORM_DOLCE)) {
 		param->hardwareDependent[0] = 0x20101;
 		param->hardwareDependent[1] = 0x252;
 	}
@@ -483,8 +483,8 @@ static inline uint32_t BootCpu0Init(void *lr)
 		SceDipswForDriver_82E45FBF(DIPSW_SHELL_CRON);
 
 	if ((s_kblParam.pscode.product_code & 0xfeff) == 1 &&
-	    !SceDipswForDriver_A98FC2FD(DIPSW_DISABLE_RECONFIGURATION)) {
-		if (SceDipswForDriver_A98FC2FD(DIPSW_DEVELOPMENT_MODE)) {
+	    !sceKernelCheckDipsw(DIPSW_DISABLE_RECONFIGURATION)) {
+		if (sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE)) {
 			SceDipswForDriver_82E45FBF(0xc0);
 			SceDipswForDriver_82E45FBF(0xc1);
 			SceDipswForDriver_82E45FBF(0xc2);
@@ -533,7 +533,7 @@ static inline uint32_t BootCpu0Init(void *lr)
 			SceDipswForDriver_F1F3E9FE(DIPSW_USER_PA_MAPPING);
 			SceDipswForDriver_F1F3E9FE(0x80);
 			SceDipswForDriver_F1F3E9FE(DIPSW_USER_PA_MAPPING_ADDRESS);
-			if (SceDipswForDriver_A98FC2FD(DIPSW_RELEASE_CHECK_MODE)) {
+			if (sceKernelCheckDipsw(DIPSW_RELEASE_CHECK_MODE)) {
 				SceDipswForDriver_82E45FBF(DIPSW_UART1_CONSOLE);
 				SceDipswForDriver_82E45FBF(0xd3);
 			} else {
@@ -542,15 +542,15 @@ static inline uint32_t BootCpu0Init(void *lr)
 			}
 		}
 		SceDipswForDriver_82E45FBF(DIPSW_CONSOLE_LOGGING);
-		if (SceDipswForDriver_A98FC2FD(DIPSW_UART0_CONSOLE))
+		if (sceKernelCheckDipsw(DIPSW_UART0_CONSOLE))
 			SceDipswForDriver_F1F3E9FE(0xc6);
 	}
 
 	InitializeAssertLevel();
 	InitializeDebugBuffer();
-	if (SceDipswForDriver_A98FC2FD(DIPSW_UART1_CONSOLE) || SceDipswForDriver_A98FC2FD(DIPSW_UART0_CONSOLE) ||
-	    SceDipswForDriver_A98FC2FD(DIPSW_CONSOLE_LOGGING)) {
-		SerialInit(SceDipswForDriver_A98FC2FD(DIPSW_UART0_CONSOLE));
+	if (sceKernelCheckDipsw(DIPSW_UART1_CONSOLE) || sceKernelCheckDipsw(DIPSW_UART0_CONSOLE) ||
+	    sceKernelCheckDipsw(DIPSW_CONSOLE_LOGGING)) {
+		SerialInit(sceKernelCheckDipsw(DIPSW_UART0_CONSOLE));
 		sceKernelSetGPO(0x82);
 		SceDebugForKernel_22546577((uintptr_t)SerialDebugPutchar, 0);
 	}
@@ -657,29 +657,29 @@ static inline uint32_t BootCpu0Init(void *lr)
 		PERVASIVE_MISC->es3Config |= 8;
 	BootDeviceGateEnable();
 	BootDeviceResetDisable();
-	if (SceDipswForDriver_A98FC2FD(DIPSW_DEVELOPMENT_MODE) || SceDipswForDriver_A98FC2FD(0xc0) ||
-	    SceDipswForDriver_A98FC2FD(0xc1) || SceDipswForDriver_A98FC2FD(0xc2)) {
+	if (sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE) || sceKernelCheckDipsw(0xc0) ||
+	    sceKernelCheckDipsw(0xc1) || sceKernelCheckDipsw(0xc2)) {
 		DebugBusGateEnable();
 		DebugBusResetDisable();
 	}
-	if (SceDipswForDriver_A98FC2FD(DIPSW_DEVELOPMENT_MODE)) {
+	if (sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE)) {
 		DebugDeviceGateEnable();
 		DebugDeviceResetDisable();
 		DebugPaGateEnable();
 		DebugPaResetDisable();
 	}
-	if (SceDipswForDriver_A98FC2FD(0xc0) || SceDipswForDriver_A98FC2FD(0xc1)) {
+	if (sceKernelCheckDipsw(0xc0) || sceKernelCheckDipsw(0xc1)) {
 		ScePervasiveForDriver_D34E74C5(0);
 		ScePervasiveForDriver_EDCA3961(0);
 	}
-	if (SceDipswForDriver_A98FC2FD(DIPSW_HARDWARE_BREAKPOINT)) {
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT)) {
 		ArmGateEnable(0xc00000);
 		ArmDebuggerGateEnable();
 		ArmDebuggerResetDisable();
 	}
-	if (SceDipswForDriver_A98FC2FD(DIPSW_DEVELOPMENT_MODE))
+	if (sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE))
 		EnableLpddr2Sub();
-	if (SceDipswForDriver_A98FC2FD(DIPSW_DEVELOPMENT_MODE))
+	if (sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE))
 		GRAB_NS->developmentMode = 1;
 	PERVASIVE_MISC->pervasiveAccessMode = 0x1f3da;
 	PERVASIVE_MISC->tasAccessMode = 0xff;
@@ -930,7 +930,7 @@ void boot(void)
 	SceCpuForKernel_FE2B77A3(&bootSaveArea.corelock);
 	if (sceKernelCpuId() == 0) {
 		CpuL2CacheInit(CPU_L2CC);
-		if (SceDipswForDriver_A98FC2FD(DIPSW_DEVELOPMENT_MODE))
+		if (sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE))
 			CpuL2CacheSetEventMonitorBus(1);
 		CpuL2InvalidateAll();
 	}
@@ -1028,9 +1028,9 @@ static inline uint32_t BootCpu0Init(void *lr)
 	InitializeDipsw(&s_kblParam.dipsw);
 	InitializeAssertLevel();
 	InitializeDebugBuffer();
-	if (SceDipswForDriver_A98FC2FD(DIPSW_UART1_CONSOLE) || SceDipswForDriver_A98FC2FD(DIPSW_UART0_CONSOLE) ||
-	    SceDipswForDriver_A98FC2FD(DIPSW_CONSOLE_LOGGING)) {
-		SerialInit(SceDipswForDriver_A98FC2FD(DIPSW_UART0_CONSOLE));
+	if (sceKernelCheckDipsw(DIPSW_UART1_CONSOLE) || sceKernelCheckDipsw(DIPSW_UART0_CONSOLE) ||
+	    sceKernelCheckDipsw(DIPSW_CONSOLE_LOGGING)) {
+		SerialInit(sceKernelCheckDipsw(DIPSW_UART0_CONSOLE));
 		sceKernelSetGPO(BOOT_GPO(2));
 		SceDebugForKernel_22546577((uintptr_t)SerialDebugPutchar, 0);
 	}
@@ -1087,7 +1087,7 @@ static inline uint32_t BootCpu0Init(void *lr)
 	current = s_bootParam.current;
 	current->numMemory = 3;
 	current->memory[0].pbase = 0x40200000;
-	if (SceDipswForDriver_A98FC2FD(DIPSW_ENABLE_TOOL_PHYMEMPART))
+	if (sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART))
 		current->memory[0].psize = 0x3fe00000;
 	else
 		current->memory[0].psize = 0x1fe00000;
@@ -1331,7 +1331,7 @@ void boot(void)
 		sceKernelMMUMapLargePages((uint32_t *)(param->l2PageTable000.pbase + 0x400),
 					  BOOT_MAP_DATA, param->phyPageTable.vbase, 0,
 					  param->phyPageTable.psize, param->phyPageTable.pbase);
-		if (SceDipswForDriver_A98FC2FD(DIPSW_ENABLE_TOOL_PHYMEMPART))
+		if (sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART))
 			sceKernelMMUMapLargePages((uint32_t *)(param->l2PageTable000.pbase + 0x400),
 						  BOOT_MAP_DATA, param->phyPageTableHigh.vbase,
 						  0x80000, param->phyPageTableHigh.psize,

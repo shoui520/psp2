@@ -100,7 +100,7 @@ static int Finalize(void)
 		SceMagicGateForDriver_8E2E577E();
 		SceMagicGateForDriver_6D3B42E6();
 	}
-	SceSysmemForDriver_009E1C61(s_mg.memblock);
+	sceKernelFreeMemBlock(s_mg.memblock);
 	sceKernelSetThreadAccessLevel(permission);
 out:
 	LeaveContext(context);
@@ -126,12 +126,12 @@ static int AllocTemporary(void **base, unsigned *size)
 	if (uid < 0)
 		return MG_ERROR_MEMORY;
 	if (sceKernelGetMemBlockBase(uid, &ptr) < 0) {
-		SceSysmemForDriver_009E1C61(uid);
+		sceKernelFreeMemBlock(uid);
 		return MG_ERROR_MEMORY;
 	}
 	ret = SceMagicGateForDriver_758D7158(ptr, bytes);
 	if (ret < 0) {
-		SceSysmemForDriver_009E1C61(uid);
+		sceKernelFreeMemBlock(uid);
 		return ret;
 	}
 	*base = ptr;
@@ -220,7 +220,7 @@ out:
 		s_mg.phase = 0;
 	s_mg.flags &= ~MG_AUTHENTICATED;
 	if (uid)
-		SceSysmemForDriver_009E1C61(uid);
+		sceKernelFreeMemBlock(uid);
 	return ret;
 }
 
@@ -297,7 +297,7 @@ out:
 		s_mg.phase = 0;
 	s_mg.flags &= ~MG_AUTHENTICATED;
 	if (uid)
-		SceSysmemForDriver_009E1C61(uid);
+		sceKernelFreeMemBlock(uid);
 	return ret;
 }
 
@@ -565,7 +565,7 @@ closeMagicGate:
 	SceMagicGateForDriver_6D3B42E6();
 freeBlock:
 	if (s_mg.memblock >= 0) {
-		SceSysmemForDriver_009E1C61(s_mg.memblock);
+		sceKernelFreeMemBlock(s_mg.memblock);
 		s_mg.memblock = -1;
 	}
 permissionOut:

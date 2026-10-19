@@ -10,7 +10,7 @@ int sceKernelRegisterExceptionHandler(unsigned int code, unsigned int priority,
 
 	if (handler == NULL || ((unsigned int)handler & 2))
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	if (SceSysrootForKernel_D7198963()) {
+	if (sceKernelIsColdBoot()) {
 		words = (unsigned int *)((unsigned int)handler & ~3U);
 		if (words[0] != 0 || words[1] != 0) {
 			SCE_DBG_ASSERT_FAIL(189);
@@ -28,7 +28,7 @@ int sceKernelRegisterExceptionHandler(unsigned int code, unsigned int priority,
 	}
 
 	i = priority - 1;
-	flags = SceCpuForDriver_D32ACE9E(&g_excpHandlers.lock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&g_excpHandlers.lock);
 	for (; i >= 0; i--)
 		if (g_excpHandlers.first[code][i] != NULL)
 			break;
@@ -60,14 +60,14 @@ int sceKernelRegisterDefaultExceptionHandler(SceExcpmgrHandler *handler)
 	unsigned int code, i;
 	int flags;
 
-	if (SceSysrootForKernel_D7198963()) {
+	if (sceKernelIsColdBoot()) {
 		if (handler->next != NULL || handler->reserved != 0) {
 			SCE_DBG_ASSERT_FAIL(242);
 			return SCE_KERNEL_ERROR_ILLEGAL_EXCPHANDLER;
 		}
 	}
 
-	flags = SceCpuForDriver_D32ACE9E(&g_excpHandlers.lock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&g_excpHandlers.lock);
 	excpPokeWord((unsigned int)handler, (unsigned int)g_excpHandlers.defaultHandler);
 	g_excpHandlers.defaultHandler = handler;
 	first = g_excpHandlers.first;

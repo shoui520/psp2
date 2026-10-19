@@ -95,7 +95,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelClearIntrPendingStatusForDebugger
 	sceKernelRegisterExceptionHandler
 	SceExcpmgrForKernel_96C2869C
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	SceSysrootForKernel_2D6B2A79
@@ -109,15 +109,15 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCpuId
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_821FC0EE
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelCpuResumeIntr
 	SceDebugForKernel_78027203
 	SceDebugForDriver_02B04343
-	SceDebugForDriver_35A35322
+	sceKernelAssert
 	SceDebugForDriver_374B7868
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	SceDipswForDriver_B2AD48BE
 	memset
 	strncpy

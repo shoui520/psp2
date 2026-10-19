@@ -10,10 +10,10 @@
 extern "C" {
 #endif
 
-/* ScePmMgrForDriver_2AC815A2: 1 on a product mode console (the KBL parameters' boot type) */
+/* sceSblPmMgrGetProductMode: 1 on a product mode console (the KBL parameters' boot type) */
 typedef SceUInt8 SceProductMode;
 
-int ScePmMgrForDriver_2AC815A2(SceProductMode *mode);	/* vitasdk: kscePmMgrGetProductMode */
+int sceSblPmMgrGetProductMode(SceProductMode *mode);
 int ScePmMgrForDriver_BD1F193B(void);	/* vitasdk: kscePmMgrIsExternalBootMode */
 
 #ifdef __cplusplus

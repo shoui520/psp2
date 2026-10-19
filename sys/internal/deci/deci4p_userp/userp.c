@@ -350,9 +350,9 @@ static inline __attribute__((always_inline)) void UserpFreeObject(UserpObject *o
 	if (st->writeMutex > 0)
 		sceKernelDeleteMutex(st->writeMutex);
 	if (st->ringBlock > 0)
-		SceSysmemForDriver_009E1C61(st->ringBlock);
+		sceKernelFreeMemBlock(st->ringBlock);
 	if (obj->memblock > 0)
-		SceSysmemForDriver_009E1C61(obj->memblock);
+		sceKernelFreeMemBlock(obj->memblock);
 }
 
 /* name unknown: a process exited: close its channels */
@@ -430,7 +430,7 @@ int module_start(SceSize args, void *argp)
 	char *className;
 	SceUID uid;
 
-	if (!SceDipswForDriver_A98FC2FD(0xc2))
+	if (!sceKernelCheckDipsw(0xc2))
 		return 1;
 	uid = sceKernelRegisterProcEventHandler("SceKernelDeci4p", &s_procHandler, NULL);
 	if (uid < 0)
@@ -505,7 +505,7 @@ SceUID sceKernelDeci4pOpen(const char *name, SceUInt32 protocol, SceSize ringSiz
 	}
 	guid = sceGUIDKernelCreate(s_class, "SceKernelDeci4pUserpObject", (SceObjectBase **)&obj);
 	if (guid < 0) {
-		SceSysmemForDriver_009E1C61(mb);
+		sceKernelFreeMemBlock(mb);
 		ret = SCE_KERNEL_ERROR_DECI4P_ILLEGAL_SID;
 		goto unlock;
 	}
@@ -653,7 +653,7 @@ int sceKernelDeci4pRegisterCallback(SceUID puid, SceUID cbPuid)
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_SID;
 	}
 	st = obj->state;
-	intr = SceCpuForDriver_D32ACE9E(&st->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&st->lock);
 	st->callback = cb;
 	if (cb != 0)
 		sceKernelNotifyCallback(cb, st->status);
@@ -718,7 +718,7 @@ int sceKernelDeci4pRead(SceUID puid, void *buf, SceSize size, int flags)
 	if (st->status & STATUS_CLOSED)
 		goto closed;
 
-	intr = SceCpuForDriver_D32ACE9E(&st->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&st->lock);
 	if (st->used < 0x10) {
 		/* wait for a packet */
 		sceKernelClearEventFlag(st->evf, ~EVF_DATA);
@@ -742,7 +742,7 @@ int sceKernelDeci4pRead(SceUID puid, void *buf, SceSize size, int flags)
 			goto down;
 		if (bits & EVF_CLOSED)
 			goto closed;
-		intr = SceCpuForDriver_D32ACE9E(&st->lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&st->lock);
 		skip = 0;
 		if (st->used > 0xf) {
 			UserpPeekHeader(st, hdr);
@@ -970,7 +970,7 @@ int sceKernelDeci4pCreateHostProcess(const void *uparam, void *uout, SceUID cbPu
 				}
 			}
 			if (mb != 0)
-				SceSysmemForDriver_009E1C61(mb);
+				sceKernelFreeMemBlock(mb);
 		}
 	}
 	SYSCALL_LEAVE(tid);
@@ -1010,7 +1010,7 @@ int sceKernelDeci4pCreateHostProcessAndWait(const void *uparam, void *uout, int 
 				}
 			}
 			if (mb != 0)
-				SceSysmemForDriver_009E1C61(mb);
+				sceKernelFreeMemBlock(mb);
 		}
 	}
 	SYSCALL_LEAVE(tid);

@@ -21,7 +21,7 @@ int qmiUartInterrupt(unsigned int interrupt, QmiUartPort *port)
 
 	if (port == NULL)
 		return -2;
-	intr = SceCpuForDriver_D32ACE9E(&port->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
 	if (!port->enabled) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intr);
 		return 0x80332002;
@@ -213,7 +213,7 @@ int qmiInitializeUart(void)
 		(SceKernelIntrHandler)qmiUartInterrupt, &g_qmiUartPort,
 		176, 15, NULL);
 	if (result < 0) {
-		SceSysmemForDriver_009E1C61(g_qmiUartMemBlock);
+		sceKernelFreeMemBlock(g_qmiUartMemBlock);
 		return result;
 	}
 	g_qmiUartRegisters->enable = 0;
@@ -234,7 +234,7 @@ int qmiFinalizeUart(void)
 		g_qmiUartPort.index = 255;
 	}
 	sceKernelReleaseIntrHandler(229);
-	SceSysmemForDriver_009E1C61(g_qmiUartMemBlock);
+	sceKernelFreeMemBlock(g_qmiUartMemBlock);
 	return 0;
 }
 
@@ -346,7 +346,7 @@ int qmiCloseUart(QmiUartPort *port)
 {
 	if (port != NULL && port->enabled) {
 		SceKernelIntrStatus intr =
-			SceCpuForDriver_D32ACE9E(&port->lock);
+			sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
 
 		if (port->interruptNumber != 0)
 			sceKernelDisableIntr(port->interruptNumber);
@@ -375,7 +375,7 @@ int qmiUartTransmit(QmiUartPort *port, const void *data, SceSize length,
 
 	if (port != &g_qmiUartPort || length == 0 || data == NULL)
 		return 0x80330002;
-	intr = SceCpuForDriver_D32ACE9E(&g_qmiUartPort.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&g_qmiUartPort.lock);
 	if (!g_qmiUartPort.enabled) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_qmiUartPort.lock, intr);
 		return 0x80332002;
@@ -442,7 +442,7 @@ int qmiUartReceive(QmiUartPort *port, void *data, SceSize length,
 
 	if (port != &g_qmiUartPort || length == 0 || data == NULL)
 		return 0x80330002;
-	intr = SceCpuForDriver_D32ACE9E(&g_qmiUartPort.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&g_qmiUartPort.lock);
 	if (!g_qmiUartPort.enabled) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_qmiUartPort.lock, intr);
 		return 0x80332002;

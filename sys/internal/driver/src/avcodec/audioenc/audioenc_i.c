@@ -62,13 +62,13 @@ int _audioencInternalInitLibrary(AudioencWorkManager *manager,
 	} else {
 		if (totalSize > manager->contextSize) {
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(0, &initLibraryContextSize, __builtin_return_address(0));
+			sceKernelAssert(0, &initLibraryContextSize, __builtin_return_address(0));
 #endif
 			ret = SCE_AUDIOENC_ERROR_OUT_OF_MEMORY;
 			goto done;
 		}
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(manager->pContext != NULL, &initLibraryContext,
+		sceKernelAssert(manager->pContext != NULL, &initLibraryContext,
 				 __builtin_return_address(0));
 #endif
 		context = manager->pContext;
@@ -257,7 +257,7 @@ releaseExternal:
 	if (ret < 0)
 		return ret;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(virtualContext != 0, &deleteEncoderContext, caller);
+	sceKernelAssert(virtualContext != 0, &deleteEncoderContext, caller);
 #endif
 	ret = sceCodecEngineUnregisterUnmapMemory(0, virtualContext, totalSize);
 	if (ret < 0)
@@ -312,7 +312,7 @@ int _audioencInternalCreateEncoder(AudioencWorkManager *manager,
 		ret = sceCodecEngineUnmapUserVAtoPA(0, vaContext, &physical);
 		if (ret >= 0) {
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(physical != 0, &createEncoderContext, caller);
+			sceKernelAssert(physical != 0, &createEncoderContext, caller);
 #endif
 			context = SceCodecEngineWrapperForDriver_0F235F44(physical, contextSize);
 		}
@@ -336,7 +336,7 @@ int _audioencInternalCreateEncoder(AudioencWorkManager *manager,
 			memset(&work[index].info, 0, sizeof(work[index].info));
 			if (resident) {
 #if FW_DEBUG
-				SceDebugForDriver_35A35322(_audioencGetResidentEncoderOwner(index) == -1,
+				sceKernelAssert(_audioencGetResidentEncoderOwner(index) == -1,
 						 &createEncoderOwner, caller);
 #endif
 				_audioencSetResidentEncoderOwner(index);
@@ -588,7 +588,7 @@ int _audioencInternalExitLibrary(SceUID pid, AudioencWorkManager *manager,
 				continue;
 			}
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(virtualContext != 0, &exitLibraryContext, caller);
+			sceKernelAssert(virtualContext != 0, &exitLibraryContext, caller);
 #endif
 			ret = sceCodecEngineUnregisterUnmapMemory(pid, virtualContext, size);
 			result &= ~(ret >> 31);

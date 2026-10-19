@@ -83,7 +83,7 @@ static inline void GlobalTimerUnmap(void)
 {
 	int ret;
 
-	ret = SceSysmemForDriver_009E1C61(s_globalTimer.uid);
+	ret = sceKernelFreeMemBlock(s_globalTimer.uid);
 	if (ret != 0)
 		GLOBAL_TIMER_ERROR("failed to free global timer memory block", ret, 90);
 }

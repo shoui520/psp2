@@ -202,7 +202,7 @@ int AllocateGpuPageDirectory(GpuMmuContext *context)
 	if (ret >= 0)
 		ret = sceKernelVAtoPA(base, &physical);
 	if (ret < 0) {
-		SceSysmemForDriver_009E1C61(uid);
+		sceKernelFreeMemBlock(uid);
 		return ret;
 	}
 	memset(base, 0, 0x1000);
@@ -218,7 +218,7 @@ int FreeGpuPageDirectory(GpuMmuContext *context)
 		return (int)0x80020005;
 	context->pageDirectory = 0;
 	if (context->pageDirectoryMemblockUid != (unsigned)-1) {
-		SceSysmemForDriver_009E1C61(context->pageDirectoryMemblockUid);
+		sceKernelFreeMemBlock(context->pageDirectoryMemblockUid);
 		context->pageDirectoryMemblockUid = -1;
 	}
 	context->pageDirectoryPhysicalAddress = 0;

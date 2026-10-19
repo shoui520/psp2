@@ -1427,7 +1427,7 @@ IMG_INT sceGpuModObjPoll(MODIFY_SYNC_OP_INFO *psModSyncOpInfo)
 	if (completed == psModSyncOpInfo->ui32NumSyncs)
 		result = 0;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(result != (IMG_INT)0x804c0007,
+	sceKernelAssert(result != (IMG_INT)0x804c0007,
 			&dbg_sceGpuModObjPoll_L5248, __builtin_return_address(0));
 #endif
 	return result;

@@ -168,7 +168,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCancelEventFlag
 	sceKernelGetSystemTimeWide
 	sceKernelCreateMutex
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	SceSysmemForDriver_20C811FA
 	SceSysmemForDriver_24A99FFF
 	SceSysmemForDriver_45D22597
@@ -206,9 +206,9 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_391B5B74
 	SceDebugForDriver_391B74B7
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_BF82DEB2
+	sceKernelSpinlockLowLock
 	SceCpuForDriver_CDA96E81
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	SceCpuForDriver_E813EBB2
 	ScePervasiveForDriver_714EEFB7

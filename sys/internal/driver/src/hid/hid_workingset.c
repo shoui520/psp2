@@ -31,7 +31,7 @@ int processResumeStart(SceUID pid, int eventType,
 			entry = (HidProcessLink *)link;
 			process = entry->process;
 			if (pid == process->pid) {
-				state = SceCpuForDriver_D32ACE9E(
+				state = sceKernelSpinlockLowLockCpuSuspendIntr(
 					&process->spinlock);
 				entry->process->flags &= ~0x100u;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(
@@ -47,7 +47,7 @@ int processResumeStart(SceUID pid, int eventType,
 			entry = (HidProcessLink *)link;
 			process = entry->process;
 			if (pid == process->pid) {
-				state = SceCpuForDriver_D32ACE9E(
+				state = sceKernelSpinlockLowLockCpuSuspendIntr(
 					&process->spinlock);
 				entry->process->flags &= ~0x10u;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(
@@ -64,7 +64,7 @@ int processResumeStart(SceUID pid, int eventType,
 				entry = (HidProcessLink *)link;
 				process = entry->process;
 				if (pid == process->pid) {
-					state = SceCpuForDriver_D32ACE9E(
+					state = sceKernelSpinlockLowLockCpuSuspendIntr(
 						&process->spinlock);
 					entry->process->flags |= 0x100;
 					sceKernelSpinlockLowUnlockCpuResumeIntr(

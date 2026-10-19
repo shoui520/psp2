@@ -321,15 +321,15 @@ set(MODULE_IMPORT_NIDS
 	0x615771E2:F:0x771190E7
 )
 set(MODULE_IMPORT_FUNCS
-	SceCpuForDriver_364E68A4
+	sceKernelDcacheCleanInvalidateRange
 	SceCpuForDriver_4C38CE4D
 	sceKernelCpuId
 	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_821FC0EE
-	SceCpuForDriver_9CB9F0CE
+	sceKernelDcacheCleanRangeForL1WBWA
 	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceCpuForDriver_EC53D007
 	sceKernelCpuResumeIntr
 	SceCpuForKernel_803C84BF
@@ -492,7 +492,7 @@ set(MODULE_IMPORT_FUNCS
 	SceExcpmgrForKernel_B615A7DA
 	sceKernelInitialHandlerDebugUndefCfunc
 	sceKernelInitialHandlerDebugPabtCfunc
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceGUIDClose
 	sceGUIDGetObject
 	sceKernelFreeHeapMemory
@@ -572,7 +572,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForKernel_40F28DC6
 	SceSysrootForKernel_4F57A13F
 	SceSysrootForKernel_6D111FA7
-	SceSysrootForKernel_C8C8C321
+	sceKernelSysrootGetSharedMemory
 	SceSysrootForKernel_CCB8BB5E
 	SceSysrootForKernel_EEB867C0
 	SceSysrootForDriver_951C7943
@@ -580,7 +580,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_DC651D22
 	SceSysrootForDriver_ED22CF8F
 	SceSysrootForDriver_FF2DD7AB
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	SceDipswForDriver_B2AD48BE
 	memset
 	strncmp

@@ -81,7 +81,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUnlockMutex
 	SceThreadmgrForDriver_E54FD746
 	sceKernelCreateMutex
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelFreeHeapMemory
 	sceKernelCopyToUser
 	sceKernelAllocHeapMemory

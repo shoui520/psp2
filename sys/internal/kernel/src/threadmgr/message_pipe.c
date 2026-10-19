@@ -108,7 +108,7 @@ static int uidMsgPipe_Destructor(void *object)
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 4892);
 	for (;;) {
-		intr = SceCpuForDriver_D32ACE9E(&pipe->event.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&pipe->event.lock);
 		if (sceGUIDGetObject(pipe->processId, (SceObjectBase **)&process) < 0)
 			break;
 		if (sceKernelTryLockFastMutex(&process->msgPipeLock) >= 0) {
@@ -124,12 +124,12 @@ static int uidMsgPipe_Destructor(void *object)
 	}
 	memBlockId = pipe->memBlockId;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&pipe->event.lock, intr);
-	intr = SceCpuForDriver_D32ACE9E(&pipe->event.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&pipe->event.lock);
 	for (node = pipe->event.next; node != queue; node = node->next) {
 		if (!(node->owner & 1))
 			continue;
 		thread = (struct ThreadCB *)node;
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		if (thread->waitType == WAIT_TYPE_MSG_PIPE) {
 			if (pipe->waitDirection == MSG_PIPE_WAIT_SEND) {
 				if (thread->msgPipeResult != NULL) {
@@ -162,7 +162,7 @@ static int uidMsgPipe_Destructor(void *object)
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
-			intr = SceCpuForDriver_D32ACE9E(&process->resourceLock);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
 			if (pipe->event.attr & MSG_PIPE_ATTR_LW)
 				process->uidLwCount--;
 			else if (!(pipe->event.attr & MSG_PIPE_ATTR_UNLIMITED))
@@ -175,7 +175,7 @@ static int uidMsgPipe_Destructor(void *object)
 		}
 		sceGUIDReleaseObject(pid);
 	}
-	if (memBlockId == -1 || SceSysmemForDriver_009E1C61(memBlockId) >= 0)
+	if (memBlockId == -1 || sceKernelFreeMemBlock(memBlockId) >= 0)
 		memset(&pipe->ring, 0, sizeof(ThreadmgrMsgPipe) - offsetof(ThreadmgrMsgPipe, ring));
 	else
 		SCE_DBG_ASSERT_LEVEL(0, 0, 5001);
@@ -196,7 +196,7 @@ static int getMsgPipeInfo(SceUID msgPipeId, SceKernelMsgPipeInfo *info)
 	} else {
 		info->msgPipeId = msgPipeId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(msgPipeId), sizeof(info->name) - 1);
-		SceCpuForDriver_BF82DEB2(&pipe->event.lock);
+		sceKernelSpinlockLowLock(&pipe->event.lock);
 		info->bufferSize = pipe->ring.size;
 		info->freeSize = pipe->ring.size - pipe->ring.used;
 		info->attr = pipe->event.attr;
@@ -564,7 +564,7 @@ static int uidMsgPipe_RevalidateMethod(void *cls, void *object)
 			continue;
 		waiter = (struct ThreadCB *)node;
 		SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 5073);
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+		sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 		if (waiter->waitType == WAIT_TYPE_MSG_PIPE) {
 			n = pipe->ring.size - pipe->ring.used;
 			if (waiter->msgPipeRemaining <= n)
@@ -667,7 +667,7 @@ int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 	ret = sceGUIDReferObjectWithClass(msgPipeId, MSG_PIPE_CLASS(), (SceObjectBase **)&pipe);
 	if (ret < 0)
 		return MsgPipeUnknownIdError();
-	SceCpuForDriver_BF82DEB2(&pipe->event.lock);
+	sceKernelSpinlockLowLock(&pipe->event.lock);
 	locked = 1;
 	wait = timeout;
 	if (timeout != NULL && pid != THREADMGR_KERNEL_PID) {
@@ -775,7 +775,7 @@ int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 				sceGUIDReleaseObject(msgPipeId);
 				return cbRet;
 			}
-			SceCpuForDriver_BF82DEB2(&pipe->event.lock);
+			sceKernelSpinlockLowLock(&pipe->event.lock);
 		}
 		wake = 0;
 		if (pipe->waitDirection == MSG_PIPE_WAIT_SEND) {
@@ -789,7 +789,7 @@ int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 					continue;
 				waiter = (struct ThreadCB *)pos;
 				SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 2071);
-				SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+				sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 				if (waiter->waitType == WAIT_TYPE_MSG_PIPE) {
 					if (pipe->partial ||
 					    waiter->currentPriority <= thread->currentPriority) {
@@ -818,7 +818,7 @@ int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 			SCE_DBG_ASSERT_PRINTF(waiter->magic == THREAD_CB_MAGIC, 2109,
 				" k: error: sendMsgPipeVectorCore(), sendProcessId=0x%08X, msgPipeId=0x%08X, threadId=0x%08X",
 				pid, msgPipeId, currentThreadContext()->threadId);
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+			sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 			if (waiter->waitType != WAIT_TYPE_MSG_PIPE) {
 				sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 				continue;
@@ -908,7 +908,7 @@ decided:
 		/* wait for room or receivers */
 		pipe->waitDirection = MSG_PIPE_WAIT_SEND;
 		pipe->waitCount++;
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		thread->msgPipeVector = vector;
 		thread->msgPipeRemaining = remaining;
 		thread->msgPipeSize = total;
@@ -1021,7 +1021,7 @@ int recvMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 	ret = sceGUIDReferObjectWithClass(msgPipeId, MSG_PIPE_CLASS(), (SceObjectBase **)&pipe);
 	if (ret < 0)
 		return MsgPipeUnknownIdError();
-	SceCpuForDriver_BF82DEB2(&pipe->event.lock);
+	sceKernelSpinlockLowLock(&pipe->event.lock);
 	locked = 1;
 	wait = timeout;
 	if (timeout != NULL && pid != THREADMGR_KERNEL_PID) {
@@ -1127,7 +1127,7 @@ int recvMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 				sceGUIDReleaseObject(msgPipeId);
 				return cbRet;
 			}
-			SceCpuForDriver_BF82DEB2(&pipe->event.lock);
+			sceKernelSpinlockLowLock(&pipe->event.lock);
 		}
 		wake = 0;
 		if (pipe->waitDirection == MSG_PIPE_WAIT_RECEIVE) {
@@ -1141,7 +1141,7 @@ int recvMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 					continue;
 				waiter = (struct ThreadCB *)pos;
 				SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 3361);
-				SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+				sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 				if (waiter->waitType == WAIT_TYPE_MSG_PIPE) {
 					if (pipe->partial ||
 					    waiter->currentPriority <= thread->currentPriority) {
@@ -1185,7 +1185,7 @@ int recvMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 			SCE_DBG_ASSERT_PRINTF(waiter->magic == THREAD_CB_MAGIC, 3415,
 				" k: error: recvMsgPipeVectorCore(), recvProcessId=0x%08X, msgPipeId=0x%08X, threadId=0x%08X",
 				pid, msgPipeId, currentThreadContext()->threadId);
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+			sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 			if (waiter->waitType != WAIT_TYPE_MSG_PIPE) {
 				sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 				continue;
@@ -1279,7 +1279,7 @@ decided:
 		updateMsgPipeDataPattern(pipe);
 		pipe->waitDirection = MSG_PIPE_WAIT_RECEIVE;
 		pipe->waitCount++;
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		thread->msgPipeRemaining = remaining;
 		thread->msgPipeVector = vector;
 		thread->waitOptions = mode | MSG_PIPE_MODE_RECEIVING;
@@ -1994,7 +1994,7 @@ int msgPipeProcessExit(SceProcessObject *process)
 			}
 			thread = &object->context;
 			for (;;) {
-				SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+				sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 				if (!(thread->status & SCE_KERNEL_THREAD_STATUS_WAITING)) {
 					sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 					break;
@@ -2060,7 +2060,7 @@ int msgPipeProcessExit(SceProcessObject *process)
 		if (link == &process->msgPipes)
 			break;
 		pipe = MSG_PIPE_FROM_PROCESS_LINK(link);
-		intr = SceCpuForDriver_D32ACE9E(&pipe->event.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&pipe->event.lock);
 		ListLinkRemove(link);
 		if (sceKernelUnlockFastMutex(&process->msgPipeLock) < 0) {
 			SCE_DBG_ASSERT_FAIL(920);
@@ -2082,7 +2082,7 @@ int msgPipeProcessExit(SceProcessObject *process)
 				continue;
 			waiter = (struct ThreadCB *)node;
 			SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 949);
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+			sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 			if (waiter->waitType == WAIT_TYPE_MSG_PIPE)
 				wakeupAndDistributeThread(waiter, (uintptr_t)queue,
 							  SCE_KERNEL_ERROR_MSG_PIPE_DELETED);
@@ -2093,7 +2093,7 @@ int msgPipeProcessExit(SceProcessObject *process)
 				MSG_PIPE_EVENT_ERROR, &pipe->event) < 0)
 			SCE_PANIC(967);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&pipe->event.lock, intr);
-		if (memBlockId != -1 && SceSysmemForDriver_009E1C61(memBlockId) < 0) {
+		if (memBlockId != -1 && sceKernelFreeMemBlock(memBlockId) < 0) {
 			SCE_DBG_ASSERT_LEVEL(0, 0, 975);
 			return 0;
 		}
@@ -2127,7 +2127,7 @@ int msgPipeProcessExit(SceProcessObject *process)
 					continue;
 				if (SceSysmemForDriver_84A4AF5E(process->pid, vector[i]) < 0)
 					SCE_PANIC(1030);
-				SceCpuForDriver_BF82DEB2(&pipe->event.lock);
+				sceKernelSpinlockLowLock(&pipe->event.lock);
 				ret = setEventWithNotifyCallback(guid, MSG_PIPE_EVENT_PROCESS_EXITED,
 					(uint64_t)(int64_t)process->pid, MSG_PIPE_EVENT_PROCESS_EXITED,
 					&pipe->event);
@@ -2310,7 +2310,7 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 att
 		intr = SceCpuForDriver_821FC0EE();
 	} else {
 		process = thread->process;
-		intr = SceCpuForDriver_D32ACE9E(&process->resourceLock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
 		memory = process->msgPipeMemory + size;
 		if (memory > MSG_PIPE_MEMORY_MAX) {
 			if (thread->processId == THREADMGR_KERNEL_PID) {
@@ -2360,7 +2360,7 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 att
 	if (uid < 0) {
 		ret = uid;
 		if (ThreadmgrInSyscall()) {
-			SceCpuForDriver_BF82DEB2(&process->resourceLock);
+			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (attr & MSG_PIPE_ATTR_LW)
 				process->uidLwCount--;
 			else if (attr & MSG_PIPE_ATTR_UNLIMITED)
@@ -2416,7 +2416,7 @@ unlockOwner:
 releaseOwner:
 	sceGUIDReleaseObject(pid);
 freeBlock:
-	SceSysmemForDriver_009E1C61(blockId);
+	sceKernelFreeMemBlock(blockId);
 restore:
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
@@ -2461,7 +2461,7 @@ int sceKernelDeleteMsgPipe(SceUID msgPipeId)
 		wake = 0;
 	} else {
 		thread = currentThreadContext();
-		SceCpuForDriver_BF82DEB2(&pipe->event.lock);
+		sceKernelSpinlockLowLock(&pipe->event.lock);
 		wake = setEventWithNotifyCallback(msgPipeId, MSG_PIPE_EVENT_DELETED,
 			(uint64_t)(int64_t)thread->threadId << 32 |
 			(uint64_t)(int64_t)thread->processId, MSG_PIPE_EVENT_DELETED, &pipe->event);
@@ -2706,7 +2706,7 @@ int sceKernelTrySendMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVector
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&pipe->event.lock);
+	sceKernelSpinlockLowLock(&pipe->event.lock);
 	queue = MSG_PIPE_QUEUE(pipe);
 	if (vector == NULL) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
@@ -2774,7 +2774,7 @@ int sceKernelTrySendMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVector
 				continue;
 			waiter = (struct ThreadCB *)node;
 			SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 2817, "sceKernelTrySendMsgPipeVector");
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+			sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 			if (waiter->waitType == WAIT_TYPE_MSG_PIPE) {
 				/* Sony's: the waiter stays locked on these two */
 				if (pipe->partial)
@@ -2824,7 +2824,7 @@ send:
 		waiter = (struct ThreadCB *)node;
 		node = next;
 		SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 2880, "sceKernelTrySendMsgPipeVector");
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+		sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 		if (waiter->waitType != WAIT_TYPE_MSG_PIPE) {
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 			continue;
@@ -2985,7 +2985,7 @@ int sceKernelTryReceiveMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVec
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&pipe->event.lock);
+	sceKernelSpinlockLowLock(&pipe->event.lock);
 	queue = MSG_PIPE_QUEUE(pipe);
 	if (vector == NULL) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
@@ -3052,7 +3052,7 @@ int sceKernelTryReceiveMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVec
 				continue;
 			waiter = (struct ThreadCB *)pos;
 			SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 4136, "sceKernelTryReceiveMsgPipeVector");
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+			sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 			if (waiter->waitType == WAIT_TYPE_MSG_PIPE) {
 				/* Sony's: the waiter stays locked on these two */
 				if (pipe->partial)
@@ -3110,7 +3110,7 @@ receive:
 			continue;
 		waiter = (struct ThreadCB *)pos;
 		SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 4215, "sceKernelTryReceiveMsgPipeVector");
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+		sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 		if (waiter->waitType != WAIT_TYPE_MSG_PIPE)
 			goto next;
 		if (remaining == 0) {
@@ -3259,7 +3259,7 @@ int sceKernelCancelMsgPipe(SceUID msgPipeId, int *numSendWaitThreads,
 		goto resume;
 	}
 	queue = MSG_PIPE_QUEUE(pipe);
-	SceCpuForDriver_BF82DEB2(&pipe->event.lock);
+	sceKernelSpinlockLowLock(&pipe->event.lock);
 	if (pipe->processId == -1) {
 		sceKernelSpinlockLowUnlock(&pipe->event.lock);
 		ret = SCE_KERNEL_ERROR_MSG_PIPE_DELETED;
@@ -3280,7 +3280,7 @@ int sceKernelCancelMsgPipe(SceUID msgPipeId, int *numSendWaitThreads,
 			continue;
 		waiter = (struct ThreadCB *)node;
 		SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 4471, "sceKernelCancelMsgPipe");
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+		sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 		if (waiter->waitType == WAIT_TYPE_MSG_PIPE) {
 			wake |= wakeupAndDistributeThread(waiter, (uintptr_t)queue,
 							  SCE_KERNEL_ERROR_WAIT_CANCEL);

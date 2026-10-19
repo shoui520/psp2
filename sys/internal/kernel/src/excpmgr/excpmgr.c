@@ -264,7 +264,7 @@ int sceKernelReleaseExceptionHandler(unsigned int code, SceExcpmgrHandler *handl
 		return SCE_KERNEL_ERROR_ILLEGAL_EXCPCODE;
 	}
 
-	flags = SceCpuForDriver_D32ACE9E(&g_excpHandlers.lock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&g_excpHandlers.lock);
 	first = g_excpHandlers.first[code];
 	head = g_excpHandlers.head[code];
 	if (head == NULL) {
@@ -440,7 +440,7 @@ int Init(SceSize args, void *argp)
 	dacr = readDacr();
 	writeDacr(DACR_ALL_MANAGER);
 	start = (unsigned int)memcpy(vectors, exceptionVectors, size);
-	SceCpuForDriver_9CB9F0CE((void *)cacheLineDown(start),
+	sceKernelDcacheCleanRangeForL1WBWA((void *)cacheLineDown(start),
 		cacheLineDown(start + size + 31) - cacheLineDown(start));
 	writeDacr(dacr);
 	SceCpuForKernel_803C84BF();

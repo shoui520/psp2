@@ -568,7 +568,7 @@ int emulateController(CtrlpEmulate *emulate, SceUInt32 version)
 
 	state.version = version;
 	getPortInfo();
-	intr = SceCpuForDriver_D32ACE9E(&state.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
 	buttons = normalizeButtons(emulate->data.buttons, version);
 	if (state.version) {
 		port = emulate->portType.port;
@@ -603,7 +603,7 @@ static inline int stopMode(SceUInt32 mode)
 	SceUInt32 intr;
 	int result;
 
-	intr = SceCpuForDriver_D32ACE9E(&state.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
 	if (state.mode == mode) {
 		state.mode = CTRLP_MODE_IDLE;
 		result = CTRLP_RESULT_OK;
@@ -699,7 +699,7 @@ static int controllerCallback(SceUInt32 port, struct ctrlNativeSample *sample, i
 	if (state.mode == CTRLP_MODE_RECORD) {
 		if (port >= CTRLP_PORT_NUM)
 			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-		intr = SceCpuForDriver_D32ACE9E(&state.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
 		if (state.mode != CTRLP_MODE_RECORD || !(state.streams & CTRLP_STREAM_CTRL))
 			goto out;
 		record = &ring.record[ring.writeIndex];
@@ -725,7 +725,7 @@ static int controllerCallback(SceUInt32 port, struct ctrlNativeSample *sample, i
 		error(2274, "ILLEGAL PARAM\n");
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&state.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
 	if (state.mode != CTRLP_MODE_PLAYBACK || !(state.streams & CTRLP_STREAM_CTRL))
 		goto out;
 	time = sceKernelGetSystemTimeWide() - state.baseTime;
@@ -788,7 +788,7 @@ int appendRecords(CtrlpPutRecords *put, SceUInt32 length, SceUInt32 *space,
 	state.spaceThreshold = put->spaceThreshold;
 	*space = 0;
 
-	intr = SceCpuForDriver_D32ACE9E(&state.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
 	if (state.mode != CTRLP_MODE_PLAYBACK) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 		return CTRLP_RESULT_ILLEGAL_STATE;
@@ -876,7 +876,7 @@ static inline int startRecord(const CtrlpStartRecord *start, SceUInt32 length)
 	getPortInfo();
 	findPrimaryPort();
 
-	intr = SceCpuForDriver_D32ACE9E(&state.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
 	if (state.mode != CTRLP_MODE_IDLE) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 		return CTRLP_RESULT_BUSY;
@@ -904,7 +904,7 @@ static inline int startPlayback(const CtrlpStartPlayback *start, SceUInt32 lengt
 	getPortInfo();
 	findPrimaryPort();
 
-	intr = SceCpuForDriver_D32ACE9E(&state.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
 	if (state.mode != CTRLP_MODE_IDLE) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 		return CTRLP_RESULT_BUSY;
@@ -936,7 +936,7 @@ static inline int setRapidFire(const CtrlpSetRapidFire *set, SceUInt32 length)
 	if (set->port >= CTRLP_PORT_NUM)
 		return CTRLP_RESULT_INVALID;
 
-	intr = SceCpuForDriver_D32ACE9E(&state.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
 	rule = set->rule;
 	if (SceCtrlForDriver_A248CDAE(state.version ? set->portType.port : 0, set->index, &rule) < 0) {
 		result = CTRLP_RESULT_INVALID;
@@ -959,7 +959,7 @@ static inline int clearRapidFire(const CtrlpClearRapidFire *clear, SceUInt32 len
 	if (clear->port >= CTRLP_PORT_NUM)
 		return CTRLP_RESULT_INVALID;
 
-	intr = SceCpuForDriver_D32ACE9E(&state.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
 	if (SceCtrlForDriver_ED138A26(state.version ? clear->portType.port : 0, clear->index) < 0) {
 		result = CTRLP_RESULT_INVALID;
 	} else {
@@ -1129,7 +1129,7 @@ static inline int processRequest(void)
 		break;
 	}
 
-	intr = SceCpuForDriver_D32ACE9E(&state.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
 	if (state.pending & CTRLP_SEND_RESPONSE) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 		error(934, "dup resp req 0x%02X 0x%02X\n", code, state.responseHeader.code);
@@ -1235,7 +1235,7 @@ static inline int recvPacket(SceSize size)
 	SceUInt32 intr;
 	int ret, left;
 
-	intr = SceCpuForDriver_D32ACE9E(&state.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
 	if (state.pending & CTRLP_SEND_RESPONSE) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 		state.recvCount = 0;
@@ -1268,7 +1268,7 @@ static inline int sendPacket(void)
 	SceUInt32 intr, what, size;
 	int ret;
 
-	intr = SceCpuForDriver_D32ACE9E(&state.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
 	if (state.sending) {
 		error(1212, "Already sending\n");
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
@@ -1329,7 +1329,7 @@ static inline int sentPacket(void)
 	SceUInt32 intr;
 	int ret;
 
-	intr = SceCpuForDriver_D32ACE9E(&state.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
 	if (state.sending == CTRLP_SEND_RECORDS)
 		state.recordReady = 1;
 	state.sending = 0;
@@ -1416,7 +1416,7 @@ static int touchCallback(SceUInt32 panel, SceTouchData *sample)
 	}
 
 	if (state.mode == CTRLP_MODE_RECORD) {
-		intr = SceCpuForDriver_D32ACE9E(&state.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
 		if (state.mode != CTRLP_MODE_RECORD || !(state.streams & CTRLP_STREAM_TOUCH))
 			goto out;
 		record = &ring.record[ring.writeIndex];
@@ -1438,7 +1438,7 @@ static int touchCallback(SceUInt32 panel, SceTouchData *sample)
 	if (state.mode != CTRLP_MODE_PLAYBACK)
 		return 0;
 
-	intr = SceCpuForDriver_D32ACE9E(&state.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
 	if (state.mode != CTRLP_MODE_PLAYBACK || !(state.streams & CTRLP_STREAM_TOUCH))
 		goto out;
 	time = sceKernelGetSystemTimeWide() - state.baseTime;
@@ -1476,7 +1476,7 @@ int module_start(SceSize args, void *argp)
 
 	(void)args;
 	(void)argp;
-	if (!SceDipswForDriver_A98FC2FD(CTRLP_DIPSW))
+	if (!sceKernelCheckDipsw(CTRLP_DIPSW))
 		return SCE_KERNEL_START_NO_RESIDENT;
 
 	memset(&state, 0, sizeof(state));
@@ -1512,7 +1512,7 @@ int module_start(SceSize args, void *argp)
 	protocol.flags = DFMGR_PROTOCOL_ENABLE;
 	__builtin_memset(protocol.name, 0, sizeof(protocol.name));
 	strncpy(protocol.name, "CTRLP", sizeof(protocol.name));
-	protocol.flags |= SceDipswForDriver_A98FC2FD(CTRLP_DIPSW_AUTO_ENABLE) ?
+	protocol.flags |= sceKernelCheckDipsw(CTRLP_DIPSW_AUTO_ENABLE) ?
 			  DFMGR_PROTOCOL_SDIO : DFMGR_PROTOCOL_USB;
 	ret = sceDfMgrOpen(protocolHandler, &protocol, NULL);
 	if (ret < 0) {

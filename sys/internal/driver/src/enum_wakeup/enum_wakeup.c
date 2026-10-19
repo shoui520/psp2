@@ -23,7 +23,7 @@ void ewPowerButton(uint32_t state, uint32_t previous, void *argument)
 
 	(void)previous;
 	(void)argument;
-	intr = SceCpuForDriver_D32ACE9E(&ewg.ew.spinlock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ewg.ew.spinlock);
 	ewg.ew.powerButton = state;
 	if (state & EW_BUTTON_POWER) {
 		sceKernelSetEventFlag(ewg.ew.evf, EW_EVENT_POWER_PRESSED);
@@ -47,7 +47,7 @@ int ewPowerOffThread(SceSize args, void *argp)
 
 	ewg.ew.spinlock = 0;
 	SceSysconForDriver_E26488B9(SYSCON_SCRATCH_PAD(resumeContextPA), &command, sizeof(command));
-	intr = SceCpuForDriver_D32ACE9E(&ewg.ew.spinlock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ewg.ew.spinlock);
 	ewg.ew.powerMask = EW_BUTTON_POWER;
 	ewg.ew.powerCallback = SceCtrlForDriver_FF9D4DD4(EW_BUTTON_POWER, ewPowerButton, 0, &state);
 	if (state & EW_BUTTON_POWER)
@@ -137,7 +137,7 @@ void ewInitDisplay(void)
 	ewg.ew.fb[1] = (char *)ewg.ew.fb[0] + EW_FB_SIZE;
 	ewDrawSetTarget(ewg.ew.fb[1], EW_SCREEN_WIDTH, EW_SCREEN_HEIGHT, 0);
 	ewDrawClear(0xff000000);
-	SceCpuForDriver_103872A5(ewg.ew.fb[0], EW_FB_SIZE);
+	sceKernelDcacheCleanRange(ewg.ew.fb[0], EW_FB_SIZE);
 	fb.size = 0x18;
 	fb.base = ewg.ew.fb[0];
 	fb.pitch = EW_SCREEN_WIDTH;
@@ -352,7 +352,7 @@ clocks:
 			} else {
 				ewDrawClear(0xff000000);
 			}
-			SceCpuForDriver_103872A5(fb, EW_FB_SIZE);
+			sceKernelDcacheCleanRange(fb, EW_FB_SIZE);
 			frame.size = 0x18;
 			frame.base = fb;
 			frame.pitch = EW_SCREEN_WIDTH;

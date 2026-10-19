@@ -14,9 +14,9 @@ int UpdateUtilReleaseAllBuffers(SceUID pid)
 	for (entry = updateBufferTable; entry != updateBufferTable + 4; entry++) {
 		if (entry->pid == pid && entry->kernelBuffer &&
 				entry->allocated == 1 && !entry->inUse) {
-			SceSysmemForDriver_009E1C61(entry->kernelMemBlock);
+			sceKernelFreeMemBlock(entry->kernelMemBlock);
 			if (entry->userMemBlock > 0)
-				SceSysmemForDriver_009E1C61(entry->userMemBlock);
+				sceKernelFreeMemBlock(entry->userMemBlock);
 			entry->kernelMemBlock = 0;
 			entry->userMemBlock = 0;
 			entry->kernelBuffer = NULL;

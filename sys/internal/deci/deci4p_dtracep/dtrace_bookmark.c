@@ -39,6 +39,6 @@ int dtrace_bookmark_init(void)
 
 int dtrace_bookmark_fini(void)
 {
-	SceSysmemForDriver_009E1C61(s_bookmark.uid);
+	sceKernelFreeMemBlock(s_bookmark.uid);
 	return 0;
 }

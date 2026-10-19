@@ -455,7 +455,7 @@ foundStorage:
 		if (coherentAllocation == NULL)
 			return (int)0x804a0011;
 		memset(coherentAllocation, 0, coherentSize);
-		SceCpuForDriver_103872A5(coherentAllocation, coherentSize);
+		sceKernelDcacheCleanRange(coherentAllocation, coherentSize);
 		for (index = 0; index < 65; ++index) {
 			if (storage->allocations[index].address == NULL) {
 				storage->allocations[index].address = coherentAllocation;
@@ -587,7 +587,7 @@ foundStorage:
 		system->dspHeapUsed = used - dspHeapSize;
 	}
 	if (systemMemory != NULL && systemSize != 0) {
-		SceSysmemForDriver_009E1C61(memBlock);
+		sceKernelFreeMemBlock(memBlock);
 		for (index = 0; index < 65; ++index) {
 			if (storage->memBlocks[index] == memBlock) {
 				storage->memBlocks[index] = 0;
@@ -621,7 +621,7 @@ int ngsReleaseDebugBuffer(SceNgsBufferInfo *buffer, SceUID memBlock)
 
 	if (buffer->data == NULL || buffer->size == 0)
 		return SCE_NGS_ERROR;
-	result = SceSysmemForDriver_009E1C61(memBlock);
+	result = sceKernelFreeMemBlock(memBlock);
 	buffer->data = NULL;
 	buffer->size = 0;
 	return result;

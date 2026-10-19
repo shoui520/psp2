@@ -113,7 +113,7 @@ struct MsproalErrorRecord **MsproalUserGetErrorLogBuffer(
 
 void MsproalUserInvalidateCache(void *address, unsigned int length)
 {
-	SceCpuForDriver_02796361(address, length);
+	sceKernelDcacheInvalidateRange(address, length);
 }
 
 void msproal_user_virt_to_bus(const void *address, uintptr_t *physicalAddress)

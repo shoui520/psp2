@@ -264,7 +264,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoSync
 	sceIoRead
 	sceIoClose
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_49D4DD9B
 	sceKernelCopyToUser
@@ -282,10 +282,10 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_C6E83F34
 	SceSblAIMgrForDriver_D78B04A2
 	SceSblAIMgrForDriver_F4B98F66
-	SceCpuForDriver_02796361
-	SceCpuForDriver_103872A5
+	sceKernelDcacheInvalidateRange
+	sceKernelDcacheCleanRange
 	SceDebugForDriver_02B04343
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	memset
 	strncmp
 	memcpy

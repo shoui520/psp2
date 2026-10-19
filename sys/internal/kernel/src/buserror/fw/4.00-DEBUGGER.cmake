@@ -40,7 +40,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForKernel_3E455842
 	SceSysrootForKernel_82FC6405
 	SceSysrootForKernel_B27B7530
-	SceSysrootForKernel_C8C8C321
+	sceKernelSysrootGetSharedMemory
 	SceDebugForKernel_A465A31A
 	memcpy
 	snprintf

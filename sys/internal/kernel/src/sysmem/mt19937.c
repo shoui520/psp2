@@ -72,7 +72,7 @@ int SceKernelUtilsForDriver_875B2A1C(SceUInt32 *buffer, SceSize size)
 
 	if (((uintptr_t)buffer & 3) || (size & 3))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	flags = SceCpuForDriver_D32ACE9E(&s_mt19937Lock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mt19937Lock);
 	count = size >> 2;
 	for (i = 0; i != count; i++)
 		*buffer++ = SceKernelUtilsForDriver_92AEDFBC(&s_mt19937);

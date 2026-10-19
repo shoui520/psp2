@@ -63,7 +63,7 @@ static int EmcIntrHandler(int intrCode, void *userCtx)
 
 	(void)intrCode;
 	(void)userCtx;
-	state = SceCpuForDriver_D32ACE9E(&s_emc.lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_emc.lock);
 	status = regs->intrStatus;
 	regs->intrClear = 1;
 	if (status & EMC_INTR_EVENT) {

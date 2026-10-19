@@ -19,16 +19,16 @@ int _freeRpcCh(unsigned int channel, int clockDown)
 	int intr, ret;
 	unsigned int command;
 
-	intr = SceCpuForDriver_D32ACE9E((SceKernelSpinlock *)&g_veneziaRpcState.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr((SceKernelSpinlock *)&g_veneziaRpcState.lock);
 	g_veneziaRpcState.channels[channel].inUse = 0;
 	g_veneziaRpcState.freeChannels++;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(channel <= 15, SCE_DBGINFO_FUNC(222, "_getRpcArg"),
+	sceKernelAssert(channel <= 15, SCE_DBGINFO_FUNC(222, "_getRpcArg"),
 			 __builtin_return_address(0));
 #endif
 	arg = g_veneziaRpcState.memory ? &g_veneziaRpcState.memory->arguments[channel] : NULL;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(arg != NULL, SCE_DBGINFO_FUNC(637, "_freeRpcCh"),
+	sceKernelAssert(arg != NULL, SCE_DBGINFO_FUNC(637, "_freeRpcCh"),
 			 __builtin_return_address(0));
 #endif
 	command = arg->command;
@@ -45,7 +45,7 @@ clock:
 	    getVeneziaClockLockCount() == 0) {
 		ret = ScePervasiveForDriver_725B4F59(veneziaClockSelector(41));
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(ret >= 0, SCE_DBGINFO_FUNC(650, "_freeRpcCh"),
+		sceKernelAssert(ret >= 0, SCE_DBGINFO_FUNC(650, "_freeRpcCh"),
 				 __builtin_return_address(0));
 #endif
 	}
@@ -65,7 +65,7 @@ int _callGenericThunk(unsigned int command, const unsigned int *input,
 	int intr, ret, allocated, clockDown = flags & 0x1000000;
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(command < 0x200, SCE_DBGINFO_FUNC(693, "_callGenericThunk"),
+	sceKernelAssert(command < 0x200, SCE_DBGINFO_FUNC(693, "_callGenericThunk"),
 			 __builtin_return_address(0));
 #endif
 	if (clockDown) {
@@ -73,7 +73,7 @@ int _callGenericThunk(unsigned int command, const unsigned int *input,
 		if (ret < 0)
 			return ret;
 	}
-	intr = SceCpuForDriver_D32ACE9E((SceKernelSpinlock *)&g_veneziaRpcState.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr((SceKernelSpinlock *)&g_veneziaRpcState.lock);
 	channel = (g_veneziaRpcState.lastChannel + 1) & 7;
 	if (!g_veneziaRpcState.channels[channel].inUse)
 		goto allocated;
@@ -110,7 +110,7 @@ allocationDone:
 			ret = ScePervasiveForDriver_725B4F59(
 				veneziaClockSelector(getVeneziaPreferredClock()));
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(ret >= 0, SCE_DBGINFO_FUNC(604, "_allocRpcCh"),
+			sceKernelAssert(ret >= 0, SCE_DBGINFO_FUNC(604, "_allocRpcCh"),
 					 __builtin_return_address(0));
 #endif
 		}
@@ -119,7 +119,7 @@ allocationDone:
 		channel = -1;
 	}
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(allocated, SCE_DBGINFO_FUNC(614, "_allocRpcCh"),
+	sceKernelAssert(allocated, SCE_DBGINFO_FUNC(614, "_allocRpcCh"),
 			 __builtin_return_address(0));
 #endif
 	sceKernelSpinlockLowUnlockCpuResumeIntr((SceKernelSpinlock *)&g_veneziaRpcState.lock, intr);
@@ -127,12 +127,12 @@ allocationDone:
 	g_veneziaRpcState.channels[channel].flags = flags & 0xff0000;
 	thunk.allocationCount = 0;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(channel <= 15, SCE_DBGINFO_FUNC(222, "_getRpcArg"),
+	sceKernelAssert(channel <= 15, SCE_DBGINFO_FUNC(222, "_getRpcArg"),
 			 __builtin_return_address(0));
 #endif
 	arg = g_veneziaRpcState.memory ? &g_veneziaRpcState.memory->arguments[channel] : NULL;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(arg != NULL, SCE_DBGINFO_FUNC(714, "_callGenericThunk"),
+	sceKernelAssert(arg != NULL, SCE_DBGINFO_FUNC(714, "_callGenericThunk"),
 			 __builtin_return_address(0));
 #endif
 	sequence = g_veneziaRpcState.sequence;
@@ -255,14 +255,14 @@ _callDebugThunk(unsigned int command, const unsigned int *input, VeneziaRpcPack 
 #endif
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(command <= 31, SCE_DBGINFO_FUNC(1062, "_callDebugThunk"),
+	sceKernelAssert(command <= 31, SCE_DBGINFO_FUNC(1062, "_callDebugThunk"),
 			 __builtin_return_address(0));
 #endif
 	ret = sceKernelWaitSema(g_veneziaRpcState.debugSemaphore, 1, NULL);
 	if (ret < 0)
 		return ret;
 	channel = -1;
-	intr = SceCpuForDriver_D32ACE9E(&g_veneziaRpcState.debugLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaRpcState.debugLock);
 	if (!g_veneziaRpcState.channels[8].inUse) {
 		channel = 8;
 #if FW_DEBUG
@@ -272,7 +272,7 @@ _callDebugThunk(unsigned int command, const unsigned int *input, VeneziaRpcPack 
 		g_veneziaRpcState.freeDebugChannels--;
 	}
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(allocated,
+	sceKernelAssert(allocated,
 			 SCE_DBGINFO_FUNC(1013, "_allocRpcChDebug"),
 			 __builtin_return_address(0));
 #endif
@@ -281,12 +281,12 @@ _callDebugThunk(unsigned int command, const unsigned int *input, VeneziaRpcPack 
 	g_veneziaRpcState.channels[channel].flags = 0x10000;
 	thunk.allocationCount = 0;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(allocated, SCE_DBGINFO_FUNC(222, "_getRpcArg"),
+	sceKernelAssert(allocated, SCE_DBGINFO_FUNC(222, "_getRpcArg"),
 			 __builtin_return_address(0));
 #endif
 	arg = g_veneziaRpcState.memory ? &g_veneziaRpcState.memory->arguments[channel] : NULL;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(arg != NULL, SCE_DBGINFO_FUNC(1083, "_callDebugThunk"),
+	sceKernelAssert(arg != NULL, SCE_DBGINFO_FUNC(1083, "_callDebugThunk"),
 			 __builtin_return_address(0));
 #endif
 	sequence = g_veneziaRpcState.debugSequence;
@@ -317,10 +317,10 @@ _callDebugThunk(unsigned int command, const unsigned int *input, VeneziaRpcPack 
 	}
 	channel = thunk.channel;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(channel == 8, SCE_DBGINFO_FUNC(1025, "_freeRpcChDebug"),
+	sceKernelAssert(channel == 8, SCE_DBGINFO_FUNC(1025, "_freeRpcChDebug"),
 			 __builtin_return_address(0));
 #endif
-	intr = SceCpuForDriver_D32ACE9E(&g_veneziaRpcState.debugLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaRpcState.debugLock);
 	g_veneziaRpcState.channels[channel].inUse = 0;
 	g_veneziaRpcState.freeDebugChannels++;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaRpcState.debugLock, intr);
@@ -384,12 +384,12 @@ int _sceVeneziaRpcClockDown(void)
 {
 	int intr, ret;
 
-	intr = SceCpuForDriver_D32ACE9E(
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(
 		(SceKernelSpinlock *)&g_veneziaRpcState.lock);
 	if (g_veneziaRpcState.freeChannels == 8 && getVeneziaClockLockCount() == 0) {
 		ret = ScePervasiveForDriver_725B4F59(veneziaClockSelector(41));
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(ret >= 0, SCE_DBGINFO_FUNC(555, "_sceVeneziaRpcClockDown"),
+		sceKernelAssert(ret >= 0, SCE_DBGINFO_FUNC(555, "_sceVeneziaRpcClockDown"),
 				 __builtin_return_address(0));
 #endif
 	}
@@ -522,7 +522,7 @@ unsigned int setRpcBootState(unsigned int state)
 static inline VeneziaRpcArg *_getRpcArg(unsigned int channel)
 {
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(channel <= 15, SCE_DBGINFO_FUNC(222, "_getRpcArg"),
+	sceKernelAssert(channel <= 15, SCE_DBGINFO_FUNC(222, "_getRpcArg"),
 			 __builtin_return_address(0));
 #endif
 	return g_veneziaRpcState.memory ? &g_veneziaRpcState.memory->arguments[channel] : NULL;
@@ -534,7 +534,7 @@ int _sceVeneziaRpcGetHistory(VeneziaRpcHistoryEntry *history)
 	VeneziaRpcArg *arg, *previousArg;
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(history != NULL, SCE_DBGINFO_FUNC(923, "_sceVeneziaRpcGetHistory"),
+	sceKernelAssert(history != NULL, SCE_DBGINFO_FUNC(923, "_sceVeneziaRpcGetHistory"),
 			 __builtin_return_address(0));
 #endif
 	if (!g_veneziaRpcState.memory)
@@ -557,7 +557,7 @@ int _sceVeneziaRpcGetHistory(VeneziaRpcHistoryEntry *history)
 		channel = channels[i];
 		arg = _getRpcArg(channel);
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(arg != NULL, SCE_DBGINFO_FUNC(946, "_sceVeneziaRpcGetHistory"),
+		sceKernelAssert(arg != NULL, SCE_DBGINFO_FUNC(946, "_sceVeneziaRpcGetHistory"),
 				 __builtin_return_address(0));
 #endif
 		history[i].resultFlags = arg->resultFlags;
@@ -583,7 +583,7 @@ void _sceVeneziaRpcPrintBlockingCalls(SceUID pid)
 		return;
 	for (channel = 0; channel < 8; channel++) {
 		arg = _getRpcArg(channel);
-		SceDebugForDriver_35A35322(arg != NULL,
+		sceKernelAssert(arg != NULL,
 			 SCE_DBGINFO_FUNC(969, "_sceVeneziaRpcPrintBlockingCalls"),
 			 __builtin_return_address(0));
 		if (!(arg->resultFlags & 2) && arg->pid == pid)

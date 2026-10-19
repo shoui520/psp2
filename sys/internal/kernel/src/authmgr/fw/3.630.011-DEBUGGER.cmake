@@ -60,8 +60,8 @@ set(MODULE_IMPORT_FUNCS
 	memset
 	memcpy
 	__stack_chk_fail
-	SceCpuForDriver_02796361
-	SceCpuForDriver_103872A5
+	sceKernelDcacheInvalidateRange
+	sceKernelDcacheCleanRange
 	SceDebugForDriver_391B5B74
 	SceSysmemForDriver_0B4ED16A
 	sceKernelVAtoPA

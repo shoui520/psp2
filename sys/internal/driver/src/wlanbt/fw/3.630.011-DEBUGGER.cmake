@@ -111,7 +111,7 @@ set(MODULE_IMPORT_NIDS
 	0xE1AC6D7C:F:0x6FE062D1
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	SceSysmemForDriver_45D22597
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
@@ -147,7 +147,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUnlockFastMutex
 	sceKernelScheduleWorkTask
 	sceKernelGetSystemTimeWide
-	ScePmMgrForDriver_2AC815A2
+	sceSblPmMgrGetProductMode
 	SceQafMgrForDriver_52B4E164
 	sceSblSsGetNvsData
 	SceSblAIMgrForDriver_3B638885

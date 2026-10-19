@@ -154,7 +154,6 @@ int sceKernelWaitProcessEventCompletion(SceUID pid, SceUInt32 event, SceUInt32 *
 
 int SceProcessmgrForDriver_11BEFBBE(void *ptr);
 int SceProcessmgrForDriver_1C70501E(SceUID pid);
-/* vitasdk: ksceKernelCreateProcessLocalStorage */
 int sceKernelRegisterKPLS(const char *name, SceSize size);
 void *SceProcessmgrForDriver_3B33FFBA(SceSize size, void *opt);
 int SceProcessmgrForDriver_4140D633(const ProcessmgrLibcOps *ops);

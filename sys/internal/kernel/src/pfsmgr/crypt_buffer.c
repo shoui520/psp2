@@ -121,12 +121,12 @@ fail:
 	for (; i >= 0; i--) {
 		pool = &g_pfsCryptBufPools[i];
 		if (pool->sharedBlock != -1) {
-			SceSysmemForDriver_009E1C61(pool->sharedBlock);
+			sceKernelFreeMemBlock(pool->sharedBlock);
 			pool->sharedBlock = -1;
 			pool->sharedBase = NULL;
 		}
 		if (pool->block != -1) {
-			SceSysmemForDriver_009E1C61(pool->block);
+			sceKernelFreeMemBlock(pool->block);
 			pool->block = -1;
 			pool->base = NULL;
 		}
@@ -149,8 +149,8 @@ void pfsCryptBufferTerm(void)
 	for (i = 0; i < PFS_CRYPT_BUF_POOLS; i++) {
 		sceKernelDeleteCond(g_pfsCryptBufCond[i]);
 		sceKernelDeleteMutex(g_pfsCryptBufMutex[i]);
-		SceSysmemForDriver_009E1C61(g_pfsCryptBufPools[i].block);
-		SceSysmemForDriver_009E1C61(g_pfsCryptBufPools[i].sharedBlock);
+		sceKernelFreeMemBlock(g_pfsCryptBufPools[i].block);
+		sceKernelFreeMemBlock(g_pfsCryptBufPools[i].sharedBlock);
 	}
 }
 

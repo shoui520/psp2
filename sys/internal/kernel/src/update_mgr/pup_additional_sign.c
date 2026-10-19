@@ -67,7 +67,7 @@ verify:
 	result = UpdateUtilIoRead(fd, segment->offset, 1024, buffer);
 	if (result)
 		goto cleanup;
-	SceCpuForDriver_103872A5(buffer, 1024);
+	sceKernelDcacheCleanRange(buffer, 1024);
 	if (loadSm) {
 		pupSmId = -1;
 		result = UpdateUtilSetupSm(0, &pupSmId, 0);

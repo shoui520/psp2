@@ -113,7 +113,7 @@ int CpuResumeIntrLow(int flags)
 }
 
 #if FW_DEBUG
-SceKernelIntrStatus SceCpuForDriver_27C0B340(volatile SceKernelSpinlock *lock)
+SceKernelIntrStatus sceKernelSpinlockLowTrylockCpuSuspendIntr(volatile SceKernelSpinlock *lock)
 {
 	uintptr_t caller = (uintptr_t)__builtin_return_address(0);
 	int previous = CpuSpinlockTrylockIrqWithCaller(lock, caller);
@@ -127,7 +127,7 @@ SceKernelIntrStatus SceCpuForDriver_27C0B340(volatile SceKernelSpinlock *lock)
 	return previous;
 }
 
-SceKernelIntrStatus SceCpuForDriver_D32ACE9E(volatile SceKernelSpinlock *lock)
+SceKernelIntrStatus sceKernelSpinlockLowLockCpuSuspendIntr(volatile SceKernelSpinlock *lock)
 {
 	uintptr_t caller = (uintptr_t)__builtin_return_address(0);
 	int previous = CpuSpinlockLockIrqWithCaller(lock, caller);

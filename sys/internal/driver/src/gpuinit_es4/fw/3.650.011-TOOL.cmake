@@ -68,7 +68,7 @@ set(MODULE_IMPORT_FUNCS
 	sceGpuMmuMapMemory
 	SceDebugForDriver_391B74B7
 	ScePervasiveForDriver_714EEFB7
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	memset

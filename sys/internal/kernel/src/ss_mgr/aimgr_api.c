@@ -59,7 +59,7 @@ int SceSblSsMgrForDriver_9A9676D0(ScePsCode *pscode)
 
 	if (!pscode)
 		return AIMGR_ERROR_INVALID_ARGUMENT;
-	if (ScePmMgrForDriver_2AC815A2(&productMode))
+	if (sceSblPmMgrGetProductMode(&productMode))
 		return AIMGR_ERROR_PRODUCT_MODE;
 	if (!productMode)
 		return AIMGR_ERROR_NOT_PRODUCTION;

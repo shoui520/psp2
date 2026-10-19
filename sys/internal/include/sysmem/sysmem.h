@@ -54,7 +54,6 @@ _Static_assert(sizeof(SceKernelAllocMemBlockKernelOpt) == 0x58, "SceKernelAllocM
 
 typedef SceKernelAllocMemBlockKernelOpt SceKernelAllocMemBlockOptKernel;
 
-/* vitasdk: ksceKernelAllocMemBlock */
 SceUID sceKernelAllocMemBlockForKernel(const char *name, SceKernelMemBlockType type, SceSize size,
 			       SceKernelAllocMemBlockKernelOpt *opt);
 SceUID sceKernelAllocPartitionMemBlock(SceUID part, const char *name, SceKernelMemBlockType type,
@@ -124,7 +123,6 @@ typedef struct SceKernelHeapCreateOpt {
 _Static_assert(sizeof(SceKernelHeapCreateOpt) == 0x1c, "SceKernelHeapCreateOpt size");
 #endif
 
-/* vitasdk: ksceKernelCreateHeap */
 SceUID sceKernelCreateHeap(const char *name, SceSize size, SceKernelHeapCreateOpt *opt);
 
 /* SceSysmemForDriver_49D4DD9B's options */
@@ -145,7 +143,6 @@ void *SceSysmemForDriver_49D4DD9B(SceUID uid, SceSize len, SceAllocOpt *opt);
 
 #include <sysmem/uid_class.h>
 
-/* vitasdk: ksceGUIDKernelCreate */
 SceUID sceGUIDKernelCreate(SceClass *cls, const char *name, SceObjectBase **obj);
 
 /*
@@ -175,11 +172,9 @@ typedef struct UIDCreateOpt {
 /* scePUIDOpenByGUIDWithOptForKernel, scePUIDOpenByNameWithOptForKernel */
 SceUID SceSysmemForKernel_1FF2749A(SceUID pid, SceUID guid, const UIDCreateOpt *opt);
 SceUID SceSysmemForKernel_201E970B(SceUID pid, const char *name, const UIDCreateOpt *opt);
-/* vitasdk: ksceKernelIsAccessibleRange */
 int sceKernelIsAccessibleRange(SceUInt32 type, const void *addr, SceSize size);
 
 /* the memblock's virtual base address */
-/* vitasdk: ksceKernelGetMemBlockVBase */
 int sceKernelGetMemBlockVBase(SceUID uid, void **vbase);
 
 /* a physical memory partition's sizes (phymem.c) */
@@ -340,12 +335,10 @@ int SceSysmemForDriver_20C811FA(SceUInt32 type);
 int SceSysmemForDriver_A7C0D1FC(const void *va);
 SceUInt32 SceSysmemForDriver_CB0F3A33(SceUInt32 type);
 int GUIDGetClass(SceUID guid, SceClass **cls);
-/* vitasdk: ksceGUIDGetName */
 int sceGUIDGetName(SceUID guid, const char **name);
-int sceGUIDGetObject(SceUID guid, void *object);	/* vitasdk: ksceGUIDGetObject */
-/* vitasdk: ksceGUIDReferObjectWithSubclass */
+int sceGUIDGetObject(SceUID guid, void *object);
 int sceGUIDReferObjectWithSubclass(SceUID guid, SceClass *cls, SceObjectBase **object);
-int sceGUIDSetName(SceUID guid, const char *name);	/* vitasdk: ksceGUIDSetName */
+int sceGUIDSetName(SceUID guid, const char *name);
 /* vitasdk: ksceKernelAllocUncacheHeapMemoryWithOption */
 void *SceSysmemForDriver_0B4ED16A(SceSize size, SceAllocOpt *opt);
 SceSSize sceKernelCountFillValueFromUserProc(SceUID pid, const void *src, SceUInt32 value, SceSize size);
@@ -379,14 +372,12 @@ SceUID GUIDOpenByName(const char *name);
 int GetMemBlockInfoAll(TinyPartition *tiny, uintptr_t lo, uintptr_t hi, uintptr_t pa, SceSize psize, SceUInt32 level, MemBlockInfoEx *info, SceSize infoSize, SceUInt32 *count);
 /* vitasdk: ksceKernelProcUserMap */
 SceUID SceSysmemForDriver_0091D74D(SceUID pid, const char *name, int permission, const void *user_buf, SceSize size, void **kernel_page, SceSize *kernel_size, SceUInt32 *kernel_offset);
-int SceSysmemForDriver_009E1C61(SceUID guid);	/* vitasdk: ksceKernelFreeMemBlock */
-/* vitasdk: ksceGUIDReferObjectWithClass */
+int sceKernelFreeMemBlock(SceUID guid);
 int sceGUIDReferObjectWithClass(SceUID guid, SceClass *sce_class, SceObjectBase **object);
 /* vitasdk: ksceKernelMapMemBlockWithFlag */
 int SceSysmemForDriver_04059C4B(SceUID guid, int flags);
 /* vitasdk: kscePUIDGetName */
 int SceSysmemForDriver_09896EB7(SceUID pid, SceUID puid, const char **name);
-/* vitasdk: ksceGUIDReferObject */
 int sceGUIDReferObject(SceUID guid, SceObjectBase **object);
 /* vitasdk: kscePUIDSetName */
 int SceSysmemForDriver_12624884(SceUID pid, SceUID puid, const char *name);
@@ -413,15 +404,11 @@ SceUID SceSysmemForDriver_513B9DDD(SceUID pid, const char *name);
 int SceSysmemForDriver_58D21746(SceUID guid);	/* vitasdk: ksceKernelMapMemBlock */
 int SceSysmemForDriver_59A4402F(void *addr, SceSize size);	/* vitasdk: ksceKernelLockRange */
 int SceSysmemForDriver_64DBE472(SceUID guid, uintptr_t range[2]);
-/* vitasdk: ksceKernelLockRangeProc */
 int sceKernelLockRangeProc(SceUID pid, void *addr, SceSize size);
 int SceSysmemForDriver_6C76AD89(SceUID guid, uintptr_t va, SceSize size, SceUInt32 flags);
-/* vitasdk: ksceKernelCopyToUser */
 int sceKernelCopyToUser(void *dst, const void *src, SceSize size);
-int sceKernelUnlockRange(void *addr, SceSize size);	/* vitasdk: ksceKernelUnlockRange */
-/* vitasdk: ksceGUIDReferObjectWithClassLevel */
+int sceKernelUnlockRange(void *addr, SceSize size);
 int sceGUIDReferObjectWithClassLevel(SceUID guid, SceClass *pClass, SceUInt32 level, SceObjectBase **entry);
-/* vitasdk: ksceKernelAllocHeapMemory */
 void *sceKernelAllocHeapMemory(SceUID uid, SceSize size) __attribute__((alloc_size(2)));
 /* vitasdk: ksceKernelUserMapWithFlags */
 SceUID SceSysmemForDriver_7D4F8B5F(const char *name, int permission, int flags, const void *user_buf, SceSize size, void **kernel_page, SceSize *kernel_size, unsigned int *kernel_offset);
@@ -435,14 +422,12 @@ SceUID SceSysmemForDriver_89A44858(SceClass *cls, const char *name, SceUID heapG
 /* vitasdk: ksceKernelFindMemBlockByAddr */
 SceUID SceSysmemForDriver_8A1742F6(const void *addr, SceSize size);
 int SceSysmemForDriver_8C43B052(SceUID guid, uintptr_t va, SceSize size, SceUInt32 flags);
-int sceKernelVAtoPA(const void *va, uintptr_t *pa);	/* vitasdk: ksceKernelVAtoPA */
+int sceKernelVAtoPA(const void *va, uintptr_t *pa);
 /* vitasdk: kscePUIDOpenByNameWithClass */
 SceUID SceSysmemForDriver_8DA0BCA5(SceUID pid, const char *name, SceClass *cls);
 /* vitasdk: ksceKernelGetMemBlockPARange */
 int SceSysmemForDriver_98C15666(SceUID guid, SceKernelPARange *range);
-/* vitasdk: ksceKernelGetMemBlockBase */
 int sceKernelGetMemBlockBase(SceUID uid, void **base);
-/* vitasdk: ksceKernelUnlockRangeProc */
 int sceKernelUnlockRangeProc(SceUID pid, void *addr, SceSize size);
 /* vitasdk: ksceKernelVARangeToPARange */
 int SceSysmemForDriver_AE36C775(const SceKernelVARange *range, SceKernelPARange *out);
@@ -454,20 +439,16 @@ void *SceSysmemForDriver_B415B5A8(SceUID uid, SceSize size, void *opt, const voi
 SceSize SceSysmemForDriver_B429D419(const char *str, SceSize max);
 /* vitasdk: ksceKernelCountFillValue64FromUser */
 SceSSize SceSysmemForDriver_BB3B02C2(const void *src, SceUInt64 value, SceSize size);
-/* vitasdk: ksceKernelCopyFromUser */
 int sceKernelCopyFromUser(void *dst, const void *src, SceSize size);
 /* vitasdk: ksceKernelCountFillValueFromUser */
 SceSSize SceSysmemForDriver_BDA6E42B(const void *src, SceUInt32 value, SceSize size);
 SceUID SceSysmemForDriver_BF209859(SceUID pid, SceUID guid);	/* vitasdk: kscePUIDOpenByGUID */
 /* vitasdk: kscePUIDOpenByGUIDWithFlags */
 SceUID SceSysmemForDriver_CED1547B(SceUID pid, SceUID guid, SceUInt32 flags);
-/* vitasdk: ksceKernelStrncpyFromUser */
 SceSSize sceKernelStrncpyFromUser(char *dst, const char *src, SceSize n);
 /* vitasdk: ksceKernelRemapMemBlock */
 int SceSysmemForDriver_DFE2C8CB(SceUID guid, SceKernelMemBlockType type);
-/* vitasdk: ksceKernelIsEqualAccessibleRangeProcBySW */
 int sceKernelIsEqualAccessibleRangeProcBySW(SceUID pid, SceUInt32 perm, const void *addr, SceSize size);
-/* vitasdk: ksceGUIDReferObjectWithLevel */
 int sceGUIDReferObjectWithLevel(SceUID guid, SceUInt32 level, SceObjectBase **object);
 int SceSysmemForDriver_FB817A59(void *ptr);	/* vitasdk: ksceKernelFreeUncacheHeapMemory */
 int SceSysmemForDriver_FFCD9B60(SceUID guid);	/* vitasdk: ksceKernelUnmapMemBlock */
@@ -479,7 +460,6 @@ int SceSysmemForKernel_05822B82(SceUInt32 type, SceSize *free);
 PhyMemPart *SceSysmemForKernel_0B1B4ACA(void);
 int SceSysmemForKernel_0B36F7F9(SceUID uid, SceUInt32 mode);
 int SceSysmemForKernel_0B5A3E93(const void *va);
-/* vitasdk: ksceGUIDGetObjectWithClass */
 int sceGUIDGetObjectWithClass(SceUID uid, SceClass *pClass, SceObjectBase **obj);
 int sceUIDEntryHeapCloseAllPUID(SceUID guid);
 int SceSysmemForKernel_17D3D4BD(ObjectHeap *heap, SceSize size, void *object);
@@ -506,7 +486,6 @@ int SceSysmemForKernel_499A9FFF(void *dst, const void *src, SceSize size);
 int SceSysmemForKernel_4A2E421D(SceUID guid);	/* vitasdk: ksceKernelDeleteAddressSpace */
 struct AddressSpaceObject *SceSysmemForKernel_2E5CC243(void);	/* sceKernelGetKernelAddressSpace */
 int SceSysmemForKernel_4E923101(SceUID guid);
-/* vitasdk: ksceGUIDGetUIDVectorByClass */
 int sceGUIDGetUIDVectorByClass(SceClass *cls, int vis_level, SceUID *vector, SceSize num, SceSize *ret_num);
 int SceSysmemForKernel_5B434019(PhyMemPart *part, SceSize psize);
 SceClass *SceSysmemForKernel_5C0FC6BE(void);

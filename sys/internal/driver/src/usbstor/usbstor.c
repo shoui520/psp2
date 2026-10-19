@@ -794,7 +794,7 @@ static int initializeDescriptors(void)
 	if (s.memblock < 0)
 		return STOR_ERROR_MEMORY;
 	if (sceKernelGetMemBlockBase(s.memblock, &base) < 0) {
-		SceSysmemForDriver_009E1C61(s.memblock);
+		sceKernelFreeMemBlock(s.memblock);
 		return STOR_ERROR_MEMORY;
 	}
 	descriptors = base;
@@ -832,7 +832,7 @@ static int initializeDescriptors(void)
 		  sizeof(names[0]));
 	s.eventFlag = sceKernelCreateEventFlag("SceUsbstor", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (s.eventFlag < 0) {
-		SceSysmemForDriver_009E1C61(s.memblock);
+		sceKernelFreeMemBlock(s.memblock);
 		return STOR_ERROR_GENERAL;
 	}
 	s.status = 0;
@@ -1201,7 +1201,7 @@ int module_stop(SceSize size, void *args)
 	sceKernelDeleteThread(s.thread);
 	sceKernelWaitThreadEnd(s.thread, NULL, NULL);
 	sceKernelDeleteEventFlag(s.eventFlag);
-	SceSysmemForDriver_009E1C61(s.memblock);
+	sceKernelFreeMemBlock(s.memblock);
 	s.status = (s.status & ~(STATUS_READY | STATUS_STARTED)) | STATUS_STOPPED;
 	return SceUdcdForDriver_0DECE532(&s.driver) < 0 ? SCE_KERNEL_STOP_FAIL : SCE_KERNEL_STOP_SUCCESS;
 }

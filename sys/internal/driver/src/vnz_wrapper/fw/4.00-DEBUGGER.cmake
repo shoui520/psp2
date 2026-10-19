@@ -123,15 +123,15 @@ set(MODULE_IMPORT_NIDS
 	0x2ED7F97A:F:0x6E0BC27C
 )
 set(MODULE_IMPORT_FUNCS
-	SceDebugForDriver_35A35322
+	sceKernelAssert
 	SceDebugForDriver_D9703808
-	SceCpuForDriver_02796361
-	SceCpuForDriver_103872A5
+	sceKernelDcacheInvalidateRange
+	sceKernelDcacheCleanRange
 	sceKernelIsUncacheAddressInTmpFsGame
-	SceCpuForDriver_364E68A4
+	sceKernelDcacheCleanInvalidateRange
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_821FC0EE
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceCpuForDriver_E813EBB2
 	sceKernelCpuResumeIntr
 	sceKernelDisableIntr
@@ -171,7 +171,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDmaOpAlloc
 	sceKernelDmaOpFree
 	sceKernelDmaOpAssign
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceGUIDReferObjectWithClass
 	SceSysmemForDriver_04059C4B
 	sceGUIDClose

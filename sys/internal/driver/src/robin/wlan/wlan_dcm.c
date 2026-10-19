@@ -1115,7 +1115,7 @@ int robinWlanDcmInterruptRequest(SceWlanBtRobinWlanDcm *dcm)
 		SceDebugForDriver_D9703808(1, 0, &gDcmInterruptError,
 			"%s : sceKernelEnableSubIntr err:0x%08x\n",
 			"robinWlanDcmInterruptRequest", result);
-		SceDebugForDriver_35A35322(0, &gDcmInterruptAssert, __builtin_return_address(0));
+		sceKernelAssert(0, &gDcmInterruptAssert, __builtin_return_address(0));
 	}
 #endif
 	if (readPending)

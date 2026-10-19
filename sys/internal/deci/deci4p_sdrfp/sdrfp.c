@@ -86,8 +86,8 @@ static int sdrfpTransact(int multi, void *buf, SceSize size)
 	SceUInt32 cpu;
 	int ret;
 
-	SceCpuForDriver_BF82DEB2(&s_sendLock);
-	intr = SceCpuForDriver_D32ACE9E(&s_seqLock);
+	sceKernelSpinlockLowLock(&s_sendLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_seqLock);
 	seq = ++s_seq;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_seqLock, intr);
 
@@ -106,7 +106,7 @@ static int sdrfpTransact(int multi, void *buf, SceSize size)
 	s_send = &s_request;
 	ret = _threadSignal(s_channel.handle);
 	if (ret >= 0)
-		SceCpuForDriver_BF82DEB2(&s_doneLock);	/* released by the handler */
+		sceKernelSpinlockLowLock(&s_doneLock);	/* released by the handler */
 	sceKernelSpinlockLowUnlock(&s_sendLock);
 
 	s_request.multi = 0;
@@ -291,7 +291,7 @@ int sdrfpOpen(const char *name, int flags, int mode, Deci4pFsStat *stat)
 	int ret;
 
 	len = strnlen(name, 0x400);
-	SceCpuForDriver_BF82DEB2(&s_requestLock);
+	sceKernelSpinlockLowLock(&s_requestLock);
 	pkt = s_resource[0].base;
 	size = ((len + 4) & ~3) + offsetof(DrfpOpenPacket, name);
 	if (pkt == NULL) {
@@ -339,7 +339,7 @@ int sdrfpRead(int fd, void *buf, SceOff offset, SceSize size)
 	SceUInt16 nfrag;
 	int ret, i;
 
-	SceCpuForDriver_BF82DEB2(&s_requestLock);
+	sceKernelSpinlockLowLock(&s_requestLock);
 	pkt = s_resource[1].base;
 	if (pkt == NULL) {
 		/* (returns with the request lock held) */
@@ -410,7 +410,7 @@ int sdrfpClose(int fd)
 	DrfpClosePacket *pkt;
 	int ret;
 
-	SceCpuForDriver_BF82DEB2(&s_requestLock);
+	sceKernelSpinlockLowLock(&s_requestLock);
 	pkt = s_resource[0].base;
 	if (pkt == NULL) {
 		/* (returns with the request lock held) */
@@ -437,7 +437,7 @@ int sdrfpGetstat(const char *name, Deci4pFsStat *stat)
 	int ret;
 
 	len = strnlen(name, 0x400);
-	SceCpuForDriver_BF82DEB2(&s_requestLock);
+	sceKernelSpinlockLowLock(&s_requestLock);
 	pkt = s_resource[0].base;
 	size = ((len + 4) & ~3) + offsetof(DrfpGetstatPacket, name);
 	if (pkt == NULL)
@@ -497,7 +497,7 @@ int SDrfpModuleStart(SceSize args, void *argp)
 	int ret;
 
 	SCE_DBG_PRINTF_LEVEL(2, 0xf, 216, "\n");
-	if (!SceDipswForDriver_A98FC2FD(0xc1)) {
+	if (!sceKernelCheckDipsw(0xc1)) {
 		SCE_DBG_PRINTF(0xb, 220, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
@@ -515,7 +515,7 @@ int SDrfpModuleStart(SceSize args, void *argp)
 	s_request.received = 0;
 	s_channel.handle = 0;
 	s_channel.connected = 0;
-	SceCpuForDriver_BF82DEB2(&s_doneLock);
+	sceKernelSpinlockLowLock(&s_doneLock);
 	initResourceTable();
 
 	ret = sceSDfMgrOpen(sdrfpEventHandler, &s_protocol, &s_channel);

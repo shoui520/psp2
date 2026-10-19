@@ -325,7 +325,7 @@ PVRSRV_ERROR _PVRSRVAllocDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 
 	psCurrentDeviceNode = GetGpuDeviceNode();
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(psDeviceNode == psCurrentDeviceNode,
+	sceKernelAssert(psDeviceNode == psCurrentDeviceNode,
 			SCE_DBGINFO_FUNC(300, "_PVRSRVAllocDeviceMemKM"),
 			__builtin_return_address(0));
 #endif

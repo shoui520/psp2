@@ -47,7 +47,7 @@ set(MODULE_IMPORT_NIDS
 	0xE14BEF6E:F:0xCA94A759
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	SceCpuForDriver_5AC9D394

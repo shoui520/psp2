@@ -113,7 +113,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_4F64DEF6
 	ScePervasiveForDriver_A2EFD7AF
 	ScePervasiveForDriver_BB67EF58
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	SceSysmemForDriver_45D22597
 	sceKernelCopyToUser
 	sceKernelVAtoPA
@@ -122,9 +122,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelAllocMemBlockForKernel
 	sceKernelStrncpyFromUser
 	sceKernelVARangeToPAVector
-	SceCpuForDriver_103872A5
+	sceKernelDcacheCleanRange
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceDebugForDriver_D9703808
 	memset
 	strncmp

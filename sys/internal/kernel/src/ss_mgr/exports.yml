@@ -11,7 +11,7 @@ SceSblSsMgr:
       version: 1
       nid: 0x74580D9F
       functions:
-        - ScePmMgrForDriver_2AC815A2: 0x516ECC08
+        - sceSblPmMgrGetProductMode: 0x516ECC08
         - SceSblSsMgrForKernel_83D254FF: 0x83D254FF
         - nvs_read_data: 0xC2EC8F5A
         - nvs_write_data: 0xE29E161C

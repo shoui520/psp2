@@ -309,7 +309,7 @@ static inline __attribute__((always_inline)) int PrepareTxPacket(
 		goto consumed;
 #if FW_DEBUG
 	} else {
-		SceDebugForDriver_35A35322(0, &dbg_PrepareTxPacket_L1552, caller);
+		sceKernelAssert(0, &dbg_PrepareTxPacket_L1552, caller);
 		packetLength = packet->length;
 #endif
 	}
@@ -365,7 +365,7 @@ SceUInt32 bbmcPacketInterfaceExpire(void *context)
 {
 	BbmcPacketInterface *control = context;
 	SceKernelIntrStatus intr =
-		SceCpuForDriver_D32ACE9E(&control->expiryLock);
+		sceKernelSpinlockLowLockCpuSuspendIntr(&control->expiryLock);
 
 	if (++control->expiryCount > 11) {
 		BbmcControl *manager = bbmcGetControl();
@@ -413,7 +413,7 @@ int GetCommRate(struct NetDriver *driver, unsigned int command,
 			} else {
 				result = (int)0x80330005;
 #if FW_DEBUG
-				SceDebugForDriver_35A35322(0, &dbg_GetCommRate_L1053,
+				sceKernelAssert(0, &dbg_GetCommRate_L1053,
 					__builtin_return_address(0));
 #endif
 			}
@@ -465,7 +465,7 @@ int GetCommRate(struct NetDriver *driver, unsigned int command,
 				} else {
 					result = (int)0x80330005;
 #if FW_DEBUG
-					SceDebugForDriver_35A35322(0, &dbg_DisconnectNetwork_L1005,
+					sceKernelAssert(0, &dbg_DisconnectNetwork_L1005,
 						__builtin_return_address(0));
 #endif
 				}
@@ -648,7 +648,7 @@ int bbmcStopUsbSerialDevice(int argumentSize, void *arguments, void *context)
 	sceKernelWaitThreadEnd(g_usbSerialDevice->thread, NULL, NULL);
 	device = g_usbSerialDevice;
 	if (device->memoryBlock > 0) {
-		SceSysmemForDriver_009E1C61(device->memoryBlock);
+		sceKernelFreeMemBlock(device->memoryBlock);
 		device = g_usbSerialDevice;
 		device->memoryBlock = 0;
 	}
@@ -772,7 +772,7 @@ reload:
 	device = g_usbSerialDevice;
 failed:
 	if (device->memoryBlock > 0) {
-		SceSysmemForDriver_009E1C61(device->memoryBlock);
+		sceKernelFreeMemBlock(device->memoryBlock);
 		device = g_usbSerialDevice;
 		device->memoryBlock = 0;
 	}

@@ -72,7 +72,7 @@ failed:
 			sceKernelDeleteEventFlag(table->evf);
 		for (i = 0; i < table->count; i++) {
 			if (table->buffers[i].block)
-				SceSysmemForDriver_009E1C61(table->buffers[i].block);
+				sceKernelFreeMemBlock(table->buffers[i].block);
 		}
 	}
 	return ret;

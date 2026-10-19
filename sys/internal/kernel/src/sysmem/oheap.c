@@ -176,7 +176,7 @@ int ObjectHeapAllocLimit(ObjectHeap *heap, unsigned int type, void **object)
 	if (type >= OBJECT_HEAP_TYPES)
 		return 0;
 	limit = &heap->limits[type];
-	status = SceCpuForDriver_D32ACE9E(&heap->lock);
+	status = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	if (limit->count >= limit->max) {
 		SCE_PRINTF_WITH_INFO(0xb, 259, "Object Limit Overflow:type=%d, %d >= %d nMaxLimit\n",
 				     type, limit->count, limit->max);
@@ -218,7 +218,7 @@ int ObjectHeapFreeLimit(ObjectHeap *heap, unsigned int type, void *object)
 	if (type >= OBJECT_HEAP_TYPES)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	limit = &heap->limits[type];
-	status = SceCpuForDriver_D32ACE9E(&heap->lock);
+	status = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	if (limit->count == 0) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&heap->lock, status);
 		return 0;

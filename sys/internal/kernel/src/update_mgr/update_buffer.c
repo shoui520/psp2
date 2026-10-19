@@ -108,9 +108,9 @@ int UpdateUtilReleaseBuffer(void *buffer, SceUID pid)
 			entry->allocated = 0;
 		}
 		if (entry->kernelBuffer && !entry->allocated && !entry->inUse) {
-			kernelFreeResult = SceSysmemForDriver_009E1C61(entry->kernelMemBlock);
+			kernelFreeResult = sceKernelFreeMemBlock(entry->kernelMemBlock);
 			if (entry->userMemBlock > 0)
-				userFreeResult = SceSysmemForDriver_009E1C61(entry->userMemBlock);
+				userFreeResult = sceKernelFreeMemBlock(entry->userMemBlock);
 			entry->kernelMemBlock = 0;
 			entry->userMemBlock = 0;
 			if (userFreeResult < 0 && buffer == entry->kernelBuffer)

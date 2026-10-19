@@ -493,7 +493,7 @@ int sceKernelGetSubbudgetInfo(SceUInt32 subbudget, AddressSpaceSubbudgetInfo *us
 	AddressSpaceSubbudgetInfo info;
 	int ret;
 
-	if (!SceDipswForDriver_A98FC2FD(DIPSW_SUBBUDGET_INFO))
+	if (!sceKernelCheckDipsw(DIPSW_SUBBUDGET_INFO))
 		return SCE_KERNEL_ERROR_ONLY_DEVELOPMENT_MODE;
 	ret = sceKernelCopyFromUser(&info, userInfo, sizeof(info));
 	if (ret < 0 || info.size != sizeof(info))
@@ -644,8 +644,8 @@ int SysmemModuleStart(SceSize args, void *argp)
 	writeDacr(dacr);
 	InitializeDipsw(context);
 	InitializeDebugPrintLevel(context);
-	if (SceDipswForDriver_A98FC2FD(DIPSW_DEBUG_PUTCHAR) ||
-	    SceDipswForDriver_A98FC2FD(DIPSW_DEBUG_PUTCHAR_ALT))
+	if (sceKernelCheckDipsw(DIPSW_DEBUG_PUTCHAR) ||
+	    sceKernelCheckDipsw(DIPSW_DEBUG_PUTCHAR_ALT))
 		SceDebugForKernel_22546577(context->debugPutchar, 0);
 	if (SysrootModuleStart(context) < 0)
 		SCE_PANIC(1795);
@@ -684,8 +684,8 @@ int SysmemModuleStart(SceSize args, void *argp)
 		SCE_PANIC(1903);
 	if (SerialInit(context) < 0)
 		SCE_PANIC(1912);
-	if (SceDipswForDriver_A98FC2FD(DIPSW_DEBUG_PUTCHAR) ||
-	    SceDipswForDriver_A98FC2FD(DIPSW_DEBUG_PUTCHAR_ALT))
+	if (sceKernelCheckDipsw(DIPSW_DEBUG_PUTCHAR) ||
+	    sceKernelCheckDipsw(DIPSW_DEBUG_PUTCHAR_ALT))
 		SceDebugForKernel_22546577((uintptr_t)SerialDebugPutchar, 0);
 	PhyMemLowModuleStartPhase2(g_uidManager);
 	PhyMemModuleStartPhase2(g_uidManager);
@@ -861,7 +861,7 @@ int UserCopyToText(void *dst, const void *src, SceSize size, SceUInt32 textDacr)
 
 	writeDacr(textDacr);
 	ret = VmaccessCopyToUser(dst, src, size);
-	SceCpuForDriver_103872A5((void *)((uintptr_t)dst & ~0x1f),
+	sceKernelDcacheCleanRange((void *)((uintptr_t)dst & ~0x1f),
 				   (((uintptr_t)dst + size + 0x1f) & ~0x1f) -
 				   ((uintptr_t)dst & ~0x1f));
 	writeDacr(dacr);

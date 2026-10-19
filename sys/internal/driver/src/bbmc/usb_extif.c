@@ -53,7 +53,7 @@ int bbmcUsbExtIfReleaseGpio(void)
 
 	if (g_usbExtIf == NULL)
 		return (int)0x80330003;
-	SceCpuForDriver_BF82DEB2(&g_usbExtIf->lock);
+	sceKernelSpinlockLowLock(&g_usbExtIf->lock);
 	if (g_usbExtIf->mode == 0)
 		bbmcCloseUsbSerialChannels();
 	ret = SceBbmcForDriver_D16D0845();
@@ -68,7 +68,7 @@ int bbmcUsbExtIfAcquireGpio(void)
 
 	if (g_usbExtIf == NULL)
 		return (int)0x80330003;
-	SceCpuForDriver_BF82DEB2(&g_usbExtIf->lock);
+	sceKernelSpinlockLowLock(&g_usbExtIf->lock);
 	ret = SceBbmcForDriver_D98DB926();
 	if (ret >= 0) {
 		if (g_usbExtIf->mode == 1)
@@ -102,7 +102,7 @@ int sceBbmcUsbExtIfStart(int mode)
 
 	if (g_usbExtIf == NULL)
 		return (int)0x80330003;
-	SceCpuForDriver_BF82DEB2(&g_usbExtIf->lock);
+	sceKernelSpinlockLowLock(&g_usbExtIf->lock);
 	ret = SceBbmcForDriver_D98DB926();
 	if (ret < 0)
 		goto fail;
@@ -184,7 +184,7 @@ int sceBbmcUsbExtIfStop(void)
 
 	if (g_usbExtIf == NULL)
 		return (int)0x80330003;
-	SceCpuForDriver_BF82DEB2(&g_usbExtIf->lock);
+	sceKernelSpinlockLowLock(&g_usbExtIf->lock);
 	if (g_usbExtIf->mode != 0) {
 		if (g_usbExtIf->mode == 1) {
 			bbmcCloseUsbSerialQcom(g_usbExtIf->qcomChannel);

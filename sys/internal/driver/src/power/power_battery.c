@@ -384,7 +384,7 @@ uint32_t ScePowerForDriver_733F973B(void)
 
 	if (s_powerBatteryBase.workerPaused)
 		return 0;
-	intrState = SceCpuForDriver_D32ACE9E(
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(
 					(SceKernelSpinlock *)&s_powerBatteryBase.chargingLock);
 	previous = s_powerBatteryBase.usbChargingEnabled;
 	if (previous != 1) {
@@ -401,7 +401,7 @@ int ScePowerForDriver_90285886(void)
 {
 	SceKernelIntrStatus intrState;
 
-	intrState = SceCpuForDriver_D32ACE9E(
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(
 					(SceKernelSpinlock *)&s_powerBatteryBase.chargingLock);
 	if (s_powerBatteryBase.usbChargingEnabled) {
 		s_powerBatteryBase.usbChargingEnabled = 0;
@@ -420,7 +420,7 @@ int ScePowerForDriver_ACC857A4(void)
 	SceKernelIntrStatus intrState;
 	int previous, result;
 
-	intrState = SceCpuForDriver_D32ACE9E(
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(
 				(SceKernelSpinlock *)&s_powerBatteryBase.chargingLock);
 	if (s_powerBatteryBase.usbChargingEnabled) {
 		previous = SceCpuForDriver_CDA96E81(

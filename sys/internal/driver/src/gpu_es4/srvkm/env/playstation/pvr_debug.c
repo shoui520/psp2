@@ -35,10 +35,10 @@ IMG_VOID VBAppend(const IMG_CHAR *pszFormat, ...)
 	const IMG_CHAR *pszPrintFormat;
 
 	va_start(VArgs, pszFormat);
-	ulLockFlags = SceCpuForDriver_D32ACE9E(&gsDebugLockIRQ);
+	ulLockFlags = sceKernelSpinlockLowLockCpuSuspendIntr(&gsDebugLockIRQ);
 	strncpy(gszBufferIRQ, "PVR_K: ", 512);
 	ui32Used = strnlen(gszBufferIRQ, sizeof(gszBufferIRQ));
-	SceDebugForDriver_35A35322(ui32Used < sizeof(gszBufferIRQ), &dbg_VBAppend_L101,
+	sceKernelAssert(ui32Used < sizeof(gszBufferIRQ), &dbg_VBAppend_L101,
 			__builtin_return_address(0));
 	ui32Space = sizeof(gszBufferIRQ) - ui32Used;
 	i32Len = vsnprintf(&gszBufferIRQ[ui32Used], ui32Space, pszFormat, VArgs);

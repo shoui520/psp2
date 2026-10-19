@@ -189,7 +189,7 @@ int sceSDbgSdioInit(void)
 
 int sceSDbgSdioModuleStart(SceSize args, void *argp)
 {
-	if (!SceDipswForDriver_A98FC2FD(0xc1)) {
+	if (!sceKernelCheckDipsw(0xc1)) {
 		SCE_DBG_PRINTF(0xb, 210, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
@@ -203,7 +203,7 @@ int sceSDbgSdioModuleStart(SceSize args, void *argp)
 
 int SceSDbgSdioForKernel_356C6621(void)
 {
-	SceSysmemForDriver_009E1C61(s_sdbgSdio.memblock);
+	sceKernelFreeMemBlock(s_sdbgSdio.memblock);
 	return 0;
 }
 

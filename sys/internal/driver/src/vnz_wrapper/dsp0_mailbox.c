@@ -38,7 +38,7 @@ int veneziaMailboxIntrHandler(int intrCode, void *userCtx)
 	if (pending << 16)
 		sceKernelSetEventFlag(g_veneziaMailboxState.blockingEvent, mask);
 	if (pending >> 16) {
-		intr = SceCpuForDriver_D32ACE9E(
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(
 			&g_veneziaMailboxState.completionLock);
 		g_veneziaMailboxState.completedChannels |= mask;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(
@@ -119,7 +119,7 @@ unsigned int getCompletedVeneziaRpc(void)
 	unsigned int completed;
 	int intr;
 
-	intr = SceCpuForDriver_D32ACE9E(
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(
 		&g_veneziaMailboxState.completionLock);
 	completed = g_veneziaMailboxState.completedChannels;
 	g_veneziaMailboxState.completedChannels = 0;

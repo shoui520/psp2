@@ -89,10 +89,10 @@ static int uidEventFlag_Destructor(void *object)
 	int intr;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1686);
-	intr = SceCpuForDriver_D32ACE9E(&evf->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&evf->lock);
 	wake = wakeupWaitObjectAll((uintptr_t)&evf->next, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
 	if (evf->core.holder != NULL) {
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(evf->core.holder));
+		sceKernelSpinlockLowLock(THREAD_LOCK(evf->core.holder));
 		ListLinkRemove(&evf->core.holderLink);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(evf->core.holder));
 	}
@@ -101,7 +101,7 @@ static int uidEventFlag_Destructor(void *object)
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
-			SceCpuForDriver_BF82DEB2(&process->resourceLock);
+			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (evf->attr & EVF_ATTR_LW)
 				process->uidLwCount--;
 			else if (evf->attr & EVF_ATTR_UNLIMITED)
@@ -184,14 +184,14 @@ int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPa
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&evf->lock);
+	sceKernelSpinlockLowLock(&evf->lock);
 	if (!(evf->attr & EVF_ATTR_MULTI)) {
 		if (evf->core.holder == NULL) {
 			ListNode *head =
 				(ListNode *)&thread->heldEventFlagNext;
 
 			evf->core.holder = thread;
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 			evf->core.holderLink.next = head;
 			evf->core.holderLink.prev = head->prev;
 			head->prev = &evf->core.holderLink;
@@ -213,7 +213,7 @@ int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPa
 			ret = callCallbackAll(thread);
 			if (ret < 0)
 				goto release;
-			SceCpuForDriver_BF82DEB2(&evf->lock);
+			sceKernelSpinlockLowLock(&evf->lock);
 		}
 		current = evf->core.pattern;
 		if (EventFlagMatches(current, pattern, mode)) {
@@ -226,14 +226,14 @@ int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPa
 			evf->core.pattern = current;
 			if (evf->core.holder != NULL && --evf->core.holdCount == 0) {
 				evf->core.holder = NULL;
-				SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+				sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 				ListLinkRemove(&evf->core.holderLink);
 				sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			}
 			ret = 0;
 			goto unlock;
 		}
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		thread->waitMode = pattern;
 		thread->waitEventMode = mode;
 		thread->waitPatternOutput = outPattern;
@@ -293,7 +293,7 @@ int getEventFlagInfo(SceUID evfId, SceKernelEventFlagInfo *info)
 	} else {
 		info->evfId = evfId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(evfId), sizeof(info->name) - 1);
-		SceCpuForDriver_BF82DEB2(&evf->lock);
+		sceKernelSpinlockLowLock(&evf->lock);
 		info->attr = evf->attr;
 		info->initPattern = evf->core.initPattern;
 		info->currentPattern = evf->core.pattern;
@@ -338,7 +338,7 @@ void releaseAllEventFlag(struct ThreadCB *thread)
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 365);
 	for (;;) {
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		for (link = head->next; link != head; link = head->next) {
 			evf = EVENT_FLAG_FROM_HOLDER_LINK(link);
 			if (SceCpuForDriver_5AC9D394(&evf->lock) < 0)
@@ -350,7 +350,7 @@ void releaseAllEventFlag(struct ThreadCB *thread)
 			}
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			sceKernelSpinlockLowUnlock(&evf->lock);
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		}
 		if (link == head)
 			break;
@@ -465,7 +465,7 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 		intr = SceCpuForDriver_821FC0EE();
 	} else {
 		process = thread->process;
-		intr = SceCpuForDriver_D32ACE9E(&process->resourceLock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
 		if (attr & EVF_ATTR_LW) {
 			if (process->uidLwCount >= 0x100) {
 				sceKernelSpinlockLowUnlock(&process->resourceLock);
@@ -500,7 +500,7 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 		name, &opt, (SceObjectBase **)&evf);
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {
-			SceCpuForDriver_BF82DEB2(&process->resourceLock);
+			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (attr & EVF_ATTR_LW)
 				process->uidLwCount--;
 			else if (attr & EVF_ATTR_UNLIMITED)
@@ -600,7 +600,7 @@ int sceKernelPollEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&evf->lock);
+	sceKernelSpinlockLowLock(&evf->lock);
 	if (!(evf->attr & EVF_ATTR_MULTI) && evf->core.holder != NULL && evf->core.holder != thread) {
 		ret = SCE_KERNEL_ERROR_EVF_MULTI;
 	} else {
@@ -657,7 +657,7 @@ int sceKernelSetEventFlag(SceUID evfId, uint32_t pattern)
 		goto resume;
 	}
 	queue = (struct ThreadmgrWaitQueue *)&evf->next;
-	SceCpuForDriver_BF82DEB2(&evf->lock);
+	sceKernelSpinlockLowLock(&evf->lock);
 	evf->core.pattern |= pattern;
 	if (queue->next == (struct ThreadmgrWaitNode *)queue || evf->core.pattern == 0) {
 		sceKernelSpinlockLowUnlock(&evf->lock);
@@ -674,7 +674,7 @@ int sceKernelSetEventFlag(SceUID evfId, uint32_t pattern)
 			"*** pWaitCB=%p, PEventFlagCB=%p, pThreadCB=%p, pThreadCB->magic=0x%08X, "
 			"&gpThreadMgrCB->threadMgrCBLock=%p\n", queue, &evf->core, waiter,
 			waiter->magic, &s_threadmgrRuntime.manager->threadMgrCBLock);
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+		sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 		request = waiter->waitMode;
 		if (EventFlagMatches(evf->core.pattern, request, waiter->waitEventMode)) {
 			wake |= wakeupAndDistributeThread(waiter, (uintptr_t)queue, 0);
@@ -719,7 +719,7 @@ int sceKernelClearEventFlag(SceUID evfId, uint32_t mask)
 			ret = SCE_KERNEL_ERROR_UNKNOWN_EVF_ID;
 		}
 	} else {
-		SceCpuForDriver_BF82DEB2(&evf->lock);
+		sceKernelSpinlockLowLock(&evf->lock);
 		evf->core.pattern &= mask;
 		sceKernelSpinlockLowUnlock(&evf->lock);
 		sceGUIDReleaseObject(evfId);
@@ -750,7 +750,7 @@ int sceKernelCancelEventFlag(SceUID evfId, uint32_t setPattern, int *numWaitThre
 			ret = SCE_KERNEL_ERROR_UNKNOWN_EVF_ID;
 		}
 	} else {
-		SceCpuForDriver_BF82DEB2(&evf->lock);
+		sceKernelSpinlockLowLock(&evf->lock);
 		evf->core.pattern = setPattern;
 		wake = wakeupWaitObjectAll((uintptr_t)&evf->next, SCE_KERNEL_ERROR_WAIT_CANCEL,
 					   (uint32_t *)numWaitThreads);

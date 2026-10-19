@@ -108,7 +108,7 @@ int avConfigSetSuspendInterval(unsigned int interval)
 	SceUInt64 suspendTime;
 	SceUInt64 dimmingTime;
 
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.suspendInterval = interval;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 	if (interval == 0) {
@@ -135,7 +135,7 @@ int avConfigSetDimmingInterval(unsigned int interval)
 
 	if (SceSblAIMgrForDriver_71608CA3() == 0)
 		return (int)0x803a0109;
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.dimmingInterval = interval;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 	ScePowerForDriver_6BC26FC7(1, (SceUInt64)interval * 1000000);
@@ -149,7 +149,7 @@ int avConfigSetDisplayColorSpaceMode(int mode)
 
 	if (SceSblAIMgrForDriver_71608CA3() != 0)
 		return (int)0x803a0109;
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.colorSpaceMode = mode;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 	if (mode == 1) {
@@ -171,7 +171,7 @@ int avConfigSetRoutingVolume(int volume)
 	avConfigGetVolumeControlState(&mode, &muted);
 	if ((unsigned int)(mode - 1) > 1)
 		return (int)0x803a0105;
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	if (mode == 1)
 		avConfigConfiguration.settings.systemVolume = volume;
 	else if (mode == 2)

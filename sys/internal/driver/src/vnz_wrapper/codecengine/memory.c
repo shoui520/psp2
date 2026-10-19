@@ -35,7 +35,7 @@ int _closeUnmapMemBlockCore(SceUID pid, CodecEngineUnmapMemBlockEntry *entry)
 			goto closeGuid;
 	} else {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(memory != NULL, SCE_DBGINFO_FUNC(470, "_closeUnmapMemBlockCore"), __builtin_return_address(0));
+		sceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(470, "_closeUnmapMemBlockCore"), __builtin_return_address(0));
 #endif
 		if (memory->kernelBase && memory->size)
 			memset(memory->kernelBase, 0, memory->size);
@@ -54,7 +54,7 @@ int _closeUnmapMemBlockCore(SceUID pid, CodecEngineUnmapMemBlockEntry *entry)
 				ret = error;
 		}
 		if (memory->kernelMemBlock >= 0) {
-			error = SceSysmemForDriver_009E1C61(memory->kernelMemBlock);
+			error = sceKernelFreeMemBlock(memory->kernelMemBlock);
 			ret &= ~(error >> 31);
 			if (error < 0)
 				ret = error;
@@ -136,7 +136,7 @@ int sceCodecEngineOpenUnmapMemBlockForUser(void *base, SceSize size)
 	if (guid < 0)
 		goto unlock;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(memory != NULL, SCE_DBGINFO_FUNC(139, "sceCodecEngineOpenUnmapMemBlockForUser"), __builtin_return_address(0));
+	sceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(139, "sceCodecEngineOpenUnmapMemBlockForUser"), __builtin_return_address(0));
 #endif
 	memory->userMemBlock = -1;
 	memory->kernelMemBlock = -1;
@@ -190,7 +190,7 @@ int sceCodecEngineOpenUnmapMemBlockForUser(void *base, SceSize size)
 	}
 	error = sceKernelVAtoPA(base, &query.physicalBase);
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(error >= 0, SCE_DBGINFO_FUNC(208, "sceCodecEngineOpenUnmapMemBlockForUser"), __builtin_return_address(0));
+	sceKernelAssert(error >= 0, SCE_DBGINFO_FUNC(208, "sceCodecEngineOpenUnmapMemBlockForUser"), __builtin_return_address(0));
 #endif
 	type = 0x60208006;
 	if (query.physicalBase >= 0x20000000 && query.physicalBase + size <= 0x30000000)
@@ -219,8 +219,8 @@ int sceCodecEngineOpenUnmapMemBlockForUser(void *base, SceSize size)
 						memory->kernelBase = (void *)info.ex.details.vbase;
 						error = sceKernelVAtoPA(memory->kernelBase, &memory->physicalBase);
 #if FW_DEBUG
-						SceDebugForDriver_35A35322(error >= 0, SCE_DBGINFO_FUNC(268, "sceCodecEngineOpenUnmapMemBlockForUser"), __builtin_return_address(0));
-						SceDebugForDriver_35A35322(memory->physicalBase != 0, SCE_DBGINFO_FUNC(269, "sceCodecEngineOpenUnmapMemBlockForUser"), __builtin_return_address(0));
+						sceKernelAssert(error >= 0, SCE_DBGINFO_FUNC(268, "sceCodecEngineOpenUnmapMemBlockForUser"), __builtin_return_address(0));
+						sceKernelAssert(memory->physicalBase != 0, SCE_DBGINFO_FUNC(269, "sceCodecEngineOpenUnmapMemBlockForUser"), __builtin_return_address(0));
 #endif
 						memory->size = size;
 						memory->userMemBlock = userMemBlock;
@@ -237,7 +237,7 @@ int sceCodecEngineOpenUnmapMemBlockForUser(void *base, SceSize size)
 		if (puid != -1)
 			SceSysmemForDriver_84A4AF5E(0, puid);
 	}
-	SceSysmemForDriver_009E1C61(kernelMemBlock);
+	sceKernelFreeMemBlock(kernelMemBlock);
 close:
 	sceGUIDClose(guid);
 unlock:
@@ -282,13 +282,13 @@ int _closeUnmapMemBlock(SceUID puid)
 			goto unlock;
 		}
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(puid == entry->puid, SCE_DBGINFO_FUNC(1382, "_isUnmapMemoryRegistered"), __builtin_return_address(0));
+		sceKernelAssert(puid == entry->puid, SCE_DBGINFO_FUNC(1382, "_isUnmapMemoryRegistered"), __builtin_return_address(0));
 #endif
 		registered = sceGUIDReferObjectWithClass(entry->guid,
 			&g_codecEngineMemoryClass, (SceObjectBase **)&memory);
 		if (registered >= 0) {
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(memory != NULL, SCE_DBGINFO_FUNC(1390, "_isUnmapMemoryRegistered"), __builtin_return_address(0));
+			sceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(1390, "_isUnmapMemoryRegistered"), __builtin_return_address(0));
 #endif
 			registered = isVeneziaHeapManagerRegistered(&memory->heapManager);
 		}
@@ -313,7 +313,7 @@ int _closeUnmapMemBlock(SceUID puid)
 		goto unlock;
 	}
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(puid == entry->puid, SCE_DBGINFO_FUNC(382, "_closeUnmapMemBlock"), __builtin_return_address(0));
+	sceKernelAssert(puid == entry->puid, SCE_DBGINFO_FUNC(382, "_closeUnmapMemBlock"), __builtin_return_address(0));
 #endif
 	ret = _closeUnmapMemBlockCore(0, entry);
 unlock:
@@ -367,7 +367,7 @@ void *sceCodecEngineAllocMemoryFromUnmapMemBlockForUser(SceUID puid,
 		goto unlock;
 	}
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(puid == entry->puid, SCE_DBGINFO_FUNC(595, "sceCodecEngineAllocMemoryFromUnmapMemBlockForUser"), __builtin_return_address(0));
+	sceKernelAssert(puid == entry->puid, SCE_DBGINFO_FUNC(595, "sceCodecEngineAllocMemoryFromUnmapMemBlockForUser"), __builtin_return_address(0));
 #endif
 	ret = sceGUIDReferObjectWithClass(guid, &g_codecEngineMemoryClass,
 		(SceObjectBase **)&memory);
@@ -375,13 +375,13 @@ void *sceCodecEngineAllocMemoryFromUnmapMemBlockForUser(SceUID puid,
 		result = 0;
 	} else {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(memory != NULL, SCE_DBGINFO_FUNC(604, "sceCodecEngineAllocMemoryFromUnmapMemBlockForUser"), __builtin_return_address(0));
+		sceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(604, "sceCodecEngineAllocMemoryFromUnmapMemBlockForUser"), __builtin_return_address(0));
 #endif
 		result = (uintptr_t)_sceVeneziaHeapManagerAllocMemory(
 			&memory->heapManager, (size + 255) & ~255U, alignment);
 		if (result) {
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(result >= (uintptr_t)memory->kernelBase &&
+			sceKernelAssert(result >= (uintptr_t)memory->kernelBase &&
 				result < (uintptr_t)memory->kernelBase + memory->size,
 				SCE_DBGINFO_FUNC(616, "sceCodecEngineAllocMemoryFromUnmapMemBlockForUser"), __builtin_return_address(0));
 #endif
@@ -432,13 +432,13 @@ int sceCodecEngineFreeMemoryFromUnmapMemBlockForUser(SceUID puid, void *address)
 		goto unlock;
 	}
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(puid == entry->puid, SCE_DBGINFO_FUNC(695, "sceCodecEngineFreeMemoryFromUnmapMemBlockForUser"), __builtin_return_address(0));
+	sceKernelAssert(puid == entry->puid, SCE_DBGINFO_FUNC(695, "sceCodecEngineFreeMemoryFromUnmapMemBlockForUser"), __builtin_return_address(0));
 #endif
 	ret = sceGUIDReferObjectWithClass(guid, &g_codecEngineMemoryClass,
 		(SceObjectBase **)&memory);
 	if (ret >= 0) {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(memory != NULL, SCE_DBGINFO_FUNC(703, "sceCodecEngineFreeMemoryFromUnmapMemBlockForUser"), __builtin_return_address(0));
+		sceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(703, "sceCodecEngineFreeMemoryFromUnmapMemBlockForUser"), __builtin_return_address(0));
 #endif
 		if ((uintptr_t)address < (uintptr_t)memory->userBase ||
 			(uintptr_t)address >= (uintptr_t)memory->userBase + memory->size) {
@@ -481,7 +481,7 @@ int sceCodecEngineRegisterUnmapMemory(SceUID pid, SceUIntVAddr address, SceSize 
 		return ret;
 	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(entries != NULL, SCE_DBGINFO_FUNC(773, "sceCodecEngineRegisterUnmapMemory"), __builtin_return_address(0));
+	sceKernelAssert(entries != NULL, SCE_DBGINFO_FUNC(773, "sceCodecEngineRegisterUnmapMemory"), __builtin_return_address(0));
 #endif
 	for (index = 0; index < 4; index++) {
 		if (entries[index].guid == -1)
@@ -495,8 +495,8 @@ int sceCodecEngineRegisterUnmapMemory(SceUID pid, SceUIntVAddr address, SceSize 
 				goto checkResult;
 		} else {
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(memory != NULL, SCE_DBGINFO_FUNC(789, "sceCodecEngineRegisterUnmapMemory"), __builtin_return_address(0));
-			SceDebugForDriver_35A35322(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(790, "sceCodecEngineRegisterUnmapMemory"), __builtin_return_address(0));
+			sceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(789, "sceCodecEngineRegisterUnmapMemory"), __builtin_return_address(0));
+			sceKernelAssert(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(790, "sceCodecEngineRegisterUnmapMemory"), __builtin_return_address(0));
 #endif
 			if ((uintptr_t)address >= (uintptr_t)memory->userBase &&
 				(uintptr_t)address < (uintptr_t)memory->userBase + memory->size) {
@@ -540,7 +540,7 @@ int sceCodecEngineUnregisterUnmapMemory(SceUID pid, SceUIntVAddr address, SceSiz
 		return ret;
 	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(entries != NULL, SCE_DBGINFO_FUNC(865, "sceCodecEngineUnregisterUnmapMemory"), __builtin_return_address(0));
+	sceKernelAssert(entries != NULL, SCE_DBGINFO_FUNC(865, "sceCodecEngineUnregisterUnmapMemory"), __builtin_return_address(0));
 #endif
 	for (index = 0; index < 4; index++) {
 		if (entries[index].guid == -1)
@@ -554,8 +554,8 @@ int sceCodecEngineUnregisterUnmapMemory(SceUID pid, SceUIntVAddr address, SceSiz
 				goto checkResult;
 		} else {
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(memory != NULL, SCE_DBGINFO_FUNC(881, "sceCodecEngineUnregisterUnmapMemory"), __builtin_return_address(0));
-			SceDebugForDriver_35A35322(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(882, "sceCodecEngineUnregisterUnmapMemory"), __builtin_return_address(0));
+			sceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(881, "sceCodecEngineUnregisterUnmapMemory"), __builtin_return_address(0));
+			sceKernelAssert(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(882, "sceCodecEngineUnregisterUnmapMemory"), __builtin_return_address(0));
 #endif
 			if ((uintptr_t)address >= (uintptr_t)memory->userBase &&
 				(uintptr_t)address < (uintptr_t)memory->userBase + memory->size) {
@@ -598,7 +598,7 @@ int sceCodecEngineIsUnmapMemory(SceUID pid, const void *address, SceSize size)
 		return ret;
 	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(entries != NULL, SCE_DBGINFO_FUNC(952, "sceCodecEngineIsUnmapMemory"), __builtin_return_address(0));
+	sceKernelAssert(entries != NULL, SCE_DBGINFO_FUNC(952, "sceCodecEngineIsUnmapMemory"), __builtin_return_address(0));
 #endif
 	for (index = 0; index < 4; index++) {
 		if (entries[index].guid == -1)
@@ -609,8 +609,8 @@ int sceCodecEngineIsUnmapMemory(SceUID pid, const void *address, SceSize size)
 			&g_codecEngineMemoryClass, (SceObjectBase **)&memory);
 		if (ret >= 0) {
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(memory != NULL, SCE_DBGINFO_FUNC(968, "sceCodecEngineIsUnmapMemory"), __builtin_return_address(0));
-			SceDebugForDriver_35A35322(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(969, "sceCodecEngineIsUnmapMemory"), __builtin_return_address(0));
+			sceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(968, "sceCodecEngineIsUnmapMemory"), __builtin_return_address(0));
+			sceKernelAssert(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(969, "sceCodecEngineIsUnmapMemory"), __builtin_return_address(0));
 #endif
 			contains = (uintptr_t)memory->userBase <= (uintptr_t)address &&
 				(uintptr_t)address < (uintptr_t)memory->userBase + memory->size &&
@@ -654,7 +654,7 @@ int sceCodecEngineUnmapUserVAtoPA(SceUID pid, SceUIntVAddr address, uintptr_t *p
 		return ret;
 	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(entries != NULL, SCE_DBGINFO_FUNC(1033, "sceCodecEngineUnmapUserVAtoPA"), __builtin_return_address(0));
+	sceKernelAssert(entries != NULL, SCE_DBGINFO_FUNC(1033, "sceCodecEngineUnmapUserVAtoPA"), __builtin_return_address(0));
 #endif
 	for (index = 0; index < 4; index++) {
 		if (entries[index].guid == -1)
@@ -668,8 +668,8 @@ int sceCodecEngineUnmapUserVAtoPA(SceUID pid, SceUIntVAddr address, uintptr_t *p
 				goto unlock;
 		} else {
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(memory != NULL, SCE_DBGINFO_FUNC(1049, "sceCodecEngineUnmapUserVAtoPA"), __builtin_return_address(0));
-			SceDebugForDriver_35A35322(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(1050, "sceCodecEngineUnmapUserVAtoPA"), __builtin_return_address(0));
+			sceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(1049, "sceCodecEngineUnmapUserVAtoPA"), __builtin_return_address(0));
+			sceKernelAssert(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(1050, "sceCodecEngineUnmapUserVAtoPA"), __builtin_return_address(0));
 #endif
 			if ((uintptr_t)address >= (uintptr_t)memory->userBase &&
 				(uintptr_t)address < (uintptr_t)memory->userBase + memory->size) {
@@ -710,7 +710,7 @@ int sceCodecEngineUnmapPAtoUserVA(SceUID pid, uintptr_t address, SceUIntVAddr *u
 		return ret;
 	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(entries != NULL, SCE_DBGINFO_FUNC(1121, "sceCodecEngineUnmapPAtoUserVA"), __builtin_return_address(0));
+	sceKernelAssert(entries != NULL, SCE_DBGINFO_FUNC(1121, "sceCodecEngineUnmapPAtoUserVA"), __builtin_return_address(0));
 #endif
 	for (index = 0; index < 4; index++) {
 		if (entries[index].guid == -1)
@@ -724,8 +724,8 @@ int sceCodecEngineUnmapPAtoUserVA(SceUID pid, uintptr_t address, SceUIntVAddr *u
 				goto unlock;
 		} else {
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(memory != NULL, SCE_DBGINFO_FUNC(1137, "sceCodecEngineUnmapPAtoUserVA"), __builtin_return_address(0));
-			SceDebugForDriver_35A35322(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(1138, "sceCodecEngineUnmapPAtoUserVA"), __builtin_return_address(0));
+			sceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(1137, "sceCodecEngineUnmapPAtoUserVA"), __builtin_return_address(0));
+			sceKernelAssert(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(1138, "sceCodecEngineUnmapPAtoUserVA"), __builtin_return_address(0));
 #endif
 			if ((uintptr_t)address >= memory->physicalBase &&
 				(uintptr_t)address < memory->physicalBase + memory->size) {
@@ -766,7 +766,7 @@ int sceCodecEngineUnmapUserVAtoKernelVA(SceUID pid, const void *address, void **
 		return ret;
 	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(entries != NULL, SCE_DBGINFO_FUNC(1209, "sceCodecEngineUnmapUserVAtoKernelVA"), __builtin_return_address(0));
+	sceKernelAssert(entries != NULL, SCE_DBGINFO_FUNC(1209, "sceCodecEngineUnmapUserVAtoKernelVA"), __builtin_return_address(0));
 #endif
 	for (index = 0; index < 4; index++) {
 		if (entries[index].guid == -1)
@@ -780,8 +780,8 @@ int sceCodecEngineUnmapUserVAtoKernelVA(SceUID pid, const void *address, void **
 				goto unlock;
 		} else {
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(memory != NULL, SCE_DBGINFO_FUNC(1225, "sceCodecEngineUnmapUserVAtoKernelVA"), __builtin_return_address(0));
-			SceDebugForDriver_35A35322(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(1226, "sceCodecEngineUnmapUserVAtoKernelVA"), __builtin_return_address(0));
+			sceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(1225, "sceCodecEngineUnmapUserVAtoKernelVA"), __builtin_return_address(0));
+			sceKernelAssert(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(1226, "sceCodecEngineUnmapUserVAtoKernelVA"), __builtin_return_address(0));
 #endif
 			if ((uintptr_t)address >= (uintptr_t)memory->userBase &&
 				(uintptr_t)address < (uintptr_t)memory->userBase + memory->size) {
@@ -822,7 +822,7 @@ int sceCodecEngineUnmapKernelVAtoUserVA(SceUID pid, const void *address, void **
 		return ret;
 	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(entries != NULL, SCE_DBGINFO_FUNC(1297, "sceCodecEngineUnmapKernelVAtoUserVA"), __builtin_return_address(0));
+	sceKernelAssert(entries != NULL, SCE_DBGINFO_FUNC(1297, "sceCodecEngineUnmapKernelVAtoUserVA"), __builtin_return_address(0));
 #endif
 	for (index = 0; index < 4; index++) {
 		if (entries[index].guid == -1)
@@ -836,8 +836,8 @@ int sceCodecEngineUnmapKernelVAtoUserVA(SceUID pid, const void *address, void **
 				goto unlock;
 		} else {
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(memory != NULL, SCE_DBGINFO_FUNC(1313, "sceCodecEngineUnmapKernelVAtoUserVA"), __builtin_return_address(0));
-			SceDebugForDriver_35A35322(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(1314, "sceCodecEngineUnmapKernelVAtoUserVA"), __builtin_return_address(0));
+			sceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(1313, "sceCodecEngineUnmapKernelVAtoUserVA"), __builtin_return_address(0));
+			sceKernelAssert(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(1314, "sceCodecEngineUnmapKernelVAtoUserVA"), __builtin_return_address(0));
 #endif
 			if ((uintptr_t)address >= (uintptr_t)memory->kernelBase &&
 				(uintptr_t)address < (uintptr_t)memory->kernelBase + memory->size) {
@@ -877,7 +877,7 @@ int _closeUnmapMemBlockAll(SceUID pid)
 		return ret;
 	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(entries != NULL, SCE_DBGINFO_FUNC(423, "_closeUnmapMemBlockAll"), __builtin_return_address(0));
+	sceKernelAssert(entries != NULL, SCE_DBGINFO_FUNC(423, "_closeUnmapMemBlockAll"), __builtin_return_address(0));
 #endif
 	for (index = 0; index < 4; index++) {
 		if (entries[index].guid == -1)
@@ -894,13 +894,13 @@ int _closeUnmapMemBlockAll(SceUID pid)
 				ret = (int)0x80600009;
 			} else {
 #if FW_DEBUG
-				SceDebugForDriver_35A35322(puid == entry->puid, SCE_DBGINFO_FUNC(1382, "_isUnmapMemoryRegistered"), __builtin_return_address(0));
+				sceKernelAssert(puid == entry->puid, SCE_DBGINFO_FUNC(1382, "_isUnmapMemoryRegistered"), __builtin_return_address(0));
 #endif
 				registered = sceGUIDReferObjectWithClass(entry->guid,
 					&g_codecEngineMemoryClass, (SceObjectBase **)&memory);
 				if (registered >= 0) {
 #if FW_DEBUG
-					SceDebugForDriver_35A35322(memory != NULL, SCE_DBGINFO_FUNC(1390, "_isUnmapMemoryRegistered"), __builtin_return_address(0));
+					sceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(1390, "_isUnmapMemoryRegistered"), __builtin_return_address(0));
 #endif
 					registered = isVeneziaHeapManagerRegistered(&memory->heapManager);
 				}

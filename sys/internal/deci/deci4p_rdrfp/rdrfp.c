@@ -139,7 +139,7 @@ static inline __attribute__((always_inline)) int sceDeci4pRDrfpInit(void)
 	protocol.destination = 0;
 	protocol.flags = 1;
 	strncpy(protocol.name, "RDRFP", sizeof(protocol.name));
-	if (!SceDipswForDriver_A98FC2FD(RDRFP_DIPSW_NO_AUTO_ENABLE))
+	if (!sceKernelCheckDipsw(RDRFP_DIPSW_NO_AUTO_ENABLE))
 		protocol.flags |= 0x200;
 	ret = sceDfMgrOpen(sceDeci4pRDrfpHandler, &protocol, &rdrfp);
 	if (ret < 0) {
@@ -165,7 +165,7 @@ int module_start(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 
-	if (!SceDipswForDriver_A98FC2FD(RDRFP_DIPSW)) {
+	if (!sceKernelCheckDipsw(RDRFP_DIPSW)) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 0xb, SCE_DBGINFO_FUNC(639, "RDrfpModuleStart"),
 					      "disabled by dipsw\n");

@@ -50,7 +50,7 @@ int getMutexInfo(SceUID mutexId, SceKernelMutexInfo *info)
 	} else {
 		info->mutexId = mutexId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(mutexId), sizeof(info->name) - 1);
-		SceCpuForDriver_BF82DEB2(&mutex->lock);
+		sceKernelSpinlockLowLock(&mutex->lock);
 		info->attr = mutex->attr;
 		info->initCount = mutex->core.initCount;
 		info->currentCount = mutex->core.lockCount;
@@ -166,7 +166,7 @@ static int uidMutex_RevalidateMethod(void *cls, void *object)
 	SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 2214);
 	if (mutex->core.owner != NULL)
 		return 0;
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	acquireMutex(mutex, thread, thread->waitMode);
 	wake = wakeupAndDistributeThread(thread, (uintptr_t)&mutex->next, 0);
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -221,7 +221,7 @@ int releaseMutex(ThreadmgrMutexCore *core)
 	core->owner = NULL;
 	if (owner == NULL)
 		return 0;
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(owner));
+	sceKernelSpinlockLowLock(THREAD_LOCK(owner));
 	ListLinkRemove(&core->ownerLink);
 	priority = findNextCeilingPriority(owner);
 	if (owner->currentPriority != priority) {
@@ -249,7 +249,7 @@ static int uidMutex_Destructor(void *object)
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 2128);
 retry:
-	intr = SceCpuForDriver_D32ACE9E(&mutex->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&mutex->lock);
 	for (link = mutex->core.conds.next; link != &mutex->core.conds; link = next) {
 		next = link->next;
 		cond = COND_FROM_MUTEX_LINK(link);
@@ -271,7 +271,7 @@ retry:
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
-			SceCpuForDriver_BF82DEB2(&process->resourceLock);
+			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (mutex->attr & MUTEX_ATTR_LW)
 				process->uidLwCount--;
 			else if (mutex->attr & MUTEX_ATTR_UNLIMITED)
@@ -327,7 +327,7 @@ uint32_t releaseAllMutex(struct ThreadCB *thread)
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 598);
 	for (;;) {
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		for (link = head->next; link != head; link = head->next) {
 			mutex = MUTEX_FROM_OWNER_LINK(link);
 			if (SceCpuForDriver_5AC9D394(&mutex->lock) < 0)
@@ -338,7 +338,7 @@ uint32_t releaseAllMutex(struct ThreadCB *thread)
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			wake |= revalidateWaitState((uintptr_t)&mutex->next);
 			sceKernelSpinlockLowUnlock(&mutex->lock);
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		}
 		if (link == head)
 			break;
@@ -348,7 +348,7 @@ uint32_t releaseAllMutex(struct ThreadCB *thread)
 			;
 	}
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	oldPriority = thread->currentPriority;
 	thread->boostPriority = PRIORITY_NONE;
 	if (oldPriority != thread->basePriority) {
@@ -585,7 +585,7 @@ create:
 	process = NULL;
 	if (userRo & USERRO_IN_SYSCALL) {
 		process = thread->process;
-		SceCpuForDriver_BF82DEB2(&process->resourceLock);
+		sceKernelSpinlockLowLock(&process->resourceLock);
 		if (attr & MUTEX_ATTR_LW) {
 			if (process->uidLwCount >= 0x100) {
 				sceKernelSpinlockLowUnlock(&process->resourceLock);
@@ -647,14 +647,14 @@ create:
 		uid = puid;
 	}
 	if (initCount != 0) {
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		acquireMutex(mutex, thread, initCount);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	}
 	sceKernelSpinlockLowUnlock(&mutex->lock);
 	goto resume;
 unaccount:
-	SceCpuForDriver_BF82DEB2(&process->resourceLock);
+	sceKernelSpinlockLowLock(&process->resourceLock);
 	if (attr & MUTEX_ATTR_LW)
 		process->uidLwCount--;
 	else if (attr & MUTEX_ATTR_UNLIMITED)
@@ -705,7 +705,7 @@ int sceKernelDeleteMutex(SceUID mutexId)
 		__first = (struct ThreadCB *)(mutex)->next;		\
 		SCE_DBG_ASSERT_CHECK(__first->magic == THREAD_CB_MAGIC, line);	\
 		if ((mutex)->attr & MUTEX_ATTR_PRIORITY) {				\
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(__first));		\
+			sceKernelSpinlockLowLock(THREAD_LOCK(__first));		\
 			__firstPriority = __first->currentPriority;			\
 			__priority = (thread)->currentPriority;				\
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(__first));		\
@@ -759,7 +759,7 @@ int lockMutex(SceUID mutexId, int count, SceUInt32 *timeout, int callbacks)
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&mutex->lock);
+	sceKernelSpinlockLowLock(&mutex->lock);
 	if (count < 1 || (count != 1 && !(mutex->attr & MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		goto unlock;
@@ -789,16 +789,16 @@ int lockMutex(SceUID mutexId, int count, SceUInt32 *timeout, int callbacks)
 			ret = callCallbackAll(thread);
 			if (ret < 0)
 				goto release;
-			SceCpuForDriver_BF82DEB2(&mutex->lock);
+			sceKernelSpinlockLowLock(&mutex->lock);
 		}
 		if (MUTEX_MAY_TAKE(mutex, thread, 473)) {
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 			acquireMutex(mutex, thread, count);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			ret = 0;
 			goto unlock;
 		}
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		thread->waitMode = count;
 		if (!callbacks) {
 			ret = waitWaitableObject(mutexId, (uintptr_t)&mutex->next, WAIT_TYPE_MUTEX,
@@ -880,7 +880,7 @@ int sceKernelTryLockMutex(SceUID mutexId, int count)
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&mutex->lock);
+	sceKernelSpinlockLowLock(&mutex->lock);
 	if (count < 1 || (count != 1 && !(mutex->attr & MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 	} else if (mutex->core.owner == thread) {
@@ -898,7 +898,7 @@ int sceKernelTryLockMutex(SceUID mutexId, int count)
 	} else {
 		ret = SCE_KERNEL_ERROR_MUTEX_FAILED_TO_OWN;
 		if (mutex->core.owner == NULL) {
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 			acquireMutex(mutex, thread, count);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			ret = 0;
@@ -945,7 +945,7 @@ int sceKernelUnlockMutex(SceUID mutexId, int count)
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&mutex->lock);
+	sceKernelSpinlockLowLock(&mutex->lock);
 	thread = currentThreadContext();
 	if (count < 1 || (count != 1 && !(mutex->attr & MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
@@ -986,7 +986,7 @@ int sceKernelUnlockMutex(SceUID mutexId, int count)
 	first = (struct ThreadCB *)mutex->next;
 	if ((struct ThreadmgrWaitQueue *)first != (struct ThreadmgrWaitQueue *)&mutex->next) {
 		SCE_DBG_ASSERT_CHECK_FUNC(first->magic == THREAD_CB_MAGIC, 1312, "sceKernelUnlockMutex");
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(first));
+		sceKernelSpinlockLowLock(THREAD_LOCK(first));
 		acquireMutex(mutex, first, first->waitMode);
 		wake |= wakeupAndDistributeThread(first, (uintptr_t)&mutex->next, 0);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(first));
@@ -1039,7 +1039,7 @@ int sceKernelCancelMutex(SceUID mutexId, int newCount, int *numWaitThreads)
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&mutex->lock);
+	sceKernelSpinlockLowLock(&mutex->lock);
 	if (newCount < 0)
 		newCount = mutex->core.initCount;
 	if (newCount > 1 && !(mutex->attr & MUTEX_ATTR_RECURSIVE)) {
@@ -1052,7 +1052,7 @@ int sceKernelCancelMutex(SceUID mutexId, int newCount, int *numWaitThreads)
 	wake |= wakeupWaitObjectAll((uintptr_t)&mutex->next, SCE_KERNEL_ERROR_WAIT_CANCEL,
 				    (uint32_t *)numWaitThreads);
 	if (newCount != 0) {
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		acquireMutex(mutex, thread, newCount);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	}
@@ -1228,7 +1228,7 @@ int lockMutexForCond(SceUID mutexId, int count, SceUInt32 *timeout, int callback
 				      mutexId);
 		return SCE_KERNEL_ERROR_UNKNOWN_MUTEX_ID;
 	}
-	SceCpuForDriver_BF82DEB2(&mutex->lock);
+	sceKernelSpinlockLowLock(&mutex->lock);
 	if (count < 1 || (count != 1 && !(mutex->attr & MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		goto unlock;
@@ -1258,16 +1258,16 @@ int lockMutexForCond(SceUID mutexId, int count, SceUInt32 *timeout, int callback
 			ret = callCallbackAll(thread);
 			if (ret < 0)
 				goto release;
-			SceCpuForDriver_BF82DEB2(&mutex->lock);
+			sceKernelSpinlockLowLock(&mutex->lock);
 		}
 		if (MUTEX_MAY_TAKE(mutex, thread, 1884)) {
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 			acquireMutex(mutex, thread, count);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			ret = 0;
 			goto unlock;
 		}
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		thread->waitMode = count;
 		thread->waitCondId = condId;
 		thread->waitMutexId = mutexId;
@@ -1326,7 +1326,7 @@ int unlockMutexForCond(SceUID mutexId, int count)
 				      mutexId);
 		return SCE_KERNEL_ERROR_UNKNOWN_MUTEX_ID;
 	}
-	SceCpuForDriver_BF82DEB2(&mutex->lock);
+	sceKernelSpinlockLowLock(&mutex->lock);
 	if (mutex->core.owner != currentThreadContext()) {
 		if (mutex->core.owner == NULL)
 			SCE_DBG_PRINTF(0, 2003, " k: error: MUTEX_NOT_OWNED, mutexId=0x%08X([%s]), "
@@ -1358,7 +1358,7 @@ int unlockMutexForCond(SceUID mutexId, int count)
 			if ((struct ThreadmgrWaitQueue *)first !=
 			    (struct ThreadmgrWaitQueue *)&mutex->next) {
 				SCE_DBG_ASSERT_CHECK(first->magic == THREAD_CB_MAGIC, 2038);
-				SceCpuForDriver_BF82DEB2(THREAD_LOCK(first));
+				sceKernelSpinlockLowLock(THREAD_LOCK(first));
 				acquireMutex(mutex, first, first->waitMode);
 				wakeupAndDistributeThread(first, (uintptr_t)&mutex->next, 0);
 				sceKernelSpinlockLowUnlock(THREAD_LOCK(first));

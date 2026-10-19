@@ -60,14 +60,14 @@ set(MODULE_IMPORT_NIDS
 	0x7290B21C:F:0x04C05D10
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_821FC0EE
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelCpuResumeIntr
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	SceSysrootForDriver_930B1342
 	memset
 	memcpy

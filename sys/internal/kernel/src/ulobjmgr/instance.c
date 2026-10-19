@@ -50,7 +50,7 @@ UlobjProcCB *getAndLockUlobjInfoArrayImpl(SceUID pid, SceKernelIntrStatus *pLock
 	UlobjProcCB *procCB;
 
 	SCE_DBG_ASSERT(pLockState != NULL, 117);
-	*pLockState = SceCpuForDriver_D32ACE9E(&g_ulobjInstance.lock);
+	*pLockState = sceKernelSpinlockLowLockCpuSuspendIntr(&g_ulobjInstance.lock);
 	procCB = searchUlobjProcCB(pid);
 	if (procCB == NULL)
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_ulobjInstance.lock, *pLockState);
@@ -67,7 +67,7 @@ UlobjProcCB *getAndLockUlobjInfoArrayForKernel(SceUID pid)
 {
 	UlobjProcCB *procCB;
 
-	SceCpuForDriver_BF82DEB2(&g_ulobjInstance.lock);
+	sceKernelSpinlockLowLock(&g_ulobjInstance.lock);
 	procCB = searchUlobjProcCB(pid);
 	if (procCB == NULL)
 		sceKernelSpinlockLowUnlock(&g_ulobjInstance.lock);
@@ -81,7 +81,7 @@ int allocateAndLockUlobjInfoArrayImpl(SceUID pid, UlobjProcCB **pProcCB, SceKern
 
 	SCE_DBG_ASSERT(pProcCB != NULL, 151);
 	SCE_DBG_ASSERT(pLockState != NULL, 152);
-	*pLockState = SceCpuForDriver_D32ACE9E(&g_ulobjInstance.lock);
+	*pLockState = sceKernelSpinlockLowLockCpuSuspendIntr(&g_ulobjInstance.lock);
 	if (searchUlobjProcCB(pid) != NULL) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_ulobjInstance.lock, *pLockState);
 		return SCE_KERNEL_ERROR_ALREADY_REGISTERED;
@@ -134,7 +134,7 @@ UlobjProcCB *findUlobjInfoArray(SceUID pid)
 {
 	UlobjProcCB *procCB;
 
-	SceCpuForDriver_BF82DEB2(&g_ulobjInstance.lock);
+	sceKernelSpinlockLowLock(&g_ulobjInstance.lock);
 	procCB = searchUlobjProcCB(pid);
 	sceKernelSpinlockLowUnlock(&g_ulobjInstance.lock);
 	return procCB;

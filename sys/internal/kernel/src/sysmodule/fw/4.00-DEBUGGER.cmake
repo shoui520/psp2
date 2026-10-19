@@ -61,7 +61,7 @@ set(MODULE_IMPORT_FUNCS
 	memset
 	memcpy
 	__stack_chk_fail
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	SceModulemgrForDriver_02D3D0C1
 	SceModulemgrForDriver_49A3EDC7
 	SceModulemgrForDriver_9D953C22

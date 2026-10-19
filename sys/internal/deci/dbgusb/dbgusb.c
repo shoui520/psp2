@@ -125,7 +125,7 @@ static SceUdcdDriver s_driver = {
 
 static void QueuePut(DbgUsbQueue *queue, DbgUsbBuffer *buffer) /* name unknown */
 {
-	int state = SceCpuForDriver_D32ACE9E(&queue->lock);
+	int state = sceKernelSpinlockLowLockCpuSuspendIntr(&queue->lock);
 
 	buffer->next = (DbgUsbBuffer *)queue;
 	buffer->prev = queue->prev;
@@ -137,7 +137,7 @@ static void QueuePut(DbgUsbQueue *queue, DbgUsbBuffer *buffer) /* name unknown *
 
 static DbgUsbBuffer *QueueGet(DbgUsbQueue *queue) /* name unknown */
 {
-	int state = SceCpuForDriver_D32ACE9E(&queue->lock);
+	int state = sceKernelSpinlockLowLockCpuSuspendIntr(&queue->lock);
 	DbgUsbBuffer *buffer = queue->next;
 
 	if (buffer == (DbgUsbBuffer *)queue) {
@@ -288,7 +288,7 @@ int _sceDbgUsbPullData(void *data, unsigned int size)
 		}
 	}
 	if (!s_pending || s_pending->remaining) {
-		state = SceCpuForDriver_D32ACE9E(&s_done.lock);
+		state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_done.lock);
 		ready = s_done.next != (DbgUsbBuffer *)&s_done;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_done.lock, state);
 		if (ready)
@@ -363,7 +363,7 @@ int sceDbgUsbModuleStart(SceSize arglen, void *argp)
 	unsigned int threadOpt[7];
 	int i, ret;
 
-	if (!SceDipswForDriver_A98FC2FD(0xc2) || SceDipswForDriver_A98FC2FD(0xc3)) {
+	if (!sceKernelCheckDipsw(0xc2) || sceKernelCheckDipsw(0xc3)) {
 		SCE_DBG_PRINTF(0xb, 1136, "disabled by dipsw\n");
 		return 1;
 	}
@@ -379,7 +379,7 @@ int sceDbgUsbModuleStart(SceSize arglen, void *argp)
 			goto readFail;
 		if (sceKernelGetMemBlockBase(s_read[i].memblock,
 					    &s_read[i].data) < 0) {
-			SceSysmemForDriver_009E1C61(s_read[i].memblock);
+			sceKernelFreeMemBlock(s_read[i].memblock);
 			s_read[i].memblock = 0;
 			goto readFail;
 		}
@@ -396,7 +396,7 @@ int sceDbgUsbModuleStart(SceSize arglen, void *argp)
 	if (s_write.memblock < 0)
 		goto writeFail;
 	if (sceKernelGetMemBlockBase(s_write.memblock, &s_write.data) < 0) {
-		SceSysmemForDriver_009E1C61(s_write.memblock);
+		sceKernelFreeMemBlock(s_write.memblock);
 		s_write.memblock = 0;
 		goto writeFail;
 	}
@@ -482,16 +482,16 @@ statusFail:
 writeMutexFail:
 	sceKernelDeleteMutex(s_readMutex);
 readMutexFail:
-	SceSysmemForDriver_009E1C61(s_write.memblock);
+	sceKernelFreeMemBlock(s_write.memblock);
 writeFail:
-	SceSysmemForDriver_009E1C61(s_write.memblock);
+	sceKernelFreeMemBlock(s_write.memblock);
 	i = 1;
 	goto readPrevious;
 readFail:
-	SceSysmemForDriver_009E1C61(s_read[i].memblock);
+	sceKernelFreeMemBlock(s_read[i].memblock);
 	i--;
 readPrevious:
 	if (i >= 0)
-		SceSysmemForDriver_009E1C61(s_read[i].memblock);
+		sceKernelFreeMemBlock(s_read[i].memblock);
 	return 2;
 }

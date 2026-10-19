@@ -45,7 +45,7 @@ static inline __attribute__((always_inline)) void PervasiveClockInit(void)
 
 	LowioPixelClockInit();
 	PervasiveMiscInit();
-	mode = SceDipswForDriver_A98FC2FD(0xec) == 0 ? 3 : 5;
+	mode = sceKernelCheckDipsw(0xec) == 0 ? 3 : 5;
 	ScePervasiveForDriver_6AF0196F(mode, mode);
 }
 
@@ -81,7 +81,7 @@ static __attribute__((noinline)) int PervasiveInit(void)
 
 			/* Sony frees the whole UID array, including untouched entries. */
 			for (j = 0; j < 16; j++)
-				SceSysmemForDriver_009E1C61(s_pervasiveUids[j]);
+				sceKernelFreeMemBlock(s_pervasiveUids[j]);
 			sceKernelFinalizeFastMutex(&s_pervasiveMutex);
 			return ret;
 		}

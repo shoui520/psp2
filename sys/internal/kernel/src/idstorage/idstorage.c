@@ -232,12 +232,12 @@ static int initializeStorage(void)
 	storage.memblock = ret;
 	ret = sceKernelGetMemBlockBase(ret, (void **)&storage.data);
 	if (ret < 0) {
-		SceSysmemForDriver_009E1C61(storage.memblock);
+		sceKernelFreeMemBlock(storage.memblock);
 		return ret;
 	}
 	ret = sceKernelCreateMutex(name, 2, 0, NULL);
 	if (ret < 0) {
-		SceSysmemForDriver_009E1C61(storage.memblock);
+		sceKernelFreeMemBlock(storage.memblock);
 		return ret;
 	}
 	storage.mutex = ret;
@@ -267,7 +267,7 @@ int module_start(SceSize args, void *argp)
 int SceIdStorageForDriver_60B647A5(int flush)
 {
 	SceProductMode mode = 0;
-	int ret = ScePmMgrForDriver_2AC815A2(&mode);
+	int ret = sceSblPmMgrGetProductMode(&mode);
 
 	if (ret < 0)
 		return ret;
@@ -276,7 +276,7 @@ int SceIdStorageForDriver_60B647A5(int flush)
 	if (flush)
 		SceIdStorageForDriver_3AD32523();
 	sceKernelDeleteMutex(storage.mutex);
-	SceSysmemForDriver_009E1C61(storage.memblock);
+	sceKernelFreeMemBlock(storage.memblock);
 	if (storage.index)
 		sceKernelFreeHeapMemory(heap, storage.index);
 	sceKernelDeleteHeap(heap);
@@ -435,7 +435,7 @@ int SceIdStorageForDriver_EB00C509(SceSize leaf, void *buffer)
 int SceIdStorageForDriver_1FA4D135(SceSize leaf, const void *buffer)
 {
 	SceProductMode mode = 0;
-	int ret = ScePmMgrForDriver_2AC815A2(&mode);
+	int ret = sceSblPmMgrGetProductMode(&mode);
 
 	if (ret < 0)
 		return ret;
@@ -467,7 +467,7 @@ int SceIdStorageForDriver_683AAC10(uint32_t leaf, uint32_t offset, const void *b
 {
 	uint8_t data[LEAF_SIZE];
 	SceProductMode mode = 0;
-	int ret = ScePmMgrForDriver_2AC815A2(&mode);
+	int ret = sceSblPmMgrGetProductMode(&mode);
 
 	if (ret < 0)
 		return ret;
@@ -500,7 +500,7 @@ int SceIdStorageForDriver_683AAC10(uint32_t leaf, uint32_t offset, const void *b
 int SceIdStorageForDriver_958089DB(void)
 {
 	SceProductMode mode = 0;
-	int ret = ScePmMgrForDriver_2AC815A2(&mode);
+	int ret = sceSblPmMgrGetProductMode(&mode);
 	int i;
 
 	if (ret < 0)
@@ -532,7 +532,7 @@ int SceIdStorageForDriver_F4BCB3EE(void)
 {
 	uint8_t data[LEAF_SIZE];
 	SceProductMode mode = 0;
-	int ret = ScePmMgrForDriver_2AC815A2(&mode);
+	int ret = sceSblPmMgrGetProductMode(&mode);
 	unsigned int i;
 
 	if (ret < 0)
@@ -598,7 +598,7 @@ int SceIdStorageForDriver_08A471A6(uint32_t leaf)
 {
 	SceProductMode mode = 0;
 	SceKernelIntrStatus intr;
-	int ret = ScePmMgrForDriver_2AC815A2(&mode);
+	int ret = sceSblPmMgrGetProductMode(&mode);
 	int previous, block, chosen, minimum, count, i;
 
 	if (ret < 0)
@@ -662,7 +662,7 @@ int SceIdStorageForDriver_99ACCB71(const uint16_t *leaves, int count)
 {
 	SceProductMode mode = 0;
 	SceKernelIntrStatus intr;
-	int ret = ScePmMgrForDriver_2AC815A2(&mode);
+	int ret = sceSblPmMgrGetProductMode(&mode);
 	int i, block, n;
 
 	if (ret < 0)
@@ -718,7 +718,7 @@ int SceIdStorageForDriver_2C97AB36(uint32_t leaf)
 {
 	SceProductMode mode = 0;
 	SceKernelIntrStatus intr;
-	int ret = ScePmMgrForDriver_2AC815A2(&mode);
+	int ret = sceSblPmMgrGetProductMode(&mode);
 	int slot;
 
 	if (ret < 0)

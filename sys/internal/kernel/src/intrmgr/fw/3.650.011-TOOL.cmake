@@ -65,13 +65,13 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSysrootCorelockLock
 	sceKernelSysrootTrapThreadAfterSyscall
 	sceKernelSysrootCorelockUnlock
-	SceSysrootForKernel_C8C8C321
+	sceKernelSysrootGetSharedMemory
 	SceSysrootForKernel_CC85905B
 	sceKernelCpuId
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_9CB9F0CE
-	SceCpuForDriver_BF82DEB2
-	SceCpuForDriver_D32ACE9E
+	sceKernelDcacheCleanRangeForL1WBWA
+	sceKernelSpinlockLowLock
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	SceDebugForDriver_391B5B74
 	SceDebugForDriver_391B74B7

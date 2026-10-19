@@ -288,7 +288,7 @@ int ds3UsbReadInput(unsigned int port, Ds3UsbInputReport *report)
 	controller = ds3FindDeviceByPort(port);
 	if (controller == NULL || controller->inputReady == 0)
 		return 0;
-	intr = SceCpuForDriver_D32ACE9E(&ds3Usb.inputLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3Usb.inputLock);
 	*report = *(Ds3UsbInputReport *)
 		controller->inputRequests[controller->inputIndex]->buffer;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ds3Usb.inputLock, intr);
@@ -547,7 +547,7 @@ startInput:
 	usb = &ds3Usb.devices[index];
 	if (usb->inputPipe < 0)
 		return;
-	interruptState = SceCpuForDriver_D32ACE9E(&ds3Usb.inputLock);
+	interruptState = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3Usb.inputLock);
 	input = controller->inputRequests[controller->inputIndex]->buffer;
 	controller->inputIndex ^= 1;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ds3Usb.inputLock, interruptState);
@@ -1002,7 +1002,7 @@ startInput:
 	usb = &ds3Usb.devices[index];
 	if (usb->inputPipe < 0)
 		return;
-	interruptState = SceCpuForDriver_D32ACE9E(&ds3Usb.inputLock);
+	interruptState = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3Usb.inputLock);
 	input = controller->inputRequests[controller->inputIndex]->buffer;
 	controller->inputIndex ^= 1;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ds3Usb.inputLock, interruptState);
@@ -1365,7 +1365,7 @@ ds4Battery:
 	device = &ds3Usb.devices[index];
 	if (device->inputPipe < 0)
 		return;
-	intr = SceCpuForDriver_D32ACE9E(&ds3Usb.inputLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3Usb.inputLock);
 	index = controller->inputIndex;
 	input = controller->inputRequests[index]->buffer;
 	controller->inputIndex = index ^ 1;

@@ -54,7 +54,7 @@ int SpkgInfoUtilIsBelowMinimumVersion(int packageType, uint32_t version,
 	if (minimumVersion == UINT32_MAX) {
 		minimumVersion = currentVersion;
 	} else if (SceSblAIMgrForDriver_963CA644() && SceSblAIMgrForDriver_274663A0() &&
-		   SceDipswForDriver_A98FC2FD(152) && minimumVersion < 0x03000000) {
+		   sceKernelCheckDipsw(152) && minimumVersion < 0x03000000) {
 		minimumVersion = 0x03000000;
 	}
 	return minimumVersion > version;

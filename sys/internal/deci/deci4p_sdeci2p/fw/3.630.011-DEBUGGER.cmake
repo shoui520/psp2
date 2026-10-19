@@ -65,13 +65,13 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	sceKernelSysrootCorelockLock
 	sceKernelSysrootCorelockUnlock
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	sceKernelCpuId
 	SceCpuForDriver_821FC0EE
-	SceCpuForDriver_8B4C26DF
-	SceCpuForDriver_9CB9F0CE
+	sceKernelDcacheInvalidateRangeForL1WBWA
+	sceKernelDcacheCleanRangeForL1WBWA
 	sceKernelCpuResumeIntr
 	sceKernelDisableIntr
 	sceKernelRegisterIntrHandler
@@ -80,7 +80,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetIntrPendingStatusForDebugger
 	sceKernelClearIntrPendingStatusForDebugger
 	__stack_chk_fail
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	SceQafMgrForDriver_382C71E8
 	sceKernelExitThread
 	sceKernelStartThread

@@ -1482,7 +1482,7 @@ int initializeTraceHardware(void)
 
 int module_start(void)
 {
-	if (SceDipswForDriver_A98FC2FD(0xd4) == 0)
+	if (sceKernelCheckDipsw(0xd4) == 0)
 		return 1;
 	if (initializeTraceHardware() < 0)
 		return 2;

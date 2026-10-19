@@ -67,7 +67,7 @@ int PhyMemLowMarkUsed(PhyMemLow *pml, uintptr_t pa, SceSize size)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	unitShift = pml->unitShift;
 	bitmap = pml->bitmap;
-	flags = SceCpuForDriver_D32ACE9E(&pml->lock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&pml->lock);
 	index = (pa - base) >> unitShift;
 	bit = index & 0x1f;
 	start = &bitmap[index >> 5];
@@ -200,7 +200,7 @@ int PhyMemLowAlloc(PhyMemLow *pml, SceSize size, SceSize alignment, SceUInt32 fl
 	cur.word = 0;
 	cur.bit = 0;
 	cur.unit = pml->bitmap;
-	intr = SceCpuForDriver_D32ACE9E(&pml->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&pml->lock);
 
 	for (;;) {
 		/* the next free unit */
@@ -302,7 +302,7 @@ int PhyMemLowFree(PhyMemLow *pml, uintptr_t pa, SceSize size)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	index = (pa - base) >> pml->unitShift;
 	unit = pml->bitmap;
-	flags = SceCpuForDriver_D32ACE9E(&pml->lock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&pml->lock);
 	unit += index >> 5;
 	bit = index & 0x1f;
 	word = *unit;
@@ -333,7 +333,7 @@ int PhyMemLowGetFreeSize(PhyMemLow *pml, SceSize *free)
 	SceUInt32 i, b, units = 0;
 	int flags;
 
-	flags = SceCpuForDriver_D32ACE9E(&pml->lock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&pml->lock);
 	for (i = 0; i != pml->wordCount; i++, unit++)
 		for (b = 0; b != 32; b++)
 			if (!(*unit & (1 << b)))

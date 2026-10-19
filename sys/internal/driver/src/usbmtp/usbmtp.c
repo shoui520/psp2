@@ -251,7 +251,7 @@ static void detach(void *userData)
 	unsigned int intr;
 
 	sceKernelClearEventFlag(s_mtp.event, ~MTP_EVENT_ATTACHED);
-	intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	s_mtp.busFlags &= ~(MTP_BUS_ATTACHED | MTP_BUS_RESET | MTP_BUS_CANCEL);
 	s_mtp.transferFlags &= ~(MTP_TRANSFER_SENDING | MTP_TRANSFER_RECEIVING |
 				 MTP_TRANSFER_IN_STALLED | MTP_TRANSFER_OUT_STALLED);
@@ -329,7 +329,7 @@ static int attach(int usbVersion, void *userData)
 	SceUdcdForDriver_9F53D64D(&s_mtp.endpoints[1]);
 	SceUdcdForDriver_9F53D64D(&s_mtp.endpoints[2]);
 	SceUdcdForDriver_9F53D64D(&s_mtp.endpoints[3]);
-	intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	s_mtp.status = MTP_STATUS_CONNECTED;
 	s_mtp.phase = MTP_PHASE_IDLE;
 	s_mtp.busFlags = MTP_BUS_ATTACHED;
@@ -367,7 +367,7 @@ static void completeCancel(SceUdcdDeviceRequest *req)
 	cancel = req->data;
 	if (cancel->code[0] != 0x01 || cancel->code[1] != 0x40)
 		return;
-	intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	s_mtp.cancelled = ((const MtpCancelRequest *)req->data)->transaction;
 	if ((s_mtp.transferFlags & MTP_TRANSFER_SENDING) &&
 	    s_mtp.phase == MTP_PHASE_DATA_IN && s_mtp.remaining > 0)
@@ -449,7 +449,7 @@ static int _sceUsbMtpInitTask(void *args)
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 2486, "[%s%-28s] Err(%4d) sceKernelGetMemBlockBase\n",
 			       "usbmtp:", __func__, 2486);
-		SceSysmemForDriver_009E1C61(s_mtp.memblock);
+		sceKernelFreeMemBlock(s_mtp.memblock);
 		return MTP_MEMORY;
 	}
 
@@ -521,7 +521,7 @@ static int sendBulk(void *buffer, unsigned int size)
 	req->size = size;
 	req->isControlRequest = 0;
 	start = (uintptr_t)buffer & ~(MTP_CACHE_LINE - 1);
-	SceCpuForDriver_103872A5((void *)start, (uintptr_t)MTP_ALIGN((uint8_t *)buffer + size) - start);
+	sceKernelDcacheCleanRange((void *)start, (uintptr_t)MTP_ALIGN((uint8_t *)buffer + size) - start);
 	ret = SceUdcdForDriver_1ED0E89E(req);
 	if (ret < 0)
 		return ret;
@@ -551,8 +551,8 @@ static int receiveBulk(void *buffer, unsigned int size)
 	req->size = size + padding;
 	start = (uintptr_t)buffer & ~(MTP_CACHE_LINE - 1);
 	length = (uintptr_t)MTP_ALIGN((uint8_t *)buffer + req->size) - start;
-	SceCpuForDriver_364E68A4((void *)start, length);
-	intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	sceKernelDcacheCleanInvalidateRange((void *)start, length);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	if (s_mtp.busFlags & MTP_BUS_CANCEL) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 		return MTP_CANCELLED;
@@ -564,7 +564,7 @@ static int receiveBulk(void *buffer, unsigned int size)
 	ret = WaitTransfer(req, &s_mtp.endpoints[2], MTP_EVENT_RECEIVED, MTP_EVENT_RECV_FAILED, 0);
 	if (ret < 0)
 		return ret;
-	SceCpuForDriver_364E68A4((void *)start, length);
+	sceKernelDcacheCleanInvalidateRange((void *)start, length);
 	return req->transmitted;
 }
 
@@ -584,7 +584,7 @@ static int processRequest(int recipient, int arg, SceUdcdEP0DeviceRequest *req, 
 		length = req->wLength;
 		*(MtpOsStringDescriptor *)s_mtp.controlBuffer = s_mtp.osString;
 		control->size = length < sizeof(s_mtp.osString) ? length : sizeof(s_mtp.osString);
-		SceCpuForDriver_103872A5(control->data, 128);
+		sceKernelDcacheCleanRange(control->data, 128);
 		return SceUdcdForDriver_1ED0E89E(control);
 	case 0x40:	/* vendor: the extended compatible ID */
 		if (req->bRequest != 1 || req->wIndex != 4)
@@ -592,7 +592,7 @@ static int processRequest(int recipient, int arg, SceUdcdEP0DeviceRequest *req, 
 		length = req->wLength;
 		*(MtpCompatibleIdDescriptor *)s_mtp.controlBuffer = s_mtp.compatibleId;
 		control->size = length < sizeof(s_mtp.compatibleId) ? length : sizeof(s_mtp.compatibleId);
-		SceCpuForDriver_103872A5(control->data, 128);
+		sceKernelDcacheCleanRange(control->data, 128);
 		return SceUdcdForDriver_1ED0E89E(control);
 	case 0x20:	/* class */
 		if (recipient != 1)
@@ -602,7 +602,7 @@ static int processRequest(int recipient, int arg, SceUdcdEP0DeviceRequest *req, 
 			length = req->wLength < sizeof(MtpCancelRequest) ?
 				 req->wLength : sizeof(MtpCancelRequest);
 			s_mtp.cancel.request.size = length;
-			SceCpuForDriver_02796361(s_mtp.cancel.request.data,
+			sceKernelDcacheInvalidateRange(s_mtp.cancel.request.data,
 							(length + MTP_CACHE_LINE - 1) & ~(MTP_CACHE_LINE - 1));
 			return SceUdcdForDriver_C60A74B2(&s_mtp.cancel.request);
 		case MTP_REQUEST_DEVICE_RESET:
@@ -616,7 +616,7 @@ static int processRequest(int recipient, int arg, SceUdcdEP0DeviceRequest *req, 
 		case MTP_REQUEST_GET_DEVICE_STATUS:
 			status.wLength = 4;
 			count = 0;
-			intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 			if (s_mtp.transferFlags & MTP_TRANSFER_IN_STALLED) {
 				s_mtp.phase = MTP_PHASE_STALLED;
 				status.params[count++] = s_mtp.endpoints[1].endpointNumber;
@@ -651,7 +651,7 @@ cancelled:
 			length = req->wLength;
 			memcpy(s_mtp.controlBuffer, &status, status.wLength);
 			control->size = status.wLength < length ? status.wLength : length;
-			SceCpuForDriver_103872A5(control->data, 128);
+			sceKernelDcacheCleanRange(control->data, 128);
 			return SceUdcdForDriver_1ED0E89E(control);
 		}
 		break;
@@ -673,7 +673,7 @@ int sceUsbMtpSendData(MtpIfTransfer *transfer)
 		return MTP_UNAVAILABLE;
 	int64_t size = transfer->size, total = transfer->totalSize;
 	uint8_t *buffer = transfer->buffer;
-	unsigned intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	int ret;
 	if (s_mtp.cancelled != (unsigned)-1) {
 		if (!s_mtp.cancelPending) {
@@ -685,7 +685,7 @@ int sceUsbMtpSendData(MtpIfTransfer *transfer)
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 		if (s_mtp.remaining > 0)
 			sendBulk(s_mtp.data, 0);
-		intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 		if (s_mtp.deferredResponse == s_mtp.transaction) {
 			s_mtp.deferredResponse = -1;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
@@ -700,7 +700,7 @@ int sceUsbMtpSendData(MtpIfTransfer *transfer)
 		} else {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 		}
-		intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 		s_mtp.phase = MTP_PHASE_IDLE;
 		s_mtp.status &= ~2U;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
@@ -717,7 +717,7 @@ int sceUsbMtpSendData(MtpIfTransfer *transfer)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 	if (total < (int64_t)((uint64_t)size + s_mtp.remaining)) {
 		if (s_mtp.remaining >= total) {
-			intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 			s_mtp.transferFlags &= ~1U;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 			return MTP_BUSY;
@@ -792,7 +792,7 @@ int sceUsbMtpSendData(MtpIfTransfer *transfer)
 			if (ret < 0)
 				goto error;
 		}
-		intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 		s_mtp.transferFlags &= ~1U;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 	}
@@ -801,7 +801,7 @@ int sceUsbMtpSendData(MtpIfTransfer *transfer)
 error:
 	s_mtp.staged = 0;
 	s_mtp.remaining = 0;
-	intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	s_mtp.transferFlags &= ~1U;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 	return ret;
@@ -815,7 +815,7 @@ int sceUsbMtpRecvData(MtpIfTransfer *transfer)
 	uint8_t *buffer = transfer->buffer;
 	if (size > 0x10000)
 		return MTP_INVALID;
-	unsigned intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	int ret;
 	if (s_mtp.cancelled != (unsigned)-1) {
 		ret = MTP_CANCELLED;
@@ -930,14 +930,14 @@ int sceUsbMtpRecvData(MtpIfTransfer *transfer)
 finished:
 	if (ret > 0 && !(ret & (s_mtp.packetSize - 1)))
 		receiveBulk(s_mtp.data, 0);
-	intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	s_mtp.transferFlags &= ~2U;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 output:
 	s_mtp.received += done;
 	transfer->transferred = done;
 	transfer->totalSize = s_mtp.remaining;
-	intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	if (s_mtp.cancelled != (unsigned)-1) {
 		if (s_mtp.received > 0 && (!s_mtp.remaining ||
 		    (s_mtp.remaining > 0 && s_mtp.remaining <= s_mtp.staged + s_mtp.packetSize * 2))) {
@@ -954,7 +954,7 @@ output:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 	return 0;
 error:
-	intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	if (s_mtp.cancelled != (unsigned)-1) {
 		if (s_mtp.received || s_mtp.remaining) {
 			if (s_mtp.transferFlags & MTP_TRANSFER_RECEIVING) {
@@ -984,17 +984,17 @@ int SceUsbMtpForDriver_576A266F(void *command, MtpIfTransfer *transfer)
 		ret = MTP_INVALID;
 		goto error;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	if (s_mtp.cancelPending) {
 		s_mtp.cancelPending = 0;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 		sendBulk(s_mtp.data, 0);
-		intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 		s_mtp.status &= ~2U;
 		s_mtp.phase = MTP_PHASE_IDLE;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
-	intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	if (s_mtp.deferredResponse == s_mtp.transaction && s_mtp.deferredResponse != (unsigned)-1) {
 		s_mtp.deferredResponse = -1;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
@@ -1009,7 +1009,7 @@ int SceUsbMtpForDriver_576A266F(void *command, MtpIfTransfer *transfer)
 	} else {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 	}
-	intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	if (s_mtp.busFlags & MTP_BUS_CANCEL) {
 		s_mtp.busFlags &= ~4U;
 		s_mtp.status &= ~2U;
@@ -1062,7 +1062,7 @@ int SceUsbMtpForDriver_576A266F(void *command, MtpIfTransfer *transfer)
 			out->flags = 0;
 			out->count = n >> 2;
 			s_mtp.remaining = s_mtp.received = 0;
-			intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 			s_mtp.phase = MTP_PHASE_COMMAND;
 			s_mtp.transferFlags &= ~2U;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
@@ -1081,14 +1081,14 @@ int SceUsbMtpForDriver_576A266F(void *command, MtpIfTransfer *transfer)
 					goto error;
 			}
 		} else {
-			intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 			s_mtp.transferFlags |= MTP_TRANSFER_OUT_STALLED;
 			SceUdcdForDriver_34079250(&s_mtp.endpoints[2]);
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 		}
 	}
 error:
-	intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	s_mtp.phase = MTP_PHASE_IDLE;
 	s_mtp.transferFlags &= ~2U;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
@@ -1102,7 +1102,7 @@ int SceUsbMtpForDriver_4463009B(const void *response)
 		return MTP_UNAVAILABLE;
 	if (!in || in->count > 5)
 		return MTP_INVALID;
-	unsigned intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	if (in->transaction == s_mtp.cancelled || (s_mtp.status & 2)) {
 		if (s_mtp.received <= 0)
 			goto ignored;
@@ -1129,7 +1129,7 @@ int SceUsbMtpForDriver_4463009B(const void *response)
 		out->params[i] = in->params[i];
 	int ret = sendBulk(out, n);
 	if (ret >= 0) {
-		intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 		s_mtp.phase = MTP_PHASE_IDLE;
 		s_mtp.transferFlags &= ~1U;
 		s_mtp.deferredResponse = -1;
@@ -1148,7 +1148,7 @@ int SceUsbMtpForDriver_5FA86BA4(void *event)
 		return MTP_UNAVAILABLE;
 	if (!in || in->count > 3)
 		return MTP_INVALID;
-	unsigned intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	if (s_mtp.status & 2) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 		return MTP_CANCELLED;
@@ -1171,7 +1171,7 @@ int SceUsbMtpForDriver_5FA86BA4(void *event)
 		return MTP_BUSY;
 	req->data = out;
 	req->size = n;
-	SceCpuForDriver_103872A5(out, (n + 63) & ~63U);
+	sceKernelDcacheCleanRange(out, (n + 63) & ~63U);
 	int ret = SceUdcdForDriver_1ED0E89E(req);
 	if (ret < 0)
 		return ret;
@@ -1181,7 +1181,7 @@ int SceUsbMtpForDriver_5FA86BA4(void *event)
 	ret = req->transmitted;
 	if (in->code != 0xc108)
 		return ret;
-	intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	if (in->transaction == s_mtp.transaction) {
 		if (s_mtp.phase == MTP_PHASE_DATA_OUT) {
 			if (s_mtp.transferFlags & MTP_TRANSFER_RECEIVING) {
@@ -1227,7 +1227,7 @@ int SceUsbMtpForDriver_76D707B1(SceUInt32 timeout)
 
 int SceUsbMtpForDriver_6F7DF4B8(void)
 {
-	unsigned intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	unsigned status = s_mtp.status;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 	return status;
@@ -1237,7 +1237,7 @@ int SceUsbMtpForDriver_E64513A9(int phase)
 {
 	if (!s_mtp.ready)
 		return MTP_UNAVAILABLE;
-	unsigned intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
+	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	if ((s_mtp.transferFlags & MTP_TRANSFER_RECEIVING) && s_mtp.phase == MTP_PHASE_DATA_OUT) {
 		if (s_mtp.cancelled == (unsigned)-1) {
 			if ((s_mtp.received || s_mtp.remaining) && s_mtp.remaining != -1) {

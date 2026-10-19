@@ -129,7 +129,7 @@ int waitSignal(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout, int callbacks)
 	}
 	if ((int)thread->currentAttr < 0 && sceKernelCheckThreadUserStackSelf() == 0)
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
-	SceCpuForDriver_BF82DEB2(&signal->lock);
+	sceKernelSpinlockLowLock(&signal->lock);
 	if (timeout != NULL)
 		getWakeupTime(&wakeup, *timeout);
 	do {
@@ -139,9 +139,9 @@ int waitSignal(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout, int callbacks)
 			if (ret < 0)
 				goto resume;
 			cpu = currentCpuState();
-			SceCpuForDriver_BF82DEB2(&signal->lock);
+			sceKernelSpinlockLowLock(&signal->lock);
 		}
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		if (thread->flags & THREAD_FLAG_SIGNALED) {
 			/* the signal came first */
 			ret = 0;
@@ -229,8 +229,8 @@ int waitSignal(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout, int callbacks)
 		SCE_DBG_ASSERT_LEVEL(0, cpu == currentCpuState(), 2885);
 		cpu->nextRunningThread = 0;
 		switchThread(2);
-		SceCpuForDriver_BF82DEB2(&signal->lock);
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(&signal->lock);
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		ret = thread->waitResult;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -285,8 +285,8 @@ int sendSignal(SceUID threadId)
 		goto resume;
 	}
 	thread = &object->context;
-	SceCpuForDriver_BF82DEB2(&signal->lock);
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(&signal->lock);
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if ((thread->status & SCE_KERNEL_THREAD_STATUS_WAITING) &&
 	    thread->waitId == s_threadmgrRuntime.manager->signalId) {
 		wake = wakeupAndDistributeThread(thread, (uintptr_t)&signal->next, 0);
@@ -666,7 +666,7 @@ int sceKernelThreadMgrModuleBoot(SceSize arglen, const struct ThreadmgrBootArgs 
 
 	cpuId = sceKernelCpuId();
 	poisonVfpRegisters();
-	if (SceDipswForDriver_A98FC2FD(DIPSW_THBP)) {
+	if (sceKernelCheckDipsw(DIPSW_THBP)) {
 		/* no hardware breakpoints or watchpoints left over; monitor debug mode on */
 		__asm__ volatile(
 			"mcr p14, 0, %0, c0, c0, 4\n\tmcr p14, 0, %0, c0, c1, 4\n\t"
@@ -915,7 +915,7 @@ per_cpu:
 	start = (vbar + 0x2c) & ~(CACHE_LINE - 1);
 	end = (vbar + 0x2c + sizeof(void *) + CACHE_LINE - 1) & ~(CACHE_LINE - 1);
 	*(struct ThreadMgrCpuCB **)(vbar + 0x2c) = cpu;
-	SceCpuForDriver_9CB9F0CE((void *)start, end - start);
+	sceKernelDcacheCleanRangeForL1WBWA((void *)start, end - start);
 	__asm__ volatile("mcr p15, 0, %0, c3, c0, 0" : : "r"(dacr));
 	for (i = 0; i < CPU_READY_QUEUES; i++) {
 		cpu->readyQueue[i].next = (uintptr_t)&cpu->readyQueue[i];
@@ -1231,7 +1231,7 @@ void returnFromExcpToThread(void)
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 11218);
 	SCE_DBG_ASSERT_LEVEL(0, thread != NULL, 11220);
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	setupNextContext_intr(0, 8);
 	thread = currentThreadContext();
@@ -1293,7 +1293,7 @@ int SceThreadmgrForDriver_AB977C72(SceUInt32 *attributes)
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	} else {
 		intr = SceCpuForDriver_821FC0EE();
-		SceCpuForDriver_BF82DEB2(&thread->lock);
+		sceKernelSpinlockLowLock(&thread->lock);
 		*attributes = thread->currentAttr;
 		sceKernelSpinlockLowUnlock(&thread->lock);
 		sceKernelCpuResumeIntr(intr);
@@ -1653,7 +1653,7 @@ int deleteThread(struct ThreadCB *thread)
 		dtraceThreadCBExit(thread);
 	if (thread->syslibtraceState != NULL)
 		syslibtraceThreadCBExit(thread);
-	SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->threadMgrCBLock);
+	sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadMgrCBLock);
 	listClosed(thread);
 	sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->threadMgrCBLock);
 	if (thread->userThreadId != -1) {
@@ -1718,8 +1718,8 @@ int sceKernelDeleteThread(SceUID threadId)
 	userThreadId = object->context.userThreadId;
 	process = object->context.process;
 	processId = process->pid;
-	SceCpuForDriver_BF82DEB2(&process->lock);
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
+	sceKernelSpinlockLowLock(&process->lock);
+	sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 	ret = deleteThread(&object->context);
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 	sceKernelSpinlockLowUnlock(&process->lock);
@@ -1757,7 +1757,7 @@ void __attribute__((noreturn)) cleanerThread(void)
 	int intr, ret;
 
 	for (;;) {
-		intr = SceCpuForDriver_D32ACE9E(
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(
 			&s_threadmgrRuntime.manager->threadMgrCBLock);
 		manager = s_threadmgrRuntime.manager;
 		thread = (struct ThreadCB *)manager->deletedNext;
@@ -1767,7 +1767,7 @@ void __attribute__((noreturn)) cleanerThread(void)
 				&s_threadmgrRuntime.manager->threadMgrCBLock, intr);
 			intr = SceCpuForDriver_821FC0EE();
 			self = s_threadmgrRuntime.manager->cleanerThread;
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(self));
+			sceKernelSpinlockLowLock(THREAD_LOCK(self));
 			SCE_DBG_ASSERT_CHECK(self->currentCpuId == (int)sceKernelCpuId(), 1985);
 			self->currentCpuId = -1;
 			self->waitId = -1;
@@ -1850,21 +1850,21 @@ int uidThread_Destructor(struct ThreadmgrThreadObject *object)
 			thread->status);
 		SCE_PANIC(SCE_LINE(11739, 11744));
 	}
-	intr = SceCpuForDriver_D32ACE9E(THREAD_LOCK(thread));
-	SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->threadMgrCBLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadMgrCBLock);
 	((struct ThreadmgrWaitNode *)thread->next)->prev = (struct ThreadmgrWaitNode *)thread->prev;
 	((struct ThreadmgrWaitNode *)thread->prev)->next = (struct ThreadmgrWaitNode *)thread->next;
 	sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->threadMgrCBLock);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(THREAD_LOCK(thread), intr);
 	for (extended = thread->extendedStacks; extended != NULL;
 	     extended = thread->extendedStacks) {
-		ret = SceSysmemForDriver_009E1C61(extended->memBlockId);
+		ret = sceKernelFreeMemBlock(extended->memBlockId);
 		SCE_DBG_PRINTF(0, 11762, "*** uidThread_Destructor(), free ExKernelStack(0x%08X)\n",
 			       ret);
 		thread->extendedStacks = thread->extendedStacks->next;
 	}
 	if (thread->kStackMemblkId != -1) {
-		ret = SceSysmemForDriver_009E1C61(thread->kStackMemblkId);
+		ret = sceKernelFreeMemBlock(thread->kStackMemblkId);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0, 11771,
 				"*** error: uidThread_Destructor() -> sceKernelFreeMemBlock(0x%08X)=0x%08X, pThreadCB=%p, pThreadCB->magic=0x%08X\n",
@@ -1878,10 +1878,10 @@ int uidThread_Destructor(struct ThreadmgrThreadObject *object)
 		memBlockId = thread->uStackMemblkId;
 		if (memBlockId != -1) {
 			for (tries = 0; tries < FREE_RETRY_LIMIT; tries++) {
-				ret = SceSysmemForDriver_009E1C61(memBlockId);
+				ret = sceKernelFreeMemBlock(memBlockId);
 				if (ret >= 0)
 					break;
-				if (SceDipswForDriver_A98FC2FD(DIPSW_FREE_RETRY_LOG) &&
+				if (sceKernelCheckDipsw(DIPSW_FREE_RETRY_LOG) &&
 				    tries % FREE_RETRY_LOG_EVERY == 0)
 					SCE_PRINTF_WITH_INFO(0, SCE_LINE(11786, 11791),
 						"*** error: uidThread_Destructor() -> sceKernelFreeMemBlock(0x%08X[%s])=0x%08X, count=%d\n",
@@ -1891,7 +1891,7 @@ int uidThread_Destructor(struct ThreadmgrThreadObject *object)
 			}
 		}
 		if (thread->userTlsMemBlockId != -1)
-			SceSysmemForDriver_009E1C61(thread->userTlsMemBlockId);
+			sceKernelFreeMemBlock(thread->userTlsMemBlockId);
 		if (thread->exceptionEntry != NULL) {
 			SCE_DBG_ASSERT_CHECK((thread->currentAttr >> 26) & 1, 11806);
 			ret = SceSysrootForKernel_7968F091(thread->processId, thread->exceptionEntry);
@@ -1927,7 +1927,7 @@ int uidThread_Destructor(struct ThreadmgrThreadObject *object)
 		}
 	}
 	/* whoever still waits for this thread hears it is gone */
-	intr = SceCpuForDriver_D32ACE9E(&object->waitLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&object->waitLock);
 	wake = wakeupWaitObjectAll((uintptr_t)&object->waitNext, SCE_KERNEL_ERROR_WAIT_DELETE,
 				   NULL);
 	sceKernelSpinlockLowUnlock(&object->waitLock);
@@ -1949,7 +1949,7 @@ int uidThread_CancelWait(void *cls, void *uidObject, uint32_t a2)
 
 	(void)cls;
 	intr = SceCpuForDriver_821FC0EE();
-	SceCpuForDriver_BF82DEB2(&object->waitLock);
+	sceKernelSpinlockLowLock(&object->waitLock);
 	wake = wakeupWaitObjectAll((uintptr_t)&object->waitNext, SCE_KERNEL_ERROR_WAIT_CANCEL,
 				   &count);
 	sceKernelSpinlockLowUnlock(&object->waitLock);
@@ -2053,7 +2053,7 @@ int changeThreadPriority(struct ThreadCB *thread, int priority)
 	bool notify;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 5907);
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(context));
+	sceKernelSpinlockLowLock(THREAD_LOCK(context));
 	oldPriority = context->currentPriority;
 retry:
 	state = context->status;
@@ -2180,7 +2180,7 @@ retry:
 	} else {
 		context->currentPriority = priority;
 		if ((uint32_t)priority - PRIORITY_SHARED_LOW < PRIORITY_SHARED_RANGE) {
-			SceCpuForDriver_BF82DEB2(&cpu->standbyLock);
+			sceKernelSpinlockLowLock(&cpu->standbyLock);
 			unlinkThread(context);
 			sceKernelSpinlockLowUnlock(&cpu->standbyLock);
 			status = distributeThread(selectExecCpu(thread), thread);
@@ -2220,7 +2220,7 @@ notify_change:
 retry_wait:
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(context));
 	sceGUIDReleaseObject(waitId);
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(context));
+	sceKernelSpinlockLowLock(THREAD_LOCK(context));
 	goto retry;
 unlock:
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(context));
@@ -2257,7 +2257,7 @@ const struct ThreadmgrSchedProbeDescriptor s_delaySleepDescriptor = {
 void delayTimeupHandler(struct ThreadCB *thread)
 {
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 2259);
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (thread->status & SCE_KERNEL_THREAD_STATUS_WAITING)
 		wakeupAndDistributeThread(thread, 0, 0);
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -2335,7 +2335,7 @@ int delayThread(SceUInt32 usec, uint32_t flags, SceUInt32 *remaining, int callba
 				break;
 			cpu = currentCpuState();
 		}
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		if ((thread->flags >> 28) != 0 &&
 		    ((!(thread->flags & THREAD_FLAG_REQUEST_VM_SUSPEND) &&
 		      (flags & DELAY_INTERRUPTIBLE)) || ThreadmgrInSyscall())) {
@@ -2408,7 +2408,7 @@ int delayThread(SceUInt32 usec, uint32_t flags, SceUInt32 *remaining, int callba
 			/* the DTrace probe site __sched_:sleep */
 			__asm__ volatile(".global s_delaySleepCodeSite\ns_delaySleepCodeSite:");
 			thread->status = (thread->status >> 16) << 16 | SCE_KERNEL_THREAD_STATUS_WAITING;
-			SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->timedWaitLock);
+			sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->timedWaitLock);
 			head = (struct ThreadmgrWaitNode *)&s_threadmgrRuntime.manager->timedWaitNext;
 			self->next = head;
 			self->prev = head->prev;
@@ -2421,7 +2421,7 @@ int delayThread(SceUInt32 usec, uint32_t flags, SceUInt32 *remaining, int callba
 			SCE_DBG_ASSERT_LEVEL(0, cpu == currentCpuState(), 2227);
 			cpu->nextRunningThread = 0;
 			switchThread(2);
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags,
 						    THREAD_FLAG_WAKE_PENDING);
 			result = thread->waitResult;
@@ -2693,7 +2693,7 @@ int sceKernelResumeThread(SceUID threadId)
 		goto resume;
 	}
 	thread = &object->context;
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if ((uint16_t)thread->status == SCE_KERNEL_THREAD_STATUS_DORMANT) {
 		ret = SCE_KERNEL_ERROR_DORMANT;
 	} else if ((uint16_t)thread->status == SCE_KERNEL_THREAD_STATUS_SUSPENDED &&
@@ -2703,7 +2703,7 @@ int sceKernelResumeThread(SceUID threadId)
 			thread->basePriority : thread->boostPriority;
 		if (thread->vmSuspendCount < 1) {
 			/* runs again */
-			SceCpuForDriver_BF82DEB2(
+			sceKernelSpinlockLowLock(
 				&s_threadmgrRuntime.manager->threadMgrCBLock);
 			((struct ThreadmgrWaitNode *)thread->next)->prev =
 				(struct ThreadmgrWaitNode *)thread->prev;
@@ -2751,13 +2751,13 @@ int sceKernelCountWaitingThreadsProc(SceUID pid, SceUID waitId)
 		goto resume;
 	}
 	queue = (struct ThreadmgrWaitQueue *)((uintptr_t)queue + 0x10);
-	SceCpuForDriver_BF82DEB2(&queue->lock);
+	sceKernelSpinlockLowLock(&queue->lock);
 	ret = 0;
 	for (node = queue->next; node != (struct ThreadmgrWaitNode *)queue; node = node->next) {
 		thread = (node->owner & 1) ? (struct ThreadCB *)node :
 			(struct ThreadCB *)node->owner;
 		SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 10004);
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		if (thread->processId == pid)
 			ret++;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -2922,7 +2922,7 @@ static inline void threadProcessExit(SceProcessObject *process)
 		if (sceGUIDReferObjectWithClass(thread->threadId,
 			s_threadmgrRuntime.manager->threadClass, &object) < 0)
 			SCE_PANIC_FUNC(SCE_LINE(10310, 10315), "threadProcessExit");
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		deleteThread(thread);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (sceGUIDReleaseObject(thread->threadId) < 0)
@@ -2959,7 +2959,7 @@ int sceKernelThreadMgrProcessDeleteBeforePUIDClose(SceProcessObject *process)
 	SCE_DBG_ASSERT_LEVEL(0, ret >= 0, 10448);
 	ret = callbackProcessExit(process);
 	SCE_DBG_ASSERT_LEVEL(0, ret >= 0, 10450);
-	intr = SceCpuForDriver_D32ACE9E(&process->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->lock);
 	threadProcessExit(process);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 	SCE_DBG_ASSERT_LEVEL(0, 1, 10452);
@@ -3059,7 +3059,7 @@ int debugSuspendThreadSelf(uint32_t reason, SceSize size, void *message)
 	SCE_DBG_ASSERT_CHECK(thread->currentAttr >> 31, 11308);
 	process = thread->process;
 	intr = SceCpuForDriver_821FC0EE();
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (thread->flags >> 30 != 0) {
 		/* it is exiting */
 		ret = 0;
@@ -3195,7 +3195,7 @@ void _debugSuspendThreadSelf(uint32_t reason)
 			     THREAD_STATE_OFF_CPU;
 	thread->debugSuspendReason |= reason;
 	thread->currentCpuId = -1;
-	SceCpuForDriver_BF82DEB2(&manager->threadMgrCBLock);
+	sceKernelSpinlockLowLock(&manager->threadMgrCBLock);
 	thread->next = (uintptr_t)&s_threadmgrRuntime.manager->debugSuspendedNext;
 	thread->prev = s_threadmgrRuntime.manager->debugSuspendedPrev;
 	s_threadmgrRuntime.manager->debugSuspendedPrev = self;
@@ -3498,7 +3498,7 @@ static inline void unlinkQueuedThread(struct ThreadCB *thread)
 
 /* the manager's list at head takes thread */
 #define listManagerThread(head, thread) do {					\
-	SceCpuForDriver_BF82DEB2(						\
+	sceKernelSpinlockLowLock(						\
 		&s_threadmgrRuntime.manager->threadMgrCBLock); \
 	insertBefore((head), (thread));						\
 	sceKernelSpinlockLowUnlock(						\
@@ -3512,7 +3512,7 @@ void addStandby(struct ThreadMgrCpuCB *state, struct ThreadCB *thread)
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1300);
 	SCE_DBG_ASSERT_CHECK(thread->lock != 0, 1303);
-	SceCpuForDriver_BF82DEB2(&cpu->standbyLock);
+	sceKernelSpinlockLowLock(&cpu->standbyLock);
 	insertBefore((uintptr_t)&cpu->standbyNext, thread);
 	sceKernelSpinlockLowUnlock(&cpu->standbyLock);
 }
@@ -3537,7 +3537,7 @@ void addReady(struct ThreadCB *thread)
 			priority = context->currentPriority;
 		}
 		shared = priority - PRIORITY_SHARED_LOW;
-		SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->globalReadyLock);
+		sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->globalReadyLock);
 		s_threadmgrRuntime.manager->globalReadyBitmap[shared / 32] |=
 			0x80000000u >> (shared % 32);
 		insertBefore((uintptr_t)&s_threadmgrRuntime.manager->globalReadyQueue[shared], context);
@@ -3568,7 +3568,7 @@ unsigned int moveStandbyToReady(void)
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1330);
 	for (;;) {
-		SceCpuForDriver_BF82DEB2(&cpu->standbyLock);
+		sceKernelSpinlockLowLock(&cpu->standbyLock);
 		thread = (struct ThreadCB *)cpu->standbyNext;
 		while (thread != (struct ThreadCB *)&cpu->standbyNext) {
 			SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 1343);
@@ -3586,7 +3586,7 @@ unsigned int moveStandbyToReady(void)
 			}
 			count++;
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-			SceCpuForDriver_BF82DEB2(&cpu->standbyLock);
+			sceKernelSpinlockLowLock(&cpu->standbyLock);
 			thread = (struct ThreadCB *)cpu->standbyNext;
 		}
 		sceKernelSpinlockLowUnlock(&cpu->standbyLock);
@@ -3619,7 +3619,7 @@ void addReadyTop(struct ThreadCB *thread)
 			priority = context->currentPriority;
 		}
 		shared = priority - PRIORITY_SHARED_LOW;
-		SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->globalReadyLock);
+		sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->globalReadyLock);
 		s_threadmgrRuntime.manager->globalReadyBitmap[shared / 32] |=
 			0x80000000u >> (shared % 32);
 		insertBefore(s_threadmgrRuntime.manager->globalReadyQueue[shared].next, context);
@@ -3676,7 +3676,7 @@ void removeReady(struct ThreadCB *thread, int priority)
 
 	SCE_DBG_ASSERT_CHECK(context->lock != 0, 1500);
 	if ((uint32_t)context->currentPriority - PRIORITY_SHARED_LOW < PRIORITY_SHARED_RANGE) {
-		SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->globalReadyLock);
+		sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->globalReadyLock);
 		removeCommonRaw(thread, priority);
 		sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->globalReadyLock);
 		return;
@@ -3886,7 +3886,7 @@ int startThread(SceUID threadId, SceSize argSize, const void *arg, int checkSour
 		goto restore;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(self));
+	sceKernelSpinlockLowLock(THREAD_LOCK(self));
 	if (self->threadEventMask != 0) {
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(self));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
@@ -3902,7 +3902,7 @@ int startThread(SceUID threadId, SceSize argSize, const void *arg, int checkSour
 		goto resume;
 	}
 	thread = &object->context;
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	userThreadId = thread->userThreadId;
 	if (thread->threadEventMask != 0) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
@@ -4051,7 +4051,7 @@ queue:
 	regs->lr = 0;
 	regs->pc = (uintptr_t)threadEntry;
 	regs->cpsr |= CPSR_START_MASKED;
-	SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->threadMgrCBLock);
+	sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadMgrCBLock);
 	((struct ThreadmgrWaitNode *)thread->next)->prev = (struct ThreadmgrWaitNode *)thread->prev;
 	((struct ThreadmgrWaitNode *)thread->prev)->next = (struct ThreadmgrWaitNode *)thread->next;
 	sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->threadMgrCBLock);
@@ -4169,7 +4169,7 @@ static inline void activateCleanerThread(void)
 
 	SCE_DBG_ASSERT_CHECK_FUNC(ThreadmgrIntrDisabled(), 1770, "activateCleanerThread");
 	cleaner = s_threadmgrRuntime.manager->cleanerThread;
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(cleaner));
+	sceKernelSpinlockLowLock(THREAD_LOCK(cleaner));
 	if (cleaner->status & SCE_KERNEL_THREAD_STATUS_WAITING)
 		distributeThread(selectExecCpu(cleaner), cleaner);
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(cleaner));
@@ -4236,8 +4236,8 @@ void exitDeleteThread(int delete, int intr, int status)
 
 	object = (struct ThreadmgrThreadObject *)((uintptr_t)thread -
 		offsetof(struct ThreadmgrThreadObject, context));
-	SceCpuForDriver_BF82DEB2(&object->waitLock);
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(&object->waitLock);
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	thread->exitStatus = status;
 	releaseThreadTlsSlots(thread);
 	if (thread->restartWaitMultipleEvents != NULL) {
@@ -4248,7 +4248,7 @@ void exitDeleteThread(int delete, int intr, int status)
 	thread->restartWaitMultipleEvents = NULL;
 	if (delete) {
 		thread->status = (thread->status >> 16) << 16 | SCE_KERNEL_THREAD_STATUS_DELETED;
-		SceCpuForDriver_BF82DEB2(
+		sceKernelSpinlockLowLock(
 			&s_threadmgrRuntime.manager->threadMgrCBLock);
 		if (thread->syslibtraceState != NULL)
 			syslibtraceThreadCBExit(thread);
@@ -4257,7 +4257,7 @@ void exitDeleteThread(int delete, int intr, int status)
 			&s_threadmgrRuntime.manager->threadMgrCBLock);
 	} else {
 		thread->status = (thread->status >> 16) << 16 | SCE_KERNEL_THREAD_STATUS_DORMANT;
-		SceCpuForDriver_BF82DEB2(
+		sceKernelSpinlockLowLock(
 			&s_threadmgrRuntime.manager->threadMgrCBLock);
 		listThread(thread, (uintptr_t *)&s_threadmgrRuntime.manager->dormantNext);
 		sceKernelSpinlockLowUnlock(
@@ -4272,7 +4272,7 @@ void exitDeleteThread(int delete, int intr, int status)
 	for (node = head->next; node != head; node = head->next) {
 		SCE_DBG_ASSERT_CHECK(((struct ThreadCB *)node)->magic ==
 				     THREAD_CB_MAGIC, 5026);
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK((struct ThreadCB *)node));
+		sceKernelSpinlockLowLock(THREAD_LOCK((struct ThreadCB *)node));
 		if (((struct ThreadCB *)node)->waitType == WAIT_TYPE_THREAD_END) {
 			if (((struct ThreadCB *)node)->waitArg0 != 0)
 				*(int *)((struct ThreadCB *)node)->waitArg0 = status;
@@ -4369,7 +4369,7 @@ static inline void listSuspended(struct ThreadCB *thread)
 {
 	struct ThreadmgrWaitNode *self = (struct ThreadmgrWaitNode *)thread, *head;
 
-	SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->threadMgrCBLock);
+	sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadMgrCBLock);
 	head = (struct ThreadmgrWaitNode *)&s_threadmgrRuntime.manager->suspendedNext;
 	self->next = head;
 	self->prev = head->prev;
@@ -4411,7 +4411,7 @@ int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result,
 		}
 		if (SceSysrootForDriver_CAE820B2(0, &sdkVersion) >= 0 &&
 		    sdkVersion >= SDK_VERSION_CRITICAL_ERROR &&
-		    SceDipswForDriver_A98FC2FD(DIPSW_CRITICAL_ERROR)) {
+		    sceKernelCheckDipsw(DIPSW_CRITICAL_ERROR)) {
 			if ((int)frame->apiDeclare < 0)
 				SCE_PRINTF_WITH_INFO(0, SCE_LINE(9717, 9722), "\n*** %s\n",
 					(const char *)(frame->apiDeclare & ~CRITICAL_ERROR_MESSAGE));
@@ -4445,7 +4445,7 @@ int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result,
 			if (handler != NULL)
 				action = handler(sizeof(message), &message);
 			if (action == CRITICAL_ERROR_ACTION_SUSPEND) {
-				SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+				sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 				_debugSuspendThreadSelf(DEBUG_SUSPEND_CRITICAL_ERROR);
 				stopSelf(thread, 4);
 				status = thread->flags;
@@ -4480,18 +4480,18 @@ int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result,
 	/* the threads waiting for it to stop */
 	object = threadObject(thread);
 	head = (struct ThreadmgrWaitNode *)&object->waitNext;
-	SceCpuForDriver_BF82DEB2(&object->waitLock);
+	sceKernelSpinlockLowLock(&object->waitLock);
 	for (node = head->next; node != head; node = next) {
 		next = node->next;
 		SCE_DBG_ASSERT_CHECK(((struct ThreadCB *)node)->magic ==
 				     THREAD_CB_MAGIC, SCE_LINE(9611, 9616));
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK((struct ThreadCB *)node));
+		sceKernelSpinlockLowLock(THREAD_LOCK((struct ThreadCB *)node));
 		if (((struct ThreadCB *)node)->waitType == WAIT_TYPE_THREAD_SUSPEND)
 			wakeupAndDistributeThread((struct ThreadCB *)node,
 						  (uintptr_t)head, 0);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK((struct ThreadCB *)node));
 	}
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	sceKernelSpinlockLowUnlock(&object->waitLock);
 
 	if (request == THREAD_FLAG_REQUEST_VM_SUSPEND) {
@@ -4544,7 +4544,7 @@ int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result,
 
 debugSuspend:
 	if (thread->debugSuspendReason != 0) {
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		_debugSuspendThreadSelf(thread->debugSuspendReason);
 		stopSelf(thread, 4);
 		SCE_DBG_ASSERT_PRINTF(!(thread->flags & (THREAD_FLAG_REQUEST_VM_SUSPEND |
@@ -4735,7 +4735,7 @@ retry:
 		status = revalidateWaitState((uintptr_t)&waitable->next);
 		sceKernelSpinlockLowUnlock(&waitable->lock);
 		sceGUIDReleaseObject(waitId);
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(context));
+		sceKernelSpinlockLowLock(THREAD_LOCK(context));
 		goto finish;
 	}
 
@@ -4756,7 +4756,7 @@ retry:
 			if (state & SCE_KERNEL_THREAD_STATUS_READY) {
 				removeReady(thread, context->currentPriority);
 			} else {
-				SceCpuForDriver_BF82DEB2(&cpu->standbyLock);
+				sceKernelSpinlockLowLock(&cpu->standbyLock);
 				unlinkThread(context);
 				sceKernelSpinlockLowUnlock(&cpu->standbyLock);
 			}
@@ -4809,7 +4809,7 @@ retry:
 	} else {
 		context->currentPriority = priority;
 		if ((uint32_t)priority - PRIORITY_SHARED_LOW < PRIORITY_SHARED_RANGE) {
-			SceCpuForDriver_BF82DEB2(&cpu->standbyLock);
+			sceKernelSpinlockLowLock(&cpu->standbyLock);
 			unlinkThread(context);
 			sceKernelSpinlockLowUnlock(&cpu->standbyLock);
 			goto distribute;
@@ -4849,7 +4849,7 @@ finish:
 retry_wait:
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(context));
 	sceGUIDReleaseObject(waitId);
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(context));
+	sceKernelSpinlockLowLock(THREAD_LOCK(context));
 	goto retry;
 remote:
 	issueChangeThreadPriorityAndCpuAffinityIntrRequest(cpuId, context->threadId, priority, mask);
@@ -4869,7 +4869,7 @@ void changeThreadPriorityAndCpuAffinityMaskSGIHandler(SceUID threadId, int prior
 		SCE_PANIC(SCE_LINE(6823, 6829));
 	if (sceGUIDReferObjectWithClass(threadId,
 	    s_threadmgrRuntime.manager->threadClass, (SceObjectBase **)&object) >= 0) {
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
+		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		changeThreadPriorityAndCpuAffinityMask(&object->context, priority, mask, NULL, NULL);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 		sceGUIDReleaseObject(threadId);
@@ -4899,7 +4899,7 @@ int changeThreadCpuAffinityMask(SceUID threadId, uint32_t mask, uint32_t *previo
 		if (status < 0)
 			goto release;
 	}
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	version = callerSdkVersion();
 	if (version < SDK_VERSION_AFFINITY_CHECK) {
 		/* older SDKs: the mask must suit the priority */
@@ -4943,7 +4943,7 @@ int changeThreadCpuAffinityMask(SceUID threadId, uint32_t mask, uint32_t *previo
 		    thread->process->threadsStopped == 0 &&
 		    (effectiveAffinity(thread, mask) & s_threadmgrRuntime.manager->activeCpuMask)) {
 			/* a CPU that may run it is active again */
-			SceCpuForDriver_BF82DEB2(
+			sceKernelSpinlockLowLock(
 				&s_threadmgrRuntime.manager->threadMgrCBLock);
 			unlinkThread(thread);
 			sceKernelSpinlockLowUnlock(
@@ -4973,7 +4973,7 @@ int changeThreadCpuAffinityMask(SceUID threadId, uint32_t mask, uint32_t *previo
 				removeReady((struct ThreadCB *)thread,
 					    thread->currentPriority);
 			} else {
-				SceCpuForDriver_BF82DEB2(&cpu->standbyLock);
+				sceKernelSpinlockLowLock(&cpu->standbyLock);
 				unlinkThread(thread);
 				sceKernelSpinlockLowUnlock(&cpu->standbyLock);
 			}
@@ -5110,7 +5110,7 @@ int64_t sceKernelExtendKernelStackWide(SceSize size, ThreadmgrStackFunction func
 	}
 	SceSysmemForDriver_0B1FD5C3(memBlockId, &base);
 have:
-	if (!(thread->currentAttr & THREAD_ATTR_UNK10000000) || SceDipswForDriver_A98FC2FD(DIPSW_STACK_CHECK))
+	if (!(thread->currentAttr & THREAD_ATTR_UNK10000000) || sceKernelCheckDipsw(DIPSW_STACK_CHECK))
 		memset(base, 0xff, pages);
 	*(SceUID *)base = thread->threadId;
 	/* the new stack stands in for the thread's while the function runs */
@@ -5131,7 +5131,7 @@ have:
 	thread->kStackMemblkId = saved->memBlockId;
 	sceKernelCpuResumeIntr(intr);
 	if (!cached || pushExtendedStackCache(memBlockId, base) < 0) {
-		err = SceSysmemForDriver_009E1C61(memBlockId);
+		err = sceKernelFreeMemBlock(memBlockId);
 		if (err < 0) {
 			SCE_DBG_ASSERT_FAIL(5478);
 			ret = err;
@@ -5188,7 +5188,7 @@ int sceKernelGetThreadCpuAffinityMask(SceUID uid)
 		result = ThreadmgrInSyscall() ? (int)USER_ERROR_UNKNOWN_THREAD_ID :
 						(int)SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
+		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		result = object->context.currentCpuAffinityMask;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 		if (result == 0 && currentThreadContext() != NULL &&
@@ -5280,7 +5280,7 @@ int sceKernelChangeThreadPriority2(SceUID uid, uint32_t priority)
 		goto resume;
 	}
 	thread = &object->context;
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (priority - 1 >= PRIORITY_ABSOLUTE_RANGE) {
 		/* relative to the process type's default */
 		if (!(priority & PRIORITY_RELATIVE)) {
@@ -5459,7 +5459,7 @@ int sceKernelChangeThreadPriorityAndCpuAffinityMask(SceUID uid, uint32_t priorit
 			goto resume;
 		}
 	}
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (priority - 1 >= PRIORITY_ABSOLUTE_RANGE) {
 		/* relative to the process type's default */
 		if (!(priority & PRIORITY_RELATIVE)) {
@@ -5584,7 +5584,7 @@ int deactivateCpu(void)
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 7084);
 	/* the standby list; a busy thread is retried after a short spin */
 	for (;;) {
-		SceCpuForDriver_BF82DEB2(&cpu->standbyLock);
+		sceKernelSpinlockLowLock(&cpu->standbyLock);
 		for (;;) {
 			thread = (void *)cpu->standbyNext;
 			if ((uintptr_t)thread == (uintptr_t)&cpu->standbyNext)
@@ -5597,7 +5597,7 @@ int deactivateCpu(void)
 			sceKernelSpinlockLowUnlock(&cpu->standbyLock);
 			distributeThread(selectExecCpu(thread), thread);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-			SceCpuForDriver_BF82DEB2(&cpu->standbyLock);
+			sceKernelSpinlockLowLock(&cpu->standbyLock);
 		}
 		sceKernelSpinlockLowUnlock(&cpu->standbyLock);
 		for (spin = 10; spin != 0; spin--)
@@ -5614,7 +5614,7 @@ ready:
 			next = (void *)thread->next;
 			if (thread == cpu->idleThread)
 				continue;
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 			removeReady(thread, priority);
 			distributeThread(selectExecCpu(thread), thread);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -5628,7 +5628,7 @@ ready:
 			next = (void *)thread->next;
 			if (thread == cpu->idleThread)
 				continue;
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 			removeReady(thread, priority);
 			distributeThread(selectExecCpu(thread), thread);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -5638,7 +5638,7 @@ ready:
 	thread = (void *)cpu->runningThread;
 	if (thread == cpu->idleThread)
 		return 0;
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	distributeThread(selectExecCpu(thread), thread);
 	if (currentThreadContext() == NULL)
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -5683,7 +5683,7 @@ int sceKernelChangeActiveCpuMask(uint32_t mask)
 		mask >>= 16;
 	}
 	moved = 0;
-	intr = SceCpuForDriver_D32ACE9E(
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(
 		&s_threadmgrRuntime.manager->threadMgrCBLock);
 	cpuId = sceKernelCpuId();
 	old = s_threadmgrRuntime.manager->activeCpuMask;
@@ -5764,7 +5764,7 @@ int sceKernelChangeCurrentThreadAttr(uint32_t clear, uint32_t set)
 		result = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	} else {
 		intr = SceCpuForDriver_821FC0EE();
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		thread->currentAttr = (thread->currentAttr & ~clear) | set;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		sceKernelCpuResumeIntr(intr);
@@ -5787,7 +5787,7 @@ uint32_t SceThreadmgrForDriver_86DAE59B(void)
 	if (thread != NULL && (permission == THREAD_PERMISSION_SYSTEM ||
 			       permission == THREAD_PERMISSION_KERNEL)) {
 		intr = SceCpuForDriver_821FC0EE();
-		SceCpuForDriver_BF82DEB2(
+		sceKernelSpinlockLowLock(
 			&s_threadmgrRuntime.manager->threadMgrCBLock);
 		result = s_threadmgrRuntime.manager->activeCpuMask;
 		sceKernelSpinlockLowUnlock(
@@ -5825,7 +5825,7 @@ int sceKernelGetThreadExitStatus(SceUID uid, int *status)
 				result |= SYSCALL_ERROR_BIT;
 		} else {
 			thread = &object->context;
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 			if (!(thread->status & THREAD_STATE_ENDED))
 				result = SCE_KERNEL_ERROR_NOT_DORMANT;
 			else if (thread->exitStatus == (int)SCE_KERNEL_ERROR_DORMANT)
@@ -5896,7 +5896,7 @@ int waitThreadEnd(SceUID threadId, int *status, SceUInt32 *timeout, int callback
 		ret = unknownThreadError();
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&object->waitLock);
+	sceKernelSpinlockLowLock(&object->waitLock);
 	if (timeout != NULL)
 		getWakeupTime(&wakeup, *timeout);
 	do {
@@ -5905,9 +5905,9 @@ int waitThreadEnd(SceUID threadId, int *status, SceUInt32 *timeout, int callback
 			ret = callCallbackAll(self);
 			if (ret < 0)
 				goto release;
-			SceCpuForDriver_BF82DEB2(&object->waitLock);
+			sceKernelSpinlockLowLock(&object->waitLock);
 		}
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
+		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		if (object->context.status & THREAD_STATE_ENDED) {
 			if (status != NULL)
 				*status = object->context.exitStatus;
@@ -5916,7 +5916,7 @@ int waitThreadEnd(SceUID threadId, int *status, SceUInt32 *timeout, int callback
 			break;
 		}
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(self));
+		sceKernelSpinlockLowLock(THREAD_LOCK(self));
 		self->waitArg0 = (uint32_t)status;
 		if (!callbacks) {
 			ret = waitWaitableObject(threadId, (uintptr_t)&object->waitNext,
@@ -5992,7 +5992,7 @@ int waitThreadSuspend(SceUID threadId, SceUInt32 *timeout, int callbacks)
 		ret = unknownThreadError();
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&object->waitLock);
+	sceKernelSpinlockLowLock(&object->waitLock);
 	if (timeout != NULL)
 		getWakeupTime(&wakeup, *timeout);
 	do {
@@ -6001,9 +6001,9 @@ int waitThreadSuspend(SceUID threadId, SceUInt32 *timeout, int callbacks)
 			ret = callCallbackAll(self);
 			if (ret < 0)
 				goto release;
-			SceCpuForDriver_BF82DEB2(&object->waitLock);
+			sceKernelSpinlockLowLock(&object->waitLock);
 		}
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
+		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		state = object->context.status;
 		if (state & SCE_KERNEL_THREAD_STATUS_SUSPENDED) {
 			ret = 0;
@@ -6021,7 +6021,7 @@ int waitThreadSuspend(SceUID threadId, SceUInt32 *timeout, int callbacks)
 			break;
 		}
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(self));
+		sceKernelSpinlockLowLock(THREAD_LOCK(self));
 		if (!callbacks) {
 			ret = waitWaitableObject(threadId, (uintptr_t)&object->waitNext,
 						 WAIT_TYPE_THREAD_SUSPEND, &wakeup, timeout, NULL, &locked);
@@ -6163,7 +6163,7 @@ int SceThreadmgrForDriver_7B278A0B(SceUID threadId)
 	}
 	thread = &object->context;
 	if ((thread->currentAttr & THREAD_ATTR_UNK10000000) &&
-	    !SceDipswForDriver_A98FC2FD(DIPSW_STACK_CHECK)) {
+	    !sceKernelCheckDipsw(DIPSW_STACK_CHECK)) {
 		ret = SCE_KERNEL_ERROR_NOT_SUPPORTED;
 		goto release;
 	}
@@ -6245,7 +6245,7 @@ int sceKernelGetThreadInfo(SceUID threadId, SceKernelThreadInfo *output)
 	}
 	thread = &object->context;
 	strncpy(info.name, SceSysmemForDriver_E655852F(threadId), sizeof(info.name) - 1);
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	state = thread->status;
 	if (state & SCE_KERNEL_THREAD_STATUS_DELETED) {
 		SCE_DBG_PRINTF_FUNC(0, 8002, "sceKernelGetThreadInfo", "error: sceKernelGetThreadInfo(0x%08X), deleted thread\n",
@@ -6404,7 +6404,7 @@ int SceThreadmgrForDriver_7E280B69(SceKernelSystemInfo *output)
 	}
 	memset(&info, 0, sizeof(info));
 	info.size = sizeof(info);
-	intr = SceCpuForDriver_D32ACE9E(
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(
 		&s_threadmgrRuntime.manager->threadMgrCBLock);
 	info.activeCpuMask = s_threadmgrRuntime.manager->activeCpuMask;
 	if (ThreadmgrInSyscall())
@@ -6414,7 +6414,7 @@ int SceThreadmgrForDriver_7E280B69(SceKernelSystemInfo *output)
 		cpu = &s_threadmgrRuntime.manager->cpuCB[i];
 		idle = cpu->idleThread;
 		info.cpuInfo[i].threadSwitchCount = cpu->threadSwitchCount;
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(idle));
+		sceKernelSpinlockLowLock(THREAD_LOCK(idle));
 		info.cpuInfo[i].comesOutOfIdleCount = idle->intrPreemptCount;
 		info.cpuInfo[i].idleClock.quad = idle->runClock;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(idle));
@@ -6993,7 +6993,7 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 		if (attr & THREAD_ATTR_UNLIMITED)
 			uidOpt.heapKind = 1;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&process->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->lock);
 	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->threadClass, name,
 					  &uidOpt,
 					  (SceObjectBase **)&object);
@@ -7049,7 +7049,7 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 	opt.attr = MEMBLOCK_ATTR_KSTACK;
 	opt.size = sizeof(opt);
 	if ((int)attr < 0) {
-		thread->kStackSize = SceDipswForDriver_A98FC2FD(DIPSW_BIG_KERNEL_STACK) ?
+		thread->kStackSize = sceKernelCheckDipsw(DIPSW_BIG_KERNEL_STACK) ?
 			KERNEL_STACK_USER_BIG : KERNEL_STACK_USER;
 		thread->stackMemBlockType = (attr & THREAD_ATTR_UNLIMITED) ?
 			MEMBLOCK_TYPE_KSTACK_UNLIMITED : MEMBLOCK_TYPE_KSTACK_USER;
@@ -7251,7 +7251,7 @@ contexts:
 		ret = SCE_KERNEL_ERROR_NO_MEMORY;
 		goto fail_vfp;
 	}
-	if (SceDipswForDriver_A98FC2FD(DIPSW_THBP)) {
+	if (sceKernelCheckDipsw(DIPSW_THBP)) {
 		thread->thbp[0] = thread->process->contextBreakpoint->value;
 		thread->thbp[1] = thread->process->contextBreakpoint->control;
 	}
@@ -7260,7 +7260,7 @@ contexts:
 	thread->exitStatus = SCE_KERNEL_ERROR_DORMANT;
 	thread->status = (thread->status & ~SCE_KERNEL_THREAD_STATUS_MASK) |
 			 SCE_KERNEL_THREAD_STATUS_DORMANT;
-	SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->threadMgrCBLock);
+	sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadMgrCBLock);
 	thread->next = (uintptr_t)&s_threadmgrRuntime.manager->dormantNext;
 	thread->prev = s_threadmgrRuntime.manager->dormantPrev;
 	s_threadmgrRuntime.manager->dormantPrev = (uintptr_t)thread;
@@ -7304,7 +7304,7 @@ contexts:
 
 	/* its stacks: filled, with its UID at the bottom; a user thread's TLS words */
 	if ((int)attr < 0) {
-		if (!(attr & THREAD_ATTR_NO_STACK_FILL) || SceDipswForDriver_A98FC2FD(DIPSW_STACK_CHECK)) {
+		if (!(attr & THREAD_ATTR_NO_STACK_FILL) || sceKernelCheckDipsw(DIPSW_STACK_CHECK)) {
 			memset((void *)thread->pKStack, STACK_FILL,
 			       thread->kStackSize - sizeof(ThreadSyscallFrame));
 			memset(stackMirrorBase, STACK_FILL, thread->uStackSize);
@@ -7330,10 +7330,10 @@ contexts:
 							 info.tlsInit, info.tlsInitSize);
 			if (ret < 0) {
 				SCE_DBG_ASSERT_LEVEL(0, 0, 3978);
-				intr = SceCpuForDriver_D32ACE9E(
+				intr = sceKernelSpinlockLowLockCpuSuspendIntr(
 					&process->lock);
-				SceCpuForDriver_BF82DEB2(&object->waitLock);
-				SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+				sceKernelSpinlockLowLock(&object->waitLock);
+				sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 				thread->processLink.next->prev = thread->processLink.prev;
 				thread->processLink.prev->next = thread->processLink.next;
 				if (!(attr & THREAD_ATTR_UNLIMITED))
@@ -7344,7 +7344,7 @@ contexts:
 			}
 		}
 	} else {
-		if (!(attr & THREAD_ATTR_NO_STACK_FILL) || SceDipswForDriver_A98FC2FD(DIPSW_STACK_CHECK))
+		if (!(attr & THREAD_ATTR_NO_STACK_FILL) || sceKernelCheckDipsw(DIPSW_STACK_CHECK))
 			memset((void *)thread->pKStack, STACK_FILL, thread->kStackSize);
 		*(SceUID *)thread->pKStack = thread->threadId;
 	}
@@ -7356,11 +7356,11 @@ contexts:
 	if ((int)attr < 0) {
 		if (SceSysmemForDriver_58D21746(thread->uStackMemblkId) < 0)
 			SCE_PANIC(SCE_LINE(3997, 4003));
-		if (SceSysmemForDriver_009E1C61(stackMirror) < 0)
+		if (sceKernelFreeMemBlock(stackMirror) < 0)
 			SCE_PANIC(SCE_LINE(4002, 4008));
 		if (SceSysmemForDriver_58D21746(thread->userTlsMemBlockId) < 0)
 			SCE_PANIC(SCE_LINE(4007, 4013));
-		if (SceSysmemForDriver_009E1C61(tlsMirror) < 0)
+		if (sceKernelFreeMemBlock(tlsMirror) < 0)
 			SCE_PANIC(SCE_LINE(4012, 4018));
 	}
 	notifyDebugThreadEvent(pid, puid, DEBUG_THREAD_EVENT_CREATE, NULL);
@@ -7400,28 +7400,28 @@ fail_puid:
 	}
 	if ((int)attr < 0) {
 fail_exception:
-		err = SceSysmemForDriver_009E1C61(tlsMirror);
+		err = sceKernelFreeMemBlock(tlsMirror);
 		SCE_DBG_PRINTF(0, 4081, "*** free uTLSTempId, eRet=0x%08X\n", err);
 	}
 fail_tls_mirror:
-	err = SceSysmemForDriver_009E1C61(thread->userTlsMemBlockId);
+	err = sceKernelFreeMemBlock(thread->userTlsMemBlockId);
 	SCE_DBG_PRINTF(0, 4085, FREE_USER_TLS_FORMAT, err);
 	thread->userTlsMemBlockId = -1;
 	thread->tls = 0;
 	if ((int)attr < 0) {
 fail_tls:
-		err = SceSysmemForDriver_009E1C61(stackMirror);
+		err = sceKernelFreeMemBlock(stackMirror);
 		SCE_DBG_PRINTF(0, 4091, "*** free uStackTempId, eRet=0x%08X\n", err);
 		if (moduleId != -1)
 			sceGUIDReleaseObject(moduleId);
 	}
 fail_stack_mirror:
-	err = SceSysmemForDriver_009E1C61(thread->uStackMemblkId);
+	err = sceKernelFreeMemBlock(thread->uStackMemblkId);
 	SCE_DBG_PRINTF(0, 4099, "*** free uStackMemblkId, eRet=0x%08X\n", err);
 fail_user_stack:
 	thread->uStackMemblkId = -1;
 	thread->pUStack = 0;
-	err = SceSysmemForDriver_009E1C61(thread->kStackMemblkId);
+	err = sceKernelFreeMemBlock(thread->kStackMemblkId);
 	SCE_DBG_PRINTF(0, 4104, "*** free kStackMemblkId, eRet=0x%08X\n", err);
 fail_kernel_stack:
 	thread->kStackMemblkId = -1;
@@ -7509,7 +7509,7 @@ static inline void unlistThread(struct ThreadCB *thread)
 {
 	struct ThreadmgrWaitNode *self = (struct ThreadmgrWaitNode *)thread;
 
-	SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->threadMgrCBLock);
+	sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadMgrCBLock);
 	self->next->prev = self->prev;
 	self->prev->next = self->next;
 	sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->threadMgrCBLock);
@@ -7521,7 +7521,7 @@ static inline void unlistStandby(struct ThreadMgrCpuCB *cpu,
 {
 	struct ThreadmgrWaitNode *self = (struct ThreadmgrWaitNode *)thread;
 
-	SceCpuForDriver_BF82DEB2(&cpu->standbyLock);
+	sceKernelSpinlockLowLock(&cpu->standbyLock);
 	self->next->prev = self->prev;
 	self->prev->next = self->next;
 	sceKernelSpinlockLowUnlock(&cpu->standbyLock);
@@ -7582,7 +7582,7 @@ int stopThread(SceUID threadId, int priority, uint32_t request)
 	wake = 0;
 	suspend = request & THREAD_FLAG_REQUEST_SUSPEND;
 retry:
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (thread->flags & THREAD_FLAG_PENDING_STOP)
 		goto unlock;
 	state = thread->status;
@@ -7918,7 +7918,7 @@ retry:
 		SCE_DBG_ASSERT_CHECK(thread->currentCpuId == -1, 9288);
 		thread->currentCpuId = -1;
 		thread->status = (thread->status >> 16) << 16 | SCE_KERNEL_THREAD_STATUS_DELETED;
-		SceCpuForDriver_BF82DEB2(
+		sceKernelSpinlockLowLock(
 			&s_threadmgrRuntime.manager->threadMgrCBLock);
 		((struct ThreadmgrWaitNode *)thread)->next->prev =
 			((struct ThreadmgrWaitNode *)thread)->prev;
@@ -7998,13 +7998,13 @@ suspended:
 wakeSuspendWaiters:
 	/* the threads waiting for it to be suspended */
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-	SceCpuForDriver_BF82DEB2(&object->waitLock);
+	sceKernelSpinlockLowLock(&object->waitLock);
 	head = (struct ThreadmgrWaitNode *)&object->waitNext;
 	for (node = head->next; node != head; node = next) {
 		next = node->next;
 		SCE_DBG_ASSERT_CHECK(((struct ThreadCB *)node)->magic ==
 				     THREAD_CB_MAGIC, 9391);
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK((struct ThreadCB *)node));
+		sceKernelSpinlockLowLock(THREAD_LOCK((struct ThreadCB *)node));
 		if (((struct ThreadCB *)node)->waitType == WAIT_TYPE_THREAD_SUSPEND)
 			wake |= wakeupAndDistributeThread((struct ThreadCB *)node,
 							  (uintptr_t)head, 0);
@@ -8036,7 +8036,7 @@ resume:
 /* the thread goes on the manager's stagnant list */
 static inline __attribute__((always_inline)) void listStagnantThread(struct ThreadCB *thread)
 {
-	SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->threadMgrCBLock);
+	sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadMgrCBLock);
 	thread->next = (uintptr_t)&s_threadmgrRuntime.manager->stagnantNext;
 	thread->prev = s_threadmgrRuntime.manager->stagnantPrev;
 	s_threadmgrRuntime.manager->stagnantPrev = (uintptr_t)thread;
@@ -8074,7 +8074,7 @@ int sceKernelCpuScanThreadForProcessmgr(SceUID processId)
 			     thread != head; thread = next) {
 				next = (struct ThreadCB *)thread->next;
 				SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 10087);
-				SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+				sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 				if (thread->processId == processId) {
 					SCE_DBG_ASSERT_CHECK(!(thread->flags & THREAD_FLAG_REQUEST_MASK),
 							     10093);
@@ -8095,7 +8095,7 @@ int sceKernelCpuScanThreadForProcessmgr(SceUID processId)
 	if (currentThreadContext() != NULL) {
 		do {
 			retry = false;
-			SceCpuForDriver_BF82DEB2(
+			sceKernelSpinlockLowLock(
 				&s_threadmgrRuntime.manager->globalReadyLock);
 			for (word = 0; word < 4 && !retry; word++) {
 				bits = s_threadmgrRuntime.manager->globalReadyBitmap[word];
@@ -8141,7 +8141,7 @@ int sceKernelCpuScanThreadForProcessmgr(SceUID processId)
 
 	/* the running thread */
 	if (current != NULL) {
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(current));
+		sceKernelSpinlockLowLock(THREAD_LOCK(current));
 		if (current->processId == processId && (current->status & SCE_KERNEL_THREAD_STATUS_RUNNING)) {
 			runningThreadPreemptByIntr((struct ThreadCB *)current,
 						   PREEMPT_INTR);
@@ -8280,7 +8280,7 @@ int threadMgrExcpHandlerCfunc_0(struct ThreadCB *thread, uint32_t excpKind)
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 10817);
 	SCE_DBG_ASSERT_CHECK(thread != NULL, 10819);
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	SCE_DBG_ASSERT_CHECK(thread->threadId != currentCpuState()->idleThread->threadId, 10825);
 	SCE_DBG_ASSERT_PRINTF((thread->status &
 			       (SCE_KERNEL_THREAD_STATUS_RUNNING | THREAD_STATE_OFF_CPU)) != 0,
@@ -8341,7 +8341,7 @@ debug_suspend:
 		thread->currentCpuId = -1;
 		thread->status = ((thread->status & 0x7fff) << 16) |
 				     THREAD_STATE_DEBUG_SUSPENDED | THREAD_STATE_OFF_CPU;
-		SceCpuForDriver_BF82DEB2(
+		sceKernelSpinlockLowLock(
 			&s_threadmgrRuntime.manager->threadMgrCBLock);
 		thread->next = (uintptr_t)&s_threadmgrRuntime.manager->debugSuspendedNext;
 		thread->prev = s_threadmgrRuntime.manager->debugSuspendedPrev;
@@ -8358,12 +8358,12 @@ deliver:
 	if (thread->currentAttr & THREAD_ATTR_IN_SUSPENDED)
 		return EXCP_ACTION_SUSPENDED;
 	/* VM-suspended, the exception goes to the process's exception object */
-	SceCpuForDriver_BF82DEB2(&thread->process->exception->lock);
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(&thread->process->exception->lock);
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	uid = thread->userThreadId;
 	if (thread->debugSuspendReason != 0) {
 		thread->status &= THREAD_STATE_KEEP_SUSPEND;
-		SceCpuForDriver_BF82DEB2(
+		sceKernelSpinlockLowLock(
 			&s_threadmgrRuntime.manager->threadMgrCBLock);
 		((struct ThreadCB *)thread->next)->prev = thread->prev;
 		((struct ThreadCB *)thread->prev)->next = thread->next;
@@ -8375,7 +8375,7 @@ deliver:
 	thread->vmSuspendCount++;
 	thread->status = (thread->status & ~SCE_KERNEL_THREAD_STATUS_MASK) |
 			     SCE_KERNEL_THREAD_STATUS_SUSPENDED;
-	SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->threadMgrCBLock);
+	sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadMgrCBLock);
 	thread->next = (uintptr_t)&s_threadmgrRuntime.manager->suspendedNext;
 	thread->prev = s_threadmgrRuntime.manager->suspendedPrev;
 	s_threadmgrRuntime.manager->suspendedPrev = (uintptr_t)thread;
@@ -8406,7 +8406,7 @@ deliver:
 		far = thread->pRegisterContext->dfar;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 11015);
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+		sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 		info = (ThreadmgrExceptionInfo *)waiter->waitArg1;
 		info->value = uid;
 		info->kind = kind;
@@ -8419,12 +8419,12 @@ deliver:
 	sceKernelSpinlockLowUnlock(&thread->process->exception->lock);
 
 	/* the threads waiting for it to be suspended */
-	SceCpuForDriver_BF82DEB2(&object->waitLock);
+	sceKernelSpinlockLowLock(&object->waitLock);
 	for (node = (struct ThreadCB *)object->waitNext;
 	     node != (struct ThreadCB *)&object->waitNext; node = next) {
 		next = (struct ThreadCB *)node->next;
 		SCE_DBG_ASSERT_CHECK(node->magic == THREAD_CB_MAGIC, 11042);
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(node));
+		sceKernelSpinlockLowLock(THREAD_LOCK(node));
 		if (node->waitType == WAIT_TYPE_THREAD_SUSPEND)
 			wakeupAndDistributeThread(node, (uintptr_t)&object->waitNext, 0);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(node));
@@ -8475,7 +8475,7 @@ void threadMgrExcpHandlerCfunc_3(struct ThreadCB *thread)
 	if (ret < 0)
 		SCE_DBG_PRINTF(0xf, 11135, "(): sceKernelProcessDebugSuspend(0x%08X)=0x%08X\n",
 			       thread->processId, ret);
-	SceCpuForDriver_D32ACE9E(
+	sceKernelSpinlockLowLockCpuSuspendIntr(
 		&thread->process->lock);
 	for (link = thread->process->threads.next; link != &thread->process->threads;
 	     link = link->next) {

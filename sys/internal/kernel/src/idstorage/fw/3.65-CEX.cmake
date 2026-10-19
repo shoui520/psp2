@@ -49,7 +49,7 @@ set(MODULE_IMPORT_NIDS
 	0x7290B21C:F:0x4DF40893
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_49D4DD9B
 	sceKernelCreateHeap
@@ -76,7 +76,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoRead
 	sceIoClose
 	SceSblACMgrForDriver_BE5667C5
-	ScePmMgrForDriver_2AC815A2
+	sceSblPmMgrGetProductMode
 	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893

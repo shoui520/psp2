@@ -57,7 +57,7 @@ static inline DcmpCB *_getDcmpCB(SceUInt32 linkIndex)
 /* the send queue: lock it unless it is full, fill dcmp->buf[dcmp->write], commit */
 static inline int dcmpQueueLock(DcmpCB *dcmp, SceKernelIntrStatus *s)
 {
-	*s = SceCpuForDriver_D32ACE9E(&dcmp->lock);
+	*s = sceKernelSpinlockLowLockCpuSuspendIntr(&dcmp->lock);
 	if (dcmp->count >= DCMP_SEND_QUEUE) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&dcmp->lock, *s);
 		return DFMGR_ERROR_QUEUE_FULL;
@@ -233,7 +233,7 @@ static inline int _dcmpSend(DcmpCB *dcmp)
 	SceSize size;
 	int count, read, next, errPending, ret;
 
-	s = SceCpuForDriver_D32ACE9E(&dcmp->lock);
+	s = sceKernelSpinlockLowLockCpuSuspendIntr(&dcmp->lock);
 	if (dcmp->count <= 0) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&dcmp->lock, s);
 		return DFMGR_ERROR_NOTHING_TO_SEND;
@@ -257,7 +257,7 @@ static inline int _dcmpSend(DcmpCB *dcmp)
 		}
 	}
 
-	s = SceCpuForDriver_D32ACE9E(&dcmp->lock);
+	s = sceKernelSpinlockLowLockCpuSuspendIntr(&dcmp->lock);
 	count = dcmp->count;
 	read = dcmp->read;
 	next = read + 1;

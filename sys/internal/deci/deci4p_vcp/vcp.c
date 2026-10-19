@@ -514,7 +514,7 @@ static int VcpThread(SceSize args, void *argp)
 	s_vcp.fbMemblock = uid;
 	if ((ret = sceKernelGetMemBlockBase(uid, &s_vcp.fbBase)) < 0 ||
 	    (ret = sceKernelVAtoPA(s_vcp.fbBase, &s_vcp.fbPaddr)) < 0) {
-		SceSysmemForDriver_009E1C61(s_vcp.fbMemblock);
+		sceKernelFreeMemBlock(s_vcp.fbMemblock);
 		return ret;
 	}
 	sceKernelChangeThreadCpuAffinityMask(0, 0xf);
@@ -563,7 +563,7 @@ int VcpModuleStart(SceSize args, void *argp)
 	SceKernelThreadOptParam topt;
 	SceUID uid;
 
-	if (!SceDipswForDriver_A98FC2FD(0xc2)) {
+	if (!sceKernelCheckDipsw(0xc2)) {
 		SCE_DBG_PRINTF(0xb, 127, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
@@ -611,7 +611,7 @@ int VcpModuleStart(SceSize args, void *argp)
 	s_protocol.size = sizeof(s_protocol);
 	s_protocol.protocol = VCP_PROTOCOL;
 	strncpy(s_protocol.name, "VCP", sizeof(s_protocol.name));
-	if (!SceDipswForDriver_A98FC2FD(0xc3))
+	if (!sceKernelCheckDipsw(0xc3))
 		s_protocol.flags |= DFMGR_PROTOCOL_USB;
 	s_vcp.flags = VCP_FLAG_2;
 	s_vcp.handle = sceDfMgrOpen(VcpHandler, &s_protocol, &s_vcp);

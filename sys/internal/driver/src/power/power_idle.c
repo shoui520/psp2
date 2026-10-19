@@ -27,7 +27,7 @@ static inline __attribute__((always_inline)) void powerHandleProcessIdleTimers(u
 	uint64_t elapsed;
 	uint32_t idle;
 
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	for (state = s_powerProcessList; state; state = state->next) {
 		idle = state->idleState;
 		if (idle != 2) {
@@ -280,7 +280,7 @@ int ScePowerForDriver_1BA2FCAE(uint32_t timerId, uint32_t tickFlags,
 		return SCE_POWER_ERROR_INVALID_VALUE;
 
 	timer = &s_powerIdleTimers.timers[timerId];
-	context = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	context = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	if (callback && timer->callback) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock,
 						      context);
@@ -319,7 +319,7 @@ int ScePowerForDriver_FB5C3C75(SceUID pid, uint32_t unused,
 			s_processStorageKey, (void **)&state, 0);
 	if (result < 0)
 		return result;
-	context = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	context = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	state->idleInterval = interval;
 	state->lastIdleTick = sceKernelGetSystemTimeWide();
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, context);
@@ -337,7 +337,7 @@ int scePowerSetIdleTimerCount(uint64_t interval)
 	result = SceProcessmgrForDriver_AF80F39C(0,
 			s_processStorageKey, (void **)&state, 0);
 	if (result >= 0) {
-		intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+		intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 		state->idleInterval = interval;
 		state->lastIdleTick = sceKernelGetSystemTimeWide();
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);

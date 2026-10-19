@@ -44,13 +44,13 @@ set(MODULE_IMPORT_NIDS
 	0xBC05A8FB:F:0xFDC10F93
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelCopyToUser
 	sceKernelGetMemBlockBase
 	sceKernelCopyFromUser
 	sceKernelAllocMemBlockForKernel
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	memset
 	strncmp
 	memcpy

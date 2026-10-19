@@ -60,26 +60,26 @@ int sceCodecEngineDsp0ConvertVirtualToPhysical(VeneziaRpcThunk *thunk, void *bas
 	nonContiguous = flags & 2;
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(thunk != NULL,
+	sceKernelAssert(thunk != NULL,
 		SCE_DBGINFO_FUNC(135, "sceCodecEngineDsp0ConvertVirtualToPhysical"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322(thunk->channel <= 8,
+	sceKernelAssert(thunk->channel <= 8,
 		SCE_DBGINFO_FUNC(136, "sceCodecEngineDsp0ConvertVirtualToPhysical"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322(thunk->allocationCount <= 15,
+	sceKernelAssert(thunk->allocationCount <= 15,
 		SCE_DBGINFO_FUNC(137, "sceCodecEngineDsp0ConvertVirtualToPhysical"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322(thunk->packing,
+	sceKernelAssert(thunk->packing,
 		SCE_DBGINFO_FUNC(138, "sceCodecEngineDsp0ConvertVirtualToPhysical"), __builtin_return_address(0));
 	if (base)
-		SceDebugForDriver_35A35322(size != 0,
+		sceKernelAssert(size != 0,
 			SCE_DBGINFO_FUNC(140, "sceCodecEngineDsp0ConvertVirtualToPhysical"), __builtin_return_address(0));
 	else
-		SceDebugForDriver_35A35322(size == 0 && flags == 1,
+		sceKernelAssert(size == 0 && flags == 1,
 			SCE_DBGINFO_FUNC(142, "sceCodecEngineDsp0ConvertVirtualToPhysical"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322((flags & 0x30) != 0x30,
+	sceKernelAssert((flags & 0x30) != 0x30,
 		SCE_DBGINFO_FUNC(145, "sceCodecEngineDsp0ConvertVirtualToPhysical"), __builtin_return_address(0));
 #endif
 	if (copyRequired) {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(size <= allocationSize,
+		sceKernelAssert(size <= allocationSize,
 			SCE_DBGINFO_FUNC(148, "sceCodecEngineDsp0ConvertVirtualToPhysical"), __builtin_return_address(0));
 #endif
 		if (!nonContiguous)
@@ -87,7 +87,7 @@ int sceCodecEngineDsp0ConvertVirtualToPhysical(VeneziaRpcThunk *thunk, void *bas
 		goto communication;
 	}
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(allocationSize == 0,
+	sceKernelAssert(allocationSize == 0,
 		SCE_DBGINFO_FUNC(150, "sceCodecEngineDsp0ConvertVirtualToPhysical"), __builtin_return_address(0));
 #endif
 	if (!isVeneziaPhysicalRangeContiguous(base, size)) {
@@ -97,18 +97,18 @@ int sceCodecEngineDsp0ConvertVirtualToPhysical(VeneziaRpcThunk *thunk, void *bas
 	}
 	ret = sceKernelVAtoPA(base, &physical);
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(ret >= 0,
+	sceKernelAssert(ret >= 0,
 		SCE_DBGINFO_FUNC(167, "sceCodecEngineDsp0ConvertVirtualToPhysical"), __builtin_return_address(0));
 #endif
 	if (physical >= 0x40000000 && size + physical <= 0x80000000) {
 		cacheBase = (uintptr_t)base & ~255U;
 		cacheSize = (size + 255 + (uintptr_t)base - cacheBase) & ~255U;
 		if (flags & 0x10)
-			SceCpuForDriver_103872A5((void *)cacheBase, cacheSize);
+			sceKernelDcacheCleanRange((void *)cacheBase, cacheSize);
 		else if (flags & 0x20)
-			SceCpuForDriver_02796361((void *)cacheBase, cacheSize);
+			sceKernelDcacheInvalidateRange((void *)cacheBase, cacheSize);
 		else
-			SceCpuForDriver_364E68A4((void *)cacheBase, cacheSize);
+			sceKernelDcacheCleanInvalidateRange((void *)cacheBase, cacheSize);
 	}
 	copyRequired = 0;
 	communicationMemory = 0;
@@ -139,13 +139,13 @@ int sceCodecEngineDsp0ConvertPhysicalToVirtual(VeneziaRpcThunk *thunk)
 	int copyRequired;
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(thunk != NULL,
+	sceKernelAssert(thunk != NULL,
 		SCE_DBGINFO_FUNC(216, "sceCodecEngineDsp0ConvertPhysicalToVirtual"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322(thunk->channel <= 8,
+	sceKernelAssert(thunk->channel <= 8,
 		SCE_DBGINFO_FUNC(217, "sceCodecEngineDsp0ConvertPhysicalToVirtual"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322(thunk->allocationCount <= 16,
+	sceKernelAssert(thunk->allocationCount <= 16,
 		SCE_DBGINFO_FUNC(218, "sceCodecEngineDsp0ConvertPhysicalToVirtual"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322(thunk->packing == 0,
+	sceKernelAssert(thunk->packing == 0,
 		SCE_DBGINFO_FUNC(219, "sceCodecEngineDsp0ConvertPhysicalToVirtual"), __builtin_return_address(0));
 #endif
 	count = thunk->allocationCount;
@@ -154,14 +154,14 @@ int sceCodecEngineDsp0ConvertPhysicalToVirtual(VeneziaRpcThunk *thunk)
 #if FW_DEBUG
 		__builtin_prefetch(&thunk->memories[i + 3].virtualBase);
 		if (transfer->virtualBase)
-			SceDebugForDriver_35A35322(transfer->size != 0,
+			sceKernelAssert(transfer->size != 0,
 				SCE_DBGINFO_FUNC(236, "sceCodecEngineDsp0ConvertPhysicalToVirtual"), __builtin_return_address(0));
 		else
-			SceDebugForDriver_35A35322(transfer->size == 0 && transfer->flags == 1,
+			sceKernelAssert(transfer->size == 0 && transfer->flags == 1,
 				SCE_DBGINFO_FUNC(238, "sceCodecEngineDsp0ConvertPhysicalToVirtual"), __builtin_return_address(0));
-		SceDebugForDriver_35A35322(transfer->physicalBase != 0,
+		sceKernelAssert(transfer->physicalBase != 0,
 			SCE_DBGINFO_FUNC(240, "sceCodecEngineDsp0ConvertPhysicalToVirtual"), __builtin_return_address(0));
-		SceDebugForDriver_35A35322((transfer->flags & 0x30) != 0x30,
+		sceKernelAssert((transfer->flags & 0x30) != 0x30,
 			SCE_DBGINFO_FUNC(242, "sceCodecEngineDsp0ConvertPhysicalToVirtual"), __builtin_return_address(0));
 #endif
 		copyRequired = transfer->communicationMemory &&
@@ -178,7 +178,7 @@ int sceCodecEngineDsp0AllocCommunicationMemories(VeneziaRpcThunk *thunk)
 	void *memory;
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(thunk != NULL,
+	sceKernelAssert(thunk != NULL,
 		SCE_DBGINFO_FUNC(278, "sceCodecEngineDsp0AllocCommunicationMemories"), __builtin_return_address(0));
 #endif
 	count = thunk->allocationCount;
@@ -199,7 +199,7 @@ int sceCodecEngineDsp0AllocCommunicationMemories(VeneziaRpcThunk *thunk)
 			transfer->physicalBase = veneziaVirtualToPhysical((uintptr_t)memory);
 		}
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(transfer->physicalBase != 0,
+		sceKernelAssert(transfer->physicalBase != 0,
 			SCE_DBGINFO_FUNC(295, "sceCodecEngineDsp0AllocCommunicationMemories"), __builtin_return_address(0));
 #endif
 	}
@@ -214,7 +214,7 @@ int sceCodecEngineDsp0FreeCommunicationMemories(VeneziaRpcThunk *thunk)
 	void *memory;
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(thunk != NULL,
+	sceKernelAssert(thunk != NULL,
 		SCE_DBGINFO_FUNC(310, "sceCodecEngineDsp0FreeCommunicationMemories"), __builtin_return_address(0));
 #endif
 	count = thunk->allocationCount;
@@ -279,9 +279,9 @@ int sceCodecEngineDsp0MemcpyChain(VeneziaRpcThunk *thunk)
 	int packing, ret;
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(thunk != NULL, SCE_DBGINFO_FUNC(390, "sceCodecEngineDsp0MemcpyChain"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322(thunk->channel <= 8, SCE_DBGINFO_FUNC(391, "sceCodecEngineDsp0MemcpyChain"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322(thunk->allocationCount <= 16, SCE_DBGINFO_FUNC(392, "sceCodecEngineDsp0MemcpyChain"), __builtin_return_address(0));
+	sceKernelAssert(thunk != NULL, SCE_DBGINFO_FUNC(390, "sceCodecEngineDsp0MemcpyChain"), __builtin_return_address(0));
+	sceKernelAssert(thunk->channel <= 8, SCE_DBGINFO_FUNC(391, "sceCodecEngineDsp0MemcpyChain"), __builtin_return_address(0));
+	sceKernelAssert(thunk->allocationCount <= 16, SCE_DBGINFO_FUNC(392, "sceCodecEngineDsp0MemcpyChain"), __builtin_return_address(0));
 #endif
 	channel = thunk->channel;
 	count = thunk->allocationCount;
@@ -306,14 +306,14 @@ int sceCodecEngineDsp0MemcpyChain(VeneziaRpcThunk *thunk)
 					mapped = veneziaPhysicalToVirtual(transfer->physicalBase);
 					ret = sceKernelCopyFromUser((void *)mapped, transfer->virtualBase, transfer->size);
 #if FW_DEBUG
-					SceDebugForDriver_35A35322(ret == 0, SCE_DBGINFO_FUNC(426, "sceCodecEngineDsp0MemcpyChain"), __builtin_return_address(0));
+					sceKernelAssert(ret == 0, SCE_DBGINFO_FUNC(426, "sceCodecEngineDsp0MemcpyChain"), __builtin_return_address(0));
 #endif
 				} else {
 					void *base = transfer->virtualBase;
 					mapped = veneziaPhysicalToVirtual(transfer->physicalBase);
 					ret = sceKernelCopyToUser(base, (void *)mapped, transfer->size);
 #if FW_DEBUG
-					SceDebugForDriver_35A35322(ret == 0, SCE_DBGINFO_FUNC(433, "sceCodecEngineDsp0MemcpyChain"), __builtin_return_address(0));
+					sceKernelAssert(ret == 0, SCE_DBGINFO_FUNC(433, "sceCodecEngineDsp0MemcpyChain"), __builtin_return_address(0));
 #endif
 				}
 				if (ret < 0)
@@ -351,7 +351,7 @@ int sceCodecEngineDsp0MemcpyChain(VeneziaRpcThunk *thunk)
 			return 0x80600004;
 		}
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(tagCount <= 15, SCE_DBGINFO_FUNC(500, "_dmacMemcpy"), __builtin_return_address(0));
+		sceKernelAssert(tagCount <= 15, SCE_DBGINFO_FUNC(500, "_dmacMemcpy"), __builtin_return_address(0));
 #endif
 		tag = &tags[tagCount];
 		previous = tagCount ? &tags[tagCount - 1] : NULL;

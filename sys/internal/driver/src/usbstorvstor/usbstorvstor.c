@@ -206,10 +206,10 @@ static int closeImage(void)
 	s.fd = -1;
 	s.blocks = 0;
 	if (s.dataBlock >= 0) {
-		SceSysmemForDriver_009E1C61(s.dataBlock);
+		sceKernelFreeMemBlock(s.dataBlock);
 		s.dataBlock = -1;
 	}
-	SceSysmemForDriver_009E1C61(s.commandBlock);
+	sceKernelFreeMemBlock(s.commandBlock);
 	s.buffers[0] = NULL;
 	s.buffers[1] = NULL;
 	return 0;
@@ -257,7 +257,7 @@ static int openImage(void)
 		if (s.dataBlock < 0)
 			return VSTOR_ERROR_MEMORY;
 		if (sceKernelGetMemBlockBase(s.dataBlock, &base) < 0) {
-			SceSysmemForDriver_009E1C61(s.dataBlock);
+			sceKernelFreeMemBlock(s.dataBlock);
 			result = VSTOR_ERROR_MEMORY;
 			goto freeData;
 		}
@@ -304,13 +304,13 @@ static int openImage(void)
 	}
 freeData:
 	if (s.dataBlock >= 0) {
-		SceSysmemForDriver_009E1C61(s.dataBlock);
+		sceKernelFreeMemBlock(s.dataBlock);
 		s.dataBlock = -1;
 		s.buffers[0] = NULL;
 		s.buffers[1] = NULL;
 	}
 freeCommand:
-	SceSysmemForDriver_009E1C61(s.commandBlock);
+	sceKernelFreeMemBlock(s.commandBlock);
 	return result;
 }
 

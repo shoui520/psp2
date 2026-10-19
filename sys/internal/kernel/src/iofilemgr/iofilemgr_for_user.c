@@ -59,7 +59,7 @@ SceUID sceIoOpenForUser(const char *file, int flags, SceMode mode)
 	IO_CHECK_VM_DOMAIN(252);
 	fd = SceIofilemgrForDriver_C3D34965(sceKernelGetProcessId(), file, flags, mode);
 	if (fd > 0) {
-		if (SceDipswForDriver_A98FC2FD(210))
+		if (sceKernelCheckDipsw(210))
 			SceIofilemgrForDriver_2EFDFA12(fd, file);
 		fd = SceSysmemForDriver_BF209859(0, fd);
 	}

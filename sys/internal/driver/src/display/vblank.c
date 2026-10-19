@@ -43,7 +43,7 @@ static int sgiSet(int intr_code, int subintr_code, unsigned int enable) /* name 
 	DisplaySgiState *state = &sgiState[intr_code - 8];
 	SceKernelIntrStatus intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&state->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	state->enabled = (state->enabled & ~(1 << subintr_code)) | ((enable != 0) << subintr_code);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return 0;
@@ -55,7 +55,7 @@ static int sgiTake(int intr_code, int subintr_code, unsigned int *enabled) /* na
 	SceKernelIntrStatus intr;
 	SceUInt32 mask;
 
-	intr = SceCpuForDriver_D32ACE9E(&state->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	mask = state->enabled;
 	if (enabled != NULL)
 		*enabled = (mask >> subintr_code) & 1;
@@ -211,7 +211,7 @@ static int sgiDisable(int intr_code, int subintr_code) /* name unknown */
 	DisplaySgiState *state = &sgiState[intr_code - 8];
 	SceKernelIntrStatus intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&state->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	state->enabled &= ~(1 << subintr_code);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return 0;
@@ -222,7 +222,7 @@ static int sgiEnable(int intr_code, int subintr_code) /* name unknown */
 	DisplaySgiState *state = &sgiState[intr_code - 8];
 	SceKernelIntrStatus intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&state->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	state->enabled |= 1 << subintr_code;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return 0;

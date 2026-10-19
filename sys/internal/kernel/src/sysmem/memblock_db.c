@@ -282,7 +282,7 @@ int MemBlockType2TypeInfo(SceUInt32 type, const MemBlockTypeInfo **info)
 	if (entry >= end)
 		goto unknown;
 	if (!(entry->attr & MEMBLOCK_TYPE_ATTR_TOOL_ONLY) ||
-	    SceDipswForDriver_A98FC2FD(DIPSW_ENABLE_TOOL_PHYMEMPART)) {
+	    sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART)) {
 		*info = entry;
 		return 0;
 	}
@@ -310,7 +310,7 @@ int MemBlockCode2TypeInfo(SceUInt32 code, const MemBlockTypeInfo **info)
 
 	if (entry != NULL) {
 		if (!(entry->typeInfo->attr & MEMBLOCK_TYPE_ATTR_TOOL_ONLY) ||
-		    SceDipswForDriver_A98FC2FD(DIPSW_ENABLE_TOOL_PHYMEMPART)) {
+		    sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART)) {
 			*info = entry->typeInfo;
 			return 0;
 		}

@@ -85,7 +85,7 @@ int sceSblFwLoaderSetPath(const char *path, int flags)
 		prefix = NULL;
 		if (SceQafMgrForDriver_082A4FC2()) {
 			prefix = FWLOADER_PREFIX_HOST0;
-			if (!SceDipswForDriver_A98FC2FD(FWLOADER_DIPSW_HOST0))
+			if (!sceKernelCheckDipsw(FWLOADER_DIPSW_HOST0))
 				prefix = NULL;
 		}
 	}

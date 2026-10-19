@@ -45,7 +45,7 @@ int _sceCodecEngineProcessCreateEntry(SceUID pid, SceUInt32 type)
 		(void **)&storage, 1);
 	if (ret >= 0) {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(100, "_sceCodecEngineProcessCreateEntry"), __builtin_return_address(0));
+		sceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(100, "_sceCodecEngineProcessCreateEntry"), __builtin_return_address(0));
 #endif
 		memset(storage, 0, sizeof(*storage));
 		storage->unmapMemBlocks[0].puid = -1;
@@ -69,7 +69,7 @@ int _sceCodecEngineProcessExitEntry(SceUID pid, SceUInt32 type)
 	storageResult = SceProcessmgrForDriver_AF80F39C(pid,
 		g_codecEngineProcessStorageKey, (void **)&storage, 0);
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(139, "_sceCodecEngineProcessExitEntry"), __builtin_return_address(0));
+	sceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(139, "_sceCodecEngineProcessExitEntry"), __builtin_return_address(0));
 #endif
 	ret = _closeUnmapMemBlockAll(pid);
 	if (ret >= 0)
@@ -100,7 +100,7 @@ int sceCodecEngineRegisterProcExitHandler(CodecEngineProcExitHandler handler)
 	unsigned int index = 0;
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(handler != NULL, SCE_DBGINFO_FUNC(172, "sceCodecEngineRegisterProcExitHandler"), __builtin_return_address(0));
+	sceKernelAssert(handler != NULL, SCE_DBGINFO_FUNC(172, "sceCodecEngineRegisterProcExitHandler"), __builtin_return_address(0));
 #endif
 	if (g_codecEngineProcExitHandlers[0]) {
 		if (g_codecEngineProcExitHandlers[1]) {
@@ -124,7 +124,7 @@ int sceCodecEngineRegisterProcKillHandler(CodecEngineProcExitHandler handler)
 	unsigned int index = 0;
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(handler != NULL, SCE_DBGINFO_FUNC(196, "sceCodecEngineRegisterProcKillHandler"), __builtin_return_address(0));
+	sceKernelAssert(handler != NULL, SCE_DBGINFO_FUNC(196, "sceCodecEngineRegisterProcKillHandler"), __builtin_return_address(0));
 #endif
 	if (g_codecEngineProcKillHandlers[0]) {
 		if (g_codecEngineProcKillHandlers[1]) {
@@ -152,7 +152,7 @@ int _sceCodecEngineProcessSuspendPhase0(SceUID pid)
 		(void **)&storage, 0);
 	if (ret >= 0) {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(228, "_sceCodecEngineProcessSuspendPhase0"), __builtin_return_address(0));
+		sceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(228, "_sceCodecEngineProcessSuspendPhase0"), __builtin_return_address(0));
 #endif
 		ret = _sceCodecEngineProcessorProcessSuspend(pid);
 	}
@@ -168,7 +168,7 @@ int _sceCodecEngineProcessResume(SceUID pid)
 		(void **)&storage, 0);
 	if (ret >= 0) {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(253, "_sceCodecEngineProcessResume"), __builtin_return_address(0));
+		sceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(253, "_sceCodecEngineProcessResume"), __builtin_return_address(0));
 #endif
 		ret = _sceCodecEngineProcessorProcessResume(pid);
 	}
@@ -183,7 +183,7 @@ struct ThreadmgrFastMutex * _sceCodecEngineGetMutex(SceUID pid)
 		(void **)&storage, 0) < 0)
 		return NULL;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(279, "_sceCodecEngineGetMutex"), __builtin_return_address(0));
+	sceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(279, "_sceCodecEngineGetMutex"), __builtin_return_address(0));
 #endif
 	return &storage->mutex;
 }
@@ -197,7 +197,7 @@ CodecEngineUnmapMemBlockEntry * _sceCodecEngineGetUnmapMemBlockEntry(SceUID pid,
 		(void **)&storage, 0) < 0)
 		return NULL;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(301, "_sceCodecEngineGetUnmapMemBlockEntry"), __builtin_return_address(0));
+	sceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(301, "_sceCodecEngineGetUnmapMemBlockEntry"), __builtin_return_address(0));
 #endif
 	if (!guid)
 		return storage->unmapMemBlocks;
@@ -222,7 +222,7 @@ unsigned int * _sceCodecEngineGetProcessor(SceUID pid)
 		(void **)&storage, 0) < 0)
 		return NULL;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(336, "_sceCodecEngineGetProcessor"), __builtin_return_address(0));
+	sceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(336, "_sceCodecEngineGetProcessor"), __builtin_return_address(0));
 #endif
 	if (storage)
 		return &storage->processorCount;

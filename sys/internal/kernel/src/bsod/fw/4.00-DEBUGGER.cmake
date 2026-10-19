@@ -69,10 +69,10 @@ set(MODULE_IMPORT_NIDS
 	0x4E29D3B6:F:0x382C71E8
 )
 set(MODULE_IMPORT_FUNCS
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	sceKernelCpuId
 	SceCpuForDriver_821FC0EE
-	SceCpuForDriver_BF82DEB2
+	sceKernelSpinlockLowLock
 	sceKernelCpuResumeIntr
 	memset
 	__aeabi_uidiv
@@ -81,7 +81,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_CAE820B2
 	SceSysrootForKernel_3E455842
 	SceSysrootForKernel_84783B71
-	SceSysrootForKernel_C8C8C321
+	sceKernelSysrootGetSharedMemory
 	sceKernelSysrootBacktrace
 	SceSysrootForKernel_E20F6FC8
 	sceGUIDGetName

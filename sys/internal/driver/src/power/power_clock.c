@@ -575,7 +575,7 @@ int powerInitializeClockRuntime(void)
 
 	SceSysconForDriver_7F198FA2(1, 0x8a - s_powerClockControl.busVoltageTable[0]);
 	s_powerClockControl.railVoltage[0] = s_powerClockControl.busVoltageTable[0];
-	if (SceDipswForDriver_A98FC2FD(0x9f))
+	if (sceKernelCheckDipsw(0x9f))
 		s_powerClockControl.voltageDemand[4] =
 			s_powerClockControl.busVoltageTable[0];
 	else
@@ -606,7 +606,7 @@ int powerInitializeClockRuntime(void)
 	powerSetBusRailClockRaw(3, 190, 1, s_powerClockControl.busVoltageTable[2]);
 	scePowerSetArmClockFrequency(333);
 
-	if (SceDipswForDriver_A98FC2FD(0x9f) && SceDipswForDriver_A98FC2FD(0xec))
+	if (sceKernelCheckDipsw(0x9f) && sceKernelCheckDipsw(0xec))
 		gpuFrequency = 166;
 	else
 		gpuFrequency = 111;

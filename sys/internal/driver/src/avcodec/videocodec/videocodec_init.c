@@ -88,7 +88,7 @@ void *_GetVideocodecGlobal(SceUID pid)
 			videocodecResident.processLocalStorageId);
 	}
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(storage != 0, &videocodecGlobalStorage,
+	sceKernelAssert(storage != 0, &videocodecGlobalStorage,
 		__builtin_return_address(0));
 #endif
 	return storage;

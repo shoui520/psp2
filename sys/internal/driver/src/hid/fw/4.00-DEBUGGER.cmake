@@ -60,7 +60,7 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceDebugForDriver_391B74B7
 	SceDebugForDriver_D9703808
 	memset

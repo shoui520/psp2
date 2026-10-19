@@ -126,7 +126,7 @@ static inline int powerAcquireSwitchProcessLockCount(volatile uint32_t *count)
 {
 	SceKernelIntrStatus intrState;
 
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	if (!s_powerSwitchState.processLockCount && !s_powerSwitchState.systemLockCount)
 		sceKernelClearEventFlag(s_powerSwitchState.eventFlag, ~0x10000U);
 	SceCpuForDriver_5F6A8743((int32_t *)count, 1);
@@ -158,7 +158,7 @@ inline __attribute__((always_inline)) int powerAcquireSystemSwitchLock(uint32_t 
 
 	if (kind)
 		return SCE_POWER_ERROR_INVALID_VALUE;
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	if (!s_powerSwitchState.processLockCount && !s_powerSwitchState.systemLockCount)
 		sceKernelClearEventFlag(s_powerSwitchState.eventFlag, ~0x10000U);
 	s_powerSwitchState.systemLockCount++;
@@ -170,7 +170,7 @@ static inline int powerReleaseSwitchProcessLock(volatile uint32_t *count)
 {
 	SceKernelIntrStatus intrState;
 
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	if ((int32_t)*count > 0) {
 		(*count)--;
 		s_powerSwitchState.processLockCount--;
@@ -199,7 +199,7 @@ int powerReleaseSystemSwitchLock(uint32_t kind)
 
 	if (kind)
 		return SCE_POWER_ERROR_INVALID_VALUE;
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	if ((int32_t)s_powerSwitchState.systemLockCount > 0)
 		s_powerSwitchState.systemLockCount--;
 	if (!s_powerSwitchState.processLockCount && !s_powerSwitchState.systemLockCount)
@@ -769,7 +769,7 @@ static inline __attribute__((always_inline)) void powerReleaseSwitchInitHold(voi
 	(void)s_powerSwitchState.buttonRequest;
 	s_powerSwitchState.buttonRequest = 0;
 	sceKernelCpuResumeIntr(intrState);
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	if ((int32_t)s_powerSwitchState.systemLockCount > 0)
 		s_powerSwitchState.systemLockCount--;
 	if (!s_powerSwitchState.processLockCount && !s_powerSwitchState.systemLockCount)
@@ -931,7 +931,7 @@ static inline int powerReleaseSwitchProcessLockCount(volatile uint32_t *count)
 	SceKernelIntrStatus intrState;
 	uint32_t locks;
 
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	locks = *count;
 	if ((int32_t)locks > 0) {
 		*count = 0;

@@ -479,7 +479,7 @@ int SGXRemoveRenderTargetBW(IMG_UINT32 ui32BridgeID,
 		debugInfo = &dbg_SGXRemoveRenderTargetBW_L295;
 		hasRenderTarget = psPerProc->numRenderTargets[0] != 0;
 	}
-	SceDebugForDriver_35A35322(hasRenderTarget, debugInfo, __builtin_return_address(0));
+	sceKernelAssert(hasRenderTarget, debugInfo, __builtin_return_address(0));
 #endif
 	hRenderTarget = psBridgeIn->hRenderTarget;
 	if (psRTDataSet->hResItem)

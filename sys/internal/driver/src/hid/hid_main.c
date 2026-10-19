@@ -68,11 +68,11 @@ int hidDisplayCallback(int notifyId, int notifyCount, int notifyArg,
 	if (result != 0)
 		return result;
 	if ((notifyArg & 0x400000) != 0) {
-		intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
+		intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
 		hidFlags |= 0x1000;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
 	} else if ((notifyArg & 0x800000) != 0) {
-		intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
+		intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
 		hidFlags &= ~0x1000U;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
 	}
@@ -86,7 +86,7 @@ int hidSystemEvent(int resume, int eventId, void *args, void *opt)
 
 	if (resume != 0) {
 		if (resume == 1 && eventId == 0x100000) {
-			intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
+			intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
 			hidFlags &= ~0x20U;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
 		}
@@ -96,16 +96,16 @@ int hidSystemEvent(int resume, int eventId, void *args, void *opt)
 	case 0x402:
 		return (int)hidFlags < 0 ? -2 : 0;
 	case 0x4000:
-		intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
+		intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
 		hidFlags |= 0x20;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
-		intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
+		intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
 		hidFlags &= ~0x10U;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
 		hidReleaseBluetoothDevices();
 		return 0;
 	case 0x200:
-		intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
+		intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
 		hidFlags |= 0x10;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
 		return 0;
@@ -132,7 +132,7 @@ int hidBluetoothCallback(int notifyId, int notifyCount, int notifyArg,
 		hidUnlock();
 		return 0;
 	}
-	intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
 	hidFlags |= 0x80000000U;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
 #define HID_EVENT_ADDRESS() \
@@ -169,7 +169,7 @@ int hidBluetoothCallback(int notifyId, int notifyCount, int notifyArg,
 		}
 	}
 #undef HID_EVENT_ADDRESS
-	intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
 	hidFlags &= ~0x80000000U;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
 	hidUnlock();
@@ -214,7 +214,7 @@ int module_start(SceSize args, const void *argp)
 				 result);
 		goto error;
 	}
-	intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
 	hidFlags |= 1;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
 	SceSysrootForDriver_34281746(&hidSysrootOps);

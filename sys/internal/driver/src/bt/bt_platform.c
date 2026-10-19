@@ -35,7 +35,7 @@ int BtInitializeEventHandlers(void)
 		goto unregisterSystem;
 	}
 	BtInitializeHidCapture();
-	if (ScePmMgrForDriver_2AC815A2(&productMode) >= 0 && productMode == 1)
+	if (sceSblPmMgrGetProductMode(&productMode) >= 0 && productMode == 1)
 		gBtStack.mode |= 0x1000;
 	if (SceSblAIMgrForDriver_71608CA3())
 		gBtStack.mode |= 0x10000;

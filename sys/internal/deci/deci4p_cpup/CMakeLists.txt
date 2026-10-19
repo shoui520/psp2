@@ -2,6 +2,6 @@
 psp2_module(os0_kd_deci4p_cpup KIND kernel COMPILER gcc48 SOURCES
 	cpup.c
 IMPORTS
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceDfMgrClose
 )

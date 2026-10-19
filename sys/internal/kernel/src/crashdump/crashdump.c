@@ -240,7 +240,7 @@ static int crashdumpWriteCore(const CrashdumpOps *ops, CrashdumpRecord *rec, con
 	} else {
 		count = rec->nranges;
 		if (count > CRASHDUMP_MAX_RANGES) {
-			SceSysmemForDriver_009E1C61(uid);
+			sceKernelFreeMemBlock(uid);
 			return -1;
 		}
 		n = count + (rec->ttbSize != 0);
@@ -362,7 +362,7 @@ static int crashdumpWriteCore(const CrashdumpOps *ops, CrashdumpRecord *rec, con
 			}
 			ret = sceKernelGetMemBlockBase(block, (void **)&map);
 			if (ret < 0) {
-				SceSysmemForDriver_009E1C61(block);
+				sceKernelFreeMemBlock(block);
 				goto fail;
 			}
 			n = rec->range[i].size - off;
@@ -372,7 +372,7 @@ static int crashdumpWriteCore(const CrashdumpOps *ops, CrashdumpRecord *rec, con
 			ret = ops->write(buf, n);
 			if (ret < 0)
 				goto fail;	/* (the window stays mapped) */
-			SceSysmemForDriver_009E1C61(block);
+			sceKernelFreeMemBlock(block);
 			total += ret;
 		}
 	}
@@ -390,7 +390,7 @@ static int crashdumpWriteCore(const CrashdumpOps *ops, CrashdumpRecord *rec, con
 				return block;	/* (nothing closed or freed) */
 			ret = sceKernelGetMemBlockBase(block, (void **)&map);
 			if (ret < 0) {
-				SceSysmemForDriver_009E1C61(block);
+				sceKernelFreeMemBlock(block);
 				goto fail;
 			}
 			n = rec->ttbSize - off;
@@ -399,22 +399,22 @@ static int crashdumpWriteCore(const CrashdumpOps *ops, CrashdumpRecord *rec, con
 			memcpy(buf, map + (phys & 0xfffff), n);
 			ret = ops->write(buf, n);
 			if (ret < 0) {
-				SceSysmemForDriver_009E1C61(block);
+				sceKernelFreeMemBlock(block);
 				goto fail;
 			}
-			SceSysmemForDriver_009E1C61(block);
+			sceKernelFreeMemBlock(block);
 		}
 	}
 done:
 	ops->close();
-	SceSysmemForDriver_009E1C61(uid);
+	sceKernelFreeMemBlock(uid);
 	return 0;
 
 fail:
 	ops->close();
 	ops->remove(name);
 free:
-	SceSysmemForDriver_009E1C61(uid);
+	sceKernelFreeMemBlock(uid);
 	return ret;
 }
 
@@ -432,7 +432,7 @@ static inline void crashdumpMarkScreen(void)
 		for (x = 0; x < fb.width; x++, px++)
 			*px = *px != 0 ? 0xc0 : 0;
 	}
-	SceCpuForDriver_364E68A4(fb.base, fb.width * fb.height * 4);
+	sceKernelDcacheCleanInvalidateRange(fb.base, fb.width * fb.height * 4);
 }
 
 int module_start(SceSize args, void *argp)
@@ -470,7 +470,7 @@ int module_start(SceSize args, void *argp)
 		goto mark;
 	}
 	if (SceQafMgrForDriver_382C71E8()) {
-		if (!SceDipswForDriver_A98FC2FD(0xc1) && !SceDipswForDriver_A98FC2FD(0xc2)) {
+		if (!sceKernelCheckDipsw(0xc1) && !sceKernelCheckDipsw(0xc2)) {
 			ret = SceQafMgrForDriver_382C71E8();
 			goto mark;
 		}
@@ -510,6 +510,6 @@ coredump:
 		SceDebugForDriver_391B74B7("[CrashDump] Generating coredump for crashdump done\n");
 	memset(rec, 0xff, CRASHDUMP_RECORD_VER);
 out:
-	SceSysmemForDriver_009E1C61(uid);
+	sceKernelFreeMemBlock(uid);
 	return SCE_KERNEL_START_NO_RESIDENT;
 }

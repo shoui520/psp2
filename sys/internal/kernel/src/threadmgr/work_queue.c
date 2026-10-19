@@ -238,11 +238,11 @@ int uidWorkTask_Destructor(ThreadmgrWorkTask *task)
 	int intr;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 2402);
-	intr = SceCpuForDriver_D32ACE9E(&task->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&task->lock);
 	wake = wakeupWaitObjectAll((uintptr_t)&task->next, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
 	sceKernelSpinlockLowUnlock(&task->lock);
 	if (task->cb.queue != NULL) {
-		SceCpuForDriver_BF82DEB2(&task->cb.queue->lock);
+		sceKernelSpinlockLowLock(&task->cb.queue->lock);
 		queue = task->cb.queue;
 		ListLinkRemove(&task->cb.link);
 		sceKernelSpinlockLowUnlock(&queue->lock);
@@ -293,7 +293,7 @@ int uidWorkQueue_RevalidateMethod(void *cls, void *object)
 	     (struct ThreadmgrWaitNode *)thread != head; thread = next) {
 		SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 2312);
 		next = (struct ThreadCB *)thread->next;
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		SCE_DBG_ASSERT_CHECK(thread->waitId >= 0, 2315);
 		if (!isWorkQueueDone(queue, ((uint64_t)thread->waitArg1 << 32) | thread->waitArg0)) {
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -315,7 +315,7 @@ int uidWorkQueue_Destructor(ThreadmgrWorkQueue *queue)
 	int intr;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 2225);
-	intr = SceCpuForDriver_D32ACE9E(&queue->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&queue->lock);
 	for (link = queue->running.next; link != &queue->running; link = next) {
 		next = link->next;
 		TASK_FROM_LINK(link)->queue = NULL;
@@ -386,7 +386,7 @@ int waitWorkQueue(SceUID workQueueId, SceUInt32 *timeout, int callbacks)
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&queue->lock);
+	sceKernelSpinlockLowLock(&queue->lock);
 	target = queue->scheduled;
 	if (timeout != NULL)
 		getWakeupTime(&wakeup, *timeout);
@@ -396,14 +396,14 @@ int waitWorkQueue(SceUID workQueueId, SceUInt32 *timeout, int callbacks)
 			ret = callCallbackAll(thread);
 			if (ret < 0)
 				goto release;
-			SceCpuForDriver_BF82DEB2(&queue->lock);
+			sceKernelSpinlockLowLock(&queue->lock);
 		}
 		if (isWorkQueueDone(queue, target)) {
 			ret = 0;
 			sceKernelSpinlockLowUnlock(&queue->lock);
 			goto release;
 		}
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		thread->waitArg0 = (uint32_t)target;
 		thread->waitArg1 = (uint32_t)(target >> 32);
 		if (!callbacks) {
@@ -485,7 +485,7 @@ int waitWorkTask(SceUID workTaskId, SceUInt32 *timeout, int callbacks)
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&task->lock);
+	sceKernelSpinlockLowLock(&task->lock);
 	if (timeout != NULL)
 		getWakeupTime(&wakeup, *timeout);
 	do {
@@ -494,12 +494,12 @@ int waitWorkTask(SceUID workTaskId, SceUInt32 *timeout, int callbacks)
 			ret = callCallbackAll(thread);
 			if (ret < 0)
 				goto release;
-			SceCpuForDriver_BF82DEB2(&task->lock);
+			sceKernelSpinlockLowLock(&task->lock);
 		}
 		while (SceCpuForDriver_5AC9D394(&task->cb.queue->lock) < 0) {
 			sceKernelSpinlockLowUnlock(&task->lock);
 			spinDelay();
-			SceCpuForDriver_BF82DEB2(&task->lock);
+			sceKernelSpinlockLowLock(&task->lock);
 		}
 		if (task->cb.done) {
 			ret = 0;
@@ -514,7 +514,7 @@ int waitWorkTask(SceUID workTaskId, SceUInt32 *timeout, int callbacks)
 			goto release;
 		}
 		sceKernelSpinlockLowUnlock(&task->cb.queue->lock);
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		if (!callbacks) {
 			ret = waitWaitableObject(workTaskId, (uintptr_t)&task->next, WAIT_TYPE_WORK_TASK,
 						 &wakeup, timeout, NULL, &locked);
@@ -579,7 +579,7 @@ int getWorkQueueInfo(SceUID workQueueId, ThreadmgrWorkQueueInfo *info)
 	} else {
 		info->workQueueId = workQueueId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(workQueueId), sizeof(info->name) - 1);
-		SceCpuForDriver_BF82DEB2(&queue->lock);
+		sceKernelSpinlockLowLock(&queue->lock);
 		info->attr = queue->attr;
 		info->threadCount = queue->threadCount;
 		info->scheduled = queue->scheduled;
@@ -604,7 +604,7 @@ int getWorkQueueInfoFull(SceUID workQueueId, ThreadmgrWorkQueueInfoFull *info)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_WORK_QUEUE_ID;
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&queue->lock);
+	sceKernelSpinlockLowLock(&queue->lock);
 	if (info->size < (queue->threadCount + 0x12) * 4) {
 		ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
 		goto resume;
@@ -646,7 +646,7 @@ int getWorkTaskInfo(SceUID workTaskId, ThreadmgrWorkTaskInfo *info)
 		info->creatorPid = task->cb.creatorPid;
 		info->puid = task->cb.puid;
 		strncpy(info->name, SceSysmemForDriver_E655852F(workTaskId), sizeof(info->name) - 1);
-		SceCpuForDriver_BF82DEB2(&task->cb.queue->lock);
+		sceKernelSpinlockLowLock(&task->cb.queue->lock);
 		info->arg = task->cb.arg;
 		info->threadId = task->cb.threadId;
 		info->creatorThreadId = task->cb.creatorThreadId;
@@ -709,7 +709,7 @@ void callWorkTaskEntry(ThreadmgrWorkTaskCB *task, void *arg)
 	} else {
 		vfp = 0;
 	}
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	savedUnk30 = thread->kernelStackTop;
 	savedUserFrame = thread->userFrame;
 	savedVfpException = thread->vfpException;
@@ -718,7 +718,7 @@ void callWorkTaskEntry(ThreadmgrWorkTaskCB *task, void *arg)
 	savedUnk100 = thread->ioFlags;
 	if (SceIntrmgrForKernel_71C5F42F(context, vfp) != 0) {
 		/* back from the task */
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		regs = thread->pRegisterContext;
 		regs->callbackVfp = regs->callbackContext->callbackVfp;
 		regs->callbackContext = regs->callbackContext->callbackContext;
@@ -813,7 +813,7 @@ int workQueueThread(SceSize argSize, void *argp)
 	for (;;) {
 		if (sceKernelWaitSema(queue->sema, 1, NULL) < 0)
 			return 0;
-		intr = SceCpuForDriver_D32ACE9E(&queue->lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&queue->lock);
 		while ((link = queue->pending.next) != &queue->pending) {
 			cb = TASK_FROM_LINK(link);
 			if (sceGUIDReferObjectWithClass(cb->guid, WORK_TASK_CLASS(),
@@ -833,11 +833,11 @@ int workQueueThread(SceSize argSize, void *argp)
 				link->prev->next = link;
 				sceKernelSpinlockLowUnlock(&queue->lock);
 				callWorkTaskEntry(cb, cb->arg);
-				SceCpuForDriver_BF82DEB2(&task->lock);
+				sceKernelSpinlockLowLock(&task->lock);
 				while (SceCpuForDriver_5AC9D394(&queue->lock) < 0) {
 					sceKernelSpinlockLowUnlock(&task->lock);
 					spinDelay();
-					SceCpuForDriver_BF82DEB2(&task->lock);
+					sceKernelSpinlockLowLock(&task->lock);
 				}
 				cb->done = 1;
 				if (!cb->closed) {
@@ -859,7 +859,7 @@ int workQueueThread(SceSize argSize, void *argp)
 					switchThread((intr >> 7) & 1);
 			}
 			sceKernelCpuResumeIntr(intr);
-			intr = SceCpuForDriver_D32ACE9E(&queue->lock);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&queue->lock);
 		}
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&queue->lock, intr);
 	}
@@ -1157,7 +1157,7 @@ SceUID sceKernelScheduleWorkTask(SceUID workQueueId, const char *name, int (*ent
 		task->cb.ioFlags = thread->ioFlags;
 	}
 	sceKernelSpinlockLowUnlock(&task->lock);
-	SceCpuForDriver_BF82DEB2(&queue->lock);
+	sceKernelSpinlockLowLock(&queue->lock);
 	if (queue->attr & WORK_QUEUE_ATTR_TASK_PRIORITY) {
 		/* after the tasks of the same or a higher priority */
 		pos = queue->pending.next;
@@ -1382,7 +1382,7 @@ int SceThreadmgrForDriver_0B604A3C(SceUID workTaskId, ThreadmgrWorkTaskInfoShort
 	}
 	local.workTaskId = workTaskId;
 	strncpy(local.name, SceSysmemForDriver_E655852F(workTaskId), sizeof(local.name) - 1);
-	SceCpuForDriver_BF82DEB2(&task->cb.queue->lock);
+	sceKernelSpinlockLowLock(&task->cb.queue->lock);
 	queueId = task->cb.queueId;
 	local.entry = task->cb.entry;
 	local.arg = task->cb.arg;

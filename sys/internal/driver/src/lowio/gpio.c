@@ -80,7 +80,7 @@ int SceGpioForDriver_A1B5A462(unsigned bank, unsigned port)
 		return GPIO_ERROR_PORT;
 	ctx = &s_gpio[bank];
 	base = ctx->base;
-	state = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	previous = base->input;
 	bit = 1U << port;
 	base->outputClear = previous & bit;
@@ -105,7 +105,7 @@ int SceGpioForDriver_372022A4(unsigned bank, unsigned port, unsigned mode)
 		return GPIO_ERROR_MODE;
 	ctx = &s_gpio[bank];
 	base = ctx->base;
-	state = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	previous = ctx->portMode;
 	bit = 1U << port;
 	ctx->portMode = (previous & ~bit) | (mode ^ 1U) << port;
@@ -138,7 +138,7 @@ int SceGpioForDriver_BBEA1DDC(unsigned bank, unsigned port, unsigned mode)
 		return GPIO_ERROR_MODE;
 	ctx = &s_gpio[bank];
 	base = ctx->base;
-	state = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	shift = port * 2;
 	if (port > 15) {
 		shift -= 32;
@@ -208,7 +208,7 @@ int SceGpioForDriver_35AAD77A(unsigned bank, unsigned port)
 		return GPIO_ERROR_PORT;
 	ctx = &s_gpio[bank];
 	base = ctx->base;
-	state = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	bit = 1U << port;
 	pending = (base->interruptStatus[0] & ctx->intrEnable[0]) |
 		(base->interruptStatus[1] & ctx->intrEnable[1]) |
@@ -278,7 +278,7 @@ static int GpioSetSubIntr(int intrCode, unsigned port, int enable)
 	if (GpioIntrContext(intrCode, &ctx, &gate) < 0)
 		return 0;
 	intrMask = ctx->base->interruptMask;
-	state = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	mask = (enable != 0) << port | (ctx->intrEnable[gate] & ~(1U << port));
 	ctx->intrEnable[gate] = mask;
 	intrMask[gate] = (ctx->excludedPorts & intrMask[gate]) |
@@ -299,7 +299,7 @@ static int GpioEnableSubIntr(int intrCode, unsigned port)
 	if (GpioIntrContext(intrCode, &ctx, &gate) < 0)
 		return 0;
 	intrMask = ctx->base->interruptMask;
-	state = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	mask = ctx->intrEnable[gate] | 1U << port;
 	ctx->intrEnable[gate] = mask;
 	intrMask[gate] = (ctx->excludedPorts & intrMask[gate]) |
@@ -321,7 +321,7 @@ static inline __attribute__((always_inline)) int GpioDisableSubIntr(
 	if (GpioIntrContext(intrCode, &ctx, &gate) < 0)
 		return 0;
 	intrMask = ctx->base->interruptMask;
-	state = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	mask = ctx->intrEnable[gate] & ~(1U << port);
 	ctx->intrEnable[gate] = mask;
 	intrMask[gate] = (ctx->excludedPorts & intrMask[gate]) |
@@ -342,7 +342,7 @@ static int GpioSuspendSubIntr(int intrCode, unsigned port, uint32_t *previous)
 	if (GpioIntrContext(intrCode, &ctx, &gate) < 0)
 		return 0;
 	intrMask = ctx->base->interruptMask;
-	state = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	mask = ctx->intrEnable[gate];
 	if (previous)
 		*previous = mask >> port & 1;

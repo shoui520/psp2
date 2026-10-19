@@ -71,7 +71,7 @@ void powerRefreshDisplayBrightness(void)
 	uint32_t brightness;
 	unsigned int head;
 
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	if (s_powerDisplayState.displayEnabled) {
 		for (head = 0; head < 3; head += 2) {
 			if (!s_powerDisplayState.brightness[head])
@@ -96,7 +96,7 @@ uint32_t powerSwitchDisplay(uint32_t enabled, uint32_t reason)
 	uint32_t brightness;
 	unsigned int head;
 
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	previous = s_powerDisplayState.displayEnabled;
 	if ((int32_t)enabled < 0)
 		enabled = previous ^ 1;

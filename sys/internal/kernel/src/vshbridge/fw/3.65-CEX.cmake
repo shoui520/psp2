@@ -344,7 +344,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_C6E83F34
 	SceSblAIMgrForDriver_D78B04A2
 	SceSblAIMgrForDriver_F4B98F66
-	ScePmMgrForDriver_2AC815A2
+	sceSblPmMgrGetProductMode
 	sceSblGcAuthMgrMlnpsnlAuth2ForDriver
 	sceSblGcAuthMgrMlnpsnlAuth1ForDriver
 	SceIdStorageForDriver_08A471A6

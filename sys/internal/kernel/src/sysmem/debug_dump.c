@@ -305,7 +305,7 @@ void DebugFaultDump(void *argument)
 	caller = fault->caller;
 	lr = fault->lr;
 	syscall = (const ThreadSyscallFrame *)SceSysrootForDriver_44EA3197();
-	dump = (DebugDumpHeader *)(SceSysrootForKernel_C8C8C321() + DEBUG_DUMP_OFFSET +
+	dump = (DebugDumpHeader *)(sceKernelSysrootGetSharedMemory() + DEBUG_DUMP_OFFSET +
 				   cpu * 0x1000);
 	out = (DebugFrame *)(dump + 1);
 	memset(dump, 0, 0x1000);
@@ -360,7 +360,7 @@ void DebugFaultDump(void *argument)
 	/* with crash dumps on, the handlers get the TTY's last output instead */
 	report = (char *)dump;
 	if (s_crashDumpEnabled) {
-		report = (char *)(SceSysrootForKernel_C8C8C321() + DEBUG_TTY_OFFSET);
+		report = (char *)(sceKernelSysrootGetSharedMemory() + DEBUG_TTY_OFFSET);
 		SceDebugForDriver_62466B0A(report, 0x1000);
 	}
 	if (s_crashDumpHandler != NULL)
@@ -380,7 +380,7 @@ void DebugFaultDump(void *argument)
 		s_faultHandler(time, cpu, info->fileHash, info->lineHash, info->funcHash, 0, 0,
 			       fault->caller, fault->lr);
 	if ((fault->kind == DEBUG_FAULT_ASSERT &&
-	     SceDipswForDriver_A98FC2FD(DEBUG_DIPSW_STOP_ON_ASSERT)) ||
+	     sceKernelCheckDipsw(DEBUG_DIPSW_STOP_ON_ASSERT)) ||
 	    fault->kind == DEBUG_FAULT_PANIC) {
 		sceKernelCpuResumeIntr(fault->interrupts);
 		SceDebugForDriver_391B74B7("Stopped\n");
@@ -392,7 +392,7 @@ void DebugFaultDump(void *argument)
 /* the top of this CPU's fault stack */
 #define DEBUG_FAULT_STACK()	(&s_faultStacks[DebugCpuId()][0xff8])
 
-void SceDebugForDriver_35A35322(SceBool cond, const SceKernelDebugInfo *info, const void *lr)
+void sceKernelAssert(SceBool cond, const SceKernelDebugInfo *info, const void *lr)
 {
 	DebugFault fault;
 
@@ -583,13 +583,13 @@ void SceDebugForKernel_CCABDD98(const SceKernelDebugInfo *info,
 		SceDebugForDriver_391B74B7("*** Kernel %s Exception at CPU%d <0x%08x%08x(%s:%d):0x%08x(%s)>\n",
 				 type, cpu, info->fileHash, info->lineHash, info->file,
 				 info->line, info->funcHash, info->func);
-	dump = (DebugExceptionDumpHeader *)(SceSysrootForKernel_C8C8C321() +
+	dump = (DebugExceptionDumpHeader *)(sceKernelSysrootGetSharedMemory() +
 					    DEBUG_DUMP_OFFSET + cpu * 0x1000);
 	memset(dump, 0, 0x1000);
 	size = SceDebugForKernel_5D6F0CFC(dump, cpu, time, info, context, arg);
 	report = (char *)dump;
 	if (s_crashDumpEnabled) {
-		report = (char *)(SceSysrootForKernel_C8C8C321() + DEBUG_TTY_OFFSET);
+		report = (char *)(sceKernelSysrootGetSharedMemory() + DEBUG_TTY_OFFSET);
 		SceDebugForDriver_62466B0A(report, 0x1000);
 	}
 	if (s_crashDumpHandler != NULL)
@@ -624,7 +624,7 @@ int SceDebugForDriver_62466B0A(char *buffer, SceSize size)
 
 	if (size >= sizeof(s_debugTty.ring))
 		size = sizeof(s_debugTty.ring);
-	flags = SceCpuForDriver_D32ACE9E(&s_debugPrintLock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&s_debugPrintLock);
 	index = s_debugTty.index;
 	tail = sizeof(s_debugTty.ring) - index;
 	if (tail >= size) {

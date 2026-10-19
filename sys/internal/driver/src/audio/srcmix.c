@@ -51,7 +51,7 @@ int SceAudioForDriver_37517CC9(uintptr_t destination, unsigned int wordCount)
 		return (int)0x80260102;
 	if (!destination)
 		goto wait;
-	intr = SceCpuForDriver_D32ACE9E(&state->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	running = transfer->state;
 	if (running > 1) {
 		result = (int)0x8026010a;
@@ -88,7 +88,7 @@ int SceAudioForDriver_37517CC9(uintptr_t destination, unsigned int wordCount)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 wait:
 	for (;;) {
-		intr = SceCpuForDriver_D32ACE9E(&state->lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 		running = transfer->state;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 		if (running <= threshold)
@@ -173,7 +173,7 @@ int audioBuildCaptureDmaTags(struct AudioDmaState *state)
 		SceKernelIntrStatus intr;
 
 		mode = -2;
-		intr = SceCpuForDriver_D32ACE9E(&audioDmaStates[1].lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&audioDmaStates[1].lock);
 		audioStartCaptureDma(&audioDmaStates[1]);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&audioDmaStates[1].lock, intr);
 		goto mixed;
@@ -278,7 +278,7 @@ int audioCaptureDmaCallback(SceKernelDmaOpId opId, unsigned int status,
 
 	(void)tag;
 	(void)completed;
-	SceCpuForDriver_BF82DEB2(&state->lock);
+	sceKernelSpinlockLowLock(&state->lock);
 	if (state->previousCaptureBuffer && state->previousCaptureFrames)
 		audioDownsampleCapture(audioCaptureSampleBankIndex,
 			state->previousCaptureBuffer, state->previousCaptureFrames);
@@ -354,7 +354,7 @@ int audioDmaTransferCallback(SceKernelDmaOpId opId, unsigned int status,
 
 	(void)tag;
 	(void)completed;
-	intr = SceCpuForDriver_D32ACE9E(&state->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	running = (status & 1) ||
 		sceKernelDmaOpSync(opId, 1, 0, 0) > 0;
 	state->transfers[stream].state = running;
@@ -426,7 +426,7 @@ int audioAuxiliaryDmaCallback(SceKernelDmaOpId opId, unsigned int status,
 
 	(void)tag;
 	(void)completed;
-	SceCpuForDriver_BF82DEB2(&state->lock);
+	sceKernelSpinlockLowLock(&state->lock);
 	if (state->previousCaptureBuffer && state->previousCaptureFrames)
 		audioDownsampleCapture(audioCaptureSampleBankIndex,
 			state->previousCaptureBuffer, state->previousCaptureFrames);
@@ -621,7 +621,7 @@ int audioSetHardwareTransferMode(unsigned int channel, unsigned int mode)
 	if (channel > 2)
 		return -1;
 	state = &audioDmaStates[channel ^ 1];
-	intr = SceCpuForDriver_D32ACE9E(&state->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	if (state->sourceMode != mode) {
 		state->sourceMode = mode;
 		if (mode <= 1)
@@ -763,11 +763,11 @@ int audioQueueHardwareBuffer(int channel, void *buffer, unsigned int wordCount)
 		transfer->state = 1;
 	}
 queue:
-	intr = SceCpuForDriver_D32ACE9E(&state->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	while (state->pendingCaptureBuffer) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 		sceKernelWaitEventFlag(state->eventFlag, 4, 5, NULL, NULL);
-		intr = SceCpuForDriver_D32ACE9E(&state->lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	}
 	state->pendingCaptureBuffer = buffer;
 	state->captureFrames = wordCount;
@@ -783,7 +783,7 @@ int audioSetSingleTransferMode(int mode)
 	struct AudioDmaState *state = &audioDmaStates[2];
 	SceKernelIntrStatus intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&state->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	if (state->transmitSourceMode != mode) {
 		state->transmitSourceMode = mode;
 		if (mode) {
@@ -809,11 +809,11 @@ int audioQueueSingleHardwareBuffer(void *buffer, unsigned int wordCount)
 		return -2;
 	if (sceKernelDmaOpSync(state->transfers[0].opId, 1, 0, 0) <= 0)
 		audioStartTransmitDma(state, state->registers);
-	intr = SceCpuForDriver_D32ACE9E(&state->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	while (state->pendingTransmitBuffer) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 		sceKernelWaitEventFlag(state->eventFlag, 1, 5, NULL, NULL);
-		intr = SceCpuForDriver_D32ACE9E(&state->lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	}
 	state->pendingTransmitBuffer = buffer;
 	state->transmitFrames = wordCount;
@@ -843,7 +843,7 @@ int audioSubmitDmaBuffer(uintptr_t source, unsigned int wordCount,
 		goto wait;
 	if (source & 15)
 		return SCE_AUDIO_OUT_ERROR_INVALID_POINTER;
-	intr = SceCpuForDriver_D32ACE9E(&state->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	running = transfer->state;
 	if (running > 1) {
 		result = SCE_AUDIO_OUT_ERROR_BUSY;
@@ -882,7 +882,7 @@ int audioSubmitDmaBuffer(uintptr_t source, unsigned int wordCount,
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 wait:
 	for (;;) {
-		intr = SceCpuForDriver_D32ACE9E(&state->lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 		running = transfer->state;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 		if (running <= threshold)
@@ -906,7 +906,7 @@ int audioSubmitSingleDmaBuffer(uintptr_t destination, unsigned int wordCount)
 		return (int)0x80260105;
 	if (!destination)
 		goto wait;
-	intr = SceCpuForDriver_D32ACE9E(&state->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	running = state->captureState;
 	if (running > 1) {
 		result = (int)0x8026010a;
@@ -949,7 +949,7 @@ submitted:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 wait:
 	for (;;) {
-		intr = SceCpuForDriver_D32ACE9E(&state->lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 		running = state->captureState;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 		if (running <= threshold)
@@ -1010,7 +1010,7 @@ int SceAudioForDriver_28B3AF10(int channel, int inputRate, int outputRate,
 		send = tail != 0;
 		tail = withoutOutput;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&state->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	gate = ScePervasiveForDriver_47F2C35C(channel);
 	if (send) {
 		const uint32_t *cursor = packet;

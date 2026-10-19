@@ -880,7 +880,7 @@ int sceVopOpen(SceVfsVnode *vp, SceVfsPath *path, int flags, SceVfsFile *file)
 								  "vfsBuffAllocate() failed ... %d 0x%x\n",
 								  ret, ret);
 			}
-			if (SceDipswForDriver_A98FC2FD(0xd2) != 0)
+			if (sceKernelCheckDipsw(0xd2) != 0)
 				vfs_debug_path_create(file, path->path);
 		}
 	}
@@ -1639,7 +1639,7 @@ int sceVopDopen(SceVfsVnode *vp, SceVfsPath *path, SceVfsFile *file)
 		args.file = file;
 		ret = op(&args);
 		vfs_set_mnt_sync_request(vp->core.mnt);
-		if (SceDipswForDriver_A98FC2FD(0xd2) != 0)
+		if (sceKernelCheckDipsw(0xd2) != 0)
 			vfs_debug_path_create(file, path->path);
 	}
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_DOPEN + 1, 2, vp, ret);

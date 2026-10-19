@@ -88,7 +88,7 @@ int MsifSleepThread(SceSize args, void *argp)
 
 int MsifDisableInsertionSubInterrupt(int interrupt, int subInterrupt)
 {
-	int state = SceCpuForDriver_D32ACE9E(&gMsifContext.lock);
+	int state = sceKernelSpinlockLowLockCpuSuspendIntr(&gMsifContext.lock);
 
 	gMsifContext.insertionInterruptMask &= ~(1U << subInterrupt);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&gMsifContext.lock, state);
@@ -97,7 +97,7 @@ int MsifDisableInsertionSubInterrupt(int interrupt, int subInterrupt)
 
 int MsifEnableInsertionSubInterrupt(int interrupt, int subInterrupt)
 {
-	int state = SceCpuForDriver_D32ACE9E(&gMsifContext.lock);
+	int state = sceKernelSpinlockLowLockCpuSuspendIntr(&gMsifContext.lock);
 
 	gMsifContext.insertionInterruptMask |= 1U << subInterrupt;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&gMsifContext.lock, state);
@@ -107,7 +107,7 @@ int MsifEnableInsertionSubInterrupt(int interrupt, int subInterrupt)
 int MsifInsertionInterrupt(int interrupt, void *argp)
 {
 	struct MsifContext *context = argp;
-	int state = SceCpuForDriver_D32ACE9E(&gMsifContext.lock);
+	int state = sceKernelSpinlockLowLockCpuSuspendIntr(&gMsifContext.lock);
 	uint32_t status = ScePervasiveForDriver_F9E7B023();
 
 	if ((status & 1) && (context->insertionInterruptMask & 2))
@@ -121,7 +121,7 @@ int MsifInsertionInterrupt(int interrupt, void *argp)
 int MsifControllerInterrupt(int interrupt, void *argp)
 {
 	struct MsifContext *context = argp;
-	int state = SceCpuForDriver_D32ACE9E(&gMsifContext.lock);
+	int state = sceKernelSpinlockLowLockCpuSuspendIntr(&gMsifContext.lock);
 
 	gMsifContext.interruptTime = sceKernelGetSystemTimeWide();
 	if (context->started)
@@ -362,9 +362,9 @@ int sceMsifPrepareDmaTable(uint8_t *data, uint32_t length, int write)
 	}
 	if (gMsifContext.headLength) {
 		if (write)
-			SceCpuForDriver_103872A5(gMsifContext.headBuffer, 64);
+			sceKernelDcacheCleanRange(gMsifContext.headBuffer, 64);
 		else
-			SceCpuForDriver_364E68A4(gMsifContext.headBuffer, 64);
+			sceKernelDcacheCleanInvalidateRange(gMsifContext.headBuffer, 64);
 		SCE_DBG_ASSERT((gMsifContext.headLength & 3) == 0, 1405);
 		if (gMsifContext.headLength & 3) {
 			SceDebugForDriver_02B04343(0, SCE_DBGINFO(1410),
@@ -380,9 +380,9 @@ int sceMsifPrepareDmaTable(uint8_t *data, uint32_t length, int write)
 	}
 	if (alignedLength) {
 		if (write)
-			SceCpuForDriver_103872A5(alignedData, alignedLength);
+			sceKernelDcacheCleanRange(alignedData, alignedLength);
 		else
-			SceCpuForDriver_364E68A4(alignedData, alignedLength);
+			sceKernelDcacheCleanInvalidateRange(alignedData, alignedLength);
 		if (ranges) {
 			for (i = 0; i != rangeCount; ++i) {
 				uintptr_t address = ranges[i].addr;
@@ -490,9 +490,9 @@ int sceMsifPrepareDmaTable(uint8_t *data, uint32_t length, int write)
 				gMsifContext.dmaDescriptorsPhysicalAddress +
 				index * sizeof(*descriptors);
 		if (write)
-			SceCpuForDriver_103872A5(gMsifContext.tailBuffer, 64);
+			sceKernelDcacheCleanRange(gMsifContext.tailBuffer, 64);
 		else
-			SceCpuForDriver_364E68A4(gMsifContext.tailBuffer, 64);
+			sceKernelDcacheCleanInvalidateRange(gMsifContext.tailBuffer, 64);
 		SCE_DBG_ASSERT((gMsifContext.tailLength & 3) == 0, 1472);
 		if (gMsifContext.tailLength & 3) {
 			SceDebugForDriver_02B04343(0, SCE_DBGINFO(1476),
@@ -515,7 +515,7 @@ int sceMsifPrepareDmaTable(uint8_t *data, uint32_t length, int write)
 	}
 	if (index)
 		descriptors[index - 1].transferControl &= ~0x40000000U;
-	SceCpuForDriver_103872A5(descriptors,
+	sceKernelDcacheCleanRange(descriptors,
 		((entries * sizeof(*descriptors)) & ~63U) + 64);
 	return index;
 
@@ -563,16 +563,16 @@ int sceMsifReadSector(uint32_t sector, uint8_t *data, unsigned int count)
 	}
 	endTime = sceKernelGetSystemTimeWide();
 	if (gMsifContext.headLength) {
-		SceCpuForDriver_02796361(gMsifContext.headBuffer, 64);
+		sceKernelDcacheInvalidateRange(gMsifContext.headBuffer, 64);
 		memcpy(data, gMsifContext.headBuffer, gMsifContext.headLength);
 	}
 	if (gMsifContext.tailLength) {
-		SceCpuForDriver_02796361(gMsifContext.tailBuffer, 64);
+		sceKernelDcacheInvalidateRange(gMsifContext.tailBuffer, 64);
 		memcpy(gMsifContext.alignedData + gMsifContext.alignedLength,
 			gMsifContext.tailBuffer, gMsifContext.tailLength);
 	}
 	if (gMsifContext.alignedLength)
-		SceCpuForDriver_02796361(gMsifContext.alignedData,
+		sceKernelDcacheInvalidateRange(gMsifContext.alignedData,
 			gMsifContext.alignedLength);
 	if (gMsifContext.slowCardMode == 1) {
 		uint64_t period = startTime / 3000000;
@@ -759,16 +759,16 @@ release_controller_interrupt:
 	sceKernelDisableIntr(61);
 	sceKernelReleaseIntrHandler(61);
 free_dma:
-	SceSysmemForDriver_009E1C61(gMsifContext.dmaMemBlock);
+	sceKernelFreeMemBlock(gMsifContext.dmaMemBlock);
 finalize_mutex:
 	sceKernelFinalizeFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	sceKernelDeleteEventFlag(gMsifContext.eventFlag);
-	SceSysmemForDriver_009E1C61(gMsifContext.controllerMemBlock);
+	sceKernelFreeMemBlock(gMsifContext.controllerMemBlock);
 	return result < 0 ? 2 : 0;
 delete_event:
 	sceKernelDeleteEventFlag(gMsifContext.eventFlag);
 free_controller:
-	SceSysmemForDriver_009E1C61(gMsifContext.controllerMemBlock);
+	sceKernelFreeMemBlock(gMsifContext.controllerMemBlock);
 	return 2;
 }
 
@@ -1164,7 +1164,7 @@ int sceMsifZerofillSector(uint32_t sector, unsigned int count)
 			return 0x803d0005;
 		}
 		descriptors[entries - 1].transferControl &= ~0x40000000U;
-		SceCpuForDriver_103872A5(descriptors,
+		sceKernelDcacheCleanRange(descriptors,
 			((entries * sizeof(*descriptors)) & ~63U) + 64);
 		result = msproal_write(currentSector, sectors, gMsifContext.dmaDescriptors);
 		if (result) {

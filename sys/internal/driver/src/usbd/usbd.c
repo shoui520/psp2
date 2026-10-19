@@ -211,7 +211,7 @@ static __always_inline void usbdQueueEvent(UsbdEventQueue *queue, UsbdEvent *eve
 {
 	SceKernelIntrStatus intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&s_queueLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_queueLock);
 	USBD_LIST_APPEND(queue->head, queue->tail, event);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_queueLock, intr);
 }
@@ -221,7 +221,7 @@ static __always_inline UsbdEvent *usbdDequeueEvent(UsbdEventQueue *queue)
 	SceKernelIntrStatus intr;
 	UsbdEvent *event;
 
-	intr = SceCpuForDriver_D32ACE9E(&s_queueLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_queueLock);
 	event = queue->head;
 	if (event != NULL)
 		USBD_LIST_REMOVE(queue->head, queue->tail, event);

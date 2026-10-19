@@ -55,7 +55,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoOpen
 	sceIoRead
 	sceIoClose
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelVAtoPA
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel

@@ -76,7 +76,7 @@ static int CifIntrHandler(int intrCode, void *arg)
 static int CsiSetSubIntrHandler(int intrCode, int subIntr, void *handler)
 {
 	CsiContext *ctx = intrCode == 0xa6 ? &s_csi[0] : &s_csi[1];
-	uint32_t intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	uint32_t intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 
 	ctx->subIntrMask = (ctx->subIntrMask & ~(1U << subIntr)) |
 		((handler != NULL) << subIntr);
@@ -88,7 +88,7 @@ static int CsiSetSubIntrHandler(int intrCode, int subIntr, void *handler)
 static int CsiSuspendSubIntr(int intrCode, int subIntr, uint32_t *enabled)
 {
 	CsiContext *ctx = intrCode == 0xa6 ? &s_csi[0] : &s_csi[1];
-	uint32_t intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	uint32_t intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	uint32_t mask = ctx->subIntrMask;
 
 	if (enabled != NULL)
@@ -133,7 +133,7 @@ static int CsiSysEvent(int resume, int eventId, void *args, void *opt)
 static int CsiDisableSubIntr(int intrCode, int subIntr)
 {
 	CsiContext *ctx = intrCode == 0xa6 ? &s_csi[0] : &s_csi[1];
-	uint32_t intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	uint32_t intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 
 	ctx->subIntrMask &= ~(1U << subIntr);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
@@ -144,7 +144,7 @@ static int CsiDisableSubIntr(int intrCode, int subIntr)
 static int CsiEnableSubIntr(int intrCode, int subIntr)
 {
 	CsiContext *ctx = intrCode == 0xa6 ? &s_csi[0] : &s_csi[1];
-	uint32_t intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	uint32_t intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 
 	ctx->subIntrMask |= 1U << subIntr;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);

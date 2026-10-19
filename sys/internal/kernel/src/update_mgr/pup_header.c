@@ -68,7 +68,7 @@ int PupUtilVerifyPupHeaderAsync(SceSize arglen, PupVerifyThreadArgs *args)
 	result = UpdateUtilIoRead(fd, 0, pupFileBufferSize, pupFileBuffer);
 	if (result)
 		goto cleanup;
-	SceCpuForDriver_103872A5(pupFileBuffer, (pupFileBufferSize + 63) & ~63);
+	sceKernelDcacheCleanRange(pupFileBuffer, (pupFileBufferSize + 63) & ~63);
 	if (loadSm) {
 		pupSmId = -1;
 		result = UpdateUtilSetupSm(0, &pupSmId, 0);

@@ -117,7 +117,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelVARangeToPAVector
 	SceSysmemForDriver_FB817A59
 	sceKernelIsUncacheAddressInTmpFsGame
-	SceDebugForDriver_35A35322
+	sceKernelAssert
 	SceDebugForDriver_374B7868
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
@@ -164,7 +164,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	ScePmMgrForDriver_2AC815A2
+	sceSblPmMgrGetProductMode
 	SceSysconForDriver_10C9657A
 	SceSysconForDriver_63683B9B
 	SceSysconForDriver_81A6060D

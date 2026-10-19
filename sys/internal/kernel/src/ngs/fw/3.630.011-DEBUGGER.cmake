@@ -67,7 +67,7 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_391B74B7
-	SceCpuForDriver_103872A5
+	sceKernelDcacheCleanRange
 	SceCpuForDriver_CDA96E81
 	sceKernelDeleteMutex
 	sceKernelFinalizeFastMutex
@@ -81,7 +81,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUnlockFastMutex
 	sceKernelGetSystemTimeWide
 	sceKernelCreateMutex
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	SceSysmemForDriver_24A99FFF
 	SceSysmemForDriver_59A4402F
 	sceKernelCopyToUser

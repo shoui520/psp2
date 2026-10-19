@@ -242,7 +242,7 @@ SceUID SceKernelSuspendForDriver_CE7A2207(SceUInt32 idx, int (*handler)(int valu
 
 	if (idx >= SUSPEND_HANDLERS)
 		return -1;
-	state = SceCpuForDriver_D32ACE9E(&s_handlerLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_handlerLock);
 	s_suspendHandlers[idx].handler = handler;
 	s_suspendHandlers[idx].args = args;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_handlerLock, state);
@@ -256,7 +256,7 @@ SceUID SceKernelSuspendForDriver_105C5752(SceUInt32 idx, int (*handler)(int valu
 
 	if (idx >= SUSPEND_HANDLERS)
 		return -1;
-	state = SceCpuForDriver_D32ACE9E(&s_handlerLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_handlerLock);
 	s_resumeHandlers[idx].handler = handler;
 	s_resumeHandlers[idx].args = args;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_handlerLock, state);

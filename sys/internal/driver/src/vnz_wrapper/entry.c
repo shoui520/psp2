@@ -16,7 +16,7 @@ int _veneziaWrapperModuleProcessExit(SceUID pid, ProcEventParam *param, void *co
 	SceUInt32 type;
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(handlers != NULL, SCE_DBGINFO(334), __builtin_return_address(0));
+	sceKernelAssert(handlers != NULL, SCE_DBGINFO(334), __builtin_return_address(0));
 #endif
 	for (i = 0; i != 4; i++) {
 		if (handlers[i] != NULL) {
@@ -156,7 +156,7 @@ int _veneziaWrapperModuleProcessKill(SceUID pid, ProcEventParam *param, void *co
 	SceUInt32 type;
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(handlers != NULL, SCE_DBGINFO(366), __builtin_return_address(0));
+	sceKernelAssert(handlers != NULL, SCE_DBGINFO(366), __builtin_return_address(0));
 #endif
 	for (i = 0; i != 4; i++) {
 		if (handlers[i] != NULL) {

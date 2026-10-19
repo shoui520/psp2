@@ -121,8 +121,7 @@ typedef struct SceKernelDebugInfoSource {
 
 /* vitasdk: ksceKernelPanic */
 void SceDebugForDriver_391B5B74(const SceKernelDebugInfo *info, const void *lr) __attribute__((noreturn));
-/* vitasdk: ksceKernelAssert */
-void SceDebugForDriver_35A35322(SceBool cond, const SceKernelDebugInfo *info, const void *lr);
+void sceKernelAssert(SceBool cond, const SceKernelDebugInfo *info, const void *lr);
 void SceDebugForDriver_00CCE39C(const SceKernelDebugInfo *info, const void *lr, const char *fmt, ...)
 	__attribute__((noreturn));	/* vitasdk: ksceKernelPrintfPanic */
 
@@ -191,9 +190,9 @@ int SceDebugForDriver_821A2D59(SceUInt32 level, SceBool cond, const SceKernelDeb
 			      __builtin_return_address(0))
 
 /* unconditional assertion failure (the condition is already known false) */
-/* SceDebugForDriver_35A35322(cond, info, lr) */
+/* sceKernelAssert(cond, info, lr) */
 #define SCE_DBG_ASSERT(_cond, _line)					\
-	SceDebugForDriver_35A35322((_cond), SCE_DBGINFO(_line), __builtin_return_address(0))
+	sceKernelAssert((_cond), SCE_DBGINFO(_line), __builtin_return_address(0))
 
 /* level 1 assertion, checked only while assertions are enabled */
 #define SCE_DBG_ASSERT_CHECK(_cond, _line) do {				\
@@ -235,7 +234,7 @@ int SceDebugForDriver_821A2D59(SceUInt32 level, SceBool cond, const SceKernelDeb
 	SceDebugForDriver_D9703808(1, (_flags), SCE_DBGINFO_FUNC(_line, _func),	\
 				      _fmt, ##__VA_ARGS__)
 #define SCE_DBG_ASSERT_FUNC(_cond, _line, _func)			\
-	SceDebugForDriver_35A35322((_cond), SCE_DBGINFO_FUNC(_line, _func), __builtin_return_address(0))
+	sceKernelAssert((_cond), SCE_DBGINFO_FUNC(_line, _func), __builtin_return_address(0))
 #define SCE_DBG_PRINTF_LEVEL_FUNC(_level, _flags, _line, _func, _fmt, ...)	\
 	SceDebugForDriver_D9703808((_level), (_flags), SCE_DBGINFO_FUNC(_line, _func),	\
 				      _fmt, ##__VA_ARGS__)

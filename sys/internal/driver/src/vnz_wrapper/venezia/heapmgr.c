@@ -48,7 +48,7 @@ void *_sceVeneziaHeapManagerAllocMemory(VeneziaHeapManager *manager,
 	if (!manager)
 		return NULL;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(manager->magic == 911383599,
+	sceKernelAssert(manager->magic == 911383599,
 		SCE_DBGINFO_FUNC(74, "_sceVeneziaHeapManagerAllocMemory"),
 		__builtin_return_address(0));
 #endif
@@ -56,18 +56,18 @@ void *_sceVeneziaHeapManagerAllocMemory(VeneziaHeapManager *manager,
 		return NULL;
 	if (alignment && (alignment > 0x100000 || ((alignment - 1) & alignment))) {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(0,
+		sceKernelAssert(0,
 			SCE_DBGINFO_FUNC(83, "_sceVeneziaHeapManagerAllocMemory"),
 			__builtin_return_address(0));
 #endif
 		return NULL;
 	}
 	head = manager->heaps;
-	intr = SceCpuForDriver_D32ACE9E(&manager->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&manager->lock);
 	entry = head->prev;
 	for (;;) {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322((uintptr_t)manager->base <= (uintptr_t)entry &&
+		sceKernelAssert((uintptr_t)manager->base <= (uintptr_t)entry &&
 			(uintptr_t)entry < (uintptr_t)manager->base + manager->size,
 			SCE_DBGINFO_FUNC(96, "_sceVeneziaHeapManagerAllocMemory"),
 			__builtin_return_address(0));
@@ -91,15 +91,15 @@ int _procMemory(VeneziaHeapManager *manager, void *memory)
 	if (!manager)
 		return (int)0x80600000;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(manager->magic == 911383599,
+	sceKernelAssert(manager->magic == 911383599,
 		SCE_DBGINFO_FUNC(150, "_procMemory"), __builtin_return_address(0));
 #endif
 	head = manager->heaps;
-	intr = SceCpuForDriver_D32ACE9E(&manager->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&manager->lock);
 	entry = head->prev;
 	for (;;) {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322((uintptr_t)manager->base <= (uintptr_t)entry &&
+		sceKernelAssert((uintptr_t)manager->base <= (uintptr_t)entry &&
 			(uintptr_t)entry < (uintptr_t)manager->base + manager->size,
 			SCE_DBGINFO_FUNC(160, "_procMemory"), __builtin_return_address(0));
 #endif
@@ -123,15 +123,15 @@ int registerVeneziaHeapManagerMemory(VeneziaHeapManager *manager, void *memory, 
 	if (!manager)
 		return (int)0x80600000;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(manager->magic == 911383599,
+	sceKernelAssert(manager->magic == 911383599,
 		SCE_DBGINFO_FUNC(150, "_procMemory"), __builtin_return_address(0));
 #endif
 	head = manager->heaps;
-	intr = SceCpuForDriver_D32ACE9E(&manager->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&manager->lock);
 	entry = head->prev;
 	for (;;) {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322((uintptr_t)manager->base <= (uintptr_t)entry &&
+		sceKernelAssert((uintptr_t)manager->base <= (uintptr_t)entry &&
 			(uintptr_t)entry < (uintptr_t)manager->base + manager->size,
 			SCE_DBGINFO_FUNC(160, "_procMemory"), __builtin_return_address(0));
 #endif
@@ -155,15 +155,15 @@ int unregisterVeneziaHeapManagerMemory(VeneziaHeapManager *manager, void *memory
 	if (!manager)
 		return (int)0x80600000;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(manager->magic == 911383599,
+	sceKernelAssert(manager->magic == 911383599,
 		SCE_DBGINFO_FUNC(150, "_procMemory"), __builtin_return_address(0));
 #endif
 	head = manager->heaps;
-	intr = SceCpuForDriver_D32ACE9E(&manager->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&manager->lock);
 	entry = head->prev;
 	for (;;) {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322((uintptr_t)manager->base <= (uintptr_t)entry &&
+		sceKernelAssert((uintptr_t)manager->base <= (uintptr_t)entry &&
 			(uintptr_t)entry < (uintptr_t)manager->base + manager->size,
 			SCE_DBGINFO_FUNC(160, "_procMemory"), __builtin_return_address(0));
 #endif
@@ -187,15 +187,15 @@ int isVeneziaHeapManagerRegistered(VeneziaHeapManager *manager)
 	if (!manager)
 		return (int)0x80600000;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(manager->magic == 911383599,
+	sceKernelAssert(manager->magic == 911383599,
 		SCE_DBGINFO_FUNC(150, "_procMemory"), __builtin_return_address(0));
 #endif
 	head = manager->heaps;
-	intr = SceCpuForDriver_D32ACE9E(&manager->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&manager->lock);
 	entry = head->prev;
 	for (;;) {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322((uintptr_t)manager->base <= (uintptr_t)entry &&
+		sceKernelAssert((uintptr_t)manager->base <= (uintptr_t)entry &&
 			(uintptr_t)entry < (uintptr_t)manager->base + manager->size,
 			SCE_DBGINFO_FUNC(160, "_procMemory"), __builtin_return_address(0));
 #endif

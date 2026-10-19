@@ -265,7 +265,7 @@ set(MODULE_IMPORT_FUNCS
 	strnlen
 	look_ctype_table
 	memcmp
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceGUIDClose
 	sceGUIDReferObject
 	sceGUIDGetObject
@@ -388,7 +388,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_B33CEC8F
 	SceSblAIMgrForDriver_D78B04A2
 	SceSblAIMgrForDriver_F4B98F66
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	SceDipswForDriver_B2AD48BE
 	deflateInit2Padded_
 	deflateEnd

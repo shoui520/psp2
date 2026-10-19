@@ -33,14 +33,14 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	memset
 	__stack_chk_fail
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelCopyFromUserProc
 	sceKernelCopyToUser
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_BF82DEB2
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLock
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	sceKernelGetProcessId
 	sceKernelRegisterProcEventHandler

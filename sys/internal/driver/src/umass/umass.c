@@ -793,7 +793,7 @@ int SceUsbMassForDriver_F2BAB182(int intr)
 
 	if (intr != 15)
 		return (int)SCE_ERROR_ERRNO_EINVAL;
-	state = SceCpuForDriver_D32ACE9E(&intrLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&intrLock);
 	if ((enabled & 1) && (SceCpuForDriver_E36F3A46(&pending, 1) & 1))
 		sceKernelCallSubIntrHandler(15, 0, NULL);
 	if ((enabled & 2) && (SceCpuForDriver_E36F3A46(&pending, 2) & 2))
@@ -842,7 +842,7 @@ int module_start(SceSize args, void *argp)
 			}
 			SceUsbServForDriver_853CB8E4();
 		}
-		SceSysmemForDriver_009E1C61(memblock);
+		sceKernelFreeMemBlock(memblock);
 	}
 	sceKernelDeleteEventFlag(eventFlag);
 deleteMutex:

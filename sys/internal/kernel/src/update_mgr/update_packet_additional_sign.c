@@ -75,7 +75,7 @@ int UpdateUtilCreatePacketPayloadPupAS(UpdateDigestPacketPayload **packetOut,
 #else
 	memcpy(packet->descriptors, vectorVector->pRanges, 8 * vectorVector->total);
 #endif
-	SceCpuForDriver_103872A5(dataVector->pRanges,
+	sceKernelDcacheCleanRange(dataVector->pRanges,
 			(8 * dataVector->total + 63) & ~63);
 	*packetOut = packet;
 	*dataOut = dataVector;

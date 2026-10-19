@@ -34,7 +34,7 @@ LibraryDB *LibraryDBLock(SceUID pid, int *intr)
 		return NULL;
 	db = LibraryDBGetDB(pid);
 	if (db != NULL)
-		*intr = SceCpuForDriver_D32ACE9E(&db->lock);
+		*intr = sceKernelSpinlockLowLockCpuSuspendIntr(&db->lock);
 	ModulemgrReleaseProcess(pid);
 	return db;
 }
@@ -183,11 +183,11 @@ void LibraryDBDelete(SceUID pid)
 	}
 	tbl = old.addr2mod;
 	if (tbl != NULL) {
-		SceSysmemForDriver_009E1C61(tbl->tableBlock);
+		sceKernelFreeMemBlock(tbl->tableBlock);
 		if (tbl->exidxKernelBlock > 0)
-			SceSysmemForDriver_009E1C61(tbl->exidxKernelBlock);
+			sceKernelFreeMemBlock(tbl->exidxKernelBlock);
 		if (tbl->exidxBlock > 0)
-			SceSysmemForDriver_009E1C61(tbl->exidxBlock);
+			sceKernelFreeMemBlock(tbl->exidxBlock);
 		sceKernelFreeRemoteToolHeap(pid, tbl);
 	}
 	SCE_DBG_ASSERT_LEVEL(0, old.libCount == 0, 273);
@@ -209,7 +209,7 @@ LibraryDB *LibraryDBInitializeAddr2ModuleTable(SceUID pid)
 	memset(db, 0, sizeof(*db));
 	db->pid = pid;
 
-	if (SceDipswForDriver_A98FC2FD(0xd2)) {
+	if (sceKernelCheckDipsw(0xd2)) {
 		SCE_DBG_ASSERT(pid != KERNEL_PID, 405);
 		tbl = sceKernelAllocRemoteToolHeap(pid, sizeof(*tbl));
 		if (tbl != NULL) {
@@ -269,7 +269,7 @@ int LibraryDBInitializeAddr2ModuleTableForKernel(LibraryDB *db)
 	SceKernelAllocMemBlockKernelOpt opt;
 	SceModuleCB *cb;
 
-	if (SceDipswForDriver_A98FC2FD(0xd2)) {
+	if (sceKernelCheckDipsw(0xd2)) {
 		db->addr2mod = &g_kernelAddr2Mod;
 		memset(&opt, 0, sizeof(opt));
 		opt.size = sizeof(opt);
@@ -293,7 +293,7 @@ SharedModuleEntry *SharedModuleFind(const char *path)
 	SharedModuleEntry *ent;
 	int intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&g_sharedLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&g_sharedLock);
 	for (ent = g_sharedModules; ent != NULL; ent = ent->next) {
 		if (strncmp(ent->cb->path, path, 0x100) == 0) {
 			ent->refCount++;
@@ -310,7 +310,7 @@ int SharedModuleRelease(SharedModuleEntry *ent)
 {
 	int intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&g_sharedLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&g_sharedLock);
 	ent->refCount--;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_sharedLock, intr);
 	return 0;
@@ -321,7 +321,7 @@ static inline void SharedLibraryDBReleaseModule(SceModuleCB *cb)
 	SharedModuleEntry *ent, *prev;
 	int intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&g_sharedLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&g_sharedLock);
 	ent = g_sharedModules;
 	if (ent == NULL)
 		goto unlock;
@@ -1124,7 +1124,7 @@ void LibraryDBRegisterModule(SceModuleCB *cb)
 				}
 				ent->dataCopy = copy;
 			}
-			lock = SceCpuForDriver_D32ACE9E(&g_sharedLock);
+			lock = sceKernelSpinlockLowLockCpuSuspendIntr(&g_sharedLock);
 			ent->next = g_sharedModules;
 			g_sharedModules = ent;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&g_sharedLock, lock);

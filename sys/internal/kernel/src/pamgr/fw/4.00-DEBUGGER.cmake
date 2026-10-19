@@ -87,11 +87,11 @@ set(MODULE_IMPORT_NIDS
 	0x9D33EE8D:F:0x7CC73CDA
 )
 set(MODULE_IMPORT_FUNCS
-	SceDebugForDriver_35A35322
+	sceKernelAssert
 	SceDebugForDriver_374B7868
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	sceKernelCpuId
 	SceCpuForKernel_FD54A91D
 	SceThreadmgrForKernel_170F69D6
@@ -116,7 +116,7 @@ set(MODULE_IMPORT_FUNCS
 	memset
 	memcpy
 	__stack_chk_fail
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	SceSysmemForDriver_45D22597
 	sceKernelCopyToUser
 	sceKernelVAtoPA

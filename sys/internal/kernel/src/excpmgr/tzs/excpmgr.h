@@ -9,10 +9,6 @@
 #pragma once
 
 /* ForTZS imports: the os0 name of each one's function */
-#define SceSysrootForKernel_D7198963			sceKernelIsColdBoot
-#define SceCpuForDriver_BF82DEB2		sceKernelSpinlockLowLock
-#define SceCpuForDriver_D32ACE9E	sceKernelSpinlockLowLockCpuSuspendIntr
-#define SceCpuForDriver_9CB9F0CE	SceCpuForTZS_596784E9
 #define SceDebugForDriver_02B04343		SceDebugForTZS_0D799DAE
 #define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB
 #define SceDebugForDriver_374B7868		SceDebugForTZS_F851BA4F

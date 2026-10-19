@@ -74,7 +74,7 @@ static int DsiIntrPending(int intrCode, int subIntr)
 static int DsiSetSubIntrHandler(int intrCode, int subIntr, void *handler)
 {
 	DsiContext *ctx = intrCode == DSI_INTR_HEAD1 ? &s_dsi[1] : &s_dsi[0];
-	uint32_t intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	uint32_t intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	uint32_t mask;
 
 	mask = (ctx->subIntrMask & ~(1U << subIntr)) | ((handler != NULL) << subIntr);
@@ -92,7 +92,7 @@ static int DsiSetSubIntrHandler(int intrCode, int subIntr, void *handler)
 static int DsiSuspendSubIntr(int intrCode, int subIntr, uint32_t *enabled)
 {
 	DsiContext *ctx = intrCode == DSI_INTR_HEAD1 ? &s_dsi[1] : &s_dsi[0];
-	uint32_t intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	uint32_t intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	uint32_t mask = ctx->subIntrMask;
 
 	if (enabled != NULL)
@@ -140,7 +140,7 @@ static int DsiShortWrite(unsigned head, uint32_t packet)
 	if (head > 1)
 		return DSI_ERROR_HEAD;
 	ctx = &s_dsi[head];
-	intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	if (!ctx->enabled) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 		return DSI_ERROR_DISABLED;
@@ -179,7 +179,7 @@ static int DsiRead(unsigned head, uint32_t packet, uint8_t *data, int size)
 	if ((unsigned)size > 32)
 		return DSI_ERROR_PARAM;
 	ctx = &s_dsi[head];
-	intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	if (!ctx->enabled) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 		return DSI_ERROR_DISABLED;
@@ -210,7 +210,7 @@ static int DsiIntrHandler(int intrCode, void *arg)
 	uint64_t target, output;
 	uint32_t intr, status, mask;
 
-	intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	if (!ctx->enabled) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 		return -2;
@@ -255,7 +255,7 @@ static int DsiIntrHandler(int intrCode, void *arg)
 static int DsiDisableSubIntr(int intrCode, int subIntr)
 {
 	DsiContext *ctx = intrCode == DSI_INTR_HEAD1 ? &s_dsi[1] : &s_dsi[0];
-	uint32_t intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	uint32_t intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	uint32_t mask;
 
 	mask = ctx->subIntrMask & ~(1U << subIntr);
@@ -273,7 +273,7 @@ static int DsiDisableSubIntr(int intrCode, int subIntr)
 static int DsiEnableSubIntr(int intrCode, int subIntr)
 {
 	DsiContext *ctx = intrCode == DSI_INTR_HEAD1 ? &s_dsi[1] : &s_dsi[0];
-	uint32_t intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	uint32_t intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	uint32_t mask;
 
 	mask = ctx->subIntrMask | 1U << subIntr;
@@ -764,7 +764,7 @@ int SceDsiForDriver_5BE5AA9B(unsigned head)
 		return DSI_ERROR_HEAD;
 	ctx = &s_dsi[head];
 	ScePervasiveForDriver_350BF570(head);
-	intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	if (ctx->enabled) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 		return 0;
@@ -827,7 +827,7 @@ int SceDsiForDriver_114D1413(unsigned head)
 	if (head > 1)
 		return DSI_ERROR_HEAD;
 	ctx = &s_dsi[head];
-	intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	if (!ctx->enabled) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 		return 0;
@@ -867,7 +867,7 @@ int SceDsiForDriver_C2E85919(unsigned head, unsigned start)
 	if (start > 4)
 		return DSI_ERROR_PARAM;
 	ctx = &s_dsi[head];
-	intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	if (!ctx->enabled) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 		return DSI_ERROR_VIC;
@@ -985,7 +985,7 @@ int SceDsiForDriver_7640F607(unsigned head)
 	if (head > 1)
 		return DSI_ERROR_HEAD;
 	ctx = &s_dsi[head];
-	intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	if (!ctx->enabled) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 		return 0;

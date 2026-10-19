@@ -47,7 +47,7 @@ void motionPacketComplete(int result, void *arg)
 	int intr;
 
 	(void)arg;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	motionPacket.completion = NULL;
 	motionPacket.request = NULL;
 	motionPacket.response = NULL;
@@ -68,7 +68,7 @@ void motionSamplesComplete(int result, void *arg)
 
 	(void)result;
 	(void)arg;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if (motionBusy == 1) {
 		motionBusy = 0;
 		motionRingGetWriteSlot(motion.ring, &sample, &owner);
@@ -107,7 +107,7 @@ void motionStopComplete(int result, void *arg)
 
 	(void)result;
 	(void)arg;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if (motionBusy != 1) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return;
@@ -132,7 +132,7 @@ void motionIdentityComplete(int result, void *arg)
 	if (result == 0)
 		motion.initState = 4;
 	motionBusy = 0;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	switch (motion.state) {
 	case 3:
 		sceKernelSetEventFlag(motionUpdate.event, 1);
@@ -158,7 +158,7 @@ void motionStartComplete(int result, void *arg)
 
 	(void)result;
 	(void)arg;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if (motionBusy == 1) {
 		motionBusy = 0;
 		resetGyroFilter(&motion.filter);
@@ -194,7 +194,7 @@ int motionReadSamples(SceMotionDevData *data, int count, uint32_t *info,
 
 	if (data == NULL || (unsigned int)(count - 1) >= MOTION_RING_SAMPLES)
 		return (int)0x80360001;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	ret = 0;
 	if ((unsigned int)(motion.state - 1) > 1) {
 		if (motion.state == 128)
@@ -340,7 +340,7 @@ void motionResponseComplete(int result, void *arg)
 			return;
 	}
 complete:
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	completion = motionUpdate.completion;
 	motionBusy = 0;
 	request = motionUpdate.request;
@@ -412,7 +412,7 @@ int motionStopProcess(SceUID pid, int event, ProcEventParam *param, void *common
 	(void)common;
 	if (event != 0x800)
 		return 0;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if (motion.processes[0].pid == pid)
 		i = 0;
 	else if (motion.processes[1].pid == pid)
@@ -462,7 +462,7 @@ uint32_t motionSampleTimer(void *arg)
 	int intr, mode, i, result;
 
 	(void)arg;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	mode = motion.overrideSampling;
 	if (mode == 0) {
 		for (i = 0; i < MOTION_RING_READERS; i++) {
@@ -546,7 +546,7 @@ int motionCreateProcess(SceUID pid, ProcEventCreateParam *param, void *common)
 
 	(void)param;
 	(void)common;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if (motion.processes[0].pid == -1)
 		i = 0;
 	else if (motion.processes[1].pid == -1)
@@ -601,7 +601,7 @@ int motionExitProcess(SceUID pid, ProcEventParam *param, void *common)
 
 	(void)param;
 	(void)common;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if (motion.processes[0].pid == pid)
 		i = 0;
 	else if (motion.processes[1].pid == pid)
@@ -659,7 +659,7 @@ int motionKillProcess(SceUID pid, ProcEventParam *param, void *common)
 
 	(void)param;
 	(void)common;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if (motion.processes[0].pid == pid)
 		i = 0;
 	else if (motion.processes[1].pid == pid)
@@ -820,7 +820,7 @@ int motionInitializeManager(void *arg)
 	location.type = 0;
 	motion.allowGyroControl = sceIdStorageLookup(0x114, 256,
 		&location.type, sizeof(location.type)) < 0 || location.type != 0;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if (motion.processes[0].pid == -1)
 		i = 0;
 	else if (motion.processes[1].pid == -1)
@@ -938,7 +938,7 @@ int motionStartProcess(SceUID pid, int event, ProcEventParam *param, void *commo
 	(void)common;
 	if (event != 0x10000)
 		return 0;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if (motion.processes[0].pid == pid)
 		i = 0;
 	else if (motion.processes[1].pid == pid)
@@ -1176,7 +1176,7 @@ void motionInitializeComplete(int result, void *arg)
 		motion.initState = 6;
 		return;
 	case 6:
-		intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 		if (motion.state == 3) {
 			sceKernelSetEventFlag(motionUpdate.event, 1);
 			goto unlock;
@@ -1244,7 +1244,7 @@ failRecords:
 		motionFreeHeap(motion.calibrationRecords[1]);
 		motion.calibrationRecords[1] = NULL;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	switch (motion.state) {
 	case 3:
 		sceKernelSetEventFlag(motionUpdate.event, 1);
@@ -1274,7 +1274,7 @@ int motionSysEvent(int resume, int event, void *arg, void *param)
 	(void)param;
 	if (resume == 0) {
 		if (event == 0x401) {
-			intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 			if (motion.suspendState == 16) {
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 				return 0;
@@ -1328,7 +1328,7 @@ int motionSysEvent(int resume, int event, void *arg, void *param)
 			return motion.suspendState == 16 ? 0 : -1;
 		if (event != 0x400)
 			return 0;
-		intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 		motion.savedState = motion.state;
 		switch (motion.state) {
 		case 0:
@@ -1479,7 +1479,7 @@ int SceMotionDevForDriver_3E4BCBC0(SceMotionDevDeviceInfo *info)
 
 	if (info == NULL)
 		return (int)0x80360001;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if ((unsigned int)motion.state - 1 > 1) {
 		if (motion.state != 128) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
@@ -1503,7 +1503,7 @@ int SceMotionDevForDriver_3B23DF55(unsigned int block, SceMotionDevCalibrationHe
 		return (int)0x80360001;
 	if (header == NULL)
 		return (int)0x80360001;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if ((unsigned int)motion.state - 1 <= 1) {
 		*header = motion.calibrationHeaders[block];
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
@@ -1527,7 +1527,7 @@ int SceMotionDevForDriver_F0251700(unsigned int block, SceMotionDevCalibrationDa
 		return (int)0x80360001;
 	if (data == NULL)
 		return (int)0x80360001;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if ((unsigned int)motion.state - 1 <= 1) {
 		available = motion.calibrationHeaders[block].recordCount;
 		if (available >= count)
@@ -1568,7 +1568,7 @@ int SceMotionDevForDriver_DBAF611A(unsigned int mode)
 {
 	int intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if ((unsigned int)motion.state - 1 > 1) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return (int)0x80360004;
@@ -1593,7 +1593,7 @@ int SceMotionDevForDriver_C02C85AB(void)
 	unsigned int mode;
 	int intr, i;
 
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if ((unsigned int)motion.state - 1 > 1) {
 		if (motion.state == 128) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
@@ -1676,7 +1676,7 @@ int SceMotionDevForDriver_FD0B0785(void)
 	SceUID pid = sceKernelGetProcessId();
 	int intr, i;
 
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if (motion.processes[0].pid == pid)
 		i = 0;
 	else if (motion.processes[1].pid == pid)
@@ -1724,7 +1724,7 @@ int motionMagnSamplingStart(void)
 	SceUID pid;
 	int intr, i;
 
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if ((unsigned int)motion.state - 1 <= 1) {
 		pid = sceKernelGetProcessId();
 		if (motion.processes[0].pid == pid)
@@ -1782,7 +1782,7 @@ int motionMagnSamplingStop(void)
 	SceUID pid = sceKernelGetProcessId();
 	int intr, i;
 
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if (motion.processes[0].pid == pid)
 		i = 0;
 	else if (motion.processes[1].pid == pid)
@@ -1830,7 +1830,7 @@ int motionUpdateMagnCalibData(const SceMotionDevMagnCalibData *data, uint32_t *t
 
 	if (tag == NULL || data == NULL)
 		return (int)0x80360001;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	for (group = 0; group < 2; group++)
 		for (value = 0; value < 2; value++)
 			for (axis = 0; axis < 3; axis++)
@@ -1850,7 +1850,7 @@ int motionGetCurrentMagnCalibData(SceMotionDevMagnCalibData *data)
 		return (int)0x80360001;
 	if (motion.currentMagnCalibration.generation == 0)
 		return (int)0x80360105;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	data->generation = motion.currentMagnCalibration.generation;
 	for (value = 0; value < 2; value++)
 		for (group = 0; group < 2; group++)
@@ -1867,7 +1867,7 @@ int motionGetFactoryMagnCalibData(SceMotionDevMagnCalibData *data)
 
 	if (data == NULL)
 		return (int)0x80360001;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	data->generation = motion.factoryMagnCalibration.generation;
 	for (value = 0; value < 2; value++)
 		for (group = 0; group < 2; group++)
@@ -1882,7 +1882,7 @@ int motionUpdateMagnStabilityLevel(uint32_t level)
 {
 	int intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	motion.magnStabilityLevel = level;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
@@ -1894,7 +1894,7 @@ int motionGetCurrentMagnStabilityLevel(uint32_t *level)
 
 	if (level == NULL)
 		return (int)0x80360001;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	*level = motion.magnStabilityLevel;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
@@ -1906,7 +1906,7 @@ int motionGetGyroCalibData(SceMotionDevGyroCalibData *data)
 
 	if (data == NULL)
 		return (int)0x80360001;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	memcpy(data, &motion.gyroCalibration, sizeof(*data));
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
@@ -1918,7 +1918,7 @@ int motionGetAccCalibData(SceMotionDevAccCalibData *data)
 
 	if (data == NULL)
 		return (int)0x80360001;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	memcpy(data, &motion.accCalibration, sizeof(*data));
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
@@ -1930,7 +1930,7 @@ int motionGetGyroBias(SceMotionDevGyroBiasData *bias)
 
 	if (bias == NULL)
 		return (int)0x80360001;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	*bias = motion.gyroBias;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
@@ -1942,7 +1942,7 @@ int motionGetDeviceLocation(SceMotionDevDeviceLocation *location)
 
 	if (location == NULL)
 		return (int)0x80360001;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	*location = motion.deviceLocation;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
@@ -1979,7 +1979,7 @@ int motionGetControllerType(int port, uint8_t *type)
 
 int SceMotionDevForDriver_22CD6DCA(SceUID owner)
 {
-	int intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	int intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 
 	motion.owner = owner;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
@@ -1992,7 +1992,7 @@ int SceMotionDevForDriver_3CD0CE14(SceUID *owner)
 
 	if (owner == NULL)
 		return (int)0x80360001;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	*owner = motion.owner;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
@@ -2002,7 +2002,7 @@ int SceMotionDevForDriver_0808D77D(unsigned int overrideSampling)
 {
 	int intr, i;
 
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	motion.overrideSampling = overrideSampling;
 	if (overrideSampling == 0) {
 		for (i = 0; i < MOTION_RING_READERS; i++) {
@@ -2037,7 +2037,7 @@ int SceMotionDevForDriver_FD1C528D(void)
 	if (result < 0)
 		return result;
 	SceKernelSuspendForDriver_4DF40893(0);
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if (motion.timer == -1 && (motion.state == 2 || motion.state == 128))
 		motion.state = 4;
 	else
@@ -2115,7 +2115,7 @@ int SceMotionDevForDriver_09918DAE(
 		return (int)0x80360001;
 	if ((int8_t)request->type >= 0)
 		return (int)0x80360002;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if (motion.state != 4) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return (int)0x80360002;
@@ -2149,7 +2149,7 @@ int SceMotionDevForDriver_DB89D1BF(
 
 	if (request == NULL || completion == NULL || response == NULL)
 		return (int)0x80360001;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	if (motion.state != 2 || motionPacket.completion != NULL || motionBusy != 0) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return (int)0x80360003;
@@ -2179,7 +2179,7 @@ int SceMotionDevForDriver_FE6ECA41(uint32_t *available)
 
 int SceMotionDevForDriver_85E3C678(void)
 {
-	int intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	int intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 
 	if (motion.state == 2) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
@@ -2191,7 +2191,7 @@ int SceMotionDevForDriver_85E3C678(void)
 
 int SceMotionDevForDriver_031AF7A1(void)
 {
-	int intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	int intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 
 	if (motion.state == 2) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
@@ -2207,7 +2207,7 @@ int SceMotionDevForDriver_5B53AC26(void *statistics)
 
 	if (statistics == NULL)
 		return (int)0x80360001;
-	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
 	result = motionGetDeviceStatistics(statistics);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return result;

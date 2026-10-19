@@ -72,7 +72,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCancelMutex
 	sceKernelSetEventFlag
 	sceKernelCreateMutex
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	SceSysrootForDriver_834439A7
@@ -80,7 +80,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCallSubIntrHandler
 	SceCpuForDriver_2A40BB93
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceCpuForDriver_E36F3A46
 	SceUsbdForDriver_1CDBFF9F
 	SceUsbdForDriver_1EC94F18

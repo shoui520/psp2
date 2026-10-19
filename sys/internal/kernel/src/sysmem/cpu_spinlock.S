@@ -69,8 +69,8 @@
 	bx	lr
 	endfunc	sceKernelGetCpuId, sceKernelCpuId
 
-/* void SceCpuForDriver_BF82DEB2(lock): spins (wfe) until the lock is free */
-	func	SceCpuForDriver_BF82DEB2
+/* void sceKernelSpinlockLowLock(lock): spins (wfe) until the lock is free */
+	func	sceKernelSpinlockLowLock
 0:	ldrex	r1, [r0]
 	cbnz	r1, 1f
 	strex	r1, lr, [r0]
@@ -79,7 +79,7 @@
 	bx	lr
 1:	wfe
 2:	b	0b
-	endfunc	SceCpuForDriver_BF82DEB2
+	endfunc	sceKernelSpinlockLowLock
 
 /* int SceCpuForDriver_5AC9D394(lock): 0, or -1 when the lock is taken */
 	func	SceCpuForDriver_5AC9D394
@@ -110,7 +110,7 @@
  * the previous I bit; the IRQs are back on while it waits.
  * CpuSpinlockLockIrqWithCaller(lock, caller) records caller as the owner.
  */
-	func	CpuSpinlockLockIrqCore, SceCpuForDriver_D32ACE9E
+	func	CpuSpinlockLockIrqCore, sceKernelSpinlockLowLockCpuSuspendIntr
 	mov	r2, lr
 1:	mrs	r3, cpsr
 	cpsid	i
@@ -131,13 +131,13 @@
 #endif
 	mov	r2, r1
 	b	1b
-	endfunc	CpuSpinlockLockIrqWithCaller, SceCpuForDriver_D32ACE9E
+	endfunc	CpuSpinlockLockIrqWithCaller, sceKernelSpinlockLowLockCpuSuspendIntr
 
 /*
  * int CpuSpinlockTrylockIrqCore(lock): as CpuSpinlockLockIrqCore, or -1 with the
  * IRQs as they were when the lock is taken.
  */
-	func	CpuSpinlockTrylockIrqCore, SceCpuForDriver_27C0B340
+	func	CpuSpinlockTrylockIrqCore, sceKernelSpinlockLowTrylockCpuSuspendIntr
 	mov	r2, lr
 1:	mrs	r3, cpsr
 	cpsid	i
@@ -158,7 +158,7 @@
 #endif
 	mov	r2, r1
 	b	1b
-	endfunc	CpuSpinlockTrylockIrqWithCaller, SceCpuForDriver_27C0B340
+	endfunc	CpuSpinlockTrylockIrqWithCaller, sceKernelSpinlockLowTrylockCpuSuspendIntr
 
 /* void CpuSpinlockUnlockIrq(lock, flags): unlocks; IRQs on unless flags */
 	func	CpuSpinlockUnlockIrq, sceKernelSpinlockLowUnlockCpuResumeIntr

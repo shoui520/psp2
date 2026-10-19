@@ -26,7 +26,7 @@
 #define AUTH_DBG_PRINTF(function, line, format, ...) \
 	SceDebugForDriver_D9703808(1, 0xb, SCE_DBGINFO_FUNC(line, function), format, ##__VA_ARGS__)
 #define AUTH_DBG_ASSERT(function, condition, line) \
-	SceDebugForDriver_35A35322(condition, SCE_DBGINFO_FUNC(line, function), __builtin_return_address(0))
+	sceKernelAssert(condition, SCE_DBGINFO_FUNC(line, function), __builtin_return_address(0))
 #else
 #define AUTH_DBG_PRINTF(function, line, format, ...) do { } while (0)
 #define AUTH_DBG_ASSERT(function, condition, line) do { } while (0)
@@ -167,7 +167,7 @@ static NOINLINE int authMgrSetupSrcPARanges(const void *address, uint32_t size)
 		SCE_DBG_PRINTF(0xb, 1113, "ERROR: authMgrSetupSrcPARanges failed ! ret = 0x%08x\n", result);
 		result = AM_EPHYSICAL;
 	} else {
-		SceCpuForDriver_103872A5(s_state.sourceRanges,
+		sceKernelDcacheCleanRange(s_state.sourceRanges,
 			(vector.total * 8 + 0x1f) & ~0x1fU);
 		result = vector.total;
 	}
@@ -530,7 +530,7 @@ int sceSblAuthMgrAuthHeader(int handle, const void *header, uint32_t size, SelfA
 			memcpy(packet->payload, auth, sizeof(*auth));
 			words[0x170 / 4] = result;
 			words[0x174 / 4] = s_state.sourcePhysicalAddress;
-			SceCpuForDriver_103872A5((void *)header, size);
+			sceKernelDcacheCleanRange((void *)header, size);
 			result = authMgrSendPacketCore(packet, 0x190, 1);
 			if (result >= 0) {
 				memcpy(&auth->module, (uint8_t *)packet + 0xd8, sizeof(auth->module));
@@ -584,11 +584,11 @@ int SceSblAuthMgrForKernel_BC422443(int handle, void *buffer, uint32_t size)
 	memset(packet, 0, 0x50);
 	words[16] = words[18] = result;
 	words[17] = words[19] = s_state.sourcePhysicalAddress;
-	SceCpuForDriver_103872A5(buffer, RoundCacheSize(size));
+	sceKernelDcacheCleanRange(buffer, RoundCacheSize(size));
 	result = authMgrSendPacketCore(packet, 0x50, 3);
 	if (result < 0)
 		return result;
-	SceCpuForDriver_02796361(buffer, RoundCacheSize(size));
+	sceKernelDcacheInvalidateRange(buffer, RoundCacheSize(size));
 	return 0;
 }
 int SceSblAuthMgrForDriver_868B9E9A(void *buffer, uint32_t size, uint32_t type)
@@ -703,11 +703,11 @@ int SceSblAuthMgrForDriver_41DAEA12(void *input, uint32_t inputSize,
 	result = SceSysmemForDriver_AE36C775(&range, (void *)(packet->payload + 8));
 	if (result >= 0) {
 		PacketWords(packet)[20] = 0;
-		SceCpuForDriver_103872A5(input, RoundCacheSize(inputSize));
-		SceCpuForDriver_103872A5(output, RoundCacheSize(outputSize));
+		sceKernelDcacheCleanRange(input, RoundCacheSize(inputSize));
+		sceKernelDcacheCleanRange(output, RoundCacheSize(outputSize));
 		result = authMgrSendPacket(packet, 0x58, 7);
 		if (result >= 0)
-			SceCpuForDriver_02796361(input, RoundCacheSize(inputSize));
+			sceKernelDcacheInvalidateRange(input, RoundCacheSize(inputSize));
 	}
 unlock:
 	unlockResult = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
@@ -747,10 +747,10 @@ int sceSblAuthMgrVerifySpsfo(struct SpsfoContext *context)
 		memset(packet, 0, 0x50);
 		words[16] = result;
 		words[17] = s_state.sourcePhysicalAddress;
-		SceCpuForDriver_103872A5(context->buffer, RoundCacheSize(context->size));
+		sceKernelDcacheCleanRange(context->buffer, RoundCacheSize(context->size));
 		result = authMgrSendPacket(packet, 0x50, 8);
 		if (result >= 0) {
-			SceCpuForDriver_02796361(context->buffer, RoundCacheSize(context->size));
+			sceKernelDcacheInvalidateRange(context->buffer, RoundCacheSize(context->size));
 			if (context->buffer == NULL || context->size == 0) {
 				result = AM_EINVAL;
 			} else {

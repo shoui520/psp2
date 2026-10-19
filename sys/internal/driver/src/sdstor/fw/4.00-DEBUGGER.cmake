@@ -133,7 +133,7 @@ set(MODULE_IMPORT_FUNCS
 	strnlen
 	look_ctype_table
 	memcmp
-	SceDebugForDriver_35A35322
+	sceKernelAssert
 	SceDebugForDriver_D9703808
 	sceKernelDisableSubIntr
 	sceKernelRegisterIntrHandler

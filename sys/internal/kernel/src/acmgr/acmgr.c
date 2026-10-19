@@ -260,7 +260,7 @@ int SceSblACMgrForDriver_5F9AF49C(SceUID pid, const SceChar8 *path)
 		restricted = 1;
 	else
 		return 1;
-	rules = SceDipswForDriver_A98FC2FD(0x9f) ? devDeviceRules : deviceRules;
+	rules = sceKernelCheckDipsw(0x9f) ? devDeviceRules : deviceRules;
 	for (n = 0; n < 4; n++) {
 		for (i = 0; i < rules[n].prefixLen; i++)
 			if (path[i] != ~rules[n].prefix[i])
@@ -593,7 +593,7 @@ int SceSblACMgrForDriver_4CBD6156(SceUID pid)
 
 int SceSblACMgrForDriver_E87D1777(void)
 {
-	return SceDipswForDriver_A98FC2FD(0x9f);
+	return sceKernelCheckDipsw(0x9f);
 }
 
 int SceSblACMgrForDriver_AD717E7A(SceUID pid)

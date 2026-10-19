@@ -33,7 +33,7 @@ int module_start(unsigned arglen, void *argp)
 	(void)argp;
 	s_bsodQafEnabled = SceQafMgrForDriver_382C71E8();
 	if ((SceSblAIMgrForDriver_D78B04A2() && !s_bsodQafEnabled) ||
-	    SceDipswForDriver_A98FC2FD(0xc1) || SceDipswForDriver_A98FC2FD(0xc2))
+	    sceKernelCheckDipsw(0xc1) || sceKernelCheckDipsw(0xc2))
 		return 1;
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
@@ -89,7 +89,7 @@ void bsodCrashHandler(int kind)
 	uint32_t buttons, edge;
 	unsigned page = kind ? 0 : 3;
 
-	SceCpuForDriver_BF82DEB2(&s_bsodDisplay.lock);
+	sceKernelSpinlockLowLock(&s_bsodDisplay.lock);
 	sceKernelDisableIntr(0xd5);
 	sceKernelDisableIntr(0xd2);
 	sceKernelDisableIntr(0xf8);
@@ -172,7 +172,7 @@ void bsodCaptureException(const SceExcpmgrContext *context, unsigned exception,
 	unsigned core, i;
 	char *report;
 
-	SceCpuForDriver_BF82DEB2(&s_bsodDisplay.captureLock);
+	sceKernelSpinlockLowLock(&s_bsodDisplay.captureLock);
 	record->excpCode = context->excpCode;
 	for (i = 0; i < 13; i++)
 		record->r[i] = context->r[i];

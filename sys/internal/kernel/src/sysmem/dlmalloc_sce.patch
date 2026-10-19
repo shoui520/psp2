@@ -12,7 +12,7 @@
 +extern void *memset(void *, int, SceSize);
 +extern void *memcpy(void *, const void *, SceSize);
 +extern int SceDebugForDriver_391B74B7(const char *fmt, ...);
-+extern int SceCpuForDriver_D32ACE9E(volatile int *lock);
++extern int sceKernelSpinlockLowLockCpuSuspendIntr(volatile int *lock);
 +extern void sceKernelSpinlockLowUnlockCpuResumeIntr(volatile int *lock, int intr);
 +extern int sceKernelVAtoPA(const void *va, uintptr_t *pa);
 +/* the heap's system memory (dlmalloc/heap.c) */
@@ -55,7 +55,7 @@
 +} SceDlMallocLock;
 +#define MLOCK_T			SceDlMallocLock
 +#define INITIAL_LOCK(sl)	((sl)->lock = 0)
-+#define ACQUIRE_LOCK(sl)	((sl)->intr = SceCpuForDriver_D32ACE9E(&(sl)->lock), 0)
++#define ACQUIRE_LOCK(sl)	((sl)->intr = sceKernelSpinlockLowLockCpuSuspendIntr(&(sl)->lock), 0)
 +#define RELEASE_LOCK(sl)	sceKernelSpinlockLowUnlockCpuResumeIntr(&(sl)->lock, (sl)->intr)
 +static MLOCK_T malloc_global_mutex;
 +static unsigned int sce_magic_seed = 0x600bf34c;

@@ -73,7 +73,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelAllocHeapMemory
 	sceKernelCreateHeap
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	memset
 	memcpy
 	snprintf
@@ -105,8 +105,8 @@ set(MODULE_IMPORT_FUNCS
 	ScePamgrForDriver_FE9BFD27
 	SceThreadmgrForKernel_6C1F092F
 	sceKernelRegisterProcEventHandler
-	ScePmMgrForDriver_2AC815A2
-	SceDipswForDriver_A98FC2FD
+	sceSblPmMgrGetProductMode
+	sceKernelCheckDipsw
 	sceDfMgrClose
 	sceDfMgrOpen
 	sceDfMgrRecv

@@ -45,7 +45,7 @@ int bbmcResetGpio(void)
 /* name unknown: report the old count and assert the port for its first user. */
 int bbmcAcquireGpio(int *previous)
 {
-	SceCpuForDriver_BF82DEB2(&g_bbmcGpioLock);
+	sceKernelSpinlockLowLock(&g_bbmcGpioLock);
 	if (g_bbmcGpioUsers == 0)
 		SceGpioForDriver_D454A584(0, 30);
 	if (previous != NULL)
@@ -60,7 +60,7 @@ int bbmcReleaseGpio(int *previous)
 {
 	int count;
 
-	SceCpuForDriver_BF82DEB2(&g_bbmcGpioLock);
+	sceKernelSpinlockLowLock(&g_bbmcGpioLock);
 	count = g_bbmcGpioUsers;
 	if (previous != NULL)
 		*previous = count;
@@ -78,7 +78,7 @@ int bbmcGetGpioUsers(void)
 {
 	int count;
 
-	SceCpuForDriver_BF82DEB2(&g_bbmcGpioLock);
+	sceKernelSpinlockLowLock(&g_bbmcGpioLock);
 	count = g_bbmcGpioUsers;
 	sceKernelSpinlockLowUnlock(&g_bbmcGpioLock);
 	return count;

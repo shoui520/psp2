@@ -69,7 +69,7 @@ set(MODULE_IMPORT_FUNCS
 	PVRSRVAcquireDeviceDataKM
 	PVRSRVEnumerateDevicesKM
 	SceDebugForDriver_391B74B7
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	memset
 	vsnprintf
 	memcpy

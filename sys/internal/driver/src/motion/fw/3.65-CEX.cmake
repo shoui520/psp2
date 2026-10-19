@@ -77,7 +77,7 @@ set(MODULE_IMPORT_NIDS
 	0xFF160234:F:0x66AC5580
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_49D4DD9B
 	sceKernelCopyToUser
@@ -87,7 +87,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelAllocMemBlockForKernel
 	sceKernelDeleteHeap
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	memset
 	memcpy
 	__aeabi_uidivmod

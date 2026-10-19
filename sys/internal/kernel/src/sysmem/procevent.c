@@ -66,7 +66,7 @@ static int ProcEventDestroy(void *object)
 	ProcEventLink *link = &((ProcEventObject *)object)->link;
 	int state;
 
-	state = SceCpuForDriver_D32ACE9E(&s_procEventLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_procEventLock);
 	link->next->prev = link->prev;
 	link->prev->next = link->next;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_procEventLock, state);
@@ -115,7 +115,7 @@ SceUID sceKernelRegisterProcEventHandler(const char *name,
 	object->link.uid = uid;
 	object->link.common = common;
 	object->link.notify = handler->size == sizeof(*handler) ? handler->notify : NULL;
-	state = SceCpuForDriver_D32ACE9E(&s_procEventLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_procEventLock);
 	link = &object->link;
 	tail = s_procEventList[1];
 	link->next = (ProcEventLink *)s_procEventList;
@@ -145,12 +145,12 @@ int sceKernelInvokeProcEventHandler(SceUID pid, int event, int phase, void *info
 #endif
 	int state, ret = 0;
 
-	state = SceCpuForDriver_D32ACE9E(&s_procEventLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_procEventLock);
 	for (link = s_procEventList[0]; link != (ProcEventLink *)s_procEventList;
 	     link = link->next) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_procEventLock, state);
 		if (link->uid == stop) {
-			state = SceCpuForDriver_D32ACE9E(&s_procEventLock);
+			state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_procEventLock);
 			break;
 		}
 		switch (event) {
@@ -206,7 +206,7 @@ int sceKernelInvokeProcEventHandler(SceUID pid, int event, int phase, void *info
 		if (ret < 0) {
 			if (failed != NULL) {
 				*failed = link->uid;
-				state = SceCpuForDriver_D32ACE9E(&s_procEventLock);
+				state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_procEventLock);
 				break;
 			}
 			SCE_DBG_PRINTF_FUNC(0xb, 287, "sceKernelInvokeProcEventHandler",
@@ -214,7 +214,7 @@ int sceKernelInvokeProcEventHandler(SceUID pid, int event, int phase, void *info
 					    SceSysmemForDriver_E655852F(link->uid), ret);
 		}
 next:
-		state = SceCpuForDriver_D32ACE9E(&s_procEventLock);
+		state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_procEventLock);
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_procEventLock, state);
 	return ret;

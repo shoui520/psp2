@@ -90,7 +90,7 @@ set(MODULE_IMPORT_NIDS
 	0xDCE180F8:F:0xE8DB7942
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelFreeHeapMemory
 	sceKernelAllocHeapMemory
 	sceKernelCreateHeap
@@ -149,7 +149,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoRename
 	SceIofilemgrForDriver_DF57A75F
 	sceIoClose
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	sceDfMgrClose
 	sceDfMgrOpen
 	sceDfMgrRecv

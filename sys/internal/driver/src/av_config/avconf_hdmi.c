@@ -102,7 +102,7 @@ int avConfigInitializeHdmiOutput(void)
 		scale = videoMode == 0x40020 ? 0.0f : 1.0f;
 		break;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	if (avConfigConfiguration.settings.hdcpState == 1)
 		avConfigConfiguration.settings.hdcpState = 2;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
@@ -157,7 +157,7 @@ int avConfigHdmiUpdateMonitor(void)
 
 	result = SceHdmiForDriver_8EB0FD9C(&info);
 	if (result == 0) {
-		intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 		if (avConfigGetHdmiAudioMode() != 0)
 			avConfigConfiguration.settings.connectedDevices |= 8;
 		avConfigConfiguration.settings.hdcpState = 1;
@@ -249,7 +249,7 @@ int hdmiSetOutput(int vic, unsigned int rangeMode, int flags)
 			force = 1;
 	} else {
 		valid = 1;
-		intr = SceCpuForDriver_D32ACE9E(&avConfigHdmiMonitorLock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigHdmiMonitorLock);
 		avConfigHdmiMonitorValid = 1;
 		memcpy(&avConfigHdmiMonitor, &monitor, sizeof(monitor));
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigHdmiMonitorLock, intr);
@@ -499,7 +499,7 @@ int avConfigGetMonitorInfo(AvConfigMonitorInfo *info)
 		return (int)0x803a0101;
 	if (avConfigHdmiMonitorValid == 0)
 		return (int)0x803a010a;
-	intr = SceCpuForDriver_D32ACE9E(&avConfigHdmiMonitorLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigHdmiMonitorLock);
 	__builtin_memcpy(info->productId, avConfigHdmiMonitor.productId,
 			sizeof(info->productId));
 	blockCount = avConfigHdmiMonitor.blockCount;

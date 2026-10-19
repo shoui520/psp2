@@ -147,7 +147,7 @@ static int softIntrHandler(int intrCode, void *userCtx)
 	void *arg;
 	int state, status, ret;
 
-	state = SceCpuForDriver_D32ACE9E(&s_lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	if (sceSblTzsBridgePopIntrArea((void **)&msg, &size) < 0)
 		SCE_PANIC(964);
 	if (size < sizeof(*msg))
@@ -390,7 +390,7 @@ int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUIn
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	}
 
-	state = SceCpuForDriver_D32ACE9E(&s_lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	for (i = 0; i < SESSION_COUNT; i++)
 		if (s_session[i].used == 0)
 			break;
@@ -675,7 +675,7 @@ int SceSblSmSchedProxyForKernel_8B84AC2A(SceUID id, int channel,
 		goto out;
 	}
 
-	state = SceCpuForDriver_D32ACE9E(&s_lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	s = SessionLookup(id, &status);
 	if (s == NULL) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
@@ -719,7 +719,7 @@ int SceSblSmSchedProxyForKernel_85EDA5FC(SceUID id, int channel)
 		goto out;
 	}
 
-	state = SceCpuForDriver_D32ACE9E(&s_lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	s = SessionLookup(id, &status);
 	if (s == NULL) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);

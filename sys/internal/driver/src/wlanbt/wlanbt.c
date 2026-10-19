@@ -58,7 +58,7 @@ int module_start(SceSize arglen, const void *argp)
 				goto initialize;
 			}
 			if (SceSblAIMgrForDriver_3B638885() == 0) {
-				result = ScePmMgrForDriver_2AC815A2(&productMode);
+				result = sceSblPmMgrGetProductMode(&productMode);
 				if (result < 0)
 					return result;
 				if (productMode == 0 &&
@@ -547,7 +547,7 @@ int wlanBtInitializeRobin(void)
 		gWlan.region.flags = 0;
 	} else
 		gWlan.region.channelMask &= 0x1fff;
-	if (ScePmMgrForDriver_2AC815A2(&productMode) < 0)
+	if (sceSblPmMgrGetProductMode(&productMode) < 0)
 		productMode = 0;
 	else if (productMode == 1)
 		gWlan.region.channelMask = 0x1fff;

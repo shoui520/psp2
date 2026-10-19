@@ -182,7 +182,7 @@ static inline int seqResumeNasIndication(BbmcControl *control, BbmcMessage *mess
 		goto complete;
 	default:
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(0, &dbg_seqResumeNasIndication_L1379, __builtin_return_address(0));
+		sceKernelAssert(0, &dbg_seqResumeNasIndication_L1379, __builtin_return_address(0));
 #endif
 		break;
 	}
@@ -958,7 +958,7 @@ int seqResume(BbmcControl *control, BbmcMessage *message)
 	}
 	control->resumeHandler = handler;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(handler != NULL, &dbg_seqResume_L1570,
+	sceKernelAssert(handler != NULL, &dbg_seqResume_L1570,
 			__builtin_return_address(0));
 #endif
 	bbmcNotifyFeatureEvent(control, 0, 0x100000);

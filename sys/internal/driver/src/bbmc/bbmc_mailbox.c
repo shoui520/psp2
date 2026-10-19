@@ -77,7 +77,7 @@ int bbmcSendMailbox(BbmcMailbox *mailbox, BbmcQueueEntry *entry)
 	if (entry == NULL)
 		return 0x80330002;
 	entry->next = NULL;
-	intr = SceCpuForDriver_D32ACE9E(&mailbox->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&mailbox->lock);
 	if (mailbox->head != NULL) {
 		mailbox->tail->next = entry;
 		mailbox->tail = entry;
@@ -102,7 +102,7 @@ int bbmcReceiveMailbox(BbmcMailbox *mailbox, BbmcQueueEntry **entry, SceUInt *ti
 	ret = sceKernelWaitSema(mailbox->semaphore, 1, timeout);
 	if (ret < 0)
 		return ret;
-	intr = SceCpuForDriver_D32ACE9E(&mailbox->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&mailbox->lock);
 	*entry = mailbox->head;
 	mailbox->head = mailbox->head->next;
 	(*entry)->next = NULL;

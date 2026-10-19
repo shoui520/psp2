@@ -210,11 +210,11 @@ set(MODULE_IMPORT_FUNCS
 	sceVopWhiteout
 	SceIofilemgrForDriver_F7DAC0F5
 	vfsMountForPFS
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
-	SceCpuForDriver_103872A5
-	SceCpuForDriver_364E68A4
+	sceKernelDcacheCleanRange
+	sceKernelDcacheCleanInvalidateRange
 	SceCpuForDriver_5F6A8743
 	SceCpuForDriver_A4884C4E
 	SceDebugForDriver_391B5B74

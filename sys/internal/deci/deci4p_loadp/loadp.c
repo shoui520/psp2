@@ -310,7 +310,7 @@ static inline int isKernelPid(SceUID pid)
 
 static inline void lockFlags(SceUInt32 set, SceUInt32 clear)
 {
-	SceKernelIntrStatus s = SceCpuForDriver_D32ACE9E(&loadp.lock);
+	SceKernelIntrStatus s = sceKernelSpinlockLowLockCpuSuspendIntr(&loadp.lock);
 
 	loadp.flags = (loadp.flags & ~clear) | set;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&loadp.lock, s);
@@ -2217,7 +2217,7 @@ int module_start(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 
-	if (!SceDipswForDriver_A98FC2FD(LOADP_DIPSW)) {
+	if (!sceKernelCheckDipsw(LOADP_DIPSW)) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 0xb, SCE_DBGINFO_FUNC(274, "LoadpModuleStart"),
 					      "disabled by dipsw\n");
@@ -2271,7 +2271,7 @@ int module_start(SceSize args, void *argp)
 	protocol.destination = 0;
 	protocol.flags = DFMGR_PROTOCOL_ENABLE;
 	strncpy(protocol.name, "LOADP", sizeof(protocol.name));
-	if (!SceDipswForDriver_A98FC2FD(LOADP_DIPSW_NO_AUTO_ENABLE))
+	if (!sceKernelCheckDipsw(LOADP_DIPSW_NO_AUTO_ENABLE))
 		protocol.flags |= DFMGR_PROTOCOL_USB;
 	else
 		protocol.flags |= DFMGR_PROTOCOL_SDIO;
@@ -2286,7 +2286,7 @@ int module_start(SceSize args, void *argp)
 	loadp.appCmd = 0;
 	loadp.sema = ret;
 	SceSysrootForDriver_0F07C3FC((const SysrootProcessEventOps *)&loadpProcessHandler);
-	s = SceCpuForDriver_D32ACE9E(&loadp.lock);
+	s = sceKernelSpinlockLowLockCpuSuspendIntr(&loadp.lock);
 	loadp.flags |= LOADP_FLAG_ENABLED;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&loadp.lock, s);
 	return SCE_KERNEL_START_SUCCESS;

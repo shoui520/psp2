@@ -128,7 +128,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteHeap
 	sceKernelStrncpyFromUser
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	memset
 	strncmp
 	memcpy
@@ -153,7 +153,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_391B5B74
 	SceDebugForDriver_391B74B7
 	SceDebugForDriver_D9703808
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	sceKernelDeleteMutex
 	sceKernelWaitEventFlag
 	sceKernelDeleteSema

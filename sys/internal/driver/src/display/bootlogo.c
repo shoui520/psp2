@@ -42,10 +42,10 @@ int showBootLogo(SceUInt32 head) /* name unknown */
 	bootLogoBlock = block;
 	sceKernelGetMemBlockBase(block, &base);
 	if (SceKernelUtilsForDriver_367EE3DF(base, 960 * 544 * 4, bootLogo, NULL) < 0) {
-		SceSysmemForDriver_009E1C61(block);
+		sceKernelFreeMemBlock(block);
 		return -1;
 	}
-	SceCpuForDriver_364E68A4(base, 960 * 544 * 4);
+	sceKernelDcacheCleanInvalidateRange(base, 960 * 544 * 4);
 	frameBuf.size = sizeof(frameBuf);
 	frameBuf.base = base;
 	frameBuf.pitch = 960;
@@ -70,6 +70,6 @@ void freeBootLogo(SceUInt32 head) /* name unknown */
 	if (block > 0) {
 		SceDisplayForDriver_16466675(head, 0, NULL, 1);
 		SceDisplayForDriver_B54962A1(head, 0, -1);
-		SceSysmemForDriver_009E1C61(block);
+		sceKernelFreeMemBlock(block);
 	}
 }

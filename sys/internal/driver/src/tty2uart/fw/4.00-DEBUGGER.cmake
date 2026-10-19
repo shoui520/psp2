@@ -49,14 +49,14 @@ set(MODULE_IMPORT_NIDS
 	0x2ED7F97A:F:0xAA770EF7
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelGetMemBlockVBase
 	sceKernelAllocMemBlockForKernel
 	SceCpuForDriver_4C38CE4D
 	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceCpuForDriver_EC53D007
 	memcpy
 	__stack_chk_fail
@@ -76,7 +76,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterProcEventHandler
 	SceProcEventForDriver_3DED57CC
 	SceUartForKernel_4E97D3AD
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	SceSysrootForDriver_AA770EF7
 )
 set(MODULE_IMPORT_VARS

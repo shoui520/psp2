@@ -304,9 +304,9 @@ sceKernelUserUnmap:
 .word 0x10, 0x6f25e18a, 0x575b00, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_009E1C61
-.type SceSysmemForDriver_009E1C61, %function
-SceSysmemForDriver_009E1C61:
+.global sceKernelFreeMemBlock
+.type sceKernelFreeMemBlock, %function
+sceKernelFreeMemBlock:
 .word 0x10, 0x6f25e18a, 0x9e1c61, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
@@ -526,9 +526,9 @@ SceCpuForDriver_CDA96E81:
 .word 0x10, 0x40ecdb0e, 0xcda96e81, 0xe320f000
 .section .vitalink.fstubs.SceCpuForDriver, "ax", %progbits
 .balign 4
-.global SceCpuForDriver_D32ACE9E
-.type SceCpuForDriver_D32ACE9E, %function
-SceCpuForDriver_D32ACE9E:
+.global sceKernelSpinlockLowLockCpuSuspendIntr
+.type sceKernelSpinlockLowLockCpuSuspendIntr, %function
+sceKernelSpinlockLowLockCpuSuspendIntr:
 .word 0x10, 0x40ecdb0e, 0xd32ace9e, 0xe320f000
 .section .vitalink.fstubs.SceDebugForDriver, "ax", %progbits
 .balign 4
@@ -538,9 +538,9 @@ SceDebugForDriver_02B04343:
 .word 0x10, 0x88758561, 0x2b04343, 0xe320f000
 .section .vitalink.fstubs.SceDebugForDriver, "ax", %progbits
 .balign 4
-.global SceDebugForDriver_35A35322
-.type SceDebugForDriver_35A35322, %function
-SceDebugForDriver_35A35322:
+.global sceKernelAssert
+.type sceKernelAssert, %function
+sceKernelAssert:
 .word 0x10, 0x88758561, 0x35a35322, 0xe320f000
 .section .vitalink.fstubs.SceDebugForDriver, "ax", %progbits
 .balign 4
@@ -814,9 +814,9 @@ sceKernelRegisterProcEventHandler:
 .word 0x10, 0x887f19d0, 0x2a43912d, 0xe320f000
 .section .vitalink.fstubs.SceDipswForDriver, "ax", %progbits
 .balign 4
-.global SceDipswForDriver_A98FC2FD
-.type SceDipswForDriver_A98FC2FD, %function
-SceDipswForDriver_A98FC2FD:
+.global sceKernelCheckDipsw
+.type sceKernelCheckDipsw, %function
+sceKernelCheckDipsw:
 .word 0x10, 0xc9e26388, 0xa98fc2fd, 0xe320f000
 .section .vitalink.fstubs.SceKernelSuspendForDriver, "ax", %progbits
 .balign 4
@@ -1205,9 +1205,9 @@ sceKernelUserUnmap:
 .word 0x10, 0x6f25e18a, 0x575b00, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_009E1C61
-.type SceSysmemForDriver_009E1C61, %function
-SceSysmemForDriver_009E1C61:
+.global sceKernelFreeMemBlock
+.type sceKernelFreeMemBlock, %function
+sceKernelFreeMemBlock:
 .word 0x10, 0x6f25e18a, 0x9e1c61, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
@@ -1427,9 +1427,9 @@ SceCpuForDriver_CDA96E81:
 .word 0x10, 0x40ecdb0e, 0xcda96e81, 0xe320f000
 .section .vitalink.fstubs.SceCpuForDriver, "ax", %progbits
 .balign 4
-.global SceCpuForDriver_D32ACE9E
-.type SceCpuForDriver_D32ACE9E, %function
-SceCpuForDriver_D32ACE9E:
+.global sceKernelSpinlockLowLockCpuSuspendIntr
+.type sceKernelSpinlockLowLockCpuSuspendIntr, %function
+sceKernelSpinlockLowLockCpuSuspendIntr:
 .word 0x10, 0x40ecdb0e, 0xd32ace9e, 0xe320f000
 .section .vitalink.fstubs.SceDebugForDriver, "ax", %progbits
 .balign 4
@@ -1685,9 +1685,9 @@ sceKernelRegisterProcEventHandler:
 .word 0x10, 0x887f19d0, 0x2a43912d, 0xe320f000
 .section .vitalink.fstubs.SceDipswForDriver, "ax", %progbits
 .balign 4
-.global SceDipswForDriver_A98FC2FD
-.type SceDipswForDriver_A98FC2FD, %function
-SceDipswForDriver_A98FC2FD:
+.global sceKernelCheckDipsw
+.type sceKernelCheckDipsw, %function
+sceKernelCheckDipsw:
 .word 0x10, 0xc9e26388, 0xa98fc2fd, 0xe320f000
 .section .vitalink.fstubs.SceKernelSuspendForDriver, "ax", %progbits
 .balign 4

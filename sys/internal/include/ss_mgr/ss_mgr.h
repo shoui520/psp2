@@ -137,7 +137,7 @@ int SceSblSsMgrForDriver_EA6ACB6D(const void *src, void *dst, int size, unsigned
 int SceSblSsMgrForDriver_EB3AF9B5(const void *src, void *dst, int size, void *iv, int coherent, uint32_t flags);
 /* vitasdk: ksceSblAimgrGetConsoleId */
 int SceSblSsMgrForDriver_FC6CDD68(SceConsoleId *consoleId);
-/* sysmem's ScePmMgrForDriver_2AC815A2 (sysmem/pmmgr.h), which SceSblSsMgr exports again */
+/* sysmem's sceSblPmMgrGetProductMode (sysmem/pmmgr.h), which SceSblSsMgr exports again */
 int SceSblSsMgrForKernel_516ECC08(SceProductMode *mode);
 int SceSblSsMgrForKernel_83D254FF(void *flags);	/* vitasdk: ksceSblQafManagerGetQAFlags */
 /* vitasdk: ksceSblQafManagerGetQafName */

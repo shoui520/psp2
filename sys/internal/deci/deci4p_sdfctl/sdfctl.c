@@ -185,12 +185,12 @@ int sdfctlReqSend(SceUID sock)
 {
 	int intr, ret;
 
-	intr = SceCpuForDriver_D32ACE9E(&s_lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	ret = sceSDfCtlExReqSend(sock);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
 	if (ret < 0)
 		return ret;
-	intr = SceCpuForDriver_D32ACE9E(&s_lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	if (s_mgr.ifp != NULL && (s_mgr.ifp->flags & SDFCTL_IF_SEND_STARTED))
 		s_mgr.ifp->ops.poll(s_mgr.ifp);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
@@ -266,7 +266,7 @@ int sdfctlSetStatus(SceUInt32 mask, int on)
 {
 	int intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&s_statusLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_statusLock);
 	if (on)
 		s_mgr.status |= mask;
 	else
@@ -316,7 +316,7 @@ int sdfctlSetProtocolStatus(SDfCtlPd *pd, SceUInt32 mask, int on)
 {
 	int intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&s_statusLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_statusLock);
 	if (on)
 		pd->flags |= mask;
 	else
@@ -504,11 +504,11 @@ int sceSDfCtlModuleStart(SceSize args, void *argp)
 	const void *lr = __builtin_return_address(0);
 	int ret;
 
-	if (!SceDipswForDriver_A98FC2FD(0xfd)) {
+	if (!sceKernelCheckDipsw(0xfd)) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 77, "[DECI] remote power control is disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
-	ret = SceDipswForDriver_A98FC2FD(0xc4);
+	ret = sceKernelCheckDipsw(0xc4);
 	if (ret != 0) {
 		SceDebugForDriver_391B74B7("[DECI] remote power control is disabled (resource busy)\n");
 		return SCE_KERNEL_START_NO_RESIDENT;

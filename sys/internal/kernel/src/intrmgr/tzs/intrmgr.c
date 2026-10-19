@@ -78,7 +78,7 @@ static int SetSharedMemory_S(int arg0, int arg1, int arg2, int arg3)
 		return SCE_KERNEL_ERROR_ERROR;
 	if (size >= 0x100000)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	if (SceDipswForDriver_A98FC2FD(0xd2)) {
+	if (sceKernelCheckDipsw(0xd2)) {
 		if (paddr <= 0x401fffff || (int)(paddr + size) < 0)
 			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	} else {
@@ -127,7 +127,7 @@ static int SetL2ccReg(SceSize offset, SceUInt32 val)
 	sceKernelGetMemBlockBase(memBlockId, (void **)&base);
 	SCE_DBG_PRINTF(0xb, 1803, "base: %p, addr 0x%08x, val 0x%08x\n", base, base + offset, val);
 	*(volatile SceUInt32 *)(base + offset) = val;
-	SceSysmemForDriver_009E1C61(memBlockId);
+	sceKernelFreeMemBlock(memBlockId);
 	return 0;
 }
 
@@ -206,7 +206,7 @@ int sceKernelRegisterIntrHandler(unsigned int intrCode, const char *name, unsign
 		}
 	}
 	info = &g_intrHandlers[intrCode];
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (info->handler) {
 		result = SCE_KERNEL_ERROR_FOUND_HANDLER;
 		SCE_DBG_PRINTF(0xb, 452, "already registered: %d %s %p\n", intrCode, name,
@@ -252,7 +252,7 @@ int sceKernelReleaseIntrHandler(unsigned int intrCode)
 		return SCE_KERNEL_ERROR_ILLEGAL_INTRCODE;
 	}
 	info = &g_intrHandlers[intrCode];
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (!info->handler) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		SCE_DBG_PRINTF(0xb, 543, "interrupt handler is not registered. %d\n", intrCode);
@@ -322,7 +322,7 @@ int sceKernelSetIntrTargetCpu(unsigned int intrCode, unsigned int target)
 		SCE_DBG_PRINTF(0xb, 843, "invalid target cpu. %d\n", target);
 		return SCE_KERNEL_ERROR_ILLEGAL_TARGET_CPU;
 	}
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	info->targetCpu = mask;
 	g_intrDistributor->target[intrCode] = mask;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);

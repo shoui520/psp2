@@ -130,7 +130,7 @@ static int uidRWLock_RevalidateMethod(void *cls, void *object)
 			waiter = (struct ThreadCB *)node;
 			SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 2011);
 			next = node->next;
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+			sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 			SCE_DBG_ASSERT_CHECK(waiter->waitMode == RW_LOCK_MODE_READ, 2016);
 			rwLock->core.lockCount++;
 			wake |= wakeupAndDistributeThread(waiter, (uintptr_t)queue, 0);
@@ -143,7 +143,7 @@ static int uidRWLock_RevalidateMethod(void *cls, void *object)
 	for (node = queue->next; node != (struct ThreadmgrWaitNode *)queue; node = node->next) {
 		waiter = (struct ThreadCB *)node;
 		SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 2029);
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+		sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 		if (waiter->waitMode == RW_LOCK_MODE_WRITE) {
 			acquireRWLock(rwLock, waiter);
 			wake = wakeupAndDistributeThread(waiter, (uintptr_t)queue, 0);
@@ -165,7 +165,7 @@ static int releaseRWLock(ThreadmgrRWLockCore *core)
 	core->writer = NULL;
 	core->lockCount = 0;
 	if (writer != NULL) {
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(writer));
+		sceKernelSpinlockLowLock(THREAD_LOCK(writer));
 		ListLinkRemove(&core->ownerLink);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(writer));
 	}
@@ -191,7 +191,7 @@ static int uidRWLock_Destructor(void *object)
 	int intr;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1912);
-	intr = SceCpuForDriver_D32ACE9E(&rwLock->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&rwLock->lock);
 	wake = releaseRWLock(&rwLock->core);
 	wake |= wakeupWaitObjectAll((uintptr_t)&rwLock->next, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
 	sceKernelSpinlockLowUnlock(&rwLock->lock);
@@ -199,7 +199,7 @@ static int uidRWLock_Destructor(void *object)
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
-			SceCpuForDriver_BF82DEB2(&process->resourceLock);
+			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (rwLock->attr & RW_LOCK_ATTR_LW)
 				process->uidLwCount--;
 			else if (rwLock->attr & RW_LOCK_ATTR_UNLIMITED)
@@ -261,7 +261,7 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&rwLock->lock);
+	sceKernelSpinlockLowLock(&rwLock->lock);
 	if (rwLock->core.writer == thread) {
 		ret = SCE_KERNEL_ERROR_RW_LOCK_FAILED_TO_LOCK;
 		if (mode != RW_LOCK_MODE_READ) {
@@ -289,7 +289,7 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 			ret = callCallbackAll(thread);
 			if (ret < 0)
 				goto release;
-			SceCpuForDriver_BF82DEB2(&rwLock->lock);
+			sceKernelSpinlockLowLock(&rwLock->lock);
 		}
 		if (mode == RW_LOCK_MODE_READ) {
 			if (rwLock->core.writer == NULL &&
@@ -302,20 +302,20 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 				}
 				goto unlock;
 			}
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 			thread->waitMode = RW_LOCK_MODE_READ;
 			rwLock->core.readWaiters++;
 		} else {
 			if (mode != RW_LOCK_MODE_WRITE)
 				SCE_PANIC(370);
 			if (rwLock->core.writer == NULL && rwLock->core.lockCount == 0) {
-				SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+				sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 				acquireRWLock(rwLock, thread);
 				sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 				ret = 0;
 				goto unlock;
 			}
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 			thread->waitMode = RW_LOCK_MODE_WRITE;
 			rwLock->core.writeWaiters++;
 		}
@@ -382,12 +382,12 @@ static int getRWLockInfo(SceUID rwLockId, SceKernelRWLockInfo *info)
 		info->rwLockId = rwLockId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(rwLockId), sizeof(info->name) - 1);
 		queue = (struct ThreadmgrWaitQueue *)&rwLock->next;
-		SceCpuForDriver_BF82DEB2(&rwLock->lock);
+		sceKernelSpinlockLowLock(&rwLock->lock);
 		info->attr = rwLock->attr;
 		for (node = queue->next; node != (struct ThreadmgrWaitNode *)queue; node = node->next) {
 			waiter = (struct ThreadCB *)node;
 			SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 1566);
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+			sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 			if (waiter->waitMode == RW_LOCK_MODE_READ)
 				info->numReadWaitThreads++;
 			else
@@ -437,7 +437,7 @@ uint32_t releaseAllRWLock(struct ThreadCB *thread)
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 491);
 	for (;;) {
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		for (link = head->next; link != head; link = head->next) {
 			rwLock = RW_LOCK_FROM_OWNER_LINK(link);
 			if (SceCpuForDriver_5AC9D394(&rwLock->lock) < 0)
@@ -448,7 +448,7 @@ uint32_t releaseAllRWLock(struct ThreadCB *thread)
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			wake |= revalidateWaitState((uintptr_t)&rwLock->next);
 			sceKernelSpinlockLowUnlock(&rwLock->lock);
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		}
 		if (link == head)
 			break;
@@ -559,7 +559,7 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 		intr = SceCpuForDriver_821FC0EE();
 	} else {
 		process = thread->process;
-		intr = SceCpuForDriver_D32ACE9E(&process->resourceLock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
 		if (attr & RW_LOCK_ATTR_LW) {
 			if (process->uidLwCount >= 0x100) {
 				sceKernelSpinlockLowUnlock(&process->resourceLock);
@@ -594,7 +594,7 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 		&opt, (SceObjectBase **)&rwLock);
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {
-			SceCpuForDriver_BF82DEB2(&process->resourceLock);
+			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (attr & RW_LOCK_ATTR_LW)
 				process->uidLwCount--;
 			else if (attr & RW_LOCK_ATTR_UNLIMITED)
@@ -680,7 +680,7 @@ int sceKernelTryLockReadRWLock(SceUID rwLockId)
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&rwLock->lock);
+	sceKernelSpinlockLowLock(&rwLock->lock);
 	if (rwLock->core.writer == NULL &&
 	    rwLock->next == (struct ThreadmgrWaitQueue *)&rwLock->next) {
 		if (rwLock->core.lockCount == RW_LOCK_COUNT_MAX) {
@@ -729,7 +729,7 @@ int sceKernelUnlockReadRWLock(SceUID rwLockId)
 		goto resume;
 	}
 	queue = (struct ThreadmgrWaitQueue *)&rwLock->next;
-	SceCpuForDriver_BF82DEB2(&rwLock->lock);
+	sceKernelSpinlockLowLock(&rwLock->lock);
 	ret = 0;
 	if (rwLock->core.writer != NULL) {
 		ret = SCE_KERNEL_ERROR_RW_LOCK_FAILED_TO_UNLOCK;
@@ -747,7 +747,7 @@ int sceKernelUnlockReadRWLock(SceUID rwLockId)
 			     node = node->next) {
 				waiter = (struct ThreadCB *)node;
 				SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 1073, "sceKernelUnlockReadRWLock");
-				SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+				sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 				if (waiter->waitMode == RW_LOCK_MODE_WRITE) {
 					acquireRWLock(rwLock, waiter);
 					wake = wakeupAndDistributeThread(waiter, (uintptr_t)queue, 0) & 1;
@@ -814,7 +814,7 @@ int sceKernelTryLockWriteRWLock(SceUID rwLockId)
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&rwLock->lock);
+	sceKernelSpinlockLowLock(&rwLock->lock);
 	if (rwLock->core.writer == thread) {
 		if (rwLock->attr & RW_LOCK_ATTR_RECURSIVE) {
 			if (rwLock->core.lockCount == RW_LOCK_COUNT_MAX) {
@@ -827,7 +827,7 @@ int sceKernelTryLockWriteRWLock(SceUID rwLockId)
 			ret = SCE_KERNEL_ERROR_RW_LOCK_RECURSIVE;
 		}
 	} else if (rwLock->core.writer == NULL && rwLock->core.lockCount == 0) {
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		acquireRWLock(rwLock, thread);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		ret = 0;
@@ -879,7 +879,7 @@ int sceKernelUnlockWriteRWLock(SceUID rwLockId)
 		goto resume;
 	}
 	queue = (struct ThreadmgrWaitQueue *)&rwLock->next;
-	SceCpuForDriver_BF82DEB2(&rwLock->lock);
+	sceKernelSpinlockLowLock(&rwLock->lock);
 	if (rwLock->core.writer != thread) {
 		if (rwLock->core.writer == NULL)
 			SCE_DBG_PRINTF_FUNC(0, 1307, "sceKernelUnlockWriteRWLock", " k: error: RW_LOCK_NOT_OWNED, rwLockId=0x%08X([%s]), "
@@ -907,7 +907,7 @@ int sceKernelUnlockWriteRWLock(SceUID rwLockId)
 			waiter = (struct ThreadCB *)node;
 			SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 1373, "sceKernelUnlockWriteRWLock");
 			next = node->next;
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+			sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 			SCE_DBG_ASSERT_CHECK_FUNC(waiter->waitMode == RW_LOCK_MODE_READ, 1378, "sceKernelUnlockWriteRWLock");
 			rwLock->core.lockCount++;
 			wake |= wakeupAndDistributeThread(waiter, (uintptr_t)queue, 0);
@@ -917,7 +917,7 @@ int sceKernelUnlockWriteRWLock(SceUID rwLockId)
 		for (node = queue->next; node != (struct ThreadmgrWaitNode *)queue; node = node->next) {
 			waiter = (struct ThreadCB *)node;
 			SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 1354, "sceKernelUnlockWriteRWLock");
-			SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+			sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 			if (waiter->waitMode == RW_LOCK_MODE_WRITE) {
 				acquireRWLock(rwLock, waiter);
 				wake |= wakeupAndDistributeThread(waiter, (uintptr_t)queue, 0);
@@ -987,14 +987,14 @@ int sceKernelCancelRWLock(SceUID rwLockId, int *numReadWaitThreads, int *numWrit
 	}
 	writers = 0;
 	queue = (struct ThreadmgrWaitQueue *)&rwLock->next;
-	SceCpuForDriver_BF82DEB2(&rwLock->lock);
+	sceKernelSpinlockLowLock(&rwLock->lock);
 	wake = releaseRWLock(&rwLock->core);
 	readers = 0;
 	for (node = queue->next; node != (struct ThreadmgrWaitNode *)queue; node = next) {
 		waiter = (struct ThreadCB *)node;
 		next = node->next;
 		SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 1479);
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
+		sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 		if (waiter->waitMode == RW_LOCK_MODE_READ)
 			readers++;
 		else
@@ -1008,7 +1008,7 @@ int sceKernelCancelRWLock(SceUID rwLockId, int *numReadWaitThreads, int *numWrit
 	if (numWriteWaitThreads != NULL)
 		*numWriteWaitThreads = writers;
 	if (type == 1) {
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		acquireRWLock(rwLock, thread);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	}

@@ -10,7 +10,7 @@ static __attribute__((noinline)) int ResetDisable(volatile uint32_t *reg,
 {
 	uint32_t state, previous;
 
-	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
 	previous = *reg;
 	*reg = previous & ~mask;
 	LowioDmb();
@@ -37,7 +37,7 @@ static __attribute__((noinline)) int ResetEnable(volatile uint32_t *reg,
 {
 	uint32_t state, previous;
 
-	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
 	previous = *reg;
 	*reg = previous | mask;
 	LowioDmb();

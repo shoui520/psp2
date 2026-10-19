@@ -54,7 +54,7 @@ int sceSblSmSchedRegisterIntrHandlerInternal(SceUInt32 id, SceUInt32 mailbox,
 		return SCE_SBL_ERROR_NOT_READY;
 	if (mailbox > 3)
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
-	intr = SceCpuForDriver_D32ACE9E(&s_lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	request = SmschedGetRequest(id);
 	if (request == NULL) {
 		ret = SCE_SBL_ERROR_NO_REQUEST;
@@ -137,7 +137,7 @@ int cry2Arm123IntHandler(int intrCode, void *userCtx)
 	void *arg;
 
 	(void)userCtx;
-	intr = SceCpuForDriver_D32ACE9E(&s_lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	running = s_running;
 	if (running == NULL) {
 		ret = -1;
@@ -192,7 +192,7 @@ int sceSblSmSchedReleaseIntrHandlerInternal(SceUInt32 id, SceUInt32 mailbox)
 		return SCE_SBL_ERROR_NOT_READY;
 	if (mailbox > 3)
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
-	intr = SceCpuForDriver_D32ACE9E(&s_lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	request = SmschedGetRequest(id);
 	if (request == NULL) {
 		ret = SCE_SBL_ERROR_NO_REQUEST;
@@ -273,7 +273,7 @@ void waitStateChange(SceUInt32 state, int *intr, SmschedRequest *request, SceUIn
 
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, *intr);
 	for (;;) {
-		ret = SceCpuForDriver_27C0B340(&s_lock);
+		ret = sceKernelSpinlockLowTrylockCpuSuspendIntr(&s_lock);
 		if (ret >= 0) {
 			*intr = ret;
 			current = request->status.state;
@@ -304,13 +304,13 @@ int updateMailbox(SceUInt32 id, int mailbox, SceUInt32 value, SmschedMailboxOp o
 		return SCE_SBL_ERROR_NOT_READY;
 	if (mailbox < 1 || mailbox > 3)
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
-	intr = SceCpuForDriver_D32ACE9E(&s_lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	request = SmschedGetRequest(id);
 	if (request == NULL) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
 		return SCE_SBL_ERROR_NO_REQUEST;
 	}
-	SceCpuForDriver_BF82DEB2(&request->lock);
+	sceKernelSpinlockLowLock(&request->lock);
 	state = request->status.state;
 	switch (state) {
 	case SMSCHED_STATE_SUSPENDING:
@@ -376,13 +376,13 @@ int accessMailbox(SceUInt32 id, int mailbox, SceUInt32 *value, SmschedMailboxRea
 		return SCE_SBL_ERROR_NOT_READY;
 	if (mailbox < 1 || mailbox > 3)
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
-	intr = SceCpuForDriver_D32ACE9E(&s_lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	request = SmschedGetRequest(id);
 	if (request == NULL) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
 		return SCE_SBL_ERROR_NO_REQUEST;
 	}
-	SceCpuForDriver_BF82DEB2(&request->lock);
+	sceKernelSpinlockLowLock(&request->lock);
 	state = request->status.state;
 	switch (state) {
 	case SMSCHED_STATE_SUSPENDING:
@@ -681,7 +681,7 @@ int deleteAllRequest(int onlyProxied)
 	int ret, i;
 
 	disableMbox123();
-	intr = SceCpuForDriver_D32ACE9E(&s_lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	for (i = 0; i < 2; i++) {
 		request = (SmschedRequest *)s_runQueue[i].next;
 		while (&request->link != &s_runQueue[i] && request != NULL) {
@@ -1008,7 +1008,7 @@ int cry2Arm0IntHandler(int intrCode, void *userCtx)
 	message.ack = 0;
 	message.status.result = 0;
 	message.status.state = 0;
-	intr = SceCpuForDriver_D32ACE9E(&s_lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	reg = CMEP_MAILBOX_REG(cry2Arm[0]);
 	if (reg & CMEP_EVENT_SK_PRINT) {
 		SCE_DBG_PRINTF(0, 2077, "s:%s", (const char *)s_instance->debugArea);
@@ -1256,7 +1256,7 @@ int sceSblSmSchedInvokeInternal(SceUInt32 priority, uintptr_t selfPA, SceUInt32 
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	}
 
-	intr = SceCpuForDriver_D32ACE9E(&s_lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	link = s_instance->freeList.next;
 	if (link == &s_instance->freeList)
 		goto nomem;
@@ -1401,7 +1401,7 @@ int sceSblSmSchedIntrDoneMonitorCall(SceUInt32 id, int mailbox, unsigned int ind
 	int intr, ret;
 
 	(void)mailbox;
-	intr = SceCpuForDriver_D32ACE9E(&s_lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	ret = sceSblTzsBridgeFreeIntrArea(index);
 	if (ret < 0)
 		goto out;
@@ -1669,7 +1669,7 @@ int sceSblSmSchedWait(SceUInt32 id, SmschedIntrStatus *status)
 		return SCE_SBL_ERROR_NO_REQUEST;
 	if (atomicCompareAndSet8(&request->waitFlag, 0, 1) != 0)
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
-	intr = SceCpuForDriver_D32ACE9E(&s_lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	state = request->status.state;
 	switch (state) {
 	case SMSCHED_STATE_READY:
@@ -1738,7 +1738,7 @@ int sceSblSmSchedGetStatus(SceUInt32 id, SmschedIntrStatus *status)
 		return SCE_SBL_ERROR_NOT_READY;
 	if (status == NULL)
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
-	intr = SceCpuForDriver_D32ACE9E(&s_lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	request = SmschedGetRequest(id);
 	if (request == NULL) {
 		ret = SCE_SBL_ERROR_NO_REQUEST;
@@ -1797,13 +1797,13 @@ int sceSblSmSchedKill(SceUInt32 id)
 	message.ack = 0;
 	message.status.result = 0;
 	message.status.state = 0;
-	intr = SceCpuForDriver_D32ACE9E(&s_lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
 	request = SmschedGetRequest(id);
 	if (request == NULL) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
 		return SCE_SBL_ERROR_NO_REQUEST;
 	}
-	SceCpuForDriver_BF82DEB2(&request->lock);
+	sceKernelSpinlockLowLock(&request->lock);
 	state = request->status.state;
 	switch (state) {
 	case SMSCHED_STATE_STARTING:

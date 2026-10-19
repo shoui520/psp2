@@ -795,7 +795,7 @@ int CreateDefaultBudget(void)
 		SCE_DBG_ASSERT_FAIL(1184);
 		return 0;
 	}
-	if (SceDipswForDriver_A98FC2FD(0xbf) != 0) {
+	if (sceKernelCheckDipsw(0xbf) != 0) {
 		ret = sceKernelGrowPhyMemPartByPbase(g_shellPart, 0x78000000, 0x3000000);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 1196, "sceKernelGrowPhyMemPartByPbase failed 0x%08x\n",
@@ -810,7 +810,7 @@ int CreateDefaultBudget(void)
 			SCE_DBG_ASSERT_FAIL(1207);
 			return 0;
 		}
-	} else if (SceDipswForDriver_A98FC2FD(0xbe) == 0 && SceDipswForDriver_A98FC2FD(0xd2) != 0) {
+	} else if (sceKernelCheckDipsw(0xbe) == 0 && sceKernelCheckDipsw(0xd2) != 0) {
 		ret = CreateDefaultPhyMemPart("ScePhyMemPartShellDummy", 0x10002, 0x78000000, 0x8000000,
 					      &g_shellDummyPart);
 		if (ret < 0) {
@@ -820,14 +820,14 @@ int CreateDefaultBudget(void)
 		}
 	}
 	ret = CreateDefaultPhyMemPart("ScePhyMemPartGame", 0x10004, 0x50000000,
-				      SceDipswForDriver_A98FC2FD(0x80) != 0 ? 0x20000000 : 0x10000000,
+				      sceKernelCheckDipsw(0x80) != 0 ? 0x20000000 : 0x10000000,
 				      &g_gamePart);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1248, "CreateDefaultPhyMemPart failed 0x%08x\n", ret);
 		SCE_DBG_ASSERT_FAIL(1249);
 		return 0;
 	}
-	if (SceDipswForDriver_A98FC2FD(0x80) == 0) {
+	if (sceKernelCheckDipsw(0x80) == 0) {
 		ret = CreateDefaultPhyMemPart("ScePhyMemPartGameDummy", 0x10002, 0x60000000, 0x10000000,
 					      &g_gameDummyPart);
 		if (ret < 0)

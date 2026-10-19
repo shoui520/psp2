@@ -109,8 +109,8 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelIsUncacheAddressInTmpFsGame
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_821FC0EE
-	SceCpuForDriver_BF82DEB2
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLock
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	memset
 	strncmp
 	__aeabi_idiv
@@ -118,7 +118,7 @@ set(MODULE_IMPORT_FUNCS
 	__aeabi_uidiv
 	snprintf
 	__stack_chk_fail
-	SceDebugForDriver_35A35322
+	sceKernelAssert
 	sceKernelRegisterIntrHandler
 	sceKernelEnableIntr
 	sceKernelWaitEventFlag
@@ -152,7 +152,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForDriver_FD00C72A
 	SceSblAIMgrForDriver_274663A0
 	SceQafMgrForDriver_382C71E8
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	ScePervasiveForDriver_146108D4
 	ScePervasiveForDriver_2FB5F88F
 	ScePervasiveForDriver_4235EB7D

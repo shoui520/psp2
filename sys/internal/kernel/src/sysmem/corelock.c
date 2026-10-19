@@ -23,7 +23,7 @@ void SceCpuForKernel_2FF54320(SceCorelockContext *context, SceUInt32 core)
 	}
 	while (*owner != (int16_t)current)
 		wfe();
-	SceCpuForDriver_BF82DEB2(&context->lock);
+	sceKernelSpinlockLowLock(&context->lock);
 }
 
 void SceCpuForKernel_FE2B77A3(SceCorelockContext *context)

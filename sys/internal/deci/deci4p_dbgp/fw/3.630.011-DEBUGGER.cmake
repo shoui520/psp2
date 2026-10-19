@@ -177,8 +177,8 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_BF82DEB2
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLock
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	memset
 	memcpy
@@ -270,7 +270,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelInitialHandlerDebugDabtCfunc
 	sceKernelInitialHandlerDebugUndefCfunc
 	sceKernelInitialHandlerDebugPabtCfunc
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597
 	sceKernelCopyFromUserProc
@@ -295,7 +295,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_CD8CD242
 	SceCpuForKernel_74B7F445
 	SceCpuForKernel_803C84BF
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	SceSblACMgrForDriver_4CBD6156
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_AD717E7A

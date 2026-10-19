@@ -65,7 +65,7 @@ void *_sceVeneziaAllocCommunicationMemory(SceSize size)
 	void *memory;
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(size != 0,
+	sceKernelAssert(size != 0,
 		SCE_DBGINFO_FUNC(147, "_sceVeneziaAllocCommunicationMemory"),
 		__builtin_return_address(0));
 #endif
@@ -75,7 +75,7 @@ void *_sceVeneziaAllocCommunicationMemory(SceSize size)
 		if (memory)
 			break;
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(getRpcFreeChannelCount() <= 7 ||
+		sceKernelAssert(getRpcFreeChannelCount() <= 7 ||
 			getRpcFreeDebugChannelCount() == 0,
 			SCE_DBGINFO_FUNC(163, "_sceVeneziaAllocCommunicationMemory"),
 			__builtin_return_address(0));

@@ -28,7 +28,7 @@ int SpkgUtilUpdateSpackageSync(SceUID fd, const SceMbr *mbr, int nodeType,
 		result = (int)0x800f0205;
 		goto release;
 	}
-	SceCpuForDriver_103872A5(buffer, (size + 63) & ~63);
+	sceKernelDcacheCleanRange(buffer, (size + 63) & ~63);
 	result = SpkgUtilSpackageTopHalf(1, packageType, buffer,
 			segment->size, flags, &requestId);
 	if (result)

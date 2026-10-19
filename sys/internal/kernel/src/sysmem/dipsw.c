@@ -35,7 +35,7 @@ SceUInt32 SceDipswForDriver_B2AD48BE(unsigned int index)
 }
 
 __attribute__((noinline))
-int SceDipswForDriver_A98FC2FD(unsigned int bit)
+int sceKernelCheckDipsw(unsigned int bit)
 {
 	return (s_dipsw->words[bit >> 5] >> (bit & 31)) & 1;
 }
@@ -71,7 +71,7 @@ int sceKernelCheckDipswForUser(unsigned int bit)
 		if (result < 0)
 			return result;
 	}
-	return SceDipswForDriver_A98FC2FD(bit);
+	return sceKernelCheckDipsw(bit);
 }
 
 int sceKernelSetDipsw(unsigned int bit)

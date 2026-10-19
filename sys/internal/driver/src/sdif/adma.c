@@ -42,7 +42,7 @@ int setAdmaDescriptorsForAlignedData(SdifCommand *command)
 			last.attributes |= 2;
 			command->descriptors[entries - 1] = last;
 		}
-		SceCpuForDriver_103872A5(command->descriptors, 128);
+		sceKernelDcacheCleanRange(command->descriptors, 128);
 		command->descriptorPhysicalAddress = command->defaultDescriptorPhysicalAddress;
 		return 0;
 	}
@@ -212,7 +212,7 @@ countedRange:
 	}
 	entries = 0;
 	if (command->leadingLength) {
-		SceCpuForDriver_103872A5(command->leadingBuffer, 64);
+		sceKernelDcacheCleanRange(command->leadingBuffer, 64);
 		descriptor = command->descriptors;
 		descriptor->address = command->leadingPhysicalAddress;
 		descriptor->length = command->leadingLength;
@@ -220,7 +220,7 @@ countedRange:
 		entries = 1;
 	}
 	if (aligned) {
-		SceCpuForDriver_103872A5(alignedBuffer, aligned);
+		sceKernelDcacheCleanRange(alignedBuffer, aligned);
 		if (count <= 16) {
 			for (index = 0; index != count; index++) {
 				address = command->physicalRanges[index].addr;
@@ -279,7 +279,7 @@ countedRange:
 		}
 	}
 	if (command->trailingLength) {
-		SceCpuForDriver_103872A5(command->trailingBuffer, 64);
+		sceKernelDcacheCleanRange(command->trailingBuffer, 64);
 		descriptor = &command->descriptors[entries++];
 		descriptor->address = command->trailingPhysicalAddress;
 		descriptor->length = command->trailingLength;
@@ -294,7 +294,7 @@ countedRange:
 			"%s %d Warning: descriptor entry num is zero\n",
 			"prepareAdmaDescriptorTable", 559);
 	}
-	SceCpuForDriver_103872A5(command->descriptors, bytes);
+	sceKernelDcacheCleanRange(command->descriptors, bytes);
 	if (command->descriptors == command->defaultDescriptors) {
 		command->descriptorPhysicalAddress = command->defaultDescriptorPhysicalAddress;
 		return 0;
@@ -307,7 +307,7 @@ countedRange:
 		command->descriptors, command->descriptorPhysicalAddress);
 freeArea:
 	if (command->flags & 0x100000)
-		SceSysmemForDriver_009E1C61(command->descriptorMemblock);
+		sceKernelFreeMemBlock(command->descriptorMemblock);
 	else
 		SCE_DBG_ASSERT_FUNC(command->descriptors == command->context->port.descriptorBuffer,
 			434, "freeAdmaDescriptorArea");
@@ -358,24 +358,24 @@ int freeAdmaDescriptorArea(SdifCommand *command)
 
 	if ((flags & 0x400) && command->descriptors != command->defaultDescriptors) {
 		if (flags & 0x100000)
-			SceSysmemForDriver_009E1C61(command->descriptorMemblock);
+			sceKernelFreeMemBlock(command->descriptorMemblock);
 		else
 			SCE_DBG_ASSERT_FUNC(command->descriptors == command->context->port.descriptorBuffer,
 					    434, "freeAdmaDescriptorArea");
 	}
 	if (command->state == 3 && !(command->flags & 0x100200)) {
 		if (command->leadingLength) {
-			SceCpuForDriver_02796361(command->leadingBuffer, 64);
+			sceKernelDcacheInvalidateRange(command->leadingBuffer, 64);
 			memcpy(command->buffer, command->leadingBuffer, command->leadingLength);
 		}
 		if (command->trailingLength) {
-			SceCpuForDriver_02796361(command->trailingBuffer, 64);
+			sceKernelDcacheInvalidateRange(command->trailingBuffer, 64);
 			memcpy((char *)command->alignedBuffer + command->alignedLength,
 			       command->trailingBuffer, command->trailingLength);
 		}
 		if (command->state == 3 && !(command->flags & 0x100200) &&
 		    command->alignedLength)
-			SceCpuForDriver_02796361(command->alignedBuffer, command->alignedLength);
+			sceKernelDcacheInvalidateRange(command->alignedBuffer, command->alignedLength);
 	}
 	return 0;
 }
@@ -402,7 +402,7 @@ void sceSdifDumpAdmaInfo(SdifCommand *command)
 			SCE_DBG_PRINTF(0, 831, "descriptor[%d]:0x%llx\n", index, descriptor.value);
 		}
 		SCE_DBG_PRINTF(0, 834, "# Invalidate descriptor area to read real descriptor.\n");
-		SceCpuForDriver_02796361(command->descriptors, 128);
+		sceKernelDcacheInvalidateRange(command->descriptors, 128);
 		for (index = 0; index < 16; index++) {
 			descriptor.fields = command->descriptors[index];
 			SCE_DBG_PRINTF(0, 839, "descriptor[%d]:0x%llx\n", index, descriptor.value);

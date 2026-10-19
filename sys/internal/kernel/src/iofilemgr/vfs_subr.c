@@ -75,7 +75,7 @@ SceVfsMount *vfs_alloc_mount(void)
 	SceUID uid;
 	int intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&g_freeMntListLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&g_freeMntListLock);
 	mnt = g_freeMntList;
 	if (mnt == NULL) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_freeMntListLock, intr);
@@ -99,7 +99,7 @@ SceVfsMount *vfs_alloc_mount(void)
 		sceKernelDeleteMutex(fdlock->mutex);
 		fdlock->mutex = -1;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&g_freeMntListLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&g_freeMntListLock);
 	if (g_freeMntList != NULL)
 		mnt->mntListNext = g_freeMntList;
 	g_freeMntList = mnt;
@@ -360,7 +360,7 @@ int vfs_debug_extend_buff(int index)
 	sceKernelGetMemBlockBase(uid, &base);
 	pool = sceKernelAllocHeapMemory(g_vfsNcacheHeap, 0x220);
 	if (pool == NULL) {
-		SceSysmemForDriver_009E1C61(uid);
+		sceKernelFreeMemBlock(uid);
 		ret = SCE_ERROR_ERRNO_ENOMEM;
 		goto out;
 	}
@@ -370,7 +370,7 @@ int vfs_debug_extend_buff(int index)
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 2948, "bufferPoolInitialize() failed ... %d 0x%x\n",
 				     ret, ret);
-		SceSysmemForDriver_009E1C61(uid);
+		sceKernelFreeMemBlock(uid);
 		sceKernelFreeHeapMemory(g_vfsNcacheHeap, pool);
 	} else {
 		g_vfsDebugMemBlock[index] = uid;
@@ -479,7 +479,7 @@ void vfs_free_mount(SceVfsMount *mnt)
 			SCE_DBG_PRINTF(0xf, 379, "fumount table free failed ret=0x%x tbl=%p\n", ret,
 				       mnt->fumount);
 	}
-	intr = SceCpuForDriver_D32ACE9E(&g_freeMntListLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&g_freeMntListLock);
 	if (g_freeMntList != NULL)
 		mnt->mntListNext = g_freeMntList;
 	g_freeMntList = mnt;
@@ -1480,7 +1480,7 @@ char *vfs_path_buff_alloc(void)
 	char *buf;
 	int intr, i;
 
-	intr = SceCpuForDriver_D32ACE9E(&g_pathBuffLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&g_pathBuffLock);
 	for (i = 0; i < VFS_PATH_BUFF_CACHE_NUM; i++) {
 		buf = g_pathBuffCache[i];
 		if (buf != NULL) {
@@ -1502,7 +1502,7 @@ void vfs_path_buff_free(char *buf)
 {
 	int intr, ret, i;
 
-	intr = SceCpuForDriver_D32ACE9E(&g_pathBuffLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&g_pathBuffLock);
 	for (i = 0; i < VFS_PATH_BUFF_CACHE_NUM; i++) {
 		if (g_pathBuffCache[i] == NULL) {
 			g_pathBuffCache[i] = buf;
@@ -1771,7 +1771,7 @@ int vfs_finalize_file(SceVfsVnode *vp, SceVfsFile *file)
 	if (ret == 0) {
 		vp->core.fdNum--;
 		file->vnode = NULL;
-		if (SceDipswForDriver_A98FC2FD(0xd2) != 0) {
+		if (sceKernelCheckDipsw(0xd2) != 0) {
 			vfs_debug_path_free(file);
 			return 0;
 		}

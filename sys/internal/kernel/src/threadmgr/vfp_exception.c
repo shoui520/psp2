@@ -177,7 +177,7 @@ int threadmgrVfpExceptionIntrHandler(int code, void *arg)
 	thread = &object->context;
 	pid = thread->processId;
 	process = thread->process;
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	SCE_DBG_ASSERT_CHECK((uint16_t)thread->status == SCE_KERNEL_THREAD_STATUS_RUNNING, 182);
 	SCE_DBG_ASSERT_CHECK(thread->currentCpuId == cpuId, 183);
 	SCE_DBG_ASSERT_CHECK(thread->threadId != cpu->idleThread->threadId, 185);
@@ -190,7 +190,7 @@ int threadmgrVfpExceptionIntrHandler(int code, void *arg)
 			     THREAD_STATE_OFF_CPU;
 	manager = s_threadmgrRuntime.manager;
 	self = (uintptr_t)thread;
-	SceCpuForDriver_BF82DEB2(&manager->threadMgrCBLock);
+	sceKernelSpinlockLowLock(&manager->threadMgrCBLock);
 	thread->next = (uintptr_t)&s_threadmgrRuntime.manager->debugSuspendedNext;
 	thread->prev = s_threadmgrRuntime.manager->debugSuspendedPrev;
 	s_threadmgrRuntime.manager->debugSuspendedPrev = self;
@@ -224,7 +224,7 @@ int threadmgrVfpExceptionIntrHandler(int code, void *arg)
 		}
 		action = VFP_EXCEPTION_SUSPEND_PROCESS;
 decided:
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		SCE_DBG_ASSERT_LEVEL(0, thread->pVfpRegisterContext != 0, 233);
 		/* the exception is cleared for when it runs again */
 		*(uint32_t *)(thread->pVfpRegisterContext + 0x100) &= ~area->status;

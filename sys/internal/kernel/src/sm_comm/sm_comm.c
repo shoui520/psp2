@@ -240,7 +240,7 @@ cleanup:
 		*id = -1;
 	}
 	if (memBlock >= 0)
-		SceSysmemForDriver_009E1C61(memBlock);
+		sceKernelFreeMemBlock(memBlock);
 	if (eventFlag >= 0)
 		sceKernelDeleteEventFlag(eventFlag);
 out:
@@ -318,7 +318,7 @@ int SceSblSmCommForKernel_7863A0CC(SceUInt32 priority, const char *path,
 			ret = SM_ERROR_TRANSFER;
 		}
 	}
-	SceSysmemForDriver_009E1C61(memBlock);
+	sceKernelFreeMemBlock(memBlock);
 close:
 	sceIoClose(fd);
 	if (ret == 0)
@@ -364,7 +364,7 @@ int SceSblSmCommForKernel_039C73B1(SceUInt32 priority, const void *data,
 		range.size = size;
 		ret = StartSession(index, priority, &range, command, auth, id);
 	}
-	SceSysmemForDriver_009E1C61(memBlock);
+	sceKernelFreeMemBlock(memBlock);
 	if (ret == 0)
 		goto out;
 release:
@@ -445,7 +445,7 @@ int SceSblSmCommForKernel_0631F8ED(SceSblSmCommId id, SceSblSmCommPair *result)
 		index = FindSessionSlot(id);
 		/* Native cleanup does not reject an unmatched (-1) slot here. */
 		session = &s_sessions[index];
-		SceSysmemForDriver_009E1C61(session->memBlock);
+		sceKernelFreeMemBlock(session->memBlock);
 		sceKernelDeleteEventFlag(session->eventFlag);
 		ReleaseSessionSlot(index);
 		ret = sceKernelSignalSema(s_semaphore, 1);

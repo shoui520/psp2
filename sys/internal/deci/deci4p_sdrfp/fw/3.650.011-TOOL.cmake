@@ -47,8 +47,8 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_BF82DEB2
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLock
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	SceDebugForDriver_02B04343
 	SceDebugForDriver_391B74B7
@@ -72,7 +72,7 @@ set(MODULE_IMPORT_FUNCS
 	sceSDfMgrExRecv
 	SceDeci4pSDfMgrForKernel_FFC95B63
 	SceQafMgrForDriver_382C71E8
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

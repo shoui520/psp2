@@ -215,11 +215,11 @@ set(MODULE_IMPORT_FUNCS
 	SceCpuForDriver_821FC0EE
 	SceCpuForDriver_BC248C30
 	SceCpuForDriver_CDA96E81
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceCpuForDriver_DF899E4B
 	sceKernelCpuResumeIntr
 	SceDebugForDriver_391B74B7
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	SceSysrootForDriver_0A52A59C
 	SceSysrootForDriver_10788257
 	SceSysrootForDriver_246AAAB3

@@ -108,7 +108,7 @@ int _sceMtpIfModuleStart(SceSize arglen, const char *argp)
 	if (sceKernelGetMemBlockBase(s_mtp.memblock, &s_mtp.buffer) < 0) {
 		SCE_DBG_PRINTF(0, 252, "[%s%-29s] Err(%4d) cannot allocate memory\n",
 			       "MTPIF:", __func__, 252);
-		SceSysmemForDriver_009E1C61(s_mtp.memblock);
+		sceKernelFreeMemBlock(s_mtp.memblock);
 		return 1;
 	}
 	s_mtp.usb.reset = SceUsbMtpForDriver_B958E5DE;

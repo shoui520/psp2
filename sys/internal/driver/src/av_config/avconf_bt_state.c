@@ -18,7 +18,7 @@ void avConfigReadBtDevice(AvConfigBtAudioState *bt, SceUInt64 address)
 	info.profiles &= 0x20000008;
 	if (info.profiles == 0)
 		return;
-	state = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	if (info.profiles & 0x20000000) {
 		avConfigConfiguration.settings.connectedDevices |= 0x810;
 	} else {
@@ -62,7 +62,7 @@ int avConfigReadBtEvents(AvConfigState *state)
 				if (address != bt->pending.address)
 					continue;
 				bt->disconnected = 1;
-				lockState = SceCpuForDriver_D32ACE9E(
+				lockState = sceKernelSpinlockLowLockCpuSuspendIntr(
 					&avConfigConfiguration.lock);
 				avConfigConfiguration.settings.connectedDevices &= ~0x810u;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(
@@ -123,7 +123,7 @@ int avConfigReadBtEvents(AvConfigState *state)
 		continue;
 
 clearPending:
-		lockState = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+		lockState = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 		avConfigConfiguration.settings.connectedDevices &= ~0x810u;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, lockState);
 		bt->pending.address = 0;
@@ -163,7 +163,7 @@ int avConfigStartBtAudio(AvConfigBtAudioState *bt)
 	if (SceBtForDriver_E9936446(bt->pending.address) == 5)
 		return 0;
 	if (SceBtForDriver_8D47CABD(bt->pending.address, bt->pending.profile) < 0) {
-		state = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+		state = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 		avConfigConfiguration.settings.connectedDevices &= ~0x810u;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, state);
 		bt->deviceChanged = 1;
@@ -191,7 +191,7 @@ int avConfigStartBtAudio(AvConfigBtAudioState *bt)
 			bt->pending.profiles = bt->active.profiles;
 			bt->pending.address = address;
 		}
-		state = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+		state = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 		if (bt->pending.profiles & 0x20000000)
 			avConfigConfiguration.settings.connectedDevices |= 0x810;
 		else
@@ -202,7 +202,7 @@ int avConfigStartBtAudio(AvConfigBtAudioState *bt)
 		bt->active.address = 0;
 		return -2;
 	}
-	state = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.connectedDevices &= ~0x810u;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, state);
 	bt->pending.address = 0;

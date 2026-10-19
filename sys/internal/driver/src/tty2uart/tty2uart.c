@@ -95,7 +95,7 @@ static void tty2bufferStart(Tty2Buffer *p)
 
 	TTY2_TRACE(0xb, 150, "(%p)\n", p);
 	p->lock = 0;
-	intr = SceCpuForDriver_D32ACE9E(&p->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&p->lock);
 	p->pid = -1;
 	p->size = TTY2_BUFFER_SIZE;
 	p->uid = sceKernelAllocMemBlockForKernel("SceTty2uartBuffer", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW, TTY2_BUFFER_SIZE, NULL);
@@ -105,7 +105,7 @@ static void tty2bufferStart(Tty2Buffer *p)
 		ret = sceKernelGetMemBlockVBase(p->uid, (void **)&p->base);
 		if (ret < 0) {
 			TTY2_ERROR(0xb, 165, "sceKernelGetMemBlockVBase failed (0x%08X)\n", ret);
-			SceSysmemForDriver_009E1C61(p->uid);
+			sceKernelFreeMemBlock(p->uid);
 		} else {
 			p->count = 0;
 			p->cur = p->base;
@@ -134,7 +134,7 @@ static void tty2bufferWrite(Tty2Buffer *p, const signed char *buf, SceSize n)
 	SceSize i;
 
 	TTY2_TRACE(0xb, 238, "(%p, [%-16s])\n", p, buf);
-	intr = SceCpuForDriver_D32ACE9E(&p->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&p->lock);
 	for (i = 0; i < n; ) {
 		if (buf[i] == '\\' && buf[i + 1] == 'n') {
 			tty2bufferPutcharRaw(p, '\n');
@@ -160,7 +160,7 @@ static int controlOpen(SceUID pid)
 	if (p == NULL) {
 		TTY2_ERROR(0xf, 474, "Cannot allocate free tty2buffer\n");
 	} else {
-		intr = SceCpuForDriver_D32ACE9E(&p->lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&p->lock);
 		p->count = 0;
 		p->pid = pid;
 		p->cur = p->base;
@@ -182,7 +182,7 @@ static int controlClose(SceUID pid)
 	if (p == NULL) {
 		TTY2_ERROR(0xb, 542, "tty2bufferFindByPidRaw(0x%08x) failed\n", pid);
 	} else {
-		intr = SceCpuForDriver_D32ACE9E(&p->lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&p->lock);
 		p->pid = -1;
 		p->count = 0;
 		p->cur = p->base;
@@ -425,7 +425,7 @@ static SceSSize dev_tty_vop_read(SceVopReadArgs *argp)
 		SCE_PRINTF_WITH_INFO(0xf, 900, "invalid size (%d)\n", n);
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
-	if (!SceDipswForDriver_A98FC2FD(0xc4))
+	if (!sceKernelCheckDipsw(0xc4))
 		return 0;
 	ret = sceKernelLockMutex(s_mutex, 1, NULL);
 	if (ret < 0) {
@@ -456,7 +456,7 @@ static SceSSize dev_tty_vop_write(SceVopWriteArgs *argp)
 	n = argp->nbyte;
 	controlWrite(buf, n);
 
-	if ((SceDipswForDriver_A98FC2FD(0xc4) || SceDipswForDriver_A98FC2FD(0xc5)) &&
+	if ((sceKernelCheckDipsw(0xc4) || sceKernelCheckDipsw(0xc5)) &&
 	    sceKernelLockMutex(s_mutex, 1, NULL) >= 0) {
 		for (i = 0; i < n; i++) {
 			if (buf[i] == '\\' && buf[i + 1] == 'n') {
@@ -553,7 +553,7 @@ int tty2uartModuleStart(SceSize args, void *argp)
 	int ret;
 
 	TTY2_ERROR(0xb, 666, "()\n");
-	if (!SceDipswForDriver_A98FC2FD(0xd3))
+	if (!sceKernelCheckDipsw(0xd3))
 		return SCE_KERNEL_START_NO_RESIDENT;
 
 	ret = sceKernelCreateMutex("SceDeci4pTtyp", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);

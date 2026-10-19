@@ -140,7 +140,7 @@ int _addAckNakTaskList(QmiUartFramingControl *control, unsigned int kind,
 prepend:
 	entry->next = head;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(head != NULL, &g_qmiUartAckQueueDebug, __builtin_return_address(0));
+	sceKernelAssert(head != NULL, &g_qmiUartAckQueueDebug, __builtin_return_address(0));
 #endif
 	control->head->prev = entry;
 	control->head = entry;

@@ -526,7 +526,7 @@ static __attribute__((noinline)) int initOled(void) /* name unknown */
 		ret = readPanelId();
 		if (ret < 0) {
 			sceKernelUnregisterSysEventHandler(oled.eventUid);
-			SceSysmemForDriver_009E1C61(oled.spiUid);
+			sceKernelFreeMemBlock(oled.spiUid);
 			return ret;
 		}
 	} else {

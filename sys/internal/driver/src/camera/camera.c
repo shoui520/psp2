@@ -189,7 +189,7 @@ void cameraRequestActiveState(int active, void *argument)
 	CameraDriver *unlockDriver;
 
 	(void)argument;
-	intr = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	driver = cameraDriver;
 	if (driver->activeEnabled == active) {
 		unlockDriver = driver;
@@ -214,7 +214,7 @@ int cameraPowerEventHandler(int eventId, int eventCount, int flags, void *argume
 	SceKernelIntrStatus intr;
 
 	(void)argument;
-	intr = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	if (flags & 0x800000) {
 		cameraDriver->powerEventState = 3;
 		sceKernelSetEventFlag(cameraDriver->eventFlagId, 0x4000);
@@ -413,7 +413,7 @@ int cameraSubIntrHandler(void *subintrArg, void *registerArg,
 	int frameInterval;
 	SceUInt64 timestamp;
 
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	if (frameIndex <= 2) {
 		devnum = device != &cameraDriver->device[0] &&
 			device == &cameraDriver->device[1];
@@ -579,7 +579,7 @@ int cameraWaitForDeviceReads(void)
 	int intrStatus;
 
 	for (;;) {
-		intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+		intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 		driver = cameraDriver;
 		if (!driver->device[0].readInProgress && !driver->device[1].readInProgress)
 			break;
@@ -604,7 +604,7 @@ int cameraProcessStartEvent(SceUID pid, int eventType,
 	switch (eventType) {
 	case 0x20000:
 		if (pid >= 0) {
-			intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+			intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 			cameraDriver->pendingSuspendProcessId = pid;
 			sceKernelSetEventFlag(cameraDriver->eventFlagId, 0x20);
 			cameraSetProcessRequestedSuspendState(0, pid, 3);
@@ -614,7 +614,7 @@ int cameraProcessStartEvent(SceUID pid, int eventType,
 		}
 		break;
 	case 0x20001:
-		intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+		intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 		if (cameraIsProcessActive(0, pid))
 			cameraGetProcessSuspendState(0, pid, &state);
 		if (cameraIsProcessActive(1, pid))
@@ -637,7 +637,7 @@ int cameraProcessCreateEvent(SceUID pid, ProcEventCreateParam *param, void *comm
 
 	if (sceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) >= 0) {
 		if (pid >= 0) {
-			intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+			intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 			if (cameraGetProcessStorage(pid, 0) == NULL) {
 				result = cameraInitializeProcess(pid);
 				if (result == 0)
@@ -670,7 +670,7 @@ int cameraSysEventHandler(int resume, int eventid, void *args, void *opt)
 		if (eventid != 0x100000) {
 			if (eventid != 0x100002)
 				return 0;
-			intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+			intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 			driver = cameraDriver;
 			if (driver->device[0].suspendState == 0)
 				result = driver->device[1].suspendState != 0 ? (int)0x802e0013 : 0;
@@ -679,7 +679,7 @@ int cameraSysEventHandler(int resume, int eventid, void *args, void *opt)
 			goto unlock;
 		}
 		result = 0;
-		intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+		intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 		driver = cameraDriver;
 		requestedState = 3;
 		eventBits = 0x400;
@@ -694,7 +694,7 @@ int cameraSysEventHandler(int resume, int eventid, void *args, void *opt)
 			return result;
 		}
 		if (eventid == 0x402) {
-			intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+			intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 			driver = cameraDriver;
 			if (driver->device[0].suspendState == 2)
 				result = driver->device[1].suspendState == 2 ? 0 : (int)0x802e0013;
@@ -704,7 +704,7 @@ int cameraSysEventHandler(int resume, int eventid, void *args, void *opt)
 		}
 		if (eventid != 0x400)
 			return result;
-		intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+		intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 		driver = cameraDriver;
 		eventBits = 0x100;
 		requestedState = 1;
@@ -756,7 +756,7 @@ int cameraProcessStopEvent(SceUID pid, int eventType,
 		if (pid < 0)
 			break;
 		devnum = 0;
-		intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+		intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 		for (;;) {
 			driver = cameraDriver;
 			if (cameraIsProcessActive(devnum, pid) &&
@@ -775,7 +775,7 @@ int cameraProcessStopEvent(SceUID pid, int eventType,
 	case 0x200:
 		if (pid < 0)
 			break;
-		intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+		intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 		cameraSetProcessSuspendState(0, pid, 1);
 		cameraSetProcessRequestedSuspendState(0, pid, 1);
 		cameraSetProcessSuspendState(1, pid, 1);
@@ -831,9 +831,9 @@ int cameraTerminate(void)
 		SceCsiForDriver_4AE39F26(head);
 		driver->device[1].irqFrameCounter = 0;
 	}
-	SceSysmemForDriver_009E1C61(cameraFrameBufferMemBlockId);
+	sceKernelFreeMemBlock(cameraFrameBufferMemBlockId);
 	cameraFrameBufferMemBlockId = -1;
-	SceSysmemForDriver_009E1C61(cameraSramMemBlockId);
+	sceKernelFreeMemBlock(cameraSramMemBlockId);
 	cameraFrameBufferBase[0][0] = NULL;
 	cameraFrameBufferBase[0][1] = NULL;
 	cameraFrameBufferBase[0][2] = NULL;
@@ -895,13 +895,13 @@ int cameraResumeDevice(int devnum)
 	int started;
 	int result;
 
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	started = cameraHasStartedProcess(devnum, 0);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 	if (!started)
 		return 0;
 	driver = cameraDriver;
-	intrStatus = SceCpuForDriver_D32ACE9E(&driver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&driver->spinlock);
 	started = cameraIsProcessStarted(devnum, cameraDriver->activeProcessId);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 	if (!started)
@@ -968,7 +968,7 @@ int cameraResumeDevice(int devnum)
 	option.attribute.wRange = attributeDevice->config.wRange;
 	option.attribute.deferRegisterUpdate = 1;
 	option.attribute.updateDevice = 1;
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	result = cameraRestoreProcessSensorRegisters(devnum);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 	if (result < 0)
@@ -1038,7 +1038,7 @@ int cameraResumeDevice(int devnum)
 	if (result < 0)
 		return result;
 	attributeDevice = &cameraDriver->device[devnum];
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	attributeDevice->waitingForReverseFrame = 1;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 	option.timeout = device->config.frameTimeout;
@@ -1068,14 +1068,14 @@ int cameraResumeDevices(int eventType)
 			if (driver->activeProcessId == device->pendingProcessId &&
 			    enabled && (result = cameraResumeDevice(devnum),
 					driver = cameraDriver, result < 0)) {
-				intrStatus = SceCpuForDriver_D32ACE9E(&driver->spinlock);
+				intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&driver->spinlock);
 				sceKernelClearEventFlag(device->eventFlagId, ~4u);
 				driver = cameraDriver;
 				device->busy = 0;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&driver->spinlock, intrStatus);
 				driver = cameraDriver;
 			} else {
-				intrStatus = SceCpuForDriver_D32ACE9E(&driver->spinlock);
+				intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&driver->spinlock);
 				sceKernelClearEventFlag(device->eventFlagId, ~4u);
 				driver = cameraDriver;
 				device->suspendState = 0;
@@ -1085,7 +1085,7 @@ int cameraResumeDevices(int eventType)
 			}
 		}
 	}
-	intrStatus = SceCpuForDriver_D32ACE9E(&driver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&driver->spinlock);
 	driver = cameraDriver;
 	if (eventType == 1) {
 		if (driver->powerEventState == 1) {
@@ -1116,7 +1116,7 @@ int cameraStopProcess(int devnum, SceUID processId)
 		return (int)0x802e0000;
 	if (!cameraDriver->initialized)
 		return (int)0x802e0002;
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	result = sceCameraConfigStopPid(devnum, processId);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 	if (result)
@@ -1141,7 +1141,7 @@ int cameraStopProcess(int devnum, SceUID processId)
 		driver = cameraDriver;
 		device->irqFrameCounter = 0;
 	}
-	intrStatus = SceCpuForDriver_D32ACE9E(&driver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&driver->spinlock);
 	started = cameraHasStartedProcess(otherDevice, 1);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 	if (started)
@@ -1180,7 +1180,7 @@ int cameraStopProcess(int devnum, SceUID processId)
 		}
 	}
 setStopped:
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	result = sceCameraConfigSetStartedPid(devnum, processId, 0);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 	return result;
@@ -1200,7 +1200,7 @@ int cameraReleaseProcess(SceUID processId)
 		return processId;
 	driver = cameraDriver;
 	for (devnum = 0; devnum != 2; devnum++) {
-		intrStatus = SceCpuForDriver_D32ACE9E(&driver->spinlock);
+		intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&driver->spinlock);
 		if (cameraIsProcessActive(devnum, processId)) {
 			device = &cameraDriver->device[devnum];
 			sceKernelClearEventFlag(device->eventFlagId, ~7u);
@@ -1213,14 +1213,14 @@ int cameraReleaseProcess(SceUID processId)
 		driver = cameraDriver;
 		if (driver->initialized) {
 			cameraStopProcess(devnum, processId);
-			intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+			intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 			if (sceCameraConfigClosePid(devnum, processId) < 0) {
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 			} else {
 				otherProcess = cameraHasOtherProcess(devnum, processId);
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 				if (!otherProcess) {
-					intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+					intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 					cameraHasOpenProcess(1 - devnum);
 					sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 				}
@@ -1228,7 +1228,7 @@ int cameraReleaseProcess(SceUID processId)
 			driver = cameraDriver;
 		}
 	}
-	intrStatus = SceCpuForDriver_D32ACE9E(&driver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&driver->spinlock);
 	if (cameraGetProcessStorage(processId, 0)) {
 		result = cameraUnregisterProcess(processId);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
@@ -1284,7 +1284,7 @@ int cameraSuspendDevices(int eventType)
 		enabled = 1;
 	driver = cameraDriver;
 	for (devnum = 0; devnum != 2; devnum++) {
-		intrStatus = SceCpuForDriver_D32ACE9E(&driver->spinlock);
+		intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&driver->spinlock);
 		device = &driver->device[devnum];
 		device->suspendState = 1;
 		result = cameraHasStartedProcess(devnum, 0);
@@ -1316,7 +1316,7 @@ int cameraSuspendDevices(int eventType)
 			driver = cameraDriver;
 		}
 	}
-	intrStatus = SceCpuForDriver_D32ACE9E(&driver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&driver->spinlock);
 	startedFront = cameraHasStartedProcess(0, 1);
 	startedBack = cameraHasStartedProcess(1, 1);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
@@ -1338,14 +1338,14 @@ int cameraSuspendDevices(int eventType)
 			}
 		}
 	}
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	driver = cameraDriver;
 	driver->device[0].suspendState = 2;
 	driver->device[1].suspendState = 2;
 	driver->device[0].busy = 0;
 	driver->device[1].busy = 0;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&driver->spinlock, intrStatus);
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	driver = cameraDriver;
 	if (eventType == 1) {
 		if (driver->powerEventState == 3) {
@@ -1534,7 +1534,7 @@ registerCallback:
 					driver = cameraDriver;
 					device = &driver->device[devnum];
 					if (driver->activeEnabled && driver->powerEnabled) {
-						intrStatus = SceCpuForDriver_D32ACE9E(&driver->spinlock);
+						intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&driver->spinlock);
 						result = cameraIsProcessActive(devnum, cameraDriver->pendingSuspendProcessId);
 						sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 						if (result) {
@@ -1581,7 +1581,7 @@ registerCallback:
 							}
 						}
 					}
-					intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+					intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 					cameraSetProcessSuspendState(devnum, cameraDriver->pendingSuspendProcessId, 2);
 					device->busy = 0;
 					sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
@@ -1608,18 +1608,18 @@ suspendProcessDone:
 					device = &driver->device[devnum];
 					if (driver->activeEnabled && driver->powerEnabled &&
 					    driver->activeProcessId != device->activeProcessId) {
-						intrStatus = SceCpuForDriver_D32ACE9E(&driver->spinlock);
+						intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&driver->spinlock);
 						result = cameraIsProcessActive(devnum, cameraDriver->pendingSuspendProcessId);
 						sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 						if (result) {
-							intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+							intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 							result = sceCameraConfigStartPid(devnum, cameraDriver->pendingSuspendProcessId, 1);
 							sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 							if (result >= 0)
 								cameraResumeDevice(devnum);
 						}
 					}
-					intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+					intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 					sceKernelClearEventFlag(device->eventFlagId, ~4u);
 					cameraSetProcessSuspendState(devnum, cameraDriver->pendingSuspendProcessId, 0);
 					device->busy = 0;
@@ -1641,7 +1641,7 @@ suspendProcessDone:
 					driver = cameraDriver;
 					device = &driver->device[devnum];
 					if (driver->activeEnabled && driver->powerEnabled) {
-						intrStatus = SceCpuForDriver_D32ACE9E(&driver->spinlock);
+						intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&driver->spinlock);
 						result = cameraHasStartedProcess(devnum, 0);
 						sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 						if (result) {
@@ -1670,7 +1670,7 @@ suspendProcessDone:
 						SceGpioForDriver_F6310435(0, 9);
 						cameraDriver->gpioPowerEnabled = 0;
 					}
-					intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+					intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 					device->busy = 0;
 					device->suspendState = 2;
 					sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
@@ -1730,7 +1730,7 @@ suspendDevicesDone:
 					driver = cameraDriver;
 					if (driver->activeEnabled && driver->powerEnabled && cameraResumeDevice(devnum) < 0)
 						continue;
-					intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+					intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 					sceKernelClearEventFlag(device->eventFlagId, ~4u);
 					device->suspendState = 0;
 					device->busy = 0;
@@ -1749,7 +1749,7 @@ suspendDevicesDone:
 			work.timeout = 3000000;
 			if (sceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
 				processId = cameraDriver->activeProcessId;
-				intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+				intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 				processStatus = cameraGetProcessDeviceStatus(processId);
 				hasProcessStatus = processStatus > 0;
 				cameraDriver->processSwitchInProgress = 1;
@@ -1779,7 +1779,7 @@ suspendDevicesDone:
 									device->irqFrameCounter = 0;
 								}
 							}
-							intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+							intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 							cameraSetProcessState(processId, devnum, 1);
 							sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 							goto switchedDevice;
@@ -1816,7 +1816,7 @@ suspendDevicesDone:
 								}
 							}
 						}
-						intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+						intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 						sceCameraConfigSetActiveStatusPid(devnum, previousProcessId, 2);
 						sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 						work.state = 0;
@@ -1826,7 +1826,7 @@ suspendDevicesDone:
 							frameBuffers = cameraSramFrameBufferBase;
 						__builtin_memcpy(cameraFrameBufferBase, frameBuffers, sizeof(cameraSramFrameBufferBase));
 						if (deviceFlags & 2) {
-							intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+							intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 							result = sceCameraConfigStartPid(devnum, processId, 1);
 							sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 							if (result < 0)
@@ -1834,7 +1834,7 @@ suspendDevicesDone:
 							driver = cameraDriver;
 							if (driver->activeEnabled && driver->powerEnabled && cameraResumeDevice(devnum) < 0)
 								goto switchedDevice;
-							intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+							intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 							if (deviceFlags & 0x10)
 								cameraSetProcessState(processId, devnum, 2);
 							sceCameraConfigSetActiveStatusPid(devnum, processId, 0);
@@ -1843,12 +1843,12 @@ suspendDevicesDone:
 							sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 						}
 switchedDevice:
-						intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+						intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 						device->busy = 0;
 						sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 					}
 				}
-				intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+				intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 				driver = cameraDriver;
 				driver->processSwitchInProgress = 0;
 				if (hasProcessStatus && driver->queuedActiveProcessId > 0) {
@@ -1865,7 +1865,7 @@ switchedDevice:
 			cameraWaitForDeviceReads();
 			work.timeout = 3000000;
 			if (sceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
-				intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+				intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 				cameraDriver->powerEnabled = 0;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 				cameraSuspendDevices(1);
@@ -1877,7 +1877,7 @@ switchedDevice:
 			work.timeout = 3000000;
 			if (sceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
 				cameraResumeDevices(1);
-				intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+				intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 				cameraDriver->powerEnabled = 1;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 				sceKernelUnlockMutex(cameraDriver->mutexId, 1);
@@ -1887,7 +1887,7 @@ switchedDevice:
 			cameraWaitForDeviceReads();
 			work.timeout = 3000000;
 			if (sceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
-				intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+				intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 				cameraDriver->activeEnabled = 0;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 				cameraSuspendDevices(2);
@@ -1899,7 +1899,7 @@ switchedDevice:
 			work.timeout = 3000000;
 			if (sceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) >= 0) {
 				cameraResumeDevices(2);
-				intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+				intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 				cameraDriver->activeEnabled = 1;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 				sceKernelUnlockMutex(cameraDriver->mutexId, 1);
@@ -1920,7 +1920,7 @@ int sce_camera_set_attribute(int devnum, int attribute, int value, int flags)
 	if ((devnum & ~1u) != 0)
 		return (int)0x802e0000;
 	device = &cameraDriver->device[devnum];
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	result = sceCameraConfigAttribute(devnum, 1);
 	if (result < 0) {
 		if (result == (int)0x802e000e) {
@@ -1931,7 +1931,7 @@ int sce_camera_set_attribute(int devnum, int attribute, int value, int flags)
 			result = device->setAttribute(devnum, attribute, value, flags, &option);
 			if (result < 0)
 				return result;
-			intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+			intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 			result = sceCameraConfigSetAttribute(devnum, attribute, value, flags, 0);
 		}
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
@@ -1944,14 +1944,14 @@ int sce_camera_set_attribute(int devnum, int attribute, int value, int flags)
 	result = device->setAttribute(devnum, attribute, value, flags, &option);
 	if (result < 0)
 		return result;
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	result = sceCameraConfigSetAttribute(devnum, attribute, value, flags, 1);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 	if (result < 0)
 		return result;
 	if (attribute == 14) {
 		device = &cameraDriver->device[devnum];
-		intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+		intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 		device->waitingForReverseFrame = 1;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 	}
@@ -2145,7 +2145,7 @@ setSize:
 		result = (int)0x802e0011;
 		goto out;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&driver->spinlock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&driver->spinlock);
 	status = sceCameraConfigOpen(devnum, pInfo);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intr);
 	if (status < 0) {
@@ -2224,7 +2224,7 @@ int SceCameraForDriver_0E9B4B9E(int devnum)
 				goto out;
 		}
 	}
-	intr = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	result = sceCameraConfigClosePid(devnum, processId);
 	if (result < 0) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intr);
@@ -2233,7 +2233,7 @@ int SceCameraForDriver_0E9B4B9E(int devnum)
 	hasOtherProcess = cameraHasOtherProcess(devnum, processId);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intr);
 	if (hasOtherProcess == 0) {
-		intr = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 		cameraHasOpenProcess(1 - devnum);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intr);
 	}
@@ -2289,7 +2289,7 @@ int SceCameraForDriver_5338BE86(int devnum)
 		goto cleanup;
 	}
 	if (cameraAllowSimultaneousDevices == 0) {
-		intr = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 		if (cameraHasStartedProcess(1 - devnum, 1) != 0 ||
 		    cameraIsProcessStarted(1 - devnum, processId) != 0) {
 			result = (int)0x802e0012;
@@ -2304,7 +2304,7 @@ int SceCameraForDriver_5338BE86(int devnum)
 			frameBuffers = cameraSramFrameBufferBase;
 		__builtin_memcpy(cameraFrameBufferBase, frameBuffers, sizeof(cameraSramFrameBufferBase));
 	}
-	intr = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	started = sceCameraConfigStartPid(devnum, processId, 0);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intr);
 	if (started < 0) {
@@ -2313,7 +2313,7 @@ int SceCameraForDriver_5338BE86(int devnum)
 		result = started;
 		goto cleanup;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	hasStartedOther = cameraHasStartedProcess(1 - devnum, 1);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intr);
 	if (hasStartedOther == 0) {
@@ -2374,10 +2374,10 @@ int SceCameraForDriver_5338BE86(int devnum)
 	if (result < 0)
 		goto cleanup;
 	device = &cameraDriver->device[devnum];
-	intr = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	device->waitingForReverseFrame = 1;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intr);
-	intr = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	result = sceCameraConfigSetStartedPid(devnum, processId, 1);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intr);
 	timeout = driver->device[devnum].config.frameTimeout;
@@ -2466,7 +2466,7 @@ int SceCameraForDriver_2D12FDF3(int devnum, SceCameraRead *read)
 		goto out;
 	}
 	device = &cameraDriver->device[devnum];
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	if (!cameraDriver->initialized) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 		result = (int)0x802e0002;
@@ -2516,7 +2516,7 @@ int SceCameraForDriver_2D12FDF3(int devnum, SceCameraRead *read)
 		result = (int)0x802e000a;
 		goto finishRead;
 	}
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	read->dwStatus = device->irqFrameCounter < 11 ? 2 : 0;
 	previousFrame = sceCameraConfigGetProcPrevFrame(devnum, processId);
 	currentFrame = sceCameraConfigGetProcFrame(devnum, processId);
@@ -2545,12 +2545,12 @@ int SceCameraForDriver_2D12FDF3(int devnum, SceCameraRead *read)
 			currentDevice = &cameraDriver->device[devnum];
 			result = currentDevice->getExposure(devnum, currentDevice->config.wFramerate,
 					exposureTimeAndGap);
-			intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+			intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 			currentDevice->exposureTime = exposureTimeAndGap[0];
 			currentDevice->exposureGap = exposureTimeAndGap[1];
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 			if (result < 0) {
-				intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+				intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 				cameraDriver->device[devnum].readInProgress = 0;
 				sceKernelSetEventFlag(cameraDriver->eventFlagId,
 						devnum ? 0x40000 : 0x20000);
@@ -2574,7 +2574,7 @@ int SceCameraForDriver_2D12FDF3(int devnum, SceCameraRead *read)
 			if (read->dwMode != 1)
 				goto transferFrame;
 			read->dwStatus = 1;
-			intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+			intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 			read->qwFrame = device->frame;
 			read->qwTimestamp = sceCameraConfigGetProcTimestamp(devnum, processId);
 			cameraDriver->device[devnum].readInProgress = 0;
@@ -2596,7 +2596,7 @@ int SceCameraForDriver_2D12FDF3(int devnum, SceCameraRead *read)
 		result = sceKernelWaitEventFlag(cameraDriver->device[devnum].eventFlagId,
 				7, 1, &events, &timeout);
 		if ((events & 4) != 0 || result < 0) {
-			intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+			intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 			delay = 0;
 			if ((events & 4) != 0 || result == -1) {
 				delay = 2000;
@@ -2618,7 +2618,7 @@ int SceCameraForDriver_2D12FDF3(int devnum, SceCameraRead *read)
 		}
 	}
 transferFrame:
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	frame = &device->frameBuffer[device->irqFrameIndex];
 	read->qwTimestamp = sceCameraConfigGetProcTimestamp(devnum, processId);
 	read->qwFrame = sceCameraConfigGetProcFrame(devnum, processId);
@@ -2691,14 +2691,14 @@ transferFrame:
 		}
 		if (device->cachedFrameBuffer.pvIBase && imageSize &&
 		    SceSysmemForDriver_F3BBE2E1(device->cachedFrameBuffer.pvIBase) != 0x8000)
-			SceCpuForDriver_364E68A4(device->cachedFrameBuffer.pvIBase, imageSize);
+			sceKernelDcacheCleanInvalidateRange(device->cachedFrameBuffer.pvIBase, imageSize);
 		if (yuv420) {
 			if (device->cachedFrameBuffer.pvUBase && chromaSize &&
 			    SceSysmemForDriver_F3BBE2E1(device->cachedFrameBuffer.pvUBase) != 0x8000)
-				SceCpuForDriver_364E68A4(device->cachedFrameBuffer.pvUBase, chromaSize);
+				sceKernelDcacheCleanInvalidateRange(device->cachedFrameBuffer.pvUBase, chromaSize);
 			if (device->cachedFrameBuffer.pvVBase && chromaSize &&
 			    SceSysmemForDriver_F3BBE2E1(device->cachedFrameBuffer.pvVBase) != 0x8000)
-				SceCpuForDriver_364E68A4(device->cachedFrameBuffer.pvVBase, chromaSize);
+				sceKernelDcacheCleanInvalidateRange(device->cachedFrameBuffer.pvVBase, chromaSize);
 		}
 		conversion.size = sizeof(conversion);
 		conversion.filterMode = 1;
@@ -2714,16 +2714,16 @@ transferFrame:
 		if (yuv420) {
 			if (device->cachedFrameBuffer.pvIBase && imageSize &&
 			    SceSysmemForDriver_F3BBE2E1(device->cachedFrameBuffer.pvIBase) != 0x8000)
-				SceCpuForDriver_364E68A4(device->cachedFrameBuffer.pvIBase, imageSize);
+				sceKernelDcacheCleanInvalidateRange(device->cachedFrameBuffer.pvIBase, imageSize);
 			if (device->cachedFrameBuffer.pvUBase && chromaSize &&
 			    SceSysmemForDriver_F3BBE2E1(device->cachedFrameBuffer.pvUBase) != 0x8000)
-				SceCpuForDriver_364E68A4(device->cachedFrameBuffer.pvUBase, chromaSize);
+				sceKernelDcacheCleanInvalidateRange(device->cachedFrameBuffer.pvUBase, chromaSize);
 			if (device->cachedFrameBuffer.pvVBase && chromaSize &&
 			    SceSysmemForDriver_F3BBE2E1(device->cachedFrameBuffer.pvVBase) != 0x8000)
-				SceCpuForDriver_364E68A4(device->cachedFrameBuffer.pvVBase, chromaSize);
+				sceKernelDcacheCleanInvalidateRange(device->cachedFrameBuffer.pvVBase, chromaSize);
 		} else if (device->cachedFrameBuffer.pvIBase && imageSize &&
 			   SceSysmemForDriver_F3BBE2E1(device->cachedFrameBuffer.pvIBase) != 0x8000) {
-			SceCpuForDriver_02796361(device->cachedFrameBuffer.pvIBase, imageSize);
+			sceKernelDcacheInvalidateRange(device->cachedFrameBuffer.pvIBase, imageSize);
 		}
 		if (process->config.wBuffer == 1) {
 			if (result < 0)
@@ -2744,7 +2744,7 @@ transferFrame:
 	}
 	read->dwRaw8Format = device->raw8Format;
 finishRead:
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	cameraDriver->device[devnum].readInProgress = 0;
 	sceKernelSetEventFlag(cameraDriver->eventFlagId, devnum ? 0x40000 : 0x20000);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
@@ -2776,7 +2776,7 @@ int SceCameraForDriver_C2E71BE8(int devnum, int attribute, int *pValue, int flag
 	} else {
 		device = &cameraDriver->device[devnum];
 		work.option.wRange = device->config.wRange;
-		intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+		intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 		result = sceCameraConfigAttribute(devnum, 0);
 		if (result < 0) {
 			if (result == (int)0x802e000e)
@@ -2813,7 +2813,7 @@ int SceCameraForDriver_FE3C170C(int devnum, int attribute, int *pValue, int flag
 	} else {
 		device = &cameraDriver->device[devnum];
 		work.option.wRange = device->config.wRange;
-		intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+		intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 		result = sceCameraConfigAttribute(devnum, 0);
 		if (result < 0) {
 			if (result == (int)0x802e000e)
@@ -2876,7 +2876,7 @@ int SceCameraForDriver_E81EADE1(SceUID processId)
 
 	if (processId < 0)
 		return processId;
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	if (cameraDriver->processSwitchInProgress != 0)
 		cameraDriver->queuedActiveProcessId = processId;
 	else
@@ -2898,7 +2898,7 @@ int SceCameraForDriver_93477709(int devnum, SceUInt16 address, SceUInt8 value)
 		result = (int)0x802e0000;
 	} else {
 		driver = cameraDriver;
-		intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+		intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 		result = sceCameraConfigAttribute(devnum, 0);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 		if (result >= 0) {
@@ -2922,7 +2922,7 @@ int SceCameraForDriver_B241F11F(int devnum, SceUInt16 address, SceUInt8 *value)
 		result = (int)0x802e0000;
 	} else {
 		driver = cameraDriver;
-		intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+		intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 		result = sceCameraConfigAttribute(devnum, 0);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 		if (result >= 0) {
@@ -2946,7 +2946,7 @@ int SceCameraForDriver_36C164BE(int devnum, const void *registers, unsigned int 
 		result = (int)0x802e0000;
 	} else {
 		driver = cameraDriver;
-		intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+		intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 		result = sceCameraConfigAttribute(devnum, 0);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 		if (result >= 0) {
@@ -2972,7 +2972,7 @@ int SceCameraForDriver_6443EEDB(int devnum)
 		goto out;
 	}
 	device = &cameraDriver->device[devnum];
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	result = sceCameraConfigAttribute(devnum, 0);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 	if (result >= 0)
@@ -2981,7 +2981,7 @@ int SceCameraForDriver_6443EEDB(int devnum)
 		goto out;
 	driver = cameraDriver;
 	driver->hardwareInfo = SceSysconForDriver_CBD6D8BC();
-	intrStatus = SceCpuForDriver_D32ACE9E(&driver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&driver->spinlock);
 	started = cameraHasStartedProcess(devnum, 0) || cameraHasStartedProcess(1 - devnum, 0);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 	if (!started) {
@@ -3002,7 +3002,7 @@ int SceCameraForDriver_6443EEDB(int devnum)
 	result = cameraBindSensor(devnum);
 	if (result < 0)
 		goto out;
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	started = cameraHasStartedProcess(devnum, 0) || cameraHasStartedProcess(1 - devnum, 0);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 	if (!started) {
@@ -3044,7 +3044,7 @@ int SceCameraForDriver_3590BB9B(int devnum, int enabled)
 		result = (int)0x802e0000;
 	} else {
 		driver = cameraDriver;
-		intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+		intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 		result = sceCameraConfigAttribute(devnum, 0);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
 		if (result >= 0) {
@@ -3070,7 +3070,7 @@ int SceCameraForDriver_22E70D83(int devnum)
 	int intrStatus, result;
 
 	context = sceSyscallEnter();
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	if ((devnum & ~1u) != 0) {
 		result = (int)0x802e0000;
 	} else if (cameraDriver->initialized) {
@@ -3093,7 +3093,7 @@ int SceCameraForDriver_EB1CC2CA(SceUID processId, int *devices)
 
 	if (devices == NULL)
 		return (int)0x802e0000;
-	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
+	intrStatus = sceKernelSpinlockLowLockCpuSuspendIntr(&cameraDriver->spinlock);
 	active = 0;
 	if (cameraDriver->initialized) {
 		active = cameraCheckActiveProcess(processId, 0, 0) == 0;

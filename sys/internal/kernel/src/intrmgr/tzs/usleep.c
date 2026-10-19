@@ -47,7 +47,7 @@ static int UsleepIntrHandler(int intrCode, void *userCtx)
 	SceUInt32 control, now, next = 0;
 	int cpu;
 
-	SceCpuForDriver_BF82DEB2(USLEEP_LOCK);
+	sceKernelSpinlockLowLock(USLEEP_LOCK);
 	control = s_timer->control;
 	s_timer->control = 0;
 	s_timer->intr = TIMER_INTR_CLEAR;
@@ -81,11 +81,11 @@ void sceKernelUsleep(SceUInt32 usec)
 
 	if (IllegalContext())
 		SCE_DBG_ASSERT_FAIL(127);
-	intr = SceCpuForDriver_D32ACE9E(USLEEP_LOCK);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(USLEEP_LOCK);
 	if (usec >= USLEEP_MAX)
 		usec = USLEEP_MAX;
 	s_cpuWait[cpu] = 0;
-	SceCpuForDriver_BF82DEB2(&s_cpuWait[cpu]);
+	sceKernelSpinlockLowLock(&s_cpuWait[cpu]);
 	if (s_usleep.waitingCpus) {
 		wake = usec + s_timer->count;
 		s_usleep.wakeTime[cpu] = wake;
@@ -105,7 +105,7 @@ void sceKernelUsleep(SceUInt32 usec)
 	s_usleep.waitingCpus |= 1 << cpu;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(USLEEP_LOCK, intr);
 	/* until UsleepIntrHandler releases it */
-	SceCpuForDriver_BF82DEB2(&s_cpuWait[cpu]);
+	sceKernelSpinlockLowLock(&s_cpuWait[cpu]);
 }
 
 int InitUsleepTimer(int remap)

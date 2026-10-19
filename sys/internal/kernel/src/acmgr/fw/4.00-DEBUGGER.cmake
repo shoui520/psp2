@@ -43,11 +43,11 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_56D85EB0
 	SceSysrootForDriver_E2515A08
 	sceKernelCopyToUser
-	SceDebugForDriver_35A35322
+	sceKernelAssert
 	SceDebugForDriver_D9703808
 	SceQafMgrForDriver_694D1096
 	SceQafMgrForDriver_CAD47130
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

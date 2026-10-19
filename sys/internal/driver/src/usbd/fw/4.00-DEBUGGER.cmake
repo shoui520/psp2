@@ -97,7 +97,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterIntrHandler
 	sceKernelEnableIntr
 	sceKernelReleaseIntrHandler
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597
 	SceSysmemForDriver_49D4DD9B
@@ -118,13 +118,13 @@ set(MODULE_IMPORT_FUNCS
 	__aeabi_uidiv
 	__aeabi_idivmod
 	__stack_chk_fail
-	SceDebugForDriver_35A35322
+	sceKernelAssert
 	SceDebugForDriver_D9703808
-	SceCpuForDriver_02796361
-	SceCpuForDriver_103872A5
-	SceCpuForDriver_364E68A4
+	sceKernelDcacheInvalidateRange
+	sceKernelDcacheCleanRange
+	sceKernelDcacheCleanInvalidateRange
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelRegisterProcEventHandler
 	SceProcEventForDriver_3DED57CC
 )

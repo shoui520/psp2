@@ -1062,7 +1062,7 @@ TSMP_INLINE void tsmpNotifyUpdateSwInfo(void)
 		memcpy(_pkt->data, (char *)tsmp.fileRequest.buf + tsmp.fileSent, _left);	\
 		tsmp.fileSent += _left;							\
 		if (!(tsmp.status & (_status))) {					\
-			_ret = SceSysmemForDriver_009E1C61(tsmp.fileBlock);			\
+			_ret = sceKernelFreeMemBlock(tsmp.fileBlock);			\
 			if (_ret < 0)							\
 				SCE_PRINTF_WITH_INFO(0xf, _line2, "0x%08X\n", _ret);	\
 			tsmp.fileBlock = 0;						\
@@ -1307,7 +1307,7 @@ TSMP_INLINE int tsmpSyncSettingXml(void)
 	return 0;
 
 free:
-	SceSysmemForDriver_009E1C61(tsmp.fileBlock);
+	sceKernelFreeMemBlock(tsmp.fileBlock);
 	return ret;
 }
 
@@ -1364,7 +1364,7 @@ TSMP_INLINE int tsmpSyncEventLogXml(void)
 	return 0;
 
 free:
-	SceSysmemForDriver_009E1C61(tsmp.fileBlock);
+	sceKernelFreeMemBlock(tsmp.fileBlock);
 	return ret;
 }
 
@@ -1660,7 +1660,7 @@ int module_start(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 
-	if (!SceDipswForDriver_A98FC2FD(TSMP_DIPSW)) {
+	if (!sceKernelCheckDipsw(TSMP_DIPSW)) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 0xb, SCE_DBGINFO_FUNC(290, "TsmpModuleStart"),
 					      "disabled by dipsw\n");

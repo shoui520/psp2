@@ -45,7 +45,7 @@ int sceKernelSetSyslibtraceThreadCBEnable(int enable)
 
 	SCE_DBG_PRINTF_LEVEL(2, 0, 19, "debug: %s allocation of per-thread syslibtrace state\n",
 			     enable ? "enabling" : "disabling");
-	intr = SceCpuForDriver_D32ACE9E(
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(
 		&s_threadmgrRuntime.manager->threadMgrCBLock);
 	s_threadmgrRuntime.manager->syslibtraceThreadCBEnable = enable;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(
@@ -79,7 +79,7 @@ int sceKernelSetSyslibtraceThreadCBEnable(int enable)
 				       ret);
 			continue;
 		}
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
+		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		ret = syslibtraceThreadCBInit(&object->context);
 		if (ret < 0)
 			SCE_DBG_PRINTF(0, 67, "warning: failed to init syslibtrace thread state for "

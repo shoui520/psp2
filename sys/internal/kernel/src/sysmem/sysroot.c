@@ -244,7 +244,7 @@ void *sceKernelSysrootAlloc(SceSize size)
 	uint32_t flags;
 	uintptr_t cursor, end;
 
-	flags = SceCpuForDriver_D32ACE9E(&state->bootHeapLock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&state->bootHeapLock);
 	cursor = state->bootHeapCursor;
 	end = cursor + size;
 	if (end < (uintptr_t)state + state->bootHeapCapacity) {
@@ -268,7 +268,7 @@ void sceKernelSysrootSetStatus(uint32_t status)
 	struct SysrootState *state = s_sysrootState;
 	uint32_t flags;
 
-	flags = SceCpuForDriver_D32ACE9E(&state->bootHeapLock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&state->bootHeapLock);
 	state = s_sysrootState;
 	if (state->status < status)
 		state->status = status;
@@ -435,7 +435,7 @@ void InvokeInitCallback(uint32_t phase, uint32_t kind)
 		SCE_DBG_ASSERT_FAIL(2747);
 		return;
 	}
-	flags = SceCpuForDriver_D32ACE9E(&state->initCallbackLock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&state->initCallbackLock);
 	state = s_sysrootState;
 	for (current = state->initCallbackBase + 1; current <= phase; current++) {
 		for (unsigned int slot = 0; slot < 8; slot++) {
@@ -447,7 +447,7 @@ void InvokeInitCallback(uint32_t phase, uint32_t kind)
 			/* The native invocation reloads both fields after unlocking. */
 			entry->callback(kind, entry->argument);
 			state = s_sysrootState;
-			flags = SceCpuForDriver_D32ACE9E(&state->initCallbackLock);
+			flags = sceKernelSpinlockLowLockCpuSuspendIntr(&state->initCallbackLock);
 			state = s_sysrootState;
 		}
 		state->initCallbackBase++;
@@ -484,7 +484,7 @@ int sceKernelRegisterInitCallback(SysrootInitCallback callback, uint32_t phase,
 
 	if (!callback || phase > 8)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	flags = SceCpuForDriver_D32ACE9E(&s_sysrootState->initCallbackLock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&s_sysrootState->initCallbackLock);
 	state = s_sysrootState;
 	if (phase < state->initCallbackBase) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->initCallbackLock, flags);
@@ -1290,7 +1290,7 @@ void SceSysrootForDriver_C728BC61(void)
 	s_sysrootState->sdbgpNetAttach = 0;
 }
 
-void *SceSysrootForKernel_C8C8C321(void)
+void *sceKernelSysrootGetSharedMemory(void)
 {
 	return s_sysrootState->sharedMemory;
 }
@@ -2577,7 +2577,7 @@ int sceKernelIsPSVitaTV(void)
 #define SYSROOT_BOOT_FLAG_WARM		0x10
 
 #if !SYSMEM_NSKBL
-int SceSysrootForKernel_D7198963(void)
+int sceKernelIsColdBoot(void)
 {
 	return !(s_sysrootState->bootFlags & SYSROOT_BOOT_FLAG_WARM);
 }

@@ -47,7 +47,7 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	memset
 	memcpy
 	strncpy
@@ -55,7 +55,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_391B74B7
 	sceKernelGetSystemTimeWide
 	SceSblAIMgrForDriver_71608CA3
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	sceDfMgrOpen
 	sceDfMgrRecv
 	SceDeci4pDfMgrForDebugger_6D26CC56

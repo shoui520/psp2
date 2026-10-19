@@ -21,7 +21,7 @@ int dtraceThreadCBInit(struct ThreadCB *thread)
 	SceDtraceThreadCB *state;
 	int ret;
 
-	SceCpuForDriver_BF82DEB2(&thread->dtraceLock);
+	sceKernelSpinlockLowLock(&thread->dtraceLock);
 	if (thread->dtraceState != NULL) {
 		ret = 0;
 		goto unlock;
@@ -58,7 +58,7 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 	if (!enable) {
 		SCE_DBG_PRINTF_LEVEL(2, 0, 19, "debug: %s allocation of per-thread dtrace state\n",
 				     "disabling");
-		intr = SceCpuForDriver_D32ACE9E(
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(
 			&s_threadmgrRuntime.manager->threadMgrCBLock);
 		s_threadmgrRuntime.manager->dtraceThreadCBEnable = 0;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(
@@ -67,7 +67,7 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 	}
 	SCE_DBG_PRINTF_LEVEL(2, 0, 19, "debug: %s allocation of per-thread dtrace state\n",
 			     "enabling");
-	intr = SceCpuForDriver_D32ACE9E(
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(
 		&s_threadmgrRuntime.manager->threadMgrCBLock);
 	s_threadmgrRuntime.manager->dtraceThreadCBEnable = enable;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(
@@ -109,7 +109,7 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 				       ret);
 			continue;
 		}
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
+		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		ret = dtraceThreadCBInit(&object->context);
 		if (ret < 0)
 			SCE_DBG_PRINTF(0, 79, "warning: failed to init dtrace thread state for thread "
@@ -124,7 +124,7 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 /* frees a thread's DTrace state */
 int dtraceThreadCBExit(struct ThreadCB *thread)
 {
-	SceCpuForDriver_BF82DEB2(&thread->dtraceLock);
+	sceKernelSpinlockLowLock(&thread->dtraceLock);
 	if (thread->dtraceState != NULL) {
 		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId, thread->dtraceState);
 		thread->dtraceState = NULL;
@@ -182,7 +182,7 @@ int SceThreadmgrForKernel_DF59DF99(unsigned int cpuId, void (*fn)(void *), void 
 		issueDTraceSyncXCallIntrRequest(cpuId, fn, arg, &done);
 		ret = 0;
 		sceKernelCpuResumeIntr(intr);
-		SceCpuForDriver_BF82DEB2(&done);	/* until the target CPU unlocks it */
+		sceKernelSpinlockLowLock(&done);	/* until the target CPU unlocks it */
 		intr = SceCpuForDriver_821FC0EE();
 	}
 	sceKernelCpuResumeIntr(intr);

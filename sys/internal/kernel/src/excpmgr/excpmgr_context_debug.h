@@ -11,7 +11,7 @@ EXCP_CONTEXT_DEBUG_LINKAGE void excpRestoreDebugRegisters(SceExcpmgrContext *con
 	regs = thread == NULL ? g_excpData.kernelBreakpoints : thread->process->phbp;
 	if (regs == NULL)
 		return;
-	SceCpuForDriver_BF82DEB2(&regs->lock);
+	sceKernelSpinlockLowLock(&regs->lock);
 	writeBreakpoint(0, regs->reg[0].value, regs->reg[0].control);
 	writeBreakpoint(1, regs->reg[1].value, regs->reg[1].control);
 	writeBreakpoint(2, regs->reg[2].value, regs->reg[2].control);
@@ -24,7 +24,7 @@ EXCP_CONTEXT_DEBUG_LINKAGE void excpRestoreDebugRegisters(SceExcpmgrContext *con
 		(ProcessHwWatchpoints *)thread->process->phbp;
 	if (watch == NULL)
 		return;
-	SceCpuForDriver_BF82DEB2(&watch->lock);
+	sceKernelSpinlockLowLock(&watch->lock);
 	/* Sony bug kept: the values come from context + 8, not from regs->pair */
 	wp = &context->r[2];
 	writeWatchpoint(0, wp[0], wp[1]);

@@ -449,7 +449,7 @@ static int ehciPowerOffPort(UsbdBus *bus, int port)
 	Ehci *ehci = s_ehci[bus->index];
 	int state;
 
-	state = SceCpuForDriver_D32ACE9E(&ehci->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ehci->lock);
 	ehci->portState = EHCI_PORT_OFF;
 	ehci->regs->portSc &= ~EHCI_PORTSC_POWER;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ehci->lock, state);
@@ -461,7 +461,7 @@ static int ehciResetPort(UsbdBus *bus, int port)
 	Ehci *ehci = s_ehci[bus->index];
 	int state;
 
-	state = SceCpuForDriver_D32ACE9E(&ehci->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ehci->lock);
 	ehci->portState = EHCI_PORT_RESETTING;
 	ehci->regs->portSc |= EHCI_PORTSC_RESET;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ehci->lock, state);
@@ -473,7 +473,7 @@ static int ehciPowerOnPort(UsbdBus *bus, int port)
 	Ehci *ehci = s_ehci[bus->index];
 	int state;
 
-	state = SceCpuForDriver_D32ACE9E(&ehci->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ehci->lock);
 	if (ehci->portState == EHCI_PORT_OFF || ehci->portState == EHCI_PORT_POWERED) {
 		ehci->portState = EHCI_PORT_POWERED;
 		ehci->regs->portSc |= EHCI_PORTSC_POWER;
@@ -492,7 +492,7 @@ static SceUInt32 ehciConnectDone(void *arg)
 	SceUInt32 portSc;
 	int state;
 
-	state = SceCpuForDriver_D32ACE9E(&ehci->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ehci->lock);
 	regs = ehci->regs;
 	portSc = regs->portSc;
 	if (ehci->portState == EHCI_PORT_CONNECTED) {
@@ -518,7 +518,7 @@ static SceUInt32 ehciResetDone(void *arg)
 	Ehci *ehci = arg;
 	int state;
 
-	state = SceCpuForDriver_D32ACE9E(&ehci->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ehci->lock);
 	if (ehci->portState == EHCI_PORT_RESETTING) {
 		ehci->regs->portSc &= ~EHCI_PORTSC_RESET;
 		ehci->portState = EHCI_PORT_RESET;
@@ -534,13 +534,13 @@ static SceUInt32 ehciRecoveryDone(void *arg)
 	Ehci *ehci = arg;
 	int state;
 
-	state = SceCpuForDriver_D32ACE9E(&ehci->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ehci->lock);
 	if (ehci->portState == EHCI_PORT_RESET) {
 		if (ehci->regs->portSc & EHCI_PORTSC_ENABLE) {
 			ehci->portState = EHCI_PORT_ENABLED;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&ehci->lock, state);
 			usbdNotifyAttach(USBD_ID(ehci->bus, 0), 0, SCE_USBD_DEVICE_SPEED_HS);
-			state = SceCpuForDriver_D32ACE9E(&ehci->lock);
+			state = sceKernelSpinlockLowLockCpuSuspendIntr(&ehci->lock);
 		} else {
 			ehci->portState = EHCI_PORT_POWERED;
 			ehci->regs->portSc |= EHCI_PORTSC_OWNER;
@@ -719,7 +719,7 @@ static UsbdPipe *ehciAllocPipe(UsbdDevice *device, const SceUsbdEndpointDescript
 	if (ehci == NULL)
 		return NULL;
 
-	state = SceCpuForDriver_D32ACE9E(&ehci->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ehci->lock);
 	pipe = usbdAllocPipe(device, endpoint);
 	if (pipe == NULL)
 		goto fail;
@@ -891,10 +891,10 @@ static int ehciSubmitItd(Ehci *ehci, UsbdPipe *pipe, UsbdRequest *request)
 	}
 	if (SceSysmemForDriver_F3BBE2E1(request->buffer) != USBD_MEMTYPE_UNCACHED) {
 		if (pipe->direction)
-			SceCpuForDriver_364E68A4((void *)USBD_CACHE_BASE(request->buffer),
+			sceKernelDcacheCleanInvalidateRange((void *)USBD_CACHE_BASE(request->buffer),
 							     USBD_CACHE_SIZE(request->buffer, request->length));
 		else
-			SceCpuForDriver_103872A5((void *)USBD_CACHE_BASE(request->buffer),
+			sceKernelDcacheCleanRange((void *)USBD_CACHE_BASE(request->buffer),
 						   USBD_CACHE_SIZE(request->buffer, request->length));
 	}
 	USBD_LIST_REMOVE(pipe->requestHead, pipe->requestTail, request);
@@ -965,10 +965,10 @@ static int ehciSubmitSitd(Ehci *ehci, UsbdPipe *pipe, UsbdRequest *request)
 	pa = usbdVAtoPA(request->isochRequest.buffer);
 	if (SceSysmemForDriver_F3BBE2E1(request->buffer) != USBD_MEMTYPE_UNCACHED) {
 		if (pipe->direction)
-			SceCpuForDriver_364E68A4((void *)USBD_CACHE_BASE(request->buffer),
+			sceKernelDcacheCleanInvalidateRange((void *)USBD_CACHE_BASE(request->buffer),
 							     USBD_CACHE_SIZE(request->buffer, request->length));
 		else
-			SceCpuForDriver_103872A5((void *)USBD_CACHE_BASE(request->buffer),
+			sceKernelDcacheCleanRange((void *)USBD_CACHE_BASE(request->buffer),
 						   USBD_CACHE_SIZE(request->buffer, request->length));
 	}
 
@@ -1075,7 +1075,7 @@ static int ehciSubmitControl(Ehci *ehci, UsbdPipe *pipe, UsbdRequest *request)
 	if (qh->token & EHCI_QTD_ERRORS)
 		qh->token &= ~EHCI_QTD_ERRORS;
 	if (SceSysmemForDriver_F3BBE2E1(setup) != USBD_MEMTYPE_UNCACHED)
-		SceCpuForDriver_103872A5((void *)USBD_CACHE_BASE(setup),
+		sceKernelDcacheCleanRange((void *)USBD_CACHE_BASE(setup),
 					   USBD_CACHE_SIZE(setup, sizeof(*setup)));
 
 	if (setup->wLength != 0) {
@@ -1118,10 +1118,10 @@ static int ehciSubmitControl(Ehci *ehci, UsbdPipe *pipe, UsbdRequest *request)
 		ehciQueueQtd(ehci, pipe, dataStage, request);
 		if (SceSysmemForDriver_F3BBE2E1(request->buffer) != USBD_MEMTYPE_UNCACHED) {
 			if (setup->bmRequestType & SCE_USBD_REQTYPE_DIR_BITS)
-				SceCpuForDriver_364E68A4((void *)USBD_CACHE_BASE(request->buffer),
+				sceKernelDcacheCleanInvalidateRange((void *)USBD_CACHE_BASE(request->buffer),
 								     USBD_CACHE_SIZE(request->buffer, request->length));
 			else
-				SceCpuForDriver_103872A5((void *)USBD_CACHE_BASE(request->buffer),
+				sceKernelDcacheCleanRange((void *)USBD_CACHE_BASE(request->buffer),
 							   USBD_CACHE_SIZE(request->buffer, request->length));
 		}
 	}
@@ -1184,10 +1184,10 @@ static int ehciSubmitBulk(Ehci *ehci, UsbdPipe *pipe, UsbdRequest *request)
 	if (request->syncCache &&
 	    SceSysmemForDriver_F3BBE2E1(request->buffer) != USBD_MEMTYPE_UNCACHED) {
 		if (pipe->direction)
-			SceCpuForDriver_364E68A4((void *)USBD_CACHE_BASE(request->buffer),
+			sceKernelDcacheCleanInvalidateRange((void *)USBD_CACHE_BASE(request->buffer),
 							     USBD_CACHE_SIZE(request->buffer, request->length));
 		else
-			SceCpuForDriver_103872A5((void *)USBD_CACHE_BASE(request->buffer),
+			sceKernelDcacheCleanRange((void *)USBD_CACHE_BASE(request->buffer),
 						   USBD_CACHE_SIZE(request->buffer, request->length));
 	}
 
@@ -1248,7 +1248,7 @@ static int ehciClosePipe(UsbdPipe *pipe)
 	if (ehci == NULL)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
 
-	state = SceCpuForDriver_D32ACE9E(&ehci->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ehci->lock);
 	if (pipe->device == NULL) {
 		result = SCE_USBD_ERROR_DEVICE_NOT_FOUND;
 		goto out;
@@ -1378,7 +1378,7 @@ static __always_inline void ehciInvalidateRequest(UsbdRequest *request)
 {
 	if (SceSysmemForDriver_F3BBE2E1(request->buffer) != USBD_MEMTYPE_UNCACHED &&
 	    request->pipe->direction == SCE_USBD_ENDPOINT_DIRECTION_IN)
-		SceCpuForDriver_02796361((void *)USBD_CACHE_BASE(request->buffer),
+		sceKernelDcacheInvalidateRange((void *)USBD_CACHE_BASE(request->buffer),
 						USBD_CACHE_SIZE(request->buffer, request->length));
 }
 
@@ -1588,7 +1588,7 @@ static int ehciInterruptHandler(int intrCode, void *arg)
 	SceUInt32 status;
 	int state;
 
-	state = SceCpuForDriver_D32ACE9E(&ehci->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ehci->lock);
 	status = ehci->regs->usbSts & ehci->regs->usbIntr;
 	if (status & EHCI_STS_HOST_ERROR) {
 		SCE_DBG_PRINTF(6, 1745, "Host System Error\n");
@@ -1624,7 +1624,7 @@ static int ehciSubmitRequest(UsbdPipe *pipe, UsbdRequest *request)
 	Ehci *ehci = s_ehci[pipe->device->bus->index];
 	int result, state;
 
-	state = SceCpuForDriver_D32ACE9E(&ehci->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&ehci->lock);
 	switch (pipe->type) {
 	case SCE_USBD_ENDPOINT_TRANSFER_TYPE_CONTROL:
 		result = ehciSubmitControl(ehci, pipe, request);
@@ -1952,8 +1952,8 @@ int ehciInit(UsbdBus *bus)
 		}
 	}
 	usbdFree(records);
-	SceSysmemForDriver_009E1C61(ehci->descriptorBlockId);
-	SceSysmemForDriver_009E1C61(ehci->registerBlockId);
+	sceKernelFreeMemBlock(ehci->descriptorBlockId);
+	sceKernelFreeMemBlock(ehci->registerBlockId);
 	if (result < 0)
 		goto fail;
 
@@ -1976,9 +1976,9 @@ done:
 	return 0;
 
 freeBlocks:
-	SceSysmemForDriver_009E1C61(ehci->descriptorBlockId);
+	sceKernelFreeMemBlock(ehci->descriptorBlockId);
 freeRegisters:
-	SceSysmemForDriver_009E1C61(ehci->registerBlockId);
+	sceKernelFreeMemBlock(ehci->registerBlockId);
 fail:
 	s_ehci[ehci->bus] = NULL;
 	usbdFree(ehci);
@@ -1999,10 +1999,10 @@ int ehciTerm(UsbdBus *bus)
 	result = sceKernelReleaseIntrHandler(ehci->intrCode);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_009E1C61(ehci->descriptorBlockId);
+	result = sceKernelFreeMemBlock(ehci->descriptorBlockId);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_009E1C61(ehci->registerBlockId);
+	result = sceKernelFreeMemBlock(ehci->registerBlockId);
 	if (result < 0)
 		return result;
 	s_ehci[ehci->bus] = NULL;

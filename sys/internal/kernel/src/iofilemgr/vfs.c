@@ -1904,7 +1904,7 @@ int vfsInitialize(void)
 			       ret);
 		return ret;
 	}
-	if (SceDipswForDriver_A98FC2FD(0xd2) != 0)
+	if (sceKernelCheckDipsw(0xd2) != 0)
 		vfs_debug_buff_initialize();
 	ret = ioerror_initialize();
 	if (ret < 0)
@@ -2959,7 +2959,7 @@ SceUID vfsDopen(IofilemgrDopenParam *param)
 		vfs_close_file(vp, fd);
 		goto release;
 	}
-	if (SceDipswForDriver_A98FC2FD(0xd2) != 0) {
+	if (sceKernelCheckDipsw(0xd2) != 0) {
 		vfs_debug_set_resolved_path(file, dirname);
 		vfs_debug_set_open_param(file, 0, 0);
 	}
@@ -3362,7 +3362,7 @@ SceUID vfsAllocateFileDummy(int flags, int isDir, const char *path)
 	file->hasFlockEnt = 0;
 	file->idata = 0;
 	__builtin_memset(file->ioSchedData, 0, sizeof(file->ioSchedData));
-	if (SceDipswForDriver_A98FC2FD(0xd2) != 0)
+	if (sceKernelCheckDipsw(0xd2) != 0)
 		vfs_debug_path_create(file, 0);
 	return fd;
 }
@@ -3379,7 +3379,7 @@ int SceIofilemgrForDriver_3A79FAC9(SceUID fd)
 		vfs_release_file(fd);
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
-	if (SceDipswForDriver_A98FC2FD(0xd2) != 0)
+	if (sceKernelCheckDipsw(0xd2) != 0)
 		vfs_debug_path_free(file);
 	vfs_release_file(fd);
 	return vfs_close_file_dummy(fd);
@@ -4318,7 +4318,7 @@ open:
 		if (err < 0)
 			SCE_DBG_PRINTF(0xf, 3302, "Close failed %d 0x%x\n", err, err);
 	} else {
-		if (SceDipswForDriver_A98FC2FD(0xd2) != 0) {
+		if (sceKernelCheckDipsw(0xd2) != 0) {
 			vfs_debug_set_resolved_path(file, filename);
 			vfs_debug_set_open_param(file, flags, mode);
 		}

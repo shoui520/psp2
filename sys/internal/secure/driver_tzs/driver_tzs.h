@@ -11,9 +11,6 @@
 #pragma once
 
 /* ForTZS imports: the os0 name of each one's function */
-#define SceSysmemForDriver_009E1C61			sceKernelFreeMemBlock
-#define SceDipswForDriver_A98FC2FD			sceKernelCheckDipsw
-#define SceCpuForDriver_D32ACE9E	sceKernelSpinlockLowLockCpuSuspendIntr
 #define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB
 
 #include <fw.h>

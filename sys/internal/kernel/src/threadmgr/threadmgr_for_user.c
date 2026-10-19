@@ -103,7 +103,7 @@ int closeMsgPipeForUser(SceUID uid, uint32_t pattern)
 		goto invalid;
 	thread = currentThreadContext();
 	ret = 0;
-	SceCpuForDriver_BF82DEB2(&event->lock);
+	sceKernelSpinlockLowLock(&event->lock);
 	wake = setEventWithNotifyCallback(guid, pattern,
 		((uint64_t)thread->userThreadId << 32) | (int64_t)currentThreadContext()->processId,
 		pattern, event);
@@ -159,7 +159,7 @@ int closeSimpleEventForUser(SceUID uid, uint32_t pattern)
 		goto invalid;
 	thread = currentThreadContext();
 	ret = 0;
-	SceCpuForDriver_BF82DEB2(&event->lock);
+	sceKernelSpinlockLowLock(&event->lock);
 	wake = setEventWithNotifyCallback(guid, pattern,
 		((uint64_t)thread->userThreadId << 32) | (int64_t)currentThreadContext()->processId,
 		pattern, event);
@@ -3954,7 +3954,7 @@ int sceKernelCloseTimerForUser(SceUID uid)
 	thread = currentThreadContext();
 	uint32_t low = thread->processId;
 	high |= (int32_t)low >> 31;
-	SceCpuForDriver_BF82DEB2(&object->base.event.lock);
+	sceKernelSpinlockLowLock(&object->base.event.lock);
 	wake = setEventWithNotifyCallback(guid, 0x200, (uint64_t)high << 32 | low,
 					  0x200, &object->base.event);
 	sceKernelSpinlockLowUnlock(&object->base.event.lock);

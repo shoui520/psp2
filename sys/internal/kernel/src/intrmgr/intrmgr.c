@@ -32,7 +32,7 @@ static inline __attribute__((always_inline)) void PatchCode(void *address, const
 		*(volatile SceUInt16 *)address = *(const SceUInt16 *)code;
 	else
 		*(volatile SceUInt32 *)address = *(const SceUInt32 *)code;
-	SceCpuForDriver_9CB9F0CE((void *)start,
+	sceKernelDcacheCleanRangeForL1WBWA((void *)start,
 		(((unsigned int)address + size + 31) & ~31U) - start);
 	writeDacr(dacr);
 }
@@ -78,7 +78,7 @@ int ResumeController(int value, void *args)
 			if (info->configuration == 3)
 				SetConfiguration(i, 3);
 		}
-		sceKernelVAtoPA(SceSysrootForKernel_C8C8C321(), &paddr);
+		sceKernelVAtoPA(sceKernelSysrootGetSharedMemory(), &paddr);
 		intrmgrSmc(paddr, 0xa000);
 	}
 	sceKernelSysrootCorelockUnlock();
@@ -229,7 +229,7 @@ int sceKernelRegisterIntrHandler(unsigned int intrCode, const char *name, unsign
 		}
 	}
 	info = &g_intrHandlers[intrCode];
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (info->handler) {
 		result = SCE_KERNEL_ERROR_FOUND_HANDLER;
 		SCE_DBG_PRINTF(0xb, 452, INTR_TEXT(g_intrAlreadyRegistered, "already registered: %d %s %p\n"),
@@ -289,7 +289,7 @@ int sceKernelReleaseIntrHandler(unsigned int intrCode)
 		return SCE_KERNEL_ERROR_ILLEGAL_INTRCODE;
 	}
 	info = &g_intrHandlers[intrCode];
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (!info->handler) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		SCE_DBG_PRINTF(0xb, 543, INTR_TEXT(g_intrInterruptHandlerIsNotRegistered, "interrupt handler is not registered. %d\n"), intrCode);
@@ -338,7 +338,7 @@ int sceKernelRegisterIntrHookHandler(int intrCode, void *handler, void **oldHand
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	info = &g_intrHandlers[intrCode];
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (!info->handler) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_NOTFOUND_HANDLER;
@@ -366,7 +366,7 @@ int sceKernelReleaseIntrHookHandler(unsigned int intrCode)
 		return SCE_KERNEL_ERROR_ILLEGAL_INTRCODE;
 	}
 	info = &g_intrHandlers[intrCode];
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (!info->handler || !info->oldHandler) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_NOTFOUND_HANDLER;
@@ -474,7 +474,7 @@ int sceKernelSetIntrPriority(unsigned int intrCode, unsigned int priority)
 		SCE_DBG_PRINTF(0xb, 789, INTR_TEXT(g_intrInvalidPriority, "invalid priority. %d\n"), priority);
 		goto Return;
 	}
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	info->priority = priority;
 	((GicDistributor *)g_intrDistributor)->priority[intrCode] = priority;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
@@ -515,7 +515,7 @@ int sceKernelSetIntrTargetCpu(unsigned int intrCode, unsigned int target)
 		SCE_DBG_PRINTF(0xb, 843, INTR_TEXT(g_intrInvalidTargetCpu, "invalid target cpu. %d\n"), target);
 		return SCE_KERNEL_ERROR_ILLEGAL_TARGET_CPU;
 	}
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	info->targetCpu = mask;
 	((GicDistributor *)g_intrDistributor)->target[intrCode] = mask;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
@@ -599,7 +599,7 @@ int sceKernelRegisterSubIntrHandler(unsigned int intrCode, unsigned int subCode,
 		return SCE_KERNEL_ERROR_ILLEGAL_HANDLER;
 	}
 	info = &g_intrHandlers[intrCode];
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (!info->handler) {
 		SCE_DBG_PRINTF(0xb, 992, INTR_TEXT(g_intrNotYetRegistered, "not yet registered. %d\n"), intrCode);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
@@ -667,7 +667,7 @@ int sceKernelReleaseSubIntrHandler(int intrCode, int subCode)
 		return SCE_KERNEL_ERROR_ILLEGAL_INTRCODE;
 	}
 	info = &g_intrHandlers[intrCode];
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (!info->handler) {
 		SCE_DBG_PRINTF(0xb, 1074, INTR_TEXT(g_intrInterruptHandlerIsNotRegistered, "interrupt handler is not registered. %d\n"), intrCode);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
@@ -721,7 +721,7 @@ int _name(int intrCode, int subCode _args) \
 	} \
 	_nullCheck \
 	info = &g_intrHandlers[intrCode]; \
-	state = SceCpuForDriver_D32ACE9E(&info->lock); \
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock); \
 	if (subCode < 0 || (unsigned int)subCode >= info->subCount) { \
 		SCE_DBG_PRINTF(0xb, _subLine, INTR_TEXT(g_intrUnknownSubinterruptCode, "Unknown subinterrupt code. %d-%d\n"), intrCode, subCode); \
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state); \

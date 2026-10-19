@@ -332,14 +332,14 @@ cancelled:
 	else
 		ret = sceGUIDReferObjectWithClass(waitId, WaitTypeClass(waitType), NULL);
 	if (ret < 0) {
-		SceCpuForDriver_BF82DEB2(&thread->lock);
+		sceKernelSpinlockLowLock(&thread->lock);
 		if (thread->waitResult == (int)THREADMGR_ERROR_WAIT_CANCEL)
 			thread->waitResult = SCE_KERNEL_ERROR_WAIT_DELETE;
 		return thread->waitResult;
 	}
 	*locked = 1;
-	SceCpuForDriver_BF82DEB2(&queue->lock);
-	SceCpuForDriver_BF82DEB2(&thread->lock);
+	sceKernelSpinlockLowLock(&queue->lock);
+	sceKernelSpinlockLowLock(&thread->lock);
 	return thread->waitResult;
 
 abandon:
@@ -457,7 +457,7 @@ bool wakeupAndDistributeThread(struct ThreadCB *thread, uintptr_t waitable,
 				thread->delayId, thread->waitId, queue);
 		}
 #endif
-		SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->timedWaitLock);
+		sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->timedWaitLock);
 		self->next->prev = self->prev;
 		self->prev->next = self->next;
 		sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->timedWaitLock);
@@ -489,7 +489,7 @@ uint32_t wakeupWaitObjectAll(uintptr_t waitable, int result, uint32_t *count)
 		next = node->next;
 		woken++;
 		SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 493);
-		SceCpuForDriver_BF82DEB2(&thread->lock);
+		sceKernelSpinlockLowLock(&thread->lock);
 		wake |= wakeupAndDistributeThread(thread, waitable, result);
 		sceKernelSpinlockLowUnlock(&thread->lock);
 	}
@@ -526,7 +526,7 @@ void waitTimeoutHandler(struct ThreadCB *thread)
 
 	SCE_DBG_ASSERT_LEVEL_CHECK(1, ThreadmgrIntrDisabled(), 601);
 	for (;;) {
-		SceCpuForDriver_BF82DEB2(&thread->lock);
+		sceKernelSpinlockLowLock(&thread->lock);
 		waitId = thread->waitId;
 		ret = sceGUIDReferObjectWithSubclass(waitId,
 			s_threadmgrRuntime.manager->waitableClass, &object);

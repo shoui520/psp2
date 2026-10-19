@@ -189,7 +189,7 @@ set(MODULE_IMPORT_NIDS
 	0x58A1A1C5:F:0x99A3CABE
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceGUIDReferObject
 	sceGUIDReleaseObject
 	SceSysmemForDriver_22CBE925
@@ -203,13 +203,13 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelLockRangeWithMode
 	sceKernelCopyFromUser
 	sceKernelAllocMemBlockForKernel
-	SceCpuForDriver_02796361
+	sceKernelDcacheInvalidateRange
 	SceCpuForDriver_0EE04C03
 	SceCpuForDriver_10EB35EB
-	SceCpuForDriver_364E68A4
+	sceKernelDcacheCleanInvalidateRange
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_821FC0EE
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelCpuResumeIntr
 	SceDebugForDriver_391B74B7
 	SceDebugForDriver_D9703808

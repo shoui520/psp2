@@ -70,7 +70,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	memset
 	memcpy
 	strncpy
@@ -79,12 +79,12 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	SceDebugForDriver_02B04343
-	SceDebugForDriver_35A35322
+	sceKernelAssert
 	SceDebugForDriver_391B5B74
 	SceDebugForDriver_391B74B7
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	sceKernelWaitEventFlag
 	sceKernelDeleteSema
 	sceKernelCreateSema

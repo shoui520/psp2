@@ -126,7 +126,7 @@ static inline void set_module_flags(SceModuleCB *cb, SceUInt32 flags)
 		if ((flags & LOAD_FLAG_SHARED) != 0) {
 			if (cb->shared == NULL)
 				mflags |= MODULE_FLAG_SHARED_ORIGINAL;
-			else if (!SceDipswForDriver_A98FC2FD(0xd2))
+			else if (!sceKernelCheckDipsw(0xd2))
 				mflags |= MODULE_FLAG_SHARED_COPY;
 			else
 				mflags |= MODULE_FLAG_SHARED_TOOL;
@@ -255,7 +255,7 @@ int ModulemgrLoadModule(SceModuleObject *obj, const char *path, SceUID fd, SceSe
 
 	if (cb->pid == KERNEL_PID) {
 		cb->exidxCopy = cb->exidxTop;
-	} else if (SceDipswForDriver_A98FC2FD(0xd2) &&
+	} else if (sceKernelCheckDipsw(0xd2) &&
 		   (SceUInt32)cb->exidxTop < (SceUInt32)cb->exidxBtm) {
 		if ((cb->flags & MODULE_FLAG_SHARED_MASK) == 0) {
 			size = (SceUInt32)cb->exidxBtm - (SceUInt32)cb->exidxTop;
@@ -644,7 +644,7 @@ void ShowCallerInfo(SceUID pid, SceUInt32 addr)
 	int seg = -1, found = -1;
 	SceUInt32 offset = -1;
 
-	if (!SceDipswForDriver_A98FC2FD(0xd2))
+	if (!sceKernelCheckDipsw(0xd2))
 		return;
 	modid = LibraryDBGetModuleUIDByAddr(pid, addr);
 	if (modid < 0)
@@ -684,7 +684,7 @@ int ModulemgrGetStubInfo(SceUID pid, SceUInt32 addr, ModulemgrStubInfo *info)
 
 	if (info == NULL || info->size != sizeof(*info))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	if (!SceDipswForDriver_A98FC2FD(0xd2) || (modid = LibraryDBGetModuleUIDByAddr(pid, addr)) < 0 ||
+	if (!sceKernelCheckDipsw(0xd2) || (modid = LibraryDBGetModuleUIDByAddr(pid, addr)) < 0 ||
 	    (obj = ModulemgrReferModule(modid)) == NULL)
 		return SCE_KERNEL_ERROR_LIBRARYDB_NO_MOD;
 	stub = LibraryDBGetStubCBByStubCodeAddrForTool(&obj->cb, addr);
@@ -777,7 +777,7 @@ int loadModuleCommon(SceUID pid, const char *path, SceUInt32 flags,
 	if (strncmp(path, "host0:", 6) == 0) {
 		if (pid == KERNEL_PID && !SceQafMgrForDriver_082A4FC2())
 			return SCE_KERNEL_ERROR_MODULEMGR_NOENT;
-		if (fd != 0 && !SceDipswForDriver_A98FC2FD(0xfb)) {
+		if (fd != 0 && !sceKernelCheckDipsw(0xfb)) {
 			ret = SCE_KERNEL_ERROR_MODULEMGR_NOENT;
 			goto out;
 		}
@@ -1688,7 +1688,7 @@ int sceKernelLoadPreloadingModules(SceUID pid, const ProcessImageInfo *info,
 	int tool, internal, i;
 	SceUID ret;
 
-	tool = SceDipswForDriver_A98FC2FD(0xd2);
+	tool = sceKernelCheckDipsw(0xd2);
 	if ((flags & 1) != 0)
 		LibraryDBSetShared(pid);
 
@@ -1703,7 +1703,7 @@ int sceKernelLoadPreloadingModules(SceUID pid, const ProcessImageInfo *info,
 		}
 		if ((m->flags & PRELOAD_DEVELOPMENT) != 0 && !SceSblACMgrForKernel_BBA13D9C())
 			continue;
-		if ((m->flags & PRELOAD_DIPSW_D4) != 0 && !SceDipswForDriver_A98FC2FD(0xd4))
+		if ((m->flags & PRELOAD_DIPSW_D4) != 0 && !sceKernelCheckDipsw(0xd4))
 			continue;
 		if ((m->flags & ((flags & 1) != 0 ? PRELOAD_STAGE1 : PRELOAD_STAGE0)) == 0)
 			continue;
@@ -1714,7 +1714,7 @@ int sceKernelLoadPreloadingModules(SceUID pid, const ProcessImageInfo *info,
 		for (i = 0; i < 2; i++) {
 			if (!SceSysrootForKernel_55392965()) {
 				if (!SceQafMgrForDriver_B9770A13() || g_hostIoFailed ||
-				    !SceDipswForDriver_A98FC2FD(0xfb))
+				    !sceKernelCheckDipsw(0xfb))
 					continue;
 				path = m->hostPath[i];
 			} else {
@@ -2062,7 +2062,7 @@ SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, SceUInt32 flags,
 	relocatorFormCount();
 	ModuleCBDumpLoadAddress(&obj->cb);
 
-	if (SceDipswForDriver_A98FC2FD(0xd2))
+	if (sceKernelCheckDipsw(0xd2))
 		LibraryDBRenameAddr2ModTbls(obj->cb.pid, obj->cb.name);
 	if (obj->cb.procParam != NULL) {
 		ret = ModulemgrImportProcParam(&obj->cb, obj->cb.procParam, info);

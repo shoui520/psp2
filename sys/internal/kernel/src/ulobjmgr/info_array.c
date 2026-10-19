@@ -14,12 +14,12 @@ static inline __attribute__((always_inline)) void tidyUp(UlobjProcCB *procCB)
 
 	SCE_DBG_ASSERT(procCB != NULL, 38);
 	if (procCB->driverMemBlock != -1) {
-		ret = SceSysmemForDriver_009E1C61(procCB->driverMemBlock);
+		ret = sceKernelFreeMemBlock(procCB->driverMemBlock);
 		SCE_DBG_ASSERT(ret == 0, 44);
 		procCB->driverMemBlock = -1;
 	}
 	if (procCB->userMemBlock != -1) {
-		ret = SceSysmemForDriver_009E1C61(procCB->userMemBlock);
+		ret = sceKernelFreeMemBlock(procCB->userMemBlock);
 		SCE_DBG_ASSERT(ret == 0, 53);
 		procCB->userMemBlock = -1;
 	}

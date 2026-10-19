@@ -45,7 +45,6 @@ SceClass *SceSysmemForDriver_85336A1C(void);	/* vitasdk: ksceKernelGetUIDClass *
 SceClass *SceSysmemForKernel_E4193EB6(void);	/* vitasdk: ksceKernelGetUIDDLinkClass */
 SceClass *SceSysmemForKernel_7C878E94(void);	/* vitasdk: ksceKernelGetUIDHeapClass */
 SceClass *SceSysmemForKernel_86681B64(void);	/* vitasdk: ksceKernelGetUIDMemBlockClass */
-/* vitasdk: ksceUIDClassInitClass */
 int sceUIDClassInitClass(SceClass *cls, const char *name, void *uidclass,
 			SceSize itemsize, SceClassCallback create, SceClassCallback destroy);
 /* vitasdk: ksceKernelFindClassByName */

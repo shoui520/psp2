@@ -90,7 +90,7 @@ int _scePowerRemoveProcessCallback(SceUID pid)
 #endif
 
 	for (;;) {
-		intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+		intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 		previous = NULL;
 		for (record = s_powerCallbackControl.head; record; record = record->next) {
 			if (record->pid == pid)
@@ -327,7 +327,7 @@ int scePowerRegisterCallback(SceUID callback)
 	record->lastNotification = s_powerCallbackControl.stateFlags;
 	record->permittedMask = permittedMask;
 	record->notified = 0;
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	for (current = s_powerCallbackControl.head; current; current = current->next) {
 		if (current->callback == callback) {
 			result = SCE_POWER_ERROR_ALREADY_REGISTERD;
@@ -368,7 +368,7 @@ inline __attribute__((always_inline)) int scePowerUnregisterCallback(SceUID call
 
 	if (sceKernelGetThreadmgrUIDClass(callback) != 8)
 		return (int)0xc00280a1;
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	for (record = s_powerCallbackControl.head; record; record = record->next) {
 		if (record->callback == callback)
 			break;
@@ -418,7 +418,7 @@ static void _scePowerNotifyCallbackProc(SceUID pid, uint32_t clearMask,
 	const void *caller = __builtin_return_address(0);
 #endif
 
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	state = (s_powerCallbackControl.stateFlags & ~clearMask) | setMask;
 	s_powerCallbackControl.stateFlags = state;
 	for (record = s_powerCallbackControl.head; record; record = next) {
@@ -541,7 +541,7 @@ int powerHasBusyCallback(uint32_t mask, SceUID *callback)
 	struct PowerCallbackRecord *record;
 	uint32_t intrState;
 
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	for (record = s_powerCallbackControl.head; record;
 	     record = record->next) {
 		if (record->callback >= 0 &&

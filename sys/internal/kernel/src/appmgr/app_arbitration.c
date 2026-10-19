@@ -426,7 +426,7 @@ int _gcListenerThreadEntry(SceSize args, void *argp)
 					gcGameWaitProcessEventsPanicInfo, gcGameCheckProcessEventsPanicInfo);
 			}
 			if (removableChanged) {
-				ScePmMgrForDriver_2AC815A2(&productMode);
+				sceSblPmMgrGetProductMode(&productMode);
 				if (productMode != 1) {
 					GC_SUSPEND_MEDIA("suspendAppBootedfromGCorRM", 2589, 2592,
 						2596, 2599, 2601, 2607, 2609, 1, 0, 0,

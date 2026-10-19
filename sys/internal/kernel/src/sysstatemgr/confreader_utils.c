@@ -19,7 +19,7 @@ int ConfReaderUtilsAllocConfBuf(ConfReader *reader, SceSize size)
 void ConfReaderUtilsFreeConfBuf(ConfReader *reader) /* name unknown */
 {
 	if (reader->confBlock >= 0) {
-		SceSysmemForDriver_009E1C61(reader->confBlock);
+		sceKernelFreeMemBlock(reader->confBlock);
 		reader->confBlock = -1;
 		reader->confSize = 0;
 		reader->confBuf = NULL;
@@ -43,7 +43,7 @@ int ConfReaderUtilsAllocCmdBuf(ConfReader *reader, SceSize size)
 void ConfReaderUtilsFreeCmdBuf(ConfReader *reader) /* name unknown */
 {
 	if (reader->cmdBlock >= 0) {
-		SceSysmemForDriver_009E1C61(reader->cmdBlock);
+		sceKernelFreeMemBlock(reader->cmdBlock);
 		reader->cmdBlock = -1;
 		reader->cmdSize = 0;
 		reader->cmdBuf = NULL;

@@ -1310,7 +1310,7 @@ static int detachAudio(int id)
 		if (stream->opened && s_audio.opened)
 			s_audio.opened--;
 		for (unsigned i = 0; i < 3; i++)
-			SceSysmemForDriver_009E1C61(stream->memblock[i]);
+			sceKernelFreeMemBlock(stream->memblock[i]);
 		release(stream);
 		ret = removeDevice(id) ? 0 : -1;
 	}

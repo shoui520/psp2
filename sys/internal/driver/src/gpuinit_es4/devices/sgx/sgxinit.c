@@ -213,7 +213,7 @@ unmap:
 	sceGpuMmuUnmapMemory(context, SGX_PERFMON_KERNEL_VADDR, SGX_PERFMON_PAGE_SIZE);
 	sceGpuMmuUnmapMemory(context, SGX_BOOKMARK_VADDR, SGX_BOOKMARK_SIZE);
 free:
-	SceSysmemForDriver_009E1C61(uid);
+	sceKernelFreeMemBlock(uid);
 }
 
 PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,

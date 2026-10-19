@@ -14,17 +14,17 @@ void _sceVeneziaSimpleHeapInit(void *base, SceSize size, VeneziaSimpleHeap *heap
 	valid = blockSize;
 	if (blockSize)
 		valid = ((blockSize - 1) & blockSize) == 0;
-	SceDebugForDriver_35A35322(valid,
+	sceKernelAssert(valid,
 		SCE_DBGINFO_FUNC(29, "_sceVeneziaSimpleHeapInit"), __builtin_return_address(0));
 	numBlocks = size / blockSize;
-	SceDebugForDriver_35A35322(numBlocks - 1 <= 127, SCE_DBGINFO_FUNC(31, "_sceVeneziaSimpleHeapInit"),
+	sceKernelAssert(numBlocks - 1 <= 127, SCE_DBGINFO_FUNC(31, "_sceVeneziaSimpleHeapInit"),
 		__builtin_return_address(0));
-	SceDebugForDriver_35A35322(workSize >= sizeof(VeneziaSimpleHeap),
+	sceKernelAssert(workSize >= sizeof(VeneziaSimpleHeap),
 		SCE_DBGINFO_FUNC(32, "_sceVeneziaSimpleHeapInit"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322(base != NULL &&
+	sceKernelAssert(base != NULL &&
 		((uintptr_t)base & (blockSize - 1)) == 0,
 		SCE_DBGINFO_FUNC(33, "_sceVeneziaSimpleHeapInit"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322(heap != NULL, SCE_DBGINFO_FUNC(34, "_sceVeneziaSimpleHeapInit"),
+	sceKernelAssert(heap != NULL, SCE_DBGINFO_FUNC(34, "_sceVeneziaSimpleHeapInit"),
 		__builtin_return_address(0));
 #endif
 	heap->marker = (uintptr_t)heap - 1;
@@ -49,24 +49,24 @@ void *_sceVeneziaSimpleHeapAllocMemory(VeneziaSimpleHeap *heap, SceSize size)
 	int intr;
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(heap != NULL,
+	sceKernelAssert(heap != NULL,
 		SCE_DBGINFO_FUNC(55, "_sceVeneziaSimpleHeapAllocMemory"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322(heap->marker == (uintptr_t)heap - 1,
+	sceKernelAssert(heap->marker == (uintptr_t)heap - 1,
 		SCE_DBGINFO_FUNC(56, "_sceVeneziaSimpleHeapAllocMemory"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322(size != 0, SCE_DBGINFO_FUNC(57, "_sceVeneziaSimpleHeapAllocMemory"),
+	sceKernelAssert(size != 0, SCE_DBGINFO_FUNC(57, "_sceVeneziaSimpleHeapAllocMemory"),
 		__builtin_return_address(0));
 #endif
-	intr = SceCpuForDriver_D32ACE9E(&heap->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	previous = heap->lastFreeBlock;
 	alignedSize = (heap->blockSize - 1 + size) & -heap->blockSize;
 	current = heap->blocks[previous].next;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(previous < heap->numBlocks,
+	sceKernelAssert(previous < heap->numBlocks,
 		SCE_DBGINFO_FUNC(69, "_sceVeneziaSimpleHeapAllocMemory"), __builtin_return_address(0));
 #endif
 	for (;;) {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(current < heap->numBlocks,
+		sceKernelAssert(current < heap->numBlocks,
 			SCE_DBGINFO_FUNC(71, "_sceVeneziaSimpleHeapAllocMemory"), __builtin_return_address(0));
 #endif
 		availableSize = heap->blocks[current].size;
@@ -82,7 +82,7 @@ void *_sceVeneziaSimpleHeapAllocMemory(VeneziaSimpleHeap *heap, SceSize size)
 	allocated = (availableSize - alignedSize) / heap->blockSize + current;
 	next = heap->blocks[current].next;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(allocated < heap->numBlocks,
+	sceKernelAssert(allocated < heap->numBlocks,
 		SCE_DBGINFO_FUNC(76, "_sceVeneziaSimpleHeapAllocMemory"), __builtin_return_address(0));
 #endif
 	heap->blocks[allocated].next = ~0U;
@@ -91,7 +91,7 @@ void *_sceVeneziaSimpleHeapAllocMemory(VeneziaSimpleHeap *heap, SceSize size)
 		heap->blocks[current].size -= alignedSize;
 	} else {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(current == allocated,
+		sceKernelAssert(current == allocated,
 			SCE_DBGINFO_FUNC(84, "_sceVeneziaSimpleHeapAllocMemory"), __builtin_return_address(0));
 #endif
 		heap->blocks[previous].next = next;
@@ -123,35 +123,35 @@ int _sceVeneziaSimpleHeapFreeMemory(VeneziaSimpleHeap *heap, void *memory)
 	int intr, ret;
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(heap != NULL, SCE_DBGINFO_FUNC(135, "_sceVeneziaSimpleHeapFreeMemory"),
+	sceKernelAssert(heap != NULL, SCE_DBGINFO_FUNC(135, "_sceVeneziaSimpleHeapFreeMemory"),
 		__builtin_return_address(0));
-	SceDebugForDriver_35A35322(heap->marker == (uintptr_t)heap - 1,
+	sceKernelAssert(heap->marker == (uintptr_t)heap - 1,
 		SCE_DBGINFO_FUNC(136, "_sceVeneziaSimpleHeapFreeMemory"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322(address && !(address & (heap->blockSize - 1)),
+	sceKernelAssert(address && !(address & (heap->blockSize - 1)),
 		SCE_DBGINFO_FUNC(137, "_sceVeneziaSimpleHeapFreeMemory"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322(address >= (uintptr_t)heap->base &&
+	sceKernelAssert(address >= (uintptr_t)heap->base &&
 		address < (uintptr_t)heap->base + heap->blockSize * heap->numBlocks,
 		SCE_DBGINFO_FUNC(138, "_sceVeneziaSimpleHeapFreeMemory"), __builtin_return_address(0));
 #endif
-	intr = SceCpuForDriver_D32ACE9E(&heap->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	allocated = (address - (uintptr_t)heap->base) / heap->blockSize;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(heap->blocks[allocated].size != 0,
+	sceKernelAssert(heap->blocks[allocated].size != 0,
 		SCE_DBGINFO_FUNC(146, "_sceVeneziaSimpleHeapFreeMemory"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322(heap->blocks[allocated].next == ~0U,
+	sceKernelAssert(heap->blocks[allocated].next == ~0U,
 		SCE_DBGINFO_FUNC(147, "_sceVeneziaSimpleHeapFreeMemory"), __builtin_return_address(0));
 #endif
 	current = heap->blocks[heap->lastFreeBlock].next;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(heap->lastFreeBlock < heap->numBlocks,
+	sceKernelAssert(heap->lastFreeBlock < heap->numBlocks,
 		SCE_DBGINFO_FUNC(152, "_sceVeneziaSimpleHeapFreeMemory"), __builtin_return_address(0));
-	SceDebugForDriver_35A35322(current < heap->numBlocks,
+	sceKernelAssert(current < heap->numBlocks,
 		SCE_DBGINFO_FUNC(153, "_sceVeneziaSimpleHeapFreeMemory"), __builtin_return_address(0));
 #endif
 	for (;;) {
 		next = heap->blocks[current].next;
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(next < heap->numBlocks,
+		sceKernelAssert(next < heap->numBlocks,
 			SCE_DBGINFO_FUNC(156, "_sceVeneziaSimpleHeapFreeMemory"), __builtin_return_address(0));
 #endif
 		if (next == current) {
@@ -189,7 +189,7 @@ int _sceVeneziaSimpleHeapFreeMemory(VeneziaSimpleHeap *heap, void *memory)
 		if (heap->lastFreeBlock == current) {
 			ret = (int)0x80600000;
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(0, SCE_DBGINFO_FUNC(201, "_sceVeneziaSimpleHeapFreeMemory"),
+			sceKernelAssert(0, SCE_DBGINFO_FUNC(201, "_sceVeneziaSimpleHeapFreeMemory"),
 				__builtin_return_address(0));
 #endif
 			break;

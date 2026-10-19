@@ -64,7 +64,7 @@ int uidSemaphore_RevalidateMethod(void *cls, void *object)
 		thread = (struct ThreadCB *)node;
 		SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 1431);
 		next = node->next;
-		SceCpuForDriver_BF82DEB2(&thread->lock);
+		sceKernelSpinlockLowLock(&thread->lock);
 		SCE_DBG_ASSERT_CHECK(thread->waitId >= 0, 1434);
 		if (sema->count < thread->waitMode) {
 			sceKernelSpinlockLowUnlock(&thread->lock);
@@ -100,14 +100,14 @@ static int uidSemaphore_Destructor(void *object)
 	int intr;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1366);
-	intr = SceCpuForDriver_D32ACE9E(&sema->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&sema->lock);
 	wake = wakeupWaitObjectAll((uintptr_t)&sema->next, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
 	sceKernelSpinlockLowUnlock(&sema->lock);
 	pid = sema->ownerPid;
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
-			SceCpuForDriver_BF82DEB2(&process->resourceLock);
+			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (sema->attr & SEMA_ATTR_LW)
 				process->uidLwCount--;
 			else if (sema->attr & SEMA_ATTR_UNLIMITED)
@@ -142,7 +142,7 @@ int getSemaInfo(SceUID semaId, SceKernelSemaInfo *info)
 	} else {
 		info->semaId = semaId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(semaId), sizeof(info->name) - 1);
-		SceCpuForDriver_BF82DEB2(&sema->lock);
+		sceKernelSpinlockLowLock(&sema->lock);
 		info->attr = sema->attr;
 		info->initCount = sema->initCount;
 		info->currentCount = sema->count;
@@ -237,7 +237,7 @@ int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&sema->lock);
+	sceKernelSpinlockLowLock(&sema->lock);
 	if (sema->maxCount < needCount) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		goto unlock;
@@ -251,14 +251,14 @@ int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 			ret = callCallbackAll(thread);
 			if (ret < 0)
 				goto release;
-			SceCpuForDriver_BF82DEB2(&sema->lock);
+			sceKernelSpinlockLowLock(&sema->lock);
 		}
 		if (!isWaitOnly(queue, thread->currentPriority) && needCount <= sema->count) {
 			sema->count -= needCount;
 			ret = 0;
 			goto unlock;
 		}
-		SceCpuForDriver_BF82DEB2(&thread->lock);
+		sceKernelSpinlockLowLock(&thread->lock);
 		thread->waitMode = needCount;
 		if (!callbacks) {
 			ret = waitWaitableObject(semaId, (uintptr_t)queue, WAIT_TYPE_SEMAPHORE, &wakeup,
@@ -387,7 +387,7 @@ static inline __attribute__((always_inline)) SceUID sceKernelCreateSemaCore(cons
 		intr = SceCpuForDriver_821FC0EE();
 	} else {
 		process = thread->process;
-		intr = SceCpuForDriver_D32ACE9E(&process->resourceLock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
 		if (attr & SEMA_ATTR_LW) {
 			if (process->uidLwCount >= UID_LW_MAX_PER_PROCESS) {
 				sceKernelSpinlockLowUnlock(&process->resourceLock);
@@ -422,7 +422,7 @@ static inline __attribute__((always_inline)) SceUID sceKernelCreateSemaCore(cons
 		name, &opt, (SceObjectBase **)&sema);
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {
-			SceCpuForDriver_BF82DEB2(&process->resourceLock);
+			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (attr & SEMA_ATTR_LW)
 				process->uidLwCount--;
 			else if (attr & SEMA_ATTR_UNLIMITED)
@@ -577,7 +577,7 @@ int sceKernelPollSema(SceUID semaId, int needCount)
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&sema->lock);
+	sceKernelSpinlockLowLock(&sema->lock);
 	if (sema->maxCount < needCount) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 	} else {
@@ -642,7 +642,7 @@ int sceKernelSignalSema(SceUID semaId, int signalCount)
 		goto resume;
 	}
 	queue = (struct ThreadmgrWaitQueue *)&sema->next;
-	SceCpuForDriver_BF82DEB2(&sema->lock);
+	sceKernelSpinlockLowLock(&sema->lock);
 	newCount = sema->count + signalCount;
 	if (newCount > sema->maxCount) {
 		if (ThreadmgrInSyscall()) {
@@ -677,7 +677,7 @@ int sceKernelSignalSema(SceUID semaId, int signalCount)
 		waiter = (struct ThreadCB *)node;
 		SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 901, "sceKernelSignalSema");
 		next = node->next;
-		SceCpuForDriver_BF82DEB2(&waiter->lock);
+		sceKernelSpinlockLowLock(&waiter->lock);
 		if (sema->count < waiter->waitMode) {
 			sceKernelSpinlockLowUnlock(&waiter->lock);
 			break;
@@ -723,7 +723,7 @@ int sceKernelCancelSema(SceUID semaId, int setCount, int *numWaitThreads)
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&sema->lock);
+	sceKernelSpinlockLowLock(&sema->lock);
 	if (sema->maxCount < setCount) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		sceKernelSpinlockLowUnlock(&sema->lock);

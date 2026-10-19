@@ -155,7 +155,7 @@ static __attribute__((noinline, noclone)) void uartKick(SDfCtlIf *ifp, SceUInt32
 {
 	int s;
 
-	s = SceCpuForDriver_D32ACE9E(&s_uartLock);
+	s = sceKernelSpinlockLowLockCpuSuspendIntr(&s_uartLock);
 	if (ifp->state & UART_UP) {
 		if (*intr & UART_INTR_SEND)
 			ifp->state |= UART_SEND_READY;

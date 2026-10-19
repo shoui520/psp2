@@ -99,7 +99,7 @@ set(MODULE_IMPORT_NIDS
 	0x0351D827:F:0xDEC408D4
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	SceSysmemForDriver_45D22597
 	sceKernelCopyToUser
 	SceSysmemForDriver_84A4AF5E

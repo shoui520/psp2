@@ -106,7 +106,7 @@ int AllocMemBlockForKernelByCommand(SceKernelAllocMemBlockCommand *command)
 		return AllocMemBlockLowByCommand(command);
 	}
 	if (attr & MEMBLOCK_TYPE_TOOL_PHYMEMPART) {
-		if (SceDipswForDriver_A98FC2FD(DIPSW_ENABLE_TOOL_PHYMEMPART))
+		if (sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART))
 			return AllocMemBlockLowByCommand(command);
 		SCE_DBG_PRINTF(0xb, 524, "Only SCE_DIPSW_ENABLE_TOOL_PHYMEMPART\n");
 		SCE_DBG_ASSERT_FAIL(525);
@@ -292,7 +292,7 @@ int MemBlockClientInfoAddGUID(MemBlockClientInfo *info, SceUID pid)
 	SceUInt32 i, capacity;
 	int intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&info->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	capacity = info->capacity;
 	slot = info->guids;
 	if (capacity != 0) {
@@ -324,7 +324,7 @@ int MemBlockClientInfoRemoveGUID(MemBlockClientInfo *info, SceUID pid)
 
 	if (pid == -1)
 		return SCE_KERNEL_ERROR_SYSMEM_MEMBLOCK_ERROR;
-	intr = SceCpuForDriver_D32ACE9E(&info->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	capacity = info->capacity;
 	slot = info->guids;
 	if (capacity != 0) {
@@ -833,7 +833,7 @@ SceUID sceKernelAllocMemBlockWithInfoForKernel(const char *name, SceUInt32 type,
 		attr &= ~ALLOC_ATTR_KEEP_CLEAR;
 		command.opt.attr = attr;
 	} else if (!(command.code & MEMBLOCK_CODE_W)) {
-		if (SceDipswForDriver_A98FC2FD(DIPSW_NO_CLEAR))
+		if (sceKernelCheckDipsw(DIPSW_NO_CLEAR))
 			command.opt.attr |= ALLOC_ATTR_NO_CLEAR;
 		attr = command.opt.attr;
 	}
@@ -1037,7 +1037,7 @@ int SceSysmemForDriver_DFE2C8CB(SceUID guid, SceKernelMemBlockType type)
 		newCode = code;
 		currentCode = block->code;
 		if (MemBlockRemapAllowed(s_remapKernel, currentCode, newCode) ||
-		    (SceDipswForDriver_A98FC2FD(DIPSW_ENABLE_TOOL_PHYMEMPART) &&
+		    (sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART) &&
 		     MemBlockRemapAllowed(s_remapTool, currentCode, newCode)) ||
 		    MemBlockRemapAllowed(s_remapCdram, currentCode, newCode)) {
 			intr = SceCpuForDriver_4C38CE4D(&block->lock);
@@ -1135,7 +1135,7 @@ int FreeMemBlockCore(SceUID guid, int checkLock, MemBlockObject **freed, MemBloc
 	return ret;
 }
 
-int SceSysmemForDriver_009E1C61(SceUID guid)
+int sceKernelFreeMemBlock(SceUID guid)
 {
 	return FreeMemBlockCore(guid, 0, NULL, NULL, NULL, NULL);
 }
@@ -1403,7 +1403,7 @@ clear:
 	}
 	puid = SceSysmemForDriver_BF209859(0, guid);
 	if (puid < 0) {
-		SceSysmemForDriver_009E1C61(guid);
+		sceKernelFreeMemBlock(guid);
 		return puid;
 	}
 	return puid;
@@ -1759,7 +1759,7 @@ SceUID UserMap(SceUID pid, const char *name, SceUInt32 perm, SceUInt32 flags, ui
 				sceGUIDReleaseObject(guid);
 				ret = sceKernelGetMemBlockVBase(guid, &vbase);
 				if (ret < 0) {
-					SceSysmemForDriver_009E1C61(guid);
+					sceKernelFreeMemBlock(guid);
 				} else {
 					*base = vbase;
 					*mapSize = len;
@@ -2252,7 +2252,7 @@ SceUID sceKernelAllocMemBlockForVMForUser(const char *userName, SceSize size)
 	puid = SceSysmemForDriver_BF209859(0, guid);
 	ret = puid;
 	if (puid >= 0) {
-		intr = SceCpuForDriver_D32ACE9E(&storage->lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&storage->lock);
 		if (storage->vmBlocks == NULL) {
 			storage->vmBlocks = SceSysrootForKernel_2F75C1DC(
 				SYSMEM_VM_BLOCKS * sizeof(SysmemVMBlock), NULL);
@@ -2292,7 +2292,7 @@ SceUID sceKernelAllocMemBlockForVMForUser(const char *userName, SceSize size)
 		/* the original keeps the storage lock here */
 	}
 	SceCpuForDriver_A4884C4E((SceInt32 *)&storage->vmSize, size);
-	SceSysmemForDriver_009E1C61(guid);
+	sceKernelFreeMemBlock(guid);
 fail:
 	SysrootDecProcessResource(restype);
 	return ret;
@@ -2346,7 +2346,7 @@ SceUID sceKernelAllocUnmapMemBlockForUser(const char *userName, SceSize size)
 			if (ret >= 0)
 				return ret;
 		}
-		SceSysmemForDriver_009E1C61(guid);
+		sceKernelFreeMemBlock(guid);
 	}
 	SysrootDecProcessResource(restype);
 	return ret;
@@ -2644,14 +2644,14 @@ SceUID sceKernelOpenMemBlockForUser(const char *userName, SceUInt32 flags)
 	}
 	ret = MemBlockClientInfoAddGUID(client, mirror);
 	if (ret < 0) {
-		SceSysmemForDriver_009E1C61(mirror);
+		sceKernelFreeMemBlock(mirror);
 		goto uncharge;
 	}
 	puid = SceSysmemForDriver_BF209859(0, mirror);
 	if (puid >= 0)
 		return puid;
 	MemBlockClientInfoRemoveGUID(client, mirror);
-	SceSysmemForDriver_009E1C61(mirror);
+	sceKernelFreeMemBlock(mirror);
 	ret = puid;
 uncharge:
 	SysrootDecProcessResource(restype);

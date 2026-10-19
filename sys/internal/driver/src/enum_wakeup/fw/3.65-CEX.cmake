@@ -154,9 +154,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	sceKernelDeleteHeap
-	SceCpuForDriver_103872A5
+	sceKernelDcacheCleanRange
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_E0489831
 	SceSysrootForDriver_67AAB627

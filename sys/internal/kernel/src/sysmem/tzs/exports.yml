@@ -118,7 +118,7 @@ SceSysmem:
         - SceCpuForTZS_31E78A4B: 0x31E78A4B
         - sceKernelCpuId: 0x44C423D3
         - SceCpuForTZS_4FED4BCE: 0x4FED4BCE
-        - SceCpuForTZS_596784E9: 0x596784E9
+        - sceKernelDcacheCleanRangeForL1WBWA: 0x596784E9
         - sceKernelSpinlockLowLock: 0x71FD9AB5
         - SceCpuForTZS_7548CBCF: 0x7548CBCF
         - SceCpuForTZS_75D87321: 0x75D87321

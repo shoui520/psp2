@@ -39,7 +39,7 @@ int SpkgUtilDoPersonalizeSLSK(const char *sourceName,
 			header->bodySize + sizeof(SlskPersonalization));
 	if (result)
 		goto cleanup;
-	SceCpuForDriver_103872A5((uint8_t *)sbls + (sourceSector << 9),
+	sceKernelDcacheCleanRange((uint8_t *)sbls + (sourceSector << 9),
 			(sourceSize + 63) & ~63);
 	result = UpdateUtilSetupSm(0, &slskSmId, 0);
 	if (result)
@@ -51,7 +51,7 @@ int SpkgUtilDoPersonalizeSLSK(const char *sourceName,
 	result = serviceResult;
 	if (result)
 		goto cleanup;
-	SceCpuForDriver_02796361((uint8_t *)sbls + (sourceSector << 9),
+	sceKernelDcacheInvalidateRange((uint8_t *)sbls + (sourceSector << 9),
 			(sourceSize + 63) & ~63);
 	result = StorageUtilSblsRename(sbls, entries, previousName, retiredName);
 	if (!result)

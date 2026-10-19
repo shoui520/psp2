@@ -260,7 +260,7 @@ static __attribute__((noinline)) int PervasiveInit(void)
 		s_pervasive.hardwareInfo[i + 2] = s_misc->hardwareInfo[i];
 	PixelClockInit();
 	PervasiveMiscInit();
-	mode = SceDipswForDriver_A98FC2FD(0xec) == 0 ? 3 : 5;
+	mode = sceKernelCheckDipsw(0xec) == 0 ? 3 : 5;
 	GpuClockSet(mode, mode);
 	sceKernelRegisterMonitorCallHandler(PERVASIVE_MONCALL_POWER, PervasivePowerMonitorCall);
 	sceKernelRegisterMonitorCallHandler(PERVASIVE_MONCALL_RESET, PervasiveResetMonitorCall);
@@ -274,7 +274,7 @@ static __attribute__((noinline)) int PervasiveInit(void)
 error:
 	/* Sony frees the whole UID array, including untouched entries. */
 	for (i = 0; i < 16; i++)
-		SceSysmemForDriver_009E1C61(s_pervasive.uid[i]);
+		sceKernelFreeMemBlock(s_pervasive.uid[i]);
 	return ret;
 }
 
@@ -297,7 +297,7 @@ int ParkOtherCpus(int cleanCache)
 {
 	uint32_t state;
 
-	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
 	s_parkCleanCache = cleanCache;
 	plePark();
 	s_parkedCpus = 1 << (readMpidr() & 3);

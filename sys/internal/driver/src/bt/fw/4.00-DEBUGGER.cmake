@@ -142,7 +142,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoOpen
 	sceIoRead
 	sceIoClose
-	ScePmMgrForDriver_2AC815A2
+	sceSblPmMgrGetProductMode
 	sceKernelRegisterSysEventHandler
 	sceKernelUnregisterSysEventHandler
 	SceSysrootForDriver_5A4A7F7E

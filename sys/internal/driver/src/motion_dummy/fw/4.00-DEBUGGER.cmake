@@ -45,7 +45,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCopyFromUser
 	sceKernelDeleteHeap
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	memset
 	__memset_chk
 	memcpy

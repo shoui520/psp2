@@ -33,24 +33,24 @@ void LoadelfFreeMem(SceModuleCB *cb, void **vaddr, SceUID *memblk, LoadelfSegmen
 		vaddr, segx);
 
 	if (cb->pid == KERNEL_PID) {
-		SceSysmemForDriver_009E1C61(*memblk);
+		sceKernelFreeMemBlock(*memblk);
 		*vaddr = NULL;
 		*memblk = 0;
 		if (segx == NULL)
 			return;
 	} else {
 		if (segx == NULL) {
-			SceSysmemForDriver_009E1C61(*memblk);
+			sceKernelFreeMemBlock(*memblk);
 			*vaddr = NULL;
 			*memblk = 0;
 			return;
 		}
 		if (segx->tmpBlock > 0) {
-			SceSysmemForDriver_009E1C61(segx->tmpBlock);
+			sceKernelFreeMemBlock(segx->tmpBlock);
 			segx->tmpBlock = 0;
 			segx->kaddr = NULL;
 		}
-		SceSysmemForDriver_009E1C61(*memblk);
+		sceKernelFreeMemBlock(*memblk);
 		*vaddr = NULL;
 		*memblk = 0;
 	}
@@ -98,7 +98,7 @@ static int LoadelfCopySharedSegment(LoadelfContext *ctx, int index)
 		return tmp;
 	sceKernelGetMemBlockBase(tmp, &base);
 	memcpy(ctx->seg[index].kaddr, (char *)base + ((SceUInt32)orig->vaddr & 0xfff), seg->filesz);
-	return SceSysmemForDriver_009E1C61(tmp);
+	return sceKernelFreeMemBlock(tmp);
 }
 
 int LoadelfLoadSegment(LoadelfContext *ctx, SelfReader *reader, int index, LoadelfTiming *timing)
@@ -452,7 +452,7 @@ int LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, Sce
 #else
 							ret = RelocatorRelSegment(ctx, buf, ph->p_filesz);
 #endif
-							SceSysmemForDriver_009E1C61(uid);
+							sceKernelFreeMemBlock(uid);
 							if (ret < 0)
 								goto fail;
 							relaCount++;
@@ -460,7 +460,7 @@ int LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, Sce
 							goto next;
 						}
 					}
-					SceSysmemForDriver_009E1C61(uid);
+					sceKernelFreeMemBlock(uid);
 					goto fail;
 				}
 				state = 2;
@@ -515,7 +515,7 @@ int LoadelfMapImage(LoadelfContext *ctx)
 		segx = &ctx->seg[i];
 		if ((seg->perms & SEGMENT_PERM_MASK) == SEGMENT_PERM_TEXT &&
 		    (cb->flags & MODULE_FLAG_SHARED_COPY) == 0)
-			SceCpuForDriver_103872A5((void *)PAGE_TRUNC((SceUInt32)segx->kaddr),
+			sceKernelDcacheCleanRange((void *)PAGE_TRUNC((SceUInt32)segx->kaddr),
 				PAGE_ROUND(seg->memsz + ((SceUInt32)seg->vaddr & 0xfff)));
 		if (cb->pid == KERNEL_PID) {
 			if ((seg->perms & SEGMENT_PERM_MASK) != SEGMENT_PERM_TEXT)
@@ -523,7 +523,7 @@ int LoadelfMapImage(LoadelfContext *ctx)
 			ret = SceSysmemForDriver_DFE2C8CB(seg->memblk, memtype);
 		} else {
 			if (segx->tmpBlock > 0) {
-				SceSysmemForDriver_009E1C61(segx->tmpBlock);
+				sceKernelFreeMemBlock(segx->tmpBlock);
 				segx->tmpBlock = 0;
 				segx->kaddr = NULL;
 			}

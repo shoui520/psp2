@@ -499,7 +499,7 @@ int cecDevSetLogicalAddress(SceUInt8 address)
 
 int cecDevGetPhysicalAddress(SceUInt8 *physical)
 {
-	SceCpuForDriver_BF82DEB2(&cecDev.lock);
+	sceKernelSpinlockLowLock(&cecDev.lock);
 	physical[0] = cecDev.physicalAddress[0];
 	physical[1] = cecDev.physicalAddress[1];
 	sceKernelSpinlockLowUnlock(&cecDev.lock);
@@ -663,7 +663,7 @@ void cecDevNotifyHpd(int on)
 {
 	int (*callback)(void);
 
-	SceCpuForDriver_BF82DEB2(&cecDev.lock);
+	sceKernelSpinlockLowLock(&cecDev.lock);
 	if (cecDev.hpd != 0) {
 		if (on != 0) {
 			sceKernelSpinlockLowUnlock(&cecDev.lock);
@@ -698,7 +698,7 @@ void cecDevNotifyRxSense(int on)
 
 void cecDevSetPhysicalAddress(const SceUInt8 *physical)
 {
-	SceCpuForDriver_BF82DEB2(&cecDev.lock);
+	sceKernelSpinlockLowLock(&cecDev.lock);
 	cecDev.physicalAddress[0] = physical[0];
 	cecDev.physicalAddress[1] = physical[1];
 	sceKernelSpinlockLowUnlock(&cecDev.lock);

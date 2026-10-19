@@ -256,7 +256,7 @@ int robinInitialize(void)
 		}
 	}
 	if (gRobin.firmwareMemBlock > 0)
-		SceSysmemForDriver_009E1C61(gRobin.firmwareMemBlock);
+		sceKernelFreeMemBlock(gRobin.firmwareMemBlock);
 	return result;
 }
 

@@ -372,7 +372,7 @@ int initializeDsp0Videocodec(void)
 			struct ThreadmgrFastMutex *mutex;
 
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(storage != NULL, &dsp0VideocodecCreateStorage,
+			sceKernelAssert(storage != NULL, &dsp0VideocodecCreateStorage,
 					 __builtin_return_address(0));
 #endif
 			global = storage;
@@ -388,7 +388,7 @@ int initializeDsp0Videocodec(void)
 						(SceKernelFastMutex *)global->pMutex);
 					global->pMutex = NULL;
 				}
-				intr = SceCpuForDriver_D32ACE9E(
+				intr = sceKernelSpinlockLowLockCpuSuspendIntr(
 					&global->statusLock);
 				global->status = 0;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(
@@ -414,7 +414,7 @@ int _sceDsp0VideocodecProcessCreateEntry(SceUID pid, SceUInt32 type)
 		struct ThreadmgrFastMutex *mutex;
 
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(storage != NULL, &dsp0VideocodecCreateStorage,
+		sceKernelAssert(storage != NULL, &dsp0VideocodecCreateStorage,
 				 __builtin_return_address(0));
 #endif
 		global = storage;
@@ -429,7 +429,7 @@ int _sceDsp0VideocodecProcessCreateEntry(SceUID pid, SceUInt32 type)
 				sceKernelFinalizeFastMutex((SceKernelFastMutex *)global->pMutex);
 				global->pMutex = NULL;
 			}
-			intr = SceCpuForDriver_D32ACE9E(&global->statusLock);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&global->statusLock);
 			global->status = 0;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&global->statusLock, intr);
 		} else {
@@ -452,7 +452,7 @@ int _sceDsp0VideocodecProcessExitEntry(SceUID pid, SceUInt32 type)
 		SceKernelIntrStatus intr;
 
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(storage != NULL, &dsp0VideocodecExitStorage,
+		sceKernelAssert(storage != NULL, &dsp0VideocodecExitStorage,
 				 __builtin_return_address(0));
 #endif
 		global = storage;
@@ -460,7 +460,7 @@ int _sceDsp0VideocodecProcessExitEntry(SceUID pid, SceUInt32 type)
 			sceKernelFinalizeFastMutex((SceKernelFastMutex *)global->pMutex);
 			global->pMutex = NULL;
 		}
-		intr = SceCpuForDriver_D32ACE9E(&global->statusLock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&global->statusLock);
 		global->status = 0;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&global->statusLock, intr);
 		ret = 0;
@@ -483,11 +483,11 @@ int dsp0VideocodecIsProcessActive(SceUID pid)
 		storage = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
 	}
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(storage != NULL, &dsp0VideocodecGlobalStorage,
+	sceKernelAssert(storage != NULL, &dsp0VideocodecGlobalStorage,
 			 __builtin_return_address(0));
 #endif
 	global = storage;
-	intr = SceCpuForDriver_D32ACE9E(&global->statusLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&global->statusLock);
 	status = global->status;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&global->statusLock, intr);
 	return status == 1;
@@ -509,11 +509,11 @@ int dsp0VideocodecIsProcessSuspended(SceUID pid)
 		storage = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
 	}
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(storage != NULL, &dsp0VideocodecGlobalStorage,
+	sceKernelAssert(storage != NULL, &dsp0VideocodecGlobalStorage,
 			 __builtin_return_address(0));
 #endif
 	global = storage;
-	intr = SceCpuForDriver_D32ACE9E(&global->statusLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&global->statusLock);
 	status = global->status;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&global->statusLock, intr);
 	if (status != 0) {
@@ -526,11 +526,11 @@ int dsp0VideocodecIsProcessSuspended(SceUID pid)
 			storage = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
 		}
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(storage != NULL, &dsp0VideocodecGlobalStorage,
+		sceKernelAssert(storage != NULL, &dsp0VideocodecGlobalStorage,
 				 __builtin_return_address(0));
 #endif
 		global = storage;
-		intr = SceCpuForDriver_D32ACE9E(&global->statusLock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&global->statusLock);
 		status = global->status;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&global->statusLock, intr);
 		suspended = status == 3;
@@ -553,11 +553,11 @@ int dsp0VideocodecProcessResume(SceUID pid)
 		storage = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
 	}
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(storage != NULL, &dsp0VideocodecGlobalStorage,
+	sceKernelAssert(storage != NULL, &dsp0VideocodecGlobalStorage,
 			 __builtin_return_address(0));
 #endif
 	global = storage;
-	intr = SceCpuForDriver_D32ACE9E(&global->statusLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&global->statusLock);
 	status = global->status;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&global->statusLock, intr);
 	if (status == 3) {
@@ -570,11 +570,11 @@ int dsp0VideocodecProcessResume(SceUID pid)
 			storage = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
 		}
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(storage != NULL, &dsp0VideocodecGlobalStorage,
+		sceKernelAssert(storage != NULL, &dsp0VideocodecGlobalStorage,
 				 __builtin_return_address(0));
 #endif
 		global = storage;
-		intr = SceCpuForDriver_D32ACE9E(&global->statusLock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&global->statusLock);
 		global->status = 1;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&global->statusLock, intr);
 	}
@@ -591,7 +591,7 @@ int dsp0VideocodecQueryLibraryMemory(const Dsp0VideocodecInitParam *param,
 
 	global = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(global != NULL, &dsp0VideocodecGlobalStorage,
+	sceKernelAssert(global != NULL, &dsp0VideocodecGlobalStorage,
 			 __builtin_return_address(0));
 #endif
 	if (param == NULL || memorySize == NULL)
@@ -629,7 +629,7 @@ int dsp0VideocodecTermLibraryForProcess(unsigned int codecType, SceUID pid)
 		storage = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
 	}
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(storage != NULL, &dsp0VideocodecGlobalStorage,
+	sceKernelAssert(storage != NULL, &dsp0VideocodecGlobalStorage,
 			 __builtin_return_address(0));
 #endif
 	global = storage;
@@ -652,7 +652,7 @@ int dsp0VideocodecTermLibraryForProcess(unsigned int codecType, SceUID pid)
 		if (global->workMemory != NULL)
 			global->workMemory = NULL;
 		global->initialized = 0;
-		intr = SceCpuForDriver_D32ACE9E(&global->statusLock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&global->statusLock);
 		global->status = 0;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&global->statusLock, intr);
 		sceKernelUnlockFastMutex((SceKernelFastMutex *)global->pMutex);

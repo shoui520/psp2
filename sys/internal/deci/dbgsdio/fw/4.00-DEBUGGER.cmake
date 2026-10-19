@@ -64,18 +64,18 @@ set(MODULE_IMPORT_NIDS
 	0xEB4E3738:F:0xFCE4171A
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	SceSysmemForDriver_0AAA4FDD
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	sceKernelVARangeToPAVector
-	SceCpuForDriver_02796361
-	SceCpuForDriver_103872A5
+	sceKernelDcacheInvalidateRange
+	sceKernelDcacheCleanRange
 	sceKernelIsUncacheAddressInTmpFsGame
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceDebugForDriver_02B04343
-	SceDebugForDriver_35A35322
+	sceKernelAssert
 	SceDebugForDriver_D9703808
 	memset
 	memcpy
@@ -93,7 +93,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelInitializeFastMutex
 	sceKernelSetEventFlag
 	sceKernelUnlockFastMutex
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	sceKernelRegisterSysEventHandler
 	sceKernelUnregisterSysEventHandler
 	ScePervasiveForDriver_701D5355

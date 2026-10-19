@@ -73,7 +73,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCopyToUser
 	sceKernelCopyFromUser
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	memset
 	strncmp
 	__stack_chk_fail

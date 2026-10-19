@@ -488,7 +488,7 @@ int sceRtcSynchronizeCold(void)
 	dipsw = 0;
 	if (raw == 0) {
 		for (i = 0; i < 32; i++) {
-			if (SceDipswForDriver_A98FC2FD(i))
+			if (sceKernelCheckDipsw(i))
 				dipsw |= 1 << i;
 		}
 		g_rtc.initialized = 0;

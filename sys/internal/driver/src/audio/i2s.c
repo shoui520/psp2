@@ -30,7 +30,7 @@ int audioI2sInterruptHandler(int intrCode, void *userCtx)
 	SceKernelIntrStatus intr;
 
 	(void)intrCode;
-	intr = SceCpuForDriver_D32ACE9E(&audioI2sLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&audioI2sLock);
 	if (registers->interruptStatus & 2) {
 		if (audioDmaStates[2].transmitSourceMode == 0) {
 			struct AudioDmaTransfer *transfer =
@@ -84,7 +84,7 @@ int SceAudioForDriver_A8C38998(int port)
 	if ((unsigned int)port - 3 > 4)
 		return -1;
 	audioSelectedI2sPort = port;
-	intr = SceCpuForDriver_D32ACE9E(&audioI2sLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&audioI2sLock);
 	audioEnableI2s(port);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&audioI2sLock, intr);
 	return 0;
@@ -141,7 +141,7 @@ int audioInitializeI2s(void)
 	ScePervasiveForDriver_A1D2E440(1);
 	audioDmaCommandMode = 1;
 	audioSelectedI2sPort = 7;
-	intr = SceCpuForDriver_D32ACE9E(&audioI2sLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&audioI2sLock);
 	audioEnableI2s(7);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&audioI2sLock, intr);
 	return 0;
@@ -152,7 +152,7 @@ int audioEnableI2sLocked(int port)
 	SceKernelIntrStatus intr;
 	int result;
 
-	intr = SceCpuForDriver_D32ACE9E(&audioI2sLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&audioI2sLock);
 	result = audioEnableI2s(port);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&audioI2sLock, intr);
 	return result;

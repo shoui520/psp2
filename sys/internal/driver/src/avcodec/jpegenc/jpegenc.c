@@ -130,7 +130,7 @@ int SceAvcodecForDriver_468949D7(SceJpegEncoderContext context, const void *pYCb
 			control->pJpegEnd = pJpegEnd;
 			alignedOutput = (unsigned int)pJpeg & ~255U;
 			if ((control->option & 1) != 0 && ret >= 0)
-				SceCpuForDriver_02796361((void *)alignedOutput,
+				sceKernelDcacheInvalidateRange((void *)alignedOutput,
 					((unsigned int)pJpeg + 255 - alignedOutput + ret) & ~255U);
 			SceSysmemForDriver_22CBE925(32, (void *)alignedOutput,
 				((unsigned int)pJpeg + 255 - alignedOutput + outputSize) & ~255U);

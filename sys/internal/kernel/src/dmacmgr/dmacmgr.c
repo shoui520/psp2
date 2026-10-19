@@ -99,7 +99,7 @@ void ReleaseDmac4Channel(int index)
 	SceKernelIntrStatus intr;
 	SceUInt32 mask;
 
-	intr = SceCpuForDriver_D32ACE9E(&dmac4->dmac.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&dmac4->dmac.lock);
 	if (!(dmac4->dmac.intrChannels & 0x80000000)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&dmac4->dmac.lock, intr);
 		return;
@@ -126,7 +126,7 @@ void RemoveQueuedDmaOperation(DmaOp *op)
 {
 	DmaController *dmac = op->dmac;
 
-	SceCpuForDriver_BF82DEB2(&dmac->lock);
+	sceKernelSpinlockLowLock(&dmac->lock);
 	if (dmac->head == op)
 		dmac->head = op->next;
 	if (dmac->tail == op)
@@ -417,7 +417,7 @@ static inline void releaseOpChannel(DmaOp *op, DmaChannel *channel)
 	channel->op = NULL;
 	op->channel = NULL;
 	dmac->freeChannels |= channelBit(dmac, channel);
-	intr = SceCpuForDriver_D32ACE9E(&dmac->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&dmac->lock);
 	if (dmac->head != NULL)
 		StartQueuedDmaOperation(dmac, dmac->head);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&dmac->lock, intr);
@@ -438,7 +438,7 @@ void DmacIntrHandler(DmaChannel *channel)
 
 	if (op == NULL)
 		return;
-	SceCpuForDriver_BF82DEB2(&op->lock);
+	sceKernelSpinlockLowLock(&op->lock);
 	SCE_DBG_ASSERT(op->channel == channel, 1897);
 	intrStatus = reg->intrStatus;
 	reg->intrStatus = intrStatus;
@@ -892,7 +892,7 @@ int sceKernelDmaOpFree(SceKernelDmaOpId opid)
 			       opid, op->magic);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&op->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&op->lock);
 	if (!(op->status & DMA_OP_ALLOCATED)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -908,7 +908,7 @@ int sceKernelDmaOpFree(SceKernelDmaOpId opid)
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
 			for (retry = 5; ; ) {
 				sceKernelDelayThread(10);
-				intr = SceCpuForDriver_D32ACE9E(&op->lock);
+				intr = sceKernelSpinlockLowLockCpuSuspendIntr(&op->lock);
 				if (!(op->status & DMA_OP_CANCELING))
 					break;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
@@ -939,7 +939,7 @@ int sceKernelDmaOpAssign(SceKernelDmaOpId opid, SceKernelDmacId dmacId, SceUInt3
 			       opid, op->magic);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&op->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&op->lock);
 	if (!(op->status & DMA_OP_ALLOCATED)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -1001,7 +1001,7 @@ int sceKernelDmaOpSetCallback(SceKernelDmaOpId opid, DmaOpCallback callback, voi
 			       opid, op->magic);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&op->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&op->lock);
 	if (!(op->status & DMA_OP_ALLOCATED)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -1033,7 +1033,7 @@ int sceKernelDmaOpSetupChain(SceKernelDmaOpId opid, SceKernelDmaOpTag *pTag,
 			       opid, op->magic);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&op->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&op->lock);
 	if (pParam != NULL) {
 		if (op->dmacId == SCE_KERNEL_DMAC_ID_DMAC5) {
 			if (pParam->size != sizeof(SceKernelDmaOpEncDecChainParam))
@@ -1152,7 +1152,7 @@ int sceKernelDmaOpConcatenate(SceKernelDmaOpId opid, SceKernelDmaOpTag *pTag,
 			       opid, op->magic);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&op->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&op->lock);
 	if (!(op->status & DMA_OP_ALLOCATED)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -1171,7 +1171,7 @@ int sceKernelDmaOpConcatenate(SceKernelDmaOpId opid, SceKernelDmaOpTag *pTag,
 	if (res >= 0 && done) {
 		/* the operation had finished: queue it again */
 		dmac = op->dmac;
-		SceCpuForDriver_BF82DEB2(&dmac->lock);
+		sceKernelSpinlockLowLock(&dmac->lock);
 		if (dmac->intrChannels == 0) {
 			sceKernelSpinlockLowUnlock(&dmac->lock);
 			res = SCE_KERNEL_ERROR_NOT_UNDER_CONTROL;
@@ -1198,7 +1198,7 @@ int sceKernelDmaOpEnQueue(SceKernelDmaOpId opid)
 			       opid, op->magic);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&op->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&op->lock);
 	if (!(op->status & DMA_OP_ALLOCATED)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -1220,7 +1220,7 @@ int sceKernelDmaOpEnQueue(SceKernelDmaOpId opid)
 		return SCE_KERNEL_ERROR_CANCELING;
 	}
 	dmac = op->dmac;
-	SceCpuForDriver_BF82DEB2(&dmac->lock);
+	sceKernelSpinlockLowLock(&dmac->lock);
 	if (dmac->intrChannels == 0) {
 		sceKernelSpinlockLowUnlock(&dmac->lock);
 		res = SCE_KERNEL_ERROR_NOT_UNDER_CONTROL;
@@ -1320,7 +1320,7 @@ static inline int dmacMemcpySub(DmaOp *op, void *dst, const void *src, SceSize s
 	}
 	sceKernelDeleteEventFlag(op->evfId);
 	/* wait until the interrupt handler is done with the operation */
-	SceCpuForDriver_BF82DEB2(&op->lock);
+	sceKernelSpinlockLowLock(&op->lock);
 	if (cmd & (SCE_KERNEL_DMAC_CMD_COHERENT_SRC | SCE_KERNEL_DMAC_CMD_COHERENT_DST))
 		sceKernelSysrootEnableAutoClockDown();
 	return res;
@@ -1399,7 +1399,7 @@ static inline int dmacMemsetSub(DmaOp *op, SceKernelDmaOpChainParam *param,
 	}
 	sceKernelDeleteEventFlag(op->evfId);
 	/* wait until the interrupt handler is done with the operation */
-	SceCpuForDriver_BF82DEB2(&op->lock);
+	sceKernelSpinlockLowLock(&op->lock);
 	if (tag->cmd & SCE_KERNEL_DMAC_CMD_COHERENT_DST)
 		sceKernelSysrootEnableAutoClockDown();
 	return res;
@@ -1452,7 +1452,7 @@ int sceKernelDmaOpDeQueue(SceKernelDmaOpId opid)
 			       opid, op->magic);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&op->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&op->lock);
 	if (!(op->status & DMA_OP_ALLOCATED)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -1490,7 +1490,7 @@ int sceKernelDmaOpSync(SceKernelDmaOpId opid, SceKernelDmaOpSyncMode syncMode,
 			       opid, op->magic);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&op->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&op->lock);
 	if (!(op->status & DMA_OP_ALLOCATED)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -1535,7 +1535,7 @@ int sceKernelDmaOpSync(SceKernelDmaOpId opid, SceKernelDmaOpSyncMode syncMode,
 	if (res < 0)
 		return res;
 	if (ppErrorTag != NULL) {
-		intr = SceCpuForDriver_D32ACE9E(&op->lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&op->lock);
 		if (op->magic == DMA_OP_MAGIC)
 			*ppErrorTag = op->errorTag;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
@@ -1555,7 +1555,7 @@ int sceKernelDmaOpQuit(SceKernelDmaOpId opid)
 			       opid, op->magic);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&op->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&op->lock);
 	if (!(op->status & DMA_OP_ALLOCATED)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -1573,7 +1573,7 @@ int sceKernelDmaOpQuit(SceKernelDmaOpId opid)
 			for (retry = 5; ; ) {
 				if (!SceIntrmgrForDriver_182EE3E3() && intr != 0)
 					sceKernelDelayThread(10);
-				intr = SceCpuForDriver_D32ACE9E(&op->lock);
+				intr = sceKernelSpinlockLowLockCpuSuspendIntr(&op->lock);
 				if (!(op->status & DMA_OP_CANCELING))
 					break;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
@@ -1649,7 +1649,7 @@ int SceDmacmgrForDriver_BCBB5E85(int dmac, SceUInt32 channel)
 	}
 	if (channel > 1 && channel != 0xffff)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	intr = SceCpuForDriver_D32ACE9E(&ctrl->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctrl->lock);
 	if (channel == 0xffff) {
 		ReleaseDmacChannel(intrCode, ctrl, first);
 		ReleaseDmacChannel(intrCode + 1, ctrl, first + 2);
@@ -1717,8 +1717,8 @@ int module_start(SceSize args, void *argp)
 	s_dmacMgr.dmac3Reg = mapDmac("SceDmacmgrDmac3Reg", DMAC3_REG_BASE);
 	s_dmacMgr.dmac4Reg = mapDmac("SceDmacmgrDmac4Reg", DMAC4_REG_BASE);
 	s_dmacMgr.dmac5Reg = mapDmac("SceDmacmgrDmac5Reg", DMAC5_REG_BASE);
-	if (SceDipswForDriver_A98FC2FD(0x9f) || SceDipswForDriver_A98FC2FD(0xc0) ||
-	    SceDipswForDriver_A98FC2FD(0xc1) || SceDipswForDriver_A98FC2FD(0xc2))
+	if (sceKernelCheckDipsw(0x9f) || sceKernelCheckDipsw(0xc0) ||
+	    sceKernelCheckDipsw(0xc1) || sceKernelCheckDipsw(0xc2))
 		s_dmacMgr.dmac6Reg = mapDmac("SceDmacmgrDmac6Reg", DMAC6_REG_BASE);
 	else
 		s_dmacMgr.dmac6Reg = NULL;

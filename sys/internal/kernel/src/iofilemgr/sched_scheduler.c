@@ -935,7 +935,7 @@ int sceIoSchedulerAddIoRequest(IoScheduler *sched, IoRequest *req)
 		ret = sceIoSchedulerNeedsIoChunks(sched, req);
 		priority = req->priority;
 		if (ret == 1) {
-			ret = SceDipswForDriver_A98FC2FD(0xe7);
+			ret = sceKernelCheckDipsw(0xe7);
 			priority = req->priority;
 			if (ret == 0) {
 				if (priority > 10 && (req->cacheFlags != 0 || req->isWrite == 1))

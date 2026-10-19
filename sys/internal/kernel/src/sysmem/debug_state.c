@@ -37,9 +37,9 @@ extern int s_crashDumpEnabled;
 /* name unknown: the assertion level from the DIP switches, crash dumps on */
 int InitializeAssertLevel(const struct SysmemBootContext *context)
 {
-	if (SceDipswForDriver_A98FC2FD(DIPSW_ASSERT_LEVEL_2))
+	if (sceKernelCheckDipsw(DIPSW_ASSERT_LEVEL_2))
 		s_assertLevel = 2;
-	else if (SceDipswForDriver_A98FC2FD(DIPSW_ASSERT_LEVEL_1))
+	else if (sceKernelCheckDipsw(DIPSW_ASSERT_LEVEL_1))
 		s_assertLevel = 1;
 	s_crashDumpHandler = NULL;
 	if (!(SysrootGetBootTypeIndicator2() & BOOT_NO_CRASH_DUMP))
@@ -76,7 +76,7 @@ void SceDebugForDriver_FD753E7A(SceUInt32 level, SceBool condition,
 			   const SceKernelDebugInfo *info, const void *caller)
 {
 	if ((int32_t)level <= (int32_t)s_assertLevel)
-		SceDebugForDriver_35A35322(condition, info, caller);
+		sceKernelAssert(condition, info, caller);
 }
 
 uintptr_t SceDebugForKernel_8D474850(void)

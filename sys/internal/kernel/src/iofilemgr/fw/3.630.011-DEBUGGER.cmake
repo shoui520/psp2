@@ -222,7 +222,7 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_FA54D49A
 	sceKernelCreateMutex
 	sceKernelUserUnmap
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceGUIDReferObjectWithClass
 	sceGUIDClose
 	sceGUIDReleaseObject
@@ -259,7 +259,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_A4884C4E
 	SceCpuForDriver_CDA96E81
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceDebugForDriver_02B04343
 	SceDebugForDriver_391B5B74
 	SceDebugForDriver_391B74B7
@@ -302,7 +302,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterInitCallback
 	sceKernelApiDeclareTypeInt64
 	sceKernelRegisterProcEventHandler
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	sceKernelRegisterSysEventHandler
 	ScePfsFacadeForKernel_04352D52
 	ScePfsFacadeForKernel_4238D2D2

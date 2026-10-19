@@ -97,7 +97,7 @@ TTYP_INLINE void ttypReleaseResource(TtypResource *r)
 {
 	SceKernelIntrStatus intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&s_resourceLock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_resourceLock);
 	memset(r, 0, sizeof(*r));
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_resourceLock, intr);
 	sceKernelSignalSema(s_sema, 1);
@@ -496,7 +496,7 @@ TTYP_INLINE int TtypInit(void)
 
 int TtypModuleStart(SceSize args, void *argp)
 {
-	if (!SceDipswForDriver_A98FC2FD(0xc2) || !SceDipswForDriver_A98FC2FD(0xc7)) {
+	if (!sceKernelCheckDipsw(0xc2) || !sceKernelCheckDipsw(0xc7)) {
 		SCE_DBG_PRINTF(0xb, 172, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
@@ -776,7 +776,7 @@ int TtypWrite(int unit, const void *data, SceSize size, const SceUID *pid)
 	}
 
 	mode = 0;
-	ScePmMgrForDriver_2AC815A2((SceProductMode *)&mode);
+	sceSblPmMgrGetProductMode((SceProductMode *)&mode);
 	if (mode == 0) {
 		if (size != 0) {
 			if ((ch->flags & TTYP_CH_ENABLED) && !(ch->in->flags & TTYP_IN_STOPPED))

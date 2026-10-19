@@ -476,12 +476,12 @@ int module_start(SceSize args, void *argp)
 {
 	SceProductMode mode = 0;
 
-	if (!SceDipswForDriver_A98FC2FD(0xc1) || !SceDipswForDriver_A98FC2FD(0xc6)) {
+	if (!sceKernelCheckDipsw(0xc1) || !sceKernelCheckDipsw(0xc6)) {
 		if (SceCpuId() == 0)
 			SceDebugForDriver_391B74B7("STTYP is disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
-	if (ScePmMgrForDriver_2AC815A2(&mode) < 0)
+	if (sceSblPmMgrGetProductMode(&mode) < 0)
 		return SCE_KERNEL_START_SUCCESS;
 	return mode == 1 ? SCE_KERNEL_START_NO_RESIDENT : SCE_KERNEL_START_SUCCESS;
 }

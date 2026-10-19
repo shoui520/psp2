@@ -519,7 +519,7 @@ unregisterThread:
 unregisterSystem:
 	sceKernelUnregisterSysEventHandler(systemId);
 freeMemory:
-	SceSysmemForDriver_009E1C61(memoryId);
+	sceKernelFreeMemBlock(memoryId);
 	return 2;
 }
 

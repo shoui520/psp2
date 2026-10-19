@@ -36,7 +36,7 @@ int pfsBufferListInit(ScePfsBufferList *list, const char *name, SceSize elementS
 	}
 	ret = sceKernelGetMemBlockBase(list->memBlock, (void **)&base);
 	if (ret != 0) {
-		SceSysmemForDriver_009E1C61(list->memBlock);
+		sceKernelFreeMemBlock(list->memBlock);
 		goto deleteMutex;
 	}
 
@@ -63,7 +63,7 @@ deleteMutex:
 
 void pfsBufferListTerm(ScePfsBufferList *list)
 {
-	SceSysmemForDriver_009E1C61(list->memBlock);
+	sceKernelFreeMemBlock(list->memBlock);
 	sceKernelDeleteMutex(list->mutex);
 }
 

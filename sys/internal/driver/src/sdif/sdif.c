@@ -69,7 +69,7 @@ int sdifEnableSubIntr(int interrupt, int subInterrupt)
 	uint32_t mask;
 	int result;
 
-	intrState = SceCpuForDriver_D32ACE9E(&context->port.lock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&context->port.lock);
 	if ((unsigned int)(subInterrupt - 2) <= 6) {
 		result = sdifEnableFunctionInterrupt(context, subInterrupt - 1);
 		if (result != 0) {
@@ -110,7 +110,7 @@ int sdifDisableSubIntr(int interrupt, int subInterrupt)
 	uint32_t mask;
 	int result;
 
-	intrState = SceCpuForDriver_D32ACE9E(&context->port.lock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&context->port.lock);
 	if ((unsigned int)(subInterrupt - 2) <= 6) {
 		result = sdifDisableFunctionInterrupt(context, subInterrupt - 1);
 		if (result != 0) {
@@ -351,7 +351,7 @@ int SceSdifForDriver_E5E5F42E(void)
 		context = &gSdifContexts[0];
 		do {
 			port = &context->port;
-			intrState = SceCpuForDriver_D32ACE9E(&port->lock);
+			intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
 			registers = port->registers;
 			__builtin_prefetch(&context[2].port.registers);
 			__builtin_prefetch(&context[2].port.part);
@@ -368,8 +368,8 @@ int SceSdifForDriver_E5E5F42E(void)
 			sceKernelReleaseIntrHandler(interrupt);
 			sceKernelDeleteEventFlag(port->eventFlag);
 			sceKernelFinalizeFastMutex(&port->mutex);
-			SceSysmemForDriver_009E1C61(port->descriptorMemblock);
-			SceSysmemForDriver_009E1C61(port->registerMemblock);
+			sceKernelFreeMemBlock(port->descriptorMemblock);
+			sceKernelFreeMemBlock(port->registerMemblock);
 			ScePervasiveForDriver_3D8A8712(index);
 			ScePervasiveForDriver_4E43299D(index);
 			context++;
@@ -533,7 +533,7 @@ int sceSdifResume0(int phase, int event)
 					do {
 						port = &context->port;
 						port->polling = 1;
-						intrState = SceCpuForDriver_D32ACE9E(&port->lock);
+						intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
 						_sceSdifReset(context, 3);
 						sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 						if (index != 0) {
@@ -566,7 +566,7 @@ int sceSdifResume0(int phase, int event)
 		do {
 			port = &context->port;
 			sceKernelDisableIntr(index + 220);
-			intrState = SceCpuForDriver_D32ACE9E(&port->lock);
+			intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
 			registers = port->registers;
 			__builtin_prefetch(&context[3].port.registers);
 			registers->clockControl = 0;
@@ -675,7 +675,7 @@ int sceSdifInit(void)
 			sdifCommandQueuePush(&port->freeCommands, command++);
 		} while (commandIndex != 16);
 		++index;
-		intrState = SceCpuForDriver_D32ACE9E(&port->lock);
+		intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
 		_sceSdifReset(context, 3);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 		sceKernelEnableIntr(interrupt);
@@ -703,9 +703,9 @@ deleteEventFlag:
 finalizeMutex:
 	sceKernelFinalizeFastMutex(&port->mutex);
 freeDescriptors:
-	SceSysmemForDriver_009E1C61(port->descriptorMemblock);
+	sceKernelFreeMemBlock(port->descriptorMemblock);
 freeRegisters:
-	SceSysmemForDriver_009E1C61(port->registerMemblock);
+	sceKernelFreeMemBlock(port->registerMemblock);
 cleanupPorts:
 	if (index != 0) {
 		commandIndex = 0;
@@ -718,8 +718,8 @@ cleanupPorts:
 			sceKernelReleaseIntrHandler(interrupt);
 			sceKernelDeleteEventFlag(port->eventFlag);
 			sceKernelFinalizeFastMutex(&port->mutex);
-			SceSysmemForDriver_009E1C61(port->descriptorMemblock);
-			SceSysmemForDriver_009E1C61(port->registerMemblock);
+			sceKernelFreeMemBlock(port->descriptorMemblock);
+			sceKernelFreeMemBlock(port->registerMemblock);
 			context++;
 			commandIndex++;
 		} while (commandIndex != index);
@@ -737,7 +737,7 @@ int sceSdifReset(SdifContextGlobal *context, int flags)
 	SceKernelIntrStatus intrState;
 	int result;
 
-	intrState = SceCpuForDriver_D32ACE9E(&context->port.lock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&context->port.lock);
 	result = _sceSdifReset(context, flags);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&context->port.lock, intrState);
 	return result;
@@ -750,7 +750,7 @@ int sdifPowerOn(SdifContextGlobal *context, uint8_t powerControl)
 	volatile SdifHostRegisters *registers;
 	int retries = 102;
 
-	intrState = SceCpuForDriver_D32ACE9E(&port->lock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
 	registers = port->registers;
 	while (!(registers->presentState & 0x20000)) {
 		if (port->index == 1 && --retries == 0)
@@ -794,7 +794,7 @@ int sdifSetClock(SdifContextGlobal *context, uint32_t frequency, int highSpeed)
 	int retries = 41;
 	volatile int delay;
 
-	intrState = SceCpuForDriver_D32ACE9E(&context->port.lock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&context->port.lock);
 	if (frequency > 47999999)
 		shift = 0;
 	else if (frequency > 23999999)
@@ -847,7 +847,7 @@ int sdifSetBusWidth(SdifContextGlobal *context, int width)
 	SceKernelIntrStatus intrState;
 	uint8_t hostControl;
 
-	intrState = SceCpuForDriver_D32ACE9E(&port->lock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
 	registers = port->registers;
 	port->busWidth = width;
 	hostControl = registers->hostControl;
@@ -909,7 +909,7 @@ int sceSdifInterrupt(int interrupt, SdifContextGlobal *context, unsigned int int
 	int removed = 0;
 	SdifCommand *command;
 
-	intrState = SceCpuForDriver_D32ACE9E(&port->lock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
 	normalStatus = registers->normalInterruptStatus;
 	errorStatus = registers->errorInterruptStatus;
 	if (errorStatus & 0x200) {
@@ -1268,7 +1268,7 @@ int sceSdifWaitCmdCompletionCore(SdifCommand *command)
 			SceKernelIntrStatus intrState;
 			SdifCommand *current;
 
-			intrState = SceCpuForDriver_D32ACE9E(&port->lock);
+			intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
 			current = port->currentCommand;
 			if (current) {
 				current->errorCode = 0x80320021;
@@ -1329,7 +1329,7 @@ int sceSdifSendSyncCmd(SdifContextGlobal *context, SdifCommand *command,
 		SceKernelIntrStatus intrState;
 		SdifCommand *completion;
 
-		intrState = SceCpuForDriver_D32ACE9E(&port->lock);
+		intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
 		if (checkCard && (!(port->registers->powerControl & 1) || !port->deviceType)) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 			result = 0x8032001a;
@@ -1375,7 +1375,7 @@ SdifCommand *sdifRemovePendingCommand(SdifContextGlobal *context, unsigned int i
 	SceKernelIntrStatus intrState;
 	SdifCommand *command;
 
-	intrState = SceCpuForDriver_D32ACE9E(lock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
 	command = sdifCommandQueueRemove(&context->port.pendingCommands, index);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
 	return command;
@@ -1392,7 +1392,7 @@ int sdifWaitPendingCommand(SdifContextGlobal *context, unsigned int index,
 	int result;
 
 	(void)reserved;
-	intrState = SceCpuForDriver_D32ACE9E(lock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
 	command = context->port.currentCommand;
 	if (!command || command->index != index)
 		command = sdifCommandQueueFind(&context->port.pendingCommands, index);
@@ -1424,7 +1424,7 @@ int sdifGetCommandState(SdifContextGlobal *context, unsigned int index)
 	SceKernelIntrStatus intrState;
 	SdifCommand *command;
 
-	intrState = SceCpuForDriver_D32ACE9E(lock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
 	command = context->port.currentCommand;
 	if (command && command->index == index) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
@@ -1491,7 +1491,7 @@ int sdifSendAsyncCommand(SdifContextGlobal *context, SdifCommand *command,
 		}
 	}
 	lock = &context->port.lock;
-	intrState = SceCpuForDriver_D32ACE9E(lock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
 	if ((context->port.registers->powerControl & 1) && context->port.deviceType) {
 		if (context->port.currentCommand) {
 			sdifCommandQueuePush(&context->port.pendingCommands, command);
@@ -1763,7 +1763,7 @@ int sdifResetCard(SdifContextGlobal *context)
 complete:
 	if (result < 0)
 		return result;
-	intrState = SceCpuForDriver_D32ACE9E(&port->lock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
 	registers = port->registers;
 	registers->clockControl = 0;
 	registers->clockControl = 0x4001;
@@ -1779,7 +1779,7 @@ complete:
 	registers->hostControl &= ~4U;
 unlock:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
-	intrState = SceCpuForDriver_D32ACE9E(&port->lock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
 	registers = port->registers;
 	port->busWidth = 1;
 	registers->hostControl &= 0xdd;
@@ -2140,7 +2140,7 @@ int SceSdifForDriver_6CC8E28D(unsigned int index)
 	}
 	result = sceSdifSendSyncCmd(context, command, NULL, 0, 0);
 	if (!result && (command->response[0] & 0x1e00) == 0x800) {
-		intrState = SceCpuForDriver_D32ACE9E(&port->lock);
+		intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
 		if (!port->part) {
 			port->deviceType = port->removedDeviceType;
 			port->part = port->removedPart;
@@ -2173,7 +2173,7 @@ int SceSdifForDriver_B83F7518(unsigned int index, SdifCommandInfo *info)
 		return 0x80320001;
 	context = &gSdifContexts[index];
 	port = &context->port;
-	intrState = SceCpuForDriver_D32ACE9E(&port->lock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
 	command = sdifCommandQueuePop(&port->freeCommands);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 	if (!command)
@@ -2222,7 +2222,7 @@ complete:
 	}
 release:
 	port->lastTransferTime = command->endTime - command->startTime;
-	intrState = SceCpuForDriver_D32ACE9E(&port->lock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
 	command->state = 0;
 	sdifCommandQueuePush(&port->freeCommands, command);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
@@ -2275,7 +2275,7 @@ SdifCommand *sdifAllocateCommandLocked(SdifContextGlobal *context)
 	SdifCommand *command;
 	int intrState;
 
-	intrState = SceCpuForDriver_D32ACE9E(lock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
 	command = sdifCommandQueuePop(&context->port.freeCommands);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
 	return command;
@@ -2292,7 +2292,7 @@ void sdifFreeCommandLocked(SdifContextGlobal *context, SdifCommand *command)
 	SceKernelSpinlock *lock = &context->port.lock;
 	int intrState;
 
-	intrState = SceCpuForDriver_D32ACE9E(lock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
 	command->state = 0;
 	sdifCommandQueuePush(&context->port.freeCommands, command);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);

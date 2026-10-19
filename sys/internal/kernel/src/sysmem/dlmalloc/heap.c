@@ -424,7 +424,7 @@ static int HeapEnableDiableMode(SceUID uid, SceUInt32 mode, int enable)
 		SCE_DBG_PRINTF(0xb, 995, "UIDtoHeap(0x%08x) failed\n", uid);
 		return SCE_KERNEL_ERROR_ILLEGAL_HEAP_ID;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&heap->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	if (enable)
 		heap->flags |= mode;
 	else
@@ -489,7 +489,7 @@ __attribute__((flatten)) static int HeapObjectFree(void *object, void *ptr)
 	KernelHeap *heap = object;
 	int intr, ret;
 
-	intr = SceCpuForDriver_D32ACE9E(&heap->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	ret = HeapFree(heap, ptr);
 #if FW_DEBUG
 	if (s_hooks.free != NULL)
@@ -581,7 +581,7 @@ int sceKernelShrinkHeap(SceUID uid)
 		SCE_DBG_PRINTF(0xb, 966, "UIDtoHeap(0x%08x) failed\n", uid);
 		return SCE_KERNEL_ERROR_ILLEGAL_HEAP_ID;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&heap->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	ret = mspace_release_unused_segment(heap->msp);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&heap->lock, intr);
 	sceGUIDReleaseObject(uid);
@@ -603,7 +603,7 @@ int SceSysmemForKernel_6E82D5A0(SceUID uid, SceUInt32 mode)
 /* name unknown: the heap's lock taken; returns the interrupt state */
 int HeapLock(KernelHeap *heap)
 {
-	return SceCpuForDriver_D32ACE9E(&heap->lock);
+	return sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 }
 
 /* name unknown */
@@ -656,7 +656,7 @@ static int HeapObjectAlloc(void *object, SceSize size, void **ptr)
 	void *mem;
 	int intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&heap->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	mem = HeapAllocPrologue(heap, size, 0);
 #if FW_DEBUG
 	if (mem != NULL && s_hooks.alloc != NULL)
@@ -678,7 +678,7 @@ static void *HeapAllocHeapMemoryWithOption(KernelHeap *heap, SceSize size,
 	void *ptr;
 	int intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&heap->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	if (opt == NULL) {
 		ptr = HeapAllocPrologue(heap, size, 0);
 	} else {
@@ -811,7 +811,7 @@ int sceKernelFreeHeapMemory(SceUID uid, void *ptr)
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 1406, "sceKernelFreeHeapMemory");
 		return SCE_KERNEL_ERROR_ILLEGAL_HEAP_ID;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&heap->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	ret = HeapFree(heap, ptr);
 #if FW_DEBUG
 	if (ret == 0 && s_hooks.free != NULL)
@@ -845,7 +845,7 @@ static int HeapObjectDestroy(SceObjectBase *object)
 	KernelHeap *heap = (KernelHeap *)object;
 	int intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&heap->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	destroy_mspace(heap->msp);
 	if (heap->blocks != NULL) {
 		CheckBlock(heap);
@@ -868,7 +868,7 @@ int sceKernelVerifyHeap(SceUID uid, void *ptr)
 		SCE_DBG_ASSERT_FAIL(1425);
 		return SCE_KERNEL_ERROR_ILLEGAL_HEAP_ID;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&heap->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	ret = mspace_verify_all_chunk(heap->msp, heap->name, ptr);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&heap->lock, intr);
 	sceGUIDReleaseObject(uid);
@@ -905,7 +905,7 @@ int SceSysmemForKernel_4233C16D(void *ptr)
 	KernelHeap *heap = s_kernelHeap;
 	int intr, ret;
 
-	intr = SceCpuForDriver_D32ACE9E(&heap->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	ret = HeapFree(heap, ptr);
 #if FW_DEBUG
 	if (ret == 0 && s_hooks.free != NULL) {
@@ -1057,7 +1057,7 @@ void *sceKernelDlMmap(KernelHeap *heap, SceSize size)
 		heap->peakSize = total;
 	heap->size = total;
 	if (heap->code == HEAP_CODE_UNCACHED_1 || heap->code == HEAP_CODE_UNCACHED_2)
-		SceCpuForDriver_02796361(base, mapSize);
+		sceKernelDcacheInvalidateRange(base, mapSize);
 	if (heap->mmapResult != NULL) {
 		heap->mmapResult->base = base;
 		heap->mmapResult->size = mapSize;
@@ -1153,7 +1153,7 @@ int sceKernelGetHeapInfoByPtr(void *object, void *pInfo)
 		ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
 		goto out;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&heap->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	uid = SceSysmemForKernel_EC90AA11((SceObjectBase *)heap);
 	if (uid < 0)
 		info->uid = 0;
@@ -1240,7 +1240,7 @@ int SceSysmemForKernel_BF70207B(SceUID uid, SceUInt32 level, SceUInt32 max,
 	ret = sceGUIDReferObjectWithLevel(uid, level, (SceObjectBase **)&heap);
 	if (ret < 0)
 		return ret;
-	intr = SceCpuForDriver_D32ACE9E(&heap->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	if (heap->flags & HEAP_HAS_MEMBLOCK) {
 		ret = 1;
 		if (list != NULL) {

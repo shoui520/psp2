@@ -66,13 +66,13 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSysrootSetModulePrivate
 	SceSysrootForKernel_CC85905B
 	sceKernelSysrootBacktrace
-	SceSysrootForKernel_D7198963
+	sceKernelIsColdBoot
 	sceKernelSysrootReturnFromExcpToThread
 	sceKernelCpuId
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_9CB9F0CE
-	SceCpuForDriver_BF82DEB2
-	SceCpuForDriver_D32ACE9E
+	sceKernelDcacheCleanRangeForL1WBWA
+	sceKernelSpinlockLowLock
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	SceCpuForKernel_803C84BF
 	SceCpuForKernel_C32687D0

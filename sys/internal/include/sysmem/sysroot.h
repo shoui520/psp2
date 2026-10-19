@@ -48,7 +48,7 @@ struct SysrootProfiler;
 
 #include <buserror/buserror_types.h>
 
-/* the sysroot shared memory (SceSysrootForKernel_C8C8C321), name unknown */
+/* the sysroot shared memory (sceKernelSysrootGetSharedMemory), name unknown */
 typedef struct SceSysrootSharedMemory {
 	SceUInt8 secure[0x1000];		/* its address goes to the secure monitor (intrmgr) */
 	char tty[0x1000];			/* the TTY log at a crash or bus error */
@@ -56,7 +56,7 @@ typedef struct SceSysrootSharedMemory {
 	BusErrorRecord busError;		/* 0x6000 */
 } SceSysrootSharedMemory;
 
-void *SceSysrootForKernel_C8C8C321(void);	/* vitasdk: ksceKernelSysrootGetSharedMemory */
+void *sceKernelSysrootGetSharedMemory(void);
 
 /* the SELF images sysroot keeps for the secure modules (SceSysrootForKernel_F10AB792) */
 #define SCE_KERNEL_SYSROOT_SELF_INDEX_GCAUTHMGR_SM			0
@@ -78,7 +78,7 @@ SceUInt32 SceSysrootForDriver_55392965(void);	/* vitasdk: ksceSysrootUseExternal
 
 static inline SceSysrootSharedMemory *sysrootSharedMemory(void)
 {
-	return (SceSysrootSharedMemory *)SceSysrootForKernel_C8C8C321();
+	return (SceSysrootSharedMemory *)sceKernelSysrootGetSharedMemory();
 }
 
 /* Name unknown: returns the hardware model classification. */
@@ -210,7 +210,7 @@ uint32_t SceSysrootForKernel_4373AC96(void);	/* vitasdk: ksceSysrootIsBsodReboot
 int SceSysrootForKernel_834439A7(void);	/* vitasdk: ksceSysrootIsSafeMode */
 uint32_t SceSysrootForKernel_B0E1FC67(void);	/* vitasdk: ksceSysrootIsUpdateMode */
 int SceSysrootForKernel_79C9AE10(void);	/* vitasdk: ksceSysrootIsUsbEnumWakeup */
-int SceSysrootForKernel_D7198963(void);	/* vitasdk: ksceKernelIsColdBoot */
+int sceKernelIsColdBoot(void);
 /* nonzero when the model has the capability (1: multiple controller ports) */
 /* vitasdk: ksceKernelSysrootCheckModelCapability */
 unsigned int SceSysrootForDriver_8AA268D6(unsigned int capability);
@@ -396,7 +396,6 @@ int SceSysrootForKernel_CD4B84F7(void *buffer, SceSize size);
 int SceSysrootForKernel_CD8B5D37(uint32_t a0, uint32_t a1, uint32_t a2);
 void SceSysrootForKernel_D02281A8(void);
 int SceSysrootForKernel_D29BCA77(const SysrootProcessmgrRuntimeOps *ops);
-/* vitasdk: ksceKernelAllocHeapMemory2 */
 void *sceKernelSysrootAllocRemoteProcessHeap(SceUID pid, SceSize size, void *opt);
 uint32_t SceSysrootForKernel_D3872270(void);	/* vitasdk: ksceSysrootGetFactorySystemSwVersion */
 SceUID SceSysrootForKernel_D441DC34(void);
@@ -438,7 +437,6 @@ void sceKernelSysrootSetStatus(uint32_t status);
 int sceKernelSysrootThreadMgrStartAfterProcess(void);
 
 /* the secure kernel's SceSysrootForTZS (the names of 0.990's import stubs) */
-void *sceKernelSysrootGetSharedMemory(void);
 const struct SceKblParam *sceKernelSysrootGetKblParam(void);
 unsigned int sceKernelSysrootGetErnieWakeupFactor(void);
 unsigned int *sceKernelSysrootGetVbaseResetVector(void);	/* the exception vector page */

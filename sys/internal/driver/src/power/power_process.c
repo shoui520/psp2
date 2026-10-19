@@ -22,7 +22,7 @@ static inline __attribute__((always_inline)) void updateGpuWirelessLimits(void)
 	int maximum = 0, unlimited;
 
 	powerLockClockControl();
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	for (process = s_powerProcessList; process; process = process->next) {
 		if (!process->clockExcluded) {
 			if (process->clockFrequency[POWER_PROCESS_CLOCK_GPU] > maximum)
@@ -73,7 +73,7 @@ void powerRecomputeClockFrequencies(void)
 	int unlimited;
 
 	powerLockClockControl();
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	for (process = s_powerProcessList; process; process = process->next) {
 		if (process->clockExcluded)
 			continue;
@@ -120,7 +120,7 @@ int powerInitializeKernelProcessState(void)
 
 	s_powerProcessList = NULL;
 	powerResetProcessClockFlags();
-	override = SceDipswForDriver_A98FC2FD(0x9f) && SceDipswForDriver_A98FC2FD(0xec);
+	override = sceKernelCheckDipsw(0x9f) && sceKernelCheckDipsw(0xec);
 	powerInitializeProcessClockFlags(override);
 	result = SceProcessmgrForDriver_AF80F39C(SCE_KERNEL_PROCESS_ID,
 			s_processStorageKey, (void **)&state, 1);
@@ -135,7 +135,7 @@ int powerInitializeKernelProcessState(void)
 	state->clockFrequency[POWER_PROCESS_CLOCK_BUS] = 222;
 	state->clockFrequency[POWER_PROCESS_CLOCK_ARM] = 333;
 	powerInitializeProcessIdleState(state);
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	state->next = s_powerProcessList;
 	s_powerProcessList = state;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
@@ -171,7 +171,7 @@ void powerCreateProcessState(SceUID pid)
 	if (pid != SCE_KERNEL_PROCESS_ID && game)
 		sceKernelSysrootDisableAutoClockDown();
 	powerInitializeProcessIdleState(state);
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	state->next = s_powerProcessList;
 	s_powerProcessList = state;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
@@ -197,7 +197,7 @@ static inline __attribute__((always_inline)) void powerUnlinkProcessState(SceUID
 	if (SceProcessmgrForDriver_AF80F39C(pid,
 			s_processStorageKey, (void **)&state, 0) < 0)
 		return;
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	if (s_powerProcessList == state)
 		s_powerProcessList = state->next;
 	else {
@@ -270,7 +270,7 @@ static inline __attribute__((always_inline)) int setProcessClockFrequency(SceUID
 	state->clockFrequency[lane] = frequency;
 	/* The native caller deliberately ignores the outer lock result. */
 	powerLockClockControl();
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	for (process = s_powerProcessList; process; process = process->next) {
 		int requested = process->clockFrequency[lane];
 
@@ -390,7 +390,7 @@ static inline __attribute__((always_inline)) int setProcessGpuFrequency(SceUID p
 		return result;
 	state->clockFrequency[POWER_PROCESS_CLOCK_GPU] = frequency;
 	powerLockClockControl();
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	for (process = s_powerProcessList; process; process = process->next)
 		if (!process->clockExcluded && process->clockFrequency[POWER_PROCESS_CLOCK_GPU] > maximum)
 			maximum = process->clockFrequency[POWER_PROCESS_CLOCK_GPU];
@@ -456,7 +456,7 @@ int powerSetProcessConfigurationFlags(uint32_t mask, uint32_t enabled)
 	if (!((previous ^ current) & 0x30))
 		return 0;
 	powerLockClockControl();
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
 	for (process = s_powerProcessList; process; process = process->next) {
 		if (!process->clockExcluded)
 			flags |= process->wirelessFlags;

@@ -258,7 +258,7 @@ int sharedFbReleaseProcess(SceUID processId)
 	process = &port->processes[index];
 	if (!process)
 		goto done;
-	result = SceSysmemForDriver_009E1C61(process->shareMemBlock);
+	result = sceKernelFreeMemBlock(process->shareMemBlock);
 	if (result < 0) {
 		sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
 		return result;
@@ -434,7 +434,7 @@ SceUID sceSharedFbCreate(int index, const SceSharedFbCreate *param)
 	sceKernelDeleteEventFlag(beginEvent);
 	sceKernelDeleteEventFlag(endEvent);
 freeMemBlock:
-	SceSysmemForDriver_009E1C61(memBlock);
+	sceKernelFreeMemBlock(memBlock);
 done:
 	sceSyscallLeave(syscallState);
 	return result;
@@ -494,7 +494,7 @@ int sceSharedFbDelete(SceUID fbId)
 	memset(port->assignedPids, -1, sizeof(port->assignedPids));
 	memset(port->requestedPids, -1, sizeof(port->requestedPids));
 	sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
-	result = SceSysmemForDriver_009E1C61(memBlock);
+	result = sceKernelFreeMemBlock(memBlock);
 	if (result < 0)
 		goto done;
 	result = SceSysmemForDriver_84A4AF5E(ownerPid, fbId);

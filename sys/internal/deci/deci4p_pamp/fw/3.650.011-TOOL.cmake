@@ -148,7 +148,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePamgrForDriver_FB04BBEF
 	ScePamgrForDriver_FB46C3CD
 	SceSysrootForDriver_39F1FD07
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	sceDfMgrOpen
 	sceDfMgrRecv
 	SceDeci4pDfMgrForDebugger_6D26CC56

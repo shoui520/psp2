@@ -40,7 +40,7 @@ int udcdRegisterCallback(SceUID callback, SceUID process, unsigned int mask)
 		return UDCD_ERROR_NO_THREAD;
 	if (sceKernelGetThreadmgrUIDClass(callback) != UDCD_THREADMGR_CLASS_CALLBACK)
 		return UDCD_ERROR_INVALID_ARGUMENT;
-	status = SceCpuForDriver_D32ACE9E(&state->lock);
+	status = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	if (state->callbackThread != -1 && thread != state->callbackThread) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 		return UDCD_ERROR_BUSY;
@@ -66,7 +66,7 @@ int udcdUnregisterCallback(SceUID process, SceUID thread)
 	struct udcdBusState *state = &udcdState.buses[2];
 	SceKernelIntrStatus status;
 
-	status = SceCpuForDriver_D32ACE9E(&state->lock);
+	status = sceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	if (state->callbackProcess != process && state->callbackThread != thread) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 		return UDCD_ERROR_INVALID_ARGUMENT;

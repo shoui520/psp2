@@ -227,12 +227,12 @@ int _audiodecInternalInitLibrary(AudiodecWorkManager *manager,
 	} else {
 		if (totalSize > manager->contextSize) {
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(0, &initLibraryContextSize, caller);
+			sceKernelAssert(0, &initLibraryContextSize, caller);
 #endif
 			return SCE_AUDIODEC_ERROR_OUT_OF_MEMORY;
 		}
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(manager->pContext != NULL, &initLibraryContext, caller);
+		sceKernelAssert(manager->pContext != NULL, &initLibraryContext, caller);
 #endif
 		storage = manager->pContext;
 	}
@@ -425,7 +425,7 @@ releaseExternal:
 	if (ret < 0)
 		return ret;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(virtualContext != 0, &deleteDecoderContext, caller);
+	sceKernelAssert(virtualContext != 0, &deleteDecoderContext, caller);
 #endif
 	ret = sceCodecEngineUnregisterUnmapMemory(0, virtualContext, totalSize);
 	if (ret < 0)
@@ -497,7 +497,7 @@ int _audiodecInternalCreateDecoder(AudiodecWorkManager *manager,
 		if (ret < 0)
 			goto mappingFailed;
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(physical != 0, &createDecoderContext, caller);
+		sceKernelAssert(physical != 0, &createDecoderContext, caller);
 #endif
 		context = SceCodecEngineWrapperForDriver_0F235F44(physical, contextSize);
 		if (!context)
@@ -521,7 +521,7 @@ int _audiodecInternalCreateDecoder(AudiodecWorkManager *manager,
 			       sizeof(work[index].samplesPerFrame) + sizeof(work[index].bufferedFrames));
 			if (resident) {
 #if FW_DEBUG
-				SceDebugForDriver_35A35322(_audiodecGetResidentDecoderOwner(index) == -1,
+				sceKernelAssert(_audiodecGetResidentDecoderOwner(index) == -1,
 						 &createDecoderOwner, caller);
 #endif
 				_audiodecSetResidentDecoderOwner(index);
@@ -808,7 +808,7 @@ int _audiodecInternalExitLibrary(SceUID pid, AudiodecWorkManager *manager,
 				continue;
 			}
 #if FW_DEBUG
-			SceDebugForDriver_35A35322(virtualContext != 0, &exitLibraryContext, caller);
+			sceKernelAssert(virtualContext != 0, &exitLibraryContext, caller);
 #endif
 			ret = sceCodecEngineUnregisterUnmapMemory(pid, virtualContext, size);
 			if (ret < 0)

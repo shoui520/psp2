@@ -150,7 +150,7 @@ static int sysmoduleLoadLib(SysmoduleProc *proc, SceUInt32 *ref, const Sysmodule
 		alt = 0x8020;
 		flags = 0x8000;
 	}
-	if ((lib->flags & SYSMODULE_LIB_DEVONLY) && SceDipswForDriver_A98FC2FD(0xd2))
+	if ((lib->flags & SYSMODULE_LIB_DEVONLY) && sceKernelCheckDipsw(0xd2))
 		flags = alt;
 	pid = sceKernelGetProcessId();
 	perm = sceKernelSetThreadAccessLevel(0x80);
@@ -351,12 +351,12 @@ static inline int sysmoduleLibWanted(const SysmoduleLib *lib)
 		flags = lib->flags;
 	}
 	if (flags & SYSMODULE_LIB_DIPSW_D4) {
-		if (!SceDipswForDriver_A98FC2FD(0xd4))
+		if (!sceKernelCheckDipsw(0xd4))
 			return 0;
 		flags = lib->flags;
 	}
 	if (flags & SYSMODULE_LIB_DIPSW_C2) {
-		if (!SceDipswForDriver_A98FC2FD(0xc2))
+		if (!sceKernelCheckDipsw(0xc2))
 			return 0;
 		flags = lib->flags;
 	}
@@ -369,8 +369,8 @@ static inline int sysmoduleLoadLibFrom(SysmoduleProc *proc, SceUInt32 *ref, cons
 	const char *prefix;
 	int ret;
 
-	if (SceQafMgrForDriver_B9770A13() && SceDipswForDriver_A98FC2FD(0xfb) &&
-	    (SceDipswForDriver_A98FC2FD(0xc1) || SceDipswForDriver_A98FC2FD(0xc2))) {
+	if (SceQafMgrForDriver_B9770A13() && sceKernelCheckDipsw(0xfb) &&
+	    (sceKernelCheckDipsw(0xc1) || sceKernelCheckDipsw(0xc2))) {
 		prefix = proc->prefix;
 		if (prefix == NULL || prefix == s_host) {
 			ret = sysmoduleLoadLib(proc, ref, lib, s_host, sizeof(s_host) - 1);

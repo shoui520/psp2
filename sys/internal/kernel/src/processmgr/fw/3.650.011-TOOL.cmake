@@ -297,7 +297,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetSystemTimeWide
 	sceKernelDebugSuspendThread
 	sceKernelCreateMutex
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceGUIDReferObjectWithClass
 	sceGUIDClose
 	sceGUIDReferObject
@@ -394,15 +394,15 @@ set(MODULE_IMPORT_FUNCS
 	SceCpuForDriver_5F6A8743
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_821FC0EE
-	SceCpuForDriver_BF82DEB2
+	sceKernelSpinlockLowLock
 	SceCpuForDriver_CDA96E81
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	sceKernelCpuResumeIntr
 	SceDebugForDriver_02B04343
 	SceDebugForDriver_391B5B74
 	k_sceEventLogPut
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	memset
 	strncmp
 	memcpy

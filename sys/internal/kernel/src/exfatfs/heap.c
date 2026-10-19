@@ -74,7 +74,7 @@ void *allocateHeapBuffer(struct SceExfatfsDrive *unusedDrive)
 	int intrState;
 
 	(void)unusedDrive;
-	intrState = SceCpuForDriver_D32ACE9E(&g_heapLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&g_heapLock);
 	if (g_heapBlockCacheCount <= 0)
 		buffer = sceKernelAllocHeapMemory(g_commonHeapId, 0x800);
 	else
@@ -88,7 +88,7 @@ void freeHeapBuffer(int unused, void *buffer)
 	int intrState;
 	int count;
 
-	intrState = SceCpuForDriver_D32ACE9E(&g_heapLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&g_heapLock);
 	count = g_heapBlockCacheCount;
 	if (count > 3) {
 		sceKernelFreeHeapMemory(g_commonHeapId, buffer);
@@ -104,7 +104,7 @@ void *allocateCommonHeapMemory(int unused, SceSize size)
 	int intrState;
 	void *memory;
 
-	intrState = SceCpuForDriver_D32ACE9E(&g_heapLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&g_heapLock);
 	memory = sceKernelAllocHeapMemory(g_commonHeapId, size);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_heapLock, intrState);
 	return memory;
@@ -114,7 +114,7 @@ void freeCommonHeapMemory(int unused, void *memory)
 {
 	int intrState;
 
-	intrState = SceCpuForDriver_D32ACE9E(&g_heapLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&g_heapLock);
 	sceKernelFreeHeapMemory(g_commonHeapId, memory);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_heapLock, intrState);
 }

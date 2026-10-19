@@ -180,7 +180,7 @@ static void KblMainContinue(SceKernelBootParam *param)
 	}
 	SceCpuForKernel_FE2B77A3(param->corelock);
 
-	if (!SceSysrootForKernel_D7198963()) {
+	if (!sceKernelIsColdBoot()) {
 		/* resume: the scratchpad gets the resume image and the context it restores */
 		if (sceKernelCpuId() == 0) {
 			memset(&info, 0, sizeof(info));
@@ -262,7 +262,7 @@ int sceKblMain(SceKernelBootParam *param)
 		SceDebugForDriver_1A3F2AA4(IsAllowKernelDebug() ? 1 : 2,
 				      "Starting PSP2 Kernel [0x%08x]: %d\n", FW_VERSION,
 				      KblMainGetBuildNumber());
-		if (SceSysrootForKernel_D7198963())
+		if (sceKernelIsColdBoot())
 			SceDebugForDriver_1A3F2AA4(IsAllowKernelDebug() ? 1 : 2,
 					      "Time taken to load KBL: %d us\n",
 					      param->kblParam->kbl_load_time);
@@ -291,7 +291,7 @@ int sceKblMain(SceKernelBootParam *param)
 							KBL_STACK_SIZE, KBL_STACK_ALIGN);
 	sceKernelGetMemBlockVBase(cpu->stackBlockId, &stack);
 	cpu->stackBottom = (char *)stack + cpu->stackSize;
-	if (SceDipswForDriver_A98FC2FD(DIPSW_WIPE_KERNEL_STACK))
+	if (sceKernelCheckDipsw(DIPSW_WIPE_KERNEL_STACK))
 		memset((char *)stack + KBL_STACK_GUARD, 0xff, KBL_STACK_SIZE - KBL_STACK_GUARD);
 	SceCpuForKernel_FE2B77A3(param->corelock);
 	KblCorelockSync(&param->corelock);

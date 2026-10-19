@@ -101,7 +101,7 @@ static int GrabStopMonitorCall(unsigned int mask, int restart)
 
 	if ((mask >> 12) != 0)
 		return GRAB_ERROR;
-	state = SceCpuForDriver_D32ACE9E(&s_grabLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_grabLock);
 	if (restart) {
 		s_grab.grabNs->writeStop &= ~mask;
 		s_grab.grabNs->readStop &= ~mask;
@@ -175,7 +175,7 @@ static inline void GrabStopPorts(unsigned int mask)
 {
 	int state;
 
-	state = SceCpuForDriver_D32ACE9E(&s_grabLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_grabLock);
 	s_grab.grabNs->writeStop |= mask;
 	s_grab.grabNs->readStop |= mask;
 	PervasiveDmb();
@@ -187,7 +187,7 @@ static inline void GrabRestartPorts(unsigned int mask)
 {
 	int state;
 
-	state = SceCpuForDriver_D32ACE9E(&s_grabLock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_grabLock);
 	s_grab.grabNs->writeStop &= ~mask;
 	s_grab.grabNs->readStop &= ~mask;
 	PervasiveDsb();
@@ -277,7 +277,7 @@ static __attribute__((noinline)) int GrabInit(void)
 
 error:
 	for (i = 0; i < 4; i++)
-		SceSysmemForDriver_009E1C61(s_grab.uid[i]);
+		sceKernelFreeMemBlock(s_grab.uid[i]);
 	return ret;
 }
 

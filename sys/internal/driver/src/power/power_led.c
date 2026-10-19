@@ -68,7 +68,7 @@ inline int SceLedForDriver_EA24BE03(uint32_t led, uint32_t mode, const void *opt
 	if (mode > SCE_LED_MODE_LEVEL || (mode == SCE_LED_MODE_LEVEL && led != 2))
 		return SCE_LED_ERROR_INVALID_MODE;
 
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerLedLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerLedLock);
 	state->repeatCount = -1;
 	state->scriptCursor = NULL;
 	previous = state->mode;
@@ -281,7 +281,7 @@ static int powerLedVblankHandler(void *subintrArg, void *registerArg, unsigned c
 	unsigned int led;
 	int phase;
 
-	intrState = SceCpuForDriver_D32ACE9E(&s_powerLedLock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&s_powerLedLock);
 	for (led = 0; led < 8; led++) {
 		state = &s_powerLeds[led];
 		if (state->gpio == 0)

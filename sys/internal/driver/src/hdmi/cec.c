@@ -134,7 +134,7 @@ static const CecOpcode *handlers[256];
 
 static inline void _setStatus(SceUInt32 flag)
 {
-	SceKernelIntrStatus intr = SceCpuForDriver_D32ACE9E(&work.lock);
+	SceKernelIntrStatus intr = sceKernelSpinlockLowLockCpuSuspendIntr(&work.lock);
 
 	work.status |= flag;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&work.lock, intr);
@@ -142,7 +142,7 @@ static inline void _setStatus(SceUInt32 flag)
 
 static inline void _clearStatus(SceUInt32 flag)
 {
-	SceKernelIntrStatus intr = SceCpuForDriver_D32ACE9E(&work.lock);
+	SceKernelIntrStatus intr = sceKernelSpinlockLowLockCpuSuspendIntr(&work.lock);
 
 	work.status &= ~flag;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&work.lock, intr);

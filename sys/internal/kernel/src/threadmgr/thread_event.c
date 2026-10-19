@@ -71,7 +71,7 @@ static int uidThreadEvent_Destructor(void *object)
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
-			SceCpuForDriver_BF82DEB2(&process->resourceLock);
+			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (event->attr & THREAD_EVENT_ATTR_UNLIMITED)
 				process->uidUnlimitedCount--;
 			else
@@ -102,7 +102,7 @@ static int getThreadEventInfo(SceUID uid, ThreadmgrThreadEventInfo *info)
 		info->uid = uid;
 		ret = 0;
 		strncpy(info->name, SceSysmemForDriver_E655852F(uid), sizeof(info->name) - 1);
-		SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->threadEventLock);
+		sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadEventLock);
 		info->attr = event->attr;
 		info->pid = event->pid;
 		info->mask = event->mask;
@@ -167,11 +167,11 @@ int callThreadEventHandlers(uint32_t mask)
 	int ret;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 162);
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (thread->currentAttr & THREAD_ATTR_NO_THREAD_EVENTS)
 		goto unlock;
 	thread->threadEventMask |= mask;
-	SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->threadEventLock);
+	sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadEventLock);
 	head = (ListNode *)&s_threadmgrRuntime.manager->threadEventHandlerNext;
 	link = head->next;
 	while (link != head) {
@@ -190,7 +190,7 @@ int callThreadEventHandlers(uint32_t mask)
 		ret = callCallbackEntry(thread, event->user, event->handler, mask, threadId, 0,
 					event->arg);
 		SCE_DBG_ASSERT_CHECK(thread->lock != 0, 224);
-		SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->threadEventLock);
+		sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadEventLock);
 		hook = s_threadmgrRuntime.threadTraceHook;
 		if (hook != NULL)
 			hook(0xf, 3, threadId, thread, thread->waitResult);
@@ -255,7 +255,7 @@ int threadEventProcessExit(SceProcessObject *process)
 				(SceObjectBase **)&event) < 0) {
 			SCE_DBG_ASSERT_FAIL(326);
 		} else {
-			SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->threadEventLock);
+			sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadEventLock);
 			if (!event->deleted) {
 				event->deleted = 1;
 				if (event->running == 0) {
@@ -415,7 +415,7 @@ checked:
 		goto resume;
 	}
 	if (ThreadmgrInSyscall()) {
-		SceCpuForDriver_BF82DEB2(&accounting->resourceLock);
+		sceKernelSpinlockLowLock(&accounting->resourceLock);
 		if (attr == 0) {
 			if (accounting->uidCount >= 0x800) {
 				sceKernelSpinlockLowUnlock(&accounting->resourceLock);
@@ -444,7 +444,7 @@ checked:
 	event->running = 0;
 	if (user)
 		event->user = 1;
-	SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->threadEventLock);
+	sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadEventLock);
 	event->link.next = (ListNode *)&s_threadmgrRuntime.manager->threadEventHandlerNext;
 	event->link.prev = (ListNode *)s_threadmgrRuntime.manager->threadEventHandlerPrev;
 	s_threadmgrRuntime.manager->threadEventHandlerPrev = (uintptr_t)&event->link;
@@ -484,7 +484,7 @@ int sceKernelUnregisterThreadEventHandler(SceUID uid)
 		SCE_DBG_ASSERT_FAIL(630);
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_EVENT_ID;
 	} else {
-		SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->threadEventLock);
+		sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadEventLock);
 		if (!event->deleted) {
 			event->deleted = 1;
 			if (event->running == 0) {

@@ -458,7 +458,7 @@ int mapMainDDR(void)
 	SceGrabForDriver_E9C25A28(3, paddr | 1);
 	result = gCompatMemoryBlocks[2][1];
 	if (result > 0) {
-		result = SceSysmemForDriver_009E1C61(result);
+		result = sceKernelFreeMemBlock(result);
 		gCompatMemoryBlocks[2][1] = 0;
 	}
 	return result;
@@ -501,7 +501,7 @@ int compatProcessKillHandler(SceUID pid, ProcEventParam *param,
 				SceUID uid = *block++;
 
 				if (uid > 0) {
-					SceSysmemForDriver_009E1C61(uid);
+					sceKernelFreeMemBlock(uid);
 					block[-1] = 0;
 				}
 			}
@@ -554,7 +554,7 @@ int compatProcessExitHandler(SceUID pid, ProcEventParam *param,
 				SceUID uid = *block++;
 
 				if (uid > 0) {
-					SceSysmemForDriver_009E1C61(uid);
+					sceKernelFreeMemBlock(uid);
 					block[-1] = 0;
 				}
 			}
@@ -597,7 +597,7 @@ int module_start(SceSize arglen, const void *argp)
 		goto cleanup;
 	}
 	if (sceKernelGetMemBlockBase(memblock, (void **)&gCompatLcdDma)) {
-		result = SceSysmemForDriver_009E1C61(memblock);
+		result = sceKernelFreeMemBlock(memblock);
 		gCompatLcdDmaMemBlock = result;
 		if (result < 0)
 			goto cleanup;
@@ -615,7 +615,7 @@ int module_start(SceSize arglen, const void *argp)
 		goto cleanup;
 	}
 	if (sceKernelGetMemBlockBase(memblock, (void **)&gCompatMailbox)) {
-		result = SceSysmemForDriver_009E1C61(memblock);
+		result = sceKernelFreeMemBlock(memblock);
 		gCompatMailboxMemBlock = result;
 		if (result < 0)
 			goto cleanup;
@@ -633,7 +633,7 @@ int module_start(SceSize arglen, const void *argp)
 		goto cleanup;
 	}
 	if (sceKernelGetMemBlockBase(memblock, (void **)&gCompatSharedSram)) {
-		gCompatSharedSramMemBlock = SceSysmemForDriver_009E1C61(memblock);
+		gCompatSharedSramMemBlock = sceKernelFreeMemBlock(memblock);
 		if (gCompatSharedSramMemBlock < 0)
 			goto cleanup;
 	} else {
@@ -707,15 +707,15 @@ cleanup:
 		sceKernelReleaseIntrHandler(config[2].intrcode);
 	} while (sema != gCompatReturnSema + 3);
 	if (gCompatSharedSramMemBlock > 0) {
-		SceSysmemForDriver_009E1C61(gCompatSharedSramMemBlock);
+		sceKernelFreeMemBlock(gCompatSharedSramMemBlock);
 		gCompatSharedSramMemBlock = 0;
 	}
 	if (gCompatMailboxMemBlock > 0) {
-		SceSysmemForDriver_009E1C61(gCompatMailboxMemBlock);
+		sceKernelFreeMemBlock(gCompatMailboxMemBlock);
 		gCompatMailboxMemBlock = 0;
 	}
 	if (gCompatLcdDmaMemBlock > 0) {
-		SceSysmemForDriver_009E1C61(gCompatLcdDmaMemBlock);
+		sceKernelFreeMemBlock(gCompatLcdDmaMemBlock);
 		gCompatLcdDmaMemBlock = 0;
 	}
 	return 2;
@@ -739,34 +739,34 @@ int compatInitEx(int mode)
 		uintptr_t paddr;
 
 		result = sceKernelVAtoPA(gCompatMainDdr, &paddr);
-		SceDebugForDriver_35A35322(result >= 0, &gCompatMapMainDdrTranslationInfo,
+		sceKernelAssert(result >= 0, &gCompatMapMainDdrTranslationInfo,
 			__builtin_return_address(0));
 		result = SceGrabForDriver_E9C25A28(0, paddr | 1);
-		SceDebugForDriver_35A35322(result == 0, &gCompatMapMainDdrBankInfo,
+		sceKernelAssert(result == 0, &gCompatMapMainDdrBankInfo,
 			__builtin_return_address(0));
 		result = sceKernelVAtoPA((char *)gCompatMainDdr + 0x1000000,
 			&paddr);
-		SceDebugForDriver_35A35322(result >= 0, &gCompatMapMainDdrTranslationInfo,
+		sceKernelAssert(result >= 0, &gCompatMapMainDdrTranslationInfo,
 			__builtin_return_address(0));
 		result = SceGrabForDriver_E9C25A28(1, paddr | 1);
-		SceDebugForDriver_35A35322(result == 0, &gCompatMapMainDdrBankInfo,
+		sceKernelAssert(result == 0, &gCompatMapMainDdrBankInfo,
 			__builtin_return_address(0));
 		result = sceKernelVAtoPA((char *)gCompatMainDdr + 0x1000000,
 			&paddr);
-		SceDebugForDriver_35A35322(result >= 0, &gCompatMapMainDdrTranslationInfo,
+		sceKernelAssert(result >= 0, &gCompatMapMainDdrTranslationInfo,
 			__builtin_return_address(0));
 		result = SceGrabForDriver_E9C25A28(2, paddr | 1);
-		SceDebugForDriver_35A35322(result == 0, &gCompatMapMainDdrBankInfo,
+		sceKernelAssert(result == 0, &gCompatMapMainDdrBankInfo,
 			__builtin_return_address(0));
 		result = sceKernelVAtoPA((char *)gCompatMainDdr + 0x3000000,
 			&paddr);
-		SceDebugForDriver_35A35322(result >= 0, &gCompatMapMainDdrTranslationInfo,
+		sceKernelAssert(result >= 0, &gCompatMapMainDdrTranslationInfo,
 			__builtin_return_address(0));
 		result = SceGrabForDriver_E9C25A28(3, paddr | 1);
-		SceDebugForDriver_35A35322(result == 0, &gCompatMapMainDdrBankInfo,
+		sceKernelAssert(result == 0, &gCompatMapMainDdrBankInfo,
 			__builtin_return_address(0));
 		if (gCompatMemoryBlocks[2][1] > 0) {
-			SceSysmemForDriver_009E1C61(gCompatMemoryBlocks[2][1]);
+			sceKernelFreeMemBlock(gCompatMemoryBlocks[2][1]);
 			gCompatMemoryBlocks[2][1] = 0;
 		}
 	}
@@ -781,7 +781,7 @@ int compatInitEx(int mode)
 	sceSblFwLoaderClose();
 	if (status < 0)
 		return status;
-	SceCpuForDriver_9CB9F0CE((char *)gCompatMainDdr + 0x3000000,
+	sceKernelDcacheCleanRangeForL1WBWA((char *)gCompatMainDdr + 0x3000000,
 		loaded);
 	result = sceSblFwLoaderSetPath(gCompatBootFirmwarePath, 0);
 	if (result < 0)
@@ -789,7 +789,7 @@ int compatInitEx(int mode)
 	status = sceSblFwLoaderLoad(1, (char *)gCompatMainDdr + 0x600000,
 		0xa00000, &loaded);
 	sceSblFwLoaderClose();
-	SceCpuForDriver_9CB9F0CE((char *)gCompatMainDdr + 0x600000,
+	sceKernelDcacheCleanRangeForL1WBWA((char *)gCompatMainDdr + 0x600000,
 		loaded);
 #if FW_VERSION >= 0x03650000
 	{
@@ -799,7 +799,7 @@ int compatInitEx(int mode)
 		bootRandomWord = (unsigned int *)((char *)gCompatMainDdr + 0x3fff00);
 		__builtin_memcpy(bootRandomWord, &gCompatBootRandom,
 			sizeof(*bootRandomWord));
-		SceCpuForDriver_9CB9F0CE(
+		sceKernelDcacheCleanRangeForL1WBWA(
 			(char *)gCompatMainDdr + 0x3fff00, 32);
 	}
 #endif
@@ -1006,7 +1006,7 @@ int compatWaitAndGetRequest(int mode, int id)
 	}
 	sceKernelCpuResumeIntr(intrState);
 	sceKernelUnlockMutex(gCompatMutex, 1);
-	SceCpuForDriver_8B4C26DF(
+	sceKernelDcacheInvalidateRangeForL1WBWA(
 		(char *)gCompatMainDdr + (request & 0x3ffffff), 128);
 	__asm__ volatile("dsb sy" ::: "memory");
 	result = request >> 1;
@@ -1027,14 +1027,14 @@ int compatWaitSpecialRequest(int mode)
 	int intrcode;
 
 	if (mode == 1) {
-		SceCpuForDriver_8B4C26DF(
+		sceKernelDcacheInvalidateRangeForL1WBWA(
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = *requestState;
 		start = SceProcessmgrForDriver_82D94BE9();
 		while (state != 1) {
 			sceKernelDelayThread(100);
-			SceCpuForDriver_8B4C26DF(
+			sceKernelDcacheInvalidateRangeForL1WBWA(
 				(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 			requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 			state = *requestState;
@@ -1061,16 +1061,16 @@ int compatWaitSpecialRequest(int mode)
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = 2;
 		__builtin_memcpy(requestState, &state, sizeof(state));
-		SceCpuForDriver_9CB9F0CE(
+		sceKernelDcacheCleanRangeForL1WBWA(
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
-		SceCpuForDriver_8B4C26DF(
+		sceKernelDcacheInvalidateRangeForL1WBWA(
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = *requestState;
 		start = SceProcessmgrForDriver_82D94BE9();
 		while (state != 3) {
 			sceKernelDelayThread(100);
-			SceCpuForDriver_8B4C26DF(
+			sceKernelDcacheInvalidateRangeForL1WBWA(
 				(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 			requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 			state = *requestState;
@@ -1082,19 +1082,19 @@ int compatWaitSpecialRequest(int mode)
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = 0;
 		__builtin_memcpy(requestState, &state, sizeof(state));
-		SceCpuForDriver_9CB9F0CE(
+		sceKernelDcacheCleanRangeForL1WBWA(
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 		goto verified;
 	}
 	if (mode < 1 || mode > 3) {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(0,
+		sceKernelAssert(0,
 			SCE_DBGINFO_FUNC(1398, "sceCompatWaitSpecialRequest"),
 			__builtin_return_address(0));
 #endif
 		goto verified;
 	}
-	SceCpuForDriver_8B4C26DF(
+	sceKernelDcacheInvalidateRangeForL1WBWA(
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 	state = *requestState;
@@ -1110,7 +1110,7 @@ int compatWaitSpecialRequest(int mode)
 				goto out;
 			goto terminated;
 		}
-		SceCpuForDriver_8B4C26DF(
+		sceKernelDcacheInvalidateRangeForL1WBWA(
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = *requestState;
@@ -1134,7 +1134,7 @@ int compatWaitSpecialRequest(int mode)
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 	state = 0;
 	__builtin_memcpy(requestState, &state, sizeof(state));
-	SceCpuForDriver_9CB9F0CE(
+	sceKernelDcacheCleanRangeForL1WBWA(
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 	result = sceKernelUnlockMutex(gCompatExitMutex, 1);
 	if (result < 0)
@@ -1142,7 +1142,7 @@ int compatWaitSpecialRequest(int mode)
 verified:
 #if FW_DEBUG
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
-	SceDebugForDriver_35A35322(*requestState == 0,
+	sceKernelAssert(*requestState == 0,
 		&gCompatWaitSpecialRequestInfo,
 		__builtin_return_address(0));
 #endif
@@ -1231,14 +1231,14 @@ int sceCompatCacheInternal(int mode, void *base, int size)
 	if (size & 63)
 		size = size + 64 - (size & 63);
 	if (mode == 2) {
-		SceCpuForDriver_9CB9F0CE((void *)address, size);
+		sceKernelDcacheCleanRangeForL1WBWA((void *)address, size);
 	} else if (mode == 3) {
-		SceCpuForDriver_E551F99B((void *)address, size);
+		sceKernelDcacheCleanInvalidateRangeForL1WBWA((void *)address, size);
 	} else if (mode == 1) {
-		SceCpuForDriver_8B4C26DF((void *)address, size);
+		sceKernelDcacheInvalidateRangeForL1WBWA((void *)address, size);
 	} else {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(0, SCE_DBGINFO_FUNC(1535, "sceCompatCache"),
+		sceKernelAssert(0, SCE_DBGINFO_FUNC(1535, "sceCompatCache"),
 			__builtin_return_address(0));
 #endif
 	}
@@ -1330,7 +1330,7 @@ failed:
 			SceUID uid = *block++;
 
 			if (uid > 0) {
-				SceSysmemForDriver_009E1C61(uid);
+				sceKernelFreeMemBlock(uid);
 				block[-1] = 0;
 			}
 		}
@@ -1439,7 +1439,7 @@ int compatProcessStopHandler(SceUID pid, int event,
 	}
 	if (compatInterrupt(10) != 0)
 		goto color;
-	SceCpuForDriver_8B4C26DF(
+	sceKernelDcacheInvalidateRangeForL1WBWA(
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 	state = *requestState;
@@ -1450,7 +1450,7 @@ int compatProcessStopHandler(SceUID pid, int event,
 			goto color;
 		if (!gCompatMainDdr)
 			goto unavailable;
-		SceCpuForDriver_8B4C26DF(
+		sceKernelDcacheInvalidateRangeForL1WBWA(
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = *requestState;
@@ -1467,13 +1467,13 @@ int compatProcessStopHandler(SceUID pid, int event,
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 	state = 0;
 	__builtin_memcpy(requestState, &state, sizeof(state));
-	SceCpuForDriver_9CB9F0CE(
+	sceKernelDcacheCleanRangeForL1WBWA(
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 	if (sceKernelUnlockMutex(gCompatExitMutex, 1) < 0)
 		goto color;
 #if FW_DEBUG
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
-	SceDebugForDriver_35A35322(*requestState == 0,
+	sceKernelAssert(*requestState == 0,
 		&gCompatWaitSpecialRequestInfo,
 		__builtin_return_address(0));
 #endif
@@ -1810,34 +1810,34 @@ int compatSuspendResume(int mode)
 		unsigned int bank = gCompatState;
 
 		result = sceKernelVAtoPA(gCompatMainDdr, &paddr);
-		SceDebugForDriver_35A35322(result >= 0, &gCompatMapMainDdrTranslationInfo,
+		sceKernelAssert(result >= 0, &gCompatMapMainDdrTranslationInfo,
 			__builtin_return_address(0));
 		result = SceGrabForDriver_E9C25A28(0, paddr | 1);
-		SceDebugForDriver_35A35322(result == 0, &gCompatMapMainDdrBankInfo,
+		sceKernelAssert(result == 0, &gCompatMapMainDdrBankInfo,
 			__builtin_return_address(0));
 		result = sceKernelVAtoPA((char *)gCompatMainDdr + 0x1000000,
 			&paddr);
-		SceDebugForDriver_35A35322(result >= 0, &gCompatMapMainDdrTranslationInfo,
+		sceKernelAssert(result >= 0, &gCompatMapMainDdrTranslationInfo,
 			__builtin_return_address(0));
 		result = SceGrabForDriver_E9C25A28(bank, paddr | 1);
-		SceDebugForDriver_35A35322(result == 0, &gCompatMapMainDdrBankInfo,
+		sceKernelAssert(result == 0, &gCompatMapMainDdrBankInfo,
 			__builtin_return_address(0));
 		result = sceKernelVAtoPA((char *)gCompatMainDdr + 0x1000000,
 			&paddr);
-		SceDebugForDriver_35A35322(result >= 0, &gCompatMapMainDdrTranslationInfo,
+		sceKernelAssert(result >= 0, &gCompatMapMainDdrTranslationInfo,
 			__builtin_return_address(0));
 		result = SceGrabForDriver_E9C25A28(2, paddr | 1);
-		SceDebugForDriver_35A35322(result == 0, &gCompatMapMainDdrBankInfo,
+		sceKernelAssert(result == 0, &gCompatMapMainDdrBankInfo,
 			__builtin_return_address(0));
 		result = sceKernelVAtoPA((char *)gCompatMainDdr + 0x3000000,
 			&paddr);
-		SceDebugForDriver_35A35322(result >= 0, &gCompatMapMainDdrTranslationInfo,
+		sceKernelAssert(result >= 0, &gCompatMapMainDdrTranslationInfo,
 			__builtin_return_address(0));
 		result = SceGrabForDriver_E9C25A28(3, paddr | 1);
-		SceDebugForDriver_35A35322(result == 0, &gCompatMapMainDdrBankInfo,
+		sceKernelAssert(result == 0, &gCompatMapMainDdrBankInfo,
 			__builtin_return_address(0));
 		if (gCompatMemoryBlocks[2][1] > 0) {
-			SceSysmemForDriver_009E1C61(gCompatMemoryBlocks[2][1]);
+			sceKernelFreeMemBlock(gCompatMemoryBlocks[2][1]);
 			gCompatMemoryBlocks[2][1] = 0;
 		}
 	}
@@ -1870,14 +1870,14 @@ cleanup:
 		goto out;
 	}
 	gCompatResumeCookie = 0;
-	SceCpuForDriver_8B4C26DF(
+	sceKernelDcacheInvalidateRangeForL1WBWA(
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 	state = *requestState;
 	start = SceProcessmgrForDriver_82D94BE9();
 	while (state != 1) {
 		sceKernelDelayThread(100);
-		SceCpuForDriver_8B4C26DF(
+		sceKernelDcacheInvalidateRangeForL1WBWA(
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = *requestState;
@@ -1904,16 +1904,16 @@ cleanup:
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 	state = 2;
 	__builtin_memcpy(requestState, &state, sizeof(state));
-	SceCpuForDriver_9CB9F0CE(
+	sceKernelDcacheCleanRangeForL1WBWA(
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
-	SceCpuForDriver_8B4C26DF(
+	sceKernelDcacheInvalidateRangeForL1WBWA(
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 	state = *requestState;
 	start = SceProcessmgrForDriver_82D94BE9();
 	while (state != 3) {
 		sceKernelDelayThread(100);
-		SceCpuForDriver_8B4C26DF(
+		sceKernelDcacheInvalidateRangeForL1WBWA(
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = *requestState;
@@ -1925,11 +1925,11 @@ cleanup:
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 	state = 0;
 	__builtin_memcpy(requestState, &state, sizeof(state));
-	SceCpuForDriver_9CB9F0CE(
+	sceKernelDcacheCleanRangeForL1WBWA(
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 #if FW_DEBUG
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
-	SceDebugForDriver_35A35322(*requestState == 0,
+	sceKernelAssert(*requestState == 0,
 		&gCompatWaitSpecialRequestInfo,
 		__builtin_return_address(0));
 #endif

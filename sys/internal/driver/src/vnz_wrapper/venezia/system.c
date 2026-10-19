@@ -44,7 +44,7 @@ int initCodecEnginePerformanceMonitor(void)
 int sceCodecEngineDsp0GetThreadExecGroup(unsigned int thread)
 {
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(thread == 0,
+	sceKernelAssert(thread == 0,
 		SCE_DBGINFO_FUNC(155, "sceCodecEngineDsp0GetThreadExecGroup"), __builtin_return_address(0));
 #endif
 	return g_veneziaThreadExecGroups[thread];

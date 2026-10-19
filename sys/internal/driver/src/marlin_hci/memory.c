@@ -45,7 +45,7 @@ void MarlinMemoryTerminate(void)
 	if (marlinMemoryReferences == 1) {
 		sceKernelDeleteHeap(marlinHeapId);
 		marlinHeapId = 0;
-		SceSysmemForDriver_009E1C61(marlinMemBlockId);
+		sceKernelFreeMemBlock(marlinMemBlockId);
 		marlinMemBlockId = 0;
 	}
 	--marlinMemoryReferences;

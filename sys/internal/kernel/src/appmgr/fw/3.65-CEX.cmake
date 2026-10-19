@@ -320,7 +320,7 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelUserUnmap
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceGUIDReferObject
 	sceGUIDReleaseObject
 	SceSysmemForDriver_278BC201
@@ -469,7 +469,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_F4B98F66
 	SceQafMgrForDriver_41E04800
 	SceQafMgrForDriver_7B14DC45
-	ScePmMgrForDriver_2AC815A2
+	sceSblPmMgrGetProductMode
 	SceSblACMgrForDriver_0139FC20
 	SceSblACMgrForDriver_091F7247
 	SceSblACMgrForDriver_0924896F
@@ -590,7 +590,7 @@ set(MODULE_IMPORT_FUNCS
 	SceAudioInForDriver_3EC79053
 	SceAudioInForDriver_E4042F6F
 	SceAvcodecForDriver_C84AFFC4
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

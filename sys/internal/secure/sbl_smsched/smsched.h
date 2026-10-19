@@ -10,12 +10,7 @@
  */
 #pragma once
 
-/* ForTZS imports, named by the henkaku wiki (SceSysmem, SceSysroot) */
-#define SceDebugForDriver_35A35322			sceKernelAssert
-/* ForTZS imports: the names of their 0.990 stubs, os0's for the debug ones */
-#define SceCpuForDriver_BF82DEB2		sceKernelSpinlockLowLock
-#define SceCpuForDriver_27C0B340 sceKernelSpinlockLowTrylockCpuSuspendIntr
-#define SceCpuForDriver_D32ACE9E	sceKernelSpinlockLowLockCpuSuspendIntr
+/* ForTZS imports: the os0 name of each one's function */
 #define SceDebugForDriver_02B04343		SceDebugForTZS_0D799DAE
 #define SceDebugForDriver_391B5B74				SceDebugForTZS_563B623D
 #define SceDebugForDriver_FD753E7A			SceDebugForTZS_618F89E6

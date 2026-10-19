@@ -135,7 +135,7 @@ static int notifyForwardStart(Sdeci2pContext *ctx, SceUInt32 n)
 	sdeci2pSetFlags(&ctx->flags, SDECI2P_FORWARDING, 1);
 	ctl = ctx->ctl;
 	ctl[11] = n;
-	SceCpuForDriver_9CB9F0CE((void *)((SceUIntPtr)&ctl[11] & ~0x3f), 0x40);
+	sceKernelDcacheCleanRangeForL1WBWA((void *)((SceUIntPtr)&ctl[11] & ~0x3f), 0x40);
 	dsb();
 	ctx->mailbox->enableInterrupt[1] = 0xffffffff;
 	dsb();
@@ -239,7 +239,7 @@ static inline int eventReadDoneWhenRunning(Sdeci2pContext *ctx)
 	int ret;
 
 	sdeci2pSetChannelFlags(&ch->flags, SDECI2P_CH_FULL, 1);
-	SceCpuForDriver_9CB9F0CE(ch->buf, (ch->count + 0x3f) & ~0x3f);
+	sceKernelDcacheCleanRangeForL1WBWA(ch->buf, (ch->count + 0x3f) & ~0x3f);
 	ctx->last = ctx->cur;
 	if (ctx->flags & SDECI2P_ACKED) {
 		ctx->cur++;
@@ -277,7 +277,7 @@ static inline int eventWrite(Sdeci2pContext *ctx)
 		sdeci2pSetChannelFlags(&ch->flags, SDECI2P_CH_HDR, 1);
 	}
 	p = (char *)ch->buf + ch->count;
-	SceCpuForDriver_8B4C26DF(p, (left + 0x2f) & ~0x3f);
+	sceKernelDcacheInvalidateRangeForL1WBWA(p, (left + 0x2f) & ~0x3f);
 	ret = sceSDfMgrExSend(ctx->handle, p, left - sizeof(ch->hdr));
 	if (ret < 0) {
 		SDECI2P_PRINTF(0, 988, "sceSDfMgrExSend() failed (0x%08X)\n", ret);
@@ -365,7 +365,7 @@ static inline int sdeci2pAckedChannel(Sdeci2pContext *ctx, int line,
 		*channel = &ctx->fwd[ctx->cur];
 		return 0;
 	}
-	SceCpuForDriver_8B4C26DF((void *)((SceUIntPtr)&ctx->ctl[3] & ~0x3f), 0x40);
+	sceKernelDcacheInvalidateRangeForL1WBWA((void *)((SceUIntPtr)&ctx->ctl[3] & ~0x3f), 0x40);
 	n = ctx->ctl[3];
 	if (n < 2) {
 		*channel = &ctx->fwd[n];
@@ -441,7 +441,7 @@ static inline __attribute__((always_inline)) void sdeci2pAcquire(Sdeci2pContext 
 	SceUInt16 *pkt;
 
 	sdeci2pSetChannelFlags(&ctx->acq.flags, SDECI2P_CH_FULL, 1);
-	SceCpuForDriver_8B4C26DF(ctx->acq.buf, 0x40);
+	sceKernelDcacheInvalidateRangeForL1WBWA(ctx->acq.buf, 0x40);
 	pkt = ctx->acq.buf;
 	ctx->acq.count = 0;
 	SceDeci4pSDfMgrForKernel_FFC95B63(&ctx->acq.hdr, pkt[0] + sizeof(SceDeci4pHeader));
@@ -502,7 +502,7 @@ static inline int forwardPacketForInitialize(Sdeci2pContext *ctx)
 	pkt[6] = 0x48;
 	pkt[7] = 0x53;
 	*(SceUInt16 *)&pkt[0] = 0x18;
-	SceCpuForDriver_9CB9F0CE(pkt, 0x40);
+	sceKernelDcacheCleanRangeForL1WBWA(pkt, 0x40);
 	ret = sceKernelDisableIntr(SDECI2P_INTR_FWD);
 	if (ret < 0)
 		SDECI2P_PRINTF(0xf, 1657, "DisableIntr() failed (0x%08X)\n", ret);
@@ -584,7 +584,7 @@ static inline int sdeci2pForwardControl(Sdeci2pContext *ctx, SceUInt8 type)
 	pkt[9] = 0;
 	pkt[11] = 0;
 	pkt[6] = 0x48;
-	SceCpuForDriver_9CB9F0CE(pkt, 0x40);
+	sceKernelDcacheCleanRangeForL1WBWA(pkt, 0x40);
 	return notifyForwardStart(ctx, 2);
 }
 
@@ -765,7 +765,7 @@ int SDeci2pModuleStart(SceSize args, void *argp)
 	int status, ret;
 	SceUID thid;
 
-	if (!SceDipswForDriver_A98FC2FD(0xc1)) {
+	if (!sceKernelCheckDipsw(0xc1)) {
 		SCE_DBG_PRINTF(0xb, 278, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}

@@ -14,7 +14,7 @@
 #define BOOT_TYPE_EXTERNAL		0x1
 #define BOOT_TYPE_PRODUCT_MODE		0x4
 
-int ScePmMgrForDriver_2AC815A2(SceProductMode *mode)
+int sceSblPmMgrGetProductMode(SceProductMode *mode)
 {
 	SceKblParam *kbl;
 

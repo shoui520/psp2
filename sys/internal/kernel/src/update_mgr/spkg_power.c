@@ -99,7 +99,7 @@ int SpkgUtilPowerControl(int operation, int flags)
 		if (!SceSblAIMgrForDriver_274663A0() && !SceSblAIMgrForDriver_3B638885())
 			break;
 		result = (int)0x800f0233;
-		if (SceDipswForDriver_A98FC2FD(194))
+		if (sceKernelCheckDipsw(194))
 			result = 0;
 		break;
 	default:

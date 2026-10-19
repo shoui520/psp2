@@ -122,7 +122,7 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	sceKernelSysrootDisableAutoClockDown
 	sceKernelSysrootEnableAutoClockDown
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceGUIDReferObject
 	sceGUIDReleaseObject
 	SceSysmemForDriver_45D22597
@@ -144,9 +144,9 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_E54FD746
 	sceKernelCreateMutex
 	SceCpuForDriver_821FC0EE
-	SceCpuForDriver_8B4C26DF
-	SceCpuForDriver_9CB9F0CE
-	SceCpuForDriver_E551F99B
+	sceKernelDcacheInvalidateRangeForL1WBWA
+	sceKernelDcacheCleanRangeForL1WBWA
+	sceKernelDcacheCleanInvalidateRangeForL1WBWA
 	sceKernelCpuResumeIntr
 	memset
 	strncmp

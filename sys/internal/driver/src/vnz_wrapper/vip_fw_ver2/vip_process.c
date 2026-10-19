@@ -51,7 +51,7 @@ int _sceHwd0ProcessCreateEntry(SceUID pid, SceUInt32 type)
 		(void **)&storage, 1);
 	if (ret >= 0) {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(storage != NULL,
+		sceKernelAssert(storage != NULL,
 			SCE_DBGINFO_FUNC(98, "_sceHwd0ProcessCreateEntry"), __builtin_return_address(0));
 #endif
 		memset(storage, 0, sizeof(*storage));
@@ -96,7 +96,7 @@ VeneziaVipProcessStorage *_sceVipGetVipProcessResource(SceUID pid)
 		storage = SceProcessmgrForDriver_EE694840(g_veneziaVipProcessStorageKey);
 	}
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(170, "_sceVipGetVipProcessResource"),
+	sceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(170, "_sceVipGetVipProcessResource"),
 		__builtin_return_address(0));
 #endif
 	return storage;
@@ -110,7 +110,7 @@ int waitVeneziaVipProcessReady(void)
 
 	storage = SceProcessmgrForDriver_EE694840(g_veneziaVipProcessStorageKey);
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(170, "_sceVipGetVipProcessResource"),
+	sceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(170, "_sceVipGetVipProcessResource"),
 		__builtin_return_address(0));
 #endif
 	if (!storage)
@@ -134,7 +134,7 @@ int _sceHwd0StartProcessSuspend(SceUID pid)
 		(void **)&storage, 0);
 	if (ret >= 0) {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(225, "_sceHwd0StartProcessSuspend"),
+		sceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(225, "_sceHwd0StartProcessSuspend"),
 			__builtin_return_address(0));
 #endif
 		process = storage;
@@ -166,7 +166,7 @@ int _sceHwd0ProcessResume(SceUID pid)
 		(void **)&storage, 0);
 	if (ret >= 0) {
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(281, "_sceHwd0ProcessResume"),
+		sceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(281, "_sceHwd0ProcessResume"),
 			__builtin_return_address(0));
 #endif
 		process = storage;

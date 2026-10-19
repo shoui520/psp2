@@ -176,7 +176,7 @@ SceSysTimerId SceSystimerForDriver_E2B9D8E9(int type)
 
 	for (i = 0; i < count; i++) {
 		info = &table[i];
-		state = SceCpuForDriver_D32ACE9E(&info->lock);
+		state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 		if (!(info->flags & TIMER_ALLOCATED)) {
 			info->flags |= TIMER_ALLOCATED;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
@@ -203,7 +203,7 @@ int SceSystimerForDriver_8358611F(SceSysTimerId id)
 	info = GetTimerInfo(id);
 	sceKernelDisableIntr(info->intrCode);
 
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (!(info->flags & TIMER_ALLOCATED)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;
@@ -244,7 +244,7 @@ int SceSystimerForDriver_0450933B(SceSysTimerId id, SceUInt32 source, SceUInt32 
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 
 	info = GetTimerInfo(id);
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (unlikely(!(info->flags & TIMER_ALLOCATED))) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;
@@ -276,7 +276,7 @@ int SceSystimerForDriver_A73351C1(SceSysTimerId id, SceUInt64 interval)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	info = GetTimerInfo(id);
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (!(info->flags & TIMER_ALLOCATED)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;
@@ -319,7 +319,7 @@ int SceSystimerForDriver_CCCD1EE3(SceSysTimerId id, SceSysTimerCallback handler,
 	}
 
 	info = GetTimerInfo(id);
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (!(info->flags & TIMER_ALLOCATED)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;
@@ -346,7 +346,7 @@ int SceSystimerForDriver_59EBD22D(SceSysTimerId id)
 	TimerInfo *info = GetTimerInfo(id);
 	int state;
 
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (unlikely(!(info->flags & TIMER_ALLOCATED))) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;
@@ -378,7 +378,7 @@ int SceSystimerForDriver_BF8D42B0(SceSysTimerId id)
 	TimerInfo *info = GetTimerInfo(id);
 	int state;
 
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (!(info->flags & TIMER_COUNTING)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_STOPPED;
@@ -403,7 +403,7 @@ int SceSystimerForDriver_7DEBA6A5(SceSysTimerId id)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	info = GetTimerInfo(id);
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (!(info->flags & TIMER_ALLOCATED)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;
@@ -452,7 +452,7 @@ int SceSystimerForDriver_1B14DFD6(SceSysTimerId id, SceUInt64 count)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	info = GetTimerInfo(id);
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (!(info->flags & TIMER_ALLOCATED)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;
@@ -549,7 +549,7 @@ int SceSystimerForDriver_904DF737(SceSysTimerId id, SceUInt32 a, SceUInt32 b)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 
 	info = GetTimerInfo(id);
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (unlikely(!(info->flags & TIMER_ALLOCATED))) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;
@@ -580,7 +580,7 @@ int SceSystimerForDriver_C34D7940(SceSysTimerId id, SceUInt32 a)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 
 	info = GetTimerInfo(id);
-	state = SceCpuForDriver_D32ACE9E(&info->lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
 	if (unlikely(!(info->flags & TIMER_ALLOCATED))) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;

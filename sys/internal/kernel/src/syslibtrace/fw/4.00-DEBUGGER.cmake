@@ -31,7 +31,7 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	SceSysmemForKernel_4233C16D
 	SceSysmemForKernel_85571907
-	SceDebugForDriver_35A35322
+	sceKernelAssert
 	SceDebugForDriver_FD753E7A
 	__stack_chk_fail
 	SceSysrootForKernel_B39CD708

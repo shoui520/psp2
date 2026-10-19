@@ -182,7 +182,7 @@ static __attribute__((noinline)) int CpupInit(void)
 
 int CpupModuleStart(SceSize args, void *argp)
 {
-	if (!SceDipswForDriver_A98FC2FD(0xc2)) {
+	if (!sceKernelCheckDipsw(0xc2)) {
 		SCE_DBG_PRINTF(0xb, 102, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}

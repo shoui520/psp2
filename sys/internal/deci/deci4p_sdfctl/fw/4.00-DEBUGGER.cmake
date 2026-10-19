@@ -80,7 +80,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSysrootCorelockUnlock
 	sceKernelCpuId
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceUartForKernel_430C48F1
 	SceUartForKernel_4C02AA05
 	SceUartForKernel_4E97D3AD
@@ -89,7 +89,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_391B74B7
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	strncpy
 	__stack_chk_fail
 	strnlen

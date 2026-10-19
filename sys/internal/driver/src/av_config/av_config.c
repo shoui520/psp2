@@ -193,7 +193,7 @@ int _sceAVConfigResumePhase1Main(int resume, int eventId, void *args, void *opt)
 				sceKernelSetEventFlag(avConfigState.eventFlag, 16);
 				avConfigResumeActive = resume;
 				avConfigEnableAudioDevices(resume);
-				intr = SceCpuForDriver_D32ACE9E(
+				intr = sceKernelSpinlockLowLockCpuSuspendIntr(
 					&avConfigAvlsTimer.lock);
 				avConfigAvlsTimer.busy = 0;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(
@@ -274,7 +274,7 @@ int _sceAVConfigResumePhase1Main(int resume, int eventId, void *args, void *opt)
 	}
 	if (avConfigState.avlsTimerEnabled == 1) {
 		for (;;) {
-			intr = SceCpuForDriver_D32ACE9E(&avConfigAvlsTimer.lock);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigAvlsTimer.lock);
 			if (avConfigAvlsTimer.busy == 0)
 				break;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigAvlsTimer.lock, intr);
@@ -327,7 +327,7 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 		}
 		if (retries == 0)
 			registryValue = 0;
-		intr = SceCpuForDriver_D32ACE9E(&avConfigAvlsTimer.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigAvlsTimer.lock);
 		avConfigAvlsTimer.elapsed = registryValue;
 		avConfigAvlsTimer.tracking = 0;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigAvlsTimer.lock, intr);
@@ -351,7 +351,7 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 	avConfigSetEventFlag(16);
 	avConfigResumeActive = 1;
 	avConfigEnableAudioDevices(1);
-	intr = SceCpuForDriver_D32ACE9E(&avConfigAvlsTimer.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigAvlsTimer.lock);
 	avConfigAvlsTimer.busy = 0;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigAvlsTimer.lock, intr);
 	volume = avConfigState.settings.masterVolume;
@@ -783,7 +783,7 @@ iterationComplete:
 			counter = 0;
 			continue;
 		}
-		intr = SceCpuForDriver_D32ACE9E(&avConfigAvlsTimer.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigAvlsTimer.lock);
 		if (avConfigAvlsTimer.busy != 0) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigAvlsTimer.lock, intr);
 			counter = 0;
@@ -827,7 +827,7 @@ iterationComplete:
 			avConfigAvlsStartTime = now;
 		}
 		counter = 0;
-		intr = SceCpuForDriver_D32ACE9E(&avConfigAvlsTimer.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigAvlsTimer.lock);
 		avConfigAvlsTimer.busy = 0;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigAvlsTimer.lock, intr);
 	}
@@ -840,7 +840,7 @@ void avConfigSetAvlsTimeRemaining(unsigned int remaining)
 	if (avConfigState.avlsTimerEnabled != 1)
 		return;
 	for (;;) {
-		intr = SceCpuForDriver_D32ACE9E(&avConfigAvlsTimer.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigAvlsTimer.lock);
 		if (avConfigAvlsTimer.busy == 0)
 			break;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigAvlsTimer.lock, intr);
@@ -853,7 +853,7 @@ void avConfigSetAvlsTimeRemaining(unsigned int remaining)
 	else
 		remaining = 72000;
 	avConfigAvlsTimer.elapsed = remaining;
-	intr = SceCpuForDriver_D32ACE9E(&avConfigAvlsTimer.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigAvlsTimer.lock);
 	avConfigAvlsTimer.busy = 0;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigAvlsTimer.lock, intr);
 }
@@ -905,7 +905,7 @@ int sceAVConfigChangeReg(int setting, unsigned int value)
 	if (setting == 0) {
 		if (value > 1)
 			goto out;
-		intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 		avConfigConfiguration.settings.btMic = value;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 		avConfigSetEventFlag(0x1000000);
@@ -920,7 +920,7 @@ int sceAVConfigChangeReg(int setting, unsigned int value)
 	} else if (setting == 2) {
 		if (value > 1)
 			goto out;
-		intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 		avConfigConfiguration.settings.soundOutput = value;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 		avConfigSetEventFlag(16);
@@ -928,7 +928,7 @@ int sceAVConfigChangeReg(int setting, unsigned int value)
 	} else if (setting == 4) {
 		if (value > 1)
 			goto out;
-		intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 		avConfigConfiguration.settings.speakerMute = value;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 		result = 0;
@@ -954,7 +954,7 @@ int sceAVConfigSetDisplayBrightness(unsigned int brightness)
 		maximum = ScePowerForDriver_D8759B55();
 		if (maximum < brightness)
 			brightness = maximum;
-		intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 		avConfigConfiguration.settings.brightness = brightness;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 		ScePowerForDriver_43D5CE1D(brightness);
@@ -1037,10 +1037,10 @@ int sceAVConfigClearAutoSuspend2(void)
 		result = (int)0x80010058;
 		goto out;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	interval = avConfigConfiguration.settings.suspendInterval;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.suspendInterval = interval;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 	if (interval == 0) {
@@ -1076,7 +1076,7 @@ int sceAVConfigSetAutoSuspend(unsigned int interval)
 		result = (int)0x80010058;
 		goto out;
 	}
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.suspendInterval = interval;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 	if (interval == 0) {
@@ -1108,7 +1108,7 @@ int sceAVConfigSetAutoDisplayDimming(unsigned int interval)
 
 	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		if (SceSblAIMgrForDriver_71608CA3() != 0) {
-			intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 			avConfigConfiguration.settings.dimmingInterval = interval;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 			ScePowerForDriver_6BC26FC7(1, (SceUInt64)interval * 1000000);
@@ -1133,7 +1133,7 @@ int sceAVConfigSetDisplayColorSpaceMode(int mode)
 		if (SceSblAIMgrForDriver_71608CA3() != 0) {
 			result = (int)0x803a0109;
 		} else {
-			intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 			avConfigConfiguration.settings.colorSpaceMode = mode;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 			if (mode != 1) {
@@ -1182,7 +1182,7 @@ int sceAVConfigGetBtVol(int *notified, int *volume)
 	int result;
 
 	if (sceSblACMgrIsSystemProgram(0) == 1) {
-		intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 		volumeValue = avConfigConfiguration.settings.btVolume;
 		notifiedValue = avConfigConfiguration.settings.btVolumeNotified;
 		avConfigConfiguration.settings.btVolumeNotified = 0;
@@ -1205,7 +1205,7 @@ int sceAVConfigGetSystemVol(int *volume)
 	int result;
 
 	if (sceSblACMgrIsSystemProgram(0) == 1) {
-		intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 		volumeValue = avConfigConfiguration.settings.systemVolume;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 		if (sceKernelCopyToUser(volume, &volumeValue, sizeof(volumeValue)) != 0)
@@ -1232,7 +1232,7 @@ int sceAVConfigSetSystemVol(int volume)
 		if ((unsigned int)(mode - 1) > 1) {
 			result = (int)0x803a0105;
 		} else {
-			intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 			if (mode == 1)
 				avConfigConfiguration.settings.systemVolume = volume;
 			else if (mode == 2)
@@ -1270,7 +1270,7 @@ int sceAVConfigSendVolKey(int command)
 	int result;
 
 	if (sceSblACMgrIsSystemProgram(0) == 1) {
-		intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 		avConfigConfiguration.settings.volumeKeyCommand = command;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 		avConfigSetEventFlag(1);
@@ -1349,7 +1349,7 @@ int sceAVConfigDisplayOn(void)
 					devices |= 4;
 				if (SceSblAIMgrForDriver_71608CA3() == 0)
 					devices |= 1;
-				intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+				intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 				avConfigConfiguration.settings.connectedDevices |= devices;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 				avConfigSetEventFlag(0x10);
@@ -1610,7 +1610,7 @@ int sceAVConfigGetConnectedAudioDevice(SceUInt32 *devices)
 	SceUInt32 connectedDevices;
 	int result;
 
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	connectedDevices = avConfigConfiguration.settings.connectedDevices;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 	if (sceKernelCopyToUser(devices, &connectedDevices, sizeof(connectedDevices)) != 0)
@@ -1703,7 +1703,7 @@ void avConfigResetConfiguration(void)
 	int dimmingInterval, colorSpaceMode, shutterVolume, masterVolume;
 
 	avConfigDisplayStarted = 0;
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	suspendInterval = avConfigConfiguration.settings.suspendInterval;
 	brightness = avConfigConfiguration.settings.brightness;
 	soundOutput = avConfigConfiguration.settings.soundOutput;
@@ -1754,7 +1754,7 @@ void avConfigRefreshAudioDevices(void)
 	if (SceSblAIMgrForDriver_71608CA3() == 0)
 		devices |= 0x100;
 	online = scePowerIsPowerOnline();
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.acOnline = online != 0;
 	avConfigConfiguration.settings.connectedDevices |= devices;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
@@ -1900,7 +1900,7 @@ readSuspendInterval:
 	if (SceSblAIMgrForDriver_71608CA3() == 0)
 		devices |= 0x100;
 	online = scePowerIsPowerOnline();
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.acOnline = online != 0;
 	avConfigConfiguration.settings.connectedDevices = devices;
 	avConfigConfiguration.settings.btMic = btMic;
@@ -1920,7 +1920,7 @@ void avConfigGetSettings(AvConfigSettings *settings)
 {
 	SceKernelIntrStatus intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	memcpy(settings, &avConfigConfiguration.settings, sizeof(*settings));
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 }
@@ -1931,7 +1931,7 @@ void avConfigUpdateBtVolume(int notified, unsigned int volume)
 	unsigned int converted;
 
 	avConfigConvertBtVolume(volume, &converted);
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.btVolumeNotified = notified;
 	avConfigConfiguration.settings.btVolume = converted;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
@@ -1945,7 +1945,7 @@ int SceAVConfigForDriver_0E60701A(unsigned int active)
 
 	if (active > 1)
 		return (int)0x803a0101;
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.audioInputActive = active;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 	avConfigSetEventFlag(0x1000);
@@ -1957,7 +1957,7 @@ int SceAVConfigForDriver_5662E799(unsigned int policy)
 
 	if (policy > 2)
 		return (int)0x803a0101;
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.btAudioPolicy = policy;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 	avConfigSetEventFlag(0x10000);
@@ -1998,7 +1998,7 @@ int SceAVConfigForDriver_2A2E9042(unsigned int index, unsigned int enabled,
 		request->mode = mode;
 		request->blanked = blanked;
 		avConfigConfiguration.displayRequestCount++;
-		intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 		avConfigConfiguration.settings.displayEnabled = enabled;
 		avConfigConfiguration.settings.displayMode = mode;
 		avConfigConfiguration.settings.displayBlanked = blanked == 1;
@@ -2007,7 +2007,7 @@ int SceAVConfigForDriver_2A2E9042(unsigned int index, unsigned int enabled,
 		avConfigSetEventFlag(0x100000);
 		do {
 			sceKernelDelayThread(40000);
-			intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 			pending = avConfigConfiguration.settings.displayUpdatePending;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 		} while (pending != 0);
@@ -2038,7 +2038,7 @@ int SceAVConfigForDriver_91792D6F(unsigned int index)
 	SceUInt32 event;
 	int count, pending;
 
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	request = &avConfigConfiguration.displayRequests[index];
 	if (request->active != 1)
 		goto invalid;
@@ -2206,7 +2206,7 @@ selected:
 	avConfigSetEventFlag(event);
 	do {
 		sceKernelDelayThread(40000);
-		intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 		pending = avConfigConfiguration.settings.displayUpdatePending;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 	} while (pending != 0);
@@ -2292,7 +2292,7 @@ int SceAVConfigForDriver_D8B7AE3D(unsigned int index, int blanked)
 	if (avConfigConfiguration.displayRequests[15].active == 1)
 		return 0;
 update:
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.displayBlanked = blanked == 1;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 	avConfigSetEventFlag(0x100000);
@@ -2302,7 +2302,7 @@ void avConfigCompleteDisplayUpdate(void)
 {
 	SceKernelIntrStatus intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.displayUpdatePending = 0;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 }
@@ -2317,7 +2317,7 @@ void avConfigHpremoteCallback(int input, int multiType, int headphones,
 	(void)remoteStatus;
 	(void)argument;
 	if (avConfigAudioDevicesEnabled == 1 && avConfigDisplayStarted == 1) {
-		intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 		devices = avConfigConfiguration.settings.connectedDevices;
 		if (headphones == 1) {
 			if (microphone == 1)
@@ -2343,7 +2343,7 @@ void avConfigEnableAudioDevices(int enabled)
 
 void avConfigHdmiConnected(void)
 {
-	int state = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	int state = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 
 	if (avConfigGetHdmiAudioMode() != 0)
 		avConfigConfiguration.settings.connectedDevices |= 8;
@@ -2354,7 +2354,7 @@ void avConfigHdmiConnected(void)
 
 void avConfigHdmiDisconnected(void)
 {
-	int state = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
+	int state = sceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 
 	avConfigConfiguration.settings.hdcpState = 0;
 	avConfigConfiguration.settings.connectedDevices &= ~8u;

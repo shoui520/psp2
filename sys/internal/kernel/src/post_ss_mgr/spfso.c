@@ -104,7 +104,7 @@ int SceSblPostSsMgrForDriver_AD3B0078(SceSblSpfsoCtx *ctx)
 	if (ctx == NULL)
 		return SCE_SBL_ERROR_SPFSO_INVALID_ARGUMENT;
 	if (ctx->uid > 0)
-		SceSysmemForDriver_009E1C61(ctx->uid);
+		sceKernelFreeMemBlock(ctx->uid);
 	return 0;
 }
 

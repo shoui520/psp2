@@ -167,7 +167,7 @@ static int IftuIntrHandler(int intrCode, void *arg)
 	uint32_t intr, pending;
 
 	(void)intrCode;
-	intr = SceCpuForDriver_D32ACE9E(&plane->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
 	if (plane->state == IFTU_STATE_DISABLED) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 		return -2;
@@ -221,7 +221,7 @@ static int IftuSysEvent(int resume, int eventId, void *args, void *opt)
 		if (eventId != 0x4005)
 			break;
 		for (plane = s_iftuPlanes; plane != converter; plane++) {
-			intr = SceCpuForDriver_D32ACE9E(&plane->lock);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
 			if (plane->state != IFTU_STATE_DISABLED)
 				IftuStop(plane);
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
@@ -236,13 +236,13 @@ static int IftuSysEvent(int resume, int eventId, void *args, void *opt)
 		LowioDsb();
 		converter->registers->pathConfig = 0x108;
 		sceKernelEnableIntr(converter->intrCode);
-		intr = SceCpuForDriver_D32ACE9E(&converter->lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&converter->lock);
 		if (converter->state != IFTU_STATE_DISABLED) {
 			IftuLoadCsc1(converter->registers, &converter->cscParams1);
 			LowioDmb();
 		}
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&converter->lock, intr);
-		intr = SceCpuForDriver_D32ACE9E(&converter->lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&converter->lock);
 		if (converter->state != IFTU_STATE_DISABLED) {
 			IftuLoadCsc2(converter->registers, &converter->cscParams2);
 			LowioDmb();
@@ -264,7 +264,7 @@ int SceIftuForDriver_0FCBF457(unsigned int index, SceIftuCscParams *param)
 	if (index > IFTU_CONVERTER)
 		return SCE_IFTU_ERROR_INVALID_PLANE;
 	plane = &s_iftuPlanes[index];
-	intr = SceCpuForDriver_D32ACE9E(&plane->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
 	if (param != NULL)
 		__builtin_memcpy(&plane->cscParams2, param, sizeof(*param));
 	else
@@ -285,7 +285,7 @@ int SceIftuForDriver_D64F4C6B(unsigned int index, SceIftuCscParams *param)
 	if (index > IFTU_CONVERTER)
 		return SCE_IFTU_ERROR_INVALID_PLANE;
 	plane = &s_iftuPlanes[index];
-	intr = SceCpuForDriver_D32ACE9E(&plane->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
 	if (param != NULL)
 		__builtin_memcpy(&plane->cscParams1, param, sizeof(*param));
 	else
@@ -322,7 +322,7 @@ int SceIftuForDriver_E6EE2C6B(int index, unsigned int width,
 		return SCE_IFTU_ERROR_INVALID_PIXELFORMAT;
 	}
 	plane = &s_iftuPlanes[index];
-	intr = SceCpuForDriver_D32ACE9E(&plane->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
 	state = plane->state;
 	if (state != IFTU_STATE_DISABLED) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
@@ -378,11 +378,11 @@ int SceIftuForDriver_7CE0C4DA(unsigned int index, SceIftuPlaneState *state,
 	plane = &s_iftuPlanes[index];
 	if (state == NULL) {
 		state = &plane->planeState;
-		intr = SceCpuForDriver_D32ACE9E(&plane->lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
 	} else {
 		if (!IftuValidSourceFormat(state->fb.pixelformat))
 			return SCE_IFTU_ERROR_INVALID_PIXELFORMAT;
-		intr = SceCpuForDriver_D32ACE9E(&plane->lock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
 		memcpy(&plane->planeState, state, sizeof(*state));
 	}
 	if (bilinear >= 0)
@@ -451,7 +451,7 @@ int SceIftuForDriver_357EAE24(unsigned int index, unsigned int alpha)
 	if (alpha > IFTU_NO_BLEND)
 		return SCE_IFTU_ERROR_INVALID_PARAM;
 	plane = &s_iftuPlanes[index];
-	intr = SceCpuForDriver_D32ACE9E(&plane->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
 	plane->alpha = alpha;
 	if (plane->state != IFTU_STATE_DISABLED) {
 		regs = plane->registers;
@@ -476,7 +476,7 @@ int SceIftuForDriver_AF19FD85(unsigned int index, int setting)
 	if ((index & ~2) != 1)
 		return SCE_IFTU_ERROR_INVALID_PLANE;
 	plane = &s_iftuPlanes[index];
-	intr = SceCpuForDriver_D32ACE9E(&plane->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
 	plane->mergeSetting = setting;
 	if (plane->state != IFTU_STATE_DISABLED) {
 		control = plane->control;
@@ -503,7 +503,7 @@ int SceIftuForDriver_0D7C02F7(unsigned int index)
 	if (index > 3)
 		return SCE_IFTU_ERROR_INVALID_PLANE;
 	plane = &s_iftuPlanes[index];
-	intr = SceCpuForDriver_D32ACE9E(&plane->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
 	if (plane->state != IFTU_STATE_DISABLED) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 		return 0;
@@ -579,7 +579,7 @@ int SceIftuForDriver_C11F30B3(unsigned int index)
 	if (index > 3)
 		return SCE_IFTU_ERROR_INVALID_PLANE;
 	plane = &s_iftuPlanes[index];
-	intr = SceCpuForDriver_D32ACE9E(&plane->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
 	if (plane->state != IFTU_STATE_DISABLED)
 		IftuStop(plane);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
@@ -621,7 +621,7 @@ int SceIftuForDriver_67E37EFC(SceIftuFrameBuf *dst, SceIftuPlaneState *src,
 	ret = lockFastMutex(&s_iftuFastMutex);
 	if (ret < 0)
 		return ret;
-	intr = SceCpuForDriver_D32ACE9E(&converter->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&converter->lock);
 	ScePervasiveForDriver_07F2A738();
 	regs = converter->registers;
 	(void)regs->pathConfig;

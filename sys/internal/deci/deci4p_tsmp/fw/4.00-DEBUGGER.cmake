@@ -79,7 +79,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_1FFD2AFA
 	SceSysrootForDriver_7C0BE393
 	SceSysrootForDriver_ED688AEE
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelFreeHeapMemory
 	sceKernelAllocHeapMemory
 	sceKernelCreateHeap
@@ -112,7 +112,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelScheduleWorkTask
 	SceSblPostSsMgrForDriver_0298382B
 	SceSblPostSsMgrForDriver_4FF2682F
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	SceRtcForDriver_497B5DC9
 	sceRtcGetCurrentClockLocalTime
 	SceRegMgrForDebugger_46AC0CCB

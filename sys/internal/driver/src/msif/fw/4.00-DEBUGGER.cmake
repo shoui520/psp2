@@ -95,18 +95,18 @@ set(MODULE_IMPORT_NIDS
 	0x60A35F64:F:0xCBD6D8BC
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelVAtoPA
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	sceKernelVARangeToPAVector
-	SceCpuForDriver_02796361
-	SceCpuForDriver_103872A5
-	SceCpuForDriver_364E68A4
+	sceKernelDcacheInvalidateRange
+	sceKernelDcacheCleanRange
+	sceKernelDcacheCleanInvalidateRange
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceDebugForDriver_02B04343
-	SceDebugForDriver_35A35322
+	sceKernelAssert
 	SceDebugForDriver_D9703808
 	memset
 	memcpy

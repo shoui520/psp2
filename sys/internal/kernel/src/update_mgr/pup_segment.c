@@ -58,7 +58,7 @@ int PupUtilVerifyPupSegmentMain(SceSize arglen, PupVerifyThreadArgs *args)
 	result = UpdateUtilIoRead(fd, segment.offset, segment.size, buffer);
 	if (result)
 		goto cleanup;
-	SceCpuForDriver_103872A5(buffer, ((uint32_t)segment.size + 63) & ~63);
+	sceKernelDcacheCleanRange(buffer, ((uint32_t)segment.size + 63) & ~63);
 	if (loadSm) {
 		pupSmId = -1;
 		result = UpdateUtilSetupSm(0, &pupSmId, 0);

@@ -51,7 +51,7 @@ set(MODULE_IMPORT_NIDS
 	0xA351714A:F:0x13EF8516
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	memset
@@ -60,8 +60,8 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	memcmp
-	SceDipswForDriver_A98FC2FD
-	SceCpuForDriver_364E68A4
+	sceKernelCheckDipsw
+	sceKernelDcacheCleanInvalidateRange
 	SceDebugForDriver_391B74B7
 	sceIoRemove
 	sceIoWrite

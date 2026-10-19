@@ -2816,7 +2816,7 @@ int checkVeneziaDebugReset(void)
 {
 	uint32_t saved, reset;
 
-	saved = SceCpuForDriver_D32ACE9E(&g_veneziaDebugger.spinlock);
+	saved = sceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaDebugger.spinlock);
 	reset = g_veneziaVipState.resetRegisters->vip;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
 	return reset & 1;
@@ -2926,7 +2926,7 @@ int veneziaDebugInterruptHandler(int interrupt, VeneziaVipState *state)
 	if (g_veneziaDebugger.log)
 		g_veneziaDebugger.log(11, 2, 0, mailbox);
 	if (callbacks) {
-		saved = SceCpuForDriver_D32ACE9E(&g_veneziaDebugger.spinlock);
+		saved = sceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaDebugger.spinlock);
 		if (mailbox & 0xf) {
 			events |= 1;
 			++callbacks->counters[3].count;
@@ -3012,7 +3012,7 @@ int veneziaDebugAuxiliaryInterruptHandler(int interrupt, VeneziaVipState *state)
 	if (g_veneziaDebugger.log)
 		g_veneziaDebugger.log(95, 3, 0, status, ret);
 	if (!ret) {
-		saved = SceCpuForDriver_D32ACE9E(&g_veneziaDebugger.spinlock);
+		saved = sceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaDebugger.spinlock);
 		++callbacks->counters[0].count;
 		switch ((uint32_t)info.result) {
 		case -12: events = 0x80000000; break;
@@ -3238,7 +3238,7 @@ int unregisterVeneziaVipCallbacks(unsigned int processor, VeneziaVipState *state
 	VeneziaVipProcessStorage *storage, SceUID uid, SceUID pid)
 {
 	VeneziaDebugCallback *callbacks = storage->callbackState.callbacks;
-	int saved = SceCpuForDriver_D32ACE9E(&g_veneziaDebugger.spinlock);
+	int saved = sceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaDebugger.spinlock);
 
 	if (!uid) {
 		clearVeneziaVipCallback(&callbacks[0], 0, pid);
@@ -3286,7 +3286,7 @@ int registerVeneziaVipCallback(unsigned int processor, SceUID uid, uint32_t even
 		} else if (kind != 8) {
 			ret = -2141060863;
 		} else {
-			saved = SceCpuForDriver_D32ACE9E(&g_veneziaDebugger.spinlock);
+			saved = sceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaDebugger.spinlock);
 			for (index = 0; index < 6; index++)
 				if (!storage->callbackState.callbacks[index].uid)
 					break;
@@ -6584,17 +6584,17 @@ cleanup:
 	releaseVeneziaVipMemoryBlock(&state->codeMemory);
 	if (state->resetBlock > 0) {
 		state->resetRegisters = NULL;
-		SceSysmemForDriver_009E1C61(state->resetBlock);
+		sceKernelFreeMemBlock(state->resetBlock);
 		state->resetBlock = 0;
 	}
 	if (state->mailboxBlock > 0) {
 		state->mailboxRegisters = NULL;
-		SceSysmemForDriver_009E1C61(state->mailboxBlock);
+		sceKernelFreeMemBlock(state->mailboxBlock);
 		state->mailboxBlock = 0;
 	}
 	if (state->tasBlock > 0) {
 		state->tasRegisters = NULL;
-		SceSysmemForDriver_009E1C61(state->tasBlock);
+		sceKernelFreeMemBlock(state->tasBlock);
 		state->tasBlock = 0;
 	}
 	state->bootRegisters = NULL;
@@ -7163,7 +7163,7 @@ int veneziaDebugSecondaryInterruptHandler(int interrupt, VeneziaVipState *state)
 	if (g_veneziaDebugger.log)
 		g_veneziaDebugger.log(95, 3, 1, status[0], ret);
 	if (!ret) {
-		saved = SceCpuForDriver_D32ACE9E(&g_veneziaDebugger.spinlock);
+		saved = sceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaDebugger.spinlock);
 		++callbacks->counters[1].count;
 		switch (info.result) {
 		case -12: events = 0x80000000; break;

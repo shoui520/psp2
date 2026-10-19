@@ -227,7 +227,7 @@ int sceAppMgrInit(void)
 #endif
 	result = _appmgrQueueInit();
 	INIT_RESULT(result, 299);
-	result = ScePmMgrForDriver_2AC815A2(&productMode);
+	result = sceSblPmMgrGetProductMode(&productMode);
 #if FW_DEBUG
 	INIT_RESULT(result, 303);
 #else

@@ -687,7 +687,7 @@ int PhyMemPartCdramFreeCore(PhyMemPart *part, uintptr_t pa, SceSize size)
 	int flags, ret;
 
 	PhyMemPartRefer(part);
-	flags = SceCpuForDriver_D32ACE9E(&part->lock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
 	if (part->flags & PHYMEM_PART_ACTIVE) {
 		ret = PhyMemLowFree(part->segments->phyMemLow, pa, size);
 		if (ret >= 0) {
@@ -711,7 +711,7 @@ int PhyMemPartCdramAllocCore(PhyMemPart *part, SceSize size, SceSize alignment, 
 	int flags, ret;
 
 	PhyMemPartRefer(part);
-	flags = SceCpuForDriver_D32ACE9E(&part->lock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
 	if (part->flags & PHYMEM_PART_ACTIVE) {
 		ret = PhyMemLowAlloc(part->segments->phyMemLow, size, alignment, 1, pa, &allocated);
 		if (ret < 0) {
@@ -781,7 +781,7 @@ int PhyMemPartGetInfoForDebugger(PhyMemPart *part, SceKernelPhyMemPartInfoForDeb
 	int flags, ret, i, links, n;
 
 	PhyMemPartRefer(part);
-	flags = SceCpuForDriver_D32ACE9E(&part->lock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
 	if (!(part->flags & PHYMEM_PART_ACTIVE)) {
 		SCE_DBG_PRINTF(0xb, 4606, "PhyMemPart is not active\n");
 		ret = SCE_KERNEL_ERROR_PHYMEMPART_NOT_ACTIVE;
@@ -1352,7 +1352,7 @@ static inline int PhyMemPartAllocPhyPageBuddyRaw(PhyMemPart *part, SceSize size,
 
 	if (flags & ~0x33)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	intr = SceCpuForDriver_D32ACE9E(&part->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
 	if (size >= 0x100000) {
 		ret = PhyMemPartAllocPhyPage1MCoreAssertRaw2(part, size, flags | 1, pPage, &pindex);
 		if (ret < 0)
@@ -1510,7 +1510,7 @@ static inline void PhyMemPartCheckPhyPageR1(PhyMemPart *part, PhyPage *page)
 	PhyMemSegment *segment;
 	int intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&part->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
 	switch (PHYMEM_PART_TYPE(part)) {
 	case PHYMEM_PART_TYPE_LPDDR2:
 		for (segment = part->segments; segment != NULL; segment = segment->next)
@@ -1763,7 +1763,7 @@ int PhyMemPartFreePhyPage(PhyMemPart *part, PhyPage *page)
 		goto out;
 	}
 
-	intr = SceCpuForDriver_D32ACE9E(&part->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
 	switch (page->info & PHYPAGE_SIZED_MASK) {
 	case PHYPAGE_KIND_BUDDY:
 		ret = PhyMemPartFreePhyPageBuddyRaw(part, page);
@@ -1803,7 +1803,7 @@ SceSize PhyMemPartGetFreeSizeInternal(PhyMemPart *part)
 	int intr;
 
 	PhyMemPartRefer(part);
-	intr = SceCpuForDriver_D32ACE9E(&part->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
 	if (!(part->flags & PHYMEM_PART_ACTIVE))
 		SCE_DBG_PRINTF(0xb, 4368, "Warnig: pPhyMemPart is not active\n");
 	PhyMemPartGetFreeSizeRaw(part, &size);
@@ -1869,7 +1869,7 @@ int PhyMemPartGetInfoCore(PhyMemPart *part, SceKernelPhyMemPartInfoCore *info)
 	int intr, ret;
 
 	PhyMemPartRefer(part);
-	intr = SceCpuForDriver_D32ACE9E(&part->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
 	if (part->flags & PHYMEM_PART_ACTIVE) {
 		PhyMemPartGetInfoCoreRaw(part, info);
 		ret = 0;
@@ -2115,7 +2115,7 @@ int sceKernelDeletePhyMemPart(PhyMemPart *part)
 	while ((ret = SceCpuForDriver_CDA96E81((SceInt32 *)&part->refCount, 0, -1)) != 0)
 		SCE_DBG_PRINTF(3, 4845, "PhyMemPartInvalidate failed 0x%08x, 0x%08x\n", ret,
 			       part->refCount);
-	intr = SceCpuForDriver_D32ACE9E(&part->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
 	if (!(part->flags & PHYMEM_PART_ACTIVE)) {
 		SCE_DBG_PRINTF(0xb, 4851, "pPhyMemPart is not active\n");
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
@@ -2163,7 +2163,7 @@ int sceKernelResetPhyMemPart(PhyMemPart *part)
 		return 0;
 	while (part->refCount != 0)
 		SCE_DBG_PRINTF(3, 4929, "PhyMemPartGetARCount failed 0x%08x\n", part->refCount);
-	intr = SceCpuForDriver_D32ACE9E(&part->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
 	if (!(part->flags & PHYMEM_PART_ACTIVE)) {
 		SCE_DBG_PRINTF(0xb, 4935, "pPhyMemPart is not active\n");
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
@@ -2205,7 +2205,7 @@ int sceKernelGrowPhyMemPartByPbase(PhyMemPart *part, uintptr_t pbase, SceSize ps
 	int intr, ret;
 
 	PhyMemPartRefer(part);
-	intr = SceCpuForDriver_D32ACE9E(&part->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
 	if (!(part->flags & PHYMEM_PART_ACTIVE)) {
 		SCE_DBG_PRINTF(0xb, 5008, "pPMP is not active\n");
 		ret = SCE_KERNEL_ERROR_PHYMEMPART_NOT_ACTIVE;
@@ -2313,7 +2313,7 @@ int sceKernelShowPhyMemPart(PhyMemPart *part)
 	int intr, ret;
 
 	PhyMemPartRefer(part);
-	intr = SceCpuForDriver_D32ACE9E(&part->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
 	if (part->flags & PHYMEM_PART_ACTIVE) {
 		ret = 0;
 		PhyMemPartShowFreeRaw(part);
@@ -2403,7 +2403,7 @@ int PhyMemModuleStartPhase2(const UIDManager *manager)
 					  &s_phyPartKernel->base);
 	if (ret < 0)
 		return ret;
-	if (SceDipswForDriver_A98FC2FD(0xd2)) {
+	if (sceKernelCheckDipsw(0xd2)) {
 		ret = sceGUIDSet(SCE_KERNEL_PHYMEMPART_TOOL_ID, s_phyMemPartClass, NULL,
 						  &s_phyPartTool->base);
 		if (ret < 0)

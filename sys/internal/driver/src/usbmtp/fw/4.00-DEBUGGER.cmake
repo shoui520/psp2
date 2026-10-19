@@ -54,14 +54,14 @@ set(MODULE_IMPORT_NIDS
 	0xE1AC6D7C:F:0x6FE062D1
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
-	SceCpuForDriver_02796361
-	SceCpuForDriver_103872A5
-	SceCpuForDriver_364E68A4
+	sceKernelDcacheInvalidateRange
+	sceKernelDcacheCleanRange
+	sceKernelDcacheCleanInvalidateRange
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceDebugForDriver_D9703808
 	memset
 	strncmp

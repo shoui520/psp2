@@ -345,7 +345,7 @@ int ds3SetAuxiliaryMotor(int port, int level)
 	int index;
 	SceUInt32 intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 	if (port == ds3State.devices[0].port &&
 		(ds3State.devices[0].bluetoothState == 2 || ds3State.devices[0].usbState == 2))
 		index = 0;
@@ -393,7 +393,7 @@ int ds3GetControllerType(int port, uint8_t *type)
 
 	if (type == NULL)
 		return -1;
-	intr = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 	*type = SCE_CTRL_TYPE_UNPAIRED;
 	if (port == ds3State.devices[0].port &&
 		(ds3State.devices[0].bluetoothState == 2 || ds3State.devices[0].usbState == 2))
@@ -437,7 +437,7 @@ int ds3GetCalibrationData(int port, SceMotionDevDs3CalibData *data)
 	int index, result = -1;
 	SceUInt32 intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 	if (port == ds3State.devices[0].port &&
 		(ds3State.devices[0].bluetoothState == 2 || ds3State.devices[0].usbState == 2))
 		index = 0;
@@ -504,7 +504,7 @@ int ds3GetAccCalibData(int port, SceMotionDevAccCalibData *data)
 	int index, result = -1;
 	SceUInt32 intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 	if (ds3State.safeMode != 0)
 		goto unlock;
 	if (port == ds3State.devices[0].port &&
@@ -584,7 +584,7 @@ int ds3GetGyroCalibData(int port, SceMotionDevGyroCalibData *data)
 	int index, result = -1;
 	SceUInt32 intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 	if (ds3State.safeMode != 0)
 		goto unlock;
 	if (port == ds3State.devices[0].port &&
@@ -665,7 +665,7 @@ int ds3SetSingleControllerMode(int enabled)
 {
 	SceUInt32 intr;
 
-	intr = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 	ds3State.singleControllerMode = enabled;
 	if (enabled != 0)
 		ds3State.singleControllerProcess = sceKernelGetProcessId();
@@ -964,7 +964,7 @@ int ds3ReadSensorData(int port, MotionDriverSample *data)
 
 	if (data == NULL)
 		return -1;
-	intr = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 	memset(data, 0, sizeof(*data));
 	if (ds3State.safeMode != 0)
 		goto unlock;
@@ -1086,7 +1086,7 @@ int ds3ReadTouchData(int port, TouchVirtualSampleRequest *request)
 	int index;
 	int result = 0;
 
-	intr = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 	if (ds3State.safeMode != 0)
 		goto unlock;
 	if (port == ds3State.devices[0].port &&
@@ -1380,7 +1380,7 @@ int ds3BluetoothEnableReports(Ds3Device *controller)
 	int result;
 	unsigned int index;
 
-	interruptState = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+	interruptState = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 	if (controller->outputPending > 1) {
 		index = controller->outputIndex;
 	} else {
@@ -1414,7 +1414,7 @@ int ds3BluetoothSetDs4Actuators(Ds3Device *controller,
 	uint8_t *report;
 	uint8_t small;
 
-	interruptState = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+	interruptState = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 	if (controller->outputPending > 1) {
 		index = controller->outputIndex;
 	} else {
@@ -1455,7 +1455,7 @@ int ds3BluetoothSetDs4Lightbar(Ds3Device *controller, const Ds3LedState *leds)
 	uint8_t *report;
 	uint8_t red;
 
-	interruptState = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+	interruptState = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 	if (controller->outputPending > 1) {
 		index = controller->outputIndex;
 	} else {
@@ -1496,7 +1496,7 @@ int ds3BluetoothSendControl(Ds3Device *controller, uint8_t control)
 	int result;
 	unsigned int index;
 
-	interruptState = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+	interruptState = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 	if (controller->outputPending > 1) {
 		index = controller->outputIndex;
 	} else {
@@ -1586,7 +1586,7 @@ int ds3BluetoothSetDs3Actuators(Ds3Device *controller,
 	uint8_t *report;
 	uint8_t mask;
 
-	interruptState = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+	interruptState = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 	if (controller->outputPending > 1) {
 		index = controller->outputIndex;
 	} else {
@@ -1959,7 +1959,7 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 						pending = device->pendingWork;
 					} else if (device->bluetoothState == 2) {
 						if (device->idProduct == 0x0268) {
-							interruptState = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+							interruptState = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 							if (device->outputPending <= 1) {
 								device->outputPending++;
 								device->outputIndex = (device->outputIndex + 1) & 1;
@@ -2085,7 +2085,7 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 					if (device->usbState == 2) {
 						ds3UsbSetAuxiliaryMotor(device);
 					} else if (device->bluetoothState == 2) {
-						interruptState = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+						interruptState = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 						if (device->outputPending <= 1) {
 							device->outputPending++;
 							device->outputIndex = (device->outputIndex + 1) & 1;
@@ -2541,7 +2541,7 @@ rejectConnection:
 						break;
 					}
 					device->setupStage = 7;
-					interruptState = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+					interruptState = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 					requestIndex = device->outputIndex;
 					if (device->outputPending <= 1) {
 						device->outputPending++;
@@ -2665,7 +2665,7 @@ retryDs3:
 			reportId = 5;
 			reportLength = 41;
 featureRequest:
-			interruptState = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+			interruptState = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 			requestIndex = device->outputIndex;
 			if (device->outputPending <= 1) {
 				device->outputPending++;
@@ -2690,7 +2690,7 @@ inputRequest:
 			}
 			if (index == 8)
 				break;
-			interruptState = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+			interruptState = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 			requestIndex = device->inputIndex ^ 1;
 			device->inputIndex = requestIndex;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&ds3State.lock, interruptState);
@@ -2725,7 +2725,7 @@ int ds3ReadButtons(int port, struct ctrlNativeSample *output)
 
 	if ((unsigned int)port > 7)
 		return -1;
-	interruptState = SceCpuForDriver_D32ACE9E(&ds3State.lock);
+	interruptState = sceKernelSpinlockLowLockCpuSuspendIntr(&ds3State.lock);
 	if (port == ds3State.devices[0].port &&
 		(ds3State.devices[0].bluetoothState == 2 || ds3State.devices[0].usbState == 2))
 		index = 0;

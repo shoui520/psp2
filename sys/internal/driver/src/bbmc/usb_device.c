@@ -155,13 +155,13 @@ int bbmcUsbSerialDeviceThread(SceSize argumentSize, void *arguments)
 			bus = device->bus;
 			device->qcomOut.request.size = 1024;
 			device->qcomOut.request.returnCode = 0;
-			SceCpuForDriver_02796361(device->qcomOut.request.data, 1088);
+			sceKernelDcacheInvalidateRange(device->qcomOut.request.data, 1088);
 			SceUdcdForDriver_175E6179(&device->qcomOut.request, bus);
 			device = g_usbSerialDevice;
 			bus = device->bus;
 			device->atOut.request.size = 1536;
 			device->atOut.request.returnCode = 0;
-			SceCpuForDriver_02796361(device->atOut.request.data, 1600);
+			sceKernelDcacheInvalidateRange(device->atOut.request.data, 1600);
 			SceUdcdForDriver_175E6179(&device->atOut.request, bus);
 			if (bbmcWaitUsbSerialHost(5, 0, NULL) >= 0) {
 				if (bbmcOpenUsbSerialQcom(&qcomChannel) < 0)
@@ -244,7 +244,7 @@ int bbmcUsbSerialDeviceThread(SceSize argumentSize, void *arguments)
 				bus = device->bus;
 				device->qcomOut.request.returnCode = 0;
 				device->qcomOut.request.size = 1024;
-				SceCpuForDriver_02796361(device->qcomOut.request.data, 1088);
+				sceKernelDcacheInvalidateRange(device->qcomOut.request.data, 1088);
 				SceUdcdForDriver_175E6179(&device->qcomOut.request, bus);
 				device = g_usbSerialDevice;
 			}
@@ -282,7 +282,7 @@ int bbmcUsbSerialDeviceThread(SceSize argumentSize, void *arguments)
 				bus = device->bus;
 				device->atOut.request.returnCode = 0;
 				device->atOut.request.size = 1536;
-				SceCpuForDriver_02796361(device->atOut.request.data, 1600);
+				sceKernelDcacheInvalidateRange(device->atOut.request.data, 1600);
 				SceUdcdForDriver_175E6179(&device->atOut.request, bus);
 				device = g_usbSerialDevice;
 			}
@@ -377,7 +377,7 @@ int bbmcUsbDeviceProcessRequest(int recipient, int endpoint,
 		bus = device->bus;
 		device->controlOut.request.size = 64;
 		device->controlOut.request.returnCode = 0;
-		SceCpuForDriver_02796361(device->controlOut.request.data, 128);
+		sceKernelDcacheInvalidateRange(device->controlOut.request.data, 128);
 		return SceUdcdForDriver_175E6179(&device->controlOut.request, bus);
 	}
 	sceKernelSetEventFlag(device->event, 8);
@@ -396,7 +396,7 @@ int bbmcUsbDeviceQcomReadCompleted(int channelId, BbmcUsbSerialRequest *request,
 		bus = device->bus;
 		device->qcomIn.request.size = result;
 		device->qcomIn.request.returnCode = 0;
-		SceCpuForDriver_103872A5(device->qcomIn.request.data,
+		sceKernelDcacheCleanRange(device->qcomIn.request.data,
 			((SceUInt32)result + 64) & ~63u);
 		SceUdcdForDriver_2E3E622A(&device->qcomIn.request, bus);
 		return 0;
@@ -426,7 +426,7 @@ int bbmcUsbDeviceQcomWriteCompleted(int channelId, BbmcUsbSerialRequest *request
 		bus = device->bus;
 		device->qcomOut.request.size = 1024;
 		device->qcomOut.request.returnCode = 0;
-		SceCpuForDriver_02796361(device->qcomOut.request.data, 1088);
+		sceKernelDcacheInvalidateRange(device->qcomOut.request.data, 1088);
 		SceUdcdForDriver_175E6179(&device->qcomOut.request, bus);
 	}
 	return 0;
@@ -442,7 +442,7 @@ int bbmcUsbDeviceAtWriteCompleted(int channelId, BbmcUsbSerialRequest *request,
 		bus = device->bus;
 		device->atOut.request.size = 1536;
 		device->atOut.request.returnCode = 0;
-		SceCpuForDriver_02796361(device->atOut.request.data, 1600);
+		sceKernelDcacheInvalidateRange(device->atOut.request.data, 1600);
 		SceUdcdForDriver_175E6179(&device->atOut.request, bus);
 	}
 	return 0;
@@ -459,7 +459,7 @@ int bbmcUsbDeviceControlReadCompleted(int channelId, BbmcUsbSerialRequest *reque
 	bus = device->bus;
 	device->controlIn.request.size = result;
 	device->controlIn.request.returnCode = 0;
-	SceCpuForDriver_103872A5(device->controlIn.request.data,
+	sceKernelDcacheCleanRange(device->controlIn.request.data,
 		((SceUInt32)result + 64) & ~63u);
 	SceUdcdForDriver_2E3E622A(&device->controlIn.request, bus);
 	return 0;
@@ -477,7 +477,7 @@ int bbmcUsbDeviceAtInterruptReadCompleted(int channelId, BbmcUsbSerialRequest *r
 		bus = device->bus;
 		device->atInterruptIn.request.size = result;
 		device->atInterruptIn.request.returnCode = 0;
-		SceCpuForDriver_103872A5(device->atInterruptIn.request.data,
+		sceKernelDcacheCleanRange(device->atInterruptIn.request.data,
 			((SceUInt32)result + 64) & ~63u);
 		SceUdcdForDriver_2E3E622A(&device->atInterruptIn.request, bus);
 		return 0;
@@ -509,7 +509,7 @@ int bbmcUsbDeviceAtReadCompleted(int channelId, BbmcUsbSerialRequest *request,
 		bus = device->bus;
 		device->atIn.request.size = result;
 		device->atIn.request.returnCode = 0;
-		SceCpuForDriver_103872A5(device->atIn.request.data,
+		sceKernelDcacheCleanRange(device->atIn.request.data,
 			((SceUInt32)result + 64) & ~63u);
 		SceUdcdForDriver_2E3E622A(&device->atIn.request, bus);
 		return 0;

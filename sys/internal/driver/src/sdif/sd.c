@@ -519,7 +519,7 @@ int sceSdWriteSectorInternal(SdifContextPart *sd, uint32_t sector,
 	}
 	command->size = sizeof(*command);
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(1, SCE_DBGINFO(1413), __builtin_return_address(0));
+	sceKernelAssert(1, SCE_DBGINFO(1413), __builtin_return_address(0));
 #endif
 	command->blockCount = count;
 	command->buffer = (void *)buffer;
@@ -568,7 +568,7 @@ int SceSdifForDriver_0203ECDC(SdifContextPart *sd, uint32_t sector,
 		command->command = transferCount == 1 ? 24 : 25;
 		command->size = sizeof(*command);
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(1, SCE_DBGINFO_FUNC(1413, "sceSdWriteSectorInternal"),
+		sceKernelAssert(1, SCE_DBGINFO_FUNC(1413, "sceSdWriteSectorInternal"),
 				 __builtin_return_address(0));
 #endif
 		command->blockCount = transferCount;

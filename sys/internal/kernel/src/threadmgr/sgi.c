@@ -333,7 +333,7 @@ static inline void salvageExecutableStagnantThread(void)
 	SCE_DBG_ASSERT_CHECK(IntrDisabled(), 66);
 	first = NULL;
 	for (;;) {
-		SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->threadMgrCBLock);
+		sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadMgrCBLock);
 		for (;;) {
 			manager = s_threadmgrRuntime.manager;
 			thread = (struct ThreadCB *)manager->stagnantNext;

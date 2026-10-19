@@ -276,7 +276,7 @@ static void completeControl(SceUdcdDeviceRequest *req)
 static int Stop(int size, void *args, void *ctx)
 {
 	sceKernelDeleteEventFlag(s_serial.event);
-	SceSysmemForDriver_009E1C61(s_serial.memblock);
+	sceKernelFreeMemBlock(s_serial.memblock);
 	return 0;
 }
 
@@ -337,7 +337,7 @@ static void BulkINDone(SceUdcdDeviceRequest *req)
 	if (req->returnCode < 0)
 		return;
 
-	state = SceCpuForDriver_D32ACE9E(&s_serial.lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_serial.lock);
 	s_serial.txActive = 0;
 	if (req->transmitted)
 		s_serial.txRead = (s_serial.txRead + req->transmitted) & (TX_SIZE - 1);
@@ -362,7 +362,7 @@ static void BulkOUTDone(SceUdcdDeviceRequest *req)
 	if (req->returnCode < 0)
 		return;
 
-	state = SceCpuForDriver_D32ACE9E(&s_serial.lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_serial.lock);
 	s_serial.rxActive = 0;
 	received = req->transmitted;
 	if (received) {
@@ -550,7 +550,7 @@ static int Start(int size, void *args, void *ctx)
 	return 0;
 
 fail:
-	SceSysmemForDriver_009E1C61(s_serial.memblock);
+	sceKernelFreeMemBlock(s_serial.memblock);
 	return -1;
 }
 
@@ -687,7 +687,7 @@ int SceUsbDevSerial_C0FDECAF(void)
 int SceUsbDevSerial_6F2B3960(void)
 {
 	unsigned int context = serialEnter();
-	SceKernelIntrStatus state = SceCpuForDriver_D32ACE9E(&s_serial.lock);
+	SceKernelIntrStatus state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_serial.lock);
 
 	if (s_serial.attached && s_serial.openCount == 0)
 		StartTransfer();
@@ -701,7 +701,7 @@ int SceUsbDevSerial_6F2B3960(void)
 int SceUsbDevSerial_F0C3F3D4(void)
 {
 	unsigned int context = serialEnter();
-	SceKernelIntrStatus state = SceCpuForDriver_D32ACE9E(&s_serial.lock);
+	SceKernelIntrStatus state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_serial.lock);
 	int ret = 0;
 
 	if (s_serial.openCount == 0) {
@@ -739,7 +739,7 @@ int SceUsbDevSerial_57FBB08C(void *buffer, unsigned int size)
 	if (size == 0)
 		goto out;
 
-	state = SceCpuForDriver_D32ACE9E(&s_serial.lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_serial.lock);
 	if (!s_serial.attached || !s_serial.openCount) {
 		ret = SCE_ERROR_ERRNO_ENODEV;
 		goto unlock;
@@ -782,7 +782,7 @@ int SceUsbDevSerial_57FBB08C(void *buffer, unsigned int size)
 			}
 		} while (bits & SERIAL_EVENT_RETRY);
 
-		state = SceCpuForDriver_D32ACE9E(&s_serial.lock);
+		state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_serial.lock);
 		pending = rxPending();
 		sceKernelClearEventFlag(s_serial.event, ~SERIAL_EVENT_RX_READY);
 	}
@@ -829,7 +829,7 @@ int SceUsbDevSerial_4437FF2D(const void *buffer, unsigned int size)
 	if (size == 0)
 		goto out;
 
-	state = SceCpuForDriver_D32ACE9E(&s_serial.lock);
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_serial.lock);
 	if (!s_serial.attached || !s_serial.openCount) {
 		ret = SCE_ERROR_ERRNO_ENODEV;
 		goto unlock;
@@ -861,7 +861,7 @@ int SceUsbDevSerial_4437FF2D(const void *buffer, unsigned int size)
 				goto out;
 			}
 		} while (bits & SERIAL_EVENT_RETRY);
-		state = SceCpuForDriver_D32ACE9E(&s_serial.lock);
+		state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_serial.lock);
 	}
 
 	space = (s_serial.txRead - s_serial.txWrite - 1) & (TX_SIZE - 1);

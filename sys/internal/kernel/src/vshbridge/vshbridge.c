@@ -64,7 +64,7 @@
 									\
 	if (!sceSblACMgrIsSystemProgram(0)) {				\
 		_ret = SCE_ERROR_ERRNO_ENOSYS;				\
-	} else if (ScePmMgrForDriver_2AC815A2(&_mode) != 0) {		\
+	} else if (sceSblPmMgrGetProductMode(&_mode) != 0) {		\
 		_mode = 0;						\
 		_ret = (_error);					\
 	} else {							\
@@ -463,7 +463,7 @@ SceUInt32 vshSysconGetLogInfo(void *info)
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else if (info == NULL) {
 		ret = SCE_ERROR_ERRNO_EINVAL;
-	} else if (ScePmMgrForDriver_2AC815A2(&mode) != 0) {
+	} else if (sceSblPmMgrGetProductMode(&mode) != 0) {
 		mode = 0;
 		ret = SCE_SYSCON_ERROR_NOT_PRODUCT_MODE;
 	} else if (!mode) {
@@ -1360,7 +1360,7 @@ SceUInt32 vshHdmiEnableCec(void)
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
-		ScePmMgrForDriver_2AC815A2(&mode);
+		sceSblPmMgrGetProductMode(&mode);
 		ret = mode == 1 ? sceHdmiCecEnableCec() : (int)SCE_HDMI_ERROR_NOT_PRODUCT_MODE;
 	}
 	sceSyscallLeave(t);
@@ -1376,7 +1376,7 @@ SceUInt32 vshHdmiDisableCec(void)
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
-		ScePmMgrForDriver_2AC815A2(&mode);
+		sceSblPmMgrGetProductMode(&mode);
 		ret = mode == 1 ? SceHdmiForDriver_291F000B() : (int)SCE_HDMI_ERROR_NOT_PRODUCT_MODE;
 	}
 	sceSyscallLeave(t);

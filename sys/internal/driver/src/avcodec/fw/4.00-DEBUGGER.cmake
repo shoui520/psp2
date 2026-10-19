@@ -104,14 +104,14 @@ set(MODULE_IMPORT_NIDS
 	0x51593F20:F:0xFBD4853E
 )
 set(MODULE_IMPORT_FUNCS
-	SceDebugForDriver_35A35322
+	sceKernelAssert
 	SceDebugForDriver_D9703808
-	SceCpuForDriver_02796361
-	SceCpuForDriver_103872A5
-	SceCpuForDriver_364E68A4
+	sceKernelDcacheInvalidateRange
+	sceKernelDcacheCleanRange
+	sceKernelDcacheCleanInvalidateRange
 	SceCpuForDriver_5AC9D394
 	sceKernelSpinlockLowUnlockCpuResumeIntr
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	sceKernelFinalizeFastMutex
 	sceKernelDelayThread
@@ -125,7 +125,7 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForDriver_EE694840
 	sceKernelIsGameBudget
 	sceKernelRegisterProcEventHandler
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	SceSysmemForDriver_22CBE925
 	sceKernelCopyToUser
 	sceKernelVAtoPA

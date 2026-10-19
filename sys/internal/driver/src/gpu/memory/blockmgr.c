@@ -138,7 +138,7 @@ releaseMapping:
 	if (restoreMapping)
 		SceSysmemForDriver_58D21746(referencedUid);
 	if (!kernel)
-		SceSysmemForDriver_009E1C61(mappingUid);
+		sceKernelFreeMemBlock(mappingUid);
 	return 0;
 }
 
@@ -220,7 +220,7 @@ int sceGpuMemBlockDelBlock(GpuMemBlockHeap *heap, int uid, int *referencedOut)
 		block->ranges = 0;
 		if (block->mappingUid != -1) {
 			SceSysmemForDriver_F50BDC0C(block->mappingUid);
-			SceSysmemForDriver_009E1C61(block->mappingUid);
+			sceKernelFreeMemBlock(block->mappingUid);
 		}
 		if (block->referencedUid != -1)
 			SceSysmemForDriver_F50BDC0C(block->referencedUid);
@@ -258,7 +258,7 @@ int DestroyMemBlockHeap(GpuMemBlockHeap *heap)
 		uid = block->mappingUid;
 		if (uid != -1) {
 			SceSysmemForDriver_F50BDC0C(uid);
-			SceSysmemForDriver_009E1C61(block->mappingUid);
+			sceKernelFreeMemBlock(block->mappingUid);
 		}
 		uid = block->referencedUid;
 		if (uid != -1)

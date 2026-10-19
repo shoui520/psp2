@@ -113,7 +113,7 @@ int SceDebugForDriver_391B74B7(const char *format, ...)
 	int result;
 
 	va_start(arguments, format);
-	flags = SceCpuForDriver_D32ACE9E(&s_debugPrintLock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&s_debugPrintLock);
 	result = DebugCallPrintfHandler((uintptr_t)s_debugKprintfArgument,
 				       format, arguments);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, flags);
@@ -126,7 +126,7 @@ int SceDebugForDriver_411C0733(const char *format, va_list arguments)
 	uint32_t flags;
 	int result;
 
-	flags = SceCpuForDriver_D32ACE9E(&s_debugPrintLock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&s_debugPrintLock);
 	result = DebugCallPrintfHandler((uintptr_t)s_debugKprintfArgument,
 				       format, arguments);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, flags);
@@ -141,7 +141,7 @@ int SceDebugForDriver_1A3F2AA4(int level, const char *format, ...)
 
 	va_start(arguments, format);
 	if (!level || DebugLevelEnabled(level)) {
-		flags = SceCpuForDriver_D32ACE9E(&s_debugPrintLock);
+		flags = sceKernelSpinlockLowLockCpuSuspendIntr(&s_debugPrintLock);
 		result = DebugCallPrintfHandler((uintptr_t)s_debugKprintfArgument,
 					       format, arguments);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, flags);
@@ -158,7 +158,7 @@ int SceDebugForDriver_611A158B(int level, const char *format,
 
 	if (level && !DebugLevelEnabled(level))
 		return 0;
-	flags = SceCpuForDriver_D32ACE9E(&s_debugPrintLock);
+	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&s_debugPrintLock);
 	result = DebugCallPrintfHandler((uintptr_t)s_debugKprintfArgument,
 				       format, arguments);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, flags);
@@ -225,7 +225,7 @@ int SceDebugForDriver_02B04343(SceUInt32 flags, const SceKernelDebugInfo *info,
 	int result;
 
 	va_start(arguments, format);
-	savedFlags = SceCpuForDriver_D32ACE9E(&s_debugPrintLock);
+	savedFlags = sceKernelSpinlockLowLockCpuSuspendIntr(&s_debugPrintLock);
 	DebugFormatPrefix(flags, info);
 	result = DebugCallPrintfHandler((uintptr_t)s_debugKprintfArgument,
 				       format, arguments);
@@ -244,7 +244,7 @@ int SceDebugForDriver_D9703808(SceUInt32 level, SceUInt32 flags,
 
 	va_start(arguments, format);
 	if (!level || DebugLevelEnabled(level)) {
-		savedFlags = SceCpuForDriver_D32ACE9E(&s_debugPrintLock);
+		savedFlags = sceKernelSpinlockLowLockCpuSuspendIntr(&s_debugPrintLock);
 		DebugFormatPrefix(flags, info);
 		result = DebugCallPrintfHandler((uintptr_t)s_debugKprintfArgument,
 					       format, arguments);

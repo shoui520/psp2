@@ -168,10 +168,10 @@ set(MODULE_IMPORT_FUNCS
 	sceIoMkdir
 	sceIoRead
 	sceIoClose
-	SceCpuForDriver_103872A5
-	SceCpuForDriver_364E68A4
+	sceKernelDcacheCleanRange
+	sceKernelDcacheCleanInvalidateRange
 	SceDebugForDriver_02B04343
-	SceDebugForDriver_35A35322
+	sceKernelAssert
 	SceDebugForDriver_391B74B7
 	SceDebugForDriver_D9703808
 	SceSysrootForKernel_55392965
@@ -193,7 +193,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateMutex
 	SceSysmemForKernel_4233C16D
 	SceSysmemForKernel_85571907
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_49D4DD9B
 	sceKernelCopyToUser
@@ -272,7 +272,7 @@ set(MODULE_IMPORT_FUNCS
 	sceDeci4pCpupSetRtcForDriver
 	sceSblAuthMgrVerifySpsfo
 	sceKernelLoadPtLoadSegForFwloader
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

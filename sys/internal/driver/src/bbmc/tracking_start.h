@@ -62,7 +62,7 @@ int _constructTrackingStartQmi(BbcmdProtocolClient **clientPointer,
 
 	client = *clientPointer;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(1, &dbg__constructTrackingStartQmi_L321,
+	sceKernelAssert(1, &dbg__constructTrackingStartQmi_L321,
 		__builtin_return_address(0));
 #endif
 	scratch = client->request.data + sizeof(client->request.data) - 1 -

@@ -189,7 +189,7 @@ set(MODULE_IMPORT_FUNCS
 	SceIntrmgrForKernel_9CB39268
 	SceIntrmgrForKernel_BCD3BB05
 	SceIntrmgrForKernel_E3B670BF
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceGUIDReferObjectWithClass
 	sceGUIDClose
 	SceSysmemForDriver_0B1FD5C3
@@ -271,10 +271,10 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_9AF075D4
 	SceSysrootForDriver_CAE820B2
 	SceSysrootForDriver_DABD4A47
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	SceCpuForDriver_0EE04C03
 	SceCpuForDriver_1F157DC3
-	SceCpuForDriver_27C0B340
+	sceKernelSpinlockLowTrylockCpuSuspendIntr
 	SceCpuForDriver_2A40BB93
 	SceCpuForDriver_4AE1BCC0
 	SceCpuForDriver_5AC9D394
@@ -282,12 +282,12 @@ set(MODULE_IMPORT_FUNCS
 	SceCpuForDriver_5F6A8743
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_821FC0EE
-	SceCpuForDriver_9CB9F0CE
+	sceKernelDcacheCleanRangeForL1WBWA
 	SceCpuForDriver_A4884C4E
 	SceCpuForDriver_BC248C30
-	SceCpuForDriver_BF82DEB2
+	sceKernelSpinlockLowLock
 	SceCpuForDriver_CDA96E81
-	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	sceKernelSpinlockLowUnlock
 	sceKernelCpuResumeIntr
 	SceCpuForKernel_75A85059

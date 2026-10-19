@@ -24,7 +24,7 @@ int hidClearCollectionReports(HidCollection *collection)
 	if (cursor == NULL)
 		return 0;
 
-	intrState = SceCpuForDriver_D32ACE9E(&cursor->spinlock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&cursor->spinlock);
 	while (cursor->pendingCount > 0) {
 		SceSize size;
 
@@ -91,7 +91,7 @@ int hidReadCollectionReports(HidCollection *collection, void *buffer, int count)
 	}
 	pid = sceKernelGetProcessId();
 	hidGetProcessPrivileges(pid, &privileges);
-	intrState = SceCpuForDriver_D32ACE9E(&cursor->spinlock);
+	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&cursor->spinlock);
 	if (count <= 0 || cursor->pendingCount <= 0)
 		goto unlock;
 	do {
@@ -230,7 +230,7 @@ nextId:
 		cursor = hidNextProcessReportCursor(index);
 		if (cursor == NULL)
 			return collection;
-		intrState = SceCpuForDriver_D32ACE9E(&cursor->spinlock);
+		intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&cursor->spinlock);
 		cursor->pendingCount = 0;
 		cursor->readIndex = 0;
 		cursor->peekCount = 0;
@@ -841,7 +841,7 @@ void hidProcessReport(HidCollection *collection, unsigned int reportId,
 		cursor = hidNextProcessReportCursor(index);
 		if (cursor == NULL)
 			break;
-		intrState = SceCpuForDriver_D32ACE9E(&cursor->spinlock);
+		intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&cursor->spinlock);
 		if (cursor->pendingCount <= 15)
 			cursor->pendingCount++;
 		else

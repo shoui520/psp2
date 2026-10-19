@@ -145,7 +145,7 @@ int seqSuspend(BbmcControl *control, BbmcMessage *message)
 		handler = seqSuspendSelectHandler(currentState, targetState);
 		control->suspendMessageHandler = handler;
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(handler != NULL, &dbg_seqSuspend_L375,
+		sceKernelAssert(handler != NULL, &dbg_seqSuspend_L375,
 				 __builtin_return_address(0));
 #endif
 		return bbmcSendSimpleMessage(control, 43);
@@ -202,7 +202,7 @@ normalSuspend:
 		handler = seqSuspendSelectHandler(targetState, targetState);
 		control->suspendMessageHandler = handler;
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(handler != NULL, &dbg_seqSuspend_L338,
+		sceKernelAssert(handler != NULL, &dbg_seqSuspend_L338,
 				 __builtin_return_address(0));
 #endif
 		result = bbmcSendSimpleMessage(control, 43);

@@ -68,11 +68,11 @@ set(MODULE_IMPORT_FUNCS
 	PVRSRVAcquireDeviceDataKM
 	PVRSRVEnumerateDevicesKM
 	sceGpuMmuMapMemory
-	SceDebugForDriver_35A35322
+	sceKernelAssert
 	SceDebugForDriver_391B74B7
 	SceDebugForDriver_D9703808
 	ScePervasiveForDriver_714EEFB7
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	memset

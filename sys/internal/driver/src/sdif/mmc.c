@@ -75,7 +75,7 @@ int sceMmcSetupPartitionAccess(SdifMmcContext *part, unsigned int sector,
 	int accessType, result;
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(partition != NULL,
+	sceKernelAssert(partition != NULL,
 		SCE_DBGINFO_FUNC(707, "sceMmcIsCurrentPartitionAccess"),
 		__builtin_return_address(0));
 #endif
@@ -162,12 +162,12 @@ static inline uint32_t sceMmcVsector2Psector(SdifMmcContext *part,
 	uint32_t blockLength;
 
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(partition != NULL, SCE_DBGINFO(687),
+	sceKernelAssert(partition != NULL, SCE_DBGINFO(687),
 			 __builtin_return_address(0));
 #endif
 	blockLength = part->blockLength;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322((uint64_t)sector * part->blockLength >= partition->va,
+	sceKernelAssert((uint64_t)sector * part->blockLength >= partition->va,
 			 SCE_DBGINFO(690), __builtin_return_address(0));
 #endif
 	return ((uint64_t)blockLength * sector + partition->pa - partition->va) /
@@ -332,7 +332,7 @@ int sceMmcReadSector(SdifMmcContext *part, unsigned int sector, void *buffer,
 	cursor += part->blockLength * firstCount;
 	sector += firstCount;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322((sector & 0xfff) == 0, SCE_DBGINFO(1285),
+	sceKernelAssert((sector & 0xfff) == 0, SCE_DBGINFO(1285),
 			 __builtin_return_address(0));
 #endif
 	while (count) {
@@ -380,7 +380,7 @@ int sceMmcWriteSectorInternal(SdifMmcContext *part, unsigned int sector,
 		goto noCommand;
 	command->flags = 0x614;
 #if FW_DEBUG
-	SceDebugForDriver_35A35322(1, SCE_DBGINFO(1360), __builtin_return_address(0));
+	sceKernelAssert(1, SCE_DBGINFO(1360), __builtin_return_address(0));
 #endif
 	command->size = sizeof(*command);
 	command->command = count == 1 ? 24 : 25;
@@ -489,7 +489,7 @@ int SceSdifForDriver_60642F49(SdifMmcContext *part, unsigned int sector,
 			goto noCommand;
 		command->flags = 0x614;
 #if FW_DEBUG
-		SceDebugForDriver_35A35322(1,
+		sceKernelAssert(1,
 			SCE_DBGINFO_FUNC(1360, "sceMmcWriteSectorInternal"),
 			__builtin_return_address(0));
 #endif

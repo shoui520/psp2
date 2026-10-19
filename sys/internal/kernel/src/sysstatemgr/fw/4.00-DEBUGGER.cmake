@@ -116,7 +116,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoGetstat
 	sceIoRead
 	sceIoClose
-	SceSysmemForDriver_009E1C61
+	sceKernelFreeMemBlock
 	sceKernelFreeHeapMemory
 	sceKernelAllocHeapMemory
 	sceKernelGetMemBlockBase
@@ -134,7 +134,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
 	sceKernelSetGPO
-	SceDipswForDriver_A98FC2FD
+	sceKernelCheckDipsw
 	memset
 	strcmp
 	strncmp

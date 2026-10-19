@@ -398,7 +398,7 @@ int _sceKernelBacktraceCore(SceUID thid, SceKernelBacktraceFrame *frames, SceSiz
 	if (ret < 0)
 		goto resume;
 	ctx = &obj->context;
-	SceCpuForDriver_BF82DEB2(&ctx->lock);
+	sceKernelSpinlockLowLock(&ctx->lock);
 	refer = 1;
 	if ((ctx->status & 1) != 0) {
 		ret = SCE_KERNEL_ERROR_THREAD_TERMINATED;
@@ -432,7 +432,7 @@ exception:
 	if (ctx == NULL)
 		SCE_DBG_ASSERT_LEVEL(0, 0, 712);
 	thid = BACKTRACE_THID_EXCEPTION;
-	SceCpuForDriver_BF82DEB2(&ctx->lock);
+	sceKernelSpinlockLowLock(&ctx->lock);
 	goto locked;
 
 current:
@@ -440,7 +440,7 @@ current:
 		goto intr_context;
 	if (ctx == NULL)
 		SCE_DBG_ASSERT_LEVEL(0, 0, 748);
-	SceCpuForDriver_BF82DEB2(&ctx->lock);
+	sceKernelSpinlockLowLock(&ctx->lock);
 	goto locked;
 
 intr_context:

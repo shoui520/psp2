@@ -134,7 +134,7 @@ int uidCallback_Destructor(struct ThreadmgrCallback *callback)
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
-			SceCpuForDriver_BF82DEB2(&process->resourceLock);
+			sceKernelSpinlockLowLock(&process->resourceLock);
 			if (callback->cb.attr & THREAD_ATTR_UNLIMITED_OBJECTS)
 				process->uidUnlimitedCount--;
 			else
@@ -172,7 +172,7 @@ int getCallbackInfo(SceUID callbackId, SceKernelCallbackInfo *info)
 	info->callbackId = callbackId;
 	strncpy(info->name, SceSysmemForDriver_E655852F(callbackId), sizeof(info->name) - 1);
 	ret = 0;
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
+	sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 	info->attr = callback->cb.attr;
 	info->threadId = callback->cb.threadId;
 	info->callbackFunc = callback->cb.entry;
@@ -226,7 +226,7 @@ void deleteAllCallback(struct ThreadCB *thread)
 	int ret;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 244);
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	for (cb = thread->callbackNext; cb != CALLBACK_HEAD(thread); cb = next) {
 		next = cb->next;
 		cb->deleted = 1;
@@ -366,7 +366,7 @@ mapped:
 
 	if (SceIntrmgrForKernel_71C5F42F(context, vfp) != 0) {
 		/* back from the callback */
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		if (thread->callbackNest == 1) {
 			if (cacheable == 1) {
 				if (thread->kStackSize == 0x1000)
@@ -374,7 +374,7 @@ mapped:
 				if (pushExtendedStackCache(blockId, (void *)base) >= 0)
 					goto restore;
 			}
-			ret = SceSysmemForDriver_009E1C61(blockId);
+			ret = sceKernelFreeMemBlock(blockId);
 			if (ret < 0) {
 				SCE_DBG_PRINTF(0, 453, " k: error: sceKernelFreeMemBlock(0x%08X)=0x%08X\n",
 					       blockId, ret);
@@ -497,7 +497,7 @@ int callCallbackAll(struct ThreadCB *thread)
 	if ((currentThreadContext()->currentAttr & THREAD_ATTR_USER) &&
 	    !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_CALLBACKS);
 	ran = 0;
 	for (cb = thread->callbackNext; cb != CALLBACK_HEAD(thread); cb = next) {
@@ -611,7 +611,7 @@ int callbackProcessExit(SceProcessObject *process)
 			sceKernelCpuResumeIntr(intr);
 			continue;
 		}
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
+		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		if (callback->cb.deleted) {
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 			sceGUIDReleaseObject(callback->cb.threadId);
@@ -704,12 +704,12 @@ SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallba
 		intr = SceCpuForDriver_821FC0EE();
 	} else {
 		process = thread->process;
-		intr = SceCpuForDriver_D32ACE9E(&process->resourceLock);
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
 #else
 	intr = SceCpuForDriver_821FC0EE();
 	if (ThreadmgrInSyscall()) {
 		process = thread->process;
-		SceCpuForDriver_BF82DEB2(&process->resourceLock);
+		sceKernelSpinlockLowLock(&process->resourceLock);
 #endif
 		if (limit & THREAD_ATTR_UNLIMITED_OBJECTS) {
 			if (++process->uidUnlimitedCount > process->uidUnlimitedPeak)
@@ -755,7 +755,7 @@ SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallba
 	} else {
 		callback->cb.puid = -1;
 	}
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
+	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	callback->cb.next = CALLBACK_HEAD(thread);
 	callback->cb.prev = thread->callbackPrev;
 	thread->callbackPrev = &callback->cb;
@@ -764,7 +764,7 @@ SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallba
 	goto resume;
 unaccount:
 	if (ThreadmgrInSyscall()) {
-		SceCpuForDriver_BF82DEB2(&process->resourceLock);
+		sceKernelSpinlockLowLock(&process->resourceLock);
 		if (limit & THREAD_ATTR_UNLIMITED_OBJECTS)
 			process->uidUnlimitedCount--;
 		else
@@ -805,7 +805,7 @@ int sceKernelDeleteCallback(SceUID callbackId)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto release;
 	}
-	SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
+	sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 	if (callback->cb.deleted) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_CALLBACK_ID;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
@@ -868,7 +868,7 @@ int sceKernelNotifyCallback(SceUID callbackId, int arg)
 	}
 	for (;;) {
 		waitObject = NULL;
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
+		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		callback->cb.notifyId = -1;
 		callback->cb.notifyCount++;
 		callback->cb.notifyArg = arg;
@@ -884,7 +884,7 @@ int sceKernelNotifyCallback(SceUID callbackId, int arg)
 			SceCpuForDriver_BC248C30((SceInt32 *)&object->context.flags, THREAD_FLAG_CALLBACKS);
 			waitId = -1;
 			self = (struct ThreadmgrWaitNode *)&object->context;
-			SceCpuForDriver_BF82DEB2(
+			sceKernelSpinlockLowLock(
 				&s_threadmgrRuntime.manager->timedWaitLock);
 			self->next->prev = self->prev;
 			self->prev->next = self->next;
@@ -984,7 +984,7 @@ int SceThreadmgrForDriver_C040EC1C(SceUID callbackId)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
 		ret = 0;
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
+		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		callback->cb.notifyId = 0;
 		callback->cb.notifyCount = 0;
 		callback->cb.notifyArg = 0;
@@ -1017,7 +1017,7 @@ int SceThreadmgrForDriver_0892D8DF(SceUID callbackId)
 					 (SceObjectBase **)&object) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
-		SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
+		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		ret = callback->cb.notifyCount;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 		sceGUIDReleaseObject(callback->cb.threadId);
@@ -1209,7 +1209,7 @@ int sceKernelRegisterCallbackToEventForDriver(SceUID eventId, SceUID callbackId,
 		}
 		goto release;
 	}
-	SceCpuForDriver_BF82DEB2(&event->lock);
+	sceKernelSpinlockLowLock(&event->lock);
 	opt.size = 0x14;
 	opt.align = 0x40;
 	entry = SceSysmemForDriver_49D4DD9B(s_threadmgrRuntime.manager->heapId,
@@ -1264,7 +1264,7 @@ int sceKernelUnregisterCallbackFromEvent(SceUID eventId, SceUID callbackId)
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&event->lock);
+	sceKernelSpinlockLowLock(&event->lock);
 	ret = THREADMGR_ERROR_CALLBACK_NOT_REGISTERED;
 	head = EVENT_CALLBACK_HEAD(event);
 	for (entry = head->next; entry != head; entry = entry->next) {
@@ -1306,7 +1306,7 @@ int sceKernelUnregisterCallbackFromEventAll(SceUID eventId)
 		}
 		goto resume;
 	}
-	SceCpuForDriver_BF82DEB2(&event->lock);
+	sceKernelSpinlockLowLock(&event->lock);
 	head = EVENT_CALLBACK_HEAD(event);
 	for (entry = head->next; entry != head; entry = entry->next) {
 		entry->next->prev = entry->prev;

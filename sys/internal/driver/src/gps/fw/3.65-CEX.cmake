@@ -91,7 +91,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUnregisterSysEventHandler
 	SceQafMgrForDriver_BFD5E463
 	sceSblACMgrIsSystemProgram
-	ScePmMgrForDriver_2AC815A2
+	sceSblPmMgrGetProductMode
 	SceSblPostSsMgrForDriver_128FB35A
 	SceRtcForDriver_A7236656
 	SceRtcForDriver_F139E359

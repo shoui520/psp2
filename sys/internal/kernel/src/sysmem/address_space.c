@@ -52,7 +52,7 @@ static AddressSpaceGlobals *s_addressSpaceGlobals;
 /* name unknown: the physical window user I/O mappings get (smaller with dipsw 0xd5) */
 void AddressSpaceInitUserIOPA(void)
 {
-	if (!SceDipswForDriver_A98FC2FD(DIPSW_USER_IO_SMALL)) {
+	if (!sceKernelCheckDipsw(DIPSW_USER_IO_SMALL)) {
 		s_userIOPASize = 0x20000000;
 		s_userIOPABase = 0x80000000;
 		return;
@@ -200,7 +200,7 @@ static inline struct Partition *AddressSpaceGetPartition(AddressSpaceObject *as,
 __attribute__((noinline))
 static int AddressSpaceGetPhyMemPartByIndexRaw(SceUInt32 index)
 {
-	if (!SceDipswForDriver_A98FC2FD(DIPSW_ENABLE_TOOL_PHYMEMPART) && index - 0x14 < 2) {
+	if (!sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART) && index - 0x14 < 2) {
 		SCE_DBG_PRINTF(0xb, 1421, "using pindex=%d without no TOOL environment\n", index);
 		SCE_DBG_ASSERT_FAIL(1422);
 	}
@@ -439,7 +439,7 @@ int AddressSpaceAllocMemBlockByCommand(AddressSpaceObject *unused,
 	}
 	if (!(attr & MEMBLOCK_TYPE_UNCHECKED)) {
 		if (attr & MEMBLOCK_TYPE_GIVEN_PHYMEMPART) {
-			if (!SceDipswForDriver_A98FC2FD(DIPSW_ENABLE_TOOL_PHYMEMPART)) {
+			if (!sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART)) {
 				ret = SCE_KERNEL_ERROR_ERROR;
 				goto out;
 			}
@@ -722,7 +722,7 @@ int AddressSpaceIdFreeMemBlock(SceUID guid, MemBlockBaseInfo *info, MemBlockObje
 	if (ret < 0)
 		return ret;
 	AddressSpaceRefer(as);
-	intr = SceCpuForDriver_D32ACE9E(&as->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&as->lock);
 	for (i = 0; i < ADDRESS_SPACE_PARTITIONS; i++) {
 		if (as->partitionUid[i] != info->partitionUid)
 			continue;
@@ -900,7 +900,7 @@ static inline __attribute__((always_inline)) int CreateAddressSpaceUserMode(cons
 			goto no_partition;
 		as->partition[s_sharedPartitions[i]] = partition;
 	}
-	if (SceDipswForDriver_A98FC2FD(DIPSW_ENABLE_TOOL_PHYMEMPART)) {
+	if (sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART)) {
 		if (s_kernelAddressSpace->partition[AS_PARTITION_TOOL_A] == NULL) {
 			i = AS_PARTITION_TOOL_A;
 			goto no_share;
@@ -966,14 +966,14 @@ static inline __attribute__((always_inline)) int AddressSpaceCreatePartitionForU
 		if (AddressSpaceCreatePartitionByCommandRaw(as, pid, &s_userPartitions[i], 0, 0) < 0)
 			SCE_DBG_ASSERT_FAIL(1875);
 	}
-	if (SceDipswForDriver_A98FC2FD(DIPSW_ENABLE_TOOL_PHYMEMPART) &&
+	if (sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART) &&
 	    AddressSpaceCreatePartitionByCommandRaw(as, pid, &s_userToolPartition, 0, 0) < 0)
 		SCE_DBG_ASSERT_FAIL(1887);
-	if (SceDipswForDriver_A98FC2FD(DIPSW_USER_IOPA)) {
+	if (sceKernelCheckDipsw(DIPSW_USER_IOPA)) {
 		if (AddressSpaceAddDefaultUserIOPARaw(as) < 0)
 			SCE_DBG_ASSERT_FAIL(1897);
-		if (SceDipswForDriver_A98FC2FD(DIPSW_USER_IOPA_MAP)) {
-			if (!SceDipswForDriver_A98FC2FD(DIPSW_USER_IO_SMALL)) {
+		if (sceKernelCheckDipsw(DIPSW_USER_IOPA_MAP)) {
+			if (!sceKernelCheckDipsw(DIPSW_USER_IO_SMALL)) {
 				pa = 0x80000000;
 				size = 0x20000000;
 			} else {
@@ -1083,9 +1083,9 @@ int sceKernelAddressSpaceFreeAllMemBlock(SceUID guid)
 		goto out;
 	}
 	if (as->userIOPA != -1)
-		SceSysmemForDriver_009E1C61(as->userIOPA);
+		sceKernelFreeMemBlock(as->userIOPA);
 	if (as->userIOTimer != -1)
-		SceSysmemForDriver_009E1C61(as->userIOTimer);
+		sceKernelFreeMemBlock(as->userIOTimer);
 	list = SceSysmemForKernel_85571907(sizeof(*list));
 	if (list == NULL)
 		return SCE_KERNEL_ERROR_SYSMEM_ADDRESS_SPACE_ERROR;
@@ -1099,7 +1099,7 @@ int sceKernelAddressSpaceFreeAllMemBlock(SceUID guid)
 	}
 	for (i = 0; i != list->capacity; i++)
 		*entries++ = NULL;
-	intr = SceCpuForDriver_D32ACE9E(&as->lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&as->lock);
 	for (i = 0; i < ADDRESS_SPACE_PARTITIONS; i++) {
 		partition = as->partition[i];
 		for (j = i + 1; j < ADDRESS_SPACE_PARTITIONS; j++) {

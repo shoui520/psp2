@@ -260,7 +260,7 @@ PVRSRV_ERROR DevDeInitSGX(IMG_VOID *pvDeviceNode)
 		return eError;
 #if FW_DEBUG
 	if (psSGXDeviceMap->pvRegsCpuVBase == NULL && psDevInfo->pvRegsBaseKM != NULL)
-		SceDebugForDriver_35A35322(0, &dbg_DevDeInitSGX_L1265,
+		sceKernelAssert(0, &dbg_DevDeInitSGX_L1265,
 				__builtin_return_address(0));
 #endif
 	OSFreeMem_Impl(2, sizeof(PVRSRV_SGXDEV_INFO), psDevInfo, NULL);
@@ -562,7 +562,7 @@ PVRSRV_ERROR DevInitSGXPart2KM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		psDevInfo->pvRegsBaseKM = psSGXDeviceMap->pvRegsCpuVBase;
 #if FW_VERSION >= 0x04000000
 	else
-		SceDebugForDriver_35A35322(0, &dbg_DevInitSGXPart2KM_L1047, __builtin_return_address(0));
+		sceKernelAssert(0, &dbg_DevInitSGXPart2KM_L1047, __builtin_return_address(0));
 #endif
 	psDevInfo->ui32RegSize = psSGXDeviceMap->ui32RegsSize;
 	psDevInfo->sRegsPhysBase = psSGXDeviceMap->sRegsSysPBase;
