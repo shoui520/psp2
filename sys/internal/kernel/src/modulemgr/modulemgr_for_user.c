@@ -1,6 +1,7 @@
 /*
- * syscall.c - the SceModulemgr system calls (user mode module loading and
- * module queries); Sony's file name is unknown
+ * modulemgr_for_user.c - the SceModulemgr system calls (user mode module
+ * loading and module queries); the file name is 1.80's, whose records put
+ * _sceKernelLoadModuleWithoutStartForUser and _sceKernelOpenModuleForUser here
  */
 
 #include "modulemgr_internal.h"

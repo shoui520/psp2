@@ -1,6 +1,8 @@
 /*
  * syscall_stub.c - the entry points of the module loading system calls
- * (Sony's file name is unknown)
+ * (Sony's file name is unknown). A file of its own: the original keeps these
+ * apart from modulemgr_for_user.c's functions, which one file would interleave
+ * with them (each stub calls one)
  *
  * User arguments past the third come in a block that is copied in first;
  * options and the start/stop status are copied onto the kernel stack.

@@ -10,7 +10,7 @@ psp2_module(os0_kd_modulemgr KIND kernel COMPILER gcc48 SOURCES
 	librarydb.c
 	self_decrypter.c
 	syscall_stub.c
-	syscall.c
+	modulemgr_for_user.c
 	loadcore.c
 	stub_linker.c
 	syscallcb.c
