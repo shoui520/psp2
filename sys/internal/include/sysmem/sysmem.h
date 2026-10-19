@@ -84,6 +84,27 @@ SceUID sceKernelAllocPartitionMemBlock(SceUID part, const char *name, SceKernelM
 #define ALLOC_ATTR_KEEP_CLEAR		0x02000000	/* cleared whatever the dipsw says */
 #define ALLOC_ATTR_BLOCK_SHIFT		28		/* bits 28..31: the block's allocationAttributes */
 
+/*
+ * The partial-block exports (SceSysmemForDriver_16713BE8, 8C43B052, 13805CA8, 6C76AD89,
+ * 4C584B29): an operation on a range's units (bits 8..13), after a check that every unit
+ * is in the state given (bits 0..5; Sony's names, from memblock_partial.c's messages; no
+ * Sony name found for the operations)
+ */
+#define PARTIAL_CHECK_MASK				0x3f
+#define SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_ALLOCATED	0x01
+#define SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_FREE		0x02
+#define SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_MAPPED	0x04
+#define SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_ALLOCNOMAP	0x08	/* allocated, not mapped */
+#define SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_MAPPED_RW	0x10
+#define SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_MAPPED_RO	0x20
+#define PARTIAL_OP_MASK					0x3f00
+#define PARTIAL_OP_ALLOC				0x0100	/* pages, not mapped */
+#define PARTIAL_OP_FREE					0x0200
+#define PARTIAL_OP_ALLOC_MAP				0x0400	/* then mapped */
+#define PARTIAL_OP_UNMAP				0x0800	/* the pages kept */
+#define PARTIAL_OP_RW_TO_RO				0x1000
+#define PARTIAL_OP_RO_TO_RW				0x2000
+
 /* Complete result of Sysmem's physical range query. */
 typedef struct SceKernelPhyMemRangeInfo {
 	SceSize size;

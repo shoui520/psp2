@@ -16,22 +16,6 @@
 #define PARTIAL_MAP_RO			1
 #define PARTIAL_MAP_RW			3
 
-/* PartialInfoOpRange: a check (bits 0..5) then an operation (bits 8..13) */
-#define PARTIAL_CHECK_MASK		0x3f
-#define PARTIAL_CHECK_ALLOCATED		0x01
-#define PARTIAL_CHECK_FREE		0x02
-#define PARTIAL_CHECK_MAPPED		0x04
-#define PARTIAL_CHECK_ALLOCNOMAP	0x08
-#define PARTIAL_CHECK_MAPPED_RW		0x10
-#define PARTIAL_CHECK_MAPPED_RO		0x20
-#define PARTIAL_OP_MASK			0x3f00
-#define PARTIAL_OP_ALLOC		0x0100
-#define PARTIAL_OP_FREE			0x0200
-#define PARTIAL_OP_ALLOC_MAP		0x0400
-#define PARTIAL_OP_UNMAP		0x0800
-#define PARTIAL_OP_RW_TO_RO		0x1000
-#define PARTIAL_OP_RO_TO_RW		0x2000
-
 struct PhyPage;
 /* l1pagetable.c (its memblock struct is still a placeholder there) */
 
@@ -314,7 +298,7 @@ int PartialInfoOpRange(PartitionObject *partition, MemBlockObject *block, Partia
 	if (op & PARTIAL_CHECK_MASK) {
 		for (i = first, rest = size; i < count; i++) {
 			switch (op & PARTIAL_CHECK_MASK) {
-			case PARTIAL_CHECK_ALLOCATED:
+			case SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_ALLOCATED:
 				if (units[i] == 0) {
 					SCE_DBG_PRINTF(0xb, 612,
 						       "SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_ALLOCATED failed\n");
@@ -322,7 +306,7 @@ int PartialInfoOpRange(PartitionObject *partition, MemBlockObject *block, Partia
 					goto out;
 				}
 				break;
-			case PARTIAL_CHECK_FREE:
+			case SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_FREE:
 				if (units[i] != 0) {
 					SCE_DBG_PRINTF(0xb, 619,
 						       "SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_FREE:ui=%d failed\n",
@@ -331,7 +315,7 @@ int PartialInfoOpRange(PartitionObject *partition, MemBlockObject *block, Partia
 					goto out;
 				}
 				break;
-			case PARTIAL_CHECK_MAPPED:
+			case SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_MAPPED:
 				if (PARTIAL_UNIT_MAP(units[i]) == PARTIAL_MAP_NONE) {
 					SCE_DBG_PRINTF(0xb, 626,
 						       "SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_MAPPED failed\n");
@@ -339,7 +323,7 @@ int PartialInfoOpRange(PartitionObject *partition, MemBlockObject *block, Partia
 					goto out;
 				}
 				break;
-			case PARTIAL_CHECK_ALLOCNOMAP:
+			case SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_ALLOCNOMAP:
 				if (PARTIAL_UNIT_MAP(units[i]) != PARTIAL_MAP_NONE) {
 					SCE_DBG_PRINTF(0xb, 633,
 						       "SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_ALLOCNOMAP failed\n");
@@ -353,7 +337,7 @@ int PartialInfoOpRange(PartitionObject *partition, MemBlockObject *block, Partia
 					goto out;
 				}
 				break;
-			case PARTIAL_CHECK_MAPPED_RW:
+			case SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_MAPPED_RW:
 				if (PARTIAL_UNIT_MAP(units[i]) != PARTIAL_MAP_RW) {
 					SCE_DBG_PRINTF(0xb, 645,
 						       "SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_MAPPED_RW failed\n");
@@ -361,7 +345,7 @@ int PartialInfoOpRange(PartitionObject *partition, MemBlockObject *block, Partia
 					goto out;
 				}
 				break;
-			case PARTIAL_CHECK_MAPPED_RO:
+			case SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_MAPPED_RO:
 				if (PARTIAL_UNIT_MAP(units[i]) != PARTIAL_MAP_RO) {
 					SCE_DBG_PRINTF(0xb, 652,
 						       "SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_MAPPED_RO failed\n");

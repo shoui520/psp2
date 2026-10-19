@@ -930,33 +930,27 @@ int SceSysmemForDriver_58D21746(SceUID guid)
 	return MapMemBlockByGUID(guid, 0);
 }
 
-/* partial blocks: the operation kind in bits 8..13, its argument below */
-#define PARTIAL_OP_MAP			0x100
-#define PARTIAL_OP_UNMAP		0x200
-#define PARTIAL_OP_PROTECT		0x400
-#define PARTIAL_OP_ALLOC		0x800
-
 int SceSysmemForDriver_16713BE8(SceUID guid, uintptr_t va, SceSize size, SceUInt32 flags)
 {
-	if (flags & ~2)
+	if (flags & ~SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_FREE)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	return PartialMapUnmapMemBlock(guid, flags | PARTIAL_OP_MAP, va, size);
+	return PartialMapUnmapMemBlock(guid, flags | PARTIAL_OP_ALLOC, va, size);
 }
 
 int SceSysmemForDriver_8C43B052(SceUID guid, uintptr_t va, SceSize size, SceUInt32 flags)
 {
-	if ((flags & 0x3f) >= 2)
+	if ((flags & PARTIAL_CHECK_MASK) > SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_ALLOCATED)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	return PartialMapUnmapMemBlock(guid, flags | PARTIAL_OP_UNMAP, va, size);
+	return PartialMapUnmapMemBlock(guid, flags | PARTIAL_OP_FREE, va, size);
 }
 
 int SceSysmemForDriver_13805CA8(SceUID guid, uintptr_t va, SceSize size, SceUInt32 flags)
 {
-	switch (flags & 0x3f) {
+	switch (flags & PARTIAL_CHECK_MASK) {
 	case 0:
-	case 1:
-	case 8:
-		return PartialMapUnmapMemBlock(guid, flags | PARTIAL_OP_PROTECT, va, size);
+	case SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_ALLOCATED:
+	case SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_ALLOCNOMAP:
+		return PartialMapUnmapMemBlock(guid, flags | PARTIAL_OP_ALLOC_MAP, va, size);
 	default:
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
@@ -964,18 +958,19 @@ int SceSysmemForDriver_13805CA8(SceUID guid, uintptr_t va, SceSize size, SceUInt
 
 int SceSysmemForDriver_6C76AD89(SceUID guid, uintptr_t va, SceSize size, SceUInt32 flags)
 {
-	if ((flags & 0x3f) != 0 && (flags & 0x3f) != 4)
+	if ((flags & PARTIAL_CHECK_MASK) != 0 &&
+	    (flags & PARTIAL_CHECK_MASK) != SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_MAPPED)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	return PartialMapUnmapMemBlock(guid, flags | PARTIAL_OP_ALLOC, va, size);
+	return PartialMapUnmapMemBlock(guid, flags | PARTIAL_OP_UNMAP, va, size);
 }
 
 int SceSysmemForDriver_4C584B29(SceUID guid, uintptr_t va, SceSize size, SceUInt32 op)
 {
 	switch (op) {
-	case 0x1000:
-	case 0x1010:
-	case 0x2000:
-	case 0x2020:
+	case PARTIAL_OP_RW_TO_RO:
+	case PARTIAL_OP_RW_TO_RO | SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_MAPPED_RW:
+	case PARTIAL_OP_RO_TO_RW:
+	case PARTIAL_OP_RO_TO_RW | SCE_KERNEL_MEMBLOCK_PARTIAL_CHECK_MAPPED_RO:
 		return PartialMapUnmapMemBlock(guid, op, va, size);
 	default:
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
