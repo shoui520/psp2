@@ -3248,11 +3248,12 @@ int module_start(SceSize arglen, const void *argp)
 /* Sony also inlines this initializer at saved-context construction sites. */
 void initRegisterContext(struct ThreadRegisterContext *regs)
 {
+	uint32_t *reg = (uint32_t *)regs;
 	int i;
 
 	regs->full = 1;
 	for (i = 0; i < 15; i++)
-		regs->r[i] = 0xdeadbeef;
+		*++reg = 0xdeadbeef;
 	regs->status = 0;
 	regs->tpidruro = 0;
 	regs->pmselr = 0;
@@ -3726,7 +3727,7 @@ bool distributeThread(int cpuId, struct ThreadCB *thread)
 	if ((int32_t)context->status < 0 && !(context->flags & THREAD_FLAG_EXITING) &&
 	    (context->userFrame == NULL || (context->flags & THREAD_FLAG_SELF_STOPPED))) {
 		/* debug-suspended */
-		context->status = ((context->status << 16) & 0x7fffffff) |
+		context->status = ((context->status << 16) & 0x7fff0000) |
 				      THREAD_STATE_DEBUG_SUSPENDED | THREAD_STATE_OFF_CPU;
 		listManagerThread((uintptr_t)&s_threadmgrRuntime.manager->debugSuspendedNext,
 				  context);
