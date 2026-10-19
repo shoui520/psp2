@@ -3145,9 +3145,9 @@ modules:
         kernel: true
         nid: 0x74580D9F
         functions:
-          SceSblSsMgrForKernel_516ECC08: 0x516ECC08
           SceSblSsMgrForKernel_83D254FF: 0x83D254FF
           SceSblSsMgrForKernel_E2DD0378: 0xE2DD0378
+          SceSblSsMgrForKernel_sceSblPmMgrGetProductMode: 0x516ECC08
           nvs_read_data: 0xC2EC8F5A
           nvs_write_data: 0xE29E161C
   SceSblSsSmComm:
@@ -4269,7 +4269,6 @@ modules:
           SceSysmemForKernel_857701D4: 0x857701D4
           SceSysmemForKernel_86681B64: 0x86681B64
           SceSysmemForKernel_89BEF058: 0x89BEF058
-          SceSysmemForKernel_89D33DF0: 0x89D33DF0
           SceSysmemForKernel_8EE8B917: 0x8EE8B917
           SceSysmemForKernel_8FD11E02: 0x8FD11E02
           SceSysmemForKernel_93344755: 0x93344755
@@ -4319,6 +4318,7 @@ modules:
           sceGUIDGetPID: 0xBD42A0FC
           sceGUIDGetUIDVectorByClass: 0x52137FA3
           sceGUIDKernelCreateWithOpt: 0xFB6390CE
+          sceGUIDOpenByGUID: 0x89D33DF0
           sceGUIDSet: 0xBF275C5A
           sceGUIDSetPID: 0x46DF8C8A
           sceKernelAddressSpaceCtrSetObjectHeap: 0xFA348CB1

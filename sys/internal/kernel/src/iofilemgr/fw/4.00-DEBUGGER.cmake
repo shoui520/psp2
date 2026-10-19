@@ -254,7 +254,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForKernel_4E6D8BC3
 	sceGUIDGetUIDVectorByClass
 	SceSysmemForKernel_7F7D5C4A
-	SceSysmemForKernel_89D33DF0
+	sceGUIDOpenByGUID
 	SceSysmemForKernel_B591E49F
 	sceKernelObjectHeapSetResourceLimit
 	SceSysmemForKernel_FA6C098C

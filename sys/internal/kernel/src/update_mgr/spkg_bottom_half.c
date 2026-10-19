@@ -161,7 +161,7 @@ releasePacket:
 	memcpy(&header, args->buffer, sizeof(header));
 	if (header.file_offset > 1024)
 		goto invalidRequirements;
-	if (SceSblSsMgrForKernel_516ECC08(&updateFlag))
+	if (SceSblSsMgrForKernel_sceSblPmMgrGetProductMode(&updateFlag))
 		updateFlag = 0;
 	if ((info.requirements & 2) && !updateFlag)
 		goto alreadyModified;

@@ -106,7 +106,7 @@ int sceIoAsyncEventDestroy(SceUID uid)
 	void *object;
 	int ret;
 
-	handle = SceSysmemForKernel_89D33DF0(uid);
+	handle = sceGUIDOpenByGUID(uid);
 	if (handle < 0)
 		return handle;
 	if (!SceSysmemForKernel_7F7D5C4A(SceSysmemForKernel_368F1C36(handle),

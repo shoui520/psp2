@@ -466,9 +466,9 @@ SceSysmemForKernel_7F7D5C4A:
 .word 0x10, 0x2451f0f, 0x7f7d5c4a, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForKernel, "ax", %progbits
 .balign 4
-.global SceSysmemForKernel_89D33DF0
-.type SceSysmemForKernel_89D33DF0, %function
-SceSysmemForKernel_89D33DF0:
+.global sceGUIDOpenByGUID
+.type sceGUIDOpenByGUID, %function
+sceGUIDOpenByGUID:
 .word 0x10, 0x2451f0f, 0x89d33df0, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForKernel, "ax", %progbits
 .balign 4
@@ -1367,9 +1367,9 @@ SceSysmemForKernel_7F7D5C4A:
 .word 0x10, 0x2451f0f, 0x7f7d5c4a, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForKernel, "ax", %progbits
 .balign 4
-.global SceSysmemForKernel_89D33DF0
-.type SceSysmemForKernel_89D33DF0, %function
-SceSysmemForKernel_89D33DF0:
+.global sceGUIDOpenByGUID
+.type sceGUIDOpenByGUID, %function
+sceGUIDOpenByGUID:
 .word 0x10, 0x2451f0f, 0x89d33df0, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForKernel, "ax", %progbits
 .balign 4

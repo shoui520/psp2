@@ -468,7 +468,7 @@ set(MODULE_IMPORT_FUNCS
 	sceBbmcGetDriverInfoForDriver
 	SceQafMgrForDriver_3CB55F98
 	SceQafMgrForDriver_8C423C18
-	SceSblSsMgrForKernel_516ECC08
+	SceSblSsMgrForKernel_sceSblPmMgrGetProductMode
 	SceSblSsMgrForDriver_C38D0CEA
 	sceSblSsInfraAllocatePARangeVector
 	SceSblSsMgrForDriver_E0DC2587

@@ -117,7 +117,7 @@ SceSysmem:
         - SceSysmemForKernel_86681B64: 0x86681B64
         - sceKernelGetFixedHeapInfo: 0x890D9160
         - SceSysmemForKernel_89BEF058: 0x89BEF058
-        - SceSysmemForKernel_89D33DF0: 0x89D33DF0
+        - sceGUIDOpenByGUID: 0x89D33DF0
         - sceKernelCreateAddressSpace: 0x8EE89D2C
         - SceSysmemForKernel_8EE8B917: 0x8EE8B917
         - sceKernelShowPhyMemPart: 0x8F0B5536

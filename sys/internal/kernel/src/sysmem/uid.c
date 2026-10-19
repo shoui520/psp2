@@ -2213,7 +2213,7 @@ static inline int GUIDOpenByGUID(SceUID guid)
 	return ret;
 }
 
-SceUID SceSysmemForKernel_89D33DF0(SceUID guid)
+SceUID sceGUIDOpenByGUID(SceUID guid)
 {
 	if (!UIDIsGUID(guid)) {
 		SCE_DBG_PRINTF_FUNC(0xb, 6278, "sceGUIDOpenByGUID",

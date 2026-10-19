@@ -545,7 +545,7 @@ SceUID SceSysmemForKernel_F49C0BE8(const char *name);
 int sceKernelAddressSpaceGetTimerVbase(SceUID guid, uintptr_t *base);
 int SceSysmemForKernel_FCB5745A(SceUInt32 *dst, SceUInt32 value, SceSize count);
 int sceGUIDGetEntry(SceUID guid, UIDEntry **out);
-SceUID SceSysmemForKernel_89D33DF0(SceUID guid);	/* vitasdk: ksceGUIDOpenByGUID */
+SceUID sceGUIDOpenByGUID(SceUID guid);
 int sceGUIDClose(SceUID guid);
 SceUID sceGUIDGetPID(SceUID guid);
 SceUID sceGUIDKernelCreateWithOpt(SceClass *sce_class, const char *name, const UIDCreateOpt *opt,

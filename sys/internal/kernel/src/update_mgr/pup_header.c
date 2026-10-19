@@ -88,7 +88,7 @@ int PupUtilVerifyPupHeaderAsync(SceSize arglen, PupVerifyThreadArgs *args)
 		result = (int)0x800f0227;
 		goto cleanup;
 	}
-	if (SceSblSsMgrForKernel_516ECC08(&updateFlag))
+	if (SceSblSsMgrForKernel_sceSblPmMgrGetProductMode(&updateFlag))
 		updateFlag = 0;
 	attributes = pupFileHeader.m_attribute[0];
 	if ((attributes & 2) && !updateFlag) {
