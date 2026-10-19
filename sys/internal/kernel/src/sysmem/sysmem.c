@@ -28,8 +28,6 @@
 #define PAGE_KIND_FAULT			6
 #define PAGE_KIND_NOT_IN		7
 
-#define DIPSW_SUBBUDGET_INFO		0x9f	/* PLACEHOLDER: name */
-
 /* the bytes from va to the end of its 4 KiB page */
 static inline SceSize SmallPageRest(uintptr_t va)
 {
@@ -493,7 +491,7 @@ int sceKernelGetSubbudgetInfo(SceUInt32 subbudget, AddressSpaceSubbudgetInfo *us
 	AddressSpaceSubbudgetInfo info;
 	int ret;
 
-	if (!sceKernelCheckDipsw(DIPSW_SUBBUDGET_INFO))
+	if (!sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE))
 		return SCE_KERNEL_ERROR_ONLY_DEVELOPMENT_MODE;
 	ret = sceKernelCopyFromUser(&info, userInfo, sizeof(info));
 	if (ret < 0 || info.size != sizeof(info))
@@ -626,9 +624,6 @@ UIDManager *g_uidManager;
 /* the domain access sysmem reads the KBL parameters with */
 #define SYSMEM_BOOT_DACR		0x17450000
 
-#define DIPSW_DEBUG_PUTCHAR		0xc5	/* PLACEHOLDER: name */
-#define DIPSW_DEBUG_PUTCHAR_ALT		0xc4	/* PLACEHOLDER: name */
-
 int SysmemModuleStart(SceSize args, void *argp)
 {
 	const struct SysmemBootContext *context = argp;
@@ -644,8 +639,8 @@ int SysmemModuleStart(SceSize args, void *argp)
 	writeDacr(dacr);
 	InitializeDipsw(context);
 	InitializeDebugPrintLevel(context);
-	if (sceKernelCheckDipsw(DIPSW_DEBUG_PUTCHAR) ||
-	    sceKernelCheckDipsw(DIPSW_DEBUG_PUTCHAR_ALT))
+	if (sceKernelCheckDipsw(DIPSW_UART1_CONSOLE) ||
+	    sceKernelCheckDipsw(DIPSW_UART0_CONSOLE))
 		SceDebugForKernel_22546577(context->debugPutchar, 0);
 	if (SysrootModuleStart(context) < 0)
 		SCE_PANIC(1795);
@@ -684,8 +679,8 @@ int SysmemModuleStart(SceSize args, void *argp)
 		SCE_PANIC(1903);
 	if (SerialInit(context) < 0)
 		SCE_PANIC(1912);
-	if (sceKernelCheckDipsw(DIPSW_DEBUG_PUTCHAR) ||
-	    sceKernelCheckDipsw(DIPSW_DEBUG_PUTCHAR_ALT))
+	if (sceKernelCheckDipsw(DIPSW_UART1_CONSOLE) ||
+	    sceKernelCheckDipsw(DIPSW_UART0_CONSOLE))
 		SceDebugForKernel_22546577((uintptr_t)SerialDebugPutchar, 0);
 	PhyMemLowModuleStartPhase2(g_uidManager);
 	PhyMemModuleStartPhase2(g_uidManager);

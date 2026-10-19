@@ -133,7 +133,7 @@ int SceSblAIMgrForDriver_71608CA3(void)
 {
 	if (SceSblAIMgrForDriver_C6E83F34())
 		return 1;
-	return sceKernelCheckDipsw(0x98) != 0;
+	return sceKernelCheckDipsw(DIPSW_PLATFORM_DOLCE) != 0;
 }
 
 int SceSblAIMgrForDriver_37A79140(void)

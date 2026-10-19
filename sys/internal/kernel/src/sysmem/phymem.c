@@ -2403,7 +2403,7 @@ int PhyMemModuleStartPhase2(const UIDManager *manager)
 					  &s_phyPartKernel->base);
 	if (ret < 0)
 		return ret;
-	if (sceKernelCheckDipsw(0xd2)) {
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
 		ret = sceGUIDSet(SCE_KERNEL_PHYMEMPART_TOOL_ID, s_phyMemPartClass, NULL,
 						  &s_phyPartTool->base);
 		if (ret < 0)

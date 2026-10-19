@@ -1482,7 +1482,7 @@ int initializeTraceHardware(void)
 
 int module_start(void)
 {
-	if (sceKernelCheckDipsw(0xd4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_USER_PA_MAPPING) == 0)
 		return 1;
 	if (initializeTraceHardware() < 0)
 		return 2;

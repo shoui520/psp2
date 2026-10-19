@@ -1027,11 +1027,11 @@ int PampModuleStart(SceSize arglen, void *argp)
 	SceDfMgrProtocol protocol;
 	int ret;
 
-	if (!sceKernelCheckDipsw(0xc2)) {
+	if (!sceKernelCheckDipsw(DIPSW_DECI)) {
 		SCE_DBG_PRINTF(0xb, 271, "disabled by dipsw\n");
 		return 1;
 	}
-	if (!sceKernelCheckDipsw(0xd4))
+	if (!sceKernelCheckDipsw(DIPSW_USER_PA_MAPPING))
 		return 1;
 	memset(ctx, 0, sizeof(*ctx));
 	if (sceKernelInitializeFastMutex(&ctx->controlLock, "SceDeci4pPampControlLock", 2, NULL) < 0 ||
@@ -1088,7 +1088,8 @@ int PampModuleStart(SceSize arglen, void *argp)
 	protocol.destination = 0;
 	protocol.flags = DFMGR_PROTOCOL_ENABLE;
 	strncpy(protocol.name, "PAMP", sizeof(protocol.name));
-	protocol.flags |= sceKernelCheckDipsw(0xc3) ? DFMGR_PROTOCOL_SDIO : DFMGR_PROTOCOL_USB;
+	protocol.flags |= sceKernelCheckDipsw(DIPSW_NO_DBGUSB) ?
+			  DFMGR_PROTOCOL_SDIO : DFMGR_PROTOCOL_USB;
 	ret = sceDfMgrOpen(scePerfArmPmonOpen, &protocol, ctx);
 	if (ret < 0)
 		return 2;

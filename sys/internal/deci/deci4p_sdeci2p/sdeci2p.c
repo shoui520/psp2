@@ -121,7 +121,6 @@ static void sdeci2pSetFlags(SceUInt32 *flags, SceUInt32 bits, int set)
 	sceKernelCpuResumeIntr(intr);
 }
 
-
 static int notifyForwardStart(Sdeci2pContext *ctx, SceUInt32 n)
 {
 	SceKernelIntrStatus intr;
@@ -765,7 +764,7 @@ int SDeci2pModuleStart(SceSize args, void *argp)
 	int status, ret;
 	SceUID thid;
 
-	if (!sceKernelCheckDipsw(0xc1)) {
+	if (!sceKernelCheckDipsw(DIPSW_SYSTEM_DECI)) {
 		SCE_DBG_PRINTF(0xb, 278, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}

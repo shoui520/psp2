@@ -111,22 +111,6 @@ extern uint32_t _fbss[], _end[];
 #define BOOT_MAP_GLOBAL		0x10000
 #define BOOT_DOMAIN_KERNEL	0xc
 
-/* the DIP switches boot() reads or reconfigures (the henkaku wiki's numbers) */
-#define DIPSW_RELEASE_CHECK_MODE	0x81
-#define DIPSW_PLATFORM_DOLCE		0x98
-#define DIPSW_DEVELOPMENT_MODE		0x9f
-#define DIPSW_SHELL_CRON		0xba
-#define DIPSW_UART0_CONSOLE		0xc4
-#define DIPSW_UART1_CONSOLE		0xc5
-#define DIPSW_ASSERT_LEVEL_1		0xcc
-#define DIPSW_ASSERT_LEVEL_2		0xcd
-#define DIPSW_DISABLE_RECONFIGURATION	0xcb
-#define DIPSW_ENABLE_TOOL_PHYMEMPART	0xd2
-#define DIPSW_USER_PA_MAPPING		0xd4
-#define DIPSW_USER_PA_MAPPING_ADDRESS	0xd5
-#define DIPSW_HARDWARE_BREAKPOINT	0xe4
-#define DIPSW_CONSOLE_LOGGING		0xfd
-
 static struct {
 	SceKernelBootParam param;
 	SceKernelBootParam *current;
@@ -474,10 +458,10 @@ static inline uint32_t BootCpu0Init(void *lr)
 	InitializeDipsw(&s_kblParam.dipsw);
 	if (s_kblParam.boot_flags[1] == 0xff) {
 		SceDipswForDriver_F1F3E9FE(DIPSW_UART0_CONSOLE);
-		SceDipswForDriver_F1F3E9FE(0xd3);
+		SceDipswForDriver_F1F3E9FE(DIPSW_USER_UART);
 	} else {
 		SceDipswForDriver_82E45FBF(DIPSW_UART0_CONSOLE);
-		SceDipswForDriver_82E45FBF(0xd3);
+		SceDipswForDriver_82E45FBF(DIPSW_USER_UART);
 	}
 	if (!(s_kblParam.boot_flags[4] & 1))
 		SceDipswForDriver_82E45FBF(DIPSW_SHELL_CRON);
@@ -485,28 +469,28 @@ static inline uint32_t BootCpu0Init(void *lr)
 	if ((s_kblParam.pscode.product_code & 0xfeff) == 1 &&
 	    !sceKernelCheckDipsw(DIPSW_DISABLE_RECONFIGURATION)) {
 		if (sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE)) {
-			SceDipswForDriver_82E45FBF(0xc0);
-			SceDipswForDriver_82E45FBF(0xc1);
-			SceDipswForDriver_82E45FBF(0xc2);
+			SceDipswForDriver_82E45FBF(DIPSW_DMAC6);
+			SceDipswForDriver_82E45FBF(DIPSW_SYSTEM_DECI);
+			SceDipswForDriver_82E45FBF(DIPSW_DECI);
 			SceDipswForDriver_82E45FBF(DIPSW_UART1_CONSOLE);
-			SceDipswForDriver_82E45FBF(0xc6);
-			SceDipswForDriver_82E45FBF(0xc7);
-			SceDipswForDriver_82E45FBF(0xc8);
-			SceDipswForDriver_82E45FBF(0xc9);
+			SceDipswForDriver_82E45FBF(DIPSW_SYSTEM_TTY);
+			SceDipswForDriver_82E45FBF(DIPSW_TTY_STDIO);
+			SceDipswForDriver_82E45FBF(DIPSW_STOP_ON_ASSERT);
 			SceDipswForDriver_82E45FBF(DIPSW_ASSERT_LEVEL_1);
-			SceDipswForDriver_82E45FBF(0xce);
+			SceDipswForDriver_82E45FBF(DIPSW_DEBUG_LEVEL_1);
+			SceDipswForDriver_82E45FBF(DIPSW_CRITICAL_ERROR);
 			SceDipswForDriver_82E45FBF(DIPSW_HARDWARE_BREAKPOINT);
 			SceDipswForDriver_82E45FBF(DIPSW_USER_PA_MAPPING);
 			revision = param->socRevision;
 			if (revision & 0x1ff00) {
 				if ((revision & 0x30000000) == 0x20000000)
-					SceDipswForDriver_82E45FBF(DIPSW_ENABLE_TOOL_PHYMEMPART);
+					SceDipswForDriver_82E45FBF(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART);
 				else
-					SceDipswForDriver_F1F3E9FE(DIPSW_ENABLE_TOOL_PHYMEMPART);
+					SceDipswForDriver_F1F3E9FE(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART);
 			} else if ((int)revision >= 0) {
-				SceDipswForDriver_82E45FBF(DIPSW_ENABLE_TOOL_PHYMEMPART);
+				SceDipswForDriver_82E45FBF(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART);
 			} else {
-				SceDipswForDriver_F1F3E9FE(DIPSW_ENABLE_TOOL_PHYMEMPART);
+				SceDipswForDriver_F1F3E9FE(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART);
 			}
 			revision = param->socRevision;
 			if ((revision & 0x1ff00) == 0x100 && (int)revision < 0 &&
@@ -515,35 +499,35 @@ static inline uint32_t BootCpu0Init(void *lr)
 			else
 				SceDipswForDriver_F1F3E9FE(DIPSW_USER_PA_MAPPING_ADDRESS);
 			if (param->kblParam->boot_type_indicator_2 & 0x40)
-				SceDipswForDriver_F1F3E9FE(0xc8);
+				SceDipswForDriver_F1F3E9FE(DIPSW_STOP_ON_ASSERT);
 		} else {
-			SceDipswForDriver_F1F3E9FE(0xc0);
-			SceDipswForDriver_F1F3E9FE(0xc1);
-			SceDipswForDriver_F1F3E9FE(0xc2);
-			SceDipswForDriver_F1F3E9FE(0xc6);
-			SceDipswForDriver_F1F3E9FE(0xc7);
-			SceDipswForDriver_F1F3E9FE(0xc8);
-			SceDipswForDriver_F1F3E9FE(0xc9);
-			SceDipswForDriver_F1F3E9FE(0xca);
+			SceDipswForDriver_F1F3E9FE(DIPSW_DMAC6);
+			SceDipswForDriver_F1F3E9FE(DIPSW_SYSTEM_DECI);
+			SceDipswForDriver_F1F3E9FE(DIPSW_DECI);
+			SceDipswForDriver_F1F3E9FE(DIPSW_SYSTEM_TTY);
+			SceDipswForDriver_F1F3E9FE(DIPSW_TTY_STDIO);
+			SceDipswForDriver_F1F3E9FE(DIPSW_STOP_ON_ASSERT);
 			SceDipswForDriver_F1F3E9FE(DIPSW_ASSERT_LEVEL_1);
 			SceDipswForDriver_F1F3E9FE(DIPSW_ASSERT_LEVEL_2);
-			SceDipswForDriver_F1F3E9FE(0xce);
-			SceDipswForDriver_F1F3E9FE(DIPSW_ENABLE_TOOL_PHYMEMPART);
+			SceDipswForDriver_F1F3E9FE(DIPSW_DEBUG_LEVEL_1);
+			SceDipswForDriver_F1F3E9FE(DIPSW_DEBUG_LEVEL_2);
+			SceDipswForDriver_F1F3E9FE(DIPSW_CRITICAL_ERROR);
+			SceDipswForDriver_F1F3E9FE(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART);
 			SceDipswForDriver_F1F3E9FE(DIPSW_HARDWARE_BREAKPOINT);
 			SceDipswForDriver_F1F3E9FE(DIPSW_USER_PA_MAPPING);
-			SceDipswForDriver_F1F3E9FE(0x80);
+			SceDipswForDriver_F1F3E9FE(DIPSW_MEMORY_SIZE);
 			SceDipswForDriver_F1F3E9FE(DIPSW_USER_PA_MAPPING_ADDRESS);
 			if (sceKernelCheckDipsw(DIPSW_RELEASE_CHECK_MODE)) {
 				SceDipswForDriver_82E45FBF(DIPSW_UART1_CONSOLE);
-				SceDipswForDriver_82E45FBF(0xd3);
+				SceDipswForDriver_82E45FBF(DIPSW_USER_UART);
 			} else {
 				SceDipswForDriver_F1F3E9FE(DIPSW_UART1_CONSOLE);
-				SceDipswForDriver_F1F3E9FE(0xd3);
+				SceDipswForDriver_F1F3E9FE(DIPSW_USER_UART);
 			}
 		}
 		SceDipswForDriver_82E45FBF(DIPSW_CONSOLE_LOGGING);
 		if (sceKernelCheckDipsw(DIPSW_UART0_CONSOLE))
-			SceDipswForDriver_F1F3E9FE(0xc6);
+			SceDipswForDriver_F1F3E9FE(DIPSW_SYSTEM_TTY);
 	}
 
 	InitializeAssertLevel();
@@ -657,8 +641,8 @@ static inline uint32_t BootCpu0Init(void *lr)
 		PERVASIVE_MISC->es3Config |= 8;
 	BootDeviceGateEnable();
 	BootDeviceResetDisable();
-	if (sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE) || sceKernelCheckDipsw(0xc0) ||
-	    sceKernelCheckDipsw(0xc1) || sceKernelCheckDipsw(0xc2)) {
+	if (sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE) || sceKernelCheckDipsw(DIPSW_DMAC6) ||
+	    sceKernelCheckDipsw(DIPSW_SYSTEM_DECI) || sceKernelCheckDipsw(DIPSW_DECI)) {
 		DebugBusGateEnable();
 		DebugBusResetDisable();
 	}
@@ -668,7 +652,7 @@ static inline uint32_t BootCpu0Init(void *lr)
 		DebugPaGateEnable();
 		DebugPaResetDisable();
 	}
-	if (sceKernelCheckDipsw(0xc0) || sceKernelCheckDipsw(0xc1)) {
+	if (sceKernelCheckDipsw(DIPSW_DMAC6) || sceKernelCheckDipsw(DIPSW_SYSTEM_DECI)) {
 		ScePervasiveForDriver_D34E74C5(0);
 		ScePervasiveForDriver_EDCA3961(0);
 	}
@@ -1087,7 +1071,7 @@ static inline uint32_t BootCpu0Init(void *lr)
 	current = s_bootParam.current;
 	current->numMemory = 3;
 	current->memory[0].pbase = 0x40200000;
-	if (sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART))
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART))
 		current->memory[0].psize = 0x3fe00000;
 	else
 		current->memory[0].psize = 0x1fe00000;
@@ -1331,7 +1315,7 @@ void boot(void)
 		sceKernelMMUMapLargePages((uint32_t *)(param->l2PageTable000.pbase + 0x400),
 					  BOOT_MAP_DATA, param->phyPageTable.vbase, 0,
 					  param->phyPageTable.psize, param->phyPageTable.pbase);
-		if (sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART))
+		if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART))
 			sceKernelMMUMapLargePages((uint32_t *)(param->l2PageTable000.pbase + 0x400),
 						  BOOT_MAP_DATA, param->phyPageTableHigh.vbase,
 						  0x80000, param->phyPageTableHigh.psize,

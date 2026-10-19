@@ -2934,8 +2934,6 @@ SceUID sceKernelCreatePartition(const char *name, SceUInt8 domain, uintptr_t vba
 	return uid;
 }
 
-#define DIPSW_NO_CLEAR			0xe1	/* PLACEHOLDER: name */
-
 /* name unknown: a kernel block with extraLow bytes below it */
 SceUID SceSysmemForKernel_40870E74(const char *name, SceSize size, SceSize extraLow)
 {

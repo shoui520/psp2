@@ -427,7 +427,7 @@ int sceDeci4pDrfpInit(void)
 	proto.destination = 0;
 	proto.flags = DFMGR_PROTOCOL_ALIAS;
 	strncpy(proto.name, "DRFP", sizeof(proto.name));
-	if (sceKernelCheckDipsw(0xc3) == 0)
+	if (sceKernelCheckDipsw(DIPSW_NO_DBGUSB) == 0)
 		proto.flags |= DFMGR_PROTOCOL_USB;
 	s_drfpProtocol.handle = sceDfMgrOpen(drfpHandler, &proto, &s_drfpProtocol);
 	s_drfpSuspended = 0;
@@ -581,7 +581,7 @@ int DrfpModuleStart(SceSize args, void *argp)
 {
 	SceUID handle;
 
-	if (sceKernelCheckDipsw(0xc2) == 0) {
+	if (sceKernelCheckDipsw(DIPSW_DECI) == 0) {
 		SCE_DBG_PRINTF(0xb, 980, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}

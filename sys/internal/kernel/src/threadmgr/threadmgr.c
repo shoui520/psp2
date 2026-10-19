@@ -651,7 +651,7 @@ int sceKernelThreadMgrModuleBoot(SceSize arglen, const struct ThreadmgrBootArgs 
 
 	cpuId = sceKernelCpuId();
 	poisonVfpRegisters();
-	if (sceKernelCheckDipsw(DIPSW_THBP)) {
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT)) {
 		/* no hardware breakpoints or watchpoints left over; monitor debug mode on */
 		__asm__ volatile(
 			"mcr p14, 0, %0, c0, c0, 4\n\tmcr p14, 0, %0, c0, c1, 4\n\t"
@@ -1408,7 +1408,6 @@ int SceThreadmgrForDriver_84EB1EA4(int value)
 #define THREAD_EVENT_START		0x00000004	/* callThreadEventHandlers */
 #define DEBUG_THREAD_EVENT_DELETE	1
 #define TRACE_EVENT_THREAD_DELETE	1
-#define DIPSW_FREE_RETRY_LOG		0x9f
 #define FREE_RETRY_LIMIT		100000
 #define FREE_RETRY_LOG_EVERY		1000
 void __attribute__((noreturn)) exitDeleteThread(int delete, int intr, int status);
@@ -1859,7 +1858,7 @@ int uidThread_Destructor(struct ThreadmgrThreadObject *object)
 				ret = sceKernelFreeMemBlock(memBlockId);
 				if (ret >= 0)
 					break;
-				if (sceKernelCheckDipsw(DIPSW_FREE_RETRY_LOG) &&
+				if (sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE) &&
 				    tries % FREE_RETRY_LOG_EVERY == 0)
 					SCE_PRINTF_WITH_INFO(0, SCE_LINE(11786, 11791),
 						"*** error: uidThread_Destructor() -> sceKernelFreeMemBlock(0x%08X[%s])=0x%08X, count=%d\n",
@@ -4267,7 +4266,6 @@ void exitDeleteThread(int delete, int intr, int status)
 
 #define CRITICAL_ERROR_MESSAGE		0x80000000	/* criticalError: | the message */
 #define SDK_VERSION_CRITICAL_ERROR	0x01800000	/* reported for SDKs since 1.80 */
-#define DIPSW_CRITICAL_ERROR		0xce
 
 /* what the debugger's handler decides */
 #define CRITICAL_ERROR_ACTION_CONTINUE	0
@@ -5054,7 +5052,8 @@ int64_t sceKernelExtendKernelStackWide(SceSize size, ThreadmgrStackFunction func
 	}
 	sceKernelGetMemBlockMappedBase(memBlockId, &base);
 have:
-	if (!(thread->currentAttr & THREAD_ATTR_NO_STACK_FILL) || sceKernelCheckDipsw(DIPSW_STACK_CHECK))
+	if (!(thread->currentAttr & THREAD_ATTR_NO_STACK_FILL) ||
+	    sceKernelCheckDipsw(DIPSW_STACK_FILL))
 		memset(base, 0xff, pages);
 	*(SceUID *)base = thread->threadId;
 	/* the new stack stands in for the thread's while the function runs */
@@ -6098,7 +6097,7 @@ int SceThreadmgrForDriver_7B278A0B(SceUID threadId)
 	}
 	thread = &object->context;
 	if ((thread->currentAttr & THREAD_ATTR_NO_STACK_FILL) &&
-	    !sceKernelCheckDipsw(DIPSW_STACK_CHECK)) {
+	    !sceKernelCheckDipsw(DIPSW_STACK_FILL)) {
 		ret = SCE_KERNEL_ERROR_UNSUP;
 		goto release;
 	}
@@ -6577,7 +6576,6 @@ int SceThreadmgrForDriver_1096042E(SceUID uid)
 #define STACK_MIN			0x1000
 #define KERNEL_STACK_USER		0x1000	/* a user thread's kernel stack */
 #define KERNEL_STACK_USER_BIG		0x4000	/* the same with DIPSW 0xd9 */
-#define DIPSW_BIG_KERNEL_STACK		0xd9
 #define MEMBLOCK_TYPE_KSTACK_UNLIMITED	0x10a0d006	/* PLACEHOLDER: name */
 #define MEMBLOCK_TYPE_KSTACK_USER	0x10c0d006	/* PLACEHOLDER: name */
 #define MEMBLOCK_TYPE_USER_RW		0x0c20d060	/* PLACEHOLDER: name */
@@ -7182,7 +7180,7 @@ contexts:
 		ret = SCE_KERNEL_ERROR_NO_MEMORY;
 		goto fail_vfp;
 	}
-	if (sceKernelCheckDipsw(DIPSW_THBP)) {
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT)) {
 		thread->thbp[0] = thread->process->contextBreakpoint->value;
 		thread->thbp[1] = thread->process->contextBreakpoint->control;
 	}
@@ -7235,7 +7233,7 @@ contexts:
 
 	/* its stacks: filled, with its UID at the bottom; a user thread's TLS words */
 	if ((int)attr < 0) {
-		if (!(attr & THREAD_ATTR_NO_STACK_FILL) || sceKernelCheckDipsw(DIPSW_STACK_CHECK)) {
+		if (!(attr & THREAD_ATTR_NO_STACK_FILL) || sceKernelCheckDipsw(DIPSW_STACK_FILL)) {
 			memset((void *)thread->pKStack, STACK_FILL,
 			       thread->kStackSize - sizeof(ThreadSyscallFrame));
 			memset(stackMirrorBase, STACK_FILL, thread->uStackSize);
@@ -7275,7 +7273,7 @@ contexts:
 			}
 		}
 	} else {
-		if (!(attr & THREAD_ATTR_NO_STACK_FILL) || sceKernelCheckDipsw(DIPSW_STACK_CHECK))
+		if (!(attr & THREAD_ATTR_NO_STACK_FILL) || sceKernelCheckDipsw(DIPSW_STACK_FILL))
 			memset((void *)thread->pKStack, STACK_FILL, thread->kStackSize);
 		*(SceUID *)thread->pKStack = thread->threadId;
 	}

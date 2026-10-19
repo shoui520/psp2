@@ -25,10 +25,6 @@
 #include "loadp.h"
 #include <kernel/error.h>
 
-#define LOADP_DIPSW				0xc2
-#define LOADP_DIPSW_NO_AUTO_ENABLE		0xc3
-
-
 /* commands; the reply to each is cmd + 1 */
 #define LOADP_CMD_SPAWN				0x00
 #define LOADP_CMD_KILL				0x04
@@ -2216,7 +2212,7 @@ int LoadpModuleStart(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 
-	if (!sceKernelCheckDipsw(LOADP_DIPSW)) {
+	if (!sceKernelCheckDipsw(DIPSW_DECI)) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 0xb, SCE_DBGINFO_FUNC(274, "LoadpModuleStart"),
 					      "disabled by dipsw\n");
@@ -2270,7 +2266,7 @@ int LoadpModuleStart(SceSize args, void *argp)
 	protocol.destination = 0;
 	protocol.flags = DFMGR_PROTOCOL_ENABLE;
 	strncpy(protocol.name, "LOADP", sizeof(protocol.name));
-	if (!sceKernelCheckDipsw(LOADP_DIPSW_NO_AUTO_ENABLE))
+	if (!sceKernelCheckDipsw(DIPSW_NO_DBGUSB))
 		protocol.flags |= DFMGR_PROTOCOL_USB;
 	else
 		protocol.flags |= DFMGR_PROTOCOL_SDIO;

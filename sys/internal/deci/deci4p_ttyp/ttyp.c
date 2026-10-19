@@ -15,7 +15,6 @@
 #include <threadmgr/threadmgr.h>
 #include "ttyp.h"
 
-
 #if FW_DEBUG
 #define TTYP_PRINTF(_line, _fmt, ...)	SCE_PRINTF_WITH_INFO(0xf, _line, _fmt, ##__VA_ARGS__)
 /* in code the original inlined into _func */
@@ -496,7 +495,7 @@ TTYP_INLINE int TtypInit(void)
 
 int TtypModuleStart(SceSize args, void *argp)
 {
-	if (!sceKernelCheckDipsw(0xc2) || !sceKernelCheckDipsw(0xc7)) {
+	if (!sceKernelCheckDipsw(DIPSW_DECI) || !sceKernelCheckDipsw(DIPSW_TTY_STDIO)) {
 		SCE_DBG_PRINTF(0xb, 172, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}

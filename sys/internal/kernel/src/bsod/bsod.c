@@ -33,7 +33,7 @@ int module_start(unsigned arglen, void *argp)
 	(void)argp;
 	s_bsodQafEnabled = SceQafMgrForDriver_382C71E8();
 	if ((SceSblAIMgrForDriver_D78B04A2() && !s_bsodQafEnabled) ||
-	    sceKernelCheckDipsw(0xc1) || sceKernelCheckDipsw(0xc2))
+	    sceKernelCheckDipsw(DIPSW_SYSTEM_DECI) || sceKernelCheckDipsw(DIPSW_DECI))
 		return 1;
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);

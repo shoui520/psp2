@@ -363,7 +363,7 @@ int sceDbgUsbModuleStart(SceSize arglen, void *argp)
 	unsigned int threadOpt[7];
 	int i, ret;
 
-	if (!sceKernelCheckDipsw(0xc2) || sceKernelCheckDipsw(0xc3)) {
+	if (!sceKernelCheckDipsw(DIPSW_DECI) || sceKernelCheckDipsw(DIPSW_NO_DBGUSB)) {
 		SCE_DBG_PRINTF(0xb, 1136, "disabled by dipsw\n");
 		return 1;
 	}

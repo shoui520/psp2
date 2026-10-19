@@ -7,7 +7,6 @@
 
 static inline __attribute__((always_inline)) int powerGpuLimitOverride(void);
 
-
 static inline __attribute__((always_inline))
 int getProcessClockFrequency(SceUID pid, enum PowerProcessClock clock, int syscall);
 
@@ -120,7 +119,8 @@ int powerInitializeKernelProcessState(void)
 
 	s_powerProcessList = NULL;
 	powerResetProcessClockFlags();
-	override = sceKernelCheckDipsw(0x9f) && sceKernelCheckDipsw(0xec);
+	override = sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE) &&
+		   sceKernelCheckDipsw(DIPSW_GPU_OVERCLOCK);
 	powerInitializeProcessClockFlags(override);
 	result = SceProcessmgrForDriver_AF80F39C(SCE_KERNEL_PROCESS_ID,
 			s_processStorageKey, (void **)&state, 1);

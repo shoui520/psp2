@@ -26,8 +26,6 @@ int InitializeDebugPrintLevel(const struct SysmemBootContext *context)
 	return 0;
 }
 
-#define DIPSW_ASSERT_LEVEL_2		0xca
-#define DIPSW_ASSERT_LEVEL_1		0xc9
 /* boot type indicator 2: no crash dumps */
 #define BOOT_NO_CRASH_DUMP		0x40
 

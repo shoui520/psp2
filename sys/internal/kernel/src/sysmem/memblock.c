@@ -35,8 +35,6 @@
 #define MEMBLOCK_TYPE_SECTION		0x00080000	/* whole MiBs, 1 MiB aligned */
 #define MEMBLOCK_TYPE_LOW		0x00100000	/* the caller's address space */
 
-#define DIPSW_ENABLE_TOOL_PHYMEMPART	0xd2
-
 /* the block for the process the command names (the kernel for kernel codes) */
 int AllocMemBlockLowForKernelByCommand(SceKernelAllocMemBlockCommand *command)
 {
@@ -106,7 +104,7 @@ int AllocMemBlockForKernelByCommand(SceKernelAllocMemBlockCommand *command)
 		return AllocMemBlockLowByCommand(command);
 	}
 	if (attr & MEMBLOCK_TYPE_TOOL_PHYMEMPART) {
-		if (sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART))
+		if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART))
 			return AllocMemBlockLowByCommand(command);
 		SCE_DBG_PRINTF(0xb, 524, "Only SCE_DIPSW_ENABLE_TOOL_PHYMEMPART\n");
 		SCE_DBG_ASSERT_FAIL(525);
@@ -703,8 +701,6 @@ int MemBlockOptGetBase(MemBlockObject *block, MemBlockObject **base, void **info
 	return 0;
 }
 
-#define DIPSW_NO_CLEAR			0xe1		/* PLACEHOLDER: name */
-
 /* an allocation given as a whole command */
 int sceKernelAllocMemBlockByCommand(SceKernelAllocMemBlockCommand *command)
 {
@@ -1032,7 +1028,7 @@ int SceSysmemForDriver_DFE2C8CB(SceUID guid, SceKernelMemBlockType type)
 		newCode = code;
 		currentCode = block->code;
 		if (MemBlockRemapAllowed(s_remapKernel, currentCode, newCode) ||
-		    (sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART) &&
+		    (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART) &&
 		     MemBlockRemapAllowed(s_remapTool, currentCode, newCode)) ||
 		    MemBlockRemapAllowed(s_remapCdram, currentCode, newCode)) {
 			intr = SceCpuForDriver_4C38CE4D(&block->lock);

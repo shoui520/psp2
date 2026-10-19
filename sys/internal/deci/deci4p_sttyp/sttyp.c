@@ -476,7 +476,7 @@ int module_start(SceSize args, void *argp)
 {
 	SceProductMode mode = 0;
 
-	if (!sceKernelCheckDipsw(0xc1) || !sceKernelCheckDipsw(0xc6)) {
+	if (!sceKernelCheckDipsw(DIPSW_SYSTEM_DECI) || !sceKernelCheckDipsw(DIPSW_SYSTEM_TTY)) {
 		if (SceCpuId() == 0)
 			SceDebugForDriver_391B74B7("STTYP is disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;

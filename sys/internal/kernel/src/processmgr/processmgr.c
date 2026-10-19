@@ -439,7 +439,7 @@ static int DeleteProcess(SceProcessObject *process)
 	int ret;
 
 	sceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_NOT_DEBUG_SUSPENDED);
-	if (process->type != PROCESS_TYPE_SHELL || sceKernelCheckDipsw(0xc2) != 0)
+	if (process->type != PROCESS_TYPE_SHELL || sceKernelCheckDipsw(DIPSW_DECI) != 0)
 		SceModulemgrForKernel_E71530D7(process->pid);
 	process->status = (process->status & ~PROCESS_STATE_MASK) | PROCESS_STATE_EXITED;
 	sceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_DELETED);
@@ -592,7 +592,7 @@ static int ProcessResourceRecovery(SceProcessObject *process, int destroyed)
 			return ret;
 		}
 	}
-	if (sceKernelCheckDipsw(0xe4) != 0 && process->phbp != NULL) {
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) != 0 && process->phbp != NULL) {
 		ret = sceKernelFreeHeapMemory(process->toolHeap > 0 ? process->toolHeap
 								     : process->uniqueHeap,
 					       process->phbp);
@@ -604,7 +604,7 @@ static int ProcessResourceRecovery(SceProcessObject *process, int destroyed)
 		process->phwp = NULL;
 		process->contextBreakpoint = NULL;
 	}
-	if (sceKernelCheckDipsw(0xd2) != 0) {
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART) != 0) {
 		if (process->toolHeap != -1) {
 			ret = sceKernelDeleteHeap(process->toolHeap);
 			if (ret < 0) {
@@ -1401,7 +1401,7 @@ static inline __attribute__((always_inline)) SceProcessObject *_CreateProcessRaw
 		SCE_DBG_ASSERT_FAIL(3097);
 		return NULL;
 	}
-	if (sceKernelCheckDipsw(0xd2) != 0)
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART) != 0)
 		process->toolHeap = TOOL_HEAP;
 	process->entryHeap = 0x10003;
 	process->entryHeapObject = SceSysmemForKernel_FA6C098C(0x10003);
@@ -1426,7 +1426,7 @@ static int CreateKernelProcess(void)
 	process->threadPermission = 0x80;
 	process->budgetId = BudgetGetKernelBudgetId();
 	process->budget = g_kernelBudget;
-	if (sceKernelCheckDipsw(0xe4) == 0) {
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) == 0) {
 		process->phbp = NULL;
 		process->phwp = NULL;
 		process->contextBreakpoint = NULL;
@@ -1760,7 +1760,7 @@ static inline __attribute__((always_inline)) int OpenStdio(SceProcessObject *pro
 	ret = OpenStdioFile(process, "tty1:", 2);
 	if (ret < 0)
 		goto out;
-	if (sceKernelCheckDipsw(0xb8) != 0)
+	if (sceKernelCheckDipsw(DIPSW_EXTRA_TTY) != 0)
 		ret = OpenStdioFile(process, "tty7:", 3);
 out:
 	SceThreadmgrForDriver_0486F239(pid);
@@ -2016,7 +2016,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 		process->objectHeap[1] = objectHeap;
 	}
 
-	if (sceKernelCheckDipsw(0xd2) != 0) {
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART) != 0) {
 #if FW_VERSION >= 0x04000000
 		process->toolMemory = sceKernelAllocHeapMemory(TOOL_HEAP, 0x80);
 		if (process->toolMemory == NULL) {
@@ -2110,7 +2110,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 	}
 	SceKernelUtilsForDriver_875B2A1C(&process->stackGuard, sizeof(process->stackGuard));
 
-	if (sceKernelCheckDipsw(0xe4) != 0) {
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) != 0) {
 		regs = sceKernelAllocHeapMemory(process->toolHeap > 0 ? process->toolHeap
 								       : process->uniqueHeap,
 						 sizeof(*regs));
@@ -3173,7 +3173,7 @@ dispatch:
 			pid = process->pid;
 			exitStatus = process->exitStatus;
 			_ExitProcess(process, state);
-			if (sceKernelCheckDipsw(0xc2) != 0) {
+			if (sceKernelCheckDipsw(DIPSW_DECI) != 0) {
 				now = sceKernelGetSystemTimeWide();
 				SceSysrootForDriver_8498E23F(pid, exitStatus, now);
 				SceSysrootForDriver_9D058A32(pid, exitStatus, now);
@@ -3201,7 +3201,7 @@ dispatch:
 				spawnLog.spawnNameLength = 10;
 				strncpy(spawnLog.spawnName, g_exitSpawn.process->TitleId, 10);
 				_KillProcess(process, state, kind);
-				if (sceKernelCheckDipsw(0xc2) != 0) {
+				if (sceKernelCheckDipsw(DIPSW_DECI) != 0) {
 					SCE_DBG_ASSERT_CHECK(g_exitSpawn.pid == pid, 2210);
 					now = sceKernelGetSystemTimeWide();
 					SceSysrootForDriver_77CF3FBD(pid, g_exitSpawn.process->pid, now);
@@ -3210,7 +3210,8 @@ dispatch:
 			} else {
 				_KillProcess(process, state, kind);
 			}
-			if (sceKernelCheckDipsw(0xc2) != 0 && state != PROCESS_STATE_CREATED) {
+			if (sceKernelCheckDipsw(DIPSW_DECI) != 0 &&
+			    state != PROCESS_STATE_CREATED) {
 				now = sceKernelGetSystemTimeWide();
 				SceSysrootForDriver_6D44F190(pid, now);
 				SceSysrootForDriver_B501E861(pid, now);
@@ -3332,7 +3333,7 @@ force_kill:
 		CloseStdio(process);
 		pid = process->pid;
 		_KillProcess(process, state, 0x10);
-		if (sceKernelCheckDipsw(0xc2) != 0 && state != PROCESS_STATE_CREATED) {
+		if (sceKernelCheckDipsw(DIPSW_DECI) != 0 && state != PROCESS_STATE_CREATED) {
 			now = sceKernelGetSystemTimeWide();
 			SceSysrootForDriver_6D44F190(pid, now);
 			SceSysrootForDriver_B501E861(pid, now);
@@ -4743,7 +4744,7 @@ void *sceKernelAllocRemoteToolHeap(SceUID pid, SceSize size)
 	void *ptr;
 	int ret;
 
-	if (sceKernelCheckDipsw(0xd2) == 0)
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART) == 0)
 		return NULL;
 	ret = UIDtoProcessAndRefer(pid, &process);
 	if (ret < 0) {
@@ -4767,7 +4768,7 @@ int sceKernelFreeRemoteToolHeap(SceUID pid, void *ptr)
 	SceProcessObject *process;
 	int ret;
 
-	if (sceKernelCheckDipsw(0xd2) == 0)
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART) == 0)
 		return SCE_KERNEL_ERROR_UNSUP;
 	ret = UIDtoProcessAndRefer(pid, &process);
 	if (ret < 0) {
@@ -4872,7 +4873,7 @@ void SceProcessmgrForKernel_344DDE0B(SceUID pid, SceUID prevPid)
 /* names unknown: the hardware breakpoint/watchpoint defaults for new processes */
 int SceProcessmgrForKernel_1197DB8A(SceUInt32 index, SceUInt32 value, SceUInt32 control)
 {
-	if (sceKernelCheckDipsw(0xe4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) == 0)
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index >= ARRAY_SIZE(g_defaultPhbp))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -4883,7 +4884,7 @@ int SceProcessmgrForKernel_1197DB8A(SceUInt32 index, SceUInt32 value, SceUInt32 
 
 int SceProcessmgrForKernel_6DEC45C3(SceUInt32 index, SceUInt32 *value, SceUInt32 *control)
 {
-	if (sceKernelCheckDipsw(0xe4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) == 0)
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index >= ARRAY_SIZE(g_defaultPhbp))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -4924,7 +4925,7 @@ int sceKernelSetPHBP(SceUID pid, SceUInt32 index, SceUInt32 value, SceUInt32 con
 	SceProcessObject *process;
 	int intr, ret;
 
-	if (sceKernelCheckDipsw(0xe4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) == 0)
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index > 4)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -4951,7 +4952,7 @@ int sceKernelGetPHBP(SceUID pid, SceUInt32 index, SceUInt32 *value, SceUInt32 *c
 	SceProcessObject *process;
 	int intr, ret;
 
-	if (sceKernelCheckDipsw(0xe4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) == 0)
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index >= 5)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -4977,7 +4978,7 @@ int SceProcessmgrForKernel_FC80A606(SceUID pid, int index, SceUInt32 value, SceU
 	ProcessDebugRegPair *regs;
 	int ret;
 
-	if (sceKernelCheckDipsw(0xe4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) == 0)
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index != 5)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -4997,7 +4998,7 @@ int SceProcessmgrForKernel_E025F5A9(SceUID pid, int index, SceUInt32 *value, Sce
 	ProcessDebugRegPair *regs;
 	int ret;
 
-	if (sceKernelCheckDipsw(0xe4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) == 0)
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index != 5)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -5015,7 +5016,7 @@ int SceProcessmgrForKernel_E025F5A9(SceUID pid, int index, SceUInt32 *value, Sce
 
 int SceProcessmgrForKernel_DDE282CF(SceUInt32 index, SceUInt32 value, SceUInt32 control)
 {
-	if (sceKernelCheckDipsw(0xe4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) == 0)
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index >= ARRAY_SIZE(g_defaultPhwp))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -5026,7 +5027,7 @@ int SceProcessmgrForKernel_DDE282CF(SceUInt32 index, SceUInt32 value, SceUInt32 
 
 int SceProcessmgrForKernel_9FA66773(SceUInt32 index, SceUInt32 *value, SceUInt32 *control)
 {
-	if (sceKernelCheckDipsw(0xe4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) == 0)
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index >= ARRAY_SIZE(g_defaultPhwp))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -5043,7 +5044,7 @@ int sceKernelSetPHWP(SceUID pid, SceUInt32 index, SceUInt32 value, SceUInt32 con
 	SceProcessObject *process;
 	int intr, ret;
 
-	if (sceKernelCheckDipsw(0xe4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) == 0)
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index > 3)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -5070,7 +5071,7 @@ int sceKernelGetPHWP(SceUID pid, SceUInt32 index, SceUInt32 *value, SceUInt32 *c
 	SceProcessObject *process;
 	int intr, ret;
 
-	if (sceKernelCheckDipsw(0xe4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) == 0)
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index >= 4)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -5095,7 +5096,7 @@ int sceKernelEnablePHWP(SceUID pid, SceUInt32 index)
 	SceProcessObject *process;
 	int intr, ret;
 
-	if (sceKernelCheckDipsw(0xe4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) == 0)
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index > 3)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -5121,7 +5122,7 @@ int sceKernelDisablePHWP(SceUID pid, SceUInt32 index)
 	SceProcessObject *process;
 	int intr, ret;
 
-	if (sceKernelCheckDipsw(0xe4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) == 0)
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (index > 3)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -5147,7 +5148,7 @@ int SceProcessmgrForDriver_B1C3EFCA(SceUID pid, SceUInt32 value)
 	SceProcessObject *process;
 	int ret;
 
-	if (sceKernelCheckDipsw(0xe4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) == 0)
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	ret = UIDtoProcessAndRefer(pid, &process);
 	if (ret < 0)
@@ -5162,7 +5163,7 @@ int SceProcessmgrForDriver_1C70501E(SceUID pid)
 	SceProcessObject *process;
 	int ret;
 
-	if (sceKernelCheckDipsw(0xe4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) == 0)
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	ret = UIDtoProcessAndRefer(pid, &process);
 	if (ret < 0)
@@ -5178,7 +5179,7 @@ int SceProcessmgrForDriver_61B9B6FA(SceUID pid, SceUInt32 value)
 	SceProcessObject *process;
 	int ret;
 
-	if (sceKernelCheckDipsw(0xe4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) == 0)
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	ret = UIDtoProcessAndRefer(pid, &process);
 	if (ret < 0)
@@ -5193,7 +5194,7 @@ int SceProcessmgrForDriver_594319C7(SceUID pid)
 	SceProcessObject *process;
 	int ret;
 
-	if (sceKernelCheckDipsw(0xe4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT) == 0)
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	ret = UIDtoProcessAndRefer(pid, &process);
 	if (ret < 0)
@@ -5841,9 +5842,12 @@ int sceKernelCallAbortHandlerForUser(SceUInt32 code, const void *opt)
 	}
 	process = GetCurrentProcess();
 	pid = process->pid;
-	if ((sceKernelCheckDipsw(0x9f) == 0 || SceSysrootForDriver_6050A467(pid) == 1)
-	    && (sceKernelCheckDipsw(0x9f) != 0 || SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) != 0)) {
-		if (sceKernelCheckDipsw(0x9f) == 0 || SceSysrootForDriver_6050A467(pid) == 0) {
+	if ((sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE) == 0 ||
+	     SceSysrootForDriver_6050A467(pid) == 1) &&
+	    (sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE) != 0 ||
+	     SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) != 0)) {
+		if (sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE) == 0 ||
+		    SceSysrootForDriver_6050A467(pid) == 0) {
 			if (SceCpuForDriver_CDA96E81((SceInt32 *)&process->abortRequested, 0, 1) == 0) {
 				process->abortCode = code;
 				process->abortThread = sceKernelGetThreadId();
@@ -6320,7 +6324,7 @@ static inline __attribute__((always_inline)) int ProcessmgrModuleStart(void)
 		PPMInit();
 		if (CreateKernelProcess() < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 9711, "CreateKernelProcess failed\n");
-		} else if (sceKernelCheckDipsw(0xc2) != 0) {
+		} else if (sceKernelCheckDipsw(DIPSW_DECI) != 0) {
 			CreateDummyProcessWithUID(SHELL_DUMMY_PID, &g_shellDummyProcess,
 						  &g_shellDummyAuthInfo, 0x20);
 			CreateDummyProcessWithUID(NPDRM_DUMMY_PID, &g_npdrmDummyProcess,

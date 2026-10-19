@@ -66,7 +66,7 @@ int sceSDfMgrModuleStart(SceSize args, void *argp)
 		SDFMGR_DEBUG_INFO(198, 0x31602988, 0x93c704bf,
 				 "sceSDfMgrModuleStart"), "\n");
 #endif
-	if (!sceKernelCheckDipsw(0xc1)) {
+	if (!sceKernelCheckDipsw(DIPSW_SYSTEM_DECI)) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 11,
 			SDFMGR_DEBUG_INFO(202, 0x0f5d7c87, 0x93c704bf,
@@ -206,7 +206,7 @@ int sdfMgrResume(int value, void *args)
 	SdfMgrTransport *transport;
 	unsigned retries = 1000000;
 
-	if (sceKernelCheckDipsw(0xe4)) {
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT)) {
 		unsigned debugControl = CP_READ(p14, 0, c0, c2, 2);
 
 		if (!(debugControl & 0x8000))
@@ -507,7 +507,9 @@ void SceDeci4pSDfMgrForKernel_98AEC60E(void)
 
 SceUInt32 SceDeci4pSDfMgrForKernel_35238B8A(void)
 {
-	return sceKernelCheckDipsw(0xd2) ? SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW : SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_GAME_RW;
+	return sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART) ?
+	       SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW :
+	       SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_GAME_RW;
 }
 
 int SceDeci4pSDfMgrForKernel_6BF5553C(SdfMgrHook hook, unsigned index)
@@ -660,7 +662,7 @@ int sceSDfMgrModuleBoot(SceSize args, void *argp)
 
 	(void)args;
 	(void)argp;
-	if (!sceKernelCheckDipsw(0xc1)) {
+	if (!sceKernelCheckDipsw(DIPSW_SYSTEM_DECI)) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 11,
 			SDFMGR_DEBUG_INFO(224, 0xdb4fcfbc, 0xaaf0498e,
@@ -680,7 +682,7 @@ int sceSDfMgrModuleBoot(SceSize args, void *argp)
 	result = sdioInit();
 	BOOT_CHECK(result, 267, 0x8bc042c7, 268, 0x5805c178,
 		   "sdioInit failed (0x%08x)\n");
-	if (sceKernelCheckDipsw(0xe4)) {
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT)) {
 		CP_WRITE(p14, 0, c0, c0, 4, 0);
 		CP_WRITE(p14, 0, c0, c1, 4, 0);
 		CP_WRITE(p14, 0, c0, c2, 4, 0);
@@ -1167,7 +1169,7 @@ int sceSDfMgrBreakSystem(void)
 #else
 	(void)result;
 #endif
-	if (sceKernelCheckDipsw(0xe4)) {
+	if (sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT)) {
 		for (i = 0; i < 4; i++) {
 			struct SdfMgrDebugRegisters *regs =
 				s_sdfMgrState.global.debugRegisters[i];
@@ -1210,7 +1212,7 @@ int SceDeci4pSDfMgrForKernel_FCF211FB(uint32_t value, uint32_t control)
 {
 	unsigned index;
 
-	if (!sceKernelCheckDipsw(0xe4))
+	if (!sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT))
 		return 0;
 	for (index = 0; index < 4; index++) {
 		struct SdfMgrDebugRegisters *regs =

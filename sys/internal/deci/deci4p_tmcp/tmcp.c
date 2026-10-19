@@ -501,7 +501,7 @@ int module_start(SceSize args, void *argp)
 	TmcpSlot *slot;
 	int handle;
 
-	if (!sceKernelCheckDipsw(0xc2))
+	if (!sceKernelCheckDipsw(DIPSW_DECI))
 		return SCE_KERNEL_START_NO_RESIDENT;
 
 	mutex = sceKernelCreateMutex("SceDeci4pTmcpComm", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);

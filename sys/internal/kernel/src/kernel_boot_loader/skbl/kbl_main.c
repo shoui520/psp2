@@ -57,8 +57,7 @@ extern const char compatSramImage[], compatSramResume[], compatSramResumeEnd[];
 
 #define KBL_STACK_SIZE		0x4000
 #define KBL_STACK_ALIGN		0x1000
-#define KBL_STACK_GUARD		0x1000		/* the part DIPSW_WIPE_KERNEL_STACK leaves */
-#define DIPSW_WIPE_KERNEL_STACK	0xd8
+#define KBL_STACK_GUARD		0x1000		/* the part DIPSW_STACK_FILL leaves */
 
 #define NSKBL_ADDRESS		0x51000000	/* where NSKBL runs */
 #define NSKBL_SIZE		0x1000000
@@ -291,7 +290,7 @@ int sceKblMain(SceKernelBootParam *param)
 							KBL_STACK_SIZE, KBL_STACK_ALIGN);
 	sceKernelGetMemBlockVBase(cpu->stackBlockId, &stack);
 	cpu->stackBottom = (char *)stack + cpu->stackSize;
-	if (sceKernelCheckDipsw(DIPSW_WIPE_KERNEL_STACK))
+	if (sceKernelCheckDipsw(DIPSW_STACK_FILL))
 		memset((char *)stack + KBL_STACK_GUARD, 0xff, KBL_STACK_SIZE - KBL_STACK_GUARD);
 	SceCpuForKernel_FE2B77A3(param->corelock);
 	KblCorelockSync(&param->corelock);

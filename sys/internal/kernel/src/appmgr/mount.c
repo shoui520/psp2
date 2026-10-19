@@ -1237,7 +1237,7 @@ int appmgrValidateSaveDataMount(SceUID pid, const char *path, int skipVerificati
 	result = appmgrReadKeystone(pid, driveId.drive_id, keystone);
 	if (result >= 0) {
 		if ((SceQafMgrForDriver_41E04800() != 1 ||
-		     sceKernelCheckDipsw(218) == 0) &&
+		     sceKernelCheckDipsw(DIPSW_IGNORE_KEYSTONE) == 0) &&
 		    timingsafe_memcmp(keystone, content->keystone, sizeof(keystone)) != 0)
 			return (int)0x80800006;
 	} else if (result != (int)0x80010002 && result != (int)0x80010013) {

@@ -210,7 +210,7 @@ int sceIoRequestQueueAssignIoChunksToIoRequest(IoRequestQueue *queue, IoRequest 
 				if (!(req->mntOpt & 0x10000) ||
 						(req->type != IO_REQUEST_READ && req->type != IO_REQUEST_PREAD))
 					goto wholeChunk;
-				dipsw = sceKernelCheckDipsw(231);
+				dipsw = sceKernelCheckDipsw(DIPSW_IO_NO_CHUNKS);
 				remain = req->ioRemain;
 				if (dipsw != 0)
 					goto wholeChunk;

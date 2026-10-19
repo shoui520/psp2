@@ -261,7 +261,7 @@ freeBlock:
 
 int _sceDbgSdioModuleStart(SceSize args, void *argp)
 {
-	if (!sceKernelCheckDipsw(0xc2)) {
+	if (!sceKernelCheckDipsw(DIPSW_DECI)) {
 		SCE_DBG_PRINTF(0xb, 225, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
@@ -479,7 +479,6 @@ complete:
 	sceKernelEnableIntr(DBGSDIO_INTR_BASE + c->index);
 	return size;
 }
-
 
 /* name unknown (exported): read from a channel */
 int receiveData(SceUInt32 index, void *buffer, SceSize size)

@@ -38,7 +38,6 @@
 #define SYSMODULE_ERROR_BAD_FLAGS		(0x805a10fe | 0x40000000)
 #define SYSMODULE_ERROR_NOT_LOADED		(SCE_SYSMODULE_ERROR_UNLOADED | 0x40000000)	/* unload */
 
-
 /* a user library */
 typedef struct SysmoduleLib {
 	const char *name;			/* NULL: none */
@@ -150,7 +149,8 @@ static int sysmoduleLoadLib(SysmoduleProc *proc, SceUInt32 *ref, const Sysmodule
 		alt = 0x8020;
 		flags = 0x8000;
 	}
-	if ((lib->flags & SYSMODULE_LIB_DEVONLY) && sceKernelCheckDipsw(0xd2))
+	if ((lib->flags & SYSMODULE_LIB_DEVONLY) &&
+	    sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART))
 		flags = alt;
 	pid = sceKernelGetProcessId();
 	perm = sceKernelSetThreadAccessLevel(0x80);
@@ -351,12 +351,12 @@ static inline int sysmoduleLibWanted(const SysmoduleLib *lib)
 		flags = lib->flags;
 	}
 	if (flags & SYSMODULE_LIB_DIPSW_D4) {
-		if (!sceKernelCheckDipsw(0xd4))
+		if (!sceKernelCheckDipsw(DIPSW_USER_PA_MAPPING))
 			return 0;
 		flags = lib->flags;
 	}
 	if (flags & SYSMODULE_LIB_DIPSW_C2) {
-		if (!sceKernelCheckDipsw(0xc2))
+		if (!sceKernelCheckDipsw(DIPSW_DECI))
 			return 0;
 		flags = lib->flags;
 	}
@@ -369,8 +369,8 @@ static inline int sysmoduleLoadLibFrom(SysmoduleProc *proc, SceUInt32 *ref, cons
 	const char *prefix;
 	int ret;
 
-	if (SceQafMgrForDriver_B9770A13() && sceKernelCheckDipsw(0xfb) &&
-	    (sceKernelCheckDipsw(0xc1) || sceKernelCheckDipsw(0xc2))) {
+	if (SceQafMgrForDriver_B9770A13() && sceKernelCheckDipsw(DIPSW_HOST0_MODULES) &&
+	    (sceKernelCheckDipsw(DIPSW_SYSTEM_DECI) || sceKernelCheckDipsw(DIPSW_DECI))) {
 		prefix = proc->prefix;
 		if (prefix == NULL || prefix == s_host) {
 			ret = sysmoduleLoadLib(proc, ref, lib, s_host, sizeof(s_host) - 1);

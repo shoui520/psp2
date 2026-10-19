@@ -115,7 +115,7 @@ SceUID sceIoDopenInternal(const char *dirname)
 		fd = ret;
 		goto decrement;
 	}
-	if (sceKernelCheckDipsw(210))
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART))
 		SceIofilemgrForDriver_2EFDFA12(fd, dirname);
 
 	param.priority = priority;

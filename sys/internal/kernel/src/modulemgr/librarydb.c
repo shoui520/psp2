@@ -209,7 +209,7 @@ LibraryDB *LibraryDBInitializeAddr2ModuleTable(SceUID pid)
 	memset(db, 0, sizeof(*db));
 	db->pid = pid;
 
-	if (sceKernelCheckDipsw(0xd2)) {
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
 		SCE_DBG_ASSERT(pid != KERNEL_PID, 405);
 		tbl = sceKernelAllocRemoteToolHeap(pid, sizeof(*tbl));
 		if (tbl != NULL) {
@@ -269,7 +269,7 @@ int LibraryDBInitializeAddr2ModuleTableForKernel(LibraryDB *db)
 	SceKernelAllocMemBlockKernelOpt opt;
 	SceModuleCB *cb;
 
-	if (sceKernelCheckDipsw(0xd2)) {
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
 		db->addr2mod = &g_kernelAddr2Mod;
 		memset(&opt, 0, sizeof(opt));
 		opt.size = sizeof(opt);

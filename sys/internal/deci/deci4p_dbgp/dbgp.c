@@ -647,7 +647,7 @@ int DbgpModuleStart(SceSize args, const void *argp)
 	SceKernelIntrStatus state;
 	int result;
 
-	if (sceKernelCheckDipsw(194) == 0) {
+	if (sceKernelCheckDipsw(DIPSW_DECI) == 0) {
 #if FW_SINCE(0x04000000)
 		SCE_DBG_PRINTF_FUNC(11, 188, "DbgpModuleStart", "disabled by dipsw\n");
 #endif
@@ -682,7 +682,7 @@ int DbgpModuleStart(SceSize args, const void *argp)
 	state = sceKernelSpinlockLowLockCpuSuspendIntr(&g_dbgp.lock);
 	g_dbgp.status |= 2;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_dbgp.lock, state);
-	if (sceKernelCheckDipsw(195) != 0)
+	if (sceKernelCheckDipsw(DIPSW_NO_DBGUSB) != 0)
 		protocol.flags |= DFMGR_PROTOCOL_SDIO;
 	else
 		protocol.flags |= DFMGR_PROTOCOL_USB;

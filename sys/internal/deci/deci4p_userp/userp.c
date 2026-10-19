@@ -45,7 +45,6 @@ typedef struct UserpStrBuf {
 #define USERP_ERROR_ABORT	0x800807fa
 #define USERP_ERROR_ABORT2	0x800807fb
 
-
 /* UserpState.status (also the callback argument) */
 #define STATUS_PENDING_MASK	0x00ffffff	/* bytes waiting in the ring */
 #define STATUS_DATA		0x10000000
@@ -109,7 +108,6 @@ typedef struct UserpObject {
 	SceUID memblock;
 	UserpState *state;
 } UserpObject;
-
 
 _Static_assert(sizeof(UserpPacket) == 0x10810, "UserpPacket layout");
 _Static_assert(offsetof(UserpState, lock) == 0x110a0, "UserpState layout");
@@ -430,7 +428,7 @@ int module_start(SceSize args, void *argp)
 	char *className;
 	SceUID uid;
 
-	if (!sceKernelCheckDipsw(0xc2))
+	if (!sceKernelCheckDipsw(DIPSW_DECI))
 		return 1;
 	uid = sceKernelRegisterProcEventHandler("SceKernelDeci4p", &s_procHandler, NULL);
 	if (uid < 0)

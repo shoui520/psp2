@@ -16,7 +16,6 @@
 
 #define PERVASIVE_INTR_PARK	0xb	/* software interrupt: park this core */
 
-
 ScePervasiveMailboxRegisters *s_mailbox;
 volatile SceUartClkgenRegisters *s_uartClock;
 ScePervasiveVidRegisters *s_video;
@@ -61,7 +60,6 @@ static const struct {
 	{ "ScePervasive2", PERVASIVE2_BASE, PERVASIVE_PAGE_SIZE, &s_pervasive2 },
 	{ "SceUartclkReg", UART_CLKGEN_BASE, PERVASIVE_PAGE_SIZE, &s_uartClock },
 };
-
 
 int module_start(SceSize arglen, const void *argp)
 {
@@ -260,7 +258,7 @@ static __attribute__((noinline)) int PervasiveInit(void)
 		s_pervasive.hardwareInfo[i + 2] = s_misc->hardwareInfo[i];
 	PixelClockInit();
 	PervasiveMiscInit();
-	mode = sceKernelCheckDipsw(0xec) == 0 ? 3 : 5;
+	mode = sceKernelCheckDipsw(DIPSW_GPU_OVERCLOCK) == 0 ? 3 : 5;
 	GpuClockSet(mode, mode);
 	sceKernelRegisterMonitorCallHandler(PERVASIVE_MONCALL_POWER, PervasivePowerMonitorCall);
 	sceKernelRegisterMonitorCallHandler(PERVASIVE_MONCALL_RESET, PervasiveResetMonitorCall);

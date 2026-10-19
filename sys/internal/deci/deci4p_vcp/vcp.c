@@ -563,7 +563,7 @@ int VcpModuleStart(SceSize args, void *argp)
 	SceKernelThreadOptParam topt;
 	SceUID uid;
 
-	if (!sceKernelCheckDipsw(0xc2)) {
+	if (!sceKernelCheckDipsw(DIPSW_DECI)) {
 		SCE_DBG_PRINTF(0xb, 127, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
@@ -611,7 +611,7 @@ int VcpModuleStart(SceSize args, void *argp)
 	s_protocol.size = sizeof(s_protocol);
 	s_protocol.protocol = VCP_PROTOCOL;
 	strncpy(s_protocol.name, "VCP", sizeof(s_protocol.name));
-	if (!sceKernelCheckDipsw(0xc3))
+	if (!sceKernelCheckDipsw(DIPSW_NO_DBGUSB))
 		s_protocol.flags |= DFMGR_PROTOCOL_USB;
 	s_vcp.flags = VCP_FLAG_2;
 	s_vcp.handle = sceDfMgrOpen(VcpHandler, &s_protocol, &s_vcp);

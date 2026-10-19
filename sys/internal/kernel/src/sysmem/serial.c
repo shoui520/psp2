@@ -266,10 +266,11 @@ int SerialInit(int uart0Enabled)
 		SceUartForKernel_4C02AA05(s_debugPorts[0].port);
 		s_debugPorts[0].enabled = 1;
 	}
-	if (!sceKernelCheckDipsw(0xc5) && !sceKernelCheckDipsw(0xfd))
+	if (!sceKernelCheckDipsw(DIPSW_UART1_CONSOLE) &&
+	    !sceKernelCheckDipsw(DIPSW_CONSOLE_LOGGING))
 		return 0;
 	SceUartForKernel_4C02AA05(1);
-	if (sceKernelCheckDipsw(0xc5))
+	if (sceKernelCheckDipsw(DIPSW_UART1_CONSOLE))
 		s_debugPorts[1].enabled = 1;
 	return 0;
 }
@@ -287,7 +288,7 @@ int SerialInit(const struct SysmemBootContext *context)
 	if (SceSysrootForDriver_AE7A8F1D())
 		s_debugPorts[0].enabled = 1;
 #endif
-	if (sceKernelCheckDipsw(0xc5))
+	if (sceKernelCheckDipsw(DIPSW_UART1_CONSOLE))
 		s_debugPorts[1].enabled = 1;
 #if SERIAL_SUSPEND
 	SceKernelSuspendForDriver_CE7A2207(UART_SUSPEND_SLOT, SerialSuspend, NULL);

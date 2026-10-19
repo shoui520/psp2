@@ -57,7 +57,7 @@ int audioInitializeSpdif(void)
 	registers->configuration[11] = 0;
 	registers->configuration[11] = 0;
 	if (SceSblAIMgrForDriver_274663A0() &&
-	    (!SceQafMgrForDriver_382C71E8() || sceKernelCheckDipsw(229))) {
+	    (!SceQafMgrForDriver_382C71E8() || sceKernelCheckDipsw(DIPSW_NO_HDCP))) {
 		registers->configuration[12] = 0x1e0040;
 		registers->configuration[12] = 0x1e0040;
 	} else {

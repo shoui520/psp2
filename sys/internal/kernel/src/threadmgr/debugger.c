@@ -379,7 +379,7 @@ int getThreadInfoForDebugger(SceUID threadId, SceUInt32 level, uint32_t flags,
 	}
 measured:
 	if (!(flags & 1) || ((thread->currentAttr & THREAD_ATTR_NO_STACK_FILL) &&
-			     !sceKernelCheckDipsw(DIPSW_STACK_CHECK))) {
+			     !sceKernelCheckDipsw(DIPSW_STACK_FILL))) {
 		ret = 0;
 		info->stackMaxUsed = 0;
 		info->userStackMaxUsed = 0;
@@ -1713,7 +1713,7 @@ int sceKernelSetTHBP(SceUID threadId, int selector, uint32_t value0, uint32_t va
 	struct ThreadmgrThreadObject *object;
 	int intr, ret;
 
-	if (!sceKernelCheckDipsw(DIPSW_THBP))
+	if (!sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT))
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (selector != THBP_SELECTOR)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -1741,7 +1741,7 @@ int sceKernelGetTHBP(SceUID threadId, int selector, uint32_t *value0, uint32_t *
 	struct ThreadmgrThreadObject *object;
 	int intr, ret;
 
-	if (!sceKernelCheckDipsw(DIPSW_THBP))
+	if (!sceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT))
 		return SCE_KERNEL_ERROR_CP14_DISABLED;
 	if (selector != THBP_SELECTOR)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;

@@ -1771,7 +1771,7 @@ int vfs_finalize_file(SceVfsVnode *vp, SceVfsFile *file)
 	if (ret == 0) {
 		vp->core.fdNum--;
 		file->vnode = NULL;
-		if (sceKernelCheckDipsw(0xd2) != 0) {
+		if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART) != 0) {
 			vfs_debug_path_free(file);
 			return 0;
 		}

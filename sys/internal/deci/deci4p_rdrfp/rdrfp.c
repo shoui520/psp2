@@ -10,9 +10,6 @@
 
 #define RDRFP_DFMGR_ERROR_REQUESTED		0x80080007	/* name unknown: already requested */
 
-#define RDRFP_DIPSW			0xc2
-#define RDRFP_DIPSW_NO_AUTO_ENABLE	0xc3
-
 static RdrfpQueue rdrfpSendQueue;
 RdrfpContext rdrfp;
 static SceUID rdrfpHeap;
@@ -138,7 +135,7 @@ static inline __attribute__((always_inline)) int sceDeci4pRDrfpInit(void)
 	protocol.destination = 0;
 	protocol.flags = 1;
 	strncpy(protocol.name, "RDRFP", sizeof(protocol.name));
-	if (!sceKernelCheckDipsw(RDRFP_DIPSW_NO_AUTO_ENABLE))
+	if (!sceKernelCheckDipsw(DIPSW_NO_DBGUSB))
 		protocol.flags |= 0x200;
 	ret = sceDfMgrOpen(sceDeci4pRDrfpHandler, &protocol, &rdrfp);
 	if (ret < 0) {
@@ -163,7 +160,7 @@ int RDrfpModuleStart(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 
-	if (!sceKernelCheckDipsw(RDRFP_DIPSW)) {
+	if (!sceKernelCheckDipsw(DIPSW_DECI)) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 0xb, SCE_DBGINFO_FUNC(639, "RDrfpModuleStart"),
 					      "disabled by dipsw\n");

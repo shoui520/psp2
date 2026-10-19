@@ -18,7 +18,6 @@
 #define FWLOADER_HEAP		0x1000b		/* name unknown: the kernel heap */
 #define FWLOADER_PATH_MAX	0x100		/* names unknown */
 #define FWLOADER_BUF_SIZE	0x200
-#define FWLOADER_DIPSW_HOST0	0xfc
 
 #define FWLOADER_PREFIX_EXTERNAL	"sd0:"
 #define FWLOADER_PREFIX_HOST0		"host0:module/"
@@ -85,7 +84,7 @@ int sceSblFwLoaderSetPath(const char *path, int flags)
 		prefix = NULL;
 		if (SceQafMgrForDriver_082A4FC2()) {
 			prefix = FWLOADER_PREFIX_HOST0;
-			if (!sceKernelCheckDipsw(FWLOADER_DIPSW_HOST0))
+			if (!sceKernelCheckDipsw(DIPSW_HOST0_ACCESS))
 				prefix = NULL;
 		}
 	}

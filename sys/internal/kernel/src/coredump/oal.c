@@ -625,7 +625,7 @@ int oalIsToolDipswEnabled(void)
 	int result = SceSblAIMgrForDriver_274663A0();
 
 	if (result != 0)
-		return sceKernelCheckDipsw(210) != 0;
+		return sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART) != 0;
 	return result;
 }
 

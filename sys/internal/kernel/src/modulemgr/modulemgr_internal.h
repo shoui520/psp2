@@ -398,7 +398,7 @@ typedef struct PreloadModule {
 #define PRELOAD_STAGE1			0x00000010
 #define PRELOAD_STAGE0			0x00000020
 #define PRELOAD_DEVELOPMENT		0x00000040
-#define PRELOAD_DIPSW_D4		0x00000080
+#define PRELOAD_USER_PA_MAPPING		0x00000080
 #define PRELOAD_ERROR_SHIFT		28
 
 /* info of the library function a stub address calls (sysmem/sysroot_modulemgr.h) */

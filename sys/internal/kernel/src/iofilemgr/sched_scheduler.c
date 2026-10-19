@@ -935,7 +935,7 @@ int sceIoSchedulerAddIoRequest(IoScheduler *sched, IoRequest *req)
 		ret = sceIoSchedulerNeedsIoChunks(sched, req);
 		priority = req->priority;
 		if (ret == 1) {
-			ret = sceKernelCheckDipsw(0xe7);
+			ret = sceKernelCheckDipsw(DIPSW_IO_NO_CHUNKS);
 			priority = req->priority;
 			if (ret == 0) {
 				if (priority > 10 && (req->cacheFlags != 0 || req->isWrite == 1))

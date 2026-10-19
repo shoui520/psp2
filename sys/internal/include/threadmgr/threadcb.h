@@ -247,7 +247,7 @@ typedef struct ThreadCB {
 
 /* ThreadCB.initAttr and currentAttr (no Sony name found for these bits) */
 #define THREAD_ATTR_USER		0x80000000	/* a user thread: it has a user stack */
-#define THREAD_ATTR_NO_STACK_FILL	0x10000000	/* stacks filled and measured only with DIPSW 0xd8 */
+#define THREAD_ATTR_NO_STACK_FILL	0x10000000	/* stacks filled only with DIPSW_STACK_FILL */
 #define THREAD_ATTR_VM			0x04000000	/* a VM's: it gets an exception entry */
 #define THREAD_ATTR_NO_MODULE_TLS	0x02000000	/* no module TLS image is copied */
 #define THREAD_ATTR_COREDUMP_HANDLER	0x00800000	/* processmgr's coredump handler: it runs in its

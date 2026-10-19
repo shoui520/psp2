@@ -1717,8 +1717,8 @@ int StartDmacmgr(SceSize args, void *argp)
 	s_dmacMgr.dmac3Reg = mapDmac("SceDmacmgrDmac3Reg", DMAC3_REG_BASE);
 	s_dmacMgr.dmac4Reg = mapDmac("SceDmacmgrDmac4Reg", DMAC4_REG_BASE);
 	s_dmacMgr.dmac5Reg = mapDmac("SceDmacmgrDmac5Reg", DMAC5_REG_BASE);
-	if (sceKernelCheckDipsw(0x9f) || sceKernelCheckDipsw(0xc0) ||
-	    sceKernelCheckDipsw(0xc1) || sceKernelCheckDipsw(0xc2))
+	if (sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE) || sceKernelCheckDipsw(DIPSW_DMAC6) ||
+	    sceKernelCheckDipsw(DIPSW_SYSTEM_DECI) || sceKernelCheckDipsw(DIPSW_DECI))
 		s_dmacMgr.dmac6Reg = mapDmac("SceDmacmgrDmac6Reg", DMAC6_REG_BASE);
 	else
 		s_dmacMgr.dmac6Reg = NULL;

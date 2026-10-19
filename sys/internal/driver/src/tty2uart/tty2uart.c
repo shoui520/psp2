@@ -27,7 +27,6 @@
 #define TTY2_BUFFER_SIZE	0x1000
 #define TTY2_UART		0
 
-
 #define TTY2_TRACE(_flags, _line, _fmt, ...)				\
 	SCE_DBG_PRINTF_LEVEL(2, _flags, _line, _fmt, ##__VA_ARGS__)
 #define TTY2_ERROR(_flags, _line, _fmt, ...)				\
@@ -425,7 +424,7 @@ static SceSSize dev_tty_vop_read(SceVopReadArgs *argp)
 		SCE_PRINTF_WITH_INFO(0xf, 900, "invalid size (%d)\n", n);
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
-	if (!sceKernelCheckDipsw(0xc4))
+	if (!sceKernelCheckDipsw(DIPSW_UART0_CONSOLE))
 		return 0;
 	ret = sceKernelLockMutex(s_mutex, 1, NULL);
 	if (ret < 0) {
@@ -456,7 +455,8 @@ static SceSSize dev_tty_vop_write(SceVopWriteArgs *argp)
 	n = argp->nbyte;
 	controlWrite(buf, n);
 
-	if ((sceKernelCheckDipsw(0xc4) || sceKernelCheckDipsw(0xc5)) &&
+	if ((sceKernelCheckDipsw(DIPSW_UART0_CONSOLE) ||
+	     sceKernelCheckDipsw(DIPSW_UART1_CONSOLE)) &&
 	    sceKernelLockMutex(s_mutex, 1, NULL) >= 0) {
 		for (i = 0; i < n; i++) {
 			if (buf[i] == '\\' && buf[i + 1] == 'n') {
@@ -553,7 +553,7 @@ int tty2uartModuleStart(SceSize args, void *argp)
 	int ret;
 
 	TTY2_ERROR(0xb, 666, "()\n");
-	if (!sceKernelCheckDipsw(0xd3))
+	if (!sceKernelCheckDipsw(DIPSW_USER_UART))
 		return SCE_KERNEL_START_NO_RESIDENT;
 
 	ret = sceKernelCreateMutex("SceDeci4pTtyp", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);

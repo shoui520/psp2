@@ -488,7 +488,7 @@ int sceDfMgrInit(void)
 
 int sceDfMgrModuleStart(SceSize args, void *argp)
 {
-	if (sceKernelCheckDipsw(0xc2) == 0) {
+	if (sceKernelCheckDipsw(DIPSW_DECI) == 0) {
 		SCE_DBG_PRINTF(0xb, 164, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
@@ -1098,7 +1098,7 @@ static int _suspendHandlerQuery(int resume, int eventid, void *args, void *opt)
 				return 0;
 			code = sleepMode == POWER_SLEEP_SUSPEND ? 0x8e : 0x8f;
 			dfmgrSetFlags(DFMGR_SUSPENDING);
-			if (sceKernelCheckDipsw(0xc3) == 0)
+			if (sceKernelCheckDipsw(DIPSW_NO_DBGUSB) == 0)
 				dcmpSendStatusPower(1, code, 0, 0);
 			dcmpSendStatusPower(0, code, 0, 0);
 			return 0;

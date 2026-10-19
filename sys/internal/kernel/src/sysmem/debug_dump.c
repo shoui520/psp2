@@ -53,8 +53,6 @@ extern volatile SceKernelSpinlock s_debugPrintLock;
 #define DEBUG_DUMP_FAULT		1
 #define DEBUG_DUMP_EXCEPTION		3
 
-#define DEBUG_DIPSW_STOP_ON_ASSERT	200
-
 /* a failed assertion or a panic, as Assert/Panic hand it to DebugFaultDump */
 typedef struct DebugFault {
 	int kind;
@@ -380,7 +378,7 @@ void DebugFaultDump(void *argument)
 		s_faultHandler(time, cpu, info->fileHash, info->lineHash, info->funcHash, 0, 0,
 			       fault->caller, fault->lr);
 	if ((fault->kind == DEBUG_FAULT_ASSERT &&
-	     sceKernelCheckDipsw(DEBUG_DIPSW_STOP_ON_ASSERT)) ||
+	     sceKernelCheckDipsw(DIPSW_STOP_ON_ASSERT)) ||
 	    fault->kind == DEBUG_FAULT_PANIC) {
 		sceKernelCpuResumeIntr(fault->interrupts);
 		SceDebugForDriver_391B74B7("Stopped\n");

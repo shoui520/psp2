@@ -18,8 +18,6 @@
 #include <post_ss_mgr/sblpostssmgr.h>
 #include <regmgr/regmgr.h>
 
-#define TSMP_DIPSW			0xc2
-
 /* Sony's build inlines every helper into its callers */
 #define TSMP_INLINE		static inline __attribute__((always_inline))
 #define TSMP_MEMTYPE			SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW	/* kernel read/write */
@@ -1655,7 +1653,7 @@ int TsmpModuleStart(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 
-	if (!sceKernelCheckDipsw(TSMP_DIPSW)) {
+	if (!sceKernelCheckDipsw(DIPSW_DECI)) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 0xb, SCE_DBGINFO_FUNC(290, "TsmpModuleStart"),
 					      "disabled by dipsw\n");

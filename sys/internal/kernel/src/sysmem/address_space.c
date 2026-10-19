@@ -32,9 +32,6 @@ struct Bitheap;
 
 /* partition.c, phymem.c, memblock.c, bitheap.c, uid.c, sysroot */
 
-#define DIPSW_ENABLE_TOOL_PHYMEMPART	0xd2
-#define DIPSW_USER_IO_SMALL		0xd5	/* PLACEHOLDER: name */
-
 /* the address space class and the user ASID heap (sceKernelGetUIDAddressSpaceClass) */
 typedef struct AddressSpaceGlobals {
 	SceClass *cls;
@@ -52,7 +49,7 @@ static AddressSpaceGlobals *s_addressSpaceGlobals;
 /* name unknown: the physical window user I/O mappings get (smaller with dipsw 0xd5) */
 void AddressSpaceInitUserIOPA(void)
 {
-	if (!sceKernelCheckDipsw(DIPSW_USER_IO_SMALL)) {
+	if (!sceKernelCheckDipsw(DIPSW_USER_PA_MAPPING_ADDRESS)) {
 		s_userIOPASize = 0x20000000;
 		s_userIOPABase = 0x80000000;
 		return;
@@ -200,7 +197,7 @@ static inline struct Partition *AddressSpaceGetPartition(AddressSpaceObject *as,
 __attribute__((noinline))
 static int AddressSpaceGetPhyMemPartByIndexRaw(SceUInt32 index)
 {
-	if (!sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART) && index - 0x14 < 2) {
+	if (!sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART) && index - 0x14 < 2) {
 		SCE_DBG_PRINTF(0xb, 1421, "using pindex=%d without no TOOL environment\n", index);
 		SCE_DBG_ASSERT_FAIL(1422);
 	}
@@ -439,7 +436,7 @@ int AddressSpaceAllocMemBlockByCommand(AddressSpaceObject *unused,
 	}
 	if (!(attr & MEMBLOCK_TYPE_UNCHECKED)) {
 		if (attr & MEMBLOCK_TYPE_GIVEN_PHYMEMPART) {
-			if (!sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART)) {
+			if (!sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
 				ret = SCE_KERNEL_ERROR_ERROR;
 				goto out;
 			}
@@ -779,8 +776,6 @@ int sceKernelAddressSpaceCtrSetObjectHeap(AddressSpaceObject *as, ObjectHeap *he
 }
 
 #define ADDRESS_SPACE_MAGIC		0x4d95aeec
-#define DIPSW_USER_IOPA			0x9f	/* PLACEHOLDER: name */
-#define DIPSW_USER_IOPA_MAP		0xd4	/* PLACEHOLDER: name */
 #define AS_PARTITION_TOOL_A		20
 #define AS_PARTITION_TOOL_B		21
 
@@ -900,7 +895,7 @@ static inline __attribute__((always_inline)) int CreateAddressSpaceUserMode(cons
 			goto no_partition;
 		as->partition[s_sharedPartitions[i]] = partition;
 	}
-	if (sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART)) {
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
 		if (s_kernelAddressSpace->partition[AS_PARTITION_TOOL_A] == NULL) {
 			i = AS_PARTITION_TOOL_A;
 			goto no_share;
@@ -966,14 +961,14 @@ static inline __attribute__((always_inline)) int AddressSpaceCreatePartitionForU
 		if (AddressSpaceCreatePartitionByCommandRaw(as, pid, &s_userPartitions[i], 0, 0) < 0)
 			SCE_DBG_ASSERT_FAIL(1875);
 	}
-	if (sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART) &&
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART) &&
 	    AddressSpaceCreatePartitionByCommandRaw(as, pid, &s_userToolPartition, 0, 0) < 0)
 		SCE_DBG_ASSERT_FAIL(1887);
-	if (sceKernelCheckDipsw(DIPSW_USER_IOPA)) {
+	if (sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE)) {
 		if (AddressSpaceAddDefaultUserIOPARaw(as) < 0)
 			SCE_DBG_ASSERT_FAIL(1897);
-		if (sceKernelCheckDipsw(DIPSW_USER_IOPA_MAP)) {
-			if (!sceKernelCheckDipsw(DIPSW_USER_IO_SMALL)) {
+		if (sceKernelCheckDipsw(DIPSW_USER_PA_MAPPING)) {
+			if (!sceKernelCheckDipsw(DIPSW_USER_PA_MAPPING_ADDRESS)) {
 				pa = 0x80000000;
 				size = 0x20000000;
 			} else {

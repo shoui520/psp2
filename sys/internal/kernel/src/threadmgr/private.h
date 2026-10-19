@@ -34,9 +34,6 @@
 #define CPSR_KEEP_MASK			0x06f001df
 #define CPACR_CP10_CP11_FULL		0x00f00000
 
-#define DIPSW_STACK_CHECK		0xd8	/* PLACEHOLDER: name */
-#define DIPSW_THBP			0xe4
-
 /* the scheduler and its trace */
 #define PRIORITY_NONE			0xfe
 #define PREEMPT_INTR			2

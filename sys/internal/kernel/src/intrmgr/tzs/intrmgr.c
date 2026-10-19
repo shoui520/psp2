@@ -78,7 +78,7 @@ static int SetSharedMemory_S(int arg0, int arg1, int arg2, int arg3)
 		return SCE_KERNEL_ERROR_ERROR;
 	if (size >= 0x100000)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	if (sceKernelCheckDipsw(0xd2)) {
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
 		if (paddr <= 0x401fffff || (int)(paddr + size) < 0)
 			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	} else {

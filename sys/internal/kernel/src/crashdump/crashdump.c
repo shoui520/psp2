@@ -470,7 +470,7 @@ int module_start(SceSize args, void *argp)
 		goto mark;
 	}
 	if (SceQafMgrForDriver_382C71E8()) {
-		if (!sceKernelCheckDipsw(0xc1) && !sceKernelCheckDipsw(0xc2)) {
+		if (!sceKernelCheckDipsw(DIPSW_SYSTEM_DECI) && !sceKernelCheckDipsw(DIPSW_DECI)) {
 			ret = SceQafMgrForDriver_382C71E8();
 			goto mark;
 		}

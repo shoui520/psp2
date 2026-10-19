@@ -83,7 +83,7 @@ static char *ConfReaderGetRemotePath(char **buffer, const char *path)
 	int i = strnlen(path, 0x3ff);
 
 	if (s_noRemoteModule || !SceQafMgrForDriver_082A4FC2() ||
-	    !sceKernelCheckDipsw(0xfc) || !strncmp("host0:", path, 6))
+	    !sceKernelCheckDipsw(DIPSW_HOST0_ACCESS) || !strncmp("host0:", path, 6))
 		return NULL;
 	strncpy(*buffer, "host0:module", 0x3ff);
 	(*buffer)[12] = '/';
@@ -314,7 +314,7 @@ static int ConfReaderCmdToolLoad(ConfReader *reader, int argc, char **argv, unsi
 	char *path, *remote;
 	int ret, status;
 
-	if (!sceKernelCheckDipsw(0xd2))
+	if (!sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART))
 		return 0;
 	if (argc < 1)
 		return CONF_ERROR(22);

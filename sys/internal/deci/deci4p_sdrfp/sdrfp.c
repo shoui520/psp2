@@ -497,7 +497,7 @@ int SDrfpModuleStart(SceSize args, void *argp)
 	int ret;
 
 	SCE_DBG_PRINTF_LEVEL(2, 0xf, 216, "\n");
-	if (!sceKernelCheckDipsw(0xc1)) {
+	if (!sceKernelCheckDipsw(DIPSW_SYSTEM_DECI)) {
 		SCE_DBG_PRINTF(0xb, 220, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}

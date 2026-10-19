@@ -45,7 +45,7 @@ static inline __attribute__((always_inline)) void PervasiveClockInit(void)
 
 	LowioPixelClockInit();
 	PervasiveMiscInit();
-	mode = sceKernelCheckDipsw(0xec) == 0 ? 3 : 5;
+	mode = sceKernelCheckDipsw(DIPSW_GPU_OVERCLOCK) == 0 ? 3 : 5;
 	ScePervasiveForDriver_6AF0196F(mode, mode);
 }
 

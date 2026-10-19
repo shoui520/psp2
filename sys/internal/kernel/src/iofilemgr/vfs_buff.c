@@ -716,7 +716,7 @@ int vfsBuffAllocate(SceSize dataCacheSize, int wayNum, SceSize lineSize,
 		data += lineSize * wayNum;
 	}
 
-	if (memType == VFS_BUFF_MEM_HOST && sceKernelCheckDipsw(0xd2)) {
+	if (memType == VFS_BUFF_MEM_HOST && sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
 		bc->hostMemBlock = sceKernelAllocMemBlockForKernel("SceIoBuffCacheForHost", 0x10f0d006,
 							   ioCacheSize, NULL);
 		if (bc->hostMemBlock < 0)
@@ -850,7 +850,8 @@ static inline int vfs_buf_free_io_buff(struct BuffCache *bc)
 	SceUID pid = bc->pid;
 	int ret;
 
-	if (bc->memType == VFS_BUFF_MEM_HOST && sceKernelCheckDipsw(0xd2)) {
+	if (bc->memType == VFS_BUFF_MEM_HOST &&
+	    sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
 		ret = vfs_buf_free_memory(pid, bc->hostBuff, bc->memType);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(2, 0xf, 390,

@@ -10,7 +10,6 @@
 
 /* attr: only with the tool DIP switch */
 #define MEMBLOCK_TYPE_ATTR_TOOL_ONLY	0x20
-#define DIPSW_ENABLE_TOOL_PHYMEMPART	210
 
 /* PLACEHOLDER: attr is not decoded beyond the tool-only and contiguous bits */
 /* MemBlockTypeInfo: sysmem_internal.h */
@@ -282,7 +281,7 @@ int MemBlockType2TypeInfo(SceUInt32 type, const MemBlockTypeInfo **info)
 	if (entry >= end)
 		goto unknown;
 	if (!(entry->attr & MEMBLOCK_TYPE_ATTR_TOOL_ONLY) ||
-	    sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART)) {
+	    sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
 		*info = entry;
 		return 0;
 	}
@@ -310,7 +309,7 @@ int MemBlockCode2TypeInfo(SceUInt32 code, const MemBlockTypeInfo **info)
 
 	if (entry != NULL) {
 		if (!(entry->typeInfo->attr & MEMBLOCK_TYPE_ATTR_TOOL_ONLY) ||
-		    sceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART)) {
+		    sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
 			*info = entry->typeInfo;
 			return 0;
 		}

@@ -487,7 +487,7 @@ int module_start(SceSize args, void *argp)
 	GpuCoreDumpCoreValue *v;
 	int i;
 
-	if (sceKernelCheckDipsw(0xd4) == 0)
+	if (sceKernelCheckDipsw(DIPSW_USER_PA_MAPPING) == 0)
 		return SCE_KERNEL_START_NO_RESIDENT;
 	if (SceModulemgrForDriver_1D9E0F7E((SceUInt32)&gpuCoreDumpModuleInfo, &gpuCoreDumpModuleInfo) < 0)
 		for (i = 0; i != sizeof(GPU_COREDUMP_NAME); i++)

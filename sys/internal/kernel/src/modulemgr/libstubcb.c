@@ -197,7 +197,7 @@ int LibStubCBInit(LoadelfContext *ctx)
 		}
 		nfunc = imp->nfunc;
 		nvar = imp->nvar;
-		if (!sceKernelCheckDipsw(0xd2) || nfunc + nvar == 0)
+		if (!sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART) || nfunc + nvar == 0)
 			continue;
 		copy = sceKernelAllocRemoteToolHeap(pid, (nfunc + nvar) * 8);
 		stub->toolCopy = copy;

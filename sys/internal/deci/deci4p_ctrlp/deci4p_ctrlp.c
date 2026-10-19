@@ -33,9 +33,6 @@
 
 #define CTRLP_PROTOCOL		0x2c000
 
-#define CTRLP_DIPSW		0xc2	/* the protocol is available */
-#define CTRLP_DIPSW_AUTO_ENABLE	0xc3
-
 /* commands from the host; the response code is the command code + 1 */
 #define CTRLP_CMD_START_RECORD		0x02
 #define CTRLP_CMD_STOP_RECORD		0x04
@@ -1476,7 +1473,7 @@ int module_start(SceSize args, void *argp)
 
 	(void)args;
 	(void)argp;
-	if (!sceKernelCheckDipsw(CTRLP_DIPSW))
+	if (!sceKernelCheckDipsw(DIPSW_DECI))
 		return SCE_KERNEL_START_NO_RESIDENT;
 
 	memset(&state, 0, sizeof(state));
@@ -1512,7 +1509,7 @@ int module_start(SceSize args, void *argp)
 	protocol.flags = DFMGR_PROTOCOL_ENABLE;
 	__builtin_memset(protocol.name, 0, sizeof(protocol.name));
 	strncpy(protocol.name, "CTRLP", sizeof(protocol.name));
-	protocol.flags |= sceKernelCheckDipsw(CTRLP_DIPSW_AUTO_ENABLE) ?
+	protocol.flags |= sceKernelCheckDipsw(DIPSW_NO_DBGUSB) ?
 			  DFMGR_PROTOCOL_SDIO : DFMGR_PROTOCOL_USB;
 	ret = sceDfMgrOpen(protocolHandler, &protocol, NULL);
 	if (ret < 0) {

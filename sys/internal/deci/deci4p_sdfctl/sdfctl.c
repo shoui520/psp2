@@ -504,11 +504,11 @@ int sceSDfCtlModuleStart(SceSize args, void *argp)
 	const void *lr = __builtin_return_address(0);
 	int ret;
 
-	if (!sceKernelCheckDipsw(0xfd)) {
+	if (!sceKernelCheckDipsw(DIPSW_CONSOLE_LOGGING)) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 77, "[DECI] remote power control is disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
-	ret = sceKernelCheckDipsw(0xc4);
+	ret = sceKernelCheckDipsw(DIPSW_UART0_CONSOLE);
 	if (ret != 0) {
 		SceDebugForDriver_391B74B7("[DECI] remote power control is disabled (resource busy)\n");
 		return SCE_KERNEL_START_NO_RESIDENT;

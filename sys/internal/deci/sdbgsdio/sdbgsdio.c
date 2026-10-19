@@ -189,7 +189,7 @@ int sceSDbgSdioInit(void)
 
 int sceSDbgSdioModuleStart(SceSize args, void *argp)
 {
-	if (!sceKernelCheckDipsw(0xc1)) {
+	if (!sceKernelCheckDipsw(DIPSW_SYSTEM_DECI)) {
 		SCE_DBG_PRINTF(0xb, 210, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
