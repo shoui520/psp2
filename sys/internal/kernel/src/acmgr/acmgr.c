@@ -703,13 +703,11 @@ int SceSblACMgrForDriver_D7AD8471(SceUID pid, const SceChar8 *path)
 				break;
 		if (i != nameLen)
 			continue;
-		ret = sceSblACMgrHasCapability(pid, 1);
-		if (ret == 0 &&
-		    (level == 0x40 || level == 0x80 ||
-		     (sceSblACMgrHasCapability(pid, 3) &&
-		      memcmp(ENC("\x8a\x87\xcf\xc5"), mountPoints[n].name, nameLen) == 0) ||
-		     ((paid == 0x220000101cc73883ULL || paid == 0x220000101cc60019ULL) &&
-		      memcmp(ENC("\x93\x92\x9e\xcf\xc5"), mountPoints[n].name, nameLen) == 0)))
+		if (sceSblACMgrHasCapability(pid, 1) || level == 0x40 || level == 0x80 ||
+		    (sceSblACMgrHasCapability(pid, 3) &&
+		     memcmp(ENC("\x8a\x87\xcf\xc5"), mountPoints[n].name, nameLen) == 0) ||
+		    ((paid == 0x220000101cc73883ULL || paid == 0x220000101cc60019ULL) &&
+		     memcmp(ENC("\x93\x92\x9e\xcf\xc5"), mountPoints[n].name, nameLen) == 0))
 			ret = 1;
 		break;
 	}
