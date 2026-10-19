@@ -35,7 +35,8 @@ struct FixedHeap;
 #define DMAC_LEN_MOD_DST_MASK	0xf0000000
 #define DMAC_LEN_MASK		0x00ffffff
 
-#define DMA_OP_MAGIC	((SceUInt32)&s_dmacMgr | 1)
+/* the address of the manager plus one (Sony ORs the bit in; the sum is what the prover folds) */
+#define DMA_OP_MAGIC	((SceUInt32)&s_dmacMgr + 1)
 
 /* a channel interrupt: DMAC4's gates have no channel of their own */
 typedef struct DmacIntr {
@@ -43,6 +44,21 @@ typedef struct DmacIntr {
 	const char *name;
 	DmaChannel *channel;
 } DmacIntr;
+
+/* the fields of an operation before its lock, cleared one by one */
+#define DMA_OP_CLEAR(_op) do {			\
+	(_op).prev = NULL;			\
+	(_op).next = NULL;			\
+	(_op).callback = NULL;			\
+	(_op).pUserData = NULL;			\
+	(_op).dmac = NULL;			\
+	(_op).channel = NULL;			\
+	(_op).head = NULL;			\
+	(_op).tail = NULL;			\
+	(_op).coherencyMask = 0;		\
+	(_op).errorTag = NULL;			\
+	(_op).setValue = 0;			\
+} while (0)
 
 static DmaTag s_tagCache[64] __attribute__((aligned(64)));
 static DmacMgr s_dmacMgr;
@@ -87,14 +103,14 @@ void _CancelDmaTransfer(DmaOp *op)
 	channel->op = NULL;
 	op->channel = NULL;
 	dmac->freeChannels |= channelBit(dmac, channel);
-	op->status &= ~DMA_OP_CANCELING;
+	op->status &= (SceUInt16)~DMA_OP_CANCELING;
 }
 
 /* stop a DMAC4 channel and close its interrupt gate */
 void ReleaseDmac4Channel(int index)
 {
 	Dmac4Channel *dmac4 = &s_dmacMgr.dmac4[index];
-	volatile SceDmac4Reg *reg4 = s_dmacMgr.dmac4Reg;
+	volatile SceDmac4Reg *reg4;
 	volatile SceDmacChannelReg *reg;
 	SceKernelIntrStatus intr;
 	SceUInt32 mask;
@@ -104,6 +120,7 @@ void ReleaseDmac4Channel(int index)
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&dmac4->dmac.lock, intr);
 		return;
 	}
+	reg4 = s_dmacMgr.dmac4Reg;
 	mask = ~(1 << index);
 	reg = dmac4->channel.reg;
 	reg4->gate[0].intrMask &= mask;
@@ -138,7 +155,7 @@ void RemoveQueuedDmaOperation(DmaOp *op)
 	op->prev = NULL;
 	op->next = NULL;
 	sceKernelSpinlockLowUnlock(&dmac->lock);
-	op->status &= ~DMA_OP_QUEUED;
+	op->status &= (SceUInt16)~DMA_OP_QUEUED;
 }
 
 DmaTag *AllocateDmaTagData(void)
@@ -195,33 +212,28 @@ int SuspendDmacmgr(int value, void *args)
  */
 int ReleaseDmaTagChain(DmaTag *first, DmaTag *last)
 {
-	DmaTag *tag = first, *run = first, *next = first->next;
+	DmaTag *tag = first, *run = first, *next;
 	DmaTag *head;
+	int result;
 
-	if (!tag->cached)
-		goto release;
 	for (;;) {
-		if (tag == last || !next->cached) {
-			do {
-				head = s_dmacMgr.freeTag;
-				tag->next = head;
-			} while (SceCpuForDriver_CDA96E81((SceInt32 *)&s_dmacMgr.freeTag,
-								 (SceInt32)head, (SceInt32)run) !=
-				 (SceInt32)head);
-			if (tag == last)
-				return 0;
-		}
-		for (;;) {
-			tag = next;
-			next = next->next;
-			if (tag->cached)
-				break;
-release:
-			SceSysmemForKernel_93344755(s_dmacMgr.objectHeap, tag);
+		next = tag->next;
+		if (tag->cached) {
+			if (tag == last || !next->cached) {
+				do {
+					head = s_dmacMgr.freeTag;
+					tag->next = head;
+					result = SceCpuForDriver_CDA96E81((SceInt32 *)&s_dmacMgr.freeTag,
+									  (SceInt32)head, (SceInt32)run);
+				} while ((SceInt32)head != result);
+			}
+		} else {
+			result = SceSysmemForKernel_93344755(s_dmacMgr.objectHeap, tag);
 			run = next;
-			if (tag == last)
-				return 0;
 		}
+		if (tag == last)
+			return result;
+		tag = next;
 	}
 }
 
@@ -266,9 +278,10 @@ static int CreateDmaTagChain(int dmacId, SceKernelPAVector *src, SceKernelPAVect
 			     const SceKernelDmaOpTag *param, DmaTag **head, DmaTag **tail)
 {
 	SceKernelPARange *srcRange, *dstRange, *srcEnd, *dstEnd;
-	SceUInt32 srcBlockMask, dstBlockMask, blockMask, cmd, count;
-	SceSize size, offset;
-	DmaTag *tag, *prev;
+	SceUInt32 srcBlockMask, dstBlockMask, blockMask, cmd, count = 0;
+	SceUInt32 lenFlags, dstModulo, srcModulo;
+	SceSize size, offset = 0;
+	DmaTag *tag, *prev = NULL;
 
 	if (src->capacity == 0 || dst->capacity == 0)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -282,11 +295,11 @@ static int CreateDmaTagChain(int dmacId, SceKernelPAVector *src, SceKernelPAVect
 	dstBlockMask = param->blockSize >> 16;
 	if (dstBlockMask != 0)
 		dstBlockMask--;
+	lenFlags = param->len & 0xff000000;
 	blockMask = dstBlockMask | srcBlockMask;
+	dstModulo = param->len & DMAC_LEN_MOD_DST_MASK;
+	srcModulo = param->len & DMAC_LEN_MOD_SRC_MASK;
 
-	prev = NULL;
-	count = 0;
-	offset = 0;
 	tag = AllocateDmaTagData();
 	if (tag == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
@@ -296,7 +309,7 @@ static int CreateDmaTagChain(int dmacId, SceKernelPAVector *src, SceKernelPAVect
 		tag->tag.dst = (void *)dstRange->addr;
 		if (srcRange->size < dstRange->size) {
 			size = srcRange->size;
-			if (!(param->len & DMAC_LEN_MOD_DST_MASK)) {
+			if (!dstModulo) {
 				dstRange->addr += size;
 				dstRange->size -= size;
 			}
@@ -307,7 +320,7 @@ static int CreateDmaTagChain(int dmacId, SceKernelPAVector *src, SceKernelPAVect
 			dstRange++;
 		} else {
 			size = dstRange->size;
-			if (!(param->len & DMAC_LEN_MOD_SRC_MASK)) {
+			if (!srcModulo) {
 				srcRange->addr += size;
 				srcRange->size -= size;
 			}
@@ -327,7 +340,7 @@ static int CreateDmaTagChain(int dmacId, SceKernelPAVector *src, SceKernelPAVect
 					       size, blockMask);
 				return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 			}
-			tag->tag.len = size | (param->len & 0xff000000);
+			tag->tag.len = size | lenFlags;
 		}
 		tag->tag.cmd = cmd & ~(DMAC_CMD_INTERRUPT | 0x2000);
 		tag->prev = prev;
@@ -373,57 +386,55 @@ void StartQueuedDmaOperation(DmaController *dmac, DmaOp *op)
 	DmaChannel *channel;
 	DmaTag *head;
 
-	if (freeChannels == 0)
-		return;
-	channel = &dmac->channel[__builtin_clz(freeChannels)];
-	reg = channel->reg;
-	dmac->freeChannels = freeChannels - channelBit(dmac, channel);
-	channel->op = op;
-	op->channel = channel;
-	reg->coherencyMask = op->coherencyMask;
-	if (op->dmacId == SCE_KERNEL_DMAC_ID_DMAC5) {
-		volatile SceDmac5ChannelReg *reg5 = (volatile SceDmac5ChannelReg *)reg;
-		const SceKernelDmaOpEncDec *encDec = op->encDec;
-		const SceUInt32 *key = (const SceUInt32 *)encDec->key;
-		int i;
+	if (freeChannels != 0) {
+		channel = &dmac->channel[__builtin_clz(freeChannels)];
+		reg = channel->reg;
+		dmac->freeChannels = freeChannels - channelBit(dmac, channel);
+		channel->op = op;
+		op->channel = channel;
+		reg->coherencyMask = op->coherencyMask;
+		if (op->dmacId == SCE_KERNEL_DMAC_ID_DMAC5) {
+			volatile SceDmac5ChannelReg *reg5 = (volatile SceDmac5ChannelReg *)reg;
+			const SceKernelDmaOpEncDec *encDec = op->encDec;
+			const SceUInt32 *key = (const SceUInt32 *)encDec->key;
 
-		reg->srcKeyringId = encDec->keyring;
-		reg->iv = (SceUInt32)encDec->iv;
-		reg->ivCoherencyMask = encDec->ivCoherencyMask;
-		for (i = 0; i < 16; i++)
-			reg5->key[i] = key[i];
-		head = op->head;
-	} else {
-		head = op->head;
-		if ((head->tag.cmd & 0xc) == SCE_KERNEL_DMAC_CMD_OP_SET)
-			reg->setValue = op->setValue;
+			reg->srcKeyringId = encDec->keyring;
+			reg->iv = (SceUInt32)encDec->iv;
+			reg->ivCoherencyMask = encDec->ivCoherencyMask;
+		reg5->key[0] = key[0];
+		reg5->key[1] = key[1];
+		reg5->key[2] = key[2];
+		reg5->key[3] = key[3];
+		reg5->key[4] = key[4];
+		reg5->key[5] = key[5];
+		reg5->key[6] = key[6];
+		reg5->key[7] = key[7];
+		reg5->key[8] = key[8];
+		reg5->key[9] = key[9];
+		reg5->key[10] = key[10];
+		reg5->key[11] = key[11];
+		reg5->key[12] = key[12];
+		reg5->key[13] = key[13];
+		reg5->key[14] = key[14];
+		reg5->key[15] = key[15];
+			head = op->head;
+		} else {
+			head = op->head;
+			if ((head->tag.cmd & 0xc) == SCE_KERNEL_DMAC_CMD_OP_SET)
+				reg->setValue = op->setValue;
+		}
+		reg->chainStart = head->pa;
+		dsb();
+		dmac->head = op->next;
+		if (op->next == NULL)
+			dmac->tail = NULL;
+		op->prev = NULL;
+		op->next = NULL;
+		op->status &= (SceUInt16)~DMA_OP_QUEUED;
 	}
-	reg->chainStart = head->pa;
-	dsb();
-	dmac->head = op->next;
-	if (op->next == NULL)
-		dmac->tail = NULL;
-	op->prev = NULL;
-	op->next = NULL;
-	op->status &= ~DMA_OP_QUEUED;
 }
 
 /* hand the channel back to its controller and start the next queued operation */
-static inline void releaseOpChannel(DmaOp *op, DmaChannel *channel)
-{
-	DmaController *dmac = op->dmac;
-	SceKernelIntrStatus intr;
-
-	channel->op = NULL;
-	op->channel = NULL;
-	dmac->freeChannels |= channelBit(dmac, channel);
-	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&dmac->lock);
-	if (dmac->head != NULL)
-		StartQueuedDmaOperation(dmac, dmac->head);
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&dmac->lock, intr);
-	op->status |= DMA_OP_DONE;
-}
-
 /* completion or error of one channel */
 void DmacIntrHandler(DmaChannel *channel)
 {
@@ -450,7 +461,9 @@ void DmacIntrHandler(DmaChannel *channel)
 		return;
 	}
 	if (op->status & DMA_OP_CANCELING) {
-		DmaController *dmac = op->dmac;
+		DmaController *dmac;
+		SceUInt16 status;
+		SceUInt32 freeChannels;
 
 		reg->ctrl = 0;
 		dsb();
@@ -458,89 +471,126 @@ void DmacIntrHandler(DmaChannel *channel)
 			;
 		reg->intrStatus = DMAC_INTR_COMPLETE | DMAC_INTR_ERROR;
 		dsb();
+		dmac = op->dmac;
+		status = op->status;
+		freeChannels = dmac->freeChannels;
 		channel->op = NULL;
 		op->channel = NULL;
-		dmac->freeChannels |= channelBit(dmac, channel);
-		op->status &= ~DMA_OP_CANCELING;
+		dmac->freeChannels = freeChannels | channelBit(dmac, channel);
+		op->status = status & 0xffbf;
 		sceKernelSpinlockLowUnlock(&op->lock);
 		return;
 	}
 
 	head = op->head;
 	error = intrStatus & DMAC_INTR_ERROR;
-	if (error) {
-		/* the tags before the failing one are done, the failing one partly */
-		current = reg->currentTag;
-		completed = 0;
-		prev = NULL;
-		for (tag = head; tag != NULL; prev = tag, tag = tag->next) {
-			completed += tag->tag.len & DMAC_LEN_MASK;
-			if (tag->pa == current) {
-				completed -= reg->errorLen;
-				op->errorTag = tag->param;
-				break;
+	if (!error) {
+		if (head != NULL) {
+			busy = reg->stat & SCE_KERNEL_DMAC_STAT_BUSY;
+			if (stat & SCE_KERNEL_DMAC_STAT_BUSY) {
+				/* still running: done up to the tag that raised the interrupt */
+				tag = head;
+				completed = 0;
+				for (;;) {
+					SCE_DBG_ASSERT(tag != NULL, 1977);
+					completed += tag->tag.len & DMAC_LEN_MASK;
+					if (tag->tag.cmd & DMAC_CMD_INTERRUPT)
+						break;
+					tag = tag->next;
+				}
+				head = op->head;
+			} else {
+				/* stopped: done up to the current tag */
+				current = reg->currentTag;
+				tag = head;
+				completed = tag->tag.len & DMAC_LEN_MASK;
+				if (tag->pa != current) {
+					do {
+						tag = tag->next;
+						completed += tag->tag.len & DMAC_LEN_MASK;
+					} while (tag->pa != current);
+				}
 			}
-		}
-		if (prev != NULL)
-			ReleaseDmaTagChain(head, prev);
-		next = tag;
-		SCE_DBG_PRINTF(0, 1949, "DMAC transfer error ! stat = 0x%08x, curchain %p, opname %s\n",
-			       stat, op->errorTag, op->name);
-		if (stat & SCE_KERNEL_DMAC_STAT_ABORTED)
-			SCE_DBG_PRINTF(0, 1952, "DMAC transfer is aborted\n");
-		if (stat & SCE_KERNEL_DMAC_STAT_ERROR_READ)
-			SCE_DBG_PRINTF(0, 1955, "DMAC transfer error: read error\n");
-		if (stat & SCE_KERNEL_DMAC_STAT_ERROR_WRITE)
-			SCE_DBG_PRINTF(0, 1958, "DMAC transfer error: write error\n");
-		if (stat & SCE_KERNEL_DMAC_STAT_ERROR_ILLEGAL_CONFIG)
-			SCE_DBG_PRINTF(0, 1961, "DMAC transfer error: illegal configuration\n");
-		if (stat & SCE_KERNEL_DMAC_STAT_ERROR_TAG)
-			SCE_DBG_PRINTF(0, 1964, "DMAC transfer error: tag error\n");
-		if (stat & SCE_KERNEL_DMAC_STAT_ERROR_ZERO_BYTE)
-			SCE_DBG_PRINTF(0, 1967, "DMAC transfer error: zero byte error\n");
-		busy = stat & SCE_KERNEL_DMAC_STAT_BUSY;
-	} else if (head != NULL) {
-		busy = reg->stat & SCE_KERNEL_DMAC_STAT_BUSY;
-		tag = head;
-		if (stat & SCE_KERNEL_DMAC_STAT_BUSY) {
-			/* still running: done up to the tag that raised the interrupt */
-			completed = 0;
-			for (;;) {
-				SCE_DBG_ASSERT(tag != NULL, 1977);
-				completed += tag->tag.len & DMAC_LEN_MASK;
-				if (tag->tag.cmd & DMAC_CMD_INTERRUPT)
-					break;
-				tag = tag->next;
-			}
+			next = tag->next;
+			ReleaseDmaTagChain(head, tag);
 		} else {
-			/* stopped: done up to the current tag */
-			current = reg->currentTag;
-			completed = tag->tag.len & DMAC_LEN_MASK;
-			while (tag->pa != current) {
-				tag = tag->next;
-				completed += tag->tag.len & DMAC_LEN_MASK;
-			}
+			next = NULL;
+			busy = reg->stat & SCE_KERNEL_DMAC_STAT_BUSY;
+			completed = 0;
 		}
-		next = tag->next;
-		ReleaseDmaTagChain(op->head, tag);
-	} else {
-		next = NULL;
-		busy = reg->stat & SCE_KERNEL_DMAC_STAT_BUSY;
-		completed = 0;
+		goto Continue;
 	}
 
+	/* the tags before the failing one are done, the failing one partly */
+	current = reg->currentTag;
+	prev = NULL;
+	if (head != NULL) {
+		completed = head->tag.len & DMAC_LEN_MASK;
+		if (head->pa == current) {
+			next = head;
+			goto Failed;
+		}
+		for (prev = head; ; prev = prev->next) {
+			next = prev->next;
+			if (next == NULL)
+				break;
+			completed += next->tag.len & DMAC_LEN_MASK;
+			if (next->pa == current)
+				goto Failed;
+		}
+		ReleaseDmaTagChain(head, prev);
+	} else {
+		next = NULL;
+		completed = 0;
+	}
+	goto Report;
+Failed:
+	completed -= reg->errorLen;
+	op->errorTag = next->param;
+	if (prev != NULL)
+		ReleaseDmaTagChain(head, prev);
+Report:
+	if (stat & 0xffdfffff)
+		SCE_DBG_PRINTF(0, 1949, "DMAC transfer error ! stat = 0x%08x, curchain %p, opname %s\n",
+			       stat, op->errorTag, op->name);
+	if (stat & SCE_KERNEL_DMAC_STAT_ABORTED)
+		SCE_DBG_PRINTF(0, 1952, "DMAC transfer is aborted\n");
+	if (stat & SCE_KERNEL_DMAC_STAT_ERROR_READ)
+		SCE_DBG_PRINTF(0, 1955, "DMAC transfer error: read error\n");
+	if (stat & SCE_KERNEL_DMAC_STAT_ERROR_WRITE)
+		SCE_DBG_PRINTF(0, 1958, "DMAC transfer error: write error\n");
+	if (stat & SCE_KERNEL_DMAC_STAT_ERROR_ILLEGAL_CONFIG)
+		SCE_DBG_PRINTF(0, 1961, "DMAC transfer error: illegal configuration\n");
+	if (stat & SCE_KERNEL_DMAC_STAT_ERROR_TAG)
+		SCE_DBG_PRINTF(0, 1964, "DMAC transfer error: tag error\n");
+	if (stat & SCE_KERNEL_DMAC_STAT_ERROR_ZERO_BYTE)
+		SCE_DBG_PRINTF(0, 1967, "DMAC transfer error: zero byte error\n");
+	busy = stat & SCE_KERNEL_DMAC_STAT_BUSY;
+Continue:
 	op->head = next;
 	sceKernelSetEventFlag(op->evfId, 1);
 	if (!busy) {
 		reg->intrStatus = DMAC_INTR_COMPLETE;
 		dsb();
-		if (op->head != NULL && !error) {
+		head = op->head;
+		if (head != NULL && !error) {
 			/* continue with the rest of the chain */
-			op->head->prev = NULL;
-			reg->chainStart = op->head->pa;
+			head->prev = NULL;
+			reg->chainStart = head->pa;
 			dsb();
 		} else {
-			releaseOpChannel(op, channel);
+			DmaController *dmac = op->dmac;
+			SceUInt32 freeChannels = dmac->freeChannels;
+			SceKernelIntrStatus intr;
+
+			channel->op = NULL;
+			op->channel = NULL;
+			dmac->freeChannels = freeChannels | channelBit(dmac, channel);
+			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&dmac->lock);
+			if (dmac->head != NULL)
+				StartQueuedDmaOperation(dmac, dmac->head);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&dmac->lock, intr);
+			op->status |= DMA_OP_DONE;
 		}
 	}
 
@@ -669,7 +719,7 @@ int _concatenateChain(DmaOp *op, SceKernelDmaOpFlag flag, const SceKernelDmaOpTa
 {
 	DmaTag *first, *last, *head, *tail;
 	SceKernelPAVector src, dst;
-	SceKernelPARange range, physRange;
+	SceKernelPARange range[1], physRange[1];
 	SceUInt32 cmd;
 	int res;
 
@@ -709,12 +759,12 @@ int _concatenateChain(DmaOp *op, SceKernelDmaOpFlag flag, const SceKernelDmaOpTa
 		break;
 	case SCE_KERNEL_DMA_OP_VIRTUAL_SRC_ADDR:
 		dst.capacity = 1;
-		dst.pRanges = &physRange;
+		dst.pRanges = physRange;
 		do {
 			src.capacity = 1;
-			src.pRanges = &range;
-			physRange.addr = (SceUInt32)param->dst;
-			physRange.size = param->len & DMAC_LEN_MASK;
+			src.pRanges = range;
+			physRange[0].addr = (SceUInt32)param->dst;
+			physRange[0].size = param->len & DMAC_LEN_MASK;
 			res = AllocPARanges((SceUInt32)param->src, param->len, &src);
 			if (res < 0)
 				return res;
@@ -737,12 +787,12 @@ int _concatenateChain(DmaOp *op, SceKernelDmaOpFlag flag, const SceKernelDmaOpTa
 		break;
 	case SCE_KERNEL_DMA_OP_VIRTUAL_DST_ADDR:
 		src.capacity = 1;
-		src.pRanges = &physRange;
+		src.pRanges = physRange;
 		do {
 			dst.capacity = 1;
-			dst.pRanges = &range;
-			physRange.addr = (SceUInt32)param->src;
-			physRange.size = param->len & DMAC_LEN_MASK;
+			dst.pRanges = range;
+			physRange[0].addr = (SceUInt32)param->src;
+			physRange[0].size = param->len & DMAC_LEN_MASK;
 			res = AllocPARanges((SceUInt32)param->dst, param->len, &dst);
 			if (res < 0)
 				return res;
@@ -766,12 +816,12 @@ int _concatenateChain(DmaOp *op, SceKernelDmaOpFlag flag, const SceKernelDmaOpTa
 	case SCE_KERNEL_DMA_OP_VIRTUAL_ADDR:
 		do {
 			src.capacity = 1;
-			src.pRanges = &range;
+			src.pRanges = range;
 			res = AllocPARanges((SceUInt32)param->src, param->len, &src);
 			if (res < 0)
 				return res;
 			dst.capacity = 1;
-			dst.pRanges = &physRange;
+			dst.pRanges = physRange;
 			res = AllocPARanges((SceUInt32)param->dst, param->len, &dst);
 			if (res < 0) {
 				sceKernelFreeHeapMemory(s_dmacMgr.rangeHeapId, src.pRanges);
@@ -806,6 +856,7 @@ int _concatenateChain(DmaOp *op, SceKernelDmaOpFlag flag, const SceKernelDmaOpTa
 			ReleaseDmaTagChain(head, head);
 			return SCE_KERNEL_ERROR_NO_MEMORY;
 		}
+		cmd = param[1].cmd;
 		head->tag.cmd = param[0].cmd;
 		head->tag.blockSize = param[0].blockSize;
 		head->tag.pNext = param[0].pNext;
@@ -827,7 +878,6 @@ int _concatenateChain(DmaOp *op, SceKernelDmaOpFlag flag, const SceKernelDmaOpTa
 		tail->prev = head;
 		tail->tag.pNext = SCE_KERNEL_DMAC_CHAIN_END;
 		tail->param = &param[1];
-		cmd = param[1].cmd;
 		break;
 	default:
 		SCE_DBG_PRINTF(0xb, 1335, "Unknown flag\n");
@@ -880,43 +930,48 @@ SceKernelDmaOpId sceKernelDmaOpAlloc(const char *name)
 
 int sceKernelDmaOpFree(SceKernelDmaOpId opid)
 {
-	DmaOp *op = getDmaOp(opid);
+	DmaOp *op;
 	SceKernelIntrStatus intr;
-	int retry;
+	int retry, result;
 
 	if (SceIntrmgrForDriver_182EE3E3())
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
+	op = getDmaOp(opid);
 	if (op->magic != DMA_OP_MAGIC) {
+		result = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 		SCE_DBG_PRINTF_FUNC(0xb, 732, "sceKernelDmaOpFree",
 				    "invalid magic number. opid 0x%08x, magic 0x%08x\n",
 			       opid, op->magic);
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+		return result;
 	}
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&op->lock);
 	if (!(op->status & DMA_OP_ALLOCATED)) {
+		result = SCE_KERNEL_ERROR_NOT_INITIALIZED;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
-		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
+		return result;
 	}
 	if (op->status & DMA_OP_CANCELING) {
+		result = SCE_KERNEL_ERROR_CANCELING;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
-		return SCE_KERNEL_ERROR_CANCELING;
+		return result;
 	}
 	if (op->channel != NULL) {
 		_CancelDmaTransfer(op);
 		if (op->status & DMA_OP_CANCELING) {
 			/* the interrupt handler finishes the cancel */
+			retry = 5;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
-			for (retry = 5; ; ) {
+			do {
 				sceKernelDelayThread(10);
 				intr = sceKernelSpinlockLowLockCpuSuspendIntr(&op->lock);
 				if (!(op->status & DMA_OP_CANCELING))
-					break;
+					goto Canceled;
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
-				if (--retry == 0)
-					return SCE_ERROR_ERRNO_EBUSY;
-			}
+			} while (--retry != 0);
+			return SCE_ERROR_ERRNO_EBUSY;
 		}
 	}
+Canceled:
 	if (op->status & DMA_OP_QUEUED)
 		RemoveQueuedDmaOperation(op);
 	sceKernelDeleteEventFlag(op->evfId);
@@ -982,7 +1037,7 @@ invalid:
 		return SCE_KERNEL_ERROR_NOT_UNDER_CONTROL;
 	}
 	op->dmacId = dmacId;
-	op->status &= ~DMA_OP_DONE;
+	op->status &= (SceUInt16)~DMA_OP_DONE;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
 	return 0;
 }
@@ -1073,7 +1128,7 @@ invalidSize:
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
 		return res;
 	}
-	op->status &= ~DMA_OP_DONE;
+	op->status &= (SceUInt16)~DMA_OP_DONE;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
 	return 0;
 }
@@ -1261,38 +1316,41 @@ static const SceKernelDmaOpChainParam s_memcpyParam = {
 static inline int dmacMemcpySub(DmaOp *op, void *dst, const void *src, SceSize size)
 {
 	SceKernelDmaOpId opid = getDmaOpId(op);
-	SceKernelDmaOpTag tag;
+	SceKernelDmaOpTag tag[1];
 	SceKernelDmacId dmacId;
+	const void *bus;
 	SceUInt32 cmd;
 	SceSize n;
+	SceUID evfId;
 	int res;
 
 	cmd = SCE_KERNEL_DMAC_CMD_COHERENT_DST | 0x3000;
 	if (isUncacheAddress(dst))
 		cmd = 0x3000;
-	if (isUncacheAddress((void *)src))
-		dmacId = dmacForAddress(src);
-	else {
+	bus = src;
+	if (!isUncacheAddress((void *)src)) {
 		cmd |= SCE_KERNEL_DMAC_CMD_COHERENT_SRC;
-		dmacId = dmacForAddress(dst);
+		bus = dst;
 	}
-	tag.cmd = cmd;
-	tag.blockSize = 0;
-	tag.pNext = SCE_KERNEL_DMAC_CHAIN_END;
+	dmacId = dmacForAddress(bus);
+	tag[0].cmd = cmd;
+	tag[0].blockSize = 0;
+	tag[0].pNext = SCE_KERNEL_DMAC_CHAIN_END;
 	if (cmd & (SCE_KERNEL_DMAC_CMD_COHERENT_SRC | SCE_KERNEL_DMAC_CMD_COHERENT_DST))
 		sceKernelSysrootDisableAutoClockDown();
 	for (;;) {
 		n = size > DMAC_LEN_MASK - 1 ? DMAC_LEN_MASK : size;
-		tag.src = src;
-		tag.dst = dst;
-		tag.len = n;
+		tag[0].src = src;
+		tag[0].dst = dst;
+		tag[0].len = n;
+		evfId = op->evfId;
 		res = sceKernelDmaOpAssign(opid, dmacId, 0);
 		if (res < 0) {
 			SCE_DBG_PRINTF_FUNC(0xb, 461, "dmacMemcpySub",
 					    "Assign dmac operation failed. 0x%08x\n", res);
 			break;
 		}
-		res = sceKernelDmaOpSetupChain(opid, &tag,
+		res = sceKernelDmaOpSetupChain(opid, tag,
 						(SceKernelDmaOpChainParam *)&s_memcpyParam,
 						SCE_KERNEL_DMA_OP_VIRTUAL_ADDR);
 		if (res < 0) {
@@ -1306,7 +1364,7 @@ static inline int dmacMemcpySub(DmaOp *op, void *dst, const void *src, SceSize s
 					    "Enqueue operation failed. 0x%08x\n", res);
 			break;
 		}
-		res = sceKernelWaitEventFlag(op->evfId, 1,
+		res = sceKernelWaitEventFlag(evfId, 1,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      NULL, NULL);
@@ -1337,7 +1395,7 @@ int sceKernelDmacMemcpy(void *dst, const void *src, SceSize size)
 		return 0;
 	if ((SceUInt32)dst - (SceUInt32)src < size || (SceUInt32)src - (SceUInt32)dst < size)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	memset(&op, 0, __builtin_offsetof(DmaOp, lock));
+	DMA_OP_CLEAR(op);
 	op.lock = 0;
 	op.magic = DMA_OP_MAGIC;
 	evfId = sceKernelCreateEventFlag("SceDmacMemcpy", 0, 0, NULL);
@@ -1359,15 +1417,18 @@ static inline int dmacMemsetSub(DmaOp *op, SceKernelDmaOpChainParam *param,
 				SceSize size)
 {
 	SceKernelDmaOpId opid = getDmaOpId(op);
+	SceUInt32 coherent = tag->cmd & SCE_KERNEL_DMAC_CMD_COHERENT_DST;
 	SceSize n;
+	SceUID evfId;
 	int res;
 
-	if (tag->cmd & SCE_KERNEL_DMAC_CMD_COHERENT_DST)
+	if (coherent)
 		sceKernelSysrootDisableAutoClockDown();
 	for (;;) {
 		n = size > DMAC_LEN_MASK - 1 ? DMAC_LEN_MASK : size;
 		tag->dst = dst;
 		tag->len = n;
+		evfId = op->evfId;
 		res = sceKernelDmaOpAssign(opid, dmacId, 0);
 		if (res < 0) {
 			SCE_DBG_PRINTF_FUNC(0xb, 576, "dmacMemsetSub",
@@ -1386,7 +1447,7 @@ static inline int dmacMemsetSub(DmaOp *op, SceKernelDmaOpChainParam *param,
 					    "Enqueue operation failed. 0x%08x\n", res);
 			break;
 		}
-		res = sceKernelWaitEventFlag(op->evfId, 1,
+		res = sceKernelWaitEventFlag(evfId, 1,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      NULL, NULL);
@@ -1400,7 +1461,7 @@ static inline int dmacMemsetSub(DmaOp *op, SceKernelDmaOpChainParam *param,
 	sceKernelDeleteEventFlag(op->evfId);
 	/* wait until the interrupt handler is done with the operation */
 	sceKernelSpinlockLowLock(&op->lock);
-	if (tag->cmd & SCE_KERNEL_DMAC_CMD_COHERENT_DST)
+	if (coherent)
 		sceKernelSysrootEnableAutoClockDown();
 	return res;
 }
@@ -1409,7 +1470,7 @@ int sceKernelDmacMemset(void *dst, int c, SceSize size)
 {
 	SceKernelDmaOpChainParam param;
 	DmaOp op;
-	SceKernelDmaOpTag tag;
+	SceKernelDmaOpTag tag[1];
 	SceKernelDmacId dmacId;
 	SceUID evfId;
 
@@ -1420,13 +1481,13 @@ int sceKernelDmacMemset(void *dst, int c, SceSize size)
 	dmacId = dmacForAddress(dst);
 	param.setValue = (c & 0xff) * 0x01010101;
 	param.coherencyMask = 0x3e600;
-	tag.cmd = SCE_KERNEL_DMAC_CMD_OP_SET | 0x3000;
+	tag[0].cmd = SCE_KERNEL_DMAC_CMD_OP_SET | 0x3000;
 	if (!isUncacheAddress(dst))
-		tag.cmd |= SCE_KERNEL_DMAC_CMD_COHERENT_DST;
-	memset(&op, 0, __builtin_offsetof(DmaOp, magic));
+		tag[0].cmd |= SCE_KERNEL_DMAC_CMD_COHERENT_DST;
+	DMA_OP_CLEAR(op);
 	op.magic = DMA_OP_MAGIC;
-	tag.blockSize = 0;
-	tag.pNext = SCE_KERNEL_DMAC_CHAIN_END;
+	tag[0].blockSize = 0;
+	tag[0].pNext = SCE_KERNEL_DMAC_CHAIN_END;
 	param.size = sizeof(param);
 	evfId = sceKernelCreateEventFlag("SceDmacMemset", 0, 0, NULL);
 	op.evfId = evfId;
@@ -1438,7 +1499,7 @@ int sceKernelDmacMemset(void *dst, int c, SceSize size)
 	op.name = "SceDmacMemset";
 	op.status = DMA_OP_ALLOCATED;
 	op.lock = 0;
-	return dmacMemsetSub(&op, &param, &tag, dmacId, dst, size);
+	return dmacMemsetSub(&op, &param, tag, dmacId, dst, size);
 }
 
 int sceKernelDmaOpDeQueue(SceKernelDmaOpId opid)
@@ -1479,15 +1540,17 @@ int sceKernelDmaOpSync(SceKernelDmaOpId opid, SceKernelDmaOpSyncMode syncMode,
 			SceUInt32 timeout, const SceKernelDmaOpTag **ppErrorTag)
 {
 	DmaOp *op = getDmaOp(opid);
+	SceUInt32 magic = op->magic;
 	SceKernelIntrStatus intr;
 	SceUInt16 status;
 	SceUID evfId;
+	SceUInt32 *pTimeout;
 	int res;
 
-	if (op->magic != DMA_OP_MAGIC) {
+	if (magic != DMA_OP_MAGIC) {
 		SCE_DBG_PRINTF_FUNC(0xb, 1586, "sceKernelDmaOpSync",
 				    "invalid magic number. opid 0x%08x, magic 0x%08x\n",
-			       opid, op->magic);
+			       opid, magic);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&op->lock);
@@ -1516,16 +1579,15 @@ int sceKernelDmaOpSync(SceKernelDmaOpId opid, SceKernelDmaOpSyncMode syncMode,
 					      NULL);
 		break;
 	case SCE_KERNEL_DMA_OP_SYNC_WAIT:
-		res = sceKernelWaitEventFlag(evfId, 1,
-					      SCE_KERNEL_EVF_WAITMODE_OR |
-					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
-					      NULL, NULL);
-		break;
+		pTimeout = NULL;
+		goto Wait;
 	case SCE_KERNEL_DMA_OP_SYNC_TIMED_WAIT:
+		pTimeout = &timeout;
+Wait:
 		res = sceKernelWaitEventFlag(evfId, 1,
 					      SCE_KERNEL_EVF_WAITMODE_OR |
 					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
-					      NULL, &timeout);
+					      NULL, pTimeout);
 		break;
 	default:
 		SCE_DBG_PRINTF_FUNC(0xb, 1648, "sceKernelDmaOpSync",
@@ -1536,7 +1598,7 @@ int sceKernelDmaOpSync(SceKernelDmaOpId opid, SceKernelDmaOpSyncMode syncMode,
 		return res;
 	if (ppErrorTag != NULL) {
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&op->lock);
-		if (op->magic == DMA_OP_MAGIC)
+		if (magic == op->magic)
 			*ppErrorTag = op->errorTag;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
 	}
@@ -1603,61 +1665,64 @@ int SceDmacmgrForDriver_BCBB5E85(int dmac, SceUInt32 channel)
 
 	switch (dmac) {
 	case 0:
-		intrCode = 0x70;
 		first = &s_dmacMgr.dmac01Channel[0];
+		intrCode = 0x70;
 		ctrl = &s_dmacMgr.dmac01;
-		break;
+		goto Check;
 	case 1:
-		intrCode = 0x72;
+		if (channel != 0xffff && channel > 1)
+			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 		first = &s_dmacMgr.dmac01Channel[1];
+		intrCode = 0x72;
 		ctrl = &s_dmacMgr.dmac01;
-		break;
+		goto Lock;
 	case 2:
-		intrCode = 0x74;
 		first = &s_dmacMgr.dmac23Channel[0];
+		intrCode = 0x74;
 		ctrl = &s_dmacMgr.dmac23;
-		break;
+		goto Check;
 	case 3:
-		intrCode = 0x76;
 		first = &s_dmacMgr.dmac23Channel[1];
+		intrCode = 0x76;
 		ctrl = &s_dmacMgr.dmac23;
-		break;
+		goto Check;
 	case 4:
 		if (channel != 0xffff && channel > 15)
 			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 		if (channel == 0xffff) {
-			for (i = 0; i < 16; i++)
+			for (i = 0; i != 16; ++i)
 				ReleaseDmac4Channel(i);
-		} else {
-			ReleaseDmac4Channel(channel);
+			return 0;
 		}
+		ReleaseDmac4Channel(channel);
 		return 0;
 	case 5:
-		intrCode = 0x7c;
 		first = &s_dmacMgr.dmac5Channel[0];
+		intrCode = 0x7c;
 		ctrl = &s_dmacMgr.dmac5;
-		break;
+		goto Check;
 	case 6:
 		if (s_dmacMgr.dmac6Reg == NULL)
 			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 		first = &s_dmacMgr.dmac6Channel[0];
 		intrCode = 0x7e;
 		ctrl = &s_dmacMgr.dmac6;
-		break;
+Check:
+		if (channel > 1 && channel != 0xffff)
+			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+Lock:
+		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctrl->lock);
+		if (channel == 0xffff) {
+			ReleaseDmacChannel(intrCode, ctrl, first);
+			ReleaseDmacChannel(intrCode + 1, ctrl, first + 2);
+		} else {
+			ReleaseDmacChannel(intrCode + channel, ctrl, first + channel * 2);
+		}
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrl->lock, intr);
+		return 0;
 	default:
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	if (channel > 1 && channel != 0xffff)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&ctrl->lock);
-	if (channel == 0xffff) {
-		ReleaseDmacChannel(intrCode, ctrl, first);
-		ReleaseDmacChannel(intrCode + 1, ctrl, first + 2);
-	} else {
-		ReleaseDmacChannel(intrCode + channel, ctrl, first + channel * 2);
-	}
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrl->lock, intr);
-	return 0;
 }
 
 static const DmacIntr s_dmacIntr[16] = {
@@ -1687,11 +1752,14 @@ static inline int isDmac6Intr(int intrCode)
 
 static inline void InitializeTagCache(void)
 {
+	SceKernelDmaOpTag *hw;
 	DmaTag *tag;
 
-	for (tag = s_tagCache; tag != &s_tagCache[64]; tag++) {
-		int res = sceKernelVAtoPA(&tag->tag, &tag->pa);
+	for (hw = &s_tagCache[0].tag; hw != &s_tagCache[64].tag; hw += 2) {
+		int res;
 
+		tag = (DmaTag *)((char *)hw - __builtin_offsetof(DmaTag, tag));
+		res = sceKernelVAtoPA(hw, &tag->pa);
 		tag->pa |= 1;
 		if (res < 0)
 			SCE_PANIC_FUNC(2083, "InitializeTagCache");
