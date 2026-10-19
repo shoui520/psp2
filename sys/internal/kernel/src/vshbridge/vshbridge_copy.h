@@ -7,7 +7,7 @@
 #pragma once
 
 #include <scetypes.h>
-#include <vshbridge/vshbridge_imports.h>
+#include "vshbridge.h"
 
 #include <intrmgr/syscall_copy.h>
 

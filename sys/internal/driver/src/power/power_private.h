@@ -4,7 +4,9 @@
 
 #pragma once
 
-#include "power_imports.h"
+#include <scetypes.h>
+#include <hdmi/hdmi.h>
+#include <lowio/grab.h>
 #include <power/power.h>
 #include <power/led.h>
 #include <idstorage/idstorage.h>

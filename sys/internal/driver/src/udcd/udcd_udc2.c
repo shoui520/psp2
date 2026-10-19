@@ -12,7 +12,6 @@
 #include <intrmgr/intrmgr.h>
 #include <threadmgr/threadmgr.h>
 #include <usbd/usb_regs.h>
-#include <udcd/udcd_imports.h>
 #include "udcd_internal.h"
 #include <syscon/syscon.h>
 #include <sysmem/suspend.h>

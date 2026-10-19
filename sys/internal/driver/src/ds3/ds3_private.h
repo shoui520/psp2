@@ -6,6 +6,12 @@
 #include <usbd/usbd.h>
 #include <bt/bt_hid.h>
 #include <threadmgr/fast_mutex_object.h>
+#include <scetypes.h>
+#include <power/power.h>
+#include <lowio/pervasive.h>
+#include <syscon/syscon.h>
+#include <threadmgr/threadmgr.h>
+#include <sysmem/sblaimgr.h>
 
 #define DS3_USB_DEVICES 4
 #define DS3_USB_DEVICE_UNUSED 0x0fffffff

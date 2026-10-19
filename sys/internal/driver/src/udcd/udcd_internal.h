@@ -6,6 +6,12 @@
 #include <udcd/udcd.h>
 #include <sysmem/cpu.h>
 #include <sysmem/procevent.h>
+#include <scetypes.h>
+#include <power/power.h>
+#include <lowio/pervasive.h>
+#include <syscon/syscon.h>
+#include <threadmgr/threadmgr.h>
+#include <sysmem/sblaimgr.h>
 
 /* SceUdcd codes after vitasdk's SCE_UDCD_ERROR_* (names unknown) */
 #define UDCD_ERROR_INVALID_ARGUMENT	0x8024300a

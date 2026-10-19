@@ -7,7 +7,6 @@
  */
 #include <scetypes.h>
 #include <intrmgr/syscall.h>
-#include <vshbridge/vshbridge_imports.h>
 #include "vshbridge.h"
 
 int drmBridgeGetCurrentSecureTick(SceRtcTick *tick)

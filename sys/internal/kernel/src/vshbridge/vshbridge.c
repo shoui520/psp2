@@ -12,7 +12,6 @@
 #include <sdif/sdif.h>
 #include <msif/msif.h>
 #include <intrmgr/syscall.h>
-#include <vshbridge/vshbridge_imports.h>
 #include "vshbridge.h"
 
 #define SCE_SBL_ERROR_INVALID_ARGUMENT		0x800f0016

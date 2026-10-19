@@ -1,6 +1,8 @@
 /* Descriptive source name: this original has no debug source records. */
 #include <intrmgr/syscall.h>
-#include <vshbridge/vshbridge_imports.h>
+#include <sysmem/sysmem.h>
+#include <threadmgr/threadmgr.h>
+#include <acmgr/acmgr.h>
 #include <kernel/error.h>
 #include "kernel_wrappers.h"
 #include "buffer.h"

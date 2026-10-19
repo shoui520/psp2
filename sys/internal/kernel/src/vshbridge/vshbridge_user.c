@@ -6,7 +6,6 @@
  * separate kernel stack (SceThreadmgrForDriver_E54FD746).
  */
 #include <scetypes.h>
-#include <vshbridge/vshbridge_imports.h>
 #include "vshbridge.h"
 #include "vshbridge_copy.h"
 

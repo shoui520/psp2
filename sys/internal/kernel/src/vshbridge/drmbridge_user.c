@@ -3,7 +3,6 @@
  * around the bridges in drmbridge.c, as in vshbridge_user.c.
  */
 #include <scetypes.h>
-#include <vshbridge/vshbridge_imports.h>
 #include "vshbridge.h"
 #include "vshbridge_copy.h"
 

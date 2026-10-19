@@ -15,7 +15,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <sysmem/sysclib.h>
-#include "deci4p_loadp_imports.h"
+#include <scetypes.h>
+#include <acmgr/acmgr.h>
 #include <modulemgr/modulemgr_control.h>
 #include <processmgr/processmgr.h>
 #include <sysmem/qafmgr.h>

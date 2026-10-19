@@ -6,7 +6,6 @@
 #include <bt/bt_event.h>
 #include <bt/bt_test.h>
 #include <sysmem/debug.h>
-#include <udcd/udcd_imports.h>
 #include <threadmgr/threadmgr.h>
 #include <motion/motion_dev.h>
 #include <touch_dummy/touch_dummy.h>
