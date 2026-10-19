@@ -5,8 +5,7 @@
 
 #include <kernel_boot_loader/kbl_param.h>
 #include <sysmem/qafmgr.h>
-
-SceKblParam *SceSysrootForKernel_9DB56D1F(void);
+#include <sysmem/sysroot.h>
 
 /* bit `bit` of qa_flags[index] */
 static inline int QafMgrFlag(unsigned int index, unsigned int bit)

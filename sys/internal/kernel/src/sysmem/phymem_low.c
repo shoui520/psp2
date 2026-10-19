@@ -7,7 +7,6 @@
 
 #include "sysmem_internal.h"
 
-
 /* the memory type codes the exports take */
 #define PHYMEM_LOW_TYPE_MAIN		0x10001
 #define PHYMEM_LOW_TYPE_SUB		0x10002
@@ -18,17 +17,6 @@
 #define PHYMEM_LOW_ALLOC_PARTIAL	0x02	/* a shorter run will do */
 
 #define PHYMEM_LOW_UNIT_SHIFT		18
-
-typedef struct PhyMemLow {
-	SceKernelSpinlock lock;
-	uintptr_t base;
-	SceSize size;
-	SceSize unitSize;
-	SceUInt32 unitShift;
-	SceUInt32 unitMask;
-	SceUInt32 wordCount;		/* bitmap words */
-	SceUInt32 *bitmap;
-} PhyMemLow;
 
 _Static_assert(sizeof(PhyMemLow) == 0x20, "PhyMemLow size");
 

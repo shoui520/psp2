@@ -54,20 +54,6 @@ static const SceUInt32 s_smbTypes[SMB_FIFO_COUNT] = {
 static SceClass *s_smbClass;
 static SmbFifo *s_smbFifo;
 
-const char *SysrootGetMemBlockName(unsigned int index);
-void MemBlockClearRaw(MemBlockObject *block);
-void *MemBlockGetPhyMemPartRaw(MemBlockObject *block);
-void MemBlockSetPhyMemPartRaw(MemBlockObject *block, void *phyMemPart);
-int PartitionAllocSimpleMemBlock(void *partition, SceUInt32 smbType, SceSize size,
-				 MemBlockObject **block);
-int PartitionMapPages(void *partition, SceUInt32 code, uintptr_t va, SceSize size,
-		      uintptr_t pa, SceUInt32 flags);
-int PartitionUnmapL2PageTable(void *partition, uintptr_t va, SceSize size, SceUInt32 mode,
-			      SceUInt32 flags);
-int PartitionReserveSection(void *partition, uintptr_t va);
-int PhyMemPartAllocPhyPage(void *part, SceSize size, SceUInt32 flags, struct PhyPage **page);
-int PhyMemPartFreePhyPage(void *part, struct PhyPage *page);
-
 /* the bytes of guard pages in front of the block */
 static inline SceSize SmbGuardSize(SceUInt32 smbType)
 {

@@ -7,6 +7,7 @@
 
 #include <sysmem/cp15.h>
 #include "sysmem_internal.h"
+#include <sysmem/sysroot.h>
 #define MEMBLOCK_OBJ_MODULE_CALL
 #include "memblock_obj_module.h"
 
@@ -16,31 +17,9 @@
 struct L2PageTable;
 
 /* phymem.c, virpage.c */
-int PhyMemPartFreePhyPage(void *part, struct PhyPage *page);
-SceSize PhyPageGetSizeRaw(const struct PhyPage *page);
-int VirPageAllocPhyPage(VirPage *vp, void *partition, void *phyPart, VirPage **out);
-int VirPageFree(void *partition, FixedHeap *heap, VirPage *vp);
 /* partition.c */
-int PartitionMapPages(void *partition, SceUInt32 code, uintptr_t va, SceSize size,
-		      uintptr_t pa, SceUInt32 flags);
-int PartitionUnmapL2PageTable(void *partition, uintptr_t va, SceSize size, SceUInt32 mode,
-			      SceUInt32 flags);
-int PartitionRemapPages(PartitionObject *partition, MemBlockObject *block, SceUInt32 type,
-			uintptr_t va, SceSize size, uintptr_t pa, SceUInt32 flags);
-int PartitionFindL2PageTable(PartitionObject *partition, uintptr_t va, SceSize size,
-			     SceUInt32 flags, struct L2PageTable **l2pt);
-void PartitionFindAndTryRemoveL2PageTable(PartitionObject *partition, uintptr_t va, SceSize size);
 /* l1pagetable.c, l2pagetable.c (their memblock structs are still placeholders there) */
-int L1PageTableMap(L1PageTable *l1pt, MemBlockObject *block, SceUInt32 type, SceUInt32 domain,
-		   SceSize unit, uintptr_t va, SceSize size, uintptr_t pa);
-int L1PageTableRemap(L1PageTable *l1pt, MemBlockObject *block, SceUInt32 type, SceUInt32 domain,
-		     SceSize unit, uintptr_t va, SceSize size, uintptr_t pa, SceUInt32 flags);
-int L1PageTableUnmap(L1PageTable *l1pt, MemBlockObject *block, SceSize unit, SceUInt32 asid,
-		     SceUInt8 domain, uintptr_t va, SceSize size, SceUInt32 flags);
-void L2PageTableUnreserve(struct L2PageTable *l2pt, SceSize size);
 /* cache.c, mmu.c, address_space.c */
-void CacheInvalidateRangeWithPA(const void *start, uintptr_t pa, SceSize size);
-int AddressSpaceSwitchContext(AddressSpaceObject *as);
 
 /* the bit of a type in the type masks below */
 #define VIRPAGE_TYPE_BIT(_type)		(1u << ((_type) - 1))

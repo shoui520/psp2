@@ -19,6 +19,13 @@
 #include <threadmgr/threadcb.h>
 #include <sysmem/sysclib.h>
 
+/* memblock_obj_module.h */
+typedef struct MemBlockObject MemBlockObject;
+typedef struct TinyPartitionClientInfoList TinyPartitionClientInfoList;
+
+/* sysmem_boot.h */
+struct SysmemBootContext;
+
 /*
  * l1pagetable.c: an address space's two L1 tables (below and above the
  * TTBR0/TTBR1 split) under one lock
@@ -442,9 +449,6 @@ int FixedHeapApplyRangeWithIndexArgRaw(FixedHeap *heap, SceUInt32 start, SceUInt
 				       void *arg, SceUInt32 *next);
 int FixedHeapSetPage(FixedHeap *heap, void *page);
 int FixedHeapSetUID(struct UIDManager *manager);
-FixedHeap *SceSysmemForKernel_3717C322(SceSize size);		/* sceKernelGetKernelFixedHeap */
-void *SceSysmemForKernel_ABA5313C(FixedHeap *heap);		/* sceKernelFixedHeapAllocObject */
-int SceSysmemForKernel_93344755(FixedHeap *heap, void *object);	/* sceKernelFixedHeapFreeObject */
 int SceSysmemForKernel_811C452B(FixedHeap *heap, FixedHeapObjectHook *hook);
 int sceKernelGetFixedHeapInfo(SceUID uid, SceKernelFixedHeapInfo *info);
 int sceKernelFixedHeapSetHook(SceUID uid, FixedHeapObjectHook *hook);
@@ -501,7 +505,6 @@ int NameHeapDelete(const char *name, SceUInt32 flags);
 int NameHeapFind(const char *name, SceUInt32 flags, NameEntry **out);
 int NameHeapInit(struct UIDManager *manager);
 int NameEntrySetUIDEntry(NameEntry *entry, void *uidEntry);
-SceUInt32 SceSysmemForKernel_EB48682E(const char *key, SceSize length, SceUInt32 seed);	/* sceKernelNameHeapGetKey */
 
 /* uid_class.c */
 int UIDHeapInit(UIDHeap *heap);
@@ -513,31 +516,8 @@ int UIDHeapObjectDestroy(void *object);
 int UIDHeapCallAlloc(void *heap, SceSize size, void **object);
 int UIDHeapCallFree(void *heap, void *object);
 
-/* sysmem.c: the kernel heap under its lock */
-void *HeapAllocLocked(void *heap, SceSize size);
-int HeapFreeLocked(void *heap, void *ptr);
-void *UIDManagerGetKernelHeap(void) __attribute__((pure));
-
-/* smb.c: simple memblocks */
-struct MemBlockObject;
-int AllocSimpleMemBlock(const char *name, SceUInt32 smbType, void *phyMemPart, SceUInt32 flags,
-			struct MemBlockObject **smb);
-int SceSysmemForKernel_39D5A3B7(struct MemBlockObject *smb, void **base);	/* sceKernelGetSimpleMemBlockBase */
-int SceSysmemForKernel_A4DB88E1(void *smb);	/* vitasdk: void * */
-
 /* 0x81012970 (partition.c): the kernel partition (UIDManager +0x40) */
 struct Partition *PartitionGetKernel(void);
-
-/* address_space.c */
-int AddressSpaceGetDefaultPhyMemPart(struct AddressSpaceObject *as, int kernel, void **part);
-
-/* uid.c */
-int GUIDUnregisterChecked(SceUID guid);
-int GUIDSetCNOA(SceUID guid, void *cls, const char *name, void *object, SceUInt32 attr);
-int UIDDLinkClassInit(struct UIDManager *manager);
-int UIDEntryHeapClassInit(struct UIDManager *manager);
-void UIDClassSetCallbacks(SceClass *cls, const char *name, SceClassCallback create,
-			  SceClassCallback destroy);
 
 #define ADDRESS_SPACE_TYPE_USER		0x10000001
 
@@ -602,32 +582,7 @@ typedef struct SceKernelPUIDInfo {
 	SceUInt16 useCount;
 } SceKernelPUIDInfo;
 
-/* memblock.c */
-int FreeMemBlockByGUID(SceUID guid);
-
-/* sysroot.c */
-SceUID SceSysrootForKernel_7385CADE(void);	/* the current process */
-SceUID SceSysrootForKernel_D441DC34(void);	/* the current thread */
-uint32_t SceSysrootForKernel_085C2BCB(void);	/* SceUIDSysrootClass */
-/* vitasdk: ksceKernelSysrootGetPUIDEntryHeap */
-int SceSysrootForKernel_88DE85EF(SceUID processId, void **entryHeap);
-int SysrootPIDtoAddressSpaceCB(SceUID processId, void **addressSpaceCB);
-void *SysrootGetProcessObjectHeap(SceUID pid, int kind);
-
-/* the atomics of atomics_small.c */
-/* vitasdk: ksceKernelAtomicAddAndGet16 */
-SceInt16 SceCpuForDriver_59F74E94(SceInt16 *address, SceInt16 value);
-/* vitasdk: ksceKernelAtomicDecIfPositive16 */
-SceInt16 SceCpuForDriver_9A693F5B(SceInt16 *address);
-
 /* exports used inside the module */
-SceUID SceSysmemForKernel_6DB44A42(SceClass *cls, const char *name, void *object);	/* sceGUIDRegister */
-int SceSysmemForKernel_7F7D5C4A(SceClass *cls, SceClass *base);	/* wiki: sceUIDClassIsSubclassForKernel (guessed) */
-void *SceSysmemForKernel_0164D817(void);				/* sceKernelGetPhyPartKernel */
-void *SceSysmemForKernel_FA6C098C(SceUID uid);				/* sceUIDtoObject */
-int sceGUIDGetObject(SceUID guid, void *object);	/* vitasdk: ksceGUIDGetObject */
-void *SceSysmemForKernel_85571907(SceSize size);	/* vitasdk: ksceKernelAlloc */
-int SceSysmemForKernel_4233C16D(void *ptr);	/* vitasdk: ksceKernelFree */
 
 /* sysclib fill.c: the fill core memset wraps */
 void *SetMemoryCore(void *destination, int value, SceSize size);
@@ -834,3 +789,357 @@ typedef struct SysmemProcessStorage {
 #define UID_WALK_SKIP		0x02
 #define UID_WALK_CONTINUE	0x10
 #define UID_WALK_STOP		0x20
+
+/* address_space.c */
+int AddressSpaceGetDefaultPhyMemPart(struct AddressSpaceObject *as, int kernel, void **part);
+int AddressSpaceVARangeToPAVector(AddressSpaceObject *as, const SceKernelPARange *range,
+				  SceKernelPAVector *vector, int *memoryType);
+struct Partition *AddressSpaceGetPartitionByIndex(AddressSpaceObject *as, SceUInt32 index);
+int AddressSpaceGetPhyMemPartByIndex(AddressSpaceObject *as, SceUInt32 index, void **part);
+int AddressSpaceGetPhyMemPart(AddressSpaceObject *as, SceUInt32 code, void **part);
+int AddressSpaceAllocMemBlockByCommand(AddressSpaceObject *unused,
+				       SceKernelAllocMemBlockCommand *command);
+int AddressSpaceSwitchContext(AddressSpaceObject *as);
+int AddressSpaceMemset(AddressSpaceObject *as, void *dst, int c, SceSize size);
+int AddressSpaceCheckAccessibleRange(AddressSpaceObject *as, uint32_t mode, uintptr_t va,
+				     SceSize size);
+int AddressSpaceVAtoPAWithMode(AddressSpaceObject *as, uint32_t mode, uintptr_t va, uintptr_t *pa);
+int AddressSpaceVAtoPABySW(AddressSpaceObject *as, uintptr_t va, uintptr_t *pa);
+int AddressSpaceGetMemoryType(AddressSpaceObject *as, uintptr_t va);
+int AddressSpaceFindMemBlockCtlByAddr(AddressSpaceObject *as, uintptr_t va, SceSize size,
+				      MemBlockObject **block);
+SceUID AddressSpaceFindMemBlockCB(AddressSpaceObject *as, uintptr_t va, SceSize size,
+				  MemBlockObject **out);
+int AddressSpaceGetMemBlockInfoByAddr(AddressSpaceObject *as, uintptr_t va, SceInt32 level,
+				      MemBlockPhyInfo *info);
+int AddressSpaceGetSubbudgetInfo(AddressSpaceObject *as, SceUInt32 subbudget,
+				 AddressSpaceSubbudgetInfo *out);
+int AddressSpaceGetFreeMemorySize(AddressSpaceObject *as, SceKernelFreeMemorySizeInfo *out);
+int AddressSpaceIdFreeMemBlock(SceUID guid, MemBlockBaseInfo *info, MemBlockObject **baseBlock,
+			       void **baseInfo);
+MMUContext *AddressSpaceGetMMUContext(AddressSpaceObject *as);
+int AddressSpaceIsEqualAccessibleBySW(SceUID guid, SceUInt32 perm, uintptr_t va, uintptr_t *pa);
+int AddressSpaceKernelReady(void);
+int AsidUserStart(const UIDManager *manager);
+void AddressSpaceKernelGameStart(void);
+
+/* aimgr.c */
+int AimgrInit(void);
+
+typedef struct Bitheap {
+	SceUInt32 magic;
+	SceUInt32 count;			/* indices */
+	SceUInt32 words;			/* per map */
+	SceUInt32 used;
+	SceUInt32 free;				/* set bits in freeMap */
+	SceUInt32 freed;			/* set bits in freedMap */
+	SceUInt32 *freeMap;
+	SceUInt32 *freedMap;
+} Bitheap;
+
+/* bitheap.c */
+int BitheapInit(Bitheap *heap, SceUInt32 count, SceUInt32 *buffer);
+int BitheapAlloc(Bitheap *heap);
+int sceKernelBitheapUse(Bitheap *heap, int index);
+int sceKernelBitheapFree(Bitheap *heap, int index);
+int BitheapModuleStart(void);
+
+/* cache.c */
+void CacheInvalidateRangeWithPA(const void *start, uintptr_t pa, SceSize size);
+
+/* debug_state.c */
+int InitializeDebugPrintLevel(const struct SysmemBootContext *context);
+int InitializeAssertLevel(const struct SysmemBootContext *context);
+int InitializeDebugNop(void);
+
+/* dipsw.c */
+#if SYSMEM_NSKBL
+int InitializeDipsw(struct SceDipsw *dipsw);	/* the boot loaders' own */
+#else
+int InitializeDipsw(const struct SysmemBootContext *context);
+#endif
+
+/* l1pagetable.c */
+void L1PageTableInit(L1PageTable *l1pt, uint32_t *low, uint32_t *high, uintptr_t split,
+		     SceUInt32 reserved);
+int L1PageTableMapDirect(L1PageTable *l1pt, SceUInt32 type, SceUInt32 domain, uintptr_t va,
+			 SceSize size, uintptr_t pa);
+int L1PageTableUnmapDirect(L1PageTable *l1pt, SceUInt32 asid, SceUInt32 domain, uintptr_t va,
+			   SceSize size);
+int L1PageTableMap(L1PageTable *l1pt, MemBlockObject *block, SceUInt32 type,
+		   SceUInt32 domain, SceSize unit, uintptr_t va, SceSize size, uintptr_t pa);
+int L1PageTableRemap(L1PageTable *l1pt, MemBlockObject *block, SceUInt32 type,
+		     SceUInt32 domain, SceSize unit, uintptr_t va, SceSize size, uintptr_t pa,
+		     SceUInt32 flags);
+int L1PageTableSetL2PageTable(L1PageTable *l1pt, SceUInt32 domain, uintptr_t va, uintptr_t l2pa);
+int L1PageTableUnsetL2PageTable(L1PageTable *l1pt, uintptr_t va);
+int L1PageTableUnmap(L1PageTable *l1pt, MemBlockObject *block, SceSize unit,
+		     SceUInt32 asid, SceUInt8 domain, uintptr_t va, SceSize size, SceUInt32 flags);
+int L1PageTableVAtoPABySW(L1PageTable *l1pt, uintptr_t va, uintptr_t *pa);
+int L1PageTableIsEqualAccessibleBySW(L1PageTable *l1pt, SceUInt32 perm, uintptr_t va,
+				     uintptr_t *pa);
+int L1PageTableGetMemoryType(L1PageTable *l1pt, uintptr_t va);
+int L1PageTableModuleStart(void);
+
+/* l2cc.c */
+void sceKernelL2CacheRemap(void);
+
+/* l2pagetable.c */
+int AllocL2PageTableObject(Partition *partition, FixedHeap *heap, SceUInt32 opt, L2PageTable **out);
+int L2PageTableFree(FixedHeap *heap, L2PageTable *l2pt);
+int L2PageTableInit(L2PageTable *l2pt);
+int L2PageTableGetPageCount(L2PageTable *l2pt);
+void L2PageTableUnreserve(L2PageTable *l2pt, SceSize size);
+int L2PageTableMapPages(L2PageTable *l2pt, SceUInt32 type, uintptr_t va, SceSize size,
+			uintptr_t pa);
+int L2PageTableRemapPages(L2PageTable *l2pt, MemBlockObject *block, SceUInt32 type,
+			  uintptr_t va, SceSize size, uintptr_t pa, SceUInt32 flags);
+int L2PageTableUnmapPages(L2PageTable *l2pt, SceUInt32 asid, uintptr_t va, SceSize size,
+			  SceUInt32 flags);
+int L2PageTableModuleStart(void);
+
+/* memblock.c */
+int FreeMemBlockByGUID(SceUID guid);
+int MemBlockGetInfoRaw(MemBlockObject *block, SceInt32 level, MemBlockInfoEx *info);
+int MemBlockGetInfo(MemBlockObject *block, SceInt32 level, MemBlockPhyInfo *info);
+int MemBlockWithinPhyRange(MemBlockObject *block, uintptr_t pa, SceSize size);
+int MemBlockClearBaseInfo(MemBlockObject *block);
+int MemBlockModuleStartAfterProcessmgr(void);
+int MemBlockModuleStart(void);
+int MemBlockOptSetClientInfoRaw(MemBlockObject *block, const SceKernelAllocMemBlockKernelOpt *opt);
+SceUID MemBlockCreateGUID(const char *name, MemBlockObject *block, SceUInt32 attr);
+
+/* memblock_db.c */
+SceUInt32 MemBlockCode2PartitionIndex(SceUInt32 code);
+const MemBlockCodeInfo *MemBlockCode2CodeInfo(SceUInt32 code);
+int MemBlockType2TypeInfo(SceUInt32 type, const MemBlockTypeInfo **info);
+int MemBlockType2Code(SceUInt32 type, SceUInt32 *code);
+int MemBlockCode2TypeInfo(SceUInt32 code, const MemBlockTypeInfo **info);
+int MemBlockCode2Type(SceUInt32 code, SceUInt32 *type);
+
+/* memblock_partial.c */
+int MemBlockPartialInfoCreate(MemBlockObject *block, SceKernelAllocMemBlockCommand *command);
+int MemBlockPartialAllocPhyPage(MemBlockObject *block, SceKernelAllocMemBlockCommand *command);
+int MemBlockPartialMapRaw(MemBlockObject *block, SceKernelAllocMemBlockCommand *command);
+int MemBlockPartialUnmapRaw(MemBlockObject *block, PartitionObject *partition);
+int MemBlockPartialFreeRaw(MemBlockObject *block, PartitionObject *partition);
+int MemBlockPartialOpRange(PartitionObject *partition, MemBlockObject *block, SceUInt32 op,
+			   uintptr_t va, SceSize size);
+SceSize MemBlockPartialGetHeadFreeSize(MemBlockObject *block);
+SceSize MemBlockPartialGetTailSize(MemBlockObject *block);
+SceSize MemBlockPartialGetMappedSize(MemBlockObject *block);
+SceSize MemBlockPartialGetAllocatedSize(MemBlockObject *block);
+
+/* memblock_vpl.c */
+SceSize MemBlockVirPageListGetHeadFreeSize(MemBlockObject *block);
+SceSize MemBlockVirPageListGetTailFreeSize(MemBlockObject *block);
+SceSize MemBlockVirPageListGetHeadType1Size(MemBlockObject *block);
+SceSize MemBlockVirPageListGetTailType1Size(MemBlockObject *block);
+SceSize MemBlockVirPageListGetMappedSize(MemBlockObject *block);
+SceSize MemBlockVirPageListGetPhySize(MemBlockObject *block);
+int MemBlockVirPageListCheckWithinPhyRange(MemBlockObject *block, uintptr_t pa, SceSize size);
+int MemBlockVirPageListGetInfo(MemBlockObject *block, MemBlockPhyInfo *info);
+int MemBlockVirPageListAllocPhyPage(MemBlockObject *block, PartitionObject *partition,
+				    void *phyPart);
+int MemBlockVirPageListMapRaw(MemBlockObject *block, const SceKernelAllocMemBlockCommand *command,
+			      PartitionObject *partition, SceUInt32 flags);
+int MemBlockVirPageListUnmapRaw(MemBlockObject *block, PartitionObject *partition);
+int MemBlockVirPageListRemapRaw(MemBlockObject *block, PartitionObject *partition,
+				SceUInt32 type, SceUInt32 flags);
+int MemBlockVirPageListFreeVirPageCore(MemBlockObject *block, PartitionObject *partition);
+
+/* partition.c */
+int AddressSpaceContextAllocL2Tables(AddressSpaceContext *context);
+int PartitionFindL2PageTable(Partition *partition, uintptr_t va, SceSize size, SceUInt32 flags,
+			     L2PageTable **out);
+int PartitionGetPhyMemPart(Partition *partition, SceUInt32 code, void **phyMemPart);
+void PartitionVirPageRelease(Partition *partition);
+int DeletePartition(Partition *partition);
+int PartitionAllocVirPage(Partition *partition, VirPage **vp);
+int PartitionReserveSection(Partition *partition, uintptr_t va);
+int PartitionMapPages(Partition *partition, SceUInt32 code, uintptr_t va, SceSize size,
+		      uintptr_t pa, SceUInt32 flags);
+int PartitionRemapPages(Partition *partition, MemBlockObject *block, SceUInt32 type,
+			uintptr_t va, SceSize size, uintptr_t pa, SceUInt32 flags);
+int PartitionUnmapL2PageTable(Partition *partition, uintptr_t va, SceSize size, SceUInt32 mode,
+			      SceUInt32 flags);
+void PartitionFindAndTryRemoveL2PageTable(Partition *partition, uintptr_t va, SceSize size);
+int PartitionGetMemoryType(Partition *partition, uintptr_t va);
+int PartitionVAtoPABySW(Partition *partition, uintptr_t va, uintptr_t *pa);
+int PartitionIsEqualAccessibleBySW(Partition *partition, SceUInt32 perm, uintptr_t va,
+				   uintptr_t *pa);
+int PartitionGetMemBlockPARange(Partition *partition, MemBlockObject *block,
+				SceKernelPARange *range);
+int PartitionGetMemBlockPAVector(Partition *partition, MemBlockObject *block,
+				 SceKernelPAVector *vector);
+int PartitionAllocMemBlockByCommand(Partition *partition, SceKernelAllocMemBlockCommand *command);
+int PartitionAllocMemBlockWithPhyMemPartExt(Partition *partition, void *phyMemPart,
+					    const char *name, SceUInt32 code, SceSize size,
+					    const SceKernelAllocMemBlockKernelOpt *opt,
+					    MemBlockObject **block);
+int PartitionAllocSimpleMemBlock(Partition *partition, SceUInt32 smbType, SceSize size,
+				 MemBlockObject **block);
+int PartitionAllocVSlot(Partition *partition, SceUInt32 code, SceSize size, MemBlockObject **slot);
+int PartitionFreeMemBlockWithBase(Partition *partition, MemBlockObject *block,
+				  MemBlockObject **baseBlock, void **baseInfo);
+int PartitionFreeMemBlock(Partition *partition, MemBlockObject *block);
+int AddressSpaceContextFreeL2Tables(AddressSpaceContext *context);
+int TinyPartitionFreeAllMemBlock(Partition *partition, TinyPartitionClientInfoList *list);
+int PartitionMapMemBlock(Partition *partition, MemBlockObject *block,
+			 const SceKernelAllocMemBlockCommand *command, SceUInt32 flags);
+int PartitionUnmapMemBlock(Partition *partition, MemBlockObject *block);
+int PartitionRemapMemBlock(Partition *partition, MemBlockObject *block, SceUInt32 type,
+			   SceUInt32 flags);
+int TinyPartitionFindMemBlock(TinyPartition *tiny, uintptr_t va, SceSize size,
+			      MemBlockObject **block);
+int PartitionGetMemBlockInfoByAddr(TinyPartition *tiny, uintptr_t va, SceUInt32 arg, void *info);
+int TinyPartitionGetMemBlockInfoListByPA(TinyPartition *tiny, uintptr_t lo, uintptr_t hi,
+					 uintptr_t pa, SceSize psize, SceUInt32 arg,
+					 MemBlockInfoEx *info, SceSize infoSize, SceUInt32 *count);
+int TinyPartitionGetMemBlockInfoListByVA(TinyPartition *tiny, uintptr_t lo, uintptr_t hi,
+					 SceUInt32 arg, MemBlockInfoEx *info, SceSize infoSize,
+					 SceUInt32 *count);
+int PartitionGetInfo(Partition *partition, PartitionInfo *info);
+SceUID sceKernelCreatePartition(const char *name, SceUInt8 domain, uintptr_t vbase, SceSize size,
+				Partition **out, const PartitionInitParam *param);
+int MemBlockFreeFromPartition(MemBlockObject *block);
+int PartitionModuleStart(const UIDManager *manager);
+int CreateTinyPartitionRaw(void);
+
+/*
+ * A physical page descriptor. The table holds one 32-bit word per page
+ * index; a descriptor spans the words of the pages it stands for.
+ */
+typedef struct PhyPage {
+	SceUInt32 info;			/* pindex | order | state */
+	SceSize size;
+	struct PhyPage *prev;
+	struct PhyPage *next;
+} PhyPage;
+
+typedef struct PhyMemLow {
+	SceKernelSpinlock lock;
+	uintptr_t base;
+	SceSize size;
+	SceSize unitSize;
+	SceUInt32 unitShift;
+	SceUInt32 unitMask;
+	SceUInt32 wordCount;		/* bitmap words */
+	SceUInt32 *bitmap;
+} PhyMemLow;
+
+/* phymem.c */
+SceSize PhyPageGetSizeRaw(const PhyPage *page);
+int PhyMemPartAllocPhyPage(PhyMemPart *part, SceSize size, SceUInt32 flags, PhyPage **page);
+int PhyMemPartFreePhyPage(PhyMemPart *part, PhyPage *page);
+SceSize PhyMemPartGetFreeSizeInternal(PhyMemPart *part);
+int PhyMemPartCdramAlloc(PhyMemPart *part, SceSize size, SceSize alignment, uintptr_t *pa);
+int PhyMemPartCdramFree(PhyMemPart *part, uintptr_t pa, SceSize size);
+int PhyMemPartGetInfoCore(PhyMemPart *part, SceKernelPhyMemPartInfoCore *info);
+const char *PhyMemPartGetName(PhyMemPart *part);
+SceUInt32 PhyMemPartTestAttr(PhyMemPart *part, SceUInt32 mask);
+int PhyMemModuleStart(const UIDManager *manager);
+int PhyMemModuleStartPhase2(const UIDManager *manager);
+int PhyMemPartInitCdram(void);
+int PhyMemCdramAlloc(SceSize size, SceSize alignment, uintptr_t *pa);
+int PhyMemCdramFree(uintptr_t pa, SceSize size);
+
+/* phymem_low.c */
+int PhyMemLowAlloc(PhyMemLow *pml, SceSize size, SceSize alignment, SceUInt32 flags,
+		   uintptr_t *pa, SceSize *allocated);
+int PhyMemLowFree(PhyMemLow *pml, uintptr_t pa, SceSize size);
+int PhyMemLowGetFreeSize(PhyMemLow *pml, SceSize *free);
+int PhyMemLowMainAlloc(SceSize size, SceSize alignment, SceUInt32 flags, uintptr_t *pa,
+		       SceSize *allocated);
+int PhyMemLowMainMarkUsed(uintptr_t pa, SceSize size);
+int PhyMemLowMainFree(uintptr_t pa, SceSize size);
+int PhyMemLowCreate(uintptr_t base, SceSize size, PhyMemLow **out);
+int PhyMemLowDestroy(PhyMemLow *pml);
+int PhyMemLowStaticAlloc(SceSize size, SceSize alignment, uintptr_t *pa);
+int PhyMemLowStaticMarkUsed(uintptr_t pa, SceSize size);
+int PhyMemLowStaticFree(uintptr_t pa, SceSize size);
+int PhyMemLowModuleStart(const UIDManager *manager);
+int PhyMemLowModuleStartPhase2(const UIDManager *manager);
+int PhyMemLowStaticInit(void);
+
+/* procevent.c */
+int sceKernelProcessEventInit(void);
+
+/* serial.c */
+int SerialDebugPutchar(void *args, int c);
+#if defined(SYSMEM_SKBL) || defined(SYSMEM_NSKBL)
+int SerialInit(int uart0Enabled);
+#else
+int SerialInit(const struct SysmemBootContext *context);
+#endif
+
+/* smb.c: simple memblocks */
+int AllocSimpleMemBlock(const char *name, SceUInt32 smbType, void *phyMemPart, SceUInt32 flags,
+			struct MemBlockObject **smb);
+int SceSysmemForKernel_39D5A3B7(struct MemBlockObject *smb, void **base);	/* sceKernelGetSimpleMemBlockBase */
+int FreeSimpleMemBlock(MemBlockObject *block, SceUInt32 flags);
+int SimpleMemBlockGetPbase(MemBlockObject *block, uintptr_t *pbase);
+int SimpleMemBlockModuleStart(const UIDManager *manager);
+
+/* sysmem.c: the kernel heap under its lock */
+void *HeapAllocLocked(void *heap, SceSize size);
+int HeapFreeLocked(void *heap, void *ptr);
+void *UIDManagerGetKernelHeap(void) __attribute__((pure));
+int PIDFreeMemBlock(MemBlockBaseInfo *info, MemBlockObject **baseBlock, void **baseInfo);
+
+/* sysmem_heap.c */
+char *SysmemAllocName(const char *name);
+void SysmemFreeName(char *name);
+int SysmemHeapModuleStart(const UIDManager *manager);
+
+/* sysroot.c */
+int SysrootPIDtoAddressSpaceCB(SceUID processId, void **addressSpaceCB);
+void *SysrootGetProcessObjectHeap(SceUID pid, int kind);
+void *sceKernelSysrootAlloc(SceSize size);
+int SysrootModuleStart(const struct SysmemBootContext *context);
+int SysrootIncProcessResource(SceUInt32 type);
+int SysrootDecProcessResource(SceUInt32 type);
+uint32_t SysrootGetBootTypeIndicator2(void);
+int SysrootCreateProcessLocalStorage(const char *name, SceSize size);
+void *SysrootGetProcessLocalStorageAddr(SceUInt32 key);
+int SysrootGetProcessLocalStorageAddrForPid(SceUID pid, SceUInt32 key, void **addr, int create);
+const char *SysrootGetMemBlockName(unsigned int index);
+
+/* sysroot_capability.c */
+int CheckProcessCapabilityGranted(SceUID processId, unsigned int capability);
+int CheckProcessDebugCapability(SceUID processId);
+
+/* sysroot_time_low.c */
+uint32_t SysrootGetTimeLow(void);
+
+/* uid.c */
+int GUIDUnregisterChecked(SceUID guid);
+int GUIDSetCNOA(SceUID guid, void *cls, const char *name, void *object, SceUInt32 attr);
+int UIDDLinkClassInit(struct UIDManager *manager);
+int UIDEntryHeapClassInit(struct UIDManager *manager);
+void UIDClassSetCallbacks(SceClass *cls, const char *name, SceClassCallback create,
+			  SceClassCallback destroy);
+int sceUIDCallConstructor(SceClass *cls, SceObjectBase *object);
+int GUIDRegister(SceClass *cls, const char *name, SceObjectBase *object, SceUInt32 attr);
+int GUIDFindByName(const char *name);
+int GUIDReleaseObject(SceUID guid);
+int GUIDReferObjectWithClassExclusive(SceUID guid, SceClass *cls, SceObjectBase **object);
+SceUID PUIDFindByGUID(SceUID pid, SceUID guid);
+SceUID PUID2GUIDWithRefer(SceUID pid, SceUID puid, SceClass *cls);
+int PUIDCloseWithFlags(SceUID pid, SceUID puid, SceUInt32 flags);
+int PUIDReferObjectWithLevel(SceUID pid, SceUID puid, SceUInt32 level, SceObjectBase **out);
+
+/* virpage.c */
+int VirPageInit(VirPage *vp);
+int VirPageAllocPhyPage(VirPage *vp, void *partition, void *phyPart, VirPage **out);
+int VirPageGetMapRange(VirPage *vp, uintptr_t *pbase, SceSize *size);
+int VirPageGetPhyBase(VirPage *vp, uintptr_t *pbase);
+int VirPageFree(void *partition, FixedHeap *heap, VirPage *vp);
+int VirPageCreate(void);
+int VirPageDestroy(void);
+void AllocMemBlockCommandInit(SceKernelAllocMemBlockCommand *command, const char *name,
+			      SceSize size);
+void AllocMemBlockCommandInitWithType(SceKernelAllocMemBlockCommand *command, const char *name,
+				      SceUInt32 type, SceSize size);
+void AllocMemBlockCommandSetExtraLow(SceKernelAllocMemBlockCommand *command, SceUInt32 extraLow);
+void AllocMemBlockCommandSetExtraHigh(SceKernelAllocMemBlockCommand *command, SceUInt32 extraHigh);

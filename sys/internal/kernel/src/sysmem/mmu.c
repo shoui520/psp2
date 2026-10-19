@@ -22,9 +22,6 @@
 #include <threadmgr/threadcb.h>
 #include <sysmem/cpu.h>
 
-int SceCpuForDriver_821FC0EE(void);
-int sceKernelCpuResumeIntr(int flags);
-
 /* PLACEHOLDER: Sony's name for 0x8002200b is unknown */
 
 /* the DACR while a page table is written, and every domain as client */

@@ -9,6 +9,8 @@
 #include <sysmem/uid_guid.h>
 #include "memblock_obj_module.h"
 #include "memblock/status_module.h"
+#include <sysmem/dipsw.h>
+#include <sysmem/utils.h>
 
 /* MemBlockObject flags bits 20..22 */
 
@@ -22,37 +24,9 @@
 static SceClass *s_partitionClass;
 
 /* l1pagetable.c, l2pagetable.c, smb.c, fixed_heap.c, virpage.c */
-int L1PageTableUnsetL2PageTable(L1PageTable *l1pt, uintptr_t va);
-int L2PageTableFree(FixedHeap *heap, L2PageTable *l2pt);
-int FreeSimpleMemBlock(MemBlockObject *block, SceUInt32 flags);
-int VirPageInit(VirPage *vp);
 /* memblock_obj.c */
-int MemBlockL2PageTableIsAllFree(const MemBlockObject *block);
-void *MemBlockGetPhyMemPartRaw(MemBlockObject *block);
-int MemBlockFreePhyPages(MemBlockObject *block, void *phyPart);
 /* memblock_vpl.c, memblock_partial.c, phymem.c */
-int MemBlockVirPageListUnmapRaw(MemBlockObject *block, Partition *partition);
-int MemBlockVirPageListFreeVirPageCore(MemBlockObject *block, Partition *partition);
-int MemBlockPartialUnmapRaw(MemBlockObject *block, Partition *partition);
-int MemBlockPartialFreeRaw(MemBlockObject *block, Partition *partition);
-int PhyMemPartCdramFree(void *part, uintptr_t pa, SceSize size);
-int PhyMemCdramFree(uintptr_t pa, SceSize size);
-int MemBlockVirPageListMapRaw(MemBlockObject *block, const SceKernelAllocMemBlockCommand *command,
-			      Partition *partition, SceUInt32 flags);
-int MemBlockGetMirrorBlock(const SceKernelAllocMemBlockKernelOpt *opt, MemBlockObject **block);
-SceSize MemBlockGetHeadFreeSize(MemBlockObject *block);
-SceSize MemBlockGetTailFreeSize(MemBlockObject *block);
-SceSize MemBlockGetHeadType1Size(MemBlockObject *block);
-SceSize MemBlockGetTailType1Size(MemBlockObject *block);
-void MemBlockIncMapRef(MemBlockObject *block);
-void FreeMemBlockObject(FixedHeap *heap, MemBlockObject *block);
-int AllocMemBlockObject(FixedHeap *heap, MemBlockObject **block);
-void MemBlockInitRaw(MemBlockObject *block);
-void AllocMemBlockCommandSetExtraLow(SceKernelAllocMemBlockCommand *command, SceUInt32 extraLow);
-void AllocMemBlockCommandSetExtraHigh(SceKernelAllocMemBlockCommand *command, SceUInt32 extraHigh);
 /* memblock.c */
-int MemBlockWithinPhyRange(MemBlockObject *block, uintptr_t pa, SceSize size);
-int MemBlockGetInfoRaw(MemBlockObject *block, SceInt32 level, MemBlockInfoEx *info);
 
 /*
  * An L2 page table released: unhooked from the L1 table and its quarter of
@@ -1381,14 +1355,6 @@ tail:
 #define MEMBLOCK_TYPE_NO_CLEAR		0x20000000
 #define MEMBLOCK_TYPE_CDRAM		0x80
 
-int MemBlockOptSetClientInfoRaw(MemBlockObject *block, const SceKernelAllocMemBlockKernelOpt *opt);
-int MemBlockVirPageListAllocPhyPage(MemBlockObject *block, Partition *partition, void *phyPart);
-int MemBlockPartialInfoCreate(MemBlockObject *block, SceKernelAllocMemBlockCommand *command);
-int MemBlockPartialAllocPhyPage(MemBlockObject *block, SceKernelAllocMemBlockCommand *command);
-int MemBlockPartialMapRaw(MemBlockObject *block, SceKernelAllocMemBlockCommand *command);
-void MemBlockSetPhyMemPartRaw(MemBlockObject *block, void *phyMemPart);
-SceSize MemBlockGetAllocMapSizeRaw(MemBlockObject *block);
-
 /* the largest power of two both are a multiple of */
 static inline SceSize VirPageCommonAlign(uintptr_t va, SceSize size)
 {
@@ -1750,10 +1716,6 @@ fail:
 	return ret;
 }
 
-int PhyMemPartCdramAlloc(void *part, SceSize size, SceSize alignment, uintptr_t *pa);
-int PhyMemCdramAlloc(SceSize size, SceSize alignment, uintptr_t *pa);
-int MemBlockFill(MemBlockObject *block);
-
 /* the largest power of two not above size */
 static inline SceSize AllocMemBlockSizeAlign(SceSize size)
 {
@@ -1973,10 +1935,6 @@ name:
 	return ret;
 }
 
-int MemBlockCode2TypeInfo(SceUInt32 code, const MemBlockTypeInfo **typeInfo);
-void AllocMemBlockCommandInit(SceKernelAllocMemBlockCommand *command, const char *name,
-			      SceSize size);
-
 /* name unknown: a block of the code in the partition, backed from phyMemPart */
 int PartitionAllocMemBlockWithPhyMemPart(Partition *partition, void *phyMemPart, const char *name,
 					 SceUInt32 code, SceSize size,
@@ -2031,14 +1989,6 @@ int AddressSpaceContextAllocL2Tables(AddressSpaceContext *context)
 
 #define MEMBLOCK_L2PT			0x10000000	/* a simple memblock of four L2 tables */
 #define MEMBLOCK_L2PT_FREE_ALL		0x0f000000
-
-int AllocL2PageTableObject(Partition *partition, FixedHeap *heap, SceUInt32 opt, L2PageTable **out);
-int L2PageTableInit(L2PageTable *l2pt);
-int L1PageTableSetL2PageTable(L1PageTable *l1pt, SceUInt32 domain, uintptr_t va, uintptr_t l2pa);
-int MemBlockL2PageTableFreeCount(const MemBlockObject *block);
-int MemBlockL2PageTableAllocFreeArea(MemBlockObject *block, SceUInt32 *quarter, uintptr_t *va,
-				     uintptr_t *pa);
-const char *SysrootGetMemBlockName(unsigned int index);
 
 /* a block with a free quarter: one on the partition's list, else a new one */
 static inline MemBlockObject *PartitionL2CAllocMemBlockForL2PageTableRaw(Partition *partition,
@@ -2230,8 +2180,6 @@ int PartitionFindL2PageTable(Partition *partition, uintptr_t va, SceSize size, S
 	return l2pt != NULL ? 0 : SCE_KERNEL_ERROR_NO_L2PAGETABLE;
 }
 
-int AddressSpaceGetPhyMemPart(struct AddressSpaceObject *as, SceUInt32 code, void **phyMemPart);
-
 /* name unknown: where the partition's blocks of the code get their pages */
 int PartitionGetPhyMemPart(Partition *partition, SceUInt32 code, void **phyMemPart)
 {
@@ -2352,11 +2300,6 @@ int PartitionReserveSection(Partition *partition, uintptr_t va)
 	return ret;
 }
 
-int L2PageTableMapPages(L2PageTable *l2pt, SceUInt32 type, uintptr_t va, SceSize size,
-			uintptr_t pa);
-int L2PageTableRemapPages(L2PageTable *l2pt, MemBlockObject *block, SceUInt32 type,
-			  uintptr_t va, SceSize size, uintptr_t pa, SceUInt32 flags);
-
 /* [va, va + size) in one MiB mapped to pa, its L2 page table made if needed */
 int PartitionMapPages(Partition *partition, SceUInt32 code, uintptr_t va, SceSize size,
 		      uintptr_t pa, SceUInt32 flags)
@@ -2395,10 +2338,6 @@ int PartitionRemapPages(Partition *partition, MemBlockObject *block, SceUInt32 t
 	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->mapLock, intr);
 	return ret;
 }
-
-int L2PageTableUnmapPages(L2PageTable *l2pt, SceUInt32 asid, uintptr_t va, SceSize size,
-			  SceUInt32 flags);
-int L2PageTableGetPageCount(L2PageTable *l2pt);
 
 /* [va, va + size) in one MiB unmapped (mode 1: kept reserved) */
 int PartitionUnmapL2PageTable(Partition *partition, uintptr_t va, SceSize size, SceUInt32 mode,
@@ -2453,15 +2392,6 @@ void PartitionFindAndTryRemoveL2PageTable(Partition *partition, uintptr_t va, Sc
 	}
 	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->mapLock, intr);
 }
-
-int L1PageTableGetMemoryType(L1PageTable *l1pt, uintptr_t va);
-int L1PageTableVAtoPABySW(L1PageTable *l1pt, uintptr_t va, uintptr_t *pa);
-int L1PageTableIsEqualAccessibleBySW(L1PageTable *l1pt, SceUInt32 perm, uintptr_t va,
-				     uintptr_t *pa);
-int sceKernelMMUL2GetMemoryType(const uint32_t *l2, uintptr_t va);
-int MMUL2VAtoPABySW(const uint32_t *l2, uintptr_t va, uintptr_t *pa);
-int MMUL2IsEqualAccessibleBySW(const uint32_t *l2, uint32_t perm, uintptr_t va, uintptr_t *pa);
-int VirPageGetMapRange(VirPage *vp, uintptr_t *pbase, SceSize *size);
 
 /* the L1 queries' answer for a page mapped through an L2 table */
 #define MMU_L1_IS_L2			5
@@ -2680,11 +2610,6 @@ int PartitionFreeMemBlockWithBase(Partition *partition, MemBlockObject *block,
 
 #define MEMBLOCK_FLAG_ZOMBIE		0x20	/* freed while still mapped elsewhere */
 
-SceUInt16 MemBlockGetLockRef(MemBlockObject *block);
-SceUInt16 MemBlockGetMapRef(MemBlockObject *block);
-int MemBlockDecMapRef(MemBlockObject *block);
-int PIDFreeMemBlock(MemBlockBaseInfo *info, MemBlockObject **baseBlock, void **baseInfo);
-
 /*
  * A block freed, then each base block it mirrored once its last mirror is
  * gone and it was freed already (a zombie).
@@ -2769,8 +2694,6 @@ int AddressSpaceContextFreeL2Tables(AddressSpaceContext *context)
 
 #define MEMBLOCK_OPT_CLIENT_INFO	0x500000
 
-int MemBlockClearBaseInfo(MemBlockObject *block);
-
 /* every block of a dying process's partition freed, then the list itself */
 int TinyPartitionFreeAllMemBlock(Partition *partition, TinyPartitionClientInfoList *list)
 {
@@ -2848,10 +2771,6 @@ out:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
 	return 0;
 }
-
-int MemBlockVirPageListRemapRaw(MemBlockObject *block, Partition *partition, SceUInt32 type,
-				SceUInt32 flags);
-int MemBlockGetInfo(MemBlockObject *block, SceInt32 level, MemBlockPhyInfo *info);
 
 /* name unknown: a list block mapped */
 int PartitionMapMemBlock(Partition *partition, MemBlockObject *block,
@@ -2938,22 +2857,6 @@ int TinyPartitionGetMemBlockInfoListByVA(TinyPartition *tiny, uintptr_t lo, uint
 	return TinyPartitionGetMemBlockInfoList(tiny, 0, lo, hi, 0, 0, arg, info, infoSize, count);
 }
 
-/* a partition's state (SceSysmemForKernel_FB101B86) */
-typedef struct PartitionInfo {
-	SceSize size;			/* sizeof(PartitionInfo) */
-	Partition *partition;
-	uintptr_t vbase;
-	SceSize vsize;
-	SceUInt32 blockCount;
-	SceSize freeSize;
-	const char *name;
-	SceUInt32 blockCountMax;
-	SceUInt32 l2Count;
-	SceUInt32 l2CountMax;
-	SceUInt32 virPageCount;
-	SceUInt32 virPageCountMax;
-} PartitionInfo;
-
 /* name unknown */
 int PartitionGetInfo(Partition *partition, PartitionInfo *info)
 {
@@ -3030,11 +2933,6 @@ SceUID sceKernelCreatePartition(const char *name, SceUInt8 domain, uintptr_t vba
 	*out = partition;
 	return uid;
 }
-
-int MemBlockType2Code(SceUInt32 type, SceUInt32 *code);
-SceUID MemBlockCreateGUID(const char *name, MemBlockObject *block, SceUInt32 attr);
-int SceDipswForDriver_A98FC2FD(unsigned int bit);
-int SceKernelUtilsForDriver_875B2A1C(void *buffer, SceSize size);
 
 #define DIPSW_NO_CLEAR			0xe1	/* PLACEHOLDER: name */
 

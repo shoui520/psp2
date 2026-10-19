@@ -6,23 +6,13 @@
 
 #include "sysmem_internal.h"
 #include <sysmem/uid_guid.h>
+#include <sysmem/dipsw.h>
 
 /* the globals are not static: the unconverted part of the file sets them */
 
 #define PHYMEM_PAGE_SHIFT		12
 #define PHYMEM_PAGES_PER_1M		0x100
 #define PHYMEM_BUDDY_ORDERS		9	/* 4 KiB .. 1 MiB */
-
-/*
- * A physical page descriptor. The table holds one 32-bit word per page
- * index; a descriptor spans the words of the pages it stands for.
- */
-typedef struct PhyPage {
-	SceUInt32 info;			/* pindex | order | state */
-	SceSize size;
-	struct PhyPage *prev;
-	struct PhyPage *next;
-} PhyPage;
 
 #define PHYPAGE_PINDEX(_info)		((_info) & 0xfffff)
 #define PHYPAGE_ORDER_MASK		0x1f00000
@@ -258,13 +248,6 @@ int sceKernelGetPhyMemInfo(SceUInt32 type, SceKernelPhyMemRangeInfo *info)
 	info->rangeSize = pages->size;
 	return 0;
 }
-
-/* phymem_low.c */
-typedef struct PhyMemLow PhyMemLow;
-int PhyMemLowAlloc(PhyMemLow *pml, SceSize size, SceSize alignment, SceUInt32 flags,
-		   uintptr_t *pa, SceSize *allocated);
-int PhyMemLowFree(PhyMemLow *pml, uintptr_t pa, SceSize size);
-int PhyMemLowGetFreeSize(PhyMemLow *pml, SceSize *free);
 
 /* the page descriptor of pindex in one table, NULL outside it */
 static inline __attribute__((always_inline))
@@ -1237,12 +1220,6 @@ int PhyMemPartAllocPhyPage1MCoreAssertRaw2(PhyMemPart *part, SceSize size, SceUI
 }
 
 /* phymem_low.c */
-int PhyMemLowMainAlloc(SceSize size, SceSize alignment, SceUInt32 flags, uintptr_t *pa,
-		       SceSize *allocated);
-int PhyMemLowMainMarkUsed(uintptr_t pa, SceSize size);
-int PhyMemLowCreate(uintptr_t base, SceSize size, PhyMemLow **out);
-int PhyMemLowStaticAlloc(SceSize size, SceSize alignment, uintptr_t *pa);
-int PhyMemLowStaticMarkUsed(uintptr_t pa, SceSize size);
 
 uintptr_t sceKernelPhyPageTableMgrGetPbase(PhyPageTableMgr *mgr)
 {
@@ -1936,8 +1913,6 @@ SceUInt32 PhyMemPartTestAttr(PhyMemPart *part, SceUInt32 mask)
 	return attr;
 }
 
-int PhyMemLowMainFree(uintptr_t pa, SceSize size);
-
 /* the segments' memory back to the main allocator, then the segments and cache freed */
 static inline void PhyMemPartRecoveryRaw(PhyMemPart *part)
 {
@@ -2086,9 +2061,6 @@ int sceKernelCreatePhyMemPart(const char *name, SceUInt32 type, SceSize psize, P
 {
 	return CreatePhyMemPartByPbase(name, type, 0, psize, out);
 }
-
-int PhyMemLowDestroy(PhyMemLow *pml);
-int PhyMemLowStaticFree(uintptr_t pa, SceSize size);
 
 /* the size of every segment */
 static inline SceSize PhyMemPartGetPsize(PhyMemPart *part)
@@ -2375,9 +2347,6 @@ int sceKernelGetPhyMemPartInfoByID(SceUID uid, SceKernelPhyMemPartInfoForDebugge
 		ret = PhyMemPartGetInfoForDebugger(part, info);
 	return ret;
 }
-
-int SceDipswForDriver_A98FC2FD(unsigned int bit);
-int PhyMemLowStaticInit(void);
 
 /* the fixed GUIDs of the kernel and tool partitions */
 

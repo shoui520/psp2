@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <sysmem/debug.h>
 #include "sysmem_boot.h"
+#include "sysmem_internal.h"
 
 volatile uint32_t s_assertLevel;
 static volatile uint32_t s_debugPutcharGate = 1;
@@ -32,7 +33,6 @@ int InitializeDebugPrintLevel(const struct SysmemBootContext *context)
 
 extern DebugCrashDumpHandler s_crashDumpHandler;
 extern int s_crashDumpEnabled;
-uint32_t SysrootGetBootTypeIndicator2(void);
 
 /* name unknown: the assertion level from the DIP switches, crash dumps on */
 int InitializeAssertLevel(const struct SysmemBootContext *context)

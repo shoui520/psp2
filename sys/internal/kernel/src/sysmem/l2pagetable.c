@@ -6,16 +6,6 @@
 #include "sysmem_internal.h"
 #include "memblock_obj_module.h"
 
-int sceKernelMMUL2Init(uint32_t *l2);
-int sceKernelMMUMapLargePages(uint32_t *l2, uint32_t type, uint32_t domain, uintptr_t offset,
-			      SceSize size, uintptr_t pa);
-int sceKernelMMUUnmapLargePagesWithFlags(uint32_t *l2, uint32_t asid, uintptr_t va,
-					 uintptr_t offset, SceSize size, uint32_t flags);
-int sceKernelMMUMapSmallPages(uint32_t *l2, uint32_t type, uint32_t domain, uintptr_t offset,
-			      SceSize size, uintptr_t pa);
-int sceKernelMMUUnmapSmallPagesWithFlags(uint32_t *l2, uint32_t asid, uintptr_t va,
-					 uintptr_t offset, SceSize size, uint32_t flags);
-
 /* memblock type bit: a shared (S) mapping */
 #define L2PT_TYPE_SHARED		0x10000
 

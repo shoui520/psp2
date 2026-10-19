@@ -35,3 +35,36 @@ int MMUContextSwitch(const MMUContext *context, MMUContext *saved, uint32_t *con
 int MMUContextSwitchSync(const MMUContext *context, MMUContext *saved);
 int MMUVAtoPACore(uint32_t mode, uint32_t flags, uintptr_t va, uintptr_t *pa, int *memoryType);
 int MMUCheckAccessibleRange(uint32_t mode, uintptr_t va, SceSize size);
+
+/* mmu.c */
+int MMUInitPost(void);
+int sceKernelMMUL1Init(uint32_t *l1);
+int sceKernelMMUSetL2PageTable(uint32_t *l1, uint32_t domain, uintptr_t va, uintptr_t l2pa);
+int sceKernelMMUUnsetL2PageTable(uint32_t *l1, uintptr_t va);
+int sceKernelMMUMapSupersections(uint32_t *l1, uint32_t type, uint32_t domain, uintptr_t va,
+				 SceSize size, uintptr_t pa);
+int sceKernelMMUMapSections(uint32_t *l1, uint32_t type, uint32_t domain, uintptr_t va,
+			    SceSize size, uintptr_t pa);
+int sceKernelMMUUnmapSectionsWithFlags(uint32_t *l1, uint32_t asid, uintptr_t va, SceSize size,
+				       uint32_t flags);
+int MMUUnmapSupersectionsWithFlags(uint32_t *l1, uint32_t asid, uintptr_t va, SceSize size,
+				   uint32_t flags);
+int sceKernelMMUL2Init(uint32_t *l2);
+int sceKernelMMUMapLargePages(uint32_t *l2, uint32_t type, uint32_t domain, uintptr_t offset,
+			      SceSize size, uintptr_t pa);
+int sceKernelMMUUnmapLargePagesWithFlags(uint32_t *l2, uint32_t asid, uintptr_t va,
+					 uintptr_t offset, SceSize size, uint32_t flags);
+int sceKernelMMUMapSmallPages(uint32_t *l2, uint32_t type, uint32_t domain, uintptr_t offset,
+			      SceSize size, uintptr_t pa);
+int sceKernelMMUUnmapSmallPagesWithFlags(uint32_t *l2, uint32_t asid, uintptr_t va,
+					 uintptr_t offset, SceSize size, uint32_t flags);
+int MMUVAtoPAWithFlags(uint32_t mode, uint32_t flags, uintptr_t va, uintptr_t *pa);
+int MMUVAtoPAWithMemoryType(uint32_t mode, uintptr_t va, uintptr_t *pa, int *memoryType);
+int sceKernelMMUL1VAtoPABySW(const uint32_t *l1, uintptr_t va, uintptr_t *pa);
+int sceKernelMMUL1IsEqualAccessibleBySW(const uint32_t *l1, uint32_t perm, uintptr_t va,
+					uintptr_t *pa);
+int sceKernelMMUL1GetMemoryType(const uint32_t *l1, uintptr_t va);
+int MMUL2VAtoPABySW(const uint32_t *l2, uintptr_t va, uintptr_t *pa);
+int MMUL2IsEqualAccessibleBySW(const uint32_t *l2, uint32_t perm, uintptr_t va, uintptr_t *pa);
+int sceKernelMMUL2GetMemoryType(const uint32_t *l2, uintptr_t va);
+int MMUIsValidMap(const MMUContext *context, uintptr_t va, SceSize size, uintptr_t pa);

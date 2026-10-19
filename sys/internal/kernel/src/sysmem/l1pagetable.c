@@ -6,23 +6,7 @@
 
 #include "sysmem_internal.h"
 #include "memblock_obj_module.h"
-
-int sceKernelMMUSetL2PageTable(uint32_t *l1, uint32_t domain, uintptr_t va, uintptr_t l2pa);
-int sceKernelMMUUnsetL2PageTable(uint32_t *l1, uintptr_t va);
-int sceKernelMMUMapSupersections(uint32_t *l1, uint32_t type, uint32_t domain, uintptr_t va,
-				 SceSize size, uintptr_t pa);
-int sceKernelMMUMapSections(uint32_t *l1, uint32_t type, uint32_t domain, uintptr_t va,
-			    SceSize size, uintptr_t pa);
-int sceKernelMMUUnmapSectionsWithFlags(uint32_t *l1, uint32_t asid, uintptr_t va, SceSize size,
-				       uint32_t flags);
-int MMUUnmapSupersectionsWithFlags(uint32_t *l1, uint32_t asid, uintptr_t va, SceSize size,
-				   uint32_t flags);
-int sceKernelMMUL1VAtoPABySW(const uint32_t *l1, uintptr_t va, uintptr_t *pa);
-int sceKernelMMUL1IsEqualAccessibleBySW(const uint32_t *l1, uint32_t perm, uintptr_t va,
-					uintptr_t *pa);
-int sceKernelMMUL1GetMemoryType(const uint32_t *l1, uintptr_t va);
-int MMUIsValidMap(const MMUContext *context, uintptr_t va, SceSize size, uintptr_t pa);
-int SceSysrootForKernel_5C426B19(void);
+#include <sysmem/sysroot.h>
 
 /* memblock type bit: a shared (S) mapping */
 #define L1PT_TYPE_SHARED		0x10000
@@ -31,7 +15,6 @@ int SceSysrootForKernel_5C426B19(void);
 #define L1PT_SECTION			0x100000
 
 /* address_space.c */
-MMUContext *AddressSpaceGetMMUContext(AddressSpaceObject *as);
 
 static inline uint32_t *L1PageTableFor(const L1PageTable *l1pt, uintptr_t va)
 {

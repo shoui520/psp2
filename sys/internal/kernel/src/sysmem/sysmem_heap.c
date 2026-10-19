@@ -6,9 +6,7 @@
 
 #include "sysmem_internal.h"
 #include <sysmem/sysclib.h>
-
-uint32_t SceSysrootForKernel_5C426B19(void);
-void *sceKernelSysrootAlloc(SceSize size);
+#include <sysmem/sysroot.h>
 
 /* name unknown: a 0x20-byte copy of a name, from the sysroot heap while it boots */
 char *SysmemAllocName(const char *name)

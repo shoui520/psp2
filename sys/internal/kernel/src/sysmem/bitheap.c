@@ -8,17 +8,6 @@
 
 #define BITHEAP_MAGIC			0xba46d66f
 
-typedef struct Bitheap {
-	SceUInt32 magic;
-	SceUInt32 count;			/* indices */
-	SceUInt32 words;			/* per map */
-	SceUInt32 used;
-	SceUInt32 free;				/* set bits in freeMap */
-	SceUInt32 freed;			/* set bits in freedMap */
-	SceUInt32 *freeMap;
-	SceUInt32 *freedMap;
-} Bitheap;
-
 /* name unknown: count indices over maps at buffer (2 * count / 8 bytes) */
 int BitheapInit(Bitheap *heap, SceUInt32 count, SceUInt32 *buffer)
 {

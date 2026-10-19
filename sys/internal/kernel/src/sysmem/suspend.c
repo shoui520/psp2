@@ -10,6 +10,7 @@
 #include <sysmem/sysevent.h>
 #include <sysmem/suspend.h>
 #include "sysevent_internal.h"
+#include <sysmem/sysroot.h>
 
 #define SUSPEND_HANDLERS		32
 

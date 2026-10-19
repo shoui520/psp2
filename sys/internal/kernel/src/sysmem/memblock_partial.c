@@ -33,19 +33,7 @@
 #define PARTIAL_OP_RO_TO_RW		0x2000
 
 struct PhyPage;
-void *MemBlockGetPhyMemPartRaw(MemBlockObject *block);
-int PhyMemPartAllocPhyPage(void *part, SceSize size, SceUInt32 flags, struct PhyPage **page);
-int PhyMemPartFreePhyPage(void *part, struct PhyPage *page);
-int PartitionMapPages(void *partition, SceUInt32 code, uintptr_t va, SceSize size,
-		      uintptr_t pa, SceUInt32 flags);
-int PartitionUnmapL2PageTable(void *partition, uintptr_t va, SceSize size, SceUInt32 mode,
-			      SceUInt32 flags);
-void PartitionFindAndTryRemoveL2PageTable(PartitionObject *partition, uintptr_t va, SceSize size);
 /* l1pagetable.c (its memblock struct is still a placeholder there) */
-int L1PageTableMap(L1PageTable *l1pt, MemBlockObject *block, SceUInt32 type, SceUInt32 domain,
-		   SceSize unit, uintptr_t va, SceSize size, uintptr_t pa);
-int L1PageTableUnmap(L1PageTable *l1pt, MemBlockObject *block, SceSize unit, SceUInt32 asid,
-		     SceUInt8 domain, uintptr_t va, SceSize size, SceUInt32 flags);
 
 /* the first physical page's address (PhyPage info: pindex in bits 0..19) */
 static inline uintptr_t PartialPagePbase(const struct PhyPage *page)

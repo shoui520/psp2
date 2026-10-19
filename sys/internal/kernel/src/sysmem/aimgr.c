@@ -8,6 +8,7 @@
 #include <kernel_boot_loader/kbl_param.h>
 #include <ss_mgr/ss_mgr.h>
 #include <sysmem/sblaimgr.h>
+#include <sysmem/sysroot.h>
 
 /* name unknown */
 #define AIMGR_ERROR_INVALID_ARGUMENT	0x800f0c16
@@ -20,8 +21,6 @@
 
 /* the hardware info's model byte of a PS TV (Dolce) */
 #define HARDWARE_MODEL_MASK		0xff0000
-
-SceKblParam *SceSysrootForKernel_9DB56D1F(void);
 
 /* a big-endian halfword */
 #define SWAP16(x)			((SceUInt16)((x) >> 8 | (x) << 8))

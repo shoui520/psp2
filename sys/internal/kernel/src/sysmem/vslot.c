@@ -37,16 +37,6 @@ static VSlotFIFO s_vslotFifo[2];
 static SceClass *s_vslotClass;
 static SceClass s_vslotClassBody;
 
-AddressSpaceObject *SceSysmemForKernel_2E5CC243(void);	/* sceKernelGetKernelAddressSpace */
-void *AddressSpaceGetPartitionByIndex(AddressSpaceObject *as, SceUInt32 index);
-void MemBlockClearRaw(MemBlockObject *block);
-int PartitionAllocVSlot(void *partition, SceUInt32 code, SceSize size,
-			struct MemBlockObject **slot);
-int PartitionMapPages(void *partition, SceUInt32 code, uintptr_t va, SceSize size,
-		      uintptr_t pa, SceUInt32 flags);
-int PartitionUnmapL2PageTable(void *partition, uintptr_t va, SceSize size, SceUInt32 mode,
-			      SceUInt32 flags);
-
 static inline VSlotFIFO *GetFIFO(SceUInt32 type)
 {
 	switch (type & 0xf) {

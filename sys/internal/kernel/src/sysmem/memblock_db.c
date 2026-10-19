@@ -6,9 +6,7 @@
  */
 
 #include "sysmem_internal.h"
-
-
-int SceDipswForDriver_A98FC2FD(unsigned int bit);
+#include <sysmem/dipsw.h>
 
 /* attr: only with the tool DIP switch */
 #define MEMBLOCK_TYPE_ATTR_TOOL_ONLY	0x20
@@ -18,7 +16,6 @@ int SceDipswForDriver_A98FC2FD(unsigned int bit);
 /* MemBlockTypeInfo: sysmem_internal.h */
 
 #define MEMBLOCK_DB_KEYS		38
-
 
 static const MemBlockTypeInfo s_typeInfo[89] = {
 	{ 0x00000000, 0x00000000, 0x00000001, 0x00000000 },

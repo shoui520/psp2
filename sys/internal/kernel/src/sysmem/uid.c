@@ -12,6 +12,7 @@
 #include <sysmem/uid_guid.h>
 #include "sysmem_internal.h"
 #include "memblock_obj_module.h"
+#include <sysmem/sysroot.h>
 
 #define UID_WRITE_LOCK(heap, line)	FixedHeapWriteLock(&(heap)->fixedHeap, __func__, (line))
 #define UID_WRITE_UNLOCK(heap, state)	FixedHeapWriteUnlock(&(heap)->fixedHeap, (state))

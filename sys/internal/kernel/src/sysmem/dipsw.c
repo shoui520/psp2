@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <sysmem/dipsw.h>
 #include "sysmem_boot.h"
+#include "sysmem_internal.h"
 
 union DipswState {
 	SceDipsw info;
@@ -12,7 +13,6 @@ static union DipswState s_bootDipsw;
 static union DipswState *s_dipsw;
 
 #define SCE_KERNEL_ERROR_ILLEGAL_DIPSW_NUMBER ((int)UINT32_C(0x80021001))
-extern int CheckProcessDebugCapability(int processId);
 
 /* Name unknown; called before the first startup DIP-switch query. */
 int InitializeDipsw(const struct SysmemBootContext *context)

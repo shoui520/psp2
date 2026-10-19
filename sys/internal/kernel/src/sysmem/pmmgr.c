@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <kernel_boot_loader/kbl_param.h>
 #include <sysmem/pmmgr.h>
+#include <sysmem/sysroot.h>
 
 /* name unknown */
 #define PMMGR_ERROR_INVALID_ARGUMENT	0x800f0a16
@@ -12,8 +13,6 @@
 
 #define BOOT_TYPE_EXTERNAL		0x1
 #define BOOT_TYPE_PRODUCT_MODE		0x4
-
-SceKblParam *SceSysrootForKernel_9DB56D1F(void);
 
 int ScePmMgrForDriver_2AC815A2(SceProductMode *mode)
 {

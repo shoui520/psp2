@@ -7,6 +7,10 @@
 #include "sysmem_internal.h"
 #include "memblock_obj_module.h"
 #include "sysmem_boot.h"
+#include <sysmem/utils.h>
+#include <sysmem/sysroot.h>
+#include "sysevent_internal.h"
+#include "vslot_module.h"
 
 #define SYSMEM_ERROR_NOT_THREAD		SCE_KERNEL_ERROR_ILLEGAL_CONTEXT
 
@@ -25,23 +29,6 @@
 #define PAGE_KIND_NOT_IN		7
 
 #define DIPSW_SUBBUDGET_INFO		0x9f	/* PLACEHOLDER: name */
-
-void *SceSysrootForKernel_63EBB05B(void);
-int SceSysrootForKernel_F8769E86(int unk);
-SceUID SceSysrootForKernel_7334F1E8(SceUID processId);
-void *SysrootGetProcessLocalStorageAddr(SceUInt32 key);
-int AddressSpaceVAtoPABySW(AddressSpaceObject *as, uintptr_t va, uintptr_t *pa);
-int AddressSpaceVAtoPAWithMode(AddressSpaceObject *as, uint32_t mode, uintptr_t va, uintptr_t *pa);
-int AddressSpaceCheckAccessibleRange(AddressSpaceObject *as, uint32_t mode, uintptr_t va,
-				     SceSize size);
-int AddressSpaceIsEqualAccessibleBySW(SceUID guid, SceUInt32 perm, uintptr_t va, uintptr_t *pa);
-int AddressSpaceGetMemoryType(AddressSpaceObject *as, uintptr_t va);
-int AddressSpaceGetSubbudgetInfo(AddressSpaceObject *as, SceUInt32 subbudget,
-				 AddressSpaceSubbudgetInfo *out);
-int AddressSpaceGetFreeMemorySize(AddressSpaceObject *as, SceKernelFreeMemorySizeInfo *out);
-int AddressSpaceIdFreeMemBlock(SceUID guid, MemBlockBaseInfo *info, MemBlockObject **baseBlock,
-			       void **baseInfo);
-int AddressSpaceKernelReady(void);
 
 /* the bytes from va to the end of its 4 KiB page */
 static inline SceSize SmallPageRest(uintptr_t va)
@@ -270,8 +257,6 @@ int VARangeToPAVectorBySWCore(const SceKernelVARange *range, SceKernelPAVector *
 	vector->nDataInVector = count;
 	return 0;
 }
-int SysrootGetProcessLocalStorageAddrForPid(SceUID pid, SceUInt32 key, void **addr, int create);
-int SceSysrootForKernel_AE2132FD(void *ptr);
 
 /* a base block freed from the address space of the process its info names */
 int PIDFreeMemBlock(MemBlockBaseInfo *info, MemBlockObject **baseBlock, void **baseInfo)
@@ -644,36 +629,7 @@ UIDManager *g_uidManager;
 #define DIPSW_DEBUG_PUTCHAR		0xc5	/* PLACEHOLDER: name */
 #define DIPSW_DEBUG_PUTCHAR_ALT		0xc4	/* PLACEHOLDER: name */
 
-int InitializeDipsw(const struct SysmemBootContext *context);
-int InitializeDebugPrintLevel(const struct SysmemBootContext *context);
-int InitializeDebugNop(void);
-int InitializeAssertLevel(const struct SysmemBootContext *context);
-int SysrootModuleStart(const struct SysmemBootContext *context);
-int MMUInitPost(void);
-int SceKernelUtilsForDriver_D428CC2A(SceUInt32 seed);
-void *SceSysrootForKernel_37EC12BB(unsigned int index);
-int BitheapModuleStart(void);
-int PhyMemLowModuleStart(const UIDManager *manager);
-int PhyMemModuleStart(const UIDManager *manager);
-int VirPageDestroy(void);
-int L1PageTableModuleStart(void);
-int L2PageTableModuleStart(void);
-int VirPageCreate(void);
-int MemBlockModuleStart(void);
-void MemBlockObjModuleStart(const UIDManager *manager);
-int PartitionModuleStart(const UIDManager *manager);
-int SysmemHeapModuleStart(const UIDManager *manager);
-int AsidUserStart(const UIDManager *manager);
-void sceKernelL2CacheRemap(void);
-int SuspendInit(void);
 int LedModuleStart(const struct SysmemBootContext *context);
-int SerialInit(const struct SysmemBootContext *context);
-int SerialDebugPutchar(void *args, int c);
-int PhyMemLowModuleStartPhase2(const UIDManager *manager);
-int PhyMemModuleStartPhase2(const UIDManager *manager);
-int AimgrInit(void);
-int sceKernelSysEventInit(void);
-int sceKernelProcessEventInit(void);
 
 int SysmemModuleStart(SceSize args, void *argp)
 {
@@ -742,13 +698,6 @@ int SysmemModuleStart(SceSize args, void *argp)
 	return 0;
 }
 
-int SysrootCreateProcessLocalStorage(const char *name, SceSize size);
-int PhyMemPartInitCdram(void);
-int MemBlockModuleStartAfterProcessmgr(void);
-int CreateTinyPartitionRaw(void);
-void AddressSpaceKernelGameStart(void);
-int VSlotModuleStart(void);
-
 int sceKernelSysmemModuleStartAfterProcessmgr(void)
 {
 	int key;
@@ -796,8 +745,6 @@ SceSSize VmaccessStrncpyFromUser(char *dst, const char *userSrc, SceSize n);
 SceSSize VmaccessStrncpyToUser(char *userDst, const char *src, SceSize n);
 SceSSize VmaccessCountFillUser32(const void *userSrc, SceUInt32 value, SceSize size);
 SceSSize VmaccessCountFillUser64(const void *userSrc, SceUInt32 low, SceUInt32 high, SceSize size);
-
-int AddressSpaceSwitchContext(AddressSpaceObject *as);
 
 /* fault in the kernel buffer's pages */
 static inline void UserCopyTouchKernel(const void *buffer, SceSize size)

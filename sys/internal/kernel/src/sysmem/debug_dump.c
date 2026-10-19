@@ -26,21 +26,10 @@
 #include <excpmgr/excpmgr.h>
 #include <sysmem/sysroot_modulemgr.h>
 #include "debug_tty.h"
-
-int SceDipswForDriver_A98FC2FD(unsigned int bit);
-SceUInt64 SceSysrootForKernel_E20F6FC8(void);
-SceUID SceSysrootForKernel_7385CADE(void);
-SceUID SceSysrootForKernel_D441DC34(void);
-SceUInt32 SceSysrootForDriver_44EA3197(void);
-SceUInt32 SceSysrootForKernel_C8C8C321(void);
-int SceSysrootForDriver_CC7A0E63(int type, SceSize size, const char *buffer);
-void SceSysrootForKernel_0DF574A9(void);
-void *SceSysrootForKernel_3E455842(void);
-int SceQafMgrForDriver_382C71E8(void);
-int SceSysrootForKernel_FF9F80FF(SceUID pid, SceUInt32 addr, struct ModulemgrStubInfo *info);
-int SceSysrootForKernel_1D84C4D4(SceUID pid, SceUInt32 addr, SceUInt32 *fingerprint,
-				void **textBase, char *name);
-int SceSysrootForKernel_0B79E220(uint32_t nid, const char **name);
+#include <sysmem/dipsw.h>
+#include <sysmem/qafmgr.h>
+#include <sysmem/sysroot.h>
+#include "sysmem_internal.h"
 
 /* debug_asm.S */
 void DebugCallOnStack(void *argument, void *stackTop, void (*func)(void *));

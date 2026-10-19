@@ -6,6 +6,7 @@
 
 #include "../sysmem_internal.h"
 #include <sysmem/uid_guid.h>
+#include <sysmem/sysroot.h>
 #define MEMBLOCK_OBJ_MODULE_FILE	"dlmalloc/../memblock_obj_module.h"
 #include "../memblock_obj_module.h"
 #include <sysmem/heap_info.h>
@@ -126,25 +127,6 @@ static SceClass *s_heapClass;			/* "SceUIDKernelHeapClass" */
 #if FW_DEBUG
 static HeapHooks s_hooks;
 #endif
-
-int sceUIDCallConstructor(SceClass *cls, SceObjectBase *object);
-int MemBlockType2Code(SceUInt32 type, SceUInt32 *code);
-SceSize MemBlockGetAllocMapSizeRaw(MemBlockObject *block);
-uintptr_t MemBlockGetVBase(MemBlockObject *block);
-SceSize MemBlockGetHeadFreeSize(MemBlockObject *block);
-int MemBlockFreeFromPartition(MemBlockObject *block);
-int PartitionGetPhyMemPart(struct Partition *partition, SceUInt32 code, void **phyMemPart);
-int PartitionAllocMemBlockWithPhyMemPartExt(struct Partition *partition, void *phyMemPart,
-					    const char *name, SceUInt32 code, SceSize size,
-					    const SceKernelAllocMemBlockKernelOpt *opt,
-					    MemBlockObject **block);
-int TinyPartitionFindMemBlock(TinyPartition *tiny, uintptr_t va, SceSize size,
-			      MemBlockObject **block);
-AddressSpaceObject *SceSysmemForKernel_2E5CC243(void);
-struct Partition *AddressSpaceGetPartitionByIndex(AddressSpaceObject *as, SceUInt32 index);
-int AddressSpaceGetPhyMemPartByIndex(AddressSpaceObject *as, SceUInt32 index, void **part);
-uint32_t SceSysrootForKernel_5C426B19(void);
-void *sceKernelSysrootAlloc(SceSize size);
 
 /* name unknown: SceUIDKernelHeapClass's constructor */
 static int HeapObjectCreate(SceObjectBase *object)

@@ -30,7 +30,7 @@
 
 /* MemBlockObject.attr: mapped in whole units (never supersections) */
 
-typedef struct MemBlockObject {
+struct MemBlockObject {
 	union {
 		SceObjectBase base;
 		struct {
@@ -77,7 +77,7 @@ typedef struct MemBlockObject {
 			struct MemBlockObject *smbNext;	/* 0x3c: in its type's FIFO */
 		};
 	};
-} MemBlockObject;
+};
 
 /*
  * memblock_obj.c keeps out-of-line copies (MEMBLOCK_OBJ_MODULE_EXTERN); files
@@ -280,11 +280,11 @@ typedef struct MemBlockClientInfo {
 _Static_assert(sizeof(MemBlockClientInfo) == 0x40, "MemBlockClientInfo size");
 
 /* the client infos of a dying process's blocks, collected while they are freed (partition.c) */
-typedef struct TinyPartitionClientInfoList {
+struct TinyPartitionClientInfoList {
 	SceUInt32 capacity;
 	void **entries;
 	SceUInt32 count;
-} TinyPartitionClientInfoList;
+};
 
 /* opt state 4 or 5: the base info / client info pointer in opt */
 static inline void MemBlockOptClearBaseInfoRaw(MemBlockObject *block)
@@ -354,3 +354,40 @@ static inline void MemBlockSetVirPageRaw(MemBlockObject *block, VirPage *vp)
 }
 
 #pragma pop_macro("__FILE_NAME__")
+
+/* memblock_obj.c */
+uintptr_t MemBlockGetVBase(MemBlockObject *block);
+SceUInt32 MemBlockGetCode(MemBlockObject *block);
+struct Partition *GetMemBlockPartition(MemBlockObject *block);
+void MemBlockClearRaw(MemBlockObject *block);
+void MemBlockInitRaw(MemBlockObject *block);
+void *MemBlockGetPhyMemPartRaw(MemBlockObject *block);
+void MemBlockSetPhyMemPartRaw(MemBlockObject *block, void *phyMemPart);
+SceSize MemBlockGetAllocMapSizeRaw(MemBlockObject *block);
+int MemBlockGetPhyRange(MemBlockObject *block, uintptr_t range[2]);
+int MemBlockGetPhyRangeList(MemBlockObject *block, SceKernelPAVector *vector,
+			    SceKernelPARange *cur, SceKernelPARange *end);
+int MemBlockGetMirrorBlock(const SceKernelAllocMemBlockKernelOpt *opt, MemBlockObject **block);
+SceSize MemBlockGetHeadFreeSize(MemBlockObject *block);
+SceSize MemBlockGetTailFreeSize(MemBlockObject *block);
+SceSize MemBlockGetHeadType1Size(MemBlockObject *block);
+SceSize MemBlockGetTailType1Size(MemBlockObject *block);
+SceSize MemBlockGetMapSize(MemBlockObject *block);
+int MemBlockFill(MemBlockObject *block);
+int MemBlockL2PageTableIsAllFree(const MemBlockObject *block);
+int MemBlockL2PageTableFreeCount(const MemBlockObject *block);
+int MemBlockL2PageTableAllocFreeArea(MemBlockObject *block, SceUInt32 *quarter, uintptr_t *va,
+				     uintptr_t *pa);
+SceUInt16 MemBlockGetMapRef(MemBlockObject *block);
+void MemBlockClearMapRef(MemBlockObject *block);
+void MemBlockIncMapRef(MemBlockObject *block);
+int MemBlockDecMapRef(MemBlockObject *block);
+SceUInt16 MemBlockGetLockRef(MemBlockObject *block);
+void MemBlockIncLockRef(MemBlockObject *block);
+int MemBlockDecLockRef(MemBlockObject *block);
+SceUID MemBlockGetGUID(MemBlockObject *block);
+int MemBlockFreePhyPages(MemBlockObject *block, void *phyPart);
+int AllocMemBlockObject(FixedHeap *heap, MemBlockObject **block);
+void FreeMemBlockObject(FixedHeap *heap, MemBlockObject *block);
+int MemBlockSetBaseInfo(SceUID uid, void *info);
+void MemBlockObjModuleStart(const UIDManager *manager);

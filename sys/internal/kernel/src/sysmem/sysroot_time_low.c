@@ -5,9 +5,9 @@
  */
 
 #include <stdint.h>
+#include <sysmem/sysroot.h>
 
 #if FW_DEBUG
-uint32_t SceSysrootForKernel_41636522(void);
 
 /* name unknown: the low word of the system time */
 uint32_t SysrootGetTimeLow(void)

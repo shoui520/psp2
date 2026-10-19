@@ -41,8 +41,6 @@ static SceClass s_procEventClass;
 /* the list head (next, prev) */
 static ProcEventLink *s_procEventList[2];
 
-uint32_t SysrootGetTimeLow(void);
-
 /* debug builds time each handler and report the slow ones */
 #if FW_DEBUG
 #define PROC_EVENT_TIMER_START()	(start = SysrootGetTimeLow())

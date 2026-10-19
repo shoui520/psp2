@@ -69,3 +69,6 @@ static inline void VSlotSetNextRaw(MemBlockObject *block, MemBlockObject *next)
 }
 
 #pragma pop_macro("__FILE_NAME__")
+
+/* vslot.c */
+int VSlotModuleStart(void);

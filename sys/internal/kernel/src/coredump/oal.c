@@ -1969,9 +1969,9 @@ int oalEachOfAllMemBlockInfo(SceUID pid,
 		return result;
 	numVisitedPartitions = 0;
 	for (i = 0; i < space.partitionCount; i++) {
-		if (pid != 0x10005 && space.partition[i].data[1] < 0x40000000)
+		if (pid != 0x10005 && space.partition[i].vbase < 0x40000000)
 			continue;
-		partition = (void *)space.partition[i].data[0];
+		partition = space.partition[i].partition;
 		for (k = 0; k < numVisitedPartitions; k++) {
 			if (visitedPartitions[k] == partition)
 				break;

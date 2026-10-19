@@ -242,16 +242,33 @@ typedef struct AddressSpaceCreateOpt {
 #define ADDRESS_SPACE_PARTITIONS	32
 #define ADDRESS_SPACE_PHYMEMPARTS	16
 
+/* a partition's state (SceSysmemForKernel_FB101B86) */
+typedef struct PartitionInfo {
+	SceSize size;			/* sizeof(PartitionInfo) */
+	struct Partition *partition;
+	uintptr_t vbase;
+	SceSize vsize;
+	SceUInt32 blockCount;
+	SceSize freeSize;
+	const char *name;
+	SceUInt32 blockCountMax;
+	SceUInt32 l2Count;
+	SceUInt32 l2CountMax;
+	SceUInt32 virPageCount;
+	SceUInt32 virPageCountMax;
+} PartitionInfo;
+
+#ifndef __cplusplus
+_Static_assert(sizeof(PartitionInfo) == 0x30, "PartitionInfo size");
+#endif
+
 /* an address space's partitions and physical memory partitions (SceSysmemForKernel_C3EF4055) */
 typedef struct AddressSpaceInfo {
 	SceSize size;				/* sizeof(AddressSpaceInfo) */
 	SceUID uid;
 	SceUInt8 asid;
 	SceUInt32 partitionCount;		/* 0x0c */
-	struct {
-		SceSize size;
-		SceUInt32 data[11];
-	} partition[ADDRESS_SPACE_PARTITIONS];	/* 0x10: PartitionInfo */
+	PartitionInfo partition[ADDRESS_SPACE_PARTITIONS];	/* 0x10 */
 	SceUInt32 phyMemPartCount;		/* 0x610 */
 	void *phyMemPart[ADDRESS_SPACE_PHYMEMPARTS];	/* 0x614 */
 } AddressSpaceInfo;
@@ -487,6 +504,7 @@ SceUInt32 SceSysmemForKernel_48D2E408(SceUInt32 type);
 /* vitasdk: ksceKernelCopyToUserDomain */
 int SceSysmemForKernel_499A9FFF(void *dst, const void *src, SceSize size);
 int SceSysmemForKernel_4A2E421D(SceUID guid);	/* vitasdk: ksceKernelDeleteAddressSpace */
+struct AddressSpaceObject *SceSysmemForKernel_2E5CC243(void);	/* sceKernelGetKernelAddressSpace */
 int SceSysmemForKernel_4E923101(SceUID guid);
 /* vitasdk: ksceGUIDGetUIDVectorByClass */
 int sceGUIDGetUIDVectorByClass(SceClass *cls, int vis_level, SceUID *vector, SceSize num, SceSize *ret_num);

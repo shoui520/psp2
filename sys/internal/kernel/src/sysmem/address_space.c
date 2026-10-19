@@ -11,6 +11,8 @@
 #include "sysmem_internal.h"
 #include "memblock_obj_module.h"
 #include <sysmem/sysclib.h>
+#include <sysmem/dipsw.h>
+#include <sysmem/sysroot.h>
 
 static inline __attribute__((always_inline)) void AddressSpaceRefer(AddressSpaceObject *as)
 {
@@ -29,20 +31,6 @@ static inline __attribute__((always_inline)) void AddressSpaceRelease(AddressSpa
 struct Bitheap;
 
 /* partition.c, phymem.c, memblock.c, bitheap.c, uid.c, sysroot */
-void *SceSysrootForKernel_63EBB05B(void);
-SceUID sceKernelCreatePartition(const char *name, SceUInt8 domain, uintptr_t vbase, SceSize size,
-				struct Partition **out, const PartitionInitParam *param);
-int DeletePartition(struct Partition *partition);
-int AddressSpaceContextFreeL2Tables(AddressSpaceContext *context);
-int PartitionAllocMemBlockByCommand(struct Partition *partition,
-				    SceKernelAllocMemBlockCommand *command);
-SceUID MemBlockCreateGUID(const char *name, MemBlockObject *block, SceUInt32 attr);
-const char *PhyMemPartGetName(void *part);
-int PhyMemPartGetInfoCore(void *part, SceKernelPhyMemPartInfoCore *info);
-int sceKernelBitheapFree(struct Bitheap *heap, int index);
-char *SysmemAllocName(const char *name);
-void SysmemFreeName(char *name);
-int SceDipswForDriver_A98FC2FD(unsigned int bit);
 
 #define DIPSW_ENABLE_TOOL_PHYMEMPART	0xd2
 #define DIPSW_USER_IO_SMALL		0xd5	/* PLACEHOLDER: name */
@@ -255,8 +243,6 @@ int SceSysmemForDriver_2D711589(const MMUContext *context, MMUContext *saved)
 	return MMUContextSwitchSync(context, saved);
 }
 
-int MMUVAtoPAWithMemoryType(uint32_t mode, uintptr_t va, uintptr_t *pa, int *memoryType);
-
 #define MMU_MODE_KERNEL_RW		0x33
 
 /* the physical ranges behind [va, va + size) of the address space */
@@ -409,9 +395,6 @@ int AddressSpaceGetPhyMemPart(AddressSpaceObject *as, SceUInt32 code, void **par
 	return AddressSpaceGetPhyMemPartByIndex(as, (code >> 20) & 0xf, part);
 }
 
-SceUInt32 MemBlockCode2PartitionIndex(SceUInt32 code);
-int MemBlockGetMirrorBlock(const SceKernelAllocMemBlockKernelOpt *opt, MemBlockObject **block);
-
 /* MemBlockTypeInfo attr: how the address space allocates the type */
 #define MEMBLOCK_TYPE_DIRECT		0x00200000	/* its physical partition, no checks */
 #define MEMBLOCK_TYPE_MIRROR_SIZE	0x00800000	/* a mirror's size from its base */
@@ -545,11 +528,6 @@ int AddressSpaceVAtoPAWithMode(AddressSpaceObject *as, uint32_t mode, uintptr_t 
 	return ret;
 }
 
-int PartitionVAtoPABySW(struct Partition *partition, uintptr_t va, uintptr_t *pa);
-int PartitionGetMemoryType(struct Partition *partition, uintptr_t va);
-int L1PageTableVAtoPABySW(L1PageTable *l1pt, uintptr_t va, uintptr_t *pa);
-int L1PageTableGetMemoryType(L1PageTable *l1pt, uintptr_t va);
-
 #define PARTITION_NOT_IN		7	/* the partitions' answer for addresses outside them */
 #define MMU_L1_IS_L2			5
 
@@ -593,9 +571,6 @@ out:
 	return ret;
 }
 
-int TinyPartitionFindMemBlock(TinyPartition *tiny, uintptr_t va, SceSize size,
-			      MemBlockObject **block);
-
 /* the block holding [va, va + size), from the partition the range lies in */
 int AddressSpaceFindMemBlockCtlByAddr(AddressSpaceObject *as, uintptr_t va, SceSize size,
 				      MemBlockObject **block)
@@ -617,8 +592,6 @@ out:
 	return ret;
 }
 
-SceUID MemBlockGetGUID(MemBlockObject *block);
-
 /* the GUID of the block holding [va, va + size), one made if it has none */
 SceUID AddressSpaceFindMemBlockCB(AddressSpaceObject *as, uintptr_t va, SceSize size,
 				  MemBlockObject **out)
@@ -637,9 +610,6 @@ SceUID AddressSpaceFindMemBlockCB(AddressSpaceObject *as, uintptr_t va, SceSize 
 		return SceSysmemForKernel_EC90AA11((SceObjectBase *)block);
 	return guid;
 }
-
-int PartitionGetMemBlockInfoByAddr(TinyPartition *tiny, uintptr_t va, SceInt32 level,
-				   MemBlockPhyInfo *info);
 
 /* the info of the block holding va */
 int AddressSpaceGetMemBlockInfoByAddr(AddressSpaceObject *as, uintptr_t va, SceInt32 level,
@@ -739,9 +709,6 @@ int AddressSpaceGetFreeMemorySize(AddressSpaceObject *as, SceKernelFreeMemorySiz
 	return 0;
 }
 
-int PartitionFreeMemBlockWithBase(struct Partition *partition, MemBlockObject *block,
-				  MemBlockObject **baseBlock, void **baseInfo);
-
 /* a base block freed in the partition its info names (the address space by GUID) */
 int AddressSpaceIdFreeMemBlock(SceUID guid, MemBlockBaseInfo *info, MemBlockObject **baseBlock,
 			       void **baseInfo)
@@ -810,18 +777,6 @@ int sceKernelAddressSpaceCtrSetObjectHeap(AddressSpaceObject *as, ObjectHeap *he
 	AddressSpaceRelease(as);
 	return 0;
 }
-
-int BitheapAlloc(struct Bitheap *heap);
-int sceKernelMMUL1Init(uint32_t *l1);
-void L1PageTableInit(L1PageTable *l1pt, uint32_t *low, uint32_t *high, uintptr_t split,
-		     SceUInt32 reserved);
-int AddressSpaceContextAllocL2Tables(AddressSpaceContext *context);
-int L1PageTableMapDirect(L1PageTable *l1pt, SceUInt32 type, SceUInt32 domain, uintptr_t va,
-			 SceSize size, uintptr_t pa);
-void AllocMemBlockCommandInit(SceKernelAllocMemBlockCommand *command, const char *name,
-			      SceSize size);
-int MemBlockCode2TypeInfo(SceUInt32 code, const MemBlockTypeInfo **info);
-SceUInt32 SceSysrootForKernel_41636522(void);			/* a random number */
 
 #define ADDRESS_SPACE_MAGIC		0x4d95aeec
 #define DIPSW_USER_IOPA			0x9f	/* PLACEHOLDER: name */
@@ -1107,8 +1062,6 @@ fail:
 	return ret;
 }
 
-int TinyPartitionFreeAllMemBlock(struct Partition *partition, TinyPartitionClientInfoList *list);
-
 /* every block of a dying process's address space freed, its clients' mappings first */
 int sceKernelAddressSpaceFreeAllMemBlock(SceUID guid)
 {
@@ -1310,9 +1263,6 @@ int SceSysmemForKernel_20D01AFA(SceUID guid)
 	return AddressSpaceSwitchContext(as);
 }
 
-int L1PageTableUnmapDirect(L1PageTable *l1pt, SceUInt32 asid, SceUInt32 domain, uintptr_t va,
-			   SceSize size);
-
 /* whole sections of the address space unmapped */
 int SceSysmemForKernel_73C38695(SceUID uid, int asid, int domain, void *addr, SceSize size)
 {
@@ -1335,11 +1285,6 @@ int SceSysmemForKernel_73C38695(SceUID uid, int asid, int domain, void *addr, Sc
 	AddressSpaceRelease(as);
 	return ret;
 }
-
-int PartitionIsEqualAccessibleBySW(struct Partition *partition, SceUInt32 perm, uintptr_t va,
-				   uintptr_t *pa);
-int L1PageTableIsEqualAccessibleBySW(L1PageTable *l1pt, SceUInt32 perm, uintptr_t va,
-				     uintptr_t *pa);
 
 /* whether va is accessible with perm in the address space of a GUID */
 int AddressSpaceIsEqualAccessibleBySW(SceUID guid, SceUInt32 perm, uintptr_t va, uintptr_t *pa)
@@ -1420,8 +1365,6 @@ int sceKernelAddressSpaceGetTimerVbase(SceUID guid, uintptr_t *base)
 	AddressSpaceRelease(as);
 	return 0;
 }
-
-int PartitionGetInfo(struct Partition *partition, void *info);
 
 int SceSysmemForKernel_C3EF4055(SceUID guid, AddressSpaceInfo *info)
 {
@@ -1506,9 +1449,6 @@ int AddressSpaceKernelReady(void)
 {
 	return s_kernelAddressSpace != NULL ? 0 : SCE_KERNEL_ERROR_ERROR;
 }
-
-int BitheapInit(struct Bitheap *heap, SceUInt32 count, SceUInt32 *buffer);
-int sceKernelBitheapUse(struct Bitheap *heap, int index);
 
 #define ASID_COUNT			0x100
 #define ASID_RESERVED_LOW		2	/* 0, 1: the kernel's */

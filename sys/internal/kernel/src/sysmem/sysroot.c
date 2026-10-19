@@ -30,6 +30,7 @@
 #include <kernel_boot_loader/kernel_boot_param.h>
 #include <sysmem/sysmem.h>
 #endif
+#include "sysmem_internal.h"
 
 /* 16 bytes sysroot copies whole (a session ID, the debug flags) */
 struct SysrootWordBlock128 {
@@ -1853,10 +1854,6 @@ int SysrootGetProcessLocalStorageAddrForPid(SceUID pid, SceUInt32 key,
 }
 #endif
 
-extern void *SceSysmemForDriver_B415B5A8(SceUID heap, SceSize size,
-					  void *opt, const void *caller);
-extern int SceSysmemForKernel_4233C16D(void *ptr);
-
 #if !SYSMEM_NSKBL
 void *sceKernelSysrootAllocRemoteProcessHeap(SceUID pid, SceSize size, void *opt)
 {
@@ -2648,7 +2645,6 @@ const char *SysrootGetMemBlockName(unsigned int index)
 #endif
 
 #if SYSMEM_NSKBL
-extern int InitializeDipsw(SceDipsw *dipsw);
 
 #define SCE_KBL_PARAM_MAGIC	0xcbac03aa
 #define SYSROOT_CPU_COUNT	4

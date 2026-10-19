@@ -8,6 +8,8 @@
 #include "sysmem_boot.h"
 #include "debug_tty.h"
 #include <stdarg.h>
+#include <sysmem/qafmgr.h>
+#include <sysmem/sysroot.h>
 
 typedef int (*DebugPrintfHandler)(int argument, const char *format,
 				  va_list arguments);
@@ -17,10 +19,7 @@ typedef int (*DebugPrintfInvocation)(int argument, const char *format,
 
 extern int DebugDefaultPrintf(int argument, const char *format,
 			      va_list arguments);
-extern SceKblParam *SceSysrootForKernel_9DB56D1F(void);
-extern int SceQafMgrForDriver_382C71E8(void);	/* qafmgr.c */
 struct SysrootState;
-extern struct SysrootState *SceSysrootForKernel_3E455842(void);
 extern volatile uintptr_t s_debugPutcharHandler;
 extern volatile uintptr_t s_debugPutcharArgument;
 extern volatile uint32_t s_debugPrintLevel;

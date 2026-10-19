@@ -13,6 +13,8 @@
 #include <lowio/uart_regs.h>
 #include <lowio/pervasive.h>
 #include <sysmem/uart.h>
+#include <sysmem/dipsw.h>
+#include <sysmem/sysroot.h>
 
 /* what each build has */
 #if !defined(SYSMEM_TZS) && !defined(SYSMEM_NSKBL)
@@ -37,9 +39,7 @@ typedef struct UartDebugPort {
 	SceUInt32 port;
 } UartDebugPort;
 
-int SceDipswForDriver_A98FC2FD(unsigned int bit);
 int SceUartForKernel_4C02AA05(int port);
-int SceSysrootForDriver_AE7A8F1D(void);
 
 UartDebugPort s_debugPorts[UART_DEBUG_PORTS] = {
 	{ 0, 0 }, { 0, 1 }, { 0, 6 },

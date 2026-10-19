@@ -7,6 +7,8 @@
 
 #include <sysmem/cp15.h>
 #include <sysmem/uid_guid.h>
+#include <sysmem/dipsw.h>
+#include <sysmem/sysroot.h>
 #pragma push_macro("__FILE_NAME__")
 #undef __FILE_NAME__
 #define __FILE_NAME__ "memblock_obj_module.h"
@@ -20,25 +22,6 @@
 #define __FILE_NAME__ "memblock.c"
 
 /* address_space.c, sysroot, uid.c, user_copy.c, phymem.c, memblock_db.c, memblock_obj.c */
-int AddressSpaceAllocMemBlockByCommand(struct AddressSpaceObject *as,
-				       SceKernelAllocMemBlockCommand *command);
-int AddressSpaceFindMemBlockCB(struct AddressSpaceObject *as, uintptr_t va, SceSize size,
-			       MemBlockObject **block);
-int SceSysrootForKernel_7385CADE(void);					/* current PID */
-void *SceSysrootForKernel_63EBB05B(void);
-int PUIDReferObjectWithLevel(SceUID pid, SceUID puid, SceUInt32 level, SceObjectBase **object);
-int SceDipswForDriver_A98FC2FD(unsigned int bit);
-int PartitionMapMemBlock(struct Partition *partition, MemBlockObject *block,
-			 const SceKernelAllocMemBlockCommand *command, SceUInt32 flags);
-int MemBlockPartialOpRange(struct Partition *partition, MemBlockObject *block, SceUInt32 op,
-			   uintptr_t va, SceSize size);
-const MemBlockCodeInfo *MemBlockCode2CodeInfo(SceUInt32 code);
-int MemBlockCode2Type(SceUInt32 code, SceUInt32 *type);
-SceSize MemBlockGetAllocMapSizeRaw(MemBlockObject *block);
-SceSize MemBlockGetHeadFreeSize(MemBlockObject *block);
-SceSize MemBlockGetTailFreeSize(MemBlockObject *block);
-SceSize MemBlockGetMapSize(MemBlockObject *block);
-void *MemBlockGetPhyMemPartRaw(MemBlockObject *block);
 
 /* MemBlockTypeInfo attr: how a type is allocated */
 #define MEMBLOCK_TYPE_USER_INFO		0x00000001	/* user code may see its info */
@@ -441,14 +424,6 @@ int GetMemBlockInfoByRangeForUser(SceUInt32 mode, uintptr_t va, SceSize size,
 	return sceKernelCopyToUser(userInfo, &info, sizeof(info));
 }
 
-int AddressSpaceFindMemBlockCtlByAddr(struct AddressSpaceObject *as, uintptr_t va, SceSize size,
-				      MemBlockObject **block);
-int AddressSpaceVARangeToPAVector(struct AddressSpaceObject *as, const SceKernelPARange *range,
-				  SceKernelPAVector *vector, int *memoryType);
-void MemBlockIncLockRef(MemBlockObject *block);
-int MemBlockDecLockRef(MemBlockObject *block);
-int MMUVAtoPAWithMemoryType(uint32_t mode, uintptr_t va, uintptr_t *pa, int *memoryType);
-int GUIDRegister(SceClass *cls, const char *name, SceObjectBase *object, SceUInt32 attr);
 int MemBlockOptSetClientInfoRaw(MemBlockObject *block, const SceKernelAllocMemBlockKernelOpt *opt);
 
 #define AS_LOCK_RANGE_MAX		16	/* blocks one call may lock */
@@ -727,16 +702,6 @@ int MemBlockOptGetBase(MemBlockObject *block, MemBlockObject **base, void **info
 	}
 	return 0;
 }
-
-int MemBlockType2TypeInfo(SceUInt32 type, const MemBlockTypeInfo **info);
-int MemBlockCode2TypeInfo(SceUInt32 code, const MemBlockTypeInfo **info);
-int MemBlockType2Code(SceUInt32 type, SceUInt32 *code);
-void AllocMemBlockCommandInitWithType(SceKernelAllocMemBlockCommand *command, const char *name,
-				      SceUInt32 type, SceSize size);
-int SceSysrootForKernel_7FC7A163(void);
-int PartitionUnmapMemBlock(struct Partition *partition, MemBlockObject *block);
-int PartitionRemapMemBlock(struct Partition *partition, MemBlockObject *block, SceUInt32 type,
-			   SceUInt32 flags);
 
 #define DIPSW_NO_CLEAR			0xe1		/* PLACEHOLDER: name */
 
@@ -1102,11 +1067,6 @@ int SceSysmemForDriver_FFCD9B60(SceUID guid)
 	return ret;
 }
 
-int GUIDReferObjectWithClassExclusive(SceUID guid, SceClass *cls, SceObjectBase **object);
-int GUIDReleaseObject(SceUID guid);
-void MemBlockClearMapRef(MemBlockObject *block);
-int PartitionFreeMemBlock(struct Partition *partition, MemBlockObject *block);
-
 /*
  * A block freed by its GUID once nobody else refers to it: its base info
  * dropped (or handed back), the clients mapping it unmapped first.
@@ -1179,11 +1139,6 @@ int SceSysmemForDriver_009E1C61(SceUID guid)
 {
 	return FreeMemBlockCore(guid, 0, NULL, NULL, NULL, NULL);
 }
-
-int SceSysrootForKernel_EC3124A3(SceUID pid, char *titleId, SceSize len);
-int CheckProcessDebugCapability(SceUID pid);
-SceUID PUID2GUIDWithRefer(SceUID pid, SceUID puid, SceClass *cls);
-int GUIDFindByName(const char *name);
 
 /* the user allocation options: SceKernelAllocMemBlockOpt as the kernel reads it, up to 0x40 bytes */
 typedef struct MemBlockUserOpt {
@@ -1471,8 +1426,6 @@ SceUID SceSysmemForDriver_8A1742F6(const void *addr, SceSize size)
 					  (uintptr_t)addr, size, NULL);
 }
 
-SceUInt16 MemBlockGetLockRef(MemBlockObject *block);
-
 /* told about lock reference changes (debug builds; SceSysmemForKernel_F57A97A0) */
 typedef struct MemBlockDebugCallbacks {
 	void (*incRef)(int unused, MemBlockObject *block, SceUInt16 count,
@@ -1534,11 +1487,6 @@ int SceSysmemForDriver_F50BDC0C(SceUID guid)
 	return ret;
 }
 
-int PartitionGetMemBlockPARange(struct Partition *partition, MemBlockObject *block,
-				SceKernelPARange *range);
-int PartitionGetMemBlockPAVector(struct Partition *partition, MemBlockObject *block,
-				 SceKernelPAVector *vector);
-
 int SceSysmemForDriver_98C15666(SceUID guid, SceKernelPARange *range)
 {
 	MemBlockObject *block;
@@ -1578,9 +1526,6 @@ int SceSysmemForDriver_19A51AC7(SceUID guid, SceKernelPAVector *vector)
 	sceGUIDReleaseObject(guid);
 	return ret;
 }
-
-struct Partition *GetMemBlockPartition(MemBlockObject *block);
-SceUInt32 MemBlockGetCode(MemBlockObject *block);
 
 /* name unknown: the process of the address space the block is in */
 SceUID sceKernelGetMemBlockProcess(SceUID guid)
@@ -1955,8 +1900,6 @@ fail:
 	return ret;
 }
 
-int MemBlockGetPhyRange(MemBlockObject *block, uintptr_t range[2]);
-
 /* name unknown: the physical range of a contiguous block */
 int SceSysmemForDriver_64DBE472(SceUID guid, uintptr_t range[2])
 {
@@ -1971,9 +1914,6 @@ int SceSysmemForDriver_64DBE472(SceUID guid, uintptr_t range[2])
 	sceGUIDReleaseObject(guid);
 	return ret;
 }
-
-int MemBlockGetPhyRangeList(MemBlockObject *block, SceKernelPAVector *vector,
-			    SceKernelPARange *cur, SceKernelPARange *end);
 
 /* the physical ranges of a block, adjacent pieces merged */
 int sceKernelMemBlockToPAVector(SceUID guid, SceKernelPAVector *vector)
@@ -2017,8 +1957,6 @@ int MemBlockGetInfoRaw(MemBlockObject *block, SceInt32 level, MemBlockInfoEx *in
 	MemBlockGetInfoDetails(block, level, &info->details);
 	return 0;
 }
-
-int MemBlockVirPageListGetInfo(MemBlockObject *block, MemBlockPhyInfo *info);
 
 /* a block's info with its physical ranges */
 int MemBlockGetInfo(MemBlockObject *block, SceInt32 level, MemBlockPhyInfo *info)
@@ -2073,9 +2011,6 @@ int GetMemBlockInfoForPID(SceUID pid, SceUID uid, SceInt32 level, MemBlockPhyInf
 	return ret;
 }
 
-SceSize PhyPageGetSizeRaw(const struct PhyPage *page);
-int MemBlockVirPageListCheckWithinPhyRange(MemBlockObject *block, uintptr_t pa, SceSize size);
-
 /* whether all of a block's pages lie in [pa, pa + size) */
 int MemBlockWithinPhyRange(MemBlockObject *block, uintptr_t pa, SceSize size)
 {
@@ -2100,9 +2035,6 @@ int MemBlockWithinPhyRange(MemBlockObject *block, uintptr_t pa, SceSize size)
 	return PhyPageGetSizeRaw(block->smbPage) + pbase <= size + pa;
 }
 
-int AddressSpaceGetMemBlockInfoByAddr(struct AddressSpaceObject *as, uintptr_t va,
-				      SceInt32 level, MemBlockPhyInfo *info);
-
 /* sceKernelAddressSpaceGetMemBlockInfoByAddr: the info of pid's block holding va */
 int SceSysmemForKernel_C3F9607E(SceUID pid, uintptr_t va, SceInt32 level, MemBlockPhyInfo *info)
 {
@@ -2118,8 +2050,6 @@ int SceSysmemForKernel_C3F9607E(SceUID pid, uintptr_t va, SceInt32 level, MemBlo
 		return ret;
 	return AddressSpaceGetMemBlockInfoByAddr(as, va, level, info);
 }
-
-SceUID SceSysrootForKernel_340575CB(void);
 
 /* the PUIDs' owner when uid is one */
 static inline SceUID MemBlockUIDOwner(SceUID uid)
@@ -2156,13 +2086,6 @@ int SceSysmemForDriver_A73CFFEF(SceUID uid, SceInt32 level, MemBlockPhyInfo *inf
 	return GetMemBlockInfoForPID(MemBlockUIDOwner(uid), uid, level, info);
 }
 
-int TinyPartitionGetMemBlockInfoListByPA(TinyPartition *tiny, uintptr_t lo, uintptr_t hi,
-					 uintptr_t pa, SceSize psize, SceUInt32 arg,
-					 MemBlockInfoEx *info, SceSize infoSize, SceUInt32 *count);
-int TinyPartitionGetMemBlockInfoListByVA(TinyPartition *tiny, uintptr_t lo, uintptr_t hi,
-					 SceUInt32 arg, MemBlockInfoEx *info, SceSize infoSize,
-					 SceUInt32 *count);
-
 /* name unknown: the info of a partition's blocks based in [lo, hi) */
 int SceSysmemForKernel_AD19285A(TinyPartition *tiny, uintptr_t lo, uintptr_t hi, SceUInt32 level,
 				MemBlockInfoEx *info, SceSize infoSize, SceUInt32 *count)
@@ -2191,14 +2114,6 @@ int GetMemBlockInfoAll(TinyPartition *tiny, uintptr_t lo, uintptr_t hi, uintptr_
 invalid:
 	return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 }
-
-int sceKernelSysrootGetCurrentThreadAttr(uint32_t *attr);
-int SysrootIncProcessResource(SceUInt32 type);
-int SysrootDecProcessResource(SceUInt32 type);
-int SceSysrootForKernel_4F0A4066(SceUID pid, void *info);
-int SceSysrootForKernel_F8769E86(SceUID pid);
-void *SysrootGetProcessLocalStorageAddr(SceUInt32 key);
-void *SceSysrootForKernel_2F75C1DC(SceSize size, void *opt);
 
 #define MEMBLOCK_ERROR_OVERFLOW_FATAL	0xc0024b0b
 
@@ -2515,11 +2430,6 @@ int FreeMemBlockByGUID(SceUID guid)
 		MemBlockOptGetClientInfo(base, guid);
 	return ret;
 }
-
-int PUIDCloseWithFlags(SceUID pid, SceUID puid, SceUInt32 flags);
-SceUID PUIDFindByGUID(SceUID pid, SceUID guid);
-int MemBlockSetBaseInfo(SceUID guid, MemBlockBaseInfo *info);
-int CheckProcessCapabilityGranted(SceUID pid, unsigned int capability);
 
 #define MEMBLOCK_ERROR_LOCKED_FATAL	0xc0024b10
 

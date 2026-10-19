@@ -21,7 +21,6 @@ SceClass *SceSysmemForKernel_86681B64(void)
 }
 
 /* memblock_db.c */
-int MemBlockCode2Type(SceUInt32 code, SceUInt32 *type);
 
 /* name unknown: the block's base address */
 __attribute__((noinline))
@@ -60,7 +59,7 @@ int MemBlockGetTypeCB(SceObjectBase *object, void *argument)
 }
 
 /* name unknown: the block's partition */
-void *GetMemBlockPartition(MemBlockObject *block)
+struct Partition *GetMemBlockPartition(MemBlockObject *block)
 {
 	int flags = SceCpuForDriver_EC53D007(&block->lock);
 	void *partition = block->partition;
@@ -211,23 +210,8 @@ int MemBlockObjectDestroy(void *object)
 }
 
 /* memblock_partial.c, memblock_vpl.c, virpage.c */
-SceSize MemBlockPartialGetHeadFreeSize(MemBlockObject *block);
-SceSize MemBlockPartialGetTailSize(MemBlockObject *block);
-SceSize MemBlockPartialGetMappedSize(MemBlockObject *block);
-SceSize MemBlockPartialGetAllocatedSize(MemBlockObject *block);
-SceSize MemBlockVirPageListGetHeadFreeSize(MemBlockObject *block);
-SceSize MemBlockVirPageListGetTailFreeSize(MemBlockObject *block);
-SceSize MemBlockVirPageListGetHeadType1Size(MemBlockObject *block);
-SceSize MemBlockVirPageListGetTailType1Size(MemBlockObject *block);
-SceSize MemBlockVirPageListGetMappedSize(MemBlockObject *block);
-SceSize MemBlockVirPageListGetPhySize(MemBlockObject *block);
-int VirPageGetPhyBase(VirPage *vp, uintptr_t *pbase);
 /* phymem.c, mmu.c, address_space.c, smb.c, fixed_heap.c */
-int PhyMemPartFreePhyPage(void *part, struct PhyPage *page);
 extern struct PhyMemPart *s_phyPartGame;
-int MMUVAtoPAWithFlags(uint32_t mode, uint32_t flags, uintptr_t va, uintptr_t *pa);
-int AddressSpaceMemset(AddressSpaceObject *as, void *dst, int c, SceSize size);
-int SimpleMemBlockGetPbase(MemBlockObject *block, uintptr_t *pbase);
 
 /* bits 20..22: 4 = carries base info in opt */
 
@@ -852,8 +836,6 @@ int sceKernelGetMemBlockBase(SceUID uid, void **base)
 {
 	return SceSysmemForDriver_0B1FD5C3(uid, base);
 }
-
-int SimpleMemBlockModuleStart(const UIDManager *manager);
 
 /* name unknown: SceUIDMemBlockClass gets its callbacks, then the simple memblocks start */
 void MemBlockObjModuleStart(const UIDManager *manager)

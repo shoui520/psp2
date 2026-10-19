@@ -7,20 +7,10 @@
 
 #include "sysmem_internal.h"
 
-
-
 /* phymem.c */
 struct PhyPage;
-int PhyMemPartAllocPhyPage(void *part, SceSize size, SceUInt32 flags, struct PhyPage **page);
-int PhyMemPartFreePhyPage(void *part, struct PhyPage *page);
-SceSize PhyMemPartGetFreeSizeInternal(void *part);
-const char *PhyMemPartGetName(void *part);
-SceUInt32 PhyMemPartTestAttr(void *part, SceUInt32 mask);
-SceSize PhyPageGetSizeRaw(const struct PhyPage *page);
 
 /* partition.c */
-int PartitionAllocVirPage(void *partition, struct VirPage **vp);
-void PartitionVirPageRelease(void *partition);
 
 #define PHYMEM_PART_ATTR_DIVIDE		0x40	/* pages may be backed piece by piece */
 
