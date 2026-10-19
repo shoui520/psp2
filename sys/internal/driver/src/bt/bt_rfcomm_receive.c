@@ -11,8 +11,6 @@ uintptr_t BtSetConnectedProfiles(BtConnection *connection, BtChannel *channel,
 				unsigned int profiles);
 void BtDeliverConnectionData(BtConnection *connection, uint32_t profile,
 				 uint8_t *packet, unsigned int length);
-uintptr_t BtCompleteRfcommConnection(BtConnection *connection,
-				    BtChannel *channel);
 uintptr_t BtHspOpened(BtConnection *connection);
 uintptr_t BtSerialPortOpened(BtConnection *connection);
 int BtSendRfcommData(BtConnection *connection, unsigned int dlci,

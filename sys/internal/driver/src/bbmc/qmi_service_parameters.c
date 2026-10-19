@@ -9,17 +9,6 @@ extern int bbcmdUpdateCompletedMaskForState(BbcmdRequest *request, int state);
 extern int qmiReadCountedResponseBytes(const QmiResultResponse *response,
 	QmiCountedBytes *output);
 extern int qmiAcquireClientInstance(BbcmdProtocolClient *client);
-extern int bbcmdConfiguredServiceClientCallback(unsigned int event,
-	BbcmdProtocolClient *client);
-extern int bbcmdDmsClientCallback(unsigned int event, BbcmdProtocolClient *client);
-extern int bbcmdNasClientCallback(unsigned int event, BbcmdProtocolClient *client);
-extern int bbcmdQosClientCallback(unsigned int event, BbcmdProtocolClient *client);
-extern int bbcmdWmsClientCallback(unsigned int event, BbcmdProtocolClient *client);
-extern int bbcmdPdsClientCallback(unsigned int event, BbcmdProtocolClient *client);
-extern int bbcmdAtClientCallback(unsigned int event, BbcmdProtocolClient *client);
-extern int bbcmdCat2ClientCallback(unsigned int event, BbcmdProtocolClient *client);
-extern int bbcmdUimClientCallback(unsigned int event, BbcmdProtocolClient *client);
-extern int bbcmdWdsClientCallback(unsigned int event, BbcmdProtocolClient *client);
 
 int bbcmdInitializeClients(BbcmdRequest *request)
 {

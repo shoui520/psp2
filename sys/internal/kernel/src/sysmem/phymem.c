@@ -122,7 +122,6 @@ typedef struct PhyMemPageRange {
 	SceSize size;
 } PhyMemPageRange;
 
-
 static SceClass *s_phyMemPartClass;
 static const PhyMemPageRange *s_phyPageVenezia;
 static const PhyMemPageRange *s_phyPageVip;
@@ -259,8 +258,6 @@ int sceKernelGetPhyMemInfo(SceUInt32 type, SceKernelPhyMemRangeInfo *info)
 	info->rangeSize = pages->size;
 	return 0;
 }
-
-int sceKernelVAtoPA(const void *va, uintptr_t *pa);
 
 /* phymem_low.c */
 typedef struct PhyMemLow PhyMemLow;
@@ -1939,8 +1936,6 @@ SceUInt32 PhyMemPartTestAttr(PhyMemPart *part, SceUInt32 mask)
 	return attr;
 }
 
-/* sceKernelAllocWithOptForKernel */
-void *SceSysmemForKernel_CF3C3F7A(SceSize size, SceAllocOpt *opt);
 int PhyMemLowMainFree(uintptr_t pa, SceSize size);
 
 /* the segments' memory back to the main allocator, then the segments and cache freed */
@@ -2382,8 +2377,6 @@ int sceKernelGetPhyMemPartInfoByID(SceUID uid, SceKernelPhyMemPartInfoForDebugge
 }
 
 int SceDipswForDriver_A98FC2FD(unsigned int bit);
-int sceGUIDSet(SceUID guid, SceClass *cls, const char *name,
-				SceObjectBase *object);
 int PhyMemLowStaticInit(void);
 
 /* the fixed GUIDs of the kernel and tool partitions */

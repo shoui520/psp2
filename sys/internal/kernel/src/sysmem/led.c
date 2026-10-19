@@ -16,8 +16,6 @@
 #define LED_GPO_BITS			0xff0000
 #define LED_SUSPEND_SLOT		5
 
-int sceKernelCpuId(void);
-
 /* the registers' physical address until LedModuleStart maps them */
 static volatile SceGpioRegisters *s_ledRegs = (void *)GPIO0_REG_BASE;
 #ifndef SYSMEM_TZS

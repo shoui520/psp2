@@ -4,8 +4,6 @@
 #include "../bbmc_memory.h"
 #include "../usb_extif.h"
 
-void bbmcEnterCS(struct ThreadmgrFastMutex *mutex);
-void bbmcLeaveCS(struct ThreadmgrFastMutex *mutex);
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int message);
 int bbmcTimerCancelHandler(int timerId);
 

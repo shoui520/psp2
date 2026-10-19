@@ -12,10 +12,6 @@ extern SceUID g_appmgrCore2MutexOwner;
 extern int sceAppMgrCheckAppLaunchLimitToAvoidQueueOverflow(void);
 extern SceUID g_appmgrShellPid;
 extern int dumpBgmState(void);
-extern void _appListClearAppState(struct AppState *app);
-extern void appmgrClearPendingAppEvents(struct AppState *app);
-extern int appmgrInitializeShellEventQueue(void);
-extern void appmgrResetProcessState(AppmgrProcessState *process);
 extern void _deviceGetBgmProxyAppName(int appId, char *name);
 
 static inline SceUInt32 appListLoadStateExclusive(SceUInt32 *state);

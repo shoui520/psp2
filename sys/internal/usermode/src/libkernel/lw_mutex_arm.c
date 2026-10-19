@@ -4,8 +4,6 @@
 #include <kernel/error.h>
 #include <sysmem/atomic.h>
 
-extern int sceKernelTryLockLwMutex(SceKernelLwMutexWork *work, int count);
-
 static int LockLwMutexBusy(SceKernelLwMutexWork *work, int count,
 		unsigned int *timeout, unsigned int callbacks)
 {

@@ -83,8 +83,6 @@ typedef void (*ThreadmgrSchedSleepHandler)(const struct ThreadmgrSchedProbeDescr
 
 int sceKernelCheckThreadUserStackSelf(void);
 int callCallbackAll(struct ThreadCB *thread);
-bool wakeupAndDistributeThread(struct ThreadCB *thread, uintptr_t waitable,
-			       int result);
 
 /* the __sched_:sleep probe of a signal wait */
 static uint32_t s_signalSleepProbeId;
@@ -594,7 +592,6 @@ void startEventFlag(void);
 void startSemaphore(void);
 void startMutex(void);
 void startCond(void);
-void startEvent(void);
 int startMsgPipe(void);
 void startLwMutex(void);
 void startLwCond(void);
@@ -2704,10 +2701,8 @@ int createException(SceProcessObject *process);
 int deleteException(SceProcessObject *process);
 int uidLwMutex_DeleteCache(SceProcessObject *process, int target);
 int uidLwMutex_ManageCache(SceProcessObject *process, int high, int low, int target);
-int eventFlagProcessExit(SceProcessObject *process);
 int semaphoreProcessExit(SceProcessObject *process);
 int condProcessExit(SceProcessObject *process);
-int mutexProcessExit(SceProcessObject *process);
 int rwLockProcessExit(SceProcessObject *process);
 int lwCondProcessExit(SceProcessObject *process);
 int lwMutexProcessExit(SceProcessObject *process);
@@ -3078,9 +3073,6 @@ int sceKernelThreadMgrProcessDeleteAfterPUIDClose(SceProcessObject *process)
 #define DEBUG_SUSPEND_ACTION_IGNORE	2
 
 #define USER_TLS_STACK_RANGE		0x7f8
-
-void issueCallPAScheduleHookIntrRequest(unsigned int cpuId, SceUID processId, SceUID threadId,
-					uint32_t event, int priority);
 
 /* the user stack left below the syscall's sp, 0 if it is out of the stack */
 int sceKernelCheckThreadUserStackSelf(void)
@@ -7577,9 +7569,6 @@ SceUID sceKernelCreateRemoteThread(SceUID pid, const char *name, SceKernelThread
 #define EVENT_DELETED_PATTERN		0x00000010	/* PLACEHOLDER: the pattern a cut wait reports */
 #define SCE_KERNEL_ERROR_ILLEGAL_PRIORITY	0x80028023
 void setupThreadExit(struct ThreadCB *thread, uint32_t request);
-void insertPriorityQueue(uintptr_t head, struct ThreadCB *thread);
-int revalidateWaitState(uintptr_t waitable);
-void runningThreadPreemptByIntr(struct ThreadCB *thread, uint32_t reason);
 void issueStopThreadIntrRequest(unsigned int cpuId, SceUID threadId, uint32_t arg1,
 				uint32_t arg2);
 

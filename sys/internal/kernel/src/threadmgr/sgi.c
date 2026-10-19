@@ -324,7 +324,6 @@ void pmonThreadGetCounterIntr(struct ThreadmgrPmonRequest *request);
 void dtraceAsyncXCallIntr(void (*fn)(void *), void *arg);
 void dtraceSyncXCallIntr(void (*fn)(void *), void *arg, SceKernelSpinlock *done);
 int deactivateCpu(void);
-void addReady(struct ThreadCB *thread);
 /* intrmgr.h gives it an argument it does not take */
 
 typedef int (*ThreadmgrIntrRequestHandler)(SceSize size, void *message);

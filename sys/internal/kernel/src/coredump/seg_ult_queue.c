@@ -16,8 +16,6 @@ extern void oalGetUltQueueInfo(SceUID pid, SceUIntPtr address,
 	SceUInt32 *numSenders, SceUInt32 *numReceivers, SceUInt32 *numData);
 extern void *memMgrLocalAlloc(SceSize size);
 extern int memMgrLocalFree(void *allocation);
-extern int segWritePaddingData(SegIf *segment, SceSize writtenSize);
-extern int writerWritePaddingData(Writer *writer, SceSize size);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

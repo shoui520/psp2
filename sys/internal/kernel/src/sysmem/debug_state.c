@@ -32,7 +32,6 @@ int InitializeDebugPrintLevel(const struct SysmemBootContext *context)
 
 extern DebugCrashDumpHandler s_crashDumpHandler;
 extern int s_crashDumpEnabled;
-int SceDipswForDriver_A98FC2FD(unsigned int bit);
 uint32_t SysrootGetBootTypeIndicator2(void);
 
 /* name unknown: the assertion level from the DIP switches, crash dumps on */

@@ -4,8 +4,6 @@
 void BtDispatchHciEvent(BtStack *stack, uint8_t *packet, int length);
 void BtDispatchAclPacket(BtStack *stack, uint8_t *packet, int length);
 int BtReadLe16(const uint8_t *source);
-int BtCopyIn(const void *source, void *destination, unsigned int length,
-	     int userMode);
 int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
 BtChannel *BtFindChannel(BtConnection *connection, unsigned char selector,
 			 int identifier);

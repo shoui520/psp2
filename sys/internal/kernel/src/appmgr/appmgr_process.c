@@ -17,13 +17,10 @@
 
 extern int appmgrUsesGxmDebugger(SceUID pid);
 
-extern int _appListFindAndLockAppByProcessId(SceUID pid, struct AppState **app);
-extern int _appListFindAndLockAppByName(const char *appName, struct AppState **app);
 extern int _suspendAppForDebugger(struct AppState *app,
 				 struct AppmgrWaitObject **waitObject);
 extern int _resumeAppForDebugger(struct AppState *app,
 				struct AppmgrWaitObject **waitObject);
-extern int _appListUnlockApp(struct AppState *app);
 extern int dumpBgmState(void);
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;

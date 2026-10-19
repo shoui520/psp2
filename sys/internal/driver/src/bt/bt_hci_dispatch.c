@@ -18,7 +18,6 @@ int BtProcessInquiryResult(BtStack *stack, uint64_t deviceAddress,
 void BtProcessRemoteNameResponse(BtStack *stack, int status,
 				uint64_t deviceAddress, uint32_t deviceClass,
 				int8_t rssi, const uint8_t *name);
-int BtUpdateDeviceClass(BtDevice *device, uint32_t deviceClass);
 void BtSetDeviceAuthenticationFailed(BtStack *stack, BtConnection *connection,
 				     int failed);
 int BtReadDeviceLinkKey(BtStack *stack, uint64_t deviceAddress, uint8_t *key);

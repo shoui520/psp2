@@ -22,7 +22,6 @@
 #include <display/display.h>
 #include <string.h>
 
-
 int ds3ReadSensorData(int port, MotionDriverSample *data);
 int ds3GetGyroCalibData(int port, SceMotionDevGyroCalibData *data);
 int ds3GetAccCalibData(int port, SceMotionDevAccCalibData *data);
@@ -37,7 +36,6 @@ int ds3StopProcess(SceUID pid, int eventType, ProcEventParam *params, void *comm
 int ds3StartProcess(SceUID pid, int eventType, ProcEventParam *params, void *common);
 int ds3ReadButtons(int port, struct ctrlNativeSample *output);
 int ds3SetActuator(int port, const SceCtrlActuator *state);
-int ds3GetBatteryInfo(int port, uint8_t *battery);
 int ds3DisconnectController(int port);
 int ds3SetIdleTimeout(int seconds);
 int ds3GetControllerPortMask(void);
@@ -97,7 +95,6 @@ static const MotionVirtualDriver ds3MotionDriver = {
 
 static uint8_t ds3UnassignedLocalAddress[6];
 static Ds3State ds3State;
-
 
 int ds3GetControllerPortMask(void)
 {

@@ -40,7 +40,6 @@ SceUID MemBlockCreateGUID(const char *name, MemBlockObject *block, SceUInt32 att
 const char *PhyMemPartGetName(void *part);
 int PhyMemPartGetInfoCore(void *part, SceKernelPhyMemPartInfoCore *info);
 int sceKernelBitheapFree(struct Bitheap *heap, int index);
-int GUIDUnregisterChecked(SceUID guid);
 char *SysmemAllocName(const char *name);
 void SysmemFreeName(char *name);
 int SceDipswForDriver_A98FC2FD(unsigned int bit);
@@ -412,7 +411,6 @@ int AddressSpaceGetPhyMemPart(AddressSpaceObject *as, SceUInt32 code, void **par
 
 SceUInt32 MemBlockCode2PartitionIndex(SceUInt32 code);
 int MemBlockGetMirrorBlock(const SceKernelAllocMemBlockKernelOpt *opt, MemBlockObject **block);
-SceUID SceSysmemForDriver_45D22597(SceUID pid, SceUID puid);
 
 /* MemBlockTypeInfo attr: how the address space allocates the type */
 #define MEMBLOCK_TYPE_DIRECT		0x00200000	/* its physical partition, no checks */
@@ -515,8 +513,6 @@ int AddressSpaceMemset(AddressSpaceObject *as, void *dst, int c, SceSize size)
 	AddressSpaceRelease(as);
 	return 0;
 }
-
-int MMUCheckAccessibleRange(uint32_t mode, uintptr_t va, SceSize size);
 
 /* name unknown: whether [va, va + size) is accessible with mode, inside the address space */
 int AddressSpaceCheckAccessibleRange(AddressSpaceObject *as, uint32_t mode, uintptr_t va,
@@ -622,7 +618,6 @@ out:
 }
 
 SceUID MemBlockGetGUID(MemBlockObject *block);
-SceUID SceSysmemForKernel_EC90AA11(SceObjectBase *object);
 
 /* the GUID of the block holding [va, va + size), one made if it has none */
 SceUID AddressSpaceFindMemBlockCB(AddressSpaceObject *as, uintptr_t va, SceSize size,
@@ -826,8 +821,6 @@ int L1PageTableMapDirect(L1PageTable *l1pt, SceUInt32 type, SceUInt32 domain, ui
 void AllocMemBlockCommandInit(SceKernelAllocMemBlockCommand *command, const char *name,
 			      SceSize size);
 int MemBlockCode2TypeInfo(SceUInt32 code, const MemBlockTypeInfo **info);
-int sceKernelGetMemBlockBase(SceUID guid, void **base);
-int sceKernelGetMemBlockVBase(SceUID guid, void **vbase);
 SceUInt32 SceSysrootForKernel_41636522(void);			/* a random number */
 
 #define ADDRESS_SPACE_MAGIC		0x4d95aeec
@@ -1226,8 +1219,6 @@ int SceSysmemForKernel_5E772E19(SceUID guid, SceUID pid)
 	return 0;
 }
 
-int sceGUIDSetName(SceUID guid, const char *name);
-
 /* the GUID names of the user partitions, prefixed */
 static const struct {
 	SceUInt32 index;
@@ -1516,8 +1507,6 @@ int AddressSpaceKernelReady(void)
 	return s_kernelAddressSpace != NULL ? 0 : SCE_KERNEL_ERROR_ERROR;
 }
 
-int AddressSpaceObjectCreate(void *object);
-int AddressSpaceObjectDestroy(void *object);
 int BitheapInit(struct Bitheap *heap, SceUInt32 count, SceUInt32 *buffer);
 int sceKernelBitheapUse(struct Bitheap *heap, int index);
 

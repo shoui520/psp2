@@ -8,7 +8,6 @@
 extern Writer *currentWriter;
 extern void *memMgrLocalAllAlloc(SceSize *size);
 extern int memMgrLocalFree(void *allocation);
-extern int segWritePaddingData(SegIf *segment, SceSize writtenSize);
 extern int oalGetNumOfFibers(SceUID pid);
 extern int oalEachFiberInfo(SceUID pid,
 	int (*callback)(CoredumpFiberInfo *info, void *context),

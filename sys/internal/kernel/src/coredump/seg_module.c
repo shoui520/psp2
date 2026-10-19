@@ -9,7 +9,6 @@
 extern Writer *currentWriter;
 extern void *memMgrLocalAllAlloc(SceSize *size);
 extern int memMgrLocalFree(void *allocation);
-extern int writerWritePaddingData(Writer *writer, SceSize size);
 extern int oalGetNumOfModulesAndSegments(SceUID pid, int *numModules,
 	unsigned int *numSegments, SceKernelModuleInfoForDebugger *modules,
 	SceSize capacity);

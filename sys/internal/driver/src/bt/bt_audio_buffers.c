@@ -8,8 +8,6 @@ extern int gBtAudioOverruns;
 extern int gBtAudioLastSequence;
 BtConnection *BtFindConnection(BtStack *stack, unsigned char selector,
 			       uint64_t deviceAddress);
-int BtCopyIn(const void *source, void *destination, unsigned int length,
-	     int userMode);
 int BtSendScoPacket(BtConnection *connection, const void *data, int length,
 		    int userMode);
 int BtPack(uint8_t *destination, int remaining, const char *format, ...);

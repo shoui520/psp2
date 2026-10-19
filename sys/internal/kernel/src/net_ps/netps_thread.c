@@ -37,7 +37,6 @@ void sceNetPsSeedRandom(void);
 int init_crypto(void *(*allocate)(SceSize size), void (*release)(void *ptr));
 void callout_startup(void);
 void mbinit(void);
-void soinit(void);
 void ifinit(void);
 void domaininit(void);
 void if_attachdomain(void);
@@ -550,5 +549,4 @@ int sceNetPsStartStack(const SceNetPsThreadParam *param)
 	gNetPsRuntime.flags |= 1;
 	return 0;
 }
-
 

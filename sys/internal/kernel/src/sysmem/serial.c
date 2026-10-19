@@ -36,7 +36,6 @@ typedef struct UartDebugPort {
 	SceUInt32 port;
 } UartDebugPort;
 
-int sceKernelCpuId(void);
 int SceDipswForDriver_A98FC2FD(unsigned int bit);
 int SceUartForKernel_4C02AA05(int port);
 int SceSysrootForDriver_AE7A8F1D(void);

@@ -37,7 +37,6 @@ SceWlanVisitor *WlanVisitorLeave(SceWlanVisitor *visitor);
 SceWlanVisitor *WlanVisitorClose(SceWlanVisitor *visitor, int result);
 SceWlanVisitor *WlanVisitorInitialize(SceWlanVisitor *visitor);
 int wlanNotifyCallbacks(int argument);
-int wlanSetConfiguration(int request);
 int robinWlanTcmSetMulticastAddresses(SceWlanBtRobinWlanTcm *tcm,
 				    const SceNetEtherAddr *addresses, unsigned int size);
 int robinWlanTcmSetStationPowerSave(SceWlanBtRobinWlanTcm *tcm, int enabled);

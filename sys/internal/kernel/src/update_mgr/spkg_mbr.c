@@ -9,8 +9,6 @@ extern uint64_t spkgOsChunkMask, spkgVshChunkMask;
 extern SceMbr spkgMbr;
 int UpdateUtilLockMbr(void);
 int UpdateUtilUnlockMbr(void);
-int StorageUtilReadMbr(SceMbr *mbr);
-int StorageUtilWriteMbr(const SceMbr *mbr);
 
 int SpkgUtilApplyMBR(void)
 {

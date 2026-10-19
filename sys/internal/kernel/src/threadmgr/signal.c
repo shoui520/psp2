@@ -33,8 +33,6 @@ int sceKernelWaitSignalForUser(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout)
 
 int sceKernelCheckThreadUserStackSelf(void);
 int callCallbackAll(struct ThreadCB *thread);
-bool wakeupAndDistributeThread(struct ThreadCB *thread, uintptr_t waitable,
-			       int result);
 extern const char s_signalSleepCodeSite[];
 
 /* _sceKernelWaitSignal: the timeout comes in and goes back out */

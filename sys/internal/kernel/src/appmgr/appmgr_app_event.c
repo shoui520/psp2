@@ -14,7 +14,6 @@
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
 extern int dumpBgmState(void);
-extern struct AppState *appmgrFindCurrentApp(struct AppState *apps);
 extern int sceAppMgrAppParamGetString(int pid, int param, char *string, SceSize length);
 
 #if !FW_DEBUG
@@ -81,9 +80,6 @@ _Noreturn void appmgrAppEventMutexPanic(void)
 		appmgrAppEventMutexPanic(); \
 } while (0)
 #endif
-
-extern int sceAppMgrSendSystemEvent2(const char *appName, const char *titleId,
-				  int event);
 
 void appmgrClearPendingAppEvents(struct AppState *app)
 {

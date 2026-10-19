@@ -12,7 +12,6 @@ extern void oalGetAppIdList(int *ids, SceSize capacity);
 extern void oalGetAppInfo(int appId, CoredumpAppInfo *info, char *path);
 extern void *memMgrLocalAlloc(SceSize size);
 extern int memMgrLocalFree(void *allocation);
-extern int writerWritePaddingData(Writer *writer, SceSize size);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

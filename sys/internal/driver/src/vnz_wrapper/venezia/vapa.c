@@ -6,13 +6,6 @@
 #include <dmacmgr/dmacmgr.h>
 #include <sysmem/sysclib.h>
 
-extern void *getVeneziaImageBase(void);
-extern unsigned int getVeneziaImagePhysicalBase(void);
-extern SceSize getVeneziaImageSize(void);
-extern VeneziaRpcMemory *getRpcMemoryBase(void);
-extern unsigned int getRpcMemoryPhysicalBase(void);
-extern SceSize getRpcMemorySize(void);
-
 unsigned int SceCodecEngineWrapperForDriver_F9495589(unsigned int physical)
 {
 	return veneziaPhysicalToVirtual(physical);

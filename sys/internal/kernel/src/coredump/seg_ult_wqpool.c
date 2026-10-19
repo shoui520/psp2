@@ -13,7 +13,6 @@ extern void oalGetUltWaitingQueueResourcePoolInfo(SceUID pid, SceUIntPtr address
 	CoredumpUltWaitingQueueResourcePoolInfo *info);
 extern void *memMgrLocalAlloc(SceSize size);
 extern int memMgrLocalFree(void *allocation);
-extern int segWritePaddingData(SegIf *segment, SceSize writtenSize);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

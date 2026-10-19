@@ -8,7 +8,6 @@ extern Writer *currentWriter;
 extern int oalIsSystemProgram(SceUID pid);
 extern void oalGetDeviceInfo(CoredumpDeviceInfo *info, SceUID *renderingPids,
 	SceSize *renderingCount, SceUID *touchPids, SceSize *touchCount);
-extern int writerWritePaddingData(Writer *writer, SceSize size);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

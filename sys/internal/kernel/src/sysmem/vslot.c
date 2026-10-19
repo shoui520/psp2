@@ -37,9 +37,6 @@ static VSlotFIFO s_vslotFifo[2];
 static SceClass *s_vslotClass;
 static SceClass s_vslotClassBody;
 
-int SceSysmemForKernel_7CDB7655(SceClass *cls, const char *name, void *uidclass, SceSize itemsize,
-				SceClassCallback create, SceClassCallback destroy);
-int SceSysmemForDriver_61A67D32(SceUID pid, SceUInt32 mode, const void *va, uintptr_t *pa);
 AddressSpaceObject *SceSysmemForKernel_2E5CC243(void);	/* sceKernelGetKernelAddressSpace */
 void *AddressSpaceGetPartitionByIndex(AddressSpaceObject *as, SceUInt32 index);
 void MemBlockClearRaw(MemBlockObject *block);

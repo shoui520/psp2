@@ -6,8 +6,6 @@
 
 extern int bbcmdReadNetworkStartResponse(BbcmdRequest *request,
 	BbcmdProtocolClient *client);
-extern int bbmcNotifyFeatureEvent(BbmcControl *control, SceUInt32 featureId,
-	SceUInt32 eventMask);
 
 /* Each optional parameter is appended directly to the client's wire packet. */
 #define APPEND_BYTE(parameterType, parameterValue) do { \

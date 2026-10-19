@@ -6,9 +6,6 @@
 const signed char gPsfSignature[4] = { 0, 'P', 'S', 'F' };
 const signed char gPsfDefaultSignature[4] = { 0, 'P', 'S', 'F' };
 
-int appmgrPsfInitializeHeader(void *object, const void *magic,
-	unsigned int majorVersion, unsigned int minorVersion);
-
 int appmgrPsfParse(const void *data, SceSize size, void **object)
 {
 	const AppmgrPsfHeader *header = data;

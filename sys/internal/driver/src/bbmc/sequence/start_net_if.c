@@ -4,8 +4,6 @@
 #include "../bbmc_netif.h"
 #include "../bbcmd.h"
 
-void bbmcEnterCS(struct ThreadmgrFastMutex *mutex);
-void bbmcLeaveCS(struct ThreadmgrFastMutex *mutex);
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int message);
 
 /* Independent original state and command-25 output destinations. */

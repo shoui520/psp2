@@ -191,7 +191,6 @@ struct SysrootAutoClockDownState {
 struct SysrootAutoClockDownState SceSysrootForDriver_4B8C305A = { 0 };
 /* PLACEHOLDER: meaning of the secondary native Sysroot word618. */
 static uint32_t s_sysrootClass;
-extern int SceDebugForKernel_0EDA5174(uint32_t value);
 
 _Static_assert(sizeof(struct SysrootState) == 0x41c, "Sysroot state size");
 _Static_assert(offsetof(struct SysrootState, modulePrivate) == 0x34,
@@ -2648,7 +2647,6 @@ const char *SysrootGetMemBlockName(unsigned int index)
 #endif
 
 #if SYSMEM_NSKBL
-extern int sceKernelCpuId(void);
 extern int InitializeDipsw(SceDipsw *dipsw);
 
 #define SCE_KBL_PARAM_MAGIC	0xcbac03aa

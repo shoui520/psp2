@@ -1,11 +1,6 @@
 #include <libkernel/libkernel.h>
 #include <sysmem/compiler.h>
 
-extern SceSize sceClibStrlcpy(char *destination, const char *source,
-		SceSize capacity);
-extern SceSize sceClibStrlcat(char *destination, const char *source,
-		SceSize capacity);
-
 SceSize sceClibStrlcpyChk(char *destination, const char *source, SceSize count,
 		SceSize capacity)
 {

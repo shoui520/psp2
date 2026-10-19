@@ -33,28 +33,18 @@
 #include <string.h>
 
 struct mbuf *m_get(int how, int type);
-void m_freem(struct mbuf *mbuf);
-void sofree(struct socket *socket);
 void sce_psnet_panic(const char *message, ...) __attribute__((noreturn));
 extern struct malloc_type *mbtypes[8];
-struct SceNetPsDump *sceNetPsLookupDump(unsigned int dumpId, int checkProcess);
 int sceNetPsDestroyDump(unsigned int dumpId, struct SceNetPsDump *dump);
-SceNetPsEpoll *sceNetPsLookupEpoll(unsigned int epollId, unsigned int flags);
 int sceNetPsDestroyEpoll(unsigned int epollId, SceNetPsEpoll *epoll);
-SceNetPsDescriptor *sceNetPsLookupDescriptor(unsigned int descriptorId,
-					   unsigned int flags);
 int sceNetPsDestroyDescriptor(unsigned int descriptorId,
 			     SceNetPsDescriptor *descriptor);
 int sceNetPsInterfaceControl(int interfaceIndex, int command, void *data,
 			    int length);
 int sceNetPsStackControl(int flags, int command, void *data, int length);
-int sceNetPsWakeupInterrupted(const void *waitChannel);
-int sceNetPsQueueWakeup(const void *waitChannel, unsigned int events);
 int sceNetPsRoutingSysctl(const int *name, unsigned int nameLength, void *oldData,
 			  unsigned int *oldLength, const void *newData,
 			  unsigned int newLength);
-int sceNetPsFree(void *pointer);
-void *sceNetPsMalloc(SceSize size, char flags, SceSize alignment);
 
 int sceNetPsGetDnsConfig(SceNetPsDnsConfig *config, int networkOrder,
 			int addressesOnly);
@@ -582,7 +572,6 @@ int sceNetPsDumpCreate(const char *name, int length, int flags)
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 	return result;
 }
-
 
 int sceNetPsDumpClose(int dumpId)
 {

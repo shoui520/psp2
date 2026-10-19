@@ -25,7 +25,6 @@ static SceClass *s_partitionClass;
 int L1PageTableUnsetL2PageTable(L1PageTable *l1pt, uintptr_t va);
 int L2PageTableFree(FixedHeap *heap, L2PageTable *l2pt);
 int FreeSimpleMemBlock(MemBlockObject *block, SceUInt32 flags);
-int FixedHeapAllocObjectExt(FixedHeap *heap, void **object);
 int VirPageInit(VirPage *vp);
 /* memblock_obj.c */
 int MemBlockL2PageTableIsAllFree(const MemBlockObject *block);
@@ -382,14 +381,12 @@ int TinyPartitionInitRaw(TinyPartition *tiny, const char *name, uintptr_t vbase,
 	return 0;
 }
 
-
 /* SceKernelAllocMemBlockCommand cmdFlags (+0x90) */
 #define ALLOC_CMD_MIRROR		0x01
 #define ALLOC_CMD_PHY_ANY		0x04
 #define ALLOC_CMD_PADDR_LIST		0x08
 #define ALLOC_CMD_PADDR			0x10
 #define ALLOC_CMD_PARTIAL		0x20
-
 
 /* the codes that must be physically contiguous */
 static inline void AllocMemBlockCommandCheck2(SceKernelAllocMemBlockCommand *command)
@@ -1208,7 +1205,6 @@ taken:
 	return 0;
 }
 
-
 /* a block anywhere in the partition (aligned to align) */
 int PartitionAllocMemBlockInListByCommandRaw(Partition *partition,
 					     SceKernelAllocMemBlockCommand *command,
@@ -1232,7 +1228,6 @@ int PartitionAllocMemBlockInListByCommandRaw(Partition *partition,
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&partition->tiny.lock, intr);
 	return ret;
 }
-
 
 /*
  * Virtual pages of a type for [va, va + size), each as large as the alignment
@@ -1385,7 +1380,6 @@ tail:
 /* MemBlockTypeInfo attr: never cleared */
 #define MEMBLOCK_TYPE_NO_CLEAR		0x20000000
 #define MEMBLOCK_TYPE_CDRAM		0x80
-
 
 int MemBlockOptSetClientInfoRaw(MemBlockObject *block, const SceKernelAllocMemBlockKernelOpt *opt);
 int MemBlockVirPageListAllocPhyPage(MemBlockObject *block, Partition *partition, void *phyPart);
@@ -1698,7 +1692,6 @@ int MemBlockVirAlloc2MappedByCommand(MemBlockObject *block, SceKernelAllocMemBlo
 	return 0;
 }
 
-
 /* the allocation unit: opt.unitSize when given, else a page */
 static inline SceSize AllocMemBlockCommandGetUnitSize(const SceKernelAllocMemBlockCommand *command)
 {
@@ -1756,7 +1749,6 @@ fail:
 	command->block = NULL;
 	return ret;
 }
-
 
 int PhyMemPartCdramAlloc(void *part, SceSize size, SceSize alignment, uintptr_t *pa);
 int PhyMemCdramAlloc(SceSize size, SceSize alignment, uintptr_t *pa);
@@ -2212,7 +2204,6 @@ out:
 		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, l2Intr);
 	return ret;
 }
-
 
 /* PartitionFindL2PageTable, PartitionMapPages flags */
 #define PARTITION_MAP_LOCKED		0x01	/* the caller holds mapLock */
@@ -3237,7 +3228,6 @@ int PartitionModuleStart(const UIDManager *manager)
 	MemBlockSetNameRaw(block, "SceMagic");
 	return ret;
 }
-
 
 /* the user shared tiny partition's context: only its memblock heap */
 static AddressSpaceContext s_userSharedContext;

@@ -97,19 +97,8 @@ void avConfigHdmiConnected(void);
 void avConfigHdmiDisconnected(void);
 void sceAVConfigHdmiHdcpDoneIntr(void);
 int avConfigInitializeHdmiOutput(void);
-int avConfigSetSuspendInterval(unsigned int interval);
-int avConfigSetDimmingInterval(unsigned int interval);
-int avConfigSetDisplayColorSpaceMode(int mode);
-int avConfigApplyHdmiScalingRatio(const AvConfigScalingRatio *ratio);
-void avConfigSelectBtProfile(AvConfigBtAudioState *bt,
-			   const AvConfigSettings *settings);
-int avConfigStartBtAudio(AvConfigBtAudioState *bt);
-int avConfigStopBtAudio(AvConfigBtAudioState *bt);
-int avConfigSendBtVolume(SceUInt64 address, unsigned int volume);
-int avConfigSendBtButton(AvConfigBtAudioState *bt, unsigned int button);
 void avConfigCompleteDisplayUpdate(void);
 int SceAVConfigForDriver_0E60701A(unsigned int active);
-int avConfigSetRoutingVolume(int volume);
 void avConfigEnableAvls(void);
 
 int _sceAVConfigPowerIntr(int notifyId, int notifyCount, int flags, void *userData)
@@ -2376,5 +2365,4 @@ void avConfigHdmiDisconnected(void)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, state);
 	avConfigSetEventFlag(0x200);
 }
-
 

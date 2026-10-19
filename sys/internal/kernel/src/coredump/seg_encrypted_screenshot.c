@@ -14,7 +14,6 @@ extern int oalFileReopen(const char *path, SceUID *fd);
 extern int oalFileRead(SceUID fd, void *buffer, SceSize size);
 extern SceOff oalFileSeek(SceUID fd, SceOff offset, int whence);
 extern int oalFileClose(SceUID fd);
-extern int writerWritePaddingData(Writer *writer, SceSize size);
 extern int oalGetFrameBufferDetails(SceUID pid, int index,
 	unsigned int *vblankcount, unsigned int *width, unsigned int *height,
 	unsigned int *pixelformat, void **base, unsigned int *pitch);

@@ -13,7 +13,6 @@ extern void oalGetUltMutexInfo(SceUID pid, SceUIntPtr address,
 	CoredumpUltMutexInfo *info, SceUInt32 *ids, uint32_t *numIds);
 extern void *memMgrLocalAlloc(SceSize size);
 extern int memMgrLocalFree(void *allocation);
-extern int segWritePaddingData(SegIf *segment, SceSize writtenSize);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

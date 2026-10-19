@@ -67,7 +67,6 @@ int PartitionUnmapL2PageTable(void *partition, uintptr_t va, SceSize size, SceUI
 int PartitionReserveSection(void *partition, uintptr_t va);
 int PhyMemPartAllocPhyPage(void *part, SceSize size, SceUInt32 flags, struct PhyPage **page);
 int PhyMemPartFreePhyPage(void *part, struct PhyPage *page);
-void *SceSysmemForKernel_0164D817(void);
 
 /* the bytes of guard pages in front of the block */
 static inline SceSize SmbGuardSize(SceUInt32 smbType)

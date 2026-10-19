@@ -17,7 +17,6 @@ extern void oalGetWaitingThreadList(SceUID pid, SceUID waitId,
 	CoredumpWaitingThread *threads, SceSize capacity);
 extern void *memMgrLocalAlloc(SceSize size);
 extern int memMgrLocalFree(void *allocation);
-extern int segWritePaddingData(SegIf *segment, SceSize writtenSize);
 extern int oalGetNumOfWaitingThreads(SceUID pid, SceUID waitId);
 
 static int _calcSize(SegIf *segment);

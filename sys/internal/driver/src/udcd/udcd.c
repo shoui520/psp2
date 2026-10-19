@@ -12,8 +12,6 @@
 
 struct udcdState udcdState = { 0 };
 
-void udcdUpdateStateEvent(int bus);
-
 /* Original name unknown. Signal PHY readiness for the controller IRQ. */
 int udcdPhyInterrupt(int interrupt, void *argp)
 {

@@ -4,8 +4,6 @@
 #include "../bbcmd.h"
 #include "../bbmc_netif.h"
 
-void bbmcEnterCS(struct ThreadmgrFastMutex *mutex);
-void bbmcLeaveCS(struct ThreadmgrFastMutex *mutex);
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int message);
 int bbmcFinalizeGps(void);
 int bbmcUnregisterNetworkInterface(void);

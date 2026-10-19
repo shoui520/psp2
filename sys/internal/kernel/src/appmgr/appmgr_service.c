@@ -15,13 +15,11 @@ extern SceUID g_appmgrMainMutexOwner;
 extern SceUID g_appmgrShellPid;
 extern int appmgrResolvePath(const char *path, SceUID pid, char *output,
 			     SceSize size);
-extern void _appListShowAppState(struct AppState *app);
 extern int dumpBgmState(void);
 extern int sceAppMgrSendEventInternal(const SceAppMgrSystemEvent *event,
 				     SceUID pid);
 extern int _appListPushEvent(struct AppState *app,
 			     const SceAppMgrSystemEvent *event);
-extern void _shellEventRecommendedScreenOrientationStatusChangedQueuePush(void);
 
 #if FW_DEBUG
 SCE_DBGINFO_DEFINE(static, appmgrDumpSeparatorInfo, 31, "sceAppMgrDump");

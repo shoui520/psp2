@@ -21,7 +21,6 @@
 #define HARDWARE_MODEL_MASK		0xff0000
 
 SceKblParam *SceSysrootForKernel_9DB56D1F(void);
-int SceDipswForDriver_A98FC2FD(unsigned int bit);
 
 /* a big-endian halfword */
 #define SWAP16(x)			((SceUInt16)((x) >> 8 | (x) << 8))

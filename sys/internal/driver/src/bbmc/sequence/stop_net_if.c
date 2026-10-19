@@ -3,8 +3,6 @@
 #include "../bbmc_netif.h"
 #include "../bbcmd.h"
 
-void bbmcEnterCS(struct ThreadmgrFastMutex *mutex);
-void bbmcLeaveCS(struct ThreadmgrFastMutex *mutex);
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int message);
 
 SceUInt32 gBbmcStopNetIfState;

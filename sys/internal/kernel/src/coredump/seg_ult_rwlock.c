@@ -15,7 +15,6 @@ extern void oalGetUltRwlockInfo(SceUID pid, SceUIntPtr address,
 	SceUInt32 *numWriters);
 extern void *memMgrLocalAlloc(SceSize size);
 extern int memMgrLocalFree(void *allocation);
-extern int segWritePaddingData(SegIf *segment, SceSize writtenSize);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

@@ -8,8 +8,6 @@
 SceUID BtOpenFile(const char *path, int mode);
 int BtCloseFile(SceUID file);
 int BtWriteFile(SceUID file, const void *source, SceSize length);
-uint8_t *BtUtf16BeToUtf8(uint8_t *destination, const uint8_t *source,
-			int capacity);
 int BtUnpack(const uint8_t *source, int remaining, const char *format, ...);
 uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
 		       unsigned int argument, uint64_t deviceAddress);

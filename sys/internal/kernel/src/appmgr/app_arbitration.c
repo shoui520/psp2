@@ -15,12 +15,9 @@
 
 extern int dumpBgmState(void);
 extern SceUID g_appmgrMainMutexOwner;
-extern int appmgrGetAppRunState(const struct AppState *app);
 
 struct AppState;
-extern int _appListFindAndLockAppByProcessId(SceUID pid, struct AppState **app);
 extern int _appListPushEvent(struct AppState *app, const SceAppMgrSystemEvent *event);
-extern int _appListUnlockApp(struct AppState *app);
 extern int _processUpdateThreadEntry(SceSize args, void *argp);
 extern int _gcListenerThreadEntry(SceSize args, void *argp);
 extern SceUID g_appmgrMainMutex;

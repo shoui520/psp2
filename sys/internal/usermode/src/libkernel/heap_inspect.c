@@ -3,9 +3,6 @@
 unsigned int heapInitialized;
 struct MspaceStateView *primaryHeap;
 
-extern int sceKernelLockLwMutex(SceKernelLwMutexWork *work, int count,
-		SceUInt *timeout);
-extern int sceKernelUnlockLwMutex(SceKernelLwMutexWork *work, int count);
 extern void abort(void) __attribute__((noreturn));
 
 /* SCE: inspect accounting maintained by the allocator, without traversing bins. */

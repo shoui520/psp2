@@ -15,8 +15,6 @@ extern int dumpBgmState(void);
 extern int appmgrIsTrcCheckNotifyEnabled(void);
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
-extern int _appmgrProcessQuitProcess(struct AppState *app, int exitReason,
-				   int relaunch, int retry);
 extern int _appListPushEvent(struct AppState *app,
 			     const SceAppMgrSystemEvent *event);
 

@@ -32,8 +32,6 @@ void SceCpuForKernel_B331AB16(struct CpuLongIrqHandlerRecord *record)
 #endif
 }
 
-extern uint32_t SceSysrootForKernel_41636522(void);
-
 #if FW_DEBUG
 
 SceKernelIntrStatus SceCpuForDriver_F02467D1(volatile SceKernelRWSpinlock *lock)

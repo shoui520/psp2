@@ -26,15 +26,8 @@ int AddressSpaceFindMemBlockCB(struct AddressSpaceObject *as, uintptr_t va, SceS
 			       MemBlockObject **block);
 int SceSysrootForKernel_7385CADE(void);					/* current PID */
 void *SceSysrootForKernel_63EBB05B(void);
-int sceGUIDReferObjectWithLevel(SceUID guid, SceUInt32 level, SceObjectBase **object);
 int PUIDReferObjectWithLevel(SceUID pid, SceUID puid, SceUInt32 level, SceObjectBase **object);
-int UIDEntryReleaseObject(SceUID pid, SceUID puid);
-int sceKernelCopyFromUser(void *dst, const void *src, SceSize size);
-int sceKernelCopyToUser(void *dst, const void *src, SceSize size);
-int sceKernelVAtoPA(const void *va, uintptr_t *pa);
 int SceDipswForDriver_A98FC2FD(unsigned int bit);
-SceUID sceKernelAllocPartitionMemBlock(SceUID partUid, const char *name, SceUInt32 type,
-					SceSize size, const SceKernelAllocMemBlockKernelOpt *opt);
 int PartitionMapMemBlock(struct Partition *partition, MemBlockObject *block,
 			 const SceKernelAllocMemBlockCommand *command, SceUInt32 flags);
 int MemBlockPartialOpRange(struct Partition *partition, MemBlockObject *block, SceUInt32 op,
@@ -1111,7 +1104,6 @@ int SceSysmemForDriver_FFCD9B60(SceUID guid)
 
 int GUIDReferObjectWithClassExclusive(SceUID guid, SceClass *cls, SceObjectBase **object);
 int GUIDReleaseObject(SceUID guid);
-int GUIDUnregisterChecked(SceUID guid);
 void MemBlockClearMapRef(MemBlockObject *block);
 int PartitionFreeMemBlock(struct Partition *partition, MemBlockObject *block);
 
@@ -1188,13 +1180,10 @@ int SceSysmemForDriver_009E1C61(SceUID guid)
 	return FreeMemBlockCore(guid, 0, NULL, NULL, NULL, NULL);
 }
 
-int sceKernelStrncpyFromUser(char *dst, const char *src, SceSize len);
 int SceSysrootForKernel_EC3124A3(SceUID pid, char *titleId, SceSize len);
 int CheckProcessDebugCapability(SceUID pid);
 SceUID PUID2GUIDWithRefer(SceUID pid, SceUID puid, SceClass *cls);
 int GUIDFindByName(const char *name);
-SceUID SceSysmemForDriver_BF209859(SceUID pid, SceUID guid);
-int sceKernelGetMemBlockVBase(SceUID guid, void **vbase);
 
 /* the user allocation options: SceKernelAllocMemBlockOpt as the kernel reads it, up to 0x40 bytes */
 typedef struct MemBlockUserOpt {
@@ -2208,7 +2197,6 @@ int SysrootIncProcessResource(SceUInt32 type);
 int SysrootDecProcessResource(SceUInt32 type);
 int SceSysrootForKernel_4F0A4066(SceUID pid, void *info);
 int SceSysrootForKernel_F8769E86(SceUID pid);
-SceUInt32 SceSysmemForKernel_4E6D8BC3(void);
 void *SysrootGetProcessLocalStorageAddr(SceUInt32 key);
 void *SceSysrootForKernel_2F75C1DC(SceSize size, void *opt);
 
@@ -2449,8 +2437,6 @@ SceUID sceKernelAllocUnmapMemBlock(const char *userName, SceSize size)
 	return ret;
 }
 
-int SceSysmemForKernel_9C23DFF7(SceUID pid, SceUID puid, SceClass *cls, SceObjectBase **out);
-
 /* a VM block's range written back to memory and the I-cache dropped */
 int sceKernelSyncVMDomain(SceUID puid, uintptr_t va, SceSize size)
 {
@@ -2530,13 +2516,10 @@ int FreeMemBlockByGUID(SceUID guid)
 	return ret;
 }
 
-SceUID SceSysmemForDriver_184172B1(SceUID pid, SceUID puid, SceClass *cls);
-int sceGUIDGetObjectWithClass(SceUID guid, SceClass *cls, SceObjectBase **object);
 int PUIDCloseWithFlags(SceUID pid, SceUID puid, SceUInt32 flags);
 SceUID PUIDFindByGUID(SceUID pid, SceUID guid);
 int MemBlockSetBaseInfo(SceUID guid, MemBlockBaseInfo *info);
 int CheckProcessCapabilityGranted(SceUID pid, unsigned int capability);
-int sceKernelIsAccessibleRange(SceUInt32 mode, const void *addr, SceSize size);
 
 #define MEMBLOCK_ERROR_LOCKED_FATAL	0xc0024b10
 

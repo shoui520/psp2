@@ -127,28 +127,12 @@ static SceClass *s_heapClass;			/* "SceUIDKernelHeapClass" */
 static HeapHooks s_hooks;
 #endif
 
-int sceGUIDReferObjectWithClass(SceUID guid, SceClass *cls, SceObjectBase **object);
-int sceGUIDReferObjectWithLevel(SceUID guid, SceUInt32 level, SceObjectBase **object);
-int sceGUIDReleaseObject(SceUID guid);
-int sceGUIDClose(SceUID guid);
-int sceGUIDGetName(SceUID guid, const char **name);
-int sceGUIDGetUIDVectorByClass(SceClass *cls, int level, SceUID *vector, SceSize num,
-				SceSize *count);
 int sceUIDCallConstructor(SceClass *cls, SceObjectBase *object);
-SceUID SceSysmemForKernel_6DB44A42(SceClass *cls, const char *name, void *object);
-int sceGUIDSet(SceUID guid, SceClass *cls, const char *name,
-				SceObjectBase *object);
-SceUID SceSysmemForKernel_EC90AA11(SceObjectBase *object);
-int UIDHeapClassInit(UIDHeapClass *cls, const char *name, SceClassCallback create,
-		     SceClassCallback destroy, int (*alloc)(void *heap, SceSize size, void **object),
-		     int (*free)(void *heap, void *object));
-int sceKernelGetMemBlockAllocMapSize(SceUID uid, SceSize *size);
 int MemBlockType2Code(SceUInt32 type, SceUInt32 *code);
 SceSize MemBlockGetAllocMapSizeRaw(MemBlockObject *block);
 uintptr_t MemBlockGetVBase(MemBlockObject *block);
 SceSize MemBlockGetHeadFreeSize(MemBlockObject *block);
 int MemBlockFreeFromPartition(MemBlockObject *block);
-struct Partition *PartitionGetKernel(void);
 int PartitionGetPhyMemPart(struct Partition *partition, SceUInt32 code, void **phyMemPart);
 int PartitionAllocMemBlockWithPhyMemPartExt(struct Partition *partition, void *phyMemPart,
 					    const char *name, SceUInt32 code, SceSize size,
@@ -159,7 +143,6 @@ int TinyPartitionFindMemBlock(TinyPartition *tiny, uintptr_t va, SceSize size,
 AddressSpaceObject *SceSysmemForKernel_2E5CC243(void);
 struct Partition *AddressSpaceGetPartitionByIndex(AddressSpaceObject *as, SceUInt32 index);
 int AddressSpaceGetPhyMemPartByIndex(AddressSpaceObject *as, SceUInt32 index, void **part);
-void *SceSysmemForKernel_0164D817(void);
 uint32_t SceSysrootForKernel_5C426B19(void);
 void *sceKernelSysrootAlloc(SceSize size);
 

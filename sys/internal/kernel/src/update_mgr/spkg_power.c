@@ -8,8 +8,6 @@
 
 extern int updateSysconShutdownWorkaround;
 extern int updateSysconFirmwareUpdateStarted;
-int UpdateUtilLockPupHeader(void);
-int UpdateUtilUnlockPupHeader(void);
 int SpkgUtilCpReboot(void);
 int SpkgUtilCpShutdown(int mode);
 int SceDeci4pCpupForDriver_BBB991CD(uint32_t commandId);

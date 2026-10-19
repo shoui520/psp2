@@ -7,7 +7,6 @@
 extern int oalFileSetIoCacheSize(SceUID fd, SceSize cacheSize);
 extern int oalFileWrite(SceUID fd, const void *buffer, SceSize size);
 extern SceOff oalFileSeek(SceUID fd, SceOff offset, int whence);
-extern int writerFlush(Writer *writer);
 extern int oalFileClose(SceUID fd);
 
 static int _writeDataToDest(Writer *writer, const void *data, SceSize size,

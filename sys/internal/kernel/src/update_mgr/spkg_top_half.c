@@ -4,8 +4,6 @@
 #include "spkg.h"
 #include <sysmem/sblaimgr.h>
 
-int UpdateUtilLockPupHeader(void);
-int UpdateUtilUnlockPupHeader(void);
 int UpdateUtilCheckBuffer(SceSize size, void *buffer);
 int UpdateUtilSetBufferState(unsigned int state, void *buffer);
 int UpdateUtilInitializeNodeStatus(unsigned int nodeType,

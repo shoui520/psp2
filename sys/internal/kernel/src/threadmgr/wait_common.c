@@ -125,9 +125,6 @@ typedef void (*ThreadmgrSchedSleepHandler)(const struct ThreadmgrSchedProbeDescr
 #define THREADMGR_ERROR_WAIT_CANCEL	0x800280a2	/* PLACEHOLDER: name */
 #define SCE_KERNEL_ERROR_WAIT_DELETE	0x80028006
 
-void cancelDelayTimer(SceUID uid, struct ThreadCB *thread);
-int uidDelay_AllocObject(const uint64_t *wakeup, uintptr_t callback);
-
 /* the class a wait type's object belongs to */
 static inline SceClass *WaitTypeClass(uint32_t waitType)
 {

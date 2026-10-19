@@ -114,8 +114,6 @@ const QmiBuildSuffixRule g_qmiBuildSuffixRules[11] = {
 
 int bbcmdGetCompletedMask(unsigned int channel, unsigned int *mask);
 int bbcmdSetCompletedMask(unsigned int channel, unsigned int mask);
-void bbmcEnterCS(struct ThreadmgrFastMutex *mutex);
-void bbmcLeaveCS(struct ThreadmgrFastMutex *mutex);
 
 /* name unknown: secondary instance deactivation restores channel state one. */
 int bbcmdSecondaryDeactivateCompleted(BbcmdRequest *request)
@@ -151,7 +149,6 @@ int bbcmdReleaseClients(BbcmdRequest *request);
 int bbcmdGetUimCardStatus(BbcmdRequest *request);
 int bbcmdVerifyUimPin(BbcmdRequest *request);
 int bbcmdUnblockUimPin(BbcmdRequest *request);
-int bbcmdGetInformation(BbcmdRequest *request);
 int bbcmdListSmsMessages(BbcmdRequest *request);
 int bbcmdReadSmsMessage(BbcmdRequest *request);
 int bbcmdDeleteSmsMessage(BbcmdRequest *request);
@@ -2539,7 +2536,6 @@ completed:
 	return result;
 }
 
-
 /* name unknown: list stored DMS images by type, retaining at most five per type. */
 int bbcmdListStoredImages(BbcmdRequest *request)
 {
@@ -2786,8 +2782,6 @@ completed:
 	return result;
 }
 
-
-
 void bbcmdClientRetryTimer(void *arg)
 {
 	BbcmdProtocolClient *client = arg;
@@ -2927,7 +2921,6 @@ int bbcmdSendEmptyDmsMessages(BbcmdRequest *request, QmiEmptyMessageList message
 	return result;
 }
 
-
 /* name unknown: select the next configured client for deactivation. */
 int bbcmdSelectClientDeactivation(BbcmdRequest *request, unsigned int clearMask)
 {
@@ -2995,7 +2988,6 @@ int bbcmdSelectClientDeactivation(BbcmdRequest *request, unsigned int clearMask)
 notify:
 	return sceKernelSetEventFlag(control->event, 1U << node->index);
 }
-
 
 int bbcmdSendTerminalResponse(BbcmdRequest *request)
 {
@@ -3582,7 +3574,6 @@ completed:
 	return result;
 }
 
-
 /* name unknown: attach or detach the NAS packet service. */
 int bbcmdAttachDetachPacketService(BbcmdRequest *request)
 {
@@ -3726,9 +3717,6 @@ completed:
 			request->input, request->output, request->completionArg);
 	return result;
 }
-
-
-
 
 /* name unknown: query UIM state followed by all five facility lock states. */
 int bbcmdGetUimFacilityStatus(BbcmdRequest *request)
@@ -4436,8 +4424,6 @@ completed:
 	return result;
 }
 
-
-
 /* The original scratch headroom is smaller than a maximum-length PIN payload. */
 int bbcmdVerifyUimPin(BbcmdRequest *request)
 {
@@ -5039,7 +5025,6 @@ completed:
 	return result;
 }
 
-
 int bbcmdDeleteStoredImage(BbcmdRequest *request)
 {
 	BbcmdRequestNode *node;
@@ -5239,7 +5224,6 @@ completed:
 			request->input, request->output, request->completionArg);
 	return result;
 }
-
 
 #include "tracking_start.h"
 
@@ -6318,8 +6302,6 @@ finish:
 	bbcmdUnlockMutex(&control->mutex);
 	return result;
 }
-
-
 
 int bbcmdConfiguredServiceClientCallback(unsigned int event,
 	BbcmdProtocolClient *incomingClient)
@@ -11238,7 +11220,6 @@ finish_locked:
 }
 
 #undef READ_CHANNEL_RATE
-
 
 /* name unknown: reset and publish one complete protocol context. */
 BbcmdProtocolContext *bbcmdCreateProtocolContext(unsigned int channel)

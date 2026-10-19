@@ -6,7 +6,6 @@
 #include <sysmem/sysmem.h>
 
 int compatIsPocketStationTitle(const signed char *titleId);
-int sceCompatIsPocketStationTitle(const char *titleId);
 
 int sceCompatIsPocketStationTitle(const char *titleId)
 {

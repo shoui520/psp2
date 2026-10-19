@@ -77,7 +77,6 @@ extern int writeFrameBuffers(SceUID pid);
 extern int oalResumeProcess(SceUID pid);
 extern int oalSuspendProcess(SceUID pid, SceUInt32 *timeout);
 extern int oalChangeThreadPriority(SceUID threadId, int priority);
-extern int writerFlush(Writer *writer);
 extern SceSize encryptedScreenshotSize;
 extern int oalIsPlaintextDumpAllowed(SceUID pid);
 extern int oalIsSystemProgram(SceUID pid);
@@ -111,11 +110,8 @@ extern int oalDeleteThread(SceUID threadId);
 extern void segSummarySetSegIfMethodPairTables(const SegIfMethodPair *pairs,
 	SceUInt32 numSegments);
 extern SceUID openCorefile(void);
-extern int segInit(SegIf *segment);
-extern int segCalcSize(SegIf *segment);
 extern int oalGetCdnPcAndLrInfo(SceUID pid,
 	const CoredumpThreadStopEvent *event, CoredumpCdnPcAndLrInfo *location);
-extern int writerWritePaddingData(Writer *writer, SceSize size);
 extern int cafWriterEndSegment(CafWriter *writer);
 extern int cafWriterGetNumSegments(CafWriter *writer);
 extern int oalFileRemove(const char *path);

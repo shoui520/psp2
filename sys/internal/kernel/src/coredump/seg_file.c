@@ -29,7 +29,6 @@ static int fileAccumulateSize(CoredumpFileInfo *info, SceSize resolvedPathSize,
 	const char *resolvedPath, SceSize resolvedPathPadding,
 	SceSize openPathSize, const char *openPath, SceSize openPathPadding,
 	void *context);
-extern int writerWritePaddingData(Writer *writer, SceSize size);
 
 static int _writeSegs(SegIf *base);
 static int _calcSize(SegIf *base);

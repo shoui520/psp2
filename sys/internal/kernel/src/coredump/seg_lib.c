@@ -24,7 +24,6 @@ extern void oalGetLibName(SceUID pid, SceUID libraryId, char *name,
 extern void *memMgrLocalAlloc(SceSize size);
 extern void *memMgrLocalAllAlloc(SceSize *size);
 extern int memMgrLocalFree(void *allocation);
-extern int writerWritePaddingData(Writer *writer, SceSize size);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

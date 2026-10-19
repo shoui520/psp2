@@ -212,14 +212,12 @@ int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result,
 int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
 void getWakeupTime(uint64_t *wakeup, uint32_t timeout);
-int releaseThreadWaitState(struct ThreadCB *thread, uintptr_t waitable, int result);
 bool wakeupAndDistributeThread(struct ThreadCB *thread, uintptr_t waitable,
 			       int result);
 int revalidateWaitState(uintptr_t waitable);
 uint32_t wakeupWaitObjectAll(uintptr_t waitable, int result, uint32_t *count);
 void initRegisterContext(struct ThreadRegisterContext *regs);
 void initVfpContext(uintptr_t vfp);
-int uidWaitableConstructor(void *object);
 void returnFromWorkTaskEntry(int result) __attribute__((noreturn));
 
 /* a short pause between lock attempts (lock order: task before queue) */

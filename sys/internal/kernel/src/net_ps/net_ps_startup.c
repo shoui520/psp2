@@ -10,11 +10,6 @@ extern SceNetPsProcessHooks gNetPsProcessHooks;
 int sceNetPsInitializeGateway(SceNetPsGatewayState *slot, struct NetDriver *driver);
 int sceNetPsInitializeDebugInterface(void *slot, struct NetDriver *driver);
 int sceNetPsInitializeHeap(void *base, int size);
-int sceNetPsStartStack(const SceNetPsThreadParam *param);
-SceUID sceNetPsGetSoftThread(void);
-struct NetDriverPacket *sceNetPsAllocatePacket(struct NetDriver *driver,
-		unsigned int length, unsigned int alignment);
-void sceNetPsFreePacket(struct NetDriverPacket *packet);
 
 SceUID gNetPsMemoryId;
 SceUID gNetPsSystemEventId;

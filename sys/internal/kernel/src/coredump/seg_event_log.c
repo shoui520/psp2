@@ -7,7 +7,6 @@
 
 extern Writer *currentWriter;
 extern int oalGetEventlog(void *buffer, SceSize size, SceSize *readBlocks);
-extern int writerWritePaddingData(Writer *writer, SceSize size);
 
 typedef struct CoredumpEventLogNote {
 	CoredumpNoteHeader header;

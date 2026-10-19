@@ -55,7 +55,6 @@ int BtFlushRegisteredDevices(BtStack *stack);
 int BtCountRegisteredDevices(BtStack *stack);
 BtDevice *BtGetOrCreateDevice(BtStack *stack, uint64_t deviceAddress,
 			    unsigned int create);
-BtDevice *BtRestoreDeviceFromHistory(BtStack *stack, uint64_t deviceAddress);
 int BtSetAvrcpTitle(BtStack *stack, const void *title, unsigned int length);
 int BtSetAvrcpPlayStatus(BtStack *stack, int status);
 int BtSendAvrcpButton(BtConnection *connection, int button);

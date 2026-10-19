@@ -11,7 +11,6 @@ extern void oalGetMemBlockIdList(SceUID pid, SceUID *ids, SceSize capacity);
 extern void oalGetMemBlockInfo(SceUID pid, SceUID uid, CoredumpMemBlockInfo *info);
 extern void *memMgrLocalAlloc(SceSize size);
 extern int memMgrLocalFree(void *allocation);
-extern int writerWritePaddingData(Writer *writer, SceSize size);
 
 static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);

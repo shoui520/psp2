@@ -15,7 +15,6 @@ enum {
 
 extern void *memMgrLocalAlloc(SceSize size);
 extern int memMgrLocalFree(void *allocation);
-extern int segWritePaddingData(SegIf *segment, SceSize writtenSize);
 extern int oalGetNumOfUltRuntimes(SceUID pid);
 extern int oalEachUltRuntimeInfo(SceUID pid,
 	int (*callback)(SceUInt32 runtimeId, CoredumpUltRuntimeInfo *info,

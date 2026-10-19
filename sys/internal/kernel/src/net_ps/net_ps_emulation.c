@@ -6,7 +6,6 @@
 extern SceNetPsPacketService gNetPsPacketService;
 int sceNetPsStartBandwidthTimer(struct ifnet *interface);
 extern int gNetPsSoftTick;
-struct timeval *sceNetPsGetTime(struct timeval *value);
 void callout_reset(struct callout *timer, int ticks,
 		   void (*callback)(void *), void *argument);
 void sceNetPsDelayTimer(void *argument);
@@ -19,7 +18,6 @@ int sceNetPsIsSdkVersion2OrLater(void);
 int sceNetPsSeedEmulationRandom(unsigned int seed);
 unsigned int sceNetPsGetEmulationSeed(void);
 unsigned int sceNetPsEmulationRandom(void);
-void m_freem(struct mbuf *mbuf);
 void callout_init(struct callout *timer);
 void callout_stop(struct callout *timer);
 

@@ -8,7 +8,6 @@ extern Writer *currentWriter;
 extern SceUInt32 oalGetGpuRecoveryCount(void);
 extern SceSize oalGetGpuActivitySize(void);
 extern void oalGetGpuActivity(void *buffer, SceSize size);
-extern int writerWritePaddingData(Writer *writer, SceSize size);
 
 typedef struct CoredumpGpuActivityNote {
 	CoredumpNoteHeader header;

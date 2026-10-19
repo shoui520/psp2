@@ -17,7 +17,6 @@ SceClass g_ioAsyncEventClass;
 
 /* 4.00 builds this file with _FORTIFY_SOURCE; Sony's heap declaration gives the size it checks */
 #if FW_VERSION >= 0x04000000
-void *sceKernelAllocHeapMemory(SceUID uid, SceSize size) __attribute__((alloc_size(2)));
 #define strncpy(dst, src, len)	__builtin___strncpy_chk(dst, src, len, __builtin_object_size(dst, 1))
 #endif
 

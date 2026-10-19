@@ -18,16 +18,6 @@
 #include <processmgr/processmgr.h>
 #include <sysmem/sysroot.h>
 
-int sceNetPsProcessCreateHandler(SceUID processId, const void *param,
-				SceNetPsProcessHooks *hooks);
-int sceNetPsProcessExitHandler(SceUID processId, const void *param,
-			      SceNetPsProcessHooks *hooks);
-int sceNetPsProcessKillHandler(SceUID processId, const void *param,
-			      SceNetPsProcessHooks *hooks);
-int sceNetPsProcessSuspendHandler(SceUID processId, int event,
-		const void *param, SceNetPsProcessHooks *hooks);
-int sceNetPsProcessResumeHandler(SceUID processId, int event,
-		const void *param, SceNetPsProcessHooks *hooks);
 int SceNetPsForDriver_83A12CCC(void *interface);
 int SceNetPsForDriver_C000CA8F(void *interface);
 

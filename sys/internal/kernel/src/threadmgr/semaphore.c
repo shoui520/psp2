@@ -38,9 +38,6 @@ typedef struct ThreadmgrSemaphore {
 
 _Static_assert(sizeof(ThreadmgrSemaphore) == 0x38, "SceUIDSemaphoreObject size");
 
-int uidCacheConstructor(void *object);
-int uidCacheDestructor(void *object);
-
 /* SCE_KERNEL_ERROR_UNKNOWN_SEMA_ID, with bit 30 set inside a user syscall */
 #define SEMA_ERROR_UNKNOWN_ID()		((ThreadmgrUserRoWord() & USERRO_IN_SYSCALL) ? \
 					 0xc0028101 : 0x80028101)

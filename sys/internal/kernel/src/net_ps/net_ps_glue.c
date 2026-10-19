@@ -59,7 +59,6 @@ int sceNetPsRoutingSysctl(const int *name, unsigned int nameLength, void *oldDat
 			  unsigned int *oldLength, const void *newData,
 			  unsigned int newLength);
 
-
 static const unsigned int gNetPsHeapTailMagic = 0x4d61416b;
 
 struct in_ifaddrhead in_ifaddrhead;
@@ -103,7 +102,6 @@ int gNetPsSuspendResult;
 
 unsigned int sceNetPsGetFreeMemory(int lowest);
 int sceNetPsManageProcessSockets(SceUID processId, unsigned int flags);
-int sceNetPsCleanupProcess(SceUID processId);
 int sceNetPsInitializeProcessProtocol(SceUID processId);
 int sceNetPsDestroyProcessEpolls(SceUID processId);
 int sceNetPsDestroyProcessDescriptors(SceUID processId);
@@ -145,7 +143,6 @@ void sceNetPsSeedRandom(void);
 int init_crypto(void *(*allocate)(SceSize size), void (*release)(void *ptr));
 void callout_startup(void);
 void mbinit(void);
-void soinit(void);
 void ifinit(void);
 void domaininit(void);
 void if_attachdomain(void);
@@ -170,11 +167,6 @@ void sce_psnet_panic(const char *message, ...) __attribute__((noreturn));
 
 /* bnet_socket_sanity_check still requires the original text/data range owners. */
 
-
-
-
-
-
 /* SetDump requires the complete Sony dump owner; allocation is unresolved. */
 
 /* Name unknown; find a socket without checking its process or state. */
@@ -186,20 +178,7 @@ struct socket *sceNetPsLookupSocketUnchecked(unsigned int socketId, int *error)
 	return NULL;
 }
 
-
-
 /* LookupDump requires the complete Sony dump owner. */
-
-
-
-
-
-
-
-
-
-
-
 
 /* Name unknown; collect the complete serialized interface record. */
 void sceNetPsSetDump(unsigned int dumpId, SceNetPsDump *dump)
@@ -277,25 +256,6 @@ int sceNetPsCollectInterfaceInfo(SceNetPsInterfaceInfo *info,
 	return 0;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* SCE: the gateway may consume a received packet before driver queuing. */
 int sceNetPsDeliverRxPacket(struct NetDriver *driver,
 			   struct NetDriverPacket *packet)
@@ -328,7 +288,6 @@ int sceNetPsSetTxEmulation(struct SceNetPsDriverContext *context,
 int sceNetPsCanTransmit(struct SceNetPsDriverContext *context,
 		       struct ifnet *interface);
 void sceNetPsCaptureTxPacket(struct NetDriverPacket *packet);
-void m_freem(struct mbuf *mbuf);
 void m_copydata(struct mbuf *mbuf, int offset, int length, void *destination);
 
 /* Name unknown; convert queued BSD packets to driver-owned transmit storage. */
@@ -454,7 +413,6 @@ void sceNetPsGetInterfaceInfo(struct ifnet *interface, SceNetPsInterfaceInfo *in
 		info->driverMtu = driver->mtu;
 	}
 }
-
 
 int sceNetPsCloseInterface(struct SceNetPsDriverContext *context,
 			   unsigned int *flags, int suspended);
@@ -1592,7 +1550,6 @@ int sceNetPsIsHeapAddress(const void *address)
 	return (uintptr_t)gNetPsHeapStart <= (uintptr_t)address &&
 		(uintptr_t)address <= (uintptr_t)gNetPsHeapLastByte;
 }
-
 
 int sceNetPsCopyUserString(const char *source, char *destination, size_t length);
 
