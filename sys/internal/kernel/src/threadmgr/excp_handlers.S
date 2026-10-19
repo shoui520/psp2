@@ -125,7 +125,7 @@ idleThreadEntry:
 	.arm
 	.balign 4
 .global \name
-.type \name, %object
+.type \name, %function
 \name:
 	.word	0				/* the next handler (excpmgr's) */
 	.word	0
@@ -207,7 +207,7 @@ idleThreadEntry:
 	.arm
 	.balign 4
 .global \name
-.type \name, %object
+.type \name, %function
 \name:
 	.word	0				/* the next handler (excpmgr's) */
 	.word	0

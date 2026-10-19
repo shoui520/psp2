@@ -1144,6 +1144,7 @@ int uidLwMutex_CreateCache(SceProcessObject *process, int target)
 {
 	UIDCreateOpt opt;
 	ThreadmgrLwMutex *lwMutex;
+	SceObjectBase *pObject;
 	bool more = true;
 	SceUID uid;
 	int intr, ret;
@@ -1161,13 +1162,14 @@ int uidLwMutex_CreateCache(SceProcessObject *process, int target)
 		intr = SceCpuForDriver_821FC0EE();
 		uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->lwMutexClass,
 			"SceKernelLwMutexCache", &opt,
-			(SceObjectBase **)&lwMutex);
+			&pObject);
 		if (uid < 0) {
 			sceKernelCpuResumeIntr(intr);
 			SCE_DBG_PRINTF(0, 2013, "*** error: uidLwMutex_CreateCache() -> "
 				"sceGUIDKernelCreateWithAttr()=0x%08X\n", uid);
 			return uid;
 		}
+		lwMutex = (ThreadmgrLwMutex *)pObject;
 		lwMutex->ownerPid = process->pid;
 		ret = sceGUIDGetEntry(uid, &lwMutex->uidEntry);
 		if (ret < 0) {

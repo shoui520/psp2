@@ -142,6 +142,7 @@ int getThreadInfoForDebugger(SceUID threadId, SceUInt32 level, uint32_t flags,
 			     ThreadmgrThreadInfoForDebugger *info)
 {
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	struct ThreadCB *thread;
 	struct ThreadRegisterContext *context;
 	ThreadSyscallFrame *frame;
@@ -154,10 +155,11 @@ int getThreadInfoForDebugger(SceUID threadId, SceUInt32 level, uint32_t flags,
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithClassLevel(threadId, THREAD_CLASS(), level,
-					      (SceObjectBase **)&object) < 0) {
+					      &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto resume;
 	}
+	object = (struct ThreadmgrThreadObject *)pObject;
 	thread = &object->context;
 	strncpy(info->name, SceSysmemForDriver_E655852F(threadId), sizeof(info->name) - 1);
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
@@ -966,6 +968,7 @@ int getThreadNameListProc(SceUID pid, SceUInt32 level, ThreadmgrThreadName *name
 			  SceSize *count)
 {
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	ThreadmgrThreadName entry;
 	const char *name;
 	SceSize got = 0, need;
@@ -993,8 +996,9 @@ int getThreadNameListProc(SceUID pid, SceUInt32 level, ThreadmgrThreadName *name
 			found = 0;
 			for (i = 0; i < total; i++) {
 				if (sceGUIDReferObjectWithClass(vector[i], THREAD_CLASS(),
-						(SceObjectBase **)&object) < 0)
+						&pObject) < 0)
 					continue;
+				object = (struct ThreadmgrThreadObject *)pObject;
 				if (object->context.processId == pid) {
 					vector[found++] = vector[i];
 				} else {
@@ -1692,6 +1696,7 @@ int sceKernelGetWaitingThreadList(SceUID waitId, ThreadmgrWaitingThread *list, S
 				  SceSize *count)
 {
 	struct ThreadmgrWaitableObject *object;
+	SceObjectBase *pObject;
 	struct ThreadmgrWaitNode *node, *head;
 	struct ThreadCB *thread;
 	ThreadmgrWaitingThread *out;
@@ -1703,10 +1708,11 @@ int sceKernelGetWaitingThreadList(SceUID waitId, ThreadmgrWaitingThread *list, S
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithSubclass(waitId,
 			s_threadmgrRuntime.manager->waitableClass,
-			(SceObjectBase **)&object) < 0) {
+			&pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_UID;
 		goto resume;
 	}
+	object = (struct ThreadmgrWaitableObject *)pObject;
 	sceKernelSpinlockLowLock(&object->lock);
 	head = (struct ThreadmgrWaitNode *)&object->next;
 	ret = 0;

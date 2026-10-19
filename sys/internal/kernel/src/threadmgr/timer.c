@@ -557,15 +557,17 @@ static SceUID setAlarmWithName(const char *name, SceUInt64 delay, ThreadmgrAlarm
 static int getAlarmInfo(SceUID alarmId, ThreadmgrAlarmInfo *info)
 {
 	ThreadmgrAlarm *alarm;
+	SceObjectBase *pObject;
 	int intr, ret;
 
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithClass(alarmId, s_threadmgrRuntime.manager->alarmClass,
-					 (SceObjectBase **)&alarm) < 0) {
+					 &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_ALARM_ID;
 	} else {
+		alarm = (ThreadmgrAlarm *)pObject;
 		info->alarmId = alarmId;
 		ret = 0;
 		strncpy(info->name, alarm->name, sizeof(info->name) - 1);

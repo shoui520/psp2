@@ -262,6 +262,7 @@ int sendSignal(SceUID threadId)
 {
 	struct ThreadmgrWaitableObject *signal = s_threadmgrRuntime.manager->signalObject;
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	struct ThreadCB *thread;
 	uint32_t saved;
 	int intr, ret, wake;
@@ -270,10 +271,11 @@ int sendSignal(SceUID threadId)
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithClass(threadId,
-		s_threadmgrRuntime.manager->threadClass, (SceObjectBase **)&object) < 0) {
+		s_threadmgrRuntime.manager->threadClass, &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
+	object = (struct ThreadmgrThreadObject *)pObject;
 	thread = &object->context;
 	sceKernelSpinlockLowLock(&signal->lock);
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
@@ -1990,11 +1992,13 @@ void notifyThreadPriorityChange(struct ThreadCB *thread,
 void changeThreadPrioritySGIHandler(SceUID threadId, int priority)
 {
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 
 	if (currentThreadContext() != NULL)
 		SCE_PANIC(SCE_LINE(6152, 6158));
 	if (sceGUIDReferObjectWithClass(threadId,
-	    s_threadmgrRuntime.manager->threadClass, (SceObjectBase **)&object) >= 0) {
+	    s_threadmgrRuntime.manager->threadClass, &pObject) >= 0) {
+		object = (struct ThreadmgrThreadObject *)pObject;
 		changeThreadPriority(&object->context, priority);
 		sceGUIDReleaseObject(threadId);
 	}
@@ -4792,11 +4796,13 @@ void changeThreadPriorityAndCpuAffinityMaskSGIHandler(SceUID threadId, int prior
 						    uint32_t mask)
 {
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 
 	if (currentThreadContext() != NULL)
 		SCE_PANIC(SCE_LINE(6823, 6829));
 	if (sceGUIDReferObjectWithClass(threadId,
-	    s_threadmgrRuntime.manager->threadClass, (SceObjectBase **)&object) >= 0) {
+	    s_threadmgrRuntime.manager->threadClass, &pObject) >= 0) {
+		object = (struct ThreadmgrThreadObject *)pObject;
 		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		changeThreadPriorityAndCpuAffinityMask(&object->context, priority, mask, NULL, NULL);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
@@ -5205,8 +5211,8 @@ int sceKernelChangeThreadPriority2(SceUID uid, uint32_t priority)
 	result = sceGUIDReferObjectWithClass(uid,
 		s_threadmgrRuntime.manager->threadClass, &pObject);
 	if (result < 0) {
-		result = ThreadmgrInSyscall() ? (int)USER_ERROR_UNKNOWN_THREAD_ID :
-						(int)SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
+		result = !ThreadmgrInSyscall() ? (int)SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID :
+						 (int)USER_ERROR_UNKNOWN_THREAD_ID;
 		goto resume;
 	}
 	object = (struct ThreadmgrThreadObject *)pObject;
@@ -5313,7 +5319,7 @@ int sceKernelChangeThreadPriority(SceUID uid, uint32_t priority)
 #define CHANGE_AFFINITY_FUNC			"sceKernelChangeThreadPriorityAndCpuAffinityMask"
 
 /* the mask as a CPU mask (bits 0-3); a syscall's is in bits 16-19 */
-static int normalizeAffinityMask(uint32_t *mask)
+static inline __attribute__((always_inline)) int normalizeAffinityMask(uint32_t *mask)
 {
 	if (ThreadmgrInSyscall()) {
 		if (*mask == AFFINITY_CURRENT_CPU || (*mask & ~AFFINITY_USER_MASK))
@@ -5377,8 +5383,8 @@ int sceKernelChangeThreadPriorityAndCpuAffinityMask(SceUID uid, uint32_t priorit
 	result = sceGUIDReferObjectWithClass(uid,
 		s_threadmgrRuntime.manager->threadClass, &pObject);
 	if (result < 0) {
-		result = ThreadmgrInSyscall() ? (int)USER_ERROR_UNKNOWN_THREAD_ID :
-						(int)SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
+		result = !ThreadmgrInSyscall() ? (int)SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID :
+						 (int)USER_ERROR_UNKNOWN_THREAD_ID;
 		goto resume;
 	}
 	object = (struct ThreadmgrThreadObject *)pObject;
@@ -5734,6 +5740,7 @@ uint32_t SceThreadmgrForDriver_86DAE59B(void)
 int sceKernelGetThreadExitStatus(SceUID uid, int *status)
 {
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	struct ThreadCB *thread;
 	SceKernelIntrStatus intr;
 	uint32_t saved;
@@ -5750,12 +5757,13 @@ int sceKernelGetThreadExitStatus(SceUID uid, int *status)
 	} else {
 		intr = SceCpuForDriver_821FC0EE();
 		result = sceGUIDReferObjectWithClass(uid,
-			s_threadmgrRuntime.manager->threadClass, (SceObjectBase **)&object);
+			s_threadmgrRuntime.manager->threadClass, &pObject);
 		if (result < 0) {
 			result = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 			if (ThreadmgrInSyscall())
 				result |= SYSCALL_ERROR_BIT;
 		} else {
+			object = (struct ThreadmgrThreadObject *)pObject;
 			thread = &object->context;
 			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 			if (!(thread->status & THREAD_STATE_ENDED))
@@ -6257,6 +6265,7 @@ restore:
 int SceThreadmgrForDriver_33E85E9E(SceKernelThreadRunStatus *output)
 {
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	struct ThreadMgrCpuCB *cpu;
 	SceKernelThreadRunStatus status;
 	SceUInt32 version;
@@ -6288,12 +6297,13 @@ int SceThreadmgrForDriver_33E85E9E(SceKernelThreadRunStatus *output)
 			threadId = cpu->threadId;
 			if (sceGUIDReferObjectWithClass(threadId,
 				s_threadmgrRuntime.manager->threadClass,
-				(SceObjectBase **)&object) < 0) {
+				&pObject) < 0) {
 				status.cpuInfo[i].processId = -1;
 				status.cpuInfo[i].threadId = -1;
 				status.cpuInfo[i].priority = -1;
 				continue;
 			}
+			object = (struct ThreadmgrThreadObject *)pObject;
 			status.cpuInfo[i].processId = object->context.processId;
 			if (object->context.processId == currentThreadContext()->processId)
 				status.cpuInfo[i].threadId = object->context.userThreadId;
@@ -6493,6 +6503,7 @@ int sceKernelGetThreadmgrUIDClass(SceUID uid)
 void *SceThreadmgrForDriver_66EEA46A(SceUID uid, unsigned int index)
 {
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	SceKernelIntrStatus intr;
 	uint32_t saved;
 	void *result = NULL;
@@ -6503,7 +6514,8 @@ void *SceThreadmgrForDriver_66EEA46A(SceUID uid, unsigned int index)
 		intr = SceCpuForDriver_821FC0EE();
 		if (sceGUIDReferObjectWithClass(uid,
 		    s_threadmgrRuntime.manager->threadClass,
-		    (SceObjectBase **)&object) >= 0) {
+		    &pObject) >= 0) {
+			object = (struct ThreadmgrThreadObject *)pObject;
 			if (object->context.tls != 0)
 				result = (void *)(object->context.tls - TLS_SLOT_AREA +
 						  index * sizeof(uint32_t));
@@ -6519,6 +6531,7 @@ void *SceThreadmgrForDriver_66EEA46A(SceUID uid, unsigned int index)
 int SceThreadmgrForDriver_1096042E(SceUID uid)
 {
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	int result;
 
 	if (uid == 0) {
@@ -6527,8 +6540,9 @@ int SceThreadmgrForDriver_1096042E(SceUID uid)
 		return (currentThreadContext()->currentAttr >> THREAD_ATTR_UNLIMITED_SHIFT) & 1;
 	}
 	if (sceGUIDReferObjectWithClass(uid, s_threadmgrRuntime.manager->threadClass,
-					 (SceObjectBase **)&object) < 0)
+					 &pObject) < 0)
 		return UNKNOWN_THREAD;
+	object = (struct ThreadmgrThreadObject *)pObject;
 	result = (object->context.currentAttr >> THREAD_ATTR_UNLIMITED_SHIFT) & 1;
 	sceGUIDReleaseObject(uid);
 	return result;

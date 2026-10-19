@@ -650,6 +650,7 @@ int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 	ThreadmgrMsgPipeRestart *state;
 	SceKernelMsgPipeVector buffer;
 	ThreadmgrMsgPipe *pipe;
+	SceObjectBase *pObject;
 	SceUInt32 timeoutValue, *wait;
 	SceSize total = 0, remaining = 0, offset = 0, n, moved, savedUsed;
 	uint8_t *savedRead;
@@ -659,7 +660,7 @@ int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 	int index = 0, locked = 0, i, ret, cbRet;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1909);
-	ret = sceGUIDReferObjectWithClass(msgPipeId, MSG_PIPE_CLASS(), (SceObjectBase **)&pipe);
+	ret = sceGUIDReferObjectWithClass(msgPipeId, MSG_PIPE_CLASS(), &pObject);
 	if (ret < 0)
 		return MsgPipeUnknownIdError();
 	sceKernelSpinlockLowLock(&pipe->event.lock);
@@ -672,6 +673,7 @@ int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 			total = 0;
 			goto fail;
 		}
+		pipe = (ThreadmgrMsgPipe *)pObject;
 		wait = &timeoutValue;
 	}
 	if (SceThreadmgrForDriver_20C228E4()) {

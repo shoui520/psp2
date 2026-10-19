@@ -498,6 +498,7 @@ int sceKernelUnregisterThreadEventHandler(SceUID uid)
 int SceThreadmgrForDriver_6657429E(SceUID uid, ThreadmgrThreadEventInfo *info)
 {
 	struct ThreadmgrThreadObject *target;
+	SceObjectBase *pObject;
 	ThreadmgrThreadEventInfo local;
 	uint32_t saved;
 	SceSize size;
@@ -517,9 +518,10 @@ int SceThreadmgrForDriver_6657429E(SceUID uid, ThreadmgrThreadEventInfo *info)
 			if (targetId != THREAD_EVENT_TARGET_PROCESS && ThreadmgrInSyscall()) {
 				if (sceGUIDReferObjectWithClass(targetId,
 						s_threadmgrRuntime.manager->threadClass,
-						(SceObjectBase **)&target) < 0) {
+						&pObject) < 0) {
 					local.target = -1;
 				} else {
+					target = (struct ThreadmgrThreadObject *)pObject;
 					local.target = target->context.userThreadId;
 					sceGUIDReleaseObject(targetId);
 				}
@@ -584,6 +586,7 @@ int SceThreadmgrForDriver_C4456EC9(SceUID pid, int level, ThreadmgrThreadEventIn
 				   SceSize size, SceSize *count)
 {
 	struct ThreadmgrThreadObject *target;
+	SceObjectBase *pObject;
 	ThreadmgrThreadEventInfo info;
 	SceSize got = 0;
 	SceUID *vector, targetId;
@@ -617,9 +620,10 @@ int SceThreadmgrForDriver_C4456EC9(SceUID pid, int level, ThreadmgrThreadEventIn
 		if (targetId != THREAD_EVENT_TARGET_PROCESS) {
 			if (sceGUIDReferObjectWithClass(targetId,
 					s_threadmgrRuntime.manager->threadClass,
-					(SceObjectBase **)&target) < 0) {
+					&pObject) < 0) {
 				info.target = -1;
 			} else {
+				target = (struct ThreadmgrThreadObject *)pObject;
 				info.target = target->context.userThreadId;
 				sceGUIDReleaseObject(targetId);
 			}

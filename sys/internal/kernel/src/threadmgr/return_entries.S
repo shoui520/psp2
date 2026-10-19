@@ -8,8 +8,13 @@
 .text
 
 .macro THREAD_RETURN_ENTRY name, target
+.global \name\()Pad
+.type \name\()Pad, %function
+.thumb_func
+\name\()Pad:
 	nop
 	nop
+.size \name\()Pad, .-\name\()Pad
 .global \name
 .type \name, %function
 .thumb_func

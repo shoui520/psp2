@@ -95,6 +95,7 @@ static inline void PmonWriteUserEnable(uint32_t value)
 int pmonCpuSetEventSelf(SceUID threadId, uint32_t counter, uint32_t eventType)
 {
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	struct ThreadCB *thread;
 	int inIntr, intr, ret;
 
@@ -118,9 +119,10 @@ int pmonCpuSetEventSelf(SceUID threadId, uint32_t counter, uint32_t eventType)
 		}
 	} else if (sceGUIDReferObjectWithClass(threadId,
 			s_threadmgrRuntime.manager->threadClass,
-			(SceObjectBase **)&object) < 0) {
+			&pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
+		object = (struct ThreadmgrThreadObject *)pObject;
 		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		object->context.pRegisterContext->pmevent[counter].eventType = eventType;
 		if (object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING)
@@ -144,6 +146,7 @@ int pmonThreadChangeEnableCounter(SceUID threadId, uint32_t mask, int enable)
 {
 	struct ThreadCB *thread = PmonCpuThread();
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	uint32_t enabled;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 190);
@@ -164,8 +167,9 @@ int pmonThreadChangeEnableCounter(SceUID threadId, uint32_t mask, int enable)
 		return 0;
 	}
 	if (sceGUIDReferObjectWithClass(threadId, s_threadmgrRuntime.manager->threadClass,
-					 (SceObjectBase **)&object) < 0)
+					 &pObject) < 0)
 		return SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
+	object = (struct ThreadmgrThreadObject *)pObject;
 	sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 	if (object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING)
 		issuePMonThreadChangeCounterEnableIntrRequest(object->context.currentCpuId, threadId,
@@ -216,6 +220,7 @@ void pmonThreadSetCounterIntr(struct ThreadmgrPmonRequest *request)
 {
 	struct ThreadCB *thread;
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	SceUID threadId = request->threadId;
 	int ret;
 
@@ -232,9 +237,10 @@ void pmonThreadSetCounterIntr(struct ThreadmgrPmonRequest *request)
 		ret = 0;
 	} else if (sceGUIDReferObjectWithClass(threadId,
 			s_threadmgrRuntime.manager->threadClass,
-			(SceObjectBase **)&object) < 0) {
+			&pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
+		object = (struct ThreadmgrThreadObject *)pObject;
 		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		if (object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) {
 			issuePMonThreadSetCounterIntrRequest(object->context.currentCpuId, request);
@@ -340,6 +346,7 @@ void pmonThreadGetCounterIntr(struct ThreadmgrPmonRequest *request)
 {
 	struct ThreadCB *thread;
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	SceUID threadId = request->threadId;
 	uint32_t *out = (uint32_t *)request->value;
 	int ret;
@@ -357,9 +364,10 @@ void pmonThreadGetCounterIntr(struct ThreadmgrPmonRequest *request)
 			*out = thread->pRegisterContext->pmevent[request->counter].count;
 	} else if (sceGUIDReferObjectWithClass(threadId,
 			s_threadmgrRuntime.manager->threadClass,
-			(SceObjectBase **)&object) < 0) {
+			&pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
+		object = (struct ThreadmgrThreadObject *)pObject;
 		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		if (object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) {
 			issuePMonThreadGetCounterIntrRequest(object->context.currentCpuId, request);

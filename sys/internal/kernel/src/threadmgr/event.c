@@ -432,6 +432,7 @@ void cancelWME(ThreadmgrWaitMultipleEvents *wme)
 	ListNode *head, *link;
 	ThreadmgrEventWaitNode *node;
 	ThreadmgrEvent *event;
+	SceObjectBase *pObject;
 	SceUID eventId;
 	uint32_t i;
 
@@ -442,11 +443,12 @@ void cancelWME(ThreadmgrWaitMultipleEvents *wme)
 			node = EVENT_WAIT_NODE_FROM_LINK(link);
 			eventId = node->eventId;
 			if (sceGUIDReferObjectWithSubclass(eventId, EVENT_CLASS(),
-							    (SceObjectBase **)&event) < 0) {
+							    &pObject) < 0) {
 				SCE_DBG_PRINTF(0, 2107, "   WME cancel: deletetd event(0x%08X)\n",
 					       eventId);
 				break;
 			}
+			event = (ThreadmgrEvent *)pObject;
 			if (SceCpuForDriver_5AC9D394(&event->lock) >= 0) {
 				unlinkEventWaitNode(node, wme);
 				releaseEventWaiter(event, node, thread);

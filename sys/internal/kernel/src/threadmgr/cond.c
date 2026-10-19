@@ -847,6 +847,7 @@ int SceThreadmgrForDriver_D1FBDFA6(SceUID condId, SceKernelCondInfo *info)
 {
 	SceKernelCondInfo local;
 	ThreadmgrMutex *mutex;
+	SceObjectBase *pObject;
 	uint32_t saved;
 	SceSize size;
 	SceUID mutexId;
@@ -865,9 +866,10 @@ int SceThreadmgrForDriver_D1FBDFA6(SceUID condId, SceKernelCondInfo *info)
 			if (ThreadmgrInSyscall()) {
 				if (sceGUIDReferObjectWithClass(mutexId,
 						s_threadmgrRuntime.manager->mutexClass,
-						(SceObjectBase **)&mutex) < 0) {
+						&pObject) < 0) {
 					local.mutexId = -1;
 				} else {
+					mutex = (ThreadmgrMutex *)pObject;
 					local.mutexId = mutex->core.puid;
 					sceGUIDReleaseObject(mutexId);
 				}
@@ -932,6 +934,7 @@ int SceThreadmgrForDriver_CA704239(SceUID pid, int level, SceKernelCondInfo *inf
 {
 	SceKernelCondInfo info;
 	ThreadmgrMutex *mutex;
+	SceObjectBase *pObject;
 	SceSize got = 0;
 	SceUID *vector, mutexId;
 	int num, total, i, ret;
@@ -962,9 +965,10 @@ int SceThreadmgrForDriver_CA704239(SceUID pid, int level, SceKernelCondInfo *inf
 		mutexId = info.mutexId;
 		if (sceGUIDReferObjectWithClass(mutexId,
 				s_threadmgrRuntime.manager->mutexClass,
-				(SceObjectBase **)&mutex) < 0) {
+				&pObject) < 0) {
 			info.mutexId = -1;
 		} else {
+			mutex = (ThreadmgrMutex *)pObject;
 			info.mutexId = mutex->core.puid;
 			sceGUIDReleaseObject(mutexId);
 		}

@@ -402,6 +402,7 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 	SceProcessObject *process = NULL;
 	UIDCreateOpt opt;
 	ThreadmgrEventFlag *evf;
+	SceObjectBase *pObject;
 	uint32_t saved;
 	SceUID uid;
 	int intr;
@@ -486,7 +487,7 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	}
 	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->eventFlagClass,
-		name, &opt, (SceObjectBase **)&evf);
+		name, &opt, &pObject);
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {
 			sceKernelSpinlockLowLock(&process->resourceLock);
@@ -500,6 +501,7 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 			sceKernelSpinlockLowUnlock(&process->resourceLock);
 		}
 	} else {
+		evf = (ThreadmgrEventFlag *)pObject;
 		evf->ownerPid = ThreadmgrInSyscall() ? thread->processId : SCE_KERNEL_PROCESS_ID;
 		evf->attr = attr;
 		evf->core.pattern = initPattern;

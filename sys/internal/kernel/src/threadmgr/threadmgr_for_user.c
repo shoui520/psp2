@@ -64,6 +64,7 @@ int closeMsgPipeForUser(SceUID uid, uint32_t pattern)
 {
 	struct ThreadCB *thread;
 	ThreadmgrEvent *event;
+	SceObjectBase *pObject;
 	uint32_t attributes, version;
 	SceUID guid;
 	int intr, ret, wake;
@@ -71,10 +72,11 @@ int closeMsgPipeForUser(SceUID uid, uint32_t pattern)
 	intr = SceCpuForDriver_821FC0EE();
 	guid = SceSysmemForDriver_45D22597(0, uid);
 	if (guid < 0 || sceGUIDReferObjectWithClass(guid,
-		s_threadmgrRuntime.manager->msgPipeClass, (SceObjectBase **)&event) < 0) {
+		s_threadmgrRuntime.manager->msgPipeClass, &pObject) < 0) {
 		ret = USER_ERROR_UNKNOWN_MSG_PIPE_ID;
 		goto resume;
 	}
+	event = (ThreadmgrEvent *)pObject;
 	if (scePUIDGetAttr(0, uid, &attributes) < 0)
 		goto invalid;
 	if (!(pattern & EVENT_CLOSE_DELETE))
@@ -119,6 +121,7 @@ int closeSimpleEventForUser(SceUID uid, uint32_t pattern)
 {
 	struct ThreadCB *thread;
 	ThreadmgrEvent *event;
+	SceObjectBase *pObject;
 	uint32_t attributes, version;
 	SceUID guid;
 	int intr, ret, wake;
@@ -127,10 +130,11 @@ int closeSimpleEventForUser(SceUID uid, uint32_t pattern)
 	guid = SceSysmemForDriver_45D22597(0, uid);
 	if (guid < 0 || sceGUIDReferObjectWithClass(guid,
 		s_threadmgrRuntime.manager->simpleEventClass,
-		(SceObjectBase **)&event) < 0) {
+		&pObject) < 0) {
 		ret = USER_ERROR_UNKNOWN_SIMPLE_EVENT_ID;
 		goto resume;
 	}
+	event = (ThreadmgrEvent *)pObject;
 	if (scePUIDGetAttr(0, uid, &attributes) < 0)
 		goto invalid;
 	if (!(pattern & EVENT_CLOSE_DELETE))
@@ -1515,21 +1519,6 @@ int sceKernelGetLwCondInfoByIdForUser(SceUID condId, void *info)
 	if (guid < 0)
 		return USER_ERROR_UNKNOWN_LW_COND_ID;
 	return sceKernelGetLwCondInfo(guid, info);
-}
-
-/* the core of _sceKernelCreateTimer: the user gets a PUID */
-SceUID sceKernelCreateTimerForUser(const char *userName, SceUInt32 attr, const void *option)
-{
-	char name[32];
-	SceUID uid;
-
-	uid = copyinUIDNameWithAttr(name, userName, attr);
-	if (uid < 0)
-		return uid;
-	uid = sceKernelCreateTimer(name, attr, option);
-	if (uid < 0)
-		return uid;
-	return SceSysmemForDriver_BF209859(currentThreadContext()->processId, uid);
 }
 
 /* sceKernelGetSystemTimeLow (user) */
@@ -3992,6 +3981,7 @@ int sceKernelCloseTimerForUser(SceUID uid)
 {
 	SceKernelIntrStatus intrState = SceCpuForDriver_821FC0EE();
 	ThreadmgrUidTimer *object;
+	SceObjectBase *pObject;
 	struct ThreadCB *thread;
 	SceUID guid;
 	uint32_t attributes;
@@ -4001,8 +3991,9 @@ int sceKernelCloseTimerForUser(SceUID uid)
 
 	guid = SceSysmemForDriver_45D22597(0, uid);
 	if (guid < 0 || sceGUIDReferObjectWithClass(guid,
-		s_threadmgrRuntime.manager->timerClass, (SceObjectBase **)&object) < 0)
+		s_threadmgrRuntime.manager->timerClass, &pObject) < 0)
 		goto resume;
+	object = (ThreadmgrUidTimer *)pObject;
 	if (scePUIDGetAttr(0, uid, &attributes) < 0)
 		goto release;
 	if (!(attributes & 0x80000)) {

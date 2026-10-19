@@ -711,6 +711,7 @@ int sceKernelGetFastMutexInfo(struct ThreadmgrFastMutex *mutex, ThreadmgrFastMut
 int SceThreadmgrForDriver_AF302193(SceUID uid, ThreadmgrFastMutexInfo *info)
 {
 	struct ThreadmgrUidFastMutex *uidMutex;
+	SceObjectBase *pObject;
 	struct ThreadmgrFastMutex *mutex;
 	ThreadmgrFastMutexInfo local;
 	uint32_t saved;
@@ -725,9 +726,10 @@ int SceThreadmgrForDriver_AF302193(SceUID uid, ThreadmgrFastMutexInfo *info)
 		ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 	} else if (sceGUIDReferObjectWithClass(uid,
 			s_threadmgrRuntime.manager->fastMutexClass,
-			(SceObjectBase **)&uidMutex) < 0) {
+			&pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_FAST_MUTEX_ID;
 	} else {
+		uidMutex = (struct ThreadmgrUidFastMutex *)pObject;
 		mutex = uidMutex->workArea;
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&uidMutex->lock);
 		ret = getFastMutexInfo(mutex, &local);
@@ -749,6 +751,7 @@ int SceThreadmgrForDriver_6D4C1EB7(int level, ThreadmgrFastMutexInfo *infos, Sce
 				   SceSize *count)
 {
 	struct ThreadmgrUidFastMutex *uidMutex;
+	SceObjectBase *pObject;
 	ThreadmgrFastMutexInfo info;
 	SceSize got = 0, at;
 	SceUID *vector;
@@ -785,8 +788,9 @@ int SceThreadmgrForDriver_6D4C1EB7(int level, ThreadmgrFastMutexInfo *infos, Sce
 	for (i = 0; i < total; i++) {
 		if (sceGUIDReferObjectWithClass(vector[i],
 				s_threadmgrRuntime.manager->fastMutexClass,
-				(SceObjectBase **)&uidMutex) < 0)
+				&pObject) < 0)
 			continue;
+		uidMutex = (struct ThreadmgrUidFastMutex *)pObject;
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&uidMutex->lock);
 		num = getFastMutexInfo(uidMutex->workArea, &info);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&uidMutex->lock, intr);

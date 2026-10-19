@@ -1019,6 +1019,7 @@ int SceThreadmgrForDriver_FDC044AC(SceUID callbackId, SceKernelCallbackInfo *inf
 {
 	SceKernelCallbackInfo local;
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	SceUID threadId, puid;
 	SceSize size, got;
 	uint32_t saved;
@@ -1036,9 +1037,10 @@ int SceThreadmgrForDriver_FDC044AC(SceUID callbackId, SceKernelCallbackInfo *inf
 			if (ThreadmgrInSyscall()) {
 				threadId = local.threadId;
 				if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(),
-						(SceObjectBase **)&object) < 0) {
+						&pObject) < 0) {
 					local.threadId = -1;
 				} else {
+					object = (struct ThreadmgrThreadObject *)pObject;
 					local.threadId = object->context.userThreadId;
 					sceGUIDReleaseObject(threadId);
 				}
@@ -1108,6 +1110,7 @@ int SceThreadmgrForDriver_FF8DA217(SceUID pid, int level, SceKernelCallbackInfo 
 {
 	SceKernelCallbackInfo info;
 	struct ThreadmgrThreadObject *object;
+	SceObjectBase *pObject;
 	SceUID *vector, threadId, puid;
 	SceSize got = 0, found;
 	int num, total, i, ret;
@@ -1135,9 +1138,10 @@ int SceThreadmgrForDriver_FF8DA217(SceUID pid, int level, SceKernelCallbackInfo 
 		info.callbackId = vector[i];
 		threadId = info.threadId;
 		if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(),
-						 (SceObjectBase **)&object) < 0) {
+						 &pObject) < 0) {
 			info.threadId = -1;
 		} else {
+			object = (struct ThreadmgrThreadObject *)pObject;
 			info.threadId = object->context.userThreadId;
 			sceGUIDReleaseObject(threadId);
 		}

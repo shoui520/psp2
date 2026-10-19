@@ -544,16 +544,18 @@ static inline uint32_t countPendingTasks(const ThreadmgrWorkQueue *queue)
 int getWorkQueueInfo(SceUID workQueueId, ThreadmgrWorkQueueInfo *info)
 {
 	ThreadmgrWorkQueue *queue;
+	SceObjectBase *pObject;
 	int intr, ret;
 
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithClass(workQueueId, WORK_QUEUE_CLASS(),
-					 (SceObjectBase **)&queue) < 0) {
+					 &pObject) < 0) {
 		ret = !ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_WORK_QUEUE_ID :
 			SCE_KERNEL_ERROR_UNKNOWN_WORK_QUEUE_ID | SYSCALL_ERROR_BIT;
 	} else {
+		queue = (ThreadmgrWorkQueue *)pObject;
 		info->workQueueId = workQueueId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(workQueueId), sizeof(info->name) - 1);
 		sceKernelSpinlockLowLock(&queue->lock);
@@ -573,14 +575,16 @@ int getWorkQueueInfo(SceUID workQueueId, ThreadmgrWorkQueueInfo *info)
 int getWorkQueueInfoFull(SceUID workQueueId, ThreadmgrWorkQueueInfoFull *info)
 {
 	ThreadmgrWorkQueue *queue;
+	SceObjectBase *pObject;
 	int intr, ret;
 
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithClass(workQueueId, WORK_QUEUE_CLASS(),
-					 (SceObjectBase **)&queue) < 0) {
+					 &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_WORK_QUEUE_ID;
 		goto resume;
 	}
+	queue = (ThreadmgrWorkQueue *)pObject;
 	sceKernelSpinlockLowLock(&queue->lock);
 	if (info->size < (queue->threadCount + 0x12) * 4) {
 		ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
@@ -609,15 +613,17 @@ resume:
 int getWorkTaskInfo(SceUID workTaskId, ThreadmgrWorkTaskInfo *info)
 {
 	ThreadmgrWorkTask *task;
+	SceObjectBase *pObject;
 	int intr, ret;
 
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithClass(workTaskId, WORK_TASK_CLASS(),
-					 (SceObjectBase **)&task) < 0) {
+					 &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_WORK_TASK_ID;
 	} else {
+		task = (ThreadmgrWorkTask *)pObject;
 		info->workTaskId = workTaskId;
 		ret = 0;
 		info->creatorPid = task->cb.creatorPid;
@@ -784,6 +790,7 @@ int workQueueThread(SceSize argSize, void *argp)
 	ListNode *link;
 	ThreadmgrWorkTaskCB *cb;
 	ThreadmgrWorkTask *task;
+	SceObjectBase *pObject;
 	uint32_t wake, revalidated;
 	int intr;
 
@@ -794,8 +801,9 @@ int workQueueThread(SceSize argSize, void *argp)
 		while ((link = queue->pending.next) != &queue->pending) {
 			cb = TASK_FROM_LINK(link);
 			if (sceGUIDReferObjectWithClass(cb->guid, WORK_TASK_CLASS(),
-							 (SceObjectBase **)&task) < 0)
+							 &pObject) < 0)
 				SCE_PANIC(638);
+			task = (ThreadmgrWorkTask *)pObject;
 			ListLinkRemove(link);
 			link->next = link;
 			link->prev = link;
@@ -1336,6 +1344,7 @@ int SceThreadmgrForDriver_0B604A3C(SceUID workTaskId, ThreadmgrWorkTaskInfoShort
 {
 	ThreadmgrWorkTaskInfoShort local;
 	ThreadmgrWorkTask *task;
+	SceObjectBase *pObject;
 	SceUID puid, queueId;
 	SceSize size, got;
 	uint32_t saved;
@@ -1350,12 +1359,13 @@ int SceThreadmgrForDriver_0B604A3C(SceUID workTaskId, ThreadmgrWorkTaskInfoShort
 	local = (ThreadmgrWorkTaskInfoShort){ .size = sizeof(local) };
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithClass(workTaskId, WORK_TASK_CLASS(),
-					 (SceObjectBase **)&task) < 0) {
+					 &pObject) < 0) {
 		ret = !ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_WORK_TASK_ID :
 			SCE_KERNEL_ERROR_UNKNOWN_WORK_TASK_ID | SYSCALL_ERROR_BIT;
 		sceKernelCpuResumeIntr(intr);
 		goto restore;
 	}
+	task = (ThreadmgrWorkTask *)pObject;
 	local.workTaskId = workTaskId;
 	strncpy(local.name, SceSysmemForDriver_E655852F(workTaskId), sizeof(local.name) - 1);
 	sceKernelSpinlockLowLock(&task->cb.queue->lock);
