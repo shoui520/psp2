@@ -11,6 +11,7 @@
 #include <threadmgr/threadmgr_vfp.h>
 #include <threadmgr/threadmgr_callback.h>
 #include <processmgr/process.h>
+#include <dtrace/sce/dtrace_thread.h>
 #include <sysmem/sysmem.h>
 #include <systimer/timer_regs.h>
 #include <excpmgr/excpmgr.h>
@@ -184,7 +185,6 @@ typedef struct ThreadmgrExceptionInfo {
 	uint32_t reserved1;
 } ThreadmgrExceptionInfo;
 
-#define DTRACE_THREAD_START		0x00000004	/* __proc_:lwp__start pending */
 #define DTRACE_PROCESS_START		0x00000004	/* __proc_:start pending */
 
 /* a thread context's spinlock */

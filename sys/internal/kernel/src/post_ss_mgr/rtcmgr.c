@@ -27,7 +27,8 @@
 #define RTC_CP_SERIAL_ID_SIZE	0x80
 
 /* SceDeci4pCpup's import: NULL when no CP (SceDeci4pCpup) is there to ask */
-int (*g_rtcMgrCpup)(SceUInt32 *version, SceUInt32 *unk1, SceUInt32 *unk2) =
+int (*g_rtcMgrCpup)(SceUInt32 *protocolVersion, SceUInt32 *packageVersion,
+		    SceUInt32 *boardVersion) =
 	sceDeci4pCpupInquireVersionForDriver;	/* name unknown */
 SceUID g_rtcMgrCpMutex = -1;		/* name unknown */
 
@@ -45,13 +46,13 @@ int rtcMgrGetCpRtc(SceUInt32 *time, int physical)	/* name unknown */
 
 int _sceSblRtcMgrSetCpRtc(SceUInt32 time, int physical, const void *key)	/* name unknown */
 {
-	SceUInt32 version, unk1, unk2;
+	SceUInt32 version, packageVersion, boardVersion;
 	int ret;
 
 	if (g_rtcMgrCpup == NULL)
 		return SCE_SBL_ERROR_RTC_NO_CP;
 	SceKernelSuspendForDriver_4DF40893(0);
-	ret = sceDeci4pCpupInquireVersionForDriver(&version, &unk1, &unk2);
+	ret = sceDeci4pCpupInquireVersionForDriver(&version, &packageVersion, &boardVersion);
 	SceKernelSuspendForDriver_2BB92967(0);
 	if (ret != 0)
 		return SCE_SBL_ERROR_RTC_CP_VERSION;
@@ -111,14 +112,14 @@ int SceSblPostSsMgrForDriver_DE5150FE(SceUInt32 *time)
 
 int rtcMgrGetCpSerialId(void *serialId)	/* name unknown */
 {
-	SceUInt32 version, unk1, unk2;
+	SceUInt32 version, packageVersion, boardVersion;
 	SceSize size;
 	int ret;
 
 	if (g_rtcMgrCpup == NULL)
 		return SCE_SBL_ERROR_RTC_NO_CP;
 	SceKernelSuspendForDriver_4DF40893(0);
-	ret = sceDeci4pCpupInquireVersionForDriver(&version, &unk1, &unk2);
+	ret = sceDeci4pCpupInquireVersionForDriver(&version, &packageVersion, &boardVersion);
 	SceKernelSuspendForDriver_2BB92967(0);
 	if (ret != 0)
 		return SCE_SBL_ERROR_RTC_CP_VERSION;

@@ -100,13 +100,6 @@ typedef struct __attribute__((packed)) SyslibtraceThreadCB {
 	void *savedLr;				/* 0x04: the caller of the traced syscall */
 } SyslibtraceThreadCB;
 
-/* DTrace's per-thread state (dtraceThreadCBInit allocates it) */
-typedef struct SceDtraceThreadCB {
-	uint32_t unk00[5];
-	uint32_t flags;				/* 0x14: DTRACE_THREAD_START when allocated */
-	uint32_t unk18[4];
-} SceDtraceThreadCB;
-
 #include <processmgr/process.h>
 struct ThreadmgrExtendedStack;
 struct ThreadmgrCallback;
@@ -226,7 +219,7 @@ typedef struct ThreadCB {
 	uint32_t changeCpuCount;		/* 0x198 */
 	uint32_t savedCpuAffinityMask;		/* 0x19c: put back when a suspension ends */
 	struct SyslibtraceThreadCB *syslibtraceState;	/* 0x1a0: syslibtraceThreadCBInit's (8) */
-	struct SceDtraceThreadCB *dtraceState;	/* 0x1a4: dtraceThreadCBInit's (0x28) */
+	struct SceDtraceThreadCB *dtraceState;	/* 0x1a4: dtraceThreadCBInit's (dtrace/sce/dtrace_thread.h) */
 	SceKernelSpinlock dtraceLock;		/* 0x1a8 */
 	uint32_t magic;				/* 0x1ac: THREAD_CB_MAGIC */
 } ThreadCB;
@@ -301,7 +294,6 @@ _Static_assert(__builtin_offsetof(ThreadCB, processLink) == 0x90, "ThreadCB.proc
 _Static_assert(__builtin_offsetof(ThreadCB, addressSpace) == 0xf4, "ThreadCB.addressSpace");
 _Static_assert(__builtin_offsetof(ThreadCB, syslibtraceState) == 0x1a0, "ThreadCB.syslibtraceState");
 _Static_assert(sizeof(SyslibtraceThreadCB) == 8, "SyslibtraceThreadCB size");
-_Static_assert(sizeof(SceDtraceThreadCB) == 0x28, "SceDtraceThreadCB size");
 _Static_assert(sizeof(ThreadCB) == 0x1b0, "ThreadCB size");
 
 struct ThreadmgrWaitNode;
