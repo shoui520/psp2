@@ -114,7 +114,7 @@ static char *formatCpsr(char *text, unsigned int cpsr)
 	else
 		PUT('_');
 	it = (cpsr >> 25 & 3) | (cpsr >> 10 & 3) << 2;
-	if (unlikely(it != 0)) {
+	if (it != 0) {
 		unsigned int cond = cpsr >> 12 & 15;
 
 		PUT(' ');
