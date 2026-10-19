@@ -28,21 +28,6 @@ static const SceUInt64 g_fileSizeLimits[] = {
 	0xffffffffffffffffULL,
 };
 
-extern int UVFAT_Initialize(struct SceExfatfsSharedResource *sharedResource);
-extern int UVFAT_readallocationbitmap(struct SceExfatfsSharedResource *sharedResource,
-	struct SceExfatfsFileSystem *fileSystem);
-extern SceUInt32 UVFAT_GetFatEmptyClust(struct SceExfatfsFileSystem *fileSystem,
-	SceUInt32 cluster);
-extern int sceFatfsInitializeHeap(int reuseHeap);
-extern int sceFatfsCpInitTable(void);
-
-extern SceUInt32 _root_cluster(struct SceExfatfsFileSystem *fileSystem);
-extern void *allocateHeapBuffer(SceExfatfsDrive *unusedDrive);
-extern void freeHeapBuffer(int unused, void *buffer);
-extern void *allocateCommonHeapMemory(int unused, SceSize size);
-
-extern int sceFatfsPrepareNameset(int unused, const unsigned char *path, SceFatfsNameset **nameset);
-
 int _utf16_to_utf8(unsigned char *destination, unsigned int remaining,
 		const SceUInt16 *source)
 {
@@ -155,9 +140,6 @@ finish:
 	}
 	return result;
 }
-
-extern int sceFatfsACGetDirPermission(SceExfatfsDrive *drive,
-		unsigned char attribute);
 
 /* Sony's wrapper name is unknown; its mode helper was inlined. */
 #if FW_VERSION >= 0x04000000
@@ -605,8 +587,6 @@ void _print_fnode(SceExfatfsFnode *fnode, const char *caller)
 #endif
 }
 
-extern int _has_parent_directory(SceExfatfsFnode *fnode);
-
 int _deleted_entry(SceExfatfsFnode *fnode)
 {
 	int hasParent;
@@ -934,9 +914,6 @@ int _sceFatfsWriteModeFromStat(SceExfatfsDrive *drive, int attribute)
 	return mode;
 }
 
-extern int UVFAT_Mount(struct SceExfatfsSharedResource *sharedResource,
-	const char *devname, int mode, const SceExfatfsMountParam *mountParam);
-
 int _cache_all_fat_data_drive(SceExfatfsDrive *drive, int unused,
 		const char *devname, int unusedMode, int flags)
 {
@@ -982,9 +959,6 @@ checkSystemMount:
 	}
 	return result;
 }
-
-extern SceUInt32 getInitializedFileCount(SceExfatfsSharedResource *sharedResource);
-extern SceUInt32 getInitializedFnodeCount(SceExfatfsSharedResource *sharedResource);
 
 int _used_resource_count(SceVfsMount *mount)
 {
@@ -1096,11 +1070,6 @@ unlock:
 	}
 	return result;
 }
-
-extern int UVFAT_FinalizeLockMountPoint(SceExfatfsFileSystem *fileSystem);
-extern int releaseMediaStorage(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFileSystem *fileSystem, int mountMode);
-extern void freeCommonHeapMemory(int unused, void *memory);
 
 void _free_all_cluster_cache(SceExfatfsDrive *drive)
 {
@@ -1295,17 +1264,6 @@ SceSize getDriveClusterSize(SceExfatfsDrive *drive)
 	fileSystem = &g_sharedResource.fileSystems[mountIndex];
 	return fileSystem->sectorSize * fileSystem->clusterSectorCount;
 }
-
-extern int sceFatfsACGetRootDirAttribute(SceExfatfsDrive *drive, unsigned char *attribute);
-extern SceExfatfsFnode *UVFAT_GetFnode(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFileSystem *fileSystem, const SceUInt16 *path);
-extern int UVFAT_ReleaseFnode(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFnode *fnode);
-extern int UVFAT_SearchFile(SceExfatfsSharedResource *sharedResource,
-	SceFatfsNameset *nameset, SceExfatfsFileSystem *fileSystem,
-	SceExfatfsFnode *fnode, int search);
-extern int _set_root_cluster_and_cluster_count(SceExfatfsFnode *fnode,
-	SceUInt32 cluster, SceUInt64 size);
 
 int _sceExfatfsVopSetRoot(SceExfatfsDrive *drive, SceExfatfsFnode **root)
 {
@@ -1647,10 +1605,6 @@ int sceExfatfsVopInactive(SceExfatfsFnode *fnode)
 	return 0;
 }
 
-extern void freePathBuffer(int unused, void *buffer);
-extern int UVFAT_ToUpperBuf(SceUInt16 *destination, const SceUInt16 *source,
-	int count, SceExfatfsFileSystem *fileSystem);
-
 int sceExfatfsVopDecodePathElem(SceExfatfsDrive *drive, const unsigned char *path,
 	SceSize *offset, SceSize *length, unsigned char *destination, SceSize size)
 {
@@ -1831,9 +1785,6 @@ freeNameset:
 	return result;
 }
 
-extern int getFnodeReferenceCount(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFileSystem *fileSystem, const SceUInt16 *path);
-
 int _exfatfs_reference_count(SceExfatfsFnode *parent, const SceIoDirent *entry, int *error)
 {
 	SceExfatfsFileSystem *fileSystem;
@@ -1904,12 +1855,6 @@ finish:
 		*error = result;
 	return references;
 }
-
-extern int UVFAT_SearchFileFromDir(SceExfatfsSharedResource *sharedResource,
-	SceUInt16 *name, SceExfatfsFileSystem *fileSystem, SceExfatfsFnode *fnode);
-extern int _set_start_cluster_and_cluster_count(SceExfatfsFnode *fnode,
-	SceUInt32 cluster, SceUInt64 size);
-extern unsigned int lookupUpcaseCharacter(unsigned int unicode, SceExfatfsUpcaseTable *table);
 
 int sceExfatfsVopLookup(SceExfatfsFnode *parent, const void *suffix,
 	int suffixLength, SceExfatfsFnode **output)
@@ -2217,8 +2162,6 @@ int sceExfatfsVopGetstat(SceExfatfsFnode *fnode, SceIoStat *stat)
 	return 0;
 }
 
-extern int closeFileDescriptor(SceExfatfsSharedResource *sharedResource, unsigned int fd);
-
 #if FW_VERSION >= 0x04000000
 int sceExfatfsVopDclose(unsigned int fd)
 {
@@ -2287,10 +2230,6 @@ int sceExfatfsVopDclose(unsigned int fd)
 	return result;
 }
 #endif
-
-extern int UVFAT_FlushFdBuf(SceExfatfsFile *file, struct SceExfatfsFileSystem *fileSystem);
-extern int _exfatfs_flush_metadata(SceExfatfsSharedResource *sharedResource, SceExfatfsFnode *fnode);
-extern int flushFileSystemMetadata(struct SceExfatfsFileSystem *fileSystem);
 
 int sceExfatfsVopClose(unsigned int fd)
 {
@@ -2547,9 +2486,6 @@ static inline int _read_fd_check(unsigned int fd, const char *caller)
 #endif
 }
 
-extern int UVFAT_Read(SceExfatfsSharedResource *sharedResource,
-	unsigned int fd, void *buffer, unsigned int size);
-
 int sceExfatfsVopPread(unsigned int fd, void *buffer, unsigned int size,
 	SceOff offset, unsigned int *readSize)
 {
@@ -2636,7 +2572,6 @@ static inline int _write_fd_check(unsigned int fd, const char *caller)
 #endif
 }
 
-
 #if FW_VERSION < 0x04000000
 static inline int _check_free_count(SceExfatfsFnode *fnode, unsigned long long newSize)
 {
@@ -2682,9 +2617,6 @@ static inline int _check_free_count(SceExfatfsFnode *fnode, unsigned long long n
 	}
 }
 #endif
-
-extern int UVFAT_Write(SceExfatfsSharedResource *sharedResource,
-	unsigned int fd, const void *buffer, unsigned int size);
 
 int sceExfatfsVopPwrite(unsigned int fd, const void *buffer, unsigned int size,
 	SceOff offset, unsigned int *writeSize)
@@ -2748,11 +2680,6 @@ int sceExfatfsVopPwrite(unsigned int fd, const void *buffer, unsigned int size,
 	_write_fd_check(fd, "sceExfatfsVopPwrite(exit)");
 	return result;
 }
-
-extern int _ReserveUnusedFd(SceExfatfsSharedResource *sharedResource, int mode);
-extern int _AllocateFdBuffer(SceExfatfsFile *file);
-extern void _ReleaseFp(SceExfatfsSharedResource *sharedResource, SceExfatfsFile *file);
-extern void _flush_fd_cache(SceExfatfsSharedResource *sharedResource, SceExfatfsFnode *fnode);
 
 SceExfatfsFile *_exfatfs_open_common(SceExfatfsFnode *fnode, int mode,
 	SceExfatfsSharedResource *sharedResource, int *error)
@@ -2892,9 +2819,6 @@ static inline int _directory_fd_check(unsigned int fd, const char *caller)
 	return 0;
 #endif
 }
-
-extern int UVFAT_InitFd(SceExfatfsSharedResource *sharedResource,
-	unsigned int fd, struct SceExfatfsFileSystem *fileSystem);
 
 int sceExfatfsVopDopen(SceExfatfsFnode *fnode, unsigned int *fd)
 {
@@ -3137,19 +3061,6 @@ int sceExfatfsVopOpen(SceExfatfsFnode *fnode, int flags, int *fd)
 	return 0;
 }
 
-extern int initializeFnode(SceExfatfsFnode *fnode);
-extern int UVFAT_SearchGetFile_ex(int mode, SceExfatfsSharedResource *sharedResource,
-	SceUInt16 *filename, struct SceExfatfsFileSystem *fileSystem,
-	SceExfatfsFnode *fnode, int flags);
-extern int _ReadDir_fat(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFile *file, SceUInt16 *filename, SceExfatfsStat *stat,
-	unsigned char *shortName, int flags);
-extern int sceFatfsACCheckRDirEntry(SceExfatfsDrive *drive, unsigned char attribute);
-extern int codepageToUtf16(SceUInt16 *destination, int capacity,
-	const unsigned char *source);
-extern int utf16ToUtf8(unsigned char *destination, unsigned int capacity,
-	const SceUInt16 *source);
-
 int sceExfatfsVopDread(unsigned int fd, SceIoDirent *dirent)
 {
 	SceExfatfsFile *file;
@@ -3347,13 +3258,6 @@ free_filename:
 	freeHeapBuffer((int)fileSystem->drive, filename);
 	return result;
 }
-
-extern int sceFatfsACSetFSAttributeByPermission(SceExfatfsDrive *drive,
-	SceUInt32 permission, unsigned char *attribute);
-extern int applyFatAttributeToStat(SceExfatfsDrive *drive,
-	unsigned char attribute, SceExfatfsStat *stat);
-extern int _Update_FAT_Size(SceExfatfsFnode *fnode, SceExfatfsStat *stat,
-	unsigned int updateTime, SceExfatfsSharedResource *sharedResource);
 
 int _chstat_setup(SceExfatfsFnode *fnode, SceIoStat *stat, unsigned int bits)
 {
@@ -3666,11 +3570,6 @@ void _exfatfs_set_whiteout_bit(SceExfatfsFnode *fnode)
 	fnode->flags |= 1;
 }
 
-extern int UVFAT_FreeClusterLink(SceExfatfsSharedResource *sharedResource,
-	struct SceExfatfsFileSystem *fileSystem, SceUInt32 cluster);
-extern int UVFAT_FreeClusterLink_ex_NFC(SceExfatfsSharedResource *sharedResource,
-	struct SceExfatfsFileSystem *fileSystem, SceExfatfsStat *stat, SceUInt32 cluster);
-
 int _exfatfs_free_cluster_link(SceExfatfsFnode *fnode, SceUInt32 cluster)
 {
 	struct SceExfatfsFileSystem *fileSystem = fnode->fileSystem;
@@ -3722,10 +3621,6 @@ int _exfatfs_free_cluster_link(SceExfatfsFnode *fnode, SceUInt32 cluster)
 	}
 	return 0;
 }
-
-extern int UVFAT_UnLinkFromDir(SceExfatfsSharedResource *sharedResource,
-	SceUInt16 *fileName, struct SceExfatfsFileSystem *fileSystem,
-	SceExfatfsFnode *fnode);
 
 int sceExfatfsVopRemove(SceExfatfsFnode *parent_fnode, SceExfatfsFnode *fnode)
 {
@@ -3848,15 +3743,6 @@ int sceExfatfsVopRemove(SceExfatfsFnode *parent_fnode, SceExfatfsFnode *fnode)
 	return result;
 }
 
-extern int UVFAT_InitDirEntry(SceExfatfsSharedResource *sharedResource,
-	int fd, SceUInt32 cluster, struct SceExfatfsFileSystem *fileSystem);
-extern int UVFAT_InitDirEntry_ex(SceExfatfsSharedResource *sharedResource,
-	int fd, SceUInt32 cluster, struct SceExfatfsFileSystem *fileSystem,
-	unsigned int flags, SceUInt32 size);
-extern int _exfatfs_search_next_short_name(SceExfatfsSharedResource *sharedResource,
-	int fd, struct SceExfatfsFileSystem *fileSystem, unsigned char *entry);
-extern int _exfatfs_release_temporal_file(struct SceExfatfsFileSystem *fileSystem);
-
 int _check_empty_directory(SceExfatfsFnode *parent_fnode, SceExfatfsFnode *fnode)
 {
 	struct SceExfatfsFileSystem *fileSystem = fnode->fileSystem;
@@ -3865,7 +3751,7 @@ int _check_empty_directory(SceExfatfsFnode *parent_fnode, SceExfatfsFnode *fnode
 	SceExfatfsDrive *drive;
 	SceFatfsNameset *nameset, *preparedNameset;
 	SceUInt32 startCluster;
-	unsigned char entry[32];
+	SceExfatfsFatDirectoryEntry entry;
 	unsigned char *path;
 	int result;
 #if FW_VERSION < 0x04000000
@@ -3957,7 +3843,7 @@ int _check_empty_directory(SceExfatfsFnode *parent_fnode, SceExfatfsFnode *fnode
 #endif
 			goto checked;
 		}
-		result = _exfatfs_search_next_short_name(&g_sharedResource, 0, directoryFileSystem, entry);
+		result = _exfatfs_search_next_short_name(&g_sharedResource, 0, directoryFileSystem, &entry);
 	}
 	if (result == -7)
 		result = -4;
@@ -4023,10 +3909,6 @@ checked:
 	freeHeapBuffer((int)drive, preparedNameset);
 	return result;
 }
-
-extern int UVFAT_MakeDir_vop(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFnode *parent, SceFatfsNameset *nameset, int mode,
-	SceExfatfsFnode *fnode);
 
 int sceExfatfsVopMkdir(SceExfatfsFnode *parent, const void *suffix,
 	int suffixLength, int mode, SceExfatfsFnode **output)
@@ -4196,10 +4078,6 @@ free_nameset:
 	freeHeapBuffer((int)drive, preparedNameset);
 	return result;
 }
-
-extern int UVFAT_Create(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFnode *parent, SceFatfsNameset *nameset, int mode,
-	SceExfatfsFnode **fnode);
 
 int sceExfatfsVopCreate(SceExfatfsFnode *parent, const void *suffix,
 	int suffixLength, int mode, SceExfatfsFnode **output)
@@ -4491,13 +4369,6 @@ deleted:
 #endif
 }
 
-extern int UVFAT_LinkFromDir_ex(SceExfatfsSharedResource *sharedResource,
-	const SceUInt16 *fileName, SceExfatfsFileSystem *fileSystem,
-	SceExfatfsFnode *fnode, SceExfatfsFnode *parent);
-extern int _change_path_element(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFileSystem *fileSystem, const SceUInt16 *oldPath,
-	int keepLength, SceExfatfsFnode *fnode);
-
 int sceExfatfsVopRename(SceExfatfsFnode *oldFnode, SceExfatfsFnode *parent,
 	const void *suffix, int suffixLength, SceExfatfsFnode **output)
 {
@@ -4700,8 +4571,6 @@ free_namesets:
 	return result;
 }
 
-extern int initializeFatDateTime(SceExfatfsDateTime *dateTime);
-
 int _VopGetstatRootdir(SceExfatfsDrive *drive, SceIoStat *output)
 {
 	unsigned char attribute = 0;
@@ -4843,9 +4712,6 @@ success:
 finish:
 	return result;
 }
-
-extern SceExfatfsFile *invalidateFileCachePosition(SceExfatfsFile *file);
-extern int exfatfs_cleanup_device_file_buffer(SceExfatfsDrive *drive);
 
 int sceExfatfsVopCleanup(SceExfatfsFnode *fnode, SceUInt32 fd)
 {
@@ -5028,8 +4894,6 @@ flush_metadata:
 	return result;
 }
 
-extern void _FreeFpCache(SceExfatfsFile *file);
-
 int sceExfatfsVopUmount(SceExfatfsDrive *drive, int mode)
 {
 	SceExfatfsFileSystem *fileSystem;
@@ -5199,9 +5063,6 @@ failed:
 	return result;
 }
 
-extern int _exfatfs_get_devinf(SceExfatfsFileSystem *fileSystem,
-	void *information, SceSize informationSize, SceExfatfsSharedResource *sharedResource);
-
 int exfatfs_get_drive_information(SceExfatfsDrive *drive, void *information,
 	SceSize informationSize)
 {
@@ -5290,10 +5151,6 @@ int exfatfs_get_file_size_limit(SceExfatfsDrive *drive, SceUInt64 *limit)
 	*limit = type <= 1 ? g_fileSizeLimits[type] : 0;
 	return 0;
 }
-
-extern int _exfatfs_set_fake_free(SceExfatfsFileSystem *fileSystem,
-	SceExfatfsSharedResource *resource, SceUInt64 fakeFree,
-	SceExfatfsSharedResource *sharedResource);
 
 int exfatfs_set_fake_free(SceExfatfsDrive *drive, SceUInt64 fakeFree)
 {

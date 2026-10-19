@@ -118,9 +118,6 @@ closed:
 }
 #endif
 
-extern int _VopGetstatRootdir(SceExfatfsDrive *drive, SceIoStat *stat);
-extern int _sceExfatfsVopGetRoot(SceExfatfsDrive *drive, SceExfatfsFnode **root);
-
 #if FW_VERSION >= 0x04000000
 extern int get_new_vnode(SceVfsMount *mount, SceVfsVnode **output);
 #else
@@ -214,17 +211,6 @@ int exfatfs_vfs_get_root(SceVfsOpGetRootArgs *argp)
 	return result;
 }
 
-extern SceExfatfsFnode *getDriveWhiteoutDirectory(SceExfatfsDrive *drive);
-extern int sceExfatfsVopDopen(SceExfatfsFnode *fnode, unsigned int *fd);
-extern int sceExfatfsVopDread(unsigned int fd, SceIoDirent *entry);
-extern int sceExfatfsVopDclose(unsigned int fd);
-extern int _exfatfs_reference_count(SceExfatfsFnode *parent, const SceIoDirent *entry, int *error);
-extern int sceExfatfsVopLookup(SceExfatfsFnode *parent, const void *suffix,
-	int suffixLength, SceExfatfsFnode **output);
-extern int sceExfatfsVopRemove(SceExfatfsFnode *parent, SceExfatfsFnode *fnode);
-extern int _check_empty_directory(SceExfatfsFnode *parent, SceExfatfsFnode *fnode);
-extern int sceExfatfsVopInactive(SceExfatfsFnode *fnode);
-
 int _delete_whiteout_entry_core(SceExfatfsDrive *drive)
 {
 	SceExfatfsFnode *directory = getDriveWhiteoutDirectory(drive);
@@ -295,9 +281,6 @@ int _delete_whiteout_entry_core(SceExfatfsDrive *drive)
 	return result;
 }
 
-extern int sceFatfsACGetRootDirAttribute(SceExfatfsDrive *drive, unsigned char *attribute);
-extern int _sceExfatfsVopSetRoot(SceExfatfsDrive *drive, SceExfatfsFnode **root);
-
 int exfatfs_vfs_set_root(SceVfsOpSetRootArgs *argp)
 {
 	SceVfsMount *mount = argp->mnt;
@@ -324,9 +307,6 @@ int exfatfs_vfs_set_root(SceVfsOpSetRootArgs *argp)
 	vfsUnlockVnode(vnode);
 	return result;
 }
-
-extern int sceFatfsFinalizeHeap(int reuseHeap);
-extern void freeCommonHeapMemory(int unused, void *memory);
 
 void _cleanup_after_umount(SceExfatfsDrive *drive)
 {
@@ -424,8 +404,6 @@ static inline int _lock_drive_information(SceVfsMount *mount, const char *functi
 }
 #endif
 
-extern int sceExfatfsVopUmount(SceExfatfsDrive *drive, unsigned int mode);
-
 int exfatfs_vfs_umount(SceVfsOpUmountArgs *argp)
 {
 	SceVfsMount *mount = argp->mnt;
@@ -472,9 +450,6 @@ int exfatfs_vfs_umount(SceVfsOpUmountArgs *argp)
 			"%s: sceKernelUnlockFastMutex failed[%#x]\n", "exfatfs_vfs_umount", error);
 	return result;
 }
-
-extern int sceExfatfsVopDecodePathElem(SceExfatfsDrive *drive, const unsigned char *path,
-	SceSize *offset, SceSize *length, unsigned char *destination, SceSize size);
 
 int exfatfs_vfs_decode_path_elem(SceVfsOpDecodePathElemArgs *argp)
 {
@@ -579,10 +554,6 @@ complete:
 	return result;
 }
 
-extern SceExfatfsFnode *getWhiteoutDirectory(SceExfatfsFnode *fnode);
-extern int sceExfatfsVopRename(SceExfatfsFnode *oldFnode, SceExfatfsFnode *parent,
-	const void *suffix, int suffixLength, SceExfatfsFnode **output);
-
 int _exfatfs_rename(SceVfsVnode *vnode, SceExfatfsFnode *parent,
 	SceVfsPath *path, SceExfatfsFnode **output)
 {
@@ -664,12 +635,6 @@ static inline void _exfatfs_lookup_rollback(SceVfsVnode *vnode, SceExfatfsFnode 
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
 			"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_exfatfs_lookup_rollback", result);
 }
-
-extern int sceFatfsACSetFSAttributeByPermission(SceExfatfsDrive *drive,
-	SceUInt32 permission, unsigned char *attribute);
-extern int sceExfatfsVopCreate(SceExfatfsFnode *parent, const void *suffix,
-	int suffixLength, int mode, SceExfatfsFnode **output);
-extern SceUInt64 fnodeToFileId(const SceExfatfsFnode *fnode);
 
 int _exfatfs_create(SceVopCreateArgs *argp)
 {
@@ -799,9 +764,6 @@ int _exfatfs_create(SceVopCreateArgs *argp)
 	*output = vnode;
 	return result;
 }
-
-extern int sceExfatfsVopMkdir(SceExfatfsFnode *parent, const void *suffix,
-	int suffixLength, int mode, SceExfatfsFnode **output);
 
 int _exfatfs_mkdir(SceVopMkdirArgs *argp)
 {
@@ -1018,10 +980,6 @@ int exfatfs_vop_dopen(SceVopDopenArgs *argp)
 	return result;
 }
 
-extern void *allocateHeapBuffer(SceExfatfsDrive *unusedDrive);
-extern void freeHeapBuffer(int unused, void *buffer);
-extern int sceExfatfsVopGetstat(SceExfatfsFnode *fnode, SceIoStat *stat);
-
 int exfatfs_vop_lookup(SceVopLookupArgs *argp)
 {
 	SceVfsVnode *parent = argp->dvp;
@@ -1141,8 +1099,6 @@ failed:
 	return result;
 }
 
-extern int sceFatfsACCheckRDirEntry(SceExfatfsDrive *drive, unsigned char attribute);
-
 /* Both release stat operations inline this common access and locking path. */
 #if FW_VERSION >= 0x04000000
 int _exfatfs_getstat_common(SceVfsVnode *vnode, SceIoStat *stat, const char *function)
@@ -1205,9 +1161,6 @@ int exfatfs_vop_getstat(SceVopGetstatArgs *argp)
 	return _exfatfs_getstat_common(vnode, stat, "exfatfs_vop_getstat");
 }
 
-extern int sceExfatfsVopOpen(SceExfatfsFnode *fnode, int flags, int *fd);
-extern int _exfatfs_renamed_file(const SceExfatfsFnode *vnode, const SceExfatfsFnode *file);
-
 static inline void _file_size_sync_check(SceVfsVnode *vnode, SceVfsFile *file, const char *function)
 {
 	if (vnode != file->vnode) {
@@ -1246,8 +1199,6 @@ int exfatfs_vop_open(SceVopOpenArgs *argp)
 	}
 	return result;
 }
-
-extern int sceExfatfsVopLseek(unsigned int fd, SceOff offset, int whence, SceOff *position);
 
 static inline void _file_size_check_before_lseek(SceVfsVnode *vnode, SceVfsFile *file)
 {
@@ -1297,12 +1248,6 @@ SceOff exfatfs_vop_lseek(SceVopLseekArgs *argp)
 	file->fpos = position;
 	return position;
 }
-
-extern int validateDateTime(const SceExfatfsDateTime *dateTime);
-extern int sceFatfsACSetFSAttributeByAttribute(SceExfatfsDrive *drive,
-	unsigned char attribute, unsigned char *output);
-extern int _chstat_setup(SceExfatfsFnode *fnode, SceIoStat *stat, unsigned int bits);
-extern SceOff _exfatfs_vnode_size(SceExfatfsFnode *fnode);
 
 int _exfatfs_chstat_common(SceVfsVnode *vnode, SceIoStat *stat, unsigned int bits)
 {
@@ -1501,13 +1446,6 @@ int exfatfs_vop_rmdir(SceVopRmdirArgs *argp)
 	}
 	return result;
 }
-
-extern int exfatfs_get_drive_information(SceExfatfsDrive *drive, void *information, int size);
-extern int exfatfs_get_file_size_limit(SceExfatfsDrive *drive, SceUInt64 *limit);
-extern int exfatfs_set_fake_free(SceExfatfsDrive *drive, SceUInt64 freeSize);
-extern int exfatfs_clear_fake_free(SceExfatfsDrive *drive);
-extern int checkDriveWritable(SceExfatfsDrive *drive);
-extern void _exfatfs_set_whiteout_directory(SceExfatfsFnode *fnode);
 
 int exfatfs_vfs_devctl(SceVfsOpDevctlArg *argp)
 {
@@ -1710,8 +1648,6 @@ int exfatfs_vfs_devctl(SceVfsOpDevctlArg *argp)
 	return result;
 }
 
-extern int sceExfatfsVopLink(SceExfatfsFnode *from, SceExfatfsFnode *to);
-
 int exfatfs_vop_link(SceVopLinkArgs *argp)
 {
 	SceVfsVnode *from = argp->fvp;
@@ -1804,8 +1740,6 @@ static inline int lockDriveInformationAllowUnmount(SceVfsMount *mount, int allow
 }
 #endif
 
-extern int sceExfatfsVopCleanup(SceExfatfsFnode *fnode, SceUInt32 fd);
-
 int exfatfs_vop_cleanup(SceVopCleanupArgs *argp)
 {
 	SceVfsVnode *vnode = argp->vp;
@@ -1848,8 +1782,6 @@ int exfatfs_vop_cleanup(SceVopCleanupArgs *argp)
 	}
 	return result;
 }
-
-extern int sceExfatfsVopSync(SceExfatfsFnode *fnode, SceUInt32 fd, int flags);
 
 int exfatfs_vop_sync(SceVopSyncArgs *argp)
 {
@@ -1901,8 +1833,6 @@ int exfatfs_vop_sync(SceVopSyncArgs *argp)
 	return result;
 }
 
-extern int _exfatfs_flush_all_data(SceExfatfsDrive *drive);
-
 int exfatfs_vfs_sync(SceVfsOpSyncArgs *argp)
 {
 	SceVfsMount *mount = argp->mnt;
@@ -1940,9 +1870,6 @@ int exfatfs_vfs_sync(SceVfsOpSyncArgs *argp)
 	}
 	return result;
 }
-
-extern int sceExfatfsVopPread(unsigned int fd, void *buffer, unsigned int size,
-	SceOff offset, unsigned int *readSize);
 
 int exfatfs_vop_read(SceVopReadArgs *argp)
 {
@@ -1983,10 +1910,6 @@ int exfatfs_vop_read(SceVopReadArgs *argp)
 	}
 	return result;
 }
-
-extern int sceExfatfsVopPwrite(unsigned int fd, const void *buffer, unsigned int size,
-	SceOff offset, unsigned int *writeSize);
-extern SceOff _exfatfs_file_size(unsigned int fd);
 
 int exfatfs_vop_write(SceVopWriteArgs *argp)
 {
@@ -2137,9 +2060,6 @@ int exfatfs_vop_pwrite(SceVopPwriteArgs *argp)
 	return result;
 }
 
-extern int probeWhiteoutDestination(SceExfatfsFnode *parent, const SceVfsPath *path);
-extern void _exfatfs_set_whiteout_bit(SceExfatfsFnode *fnode);
-
 int exfatfs_vop_whiteout(SceVopWhiteoutArgs *argp)
 {
 	SceVfsVnode *parent = argp->dvp;
@@ -2185,13 +2105,7 @@ int exfatfs_vop_whiteout(SceVopWhiteoutArgs *argp)
 	return result;
 }
 
-extern int sceFatfsInitializeHeap(int reuseHeap);
-extern void *allocateCommonHeapMemory(int unused, SceSize size);
-extern int _cache_all_fat_data_drive(SceExfatfsDrive *drive, int unused,
-	const char *devname, int unusedMode, int flags);
-extern SceSize getDriveClusterSize(SceExfatfsDrive *drive);
 extern int initializeLegacyDrive(SceExfatfsDrive *drive);
-extern void _free_all_cluster_cache(SceExfatfsDrive *drive);
 
 int exfatfs_vfs_mount(SceVfsOpMountArgs *argp)
 {
@@ -2413,10 +2327,6 @@ finalizeDrive:
 	return result;
 }
 
-extern int sceExfatfsVopClose(unsigned int fd);
-extern int _used_resource_count(SceVfsMount *mount);
-extern void _free_all_cluster_cache(SceExfatfsDrive *drive);
-
 int exfatfs_vop_close(SceVopCloseArgs *argp)
 {
 	SceVfsVnode *vnode = argp->vp;
@@ -2472,8 +2382,6 @@ closed:
 		file->fd = 0;
 	return result;
 }
-
-extern void _clear_whiteout_directory(SceExfatfsFnode *fnode);
 
 int exfatfs_vop_inactive(SceVopInactiveArgs *argp)
 {
@@ -2546,8 +2454,6 @@ unlock:
 	return result;
 }
 
-extern int sceExfatfsVopDclose(unsigned int fd);
-
 int exfatfs_vop_dclose(SceVopDcloseArgs *argp)
 {
 	SceVfsVnode *vnode = argp->vp;
@@ -2601,8 +2507,6 @@ closed:
 		file->fd = 0;
 	return result;
 }
-
-extern int sceExfatfsVopUnlink(SceExfatfsFnode *from, SceExfatfsFnode *to);
 
 int exfatfs_vop_unlink(SceVopUnlinkArgs *argp)
 {
@@ -2689,7 +2593,7 @@ void _exfatfs_notify_broken_cluster_chain(SceExfatfsDrive *drive,
 }
 
 void _exfatfs_notify_invalid_directory_entry(SceExfatfsDrive *drive,
-	const unsigned char *entry)
+	const SceExfatfsFatDirectoryEntry *entry)
 {
 	SceVfsMountData *mountData = drive->deviceInfo.mount_misc;
 	IoErrorEventInfo info;
@@ -2704,7 +2608,7 @@ void _exfatfs_notify_invalid_directory_entry(SceExfatfsDrive *drive,
 	info.reserved1[1] = 0;
 	SCE_DBG_PRINTF_LEVEL(1, 0, 305,
 		"%s: invalid directory entry found, first byte[%#x], assignName(%s), mntId[%#x], error[%#x]\n",
-		"_exfatfs_notify_invalid_directory_entry", *entry, mountData->assignName,
+		"_exfatfs_notify_invalid_directory_entry", entry->name[0], mountData->assignName,
 		info.mntId, 0x808d0008);
 	result = sceIoSetErrorEvent(mountData->mntId, 1, &info);
 	if (result < 0)

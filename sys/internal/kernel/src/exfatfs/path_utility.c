@@ -4,18 +4,6 @@
 #include <sysmem/debug.h>
 #include "exfatfs_internal.h"
 
-extern void *allocateHeapBuffer(SceExfatfsDrive *unusedDrive);
-extern void freeHeapBuffer(int unused, void *buffer);
-extern int utf16Length(const SceUInt16 *string);
-extern SceUInt16 *utf16CopyBounded(SceUInt16 *destination,
-		const SceUInt16 *source, unsigned int count);
-extern SceUInt16 *utf16Copy(SceUInt16 *destination, const SceUInt16 *source);
-extern SceUInt16 *utf16FindChar(SceUInt16 *string, int character);
-extern int utf16ToCodepage(unsigned char *destination, int capacity,
-		const SceUInt16 *source);
-extern int isUnicodeDoubleByte(unsigned int unicode);
-extern int isCodepageDoubleByte(const unsigned char *source);
-
 int utf8ToUtf16(void *destination, unsigned int capacity,
 		const unsigned char *source)
 {

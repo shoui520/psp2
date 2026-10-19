@@ -1,13 +1,6 @@
 #include <sysmem/debug.h>
 #include "exfatfs_internal.h"
 
-extern int UVFAT_InitDirEntry_ex(SceExfatfsSharedResource *sharedResource,
-	int fd, SceUInt32 cluster, SceExfatfsFileSystem *fileSystem,
-	unsigned int flags, SceUInt32 size);
-extern int UVFAT_ReadDirEntry(SceExfatfsSharedResource *sharedResource,
-	int fd, void *entry, int flags, SceExfatfsFileSystem *fileSystem);
-extern int _exfatfs_release_temporal_file(SceExfatfsFileSystem *fileSystem);
-
 int _check_allocation_bitmap(SceExfatfsSharedResource *sharedResource,
 	SceExfatfsFileSystem *fileSystem)
 {
@@ -60,18 +53,6 @@ found:
 	fileSystem->bitmapSize = ((SceUInt64)lengthHigh << 32) | lengthLow;
 	return result;
 }
-
-extern int hasCachedFreeClusterCount(SceExfatfsFileSystem *fileSystem);
-extern void cacheFreeClusterCount(SceExfatfsFileSystem *fileSystem, SceUInt32 count);
-extern SceUInt64 clusterToDeviceSector(SceUInt32 cluster,
-	SceExfatfsFileSystem *fileSystem);
-extern SceUInt32 UVFAT_NextCluster(SceExfatfsSharedResource *sharedResource,
-	SceUInt32 cluster, SceExfatfsFileSystem *fileSystem);
-extern int UVFAT_ReadDevice(SceExfatfsFileSystem *fileSystem, SceUInt64 sector,
-	SceSize size, void *buffer);
-extern int UVFAT_WriteDevice(SceExfatfsFileSystem *fileSystem, SceUInt64 sector,
-	SceSize size, const void *buffer);
-extern void *allocateFatBuffer(unsigned int size);
 
 int UVFAT_readallocationbitmap(SceExfatfsSharedResource *sharedResource,
 	SceExfatfsFileSystem *fileSystem)
@@ -216,9 +197,6 @@ int updateallocbitmaps(SceExfatfsFileSystem *fileSystem)
 		fileSystem->bitmapDirty = 0;
 	return result;
 }
-
-extern void accountAllocatedCluster(SceExfatfsFileSystem *fileSystem, SceUInt32 cluster);
-extern void accountFreedCluster(SceExfatfsFileSystem *fileSystem, SceUInt32 cluster);
 
 int UVFAT_allocationbitmapentry(SceExfatfsSharedResource *sharedResource,
 	int mode, SceExfatfsFileSystem *fileSystem, SceUInt32 cluster, SceUInt32 *value)

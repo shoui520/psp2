@@ -4,18 +4,11 @@
 #include <sysmem/debug.h>
 #include "exfatfs_internal.h"
 
-
 typedef struct SceExfatfsDeviceInfo {
 	SceIoDevInfo base;
 	SceUInt32 volumeSerial;
 	unsigned char volumeLabel[12];
 } SceExfatfsDeviceInfo;
-
-extern int UVFAT_readallocationbitmap(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFileSystem *fileSystem);
-extern int UVFAT_GetFreeClusterCount(SceExfatfsFileSystem *fileSystem,
-	SceUInt32 *count);
-extern int exfatfsErrorToIoError(int error);
 
 int _exfatfs_get_devinf(SceExfatfsFileSystem *fileSystem, void *information,
 	SceSize informationSize, SceExfatfsSharedResource *sharedResource)

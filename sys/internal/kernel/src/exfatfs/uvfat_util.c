@@ -3,18 +3,6 @@
 #include <sysmem/debug.h>
 #include "exfatfs_internal.h"
 
-extern SceExfatfsFnode *UVFAT_GetParentFnode(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFileSystem *fileSystem, const SceUInt16 *path);
-extern int UVFAT_ReleaseFnode(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFnode *fnode);
-extern void _print_fnode(SceExfatfsFnode *fnode, const char *caller);
-extern int UVFAT_SearchFile(SceExfatfsSharedResource *sharedResource,
-	SceFatfsNameset *nameset, SceExfatfsFileSystem *fileSystem,
-	SceExfatfsFnode *fnode, int search);
-extern int _UVFAT_SearchFile_from_root(SceExfatfsSharedResource *sharedResource,
-	SceFatfsNameset *nameset, SceExfatfsFileSystem **fileSystem,
-	SceExfatfsFnode *fnode, SceExfatfsFnode *parent);
-
 void _check_parent_directory_data(SceExfatfsFnode *fnode,
 	SceExfatfsSharedResource *sharedResource)
 {
@@ -69,7 +57,7 @@ void _check_parent_directory_data(SceExfatfsFnode *fnode,
 						&fnode->fileSystem, parent, temporary);
 				else
 					result = UVFAT_SearchFile(sharedResource, &nameset,
-						fnode->fileSystem, parent, (int)temporary);
+						fnode->fileSystem, parent, temporary);
 				UVFAT_ReleaseFnode(sharedResource, temporary);
 			} else {
 				SCE_DBG_PRINTF_LEVEL(1, 0, 519, "%s: FilePath[1] == 0, root_dir\n",
@@ -125,32 +113,6 @@ no_parent:
 		SCE_DBG_PRINTF_LEVEL(1, 0, 492, "%s: no parentFnode\n",
 			"_check_parent_directory_data");
 }
-
-extern SceUInt32 fileSystemClusterSize(SceExfatfsFileSystem *fileSystem);
-extern SceUInt32 contiguousClusterAtIndex(SceExfatfsFileSystem *fileSystem,
-	SceUInt32 start, SceUInt32 index, SceUInt64 size);
-extern SceUInt32 nextContiguousCluster(SceExfatfsFileSystem *fileSystem,
-	SceExfatfsStat *stat, SceUInt32 cluster);
-extern SceUInt32 UVFAT_NextCluster(SceExfatfsSharedResource *sharedResource,
-	SceUInt32 cluster, SceExfatfsFileSystem *fileSystem);
-extern void _exfatfs_notify_broken_cluster_chain(SceExfatfsDrive *drive,
-	SceUInt32 cluster, SceUInt32 next);
-extern SceExfatfsFile *_exfatfs_open_common(SceExfatfsFnode *fnode, int mode,
-	SceExfatfsSharedResource *sharedResource, int *error);
-extern int UVFAT_WriteData(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFileSystem *fileSystem, SceExfatfsFile *file,
-	const void *buffer, unsigned int size, int mode, void *result);
-extern int UVFAT_FlushFdBuf(SceExfatfsFile *file, SceExfatfsFileSystem *fileSystem);
-extern void _ReleaseFp(SceExfatfsSharedResource *sharedResource, SceExfatfsFile *file);
-extern int _exfatfs_flush_metadata(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFnode *fnode);
-extern int flushFileSystemMetadata(SceExfatfsFileSystem *fileSystem);
-extern int UVFAT_SetEOF(SceExfatfsFileSystem *fileSystem, SceUInt32 cluster);
-extern int UVFAT_FreeClusterLink(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFileSystem *fileSystem, SceUInt32 cluster);
-extern int UVFAT_FreeClusterLink_ex_NFC(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFileSystem *fileSystem, SceExfatfsStat *stat, SceUInt32 cluster);
-extern void _invalidate_cluster_cache_data(SceExfatfsFnode *fnode);
 
 int _Update_FAT_Size(SceExfatfsFnode *fnode, SceExfatfsStat *stat,
 	unsigned int updateTime, SceExfatfsSharedResource *sharedResource)
@@ -331,29 +293,6 @@ error_flush:
 		fnode->flags &= ~4;
 	return result;
 }
-
-extern int sceFatfsACSetFSAttributeByPermission(SceExfatfsDrive *drive,
-	SceUInt32 permission, unsigned char *attribute);
-extern int applyFatAttributeToStat(SceExfatfsDrive *drive,
-	unsigned char attribute, SceExfatfsStat *stat);
-extern int sceFatfsACGetDirPermission(SceExfatfsDrive *drive, unsigned char attribute);
-extern int sceFatfsACGetFSAttributeByThreadAccessLevel(SceExfatfsDrive *drive,
-	SceUInt32 accessLevel, SceUInt32 permission, unsigned char *attribute);
-extern void getCurrentFatDateTime(SceExfatfsDateTime *dateTime);
-extern void touchFnodeModificationTime(SceExfatfsFnode *fnode);
-extern unsigned int fatDateTimeToTime(SceExfatfsDateTime *dateTime);
-extern unsigned int UVFAT_TimeToFATDate(SceExfatfsDateTime *dateTime);
-extern SceUInt32 UVFAT_SearchEmptyCluster(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFileSystem *fileSystem, SceUInt32 start);
-extern int UVFAT_WriteCblock(SceUInt32 cluster, SceUInt32 block,
-	SceExfatfsFileSystem *fileSystem, void *buffer);
-extern int UVFAT_allocationbitmapentry(SceExfatfsSharedResource *sharedResource,
-	int mode, SceExfatfsFileSystem *fileSystem, SceUInt32 cluster, SceUInt32 *value);
-extern int UVFAT_LinkFromDir_ex(SceExfatfsSharedResource *sharedResource,
-	SceUInt16 *fileName, SceExfatfsFileSystem *fileSystem,
-	SceExfatfsFnode *fnode, SceExfatfsFnode *parent);
-extern int UVFAT_SetGetFAT(SceExfatfsFileSystem *fileSystem, int mode,
-	SceUInt32 cluster, SceUInt32 *value);
 
 int UVFAT_MakeDir_vop(SceExfatfsSharedResource *sharedResource,
 	SceExfatfsFnode *parent, SceFatfsNameset *nameset, unsigned int mode,

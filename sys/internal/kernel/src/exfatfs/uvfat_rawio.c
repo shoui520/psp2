@@ -5,21 +5,7 @@
 #include <scetypes.h>
 #include <threadmgr/threadmgr.h>
 
-extern void *allocateFatBuffer(SceSize size);
-extern void freeFatBuffer(void *buffer, SceSize size);
-extern void touchFnodeModificationTime(SceExfatfsFnode *fnode);
-extern SceUInt32 getInitializedFileCount(SceExfatfsSharedResource *sharedResource);
-extern void freeUpcaseStorage(SceExfatfsFileSystem *fileSystem);
-extern int updateallocbitmaps(SceExfatfsFileSystem *fileSystem);
 extern int flushFileSystemMetadata(SceExfatfsFileSystem *fileSystem);
-extern int _check_allocation_bitmap(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFileSystem *fileSystem);
-extern int UVFAT_readupcasetable(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFileSystem *fileSystem);
-extern void _exfatfs_notify_invalid_boot_signature(SceExfatfsDrive *drive);
-extern void _exfatfs_notify_invalid_sector_shift(SceExfatfsDrive *drive,
-	SceUInt32 sectorSize);
-extern void _exfatfs_notify_unsupported_sector_size(SceExfatfsDrive *drive);
 
 int hasCachedFreeClusterCount(SceExfatfsFileSystem *fileSystem)
 {
@@ -365,8 +351,6 @@ unsigned int fatDateTimeToTime(SceExfatfsDateTime *dateTime)
 	return (SceUInt16)((dateTime->minute << 5) |
 		(dateTime->hour << 11) | (dateTime->second >> 1));
 }
-
-extern int _sceFatfsWriteModeFromStat(SceExfatfsDrive *drive, int attribute);
 
 int copyFatEntryAttributeToStat(const SceExfatfsFatDirectoryEntry *entry,
 	SceExfatfsStat *stat, SceExfatfsFileSystem *fileSystem)

@@ -1,21 +1,6 @@
 #include <sysmem/debug.h>
 #include "exfatfs_internal.h"
 
-extern int UVFAT_InitDirEntry_ex(SceExfatfsSharedResource *sharedResource,
-	int fd, SceUInt32 cluster, SceExfatfsFileSystem *fileSystem,
-	unsigned int flags, SceUInt32 size);
-extern int UVFAT_ReadDirEntry(SceExfatfsSharedResource *sharedResource,
-	int fd, void *entry, int flags, SceExfatfsFileSystem *fileSystem);
-extern int _exfatfs_release_temporal_file(SceExfatfsFileSystem *fileSystem);
-extern SceUInt32 UVFAT_NextCluster(SceExfatfsSharedResource *sharedResource,
-	SceUInt32 cluster, SceExfatfsFileSystem *fileSystem);
-extern SceUInt64 clusterToDeviceSector(SceUInt32 cluster,
-	SceExfatfsFileSystem *fileSystem);
-extern int UVFAT_ReadDevice(SceExfatfsFileSystem *fileSystem, SceUInt64 sector,
-	SceSize size, void *buffer);
-extern void *allocateFatBuffer(unsigned int size);
-extern void freeFatBuffer(void *buffer, unsigned int size);
-
 int UVFAT_readupcasetable(SceExfatfsSharedResource *sharedResource,
 	SceExfatfsFileSystem *fileSystem)
 {

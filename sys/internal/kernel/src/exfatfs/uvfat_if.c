@@ -4,15 +4,8 @@
 #include "exfatfs_internal.h"
 
 extern int g_codepageTablesEnabled;
-extern SceExfatfsFile *invalidateFileCachePosition(SceExfatfsFile *file);
 
 int g_uvfatInitialized;
-
-extern int UVFAT_ReadData(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFileSystem *fileSystem, SceExfatfsFile *file,
-	void *buffer, unsigned int size, char mode);
-extern int UVFAT_LockMountPoint(SceExfatfsFileSystem *fileSystem);
-extern int UVFAT_UnlockMountPoint(SceExfatfsFileSystem *fileSystem);
 
 /* The release _ReserveUnusedFd contains this initializer inline. */
 #if FW_VERSION >= 0x04000000
@@ -55,17 +48,6 @@ SceExfatfsFile *_InitializeFp(SceExfatfsFile *file)
 }
 
 #endif
-
-extern int _exfat_lock_shared_resource(const char *caller);
-extern int _exfat_unlock_shared_resource(const char *caller);
-extern void _flush_fd_cache(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFnode *fnode);
-extern void clearClusterCacheStorage(SceExfatfsFnode *fnode);
-extern void _invalidate_cluster_cache_data(SceExfatfsFnode *fnode);
-extern int fatNameCompare(const SceUInt16 *left, const SceUInt16 *right);
-extern int fatNameLength(const SceUInt16 *name);
-extern SceUInt16 *fatNameCopyBounded(SceUInt16 *destination,
-	const SceUInt16 *source, unsigned int count);
 
 SceExfatfsFnode *_GetFnode(SceExfatfsSharedResource *sharedResource,
 	SceExfatfsFileSystem *fileSystem, const SceUInt16 *path)
@@ -251,8 +233,6 @@ SceUInt32 getInitializedFileCount(SceExfatfsSharedResource *sharedResource)
 	return sharedResource->initializedFileCount;
 }
 
-extern void *allocateCommonHeapMemory(int unused, SceSize size);
-
 int UVFAT_Initialize(SceExfatfsSharedResource *sharedResource)
 {
 	SceExfatfsFile *files;
@@ -362,10 +342,6 @@ int UVFAT_Initialize(SceExfatfsSharedResource *sharedResource)
 	sharedResource->initializedFnodeCount = 1024;
 	return 0;
 }
-
-extern int UVFAT_MediaInitialize(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFileSystem *fileSystem, int mountMode);
-extern int UVFAT_InitLockMountPoint(SceExfatfsFileSystem *fileSystem);
 
 int UVFAT_Mount(SceExfatfsSharedResource *sharedResource, const char *devname,
 	int mode, const SceExfatfsMountParam *mountParam)
@@ -569,17 +545,7 @@ int UVFAT_Read(SceExfatfsSharedResource *sharedResource, unsigned int fd,
 	return result;
 }
 
-extern void *allocateFatBuffer(unsigned int size);
 /* Original callers pass the allocation size although the helper ignores it. */
-extern void freeFatBuffer(void *buffer, unsigned int size);
-extern int UVFAT_WriteData(SceExfatfsSharedResource *sharedResource,
-	SceExfatfsFileSystem *fileSystem, SceExfatfsFile *file,
-	const void *buffer, unsigned int size, int mode, void *result);
-extern int UVFAT_FlushFdBuf(SceExfatfsFile *file,
-	SceExfatfsFileSystem *fileSystem);
-extern int flushFileSystemMetadata(SceExfatfsFileSystem *fileSystem);
-extern int _update_metadata(SceExfatfsSharedResource *sharedResource,
-	unsigned int fd);
 
 int UVFAT_Write(SceExfatfsSharedResource *sharedResource, unsigned int fd,
 	const void *buffer, unsigned int size)
@@ -684,14 +650,6 @@ SceExfatfsFnode *UVFAT_GetFnode(SceExfatfsSharedResource *sharedResource,
 	return _GetFnode(sharedResource, fileSystem, path);
 }
 
-extern int sceFatfsACSetFSAttributeByPermission(SceExfatfsDrive *drive,
-	SceUInt32 permission, unsigned char *attribute);
-extern int applyFatAttributeToStat(SceExfatfsDrive *drive,
-	unsigned char attribute, SceExfatfsStat *stat);
-extern int getCurrentFatDateTime(SceExfatfsDateTime *dateTime);
-extern int UVFAT_LinkFromDir_ex(SceExfatfsSharedResource *sharedResource,
-	const SceUInt16 *fileName, SceExfatfsFileSystem *fileSystem,
-	SceExfatfsFnode *fnode, SceExfatfsFnode *parent);
 extern int initializeFnode(SceExfatfsFnode *fnode);
 
 int UVFAT_Create(SceExfatfsSharedResource *sharedResource,
@@ -1099,9 +1057,6 @@ void _FreeFpCache(SceExfatfsFile *file)
 		file->Buf = NULL;
 	}
 }
-
-extern int _deleted_entry(SceExfatfsFnode *fnode);
-extern int _exfatfs_free_cluster_link(SceExfatfsFnode *fnode, SceUInt32 cluster);
 
 void _ReleaseFp(SceExfatfsSharedResource *sharedResource, SceExfatfsFile *file)
 {

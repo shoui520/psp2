@@ -2,42 +2,6 @@
 #include <string.h>
 #include "exfatfs_internal.h"
 
-extern int isShortNameCharacter(unsigned int character, int allowExtended);
-extern int shortNameTimeCharacter(void);
-extern SceUInt32 fileSystemClusterSize(SceExfatfsFileSystem *fileSystem);
-extern int UVFAT_ReadCblock(SceUInt32 cluster, SceUInt32 block,
-	SceExfatfsFileSystem *fileSystem, void *buffer);
-extern int UVFAT_SetGetFAT(SceExfatfsFileSystem *fileSystem, int mode,
-	SceUInt32 cluster, SceUInt32 *value);
-extern void _exfatfs_notify_broken_cluster_chain(SceExfatfsDrive *drive,
-	SceUInt32 cluster, SceUInt32 next);
-extern int sceFatfsACGetRootDirAttribute(SceExfatfsDrive *drive, unsigned char *attribute);
-extern int _sceFatfsWriteModeFromStat(SceExfatfsDrive *drive, int attribute);
-extern int initializeFatDateTime(SceExfatfsDateTime *dateTime);
-extern void _initialize_cluster_cache_data(SceExfatfsFnode *fnode);
-
-extern int hasCachedFreeClusterCount(SceExfatfsFileSystem *fileSystem);
-extern SceUInt32 UVFAT_GetFatEmptyClust(SceExfatfsFileSystem *fileSystem,
-	SceUInt32 FatEmptyClust);
-extern int UVFAT_allocationbitmapentry(SceExfatfsSharedResource *sharedResource,
-	int mode, SceExfatfsFileSystem *fileSystem, SceUInt32 cluster, SceUInt32 *value);
-
-extern int UVFAT_SetEOF(SceExfatfsFileSystem *fileSystem, SceUInt32 cluster);
-
-extern int updateallocbitmaps(SceExfatfsFileSystem *fileSystem);
-
-extern int getCurrentFatDateTime(SceExfatfsDateTime *dateTime);
-
-extern void _invalidate_cluster_cache_data(SceExfatfsFnode *fnode);
-extern void resetFilePosition(SceExfatfsFile *file);
-extern void _print_fnode(SceExfatfsFnode *fnode, const char *function);
-extern int flushFileSystemMetadata(SceExfatfsFileSystem *fileSystem);
-extern SceUInt64 clusterToDeviceSector(SceUInt32 cluster,
-	SceExfatfsFileSystem *fileSystem);
-extern int UVFAT_ReadDevice(SceExfatfsFileSystem *fileSystem,
-	SceUInt64 sector, unsigned int size, void *buffer);
-extern unsigned int UVFAT_TimeToFATDate(SceExfatfsDateTime *dateTime);
-extern unsigned int fatDateTimeToTime(SceExfatfsDateTime *dateTime);
 extern int UVFAT_WriteStatDir_ex(SceExfatfsSharedResource *sharedResource,
 	SceExfatfsFileSystem *fileSystem, const SceExfatfsStat *stat);
 extern int readTemporalDirectoryEntry(SceExfatfsSharedResource *sharedResource,
@@ -48,35 +12,9 @@ extern int UVFAT_WriteDirEntry_ex(SceExfatfsSharedResource *sharedResource,
 extern int readDirectoryEntryBytes(SceExfatfsSharedResource *sharedResource,
 	SceExfatfsFileSystem *fileSystem, SceExfatfsFile *file, void *entry);
 extern int setDirectoryPosition(SceExfatfsFile *file, SceUInt64 offset);
-extern SceUInt16 *fatNameAppendBounded(SceUInt16 *destination,
-	const SceUInt16 *source, unsigned int capacity);
-extern int copyFatEntryAttributeToStat(const SceExfatfsFatDirectoryEntry *entry,
-	SceExfatfsStat *stat, SceExfatfsFileSystem *fileSystem);
-extern SceExfatfsDateTime *decodeFatDateTime(SceExfatfsDateTime *dateTime,
-	unsigned int date, unsigned int time);
-extern void _exfatfs_notify_invalid_directory_entry(SceExfatfsDrive *drive,
-	const void *entry);
-extern void _exfatfs_notify_directory_loop(SceExfatfsDrive *drive,
-	SceUInt32 startCluster, SceOff offset, unsigned char attributes, SceOff fileSize);
 extern int writeDirectoryEntryBytes(SceExfatfsSharedResource *sharedResource,
 	SceExfatfsFileSystem *fileSystem, SceExfatfsFile *file,
 	const void *entry, int *writeResult);
-extern int fatNameLength(const SceUInt16 *name);
-extern int fatNameCompare(const SceUInt16 *left, const SceUInt16 *right);
-extern SceUInt16 *fatNameCopyBounded(SceUInt16 *destination,
-	const SceUInt16 *source, unsigned int capacity);
-extern unsigned int checksumUtf16Name(const SceUInt16 *name, unsigned int length);
-extern void *allocateFatBuffer(SceSize size);
-extern void freeFatBuffer(void *buffer, SceSize size);
-extern int UVFAT_ToUpperBuf(SceUInt16 *destination, const SceUInt16 *source,
-	int count, SceExfatfsFileSystem *fileSystem);
-extern int copyExfatEntryAttributeToStat(const SceExfatfsFileDirectoryEntry *entry,
-	SceExfatfsStat *stat, SceExfatfsFileSystem *fileSystem);
-extern void decodeExfatEntryDateTimes(SceExfatfsStat *stat,
-	const SceExfatfsFileDirectoryEntry *entry);
-extern int fatCodepageToUtf16(SceUInt16 *destination, int capacity,
-	const unsigned char *source);
-extern int sceFatfsACCheckRDirEntry(SceExfatfsDrive *drive, unsigned char attribute);
 
 unsigned int _setShortNameString(const SceUInt16 *source, unsigned char *destination,
 	unsigned int capacity, int *sourceIndex, unsigned int *flags)
@@ -133,10 +71,7 @@ unsigned int _setShortNameString(const SceUInt16 *source, unsigned char *destina
 	return written;
 }
 
-extern int decodeExfatUtcOffset(unsigned int offset);
 extern void adjustFatDateTimeMinutes(SceExfatfsDateTime *dateTime, int minutes);
-extern int copyStatAttributeToFatEntry(const SceExfatfsStat *stat,
-	SceExfatfsFatDirectoryEntry *entry, SceExfatfsFileSystem *fileSystem);
 
 int UVFAT_ChangeStatFileentry(SceExfatfsFileSystem *fileSystem,
 	SceExfatfsFileDirectoryEntry *entry, const SceExfatfsStat *stat)
@@ -190,8 +125,6 @@ int UVFAT_ChangeStatFileentry(SceExfatfsFileSystem *fileSystem,
 	entry->fileAttributes[0] = fatEntry.attribute;
 	return 0;
 }
-
-extern void _invalidate_cluster_cache_element(SceExfatfsClusterCacheElement *element);
 
 static inline unsigned int _cluster_cache_interval(SceExfatfsFnode *fnode)
 {
@@ -422,8 +355,6 @@ void _update_cached_index(SceExfatfsFnode *fnode, unsigned int clusterIndex,
 }
 
 extern int g_codepageTablesEnabled;
-extern SceUInt32 getInitializedFileCount(SceExfatfsSharedResource *sharedResource);
-extern int UVFAT_FlushFdBuf(SceExfatfsFile *file, SceExfatfsFileSystem *fileSystem);
 
 void sync_multi_open(SceExfatfsSharedResource *sharedResource, SceExfatfsFile *file)
 {
@@ -908,9 +839,6 @@ static inline void _update_current_tail(SceExfatfsFnode *fnode,
 			0);
 #endif
 }
-
-extern int UVFAT_WriteDevice(SceExfatfsFileSystem *fileSystem,
-	SceUInt64 sector, unsigned int size, const void *buffer);
 
 #if FW_VERSION >= 0x04000000
 static inline
@@ -2036,9 +1964,6 @@ SceUInt32 UVFAT_SearchEmptyCluster(SceExfatfsSharedResource *sharedResource,
 notFound:
 	return fileSystem->fileSystemType == 2 ? (SceUInt32)-1 : 0x0fffffff;
 }
-
-extern int UVFAT_SetFatChain_ex_NFC(SceExfatfsFileSystem *fileSystem,
-	int mode, SceUInt32 startCluster, SceUInt32 lastCluster);
 
 #if FW_VERSION >= 0x04000000
 int _assign_first_cluster_of_file(SceExfatfsFile *file,
@@ -3852,7 +3777,7 @@ int _SearchFileFromDir(SceExfatfsSharedResource *sharedResource,
 			continue;
 		}
 		if (firstCharacter <= 0x20 && firstCharacter != 5) {
-			_exfatfs_notify_invalid_directory_entry(fileSystem->drive, &record);
+			_exfatfs_notify_invalid_directory_entry(fileSystem->drive, &record.shortEntry);
 			fragmentCount = 0;
 			continue;
 		}

@@ -4,10 +4,6 @@
 #include <string.h>
 #include "exfatfs_internal.h"
 
-extern void *allocateHeapBuffer(SceExfatfsDrive *unusedDrive);
-extern void *allocateCommonHeapMemory(int unused, SceSize size);
-extern void freeHeapBuffer(int unused, void *buffer);
-
 void *allocateFatBuffer(SceSize size)
 {
 	if (size > 0x800)
@@ -47,13 +43,6 @@ unsigned int checksumUtf16Name(const SceUInt16 *name, unsigned int length)
 	} while (character);
 	return checksum;
 }
-
-extern int utf16Length(const SceUInt16 *string);
-extern SceUInt16 *utf16CopyBounded(SceUInt16 *destination,
-	const SceUInt16 *source, unsigned int count);
-extern int utf16Compare(const SceUInt16 *left, const SceUInt16 *right);
-extern int codepageToUtf16(SceUInt16 *destination, int capacity,
-	const unsigned char *source);
 
 int fatNameLength(const SceUInt16 *name)
 {
@@ -159,9 +148,6 @@ int shortNameTimeCharacter(void)
 	return (unsigned char)(value + '0');
 }
 
-extern unsigned int lookupUpcaseCharacter(unsigned int unicode,
-	SceExfatfsUpcaseTable *table);
-
 int UVFAT_ToUpperBuf(SceUInt16 *destination, const SceUInt16 *source,
 	int count, SceExfatfsFileSystem *fileSystem)
 {
@@ -208,6 +194,4 @@ int UVFAT_ToUpperBuf(SceUInt16 *destination, const SceUInt16 *source,
 	destination[destinationIndex] = 0;
 	return 0;
 }
-
-extern int _sceFatfsWriteModeFromStat(SceExfatfsDrive *drive, int attribute);
 

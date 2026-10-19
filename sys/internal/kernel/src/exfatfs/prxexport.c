@@ -5,10 +5,9 @@
 #include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>
 #include <iofilemgr/vfs.h>
+#include "exfatfs_internal.h"
 
 extern SceVfsInfo g_exfatfsInfo;
-extern int _register_exfatfs_vops(SceVfsInfo *info);
-extern int sceExfatfsInit(void);
 /* SceSysrootForDriver NID 0x7B7F8171; absent from the pinned SDK header. */
 
 int sceExfatInitPhase2(void *unused)
