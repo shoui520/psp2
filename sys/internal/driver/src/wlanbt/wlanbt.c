@@ -16,17 +16,6 @@
 #include <ss_mgr/ss_mgr.h>
 
 int wlanBtInitializeRobin(void);
-int wlanBtResumeRobin(unsigned int *wakeSources);
-int wlanBtStartRobin(void);
-int wlanBtStopRobin(void);
-int robinWlanSwitchProcess(int eventId);
-int robinWlanStartProcess(SceUID pid, int eventType);
-int robinWlanKillProcess(SceUID pid);
-int robinWlanExitProcess(SceUID pid);
-int robinWlanSetConfiguration(int request, int force);
-unsigned int robinWlanGetConfiguration(void);
-int robinWlanGetWakeOnTargetProcess(void);
-int robinInitialize(void);
 
 static SceWlanBtRobinConfig gWlanBtConfig;
 static SceWlan gWlan;

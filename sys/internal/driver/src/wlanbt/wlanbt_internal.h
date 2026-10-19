@@ -257,6 +257,8 @@ _Static_assert(offsetof(SceWlanVisitor, accepting) == 8, "visitor admission stat
 struct SdifSdioFunction;
 struct NetDriverPacket;
 typedef struct SceWlanBtRobinWlanContext SceWlanBtRobinWlanContext;
+typedef struct SceWlanBtRobinWlanAddBlockAckMessage SceWlanBtRobinWlanAddBlockAckMessage;
+typedef struct SceWlanBtRobinWlanDeleteBlockAckMessage SceWlanBtRobinWlanDeleteBlockAckMessage;
 
 /* Complete TCM subobject, followed by the context mutex at runtime byte 1520. */
 typedef struct SceWlanBtRobinWlanTcm {
@@ -753,5 +755,309 @@ int wlanSetConfiguration(int request);
 int wlanRegisterCallback(SceUID callbackId);
 int wlanUnregisterCallback(void);
 int wlanGetWakeOnTargetProcess(void);
+
+/* ../robin/common/robin.c */
+int robinInitialize(void);
+int robinGetCardRevision(void);
+int wlanBtStartRobin(void);
+int wlanBtStopRobin(void);
+int wlanBtResumeRobin(unsigned int *wakeSources);
+
+/* ../robin/wlan/wlan_dcm.c */
+int robinCompleteInitialization(void);
+int robinWlanInitializeDcm(SceWlanBtRobinWlanDcm *dcm);
+int robinWlanPowerOn(void);
+int robinWlanPowerOff(void);
+int robinWlanRestart(void);
+int robinWlanRequestStandby(void);
+int robinWlanStartDcm(SceWlanBtRobinWlanDcm *dcm);
+int robinWlanShutdownDcm(SceWlanBtRobinWlanDcm *dcm, int keepFunction);
+SceWlanBtRobinWlanCommand *robinWlanAllocateCommand(SceWlanBtRobinWlanContext *context,
+						 unsigned int size);
+int robinWlanReleaseCommand(SceWlanBtRobinWlanContext *context, SceWlanBtRobinWlanCommand *command);
+int robinWlanSubmitCommand(SceWlanBtRobinWlanContext *context,
+			  SceWlanBtRobinWlanCommand *command, uint16_t commandId,
+			  unsigned int size);
+int robinWlanWaitCommand(SceWlanBtRobinWlanContext *context, SceWlanBtRobinWlanCommand *command);
+int robinWlanSubmitAndWaitCommand(SceWlanBtRobinWlanContext *context,
+				 SceWlanBtRobinWlanCommand *command, uint16_t commandId,
+				 unsigned int size);
+int robinWlanTransmitCommand(SceWlanBtRobinWlanContext *context);
+int robinWlanRequestTransmit(SceWlanBtRobinWlanDcm *dcm);
+int robinWlanDcmInterruptRequest(SceWlanBtRobinWlanDcm *dcm);
+int robinWlanRequestCardWake(SceWlanBtRobinWlanDcm *dcm);
+
+/* ../robin/wlan/wlan_mrvl.c */
+int robinWlanRequestSetup(SceWlanBtRobinWlanContext *context,
+			 int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanValidateSetupResponse(const void *response, int responseSize);
+int robinWlanSetMulticastAddresses(SceWlanBtRobinWlanContext *context,
+				 unsigned int count, const SceNetEtherAddr *addresses);
+int robinWlanReadSetting(SceWlanBtRobinWlanContext *context, uint16_t settingId,
+			void *data, unsigned int size);
+int robinWlanWriteSetting(SceWlanBtRobinWlanContext *context, uint16_t settingId,
+			 const void *data, unsigned int size);
+int robinWlanRequestDeauthentication(SceWlanBtRobinWlanContext *context,
+		SceWlanBtRobinWlanCommand **output,
+		int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanDeauthenticate(SceWlanBtRobinWlanContext *context);
+int robinWlanSetControl(SceWlanBtRobinWlanContext *context, uint16_t control);
+int robinWlanRequestStartAdhoc(SceWlanBtRobinWlanContext *context,
+	WlanBssConnectionConfig *configuration, unsigned int capacity,
+	SceWlanBtRobinWlanCommand **output,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanStartAdhoc(SceWlanBtRobinWlanContext *context,
+		      WlanBssConnectionConfig *configuration, unsigned int capacity);
+int robinWlanJoinAdhoc(SceWlanBtRobinWlanContext *context, WlanBssConnectionConfig *configuration);
+int robinWlanRequestStopAdhoc(SceWlanBtRobinWlanContext *context,
+			     SceWlanBtRobinWlanCommand **output,
+			     int (*callback)(SceWlanBtRobinWlanContext *,
+					     SceWlanBtRobinWlanCommand *));
+int robinWlanStopAdhoc(SceWlanBtRobinWlanContext *context);
+int robinWlanRequestMacAddress(SceWlanBtRobinWlanContext *context,
+			       SceWlanBtRobinWlanCommand **output,
+			       int (*callback)(SceWlanBtRobinWlanContext *,
+					       SceWlanBtRobinWlanCommand *));
+int robinWlanReadMacAddressResponse(SceWlanBtRobinWlanCommand *command, SceNetEtherAddr *address);
+int robinWlanGetMacAddress(SceWlanBtRobinWlanContext *context, SceNetEtherAddr *address);
+int robinWlanRequestBackgroundScan(
+	SceWlanBtRobinWlanContext *context, uint8_t enabled,
+	const SceWlanBtScanSsid *ssids, unsigned int ssidCount,
+	const SceWlanBtScanSsid *wildcardSsids, unsigned int wildcardCount,
+	uint8_t bssType, uint8_t channelsPerScan, uint32_t scanInterval,
+	const uint8_t *channels, unsigned int channelCount, uint8_t scanMode,
+	uint16_t minScanTime, uint16_t maxScanTime,
+	SceWlanBtRobinWlanCommand **output,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanSetBackgroundScan(
+	SceWlanBtRobinWlanContext *context, uint8_t enabled,
+	const SceWlanBtScanSsid *ssids, unsigned int ssidCount,
+	const SceWlanBtScanSsid *wildcardSsids, unsigned int wildcardCount,
+	uint8_t bssType, uint8_t channelsPerScan, uint32_t scanInterval,
+	const uint8_t *channels, unsigned int channelCount, uint8_t scanMode,
+	uint16_t minScanTime, uint16_t maxScanTime);
+int robinWlanRequestBackgroundScanQuery(SceWlanBtRobinWlanContext *context,
+			    SceWlanBtRobinWlanCommand **output,
+			    int (*callback)(SceWlanBtRobinWlanContext *,
+					    SceWlanBtRobinWlanCommand *));
+int robinWlanSubscribeEvents(SceWlanBtRobinWlanContext *context,
+			     int (*callback)(SceWlanBtRobinWlanContext *,
+					     SceWlanBtRobinWlanCommand *));
+int robinWlanRequestIbssCoalescing(SceWlanBtRobinWlanContext *context, int enabled,
+				 SceWlanBtRobinWlanCommand **output,
+				 int (*callback)(SceWlanBtRobinWlanContext *,
+						 SceWlanBtRobinWlanCommand *));
+int robinWlanSetIbssCoalescing(SceWlanBtRobinWlanContext *context, int enabled);
+int robinWlanReadMemory(SceWlanBtRobinWlanContext *context, uint32_t address, uint32_t *output);
+int robinWlanWriteMemory(SceWlanBtRobinWlanContext *context, uint32_t address, uint32_t value);
+int robinWlanSetInactivityTimeout(SceWlanBtRobinWlanContext *context,
+				int (*callback)(SceWlanBtRobinWlanContext *,
+						SceWlanBtRobinWlanCommand *));
+int robinWlanSetSdioPullControl(
+	SceWlanBtRobinWlanContext *context, uint16_t pullUpDelay, uint16_t pullDownDelay,
+	uint8_t pullControl, uint8_t pullFlags,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanSetMacFilter(
+	SceWlanBtRobinWlanContext *context, const SceNetEtherAddr *address,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanRequestRssi(
+	SceWlanBtRobinWlanContext *context, SceWlanBtRobinWlanCommand **output,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanReadRssiResponse(SceWlanBtRobinWlanCommand *command, WlanSignalInfo *output);
+int robinWlanGetRssi(SceWlanBtRobinWlanContext *context, WlanSignalInfo *output);
+int robinWlanRequestFunctionInitialize(
+	SceWlanBtRobinWlanContext *context,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanRequestFunctionShutdown(
+	SceWlanBtRobinWlanContext *context,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int mrvlExecAssociate(SceWlanBtRobinWlanContext *context,
+		       const WlanBssDesc *descriptor,
+		       const WlanConnectionSecurity *security,
+		       const void *informationElements, unsigned int informationElementsSize,
+		       unsigned int *htEnabled);
+int robinWlanRequestAddBlockAck(
+	SceWlanBtRobinWlanContext *context, const SceNetEtherAddr *peer,
+	uint16_t bufferSize, uint16_t tid, uint8_t policy, uint8_t amsdu,
+	uint16_t timeout, uint16_t startingSequence,
+	SceWlanBtRobinWlanCommand **output,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanReadAddBlockAckResult(const SceWlanBtRobinWlanCommand *command, uint8_t *result);
+int robinWlanSetHtTransmit(SceWlanBtRobinWlanContext *context,
+			   uint16_t capabilities, uint16_t information);
+int robinWlanRequestDeleteBlockAck(
+	SceWlanBtRobinWlanContext *context, uint8_t result, const SceNetEtherAddr *peer,
+	uint16_t parameters, uint16_t reason,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanSetTransmitBuffer(
+	SceWlanBtRobinWlanContext *context, uint16_t size,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanSetAmsduAggregation(
+	SceWlanBtRobinWlanContext *context, int enabled, uint16_t currentBufferSize,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanRequestCoexistence(
+	SceWlanBtRobinWlanContext *context, uint8_t mode,
+	SceWlanBtRobinWlanCommand **output,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanSetTransmitRate(SceWlanBtRobinWlanContext *context, unsigned int rate);
+int robinWlanEnableAutoDeepSleep(
+	SceWlanBtRobinWlanContext *context, uint16_t timeout,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanRequestDisableStationPowerSave(
+	SceWlanBtRobinWlanContext *context, SceWlanBtRobinWlanCommand **output,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanDisableStationPowerSave(SceWlanBtRobinWlanContext *context);
+int robinWlanRequestEnableStationPowerSave(
+	SceWlanBtRobinWlanContext *context, uint16_t nullPacketInterval,
+	uint16_t beaconMissTimeout, uint16_t adhocWakePeriod, uint16_t mode,
+	SceWlanBtRobinWlanCommand **output,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanEnableStationPowerSave(
+	SceWlanBtRobinWlanContext *context, uint16_t nullPacketInterval,
+	uint16_t beaconMissTimeout, uint16_t adhocWakePeriod, uint16_t mode);
+int robinWlanConfirmSleep(
+	SceWlanBtRobinWlanContext *context,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanConfigureHostSleep(
+	SceWlanBtRobinWlanContext *context, uint32_t conditions, uint8_t gpio, uint8_t gap,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanSetManagementInformationElements(
+	SceWlanBtRobinWlanContext *context, const void *informationElements, size_t size);
+int robinWlanSetHostSleepData(
+	SceWlanBtRobinWlanContext *context, const void *data, size_t size,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanSetHostSleepAddressData(
+	SceWlanBtRobinWlanContext *context, const SceNetEtherAddr *address,
+	const void *data, size_t size,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanClearHostSleepAddressData(
+	SceWlanBtRobinWlanContext *context,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanRequestHostSleepAddressData(
+	SceWlanBtRobinWlanContext *context,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanReadHostSleepAddresses(SceWlanBtRobinWlanContext *context,
+				  const void *buffer, unsigned int size);
+int robinWlanRequestHostSleepDataForAddress(
+	SceWlanBtRobinWlanContext *context, const SceNetEtherAddr *address,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanReadHostSleepPeerData(SceWlanBtRobinWlanContext *context,
+				 const void *buffer, unsigned int size, int index);
+int robinWlanRequestBssMode(
+	SceWlanBtRobinWlanContext *context, uint8_t connectionType,
+	SceWlanBtRobinWlanCommand **output,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanSetBssMode(SceWlanBtRobinWlanContext *context, uint8_t connectionType);
+int robinWlanSetEnergyDetectionMacOffset(SceWlanBtRobinWlanContext *context, int16_t offset);
+int robinWlanRequestDisableEnergyDetectionMac(
+	SceWlanBtRobinWlanContext *context, SceWlanBtRobinWlanCommand **output,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+int robinWlanDisableEnergyDetectionMac(SceWlanBtRobinWlanContext *context);
+int robinWlanRespondAddBlockAck(
+	SceWlanBtRobinWlanContext *context,
+	const SceWlanBtRobinWlanAddBlockAckMessage *input,
+	int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *));
+void robinWlanReadDeleteBlockAckReason(
+	const SceWlanBtRobinWlanDeleteBlockAckMessage *message,
+	uint8_t *initiator, uint16_t *reason);
+void robinWlanReadDeleteBlockAckResult(
+	const SceWlanBtRobinWlanDeleteBlockAckMessage *message,
+	SceNetEtherAddr *peer, uint8_t *result, uint8_t *parameterFlags);
+int robinWlanScan(SceWlanBtRobinWlanContext *context, WlanScanConfig *configuration,
+		 unsigned int capacity);
+
+/* ../robin/wlan/wlan_robin.c */
+int robinInitializeWlanContext(void);
+int robinWlanNotifyWorker(unsigned int flags);
+int robinWlanSetIoctlError(int error);
+uint32_t robinWlanRecordCurrentState(unsigned int state, unsigned int stage);
+uint32_t robinWlanRecordPendingState(unsigned int state, unsigned int stage);
+int robinWlanGetBssid(uint8_t bssid[6]);
+int robinWlanNeedsDeauthentication(void);
+unsigned int robinWlanGetConfiguration(void);
+int robinWlanSetConfiguration(int request, int force);
+int robinWlanGetWakeOnTargetProcess(void);
+int robinWlanStartProcess(SceUID pid, int eventType);
+int robinWlanExitProcess(SceUID pid);
+int robinWlanKillProcess(SceUID pid);
+int robinWlanSwitchProcess(int eventId);
+
+/* ../robin/wlan/wlan_tcm.c */
+int robinWlanInitializeTcm(SceWlanBtRobinWlanContext *context);
+int robinWlanBeginSetup(SceWlanBtRobinWlanContext *context);
+int robinWlanBeginInitialize(SceWlanBtRobinWlanContext *context);
+int robinWlanBeginShutdown(SceWlanBtRobinWlanContext *context);
+int robinWlanBeginPowerSaveEnable(SceWlanBtRobinWlanContext *context);
+int robinWlanBeginPowerSaveDisable(SceWlanBtRobinWlanContext *context);
+int robinWlanBeginWakeOnConfiguration(SceWlanBtRobinWlanContext *context);
+int robinWlanBeginHostSleepReset(SceWlanBtRobinWlanContext *context);
+int robinWlanBeginWakeOffConfiguration(SceWlanBtRobinWlanContext *context);
+int robinWlanNotifyCommandCancellation(SceWlanBtRobinWlanContext *context);
+int robinWlanTcmSetMulticastAddresses(SceWlanBtRobinWlanTcm *tcm,
+				     const SceNetEtherAddr *addresses, unsigned int size);
+int robinWlanTcmScan(SceWlanBtRobinWlanTcm *tcm, WlanScanConfig *configuration,
+		    unsigned int capacity);
+int robinWlanTcmStartBackgroundScan(SceWlanBtRobinWlanTcm *tcm,
+				  const WlanBackgroundScanConfig *configuration,
+				  unsigned int capacity);
+int robinWlanTcmStopBackgroundScan(SceWlanBtRobinWlanTcm *tcm);
+int robinWlanTcmReadBackgroundScan(SceWlanBtRobinWlanTcm *tcm,
+				 WlanScanResult *scanResult, unsigned int capacity);
+int robinWlanTcmAssociate(SceWlanBtRobinWlanTcm *tcm,
+			const WlanBssDesc *descriptor,
+			const WlanConnectionSecurity *security,
+			const void *informationElements,
+			unsigned int informationElementsSize);
+int robinWlanTcmDisconnect(SceWlanBtRobinWlanTcm *tcm);
+int robinWlanTcmSetStationPowerSave(SceWlanBtRobinWlanTcm *tcm, int enabled);
+int robinWlanTcmStartAdhoc(SceWlanBtRobinWlanTcm *tcm,
+			 WlanBssConnectionConfig *configuration, unsigned int capacity);
+int robinWlanTcmJoinAdhoc(SceWlanBtRobinWlanTcm *tcm,
+			WlanBssConnectionConfig *configuration, unsigned int capacity);
+int robinWlanTcmStopAdhoc(SceWlanBtRobinWlanTcm *tcm);
+int robinWlanTcmSetManagementInformationElements(SceWlanBtRobinWlanTcm *tcm,
+					       const void *informationElements, size_t size);
+int robinWlanBeginSleep(SceWlanBtRobinWlanContext *context);
+void robinWlanTcmEventReceive(SceWlanBtRobinWlanContext *context, const void *input);
+int robinWlanProcessTransmit(SceWlanBtRobinWlanContext *context);
+int robinWlanRequestRssiUpdate(SceWlanBtRobinWlanContext *context);
+int robinWlanTcmSetTransmitRate(SceWlanBtRobinWlanTcm *tcm, const void *input);
+int robinWlanTcmReadSettings(SceWlanBtRobinWlanTcm *tcm, void *input);
+int robinWlanTcmWriteSettings(SceWlanBtRobinWlanTcm *tcm, const void *input);
+int robinWlanTcmGetCardInfo(SceWlanBtRobinWlanTcm *tcm, void *input);
+int robinWlanTcmConfigureOutput(SceWlanBtRobinWlanTcm *tcm, int output, unsigned int value);
+int robinWlanTcmReadInput(SceWlanBtRobinWlanTcm *tcm, int input, unsigned int *value);
+int robinWlanTcmSetEnergyDetectionMacOffset(SceWlanBtRobinWlanTcm *tcm, int16_t offset);
+int robinWlanTcmDisableEnergyDetectionMac(SceWlanBtRobinWlanTcm *tcm);
+
+/* wlan_bss.c */
+int wlanBssHasPrivacy(const WlanBssDesc *descriptor);
+int wlanBssHasWpa(const WlanBssDesc *descriptor);
+int wlanBssHasRsn(const WlanBssDesc *descriptor);
+int wlanBssHasWmm(const WlanBssDesc *descriptor);
+int wlanBuildScanResult(const WlanScanRecord *record, unsigned int recordCount,
+		       const void *recordEnd, WlanScanResult *result,
+		       unsigned int capacity, const uint32_t *mask);
+int robinWlanReadBackgroundScanResponse(SceWlanBtRobinWlanContext *context,
+				      SceWlanBtRobinWlanCommand *command,
+				      WlanScanResult *result, unsigned int capacity);
+int robinWlanReadBackgroundScan(SceWlanBtRobinWlanContext *context,
+			       WlanScanResult *result, unsigned int capacity);
+int wlanMapBssType(uint8_t bssType);
+
+/* wlan_password.c */
+int wlanDerivePasswordKey(const char *password, const void *salt, int saltSize, uint8_t *output);
+
+/* wlanbt.c */
+int wlanBtIsAvailable(void);
+int wlanBtGetWlanWakeSource(void);
+int wlanBtGetBluetoothWakeSource(void);
+void wlanBtPowerOnDevice(void);
+void wlanBtPowerDownDevice(void);
+int wlanBtNotifyMonitor(unsigned int event, unsigned int argument,
+		       unsigned int size, const void *data);
+int wlanIsSupportedChannel(int channel);
+int wlanIsActiveScanChannel(int channel);
+int wlanNotifyCallbacks(int argument);
 
 #endif

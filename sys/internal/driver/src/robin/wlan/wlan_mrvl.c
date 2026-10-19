@@ -1,5 +1,6 @@
 /* Marvell command family; filename attested by Sony's prototype debug records. */
 #include "../../wlanbt/wlanbt_internal.h"
+#include "../../wlanbt/wlan_util.h"
 #include <net/ether.h>
 #include <string.h>
 
@@ -413,14 +414,14 @@ _Static_assert(offsetof(SceWlanBtRobinWlanRssiResponse, averageBeaconRssi) == 18
 _Static_assert(offsetof(SceWlanBtRobinWlanRssiResponse, beaconTimestamp) == 22,
 	       "beacon TSF timestamp");
 
-typedef struct SceWlanBtRobinWlanAddBlockAckMessage {
+struct SceWlanBtRobinWlanAddBlockAckMessage {
 	uint8_t result;
 	SceNetEtherAddr peer;
 	uint8_t dialogToken;
 	uint8_t parameters[2];
 	uint8_t timeout[2];
 	uint8_t startingSequence[2];
-} SceWlanBtRobinWlanAddBlockAckMessage;
+};
 
 typedef struct SceWlanBtRobinWlanHtTransmitRequest {
 	uint8_t action[2];
@@ -428,13 +429,13 @@ typedef struct SceWlanBtRobinWlanHtTransmitRequest {
 	uint8_t information[2];
 } SceWlanBtRobinWlanHtTransmitRequest;
 
-typedef struct SceWlanBtRobinWlanDeleteBlockAckMessage {
+struct SceWlanBtRobinWlanDeleteBlockAckMessage {
 	uint8_t result;
 	SceNetEtherAddr peer;
 	uint8_t parameters[2];
 	uint8_t reason[2];
 	uint8_t reserved;
-} SceWlanBtRobinWlanDeleteBlockAckMessage;
+};
 
 typedef struct SceWlanBtRobinWlanTransmitBufferRequest {
 	uint8_t action[2];
@@ -730,31 +731,6 @@ _Static_assert(offsetof(SceWlanBtRobinWlanBackgroundScanRequest, parameters) == 
 	       "Robin background scan parameters");
 _Static_assert(sizeof(SceWlanBtRobinWlanSdioPullControlRequest) == 8,
 	       "Robin SDIO pull control request");
-
-SceWlanBtRobinWlanCommand *robinWlanAllocateCommand(SceWlanBtRobinWlanContext *context,
-						 unsigned int size);
-int robinWlanSubmitCommand(SceWlanBtRobinWlanContext *context,
-			  SceWlanBtRobinWlanCommand *command, uint16_t commandId,
-			  unsigned int size);
-int robinWlanReleaseCommand(SceWlanBtRobinWlanContext *context,
-			   SceWlanBtRobinWlanCommand *command);
-int robinWlanSubmitAndWaitCommand(SceWlanBtRobinWlanContext *context,
-				 SceWlanBtRobinWlanCommand *command, uint16_t commandId,
-				 unsigned int size);
-int robinWlanWaitCommand(SceWlanBtRobinWlanContext *context,
-			SceWlanBtRobinWlanCommand *command);
-int wlanIsActiveScanChannel(int channel);
-
-int wlanDerivePasswordKey(const char *password, const void *salt, int saltSize,
-			  uint8_t *output);
-int wlanBssHasWpa(const WlanBssDesc *descriptor);
-int wlanBssHasRsn(const WlanBssDesc *descriptor);
-int wlanBssHasWmm(const WlanBssDesc *descriptor);
-int wlanCopyInformationElement(const void *buffer, unsigned int length, int id,
-			       void *output, unsigned int *outputSize,
-			       unsigned int *offset);
-int wlanCopyWpaInformationElement(const void *buffer, unsigned int length,
-				  void *output, unsigned int *outputSize);
 
 int robinWlanRequestSetup(SceWlanBtRobinWlanContext *context,
 			 int (*callback)(SceWlanBtRobinWlanContext *, SceWlanBtRobinWlanCommand *))
@@ -3097,10 +3073,6 @@ void robinWlanReadDeleteBlockAckResult(
 }
 
 extern const uint8_t gBssTypeMapping[3];
-int wlanIsSupportedChannel(int channel);
-int wlanBuildScanResult(const WlanScanRecord *record, unsigned int recordCount,
-	const uint8_t *recordEnd, WlanScanResult *result, unsigned int capacity,
-	const unsigned int *mask);
 
 int robinWlanScan(SceWlanBtRobinWlanContext *context, WlanScanConfig *configuration,
 		 unsigned int capacity)

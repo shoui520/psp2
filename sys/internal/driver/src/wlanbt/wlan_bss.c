@@ -297,15 +297,6 @@ int robinWlanReadBackgroundScanResponse(SceWlanBtRobinWlanContext *context,
 	return wlanBuildScanResult(record, count, recordEnd, result, capacity, mask);
 }
 
-SceWlanBtRobinWlanCommand *robinWlanAllocateCommand(SceWlanBtRobinWlanContext *context,
-						 unsigned int size);
-int robinWlanSubmitCommand(SceWlanBtRobinWlanContext *context,
-	SceWlanBtRobinWlanCommand *command, unsigned int commandId, unsigned int size);
-int robinWlanWaitCommand(SceWlanBtRobinWlanContext *context,
-			SceWlanBtRobinWlanCommand *command);
-int robinWlanReleaseCommand(SceWlanBtRobinWlanContext *context,
-			   SceWlanBtRobinWlanCommand *command);
-
 int robinWlanReadBackgroundScan(SceWlanBtRobinWlanContext *context,
 			       WlanScanResult *result, unsigned int capacity)
 {

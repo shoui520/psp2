@@ -22,11 +22,6 @@ static const WlanLlcSnapPrefix gWlanRfc1042Prefix = {
 
 static unsigned int gCommandEventIndex;
 
-int wlanBtNotifyMonitor(unsigned int event, unsigned int argument,
-		       unsigned int size, const void *data);
-void robinWlanTcmEventReceive(SceWlanBtRobinWlanContext *context, const void *event);
-int robinWlanNotifyWorker(unsigned int flags);
-
 void robinWlanReceiveMessages(SceWlanBtRobinWlanDcm *dcm);
 int robinWlanTransmitPackets(SceWlanBtRobinWlanDcm *dcm);
 

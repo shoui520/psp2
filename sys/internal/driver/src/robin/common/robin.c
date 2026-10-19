@@ -9,17 +9,10 @@
 #include <post_ss_mgr/sblfwloader.h>
 int robinResetWlanForResume(void);
 int robinDeauthenticateForResume(void);
-int robinWlanNeedsDeauthentication(void);
-int robinWlanGetBssid(uint8_t bssid[6]);
-void wlanBtPowerOnDevice(void);
-void wlanBtPowerDownDevice(void);
 
 SceWlanBtRobinSdioStatus gBootstrapStatus;
 SceWlanBtRobinBootstrapMessage gBootstrapMessage;
 SceWlanBtRobin gRobin;
-
-int robinInitializeWlanContext(void);
-int robinCompleteInitialization(void);
 
 int robinInitializeWork(void *argument)
 {
