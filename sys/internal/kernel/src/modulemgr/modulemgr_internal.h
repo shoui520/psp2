@@ -181,25 +181,6 @@ typedef struct SceModuleInfo {
 	SceUInt32 extabEnd;
 } SceModuleInfo;
 
-/* exported library entry (0x20 bytes) */
-typedef struct SceModuleExports {
-	SceUInt8 size;
-	SceUInt8 auxattr;
-	SceUInt16 version;
-	SceUInt16 attr;
-	SceUInt16 nfunc;
-	SceUInt16 nvar;
-	SceUInt16 ntls;
-	SceUInt8 hashinfo;		/* low nibble: funcs, high: vars */
-	SceUInt8 hashinfotls;
-	SceUInt8 reserved;
-	SceUInt8 nidaltsets;
-	SceNID libnid;
-	const char *libname;
-	SceNID *nidtable;
-	void **entrytable;
-} SceModuleExports;
-
 /* imported library entry, normalised 0x24-byte form */
 typedef struct SceModuleImports {
 	SceUInt8 size;
@@ -258,26 +239,6 @@ typedef struct SceModuleObject {
 	SceUInt32 base[2];		/* SceObjectBase */
 	SceModuleCB cb;
 } SceModuleObject;
-
-/* LibEntCB.flags */
-#define LIBENT_FLAG_SHARED		0x0004	/* entries are trusted (copied module) */
-#define LIBENT_FLAG_TRACE_TARGET	0x0100	/* syslibtrace: SCE_SYSLIBTRACE_LIB_TARGET */
-#define LIBENT_FLAG_TRACING		0x0400	/* syslibtrace: SCE_SYSLIBTRACE_LIB_TRACING */
-
-typedef struct LibEntCB {
-	struct LibEntCB *next;		/* LibraryDB.libList */
-	struct LibEntCB *older;		/* other versions of the same library */
-	SceModuleExports *exports;
-	SceInt16 syscallIndex;
-	SceUInt16 flags;
-	int clientCount;
-	struct LibStubCB *clients;
-	SceUID guid;
-	SceUID puid;
-	SceModuleCB *cb;
-	SceUInt32 enterArg;		/* syslibtrace: its enter and return callbacks' arguments */
-	SceUInt32 returnArg;
-} LibEntCB;
 
 typedef struct LibStubCB {
 	struct LibStubCB *next;		/* client / lost client list */

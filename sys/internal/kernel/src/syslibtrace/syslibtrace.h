@@ -10,7 +10,7 @@
 #define SCE_KERNEL_ERROR_ILLEGAL_ADDR	0x80020006
 #endif
 
-extern SceSyslibtraceSyscallInfo g_syslibtraceSyscallInfo[SCE_SYSLIBTRACE_NUM_SYSCALLS];
+extern SyscallTraceInfo g_syslibtraceSyscallInfo[SCE_SYSLIBTRACE_NUM_SYSCALLS];
 
 /* syslibtrace_trampoline.S: the syscall handler of traced functions */
 void SyslibtraceSyscallTrampoline(void);

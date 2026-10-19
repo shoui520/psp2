@@ -8,6 +8,7 @@
 #include <scetypes.h>
 #include <kernel/modulemgr.h>
 #include <modulemgr/module_info.h>
+#include <modulemgr/module_library.h>
 #include <modulemgr/modulemgr_control.h>
 #include <modulemgr/modulemgr_patch.h>
 #include <authmgr/sblauthmgr.h>
@@ -97,6 +98,8 @@ int sceKernelFinalizeKbl(void);
 int sceKernelGetExportedLibraryListInModule(SceUID pid, SceUID modid, SceUID *list, SceSize *num);
 int sceKernelGetImportedLibraryListInModule(SceUID pid, SceUID modid, SceUID *list, SceSize *num);
 int sceKernelGetLibEntCBListForSyslibtrace(struct LibEntCB **list, SceSize *num);
+/* name unknown: install the syscall tracer (tool mode) */
+void SceModulemgrForKernel_B23286B8(SyscallTraceInfo *info, void *entry);
 int sceKernelGetLibraryClientList(SceUID pid, SceUID libid, SceUID *list, SceSize *num,
 				  SceUInt32 start);
 int sceKernelGetLibraryDBFlags(SceUID pid, SceUInt32 *flags);

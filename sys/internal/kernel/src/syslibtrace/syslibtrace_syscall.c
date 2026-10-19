@@ -18,7 +18,7 @@
 #include <stddef.h>
 
 #define LIBENT_LIST_SIZE	0x1000
-#define LIBENT_LIST_NUM		(LIBENT_LIST_SIZE / sizeof(SceSyslibtraceLibEntry *))
+#define LIBENT_LIST_NUM		(LIBENT_LIST_SIZE / sizeof(LibEntCB *))
 
 /* registers saved by the trampoline around each hook */
 typedef struct SyslibtraceSyscallFrame {
@@ -27,9 +27,9 @@ typedef struct SyslibtraceSyscallFrame {
 	void *lr;
 } SyslibtraceSyscallFrame;
 
-_Static_assert(offsetof(SceSyslibtraceLibEntry, enterArg) == 0x24, "library entry args");
+_Static_assert(offsetof(LibEntCB, enterArg) == 0x24, "library entry args");
 
-SceSyslibtraceSyscallInfo g_syslibtraceSyscallInfo[SCE_SYSLIBTRACE_NUM_SYSCALLS];
+SyscallTraceInfo g_syslibtraceSyscallInfo[SCE_SYSLIBTRACE_NUM_SYSCALLS];
 
 SceSyslibtraceSyscallCallback g_enterCallback;
 SceSyslibtraceSyscallCallback g_returnCallback;
@@ -38,16 +38,16 @@ SceSyslibtraceLibCallback g_deregisterLibCallback;
 SceSyslibtraceLibCallback g_setTargetCallback;
 SceSyslibtraceLibCallback g_clearTargetCallback;
 
-static inline int IsSyscallExport(const SceSyslibtraceLibEntry *lib)
+static inline int IsSyscallExport(const LibEntCB *lib)
 {
-	return (lib->exports->attribute & SCE_LIBRARY_ATTR_SYSCALL_EXPORT) != 0;
+	return (lib->exports->attr & SCE_LIBRARY_ATTR_SYSCALL_EXPORT) != 0;
 }
 
 /* called by the trampoline before the traced function: frame->lr becomes the function */
 void SceSyslibtraceSyscallEnterHook(SyslibtraceSyscallFrame *frame)
 {
 	ThreadCB *thread = getCurrentThreadCB();
-	SceSyslibtraceSyscallInfo *info;
+	SyscallTraceInfo *info;
 	SceSyslibtraceSyscallCallback callback;
 	SceUInt32 number;
 
@@ -61,9 +61,9 @@ void SceSyslibtraceSyscallEnterHook(SyslibtraceSyscallFrame *frame)
 
 	info = &g_syslibtraceSyscallInfo[number];
 	callback = g_enterCallback;
-	frame->lr = info->entry;
+	frame->lr = info->func;
 	if (info != NULL && callback != NULL)
-		callback(info->libraryNid, info->nid, info->index, info->enterArg,
+		callback(info->libnid, info->funcnid, info->index, info->enterArg,
 			 frame->r[0], frame->r[1], frame->r[2], frame->r[3]);
 }
 
@@ -71,7 +71,7 @@ void SceSyslibtraceSyscallEnterHook(SyslibtraceSyscallFrame *frame)
 void SceSyslibtraceSyscallReturnHook(SyslibtraceSyscallFrame *frame)
 {
 	ThreadCB *thread = getCurrentThreadCB();
-	SceSyslibtraceSyscallInfo *info;
+	SyscallTraceInfo *info;
 	SceSyslibtraceSyscallCallback callback;
 	SceUInt32 number;
 
@@ -86,7 +86,7 @@ void SceSyslibtraceSyscallReturnHook(SyslibtraceSyscallFrame *frame)
 	info = &g_syslibtraceSyscallInfo[number];
 	callback = g_returnCallback;
 	if (info != NULL && callback != NULL)
-		callback(info->libraryNid, info->nid, info->index, info->returnArg,
+		callback(info->libnid, info->funcnid, info->index, info->returnArg,
 			 frame->r[0], frame->r[1], frame->r[2], frame->r[3]);
 }
 
@@ -130,7 +130,7 @@ int SceSyslibtraceForKernel_BD326721(SceUInt32 flags)
 /* report every syscall-exported library not yet registered to the register callback */
 int sceSyslibtraceCallbackRegisterLibs(SceUInt32 flags)
 {
-	SceSyslibtraceLibEntry **list;
+	LibEntCB **list;
 	SceSize num;
 	SceUInt32 i;
 	int ret;
@@ -143,7 +143,7 @@ int sceSyslibtraceCallbackRegisterLibs(SceUInt32 flags)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
-	ret = sceKernelGetLibEntCBListForSyslibtrace((struct LibEntCB **)list, &num);
+	ret = sceKernelGetLibEntCBListForSyslibtrace(list, &num);
 	if (ret < 0) {
 		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT(0, 190);
@@ -151,16 +151,16 @@ int sceSyslibtraceCallbackRegisterLibs(SceUInt32 flags)
 	}
 
 	for (i = 0; i < num; i++) {
-		SceSyslibtraceLibEntry *lib = list[i];
+		LibEntCB *lib = list[i];
 		SceSyslibtraceLibCallback callback;
 
-		if (!IsSyscallExport(lib) || (lib->traceFlags & SCE_SYSLIBTRACE_LIB_REGISTERED))
+		if (!IsSyscallExport(lib) || (lib->flags & SCE_SYSLIBTRACE_LIB_REGISTERED))
 			continue;
 		callback = g_registerLibCallback;
 		if (callback == NULL)
 			continue;
 		callback(lib, &lib->enterArg, &lib->returnArg);
-		list[i]->traceFlags |= SCE_SYSLIBTRACE_LIB_REGISTERED;
+		list[i]->flags |= SCE_SYSLIBTRACE_LIB_REGISTERED;
 	}
 
 	SceSysmemForKernel_4233C16D(list);
@@ -170,7 +170,7 @@ int sceSyslibtraceCallbackRegisterLibs(SceUInt32 flags)
 /* report every registered syscall-exported library to the deregister callback */
 int sceSyslibtraceCallbackDeregisterLibs(SceUInt32 flags)
 {
-	SceSyslibtraceLibEntry **list;
+	LibEntCB **list;
 	SceSize num;
 	SceUInt32 i;
 	int ret;
@@ -183,7 +183,7 @@ int sceSyslibtraceCallbackDeregisterLibs(SceUInt32 flags)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
-	ret = sceKernelGetLibEntCBListForSyslibtrace((struct LibEntCB **)list, &num);
+	ret = sceKernelGetLibEntCBListForSyslibtrace(list, &num);
 	if (ret < 0) {
 		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT(0, 232);
@@ -191,16 +191,16 @@ int sceSyslibtraceCallbackDeregisterLibs(SceUInt32 flags)
 	}
 
 	for (i = 0; i < num; i++) {
-		SceSyslibtraceLibEntry *lib = list[i];
+		LibEntCB *lib = list[i];
 		SceSyslibtraceLibCallback callback;
 
-		if (!IsSyscallExport(lib) || !(lib->traceFlags & SCE_SYSLIBTRACE_LIB_REGISTERED))
+		if (!IsSyscallExport(lib) || !(lib->flags & SCE_SYSLIBTRACE_LIB_REGISTERED))
 			continue;
 		callback = g_deregisterLibCallback;
 		if (callback == NULL)
 			continue;
 		callback(lib, &lib->enterArg, &lib->returnArg);
-		list[i]->traceFlags &= ~SCE_SYSLIBTRACE_LIB_REGISTERED;
+		list[i]->flags &= ~SCE_SYSLIBTRACE_LIB_REGISTERED;
 	}
 
 	SceSysmemForKernel_4233C16D(list);
@@ -211,7 +211,7 @@ int sceSyslibtraceCallbackDeregisterLibs(SceUInt32 flags)
  * Index range [*first, *end) of the libraries libraryNid selects: all of them,
  * or the first one with that NID. Returns 0 if there is none.
  */
-static inline int FindTargetLibs(SceSyslibtraceLibEntry **list, SceSize num, SceUInt32 libraryNid,
+static inline int FindTargetLibs(LibEntCB **list, SceSize num, SceUInt32 libraryNid,
 				 SceUInt32 *first, SceUInt32 *end)
 {
 	SceUInt32 i;
@@ -222,7 +222,7 @@ static inline int FindTargetLibs(SceSyslibtraceLibEntry **list, SceSize num, Sce
 		return 1;
 	}
 	for (i = 0; i < num; i++) {
-		if (libraryNid == list[i]->exports->libraryNid) {
+		if (libraryNid == list[i]->exports->libnid) {
 			*first = i;
 			*end = i + 1;
 			return 1;
@@ -234,7 +234,7 @@ static inline int FindTargetLibs(SceSyslibtraceLibEntry **list, SceSize num, Sce
 /* select a syscall-exported library (or all of them) for tracing */
 int sceSyslibtraceSetTargetSyscallLib(SceUInt32 libraryNid)
 {
-	SceSyslibtraceLibEntry **list;
+	LibEntCB **list;
 	SceSize num;
 	SceUInt32 i, first, end;
 	int ret;
@@ -244,7 +244,7 @@ int sceSyslibtraceSetTargetSyscallLib(SceUInt32 libraryNid)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
-	ret = sceKernelGetLibEntCBListForSyslibtrace((struct LibEntCB **)list, &num);
+	ret = sceKernelGetLibEntCBListForSyslibtrace(list, &num);
 	if (ret < 0) {
 		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT(0, 271);
@@ -253,13 +253,13 @@ int sceSyslibtraceSetTargetSyscallLib(SceUInt32 libraryNid)
 
 	if (FindTargetLibs(list, num, libraryNid, &first, &end)) {
 		for (i = first; i < end; i++) {
-			SceSyslibtraceLibEntry *lib = list[i];
+			LibEntCB *lib = list[i];
 			SceSyslibtraceLibCallback callback;
 
-			if (!IsSyscallExport(lib) || (lib->traceFlags & SCE_SYSLIBTRACE_LIB_TARGET))
+			if (!IsSyscallExport(lib) || (lib->flags & SCE_SYSLIBTRACE_LIB_TARGET))
 				continue;
 			callback = g_setTargetCallback;
-			lib->traceFlags |= SCE_SYSLIBTRACE_LIB_TARGET;
+			lib->flags |= SCE_SYSLIBTRACE_LIB_TARGET;
 			if (callback != NULL)
 				callback(lib, &lib->enterArg, &lib->returnArg);
 		}
@@ -272,7 +272,7 @@ int sceSyslibtraceSetTargetSyscallLib(SceUInt32 libraryNid)
 /* deselect a syscall-exported library (or all of them) */
 int sceSyslibtraceClearTargetSyscallLib(SceUInt32 libraryNid)
 {
-	SceSyslibtraceLibEntry **list;
+	LibEntCB **list;
 	SceSize num;
 	SceUInt32 i, first, end;
 	int ret;
@@ -282,7 +282,7 @@ int sceSyslibtraceClearTargetSyscallLib(SceUInt32 libraryNid)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
-	ret = sceKernelGetLibEntCBListForSyslibtrace((struct LibEntCB **)list, &num);
+	ret = sceKernelGetLibEntCBListForSyslibtrace(list, &num);
 	if (ret < 0) {
 		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT(0, 328);
@@ -291,13 +291,13 @@ int sceSyslibtraceClearTargetSyscallLib(SceUInt32 libraryNid)
 
 	if (FindTargetLibs(list, num, libraryNid, &first, &end)) {
 		for (i = first; i < end; i++) {
-			SceSyslibtraceLibEntry *lib = list[i];
+			LibEntCB *lib = list[i];
 			SceSyslibtraceLibCallback callback;
 
-			if (!IsSyscallExport(lib) || !(lib->traceFlags & SCE_SYSLIBTRACE_LIB_TARGET))
+			if (!IsSyscallExport(lib) || !(lib->flags & SCE_SYSLIBTRACE_LIB_TARGET))
 				continue;
 			callback = g_clearTargetCallback;
-			lib->traceFlags &= ~SCE_SYSLIBTRACE_LIB_TARGET;
+			lib->flags &= ~SCE_SYSLIBTRACE_LIB_TARGET;
 			if (callback != NULL)
 				callback(lib, &lib->enterArg, &lib->returnArg);
 		}
@@ -307,15 +307,15 @@ int sceSyslibtraceClearTargetSyscallLib(SceUInt32 libraryNid)
 	return 0;
 }
 
-static inline SceUInt32 SyscallNumber(const SceSyslibtraceLibEntry *lib, SceUInt32 index)
+static inline SceUInt32 SyscallNumber(const LibEntCB *lib, SceUInt32 index)
 {
-	return (SceUInt32)(lib->syscallBase + index) % SCE_SYSLIBTRACE_NUM_SYSCALLS;
+	return (SceUInt32)(lib->syscallIndex + index) % SCE_SYSLIBTRACE_NUM_SYSCALLS;
 }
 
 /* route the syscalls of every target library through the trampoline */
 int sceSyslibtraceStartSyscallTrace(void)
 {
-	SceSyslibtraceLibEntry **list;
+	LibEntCB **list;
 	SceSize num;
 	SceUInt32 i, k;
 	int ret;
@@ -325,7 +325,7 @@ int sceSyslibtraceStartSyscallTrace(void)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
-	ret = sceKernelGetLibEntCBListForSyslibtrace((struct LibEntCB **)list, &num);
+	ret = sceKernelGetLibEntCBListForSyslibtrace(list, &num);
 	if (ret < 0) {
 		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT_LEVEL(0, 0, 386);
@@ -333,24 +333,24 @@ int sceSyslibtraceStartSyscallTrace(void)
 	}
 
 	for (i = 0; i < num; i++) {
-		SceSyslibtraceLibEntry *lib = list[i];
+		LibEntCB *lib = list[i];
 
-		if (!(lib->traceFlags & SCE_SYSLIBTRACE_LIB_TARGET) ||
-		    (lib->traceFlags & SCE_SYSLIBTRACE_LIB_TRACING))
+		if (!(lib->flags & SCE_SYSLIBTRACE_LIB_TARGET) ||
+		    (lib->flags & SCE_SYSLIBTRACE_LIB_TRACING))
 			continue;
-		lib->traceFlags |= SCE_SYSLIBTRACE_LIB_TRACING;
+		lib->flags |= SCE_SYSLIBTRACE_LIB_TRACING;
 
-		for (k = 0; k < lib->exports->numFunctions; k++) {
+		for (k = 0; k < lib->exports->nfunc; k++) {
 			SceUInt32 number = SyscallNumber(lib, k);
-			SceSyslibtraceSyscallInfo *info = &g_syslibtraceSyscallInfo[number];
+			SyscallTraceInfo *info = &g_syslibtraceSyscallInfo[number];
 			const SceModuleExports *exports;
 
 			SceModulemgrForKernel_2E4A10A0(number, SyslibtraceSyscallTrampoline);
 			lib = list[i];
 			exports = lib->exports;
-			info->entry = exports->entryTable[k];
-			info->libraryNid = exports->libraryNid;
-			info->nid = exports->nidTable[k];
+			info->func = exports->entrytable[k];
+			info->libnid = exports->libnid;
+			info->funcnid = exports->nidtable[k];
 			info->index = k;
 			info->enterArg = lib->enterArg;
 			info->returnArg = lib->returnArg;
@@ -364,7 +364,7 @@ int sceSyslibtraceStartSyscallTrace(void)
 /* give the traced syscalls their functions back */
 int sceSyslibtraceStopSyscallTrace(void)
 {
-	SceSyslibtraceLibEntry **list;
+	LibEntCB **list;
 	SceSize num;
 	SceUInt32 i, k;
 	int ret;
@@ -374,7 +374,7 @@ int sceSyslibtraceStopSyscallTrace(void)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
-	ret = sceKernelGetLibEntCBListForSyslibtrace((struct LibEntCB **)list, &num);
+	ret = sceKernelGetLibEntCBListForSyslibtrace(list, &num);
 	if (ret < 0) {
 		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT_LEVEL(0, 0, 438);
@@ -382,16 +382,16 @@ int sceSyslibtraceStopSyscallTrace(void)
 	}
 
 	for (i = 0; i < num; i++) {
-		SceSyslibtraceLibEntry *lib = list[i];
+		LibEntCB *lib = list[i];
 
-		if ((lib->traceFlags & (SCE_SYSLIBTRACE_LIB_TARGET | SCE_SYSLIBTRACE_LIB_TRACING)) !=
+		if ((lib->flags & (SCE_SYSLIBTRACE_LIB_TARGET | SCE_SYSLIBTRACE_LIB_TRACING)) !=
 		    (SCE_SYSLIBTRACE_LIB_TARGET | SCE_SYSLIBTRACE_LIB_TRACING))
 			continue;
-		lib->traceFlags &= ~SCE_SYSLIBTRACE_LIB_TRACING;
+		lib->flags &= ~SCE_SYSLIBTRACE_LIB_TRACING;
 
-		for (k = 0; k < lib->exports->numFunctions; k++) {
+		for (k = 0; k < lib->exports->nfunc; k++) {
 			lib = list[i];
-			SceModulemgrForKernel_2E4A10A0(SyscallNumber(lib, k), lib->exports->entryTable[k]);
+			SceModulemgrForKernel_2E4A10A0(SyscallNumber(lib, k), lib->exports->entrytable[k]);
 		}
 	}
 
@@ -407,6 +407,6 @@ int SceSyslibtraceForKernel_7CC73CDA(SceUInt32 syscall, SceUInt32 *nid)
 	if (syscall >= SCE_SYSLIBTRACE_NUM_SYSCALLS)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 
-	*nid = g_syslibtraceSyscallInfo[syscall].nid;
+	*nid = g_syslibtraceSyscallInfo[syscall].funcnid;
 	return 0;
 }

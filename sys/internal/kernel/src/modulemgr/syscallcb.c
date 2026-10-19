@@ -11,16 +11,6 @@
 /* DACR with the domain of the (read-only) syscall table opened for writing */
 #define SYSCALLCB_DACR_WRITABLE		0x17450000
 
-/* one traced syscall (tool mode) */
-typedef struct SyscallTraceInfo {
-	void *func;
-	SceNID libnid;
-	SceNID funcnid;
-	SceUInt32 index;		/* in the library */
-	SceUInt32 enterArg;		/* LibEntCB.enterArg */
-	SceUInt32 returnArg;
-} SyscallTraceInfo;
-
 static void *g_traceEntry;		/* called instead of traced syscalls */
 static SyscallTraceInfo *g_traceInfo;
 

@@ -8,47 +8,11 @@
 #include <scetypes.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysroot.h>
-
-/* SCE library export record (the module's export table entry) */
-typedef struct SceModuleExports {
-	SceUInt8 size;
-	SceUInt8 auxattribute;
-	SceUInt16 version;
-	SceUInt16 attribute;
-	SceUInt16 numFunctions;
-	SceUInt16 numVars;
-	SceUInt16 numTlsVars;
-	SceUInt8 hashinfo;		/* low nibble: funcs, high: vars */
-	SceUInt8 hashinfotls;
-	SceUInt8 reserved;
-	SceUInt8 nidaltsets;
-	SceUInt32 libraryNid;
-	const char *libraryName;
-	const SceUInt32 *nidTable;
-	void *const *entryTable;
-} SceModuleExports;
+#include <modulemgr/module_library.h>
 
 #define SCE_LIBRARY_ATTR_SYSCALL_EXPORT	0x4000
 
-/*
- * The module manager's entry for an exported library, as handed out by
- * sceKernelGetLibEntCBListForSyslibtrace (Modulemgr's LibEntCB).
- */
-typedef struct SceSyslibtraceLibEntry {
-	struct SceSyslibtraceLibEntry *next;
-	struct SceSyslibtraceLibEntry *older;	/* other versions of the same library */
-	const SceModuleExports *exports;
-	SceInt16 syscallBase;		/* syscall number of the first function */
-	SceUInt16 traceFlags;		/* SCE_SYSLIBTRACE_LIB_* */
-	int clientCount;
-	void *clients;
-	SceUID guid;
-	SceUID puid;
-	void *cb;			/* the exporting module */
-	void *enterArg;			/* passed to the enter callback, set by the library callbacks */
-	void *returnArg;		/* passed to the return callback */
-} SceSyslibtraceLibEntry;
-
+/* LibEntCB.flags */
 #define SCE_SYSLIBTRACE_LIB_TARGET	0x100	/* selected by sceSyslibtraceSetTargetSyscallLib */
 #define SCE_SYSLIBTRACE_LIB_REGISTERED	0x200	/* seen by the register callback */
 #define SCE_SYSLIBTRACE_LIB_TRACING	0x400	/* syscalls redirected to the trampoline */
@@ -58,8 +22,7 @@ typedef struct SceSyslibtraceLibEntry {
 typedef int (*SceSyslibtraceSyscallCallback)(SceUInt32 libraryNid, SceUInt32 nid, SceUInt32 index,
 					     void *arg, SceUInt32 r0, SceUInt32 r1, SceUInt32 r2,
 					     SceUInt32 r3);
-typedef int (*SceSyslibtraceLibCallback)(SceSyslibtraceLibEntry *lib, void **enterArg,
-					 void **returnArg);
+typedef int (*SceSyslibtraceLibCallback)(LibEntCB *lib, void **enterArg, void **returnArg);
 
 /* argument of SceSyslibtraceForKernel_F9CB8BA9 */
 typedef struct SceSyslibtraceCallbacks {
@@ -71,16 +34,6 @@ typedef struct SceSyslibtraceCallbacks {
 	SceSyslibtraceLibCallback setTarget;
 	SceSyslibtraceLibCallback clearTarget;
 } SceSyslibtraceCallbacks;
-
-/* the traced function behind each syscall number (handed to the module manager) */
-typedef struct SceSyslibtraceSyscallInfo {
-	void *entry;
-	SceUInt32 libraryNid;
-	SceUInt32 nid;
-	SceUInt32 index;		/* function index in the library */
-	void *enterArg;
-	void *returnArg;
-} SceSyslibtraceSyscallInfo;
 
 #define SCE_SYSLIBTRACE_NUM_SYSCALLS	0x1000
 
@@ -108,7 +61,3 @@ int SceSyslibtraceForKernel_7CC73CDA(SceUInt32 syscall, SceUInt32 *nid);	/* NID 
 SceSize SceNidsymtblForDriver_138A9106(const SceNidsymtblEntry **table);	/* the table */
 int SceNidsymtblForDriver_985E2935(SceUInt32 nid, const char **name);	/* name of a NID */
 
-/* imports */
-/* sceKernelGetLibEntCBListForSyslibtrace: <modulemgr/modulemgr.h> (fills a list of SceSyslibtraceLibEntry pointers) */
-/* names unknown: hand the syscall table and trampoline to the module manager, the NID lookup to sysroot */
-int SceModulemgrForKernel_B23286B8(SceSyslibtraceSyscallInfo *info, void *trampoline);

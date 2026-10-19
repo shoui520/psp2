@@ -4,6 +4,7 @@
 
 #include <sysmem/debug.h>
 #include <syslibtrace/syslibtrace.h>
+#include <modulemgr/modulemgr.h>
 #include "syslibtrace.h"
 
 int SyslibtraceStart(SceSize args, void *argp)
