@@ -204,8 +204,9 @@ int SceSblACMgrForKernel_1948E9DB(void)
 	return 0;
 }
 
-int sceSblACMgrGetMediaType(const SceChar8 *path, SceUInt32 *mediaType)
+int sceSblACMgrGetMediaType(const char *pathname, SceUInt32 *mediaType)
 {
+	const SceChar8 *path = (const SceChar8 *)pathname;	/* compared as signed characters */
 	const AcMgrMediaType *entry;
 	const SceChar8 *device, *suffix, *p;
 	SceSize deviceLen, suffixLen, i;

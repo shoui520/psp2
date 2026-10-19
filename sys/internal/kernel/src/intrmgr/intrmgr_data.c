@@ -23,7 +23,7 @@ void *g_intrDispatchPending INTR_DATA;
 IntrStackGuard g_intrStackGuard INTR_DATA;
 IntrLevelStack g_intrStacks[64] INTR_DATA;
 SceUInt32 g_intrReserved1[10] INTR_DATA;
-SceUInt32 g_intrThreadmgrCpu[4] INTR_DATA;
+struct ThreadMgrCpuCB *g_intrThreadmgrCpu[4] INTR_DATA;
 ProcessHwWatchpoints *g_intrKernelWatchpoints INTR_DATA;
 ProcessHwBreakpoints *g_intrKernelBreakpoints INTR_DATA;
 SceUInt32 g_intrReserved2[15] INTR_DATA;

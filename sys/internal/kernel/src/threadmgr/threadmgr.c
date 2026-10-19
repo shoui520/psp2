@@ -533,11 +533,6 @@ int uidExtendedClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
 #define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
 #define SCE_KERNEL_ERROR_NOT_DORMANT	0x80028028
 
-/* the CPU states SceIntrmgrForKernel_04E635AA is given */
-struct ThreadmgrCpuStates {
-	struct ThreadMgrCpuCB *cpu[CPU_COUNT];
-};
-
 /* what the bootloader passes: per CPU, the stack it is running on */
 struct ThreadmgrBootArgs {
 	uint8_t reserved[0x200];
@@ -548,14 +543,6 @@ struct ThreadmgrBootArgs {
 };
 
 typedef int (*ThreadmgrSuspendHandler)(int event, void *arg);
-extern int SceIntrmgrForKernel_9CB39268(void *handler);	/* before an interrupt handler */
-extern int SceIntrmgrForKernel_46F04D82(void *handler);
-extern int SceIntrmgrForKernel_764F140A(void *handler);	/* the next context after an interrupt */
-extern int SceIntrmgrForKernel_04E635AA(struct ThreadmgrCpuStates *states);
-extern int SceIntrmgrForKernel_E3B670BF(void *handler);	/* a thread's debug suspension */
-extern int SceIntrmgrForKernel_BCD3BB05(void);
-extern uint32_t SceIntrmgrForKernel_08FDB0CE(struct ThreadRegisterContext *context, uint32_t flags,
-					     uintptr_t vfp);
 
 /* excp_handlers.S */
 void poisonVfpRegisters(void);
@@ -697,7 +684,7 @@ int sceKernelThreadMgrModuleBoot(SceSize arglen, const struct ThreadmgrBootArgs 
 	struct ThreadmgrWaitableClass *waitableClass, *threadClass;
 	struct ThreadmgrThreadObject *object;
 	struct ThreadCB *thread;
-	struct ThreadmgrCpuStates states;
+	struct ThreadMgrCpuCB *cpuCB[CPU_COUNT];
 	SceClass *cacheClass;
 	uintptr_t vbar, start, end;
 	uint32_t dacr, dscr, mask;
@@ -903,8 +890,8 @@ int sceKernelThreadMgrModuleBoot(SceSize arglen, const struct ThreadmgrBootArgs 
 	SceIntrmgrForKernel_46F04D82(SceThreadmgrForKernel_BB56D42F);
 	SceIntrmgrForKernel_764F140A(setupNextContext_intr);
 	for (i = 0; i < CPU_COUNT; i++)
-		states.cpu[i] = &s_threadmgrRuntime.manager->cpuCB[i];
-	SceIntrmgrForKernel_04E635AA(&states);
+		cpuCB[i] = &s_threadmgrRuntime.manager->cpuCB[i];
+	SceIntrmgrForKernel_04E635AA(cpuCB);
 	startFastMutex();
 	startCallback();
 	startThreadEvent();

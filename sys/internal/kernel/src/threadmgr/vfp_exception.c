@@ -67,7 +67,6 @@ _Static_assert(sizeof(ThreadmgrVfpExceptionMessage) == 0x210, "VFP exception mes
 typedef void (*ThreadmgrProcessDebugSuspendHook)(SceUID pid, SceUID threadId, int kind,
 						 uintptr_t arg);
 
-extern void SceIntrmgrForKernel_71E08D71(ThreadmgrVfpTrace *trace, const void *raw);
 void runningThreadPreemptByIntr(struct ThreadCB *context, uint32_t reason);
 
 static const char *const s_traceExceptions[16] = {

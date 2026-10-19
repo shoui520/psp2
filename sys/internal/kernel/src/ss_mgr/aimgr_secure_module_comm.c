@@ -20,7 +20,6 @@ const SceSelfAuthInfo aimgrSmAuthInfo = {
 		0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff
 	}
 };
-int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, uint32_t *mediaType);
 
 int invoke_aimgr_secure_module(void)
 {

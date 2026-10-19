@@ -21,7 +21,18 @@
 #include <iofilemgr/iofilemgr.h>
 #include <modulemgr/module_library.h>
 #include <sysmem/debug.h>
-#include "modulemgr_imports.h"
+#include <sysmem/dipsw.h>
+#include <sysmem/utils.h>
+#include <sysmem/qafmgr.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysclib.h>
+#include <sysmem/sysroot.h>
+#include <processmgr/processmgr.h>
+#include <acmgr/acmgr.h>
+#include <intrmgr/intrmgr.h>
+#include <sysmem/cpu.h>
+#include <sysmem/procevent.h>
+#include <excpmgr/excpmgr.h>
 #include <modulemgr/modulemgr_control.h>
 #include <sysmem/sysroot_modulemgr.h>
 

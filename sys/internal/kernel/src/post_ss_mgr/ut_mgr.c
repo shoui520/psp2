@@ -102,7 +102,6 @@ typedef struct SceUtSmCommand {
 	SceUInt32 reserved[4];
 } SceUtSmCommand;
 
-int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, SceUInt32 *mediaType);
 int utSmOpen(void *utoken, SceSize size, SceUInt32 now);
 int utSmSeal(void *utoken, SceSize size, SceUInt32 now);
 

@@ -507,9 +507,6 @@ void runningThreadPreemptByIntr(struct ThreadCB *context, uint32_t reason)
 #define OVERFLOW_IGNORE			2
 
 typedef void (*ThreadmgrProbe)(const struct ThreadmgrSchedProbeDescriptor *probe, ...);
-extern int SceIntrmgrForKernel_71C5F42F(struct ThreadRegisterContext *context, uintptr_t vfp);
-extern uint32_t SceIntrmgrForKernel_08FDB0CE(struct ThreadRegisterContext *context,
-					     uint32_t flags, uintptr_t vfp);
 /* context_runtime.S */
 extern void callSwitchThread2OnStack(uintptr_t stackTop, uint32_t mode);
 

@@ -22,24 +22,6 @@
 #define INTR_LEVEL_STACK_SIZE 0x2000
 #define INTR_STACK_MAGIC 0x1ab4e8dfU
 
-typedef struct SceKernelIntrHandlerInfo {
-	SceSize size;
-	void *handler;
-	void *arg;
-	SceUInt16 intrCode;
-	SceUInt16 type;
-	SceUInt16 subCount;
-	SceUInt16 priority;
-	SceUInt16 targetCpu;
-	SceUInt16 enabled;
-	SceUInt32 count[4];
-	SceUInt32 reserved0[4];		/* always 0 */
-	SceUInt32 reserved1[4];
-	SceUInt32 reserved2[8];
-	char *name;
-	SceUInt32 typeFlag;		/* 0x10: the handler's type has 0x10 */
-} SceKernelIntrHandlerInfo;
-
 typedef struct IntrIrqSystem {
 	SceUInt32 translationBase;
 	SceUInt32 dacr;
@@ -81,7 +63,7 @@ extern void *g_intrSysroot;
 extern SceUInt32 g_intrReserved2[15];
 extern ProcessHwBreakpoints *g_intrKernelBreakpoints;
 extern ProcessHwWatchpoints *g_intrKernelWatchpoints;
-extern SceUInt32 g_intrThreadmgrCpu[4];
+extern struct ThreadMgrCpuCB *g_intrThreadmgrCpu[4];
 extern SceUInt32 g_intrReserved1[10];
 extern IntrLevelStack g_intrStacks[64];
 extern IntrStackGuard g_intrStackGuard;

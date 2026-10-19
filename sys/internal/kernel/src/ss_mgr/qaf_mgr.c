@@ -565,7 +565,6 @@ const SceSelfAuthInfo qafSmAuthInfo = {
 		0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff
 	}
 };
-int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, uint32_t *mediaType);
 
 int qafLoadSecureModule(const char *path)
 {

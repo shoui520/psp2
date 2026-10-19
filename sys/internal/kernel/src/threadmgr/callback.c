@@ -69,11 +69,6 @@ typedef struct ThreadmgrRegisterCallback {
 	ThreadmgrEventCallback *callbackPrev;
 } ThreadmgrRegisterCallback;
 
-extern void SceIntrmgrForKernel_08FDB0CE(struct ThreadRegisterContext *context, uint32_t flags,
-					 uintptr_t vfp) __attribute__((noreturn));
-extern int SceIntrmgrForKernel_71C5F42F(struct ThreadRegisterContext *context, uintptr_t vfp)
-	__attribute__((returns_twice));
-extern void SceIntrmgrForDriver_C568F145(uint32_t code);
 int sceKernelCheckThreadUserStackSelf(void);
 int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result,
 				    uint32_t request);
@@ -111,6 +106,7 @@ void __attribute__((noreturn)) returnFromCallback(struct ThreadCB *thread)
 	regs->callbackContext->pmuserenr = regs->pmuserenr;
 	regs->callbackContext->pmcr = regs->pmcr;
 	SceIntrmgrForKernel_08FDB0CE(regs->callbackContext, 0, regs->callbackVfp);
+	__builtin_unreachable();
 }
 
 /* SceUIDCallbackClass's constructor */
@@ -487,6 +483,7 @@ restore:
 		regs->pmevent[i].count = 0;
 	}
 	SceIntrmgrForKernel_08FDB0CE(thread->pRegisterContext, 0, thread->pVfpRegisterContext);
+	__builtin_unreachable();
 }
 
 /*

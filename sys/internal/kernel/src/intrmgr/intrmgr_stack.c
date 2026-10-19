@@ -41,10 +41,10 @@ void SceIntrmgrForKernel_9CB39268(void *handler) { g_intrStackGuard.beforeIntrHa
 void SceIntrmgrForKernel_46F04D82(void *handler) { g_intrDispatchPending = handler; }
 void SceIntrmgrForKernel_764F140A(void *handler) { g_intrSetupNextContext = handler; }
 
-void SceIntrmgrForKernel_04E635AA(const SceUInt32 *values)
+void SceIntrmgrForKernel_04E635AA(struct ThreadMgrCpuCB *const *cpu)
 {
 	for (int i = 0; i < 4; i++)
-		g_intrThreadmgrCpu[i] = values[i];
+		g_intrThreadmgrCpu[i] = cpu[i];
 }
 
 /* name unknown: SCE_MONCALL_SET_SHARED_MEMORY (GIC state handover on resume). */

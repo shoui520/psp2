@@ -31,7 +31,9 @@ int SceSblACMgrForDriver_2A29453C(SceUID pid);	/* vitasdk: ksceSblACMgrIsAllowed
 int SceSblACMgrForDriver_2E992B02(SceUID pid);
 int SceSblACMgrForDriver_3B356B98(SceSblACMgrValue *value, SceUInt32 *mode);
 int SceSblACMgrForDriver_426A4E8C(SceUID pid);	/* vitasdk: ksceSblACMgrIsFself */
-int sceSblACMgrGetMediaType(const SceChar8 *path, SceUInt32 *mediaType);
+int sceSblACMgrGetMediaType(const char *path, SceUInt32 *mediaType);
+/* the same function, SceSblACMgrForKernel's export */
+int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, SceUInt32 *mediaType);
 int SceSblACMgrForDriver_456DA7AC(SceUID pid);
 int sceSblACMgrSetFSAttributeByAttributeWithMountPoint(SceUID pid, SceSblACMgrValue *attr,
 						       const SceSblACMgrValue *source,

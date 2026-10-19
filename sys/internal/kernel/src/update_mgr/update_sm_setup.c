@@ -3,8 +3,7 @@
 #include <threadmgr/threadmgr.h>
 #include <string.h>
 #include "update_internal.h"
-
-int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, void *type);
+#include <acmgr/acmgr.h>
 
 typedef struct UpdateUtilSmPath {
 	const char *sm_path;

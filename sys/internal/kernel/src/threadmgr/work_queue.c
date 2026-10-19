@@ -201,10 +201,6 @@ _Static_assert(sizeof(ThreadmgrWorkQueueInfo) == 0x40 && sizeof(ThreadmgrWorkTas
 	       offsetof(ThreadmgrWorkQueueInfoFull, threads) == 0x44,
 	       "work queue info layouts");
 
-extern void SceIntrmgrForKernel_08FDB0CE(struct ThreadRegisterContext *context, uint32_t flags,
-					 uintptr_t vfp) __attribute__((noreturn));
-extern int SceIntrmgrForKernel_71C5F42F(struct ThreadRegisterContext *context, uintptr_t vfp)
-	__attribute__((returns_twice));
 int callCallbackAll(struct ThreadCB *thread);
 int sceKernelCheckThreadUserStackSelf(void);
 int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result,
@@ -693,6 +689,7 @@ void __attribute__((noreturn)) returnFromWorkTask(int result)
 	regs->callbackContext->pmuserenr = regs->pmuserenr;
 	regs->callbackContext->pmcr = regs->pmcr;
 	SceIntrmgrForKernel_08FDB0CE(regs->callbackContext, 0, regs->callbackVfp);
+	__builtin_unreachable();
 }
 
 /*
@@ -811,6 +808,7 @@ void callWorkTaskEntry(ThreadmgrWorkTaskCB *task, void *arg)
 		regs->pmevent[i].count = 0;
 	}
 	SceIntrmgrForKernel_08FDB0CE(thread->pRegisterContext, 0, thread->pVfpRegisterContext);
+	__builtin_unreachable();
 }
 
 /* a worker: runs the queue's tasks as its semaphore counts them */

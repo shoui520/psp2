@@ -1244,7 +1244,6 @@ SceUID sceIoPreadAsyncForUser(SceUID fd, void *data, SceSize size, SceOff offset
 SceUID sceIoPwriteAsyncForUser(SceUID fd, const void *data, SceSize size, SceOff offset, void *asyncParam);
 
 /* SceSblACMgr */
-int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, SceUInt32 *type);
 
 /*
  * SceFios2Kernel. iofilemgr keeps a directory handle as an int (its dummy files carry it),

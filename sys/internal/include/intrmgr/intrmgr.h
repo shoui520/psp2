@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <scetypes.h>
 
 typedef int (*SceKernelIntrHandler)(int intrCode, void *userCtx);
@@ -58,6 +59,31 @@ int sceKernelCallSubIntrHandler(int intrCode, int subCode, void *value);
 int sceKernelGenerateSoftIntr(unsigned int intrCode, unsigned int filter, unsigned int target);
 int sceKernelGetIntrPendingStatusForDebugger(int intrCode);
 int sceKernelClearIntrPendingStatusForDebugger(int intrCode);
+int sceKernelSuspendSubIntr(int intrCode, int subCode, unsigned int *enabled);
+int sceKernelResumeSubIntr(int intrCode, int subCode, unsigned int stateValue);
+int sceKernelIsSubInterruptOccurred(int intrCode, int subCode);
+
+/* sceKernelQueryIntrHandlerInfo's output */
+typedef struct SceKernelIntrHandlerInfo {
+	SceSize size;
+	void *handler;
+	void *arg;
+	SceUInt16 intrCode;
+	SceUInt16 type;
+	SceUInt16 subCount;
+	SceUInt16 priority;
+	SceUInt16 targetCpu;
+	SceUInt16 enabled;
+	SceUInt32 count[4];
+	SceUInt32 reserved0[4];		/* always 0 */
+	SceUInt32 reserved1[4];
+	SceUInt32 reserved2[8];
+	char *name;
+	SceUInt32 typeFlag;		/* 0x10: the handler's type has 0x10 */
+} SceKernelIntrHandlerInfo;
+
+int sceKernelQueryIntrHandlerInfo(unsigned int intrCode, unsigned int subCode,
+				  SceKernelIntrHandlerInfo *out);
 
 /* Name unknown: install the syscall entry and return trace hooks. */
 void SceIntrmgrForKernel_217AC350(void *enter, void *leave);
@@ -78,3 +104,28 @@ int sceKernelReleaseIntrHookHandler(unsigned int intrCode);
 int sceKernelResumeIntr(unsigned int intrCode, unsigned int enabled);
 int sceKernelSetIntrPriority(unsigned int intrCode, unsigned int priority);
 int sceKernelSuspendIntr(unsigned int intrCode, unsigned int *enabled);
+
+/* intrmgr.c: the thread manager's event hook, and an event (0x100000) carrying a value */
+void SceIntrmgrForKernel_E3B670BF(int (*event)(unsigned int, unsigned int, void *));
+int SceIntrmgrForDriver_C568F145(unsigned int value);
+
+/* intrmgr_stack.c: the thread manager's hooks */
+struct ThreadMgrCpuCB;				/* threadmgr's per-CPU control block */
+void SceIntrmgrForKernel_BCD3BB05(void);
+void SceIntrmgrForKernel_9CB39268(void *handler);	/* before an interrupt handler */
+void SceIntrmgrForKernel_46F04D82(void *handler);
+void SceIntrmgrForKernel_764F140A(void *handler);	/* the next context after an interrupt */
+void SceIntrmgrForKernel_04E635AA(struct ThreadMgrCpuCB *const *cpu);	/* one per CPU */
+
+/* intrmgr_copy.c: copies 0x200 bytes, returning the end of the copy */
+void *SceIntrmgrForKernel_71E08D71(void *destination, const void *source);
+
+/*
+ * intrmgr_cpu.S: a context saved like setjmp (0 when saved, nonzero when it is resumed), and
+ * resumed like longjmp.
+ */
+struct ThreadRegisterContext;			/* threadmgr/threadcb.h */
+int SceIntrmgrForKernel_71C5F42F(struct ThreadRegisterContext *context, uintptr_t vfp)
+	__attribute__((returns_twice));
+uint32_t SceIntrmgrForKernel_08FDB0CE(struct ThreadRegisterContext *context, uint32_t flags,
+				      uintptr_t vfp);

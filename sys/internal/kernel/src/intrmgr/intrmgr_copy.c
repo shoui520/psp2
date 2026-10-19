@@ -2,8 +2,11 @@
 #include "intrmgr.h"
 
 /* Name unknown; sixteen snapshots preserve the original's overlap behavior. */
-SceUInt32 *SceIntrmgrForKernel_71E08D71(SceUInt32 *dst, const SceUInt32 *src)
+void *SceIntrmgrForKernel_71E08D71(void *destination, const void *source)
 {
+	SceUInt32 *dst = destination;
+	const SceUInt32 *src = source;
+
 	for (int i = 0; i < 0x200 / 32; i++, dst += 8, src += 8) {
 		SceUInt32 word0 = src[0], word1 = src[1];
 		SceUInt32 word2 = src[2], word3 = src[3];
