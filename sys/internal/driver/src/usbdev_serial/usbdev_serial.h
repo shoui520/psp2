@@ -2,10 +2,6 @@
 #pragma once
 #include <stdint.h>
 
-/* Official error names from the kernel reference manual. */
-#define SCE_ERROR_ERRNO_ENODEV 0x80010013
-#define SCE_KERNEL_ERROR_WAIT_CANCEL 0x80028007
-
 int SceUsbDevSerial_DAE5C362(unsigned mode);
 int SceUsbDevSerial_9F497D4E(void);
 int SceUsbDevSerial_C0FDECAF(void);

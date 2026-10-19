@@ -5218,9 +5218,9 @@ out:
 #define PRIORITY_RELATIVE_OFFSET	0x100000a0
 #define PRIORITY_RELATIVE_OFFSET_SYSTEM	0x10000060
 #define PRIORITY_RELATIVE_OFFSET_OLD	0x10000100
-#define PRIORITY_USER_LOW		0x40
-#define PRIORITY_USER_RANGE_SYSTEM	0x80
-#define PRIORITY_USER_RANGE		0xbc
+#define USER_THREAD_PRIORITY_LOW	0x40	/* a user mode thread's: 0x40-0xfb, a game's 0x40-0xbf */
+#define USER_THREAD_PRIORITY_RANGE_GAME	0x80
+#define USER_THREAD_PRIORITY_RANGE	0xbc
 
 #define CHANGE_PRIORITY_FORMAT \
 	"***\n***\n***\n*** error: sceKernelChangeThreadPriority(\"%s\"), illegal priority for user " \
@@ -5305,9 +5305,9 @@ int sceKernelChangeThreadPriority2(SceUID uid, uint32_t priority)
 	if ((int)thread->currentAttr < 0) {
 		/* a user thread's range */
 		type = thread->process->budget->type;
-		if (priority - PRIORITY_USER_LOW >
-		    (type == PROCESS_TYPE_GAME ? PRIORITY_USER_RANGE_SYSTEM - 1 :
-						   PRIORITY_USER_RANGE - 1)) {
+		if (priority - USER_THREAD_PRIORITY_LOW >
+		    (type == PROCESS_TYPE_GAME ? USER_THREAD_PRIORITY_RANGE_GAME - 1 :
+						   USER_THREAD_PRIORITY_RANGE - 1)) {
 			if (type == PROCESS_TYPE_GAME)
 				SCE_DBG_PRINTF_FUNC(0, 6276, CHANGE_PRIORITY_FUNC, CHANGE_PRIORITY_FORMAT,
 						    SceSysmemForDriver_E655852F(uid), priority);
@@ -5484,9 +5484,9 @@ int sceKernelChangeThreadPriorityAndCpuAffinityMask(SceUID uid, uint32_t priorit
 	if ((int)thread->currentAttr < 0) {
 		/* a user thread's range */
 		type = thread->process->budget->type;
-		if (priority - PRIORITY_USER_LOW >
-		    (type == PROCESS_TYPE_GAME ? PRIORITY_USER_RANGE_SYSTEM - 1 :
-						   PRIORITY_USER_RANGE - 1)) {
+		if (priority - USER_THREAD_PRIORITY_LOW >
+		    (type == PROCESS_TYPE_GAME ? USER_THREAD_PRIORITY_RANGE_GAME - 1 :
+						   USER_THREAD_PRIORITY_RANGE - 1)) {
 			if (type == PROCESS_TYPE_GAME)
 				SCE_DBG_PRINTF_FUNC(0, 7029, CHANGE_AFFINITY_FUNC, "***\n***\n***\n*** error: "
 					"sceKernelChangeThreadPriorityAndCpuAffinityMask(\"%s\"), illegal "
@@ -6917,12 +6917,12 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 	}
 	if ((int)attr < 0) {
 		if (type->type == PROCESS_TYPE_GAME) {
-			if ((unsigned int)priority - PRIORITY_USER_LOW >= PRIORITY_USER_RANGE_SYSTEM) {
+			if ((unsigned int)priority - USER_THREAD_PRIORITY_LOW >= USER_THREAD_PRIORITY_RANGE_GAME) {
 				SCE_DBG_PRINTF(0, 3388, PRIORITY_FORMAT, name, priority);
 				ret = SCE_KERNEL_ERROR_ILLEGAL_PRIORITY;
 				goto restore;
 			}
-		} else if ((unsigned int)priority - PRIORITY_USER_LOW >= PRIORITY_USER_RANGE) {
+		} else if ((unsigned int)priority - USER_THREAD_PRIORITY_LOW >= USER_THREAD_PRIORITY_RANGE) {
 			SCE_DBG_PRINTF(0, 3394, PRIORITY_FORMAT, name, priority);
 			ret = SCE_KERNEL_ERROR_ILLEGAL_PRIORITY;
 			goto restore;

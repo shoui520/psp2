@@ -11,8 +11,6 @@
 #include "ngs_system.h"
 #include "ngs_voice_definition.h"
 
-#define SCE_NGS_ERROR_INVALID_PARAM ((int)0x804a0002)
-
 struct SceNgsVoicePreset;
 
 int ngsCopyToCaller(void *destination, const void *source, SceSize size,

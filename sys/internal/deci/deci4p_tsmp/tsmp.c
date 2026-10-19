@@ -18,10 +18,6 @@
 #include <post_ss_mgr/sblpostssmgr.h>
 #include <regmgr/regmgr.h>
 
-#define SCE_ERROR_ERRNO_ENODATA			0x8001003d
-#define SCE_KERNEL_ERROR_INVALID_FLAGS		0x8002000a
-#define SCE_KERNEL_ERROR_NO_MEMORY		0x8002710b
-
 #define TSMP_DIPSW			0xc2
 
 /* Sony's build inlines every helper into its callers */
