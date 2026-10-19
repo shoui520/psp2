@@ -39,8 +39,6 @@ typedef struct UartDebugPort {
 	SceUInt32 port;
 } UartDebugPort;
 
-int SceUartForKernel_4C02AA05(int port);
-
 UartDebugPort s_debugPorts[UART_DEBUG_PORTS] = {
 	{ 0, 0 }, { 0, 1 }, { 0, 6 },
 };

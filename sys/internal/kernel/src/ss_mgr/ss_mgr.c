@@ -26,7 +26,6 @@ const SceSelfAuthInfo ssPortabilityAuthInfo = {
 		0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff
 	}
 };
-void *SceSblSsMgrForDriver_CD98CC92(void *dst, int c, SceSize size) __attribute__((noinline));
 
 /* Portability service request, shared by its input and output. Name unknown. */
 typedef struct SsPortabilityRequest {
@@ -346,7 +345,7 @@ stop:
 }
 
 /* Not memset: callers clear key material, which a builtin could drop. */
-SS_MGR_CORE(SceSblSsMgrForDriver_CD98CC92)
+SS_MGR_CORE(SceSblSsMgrForDriver_CD98CC92) __attribute__((noinline))
 void *SceSblSsMgrForDriver_CD98CC92(void *dst, int c, SceSize size)
 {
 	uint8_t *p = dst;
