@@ -6,6 +6,7 @@
 #include "bbcmd.h"
 #include "bbmc_memory.h"
 #include "bbcmd_fp.h"
+#include "qmi_backend.h"
 
 BbcmdControl *g_bbcmdControl;
 static BbcmdControl g_bbcmdStorage;
@@ -303,12 +304,6 @@ void bbcmdFree(void *ptr)
 }
 
 extern int bbmcSendSimpleMessage(BbmcControl *control, unsigned int command);
-extern int bbcmdInitializeProtocol(unsigned int command, BbcmdControl *control);
-extern int bbcmdFinalizeProtocol(unsigned int command, BbcmdControl *control);
-extern int bbcmdOpenChannel(unsigned int command, unsigned int channel);
-extern int bbcmdCloseChannel(unsigned int command, unsigned int channel);
-extern int bbcmdResetChannel(unsigned int command, unsigned int channel,
-			     BbcmdControl *control);
 
 /* Validate command arguments and queue a complete request. */
 int bbcmdExecute(unsigned int channel, unsigned int command,

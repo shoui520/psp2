@@ -41,3 +41,7 @@ _Static_assert(offsetof(BbmcDriverInfo, targetState) == 4 &&
 	offsetof(BbmcDriverInfo, firstBootReply) == 8 &&
 	offsetof(BbmcDriverInfo, secondBootReply) == 12,
 	"BBMC driver information layout");
+
+/* bbmc.c */
+int SceBbmcForDriver_D98DB926(void);
+int SceBbmcForDriver_D16D0845(void);

@@ -5,13 +5,11 @@
 #include "../usb_extif.h"
 
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int message);
-int bbmcTimerCancelHandler(int timerId);
 
 typedef int (*BbmcSuspendHandler)(BbmcControl *, BbmcMessage *);
 
 int suspendInitialToComBoot(BbmcControl *control, BbmcMessage *message);
 int suspendSteadyComBoot(BbmcControl *control, BbmcMessage *message);
-int suspendDuringFromComBootToStandby(BbmcControl *control, BbmcMessage *message);
 int suspendDuringFromComBootToInitial(BbmcControl *control, BbmcMessage *message);
 int suspendSteadyStandby(BbmcControl *control, BbmcMessage *message);
 int suspendDuringFromStandbyToAuthorized(BbmcControl *control, BbmcMessage *message);
@@ -30,9 +28,6 @@ int suspendSteadyLowPowerMode(BbmcControl *control, BbmcMessage *message);
 int suspendDuringFromLpmToConnected(BbmcControl *control, BbmcMessage *message);
 int suspendLowPowerModeToStandby(BbmcControl *control, BbmcMessage *message);
 int suspendConnectedToLowPowerModeOrStandby(BbmcControl *control, BbmcMessage *message);
-int suspendSteadyConnected(BbmcControl *control, BbmcMessage *message);
-int suspendGotoLPM(BbmcControl *control, BbmcMessage *message);
-int suspendGotoConnected(BbmcControl *control, BbmcMessage *message);
 
 #if FW_DEBUG
 static const SceKernelDebugInfo dbg_seqSuspend_L375

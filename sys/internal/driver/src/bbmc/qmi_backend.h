@@ -900,4 +900,110 @@ int qmiControlClientCompleted(unsigned int event, BbcmdProtocolClient *client);
 int qmiSendControlCommand(QmiClientInstance *instance, unsigned int command,
 	const void *arguments);
 
+/* qmi_backend.c */
+int qmiInitializeBackend(void);
+int qmiFinalizeBackend(void);
+int qmiOpenTransport(unsigned int channel);
+int qmiCloseTransport(unsigned int channel);
+int qmiActivateChannel(unsigned int channel,
+	int (*completed)(BbcmdRequest *request, int result), BbcmdRequest *request);
+int qmiDeactivateChannel(unsigned int channel,
+	int (*completed)(BbcmdRequest *request), BbcmdRequest *request);
+int qmiSuspendChannel(unsigned int channel, void *forwardedValue1, void *forwardedValue2);
+int qmiResumeChannel(unsigned int channel, void *forwardedValue1, void *forwardedValue2);
+int qmiAcquireClientInstance(BbcmdProtocolClient *client);
+int qmiReleaseClientInstance(BbcmdProtocolClient *client);
+
+/* qmi_channel.c */
+int qmiStartProtocolChannel(unsigned int channel,
+	int (*completed)(BbcmdRequest *request, int result), BbcmdRequest *request);
+int qmiStopProtocolChannel(unsigned int channel,
+	int (*completed)(BbcmdRequest *request), BbcmdRequest *request);
+int qmiPauseProtocolChannel(unsigned int channel, void *forwardedValue1, void *forwardedValue2);
+int qmiResumeProtocolChannel(unsigned int channel, void *forwardedValue1, void *forwardedValue2);
+
+/* qmi_control.c */
+int qmiControlThread(SceSize args, void *argp);
+int qmiWaitControlTransaction(QmiClientInstance *instance);
+
+/* qmi_instance/qmi_instance.c */
+int qmiLockBackend(unsigned int kind);
+int qmiUnlockBackend(unsigned int kind, int locked);
+int qmiGetClientInstance_internal(BbcmdProtocolClient *client);
+int qmiReleaseClientInstanceInternal(BbcmdProtocolClient *client);
+int qmiResetClientInstancesInternal(void);
+int qmiLookupClientInstance(unsigned int channel, unsigned int service, unsigned int clientId);
+int qmiFindActiveClientInstance(unsigned int clientId, unsigned int service, unsigned int channel);
+int qmiInitializeControlClient(unsigned int channel);
+void qmiClientRequestTimedOut(void *arg);
+
+/* qmi_notify.c */
+int qmiNotifyClientPacket(QmiClientInstance *instance, unsigned int packetType,
+	const QmiReceivedHeader *header);
+
+/* qmi_packet.c */
+int qmiStoreReceivedClientPacket(unsigned int index,
+	const QmiReceivedHeader *header, unsigned int packetType,
+	const void *packet, unsigned int length);
+int qmiMatchReceivedClient(unsigned int channel, const QmiReceivedHeader *header, int *packetType);
+int qmiInitializeChannelClient(unsigned int channel);
+int qmiResetChannelFifo(unsigned int channel);
+
+/* qmi_prot_main.c */
+int qmiInitializeDeviceDriver(void);
+int qmiFinalizeDeviceDriver(void);
+int qmiOpenDeviceChannel(unsigned int channel);
+int qmiCloseDeviceChannel(unsigned int channel);
+int qmiActivateDeviceChannel(unsigned int channel,
+	int (*completed)(BbcmdRequest *request, int result), BbcmdRequest *request);
+int qmiDeactivateDeviceChannel(unsigned int channel,
+	int (*completed)(BbcmdRequest *request), BbcmdRequest *request);
+int qmiSuspendDeviceChannel(unsigned int channel, void *forwardedValue1, void *forwardedValue2);
+int qmiResumeDeviceChannel(unsigned int channel, void *forwardedValue1, void *forwardedValue2);
+int qmiWakePacketTransmitter(void);
+
+/* qmi_receive.c */
+int qmiReceiveClientPacket(unsigned int channel, const void *packet, unsigned int length);
+
+/* qmi_service.c */
+int qmiClassifyService(unsigned int service);
+
+/* qmi_service_parameters.c */
+int bbcmdInitializeClients(BbcmdRequest *request);
+
+/* qmi_signal.c */
+int qmiWaitInterface(unsigned int kind, unsigned int channel, SceUInt32 timeout);
+int qmiSignalBackend(unsigned int kind, unsigned int channel, unsigned int eventOffset);
+
+/* qmi_solution.c */
+int qmiReadCountedResponseBytes(const QmiResultResponse *response, QmiCountedBytes *output);
+int bbcmdReadNetworkStartResponse(BbcmdRequest *request, BbcmdProtocolClient *client);
+int bbcmdUpdateCompletedMaskForState(BbcmdRequest *request, int state);
+int bbcmdSendEmptyDmsMessages(BbcmdRequest *request, QmiEmptyMessageList messageList);
+int bbcmdInitializeProtocol(unsigned int command, BbcmdControl *control);
+int bbcmdFinalizeProtocol(unsigned int command, BbcmdControl *control);
+int bbcmdOpenChannel(unsigned int command, unsigned int channel);
+int bbcmdCloseChannel(unsigned int command, unsigned int channel);
+int bbcmdResetChannel(unsigned int command, unsigned int channel, BbcmdControl *control);
+
+/* qmi_transmit.c */
+int qmiSendClientRequestInternal(BbcmdProtocolClient *client);
+int qmiBuildTransmitHeader(unsigned int service, QmiClientInstance *instance,
+	QmiTransmitHeader *header, unsigned int *length, unsigned int payloadLength);
+int qmiNotifyTransmittedPacket(unsigned int channel, const void *packet);
+int qmiStartClientRequestTimer(unsigned int service, QmiClientInstance *instance);
+
+/* uart_framing/lib_qmi_uart.c */
+int qmiInitializeUartFraming(unsigned int format, int (*lock)(void *),
+	int (*unlock)(void *), void *context,
+	int (*send)(const void *, unsigned int), unsigned int (*transmitPending)(void));
+int qmiFinalizeUartFraming(void);
+int qmiSuspendUartFraming(void);
+int qmiResumeUartFraming(void);
+int qmiQueueUartFrame(const void *data, unsigned int length);
+void qmiPumpUartFrames(void);
+int qmiDecodeUartFrame(const unsigned char *data, unsigned int length,
+	void **packet, unsigned int *packetLength);
+int qmiIsUartFrameQueueEmpty(void);
+
 #endif

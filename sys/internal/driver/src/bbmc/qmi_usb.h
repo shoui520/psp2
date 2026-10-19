@@ -41,4 +41,14 @@ _Static_assert(offsetof(QmiUsbRequest, context) == 16,
 
 int qmiGetUsbDeviceSpeed(SceUInt32 *speed);
 
+/* qmi_usb.c */
+int qmiInitializeUsbTransport(void);
+int qmiFinalizeUsbTransport(void);
+int qmiGetUsbState(SceUInt32 *state);
+int qmiRegisterUsbStateCallback(int (*callback)(int state, void *context), void *context);
+int qmiUnregisterUsbStateCallback(int (*callback)(int state, void *context));
+int qmiSubmitUsbControlIn(QmiUsbRequest *request);
+int qmiSubmitUsbControlOut(QmiUsbRequest *request);
+int qmiSubmitUsbInterrupt(QmiUsbRequest *request);
+
 #endif

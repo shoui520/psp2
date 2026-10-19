@@ -28,4 +28,12 @@ _Static_assert(sizeof(QmiPacketFifo) == 16780, "QMI FIFO size");
 
 extern QmiPacketFifo g_qmiPacketFifo;
 
+/* qmi_fifo.c */
+int qmiInitializePacketFifos(void);
+int qmiEnqueueClientRequest(QmiClientInstance *instance);
+int qmiClaimQueuedPacket(unsigned int *channel, void **packet, unsigned int *length);
+int qmiRetryQueuedPacket(void);
+int qmiReleaseQueuedPacket(void);
+int qmiIsPacketFifoEmpty(void);
+
 #endif

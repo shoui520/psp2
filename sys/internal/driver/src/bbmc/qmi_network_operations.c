@@ -4,9 +4,6 @@
 #include "qmi_network_operations.h"
 #include "bbmc_memory.h"
 
-extern int bbcmdReadNetworkStartResponse(BbcmdRequest *request,
-	BbcmdProtocolClient *client);
-
 /* Each optional parameter is appended directly to the client's wire packet. */
 #define APPEND_BYTE(parameterType, parameterValue) do { \
 	QmiByteValueTlv *parameter = (QmiByteValueTlv *)cursor; \

@@ -1,20 +1,6 @@
 /* Protocol-driver channel transitions. */
 #include "qmi_backend.h"
 
-extern int qmiOpenDeviceChannel(unsigned int channel);
-extern int qmiCloseDeviceChannel(unsigned int channel);
-extern int qmiInitializeChannelClient(unsigned int channel);
-extern int qmiResetChannelFifo(unsigned int channel);
-extern int qmiWaitControlTransaction(QmiClientInstance *instance);
-extern int qmiActivateDeviceChannel(unsigned int channel,
-	int (*completed)(BbcmdRequest *request, int result), BbcmdRequest *request);
-extern int qmiDeactivateDeviceChannel(unsigned int channel,
-	int (*completed)(BbcmdRequest *request), BbcmdRequest *request);
-extern int qmiSuspendDeviceChannel(unsigned int channel,
-	void *forwardedValue1, void *forwardedValue2);
-extern int qmiResumeDeviceChannel(unsigned int channel,
-	void *forwardedValue1, void *forwardedValue2);
-
 /* name unknown: open the device and initialize its protocol client. */
 int qmiConnectTransport(unsigned int channel)
 {

@@ -52,4 +52,17 @@ _Static_assert(offsetof(BbmcUsbSerialDevice, controlInSetup) == 508, "USB contro
 extern BbmcUsbSerialDevice *g_usbSerialDevice;
 extern SceUdcdEndpoint g_usbSerialEndpoints[6];
 
+/* usb_device.c */
+void bbmcUsbDeviceControlSent(SceUdcdDeviceRequest *request);
+void bbmcUsbDeviceAtOutCompleted(SceUdcdDeviceRequest *request);
+void bbmcUsbDeviceAtInCompleted(SceUdcdDeviceRequest *request);
+void bbmcUsbDeviceAtInterruptCompleted(SceUdcdDeviceRequest *request);
+void bbmcUsbDeviceQcomOutCompleted(SceUdcdDeviceRequest *request);
+void bbmcUsbDeviceQcomInCompleted(SceUdcdDeviceRequest *request);
+void bbmcUsbDeviceControlOutCompleted(SceUdcdDeviceRequest *request);
+
+/* usb_host.c */
+int bbmcInitializeUsbSerialHost(void);
+int bbmcFinalizeUsbSerialHost(void);
+
 #endif

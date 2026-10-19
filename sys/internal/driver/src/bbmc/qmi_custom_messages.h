@@ -59,3 +59,6 @@ _Static_assert(sizeof(QmiUimRefreshInfo) == 7, "UIM refresh registration info");
 _Static_assert(sizeof(QmiUimRefreshParameters) == 12, "UIM refresh registration prefix");
 _Static_assert(sizeof(QmiUimRefreshFile) == 3, "UIM refresh file prefix");
 _Static_assert(offsetof(QmiUimRefreshFile, path) == 3, "UIM refresh unaligned path");
+
+/* qmi_custom_messages.c */
+int bbcmdRegisterRefreshFiles(BbcmdRequest *request);

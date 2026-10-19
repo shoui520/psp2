@@ -5,11 +5,9 @@
 #include <stdint.h>
 #include <udcd/udcd.h>
 #include <usbserv/usbserv.h>
+#include <bbmc/bbmc.h>
 #include "usb_serial.h"
 #include "usb_extif.h"
-
-int SceBbmcForDriver_D98DB926(void);
-int SceBbmcForDriver_D16D0845(void);
 
 static const SceUInt32 g_usbExtIfBus = 2;
 static BbmcUsbExtIfControl g_usbExtIfStorage = {

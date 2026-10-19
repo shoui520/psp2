@@ -59,4 +59,7 @@ _Static_assert(sizeof(QmiUimApplicationPrefix) == 7, "UIM application prefix siz
 _Static_assert(sizeof(QmiUimCardPrefix) == 6, "UIM card prefix size");
 _Static_assert(sizeof(QmiUimCardStatusPrefix) == 9, "UIM card status prefix size");
 
+/* qmi_uim_card_status.c */
+int bbcmdGetUimCardStatus(BbcmdRequest *request);
+
 #endif

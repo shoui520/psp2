@@ -203,4 +203,8 @@ _Static_assert(sizeof(BbmcNetworkScanContext) == 4, "network scan context size")
 _Static_assert(sizeof(QmiScannedNetworkValue) == 6, "scanned network wire prefix");
 _Static_assert(sizeof(QmiNetworkRadioInterfaceValue) == 5, "network radio wire entry");
 
+/* qmi_modem_status.c */
+int bbcmdGetCellLocationInfo(BbcmdRequest *request);
+int bbcmdNetworkScan(BbcmdRequest *request);
+
 #endif

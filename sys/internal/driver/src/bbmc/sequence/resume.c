@@ -3,13 +3,10 @@
 #include "../bbmc_message.h"
 #include "../bbcmd.h"
 #include "../bbmc_netif.h"
+#include "../usb_extif.h"
 
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int message);
 int bbmcFinalizeGps(void);
-int bbmcUnregisterNetworkInterface(void);
-int bbmcResetGpio(void);
-int bbmcUsbExtIfAcquireGpio(void);
-int bbmcTimerResetHook(void);
 
 int seqResumeFromConnected(BbmcControl *control, BbmcMessage *message);
 int seqResumeResetAuthorized(BbmcControl *control, BbmcMessage *message);

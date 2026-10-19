@@ -28,6 +28,8 @@
 #include "bbmc_modem_configuration.h"
 #include <sysmem/sysmem.h>
 #include "bbmc_memory.h"
+#include "usb_extif.h"
+#include "usb_device.h"
 
 static const BbmcSetupDescriptor bbmcSetupDescriptors[8];
 
@@ -38,27 +40,11 @@ extern int bbmcUnlockFastMutex(struct ThreadmgrFastMutex *mutex)
 extern int bbmcInitializeFastMutex(struct ThreadmgrFastMutex *mutex,
 	const char *name, int attr, void *opt)
 	__asm__("sceKernelInitializeFastMutex");
-int bbmcAcquireGpio(int *previous);
-int bbmcReleaseGpio(int *previous);
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int command);
-int bbmcTimerSetHandler(SceUInt32 delay, void (*callback)(void *arg), void *arg);
-int bbmcTimerCancelHandler(int timerId);
 void bbmcPowerEventTimeout(void *argp);
 int bbmcPowerOffStateHandler(BbmcControl *control, BbmcMessage *message);
 int stmInitial_ComBoot(BbmcControl *control, BbmcMessage *message);
 int bbmcLookupModeValue(int mode, SceUInt32 *output);
-int bbmcInitializeGpio(void);
-int bbmcFinalizeGpio(void);
-int bbmcInitializeUsbSerialHost(void);
-int bbmcFinalizeUsbSerialHost(void);
-int bbmcInitializeUsbExtIf(void);
-int bbmcFinalizeUsbExtIf(void);
-int bbmcInitializeTimer(void);
-int bbmcFinalizeTimer(void);
-int bbmcInitializeMailbox(void);
-int bbmcFinalizeMailbox(void);
-int bbmcCreateMailbox(struct BbmcMailbox **mailbox);
-unsigned int bbmcDeleteMailbox(struct BbmcMailbox *mailbox);
 int managerThread(SceSize argumentSize, void *arguments);
 BbmcControl *g_bbmcControl;
 static BbmcControl bbmcMainControl;

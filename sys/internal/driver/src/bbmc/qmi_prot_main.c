@@ -4,25 +4,13 @@
 #include <sysmem/debug.h>
 #include "qmi_device.h"
 #include "bbmc_memory.h"
+#include "bbmc_control.h"
+#include "bbmc_netif.h"
+#include "qmi_fifo.h"
+#include "qmi_backend.h"
 
-int qmiSubmitUsbControlIn(QmiUsbRequest *request);
-int qmiSubmitUsbInterrupt(QmiUsbRequest *request);
-int qmiSubmitUsbControlOut(QmiUsbRequest *request);
 int UsbCtrlOutFinCb(QmiUsbRequest *request, int resultOrCount);
 int qmiUsbStateChanged(int state, void *context);
-int qmiUnregisterUsbStateCallback(int (*callback)(int state, void *context));
-int bbmcFinalizeUsbPacketInterface(void);
-int qmiFinalizeUsbTransport(void);
-int qmiInitializeUsbTransport(void);
-int bbmcInitializeUsbPacketInterface(void);
-int qmiRegisterUsbStateCallback(int (*callback)(int state, void *context),
-	void *context);
-int qmiUartTransmit(QmiUartPort *port, const void *data, SceSize length,
-	int (*callback)(unsigned int requestId, unsigned int count,
-		unsigned int flags, void *context), void *context);
-int qmiFinalizeUart(void);
-int qmiInitializeUart(void);
-int qmiQueueUartFrame(const void *data, SceSize length);
 int qmiActivateDeviceUart(int (*completed)(BbcmdRequest *request, int result),
 	BbcmdRequest *request);
 int qmiDeactivateDeviceUart(int (*completed)(BbcmdRequest *request),
@@ -39,38 +27,6 @@ int qmiInitializeDeviceUsb(void);
 int qmiFinalizeDeviceUsb(void);
 int qmiSendFramedUartPacket(const void *data, SceSize length);
 int qmiSendUsbPacket(const void *data, SceSize length);
-int qmiDecodeUartFrame(const unsigned char *data, unsigned int length,
-	void **packet, unsigned int *packetLength);
-void qmiPumpUartFrames(void);
-int qmiIsUartFrameQueueEmpty(void);
-int qmiUartReceive(QmiUartPort *port, void *data, SceSize length,
-	int (*callback)(unsigned int requestId, unsigned int count,
-		unsigned int flags, void *context), void *context);
-int qmiReceiveClientPacket(unsigned int channel, const void *packet,
-	unsigned int length);
-int qmiClaimQueuedPacket(unsigned int *channel, void **packet,
-	unsigned int *length);
-int qmiReleaseQueuedPacket(void);
-int qmiRetryQueuedPacket(void);
-int qmiIsPacketFifoEmpty(void);
-int qmiNotifyTransmittedPacket(unsigned int channel, const void *packet);
-int qmiWaitControlTransaction(QmiClientInstance *instance);
-int bbmcReleaseGpio(int *previous);
-int qmiOpenUart(unsigned int index, QmiUartPort **port,
-	const QmiUartConfig *config);
-int qmiCloseUart(QmiUartPort *port);
-int qmiInitializeUartFraming(unsigned int format,
-	int (*lock)(void *context), int (*unlock)(void *context), void *context,
-	int (*send)(const void *data, SceSize length),
-	unsigned int (*transmitPending)(void));
-int qmiFinalizeUartFraming(void);
-int qmiSuspendUartFraming(void);
-int qmiResumeUartFraming(void);
-int bbmcGetGpioUsers(void);
-int bbmcAcquireGpio(int *previous);
-int qmiGetUsbState(unsigned int *state);
-int bbmcTimerSetHandler(SceUInt32 delay, void (*callback)(void *arg), void *arg);
-int bbmcTimerCancelHandler(int id);
 void qmiUsbDisconnectTimedOut(void *context);
 
 const QmiDeviceOperations g_qmiDeviceOperations[2] = {

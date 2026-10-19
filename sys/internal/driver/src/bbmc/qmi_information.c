@@ -460,9 +460,6 @@ completed:
 
 #undef COPY_INFORMATION_STRING
 
-extern int bbcmdSendEmptyDmsMessages(BbcmdRequest *request,
-	QmiEmptyMessageList messageList);
-
 #define SEND_INFORMATION_MESSAGES(bindingIndex, serviceId, list, nextState) do { \
 	BbcmdClientBinding *binding = &protocol->bindings[bindingIndex]; \
 	unsigned int bits = binding->requestBits; \

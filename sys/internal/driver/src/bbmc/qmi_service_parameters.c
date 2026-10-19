@@ -3,13 +3,6 @@
 #include <threadmgr/threadmgr.h>
 #include "qmi_backend.h"
 
-extern int bbcmdSetRequestedMask(unsigned int channel, unsigned int mask);
-extern int bbcmdSelectState(SceUInt32 *state, SceUInt32 flags);
-extern int bbcmdUpdateCompletedMaskForState(BbcmdRequest *request, int state);
-extern int qmiReadCountedResponseBytes(const QmiResultResponse *response,
-	QmiCountedBytes *output);
-extern int qmiAcquireClientInstance(BbcmdProtocolClient *client);
-
 int bbcmdInitializeClients(BbcmdRequest *request)
 {
 	BbcmdControl *control;

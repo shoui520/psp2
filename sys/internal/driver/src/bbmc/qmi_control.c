@@ -1,16 +1,7 @@
 /* Control-channel request progression and completion. */
 #include "qmi_backend.h"
 #include <threadmgr/threadmgr.h>
-
-extern int qmiSignalBackend(unsigned int kind, unsigned int channel,
-	unsigned int eventOffset);
-extern int qmiWaitInterface(unsigned int kind, unsigned int channel,
-	SceUInt32 timeout);
-extern int qmiBuildTransmitHeader(unsigned int service,
-	QmiClientInstance *instance, QmiTransmitHeader *header,
-	unsigned int *length, unsigned int payloadLength);
-extern int qmiStartClientRequestTimer(unsigned int service, QmiClientInstance *instance);
-extern int qmiEnqueueClientRequest(QmiClientInstance *instance);
+#include "qmi_fifo.h"
 
 /* name unknown: advance one control exchange or complete its waiting client. */
 int qmiAdvanceControlTransaction(QmiClientInstance *instance, unsigned int *stage)

@@ -7,12 +7,6 @@
 #include "../bbcmd.h"
 
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int command);
-int bbmcTimerSetHandler(SceUInt32 delay, void (*callback)(void *), void *arg);
-int bbmcTimerCancelHandler(int timerId);
-int bbmcSendSysconCommand(BbmcControl *control,
-	int (*callback)(SceSysconPacket *, void *), SceSysconPacket *packet,
-	SceUInt8 selector, SceUInt8 operation, unsigned int byteCount, ...);
-int bbmcCancelSysconCommand(SceSysconPacket *packet, int *pending);
 int connectedRequestLowPowerMode(BbmcControl *control);
 
 SceUInt32 connectedTransitionStep;

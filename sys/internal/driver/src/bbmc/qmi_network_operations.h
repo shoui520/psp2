@@ -43,3 +43,6 @@ _Static_assert(offsetof(BbmcNetworkStartOptions, reservedPassword) == 164,
 	"network start ignored password span");
 _Static_assert(offsetof(BbmcNetworkStartOptions, passwordLength) == 180,
 	"network start password length");
+
+/* qmi_network_operations.c */
+int bbcmdStartNetwork(BbcmdRequest *request);

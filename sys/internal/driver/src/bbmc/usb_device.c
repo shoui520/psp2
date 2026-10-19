@@ -5,9 +5,7 @@
 
 #include "usb_serial.h"
 #include "usb_device.h"
-
-int bbmcStartUsbSerialDevice(int argumentSize, void *arguments, void *context);
-int bbmcStopUsbSerialDevice(int argumentSize, void *arguments, void *context);
+#include "bbmc_netif.h"
 
 BbmcUsbSerialDevice *g_usbSerialDevice;
 BbmcUsbSerialDevice g_usbSerialDeviceStorage;

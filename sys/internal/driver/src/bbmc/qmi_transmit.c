@@ -1,13 +1,7 @@
 /* QMI transmit framing and transaction allocation. */
 #include "qmi_backend.h"
-
-extern int qmiClassifyService(unsigned int service);
-extern int qmiLockBackend(unsigned int kind);
-extern int qmiUnlockBackend(unsigned int kind, int locked);
-extern int qmiLookupClientInstance(unsigned int channel, unsigned int service,
-	unsigned int clientId);
-extern int qmiNotifyClientPacket(QmiClientInstance *instance,
-	unsigned int packetType, const QmiReceivedHeader *header);
+#include "bbmc_control.h"
+#include "qmi_fifo.h"
 
 typedef struct QmiRequestTimeout {
 	unsigned int service;
@@ -22,13 +16,6 @@ const QmiRequestTimeout g_qmiRequestTimeouts[3] = {
 	{ .service = 1, .messageId = 2, .timeoutMs = 0 },
 	{ .service = 3, .messageId = 1, .timeoutMs = 0 },
 };
-
-extern int qmiFindActiveClientInstance(unsigned int clientId,
-	unsigned int service, unsigned int channel);
-extern int qmiEnqueueClientRequest(QmiClientInstance *instance);
-extern int bbmcTimerSetHandler(unsigned int delay, void (*callback)(void *),
-	void *arg);
-extern void qmiClientRequestTimedOut(void *arg);
 
 int qmiBuildTransmitHeader(unsigned int service, QmiClientInstance *instance,
 	QmiTransmitHeader *header, unsigned int *length, unsigned int payloadLength);

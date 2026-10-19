@@ -4,10 +4,6 @@
 
 QmiPacketFifo g_qmiPacketFifo;
 
-extern int qmiLockBackend(unsigned int kind);
-extern int qmiUnlockBackend(unsigned int kind, int locked);
-extern int qmiWakePacketTransmitter(void);
-
 /* name unknown: reset the eight-entry circular transport queue. */
 int qmiInitializePacketFifos(void)
 {

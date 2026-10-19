@@ -6,6 +6,8 @@
 #include <threadmgr/fast_mutex_object.h>
 #include <syscon/syscon.h>
 #include "bbmc_memory.h"
+#include "bbmc_message.h"
+#include "bbmc_mailbox.h"
 #include "bbmc_network_info.h"
 #include "bbmc_pin.h"
 #include "bbmc_proactive.h"
@@ -286,5 +288,39 @@ BBMC_CONTROL_OFFSET(firmwareRevisionSelection, 24996);
 BBMC_CONTROL_OFFSET(runningStorageIndex, 25004);
 BBMC_CONTROL_OFFSET(transitionStatus, 25028);
 #undef BBMC_CONTROL_OFFSET
+
+/* bbmc.c */
+int bbmcSendSysconCommand(BbmcControl *control,
+	int (*callback)(SceSysconPacket *, void *), SceSysconPacket *packet,
+	SceUInt8 selector, SceUInt8 operation, unsigned int byteCount, ...);
+int bbmcSendSizedSysconCommand(BbmcControl *control,
+	int (*callback)(SceSysconPacket *, void *), SceSysconPacket *packet,
+	SceUInt8 selector, SceUInt8 payloadLength, unsigned int byteCount, ...);
+int bbmcCancelSysconCommand(SceSysconPacket *packet, int *pending);
+
+/* bbmc_gpio.c */
+int bbmcInitializeGpio(void);
+int bbmcFinalizeGpio(void);
+int bbmcResetGpio(void);
+int bbmcAcquireGpio(int *previous);
+int bbmcReleaseGpio(int *previous);
+int bbmcGetGpioUsers(void);
+
+/* bbmc_timer.c */
+int bbmcInitializeTimer(void);
+int bbmcFinalizeTimer(void);
+int bbmcTimerResetHook(void);
+int bbmcTimerSetHandler(SceUInt32 delay, void (*callback)(void *arg), void *arg);
+int bbmcTimerCancelHandler(int id);
+
+/* state_machine/com_boot.c */
+int suspendDuringFromComBootToStandby(BbmcControl *control, BbmcMessage *message);
+
+/* state_machine/connected.c */
+int suspendSteadyConnected(BbmcControl *control, BbmcMessage *message);
+int suspendGotoLPM(BbmcControl *control, BbmcMessage *message);
+
+/* state_machine/low_power_mode.c */
+int suspendGotoConnected(BbmcControl *control, BbmcMessage *message);
 
 #endif

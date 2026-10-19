@@ -108,3 +108,11 @@ BbcmdProtocolContext *bbcmdCreateProtocolContext(unsigned int channel);
 int bbcmdSetChannelState(unsigned int channel, unsigned int state);
 int bbcmdLockMutex(struct ThreadmgrFastMutex *mutex);
 int bbcmdUnlockMutex(struct ThreadmgrFastMutex *mutex);
+
+/* bbcmd.c */
+int bbcmdSetRequestedMask(unsigned int channel, unsigned int mask);
+int bbcmdSetCompletedMask(unsigned int channel, unsigned int mask);
+int bbcmdGetCompletedMask(unsigned int channel, unsigned int *mask);
+int bbcmdSelectState(SceUInt32 *state, SceUInt32 flags);
+void bbcmdStoreStateOne(SceUInt32 *state);
+void bbcmdStoreStateOneDuplicate(SceUInt32 *state);

@@ -1,16 +1,9 @@
 /* QMI receive framing and client delivery. */
 #include "qmi_backend.h"
+#include "bbmc_control.h"
 
 extern const int g_qmiControlPacketTypes[3];
 extern const int g_qmiServicePacketTypes[5];
-extern int qmiMatchReceivedClient(unsigned int channel,
-	const QmiReceivedHeader *header, int *packetType);
-extern int qmiStoreReceivedClientPacket(unsigned int index,
-	const QmiReceivedHeader *header, unsigned int packetType,
-	const void *packet, unsigned int length);
-extern int qmiLockBackend(unsigned int kind);
-extern int qmiUnlockBackend(unsigned int kind, int locked);
-extern int bbmcTimerCancelHandler(int timer);
 
 /* name unknown: parse transport framing and deliver matched client packets. */
 int qmiReceiveClientPacket(unsigned int channel, const void *packet,

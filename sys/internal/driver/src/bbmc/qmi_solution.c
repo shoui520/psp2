@@ -10,6 +10,7 @@
 #include "bbcmd_fp.h"
 #include "bbmc_netif.h"
 #include "qmi_custom_messages.h"
+#include "qmi_network_operations.h"
 
 static BbcmdProtocolContext g_qmiProtocolContexts[2];
 static BbcmdProtocolContext *g_qmiPublishedContexts[2];
@@ -39,10 +40,6 @@ static const int g_cat2TerminalCommandTypes[19] = {
 };
 
 extern int bbmcNotifyTrackingStopped(void);
-int bbmcTimerCancelHandler(int id);
-int bbmcTimerSetHandler(unsigned int delay, void (*callback)(void *), void *arg);
-void bbcmdStoreStateOne(SceUInt32 *state);
-void bbcmdStoreStateOneDuplicate(SceUInt32 *state);
 extern int bbmcNotifyGpsSessionStatus(SceUInt8 *status);
 extern int bbmcNotifyGpsPosition(QmiPdsPosition *position);
 extern int bbmcNotifyGpsNmea(QmiPdsNmeaReport *report);
@@ -112,9 +109,6 @@ const QmiBuildSuffixRule g_qmiBuildSuffixRules[11] = {
 	{ 7, "UQSUS2", 0 },
 };
 
-int bbcmdGetCompletedMask(unsigned int channel, unsigned int *mask);
-int bbcmdSetCompletedMask(unsigned int channel, unsigned int mask);
-
 /* name unknown: secondary instance deactivation restores channel state one. */
 int bbcmdSecondaryDeactivateCompleted(BbcmdRequest *request)
 {
@@ -144,9 +138,7 @@ int bbcmdActivateInstance(BbcmdRequest *request);
 int bbcmdDeactivateInstance(BbcmdRequest *request);
 int bbcmdSuspendPrimaryChannel(BbcmdRequest *request);
 int bbcmdResumePrimaryChannel(BbcmdRequest *request);
-int bbcmdInitializeClients(BbcmdRequest *request);
 int bbcmdReleaseClients(BbcmdRequest *request);
-int bbcmdGetUimCardStatus(BbcmdRequest *request);
 int bbcmdVerifyUimPin(BbcmdRequest *request);
 int bbcmdUnblockUimPin(BbcmdRequest *request);
 int bbcmdListSmsMessages(BbcmdRequest *request);
@@ -157,16 +149,12 @@ int bbcmdStartTracking(BbcmdRequest *request);
 int bbcmdStopTracking(BbcmdRequest *request);
 int bbcmdSendGpsData(BbcmdRequest *request);
 int bbcmdGetChannelRates(BbcmdRequest *request);
-int bbcmdStartNetwork(BbcmdRequest *request);
 int bbcmdStopNetwork(BbcmdRequest *request);
 int bbcmdGetNetworkInfo(BbcmdRequest *request);
-int bbcmdNetworkScan(BbcmdRequest *request);
 int bbcmdAttachDetachPacketService(BbcmdRequest *request);
 int bbcmdSetRegistrationRejectReport(BbcmdRequest *request);
 int bbcmdResetConfiguredService(BbcmdRequest *request);
-int bbcmdRegisterRefreshFiles(BbcmdRequest *request);
 int bbcmdReadConfiguredServiceValue(BbcmdRequest *request);
-int bbcmdGetCellLocationInfo(BbcmdRequest *request);
 int bbcmdConfigureServiceParameters(BbcmdRequest *request);
 int bbcmdSetOperatingMode(BbcmdRequest *request);
 int bbcmdSetFirmwarePreference(BbcmdRequest *request);
@@ -497,11 +485,6 @@ next:
 invalid:
 	return 0x80330002;
 }
-
-extern int qmiSuspendChannel(unsigned int channel, void *forwardedValue1,
-			     void *forwardedValue2);
-extern int qmiResumeChannel(unsigned int channel, void *forwardedValue1,
-			    void *forwardedValue2);
 
 /* name unknown: forward indexed values from command 49/50 responses. */
 int qmiReadIndexedResponse(BbcmdRequest *request,
@@ -921,13 +904,6 @@ int bbcmdSuspendPrimaryChannel(BbcmdRequest *request)
 	bbcmdUnlockMutex(&control->mutex);
 	return ret;
 }
-
-extern int qmiActivateChannel(unsigned int channel,
-			      int (*completed)(BbcmdRequest *request, int result),
-			      BbcmdRequest *request);
-extern int qmiDeactivateChannel(unsigned int channel,
-				int (*completed)(BbcmdRequest *request),
-				BbcmdRequest *request);
 
 /* name unknown: deliver each command's completion to its manager message family. */
 void bbcmdManagerCompletion(SceUInt32 channel, SceUInt32 command,
@@ -8769,9 +8745,6 @@ completed:
 	return result;
 }
 
-extern int qmiReleaseClientInstance(BbcmdProtocolClient *client);
-extern int bbcmdSetRequestedMask(unsigned int channel, unsigned int mask);
-
 int bbcmdSendGpsData(BbcmdRequest *request)
 {
 	BbcmdRequestNode *node;
@@ -11231,11 +11204,6 @@ BbcmdProtocolContext *bbcmdCreateProtocolContext(unsigned int channel)
 	context->initializeHandlers = bbcmdRegisterQmiHandlers;
 	return context;
 }
-
-extern int qmiInitializeBackend(void);
-extern int qmiFinalizeBackend(void);
-extern int qmiOpenTransport(unsigned int channel);
-extern int qmiCloseTransport(unsigned int channel);
 
 int bbcmdInitializeProtocol(unsigned int command, BbcmdControl *control)
 {

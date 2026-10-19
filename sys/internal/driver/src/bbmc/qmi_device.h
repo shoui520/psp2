@@ -114,4 +114,16 @@ extern QmiDeviceControl g_qmiDeviceStorage;
 extern SceUInt8 g_qmiUartReceiveBuffer[32];
 extern const QmiDeviceOperations g_qmiDeviceOperations[2];
 
+/* qmi_uart.c */
+int qmiInitializeUart(void);
+int qmiFinalizeUart(void);
+int qmiOpenUart(unsigned int index, QmiUartPort **port, const QmiUartConfig *config);
+int qmiCloseUart(QmiUartPort *port);
+int qmiUartTransmit(QmiUartPort *port, const void *data, SceSize length,
+	int (*completed)(unsigned int, unsigned int, unsigned int, void *),
+	void *context);
+int qmiUartReceive(QmiUartPort *port, void *data, SceSize length,
+	int (*completed)(unsigned int, unsigned int, unsigned int, void *),
+	void *context);
+
 #endif

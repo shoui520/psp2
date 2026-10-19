@@ -2,16 +2,7 @@
 #include <stddef.h>
 #include <sysmem/cpu.h>
 #include <threadmgr/threadmgr.h>
-#include "bbmc_queue.h"
-
-/* name unknown: all five words are initialized and used by the queue owner. */
-typedef struct BbmcMailbox {
-	SceUID semaphore;
-	SceKernelSpinlock lock;
-	int count;
-	BbmcQueueEntry *head;
-	BbmcQueueEntry *tail;
-} BbmcMailbox;
+#include "bbmc_mailbox.h"
 
 /* The slot flag immediately precedes the one mailbox returned by its owner. */
 typedef struct BbmcMailboxSlot {

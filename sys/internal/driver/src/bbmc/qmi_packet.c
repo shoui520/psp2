@@ -1,12 +1,7 @@
 /* QMI packet delivery to client storage. */
 #include <string.h>
 #include "qmi_backend.h"
-
-extern int qmiInitializePacketFifos(void);
-extern int qmiInitializeControlClient(unsigned int channel);
-
-extern int qmiNotifyClientPacket(QmiClientInstance *instance,
-	unsigned int packetType, const QmiReceivedHeader *header);
+#include "qmi_fifo.h"
 
 const int g_qmiControlPacketTypes[3] = { 0, 1, 2 };
 const int g_qmiServicePacketTypes[5] = { 0, 0, 1, 1, 2 };

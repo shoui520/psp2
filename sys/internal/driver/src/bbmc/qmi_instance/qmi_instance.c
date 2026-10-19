@@ -4,11 +4,6 @@
 #include <sysmem/debug.h>
 #include "../qmi_backend.h"
 
-extern int qmiInitializeDeviceDriver(void);
-extern int qmiFinalizeDeviceDriver(void);
-extern int qmiControlThread(SceSize args, void *argp);
-extern int qmiClassifyService(unsigned int service);
-
 /* name unknown: allocate the protocol-driver synchronization resources. */
 int qmiCreateBackend(void)
 {

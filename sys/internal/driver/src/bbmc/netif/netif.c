@@ -638,13 +638,6 @@ int bbmcUnregisterNetworkInterface(void)
 	return SceNetPsForDriver_F5788FF8(&control->driver);
 }
 
-void bbmcUsbDeviceControlSent(SceUdcdDeviceRequest *request);
-void bbmcUsbDeviceControlOutCompleted(SceUdcdDeviceRequest *request);
-void bbmcUsbDeviceQcomInCompleted(SceUdcdDeviceRequest *request);
-void bbmcUsbDeviceQcomOutCompleted(SceUdcdDeviceRequest *request);
-void bbmcUsbDeviceAtInterruptCompleted(SceUdcdDeviceRequest *request);
-void bbmcUsbDeviceAtInCompleted(SceUdcdDeviceRequest *request);
-void bbmcUsbDeviceAtOutCompleted(SceUdcdDeviceRequest *request);
 int bbmcStartUsbSerialDevice(int argumentSize, void *arguments, void *context);
 int bbmcStopUsbSerialDevice(int argumentSize, void *arguments, void *context);
 

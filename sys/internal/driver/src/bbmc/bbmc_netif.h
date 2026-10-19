@@ -70,3 +70,10 @@ _Static_assert(offsetof(BbmcPacketInterface, networkHandle) == 264, "network han
 _Static_assert(offsetof(BbmcPacketInterface, receivePipe) == 320, "packet receive pipe");
 _Static_assert(offsetof(BbmcPacketInterface, transmitMutex) == 416, "packet transmit mutex");
 _Static_assert(offsetof(BbmcPacketInterface, expiryLock) == 480, "packet expiry lock");
+
+/* netif/netif.c */
+int bbmcInitializeUsbPacketInterface(void);
+int bbmcFinalizeUsbPacketInterface(void);
+int bbmcUnregisterNetworkInterface(void);
+int bbmcStopUsbSerialDevice(int argumentSize, void *arguments, void *context);
+int bbmcStartUsbSerialDevice(int argumentSize, void *arguments, void *context);

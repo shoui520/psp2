@@ -3,19 +3,6 @@
 #include "bbcmd.h"
 #include "qmi_backend.h"
 
-extern int qmiStartProtocolChannel(unsigned int channel,
-	int (*completed)(BbcmdRequest *request, int result), BbcmdRequest *request);
-extern int qmiStopProtocolChannel(unsigned int channel,
-	int (*completed)(BbcmdRequest *request), BbcmdRequest *request);
-extern int qmiPauseProtocolChannel(unsigned int channel,
-	void *forwardedValue1, void *forwardedValue2);
-extern int qmiResumeProtocolChannel(unsigned int channel,
-	void *forwardedValue1, void *forwardedValue2);
-extern int qmiGetClientInstance_internal(BbcmdProtocolClient *client);
-extern int qmiReleaseClientInstanceInternal(BbcmdProtocolClient *client);
-extern int qmiSendClientRequestInternal(BbcmdProtocolClient *client);
-extern int qmiResetClientInstancesInternal(void);
-
 /* name unknown: initialize only when the protocol driver is absent. */
 int qmiInitializeBackend(void)
 {
