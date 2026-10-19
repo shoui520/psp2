@@ -102,42 +102,45 @@ void SceCpuForKernel_4F442396(const void *start, uint32_t size)
 
 void SceCpuForKernel_F9B0B171(void)
 {
-	uint32_t set, way;
+	uint32_t setWay = 0;
 
-	for (set = 0; set < L1_DCACHE_WAY_SIZE; set += L1_CACHE_LINE) {
-		way = 0;
+	do {
+		/* every way of the set, until the way field wraps */
 		do {
-			writeDcisw(set | way);
-			way += L1_DCACHE_WAY_STEP;
-		} while (way);
-	}
+			writeDcisw(setWay);
+			setWay += L1_DCACHE_WAY_STEP;
+		} while (setWay >= L1_DCACHE_WAY_STEP);
+		setWay += L1_CACHE_LINE;
+	} while (setWay < L1_DCACHE_WAY_SIZE);
 	dsb();
 }
 
 void SceCpuForKernel_49180814(void)
 {
-	uint32_t set, way;
+	uint32_t setWay = 0;
 
-	for (set = 0; set < L1_DCACHE_WAY_SIZE; set += L1_CACHE_LINE) {
-		way = 0;
+	do {
+		/* every way of the set, until the way field wraps */
 		do {
-			writeDccsw(set | way);
-			way += L1_DCACHE_WAY_STEP;
-		} while (way);
-	}
+			writeDccsw(setWay);
+			setWay += L1_DCACHE_WAY_STEP;
+		} while (setWay >= L1_DCACHE_WAY_STEP);
+		setWay += L1_CACHE_LINE;
+	} while (setWay < L1_DCACHE_WAY_SIZE);
 	dsb();
 }
 
 void SceCpuForKernel_4BBA5C82(void)
 {
-	uint32_t set, way;
+	uint32_t setWay = 0;
 
-	for (set = 0; set < L1_DCACHE_WAY_SIZE; set += L1_CACHE_LINE) {
-		way = 0;
+	do {
+		/* every way of the set, until the way field wraps */
 		do {
-			writeDccisw(set | way);
-			way += L1_DCACHE_WAY_STEP;
-		} while (way);
-	}
+			writeDccisw(setWay);
+			setWay += L1_DCACHE_WAY_STEP;
+		} while (setWay >= L1_DCACHE_WAY_STEP);
+		setWay += L1_CACHE_LINE;
+	} while (setWay < L1_DCACHE_WAY_SIZE);
 	dsb();
 }
