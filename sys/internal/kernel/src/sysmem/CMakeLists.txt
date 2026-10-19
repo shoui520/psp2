@@ -91,10 +91,16 @@ psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	sysroot.c
 	sysroot_time_low.c
 	sysroot_capability.c
-	aeabi.S
-	unsigned_division.S
-	signed_division.S
-	signed_division64.S
+	../../../../../toolchains/libgcc/udiv.S
+	../../../../../toolchains/libgcc/idiv.S
+	../../../../../toolchains/libgcc/dvmd_tls.S
+	../../../../../toolchains/libgcc/lshrdi3.S
+	../../../../../toolchains/libgcc/ashrdi3.S
+	../../../../../toolchains/libgcc/ashldi3.S
+	../../../../../toolchains/libgcc/lcmp.S
+	../../../../../toolchains/libgcc/ulcmp.S
+	../../../../../toolchains/libgcc/ldivmod.S
+	../../../../../toolchains/libgcc/uldivmod.S
 	atomics32.c
 	atomics64.c
 	cpu_spinlock.S
@@ -143,6 +149,10 @@ psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	strlcpy_chk.c
 	sprintf_chk.c
 	stack_chk.c
+	../../../../../toolchains/libgcc/mul.c
+	../../../../../contrib/gcc-4.8-2014.05/libgcc/config/arm/bpabi.c
+	../../../../../toolchains/libgcc/div64.c
+	../../../../../toolchains/libgcc/udiv64.c
 )
 # strings.c includes the adapted strlcpy-sce.c from the build directory
 target_include_directories(os0_kd_sysmem PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
@@ -177,3 +187,15 @@ target_link_options(os0_kd_sysmem PRIVATE -Wl,-Tdata,${SYSMEM_DATA_BASE})
 
 target_include_directories(os0_kd_sysmem PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/sfmt-1.3.3")
+
+# the compiler runtime (libgcc), built from GCC's source as LibKernel's: the EABI division and
+# 64-bit entry points in SceSysclib's place, the C helpers last, where Sony's link puts libgcc
+set(libgcc ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../toolchains/libgcc)
+set(gcc ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/gcc-4.8-2014.05)
+set_source_files_properties(${libgcc}/mul.c ${libgcc}/div64.c ${libgcc}/udiv64.c
+	${gcc}/libgcc/config/arm/bpabi.c
+	PROPERTIES COMPILE_OPTIONS "-fno-stack-protector;-fbuilding-libgcc"
+	COMPILE_DEFINITIONS "IN_LIBGCC2"
+	INCLUDE_DIRECTORIES "${libgcc};${libgcc}/target;${gcc}/gcc;${gcc}/gcc/ginclude;${gcc}/libgcc;${gcc}/include")
+include(../../../../../toolchains/libgcc/lib1funcs.cmake)
+gcc48_use_lib1funcs(os0_kd_sysmem)

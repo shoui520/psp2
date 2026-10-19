@@ -130,6 +130,8 @@ target_include_directories(os0_us_libkernel PRIVATE
 	../../../../../contrib/gcc-4.8-2014.05/gcc/ginclude
 	../../../../../contrib/gcc-4.8-2014.05/libgcc
 	../../../../../contrib/gcc-4.8-2014.05/include)
+include(../../../../../toolchains/libgcc/lib1funcs.cmake)
+gcc48_use_lib1funcs(os0_us_libkernel)
 
 set_source_files_properties(../../../../../toolchains/libgcc/mul.c
 	../../../../../toolchains/libgcc/f2lz.c ../../../../../toolchains/libgcc/f2ulz.c
