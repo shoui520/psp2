@@ -94,7 +94,6 @@ int setFatfsAttributeByMode(const SceSelfAuthInfo *info, SceSblACMgrValue *attr,
 	const FatfsModeAttribute *table;
 	SceUInt32 count, i, attribute;
 	SceUInt8 *p;
-	int level;
 
 	if (mode == 0x1000000) {
 		p = attr->value;
@@ -105,16 +104,18 @@ int setFatfsAttributeByMode(const SceSelfAuthInfo *info, SceSblACMgrValue *attr,
 		}
 		return 0;
 	}
-	level = sceKernelSysrootGetThreadAccessLevel();
-	if (level == 0x40 || level == 0x80) {
+	switch (sceKernelSysrootGetThreadAccessLevel()) {
+	case 0x40: case 0x80:
 		table = fatfsKernelModes;
 		count = 10;
 		mode &= 0x10186;
-	} else if (level == 0x10 || level == 0x20) {
+		break;
+	case 0x10: case 0x20:
 		table = fatfsUserModes;
 		count = 2;
 		mode &= 0x180;
-	} else {
+		break;
+	default:
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
 	attribute = 0;
@@ -140,6 +141,7 @@ int setFatfsAttributeByAttribute(const SceSelfAuthInfo *info, SceSblACMgrValue *
 int setFatfsAttributeByAttributeWithMountPoint(const SceSelfAuthInfo *info, SceSblACMgrValue *attr,
 					       const SceSblACMgrValue *source, SceUInt32 mountPoint)
 {
+	SceUInt8 *p;
 	SceUInt16 value;
 	SceUInt64 paid;
 
@@ -157,15 +159,15 @@ int setFatfsAttributeByAttributeWithMountPoint(const SceSelfAuthInfo *info, SceS
 		return ACMGR_ERROR_INVALID_ARGUMENT;
 	paid = info->programAuthorityId;
 	if (paid == 0x220000101cc73883ULL || paid == 0x280000000000001eULL ||
-	    paid == 0x2800000000000010ULL || paid == 0x2800000000000031ULL ||
-	    (info->capability.bytes[16] & 0x20))
+	    paid == 0x2800000000000010ULL || paid == 0x2800000000000031ULL)
 		value = 0;
 	else
-		value = 4;
+		value = (info->capability.bytes[16] & 0x20) ? 0 : 4;
+	p = attr->value;
 	if (attr->size == 1) {
-		attr->value[0] = value;
+		p[0] = value;
 	} else if (attr->size == 2) {
-		fatfsStoreHalf(attr->value, value);
+		fatfsStoreHalf(p, value);
 	}
 	return 0;
 }
@@ -217,13 +219,16 @@ int getFatfsAttributeByThreadAccessLevel(SceUInt32 mode, int level, SceSblACMgrV
 	const FatfsModeAttribute *table;
 	SceUInt32 count, i, attribute;
 
-	if (level == 0x40 || level == 0x80) {
+	switch (level) {
+	case 0x40: case 0x80:
 		table = fatfsKernelModes;
 		count = 10;
-	} else if (level == 0x10 || level == 0x20) {
+		break;
+	case 0x10: case 0x20:
 		table = fatfsUserModes;
 		count = 2;
-	} else {
+		break;
+	default:
 		return ACMGR_ERROR_INVALID_ARGUMENT;
 	}
 	attribute = 0;
