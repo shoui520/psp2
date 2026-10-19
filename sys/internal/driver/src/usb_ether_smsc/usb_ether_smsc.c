@@ -1249,7 +1249,7 @@ static int workerEntry(SceSize arglen, void *argp)
 	a->proc.exit = NULL;
 	a->proc.kill = NULL;
 	a->proc.size = sizeof(a->proc);
-	a->proc.notify = processEvent;
+	a->proc.notify = (ProcEventNotifyHandler)processEvent;
 	a->proc.create = NULL;
 	a->proc.suspend = NULL;
 	a->proc.resume = NULL;

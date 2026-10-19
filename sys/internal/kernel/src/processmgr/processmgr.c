@@ -1687,32 +1687,27 @@ failed:
 }
 
 /* the object heap resource limits per budget type */
-typedef struct ObjectHeapLimit {
-	SceInt32 limit;
-	SceUInt32 reserved;
-} ObjectHeapLimit;
-
-static const ObjectHeapLimit g_shellObjectLimit[6] = {
+static const ObjectHeapResourceLimit g_shellObjectLimit[6] = {
 	{ -1, 0 }, { 0x400, 0 }, { -1, 0 }, { 0, 0 }, { 0, 0 }, { 4, 0 },
 };
 
-static const ObjectHeapLimit g_shellCDialogObjectLimit[6] = {
+static const ObjectHeapResourceLimit g_shellCDialogObjectLimit[6] = {
 	{ -1, 0 }, { 0, 0 }, { -1, 0 }, { 0, 0 }, { 0, 0 }, { 4, 0 },
 };
 
-static const ObjectHeapLimit g_miniAppObjectLimit[6] = {
+static const ObjectHeapResourceLimit g_miniAppObjectLimit[6] = {
 	{ -1, 0 }, { 0x400, 0 }, { -1, 0 }, { 0, 0 }, { 0, 0 }, { 4, 0 },
 };
 
-static const ObjectHeapLimit g_miniAppCDialogObjectLimit[6] = {
+static const ObjectHeapResourceLimit g_miniAppCDialogObjectLimit[6] = {
 	{ -1, 0 }, { 0x10, 0 }, { -1, 0 }, { -1, 0 }, { -1, 0 }, { 4, 0 },
 };
 
-static const ObjectHeapLimit g_gameObjectLimit[6] = {
+static const ObjectHeapResourceLimit g_gameObjectLimit[6] = {
 	{ -1, 0 }, { 0x400, 0 }, { -1, 0 }, { 0, 0 }, { 0, 0 }, { 4, 0 },
 };
 
-static const ObjectHeapLimit g_gameCDialogObjectLimit[6] = {
+static const ObjectHeapResourceLimit g_gameCDialogObjectLimit[6] = {
 	{ -1, 0 }, { 0x10, 0 }, { -1, 0 }, { -1, 0 }, { -1, 0 }, { 4, 0 },
 };
 
@@ -1777,7 +1772,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 {
 	SceProcessObject *process;
 	SceKernelHeapHook *asParam;
-	const ObjectHeapLimit *limit, *cdialogLimit;
+	const ObjectHeapResourceLimit *limit, *cdialogLimit;
 	ProcEventCreateParam createParam;
 	ProcEventParam failParam;
 	ProcessDebugRegBlock *regs;
@@ -5810,7 +5805,7 @@ out:
 int sceKernelLibcMktime(ProcessTm *utm, SceKernelTime *ut, SceUInt64 *uwide)
 {
 	SceKernelTime t;
-	SceUInt64 wide;
+	ProcessTimezone tz;
 	SceUInt32 state;
 	ProcessTm tm;
 	int ret;
@@ -5819,11 +5814,11 @@ int sceKernelLibcMktime(ProcessTm *utm, SceKernelTime *ut, SceUInt64 *uwide)
 	if (utm == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	ret = sceKernelCopyFromUser(&tm, utm, sizeof(tm));
-	if (ret >= 0 && (ret = ProcessmgrLibcMktime(&tm, &t, &wide)) >= 0
+	if (ret >= 0 && (ret = ProcessmgrLibcMktime(&tm, &t, &tz)) >= 0
 	    && (ret = sceKernelCopyToUser(utm, &tm, sizeof(tm))) >= 0
 	    && (ut == NULL || (ret = sceKernelCopyToUser(ut, &t, sizeof(t))) >= 0)
 	    && uwide != NULL)
-		ret = sceKernelCopyToUser(uwide, &wide, sizeof(wide));
+		ret = sceKernelCopyToUser(uwide, &tz, sizeof(tz));
 	ProcessSyscallLeave(state);
 	return ret;
 }

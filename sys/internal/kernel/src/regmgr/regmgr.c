@@ -181,7 +181,7 @@ fill:
 	}
 	if (initType == 1) {
 		if (s_rgMnKey[keyNo].type != REGMGR_TYPE_INT)
-			value->data = s_rgMnKey[keyNo].init.data;
+			value->data = (void *)s_rgMnKey[keyNo].init.data;
 		else
 			value->data = &s_rgMnKey[keyNo].init.value;
 		value->size = s_rgMnKey[keyNo].initSize;

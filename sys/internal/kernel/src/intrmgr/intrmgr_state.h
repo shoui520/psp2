@@ -30,7 +30,7 @@ typedef struct IntrHandler {
 	SceUInt32 count[4];
 	SceKernelSpinlock lock;
 	struct IntrHandler *sub;
-	SubIntrCallback *callbacks;
+	const SubIntrCallback *callbacks;
 	SceUInt32 subCount;
 } IntrHandler;
 

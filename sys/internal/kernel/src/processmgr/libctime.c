@@ -29,7 +29,7 @@ SceKernelTime SceProcessmgrForKernel_B0E076D6(SceKernelTime *t)
 	return -1;
 }
 
-int SceProcessmgrForKernel_014F5113(void *tv, void *tz)
+int SceProcessmgrForKernel_014F5113(ProcessTimeval *tv, ProcessTimezone *tz)
 {
 	if (g_libcOps->gettimeofday != NULL)
 		return g_libcOps->gettimeofday(tv, tz);
@@ -37,38 +37,38 @@ int SceProcessmgrForKernel_014F5113(void *tv, void *tz)
 }
 
 /* names unknown: gmtime_r, localtime_r and mktime */
-int ProcessmgrLibcGmtime_r(const SceKernelTime *t, void *tm)
+int ProcessmgrLibcGmtime_r(const SceKernelTime *t, ProcessTm *tm)
 {
 	if (g_libcOps->gmtime_r != NULL)
 		return g_libcOps->gmtime_r(t, tm);
 	return SCE_KERNEL_ERROR_NOT_IMPLEMENTED;
 }
 
-int ProcessmgrLibcLocaltime_r(const SceKernelTime *t, void *tm)
+int ProcessmgrLibcLocaltime_r(const SceKernelTime *t, ProcessTm *tm)
 {
 	if (g_libcOps->localtime_r != NULL)
 		return g_libcOps->localtime_r(t, tm);
 	return SCE_KERNEL_ERROR_NOT_IMPLEMENTED;
 }
 
-int ProcessmgrLibcMktime(void *tm, SceKernelTime *t, SceUInt64 *wide)
+int ProcessmgrLibcMktime(ProcessTm *tm, SceKernelTime *t, ProcessTimezone *tz)
 {
 	if (g_libcOps->mktime != NULL)
-		return g_libcOps->mktime(tm, t, wide);
+		return g_libcOps->mktime(tm, t, tz);
 	return SCE_KERNEL_ERROR_NOT_IMPLEMENTED;
 }
 
 /* names unknown: the RTC's current tick and current secure tick */
-int SceProcessmgrForKernel_D231AE5B(void *a, void *b, void *c)
+int SceProcessmgrForKernel_D231AE5B(struct SceRtcTick *tick)
 {
 	if (g_libcOps->getCurrentTick != NULL)
-		return g_libcOps->getCurrentTick(a, b, c);
+		return g_libcOps->getCurrentTick(tick);
 	return SCE_KERNEL_ERROR_NOT_IMPLEMENTED;
 }
 
-int SceProcessmgrForKernel_3EBC93BB(void *a, void *b, void *c)
+int SceProcessmgrForKernel_3EBC93BB(struct SceRtcTick *tick)
 {
 	if (g_libcOps->getCurrentSecureTick != NULL)
-		return g_libcOps->getCurrentSecureTick(a, b, c);
+		return g_libcOps->getCurrentSecureTick(tick);
 	return SCE_KERNEL_ERROR_NOT_IMPLEMENTED;
 }

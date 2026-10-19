@@ -404,7 +404,8 @@ int SceGpsForDriver_BE3EB4E9(unsigned device, unsigned mode, const GpsLocation *
 	if (device - 1U < 4 && s_gps.active->setClock == 1) {
 		int allowed = device == 2 || (device == 1 && !canSetClock(&s_gps.driver[0]));
 		if (allowed && state - 6U < 2 && !s_gps.location.noClock &&
-		    SceRtcForDriver_F139E359(&date, tick) >= 0 && SceRtcForDriver_A7236656(tick) >= 0)
+		    SceRtcForDriver_F139E359(&date, (SceRtcTick *)tick) >= 0 &&
+		    SceRtcForDriver_A7236656((SceRtcTick *)tick) >= 0)
 			s_gps.active->setClock = 0;
 	}
 	gpsDataUnlock();

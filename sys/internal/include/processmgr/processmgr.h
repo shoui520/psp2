@@ -53,20 +53,30 @@ typedef struct ProcessTimezone {
 
 /* the user mode struct tm */
 typedef struct ProcessTm {
-	SceInt32 field[9];
+	SceInt32 sec;
+	SceInt32 min;
+	SceInt32 hour;
+	SceInt32 mday;
+	SceInt32 mon;
+	SceInt32 year;				/* the full year */
+	SceInt32 wday;
+	SceInt32 yday;
+	SceInt32 isdst;
 } ProcessTm;
 
-/* the kernel libc time implementation (SceProcessmgrForDriver_4140D633); rtc's RtcLibcTimeFunctions */
+struct SceRtcTick;
+
+/* the kernel libc time implementation rtc registers (SceProcessmgrForDriver_4140D633) */
 typedef struct ProcessmgrLibcOps {
 	SceSize size;
 	SceUInt32 (*clock)(void);
 	SceKernelTime (*time)(SceKernelTime *t);
-	int (*gettimeofday)(void *tv, void *tz);
-	int (*gmtime_r)(const SceKernelTime *t, void *tm);
-	int (*localtime_r)(const SceKernelTime *t, void *tm);
-	int (*mktime)(void *tm, SceKernelTime *t, SceUInt64 *wide);
-	int (*getCurrentTick)(void *a, void *b, void *c);
-	int (*getCurrentSecureTick)(void *a, void *b, void *c);
+	int (*gettimeofday)(ProcessTimeval *tv, ProcessTimezone *tz);
+	int (*gmtime_r)(const SceKernelTime *t, ProcessTm *tm);
+	int (*localtime_r)(const SceKernelTime *t, ProcessTm *tm);
+	int (*mktime)(ProcessTm *tm, SceKernelTime *t, ProcessTimezone *tz);
+	int (*getCurrentTick)(struct SceRtcTick *tick);
+	int (*getCurrentSecureTick)(struct SceRtcTick *tick);
 } ProcessmgrLibcOps;
 
 /* names from SceSysmodule's error messages */
@@ -170,12 +180,12 @@ int SceProcessmgrForDriver_EC283166(SceUInt64 *time);	/* vitasdk: ksceKernelGetP
 /* vitasdk: ksceKernelGetProcessLocalStorageAddr */
 void *SceProcessmgrForDriver_EE694840(SceUInt32 key);
 /* vitasdk: ksceKernelLibcGettimeofday */
-int SceProcessmgrForKernel_014F5113(void *tv, void *tz);
+int SceProcessmgrForKernel_014F5113(ProcessTimeval *tv, ProcessTimezone *tz);
 int SceProcessmgrForKernel_1197DB8A(SceUInt32 index, SceUInt32 value, SceUInt32 control);
 SceUID SceProcessmgrForKernel_1E5B38E5(const char *name, SceUInt32 type, const char *path,
 				       SceSize args, void *argp, const SceKernelProcessOpt *opt);
 void SceProcessmgrForKernel_344DDE0B(SceUID pid, SceUID prevPid);
-int SceProcessmgrForKernel_3EBC93BB(void *a, void *b, void *c);
+int SceProcessmgrForKernel_3EBC93BB(struct SceRtcTick *tick);
 int SceProcessmgrForKernel_459A223B(SceUID budgetId);
 int SceProcessmgrForKernel_5137B783(SceUID pid, int waitDebugger, SceSize args, void *argp);
 int SceProcessmgrForKernel_6DEC45C3(SceUInt32 index, SceUInt32 *value, SceUInt32 *control);
@@ -185,7 +195,7 @@ SceClass *SceProcessmgrForKernel_98AE4BC8(void);	/* vitasdk: ksceKernelGetUIDPro
 int SceProcessmgrForKernel_9FA66773(SceUInt32 index, SceUInt32 *value, SceUInt32 *control);
 /* vitasdk: ksceKernelLibcTime */
 SceKernelTime SceProcessmgrForKernel_B0E076D6(SceKernelTime *t);
-int SceProcessmgrForKernel_D231AE5B(void *a, void *b, void *c);
+int SceProcessmgrForKernel_D231AE5B(struct SceRtcTick *tick);
 SceUID SceProcessmgrForKernel_DC18FCEF(const char *name, SceUInt32 type,
 				       const ProcessBudgetOpt *opt);
 int SceProcessmgrForKernel_DDE282CF(SceUInt32 index, SceUInt32 value, SceUInt32 control);

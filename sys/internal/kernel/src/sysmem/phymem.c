@@ -302,7 +302,7 @@ static __attribute__((noinline)) PhyPage *PhyMemPartGetPhyPageByIndexRaw(PhyMemP
 
 static inline SceInt32 PhyMemPartRefer(PhyMemPart *part)
 {
-	SceInt32 count = SceCpuForKernel_8F40D0FD((SceInt32 *)&part->refCount, 1,
+	SceInt32 count = SceCpuForKernel_8F40D0FD((uint32_t *)&part->refCount, 1,
 									      0x7fffffff);
 
 	SCE_DBG_ASSERT_CHECK_FUNC(count >= 0, 1489, "PhyMemPartRefer");

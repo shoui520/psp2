@@ -1883,8 +1883,8 @@ int ModulemgrModuleStart(SceSize args, void *argp)
 
 	g_moduleClass = sceKernelSysrootGetModulePrivate(9);
 	g_moduleClass->name = "SceUIDModuleClass";
-	g_moduleClass->create_cb = ModulemgrConstructor;
-	g_moduleClass->destroy_cb = ModulemgrDestructor;
+	g_moduleClass->create_cb = (SceClassCallback)ModulemgrConstructor;
+	g_moduleClass->destroy_cb = (SceClassCallback)ModulemgrDestructor;
 	g_private = (ModulemgrPrivate *)g_moduleClass;
 	g_private->stubClass.name = "SceUIDLibStubClass";
 	g_libraryClass = &g_private->libraryClass;
@@ -1892,8 +1892,8 @@ int ModulemgrModuleStart(SceSize args, void *argp)
 	g_private->stubClass.destroy_cb = LibStubClassDestroy;
 	g_stubClass = &g_private->stubClass;
 	g_private->libraryClass.name = "SceUIDLibraryClass";
-	g_private->libraryClass.create_cb = LibraryClassCreate;
-	g_private->libraryClass.destroy_cb = LibraryClassDestroy;
+	g_private->libraryClass.create_cb = (SceClassCallback)LibraryClassCreate;
+	g_private->libraryClass.destroy_cb = (SceClassCallback)LibraryClassDestroy;
 	sceKernelSetProcessLibdb(SCE_KERNEL_PROCESS_ID, &g_private->kernelDB);
 	SceSysrootForKernel_B171CC2D(&g_sysrootCallbacks);
 

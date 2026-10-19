@@ -408,7 +408,7 @@ invalid:
 
 /* SCE: apply frame-size, drop-interval and duplication controls. */
 int sceNetPsFilterTxMbuf(struct SceNetPsDriverContext *context,
-			struct mbuf *mbuf, unsigned int *duplicates)
+			struct mbuf *mbuf, int *duplicates)
 {
 	struct timeval now;
 	int length = mbuf->m_pkthdr.len;

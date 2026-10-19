@@ -398,14 +398,14 @@ int sceKernelObjectHeapSetResourceLimit(SceUID pid, int kind, unsigned int type,
 }
 
 int sceKernelObjectHeapSetResourceLimitAll(ObjectHeap *heap, unsigned int count,
-					   const SceUInt32 (*limits)[2])
+					   const ObjectHeapResourceLimit *limits)
 {
 	unsigned int type;
 	int ret;
 
 	type = 0;
 	while (type != count) {
-		ret = ObjectHeapSetResourceLimit(heap, type, (*limits)[0], (*limits)[1]);
+		ret = ObjectHeapSetResourceLimit(heap, type, limits->max, limits->reserve);
 		type++;
 		limits++;
 		if (ret < 0) {

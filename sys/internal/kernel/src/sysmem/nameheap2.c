@@ -357,7 +357,7 @@ int SceSysmemForKernel_40965FD1(const char *name, SceUInt32 flags, char **out)
 }
 
 /* sceKernelNameHeapDelete */
-int SceSysmemForKernel_634D0D0C(char *name, unsigned int flags)
+int SceSysmemForKernel_634D0D0C(const char *name, unsigned int flags)
 {
 	if (name == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;

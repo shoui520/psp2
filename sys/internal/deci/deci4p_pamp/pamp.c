@@ -349,7 +349,7 @@ static int pampOpen(PampContext *ctx)
 	int pids[16], count = 0, ret, key;
 
 	memset(pids, 0, sizeof(pids));
-	ret = SceProcessmgrForKernel_EFFF2975(3, pids, sizeof(pids), &count);
+	ret = SceProcessmgrForKernel_EFFF2975(3, pids, sizeof(pids), (SceSize *)&count);
 	if (ret < 0)
 		return PAMP_STATUS_NOT_AVAILABLE;
 	for (int i = 0; i < count; i++) {

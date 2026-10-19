@@ -86,9 +86,9 @@ SceProcessObject *GetCurrentProcess(void);
 
 /* libctime.c */
 SceUInt32 ProcessmgrLibcClock(void);
-int ProcessmgrLibcGmtime_r(const SceKernelTime *t, void *tm);
-int ProcessmgrLibcLocaltime_r(const SceKernelTime *t, void *tm);
-int ProcessmgrLibcMktime(void *tm, SceKernelTime *t, SceUInt64 *wide);
+int ProcessmgrLibcGmtime_r(const SceKernelTime *t, ProcessTm *tm);
+int ProcessmgrLibcLocaltime_r(const SceKernelTime *t, ProcessTm *tm);
+int ProcessmgrLibcMktime(ProcessTm *tm, SceKernelTime *t, ProcessTimezone *tz);
 
 /* budget.c */
 extern ProcessBudget *g_gameBudget;

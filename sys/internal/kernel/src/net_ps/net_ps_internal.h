@@ -21,9 +21,7 @@ typedef struct SceNetPsGatewayState {
 _Static_assert(sizeof(SceNetPsGatewayState) == 8, "gateway state size");
 _Static_assert(offsetof(SceNetPsGatewayState, socket) == 4, "gateway socket");
 
-
 #include <net_ps/net_ps_bsd.h>
-
 
 typedef struct SceNetPsSysEventHooks {
 	int (*suspend)(void);
@@ -56,7 +54,6 @@ _Static_assert(sizeof(SceNetPsHeapBlock) == 32, "SceNetPsHeapBlock size");
 _Static_assert(offsetof(SceNetPsHeapBlock, next) == 16, "heap block next");
 _Static_assert(offsetof(SceNetPsHeapBlock, prev) == 20, "heap block prev");
 _Static_assert(offsetof(SceNetPsHeapBlock, capacity) == 24, "heap block capacity");
-
 
 /* Complete serialized record: 168c initializes all320 bytes; 1eb8 augments it.
  * 2f10 only changes byte order and clears private controls for serialization.
@@ -185,7 +182,6 @@ _Static_assert(offsetof(SceNetPsDebugSockInfo, sockets) == 12,
 
 /* Sony's network-owned bookkeeping, separate from the kernel process object. */
 
-
 struct socket;
 struct NetDriverPacket;
 struct SceNetPsDriverContext;
@@ -217,10 +213,6 @@ _Static_assert(offsetof(SceNetPsPacketService, filterFlags) == 72,
 	       "SceNetPsPacketService filterFlags");
 
 struct ifnet;
-
-
-
-
 
 extern SceNetPsMutex gNetPsThreadMutex;
 extern SceNetPsMutex gNetPsJumboMutex;
@@ -259,7 +251,7 @@ int sceNetPsSetDriverEmulation(struct SceNetPsDriverContext *context,
 			       SceNetEmulationParam *parameters,
 			       int networkOrder, int privileged);
 int sceNetPsFilterTxMbuf(struct SceNetPsDriverContext *context,
-			struct mbuf *mbuf, unsigned int *duplicates);
+			struct mbuf *mbuf, int *duplicates);
 int sceNetPsSetTxEmulation(struct SceNetPsDriverContext *context,
 			  struct mbuf *mbuf, struct NetDriverPacket *packet);
 

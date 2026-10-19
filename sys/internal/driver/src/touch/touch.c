@@ -306,38 +306,31 @@ static int configDone(SceSysconPacket *packet, void *argp)
 	return 0;
 }
 
-/* syscon's report of one panel (SceSysconForDriver_030D447F) */
-struct touchSysconPanel {
-	unsigned short vendor, product, firmware;
-	unsigned char detail[2];
-	unsigned short reserved;
-};
-
 /* name unknown: device info of both panels from the newer syscon interface */
 static int readDeviceInfo(void)
 {
-	struct touchSysconPanel info[TOUCH_PORTS] = { 0 };
+	SceKernelTouchpanelDeviceInfo2 info = { 0 };
 	int retries = 3, ret;
 
 	for (;;) {
-		ret = SceSysconForDriver_030D447F(info);
+		ret = SceSysconForDriver_030D447F(&info);
 		if (ret < 0)
 			return ret;
-		if ((info[0].product && info[1].product) || retries == 1)
+		if ((info.front.product && info.rear.product) || retries == 1)
 			break;
 		retries--;
 		sceKernelDelayThread(20000);
 	}
-	touch.ports[0].deviceInfo.product = info[0].product;
-	touch.ports[1].deviceInfo.product = info[1].product;
-	touch.ports[0].deviceInfo.vendor = info[0].vendor;
-	touch.ports[0].deviceInfo.firmware = info[0].firmware;
-	touch.ports[0].deviceInfo.detail[0] = info[0].detail[0];
-	touch.ports[0].deviceInfo.detail[1] = info[0].detail[1];
-	touch.ports[1].deviceInfo.vendor = info[1].vendor;
-	touch.ports[1].deviceInfo.firmware = info[1].firmware;
-	touch.ports[1].deviceInfo.detail[0] = info[1].detail[0];
-	touch.ports[1].deviceInfo.detail[1] = info[1].detail[1];
+	touch.ports[0].deviceInfo.product = info.front.product;
+	touch.ports[1].deviceInfo.product = info.rear.product;
+	touch.ports[0].deviceInfo.vendor = info.front.vendor;
+	touch.ports[0].deviceInfo.firmware = info.front.firmware;
+	touch.ports[0].deviceInfo.detail[0] = info.front.detail[0];
+	touch.ports[0].deviceInfo.detail[1] = info.front.detail[1];
+	touch.ports[1].deviceInfo.vendor = info.rear.vendor;
+	touch.ports[1].deviceInfo.firmware = info.rear.firmware;
+	touch.ports[1].deviceInfo.detail[0] = info.rear.detail[0];
+	touch.ports[1].deviceInfo.detail[1] = info.rear.detail[1];
 	return ret;
 }
 
@@ -1695,7 +1688,6 @@ static int readRing(struct touchRing *ring, unsigned kind, SceTouchData *out,
 	return count;
 }
 
-
 /* ------------------------------------------------------------ driver exports */
 
 /* name unknown: read (wait for the next frame) or peek a process' ring */
@@ -2641,7 +2633,6 @@ int sceTouchGetDeviceInfo(unsigned port, void *out)
 	sceSyscallLeave(t);
 	return ret;
 }
-
 
 int sceTouchRead2(unsigned device, unsigned port, void *out, unsigned count)
 {

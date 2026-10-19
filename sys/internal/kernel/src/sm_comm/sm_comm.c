@@ -235,7 +235,8 @@ static int __attribute__((noinline)) StartSession(int index, uint32_t priority,
 	ret = s_sessions[index].result;
 cleanup:
 	if (*id != -1) {
-		sceSblSmSchedProxyWait(*id, &vector);
+		/* the vector takes the result */
+		sceSblSmSchedProxyWait(*id, (SceUInt32 *)&vector);
 		*id = -1;
 	}
 	if (memBlock >= 0)
@@ -448,7 +449,7 @@ int sceSblSmCommStopSm(SceSblSmCommId id, SceSblSmCommPair *result)
 		sceKernelDeleteEventFlag(session->eventFlag);
 		ReleaseSessionSlot(index);
 		ret = sceKernelSignalSema(s_semaphore, 1);
-		waitRet = sceSblSmSchedProxyWait(id, result);
+		waitRet = sceSblSmSchedProxyWait(id, (SceUInt32 *)result);
 		if (waitRet != 0 && ret == 0)
 			ret = waitRet;
 	}

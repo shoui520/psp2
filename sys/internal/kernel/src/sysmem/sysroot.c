@@ -136,8 +136,8 @@ struct SysrootState {
 	const SysrootProcessmgrRuntimeOps *processmgrRuntimeOps;
 	const SysrootProcessmgrOps *processmgrOps;
 	int (*licMgrGetLicenseStatus)(void);
-	int (*utMgrHasPsmTestFlag)(void);
-	int (*utMgrHasSystemDataFilePlayReadyFlag)(void);
+	SysrootUtMgrHasFlag utMgrHasPsmTestFlag;
+	SysrootUtMgrHasFlag utMgrHasSystemDataFilePlayReadyFlag;
 	SysrootBusErrorHandler busErrorHandler;	/* 0x374: deci4p_sdfmgr's, buserror calls it */
 	SysrootBusErrorGetInfo busErrorGetInfo;	/* 0x378: buserror's record reader */
 	SysrootCoredumpTrigger coredumpTrigger;
@@ -146,19 +146,17 @@ struct SysrootState {
 	SysrootTtyGetLogRaw ttyGetLogRaw;	/* tty2uart's */
 	SysrootUtMgrHasAuthId utMgrHasAuthId;	/* 0x38c: post_ss_mgr's, acmgr asks */
 	int (*utMgrGetTrilithiumBuffer)(void *buffer);
-	int (*utMgrHasNpTestFlag)(void);
+	SysrootUtMgrHasFlag utMgrHasNpTestFlag;
 	int (*getSystemSwVersion)(void);
 	SysrootLedSetMode ledSetMode;		/* 0x39c: power's SceLedForDriver_EA24BE03 */
 	const struct SysrootSelfImage *selfImages;
 	int (*getNidName)(uint32_t nid, const char **name);
 	SysrootSysStateEvent sysStateEvent;	/* 0x3a8: deci4p_(s)dfmgr's, sysstatemgr reports boot */
-	int (*sendSystemError)(int type, SceSize size, const char *buffer);	/* deci4p_sdfmgr's */
+	SysrootSendSystemError sendSystemError;	/* 0x3ac: deci4p_sdfmgr's */
 	const SysrootDfmgrOps *dfmgrOps;
-	int (*setSwInfoInt)(const char *name, SceSize length, SceUInt32 number);
-	int (*setSwInfoStr)(const char *name, SceSize nameLength, const char *str,
-			    SceSize strLength);
-	int (*setSwInfoBin)(const char *name, SceSize nameLength, const void *data,
-			    SceSize dataSize);
+	SysrootSetSwInfoInt setSwInfoInt;	/* 0x3b4: deci4p_tsmp's */
+	SysrootSetSwInfoStr setSwInfoStr;
+	SysrootSetSwInfoBin setSwInfoBin;
 	int (*syncLocalTime)(void);		/* 0x3c0: deci4p_tsmp's */
 	const SysrootProcessEventOps *processEventOps;
 	const SysrootDbgpOps *dbgpOps;
@@ -1205,7 +1203,7 @@ void SceSysrootForDriver_27D30DB2(SysrootNetHook callback)
 	s_sysrootState->sdbgpNetAttach = callback;
 }
 
-void SceSysrootForDriver_2D6B2A79(int (*callback)(int type, SceSize size, const char *buffer))
+void SceSysrootForDriver_2D6B2A79(SysrootSendSystemError callback)
 {
 	s_sysrootState->sendSystemError = callback;
 }
@@ -1344,8 +1342,7 @@ uint32_t SceSysrootForKernel_FFD6E24D(void)
 	return s_sysrootState->pervasiveDword;
 }
 
-void SceSysrootForDriver_05CD0DD9(int (*callback)(const char *name, SceSize nameLength,
-						  const void *data, SceSize dataSize))
+void SceSysrootForDriver_05CD0DD9(SysrootSetSwInfoBin callback)
 {
 	s_sysrootState->setSwInfoBin = callback;
 }
@@ -1355,8 +1352,7 @@ void SceSysrootForDriver_1834D482(SysrootTmcpCommand callback)
 	s_sysrootState->tmcpCommand = callback;
 }
 
-void SceSysrootForDriver_1FFD2AFA(int (*callback)(const char *name, SceSize length,
-						  SceUInt32 number))
+void SceSysrootForDriver_1FFD2AFA(SysrootSetSwInfoInt callback)
 {
 	s_sysrootState->setSwInfoInt = callback;
 }
@@ -1406,8 +1402,7 @@ void SceSysrootForDriver_70AD47A9(int (*callback)(void *out))
 	s_sysrootState->appMgrGetAppList = callback;
 }
 
-void SceSysrootForDriver_7C0BE393(int (*callback)(const char *name, SceSize nameLength,
-						  const char *str, SceSize strLength))
+void SceSysrootForDriver_7C0BE393(SysrootSetSwInfoStr callback)
 {
 	s_sysrootState->setSwInfoStr = callback;
 }
@@ -1474,12 +1469,12 @@ int SceSysrootForDriver_D1E54BF4(uint64_t deviceAddress)
 	return ops->getConnectingInfo(deviceAddress);
 }
 
-void SceSysrootForDriver_E25D2FD5(int (*callback)(void))
+void SceSysrootForDriver_E25D2FD5(SysrootUtMgrHasFlag callback)
 {
 	s_sysrootState->utMgrHasPsmTestFlag = callback;
 }
 
-void SceSysrootForDriver_E2E88E3E(int (*callback)(void))
+void SceSysrootForDriver_E2E88E3E(SysrootUtMgrHasFlag callback)
 {
 	s_sysrootState->utMgrHasSystemDataFilePlayReadyFlag = callback;
 }
@@ -1522,7 +1517,7 @@ void SceSysrootForDriver_ED688AEE(int (*callback)(void))
 	s_sysrootState->syncLocalTime = callback;
 }
 
-void SceSysrootForDriver_EE5D6CE9(int (*callback)(void))
+void SceSysrootForDriver_EE5D6CE9(SysrootUtMgrHasFlag callback)
 {
 	s_sysrootState->utMgrHasNpTestFlag = callback;
 }
@@ -1547,7 +1542,7 @@ uint32_t SceSysrootForKernel_2F97041A(void)
 	return kbl->wakeup_factor;
 }
 
-uint32_t SceSysrootForKernel_4373AC96(void)
+int SceSysrootForKernel_4373AC96(void)
 {
 	const SceKblParam *kbl = s_sysrootState->kblParam;
 
@@ -1561,7 +1556,7 @@ uint32_t SceSysrootForKernel_50FE3B4D(void)
 	return (kbl->boot_flags[5] & 1) ^ 1;
 }
 
-uint32_t SceSysrootForKernel_55392965(void)
+int SceSysrootForKernel_55392965(void)
 {
 	const SceKblParam *kbl = s_sysrootState->kblParam;
 
@@ -1582,7 +1577,7 @@ uint32_t SceSysrootForKernel_7B7F8171(void)
 	return (kbl->boot_type_indicator_1 >> 19) & 1;
 }
 
-uint32_t SceSysrootForKernel_89D19090(void)
+int SceSysrootForKernel_89D19090(void)
 {
 	const SceKblParam *kbl = s_sysrootState->kblParam;
 
@@ -1611,7 +1606,7 @@ uint32_t SceSysrootForDriver_AE7A8F1D(void)
 	return kbl->boot_flags[1] != 0xff;
 }
 
-uint32_t SceSysrootForKernel_B0E1FC67(void)
+int SceSysrootForKernel_B0E1FC67(void)
 {
 	const SceKblParam *kbl = s_sysrootState->kblParam;
 
@@ -1732,7 +1727,8 @@ volatile uint32_t *SceSysrootForDriver_6655F48C(unsigned int bank, unsigned int 
 void sceKernelSysrootEnableAutoClockDown(void)
 {
 	uint32_t previous = SceCpuForDriver_341B6E81(
-		&SceSysrootForDriver_4B8C305A.disableCountAndFlags, (uint32_t)-0x10);
+		(volatile SceInt32 *)&SceSysrootForDriver_4B8C305A.disableCountAndFlags,
+		(uint32_t)-0x10);
 
 	SCE_DBG_ASSERT_CHECK((int32_t)previous > 0x10, 1002);
 }
@@ -1740,7 +1736,7 @@ void sceKernelSysrootEnableAutoClockDown(void)
 void sceKernelSysrootDisableAutoClockDown(void)
 {
 	uint32_t previous = SceCpuForDriver_341B6E81(
-		&SceSysrootForDriver_4B8C305A.disableCountAndFlags, 0x10);
+		(volatile SceInt32 *)&SceSysrootForDriver_4B8C305A.disableCountAndFlags, 0x10);
 
 	SCE_DBG_ASSERT_CHECK(previous < 0xf0000000U, 1011);
 }
@@ -2268,7 +2264,7 @@ int SceSysrootForDriver_CA497324(SceUID pid, SceUID modid, SceUInt64 time)
 
 int SceSysrootForDriver_CC7A0E63(int type, SceSize size, const char *buffer)
 {
-	int (*callback)(int, SceSize, const char *) = s_sysrootState->sendSystemError;
+	SysrootSendSystemError callback = s_sysrootState->sendSystemError;
 
 	if (callback == NULL)
 		return type;
@@ -2342,8 +2338,7 @@ int SceSysrootForDriver_1160FCA1(SceUID pid, SceUInt32 *flag)
 int SceSysrootForDriver_17DD213C(const char *name, SceSize nameLength, const char *str,
 				 SceSize strLength)
 {
-	int (*callback)(const char *, SceSize, const char *, SceSize) =
-		s_sysrootState->setSwInfoStr;
+	SysrootSetSwInfoStr callback = s_sysrootState->setSwInfoStr;
 
 	if (callback == NULL)
 		return 0;
@@ -2353,7 +2348,7 @@ int SceSysrootForDriver_17DD213C(const char *name, SceSize nameLength, const cha
 /* sceKernelSysrootSblUtMgrHasPSMTestFlag (henkaku wiki) */
 int SceSysrootForDriver_26AA237C(void)
 {
-	int (*callback)(void) = s_sysrootState->utMgrHasPsmTestFlag;
+	SysrootUtMgrHasFlag callback = s_sysrootState->utMgrHasPsmTestFlag;
 
 	if (callback == NULL)
 		return 0;
@@ -2400,7 +2395,7 @@ int SceSysrootForDriver_6219CC14(void *dbgp, void *process, SceUInt32 set, SceUI
 /* sceKernelSysrootSetSwInfoInt */
 int SceSysrootForDriver_631141E2(const char *name, SceSize length, SceUInt32 number)
 {
-	int (*callback)(const char *, SceSize, SceUInt32) = s_sysrootState->setSwInfoInt;
+	SysrootSetSwInfoInt callback = s_sysrootState->setSwInfoInt;
 
 	if (callback == NULL)
 		return 0;
@@ -2444,8 +2439,7 @@ int SceSysrootForDriver_9BF782CA(SceUInt32 led, SceUInt32 mode, const void *opti
 int SceSysrootForDriver_9E96D990(const char *name, SceSize nameLength, const void *data,
 				 SceSize dataSize)
 {
-	int (*callback)(const char *, SceSize, const void *, SceSize) =
-		s_sysrootState->setSwInfoBin;
+	SysrootSetSwInfoBin callback = s_sysrootState->setSwInfoBin;
 
 	if (callback == NULL)
 		return 0;
@@ -2454,7 +2448,7 @@ int SceSysrootForDriver_9E96D990(const char *name, SceSize nameLength, const voi
 
 int SceSysrootForDriver_A43599E9(void)
 {
-	int (*callback)(void) = s_sysrootState->utMgrHasNpTestFlag;
+	SysrootUtMgrHasFlag callback = s_sysrootState->utMgrHasNpTestFlag;
 
 	if (callback == NULL)
 		return SCE_ERROR_ERRNO_ENOENT;
@@ -2491,7 +2485,8 @@ int SceSysrootForDriver_DABD4A47(void *threadInfo)
 /* sceKernelSysrootSblUtMgrHasSystemDataFilePlayReadyFlag (henkaku wiki) */
 int SceSysrootForDriver_E2515A08(void)
 {
-	int (*callback)(void) = s_sysrootState->utMgrHasSystemDataFilePlayReadyFlag;
+	SysrootUtMgrHasFlag callback =
+		s_sysrootState->utMgrHasSystemDataFilePlayReadyFlag;
 
 	if (callback == NULL)
 		return 0;

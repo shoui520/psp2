@@ -2826,14 +2826,14 @@ int sceKernelThreadMgrProcessCreate(SceProcessObject *process)
 	self = currentThreadContext();
 	if (self == NULL) {
 		process->workerThread = sceKernelCreateThread(name,
-			(uintptr_t)processWorkerThread, WORKER_PRIORITY, WORKER_STACK_SIZE, 0,
+			processWorkerThread, WORKER_PRIORITY, WORKER_STACK_SIZE, 0,
 			WORKER_CPU_AFFINITY, NULL);
 		self = currentThreadContext();
 	} else {
 		permission = self->permission;
 		self->permission = PERMISSION_WORKER;
 		process->workerThread = sceKernelCreateThread(name,
-			(uintptr_t)processWorkerThread, WORKER_PRIORITY, WORKER_STACK_SIZE, 0,
+			processWorkerThread, WORKER_PRIORITY, WORKER_STACK_SIZE, 0,
 			WORKER_CPU_AFFINITY, NULL);
 		self = currentThreadContext();
 		if (permission >= 0 && self != NULL)

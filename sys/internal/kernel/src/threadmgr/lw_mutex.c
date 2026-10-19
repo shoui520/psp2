@@ -63,7 +63,7 @@ static int getLwMutexInfo(SceUID lwMutexId, SceKernelLwMutexInfo *info)
 	sceKernelSpinlockLowLock(&lwMutex->lock);
 	info->numWaitThreads = lwMutex->waiting;
 	info->initCount = lwMutex->initCount;
-	info->pWork = lwMutex->work;
+	info->pWork = (SceKernelLwMutexWork *)lwMutex->work;
 	info->attr = lwMutex->attr;
 	strncpy(info->name, lwMutex->name, sizeof(info->name));
 	sceKernelSpinlockLowUnlock(&lwMutex->lock);
@@ -75,7 +75,7 @@ static int getLwMutexInfo(SceUID lwMutexId, SceKernelLwMutexInfo *info)
 			ret = SCE_KERNEL_ERROR_LW_MUTEX_CAN_NOT_ACCESS | SYSCALL_ERROR_BIT;
 		} else {
 			ret = SCE_KERNEL_ERROR_LW_MUTEX_CAN_NOT_ACCESS;
-			info->pWork = (ThreadmgrLwMutexWork *)((uintptr_t)info->pWork | 1);
+			info->pWork = (SceKernelLwMutexWork *)((uintptr_t)info->pWork | 1);
 		}
 	} else {
 		if (work.owner == 0) {

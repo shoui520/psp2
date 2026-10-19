@@ -14,6 +14,8 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/debug.h>
 #include <smsc_proxy/smsc_proxy.h>
+#include <post_ss_mgr/sblpostssmgr.h>
+#include <kernel_boot_loader/kbl_param.h>
 
 #define AM_EINVAL ((int)0x800f0516)
 #define AM_EHANDLE ((int)0x800f0509)
@@ -301,7 +303,7 @@ static __attribute__((noinline)) int authMgrStopSM(SceUID id)
 static __attribute__((noinline)) int authMgrInvokeSM(void)
 {
 	uint32_t guard = __stack_chk_guard;
-	uint8_t *bootParameters = sceKernelSysrootGetKblParam();
+	const SceKblParam *kblParam = sceKernelSysrootGetKblParam();
 	SelfAuthRequest auth;
 	uint32_t *words = (uint32_t *)(void *)&auth;
 	int result;
@@ -321,7 +323,7 @@ static __attribute__((noinline)) int authMgrInvokeSM(void)
 	words[17] = 0x80;
 	words[20] = 0;
 	words[21] = UINT32_MAX;
-	auth.mediaType = (*(uint32_t *)(void *)(bootParameters + 0x6c) & 0x40) ? 1 : 10;
+	auth.mediaType = (kblParam->boot_type_indicator_1 & BOOT_TYPE_SPECIAL_MEDIA) ? 1 : 10;
 	result = sceSblSmSchedProxyInvoke(0, 0, 0, NULL, &auth, (SceUID *)&s_state.requestId);
 	if (result != 0) {
 		SCE_DBG_PRINTF(0xb, 909, "ERROR: sceSblSmSchedProxyInvoke ret = 0x%08x\n", result);
@@ -390,7 +392,7 @@ static __attribute__((noinline)) int sceSblAuthMgrStart(void)
 		SCE_DBG_PRINTF(0xb, 239, "ERROR: sceKernelVAtoPA ret = 0x%08x\n", result);
 		result = AM_EPHYSICAL;
 	} else {
-		arena = SceSysmemForDriver_0B4ED16A(0x408, option);
+		arena = SceSysmemForDriver_0B4ED16A(0x408, (SceAllocOpt *)option);
 		if (arena == NULL) {
 			result = AM_ENOMEM;
 		} else {
@@ -716,20 +718,16 @@ out:
 	CheckStackGuard(guard);
 	return result;
 }
-struct SpsfoContext {
-	uint32_t reserved;
-	void *buffer;
-	uint32_t size;
-};
-int sceSblAuthMgrVerifySpsfo(struct SpsfoContext *context)
+
+int sceSblAuthMgrVerifySpsfo(SceSblSpfsoCtx *context)
 {
 	struct AuthPacket *packet;
 	uint32_t *words;
 	uint64_t offset;
 	int result, unlockResult, signalResult;
 
-	if (context == NULL || context->buffer == NULL || context->size > 0x8000 ||
-	    ((uintptr_t)context->buffer & 0x1f))
+	if (context == NULL || context->base == NULL || context->size > 0x8000 ||
+	    ((uintptr_t)context->base & 0x1f))
 		return AM_EINVAL;
 	result = authMgrWaitSelfSemaphore();
 	if (result < 0)
@@ -737,7 +735,7 @@ int sceSblAuthMgrVerifySpsfo(struct SpsfoContext *context)
 	result = lockFastMutex(&s_state.npdrmMutex);
 	if (result < 0)
 		goto signal;
-	result = authMgrSetupSrcPARanges(context->buffer, context->size);
+	result = authMgrSetupSrcPARanges(context->base, context->size);
 	if (result < 0) {
 		AUTH_DBG_ASSERT("sceSblAuthMgrVerifySpsfo", 0, 1984);
 	} else {
@@ -746,16 +744,18 @@ int sceSblAuthMgrVerifySpsfo(struct SpsfoContext *context)
 		memset(packet, 0, 0x50);
 		words[16] = result;
 		words[17] = s_state.sourcePhysicalAddress;
-		sceKernelDcacheCleanRange(context->buffer, RoundCacheSize(context->size));
+		sceKernelDcacheCleanRange(context->base, RoundCacheSize(context->size));
 		result = authMgrSendPacket(packet, 0x50, 8);
 		if (result >= 0) {
-			sceKernelDcacheInvalidateRange(context->buffer, RoundCacheSize(context->size));
-			if (context->buffer == NULL || context->size == 0) {
+			sceKernelDcacheInvalidateRange(context->base,
+						       RoundCacheSize(context->size));
+			if (context->base == NULL || context->size == 0) {
 				result = AM_EINVAL;
 			} else {
-				offset = *(uint64_t *)(void *)((uint8_t *)context->buffer + 0x10);
+				offset = *(uint64_t *)(void *)((uint8_t *)context->base + 0x10);
 				if (offset >= 0x30 && context->size >= 0x200 && offset <= context->size - 0x200) {
-					memcpy(s_state.cachedSpsfoAuth, (uint8_t *)context->buffer + (uint32_t)offset, 0x200);
+					memcpy(s_state.cachedSpsfoAuth,
+					       (uint8_t *)context->base + (uint32_t)offset, 0x200);
 					result = 0;
 				} else {
 					result = (int)0x800f0524;

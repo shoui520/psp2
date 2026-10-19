@@ -86,14 +86,17 @@ typedef struct SceSysconDebugHandlers {
 	void (*end)(SceSysconPacket *packet);
 } SceSysconDebugHandlers;
 
-/* one touch panel's report; names from the henkaku wiki (guessed there) */
+/*
+ * one touch panel's report; the type names are the henkaku wiki's (guessed there), the
+ * fields what touch does with them. Plain C types: with SceUInt16 and SceUInt8 GCC 4.8
+ * lays out touch's readDeviceInfo differently from Sony's.
+ */
 typedef struct SceKernelTouchpanelInfo {
-	SceUInt16 vendorID;
-	SceUInt16 firmwareRev;
-	SceUInt16 configRev;
-	SceUInt8 hwVersion;
-	SceUInt8 vendorInfo;
-	SceUInt8 reserved[2];
+	unsigned short vendor;			/* 0x800a: the alternative panel */
+	unsigned short product;			/* 0 while the panel is not up */
+	unsigned short firmware;
+	unsigned char detail[2];		/* the wiki's hardware version and vendor info */
+	unsigned char reserved[2];		/* copied from the reply; nothing reads them */
 } SceKernelTouchpanelInfo;
 
 typedef struct SceKernelTouchpanelDeviceInfo2 {

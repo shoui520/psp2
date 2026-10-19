@@ -25,7 +25,7 @@
 	X(processIdFormat, "ProcessId: 0x%08X\n") \
 	X(waypointNoModuleFormat, "(%2d) PC:0x%08X, TARGETPC:0x%08X %s%c%c [no module info]\n") \
 	X(waypointModuleFormat, "(%2d) PC:0x%08X, TARGETPC:0x%08X %s%c%c [%s + 0x%08X]\n") \
-	X(uidFormat, "0x%08X") \
+	X(fingerprintFormat, "0x%08X") \
 	X(waypointEventFormat, "(%2d) PC:0x%08X, TARGETPC:0x%08X <<< %s >>>\n") \
 	X(waypointExceptionFormat, "(%2d) PC:0x%08X, TARGETPC:0x%08X <<< %s Exception >>>\n") \
 	X(waypointHeader, "=== Print Waypoint ===\n") \

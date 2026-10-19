@@ -165,13 +165,13 @@ void DebugPrintBacktrace(SceUID pid, SceUID thid, const void *lr)
 	memset(frames, 0, sizeof(s_backtraceFrames[0]));
 	if (s_backtraceHandler(thid, frames, sizeof(s_backtraceFrames[0]), &count,
 			       DEBUG_BACKTRACE_KERNEL) >= 0)
-		s_printBacktraceHandler(SCE_KERNEL_PROCESS_ID, frames, count, lr);
+		s_printBacktraceHandler(SCE_KERNEL_PROCESS_ID, frames, count, (SceUInt32)lr);
 	if (pid == -1)
 		return;
 	memset(frames, 0, sizeof(s_backtraceFrames[0]));
 	if (s_backtraceHandler(thid, frames, sizeof(s_backtraceFrames[0]), &count,
 			       DEBUG_BACKTRACE_USER) >= 0)
-		s_printBacktraceHandler(pid, frames, count, NULL);
+		s_printBacktraceHandler(pid, frames, count, 0);
 }
 
 /* name unknown: prints a syscall frame (the current one by default) and its result */

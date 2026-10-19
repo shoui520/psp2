@@ -207,7 +207,8 @@ static int ReceiveChallenge(unsigned size, struct UsbstorSense *sense)
 		Sense(sense, SCSI_KEY_NOT_READY, 0xff, 0xff);
 		goto out;
 	}
-	if (SceMagicGateForDriver_CA74A13D(buf, 0x410, temp, tempSize, zero) < 0) {
+	if (SceMagicGateForDriver_CA74A13D(buf, 0x410, temp, tempSize,
+					   (MagicGateDeviceIdentity *)zero) < 0) {
 		Sense(sense, SCSI_KEY_ILLEGAL_REQUEST, SCSI_ASC_KEY_EXCHANGE_FAILURE, 0);
 		goto out;
 	}
@@ -241,7 +242,7 @@ static int ReportChallenge(unsigned size, struct UsbstorSense *sense)
 		Sense(sense, SCSI_KEY_ILLEGAL_REQUEST, SCSI_ASC_KEY_EXCHANGE_FAILURE, 0);
 		goto out;
 	}
-	if (SceMagicGateForDriver_0201E54B(info) < 0) {
+	if (SceMagicGateForDriver_0201E54B((MagicGateDeviceIdentity *)info) < 0) {
 		Sense(sense, SCSI_KEY_ILLEGAL_REQUEST, SCSI_ASC_INVALID_FIELD_IN_CDB, 0);
 		goto out;
 	}
@@ -257,7 +258,8 @@ static int ReportChallenge(unsigned size, struct UsbstorSense *sense)
 		Sense(sense, SCSI_KEY_ILLEGAL_REQUEST, SCSI_ASC_INVALID_FIELD_IN_CDB, 0);
 		goto out;
 	}
-	if (SceMagicGateForDriver_CA74A13D(buf, 0x410, temp, tempSize, info) < 0) {
+	if (SceMagicGateForDriver_CA74A13D(buf, 0x410, temp, tempSize,
+					   (MagicGateDeviceIdentity *)info) < 0) {
 		Sense(sense, SCSI_KEY_ILLEGAL_REQUEST, SCSI_ASC_KEY_EXCHANGE_FAILURE, 0);
 		goto out;
 	}
@@ -265,15 +267,17 @@ static int ReportChallenge(unsigned size, struct UsbstorSense *sense)
 		Sense(sense, SCSI_KEY_ILLEGAL_REQUEST, SCSI_ASC_INVALID_FIELD_IN_CDB, 0);
 		goto out;
 	}
-	if (SceMagicGateForDriver_42A9D74E(-1, s_mg.tag, &s_mg.deviceInfo,
-					s_mg.hostResponse, &s_mg.response, buf) < 0) {
+	if (SceMagicGateForDriver_42A9D74E(-1, s_mg.tag, (uint64_t *)&s_mg.deviceInfo,
+					   (uint64_t *)s_mg.hostResponse, &s_mg.response,
+					   (struct MagicGateInstalledRecord *)buf) < 0) {
 		Sense(sense, SCSI_KEY_ILLEGAL_REQUEST, SCSI_ASC_KEY_EXCHANGE_FAILURE, 0);
 		goto out;
 	}
 	for (bytes = 0; bytes < 8; bytes++)
 		challenge[bytes] = 0;
 	CopyBytes(challenge + 8, s_mg.challenge, 8);
-	if (SceMagicGateForDriver_CA74A13D(buf, 0x410, temp, tempSize, challenge) < 0) {
+	if (SceMagicGateForDriver_CA74A13D(buf, 0x410, temp, tempSize,
+					   (MagicGateDeviceIdentity *)challenge) < 0) {
 		Sense(sense, SCSI_KEY_ILLEGAL_REQUEST, SCSI_ASC_KEY_EXCHANGE_FAILURE, 0);
 		goto out;
 	}
@@ -324,14 +328,16 @@ static int Authenticate(unsigned size, struct UsbstorSense *sense)
 	}
 	CopyBytes(received, buf + 4, 8);
 	memmove(buf, buf + 12, 0x410);
-	if (SceMagicGateForDriver_42A9D74E(-1, tag, &s_mg.deviceInfo,
-					&s_mg.response, s_mg.hostResponse, buf) < 0 ||
+	if (SceMagicGateForDriver_42A9D74E(-1, tag, (uint64_t *)&s_mg.deviceInfo,
+					   &s_mg.response, (uint64_t *)s_mg.hostResponse,
+					   (struct MagicGateInstalledRecord *)buf) < 0 ||
 	    !SameTag(received, tag)) {
 		Sense(sense, SCSI_KEY_ILLEGAL_REQUEST, SCSI_ASC_KEY_EXCHANGE_FAILURE, 0);
 		goto out;
 	}
-	if (SceMagicGateForDriver_42A9D74E(s_mg.session, NULL, &s_mg.deviceInfo,
-					s_mg.tag, received, buf) < 0) {
+	if (SceMagicGateForDriver_42A9D74E(s_mg.session, NULL, (uint64_t *)&s_mg.deviceInfo,
+					   (uint64_t *)s_mg.tag, (uint64_t *)received,
+					   (struct MagicGateInstalledRecord *)buf) < 0) {
 		Sense(sense, SCSI_KEY_ILLEGAL_REQUEST, SCSI_ASC_INVALID_FIELD_IN_CDB, 0);
 		goto out;
 	}

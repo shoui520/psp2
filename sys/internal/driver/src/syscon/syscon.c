@@ -197,7 +197,6 @@ int SceSysconForDriver_67A4CB9F(SceSysconCallback callback, void *argument)
 	return sysconSetCallback(callback, argument, 38);
 }
 
-
 static int _sceSysconGpioIntr(void *subintrArg, void *registerArg, unsigned char intrPriority);
 
 static void sysconStartPacket(SceSysconPacket *packet)
@@ -2663,18 +2662,18 @@ int SceSysconForDriver_030D447F(SceKernelTouchpanelDeviceInfo2 *info)
 	result = sceSysconCmdExec(&packet, 0);
 	if (result < 0)
 		return result;
-	info->front.vendorID = (uint16_t)packet.reply.data[0] << 8 | packet.reply.data[1];
-	info->front.firmwareRev = (uint16_t)packet.reply.data[2] << 8 | packet.reply.data[3];
-	info->front.configRev = (uint16_t)packet.reply.data[4] << 8 | packet.reply.data[5];
-	info->front.hwVersion = packet.reply.data[6];
-	info->front.vendorInfo = packet.reply.data[7];
+	info->front.vendor = (uint16_t)packet.reply.data[0] << 8 | packet.reply.data[1];
+	info->front.product = (uint16_t)packet.reply.data[2] << 8 | packet.reply.data[3];
+	info->front.firmware = (uint16_t)packet.reply.data[4] << 8 | packet.reply.data[5];
+	info->front.detail[0] = packet.reply.data[6];
+	info->front.detail[1] = packet.reply.data[7];
 	info->front.reserved[0] = packet.reply.data[8];
 	info->front.reserved[1] = packet.reply.data[9];
-	info->rear.vendorID = (uint16_t)packet.reply.data[10] << 8 | packet.reply.data[11];
-	info->rear.firmwareRev = (uint16_t)packet.reply.data[12] << 8 | packet.reply.data[13];
-	info->rear.configRev = (uint16_t)packet.reply.data[14] << 8 | packet.reply.data[15];
-	info->rear.hwVersion = packet.reply.data[16];
-	info->rear.vendorInfo = packet.reply.data[17];
+	info->rear.vendor = (uint16_t)packet.reply.data[10] << 8 | packet.reply.data[11];
+	info->rear.product = (uint16_t)packet.reply.data[12] << 8 | packet.reply.data[13];
+	info->rear.firmware = (uint16_t)packet.reply.data[14] << 8 | packet.reply.data[15];
+	info->rear.detail[0] = packet.reply.data[16];
+	info->rear.detail[1] = packet.reply.data[17];
 	info->rear.reserved[0] = packet.reply.data[18];
 	info->rear.reserved[1] = packet.reply.data[19];
 	return 0;

@@ -13,7 +13,7 @@ typedef int (*SceKernelIntrHandler)(int intrCode, void *userCtx);
 typedef struct SceKernelIntrRegisterOpt {
 	SceSize size;				/* sizeof(SceKernelIntrRegisterOpt) */
 	SceUInt32 num;				/* the sub-interrupt handler slots to allocate */
-	void *handlers;				/* the sub-interrupt callbacks */
+	const void *handlers;			/* the sub-interrupt callbacks */
 	SceUInt32 attr;				/* SCE_KERNEL_INTR_OPT_HAS_CONFIG */
 	SceUInt32 config;			/* SCE_KERNEL_INTR_CONFIG_* */
 } SceKernelIntrRegisterOpt;

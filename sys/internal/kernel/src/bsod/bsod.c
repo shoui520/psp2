@@ -64,7 +64,8 @@ int module_start(unsigned arglen, void *argp)
 	sceKernelRegisterExceptionHandler(3, 2, &bsodPrefetchEntry);
 	sceKernelRegisterExceptionHandler(4, 2, &bsodDataEntry);
 	sceKernelRegisterExceptionHandler(1, 2, &bsodUndefinedEntry);
-	SceDebugForKernel_67E9D1EC(bsodDebugCrashCallback);
+	/* bsodDebugCrashCallback ignores the fault */
+	SceDebugForKernel_67E9D1EC((DebugFaultHandler)bsodDebugCrashCallback);
 	bsodInitializePutchar();
 	SceDebugForKernel_A465A31A(0);
 	sceKernelCpuResumeIntr(state);
@@ -273,7 +274,9 @@ void bsodCaptureException(const SceExcpmgrContext *context, unsigned exception,
 	SceDebugForDriver_62466B0A(shared->tty, sizeof(shared->tty));
 	report = shared->report[core];
 	memset(report, 0, sizeof(shared->report[core]));
-	SceDebugForKernel_5D6F0CFC(report, core, time, name, context, exception);
+	/* the dump takes its hashes from the handler's name, where it expects debug info */
+	SceDebugForKernel_5D6F0CFC((DebugExceptionDumpHeader *)report, core, time,
+				   (const SceKernelDebugInfo *)name, context, exception);
 	bsodCrashHandler(0);
 }
 

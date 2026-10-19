@@ -352,7 +352,7 @@ int sceIoGetstatForUser(const char *file, SceIoStat *stat)
 	return ret;
 }
 
-int sceIoChstatForUser(const char *file, const SceIoStat *stat, int bits)
+int sceIoChstatForUser(const char *file, SceIoStat *stat, int bits)
 {
 	char *resolved;
 	SceUID pid;
@@ -583,7 +583,7 @@ int sceIoGetstatByFdForUser(SceUID fd, SceIoStat *stat)
 	return ret;
 }
 
-int sceIoChstatByFdForUser(SceUID fd, const SceIoStat *stat, int bits)
+int sceIoChstatByFdForUser(SceUID fd, SceIoStat *stat, int bits)
 {
 	SceUInt32 tls = sceSyscallEnter();
 	SceUID guid;

@@ -1694,7 +1694,7 @@ restore:
 }
 
 /* the event time goes away and every waiter wakes with SCE_KERNEL_ERROR_WAIT_CANCEL */
-int sceKernelCancelTimer(SceUID timerId, int *numWaitThreads)
+int sceKernelCancelTimer(SceUID timerId, SceUInt32 *numWaitThreads)
 {
 	struct ThreadmgrWaitNode *queue, *node, *next;
 	struct ThreadCB *thread;

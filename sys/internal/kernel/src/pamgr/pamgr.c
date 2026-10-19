@@ -777,11 +777,11 @@ void writeTraceRecord02(SceUID processId, SceUID threadId, uint16_t priority,
 	pamgrState.pfmRegisters->traceFifo = threadId;
 }
 
-void writeTraceRecord03(uint32_t first, uint32_t second, uint32_t header)
+void writeTraceRecord03(SceUID processId, SceUID threadId, uint32_t why)
 {
-	pamgrState.pfmRegisters->traceFifo = 0x030c0000 | header;
-	pamgrState.pfmRegisters->traceFifo = first;
-	pamgrState.pfmRegisters->traceFifo = second;
+	pamgrState.pfmRegisters->traceFifo = 0x030c0000 | why;
+	pamgrState.pfmRegisters->traceFifo = processId;
+	pamgrState.pfmRegisters->traceFifo = threadId;
 }
 
 void writeTraceRecord01(SceUID processId, SceUID threadId, uint16_t newPriority,

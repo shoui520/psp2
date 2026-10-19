@@ -691,9 +691,9 @@ int sceKernelCancelEventFlagForUser(SceUID evfId, uint32_t pattern, int *numWait
 int sceKernelGetEventFlagInfoForUser(SceUID evfId, SceKernelEventFlagInfo *info);
 int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attributes);
 int cancelTimerForUser(SceUID uid, uint32_t *count);
-int createTimerForUser(const char *name, uint32_t attributes, const uint32_t *options);
-int setTimerEventForUser(SceUID uid, uint32_t type, const volatile uint64_t *interval,
-		uint32_t repeat);
+int createTimerForUser(const char *name, uint32_t attributes,
+		       const SceKernelTimerOptParam *options);
+int setTimerEventForUser(SceUID uid, uint32_t type, SceUInt64 *interval, uint32_t repeat);
 int getTimerEventRemainingTimeForUser(SceUID uid, uint64_t *output);
 int getTimerInfoForUser(SceUID uid, SceKernelTimerInfo *output);
 int getTimerBaseForUser(SceUID uid, uint64_t *value);

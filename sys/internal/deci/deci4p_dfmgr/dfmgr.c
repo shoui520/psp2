@@ -479,7 +479,8 @@ int sceDfMgrInit(void)
 	}
 
 	sceKernelRegisterSysEventHandler("SceDeci4pDfMgr", _suspendHandlerQuery, NULL);
-	SceSysrootForDriver_C5EAF5F7(_sysstatemgrEvent);
+	/* _sysstatemgrEvent returns nothing */
+	SceSysrootForDriver_C5EAF5F7((SysrootSysStateEvent)_sysstatemgrEvent);
 	SceSysrootForDriver_579CC758(&s_dfmgrSysrootCallbacks);
 	dfmgrSetFlags(DFMGR_INITIALIZED);
 	dcmpSendStatusPower(0, 0xf, 1, 0);

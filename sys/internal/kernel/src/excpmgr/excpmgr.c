@@ -122,10 +122,12 @@ void printWPT(SceExcpmgrContext *context)
 {
 	ThreadCB *thread = context->thread;
 	SceExcpmgrWaypoint *wp;
-	unsigned int first, i, index, flags, moduleBase;
+	unsigned int first, i, index, flags;
+	void *moduleBase;
 	const char *encoding;
 	char name[28];
-	SceUID pid, uid;
+	SceUID pid;
+	SceUInt32 fingerprint;
 
 	pid = thread != NULL ? thread->processId : SCE_KERNEL_PROCESS_ID;
 	SCE_PRINTF_WITH_INFO(0, 998,
@@ -166,7 +168,7 @@ void printWPT(SceExcpmgrContext *context)
 			break;
 		}
 		if (SceSysrootForKernel_1D84C4D4(wp->targetPc < 0x40000000 ? SCE_KERNEL_PROCESS_ID : pid,
-				wp->targetPc, &uid, &moduleBase, name) < 0) {
+				wp->targetPc, &fingerprint, &moduleBase, name) < 0) {
 			SCE_PRINTF_WITH_INFO(0, 1078,
 				EXCP_REPORT_TEXT(waypointNoModuleFormat, "(%2d) PC:0x%08X, TARGETPC:0x%08X %s%c%c [no module info]\n"),
 				index, wp->pc, wp->targetPc, encoding,
@@ -174,12 +176,13 @@ void printWPT(SceExcpmgrContext *context)
 			continue;
 		}
 		if ((pid == SCE_KERNEL_PROCESS_ID || wp->targetPc < 0x4000000) && !SceQafMgrForDriver_382C71E8())
-			snprintf(name, 27, EXCP_REPORT_TEXT(uidFormat, "0x%08X"), uid);
+			snprintf(name, 27, EXCP_REPORT_TEXT(fingerprintFormat, "0x%08X"),
+				 fingerprint);
 		SCE_PRINTF_WITH_INFO(0, 1069,
 			EXCP_REPORT_TEXT(waypointModuleFormat, "(%2d) PC:0x%08X, TARGETPC:0x%08X %s%c%c [%s + 0x%08X]\n"),
 			index, wp->pc, wp->targetPc, encoding,
 			flags & 0x100 ? 'L' : 'B', flags & 0x400 ? 't' : 'n',
-			name, wp->targetPc - moduleBase);
+			name, wp->targetPc - (uintptr_t)moduleBase);
 	}
 }
 

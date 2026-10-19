@@ -4,43 +4,8 @@
 
 #include "rtc_internal.h"
 
-/* struct tm, with tm_year the full year */
-typedef struct RtcLibcTm {
-	int sec;
-	int min;
-	int hour;
-	int mday;
-	int mon;
-	int year;
-	int wday;
-	int yday;
-	int isdst;
-} RtcLibcTm;
-
-typedef struct RtcLibcTimeval {
-	int sec;
-	int usec;
-} RtcLibcTimeval;
-
-typedef struct RtcLibcTimezone {
-	int minutesWest;
-	int dstTime;
-} RtcLibcTimezone;
-
-typedef struct RtcLibcTimeFunctions {
-	SceSize size;
-	unsigned int (*clock)(void);
-	unsigned int (*time)(unsigned int *t);
-	int (*gettimeofday)(RtcLibcTimeval *tv, RtcLibcTimezone *tz);
-	int (*gmtime)(const unsigned int *t, RtcLibcTm *tm);
-	int (*localtime)(const unsigned int *t, RtcLibcTm *tm);
-	int (*mktime)(RtcLibcTm *tm, unsigned int *t, RtcLibcTimezone *tz);
-	int (*getCurrentTick)(SceRtcTick *tick);
-	int (*getCurrentSecureTick)(SceRtcTick *tick);
-} RtcLibcTimeFunctions;
-
 /* names unknown: clock(), time(), gettimeofday(), gmtime_r(), localtime_r(), mktime() */
-static unsigned int rtcLibcClock(void)
+static SceUInt32 rtcLibcClock(void)
 {
 	SceRtcTick tick;
 
@@ -48,7 +13,7 @@ static unsigned int rtcLibcClock(void)
 	return tick.tick;
 }
 
-static int rtcLibcMktime(RtcLibcTm *tm, unsigned int *t, RtcLibcTimezone *tz)
+static int rtcLibcMktime(ProcessTm *tm, SceKernelTime *t, ProcessTimezone *tz)
 {
 	SceDateTime time;
 	SceRtcTick tick;
@@ -175,13 +140,13 @@ found:
 	SceRtcForDriver_0F9E02EF(&tick, &tick, offset);
 	*t = __aeabi_ldivmod((SceInt64)tick.tick - RTC_TICK_UNIX_EPOCH, 1000000);
 	if (tz != NULL) {
-		tz->minutesWest = offset;
-		tz->dstTime = 0;
+		tz->minuteswest = offset;
+		tz->dsttime = 0;
 	}
 	return 0;
 }
 
-static inline void rtcFillTm(RtcLibcTm *tm, const SceDateTime *time)
+static inline void rtcFillTm(ProcessTm *tm, const SceDateTime *time)
 {
 	tm->mon = time->month - 1;
 	tm->year = time->year;
@@ -194,7 +159,7 @@ static inline void rtcFillTm(RtcLibcTm *tm, const SceDateTime *time)
 	tm->isdst = g_rtc.daylightSaving != 0;
 }
 
-static int rtcLibcLocaltime(const unsigned int *t, RtcLibcTm *tm)
+static int rtcLibcLocaltime(const SceKernelTime *t, ProcessTm *tm)
 {
 	int offset = g_rtc.timezone + g_rtc.daylightSaving;
 	SceDateTime time;
@@ -213,7 +178,7 @@ static int rtcLibcLocaltime(const unsigned int *t, RtcLibcTm *tm)
 	return 0;
 }
 
-static int rtcLibcGettimeofday(RtcLibcTimeval *tv, RtcLibcTimezone *tz)
+static int rtcLibcGettimeofday(ProcessTimeval *tv, ProcessTimezone *tz)
 {
 	SceDateTime time;
 	SceRtcTick tick;
@@ -227,13 +192,13 @@ static int rtcLibcGettimeofday(RtcLibcTimeval *tv, RtcLibcTimezone *tz)
 		tv->usec = time.microsecond;
 	}
 	if (tz != NULL) {
-		tz->minutesWest = 0;
-		tz->dstTime = 0;
+		tz->minuteswest = 0;
+		tz->dsttime = 0;
 	}
 	return 0;
 }
 
-static unsigned int rtcLibcTime(unsigned int *t)
+static SceKernelTime rtcLibcTime(SceKernelTime *t)
 {
 	SceDateTime time;
 	SceRtcTick tick;
@@ -247,7 +212,7 @@ static unsigned int rtcLibcTime(unsigned int *t)
 	return sec;
 }
 
-static int rtcLibcGmtime(const unsigned int *t, RtcLibcTm *tm)
+static int rtcLibcGmtime(const SceKernelTime *t, ProcessTm *tm)
 {
 	SceDateTime time;
 	SceRtcTick tick;
@@ -265,13 +230,13 @@ static int rtcLibcGmtime(const unsigned int *t, RtcLibcTm *tm)
 	return 0;
 }
 
-static const RtcLibcTimeFunctions s_rtcLibcTime = {
-	.size = sizeof(RtcLibcTimeFunctions),
+static const ProcessmgrLibcOps s_rtcLibcTime = {
+	.size = sizeof(ProcessmgrLibcOps),
 	.clock = rtcLibcClock,
 	.time = rtcLibcTime,
 	.gettimeofday = rtcLibcGettimeofday,
-	.gmtime = rtcLibcGmtime,
-	.localtime = rtcLibcLocaltime,
+	.gmtime_r = rtcLibcGmtime,
+	.localtime_r = rtcLibcLocaltime,
 	.mktime = rtcLibcMktime,
 	.getCurrentTick = SceRtcForDriver_DEC408D4,
 	.getCurrentSecureTick = SceRtcForDriver_401C0954,

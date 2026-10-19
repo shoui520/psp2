@@ -33,7 +33,7 @@ _Static_assert(sizeof(SceSelfAuthInfo) == 0x90, "SceSelfAuthInfo");
 _Static_assert(sizeof(SelfAuthRequest) == 0x130, "SelfAuthRequest");
 #endif
 
-struct SpsfoContext;
+struct SceSblSpfsoCtx;
 
 int sceSblAuthMgrDecBindData(void *input, uint32_t inputSize, void *output, uint32_t outputSize, int flags);
 int sceSblAuthMgrGetEKc(void *buffer, uint32_t size, uint32_t type);
@@ -49,4 +49,4 @@ int sceSblAuthMgrClearDmac5Key(int slot, int value);
 int sceSblAuthMgrAuthHeader(int handle, const void *header, uint32_t size, SelfAuthRequest *auth);
 int sceSblAuthMgrClose(int handle);
 int sceSblAuthMgrOpen(int *handle);
-int sceSblAuthMgrVerifySpsfo(struct SpsfoContext *context);
+int sceSblAuthMgrVerifySpsfo(struct SceSblSpfsoCtx *context);

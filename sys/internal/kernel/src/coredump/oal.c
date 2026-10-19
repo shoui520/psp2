@@ -1635,7 +1635,7 @@ int oalGetThreadRegInfo(SceUID pid, SceUID threadId,
 		}
 		info->registers.fpscr = registers[0].fpscr;
 	}
-	result = SceThreadmgrForDriver_5CDE387A(guid, vfp);
+	result = SceThreadmgrForDriver_5CDE387A(guid, (uint32_t *)vfp);
 	if (result == 0) {
 		if (((uintptr_t)info->vfp & 15) == 0) {
 			alignedVfp = (uint64_t *)info->vfp;
@@ -2465,7 +2465,7 @@ void oalGetLwMutexInfo(SceUID pid, SceUID lwMutexId, CoredumpLwMutexInfo *info)
 		info->lwMutexId = lwMutexId;
 		strncpy(info->name, mutex.name, 32);
 		info->attr = mutex.attr;
-		info->work = mutex.pWork;
+		info->work = (ThreadmgrLwMutexWork *)mutex.pWork;
 		info->initCount = mutex.initCount;
 		info->currentCount = mutex.currentCount;
 		owner = mutex.currentOwnerId;
@@ -2480,7 +2480,7 @@ void oalGetLwMutexInfo(SceUID pid, SceUID lwMutexId, CoredumpLwMutexInfo *info)
 		info->lwMutexId = lwMutexId;
 		strncpy(info->name, mutex.name, 32);
 		info->attr = mutex.attr;
-		info->work = mutex.pWork;
+		info->work = (ThreadmgrLwMutexWork *)mutex.pWork;
 		info->initCount = mutex.initCount;
 		info->currentCount = mutex.currentCount;
 		info->numWaitThreads = mutex.numWaitThreads;
@@ -2544,7 +2544,7 @@ void oalGetLwCondInfo(SceUID pid, SceUID lwCondId, CoredumpLwCondInfo *info,
 	if (guid < 0 || SceThreadmgrForDriver_C2AFFBD0(guid, &cond) < 0)
 		return;
 	__builtin_memset(uidBytes, 0, sizeof(uidBytes));
-	mutexWork = cond.pLwMutex;
+	mutexWork = (ThreadmgrLwMutexWork *)cond.pLwMutex;
 	if (SceSysmemForDriver_9F6E45E3(pid, 16, &mutexWork->uid, 4) == 0)
 		sceKernelCopyFromUserProc(pid, uidBytes, &mutexWork->uid, 4);
 	lwMutexId = uidBytes[0] + ((SceUInt32)uidBytes[1] << 8) +
@@ -2559,7 +2559,7 @@ void oalGetLwCondInfo(SceUID pid, SceUID lwCondId, CoredumpLwCondInfo *info,
 	info->formatVersion[2] = 0;
 	info->formatVersion[3] = 0;
 	*work = cond.pWork;
-	*lwMutexWork = cond.pLwMutex;
+	*lwMutexWork = (ThreadmgrLwMutexWork *)cond.pLwMutex;
 }
 
 void oalGetMsgPipeInfo(SceUID pid, SceUID msgPipeId, CoredumpMsgPipeInfo *info)
@@ -2618,7 +2618,7 @@ void oalGetCallbackInfo(SceUID pid, SceUID callbackId, CoredumpCallbackInfo *inf
 	info->threadId = threadId;
 	strncpy(info->name, callback.name, 32);
 	info->attr = callback.attr;
-	info->entry = callback.callbackFunc;
+	info->entry = (uintptr_t)callback.callbackFunc;
 	info->common = callback.pCommon;
 	info->notifyCount = callback.notifyCount;
 	info->notifyArg = callback.notifyArg;

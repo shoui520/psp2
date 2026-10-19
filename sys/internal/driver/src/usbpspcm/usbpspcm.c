@@ -634,7 +634,7 @@ static int startCommunication(int size, void *args, void *context)
 {
 	SceKernelAllocMemBlockKernelOpt options;
 	struct PcmMemory *memory = NULL;
-	SceUInt32 param[22];
+	SceUInt32 param[22];			/* the device info, in a larger buffer */
 	unsigned int i, state;
 
 	memset(&options, 0, sizeof(options));
@@ -710,8 +710,8 @@ static int startCommunication(int size, void *args, void *context)
 	if (allocUnits(2) < 0)
 		goto failEvents;
 	resetNotifications();
-	param[1] = 5;
-	SceUdcdForDriver_78BF2A28(param);
+	((SceUdcdDeviceInfo *)param)->eventDetail = 5;
+	SceUdcdForDriver_78BF2A28((SceUdcdDeviceInfo *)param);
 	state = lock();
 	s.flags = (s.flags & ~PCM_STATE_MASK) | PCM_STATE_READY;
 	unlock(state);

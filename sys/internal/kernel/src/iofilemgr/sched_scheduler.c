@@ -397,7 +397,7 @@ dcloseComplete:
 		SCE_DBG_ASSERT(req->isAsync == 0, 1924);
 		param.dev = req->args.devctl.dev;
 		param.cmd = req->args.devctl.cmd;
-		param.indata = req->args.devctl.indata;
+		param.indata = (void *)req->args.devctl.indata;
 		param.inlen = req->args.devctl.inlen;
 		param.outdata = req->args.devctl.outdata;
 		param.outlen = req->args.devctl.outlen;

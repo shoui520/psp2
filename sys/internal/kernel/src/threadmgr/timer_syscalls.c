@@ -35,13 +35,14 @@ int _sceKernelCancelTimer(SceUID uid, uint32_t *count)
 	return copied < 0 ? copied : result;
 }
 
-int _sceKernelCreateTimer(const char *name, uint32_t attributes, const uint32_t *options)
+int _sceKernelCreateTimer(const char *name, uint32_t attributes,
+			  const SceKernelTimerOptParam *options)
 {
-	uint32_t copied;
+	SceKernelTimerOptParam copied;
 	int result;
 
 	if (options) {
-		result = sceKernelCopyFromUser(&copied, options, 4);
+		result = sceKernelCopyFromUser(&copied, options, sizeof(copied));
 		if (result < 0)
 			return result;
 		options = &copied;

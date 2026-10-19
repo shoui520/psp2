@@ -439,7 +439,8 @@ SceUID _sceKernelCreateMutex(const char *name, SceUInt32 attr, int initCount, co
 SceUID _sceKernelCreateRWLock(const char *name, SceUInt32 attr, const void *option);
 SceUID _sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t initPattern,
 				   const void *option);
-int _sceKernelCreateTimer(const char *name, uint32_t attributes, const uint32_t *options);
+int _sceKernelCreateTimer(const char *name, uint32_t attributes,
+			  const SceKernelTimerOptParam *options);
 int _sceKernelDeleteLwMutex(void *work);
 int _sceKernelGetEventFlagInfo(SceUID evfId, SceKernelEventFlagInfo *info, const uint32_t *args);
 int _sceKernelGetEventPattern(SceUID eventId, uint32_t *pattern);
@@ -477,7 +478,7 @@ int sceKernelCancelMsgPipe(SceUID msgPipeId, int *numSendWaitThreads, int *numRe
 int sceKernelCancelMutex(SceUID mutexId, int newCount, int *numWaitThreads);
 int sceKernelCancelRWLock(SceUID rwLockId, int *numReadWaitThreads, int *numWriteWaitThreads,
 			  SceUInt32 type);
-int sceKernelCancelTimer(SceUID timerId, int *numWaitThreads);
+int sceKernelCancelTimer(SceUID timerId, SceUInt32 *numWaitThreads);
 int sceKernelChangeActiveCpuMask(uint32_t mask);
 int sceKernelChangeCurrentThreadAttr(uint32_t clear, uint32_t set);
 int sceKernelChangeThreadPriority(SceUID uid, uint32_t priority);

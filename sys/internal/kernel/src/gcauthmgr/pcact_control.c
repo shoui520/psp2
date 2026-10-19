@@ -144,7 +144,8 @@ int GcAuthPcactApplyActivation(const GcAuthPcactApplyActivationRequest *request)
 	result = GcAuthPcactGetAesDecryptKeyWithStack(&activation->key,
 		&gcAuthActivationRandom.pcact, (unsigned char *)aesKey);
 	if (result >= 0)
-		result = SceNpDrmForDriver_742EBAF4(&activation->npDrm,
+		result = SceNpDrmForDriver_742EBAF4(
+			(const struct NpDrmActivationCache *)&activation->npDrm,
 			(const char *)aesKey);
 	memset(&activation->npDrm, 0, sizeof(activation->npDrm));
 	memset(&gcAuthActivationRandom, 0, sizeof(gcAuthActivationRandom));

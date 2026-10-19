@@ -270,7 +270,7 @@ static int startCodec(void)
 	s_codec.revision = (ret >> 12) & 0xf;
 	s_codec.version = (ret >> 9) & 7;
 	s_codec.hardware = (SceSysconForDriver_CBD6D8BC() >> 3) & 1;
-	ret = SceSysconForDriver_965C68C3(info);
+	ret = SceSysconForDriver_965C68C3((uint32_t *)info);
 	s_codec.hardware2 = ret == 0 && (info[0] & 4) ? 0x20 : 0;
 	s_curves[0] = s_curve0;
 	s_curves[1] = s_codec.hardware2 == 0x20 ? s_curveDolce : s_curve1;

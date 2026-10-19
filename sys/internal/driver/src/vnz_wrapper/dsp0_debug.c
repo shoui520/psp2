@@ -4326,7 +4326,7 @@ int drainVeneziaVipCapture(unsigned int processor, VeneziaDebugSnapshotList *lis
 	unsigned int captureProcessor, consumed, collected = 0, previous = 0, current;
 	SceSize event;
 	SceUInt timeout;
-	uint32_t requestState;
+	int requestState;
 	int ret, requestRet;
 
 	ret = waitVeneziaVipProcessReady();
@@ -7765,7 +7765,8 @@ int finishVeneziaVipStartup(VeneziaVipState *state)
 	memory.virtualAddress = state->debuggerMemory.virtualAddress + 0x80000;
 	memory.physicalAddress = state->debuggerMemory.physicalAddress + 0x80000;
 	memory.size = 0x30000;
-	callbacks.write = writeVeneziaVipPhysicalWord;
+	/* the command code passes a third word on one path; the write ignores it */
+	callbacks.write = (uint32_t (*)(uint32_t, uint32_t, ...))writeVeneziaVipPhysicalWord;
 	callbacks.read = readVeneziaVipPhysicalWord;
 	ret = initializeVeneziaVipCommandsLocked(state, &callbacks, &memory);
 	if (g_veneziaDebugger.log)

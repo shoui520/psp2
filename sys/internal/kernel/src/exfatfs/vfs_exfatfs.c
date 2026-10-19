@@ -1466,7 +1466,7 @@ int exfatfs_vfs_devctl(SceVfsOpDevctlArg *argp)
 	switch (command) {
 	case 0x3001:
 		if (SceSblACMgrForDriver_D7AD8471(SceThreadmgrForDriver_FA54D49A(),
-			mount->mntData->assignName) != 1)
+			(const SceChar8 *)mount->mntData->assignName) != 1)
 			return 0x80010030;
 		if (arglen)
 			SCE_DBG_PRINTF_LEVEL(1, 0, 4465,

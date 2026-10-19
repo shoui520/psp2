@@ -1287,7 +1287,7 @@ static inline __attribute__((always_inline)) void loadpKillCmd(void)
 	}
 	count = 0;
 	memset(pids, 0, sizeof(pids));
-	ret = SceProcessmgrForKernel_EFFF2975(3, pids, sizeof(pids), &count);
+	ret = SceProcessmgrForKernel_EFFF2975(3, pids, sizeof(pids), (SceSize *)&count);
 	if (ret >= 0) {
 		found = 0;
 		for (i = 0; i < count; i++) {

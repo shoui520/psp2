@@ -1134,7 +1134,7 @@ void vfs_initialize_file(SceVfsVnode *vp, SceVfsFile *file)
 /* name unknown: drops a file's opened-entry count and closes its UID */
 int vfs_close_file(SceVfsVnode *vp, SceUID fd)
 {
-	SceCpuForDriver_A4884C4E(&vp->core.mnt->openedEntryNum, 1);
+	SceCpuForDriver_A4884C4E((volatile SceInt32 *)&vp->core.mnt->openedEntryNum, 1);
 	return sceGUIDClose(fd);
 }
 
@@ -2059,7 +2059,7 @@ SceUID vfs_allocate_file(SceVfsVnode *vp, SceVfsFile **file, const char *name)
 		return uid;
 	}
 	*file = &obj->file;
-	SceCpuForDriver_5F6A8743(&mnt->openedEntryNum, 1);
+	SceCpuForDriver_5F6A8743((volatile SceInt32 *)&mnt->openedEntryNum, 1);
 	return uid;
 }
 

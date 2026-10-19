@@ -232,7 +232,7 @@ int powerBatteryWorker(SceSize argumentSize, void *argument)
 			s_powerBatteryBase.scanStep = 11;
 			break;
 		case 11:
-			result = SceSysconForDriver_0826BA07(&value);
+			result = SceSysconForDriver_0826BA07((int32_t *)&value);
 			if (result < 0)
 				goto invalidate;
 			s_powerBatteryBase.state.electricCurrent = value;
@@ -365,9 +365,9 @@ int ScePowerForDriver_E4E3C316(uint32_t status)
 		state->usbStatusPacket.tx[0] = 0x9a;
 		state->usbStatusPacket.tx[1] = 8;
 		state->usbStatusPacket.tx[2] = 3;
-		result = SceSysconForDriver_C2224E82(&state->usbStatusPacket,
+		result = SceSysconForDriver_C2224E82((SceSysconPacket *)&state->usbStatusPacket,
 				1, powerChargingCommandComplete,
-				&state->usbStatusPending);
+				(void *)&state->usbStatusPending);
 		if (result >= 0)
 			state->usbStatusPending = 1;
 		else
@@ -429,9 +429,10 @@ int ScePowerForDriver_ACC857A4(void)
 			state->usbStopPacket.tx[2] = 1;
 			state->usbStopPacket.tx[0] = 4;
 			state->usbStopPacket.tx[1] = 8;
-			result = SceSysconForDriver_C2224E82(&state->usbStopPacket,
+			result = SceSysconForDriver_C2224E82(
+					(SceSysconPacket *)&state->usbStopPacket,
 					1, powerChargingCommandComplete,
-					&state->usbStopPending);
+					(void *)&state->usbStopPending);
 			if (result >= 0)
 				state->usbStopPending = 0;
 		}

@@ -480,7 +480,7 @@ TSMP_INLINE int tsmpEventRecv(SceSize size)
 
 TSMP_INLINE int tsmpEventSend(void)
 {
-	const char *p;
+	char *p;
 	int left, n;
 
 	left = tsmp.send.length;
@@ -492,7 +492,7 @@ TSMP_INLINE int tsmpEventSend(void)
 		SCE_PRINTF_WITH_INFO(0xf, 706, "0x%08X:%d\n", tsmp.send.status, tsmp.send.length);
 		return SCE_KERNEL_ERROR_INVALID_FLAGS;
 	}
-	SceDeci4pDfMgrForDebugger_6D26CC56(p, left);
+	SceDeci4pDfMgrForDebugger_6D26CC56((SceDeci4pHeader *)p, left);
 	for (; left > 0; left -= n, p += n) {
 		n = sceDfMgrSend(tsmp.handle, p, left);
 		if (n < 0) {
@@ -822,7 +822,7 @@ TSMP_INLINE int tsmpUpdateActivation(const TsmpHeader *pkt, SceSize size)
 		goto bad_size;
 	}
 
-	if (body[0] >= 2 && (ret = SceSblPostSsMgrForDriver_0298382B(&body[1])) < 0) {
+	if (body[0] >= 2 && (ret = SceSblPostSsMgrForDriver_0298382B((const char *)&body[1])) < 0) {
 		if (ret == (int)0x800f1302)
 			result = TSMP_RESULT_ACT_EXPIRED;
 		else if (ret == (int)0x800f1324 || ret == (int)0x800f1327)
@@ -1641,9 +1641,10 @@ TSMP_INLINE int tsmpInit(void)
 	if (ret < 0)
 		return ret;
 	sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceDeci4pTsmpInit", tsmpSyncInit, NULL);
-	SceSysrootForDriver_1FFD2AFA(tsmpSetSwInfoInt);
-	SceSysrootForDriver_7C0BE393(tsmpSetSwInfoStr);
-	SceSysrootForDriver_05CD0DD9(tsmpSetSwInfoBin);
+	/* tsmp checks the name length and the string length signed */
+	SceSysrootForDriver_1FFD2AFA((SysrootSetSwInfoInt)tsmpSetSwInfoInt);
+	SceSysrootForDriver_7C0BE393((SysrootSetSwInfoStr)tsmpSetSwInfoStr);
+	SceSysrootForDriver_05CD0DD9((SysrootSetSwInfoBin)tsmpSetSwInfoBin);
 	SceSysrootForDriver_ED688AEE(tsmpSyncLocalTime);
 	return 0;
 }

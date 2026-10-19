@@ -24,6 +24,12 @@ typedef struct FixedHeap FixedHeap;
 typedef struct TinyPartition TinyPartition;
 typedef struct SceKernelHeapHook SceKernelHeapHook;
 
+/* one object type's limits, as sceKernelObjectHeapSetResourceLimitAll takes them */
+typedef struct ObjectHeapResourceLimit {
+	SceUInt32 max;				/* objects allowed at once, -1: no limit */
+	SceUInt32 reserve;			/* objects kept preallocated */
+} ObjectHeapResourceLimit;
+
 /*
  * sceKernelAllocMemBlockForKernel's options (Sony: SceKernelAllocMemBlockOptKernel);
  * attr says which fields are given (SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_*, and
@@ -298,7 +304,7 @@ int SceSysmemForKernel_C3EF4055(SceUID uid, AddressSpaceInfo *info);
 
 /* names unknown (os0:kd/intrmgr.skprx): name string copy into / release from kernel heap */
 int SceSysmemForKernel_B628B46B(const char *name, unsigned int flags, char **out);
-int SceSysmemForKernel_634D0D0C(char *name, unsigned int flags);
+int SceSysmemForKernel_634D0D0C(const char *name, unsigned int flags);
 const char *SceSysmemForDriver_E655852F(SceUID uid);	/* vitasdk: ksceGUIDName */
 
 /* Global uncached heap allocator; NID 0x7750CEA7, size is the sole argument. */
@@ -307,7 +313,6 @@ void *SceSysmemForDriver_7750CEA7(SceSize size);
 
 /* NID 0xF3BBE2E1: memory type for the block containing this address. */
 int sceKernelGetMemBlockMemtypeByAddr(const void *address);
-
 
 /* a memblock as the kernel sees it (memblock.c) */
 typedef struct MemBlockInfoDetails {
@@ -599,7 +604,8 @@ int sceKernelGrowPhyMemPartByPbase(PhyMemPart *part, uintptr_t pbase, SceSize ps
 int sceKernelIsPSVitaTV(void);
 int sceKernelLockRangeWithMode(SceKernelMemoryRefPerm mode, void *addr, SceSize size);
 void *sceKernelObjectHeapAlloc(ObjectHeap *heap, SceSize size);
-int sceKernelObjectHeapSetResourceLimitAll(ObjectHeap *heap, unsigned int count, const SceUInt32 (*limits)[2]);
+int sceKernelObjectHeapSetResourceLimitAll(ObjectHeap *heap, unsigned int count,
+					   const ObjectHeapResourceLimit *limits);
 SceUID sceKernelOpenMemBlockForUser(const char *userName, SceUInt32 flags);
 int sceKernelOpenVMDomainForUser(void);
 int sceKernelPrintHeapSegmentList(SceUID uid);

@@ -49,7 +49,8 @@ void DebugAppendCharacter(int character)
 		next = index + 1;
 		if (next == sizeof(s_debugTty.ring))
 			next = 0;
-	} while (SceCpuForDriver_CDA96E81(&s_debugTty.index, index, next) != index);
+	} while (SceCpuForDriver_CDA96E81((volatile SceInt32 *)&s_debugTty.index,
+					  index, next) != index);
 	s_debugTty.ring[index] = character;
 }
 

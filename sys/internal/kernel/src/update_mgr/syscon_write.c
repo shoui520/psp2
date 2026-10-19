@@ -72,7 +72,8 @@ int SysconUtilWriteFirmware(int kind, const void *buffer, uint64_t size,
 			cursor += sizeof(SysconUpdateVersionPacket);
 			break;
 		case 3:
-			result = SceSysconForDriver_CBA836FF(packet->signature.signature, 24);
+			result = SceSysconForDriver_CBA836FF(
+				(const uint32_t *)packet->signature.signature, 24);
 			remaining -= sizeof(SysconUpdateSignaturePacket);
 			cursor += sizeof(SysconUpdateSignaturePacket);
 			if (result)
@@ -91,7 +92,8 @@ int SysconUtilWriteFirmware(int kind, const void *buffer, uint64_t size,
 			unsigned int offset = 0;
 			int (*send)(const void *, unsigned int, unsigned int);
 
-			result = SceSysconForDriver_D27C3D80(data, segmentSize, &checksum);
+			result = SceSysconForDriver_D27C3D80(data, segmentSize,
+							     (uint32_t *)&checksum);
 			if (result)
 				return result;
 			result = SceSysconForDriver_9B00BC7F((unsigned char)segmentNumber);
@@ -123,7 +125,8 @@ int SysconUtilWriteFirmware(int kind, const void *buffer, uint64_t size,
 			break;
 		}
 		case 0x20:
-			result = SceSysconForDriver_C7747A63(packet->checksum.digest, 20);
+			result = SceSysconForDriver_C7747A63(
+				(const uint32_t *)packet->checksum.digest, 20);
 			remaining -= sizeof(SysconUpdateChecksumPacket);
 			cursor += sizeof(SysconUpdateChecksumPacket);
 			if (result)

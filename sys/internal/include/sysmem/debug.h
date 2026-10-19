@@ -40,12 +40,12 @@ typedef struct SceKernelBacktraceFrameForKernel DebugFrame;
 typedef int (*DebugBacktraceHandler)(SceUID thid, DebugFrame *frames, SceSize size,
 				     SceSize *count, SceUInt32 flags);
 typedef int (*DebugPrintBacktraceHandler)(SceUID pid, const DebugFrame *frames,
-					  SceSize count, const void *lr);
+					  SceSize count, SceUInt32 start);
 typedef int (*DebugCrashDumpHandler)(int type, SceSize size, void *dump);
 typedef void (*DebugFaultHandler)(SceUInt64 time, int cpu, SceUInt32 fileHash,
 				  SceUInt32 lineHash, SceUInt32 funcHash, int reserved0, int reserved1,
 				  const void *caller, const void *lr);
-typedef int (*EventLogHandler)(const void *entry, SceSize size);
+typedef void (*EventLogHandler)(const void *entry, SceSize size);
 
 /* the exception dump's header has no return addresses */
 typedef struct DebugExceptionDumpHeader {

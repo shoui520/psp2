@@ -1645,7 +1645,7 @@ int robinWlanSetInactivityTimeout(SceWlanBtRobinWlanContext *context,
 		return 0x80418005;
 	request = command->requestPayload;
 	command->callback = callback;
-	request->timeoutUnit[0] = 1000;
+	request->timeoutUnit[0] = 1000 & 0xff;
 	request->timeoutUnit[1] = 1000 >> 8;
 	request->action[0] = 1;
 	request->unicastTimeout[0] = 200;
@@ -2578,7 +2578,7 @@ int robinWlanRequestEnableStationPowerSave(
 	request->parameter.mode[0] = mode;
 	request->parameter.adhocWakePeriod[1] = adhocWakePeriod >> 8;
 	request->parameter.mode[1] = mode >> 8;
-	request->parameter.delayToPowerSave[0] = 1000;
+	request->parameter.delayToPowerSave[0] = 1000 & 0xff;
 	request->parameter.delayToPowerSave[1] = 1000 >> 8;
 	result = robinWlanSubmitCommand(context, command, 228, sizeof(*request));
 	if (result >= 0)
@@ -2618,7 +2618,7 @@ int robinWlanEnableStationPowerSave(
 	request->parameter.adhocWakePeriod[0] = adhocWakePeriod;
 	request->parameter.mode[0] = mode;
 	request->parameter.mode[1] = mode >> 8;
-	request->parameter.delayToPowerSave[0] = 1000;
+	request->parameter.delayToPowerSave[0] = 1000 & 0xff;
 	request->parameter.delayToPowerSave[1] = 1000 >> 8;
 	result = robinWlanSubmitCommand(context, command, 228, sizeof(*request));
 	if (result >= 0) {

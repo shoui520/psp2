@@ -183,7 +183,7 @@ int GcAuthPcactCreateChallenge(const GcAuthPcactChallengeRequest *request)
 	input = (const unsigned char *)&gcAuthPcactConsoleId;
 	for (index = 0; index != 16; index++)
 		consoleId[index] = input[index];
-	if (GcAuthGenerateRandom20(&gcAuthPcactScratch) != 0) {
+	if (GcAuthGenerateRandom20(gcAuthPcactScratch.random) != 0) {
 		result = (int)0x808a0202;
 		goto finish;
 	}
@@ -325,7 +325,7 @@ int GcAuthPcactEncryptChallenge(const GcAuthPcactEncryptChallengeRequest *reques
 	cursor = (unsigned char *)random;
 	for (index = 0; index != 64; index++)
 		cursor[index] = 0;
-	if (GcAuthGenerateRandom20(&gcAuthPcactScratch) != 0) {
+	if (GcAuthGenerateRandom20(gcAuthPcactScratch.random) != 0) {
 		result = (int)0x808a0302;
 		goto finish;
 	}

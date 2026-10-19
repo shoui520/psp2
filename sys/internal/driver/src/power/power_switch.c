@@ -24,7 +24,7 @@ int powerReleaseProcessSwitchLock(uint32_t kind);
 int powerReleaseSystemSwitchLock(uint32_t kind);
 
 static inline __attribute__((always_inline)) int powerDispatchSwitchEvent(int phase, int event, int sleepMode,
-				    const void *argument, SceUID *busy);
+				    void *argument, SceUID *busy);
 
 static void powerReadMonitorRegisters(struct PowerMonitorState *state);
 
@@ -1102,7 +1102,7 @@ static __attribute__((noinline)) void powerNotifyDisplayCallbacks(void)
 }
 
 static inline __attribute__((always_inline)) int powerDispatchSwitchEvent(int phase, int event, int sleepMode,
-				    const void *argument, SceUID *busy)
+				    void *argument, SceUID *busy)
 {
 	int ret;
 

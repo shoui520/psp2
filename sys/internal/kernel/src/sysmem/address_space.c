@@ -16,7 +16,7 @@
 
 static inline __attribute__((always_inline)) void AddressSpaceRefer(AddressSpaceObject *as)
 {
-	int count = SceCpuForKernel_8F40D0FD(&as->refCount, 1, 0x7fffffff);
+	int count = SceCpuForKernel_8F40D0FD((uint32_t *)&as->refCount, 1, 0x7fffffff);
 
 	SCE_DBG_ASSERT_CHECK_FUNC(count >= 0, 926, "AddressSpaceRefer");
 }

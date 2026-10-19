@@ -158,7 +158,7 @@ int getCallbackInfo(SceUID callbackId, SceKernelCallbackInfo *info)
 	sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 	info->attr = callback->cb.attr;
 	info->threadId = callback->cb.threadId;
-	info->callbackFunc = callback->cb.entry;
+	info->callbackFunc = (SceKernelCallbackFunction)callback->cb.entry;
 	info->notifyId = callback->cb.notifyId;
 	info->notifyCount = callback->cb.notifyCount;
 	info->notifyArg = callback->cb.notifyArg;

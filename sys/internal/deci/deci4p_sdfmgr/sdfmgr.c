@@ -738,9 +738,10 @@ int sceSDfMgrModuleBoot(SceSize args, void *argp)
 			(SceKernelIntrHandler)_threadKicker, NULL, 0x20, 15, NULL);
 		BOOT_CHECK(result, 347, 0x9d408fa5, 348, 0xdc18cd4a,
 			   "sceKernelRegisterIntrHandler() failed (0x%08x)\n");
-		SceSysrootForKernel_8747D415(busErrorHandler);
-		SceSysrootForKernel_2D6B2A79(dcmpSendStatusSystemError);
-		SceSysrootForKernel_C5EAF5F7(sdfMgrReportPowerState);
+		/* Sysroot returns what its callbacks return; these return nothing */
+		SceSysrootForKernel_8747D415((SysrootBusErrorHandler)busErrorHandler);
+		SceSysrootForKernel_2D6B2A79((SysrootSendSystemError)dcmpSendStatusSystemError);
+		SceSysrootForKernel_C5EAF5F7((SysrootSysStateEvent)sdfMgrReportPowerState);
 	}
 	result = SceDeci4pSDfMgrForKernel_B22B42FB(sdfMgrHandleControlInterrupt);
 	BOOT_CHECK(result, 366, 0xda2c4ab9, 367, 0x7cebaae2,

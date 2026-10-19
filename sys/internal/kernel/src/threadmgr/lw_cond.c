@@ -119,7 +119,7 @@ static int getLwCondInfo(SceUID condId, SceKernelLwCondInfo *info)
 		info->attr = cond->attr;
 		info->numWaitThreads = cond->waiting;
 		info->pWork = cond->work;
-		info->pLwMutex = cond->lwMutexWork;
+		info->pLwMutex = (SceKernelLwMutexWork *)cond->lwMutexWork;
 		sceKernelSpinlockLowUnlock(&cond->lock);
 		sceGUIDReleaseObject(condId);
 	}

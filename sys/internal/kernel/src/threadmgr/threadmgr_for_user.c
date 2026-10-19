@@ -522,14 +522,6 @@ int sceKernelCancelEventForUser(SceUID eventId, int *numWaitThreads)
 	return sceKernelCancelEvent(guid, numWaitThreads);
 }
 
-/* a common info header: its size, then the object's UID */
-struct ThreadmgrUserInfoHeader {
-	SceSize size;
-	SceUID uid;
-	char name[32];
-	uint32_t attr;				/* 0x28 */
-};
-
 enum ThreadmgrUserObjectClass {
 	USER_OBJECT_SEMAPHORE,
 	USER_OBJECT_MUTEX,
@@ -1040,7 +1032,7 @@ int sceKernelCancelSemaForUser(SceUID semaId, int setCount, int *numWaitThreads)
 }
 
 /* the core of _sceKernelGetSemaInfo */
-int sceKernelGetSemaInfoForUser(SceUID semaId, struct ThreadmgrUserInfoHeader *info)
+int sceKernelGetSemaInfoForUser(SceUID semaId, SceKernelSemaInfo *info)
 {
 	uint32_t attributes;
 	SceUID guid;
@@ -1051,7 +1043,7 @@ int sceKernelGetSemaInfoForUser(SceUID semaId, struct ThreadmgrUserInfoHeader *i
 		return USER_ERROR_UNKNOWN_SEMA_ID;
 	ret = SceThreadmgrForDriver_C99DCF0D(guid, info);
 	if (ret >= 0) {
-		info->uid = semaId;
+		info->semaId = semaId;
 		ret = scePUIDGetAttr(0, semaId, &attributes);
 		if (ret >= 0 && (attributes & PUID_ATTR_OPENED))
 			info->attr |= PUID_ATTR_OPENED;
@@ -1176,7 +1168,7 @@ int sceKernelWaitCondCBForUser(SceUID condId, SceUInt32 *timeout)
 }
 
 /* the core of _sceKernelGetCondInfo */
-int sceKernelGetCondInfoForUser(SceUID condId, struct ThreadmgrUserInfoHeader *info)
+int sceKernelGetCondInfoForUser(SceUID condId, SceKernelCondInfo *info)
 {
 	SceUID guid = SceSysmemForDriver_45D22597(0, condId);
 	int ret;
@@ -1185,7 +1177,7 @@ int sceKernelGetCondInfoForUser(SceUID condId, struct ThreadmgrUserInfoHeader *i
 		return USER_ERROR_UNKNOWN_COND_ID;
 	ret = SceThreadmgrForDriver_D1FBDFA6(guid, info);
 	if (ret >= 0)
-		info->uid = condId;
+		info->condId = condId;
 	return ret;
 }
 
@@ -1322,7 +1314,7 @@ int sceKernelCancelMsgPipeForUser(SceUID msgPipeId, int *numSendWaitThreads,
 }
 
 /* the core of _sceKernelGetMsgPipeInfo */
-int sceKernelGetMsgPipeInfoForUser(SceUID msgPipeId, struct ThreadmgrUserInfoHeader *info)
+int sceKernelGetMsgPipeInfoForUser(SceUID msgPipeId, SceKernelMsgPipeInfo *info)
 {
 	uint32_t attributes;
 	SceUID guid;
@@ -1333,7 +1325,7 @@ int sceKernelGetMsgPipeInfoForUser(SceUID msgPipeId, struct ThreadmgrUserInfoHea
 		return USER_ERROR_UNKNOWN_MSG_PIPE_ID;
 	ret = SceThreadmgrForDriver_207E0E18(guid, info);
 	if (ret >= 0) {
-		info->uid = msgPipeId;
+		info->msgPipeId = msgPipeId;
 		ret = scePUIDGetAttr(0, msgPipeId, &attributes);
 		if (ret >= 0 && (attributes & PUID_ATTR_OPENED))
 			info->attr |= PUID_ATTR_OPENED;
@@ -1666,7 +1658,7 @@ int sceKernelCancelRWLockForUser(SceUID rwLockId, int *numReadWaitThreads,
 }
 
 /* the core of _sceKernelGetRWLockInfo */
-int sceKernelGetRWLockInfoForUser(SceUID rwLockId, struct ThreadmgrUserInfoHeader *info)
+int sceKernelGetRWLockInfoForUser(SceUID rwLockId, SceKernelRWLockInfo *info)
 {
 	uint32_t attributes;
 	SceUID guid;
@@ -1677,7 +1669,7 @@ int sceKernelGetRWLockInfoForUser(SceUID rwLockId, struct ThreadmgrUserInfoHeade
 		return USER_ERROR_UNKNOWN_RW_LOCK_ID;
 	ret = sceKernelGetRWLockInfo(guid, info);
 	if (ret >= 0) {
-		info->uid = rwLockId;
+		info->rwLockId = rwLockId;
 		ret = scePUIDGetAttr(0, rwLockId, &attributes);
 		if (ret >= 0 && (attributes & PUID_ATTR_OPENED))
 			info->attr |= PUID_ATTR_OPENED;
@@ -3839,7 +3831,8 @@ int cancelTimerForUser(SceUID uid, uint32_t *count)
 	return guid < 0 ? (int)0xc0028241u : sceKernelCancelTimer(guid, count);
 }
 
-int createTimerForUser(const char *name, uint32_t attributes, const uint32_t *options)
+int createTimerForUser(const char *name, uint32_t attributes,
+		       const SceKernelTimerOptParam *options)
 {
 	char copied[0x20];
 	int result = copyinUIDNameWithAttr(copied, name, attributes);
@@ -3853,7 +3846,7 @@ int createTimerForUser(const char *name, uint32_t attributes, const uint32_t *op
 }
 
 /* name unknown */
-int setTimerEventForUser(SceUID uid, uint32_t type, const volatile uint64_t *interval, uint32_t repeat)
+int setTimerEventForUser(SceUID uid, uint32_t type, SceUInt64 *interval, uint32_t repeat)
 {
 	SceUID guid = SceSysmemForDriver_45D22597(0, uid);
 

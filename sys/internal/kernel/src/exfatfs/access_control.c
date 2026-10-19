@@ -188,8 +188,8 @@ int sceFatfsACGetRootDirAttribute(SceExfatfsDrive *drive, unsigned char *attribu
 		SceInt32 queriedPermission = 0;
 		SceUID pid = SceThreadmgrForDriver_FA54D49A();
 
-		result = SceSblACMgrForDriver_FF7125DE(pid, drive->assignName,
-						    &queriedPermission);
+		result = SceSblACMgrForDriver_FF7125DE(pid, (const SceChar8 *)drive->assignName,
+						    (SceUInt32 *)&queriedPermission);
 		permission = queriedPermission;
 	}
 	if (result >= 0) {

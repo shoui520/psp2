@@ -102,12 +102,6 @@ SceUInt32 ewTimer(void *arg)
 
 /* ===== drawing ===== */
 
-
-
-
-
-
-
 /* the never-taken brightness hooks when no display driver is present */
 int ewNoDisplay(void)
 {
@@ -193,7 +187,6 @@ fail:
 
 /* ===== main ===== */
 
-
 /* the lowest clocks while the screen is up */
 static const int ewClocks[4] = { 41, 55, 0, 83 };
 
@@ -242,7 +235,7 @@ int ewMainThread(SceSize args, void *argp)
 		held = ewg.buttons.current;
 	}
 
-	if (SceSysconForDriver_CF5B2F2F(&factor) < 0)
+	if (SceSysconForDriver_CF5B2F2F((uint32_t *)&factor) < 0)
 		factor = 0xf;
 	if (held & EW_BUTTON_UP) {
 		ewg.ew.mode = EW_MODE_MTP_DISPLAY;
@@ -406,7 +399,7 @@ motion:
 			}
 
 			/* charging state */
-			SceSysconForDriver_A2FE9BF9(&charger);
+			SceSysconForDriver_A2FE9BF9((uint32_t *)&charger);
 			if ((SceUdcdForDriver_E054B5E4() & 2) && (charger & 0xf00) != 0x200) {
 				if (!ewg.ew.connected) {
 					if (ewg.ew.timer > 0) {

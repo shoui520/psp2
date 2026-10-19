@@ -28,8 +28,15 @@ typedef int (*SysrootBusErrorHandler)(SceUInt32 status0, SceUInt32 status1,
 typedef SceSize (*SysrootBusErrorGetInfo)(void *buffer, SceSize size);
 typedef int (*SysrootCoredumpAddThread)(const struct CoredumpThreadSnapshot *snapshot);
 typedef int (*SysrootUtMgrHasAuthId)(SceUInt64 authId);
+typedef SceUInt8 (*SysrootUtMgrHasFlag)(void);
 typedef int (*SysrootLedSetMode)(SceUInt32 led, SceUInt32 mode, const void *option);
 typedef int (*SysrootSysStateEvent)(int event);
+typedef int (*SysrootSendSystemError)(int type, SceSize size, const char *buffer);
+typedef int (*SysrootSetSwInfoInt)(const char *name, SceSize nameLength, SceUInt32 number);
+typedef int (*SysrootSetSwInfoStr)(const char *name, SceSize nameLength, const char *str,
+				   SceSize strLength);
+typedef int (*SysrootSetSwInfoBin)(const char *name, SceSize nameLength, const void *data,
+				   SceSize dataSize);
 struct SceVfsMount;
 struct ScePfsMountInfo;
 typedef int (*SysrootPfsMgrGetMountInfo)(struct SceVfsMount *mount, struct ScePfsMountInfo *info);
@@ -208,10 +215,10 @@ int SceSysrootForKernel_CBD377B7(int (*callback)(void));
 uint64_t SceSysrootForKernel_E20F6FC8(void);
 /* the same function, SceSysrootForKernel's export */
 int SceSysrootForKernel_sceKernelSysrootAppMgrSpawnProcess(const char *name, int type, const char *path, SceSize length, const void *args, void *opt, void *out);
-uint32_t SceSysrootForKernel_4373AC96(void);	/* vitasdk: ksceSysrootIsBsodReboot */
+int SceSysrootForKernel_4373AC96(void);	/* vitasdk: ksceSysrootIsBsodReboot */
 /* the same function, SceSysrootForKernel's export */
 int SceSysrootForKernel_sceKernelSysrootIsSafeMode(void);
-uint32_t SceSysrootForKernel_B0E1FC67(void);	/* vitasdk: ksceSysrootIsUpdateMode */
+int SceSysrootForKernel_B0E1FC67(void);	/* vitasdk: ksceSysrootIsUpdateMode */
 int SceSysrootForKernel_79C9AE10(void);	/* vitasdk: ksceSysrootIsUsbEnumWakeup */
 int sceKernelIsColdBoot(void);
 /* nonzero when the model has the capability (1: multiple controller ports) */
@@ -231,18 +238,18 @@ void sceKernelApiDeclareTypeUInt64(void);
 void sceKernelSysrootSetVbaseResetVector(void *vector);
 
 int sceKernelSysrootGetShellPid(void);
-void SceSysrootForDriver_05CD0DD9(int (*callback)(const char *name, SceSize nameLength, const void *data, SceSize dataSize));
+void SceSysrootForDriver_05CD0DD9(SysrootSetSwInfoBin callback);
 void SceSysrootForDriver_0ECD711E(void);
 /* vitasdk: ksceKernelSysrootSetProcessHandler */
 int SceSysrootForDriver_0F07C3FC(const SysrootProcessEventOps *ops);
 void SceSysrootForDriver_1434D90E(uint32_t notifier);
-void SceSysrootForDriver_1FFD2AFA(int (*callback)(const char *name, SceSize length, SceUInt32 number));
+void SceSysrootForDriver_1FFD2AFA(SysrootSetSwInfoInt callback);
 int SceSysrootForDriver_20D2A0DF(SceUID pid, SceUID modid, uint64_t time);
 void SceSysrootForDriver_246AAAB3(SysrootLedSetMode callback);
 int SceSysrootForDriver_256B2394(SceUID pid, SceUID modid, SceUInt32 stopReason, SceUInt64 time);
 void SceSysrootForDriver_2816A813(void);
 void SceSysrootForDriver_2C9E7797(void);
-void SceSysrootForDriver_2D6B2A79(int (*callback)(int type, SceSize size, const char *buffer));
+void SceSysrootForDriver_2D6B2A79(SysrootSendSystemError callback);
 /* vitasdk: ksceKernelSysrootSetGetSystemSwVersionFunc */
 void SceSysrootForDriver_3276086B(int (*callback)(void));
 void SceSysrootForDriver_35875119(int (*callback)(void *buffer));
@@ -276,13 +283,13 @@ int SceSysrootForDriver_79C9AE10(void);
 int SceSysrootForDriver_7AAC4EE7(const char *key, SceUInt32 value);
 void SceSysrootForDriver_7B7ED1E9(void);
 uint32_t SceSysrootForDriver_7B7F8171(void);
-void SceSysrootForDriver_7C0BE393(int (*callback)(const char *name, SceSize nameLength, const char *str, SceSize strLength));
+void SceSysrootForDriver_7C0BE393(SysrootSetSwInfoStr callback);
 void SceSysrootForDriver_7C2C10E2(uint32_t phase, uint32_t kind);
 void SceSysrootForDriver_82FC6405(SysrootBusErrorGetInfo callback);
 int sceKernelSysrootIsSafeMode(void);
 int SceSysrootForDriver_84C0BE05(SceUID pid);
 void SceSysrootForDriver_8747D415(SysrootBusErrorHandler callback);
-uint32_t SceSysrootForDriver_89D19090(void);
+int SceSysrootForDriver_89D19090(void);
 void SceSysrootForDriver_93CD44CD(uint32_t phase);	/* vitasdk: ksceKernelInvokeInitCallback */
 void SceSysrootForDriver_9421B223(void);
 int SceSysrootForDriver_951C7943(uint64_t deviceAddress, void *buffer, int maxCount);
@@ -294,7 +301,7 @@ void SceSysrootForDriver_A6A0A038(uint32_t notifier);
 void SceSysrootForDriver_A7A01DF0(void);
 void SceSysrootForDriver_A85FF3B2(void);
 uint32_t SceSysrootForDriver_AE7A8F1D(void);
-uint32_t SceSysrootForDriver_B0E1FC67(void);
+int SceSysrootForDriver_B0E1FC67(void);
 void SceSysrootForDriver_B0E3E791(uint32_t notifier);
 int SceSysrootForDriver_B27B7530(SceUInt32 status0, SceUInt32 status1, SceUInt32 status2);
 void SceSysrootForDriver_C5EAF5F7(SysrootSysStateEvent callback);
@@ -310,14 +317,14 @@ void SceSysrootForDriver_D7207203(void);
 int SceSysrootForDriver_DABD4A47(void *threadInfo);
 int SceSysrootForDriver_DC651D22(void *buffer, SceSize size, SceUInt32 *count);
 void SceSysrootForDriver_E06C14FD(void);
-void SceSysrootForDriver_E25D2FD5(int (*callback)(void));
-void SceSysrootForDriver_E2E88E3E(int (*callback)(void));
+void SceSysrootForDriver_E25D2FD5(SysrootUtMgrHasFlag callback);
+void SceSysrootForDriver_E2E88E3E(SysrootUtMgrHasFlag callback);
 uint32_t SceSysrootForDriver_E4EA1960(void);
 void SceSysrootForDriver_EB19AAF6(void);
 int SceSysrootForDriver_ED22CF8F(void *buffer, SceSize size, SceUInt32 *count);
 void SceSysrootForDriver_ED688AEE(int (*callback)(void));
 /* vitasdk: ksceSysrootUtMgrSetNpTestFlag */
-void SceSysrootForDriver_EE5D6CE9(int (*callback)(void));
+void SceSysrootForDriver_EE5D6CE9(SysrootUtMgrHasFlag callback);
 int SceSysrootForDriver_F404026C(void);
 int SceSysrootForDriver_FF2DD7AB(struct SysrootDebugNotifiers *notifiers);
 uint32_t SceSysrootForKernel_085C2BCB(void);
@@ -332,7 +339,7 @@ void SceSysrootForKernel_21F5790B(void (*callback)(void));
 int SceSysrootForKernel_256B2394(SceUID pid, SceUID modid, SceUInt32 stopReason, SceUInt64 time);
 int SceSysrootForKernel_26458702(const SysrootThreadmgrOps *ops);
 void SceSysrootForKernel_27D30DB2(SysrootNetHook callback);
-void SceSysrootForKernel_2D6B2A79(int (*callback)(int type, SceSize size, const char *buffer));
+void SceSysrootForKernel_2D6B2A79(SysrootSendSystemError callback);
 void *SceSysrootForKernel_2F75C1DC(SceSize size, void *opt);
 uint32_t SceSysrootForKernel_2F97041A(void);	/* vitasdk: ksceSysrootGetWakeupFactor */
 uint32_t SceSysrootForKernel_340575CB(void);
@@ -345,7 +352,7 @@ int SceSysrootForKernel_40F28DC6(void *interface);
 void SceSysrootForKernel_42FC9FFF(void);
 int SceSysrootForKernel_4F57A13F(void *mount, void *info);
 uint32_t SceSysrootForKernel_50FE3B4D(void);	/* vitasdk: ksceSysrootIsNonRemovableCardMode */
-uint32_t SceSysrootForKernel_55392965(void);	/* vitasdk: ksceSysrootIsManufacturingMode */
+int SceSysrootForKernel_55392965(void);	/* vitasdk: ksceSysrootIsManufacturingMode */
 int SceSysrootForKernel_571E5B79(SceUID parentPid, SceUID pid, int flags, void *process, uint64_t time);
 void SceSysrootForKernel_59B76D23(void *value);
 void SceSysrootForKernel_5B5EBFB1(volatile SceLongTimerRegisters *time);
@@ -372,7 +379,7 @@ int SceSysrootForKernel_8498E23F(SceUID pid, int exitStatus, SceUInt64 time);
 int SceSysrootForKernel_84C0BE05(SceUID pid);
 void SceSysrootForKernel_8747D415(SysrootBusErrorHandler callback);
 int SceSysrootForKernel_89532E2F(void);
-uint32_t SceSysrootForKernel_89D19090(void);	/* vitasdk: ksceSysrootIsExternalBootMode */
+int SceSysrootForKernel_89D19090(void);	/* vitasdk: ksceSysrootIsExternalBootMode */
 void SceSysrootForKernel_9A8871F1(SysrootAppMgrSpawnProcess callback);
 int SceSysrootForKernel_9CFF80F9(SceUID pid, void *address, SceUInt32 *opcode);
 int SceSysrootForKernel_9D058A32(SceUID pid, int exitStatus, uint64_t time);

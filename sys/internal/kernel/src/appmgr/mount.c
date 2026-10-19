@@ -375,7 +375,7 @@ int appmgrReleasePfsMount(SceUID pid, AppmgrPfsMount *mount, int flags)
 		    (mount->mountId == 1005 &&
 		     authInfo.programAuthorityId == 0x2800000000000039ULL))
 			return 0;
-		result = ScePfsMgrForKernel_2D67D8CA(&mount->mountPoint,
+		result = ScePfsMgrForKernel_2D67D8CA(mount->mountPoint.drive_id,
 					  authInfo.programAuthorityId);
 		return result == (int)0x80010002 || result >= 0 ? 0 : result;
 	}
@@ -387,7 +387,7 @@ int appmgrReleasePfsMount(SceUID pid, AppmgrPfsMount *mount, int flags)
 			goto restore;
 	} else if (mount->mountPoint.drive_id[0] != 0) {
 		permission = sceKernelSetThreadAccessLevel(128);
-		result = ScePfsMgrForKernel_680BC384(&mount->mountPoint);
+		result = ScePfsMgrForKernel_680BC384(mount->mountPoint.drive_id);
 		sceKernelSetThreadAccessLevel(permission);
 		if (result != (int)0x80010013 && result != 0)
 			goto restore;
@@ -717,7 +717,7 @@ int appmgrCloneVirtualMount(SceUID pid, const AppmgrVirtualMount *source,
 		status = sceKernelGetProcessSelfAuthInfo(pid, &authInfo);
 		if (status < 0)
 			goto authError;
-		status = ScePfsMgrForKernel_D8D0FEE5(&pfsMount->mountPoint,
+		status = ScePfsMgrForKernel_D8D0FEE5(pfsMount->mountPoint.drive_id,
 				       authInfo.programAuthorityId);
 		if (status != (int)0x80010011 && status < 0)
 			goto authError;
@@ -1295,14 +1295,14 @@ int appmgrIsDevelopmentPath(const char *path)
 
 int appmgrGetVs0UserModuleDrive(char *mountPoint)
 {
-	if (SceSblACMgrForDriver_E79C7A8D(0, "vs0:sys/external"))
+	if (SceSblACMgrForDriver_E79C7A8D(0, (const SceChar8 *)"vs0:sys/external"))
 		return appmgrGetMountPointById(1007, mountPoint);
 	return (int)0x80800009;
 }
 
 int appmgrGetVs0UserDataDrive(char *mountPoint)
 {
-	if (SceSblACMgrForDriver_E79C7A8D(0, "vs0:data/external"))
+	if (SceSblACMgrForDriver_E79C7A8D(0, (const SceChar8 *)"vs0:data/external"))
 		return appmgrGetMountPointById(1008, mountPoint);
 	return (int)0x80800009;
 }
@@ -1322,7 +1322,7 @@ int appmgrConvertVs0UserDrivePath(const char *path, char *output, SceSize size)
 	memset(output, 0, capacity);
 	if (capacity <= 63)
 		goto out;
-	if (!SceSblACMgrForDriver_E79C7A8D(0, path)) {
+	if (!SceSblACMgrForDriver_E79C7A8D(0, (const SceChar8 *)path)) {
 		result = (int)0x80800009;
 		goto out;
 	}
@@ -1592,7 +1592,7 @@ int sceAppMgrRdrfpUmount(const SceAppMgrRdrfpMountPoint *mountPoint)
 	result = (int)0x80800002;
 	if (mount == NULL)
 		goto unlock;
-	result = ScePfsMgrForKernel_680BC384(&mount->mountPoint);
+	result = ScePfsMgrForKernel_680BC384(mount->mountPoint.drive_id);
 	if (result < 0 && result != (int)0x80010013)
 		goto unlock;
 	cursor = g_appmgrPfsMounts;
@@ -1766,7 +1766,7 @@ cleanup:
 			    (pfsMount->mountId == 1005 &&
 			     authInfo.programAuthorityId == 0x2800000000000039ULL))
 				goto freeVirtualMount;
-			ScePfsMgrForKernel_2D67D8CA(&pfsMount->mountPoint,
+			ScePfsMgrForKernel_2D67D8CA(pfsMount->mountPoint.drive_id,
 					  authInfo.programAuthorityId);
 			goto freeVirtualMount;
 		}
@@ -1778,7 +1778,7 @@ cleanup:
 				goto restoreAuthority;
 		} else if (pfsMount->mountPoint.drive_id[0] != 0) {
 			permission = sceKernelSetThreadAccessLevel(128);
-			status = ScePfsMgrForKernel_680BC384(&pfsMount->mountPoint);
+			status = ScePfsMgrForKernel_680BC384(pfsMount->mountPoint.drive_id);
 			sceKernelSetThreadAccessLevel(permission);
 			if (status != (int)0x80010013 && status != 0)
 				goto restoreAuthority;

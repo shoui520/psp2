@@ -32,18 +32,10 @@ typedef struct SelfDecrypterSlot {
 	SceSize size;
 } SelfDecrypterSlot;
 
-/* partial inflate stream state handed to SceDeflateForDriver */
-typedef struct SelfInflateStream {
-	SceUInt32 flags;
-	const void *inputEnd;
-	int slot;
-	void *(*refill)(struct SelfInflateStream *stream);
-} SelfInflateStream;
-
 static SelfDecrypterSlot g_slot[2];
 static SceUID g_commEvf;
 static SceUID g_decrypterThread;
-static SelfInflateStream g_stream;
+static SceDeflatePartialInputParam g_stream;	/* its cookie is the slot being inflated */
 static SelfReader *g_reader;
 static SceUInt8 *g_destination;
 static SceSize g_segmentSize;
@@ -234,20 +226,20 @@ int selfDecrypterWaitBlock(int slot)
 	return ret < 0 ? ret : g_slot[slot].result;
 }
 
-void *selfDecrypterRefill(SelfInflateStream *stream)
+const void *selfDecrypterRefill(SceDeflatePartialInputParam *param, unsigned int outputsize)
 {
 	SelfDecrypterSlot *slot;
 	SceSize size;
 	SceUInt32 bits;
 	int ret;
 
-	g_slot[stream->slot].result = 0;
-	g_slot[stream->slot].state = 3;
+	g_slot[(int)param->cookie].result = 0;
+	g_slot[(int)param->cookie].state = 3;
 	sceKernelSetEventFlag(g_commEvf, SELF_EVF_DONE);
 	sceKernelWaitEventFlag(g_commEvf, SELF_EVF_SLOT0 | SELF_EVF_SLOT1,
 				5, &bits, NULL);
-	g_stream.slot = (bits & SELF_EVF_SLOT0) ^ 1;
-	slot = &g_slot[g_stream.slot];
+	g_stream.cookie = (void *)((bits & SELF_EVF_SLOT0) ^ 1);
+	slot = &g_slot[(int)g_stream.cookie];
 	size = slot->size;
 	if (slot->state < 2) {
 		ret = SceSblAuthMgrForKernel_BC422443(g_reader->authContext, slot->buf, size);
@@ -255,7 +247,7 @@ void *selfDecrypterRefill(SelfInflateStream *stream)
 			return NULL;
 		slot->state = 2;
 	}
-	g_stream.inputEnd = (void *)(((SceUInt32)slot->buf + size + 3) & ~3);
+	g_stream.pBufEnd = (void *)(((SceUInt32)slot->buf + size + 3) & ~3);
 	return slot->buf;
 }
 
@@ -314,12 +306,12 @@ int selfDecrypter_thread_entry(SceSize args, void *argp)
 				SCE_DBG_ASSERT_LEVEL(0, g_compression == 2, 179);
 				inflateResult = SceKernelUtilsForDriver_5B9BCD75(slot->buf, NULL, NULL, NULL, &input);
 				if (inflateResult >= 0) {
-					g_stream.inputEnd = (SceUInt8 *)slot->buf + size;
-					g_stream.slot = 0;
+					g_stream.pBufEnd = (SceUInt8 *)slot->buf + size;
+					g_stream.cookie = NULL;
 					inflateResult = SceKernelUtilsForDriver_3D74CCDF(g_destination,
 							g_outputLeft, input, NULL, &g_stream);
 				}
-				status = g_stream.slot + (inflateResult < 0 ? 2 : 0);
+				status = (int)g_stream.cookie + (inflateResult < 0 ? 2 : 0);
 				slot = &g_slot[status & 1];
 				ret = status & 2 ? SELF_DECOMPRESSION_ERROR : status;
 			}
@@ -352,8 +344,8 @@ int SelfDecrypterInit(void)
 	g_decrypterThread = ret;
 	if (ret < 0)
 		return ret;
-	g_stream.refill = selfDecrypterRefill;
-	g_stream.flags = 0x10;
+	g_stream.callback = selfDecrypterRefill;
+	g_stream.size = sizeof(g_stream);
 	return sceKernelStartThread(ret, 0, NULL);
 }
 
