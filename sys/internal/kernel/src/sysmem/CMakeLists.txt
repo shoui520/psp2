@@ -165,8 +165,8 @@ set_property(SOURCE strings.c PROPERTY COMPILE_DEFINITIONS
 
 set_source_files_properties(dipsw.c PROPERTIES COMPILE_OPTIONS "-Os")
 
-# Sony's UART file and string functions sign-extend their characters.
-set_source_files_properties(serial.c strings.c PROPERTIES COMPILE_OPTIONS "-fsigned-char")
+# Sony's UART file, string functions and UID names sign-extend their characters.
+set_source_files_properties(serial.c strings.c uid.c PROPERTIES COMPILE_OPTIONS "-fsigned-char")
 
 # Sony's exported atomic entry points use ARM instructions in every firmware.
 set_source_files_properties(atomics32.c atomics64.c

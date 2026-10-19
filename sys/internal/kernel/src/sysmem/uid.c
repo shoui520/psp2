@@ -38,7 +38,7 @@ static SceClass *s_dlinkClass;
 static FixedHeapClass *s_entryHeapClass;
 static void *s_registerHeap;
 /* the last mismatching UID UIDEntryCheckInvalid warned about */
-static SceUID s_lastWarnedUID;
+static SceUID s_lastWarnedUID = -1;
 
 /* name unknown: SceUIDDLinkClass's constructor and destructor */
 static int UIDDLinkCreate(void *object)
