@@ -64,7 +64,7 @@ psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	procevent.c
 	led.c
 	serial.c
-	deflate.c
+	deflate.S
 	string_compare.S
 	string_scan.S
 	strncpy.S
@@ -120,6 +120,7 @@ psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	aes_block.c
 	aes.S
 	sfmt.S
+	deflate_huffman.S
 	xorshift128.c
 	kernel_utils_crypto.c
 	sha256_transform.S
