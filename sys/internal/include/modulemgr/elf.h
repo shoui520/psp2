@@ -1,7 +1,8 @@
 /*
- * The ELF32 records of a core file, as the System V ABI names them: the file header and the
- * program headers coredump and crashdump write. No SDK header or debug record names Sony's
- * own; the names are the ABI's.
+ * The ELF32 records, as the System V ABI names them: the file header and the program headers
+ * of the modules the module manager loads and of the core files coredump and crashdump
+ * write. No SDK header or debug record names Sony's own; the names are the ABI's, and the
+ * SCE values the ones Sony's tools print.
  */
 #pragma once
 
@@ -48,6 +49,7 @@ typedef uint32_t	Elf32_Word;
 #define ET_EXEC		2
 #define ET_DYN		3
 #define ET_CORE		4
+#define ET_SCE_FIXEDEXEC	0xfe04
 
 /* e_machine */
 #define EM_ARM		40
@@ -79,6 +81,9 @@ typedef struct {
 #define PT_DYNAMIC	2
 #define PT_INTERP	3
 #define PT_NOTE		4
+#define PT_SCE_RELA	0x60000000
+#define PT_SCE_COMMENT	0x6fffff00
+#define PT_SCE_VERSION	0x6fffff01
 
 /* p_flags */
 #define PF_X		0x1

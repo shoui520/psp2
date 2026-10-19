@@ -5,7 +5,7 @@
  */
 
 #include <string.h>
-#include <coredump/elf.h>
+#include <modulemgr/elf.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include <sysmem/sysmem.h>

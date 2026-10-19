@@ -17,23 +17,6 @@
 #define SELF_EVF_DONE		0x00000008
 #define SELF_EVF_UNLOCKED	0x80000000
 
-typedef struct Elf32Ehdr {
-	SceUInt8 e_ident[16];
-	SceUInt16 e_type;
-	SceUInt16 e_machine;
-	SceUInt32 e_version;
-	SceUInt32 e_entry;
-	SceUInt32 e_phoff;
-	SceUInt32 e_shoff;
-	SceUInt32 e_flags;
-	SceUInt16 e_ehsize;
-	SceUInt16 e_phentsize;
-	SceUInt16 e_phnum;
-	SceUInt16 e_shentsize;
-	SceUInt16 e_shnum;
-	SceUInt16 e_shstrndx;
-} Elf32Ehdr;
-
 typedef struct SceSelfSegmentInfo {
 	SceUInt64 offset;
 	SceUInt64 length;
@@ -74,7 +57,7 @@ static SceUInt8 g_buffer[2][0x10000] __attribute__((aligned(0x40)));
 
 int SelfReaderCheckElfHeader(const void *ehdr, SceSize size)
 {
-	const Elf32Ehdr *e = ehdr;
+	const Elf32_Ehdr *e = ehdr;
 
 	if (size < sizeof(*e) ||
 	    (*(const SceUInt32 *)&e->e_ident[4] & 0xff00ff) != 0x10001 ||
@@ -89,7 +72,7 @@ int SelfReaderCheckElfHeader(const void *ehdr, SceSize size)
 	} else {
 		return SCE_KERNEL_ERROR_ILLEGAL_ELF_HEADER;
 	}
-	if (e->e_phentsize != sizeof(Elf32Phdr) ||
+	if (e->e_phentsize != sizeof(Elf32_Phdr) ||
 	    (e->e_shnum != 0 && e->e_shentsize != 0x28))
 		return SCE_KERNEL_ERROR_ILLEGAL_ELF_HEADER;
 	return e->e_phoff <= sizeof(*e) ? 0 : SCE_KERNEL_ERROR_ILLEGAL_ELF_HEADER;
@@ -98,7 +81,7 @@ int SelfReaderCheckElfHeader(const void *ehdr, SceSize size)
 int SelfReaderOpen(SelfReader *reader, SceUID pid, SceUID fd, SelfAuthRequest *auth)
 {
 	const SceSelfImageHeader *self;
-	const Elf32Ehdr *ehdr;
+	const Elf32_Ehdr *ehdr;
 	const char *p;
 	SceSize size, left, phsize;
 	int ret;
@@ -143,13 +126,13 @@ int SelfReaderOpen(SelfReader *reader, SceUID pid, SceUID fd, SelfAuthRequest *a
 			ret = SCE_KERNEL_ERROR_ILLEGAL_SELF_HEADER;
 			goto fail;
 		}
-		ehdr = (const Elf32Ehdr *)(p + (SceUInt32)self->header.elfOffset);
+		ehdr = (const Elf32_Ehdr *)(p + (SceUInt32)self->header.elfOffset);
 		reader->ehdr = (void *)ehdr;
 		ret = SelfReaderCheckElfHeader(ehdr, size - (SceUInt32)self->header.elfOffset);
 		if (ret < 0)
 			goto fail;
 		reader->phdr = (void *)(p + (SceUInt32)self->header.phdrOffset);
-		phsize = ehdr->e_phnum * sizeof(Elf32Phdr);
+		phsize = ehdr->e_phnum * sizeof(Elf32_Phdr);
 		if (phsize > size - (SceUInt32)self->header.phdrOffset)
 			goto bad_elf;
 		reader->segmentInfo = (void *)(p + (SceUInt32)self->header.segmentInfoOffset);
@@ -159,14 +142,14 @@ int SelfReaderOpen(SelfReader *reader, SceUID pid, SceUID fd, SelfAuthRequest *a
 		return 0;
 	}
 	if (p[0] == 0x7f && p[1] == 'E' && p[2] == 'L' && p[3] == 'F') {
-		ehdr = (const Elf32Ehdr *)p;
+		ehdr = (const Elf32_Ehdr *)p;
 		reader->fd = fd;
 		reader->ehdr = (void *)ehdr;
 		reader->type = 1;
 		ret = SelfReaderCheckElfHeader(ehdr, size);
 		if (ret < 0)
 			goto fail;
-		if (ehdr->e_phnum * sizeof(Elf32Phdr) <= size - sizeof(*ehdr)) {
+		if (ehdr->e_phnum * sizeof(Elf32_Phdr) <= size - sizeof(*ehdr)) {
 			reader->phdr = (void *)(p + ehdr->e_phoff);
 			return 0;
 		}
@@ -198,35 +181,35 @@ int SelfReaderGetType(SelfReader *reader)
 {
 	if (reader->ehdr == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ELF_HEADER;
-	return ((Elf32Ehdr *)reader->ehdr)->e_type;
+	return ((Elf32_Ehdr *)reader->ehdr)->e_type;
 }
 
 SceUInt16 SelfReaderGetPhnum(SelfReader *reader)
 {
-	return ((Elf32Ehdr *)reader->ehdr)->e_phnum;
+	return ((Elf32_Ehdr *)reader->ehdr)->e_phnum;
 }
 
 SceUInt32 SelfReaderGetEntry(SelfReader *reader)
 {
-	return ((Elf32Ehdr *)reader->ehdr)->e_entry;
+	return ((Elf32_Ehdr *)reader->ehdr)->e_entry;
 }
 
 void *SelfReaderGetSegmentInfo(SelfReader *reader, SceUInt32 index)
 {
 	if (reader->ehdr == NULL)
 		return NULL;
-	if (reader->segmentInfo != NULL && index < ((Elf32Ehdr *)reader->ehdr)->e_phnum)
+	if (reader->segmentInfo != NULL && index < ((Elf32_Ehdr *)reader->ehdr)->e_phnum)
 		return (SceSelfSegmentInfo *)reader->segmentInfo + index;
 	return NULL;
 }
 
 SceUInt32 SelfReaderGetSegmentOffset(SelfReader *reader, SceUInt32 index)
 {
-	Elf32Phdr *phdr;
+	Elf32_Phdr *phdr;
 
 	if (reader->ehdr != NULL && reader->phdr != NULL &&
-	    index < ((Elf32Ehdr *)reader->ehdr)->e_phnum) {
-		phdr = (Elf32Phdr *)reader->phdr + index;
+	    index < ((Elf32_Ehdr *)reader->ehdr)->e_phnum) {
+		phdr = (Elf32_Phdr *)reader->phdr + index;
 		if (phdr != NULL)
 			return phdr->p_offset;
 	}
@@ -376,7 +359,7 @@ int SelfDecrypterInit(void)
 
 int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTiming *timing)
 {
-	SceSize filesz = ((Elf32Phdr *)reader->phdr)[index].p_filesz;
+	SceSize filesz = ((Elf32_Phdr *)reader->phdr)[index].p_filesz;
 
 	if (filesz == 0)
 		return 0;

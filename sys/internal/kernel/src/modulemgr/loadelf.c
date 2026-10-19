@@ -293,7 +293,7 @@ int LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, Sce
 	SceModuleCB *cb = ctx->cb;
 	LoadelfTiming timing, *t;
 	SelfReader reader;
-	Elf32Phdr *ph;
+	Elf32_Phdr *ph;
 	SceUInt32 rnd, state, align;
 	SceUInt16 phnum;
 	SceUID pid, uid;
@@ -348,7 +348,7 @@ int LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, Sce
 		timing.path = cb->path;
 		timing.totalSize = 0;
 		for (i = 0; i < phnum; i++) {
-			ph = (Elf32Phdr *)reader.phdr + i;
+			ph = (Elf32_Phdr *)reader.phdr + i;
 			if (ph->p_type == PT_LOAD || ph->p_type == PT_SCE_RELA)
 				timing.totalSize += ph->p_filesz;
 		}
@@ -364,7 +364,7 @@ int LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, Sce
 	loaded = 0;
 	state = 0;
 	for (i = 0; i < phnum; i++) {
-		ph = (Elf32Phdr *)reader.phdr + i;
+		ph = (Elf32_Phdr *)reader.phdr + i;
 		if (ph->p_type == PT_LOAD) {
 			SceModuleSegment *seg = &cb->segment[i];
 
@@ -544,7 +544,7 @@ int sceKernelLoadPtLoadSegForFwloader(const char *path, int index, void *dst, Sc
 {
 	SelfAuthRequest auth;
 	SelfReader reader;
-	Elf32Phdr *ph;
+	Elf32_Phdr *ph;
 	SceUID fd;
 	int ret, type;
 
@@ -568,7 +568,7 @@ int sceKernelLoadPtLoadSegForFwloader(const char *path, int index, void *dst, Sc
 		type = SelfReaderGetType(&reader);
 		ret = type;
 		if (type >= 0) {
-			ph = (Elf32Phdr *)reader.phdr + index;
+			ph = (Elf32_Phdr *)reader.phdr + index;
 			if (index < SelfReaderGetPhnum(&reader) && type == ET_SCE_FIXEDEXEC &&
 			    ph->p_type == PT_LOAD && ph->p_filesz != 0 && ph->p_filesz <= size) {
 				ret = SelfReaderLoadSegment(&reader, index, dst, NULL);

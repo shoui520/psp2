@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <coredump/elf.h>
+#include <modulemgr/elf.h>
 #include <scetypes.h>
 
 typedef struct SegIf SegIf;

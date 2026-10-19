@@ -1,7 +1,7 @@
 /* ELF and note headers of the core file. */
 
 #include "seg_internal.h"
-#include <coredump/elf.h>
+#include <modulemgr/elf.h>
 #include <sysmem/debug.h>
 #include <string.h>
 #include <stdio.h>

@@ -4,7 +4,7 @@
 #include "seg_internal.h"
 #include <sysmem/debug.h>
 #include <kernel/error.h>
-#include <coredump/elf.h>
+#include <modulemgr/elf.h>
 #include <threadmgr/threadmgr.h>
 #include <string.h>
 #include <sysmem/sysclib.h>

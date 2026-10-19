@@ -21,6 +21,7 @@
 #include <modulemgr/modulemgr.h>
 #include <iofilemgr/iofilemgr.h>
 #include <modulemgr/module_library.h>
+#include <modulemgr/elf.h>
 #include <sysmem/debug.h>
 #include <sysmem/dipsw.h>
 #include <sysmem/utils.h>
@@ -284,7 +285,7 @@ typedef struct SelfReader {
 	void *header;			/* the first page of the file */
 	SceSize headerSize;
 	void *ehdr;
-	void *phdr;			/* Elf32Phdr[] */
+	void *phdr;			/* Elf32_Phdr[] */
 	SceUInt8 type;			/* 1: ELF, 2: SELF */
 	SceUInt8 authenticated;		/* the SELF header went through the auth manager */
 	SceUInt8 padding[2];
@@ -296,23 +297,6 @@ typedef struct SelfReader {
 	SceUID pid;
 	SceUInt32 reserved;
 } SelfReader;
-
-typedef struct Elf32Phdr {
-	SceUInt32 p_type;
-	SceUInt32 p_offset;
-	SceUInt32 p_vaddr;
-	SceUInt32 p_paddr;
-	SceUInt32 p_filesz;
-	SceUInt32 p_memsz;
-	SceUInt32 p_flags;
-	SceUInt32 p_align;
-} Elf32Phdr;
-
-#define PT_LOAD			0x00000001
-#define PT_SCE_RELA		0x60000000
-#define PT_SCE_COMMENT		0x6fffff00
-#define PT_SCE_VERSION		0x6fffff01
-#define ET_SCE_FIXEDEXEC	0xfe04
 
 /* bootimage_fs.c */
 typedef struct BootimageEntry {

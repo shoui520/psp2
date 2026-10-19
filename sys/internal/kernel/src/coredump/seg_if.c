@@ -2,7 +2,7 @@
 
 #include "seg_internal.h"
 #include "writer_internal.h"
-#include <coredump/elf.h>
+#include <modulemgr/elf.h>
 #include <sysmem/debug.h>
 
 extern Writer *currentWriter;
