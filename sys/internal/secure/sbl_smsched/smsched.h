@@ -13,19 +13,15 @@
 /* ForTZS imports, named by the henkaku wiki (SceSysmem, SceSysroot) */
 #define sceKernelVAtoPAForTZS			SceSysmemForTZS_1DEADF6C
 #define sceKernelFreeUncacheHeapMemoryForTZS	SceSysmemForTZS_2F18E288
-#define sceKernelFreeHeapMemoryForTZS		SceSysmemForTZS_42FB5B12
 #define sceKernelAllocHeapMemoryForTZS		SceSysmemForTZS_473871D8
 #define sceKernelCreateHeapForTZS		SceSysmemForTZS_56A16D84
-#define sceKernelDeleteHeapForTZS		SceSysmemForTZS_624454BC
 #define sceKernelAllocUncacheHeapMemoryWithOptionForTZS SceSysmemForTZS_6A3FBAF0
-#define sceKernelVARangeToPAVectorForTZS	SceSysmemForTZS_9D43E416
 #define sceKernelSysrootGetSharedMemoryForTZS	SceSysrootForTZS_1C96096F
 #define sceKernelSysrootGetKblParamForTZS	SceSysrootForTZS_29C1049E
 #define sceKernelSysrootSetModulePrivateForTZS	SceSysrootForTZS_EA572BD9
 #define SceDebugForDriver_35A35322			SceDebugForTZS_2F9B8AA8
 /* ForTZS imports: the names of their 0.990 stubs, os0's for the debug ones */
 #define sceKernelDcacheCleanRange		SceCpuForTZS_190D96D5
-#define sceKernelCpuId				SceCpuForTZS_44C423D3
 #define SceCpuForDriver_BF82DEB2		SceCpuForTZS_71FD9AB5
 #define SceCpuForDriver_27C0B340 SceCpuForTZS_ACF209F3
 #define sceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
@@ -52,18 +48,11 @@
 #include <smsc_proxy/smsc_proxy.h>
 #include <sysmem/cpu.h>
 
-/* the compiler's stack-protector symbols are the ForTZS sysclib ones here */
-__asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"
-	".set __stack_chk_guard, SceSysclibForTZS_BA505B15");
-
 int sceKernelVAtoPAForTZS(const void *va, uintptr_t *pa);
-int sceKernelVARangeToPAVectorForTZS(const SceKernelVARange *range, SceKernelPAVector *vector);
 void *sceKernelAllocUncacheHeapMemoryWithOptionForTZS(SceSize size, SceAllocOpt *opt);
 int sceKernelFreeUncacheHeapMemoryForTZS(void *ptr);
 void *sceKernelAllocHeapMemoryForTZS(SceUID heap, SceSize size);
-int sceKernelFreeHeapMemoryForTZS(SceUID heap, void *ptr);
 SceUID sceKernelCreateHeapForTZS(const char *name, SceSize size, SceKernelHeapCreateOpt *opt);
-int sceKernelDeleteHeapForTZS(SceUID heap);
 void *sceKernelSysrootGetSharedMemoryForTZS(void);
 int sceKernelSysrootSetModulePrivateForTZS(int index, void *data);
 const SceKblParam *sceKernelSysrootGetKblParamForTZS(void);

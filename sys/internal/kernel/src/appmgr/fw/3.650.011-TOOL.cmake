@@ -545,7 +545,7 @@ set(MODULE_IMPORT_FUNCS
 	scePowerRequestStandby
 	SceAudioForDriver_3440C1CA
 	SceAudioForDriver_629261CD
-	SceAudioForDriver_DB1C4A83
+	sceAudioOutSetAdoptMode
 	SceAudioForDriver_E87902DF
 	SceAudioForDriver_F07D34C2
 	SceDisplayForDriver_289D82FE

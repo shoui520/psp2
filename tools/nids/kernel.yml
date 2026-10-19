@@ -108,7 +108,6 @@ modules:
         functions:
           SceAudioForDriver_134C96C1: 0x134C96C1
           SceAudioForDriver_15FB30DF: 0x15FB30DF
-          SceAudioForDriver_216D8A91: 0x216D8A91
           SceAudioForDriver_28B3AF10: 0x28B3AF10
           SceAudioForDriver_3440C1CA: 0x3440C1CA
           SceAudioForDriver_37517CC9: 0x37517CC9
@@ -118,14 +117,15 @@ modules:
           SceAudioForDriver_7E0E1331: 0x7E0E1331
           SceAudioForDriver_81EB0AE5: 0x81EB0AE5
           SceAudioForDriver_85987B88: 0x85987B88
-          SceAudioForDriver_8D0AE24F: 0x8D0AE24F
           SceAudioForDriver_A8C38998: 0xA8C38998
           SceAudioForDriver_AC9383D0: 0xAC9383D0
           SceAudioForDriver_B05D5B28: 0xB05D5B28
-          SceAudioForDriver_DB1C4A83: 0xDB1C4A83
           SceAudioForDriver_E87902DF: 0xE87902DF
           SceAudioForDriver_F07D34C2: 0xF07D34C2
           SceAudioForDriver_FC375BAC: 0xFC375BAC
+          sceAudioOutSetAdoptMode: 0xDB1C4A83
+          sceAudioOutSetAlcMode: 0x216D8A91
+          sceAudioOutSetEffectType: 0x8D0AE24F
   SceAudioin:
     nid: 0x00000000
     libraries:
@@ -134,14 +134,14 @@ modules:
         nid: 0x60928C22
         functions:
           SceAudioInForDriver_005A2A31: 0x005A2A31
-          SceAudioInForDriver_0AB2743C: 0x0AB2743C
           SceAudioInForDriver_197CAA1B: 0x197CAA1B
-          SceAudioInForDriver_313C969A: 0x313C969A
           SceAudioInForDriver_3D164387: 0x3D164387
           SceAudioInForDriver_3EC79053: 0x3EC79053
-          SceAudioInForDriver_9C7404BF: 0x9C7404BF
           SceAudioInForDriver_E4042F6F: 0xE4042F6F
           SceAudioInForDriver_FB46FA10: 0xFB46FA10
+          sceAudioInInput: 0x0AB2743C
+          sceAudioInOpenPort: 0x9C7404BF
+          sceAudioInReleasePort: 0x313C969A
           sceAudioInSelectInput: 0x44A497F8
   SceAvcodec:
     nid: 0x00000000
@@ -264,67 +264,67 @@ modules:
         functions:
           SceBbmcForDriver_009C73D2: 0x009C73D2
           SceBbmcForDriver_07ADDA90: 0x07ADDA90
-          SceBbmcForDriver_0819A4DD: 0x0819A4DD
-          SceBbmcForDriver_0AF6520F: 0x0AF6520F
-          SceBbmcForDriver_192D641F: 0x192D641F
-          SceBbmcForDriver_1B122CE5: 0x1B122CE5
           SceBbmcForDriver_24EE6E9C: 0x24EE6E9C
           SceBbmcForDriver_2930DB51: 0x2930DB51
-          SceBbmcForDriver_2CD4131A: 0x2CD4131A
-          SceBbmcForDriver_393E70CB: 0x393E70CB
           SceBbmcForDriver_399EF002: 0x399EF002
           SceBbmcForDriver_3D06FDB0: 0x3D06FDB0
           SceBbmcForDriver_3D27000A: 0x3D27000A
           SceBbmcForDriver_4281E476: 0x4281E476
-          SceBbmcForDriver_435858B1: 0x435858B1
-          SceBbmcForDriver_44217A55: 0x44217A55
-          SceBbmcForDriver_454DF20B: 0x454DF20B
-          SceBbmcForDriver_46C5F794: 0x46C5F794
           SceBbmcForDriver_503C7E0B: 0x503C7E0B
-          SceBbmcForDriver_580A3C06: 0x580A3C06
           SceBbmcForDriver_683D19BF: 0x683D19BF
-          SceBbmcForDriver_6A56F88C: 0x6A56F88C
           SceBbmcForDriver_6AD4053A: 0x6AD4053A
-          SceBbmcForDriver_6F3697F6: 0x6F3697F6
           SceBbmcForDriver_739274F3: 0x739274F3
           SceBbmcForDriver_75FA68D3: 0x75FA68D3
-          SceBbmcForDriver_77030C3C: 0x77030C3C
-          SceBbmcForDriver_7CB72009: 0x7CB72009
           SceBbmcForDriver_7EA964B6: 0x7EA964B6
           SceBbmcForDriver_864E6CA0: 0x864E6CA0
-          SceBbmcForDriver_8820F7C4: 0x8820F7C4
-          SceBbmcForDriver_891AFA0C: 0x891AFA0C
-          SceBbmcForDriver_8AAC6F1E: 0x8AAC6F1E
-          SceBbmcForDriver_902D3CAC: 0x902D3CAC
           SceBbmcForDriver_92D7C12C: 0x92D7C12C
           SceBbmcForDriver_93E5345A: 0x93E5345A
-          SceBbmcForDriver_94A31A9C: 0x94A31A9C
-          SceBbmcForDriver_9611C253: 0x9611C253
-          SceBbmcForDriver_A41FA509: 0xA41FA509
-          SceBbmcForDriver_A5E182D0: 0xA5E182D0
-          SceBbmcForDriver_A9467106: 0xA9467106
           SceBbmcForDriver_A9CF664F: 0xA9CF664F
-          SceBbmcForDriver_ACB0EC17: 0xACB0EC17
           SceBbmcForDriver_B17A056F: 0xB17A056F
           SceBbmcForDriver_B7E650A9: 0xB7E650A9
           SceBbmcForDriver_BC3C8942: 0xBC3C8942
           SceBbmcForDriver_BF550F4A: 0xBF550F4A
-          SceBbmcForDriver_C35ECB1F: 0xC35ECB1F
-          SceBbmcForDriver_C835DB15: 0xC835DB15
           SceBbmcForDriver_D16D0845: 0xD16D0845
           SceBbmcForDriver_D288E771: 0xD288E771
           SceBbmcForDriver_D98DB926: 0xD98DB926
-          SceBbmcForDriver_DCE38C84: 0xDCE38C84
           SceBbmcForDriver_E09808A2: 0xE09808A2
-          SceBbmcForDriver_E39F8435: 0xE39F8435
-          SceBbmcForDriver_E767F32C: 0xE767F32C
-          SceBbmcForDriver_E83B73CA: 0xE83B73CA
-          SceBbmcForDriver_E89B746D: 0xE89B746D
           SceBbmcForDriver_EBC5D3DB: 0xEBC5D3DB
-          SceBbmcForDriver_F2DABC5B: 0xF2DABC5B
           SceBbmcForDriver_F4C8482D: 0xF4C8482D
           SceBbmcForDriver_FB3DA35E: 0xFB3DA35E
           SceBbmcForDriver_FCF6A1EA: 0xFCF6A1EA
+          sceBbmcClearEventForDriver: 0xE83B73CA
+          sceBbmcDLGetSwdlErrorForDriver: 0x891AFA0C
+          sceBbmcDLQBackupEFSNVForDriver: 0x6F3697F6
+          sceBbmcDLQConfirmChangePartitionForDriver: 0x44217A55
+          sceBbmcDLQDownloadSafeImageForDriver: 0xC835DB15
+          sceBbmcDLQDownloadSlotImageForDriver: 0x2CD4131A
+          sceBbmcDLQRestoreEFSNVForDriver: 0x8820F7C4
+          sceBbmcDLUpdaterContinueForDriver: 0x94A31A9C
+          sceBbmcDLUpdaterGetArchiveVersionForDriver: 0x7CB72009
+          sceBbmcDLUpdaterGetPkgIdForDriver: 0xE89B746D
+          sceBbmcDLUpdaterGetSequenceForDriver: 0x6A56F88C
+          sceBbmcDLUpdaterStartForDriver: 0xACB0EC17
+          sceBbmcGetDriverInfoForDriver: 0xF2DABC5B
+          sceBbmcGetNetworkInfoForDriver: 0xA9467106
+          sceBbmcGetPinStatusForDriver: 0xA5E182D0
+          sceBbmcReserveOperationModeForDriver: 0xA41FA509
+          sceBbmcResumeSubscriberCallbackForDriver: 0x435858B1
+          sceBbmcSMSGetListDoneForDriver: 0xC35ECB1F
+          sceBbmcSMSGetListStartForDriver: 0x454DF20B
+          sceBbmcSMSReadAckForDriver: 0x1B122CE5
+          sceBbmcSMSReadDoneForDriver: 0x0819A4DD
+          sceBbmcSMSReadStartForDriver: 0x9611C253
+          sceBbmcSMSSendForDriver: 0x0AF6520F
+          sceBbmcSetLPMModeForDriver: 0xE39F8435
+          sceBbmcSetupGetValueDoneForDriver: 0xE767F32C
+          sceBbmcSetupGetValueStartForDriver: 0x902D3CAC
+          sceBbmcSetupSetValueForDriver: 0x77030C3C
+          sceBbmcSubscribeFeatureIdForDriver: 0x580A3C06
+          sceBbmcTurnOffForDriver: 0x393E70CB
+          sceBbmcTurnOnForDriver: 0x192D641F
+          sceBbmcUnblockPinForDriver: 0x46C5F794
+          sceBbmcUnsubscribeFeatureForDriver: 0xDCE38C84
+          sceBbmcVerifyPinForDriver: 0x8AAC6F1E
   SceBt:
     nid: 0x00000000
     libraries:
@@ -630,18 +630,18 @@ modules:
         nid: 0x5E323A42
         functions:
           SceDeci4pCpupForDriver_02CDA82C: 0x02CDA82C
-          SceDeci4pCpupForDriver_2015C7CB: 0x2015C7CB
           SceDeci4pCpupForDriver_2BAD7B39: 0x2BAD7B39
-          SceDeci4pCpupForDriver_4939DA45: 0x4939DA45
           SceDeci4pCpupForDriver_765F7234: 0x765F7234
-          SceDeci4pCpupForDriver_7998FFD8: 0x7998FFD8
-          SceDeci4pCpupForDriver_8139AD4E: 0x8139AD4E
-          SceDeci4pCpupForDriver_90339379: 0x90339379
-          SceDeci4pCpupForDriver_BBB991CD: 0xBBB991CD
-          SceDeci4pCpupForDriver_C0AB956B: 0xC0AB956B
-          SceDeci4pCpupForDriver_D78403C8: 0xD78403C8
-          SceDeci4pCpupForDriver_DAC4F630: 0xDAC4F630
-          SceDeci4pCpupForDriver_DE07478F: 0xDE07478F
+          sceDeci4pCpupExecCommand: 0xBBB991CD
+          sceDeci4pCpupGetCpSerialIdForDriver: 0x8139AD4E
+          sceDeci4pCpupGetProgressForDriver: 0x7998FFD8
+          sceDeci4pCpupGetRtcForDriver: 0x2015C7CB
+          sceDeci4pCpupInquireVersionForDriver: 0xC0AB956B
+          sceDeci4pCpupSetRtcForDriver: 0xDAC4F630
+          sceDeci4pCpupSetRtcWithActivationKeyForDriver: 0x4939DA45
+          sceDeci4pCpupStartUpdateForDriver: 0xDE07478F
+          sceDeci4pCpupTransferUpdatePackageForDriver: 0x90339379
+          sceDeci4pCpupTriggerUpdateForDriver: 0xD78403C8
   SceDeci4pDbgp:
     nid: 0x00000000
     libraries:
@@ -3069,8 +3069,8 @@ modules:
         kernel: true
         nid: 0x5A2E5C09
         functions:
-          SceSblSmSchedForTZS_AB169029: 0xAB169029
-          SceSblSmSchedForTZS_E72F2886: 0xE72F2886
+          sceSblSmSchedInitForTZS: 0xAB169029
+          sceSblSmSchedStopForTZS: 0xE72F2886
   SceSblSmschedProxy:
     nid: 0x00000000
     libraries:
@@ -3725,12 +3725,12 @@ modules:
         kernel: true
         nid: 0xC516B23E
         functions:
+          CpuL2CacheSyncCore: 0x2B6403F8
+          CpuL2CleanInvalidateAll: 0x9E4C0D0D
           SceCpuForTZS_0A15B41C: 0x0A15B41C
           SceCpuForTZS_17A88E69: 0x17A88E69
           SceCpuForTZS_190D96D5: 0x190D96D5
-          SceCpuForTZS_2B6403F8: 0x2B6403F8
           SceCpuForTZS_31E78A4B: 0x31E78A4B
-          SceCpuForTZS_44C423D3: 0x44C423D3
           SceCpuForTZS_4FED4BCE: 0x4FED4BCE
           SceCpuForTZS_596784E9: 0x596784E9
           SceCpuForTZS_71FD9AB5: 0x71FD9AB5
@@ -3738,7 +3738,6 @@ modules:
           SceCpuForTZS_75D87321: 0x75D87321
           SceCpuForTZS_7A5373EB: 0x7A5373EB
           SceCpuForTZS_7CCE9480: 0x7CCE9480
-          SceCpuForTZS_9E4C0D0D: 0x9E4C0D0D
           SceCpuForTZS_A5965CBF: 0xA5965CBF
           SceCpuForTZS_ACF209F3: 0xACF209F3
           SceCpuForTZS_B421FAFD: 0xB421FAFD
@@ -3749,6 +3748,7 @@ modules:
           SceCpuForTZS_D4E7413D: 0xD4E7413D
           SceCpuForTZS_D67A4356: 0xD67A4356
           SceCpuForTZS_EFD6F289: 0xEFD6F289
+          sceKernelCpuId: 0x44C423D3
       SceDebugForDriver:
         kernel: true
         nid: 0x88758561
@@ -4061,11 +4061,11 @@ modules:
         nid: 0xC839BB78
         functions:
           SceSysclibForTZS_361850BB: 0x361850BB
-          SceSysclibForTZS_956DB750: 0x956DB750
-          SceSysclibForTZS_BE3AF2EE: 0xBE3AF2EE
-          SceSysclibForTZS_E5457B97: 0xE5457B97
+          __stack_chk_fail: 0xE5457B97
+          memcpy: 0xBE3AF2EE
+          memset: 0x956DB750
         variables:
-          SceSysclibForTZS_BA505B15: 0xBA505B15
+          __stack_chk_guard: 0xBA505B15
       SceSysmemForDriver:
         kernel: true
         nid: 0x6F25E18A
@@ -4361,24 +4361,24 @@ modules:
         kernel: true
         nid: 0x08680060
         functions:
-          SceSysmemForTZS_0028E26C: 0x0028E26C
           SceSysmemForTZS_038EAEEE: 0x038EAEEE
           SceSysmemForTZS_1DEADF6C: 0x1DEADF6C
           SceSysmemForTZS_29DE887D: 0x29DE887D
           SceSysmemForTZS_2F18E288: 0x2F18E288
           SceSysmemForTZS_31273DC7: 0x31273DC7
-          SceSysmemForTZS_402EB970: 0x402EB970
           SceSysmemForTZS_42AD34AB: 0x42AD34AB
-          SceSysmemForTZS_42FB5B12: 0x42FB5B12
           SceSysmemForTZS_473871D8: 0x473871D8
           SceSysmemForTZS_56A16D84: 0x56A16D84
-          SceSysmemForTZS_624454BC: 0x624454BC
           SceSysmemForTZS_658EACE3: 0x658EACE3
           SceSysmemForTZS_6A3FBAF0: 0x6A3FBAF0
-          SceSysmemForTZS_9D43E416: 0x9D43E416
-          SceSysmemForTZS_E1DEDFF4: 0xE1DEDFF4
           SceSysmemForTZS_EA712806: 0xEA712806
           SceSysmemForTZS_F459D09D: 0xF459D09D
+          sceKernelAllocMemBlockForKernel: 0x402EB970
+          sceKernelAllocPartitionMemBlock: 0x0028E26C
+          sceKernelDeleteHeap: 0x624454BC
+          sceKernelFreeHeapMemory: 0x42FB5B12
+          sceKernelGetMemBlockBase: 0xE1DEDFF4
+          sceKernelVARangeToPAVector: 0x9D43E416
       SceSysrootForDriver:
         kernel: true
         nid: 0x2ED7F97A
@@ -4914,12 +4914,12 @@ modules:
         kernel: true
         nid: 0x15243EC5
         functions:
-          SceUsbMassForDriver_081CA197: 0x081CA197
           SceUsbMassForDriver_3C821E99: 0x3C821E99
           SceUsbMassForDriver_7833D935: 0x7833D935
-          SceUsbMassForDriver_B80D1DF8: 0xB80D1DF8
-          SceUsbMassForDriver_D989A9F6: 0xD989A9F6
           SceUsbMassForDriver_F2BAB182: 0xF2BAB182
+          _sceUsbMassGetDevInfo: 0xD989A9F6
+          _sceUsbMassReadSector: 0xB80D1DF8
+          _sceUsbMassWriteSector: 0x081CA197
   SceUsbMtp:
     nid: 0x00000000
     libraries:

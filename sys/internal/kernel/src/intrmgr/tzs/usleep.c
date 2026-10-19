@@ -75,7 +75,7 @@ static int UsleepIntrHandler(int intrCode, void *userCtx)
 
 void sceKernelUsleep(SceUInt32 usec)
 {
-	int cpu = SceCpuForTZS_44C423D3();
+	int cpu = sceKernelCpuId();
 	SceKernelIntrStatus intr;
 	SceUInt32 wake;
 
@@ -115,7 +115,7 @@ int InitUsleepTimer(int remap)
 	void *base;
 	int ret;
 
-	if (SceCpuForTZS_44C423D3() != 0)
+	if (sceKernelCpuId() != 0)
 		return 0;
 	if (remap) {
 		memset(&opt, 0, sizeof(opt));

@@ -41,8 +41,8 @@ int BbmcUtilCallback(int notifyId, int notifyCount, int notifyArg, void *userDat
 	if (events & 0x800000)
 		pattern |= 0x800000;
 	if (events)
-		SceBbmcForDriver_E83B73CA(updateBbmcContext.subscriber.subscriberId, events);
+		sceBbmcClearEventForDriver(updateBbmcContext.subscriber.subscriberId, events);
 	if (pattern)
 		sceKernelSetEventFlag(updateBbmcContext.eventFlagId, pattern);
-	return SceBbmcForDriver_435858B1(updateBbmcContext.subscriber.subscriberId);
+	return sceBbmcResumeSubscriberCallbackForDriver(updateBbmcContext.subscriber.subscriberId);
 }

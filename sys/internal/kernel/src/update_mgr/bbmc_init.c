@@ -2,15 +2,6 @@
 #include <threadmgr/threadmgr.h>
 #include "bbmc_update.h"
 
-int SceBbmcForDriver_580A3C06(BbmcSubscribeFeatureIdParam *param);
-int SceBbmcForDriver_F2DABC5B(int subscriber, BbmcDriverInfo *info);
-int SceBbmcForDriver_A41FA509(int subscriber, unsigned int operationMode);
-int SceBbmcForDriver_192D641F(int subscriber);
-int SceBbmcForDriver_393E70CB(int subscriber);
-int SceBbmcForDriver_891AFA0C(int subscriber, uint32_t *status);
-int SceBbmcForDriver_6A56F88C(int subscriber, uint32_t *first,
-	uint32_t *second, BbmcDriverInfo *info);
-
 int BbmcUtilInitialize(void)
 {
 	unsigned int pattern;
@@ -50,7 +41,7 @@ int SceSblUsComUtilCallbackHandler(SceSize args, void *argp)
 {
 	union {
 		BbmcDriverInfo driverInfo;
-		uint32_t status;
+		SceInt32 error;
 	} reply;
 	uint32_t pattern = 0, first, second, events;
 	UpdateUtilNodeStatus *status;
@@ -67,7 +58,7 @@ int SceSblUsComUtilCallbackHandler(SceSize args, void *argp)
 	if (result < 0)
 		goto deleteEvent;
 	updateBbmcContext.subscriber.callbackId = result;
-	result = SceBbmcForDriver_580A3C06(&updateBbmcContext.subscriber);
+	result = sceBbmcSubscribeFeatureIdForDriver(&updateBbmcContext.subscriber);
 	if (result < 0) {
 		sceKernelDeleteCallback(updateBbmcContext.subscriber.callbackId);
 		goto deleteEvent;
@@ -93,7 +84,7 @@ int SceSblUsComUtilCallbackHandler(SceSize args, void *argp)
 		}
 		switch (updateBbmcContext.state) {
 		case 0:
-			operationResult = SceBbmcForDriver_F2DABC5B(
+			operationResult = sceBbmcGetDriverInfoForDriver(
 				updateBbmcContext.subscriber.subscriberId, &reply.driverInfo);
 			if (operationResult < 0)
 				goto failure;
@@ -102,7 +93,7 @@ int SceSblUsComUtilCallbackHandler(SceSize args, void *argp)
 				if (reply.driverInfo.currentState <= 1 ||
 				    reply.driverInfo.secondBootReply - 1 <= 1 ||
 				    reply.driverInfo.secondBootReply == 6) {
-					operationResult = SceBbmcForDriver_A41FA509(
+					operationResult = sceBbmcReserveOperationModeForDriver(
 						updateBbmcContext.subscriber.subscriberId, 1);
 					if (operationResult < 0)
 						goto failure;
@@ -114,12 +105,12 @@ int SceSblUsComUtilCallbackHandler(SceSize args, void *argp)
 			if (events & 0x10000) {
 				events &= ~0x10000u;
 				if (reply.driverInfo.currentState <= 0) {
-					operationResult = SceBbmcForDriver_192D641F(
+					operationResult = sceBbmcTurnOnForDriver(
 						updateBbmcContext.subscriber.subscriberId);
 					if (operationResult < 0)
 						goto failure;
 				} else {
-					operationResult = SceBbmcForDriver_393E70CB(
+					operationResult = sceBbmcTurnOffForDriver(
 						updateBbmcContext.subscriber.subscriberId);
 					if (operationResult != (int)0x80330003 && operationResult < 0)
 						goto failure;
@@ -127,7 +118,7 @@ int SceSblUsComUtilCallbackHandler(SceSize args, void *argp)
 			}
 			if (events & 0x20000) {
 				events &= ~0x20000u;
-				operationResult = SceBbmcForDriver_192D641F(
+				operationResult = sceBbmcTurnOnForDriver(
 					updateBbmcContext.subscriber.subscriberId);
 				if (operationResult < 0)
 					goto failure;
@@ -140,7 +131,7 @@ int SceSblUsComUtilCallbackHandler(SceSize args, void *argp)
 			}
 			break;
 		case 1:
-			operationResult = SceBbmcForDriver_F2DABC5B(
+			operationResult = sceBbmcGetDriverInfoForDriver(
 				updateBbmcContext.subscriber.subscriberId, &reply.driverInfo);
 			if (operationResult < 0)
 				goto failure;
@@ -162,9 +153,9 @@ int SceSblUsComUtilCallbackHandler(SceSize args, void *argp)
 				events &= 0x80ffefff;
 			}
 			if (events & 0x2000) {
-				SceBbmcForDriver_891AFA0C(updateBbmcContext.subscriber.subscriberId,
-					&reply.status);
-				operationResult = reply.status;
+				sceBbmcDLGetSwdlErrorForDriver(updateBbmcContext.subscriber.subscriberId,
+					&reply.error);
+				operationResult = reply.error;
 			} else if (events & 0x800000) {
 				updateBbmcContext.transferDone = 1;
 				operationResult = 0;
@@ -177,7 +168,7 @@ int SceSblUsComUtilCallbackHandler(SceSize args, void *argp)
 				}
 				operationResult = 0;
 				if (events & 0x40000)
-					SceBbmcForDriver_6A56F88C(
+					sceBbmcDLUpdaterGetSequenceForDriver(
 						updateBbmcContext.subscriber.subscriberId,
 						&first, &second, &reply.driverInfo);
 			}

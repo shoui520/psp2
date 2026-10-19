@@ -91,7 +91,6 @@ _Static_assert(offsetof(BbmcSignalStrengthInfo, ecio) == 120,
 	"signal strength ECIO list");
 _Static_assert(offsetof(BbmcSignalStrengthInfo, errorRates) == 156,
 	"signal strength error rate list");
-int sceBbmcGetNetworkInfoForDriver(BbmcNetworkInfo *info);
 
 _Static_assert(sizeof(BbmcNetworkInfo) == 456, "network info size");
 _Static_assert(offsetof(BbmcNetworkInfo, serving) == 4, "network serving system");

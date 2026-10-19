@@ -42,7 +42,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForTZS_D4E6D8E8
 	SceSysrootForTZS_EA572BD9
 	SceCpuForTZS_17A88E69
-	SceCpuForTZS_44C423D3
+	sceKernelCpuId
 	SceCpuForTZS_596784E9
 	SceCpuForTZS_71FD9AB5
 	SceCpuForTZS_A5965CBF
@@ -54,9 +54,9 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForTZS_618F89E6
 	SceDebugForTZS_D26EB4BB
 	SceDebugForTZS_F851BA4F
-	SceSysclibForTZS_BE3AF2EE
-	SceSysclibForTZS_E5457B97
+	memcpy
+	__stack_chk_fail
 )
 set(MODULE_IMPORT_VARS
-	SceSysclibForTZS_BA505B15
+	__stack_chk_guard
 )

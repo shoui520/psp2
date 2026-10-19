@@ -8,6 +8,7 @@
 #include <intrmgr/syscall.h>
 #include "post_ss_mgr_internal.h"
 #include <post_ss_mgr/sblrtcmgr.h>
+#include <deci4p_cpup/cpup.h>
 
 #define SCE_SBL_ERROR_RTC_NO_CP			0x800f1002	/* names unknown */
 #define SCE_SBL_ERROR_RTC_CP			0x800f1005
@@ -26,15 +27,9 @@
 
 #define RTC_CP_SERIAL_ID_SIZE	0x80
 
-int SceDeci4pCpupForDriver_2015C7CB(SceUInt32 *time, int physical);
-int SceDeci4pCpupForDriver_C0AB956B(SceUInt32 *version, SceUInt32 *unk1, SceUInt32 *unk2);
-int SceDeci4pCpupForDriver_DAC4F630(SceUInt32 time, int physical);
-int SceDeci4pCpupForDriver_4939DA45(SceUInt32 time, int physical, const void *key);
-int SceDeci4pCpupForDriver_8139AD4E(void *serialId, SceSize *size);
-
 /* SceDeci4pCpup's import: NULL when no CP (SceDeci4pCpup) is there to ask */
 int (*g_rtcMgrCpup)(SceUInt32 *version, SceUInt32 *unk1, SceUInt32 *unk2) =
-	SceDeci4pCpupForDriver_C0AB956B;	/* name unknown */
+	sceDeci4pCpupInquireVersionForDriver;	/* name unknown */
 SceUID g_rtcMgrCpMutex = -1;		/* name unknown */
 
 int rtcMgrGetCpRtc(SceUInt32 *time, int physical)	/* name unknown */
@@ -44,7 +39,7 @@ int rtcMgrGetCpRtc(SceUInt32 *time, int physical)	/* name unknown */
 	if (g_rtcMgrCpup == NULL)
 		return SCE_SBL_ERROR_RTC_NO_CP;
 	SceKernelSuspendForDriver_4DF40893(0);
-	ret = SceDeci4pCpupForDriver_2015C7CB(time, physical);
+	ret = sceDeci4pCpupGetRtcForDriver(time, physical);
 	SceKernelSuspendForDriver_2BB92967(0);
 	return ret == 0 ? 0 : SCE_SBL_ERROR_RTC_CP;
 }
@@ -57,7 +52,7 @@ int _sceSblRtcMgrSetCpRtc(SceUInt32 time, int physical, const void *key)	/* name
 	if (g_rtcMgrCpup == NULL)
 		return SCE_SBL_ERROR_RTC_NO_CP;
 	SceKernelSuspendForDriver_4DF40893(0);
-	ret = SceDeci4pCpupForDriver_C0AB956B(&version, &unk1, &unk2);
+	ret = sceDeci4pCpupInquireVersionForDriver(&version, &unk1, &unk2);
 	SceKernelSuspendForDriver_2BB92967(0);
 	if (ret != 0)
 		return SCE_SBL_ERROR_RTC_CP_VERSION;
@@ -66,9 +61,9 @@ int _sceSblRtcMgrSetCpRtc(SceUInt32 time, int physical, const void *key)	/* name
 		return ret;
 	SceKernelSuspendForDriver_4DF40893(0);
 	if (key == NULL)
-		SceDeci4pCpupForDriver_DAC4F630(time, physical);
+		sceDeci4pCpupSetRtcForDriver(time, physical);
 	else if (version >= RTC_CP_KEY_VERSION)
-		SceDeci4pCpupForDriver_4939DA45(time, physical, key);
+		sceDeci4pCpupSetRtcWithActivationKeyForDriver(time, physical, key);
 	SceKernelSuspendForDriver_2BB92967(0);
 	return sceKernelUnlockMutex(g_rtcMgrCpMutex, 1);
 }
@@ -124,7 +119,7 @@ int rtcMgrGetCpSerialId(void *serialId)	/* name unknown */
 	if (g_rtcMgrCpup == NULL)
 		return SCE_SBL_ERROR_RTC_NO_CP;
 	SceKernelSuspendForDriver_4DF40893(0);
-	ret = SceDeci4pCpupForDriver_C0AB956B(&version, &unk1, &unk2);
+	ret = sceDeci4pCpupInquireVersionForDriver(&version, &unk1, &unk2);
 	SceKernelSuspendForDriver_2BB92967(0);
 	if (ret != 0)
 		return SCE_SBL_ERROR_RTC_CP_VERSION;
@@ -132,7 +127,7 @@ int rtcMgrGetCpSerialId(void *serialId)	/* name unknown */
 		return SCE_SBL_ERROR_RTC_UNSUPPORTED;
 	SceKernelSuspendForDriver_4DF40893(0);
 	size = RTC_CP_SERIAL_ID_SIZE;
-	ret = SceDeci4pCpupForDriver_8139AD4E(serialId, &size);
+	ret = sceDeci4pCpupGetCpSerialIdForDriver(serialId, &size);
 	SceKernelSuspendForDriver_2BB92967(0);
 	return ret == 0 ? 0 : SCE_SBL_ERROR_RTC_CP;
 }

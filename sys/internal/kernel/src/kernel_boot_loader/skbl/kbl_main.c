@@ -49,7 +49,6 @@ int sceKernelMMUMapSection(uint32_t *l1, uint32_t type, uint32_t domain, uintptr
 			   uintptr_t pa);
 int sceKernelMMUUnmapSectionWithFlags(uint32_t *l1, uint32_t asid, uintptr_t va,
 				      uint32_t flags);
-void CpuL2CleanInvalidateAll(void);
 SceSize sceArlzDecode(void *dst, SceSize dstSize, const void *src, int flags);
 int sceArlzArmFilter(void *buffer, SceSize size, int flags);
 

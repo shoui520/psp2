@@ -36,20 +36,15 @@ _Static_assert(offsetof(BbmcUtilContext, subscriber) == 12 &&
 extern BbmcUtilContext updateBbmcContext;
 extern int updateBbmcInitialized;
 
-int SceBbmcForDriver_E83B73CA(int subscriber, unsigned int events);
-int SceBbmcForDriver_435858B1(int subscriber);
 int BbmcUtilCallback(int notifyId, int notifyCount, int notifyArg, void *userData);
 int SceSblUsComUtilCallbackHandler(SceSize args, void *argp);
 int BbmcUtilInitialize(void);
-int SceBbmcForDriver_E89B746D(int subscriber, uint32_t *hardwareInfo)
-	__attribute__((weak));
 int SceBbmcForDriver_4281E476(int subscriber, uint32_t *status);
-int SceBbmcForDriver_ACB0EC17(int subscriber, const BbmcUpdatePackage *package);
-int SceBbmcForDriver_94A31A9C(int subscriber, const BbmcUpdatePackage *package);
-
-int SceBbmcForDriver_7CB72009(int subscriber, uint32_t *version)
-	__attribute__((weak));
 int BbmcUtilIsAvailable(void);
+
+/* weak imports: the BBMC driver is not always loaded */
+#pragma weak sceBbmcDLUpdaterGetPkgIdForDriver
+#pragma weak sceBbmcDLUpdaterGetArchiveVersionForDriver
 
 /* bbmc_status.c */
 int BbmcUtilGetStatus(uint32_t *status);

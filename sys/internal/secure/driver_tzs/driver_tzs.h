@@ -11,15 +11,11 @@
 #pragma once
 
 /* ForTZS imports: names unknown, the os0 function each one stands for */
-#define sceKernelAllocMemBlockForKernel			SceSysmemForTZS_402EB970
-#define sceKernelGetMemBlockBase		SceSysmemForTZS_E1DEDFF4
 #define SceSysmemForDriver_009E1C61			SceSysmemForTZS_658EACE3
 #define SceDipswForDriver_A98FC2FD			SceDipswForTZS_A98FC2FD
 #define SceCpuForDriver_D32ACE9E	SceCpuForTZS_D67A4356
 #define sceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
 #define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB
-#define memset					SceSysclibForTZS_956DB750
-#define memcpy					SceSysclibForTZS_BE3AF2EE
 
 /* ForTZS imports named by the henkaku wiki (SceSysmem page) */
 #define sceKernelVAtoPAForTZS			SceSysmemForTZS_1DEADF6C
@@ -49,10 +45,6 @@
 #undef SCE_DBG_PRINTF
 #define SCE_DBG_PRINTF(...)		((void)0)
 #endif
-
-/* the compiler's stack-protector symbols are the ForTZS sysclib ones here */
-__asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"
-	".set __stack_chk_guard, SceSysclibForTZS_BA505B15");
 
 int sceKernelVAtoPAForTZS(const void *va, uintptr_t *pa);
 int sceKernelCpuAtomicOrAndGet32(volatile int *addr, int value);

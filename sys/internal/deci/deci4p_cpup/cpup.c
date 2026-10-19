@@ -15,6 +15,7 @@
 #include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>
 #include <deci4p_dfmgr/deci4p.h>
+#include <deci4p_cpup/cpup.h>
 
 #define CPUP_PROTOCOL		0x3000
 #define CPUP_BUF_SIZE		0x11000

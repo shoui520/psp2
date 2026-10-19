@@ -23,8 +23,6 @@ ScePl310Registers *volatile s_cpuL2RegisterBase =
 
 #ifndef SYSMEM_TZS
 
-void CpuL2CacheSyncCore(void);
-
 #if defined(SYSMEM_SKBL)
 void CpuL2CacheSetup(void);
 void CpuL2CacheDisable(void);

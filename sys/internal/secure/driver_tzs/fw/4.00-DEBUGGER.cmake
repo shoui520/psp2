@@ -48,9 +48,9 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	SceSysmemForTZS_038EAEEE
 	SceSysmemForTZS_1DEADF6C
-	SceSysmemForTZS_402EB970
+	sceKernelAllocMemBlockForKernel
 	SceSysmemForTZS_658EACE3
-	SceSysmemForTZS_E1DEDFF4
+	sceKernelGetMemBlockBase
 	SceCpuForTZS_4FED4BCE
 	SceCpuForTZS_75D87321
 	SceCpuForTZS_7A5373EB
@@ -60,9 +60,9 @@ set(MODULE_IMPORT_FUNCS
 	SceCpuForTZS_D67A4356
 	SceDebugForTZS_D26EB4BB
 	SceDipswForTZS_A98FC2FD
-	SceSysclibForTZS_956DB750
-	SceSysclibForTZS_BE3AF2EE
-	SceSysclibForTZS_E5457B97
+	memset
+	memcpy
+	__stack_chk_fail
 	sceKernelGenerateSoftIntr
 	sceKernelDisableIntr
 	sceKernelRegisterIntrHandler
@@ -77,5 +77,5 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForTZS_D6FBF445
 )
 set(MODULE_IMPORT_VARS
-	SceSysclibForTZS_BA505B15
+	__stack_chk_guard
 )

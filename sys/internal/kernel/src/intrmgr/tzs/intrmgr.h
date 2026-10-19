@@ -10,8 +10,6 @@
 #pragma once
 
 /* ForTZS imports: names unknown, the os0 function each one stands for */
-#define sceKernelAllocMemBlockForKernel			SceSysmemForTZS_402EB970
-#define sceKernelGetMemBlockBase		SceSysmemForTZS_E1DEDFF4
 #define SceDipswForDriver_A98FC2FD			SceDipswForTZS_A98FC2FD
 #define SceCpuForDriver_BF82DEB2		SceCpuForTZS_71FD9AB5
 #define sceKernelSpinlockLowUnlock		SceCpuForTZS_CD98416C
@@ -20,7 +18,6 @@
 #define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB
 #define SceDebugForDriver_374B7868		SceDebugForTZS_F851BA4F
 #define SceDebugForDriver_FD753E7A			SceDebugForTZS_618F89E6
-#define memset					SceSysclibForTZS_956DB750
 #define ScePmMgrForDriver_2AC815A2			ScePmMgrForTZS_CF554E69
 #define SceDebugForDriver_35A35322			SceDebugForTZS_2F9B8AA8
 #define SceSysmemForDriver_009E1C61			SceSysmemForTZS_658EACE3
@@ -50,12 +47,7 @@
 #define SCE_DBG_ASSERT_FAIL(...)	((void)0)
 #endif
 
-/* the compiler's stack-protector symbols are the ForTZS sysclib ones here */
-__asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"
-	".set __stack_chk_guard, SceSysclibForTZS_BA505B15");
-
 /* ForTZS imports named by the henkaku wiki's SceSysmem and SceExcpmgr pages */
-#define sceKernelAllocPartitionMemBlockForTZS	SceSysmemForTZS_0028E26C
 #define sceKernelAddressSpaceUnmapForTZS	SceSysmemForTZS_31273DC7
 #define sceKernelNameHeapInsertForTZS		SceSysmemForTZS_42AD34AB
 #define sceKernelNameHeapDeleteForTZS		SceSysmemForTZS_F459D09D
@@ -63,13 +55,9 @@ __asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"
 #define sceKernelSysrootSetSharedMemoryForTZS	SceSysrootForTZS_45EEB2E0
 #define sceKernelSysrootSetModulePrivateForTZS	SceSysrootForTZS_EA572BD9
 #define sceKernelL1DcacheCleanInvalidateAll	SceCpuForTZS_0A15B41C
-#define sceKernelCpuWaitL2Cache			SceCpuForTZS_2B6403F8
 #define sceKernelPleFlushRequest		SceCpuForTZS_C4137AED
 #define sceKernelRegisterMonitorEntryForTZS	sceKernelRegisterMonitorEntry
 
-SceUID sceKernelAllocPartitionMemBlockForTZS(SceUID partition, const char *name, SceUInt32 type,
-					     SceSize size,
-					     const SceKernelAllocMemBlockKernelOpt *opt);
 int sceKernelAddressSpaceUnmapForTZS(SceUID addressSpace, SceUInt32 flags, SceUInt32 type,
 				     void *vaddr, SceSize size);
 int sceKernelNameHeapInsertForTZS(const char *name, SceUInt32 flags, char **out);
@@ -78,9 +66,7 @@ void *sceKernelSysrootGetSharedMemoryForTZS(void);
 void sceKernelSysrootSetSharedMemoryForTZS(void *base);
 int sceKernelSysrootSetModulePrivateForTZS(unsigned int slot, void *data);
 void sceKernelL1DcacheCleanInvalidateAll(void);
-int sceKernelCpuWaitL2Cache(void);
 void sceKernelPleFlushRequest(void);
-int SceCpuForTZS_9E4C0D0D(void);			/* before an L2 control change */
 int sceKernelRegisterMonitorEntryForTZS(int vector, void *entry);
 
 /* SKBL builds this module into the secure kernel boot loader (INTRMGR_SKBL) */

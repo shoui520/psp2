@@ -68,7 +68,6 @@ int __vsnprintf_chk(char *destination, size_t size, int flags, size_t capacity,
 /* the stack protector's failure (sprintf_chk.c; noreturn there) */
 void __stack_chk_fail(void);
 void sceLibSspStackChkFail(void);
-void SceSysclibForTZS_E5457B97(void);
 
 /* the AEABI division helpers (signed_division.S, unsigned_division.S, signed_division64.S, ...) */
 int __aeabi_idiv(int numerator, int denominator);

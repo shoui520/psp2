@@ -192,11 +192,11 @@ set(MODULE_IMPORT_FUNCS
 	sceMsifFormat
 	SceMsifForDriver_D0307849
 	SceMsifForDriver_F997286B
-	SceUsbMassForDriver_081CA197
+	_sceUsbMassWriteSector
 	SceUsbMassForDriver_3C821E99
 	SceUsbMassForDriver_7833D935
-	SceUsbMassForDriver_B80D1DF8
-	SceUsbMassForDriver_D989A9F6
+	_sceUsbMassReadSector
+	_sceUsbMassGetDevInfo
 	SceUsbMassForDriver_F2BAB182
 )
 set(MODULE_IMPORT_VARS

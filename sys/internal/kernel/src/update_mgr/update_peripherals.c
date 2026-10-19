@@ -5,10 +5,9 @@
 #include <sysmem/sblaimgr.h>
 #include <touch/touch.h>
 #include <motion/motion_dev.h>
+#include <deci4p_cpup/cpup.h>
 
-int SceDeci4pCpupForDriver_C0AB956B(unsigned int *protocol,
-				 unsigned int *board, unsigned int *version)
-	__attribute__((weak));
+#pragma weak sceDeci4pCpupInquireVersionForDriver
 
 int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp)
 {
@@ -33,9 +32,9 @@ int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp)
 	hardware = 0;
 	firmware = 0;
 	information.dataFlashVersion = 0;
-	useCpup = SceDeci4pCpupForDriver_C0AB956B;
+	useCpup = sceDeci4pCpupInquireVersionForDriver;
 	if (useCpup) {
-		if (SceDeci4pCpupForDriver_C0AB956B(&hardware, &firmware,
+		if (sceDeci4pCpupInquireVersionForDriver(&hardware, &firmware,
 						 &information.dataFlashVersion) != 0) {
 			updateCpupConnected = 0;
 			updateUseCpupService = 0;

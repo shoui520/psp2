@@ -35,11 +35,11 @@ static const LedModeParam sddevWriteEndLed = {
 
 static SceSdstorSddev sddevTables[5];
 
-int SceUsbMassForDriver_D989A9F6(SceUsbMassDevInfo *info)
+int _sceUsbMassGetDevInfo(SceUsbMassDevInfo *info)
 	__attribute__((weak));
-int SceUsbMassForDriver_B80D1DF8(uint32_t sector, void *buffer, uint32_t count)
+int _sceUsbMassReadSector(uint32_t sector, void *buffer, uint32_t count)
 	__attribute__((weak));
-int SceUsbMassForDriver_081CA197(uint32_t sector, void *buffer, uint32_t count)
+int _sceUsbMassWriteSector(uint32_t sector, void *buffer, uint32_t count)
 	__attribute__((weak));
 
 int sddev_power_off(SceSdstorSddev *device)
@@ -334,11 +334,11 @@ initializeSd:
 	if (device->mediaType == 3) {
 		SceUsbMassDevInfo usbInfo;
 
-		if (!SceUsbMassForDriver_D989A9F6) {
+		if (!_sceUsbMassGetDevInfo) {
 			result = 0x80010013;
 			goto failed;
 		}
-		result = SceUsbMassForDriver_D989A9F6(&usbInfo);
+		result = _sceUsbMassGetDevInfo(&usbInfo);
 		if (result == 0) {
 			if (usbInfo.sectorCount >= UINT64_C(0x100000000)) {
 				result = 0x80024902;
@@ -616,8 +616,8 @@ int sddev_read(SceSdstorSddev *device, void *buffer, uint32_t sector,
 		SceSysrootForDriver_9BF782CA(3, 2, &sddevReadEndLed);
 		break;
 	case 3:
-		if (SceUsbMassForDriver_B80D1DF8)
-			result = SceUsbMassForDriver_B80D1DF8(sector, buffer, count);
+		if (_sceUsbMassReadSector)
+			result = _sceUsbMassReadSector(sector, buffer, count);
 		else
 			result = 0x80010013;
 		break;
@@ -687,8 +687,8 @@ int sddev_write(SceSdstorSddev *device, const void *buffer, uint32_t sector,
 		SceSysrootForDriver_9BF782CA(3, 2, &sddevWriteEndLed);
 		break;
 	case 3:
-		if (SceUsbMassForDriver_081CA197)
-			result = SceUsbMassForDriver_081CA197(sector, (void *)buffer, count);
+		if (_sceUsbMassWriteSector)
+			result = _sceUsbMassWriteSector(sector, (void *)buffer, count);
 		else
 			result = 0x80010013;
 		break;

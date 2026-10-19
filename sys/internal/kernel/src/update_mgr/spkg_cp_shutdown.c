@@ -1,9 +1,8 @@
 #include "update_internal.h"
+#include <deci4p_cpup/cpup.h>
 #include "spkg.h"
 
 extern int updateCpupContext, updateCpupUpdateTriggered;
-int SceDeci4pCpupForDriver_BBB991CD(uint32_t commandId);
-int SceDeci4pCpupForDriver_2BAD7B39(int context);
 
 int SpkgUtilCpShutdown(int mode)
 {
@@ -14,14 +13,14 @@ int SpkgUtilCpShutdown(int mode)
 	}
 	if (updateCpupConnected && updateCpupUpdateTriggered) {
 		if (updateUseCpupExtendedService)
-			SceDeci4pCpupForDriver_BBB991CD(6);
+			sceDeci4pCpupExecCommand(6);
 		SceDeci4pCpupForDriver_2BAD7B39(updateCpupContext);
 		return 0;
 	}
 	if (updateUseCpupService) {
 		if (updateUseCpupExtendedService)
-			SceDeci4pCpupForDriver_BBB991CD(6);
-		SceDeci4pCpupForDriver_BBB991CD(2);
+			sceDeci4pCpupExecCommand(6);
+		sceDeci4pCpupExecCommand(2);
 		return 0;
 	}
 	return updateUseCpupService;

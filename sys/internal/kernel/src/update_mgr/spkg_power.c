@@ -6,10 +6,10 @@
 #include <sysmem/dipsw.h>
 #include <power/power.h>
 #include "spkg.h"
+#include <deci4p_cpup/cpup.h>
 
 extern int updateSysconShutdownWorkaround;
 extern int updateSysconFirmwareUpdateStarted;
-int SceDeci4pCpupForDriver_BBB991CD(uint32_t commandId);
 int SceLedForDriver_EA24BE03(int led, int mode, void *param) __attribute__((weak));
 
 int SpkgUtilPowerControl(int operation, int flags)
@@ -58,14 +58,14 @@ int SpkgUtilPowerControl(int operation, int flags)
 	case 2:
 		result = updateUseCpupService;
 		if (result)
-			result = SceDeci4pCpupForDriver_BBB991CD(0);
+			result = sceDeci4pCpupExecCommand(0);
 		if (flags & 1)
 			result = SceKernelSuspendForDriver_4DF40893(0);
 		break;
 	case 3:
 		result = updateUseCpupService;
 		if (result)
-			result = SceDeci4pCpupForDriver_BBB991CD(1);
+			result = sceDeci4pCpupExecCommand(1);
 		if (flags & 1)
 			result = SceKernelSuspendForDriver_2BB92967(0);
 		break;

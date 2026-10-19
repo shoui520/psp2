@@ -48,8 +48,6 @@ int bbmcLookupModeValue(int mode, SceUInt32 *output);
 int managerThread(SceSize argumentSize, void *arguments);
 BbmcControl *g_bbmcControl;
 static BbmcControl bbmcMainControl;
-int sceBbmcUnsubscribeFeatureForDriver(int subscriberId);
-int sceBbmcTurnOffForDriver(int subscriberId);
 int bbmcProcessKillHandler(SceUID processId,
 	ProcEventParam *parameters, void *common);
 

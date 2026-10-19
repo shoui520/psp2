@@ -23,7 +23,7 @@ int BbmcUtilGetFirmwareVersion(uint32_t *version)
 		*version = updateBbmcContext.firmwareVersion;
 		return 0;
 	}
-	result = SceBbmcForDriver_7CB72009(
+	result = sceBbmcDLUpdaterGetArchiveVersionForDriver(
 		updateBbmcContext.subscriber.subscriberId, version);
 	if (!result)
 		updateBbmcContext.firmwareVersion = *version;

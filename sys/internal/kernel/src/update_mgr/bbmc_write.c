@@ -46,7 +46,7 @@ int BbmcUtilWriteFirmware(const void *buffer, uint64_t size, uint32_t version,
 		package.chunkIndex = (uint32_t)chunkIndex - 1;
 		package.buffer = (void *)buffer;
 		package.size = size;
-		result = SceBbmcForDriver_94A31A9C(
+		result = sceBbmcDLUpdaterContinueForDriver(
 			updateBbmcContext.subscriber.subscriberId, &package);
 	} else {
 		updateBbmcContext.transferDone = 0;
@@ -54,7 +54,7 @@ int BbmcUtilWriteFirmware(const void *buffer, uint64_t size, uint32_t version,
 		package.chunkIndex = 0;
 		package.buffer = (void *)buffer;
 		package.size = size;
-		result = SceBbmcForDriver_ACB0EC17(
+		result = sceBbmcDLUpdaterStartForDriver(
 			updateBbmcContext.subscriber.subscriberId, &package);
 	}
 	if (result)

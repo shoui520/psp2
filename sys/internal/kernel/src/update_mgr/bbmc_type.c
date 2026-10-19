@@ -3,7 +3,7 @@
 int BbmcUtilCheckFirmwareType(uint64_t hardwareInfo)
 {
 	uint32_t actualHardware;
-	int (*getHardware)(int, uint32_t *) = SceBbmcForDriver_E89B746D;
+	int (*getHardware)(int, uint32_t *) = sceBbmcDLUpdaterGetPkgIdForDriver;
 	int result;
 
 	UpdateUtilLockCom();

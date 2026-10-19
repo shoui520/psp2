@@ -1,18 +1,10 @@
 #include <threadmgr/threadmgr.h>
 #include "spkg_peripherals.h"
+#include <deci4p_cpup/cpup.h>
 
 extern int updateCpupContext;
 extern int updateCpupUpdateStarted;
 extern int updateCpupUpdateTriggered;
-
-int SceDeci4pCpupForDriver_DE07478F(uint32_t version, uint32_t size,
-	uint32_t *context);
-int SceDeci4pCpupForDriver_90339379(uint32_t context, uint32_t offset,
-	SceSize size, const void *data);
-int SceDeci4pCpupForDriver_02CDA82C(uint32_t context);
-int SceDeci4pCpupForDriver_D78403C8(uint32_t context);
-int SceDeci4pCpupForDriver_7998FFD8(uint32_t context, uint32_t *result,
-	uint32_t *progress, uint32_t *detail);
 
 int CpUtilWriteFirmware(const void *buffer, uint64_t size, uint32_t version,
 	unsigned int nodeType, UpdateUtilNodeStatus *status)
@@ -24,7 +16,7 @@ int CpUtilWriteFirmware(const void *buffer, uint64_t size, uint32_t version,
 
 	if (!updateCpupConnected)
 		return (int)0x800f0202;
-	if (SceDeci4pCpupForDriver_DE07478F(version, total,
+	if (sceDeci4pCpupStartUpdateForDriver(version, total,
 		(uint32_t *)&updateCpupContext))
 		return (int)0x800f0205;
 	updateCpupUpdateStarted = 1;
@@ -37,7 +29,7 @@ int CpUtilWriteFirmware(const void *buffer, uint64_t size, uint32_t version,
 	context = updateCpupContext;
 	do {
 		chunkSize = remaining >= 65536 ? 65536 : remaining;
-		if (SceDeci4pCpupForDriver_90339379(context, offset, chunkSize, data)) {
+		if (sceDeci4pCpupTransferUpdatePackageForDriver(context, offset, chunkSize, data)) {
 			SceDeci4pCpupForDriver_02CDA82C(updateCpupContext);
 			return (int)0x800f0205;
 		}
@@ -52,12 +44,12 @@ int CpUtilWriteFirmware(const void *buffer, uint64_t size, uint32_t version,
 		}
 		sceKernelDelayThread(10000);
 	} while (remaining);
-	if (SceDeci4pCpupForDriver_D78403C8(updateCpupContext)) {
+	if (sceDeci4pCpupTriggerUpdateForDriver(updateCpupContext)) {
 		SceDeci4pCpupForDriver_02CDA82C(updateCpupContext);
 		return (int)0x800f0205;
 	}
 	updateCpupUpdateTriggered = 1;
-	while (!SceDeci4pCpupForDriver_7998FFD8(updateCpupContext, &result,
+	while (!sceDeci4pCpupGetProgressForDriver(updateCpupContext, &result,
 		&progress, &detail)) {
 		if (!result)
 			return 0;

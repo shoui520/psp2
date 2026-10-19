@@ -49,9 +49,9 @@ set(MODULE_IMPORT_NIDS
 	0xEC3056FE:F:0xC188114F
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysclibForTZS_E5457B97
+	__stack_chk_fail
 	SceCpuForTZS_190D96D5
-	SceCpuForTZS_44C423D3
+	sceKernelCpuId
 	SceCpuForTZS_71FD9AB5
 	SceCpuForTZS_ACF209F3
 	SceCpuForTZS_B8F00FBE
@@ -70,12 +70,12 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForTZS_F851BA4F
 	SceSysmemForTZS_1DEADF6C
 	SceSysmemForTZS_2F18E288
-	SceSysmemForTZS_42FB5B12
+	sceKernelFreeHeapMemory
 	SceSysmemForTZS_473871D8
 	SceSysmemForTZS_56A16D84
-	SceSysmemForTZS_624454BC
+	sceKernelDeleteHeap
 	SceSysmemForTZS_6A3FBAF0
-	SceSysmemForTZS_9D43E416
+	sceKernelVARangeToPAVector
 	sceKernelGenerateSoftIntr
 	sceKernelDisableIntr
 	sceKernelRegisterIntrHandler
@@ -84,5 +84,5 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterMonitorCallHandler
 )
 set(MODULE_IMPORT_VARS
-	SceSysclibForTZS_BA505B15
+	__stack_chk_guard
 )

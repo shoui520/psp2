@@ -43,29 +43,29 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	ScePmMgrForTZS_CF554E69
 	sceKernelRegisterMonitorEntry
-	SceSysmemForTZS_0028E26C
+	sceKernelAllocPartitionMemBlock
 	SceSysmemForTZS_31273DC7
-	SceSysmemForTZS_402EB970
+	sceKernelAllocMemBlockForKernel
 	SceSysmemForTZS_42AD34AB
 	SceSysmemForTZS_658EACE3
-	SceSysmemForTZS_E1DEDFF4
+	sceKernelGetMemBlockBase
 	SceSysmemForTZS_F459D09D
 	SceSysrootForTZS_1C96096F
 	SceSysrootForTZS_45EEB2E0
 	SceSysrootForTZS_EA572BD9
 	SceCpuForTZS_0A15B41C
-	SceCpuForTZS_2B6403F8
-	SceCpuForTZS_44C423D3
+	CpuL2CacheSyncCore
+	sceKernelCpuId
 	SceCpuForTZS_71FD9AB5
-	SceCpuForTZS_9E4C0D0D
+	CpuL2CleanInvalidateAll
 	SceCpuForTZS_B8F00FBE
 	SceCpuForTZS_C4137AED
 	SceCpuForTZS_CD98416C
 	SceCpuForTZS_D67A4356
 	SceDipswForTZS_A98FC2FD
-	SceSysclibForTZS_956DB750
-	SceSysclibForTZS_E5457B97
+	memset
+	__stack_chk_fail
 )
 set(MODULE_IMPORT_VARS
-	SceSysclibForTZS_BA505B15
+	__stack_chk_guard
 )

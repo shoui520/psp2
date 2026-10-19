@@ -269,9 +269,11 @@ void SceCpuForKernel_F9B0B171(void);	/* vitasdk: ksceKernelL1DcacheInvalidateAll
 uint8_t SceCpuForKernel_FD54A91D(void);	/* vitasdk: ksceKernelCpuGetCONTEXTIDR */
 /* vitasdk: ksceKernelCorelockUnlock */
 void SceCpuForKernel_FE2B77A3(SceCorelockContext *context);
-int SceCpuForTZS_44C423D3(void);
 int sceKernelCpuId(void);
 int sceKernelCpuResumeIntr(int flags);
+/* the L2 cache controller (l2cc_maintenance.S); the secure kernel exports them as SceCpuForTZS */
+void CpuL2CacheSyncCore(void);
+void CpuL2CleanInvalidateAll(void);
 void sceKernelIcacheInvalidateRange(const void *start, SceSize size);
 SceBool sceKernelIsUncacheAddressInTmpFsGame(const void *address);
 void sceKernelRWSpinlockLowReadUnlock(volatile SceKernelRWSpinlock *lock);

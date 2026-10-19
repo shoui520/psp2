@@ -179,7 +179,7 @@ int module_start(SceSize args, void *argp)
 
 int module_bootstart(SceSize args, void *argp)
 {
-	unsigned int cpu = SceCpuForTZS_44C423D3();
+	unsigned int cpu = sceKernelCpuId();
 
 	g_irqStack[cpu] = modeStackPointer(18);
 	g_svcStack[cpu] = modeStackPointer(19);

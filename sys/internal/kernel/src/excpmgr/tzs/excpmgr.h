@@ -19,7 +19,6 @@
 #define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB
 #define SceDebugForDriver_374B7868		SceDebugForTZS_F851BA4F
 #define SceDebugForDriver_FD753E7A			SceDebugForTZS_618F89E6
-#define memcpy					SceSysclibForTZS_BE3AF2EE
 
 /* the TZS parts of the shared excpmgr declarations */
 #define EXCPMGR_TZS	1
@@ -30,10 +29,6 @@
 #include <excpmgr/excpmgr.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/sysroot.h>
-
-/* the compiler's stack-protector symbols are the ForTZS sysclib ones here */
-__asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"
-	".set __stack_chk_guard, SceSysclibForTZS_BA505B15");
 
 #define EXCP_STACK_SIZE		0x1000
 

@@ -88,8 +88,8 @@ static int SetSharedMemory_S(int arg0, int arg1, int arg2, int arg3)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = paddr;
-	memBlockId = sceKernelAllocPartitionMemBlockForTZS(0x10009, "SceSharedMemoryBlock_S",
-							   0x1020d006, size, &opt);
+	memBlockId = sceKernelAllocPartitionMemBlock(0x10009, "SceSharedMemoryBlock_S", 0x1020d006,
+						     size, &opt);
 	if (memBlockId < 0) {
 		SCE_DBG_PRINTF(0xb, 1643, "allocate shared memory block failed. 0x%08x\n", memBlockId);
 		SCE_DBG_ASSERT_FAIL(1644);
@@ -138,8 +138,8 @@ static int SetL2ccAuxControl(int arg0, int arg1, int arg2, int arg3)
 
 static int SetL2ccControl(int arg0, int arg1, int arg2, int arg3)
 {
-	SceCpuForTZS_9E4C0D0D();
-	sceKernelCpuWaitL2Cache();
+	CpuL2CleanInvalidateAll();
+	CpuL2CacheSyncCore();
 	return SetL2ccReg(offsetof(ScePl310Registers, control), arg0);
 }
 
@@ -376,8 +376,8 @@ static inline int sceKernelAllocMonitorCallTable(void)
 
 	if (g_moncallTableUid || g_moncallTable)
 		return -1;
-	memBlockId = sceKernelAllocPartitionMemBlockForTZS(0x10009, "SceMoncallTable", 0x1020d006,
-							   MONCALL_TABLE_SIZE, NULL);
+	memBlockId = sceKernelAllocPartitionMemBlock(0x10009, "SceMoncallTable", 0x1020d006,
+						     MONCALL_TABLE_SIZE, NULL);
 	if (memBlockId < 0) {
 		SCE_DBG_PRINTF(6, 1382, "allocate monitor call table failed. 0x%08x\n", memBlockId);
 		return memBlockId;
@@ -479,7 +479,7 @@ int sceKernelIntrMgrModuleStart(SceSize arglen, void *argp)
 	g_intrDistributor = (GicDistributor *)(PERIPH_REG_BASE + GIC_DISTRIBUTOR_OFFSET);
 
 	cpuInterface->control = 0;
-	if (!SceCpuForTZS_44C423D3())
+	if (!sceKernelCpuId())
 		g_intrDistributor->control = 0;
 	blocks = (g_intrDistributor->type & 31) + 1;
 	i = 0;
@@ -508,11 +508,11 @@ int sceKernelIntrMgrModuleStart(SceSize arglen, void *argp)
 	g_intrCpuInterface->binaryPoint = 2;
 	g_intrCpuInterface->aliasedBinaryPoint = 3;
 	g_intrCpuInterface->control = 9;	/* enable, FIQ for secure interrupts */
-	if (!SceCpuForTZS_44C423D3())
+	if (!sceKernelCpuId())
 		g_intrDistributor->control = 1;
 
-	g_intrCpu[SceCpuForTZS_44C423D3()].nesting = 0;
-	if (!SceCpuForTZS_44C423D3())
+	g_intrCpu[sceKernelCpuId()].nesting = 0;
+	if (!sceKernelCpuId())
 		Start();
 	sceKernelSysrootSetModulePrivateForTZS(5, g_intrHandlers);
 	g_intrEnterSyscall = NULL;
@@ -578,7 +578,7 @@ int sceKernelIntrMgrModuleStart(SceSize arglen, void *argp)
 
 	/* reset the GIC: the secure world takes its interrupts as FIQs */
 	cpuInterface->control = 0;
-	if (!SceCpuForTZS_44C423D3())
+	if (!sceKernelCpuId())
 		g_intrDistributor->control = 0;
 	blocks = (g_intrDistributor->type & 31) + 1;
 	i = 0;
@@ -587,11 +587,11 @@ int sceKernelIntrMgrModuleStart(SceSize arglen, void *argp)
 		i++;
 	} while (i != blocks);
 	g_intrCpuInterface->control = 9;	/* enable, FIQ for secure interrupts */
-	if (!SceCpuForTZS_44C423D3())
+	if (!sceKernelCpuId())
 		g_intrDistributor->control = 1;
 
-	g_intrCpu[SceCpuForTZS_44C423D3()].nesting = 0;
-	if (!SceCpuForTZS_44C423D3())
+	g_intrCpu[sceKernelCpuId()].nesting = 0;
+	if (!sceKernelCpuId())
 		Start();
 	sceKernelSysrootSetModulePrivateForTZS(5, g_intrHandlers);
 	g_intrEnterSyscall = NULL;

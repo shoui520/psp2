@@ -810,14 +810,14 @@ int sceSblSmSchedFini(int stop)
 	}
 	if (s_instance != NULL) {
 		if (s_instance->requests != NULL) {
-			sceKernelFreeHeapMemoryForTZS(s_instance->heap, s_instance->requests);
+			sceKernelFreeHeapMemory(s_instance->heap, s_instance->requests);
 			s_instance->requests = NULL;
 		}
 		heap = s_instance->heap;
-		sceKernelFreeHeapMemoryForTZS(heap, s_instance);
+		sceKernelFreeHeapMemory(heap, s_instance);
 		s_instance = NULL;
 		if (heap >= 0)
-			sceKernelDeleteHeapForTZS(heap);
+			sceKernelDeleteHeap(heap);
 	}
 	return ret;
 }
@@ -934,7 +934,7 @@ void reschedule(void)
 	opt.mmapSize = 0;
 	vector = sceKernelAllocUncacheHeapMemoryWithOptionForTZS(SMSCHED_CONTEXT_RANGES * sizeof(*vector), &opt);
 	if (vector == NULL) {
-		sceKernelFreeHeapMemoryForTZS(s_instance->heap, context);
+		sceKernelFreeHeapMemory(s_instance->heap, context);
 		goto fail;
 	}
 	range.addr = (uint32_t)context;
@@ -942,7 +942,7 @@ void reschedule(void)
 	paVector.size = sizeof(paVector);
 	paVector.capacity = SMSCHED_CONTEXT_RANGES;
 	paVector.pRanges = vector;
-	if (sceKernelVARangeToPAVectorForTZS(&range, &paVector) < 0)
+	if (sceKernelVARangeToPAVector(&range, &paVector) < 0)
 		goto free;
 	SmschedFlushWord(&vector[0].addr);
 	SmschedFlushWord(&vector[0].size);
@@ -1519,7 +1519,7 @@ int module_start(SceSize args, void *argp)
 	instance = sceKernelAllocHeapMemoryForTZS(heap, sizeof(*instance));
 	if (instance == NULL) {
 		ret = SCE_SBL_ERROR_NO_MEMORY;
-		sceKernelDeleteHeapForTZS(heap);
+		sceKernelDeleteHeap(heap);
 		goto fail;
 	}
 	instance->heap = heap;

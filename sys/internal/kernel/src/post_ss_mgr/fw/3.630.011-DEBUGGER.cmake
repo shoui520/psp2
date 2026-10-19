@@ -255,11 +255,11 @@ set(MODULE_IMPORT_FUNCS
 	SceRtcForDriver_401C0954
 	SceRtcForDriver_A0D7899A
 	SceQafMgrForDriver_082A4FC2
-	SceDeci4pCpupForDriver_2015C7CB
-	SceDeci4pCpupForDriver_4939DA45
-	SceDeci4pCpupForDriver_8139AD4E
-	SceDeci4pCpupForDriver_C0AB956B
-	SceDeci4pCpupForDriver_DAC4F630
+	sceDeci4pCpupGetRtcForDriver
+	sceDeci4pCpupSetRtcWithActivationKeyForDriver
+	sceDeci4pCpupGetCpSerialIdForDriver
+	sceDeci4pCpupInquireVersionForDriver
+	sceDeci4pCpupSetRtcForDriver
 	sceSblAuthMgrVerifySpsfo
 	sceKernelLoadPtLoadSegForFwloader
 	SceDipswForDriver_A98FC2FD

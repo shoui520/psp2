@@ -28,7 +28,6 @@
 #define PAGE_OFFSET(_a)			((_a) & (PAGE_SIZE - 1))
 
 /* cpu_cache.c: the L2 controller */
-void CpuL2CacheSyncCore(void);
 void CpuL2InvalidateRangePA(uintptr_t pa, SceSize size);
 void CpuL2CleanRangePA(uintptr_t pa, SceSize size);
 void CpuL2CleanInvalidateRangePA(uintptr_t pa, SceSize size);
