@@ -5,17 +5,18 @@
 #include <sysmem/sblaimgr.h>
 #include <sysmem/dipsw.h>
 #include <power/power.h>
+#include <power/led.h>
 #include "spkg.h"
 #include <deci4p_cpup/cpup.h>
 
 extern int updateSysconShutdownWorkaround;
 extern int updateSysconFirmwareUpdateStarted;
-int SceLedForDriver_EA24BE03(int led, int mode, void *param) __attribute__((weak));
+#pragma weak SceLedForDriver_EA24BE03
 
 int SpkgUtilPowerControl(int operation, int flags)
 {
 	int result;
-	int (*ledControl)(int kind, int enabled, void *argument) = SceLedForDriver_EA24BE03;
+	int (*ledControl)(uint32_t led, uint32_t mode, const void *option) = SceLedForDriver_EA24BE03;
 
 	UpdateUtilLockPupHeader();
 	switch (operation) {

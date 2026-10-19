@@ -35,12 +35,10 @@ static const LedModeParam sddevWriteEndLed = {
 
 static SceSdstorSddev sddevTables[5];
 
-int _sceUsbMassGetDevInfo(SceUsbMassDevInfo *info)
-	__attribute__((weak));
-int _sceUsbMassReadSector(uint32_t sector, void *buffer, uint32_t count)
-	__attribute__((weak));
-int _sceUsbMassWriteSector(uint32_t sector, void *buffer, uint32_t count)
-	__attribute__((weak));
+/* weak imports: SceUsbMass may not be loaded */
+#pragma weak _sceUsbMassGetDevInfo
+#pragma weak _sceUsbMassReadSector
+#pragma weak _sceUsbMassWriteSector
 
 int sddev_power_off(SceSdstorSddev *device)
 {
