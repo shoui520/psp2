@@ -162,10 +162,10 @@ int TinyPartitionGetMemBlockInfoList(TinyPartition *tiny, SceUInt32 flags, uintp
 				     MemBlockInfoEx *info, SceSize infoSize, SceUInt32 *count)
 {
 	MemBlockObject *block, *head;
-	SceUInt32 filled;
+	SceUInt32 filled, byPhy;
 	int intr, used;
 
-	flags &= 1;
+	byPhy = flags & 1;
 	filled = 0;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&tiny->lock);
 	head = tiny->blocks;
@@ -173,13 +173,17 @@ int TinyPartitionGetMemBlockInfoList(TinyPartition *tiny, SceUInt32 flags, uintp
 	block = head;
 	while (block != NULL) {
 		if (block->code != 0) {
-			if (filled < infoSize / sizeof(*info) && lo <= block->vbase &&
-			    block->vbase < hi &&
-			    (flags == 0 || pa == 0 || MemBlockWithinPhyRange(block, pa, psize) == 1)) {
-				if (MemBlockGetInfoRaw(block, arg, info) < 0)
-					goto next;
-				filled++;
-				info++;
+			if (filled < infoSize / sizeof(*info)) {
+				uintptr_t vbase = block->vbase;
+
+				if (lo <= vbase && hi > vbase &&
+				    (byPhy == 0 || pa == 0 ||
+				     MemBlockWithinPhyRange(block, pa, psize) == 1)) {
+					if (MemBlockGetInfoRaw(block, arg, info) < 0)
+						goto next;
+					filled++;
+					info++;
+				}
 			}
 			used++;
 		}
@@ -336,7 +340,7 @@ int TinyPartitionInitRaw(TinyPartition *tiny, const char *name, uintptr_t vbase,
 		SCE_DBG_ASSERT_FAIL(3051);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	if (size >= 0x1000000 && (size & 0xffffff)) {
+	if (size >= 0x1000000 && (size << 8) != 0) {
 		SCE_DBG_ASSERT_FAIL(3055);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
