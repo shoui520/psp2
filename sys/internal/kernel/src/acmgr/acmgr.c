@@ -617,12 +617,15 @@ int SceSblACMgrForDriver_B836CF13(SceUID pid)
 int SceSblACMgrForDriver_C98D82EE(SceUID pid)
 {
 	SceUInt64 paid = 0;
+	int ret;
 
 	if (sceSblACMgrGetPaid(pid, &paid) != 0)
 		return 0;
 	if (paid == 0x2800c0101cd2000bULL || paid - 0x210000101cd20007ULL < 4)
-		return 1;
-	return SceSblACMgrForDriver_426A4E8C(pid) && SceSysrootForDriver_26AA237C() != 0;
+		ret = 1;
+	else
+		ret = SceSblACMgrForDriver_426A4E8C(pid) && SceSysrootForDriver_26AA237C() != 0;
+	return ret;
 }
 
 int SceSblACMgrForDriver_091F7247(SceUID pid)
@@ -655,24 +658,30 @@ int SceSblACMgrForDriver_A67E8E5B(SceUID pid)
 int SceSblACMgrForDriver_D0E11C89(SceUID pid)
 {
 	SceUInt64 paid = 0;
+	int ret;
 
 	if (sceSblACMgrGetPaid(pid, &paid) != 0)
 		return 0;
 	if (paid == 0x220000101cc73883ULL || paid == 0x2800000000000010ULL)
-		return 1;
-	return sceSblACMgrHasCapability(pid, 0x82) != 0;
+		ret = 1;
+	else
+		ret = sceSblACMgrHasCapability(pid, 0x82) != 0;
+	return ret;
 }
 
 int SceSblACMgrForDriver_4DB7F512(SceUID pid)
 {
 	SceUInt64 paid = 0;
+	int ret;
 
 	if (sceSblACMgrGetPaid(pid, &paid) != 0)
 		return 0;
 	if (paid == 0x220000101cc73883ULL || paid == 0x280000000000001eULL ||
 	    paid == 0x2800000000000010ULL || paid == 0x2800000000000031ULL)
-		return 1;
-	return sceSblACMgrHasCapability(pid, 0x82) != 0;
+		ret = 1;
+	else
+		ret = sceSblACMgrHasCapability(pid, 0x82) != 0;
+	return ret;
 }
 
 int SceSblACMgrForDriver_D7AD8471(SceUID pid, const SceChar8 *path)
