@@ -13,28 +13,28 @@ SceSysmem:
       functions:
         - sceKernelAllocPartitionMemBlock: 0x0028E26C
         - SceSysmemForTZS_038EAEEE: 0x038EAEEE
-        - SceSysmemForTZS_1DEADF6C: 0x1DEADF6C
+        - sceKernelVAtoPA: 0x1DEADF6C
         - SceSysmemForTZS_29DE887D: 0x29DE887D
-        - SceSysmemForTZS_2F18E288: 0x2F18E288
-        - SceSysmemForTZS_31273DC7: 0x31273DC7
+        - sceKernelFreeUncacheHeapMemory: 0x2F18E288
+        - sceKernelAddressSpaceUnmap: 0x31273DC7
         - sceKernelAllocMemBlockForKernel: 0x402EB970
-        - SceSysmemForTZS_42AD34AB: 0x42AD34AB
+        - sceKernelNameHeapInsert: 0x42AD34AB
         - sceKernelFreeHeapMemory: 0x42FB5B12
-        - SceSysmemForTZS_473871D8: 0x473871D8
-        - SceSysmemForTZS_56A16D84: 0x56A16D84
+        - sceKernelAllocHeapMemory: 0x473871D8
+        - sceKernelCreateHeap: 0x56A16D84
         - sceKernelDeleteHeap: 0x624454BC
-        - SceSysmemForTZS_658EACE3: 0x658EACE3
-        - SceSysmemForTZS_6A3FBAF0: 0x6A3FBAF0
+        - sceKernelFreeMemBlock: 0x658EACE3
+        - sceKernelAllocUncacheHeapMemoryWithOption: 0x6A3FBAF0
         - sceKernelVARangeToPAVector: 0x9D43E416
         - sceKernelGetMemBlockBase: 0xE1DEDFF4
-        - SceSysmemForTZS_EA712806: 0xEA712806
-        - SceSysmemForTZS_F459D09D: 0xF459D09D
+        - sceKernelAllocHeapMemoryWithOption: 0xEA712806
+        - sceKernelNameHeapDelete: 0xF459D09D
     SceDipswForTZS:
       syscall: false
       version: 1
       nid: 0x9DBF584C
       functions:
-        - SceDipswForDriver_A98FC2FD: 0xA98FC2FD
+        - sceKernelCheckDipsw: 0xA98FC2FD
     SceUartForTZS:
       syscall: false
       version: 1
@@ -48,10 +48,10 @@ SceSysmem:
       functions:
         - SceDebugForTZS_0D799DAE: 0x0D799DAE
         - SceDebugForTZS_1655E0E3: 0x1655E0E3
-        - SceDebugForTZS_2F9B8AA8: 0x2F9B8AA8
+        - sceKernelAssert: 0x2F9B8AA8
         - SceDebugForDriver_391B5B74: 0x563B623D
         - SceDebugForDriver_FD753E7A: 0x618F89E6
-        - SceDebugForTZS_C70CBB58: 0xC70CBB58
+        - sceKernelPrintfLevel: 0xC70CBB58
         - SceDebugForDriver_D9703808: 0xD26EB4BB
         - SceDebugForDriver_374B7868: 0xF851BA4F
     SceSysclibForTZS:
@@ -70,13 +70,13 @@ SceSysmem:
       version: 1
       nid: 0x637069DD
       functions:
-        - SceQafMgrForTZS_54D22D74: 0x54D22D74
+        - sceSblQafManagerIsAllowKernelDebug: 0x54D22D74
     ScePmMgrForTZS:
       syscall: false
       version: 1
       nid: 0x27F1AFD8
       functions:
-        - ScePmMgrForTZS_CF554E69: 0xCF554E69
+        - sceSblPmMgrGetProductMode: 0xCF554E69
     SceSblAIMgrForTZS:
       syscall: false
       version: 1
@@ -88,50 +88,50 @@ SceSysmem:
       version: 1
       nid: 0xFEFF641D
       functions:
-        - SceSysrootForTZS_0567B4B9: 0x0567B4B9
-        - SceSysrootForTZS_1C96096F: 0x1C96096F
-        - SceSysrootForTZS_2460ADFA: 0x2460ADFA
-        - SceSysrootForTZS_29C1049E: 0x29C1049E
-        - SceSysrootForTZS_2F5FD9A8: 0x2F5FD9A8
+        - sceKernelIsColdBoot: 0x0567B4B9
+        - sceKernelSysrootGetSharedMemory: 0x1C96096F
+        - sceKernelSysrootGetVbaseResetVector: 0x2460ADFA
+        - sceKernelSysrootGetKblParam: 0x29C1049E
+        - sceKernelSysrootCorelockUnlock: 0x2F5FD9A8
         - SceSysrootForTZS_317E7556: 0x317E7556
         - SceSysrootForTZS_32546BDB: 0x32546BDB
-        - SceSysrootForTZS_45EEB2E0: 0x45EEB2E0
+        - sceKernelSysrootSetSharedMemory: 0x45EEB2E0
         - SceSysrootForTZS_7DA87A7F: 0x7DA87A7F
-        - SceSysrootForTZS_8E871C6D: 0x8E871C6D
-        - SceSysrootForTZS_A8B7DAF9: 0xA8B7DAF9
+        - sceKernelSysrootGetErnieWakeupFactor: 0x8E871C6D
+        - sceKernelSysrootGetKernelMMUContext: 0xA8B7DAF9
         - SceSysrootForTZS_C9DD8EB3: 0xC9DD8EB3
         - SceSysrootForTZS_CC36643A: 0xCC36643A
-        - SceSysrootForTZS_D4E6D8E8: 0xD4E6D8E8
-        - SceSysrootForTZS_D653194A: 0xD653194A
+        - sceKernelSysrootGetVbaseMonitorVector: 0xD4E6D8E8
+        - sceKernelSysrootCorelockLock: 0xD653194A
         - SceSysrootForTZS_D6FBF445: 0xD6FBF445
-        - SceSysrootForTZS_DB3DAB76: 0xDB3DAB76
-        - SceSysrootForTZS_EA572BD9: 0xEA572BD9
+        - sceKernelSysrootGetKermitRevision: 0xDB3DAB76
+        - sceKernelSysrootSetModulePrivate: 0xEA572BD9
     SceCpuForTZS:
       syscall: false
       version: 1
       nid: 0xC516B23E
       functions:
-        - SceCpuForTZS_0A15B41C: 0x0A15B41C
-        - SceCpuForTZS_17A88E69: 0x17A88E69
-        - SceCpuForTZS_190D96D5: 0x190D96D5
+        - sceKernelL1DcacheCleanInvalidateAll: 0x0A15B41C
+        - sceKernelL1DcacheCleanRange: 0x17A88E69
+        - sceKernelDcacheCleanRange: 0x190D96D5
         - CpuL2CacheSyncCore: 0x2B6403F8
         - SceCpuForTZS_31E78A4B: 0x31E78A4B
         - sceKernelCpuId: 0x44C423D3
         - SceCpuForTZS_4FED4BCE: 0x4FED4BCE
         - SceCpuForTZS_596784E9: 0x596784E9
-        - SceCpuForTZS_71FD9AB5: 0x71FD9AB5
+        - sceKernelSpinlockLowLock: 0x71FD9AB5
         - SceCpuForTZS_7548CBCF: 0x7548CBCF
         - SceCpuForTZS_75D87321: 0x75D87321
-        - SceCpuForTZS_7A5373EB: 0x7A5373EB
-        - SceCpuForTZS_7CCE9480: 0x7CCE9480
+        - sceKernelDcacheCleanInvalidateRange: 0x7A5373EB
+        - sceKernelDcacheCleanInvalidateAll: 0x7CCE9480
         - CpuL2CleanInvalidateAll: 0x9E4C0D0D
-        - SceCpuForTZS_A5965CBF: 0xA5965CBF
-        - SceCpuForTZS_ACF209F3: 0xACF209F3
-        - SceCpuForTZS_B421FAFD: 0xB421FAFD
-        - SceCpuForTZS_B8F00FBE: 0xB8F00FBE
-        - SceCpuForTZS_C4137AED: 0xC4137AED
-        - SceCpuForTZS_CD98416C: 0xCD98416C
-        - SceCpuForTZS_CDD46655: 0xCDD46655
+        - sceKernelL1IcacheInvalidateEntireAllCore: 0xA5965CBF
+        - sceKernelSpinlockLowTrylockCpuSuspendIntr: 0xACF209F3
+        - sceKernelL1IcacheInvalidateRange: 0xB421FAFD
+        - sceKernelSpinlockLowUnlockCpuResumeIntr: 0xB8F00FBE
+        - sceKernelPleFlushRequest: 0xC4137AED
+        - sceKernelSpinlockLowUnlock: 0xCD98416C
+        - sceKernelDcacheInvalidateRange: 0xCDD46655
         - SceCpuForTZS_D4E7413D: 0xD4E7413D
-        - SceCpuForTZS_D67A4356: 0xD67A4356
-        - SceCpuForTZS_EFD6F289: 0xEFD6F289
+        - sceKernelSpinlockLowLockCpuSuspendIntr: 0xD67A4356
+        - atomicCompareAndSet8: 0xEFD6F289

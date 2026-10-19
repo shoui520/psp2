@@ -20,8 +20,8 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterIntrHandler
 	sceKernelEnableIntr
 	sceKernelRegisterMonitorCallHandler
-	SceSysrootForTZS_1C96096F
-	SceCpuForTZS_7A5373EB
+	sceKernelSysrootGetSharedMemory
+	sceKernelDcacheCleanInvalidateRange
 )
 set(MODULE_IMPORT_VARS
 )

@@ -2,7 +2,7 @@
 #include "smsched.h"
 
 #define TZS_BRIDGE_SECURE			1
-#define SceSysrootForKernel_C8C8C321	sceKernelSysrootGetSharedMemoryForTZS
+#define SceSysrootForKernel_C8C8C321	sceKernelSysrootGetSharedMemory
 #define SceCpuForDriver_103872A5		sceKernelDcacheCleanRange
 #define SceCpuForDriver_02796361		sceKernelDcacheInvalidateRange
 

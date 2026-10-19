@@ -620,6 +620,15 @@ int sceKernelVARangeToPAVectorBySW(const SceKernelVARange *range, SceKernelPAVec
 int sceKernelVAtoPABySW(const void *va, uintptr_t *pa);
 int sceKernelVerifyHeap(SceUID uid, void *ptr);
 
+/* the secure kernel's SceSysmemForTZS (the names of 0.990's import stubs) */
+void *sceKernelAllocUncacheHeapMemoryWithOption(SceSize size, SceAllocOpt *opt);
+int sceKernelFreeUncacheHeapMemory(void *ptr);
+int sceKernelAddressSpaceUnmap(SceUID addressSpace, SceUInt32 flags, SceUInt32 type,
+			       void *vaddr, SceSize size);
+int sceKernelNameHeapInsert(const char *name, SceUInt32 flags, char **out);
+int sceKernelNameHeapDelete(char *name, SceUInt32 flags);
+uint32_t *SceSysmemForTZS_038EAEEE(void);	/* the secure world's level 1 translation table */
+
 #ifdef __cplusplus
 }
 #endif

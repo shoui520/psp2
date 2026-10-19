@@ -47,19 +47,19 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	SceSysmemForTZS_038EAEEE
-	SceSysmemForTZS_1DEADF6C
+	sceKernelVAtoPA
 	sceKernelAllocMemBlockForKernel
-	SceSysmemForTZS_658EACE3
+	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	SceCpuForTZS_4FED4BCE
 	SceCpuForTZS_75D87321
-	SceCpuForTZS_7A5373EB
-	SceCpuForTZS_7CCE9480
-	SceCpuForTZS_B8F00FBE
+	sceKernelDcacheCleanInvalidateRange
+	sceKernelDcacheCleanInvalidateAll
+	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForTZS_D4E7413D
-	SceCpuForTZS_D67A4356
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceDebugForTZS_D26EB4BB
-	SceDipswForTZS_A98FC2FD
+	sceKernelCheckDipsw
 	memset
 	memcpy
 	__stack_chk_fail
@@ -70,9 +70,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelEnableIntr
 	sceKernelUsleep
 	sceKernelRegisterMonitorCallHandler
-	SceSysrootForTZS_1C96096F
+	sceKernelSysrootGetSharedMemory
 	SceSysrootForTZS_32546BDB
-	SceSysrootForTZS_8E871C6D
+	sceKernelSysrootGetErnieWakeupFactor
 	SceSysrootForTZS_CC36643A
 	SceSysrootForTZS_D6FBF445
 )

@@ -116,7 +116,7 @@ static int CdramEnableMonitorCall(void)
 	if (s_emc.enabled)
 		return 0;
 	s_emc.enabled = 1;
-	if ((sceKernelSysrootGetErnieWakeupFactorForTZS() & ERNIE_WAKEUP_RESUME) == 0) {
+	if ((sceKernelSysrootGetErnieWakeupFactor() & ERNIE_WAKEUP_RESUME) == 0) {
 		regs = s_emc.regs;
 		sceKernelDisableIntr(EMC_INTR);
 		control = s_emc.control & ~EMC_CONTROL_HOLD;

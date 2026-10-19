@@ -283,6 +283,20 @@ void sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(volatile SceKernelRWSpinlock
 void sceKernelSpinlockLowUnlock(volatile SceKernelSpinlock *lock);
 void sceKernelSpinlockLowUnlockCpuResumeIntr(volatile SceKernelSpinlock *lock, SceKernelIntrStatus flags);
 
+/* the secure kernel's SceCpuForTZS (the names of 0.990's import stubs) */
+void sceKernelDcacheCleanRange(const void *start, SceSize size);
+void sceKernelDcacheInvalidateRange(const void *start, SceSize size);
+void sceKernelDcacheCleanInvalidateRange(const void *start, SceSize size);
+void sceKernelDcacheCleanInvalidateAll(void);
+void sceKernelL1DcacheCleanRange(const void *start, SceSize size);
+void sceKernelL1DcacheCleanInvalidateAll(void);
+void sceKernelL1IcacheInvalidateRange(const void *start, SceSize size);
+void sceKernelL1IcacheInvalidateEntireAllCore(void);
+void sceKernelPleFlushRequest(void);
+int atomicCompareAndSet8(volatile SceUInt8 *addr, SceUInt8 expected, SceUInt8 value);
+int SceCpuForTZS_75D87321(volatile int *addr, int value);	/* an atomic OR */
+void SceCpuForTZS_D4E7413D(void);	/* cleans the data cache before a core parks */
+
 #ifdef __cplusplus
 }
 #endif

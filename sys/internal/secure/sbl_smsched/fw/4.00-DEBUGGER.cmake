@@ -50,31 +50,31 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
-	SceCpuForTZS_190D96D5
+	sceKernelDcacheCleanRange
 	sceKernelCpuId
-	SceCpuForTZS_71FD9AB5
-	SceCpuForTZS_ACF209F3
-	SceCpuForTZS_B8F00FBE
-	SceCpuForTZS_CD98416C
-	SceCpuForTZS_CDD46655
-	SceCpuForTZS_D67A4356
-	SceCpuForTZS_EFD6F289
-	SceSysrootForTZS_1C96096F
-	SceSysrootForTZS_29C1049E
-	SceSysrootForTZS_EA572BD9
+	sceKernelSpinlockLowLock
+	sceKernelSpinlockLowTrylockCpuSuspendIntr
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	sceKernelSpinlockLowUnlock
+	sceKernelDcacheInvalidateRange
+	sceKernelSpinlockLowLockCpuSuspendIntr
+	atomicCompareAndSet8
+	sceKernelSysrootGetSharedMemory
+	sceKernelSysrootGetKblParam
+	sceKernelSysrootSetModulePrivate
 	SceDebugForTZS_0D799DAE
-	SceDebugForTZS_2F9B8AA8
+	sceKernelAssert
 	SceDebugForTZS_563B623D
 	SceDebugForTZS_618F89E6
 	SceDebugForTZS_D26EB4BB
 	SceDebugForTZS_F851BA4F
-	SceSysmemForTZS_1DEADF6C
-	SceSysmemForTZS_2F18E288
+	sceKernelVAtoPA
+	sceKernelFreeUncacheHeapMemory
 	sceKernelFreeHeapMemory
-	SceSysmemForTZS_473871D8
-	SceSysmemForTZS_56A16D84
+	sceKernelAllocHeapMemory
+	sceKernelCreateHeap
 	sceKernelDeleteHeap
-	SceSysmemForTZS_6A3FBAF0
+	sceKernelAllocUncacheHeapMemoryWithOption
 	sceKernelVARangeToPAVector
 	sceKernelGenerateSoftIntr
 	sceKernelDisableIntr

@@ -126,7 +126,7 @@ int sceGrabSetCmpMap(unsigned int n, uint32_t paddr)
 	if (paddr - 0x20000000 >= 0x10000000) {
 		if (paddr - 0x40000000 >= 0x40000000)
 			return GRAB_ERROR;
-		model = sceKernelSysrootGetModelInfoForTZS();
+		model = SceSysrootForTZS_D6FBF445();
 		switch (model) {	/* 0x1xxxx handhelds, 0x2xxxx PS TV */
 		default:
 			SCE_DBG_PRINTF(11, 383, "Unknown model 0x%08x\n", model);

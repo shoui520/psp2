@@ -32,21 +32,21 @@ set(MODULE_IMPORT_NIDS
 	0xC839BB78:V:0xBA505B15
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysrootForTZS_0567B4B9
-	SceSysrootForTZS_2460ADFA
+	sceKernelIsColdBoot
+	sceKernelSysrootGetVbaseResetVector
 	SceSysrootForTZS_317E7556
-	SceSysrootForTZS_A8B7DAF9
-	SceSysrootForTZS_D4E6D8E8
-	SceSysrootForTZS_EA572BD9
-	SceCpuForTZS_17A88E69
+	sceKernelSysrootGetKernelMMUContext
+	sceKernelSysrootGetVbaseMonitorVector
+	sceKernelSysrootSetModulePrivate
+	sceKernelL1DcacheCleanRange
 	sceKernelCpuId
 	SceCpuForTZS_596784E9
-	SceCpuForTZS_71FD9AB5
-	SceCpuForTZS_A5965CBF
-	SceCpuForTZS_B421FAFD
-	SceCpuForTZS_B8F00FBE
-	SceCpuForTZS_CD98416C
-	SceCpuForTZS_D67A4356
+	sceKernelSpinlockLowLock
+	sceKernelL1IcacheInvalidateEntireAllCore
+	sceKernelL1IcacheInvalidateRange
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	sceKernelSpinlockLowUnlock
+	sceKernelSpinlockLowLockCpuSuspendIntr
 	SceDebugForTZS_0D799DAE
 	memcpy
 	__stack_chk_fail

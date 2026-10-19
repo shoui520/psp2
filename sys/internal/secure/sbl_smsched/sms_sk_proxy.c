@@ -166,7 +166,7 @@ int smsSecureKernelProxyStartSecureKernel(uintptr_t enpPA, SceSize enpSize)
 	}
 
 	SkWaitMessage(CMEP_MESSAGE_MAIN_INIT);
-	ret = sceKernelVAtoPAForTZS(s_proxyInstance->skCmdArea, &cmdAreaPA);
+	ret = sceKernelVAtoPA(s_proxyInstance->skCmdArea, &cmdAreaPA);
 	if (ret < 0)
 		return ret;
 	CMEP_MAILBOX_REG(arm2Cry[0]) = cmdAreaPA & ~3;
@@ -195,15 +195,15 @@ int smsSecureKernelProxyInstallRevokeList(uintptr_t listPA, SceSize listSize)
 	opt.align = 64;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	list = sceKernelAllocUncacheHeapMemoryWithOptionForTZS(sizeof(*list), &opt);
+	list = sceKernelAllocUncacheHeapMemoryWithOption(sizeof(*list), &opt);
 	if (list == NULL)
 		return SCE_SBL_ERROR_NO_MEMORY;
 	list->pa = listPA;
 	list->size = listSize;
 	SkFlushArea(list, sizeof(*list));
-	ret = sceKernelVAtoPAForTZS(list, &pa);
+	ret = sceKernelVAtoPA(list, &pa);
 	if (ret < 0) {
-		sceKernelFreeUncacheHeapMemoryForTZS(list);
+		sceKernelFreeUncacheHeapMemory(list);
 		return ret;
 	}
 	cmd = s_proxyInstance->skCmdArea;
@@ -212,7 +212,7 @@ int smsSecureKernelProxyInstallRevokeList(uintptr_t listPA, SceSize listSize)
 	SkFlushArea(cmd, sizeof(*cmd));
 	SkSendCommand(CMEP_COMMAND(SK_COMMAND_INSTALL_REVOKE_LIST, sizeof(*cmd)));
 	reply = SkWaitReply();
-	sceKernelFreeUncacheHeapMemoryForTZS(list);
+	sceKernelFreeUncacheHeapMemory(list);
 	return SkReplyResult(reply);
 }
 
@@ -298,7 +298,7 @@ int smsSecureKernelProxySetDebug(const void *area, SceSize size)
 	uintptr_t pa;
 	int ret;
 
-	ret = sceKernelVAtoPAForTZS(area, &pa);
+	ret = sceKernelVAtoPA(area, &pa);
 	if (ret < 0)
 		return ret;
 	cmd = s_proxyInstance->skCmdArea;

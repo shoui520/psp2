@@ -35,7 +35,7 @@ static int excpWriteText(void *dst, const void *src, SceSize size)
 	SceCpuForDriver_9CB9F0CE((void *)cacheLineDown(start),
 		cacheLineDown(start + size + 31) - cacheLineDown(start));
 	writeDacr(dacr);
-	SceCpuForTZS_A5965CBF();
+	sceKernelL1IcacheInvalidateEntireAllCore();
 	return 0;
 }
 
@@ -87,8 +87,8 @@ int sceKernelRegisterMonitorEntry(unsigned int code, SceExcpmgrHandler *handler)
 	/* the monitor vectors load their target from the slot table at +0x20 */
 	entry = (unsigned int)handler + 8;
 	excpPokeVector(&g_excpHandlers.monitorVectors[8 + code], &entry);
-	SceCpuForTZS_17A88E69(g_excpHandlers.monitorVectors, g_excpHandlers.monitorVectorSize);
-	SceCpuForTZS_B421FAFD(g_excpHandlers.monitorVectors, g_excpHandlers.monitorVectorSize);
+	sceKernelL1DcacheCleanRange(g_excpHandlers.monitorVectors, g_excpHandlers.monitorVectorSize);
+	sceKernelL1IcacheInvalidateRange(g_excpHandlers.monitorVectors, g_excpHandlers.monitorVectorSize);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_excpHandlers.lock, flags);
 	return 0;
 }
@@ -113,7 +113,7 @@ int module_start(SceSize args, void *argp)
 	unsigned char *stack;
 
 	g_excpHandlers.lock = 0;
-	g_excpHandlers.vectors = SceSysrootForTZS_2460ADFA();
+	g_excpHandlers.vectors = sceKernelSysrootGetVbaseResetVector();
 	g_excpHandlers.vectorSize = (unsigned int)monitorVectors - (unsigned int)exceptionVectors;
 	excpWriteText(g_excpHandlers.vectors, exceptionVectors, g_excpHandlers.vectorSize);
 	g_excpHandlers.defaultHandler = NULL;
@@ -149,12 +149,12 @@ int module_start(SceSize args, void *argp)
 		stack += EXCP_STACK_SIZE;
 		g_excpData.stackTop[cpu] = stack;
 	}
-	g_excpData.kernelMmu = SceSysrootForTZS_A8B7DAF9();
+	g_excpData.kernelMmu = sceKernelSysrootGetKernelMMUContext();
 	g_excpData.kernelBreakpoints = NULL;
 	g_excpData.kernelWatchpoints = NULL;
-	SceSysrootForTZS_EA572BD9(4, &g_excpData);
+	sceKernelSysrootSetModulePrivate(4, &g_excpData);
 
-	g_excpHandlers.monitorVectors = SceSysrootForTZS_D4E6D8E8();
+	g_excpHandlers.monitorVectors = sceKernelSysrootGetVbaseMonitorVector();
 	g_excpHandlers.monitorVectorSize = (unsigned int)monitorVectorsEnd - (unsigned int)monitorVectors;
 	excpWriteText(g_excpHandlers.monitorVectors, monitorVectors, g_excpHandlers.monitorVectorSize);
 	g_excpHandlers.monitorHead = NULL;
@@ -185,7 +185,7 @@ int module_bootstart(SceSize args, void *argp)
 	g_svcStack[cpu] = modeStackPointer(19);
 	g_abortStack[cpu] = modeStackPointer(23);
 	g_undefStack[cpu] = modeStackPointer(27);
-	writeVbar((unsigned int)SceSysrootForTZS_2460ADFA() + cpu * 0x40);
+	writeVbar((unsigned int)sceKernelSysrootGetVbaseResetVector() + cpu * 0x40);
 	return 0;
 }
 

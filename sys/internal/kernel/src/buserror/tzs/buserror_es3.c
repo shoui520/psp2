@@ -5,7 +5,7 @@
 
 static BusErrorRecord *busErrorRecord(void)
 {
-	return (BusErrorRecord *)((char *)SceSysrootForTZS_1C96096F() + BUSERROR_SHM_RECORD);
+	return (BusErrorRecord *)((char *)sceKernelSysrootGetSharedMemory() + BUSERROR_SHM_RECORD);
 }
 
 /* name unknown: collect the record (and print it in debug builds) */
@@ -35,7 +35,7 @@ int MoncallCollectCleanBusErrorInfo_ES3(int arg0, int arg1, int arg2, int arg3)
 	BusErrorRecord *rec = busErrorRecord();
 
 	CollectBusErrorInfo_ES3(rec);
-	SceCpuForTZS_7A5373EB(rec, BUSERROR_SHM_RECORD_SIZE);
+	sceKernelDcacheCleanInvalidateRange(rec, BUSERROR_SHM_RECORD_SIZE);
 	return 0;
 }
 

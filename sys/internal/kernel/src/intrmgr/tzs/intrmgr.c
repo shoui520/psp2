@@ -53,13 +53,13 @@ void SetPriority(unsigned int intrCode, unsigned char priority)
 
 static int UnmapKblArea(int arg0, int arg1, int arg2, int arg3)
 {
-	if (sceKernelAddressSpaceUnmapForTZS(KBL_AREA_ADDRESS_SPACE, 0xf7, 0xc,
+	if (sceKernelAddressSpaceUnmap(KBL_AREA_ADDRESS_SPACE, 0xf7, 0xc,
 					     (void *)0x40000000, 0x100000) < 0)
 		SCE_DBG_ASSERT_FAIL(1673);
-	if (sceKernelAddressSpaceUnmapForTZS(KBL_AREA_ADDRESS_SPACE, 0xf7, 0xc,
+	if (sceKernelAddressSpaceUnmap(KBL_AREA_ADDRESS_SPACE, 0xf7, 0xc,
 					     (void *)0x50000000, 0x1000000) < 0)
 		SCE_DBG_ASSERT_FAIL(1684);
-	if (sceKernelAddressSpaceUnmapForTZS(KBL_AREA_ADDRESS_SPACE, 0xf7, 0xc,
+	if (sceKernelAddressSpaceUnmap(KBL_AREA_ADDRESS_SPACE, 0xf7, 0xc,
 					     (void *)0x51000000, 0x1000000) < 0)
 		SCE_DBG_ASSERT_FAIL(1694);
 	return 0;
@@ -74,7 +74,7 @@ static int SetSharedMemory_S(int arg0, int arg1, int arg2, int arg3)
 	SceUID memBlockId;
 	void *base;
 
-	if (sceKernelSysrootGetSharedMemoryForTZS())
+	if (sceKernelSysrootGetSharedMemory())
 		return SCE_KERNEL_ERROR_ERROR;
 	if (size >= 0x100000)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -96,7 +96,7 @@ static int SetSharedMemory_S(int arg0, int arg1, int arg2, int arg3)
 		return memBlockId;
 	}
 	sceKernelGetMemBlockBase(memBlockId, &base);
-	sceKernelSysrootSetSharedMemoryForTZS(base);
+	sceKernelSysrootSetSharedMemory(base);
 	return 0;
 }
 
@@ -215,7 +215,7 @@ int sceKernelRegisterIntrHandler(unsigned int intrCode, const char *name, unsign
 		goto out;
 	}
 	if (name)
-		sceKernelNameHeapInsertForTZS(name, 0, &info->name);
+		sceKernelNameHeapInsert(name, 0, &info->name);
 	else
 		info->name = NULL;
 	info->handler = handler;
@@ -269,7 +269,7 @@ int sceKernelReleaseIntrHandler(unsigned int intrCode)
 	info->arg = NULL;
 	info->targetCpu = 0;
 	info->configuration = 0;
-	sceKernelNameHeapDeleteForTZS(name, 0);
+	sceKernelNameHeapDelete(name, 0);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
@@ -400,12 +400,12 @@ static inline int Start(void)
 		SCE_DBG_ASSERT_FAIL(1958);
 	}
 #endif
-	ret = sceKernelRegisterMonitorEntryForTZS(2, monitorSmcEntry);
+	ret = sceKernelRegisterMonitorEntry(2, &monitorSmcEntry);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(6, 1965, "register smc entry handler failed. 0x%08x\n", ret);
 		SCE_DBG_ASSERT_FAIL(1966);
 	}
-	ret = sceKernelRegisterMonitorEntryForTZS(7, monitorFiqEntry);
+	ret = sceKernelRegisterMonitorEntry(7, &monitorFiqEntry);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(6, 1972, "register Monitor FIQ entry handler failed. 0x%08x\n", ret);
 		SCE_DBG_ASSERT_FAIL(1973);
@@ -514,7 +514,7 @@ int sceKernelIntrMgrModuleStart(SceSize arglen, void *argp)
 	g_intrCpu[sceKernelCpuId()].nesting = 0;
 	if (!sceKernelCpuId())
 		Start();
-	sceKernelSysrootSetModulePrivateForTZS(5, g_intrHandlers);
+	sceKernelSysrootSetModulePrivate(5, g_intrHandlers);
 	g_intrEnterSyscall = NULL;
 	g_intrLeaveSyscall = NULL;
 	g_intrEnterIntr = NULL;
@@ -593,7 +593,7 @@ int sceKernelIntrMgrModuleStart(SceSize arglen, void *argp)
 	g_intrCpu[sceKernelCpuId()].nesting = 0;
 	if (!sceKernelCpuId())
 		Start();
-	sceKernelSysrootSetModulePrivateForTZS(5, g_intrHandlers);
+	sceKernelSysrootSetModulePrivate(5, g_intrHandlers);
 	g_intrEnterSyscall = NULL;
 	g_intrLeaveSyscall = NULL;
 	g_intrEnterIntr = NULL;

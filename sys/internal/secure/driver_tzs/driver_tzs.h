@@ -10,20 +10,11 @@
  */
 #pragma once
 
-/* ForTZS imports: names unknown, the os0 function each one stands for */
-#define SceSysmemForDriver_009E1C61			SceSysmemForTZS_658EACE3
-#define SceDipswForDriver_A98FC2FD			SceDipswForTZS_A98FC2FD
-#define SceCpuForDriver_D32ACE9E	SceCpuForTZS_D67A4356
-#define sceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
+/* ForTZS imports: the os0 name of each one's function */
+#define SceSysmemForDriver_009E1C61			sceKernelFreeMemBlock
+#define SceDipswForDriver_A98FC2FD			sceKernelCheckDipsw
+#define SceCpuForDriver_D32ACE9E	sceKernelSpinlockLowLockCpuSuspendIntr
 #define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB
-
-/* ForTZS imports named by the henkaku wiki (SceSysmem page) */
-#define sceKernelVAtoPAForTZS			SceSysmemForTZS_1DEADF6C
-#define sceKernelCpuAtomicOrAndGet32		SceCpuForTZS_75D87321
-#define sceKernelDcacheCleanInvalidateRange	SceCpuForTZS_7A5373EB
-#define sceKernelDcacheCleanInvalidateAll	SceCpuForTZS_7CCE9480
-#define sceKernelSysrootGetModelInfoForTZS	SceSysrootForTZS_D6FBF445	/* the wiki's guess */
-#define sceKernelSysrootGetErnieWakeupFactorForTZS SceSysrootForTZS_8E871C6D
 
 #include <fw.h>
 #include <stdint.h>
@@ -31,6 +22,7 @@
 #include <sysmem/cpu.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
 #include <sysmem/debug.h>
 #include <intrmgr/intrmgr_tzs.h>
 #include <lowio/pervasive_regs.h>
@@ -45,14 +37,6 @@
 #undef SCE_DBG_PRINTF
 #define SCE_DBG_PRINTF(...)		((void)0)
 #endif
-
-int sceKernelVAtoPAForTZS(const void *va, uintptr_t *pa);
-int sceKernelCpuAtomicOrAndGet32(volatile int *addr, int value);
-void sceKernelDcacheCleanInvalidateRange(const void *addr, unsigned int size);
-void sceKernelDcacheCleanInvalidateAll(void);
-unsigned int sceKernelSysrootGetModelInfoForTZS(void);
-unsigned int sceKernelSysrootGetErnieWakeupFactorForTZS(void);
-void SceCpuForTZS_D4E7413D(void);	/* name unknown: cleans the data cache before a core parks */
 
 #define PERVASIVE_ERROR			((int)0x803f0000)
 #define ALL_CPUS			0xf	/* an interrupt's target CPUs */

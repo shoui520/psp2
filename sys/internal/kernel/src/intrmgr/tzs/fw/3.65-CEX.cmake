@@ -41,28 +41,28 @@ set(MODULE_IMPORT_NIDS
 	0xC839BB78:V:0xBA505B15
 )
 set(MODULE_IMPORT_FUNCS
-	ScePmMgrForTZS_CF554E69
+	sceSblPmMgrGetProductMode
 	sceKernelRegisterMonitorEntry
 	sceKernelAllocPartitionMemBlock
-	SceSysmemForTZS_31273DC7
+	sceKernelAddressSpaceUnmap
 	sceKernelAllocMemBlockForKernel
-	SceSysmemForTZS_42AD34AB
-	SceSysmemForTZS_658EACE3
+	sceKernelNameHeapInsert
+	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
-	SceSysmemForTZS_F459D09D
-	SceSysrootForTZS_1C96096F
-	SceSysrootForTZS_45EEB2E0
-	SceSysrootForTZS_EA572BD9
-	SceCpuForTZS_0A15B41C
+	sceKernelNameHeapDelete
+	sceKernelSysrootGetSharedMemory
+	sceKernelSysrootSetSharedMemory
+	sceKernelSysrootSetModulePrivate
+	sceKernelL1DcacheCleanInvalidateAll
 	CpuL2CacheSyncCore
 	sceKernelCpuId
-	SceCpuForTZS_71FD9AB5
+	sceKernelSpinlockLowLock
 	CpuL2CleanInvalidateAll
-	SceCpuForTZS_B8F00FBE
-	SceCpuForTZS_C4137AED
-	SceCpuForTZS_CD98416C
-	SceCpuForTZS_D67A4356
-	SceDipswForTZS_A98FC2FD
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	sceKernelPleFlushRequest
+	sceKernelSpinlockLowUnlock
+	sceKernelSpinlockLowLockCpuSuspendIntr
+	sceKernelCheckDipsw
 	memset
 	__stack_chk_fail
 )

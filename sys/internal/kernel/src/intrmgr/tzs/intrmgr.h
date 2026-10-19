@@ -9,18 +9,16 @@
  */
 #pragma once
 
-/* ForTZS imports: names unknown, the os0 function each one stands for */
-#define SceDipswForDriver_A98FC2FD			SceDipswForTZS_A98FC2FD
-#define SceCpuForDriver_BF82DEB2		SceCpuForTZS_71FD9AB5
-#define sceKernelSpinlockLowUnlock		SceCpuForTZS_CD98416C
-#define SceCpuForDriver_D32ACE9E	SceCpuForTZS_D67A4356
-#define sceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
+/* ForTZS imports: the os0 name of each one's function */
+#define SceDipswForDriver_A98FC2FD			sceKernelCheckDipsw
+#define SceCpuForDriver_BF82DEB2		sceKernelSpinlockLowLock
+#define SceCpuForDriver_D32ACE9E	sceKernelSpinlockLowLockCpuSuspendIntr
 #define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB
 #define SceDebugForDriver_374B7868		SceDebugForTZS_F851BA4F
 #define SceDebugForDriver_FD753E7A			SceDebugForTZS_618F89E6
-#define ScePmMgrForDriver_2AC815A2			ScePmMgrForTZS_CF554E69
-#define SceDebugForDriver_35A35322			SceDebugForTZS_2F9B8AA8
-#define SceSysmemForDriver_009E1C61			SceSysmemForTZS_658EACE3
+#define ScePmMgrForDriver_2AC815A2			sceSblPmMgrGetProductMode
+#define SceDebugForDriver_35A35322			sceKernelAssert
+#define SceSysmemForDriver_009E1C61			sceKernelFreeMemBlock
 
 #include <fw.h>
 #include <scetypes.h>
@@ -36,6 +34,7 @@
 #include <sysmem/cpu.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/sysroot.h>
+#include <excpmgr/excpmgr.h>
 
 /* Sony built the 3.6x secure kernel without its debug output */
 #if !FW_SINCE(0x04000000)
@@ -46,28 +45,6 @@
 #undef SCE_DBG_ASSERT_FAIL
 #define SCE_DBG_ASSERT_FAIL(...)	((void)0)
 #endif
-
-/* ForTZS imports named by the henkaku wiki's SceSysmem and SceExcpmgr pages */
-#define sceKernelAddressSpaceUnmapForTZS	SceSysmemForTZS_31273DC7
-#define sceKernelNameHeapInsertForTZS		SceSysmemForTZS_42AD34AB
-#define sceKernelNameHeapDeleteForTZS		SceSysmemForTZS_F459D09D
-#define sceKernelSysrootGetSharedMemoryForTZS	SceSysrootForTZS_1C96096F
-#define sceKernelSysrootSetSharedMemoryForTZS	SceSysrootForTZS_45EEB2E0
-#define sceKernelSysrootSetModulePrivateForTZS	SceSysrootForTZS_EA572BD9
-#define sceKernelL1DcacheCleanInvalidateAll	SceCpuForTZS_0A15B41C
-#define sceKernelPleFlushRequest		SceCpuForTZS_C4137AED
-#define sceKernelRegisterMonitorEntryForTZS	sceKernelRegisterMonitorEntry
-
-int sceKernelAddressSpaceUnmapForTZS(SceUID addressSpace, SceUInt32 flags, SceUInt32 type,
-				     void *vaddr, SceSize size);
-int sceKernelNameHeapInsertForTZS(const char *name, SceUInt32 flags, char **out);
-int sceKernelNameHeapDeleteForTZS(char *name, SceUInt32 flags);
-void *sceKernelSysrootGetSharedMemoryForTZS(void);
-void sceKernelSysrootSetSharedMemoryForTZS(void *base);
-int sceKernelSysrootSetModulePrivateForTZS(unsigned int slot, void *data);
-void sceKernelL1DcacheCleanInvalidateAll(void);
-void sceKernelPleFlushRequest(void);
-int sceKernelRegisterMonitorEntryForTZS(int vector, void *entry);
 
 /* SKBL builds this module into the secure kernel boot loader (INTRMGR_SKBL) */
 
@@ -82,7 +59,7 @@ extern SceUID g_moncallTableUid;
 int IllegalContext(void);
 
 /* intrmgr_entry.S */
-extern char monitorFiqEntry[], monitorSmcEntry[];
+extern SceExcpmgrHandler monitorFiqEntry, monitorSmcEntry;
 void enableInterrupts(void);
 
 /* monitor calls of dmacmgr_tzs.c (names unknown) */
@@ -93,7 +70,6 @@ void enableInterrupts(void);
 int initDmacSecure(void);
 
 /* usleep.c */
-void sceKernelUsleep(SceUInt32 usec);
 int InitUsleepTimer(int remap);
 
 /* access_mode.c */

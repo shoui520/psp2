@@ -436,3 +436,13 @@ struct SceKblParam *SceSysrootForKernel_9DB56D1F(void);	/* vitasdk: ksceKernelSy
 void SceSysrootForDriver_DD473B05(SysrootCoredumpTrigger callback);
 void sceKernelSysrootSetStatus(uint32_t status);
 int sceKernelSysrootThreadMgrStartAfterProcess(void);
+
+/* the secure kernel's SceSysrootForTZS (the names of 0.990's import stubs) */
+void *sceKernelSysrootGetSharedMemory(void);
+const struct SceKblParam *sceKernelSysrootGetKblParam(void);
+unsigned int sceKernelSysrootGetErnieWakeupFactor(void);
+unsigned int *sceKernelSysrootGetVbaseResetVector(void);	/* the exception vector page */
+unsigned int *sceKernelSysrootGetVbaseMonitorVector(void);	/* the monitor vector page */
+const unsigned int *sceKernelSysrootGetKernelMMUContext(void);
+unsigned int SceSysrootForTZS_317E7556(unsigned int cpu);	/* a core's block */
+unsigned int SceSysrootForTZS_D6FBF445(void);	/* the model (the henkaku wiki's guess) */

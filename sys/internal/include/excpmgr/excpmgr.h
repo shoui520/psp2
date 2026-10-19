@@ -181,3 +181,6 @@ int SceExcpmgrForKernel_B615A7DA(void);
 void *SceExcpmgrForKernel_5420ED8F(int cpu);
 /* the code whose faults are SCE_KERNEL_ERROR_INVALID_MEMORY_ACCESS */
 int SceExcpmgrForKernel_44CE04B8(unsigned int start, unsigned int end);
+
+/* the secure world's build (SceExcpmgrForTZS): the monitor mode handler of a vector */
+int sceKernelRegisterMonitorEntry(unsigned int code, SceExcpmgrHandler *handler);

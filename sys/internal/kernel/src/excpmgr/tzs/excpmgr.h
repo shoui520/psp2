@@ -8,12 +8,10 @@
  */
 #pragma once
 
-/* ForTZS imports: names unknown, the os0 function each one stands for */
-#define SceSysrootForKernel_D7198963			SceSysrootForTZS_0567B4B9
-#define SceCpuForDriver_BF82DEB2		SceCpuForTZS_71FD9AB5
-#define sceKernelSpinlockLowUnlock		SceCpuForTZS_CD98416C
-#define SceCpuForDriver_D32ACE9E	SceCpuForTZS_D67A4356
-#define sceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
+/* ForTZS imports: the os0 name of each one's function */
+#define SceSysrootForKernel_D7198963			sceKernelIsColdBoot
+#define SceCpuForDriver_BF82DEB2		sceKernelSpinlockLowLock
+#define SceCpuForDriver_D32ACE9E	sceKernelSpinlockLowLockCpuSuspendIntr
 #define SceCpuForDriver_9CB9F0CE	SceCpuForTZS_596784E9
 #define SceDebugForDriver_02B04343		SceDebugForTZS_0D799DAE
 #define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB
@@ -47,20 +45,9 @@ extern SceExcpmgrHandler irqHandler, fiqHandler;
 extern SceExcpmgrHandler panicUndefHandler, panicPabtHandler, panicDabtHandler;
 extern SceExcpmgrHandler initialUndefHandler, initialPabtHandler, initialDabtHandler;
 
-/* ForTZS imports, names unknown */
-unsigned int *SceSysrootForTZS_2460ADFA(void);		/* exception vector page */
-unsigned int *SceSysrootForTZS_D4E6D8E8(void);		/* monitor vector page */
-unsigned int SceSysrootForTZS_317E7556(unsigned int cpu);	/* per-core block */
-const unsigned int *SceSysrootForTZS_A8B7DAF9(void);	/* kernel MMU state */
-int SceSysrootForTZS_EA572BD9(unsigned int slot, void *data);
-void SceCpuForTZS_A5965CBF(void);			/* after code was written */
-void SceCpuForTZS_17A88E69(void *start, SceSize size);	/* after the MVBAR page changed */
-void SceCpuForTZS_B421FAFD(void *start, SceSize size);
-
 void sceKernelDefaultHandlerFiqCfunc(void);
 void sceKernelDefaultMonitorHandlerCfunc(void);
 void sceKernelDefaultHandlerSmcCfunc(void);
 void sceKernelPanicHandlerUndefCfunc(SceExcpmgrContext *context);
 void sceKernelPanicHandlerPabtCfunc(SceExcpmgrContext *context);
 void sceKernelPanicHandlerDabtCfunc(SceExcpmgrContext *context);
-int sceKernelRegisterMonitorEntry(unsigned int code, SceExcpmgrHandler *handler);

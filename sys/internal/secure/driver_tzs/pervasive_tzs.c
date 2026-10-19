@@ -85,7 +85,7 @@ static int PervasiveParkIntrHandler(int intrCode, void *userCtx)
 		plePark();
 		if (s_parkCleanCache)
 			SceCpuForTZS_D4E7413D();
-		sceKernelCpuAtomicOrAndGet32(&s_parkedCpus, bit);
+		SceCpuForTZS_75D87321(&s_parkedCpus, bit);
 		PervasiveDsb();
 		__asm__ volatile("sev");
 		while ((s_parkedCpus >> cpu) & 1)

@@ -32,9 +32,6 @@
 
 #define SPAD32K_FIREWALL	((SceSsxFirewallRegisters *)SSX_FIREWALL_SPAD32K_BASE)
 
-/* name unknown: the secure world's level 1 translation table */
-uint32_t *SceSysmemForTZS_038EAEEE(void);
-
 /* power_entry.S, run from the scratchpad with the MMU off */
 void PowerModeEntry(uint8_t *packet, unsigned int size);
 

@@ -11,24 +11,11 @@
 #pragma once
 
 /* ForTZS imports, named by the henkaku wiki (SceSysmem, SceSysroot) */
-#define sceKernelVAtoPAForTZS			SceSysmemForTZS_1DEADF6C
-#define sceKernelFreeUncacheHeapMemoryForTZS	SceSysmemForTZS_2F18E288
-#define sceKernelAllocHeapMemoryForTZS		SceSysmemForTZS_473871D8
-#define sceKernelCreateHeapForTZS		SceSysmemForTZS_56A16D84
-#define sceKernelAllocUncacheHeapMemoryWithOptionForTZS SceSysmemForTZS_6A3FBAF0
-#define sceKernelSysrootGetSharedMemoryForTZS	SceSysrootForTZS_1C96096F
-#define sceKernelSysrootGetKblParamForTZS	SceSysrootForTZS_29C1049E
-#define sceKernelSysrootSetModulePrivateForTZS	SceSysrootForTZS_EA572BD9
-#define SceDebugForDriver_35A35322			SceDebugForTZS_2F9B8AA8
+#define SceDebugForDriver_35A35322			sceKernelAssert
 /* ForTZS imports: the names of their 0.990 stubs, os0's for the debug ones */
-#define sceKernelDcacheCleanRange		SceCpuForTZS_190D96D5
-#define SceCpuForDriver_BF82DEB2		SceCpuForTZS_71FD9AB5
-#define SceCpuForDriver_27C0B340 SceCpuForTZS_ACF209F3
-#define sceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
-#define sceKernelSpinlockLowUnlock		SceCpuForTZS_CD98416C
-#define sceKernelDcacheInvalidateRange		SceCpuForTZS_CDD46655
-#define SceCpuForDriver_D32ACE9E	SceCpuForTZS_D67A4356
-#define atomicCompareAndSet8			SceCpuForTZS_EFD6F289
+#define SceCpuForDriver_BF82DEB2		sceKernelSpinlockLowLock
+#define SceCpuForDriver_27C0B340 sceKernelSpinlockLowTrylockCpuSuspendIntr
+#define SceCpuForDriver_D32ACE9E	sceKernelSpinlockLowLockCpuSuspendIntr
 #define SceDebugForDriver_02B04343		SceDebugForTZS_0D799DAE
 #define SceDebugForDriver_391B5B74				SceDebugForTZS_563B623D
 #define SceDebugForDriver_FD753E7A			SceDebugForTZS_618F89E6
@@ -41,6 +28,7 @@
 #include <sysmem/memblock.h>
 #include <sysmem/spinlock.h>
 #include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
 #include <kernel_boot_loader/kbl_param.h>
 #include <sysmem/debug.h>
 #include <intrmgr/intrmgr_tzs.h>
@@ -48,17 +36,6 @@
 #include <smsc_proxy/smsc_proxy.h>
 #include <sysmem/cpu.h>
 
-int sceKernelVAtoPAForTZS(const void *va, uintptr_t *pa);
-void *sceKernelAllocUncacheHeapMemoryWithOptionForTZS(SceSize size, SceAllocOpt *opt);
-int sceKernelFreeUncacheHeapMemoryForTZS(void *ptr);
-void *sceKernelAllocHeapMemoryForTZS(SceUID heap, SceSize size);
-SceUID sceKernelCreateHeapForTZS(const char *name, SceSize size, SceKernelHeapCreateOpt *opt);
-void *sceKernelSysrootGetSharedMemoryForTZS(void);
-int sceKernelSysrootSetModulePrivateForTZS(int index, void *data);
-const SceKblParam *sceKernelSysrootGetKblParamForTZS(void);
-void sceKernelDcacheCleanRange(const void *addr, SceSize size);
-void sceKernelDcacheInvalidateRange(const void *addr, SceSize size);
-int atomicCompareAndSet8(volatile SceUInt8 *addr, SceUInt8 expected, SceUInt8 value);
 
 #define SCE_SBL_ERROR_NO_MEMORY			((int)0x800f040c)
 #define SCE_SBL_ERROR_INVALID_ARGUMENT		((int)0x800f0416)

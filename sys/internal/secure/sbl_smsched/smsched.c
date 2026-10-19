@@ -646,11 +646,11 @@ int readCry2Arm(int mailbox, SceUInt32 *value, SmschedRequest *request)
 void freeRequestContext(SmschedRequest *request)
 {
 	if (request->context != NULL) {
-		sceKernelFreeUncacheHeapMemoryForTZS(request->context);
+		sceKernelFreeUncacheHeapMemory(request->context);
 		request->context = NULL;
 	}
 	if (request->vector != NULL) {
-		sceKernelFreeUncacheHeapMemoryForTZS(request->vector);
+		sceKernelFreeUncacheHeapMemory(request->vector);
 		request->vector = NULL;
 	}
 	request->contextType = SMSCHED_CONTEXT_NEW;
@@ -789,21 +789,21 @@ int sceSblSmSchedFini(int stop)
 	if (s_instance == NULL)
 		return ret;
 	if (s_instance->debugArea != NULL) {
-		sceKernelFreeUncacheHeapMemoryForTZS(s_instance->debugArea);
+		sceKernelFreeUncacheHeapMemory(s_instance->debugArea);
 		s_instance->debugArea = NULL;
 	}
 	if (s_instance->skCmdArea != NULL) {
-		sceKernelFreeUncacheHeapMemoryForTZS(s_instance->skCmdArea);
+		sceKernelFreeUncacheHeapMemory(s_instance->skCmdArea);
 		s_instance->skCmdArea = NULL;
 	}
 	if (s_instance->self != NULL) {
-		sceKernelFreeUncacheHeapMemoryForTZS(s_instance->self);
+		sceKernelFreeUncacheHeapMemory(s_instance->self);
 		s_instance->self = NULL;
 	}
 	for (i = 0; i < SMSCHED_REQUESTS; i++) {
 		request = &s_instance->requests[i];
 		if (request->area != NULL) {
-			sceKernelFreeUncacheHeapMemoryForTZS(request->area);
+			sceKernelFreeUncacheHeapMemory(request->area);
 			request->area = NULL;
 			request->mailbox = NULL;
 		}
@@ -924,7 +924,7 @@ void reschedule(void)
 	opt.align = 64;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	context = sceKernelAllocUncacheHeapMemoryWithOptionForTZS(SMSCHED_CONTEXT_SIZE, &opt);
+	context = sceKernelAllocUncacheHeapMemoryWithOption(SMSCHED_CONTEXT_SIZE, &opt);
 	if (context == NULL)
 		goto fail;
 	opt.size = sizeof(opt);
@@ -932,7 +932,7 @@ void reschedule(void)
 	opt.align = 64;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	vector = sceKernelAllocUncacheHeapMemoryWithOptionForTZS(SMSCHED_CONTEXT_RANGES * sizeof(*vector), &opt);
+	vector = sceKernelAllocUncacheHeapMemoryWithOption(SMSCHED_CONTEXT_RANGES * sizeof(*vector), &opt);
 	if (vector == NULL) {
 		sceKernelFreeHeapMemory(s_instance->heap, context);
 		goto fail;
@@ -946,7 +946,7 @@ void reschedule(void)
 		goto free;
 	SmschedFlushWord(&vector[0].addr);
 	SmschedFlushWord(&vector[0].size);
-	if (sceKernelVAtoPAForTZS(vector, &vectorPA) < 0)
+	if (sceKernelVAtoPA(vector, &vectorPA) < 0)
 		goto free;
 	running->contextType = SMSCHED_CONTEXT_PREEMPTED;
 	running->context = context;
@@ -959,8 +959,8 @@ void reschedule(void)
 		SCE_PANIC(1997);
 	return;
 free:
-	sceKernelFreeUncacheHeapMemoryForTZS(context);
-	sceKernelFreeUncacheHeapMemoryForTZS(vector);
+	sceKernelFreeUncacheHeapMemory(context);
+	sceKernelFreeUncacheHeapMemory(vector);
 fail:
 	SCE_PANIC(1987);
 }
@@ -1498,7 +1498,7 @@ int module_start(SceSize args, void *argp)
 
 	(void)args;
 	(void)argp;
-	kblParam = sceKernelSysrootGetKblParamForTZS();
+	kblParam = sceKernelSysrootGetKblParam();
 	skAddr = kblParam->secure_kernel.addr;
 	skSize = kblParam->secure_kernel.size;
 	rvkAddr = kblParam->prog_rvk.addr;
@@ -1511,12 +1511,12 @@ int module_start(SceSize args, void *argp)
 
 	heapOpt.size = sizeof(heapOpt);
 	heapOpt.flags = HEAP_AUTO_EXTEND;
-	heap = sceKernelCreateHeapForTZS("SceSmsched", 0x1000, &heapOpt);
+	heap = sceKernelCreateHeap("SceSmsched", 0x1000, &heapOpt);
 	if (heap < 0) {
 		ret = heap;
 		goto fail;
 	}
-	instance = sceKernelAllocHeapMemoryForTZS(heap, sizeof(*instance));
+	instance = sceKernelAllocHeapMemory(heap, sizeof(*instance));
 	if (instance == NULL) {
 		ret = SCE_SBL_ERROR_NO_MEMORY;
 		sceKernelDeleteHeap(heap);
@@ -1533,7 +1533,7 @@ int module_start(SceSize args, void *argp)
 	opt.align = 64;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	instance->debugArea = sceKernelAllocUncacheHeapMemoryWithOptionForTZS(SMSCHED_DEBUG_AREA_SIZE, &opt);
+	instance->debugArea = sceKernelAllocUncacheHeapMemoryWithOption(SMSCHED_DEBUG_AREA_SIZE, &opt);
 	if (instance->debugArea == NULL)
 		goto nomem;
 	opt.size = sizeof(opt);
@@ -1541,7 +1541,7 @@ int module_start(SceSize args, void *argp)
 	opt.align = 64;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	instance->skCmdArea = sceKernelAllocUncacheHeapMemoryWithOptionForTZS(SMSCHED_SK_CMD_AREA_SIZE, &opt);
+	instance->skCmdArea = sceKernelAllocUncacheHeapMemoryWithOption(SMSCHED_SK_CMD_AREA_SIZE, &opt);
 	if (instance->skCmdArea == NULL)
 		goto nomem;
 	opt.size = sizeof(opt);
@@ -1549,10 +1549,10 @@ int module_start(SceSize args, void *argp)
 	opt.align = 64;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	instance->self = sceKernelAllocUncacheHeapMemoryWithOptionForTZS(sizeof(*instance->self), &opt);
+	instance->self = sceKernelAllocUncacheHeapMemoryWithOption(sizeof(*instance->self), &opt);
 	if (instance->self == NULL)
 		goto nomem;
-	ret = sceKernelVAtoPAForTZS(instance->self, &instance->selfPA);
+	ret = sceKernelVAtoPA(instance->self, &instance->selfPA);
 	if (ret < 0)
 		goto fail;
 	*instance->self = kprxAuthSm;
@@ -1560,7 +1560,7 @@ int module_start(SceSize args, void *argp)
 	(void)*(volatile SceSize *)&instance->self->size;
 	dsb();
 
-	instance->requests = sceKernelAllocHeapMemoryForTZS(instance->heap,
+	instance->requests = sceKernelAllocHeapMemory(instance->heap,
 							    SMSCHED_REQUESTS * sizeof(SmschedRequest));
 	if (instance->requests == NULL)
 		goto nomem;
@@ -1574,15 +1574,15 @@ int module_start(SceSize args, void *argp)
 		opt.align = 64;
 		opt.mmapBase = NULL;
 		opt.mmapSize = 0;
-		area = sceKernelAllocUncacheHeapMemoryWithOptionForTZS(sizeof(*area), &opt);
+		area = sceKernelAllocUncacheHeapMemoryWithOption(sizeof(*area), &opt);
 		if (area == NULL)
 			goto nomem;
 		request->area = area;
-		ret = sceKernelVAtoPAForTZS(request->area, &request->areaPA);
+		ret = sceKernelVAtoPA(request->area, &request->areaPA);
 		if (ret < 0)
 			goto fail;
 		request->mailbox = &area->mailbox;
-		ret = sceKernelVAtoPAForTZS(request->mailbox, &request->mailboxPA);
+		ret = sceKernelVAtoPA(request->mailbox, &request->mailboxPA);
 		if (ret < 0)
 			goto fail;
 		SmschedLinkAddTail(&instance->freeList, &request->link);
@@ -1599,7 +1599,7 @@ int module_start(SceSize args, void *argp)
 	ret = smsSecureKernelProxySetDebug(s_instance->debugArea, SMSCHED_DEBUG_AREA_SIZE);
 	if (ret < 0)
 		goto fail;
-	sceKernelSysrootSetModulePrivateForTZS(13, s_instance);
+	sceKernelSysrootSetModulePrivate(13, s_instance);
 
 	s_runQueue[0].next = &s_runQueue[0];
 	s_runQueue[0].prev = &s_runQueue[0];

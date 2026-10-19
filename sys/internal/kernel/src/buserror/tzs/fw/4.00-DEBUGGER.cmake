@@ -24,8 +24,8 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterIntrHandler
 	sceKernelEnableIntr
 	sceKernelRegisterMonitorCallHandler
-	SceSysrootForTZS_1C96096F
-	SceCpuForTZS_7A5373EB
+	sceKernelSysrootGetSharedMemory
+	sceKernelDcacheCleanInvalidateRange
 	SceDebugForTZS_618F89E6
 	SceDebugForTZS_D26EB4BB
 	SceDebugForTZS_F851BA4F
