@@ -27,7 +27,8 @@ int SceSblSsMgrForDriver_AC57F4F0(void *result)
 	return sceSblDmac5Rnd(result, 64, 1);
 }
 
-int _set_key_seed(void *result, SceSize size)
+/* inlined into its one caller, sceSblRngPseudoRandomNumber */
+static inline int _set_key_seed(void *result, SceSize size)
 {
 	uint8_t key[20], seed[20], block[20];
 	uint8_t *output = result;
@@ -49,6 +50,12 @@ int _set_key_seed(void *result, SceSize size)
 		size -= copySize;
 	}
 	return 0;
+}
+
+__attribute__((noinline))
+int sceSblRngPseudoRandomNumber(void *result, SceSize size)
+{
+	return _set_key_seed(result, size);
 }
 
 int sceSblRngInit(void)
@@ -84,7 +91,7 @@ static int __attribute__((noinline, noclone)) rngGetRandomNumberForUser(
 	if (!result || size > 64)
 		ret = 0x80010016;
 	else
-		ret = _set_key_seed(result, size);
+		ret = sceSblRngPseudoRandomNumber(result, size);
 	sceSyscallLeave(syscallFrame);
 	return ret;
 }

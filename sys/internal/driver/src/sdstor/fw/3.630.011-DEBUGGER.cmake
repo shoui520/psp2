@@ -151,7 +151,7 @@ set(MODULE_IMPORT_FUNCS
 	vfsLockVnode
 	SceIofilemgrForDriver_D070BC48
 	vfsGetNewVnode
-	_set_key_seed
+	sceSblRngPseudoRandomNumber
 	SceSblACMgrForDriver_BE5667C5
 	SceSblGcAuthMgrGcAuthForDriver_68781760
 	sceKernelRegisterSysEventHandler

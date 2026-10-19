@@ -82,7 +82,7 @@ int SceMagicGateForDriver_12CE769D(uint64_t *challenge)
 	result = SceMagicGateForDriver_A49B9D70();
 	if (result >= 0) {
 		getSavedChallenge(challenge);
-		result = _set_key_seed(&random, 8);
+		result = sceSblRngPseudoRandomNumber(&random, 8);
 		if (result >= 0) {
 			if (random)
 				*challenge = random ^ *challenge;
@@ -104,7 +104,7 @@ int SceMagicGateForDriver_E0888D78(uint64_t *random, uint64_t *challenge)
 
 	result = SceMagicGateForDriver_A49B9D70();
 	if (result >= 0) {
-		result = _set_key_seed(random, 8);
+		result = sceSblRngPseudoRandomNumber(random, 8);
 		if (result >= 0) {
 			if (*random) {
 				result = 0;

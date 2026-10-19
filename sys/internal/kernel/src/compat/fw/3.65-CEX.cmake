@@ -169,7 +169,7 @@ set(MODULE_IMPORT_FUNCS
 	sceSblACMgrGetMediaType
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_FD00C72A
-	_set_key_seed
+	sceSblRngPseudoRandomNumber
 	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893

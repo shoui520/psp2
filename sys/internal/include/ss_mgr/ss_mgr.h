@@ -140,7 +140,6 @@ int SceSblSsMgrForKernel_83D254FF(void *flags);	/* vitasdk: ksceSblQafManagerGet
 /* vitasdk: ksceSblQafManagerGetQafName */
 int SceSblSsMgrForKernel_E2DD0378(char *name, SceSize size);
 int _sceKernelGetOpenPsId(SceKernelOpenPsId *openPsId);
-int _set_key_seed(void *result, SceSize size);
 int nvs_read_data(uint32_t offset, void *buffer, uint32_t size);
 int nvs_write_data(uint32_t offset, const void *buffer, uint32_t size);
 int sceSblDmac5EncDec(SceSblDmac5EncDecParam *param, SceUInt32 command);
@@ -166,6 +165,7 @@ int sceSblQafMgrIsAllowNpTest(void);
 int sceSblQafMgrIsAllowRemoteSysmoduleLoad(void);
 int sceSblQafMgrIsAllowScreenShotAlways(void);
 int sceSblQafMgrSetQafToken2(const void *token);
+int sceSblRngPseudoRandomNumber(void *result, SceSize size);
 int sceSblSsGetNvsData(uint32_t area, void *buffer, SceSize size);
 int sceSblSsInfraAllocatePARangeVector(void *addr, SceSize size, SceUID heap, SceKernelPAVector *vector);
 int sceSblSsSetNvsData(uint32_t area, const void *buffer, SceSize size);

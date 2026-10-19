@@ -158,7 +158,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForDriver_E87D1777
 	SceSblAIMgrForDriver_D78B04A2
 	SceSblAIMgrForDriver_F4B98F66
-	_set_key_seed
+	sceSblRngPseudoRandomNumber
 	sceKernelRegisterProcEventHandler
 	SceProcEventForDriver_3DED57CC
 	sceKernelRegisterSysEventHandler

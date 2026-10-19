@@ -1257,7 +1257,7 @@ int compatAllocCdramWithHole(SceCompatCdram *cdram)
 #if FW_VERSION >= 0x03650000
 	unsigned int bootRandom;
 
-	result = _set_key_seed(&bootRandom, sizeof(bootRandom));
+	result = sceSblRngPseudoRandomNumber(&bootRandom, sizeof(bootRandom));
 	if (result < 0)
 		return result;
 #endif

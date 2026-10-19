@@ -3130,13 +3130,13 @@ modules:
           SceSblSsMgrForDriver_E6E1AD15: 0xE6E1AD15
           SceSblSsMgrForDriver_EA6ACB6D: 0xEA6ACB6D
           SceSblSsMgrForDriver_EB3AF9B5: 0xEB3AF9B5
-          _set_key_seed: 0x4F9BFBE5
           sceSblAimgrGetConsoleId: 0xFC6CDD68
           sceSblAimgrGetOpenPsId: 0xA5B5D269
           sceSblAimgrGetPscode2: 0x9A9676D0
           sceSblAimgrGetVisibleId: 0x04843835
           sceSblDmac5HashTransform: 0x9641374E
           sceSblDmac5Rnd: 0x4DD1B2E5
+          sceSblRngPseudoRandomNumber: 0x4F9BFBE5
           sceSblSsEncryptWithPortability: 0x21EC51F6
           sceSblSsGetNvsData: 0xFDD6D5DE
           sceSblSsInfraAllocatePARangeVector: 0xE0B13BA7

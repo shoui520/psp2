@@ -229,7 +229,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblSsMgrForKernel_83D254FF
 	nvs_read_data
 	nvs_write_data
-	_set_key_seed
+	sceSblRngPseudoRandomNumber
 	SceSblSsMgrForDriver_934DB6B5
 	sceSblAimgrGetOpenPsId
 	SceSblSsMgrForDriver_CD98CC92

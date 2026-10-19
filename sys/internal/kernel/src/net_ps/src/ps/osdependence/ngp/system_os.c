@@ -172,7 +172,7 @@ unsigned int sceNetPsGetRandom(void)
 {
 	unsigned int value;
 
-	_set_key_seed(&value, sizeof(value));
+	sceSblRngPseudoRandomNumber(&value, sizeof(value));
 	return value;
 }
 

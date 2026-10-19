@@ -461,7 +461,7 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForDriver_EE694840
 	sceKernelRegisterProcEventHandler
 	SceProcEventForDriver_3DED57CC
-	_set_key_seed
+	sceSblRngPseudoRandomNumber
 	sceSblAimgrGetOpenPsId
 	sceSblSsGetNvsData
 	SceSblAIMgrForDriver_71608CA3

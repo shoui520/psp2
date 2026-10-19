@@ -312,7 +312,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoChstatByFd
 	sceIoRead
 	sceIoClose
-	_set_key_seed
+	sceSblRngPseudoRandomNumber
 	SceSblSsMgrForDriver_934DB6B5
 	sceSblAimgrGetOpenPsId
 	SceSblSsMgrForKernel_83D254FF

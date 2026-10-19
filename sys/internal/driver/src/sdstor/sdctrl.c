@@ -932,7 +932,7 @@ int sdintr_thr_entry(SceSize args, void *argp)
 						goto suspendGcWithoutIdentity;
 					memset(&gameCardMediaSector, 0, sizeof(gameCardMediaSector));
 					do {
-						if (_set_key_seed(interrupt->cid, 16))
+						if (sceSblRngPseudoRandomNumber(interrupt->cid, 16))
 							goto suspendGcWithoutIdentity;
 					} while (!interrupt->cid[0] && !interrupt->cid[1] &&
 						 !interrupt->cid[2] && !interrupt->cid[3]);
@@ -984,7 +984,7 @@ suspendGcWithoutIdentity:
 						goto suspendRmWithoutIdentity;
 					memset(&memoryCardMediaSector, 0, sizeof(memoryCardMediaSector));
 					do {
-						if (_set_key_seed(interrupt->cid, 16))
+						if (sceSblRngPseudoRandomNumber(interrupt->cid, 16))
 							goto suspendRmWithoutIdentity;
 					} while (!interrupt->cid[0] && !interrupt->cid[1] &&
 						 !interrupt->cid[2] && !interrupt->cid[3]);

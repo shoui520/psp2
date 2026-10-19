@@ -21,7 +21,7 @@ static int postSsMgrInitWork(void *arg)	/* name unknown */
 
 static int postSsMgrRandom(void *buf, SceSize size)	/* name unknown */
 {
-	return _set_key_seed(buf, size);
+	return sceSblRngPseudoRandomNumber(buf, size);
 }
 
 /* Sony's _sceSblPostSsMgrInitPhase1 (post_ss_mgr_startstop.c) */

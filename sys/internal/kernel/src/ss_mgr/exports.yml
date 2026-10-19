@@ -33,7 +33,7 @@ SceSblSsMgr:
         - sceSblSsSetNvsData: 0x249ADB07
         - SceSblSsMgrForDriver_37DD5CBF: 0x37DD5CBF
         - sceSblDmac5Rnd: 0x4DD1B2E5
-        - _set_key_seed: 0x4F9BFBE5
+        - sceSblRngPseudoRandomNumber: 0x4F9BFBE5
         - SceSblSsMgrForDriver_6704D985: 0x6704D985
         - SceSblSsMgrForDriver_711C057A: 0x711C057A
         - SceSblSsMgrForDriver_79F38554: 0x79F38554
