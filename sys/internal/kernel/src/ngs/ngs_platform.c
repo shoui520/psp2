@@ -14,9 +14,6 @@
 #include "ngs_system.h"
 #include "ngs_module_memory.h"
 
-#define SCE_NGS_ERROR ((int)0x804a0001)
-#define SCE_NGS_ERROR_OUT_OF_ASSETS ((int)0x804a0006)
-
 NgsPlatformState ngsPlatformState;
 
 int ngsPlatformInitialize(void)

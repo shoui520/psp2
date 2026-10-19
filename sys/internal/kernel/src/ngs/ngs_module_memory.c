@@ -5,8 +5,6 @@
 #include "ngs_module_memory.h"
 #include "ngs_voice_definition.h"
 
-#define SCE_NGS_ERROR_INVALID_PARAM ((int)0x804a0002)
-
 extern const int ngsReverbDelayLengths[16];
 
 struct NgsAudioFormat ngsCompressorFormat

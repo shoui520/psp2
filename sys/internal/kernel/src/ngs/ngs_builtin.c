@@ -8,8 +8,6 @@
 #include "ngs_module_memory.h"
 #include "ngs_system.h"
 
-#define SCE_NGS_ERROR ((int)0x804a0001)
-
 struct NgsSynSystem;
 struct NgsModuleDefinition;
 

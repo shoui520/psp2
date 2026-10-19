@@ -7,8 +7,6 @@
 #include "ngs_module_memory.h"
 #include "ngs_system.h"
 
-#define SCE_NGS_ERROR_PARAM_TYPE_MISMATCH ((int)0x804a000f)
-
 int ngsCheckParamType(uint32_t paramsId, uint32_t expectedParamsId)
 {
 	if ((paramsId & 0xffffU) != (expectedParamsId & 0xffffU))
