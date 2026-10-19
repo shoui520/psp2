@@ -24,7 +24,6 @@ psp2_module(os0_kd_iofilemgr KIND kernel COMPILER gcc48 SCE_LAYOUT SOURCES
 	sched_scheduler.c
 	sched_io_chunk.c
 	sched_io_request_queue.c
-	import_bindings.S
 )
 # Sony built the I/O scheduler sources with a signed char
 set_source_files_properties(io_scheduler.c sched_dispatcher.c

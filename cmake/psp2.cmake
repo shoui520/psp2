@@ -369,8 +369,6 @@ macro(psp2_sce_layout name)
 			"${PSP2_SRC}/tools/nids/${M_KIND}.yml" "${PSP2_SRC}/tools/nids/user.yml"
 		VERBATIM)
 
-	# the stubs bind every import; the old path's hand-made bindings would collide
-	list(FILTER M_SOURCES EXCLUDE REGEX "(^|/)import_bindings\\.S$")
 	add_executable(${name} ${M_SOURCES} "${tables}")
 	# Sony's objects carry unwind tables (an .ARM.exidx entry per function)
 	target_compile_options(${name} PRIVATE "$<$<COMPILE_LANGUAGE:C>:-funwind-tables>")

@@ -12,5 +12,4 @@ psp2_module(${PSP2_TARGET} KIND kernel COMPILER gcc48 SCE_LAYOUT SOURCES
 	krm.c
 	key-ring.c
 	krm_ecc.c
-	import_bindings.S
 )
