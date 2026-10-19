@@ -849,11 +849,15 @@ void CacheInvalidateRangeWithPA(const void *start, uintptr_t pa, SceSize size);
 
 /* debug_state.c */
 int InitializeDebugPrintLevel(const struct SysmemBootContext *context);
+#if defined(SYSMEM_SKBL) || defined(SYSMEM_NSKBL)
+int InitializeAssertLevel(void);	/* the boot loaders' own */
+#else
 int InitializeAssertLevel(const struct SysmemBootContext *context);
+#endif
 int InitializeDebugNop(void);
 
 /* dipsw.c */
-#if SYSMEM_NSKBL
+#if defined(SYSMEM_SKBL) || defined(SYSMEM_NSKBL)
 struct SceDipsw;
 int InitializeDipsw(struct SceDipsw *dipsw);	/* the boot loaders' own */
 #else
@@ -898,6 +902,12 @@ int L2PageTableRemapPages(L2PageTable *l2pt, MemBlockObject *block, SceUInt32 ty
 int L2PageTableUnmapPages(L2PageTable *l2pt, SceUInt32 asid, uintptr_t va, SceSize size,
 			  SceUInt32 flags);
 int L2PageTableModuleStart(void);
+
+/* l2cc.c */
+#if defined(SYSMEM_SKBL)
+struct ScePl310Registers;
+void CpuL2CacheInit(struct ScePl310Registers *registerBase);
+#endif
 
 /* led.c */
 #if defined(SYSMEM_SKBL) || defined(SYSMEM_NSKBL)
@@ -1112,6 +1122,10 @@ int SysrootCreateProcessLocalStorage(const char *name, SceSize size);
 void *SysrootGetProcessLocalStorageAddr(SceUInt32 key);
 int SysrootGetProcessLocalStorageAddrForPid(SceUID pid, SceUInt32 key, void **addr, int create);
 const char *SysrootGetMemBlockName(unsigned int index);
+#if SYSMEM_NSKBL
+struct SceKernelBootParam;
+int SetupCore0(struct SceKernelBootParam *param);
+#endif
 
 /* sysroot_capability.c */
 int CheckProcessCapabilityGranted(SceUID processId, unsigned int capability);

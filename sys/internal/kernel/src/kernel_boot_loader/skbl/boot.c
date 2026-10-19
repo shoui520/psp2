@@ -27,6 +27,8 @@
 #include <buserror/ssx_firewall_regs.h>
 #include <systimer/timer_regs.h>
 #include "boot.h"
+#include "../pervasive_kbl.h"
+#include "../../sysmem/sysmem_internal.h"
 #include <lowio/pervasive.h>
 #include <sysmem/dipsw.h>
 #include <sysmem/debugled.h>
@@ -44,46 +46,13 @@
 #define LPDDR1_FIREWALL		((SceSsxFirewallRegisters *)SSX_FIREWALL_LPDDR1_BASE)
 
 /* the other boot loader parts boot() calls */
-int LedModuleStart(void);
-int SerialInit(int uart0Enabled);
-int SerialDebugPutchar(void *args, int c);
-int InitializeDipsw(SceDipsw *dipsw);
-int InitializeAssertLevel(void);
 int InitializeDebugBuffer(void);
 int KblGetBuildNumber(void);
-int PervasiveInit(void);
-int TimerGateEnable(void);
-int TimerResetDisable(void);
 int CompatRamPowerOn(void);
 int SonyRegbusPowerOn(void);
-int BootDeviceGateEnable(void);
-int BootDeviceResetDisable(void);
-int DebugBusGateEnable(void);
-int DebugBusResetDisable(void);
-int DebugDeviceGateEnable(void);
-int DebugDeviceResetDisable(void);
-int DebugPaGateEnable(void);
-int DebugPaResetDisable(void);
-int ArmGateEnable(SceUInt32 mask);
-int ArmDebuggerGateEnable(void);
-int ArmDebuggerResetDisable(void);
-int Lpddr2IsolationDisable(int bus);
-int Lpddr2GateEnable(int bus);
-int Lpddr2ResetDisable(int bus);
-int sceKernelMMUL1Init(uint32_t *l1);
-int sceKernelMMUL2Init(uint32_t *l2);
-int sceKernelMMUSetL2PageTable(uint32_t *l1, uint32_t domain, uintptr_t va, uintptr_t l2pa);
-int sceKernelMMUMapSections(uint32_t *l1, uint32_t type, uint32_t domain, uintptr_t va,
-			    SceSize size, uintptr_t pa);
 int sceKernelMMUMapSmallPage(uint32_t *l2, uint32_t type, uintptr_t va, uintptr_t offset,
 			     uintptr_t pa);
-int sceKernelMMUMapSmallPages(uint32_t *l2, uint32_t type, uintptr_t va, uintptr_t offset,
-			      SceSize size, uintptr_t pa);
-int sceKernelMMUMapLargePages(uint32_t *l2, uint32_t type, uintptr_t va, uintptr_t offset,
-			      SceSize size, uintptr_t pa);
 uint32_t MMUTtbrValue(uintptr_t l1);
-int MMUSetReady(void);
-void CpuL2CacheInit(void *registerBase);
 void CpuL2CacheSetEventMonitorBus(int enable);
 void CpuL2InvalidateAll(void);
 void CpuL2CacheEnable(void);

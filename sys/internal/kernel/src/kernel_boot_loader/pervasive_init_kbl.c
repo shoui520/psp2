@@ -8,6 +8,7 @@
 #include <lowio/mailbox_regs.h>
 #include <lowio/uart_regs.h>
 #include <lowio/pervasive.h>
+#include "pervasive_kbl.h"
 
 /* SceLowio's register pointers (as SceDriverTzs declares them); pervasive_kbl.c
  * reaches the registers through the physical addresses instead */
@@ -26,8 +27,6 @@ static struct {
 	volatile uint32_t hardwareInfo[5];		/* revision, cacheStatus, hardwareInfo[3] */
 } s_pervasive;
 
-int LowioPixelClockInit(void);
-int PervasiveMiscInit(void);
 
 int PervasiveInit(void)
 {

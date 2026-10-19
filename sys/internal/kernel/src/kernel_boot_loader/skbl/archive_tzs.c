@@ -17,18 +17,12 @@
 #include <sysmem/debug.h>
 #include <kernel_boot_loader/kernel_boot_param.h>
 #include <sysmem/sysroot.h>
-
-/* the sysroot (sysroot.c) */
+#include "../../sysmem/sysmem_internal.h"
 
 /* the rest of the TrustZone kernel */
-int SerialDebugPutchar(void *args, int c);
 uint32_t DebugGetPrintLevel(void);
 SceUID sceKernelLoadModuleBufferWithoutStart(const void *buffer, SceSize size);
 int sceKernelGetModuleBootEntry(SceUID uid, int (**entry)(SceSize args, void *argp));
-int sceKernelMMUMapSections(uint32_t *l1, uint32_t type, uint32_t domain, uintptr_t va,
-			    SceSize size, uintptr_t pa);
-int sceKernelMMUUnmapSectionsWithFlags(uint32_t *l1, uint32_t asid, uintptr_t va,
-				       SceSize size, uint32_t flags);
 SceSize sceArlzDecode(void *dst, SceSize dstSize, const void *src, int flags);
 int sceArlzArmFilter(void *buffer, SceSize size, int flags);
 

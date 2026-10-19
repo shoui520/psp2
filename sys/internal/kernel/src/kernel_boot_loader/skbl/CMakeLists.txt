@@ -49,3 +49,6 @@ set_source_files_properties(${intrmgr_source}/dmacmgr_tzs.c PROPERTIES
 	COMPILE_DEFINITIONS INTRMGR_SKBL COMPILE_OPTIONS "-Os")
 set_source_files_properties(../pervasive_kbl.c PROPERTIES
 	COMPILE_DEFINITIONS PERVASIVE_SKBL)
+# the boot loader's own files see sysmem's interface as SKBL builds it
+set_property(SOURCE boot.c kbl_main.c archive_tzs.c APPEND PROPERTY
+	COMPILE_DEFINITIONS SYSMEM_NSKBL SYSMEM_SKBL)

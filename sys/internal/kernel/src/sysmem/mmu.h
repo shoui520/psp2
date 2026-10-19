@@ -37,6 +37,7 @@ int MMUVAtoPACore(uint32_t mode, uint32_t flags, uintptr_t va, uintptr_t *pa, in
 int MMUCheckAccessibleRange(uint32_t mode, uintptr_t va, SceSize size);
 
 /* mmu.c */
+int MMUSetReady(void);
 int MMUInitPost(void);
 int sceKernelMMUL1Init(uint32_t *l1);
 int sceKernelMMUSetL2PageTable(uint32_t *l1, uint32_t domain, uintptr_t va, uintptr_t l2pa);

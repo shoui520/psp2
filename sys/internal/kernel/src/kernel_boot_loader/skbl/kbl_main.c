@@ -20,6 +20,7 @@
 #include <power/spad_regs.h>
 #include <sysmem/sysroot.h>
 #include "boot.h"
+#include "../../sysmem/sysmem_internal.h"
 #include <sysmem/dipsw.h>
 #include <sysmem/debugled.h>
 #include <sysmem/sysmem.h>
@@ -29,7 +30,6 @@
 void jumpToNonSecure(uintptr_t entry) __attribute__((noreturn));
 
 /* the sysroot (sysroot.c) */
-int SetupCore0(SceKernelBootParam *param);
 void sceKernelSysrootSetVbaseMonitorVector(uint32_t value);
 void sceKernelSysrootSetBootStatus(unsigned int status);
 
@@ -39,8 +39,6 @@ int SysmemInitNop(void);
 int InitializeDebugPutcharPrivate(void);
 int KblMMUInit(SceKernelBootParam *param);
 int SysmemModuleStart(SceKernelBootParam *param);
-int AimgrInit(void);
-const char *SysmemAllocName(const char *name);
 void KblCallWithStack(SceKernelBootParam *param, void (*func)(SceKernelBootParam *),
 		      void *stack);
 int sceKernelModulemgrStart(SceKernelBootParam *param);

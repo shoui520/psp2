@@ -35,4 +35,4 @@ set_source_files_properties(${sysmem_source}/serial.c PROPERTIES
 set_source_files_properties(${sdif_source}/sdif.c ${sdif_source}/cmd_queue.c
 	${sdif_source}/mmc.c ${sdif_source}/card_cmd.c ${sdif_source}/sd.c
 	${sdif_source}/adma.c PROPERTIES COMPILE_DEFINITIONS SDIF_NSKBL)
-set_source_files_properties(../skbl/boot.c PROPERTIES COMPILE_DEFINITIONS BOOT_NSKBL)
+set_source_files_properties(../skbl/boot.c PROPERTIES COMPILE_DEFINITIONS "BOOT_NSKBL;SYSMEM_NSKBL")

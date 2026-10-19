@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <lowio/pervasive_regs.h>
 #include <lowio/pervasive_pixel.h>
+#include "pervasive_kbl.h"
 
 #define PERVASIVE_ERROR		((int)0x803f0000)
 
