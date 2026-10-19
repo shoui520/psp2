@@ -497,19 +497,19 @@ static int cleanupProcess(int process)
 		SceSysconForDriver_8D1D97E8(0);
 	return 0;
 }
-static __attribute__((noipa)) int processExit(SceUID pid, ProcEventParam *param, void *common)
+static int processExit(SceUID pid, ProcEventParam *param, void *common)
 {
 	return cleanupProcess(pid);
 }
-static __attribute__((noipa)) int processKill(SceUID pid, ProcEventParam *param, void *common)
+static int processKill(SceUID pid, ProcEventParam *param, void *common)
 {
 	return cleanupProcess(pid);
 }
-static __attribute__((noipa)) int processSuspend(SceUID pid, int phase, ProcEventParam *param, void *common)
+static int processSuspend(SceUID pid, int phase, ProcEventParam *param, void *common)
 {
 	return 0;
 }
-static __attribute__((noipa)) int processResume(SceUID pid, int phase, ProcEventParam *param, void *common)
+static int processResume(SceUID pid, int phase, ProcEventParam *param, void *common)
 {
 	return 0;
 }

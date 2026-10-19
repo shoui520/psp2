@@ -114,11 +114,11 @@ static int cleanupProcess(int process)
 	return ret;
 }
 
-static __attribute__((noipa)) int processExit(SceUID pid, ProcEventParam *param, void *common)
+static int processExit(SceUID pid, ProcEventParam *param, void *common)
 {
 	return cleanupProcess(pid);
 }
-static __attribute__((noipa)) int processKill(SceUID pid, ProcEventParam *param, void *common)
+static int processKill(SceUID pid, ProcEventParam *param, void *common)
 {
 	return cleanupProcess(pid);
 }

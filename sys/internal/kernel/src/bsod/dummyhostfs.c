@@ -55,7 +55,7 @@ void _sceKernelBsodDummyFsError(const char *name)
 
 /* Distinct native slots remain distinct callback addresses. */
 #define UNSUPPORTED(name, type) \
-	static int __attribute__((no_icf)) name(type *arg) \
+	static int name(type *arg) \
 	{ (void)arg; return SCE_ERROR_ERRNO_ENOTSUP; }
 UNSUPPORTED(bsodFsDevctl, SceVfsOpDevctlArg)
 UNSUPPORTED(bsodFsLookup, SceVopLookupArgs)
@@ -76,7 +76,7 @@ static SceOff bsodFsLseek(SceVopLseekArgs *arg)
 	return (int32_t)SCE_ERROR_ERRNO_ENOTSUP;
 }
 #define SUCCESS(name, type) \
-	static int __attribute__((no_icf)) name(type *arg) \
+	static int name(type *arg) \
 	{ (void)arg; return 0; }
 SUCCESS(bsodFsInit, SceVfsOpInitArgs)
 SUCCESS(bsodFsUmount, SceVfsOpUmountArgs)
@@ -112,7 +112,7 @@ static int bsodFsSetRoot(SceVfsOpSetRootArgs *arg)
 }
 
 #define DENIED(callback, type, member) \
-	static int __attribute__((no_icf)) callback(type *arg) \
+	static int callback(type *arg) \
 	{ _sceKernelBsodDummyFsError(arg->member->name); \
 	  return SCE_ERROR_ERRNO_ENOTSUP; }
 DENIED(bsodFsOpen, SceVopOpenArgs, path)

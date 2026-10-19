@@ -170,8 +170,7 @@ unknown:
 	return 0;
 }
 
-/* (noipa: its result is always 0, but module_start checks it, as in Sony's code) */
-static int __attribute__((noipa)) ErrorTableInit(ErrorTable *table)
+static int ErrorTableInit(ErrorTable *table)
 {
 	SceKernelHeapCreateOpt opt;
 

@@ -91,7 +91,7 @@ void SceSyslibtraceSyscallReturnHook(SyslibtraceSyscallFrame *frame)
 }
 
 /* name unknown: called by module start, nothing to set up */
-__attribute__((noipa)) int SyslibtraceInitialize(void)
+int SyslibtraceInitialize(void)
 {
 	return 0;
 }
