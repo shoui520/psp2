@@ -207,8 +207,8 @@ set_property(SOURCE ../../../kernel/src/sysmem/strncat.c ../../../kernel/src/sys
 	COMPILE_DEFINITIONS
 	strncat=sceClibStrncat strnlen=sceClibStrnlen
 	strncpy=sceClibStrncpy memcpy=sceClibMemcpy_safe
-	__strncpy_chk2=sceClibStrcpyChk __strncpy_chk=sceClibStrncpyChk
-	__strncat_chk2=sceClibStrcatChk __strncat_chk=sceClibStrncatChk)
+	__strcpy_chk=sceClibStrcpyChk __strncpy_chk=sceClibStrncpyChk
+	__strcat_chk=sceClibStrcatChk __strncat_chk=sceClibStrncatChk)
 
 # Pristine compiler ABI helpers; select only the native shifts and comparisons.
 set_source_files_properties(

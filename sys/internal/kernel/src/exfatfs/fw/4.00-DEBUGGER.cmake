@@ -111,7 +111,7 @@ set(MODULE_IMPORT_FUNCS
 	__aeabi_uidiv
 	__stack_chk_fail
 	strnlen
-	__strncat_chk2
+	__strcat_chk
 	memcmp
 	sceKernelAssert
 	SceDebugForDriver_D9703808

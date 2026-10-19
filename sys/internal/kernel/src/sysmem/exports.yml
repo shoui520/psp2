@@ -437,7 +437,7 @@ SceSysmem:
         - vsnprintf: 0x3DDBE2E1
         - memcpy: 0x40C88316
         - strtoul: 0x4E5042DA
-        - __strncpy_chk2: 0x545DA5FD
+        - __strcpy_chk: 0x545DA5FD
         - memchr: 0x60DAEA30
         - memmove: 0x6CC9C1A1
         - strncpy: 0x6D286146
@@ -465,7 +465,7 @@ SceSysmem:
         - look_ctype_table: 0xCDF7F155
         - __strlcpy_chk: 0xCF86EA38
         - strlen: 0xCFC6A9AC
-        - __strncat_chk2: 0xDE4666F0
+        - __strcat_chk: 0xDE4666F0
         - __prnt: 0xE38E7605
         - __aeabi_llsr: 0xE46C47E6
         - memcmp: 0xF939E83D

@@ -374,7 +374,7 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	strlen
-	__strncat_chk2
+	__strcat_chk
 	memcmp
 	SceSysrootForDriver_1B3FA457
 	SceSysrootForDriver_2BE874EF

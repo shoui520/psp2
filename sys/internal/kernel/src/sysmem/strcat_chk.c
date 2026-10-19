@@ -1,6 +1,6 @@
 #include <sysmem/sysclib.h>
 
-char *__strncat_chk2(char *destination, const char *source, size_t capacity)
+char *__strcat_chk(char *destination, const char *source, size_t capacity)
 {
 	size_t used = strnlen(destination, capacity);
 

@@ -1511,7 +1511,7 @@ int appmgrRemoveSaveDataPath(const char *path, unsigned int missingPolicy,
 		memset(childPath, 0, sizeof(childPath));
 		strncpy(childPath, path, sizeof(childPath));
 #if FW_VERSION >= 0x04000000
-		__strncat_chk2(childPath, "/", sizeof(childPath));
+		__strcat_chk(childPath, "/", sizeof(childPath));
 		__strncat_chk(childPath, entry.d_name, 256, sizeof(childPath));
 #else
 		*(unsigned short *)(childPath + strlen(childPath)) =

@@ -59,12 +59,12 @@ void *__memcpy_chk(void *destination, const void *source, size_t size, size_t ca
 void *__memset_chk(void *destination, int value, size_t size, size_t capacity);
 int __snprintf_chk(char *destination, size_t size, int flags, size_t capacity, const char *format,
 		   ...);
+char *__strcat_chk(char *destination, const char *source, size_t capacity);
+char *__strcpy_chk(char *destination, const char *source, size_t capacity);
 size_t __strlcat_chk(char *destination, const char *source, size_t size, size_t capacity);
 size_t __strlcpy_chk(char *destination, const char *source, size_t size, size_t capacity);
 char *__strncat_chk(char *destination, const char *source, size_t count, size_t capacity);
-char *__strncat_chk2(char *destination, const char *source, size_t capacity);
 char *__strncpy_chk(char *destination, const char *source, size_t count, size_t capacity);
-char *__strncpy_chk2(char *destination, const char *source, size_t capacity);
 int __vsnprintf_chk(char *destination, size_t size, int flags, size_t capacity,
 		    const char *format, va_list arguments);
 
