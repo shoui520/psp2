@@ -57,14 +57,14 @@ int DesIsWeakKey(uint64_t key)
 		0x01010101, 0x1f1f0e0e, 0x01fe01fe, 0x1fe00ef1,
 		0x01e001f1, 0x1ffe0efe, 0x1f010e01, 0x011f010e,
 	};
-	uint32_t low = key;
-	uint32_t high = key >> 32;
+	uint32_t low = (uint16_t)key;
+	uint32_t high = (uint16_t)(key >> 32);
 	uint32_t folded;
 
-	if ((uint16_t)low * 0x10001u != low ||
-	    (uint16_t)high * 0x10001u != high)
+	/* a weak key repeats its first and its last two bytes */
+	if (key != ((uint64_t)(high * 0x10001u) << 32) + low * 0x10001u)
 		return 0;
-	folded = (uint16_t)low | (uint32_t)(uint16_t)high << 16;
+	folded = low + (high << 16);
 	if ((int32_t)folded < (int32_t)~folded)
 		folded = ~folded;
 	for (index = 0; index < sizeof(weakKeys) / sizeof(weakKeys[0]); index++) {
