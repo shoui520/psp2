@@ -1,5 +1,6 @@
 /* Descriptive source name: the original library has no debug records. */
 #include "buffer.h"
+#include "cipher.h"
 
 /* DER DigestInfo: SEQUENCE, AlgorithmIdentifier/OID, OCTET STRING. */
 static const char marlinSha1DigestSequences[] = "0!0\t";
@@ -13,14 +14,6 @@ static const unsigned char marlinSha256DigestAlgorithm[] = {
 	0x03, 0x04, 0x02, 0x01, 0x05, 0x00
 };
 static const unsigned char marlinSha256DigestOctets[] = { 0x04, 32 };
-
-int MarlinSha256Digest(const void *data, unsigned int size, void *digest);
-
-int MarlinSha1Digest(const void *data, unsigned int size,
-		     void *digest);
-
-int MarlinGenerateSha1Mask(const void *seed, unsigned int seedSize,
-			   int maskSize, unsigned char *mask);
 
 int MarlinRemoveOaepPadding(const MarlinBuffer *buffer,
 			   const MarlinBuffer *label, MarlinBuffer **output)

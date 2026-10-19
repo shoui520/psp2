@@ -31,4 +31,22 @@ int MarlinCompareDataRanges(void *allocator, unsigned int firstSize,
 			    const void *first, unsigned int secondSize,
 			    const void *second);
 
+/* buffer.c */
+MarlinBuffer *MarlinBufferInitializeExternal(void *allocator, MarlinBuffer *buffer,
+					   unsigned int size, void *data);
+MarlinBuffer *MarlinBufferCopyInto(void *allocator, MarlinBuffer *buffer,
+				 unsigned int size, const void *source);
+void MarlinBufferReleaseData(void *allocator, MarlinBuffer *buffer);
+
+/* buffer_ops.c */
+void MarlinEraseMemory(void *data, unsigned int size);
+int MarlinBufferObfuscate(MarlinBuffer *buffer);
+
+/* memory.c */
+int MarlinMemoryInitialize(void);
+void MarlinMemoryTerminate(void);
+void *MarlinReallocateMemory(void *allocator, void *memory, unsigned int size);
+char *MarlinDuplicateString(void *allocator, const char *string);
+void *MarlinMoveMemory(void *destination, const void *source, unsigned int size);
+
 #endif

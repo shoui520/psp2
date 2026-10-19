@@ -1,17 +1,7 @@
 #include "key.h"
 #include "storage.h"
 #include "search.h"
-
-int MarlinBufferObfuscate(MarlinBuffer *buffer);
-void MarlinEraseMemory(void *data, unsigned int size);
-int MarlinDecryptData(const void *iv, const void *key, const void *encrypted,
-		      unsigned int size, void *data, unsigned int *dataSize);
-int MarlinCipherCreate(MarlinCipherContext **context, unsigned int selector,
-		       const void *iv, unsigned int ivSize, const void *counter,
-		       const void *key, unsigned int keySize);
-int MarlinCipherDestroy(MarlinCipherContext *context);
-int MarlinCipherProcess(MarlinCipherContext *context, const void *input,
-			unsigned int size, void *output, unsigned int *outputSize);
+#include "cipher.h"
 
 int MarlinKeyLoadStoredPair(MarlinKey *key, unsigned int selector)
 {

@@ -2,13 +2,6 @@
 #include "asn1.h"
 #include "key.h"
 
-MarlinBuffer *MarlinBufferInitializeExternal(void *allocator,
-		MarlinBuffer *buffer, unsigned int size, void *data);
-MarlinBuffer *MarlinBufferCopyInto(void *allocator, MarlinBuffer *buffer,
-		unsigned int size, const void *source);
-
-void MarlinBufferReleaseData(void *allocator, MarlinBuffer *buffer);
-
 int MarlinAsn1GetChildBuffer(MarlinAsn1Node *parent, unsigned int index,
 			   int copy, MarlinBuffer *output)
 {

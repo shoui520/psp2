@@ -3,37 +3,9 @@
 #include "key.h"
 #include "storage.h"
 #include "search.h"
+#include "cipher.h"
 
 extern MarlinBuffer *marlinStoredData;
-int MarlinMemoryInitialize(void);
-void MarlinMemoryTerminate(void);
-int MarlinKeyLoadStoredPair(MarlinKey *key, unsigned int selector);
-int MarlinKeyLoadStoredRaw(MarlinKey *key);
-int MarlinRsaSign(MarlinRsaContext *context, int algorithm,
-		  const MarlinBuffer *data, MarlinBuffer **signature);
-int MarlinKeyDecryptRsa(MarlinKey *key, unsigned int mode,
-		       const MarlinBuffer *label, const MarlinBuffer *encrypted,
-		       MarlinBuffer **output);
-int MarlinKeyTransformBuffer(MarlinKey *key, unsigned int algorithm,
-			     unsigned int mode, const void *counter,
-			     const MarlinBuffer *input, MarlinBuffer **output);
-int MarlinKeyUnwrapRsa(MarlinKey *wrappingKey, unsigned int mode,
-		       const MarlinBuffer *label, const MarlinBuffer *encrypted,
-		       MarlinKey *key);
-int MarlinKeyUnwrap(MarlinKey *wrappingKey, unsigned int mode,
-		    const void *iv, unsigned int ivSize, const void *encrypted,
-		    unsigned int encryptedSize, MarlinKey *key);
-int MarlinSha1Digest(const void *data, unsigned int size, void *digest);
-int MarlinSha256Digest(const void *data, unsigned int size, void *digest);
-int MarlinCipherTransformBlock(const void *key, const void *input, void *output);
-int MarlinDecryptData(const void *iv, const void *key, const void *encrypted,
-		      unsigned int size, void *data, unsigned int *dataSize);
-int MarlinBufferObfuscate(MarlinBuffer *buffer);
-void MarlinEraseMemory(void *data, unsigned int size);
-int MarlinHmacDigest(unsigned int algorithm, const MarlinBuffer *key,
-		     const MarlinBuffer *data, MarlinBuffer **digest);
-int MarlinRsaEncrypt(MarlinRsaContext *context, const MarlinBuffer *data,
-		     MarlinBuffer **output);
 
 SceUID marlinHciMutex = -1;
 

@@ -1,11 +1,6 @@
 /* Descriptive source name: the original library has no debug records. */
 #include "key.h"
 
-int MarlinRsaPrivateOperation(unsigned int *output, const unsigned int *input,
-			      const MarlinRsaPrivateKey *key, int count);
-int MarlinRsaExponentOperation(unsigned int *output, const unsigned int *input,
-			       const MarlinRsaExponentKey *key, int count);
-
 int MarlinRsaSignPrivate512(unsigned int *output, const unsigned int *input,
 			    const MarlinRsaPrivateKey *key)
 {

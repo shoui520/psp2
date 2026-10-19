@@ -283,9 +283,6 @@ int MarlinAsn1Destroy(void *allocator, MarlinAsn1Node *node)
 	return MarlinAsn1Walk(allocator, node, MarlinAsn1FreeNode, 0);
 }
 
-void *MarlinReallocateMemory(void *allocator, void *memory, unsigned int size);
-void *MarlinMoveMemory(void *destination, const void *source, unsigned int size);
-
 int MarlinAsn1InsertChild(void *allocator, MarlinAsn1Node *parent,
 			 int index, MarlinAsn1Node *child)
 {

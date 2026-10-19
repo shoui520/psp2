@@ -1,7 +1,6 @@
 /* Descriptive source name: the original library has no debug records. */
 #include "buffer.h"
-
-int MarlinSha1Digest(const void *data, unsigned int size, void *digest);
+#include "cipher.h"
 
 int MarlinGenerateSha1Mask(const void *seed, unsigned int seedSize,
 			   int maskSize, unsigned char *mask)

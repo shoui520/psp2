@@ -7,27 +7,6 @@
 
 int module_start(void);
 int module_stop(void);
-int MarlinKernelLock(void);
-int MarlinKernelUnlock(void);
-int MarlinKernelImportStoredKey(unsigned int kind, unsigned int *outputHandle);
-unsigned int MarlinKernelGetKeyOperationsEnabled(unsigned int handle);
-int MarlinKernelReleaseKey(unsigned int handle);
-int MarlinKernelExportStoredList(MarlinStoredHandleList *request);
-int MarlinKernelImportWrappedKey(MarlinWrappedKeyImport *request);
-int MarlinKernelImportDerivedKey(MarlinDerivedKeyImport *request);
-int MarlinKernelSign(MarlinKeySignRequest *request);
-int MarlinKernelDecrypt(MarlinKeyDecryptRequest *request);
-int MarlinKernelWrapRsa(MarlinKeyWrapRsaRequest *request);
-int MarlinKernelVerifyMac(MarlinKeyVerifyRequest *request);
-int MarlinKernelVerifyDigest(MarlinKeyVerifyRequest *request);
-int MarlinKernelDisableKey(unsigned int handle, unsigned int unused,
-			 unsigned int *outputHandle);
-int MarlinKernelStoreData(int selector, unsigned int size, const void *data);
-int MarlinKernelCheckStored(int selector);
-int MarlinKernelGetHandleSize(unsigned int handle, unsigned int *outputSize);
-int MarlinKernelTakeHandleObject(unsigned int handle, unsigned int unused, void **output);
-int MarlinKernelExportStoredInfo(unsigned int *outputHandle);
-int MarlinKernelExportEncryptedKey(unsigned int handle, unsigned int *outputHandle);
 
 int MarlinHciCheckAccess(void)
 {

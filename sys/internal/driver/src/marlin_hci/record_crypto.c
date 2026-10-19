@@ -2,17 +2,8 @@
 #include "buffer.h"
 #include <sysmem/sysmem.h>
 #include <sysmem/utils.h>
-
-MarlinBuffer *MarlinGetRecordSecret(void *allocator);
-int MarlinSha256Digest(const void *data, unsigned int size, void *digest);
-int MarlinRandomCreate(SceMt19937Context **context);
-int MarlinRandomRead(SceMt19937Context *context, int size, void *data);
-int MarlinRandomDestroy(SceMt19937Context *context);
-int MarlinEncryptData(const void *iv, const void *key, const void *data,
-		      unsigned int size, void *encrypted,
-		      unsigned int *encryptedSize);
-int MarlinDecryptData(const void *iv, const void *key, const void *encrypted,
-		      unsigned int size, void *data, unsigned int *dataSize);
+#include "cipher.h"
+#include "storage.h"
 
 MarlinBuffer *MarlinCreateEncryptedRecordBuffer(unsigned int dataSize)
 {

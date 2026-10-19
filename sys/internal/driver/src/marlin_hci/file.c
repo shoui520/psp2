@@ -4,8 +4,7 @@
 #include <stdint.h>
 #include <iofilemgr/iofilemgr.h>
 #include <kernel/error.h>
-
-unsigned int MarlinStringLength(const char *string);
+#include "search.h"
 
 int MarlinFileRemove(void *allocator, const char *path)
 {

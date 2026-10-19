@@ -1,10 +1,6 @@
 /* Descriptive source name: the original library has no debug records. */
 #include "buffer.h"
-
-int MarlinDecodeIntegerWords(unsigned int *words, int count,
-			     const unsigned char *data, int size);
-int MarlinEncodeIntegerWords(unsigned char *data, int size,
-			     const unsigned int *words, int count);
+#include "integer_arithmetic.h"
 
 int MarlinCreateIntegerWords(const MarlinBuffer *buffer, int count,
 			    unsigned int **words)

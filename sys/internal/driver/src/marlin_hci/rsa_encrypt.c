@@ -1,10 +1,6 @@
 /* Descriptive source name: the original library has no debug records. */
 #include <marlin_hci/rsa.h>
-
-int MarlinRsaHasRandomGenerator(void);
-void MarlinRsaFillNonzeroRandom(unsigned char *data, int size);
-int MarlinRsaExponentOperation(unsigned int *output, const unsigned int *input,
-			       const MarlinRsaExponentKey *key, int count);
+#include "key.h"
 
 int MarlinRsaEncryptBlock(MarlinRsaData *output, const MarlinRsaData *input,
 			 const MarlinRsaExponentKey *key, int count, int size)

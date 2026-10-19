@@ -1,8 +1,6 @@
 /* Descriptive source name: the original library has no debug records. */
 #include "key.h"
-
-int MarlinCreateIntegerWords(const MarlinBuffer *buffer, int count,
-			    unsigned int **words);
+#include "integer_arithmetic.h"
 
 int MarlinRsaCreate(MarlinRsaContext **context, const MarlinBuffer *modulus,
 		    const MarlinBuffer *publicExponent,

@@ -1,34 +1,11 @@
 /* Descriptive source name: the original library has no debug records. */
 #include "key.h"
-
-int MarlinIntegerByteLength(int count, const unsigned int *words);
-int MarlinCreateIntegerWords(const MarlinBuffer *buffer, int count,
-			    unsigned int **words);
-int MarlinCreateIntegerBuffer(int count, const unsigned int *words,
-			     int size, MarlinBuffer **output);
-int MarlinRsaPrivateTransform(MarlinRsaContext *context,
-			      const unsigned int *input, unsigned int *output);
-int MarlinRemoveOaepPadding(const MarlinBuffer *buffer,
-			   const MarlinBuffer *label, MarlinBuffer **output);
-
-int MarlinRemovePkcs1Padding(const MarlinBuffer *buffer, MarlinBuffer **output);
-
-int MarlinRsaSignTransform(MarlinRsaContext *context,
-			   const unsigned int *input, unsigned int *output);
-int MarlinCreateSignaturePadding(const MarlinBuffer *data, int algorithm,
-				unsigned int size, MarlinBuffer **output);
+#include "integer_arithmetic.h"
+#include "cipher.h"
 
 typedef int (*MarlinRsaEncryptOperation)(MarlinRsaData *output,
 				       const MarlinRsaData *input,
 				       const MarlinRsaExponentKey *key);
-int MarlinFillRandomBytes(unsigned char *data, int size);
-int MarlinRsaSetRandomGenerator(int (*generator)(unsigned char *data, int size));
-int MarlinRsaEncrypt512(MarlinRsaData *output, const MarlinRsaData *input,
-			 const MarlinRsaExponentKey *key);
-int MarlinRsaEncrypt1024(MarlinRsaData *output, const MarlinRsaData *input,
-			 const MarlinRsaExponentKey *key);
-int MarlinRsaEncrypt2048(MarlinRsaData *output, const MarlinRsaData *input,
-			 const MarlinRsaExponentKey *key);
 
 int MarlinRsaDecryptOaep(MarlinRsaContext *context, const MarlinBuffer *encrypted,
 			const MarlinBuffer *label, MarlinBuffer **output)

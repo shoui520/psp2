@@ -1,13 +1,8 @@
 /* Descriptive source name: the original library has no debug records. */
 #include "storage.h"
 #include "file.h"
-
-int MarlinGetStorageRoot(void *allocator, unsigned int *size, char *path);
-int MarlinAppendPath(unsigned int *size, char *path, const char *component);
-int MarlinCreateDirectories(void *allocator, const char *path);
-int MarlinEncryptRecord(const MarlinBuffer *data, unsigned char *output);
-int MarlinDecryptRecord(const MarlinBuffer *record, MarlinBuffer **output);
-int MarlinSha1Digest(const void *data, unsigned int size, void *digest);
+#include "path.h"
+#include "cipher.h"
 
 int MarlinGetStoredPath(int selector, int createDirectories,
 			unsigned int capacity, char *path)

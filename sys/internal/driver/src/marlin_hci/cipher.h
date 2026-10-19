@@ -48,4 +48,39 @@ int MarlinCipherDecryptCbc(const MarlinCipherContext *context,
 			   unsigned int size, unsigned char *data,
 			   unsigned int *dataSize);
 
+/* cipher.c */
+int MarlinCipherCreate(MarlinCipherContext **context, unsigned int selector,
+		       const void *iv, unsigned int ivSize, const void *counter,
+		       const void *key, unsigned int keySize);
+int MarlinCipherDestroy(MarlinCipherContext *context);
+int MarlinCipherProcess(MarlinCipherContext *context, const void *input,
+			unsigned int size, void *output,
+			unsigned int *outputSize);
+int MarlinEncryptData(const void *iv, const void *key, const void *data,
+		      unsigned int size, void *encrypted,
+		      unsigned int *encryptedSize);
+int MarlinDecryptData(const void *iv, const void *key, const void *encrypted,
+		      unsigned int size, void *data, unsigned int *dataSize);
+int MarlinCipherTransformBlock(const void *key, const void *input, void *output);
+
+/* hash.c */
+int MarlinHmacDigest(unsigned int algorithm, const MarlinBuffer *key,
+		     const MarlinBuffer *data, MarlinBuffer **digest);
+
+/* hash_context.c */
+int MarlinSha1Digest(const void *data, unsigned int size, void *digest);
+int MarlinSha256Digest(const void *data, unsigned int size, void *digest);
+
+/* mask.c */
+int MarlinGenerateSha1Mask(const void *seed, unsigned int seedSize,
+			   int maskSize, unsigned char *mask);
+
+/* random.c */
+int MarlinRandomCreate(SceMt19937Context **context);
+int MarlinRandomRead(SceMt19937Context *context, int size, void *data);
+int MarlinRandomDestroy(SceMt19937Context *context);
+
+/* random_fill.c */
+int MarlinFillRandomBytes(unsigned char *data, int size);
+
 #endif

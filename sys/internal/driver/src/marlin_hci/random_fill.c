@@ -1,10 +1,7 @@
 /* Descriptive source name: the original library has no debug records. */
 #include <sysmem/sysmem.h>
 #include <sysmem/utils.h>
-
-int MarlinRandomCreate(SceMt19937Context **context);
-int MarlinRandomRead(SceMt19937Context *context, int size, void *data);
-int MarlinRandomDestroy(SceMt19937Context *context);
+#include "cipher.h"
 
 unsigned char marlinRandomBytes[256];
 unsigned char *marlinRandomCursor;

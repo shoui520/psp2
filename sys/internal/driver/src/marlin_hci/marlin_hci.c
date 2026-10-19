@@ -1,11 +1,8 @@
+#include "handles.h"
+#include "key.h"
 /*
  * SceMarlinHci module entry points.
  */
-
-int MarlinInitialize(void);
-void MarlinHandlesInitialize(void);
-void MarlinHandlesTerminate(void);
-void MarlinTerminate(void);
 
 int module_start(void)
 {

@@ -1,31 +1,6 @@
 /* Descriptive names: original export NIDs have no SDK identifiers. */
 #include <intrmgr/syscall_copy.h>
 #include "kernel_wrappers.h"
-int MarlinHciInitialize(void);
-int MarlinHciTerminate(void);
-int MarlinHciLock(void);
-int MarlinHciUnlock(void);
-int MarlinHciImportStoredKeyChecked(unsigned int kind, unsigned int *outputHandle);
-int MarlinHciGetKeyOperationsEnabledChecked(unsigned int handle);
-int MarlinHciReleaseKeyChecked(unsigned int handle);
-int MarlinHciExportStoredListChecked(void *handles, unsigned int *count);
-int MarlinHciImportWrappedKeyChecked(MarlinWrappedKeyImport *request);
-int MarlinHciExportStoredInfoChecked(unsigned int *outputHandle);
-int MarlinHciExportEncryptedKeyChecked(unsigned int handle, unsigned int *outputHandle);
-int MarlinHciImportDerivedKeyChecked(MarlinDerivedKeyImport *request);
-int MarlinHciDecryptChecked(MarlinKeyDecryptRequest *request);
-int MarlinHciVerifyMacChecked(MarlinKeyVerifyRequest *request);
-int MarlinHciVerifyDigestChecked(MarlinKeyVerifyRequest *request);
-int MarlinHciStoreDataChecked(int selector, unsigned int size, const void *data);
-int MarlinHciCheckStoredChecked(int selector);
-int MarlinHciGetHandleSizeChecked(unsigned int handle, unsigned int *outputSize);
-int MarlinHciTakeHandleObjectChecked(unsigned int handle, unsigned int unused, void *output);
-int MarlinHciDisableKeyChecked(unsigned int handle, const MarlinUserDataInput *input,
-			unsigned int *outputHandle);
-int MarlinHciWrapRsaChecked(unsigned int handle, const MarlinUserDataInput *modulus,
-			const MarlinUserDataInput *publicExponent, unsigned int *outputHandle);
-int MarlinHciSignChecked(unsigned int handle, unsigned int algorithm,
-			const MarlinUserDataInput *input, unsigned int *outputHandle);
 
 int MarlinHciInitializeAlias(void)
 {

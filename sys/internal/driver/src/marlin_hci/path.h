@@ -14,4 +14,9 @@ typedef struct MarlinPathInfo {
 int MarlinAppendPath(unsigned int *size, char *path, const char *component);
 int MarlinStringListDestroy(void *allocator, MarlinStringList *list);
 
+/* directory.c */
+int MarlinCreateDirectories(void *allocator, const char *path);
+int MarlinGetStorageRoot(void *allocator, unsigned int *size, char *path);
+signed char MarlinGetPathSeparator(void);
+
 #endif

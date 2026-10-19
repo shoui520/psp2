@@ -1,11 +1,10 @@
 #include <sysmem/sysmem.h>
 #include "buffer.h"
+#include "search.h"
 
 SceUID marlinMemBlockId;
 SceUID marlinHeapId;
 int marlinMemoryReferences;
-
-unsigned int MarlinStringLength(const char *string);
 
 int MarlinMemoryInitialize(void)
 {
@@ -40,7 +39,6 @@ int MarlinMemoryInitialize(void)
 	} while (0);
 	return result;
 }
-
 
 void MarlinMemoryTerminate(void)
 {

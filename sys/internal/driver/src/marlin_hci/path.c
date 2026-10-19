@@ -1,9 +1,7 @@
 /* Descriptive source name: the original library has no debug records. */
 #include "buffer.h"
 #include "path.h"
-
-unsigned int MarlinStringLength(const char *string);
-signed char MarlinGetPathSeparator(void);
+#include "search.h"
 
 int MarlinAppendPath(unsigned int *size, char *path, const char *component)
 {

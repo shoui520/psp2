@@ -2,9 +2,6 @@
 #include "key.h"
 #include "integer_arithmetic.h"
 
-int MarlinRsaPrivateOperation(unsigned int *output, const unsigned int *input,
-			      const MarlinRsaPrivateKey *key, int count);
-
 int MarlinRsaPrivate512(unsigned int *output, const unsigned int *input,
 			const MarlinRsaPrivateKey *key)
 {

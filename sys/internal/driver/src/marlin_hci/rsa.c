@@ -1,32 +1,6 @@
 /* Descriptive source name: the original library has no debug records. */
 #include "key.h"
 
-int MarlinRsaPrivate512(unsigned int *output, const unsigned int *input,
-			    const MarlinRsaPrivateKey *key);
-int MarlinRsaPrivate1024(unsigned int *output, const unsigned int *input,
-			    const MarlinRsaPrivateKey *key);
-int MarlinRsaPrivate2048(unsigned int *output, const unsigned int *input,
-			    const MarlinRsaPrivateKey *key);
-int MarlinRsaExponent512(unsigned int *output, const unsigned int *input,
-			    const MarlinRsaExponentKey *key);
-int MarlinRsaExponent1024(unsigned int *output, const unsigned int *input,
-			    const MarlinRsaExponentKey *key);
-int MarlinRsaExponent2048(unsigned int *output, const unsigned int *input,
-			    const MarlinRsaExponentKey *key);
-
-int MarlinRsaSignPrivate512(unsigned int *output, const unsigned int *input,
-			        const MarlinRsaPrivateKey *key);
-int MarlinRsaSignPrivate1024(unsigned int *output, const unsigned int *input,
-			        const MarlinRsaPrivateKey *key);
-int MarlinRsaSignPrivate2048(unsigned int *output, const unsigned int *input,
-			        const MarlinRsaPrivateKey *key);
-int MarlinRsaSignExponent512(unsigned int *output, const unsigned int *input,
-			        const MarlinRsaExponentKey *key);
-int MarlinRsaSignExponent1024(unsigned int *output, const unsigned int *input,
-			        const MarlinRsaExponentKey *key);
-int MarlinRsaSignExponent2048(unsigned int *output, const unsigned int *input,
-			        const MarlinRsaExponentKey *key);
-
 int MarlinRsaPrivateTransform(MarlinRsaContext *context,
 			      const unsigned int *input, unsigned int *output)
 {

@@ -11,4 +11,7 @@ int MarlinBufferContains(const MarlinBuffer *buffer, const void *pattern,
 int MarlinBufferIsStarfishEncrypted(const MarlinBuffer *buffer, int *encrypted);
 int MarlinBufferGetKeyFormat(const MarlinBuffer *buffer, unsigned int *format);
 
+/* string.c */
+signed char *MarlinStringFindCharacter(signed char *string, int character);
+
 #endif

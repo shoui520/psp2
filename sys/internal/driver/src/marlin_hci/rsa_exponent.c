@@ -2,9 +2,6 @@
 #include "key.h"
 #include "integer_arithmetic.h"
 
-int MarlinRsaExponentOperation(unsigned int *output, const unsigned int *input,
-			       const MarlinRsaExponentKey *key, int count);
-
 int MarlinRsaExponent512(unsigned int *output, const unsigned int *input,
 			 const MarlinRsaExponentKey *key)
 {

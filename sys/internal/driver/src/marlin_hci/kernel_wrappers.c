@@ -3,39 +3,6 @@
 #include "handles.h"
 #include "kernel_wrappers.h"
 
-int MarlinLock(void *context);
-int MarlinUnlock(void *context);
-int MarlinKeyImportStored(unsigned int kind, MarlinKey **output);
-unsigned int MarlinKeyGetOperationsEnabled(const MarlinKey *key);
-int MarlinKeyRelease(MarlinKey *key);
-int MarlinExportStoredList(MarlinBuffer ***output, unsigned int *count);
-int MarlinExportStoredInfo(MarlinBuffer **output);
-int MarlinKeyExportEncrypted(MarlinKey *key, MarlinBuffer **output);
-int MarlinStoreData(int selector, unsigned int size, const void *data);
-int MarlinCheckStored(int selector);
-int MarlinKeyDisable(MarlinKey *key, unsigned int unused1, MarlinBuffer **unused2);
-int MarlinKeyVerifyDigest(MarlinKey *key, unsigned int algorithm,
-			  const MarlinBuffer *prefix, const MarlinBuffer *expected,
-			  unsigned int *verified);
-int MarlinKeyVerifyMac(MarlinKey *key, unsigned int algorithm,
-		       const MarlinBuffer *data, const MarlinBuffer *expected,
-		       unsigned int *verified);
-int MarlinKeyWrapRsa(MarlinKey *key, const MarlinBuffer *modulus,
-		    const MarlinBuffer *publicExponent, MarlinBuffer **output);
-int MarlinKeyDecrypt(MarlinKey *key, unsigned int algorithm,
-		     unsigned int mode, const void *counter,
-		     const MarlinBuffer *label, const MarlinBuffer *encrypted,
-		     MarlinBuffer **output);
-int MarlinKeySign(MarlinKey *key, unsigned int algorithm,
-		  const MarlinBuffer *data, MarlinBuffer **signature);
-int MarlinKeyImportDerived(unsigned int iterations, unsigned int seedIndex,
-			   const MarlinBuffer *wrappedSeed, const MarlinBuffer *check,
-			   const MarlinBuffer *iv, const MarlinBuffer *encrypted,
-			   MarlinKey **output);
-int MarlinKeyImportWrapped(MarlinKey *wrappingKey, unsigned int algorithm,
-			   const MarlinBuffer *label, const MarlinBuffer *input,
-			   unsigned int kind, MarlinKey **output);
-
 int MarlinKernelLock(void)
 {
 	int context = 0;

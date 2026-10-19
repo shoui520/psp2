@@ -55,4 +55,11 @@ int MarlinGetStoredSections(int selector, MarlinBuffer **first,
 int MarlinExtractStoredKeyPair(const MarlinBuffer *data, MarlinBuffer **first,
 			      MarlinBuffer **second);
 
+/* record_crypto.c */
+int MarlinEncryptRecord(const MarlinBuffer *data, unsigned char *output);
+int MarlinDecryptRecord(const MarlinBuffer *record, MarlinBuffer **output);
+
+/* record_secret.c */
+MarlinBuffer *MarlinGetRecordSecret(void *allocator);
+
 #endif

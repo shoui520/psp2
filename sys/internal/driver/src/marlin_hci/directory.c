@@ -3,10 +3,8 @@
 #include "path.h"
 #include <kernel/error.h>
 #include <iofilemgr/iofilemgr.h>
+#include "search.h"
 
-unsigned int MarlinStringLength(const char *string);
-char *MarlinDuplicateString(void *allocator, const char *string);
-signed char *MarlinStringFindCharacter(signed char *string, int character);
 signed char MarlinGetPathSeparator(void);
 
 int MarlinEnsureDirectory(const char *path)
