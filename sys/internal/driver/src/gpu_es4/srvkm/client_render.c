@@ -17,87 +17,22 @@
 #include <threadmgr/threadmgr.h>
 #include <gpu/memory_sce.h>
 #include <gpu/osfunc_sce.h>
+#include "bridge_sce.h"
+#include "system_sce.h"
+#include "handle-types.h"
+#include "mapped_memory_sce.h"
+#include "pb_sce.h"
 
-PVRSRV_ERROR ResManFreeResByPtr(struct Resource *resource,
-		IMG_BOOL forceCleanup);
-PVRSRV_ERROR SGXUnregisterHWRenderContextKM(IMG_HANDLE hHWRenderContext,
-		IMG_BOOL bForceCleanup);
-int DestroyCommandRing(struct GpuCommandRing *ring);
-PVRSRV_ERROR PVRSRVFreeSyncInfoKM(PVRSRV_KERNEL_SYNC_INFO *psSyncInfo);
-IMG_VOID DestroyPrivateParameterBuffer(SGX_CLIENTPBDESC *psClientPBDesc);
-PVRSRV_ERROR UnreferenceClientParameterBuffer(SGX_CLIENTPBDESC *psClientPBDesc);
 int FreeProcessGpuMemory(void *address);
 extern int gPVRSRVLock;
 IMG_UINT32 GetRemoteAllocProcess(void);
-unsigned LinuxLockMutexForPid(int *psPVRSRVMutex, int pid);
-int LinuxUnLockMutex(int *psPVRSRVMutex);
-PVRSRV_ERROR SGXFlushHWRenderTargetKM(IMG_HANDLE psDeviceNode,
-		IMG_DEV_VIRTADDR sHWRTDataSetDevVAddr, IMG_BOOL bForceCleanup);
 IMG_VOID *AllocProcessGpuMemory(IMG_SIZE_T size);
-struct Resource *ResManRegisterRes(struct ResourceContext *context,
-		IMG_UINT32 resourceType, IMG_VOID *param, IMG_UINT32 value,
-		PVRSRV_ERROR (*callback)(IMG_VOID *, IMG_UINT32, IMG_BOOL));
-PVRSRV_ERROR PVRSRVAllocHandle(struct _PVRSRV_HANDLE_BASE_ *base,
-		IMG_SID *output, IMG_VOID *data, IMG_UINT32 type, IMG_UINT32 flags);
 PVRSRV_ERROR AllocateRenderTargetResources(PVRSRV_DEVICE_NODE *psDeviceNode,
 		PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_SID hMemBlockProcRef,
 		struct SGX_RENDERCONTEXT *psRenderContext, SGX_RTDATASET *psRTDataSet);
-PVRSRV_ERROR SGXUnregisterHW2DContextKM(IMG_HANDLE hHW2DContext,
-		IMG_BOOL bForceCleanup);
 extern SceUID exitingProcess;
 extern IMG_UINT32 gpuSuspended;
 int WaitSignalCounterKernel(volatile IMG_UINT32 *counter, IMG_UINT32 timeout);
-PVRSRV_ERROR PVRSRVGetDeviceMemHeapInfoKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		GpuMemoryContext *context, IMG_UINT32 *pui32ClientHeapCount,
-		PVRSRV_HEAP_INFO *psHeapInfo, IMG_BOOL *pbSharedDeviceMemHeap);
-PVRSRV_ERROR PVRSRVAllocSyncInfoKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		GpuMemoryContext *hDevMemContext, PVRSRV_KERNEL_SYNC_INFO **ppsSyncInfo);
-int CreatePrivateParameterBuffer(PVRSRV_DEVICE_NODE *psDeviceNode,
-		PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_INT32 hMemBlockProcRef,
-		struct SGX_RENDERCONTEXT *psRenderContext, IMG_UINT32 ui32Size,
-		PVRSRV_HEAP_INFO *psParameterHeap, PVRSRV_HEAP_INFO *psKernelHeap);
-int CreateSharedParameterBuffer(PVRSRV_DEVICE_NODE *psDeviceNode,
-		PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_INT32 hMemBlockProcRef,
-		IMG_HANDLE *phSharedPBDesc, IMG_UINT32 ui32Size,
-		IMG_HANDLE hDevMemContext, PVRSRV_HEAP_INFO *psParameterHeap,
-		PVRSRV_HEAP_INFO *psKernelHeap);
-int InitializeSharedClientParameterBuffer(IMG_HANDLE hSharedPBDesc,
-		PVRSRV_KERNEL_MEM_INFO *psSharedMemInfo,
-		PVRSRV_KERNEL_MEM_INFO *psHWMemInfo,
-		PVRSRV_KERNEL_MEM_INFO *psBlockMemInfo,
-		PVRSRV_KERNEL_MEM_INFO *psHWBlockMemInfo,
-		PVRSRV_KERNEL_MEM_INFO **ppsSubMemInfo, IMG_UINT32 ui32SubMemInfoCount,
-		SGX_CLIENTPBDESC *psClientPBDesc);
-PVRSRV_ERROR SGXFindSharedPBDescKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
-		IMG_HANDLE hDevCookie, IMG_BOOL bLockOnFailure,
-		IMG_UINT32 ui32TotalPBSize, IMG_HANDLE *phSharedPBDesc,
-		PVRSRV_KERNEL_MEM_INFO **ppsSharedPBDescKernelMemInfo,
-		PVRSRV_KERNEL_MEM_INFO **ppsHWPBDescKernelMemInfo,
-		PVRSRV_KERNEL_MEM_INFO **ppsBlockKernelMemInfo,
-		PVRSRV_KERNEL_MEM_INFO **ppsHWBlockKernelMemInfo,
-		PVRSRV_KERNEL_MEM_INFO ***pppsSharedPBDescSubKernelMemInfos,
-		IMG_UINT32 *ui32SharedPBDescSubKernelMemInfosCount);
-PVRSRV_ERROR SGXUnrefSharedPBDescKM(IMG_HANDLE hSharedPBDesc);
-PVRSRV_ERROR CreateCommandRing(PVRSRV_DEVICE_NODE *psDeviceNode,
-		PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_INT32 hMemBlockProcRef,
-		IMG_UINT32 ui32BufferSize, IMG_UINT32 ui32CommandAlignment,
-		IMG_UINT32 ui32OverrunSize, GpuHeap *heap,
-		struct GpuCommandRing **ppsRing);
-PVRSRV_ERROR SGXGetInternalDevInfoKM(IMG_HANDLE hDevCookie,
-		SGX_INTERNAL_DEVINFO *psSGXInternalDevInfo);
-IMG_HANDLE SGXRegisterHWRenderContextKM(IMG_HANDLE hDeviceNode,
-		IMG_DEV_VIRTADDR *psHWRenderContextDevVAddr,
-		PVRSRV_KERNEL_MEM_INFO *psHWRenderContextMemInfo,
-		PVRSRV_PER_PROCESS_DATA *psPerProc);
-PVRSRV_ERROR FreeSyncInfoCallback(IMG_VOID *pvParam, IMG_UINT32 ui32Param);
-IMG_HANDLE SGXRegisterHW2DContextKM(IMG_HANDLE hDeviceNode,
-		IMG_DEV_VIRTADDR *psHW2DContextDevVAddr,
-		PVRSRV_KERNEL_MEM_INFO *psHW2DContextMemInfo,
-		PVRSRV_PER_PROCESS_DATA *psPerProc);
-IMG_VOID *AcquireCommandRingSpace(struct GpuCommandRing *psRing,
-		IMG_UINT32 ui32Size, volatile IMG_UINT32 *pui32SignalCounter);
-PVRSRV_ERROR SGXSubmit2DKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		PVRSRV_2D_SGX_KICK *psKick);
 
 PVRSRV_ERROR DestroyRenderContextMutexCallback(IMG_VOID *pvParam,
 		IMG_UINT32 ui32Param, IMG_BOOL bForceCleanup)
@@ -308,8 +243,7 @@ PVRSRV_ERROR CreateRenderContext(PVRSRV_DEVICE_NODE *psDeviceNode,
 		goto outOfMemory;
 	psRenderContext->psTA3DSyncObject->hResItem = ResManRegisterRes(
 			psPerProc->hResManContext, 20, psRenderContext->psTA3DSyncObject,
-			0, (PVRSRV_ERROR (*)(IMG_VOID *, IMG_UINT32, IMG_BOOL))
-			FreeSyncInfoCallback);
+			0, FreeSyncInfoCallback);
 	eError = _PVRSRVAllocDeviceMemKM(psDeviceNode, psPerProc,
 			psGeneralHeap->hDevMemHeap, 0x40000b, 496, 16,
 			psCreate->hMemBlockProcRef,
@@ -1156,10 +1090,10 @@ PVRSRV_ERROR CreateTransferQueue(PVRSRV_DEVICE_NODE *psDeviceNode,
 		goto failure;
 	context->sourceSync->hResItem = ResManRegisterRes(psPerProc->hResManContext,
 			20, context->sourceSync, 0,
-			(PVRSRV_ERROR (*)(IMG_VOID *, IMG_UINT32, IMG_BOOL))FreeSyncInfoCallback);
+			FreeSyncInfoCallback);
 	context->destinationSync->hResItem = ResManRegisterRes(psPerProc->hResManContext,
 			20, context->destinationSync, 0,
-			(PVRSRV_ERROR (*)(IMG_VOID *, IMG_UINT32, IMG_BOOL))FreeSyncInfoCallback);
+			FreeSyncInfoCallback);
 	if (CreateCommandRing(psDeviceNode, psPerProc, psMemoryContext->hMemBlockProcRef,
 			0x10000, 64, 0x400, heap, &context->commandRing) != PVRSRV_OK)
 		goto failure;

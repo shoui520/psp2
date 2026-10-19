@@ -7,8 +7,6 @@
 
 void *AllocProcessGpuMemory(unsigned size);
 int FreeProcessGpuMemory(void *address);
-IMG_UINT32 OSClockus(IMG_VOID);
-IMG_VOID OSWaitus(IMG_UINT32 ui32Timeus);
 int WaitSignalCounterKernel(volatile IMG_UINT32 *counter, IMG_UINT32 timeout);
 
 PVRSRV_ERROR CreateCommandRing(PVRSRV_DEVICE_NODE *psDeviceNode,

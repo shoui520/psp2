@@ -5,17 +5,13 @@
 #include <stddef.h>
 #include <string.h>
 #include <gpu/osfunc_sce.h>
+#include "system_sce.h"
+#include "sgxkick_sce.h"
 
 #define SGXMKIF_CMD_2D 2
 #define KERNEL_ID 0xffffffffU
 
 extern int gPVRSRVLock;
-int LinuxLockMutex(int *mutex);
-int LinuxUnLockMutex(int *mutex);
-PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		IMG_UINT32 eCmdType, SGXMKIF_COMMAND *psCommand,
-		IMG_UINT32 ui32CallerID, IMG_UINT32 ui32PDumpFlags,
-		IMG_HANDLE hDevMemContext, IMG_BOOL bLastInScene);
 
 PVRSRV_ERROR SGXSubmit2DKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 		PVRSRV_2D_SGX_KICK *psKick)

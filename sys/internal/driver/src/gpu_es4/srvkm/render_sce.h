@@ -3,6 +3,8 @@
 #define RENDER_SCE_H
 
 #include <gpu/sce_ddk_port.h>
+#include <gpu/memory_sce.h>
+#include "transfer_sce.h"
 
 struct PVRSRV_KERNEL_MEM_INFO;
 struct SGXMKIF_HWRTDATASET;
@@ -343,5 +345,27 @@ _Static_assert(sizeof(SGX_ADDRENDTARG) == 68, "SCE render target request");
 _Static_assert(sizeof(SGX_CREATERENDERCONTEXT) == 36, "SCE render context request");
 _Static_assert(sizeof(SGX_RTDATASET) == 232, "SCE render target data set");
 _Static_assert(sizeof(struct SGX_RENDERCONTEXT) == 132, "SCE render context");
+
+/* client_render.c */
+PVRSRV_ERROR DestroyRenderContext(struct SGX_RENDERCONTEXT *psRenderContext,
+		IMG_UINT32 ui32Param, IMG_BOOL bForceCleanup);
+PVRSRV_ERROR CreateRenderContext(PVRSRV_DEVICE_NODE *psDeviceNode,
+		PVRSRV_PER_PROCESS_DATA *psPerProc, SGX_CREATERENDERCONTEXT *psCreate,
+		IMG_SID *phRenderContext, PVRSRV_KERNEL_MEM_INFO **ppsVisTestMemInfo);
+PVRSRV_ERROR RemoveRenderTarget(PVRSRV_DEVICE_NODE *psDeviceNode,
+		struct SGX_RENDERCONTEXT *psRenderContext, SGX_RTDATASET *psRTDataSet);
+PVRSRV_ERROR AddRenderTarget(PVRSRV_DEVICE_NODE *psDeviceNode,
+		PVRSRV_PER_PROCESS_DATA *psPerProc, SGX_ADDRENDTARG *psAddRT,
+		IMG_SID *phRenderTarget);
+PVRSRV_ERROR DestroyCommandContext(GpuTransferQueueContext *context, IMG_BOOL bForceCleanup);
+PVRSRV_ERROR CreateTransferQueue(PVRSRV_DEVICE_NODE *psDeviceNode,
+		PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_UINT32 reservedParameter,
+		GpuTransferMemoryContext *psMemoryContext, IMG_SID *phContext);
+PVRSRV_ERROR SubmitTransferCommands(IMG_UINT32 *commands, IMG_UINT32 numCommands,
+		PVRSRV_DEVICE_NODE *psDeviceNode, PVRSRV_PER_PROCESS_DATA *psPerProc,
+		GpuTransferQueueContext *context, IMG_VOID *syncInfo,
+		IMG_BOOL sourceSyncEnable, IMG_BOOL destinationSyncEnable,
+		GpuTransferStatus *status);
+PVRSRV_ERROR WaitTransferQueueIdle(GpuTransferQueueContext *context);
 
 #endif

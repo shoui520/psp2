@@ -4,20 +4,14 @@
 #include <intrmgr/syscall.h>
 #include <stddef.h>
 #include <gpu/osfunc_sce.h>
+#include "system_sce.h"
+#include "handle-types.h"
+#include <gpu/power_sce.h>
 
 extern int gPVRSRVLock;
 extern IMG_UINT32 gpuSuspended;
 extern SceUID exitingProcess;
 extern struct _PVRSRV_HANDLE_BASE_ *gpsKernelHandleBase;
-unsigned LinuxLockMutex(int *psMutex);
-int LinuxUnLockMutex(int *psMutex);
-PVRSRV_ERROR PVRSRVLookupHandle(struct _PVRSRV_HANDLE_BASE_ *psBase,
-		IMG_VOID **ppvData, IMG_SID hHandle, IMG_UINT32 eType);
-PVRSRV_ERROR CopyFromUserWrapper(PVRSRV_PER_PROCESS_DATA *psPerProc,
-		IMG_VOID *destination, const IMG_VOID *source, IMG_SIZE_T size);
-IMG_INT BridgedDispatchKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
-		PVRSRV_BRIDGE_PACKAGE *psBridgePackageKM);
-int sceGpuWaitSuspend(void);
 
 /* SCE replaces Linux file/ioctl arguments with a native bridge-package pointer.
  * The unused first argument is retained in the exported ABI.

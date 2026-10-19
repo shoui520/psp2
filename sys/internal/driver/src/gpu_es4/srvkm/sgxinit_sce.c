@@ -17,6 +17,11 @@
 #include <sysmem/sysroot.h>
 #include <display/display.h>
 #include <gpu/osfunc_sce.h>
+#include "gpu-blockheap.h"
+#include "mapped_memory_sce.h"
+#include "system_sce.h"
+#include "sgxkick_sce.h"
+#include <gpu/power_sce.h>
 
 #define SGXMKIF_CC_INVAL_BIF_SL 0x4U
 #define DEVICE_MEMORY_HEAP_KERNEL 1
@@ -30,62 +35,8 @@
 #define SGXMKIF_CMD_GETMISCINFO 6
 #define KERNEL_ID 0xffffffffU
 
-PVRSRV_ERROR SysGetDeviceMemoryMap(PVRSRV_DEVICE_TYPE eDeviceType,
-		SGX_DEVICE_MAP **ppsDeviceMap);
-IMG_VOID PVRSRVDevicePostClockSpeedChange(IMG_UINT32 ui32DeviceIndex,
-		IMG_BOOL bIdleDevice, IMG_VOID *pvInfo);
-PVRSRV_ERROR PVRSRVDevicePreClockSpeedChange(IMG_UINT32 ui32DeviceIndex,
-		IMG_BOOL bIdleDevice, IMG_VOID *pvInfo);
-PVRSRV_ERROR SGXScheduleProcessQueuesKM(PVRSRV_DEVICE_NODE *psDeviceNode);
-PVRSRV_ERROR PVRSRVPowerLock(IMG_UINT32 ui32CallerID, IMG_BOOL bSystemPowerEvent);
-IMG_VOID PVRSRVPowerUnlock(IMG_UINT32 ui32CallerID);
-IMG_BOOL SGXIsDevicePowered(PVRSRV_DEVICE_NODE *psDeviceNode);
-IMG_UINT32 OSReadHWReg(IMG_VOID *pvLinRegBaseAddr, IMG_UINT32 ui32Offset);
-IMG_VOID OSWriteHWReg(IMG_VOID *pvLinRegBaseAddr, IMG_UINT32 ui32Offset,
-		IMG_UINT32 ui32Value);
-PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
-		IMG_VOID **ppvLinAddr, IMG_HANDLE *phBlockAlloc);
-IMG_HANDLE BM_CreateContext(PVRSRV_DEVICE_NODE *psDeviceNode,
-		IMG_DEV_PHYADDR *psPDDevPAddr, PVRSRV_PER_PROCESS_DATA *psPerProc,
-		IMG_BOOL *pbCreated);
-IMG_HANDLE BM_CreateHeap(IMG_HANDLE hBMContext,
-		DEVICE_MEMORY_HEAP_INFO *psDevMemHeapInfo);
-PVRSRV_ERROR MMU_BIFResetPDAlloc(PVRSRV_SGXDEV_INFO *psDevInfo);
-IMG_VOID MMU_BIFResetPDFree(PVRSRV_SGXDEV_INFO *psDevInfo);
-PVRSRV_ERROR OSRemoveTimer(IMG_HANDLE hTimer);
-IMG_VOID OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
-		IMG_VOID *pvLinAddr, IMG_HANDLE hBlockAlloc);
-PVRSRV_ERROR BM_DestroyContext(IMG_HANDLE hBMContext, IMG_BOOL *pbDestroyed);
-IMG_VOID BM_DestroyHeap(IMG_HANDLE hDevMemHeap);
-PVRSRV_ERROR PVRSRVRemovePowerDevice(IMG_UINT32 ui32DeviceIndex);
-IMG_UINT32 OSClockus(IMG_VOID);
-IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bHardwareRecovery,
-		IMG_UINT32 ui32PDUMPFlags);
-PVRSRV_ERROR PollForValueKM(volatile IMG_UINT32 *pui32LinMemAddr,
-		IMG_UINT32 ui32Value, IMG_UINT32 ui32Mask, IMG_UINT32 ui32Timeoutus,
-		IMG_UINT32 ui32PollPeriodus, IMG_BOOL bAllowPreemption);
-IMG_VOID VBAppend(const IMG_CHAR *pszFormat, ...);
 IMG_VOID SGX_MISRHandler(IMG_VOID *pvData);
 SceUID GetLockupEventUid(void);
-IMG_VOID SGXTestActivePowerEvent(PVRSRV_DEVICE_NODE *psDeviceNode,
-		IMG_UINT32 ui32CallerID);
-PVRSRV_ERROR SGXPrePowerState(IMG_HANDLE hDevHandle,
-		PVRSRV_DEV_POWER_STATE eNewPowerState, PVRSRV_DEV_POWER_STATE eCurrentPowerState);
-PVRSRV_ERROR SGXPostPowerState(IMG_HANDLE hDevHandle,
-		PVRSRV_DEV_POWER_STATE eNewPowerState, PVRSRV_DEV_POWER_STATE eCurrentPowerState);
-PVRSRV_ERROR SGXPreClockSpeedChange(IMG_HANDLE hDevHandle, IMG_BOOL bIdleDevice,
-		PVRSRV_DEV_POWER_STATE eCurrentPowerState);
-PVRSRV_ERROR SGXPostClockSpeedChange(IMG_HANDLE hDevHandle, IMG_BOOL bIdleDevice,
-		PVRSRV_DEV_POWER_STATE eCurrentPowerState);
-PVRSRV_ERROR PVRSRVRegisterPowerDevice(IMG_UINT32 ui32DeviceIndex,
-		PFN_PRE_POWER pfnPrePower, PFN_POST_POWER pfnPostPower,
-		PFN_PRE_CLOCKSPEED_CHANGE pfnPreClockSpeedChange,
-		PFN_POST_CLOCKSPEED_CHANGE pfnPostClockSpeedChange, IMG_HANDLE hDevCookie,
-		PVRSRV_DEV_POWER_STATE eCurrentPowerState, PVRSRV_DEV_POWER_STATE eDefaultPowerState);
-PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		IMG_UINT32 eCmdType, SGXMKIF_COMMAND *psCommand,
-		IMG_UINT32 ui32CallerID, IMG_UINT32 ui32PDumpFlags,
-		IMG_HANDLE hDevMemContext, IMG_BOOL bLastInScene);
 
 #if FW_DEBUG
 static const SceKernelDebugInfo dbg_DevDeInitSGX_L1265 = {
@@ -772,9 +723,6 @@ PVRSRV_ERROR SGXGetClientInfoKM(IMG_HANDLE hDevCookie,
 			sizeof(psClientInfo->asDevData));
 	return PVRSRV_OK;
 }
-
-PVRSRV_ERROR PVRSRVGetDeviceMemHeapsKM(IMG_HANDLE hDevCookie,
-		PVRSRV_HEAP_INFO *psHeapInfo);
 
 /* Pristine SGX initialization query; SCE compiles out the error diagnostics. */
 /* SCE clock/SoC queries, direct hardware counter setup, timers and

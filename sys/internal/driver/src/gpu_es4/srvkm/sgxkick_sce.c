@@ -4,19 +4,14 @@
 #include "sgxkick_sce.h"
 #include <stddef.h>
 #include <sysmem/cpu.h>
+#include "system_sce.h"
 
 #define SGXMKIF_CMDTA_CTRLFLAGS_READY 1U
 #define SGXMKIF_CMD_TA 0
 #define KERNEL_ID 0xffffffffU
 
 extern int gPVRSRVLock;
-int LinuxLockMutex(int *mutex);
-int LinuxUnLockMutex(int *mutex);
 /* NID is absent from the pinned vitasdk vocabulary. */
-PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		IMG_UINT32 eCmdType, SGXMKIF_COMMAND *psCommand,
-		IMG_UINT32 ui32CallerID, IMG_UINT32 ui32PDumpFlags,
-		IMG_HANDLE hDevMemContext, IMG_BOOL bLastInScene);
 
 PVRSRV_ERROR SGXDoKickKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 		SGX_CCB_KICK_KM *psCCBKick)

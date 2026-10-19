@@ -4,14 +4,12 @@
 #include <gpu/device_sce.h>
 #include "sgx543_v1.164defs.h"
 #include "sgxmpdefs.h"
+#include "sgxkick_sce.h"
+#include <gpu/osfunc_sce.h>
 
 /* SCE MP configuration: eight BIF lists, with list seven reserved for EDM. */
 #define SGX_FEATURE_BIF_NUM_DIRLISTS 8
 #define SGX_BIF_DIR_LIST_INDEX_EDM 7
-
-IMG_VOID OSWriteHWReg(IMG_VOID *pvLinRegBaseAddr, IMG_UINT32 ui32Offset,
-		IMG_UINT32 ui32Value);
-IMG_VOID SGXWaitClocks(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_UINT32 ui32SGXClocks);
 
 /* SCE: PDUMP operations are absent; the original caller retains the argument. */
 IMG_VOID SGXInitClocks(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_UINT32 ui32PDUMPFlags)

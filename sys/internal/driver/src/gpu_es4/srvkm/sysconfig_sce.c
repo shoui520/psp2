@@ -8,23 +8,6 @@
 #include <gpu/osfunc_sce.h>
 #include <lowio/pervasive.h>
 
-PVRSRV_ERROR OSUninstallSystemLISR(IMG_VOID *pvSysData);
-PVRSRV_ERROR OSUninstallMISR(IMG_VOID *pvSysData);
-PVRSRV_ERROR PVRSRVDeinitialiseDevice(IMG_UINT32 ui32DevIndex);
-PVRSRV_ERROR OSDeInitEnvData(IMG_VOID *pvEnvSpecificData);
-IMG_VOID PVRSRVDeInit(SYS_DATA *psSysData);
-PVRSRV_ERROR OSDestroyResource(PVRSRV_RESOURCE *psResource);
-PVRSRV_ERROR OSInstallMISR(IMG_VOID *pvSysData);
-PVRSRV_ERROR OSInstallSystemLISR(IMG_VOID *pvSysData, IMG_UINT32 ui32Irq);
-PVRSRV_ERROR OSInitEnvData(IMG_VOID **ppvEnvSpecificData);
-PVRSRV_ERROR PVRSRVInit(SYS_DATA *psSysData);
-PVRSRV_ERROR PVRSRVRegisterDevice(SYS_DATA *psSysData,
-		PVRSRV_ERROR (*pfnRegisterDevice)(PVRSRV_DEVICE_NODE *),
-		IMG_UINT32 ui32SOCInterruptBit, IMG_UINT32 *pui32DeviceIndex);
-PVRSRV_ERROR SGXRegisterDevice(PVRSRV_DEVICE_NODE *psDeviceNode);
-PVRSRV_ERROR PVRSRVInitialiseDevice(IMG_UINT32 ui32DevIndex);
-int MapGpuRegisters(IMG_VOID);
-
 SYS_DATA gsSysData;
 
 PVRSRV_ERROR SysDeinitialise(SYS_DATA *psSysData)

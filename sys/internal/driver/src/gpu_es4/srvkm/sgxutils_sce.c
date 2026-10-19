@@ -12,6 +12,8 @@
 #include <string.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/cpu.h>
+#include <gpu/osfunc_sce.h>
+#include <gpu/power_sce.h>
 
 /* Pristine sgx_mkif_km.h register-bank selection for SGX MP. */
 #define SGX_REG_BANK_SHIFT 14
@@ -22,38 +24,11 @@
 /* SCE serializes asynchronous context cleanup using this kernel mutex. */
 SceUID gSGXCleanupMutex;
 
-IMG_UINT32 OSClockus(IMG_VOID);
-IMG_VOID OSSleepms(IMG_UINT32 ui32Timems);
-IMG_VOID OSWaitus(IMG_UINT32 ui32Timeus);
-IMG_VOID OSWriteHWReg(IMG_VOID *pvLinRegBaseAddr, IMG_UINT32 ui32Offset,
-		IMG_UINT32 ui32Value);
-PVRSRV_ERROR PVRSRVSetDevicePowerStateKM(IMG_UINT32 ui32DeviceIndex,
-		PVRSRV_DEV_POWER_STATE eNewPowerState, IMG_UINT32 ui32CallerID,
-		IMG_BOOL bRetainMutex);
-IMG_VOID PVRSRVPowerUnlock(IMG_UINT32 ui32CallerID);
-PVRSRV_ERROR OSScheduleMISR(SYS_DATA *psSysData);
-IMG_BOOL PVRSRVIsDevicePowered(IMG_UINT32 ui32DeviceIndex);
 PVRSRV_ERROR SGXCleanupRequest(PVRSRV_DEVICE_NODE *psDeviceNode,
 		IMG_DEV_VIRTADDR *psHWDataDevVAddr, IMG_UINT32 ui32CleanupType,
 		IMG_BOOL bForceCleanup);
-PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
-		IMG_VOID *pvLinAddr, IMG_HANDLE hBlockAlloc);
-PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
-		IMG_VOID **ppvLinAddr, IMG_HANDLE *phBlockAlloc);
-RESMAN_ITEM *ResManRegisterRes(RESMAN_CONTEXT *psResManContext,
-		IMG_UINT32 ui32ResType, IMG_VOID *pvParam, IMG_UINT32 ui32Param,
-		RESMAN_FREE_FN pfnFreeResource);
-PVRSRV_ERROR ResManFreeResByPtr(RESMAN_ITEM *psResItem, IMG_BOOL bForceCleanup);
-RESMAN_ITEM *ResManFindResourceByCriteria(RESMAN_CONTEXT *psResManContext,
-		IMG_UINT32 ui32SearchCriteria, IMG_UINT32 ui32ResType,
-		IMG_VOID *pvParam, IMG_UINT32 ui32Param);
 extern SceUID gPVRSRVLock;
 IMG_UINT32 GetRemoteAllocProcess(IMG_VOID);
-unsigned LinuxLockMutexForPid(SceUID *psPVRSRVMutex, SceUID pid);
-int LinuxUnLockMutex(SceUID *psPVRSRVMutex);
-PVRSRV_ERROR PollForValueKM(volatile IMG_UINT32 *pui32LinMemAddr,
-		IMG_UINT32 ui32Value, IMG_UINT32 ui32Mask, IMG_UINT32 ui32Timeoutus,
-		IMG_UINT32 ui32PollPeriodus, IMG_BOOL bAllowPreemption);
 
 /* Pristine inline kernel-ring acquisition, using the common timeout loop. */
 static inline SGXMKIF_COMMAND *SGXAcquireKernelCCBSlot(PVRSRV_SGX_CCB_INFO *psCCB)

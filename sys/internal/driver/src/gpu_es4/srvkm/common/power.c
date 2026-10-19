@@ -4,43 +4,15 @@
 #include "../gpu-dump.h"
 #include <stdarg.h>
 #include <stddef.h>
+#include <gpu/osfunc_sce.h>
 
 /* Pristine IMG state words, ordered as in the SCE native data. */
 static IMG_BOOL gbInitServerRunning = IMG_FALSE;
 static IMG_BOOL gbInitSuccessful = IMG_FALSE;
 static IMG_BOOL gbInitServerRan = IMG_FALSE;
 
-PVRSRV_ERROR SysDevicePrePowerState(IMG_UINT32 ui32DeviceIndex,
-		PVRSRV_DEV_POWER_STATE eNewPowerState,
-		PVRSRV_DEV_POWER_STATE eCurrentPowerState);
-PVRSRV_ERROR SysDevicePostPowerState(IMG_UINT32 ui32DeviceIndex,
-		PVRSRV_DEV_POWER_STATE eNewPowerState,
-		PVRSRV_DEV_POWER_STATE eCurrentPowerState);
-PVRSRV_ERROR OSUnlockResource(PVRSRV_RESOURCE *psResource, IMG_UINT32 ui32ID);
-IMG_VOID OSPowerLockUnwrap(IMG_VOID);
-PVRSRV_ERROR OSPowerLockWrap(IMG_VOID);
-PVRSRV_ERROR OSLockResource(PVRSRV_RESOURCE *psResource, IMG_UINT32 ui32ID);
-IMG_BOOL OSIsResourceLocked(PVRSRV_RESOURCE *psResource, IMG_UINT32 ui32ID);
-IMG_VOID OSWaitus(IMG_UINT32 ui32Timeus);
-PVRSRV_ERROR List_PVRSRV_POWER_DEV_PVRSRV_ERROR_Any_va(PVRSRV_POWER_DEV *psHead,
-		PVRSRV_ERROR (*pfnCallBack)(PVRSRV_POWER_DEV *psNode, va_list va), ...);
-
 #define ISR_ID 0xfffffffdU
 #define KERNEL_ID 0xffffffffU
-
-PVRSRV_ERROR SysSystemPrePowerState(PVRSRV_SYS_POWER_STATE eNewSysPowerState);
-PVRSRV_ERROR SysSystemPostPowerState(PVRSRV_SYS_POWER_STATE eNewSysPowerState);
-IMG_VOID PVRSRVScheduleDeviceCallbacks(IMG_VOID);
-IMG_VOID *List_PVRSRV_POWER_DEV_Any_va(PVRSRV_POWER_DEV *psHead,
-		IMG_VOID *(*pfnCallBack)(PVRSRV_POWER_DEV *psNode, va_list va), ...);
-IMG_VOID *MatchPowerDeviceIndex_AnyVaCb(PVRSRV_POWER_DEV *psPowerDevice, va_list va);
-IMG_VOID List_PVRSRV_POWER_DEV_Remove(PVRSRV_POWER_DEV *psPowerDevice);
-PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
-		IMG_VOID *pvLinAddr, IMG_HANDLE hBlockAlloc);
-PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
-		IMG_VOID **ppvLinAddr, IMG_HANDLE *phBlockAlloc);
-IMG_VOID List_PVRSRV_POWER_DEV_Insert(PVRSRV_POWER_DEV **ppsHead,
-		PVRSRV_POWER_DEV *psPowerDevice);
 
 static IMG_BOOL _IsSystemStatePowered(PVRSRV_SYS_POWER_STATE eSystemPowerState)
 {

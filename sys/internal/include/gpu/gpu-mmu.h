@@ -3,6 +3,7 @@
 #define GPU_MMU_H
 
 #include <gpu/gpu-heap.h>
+#include <gpu/device_sce.h>
 
 typedef struct GpuPageTablePool {
 	int uid;
@@ -65,5 +66,8 @@ int sceGpuMmuUnmapMemory(GpuMmuContext *context, unsigned address,
 /* driver/src/gpu/memory/memorycontext.c: the process of a GPU memory context, -1 if none */
 int SceGpuEs4ForDriver_7AA79658(unsigned physical, unsigned *pid);
 
+/* devices/sgx/mmu_sce.c */
+PVRSRV_ERROR MMU_BIFResetPDAlloc(PVRSRV_SGXDEV_INFO *psDevInfo);
+IMG_VOID MMU_BIFResetPDFree(PVRSRV_SGXDEV_INFO *psDevInfo);
 
 #endif

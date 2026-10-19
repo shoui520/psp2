@@ -13,6 +13,10 @@
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include <acmgr/acmgr.h>
+#include "../../bridge_sce.h"
+#include "../../handle-types.h"
+#include "../../sgxtransfer_sce.h"
+#include <gpu/osfunc_sce.h>
 
 typedef struct SGX_BRIDGE_OUT_TRACE_COUNTERS {
 	PVRSRV_ERROR eError;
@@ -23,16 +27,6 @@ typedef struct SGX_BRIDGE_OUT_TRACE_INFO {
 	PVRSRV_ERROR eError;
 	GpuTraceInfo info;
 } SGX_BRIDGE_OUT_TRACE_INFO;
-
-PVRSRV_ERROR DestroyCommandContext(IMG_VOID *pvParam, IMG_UINT32 ui32Param);
-PVRSRV_ERROR PVRSRVLookupHandle(struct _PVRSRV_HANDLE_BASE_ *psBase, IMG_VOID **ppvData,
-			     IMG_SID hHandle, IMG_UINT32 eType);
-PVRSRV_ERROR PVRSRVReleaseHandle(struct _PVRSRV_HANDLE_BASE_ *psBase, IMG_SID hHandle,
-			      IMG_UINT32 eType);
-PVRSRV_ERROR ResManFreeResByPtr(struct Resource *resource, IMG_BOOL forceCleanup);
-struct Resource *ResManRegisterRes(struct ResourceContext *context,
-		IMG_UINT32 resourceType, IMG_VOID *param, IMG_UINT32 value,
-		PVRSRV_ERROR (*callback)(IMG_VOID *, IMG_UINT32));
 
 typedef struct PVRSRV_BRIDGE_IN_RELEASECLIENTINFO {
 	IMG_UINT32 ui32BridgeFlags;
@@ -129,17 +123,11 @@ typedef struct SGX_BRIDGE_OUT_SET_RENDER_CONTEXT_PRIORITY {
 	IMG_UINT32 ui32Priority;
 } SGX_BRIDGE_OUT_SET_RENDER_CONTEXT_PRIORITY;
 
-PVRSRV_ERROR SGXSetRenderContextPriorityKM(IMG_HANDLE hHWRenderContext,
-		IMG_UINT32 *priority);
-
 typedef struct PVRSRV_BRIDGE_IN_SUBMIT2D {
 	IMG_UINT32 ui32BridgeFlags;
 	IMG_SID hDevCookie;
 	PVRSRV_2D_SGX_KICK sKick;
 } PVRSRV_BRIDGE_IN_SUBMIT2D;
-
-PVRSRV_ERROR SGXSubmit2DKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		PVRSRV_2D_SGX_KICK *psKick);
 
 typedef struct PVRSRV_BRIDGE_IN_SGX_FLUSH_HW_RENDER_TARGET {
 	IMG_UINT32 ui32BridgeFlags;
@@ -147,22 +135,11 @@ typedef struct PVRSRV_BRIDGE_IN_SGX_FLUSH_HW_RENDER_TARGET {
 	IMG_DEV_VIRTADDR sHWRTDataSetDevVAddr;
 } PVRSRV_BRIDGE_IN_SGX_FLUSH_HW_RENDER_TARGET;
 
-PVRSRV_ERROR SGXFlushHWRenderTargetKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		IMG_DEV_VIRTADDR sHWRTDataSetDevVAddr, IMG_BOOL forceCleanup);
-
 typedef struct PVRSRV_BRIDGE_IN_SGXGETMISCINFO {
 	IMG_UINT32 ui32BridgeFlags;
 	IMG_SID hDevCookie;
 	SGX_MISC_INFO *psMiscInfo;
 } PVRSRV_BRIDGE_IN_SGXGETMISCINFO;
-
-PVRSRV_ERROR CopyFromUserWrapper(PVRSRV_PER_PROCESS_DATA *psPerProc,
-		IMG_VOID *destination, const IMG_VOID *source, IMG_SIZE_T size);
-PVRSRV_ERROR CopyToUserWrapper(PVRSRV_PER_PROCESS_DATA *psPerProc,
-		IMG_VOID *destination, const IMG_VOID *source, IMG_SIZE_T size);
-PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO *psDevInfo,
-		SGX_MISC_INFO *psMiscInfo, PVRSRV_DEVICE_NODE *psDeviceNode,
-		struct BM_CONTEXT *memoryContext);
 
 typedef struct PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE {
 	IMG_UINT32 ui32BridgeFlags;
@@ -170,9 +147,6 @@ typedef struct PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE {
 	IMG_SID hKernSyncInfo;
 	IMG_BOOL bWaitForComplete;
 } PVRSRV_BRIDGE_IN_2DQUERYBLTSCOMPLETE;
-
-PVRSRV_ERROR SGX2DQueryBlitsCompleteKM(PVRSRV_SGXDEV_INFO *psDevInfo,
-		struct PVRSRV_KERNEL_SYNC_INFO *psSyncInfo, IMG_BOOL bWaitForComplete);
 
 typedef struct PVRSRV_BRIDGE_IN_GETINTERNALDEVINFO {
 	IMG_UINT32 ui32BridgeFlags;
@@ -184,11 +158,6 @@ typedef struct PVRSRV_BRIDGE_OUT_GETINTERNALDEVINFO {
 	PVRSRV_ERROR eError;
 } PVRSRV_BRIDGE_OUT_GETINTERNALDEVINFO;
 
-PVRSRV_ERROR SGXGetInternalDevInfoKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		SGX_INTERNAL_DEVINFO *psInternalDevInfo);
-IMG_UINT32 PVRSRVAllocHandle(struct _PVRSRV_HANDLE_BASE_ *base, IMG_SID *output,
-		IMG_VOID *data, IMG_UINT32 type, IMG_UINT32 flags);
-
 typedef struct PVRSRV_BRIDGE_IN_GETCLIENTINFO {
 	IMG_UINT32 ui32BridgeFlags;
 	IMG_SID hDevCookie;
@@ -198,9 +167,6 @@ typedef struct PVRSRV_BRIDGE_OUT_GETCLIENTINFO {
 	SGX_CLIENT_INFO sClientInfo;
 	PVRSRV_ERROR eError;
 } PVRSRV_BRIDGE_OUT_GETCLIENTINFO;
-
-PVRSRV_ERROR SGXGetClientInfoKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		SGX_CLIENT_INFO *psClientInfo);
 
 typedef struct SGX_BRIDGE_IN_GET_RENDER_TARGET_INFO {
 	IMG_UINT32 ui32BridgeFlags;
@@ -257,8 +223,6 @@ typedef struct SGX_BRIDGE_IN_WAIT_TRANSFER_QUEUE {
 	} context;
 } SGX_BRIDGE_IN_WAIT_TRANSFER_QUEUE;
 
-PVRSRV_ERROR WaitTransferQueueIdle(GpuTransferQueueContext *context);
-
 typedef struct PVRSRV_BRIDGE_IN_DOKICK {
 	IMG_UINT32 ui32BridgeFlags;
 	IMG_SID hDevCookie;
@@ -274,16 +238,8 @@ PVRSRV_ERROR SGXKickTA(PVRSRV_DEVICE_NODE *device, SGX_KICKTA *kick,
 		SGX_KICKTA_RESULT *result, IMG_UINT32 flags,
 		IMG_UINT32 unused);
 
-PVRSRV_ERROR DestroyRenderContext(struct SGX_RENDERCONTEXT *psRenderContext,
-		IMG_UINT32 ui32Param, IMG_BOOL forceCleanup);
-PVRSRV_ERROR CreateRenderContext(PVRSRV_DEVICE_NODE *psDeviceNode,
-		PVRSRV_PER_PROCESS_DATA *psPerProc, SGX_CREATERENDERCONTEXT *context,
-		IMG_SID *hRenderContext, struct PVRSRV_KERNEL_MEM_INFO **visTestMemInfo);
-
-PVRSRV_ERROR AddRenderTarget(PVRSRV_DEVICE_NODE *psDeviceNode,
-		PVRSRV_PER_PROCESS_DATA *psPerProc, SGX_ADDRENDTARG *target,
-		IMG_SID *hRenderTarget);
-PVRSRV_ERROR RemoveRenderTargetCallback(IMG_VOID *pvParam, IMG_UINT32 ui32Param);
+PVRSRV_ERROR RemoveRenderTargetCallback(IMG_VOID *pvParam, IMG_UINT32 ui32Param,
+		IMG_BOOL bForceCleanup);
 IMG_VOID *AllocProcessGpuMemory(IMG_SIZE_T size);
 int FreeProcessGpuMemory(IMG_VOID *memory);
 
@@ -301,19 +257,6 @@ static const SceKernelDebugInfo dbg_SGXRemoveRenderTargetBW_L295 = {
 	"bridged/sgx/bridged_sgx_bridge_sce.c", 295, "SGXRemoveRenderTargetBW"
 };
 #endif
-
-PVRSRV_ERROR RemoveRenderTarget(PVRSRV_DEVICE_NODE *psDeviceNode,
-		struct SGX_RENDERCONTEXT *psRenderContext, SGX_RTDATASET *psRTDataSet);
-
-PVRSRV_ERROR CreateTransferQueue(PVRSRV_DEVICE_NODE *psDeviceNode,
-		PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_UINT32 reservedParameter,
-		GpuTransferMemoryContext *memoryContext, IMG_SID *hContext);
-
-PVRSRV_ERROR SubmitTransferCommands(IMG_UINT32 *commands, IMG_UINT32 numCommands,
-		PVRSRV_DEVICE_NODE *psDeviceNode, PVRSRV_PER_PROCESS_DATA *psPerProc,
-		struct GpuTransferQueueContext *context, IMG_VOID *syncInfo,
-		IMG_BOOL sourceSyncEnable, IMG_BOOL destinationSyncEnable,
-		GpuTransferStatus *status);
 
 /* The command is registered but unsupported by the kernel driver. */
 int SGXUnsupportedBW(IMG_UINT32 ui32BridgeID, IMG_VOID *psBridgeIn,
@@ -437,7 +380,8 @@ out:
 	return result;
 }
 
-PVRSRV_ERROR DestroyCommandContextCallback(IMG_VOID *pvParam, IMG_UINT32 ui32Param)
+PVRSRV_ERROR DestroyCommandContextCallback(IMG_VOID *pvParam, IMG_UINT32 ui32Param,
+		IMG_BOOL bForceCleanup)
 {
 	DestroyCommandContext(pvParam, 0);
 	return PVRSRV_OK;
@@ -626,7 +570,8 @@ int SGXAddRenderTargetBW(IMG_UINT32 ui32BridgeID,
 	return 0;
 }
 
-PVRSRV_ERROR RemoveRenderTargetCallback(IMG_VOID *pvParam, IMG_UINT32 ui32Param)
+PVRSRV_ERROR RemoveRenderTargetCallback(IMG_VOID *pvParam, IMG_UINT32 ui32Param,
+		IMG_BOOL bForceCleanup)
 {
 	GpuRenderTargetResource *resource = pvParam;
 	PVRSRV_ERROR eError;
@@ -661,7 +606,8 @@ int SGXDestroyRenderContextBW(IMG_UINT32 ui32BridgeID,
 	return 0;
 }
 
-PVRSRV_ERROR DestroyRenderContextCallback(IMG_VOID *pvParam, IMG_UINT32 ui32Param)
+PVRSRV_ERROR DestroyRenderContextCallback(IMG_VOID *pvParam, IMG_UINT32 ui32Param,
+		IMG_BOOL bForceCleanup)
 {
 	return DestroyRenderContext(pvParam, 0, IMG_FALSE);
 }
@@ -1122,11 +1068,6 @@ int SGXDoKickBW(IMG_UINT32 ui32BridgeID, PVRSRV_BRIDGE_IN_DOKICK *psBridgeIn,
 
 typedef int (*BridgeWrapper)(IMG_UINT32 bridgeID, IMG_VOID *input,
 		IMG_VOID *output, PVRSRV_PER_PROCESS_DATA *process);
-
-int DummyBW(IMG_UINT32 ui32BridgeID, IMG_VOID *psBridgeIn,
-		IMG_VOID *psBridgeOut, PVRSRV_PER_PROCESS_DATA *psPerProc);
-void _SetDispatchTableEntry(IMG_UINT32 index, const IMG_CHAR *name,
-		BridgeWrapper wrapper, const IMG_CHAR *wrapperName);
 
 /* IMG dispatch initialization with SCE bridge IDs and extensions. */
 void SetSGXDispatchTableEntry(void)

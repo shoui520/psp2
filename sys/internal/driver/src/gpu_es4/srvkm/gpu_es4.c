@@ -16,13 +16,13 @@
 #include <power/power.h>
 #include <processmgr/processmgr.h>
 #include <gpu/osfunc_sce.h>
+#include "bridge_sce.h"
+#include "system_sce.h"
+#include "sgxkick_sce.h"
+#include <gpu/power_sce.h>
 
 /* SCE stores the services mutex UID in the native module's zeroed state. */
 SceUID gPVRSRVLock;
-IMG_VOID LinuxLockMutex(int *psMutex);
-IMG_VOID LinuxUnLockMutex(int *psMutex);
-PVRSRV_ERROR PVRSRVProcessConnect(IMG_UINT32 ui32PID, IMG_UINT32 ui32Flags);
-IMG_VOID PVRSRVProcessDisconnect(IMG_UINT32 ui32PID);
 
 /* SCE native user entry: start services and select the default GPU clock. */
 int PVRSRVOpen(void)
@@ -57,26 +57,10 @@ int PVRSRVRelease(void)
 }
 
 unsigned SetRemoteAllocProcess(unsigned pid);
-IMG_VOID PVRDPFInit(IMG_VOID);
-void GpuStartupHook(void);
-void GpuShutdownHook(void);
-void LinuxInitMutex(SceUID *psMutex);
 int CreateSignalWaitObjects(void);
 int CreateLockupWaitObjects(void);
-SceUID SGXCleanupMutexInit(void);
-int InitGpuMemorySupport(void);
-PVRSRV_ERROR CommonBridgeInit(IMG_VOID);
-PVRSRV_ERROR SysInitialise(IMG_VOID);
-IMG_VOID sceGpuBridgeDeInit(IMG_VOID);
-int sceGpuProcessCreateEvent(SceUID pid);
-int sceGpuProcessExitEvent(SceUID pid);
-int sceGpuProcessKillEvent(SceUID pid);
-int sceGpuProcessStopEvent(SceUID pid, int eventType);
-int sceGpuProcessStartEvent(SceUID pid, int eventType);
-int sceGpuSysEventHandler(int eventId, int eventType);
 int CheckRegisterDumpRegisterLists(void);
 int InitWaitModObjList(void);
-int CreateSuspendWaitEvent(void);
 
 /* SCE startup registers native callbacks after initializing the DDK services. */
 int module_start(SceSize arglen, const void *argp)

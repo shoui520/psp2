@@ -5,6 +5,7 @@
 #define SGXKICK_SCE_H
 
 #include <gpu/sgxinit_sce.h>
+#include <gpu/sgxutils_sce.h>
 #include "sync_sce.h"
 #include "transfer_sce.h"
 
@@ -67,5 +68,41 @@ typedef struct _SGXMKIF_HWDEVICE_SYNC_LIST_ {
 
 _Static_assert(sizeof(SGX_CCB_KICK_KM) == 556, "SCE CCB kick input");
 _Static_assert(sizeof(SGXMKIF_CMDTA_SHARED) == 480, "TA shared command");
+
+/* sgxutils_sce.c */
+PVRSRV_ERROR SGXScheduleCCBCommand(PVRSRV_DEVICE_NODE *psDeviceNode,
+		SGXMKIF_CMD_TYPE eCmdType, SGXMKIF_COMMAND *psCommandData,
+		IMG_UINT32 ui32CallerID, IMG_UINT32 ui32PDumpFlags,
+		IMG_HANDLE hDevMemContext, IMG_BOOL bLastInScene);
+PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE *psDeviceNode,
+		SGXMKIF_CMD_TYPE eCmdType, SGXMKIF_COMMAND *psCommandData,
+		IMG_UINT32 ui32CallerID, IMG_UINT32 ui32PDumpFlags,
+		IMG_HANDLE hDevMemContext, IMG_BOOL bLastInScene);
+PVRSRV_ERROR SGXScheduleProcessQueuesKM(PVRSRV_DEVICE_NODE *psDeviceNode);
+IMG_VOID SGXTestActivePowerEvent(PVRSRV_DEVICE_NODE *psDeviceNode, IMG_UINT32 ui32CallerID);
+IMG_BOOL SGXIsDevicePowered(PVRSRV_DEVICE_NODE *psDeviceNode);
+PVRSRV_ERROR SGXGetInternalDevInfoKM(IMG_HANDLE hDevCookie,
+		SGX_INTERNAL_DEVINFO *psSGXInternalDevInfo);
+PVRSRV_ERROR SGXCleanupRequest(PVRSRV_DEVICE_NODE *psDeviceNode,
+		IMG_DEV_VIRTADDR *psHWDataDevVAddr, IMG_UINT32 ui32CleanupType,
+		IMG_BOOL bForceCleanup);
+IMG_HANDLE SGXRegisterHWRenderContextKM(IMG_HANDLE hDeviceNode,
+		IMG_DEV_VIRTADDR *psHWRenderContextDevVAddr,
+		struct PVRSRV_KERNEL_MEM_INFO *psHWRenderContextMemInfo,
+		PVRSRV_PER_PROCESS_DATA *psPerProc);
+PVRSRV_ERROR SGXUnregisterHWRenderContextKM(IMG_HANDLE hHWRenderContext, IMG_BOOL bForceCleanup);
+IMG_HANDLE SGXRegisterHW2DContextKM(IMG_HANDLE hDeviceNode,
+		IMG_DEV_VIRTADDR *psHW2DContextDevVAddr,
+		struct PVRSRV_KERNEL_MEM_INFO *psHW2DContextMemInfo,
+		PVRSRV_PER_PROCESS_DATA *psPerProc);
+PVRSRV_ERROR SGXUnregisterHW2DContextKM(IMG_HANDLE hHW2DContext, IMG_BOOL bForceCleanup);
+PVRSRV_ERROR SGX2DQueryBlitsCompleteKM(PVRSRV_SGXDEV_INFO *psDevInfo,
+		PVRSRV_KERNEL_SYNC_INFO *psSyncInfo, IMG_BOOL bWaitForComplete);
+PVRSRV_ERROR SGXFlushHWRenderTargetKM(IMG_HANDLE psDeviceNode,
+		IMG_DEV_VIRTADDR sHWRTDataSetDevVAddr, IMG_BOOL bForceCleanup);
+IMG_VOID SGXWaitClocks(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_UINT32 ui32SGXClocks);
+PVRSRV_ERROR SGXPerProcessContextSuspend(PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_BOOL bResume);
+PVRSRV_ERROR SGXSetRenderContextPriorityKM(IMG_HANDLE hHWRenderContext, IMG_UINT32 *pui32Priority);
+SceUID SGXCleanupMutexInit(IMG_VOID);
 
 #endif

@@ -25,4 +25,23 @@ typedef struct PVRSRV_BRIDGE_PACKAGE_TAG {
 
 _Static_assert(sizeof(PVRSRV_BRIDGE_PACKAGE) == 28, "native bridge package");
 
+typedef IMG_INT (*BridgeWrapperFunction)(IMG_UINT32 ui32BridgeID,
+		IMG_VOID *psBridgeIn, IMG_VOID *psBridgeOut,
+		PVRSRV_PER_PROCESS_DATA *psPerProc);
+
+/* bridged/bridged_pvr_bridge.c */
+int DummyBW(IMG_UINT32 ui32BridgeID, IMG_VOID *psBridgeIn,
+		IMG_VOID *psBridgeOut, PVRSRV_PER_PROCESS_DATA *psPerProc);
+PVRSRV_ERROR FreeSyncInfoCallback(IMG_VOID *pvParam, IMG_UINT32 ui32Param,
+		IMG_BOOL bForceCleanup);
+IMG_VOID _SetDispatchTableEntry(IMG_UINT32 ui32Index, const IMG_CHAR *pszIOCName,
+		BridgeWrapperFunction pfFunction, const IMG_CHAR *pszFunctionName);
+PVRSRV_ERROR CommonBridgeInit(IMG_VOID);
+IMG_VOID sceGpuBridgeDeInit(IMG_VOID);
+IMG_INT BridgedDispatchKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
+		PVRSRV_BRIDGE_PACKAGE *psBridgePackageKM);
+
+/* bridged/sgx/bridged_sgx_bridge_sce.c */
+void SetSGXDispatchTableEntry(void);
+
 #endif

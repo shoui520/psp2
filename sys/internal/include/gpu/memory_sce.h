@@ -35,5 +35,11 @@ PVRSRV_ERROR _PVRSRVAllocDeviceMemKM(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 PVRSRV_ERROR PVRSRVFreeDeviceMemKM(struct PVRSRV_DEVICE_NODE *psDeviceNode,
 		PVRSRV_KERNEL_MEM_INFO *psMemInfo);
 
+/* mem.c */
+PVRSRV_ERROR PVRSRVAllocSharedSysMemoryKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
+		IMG_SID hMemBlockProcRef, IMG_UINT32 ui32Flags, IMG_SIZE_T uSize,
+		PVRSRV_KERNEL_MEM_INFO **ppsKernelMemInfo);
+PVRSRV_ERROR PVRSRVFreeSharedSysMemoryKM(PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo);
+PVRSRV_ERROR PVRSRVDissociateMemFromResmanKM(PVRSRV_KERNEL_MEM_INFO *psKernelMemInfo);
 
 #endif

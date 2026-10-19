@@ -5,8 +5,10 @@
 #include <gpu/sgxmkif_sce.h>
 #include <threadmgr/threadmgr.h>
 #include <string.h>
+#include "sgxkick_sce.h"
+#include "system_sce.h"
+#include <gpu/osfunc_sce.h>
 
-IMG_UINT32 OSClockus(IMG_VOID);
 PVRSRV_ERROR SGXPrePowerState(IMG_HANDLE hDevHandle,
 		PVRSRV_DEV_POWER_STATE eNewPowerState,
 		PVRSRV_DEV_POWER_STATE eCurrentPowerState);
@@ -14,21 +16,6 @@ PVRSRV_ERROR SGXPostPowerState(IMG_HANDLE hDevHandle,
 		PVRSRV_DEV_POWER_STATE eNewPowerState,
 		PVRSRV_DEV_POWER_STATE eCurrentPowerState);
 PVRSRV_ERROR SGXUpdateTimingInfo(PVRSRV_DEVICE_NODE *psDeviceNode);
-PVRSRV_ERROR OSEnableTimer(IMG_HANDLE hTimer);
-PVRSRV_ERROR SysGetDeviceMemoryMap(PVRSRV_DEVICE_TYPE eDeviceType,
-		SGX_DEVICE_MAP **ppsDeviceMap);
-IMG_HANDLE OSAddTimer(IMG_VOID (*pfnTimerFunc)(IMG_VOID *), IMG_VOID *pvData,
-		IMG_UINT32 ui32MsTimeout);
-PVRSRV_ERROR OSRemoveTimer(IMG_HANDLE hTimer);
-IMG_VOID SGXOSTimer(IMG_VOID *pvData);
-PVRSRV_ERROR OSDisableTimer(IMG_HANDLE hTimer);
-IMG_UINT32 OSReadHWReg(IMG_VOID *pvLinRegBaseAddr, IMG_UINT32 ui32Offset);
-PVRSRV_ERROR SGXDeinitialise(IMG_HANDLE hDevCookie);
-PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bHardwareRecovery);
-PVRSRV_ERROR SGXScheduleCCBCommand(PVRSRV_DEVICE_NODE *psDeviceNode,
-		IMG_UINT32 eCmdType, SGXMKIF_COMMAND *psCommandData,
-		IMG_UINT32 ui32CallerID, IMG_UINT32 ui32PDumpFlags,
-		IMG_HANDLE hDevMemContext, IMG_BOOL bLastInScene);
 
 /* SCE: the source-local PollForValueKM specialization uses a fixed
  * 500000us timeout and 50us non-preemptible delay. The suffix distinguishes

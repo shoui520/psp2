@@ -69,4 +69,22 @@ typedef struct {
 _Static_assert(sizeof(RESMAN_ITEM) == 28, "native resource item");
 _Static_assert(sizeof(RESMAN_CONTEXT) == 16, "native resource context");
 
+/* common/resman.c */
+PVRSRV_ERROR ResManInit(IMG_VOID);
+IMG_VOID ResManDeInit(IMG_VOID);
+PVRSRV_ERROR PVRSRVResManConnect(PVRSRV_PER_PROCESS_DATA *psPerProc,
+		RESMAN_CONTEXT **phResManContext);
+IMG_VOID PVRSRVResManDisconnect(RESMAN_CONTEXT *psResManContext, IMG_BOOL bKernelContext);
+RESMAN_ITEM *ResManRegisterRes(RESMAN_CONTEXT *psResManContext,
+		IMG_UINT32 ui32ResType, IMG_VOID *pvParam, IMG_UINT32 ui32Param,
+		RESMAN_FREE_FN pfnFreeResource);
+PVRSRV_ERROR ResManFreeResByPtr(RESMAN_ITEM *psResItem, IMG_BOOL bForceCleanup);
+PVRSRV_ERROR ResManFreeResByCriteria(RESMAN_CONTEXT *psResManContext,
+		IMG_UINT32 ui32SearchCriteria, IMG_UINT32 ui32ResType,
+		IMG_VOID *pvParam, IMG_UINT32 ui32Param);
+PVRSRV_ERROR ResManDissociateRes(RESMAN_ITEM *psResItem, RESMAN_CONTEXT *psNewResManContext);
+RESMAN_ITEM *ResManFindResourceByCriteria(RESMAN_CONTEXT *psResManContext,
+		IMG_UINT32 ui32SearchCriteria, IMG_UINT32 ui32ResType,
+		IMG_VOID *pvParam, IMG_UINT32 ui32Param);
+
 #endif

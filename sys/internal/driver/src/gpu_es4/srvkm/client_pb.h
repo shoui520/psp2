@@ -6,6 +6,7 @@
 #define CLIENT_PB_H
 
 #include <gpu/memory_sce.h>
+#include <gpu/device_sce.h>
 
 typedef struct SGX_PBDESC SGX_PBDESC;
 
@@ -82,5 +83,26 @@ _Static_assert(sizeof(SGX_PBBLOCK) == 36, "IMG client PB block");
 _Static_assert(sizeof(SGX_HWPBDESC) == 60, "IMG hardware PB descriptor");
 _Static_assert(sizeof(SGX_PBDESC) == 64, "IMG client PB descriptor");
 _Static_assert(sizeof(SGX_CLIENTPBDESC) == 28, "IMG client PB wrapper");
+
+/* client_pb.c */
+struct SGX_RENDERCONTEXT;
+void DestroyPrivateParameterBuffer(SGX_CLIENTPBDESC *psClientPBDesc);
+int CreatePrivateParameterBuffer(PVRSRV_DEVICE_NODE *psDeviceNode,
+		PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_INT32 hMemBlockProcRef,
+		struct SGX_RENDERCONTEXT *psRenderContext, IMG_UINT32 ui32Size,
+		PVRSRV_HEAP_INFO *psParameterHeap, PVRSRV_HEAP_INFO *psKernelHeap);
+int CreateSharedParameterBuffer(PVRSRV_DEVICE_NODE *psDeviceNode,
+		PVRSRV_PER_PROCESS_DATA *psPerProc, IMG_INT32 hMemBlockProcRef,
+		IMG_HANDLE *phSharedPBDesc, IMG_UINT32 ui32Size,
+		IMG_HANDLE hDevMemContext, PVRSRV_HEAP_INFO *psParameterHeap,
+		PVRSRV_HEAP_INFO *psKernelHeap);
+PVRSRV_ERROR UnreferenceClientParameterBuffer(SGX_CLIENTPBDESC *psClientPBDesc);
+int InitializeSharedClientParameterBuffer(IMG_HANDLE hSharedPBDesc,
+		PVRSRV_KERNEL_MEM_INFO *psSharedMemInfo,
+		PVRSRV_KERNEL_MEM_INFO *psHWMemInfo,
+		PVRSRV_KERNEL_MEM_INFO *psBlockMemInfo,
+		PVRSRV_KERNEL_MEM_INFO *psHWBlockMemInfo,
+		PVRSRV_KERNEL_MEM_INFO **ppsSubMemInfo, IMG_UINT32 ui32SubMemInfoCount,
+		SGX_CLIENTPBDESC *psClientPBDesc);
 
 #endif

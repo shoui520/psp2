@@ -1,7 +1,6 @@
 /* IMG hash implementation with explicitly marked SCE portability changes. */
 #include "hash_sce.h"
 #include <gpu/osfunc_sce.h>
-typedef unsigned u32;
 typedef int s32;
 
 /* IMG 1.7 default hash; SCE assertion disabled. ARM pointer words are 32-bit. */
@@ -47,10 +46,6 @@ u32 HASH_Key_Comp_Default(u32 uKeySize, void *pKey1, void *pKey2)
 /* IMG _Resize with _Rehash/_ChainInsert inlined by Sony. SCE removes
  * the redundant equal-size check and the failed-rehash allocation cleanup.
  */
-PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 flags, IMG_SIZE_T size,
-		IMG_VOID **output, IMG_HANDLE *handle);
-PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 flags, IMG_SIZE_T size,
-		IMG_VOID *address, IMG_HANDLE handle);
 
 IMG_BOOL _Resize(HASH_TABLE *pHash, IMG_UINT32 uNewSize)
 {

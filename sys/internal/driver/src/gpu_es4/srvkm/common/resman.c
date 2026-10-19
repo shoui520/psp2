@@ -2,13 +2,9 @@
 #include <gpu/resman_sce.h>
 #include <stddef.h>
 #include <stdarg.h>
+#include <gpu/osfunc_sce.h>
 
 RESMAN_LIST *gpsResList = NULL;
-
-PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
-		IMG_VOID *pvLinAddr, IMG_HANDLE hBlockAlloc);
-PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
-		IMG_VOID **ppvLinAddr, IMG_HANDLE *phBlockAlloc);
 
 /* Pristine IMPLEMENT_LIST_REVERSE(RESMAN_ITEM) expansion. */
 IMG_VOID List_RESMAN_ITEM_Reverse(RESMAN_ITEM **ppsHead)

@@ -5,7 +5,6 @@
 #define GPU_HANDLE_TYPES_H
 #include <gpu/sce_ddk_port.h>
 #include "hash_sce.h"
-typedef unsigned u32;
 typedef int s32;
 struct sHandleList {
 	u32 ui32Prev;
@@ -44,4 +43,23 @@ struct _PVRSRV_HANDLE_BASE_ {
 	u32 bPurgingEnabled;
 };
 typedef struct _PVRSRV_HANDLE_BASE_ PVRSRV_HANDLE_BASE;
+
+/* handle.c */
+PVRSRV_ERROR PVRSRVAllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_SID *phHandle,
+		IMG_VOID *pvData, IMG_UINT32 eType, IMG_UINT32 eFlag);
+PVRSRV_ERROR PVRSRVAllocSubHandle(PVRSRV_HANDLE_BASE *psBase, IMG_SID *phHandle,
+		IMG_VOID *pvData, IMG_UINT32 eType, IMG_UINT32 eFlag, IMG_SID hParent);
+PVRSRV_ERROR PVRSRVFindHandle(PVRSRV_HANDLE_BASE *psBase, IMG_SID *phHandle,
+		IMG_VOID *pvData, IMG_UINT32 eType);
+PVRSRV_ERROR PVRSRVLookupHandle(PVRSRV_HANDLE_BASE *psBase, IMG_VOID **ppvData,
+		IMG_SID hHandle, IMG_UINT32 eType);
+PVRSRV_ERROR PVRSRVReleaseHandle(PVRSRV_HANDLE_BASE *psBase, IMG_SID hHandle, IMG_UINT32 eType);
+PVRSRV_ERROR PVRSRVNewHandleBatch(PVRSRV_HANDLE_BASE *psBase, IMG_UINT32 ui32BatchSize);
+PVRSRV_ERROR PVRSRVCommitHandleBatch(PVRSRV_HANDLE_BASE *psBase);
+IMG_VOID PVRSRVReleaseHandleBatch(PVRSRV_HANDLE_BASE *psBase);
+PVRSRV_ERROR PVRSRVPurgeHandles(PVRSRV_HANDLE_BASE *psBase);
+PVRSRV_ERROR PVRSRVFreeHandleBase(PVRSRV_HANDLE_BASE *psBase);
+PVRSRV_ERROR PVRSRVHandleDeInit(IMG_VOID);
+PVRSRV_ERROR PVRSRVHandleInit(IMG_VOID);
+
 #endif

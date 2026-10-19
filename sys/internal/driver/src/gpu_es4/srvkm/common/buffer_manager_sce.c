@@ -9,8 +9,8 @@
 #include <sysmem/sysmem.h>
 #include <processmgr/processmgr.h>
 #include <threadmgr/threadmgr.h>
+#include "../system_sce.h"
 
-PVRSRV_DEVICE_NODE *SetGpuDeviceNode(PVRSRV_DEVICE_NODE *psDeviceNode);
 int sceGpuInitMemoryContexts(void);
 int GetKernelMemoryContext(GpuMemoryContext **output);
 int sceGpuMmuAllocatePageTablePool(GpuPageTablePool *pool, unsigned pid);

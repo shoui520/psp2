@@ -6,22 +6,11 @@
 #include <sysmem/debug.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysmem.h>
+#include <gpu/osfunc_sce.h>
+#include <gpu/resman_sce.h>
 
 HASH_TABLE *psHashTab;
 extern PVRSRV_HANDLE_BASE *gpsKernelHandleBase;
-IMG_UINTPTR_T HASH_Remove(HASH_TABLE *pHash, IMG_UINTPTR_T k);
-IMG_UINTPTR_T HASH_Retrieve(HASH_TABLE *pHash, IMG_UINTPTR_T k);
-HASH_TABLE *HASH_Create(IMG_UINT32 uInitialLen);
-IMG_VOID HASH_Delete(HASH_TABLE *pHash);
-PVRSRV_ERROR PVRSRVFreeHandleBase(PVRSRV_HANDLE_BASE *psBase);
-PVRSRV_ERROR PVRSRVReleaseHandle(PVRSRV_HANDLE_BASE *psBase, IMG_SID hHandle,
-		IMG_UINT32 eType);
-PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 flags, IMG_SIZE_T size,
-		IMG_VOID *memory, IMG_HANDLE block);
-PVRSRV_ERROR OSPerProcessPrivateDataDeInit(GpuMappedMemoryList *list);
-PVRSRV_ERROR PVRSRVPurgeHandles(PVRSRV_HANDLE_BASE *psBase);
-PVRSRV_ERROR PVRSRVResManDisconnect(struct ResourceContext *hResManContext,
-		IMG_BOOL bKernelContext);
 IMG_INT sceGpuWaitModObjRemoveAll(IMG_INT waitEventFlag);
 
 /* IMG FreePerProcessData; SCE omits generic diagnostics/assertions and adds

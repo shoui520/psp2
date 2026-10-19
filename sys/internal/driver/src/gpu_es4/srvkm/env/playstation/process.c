@@ -6,26 +6,18 @@
 #include <gpu/gpu-mmu.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/debug.h>
+#include "../../system_sce.h"
+#include "../../handle-types.h"
+#include "../../sgxkick_sce.h"
+#include <gpu/power_sce.h>
 
 extern int gPVRSRVLock;
-unsigned LinuxLockMutex(int *psMutex);
-unsigned LinuxLockMutexForPid(int *psMutex, int pid);
-int LinuxUnLockMutex(int *psMutex);
-int LinuxTryLockMutex(int *psMutex);
 int AddMemoryContextToList(GpuMemoryContext **output, unsigned pid);
 int RemoveMemoryContextFromList(GpuMemoryContext *context, unsigned pid);
 int GetMemoryContext(GpuMemoryContext **output, unsigned pid);
 int sceGpuMmuAllocatePageTablePool(GpuPageTablePool *pool, unsigned pid);
 int sceGpuUnregisterSalvage(int eventUid);
-IMG_VOID PVRSRVProcessDisconnect(IMG_UINT32 ui32PID);
-PVRSRV_ERROR SGXPerProcessContextSuspend(PVRSRV_PER_PROCESS_DATA *psPerProc,
-		IMG_BOOL bResume);
-PVRSRV_ERROR PVRSRVLookupHandle(struct _PVRSRV_HANDLE_BASE_ *psBase,
-		IMG_VOID **ppvData, IMG_SID hHandle, IMG_UINT32 eType);
 int sceGpuIsHalted(void);
-int sceGpuCancelSuspendWait(void);
-int sceGpuSignalSuspendWait(void);
-PVRSRV_ERROR PVRSRVSetPowerStateKM(IMG_UINT32 eNewPowerState);
 
 SceUID exitingProcess = -1;
 IMG_UINT32 gpuSuspended;

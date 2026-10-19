@@ -29,4 +29,7 @@ typedef struct SGXMKIF_2DCMD {
 _Static_assert(sizeof(SGXMKIF_2DCMD_SHARED) == 112, "SCE shared 2D command");
 _Static_assert(sizeof(SGXMKIF_2DCMD) == 232, "hardware 2D command host interface");
 
+/* sgxtransfer_sce.c */
+PVRSRV_ERROR SGXSubmit2DKM(PVRSRV_DEVICE_NODE *psDeviceNode, PVRSRV_2D_SGX_KICK *psKick);
+
 #endif

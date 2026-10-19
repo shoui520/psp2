@@ -32,4 +32,11 @@ typedef struct _MODIFY_SYNC_OP_INFO {
 	IMG_UINT32 reserved;
 } MODIFY_SYNC_OP_INFO;
 
+/* common/sharedsync.c */
+IMG_INT sceGpuSharedSyncObjectCreate(IMG_UINT32 ui32SharedKey, IMG_SID hHandle);
+IMG_INT sceGpuSharedSyncObjectDelete(IMG_UINT32 ui32SharedKey);
+IMG_INT sceGpuSharedSyncObjectOpen(IMG_UINT32 ui32SharedKey, IMG_SID *hHandle);
+IMG_INT sceGpuSharedSyncObjectClose(IMG_UINT32 ui32SharedKey);
+IMG_INT sceGpuSharedSyncObjectGetHandle(IMG_UINT32 ui32SharedKey, IMG_SID *hHandle);
+
 #endif

@@ -15,13 +15,11 @@
 #include <threadmgr/threadmgr.h>
 #include <gpu/memory_sce.h>
 #include <gpu/power_sce.h>
+#include "../handle-types.h"
+#include <gpu/resman_sce.h>
 
 /* IMG shared-heap classification table, zero-initialized in both TOOL originals. */
 static IMG_BOOL abSharedDeviceMemHeap[32];
-
-typedef IMG_INT (*BridgeWrapperFunction)(IMG_UINT32 ui32BridgeID,
-		IMG_VOID *psBridgeIn, IMG_VOID *psBridgeOut,
-		PVRSRV_PER_PROCESS_DATA *psPerProc);
 
 /* SCE strips the generic bridge size and diagnostic counters from each entry. */
 typedef struct PVRSRV_BRIDGE_DISPATCH_TABLE_ENTRY {
@@ -103,10 +101,9 @@ PVRSRV_ERROR DoModifyCompleteSyncOps(MODIFY_SYNC_OP_INFO *psModSyncOpInfo,
 	return PVRSRV_OK;
 }
 
-PVRSRV_ERROR PVRSRVFreeSyncInfoKM(PVRSRV_KERNEL_SYNC_INFO *psSyncInfo);
-
 /* IMG resource callback; SCE retains the two-argument resman ABI. */
-PVRSRV_ERROR FreeSyncInfoCallback(IMG_VOID *pvParam, IMG_UINT32 ui32Param)
+PVRSRV_ERROR FreeSyncInfoCallback(IMG_VOID *pvParam, IMG_UINT32 ui32Param,
+		IMG_BOOL bForceCleanup)
 {
 	return PVRSRVFreeSyncInfoKM(pvParam);
 }
@@ -122,9 +119,6 @@ typedef struct PVRSRV_BRIDGE_OUT_GET_MAPPED_MEMORY_INFO {
 	IMG_SIZE_T size;
 	IMG_UINT32 mmuFlags;
 } PVRSRV_BRIDGE_OUT_GET_MAPPED_MEMORY_INFO;
-
-PVRSRV_ERROR QueryMappedMemory(GpuMappedMemoryList *list,
-		IMG_VOID *cpuAddress, GpuMappedMemory *info);
 
 /* SCE query returns the original mapped range and its GPU MMU flags. */
 IMG_INT PVRSRVGetMappedMemoryInfoBW(IMG_UINT32 ui32BridgeID,
@@ -154,8 +148,6 @@ typedef struct PVRSRV_BRIDGE_IN_CHECK_GPU_MAPPING {
 	IMG_UINT32 access;
 } PVRSRV_BRIDGE_IN_CHECK_GPU_MAPPING;
 
-PVRSRV_ERROR PVRSRVLookupHandle(struct _PVRSRV_HANDLE_BASE_ *psBase, IMG_VOID **ppvData,
-		IMG_SID hHandle, IMG_UINT32 eType);
 IMG_INT CheckGpuMmuMapping(GpuMmuContext *context, IMG_UINT32 address,
 		IMG_SIZE_T size, IMG_UINT32 flags);
 
@@ -199,9 +191,6 @@ typedef struct PVRSRV_BRIDGE_IN_UNREGISTER_MEMBLOCK {
 	IMG_INT32 memBlockUid;
 } PVRSRV_BRIDGE_IN_UNREGISTER_MEMBLOCK;
 
-PVRSRV_ERROR PVRSRVUnregisterMemBlockKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
-		IMG_INT32 memBlockUid);
-
 /* SCE memory-block bridge. */
 IMG_INT PVRSRVUnregisterMemBlockBW(IMG_UINT32 ui32BridgeID,
 		PVRSRV_BRIDGE_IN_UNREGISTER_MEMBLOCK *psBridgeIn,
@@ -225,9 +214,6 @@ typedef struct PVRSRV_BRIDGE_OUT_REGISTER_MEMBLOCK {
 	IMG_UINT32 blockGroupId;
 } PVRSRV_BRIDGE_OUT_REGISTER_MEMBLOCK;
 
-PVRSRV_ERROR PVRSRVRegisterMemBlockKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
-		IMG_INT32 memBlockUid, IMG_UINT32 *blockGroupId, IMG_BOOL restoreMapping);
-
 /* SCE reserves block group 1. The requested group is also an output. */
 IMG_INT PVRSRVRegisterMemBlockBW(IMG_UINT32 ui32BridgeID,
 		PVRSRV_BRIDGE_IN_REGISTER_MEMBLOCK *psBridgeIn,
@@ -245,11 +231,10 @@ IMG_INT PVRSRVRegisterMemBlockBW(IMG_UINT32 ui32BridgeID,
 	return 0;
 }
 
-IMG_INT sceGpuSharedSyncObjectDelete(IMG_UINT32 ui32SharedKey);
-
 /* SCE cleanup releases the shared object and its sync-info reference. */
 PVRSRV_ERROR DeleteSharedSyncInfoCallback(IMG_VOID *pvParam,
-		IMG_UINT32 ui32SharedKey)
+		IMG_UINT32 ui32SharedKey,
+		IMG_BOOL bForceCleanup)
 {
 	PVRSRV_KERNEL_SYNC_INFO *psSyncInfo = pvParam;
 
@@ -265,11 +250,6 @@ typedef struct PVRSRV_BRIDGE_IN_DELETE_SHARED_SYNCINFO {
 } PVRSRV_BRIDGE_IN_DELETE_SHARED_SYNCINFO;
 
 extern struct _PVRSRV_HANDLE_BASE_ *gpsKernelHandleBase;
-IMG_INT sceGpuSharedSyncObjectGetHandle(IMG_UINT32 ui32SharedKey,
-		IMG_SID *hHandle);
-PVRSRV_ERROR PVRSRVReleaseHandle(struct _PVRSRV_HANDLE_BASE_ *psBase, IMG_SID hHandle,
-		IMG_UINT32 eType);
-PVRSRV_ERROR ResManFreeResByPtr(struct Resource *resource, IMG_BOOL forceCleanup);
 
 #if FW_DEBUG
 static const SceKernelDebugInfo dbg_PVRSRVDeleteSharedSyncInfoBW_L5693 = {
@@ -406,10 +386,6 @@ typedef struct PVRSRV_BRIDGE_IN_CLOSE_SHARED_SYNCINFO {
 	IMG_SID hKernelSyncInfo;
 } PVRSRV_BRIDGE_IN_CLOSE_SHARED_SYNCINFO;
 
-PVRSRV_ERROR PVRSRVFindHandle(struct _PVRSRV_HANDLE_BASE_ *psBase, IMG_SID *phHandle,
-		IMG_VOID *pvData, IMG_UINT32 eType);
-IMG_INT sceGpuSharedSyncObjectClose(IMG_UINT32 ui32SharedKey);
-
 #if FW_DEBUG
 static const SceKernelDebugInfo dbg_PVRSRVCloseSharedSyncInfoBW_L5632 = {
 	0x1399193b, 0x5d0525ef, 0xa2318864,
@@ -522,10 +498,6 @@ typedef struct PVRSRV_BRIDGE_OUT_OPEN_SHARED_SYNCINFO {
 	IMG_SID hKernelSyncInfo;
 } PVRSRV_BRIDGE_OUT_OPEN_SHARED_SYNCINFO;
 
-IMG_INT sceGpuSharedSyncObjectOpen(IMG_UINT32 ui32SharedKey, IMG_SID *phHandle);
-PVRSRV_ERROR PVRSRVAllocSubHandle(struct _PVRSRV_HANDLE_BASE_ *psBase, IMG_SID *phHandle,
-		IMG_VOID *pvData, IMG_UINT32 eType, IMG_UINT32 eFlag, IMG_SID hParent);
-
 #if FW_DEBUG
 static const SceKernelDebugInfo dbg_PVRSRVOpenSharedSyncInfoBW_L5585 = {
 	0x1399193b, 0xb3c2b5a7, 0x85b0db37,
@@ -582,9 +554,6 @@ out:
 	return 0;
 }
 
-PVRSRV_ERROR PVRSRVNewHandleBatch(struct _PVRSRV_HANDLE_BASE_ *psBase,
-		IMG_UINT32 ui32BatchSize);
-
 /* IMG bridge batch helper; SCE compiles out upstream PVR_ASSERT. */
 PVRSRV_ERROR NewHandleBatch(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		IMG_UINT32 ui32BatchSize)
@@ -635,8 +604,6 @@ typedef struct PVRSRV_BRIDGE_IN_MODIFY_COMPLETE_SYNC_OPS {
 	IMG_SID hKernelSyncInfoModObj;
 } PVRSRV_BRIDGE_IN_MODIFY_COMPLETE_SYNC_OPS;
 
-IMG_VOID PVRSRVScheduleDeviceCallbacks(IMG_VOID);
-
 /* IMG bridge with SCE multiple-sync extension and diagnostics disabled. */
 IMG_INT PVRSRVModifyCompleteSyncOpsBW(IMG_UINT32 ui32BridgeID,
 		PVRSRV_BRIDGE_IN_MODIFY_COMPLETE_SYNC_OPS *psBridgeIn,
@@ -673,9 +640,6 @@ typedef struct PVRSRV_BRIDGE_IN_MODIFY_PENDING_SYNC_OPS {
 	IMG_UINT32 ui32ModifyFlags;
 	IMG_UINT32 ui32NumSyncs;
 } PVRSRV_BRIDGE_IN_MODIFY_PENDING_SYNC_OPS;
-
-PVRSRV_ERROR ResManDissociateRes(struct Resource *psResItem,
-		struct ResourceContext *psResManContext);
 
 /* IMG operation with SCE four-sync validation, duplicate rejection and snapshots. */
 IMG_INT PVRSRVModifyPendingSyncOpsBW(IMG_UINT32 ui32BridgeID,
@@ -772,15 +736,11 @@ IMG_INT PVRSRVDestroySyncInfoModObjBW(IMG_UINT32 ui32BridgeID,
 	return 0;
 }
 
-IMG_UINT32 OSClockus(IMG_VOID);
-IMG_VOID OSSleepms(IMG_UINT32 ui32Timems);
-PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
-		IMG_VOID *pvLinAddr, IMG_HANDLE hBlockAlloc);
-
 /* IMG cleanup callback/LOOP_UNTIL_TIMEOUT with SCE multiple-sync extension.
  * SCE disables upstream diagnostics and uses its two-argument resman callback.
  */
-PVRSRV_ERROR ModifyCompleteSyncOpsCallBack(IMG_VOID *pvParam, IMG_UINT32 ui32Param)
+PVRSRV_ERROR ModifyCompleteSyncOpsCallBack(IMG_VOID *pvParam, IMG_UINT32 ui32Param,
+		IMG_BOOL bForceCleanup)
 {
 	MODIFY_SYNC_OP_INFO *psModSyncOpInfo = pvParam;
 	IMG_INT i;
@@ -825,11 +785,6 @@ typedef struct PVRSRV_BRIDGE_OUT_GET_MISC_INFO {
 	PVRSRV_MISC_INFO sMiscInfo;
 } PVRSRV_BRIDGE_OUT_GET_MISC_INFO;
 
-PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
-		IMG_VOID **ppvLinAddr, IMG_HANDLE *phBlockAlloc);
-PVRSRV_ERROR CopyToUserWrapper(PVRSRV_PER_PROCESS_DATA *psPerProc,
-		IMG_VOID *destination, const IMG_VOID *source, IMG_SIZE_T size);
-
 /* IMG misc-info bridge; SCE retains only the DDK-version string copy path. */
 IMG_INT PVRSRVGetMiscInfoBW(IMG_UINT32 ui32BridgeID,
 		PVRSRV_BRIDGE_IN_GET_MISC_INFO *psBridgeIn,
@@ -868,9 +823,6 @@ typedef struct PVRSRV_BRIDGE_IN_UNMAP_MEMORY_FROM_GPU {
 	IMG_BOOL bWaitForIdle;
 } PVRSRV_BRIDGE_IN_UNMAP_MEMORY_FROM_GPU;
 
-PVRSRV_ERROR PVRSRVUnmapMemoryFromGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
-		const IMG_VOID *cpuAddress, GpuHeap *heap, IMG_BOOL bWaitForIdle);
-
 /* SCE memory-unmap bridge accepts an optional heap and propagates RETRY. */
 IMG_INT PVRSRVUnmapMemoryFromGpuBW(IMG_UINT32 ui32BridgeID,
 		PVRSRV_BRIDGE_IN_UNMAP_MEMORY_FROM_GPU *psBridgeIn,
@@ -904,12 +856,6 @@ typedef struct PVRSRV_BRIDGE_OUT_MAP_MEMORY_TO_GPU {
 	PVRSRV_ERROR eError;
 	IMG_DEV_VIRTADDR deviceAddress;
 } PVRSRV_BRIDGE_OUT_MAP_MEMORY_TO_GPU;
-
-PVRSRV_ERROR PVRSRVMapMemoryToGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
-		PVRSRV_DEVICE_NODE *psDeviceNode, GpuMemoryContext *context,
-		GpuHeap *heap, IMG_VOID *cpuAddress, IMG_SIZE_T size,
-		IMG_SIZE_T allocationSize, IMG_UINT32 flags,
-		IMG_DEV_VIRTADDR *deviceAddress);
 
 /* SCE maps a CPU range through its process context and optional GPU heap. */
 IMG_INT PVRSRVMapMemoryToGpuBW(IMG_UINT32 ui32BridgeID,
@@ -947,9 +893,6 @@ typedef struct PVRSRV_BRIDGE_IN_DESTROY_DEVMEMCONTEXT {
 	IMG_SID hDevCookie;
 	IMG_SID hDevMemContext;
 } PVRSRV_BRIDGE_IN_DESTROY_DEVMEMCONTEXT;
-
-PVRSRV_ERROR PVRSRVDestroyDeviceMemContextKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		GpuMemoryContext *context, IMG_BOOL *pbDestroyed);
 
 /* IMG context destruction with SCE rejection while any CPU range is mapped. */
 IMG_INT PVRSRVDestroyDeviceMemContextBW(IMG_UINT32 ui32BridgeID,
@@ -992,9 +935,6 @@ typedef struct PVRSRV_BRIDGE_OUT_ACQUIRE_DEVICEINFO {
 	PVRSRV_ERROR eError;
 	IMG_SID hDevCookie;
 } PVRSRV_BRIDGE_OUT_ACQUIRE_DEVICEINFO;
-
-PVRSRV_ERROR PVRSRVAllocHandle(struct _PVRSRV_HANDLE_BASE_ *base, IMG_SID *output,
-		IMG_VOID *data, IMG_UINT32 type, IMG_UINT32 flags);
 
 /* IMG acquisition bridge; SCE compiles out the command assertion. */
 IMG_INT PVRSRVAcquireDeviceDataBW(IMG_UINT32 ui32BridgeID,
@@ -1072,11 +1012,6 @@ typedef struct PVRSRV_BRIDGE_OUT_GET_DEVMEM_HEAPINFO {
 	PVRSRV_HEAP_INFO sHeapInfo[32];
 } PVRSRV_BRIDGE_OUT_GET_DEVMEM_HEAPINFO;
 
-PVRSRV_ERROR PVRSRVGetDeviceMemHeapInfoKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		GpuMemoryContext *context, IMG_UINT32 *pui32ClientHeapCount,
-		PVRSRV_HEAP_INFO *psHeapInfo, IMG_BOOL *pbSharedDeviceMemHeap);
-PVRSRV_ERROR PVRSRVCommitHandleBatch(struct _PVRSRV_HANDLE_BASE_ *psBase);
-
 /* IMG heap-info bridge with SCE diagnostics and inline assertions disabled. */
 IMG_INT PVRSRVGetDeviceMemHeapInfoBW(IMG_UINT32 ui32BridgeID,
 		PVRSRV_BRIDGE_IN_GET_DEVMEM_HEAPINFO *psBridgeIn,
@@ -1130,9 +1065,6 @@ typedef struct PVRSRV_BRIDGE_OUT_CREATE_SYNC_INFO_MOD_OBJ {
 
 IMG_INT sceGpuWaitModObjAdd(MODIFY_SYNC_OP_INFO *psModSyncOpInfo,
 		IMG_INT waitEventFlag);
-struct Resource *ResManRegisterRes(struct ResourceContext *context,
-		IMG_UINT32 resourceType, IMG_VOID *param, IMG_UINT32 value,
-		PVRSRV_ERROR (*callback)(IMG_VOID *, IMG_UINT32));
 
 /* IMG constructor with SCE multi-sync owner, mask quota and wait registration. */
 IMG_INT PVRSRVCreateSyncInfoModObjBW(IMG_UINT32 ui32BridgeID, IMG_VOID *psBridgeIn,
@@ -1186,9 +1118,6 @@ typedef struct PVRSRV_BRIDGE_OUT_ALLOC_SYNC_INFO {
 	IMG_SID hKernelSyncInfo;
 } PVRSRV_BRIDGE_OUT_ALLOC_SYNC_INFO;
 
-PVRSRV_ERROR PVRSRVAllocSyncInfoKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		GpuMemoryContext *hDevMemContext, PVRSRV_KERNEL_SYNC_INFO **ppsSyncInfo);
-
 /* IMG allocation bridge; SCE adds the per-process 48-sync quota. */
 IMG_INT PVRSRVAllocSyncInfoBW(IMG_UINT32 ui32BridgeID,
 		PVRSRV_BRIDGE_IN_ALLOC_SYNC_INFO *psAllocSyncInfoIN,
@@ -1236,8 +1165,6 @@ typedef struct PVRSRV_BRIDGE_IN_CREATE_SHARED_SYNC_INFO {
 	IMG_UINT32 ui32SharedKey;
 	IMG_SID hKernelSyncInfo;
 } PVRSRV_BRIDGE_IN_CREATE_SHARED_SYNC_INFO;
-
-IMG_INT sceGpuSharedSyncObjectCreate(IMG_UINT32 ui32SharedKey, IMG_SID hHandle);
 
 #if FW_DEBUG
 static const SceKernelDebugInfo dbg_PVRSRVCreateSharedSyncInfoBW_L5541 = {
@@ -1396,11 +1323,6 @@ typedef struct PVRSRV_BRIDGE_OUT_CREATE_DEVMEMCONTEXT {
 	PVRSRV_HEAP_INFO sHeapInfo[32];
 } PVRSRV_BRIDGE_OUT_CREATE_DEVMEMCONTEXT;
 
-PVRSRV_ERROR PVRSRVCreateDeviceMemContextKM(PVRSRV_DEVICE_NODE *psDeviceNode,
-		PVRSRV_PER_PROCESS_DATA *psPerProc, GpuMemoryContext **context,
-		IMG_UINT32 *pui32ClientHeapCount, PVRSRV_HEAP_INFO *psHeapInfo,
-		IMG_BOOL *pbCreated, IMG_BOOL *pbSharedDeviceMemHeap);
-
 /* IMG context bridge with SCE native heap descriptors and assertions disabled. */
 IMG_INT PVRSRVCreateDeviceMemContextBW(IMG_UINT32 ui32BridgeID,
 		PVRSRV_BRIDGE_IN_CREATE_DEVMEMCONTEXT *psCreateDevMemContextIN,
@@ -1511,8 +1433,6 @@ IMG_INT sceGpuModObjPoll(MODIFY_SYNC_OP_INFO *psModSyncOpInfo)
 	return result;
 }
 
-IMG_VOID SetSGXDispatchTableEntry(IMG_VOID);
-
 /* IMG initializer with SCE's reduced bridge set and compact dispatch entries. */
 PVRSRV_ERROR CommonBridgeInit(IMG_VOID)
 {
@@ -1564,12 +1484,6 @@ PVRSRV_ERROR CommonBridgeInit(IMG_VOID)
 IMG_VOID sceGpuBridgeDeInit(IMG_VOID)
 {
 }
-
-PVRSRV_ERROR CopyFromUserWrapper(PVRSRV_PER_PROCESS_DATA *psPerProc,
-		IMG_VOID *destination, const IMG_VOID *source, IMG_SIZE_T size);
-PVRSRV_ERROR CopyToUserWrapper(PVRSRV_PER_PROCESS_DATA *psPerProc,
-		IMG_VOID *destination, const IMG_VOID *source, IMG_SIZE_T size);
-IMG_VOID PVRSRVReleaseHandleBatch(IMG_HANDLE psHandleBase);
 
 /* IMG dispatcher, with SCE compact table and four-argument copy wrappers.
  * SCE ignores the copy-out result and rejects any nonzero bridge result.

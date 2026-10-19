@@ -3,6 +3,7 @@
 #define GPU_BLOCKHEAP_H
 
 #include <gpu/gpu-heap.h>
+#include <gpu/device_sce.h>
 
 typedef struct GpuMemBlockRange {
 	unsigned primaryAddress;
@@ -61,5 +62,13 @@ int sceGpuMemBlockAddBlock(GpuMemBlockHeap *heap, int uid,
 			  unsigned *groupId, unsigned restoreMapping);
 int sceGpuMemBlockDelBlock(GpuMemBlockHeap *heap, int uid, int *referencedOut);
 int DestroyMemBlockHeap(GpuMemBlockHeap *heap);
+
+/* common/buffer_manager_sce.c */
+IMG_HANDLE BM_CreateContext(PVRSRV_DEVICE_NODE *psDeviceNode,
+		IMG_DEV_PHYADDR *psPDDevPAddr, PVRSRV_PER_PROCESS_DATA *psPerProc,
+		IMG_BOOL *pbCreated);
+PVRSRV_ERROR BM_DestroyContext(IMG_HANDLE hBMContext, IMG_BOOL *pbDestroyed);
+IMG_HANDLE BM_CreateHeap(IMG_HANDLE hBMContext, DEVICE_MEMORY_HEAP_INFO *psDevMemHeapInfo);
+IMG_VOID BM_DestroyHeap(IMG_HANDLE hDevMemHeap);
 
 #endif

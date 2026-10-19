@@ -6,7 +6,6 @@
 
 struct _PVRSRV_HANDLE_BASE_;
 
-int ClearMappedMemoryList(GpuMappedMemoryList *list);
 int FreeProcessGpuMemory(IMG_VOID *address);
 
 /* SCE creates its mapping list lazily; no Linux private state is required. */

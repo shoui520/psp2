@@ -4,10 +4,6 @@
 #include "handle-types.h"
 #include <gpu/osfunc_sce.h>
 
-PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 flags, IMG_SIZE_T size,
-		IMG_VOID **ppvLinAddr, IMG_HANDLE *phBlockAlloc);
-PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 flags, IMG_SIZE_T size,
-		IMG_VOID *pvLinAddr, IMG_HANDLE hBlockAlloc);
 IMG_UINT32 GetRemoteAllocProcess(void);
 IMG_UINT32 SetRemoteAllocProcess(IMG_UINT32 owner);
 extern PVRSRV_HANDLE_BASE *gpsKernelHandleBase;
@@ -168,8 +164,6 @@ PVRSRV_ERROR IncreaseHandleArraySize(PVRSRV_HANDLE_BASE *psBase,
 	return ReallocHandleArray(psBase, ui32NewTotalHandCount);
 }
 
-IMG_UINT32 HASH_Remove_Extended(struct _HASH_TABLE_ *psHashTab, const IMG_VOID *pvKey);
-
 #define INDEX_TO_HANDLE_STRUCT_PTR(psBase, index) \
 	(&(psBase)->psHandleArray[(index) >> 8].psHandle[(index) & 0xff])
 
@@ -265,9 +259,6 @@ PVRSRV_ERROR PVRSRVHandleBatchCommitOrRelease(PVRSRV_HANDLE_BASE *psBase,
 	return PVRSRV_OK;
 }
 
-IMG_UINT32 HASH_Insert_Extended(struct _HASH_TABLE_ *psHashTab,
-		const IMG_VOID *pvKey, IMG_UINT32 value);
-
 /* IMG AllocHandle under the SCE 32-bit token interface; diagnostics disabled. */
 PVRSRV_ERROR AllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_SID *phHandle,
 		IMG_VOID *pvData, IMG_UINT32 eType, IMG_UINT32 eFlag, IMG_SID hParent)
@@ -345,9 +336,6 @@ PVRSRV_ERROR AllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_SID *phHandle,
 	*phHandle = hHandle;
 	return PVRSRV_OK;
 }
-
-IMG_UINT32 HASH_Retrieve_Extended(struct _HASH_TABLE_ *psHashTab,
-		const IMG_VOID *pvKey);
 
 /* IMG PVRSRVAllocHandle; SCE omits diagnostic/debug-break paths. */
 PVRSRV_ERROR PVRSRVAllocHandle(PVRSRV_HANDLE_BASE *psBase, IMG_SID *phHandle,
@@ -530,8 +518,6 @@ IMG_VOID PVRSRVReleaseHandleBatch(PVRSRV_HANDLE_BASE *psBase)
 		PVRSRVHandleBatchCommitOrRelease(psBase, IMG_FALSE);
 }
 
-IMG_VOID HASH_Delete(struct _HASH_TABLE_ *psHashTab);
-
 /* IMG base teardown and inlined FreeAllHandles/FreeHandleArray, no diagnostics. */
 PVRSRV_ERROR FreeHandleBase(PVRSRV_HANDLE_BASE *psBase)
 {
@@ -604,11 +590,6 @@ typedef IMG_UINT32 (*HashCallback)(IMG_UINT32 bytes, const IMG_VOID *key,
 		IMG_UINT32 count);
 typedef IMG_UINT32 (*KeyEqualCallback)(IMG_UINT32 bytes,
 		const IMG_VOID *left, const IMG_VOID *right);
-HASH_TABLE *HASH_Create_Extended(IMG_UINT32 count, IMG_UINT32 bytes,
-		HASH_FUNC *hash, HASH_KEY_COMP *equal);
-IMG_UINT32 HASH_Func_Default(IMG_UINT32 bytes, IMG_VOID *key, IMG_UINT32 count);
-IMG_UINT32 HASH_Key_Comp_Default(IMG_UINT32 bytes, IMG_VOID *left,
-		IMG_VOID *right);
 
 /* IMG base construction; SCE generic diagnostics omitted. */
 PVRSRV_ERROR PVRSRVAllocHandleBase(PVRSRV_HANDLE_BASE **ppsBase)

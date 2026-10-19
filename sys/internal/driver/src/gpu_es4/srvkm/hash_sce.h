@@ -6,6 +6,8 @@
 
 #include <gpu/sce_ddk_port.h>
 
+typedef unsigned u32;
+
 typedef IMG_UINT32 HASH_FUNC(IMG_SIZE_T uKeySize, IMG_VOID *pKey,
 		IMG_UINT32 uHashTabLen);
 typedef IMG_BOOL HASH_KEY_COMP(IMG_SIZE_T uKeySize, IMG_VOID *pKey1,
@@ -26,5 +28,18 @@ typedef struct _HASH_TABLE_ {
 	HASH_FUNC *pfnHashFunc;
 	HASH_KEY_COMP *pfnKeyComp;
 } HASH_TABLE;
+
+/* hash.c */
+u32 HASH_Func_Default(u32 uKeySize, void *pKey, u32 uHashTabLen);
+u32 HASH_Key_Comp_Default(u32 uKeySize, void *pKey1, void *pKey2);
+HASH_TABLE *HASH_Create_Extended(IMG_UINT32 uInitialLen, IMG_SIZE_T uKeySize,
+		HASH_FUNC *pfnHashFunc, HASH_KEY_COMP *pfnKeyComp);
+HASH_TABLE *HASH_Create(IMG_UINT32 uInitialLen);
+IMG_VOID HASH_Delete(HASH_TABLE *pHash);
+IMG_BOOL HASH_Insert_Extended(HASH_TABLE *pHash, IMG_VOID *pKey, IMG_UINTPTR_T v);
+IMG_UINTPTR_T HASH_Remove_Extended(HASH_TABLE *pHash, IMG_VOID *pKey);
+IMG_UINTPTR_T HASH_Remove(HASH_TABLE *pHash, IMG_UINTPTR_T k);
+IMG_UINTPTR_T HASH_Retrieve_Extended(HASH_TABLE *pHash, IMG_VOID *pKey);
+IMG_UINTPTR_T HASH_Retrieve(HASH_TABLE *pHash, IMG_UINTPTR_T k);
 
 #endif

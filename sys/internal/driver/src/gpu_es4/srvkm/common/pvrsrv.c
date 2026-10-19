@@ -16,54 +16,14 @@
 #include <gpu/gpu-mmu.h>
 #include <gpu/osfunc_sce.h>
 #include <gpu/perproc_sce.h>
+#include "../handle-types.h"
+#include "../mapped_memory_sce.h"
+#include <gpu/resman_sce.h>
 
 static IMG_UINT32 g_ui32InitFlags = 0;
 #define INIT_DATA_ENABLE_PDUMPINIT 0x1U
 
-PVRSRV_ERROR PVRSRVSetDevicePowerStateKM(IMG_UINT32 ui32DeviceIndex,
-		PVRSRV_DEV_POWER_STATE eNewPowerState, IMG_UINT32 ui32CallerID,
-		IMG_BOOL bRetainMutex);
-IMG_VOID List_PVRSRV_DEVICE_NODE_ForEach_va(PVRSRV_DEVICE_NODE *psHead,
-		IMG_VOID (*pfnCallBack)(PVRSRV_DEVICE_NODE *psNode, va_list va), ...);
-PVRSRV_ERROR PVRSRVHandleDeInit(IMG_VOID);
-PVRSRV_ERROR PVRSRVPerProcessDataDeInit(IMG_VOID);
-IMG_VOID ResManDeInit(IMG_VOID);
-PVRSRV_ERROR ResManInit(IMG_VOID);
-PVRSRV_ERROR PVRSRVPerProcessDataInit(IMG_VOID);
-PVRSRV_ERROR PVRSRVHandleInit(IMG_VOID);
-PVRSRV_ERROR OSCreateResource(PVRSRV_RESOURCE *psResource);
-PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
-		IMG_VOID **ppvLinAddr, IMG_HANDLE *phBlockAlloc);
-PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
-		IMG_VOID *pvLinAddr, IMG_HANDLE hBlockAlloc);
-IMG_VOID List_PVRSRV_DEVICE_NODE_Insert(PVRSRV_DEVICE_NODE **ppsHead,
-		PVRSRV_DEVICE_NODE *psDeviceNode);
-IMG_VOID *List_PVRSRV_DEVICE_NODE_Any_va(PVRSRV_DEVICE_NODE *psHead,
-		IMG_VOID *(*pfnCallBack)(PVRSRV_DEVICE_NODE *psNode, va_list va), ...);
-IMG_VOID *MatchDeviceKM_AnyVaCb(PVRSRV_DEVICE_NODE *psDeviceNode, va_list va);
-PVRSRV_ERROR PVRSRVResManConnect(PVRSRV_PER_PROCESS_DATA *psPerProc,
-		struct ResourceContext **phResManContext);
-PVRSRV_ERROR SysFinalise(IMG_VOID);
-PVRSRV_ERROR List_PVRSRV_DEVICE_NODE_PVRSRV_ERROR_Any(PVRSRV_DEVICE_NODE *psHead,
-		PVRSRV_ERROR (*pfnCallBack)(PVRSRV_DEVICE_NODE *psNode));
 PVRSRV_ERROR PVRSRVFinaliseSystem_CompatCheck_AnyCb(PVRSRV_DEVICE_NODE *psDeviceNode);
-PVRSRV_ERROR ResManFreeResByCriteria(struct ResourceContext *hResManContext,
-		IMG_UINT32 ui32SearchCriteria, IMG_UINT32 ui32ResType,
-		IMG_VOID *pvParam, IMG_UINT32 ui32Param);
-PVRSRV_ERROR PVRSRVResManDisconnect(struct ResourceContext *hResManContext,
-		IMG_BOOL bKernelContext);
-IMG_VOID List_PVRSRV_DEVICE_NODE_Remove(PVRSRV_DEVICE_NODE *psDeviceNode);
-IMG_UINT32 OSClockus(IMG_VOID);
-IMG_VOID OSSleepms(IMG_UINT32 ui32TimeInms);
-IMG_VOID OSWaitus(IMG_UINT32 ui32Timeus);
-IMG_INT32 OSSNPrintf(IMG_CHAR *pszStr, IMG_UINT32 ui32Size,
-		const IMG_CHAR *pszFormat, ...);
-PVRSRV_DEVICE_NODE *GetGpuDeviceNode(IMG_VOID);
-IMG_UINT32 OSReadHWReg(IMG_VOID *pvLinRegBaseAddr, IMG_UINT32 ui32Offset);
-IMG_UINT32 SysGetInterruptSource(IMG_VOID);
-IMG_VOID SysClearInterrupts(SYS_DATA *psSysData, IMG_UINT32 ui32ClearBits);
-IMG_VOID List_PVRSRV_DEVICE_NODE_ForEach(PVRSRV_DEVICE_NODE *psHead,
-		IMG_VOID (*pfnCallBack)(PVRSRV_DEVICE_NODE *psNode));
 int SignalWaitCounter(void);
 void sceGpuWaitModObjPollAll(void);
 
@@ -74,9 +34,6 @@ static const IMG_UINT32 aui32TraceDirectoryRegisters[8] = {
 	EUR_CR_BIF_DIR_LIST_BASE4, EUR_CR_BIF_DIR_LIST_BASE5,
 	EUR_CR_BIF_DIR_LIST_BASE6, EUR_CR_BIF_DIR_LIST_BASE7,
 };
-
-#define RESMAN_CRITERIA_RESTYPE 0x1U
-#define RESMAN_TYPE_DEVICEMEM_ALLOCATION 16U
 
 /* Pristine IMG enumeration callback; device enum uses the SCE native ABI. */
 IMG_VOID PVRSRVEnumerateDevicesKM_ForEachVaCb(PVRSRV_DEVICE_NODE *psDeviceNode,

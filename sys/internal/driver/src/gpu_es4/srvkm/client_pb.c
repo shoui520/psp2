@@ -7,23 +7,10 @@
 #include <string.h>
 #include <gpu/memory_sce.h>
 #include <gpu/osfunc_sce.h>
+#include "pb_sce.h"
 
-PVRSRV_ERROR PVRSRVFreeSharedSysMemoryKM(PVRSRV_KERNEL_MEM_INFO *psMemInfo);
 int FreeProcessGpuMemory(void *address);
 void *AllocProcessGpuMemory(unsigned size);
-PVRSRV_ERROR PVRSRVAllocSharedSysMemoryKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
-		IMG_SID hMemBlockProcRef, IMG_UINT32 ui32Flags, IMG_SIZE_T uSize,
-		PVRSRV_KERNEL_MEM_INFO **ppsKernelMemInfo);
-PVRSRV_ERROR SGXAddSharedPBDescKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
-		IMG_HANDLE hDevCookie, PVRSRV_KERNEL_MEM_INFO *psSharedPBDescKernelMemInfo,
-		PVRSRV_KERNEL_MEM_INFO *psHWPBDescKernelMemInfo,
-		PVRSRV_KERNEL_MEM_INFO *psBlockKernelMemInfo,
-		PVRSRV_KERNEL_MEM_INFO *psHWBlockKernelMemInfo,
-		IMG_UINT32 ui32TotalPBSize, IMG_HANDLE *phSharedPBDesc,
-		PVRSRV_KERNEL_MEM_INFO **ppsSharedPBDescSubKernelMemInfos,
-		IMG_UINT32 ui32SharedPBDescSubKernelMemInfosCount,
-		IMG_DEV_VIRTADDR sHWPBDescDevVAddr);
-PVRSRV_ERROR SGXUnrefSharedPBDescKM(IMG_HANDLE hSharedPBDesc);
 
 SGX_PBDESC *UpdateParameterBufferDescriptor(SGX_PBDESC *psPBDesc)
 {

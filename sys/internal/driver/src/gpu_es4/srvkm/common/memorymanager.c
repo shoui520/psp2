@@ -14,6 +14,9 @@
 #include <sysmem/sysclib.h>
 #include <acmgr/acmgr.h>
 #include <gpu/osfunc_sce.h>
+#include "../system_sce.h"
+#include "../render_sce.h"
+#include <gpu/resman_sce.h>
 
 int RemoveMemoryContextFromList(GpuMemoryContext *context, unsigned pid);
 int InsertMappedMemoryLegacy(GpuMappedMemoryList *list, IMG_VOID *address,
@@ -33,12 +36,7 @@ extern IMG_UINT32 gpuSuspended;
 extern SceUID exitingProcess;
 /* SCE keeps an independent generation snapshot for device-memory unmap waits. */
 IMG_UINT32 unmapWaitGeneration;
-int LinuxLockMutex(SceUID *mutex);
-int LinuxUnLockMutex(SceUID *mutex);
 int WaitSignalCounterKernel(IMG_UINT32 *counter, IMG_UINT32 timeout);
-PVRSRV_ERROR WaitTransferQueueIdle(struct GpuTransferQueueContext *context);
-PVRSRV_ERROR PVRSRVLookupHandle(PVRSRV_HANDLE_BASE *psBase, IMG_VOID **ppvData,
-		IMG_SID hHandle, IMG_UINT32 eType);
 
 /* SCE native context teardown, preserving the IMG error boundary. */
 PVRSRV_ERROR DestroyDeviceMemContextCallback(GpuMemoryContext *psContext,
@@ -79,7 +77,6 @@ int sceGpuHeapAlloc(GpuHeap *heap, IMG_SIZE_T size, IMG_SIZE_T alignment,
 int sceGpuHeapFreeByGpuVA(GpuHeap *heap, IMG_UINT32 address,
 		GpuHeapAllocation *output);
 int ShareKernelMappingWithProcesses(IMG_UINT32 address, IMG_SIZE_T size);
-GpuMemBlockHeap *GetProcessMemBlockHeap(void);
 
 /* SCE uses native heap spans and MMU permissions instead of IMG BM buffers. */
 PVRSRV_ERROR AllocDeviceMem(GpuHeap *psHeap, IMG_SIZE_T ui32Size,
@@ -199,8 +196,6 @@ PVRSRV_ERROR FreeDeviceMemCallBack(IMG_VOID *pvParam, IMG_UINT32 ui32Param)
 	return PVRSRV_OK;
 }
 
-PVRSRV_DEVICE_NODE *GetGpuDeviceNode(void);
-
 /* Pristine devicemem.c heap enumeration with SCE's single-device lookup/assert. */
 PVRSRV_ERROR PVRSRVGetDeviceMemHeapsKM(IMG_HANDLE hDevCookie,
 		PVRSRV_HEAP_INFO *psHeapInfo)
@@ -315,10 +310,6 @@ PVRSRV_ERROR PVRSRVFreeSyncInfoKM(PVRSRV_KERNEL_SYNC_INFO *psSyncInfo)
 	return PVRSRV_OK;
 }
 
-struct Resource *ResManRegisterRes(struct ResourceContext *context,
-		IMG_UINT32 resourceType, IMG_VOID *param, IMG_UINT32 value,
-		PVRSRV_ERROR (*callback)(IMG_VOID *, IMG_UINT32));
-
 /* SCE replaces IMG's generic cache/mapping policy with native heap attributes.
  * Resource registration remains at the original IMG allocation boundary.
  */
@@ -361,13 +352,11 @@ PVRSRV_ERROR _PVRSRVAllocDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 	if (eError == PVRSRV_OK) {
 		psMemInfo->hResItem = ResManRegisterRes(psPerProc->hResManContext,
 				16, psMemInfo, 0,
-				FreeDeviceMemCallBack);
+				(RESMAN_FREE_FN)FreeDeviceMemCallBack);
 		*ppsMemInfo = psMemInfo;
 	}
 	return eError;
 }
-
-PVRSRV_ERROR ResManFreeResByPtr(struct Resource *resource, IMG_BOOL forceCleanup);
 
 /* IMG public release boundary; SCE ignores the resource cleanup result. */
 PVRSRV_ERROR PVRSRVFreeDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
@@ -486,7 +475,7 @@ PVRSRV_ERROR PVRSRVCreateDeviceMemContextKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 	*context = psContext;
 	psContext->hResItem = ResManRegisterRes(psPerProc->hResManContext, 12,
 			psContext, sceKernelGetProcessId(),
-			(PVRSRV_ERROR (*)(IMG_VOID *, IMG_UINT32))DestroyDeviceMemContextCallback);
+			(RESMAN_FREE_FN)DestroyDeviceMemContextCallback);
 	return PVRSRV_OK;
 removeContext:
 	RemoveMemoryContextFromList(psContext, pid);
@@ -706,7 +695,7 @@ PVRSRV_ERROR PVRSRVMapMemoryToGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		deviceAddress->uiAddr = allocation.releasedSpanBase;
 	record->resource = ResManRegisterRes(psPerProc->hResManContext, 15,
 			cpuAddress, sceKernelGetProcessId(),
-			(PVRSRV_ERROR (*)(IMG_VOID *, IMG_UINT32))ReleaseDeviceMemBlockCallback);
+			(RESMAN_FREE_FN)ReleaseDeviceMemBlockCallback);
 	return PVRSRV_OK;
 }
 

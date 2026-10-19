@@ -53,4 +53,7 @@ _Static_assert(sizeof(SceGpuRegisterDump) == 0x3130, "native register dump");
 
 SceGpuRegisterDump *GetRegisterDumpBuffer(void);
 
+/* register-map.c */
+int MapGpuRegisters(void);
+
 #endif

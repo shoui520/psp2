@@ -12,8 +12,6 @@
 #include <stdio.h>
 #include <sysmem/cpu.h>
 
-IMG_BOOL PVRSRVSystemLISR(IMG_VOID *pvSysData);
-IMG_VOID PVRSRVMISR(IMG_VOID *pvSysData);
 /* gpu/memory/hostmem.c */
 IMG_VOID *AllocProcessGpuMemory(unsigned size);
 int FreeProcessGpuMemory(IMG_VOID *address);
@@ -305,7 +303,7 @@ IMG_BOOL OSIsResourceLocked(PVRSRV_RESOURCE *psResource, IMG_UINT32 ui32ID)
 			? IMG_TRUE : IMG_FALSE;
 }
 
-PVRSRV_ERROR OSPowerLockWrap(IMG_BOOL bTryLock)
+PVRSRV_ERROR OSPowerLockWrap(IMG_VOID)
 {
 	return PVRSRV_OK;
 }

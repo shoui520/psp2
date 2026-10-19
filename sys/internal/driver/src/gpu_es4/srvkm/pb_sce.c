@@ -7,24 +7,11 @@
 #include <gpu/device_sce.h>
 #include <stddef.h>
 #include <gpu/memory_sce.h>
+#include "sgxkick_sce.h"
+#include <gpu/osfunc_sce.h>
 
 #define PVRSRV_CLEANUPCMD_PB 0x5U
 #define CLEANUP_WITH_POLL IMG_FALSE
-
-PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
-		IMG_VOID *pvLinAddr, IMG_HANDLE hBlockAlloc);
-PVRSRV_ERROR OSAllocMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,
-		IMG_VOID **ppvLinAddr, IMG_HANDLE *phBlockAlloc);
-RESMAN_ITEM *ResManRegisterRes(RESMAN_CONTEXT *psResManContext,
-		IMG_UINT32 ui32ResType, IMG_VOID *pvParam, IMG_UINT32 ui32Param,
-		RESMAN_FREE_FN pfnFreeResource);
-PVRSRV_ERROR ResManFreeResByPtr(RESMAN_ITEM *psResItem,
-		IMG_BOOL bForceCleanup);
-PVRSRV_ERROR PVRSRVFreeSharedSysMemoryKM(PVRSRV_KERNEL_MEM_INFO *psMemInfo);
-PVRSRV_ERROR PVRSRVDissociateMemFromResmanKM(PVRSRV_KERNEL_MEM_INFO *psMemInfo);
-PVRSRV_ERROR SGXCleanupRequest(PVRSRV_DEVICE_NODE *psDeviceNode,
-		IMG_DEV_VIRTADDR *psHWDataDevVAddr, IMG_UINT32 ui32CleanupType,
-		IMG_BOOL bForceCleanup);
 
 static RESMAN_ITEM *psResItemCreateSharedPB = NULL;
 static PVRSRV_PER_PROCESS_DATA *psPerProcCreateSharedPB = NULL;

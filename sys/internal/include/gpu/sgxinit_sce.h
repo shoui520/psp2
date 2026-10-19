@@ -79,5 +79,18 @@ PVRSRV_ERROR DevInitSGXPart2KM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 PVRSRV_ERROR SGXGetInfoForSrvinitKM(IMG_HANDLE hDevHandle,
 		SGX_BRIDGE_INFO_FOR_SRVINIT *psInitInfo);
 
+/* sgxinit_sce.c */
+PVRSRV_ERROR SGXInitialise(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bHardwareRecovery);
+PVRSRV_ERROR SGXDeinitialise(IMG_HANDLE hDevCookie);
+IMG_VOID SGXOSTimer(IMG_VOID *pvData);
+PVRSRV_ERROR SGXRegisterDevice(PVRSRV_DEVICE_NODE *psDeviceNode);
+PVRSRV_ERROR SGXGetClientInfoKM(IMG_HANDLE hDevCookie, SGX_CLIENT_INFO *psClientInfo);
+PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO *psDevInfo,
+		SGX_MISC_INFO *psMiscInfo, PVRSRV_DEVICE_NODE *psDeviceNode,
+		IMG_HANDLE hDevMemContext);
+
+/* sgxreset_sce.c */
+IMG_VOID SGXReset(PVRSRV_SGXDEV_INFO *psDevInfo, IMG_BOOL bHardwareRecovery,
+		IMG_UINT32 ui32PDUMPFlags);
 
 #endif
