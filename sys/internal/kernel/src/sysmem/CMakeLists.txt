@@ -3,11 +3,6 @@ include(vendor_patch.cmake)
 # Sony built SceSysmem without -fno-delete-null-pointer-checks: a NULL test after a
 # dereference is dropped (dlmalloc's malloc.c, partition.c's free-list helpers)
 set(MODULE_COMPILE_OPTIONS -fdelete-null-pointer-checks)
-set(sysmem_sfmt_source "${CMAKE_CURRENT_BINARY_DIR}/sfmt-sce.c")
-sysmem_prepare_patched(
-	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/sfmt-1.3.3/SFMT.c"
-	"${CMAKE_CURRENT_SOURCE_DIR}/sfmt_sce.patch"
-	"${sysmem_sfmt_source}")
 # SceSysclib's strtoll (FreeBSD's)
 set(sysmem_strtoll_source "${CMAKE_CURRENT_BINARY_DIR}/strtoll-sce.c")
 sysmem_prepare_patched(
@@ -123,15 +118,15 @@ psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	des_key.c
 	des_block.c
 	kernel_utils_keys.c
-	aes.S
-	xorshift128.c
 	aes_block.c
+	aes.S
+	sfmt.S
+	xorshift128.c
 	kernel_utils_crypto.c
 	sha256_transform.S
 	sha2_data.c
 	aes_key_data.c
 	${sysmem_hmac_data}
-	"${sysmem_sfmt_source}"
 	"${sysmem_dlmalloc_source}"
 	aes_cmac.c
 	debug_dump.c
@@ -185,9 +180,6 @@ set(SYSMEM_DATA_BASE_3.65-CEX 0x81030000)
 set(SYSMEM_DATA_BASE_3.630.011-DEBUGGER 0x81030000)
 fw_value(SYSMEM_DATA_BASE SYSMEM_DATA_BASE)
 target_link_options(os0_kd_sysmem PRIVATE -Wl,-Tdata,${SYSMEM_DATA_BASE})
-
-target_include_directories(os0_kd_sysmem PRIVATE
-	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/sfmt-1.3.3")
 
 # the compiler runtime (libgcc), built from GCC's source as LibKernel's: the EABI division and
 # 64-bit entry points in SceSysclib's place, the C helpers last, where Sony's link puts libgcc

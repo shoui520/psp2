@@ -23,7 +23,6 @@ upstream. When a build needs another file, add it from the same release.
 | img-sgx-ddk-1.7.862890 | Imagination SGX DDK for Linux 1.7 | the full import (not trimmed yet) | gpu_es4, gpuinit_es4, gpucoredump_es4 (through the shared SGX headers) |
 | netbsd-2.1, netbsd-3.0 | NetBSD `syssrc` 2.1 and 3.0 | the network stack files and the system headers net_ps reads | net_ps, net_ps_dev, wlanbt (through `net_ps/include`) |
 | rt2860-7bc30c23 | Linux staging rt2860 `cmm_wpa.c` | the file | bootimage wlanbt |
-| sfmt-1.3.3 | SFMT 1.3.3 | the MEXP=19937 build | sysmem |
 | sqlite-3.6.23.1 | SQLite 3.6.23.1 amalgamation | `sqlite3.c`, `sqlite3.h` | libSceSqlite |
 | sqlite-3.7.6.3 | SQLite 3.7.6.3 source archive | what configure and the amalgamation build read | sqlite |
 | zlib-1.2.5 | zlib 1.2.5 | the library sources | post_ss_mgr (`post_ss_mgr/zlib`) |
