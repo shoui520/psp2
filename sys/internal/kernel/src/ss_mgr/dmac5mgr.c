@@ -236,7 +236,7 @@ int __attribute__((noinline, noclone)) _sceSblDmac5FreeOp(Dmac5Context *context)
 	return 0;
 }
 
-int sceSblDmac5EncDecInternal(const void *src, void *dst, SceSize size,
+int sceSblDmac5EncDec(const void *src, void *dst, SceSize size,
 	const void *key, unsigned int keyBits, void *iv, int coherent,
 	uint32_t command)
 {
@@ -364,42 +364,42 @@ int dmac5HashCrypt(Dmac5Context *context, const void *src, void *dst,
 int SceSblSsMgrForDriver_E6E1AD15(const void *src, void *dst, int size,
 	const void *key, int keyBits, void *iv, int coherent)
 {
-	return sceSblDmac5EncDecInternal(src, dst, size, key, keyBits,
+	return sceSblDmac5EncDec(src, dst, size, key, keyBits,
 		iv, coherent, 9);
 }
 
 int SceSblSsMgrForDriver_121FA69F(const void *src, void *dst, int size,
 	const void *key, int keyBits, void *iv, int coherent)
 {
-	return sceSblDmac5EncDecInternal(src, dst, size, key, keyBits,
+	return sceSblDmac5EncDec(src, dst, size, key, keyBits,
 		iv, coherent, 10);
 }
 
 int SceSblSsMgrForDriver_82B5DCEF(const void *src, void *dst, int size,
 	const void *key, int keyBits, void *iv, int coherent)
 {
-	return sceSblDmac5EncDecInternal(src, dst, size, key, keyBits,
+	return sceSblDmac5EncDec(src, dst, size, key, keyBits,
 		iv, coherent, 33);
 }
 
 int SceSblSsMgrForDriver_7D46768C(const void *src, void *dst, int size,
 	const void *key, int keyBits, void *iv, int coherent)
 {
-	return sceSblDmac5EncDecInternal(src, dst, size, key, keyBits,
+	return sceSblDmac5EncDec(src, dst, size, key, keyBits,
 		iv, coherent, 34);
 }
 
 int SceSblSsMgrForDriver_C517770D(const void *src, void *dst, int size,
 	const void *key, int keyBits, int coherent)
 {
-	return sceSblDmac5EncDecInternal(src, dst, size, key, keyBits,
+	return sceSblDmac5EncDec(src, dst, size, key, keyBits,
 		NULL, coherent, 1);
 }
 
 int SceSblSsMgrForDriver_7C978BE7(const void *src, void *dst, int size,
 	const void *key, int keyBits, int coherent)
 {
-	return sceSblDmac5EncDecInternal(src, dst, size, key, keyBits,
+	return sceSblDmac5EncDec(src, dst, size, key, keyBits,
 		NULL, coherent, 2);
 }
 
@@ -602,7 +602,7 @@ int SceSblSsMgrForDriver_EB3AF9B5(const void *src, void *dst, int size, void *iv
 		coherent, 3, flags);
 }
 
-int sceSblDmac5EncDec(SceSblDmac5EncDecParam *param, SceUInt32 command)
+int sceSblDmac5EncDecForUser(SceSblDmac5EncDecParam *param, SceUInt32 command)
 {
 	SceSblDmac5EncDecParam local;
 	uint8_t iv[16], key[32];
@@ -666,7 +666,7 @@ int sceSblDmac5EncDec(SceSblDmac5EncDecParam *param, SceUInt32 command)
 		sceSyscallLeave(syscallState);
 		return ret;
 	}
-	ret = sceSblDmac5EncDecInternal(src, dst, size,
+	ret = sceSblDmac5EncDec(src, dst, size,
 		key, keyBits, iv, 1, command);
 	dmac5UnlockUserBuffers(src, size, dst, size);
 	if (ret == 0 && ivSize != 0)

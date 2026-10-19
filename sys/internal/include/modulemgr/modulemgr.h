@@ -131,6 +131,7 @@ int sceKernelUnregisterLibrary(const void *libent);
 SceUID _sceKernelLoadModule(const char *path, SceUInt32 flags, const SceKernelLoadModuleOpt *uopt);
 int _sceKernelUnloadModule(SceUID modid, SceUInt32 flags, const SceKernelUnloadModuleOpt *uopt);
 SceUInt32 sceKernelGetAllowedSdkVersionOnSystem(void);
+SceUID sceKernelGetModuleIdByAddrForUser(const void *addr);
 int sceKernelInhibitLoadingModule(SceUInt32 flags);
 int sceKernelIsCalledFromSysModule(const void *addr);
 

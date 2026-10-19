@@ -163,7 +163,7 @@ int sceSblQafManagerSetQafTokenForUser(void)
 	return SCE_ERROR_ERRNO_ENOSYS;
 }
 
-int sceSblQafMgrGetQafToken(void)
+int sceSblQafMgrGetQafTokenForUser(void)
 {
 	return SCE_ERROR_ERRNO_ENOSYS;
 }

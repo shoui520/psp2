@@ -76,7 +76,7 @@ SceSblSsMgr:
         - sceSblQafMgrIsAllowMinimumDebugMenuDisplay: 0xA156BBD2
         - sceSblQafMgrIsAllowNpTest: 0xA9EBCBAC
         - sceSblQafMgrIsAllowNonQAPup: 0xB5621615
-        - sceSblQafMgrGetQafToken: 0xB6BAE81D
+        - sceSblQafMgrGetQafTokenForUser: 0xB6BAE81D
         - sceSblQafMgrIsAllowLimitedDebugMenuDisplay: 0xC456212D
         - sceSblQafMgrIsAllowScreenShotAlways: 0xD22A8731
         - sceSblQafManagerDeleteQafTokenForUser: 0xD542583F
@@ -98,7 +98,7 @@ SceSblSsMgr:
         - sceSblDmac5HashTransformForUser: 0x09EBC6EF
         - sceSblDmac5EncDecKeyGen: 0x5BF4F924
         - sceSblDmac5HmacKeyGen: 0xCCE57D33
-        - sceSblDmac5EncDec: 0xD0B1F759
+        - sceSblDmac5EncDecForUser: 0xD0B1F759
     SceSblAimgr:
       syscall: true
       version: 1

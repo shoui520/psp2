@@ -99,7 +99,7 @@ SceKernelModulemgr:
         - _sceKernelOpenModule: 0x9D674F45
         - _sceKernelLoadModule: 0xB4C5EF9E
         - sceKernelGetLibraryInfoByNID: 0xEAEB1312
-        - sceKernelGetModuleIdByAddr: 0xF5798C7C
+        - sceKernelGetModuleIdByAddrForUser: 0xF5798C7C
     SceBacktraceForDriver:
       syscall: false
       version: 1

@@ -313,7 +313,7 @@ int sceKernelGetModuleInfo(SceUID modid, SceKernelModuleInfo *uinfo)
 	return ret;
 }
 
-SceUID sceKernelGetModuleIdByAddr(const void *addr)
+SceUID sceKernelGetModuleIdByAddrForUser(const void *addr)
 {
 	SceUInt32 state;
 	SceUID ret;
