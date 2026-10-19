@@ -43,8 +43,11 @@ typedef enum SceUdcdStatusDriver {
 	SCE_UDCD_STATUS_DRIVER_REGISTERED	= 0x02
 } SceUdcdStatusDriver;
 
+/* the bus's last event, as a driver reads and sets it; udcd uses the first two words */
 typedef struct SceUdcdDeviceInfo {
-	unsigned char info[64];
+	unsigned int lastEvent;		/* what happened last (1: cable connected, ...) */
+	unsigned int eventDetail;
+	unsigned int reserved[14];
 } SceUdcdDeviceInfo;
 
 /* wait until any of the given state bits is set (and driverName, if any, runs) */
@@ -261,8 +264,6 @@ _Static_assert(sizeof(SceUdcdEP0DeviceRequest) == 8, "SceUdcdEP0DeviceRequest");
 _Static_assert(sizeof(SceUdcdDriver) == 0x54, "SceUdcdDriver");
 _Static_assert(sizeof(SceUdcdDeviceRequest) == 0x2c, "SceUdcdDeviceRequest");
 
-struct udcdDeviceInformation;
-
 int SceUdcdForDriver_03781649(SceUdcdDeviceRequest *request, int bus);
 int SceUdcdForDriver_0DECE532(SceUdcdDriver *driver);	/* vitasdk: ksceUdcdUnregister */
 int SceUdcdForDriver_0F3595AE(int bus);	/* vitasdk: ksceUdcdStopCurrentInternal */
@@ -293,7 +294,7 @@ int SceUdcdForDriver_512F77BC(const char *name, int bus);
 int SceUdcdForDriver_64675918(SceUdcdDriver *driver, int bus);
 /* vitasdk: ksceUdcdUnregisterInternal */
 int SceUdcdForDriver_6CCD152E(SceUdcdDriver *driver, int bus);
-int SceUdcdForDriver_78BF2A28(const struct udcdDeviceInformation *information);
+int SceUdcdForDriver_78BF2A28(const SceUdcdDeviceInfo *information);
 /* vitasdk: ksceUdcdWaitStateInternal */
 int SceUdcdForDriver_7AD0C8D1(SceUdcdWaitParam *parameter, unsigned int timeout, int bus);
 int SceUdcdForDriver_8AE87657(void);	/* vitasdk: ksceUdcdDeactivate */
@@ -317,7 +318,7 @@ int SceUdcdForDriver_D01CFD22(void);
 int SceUdcdForDriver_D03017C0(SceUdcdWaitParam *parameter, unsigned int timeout);
 int SceUdcdForDriver_DB7EF7AB(int bus);
 int SceUdcdForDriver_E054B5E4(void);	/* vitasdk: ksceUdcdGetDeviceState */
-int SceUdcdForDriver_E4F32EDA(const struct udcdDeviceInformation *information, int bus);
+int SceUdcdForDriver_E4F32EDA(const SceUdcdDeviceInfo *information, int bus);
 int SceUdcdForDriver_E9E75C49(int bus);
 int SceUdcdForDriver_EBB1E86B(void);
 int SceUdcdForDriver_FBEA3703(SceUdcdDeviceInfo *information);	/* vitasdk: ksceUdcdGetDeviceInfo */

@@ -241,13 +241,6 @@ typedef Partition PartitionObject;
 
 struct UIDManager;
 
-/* an allocator lent by the owner of an object heap (a process's heap) */
-typedef struct SceKernelHeapHook {
-	void *arg;
-	void *(*alloc)(void *arg, SceSize size);
-	void (*free)(void *arg, void *ptr);
-} SceKernelHeapHook;
-
 /* uid_class.c: a heap of UID objects; its class says how to allocate from it */
 typedef struct UIDHeapClass {
 	SceClass cls;
@@ -562,7 +555,7 @@ typedef struct AddressSpaceObject {
 	SceUID userIOPA;			/* 0x15c: the "SceUserIOPA" block */
 	SceUID userIOTimer;			/* 0x160: the "SceUserIOTimer" block */
 	uintptr_t userIOTimerBase;		/* 0x164 */
-	const AddressSpaceHeapOps *heap;	/* 0x168 */
+	const SceKernelHeapHook *heap;		/* 0x168 */
 	SceUInt32 magic;			/* 0x16c */
 } AddressSpaceObject;
 

@@ -1614,7 +1614,7 @@ out:
 }
 
 /* name unknown */
-static SceUID CreateAddressSpace(SceUID pid, const char *name, AddressSpaceHeapOps *param,
+static SceUID CreateAddressSpace(SceUID pid, const char *name, SceKernelHeapHook *param,
 				 SceUIntPtr ppm)
 {
 	AddressSpaceCreateOpt opt;
@@ -1636,7 +1636,7 @@ static SceUID CreateAddressSpace(SceUID pid, const char *name, AddressSpaceHeapO
 static inline __attribute__((always_inline)) int AllocAddressSpace(SceProcessObject *process,
 								    const char *name,
 								    SceUInt32 type,
-								    AddressSpaceHeapOps *param,
+								    SceKernelHeapHook *param,
 								    SceUIntPtr ppm)
 {
 	SceUID addressSpace;
@@ -1774,7 +1774,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 			  SceProcessObject **out)
 {
 	SceProcessObject *process;
-	AddressSpaceHeapOps *asParam;
+	SceKernelHeapHook *asParam;
 	const ObjectHeapLimit *limit, *cdialogLimit;
 	ProcEventCreateParam createParam;
 	ProcEventParam failParam;
@@ -1861,9 +1861,9 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 	process->eventSema = ret;
 
 	asParam = PPMAllocMemory(process->slot, sizeof(*asParam));
-	asParam->heap = (void *)process->slot;
-	asParam->alloc = (void *(*)(void *, SceSize))PPMAllocMemory;
-	asParam->free = PPMFreeMemory;
+	asParam->arg = (void *)process->slot;
+	asParam->funcAlloc = (void *(*)(void *, SceSize))PPMAllocMemory;
+	asParam->funcFree = PPMFreeMemory;
 	ret = AllocAddressSpace(process, name, type, asParam, g_ppm.base0 + process->slot * 0x4000);
 	if (ret < 0)
 		goto failed;

@@ -297,7 +297,7 @@ static inline void initializeRequests(void)
 
 static int Start(int size, void *args, void *userData)
 {
-	SceUInt32 param[16];
+	SceUdcdDeviceInfo info;
 
 	sceKernelClearEventFlag(s_mtp.event, ~MTP_EVENT_CONFIGURED);
 	sceKernelClearEventFlag(s_mtp.event, ~MTP_EVENT_SEND_FAILED);
@@ -306,8 +306,8 @@ static int Start(int size, void *args, void *userData)
 	initializeRequests();
 	s_mtp.ready = 1;
 	s_mtp.transferFlags |= MTP_TRANSFER_STARTED;
-	param[1] = 0xffff;
-	SceUdcdForDriver_78BF2A28(param);
+	info.eventDetail = 0xffff;
+	SceUdcdForDriver_78BF2A28(&info);
 	return 0;
 }
 

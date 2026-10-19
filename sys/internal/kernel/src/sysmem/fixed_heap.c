@@ -188,7 +188,7 @@ static void FixedHeapReleaseTables(FixedHeap *heap, int all)
 		heap->attr &= ~FIXED_HEAP_ATTR_NAME_HEAP;
 	}
 	if ((heap->attr & FIXED_HEAP_ATTR_NAME_HOOK) && all == 1 && heap->name != NULL) {
-		heap->hook->free(heap->hook->arg, heap->name);
+		heap->hook->funcFree(heap->hook->arg, heap->name);
 		heap->name = NULL;
 		heap->attr &= ~FIXED_HEAP_ATTR_NAME_HOOK;
 	}
@@ -203,8 +203,8 @@ static void FixedHeapReleaseTables(FixedHeap *heap, int all)
 		heap->attr &= ~FIXED_HEAP_ATTR_TABLES_KERNEL;
 	}
 	if (heap->attr & FIXED_HEAP_ATTR_TABLES_HOOK) {
-		heap->hook->free(heap->hook->arg, heap->pages);
-		heap->hook->free(heap->hook->arg, heap->blocks);
+		heap->hook->funcFree(heap->hook->arg, heap->pages);
+		heap->hook->funcFree(heap->hook->arg, heap->blocks);
 		heap->attr &= ~FIXED_HEAP_ATTR_TABLES_HOOK;
 	}
 	heap->pages = NULL;
@@ -880,9 +880,9 @@ int FixedHeapInitForProcess(FixedHeap *heap, SceUID pid, const char *name, SceUI
 	} else {
 		attr |= FIXED_HEAP_ATTR_PROCESS | FIXED_HEAP_ATTR_NAME_HOOK |
 			FIXED_HEAP_ATTR_TABLES_HOOK | FIXED_HEAP_ATTR_FROM_HOOK;
-		pages = hook->alloc(hook->arg, maxPages * sizeof(void *));
-		blocks = heap->hook->alloc(heap->hook->arg, maxPages * sizeof(void *));
-		heapName = heap->hook->alloc(heap->hook->arg, 0x20);
+		pages = hook->funcAlloc(hook->arg, maxPages * sizeof(void *));
+		blocks = heap->hook->funcAlloc(heap->hook->arg, maxPages * sizeof(void *));
+		heapName = heap->hook->funcAlloc(heap->hook->arg, 0x20);
 	}
 	if (name != NULL)
 		snprintf(heapName, 0x20, "SceFixedHeap%sFor0x%08X", name, pid);
@@ -902,11 +902,11 @@ int FixedHeapInitForProcess(FixedHeap *heap, SceUID pid, const char *name, SceUI
 		hook = heap->hook;
 		if (hook != NULL) {
 			if (pages != NULL)
-				hook->free(hook->arg, pages);
+				hook->funcFree(hook->arg, pages);
 			if (blocks != NULL)
-				heap->hook->free(heap->hook->arg, blocks);
+				heap->hook->funcFree(heap->hook->arg, blocks);
 			if (heapName != NULL)
-				heap->hook->free(heap->hook->arg, heapName);
+				heap->hook->funcFree(heap->hook->arg, heapName);
 		} else if (heap->heap != NULL) {
 			if (pages != NULL)
 				HeapFreeLocked(heap->heap, pages);

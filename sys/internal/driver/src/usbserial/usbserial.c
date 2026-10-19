@@ -543,10 +543,9 @@ static int initializeSerial(int size, void *args, void *ctx)
 	s_serial.lineCoding.bParityType = 0;
 	s_serial.lineCoding.bDataBits = 8;
 	s_serial.rx.timeout = s_serial.tx.timeout = s_serial.callback = -1;
-	/* Name unknown: device-information operation, selector 5. */
-	uint32_t info[16];
-	info[1] = 5;
-	SceUdcdForDriver_78BF2A28(info);
+	SceUdcdDeviceInfo info;
+	info.eventDetail = 5;
+	SceUdcdForDriver_78BF2A28(&info);
 	return 0;
 fail:
 	SceSysmemForDriver_009E1C61(s_serial.memblock);

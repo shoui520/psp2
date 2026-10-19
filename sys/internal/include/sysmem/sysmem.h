@@ -218,12 +218,15 @@ _Static_assert(offsetof(SceKernelPhyMemPartInfoForDebugger, freeBlocks) == 0xac,
 	       "debugger phymem info");
 #endif
 
-/* the allocator an address space keeps its own objects with (sceKernelCreateAddressSpace) */
-typedef struct AddressSpaceHeapOps {
-	void *heap;
-	void *(*alloc)(void *heap, SceSize size);
-	void (*free)(void *heap, void *object);
-} AddressSpaceHeapOps;
+/*
+ * an allocator lent by the owner of an object heap or an address space (a process's), which
+ * keeps its own objects with it (Sony: "pHeapHook->funcAlloc")
+ */
+struct SceKernelHeapHook {
+	void *arg;
+	void *(*funcAlloc)(void *arg, SceSize size);
+	void (*funcFree)(void *arg, void *ptr);
+};
 
 /* sceKernelCreateAddressSpace's options */
 #define ADDRESS_SPACE_OPT_HEAP		0x00000002	/* heap is given */
@@ -232,7 +235,7 @@ typedef struct AddressSpaceHeapOps {
 typedef struct AddressSpaceCreateOpt {
 	SceSize size;
 	SceUInt32 flags;			/* ADDRESS_SPACE_OPT_* */
-	const AddressSpaceHeapOps *heap;	/* 0x08: for the object and its context */
+	const SceKernelHeapHook *heap;		/* 0x08: for the object and its context */
 	uint32_t *l1Table;			/* 0x0c: the new L1 table (16 KiB) */
 } AddressSpaceCreateOpt;
 

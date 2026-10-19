@@ -268,12 +268,12 @@ int sceKernelCreateObjectHeap(SceUID pid, int kernel, SceKernelHeapHook *hook, O
 	ret = AddressSpaceGetDefaultPhyMemPart(addressSpaceCB, kernel, &partition);
 	if (ret < 0)
 		return ret;
-	heap = hook->alloc(hook->arg, sizeof(*heap));
+	heap = hook->funcAlloc(hook->arg, sizeof(*heap));
 	if (heap == NULL) {
 		SCE_DBG_PRINTF(0xb, 392, "pHeapHook->funcAlloc(0x%08x) failed\n", sizeof(*heap));
 		return SCE_KERNEL_ERROR_ERROR;
 	}
-	sizeClasses = hook->alloc(hook->arg, OBJECT_HEAP_SIZE_CLASSES * sizeof(*sizeClasses));
+	sizeClasses = hook->funcAlloc(hook->arg, OBJECT_HEAP_SIZE_CLASSES * sizeof(*sizeClasses));
 	if (sizeClasses == NULL) {
 		SCE_DBG_PRINTF(0xb, 400, "sceKernelHeapHookAlloc(0x%08x) failed\n",
 			       OBJECT_HEAP_SIZE_CLASSES * sizeof(*sizeClasses));
@@ -285,7 +285,7 @@ int sceKernelCreateObjectHeap(SceUID pid, int kernel, SceKernelHeapHook *hook, O
 			fixedHeap = NULL;
 			uid = -1;
 		} else {
-			fixedHeap = hook->alloc(hook->arg, sizeof(*fixedHeap));
+			fixedHeap = hook->funcAlloc(hook->arg, sizeof(*fixedHeap));
 			if (fixedHeap == NULL)
 				return SCE_KERNEL_ERROR_ERROR;
 			fixedHeap->hook = hook;
@@ -355,7 +355,7 @@ int sceKernelDeleteObjectHeap(ObjectHeap *heap)
 			if (def->size == entry->size)
 				break;
 		if (def->size <= 0x200 && def->ownHeap)
-			heap->hook->free(heap->hook->arg, entry->heap);
+			heap->hook->funcFree(heap->hook->arg, entry->heap);
 		else
 			HeapFreeLocked(heap->heap, entry->heap);
 		entry->heap = NULL;
@@ -365,8 +365,8 @@ int sceKernelDeleteObjectHeap(ObjectHeap *heap)
 		}
 	}
 	ObjectHeapSetSizeClass(heap, (SceSize)-1, NULL, -1);
-	heap->hook->free(heap->hook->arg, heap->sizeClasses);
-	heap->hook->free(heap->hook->arg, heap);
+	heap->hook->funcFree(heap->hook->arg, heap->sizeClasses);
+	heap->hook->funcFree(heap->hook->arg, heap);
 	return 0;
 }
 

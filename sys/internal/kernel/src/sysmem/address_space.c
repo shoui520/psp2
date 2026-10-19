@@ -82,10 +82,10 @@ int AddressSpaceFreeContext(AddressSpaceObject *as, AddressSpaceContext *context
 	if (context->l2TablesBlock != NULL)
 		AddressSpaceContextFreeL2Tables(context);
 	if (context->l1pt != NULL) {
-		as->heap->free(as->heap->heap, context->l1pt);
+		as->heap->funcFree(as->heap->arg, context->l1pt);
 		context->l1pt = NULL;
 	}
-	as->heap->free(as->heap->heap, context);
+	as->heap->funcFree(as->heap->arg, context);
 	return 0;
 }
 
@@ -148,7 +148,7 @@ void DeleteAddressSpace(AddressSpaceObject *as)
 {
 	struct Partition *partition;
 	AddressSpaceContext *context;
-	const AddressSpaceHeapOps *heap;
+	const SceKernelHeapHook *heap;
 	SceUInt32 asid;
 	SceUID uid;
 	int i, j, ret;
@@ -184,7 +184,7 @@ void DeleteAddressSpace(AddressSpaceObject *as)
 	AddressSpaceFreeContext(as, context);
 	heap = as->heap;
 	SetMemory32Core(as, ADDRESS_SPACE_DEAD, sizeof(*as));
-	heap->free(heap->heap, as);
+	heap->funcFree(heap->arg, as);
 	ret = sceKernelBitheapFree(s_addressSpaceGlobals->asidHeap, asid & 0xff);
 	if (ret < 0)
 		SCE_DBG_PRINTF(0xb, 2108, "FreeAsidUser failed 0x%08x\n", ret);
@@ -864,7 +864,7 @@ static inline int AddressSpaceAllocAsCommonRaw(AddressSpaceObject *as, uint32_t 
 	uintptr_t pa;
 	int ret;
 
-	context = as->heap->alloc(as->heap->heap, sizeof(*context));
+	context = as->heap->funcAlloc(as->heap->arg, sizeof(*context));
 	if (context == NULL) {
 		SCE_DBG_PRINTF(0xf, 1004, "AddressSpaceAllocMemoryRaw failed\n");
 		return SCE_KERNEL_ERROR_SYSMEM_ADDRESS_SPACE_ERROR;
@@ -875,7 +875,7 @@ static inline int AddressSpaceAllocAsCommonRaw(AddressSpaceObject *as, uint32_t 
 		ret = SCE_KERNEL_ERROR_SYSMEM_ADDRESS_SPACE_ERROR;
 		goto free_context;
 	}
-	l1pt = as->heap->alloc(as->heap->heap, sizeof(*l1pt));
+	l1pt = as->heap->funcAlloc(as->heap->arg, sizeof(*l1pt));
 	if (l1pt == NULL) {
 		ret = SCE_KERNEL_ERROR_SYSMEM_ADDRESS_SPACE_ERROR;
 		goto free_context;
@@ -902,9 +902,9 @@ static inline int AddressSpaceAllocAsCommonRaw(AddressSpaceObject *as, uint32_t 
 	as->context = context;
 	return 0;
 free_l1pt:
-	as->heap->free(as->heap->heap, l1pt);
+	as->heap->funcFree(as->heap->arg, l1pt);
 free_context:
-	as->heap->free(as->heap->heap, context);
+	as->heap->funcFree(as->heap->arg, context);
 	return ret;
 }
 
@@ -912,7 +912,7 @@ free_context:
 static inline __attribute__((always_inline)) int CreateAddressSpaceUserMode(const AddressSpaceCreateOpt *opt,
 					     AddressSpaceObject **out)
 {
-	const AddressSpaceHeapOps *heap;
+	const SceKernelHeapHook *heap;
 	struct Partition *partition;
 	AddressSpaceObject *as;
 	SceUInt32 asid, i;
@@ -920,7 +920,7 @@ static inline __attribute__((always_inline)) int CreateAddressSpaceUserMode(cons
 
 	asid = BitheapAlloc(s_addressSpaceGlobals->asidHeap);
 	heap = opt->heap;
-	as = heap->alloc(heap->heap, sizeof(*as));
+	as = heap->funcAlloc(heap->arg, sizeof(*as));
 	if (as == NULL) {
 		SCE_DBG_ASSERT_FAIL(1962);
 		return SCE_KERNEL_ERROR_ERROR;
@@ -972,7 +972,7 @@ no_partition:
 	ret = SCE_KERNEL_ERROR_ILLEGAL_PARTITION_INDEX;
 	AddressSpaceFreeContext(as, as->context);
 free:
-	heap->free(heap->heap, as);
+	heap->funcFree(heap->arg, as);
 	return ret;
 }
 

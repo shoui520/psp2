@@ -308,7 +308,7 @@ int SceUdcdForDriver_409DD196(int bus)
 	return state->activationState | state->controllerState | state->cableState | state->connectionState;
 }
 
-int SceUdcdForDriver_78BF2A28(const struct udcdDeviceInformation *information)
+int SceUdcdForDriver_78BF2A28(const SceUdcdDeviceInfo *information)
 {
 	if (!udcdIsDriverBus(2))
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
@@ -316,7 +316,7 @@ int SceUdcdForDriver_78BF2A28(const struct udcdDeviceInformation *information)
 	return 0;
 }
 
-int SceUdcdForDriver_E4F32EDA(const struct udcdDeviceInformation *information, int bus)
+int SceUdcdForDriver_E4F32EDA(const SceUdcdDeviceInfo *information, int bus)
 {
 	if (!udcdIsDriverBus(bus))
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
@@ -332,12 +332,10 @@ void SceUdcdForDriver_B1454F11(const unsigned int *value)
 
 int SceUdcdForDriver_FBEA3703(SceUdcdDeviceInfo *information)
 {
-	struct udcdDeviceInformation *record = (struct udcdDeviceInformation *)information;
-
 	if (!udcdIsDriverBus(2))
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
-	record->lastEvent = udcdState.buses[2].deviceInformation.lastEvent;
-	record->eventDetail = udcdState.buses[2].deviceInformation.eventDetail;
+	information->lastEvent = udcdState.buses[2].deviceInformation.lastEvent;
+	information->eventDetail = udcdState.buses[2].deviceInformation.eventDetail;
 	return 0;
 }
 

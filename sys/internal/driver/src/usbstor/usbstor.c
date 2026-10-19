@@ -296,7 +296,7 @@ static int stopStorage(int size, void *args, void *ctx)
 static int startStorage(int type, void *args, void *ctx)
 {
 	int result = STOR_ERROR_GENERAL;
-	uint32_t info[16];
+	SceUdcdDeviceInfo info;
 
 	s.flags = 0;
 	s.speed = 1;
@@ -345,8 +345,8 @@ static int startStorage(int type, void *args, void *ctx)
 	}
 	s.status |= STATUS_STARTED;
 	sceKernelSetEventFlag(s.eventFlag, EVF_START);
-	info[1] = s.type == USBSTOR_TYPE_DISK ? 5 : 0xffff;
-	SceUdcdForDriver_78BF2A28(info);
+	info.eventDetail = s.type == USBSTOR_TYPE_DISK ? 5 : 0xffff;
+	SceUdcdForDriver_78BF2A28(&info);
 	return result;
 }
 
