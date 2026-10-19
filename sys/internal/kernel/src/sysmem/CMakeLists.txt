@@ -126,7 +126,7 @@ psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	xorshift128.c
 	aes_block.c
 	kernel_utils_crypto.c
-	sha256_transform.c
+	sha256_transform.S
 	sha2_data.c
 	aes_key_data.c
 	${sysmem_hmac_data}
