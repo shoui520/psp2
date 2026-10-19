@@ -3,6 +3,10 @@
 #include "phy_patch.h"
 #include <kernel/error.h>
 
+/* power.c's definition takes a third argument, passed back to the callback; Sony's USB
+ * Ethernet drivers call it with two and leave that one unset */
+int ScePowerForDriver_B24263F0(int kind, void (*handler)(int event, int value));
+
 /* name unknown */
 static void drainReferences(struct RtlAdapter *a)
 {

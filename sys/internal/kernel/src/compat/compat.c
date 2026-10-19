@@ -30,6 +30,7 @@
 #include <power/power.h>
 #include <processmgr/processmgr.h>
 #include <post_ss_mgr/sblfwloader.h>
+#include <deci4p_sdeci2p/sdeci2p.h>
 
 struct CompatInterruptConfig {
 	int intrcode;
@@ -214,9 +215,6 @@ SceKernelIntrRegisterOpt gCompatInterruptOptions = {
 SCE_DBGINFO_DEFINE(static, gCompatMapMainDdrTranslationInfo, 751, "mapMainDDR");
 SCE_DBGINFO_DEFINE(static, gCompatMapMainDdrBankInfo, 753, "mapMainDDR");
 #endif
-
-int sceDeci2pTermForCompat(void);
-int SceDeci2pForDriver_F6427E0F(void *regs, void *shm, SceSize size);
 
 int compatLcdcIntrHandler(int intrcode, void *context)
 {

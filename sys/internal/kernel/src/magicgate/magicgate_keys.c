@@ -1,10 +1,7 @@
 /* Original source-file and internal names are unavailable. */
 #include "magicgate_private.h"
 #include <string.h>
-
-int SceSblMgKeyMgrForDriver_1263FB04(void *first, void *second);
-int SceSblMgKeyMgrForDriver_DF3B808D(const void *first, const void *second,
-				 const void *input, void *output);
+#include <mgkeymgr/mgkeymgr.h>
 
 /* Ciphertext owners are supplied by the firmware's data table. */
 extern MagicGateKey initialFirstWrappedKey;

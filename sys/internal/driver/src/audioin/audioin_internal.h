@@ -6,6 +6,7 @@
 #include <processmgr/processmgr.h>
 #include <codec/codec.h>
 #include <vnz_wrapper/vnz_wrapper.h>
+#include <audio/audio.h>
 
 /* Complete module-owned port record. Unidentified members remain explicit. */
 typedef struct AudioInPort {
@@ -159,7 +160,6 @@ extern const char g_audioInModuleName[];
 extern const char g_audioInAecMutexName[];
 
 int audioInReturnZero(void);
-int SceAudioForDriver_75915003(uintptr_t bufferAddress, unsigned int wordCount);
 unsigned int configureAudioInCaptureBuffers(void);
 int audioInProcessExitHandler(SceUID pid, ProcEventParam *param, void *common);
 int audioInProcessKillHandler(SceUID pid, ProcEventParam *param, void *common);

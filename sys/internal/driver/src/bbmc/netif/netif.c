@@ -29,7 +29,6 @@ int bbmcCloseNetworkLink(struct NetDriver *driver, int argument);
 int bbmcKickNetworkTransmit(struct NetDriver *driver, int argument);
 int GetCommRate(struct NetDriver *driver, unsigned int command,
 	int *argument, unsigned int size);
-int SceNetPsForDriver_F5788FF8(void *driver);
 /* The module's original import table uses this symbol for driver NID 4B675D05. */
 
 BbmcPacketInterface g_bbmcPacketInterfaceStorage;

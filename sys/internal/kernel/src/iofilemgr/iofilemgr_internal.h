@@ -487,10 +487,6 @@ struct Ncache {
 };
 _Static_assert(sizeof(struct Ncache) == 0x20, "Ncache");
 
-/* vitasdk: ksceVfsOpDecodePathElem */
-int SceIofilemgrForDriver_F7DAC0F5(SceVfsMount *mnt, const char *path, const char **path2,
-			    const char **path3, char *buf, SceSize n, SceSize *decodeLen);
-
 /* vfs.c */
 void vfs_umount_cleanup(SceVfsMount *mnt);
 void vfs_decrement_vp_mnt_ref(SceVfsVnode *vp);
@@ -811,11 +807,6 @@ int vfs_buf_in_one_line(struct BuffCache *bc, SceOff pos, SceSize size);
 int vfs_buf_io_cached_contains(struct BuffCache *bc, SceOff pos, SceSize size);
 int vfs_buf_io_cached_overlaps(struct BuffCache *bc, SceOff pos, SceSize size);
 int vfs_buf_io_buff_contains(struct BuffCache *bc, SceOff pos, SceSize size);
-
-/* SceSysmem / SceProcessmgr heaps a buffer cache is allocated from */
-/* vitasdk: ksceKernelAllocHeapMemory2 */
-void *sceKernelSysrootAllocRemoteProcessHeap(SceUID pid, SceSize size, void *opt);
-int SceSysrootForKernel_7968F091(SceUID pid, void *ptr);	/* frees sceKernelSysrootAllocRemoteProcessHeap's */
 
 struct VfsBuffIoOps;
 struct BuffLine;
@@ -1180,7 +1171,6 @@ typedef struct VfsBuffCacheInfo {
 
 int vfsBuffCtl(IofilemgrBuffCtlParam *param);
 		/* flock */
-void *SceThreadmgrForDriver_89CA5698(SceUInt32 slot, SceUID threadId, int create);
 SceOff vfsLseek(IofilemgrLseekParam *param);	/* vfs.c: lseek */
 
 /* data still defined in frames.S */

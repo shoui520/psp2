@@ -14,6 +14,7 @@
 #include <threadmgr/event.h>
 #include "private.h"
 #include <threadmgr/uid_waitable.h>
+#include <sysmem/uid_class.h>
 #include "mutex.h"
 
 #define EVENT_ATTR_AUTO_CLEAR		0x00000100	/* a wait that is satisfied clears its bits */
@@ -77,7 +78,6 @@ void notifyCallbackToThreadBeforeSetEvent(ThreadmgrEventCallback *head,
 					  struct ThreadCB *thread, uint32_t arg);
 bool wakeupAndDistributeThread(struct ThreadCB *thread, uintptr_t waitable,
 			       int result);
-extern SceClass *SceSysmemForKernel_368F1C36(SceUID guid);
 
 /* the waiter at a node of an event's queue: a thread itself, or a WME node */
 static inline int EventWaiterIsThread(struct ThreadmgrWaitNode *node)

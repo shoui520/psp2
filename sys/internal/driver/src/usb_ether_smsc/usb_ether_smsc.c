@@ -21,8 +21,12 @@
 #include <kernel/error.h>
 #include <net_ps/netdrv.h>
 #include <sysmem/sysevent_ids.h>
-#include <usb_ether_smsc/usb_ether_smsc.h>
+#include <syscon/syscon.h>
 #include <sysmem/sysclib.h>
+
+/* power.c's definition takes a third argument, passed back to the callback; Sony's USB
+ * Ethernet drivers call it with two and leave that one unset */
+int ScePowerForDriver_B24263F0(int kind, void (*handler)(int event, int value));
 
 /* names unknown */
 #define SMSC_ERROR_INVALID_ARGUMENT	((int)0x80418001)

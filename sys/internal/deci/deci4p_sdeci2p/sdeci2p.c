@@ -27,6 +27,7 @@
 #include <sysmem/sysroot.h>
 #include <threadmgr/threadmgr.h>
 #include <compat/compat_regs.h>
+#include <deci4p_sdeci2p/sdeci2p.h>
 
 #define SDECI2P_PROTOCOL	0x1000e000
 #define SDECI2P_INTR_FWD	0x41		/* compat side took a forwarded packet */

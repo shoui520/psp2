@@ -21,3 +21,6 @@ _Static_assert(offsetof(SceUsbMassDevInfo, writeProtected) == 12,
 int _sceUsbMassGetDevInfo(SceUsbMassDevInfo *info);
 int _sceUsbMassWriteSector(SceUInt32 sector, void *buffer, SceUInt32 count);
 int _sceUsbMassReadSector(SceUInt32 sector, void *buffer, SceUInt32 count);
+int SceUsbMassForDriver_3C821E99(int intr, unsigned int subintr);
+int SceUsbMassForDriver_7833D935(int intr, unsigned int subintr);
+int SceUsbMassForDriver_F2BAB182(int intr);

@@ -14,6 +14,7 @@
 #include <string.h>
 #include <syscon/syscon.h>
 #include <iofilemgr/iofilemgr.h>
+#include <umass/umass.h>
 
 typedef struct SceSdstorIntrHeader {
 	SceKernelSubIntrHandler insertHandler;
@@ -98,11 +99,9 @@ static const uint8_t sdintrHeaderPorts[5] = {0, 1, 2, 3, 4};
 #endif
 static const uint32_t sdintrStateRequests[3] = {0x110, 0x103, 0x1001};
 
-int SceUsbMassForDriver_3C821E99(int intrCode, unsigned int subintrCode)
-	__attribute__((weak));
-int SceUsbMassForDriver_7833D935(int intrCode, unsigned int subintrCode)
-	__attribute__((weak));
-int SceUsbMassForDriver_F2BAB182(int intrCode);
+/* weak imports: SceUsbMass may not be loaded */
+#pragma weak SceUsbMassForDriver_3C821E99
+#pragma weak SceUsbMassForDriver_7833D935
 
 int sdintrEnableUsbMassSubIntr(int intrCode, int subintrCode);
 int sdintrDisableUsbMassSubIntr(int intrCode, int subintrCode);

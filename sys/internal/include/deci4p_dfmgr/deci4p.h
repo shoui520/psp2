@@ -86,7 +86,7 @@ _Static_assert(sizeof(SceDfMgrStatus) == 0x28, "SceDfMgrStatus size");
 typedef int (*SceDfMgrHandler)(int event, void *arg, void *ctx);
 
 int sceDfMgrOpen(SceDfMgrHandler handler, const SceDfMgrProtocol *protocol, void *ctx);
-void sceDfMgrClose(int handle);
+int sceDfMgrClose(SceUID handle);
 int sceDfMgrReqSend(int handle);
 int sceDfMgrSend(int handle, const void *buf, SceSize size);
 int sceDfMgrRecv(int handle, void *buf, SceSize size);

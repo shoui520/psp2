@@ -204,6 +204,8 @@ int SceThreadmgrForDriver_B645C7EF(uint32_t size,
 				   uintptr_t argument);
 int SceThreadmgrForDriver_8C3C1F78(uint32_t slot);			/* free TLS slot */
 void *SceThreadmgrForDriver_3A72C6D8(uint32_t slot);		/* the current thread's TLS slot */
+/* threadId's (0: the caller's) TLS slot; create: allocate it when missing */
+void *SceThreadmgrForDriver_89CA5698(uint32_t slot, SceUID threadId, int create);
 
 int SceThreadmgrForDriver_1096042E(SceUID uid);
 int SceThreadmgrForDriver_332E127C(void);

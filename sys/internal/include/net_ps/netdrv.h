@@ -138,3 +138,5 @@ _Static_assert(sizeof(struct NetDriver) == 0xb0, "NetDriver size");
 
 /* name unknown: registers a driver with SceNetPs */
 int SceNetPsForDriver_1ABF937D(void *driver);
+/* name unknown: removes a driver's interface and its queued packets */
+int SceNetPsForDriver_F5788FF8(void *argument);

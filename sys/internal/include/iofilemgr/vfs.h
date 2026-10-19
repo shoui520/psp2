@@ -570,6 +570,9 @@ int vfsMountForPFS(SceVfsMountParam *param, int a2, int a3);
 
 int SceIofilemgrForDriver_0D8A806E(SceVfsVnode *fvp, SceVfsVnode *tvp);	/* vitasdk: ksceVopUnlink */
 int SceIofilemgrForDriver_942AA61F(SceVfsVnode *fvp, SceVfsVnode *tvp);	/* vitasdk: ksceVopLink */
+/* vitasdk: ksceVfsOpDecodePathElem */
+int SceIofilemgrForDriver_F7DAC0F5(SceVfsMount *mnt, const char *path, const char **path2,
+	const char **path3, char *buf, SceSize buf_len, SceSize *decode_len);
 int sceVfsAddVfs(SceVfsInfo *vfsInf);
 int sceVfsDeleteVfs(const char *name, SceVfsInfo **vfsInf);
 int sceVfsOpDevctl(SceVfsMount *mnt, const char *dev, unsigned int cmd, const void *indata,

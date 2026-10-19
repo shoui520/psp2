@@ -75,9 +75,6 @@ void sceFiosKernelRwlockReadUnlock(SceFiosKernelRwlock *lock);
 void sceFiosKernelRwlockWriteLock(SceFiosKernelRwlock *lock);
 void sceFiosKernelRwlockWriteUnlock(SceFiosKernelRwlock *lock);
 
-/* imports without an SDK name */
-void *SceThreadmgrForDriver_89CA5698(int slot, SceUID threadId, int create);
-
 /* a process's overlays and directory handles, in its process local storage */
 typedef struct SceFiosKernelProcessStorage {	/* name unknown */
 	int generation;			/* the system-wide overlays it has merged */

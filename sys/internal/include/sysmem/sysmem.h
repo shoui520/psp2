@@ -422,7 +422,7 @@ int sceKernelUnlockRange(void *addr, SceSize size);	/* vitasdk: ksceKernelUnlock
 /* vitasdk: ksceGUIDReferObjectWithClassLevel */
 int sceGUIDReferObjectWithClassLevel(SceUID guid, SceClass *pClass, SceUInt32 level, SceObjectBase **entry);
 /* vitasdk: ksceKernelAllocHeapMemory */
-void *sceKernelAllocHeapMemory(SceUID uid, SceSize size);
+void *sceKernelAllocHeapMemory(SceUID uid, SceSize size) __attribute__((alloc_size(2)));
 /* vitasdk: ksceKernelUserMapWithFlags */
 SceUID SceSysmemForDriver_7D4F8B5F(const char *name, int permission, int flags, const void *user_buf, SceSize size, void **kernel_page, SceSize *kernel_size, unsigned int *kernel_offset);
 /* vitasdk: ksceKernelStrncpyToUser */

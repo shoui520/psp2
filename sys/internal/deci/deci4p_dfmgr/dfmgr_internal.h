@@ -15,15 +15,11 @@
 #include <sysmem/spinlock.h>
 #include <sysmem/cpu.h>
 #include <sysmem/debug.h>
-/* deci4p_dfmgr/deci4p.h declares sceDfMgrClose void; it returns an error code */
-#define sceDfMgrClose sceDfMgrClose_deci4p_h
 #include <deci4p_dfmgr/deci4p.h>
 #include <threadmgr/threadmgr.h>
 #include <processmgr/processmgr.h>
 #include <sysmem/sysroot.h>
 #include <dbgusb/dbgusb.h>
-#undef sceDfMgrClose
-int sceDfMgrClose(SceUID handle);
 
 /*
  * Sony built dfmgr with the compiler builtins enabled: constant clears and
