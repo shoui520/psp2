@@ -420,15 +420,15 @@ static int usb_detach(int id)
 	DEBUG(6, 1528, "usb_detach", "[%s] USB Detach <----- dev_id=%d, type=%02x, attached_device[%d]\n", "usb_detach", id, type, s_serv.attached);
 	return 0;
 }
-static void accessoryChanged(unsigned info, void *arg)
+static void accessoryChanged(int info, void *arg)
 {
 	sceKernelSetEventFlag(s_serv.event, info ? 8 : 16);
 }
-static void microUsbChanged(unsigned info, void *arg)
+static void microUsbChanged(int info, void *arg)
 {
 	sceKernelSetEventFlag(s_serv.event, (info & 0xff00) == 0x200 ? 64 : 128);
 }
-static void multiCnChanged(unsigned info, void *arg)
+static void multiCnChanged(int info, void *arg)
 {
 	sceKernelSetEventFlag(s_serv.event, info & 0xfb00 ? 4 : 2);
 }
@@ -438,7 +438,7 @@ static void registerConnectors(void)
 	SceSysconForDriver_67A4CB9F(microUsbChanged, NULL);
 	SceSysconForDriver_4A42712F(accessoryChanged, NULL);
 }
-static int _sceUsbServSysEventHandler(int phase, int event, void *arg)
+static int _sceUsbServSysEventHandler(int phase, int event, void *arg, void *opt)
 {
 	if (!phase) {
 		if (event == SYSEVENT_SUSPEND_PREPARE(0)) {

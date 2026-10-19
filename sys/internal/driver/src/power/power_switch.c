@@ -51,7 +51,7 @@ static const SuspendPowerCallbacks s_powerSuspendCallbacks = {
 	.expireIdleTimer = ScePowerForDriver_660D5AB4,
 	.addIdleTimerMask = ScePowerForDriver_991BDEAF,
 };
-void powerSysconWakeupCallback(uint32_t value)
+void powerSysconWakeupCallback(int value, void *argp)
 {
 	if (value)
 		s_powerSwitchState.resumeRequested = 1;

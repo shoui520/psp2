@@ -314,7 +314,7 @@ typedef struct IofilemgrSyncParam {
 int ioUserUnmap(SceUID uid, const void *data, SceSize size) __asm__("sceKernelUserUnmap");
 
 /* iofilemgr.c */
-int iofilemgrInitDummyTty(int unused0, void *unused1);
+int iofilemgrInitDummyTty(uint32_t unused0, void *unused1);
 int sceIoLseek32(SceUID fd, int offset, int whence);
 
 /* iofilemgr_for_kernel.c */

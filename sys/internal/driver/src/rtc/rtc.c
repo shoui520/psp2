@@ -49,12 +49,12 @@ static SceUInt32 rtcAuxAlarmHandler(void *argp)
 }
 
 /* name unknown: syscon alarm event */
-static void rtcSysconAlarmHandler(int arg)
+static void rtcSysconAlarmHandler(int value, void *argp)
 {
 	if (g_rtc.alarmCallback < 0)
 		return;
 	if (g_rtc.alarmState == 0) {
-		if (sceKernelNotifyCallback(g_rtc.alarmCallback, arg) < 0)
+		if (sceKernelNotifyCallback(g_rtc.alarmCallback, value) < 0)
 			g_rtc.alarmCallback = -1;
 	} else if (g_rtc.alarmState == 1) {
 		g_rtc.alarmState = 2;

@@ -1876,10 +1876,7 @@ int startMsgPipe(void)
 int startMsgPipeAfterProcess(void)
 {
 	struct SceKernelThreadmgrPrivate *manager = s_threadmgrRuntime.manager;
-	struct {
-		SceSize size;
-		int ceilingPriority;
-	} opt;
+	SceKernelMutexOptParam opt;
 	char name[32];
 	int n, ret;
 

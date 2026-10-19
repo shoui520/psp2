@@ -57,7 +57,7 @@ static const SceIftuCscParams cscWideInput = {
 
 static const SceUInt32 integerScale[5] = { 0x10000, 0x10000, 0x8000, 0x5555, 0x4000 };
 
-static int initCallback(void) /* name unknown */
+static int initCallback(uint32_t kind, void *argument) /* name unknown */
 {
 	return 0;
 }
@@ -857,10 +857,7 @@ int displayInit(void) /* name unknown */
 {
 	SceUInt8 hardwareFlags[16];
 	SceKernelAllocMemBlockKernelOpt opt;
-	struct {
-		SceSize size;
-		int attr;
-	} mutexOpt;
+	ThreadmgrFastMutexOptParam mutexOpt;
 	void *base;
 	SceUID block;
 	int ret;
@@ -905,7 +902,7 @@ int displayInit(void) /* name unknown */
 	heads[1].plane[1].scale = 0;
 	plsKey = sceKernelRegisterKPLS("SceDisplay", sizeof(DisplayProcessLocal));
 	mutexOpt.size = 8;
-	mutexOpt.attr = 0x20;
+	mutexOpt.ceilingPriority = 0x20;
 	sceKernelInitializeFastMutex(&mutex, "SceDisplay", 6, &mutexOpt);
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);

@@ -189,7 +189,7 @@ int rdrfpRegisterWritebufTimer(void)
 	}
 	rdrfpWritebufTimer = ret;
 	interval.quad = RDRFP_FLUSH_INTERVAL;
-	ret = sceKernelSetTimerEvent(rdrfpWritebufTimer, 0, &interval, 1);
+	ret = sceKernelSetTimerEvent(rdrfpWritebufTimer, 0, &interval.quad, 1);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 223, "SetTimerEvent failed (0x%08X)\n", ret);
 		SceThreadmgrForDriver_91A8F38B(rdrfpWritebufTimer);

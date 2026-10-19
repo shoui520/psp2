@@ -109,7 +109,7 @@ static inline void deciEventSend(ScttypPort *port)
 	int ret;
 
 	ret = sceSDfMgrExSend(port->handle, (SceUInt8 *)&port->hdr + sent,
-			      SceDeci4pSDfMgrForKernel_68903C1D(&port->hdr) - port->sent);
+			      SceDeci4pSDfMgrForKernel_68903C1D(&port->hdr.hdr) - port->sent);
 	if (ret < 0)
 		SCTTYP_PRINTF(474, "ExSend() failed (0x%08X)\n", ret);
 	else

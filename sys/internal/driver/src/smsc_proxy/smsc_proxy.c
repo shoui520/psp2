@@ -73,12 +73,6 @@ typedef struct Session {
 	Channel channel[CHANNEL_COUNT];
 } Session;
 
-typedef struct HeapOpt {
-	SceSize size;
-	SceUInt32 attr;
-	SceUInt32 reserved[5];
-} HeapOpt;
-
 int SmcCall(SceUInt32 r0, SceUInt32 r1, SceUInt32 r2, SceUInt32 r3, SceUInt32 command);
 
 static SceUID s_heap;
@@ -300,7 +294,7 @@ static int SysEventHandler(int resume, int eventId, void *args, void *opt)
 
 int sceSblSmSchedProxyModuleStart(SceSize args, void *argp)
 {
-	HeapOpt opt;
+	SceKernelHeapCreateOpt opt;
 	int ret, i;
 
 	opt.size = sizeof(opt);

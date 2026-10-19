@@ -10,6 +10,7 @@
 #include <authmgr/sblauthmgr.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <sysmem/list.h>
+#include <sysmem/utils.h>
 
 struct ThreadmgrException;
 
@@ -159,7 +160,7 @@ typedef struct SceProcessObject {
 	SceUInt32 infoParam;			/* reported by sceKernelGetProcessInfo; 0x7f once created */
 	void *libdb;
 	SceUInt32 threadPermission;		/* its new threads' permission */
-	SceUInt8 random[0x10];			/* SceKernelUtils random state */
+	SceXorshift128State random;		/* SceKernelUtils random state */
 	SceKernelSpinlock randomLock;
 	SceSelfAuthInfo authInfo;
 	ProcessImageInfo image;

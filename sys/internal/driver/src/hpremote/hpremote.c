@@ -25,12 +25,12 @@ struct HpremoteState {
 
 static struct HpremoteState remote;
 
-static void inputChanged(int value) /* name unknown */
+static void inputChanged(int value, void *argp) /* name unknown */
 {
 	remote.rawInput = value;
 }
 
-static void multiInputChanged(int value) /* name unknown */
+static void multiInputChanged(int value, void *argp) /* name unknown */
 {
 	remote.rawMultiInput = value;
 }
@@ -333,7 +333,7 @@ int module_start(SceSize args, void *argp)
 		remote.multiType = (info & 0xff00) == 0x300;
 	}
 	SceSysconForDriver_63352A39(inputChanged, NULL);
-	SceSysconForDriver_DE613081(codecInputChanged, NULL);
+	SceSysconForDriver_DE613081((SceSysconCallback)codecInputChanged, NULL);
 	SceSysconForDriver_35E1689F(multiInputChanged, NULL);
 	uid = sceKernelCreateThread("SceHpRemote", remoteThread, 0x40, 0x1000, 0, 0x80000, NULL);
 	if (uid < 0)

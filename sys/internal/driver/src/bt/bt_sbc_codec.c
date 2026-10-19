@@ -361,7 +361,7 @@ static inline void SbcWriteBits(SbcContext *context, unsigned int value,
 	}
 }
 
-static inline int SbcScaleFactor(const float samples[16][8],
+static inline int SbcScaleFactor(float samples[16][8],
 				int blocks, int band)
 {
 	float maximum;

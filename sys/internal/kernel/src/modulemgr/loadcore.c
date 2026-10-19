@@ -30,8 +30,9 @@
 
 /* a library and its client switched to the client's address space */
 typedef struct LoadcoreProcessContext {
-	void *ctx;
-	SceUInt8 saved[0xc];
+	MMUContext *ctx;
+	/* the context switched from, as bytes: the stack protector guards it */
+	SceUInt8 saved[sizeof(MMUContext)];
 } LoadcoreProcessContext;
 
 static inline int LoadcoreSwitchProcess(SceUID pid, LoadcoreProcessContext *pc)
@@ -43,13 +44,13 @@ static inline int LoadcoreSwitchProcess(SceUID pid, LoadcoreProcessContext *pc)
 	ret = SceSysmemForDriver_2ECF7944(pid, &pc->ctx);
 	if (ret < 0)
 		return ret;
-	return SceSysmemForDriver_2D711589(pc->ctx, pc->saved);
+	return SceSysmemForDriver_2D711589(pc->ctx, (MMUContext *)pc->saved);
 }
 
 static inline void LoadcoreRestoreProcess(SceUID pid, LoadcoreProcessContext *pc)
 {
 	if (pid != SCE_KERNEL_PROCESS_ID)
-		SceSysmemForDriver_2D711589(pc->saved, NULL);
+		SceSysmemForDriver_2D711589((MMUContext *)pc->saved, NULL);
 }
 
 static inline int LoadcoreLibraryMatches(const LibEntCB *ent, const LibStubCB *stub)

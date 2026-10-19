@@ -19,7 +19,7 @@ SceUID g_ioVfsHeapUid __attribute__((section(".data"))) = 0;
 
 /* name unknown: init callback (level 5) registered by init_iofm */
 __attribute__((section(".iofilemgrEntry.iofilemgrInitDummyTty")))
-int iofilemgrInitDummyTty(int unused0, void *unused1)
+int iofilemgrInitDummyTty(uint32_t unused0, void *unused1)
 {
 	DummyTtyStart();
 	return 0;

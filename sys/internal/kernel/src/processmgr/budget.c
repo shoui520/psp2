@@ -18,16 +18,16 @@ static SceUID g_kernelBudgetId;
 static SceUID g_gameBudgetId;
 static SceUID g_shellBudgetId;
 
-static void *g_kernelPart;			/* SceSysmemForKernel_0164D817 */
-static void *g_phyContPart;			/* ScePhyMemPartPhyCont */
-static void *g_sharedPart;			/* ScePhyMemPartShared */
-static void *g_gameCDialogPart;			/* ScePhyMemPartGameCDialog */
-static void *g_shellPart;			/* ScePhyMemPartShell */
-static void *g_shellDummyPart;			/* ScePhyMemPartShellDummy */
-static void *g_gamePart;			/* ScePhyMemPartGame */
-static void *g_gameDummyPart;			/* ScePhyMemPartGameDummy */
-static void *g_shellCdramPart;			/* ScePhyMemPartShellCdram */
-static void *g_gameCdramPart;			/* ScePhyMemPartGameCdram */
+static PhyMemPart *g_kernelPart;		/* SceSysmemForKernel_0164D817 */
+static PhyMemPart *g_phyContPart;		/* ScePhyMemPartPhyCont */
+static PhyMemPart *g_sharedPart;		/* ScePhyMemPartShared */
+static PhyMemPart *g_gameCDialogPart;		/* ScePhyMemPartGameCDialog */
+static PhyMemPart *g_shellPart;			/* ScePhyMemPartShell */
+static PhyMemPart *g_shellDummyPart;		/* ScePhyMemPartShellDummy */
+static PhyMemPart *g_gamePart;			/* ScePhyMemPartGame */
+static PhyMemPart *g_gameDummyPart;		/* ScePhyMemPartGameDummy */
+static PhyMemPart *g_shellCdramPart;		/* ScePhyMemPartShellCdram */
+static PhyMemPart *g_gameCdramPart;		/* ScePhyMemPartGameCdram */
 
 /* the SceUIDProcBudgetClass constructor */
 static int ProcessBudgetConstructor(ProcessBudget *budget)
@@ -82,7 +82,7 @@ static int ProcessBudgetDestructor(ProcessBudget *budget)
 }
 
 static int CreateDefaultPhyMemPart(const char *name, SceUInt32 type, SceUIntPtr base, SceSize size,
-				   void **partition)
+				   PhyMemPart **partition)
 {
 	SceKernelPhyMemPartInfoCore info;
 	int ret;
@@ -188,7 +188,8 @@ int sceKernelGetBudgetInfoForDebugger(SceUID budgetId, SceUInt32 level,
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (info->size != sizeof(*info))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
-	ret = sceGUIDReferObjectWithClassLevel(budgetId, &g_budgetClass, level, &budget);
+	ret = sceGUIDReferObjectWithClassLevel(budgetId, &g_budgetClass, level,
+					       (SceObjectBase **)&budget);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 431, "sceGUIDReferObjectWithClassLevel failed 0x%08x\n", ret);
 		return ret;
@@ -303,7 +304,8 @@ int sceKernelGetBudgetInfo(SceUID budgetId, SceKernelBudgetInfo *info)
 			return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
 		}
 	} else {
-		ret = sceGUIDReferObjectWithClassLevel(budgetId, &g_budgetClass, 7, &budget);
+		ret = sceGUIDReferObjectWithClassLevel(budgetId, &g_budgetClass, 7,
+						       (SceObjectBase **)&budget);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 578, "sceGUIDReferObjectWithClassLevel failed 0x%08x\n",
 					     ret);
@@ -526,7 +528,7 @@ static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 	}
 
 	if (uid == -1) {
-		uid = sceGUIDKernelCreate(&g_budgetClass, name, &budget);
+		uid = sceGUIDKernelCreate(&g_budgetClass, name, (SceObjectBase **)&budget);
 		if (uid < 0) {
 			ret = uid;
 			goto failed;
@@ -538,7 +540,8 @@ static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 			goto failed;
 		}
 		ProcessBudgetConstructor(budget);
-		ret = SceSysmemForKernel_5EDDEEB5(uid, &g_budgetClass, name, budget, 0x1551000);
+		ret = SceSysmemForKernel_5EDDEEB5(uid, &g_budgetClass, name,
+						 (SceObjectBase *)budget, 0x1551000);
 		if (ret < 0) {
 			SceSysmemForKernel_4233C16D(budget);
 			goto failed;

@@ -30,7 +30,9 @@ typedef int (*SysrootCoredumpAddThread)(const struct CoredumpThreadSnapshot *sna
 typedef int (*SysrootUtMgrHasAuthId)(SceUInt64 authId);
 typedef int (*SysrootLedSetMode)(SceUInt32 led, SceUInt32 mode, const void *option);
 typedef int (*SysrootSysStateEvent)(int event);
-typedef int (*SysrootPfsMgrGetMountInfo)(void *mount, void *info);
+struct SceVfsMount;
+struct ScePfsMountInfo;
+typedef int (*SysrootPfsMgrGetMountInfo)(struct SceVfsMount *mount, struct ScePfsMountInfo *info);
 typedef int (*SysrootTmcpCommand)(SceUInt32 flags, const char *pathName,
 				  const char *cmdLine, const char *workDir, SceUInt32 *id,
 				  SceUInt32 *value, SceUID callbackUid, void *status, int async);

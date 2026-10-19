@@ -385,7 +385,7 @@ int _sceKernelBacktraceCore(SceUID thid, SceKernelBacktraceFrame *frames, SceSiz
 		ret = SCE_KERNEL_ERROR_INVALID_UID;
 		goto resume;
 	}
-	ret = sceGUIDReferObject(thid, (void **)&obj);
+	ret = sceGUIDReferObject(thid, (SceObjectBase **)&obj);
 	if (ret < 0)
 		goto resume;
 	ctx = &obj->context;
@@ -563,7 +563,7 @@ int _sceKernelBacktraceForKernelCore(SceUID thid, SceKernelBacktraceFrameForKern
 		ret = SCE_KERNEL_ERROR_INVALID_UID;
 		goto resume;
 	}
-	ret = sceGUIDReferObject(thid, (void **)&obj);
+	ret = sceGUIDReferObject(thid, (SceObjectBase **)&obj);
 	if (ret < 0)
 		goto resume;
 	ctx = &obj->context;

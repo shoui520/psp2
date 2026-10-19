@@ -837,7 +837,7 @@ static int UIDtoProcess(SceUID pid, SceProcessObject **process)
 		}
 		cls = &g_processClass;
 	}
-	if (sceGUIDGetObjectWithClass(pid, cls, process) < 0)
+	if (sceGUIDGetObjectWithClass(pid, cls, (SceObjectBase **)process) < 0)
 		return SCE_KERNEL_ERROR_INVALID_PID;
 	return *process != NULL ? 0 : SCE_KERNEL_ERROR_INVALID_PID;
 }
@@ -1785,7 +1785,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 	UIDCreateOpt uidOpt;
 	const char *threadName, *processName;
 	const void *optParam;
-	void *objectHeap;
+	ObjectHeap *objectHeap;
 	char heapName[0x20];
 	SceUID pid, heap, cdialogHeap, handler;
 	SceUInt32 sdkVersion, threadAttr, budgetType, maxSize;
@@ -1835,10 +1835,10 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 		process->parentPid = parentPid;
 		process->authInfo.sharedSecret3[0] = 0x10;
 	}
-	SceKernelUtilsForDriver_875B2A1C(process->random, sizeof(process->random));
+	SceKernelUtilsForDriver_875B2A1C((SceUInt32 *)&process->random, sizeof(process->random));
 	type &= 0x7fffffff;
 	deleteThreads = 0;
-	SceKernelUtilsForDriver_B55C69B7(process->random);
+	SceKernelUtilsForDriver_B55C69B7(&process->random);
 	process->type = type;
 	process->randomLock = 0;
 
@@ -5577,7 +5577,7 @@ int _sceKernelGetTimer5RegForUser(void *uaddr)
 {
 	SceProcessObject *process;
 	SceUInt32 state;
-	void *base;
+	uintptr_t base;
 	int ret;
 
 	state = ProcessSyscallEnter();
@@ -6081,7 +6081,7 @@ SceUID sceKernelCallCoredumpHandler(SceUID pid)
 		ret = thid;
 		goto release;
 	}
-	ret = sceGUIDGetObjectWithClass(thid, g_threadClass, &thread);
+	ret = sceGUIDGetObjectWithClass(thid, g_threadClass, (SceObjectBase **)&thread);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(10151);
 		sceKernelDeleteThread(ret);
@@ -6137,7 +6137,7 @@ int SceProcessmgrForDriver_2CEB1C7A(SceUID pid, SceUInt32 *buf, SceSize size)
 		return ret;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->randomLock);
 	for (p = buf; size != 0 && (SceSize)((char *)p - (char *)buf) < size; p++)
-		*p = SceKernelUtilsForDriver_335AF34D(process->random);
+		*p = SceKernelUtilsForDriver_335AF34D(&process->random);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->randomLock, intr);
 	sceGUIDReleaseObject(process->pid);
 	return 0;
@@ -6237,25 +6237,7 @@ static int ProcessmgrModuleStart2(void)
 }
 
 /* the process manager functions sysroot calls (SceSysrootForKernel_D29BCA77) */
-static const struct {
-	SceSize size;
-	void *(*getLibkernelAddr0)(SceProcessObject *process);
-	void *(*getLibkernelAddr1)(SceProcessObject *process);
-	void *(*getLibkernelAddr2)(SceProcessObject *process);
-	void *(*allocCurrentHeap)(SceSize size, void *opt, const void *caller);
-	int (*freeCurrentHeap)(void *ptr);
-	void *(*allocRemoteHeap)(SceUID pid, SceSize size, void *opt, const void *caller);
-	int (*freeRemoteHeap)(SceUID pid, void *ptr);
-	int (*moduleStart2)(void);
-	int (*inhibitProcEvent)(SceUID pid);
-	int (*permitProcEvent)(SceUID pid);
-	void *(*getObjectHeap)(SceUID pid, int kind);
-	int (*createLocalStorage)(const char *name, SceSize size);
-	void *(*getLocalStorageAddr)(SceUInt32 key);
-	int (*getLocalStorageAddrForPid)(SceUID pid, SceUInt32 key, void **addr, int create);
-	int (*debugSuspend)(SceUID pid, SceUInt32 state);
-	int (*getSdkVersion)(SceUID pid, SceUInt32 *sdkVersion);
-} g_sysrootOps = {
+static const SysrootProcessmgrRuntimeOps g_sysrootOps = {
 	0x44,
 	ProcessGetLibkernelAddr0,
 	ProcessGetLibkernelAddr1,
