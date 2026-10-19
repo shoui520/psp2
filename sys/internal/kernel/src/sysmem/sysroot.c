@@ -191,7 +191,7 @@ struct SysrootAutoClockDownState {
 };
 
 struct SysrootAutoClockDownState SceSysrootForDriver_4B8C305A = { 0 };
-/* PLACEHOLDER: meaning of the secondary native Sysroot word618. */
+/* the state's sysrootClass block, kept for 085C2BCB */
 static uint32_t s_sysrootClass;
 
 _Static_assert(sizeof(struct SysrootState) == 0x41c, "Sysroot state size");
@@ -1086,103 +1086,103 @@ SceKblParam *sceKernelSysrootGetKblParam(void)
 }
 #endif
 
-/* PLACEHOLDER: meanings and callback signatures of raw Sysroot state words. */
+/* the fields other modules read by offset */
 _Static_assert(offsetof(struct SysrootState, status) == 0x28,
-	       "Sysroot word28 offset");
+	       "Sysroot status offset");
 _Static_assert(offsetof(struct SysrootState, bootArgs) == 0x70,
-	       "Sysroot word70 offset");
+	       "Sysroot bootArgs offset");
 _Static_assert(offsetof(struct SysrootState, factorySystemSwVersion) == 0x74,
-	       "Sysroot word74 offset");
+	       "Sysroot factorySystemSwVersion offset");
 _Static_assert(offsetof(struct SysrootState, pervasiveDword) == 0x78,
-	       "Sysroot word78 offset");
+	       "Sysroot pervasiveDword offset");
 _Static_assert(offsetof(struct SysrootState, kermitRevision) == 0x7c,
-	       "Sysroot word7c offset");
+	       "Sysroot kermitRevision offset");
 _Static_assert(offsetof(struct SysrootState, modelInfo) == 0x80,
-	       "Sysroot word80 offset");
+	       "Sysroot modelInfo offset");
 _Static_assert(offsetof(struct SysrootState, fallbackPUIDEntryHeap) == 0x2e0,
-	       "Sysroot word2e0 offset");
+	       "Sysroot fallbackPUIDEntryHeap offset");
 _Static_assert(offsetof(struct SysrootState, intrMMUContext) == 0x314,
-	       "Sysroot word314 offset");
+	       "Sysroot intrMMUContext offset");
 _Static_assert(offsetof(struct SysrootState, vbaseResetVector) == 0x318,
-	       "Sysroot word318 offset");
+	       "Sysroot vbaseResetVector offset");
 _Static_assert(offsetof(struct SysrootState, sharedMemory) == 0x320,
-	       "Sysroot word320 offset");
+	       "Sysroot sharedMemory offset");
 _Static_assert(offsetof(struct SysrootState, appMgrSpawnProcess) == 0x328,
-	       "Sysroot word328 offset");
+	       "Sysroot appMgrSpawnProcess offset");
 _Static_assert(offsetof(struct SysrootState, getShellPid) == 0x32c,
-	       "Sysroot word32c offset");
+	       "Sysroot getShellPid offset");
 _Static_assert(offsetof(struct SysrootState, registeredPid) == 0x35c,
-	       "Sysroot word35c offset");
+	       "Sysroot registeredPid offset");
 _Static_assert(offsetof(struct SysrootState, licMgrGetLicenseStatus) == 0x368,
-	       "Sysroot word368 offset");
+	       "Sysroot licMgrGetLicenseStatus offset");
 _Static_assert(offsetof(struct SysrootState, utMgrHasPsmTestFlag) == 0x36c,
-	       "Sysroot word36c offset");
+	       "Sysroot utMgrHasPsmTestFlag offset");
 _Static_assert(offsetof(struct SysrootState, utMgrHasSystemDataFilePlayReadyFlag) == 0x370,
-	       "Sysroot word370 offset");
+	       "Sysroot utMgrHasSystemDataFilePlayReadyFlag offset");
 _Static_assert(offsetof(struct SysrootState, busErrorHandler) == 0x374,
-	       "Sysroot word374 offset");
+	       "Sysroot busErrorHandler offset");
 _Static_assert(offsetof(struct SysrootState, busErrorGetInfo) == 0x378,
-	       "Sysroot word378 offset");
+	       "Sysroot busErrorGetInfo offset");
 _Static_assert(offsetof(struct SysrootState, coredumpTrigger) == 0x37c,
-	       "Sysroot word37c offset");
+	       "Sysroot coredumpTrigger offset");
 _Static_assert(offsetof(struct SysrootState, coredumpCancel) == 0x380,
-	       "Sysroot word380 offset");
+	       "Sysroot coredumpCancel offset");
 _Static_assert(offsetof(struct SysrootState, coredumpAddThread) == 0x384,
-	       "Sysroot word384 offset");
+	       "Sysroot coredumpAddThread offset");
 _Static_assert(offsetof(struct SysrootState, ttyGetLogRaw) == 0x388,
-	       "Sysroot word388 offset");
+	       "Sysroot ttyGetLogRaw offset");
 _Static_assert(offsetof(struct SysrootState, utMgrHasAuthId) == 0x38c,
-	       "Sysroot word38c offset");
+	       "Sysroot utMgrHasAuthId offset");
 _Static_assert(offsetof(struct SysrootState, utMgrGetTrilithiumBuffer) == 0x390,
-	       "Sysroot word390 offset");
+	       "Sysroot utMgrGetTrilithiumBuffer offset");
 _Static_assert(offsetof(struct SysrootState, utMgrHasNpTestFlag) == 0x394,
-	       "Sysroot word394 offset");
+	       "Sysroot utMgrHasNpTestFlag offset");
 _Static_assert(offsetof(struct SysrootState, getSystemSwVersion) == 0x398,
-	       "Sysroot word398 offset");
+	       "Sysroot getSystemSwVersion offset");
 _Static_assert(offsetof(struct SysrootState, ledSetMode) == 0x39c,
-	       "Sysroot word39c offset");
+	       "Sysroot ledSetMode offset");
 _Static_assert(offsetof(struct SysrootState, getNidName) == 0x3a4,
-	       "Sysroot word3a4 offset");
+	       "Sysroot getNidName offset");
 _Static_assert(offsetof(struct SysrootState, sysStateEvent) == 0x3a8,
-	       "Sysroot word3a8 offset");
+	       "Sysroot sysStateEvent offset");
 _Static_assert(offsetof(struct SysrootState, sendSystemError) == 0x3ac,
-	       "Sysroot word3ac offset");
+	       "Sysroot sendSystemError offset");
 _Static_assert(offsetof(struct SysrootState, setSwInfoInt) == 0x3b4,
-	       "Sysroot word3b4 offset");
+	       "Sysroot setSwInfoInt offset");
 _Static_assert(offsetof(struct SysrootState, setSwInfoStr) == 0x3b8,
-	       "Sysroot word3b8 offset");
+	       "Sysroot setSwInfoStr offset");
 _Static_assert(offsetof(struct SysrootState, setSwInfoBin) == 0x3bc,
-	       "Sysroot word3bc offset");
+	       "Sysroot setSwInfoBin offset");
 _Static_assert(offsetof(struct SysrootState, syncLocalTime) == 0x3c0,
-	       "Sysroot word3c0 offset");
+	       "Sysroot syncLocalTime offset");
 _Static_assert(offsetof(struct SysrootState, processEventOps) == 0x3c4,
-	       "Sysroot word3c4 offset");
+	       "Sysroot processEventOps offset");
 _Static_assert(offsetof(struct SysrootState, dbgpOps) == 0x3c8,
-	       "Sysroot word3c8 offset");
+	       "Sysroot dbgpOps offset");
 _Static_assert(offsetof(struct SysrootState, dbgpNetAttach) == 0x3cc,
-	       "Sysroot word3cc offset");
+	       "Sysroot dbgpNetAttach offset");
 _Static_assert(offsetof(struct SysrootState, dbgpNetDetach) == 0x3d0,
-	       "Sysroot word3d0 offset");
+	       "Sysroot dbgpNetDetach offset");
 _Static_assert(offsetof(struct SysrootState, tmcpCommand) == 0x3d4,
-	       "Sysroot word3d4 offset");
+	       "Sysroot tmcpCommand offset");
 _Static_assert(offsetof(struct SysrootState, debugHook) == 0x3d8,
-	       "Sysroot word3d8 offset");
+	       "Sysroot debugHook offset");
 _Static_assert(offsetof(struct SysrootState, sdbgpNetAttach) == 0x3dc,
-	       "Sysroot word3dc offset");
+	       "Sysroot sdbgpNetAttach offset");
 _Static_assert(offsetof(struct SysrootState, sdbgpNetDetach) == 0x3e0,
-	       "Sysroot word3e0 offset");
+	       "Sysroot sdbgpNetDetach offset");
 _Static_assert(offsetof(struct SysrootState, appMgrGetAppInfoByPid) == 0x3e4,
-	       "Sysroot word3e4 offset");
+	       "Sysroot appMgrGetAppInfoByPid offset");
 _Static_assert(offsetof(struct SysrootState, appMgrGetAppInfoByAppId) == 0x3e8,
-	       "Sysroot word3e8 offset");
+	       "Sysroot appMgrGetAppInfoByAppId offset");
 _Static_assert(offsetof(struct SysrootState, appMgrGetAppList) == 0x3ec,
-	       "Sysroot word3ec offset");
+	       "Sysroot appMgrGetAppList offset");
 _Static_assert(offsetof(struct SysrootState, pfsMgrGetMountInfo) == 0x3f0,
-	       "Sysroot word3f0 offset");
+	       "Sysroot pfsMgrGetMountInfo offset");
 _Static_assert(offsetof(struct SysrootState, btOps) == 0x3f4,
-	       "Sysroot word3f4 offset");
+	       "Sysroot btOps offset");
 _Static_assert(offsetof(struct SysrootState, hidOps) == 0x3f8,
-	       "Sysroot word3f8 offset");
+	       "Sysroot hidOps offset");
 
 #if !SYSMEM_NSKBL
 void sceKernelSysrootSetVbaseResetVector(void *vector)

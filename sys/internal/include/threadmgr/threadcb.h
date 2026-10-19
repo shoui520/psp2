@@ -8,7 +8,9 @@
  * callbackNest, pUIDEntryHeap and magic are in threadmgr's 3.6x/4.00 messages
  * ("pRunningThreadCB->currentCpuId", "pThreadCB->magic", ...). The other p-, init-
  * and current- names come from the 0.990.030-I internal system debugger prototype
- * firmware's ThreadCB debug info, matched by meaning. The rest are ours; unk* are unknown.
+ * firmware's ThreadCB debug info, matched by meaning. The rest are ours. The reserved
+ * ranges are read and written by no module: no C does, and no original of any firmware
+ * reaches them through the current thread (TPIDRPRW), checked 2026-10-19.
  *
  * Every module includes this header instead of defining its own view.
  */
@@ -60,7 +62,7 @@ typedef struct ThreadRegisterContext {
 	uint32_t priorityMask;			/* 0xbc: the GIC priority mask */
 	uint32_t pc;				/* 0xc0 */
 	uint32_t cpsr;				/* 0xc4 */
-	uint32_t reserved0;			/* 0xc8: zeroed */
+	uint32_t dbgdscr;			/* 0xc8: DBGDSCR at an exception, else 0 */
 	uint8_t reserved1[0x24];
 	uint32_t pmcntenset;			/* 0xf0: PMCNTENSET */
 	uintptr_t callbackVfp;			/* 0xf4: callbackContext's VFP save area (| 1) */
@@ -96,7 +98,7 @@ typedef struct ThreadTlsSlotMemory {
  * Sony's code clears it byte by byte.
  */
 typedef struct __attribute__((packed)) SyslibtraceThreadCB {
-	uint8_t unk00[4];
+	uint8_t reserved[4];			/* zeroed at allocation, never read */
 	void *savedLr;				/* 0x04: the caller of the traced syscall */
 } SyslibtraceThreadCB;
 
@@ -132,7 +134,7 @@ typedef struct ThreadCB {
 	uintptr_t pKStack;			/* 0x74: its kernel stack */
 	SceSize kStackSize;			/* 0x78 */
 	void *restartWaitMultipleEvents;	/* 0x7c: kept for a restarted WME syscall */
-	uint8_t unk80[0x10];
+	uint8_t reserved0[0x10];		/* 0x80 */
 	ListNode processLink;		/* 0x90: in the process's thread list (SceProcessObject.threads) */
 	SceUID userThreadId;
 	uint32_t status;			/* 0x9c */
@@ -155,7 +157,7 @@ typedef struct ThreadCB {
 	uintptr_t entry;			/* 0xe0: the entry point */
 	SceSize argSize;			/* 0xe4: the start argument */
 	uintptr_t pArgBlock;			/* 0xe8 */
-	uint8_t unkEC[8];
+	uint8_t reserved1[8];			/* 0xec */
 	void *addressSpace;			/* 0xf4: its process's address space object */
 	void *pUIDEntryHeap;			/* 0xf8: its process's PUID entry heap */
 	SceUID tlsProcessId;

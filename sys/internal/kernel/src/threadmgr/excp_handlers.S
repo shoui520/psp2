@@ -27,7 +27,7 @@
 .fpu neon
 .text
 
-/* the excpmgr exception context */
+/* the excpmgr exception context (SceExcpmgrContext, excpmgr/excpmgr.h) */
 .equ EXCP_CTX_R0,		0x00	/* r0-r14 */
 .equ EXCP_CTX_PC,		0x3c
 .equ EXCP_CTX_CPSR,		0x44
@@ -35,25 +35,25 @@
 .equ EXCP_CTX_FPSCR,		0x4c
 .equ EXCP_CTX_FPEXC,		0x50
 .equ EXCP_CTX_CONTEXTIDR,	0x54
-.equ EXCP_CTX_UNK58,		0x58
+.equ EXCP_CTX_TPIDRURW,		0x58
 .equ EXCP_CTX_TPIDRURO,		0x5c
 .equ EXCP_CTX_THREAD,		0x60	/* the running thread's ThreadCB */
-.equ EXCP_CTX_TTBR,		0x64
-.equ EXCP_CTX_SYS_LR,		0x6c	/* PLACEHOLDER: kept when the exception came from SYS mode */
+.equ EXCP_CTX_TTBR1,		0x64
+.equ EXCP_CTX_DACR,		0x6c
 .equ EXCP_CTX_DFSR,		0x70
 .equ EXCP_CTX_IFSR,		0x74
-.equ EXCP_CTX_FAR,		0x78
-.equ EXCP_CTX_UNK7C,		0x7c
-.equ EXCP_CTX_UNK80,		0x80
-.equ EXCP_CTX_UNK84,		0x84
+.equ EXCP_CTX_DFAR,		0x78
+.equ EXCP_CTX_IFAR,		0x7c
+.equ EXCP_CTX_PAR,		0x80
+.equ EXCP_CTX_TEEHBR,		0x84
 .equ EXCP_CTX_PMCR,		0x88
-.equ EXCP_CTX_UNK8C,		0x8c
-.equ EXCP_CTX_UNK90,		0x90
-.equ EXCP_CTX_UNK94,		0x94
+.equ EXCP_CTX_PMCNTENSET,	0x8c
+.equ EXCP_CTX_PMCNTENSET2,	0x90	/* the thread's PMOVSR comes from it */
+.equ EXCP_CTX_PMSELR,		0x94
 .equ EXCP_CTX_PMCCNTR,		0x98
 .equ EXCP_CTX_PMUSERENR,	0x9c
 .equ EXCP_CTX_PMEVENT,		0xa0	/* 6 counters, type and count */
-.equ EXCP_CTX_UNKD8,		0xd8
+.equ EXCP_CTX_DBGDSCR,		0xd8
 .equ EXCP_CTX_VFP,		0x100	/* d0-d31 */
 .equ EXCP_DEBUG_REQUEST_MASK,	0xffff
 .equ EXCP_DEBUG_REQUEST_COUNT,	5
@@ -62,13 +62,13 @@
 .equ THREAD_THREAD_ID,		0x08
 .equ THREAD_REGISTERS,		0x0c
 .equ THREAD_VFP_CONTEXT,	0x10
-.equ REGS_UNK48,		0x48
-.equ REGS_CPACR,		0x4c	/* then unk50 ... pmuserenr */
+.equ REGS_KERNEL_DACR,		0x48
+.equ REGS_CPACR,		0x4c	/* then tpidrurw ... pmuserenr */
 .equ REGS_PMCCNTR,		0x74
 .equ REGS_PMEVENT,		0x78
-.equ REGS_DFSR,			0xa8	/* then ifsr, far, unkB4, unkB8 */
-.equ REGS_PC,			0xc0	/* then cpsr */
-.equ REGS_UNKF0,		0xf0
+.equ REGS_DFSR,			0xa8	/* then ifsr, dfar, ifar, teehbr */
+.equ REGS_PC,			0xc0	/* then cpsr, dbgdscr */
+.equ REGS_PMCNTENSET,		0xf0
 
 .equ CPSR_MODE_MASK,		0x1f
 .equ CPSR_MODE_SYS,		0x1f
@@ -140,7 +140,7 @@ idleThreadEntry:
 	stmia	r2!, {r4-r10}
 	ldmia	r3!, {r4-r11}			/* r7-r14 */
 	stmia	r2!, {r4-r11}
-	add	r2, r2, #8			/* to REGS_UNK48 */
+	add	r2, r2, #8			/* to REGS_KERNEL_DACR */
 	ldr	r3, [r1, #THREAD_VFP_CONTEXT]
 	cmp	r3, #0
 	addne	r4, r0, #EXCP_CTX_VFP
@@ -154,22 +154,22 @@ idleThreadEntry:
 	ldr	r3, [r0, #EXCP_CTX_CPSR]
 	and	r3, r3, #CPSR_MODE_MASK
 	cmp	r3, #CPSR_MODE_SYS
-	ldreq	r3, [r0, #EXCP_CTX_SYS_LR]
+	ldreq	r3, [r0, #EXCP_CTX_DACR]	/* a kernel thread's DACR */
 	streq	r3, [r2], #4
 	addne	r2, r2, #4
 	ldr	r3, [r0, #EXCP_CTX_CPACR]	/* REGS_CPACR ... pmuserenr */
-	ldr	r4, [r0, #EXCP_CTX_UNK58]
+	ldr	r4, [r0, #EXCP_CTX_TPIDRURW]
 	ldr	r5, [r0, #EXCP_CTX_TPIDRURO]
-	ldr	r6, [r0, #EXCP_CTX_TTBR]
+	ldr	r6, [r0, #EXCP_CTX_TTBR1]
 	ldr	r7, [r0, #EXCP_CTX_CONTEXTIDR]
-	ldr	r8, [r0, #EXCP_CTX_UNK80]
+	ldr	r8, [r0, #EXCP_CTX_PAR]
 	ldr	r9, [r0, #EXCP_CTX_PMCR]
-	ldr	r10, [r0, #EXCP_CTX_UNK90]
-	ldr	r11, [r0, #EXCP_CTX_UNK94]
+	ldr	r10, [r0, #EXCP_CTX_PMCNTENSET2]
+	ldr	r11, [r0, #EXCP_CTX_PMSELR]
 	ldr	r12, [r0, #EXCP_CTX_PMUSERENR]
 	stmia	r2!, {r3-r12}
-	ldr	r3, [r0, #EXCP_CTX_UNK8C]
-	str	r3, [r2, #REGS_UNKF0 - REGS_PMCCNTR]
+	ldr	r3, [r0, #EXCP_CTX_PMCNTENSET]
+	str	r3, [r2, #REGS_PMCNTENSET - REGS_PMCCNTR]
 	ldr	r4, [r0, #EXCP_CTX_PMCCNTR]
 	str	r4, [r2], #4
 	add	r7, r0, #EXCP_CTX_PMEVENT
@@ -177,16 +177,16 @@ idleThreadEntry:
 	ldrd	r4, r5, [r7], #8
 	strd	r4, r5, [r2], #8
 	.endr
-	ldr	r3, [r0, #EXCP_CTX_DFSR]	/* REGS_DFSR ... unkB8 */
+	ldr	r3, [r0, #EXCP_CTX_DFSR]	/* REGS_DFSR ... teehbr */
 	ldr	r4, [r0, #EXCP_CTX_IFSR]
-	ldr	r5, [r0, #EXCP_CTX_FAR]
-	ldr	r6, [r0, #EXCP_CTX_UNK7C]
-	ldr	r7, [r0, #EXCP_CTX_UNK84]
+	ldr	r5, [r0, #EXCP_CTX_DFAR]
+	ldr	r6, [r0, #EXCP_CTX_IFAR]
+	ldr	r7, [r0, #EXCP_CTX_TEEHBR]
 	stmia	r2!, {r3-r7}
 	add	r2, r2, #4			/* to REGS_PC */
 	ldr	r3, [r0, #EXCP_CTX_PC]
 	ldr	r4, [r0, #EXCP_CTX_CPSR]
-	ldr	r5, [r0, #EXCP_CTX_UNKD8]
+	ldr	r5, [r0, #EXCP_CTX_DBGDSCR]
 	stmia	r2!, {r3-r5}
 	push	{r0-r3, r12, lr}
 	ldr	r0, [r0, #EXCP_CTX_THREAD]

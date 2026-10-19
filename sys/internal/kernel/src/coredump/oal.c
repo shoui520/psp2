@@ -1675,7 +1675,7 @@ int oalGetThreadRegInfo(SceUID pid, SceUID threadId,
 		info->tpidrurw = context->tpidrurw;
 		info->cpacr = context->cpacr;
 		info->userDacr = context->userDacr;
-		info->savedControl = (context->reserved0 & 0x1fc) | 0x01371002;
+		info->savedControl = (context->dbgdscr & 0x1fc) | 0x01371002;
 		info->ifsr = context->ifsr;
 		info->ifar = context->ifar;
 		info->dfsr = context->dfsr;

@@ -604,8 +604,6 @@ int gxmPdsBuildPixelProgram(GxmChunkBuffer *buffer, SceUInt32 samples, SceUInt32
 
 /* --- USSE register budgets --- */
 
-
-
 void gxmDmsVertexInfo(SceUInt32 primaryRegs, SceUInt32 secondaryRegs, SceUInt32 tempRegs,
 			SceUInt32 outputRegs, SceUInt8 phased, GxmDmsInfo *info);
 void gxmDmsFragmentInfo(SceUInt32 primaryRegs, SceUInt32 secondaryRegs, SceUInt32 tempRegs,
@@ -808,22 +806,105 @@ typedef struct GxmMteState {
 	SceUInt32 vertexOutputs2;
 } GxmMteState;
 
+/* a block the PDS reads, reserved in a chunk buffer per draw */
+typedef struct GxmPdsBlock {
+	SceUInt32 address;
+	SceUInt16 dataSize;		/* what the PDS state words give the hardware */
+	SceUInt16 size;			/* the bytes reserved */
+} GxmPdsBlock;
+
+/*
+ * An immediate context's ring buffer (sceGxmCreateContext sets one up for each chunk
+ * buffer, and the chunk buffer's refill waits on it).
+ */
+typedef struct GxmRingBuffer {
+	SceUInt32 memory;
+	SceUInt32 gpuOffset;
+	SceSize size;
+	SceSize usableSize;		/* size less GXM_CHUNK_LINK_RESERVE when linked */
+	SceSize halfSize;		/* half the usable size */
+	SceUInt8 linked;
+	SceUInt32 threshold;		/* memory + halfSize at first; the refill moves it */
+	volatile SceUInt32 *readOffset;	/* the GPU's position, in the context's slot */
+	SceUInt32 lastOffset;		/* the refill measures from it; 0 at first */
+} GxmRingBuffer;
+
+struct SceGxmPrecomputedFragmentState;
+struct SceGxmPrecomputedVertexState;
+struct SceGxmRenderTarget;
+
+/*
+ * The default uniform buffer modes (fragmentDefaultUniformBufferMode,
+ * vertexDefaultUniformBufferMode): a program change clears all but SET.
+ */
+#define GXM_DEFAULT_UNIFORM_BUFFER_NONE		0
+#define GXM_DEFAULT_UNIFORM_BUFFER_RESERVED	1	/* sceGxmReserve*DefaultUniformBuffer */
+#define GXM_DEFAULT_UNIFORM_BUFFER_SET		3	/* sceGxmSet*DefaultUniformBuffer */
+
 typedef struct SceGxmContext {
 	SceUInt32 type;			/* SCE_GXM_CONTEXT_TYPE_* */
 	SceUInt32 flags;		/* GXM_CONTEXT_FLAG_* */
 	GxmChunkBuffer vdmBuffer;	/* 0x008 */
-	SceUInt8 unk01c[0x44 - 0x1c];
-	const SceGxmFragmentProgram *fragmentProgram;
-	SceUInt8 unk048[0x1b8 - 0x48];
+	GxmChunkBuffer vertexBuffer;	/* 0x01c */
+	GxmChunkBuffer fragmentBuffer;	/* 0x030 */
+
+	/* the fragment stage */
+	const SceGxmFragmentProgram *fragmentProgram;	/* 0x044 */
+	SceUInt32 fragmentDefaultUniformBufferMode;
+	const void *fragmentUniformBuffers[15];		/* 0x04c: [14] the default one */
+	void *fragmentTextureBlock;	/* 0x088: the program's texture words, per draw */
+	SceUInt32 fragmentProgramWords[3];		/* the program's state words */
+	void *fragmentConstantBlock;	/* 0x098: buffer addresses, literals, texture words */
+	const void *fragmentDefaultUniformBuffer;
+	SceGxmTexture fragmentTextures[16];		/* 0x0a0 */
+	const struct SceGxmPrecomputedFragmentState *precomputedFragmentState;	/* 0x1a0 */
+	const struct SceGxmPrecomputedFragmentState *appliedFragmentState;	/* last written */
+	GxmPdsBlock fragmentDmaBlock;	/* 0x1a8: the uniform buffers' DMA list */
+	GxmPdsBlock fragmentTextureStateBlock;
 	SceUInt32 frontFragmentProgramMode;
 	SceUInt32 backFragmentProgramMode;
 	GxmMteState state;		/* 0x1c0 */
-	SceUInt8 unk224[0x4b4 - 0x224];
+
+	/* the vertex stage */
+	const SceGxmVertexProgram *vertexProgram;	/* 0x224 */
+	SceUInt32 vertexDefaultUniformBufferMode;
+	const void *vertexUniformBuffers[15];		/* 0x22c: [14] the default one */
+	void *vertexTextureBlock;	/* 0x268 */
+	SceUInt32 vertexProgramWords[3];
+	void *vertexConstantBlock;	/* 0x278 */
+	const void *vertexDefaultUniformBuffer;
+	const void *vertexStreams[16];			/* 0x280 */
+	SceGxmTexture vertexTextures[16];		/* 0x2c0 */
+	const struct SceGxmPrecomputedVertexState *precomputedVertexState;	/* 0x3c0 */
+	const struct SceGxmPrecomputedVertexState *appliedVertexState;
+	GxmPdsBlock vertexDmaBlock;	/* 0x3c8 */
+	GxmPdsBlock vertexStreamBlock;	/* 0x3d0: the streams' descriptors */
+
+	SceUInt8 insideScene;		/* 0x3d8: between sceGxmBeginScene and sceGxmEndScene */
+	volatile SceUInt32 *slot;	/* 0x3dc: its slot table slot: the rings' read offsets */
+	GxmRingBuffer vdmRing;		/* 0x3e0 */
+	GxmRingBuffer vertexRing;	/* 0x404 */
+	GxmRingBuffer fragmentRing;	/* 0x428 */
+	GxmChunkBuffer fragmentUsseBuffer;	/* 0x44c */
+	GxmRingBuffer fragmentUsseRing;	/* 0x460 */
+	SceUInt32 sceneState[9];	/* 0x484: PLACEHOLDER: what the scene's end reads */
+	SceUInt32 sceneFlags;		/* 0x4a8: sceGxmBeginScene's flags */
+	const struct SceGxmRenderTarget *renderTarget;
+	SceUInt32 tileLimitX;		/* 0x4b0: stored with tileLimitY, from one pair */
 	SceUInt32 tileLimitY;		/* 0x4b4: immediate contexts clip the region to it */
 } SceGxmContext;
 
 GXM_ASSERT_OFFSET(SceGxmContext, state, 0x1c0);
 GXM_ASSERT_OFFSET(SceGxmContext, tileLimitY, 0x4b4);
+GXM_ASSERT_OFFSET(SceGxmContext, fragmentProgram, 0x44);
+GXM_ASSERT_OFFSET(SceGxmContext, fragmentTextures, 0xa0);
+GXM_ASSERT_OFFSET(SceGxmContext, frontFragmentProgramMode, 0x1b8);
+GXM_ASSERT_OFFSET(SceGxmContext, vertexProgram, 0x224);
+GXM_ASSERT_OFFSET(SceGxmContext, vertexStreams, 0x280);
+GXM_ASSERT_OFFSET(SceGxmContext, vertexTextures, 0x2c0);
+GXM_ASSERT_OFFSET(SceGxmContext, insideScene, 0x3d8);
+GXM_ASSERT_OFFSET(SceGxmContext, fragmentUsseRing, 0x460);
+GXM_ASSERT_OFFSET(SceGxmContext, sceneFlags, 0x4a8);
 
 static inline SceUInt32 gxmFloatBits(float value)
 {
@@ -1057,7 +1138,6 @@ static inline SceSize gxmUsseAlignment(void)
 {
 	return (gxmGlobals.compatFlags & GXM_COMPAT_USSE_OLD_HEADER) ? 8 : 16;
 }
-
 
 GXM_ASSERT_OFFSET(GxmGlobals, top, 0x0a4);
 GXM_ASSERT_OFFSET(GxmGlobals, top.memContext, 0x160);

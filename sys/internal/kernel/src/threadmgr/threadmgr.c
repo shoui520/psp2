@@ -3251,7 +3251,7 @@ void initRegisterContext(struct ThreadRegisterContext *regs)
 	regs->ifsr = 0;
 	regs->dfar = 0;
 	regs->ifar = 0;
-	regs->reserved0 = 0;
+	regs->dbgdscr = 0;
 	regs->pc = 0;
 	regs->cpsr = 0;
 	regs->teehbr = 0x2000;

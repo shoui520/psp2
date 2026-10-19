@@ -181,7 +181,7 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 	SceUInt32 nseg;
 	SceUInt32 *end;
 	SceUInt32 h, form, step, patchSeg, symSeg, addend, type1, type2;
-	SceUInt32 offset, off2, off3, d1, d2, d3, d4, bits, width;
+	SceUInt32 offset, offset2, offset3, d1, d2, d3, d4, bits, width;
 	SceUInt32 S, P, limit;
 	SceUInt8 *kaddr;
 	int i;
@@ -272,10 +272,11 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 231, "form0 - r_type2 or dist_2 invalid\n");
 				return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 			}
-			off2 = offset + (h >> 27);
-			if (off2 > limit - 4)
+			offset2 = offset + (h >> 27);
+			if (offset2 > limit - 4)
 				goto wrong_offset;
-			apply_one_relocation((SceUInt32 *)(kaddr + off2), type2, off2, S, addend, P);
+			apply_one_relocation((SceUInt32 *)(kaddr + offset2), type2, offset2,
+					     S, addend, P);
 			step = 12;
 			g_relocForms |= 2;
 			break;
@@ -320,10 +321,11 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 			if (offset > limit - 4)
 				goto wrong_offset;
 			apply_one_relocation((SceUInt32 *)(kaddr + offset), type1, offset, S, addend, P);
-			off2 = offset + (h >> 27);
-			if (off2 > limit - 4)
+			offset2 = offset + (h >> 27);
+			if (offset2 > limit - 4)
 				goto wrong_offset;
-			apply_one_relocation((SceUInt32 *)(kaddr + off2), type2, off2, S, addend, P);
+			apply_one_relocation((SceUInt32 *)(kaddr + offset2), type2, offset2,
+					     S, addend, P);
 			step = 8;
 			g_relocForms |= 0x10;
 			break;
@@ -342,10 +344,11 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 			if (offset > limit - 4)
 				goto wrong_offset;
 			apply_one_relocation((SceUInt32 *)(kaddr + offset), type1, offset, S, addend, P);
-			off2 = offset + (h >> 27);
-			if (off2 > limit - 4)
+			offset2 = offset + (h >> 27);
+			if (offset2 > limit - 4)
 				goto wrong_offset;
-			apply_one_relocation((SceUInt32 *)(kaddr + off2), type2, off2, S, addend, P);
+			apply_one_relocation((SceUInt32 *)(kaddr + offset2), type2, offset2,
+					     S, addend, P);
 			step = 4;
 			g_relocForms |= 0x20;
 			break;
@@ -367,18 +370,20 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 			if (offset > limit - 4)
 				goto wrong_offset;
 			apply_one_relocation((SceUInt32 *)(kaddr + offset), type1, offset, S, addend, P);
-			off2 = offset + d2;
-			if (off2 > limit - 4)
+			offset2 = offset + d2;
+			if (offset2 > limit - 4)
 				goto wrong_offset;
 			offset += d3;
-			apply_one_relocation((SceUInt32 *)(kaddr + off2), type2, off2, S, addend, P);
+			apply_one_relocation((SceUInt32 *)(kaddr + offset2), type2, offset2,
+					     S, addend, P);
 			if (offset > limit - 4)
 				goto wrong_offset;
 			apply_one_relocation((SceUInt32 *)(kaddr + offset), type1, offset, S, addend, P);
-			off3 = offset + d4;
-			if (off3 > limit - 4)
+			offset3 = offset + d4;
+			if (offset3 > limit - 4)
 				goto wrong_offset;
-			apply_one_relocation((SceUInt32 *)(kaddr + off3), type2, off3, S, addend, P);
+			apply_one_relocation((SceUInt32 *)(kaddr + offset3), type2, offset3,
+					     S, addend, P);
 			step = 4;
 			g_relocForms |= 0x40;
 			break;

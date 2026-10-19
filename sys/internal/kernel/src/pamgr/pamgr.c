@@ -762,15 +762,19 @@ int __attribute__((noinline)) waitTraceControl(struct PamgrPtmRegisters *trace)
 	}
 }
 
-/* Record kinds 1 and 2 encode two words and packed header fields;
- * kind03 accepts its complete lower header bits from the caller. */
-void writeTraceRecord02(uint32_t first, uint32_t second, uint16_t field16,
-			uint8_t field8)
+/*
+ * Record kinds 1 and 2 are threadmgr's hooks: the process and thread, then two values
+ * packed into the header; kind 3 takes its whole lower header from the caller. Sony's
+ * hooks take the two values narrowed (the header keeps 16 and 8 bits of them), so they
+ * are registered with a cast.
+ */
+void writeTraceRecord02(SceUID processId, SceUID threadId, uint16_t priority,
+			uint8_t cpuAffinityMask)
 {
 	pamgrState.pfmRegisters->traceFifo =
-		0x020c0000 | (uint16_t)(field16 << 8) | field8;
-	pamgrState.pfmRegisters->traceFifo = first;
-	pamgrState.pfmRegisters->traceFifo = second;
+		0x020c0000 | (uint16_t)(priority << 8) | cpuAffinityMask;
+	pamgrState.pfmRegisters->traceFifo = processId;
+	pamgrState.pfmRegisters->traceFifo = threadId;
 }
 
 void writeTraceRecord03(uint32_t first, uint32_t second, uint32_t header)
@@ -780,13 +784,13 @@ void writeTraceRecord03(uint32_t first, uint32_t second, uint32_t header)
 	pamgrState.pfmRegisters->traceFifo = second;
 }
 
-void writeTraceRecord01(uint32_t first, uint32_t second, uint16_t field16,
-			uint8_t field8)
+void writeTraceRecord01(SceUID processId, SceUID threadId, uint16_t newPriority,
+			uint8_t oldPriority)
 {
 	pamgrState.pfmRegisters->traceFifo =
-		0x010c0000 | (uint16_t)(field16 << 8) | field8;
-	pamgrState.pfmRegisters->traceFifo = first;
-	pamgrState.pfmRegisters->traceFifo = second;
+		0x010c0000 | (uint16_t)(newPriority << 8) | oldPriority;
+	pamgrState.pfmRegisters->traceFifo = processId;
+	pamgrState.pfmRegisters->traceFifo = threadId;
 }
 
 /* Shared QA permission check used before enabling tracing. */
@@ -981,11 +985,13 @@ int startTrace(unsigned int channel)
 			clearSyscallTraceCallbacks();
 		} else {
 			if (pamgrState.traceRecordMask & 2)
-				SceThreadmgrForKernel_A3975A5A(writeTraceRecord02);
+				SceThreadmgrForKernel_A3975A5A(
+					(ThreadmgrOnCpuHook)writeTraceRecord02);
 			if (pamgrState.traceRecordMask & 4)
 				SceThreadmgrForKernel_F885ECCA(writeTraceRecord03);
 			if (pamgrState.traceRecordMask & 1)
-				SceThreadmgrForKernel_9605DF7D(writeTraceRecord01);
+				SceThreadmgrForKernel_9605DF7D(
+					(ThreadmgrPriorityChangeHook)writeTraceRecord01);
 			callbacks = pamgrState.traceRecordMask & 0x18;
 			if (callbacks == 0x18)
 				setSyscallCallbacks(sceKernelPaSetSyscallEnter,
