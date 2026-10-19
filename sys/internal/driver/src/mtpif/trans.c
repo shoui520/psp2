@@ -10,9 +10,6 @@
 #include <acmgr/acmgr.h>
 #include <sysmem/procevent.h>
 
-#define MTP_INVALID	((int)0x80543603)
-#define MTP_UNAVAILABLE	((int)0x8054360c)
-#define MTP_OWNER	((int)0x80543602)
 #define MTP_BUFFER_SIZE	0x10000
 
 /* Opaque port identity; name unknown. */
@@ -141,8 +138,8 @@ int _sceMtpIfModuleStart(SceSize arglen, const char *argp)
 int SceMtpIfForDriver_92CD107E(const void *port)
 {
 	if (port != &s_port)
-		return MTP_INVALID;
-	return s_mtp.ops && s_mtp.ops->reset ? s_mtp.ops->reset() : MTP_UNAVAILABLE;
+		return MTP_ERROR_INVALID;
+	return s_mtp.ops && s_mtp.ops->reset ? s_mtp.ops->reset() : MTP_ERROR_UNAVAILABLE;
 }
 
 int SceMtpIfForDriver_117F7519(const void *port, void *command)
@@ -151,17 +148,17 @@ int SceMtpIfForDriver_117F7519(const void *port, void *command)
 
 	transfer.buffer = s_mtp.buffer;
 	if (port != &s_port || !command)
-		return MTP_INVALID;
+		return MTP_ERROR_INVALID;
 	return s_mtp.ops && s_mtp.ops->recvCommand ?
-		s_mtp.ops->recvCommand(command, &transfer) : MTP_UNAVAILABLE;
+		s_mtp.ops->recvCommand(command, &transfer) : MTP_ERROR_UNAVAILABLE;
 }
 
 int SceMtpIfForDriver_5766D257(const void *port, const void *response)
 {
 	if (port != &s_port || !response)
-		return MTP_INVALID;
+		return MTP_ERROR_INVALID;
 	return s_mtp.ops && s_mtp.ops->sendResponse ?
-		s_mtp.ops->sendResponse(response) : MTP_UNAVAILABLE;
+		s_mtp.ops->sendResponse(response) : MTP_ERROR_UNAVAILABLE;
 }
 
 int SceMtpIfForDriver_EDC3AB26(const void *port, void *buffer,
@@ -171,9 +168,9 @@ int SceMtpIfForDriver_EDC3AB26(const void *port, void *buffer,
 	int ret;
 
 	if (port != &s_port || !buffer)
-		return MTP_INVALID;
+		return MTP_ERROR_INVALID;
 	if (!s_mtp.ops || !s_mtp.ops->sendData)
-		return MTP_UNAVAILABLE;
+		return MTP_ERROR_UNAVAILABLE;
 	transfer.buffer = buffer;
 	transfer.size = size;
 	transfer.totalSize = totalSize;
@@ -184,9 +181,9 @@ int SceMtpIfForDriver_EDC3AB26(const void *port, void *buffer,
 int SceMtpIfForDriver_33F1826F(const void *port, MtpIfTransfer *transfer)
 {
 	if (port != &s_port || !transfer->buffer)
-		return MTP_INVALID;
+		return MTP_ERROR_INVALID;
 	return s_mtp.ops && s_mtp.ops->sendData ?
-		s_mtp.ops->sendData(transfer) : MTP_UNAVAILABLE;
+		s_mtp.ops->sendData(transfer) : MTP_ERROR_UNAVAILABLE;
 }
 
 int SceMtpIfForDriver_F0FA2D86(const void *port, void *buffer, SceUInt32 size)
@@ -195,9 +192,9 @@ int SceMtpIfForDriver_F0FA2D86(const void *port, void *buffer, SceUInt32 size)
 	int ret;
 
 	if (port != &s_port || !buffer)
-		return MTP_INVALID;
+		return MTP_ERROR_INVALID;
 	if (!s_mtp.ops || !s_mtp.ops->recvData)
-		return MTP_UNAVAILABLE;
+		return MTP_ERROR_UNAVAILABLE;
 	transfer.buffer = buffer;
 	transfer.size = size;
 	ret = s_mtp.ops->recvData(&transfer);
@@ -207,9 +204,9 @@ int SceMtpIfForDriver_F0FA2D86(const void *port, void *buffer, SceUInt32 size)
 int SceMtpIfForDriver_27D40294(const void *port, MtpIfTransfer *transfer)
 {
 	if (port != &s_port || !transfer->buffer)
-		return MTP_INVALID;
+		return MTP_ERROR_INVALID;
 	return s_mtp.ops && s_mtp.ops->recvData ?
-		s_mtp.ops->recvData(transfer) : MTP_UNAVAILABLE;
+		s_mtp.ops->recvData(transfer) : MTP_ERROR_UNAVAILABLE;
 }
 
 int SceMtpIfForDriver_B5E78858(const void *port, const SceUInt32 *command,
@@ -218,9 +215,9 @@ int SceMtpIfForDriver_B5E78858(const void *port, const SceUInt32 *command,
 	SceUInt32 count;
 
 	if (port != &s_port || !command || !event || event[6] > 3)
-		return MTP_INVALID;
+		return MTP_ERROR_INVALID;
 	if (!s_mtp.ops || !s_mtp.ops->sendEvent)
-		return MTP_UNAVAILABLE;
+		return MTP_ERROR_UNAVAILABLE;
 	count = event[6];
 	event[1] = command[1];
 	event[2] = command[2];
@@ -232,32 +229,32 @@ int SceMtpIfForDriver_B5E78858(const void *port, const SceUInt32 *command,
 int SceMtpIfForDriver_F1EC5992(const void *port)
 {
 	if (port != &s_port)
-		return MTP_INVALID;
-	return s_mtp.ops && s_mtp.ops->cancel ? s_mtp.ops->cancel() : MTP_UNAVAILABLE;
+		return MTP_ERROR_INVALID;
+	return s_mtp.ops && s_mtp.ops->cancel ? s_mtp.ops->cancel() : MTP_ERROR_UNAVAILABLE;
 }
 
 int SceMtpIfForDriver_05408B5B(const void *port, SceUInt32 timeout)
 {
 	if (port != &s_port)
-		return MTP_INVALID;
+		return MTP_ERROR_INVALID;
 	return s_mtp.ops && s_mtp.ops->waitConnect ?
-		s_mtp.ops->waitConnect(timeout) : MTP_UNAVAILABLE;
+		s_mtp.ops->waitConnect(timeout) : MTP_ERROR_UNAVAILABLE;
 }
 
 int SceMtpIfForDriver_2D9318E1(const void *port)
 {
 	if (port != &s_port)
-		return MTP_INVALID;
+		return MTP_ERROR_INVALID;
 	return s_mtp.ops && s_mtp.ops->isConnected ?
-		s_mtp.ops->isConnected() & 1 : MTP_UNAVAILABLE;
+		s_mtp.ops->isConnected() & 1 : MTP_ERROR_UNAVAILABLE;
 }
 
 int SceMtpIfForDriver_8D16B997(const void *port, int phase)
 {
 	if (port != &s_port)
-		return MTP_INVALID;
+		return MTP_ERROR_INVALID;
 	return s_mtp.ops && s_mtp.ops->changePhase ?
-		s_mtp.ops->changePhase(phase) : MTP_UNAVAILABLE;
+		s_mtp.ops->changePhase(phase) : MTP_ERROR_UNAVAILABLE;
 }
 
 const void *SceMtpIfForDriver_16D7DBCC(int port)
@@ -272,11 +269,11 @@ int sceMtpIfStartPort(const void *port)
 	if (sceKernelIsUserModeThread()) {
 		pid = sceKernelGetProcessId();
 		if (s_mtp.owner != -1 && pid != s_mtp.owner)
-			return MTP_OWNER;
+			return MTP_ERROR_BUSY;
 	}
 	s_mtp.owner = pid;
 	if (port != &s_port)
-		return MTP_INVALID;
+		return MTP_ERROR_INVALID;
 	return s_mtp.ops && s_mtp.ops->start ? s_mtp.ops->start() : sceUsbMtpStart();
 }
 
@@ -284,23 +281,23 @@ int SceMtpIfForDriver_E6453F21(const void *port)
 {
 	if (sceKernelIsUserModeThread()) {
 		if (s_mtp.owner == -1)
-			return MTP_OWNER;
+			return MTP_ERROR_BUSY;
 		s_mtp.owner = -1;
 	}
 	if (port != &s_port)
-		return MTP_INVALID;
+		return MTP_ERROR_INVALID;
 	return s_mtp.ops && s_mtp.ops->stop ?
 		s_mtp.ops->stop() : SceUsbMtpForDriver_08CD359F();
 }
 
 int SceMtpIfForDriver_CB685AC0(int port)
 {
-	return port == 1 ? sceUsbMtpStart() : MTP_INVALID;
+	return port == 1 ? sceUsbMtpStart() : MTP_ERROR_INVALID;
 }
 
 int SceMtpIfForDriver_FDF8C3C0(int port)
 {
-	return port == 1 ? SceUsbMtpForDriver_08CD359F() : MTP_INVALID;
+	return port == 1 ? SceUsbMtpForDriver_08CD359F() : MTP_ERROR_INVALID;
 }
 
 /* Enter/leave the kernel syscall domain (TPIDRPRW). */
@@ -431,7 +428,7 @@ int sceMtpIfSendDataWithParam(const void *port, MtpIfTransfer *params)
 	if (ret < 0)
 		goto unlock;
 	if (local.size > MTP_BUFFER_SIZE) {
-		ret = MTP_INVALID;
+		ret = MTP_ERROR_INVALID;
 		goto unlock;
 	}
 	ret = sceKernelCopyFromUser(s_mtp.buffer, local.buffer,
@@ -468,7 +465,7 @@ int sceMtpIfRecvDataWithParam(const void *port, MtpIfTransfer *params)
 	if (ret < 0)
 		goto unlock;
 	if (local.size > MTP_BUFFER_SIZE) {
-		ret = MTP_INVALID;
+		ret = MTP_ERROR_INVALID;
 		goto unlock;
 	}
 	transfer.buffer = s_mtp.buffer;

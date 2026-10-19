@@ -54,10 +54,12 @@
 set(PSP2_SRC "${CMAKE_CURRENT_LIST_DIR}/..")
 # the include roots of every module, after its own folder: Sony's internal interfaces
 # (sys/internal/include/<component>/), the SDK headers we write at Sony's SDK paths
-# (sys/sdk/target/include) and the build parameters (cmake/include: fw.h, skeleton.h)
+# (sys/sdk/target/include, and include_common for the SDK's headers shared across platforms)
+# and the build parameters (cmake/include: fw.h, skeleton.h)
 set(PSP2_INCLUDE_DIRS
 	"${PSP2_SRC}/sys/internal/include"
 	"${PSP2_SRC}/sys/sdk/target/include"
+	"${PSP2_SRC}/sys/sdk/target/include_common"
 	"${PSP2_SRC}/cmake/include")
 # every module in Sony's layout (psp2_module SCE_LAYOUT), e.g. to check the tables
 option(PSP2_SCE_LAYOUT "build every module with Sony's layout" OFF)

@@ -8,18 +8,13 @@
 #include "render_sce.h"
 #include <gpu/sgxmkif_sce.h>
 #include "sgx543_v1.164defs.h"
+#include <gpu/sgx_regs.h>
 #include <stddef.h>
 #include <string.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/cpu.h>
 #include <gpu/osfunc_sce.h>
 #include <gpu/power_sce.h>
-
-/* Pristine sgx_mkif_km.h register-bank selection for SGX MP. */
-#define SGX_REG_BANK_SHIFT 14
-#define SGX_REG_BANK_SIZE (1U << SGX_REG_BANK_SHIFT)
-#define SGX_REG_BANK_BASE_INDEX 2
-#define SGX_MP_CORE_SELECT(x, i) ((x) + (((i) + SGX_REG_BANK_BASE_INDEX) * SGX_REG_BANK_SIZE))
 
 /* SCE serializes asynchronous context cleanup using this kernel mutex. */
 SceUID gSGXCleanupMutex;

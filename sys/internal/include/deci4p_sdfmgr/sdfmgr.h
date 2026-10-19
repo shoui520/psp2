@@ -9,6 +9,11 @@
 #include <sysmem/debug.h>
 #include <deci4p_dfmgr/deci4p.h>
 
+/* the manager's errors (names unknown) */
+#define SDFMGR_ERROR_INVALID_ARGUMENT	((int)0x80090001)
+#define SDFMGR_ERROR_NO_SLOT		((int)0x80090003)
+#define SDFMGR_ERROR_BUSY		((int)0x80090007)
+
 /* protocol registration (sceSDfMgrOpen) */
 typedef struct SceSDfMgrProtocol {
 	SceSize size;				/* sizeof(SceSDfMgrProtocol) */

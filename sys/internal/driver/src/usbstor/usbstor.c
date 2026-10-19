@@ -134,7 +134,6 @@ struct ScsiSenseData {
 #define UNITS			8
 #define SENSE_UNIT_OTHER	7	/* the sense of every LUN above 6 */
 #define PACKET_SIZE		512	/* the buffered transfer size */
-#define TRANSFER_TIMEOUT	1000000
 #define DEVICE_INFO_SIZE	512
 #define IDSTORAGE_LEAF_USB	0x112	/* the serial number */
 #define STORAGE_THREAD_CPU	0x80000
@@ -463,7 +462,7 @@ static void completeCsw(SceUdcdDeviceRequest *req)
 
 static void cancelEndpoint(int ep, unsigned cancelled)
 {
-	unsigned timeout = TRANSFER_TIMEOUT;
+	unsigned timeout = USBSTOR_TRANSFER_TIMEOUT;
 	if (SceUdcdForDriver_38787672(&s.endpoints[ep]) != (int)SCE_UDCD_ERROR_DRIVER_IN_PROGRESS ||
 	    sceKernelWaitEventFlag(s.eventFlag, cancelled, SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL,
 				    &timeout) >= 0)
@@ -994,7 +993,7 @@ events:
 			response.specific[1] = sense->specific[1];
 			response.specific[2] = sense->specific[2];
 			n = cdb[4] < sizeof(response) ? cdb[4] : sizeof(response);
-			if (SceUsbstorForDriver_D3C7EE70(&response, n, TRANSFER_TIMEOUT) < 0)
+			if (SceUsbstorForDriver_D3C7EE70(&response, n, USBSTOR_TRANSFER_TIMEOUT) < 0)
 				commandResult = USBSTOR_COMMAND_FAILED;
 			else {
 				commandResult = USBSTOR_COMMAND_DONE;
@@ -1059,7 +1058,7 @@ events:
 			memset(s.scratch, 0, PACKET_SIZE);
 			while (remaining) {
 				n = remaining < PACKET_SIZE ? remaining : PACKET_SIZE;
-				if (SceUsbstorForDriver_D3C7EE70(s.scratch, n, TRANSFER_TIMEOUT) < 0) {
+				if (SceUsbstorForDriver_D3C7EE70(s.scratch, n, USBSTOR_TRANSFER_TIMEOUT) < 0) {
 					commandResult = USBSTOR_COMMAND_PHASE_ERROR;
 					goto checkCommand;
 				}
@@ -1067,7 +1066,7 @@ events:
 			}
 		}
 		if (s.send.request.size && commandResult != USBSTOR_COMMAND_PHASE_ERROR)
-			commandResult = flushSend(TRANSFER_TIMEOUT) < 0 ? USBSTOR_COMMAND_PHASE_ERROR
+			commandResult = flushSend(USBSTOR_TRANSFER_TIMEOUT) < 0 ? USBSTOR_COMMAND_PHASE_ERROR
 								       : USBSTOR_COMMAND_DONE;
 		goto checkCommand;
 	}
@@ -1093,7 +1092,7 @@ events:
 	s.residue = remaining;
 	while (remaining) {
 		n = remaining < PACKET_SIZE ? remaining : PACKET_SIZE;
-		if (SceUsbstorForDriver_F1A690DC(s.scratch, n, TRANSFER_TIMEOUT) < 0) {
+		if (SceUsbstorForDriver_F1A690DC(s.scratch, n, USBSTOR_TRANSFER_TIMEOUT) < 0) {
 			stallOut = 1;
 			s.status |= STATUS_OUT_STALLED;
 			/* The original preserves the command result on drain failure. */
@@ -1138,7 +1137,7 @@ receive:
 	if (s.cbwRequest.request.returnCode < REQUEST_QUEUED)
 		s.cbwRequest.request.returnCode = state;
 	else {
-		timeout = TRANSFER_TIMEOUT;
+		timeout = USBSTOR_TRANSFER_TIMEOUT;
 		result = SceUdcdForDriver_38787672(&s.endpoints[2]);
 		if (result != (int)SCE_UDCD_ERROR_DRIVER_IN_PROGRESS ||
 		    sceKernelWaitEventFlag(s.eventFlag, EVF_OUT_CANCELLED,

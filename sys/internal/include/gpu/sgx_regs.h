@@ -17,6 +17,12 @@
 #define SGX_REG_BASE			0xe8400000
 #define SGX_REG_SIZE			0x20000
 
+/* a core's bank (the DDK's SGX MP bank selection, services4/include/sgx_mkif_km.h) */
+#define SGX_REG_BANK_SHIFT		14
+#define SGX_REG_BANK_SIZE		(1U << SGX_REG_BANK_SHIFT)
+#define SGX_REG_BANK_BASE_INDEX		2
+#define SGX_MP_CORE_SELECT(x, i)	((x) + (((i) + SGX_REG_BANK_BASE_INDEX) * SGX_REG_BANK_SIZE))
+
 /* per-core bank offsets */
 #define SCE_SGX_COUNTER_VALUE		0x70
 #define SCE_SGX_COUNTER_ENABLE		0x78

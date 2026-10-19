@@ -14,6 +14,7 @@
 #include <sysmem/cpu.h>
 #include <kernel/error.h>
 #include <umass/umass.h>
+#include <usbstor/scsi.h>
 
 #define UMASS_ERROR(n) ((int)(0x802a0000U | (n))) /* official names unavailable */
 #define logError(func, fmt, ...) SceDebugForDriver_391B74B7("[Umass]%08x:%s: " fmt, \
@@ -35,20 +36,6 @@
 /* class requests */
 #define UMASS_REQUEST_RESET	0xff
 #define UMASS_REQUEST_GET_MAX_LUN 0xfe
-
-/* SCSI commands */
-#define SCSI_TEST_UNIT_READY	0x00
-#define SCSI_REQUEST_SENSE	0x03
-#define SCSI_MODE_SENSE_6	0x1a
-#define SCSI_READ_CAPACITY_10	0x25
-#define SCSI_READ_10		0x28
-#define SCSI_WRITE_10		0x2a
-
-#define SCSI_SENSE_NOT_READY		0x2
-#define SCSI_SENSE_UNIT_ATTENTION	0x6
-#define SCSI_ASC_MEDIUM_CHANGED		0x28	/* (ASC & ~2): also 0x2a, parameters changed */
-#define SCSI_MODE_SENSE_ALL_PAGES	0x3f
-#define SCSI_MODE_WRITE_PROTECT		0x80
 
 #define UMASS_SECTOR_SIZE	512
 #define UMASS_TRANSFER_MAX	0x10000		/* one bulk transfer */
@@ -396,7 +383,7 @@ static void _sceUsbMassDoRequestSense(UsbMassDevice *dev)
 			logError("_sceUsbMassDoRequestSense", "RequestSense CBW/Data failed %#x\n", ret);
 		ret = _sceUsbMassDoCSW(dev, &dev->senseCbw, &dev->senseCsw, 0);
 		senseKey = dev->sense.senseKey & 15;
-		if (!ret && (senseKey == SCSI_SENSE_NOT_READY || senseKey == SCSI_SENSE_UNIT_ATTENTION)) {
+		if (!ret && (senseKey == SCSI_KEY_NOT_READY || senseKey == SCSI_KEY_UNIT_ATTENTION)) {
 			if ((dev->sense.asc & ~2) != SCSI_ASC_MEDIUM_CHANGED || dev->sense.ascq)
 				logError("_sceUsbMassDoRequestSense", "Unit Attention. Drive may not work %#x key=%#x asc=%#x ascq=%#x\n",
 					 0, dev->sense.senseKey, dev->sense.asc, dev->sense.ascq);

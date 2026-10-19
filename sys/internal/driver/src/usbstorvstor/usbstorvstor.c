@@ -37,7 +37,6 @@
 #define USBSTOR_TYPE_NONE	0xff
 #define VSTOR_PID_DISK		0x5d3	/* USB product IDs */
 #define VSTOR_PID_CDROM		0x69a
-#define TRANSFER_TIMEOUT	1000000
 #define RESPONSE_INQUIRY_SIZE	56
 
 /* the FAT boot sector of a disk image */
@@ -153,7 +152,7 @@ static void copyBytes(uint8_t *p, const uint8_t *q, unsigned size)
 
 static int sendResponse(unsigned size)
 {
-	return SceUsbstorForDriver_D3C7EE70(s.response, size, TRANSFER_TIMEOUT) < 0 ?
+	return SceUsbstorForDriver_D3C7EE70(s.response, size, USBSTOR_TRANSFER_TIMEOUT) < 0 ?
 	       USBSTOR_COMMAND_FAILED : USBSTOR_COMMAND_DONE;
 }
 
@@ -188,7 +187,7 @@ static int transferThread(SceSize size, void *args)
 			}
 			if (bits & EVF_SEND) {
 				s.transferResult = SceUsbstorForDriver_D3C7EE70(s.transfer,
-						 s.transferSize, TRANSFER_TIMEOUT);
+						 s.transferSize, USBSTOR_TRANSFER_TIMEOUT);
 				sceKernelSetEventFlag(s.eventFlag, EVF_SENT);
 			} else if (bits & EVF_WRITE) {
 				s.transferResult = sceIoWrite(s.fd, s.transfer, s.transferSize);
@@ -348,7 +347,7 @@ static int transferBlocks(unsigned block, unsigned count, struct UsbstorSense *s
 	while (count) {
 		n = count < limit ? count : limit;
 		bytes = n * s.blockSize;
-		result = write ? SceUsbstorForDriver_F1A690DC(s.buffers[index], bytes, TRANSFER_TIMEOUT) :
+		result = write ? SceUsbstorForDriver_F1A690DC(s.buffers[index], bytes, USBSTOR_TRANSFER_TIMEOUT) :
 				 sceIoRead(s.fd, s.buffers[index], bytes);
 		if (result < 0) {
 			if (s.pending && sceKernelWaitEventFlag(s.eventFlag, completion,
@@ -598,7 +597,7 @@ static int verifyBlocks(const uint8_t *cdb, struct UsbstorSense *sense, int writ
 		n = count < s.verifyLimit ? count : s.verifyLimit;
 		bytes = n * s.blockSize;
 		if (write || (cdb[1] & 2)) {
-			if (SceUsbstorForDriver_F1A690DC(s.buffers[0], bytes, TRANSFER_TIMEOUT) < 0)
+			if (SceUsbstorForDriver_F1A690DC(s.buffers[0], bytes, USBSTOR_TRANSFER_TIMEOUT) < 0)
 				goto done;
 		}
 		if (write) {

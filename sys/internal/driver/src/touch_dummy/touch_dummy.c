@@ -16,8 +16,6 @@
 #include <touch_dummy/touch_dummy.h>
 #include <touch/touch.h>
 
-#define TOUCH_ERROR(n) ((int)(0x80350000U | (n)))
-
 struct touchOwner {
 	int pid;
 	unsigned short region, attr;
@@ -240,7 +238,7 @@ static int updateTracking(struct touchTracking *tracking, SceTouchData *sample) 
 			continue;
 		node = tracking->free;
 		if (!node)
-			return TOUCH_ERROR(255);
+			return SCE_TOUCH_ERROR_FATAL;
 		tracking->free = node->next;
 		node->next = NULL;
 		node->id = sample->report[i].id;
@@ -250,7 +248,7 @@ static int updateTracking(struct touchTracking *tracking, SceTouchData *sample) 
 		appendNodes(&tracking->added, node);
 		remaining--;
 	}
-	return remaining ? TOUCH_ERROR(255) : 0;
+	return remaining ? SCE_TOUCH_ERROR_FATAL : 0;
 }
 
 static void findOwner(unsigned port, short x, short y, struct touchOwner *owner) /* name unknown */
@@ -341,7 +339,7 @@ static int createPhysicalProcess(int pid) /* name unknown */
 	if (ret >= 0 && process) {
 		slot = findPid(touch.pids, -1);
 		if (slot < 0) {
-			ret = TOUCH_ERROR(255);
+			ret = SCE_TOUCH_ERROR_FATAL;
 		} else {
 			touch.pids[slot] = pid;
 			touch.processCount++;
@@ -378,7 +376,7 @@ static int createVirtualProcess(int pid) /* name unknown */
 	if (ret >= 0 && process) {
 		slot = findPid(pad.pids, -1);
 		if (slot < 0) {
-			ret = TOUCH_ERROR(255);
+			ret = SCE_TOUCH_ERROR_FATAL;
 		} else {
 			pad.pids[slot] = pid;
 			pad.processCount++;
@@ -415,7 +413,7 @@ static int removePhysicalProcess(int pid) /* name unknown */
 	if (ret >= 0 && process) {
 		slot = findPid(touch.pids, pid);
 		if (!touch.processCount || slot < 0) {
-			ret = TOUCH_ERROR(255);
+			ret = SCE_TOUCH_ERROR_FATAL;
 		} else {
 			touch.processCount--;
 			touch.pids[slot] = -1;
@@ -445,7 +443,7 @@ static int removeVirtualProcess(int pid) /* name unknown */
 	if (ret >= 0 && process) {
 		slot = findPid(pad.pids, pid);
 		if (!pad.processCount || slot < 0) {
-			ret = TOUCH_ERROR(255);
+			ret = SCE_TOUCH_ERROR_FATAL;
 		} else {
 			pad.processCount--;
 			pad.pids[slot] = -1;
@@ -849,7 +847,7 @@ static int readRing(struct touchRing *ring, unsigned kind, SceTouchData *out,
 	int owned;
 
 	if (!out || kind > 1)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	available = flags & 1 ? (ring->writeIndex - ring->readers[kind]) & 63 : 64;
 	if (!available)
 		return 0;
@@ -898,7 +896,7 @@ static int readPhysical(unsigned port, SceTouchData *out, unsigned count,
 	int pid, ret;
 
 	if (port >= 2 || !out || count > 64 || regions & 0xffffff00)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
@@ -907,7 +905,7 @@ static int readPhysical(unsigned port, SceTouchData *out, unsigned count,
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
 			bit = process->ports[port].eventBit;
 			if (!(bit & touch.ports[port].allocated))
-				return TOUCH_ERROR(1);
+				return SCE_TOUCH_ERROR_INVALID_ARG;
 			ret = sceKernelWaitEventFlag(touch.ports[port].events[kind], bit,
 						      SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 			if (ret < 0)
@@ -961,7 +959,7 @@ static int setSampling(unsigned port, unsigned state, unsigned kind) /* name unk
 	int ret, pid;
 
 	if (port >= 2 || state >= 2)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
@@ -995,7 +993,7 @@ static int getSampling(unsigned port, unsigned *state, unsigned kind) /* name un
 	int ret, pid;
 
 	if (port >= 2 || !state)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
@@ -1019,7 +1017,7 @@ static int setForce(unsigned port, unsigned enable, unsigned kind) /* name unkno
 	int ret, pid;
 
 	if (port >= 2)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
@@ -1047,7 +1045,7 @@ int SceTouchForDriver_328E38B0(unsigned port, int enable)
 	struct touchTracking *tracking;
 
 	if (port >= 2)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	tracking = &touch.ports[port].tracking;
 	if (enable)
@@ -1076,7 +1074,7 @@ int SceTouchForDriver_7985B164(unsigned port, unsigned region, const short *rect
 	int ret, pid;
 
 	if (port >= 2 || region >= 8 || !rect || !validRegion(port, rect, 1))
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
@@ -1099,7 +1097,7 @@ int SceTouchForDriver_E1C5D95F(unsigned port, unsigned region)
 	int ret, pid;
 
 	if (port >= 2 || region >= 8)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
@@ -1122,7 +1120,7 @@ int SceTouchForDriver_10A998DE(unsigned port, unsigned region, unsigned attr)
 	int ret, pid;
 
 	if (port >= 2 || region >= 8)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
@@ -1142,14 +1140,14 @@ int SceTouchForDriver_C7F0DAA0(unsigned port, unsigned region, unsigned enable)
 	int ret, pid;
 
 	if (port >= 2 || region >= 8 || enable >= 2)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	ret = lookupProcess(pid, touch.plsId, (void **)&process, 0);
 	if (ret >= 0 && process) {
 		dest = &process->ports[port].regions[region];
 		if (enable && !validRegion(port, &dest->x, 0))
-			ret = TOUCH_ERROR(1);
+			ret = SCE_TOUCH_ERROR_INVALID_ARG;
 		else
 			dest->active = enable;
 	}
@@ -1162,7 +1160,7 @@ int SceTouchForDriver_3F3FBF69(const TouchProcessPriorities *priorities)
 	unsigned intr, i;
 
 	if (!priorities)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	touch.priorityCount = priorities->count;
 	touch.priorityEnabled = 1;
@@ -1177,7 +1175,7 @@ int sceTouchSetCtrlpCallback(int (*callback)(unsigned, SceTouchData *))
 	unsigned intr;
 
 	if (!callback)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	touch.ctrlCallback = callback;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
@@ -1187,7 +1185,7 @@ int sceTouchSetCtrlpCallback(int (*callback)(unsigned, SceTouchData *))
 int SceTouchForDriver_03C3AC7C(const TouchVirtualDriver *driver)
 {
 	if (!driver)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	touch.virtualDriver = driver;
 	return 0;
 }
@@ -1203,7 +1201,7 @@ void SceTouchForDriver_062A11A2(void)
 int SceTouchForDriver_937DB4C0(unsigned port, SceTouchPanelInfo *out)
 {
 	if (port >= 2 || !out)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	copyWords(out, &touch.ports[port].panel, 0x30);
 	return 0;
 }
@@ -1211,7 +1209,7 @@ int SceTouchForDriver_937DB4C0(unsigned port, SceTouchPanelInfo *out)
 static int getPixelDensity(float *front, float *back) /* name unknown */
 {
 	if (!front || !back)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	*front = touch.ports[0].densityX;
 	*back = touch.ports[1].densityX;
 	return 0;
@@ -1220,7 +1218,7 @@ static int getPixelDensity(float *front, float *back) /* name unknown */
 static int getPixelDensity2(float *frontX, float *frontY, float *backX, float *backY) /* name unknown */
 {
 	if (!frontX || !frontY || !backX || !backY)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	*frontX = touch.ports[0].densityX;
 	*frontY = touch.ports[0].densityY;
 	*backX = touch.ports[1].densityX;
@@ -1253,7 +1251,7 @@ int SceTouchForDriver_4DF3A37C(unsigned port, void *out, unsigned unk)
 int SceTouchForDriver_EBF4C86A(unsigned port, int enable)
 {
 	if (port >= 2)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	if (enable)
 		touch.idleMask |= 1U << port;
 	else
@@ -1266,7 +1264,7 @@ int SceTouchForDriver_384F6C68(unsigned port, unsigned timeout)
 	unsigned intr;
 
 	if (port >= 2)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	touch.ports[port].timeout = timeout;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
@@ -1278,7 +1276,7 @@ int SceTouchForDriver_FD2E0278(unsigned port, struct touchDeviceInfo *out)
 	unsigned intr, i;
 
 	if (port >= 2 || !out)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&touch.lock);
 	for (i = 0; i < 12; i++)
 		((unsigned char *)out)[i] = 0;
@@ -1331,7 +1329,7 @@ static int userRead(unsigned port, void *out, unsigned count, unsigned regions,
 	int ret, copied, unlocked;
 
 	if (!out || count - 1 >= 64 || port >= 2) {
-		ret = TOUCH_ERROR(1);
+		ret = SCE_TOUCH_ERROR_INVALID_ARG;
 	} else {
 		ret = sceKernelLockMutex(mutex, 1, NULL);
 		if (ret >= 0) {
@@ -1407,7 +1405,7 @@ static int userGetSampling(unsigned port, void *out, unsigned kind) /* name unkn
 	int ret;
 
 	if (!out)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	t = sceSyscallEnter();
 	ret = getSampling(port, &value, kind);
 	if (ret >= 0)
@@ -1462,7 +1460,7 @@ int sceTouchGetPanelInfo(SceUInt32 port, SceTouchPanelInfo *out)
 	int ret;
 
 	if (!out)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	t = sceSyscallEnter();
 	ret = SceTouchForDriver_937DB4C0(port, &info);
 	if (ret >= 0)
@@ -1475,7 +1473,7 @@ int sceTouchGetPixelDensity(void *front, void *back)
 {
 	float values[2] = { 0 };
 	unsigned t = sceSyscallEnter();
-	int ret = TOUCH_ERROR(1);
+	int ret = SCE_TOUCH_ERROR_INVALID_ARG;
 
 	if (front && back) {
 		ret = getPixelDensity(&values[0], &values[1]);
@@ -1492,7 +1490,7 @@ int sceTouchGetPixelDensity2(void *frontX, void *frontY, void *backX, void *back
 {
 	float values[4] = { 0 };
 	unsigned t = sceSyscallEnter();
-	int ret = TOUCH_ERROR(1);
+	int ret = SCE_TOUCH_ERROR_INVALID_ARG;
 
 	if (frontX && frontY && backX && backY) {
 		ret = getPixelDensity2(&values[0], &values[1], &values[2], &values[3]);
@@ -1516,7 +1514,7 @@ int sceTouchSetRegion(unsigned port, unsigned region, const void *rect, unsigned
 	int ret;
 
 	if (!rect)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	t = sceSyscallEnter();
 	ret = sceKernelCopyFromUser(copy, rect, 8);
 	if (!ret)
@@ -1555,7 +1553,7 @@ int sceTouchSetRegionAttr(unsigned port, unsigned region, unsigned attr)
 int sceTouchSetProcessPrivilege(unsigned privilege)
 {
 	unsigned t = sceSyscallEnter();
-	int ret = TOUCH_ERROR(2);
+	int ret = SCE_TOUCH_ERROR_PRIV_REQUIRED;
 
 	if (sceSblACMgrIsSystemProgram(0))
 		ret = setPrivilege(privilege);
@@ -1568,7 +1566,7 @@ int sceTouchGetProcessInfo(unsigned port, void *out, unsigned unk)
 	/* SceTouchForDriver_4DF3A37C fills nothing: the copy hands out stack contents */
 	unsigned char info[0x884];
 	unsigned t = sceSyscallEnter();
-	int ret = TOUCH_ERROR(1);
+	int ret = SCE_TOUCH_ERROR_INVALID_ARG;
 
 	if (out) {
 		ret = SceTouchForDriver_4DF3A37C(port, info, unk);
@@ -1582,7 +1580,7 @@ int sceTouchGetProcessInfo(unsigned port, void *out, unsigned unk)
 int sceTouchEnableIdleTimerCancelSetting(unsigned port, int enable)
 {
 	unsigned t = sceSyscallEnter();
-	int ret = TOUCH_ERROR(2);
+	int ret = SCE_TOUCH_ERROR_PRIV_REQUIRED;
 
 	if (sceSblACMgrIsSystemProgram(0))
 		ret = SceTouchForDriver_EBF4C86A(port, enable);
@@ -1594,7 +1592,7 @@ int sceTouchGetDeviceInfo(unsigned port, void *out)
 {
 	struct touchDeviceInfo info;
 	unsigned t = sceSyscallEnter();
-	int ret = TOUCH_ERROR(2);
+	int ret = SCE_TOUCH_ERROR_PRIV_REQUIRED;
 
 	if (sceSblACMgrIsSystemProgram(0)) {
 		ret = SceTouchForDriver_FD2E0278(port, &info);
@@ -1614,7 +1612,7 @@ static int readVirtual(unsigned device, void *out, unsigned count, int peek) /* 
 	int ret, copied, pid;
 
 	if (!out || count > 64 || device - 1 >= 4)
-		return TOUCH_ERROR(1);
+		return SCE_TOUCH_ERROR_INVALID_ARG;
 	device--;
 	pid = sceKernelGetProcessId();
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&pad.lock);
@@ -1624,7 +1622,7 @@ static int readVirtual(unsigned device, void *out, unsigned count, int peek) /* 
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&pad.lock, intr);
 			bit = process->ports[device].eventBit;
 			if (!(bit & pad.ports[device].allocated))
-				return TOUCH_ERROR(1);
+				return SCE_TOUCH_ERROR_INVALID_ARG;
 			ret = sceKernelWaitEventFlag(pad.ports[device].event, bit,
 						      SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 			if (ret < 0)

@@ -6,20 +6,6 @@
 #include "usbmtp.h"
 #include <sysmem/uid_guid.h>
 
-/* Error names unknown; the SDK error index does not name this range. */
-#define MTP_PROTOCOL ((int)0x80543601)
-#define MTP_BUSY ((int)0x80543602)
-#define MTP_INVALID ((int)0x80543603)
-#define MTP_RUNNING ((int)0x80543604)
-#define MTP_TIMEOUT ((int)0x80543605)
-#define MTP_CANCELLED ((int)0x80543606)
-#define MTP_DISCONNECTED ((int)0x80543607)
-#define MTP_MEMORY ((int)0x80543608)
-#define MTP_UNSUPPORTED ((int)0x80543609)
-#define MTP_RETRY_LIMIT ((int)0x8054360a)
-#define MTP_UNAVAILABLE ((int)0x8054360c)
-#define MTP_WAIT_ERROR ((int)0x8054360d)
-
 /* busFlags: what the bus and the host asked for */
 #define MTP_BUS_ATTACHED	0x0001
 #define MTP_BUS_RESET		0x0002		/* Device Reset Request */
@@ -350,7 +336,7 @@ static int Stop(int size, void *args, void *userData)
 	if (s_mtp.busFlags & MTP_BUS_ATTACHED) {
 		SCE_DBG_PRINTF(0, 2283, "[%s%-28s] Err(%4d) device is now running\n",
 			       "usbmtp:", __func__, 2283);
-		return MTP_RUNNING;
+		return MTP_ERROR_RUNNING;
 	}
 	s_mtp.ready = 0;
 	s_mtp.transferFlags &= ~MTP_TRANSFER_STARTED;
@@ -443,14 +429,14 @@ static int _sceUsbMtpInitTask(void *args)
 	if (s_mtp.memblock < 0) {
 		SCE_DBG_PRINTF(0, 2480, "[%s%-28s] Err(%4d) sceKernelAllocMemBlock. Size:0x%x\n",
 			       "usbmtp:", __func__, 2480, 0x11000);
-		return MTP_MEMORY;
+		return MTP_ERROR_MEMORY;
 	}
 	ret = sceKernelGetMemBlockBase(s_mtp.memblock, (void **)&base);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 2486, "[%s%-28s] Err(%4d) sceKernelGetMemBlockBase\n",
 			       "usbmtp:", __func__, 2486);
 		sceKernelFreeMemBlock(s_mtp.memblock);
-		return MTP_MEMORY;
+		return MTP_ERROR_MEMORY;
 	}
 
 	/* the high- and full-speed descriptors, then the containers and buffers */
@@ -478,8 +464,8 @@ static int _sceUsbMtpInitTask(void *args)
 
 /*
  * Wait for a bulk or interrupt request to complete: 0 when it did, otherwise
- * MTP_CANCELLED/MTP_DISCONNECTED (the request failed), MTP_WAIT_ERROR, or
- * MTP_TIMEOUT once the endpoint has been cancelled.
+ * MTP_ERROR_CANCELLED/MTP_ERROR_DISCONNECTED (the request failed), MTP_ERROR_WAIT, or
+ * MTP_ERROR_TIMEOUT once the endpoint has been cancelled.
  */
 static inline int WaitTransfer(SceUdcdDeviceRequest *req, SceUdcdEndpoint *endpoint,
 			       unsigned int done, unsigned int failed, int bounded)
@@ -493,17 +479,17 @@ static inline int WaitTransfer(SceUdcdDeviceRequest *req, SceUdcdEndpoint *endpo
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL,
 				      &bits, bounded ? &timeout : NULL);
 	if ((bits & failed) || req->returnCode < 0)
-		return s_mtp.busFlags & MTP_BUS_ATTACHED ? MTP_CANCELLED : MTP_DISCONNECTED;
+		return s_mtp.busFlags & MTP_BUS_ATTACHED ? MTP_ERROR_CANCELLED : MTP_ERROR_DISCONNECTED;
 	if (ret == 0)
 		return 0;
 	if (ret != (int)SCE_KERNEL_ERROR_WAIT_TIMEOUT)
-		return MTP_WAIT_ERROR;
+		return MTP_ERROR_WAIT;
 	timeout = MTP_WAIT_TIMEOUT;
 	SceUdcdForDriver_9F53D64D(endpoint);
 	if (SceUdcdForDriver_38787672(endpoint) == SCE_UDCD_ERROR_DRIVER_IN_PROGRESS)
 		sceKernelWaitEventFlag(s_mtp.event, failed, SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL,
 					NULL, &timeout);
-	return MTP_TIMEOUT;
+	return MTP_ERROR_TIMEOUT;
 }
 
 static int sendBulk(void *buffer, unsigned int size)
@@ -514,9 +500,9 @@ static int sendBulk(void *buffer, unsigned int size)
 
 	/* 1: idle, 0: done; anything else is still queued */
 	if ((unsigned int)req->returnCode > 1)
-		return MTP_BUSY;
+		return MTP_ERROR_BUSY;
 	if (buffer == NULL)
-		return MTP_INVALID;
+		return MTP_ERROR_INVALID;
 	req->data = buffer;
 	req->size = size;
 	req->isControlRequest = 0;
@@ -539,9 +525,9 @@ static int receiveBulk(void *buffer, unsigned int size)
 	int ret;
 
 	if ((unsigned int)req->returnCode > 1)
-		return MTP_BUSY;
+		return MTP_ERROR_BUSY;
 	if (buffer == NULL)
-		return MTP_INVALID;
+		return MTP_ERROR_INVALID;
 	req->data = buffer;
 	req->isControlRequest = 0;
 	/* receive whole packets */
@@ -555,7 +541,7 @@ static int receiveBulk(void *buffer, unsigned int size)
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	if (s_mtp.busFlags & MTP_BUS_CANCEL) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
-		return MTP_CANCELLED;
+		return MTP_ERROR_CANCELLED;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 	ret = SceUdcdForDriver_C60A74B2(req);
@@ -576,7 +562,7 @@ static int processRequest(int recipient, int arg, SceUdcdEP0DeviceRequest *req, 
 
 	s_mtp.controlCode = req->bRequest;
 	if (arg < 0)
-		return MTP_UNSUPPORTED;
+		return MTP_ERROR_UNSUPPORTED;
 	switch (req->bmRequestType & 0x60) {
 	case 0x00:	/* standard: the Microsoft OS string */
 		if (req->bRequest != 6 || req->wValue != 0x3ee)
@@ -656,13 +642,13 @@ cancelled:
 		}
 		break;
 	}
-	return MTP_UNSUPPORTED;
+	return MTP_ERROR_UNSUPPORTED;
 }
 
 int SceUsbMtpForDriver_B958E5DE(void)
 {
 	if (!s_mtp.ready)
-		return MTP_UNAVAILABLE;
+		return MTP_ERROR_UNAVAILABLE;
 	SceUdcdForDriver_28BFEC45();
 	return 0;
 }
@@ -670,7 +656,7 @@ int SceUsbMtpForDriver_B958E5DE(void)
 int sceUsbMtpSendData(MtpIfTransfer *transfer)
 {
 	if (!s_mtp.ready)
-		return MTP_UNAVAILABLE;
+		return MTP_ERROR_UNAVAILABLE;
 	int64_t size = transfer->size, total = transfer->totalSize;
 	uint8_t *buffer = transfer->buffer;
 	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
@@ -678,7 +664,7 @@ int sceUsbMtpSendData(MtpIfTransfer *transfer)
 	if (s_mtp.cancelled != (unsigned)-1) {
 		if (!s_mtp.cancelPending) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
-			ret = MTP_CANCELLED;
+			ret = MTP_ERROR_CANCELLED;
 			goto error;
 		}
 		s_mtp.cancelPending = 0;
@@ -704,12 +690,12 @@ int sceUsbMtpSendData(MtpIfTransfer *transfer)
 		s_mtp.phase = MTP_PHASE_IDLE;
 		s_mtp.status &= ~2U;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
-		ret = MTP_CANCELLED;
+		ret = MTP_ERROR_CANCELLED;
 		goto error;
 	}
 	if (!buffer || ((unsigned)buffer & 3)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
-		ret = MTP_INVALID;
+		ret = MTP_ERROR_INVALID;
 		goto error;
 	}
 	s_mtp.transferFlags |= MTP_TRANSFER_SENDING;
@@ -720,12 +706,12 @@ int sceUsbMtpSendData(MtpIfTransfer *transfer)
 			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 			s_mtp.transferFlags &= ~1U;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
-			return MTP_BUSY;
+			return MTP_ERROR_BUSY;
 		}
 		size = total - s_mtp.remaining;
 	}
 	unsigned first = 0;
-	ret = MTP_PROTOCOL;
+	ret = MTP_ERROR_PROTOCOL;
 	if (!s_mtp.remaining) {
 		s_mtp.data->length = total <= 0xfffffff3LL ? total + 12 : -1;
 		s_mtp.data->type = 2;
@@ -780,7 +766,7 @@ int sceUsbMtpSendData(MtpIfTransfer *transfer)
 			SceUdcdDeviceRequest *req = &s_mtp.send.request;
 
 			if ((unsigned int)req->returnCode > 1) {
-				ret = MTP_BUSY;
+				ret = MTP_ERROR_BUSY;
 				goto error;
 			}
 			req->size = 0;
@@ -810,15 +796,15 @@ error:
 int sceUsbMtpRecvData(MtpIfTransfer *transfer)
 {
 	if (!s_mtp.ready)
-		return MTP_UNAVAILABLE;
+		return MTP_ERROR_UNAVAILABLE;
 	int64_t size = transfer->size;
 	uint8_t *buffer = transfer->buffer;
 	if (size > 0x10000)
-		return MTP_INVALID;
+		return MTP_ERROR_INVALID;
 	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	int ret;
 	if (s_mtp.cancelled != (unsigned)-1) {
-		ret = MTP_CANCELLED;
+		ret = MTP_ERROR_CANCELLED;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 		goto error;
 	}
@@ -830,19 +816,19 @@ int sceUsbMtpRecvData(MtpIfTransfer *transfer)
 	}
 	if (!buffer || ((unsigned)buffer & 3)) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
-		ret = MTP_INVALID;
+		ret = MTP_ERROR_INVALID;
 		goto error;
 	}
 	s_mtp.transferFlags |= MTP_TRANSFER_RECEIVING;
 	s_mtp.phase = MTP_PHASE_DATA_OUT;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
-	ret = MTP_PROTOCOL;
+	ret = MTP_ERROR_PROTOCOL;
 	if (!s_mtp.remaining) {
 		ret = receiveBulk(s_mtp.data, s_mtp.packetSize);
 		if (ret < 0)
 			goto error;
 		if (s_mtp.data->type != 2 || s_mtp.data->code != s_mtp.command->code || ret < 12)
-			return MTP_PROTOCOL;
+			return MTP_ERROR_PROTOCOL;
 		s_mtp.cursor = 12;
 		if (s_mtp.data->length == (unsigned)-1) {
 			s_mtp.remaining = -1;
@@ -946,7 +932,7 @@ output:
 			s_mtp.status &= ~2U;
 			s_mtp.deferredCancel = -1;
 		} else {
-			ret = MTP_CANCELLED;
+			ret = MTP_ERROR_CANCELLED;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 			goto error;
 		}
@@ -975,13 +961,13 @@ int SceUsbMtpForDriver_576A266F(void *command, MtpIfTransfer *transfer)
 {
 	MtpCommand *out = command;
 	if (!s_mtp.ready)
-		return MTP_UNAVAILABLE;
+		return MTP_ERROR_UNAVAILABLE;
 	if (!(s_mtp.busFlags & MTP_BUS_ATTACHED))
-		return MTP_DISCONNECTED;
+		return MTP_ERROR_DISCONNECTED;
 	int ret;
 	unsigned intr;
 	if (!transfer || !out) {
-		ret = MTP_INVALID;
+		ret = MTP_ERROR_INVALID;
 		goto error;
 	}
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
@@ -1017,7 +1003,7 @@ int SceUsbMtpForDriver_576A266F(void *command, MtpIfTransfer *transfer)
 	}
 	if ((s_mtp.status & 2) || s_mtp.phase) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
-		return MTP_CANCELLED;
+		return MTP_ERROR_CANCELLED;
 	}
 	s_mtp.transferFlags |= MTP_TRANSFER_RECEIVING;
 	s_mtp.busFlags &= ~6U;
@@ -1027,14 +1013,14 @@ int SceUsbMtpForDriver_576A266F(void *command, MtpIfTransfer *transfer)
 	for (;;) {
 		ret = receiveBulk(s_mtp.data, s_mtp.packetSize);
 		if (ret < 0) {
-			if (ret == MTP_DISCONNECTED || ret == MTP_CANCELLED)
+			if (ret == MTP_ERROR_DISCONNECTED || ret == MTP_ERROR_CANCELLED)
 				goto error;
-			if (ret != MTP_TIMEOUT) {
+			if (ret != MTP_ERROR_TIMEOUT) {
 				ret = (int)0x8024300d;
 				goto error;
 			}
 			if (++retries >= 6) {
-				ret = MTP_RETRY_LIMIT;
+				ret = MTP_ERROR_RETRY_LIMIT;
 				goto error;
 			}
 			continue;
@@ -1046,7 +1032,7 @@ int SceUsbMtpForDriver_576A266F(void *command, MtpIfTransfer *transfer)
 		if (s_mtp.command->type == 1) {
 			MtpContainer *in = s_mtp.command;
 			if (s_mtp.cancelled == in->transaction)
-				return MTP_CANCELLED;
+				return MTP_ERROR_CANCELLED;
 			out->transaction = in->transaction;
 			out->code = in->code;
 			s_mtp.transaction = in->transaction;
@@ -1058,7 +1044,7 @@ int SceUsbMtpForDriver_576A266F(void *command, MtpIfTransfer *transfer)
 				out->params[i] = words[i];
 			unsigned n = in->length - 12;
 			if (n >= 21 || (in->length & 3))
-				return MTP_PROTOCOL;
+				return MTP_ERROR_PROTOCOL;
 			out->flags = 0;
 			out->count = n >> 2;
 			s_mtp.remaining = s_mtp.received = 0;
@@ -1099,9 +1085,9 @@ int SceUsbMtpForDriver_4463009B(const void *response)
 {
 	const MtpCommand *in = response;
 	if (!s_mtp.ready)
-		return MTP_UNAVAILABLE;
+		return MTP_ERROR_UNAVAILABLE;
 	if (!in || in->count > 5)
-		return MTP_INVALID;
+		return MTP_ERROR_INVALID;
 	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	if (in->transaction == s_mtp.cancelled || (s_mtp.status & 2)) {
 		if (s_mtp.received <= 0)
@@ -1115,7 +1101,7 @@ int SceUsbMtpForDriver_4463009B(const void *response)
 	}
 	if (s_mtp.phase != 8) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
-		return MTP_CANCELLED;
+		return MTP_ERROR_CANCELLED;
 	}
 	s_mtp.transferFlags |= MTP_TRANSFER_SENDING;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
@@ -1145,13 +1131,13 @@ int SceUsbMtpForDriver_5FA86BA4(void *event)
 {
 	const MtpEvent *in = event;
 	if (!s_mtp.ready)
-		return MTP_UNAVAILABLE;
+		return MTP_ERROR_UNAVAILABLE;
 	if (!in || in->count > 3)
-		return MTP_INVALID;
+		return MTP_ERROR_INVALID;
 	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	if (s_mtp.status & 2) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
-		return MTP_CANCELLED;
+		return MTP_ERROR_CANCELLED;
 	}
 	if (in->code == 0x4001) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
@@ -1168,7 +1154,7 @@ int SceUsbMtpForDriver_5FA86BA4(void *event)
 		out->params[i] = in->params[i];
 	SceUdcdDeviceRequest *req = &s_mtp.notify.request;
 	if (req->returnCode >= 2)
-		return MTP_BUSY;
+		return MTP_ERROR_BUSY;
 	req->data = out;
 	req->size = n;
 	sceKernelDcacheCleanRange(out, (n + 63) & ~63U);
@@ -1201,7 +1187,7 @@ int SceUsbMtpForDriver_5FA86BA4(void *event)
 int SceUsbMtpForDriver_151947D2(void)
 {
 	if (!s_mtp.ready)
-		return MTP_UNAVAILABLE;
+		return MTP_ERROR_UNAVAILABLE;
 	if (s_mtp.transferFlags & MTP_TRANSFER_SENDING) {
 		s_mtp.transferFlags |= MTP_TRANSFER_IN_STALLED;
 		SceUdcdForDriver_34079250(&s_mtp.endpoints[1]);
@@ -1216,13 +1202,13 @@ int SceUsbMtpForDriver_151947D2(void)
 int SceUsbMtpForDriver_76D707B1(SceUInt32 timeout)
 {
 	if (!s_mtp.ready)
-		return MTP_UNAVAILABLE;
+		return MTP_ERROR_UNAVAILABLE;
 	uint32_t bits;
 	int ret = sceKernelWaitEventFlag(s_mtp.event, MTP_EVENT_ATTACHED | MTP_EVENT_CONFIGURED,
 					  SCE_KERNEL_EVF_WAITMODE_OR, &bits, &timeout);
 	if (bits & MTP_EVENT_CONFIGURED)
-		return MTP_CANCELLED;
-	return ret == (int)SCE_KERNEL_ERROR_WAIT_TIMEOUT ? MTP_TIMEOUT : ret;
+		return MTP_ERROR_CANCELLED;
+	return ret == (int)SCE_KERNEL_ERROR_WAIT_TIMEOUT ? MTP_ERROR_TIMEOUT : ret;
 }
 
 int SceUsbMtpForDriver_6F7DF4B8(void)
@@ -1236,7 +1222,7 @@ int SceUsbMtpForDriver_6F7DF4B8(void)
 int SceUsbMtpForDriver_E64513A9(int phase)
 {
 	if (!s_mtp.ready)
-		return MTP_UNAVAILABLE;
+		return MTP_ERROR_UNAVAILABLE;
 	unsigned intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_mtp.lock);
 	if ((s_mtp.transferFlags & MTP_TRANSFER_RECEIVING) && s_mtp.phase == MTP_PHASE_DATA_OUT) {
 		if (s_mtp.cancelled == (unsigned)-1) {
@@ -1265,17 +1251,17 @@ int SceUsbMtpForDriver_E64513A9(int phase)
 int sceUsbMtpStart(void)
 {
 	if (s_mtp.ready)
-		return MTP_BUSY;
+		return MTP_ERROR_BUSY;
 	if (sceKernelWaitEventFlag(s_mtp.event, MTP_EVENT_INITIALIZED, SCE_KERNEL_EVF_WAITMODE_OR,
 				    NULL, NULL) < 0)
-		return MTP_TIMEOUT;
+		return MTP_ERROR_TIMEOUT;
 	const char *driver = "USBDeviceControllerDriver";
 	int ret = sceUdcdStart(driver, 0, 0);
 	if (ret < 0 && ret != (int)0x80243002) {
 		SCE_DBG_PRINTF(0, 2312,
 			"[%s%-28s] Err(%4d) sceUdcdStart() failed. name=%s (0x%x)\n",
 			"usbmtp:", __func__, 2312, driver, ret);
-		return MTP_PROTOCOL;
+		return MTP_ERROR_PROTOCOL;
 	}
 	driver = "USB_MTP_Driver";
 	ret = sceUdcdStart(driver, 0, 0);
@@ -1283,14 +1269,14 @@ int sceUsbMtpStart(void)
 		SCE_DBG_PRINTF(0, 2318,
 			"[%s%-28s] Err(%4d) sceUdcdStart() failed. name=%s (0x%x)\n",
 			"usbmtp:", __func__, 2318, driver, ret);
-		return MTP_PROTOCOL;
+		return MTP_ERROR_PROTOCOL;
 	}
 	ret = sceUdcdActivate(s_mtp.product);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 2324, "[%s%-28s] Err(%4d) sceUdcdActivate() failed (0x%x)\n",
 			"usbmtp:", __func__, 2324, ret);
 		SceUdcdForDriver_1494293B(driver, 0, 0);
-		return MTP_UNAVAILABLE;
+		return MTP_ERROR_UNAVAILABLE;
 	}
 	return 0;
 }
@@ -1298,10 +1284,10 @@ int sceUsbMtpStart(void)
 int SceUsbMtpForDriver_08CD359F(void)
 {
 	if (!s_mtp.ready)
-		return MTP_UNAVAILABLE;
+		return MTP_ERROR_UNAVAILABLE;
 	SceUdcdForDriver_8AE87657();
 	if (SceUdcdForDriver_1494293B("USB_MTP_Driver", 0, 0) < 0)
-		return MTP_PROTOCOL;
+		return MTP_ERROR_PROTOCOL;
 	SceUdcdForDriver_1494293B("USBDeviceControllerDriver", 0, 0);
 	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_SEND_FAILED);
 	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_RECV_FAILED);

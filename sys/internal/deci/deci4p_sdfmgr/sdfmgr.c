@@ -25,9 +25,6 @@ SdfMgrState s_sdfMgrState;
 
 /* Per-core transport, hook and control-component registration. */
 
-#define SDFMGR_INVALID_ARGUMENT ((int)0x80090001)
-#define SDFMGR_NO_SLOT ((int)0x80090003)
-
 const uint32_t s_sdfMgrCpuTargets[4] = { 1, 2, 4, 8 };
 
 /* The native startup paths call this exported fill routine out of line. */
@@ -517,10 +514,10 @@ int SceDeci4pSDfMgrForKernel_6BF5553C(SdfMgrHook hook, unsigned index)
 	SdfMgrCpuState *cpu;
 
 	if (index >= 4)
-		return SDFMGR_INVALID_ARGUMENT;
+		return SDFMGR_ERROR_INVALID_ARGUMENT;
 	cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
 	if (cpu->indexedHooks[index])
-		return SDFMGR_NO_SLOT;
+		return SDFMGR_ERROR_NO_SLOT;
 	cpu->indexedHooks[index] = hook;
 	return 0;
 }
@@ -530,10 +527,10 @@ int SceDeci4pSDfMgrForKernel_B050A0D5(SdfMgrHook hook, unsigned index)
 	SdfMgrCpuState *cpu;
 
 	if (index >= 4)
-		return SDFMGR_INVALID_ARGUMENT;
+		return SDFMGR_ERROR_INVALID_ARGUMENT;
 	cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
 	if (cpu->indexedHooks[index] != hook)
-		return SDFMGR_INVALID_ARGUMENT;
+		return SDFMGR_ERROR_INVALID_ARGUMENT;
 	cpu->indexedHooks[index] = NULL;
 	return 0;
 }
@@ -552,7 +549,7 @@ int SceDeci4pSDfMgrForKernel_B22B42FB(SdfMgrHook hook)
 		}
 	}
 	sceKernelCpuResumeIntr(state);
-	return SDFMGR_NO_SLOT;
+	return SDFMGR_ERROR_NO_SLOT;
 }
 
 int SceDeci4pSDfMgrForKernel_E53400AE(SdfMgrHook hook)
@@ -569,7 +566,7 @@ int SceDeci4pSDfMgrForKernel_E53400AE(SdfMgrHook hook)
 		}
 	}
 	sceKernelCpuResumeIntr(state);
-	return SDFMGR_INVALID_ARGUMENT;
+	return SDFMGR_ERROR_INVALID_ARGUMENT;
 }
 
 int SceDeci4pSDfMgrForKernel_3A25594F(SdfMgrControl control)
@@ -581,7 +578,7 @@ int SceDeci4pSDfMgrForKernel_3A25594F(SdfMgrControl control)
 	if (cpu->controlComponents[0]) {
 		if (cpu->controlComponents[1]) {
 			sceKernelCpuResumeIntr(state);
-			return SDFMGR_NO_SLOT;
+			return SDFMGR_ERROR_NO_SLOT;
 		}
 		index = 1;
 	}
@@ -602,7 +599,7 @@ int SceDeci4pSDfMgrForKernel_59C077B3(SdfMgrControl control)
 		index = 1;
 	else {
 		sceKernelCpuResumeIntr(state);
-		return SDFMGR_INVALID_ARGUMENT;
+		return SDFMGR_ERROR_INVALID_ARGUMENT;
 	}
 	cpu->controlComponents[index] = NULL;
 	sceKernelCpuResumeIntr(state);

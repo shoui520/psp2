@@ -6,25 +6,13 @@
  */
 
 #include "iofilemgr_internal.h"
+#include <fios2/fios2_errors.h>
 
 /* the vfs and its tables (names unknown) */
 SceVfsInfo g_dummyTtyVfsInfo;
 extern const SceVfsOpTable g_dummyTtyVfsOps;
 extern const SceVopTable g_dummyTtyVops;
 extern const SceVfsMountParam g_dummyTtyMountParam;	/* tty0: */
-
-/* SceFios2: the errors fiosErrorToErrno converts (Sony's names, fios2_errors.h) */
-#define SCE_FIOS_ERROR_CANT_ALLOCATE_DH		0x80820003
-#define SCE_FIOS_ERROR_BAD_PATH			0x80820005
-#define SCE_FIOS_ERROR_BAD_PTR			0x80820006
-#define SCE_FIOS_ERROR_BAD_SIZE			0x80820008
-#define SCE_FIOS_ERROR_BAD_DH			0x8082000c
-#define SCE_FIOS_ERROR_NOT_A_FILE		0x8082000e
-#define SCE_FIOS_ERROR_NOT_A_DIRECTORY		0x8082000f
-#define SCE_FIOS_ERROR_PATH_TOO_LONG		0x80820018
-
-/* the facility of a Fios2 error, (error >> 16) & 0xfff */
-#define SCE_FIOS_ERROR_FACILITY			0x082
 
 /* the vnode of a tty: a character device (name unknown) */
 #define DUMMY_TTY_VNODE_TYPE	(SCE_VNODE_TYPE_DEV | SCE_VNODE_TYPE_CHR)
@@ -201,7 +189,7 @@ __attribute__((noinline)) int fiosErrorToErrno(int error)
 
 int convertFiosError(int error)
 {
-	if (((unsigned int)error << 4) >> 20 != SCE_FIOS_ERROR_FACILITY)
+	if (((unsigned int)error << 4) >> 20 != SCE_ERROR_FACILITY_FIOS)
 		return error;
 	return fiosErrorToErrno(error);
 }

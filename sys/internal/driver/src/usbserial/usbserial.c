@@ -42,19 +42,6 @@
 #define SERIAL_MASK_TX		2
 #define SERIAL_MASK_DRAIN	4
 
-/* CDC ACM class requests and notification */
-#define CDC_SET_LINE_CODING		0x20
-#define CDC_GET_LINE_CODING		0x21
-#define CDC_SET_CONTROL_LINE_STATE	0x22
-#define CDC_CONTROL_DTR			0x01
-#define CDC_NOTIFY_SERIAL_STATE		0x20
-#define CDC_STATE_DCD			0x01	/* bRxCarrier */
-#define CDC_STATE_DSR			0x02	/* bTxCarrier */
-
-#define USB_REQTYPE_TYPE_MASK		0x60
-#define USB_REQTYPE_CLASS		0x20
-#define USB_REQTYPE_CLASS_INTERFACE_IN	0xa1
-
 /* product IDs the controller presents */
 #define USB_PID_SERIAL		0x69b
 #define USB_PID_MTP		0x4e4
@@ -224,7 +211,7 @@ static int processControl(int recipient, int index, SceUdcdEP0DeviceRequest *req
 			  void *ctx)
 {
 	SceUdcdDeviceRequest *control = &s_serial.control.request;
-	if (index < 0 || (req->bmRequestType & USB_REQTYPE_TYPE_MASK) != USB_REQTYPE_CLASS)
+	if (index < 0 || (req->bmRequestType & USB_CTRLTYPE_TYPE_MASK) != USB_CTRLTYPE_TYPE_CLASS)
 		return -1;
 	switch (req->bRequest) {
 	case CDC_SET_LINE_CODING:
@@ -245,9 +232,9 @@ static int processControl(int recipient, int index, SceUdcdEP0DeviceRequest *req
 		}
 		return 0;
 	case CDC_SET_CONTROL_LINE_STATE:
-		if ((req->wValue & CDC_CONTROL_DTR) != isConnected()) {
+		if ((req->wValue & CDC_LINE_STATE_DTR) != isConnected()) {
 			unsigned clear, set;
-			if (!(req->wValue & CDC_CONTROL_DTR)) {
+			if (!(req->wValue & CDC_LINE_STATE_DTR)) {
 				s_serial.flags &= ~SERIAL_CONNECTED;
 				if (s_serial.flags & SERIAL_OPEN) {
 					if (s_serial.flags & SERIAL_ATTACHED) {
@@ -326,7 +313,8 @@ static void notifySerial(void)
 {
 	/* bmRequestType, bNotification, wValue 0, wIndex, wLength 2, the state */
 	uint32_t *p = s_serial.notification.request.data;
-	p[0] = CDC_NOTIFY_SERIAL_STATE << 8 | USB_REQTYPE_CLASS_INTERFACE_IN;
+	p[0] = CDC_NOTIFY_SERIAL_STATE << 8 | USB_CTRLTYPE_DIR_DEVICE2HOST |
+	       USB_CTRLTYPE_TYPE_CLASS | USB_CTRLTYPE_REC_INTERFACE;
 	p[1] = (uint16_t)s_serial.interface.interfaceNumber | sizeof(uint16_t) << 16;
 	*(uint16_t *)(p + 2) = s_serial.serialState;
 	s_serial.notification.request.size = 10;
@@ -821,7 +809,7 @@ static int setupSerial(unsigned mode)
 		return SERIAL_BUSY;
 	}
 	s_serial.flags |= SERIAL_OPEN;
-	s_serial.serialState |= CDC_STATE_DCD | CDC_STATE_DSR;
+	s_serial.serialState |= CDC_SERIAL_STATE_DCD | CDC_SERIAL_STATE_DSR;
 	s_serial.mode = mode;
 	sceKernelClearEventFlag(s_serial.event, ~EVENT_CLOSED);
 	if (s_serial.flags & SERIAL_ATTACHED) {
@@ -853,7 +841,7 @@ static int unsetupSerial(void)
 		return SERIAL_ALREADY_STARTED;
 	}
 	s_serial.flags &= ~SERIAL_OPEN;
-	s_serial.serialState &= ~(CDC_STATE_DCD | CDC_STATE_DSR);
+	s_serial.serialState &= ~(CDC_SERIAL_STATE_DCD | CDC_SERIAL_STATE_DSR);
 	if (s_serial.flags & SERIAL_ATTACHED) {
 		s_serial.notificationPending = s_serial.flags & SERIAL_NOTIFYING;
 		if (!s_serial.notificationPending) {

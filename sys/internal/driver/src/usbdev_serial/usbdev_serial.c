@@ -31,20 +31,6 @@
 #define SERIAL_EVENT_CLOSED		0x0100
 #define SERIAL_EVENT_DETACHED		0x0200
 
-/* CDC class requests and notifications */
-#define CDC_SET_LINE_CODING		0x20
-#define CDC_GET_LINE_CODING		0x21
-#define CDC_SET_CONTROL_LINE_STATE	0x22
-#define CDC_SEND_BREAK			0x23
-#define CDC_NOTIFY_SERIAL_STATE		0x20
-
-#define CDC_LINE_STATE_DTR		0x0001
-#define CDC_SERIAL_STATE_DCD		0x0001
-#define CDC_SERIAL_STATE_DSR		0x0002
-
-#define USB_TYPE_MASK			0x60
-#define USB_TYPE_CLASS			0x20
-
 /* 918D359E commands (names unknown) */
 #define SERIAL_COMMAND_SET_TIMEOUT	0x3517001
 #define SERIAL_COMMAND_8		0x3517008
@@ -300,7 +286,7 @@ static void detachSerial(void *ctx)
 
 static int DevReqHdlr(int recipient, int index, SceUdcdEP0DeviceRequest *req, void *ctx)
 {
-	if (index < 0 || (req->bmRequestType & USB_TYPE_MASK) != USB_TYPE_CLASS)
+	if (index < 0 || (req->bmRequestType & USB_CTRLTYPE_TYPE_MASK) != USB_CTRLTYPE_TYPE_CLASS)
 		return -1;
 
 	s_serial.controlCommand = req->bRequest;

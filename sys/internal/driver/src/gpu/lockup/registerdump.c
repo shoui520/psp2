@@ -12,12 +12,6 @@
 #include <power/power.h>
 #include <gpu/gpu-mmu.h>
 
-/* Pristine SGX MP register-bank selection, services4/include/sgx_mkif_km.h. */
-#define SGX_REG_BANK_SHIFT 14
-#define SGX_REG_BANK_SIZE (1U << SGX_REG_BANK_SHIFT)
-#define SGX_REG_BANK_BASE_INDEX 2
-#define SGX_MP_CORE_SELECT(x, i) ((x) + (((i) + SGX_REG_BANK_BASE_INDEX) * SGX_REG_BANK_SIZE))
-
 /* SCE capture selections, identical in both TOOL originals. Numeric register
  * offsets have no register identifier in the pristine candidate hardware defs.
  */

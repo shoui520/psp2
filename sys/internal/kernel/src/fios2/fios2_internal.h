@@ -19,30 +19,13 @@
 #include <rtc/rtc.h>
 #include <threadmgr/threadmgr.h>
 #include <fios2/fios2.h>
+#include <fios2/fios2_errors.h>
 #include <sysmem/compiler.h>
 #include <sysmem/sysclib.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/* the SDK's error codes (libfios2 reference) */
-#define SCE_FIOS_ERROR_UNIMPLEMENTED		0x80820000
-#define SCE_FIOS_ERROR_CANT_ALLOCATE_DH		0x80820003
-#define SCE_FIOS_ERROR_BAD_PATH			0x80820005
-#define SCE_FIOS_ERROR_BAD_PTR			0x80820006
-#define SCE_FIOS_ERROR_BAD_SIZE			0x80820008
-#define SCE_FIOS_ERROR_BAD_DH			0x8082000C
-#define SCE_FIOS_ERROR_BAD_ALIGNMENT		0x8082000D
-#define SCE_FIOS_ERROR_NOT_A_DIRECTORY		0x8082000F
-#define SCE_FIOS_ERROR_EOF			0x80820010
-#define SCE_FIOS_ERROR_ACCESS			0x80820013
-#define SCE_FIOS_ERROR_READ_ONLY		0x80820015
-#define SCE_FIOS_ERROR_PATH_TOO_LONG		0x80820018
-#define SCE_FIOS_ERROR_TOO_MANY_OVERLAYS	0x80820019
-#define SCE_FIOS_ERROR_BAD_OVERLAY		0x8082001A
-#define SCE_FIOS_ERROR_BAD_ORDER		0x8082001B
-#define SCE_FIOS_ERROR_BAD_RESOLVE_TYPE		0x80820020
 
 #define SCE_FIOS_OVERLAY_ORDER_USER_LAST	127	/* SDK SceFiosOverlayOrder */
 #define SCE_FIOS_OVERLAY_MAX_OVERLAYS		64	/* SDK SceFiosOverlayLimits */

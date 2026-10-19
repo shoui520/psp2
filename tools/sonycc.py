@@ -51,7 +51,8 @@ def win(p):
 def snc_command(opt, args):
 	sdk = host.sdk()
 	includes = [ROOT / 'sys/internal/include', ROOT / 'sys/sdk/target/include',
-		    ROOT / 'cmake/include', ROOT, sdk / 'target/include', sdk / 'target/include_common']
+		    ROOT / 'sys/sdk/target/include_common', ROOT / 'cmake/include', ROOT,
+		    sdk / 'target/include', sdk / 'target/include_common']
 	return host.windows_command([sdk / 'host_tools/build/bin/psp2snc.exe', *SNC_DEFINES, opt,
 				     *args, *(f'-I{win(i)}' for i in includes)])
 

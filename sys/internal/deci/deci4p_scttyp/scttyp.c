@@ -28,8 +28,6 @@
 #define SCTTYP_LINE_MAX		0xff
 #define SCTTYP_SUSPEND_IDX	0x15
 
-#define SDFMGR_ERROR_BUSY	0x80090007
-
 #if FW_DEBUG
 #define SCTTYP_PRINTF(_line, _fmt, ...)					\
 	SceDeci4pSDfMgrForKernel_501CE61D(0xf, SCE_DBGINFO(_line), _fmt, ##__VA_ARGS__)
@@ -178,7 +176,7 @@ poll:
 		SceDeci4pSDfMgrForKernel_98AEC60E();
 	return 0;
 negative:
-	if ((SceUInt32)ret == SDFMGR_ERROR_BUSY)
+	if (ret == SDFMGR_ERROR_BUSY)
 		goto poll;
 	SCTTYP_PRINTF(687, "ReqSend failed (0x%08X)\n", ret);
 	return ret;

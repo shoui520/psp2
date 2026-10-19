@@ -37,8 +37,6 @@
 #define SDECI2P_CTL_MAGIC	0xdec1dec1
 #define SDECI2P_STOPPED_SIZE	0x11000
 
-#define SDFMGR_ERROR_BUSY	0x80090007
-
 #if FW_DEBUG
 #define SDECI2P_PRINTF(_lvl, _line, _fmt, ...)				\
 	SceDeci4pSDfMgrForKernel_501CE61D((_lvl), SCE_DBGINFO(_line), _fmt, ##__VA_ARGS__)
@@ -479,7 +477,7 @@ static void acquireStartPollHandler(void)
 		return;
 	}
 	ret = sceSDfMgrExReqSend(s_ctx.handle);
-	if (ret >= 0 || ret == (int)SDFMGR_ERROR_BUSY) {
+	if (ret >= 0 || ret == SDFMGR_ERROR_BUSY) {
 		SceDeci4pSDfMgrForKernel_98AEC60E();
 		return;
 	}
@@ -559,7 +557,7 @@ static int acquireStartIntrHandler(int code, void *arg)
 		return -1;
 	}
 	ret = sceSDfMgrExReqSend(ctx->handle);
-	if (ret >= 0 || ret == (int)SDFMGR_ERROR_BUSY)
+	if (ret >= 0 || ret == SDFMGR_ERROR_BUSY)
 		SceDeci4pSDfMgrForKernel_98AEC60E();
 	else
 		SDECI2P_PRINTF(0xf, 1486, "ReqSend failed (0x%08X)\n", ret);

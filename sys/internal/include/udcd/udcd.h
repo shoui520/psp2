@@ -80,11 +80,23 @@ typedef struct SceUdcdWaitParam {
 #define USB_CTRLTYPE_DIR_HOST2DEVICE	(0 << 7)
 #define USB_CTRLTYPE_DIR_DEVICE2HOST	(1 << 7)
 #define USB_CTRLTYPE_TYPE_CLASS		(1 << 5)
+#define USB_CTRLTYPE_TYPE_MASK		(3 << 5)
 #define USB_CTRLTYPE_REC_INTERFACE	1
 
 #define USB_ENDPOINT_IN			0x80
 #define USB_ENDPOINT_OUT		0x00
 #define USB_ENDPOINT_TYPE_BULK		2
+
+/* the CDC ACM class requests and notification of the serial functions */
+#define CDC_SET_LINE_CODING		0x20
+#define CDC_GET_LINE_CODING		0x21
+#define CDC_SET_CONTROL_LINE_STATE	0x22
+#define CDC_SEND_BREAK			0x23
+#define CDC_NOTIFY_SERIAL_STATE		0x20
+
+#define CDC_LINE_STATE_DTR		0x0001	/* SET_CONTROL_LINE_STATE */
+#define CDC_SERIAL_STATE_DCD		0x0001	/* SERIAL_STATE: bRxCarrier */
+#define CDC_SERIAL_STATE_DSR		0x0002	/* SERIAL_STATE: bTxCarrier */
 
 /* SceUdcdDeviceRequest.returnCode */
 #define SCE_UDCD_RETCODE_CANCEL			(-1)
