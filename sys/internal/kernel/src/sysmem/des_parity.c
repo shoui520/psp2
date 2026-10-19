@@ -1,17 +1,10 @@
 /* Shared DES key utilities; names are descriptive (original names unknown). */
 #include <sysmem/des.h>
-#include <arm_neon.h>
 #include <fw.h>
 
 #if FW_SINCE(0x04000000)
-/* The debug build uses NEON population counts rather than the byte table. */
-__attribute__((noinline)) uint64_t DesAdjustKeyParity(uint64_t key)
-{
-	uint8x8_t bytes = vreinterpret_u8_u64(vcreate_u64(key));
-	uint8x8_t parity = vbic_u8(vdup_n_u8(1), vcnt_u8(bytes));
-
-	return vget_lane_u64(vreinterpret_u64_u8(veor_u8(bytes, parity)), 0);
-}
+/* the debug build counts the bits with NEON, in des.S */
+uint64_t DesAdjustKeyParity(uint64_t key);
 #else
 /* Expand the odd-parity table from its definition instead of opaque bytes. */
 #define DES_PARITY_BIT(value) \

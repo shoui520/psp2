@@ -112,10 +112,9 @@ psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	gzip.c
 	mt19937_next.S
 	mt19937.c
-	des_permutation.c
+	des.S
 	des_round.c
 	${sysmem_des_key_data}
-	des_key.c
 	des_block.c
 	kernel_utils_keys.c
 	aes_block.c

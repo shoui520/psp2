@@ -1,8 +1,8 @@
-/* Firmware-specific DES substitution and round permutations. */
+/* Firmware-specific DES round data, read by DesRound in des.S. */
 #include "des_internal.h"
 
 #if FW_SINCE(0x04000000)
-static const struct {
+const struct {
 	uint32_t alternatingBoxesMask;
 	uint32_t upperBoxesMask;
 	uint32_t outerBoxesMask;
@@ -30,33 +30,10 @@ static const struct {
 		0x5221a967, 0x724e8634, 0x4d2d549c, 0x38dbf9cb,
 	},
 };
-
-uint32_t DesRound(uint32_t first, uint32_t second)
-{
-	const uint32_t *table = desRoundTable.substitution;
-	uint32_t firstLow = table[(first & 0xfc) >> 2];
-	uint32_t secondLow = table[(second & 0xfc) >> 2];
-	uint32_t firstMiddle = table[(first >> 10) & 63];
-	uint32_t firstHigh = table[first >> 26];
-	uint32_t secondMiddle = table[(second >> 10) & 63];
-	uint32_t secondHigh = table[second >> 26];
-	uint32_t firstUpper = table[(first >> 18) & 63];
-	uint32_t secondUpper = table[(second >> 18) & 63];
-	uint32_t alternatingMask = desRoundTable.alternatingBoxesMask;
-	uint32_t upperMask = desRoundTable.upperBoxesMask;
-	uint32_t outerMask = desRoundTable.outerBoxesMask;
-
-	firstHigh ^= (firstMiddle ^ firstHigh) & alternatingMask;
-	secondHigh ^= (secondMiddle ^ secondHigh) & alternatingMask;
-	firstUpper ^= (firstLow ^ firstUpper) & alternatingMask;
-	secondUpper ^= (secondLow ^ secondUpper) & alternatingMask;
-	return (((firstHigh & ~upperMask) + (secondHigh & upperMask)) & ~outerMask)
-		+ (((firstUpper & ~upperMask) + (secondUpper & upperMask)) & outerMask);
-}
-
 #else
 /* Each column contains the paired nibbles of two standard DES S-boxes. */
-static const uint8_t desSubstitution[64][4] = {
+/* des.S indexes it by inserting bits into its address: 256-byte aligned */
+const uint8_t desSubstitution[64][4] __attribute__((aligned(256))) = {
 	{ 0xef, 0xa7, 0x2c, 0x4d },
 	{ 0x03, 0xdd, 0xea, 0xd1 },
 	{ 0x41, 0x0d, 0xc1, 0xb2 },
@@ -122,50 +99,4 @@ static const uint8_t desSubstitution[64][4] = {
 	{ 0x0f, 0x74, 0xe6, 0x28 },
 	{ 0xd9, 0xce, 0x3d, 0xcb },
 };
-
-uint32_t DesRound(uint32_t block, const uint32_t roundKey[2])
-{
-	uint32_t first = (block << 1) | (block >> 31);
-	uint32_t second = (block >> 9) | (block << 23);
-	uint32_t bits = block >> 3;
-	uint32_t substituted;
-
-	first = (first & 0xff0003ff) | ((bits & 0x3fff) << 10);
-	first = (first & 0xfffc00ff) | ((bits & 0x3ff) << 8);
-	first = (first & 0xfffff03f) | ((bits & 0x3f) << 6);
-	bits = block >> 15;
-	second = (second & 0xfffc000f) | ((bits & 0x3fff) << 4);
-	second = (second & 0xfffff003) | ((bits & 0x3ff) << 2);
-	second = (second & 0xffffffc0) | (bits & 0x3f);
-	first ^= roundKey[0];
-	second ^= roundKey[1];
-
-	substituted = desSubstitution[(first >> 6) & 63][3] & 0xf0;
-	substituted |= (desSubstitution[(first >> 18) & 63][2] & 0xf0) << 8;
-	substituted |= (desSubstitution[(second >> 6) & 63][1] & 0xf0) << 16;
-	substituted |= (uint32_t)(desSubstitution[(second >> 18) & 63][0] & 0xf0) << 24;
-	substituted |= desSubstitution[first & 63][3] & 0x0f;
-	substituted |= (desSubstitution[(first >> 12) & 63][2] & 0x0f) << 8;
-	substituted |= (desSubstitution[second & 63][1] & 0x0f) << 16;
-	substituted |= (uint32_t)(desSubstitution[(second >> 12) & 63][0] & 0x0f) << 24;
-
-	/* Standard DES P permutation, from the most significant output bit. */
-	return
-		(((substituted >> 16) & 1u) << 31) | (((substituted >> 25) & 1u) << 30) |
-		(((substituted >> 12) & 1u) << 29) | (((substituted >> 11) & 1u) << 28) |
-		(((substituted >> 3) & 1u) << 27) | (((substituted >> 20) & 1u) << 26) |
-		(((substituted >> 4) & 1u) << 25) | (((substituted >> 15) & 1u) << 24) |
-		(((substituted >> 31) & 1u) << 23) | (((substituted >> 17) & 1u) << 22) |
-		(((substituted >> 9) & 1u) << 21) | (((substituted >> 6) & 1u) << 20) |
-		(((substituted >> 27) & 1u) << 19) | (((substituted >> 14) & 1u) << 18) |
-		(((substituted >> 1) & 1u) << 17) | (((substituted >> 22) & 1u) << 16) |
-		(((substituted >> 30) & 1u) << 15) | (((substituted >> 24) & 1u) << 14) |
-		(((substituted >> 8) & 1u) << 13) | (((substituted >> 18) & 1u) << 12) |
-		(((substituted >> 0) & 1u) << 11) | (((substituted >> 5) & 1u) << 10) |
-		(((substituted >> 29) & 1u) << 9) | (((substituted >> 23) & 1u) << 8) |
-		(((substituted >> 13) & 1u) << 7) | (((substituted >> 19) & 1u) << 6) |
-		(((substituted >> 2) & 1u) << 5) | (((substituted >> 26) & 1u) << 4) |
-		(((substituted >> 10) & 1u) << 3) | (((substituted >> 21) & 1u) << 2) |
-		(((substituted >> 28) & 1u) << 1) | (((substituted >> 7) & 1u) << 0);
-}
 #endif

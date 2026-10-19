@@ -1,4 +1,4 @@
-/* Internal DES permutations; the original has no source-name debug records. */
+/* The DES functions of des.S and the data they read; no source-name debug records. */
 #ifndef SYSMEM_DES_INTERNAL_H
 #define SYSMEM_DES_INTERNAL_H
 
