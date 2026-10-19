@@ -47,12 +47,12 @@ int checkIdStorageAttribute(const SceSelfAuthInfo *info, const SceSblACMgrValue 
 	if (level == 0x80 || (paid & 0xfff8000000000000ULL) == 0x2808000000000000ULL)
 		permission = 0xf;
 	else if ((paid & ~0xfULL) == 0x2800800000000000ULL ||
-		 paid == 0x2800000000007001ULL || paid == 0x2800000000000015ULL)
+		 paid == 0x2800000000000015ULL || paid == 0x2800000000007001ULL)
 		permission = attr->value[0] & 0xf;
 	else if ((paid & 0xffff000000000000ULL) == 0x2801000000000000ULL ||
-		 paid == 0x2800800000000022ULL || paid == 0x2800800000000018ULL)
+		 paid == 0x2800800000000018ULL || paid == 0x2800800000000022ULL)
 		permission = attr->value[1] & 0xf;
-	else if (paid == 0x2800000000008005ULL || paid == 0x2800000000008003ULL ||
+	else if (paid == 0x2800000000008003ULL || paid == 0x2800000000008005ULL ||
 		 paid == 0x2800000000000025ULL)
 		return ACMGR_ERROR_ACCESS_DENIED;
 	else if ((paid & 0xffffffffffff0000ULL) == 0x2800000000000000ULL)
