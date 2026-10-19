@@ -24,7 +24,6 @@
 #include <threadmgr/threadmgr.h>
 #include <modulemgr/modulemgr.h>
 
-#define WAIT_TYPE_MSG_PIPE		0x00040000
 #define MSG_PIPE_WAIT_SEND		1	/* waitDirection: senders wait */
 #define MSG_PIPE_WAIT_RECEIVE		2	/* receivers wait */
 #define MSG_PIPE_MODE_ALL		0x00000001	/* move all of it, or nothing */
@@ -129,7 +128,7 @@ static int uidMsgPipe_Destructor(void *object)
 			continue;
 		thread = (struct ThreadCB *)node;
 		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
-		if (thread->waitType == WAIT_TYPE_MSG_PIPE) {
+		if (thread->waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE) {
 			if (pipe->waitDirection == MSG_PIPE_WAIT_SEND) {
 				if (thread->msgPipeResult != NULL) {
 					moved = thread->msgPipeSize - thread->msgPipeRemaining;
@@ -458,7 +457,7 @@ static int uidMsgPipe_ReleaseMethod(void *cls, void *object, struct ThreadCB *th
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 5142);
 	SCE_DBG_ASSERT_CHECK(pipe->event.lock != 0, 5145);
-	if (thread->waitType != WAIT_TYPE_MSG_PIPE)
+	if (thread->waitType != SCE_KERNEL_WAITTYPE_MSG_PIPE)
 		goto done;
 	pipe->partial = 0;
 	for (node = pipe->event.next; node != queue; node = node->next) {
@@ -467,7 +466,7 @@ static int uidMsgPipe_ReleaseMethod(void *cls, void *object, struct ThreadCB *th
 		waiter = (struct ThreadCB *)node;
 		SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 5167);
 		locked = SceCpuForDriver_5AC9D394(THREAD_LOCK(waiter));
-		if (waiter->waitType != WAIT_TYPE_MSG_PIPE) {
+		if (waiter->waitType != SCE_KERNEL_WAITTYPE_MSG_PIPE) {
 			if (locked == 0)
 				sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 			continue;
@@ -532,7 +531,7 @@ unlock:
 	ret = 0;
 served:
 	updateMsgPipeDataPattern(pipe);
-	if (thread->waitType == WAIT_TYPE_MSG_PIPE && --pipe->waitCount == 0)
+	if (thread->waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE && --pipe->waitCount == 0)
 		pipe->waitDirection = 0;
 done:
 	SCE_DBG_ASSERT_CHECK(pipe->event.waiting != 0, 5274);
@@ -564,7 +563,7 @@ static int uidMsgPipe_RevalidateMethod(void *cls, void *object)
 		waiter = (struct ThreadCB *)node;
 		SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 5073);
 		sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
-		if (waiter->waitType == WAIT_TYPE_MSG_PIPE) {
+		if (waiter->waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE) {
 			n = pipe->ring.size - pipe->ring.used;
 			if (waiter->msgPipeRemaining <= n)
 				n = waiter->msgPipeRemaining;
@@ -787,7 +786,7 @@ int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 				waiter = (struct ThreadCB *)pos;
 				SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 2071);
 				sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
-				if (waiter->waitType == WAIT_TYPE_MSG_PIPE) {
+				if (waiter->waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE) {
 					if (pipe->partial ||
 					    waiter->currentPriority <= thread->currentPriority) {
 						sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
@@ -816,7 +815,7 @@ int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 				" k: error: sendMsgPipeVectorCore(), sendProcessId=0x%08X, msgPipeId=0x%08X, threadId=0x%08X",
 				pid, msgPipeId, currentThreadContext()->threadId);
 			sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
-			if (waiter->waitType != WAIT_TYPE_MSG_PIPE) {
+			if (waiter->waitType != SCE_KERNEL_WAITTYPE_MSG_PIPE) {
 				sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 				continue;
 			}
@@ -925,7 +924,7 @@ decided:
 		else
 			attr &= ~WAIT_ATTR_PRIORITY;
 		pipe->event.attr = attr;
-		ret = waitWaitableObject(msgPipeId, (uintptr_t)queue, WAIT_TYPE_MSG_PIPE, &wakeup,
+		ret = waitWaitableObject(msgPipeId, (uintptr_t)queue, SCE_KERNEL_WAITTYPE_MSG_PIPE, &wakeup,
 					 wait, NULL, &locked);
 		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		index = thread->msgPipeVectorIndex;
@@ -1139,7 +1138,7 @@ int recvMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 				waiter = (struct ThreadCB *)pos;
 				SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 3361);
 				sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
-				if (waiter->waitType == WAIT_TYPE_MSG_PIPE) {
+				if (waiter->waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE) {
 					if (pipe->partial ||
 					    waiter->currentPriority <= thread->currentPriority) {
 						sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
@@ -1183,7 +1182,7 @@ int recvMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 				" k: error: recvMsgPipeVectorCore(), recvProcessId=0x%08X, msgPipeId=0x%08X, threadId=0x%08X",
 				pid, msgPipeId, currentThreadContext()->threadId);
 			sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
-			if (waiter->waitType != WAIT_TYPE_MSG_PIPE) {
+			if (waiter->waitType != SCE_KERNEL_WAITTYPE_MSG_PIPE) {
 				sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 				continue;
 			}
@@ -1296,7 +1295,7 @@ decided:
 		else
 			attr &= ~WAIT_ATTR_PRIORITY;
 		pipe->event.attr = attr;
-		ret = waitWaitableObject(msgPipeId, (uintptr_t)queue, WAIT_TYPE_MSG_PIPE, &wakeup,
+		ret = waitWaitableObject(msgPipeId, (uintptr_t)queue, SCE_KERNEL_WAITTYPE_MSG_PIPE, &wakeup,
 					 wait, NULL, &locked);
 		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		index = thread->msgPipeVectorIndex;
@@ -1921,7 +1920,6 @@ int startMsgPipeAfterProcess(void)
 }
 
 #define MSG_PIPE_EVENT_PROCESS_EXITED	0x00000200
-#define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 #define MSG_PIPE_FROM_PROCESS_LINK(link) \
 	((ThreadmgrMsgPipe *)((uintptr_t)(link) - offsetof(ThreadmgrMsgPipe, processLink)))
 
@@ -1990,7 +1988,7 @@ int msgPipeProcessExit(SceProcessObject *process)
 					sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 					break;
 				}
-				SCE_DBG_ASSERT_PRINTF(thread->waitType == WAIT_TYPE_MSG_PIPE, 852,
+				SCE_DBG_ASSERT_PRINTF(thread->waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE, 852,
 					"*** error: msgPipeProcessExit(), status=0x%08X, threadId=0x%08X[%s], waitId=0x%08X",
 					thread->waitType, thread->threadId, SceSysmemForDriver_E655852F(thread->threadId),
 					thread->waitId);
@@ -2074,7 +2072,7 @@ int msgPipeProcessExit(SceProcessObject *process)
 			waiter = (struct ThreadCB *)node;
 			SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 949);
 			sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
-			if (waiter->waitType == WAIT_TYPE_MSG_PIPE)
+			if (waiter->waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE)
 				wakeupAndDistributeThread(waiter, (uintptr_t)queue,
 							  SCE_KERNEL_ERROR_MSG_PIPE_DELETED);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
@@ -2153,8 +2151,6 @@ int msgPipeProcessExit(SceProcessObject *process)
 #define SDK_VERSION_MSG_PIPE_MEMORY	0x030fffff
 #define MSG_PIPE_UID_ATTR		0x00030000	/* PLACEHOLDER: name */
 #define MSG_PIPE_UID_ATTR_LW		0x0003c000	/* PLACEHOLDER: name */
-#define UID_MAX_PER_PROCESS		0x800
-#define UID_LW_MAX_PER_PROCESS		0x100
 
 /*
  * The buffer (bufferSize rounded up to pages, in memory of memType) and
@@ -2760,7 +2756,7 @@ int sceKernelTrySendMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVector
 			waiter = (struct ThreadCB *)node;
 			SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 2817, "sceKernelTrySendMsgPipeVector");
 			sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
-			if (waiter->waitType == WAIT_TYPE_MSG_PIPE) {
+			if (waiter->waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE) {
 				/* Sony's: the waiter stays locked on these two */
 				if (pipe->partial)
 					goto full;
@@ -2784,7 +2780,7 @@ int sceKernelTrySendMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVector
 					continue;
 				waiter = (struct ThreadCB *)node;
 				SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 2850, "sceKernelTrySendMsgPipeVector");
-				if (waiter->waitType != WAIT_TYPE_MSG_PIPE)
+				if (waiter->waitType != SCE_KERNEL_WAITTYPE_MSG_PIPE)
 					continue;
 				if (total <= room)
 					goto send;
@@ -2810,7 +2806,7 @@ send:
 		node = next;
 		SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 2880, "sceKernelTrySendMsgPipeVector");
 		sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
-		if (waiter->waitType != WAIT_TYPE_MSG_PIPE) {
+		if (waiter->waitType != SCE_KERNEL_WAITTYPE_MSG_PIPE) {
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 			continue;
 		}
@@ -3038,7 +3034,7 @@ int sceKernelTryReceiveMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVec
 			waiter = (struct ThreadCB *)pos;
 			SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 4136, "sceKernelTryReceiveMsgPipeVector");
 			sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
-			if (waiter->waitType == WAIT_TYPE_MSG_PIPE) {
+			if (waiter->waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE) {
 				/* Sony's: the waiter stays locked on these two */
 				if (pipe->partial)
 					goto empty;
@@ -3061,7 +3057,7 @@ int sceKernelTryReceiveMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVec
 					continue;
 				waiter = (struct ThreadCB *)pos;
 				SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 4167, "sceKernelTryReceiveMsgPipeVector");
-				if (waiter->waitType != WAIT_TYPE_MSG_PIPE)
+				if (waiter->waitType != SCE_KERNEL_WAITTYPE_MSG_PIPE)
 					continue;
 				if (total <= available)
 					goto receive;
@@ -3096,7 +3092,7 @@ receive:
 		waiter = (struct ThreadCB *)pos;
 		SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 4215, "sceKernelTryReceiveMsgPipeVector");
 		sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
-		if (waiter->waitType != WAIT_TYPE_MSG_PIPE)
+		if (waiter->waitType != SCE_KERNEL_WAITTYPE_MSG_PIPE)
 			goto next;
 		if (remaining == 0) {
 			if (peek)
@@ -3266,7 +3262,7 @@ int sceKernelCancelMsgPipe(SceUID msgPipeId, int *numSendWaitThreads,
 		waiter = (struct ThreadCB *)node;
 		SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 4471, "sceKernelCancelMsgPipe");
 		sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
-		if (waiter->waitType == WAIT_TYPE_MSG_PIPE) {
+		if (waiter->waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE) {
 			wake |= wakeupAndDistributeThread(waiter, (uintptr_t)queue,
 							  SCE_KERNEL_ERROR_WAIT_CANCEL);
 			count++;

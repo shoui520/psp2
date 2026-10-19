@@ -21,6 +21,70 @@
 /* a PUID attribute: the PUID came from an open, not a create */
 #define PUID_ATTR_OPENED		0x00080000
 
+/* the CPUs */
+#define CPU_COUNT			4
+#define CPU_MASK_ALL			0xf
+#define THREAD_CPU_NONE			0x7fff	/* PLACEHOLDER: cpuId of a thread on no CPU */
+
+/* program status and coprocessor access */
+#define PSR_T				0x00000020
+#define PSR_USER_CALLBACK		0x00000050	/* USR mode, FIQ masked */
+#define PSR_KERNEL_CALLBACK		0x0000005f	/* SYS mode, FIQ masked */
+#define CPSR_DEBUGGER_MASK		0xf90ffe20	/* the cpsr bits the debugger may change */
+#define CPSR_KEEP_MASK			0x06f001df
+#define CPACR_CP10_CP11_FULL		0x00f00000
+
+#define DIPSW_STACK_CHECK		0xd8	/* PLACEHOLDER: name */
+#define DIPSW_THBP			0xe4
+
+/* the scheduler and its trace */
+#define PRIORITY_NONE			0xfe
+#define PREEMPT_INTR			2
+#define PREEMPT_WAIT			4
+#define PREEMPT_EXCEPTION		8
+#define SWITCH_HOOK_OFF_CPU		2
+#define SWITCH_HOOK_ARGC		5
+#define SCHED_TRACE_OFF_CPU		2
+#define TRACE_EVENT_AFFINITY		0x20
+#define TRACE_EVENT_PRIORITY		0x21
+#define TRACE_EVENT_SCHED		0x2c
+#define LOCKED_RETRY_DELAY		10
+#define FAST_MUTEX_MAGIC		0xa35db473
+
+/* what sceKernelTrapThreadAfterSyscall asks for */
+#define TRAP_REQUEST_CRITICAL_ERROR	0x01000000	/* the syscall's misuse is in the frame */
+#define TRAP_REQUEST_DEBUG_SUSPEND	0x02000000
+
+/* SceKernelThreadInfo.waitType beyond the SDK's SCE_KERNEL_WAITTYPE_* (no Sony name found) */
+#define WAIT_TYPE_EXCEPTION		0x01000000
+#define WAIT_TYPE_WORK_QUEUE		0x04000000
+#define WAIT_TYPE_WORK_TASK		0x08000000
+
+/* waits */
+#define WAIT_ATTR_UNINTERRUPTIBLE	0x00008000	/* PLACEHOLDER: name */
+#define WAIT_ID_MULTIPLE_EVENTS		((SceUID)0x80000000)	/* thread->waitId while in a WME */
+#define EVENT_DELETED_PATTERN		0x00000010	/* PLACEHOLDER: the pattern a cut wait reports */
+#define SDK_VERSION_SIGNAL_TO_STRICT	0x02000000
+
+/* the UIDs of a process */
+#define THREADMGR_KERNEL_PID		0x10005
+#define UID_MAX_PER_PROCESS		0x800
+#define UID_LW_MAX_PER_PROCESS		0x100
+#define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
+#define THREAD_ID_LIST_ALL		0x00010021	/* PLACEHOLDER: name; every thread */
+#define THREAD_CLASS()			(s_threadmgrRuntime.manager->threadClass)
+#define USER_ERROR_UNKNOWN_THREAD_ID	(SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT)
+
+/* a thread's stacks, TLS and callbacks */
+#define STACK_FILL_WORD			0xffffffff	/* a stack's unused words */
+#define USER_TLS_STACK_RANGE		0x7f8	/* below the user TLS: the stack's top and bottom */
+#define USER_TLS_VFP_EXCEPTION		0x7f0	/* below the user TLS: the thread's VFP exception mask */
+#define VFP_EXCEPTION_KERNEL		0x00000087	/* PLACEHOLDER: the kernel callback's VFP exception mask */
+#define SAVE_ALIGN			64	/* the context save areas' alignment */
+#define SAVE_ALIGNED(buffer)		(((uintptr_t)(buffer) + SAVE_ALIGN - 1) & ~(SAVE_ALIGN - 1))
+#define PROCESS_DEBUG_SUSPEND_EXCEPTION	0x11	/* PLACEHOLDER: SceSysrootForKernel_1247A825's reason */
+#define DEBUG_THREAD_EVENT_EXIT		3	/* the exit status comes with it */
+
 /* The PMU access an SGI carries to the CPU the thread runs on. */
 /*
  * The debugger's handlers (SceThreadmgrForDriver_6C2E3A49): group 0 is told

@@ -12,7 +12,6 @@
 
 #define DTRACE_STATE_SIZE		0x28
 #define DTRACE_HEAP_SIZE		0x20000
-#define THREAD_ID_LIST_ALL		0x00010021	/* PLACEHOLDER: name */
 
 /* allocates a thread's DTrace state if it has none */
 int dtraceThreadCBInit(struct ThreadCB *thread)

@@ -17,9 +17,7 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/uid_class.h>
 
-#define WAIT_TYPE_DELAY			0x00000001	/* only the timed-wait flag */
 #define EVENT_ATTR_PRIORITY		0x00002000	/* waiters queue by priority */
-#define EVENT_DELETED_PATTERN		0x00000010	/* PLACEHOLDER: the pattern a cut wait reports */
 
 int uidRegisterCallbackClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
 	SceClass *parent, SceSize size, SceClassCallback create, SceClassCallback destroy,
@@ -40,7 +38,7 @@ static inline uint32_t wakeEventWaiter(ThreadmgrEvent *event, struct ThreadCB *t
 {
 	uint32_t matched, wake;
 
-	if (thread->waitType != WAIT_TYPE_EVENT)
+	if (thread->waitType != SCE_KERNEL_WAITTYPE_EVENT)
 		return 0;
 	matched = event->pattern & thread->waitEventPattern;
 	if (matched == 0)
@@ -143,7 +141,7 @@ restart:
 		    !(thread->flags & THREAD_FLAG_WAKE_PENDING)) {
 			waitId = -1;
 			SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_CALLBACKS);
-		} else if (thread->waitType == WAIT_TYPE_DELAY) {
+		} else if (thread->waitType == SCE_KERNEL_WAITTYPE_DELAY) {
 			/* a delay: the thread leaves the timed waits */
 			SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_CALLBACKS);
 			waitId = -1;
@@ -280,7 +278,7 @@ static int waitEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 		thread->waitEventPatternOutput = outPattern;
 		thread->waitEventDataOutput = outUserData;
 		if (!callbacks) {
-			ret = waitWaitableObject(eventId, EVENT_WAIT_QUEUE(event), WAIT_TYPE_EVENT,
+			ret = waitWaitableObject(eventId, EVENT_WAIT_QUEUE(event), SCE_KERNEL_WAITTYPE_EVENT,
 						 &wakeup, timeout, NULL, &locked);
 			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags,
 						    THREAD_FLAG_WAKE_PENDING);
@@ -290,7 +288,7 @@ static int waitEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 			break;
 		}
 		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
-		ret = waitWaitableObject(eventId, EVENT_WAIT_QUEUE(event), WAIT_TYPE_EVENT, &wakeup,
+		ret = waitWaitableObject(eventId, EVENT_WAIT_QUEUE(event), SCE_KERNEL_WAITTYPE_EVENT, &wakeup,
 					 timeout, NULL, &locked);
 		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -385,7 +383,7 @@ static int uidEvent_Destructor(void *object)
 			thread = (struct ThreadCB *)node;
 			SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 3144);
 			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
-			if (thread->waitType == WAIT_TYPE_EVENT) {
+			if (thread->waitType == SCE_KERNEL_WAITTYPE_EVENT) {
 				if (thread->waitEventPatternOutput != NULL)
 					*thread->waitEventPatternOutput = EVENT_DELETED_PATTERN;
 				if (thread->waitEventDataOutput != NULL)
@@ -967,7 +965,7 @@ int sceKernelCancelEventWithSetPattern(SceUID eventId, uint32_t setPattern, uint
 			thread = (struct ThreadCB *)node;
 			SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 1734);
 			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
-			if (thread->waitType == WAIT_TYPE_EVENT) {
+			if (thread->waitType == SCE_KERNEL_WAITTYPE_EVENT) {
 				if (thread->waitEventPatternOutput != NULL)
 					*thread->waitEventPatternOutput = EVENT_DELETED_PATTERN;
 				if (thread->waitEventDataOutput != NULL)
@@ -1104,7 +1102,7 @@ int sceKernelCancelEvent(SceUID eventId, int *numWaitThreads)
 			thread = (struct ThreadCB *)node;
 			SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 2031);
 			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
-			if (thread->waitType == WAIT_TYPE_EVENT) {
+			if (thread->waitType == SCE_KERNEL_WAITTYPE_EVENT) {
 				if (thread->waitEventPatternOutput != NULL)
 					*thread->waitEventPatternOutput = EVENT_DELETED_PATTERN;
 				if (thread->waitEventDataOutput != NULL)
@@ -1372,7 +1370,7 @@ int waitMultipleEvents(ThreadmgrWaitMultipleEvents *wme, SceUInt32 *timeout,
 				goto cancelled;
 			}
 		}
-		thread->waitType = WAIT_TYPE_MULTIPLE_EVENTS;
+		thread->waitType = SCE_KERNEL_WAITTYPE_MP_EVENTS;
 		thread->waitId = WAIT_ID_MULTIPLE_EVENTS;
 		thread->waitResult = 0;
 		SCE_DBG_ASSERT_CHECK(thread->currentCpuId == (int)sceKernelCpuId(), 2485);

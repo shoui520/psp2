@@ -1,9 +1,6 @@
 /* SceKernelThreadMgr (threadmgr.c): the early debugger event notifier. */
 #include "private.h"
 
-#define DEBUG_THREAD_EVENT_EXIT		3
-
-
 /* PLACEHOLDER: name; tells both groups of the debugger's handlers of a thread event */
 void notifyDebugThreadEvent(SceUID processId, SceUID threadId, uint32_t event, int *status)
 {

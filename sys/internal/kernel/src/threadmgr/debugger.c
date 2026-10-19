@@ -24,38 +24,8 @@
 #include <threadmgr/threadmgr.h>
 #include "affinity.h"
 
-#define THREAD_CPU_NONE			0x7fff	/* PLACEHOLDER: cpuId of a thread on no CPU */
-
 #define DEBUG_SUSPEND_REASONS		0x000f7f03	/* the reasons a debugger can give */
-#define DIPSW_THBP			0xe4
-#define DIPSW_STACK_CHECK		0xd8	/* PLACEHOLDER: name */
 #define THBP_SELECTOR			5
-
-#define CPSR_DEBUGGER_MASK		0xf90ffe20	/* the cpsr bits the debugger may change */
-#define CPSR_KEEP_MASK			0x06f001df
-#define STACK_FILL_WORD			0xffffffff	/* a stack's unused words */
-#define USER_TLS_STACK_RANGE		0x7f8	/* below the user TLS: the stack's top and bottom */
-
-#define WAIT_TYPE_DELAY			0x00000001
-#define WAIT_TYPE_UNK4			0x00000004
-#define WAIT_TYPE_EVENT_FLAG		0x00000010
-#define WAIT_TYPE_SEMAPHORE		0x00000020
-#define WAIT_TYPE_MUTEX			0x00000040
-#define WAIT_TYPE_RW_LOCK		0x00000080
-#define WAIT_TYPE_COND			0x00000100
-#define WAIT_TYPE_COND_MUTEX		0x00000200
-#define WAIT_TYPE_EVENT			0x00010000
-#define WAIT_TYPE_MULTIPLE_EVENTS	0x00020000
-#define WAIT_TYPE_MSG_PIPE		0x00040000
-#define WAIT_TYPE_LW_MUTEX		0x00100000
-#define WAIT_TYPE_LW_COND		0x00200000
-#define WAIT_TYPE_LW_COND_MUTEX		0x00400000
-#define WAIT_TYPE_EXCEPTION		0x01000000
-#define WAIT_TYPE_UNK4000000		0x04000000
-#define WAIT_TYPE_USER			0x80000000	/* PLACEHOLDER: the same wait from a user object */
-#define WAIT_ID_MULTIPLE_EVENTS		((SceUID)0x80000000)
-
-#define THREAD_CLASS()		(s_threadmgrRuntime.manager->threadClass)
 
 #define DEBUG_REG_PC			15	/* mask bits: r0-r14, then these */
 #define DEBUG_REG_CPSR			16
@@ -259,7 +229,7 @@ int getThreadInfoForDebugger(SceUID threadId, SceUInt32 level, uint32_t flags,
 	info->callbacksPending = (status >> 1) & 1;
 	info->signalPending = (status >> 4) & 1;
 	if (thread->delayId != -1 && thread->timeoutOutput != 0) {
-		if (waitType == WAIT_TYPE_MSG_PIPE) {
+		if (waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE) {
 			if (sceKernelCopyFromUserProc(thread->timeoutProcessId, &info->timeout,
 						       (const void *)thread->timeoutOutput, 4) < 0)
 				info->timeout = -1;
@@ -269,45 +239,45 @@ int getThreadInfoForDebugger(SceUID threadId, SceUInt32 level, uint32_t flags,
 		waitType = thread->waitType;
 	}
 	switch (waitType) {
-	case WAIT_TYPE_DELAY:
-	case WAIT_TYPE_UNK4:
-	case WAIT_TYPE_EVENT_FLAG:
-	case WAIT_TYPE_UNK4000000:
-	case WAIT_TYPE_USER | WAIT_TYPE_DELAY:
-	case WAIT_TYPE_USER | WAIT_TYPE_UNK4:
-	case WAIT_TYPE_USER | WAIT_TYPE_EVENT_FLAG:
-	case WAIT_TYPE_USER | WAIT_TYPE_UNK4000000:
+	case SCE_KERNEL_WAITTYPE_DELAY:
+	case SCE_KERNEL_WAITTYPE_SIGNAL:
+	case SCE_KERNEL_WAITTYPE_EVENTFLAG:
+	case WAIT_TYPE_WORK_QUEUE:
+	case SCE_KERNEL_WAITTYPE_DELAY_CB:
+	case SCE_KERNEL_WAITTYPE_SIGNAL_CB:
+	case SCE_KERNEL_WAITTYPE_EVENTFLAG_CB:
+	case SCE_KERNEL_WAITTYPE_CB | WAIT_TYPE_WORK_QUEUE:
 		info->waitDetail[0] = thread->waitArg0;
 		info->waitDetail[1] = thread->waitArg1;
 		break;
-	case WAIT_TYPE_COND:
-	case WAIT_TYPE_COND_MUTEX:
-	case WAIT_TYPE_LW_COND:
-	case WAIT_TYPE_LW_COND_MUTEX:
-	case WAIT_TYPE_USER | WAIT_TYPE_COND:
-	case WAIT_TYPE_USER | WAIT_TYPE_COND_MUTEX:
-	case WAIT_TYPE_USER | WAIT_TYPE_LW_COND:
-	case WAIT_TYPE_USER | WAIT_TYPE_LW_COND_MUTEX:
+	case SCE_KERNEL_WAITTYPE_COND_SIGNAL:
+	case SCE_KERNEL_WAITTYPE_COND_MUTEX:
+	case SCE_KERNEL_WAITTYPE_LW_COND_SIGNAL:
+	case SCE_KERNEL_WAITTYPE_LW_COND_LW_MUTEX:
+	case SCE_KERNEL_WAITTYPE_COND_SIGNAL_CB:
+	case SCE_KERNEL_WAITTYPE_COND_MUTEX_CB:
+	case SCE_KERNEL_WAITTYPE_LW_COND_SIGNAL_CB:
+	case SCE_KERNEL_WAITTYPE_LW_COND_LW_MUTEX_CB:
 		info->waitDetail[0] = thread->waitArg0;
 		info->waitDetail[1] = thread->waitArg1;
 		info->waitDetail[2] = thread->waitArg2;
 		break;
-	case WAIT_TYPE_SEMAPHORE:
-	case WAIT_TYPE_MUTEX:
-	case WAIT_TYPE_RW_LOCK:
-	case WAIT_TYPE_EVENT:
-	case WAIT_TYPE_LW_MUTEX:
+	case SCE_KERNEL_WAITTYPE_SEMAPHORE:
+	case SCE_KERNEL_WAITTYPE_MUTEX:
+	case SCE_KERNEL_WAITTYPE_RW_LOCK:
+	case SCE_KERNEL_WAITTYPE_EVENT:
+	case SCE_KERNEL_WAITTYPE_LW_MUTEX:
 	case WAIT_TYPE_EXCEPTION:
-	case WAIT_TYPE_USER | WAIT_TYPE_SEMAPHORE:
-	case WAIT_TYPE_USER | WAIT_TYPE_MUTEX:
-	case WAIT_TYPE_USER | WAIT_TYPE_RW_LOCK:
-	case WAIT_TYPE_USER | WAIT_TYPE_EVENT:
-	case WAIT_TYPE_USER | WAIT_TYPE_LW_MUTEX:
-	case WAIT_TYPE_USER | WAIT_TYPE_EXCEPTION:
+	case SCE_KERNEL_WAITTYPE_SEMAPHORE_CB:
+	case SCE_KERNEL_WAITTYPE_MUTEX_CB:
+	case SCE_KERNEL_WAITTYPE_RW_LOCK_CB:
+	case SCE_KERNEL_WAITTYPE_EVENT_CB:
+	case SCE_KERNEL_WAITTYPE_LW_MUTEX_CB:
+	case SCE_KERNEL_WAITTYPE_CB | WAIT_TYPE_EXCEPTION:
 		info->waitDetail[0] = thread->waitArg0;
 		break;
-	case WAIT_TYPE_MULTIPLE_EVENTS:
-	case WAIT_TYPE_USER | WAIT_TYPE_MULTIPLE_EVENTS:
+	case SCE_KERNEL_WAITTYPE_MP_EVENTS:
+	case SCE_KERNEL_WAITTYPE_MP_EVENTS_CB:
 		info->waitDetail[0] = (uintptr_t)
 			((const uint32_t *)thread->waitMultipleEvents)[10];	/* its events */
 		info->waitDetail[2] = ((const uint32_t *)thread->waitMultipleEvents)[3];
@@ -315,8 +285,8 @@ int getThreadInfoForDebugger(SceUID threadId, SceUInt32 level, uint32_t flags,
 			((const uint32_t *)thread->waitMultipleEvents)[2] == 1 ? 1 : 2;
 		info->waitDetail[1] = thread->waitArg1;
 		break;
-	case WAIT_TYPE_MSG_PIPE:
-	case WAIT_TYPE_USER | WAIT_TYPE_MSG_PIPE:
+	case SCE_KERNEL_WAITTYPE_MSG_PIPE:
+	case SCE_KERNEL_WAITTYPE_MSG_PIPE_CB:
 		info->waitDetail[0] = thread->waitArg0;
 		info->waitDetail[1] = thread->waitArg1;
 		info->waitDetail[2] = thread->waitOptions;
@@ -557,16 +527,16 @@ int getThreadInfoForDebuggerForUser(SceUID threadId, SceUInt32 level, uint32_t f
 			local.waitId = puid;
 	}
 	switch (local.waitType) {
-	case WAIT_TYPE_LW_COND:
-	case WAIT_TYPE_LW_COND_MUTEX:
-	case WAIT_TYPE_USER | WAIT_TYPE_LW_COND:
-	case WAIT_TYPE_USER | WAIT_TYPE_LW_COND_MUTEX:
+	case SCE_KERNEL_WAITTYPE_LW_COND_SIGNAL:
+	case SCE_KERNEL_WAITTYPE_LW_COND_LW_MUTEX:
+	case SCE_KERNEL_WAITTYPE_LW_COND_SIGNAL_CB:
+	case SCE_KERNEL_WAITTYPE_LW_COND_LW_MUTEX_CB:
 		convertWaitObjectsLw(&local);
 		break;
-	case WAIT_TYPE_COND:
-	case WAIT_TYPE_COND_MUTEX:
-	case WAIT_TYPE_USER | WAIT_TYPE_COND:
-	case WAIT_TYPE_USER | WAIT_TYPE_COND_MUTEX:
+	case SCE_KERNEL_WAITTYPE_COND_SIGNAL:
+	case SCE_KERNEL_WAITTYPE_COND_MUTEX:
+	case SCE_KERNEL_WAITTYPE_COND_SIGNAL_CB:
+	case SCE_KERNEL_WAITTYPE_COND_MUTEX_CB:
 		convertWaitObjectsCond(&local);
 		break;
 	}
@@ -662,16 +632,16 @@ int getThreadInfoListProcForDebugger(SceUID pid, uint32_t flags, SceUInt32 level
 			info.initCpuAffinityMask <<= 16;
 			info.cpuAffinityMask <<= 16;
 			switch (info.waitType) {
-			case WAIT_TYPE_LW_COND:
-			case WAIT_TYPE_LW_COND_MUTEX:
-			case WAIT_TYPE_USER | WAIT_TYPE_LW_COND:
-			case WAIT_TYPE_USER | WAIT_TYPE_LW_COND_MUTEX:
+			case SCE_KERNEL_WAITTYPE_LW_COND_SIGNAL:
+			case SCE_KERNEL_WAITTYPE_LW_COND_LW_MUTEX:
+			case SCE_KERNEL_WAITTYPE_LW_COND_SIGNAL_CB:
+			case SCE_KERNEL_WAITTYPE_LW_COND_LW_MUTEX_CB:
 				convertWaitObjectsLw(&info);
 				break;
-			case WAIT_TYPE_COND:
-			case WAIT_TYPE_COND_MUTEX:
-			case WAIT_TYPE_USER | WAIT_TYPE_COND:
-			case WAIT_TYPE_USER | WAIT_TYPE_COND_MUTEX:
+			case SCE_KERNEL_WAITTYPE_COND_SIGNAL:
+			case SCE_KERNEL_WAITTYPE_COND_MUTEX:
+			case SCE_KERNEL_WAITTYPE_COND_SIGNAL_CB:
+			case SCE_KERNEL_WAITTYPE_COND_MUTEX_CB:
 				convertWaitObjectsCond(&info);
 				break;
 			}

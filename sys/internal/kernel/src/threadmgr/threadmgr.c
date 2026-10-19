@@ -68,9 +68,6 @@ int SceThreadmgrForDriver_5311CFB5(uintptr_t hook, uintptr_t arg)
 	return 0;
 }
 
-#define WAIT_TYPE_SIGNAL		0x00000004
-#define WAIT_ATTR_UNINTERRUPTIBLE	0x00008000	/* PLACEHOLDER: name */
-
 typedef void (*ThreadmgrSchedSleepHandler)(const struct ThreadmgrSchedProbeDescriptor *probe);
 
 int sceKernelCheckThreadUserStackSelf(void);
@@ -194,7 +191,7 @@ int waitSignal(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout, int callbacks)
 				goto cancelled;
 			}
 		}
-		thread->waitType = WAIT_TYPE_SIGNAL;
+		thread->waitType = SCE_KERNEL_WAITTYPE_SIGNAL;
 		thread->waitId = s_threadmgrRuntime.manager->signalId;
 		thread->waitResult = 0;
 		SCE_DBG_ASSERT_CHECK(thread->currentCpuId == (int)sceKernelCpuId(), 2861);
@@ -467,8 +464,6 @@ int uidExtendedClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
  * their register contexts in that process.
  */
 
-#define CPU_COUNT			4
-#define CPU_MASK_ALL			0xf
 #define PARTITION_KERNEL		0x10009		/* PLACEHOLDER: name */
 #define MEMBLOCK_TYPE_KERNEL		0x1020d006	/* PLACEHOLDER: name */
 #define SWITCH_STACK_SIZE		0x1000		/* per CPU */
@@ -510,7 +505,6 @@ int uidExtendedClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
 
 #define SUSPEND_ORDER_THREADMGR		0x13	/* PLACEHOLDER: SceKernelSuspendForDriver's order */
 #define SYSROOT_SLOT_THREADMGR		6	/* sceKernelSysrootSetModulePrivate */
-#define DIPSW_THBP			0xe4
 #define DBGDSCR_MDBGEN			0x8000	/* monitor debug-mode enable */
 #define DACR_ALL_MANAGER		0xffff0000
 #define CACHE_LINE			0x20
@@ -1412,7 +1406,6 @@ int SceThreadmgrForDriver_84EB1EA4(int value)
  */
 
 #define THREAD_EVENT_START		0x00000004	/* callThreadEventHandlers */
-#define TRAP_REQUEST_DEBUG_SUSPEND	0x02000000
 #define DEBUG_THREAD_EVENT_DELETE	1
 #define TRACE_EVENT_THREAD_DELETE	1
 #define DIPSW_FREE_RETRY_LOG		0x9f
@@ -1952,13 +1945,11 @@ int uidThread_CancelWait(void *cls, void *uidObject, uint32_t a2)
  * hear of the change.
  */
 
-#define CPU_ID_GLOBAL			0x7fff
 #define PRIORITY_SHARED_LOW		0x80
 #define PRIORITY_SHARED_RANGE		0x7c
 #define WAIT_ID_MULTIPLE		((SceUID)0x80000000)
 #define WAIT_ATTR_PRIORITY		0x00002000
 #define USER_TLS_PRIORITY		0x7e0
-#define TRACE_EVENT_PRIORITY		0x21
 #define DEBUG_EVENT_PRIORITY_CHANGE	0x10
 
 typedef void (*ThreadmgrPriorityEventHook)(unsigned int event, const uint32_t *values);
@@ -2123,7 +2114,7 @@ retry:
 
 	/* queued: on another CPU, that CPU does it */
 	cpuId = context->currentCpuId;
-	if (cpuId != (int)currentCpuId && cpuId != CPU_ID_GLOBAL) {
+	if (cpuId != (int)currentCpuId && cpuId != THREAD_CPU_NONE) {
 		issueChangeThreadPriorityIntrRequest(cpuId, context->threadId, priority);
 		oldPriority = -1;
 		goto unlock;
@@ -2218,7 +2209,6 @@ unlock:
  * running its callbacks; a suspend or exit request ends the delay early.
  */
 
-#define WAIT_TYPE_DELAY			0x00000001
 #define DELAY_INTERRUPTIBLE		0x00008000	/* a request ends the delay outside a syscall too */
 #define DELAY_MIN_USEC			200
 #define DELAY200_MIN_USEC		201
@@ -2380,7 +2370,7 @@ int delayThread(SceUInt32 usec, uint32_t flags, SceUInt32 *remaining, int callba
 		} else {
 			thread->waitId = -1;
 			thread->waitResult = 0;
-			thread->waitType = WAIT_TYPE_DELAY;
+			thread->waitType = SCE_KERNEL_WAITTYPE_DELAY;
 			SCE_DBG_ASSERT_CHECK(thread->currentCpuId == (int)sceKernelCpuId(), 2207);
 			thread->currentCpuId = -1;
 			if (ThreadmgrInSyscall() || (flags & DELAY_INTERRUPTIBLE))
@@ -2481,15 +2471,6 @@ int SceThreadmgrForDriver_2B60B793(SceUInt32 usec, SceUInt32 *remaining)
 
 #define AFFINITY_MASK			0xf
 #define AFFINITY_SYSTEM_CPU		0x8	/* CPU 3 */
-#define TRACE_EVENT_AFFINITY		0x20
-#define FAST_MUTEX_MAGIC		0xa35db473
-#define PREEMPT_WAIT			4
-#define PREEMPT_EXCEPTION		8
-#define PREEMPT_INTR			2
-#define SWITCH_HOOK_OFF_CPU		2
-#define SWITCH_HOOK_ARGC		5
-#define SCHED_TRACE_OFF_CPU		2
-#define PRIORITY_NONE			0xfe
 
 /* the titles whose system-type processes may use any CPU */
 #if FW_DEBUG
@@ -2624,7 +2605,6 @@ void issueChangeThreadPriorityAndCpuAffinityIntrRequest(unsigned int cpuId, SceU
 #define WORKER_STACK_SIZE		0x1000
 #define WORKER_CPU_AFFINITY		0xf
 #define PERMISSION_WORKER		0x80		/* PLACEHOLDER: the permission it is created with */
-#define PROCESS_DEBUG_SUSPEND_EXCEPTION	0x11		/* PLACEHOLDER: SceSysrootForKernel_1247A825's reason */
 
 typedef void (*ThreadmgrProcessDebugSuspendHook)(SceUID pid, SceUID threadId, int kind,
 						 uintptr_t arg);
@@ -2992,8 +2972,6 @@ int sceKernelThreadMgrProcessDeleteAfterPUIDClose(SceProcessObject *process)
 #define DEBUG_SUSPEND_ACTION_RETURN	0	/* PLACEHOLDER: name */
 #define DEBUG_SUSPEND_ACTION_PROCESS	1	/* the process is suspended */
 #define DEBUG_SUSPEND_ACTION_IGNORE	2
-
-#define USER_TLS_STACK_RANGE		0x7f8
 
 /* the user stack left below the syscall's sp, 0 if it is out of the stack */
 int sceKernelCheckThreadUserStackSelf(void)
@@ -3513,7 +3491,7 @@ void addReady(struct ThreadCB *thread)
 		probe = (ThreadmgrQueueProbe)s_schedGlobalEnqueueHandler;
 		if (probe != NULL) {
 			probe(&s_schedGlobalEnqueueDescriptor, probeThreadId(context),
-			      context->process->pid, CPU_ID_GLOBAL);
+			      context->process->pid, THREAD_CPU_NONE);
 			priority = context->currentPriority;
 		}
 		shared = priority - PRIORITY_SHARED_LOW;
@@ -3522,7 +3500,7 @@ void addReady(struct ThreadCB *thread)
 			0x80000000u >> (shared % 32);
 		insertBefore((uintptr_t)&s_threadmgrRuntime.manager->globalReadyQueue[shared], context);
 		sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->globalReadyLock);
-		context->currentCpuId = CPU_ID_GLOBAL;
+		context->currentCpuId = THREAD_CPU_NONE;
 		return;
 	}
 	/* the DTrace probe site __sched_:enqueue */
@@ -3595,7 +3573,7 @@ void addReadyTop(struct ThreadCB *thread)
 		probe = (ThreadmgrQueueProbe)s_schedGlobalEnqueueTopHandler;
 		if (probe != NULL) {
 			probe(&s_schedGlobalEnqueueTopDescriptor, probeThreadId(context),
-			      context->process->pid, CPU_ID_GLOBAL);
+			      context->process->pid, THREAD_CPU_NONE);
 			priority = context->currentPriority;
 		}
 		shared = priority - PRIORITY_SHARED_LOW;
@@ -3604,7 +3582,7 @@ void addReadyTop(struct ThreadCB *thread)
 			0x80000000u >> (shared % 32);
 		insertBefore(s_threadmgrRuntime.manager->globalReadyQueue[shared].next, context);
 		sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->globalReadyLock);
-		context->currentCpuId = CPU_ID_GLOBAL;
+		context->currentCpuId = THREAD_CPU_NONE;
 		return;
 	}
 	/* the DTrace probe site __sched_:enqueue */
@@ -3779,7 +3757,7 @@ bool distributeThread(int cpuId, struct ThreadCB *thread)
 			current->nextRunningThread = 0;
 		}
 		SCE_DBG_ASSERT_CHECK(context->currentCpuId == (int)sceKernelCpuId() ||
-				     context->currentCpuId == CPU_ID_GLOBAL, 1725);
+				     context->currentCpuId == THREAD_CPU_NONE, 1725);
 		goto out;
 	}
 	target = &manager->cpuCB[cpuId];
@@ -3789,7 +3767,7 @@ bool distributeThread(int cpuId, struct ThreadCB *thread)
 		addReady(thread);
 		if (context->currentPriority < target->priority)
 			addIntrRequest(cpuId, INTR_MASK_SCHEDULING);
-		SCE_DBG_ASSERT_CHECK(context->currentCpuId == CPU_ID_GLOBAL, 1734);
+		SCE_DBG_ASSERT_CHECK(context->currentCpuId == THREAD_CPU_NONE, 1734);
 	} else {
 		context->status = (context->status & THREAD_STATE_HIGH_MASK) |
 				      SCE_KERNEL_THREAD_STATUS_STANDBY;
@@ -4078,8 +4056,6 @@ int _sceKernelStartThread(SceUID threadId, SceSize argSize, const void *arg)
  */
 
 #define THREAD_EVENT_EXIT		0x00000008	/* callThreadEventHandlers */
-#define WAIT_TYPE_THREAD_END		0x00000002
-#define DEBUG_THREAD_EVENT_EXIT		3	/* the exit status comes with it */
 
 /* the tracer's events (s_threadmgrRuntime.threadTraceHook) */
 #define TRACE_EVENT_THREAD_EXIT		3
@@ -4252,7 +4228,7 @@ void exitDeleteThread(int delete, int intr, int status)
 		SCE_DBG_ASSERT_CHECK(((struct ThreadCB *)node)->magic ==
 				     THREAD_CB_MAGIC, 5026);
 		sceKernelSpinlockLowLock(THREAD_LOCK((struct ThreadCB *)node));
-		if (((struct ThreadCB *)node)->waitType == WAIT_TYPE_THREAD_END) {
+		if (((struct ThreadCB *)node)->waitType == SCE_KERNEL_WAITTYPE_WAITTHEND) {
 			if (((struct ThreadCB *)node)->waitArg0 != 0)
 				*(int *)((struct ThreadCB *)node)->waitArg0 = status;
 			wakeupAndDistributeThread((struct ThreadCB *)node,
@@ -4289,11 +4265,6 @@ void exitDeleteThread(int delete, int intr, int status)
  * syscall the process misused, or a debugger suspension. A suspended
  * thread stops here and goes on running from here when it is resumed.
  */
-
-#define WAIT_TYPE_THREAD_SUSPEND	0x00000008	/* PLACEHOLDER: woken when the thread is suspended */
-
-/* what the exception handler asks for, besides the request bits above */
-#define TRAP_REQUEST_CRITICAL_ERROR	0x01000000	/* the syscall's misuse is in the frame */
 
 #define CRITICAL_ERROR_MESSAGE		0x80000000	/* criticalError: | the message */
 #define SDK_VERSION_CRITICAL_ERROR	0x01800000	/* reported for SDKs since 1.80 */
@@ -4465,7 +4436,7 @@ int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result,
 		SCE_DBG_ASSERT_CHECK(((struct ThreadCB *)node)->magic ==
 				     THREAD_CB_MAGIC, SCE_LINE(9611, 9616));
 		sceKernelSpinlockLowLock(THREAD_LOCK((struct ThreadCB *)node));
-		if (((struct ThreadCB *)node)->waitType == WAIT_TYPE_THREAD_SUSPEND)
+		if (((struct ThreadCB *)node)->waitType == SCE_KERNEL_WAITTYPE_WAITTHSUSPEND)
 			wakeupAndDistributeThread((struct ThreadCB *)node,
 						  (uintptr_t)head, 0);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK((struct ThreadCB *)node));
@@ -4554,7 +4525,6 @@ exiting:
 
 #define AFFINITY_CURRENT_CPU		0x40000000	/* the mask: the calling CPU */
 #define SDK_VERSION_AFFINITY_CHECK	0x01800000
-#define USER_ERROR_UNKNOWN_THREAD_ID	(SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT)
 
 extern void notifyThreadPriorityChange(struct ThreadCB *thread, int oldPriority,
 				       int newPriority);
@@ -4719,7 +4689,7 @@ retry:
 
 	/* queued: on another CPU, that CPU does it */
 	cpuId = context->currentCpuId;
-	if (cpuId != (int)currentCpuId && cpuId != CPU_ID_GLOBAL)
+	if (cpuId != (int)currentCpuId && cpuId != THREAD_CPU_NONE)
 		goto remote;
 	if (!((1u << (currentCpuId & 0xff)) & AFFINITY_MASK & effectiveAffinity(context, mask))) {
 		/* this CPU may no longer run it */
@@ -4929,7 +4899,7 @@ int changeThreadCpuAffinityMask(SceUID threadId, uint32_t mask, uint32_t *previo
 			goto distribute;
 		}
 	} else {
-		if (thread->currentCpuId != (int)cpuId && thread->currentCpuId != CPU_ID_GLOBAL) {
+		if (thread->currentCpuId != (int)cpuId && thread->currentCpuId != THREAD_CPU_NONE) {
 			issueChangeThreadCpuAffinityIntrRequest(thread->currentCpuId, threadId, mask);
 			goto unlock;
 		}
@@ -4998,7 +4968,6 @@ int SceThreadmgrForKernel_CBADD6B3(SceUID threadId, SceSize argSize, const void 
  * thread's stack for the call.
  */
 
-#define DIPSW_STACK_CHECK		0xd8
 #define EXTEND_STACK_MIN			0x200
 #define STACK_PAGE			0x1000
 #define STACK_SAFETY			0x10		/* kept free below the caller */
@@ -5893,7 +5862,7 @@ int waitThreadEnd(SceUID threadId, int *status, SceUInt32 *timeout, int callback
 		self->waitArg0 = (uint32_t)status;
 		if (!callbacks) {
 			ret = waitWaitableObject(threadId, (uintptr_t)&object->waitNext,
-						 WAIT_TYPE_THREAD_END, &wakeup, timeout, NULL, &locked);
+						 SCE_KERNEL_WAITTYPE_WAITTHEND, &wakeup, timeout, NULL, &locked);
 			SceCpuForDriver_4AE1BCC0((SceInt32 *)&self->flags,
 						    THREAD_FLAG_WAKE_PENDING);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(self));
@@ -5903,7 +5872,7 @@ int waitThreadEnd(SceUID threadId, int *status, SceUInt32 *timeout, int callback
 		}
 		SceCpuForDriver_BC248C30((SceInt32 *)&self->flags, THREAD_FLAG_WAKE_PENDING);
 		ret = waitWaitableObject(threadId, (uintptr_t)&object->waitNext,
-					 WAIT_TYPE_THREAD_END, &wakeup, timeout, NULL, &locked);
+					 SCE_KERNEL_WAITTYPE_WAITTHEND, &wakeup, timeout, NULL, &locked);
 		SceCpuForDriver_4AE1BCC0((SceInt32 *)&self->flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(self));
 		if (!locked)
@@ -5997,7 +5966,7 @@ int waitThreadSuspend(SceUID threadId, SceUInt32 *timeout, int callbacks)
 		sceKernelSpinlockLowLock(THREAD_LOCK(self));
 		if (!callbacks) {
 			ret = waitWaitableObject(threadId, (uintptr_t)&object->waitNext,
-						 WAIT_TYPE_THREAD_SUSPEND, &wakeup, timeout, NULL, &locked);
+						 SCE_KERNEL_WAITTYPE_WAITTHSUSPEND, &wakeup, timeout, NULL, &locked);
 			SceCpuForDriver_4AE1BCC0((SceInt32 *)&self->flags,
 						    THREAD_FLAG_WAKE_PENDING);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(self));
@@ -6007,7 +5976,7 @@ int waitThreadSuspend(SceUID threadId, SceUInt32 *timeout, int callbacks)
 		}
 		SceCpuForDriver_BC248C30((SceInt32 *)&self->flags, THREAD_FLAG_WAKE_PENDING);
 		ret = waitWaitableObject(threadId, (uintptr_t)&object->waitNext,
-					 WAIT_TYPE_THREAD_SUSPEND, &wakeup, timeout, NULL, &locked);
+					 SCE_KERNEL_WAITTYPE_WAITTHSUSPEND, &wakeup, timeout, NULL, &locked);
 		SceCpuForDriver_4AE1BCC0((SceInt32 *)&self->flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(self));
 		if (!locked)
@@ -6090,10 +6059,7 @@ int checkThreadUserStack(struct ThreadCB *thread)
  * each CPU, the CPUs' idle times and the thread ID lists.
  */
 
-#define WAIT_TYPE_WITH_CALLBACKS	0x80000000	/* SceKernelThreadInfo.waitType: the wait runs callbacks */
-#define THREAD_ID_LIST_ALL		0x00010021	/* PLACEHOLDER: name; every thread */
 #define UID_VECTOR_LEVEL		7		/* PLACEHOLDER: name */
-#define STACK_FILL_WORD			0xffffffff
 #define SDK_VERSION_RUN_STATUS_PUID	0x01800000	/* newer SDKs see PUIDs in the run status */
 
 /* the calling process's SDK version (kernel callers count as the newest) */
@@ -6265,7 +6231,7 @@ int sceKernelGetThreadInfo(SceUID threadId, SceKernelThreadInfo *output)
 	if (waiting) {
 		info.waitType = thread->waitType;
 		if (thread->flags & THREAD_FLAG_WAKE_PENDING)
-			info.waitType |= WAIT_TYPE_WITH_CALLBACKS;
+			info.waitType |= SCE_KERNEL_WAITTYPE_CB;
 	}
 	info.waitId = thread->waitId;
 	if (ThreadmgrInSyscall() && info.waitId != -1) {
@@ -7460,13 +7426,7 @@ SceUID sceKernelCreateRemoteThread(SceUID pid, const char *name, SceKernelThread
  * context. A suspension that can happen at once happens here.
  */
 
-#define THREAD_CPU_NONE			0x7fff
-#define WAIT_TYPE_COND			0x00000100
-#define WAIT_TYPE_MUTEX_2		0x00000200
-#define WAIT_TYPE_LW_COND		0x00200000
-#define WAIT_TYPE_LW_MUTEX_2		0x00400000
 #define EVENT_ATTR_PRIORITY		WAIT_ATTR_PRIORITY
-#define EVENT_DELETED_PATTERN		0x00000010	/* PLACEHOLDER: the pattern a cut wait reports */
 void setupThreadExit(struct ThreadCB *thread, uint32_t request);
 
 /* the thread leaves the manager list it is on */
@@ -7836,19 +7796,19 @@ retry:
 			SCE_DBG_ASSERT_CHECK(!(status & THREAD_FLAG_COND_RETRY_MASK), 9242);
 			if (suspend) {
 				switch (thread->waitType) {
-				case WAIT_TYPE_COND:
+				case SCE_KERNEL_WAITTYPE_COND_SIGNAL:
 					SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags,
 								   THREAD_FLAG_COND_KEEP_MUTEX);
 					break;
-				case WAIT_TYPE_MUTEX_2:
+				case SCE_KERNEL_WAITTYPE_COND_MUTEX:
 					SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags,
 								   THREAD_FLAG_COND_RELOCK);
 					break;
-				case WAIT_TYPE_LW_COND:
+				case SCE_KERNEL_WAITTYPE_LW_COND_SIGNAL:
 					SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags,
 								   THREAD_FLAG_LW_COND_KEEP_MUTEX);
 					break;
-				case WAIT_TYPE_LW_MUTEX_2:
+				case SCE_KERNEL_WAITTYPE_LW_COND_LW_MUTEX:
 					SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags,
 								   THREAD_FLAG_LW_COND_RELOCK);
 					break;
@@ -7970,7 +7930,7 @@ wakeSuspendWaiters:
 		SCE_DBG_ASSERT_CHECK(((struct ThreadCB *)node)->magic ==
 				     THREAD_CB_MAGIC, 9391);
 		sceKernelSpinlockLowLock(THREAD_LOCK((struct ThreadCB *)node));
-		if (((struct ThreadCB *)node)->waitType == WAIT_TYPE_THREAD_SUSPEND)
+		if (((struct ThreadCB *)node)->waitType == SCE_KERNEL_WAITTYPE_WAITTHSUSPEND)
 			wake |= wakeupAndDistributeThread((struct ThreadCB *)node,
 							  (uintptr_t)head, 0);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK((struct ThreadCB *)node));
@@ -7995,8 +7955,6 @@ resume:
  * this CPU's queues and the global ones, and its running thread the CPU;
  * all go on the manager's stagnant list.
  */
-
-#define LOCKED_RETRY_DELAY		10
 
 /* the thread goes on the manager's stagnant list */
 static inline __attribute__((always_inline)) void listStagnantThread(struct ThreadCB *thread)
@@ -8086,7 +8044,7 @@ int sceKernelCpuScanThreadForProcessmgr(SceUID processId)
 							thread->status =
 								(thread->status & THREAD_STATE_HIGH_MASK) |
 								SCE_KERNEL_THREAD_STATUS_STAGNANT;
-							SCE_DBG_ASSERT_CHECK(thread->currentCpuId == CPU_ID_GLOBAL, 10140);
+							SCE_DBG_ASSERT_CHECK(thread->currentCpuId == THREAD_CPU_NONE, 10140);
 							thread->currentCpuId = -1;
 							listStagnantThread(thread);
 						}
@@ -8389,7 +8347,7 @@ deliver:
 		next = (struct ThreadCB *)node->next;
 		SCE_DBG_ASSERT_CHECK(node->magic == THREAD_CB_MAGIC, 11042);
 		sceKernelSpinlockLowLock(THREAD_LOCK(node));
-		if (node->waitType == WAIT_TYPE_THREAD_SUSPEND)
+		if (node->waitType == SCE_KERNEL_WAITTYPE_WAITTHSUSPEND)
 			wakeupAndDistributeThread(node, (uintptr_t)&object->waitNext, 0);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(node));
 	}

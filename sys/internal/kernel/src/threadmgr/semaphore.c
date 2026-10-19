@@ -171,8 +171,6 @@ bool isWaitOnly(struct ThreadmgrWaitQueue *queue, int priority)
 	return first->currentPriority <= priority;
 }
 
-#define WAIT_TYPE_SEMAPHORE		0x20
-
 /* takes needCount from the semaphore, waiting for it (optionally running callbacks) */
 int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 {
@@ -257,7 +255,7 @@ int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 		sceKernelSpinlockLowLock(&thread->lock);
 		thread->waitMode = needCount;
 		if (!callbacks) {
-			ret = waitWaitableObject(semaId, (uintptr_t)queue, WAIT_TYPE_SEMAPHORE, &wakeup,
+			ret = waitWaitableObject(semaId, (uintptr_t)queue, SCE_KERNEL_WAITTYPE_SEMAPHORE, &wakeup,
 						 timeout, NULL, &locked);
 			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 			sceKernelSpinlockLowUnlock(&thread->lock);
@@ -266,7 +264,7 @@ int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 			break;
 		}
 		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
-		ret = waitWaitableObject(semaId, (uintptr_t)queue, WAIT_TYPE_SEMAPHORE, &wakeup, timeout,
+		ret = waitWaitableObject(semaId, (uintptr_t)queue, SCE_KERNEL_WAITTYPE_SEMAPHORE, &wakeup, timeout,
 					 NULL, &locked);
 		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(&thread->lock);
@@ -300,10 +298,7 @@ restore:
 #define SEMA_KERNEL_ATTR_MASK		0x0000a080	/* what kernel callers may pass */
 #define SEMA_USER_ATTR_MASK		0x00002080	/* what a syscall may pass */
 #define SEMA_OPTION_MAX_SIZE		4
-#define UID_MAX_PER_PROCESS		0x800
-#define UID_LW_MAX_PER_PROCESS		0x100
 #define SEMA_UID_ATTR_LW		0x0000c000	/* PLACEHOLDER: name */
-#define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 
 /* closes every semaphore PUID a process still holds */
 int semaphoreProcessExit(SceProcessObject *process)

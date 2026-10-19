@@ -79,7 +79,6 @@ _Static_assert(sizeof(ThreadmgrMutex) == 0x58, "SceUIDMutexObject size");
 #define PRIORITY_USER_LOW		0x80	/* user priorities are 0x80..0xfb */
 #define PRIORITY_USER_COUNT		0x7c
 #define PRIORITY_USER_LOWEST		0xfc
-#define PRIORITY_NONE			0xfe
 
 typedef void (*ThreadmgrPriorityProbeHandler)(const struct ThreadmgrSchedProbeDescriptor *probe,
 	SceUID threadId, SceUID pid, int oldPriority, int newPriority);

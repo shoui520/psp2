@@ -14,7 +14,6 @@
 #include "syscall_context.h"
 #include <sysmem/sysroot.h>
 
-#define WAIT_TYPE_LW_OBJECT		0x40000
 typedef void (*ThreadmgrSchedProbeHandler)(const struct ThreadmgrSchedProbeDescriptor *probe,
 					   SceUID threadId, SceUID processId);
 
@@ -74,7 +73,7 @@ void insertPriorityQueue(uintptr_t head, struct ThreadCB *thread)
 		if (thread->currentPriority < waiter->currentPriority)
 			break;
 	}
-	if (thread->waitType == WAIT_TYPE_LW_OBJECT && queue->lwKeepFirst != 0) {
+	if (thread->waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE && queue->lwKeepFirst != 0) {
 		prev = node->prev;
 		if (prev != (struct ThreadmgrWaitNode *)queue)
 			goto insert;
@@ -103,24 +102,6 @@ const struct ThreadmgrSchedProbeDescriptor s_schedSleepDescriptor = {
 typedef void (*ThreadmgrSchedSleepHandler)(const struct ThreadmgrSchedProbeDescriptor *probe);
 
 #define WAIT_ATTR_PRIORITY		0x00002000
-#define WAIT_ATTR_UNINTERRUPTIBLE	0x00008000	/* PLACEHOLDER: name */
-
-#define WAIT_TYPE_THREAD_END		0x00000002
-#define WAIT_TYPE_THREAD_END_2		0x00000008
-#define WAIT_TYPE_EVENT_FLAG		0x00000010
-#define WAIT_TYPE_SEMAPHORE		0x00000020
-#define WAIT_TYPE_MUTEX			0x00000040
-#define WAIT_TYPE_RW_LOCK		0x00000080
-#define WAIT_TYPE_COND			0x00000100
-#define WAIT_TYPE_MUTEX_2		0x00000200
-#define WAIT_TYPE_FAST_MUTEX		0x00001000
-#define WAIT_TYPE_EVENT			0x00010000
-#define WAIT_TYPE_LW_MUTEX		0x00100000
-#define WAIT_TYPE_LW_COND		0x00200000
-#define WAIT_TYPE_LW_MUTEX_2		0x00400000
-#define WAIT_TYPE_EXCEPTION		0x01000000
-#define WAIT_TYPE_WORK_QUEUE		0x04000000
-#define WAIT_TYPE_WORK_TASK		0x08000000
 
 /* the class a wait type's object belongs to */
 static inline SceClass *WaitTypeClass(uint32_t waitType)
@@ -128,30 +109,30 @@ static inline SceClass *WaitTypeClass(uint32_t waitType)
 	struct SceKernelThreadmgrPrivate *manager = s_threadmgrRuntime.manager;
 
 	switch (waitType) {
-	case WAIT_TYPE_THREAD_END:
-	case WAIT_TYPE_THREAD_END_2:
+	case SCE_KERNEL_WAITTYPE_WAITTHEND:
+	case SCE_KERNEL_WAITTYPE_WAITTHSUSPEND:
 		return manager->threadClass;
-	case WAIT_TYPE_EVENT_FLAG:
+	case SCE_KERNEL_WAITTYPE_EVENTFLAG:
 		return manager->eventFlagClass;
-	case WAIT_TYPE_SEMAPHORE:
+	case SCE_KERNEL_WAITTYPE_SEMAPHORE:
 		return manager->semaphoreClass;
-	case WAIT_TYPE_MUTEX:
-	case WAIT_TYPE_MUTEX_2:
+	case SCE_KERNEL_WAITTYPE_MUTEX:
+	case SCE_KERNEL_WAITTYPE_COND_MUTEX:
 		return manager->mutexClass;
-	case WAIT_TYPE_RW_LOCK:
+	case SCE_KERNEL_WAITTYPE_RW_LOCK:
 		return manager->rwLockClass;
-	case WAIT_TYPE_COND:
+	case SCE_KERNEL_WAITTYPE_COND_SIGNAL:
 		return manager->condClass;
-	case WAIT_TYPE_FAST_MUTEX:
+	case SCE_KERNEL_WAITTYPE_FAST_MUTEX:
 		return manager->fastMutexClass;
-	case WAIT_TYPE_EVENT:
+	case SCE_KERNEL_WAITTYPE_EVENT:
 		return manager->eventClass;
-	case WAIT_TYPE_LW_OBJECT:
+	case SCE_KERNEL_WAITTYPE_MSG_PIPE:
 		return manager->msgPipeClass;
-	case WAIT_TYPE_LW_MUTEX:
-	case WAIT_TYPE_LW_MUTEX_2:
+	case SCE_KERNEL_WAITTYPE_LW_MUTEX:
+	case SCE_KERNEL_WAITTYPE_LW_COND_LW_MUTEX:
 		return manager->lwMutexClass;
-	case WAIT_TYPE_LW_COND:
+	case SCE_KERNEL_WAITTYPE_LW_COND_SIGNAL:
 		return manager->lwCondClass;
 	case WAIT_TYPE_EXCEPTION:
 		return manager->exceptionClass;
@@ -204,13 +185,13 @@ int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 		case THREAD_FLAG_REQUEST_VM_SUSPEND:
 		case THREAD_FLAG_REQUEST_SUSPEND:
 			thread->waitResult = SCE_KERNEL_ERROR_THREAD_SUSPENDED;
-			if (waitType == WAIT_TYPE_MUTEX_2)
+			if (waitType == SCE_KERNEL_WAITTYPE_COND_MUTEX)
 				SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, 0x800000);
-			else if (waitType == WAIT_TYPE_COND)
+			else if (waitType == SCE_KERNEL_WAITTYPE_COND_SIGNAL)
 				SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, 0x400000);
-			else if (waitType == WAIT_TYPE_LW_COND)
+			else if (waitType == SCE_KERNEL_WAITTYPE_LW_COND_SIGNAL)
 				SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, 0x100000);
-			else if (waitType == WAIT_TYPE_LW_MUTEX_2)
+			else if (waitType == SCE_KERNEL_WAITTYPE_LW_COND_LW_MUTEX)
 				SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, 0x200000);
 			else
 				goto abandon;
@@ -234,7 +215,7 @@ int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 		thread->delayId = -1;
 		thread->timeoutOutput = 0;
 	} else {
-		if (waitType == WAIT_TYPE_LW_OBJECT && (thread->waitOptions & 0x10) &&
+		if (waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE && (thread->waitOptions & 0x10) &&
 		    (thread->timeoutProcessId == 0x10005 ||
 		     (SceSysrootForDriver_CAE820B2(thread->timeoutProcessId, &value) >= 0 &&
 		      value > 0x20fffff)))
@@ -244,12 +225,12 @@ int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 			SCE_DBG_ASSERT_CHECK(delayId == (SceUID)SCE_KERNEL_ERROR_WAIT_TIMEOUT, 207);
 			thread->waitResult = delayId;
 			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, 1);
-			if (waitType == WAIT_TYPE_RW_LOCK) {
+			if (waitType == SCE_KERNEL_WAITTYPE_RW_LOCK) {
 				if (thread->waitMode == 1)
 					queue->writeWaiters--;
 				else
 					queue->readWaiters--;
-			} else if (waitType == WAIT_TYPE_LW_OBJECT) {
+			} else if (waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE) {
 				if (--queue->lwWaiters == 0)
 					queue->lwBusy = 0;
 				if (timeoutOutput != NULL) {
@@ -271,7 +252,7 @@ int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 			}
 			if (timeoutOutput != NULL)
 				*(uint32_t *)timeoutOutput = 0;
-			if (waitType == WAIT_TYPE_EVENT_FLAG && thread->waitPatternOutput != NULL) {
+			if (waitType == SCE_KERNEL_WAITTYPE_EVENTFLAG && thread->waitPatternOutput != NULL) {
 				*thread->waitPatternOutput = queue->pattern;
 				return thread->waitResult;
 			}
@@ -324,7 +305,7 @@ cancelled:
 		sleep(&s_schedSleepDescriptor);
 	currentCpuState()->nextRunningThread = 0;
 	switchThread(2);
-	if (waitType == WAIT_TYPE_EVENT)
+	if (waitType == SCE_KERNEL_WAITTYPE_EVENT)
 		ret = sceGUIDReferObjectWithSubclass(waitId, WaitTypeClass(waitType), NULL);
 	else
 		ret = sceGUIDReferObjectWithClass(waitId, WaitTypeClass(waitType), NULL);
@@ -341,12 +322,12 @@ cancelled:
 
 abandon:
 	/* the wait ends before it started */
-	if (waitType == WAIT_TYPE_RW_LOCK) {
+	if (waitType == SCE_KERNEL_WAITTYPE_RW_LOCK) {
 		if (thread->waitMode == 1)
 			queue->writeWaiters--;
 		else
 			queue->readWaiters--;
-	} else if (waitType == WAIT_TYPE_LW_OBJECT) {
+	} else if (waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE) {
 		if (--queue->lwWaiters == 0)
 			queue->lwBusy = 0;
 	}
@@ -542,7 +523,7 @@ void waitTimeoutHandler(struct ThreadCB *thread)
 		sceGUIDReleaseObject(waitId);
 	}
 	if (thread->timeoutOutput != 0) {
-		if (thread->waitType == WAIT_TYPE_LW_OBJECT && thread->timeoutProcessId != 0x10005) {
+		if (thread->waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE && thread->timeoutProcessId != 0x10005) {
 			zero = 0;
 			ret = sceKernelCopyToUserProc(thread->timeoutProcessId,
 						       (void *)thread->timeoutOutput, &zero, 4);

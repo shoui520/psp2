@@ -22,16 +22,10 @@
 #include "affinity.h"
 #include "event.h"
 
-#define THREAD_CPU_NONE			0x7fff
-#define WAIT_TYPE_THREAD_SUSPEND	0x00000008	/* PLACEHOLDER: woken when the thread is suspended */
-#define WAIT_TYPE_EXCEPTION		0x01000000
 #define EXCEPTION_MASK_VALID		0x00000301
-#define CPSR_DEBUGGER_MASK		0xf90ffe20
-#define CPSR_KEEP_MASK			0x06f001df
 #define USER_TLS_VM_WORD0		0x7f8	/* below the user TLS: two words the VM context carries */
 #define USER_TLS_VM_WORD1		0x7f4
 
-#define THREAD_CLASS()		(s_threadmgrRuntime.manager->threadClass)
 #define EXCEPTION_CLASS()	(s_threadmgrRuntime.manager->exceptionClass)
 
 _Static_assert(sizeof(struct ThreadmgrException) == 0x38 &&
@@ -271,7 +265,7 @@ wakeWaiters:
 		SCE_DBG_ASSERT_CHECK(((struct ThreadCB *)node)->magic ==
 				     THREAD_CB_MAGIC, 658);
 		sceKernelSpinlockLowLock(THREAD_LOCK((struct ThreadCB *)node));
-		if (((struct ThreadCB *)node)->waitType == WAIT_TYPE_THREAD_SUSPEND)
+		if (((struct ThreadCB *)node)->waitType == SCE_KERNEL_WAITTYPE_WAITTHSUSPEND)
 			wake |= wakeupAndDistributeThread((struct ThreadCB *)node,
 							  (uintptr_t)head, 0);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK((struct ThreadCB *)node));

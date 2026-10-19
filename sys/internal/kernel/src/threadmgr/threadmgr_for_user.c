@@ -38,7 +38,6 @@ int __attribute__((noinline)) sceKernelWaitSignalCB(uint32_t arg0, uint32_t arg1
 #define THREAD_ID_ALL_USER		0x00010027	/* PLACEHOLDER: name; every user thread */
 
 /* the user errors: the kernel's with SYSCALL_ERROR_BIT */
-#define USER_ERROR_UNKNOWN_THREAD_ID	(SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT)
 #define USER_ERROR_UNKNOWN_SEMA_ID	0xc0028101
 #define USER_ERROR_UNKNOWN_MUTEX_ID	0xc0028141
 #define USER_ERROR_UNKNOWN_CALLBACK_ID	0xc00280a1
@@ -3831,7 +3830,6 @@ int sceKernelSetEventFlagForUser(SceUID uid, uint32_t pattern)
 	return sceKernelSetEventFlag(guid, pattern);
 }
 
-#define TIMER_PUID_ATTR_OPENED		0x80000
 extern int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attributes);
 
 /* name unknown */
@@ -3885,7 +3883,7 @@ int getTimerInfoForUser(SceUID uid, SceKernelTimerInfo *output)
 		output->timerId = uid;
 		result = scePUIDGetAttr(0, uid, &attributes);
 		if (result >= 0 && (attributes & 0x80000))
-			output->attr |= TIMER_PUID_ATTR_OPENED;
+			output->attr |= PUID_ATTR_OPENED;
 	}
 	return result;
 }
@@ -3896,7 +3894,7 @@ int sceKernelOpenTimerForUser(const char *userName)
 	char name[32];
 	UIDCreateOpt options = {
 		.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_CLASS,
-		.attr = TIMER_PUID_ATTR_OPENED,
+		.attr = PUID_ATTR_OPENED,
 	};
 	int result;
 

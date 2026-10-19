@@ -18,9 +18,6 @@
 #define LW_MUTEX_ITEM_SIZE		0x80	/* the class's object allocation size */
 #define LW_MUTEX_ATTR_MASK		0x00002002
 #define LW_MUTEX_OPTION_MAX_SIZE	4
-#define WAIT_TYPE_LW_MUTEX		0x00100000
-#define WAIT_TYPE_LW_COND_MUTEX		0x00400000	/* a lw cond waiter relocking its lw mutex */
-#define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 #define USER_THREAD_ID_KERNEL_FLAG	0x40000000	/* PLACEHOLDER: an owner that is no user thread */
 #define UID_CREATE_OPT_PID		0x00000008	/* PLACEHOLDER: name; opt.pid owns the object */
 
@@ -631,7 +628,7 @@ int _sceKernelLockLwMutex(ThreadmgrLwMutexWork *work, int count, SceUInt32 *time
 		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		thread->waitMode = count;
 		if (!callbacks) {
-			ret = waitWaitableObject(guid, (uintptr_t)&lwMutex->next, WAIT_TYPE_LW_MUTEX,
+			ret = waitWaitableObject(guid, (uintptr_t)&lwMutex->next, SCE_KERNEL_WAITTYPE_LW_MUTEX,
 						 &wakeup, timeout, NULL, &locked);
 			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -640,7 +637,7 @@ int _sceKernelLockLwMutex(ThreadmgrLwMutexWork *work, int count, SceUInt32 *time
 			break;
 		}
 		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
-		ret = waitWaitableObject(guid, (uintptr_t)&lwMutex->next, WAIT_TYPE_LW_MUTEX, &wakeup,
+		ret = waitWaitableObject(guid, (uintptr_t)&lwMutex->next, SCE_KERNEL_WAITTYPE_LW_MUTEX, &wakeup,
 					 timeout, NULL, &locked);
 		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -1028,7 +1025,7 @@ int lockLwMutexForLwCond(SceUID lwMutexId, int count, SceUInt32 *timeout, int ca
 		thread->waitMutexId = lwMutexId;
 		if (!callbacks) {
 			ret = waitWaitableObject(lwMutexId, (uintptr_t)&lwMutex->next,
-				WAIT_TYPE_LW_COND_MUTEX, &wakeup, timeout, NULL, &locked);
+				SCE_KERNEL_WAITTYPE_LW_COND_LW_MUTEX, &wakeup, timeout, NULL, &locked);
 			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			if (!locked)
@@ -1036,7 +1033,7 @@ int lockLwMutexForLwCond(SceUID lwMutexId, int count, SceUInt32 *timeout, int ca
 			break;
 		}
 		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
-		ret = waitWaitableObject(lwMutexId, (uintptr_t)&lwMutex->next, WAIT_TYPE_LW_COND_MUTEX,
+		ret = waitWaitableObject(lwMutexId, (uintptr_t)&lwMutex->next, SCE_KERNEL_WAITTYPE_LW_COND_LW_MUTEX,
 					 &wakeup, timeout, NULL, &locked);
 		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));

@@ -88,14 +88,9 @@ static inline __attribute__((always_inline)) void distributePreemptedThread(
 		addIntrRequest(target, INTR_MASK_SCHEDULING);
 }
 
-#define CPU_COUNT			4
-#define CPU_MASK_ALL			0xf
 #define PRIORITY_NO_THREAD			0x100	/* above every priority */
 #define PRIORITY_GLOBAL_FIRST_WORD	4	/* the global queues: bitmap words 4-7 of the whole */
 #define PRIORITY_CPU_LAST_WORD		7	/* priorities 0xe0-0xff: the CPU's own again */
-#define CPU_ID_GLOBAL			0x7fff
-#define TRACE_EVENT_SCHED		0x2c
-#define LOCKED_RETRY_DELAY		10
 
 typedef void (*ThreadmgrOffCpuProbe)(const struct ThreadmgrSchedProbeDescriptor *probe, ...);
 
@@ -277,7 +272,7 @@ retry:
 					cpu->priority = thread->currentPriority;
 					sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->globalReadyLock);
 					takeThread(cpu, thread, cpuId);
-					SCE_DBG_ASSERT_CHECK(thread->currentCpuId == CPU_ID_GLOBAL, 424);
+					SCE_DBG_ASSERT_CHECK(thread->currentCpuId == THREAD_CPU_NONE, 424);
 					thread->currentCpuId = cpuId;
 					sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 					goto selected;
@@ -367,15 +362,6 @@ int SceThreadmgrForKernel_BB56D42F(void)
 		return current != cpu->nextRunningThread;
 	return 1;
 }
-
-#define FAST_MUTEX_MAGIC		0xa35db473
-#define PREEMPT_WAIT			4
-#define PREEMPT_EXCEPTION		8
-#define PREEMPT_INTR			2
-#define SWITCH_HOOK_OFF_CPU		2
-#define SWITCH_HOOK_ARGC		5
-#define SCHED_TRACE_OFF_CPU		2
-#define PRIORITY_NONE			0xfe
 
 #define INTR_SCHED_PROBE(symbol, label) \
 	static uint32_t symbol##ProbeId; \
@@ -1022,9 +1008,6 @@ deferred:
  * or exit request pending, gives up the wait).
  */
 
-#define WAIT_TYPE_FAST_MUTEX		0x1000
-#define WAIT_TYPE_FAST_MUTEX_SPIN	0x2000
-#define WAIT_ATTR_UNINTERRUPTIBLE	0x00008000
 #define SPIN_RETRY_DELAY		10
 
 /* callThreadmgrBeforeIntrHandler: thread (running here) was spinning on a fast mutex */
@@ -1040,7 +1023,7 @@ void callThreadmgrBeforeIntrHandler(uintptr_t unused, struct ThreadCB *context)
 	SCE_DBG_ASSERT_CHECK(thread != NULL, 814);
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	for (;;) {
-		SCE_DBG_ASSERT_CHECK(thread->waitType == WAIT_TYPE_FAST_MUTEX_SPIN, 821);
+		SCE_DBG_ASSERT_CHECK(thread->waitType == SCE_KERNEL_WAITTYPE_FAST_MUTEX_SPIN, 821);
 		SCE_DBG_ASSERT_CHECK((thread->status & SCE_KERNEL_THREAD_STATUS_RUNNING) &&
 				     thread->currentCpuId == (int)sceKernelCpuId(), 823);
 		SCE_DBG_ASSERT_CHECK(thread->spinMutex->magic == FAST_MUTEX_MAGIC, 829);
@@ -1075,7 +1058,7 @@ void callThreadmgrBeforeIntrHandler(uintptr_t unused, struct ThreadCB *context)
 		queue = mutex->queue;
 		thread->currentCpuId = -1;
 		thread->waitId = mutex->uid;
-		thread->waitType = WAIT_TYPE_FAST_MUTEX;
+		thread->waitType = SCE_KERNEL_WAITTYPE_FAST_MUTEX;
 		count = ++queue->waiting;
 		SCE_DBG_ASSERT_CHECK(count != 0, 882);
 		queue = mutex->queue;

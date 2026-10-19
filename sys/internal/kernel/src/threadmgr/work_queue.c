@@ -24,10 +24,6 @@
 #include "timer.h"
 #include "event.h"
 
-#define TRAP_REQUEST_UNK2000000		0x02000000	/* PLACEHOLDER: name */
-#define WAIT_TYPE_WORK_QUEUE		0x04000000
-#define WAIT_TYPE_WORK_TASK		0x08000000
-
 #define WORK_QUEUE_ATTR_THREADS		0x00000001	/* the option's thread count */
 #define WORK_QUEUE_ATTR_PRIORITY	0x00000002	/* the option's thread priority */
 #define WORK_QUEUE_ATTR_STACK_SIZE	0x00000004
@@ -40,15 +36,7 @@
 #define WORK_QUEUE_THREAD_STACK		0x2000
 #define GLOBAL_WORK_QUEUE_UID		0x10023	/* SceKernelGlobalWorkQueue's fixed UID */
 
-#define SAVE_ALIGN			64
-#define SAVE_ALIGNED(buffer)		(((uintptr_t)(buffer) + SAVE_ALIGN - 1) & ~(SAVE_ALIGN - 1))
 #define TASK_VFP_SAVE_SIZE		0x48
-#define PSR_T				0x00000020
-#define PSR_KERNEL_CALLBACK		0x0000005f
-#define PSR_USER_CALLBACK		0x00000050
-#define CPACR_CP10_CP11_FULL		0x00f00000
-#define VFP_EXCEPTION_KERNEL		0x00000087	/* PLACEHOLDER: name */
-#define USER_TLS_VFP_EXCEPTION		0x7f0
 
 #define WORK_QUEUE_CLASS()	(s_threadmgrRuntime.manager->workQueueClass)
 #define WORK_TASK_CLASS()	(s_threadmgrRuntime.manager->workTaskClass)
@@ -744,7 +732,7 @@ void callWorkTaskEntry(ThreadmgrWorkTaskCB *task, void *arg)
 	if (task->user) {
 		request = thread->flags & THREAD_FLAG_REQUEST_MASK;
 		if (request == 0 && thread->debugSuspendReason != 0)
-			request = TRAP_REQUEST_UNK2000000;
+			request = TRAP_REQUEST_DEBUG_SUSPEND;
 		if (request != 0) {
 			sceKernelTrapThreadAfterSyscall(0, 0, request);
 			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_RESUMED_WAIT);

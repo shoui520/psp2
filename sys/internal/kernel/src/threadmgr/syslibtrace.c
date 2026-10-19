@@ -10,8 +10,6 @@
 #include <sysmem/sysclib.h>
 #include <threadmgr/threadmgr.h>
 
-#define THREAD_ID_LIST_ALL		0x00010021	/* PLACEHOLDER: name */
-
 /* allocates a thread's syslibtrace state if it has none (its lock held) */
 int syslibtraceThreadCBInit(struct ThreadCB *thread)
 {

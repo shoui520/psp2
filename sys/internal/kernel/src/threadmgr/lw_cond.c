@@ -19,10 +19,6 @@
 #define LW_COND_ATTR_UNLIMITED		0x00004000
 #define LW_COND_OPTION_MAX_SIZE		4
 #define LW_COND_UID_ATTR		0x00002000	/* PLACEHOLDER: name */
-#define WAIT_TYPE_LW_COND		0x00200000
-#define WAIT_TYPE_LW_COND_MUTEX		0x00400000
-#define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
-#define SDK_VERSION_SIGNAL_TO_STRICT	0x02000000
 
 /* SceUIDLwCondClass's constructor */
 static int uidLwCond_Constructor(void *object)
@@ -73,7 +69,7 @@ static int uidLwCond_Destructor(void *object)
 			next = node->next;
 			SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 1303);
 			sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
-			if (waiter->waitType == WAIT_TYPE_LW_COND_MUTEX && waiter->waitCondId == guid)
+			if (waiter->waitType == SCE_KERNEL_WAITTYPE_LW_COND_LW_MUTEX && waiter->waitCondId == guid)
 				wakeMutex |= wakeupAndDistributeThread(waiter, (uintptr_t)queue,
 					SCE_KERNEL_ERROR_WAIT_DELETE_LW_COND);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
@@ -393,7 +389,7 @@ int __sceKernelWaitLwCond(SceUID condId, SceUInt32 *timeout, int callbacks)
 		thread->waitMutexId = cond->lwMutexId;
 		if (callbacks)
 			SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
-		ret = waitWaitableObject(condId, (uintptr_t)&cond->next, WAIT_TYPE_LW_COND, &wakeup,
+		ret = waitWaitableObject(condId, (uintptr_t)&cond->next, SCE_KERNEL_WAITTYPE_LW_COND_SIGNAL, &wakeup,
 					 timeout, NULL, &locked);
 		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));

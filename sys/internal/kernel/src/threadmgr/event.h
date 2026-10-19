@@ -22,10 +22,6 @@
 #define EVENT_PATTERN_RESERVED		0x00010000	/* never set or cleared by a caller */
 #define EVENT_PATTERN_KERNEL		0x00ffffff	/* the bits a user caller may not touch */
 
-#define WAIT_TYPE_EVENT			0x00010000
-#define WAIT_TYPE_MULTIPLE_EVENTS	0x00020000
-#define WAIT_ID_MULTIPLE_EVENTS		((SceUID)0x80000000)	/* thread->waitId while in a WME */
-
 #define WME_MODE_ANY			1	/* the wait ends with the first event */
 #define WME_MODE_ALL			2	/* the wait ends when every event has come */
 #define WME_MAX_EVENTS			64

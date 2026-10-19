@@ -14,8 +14,6 @@
 #undef __FILE_NAME__
 #define __FILE_NAME__ "threadmgr_for_user.c"
 
-#define TIMER_PUID_ATTR_OPENED		0x80000
-
 /* Copy dimensions supplied alongside the user timer-info buffer. */
 struct ThreadmgrTimerInfoCopyArgs {
 	SceSize size;

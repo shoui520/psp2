@@ -20,8 +20,6 @@
 #define EVF_USER_ATTR_MASK		0x00003080	/* what a syscall may pass */
 #define EVF_OPTION_MAX_SIZE		4
 #define EVF_UID_ATTR_LW			0x0000c000	/* PLACEHOLDER: name */
-#define WAIT_TYPE_EVENT_FLAG		0x10
-#define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 
 /* whether pattern satisfies a waiter's request under mode */
 static inline int EventFlagMatches(uint32_t pattern, uint32_t request, uint32_t mode)
@@ -226,7 +224,7 @@ int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPa
 		thread->waitEventMode = mode;
 		thread->waitPatternOutput = outPattern;
 		if (!callbacks) {
-			ret = waitWaitableObject(evfId, (uintptr_t)&evf->next, WAIT_TYPE_EVENT_FLAG,
+			ret = waitWaitableObject(evfId, (uintptr_t)&evf->next, SCE_KERNEL_WAITTYPE_EVENTFLAG,
 						 &wakeup, timeout, NULL, &locked);
 			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -235,7 +233,7 @@ int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPa
 			break;
 		}
 		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
-		ret = waitWaitableObject(evfId, (uintptr_t)&evf->next, WAIT_TYPE_EVENT_FLAG, &wakeup,
+		ret = waitWaitableObject(evfId, (uintptr_t)&evf->next, SCE_KERNEL_WAITTYPE_EVENTFLAG, &wakeup,
 					 timeout, NULL, &locked);
 		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));

@@ -41,9 +41,6 @@ __attribute__((section(SCE_DBGSRC_SECTION), used)) = {
 #define SIMPLE_EVENT_OPENED		0x00000100
 #define SIMPLE_EVENT_PROCESS_EXITED	0x00000200
 #define SIMPLE_EVENT_UID_ATTR_LW	0x0000c000	/* PLACEHOLDER: name */
-#define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
-#define UID_MAX_PER_PROCESS		0x800
-#define UID_LW_MAX_PER_PROCESS		0x100
 
 /* SceUIDSimpleEventObject (0x3c) */
 typedef struct ThreadmgrSimpleEvent {

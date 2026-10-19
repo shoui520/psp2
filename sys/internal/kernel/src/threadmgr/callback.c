@@ -23,7 +23,6 @@
 #include <intrmgr/intrmgr.h>
 #include <threadmgr/threadmgr.h>
 
-#define WAIT_TYPE_DELAY			0x00000001
 #define EVENT_CALLBACK_ALLOC_SIZE	0x20	/* a ThreadmgrEventCallback's heap block */
 
 #define CALLBACK_STACK_MIN_FREE		0x708	/* the kernel stack a callback needs left */
@@ -32,18 +31,8 @@
 #define EXT_STACK_GUARD			0x1000
 #define EXT_STACK_MEMBLOCK_ATTR		0x40400008	/* PLACEHOLDER: SceKernelAllocMemBlockAttr bits */
 
-#define SAVE_ALIGN			64	/* the context save areas' alignment */
-#define SAVE_ALIGNED(buffer)		(((uintptr_t)(buffer) + SAVE_ALIGN - 1) & ~(SAVE_ALIGN - 1))
 #define CALLBACK_VFP_SAVE_SIZE		0x48	/* d8-d15, FPSCR, FPEXC */
 
-#define PSR_T				0x00000020
-#define PSR_KERNEL_CALLBACK		0x0000005f	/* SYS mode, FIQ masked */
-#define PSR_USER_CALLBACK		0x00000050	/* USR mode, FIQ masked */
-#define CPACR_CP10_CP11_FULL		0x00f00000
-#define VFP_EXCEPTION_KERNEL		0x00000087	/* PLACEHOLDER: the kernel callback's VFP exception mask */
-#define USER_TLS_VFP_EXCEPTION		0x7f0	/* below the user TLS: the thread's VFP exception mask */
-
-#define TRAP_REQUEST_UNK2000000		0x02000000	/* PLACEHOLDER: name */
 #define INTR_EXCEPTION_NO_CALLBACK_STACK	0x200	/* PLACEHOLDER: SceIntrmgrForDriver_C568F145's code */
 #define INTR_EXCEPTION_STACK_OVERFLOW	0x201	/* PLACEHOLDER: name */
 
@@ -52,7 +41,6 @@
 #define TRACE_CALLBACK_END		0xe
 
 #define CALLBACK_CLASS()	(s_threadmgrRuntime.manager->callbackClass)
-#define THREAD_CLASS()		(s_threadmgrRuntime.manager->threadClass)
 #define CALLBACK_HEAD(thread)	((struct ThreadmgrCallbackCB *)&(thread)->callbackNext)
 #define CALLBACK_FROM_CB(cb) \
 	((struct ThreadmgrCallback *)((uintptr_t)(cb) - offsetof(struct ThreadmgrCallback, cb)))
@@ -207,7 +195,7 @@ void __attribute__((noreturn)) _sceKernelExitCallback(int result)
 	if (thread->pRegisterContext->callbackContext == NULL) {
 		/* not in a callback */
 		debugSuspendThreadSelf(DEBUG_SUSPEND_EXIT_CALLBACK, 0, NULL);
-		sceKernelTrapThreadAfterSyscall(0, 0, TRAP_REQUEST_UNK2000000);
+		sceKernelTrapThreadAfterSyscall(0, 0, TRAP_REQUEST_DEBUG_SUSPEND);
 		exitDeleteThread(0, intr, SCE_KERNEL_ERROR_ILLEGAL_CONTEXT);
 	}
 	returnFromCallback(thread);
@@ -422,7 +410,7 @@ restore:
 	if (user) {
 		request = thread->flags & THREAD_FLAG_REQUEST_MASK;
 		if (request == 0 && thread->debugSuspendReason != 0)
-			request = TRAP_REQUEST_UNK2000000;
+			request = TRAP_REQUEST_DEBUG_SUSPEND;
 		if (request != 0) {
 			sceKernelTrapThreadAfterSyscall(0, 0, request);
 			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_RESUMED_WAIT);
@@ -506,7 +494,7 @@ int callCallbackAll(struct ThreadCB *thread)
 				SCE_PANIC(678);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			SceIntrmgrForDriver_C568F145(INTR_EXCEPTION_STACK_OVERFLOW);
-			sceKernelTrapThreadAfterSyscall(0, 0, TRAP_REQUEST_UNK2000000);
+			sceKernelTrapThreadAfterSyscall(0, 0, TRAP_REQUEST_DEBUG_SUSPEND);
 			exitDeleteThread(0, 0, SCE_KERNEL_ERROR_ILLEGAL_CONTEXT);
 		}
 		count = cb->notifyCount;
@@ -874,7 +862,7 @@ int sceKernelNotifyCallback(SceUID callbackId, int arg)
 			SceCpuForDriver_BC248C30((SceInt32 *)&object->context.flags, THREAD_FLAG_CALLBACKS);
 			break;
 		}
-		if (object->context.waitType == WAIT_TYPE_DELAY) {
+		if (object->context.waitType == SCE_KERNEL_WAITTYPE_DELAY) {
 			/* a delay: the thread leaves the timed waits */
 			SceCpuForDriver_BC248C30((SceInt32 *)&object->context.flags, THREAD_FLAG_CALLBACKS);
 			waitId = -1;

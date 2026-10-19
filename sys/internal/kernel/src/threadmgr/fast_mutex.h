@@ -11,7 +11,6 @@
 #include <threadmgr/uid_waitable.h>
 #include <threadmgr/fast_mutex.h>
 
-#define FAST_MUTEX_MAGIC		0xa35db473
 #define FAST_MUTEX_ATTR_RECURSIVE	0x00000002
 #define FAST_MUTEX_ATTR_CEILING		0x00000004
 #define FAST_MUTEX_ATTR_LOCKED		0x00000008	/* created locked by the caller */

@@ -18,8 +18,6 @@
 #define FAST_MUTEX_ITEM_SIZE		0x80	/* the class's object allocation size */
 #define FAST_MUTEX_ATTR_MASK		0x0000a00e
 #define FAST_MUTEX_OPTION_MAX_SIZE	8
-#define WAIT_TYPE_FAST_MUTEX		0x1000
-#define WAIT_TYPE_FAST_MUTEX_SPIN	0x2000	/* spinning on the work area's lock */
 
 #define FAST_MUTEX_UID_OBJECT(queue) \
 	((struct ThreadmgrUidFastMutex *)((uintptr_t)(queue) - offsetof(struct ThreadmgrUidFastMutex, next)))
@@ -375,7 +373,7 @@ restore:
 		SCE_PANIC_FUNC(panicLine, "lockFastMutex");				\
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));					\
 	thread->waitMode = (int)mutex;							\
-	ret = waitWaitableObject(mutex->uid, (uintptr_t)mutex->queue, WAIT_TYPE_FAST_MUTEX,	\
+	ret = waitWaitableObject(mutex->uid, (uintptr_t)mutex->queue, SCE_KERNEL_WAITTYPE_FAST_MUTEX,	\
 				 NULL, NULL, NULL, &locked);				\
 	if (ret >= 0)									\
 		SCE_DBG_ASSERT_LEVEL_FUNC(0, thread == mutex->owner && mutex->lock != 0,	\
@@ -447,7 +445,7 @@ int lockFastMutex(struct ThreadmgrFastMutex *mutex)
 	/* the owner holds the lock: spin on it */
 	thread->waitMode = (int)mutex;
 	thread->fastMutexHandoff = 0;
-	thread->waitType = WAIT_TYPE_FAST_MUTEX_SPIN;
+	thread->waitType = SCE_KERNEL_WAITTYPE_FAST_MUTEX_SPIN;
 	SCE_DBG_ASSERT_LEVEL_FUNC(0, mutex->spinWaitCount < 0x7fffffff, 330, "lockFastMutex");
 	mutex->spinWaitCount++;
 	sceKernelSpinlockLowUnlock(queueLock);
@@ -468,7 +466,7 @@ int lockFastMutex(struct ThreadmgrFastMutex *mutex)
 		if (mutex->owner == thread) {
 			/* the unlocker handed it to us */
 			SCE_DBG_ASSERT_LEVEL_FUNC(0, thread->fastMutexHandoff != 0, 390, "lockFastMutex");
-			SCE_DBG_ASSERT_LEVEL_FUNC(0, thread->waitType != WAIT_TYPE_FAST_MUTEX_SPIN, 391, "lockFastMutex");
+			SCE_DBG_ASSERT_LEVEL_FUNC(0, thread->waitType != SCE_KERNEL_WAITTYPE_FAST_MUTEX_SPIN, 391, "lockFastMutex");
 			SCE_DBG_ASSERT_CHECK_FUNC(mutex->lock != 0, 393, "lockFastMutex");
 			thread->fastMutexHandoff = 0;
 			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags,
@@ -481,7 +479,7 @@ int lockFastMutex(struct ThreadmgrFastMutex *mutex)
 			/* woken out of the spin with an error */
 			SCE_DBG_ASSERT_LEVEL_FUNC(0, (thread->flags & THREAD_FLAG_REQUEST_MASK) != 0, 406, "lockFastMutex");
 			SCE_DBG_ASSERT_LEVEL_FUNC(0, thread->waitResult != 0, 407, "lockFastMutex");
-			SCE_DBG_ASSERT_LEVEL_FUNC(0, thread->waitType != WAIT_TYPE_FAST_MUTEX_SPIN, 408, "lockFastMutex");
+			SCE_DBG_ASSERT_LEVEL_FUNC(0, thread->waitType != SCE_KERNEL_WAITTYPE_FAST_MUTEX_SPIN, 408, "lockFastMutex");
 			thread->fastMutexHandoff = 0;
 			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags,
 						    THREAD_FLAG_WAKE_PENDING);

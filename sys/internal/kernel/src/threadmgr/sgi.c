@@ -621,8 +621,6 @@ void initIntrRequestPool(void)
 	s_intrRequestPool[INTR_REQUEST_POOL_SIZE - 1].next = NULL;
 }
 
-#define TRACE_EVENT_AFFINITY		0x20
-
 /* cpuId sets threadId's affinity */
 void issueChangeThreadCpuAffinityIntrRequest(unsigned int cpuId, SceUID threadId, uint32_t mask)
 {
@@ -638,8 +636,6 @@ void issueChangeThreadCpuAffinityIntrRequest(unsigned int cpuId, SceUID threadId
 	issueIntrRequest(cpuId, request);
 }
 
-#define TRACE_EVENT_PRIORITY		0x21
-
 /* cpuId changes threadId's priority */
 void issueChangeThreadPriorityIntrRequest(unsigned int cpuId, SceUID threadId, int priority)
 {
@@ -653,8 +649,6 @@ void issueChangeThreadPriorityIntrRequest(unsigned int cpuId, SceUID threadId, i
 		hook(TRACE_EVENT_PRIORITY, 2, threadId, priority);
 	issueIntrRequest(cpuId, request);
 }
-
-#define TRACE_EVENT_SCHED		0x2c
 
 /* PLACEHOLDER: name. Tells cpuId of a scheduling event (with the trace hook) */
 void issueCallPAScheduleHookIntrRequest(unsigned int cpuId, SceUID processId, SceUID threadId,

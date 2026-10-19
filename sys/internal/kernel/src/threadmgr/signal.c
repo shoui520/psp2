@@ -17,9 +17,6 @@
 #undef __FILE_NAME__
 #define __FILE_NAME__ "threadmgr.c"
 
-#define WAIT_TYPE_SIGNAL		0x00000004
-#define WAIT_ATTR_UNINTERRUPTIBLE	0x00008000	/* PLACEHOLDER: name */
-
 extern const char s_signalSleepCodeSite[];
 
 /* _sceKernelWaitSignal: the timeout comes in and goes back out */

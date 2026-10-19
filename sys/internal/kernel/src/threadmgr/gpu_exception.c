@@ -10,8 +10,6 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>
 
-#define THREADMGR_KERNEL_PID		0x10005
-#define PROCESS_DEBUG_SUSPEND_EXCEPTION	0x11	/* PLACEHOLDER: SceSysrootForKernel_1247A825's reason */
 #define PROCESS_DEBUG_SUSPEND_GPU	1	/* the processDebugSuspendHook kind */
 
 /* what the debugger's handler decides */

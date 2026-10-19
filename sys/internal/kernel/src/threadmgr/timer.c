@@ -33,12 +33,8 @@
 #define TIMER_EVENT_DELETED		0x00000008
 #define TIMER_EVENT_PROCESS_EXITED	0x00000200
 #define TIMER_UID_ATTR_LW		0x0000c000	/* PLACEHOLDER: name */
-#define WAIT_TYPE_LW_OBJECT		0x00040000
-#define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 #define SDK_VERSION_DELAY_TIMEOUT	0x020fffff	/* newer SDKs time out a wait already due */
 #define SDK_VERSION_DELETE_CHECK	0x03100000	/* from here delete must match create */
-#define UID_MAX_PER_PROCESS		0x800
-#define UID_LW_MAX_PER_PROCESS		0x100
 #define ALARM_HOOK_CREATE		5
 #define ALARM_HOOK_CANCEL		6
 #define ALARM_HOOK_CALL			7
@@ -963,7 +959,7 @@ void cancelDelayTimer(SceUID delayId, struct ThreadCB *thread)
 		thread->remainingTimeLow = remaining;
 		thread->remainingTimeHigh = 0;
 		if (timeout != NULL) {
-			if (thread->waitType == WAIT_TYPE_LW_OBJECT &&
+			if (thread->waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE &&
 			    thread->timeoutProcessId != THREADMGR_KERNEL_PID) {
 				ret = sceKernelCopyToUserProc(thread->timeoutProcessId, timeout,
 							       &remaining, sizeof(remaining));
@@ -1748,7 +1744,7 @@ int sceKernelCancelTimer(SceUID timerId, int *numWaitThreads)
 			thread = (struct ThreadCB *)node;
 			SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 2432);
 			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
-			if (thread->waitType == WAIT_TYPE_EVENT) {
+			if (thread->waitType == SCE_KERNEL_WAITTYPE_EVENT) {
 				if (thread->waitEventPatternOutput != NULL)
 					*thread->waitEventPatternOutput = 0x10;
 				if (thread->waitEventDataOutput != NULL)

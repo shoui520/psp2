@@ -26,8 +26,6 @@
 #define RW_LOCK_MODE_READ		0
 #define RW_LOCK_MODE_WRITE		1
 #define RW_LOCK_COUNT_MAX		0x7fffffff
-#define WAIT_TYPE_RW_LOCK		0x80
-#define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 
 /* the rw lock state proper (0x20), cleared by the constructor; releaseRWLock works on it */
 typedef struct ThreadmgrRWLockCore {
@@ -307,7 +305,7 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 			SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		SCE_DBG_ASSERT_CHECK(rwLock->waiting + 1 ==
 			(uint32_t)(rwLock->core.readWaiters + rwLock->core.writeWaiters), 387);
-		ret = waitWaitableObject(rwLockId, (uintptr_t)&rwLock->next, WAIT_TYPE_RW_LOCK,
+		ret = waitWaitableObject(rwLockId, (uintptr_t)&rwLock->next, SCE_KERNEL_WAITTYPE_RW_LOCK,
 					 &wakeup, timeout, NULL, &locked);
 		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		SCE_DBG_ASSERT_PRINTF(rwLock->waiting ==

@@ -18,7 +18,6 @@
 #define THREAD_EVENT_MASK_VALID		0x0000000c
 #define THREAD_EVENT_MASK_SELF		0x00000008	/* the only event a thread may watch on itself */
 #define THREAD_EVENT_ATTR_UNLIMITED	0x00004000
-#define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 
 /* SceUIDThreadEventObject (0x38) */
 typedef struct ThreadmgrThreadEvent {
