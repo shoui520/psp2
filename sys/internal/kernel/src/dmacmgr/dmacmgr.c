@@ -36,7 +36,7 @@ struct FixedHeap;
 #define DMAC_LEN_MASK		0x00ffffff
 
 /* the address of the manager plus one (Sony ORs the bit in; the sum is what the prover folds) */
-#define DMA_OP_MAGIC	((SceUInt32)&s_dmacMgr + 1)
+#define DMA_OP_MAGIC	((SceUInt32)&s_dmacMgr | 1)
 
 /* a channel interrupt: DMAC4's gates have no channel of their own */
 typedef struct DmacIntr {
