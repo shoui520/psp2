@@ -545,8 +545,6 @@ int UVFAT_Read(SceExfatfsSharedResource *sharedResource, unsigned int fd,
 	return result;
 }
 
-/* Original callers pass the allocation size although the helper ignores it. */
-
 int UVFAT_Write(SceExfatfsSharedResource *sharedResource, unsigned int fd,
 	const void *buffer, unsigned int size)
 {

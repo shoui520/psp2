@@ -329,7 +329,7 @@ int isUnicodeDoubleByte(unsigned int unicode);
 
 /* exfatfs_utility.c */
 void *allocateFatBuffer(SceSize size);
-void freeFatBuffer(void *buffer, SceSize size);
+void freeFatBuffer(void *buffer, SceSize size);	/* callers pass the size; it is ignored */
 unsigned int checksumUtf16Name(const SceUInt16 *name, unsigned int length);
 int fatNameLength(const SceUInt16 *name);
 SceUInt16 *fatNameCopyBounded(SceUInt16 *destination, const SceUInt16 *source, unsigned int count);
