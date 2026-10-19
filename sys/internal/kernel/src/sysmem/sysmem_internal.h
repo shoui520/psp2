@@ -854,6 +854,7 @@ int InitializeDebugNop(void);
 
 /* dipsw.c */
 #if SYSMEM_NSKBL
+struct SceDipsw;
 int InitializeDipsw(struct SceDipsw *dipsw);	/* the boot loaders' own */
 #else
 int InitializeDipsw(const struct SysmemBootContext *context);
