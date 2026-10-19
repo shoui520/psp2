@@ -3,6 +3,7 @@
 #include "ssmgr_internal.h"
 #include <sysmem/sysroot.h>
 #include <sysmem/pmmgr.h>
+#include <sysmem/sblaimgr.h>
 #include <kernel_boot_loader/kbl_param.h>
 #include <threadmgr/threadmgr.h>
 #include <string.h>
@@ -10,10 +11,6 @@
 ScePsCode aimgrPscode;
 SceKernelOpenPsId aimgrOpenPsId;
 SceUID aimgrMutex;
-
-#define AIMGR_ERROR_INVALID_ARGUMENT	0x800F0C16
-#define AIMGR_ERROR_PRODUCT_MODE	0x800F0C01
-#define AIMGR_ERROR_NOT_PRODUCTION	0x800F0C29
 
 static inline unsigned int swap16(unsigned int value)
 {
@@ -41,7 +38,7 @@ int aimgrInit(void)
 int SceSblSsMgrForDriver_E0DC2587(ScePsCode *pscode)
 {
 	if (!pscode)
-		return AIMGR_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_AIMGR_INVALID_ARGUMENT;
 
 	*pscode = aimgrPscode;
 	pscode->company_code = swap16(pscode->company_code);
@@ -58,11 +55,11 @@ int sceSblAimgrGetPscode2(ScePsCode *pscode)
 	int ret, permission;
 
 	if (!pscode)
-		return AIMGR_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_AIMGR_INVALID_ARGUMENT;
 	if (sceSblPmMgrGetProductMode(&productMode))
-		return AIMGR_ERROR_PRODUCT_MODE;
+		return SCE_SBL_ERROR_AIMGR_PRODUCT_MODE;
 	if (!productMode)
-		return AIMGR_ERROR_NOT_PRODUCTION;
+		return SCE_SBL_ERROR_AIMGR_ILLEGAL_STATE;
 
 	ret = sceKernelLockMutex(aimgrMutex, 1, NULL);
 	if (ret < 0)
@@ -98,7 +95,7 @@ int sceSblAimgrGetConsoleId(SceConsoleId *consoleId)
 	int ret;
 
 	if (!consoleId)
-		return AIMGR_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_AIMGR_INVALID_ARGUMENT;
 
 	ret = sceKernelLockMutex(aimgrMutex, 1, NULL);
 	if (ret < 0)
@@ -114,7 +111,7 @@ int sceSblAimgrGetConsoleId(SceConsoleId *consoleId)
 int sceSblAimgrGetOpenPsId(SceKernelOpenPsId *openPsId)
 {
 	if (!openPsId)
-		return AIMGR_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_AIMGR_INVALID_ARGUMENT;
 
 	*openPsId = aimgrOpenPsId;
 	return 0;
@@ -125,7 +122,7 @@ int sceSblAimgrGetVisibleId(void *visibleId)
 	int ret;
 
 	if (!visibleId)
-		return AIMGR_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_AIMGR_INVALID_ARGUMENT;
 
 	ret = sceKernelLockMutex(aimgrMutex, 1, NULL);
 	if (ret < 0)
@@ -143,7 +140,7 @@ int SceSblSsMgrForDriver_B8B298FD(const uint32_t *parameters, void *passPhrase)
 	int ret;
 
 	if (!parameters || !passPhrase)
-		return AIMGR_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_AIMGR_INVALID_ARGUMENT;
 	ret = sceKernelLockMutex(aimgrMutex, 1, NULL);
 	if (ret < 0)
 		return ret;

@@ -11,9 +11,6 @@
 #define PMMGR_ERROR_INVALID_ARGUMENT	0x800f0a16
 #define PMMGR_ERROR_NO_KBL_PARAM	0x800f0a29
 
-#define BOOT_TYPE_EXTERNAL		0x1
-#define BOOT_TYPE_PRODUCT_MODE		0x4
-
 int sceSblPmMgrGetProductMode(SceProductMode *mode)
 {
 	SceKblParam *kbl;

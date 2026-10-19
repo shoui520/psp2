@@ -233,7 +233,7 @@ int ewMainThread(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 
-	SceLedForDriver_EA24BE03(2, 0, NULL);
+	SceLedForDriver_EA24BE03(2, SCE_LED_MODE_OFF, NULL);
 	sceRegMgrGetKeyInt("/CONFIG/USB", "usb_charge_enable", &chargeEnable);
 	SceUdcdForDriver_2D91F8C3(chargeEnable);
 	ScePowerForDriver_0CD21B1F(0);

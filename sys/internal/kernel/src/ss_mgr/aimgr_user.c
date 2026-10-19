@@ -2,8 +2,7 @@
 #include "ssmgr_internal.h"
 #include <sysmem/sysmem.h>
 #include <intrmgr/syscall.h>
-
-#define AIMGR_ERROR_INVALID_ARGUMENT	0x800F0C16
+#include <sysmem/sblaimgr.h>
 
 /* kept out of line in every build */
 __attribute__((noinline))
@@ -13,7 +12,7 @@ static int aimgrGetOpenPsIdForUser(SceKernelOpenPsId *openPsId)
 	int ret;
 
 	if (!openPsId)
-		return AIMGR_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_AIMGR_INVALID_ARGUMENT;
 
 	syscallFrame = sceSyscallEnter();
 	ret = sceSblAimgrGetOpenPsId(openPsId);

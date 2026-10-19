@@ -10,9 +10,6 @@
 #include <sysmem/sblaimgr.h>
 #include <sysmem/sysroot.h>
 
-/* name unknown */
-#define AIMGR_ERROR_INVALID_ARGUMENT	0x800f0c16
-
 #define PRODUCT_CODE_TEST		0x100
 #define PRODUCT_CODE_TOOL		0x101
 #define PRODUCT_CODE_DEX		0x102
@@ -177,7 +174,7 @@ int SceSblAIMgrForDriver_47D9CF13(SceUInt32 *smi)
 	SceKblParam *kbl = sceKernelSysrootGetKblParam();
 
 	if (smi == NULL || kbl == NULL)
-		return AIMGR_ERROR_INVALID_ARGUMENT;
+		return SCE_SBL_ERROR_AIMGR_INVALID_ARGUMENT;
 	*smi = kbl->factory_fw_version;
 	return 0;
 }

@@ -72,7 +72,7 @@ int SpkgUtilPowerControl(int operation, int flags)
 		break;
 	case 4:
 		if (ledControl) {
-			result = ledControl(2, 1, 0);
+			result = ledControl(2, SCE_LED_MODE_ON, NULL);
 		} else {
 			SceSysconForDriver_04EC7579(64, 1);
 			SceGpioForDriver_D454A584(0, 7);
@@ -81,7 +81,7 @@ int SpkgUtilPowerControl(int operation, int flags)
 		break;
 	case 5:
 		if (ledControl) {
-			result = ledControl(2, 0, 0);
+			result = ledControl(2, SCE_LED_MODE_OFF, NULL);
 		} else {
 			SceSysconForDriver_04EC7579(64, 0);
 			SceGpioForDriver_F6310435(0, 7);

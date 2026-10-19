@@ -4,6 +4,7 @@
 #include <sm_comm/sm_comm.h>
 #include <sysmem/sysclib.h>
 #include <rtc/rtc.h>
+#include <sysmem/sblaimgr.h>
 
 SceUID aimgrSmId;
 
@@ -55,7 +56,7 @@ int aimgrReadConsoleId(SceConsoleId *consoleId)
 	int ret, callRet;
 
 	if (!consoleId) {
-		result = 0x800f0c16;
+		result = SCE_SBL_ERROR_AIMGR_INVALID_ARGUMENT;
 		goto out;
 	}
 	ret = invoke_aimgr_secure_module();
@@ -66,7 +67,7 @@ int aimgrReadConsoleId(SceConsoleId *consoleId)
 	ret = stop_aimgr_secure_module();
 	if (ret)
 		goto error;
-	result = 0x800f0c28;
+	result = SCE_SBL_ERROR_AIMGR_SM_CALL;
 	if (callRet == 0) {
 		result = serviceResult;
 		if (result == 0)
@@ -90,7 +91,7 @@ int aimgrReadPscode2(ScePsCode *pscode)
 
 	if (pscode) {
 		if (SceIdStorageForDriver_EB00C509(68, leaf.words)) {
-			ret = 0x800f0c05;
+			ret = SCE_SBL_ERROR_AIMGR_IDSTORAGE;
 		} else {
 			ret = invoke_aimgr_secure_module();
 			if (ret == 0) {
@@ -98,7 +99,7 @@ int aimgrReadPscode2(ScePsCode *pscode)
 					&serviceResult, leaf.words, sizeof(leaf));
 				ret = stop_aimgr_secure_module();
 				if (ret == 0) {
-					ret = 0x800f0c28;
+					ret = SCE_SBL_ERROR_AIMGR_SM_CALL;
 					if (callRet == 0) {
 						ret = serviceResult;
 						if (ret == 0)
@@ -108,7 +109,7 @@ int aimgrReadPscode2(ScePsCode *pscode)
 			}
 		}
 	} else {
-		ret = 0x800f0c16;
+		ret = SCE_SBL_ERROR_AIMGR_INVALID_ARGUMENT;
 	}
 	return ret;
 }
@@ -121,7 +122,7 @@ int aimgrReadVisibleId(void *visibleId)
 	int ret, stopRet;
 
 	if (!visibleId)
-		return 0x800f0c16;
+		return SCE_SBL_ERROR_AIMGR_INVALID_ARGUMENT;
 	ret = invoke_aimgr_secure_module();
 	if (ret)
 		return ret;
@@ -131,7 +132,7 @@ int aimgrReadVisibleId(void *visibleId)
 	if (stopRet)
 		return stopRet;
 	if (ret)
-		return 0x800f0c28;
+		return SCE_SBL_ERROR_AIMGR_SM_CALL;
 	if (!serviceResult) {
 		const uint8_t *source = value + sizeof(value);
 		uint8_t *destination = (uint8_t *)reversed;
@@ -162,16 +163,16 @@ int aimgrCreatePassPhrase(const uint32_t *parameters, void *passPhrase)
 	int ret;
 
 	if (!passPhrase || !parameters)
-		return 0x800f0c16;
+		return SCE_SBL_ERROR_AIMGR_INVALID_ARGUMENT;
 	memset(&request, 0, sizeof(request));
 	request.mode = parameters[0];
 	__builtin_memcpy(request.parameters, parameters + 2,
 			 sizeof(request.parameters));
 	if (SceIdStorageForDriver_EB00C509(68, request.passPhrase))
-		return 0x800f0c05;
+		return SCE_SBL_ERROR_AIMGR_IDSTORAGE;
 	getCurrentSecureTick = SceRtcForDriver_401C0954;
 	if (!getCurrentSecureTick)
-		return 0x800f0c29;
+		return SCE_SBL_ERROR_AIMGR_ILLEGAL_STATE;
 	ret = SceRtcForDriver_401C0954(&tick);
 	if (ret)
 		return ret;

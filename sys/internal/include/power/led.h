@@ -1,8 +1,20 @@
-#ifndef SCE_LED_H
-#define SCE_LED_H
+/* SceLed (ScePower): the LEDs SceLedForDriver_EA24BE03 sets */
+#pragma once
 
 #include <stddef.h>
+#include <stdint.h>
 #include <scetypes.h>
+
+/* LED error codes (lowio's 0x803f01xx facility; names unknown) */
+#define SCE_LED_ERROR_INVALID_LED	0x803f0140
+#define SCE_LED_ERROR_INVALID_MODE	0x803f0141
+
+/* SceLedForDriver_EA24BE03's modes */
+#define SCE_LED_MODE_OFF	0
+#define SCE_LED_MODE_ON		1	/* Syscon pattern index */
+#define SCE_LED_MODE_BLINK	2
+#define SCE_LED_MODE_SCRIPT	3	/* option is a byte script */
+#define SCE_LED_MODE_LEVEL	4	/* Syscon level, LED 2 only */
 
 /* SceLedForDriver_EA24BE03's option for every mode but SCE_LED_MODE_SCRIPT. */
 typedef struct LedModeParam {
@@ -28,7 +40,6 @@ _Static_assert(offsetof(LedModeParam, blink.offTicks) == 8, "LED off ticks");
 _Static_assert(offsetof(LedModeParam, blink.repeatCount) == 12, "LED repeat count");
 _Static_assert(offsetof(LedModeParam, blink.endState) == 16, "LED final state");
 
-#endif
 
 /* vitasdk: ksceLedSetMode */
 int SceLedForDriver_EA24BE03(uint32_t led, uint32_t mode, const void *option);

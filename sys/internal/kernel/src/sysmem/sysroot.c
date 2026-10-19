@@ -680,7 +680,7 @@ int SysrootModuleStart(const struct SysmemBootContext *context)
 	}
 	s_sysrootClass = state->sysrootClass;
 	SceSysrootForDriver_4B8C305A.disableCountAndFlags =
-		(state->kblParam->boot_type_indicator_1 & 4) ? 0x14 : 4;
+		(state->kblParam->boot_type_indicator_1 & BOOT_TYPE_PRODUCT_MODE) ? 0x14 : 4;
 	SceDebugForKernel_0EDA5174((uintptr_t)state->modulePrivate[2]);
 	return 0;
 }
@@ -2646,7 +2646,6 @@ const char *SysrootGetMemBlockName(unsigned int index)
 
 #if SYSMEM_NSKBL
 
-#define SCE_KBL_PARAM_MAGIC	0xcbac03aa
 #define SYSROOT_CPU_COUNT	4
 #define SYSROOT_NAME_SIZE	32
 

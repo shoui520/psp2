@@ -348,17 +348,6 @@ _Static_assert(offsetof(struct PowerBatteryBase, state.usbStatus) == 0xec,
 _Static_assert(offsetof(struct PowerBatteryBase, state.usbStatusPacket) == 0xf4,
 	       "Power USB status packet offset");
 
-/* LED error codes (lowio's 0x803f01xx facility; names unknown) */
-#define SCE_LED_ERROR_INVALID_LED	0x803f0140
-#define SCE_LED_ERROR_INVALID_MODE	0x803f0141
-
-/* SceLedForDriver_EA24BE03's modes */
-#define SCE_LED_MODE_OFF	0
-#define SCE_LED_MODE_ON		1	/* Syscon pattern index */
-#define SCE_LED_MODE_BLINK	2
-#define SCE_LED_MODE_SCRIPT	3	/* option is a byte script */
-#define SCE_LED_MODE_LEVEL	4	/* Syscon level, LED 2 only */
-
 /* an open loop of an LED script (ops 3 and 4) */
 struct PowerLedScriptLoop {
 	const uint8_t *cursor;

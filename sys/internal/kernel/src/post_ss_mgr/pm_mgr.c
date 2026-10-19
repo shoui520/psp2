@@ -18,8 +18,6 @@
 #define PM_MODE_OFF		5
 #define PM_MODE_OFF_NVS		7
 
-#define BOOT_TYPE_PRODUCT_MODE		0x4
-
 static SceUInt32 g_pmBaryonVersion;	/* name unknown */
 static SceUInt32 g_pmSysconRevision;	/* name unknown */
 SceUInt8 g_pmProductMode;		/* name unknown */

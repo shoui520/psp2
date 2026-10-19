@@ -96,7 +96,6 @@ extern uint32_t _fbss[], _end[];
 #define CPU_PRIVATE_BASE	0x1a000000
 
 #define SCE_KBL_PARAM_ADDRESS	0x100		/* where second_loader leaves it */
-#define SCE_KBL_PARAM_MAGIC	0xcbac03aa
 #define BOOT_VECTOR_PAGE_MAGIC	0x9e3199b7
 
 #define KBL_IMAGE_ADDRESS	0x51000000	/* sceKblMain's TrustZone kernel */
@@ -548,10 +547,11 @@ static inline uint32_t BootCpu0Init(void *lr)
 				     s_kblParam.dipswWords[1] & 0xffff);
 	else
 		SCE_PRINTF_WITH_INFO(0, 1884, "cp info.   : (N/A)\n");
-	if (s_kblParam.boot_type_indicator_1 & 4)
+	if (s_kblParam.boot_type_indicator_1 & BOOT_TYPE_PRODUCT_MODE)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 1889, "\tProduct Mode : [ YES ]\n");
-	if (((s_kblParam.boot_type_indicator_1 & 4) || (s_kblParam.qa_flags[0xd] & 1)) &&
-	    (s_kblParam.boot_type_indicator_1 & 8))
+	if (((s_kblParam.boot_type_indicator_1 & BOOT_TYPE_PRODUCT_MODE) ||
+	     (s_kblParam.qa_flags[0xd] & 1)) &&
+	    (s_kblParam.boot_type_indicator_1 & BOOT_TYPE_MEMORY_TEST))
 		KblMemoryTest();
 
 	kermit = param->socRevision & 0x1ffff;

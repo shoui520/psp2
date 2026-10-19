@@ -25,6 +25,15 @@
 #define SCE_KBL_POWEROFF_PANIC		0x00000010	/* a fatal error powered it off */
 #define SCE_KBL_POWEROFF_USB_ENUM	0x00090000	/* sceSysrootIsUsbEnumWakeup */
 
+/* SceKblParam.boot_type_indicator_1 (names unknown; the henkaku wiki's meanings) */
+#define BOOT_TYPE_EXTERNAL		0x00000001	/* external boot (manufacturing images) */
+#define BOOT_TYPE_PRODUCT_MODE		0x00000004
+#define BOOT_TYPE_MEMORY_TEST		0x00000008	/* never set by the release second_loader */
+#define BOOT_TYPE_JIG			0x00010000	/* the jig handshake passed */
+#define BOOT_TYPE_SD_MODE		0x00080000
+
+#define SCE_KBL_PARAM_MAGIC		0xcbac03aa	/* SceKblParam.magic */
+
 typedef struct SceKblParam {		/* 0x200 bytes since 3.60 */
 	uint16_t version;
 	uint16_t size;

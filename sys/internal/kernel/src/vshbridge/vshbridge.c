@@ -16,11 +16,9 @@
 
 #define SCE_SBL_ERROR_INVALID_ARGUMENT		0x800f0016
 #define SCE_SBL_ERROR_NO_CAPABILITY		0x800f0902	/* name unknown */
-#define SCE_SBL_ERROR_NOT_PRODUCT_MODE		0x800f0c29	/* name unknown */
 #define SCE_SBL_ERROR_SPFSO_TOO_LARGE		0x800f1b16	/* name unknown */
 #define SCE_SYSCON_ERROR_NOT_PRODUCT_MODE	0x80250005	/* name unknown */
 #define SCE_HDMI_ERROR_NOT_PRODUCT_MODE		0x8037000e	/* name unknown */
-#define SCE_LED_ERROR_INVALID_MODE		0x803f0141	/* name unknown */
 
 /* a bridge: only a system program may call it */
 #define VSH_BRIDGE(_call) do {					\
@@ -376,16 +374,16 @@ SceUInt32 vshLedSetMode(int led, int mode, const void *conf)
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	if (mode == 3) {
+	if (mode == SCE_LED_MODE_SCRIPT) {
 		sceSyscallLeave(t);
 		return SCE_LED_ERROR_INVALID_MODE;
 	}
-	if (mode == 0 && led == 2) {
+	if (mode == SCE_LED_MODE_OFF && led == 2) {
 		if ((SceSysconForDriver_CBD6D8BC() & 0xff0000) < 0x800000) {
-			mode = 1;
+			mode = SCE_LED_MODE_ON;
 			conf = vshLedDefaultConf;
 		} else {
-			mode = 0;
+			mode = SCE_LED_MODE_OFF;
 		}
 	}
 	ret = SceLedForDriver_EA24BE03(led, mode, conf);
@@ -929,7 +927,7 @@ SceUInt32 vshSblAimgrGetPscode2(void *code)
 
 SceUInt32 vshSblAimgrGetVisibleId(void *id)
 {
-	VSH_BRIDGE_PRODUCT_MODE(SCE_SBL_ERROR_NOT_PRODUCT_MODE, sceSblAimgrGetVisibleId(id));
+	VSH_BRIDGE_PRODUCT_MODE(SCE_SBL_ERROR_AIMGR_ILLEGAL_STATE, sceSblAimgrGetVisibleId(id));
 }
 
 SceUInt32 vshSblSsGetNvsData(SceUInt32 offset, void *buf, SceSize size)
