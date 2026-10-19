@@ -70,6 +70,9 @@ psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	led.c
 	serial.c
 	deflate.c
+	string_compare.S
+	string_scan.S
+	strncpy.S
 	strings.c
 	search.c
 	strncat.c
@@ -131,7 +134,6 @@ psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	fill_core.S
 	fill.c
 	compare_core.S
-	compare.c
 	memset_chk.c
 	move.S
 	memcmp_chk.c
@@ -148,6 +150,12 @@ set_source_files_properties("${sysmem_strtoll_source}"
 	PROPERTIES COMPILE_OPTIONS "-fsigned-char")
 
 # Sony built the DIP switch file for size: literal pools, not movw/movt.
+# strncmp, timingsafe_memcmp, the scans and strncpy are Sony's assembly (string_compare.S,
+# string_scan.S, strncpy.S); strings.c gives the rest
+set_property(SOURCE strings.c PROPERTY COMPILE_DEFINITIONS
+	SYSCLIB_SELECT_STRINGS SYSCLIB_WANT_STRCMP SYSCLIB_WANT_STRLCPY SYSCLIB_WANT_STRLCAT
+	SYSCLIB_WANT_STRNCPY_S)
+
 set_source_files_properties(dipsw.c PROPERTIES COMPILE_OPTIONS "-Os")
 
 # Sony's UART file sign-extends its characters.
