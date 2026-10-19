@@ -47,11 +47,12 @@ FormatOcpTargetInfo_ES3(char *buf, SceSize size, const char *name,
 
 /* An OCP result may advance the initially null output pointer. */
 #define FORMAT_OUT(line, ...) do { \
-	if (buf + len != NULL) { \
-		SceUInt32 written = snprintf(buf + len, size - len, __VA_ARGS__); \
-		if (written >= size - len) \
-			written = size - len; \
-		len += written; \
+	if (buf != NULL) { \
+		SceUInt32 written = snprintf(buf, size, __VA_ARGS__); \
+		if (written >= size) \
+			written = size; \
+		buf += written; \
+		size -= written; \
 	} else { \
 		SCE_DBG_PRINTF(0, line, __VA_ARGS__); \
 	} \
@@ -74,7 +75,6 @@ FormatBusErrorInfo_ES3(char *buf, SceSize size, const BusErrorRecord *rec)
 	const BusErrorPort *port;
 	const BusErrorSystemBus *sys;
 	SceUInt32 i, j, written;
-	int len = 0;
 
 	FORMAT_OUT(1102,
 		"[ Bus error occured on target device ]\nBET0:0x%08x, BET1:0x%08x, BEBT:0x%08x\n\n",
@@ -90,11 +90,12 @@ FormatBusErrorInfo_ES3(char *buf, SceSize size, const BusErrorRecord *rec)
 			continue;
 		if (!(first & target->mask))
 			error++;
-		written = FormatOcpTargetInfo_ES3(buf + len, size - len, target->name,
+		written = FormatOcpTargetInfo_ES3(buf, size, target->name,
 						error->address, error->attribute);
-		len += written;
+		buf += written;
+		size -= written;
 	}
-	bus = (const BusErrorSiBus *)(si + 1);
+	bus = si->bus;
 	for (i = 0; i < si->count; i++) {
 		for (sys = systemBuses; sys != systemBuses + ARRAY_SIZE(systemBuses); sys++)
 			if (sys->address == bus->address)
@@ -195,7 +196,6 @@ int busErrorIntrHandler(int code, void *arg)
 	BusErrorRecord *rec;
 	const BusErrorOcpInfo *fixedOcp;
 	const BusErrorSiInfo *si;
-	const BusErrorSiBus *bus;
 	SceUInt32 ttbr0, vbar;
 	void *sysroot;
 	int dump;
@@ -207,20 +207,20 @@ int busErrorIntrHandler(int code, void *arg)
 	rec = &sysrootSharedMemory()->busError;
 	FormatBusErrorInfo_ES3(NULL, 0, rec);
 	fixedOcp = (const BusErrorOcpInfo *)(rec + 1);
-	if (rec->siSize) {
-		si = (const void *)((const char *)rec + rec->hdrSize + rec->ocpSize);
-		bus = (const BusErrorSiBus *)(si + 1);
-		if (bus->address == BUSERROR_MAIN_XBAR && (bus->flagStatus[0] & 3))
+	SceSysrootForKernel_B27B7530(fixedOcp->status[0][0], fixedOcp->status[0][1],
+				     fixedOcp->status[0][2]);
+	if (rec->siSize != 0) {
+		si = (const BusErrorSiInfo *)((char *)rec + rec->hdrSize + rec->ocpSize);
+		if (si->bus[0].address == BUSERROR_MAIN_XBAR && (si->bus[0].flagStatus[0] & 3) != 0)
 			for (;;)
 				;
 	}
-	if (!dump)
-		for (;;)
-			;
-	sysroot = SceSysrootForKernel_3E455842();
-	__asm__ volatile("mrc p15, 0, %0, c2, c0, 0" : "=r"(ttbr0));
-	__asm__ volatile("mrc p15, 0, %0, c12, c0, 0" : "=r"(vbar));
-	busErrorSmc122(2, ttbr0, vbar, sysroot);
+	if (dump) {
+		sysroot = SceSysrootForKernel_3E455842();
+		__asm__ volatile("mrc p15, 0, %0, c2, c0, 0" : "=r"(ttbr0));
+		__asm__ volatile("mrc p15, 0, %0, c12, c0, 0" : "=r"(vbar));
+		busErrorSmc122(2, ttbr0, vbar, sysroot);
+	}
 	for (;;)
 		;
 	return 0;
@@ -239,7 +239,6 @@ int busErrorIntrHandler(int code, void *arg)
 	BusErrorRecord *rec;
 	const BusErrorOcpInfo *fixedOcp;
 	const BusErrorSiInfo *si;
-	const BusErrorSiBus *bus;
 	void *sysroot;
 	SceUInt32 ttbr0, vbar;
 	int dump;
@@ -251,19 +250,20 @@ int busErrorIntrHandler(int code, void *arg)
 	rec = &sysrootSharedMemory()->busError;
 	/* This callback consumes the fixed OCP status words, not hdrSize. */
 	fixedOcp = (const BusErrorOcpInfo *)(rec + 1);
+	SceSysrootForKernel_B27B7530(fixedOcp->status[0][0], fixedOcp->status[0][1],
+				     fixedOcp->status[0][2]);
 	if (rec->siSize != 0) {
 		si = (const BusErrorSiInfo *)((char *)rec + rec->hdrSize + rec->ocpSize);
-		bus = (const BusErrorSiBus *)(si + 1);
-		if (bus->address == BUSERROR_MAIN_XBAR && (bus->flagStatus[0] & 3) != 0)
-			goto hang;
+		if (si->bus[0].address == BUSERROR_MAIN_XBAR && (si->bus[0].flagStatus[0] & 3) != 0)
+			for (;;)
+				;
 	}
-	if (!dump)
-		goto hang;
-	sysroot = SceSysrootForKernel_3E455842();
-	__asm__ volatile("mrc p15, 0, %0, c2, c0, 0" : "=r"(ttbr0));
-	__asm__ volatile("mrc p15, 0, %0, c12, c0, 0" : "=r"(vbar));
-	busErrorSmc122(2, ttbr0, vbar, sysroot);
-hang:
+	if (dump) {
+		sysroot = SceSysrootForKernel_3E455842();
+		__asm__ volatile("mrc p15, 0, %0, c2, c0, 0" : "=r"(ttbr0));
+		__asm__ volatile("mrc p15, 0, %0, c12, c0, 0" : "=r"(vbar));
+		busErrorSmc122(2, ttbr0, vbar, sysroot);
+	}
 	for (;;)
 		;
 	return 0;	/* (not reached) */

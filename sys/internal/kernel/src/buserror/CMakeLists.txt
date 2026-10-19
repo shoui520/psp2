@@ -9,3 +9,6 @@ else()
 		SOURCES buserror.c buserror_es3.c
 	)
 endif()
+# Sony built this module with -Os (literal pools, push for the frame), each
+# function in its own section (one with a literal pool starts 4-aligned)
+target_compile_options(os0_kd_buserror PRIVATE -Os -ffunction-sections)

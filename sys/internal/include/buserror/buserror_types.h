@@ -34,11 +34,6 @@ typedef struct BusErrorOcpInfo {
 	} target[BUSERROR_OCP_TARGETS];
 } BusErrorOcpInfo;
 
-typedef struct BusErrorSiInfo {
-	SceSize size;				/* up to the buses */
-	SceUInt32 count;
-} BusErrorSiInfo;
-
 /* one bus, followed by its initiator and then its target agents */
 typedef struct BusErrorSiBus {
 	SceSize size;
@@ -47,6 +42,12 @@ typedef struct BusErrorSiBus {
 	SceUInt32 address;
 	SceUInt64 flagStatus[5];
 } BusErrorSiBus;
+
+typedef struct BusErrorSiInfo {
+	SceSize size;				/* up to the buses */
+	SceUInt32 count;
+	BusErrorSiBus bus[];			/* each sized by its agents */
+} BusErrorSiInfo;
 
 typedef struct BusErrorSiAgent {
 	SceSize size;
