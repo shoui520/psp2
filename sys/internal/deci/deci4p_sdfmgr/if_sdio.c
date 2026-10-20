@@ -7,6 +7,7 @@
 extern int sdioIntrEntry(int code, void *context);
 
 const uint32_t s_sdioInterrupts[4] = { 0xb0, 0xb1, 0xb2, 0xb3 };
+const uint32_t s_sdioCpuTargets[4] = { 1, 2, 4, 8 };
 
 #if FW_DEBUG
 #define SDIO_DEBUG_INFO(_line, _lineHash, _funcHash, _func) ({ \
@@ -343,7 +344,7 @@ int sdioInit(void)
 	transport->name = "SDIO";
 	transport->operations = operations;
 	code = s_sdioInterrupts[sceKernelCpuId()];
-	target = s_sdfMgrCpuTargets[sceKernelCpuId()];
+	target = s_sdioCpuTargets[sceKernelCpuId()];
 	result = sceKernelRegisterIntrHandler(code, "SceSDbgSdio0Mbox", 0,
 				       sdioIntrEntry, transport, 0x10, target, NULL);
 	if (result < 0) {
