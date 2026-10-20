@@ -1169,11 +1169,9 @@ search:
 		cur = TinyPartitionStep(cur, command->opt.attr);
 		if (start == cur)
 			break;
-		if (head == cur) {
-restart:
+		/* past the anchor: on from the other end, up to where the search began */
+		if (head == cur)
 			cur = TinyPartitionStep(head, command->opt.attr);
-			start = head;
-		}
 	}
 	*out = NULL;
 	return SCE_KERNEL_ERROR_PARTITION_NO_VIRTUAL_ADDRESS;
@@ -2025,7 +2023,7 @@ static inline void PartitionL2CAllocMemBlockForL2PageTableRaw(Partition *partiti
 	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2BlockLock, intr);
 	name = SysrootGetMemBlockName(2);
 	if (partition == g_uidManager->kernelPartition)
-		smbType = ((flags << 4) & 0x30) + 0x21;	/* the mask stays 0x30 in Sony's code */
+		smbType = ((flags << 4) & 0x30) | 0x21;
 	else
 		smbType = 1;
 	ret = AllocSimpleMemBlock(name, 0x1001000, NULL, smbType, out);
