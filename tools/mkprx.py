@@ -288,6 +288,7 @@ MOVW = (R_ARM_THM_MOVW_ABS_NC, R_ARM_MOVW_ABS_NC)
 MOVT = (R_ARM_THM_MOVT_ABS, R_ARM_MOVT_ABS)
 THUMB = (R_ARM_THM_MOVW_ABS_NC, R_ARM_THM_MOVT_ABS)
 SHN_UNDEF, SHN_ABS = 0, 0xfff1
+MI_LIBSTUB_TOP = 0x2c
 MI_EXIDX_END = 0x50
 
 
@@ -495,6 +496,20 @@ def elf(a):
 			e.put(mi + field, e.word(mi + field) + delta)
 		text[1][end - 8 - text[0]:extab - text[0]] = bytes(extab + delta - (end - 8))
 
+	# Sony's linker writes 0 for an empty unwind table (and its extab) and for an
+	# empty import table: the data modules (psp2config) have neither
+	if e.word(mi + MI_EXIDX_END - 4) == e.word(mi + MI_EXIDX_END):
+		for field in range(MI_EXIDX_END - 4, MI_EXIDX_END + 12, 4):
+			e.put(mi + field, 0)
+	imports = e.word(mi + MI_LIBSTUB_TOP) != e.word(mi + MI_LIBSTUB_TOP + 4)
+	if not imports:
+		e.put(mi + MI_LIBSTUB_TOP, 0)
+		e.put(mi + MI_LIBSTUB_TOP + 4, 0)
+		# and ends the text at its last byte, not at the empty .sceRefs's alignment
+		end = max(h[3] + h[5] for h in e.shdrs
+			  if h[2] & 2 and h[5] and text[0] <= h[3] < text[0] + len(text[1]))
+		del text[1][end - text[0]:]
+
 	# .sceRefs (16-byte aligned, after .ARM.extab): the references the loader patches
 	# with an import's address. Per imported variable, in .sceVStub.rodata order:
 	# (count << 7 | 0x40), then (code << 8 | 1, offset in its segment) per reference in
@@ -507,7 +522,8 @@ def elf(a):
 	for r in refs:
 		if not r.var and stubs[0] <= r.target < stubs[1] and not tables[0] <= r.place < tables[1]:
 			r.var, r.stub = r.target & ~15, r.target & ~15
-	text[1] += bytes(-len(text[1]) % 16)
+	if imports:
+		text[1] += bytes(-len(text[1]) % 16)
 	top = text[0] + len(text[1])
 	table = bytearray()
 

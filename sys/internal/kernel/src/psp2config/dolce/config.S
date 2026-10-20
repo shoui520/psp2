@@ -17,5 +17,4 @@ SceKernelPsp2Config_A6483A7C:
 	.global	SceKernelPsp2Config_C1BA20DA	/* name unknown: end of the text */
 	.type	SceKernelPsp2Config_C1BA20DA, %object
 SceKernelPsp2Config_C1BA20DA:
-	.space	16				/* readers stop at the end address */
-	.size	SceKernelPsp2Config_C1BA20DA, 16
+	.size	SceKernelPsp2Config_C1BA20DA, 0	/* readers stop at the end address */
