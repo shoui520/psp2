@@ -16,22 +16,24 @@ int ModuleObjNew(SceUID pid, SceUInt32 flags, SceModuleObject **out)
 	SceUID uid;
 	int ret;
 
-	if (pid != SCE_KERNEL_PROCESS_ID) {
+	if (pid == SCE_KERNEL_PROCESS_ID) {
+		optp = NULL;
+	} else {
 		opt.flags = UID_CREATE_OPT_PROCESS_HEAP;
 		opt.object = NULL;
 		opt.heapGuid = 0;
 		opt.pid = pid;
-		opt.heapKind = (flags & LOAD_FLAG_TYPE1) != 0;
+		opt.heapKind = 0;
 		opt.type = 0;
 		opt.attr = 0;
 		opt.ownerPid = 0;
 		opt.cls = NULL;
-		ret = SceProcessmgrForKernel_8B4086AF(pid, opt.heapKind);
-		optp = &opt;
+		if ((flags & LOAD_FLAG_TYPE1) != 0)
+			opt.heapKind = 1;
+		ret = SceProcessmgrForKernel_8B4086AF(pid, (flags & LOAD_FLAG_TYPE1) != 0);
 		if (ret < 0)
 			return ret;
-	} else {
-		optp = NULL;
+		optp = &opt;
 	}
 
 	uid = sceGUIDKernelCreateWithOpt(g_moduleClass, "SceModuleMgrNewModule", optp, (SceObjectBase **)&obj);

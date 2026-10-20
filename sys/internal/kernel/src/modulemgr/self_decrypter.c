@@ -355,9 +355,11 @@ int SelfDecrypterInit(void)
 int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTiming *timing)
 {
 	SceSize filesz = ((Elf32_Phdr *)reader->phdr)[index].p_filesz;
+	SceUID fd;
 
 	if (filesz == 0)
 		return 0;
+	fd = reader->fd;
 	if (reader->type == 1) {
 		if (reader->fd == BOOTIMAGE_FD && reader->pid == SCE_KERNEL_PROCESS_ID) {
 			if (sceLoadcoreIoReadFrom(dst, filesz,
@@ -383,7 +385,7 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 		if (length == 0)
 			return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 		offset = segment->offset <= 0x7fffffff ? segment->offset : -0x80000000LL;
-		position = sceIoLseek(reader->fd, offset, SCE_SEEK_SET);
+		position = sceIoLseek(fd, offset, SCE_SEEK_SET);
 		if (position != offset)
 			return position < 0 ? (int)position : SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 		g_self.reader = reader;
@@ -408,7 +410,7 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 			if (timing != NULL)
 				readStart = SceThreadmgrForDriver_47F6DE49();
 #endif
-			bytesRead = sceIoRead(reader->fd, g_self.slot[next].buf, chunk);
+			bytesRead = sceIoRead(fd, g_self.slot[next].buf, chunk);
 			if ((SceSize)bytesRead != chunk) {
 				/* The original preserves negative errors and treats a
 				 * short or oversized nonnegative read as an execution error. */

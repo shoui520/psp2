@@ -88,17 +88,20 @@ int LibEntCBInit(LoadelfContext *ctx)
 {
 	SceModuleCB *cb = ctx->cb;
 	SceUInt32 offset = ctx->linkInfoUnk;
-	SceUInt16 count = cb->libEntCount;
-	int local = (cb->flags & MODULE_FLAG_SHARED_MASK) == 0;
+	int count = cb->libEntCount;
+	int shared = (cb->flags & MODULE_FLAG_SHARED_MASK) != 0;
 	SceModuleExports *src, *end, *dst, *exports;
 	LibEntCB *ent;
-	SceUInt32 bias, i;
+	SceUInt32 bias;
+	int i;
 	const char *name;
 	char *interned;
 
 	if (cb->pid == SCE_KERNEL_PROCESS_ID) {
 		cb->libent = NULL;
-	} else if (local) {
+	} else if (shared) {
+		cb->libent = cb->shared->cb->libent;
+	} else {
 		bias = Loadelf_GetAddrBias(ctx, cb->libentTop);
 		end = (SceModuleExports *)((SceUInt32)cb->libentBtm + bias);
 		dst = (SceModuleExports *)((SceUInt8 *)cb->linkInfo + offset);
@@ -119,8 +122,6 @@ int LibEntCBInit(LoadelfContext *ctx)
 			if (interned == NULL)
 				return SCE_KERNEL_ERROR_MODULEMGR_NOMEM;
 		}
-	} else {
-		cb->libent = cb->shared->cb->libent;
 	}
 
 	if (ctx->libEntCBSize != 0) {
@@ -131,11 +132,11 @@ int LibEntCBInit(LoadelfContext *ctx)
 		if (exports == NULL)
 			exports = cb->libentTop;
 		ent = cb->libEntCB;
-		for (i = 0; i < count; i++, ent++) {
-			ent->cb = cb;
-			ent->exports = &exports[i];
-			if (!local)
-				ent->flags = LIBENT_FLAG_SHARED;
+		for (i = 0; i < count; i++) {
+			ent[i].cb = cb;
+			ent[i].exports = &exports[i];
+			if (shared)
+				ent[i].flags = LIBENT_FLAG_SHARED;
 		}
 	}
 	return 0;
@@ -210,7 +211,8 @@ int LibEntGetNidTable(LibEntCB *ent, LibEntNidTable *info)
 	SceUInt32 nfunc, nvar, n, i;
 	SceSize funcHash, nidSize, size;
 	SceNID *nidtable;
-	void **entrytable;
+	void **entrytable, **ents;
+	SceUInt16 entflags;
 	SceUInt8 *copy;
 	int ret;
 
@@ -251,12 +253,14 @@ int LibEntGetNidTable(LibEntCB *ent, LibEntNidTable *info)
 		ret = sceKernelCopyFromUserProc(pid, copy + size, ent->exports->entrytable, nidSize);
 		if (ret < 0)
 			return ret;
-		if ((ent->flags & LIBENT_FLAG_SHARED) == 0) {
+		entflags = ent->flags;
+		if ((entflags & LIBENT_FLAG_SHARED) == 0) {
+			ents = info->entrytable;
 			for (i = 0; i < n; i++) {
-				if (!ModuleCBIsInRange(cb, (SceUInt32)info->entrytable[i], 1))
+				if (!ModuleCBIsInRange(cb, (SceUInt32)ents[i], 1))
 					return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 			}
-			ent->flags |= LIBENT_FLAG_SHARED;
+			ent->flags = entflags | LIBENT_FLAG_SHARED;
 		}
 	}
 	info->hashTable = info->nidtable + info->nvar + info->nfunc;

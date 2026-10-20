@@ -352,8 +352,9 @@ SceUInt32 sceKernelGetAllowedSdkVersionOnSystem(void)
 	state = ModulemgrSyscallEnter();
 	SceKernelSystemSwVersion info __attribute__((aligned(8))) = { .size = sizeof(info) };
 
-	ret = 0;
-	if (sceKernelGetSystemSwVersion(&info) == 0)
+	if (sceKernelGetSystemSwVersion(&info) != 0)
+		ret = 0;
+	else
 		ret = info.version | 0xfff;
 	ModulemgrSyscallLeave(state);
 	return ret;

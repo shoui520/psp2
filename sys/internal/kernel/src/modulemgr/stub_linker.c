@@ -77,7 +77,7 @@ int StubLinkerReadThumb(SceUID pid, SceUInt32 addr, StubLinkerInsn *in, int debu
 	in->orig = in->insn;
 	if (debugger) {
 		for (i = 0; i < 2; i++) {
-			if ((((SceUInt16 *)&in->orig)[i] & THUMB_BKPT_MASK) == THUMB_BKPT &&
+			if ((half[i + 2] & THUMB_BKPT_MASK) == THUMB_BKPT &&
 			    SceSysrootForKernel_9CFF80F9(pid, (void *)addr, &orig) == 0)
 				half[i] = orig;
 		}
@@ -104,13 +104,13 @@ int StubLinkerReadArm(SceUID pid, SceUInt32 addr, StubLinkerInsn *in, int debugg
 /* keep the breakpoints of a debugger over a patched Thumb-2 instruction */
 static inline void StubLinkerKeepThumbBkpt(SceUID pid, SceUInt32 addr, StubLinkerInsn *in)
 {
-	SceUInt16 *half = (SceUInt16 *)&in->insn, *orig = (SceUInt16 *)&in->orig;
+	SceUInt16 *half = (SceUInt16 *)&in->insn;
 	int i;
 
 	for (i = 0; i < 2; i++) {
-		if ((orig[i] & THUMB_BKPT_MASK) == THUMB_BKPT) {
+		if ((half[i + 2] & THUMB_BKPT_MASK) == THUMB_BKPT) {
 			SceSysrootForKernel_38751FB7(pid, addr, half[i]);
-			half[i] = orig[i];
+			half[i] = half[i + 2];
 		}
 	}
 }
@@ -133,7 +133,7 @@ int apply_reftable(SceModuleCB *cb, const void *reftable, SceUInt32 value, int m
 	SceUInt8 buf[0x200];
 	const SceUInt32 *p, *next, *end;
 	SceModuleSegment *seg = NULL;
-	SceUInt32 hdr, w, segno, last, memsz, type, offset, v;
+	SceUInt32 hdr, size, w, segno, last, memsz, type, offset, v;
 	SceUInt32 *where;
 	StubLinkerInsn in;
 	SceInt32 addend;
@@ -146,20 +146,21 @@ int apply_reftable(SceModuleCB *cb, const void *reftable, SceUInt32 value, int m
 	if (!ModuleCBIsInReadOnly(cb, (SceUInt32)reftable, 4))
 		return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REF_INFO;
 	ret = StubLinkerCopyIn(pid, &hdr, reftable, 4);
+	size = REFTABLE_SIZE(hdr);
 	if (ret < 0 || (hdr & REFTABLE_HDR_MASK) != 0)
 		return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REF_INFO;
-	if (!ModuleCBIsInReadOnly(cb, (SceUInt32)reftable, REFTABLE_SIZE(hdr)))
+	if (!ModuleCBIsInReadOnly(cb, (SceUInt32)reftable, size))
 		return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REF_INFO;
 
 	if (pid != SCE_KERNEL_PROCESS_ID) {
-		if (REFTABLE_SIZE(hdr) < sizeof(buf)) {
-			ret = StubLinkerCopyIn(pid, buf, reftable, REFTABLE_SIZE(hdr));
+		if (size < sizeof(buf)) {
+			ret = StubLinkerCopyIn(pid, buf, reftable, size);
 			if (ret < 0)
 				return ret;
 			reftable = buf;
 		} else {
 			ret = SceSysmemForDriver_0091D74D(pid, "SceModuleMgrRelocation", 1, reftable,
-						    REFTABLE_SIZE(hdr), &kbase, &ksize, &koffset);
+						    size, &kbase, &ksize, &koffset);
 			if (ret < 0)
 				return ret;
 			map = ret;
@@ -168,7 +169,7 @@ int apply_reftable(SceModuleCB *cb, const void *reftable, SceUInt32 value, int m
 	}
 
 	debugger = debugger == 1;
-	end = (const SceUInt32 *)((const SceUInt8 *)reftable + REFTABLE_SIZE(hdr));
+	end = (const SceUInt32 *)((const SceUInt8 *)reftable + size);
 	last = 0xffff;
 	p = (const SceUInt32 *)reftable + 1;
 	for (;;) {
@@ -357,12 +358,13 @@ static inline SceUInt32 StubLinkerFindNid(const SceUInt16 *hash, SceUInt32 bits,
 
 int link_variables(StubLinkerInfo *info, int mode)
 {
-	LibStubCB *stub = info->stub.libStubCB;
+	SceUInt32 n = info->stub.nvar;
 	LibEntCB *ent = info->ent.libEntCB;
-	SceUInt32 i, n = info->stub.nvar, idx;
-	const SceNID *nids;
+	LibStubCB *stub = info->stub.libStubCB;
+	SceUInt32 i, idx;
 	SceModuleExports *exp;
 	void *reftable;
+	SceUInt32 addr;
 	SceNID nid;
 	int ret;
 
@@ -370,25 +372,29 @@ int link_variables(StubLinkerInfo *info, int mode)
 		reftable = info->stub.varent[i];
 		if (reftable == NULL)
 			continue;
-		if (mode != STUBLINKER_LINK) {
-			ret = apply_reftable(stub->cb, reftable, 0, mode);
-		} else {
+		addr = 0;
+		if (mode == STUBLINKER_LINK) {
 			nid = info->stub.varnid[i];
-			nids = info->ent.nidtable + info->ent.nfunc;
-			idx = StubLinkerFindNid(info->ent.varHashTable, info->ent.varHashBits, nids,
-						info->ent.nvar, nid);
-			if (idx < info->ent.nvar) {
-				ret = apply_reftable(stub->cb, reftable,
-						     (SceUInt32)info->ent.entrytable[info->ent.nfunc + idx],
-						     STUBLINKER_LINK);
-			} else {
+			idx = 0;
+			if (info->ent.varHashBits != 0)
+				idx = ((const SceUInt16 *)info->ent.varHashTable)[nid >> info->ent.varHashBits];
+			for (; idx < info->ent.nvar; idx++) {
+				if (info->ent.nidtable[info->ent.nfunc + idx] == nid)
+					break;
+			}
+			if (idx >= info->ent.nvar) {
 				exp = ent->exports;
 				SCE_PRINTF_WITH_INFO(0, 989,
 					"# Library variable entry not found: [nid=0x%08x] in [%s, ver=%d] (ignored)\n",
 					nid, exp->libname, exp->version);
 				ret = apply_reftable(stub->cb, reftable, 0, STUBLINKER_UNLINK);
+				if (ret < 0)
+					return ret;
+				continue;
 			}
+			addr = (SceUInt32)info->ent.entrytable[info->ent.nfunc + idx];
 		}
+		ret = apply_reftable(stub->cb, reftable, addr, mode);
 		if (ret < 0)
 			return ret;
 	}
@@ -400,12 +406,13 @@ int link_functions(StubLinkerInfo *info, int mode, const ModulemgrLibraryPatch *
 	LibStubCB *stub = info->stub.libStubCB;
 	LibEntCB *ent = info->ent.libEntCB;
 	SceUID pid = stub->cb->pid;
-	SceUInt32 i, j, n = info->stub.nfunc, idx, num, addr, size, dacr, orig;
+	SceUInt32 i, j, n, idx, num, addr, size, dacr, orig;
 	SceUInt32 code[4], cur[4];
 	int debugger, kind, segno, offset, ret;
 	SceNID nid;
 
 	debugger = SceSysrootForKernel_6050A467(pid);
+	n = info->stub.nfunc;
 	if (n == 0)
 		return 0;
 
@@ -430,7 +437,19 @@ int link_functions(StubLinkerInfo *info, int mode, const ModulemgrLibraryPatch *
 
 	for (i = 0; i < n; i++) {
 		addr = (SceUInt32)info->stub.funcent[i];
-		if (mode == STUBLINKER_LINK) {
+		if (mode != STUBLINKER_LINK) {
+			if (mode == STUBLINKER_UNDEF) {
+				kind = mode;
+				code[0] = STUB_BKPT;
+				size = 4;
+			} else {
+				kind = mode;
+noentry:
+				size = 8;
+				code[0] = STUB_SUB_R12_PC_8;
+				code[1] = STUB_MOV_PC_0;
+			}
+		} else {
 			nid = info->stub.funcnid[i];
 			idx = StubLinkerFindNid(info->ent.hashTable, info->ent.funcHashBits,
 						info->ent.nidtable, info->ent.nfunc, nid);
@@ -455,38 +474,30 @@ int link_functions(StubLinkerInfo *info, int mode, const ModulemgrLibraryPatch *
 			} else {
 				num = (SceUInt32)info->ent.entrytable[idx];
 				code[2] = STUB_BX_R12;
-				code[1] = STUB_MOVT_R12 | ((num << 4) >> 20) | (num >> 28) << 16;
+				code[1] = STUB_MOVT_R12 | ((num >> 16) & 0xfff) | (num >> 28) << 16;
 			}
-			code[0] = STUB_MOVW_R12 | (num & 0xfff) | ((num >> 12) & 0xf) << 16;
+			code[0] = STUB_MOVW_R12 | (num & 0xfff) | ((num & 0xffff) >> 12) << 16;
 			size = 12;
 			kind = STUBLINKER_LINK;
-		} else if (mode == STUBLINKER_UNDEF) {
-			kind = mode;
-			code[0] = STUB_BKPT;
-			size = 4;
-		} else {
-			kind = mode;
-noentry:
-			size = 8;
-			code[0] = STUB_SUB_R12_PC_8;
-			code[1] = STUB_MOV_PC_0;
 		}
 
 		ret = StubLinkerCopyIn(pid, cur, (const void *)addr, sizeof(cur));
 		if (ret < 0)
 			return ret;
 		if (debugger == 1) {
-			for (j = 0; j < sizeof(cur); j += 4) {
-				orig = cur[j / 4];
+			SceUInt32 *p = cur, *q;
+
+			for (j = 0; j != sizeof(cur); j += 4) {
+				q = p;
+				orig = *p++;
 				if ((orig & ARM_BKPT_MASK) != ARM_BKPT)
 					continue;
-				if (SceSysrootForKernel_9CFF80F9(pid, (void *)(addr + j), &cur[j / 4]) == 0) {
-					if (j < size) {
-						SceSysrootForKernel_38751FB7(pid, addr + j, code[j / 4]);
-						code[j / 4] = orig;
-					}
-				} else {
-					cur[j / 4] = orig;
+				if (SceSysrootForKernel_9CFF80F9(pid, (void *)(j + addr), q) != 0) {
+					*(p - 1) = orig;
+				} else if (size > j) {
+					SceSysrootForKernel_38751FB7(pid, addr + j,
+								     *(SceUInt32 *)((char *)code + j));
+					*(SceUInt32 *)((char *)code + j) = orig;
 				}
 			}
 		}

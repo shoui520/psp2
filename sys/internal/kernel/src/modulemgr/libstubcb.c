@@ -57,6 +57,7 @@ int LibStub_checkStubTable(LoadelfContext *ctx)
 	SceUInt8 *p, *end;
 	SceUInt32 bias, count;
 	SceUInt8 esize;
+	const char *libname;
 	SceSize n;
 
 	if ((cb->flags & MODULE_FLAG_SHARED_MASK) != 0) {
@@ -87,9 +88,10 @@ int LibStub_checkStubTable(LoadelfContext *ctx)
 
 	while (esize == *p) {
 		imp = LibStubNormalize(&tmp, p);
-		if (!ModuleCBIsInReadOnly(cb, (SceUInt32)imp->libname, 1) ||
-		    !ModuleCBIsInReadOnly(cb, (SceUInt32)imp->libname,
-					  strnlen((const char *)imp->libname + bias, 0x100)))
+		libname = imp->libname;
+		if (!ModuleCBIsInReadOnly(cb, (SceUInt32)libname, 1) ||
+		    !ModuleCBIsInReadOnly(cb, (SceUInt32)libname,
+					  strnlen((const char *)libname + bias, 0x100)))
 			return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 		if (imp->nfunc != 0) {
 			n = imp->nfunc * 4;
@@ -120,9 +122,9 @@ int LibStubCBInit(LoadelfContext *ctx)
 	SceModuleCB *cb = ctx->cb;
 	SceUInt32 offset = ctx->libstubOffset;
 	SceUInt16 count = cb->libStubCount;
-	SceModuleImports *dst, *imp;
+	SceModuleImports *dst, *imp, *im;
 	SceModuleCB *c;
-	LibStubCB *stub;
+	LibStubCB *stub, *cur;
 	SceUInt8 *p, *end;
 	SceUInt32 bias, i, n;
 	SceUInt16 nfunc, nvar;
@@ -179,41 +181,43 @@ int LibStubCBInit(LoadelfContext *ctx)
 	if (imp == NULL)
 		imp = cb->libstubTop;
 	stub = cb->libStubCB;
-	for (i = 0; i < count; i++, stub++, imp++) {
-		stub->next = NULL;
-		stub->imports = imp;
-		stub->linked = NULL;
-		stub->cb = cb;
-		stub->guid = 0;
-		stub->toolCopy = NULL;
+	for (i = 0; i < count; i++) {
+		cur = &stub[i];
+		im = &imp[i];
+		cur->next = NULL;
+		cur->imports = im;
+		cur->linked = NULL;
+		cur->cb = cb;
+		cur->guid = 0;
+		cur->toolCopy = NULL;
 		if (cb->pid == SCE_KERNEL_PROCESS_ID)
 			continue;
 		c = ctx->cb;
 		pid = c->pid;
 		if ((c->flags & MODULE_FLAG_SHARED_MASK) != 0) {
 			/* the same import of the original module */
-			stub->toolCopy = c->shared->cb->libStubCB[stub - cb->libStubCB].toolCopy;
+			cur->toolCopy = c->shared->cb->libStubCB[i].toolCopy;
 			continue;
 		}
-		nfunc = imp->nfunc;
-		nvar = imp->nvar;
+		nfunc = im->nfunc;
+		nvar = im->nvar;
 		if (!sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART) || nfunc + nvar == 0)
 			continue;
 		copy = sceKernelAllocRemoteToolHeap(pid, (nfunc + nvar) * 8);
-		stub->toolCopy = copy;
+		cur->toolCopy = copy;
 		if (copy == NULL)
 			return SCE_KERNEL_ERROR_MODULEMGR_NOMEM_STUB;
-		if (stub->imports->nfunc != 0) {
-			memcpy(copy + stub->imports->nfunc, (SceUInt8 *)stub->imports->funcnid + bias,
-			       stub->imports->nfunc * 4);
-			memcpy(stub->toolCopy, (SceUInt8 *)stub->imports->funcent + bias,
-			       stub->imports->nfunc * 4);
+		if (cur->imports->nfunc != 0) {
+			memcpy(copy + cur->imports->nfunc, (SceUInt8 *)cur->imports->funcnid + bias,
+			       cur->imports->nfunc * 4);
+			memcpy(cur->toolCopy, (SceUInt8 *)cur->imports->funcent + bias,
+			       cur->imports->nfunc * 4);
 		}
-		if (stub->imports->nvar != 0) {
-			memcpy(stub->toolCopy + stub->imports->nvar + stub->imports->nfunc * 2,
-			       (SceUInt8 *)stub->imports->varnid + bias, stub->imports->nvar * 4);
-			memcpy(stub->toolCopy + stub->imports->nfunc * 2,
-			       (SceUInt8 *)stub->imports->varent + bias, stub->imports->nvar * 4);
+		if (cur->imports->nvar != 0) {
+			memcpy(cur->toolCopy + cur->imports->nvar + cur->imports->nfunc * 2,
+			       (SceUInt8 *)cur->imports->varnid + bias, cur->imports->nvar * 4);
+			memcpy(cur->toolCopy + cur->imports->nfunc * 2,
+			       (SceUInt8 *)cur->imports->varent + bias, cur->imports->nvar * 4);
 		}
 	}
 	return 0;
@@ -295,6 +299,7 @@ int LibStubGetNidTable(LibStubCB *stub, LibStubNidTable *info)
 	SceModuleCB *cb = stub->cb;
 	SceUInt32 nfunc = imp->nfunc, nvar = imp->nvar, i;
 	SceUInt8 *copy;
+	void **ents;
 	int local, ret;
 
 	info->funcent = imp->funcent;
@@ -325,8 +330,9 @@ int LibStubGetNidTable(LibStubCB *stub, LibStubNidTable *info)
 		if (ret < 0)
 			return ret;
 		if (local) {
+			ents = info->funcent;
 			for (i = 0; i < nfunc; i++) {
-				if (!ModuleCBIsInText(stub->cb, (SceUInt32)info->funcent[i], 0x10))
+				if (!ModuleCBIsInText(stub->cb, (SceUInt32)ents[i], 0x10))
 					return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 			}
 		}
@@ -339,9 +345,10 @@ int LibStubGetNidTable(LibStubCB *stub, LibStubNidTable *info)
 		if (ret < 0)
 			return ret;
 		if (local) {
+			ents = info->varent;
 			for (i = 0; i < nvar; i++) {
-				if (info->varent[i] != NULL &&
-				    !ModuleCBIsInReadOnly(stub->cb, (SceUInt32)info->varent[i], 4))
+				if (ents[i] != NULL &&
+				    !ModuleCBIsInReadOnly(stub->cb, (SceUInt32)ents[i], 4))
 					return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 			}
 		}

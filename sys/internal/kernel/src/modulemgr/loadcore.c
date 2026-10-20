@@ -169,12 +169,12 @@ int LoadcoreLinkClient(LibEntCB *ent, LibStubCB *stub, const ModulemgrLibraryPat
 	LoadcoreProcessContext pc;
 	StubLinkerInfo info;
 	SceModuleCB *lib = ent->cb, *client = stub->cb;
-	SceUID pid;
+	SceUID libPid = lib->pid, pid;
 	int ret;
 
-	if (lib->pid != SCE_KERNEL_PROCESS_ID && (client->flags & MODULE_FLAG_SHARED_ANY) != 0 &&
+	if (libPid != SCE_KERNEL_PROCESS_ID && (client->flags & MODULE_FLAG_SHARED_ANY) != 0 &&
 	    (lib->flags & MODULE_FLAG_SHARED_ANY) == 0) {
-		SCE_DBG_PRINTF_LEVEL(1, lib->flags & MODULE_FLAG_SHARED_ANY, 174,
+		SCE_DBG_PRINTF_LEVEL(1, 0, 174,
 			"\nSceModulemgr : cannot export lib to a shared text module\n"
 			"   Callee filename : %s\n"
 			"          libname  : %s\n"
@@ -183,13 +183,16 @@ int LoadcoreLinkClient(LibEntCB *ent, LibStubCB *stub, const ModulemgrLibraryPat
 		return SCE_KERNEL_ERROR_MODULEMGR_CANNOT_EXPORT_LIB_TO_SHARED;
 	}
 	pid = client->pid;
+	if (pid == libPid) {
+		pid = libPid;
+	} else {
 #if FW_DEBUG
-	if (pid != lib->pid &&
-	    (pid == SCE_KERNEL_PROCESS_ID || (ent->exports->attr & LIBRARY_ATTR_SYSCALL) == 0)) {
-		SCE_DBG_ASSERT_LEVEL(0, 0, 183);
-		pid = stub->cb->pid;
-	}
+		if (pid == SCE_KERNEL_PROCESS_ID || (ent->exports->attr & LIBRARY_ATTR_SYSCALL) == 0) {
+			SCE_DBG_ASSERT_LEVEL(0, 0, 183);
+			pid = stub->cb->pid;
+		}
 #endif
+	}
 	ret = LoadcoreSwitchProcess(pid, &pc);
 	if (ret < 0)
 		return ret;

@@ -92,7 +92,7 @@ int apply_one_relocation(SceUInt32 *where, SceUInt32 type, SceUInt32 offset,
 				SceUInt32 S, SceUInt32 A, SceUInt32 base)
 {
 	RelocInsn insn;
-	SceUInt32 v, sign, imm11;
+	SceUInt32 v, sign, imm11, j1, j2, imm10;
 	int ret;
 
 	switch (type) {
@@ -114,14 +114,17 @@ int apply_one_relocation(SceUInt32 *where, SceUInt32 type, SceUInt32 offset,
 		v = S - (offset + base) + A;
 		insn.word = *where;
 		sign = (v >> 24) & 1;
-		insn.thumbBl.j1 = sign == ((v >> 23) & 1);
+		j1 = sign == ((v >> 23) & 1);
+		j2 = sign == ((v >> 22) & 1);
+		imm10 = v >> 12;
 		imm11 = (v >> 1) & 0x7ff;
 		if (insn.thumbBl.bl == 0)
 			imm11 &= ~1u;
-		insn.thumbBl.j2 = sign == ((v >> 22) & 1);
+		insn.thumbBl.j1 = j1;
+		insn.thumbBl.j2 = j2;
 		insn.thumbBl.imm11 = imm11;
 		insn.thumbBl.s = sign;
-		insn.thumbBl.imm10 = v >> 12;
+		insn.thumbBl.imm10 = imm10;
 		*where = insn.word;
 		ret = 0;
 		break;

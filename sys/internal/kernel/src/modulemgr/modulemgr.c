@@ -135,10 +135,9 @@ static inline void set_module_flags(SceModuleCB *cb, SceUInt32 flags)
 	cb->flags |= mflags;
 }
 
-static inline int set_caller_auth_info(SceModuleCB *cb, const char *path, SceSelfAuthInfo *auth,
+static inline int set_caller_auth_info(SceUID pid, const char *path, SceSelfAuthInfo *auth,
 				       SceUInt32 flags, SelfAuthRequest *info)
 {
-	SceUID pid = cb->pid;
 	int ret;
 
 	ret = sceKernelGetProcessSelfAuthInfo((flags & 0x4002) != 0 ? pid : sceKernelGetProcessId(),
@@ -149,16 +148,11 @@ static inline int set_caller_auth_info(SceModuleCB *cb, const char *path, SceSel
 	}
 	info->module.sharedSecret3[0] = 0x10;
 	if ((flags & LOAD_FLAG_PROCESS_IMAGE) != 0) {
-		info->module.klicensee[0] = auth->klicensee[0];
 		info->selfType |= 0x10000;
-		info->module.klicensee[1] = auth->klicensee[1];
-		info->module.klicensee[2] = auth->klicensee[2];
-		info->module.klicensee[3] = auth->klicensee[3];
-	} else if ((flags & LOAD_FLAG_SELF_AUTH) != 0) {
-		info->module.klicensee[0] = info->caller.klicensee[0];
-		info->module.klicensee[1] = info->caller.klicensee[1];
-		info->module.klicensee[2] = info->caller.klicensee[2];
-		info->module.klicensee[3] = info->caller.klicensee[3];
+		__builtin_memcpy(info->module.klicensee, auth->klicensee, sizeof(info->module.klicensee));
+	} else if ((flags & LOAD_FLAG_1000) != 0) {
+		__builtin_memcpy(info->module.klicensee, info->caller.klicensee,
+				 sizeof(info->module.klicensee));
 	}
 	ret = SceIofilemgrForDriver_9C220246((flags & 0x1004) != 0 ? pid : SCE_KERNEL_PROCESS_ID,
 					     path, 1, &info->mediaType);
@@ -166,8 +160,6 @@ static inline int set_caller_auth_info(SceModuleCB *cb, const char *path, SceSel
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1049, "GetMediaType failed (0x%08x)\n", ret);
 		return ret;
 	}
-	if (pid != SCE_KERNEL_PROCESS_ID)
-		info->selfType |= 1;
 	return 0;
 }
 
@@ -178,6 +170,8 @@ int ModulemgrLoadModule(SceModuleObject *obj, const char *path, SceUID fd, SceSe
 	SceUID pid = cb->pid;
 	LoadelfContext ctx;
 	SelfAuthRequest info;
+	SceUInt32 selfType;
+	const char *name;
 	void *copy;
 	SceSize size;
 	SceUID puid;
@@ -195,11 +189,16 @@ int ModulemgrLoadModule(SceModuleObject *obj, const char *path, SceUID fd, SceSe
 	}
 
 	memset(&info, 0, sizeof(info));
+	selfType = 0;
 	if ((flags & LOAD_FLAG_NO_AUTH) == 0 && cb->shared == NULL) {
-		ret = set_caller_auth_info(cb, path, auth, flags, &info);
+		ret = set_caller_auth_info(pid, path, auth, flags, &info);
 		if (ret < 0)
 			goto fail;
+		selfType = info.selfType;
+		if (pid != SCE_KERNEL_PROCESS_ID)
+			selfType |= 1;
 	}
+	info.selfType = selfType;
 
 	ret = LoadelfParsePhdrs(&ctx, fd, &info, flags);
 	if (ret < 0) {
@@ -272,8 +271,9 @@ int ModulemgrLoadModule(SceModuleObject *obj, const char *path, SceUID fd, SceSe
 		}
 	}
 
+	name = cb->name;
 	for (i = 0; i < cb->nSegments; i++) {
-		ret = sceGUIDSetName(cb->segment[i].memblk, cb->name);
+		ret = sceGUIDSetName(cb->segment[i].memblk, name);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 1276, "ModulemgrRenameUID failed (0x%08x)\n", ret);
 			goto fail;
@@ -302,6 +302,7 @@ int ModulemgrCallEntryOnUserThread(SceModuleCB *cb, SceModuleEntry entry,
 				   int userArgs, int *status)
 {
 	SceUID pid = cb->pid;
+	const char *modname = cb->name;
 	SceModuleThreadParam tp;
 	SceKernelThreadOptParam opt, *optp;
 	ModulemgrThreadState *state;
@@ -322,7 +323,7 @@ int ModulemgrCallEntryOnUserThread(SceModuleCB *cb, SceModuleEntry entry,
 			cpu = tp.cpuAffinityMask;
 		}
 	}
-	snprintf(name, sizeof(name), "%s EntryCall", cb->name);
+	snprintf(name, sizeof(name), "%s EntryCall", modname);
 
 	if (SceThreadmgrForDriver_20C228E4()) {
 		state = SceThreadmgrForDriver_3A72C6D8(g_threadStateSlot);
@@ -547,8 +548,6 @@ unlocked:
 		goto started;
 
 	ret = ModulemgrCallStartEntry(cb, args, argp, flags, status, &usec);
-	if (ret == SCE_KERNEL_ERROR_MODULEMGR_START_FAILED)
-		goto failed;
 	if (ret < 0) {
 		if ((SceUInt32)ret - 0x8002802c < 2) {	/* stopped or suspended */
 			ModuleCBSetStatus(cb, MODULE_STATUS_START_SUSPENDED);
@@ -563,7 +562,7 @@ started:
 		return 0;
 	}
 	if ((cb->flags & MODULE_FLAG_NO_STOP) != 0 && sceKernelSysrootGetStatus() > 0xff)
-		SCE_PANIC(1470);
+		SCE_PANIC(1491);
 	ModuleCBShowStartMessage(cb, 1, usec);
 	ModulemgrLockLibDB();
 	ModulemgrUnregisterLibraries(cb, 0x20);
@@ -574,7 +573,7 @@ started:
 
 failed:
 	if ((cb->flags & MODULE_FLAG_NO_STOP) != 0)
-		SCE_PANIC(1491);
+		SCE_PANIC(1470);
 	ModulemgrLockLibDB();
 	ModulemgrUnregisterLibraries(cb, 0x20);
 	ModulemgrReleaseClients(cb, 0);
@@ -737,14 +736,14 @@ int loadModuleCommon(SceUID pid, const char *path, SceUInt32 flags,
 	SceUInt32 dbgFlags, inhibit;
 	SceUInt32 t0, t1;
 	SceUID ret, fd, modid;
-	int intr;
+	int isShared, intr;
 
 	if (opt != NULL && opt->size != 4)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (pid == 0)
 		pid = sceKernelGetProcessId();
-	fd = flags & LOAD_FLAG_SHARED;
-	if (fd != 0) {
+	isShared = flags & LOAD_FLAG_SHARED;
+	if (isShared != 0) {
 		if (pid == SCE_KERNEL_PROCESS_ID)
 			return SCE_KERNEL_ERROR_MODULEMGR_INVALID_PROCESS_UID;
 		if (ModulemgrReferProcessObject(pid) < 0)
@@ -772,7 +771,7 @@ int loadModuleCommon(SceUID pid, const char *path, SceUInt32 flags,
 	if (strncmp(path, "host0:", 6) == 0) {
 		if (pid == SCE_KERNEL_PROCESS_ID && !SceQafMgrForDriver_082A4FC2())
 			return SCE_KERNEL_ERROR_MODULEMGR_NOENT;
-		if (fd != 0 && !sceKernelCheckDipsw(DIPSW_HOST0_MODULES)) {
+		if (isShared != 0 && !sceKernelCheckDipsw(DIPSW_HOST0_MODULES)) {
 			ret = SCE_KERNEL_ERROR_MODULEMGR_NOENT;
 			goto out;
 		}
@@ -800,7 +799,7 @@ inhibited:
 		goto out;
 	}
 
-	if (fd != 0) {
+	if (isShared != 0) {
 		if (LibraryDBIsShared(pid)) {
 			flags = (flags & ~0xf0u) | LOAD_FLAG_TYPE2;
 		} else if ((shared = SharedModuleFind(path)) != NULL) {
@@ -1334,13 +1333,12 @@ int stopModuleCommon(SceUID pid, SceUID modid, SceSize args, void *argp, SceUInt
 			sceGUIDReleaseObject(pid);
 		return SCE_KERNEL_ERROR_MODULEMGR_INVALID_PROCESS_UID;
 	}
-	if ((flags & 0x100) == 0) {
-		if ((obj->cb.attr & 1) != 0 || (obj->cb.flags & MODULE_FLAG_SHARED_ORIGINAL) != 0) {
-			sceGUIDReleaseObject(modid);
-			if (pid != SCE_KERNEL_PROCESS_ID)
-				sceGUIDReleaseObject(pid);
-			return SCE_KERNEL_ERROR_MODULEMGR_CANNOT_STOP;
-		}
+	if ((flags & 0x100) == 0 &&
+	    ((obj->cb.attr & 1) != 0 || (obj->cb.flags & MODULE_FLAG_SHARED_ORIGINAL) != 0)) {
+		sceGUIDReleaseObject(modid);
+		if (pid != SCE_KERNEL_PROCESS_ID)
+			sceGUIDReleaseObject(pid);
+		return SCE_KERNEL_ERROR_MODULEMGR_CANNOT_STOP;
 	}
 	mflags = obj->cb.flags;
 	if ((mflags & MODULE_FLAG_NO_STOP) != 0 && !SceSblACMgrForKernel_BBA13D9C()) {
@@ -1937,12 +1935,13 @@ int SceModulemgrForKernel_E71530D7(SceUID pid)
 static inline int ModulemgrImportProcParam(SceModuleCB *cb, const SceProcessParam *uparam,
 					   ProcessImageInfo *info)
 {
+	SceUID pid = cb->pid;
 	SceProcessParam param;
 	SceSize size;
 	int ret;
 
-	memset(&param, 0, sizeof(param));
-	ret = sceKernelCopyFromUserProc(cb->pid, &size, uparam, sizeof(size));
+	__builtin_memset(&param, 0, sizeof(param));
+	ret = sceKernelCopyFromUserProc(pid, &size, uparam, sizeof(size));
 	if (ret < 0)
 		return ret;
 	if (size > sizeof(param)) {
@@ -2008,6 +2007,7 @@ SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, SceUInt32 flags,
 				 SceSelfAuthInfo *auth, ProcessImageInfo *info, const ModulemgrTitlePatch *patch)
 {
 	SceModuleObject *obj;
+	SceModuleCB *cb;
 	LibraryDB *db;
 	SceUInt32 t0, t1;
 	SceUID fd, old;
@@ -2055,39 +2055,40 @@ SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, SceUInt32 flags,
 		LibraryDBDelete(pid);
 		return ret;
 	}
+	cb = &obj->cb;
 	SCE_DBG_PRINTF_LEVEL(1, 0, 3118,
 		"Loading %s (guid=0x%08x, fingerprint=0x%08x): ProcessImage OK.   %d usec (form 0x%03x)\n",
-		path, obj->cb.modid, obj->cb.fingerprint, t1 - t0, g_relocForms);
+		path, cb->modid, cb->fingerprint, t1 - t0, g_relocForms);
 	(void)t0;
 	(void)t1;
 	relocatorFormCount();
-	ModuleCBDumpLoadAddress(&obj->cb);
+	ModuleCBDumpLoadAddress(cb);
 
 	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART))
-		LibraryDBRenameAddr2ModTbls(obj->cb.pid, obj->cb.name);
-	if (obj->cb.procParam != NULL) {
-		ret = ModulemgrImportProcParam(&obj->cb, obj->cb.procParam, info);
+		LibraryDBRenameAddr2ModTbls(cb->pid, cb->name);
+	if (cb->procParam != NULL) {
+		ret = ModulemgrImportProcParam(cb, cb->procParam, info);
 		if (ret < 0)
 			goto unload;
-	} else if ((obj->cb.flags & MODULE_FLAG_SELF_FIXED) != 0) {
+	} else if ((cb->flags & MODULE_FLAG_SELF_FIXED) != 0) {
 		SceModulemgrForKernel_E71530D7(pid);
 		return SCE_KERNEL_ERROR_MODULEMGR_NOT_MAIN_MODULE;
 	}
 
-	ret = ModulemgrStartModule(&obj->cb, 0, NULL, 0, NULL, patch);
+	ret = ModulemgrStartModule(cb, 0, NULL, 0, NULL, patch);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 3157, "start failed (res:0x%08x)\n", ret);
 		goto unload;
 	}
 	if (SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) &&
-	    (ret = SceSblAuthMgrForKernel_ABAB8466(obj->cb.sdkVersion)) < 0) {
+	    (ret = SceSblAuthMgrForKernel_ABAB8466(cb->sdkVersion)) < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 3171, "unknown SDK version (%08x)\n",
-				     obj->cb.sdkVersion);
+				     cb->sdkVersion);
 		goto unload;
 	}
-	db->mainModid = obj->cb.modid;
+	db->mainModid = cb->modid;
 	relocatorFormLogPrint();
-	return obj->cb.modid;
+	return cb->modid;
 
 unload:
 	SceModulemgrForKernel_E71530D7(pid);
