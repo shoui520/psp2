@@ -111,6 +111,8 @@ void startFastMutex(void)
 			     sizeof(struct SceUIDFastMutexObject));
 }
 
+SCHED_PROBE(s_acquireFastMutexChangePriority, "__sched_", "change__pri");
+
 /* gives the work area to thread (both locked), boosting it to a ceiling */
 void acquireFastMutex(struct ThreadmgrFastMutex *mutex, struct ThreadCB *thread)
 {
@@ -160,7 +162,7 @@ void acquireFastMutex(struct ThreadmgrFastMutex *mutex, struct ThreadCB *thread)
 	thread->currentPriority = priority;
 	if (thread == current)
 		currentCpuState()->priority = thread->boostPriority;
-	notifyPriorityChange(thread, oldPriority);
+	notifyPriorityChange(thread, oldPriority, s_acquireFastMutexChangePriority);
 }
 
 /* SceUIDFastMutexClass's revalidation: the first waiter gets a free mutex */
@@ -188,6 +190,8 @@ static int uidFastMutex_RevalidateMethod(void *cls, void *object)
 	}
 	return 0;
 }
+
+SCHED_PROBE(s_releaseAllFastMutexChangePriority, "__sched_", "change__pri");
 
 /*
  * An exiting thread gives up every fast mutex it holds and drops back to its
@@ -223,7 +227,7 @@ uint32_t releaseAllFastMutex(struct ThreadCB *thread)
 			break;
 		/* the queue holds its lock while it takes ours: back off */
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-		for (delay = 10; --delay != 0;)
+		for (delay = 10; delay != 0; delay--)
 			;
 	}
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -234,7 +238,7 @@ uint32_t releaseAllFastMutex(struct ThreadCB *thread)
 		thread->currentPriority = thread->basePriority;
 		wake |= 1;
 		currentCpuState()->priority = thread->basePriority;
-		notifyPriorityChange(thread, oldPriority);
+		notifyPriorityChange(thread, oldPriority, s_releaseAllFastMutexChangePriority);
 	}
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	return wake;

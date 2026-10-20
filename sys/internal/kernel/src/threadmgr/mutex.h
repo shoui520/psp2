@@ -95,8 +95,20 @@ static inline void ListLinkRemove(ListNode *link)
 	link->prev->next = link->next;
 }
 
-/* tells the tracers and the hook that a thread's priority moved */
-static inline void notifyPriorityChange(struct ThreadCB *thread, int oldPriority)
+/*
+ * Tells the tracers and the hook that a thread's priority moved. Each caller is a
+ * __sched_:change__pri probe site of its own (SCHED_PROBE(site, ...)).
+ */
+#define notifyPriorityChange(thread, oldPriority, site)				\
+	do {									\
+		__asm__ volatile(".global " #site "CodeSite\n" #site "CodeSite:");	\
+		notifyPriorityChangeAt((thread), (oldPriority), &site##Handler,	\
+				       &site##Descriptor);			\
+	} while (0)
+
+static inline void notifyPriorityChangeAt(struct ThreadCB *thread, int oldPriority,
+					  volatile uintptr_t *handler,
+					  const struct ThreadmgrSchedProbeDescriptor *descriptor)
 {
 	ThreadmgrPriorityProbeHandler probe;
 	ThreadmgrPriorityHook hook;
@@ -105,13 +117,12 @@ static inline void notifyPriorityChange(struct ThreadCB *thread, int oldPriority
 	if (s_threadmgrRuntime.manager->paHooks[1])
 		issueCallPAPriorityHookIntrRequest(ThreadmgrCpuId(), thread->processId,
 			thread->threadId, oldPriority, thread->currentPriority);
-	probe = (ThreadmgrPriorityProbeHandler)s_schedChangePriorityHandler;
+	probe = (ThreadmgrPriorityProbeHandler)*handler;
 	if (probe != NULL) {
 		threadId = thread->userThreadId;
 		if (threadId < 0)
 			threadId = thread->threadId;
-		probe(&s_schedChangePriorityDescriptor, threadId,
-		      thread->process->pid, oldPriority,
+		probe(descriptor, threadId, thread->process->pid, oldPriority,
 		      thread->currentPriority);
 	}
 	hook = (ThreadmgrPriorityHook)s_threadmgrRuntime.priorityChangeHook;

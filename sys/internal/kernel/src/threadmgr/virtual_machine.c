@@ -329,7 +329,7 @@ int resumeThreadForVM(SceUID threadId)
 		ret = --thread->vmSuspendCount;
 		if (ret < 1) {
 			if (!(thread->flags & THREAD_FLAG_REQUEST_VM_SUSPEND)) {
-				SCE_DBG_ASSERT_CHECK(state & SCE_KERNEL_THREAD_STATUS_SUSPENDED, 783);
+				SCE_DBG_ASSERT_CHECK((state & SCE_KERNEL_THREAD_STATUS_SUSPENDED) != 0, 790);
 				if (thread->flags & THREAD_FLAG_EXCEPTION) {
 					/* its exception was not taken: it goes */
 					entry = thread->exceptionEntry;
@@ -352,7 +352,7 @@ int resumeThreadForVM(SceUID threadId)
 					switchThread((intr >> 7) & 1);
 				goto resume;
 			}
-			SCE_DBG_ASSERT_CHECK(!(state & SCE_KERNEL_THREAD_STATUS_SUSPENDED), 790);
+			SCE_DBG_ASSERT_CHECK(!(state & SCE_KERNEL_THREAD_STATUS_SUSPENDED), 783);
 			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_REQUEST_VM_SUSPEND);
 		}
 	}

@@ -2268,7 +2268,7 @@ int delayThread(SceUInt32 usec, uint32_t flags, SceUInt32 *remaining, int callba
 		goto restore;
 	}
 	if (thread->processId == SCE_KERNEL_PROCESS_ID) {
-		version = SDK_VERSION_KERNEL_THREAD;
+		version = SDK_VERSION_KERNEL;
 		if (usec == 0)
 			goto zero;
 	} else if (SceSysrootForDriver_CAE820B2(thread->processId, &version) < 0) {
@@ -2838,7 +2838,7 @@ int sceKernelThreadMgrProcessCreate(SceProcessObject *process)
 	}
 	if (process->workerThread < 0) {
 		SCE_DBG_ASSERT_PRINTF(0, 10396,
-			"*** error: sceKernelCreateThread(\"%s\")=0x%08X, caller processId=0x%08X\n",
+			"error: sceKernelCreateThread(\"%s\")=0x%08X, caller processId=0x%08X\n",
 			name, process->workerThread, currentThreadContext()->processId);
 		return ret;
 	}
@@ -6066,7 +6066,7 @@ static inline void getCallerSdkVersion(SceUInt32 *version)
 {
 	if (currentThreadContext() == NULL ||
 	    currentThreadContext()->processId == SCE_KERNEL_PROCESS_ID)
-		*version = SDK_VERSION_KERNEL_THREAD;
+		*version = SDK_VERSION_KERNEL;
 	else if (SceSysrootForDriver_CAE820B2(currentThreadContext()->processId, version) < 0)
 		*version = 0;
 }
@@ -6287,7 +6287,7 @@ int SceThreadmgrForDriver_33E85E9E(SceKernelThreadRunStatus *output)
 	cpu = s_threadmgrRuntime.manager->cpuCB;
 	if (currentThreadContext() == NULL ||
 	    currentThreadContext()->processId == SCE_KERNEL_PROCESS_ID)
-		version = SDK_VERSION_KERNEL_THREAD;
+		version = SDK_VERSION_KERNEL;
 	else if (SceSysrootForDriver_CAE820B2(0, &version) < 0)
 		version = 0;
 	for (i = 0; i < CPU_COUNT; i++, cpu++) {
@@ -8402,7 +8402,7 @@ void threadMgrExcpHandlerCfunc_3(struct ThreadCB *thread)
 	ListNode *link;
 	int stopped, ret;
 
-	SCE_DBG_ASSERT_FAIL(11113);
+	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 11113);
 	if (SceCpuForDriver_CDA96E81(
 		(SceInt32 *)&thread->process->abortRequested, 0, 1) != 0)
 		return;
@@ -8438,7 +8438,7 @@ void threadMgrExcpHandlerCfunc_3(struct ThreadCB *thread)
 	if (stopped == 0) {
 		/* the other CPUs go on once all of them stopped */
 		s_threadmgrRuntime.manager->cpuStopState = 0;
-		__asm__ volatile("dsb" : : : "memory");
+		__asm__ volatile("dsb\n\tsev" : : : "memory");
 		while (s_threadmgrRuntime.manager->cpuStopState != CPU_STOP_ALL_STOPPED)
 			__asm__ volatile("wfe");
 		s_threadmgrRuntime.manager->cpuStopState = 0;

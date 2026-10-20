@@ -429,7 +429,7 @@ static int deleteTimer(SceUID timerId, SceUID puid)
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
 	if (SceIntrmgrForDriver_182EE3E3()) {
-		SCE_DBG_ASSERT_PRINTF(0, 1425, "*** error: illegal context. timerId=0x%08x[%s]\n",
+		SCE_DBG_ASSERT_PRINTF(0, 1425, "*** error: illegal context. timerGuid=0x%08x[%s]\n",
 				      timerId, SceSysmemForDriver_E655852F(timerId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
@@ -439,7 +439,7 @@ static int deleteTimer(SceUID timerId, SceUID puid)
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_TIMER_ID | SYSCALL_ERROR_BIT;
 		} else {
-			SCE_DBG_ASSERT_PRINTF(0, 1440, "*** error: unknown timer id. timerId=0x%08x\n",
+			SCE_DBG_ASSERT_PRINTF(0, 1440, "*** error: unknown timer id. timerGuid=0x%08x\n",
 					      timerId);
 			ret = SCE_KERNEL_ERROR_UNKNOWN_TIMER_ID;
 		}
@@ -513,6 +513,7 @@ static SceUID setAlarmWithName(const char *name, SceUInt64 delay, ThreadmgrAlarm
 	SceProcessObject *process;
 	ThreadmgrTraceHook hook;
 	SceUIDAlarmObject *alarm;
+	SceUInt64 now;
 	SceUID uid;
 	int intr;
 
@@ -533,8 +534,9 @@ static SceUID setAlarmWithName(const char *name, SceUInt64 delay, ThreadmgrAlarm
 		sceKernelSpinlockLowUnlock(&alarm->base.event.lock);
 		alarm->base.event.ownerPid = SCE_KERNEL_PROCESS_ID;
 		alarm->base.timer.deleted = 0;
+		now = SceSysrootForKernel_E20F6FC8();
 		alarm->base.timer.uid = uid;
-		alarm->base.timer.expiry = SceSysrootForKernel_E20F6FC8() + delay;
+		alarm->base.timer.expiry = now + delay;
 		alarm->base.timer.pid = thread == NULL ? SCE_KERNEL_PROCESS_ID : thread->processId;
 		alarm->base.timer.process = process;
 		alarm->handler = handler;

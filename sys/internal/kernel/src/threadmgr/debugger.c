@@ -775,14 +775,14 @@ int _sceKernelSetCpuRegisterForDebugger(SceUID threadId, const ThreadmgrDebugReg
 		if ((object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) &&
 		    cpu != object->context.currentCpuId) {
 			/* still on its CPU: that CPU does it */
-			request.result = &result;
-			request.done = &done;
-			done = 1;
-			dataMemoryBarrier();
 			request.threadId = threadId;
 			request.regs = regs;
 			request.mask = mask;
 			request.mode = mode;
+			done = 1;
+			request.result = &result;
+			request.done = &done;
+			dataMemoryBarrier();
 			issueSetCpuRegisterIntrRequest(object->context.currentCpuId, &request);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 			sceGUIDReleaseObject(threadId);
@@ -832,13 +832,13 @@ int _sceKernelGetCpuRegisterForDebugger(SceUID threadId, ThreadmgrDebugRegisters
 		cpu = sceKernelCpuId();
 		if ((object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) &&
 		    cpu != object->context.currentCpuId) {
-			request.result = &result;
-			request.done = &done;
-			done = 1;
-			dataMemoryBarrier();
 			request.threadId = threadId;
 			request.regs = regs;
 			request.mode = mode;
+			done = 1;
+			request.result = &result;
+			request.done = &done;
+			dataMemoryBarrier();
 			issueGetCpuRegisterIntrRequest(object->context.currentCpuId, &request);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 			sceGUIDReleaseObject(threadId);
@@ -893,14 +893,14 @@ int _sceKernelSetVfpRegisterForDebugger(SceUID threadId, const uint32_t *vfp, ui
 		cpu = sceKernelCpuId();
 		if ((object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) &&
 		    cpu != object->context.currentCpuId) {
-			request.result = &result;
-			request.done = &done;
-			done = 1;
-			dataMemoryBarrier();
 			request.threadId = threadId;
 			request.regs = vfp;
 			request.mask = mask;
 			request.mode = mode;
+			done = 1;
+			request.result = &result;
+			request.done = &done;
+			dataMemoryBarrier();
 			issueSetVfpRegisterIntrRequest(object->context.currentCpuId, &request);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 			sceGUIDReleaseObject(threadId);
@@ -957,13 +957,13 @@ int _sceKernelGetVfpRegisterForDebugger(SceUID threadId, uint32_t *vfp, int mode
 		cpu = sceKernelCpuId();
 		if ((object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) &&
 		    cpu != object->context.currentCpuId) {
-			request.result = &result;
-			request.done = &done;
-			done = 1;
-			dataMemoryBarrier();
 			request.threadId = threadId;
 			request.regs = vfp;
 			request.mode = mode;
+			done = 1;
+			request.result = &result;
+			request.done = &done;
+			dataMemoryBarrier();
 			issueGetVfpRegisterIntrRequest(object->context.currentCpuId, &request);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 			sceGUIDReleaseObject(threadId);

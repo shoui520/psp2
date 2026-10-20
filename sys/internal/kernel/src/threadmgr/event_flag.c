@@ -347,7 +347,7 @@ void releaseAllEventFlag(struct ThreadCB *thread)
 			break;
 		/* the flag holds its lock while it takes ours: back off */
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-		for (delay = 10; --delay != 0;)
+		for (delay = 10; delay != 0; delay--)
 			;
 	}
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -459,7 +459,7 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 		if (attr & SCE_KERNEL_ATTR_OPENABLE) {
 			if (process->uidOpenableCount >= 0x100) {
 				sceKernelSpinlockLowUnlock(&process->resourceLock);
-				SCE_DBG_ASSERT_PRINTF_FUNC(0, 582, "sceKernelCreateEventFlag", "sceKernelCreateEventFlag(), "
+				SCE_DBG_ASSERT_PRINTF_FUNC(0, 565, "sceKernelCreateEventFlag", "sceKernelCreateEventFlag(), "
 					"SCE_KERNEL_ERROR_UID_RL_OVERFLOW, processId=0x%08X\n",
 					thread->processId);
 				uid = SCE_KERNEL_ERROR_UID_RL_OVERFLOW | SYSCALL_ERROR_BIT;
@@ -473,7 +473,7 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 		} else {
 			if (process->uidCount >= 0x800) {
 				sceKernelSpinlockLowUnlock(&process->resourceLock);
-				SCE_DBG_PRINTF_FUNC(0xb, 565, "sceKernelCreateEventFlag",
+				SCE_DBG_PRINTF_FUNC(0xb, 582, "sceKernelCreateEventFlag",
 					"(), SCE_KERNEL_ERROR_UID_RL_OVERFLOW, processId=0x%08X\n",
 					thread->processId);
 				uid = SCE_KERNEL_ERROR_UID_RL_OVERFLOW | SYSCALL_ERROR_BIT;

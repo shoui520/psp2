@@ -111,8 +111,6 @@ typedef int (*ThreadmgrDebugHandler)(SceSize size, void *message);
 
 int debugSuspendThreadSelf(uint32_t reason, SceSize size, void *message);
 
-#define SDK_VERSION_KERNEL_THREAD	0x04000000	/* kernel threads count as the newest SDK */
-
 /* what the thread event handlers (DEBUG_HANDLER_THREAD_EVENT) hear */
 struct ThreadmgrDebugThreadEvent {
 	SceUID processId;

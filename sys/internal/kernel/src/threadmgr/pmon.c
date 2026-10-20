@@ -315,13 +315,13 @@ int SceThreadmgrForKernel_7B3368F1(SceUID threadId, uint32_t counter, uint32_t v
 	object = (struct SceUIDThreadObject *)pObject;
 	sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 	if (object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) {
-		request.result = &ret;
-		request.done = &done;
-		done = 1;
-		__sync_synchronize();
 		request.threadId = threadId;
 		request.counter = counter;
 		request.value = value;
+		done = 1;
+		request.result = &ret;
+		request.done = &done;
+		__sync_synchronize();
 		issuePMonThreadSetCounterIntrRequest(object->context.currentCpuId, &request);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 		sceGUIDReleaseObject(threadId);
@@ -452,13 +452,13 @@ int SceThreadmgrForKernel_170F69D6(SceUID threadId, uint32_t counter, uint32_t *
 	object = (struct SceUIDThreadObject *)pObject;
 	sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 	if (object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) {
-		request.result = &ret;
-		request.done = &done;
-		done = 1;
-		__sync_synchronize();
 		request.threadId = threadId;
 		request.counter = counter;
 		request.value = (uintptr_t)value;
+		done = 1;
+		request.result = &ret;
+		request.done = &done;
+		__sync_synchronize();
 		issuePMonThreadGetCounterIntrRequest(object->context.currentCpuId, &request);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 		sceGUIDReleaseObject(threadId);

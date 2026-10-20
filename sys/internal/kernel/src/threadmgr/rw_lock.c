@@ -440,7 +440,7 @@ uint32_t releaseAllRWLock(struct ThreadCB *thread)
 			break;
 		/* the lock holds its spinlock while it takes ours: back off */
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-		for (delay = 10; --delay != 0;)
+		for (delay = 10; delay != 0; delay--)
 			;
 	}
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));

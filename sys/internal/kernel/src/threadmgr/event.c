@@ -283,12 +283,14 @@ static int waitEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 		thread->waitEventPatternOutput = outPattern;
 		thread->waitEventDataOutput = outUserData;
 		if (!callbacks) {
-			ret = waitWaitableObject(eventId, queue, SCE_KERNEL_WAITTYPE_EVENT,
-						 &wakeup, timeout, NULL, &locked);
+			last = waitWaitableObject(eventId, queue, SCE_KERNEL_WAITTYPE_EVENT,
+						  &wakeup, timeout, NULL, &locked);
 			SceCpuForDriver_4AE1BCC0(flags, THREAD_FLAG_WAKE_PENDING);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-			if (!locked)
+			if (!locked) {
+				ret = last;
 				goto resume;
+			}
 			break;
 		}
 		SceCpuForDriver_BC248C30(flags, THREAD_FLAG_WAKE_PENDING);
@@ -409,11 +411,20 @@ static int uidEvent_Destructor(void *object)
 		wme = thread->waitMultipleEvents;
 		left = unlinkEventWaitNode(wait, wme);
 		waitId = thread->waitId;
-		if (!wme->busy && waitId != WAIT_ID_MULTIPLE_EVENTS)
-			releaseEventWaiter(event, wait, thread);
-		else
-			wake |= completeEventWaitNode(event, wait, thread, wme, left, waitId,
-				SCE_KERNEL_ERROR_WAIT_DELETE, EVENT_DELETED_PATTERN, 0, 0, 0);
+		if (wme->busy || waitId == WAIT_ID_MULTIPLE_EVENTS) {
+			addEventWaitResult(wme, wait->eventId, SCE_KERNEL_ERROR_WAIT_DELETE,
+					   EVENT_DELETED_PATTERN, 0);
+			markEventReady(wme, wait->index);
+			if (waitId == WAIT_ID_MULTIPLE_EVENTS &&
+			    (left == 0 || wme->mode == WME_MODE_ANY)) {
+				wake |= wakeupAndDistributeThread(thread, (uintptr_t)queue, 0);
+				goto released;
+			}
+		}
+		/* the event's own class: its UID is already going */
+		((int (*)(SceClass *, void *, void *))((struct ThreadmgrWaitableClass *)
+			s_threadmgrRuntime.manager->eventClass)->release)(event->cls, event, thread);
+released:
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (freeEventWaitNode(thread->processId, wait) < 0)
 			SCE_PANIC(SCE_LINE(3135, 3138));

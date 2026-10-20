@@ -306,7 +306,7 @@ int _sceKernelCreateLwMutexForUser(ThreadmgrLwMutexWork *work, const char *name,
 			goto unaccount;
 		}
 		sceKernelSpinlockLowUnlock(&cacheProcess->lwMutexCacheLock);
-		for (delay = 10; --delay != 0;)
+		for (delay = 10; delay != 0; delay--)
 			;
 	}
 	sceKernelSpinlockLowUnlock(&cacheProcess->lwMutexCacheLock);
@@ -1249,7 +1249,7 @@ int uidLwMutex_DeleteCache(SceProcessObject *process, int target)
 		}
 backoff:
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lwMutexCacheLock, intr);
-		for (delay = 10; --delay != 0;)
+		for (delay = 10; delay != 0; delay--)
 			;
 	}
 done:

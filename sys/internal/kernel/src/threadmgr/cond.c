@@ -636,9 +636,9 @@ int sceKernelSignalCond(SceUID condId)
 	sceKernelSpinlockLowLock(&cond->lock);
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (CondSignalDeferred(thread, cond)) {
+		/* as Sony's: returns the lookup's result */
 		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_SIGNAL_DEFERRED);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-		ret = 0;
 		goto unlock;
 	}
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -701,9 +701,9 @@ int sceKernelSignalCondAll(SceUID condId)
 	sceKernelSpinlockLowLock(&cond->lock);
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (CondSignalDeferred(thread, cond)) {
+		/* as Sony's: returns the lookup's result */
 		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_SIGNAL_DEFERRED);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-		ret = 0;
 		goto unlock;
 	}
 	queue = (struct ThreadmgrWaitQueue *)&cond->next;
@@ -835,6 +835,8 @@ int sceKernelSignalCondTo(SceUID condId, SceUID threadId)
 				"0x%08X[%s]) returns SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID\n", condId,
 				name, threadId, SceSysmemForDriver_E655852F(threadId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
+	} else {
+		ret = 0;
 	}
 unlock:
 	sceKernelSpinlockLowUnlock(&cond->lock);

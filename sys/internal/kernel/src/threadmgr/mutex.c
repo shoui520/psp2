@@ -66,6 +66,8 @@ int getMutexInfo(SceUID mutexId, SceKernelMutexInfo *info)
 	return ret;
 }
 
+SCHED_PROBE(s_acquireMutexChangePriority, "__sched_", "change__pri");
+
 /*
  * Gives the mutex to thread (both locked) and, for a ceiling mutex, boosts
  * the thread to the ceiling; before SDK 0x01800000 a boost may not move a
@@ -145,7 +147,7 @@ void acquireMutex(SceUIDMutexObject *mutex, struct ThreadCB *thread, int count)
 		SCE_PANIC(193);
 	if (thread == current)
 		cpu->priority = thread->boostPriority;
-	notifyPriorityChange(thread, oldPriority);
+	notifyPriorityChange(thread, oldPriority, s_acquireMutexChangePriority);
 }
 
 /* SceUIDMutexClass's revalidation: the first waiter gets the mutex if it is free */
@@ -314,6 +316,8 @@ void startMutex(void)
 	SCE_DBG_PRINTF_LEVEL(2, 0, 573, " sizeof(SceUIDMutexObject)=%d\n", sizeof(SceUIDMutexObject));
 }
 
+SCHED_PROBE(s_releaseAllMutexChangePriority, "__sched_", "change__pri");
+
 /*
  * An exiting thread gives up every mutex it holds (each goes to its first
  * waiter) and drops back to its base priority.
@@ -347,7 +351,7 @@ uint32_t releaseAllMutex(struct ThreadCB *thread)
 			break;
 		/* the mutex holds its lock while it takes ours: back off */
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-		for (delay = 10; --delay != 0;)
+		for (delay = 10; delay != 0; delay--)
 			;
 	}
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -365,7 +369,7 @@ uint32_t releaseAllMutex(struct ThreadCB *thread)
 		cpu = currentCpuState();
 		wake |= 1;
 		cpu->priority = thread->currentPriority;
-		notifyPriorityChange(thread, oldPriority);
+		notifyPriorityChange(thread, oldPriority, s_releaseAllMutexChangePriority);
 	}
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	return wake;
