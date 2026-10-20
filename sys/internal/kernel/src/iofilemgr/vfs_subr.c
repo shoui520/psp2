@@ -1051,11 +1051,9 @@ int sceVfsDeleteVfs(const char *name, SceVfsInfo **vfsInf)
 		if (g_vfsList == inf) {
 			g_vfsList = inf->next;
 		} else {
-			cur = g_vfsList;
-			do {
+			prev = g_vfsList;
+			while ((cur = prev->next) != inf && cur != NULL)
 				prev = cur;
-				cur = prev->next;
-			} while (cur != inf && cur != NULL);
 			prev->next = inf->next;
 		}
 		ret = 0;
@@ -1425,8 +1423,8 @@ done:
 int vfs_process_finalize(SceUID pid)
 {
 	SceUID puid[0x80];
-	SceVfsFile *file;
 	SceSize num;
+	SceVfsFile *file;
 	SceUID guid;
 	int ret, i;
 
@@ -1469,11 +1467,10 @@ BufferPool *vfs_get_vnode_pool(void)
 /* name unknown: fills the vop table cache */
 void vfs_vop_table_cache_initialize(void)
 {
-	SceVopTable **entry;
+	int i;
 
-	for (entry = g_vopTableCache; entry != g_vopTableCache + VFS_VOP_TABLE_CACHE_NUM;
-	     entry++)
-		*entry = sceKernelAllocHeapMemory(g_vfsNcacheHeap, sizeof(SceVopTable));
+	for (i = 0; i < VFS_VOP_TABLE_CACHE_NUM; i++)
+		g_vopTableCache[i] = sceKernelAllocHeapMemory(g_vfsNcacheHeap, sizeof(SceVopTable));
 }
 
 char *vfs_path_buff_alloc(void)
@@ -2069,7 +2066,7 @@ SceUID vfs_allocate_file_dummy(SceVfsFile **file, const char *path)
 	SceUIDVfsFileObject *obj;
 	SceUID uid;
 
-	uid = vfs_create_file_object(&obj, "SceVfsFile");
+	uid = vfs_create_file_object(&obj, path);
 	if (uid < 0) {
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 1717, "sceGUIDKernelCreate failed ... %d 0x%x\n", uid,
 				     uid);

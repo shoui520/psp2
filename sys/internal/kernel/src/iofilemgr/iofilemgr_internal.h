@@ -807,7 +807,7 @@ int vfs_buf_io_buff_contains(struct BuffCache *bc, SceOff pos, SceSize size);
 
 struct VfsBuffIoOps;
 struct BuffLine;
-int vfsBuffAllocate(SceSize dataCacheSize, int wayNum, SceSize lineSize,
+int vfsBuffAllocate(SceSize dataCacheSize, SceUInt32 wayNum, SceSize lineSize,
 		    SceSize ioCacheSize, SceUID pid, SceUInt16 memType,
 		    const struct VfsBuffIoOps *ioOps, struct BuffCache **bcp);
 int vfs_bop_flush_data_cache(struct BuffCache *bc, struct BuffLine *line, SceVfsVnode *vp,

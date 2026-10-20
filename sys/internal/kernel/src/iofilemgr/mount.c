@@ -1122,7 +1122,7 @@ int sceIoDeleteMountEvent(SceUID uid)
 	handle = sceGUIDOpenByGUID(uid);
 	if (handle < 0)
 		return handle;
-	if (!SceSysmemForKernel_7F7D5C4A(SceSysmemForKernel_368F1C36(uid),
+	if (!SceSysmemForKernel_7F7D5C4A(SceSysmemForKernel_368F1C36(handle),
 					 &g_mountEventClass.base))
 		return 0x80028002;
 	event = SceSysmemForKernel_FA6C098C(uid);
@@ -1139,12 +1139,8 @@ int sceIoDeleteMountEvent(SceUID uid)
 		if (prev == event) {
 			point->events = event->next;
 		} else {
-			for (;;) {
-				next = prev->next;
-				if (next == event || next == NULL)
-					break;
-				prev = prev->next;
-			}
+			while ((next = prev->next) != event && next != NULL)
+				prev = next;
 			prev->next = event->next;
 		}
 		event->next = NULL;

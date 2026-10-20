@@ -1002,6 +1002,9 @@ int SceIofilemgrForDriver_041209CF(SceUID fd, int flag, IoAsyncParam *asyncParam
 int sceIoCancel(SceUID uid)
 {
 	IoAsyncEvent *event = NULL;
+#if !FW_DEBUG
+	IoRequest *req;
+#endif
 	IoScheduler *sched;
 	SceUInt32 tls;
 	int ret, released;
@@ -1012,9 +1015,18 @@ int sceIoCancel(SceUID uid)
 		sceSyscallLeave(tls);
 		return ret;
 	}
+#if FW_DEBUG
 	sched = sceIoSchedDispatcherGetIoScheduler(&g_schedDispatcher, event->request.mntOpt);
+#else
+	req = &event->request;
+	sched = sceIoSchedDispatcherGetIoScheduler(&g_schedDispatcher, req->mntOpt);
+#endif
 	SCE_DBG_ASSERT_FUNC(sched != NULL, 1550, "sceIoCancel");
+#if FW_DEBUG
 	ret = sceIoSchedulerCancelAsyncIoRequest(sched, &event->request);
+#else
+	ret = sceIoSchedulerCancelAsyncIoRequest(sched, req);
+#endif
 	if (ret >= 0) {
 		released = sceGUIDReleaseObject(uid);
 		SCE_DBG_ASSERT_FUNC(released == 0, 1560, "sceIoCancel");

@@ -120,7 +120,6 @@ IoRequest *sceIoRequestQueueGetIoRequest(IoRequestQueue *queue, int *waiting)
 	IoRequest *req, *running;
 	SceUID thid;
 	int fd, ret, priority, conflict;
-	unsigned int type;
 
 	SCE_DBG_ASSERT(queue != NULL, 249);
 	req = queue->head;
@@ -146,14 +145,27 @@ IoRequest *sceIoRequestQueueGetIoRequest(IoRequestQueue *queue, int *waiting)
 				if (strncmp(req->args.path.path, running->args.path.path, 0x400) == 0)
 					return NULL;
 			} else {
-				type = running->type - 1;
-				if (type <= 26 && ((1 << type) & 0x05857981)) {
+				switch (running->type) {
+				case IO_REQUEST_OPEN:
+				case IO_REQUEST_REMOVE:
+				case IO_REQUEST_DOPEN:
+				case IO_REQUEST_MKDIR:
+				case IO_REQUEST_RMDIR:
+				case IO_REQUEST_RENAME:
+				case IO_REQUEST_CHSTAT:
+				case IO_REQUEST_GETSTAT:
+				case IO_REQUEST_DEVCTL:
+				case IO_REQUEST_GETSTAT_FOR_VSH:
+				case IO_REQUEST_CHSTAT_FOR_VSH:
+				case IO_REQUEST_DOPEN_ASYNC:
 					ret = vfs_check_fd_vnode(running->args.path.path, fd);
 					if (ret < 0)
 						goto nextPriority;
 					conflict = ret == 0;
-				} else {
+					break;
+				default:
 					conflict = running->args.fd.fd == fd;
+					break;
 				}
 				if (conflict)
 					return NULL;

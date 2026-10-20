@@ -920,11 +920,12 @@ int sceIoSchedulerNeedsIoChunks(IoScheduler *sched, IoRequest *req)
 int sceIoSchedulerAddIoRequest(IoScheduler *sched, IoRequest *req)
 {
 	SceSize chunkSize, offset;
-	int priority = req->priority;
+	int priority;
 	int ret;
 
 	if (req->next != NULL)
 		SCE_DBG_ASSERT(0, 2138);
+	priority = req->priority;
 	if (priority > 10 && (req->cacheFlags != 0 || req->isWrite == 1) &&
 	    sched->dispatcher->chunkAlignmentOverride > 0) {
 		req->chunkAlignment = 1;
@@ -1015,7 +1016,7 @@ aligned:
 		req->chunkOffset = 0;
 	}
 add:
-	return sceIoRequestQueueAddIoRequest(sched->queue[priority], req);
+	return sceIoRequestQueueAddIoRequest(sched->queue[req->priority], req);
 }
 
 void sceIoSchedulerAddAsyncIoRequest(IoScheduler *sched, IoRequest *req)

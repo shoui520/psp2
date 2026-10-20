@@ -277,7 +277,7 @@ int sceIoSetPriorityInternal(SceUID fd, SceInt32 priority, int fromKernel)
 				goto out;
 			}
 			SCE_DBG_ASSERT(info.priority == IO_PRIORITY_NON_GAME, 401);
-			priority = info.priority;
+			goto setParam;
 		} else {
 			if ((SceUInt32)priority > IO_PRIORITY_GAME_MAX)
 				goto invalid;
@@ -287,6 +287,7 @@ int sceIoSetPriorityInternal(SceUID fd, SceInt32 priority, int fromKernel)
 		goto invalid;
 	}
 	info.priority = priority;
+setParam:
 	ret = setFileSchedParam(fd, &info);
 	goto out;
 

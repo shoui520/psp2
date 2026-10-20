@@ -415,20 +415,31 @@ int enter_ncache(SceVfsVnode *dvp, SceVfsVnode *vp, const VfsPathElem *elem, int
 	return 0;
 }
 
-/* a struct copy of a name cache entry, taken under the ncache lock */
+/* drops the negative entry of name from dvp's name cache (inlined into vfs_lookup) */
 static inline __attribute__((always_inline)) int clear_negative_cache(SceVfsVnode *dvp,
 								      const VfsPathElem *name,
 								      const char *orgName)
 {
-	struct Ncache *ncdd, *nc, *prev, *cur;
+	struct Ncache *ncdd, *nc, *cur;
 
 	ncdd = dvp->core.ncache;
 	vfs_lock_ncache();
-	if (ncdd == NULL || ncdd->state == NCACHE_STATE_NEGATIVE)
-		goto fail;
-	for (nc = ncdd->child; nc != NULL; nc = nc->next) {
-		if (name->len != nc->nameLength || strncmp(name->name, nc->name, name->len) != 0)
-			continue;
+	if (ncdd != NULL && ncdd->state != NCACHE_STATE_NEGATIVE) {
+		nc = ncdd->child;
+		if (nc == NULL) {
+			vfs_unlock_ncache();
+			return SCE_ERROR_ERRNO_ENOENT;
+		}
+		for (;;) {
+			if (name->len == nc->nameLength &&
+			    strncmp(name->name, nc->name, name->len) == 0)
+				break;
+			nc = nc->next;
+			if (nc == NULL) {
+				vfs_unlock_ncache();
+				return SCE_ERROR_ERRNO_ENOENT;
+			}
+		}
 		remove_negative_list(nc);
 		vfs_remove_ncache_list(nc);
 		if (ncdd != nc->ncdd) {
@@ -437,29 +448,24 @@ static inline __attribute__((always_inline)) int clear_negative_cache(SceVfsVnod
 			SCE_PANIC_FUNC(SCE_LINE(8647, 8617), "clear_negative_cache");
 		}
 		cur = ncdd->child;
-		if (cur == NULL) {
-			SCE_DBG_PRINTF_FUNC(0xf, 8626, "clear_negative_cache",
-					    "nnc %s does`t exist ... \n", nc->name);
-			SCE_DBG_PRINTF_FUNC(0xf, 8627, "clear_negative_cache", "ncdd is %s \n",
-					    nc->ncdd->name);
-			goto fail;
+		if (cur != NULL) {
+			if (cur == nc) {
+				ncdd->child = nc->next;
+			} else {
+				while (cur->next != nc && cur->next != NULL)
+					cur = cur->next;
+				cur->next = nc->next;
+			}
+			nc->next = NULL;
+			vfs_free_ncache(nc);
+			vfs_unlock_ncache();
+			return SCE_ERROR_ERRNO_ENOENT;
 		}
-		if (cur == nc) {
-			ncdd->child = nc->next;
-		} else {
-			do {
-				prev = cur;
-				cur = prev->next;
-				if (cur == nc)
-					break;
-			} while (cur != NULL);
-			prev->next = nc->next;
-		}
-		nc->next = NULL;
-		vfs_free_ncache(nc);
-		goto fail;
+		SCE_DBG_PRINTF_FUNC(0xf, 8626, "clear_negative_cache",
+				    "nnc %s does`t exist ... \n", nc->name);
+		SCE_DBG_PRINTF_FUNC(0xf, 8627, "clear_negative_cache", "ncdd is %s \n",
+				    nc->ncdd->name);
 	}
-fail:
 	vfs_unlock_ncache();
 	SCE_DBG_PRINTF_FUNC(0xf, 1276, "vfs_lookup", "can not clear negative %s\n", orgName);
 	return SCE_ERROR_ERRNO_ENOENT;
@@ -469,12 +475,12 @@ int vfs_lookup(SceVfsVnode *dvp, const VfsPathElem *elem, const char *path, SceU
 	       SceVfsVnode **vpp)
 {
 	struct Ncache *ncdd, *nc;
+	SceSize len;
+	const char *path2, *path3;
+	VfsPathElem name;
 	struct Ncache copy;
 	SceVfsPath lpath;
-	VfsPathElem name;
-	const char *path2, *path3;
 	SceVfsVnode *vp;
-	SceSize len;
 	char *buf;
 	int ret;
 
@@ -489,7 +495,8 @@ int vfs_lookup(SceVfsVnode *dvp, const VfsPathElem *elem, const char *path, SceU
 			vfs_path_buff_free(buf);
 			return ret;
 		}
-		__builtin_memcpy(&name, elem, sizeof(name));
+		name.name = elem->name;
+		name.len = elem->len;
 	} else {
 		name.name = buf;
 		name.len = len;
@@ -2496,15 +2503,17 @@ int vfsRemove(IofilemgrRemoveParam *param)
 {
 	const char *file = param->file;
 	int flags = param->flags;
+	SceVfsVnode *dvp, *vp;
+	int num;
+	SceVfsVnode *nvp;
+	VfsPathElem tmpElem;
+	SceVfsPath tmpPath;
+	SceVfsPath path;
 	VfsPathElem elem[VFS_PATH_ELEM_MAX];
 	VfsPathElem *lastElem;
-	VfsPathElem tmpElem;
-	SceVfsPath path;
-	SceVfsPath tmpPath;
-	SceVfsVnode *dvp, *vp, *nvp;
 	SceVfsFile *fd;
 	char *buf, *tmp;
-	int num, last, i, ret, err;
+	int last, i, ret, err;
 	SceUInt32 type;
 
 	buf = vfs_path_buff_alloc();
@@ -4375,12 +4384,13 @@ int vfsMkdir(IofilemgrMkdirParam *param)
 {
 	SceMode mode = param->mode;
 	const char *dir = param->dir;
+	SceVfsVnode *dvp, *vp;
+	int num;
+	SceVfsPath path;
 	VfsPathElem elem[VFS_PATH_ELEM_MAX];
 	const VfsPathElem *name;
-	SceVfsVnode *dvp, *vp;
-	SceVfsPath path;
 	char *buf;
-	int num, last, ret;
+	int last, ret;
 
 	if ((mode & VFS_OPEN_MODE_VALID) == 0 || (mode & VFS_OPEN_MODE_INVALID) != 0) {
 #if FW_DEBUG

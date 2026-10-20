@@ -2067,11 +2067,10 @@ int sceVopWhiteout(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *old_path,
 
 int sceVopCleanup(SceVfsVnode *vp, SceVfsFile *file, SceUInt32 a2, SceUInt32 a3)
 {
-	SceVopCleanupArgs args;
-	struct BuffCache *bc;
 	SceVopTable *ops;
+	int fdNum;
 	SceVfsFile *other;
-	SceUID pid;
+	SceUID pid, filePid;
 	int ret, err;
 
 	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 3960, "sceVopCleanup");
@@ -2089,15 +2088,18 @@ int sceVopCleanup(SceVfsVnode *vp, SceVfsFile *file, SceUInt32 a2, SceUInt32 a3)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 3987, "sceVopCleanup",
 						  "vfsBuffFree() failed ... 0x%x %d %p\n",
 						  err, err, vp);
+		fdNum = vp->core.fdNum;
 		vp->core.bc = NULL;
 		/* the cache goes on for the next process that still has the file open */
-		if (vp->core.fdNum > 1) {
+		if (fdNum > 1) {
+			filePid = file->pid;
 			for (other = vp->core.fdList; other != NULL; other = other->next) {
 				pid = other->pid;
-				if (pid == file->pid || other == file)
+				if (pid == filePid || other == file)
 					continue;
 				if (pid != 0) {
-					bc = NULL;
+					struct BuffCache *bc = NULL;
+
 					if (vfs_is_cdialog_thread())
 						SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 4016, "sceVopCleanup",
 									  "called by CDialog, unexpected sequence !!\n");
@@ -2120,6 +2122,8 @@ int sceVopCleanup(SceVfsVnode *vp, SceVfsFile *file, SceUInt32 a2, SceUInt32 a3)
 	if (ops->vop_cleanup == NULL) {
 		ret = SCE_ERROR_ERRNO_EUNSUP;
 	} else {
+		SceVopCleanupArgs args;
+
 		args.vp = vp;
 		args.file = file;
 		args.a2 = 0;

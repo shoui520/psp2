@@ -43,13 +43,14 @@ int vfsBuffDataRead(struct BuffCache *bc, SceVfsVnode *vp, SceOff pos, SceSize s
 	SceOff lineOffset = pos & ~(SceOff)(lineSize - 1);
 	int set = (pos / lineSize) % bc->setNum;
 	struct BuffLine **head = &bc->lineList[set];
-	int wayNum = bc->wayNum;
+	int wayNum;
 	SceSize inLine;
 	struct BuffLine *line, *prev, *next;
 	int i;
 
-	inLine = pos % lineSize;
 	line = *head;
+	wayNum = bc->wayNum;
+	inLine = pos % lineSize;
 	if (inLine + size > lineSize)
 		return SCE_ERROR_ERRNO_EINVAL;
 	if (wayNum == 0)
@@ -65,21 +66,19 @@ int vfsBuffDataRead(struct BuffCache *bc, SceVfsVnode *vp, SceOff pos, SceSize s
 		} while (line->offset != lineOffset);
 	}
 	if (line->state >= VFS_BUFF_LINE_INVALID) {
-		if (line->state != VFS_BUFF_LINE_FREE && line->state != VFS_BUFF_LINE_INVALID)
+		if (!(line->state == VFS_BUFF_LINE_INVALID || line->state == VFS_BUFF_LINE_FREE))
 			SCE_DBG_PRINTF_LEVEL(2, 0xf, 640,
 					     "found cache entry is not valid ... %p state=0x%x off=0x%llx\n",
 					     line, line->state, line->offset);
 		return SCE_ERROR_ERRNO_ENOENT;
 	}
 	/* move the line to the front of its set */
-	if (*head == line) {
+	prev = *head;
+	if (prev == line) {
 		*head = line->next;
 	} else {
-		next = *head;
-		do {
+		while ((next = prev->next) != line && next != NULL)
 			prev = next;
-			next = prev->next;
-		} while (next != line && next != NULL);
 		prev->next = line->next;
 	}
 	line->next = NULL;
@@ -100,34 +99,39 @@ int vfsBuffDataWrite(struct BuffCache *bc, SceVfsVnode *vp, SceOff pos, SceSize 
 	SceOff lineOffset = pos & ~(SceOff)(lineSize - 1);
 	int set = (lineOffset / lineSize) % bc->setNum;
 	struct BuffLine **head = &bc->lineList[set];
-	int wayNum = bc->wayNum;
-	SceSize inLine = pos % lineSize;
+	int wayNum;
 	struct BuffLine *line, *prev, *next;
+	SceSize inLine;
 	int i;
 
 	line = *head;
+	wayNum = bc->wayNum;
+	inLine = pos % lineSize;
 	if (inLine + size > lineSize)
 		return SCE_ERROR_ERRNO_EINVAL;
-	for (i = 0; i < wayNum; i++) {
-		if (line->offset == lineOffset)
-			break;
-		line = line->next;
-	}
-	if (i == wayNum)
+	if (wayNum == 0)
 		return SCE_ERROR_ERRNO_ENOENT;
+	if (line->offset != lineOffset) {
+		line = *head;
+		i = 0;
+		do {
+			i++;
+			line = line->next;
+			if (i >= wayNum)
+				return SCE_ERROR_ERRNO_ENOENT;
+		} while (line->offset != lineOffset);
+	}
 	if (line->state >= VFS_BUFF_LINE_INVALID) {
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 707, "found cache entry is not valid ... %p state=0x%x\n",
 				     line, line->state);
 		return SCE_ERROR_ERRNO_ENOENT;
 	}
-	if (*head == line) {
+	prev = *head;
+	if (prev == line) {
 		*head = line->next;
 	} else {
-		next = *head;
-		do {
+		while ((next = prev->next) != line && next != NULL)
 			prev = next;
-			next = prev->next;
-		} while (next != line && next != NULL);
 		prev->next = line->next;
 	}
 	line->next = NULL;
@@ -540,14 +544,12 @@ int vfsBuffDataEnter(struct BuffCache *bc, SceOff pos, SceSize size, const void 
 		return SCE_ERROR_ERRNO_ENOENT;
 	}
 
-	if (*head == line) {
+	prev = *head;
+	if (prev == line) {
 		*head = line->next;
 	} else {
-		next = *head;
-		do {
+		while ((next = prev->next) != line && next != NULL)
 			prev = next;
-			next = prev->next;
-		} while (next != line && next != NULL);
 		prev->next = line->next;
 	}
 	line->next = NULL;
@@ -642,7 +644,7 @@ int vfs_buf_free_data_buff(struct BuffCache *bc, SceVfsVnode *vp, SceVfsFile *fi
 }
 
 /* allocate a buffer cache: setNum sets of wayNum lines, and an I/O buffer */
-int vfsBuffAllocate(SceSize dataCacheSize, int wayNum, SceSize lineSize,
+int vfsBuffAllocate(SceSize dataCacheSize, SceUInt32 wayNum, SceSize lineSize,
 		    SceSize ioCacheSize, SceUID pid, SceUInt16 memType,
 		    const struct VfsBuffIoOps *ioOps, struct BuffCache **bcp)
 {
@@ -670,7 +672,7 @@ int vfsBuffAllocate(SceSize dataCacheSize, int wayNum, SceSize lineSize,
 	}
 
 	lineNum = dataCacheSize / lineSize;
-	setNum = (SceUInt8)(lineNum / (SceUInt32)wayNum);
+	setNum = (SceUInt8)((SceUInt8)lineNum / wayNum);
 	bc = vfs_buf_allocate_memory(pid, sizeof(*bc) + setNum * sizeof(bc->lineList[0]), memType);
 	if (bc == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
@@ -693,7 +695,7 @@ int vfsBuffAllocate(SceSize dataCacheSize, int wayNum, SceSize lineSize,
 		vfs_buf_free_memory(pid, lines, memType);
 		return SCE_ERROR_ERRNO_ENOMEM;
 	}
-	data = (char *)((((SceUIntPtr)dataMemory + 0x1ff) >> 9) << 9);
+	data = (char *)(((SceUIntPtr)dataMemory + 0x1ff) / 0x200 * 0x200);
 	memset(data, 0, dataCacheSize);
 	memset(lines, 0, lineNum * sizeof(*lines));
 
@@ -729,13 +731,13 @@ int vfsBuffAllocate(SceSize dataCacheSize, int wayNum, SceSize lineSize,
 			sceKernelFreeMemBlock(bc->hostMemBlock);
 			goto free_bc;
 		}
-		ioBuff = (char *)((((SceUIntPtr)bc->ioBuffMemory + 0x1ff) >> 9) << 9);
+		ioBuff = (char *)(((SceUIntPtr)bc->ioBuffMemory + 0x1ff) / 0x200 * 0x200);
 		memset(ioBuff, 0, ioCacheSize);
 	} else {
 		bc->ioBuffMemory = vfs_buf_allocate_memory(pid, ioCacheSize + 0x200, memType);
 		if (bc->ioBuffMemory == NULL)
 			goto free_data;
-		ioBuff = (char *)((((SceUIntPtr)bc->ioBuffMemory + 0x1ff) >> 9) << 9);
+		ioBuff = (char *)(((SceUIntPtr)bc->ioBuffMemory + 0x1ff) / 0x200 * 0x200);
 		memset(ioBuff, 0, ioCacheSize);
 	}
 	bc->ioBuffCachedSize = 0;
