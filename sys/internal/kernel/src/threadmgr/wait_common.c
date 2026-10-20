@@ -389,7 +389,7 @@ const struct ThreadmgrSchedProbeDescriptor s_schedWakeupDescriptor = {
 };
 
 /* a thread leaves the queue it waits in (or the timed-wait list) and is made ready */
-bool wakeupAndDistributeThread(struct ThreadCB *thread, uintptr_t waitable,
+int wakeupAndDistributeThread(struct ThreadCB *thread, uintptr_t waitable,
 			       int result)
 {
 	struct ThreadmgrWaitQueue *queue = (struct ThreadmgrWaitQueue *)waitable;

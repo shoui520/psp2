@@ -95,12 +95,10 @@ static int uidMsgPipe_Constructor(void *object)
 static int uidMsgPipe_Destructor(void *object)
 {
 	ThreadmgrMsgPipe *pipe = object;
-	struct ThreadmgrWaitNode *queue = MSG_PIPE_QUEUE(pipe), *node;
+	struct ThreadmgrWaitNode *queue = MSG_PIPE_QUEUE(pipe), *node, *next;
 	struct ThreadCB *thread;
-	SceProcessObject *process;
 	SceObjectBase *pObject;
 	SceUID memBlockId, pid;
-	SceSize moved;
 	int intr, ret;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 4892);
@@ -108,22 +106,22 @@ static int uidMsgPipe_Destructor(void *object)
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&pipe->event.lock);
 		if (sceGUIDGetObject(pipe->processId, &pObject) < 0)
 			break;
-		if (sceKernelTryLockFastMutex(&process->msgPipeLock) >= 0) {
+		if (sceKernelTryLockFastMutex(&((SceProcessObject *)pObject)->msgPipeLock) >= 0) {
 			ListLinkRemove(&pipe->processLink);
-			if (sceKernelUnlockFastMutex(&process->msgPipeLock) < 0) {
+			if (sceKernelUnlockFastMutex(&((SceProcessObject *)pObject)->msgPipeLock) < 0) {
 				SCE_DBG_ASSERT_FAIL(4912);
 				sceKernelSpinlockLowUnlockCpuResumeIntr(&pipe->event.lock, intr);
 				return 0;
 			}
 			break;
 		}
-	process = (SceProcessObject *)pObject;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&pipe->event.lock, intr);
 	}
 	memBlockId = pipe->memBlockId;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&pipe->event.lock, intr);
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&pipe->event.lock);
-	for (node = pipe->event.next; node != queue; node = node->next) {
+	for (node = pipe->event.next; node != queue; node = next) {
+		next = node->next;
 		if (!(node->owner & 1))
 			continue;
 		thread = (struct ThreadCB *)node;
@@ -131,6 +129,8 @@ static int uidMsgPipe_Destructor(void *object)
 		if (thread->waitType == SCE_KERNEL_WAITTYPE_MSG_PIPE) {
 			if (pipe->waitDirection == MSG_PIPE_WAIT_SEND) {
 				if (thread->msgPipeResult != NULL) {
+					SceSize moved;
+
 					moved = thread->msgPipeSize - thread->msgPipeRemaining;
 					ret = setMsgPipeResult(thread, &moved);
 					if (ret < 0)
@@ -140,6 +140,8 @@ static int uidMsgPipe_Destructor(void *object)
 				}
 			} else if (pipe->waitDirection == MSG_PIPE_WAIT_RECEIVE) {
 				if (thread->msgPipeResult != NULL) {
+					SceSize moved;
+
 					moved = thread->msgPipeSize - thread->msgPipeRemaining;
 					ret = setMsgPipeResult(thread, &moved);
 					if (ret < 0)
@@ -157,21 +159,25 @@ static int uidMsgPipe_Destructor(void *object)
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&pipe->event.lock, intr);
 	pid = pipe->event.ownerPid;
-	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
-					 (SceObjectBase **)&process) >= 0) {
-		if (process->pid != SCE_KERNEL_PROCESS_ID) {
-			intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
-			if (pipe->event.attr & SCE_KERNEL_ATTR_OPENABLE)
-				process->uidOpenableCount--;
-			else if (!(pipe->event.attr & MSG_PIPE_ATTR_UNLIMITED))
-				process->uidCount--;
-			else
-				process->uidUnlimitedCount--;
-			process->msgPipeMemory -= pipe->ring.size;
-			process->msgPipeCount--;
-			sceKernelSpinlockLowUnlockCpuResumeIntr(&process->resourceLock, intr);
+	{
+		SceProcessObject *process;
+
+		if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
+						 (SceObjectBase **)&process) >= 0) {
+			if (process->pid != SCE_KERNEL_PROCESS_ID) {
+				intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
+				if (pipe->event.attr & SCE_KERNEL_ATTR_OPENABLE)
+					process->uidOpenableCount--;
+				else if (!(pipe->event.attr & MSG_PIPE_ATTR_UNLIMITED))
+					process->uidCount--;
+				else
+					process->uidUnlimitedCount--;
+				process->msgPipeMemory -= pipe->ring.size;
+				process->msgPipeCount--;
+				sceKernelSpinlockLowUnlockCpuResumeIntr(&process->resourceLock, intr);
+			}
+			sceGUIDReleaseObject(pid);
 		}
-		sceGUIDReleaseObject(pid);
 	}
 	if (memBlockId == -1 || sceKernelFreeMemBlock(memBlockId) >= 0)
 		memset(&pipe->ring, 0, sizeof(ThreadmgrMsgPipe) - offsetof(ThreadmgrMsgPipe, ring));
@@ -662,6 +668,7 @@ int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVe
 	ret = sceGUIDReferObjectWithClass(msgPipeId, MSG_PIPE_CLASS(), &pObject);
 	if (ret < 0)
 		return MsgPipeUnknownIdError();
+	pipe = (ThreadmgrMsgPipe *)pObject;
 	sceKernelSpinlockLowLock(&pipe->event.lock);
 	locked = 1;
 	wait = timeout;

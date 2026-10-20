@@ -97,11 +97,10 @@ void notifyCallbackToThreadBeforeSetEvent(ThreadmgrEventCallback *head,
 uint32_t notifyCallbackAllAfterSetEvent(SceUID eventId, ThreadmgrEvent *event, uint32_t arg)
 {
 	ThreadmgrEventCallback *head = EVENT_CALLBACK_HEAD(event), *entry, *next;
-	struct ThreadCB *thread;
-	struct ThreadmgrThreadObject *object;
 	struct ThreadmgrCallback *callback;
-	struct ThreadmgrWaitNode *self;
+	struct ThreadmgrThreadObject *object;
 	ThreadmgrEvent *waitObject;
+	struct ThreadmgrWaitNode *self;
 	unsigned int cpu = sceKernelCpuId();
 	uint32_t mask = 1u << cpu, wake = 0;
 	uintptr_t waitable;
@@ -133,28 +132,27 @@ restart:
 			deleteRegisteredCallbackList(entry);
 			continue;
 		}
-		thread = &object->context;
 		waitObject = NULL;
-		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
-		if (!(thread->status & SCE_KERNEL_THREAD_STATUS_WAITING) ||
-		    !(thread->flags & THREAD_FLAG_WAKE_PENDING)) {
+		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
+		if (!(object->context.status & SCE_KERNEL_THREAD_STATUS_WAITING) ||
+		    !(object->context.flags & THREAD_FLAG_WAKE_PENDING)) {
 			waitId = -1;
-			SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_CALLBACKS);
-		} else if (thread->waitType == SCE_KERNEL_WAITTYPE_DELAY) {
+			SceCpuForDriver_BC248C30((SceInt32 *)&object->context.flags, THREAD_FLAG_CALLBACKS);
+		} else if (object->context.waitType == SCE_KERNEL_WAITTYPE_DELAY) {
 			/* a delay: the thread leaves the timed waits */
-			SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_CALLBACKS);
+			SceCpuForDriver_BC248C30((SceInt32 *)&object->context.flags, THREAD_FLAG_CALLBACKS);
 			waitId = -1;
-			self = (struct ThreadmgrWaitNode *)thread;
+			self = (struct ThreadmgrWaitNode *)&object->context;
 			sceKernelSpinlockLowLock(
 				&s_threadmgrRuntime.manager->timedWaitLock);
 			self->next->prev = self->prev;
 			self->prev->next = self->next;
 			sceKernelSpinlockLowUnlock(
 				&s_threadmgrRuntime.manager->timedWaitLock);
-			releaseThreadWaitState(thread, 0, SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
-			wake |= distributeThread(selectExecCpu(thread), thread);
+			releaseThreadWaitState(&object->context, 0, SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
+			wake |= distributeThread(selectExecCpu(&object->context), &object->context);
 		} else {
-			waitId = thread->waitId;
+			waitId = object->context.waitId;
 			if (waitId == eventId) {
 				waitable = EVENT_WAIT_QUEUE(event);
 			} else {
@@ -168,7 +166,7 @@ restart:
 					waitable = 0;
 				} else if (SceCpuForDriver_5AC9D394(&waitObject->lock) < 0) {
 					/* lock order: drop everything and start over */
-					sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+					sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 					sceKernelSpinlockLowUnlock(&event->lock);
 					sceGUIDReleaseObject(waitId);
 					sceGUIDReleaseObject(callback->cb.threadId);
@@ -179,10 +177,10 @@ restart:
 					waitable = EVENT_WAIT_QUEUE(waitObject);
 				}
 			}
-			SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_CALLBACKS);
-			wake |= wakeupAndDistributeThread(thread, waitable, SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
+			SceCpuForDriver_BC248C30((SceInt32 *)&object->context.flags, THREAD_FLAG_CALLBACKS);
+			wake |= wakeupAndDistributeThread(&object->context, waitable, SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
 		}
-		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 #if !FW_DEBUG
 		sceGUIDReleaseObject(callback->cb.threadId);
 #endif
@@ -214,8 +212,10 @@ static int waitEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 	ThreadmgrEvent *event;
 	SceObjectBase *pObject;
 	uint64_t wakeup;
+	uintptr_t queue;
+	SceInt32 *flags;
 	uint32_t saved, matched;
-	int intr, ret, cbRet, locked = 0;
+	int intr, ret, last, cbRet, locked = 0;
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
@@ -251,9 +251,12 @@ static int waitEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 		goto resume;
 	}
 	event = (ThreadmgrEvent *)pObject;
+	last = ret;
 	sceKernelSpinlockLowLock(&event->lock);
 	if (timeout != NULL)
 		getWakeupTime(&wakeup, *timeout);
+	queue = EVENT_WAIT_QUEUE(event);
+	flags = (SceInt32 *)&thread->flags;
 	do {
 		if (callbacks && (thread->flags & THREAD_FLAG_CALLBACKS)) {
 			sceKernelSpinlockLowUnlock(&event->lock);
@@ -264,7 +267,8 @@ static int waitEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 		}
 		matched = pattern & event->pattern;
 		if (matched != 0) {
-			/* already there: ret keeps the last result (Sony's) */
+			/* already there: the result of the last wait (Sony's) */
+			ret = last;
 			if (outPattern != NULL)
 				*outPattern = matched;
 			if (outUserData != NULL)
@@ -279,23 +283,25 @@ static int waitEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 		thread->waitEventPatternOutput = outPattern;
 		thread->waitEventDataOutput = outUserData;
 		if (!callbacks) {
-			ret = waitWaitableObject(eventId, EVENT_WAIT_QUEUE(event), SCE_KERNEL_WAITTYPE_EVENT,
+			ret = waitWaitableObject(eventId, queue, SCE_KERNEL_WAITTYPE_EVENT,
 						 &wakeup, timeout, NULL, &locked);
-			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags,
-						    THREAD_FLAG_WAKE_PENDING);
+			SceCpuForDriver_4AE1BCC0(flags, THREAD_FLAG_WAKE_PENDING);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			if (!locked)
 				goto resume;
 			break;
 		}
-		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
-		ret = waitWaitableObject(eventId, EVENT_WAIT_QUEUE(event), SCE_KERNEL_WAITTYPE_EVENT, &wakeup,
-					 timeout, NULL, &locked);
-		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		SceCpuForDriver_BC248C30(flags, THREAD_FLAG_WAKE_PENDING);
+		last = waitWaitableObject(eventId, queue, SCE_KERNEL_WAITTYPE_EVENT, &wakeup,
+					  timeout, NULL, &locked);
+		SceCpuForDriver_4AE1BCC0(flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-		if (!locked)
+		if (!locked) {
+			ret = last;
 			goto callbacks;
-	} while (ret == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
+		}
+	} while (last == (int)SCE_KERNEL_ERROR_NOTIFY_CALLBACK);
+	ret = last;
 	sceKernelSpinlockLowUnlock(&event->lock);
 	sceGUIDReleaseObject(eventId);
 	if (!callbacks)
@@ -330,10 +336,10 @@ static int getEventInfo(SceUID eventId, SceKernelEventInfo *info)
 	if (ret < 0) {
 		ret = EventUnknownIdError();
 	} else {
-		event = (ThreadmgrEvent *)pObject;
 		ret = GUIDGetClass(eventId, &cls);
 		/* delays are not reported */
 		if (ret >= 0 && s_threadmgrRuntime.manager->delayClass != cls) {
+			event = (ThreadmgrEvent *)pObject;
 			info->eventId = eventId;
 			strncpy(info->name, SceSysmemForDriver_E655852F(eventId), sizeof(info->name) - 1);
 			sceKernelSpinlockLowLock(&event->lock);

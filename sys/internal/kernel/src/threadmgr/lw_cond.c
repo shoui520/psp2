@@ -43,6 +43,7 @@ static int uidLwCond_Destructor(void *object)
 	ThreadmgrLwMutex *lwMutex;
 	SceUID guid = cond->guid, lwMutexId = cond->lwMutexId, pid;
 	volatile int delay;
+	SceKernelSpinlock *mutexLock;
 	uint32_t wake, wakeMutex;
 	int intr;
 
@@ -55,16 +56,18 @@ static int uidLwCond_Destructor(void *object)
 		sceKernelSpinlockLowLock(&cond->lock);
 	} else {
 		queue = (struct ThreadmgrWaitQueue *)&lwMutex->next;
-		sceKernelSpinlockLowLock(&lwMutex->lock);
+		mutexLock = &lwMutex->lock;
+		sceKernelSpinlockLowLock(mutexLock);
 		while (SceCpuForDriver_5AC9D394(&cond->lock) < 0) {
-			sceKernelSpinlockLowUnlock(&lwMutex->lock);
-			for (delay = 10; --delay != 0;)
+			sceKernelSpinlockLowUnlock(mutexLock);
+			for (delay = 10; delay != 0; --delay)
 				;
-			sceKernelSpinlockLowLock(&lwMutex->lock);
+			sceKernelSpinlockLowLock(mutexLock);
 		}
 		ListLinkRemove(&cond->lwMutexLink);
 		wakeMutex = 0;
-		for (node = queue->next; node != (struct ThreadmgrWaitNode *)queue; node = next) {
+		for (node = (struct ThreadmgrWaitNode *)((ListNode *)queue)->next;
+		     node != (struct ThreadmgrWaitNode *)queue; node = next) {
 			waiter = (struct ThreadCB *)node;
 			next = node->next;
 			SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 1303);
@@ -74,10 +77,10 @@ static int uidLwCond_Destructor(void *object)
 					SCE_KERNEL_ERROR_WAIT_DELETE_LW_COND);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 		}
-		sceKernelSpinlockLowUnlock(&lwMutex->lock);
+		sceKernelSpinlockLowUnlock(mutexLock);
 		sceGUIDReleaseObject(lwMutexId);
 	}
-	wake = wakeupWaitObjectAll((uintptr_t)&cond->next, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
+	wake = wakeMutex | wakeupWaitObjectAll((uintptr_t)&cond->next, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
 	sceKernelSpinlockLowUnlock(&cond->lock);
 	pid = cond->ownerPid;
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
@@ -91,7 +94,7 @@ static int uidLwCond_Destructor(void *object)
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
 		sceGUIDReleaseObject(pid);
 	}
-	if (((wakeMutex | wake) & 1) && currentThreadContext() != NULL)
+	if ((wake & 1) && currentThreadContext() != NULL)
 		switchThread((intr >> 7) & 1);
 	sceKernelCpuResumeIntr(intr);
 	memset(&cond->option, 0, 0x20);
@@ -440,11 +443,8 @@ next:
 done:
 	if (callbacks && ret == SCE_KERNEL_ERROR_WAIT_DELETE_LW_COND &&
 	    (thread->flags & THREAD_FLAG_CALLBACKS)) {
-		pending = thread->flags & THREAD_FLAG_CALLBACK_RESULT;
 		ret = callCallbackAll(thread);
 		if (ret >= 0)
-			ret = 0;
-		if (!pending)
 			ret = SCE_KERNEL_ERROR_WAIT_DELETE_LW_COND;
 	}
 resume:

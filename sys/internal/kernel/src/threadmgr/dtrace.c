@@ -48,9 +48,7 @@ unlock:
 int sceKernelSetDTraceThreadCBEnable(int enable)
 {
 	struct ThreadmgrThreadObject *object;
-	SceKernelHeapCreateOpt opt;
 	SceSize count, size, i;
-	SceObjectBase *pObject;
 	SceUID *ids, id;
 	int intr, ret;
 
@@ -72,6 +70,8 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(
 		&s_threadmgrRuntime.manager->threadMgrCBLock, intr);
 	if (s_threadmgrRuntime.manager->dtraceHeapId == 0) {
+		SceKernelHeapCreateOpt opt;
+
 		opt.size = sizeof(opt);
 		opt.attr = 0x400;
 		opt.memtype = 0x10f0d006;
@@ -101,6 +101,8 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 		return ret;
 	}
 	for (i = 0; i < count; i++) {
+		SceObjectBase *pObject;
+
 		id = ids[i];
 		ret = sceGUIDReferObjectWithClass(id,
 			s_threadmgrRuntime.manager->threadClass, &pObject);

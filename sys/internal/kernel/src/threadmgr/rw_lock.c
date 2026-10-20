@@ -204,6 +204,8 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 	ThreadmgrRWLock *rwLock;
 	SceObjectBase *pObject;
 	uint64_t wakeup;
+	uintptr_t queue;
+	SceInt32 *flags;
 	uint32_t saved;
 	int intr, ret, cbRet, locked = 0;
 
@@ -264,6 +266,8 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 	}
 	if (timeout != NULL)
 		getWakeupTime(&wakeup, *timeout);
+	queue = (uintptr_t)&rwLock->next;
+	flags = (SceInt32 *)&thread->flags;
 	do {
 		if (callbacks && (thread->flags & THREAD_FLAG_CALLBACKS)) {
 			sceKernelSpinlockLowUnlock(&rwLock->lock);
@@ -291,7 +295,7 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 				SCE_PANIC(370);
 			if (rwLock->core.writer == NULL && rwLock->core.lockCount == 0) {
 				sceKernelSpinlockLowLock(THREAD_LOCK(thread));
-				acquireRWLock(rwLock, thread);
+				acquireRWLock((ThreadmgrRWLock *)pObject, thread);
 				sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 				ret = 0;
 				goto unlock;
@@ -301,12 +305,12 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 			rwLock->core.writeWaiters++;
 		}
 		if (callbacks)
-			SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+			SceCpuForDriver_BC248C30(flags, THREAD_FLAG_WAKE_PENDING);
 		SCE_DBG_ASSERT_CHECK(rwLock->waiting + 1 ==
 			(uint32_t)(rwLock->core.readWaiters + rwLock->core.writeWaiters), 387);
-		ret = waitWaitableObject(rwLockId, (uintptr_t)&rwLock->next, SCE_KERNEL_WAITTYPE_RW_LOCK,
+		ret = waitWaitableObject(rwLockId, queue, SCE_KERNEL_WAITTYPE_RW_LOCK,
 					 &wakeup, timeout, NULL, &locked);
-		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		SceCpuForDriver_4AE1BCC0(flags, THREAD_FLAG_WAKE_PENDING);
 		SCE_DBG_ASSERT_PRINTF(rwLock->waiting ==
 			(uint32_t)(rwLock->core.readWaiters + rwLock->core.writeWaiters), 399,
 			"ret=%08x cpu[%d] A :%d W :%d R :%d %p\n", ret, sceKernelCpuId(),
@@ -737,7 +741,7 @@ int sceKernelUnlockReadRWLock(SceUID rwLockId)
 				SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 1073, "sceKernelUnlockReadRWLock");
 				sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 				if (waiter->waitMode == RW_LOCK_MODE_WRITE) {
-					acquireRWLock(rwLock, waiter);
+					acquireRWLock((ThreadmgrRWLock *)pObject, waiter);
 					wake = wakeupAndDistributeThread(waiter, (uintptr_t)queue, 0) & 1;
 					sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 					break;
@@ -844,6 +848,9 @@ int sceKernelUnlockWriteRWLock(SceUID rwLockId)
 	struct ThreadmgrWaitQueue *queue;
 	ThreadmgrRWLock *rwLock;
 	SceObjectBase *pObject;
+#if FW_DEBUG
+	const char *name;
+#endif
 	uint32_t saved, wake;
 	int intr, ret;
 
@@ -873,15 +880,16 @@ int sceKernelUnlockWriteRWLock(SceUID rwLockId)
 	queue = (struct ThreadmgrWaitQueue *)&rwLock->next;
 	sceKernelSpinlockLowLock(&rwLock->lock);
 	if (rwLock->core.writer != thread) {
+#if FW_DEBUG
+		name = SceSysmemForDriver_E655852F(rwLockId);
+#endif
 		if (rwLock->core.writer == NULL)
 			SCE_DBG_PRINTF_FUNC(0, 1307, "sceKernelUnlockWriteRWLock", " k: error: RW_LOCK_NOT_OWNED, rwLockId=0x%08X([%s]), "
-				"threadGuid=0x%08X\n", rwLockId, SceSysmemForDriver_E655852F(rwLockId),
-				currentThreadContext()->threadId);
+				"threadGuid=0x%08X\n", rwLockId, name, currentThreadContext()->threadId);
 		else
 			SCE_DBG_PRINTF_FUNC(0, 1304, "sceKernelUnlockWriteRWLock", " k: error: RW_LOCK_NOT_OWNED, rwLockId=0x%08X([%s]), "
-				"currentOwner==0x%08X, threadGuid=0x%08X\n", rwLockId,
-				SceSysmemForDriver_E655852F(rwLockId), rwLock->core.writer->threadId,
-				currentThreadContext()->threadId);
+				"currentOwner==0x%08X, threadGuid=0x%08X\n", rwLockId, name,
+				rwLock->core.writer->threadId, currentThreadContext()->threadId);
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_RW_LOCK_NOT_OWNED | SYSCALL_ERROR_BIT;
 		} else {
@@ -911,7 +919,7 @@ int sceKernelUnlockWriteRWLock(SceUID rwLockId)
 			SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 1354, "sceKernelUnlockWriteRWLock");
 			sceKernelSpinlockLowLock(THREAD_LOCK(waiter));
 			if (waiter->waitMode == RW_LOCK_MODE_WRITE) {
-				acquireRWLock(rwLock, waiter);
+				acquireRWLock((ThreadmgrRWLock *)pObject, waiter);
 				wake |= wakeupAndDistributeThread(waiter, (uintptr_t)queue, 0);
 				sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 				break;

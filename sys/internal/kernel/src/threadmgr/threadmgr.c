@@ -1829,8 +1829,8 @@ int uidThread_Destructor(struct ThreadmgrThreadObject *object)
 	}
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(THREAD_LOCK(thread));
 	sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadMgrCBLock);
-	((struct ThreadmgrWaitNode *)thread->next)->prev = (struct ThreadmgrWaitNode *)thread->prev;
-	((struct ThreadmgrWaitNode *)thread->prev)->next = (struct ThreadmgrWaitNode *)thread->next;
+	((struct ThreadmgrWaitNode *)thread)->next->prev = ((struct ThreadmgrWaitNode *)thread)->prev;
+	((struct ThreadmgrWaitNode *)thread)->prev->next = ((struct ThreadmgrWaitNode *)thread)->next;
 	sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->threadMgrCBLock);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(THREAD_LOCK(thread), intr);
 	for (extended = thread->extendedStacks; extended != NULL;
@@ -1854,7 +1854,8 @@ int uidThread_Destructor(struct ThreadmgrThreadObject *object)
 		/* the user stack may still be in use for a while: retry */
 		memBlockId = thread->uStackMemblkId;
 		if (memBlockId != -1) {
-			for (tries = 0; tries < FREE_RETRY_LIMIT; tries++) {
+			tries = 0;
+			for (;;) {
 				ret = sceKernelFreeMemBlock(memBlockId);
 				if (ret >= 0)
 					break;
@@ -1864,6 +1865,8 @@ int uidThread_Destructor(struct ThreadmgrThreadObject *object)
 						"*** error: uidThread_Destructor() -> sceKernelFreeMemBlock(0x%08X[%s])=0x%08X, count=%d\n",
 						thread->uStackMemblkId,
 						SceSysmemForDriver_E655852F(thread->uStackMemblkId), ret, tries);
+				if (++tries == FREE_RETRY_LIMIT)
+					break;
 				memBlockId = thread->uStackMemblkId;
 			}
 		}
@@ -2019,8 +2022,9 @@ int changeThreadPriority(struct ThreadCB *thread, int priority)
 	ThreadmgrWaitMultipleEvents *wme;
 	ThreadmgrEventWaitNode *node;
 	ThreadmgrEvent *event;
+	SceObjectBase *pObject;
 	struct ThreadmgrWaitableObject *waitable;
-	struct ThreadmgrWaitNode *next;
+	struct ThreadmgrWaitNode *next, *link;
 	struct ThreadCB *waiter;
 	ThreadmgrPriorityEventHook hook;
 	uint32_t state, index;
@@ -2050,16 +2054,18 @@ retry:
 				waitId = node->eventId;
 				result = sceGUIDReferObjectWithSubclass(waitId,
 					s_threadmgrRuntime.manager->eventClass,
-					(SceObjectBase **)&event);
+					&pObject);
 				if (result < 0)
 					SCE_PANIC(SCE_LINE(6005, 6011));
+				event = (ThreadmgrEvent *)pObject;
 				if (SceCpuForDriver_5AC9D394(&event->lock) < 0)
 					goto retry_wait;
 				state = event->attr;
 				context->currentPriority = priority;
 				if (state & SCE_KERNEL_ATTR_TH_PRIO) {
-					node->next->prev = node->prev;
-					node->prev->next = node->next;
+					link = (struct ThreadmgrWaitNode *)node;
+					link->next->prev = link->prev;
+					link->prev->next = link->next;
 					for (next = event->next;
 					     next != (struct ThreadmgrWaitNode *)&event->next;
 					     next = next->next) {
@@ -2250,7 +2256,6 @@ int delayThread(SceUInt32 usec, uint32_t flags, SceUInt32 *remaining, int callba
 	ThreadmgrSchedSleepHandler sleep;
 	SceUInt32 version, delay, jittered;
 	uint64_t wakeup;
-	SceSize length;
 	struct SceKernelBacktraceFrameForKernel frames[32];
 	uint32_t saved;
 	int intr, ret, result;
@@ -2285,6 +2290,8 @@ int delayThread(SceUInt32 usec, uint32_t flags, SceUInt32 *remaining, int callba
 	}
 	intr = SceCpuForDriver_821FC0EE();
 	if (intr & 0x80) {
+		SceSize length;
+
 		memset(frames, 0, sizeof(frames));
 		if (sceKernelSysrootBacktrace(0, frames, sizeof(frames), &length, 3) >= 0)
 			sceKernelSysrootPrintBacktrace(SCE_KERNEL_PROCESS_ID, frames, length, 0);
@@ -2542,25 +2549,6 @@ checkCpuAffinityMaskPhy(uint32_t mask, uint32_t attributes, SceProcessObject *pP
 invalidType:
 	SCE_DBG_PRINTF(0, 3082, "error: processType=0x%08X\n", type);
 	SCE_PANIC(SCE_LINE(3077, 3083));
-}
-
-/* sceKernelGetDefaultCpuAffinityMask: the CPUs a process type's threads use by default */
-uint32_t sceKernelGetDefaultCpuAffinityMask(ProcessBudget *budget)
-{
-	uint32_t type = budget->type;
-
-	switch (type) {
-	case PROCESS_TYPE_GAME:
-		return 0x7;
-	case PROCESS_TYPE_MINI_APP:
-	case PROCESS_TYPE_SHELL:
-		return 0x8;
-	case PROCESS_TYPE_KERNEL:
-		return 0xf;
-	default:
-		SCE_DBG_PRINTF(0, 8634, "*** warning: unknown process type(0x%08X)\n", type);
-		SCE_PANIC(SCE_LINE(8630, 8635));
-	}
 }
 
 /* cpuId sets threadId's priority and affinity */
@@ -3707,13 +3695,13 @@ int selectExecCpu(struct ThreadCB *thread)
  * and one no CPU may run are listed aside. Returns whether this CPU should
  * switch now.
  */
-bool distributeThread(int cpuId, struct ThreadCB *thread)
+int distributeThread(int cpuId, struct ThreadCB *thread)
 {
 	struct ThreadCB *context = thread;
 	struct ThreadMgrCpuCB *current = currentCpuState();
 	struct SceKernelThreadmgrPrivate *manager = s_threadmgrRuntime.manager;
 	struct ThreadMgrCpuCB *target;
-	bool reschedule = false;
+	int reschedule = 0;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1677);
 	SCE_DBG_ASSERT_CHECK(context->lock != 0, 1680);
@@ -4576,8 +4564,9 @@ int changeThreadPriorityAndCpuAffinityMask(struct ThreadCB *thread,
 	ThreadmgrWaitMultipleEvents *wme;
 	ThreadmgrEventWaitNode *node;
 	ThreadmgrEvent *event;
+	SceObjectBase *pObject;
 	struct ThreadmgrWaitableObject *waitable;
-	struct ThreadmgrWaitNode *next;
+	struct ThreadmgrWaitNode *next, *link;
 	struct ThreadCB *waiter;
 	ThreadmgrPriorityEventHook hook;
 	uint32_t state, index, version, affinity;
@@ -4589,13 +4578,12 @@ int changeThreadPriorityAndCpuAffinityMask(struct ThreadCB *thread,
 	oldPriority = context->currentPriority;
 	if (previousPriority != NULL)
 		*previousPriority = oldPriority;
-	version = SDK_VERSION_KERNEL;
-	if (currentThreadContext() != NULL &&
-	    currentThreadContext()->processId != SCE_KERNEL_PROCESS_ID) {
-		if (SceSysrootForDriver_CAE820B2(currentThreadContext()->processId,
+	if (currentThreadContext() == NULL ||
+	    currentThreadContext()->processId == SCE_KERNEL_PROCESS_ID)
+		version = SDK_VERSION_KERNEL;
+	else if (SceSysrootForDriver_CAE820B2(currentThreadContext()->processId,
 					      &version) < 0)
-			version = 0;
-	}
+		version = 0;
 	if (previousMask != NULL)
 		*previousMask = reportedAffinity(context, version);
 retry:
@@ -4617,16 +4605,18 @@ retry:
 				waitId = node->eventId;
 				result = sceGUIDReferObjectWithSubclass(waitId,
 					s_threadmgrRuntime.manager->eventClass,
-					(SceObjectBase **)&event);
+					&pObject);
 				if (result < 0)
 					SCE_PANIC(SCE_LINE(6651, 6657));
+				event = (ThreadmgrEvent *)pObject;
 				if (SceCpuForDriver_5AC9D394(&event->lock) < 0)
 					goto retry_wait;
 				state = event->attr;
 				setPriorityAndAffinity(context, priority, mask);
 				if (state & SCE_KERNEL_ATTR_TH_PRIO) {
-					node->next->prev = node->prev;
-					node->prev->next = node->next;
+					link = (struct ThreadmgrWaitNode *)node;
+					link->next->prev = link->prev;
+					link->prev->next = link->next;
 					for (next = event->next;
 					     next != (struct ThreadmgrWaitNode *)&event->next;
 					     next = next->next) {
@@ -4982,14 +4972,16 @@ extern int64_t callWithStack(void *arg, uintptr_t stackTop, int *intrState,
 int64_t sceKernelExtendKernelStackWide(SceSize size, ThreadmgrStackFunction function, void *arg)
 {
 	struct ThreadCB *thread = currentThreadContext();
+	int intr;
+	void *base;
 	struct ThreadmgrExtendedStack frame, *saved;
 	SceKernelAllocMemBlockKernelOpt opt;
 	ThreadmgrTraceHook trace;
 	SceSize free, pages, oldSize;
 	SceUID memBlockId;
-	void *base;
+	SceUInt32 memType;
 	int64_t ret;
-	int intr, err, cached;
+	int err, cached;
 
 	free = SceThreadmgrForDriver_D74F66BD();
 	trace = s_threadmgrRuntime.threadTraceHook;
@@ -5034,10 +5026,9 @@ int64_t sceKernelExtendKernelStackWide(SceSize size, ThreadmgrStackFunction func
 	memset(&opt, 0, sizeof(opt));
 	opt.extraLow = STACK_PAGE;	/* a guard page below */
 	opt.attr = MEMBLOCK_ATTR_EXT_STACK;
+	memType = (int)thread->currentAttr < 0 ? MEMBLOCK_TYPE_KERNEL_STACK : thread->stackMemBlockType;
 	opt.size = sizeof(opt);
-	memBlockId = sceKernelAllocMemBlockForKernel("SceExt",
-		(int)thread->currentAttr < 0 ? MEMBLOCK_TYPE_KERNEL_STACK : thread->stackMemBlockType,
-		pages + STACK_PAGE, &opt);
+	memBlockId = sceKernelAllocMemBlockForKernel("SceExt", memType, pages + STACK_PAGE, &opt);
 	if (memBlockId < 0) {
 		ret = memBlockId;
 		goto out;
@@ -6677,26 +6668,27 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 {
 	struct ThreadCB *self, *thread;
 	struct ThreadmgrThreadObject *object;
+	uint32_t *stackMirrorBase;
+	struct ThreadmgrUserTls *userTls;
+	void *tlsBase;
+	SceObjectBase *pObject;
+	MMUContext *context;
+	SceUInt32 sdkVersion;
 	struct ThreadRegisterContext *regs;
 	ThreadSyscallFrame *frame;
 	struct ThreadmgrExceptionEntry *exception;
-	ProcessBudget *type;
-	SceObjectBase *pObject;
 	SceProcessObject *process;
-	struct ThreadmgrUserTls *userTls;
 	UIDCreateOpt uidOpt;
 	SceKernelAllocMemBlockKernelOpt opt;
 	SceKernelModuleInfo info;
 	SceKernelThreadOptParam param;
-	MMUContext *context;
 	SceAllocOpt heapOpt;
 	ThreadmgrLwpCreateProbe lwpCreate;
 	ThreadmgrTraceHook trace;
 	SceUID ret, uid, puid, moduleId, stackMirror, tlsMirror;
-	SceUInt32 sdkVersion, defaultMask;
+	SceUInt32 defaultMask;
 	SceSize tlsSize;
-	uint32_t saved, access, memType, handedExceptions, *stackMirrorBase;
-	void *tlsBase;
+	uint32_t saved, access, memType, handedExceptions;
 	int inSyscall, shared, priority, intr, n, cpus, err;
 	unsigned int cpu;
 
@@ -6823,7 +6815,6 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 			name, ret, process->budgetId);
 		goto restore;
 	}
-	type = (ProcessBudget *)pObject;
 
 	/* its priority */
 	priority = initPriority;
@@ -6842,7 +6833,7 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 			ret = SCE_KERNEL_ERROR_ILLEGAL_PRIORITY;
 			goto restore;
 		} else {
-			switch (type->type) {
+			switch (((ProcessBudget *)pObject)->type) {
 			case PROCESS_TYPE_GAME:
 				if (!(attr & THREAD_ATTR_UNLIMITED) ||
 				    !(cpuAffinityMask & AFFINITY_SYSTEM_CPU)) {
@@ -6859,13 +6850,13 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 				priority = initPriority - PRIORITY_RELATIVE_OFFSET;
 				SCE_DBG_PRINTF(0, 3375,
 					"*** warning: unknown process type(0x%08X), [%s] priority %d\n",
-					type->type, name, priority);
+					((ProcessBudget *)pObject)->type, name, priority);
 				break;
 			}
 		}
 	}
 	if ((int)attr < 0) {
-		if (type->type == PROCESS_TYPE_GAME) {
+		if (((ProcessBudget *)pObject)->type == PROCESS_TYPE_GAME) {
 			if ((unsigned int)priority - USER_THREAD_PRIORITY_LOW >= USER_THREAD_PRIORITY_RANGE_GAME) {
 				SCE_DBG_PRINTF(0, 3388, PRIORITY_FORMAT, name, priority);
 				ret = SCE_KERNEL_ERROR_ILLEGAL_PRIORITY;
@@ -6882,37 +6873,32 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 	ret = checkCpuAffinityMaskPhy(cpuAffinityMask, attr, process);
 	if (ret < 0)
 		goto restore;
-	if (sdkVersion < SDK_VERSION_AFFINITY_CHECK && s_threadmgrRuntime.manager->testMode == 0) {
-		if ((unsigned int)priority - PRIORITY_SHARED_LOW < PRIORITY_SHARED_RANGE) {
-			/* a shared priority: on the process type's CPUs */
-			if (cpuAffinityMask != 0) {
-				defaultMask = sceKernelGetDefaultCpuAffinityMask(type);
-				if ((defaultMask & cpuAffinityMask) !=
-				    sceKernelGetDefaultCpuAffinityMask(type)) {
-					SCE_PRINTF_WITH_INFO(0, SCE_LINE(3407, 3413), AFFINITY_FORMAT,
-							     name, cpuAffinityMask, priority);
-					ret = SCE_KERNEL_ERROR_ILLEGAL_THREAD_PARAM_COMBINATION;
-					goto restore;
-				}
+	if (sdkVersion < SDK_VERSION_AFFINITY_CHECK && s_threadmgrRuntime.manager->testMode == 0 && ((unsigned int)priority - PRIORITY_SHARED_LOW < PRIORITY_SHARED_RANGE) && cpuAffinityMask != 0) {
+		defaultMask = sceKernelGetDefaultCpuAffinityMask((ProcessBudget *)pObject);
+		if ((defaultMask & cpuAffinityMask) !=
+		    sceKernelGetDefaultCpuAffinityMask((ProcessBudget *)pObject)) {
+			SCE_PRINTF_WITH_INFO(0, SCE_LINE(3407, 3413), AFFINITY_FORMAT,
+					     name, cpuAffinityMask, priority);
+			ret = SCE_KERNEL_ERROR_ILLEGAL_THREAD_PARAM_COMBINATION;
+			goto restore;
+		}
+	}
+	if (sdkVersion < SDK_VERSION_AFFINITY_CHECK && s_threadmgrRuntime.manager->testMode == 0 && cpuAffinityMask != 0 && !((unsigned int)priority - PRIORITY_SHARED_LOW < PRIORITY_SHARED_RANGE)) {
+		cpus = 0;
+		for (cpu = 0; cpu != AFFINITY_CPU_COUNT; cpu++) {
+			if (((int)cpuAffinityMask >> cpu) & 1)
+				cpus++;
+		}
+		if (cpus > 1) {
+			if (strncmp(name, "ScePsp2SwuCui", 0x1f) != 0) {
+				SCE_PRINTF_WITH_INFO(0, SCE_LINE(3425, 3431), AFFINITY_FORMAT,
+						     name, cpuAffinityMask, priority);
+				ret = SCE_KERNEL_ERROR_ILLEGAL_THREAD_PARAM_COMBINATION;
+				goto restore;
 			}
-		} else if (cpuAffinityMask != 0) {
-			/* a CPU's own priority: on one CPU */
-			cpus = 0;
-			for (cpu = 0; cpu != AFFINITY_CPU_COUNT; cpu++) {
-				if (((int)cpuAffinityMask >> cpu) & 1)
-					cpus++;
-			}
-			if (cpus > 1) {
-				if (strncmp(name, "ScePsp2SwuCui", 0x1f) != 0) {
-					SCE_PRINTF_WITH_INFO(0, SCE_LINE(3425, 3431), AFFINITY_FORMAT,
-							     name, cpuAffinityMask, priority);
-					ret = SCE_KERNEL_ERROR_ILLEGAL_THREAD_PARAM_COMBINATION;
-					goto restore;
-				}
-				SCE_DBG_PRINTF(0, 3437, "=== [ScePsp2SwuCui]: initPriority=%d, "
-					"cpuAffinityMask=0x%08X, accepted to keep compatibility.\n",
-					priority, cpuAffinityMask);
-			}
+			SCE_DBG_PRINTF(0, 3437, "=== [ScePsp2SwuCui]: initPriority=%d, "
+				"cpuAffinityMask=0x%08X, accepted to keep compatibility.\n",
+				priority, cpuAffinityMask);
 		}
 	}
 
@@ -7387,6 +7373,25 @@ unlock_process:
 restore:
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
+}
+
+/* sceKernelGetDefaultCpuAffinityMask: the CPUs a process type's threads use by default */
+uint32_t sceKernelGetDefaultCpuAffinityMask(ProcessBudget *budget)
+{
+	uint32_t type = budget->type;
+
+	switch (type) {
+	case PROCESS_TYPE_GAME:
+		return 0x7;
+	case PROCESS_TYPE_MINI_APP:
+	case PROCESS_TYPE_SHELL:
+		return 0x8;
+	case PROCESS_TYPE_KERNEL:
+		return 0xf;
+	default:
+		SCE_DBG_PRINTF(0, 8634, "*** warning: unknown process type(0x%08X)\n", type);
+		SCE_PANIC(SCE_LINE(8630, 8635));
+	}
 }
 
 /* sceKernelCreateThread: cpuAffinityMask may name the CPUs in bits 16-19 */
@@ -8222,7 +8227,7 @@ int threadMgrExcpHandlerCfunc_0(struct ThreadCB *thread, uint32_t excpKind)
 	SCE_DBG_ASSERT_CHECK(thread->threadId != currentCpuState()->idleThread->threadId, 10825);
 	SCE_DBG_ASSERT_PRINTF((thread->status &
 			       (SCE_KERNEL_THREAD_STATUS_RUNNING | THREAD_STATE_OFF_CPU)) != 0,
-			      10832, "status=0x%08X\n", thread->status);
+			      10832, "status=0x%08X\n", (uint16_t)thread->status);
 
 	/* is it the process's to handle? */
 	if ((thread->pRegisterContext->cpsr & CPSR_MODE_MASK) != CPSR_MODE_USR) {

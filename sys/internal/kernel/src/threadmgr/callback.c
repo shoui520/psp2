@@ -735,7 +735,7 @@ SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallba
 	callback->cb.running = 0;
 	if (ThreadmgrInSyscall()) {
 		callback->cb.puid = scePUIDOpenByGUIDWithFlags(thread->processId, uid, 1);
-		uid = callback->cb.puid;
+		uid = ((struct ThreadmgrCallback *)pObject)->cb.puid;
 		if (uid < 0) {
 			SCE_DBG_ASSERT_LEVEL_FUNC(0, 0, 1016, "sceKernelCreateCallback");
 			goto unaccount;
@@ -744,9 +744,10 @@ SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallba
 		callback->cb.puid = -1;
 	}
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
+	callback = (struct ThreadmgrCallback *)pObject;
 	callback->cb.next = CALLBACK_HEAD(thread);
-	callback->cb.prev = thread->callbackPrev;
-	thread->callbackPrev = &callback->cb;
+	callback->cb.prev = CALLBACK_HEAD(thread)->prev;
+	CALLBACK_HEAD(thread)->prev = &callback->cb;
 	callback->cb.prev->next = &callback->cb;
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	goto resume;

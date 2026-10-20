@@ -63,7 +63,6 @@ int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attributes)
 int closeMsgPipeForUser(SceUID uid, uint32_t pattern)
 {
 	struct ThreadCB *thread;
-	ThreadmgrEvent *event;
 	SceObjectBase *pObject;
 	uint32_t attributes, version;
 	SceUID guid;
@@ -76,7 +75,6 @@ int closeMsgPipeForUser(SceUID uid, uint32_t pattern)
 		ret = USER_ERROR_UNKNOWN_MSG_PIPE_ID;
 		goto resume;
 	}
-	event = (ThreadmgrEvent *)pObject;
 	if (scePUIDGetAttr(0, uid, &attributes) < 0)
 		goto invalid;
 	if (!(pattern & EVENT_CLOSE_DELETE))
@@ -97,11 +95,11 @@ int closeMsgPipeForUser(SceUID uid, uint32_t pattern)
 		goto invalid;
 	thread = currentThreadContext();
 	ret = 0;
-	sceKernelSpinlockLowLock(&event->lock);
+	sceKernelSpinlockLowLock(&((ThreadmgrEvent *)pObject)->lock);
 	wake = setEventWithNotifyCallback(guid, pattern,
 		((uint64_t)thread->userThreadId << 32) | (int64_t)currentThreadContext()->processId,
-		pattern, event);
-	sceKernelSpinlockLowUnlock(&event->lock);
+		pattern, (ThreadmgrEvent *)pObject);
+	sceKernelSpinlockLowUnlock(&((ThreadmgrEvent *)pObject)->lock);
 	goto release;
 invalid:
 	wake = 0;
@@ -120,7 +118,6 @@ resume:
 int closeSimpleEventForUser(SceUID uid, uint32_t pattern)
 {
 	struct ThreadCB *thread;
-	ThreadmgrEvent *event;
 	SceObjectBase *pObject;
 	uint32_t attributes, version;
 	SceUID guid;
@@ -134,7 +131,6 @@ int closeSimpleEventForUser(SceUID uid, uint32_t pattern)
 		ret = USER_ERROR_UNKNOWN_SIMPLE_EVENT_ID;
 		goto resume;
 	}
-	event = (ThreadmgrEvent *)pObject;
 	if (scePUIDGetAttr(0, uid, &attributes) < 0)
 		goto invalid;
 	if (!(pattern & EVENT_CLOSE_DELETE))
@@ -155,11 +151,11 @@ int closeSimpleEventForUser(SceUID uid, uint32_t pattern)
 		goto invalid;
 	thread = currentThreadContext();
 	ret = 0;
-	sceKernelSpinlockLowLock(&event->lock);
+	sceKernelSpinlockLowLock(&((ThreadmgrEvent *)pObject)->lock);
 	wake = setEventWithNotifyCallback(guid, pattern,
 		((uint64_t)thread->userThreadId << 32) | (int64_t)currentThreadContext()->processId,
-		pattern, event);
-	sceKernelSpinlockLowUnlock(&event->lock);
+		pattern, (ThreadmgrEvent *)pObject);
+	sceKernelSpinlockLowUnlock(&((ThreadmgrEvent *)pObject)->lock);
 	goto release;
 invalid:
 	wake = 0;

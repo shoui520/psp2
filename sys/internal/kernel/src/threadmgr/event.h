@@ -66,7 +66,7 @@ _Static_assert(sizeof(ThreadmgrEventWaitNode) == 0x40, "WME node size");
 
 void notifyCallbackToThreadBeforeSetEvent(ThreadmgrEventCallback *head,
 					  struct ThreadCB *thread, uint32_t arg);
-bool wakeupAndDistributeThread(struct ThreadCB *thread, uintptr_t waitable,
+int wakeupAndDistributeThread(struct ThreadCB *thread, uintptr_t waitable,
 			       int result);
 
 /* the waiter at a node of an event's queue: a thread itself, or a WME node */
@@ -79,10 +79,12 @@ static inline int EventWaiterIsThread(struct ThreadmgrWaitNode *node)
 static inline uint32_t unlinkEventWaitNode(ThreadmgrEventWaitNode *node,
 					   ThreadmgrWaitMultipleEvents *wme)
 {
-	node->next->prev = node->prev;
-	node->prev->next = node->next;
-	node->next = (struct ThreadmgrWaitNode *)node;
-	node->prev = (struct ThreadmgrWaitNode *)node;
+	struct ThreadmgrWaitNode *link = (struct ThreadmgrWaitNode *)node;
+
+	link->next->prev = link->prev;
+	link->prev->next = link->next;
+	link->next = link;
+	link->prev = link;
 	ListLinkRemove(&node->wmeLink);
 	node->wmeLink.next = &node->wmeLink;
 	node->wmeLink.prev = &node->wmeLink;
@@ -115,9 +117,9 @@ static inline int releaseEventWaiter(ThreadmgrEvent *event, ThreadmgrEventWaitNo
 {
 	struct ThreadmgrWaitableClass *cls =
 		(struct ThreadmgrWaitableClass *)s_threadmgrRuntime.manager->eventClass;
+	int (*release)(SceClass *, void *, void *) = (int (*)(SceClass *, void *, void *))cls->release;
 
-	return ((int (*)(SceClass *, void *, void *))cls->release)(
-		SceSysmemForKernel_368F1C36(node->eventId), event, thread);
+	return release(SceSysmemForKernel_368F1C36(node->eventId), event, thread);
 }
 
 /*

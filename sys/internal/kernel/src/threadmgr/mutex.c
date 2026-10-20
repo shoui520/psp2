@@ -710,6 +710,8 @@ int lockMutex(SceUID mutexId, int count, SceUInt32 *timeout, int callbacks)
 	ThreadmgrMutex *mutex;
 	SceObjectBase *pObject;
 	uint64_t wakeup;
+	uintptr_t queue;
+	SceInt32 *flags;
 	uint32_t saved;
 	int intr, ret, cbRet, locked = 0;
 
@@ -772,6 +774,8 @@ int lockMutex(SceUID mutexId, int count, SceUInt32 *timeout, int callbacks)
 	}
 	if (timeout != NULL)
 		getWakeupTime(&wakeup, *timeout);
+	queue = (uintptr_t)&mutex->next;
+	flags = (SceInt32 *)&thread->flags;
 	do {
 		if (callbacks && (thread->flags & THREAD_FLAG_CALLBACKS)) {
 			sceKernelSpinlockLowUnlock(&mutex->lock);
@@ -782,7 +786,7 @@ int lockMutex(SceUID mutexId, int count, SceUInt32 *timeout, int callbacks)
 		}
 		if (MUTEX_MAY_TAKE(mutex, thread, 473)) {
 			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
-			acquireMutex(mutex, thread, count);
+			acquireMutex((ThreadmgrMutex *)pObject, thread, count);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			ret = 0;
 			goto unlock;
@@ -790,18 +794,18 @@ int lockMutex(SceUID mutexId, int count, SceUInt32 *timeout, int callbacks)
 		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		thread->waitMode = count;
 		if (!callbacks) {
-			ret = waitWaitableObject(mutexId, (uintptr_t)&mutex->next, SCE_KERNEL_WAITTYPE_MUTEX,
+			ret = waitWaitableObject(mutexId, queue, SCE_KERNEL_WAITTYPE_MUTEX,
 						 &wakeup, timeout, NULL, &locked);
-			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+			SceCpuForDriver_4AE1BCC0(flags, THREAD_FLAG_WAKE_PENDING);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			if (!locked)
 				goto resume;
 			break;
 		}
-		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
-		ret = waitWaitableObject(mutexId, (uintptr_t)&mutex->next, SCE_KERNEL_WAITTYPE_MUTEX, &wakeup,
+		SceCpuForDriver_BC248C30(flags, THREAD_FLAG_WAKE_PENDING);
+		ret = waitWaitableObject(mutexId, queue, SCE_KERNEL_WAITTYPE_MUTEX, &wakeup,
 					 timeout, NULL, &locked);
-		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		SceCpuForDriver_4AE1BCC0(flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (!locked)
 			goto callbacks;
@@ -913,6 +917,9 @@ int sceKernelUnlockMutex(SceUID mutexId, int count)
 	struct ThreadCB *thread, *first;
 	ThreadmgrMutex *mutex;
 	SceObjectBase *pObject;
+#if FW_DEBUG
+	const char *name;
+#endif
 	uint32_t saved, wake;
 	int intr, ret;
 
@@ -945,15 +952,16 @@ int sceKernelUnlockMutex(SceUID mutexId, int count)
 		goto unlock;
 	}
 	if (mutex->core.owner != thread) {
+#if FW_DEBUG
+		name = SceSysmemForDriver_E655852F(mutexId);
+#endif
 		if (mutex->core.owner == NULL)
 			SCE_DBG_PRINTF_FUNC(0, 1277, "sceKernelUnlockMutex", " k: error: MUTEX_NOT_OWNED, mutexId=0x%08X([%s]), "
-				"threadGuid=0x%08X\n", mutexId, SceSysmemForDriver_E655852F(mutexId),
-				currentThreadContext()->threadId);
+				"threadGuid=0x%08X\n", mutexId, name, currentThreadContext()->threadId);
 		else
 			SCE_DBG_PRINTF_FUNC(0, 1274, "sceKernelUnlockMutex", " k: error: MUTEX_NOT_OWNED, mutexId=0x%08X([%s]), "
-				"currentOwner=0x%08X, threadGuid=0x%08X\n", mutexId,
-				SceSysmemForDriver_E655852F(mutexId), mutex->core.owner->threadId,
-				currentThreadContext()->threadId);
+				"currentOwner=0x%08X, threadGuid=0x%08X\n", mutexId, name,
+				mutex->core.owner->threadId, currentThreadContext()->threadId);
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_MUTEX_NOT_OWNED | SYSCALL_ERROR_BIT;
 		} else {
@@ -980,7 +988,7 @@ int sceKernelUnlockMutex(SceUID mutexId, int count)
 	if ((struct ThreadmgrWaitQueue *)first != (struct ThreadmgrWaitQueue *)&mutex->next) {
 		SCE_DBG_ASSERT_CHECK_FUNC(first->magic == THREAD_CB_MAGIC, 1312, "sceKernelUnlockMutex");
 		sceKernelSpinlockLowLock(THREAD_LOCK(first));
-		acquireMutex(mutex, first, first->waitMode);
+		acquireMutex((ThreadmgrMutex *)pObject, first, first->waitMode);
 		wake |= wakeupAndDistributeThread(first, (uintptr_t)&mutex->next, 0);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(first));
 	}
@@ -1046,9 +1054,9 @@ int sceKernelCancelMutex(SceUID mutexId, int newCount, int *numWaitThreads)
 	wake = releaseMutex(&mutex->core);
 	wake |= wakeupWaitObjectAll((uintptr_t)&mutex->next, SCE_KERNEL_ERROR_WAIT_CANCEL,
 				    (uint32_t *)numWaitThreads);
-	if (newCount != 0) {
+	if (newCount > 0) {
 		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
-		acquireMutex(mutex, thread, newCount);
+		acquireMutex((ThreadmgrMutex *)pObject, thread, newCount);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	}
 	sceKernelSpinlockLowUnlock(&mutex->lock);
@@ -1231,7 +1239,9 @@ int lockMutexForCond(SceUID mutexId, int count, SceUInt32 *timeout, int callback
 	ThreadmgrMutex *mutex;
 	SceObjectBase *pObject;
 	uint64_t wakeup;
-	int ret, pending, locked = 0;
+	uintptr_t queue;
+	SceInt32 *flags;
+	int ret, locked = 0;
 
 	thread = currentThreadContext();
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1800);
@@ -1269,6 +1279,8 @@ int lockMutexForCond(SceUID mutexId, int count, SceUInt32 *timeout, int callback
 	}
 	if (timeout != NULL)
 		getWakeupTime(&wakeup, *timeout);
+	queue = (uintptr_t)&mutex->next;
+	flags = (SceInt32 *)&thread->flags;
 	do {
 		if (callbacks && (thread->flags & THREAD_FLAG_CALLBACKS)) {
 			sceKernelSpinlockLowUnlock(&mutex->lock);
@@ -1279,7 +1291,7 @@ int lockMutexForCond(SceUID mutexId, int count, SceUInt32 *timeout, int callback
 		}
 		if (MUTEX_MAY_TAKE(mutex, thread, 1884)) {
 			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
-			acquireMutex(mutex, thread, count);
+			acquireMutex((ThreadmgrMutex *)pObject, thread, count);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			ret = 0;
 			goto unlock;
@@ -1289,18 +1301,18 @@ int lockMutexForCond(SceUID mutexId, int count, SceUInt32 *timeout, int callback
 		thread->waitCondId = condId;
 		thread->waitMutexId = mutexId;
 		if (!callbacks) {
-			ret = waitWaitableObject(mutexId, (uintptr_t)&mutex->next,
+			ret = waitWaitableObject(mutexId, queue,
 				SCE_KERNEL_WAITTYPE_COND_MUTEX, &wakeup, timeout, NULL, &locked);
-			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+			SceCpuForDriver_4AE1BCC0(flags, THREAD_FLAG_WAKE_PENDING);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			if (!locked)
 				return ret;
 			break;
 		}
-		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
-		ret = waitWaitableObject(mutexId, (uintptr_t)&mutex->next, SCE_KERNEL_WAITTYPE_COND_MUTEX,
+		SceCpuForDriver_BC248C30(flags, THREAD_FLAG_WAKE_PENDING);
+		ret = waitWaitableObject(mutexId, queue, SCE_KERNEL_WAITTYPE_COND_MUTEX,
 					 &wakeup, timeout, NULL, &locked);
-		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		SceCpuForDriver_4AE1BCC0(flags, THREAD_FLAG_WAKE_PENDING);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (!locked)
 			goto deleted;
@@ -1311,11 +1323,8 @@ deleted:
 	/* the mutex went away while the callback variant waited */
 	if (ret == SCE_KERNEL_ERROR_WAIT_DELETE && callbacks &&
 	    (thread->flags & THREAD_FLAG_CALLBACKS)) {
-		pending = thread->flags & THREAD_FLAG_CALLBACK_RESULT;
 		ret = callCallbackAll(thread);
 		if (ret >= 0)
-			ret = 0;
-		if (!pending)
 			ret = SCE_KERNEL_ERROR_WAIT_DELETE;
 	}
 	return ret;
@@ -1332,6 +1341,10 @@ int unlockMutexForCond(SceUID mutexId, int count)
 	struct ThreadCB *first;
 	ThreadmgrMutex *mutex;
 	SceObjectBase *pObject;
+	uintptr_t queue;
+#if FW_DEBUG
+	const char *name;
+#endif
 	int ret;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1973);
@@ -1346,44 +1359,52 @@ int unlockMutexForCond(SceUID mutexId, int count)
 	}
 	mutex = (ThreadmgrMutex *)pObject;
 	sceKernelSpinlockLowLock(&mutex->lock);
-	if (mutex->core.owner != currentThreadContext()) {
+	if (currentThreadContext() == mutex->core.owner) {
+		if (mutex->core.lockCount < count) {
+			if (ThreadmgrInSyscall()) {
+				ret = SCE_KERNEL_ERROR_MUTEX_UNLOCK_UDF | SYSCALL_ERROR_BIT;
+			} else {
+				SCE_DBG_ASSERT_FAIL(2021);
+				ret = SCE_KERNEL_ERROR_MUTEX_UNLOCK_UDF;
+			}
+		} else {
+			mutex->core.lockCount -= count;
+			if (mutex->core.lockCount > 0) {
+				ret = 0;
+			} else {
+				queue = (uintptr_t)&mutex->next;
+				releaseMutex(&mutex->core);
+				first = (struct ThreadCB *)mutex->next;
+				if ((struct ThreadmgrWaitQueue *)first ==
+				    (struct ThreadmgrWaitQueue *)&mutex->next) {
+					ret = 0;
+				} else {
+					SCE_DBG_ASSERT_CHECK(first->magic == THREAD_CB_MAGIC, 2038);
+					ret = 0;
+					sceKernelSpinlockLowLock(THREAD_LOCK(first));
+					acquireMutex((ThreadmgrMutex *)pObject, first, first->waitMode);
+					wakeupAndDistributeThread(first, queue, 0);
+					sceKernelSpinlockLowUnlock(THREAD_LOCK(first));
+				}
+			}
+		}
+	} else {
+#if FW_DEBUG
+		name = SceSysmemForDriver_E655852F(mutexId);
+#endif
 		if (mutex->core.owner == NULL)
 			SCE_DBG_PRINTF(0, 2003, " k: error: MUTEX_NOT_OWNED, mutexId=0x%08X([%s]), "
-				"threadGuid=0x%08X\n", mutexId, SceSysmemForDriver_E655852F(mutexId),
-				currentThreadContext()->threadId);
+				"threadGuid=0x%08X\n", mutexId, name, currentThreadContext()->threadId);
 		else
 			SCE_DBG_PRINTF(0, 2000, " k: error: MUTEX_NOT_OWNED, mutexId=0x%08X([%s]), "
-				"currentOwner==0x%08X, threadGuid=0x%08X\n", mutexId,
-				SceSysmemForDriver_E655852F(mutexId), mutex->core.owner->threadId,
-				currentThreadContext()->threadId);
+				"currentOwner==0x%08X, threadGuid=0x%08X\n", mutexId, name,
+				mutex->core.owner->threadId, currentThreadContext()->threadId);
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_MUTEX_NOT_OWNED | SYSCALL_ERROR_BIT;
 		} else {
 			SCE_DBG_ASSERT_FAIL(2011);
 			ret = SCE_KERNEL_ERROR_MUTEX_NOT_OWNED;
 		}
-	} else if (mutex->core.lockCount < count) {
-		if (ThreadmgrInSyscall()) {
-			ret = SCE_KERNEL_ERROR_MUTEX_UNLOCK_UDF | SYSCALL_ERROR_BIT;
-		} else {
-			SCE_DBG_ASSERT_FAIL(2021);
-			ret = SCE_KERNEL_ERROR_MUTEX_UNLOCK_UDF;
-		}
-	} else {
-		mutex->core.lockCount -= count;
-		if (mutex->core.lockCount < 1) {
-			releaseMutex(&mutex->core);
-			first = (struct ThreadCB *)mutex->next;
-			if ((struct ThreadmgrWaitQueue *)first !=
-			    (struct ThreadmgrWaitQueue *)&mutex->next) {
-				SCE_DBG_ASSERT_CHECK(first->magic == THREAD_CB_MAGIC, 2038);
-				sceKernelSpinlockLowLock(THREAD_LOCK(first));
-				acquireMutex(mutex, first, first->waitMode);
-				wakeupAndDistributeThread(first, (uintptr_t)&mutex->next, 0);
-				sceKernelSpinlockLowUnlock(THREAD_LOCK(first));
-			}
-		}
-		ret = 0;
 	}
 	sceKernelSpinlockLowUnlock(&mutex->lock);
 	sceGUIDReleaseObject(mutexId);

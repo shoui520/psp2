@@ -69,6 +69,7 @@ static int uidEventFlag_Destructor(void *object)
 {
 	ThreadmgrEventFlag *evf = object;
 	SceProcessObject *process;
+	struct ThreadCB *holder;
 	uint32_t wake;
 	SceUID pid;
 	int intr;
@@ -76,10 +77,11 @@ static int uidEventFlag_Destructor(void *object)
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1686);
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&evf->lock);
 	wake = wakeupWaitObjectAll((uintptr_t)&evf->next, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
-	if (evf->core.holder != NULL) {
-		sceKernelSpinlockLowLock(THREAD_LOCK(evf->core.holder));
+	holder = evf->core.holder;
+	if (holder != NULL) {
+		sceKernelSpinlockLowLock(THREAD_LOCK(holder));
 		ListLinkRemove(&evf->core.holderLink);
-		sceKernelSpinlockLowUnlock(THREAD_LOCK(evf->core.holder));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(holder));
 	}
 	sceKernelSpinlockLowUnlock(&evf->lock);
 	pid = evf->ownerPid;

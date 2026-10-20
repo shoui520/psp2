@@ -422,6 +422,7 @@ static int deleteTimer(SceUID timerId, SceUID puid)
 	SceObjectBase *pObject;
 	uint32_t saved, flags, wake;
 	SceUID threadId;
+	uint64_t caller;
 	bool close;
 	int intr, ret;
 
@@ -444,9 +445,9 @@ static int deleteTimer(SceUID timerId, SceUID puid)
 		}
 		goto resume;
 	}
-	uidTimer = (ThreadmgrUidTimer *)pObject;
-	sceKernelSpinlockLowLock(&uidTimer->base.event.lock);
+	sceKernelSpinlockLowLock(&((ThreadmgrUidTimer *)pObject)->base.event.lock);
 	sceKernelSpinlockLowLock(TIMER_LOCK());
+	uidTimer = (ThreadmgrUidTimer *)pObject;
 	if (uidTimer->base.timer.deleted == 1) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_TIMER_ID;
 		sceKernelSpinlockLowUnlock(TIMER_LOCK());
@@ -466,6 +467,7 @@ static int deleteTimer(SceUID timerId, SceUID puid)
 			} else {
 				unlinkTimer(&uidTimer->base.timer);
 				setNextTimer();
+				uidTimer = (ThreadmgrUidTimer *)pObject;
 				flags = uidTimer->flags;
 			}
 		}
@@ -479,14 +481,15 @@ static int deleteTimer(SceUID timerId, SceUID puid)
 		SCE_DBG_ASSERT_CHECK(ret >= 0, 1480);
 		threadId = thread->userThreadId;
 	}
+	caller = TimerEventCaller(threadId, thread->processId);
 	if (close && sceGUIDClose(timerId) < 0)
 		SCE_PANIC(SCE_LINE(1489, 1490));
 	wake = setEventWithNotifyCallback(timerId, TIMER_EVENT_DELETED,
-		TimerEventCaller(threadId, thread->processId), TIMER_EVENT_DELETED,
-		&uidTimer->base.event);
+		caller, TIMER_EVENT_DELETED,
+		&((ThreadmgrUidTimer *)pObject)->base.event);
 	if ((int)wake < 0)
 		SCE_PANIC(SCE_LINE(1495, 1496));
-	sceKernelSpinlockLowUnlock(&uidTimer->base.event.lock);
+	sceKernelSpinlockLowUnlock(&((ThreadmgrUidTimer *)pObject)->base.event.lock);
 	sceGUIDReleaseObject(timerId);
 	ret = 0;
 	if (wake & 1)
@@ -1426,6 +1429,7 @@ SceUInt64 SceThreadmgrForDriver_A6D11DD3(SceUID timerId)
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), &pObject) >= 0) {
+		uidTimer = (ThreadmgrUidTimer *)pObject;
 		sceKernelSpinlockLowLock(&uidTimer->base.event.lock);
 		if (uidTimer->flags & TIMER_FLAG_RUNNING)
 			base = uidTimer->time;
@@ -1590,6 +1594,7 @@ SceUInt64 SceThreadmgrForDriver_85195A16(SceUID timerId, SceUInt64 time)
 		goto restore;
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), &pObject) >= 0) {
+		uidTimer = (ThreadmgrUidTimer *)pObject;
 		sceKernelSpinlockLowLock(&uidTimer->base.event.lock);
 		if (uidTimer->flags & TIMER_FLAG_RUNNING) {
 			now = SceSysrootForKernel_E20F6FC8();

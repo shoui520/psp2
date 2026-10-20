@@ -60,6 +60,7 @@ static int uidCond_Destructor(void *object)
 	ThreadmgrMutex *mutex;
 	SceUID mutexId = cond->mutexId, waitCondId = cond->waitCondId, pid;
 	volatile int delay;
+	SceKernelSpinlock *mutexLock;
 	uint32_t wake, wakeMutex;
 	int intr;
 
@@ -71,16 +72,18 @@ static int uidCond_Destructor(void *object)
 		sceKernelSpinlockLowLock(&cond->lock);
 	} else {
 		queue = (struct ThreadmgrWaitQueue *)&mutex->next;
-		sceKernelSpinlockLowLock(&mutex->lock);
+		mutexLock = &mutex->lock;
+		sceKernelSpinlockLowLock(mutexLock);
 		while (SceCpuForDriver_5AC9D394(&cond->lock) < 0) {
-			sceKernelSpinlockLowUnlock(&mutex->lock);
-			for (delay = 10; --delay != 0;)
+			sceKernelSpinlockLowUnlock(mutexLock);
+			for (delay = 10; delay != 0; --delay)
 				;
-			sceKernelSpinlockLowLock(&mutex->lock);
+			sceKernelSpinlockLowLock(mutexLock);
 		}
 		ListLinkRemove(&cond->mutexLink);
 		wakeMutex = 0;
-		for (node = queue->next; node != (struct ThreadmgrWaitNode *)queue; node = next) {
+		for (node = (struct ThreadmgrWaitNode *)((ListNode *)queue)->next;
+		     node != (struct ThreadmgrWaitNode *)queue; node = next) {
 			waiter = (struct ThreadCB *)node;
 			next = node->next;
 			SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 1557);
@@ -90,10 +93,10 @@ static int uidCond_Destructor(void *object)
 					SCE_KERNEL_ERROR_WAIT_DELETE_COND);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 		}
-		sceKernelSpinlockLowUnlock(&mutex->lock);
+		sceKernelSpinlockLowUnlock(mutexLock);
 		sceGUIDReleaseObject(mutexId);
 	}
-	wake = wakeupWaitObjectAll((uintptr_t)&cond->next, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
+	wake = wakeMutex | wakeupWaitObjectAll((uintptr_t)&cond->next, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
 	sceKernelSpinlockLowUnlock(&cond->lock);
 	pid = cond->ownerPid;
 	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
@@ -111,7 +114,7 @@ static int uidCond_Destructor(void *object)
 		}
 		sceGUIDReleaseObject(pid);
 	}
-	if (((wakeMutex | wake) & 1) && currentThreadContext() != NULL)
+	if ((wake & 1) && currentThreadContext() != NULL)
 		switchThread((intr >> 7) & 1);
 	sceKernelCpuResumeIntr(intr);
 	memset(&cond->option, 0, 0x18);
@@ -257,13 +260,10 @@ next:
 	sceKernelSpinlockLowUnlock(&cond->lock);
 	sceGUIDReleaseObject(condId);
 done:
-	if (callbacks && ret == SCE_KERNEL_ERROR_WAIT_DELETE_COND &&
+	if (ret == SCE_KERNEL_ERROR_WAIT_DELETE_COND && callbacks &&
 	    (thread->flags & THREAD_FLAG_CALLBACKS)) {
-		pending = thread->flags & THREAD_FLAG_CALLBACK_RESULT;
 		ret = callCallbackAll(thread);
 		if (ret >= 0)
-			ret = 0;
-		if (!pending)
 			ret = SCE_KERNEL_ERROR_WAIT_DELETE_COND;
 	}
 resume:
@@ -387,11 +387,10 @@ SceUID sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 	struct ThreadCB *thread;
 	SceProcessObject *process = NULL;
 	UIDCreateOpt opt;
+	ThreadmgrCond *cond, *object;
 	ThreadmgrMutex *mutex;
-	ThreadmgrCond *cond;
-	SceUInt32 sdkVersion;
 	uint32_t saved;
-	SceUID uid, puid;
+	SceUID uid, puid, ownerPid;
 	int intr;
 
 	thread = currentThreadContext();
@@ -417,6 +416,8 @@ SceUID sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 			goto restore;
 		}
 		if (attr & SCE_KERNEL_ATTR_OPENABLE) {
+			SceUInt32 sdkVersion;
+
 			SCE_DBG_ASSERT_CHECK_FUNC(thread->processId != SCE_KERNEL_PROCESS_ID, 236,
 						  "sceKernelCreateCond");
 			if (SceSysrootForDriver_CAE820B2(thread->processId, &sdkVersion) >= 0 &&
@@ -436,6 +437,7 @@ SceUID sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 		memset(&opt, 0, sizeof(opt));
 		opt.flags = UID_CREATE_OPT_ATTR;
 		opt.attr = UID_ATTR_OPENABLE;
+		(void)ThreadmgrInSyscall();
 	} else {
 		memset(&opt, 0, sizeof(opt));
 		opt.flags = UID_CREATE_OPT_ATTR;
@@ -503,29 +505,31 @@ SceUID sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 		sceGUIDReleaseObject(mutexId);
 		goto unaccount;
 	}
-	cond->ownerPid = ThreadmgrInSyscall() ? thread->processId : SCE_KERNEL_PROCESS_ID;
-	cond->option = option;
-	cond->mutexId = mutexId;
-	cond->mutexLink.next = &mutex->core.conds;
-	cond->mutexLink.prev = mutex->core.conds.prev;
-	cond->waitCondId = -1;
-	cond->attr = attr;
-	mutex->core.conds.prev = &cond->mutexLink;
-	cond->mutexLink.prev->next = &cond->mutexLink;
+	object = cond;
+	ownerPid = ThreadmgrInSyscall() ? thread->processId : SCE_KERNEL_PROCESS_ID;
+	object->ownerPid = ownerPid;
+	object->option = option;
+	object->mutexId = mutexId;
+	object->mutexLink.next = &mutex->core.conds;
+	object->mutexLink.prev = mutex->core.conds.prev;
+	object->waitCondId = -1;
+	object->attr = attr;
+	mutex->core.conds.prev = &object->mutexLink;
+	object->mutexLink.prev->next = &object->mutexLink;
 	if (ThreadmgrInSyscall()) {
 		puid = OpenByGUID(currentThreadContext()->processId, uid);
 		SCE_DBG_ASSERT_CHECK_FUNC(puid >= 0, 378, "sceKernelCreateCond");
 		if (puid < 0) {
-			sceKernelSpinlockLowUnlock(&cond->lock);
+			sceKernelSpinlockLowUnlock(&object->lock);
 			uid = sceGUIDClose(uid);
 			SCE_DBG_ASSERT_CHECK_FUNC(uid >= 0, 383, "sceKernelCreateCond");
 			uid = puid;
 			goto unaccount;
 		}
-		cond->puid = puid;
+		object->puid = puid;
 		uid = puid;
 	}
-	sceKernelSpinlockLowUnlock(&cond->lock);
+	sceKernelSpinlockLowUnlock(&object->lock);
 	sceKernelSpinlockLowUnlock(&mutex->lock);
 	sceGUIDReleaseObject(mutexId);
 	goto resume;

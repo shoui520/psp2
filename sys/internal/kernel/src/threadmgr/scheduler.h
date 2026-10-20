@@ -9,7 +9,7 @@ void addReadyTop(struct ThreadCB *thread);
 void addReady(struct ThreadCB *thread);
 void addStandby(struct ThreadMgrCpuCB *cpu, struct ThreadCB *thread);
 int selectExecCpu(struct ThreadCB *thread);
-bool distributeThread(int cpuId, struct ThreadCB *thread);
+int distributeThread(int cpuId, struct ThreadCB *thread);
 void removeCommonRaw(struct ThreadCB *thread, int priority);
 void removeReady(struct ThreadCB *thread, int priority);
 uint32_t searchHighestPriority(void);

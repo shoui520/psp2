@@ -182,7 +182,7 @@ int lwMutexProcessExit(SceProcessObject *process)
 }
 
 /* returns an object to its process's cache (both locks free of it) */
-static inline void LwMutexCachePush(SceProcessObject *process, ThreadmgrLwMutex *lwMutex)
+static inline __attribute__((always_inline)) void LwMutexCachePush(SceProcessObject *process, ThreadmgrLwMutex *lwMutex)
 {
 	sceKernelSpinlockLowLock(&process->lwMutexCacheLock);
 	lwMutex->cacheNext = process->lwMutexCache;
@@ -203,7 +203,7 @@ int _sceKernelCreateLwMutexForUser(ThreadmgrLwMutexWork *work, const char *name,
 	struct ThreadCB *thread;
 	SceProcessObject *process, *cacheProcess;
 	UIDCreateOpt opt;
-	ThreadmgrLwMutexWork userWork;
+	ThreadmgrLwMutexWork userWork __attribute__((aligned(8)));
 	ThreadmgrLwMutex *lwMutex, *old;
 	char newName[32];
 	volatile int delay;
@@ -413,11 +413,13 @@ int sceKernelDeleteLwMutexForUser(ThreadmgrLwMutexWork *work)
 	SceProcessObject *process;
 	ThreadmgrLwCond *cond;
 	ThreadmgrLwMutex *lwMutex;
+	SceUID puid;
 	SceObjectBase *pObject;
-	struct ThreadmgrWaitQueue *queue;
 	volatile int delay;
-	uint32_t saved, attr, wake, wakeOwn;
-	SceUID puid, guid;
+	struct ThreadmgrWaitQueue *queue;
+	uint32_t saved, attr, wake, count;
+	uint8_t wakeOwn;
+	SceUID guid;
 	int intr, ret;
 
 	saved = ThreadmgrUserRoWord();
@@ -426,7 +428,7 @@ int sceKernelDeleteLwMutexForUser(ThreadmgrLwMutexWork *work)
 		ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 		goto restore;
 	}
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF(0, 543, "*** error: illegal context\n");
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
@@ -464,7 +466,7 @@ retry:
 		if (SceCpuForDriver_5AC9D394(&cond->lock) < 0) {
 			/* the cond holds its lock while it takes ours: back off */
 			sceKernelSpinlockLowUnlock(&lwMutex->lock);
-			for (delay = 10; --delay != 0;)
+			for (delay = 10; delay != 0; --delay)
 				;
 			goto retry;
 		}
@@ -475,9 +477,14 @@ retry:
 	}
 	queue = (struct ThreadmgrWaitQueue *)&lwMutex->next;
 	ret = SceSysmemForDriver_84A4AF5E(0, puid);
-	wakeOwn = wakeupWaitObjectAll((uintptr_t)queue, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
+	wakeOwn = wake | wakeupWaitObjectAll((uintptr_t)queue, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
 	process = currentThreadContext()->process;
-	LwMutexCachePush(process, lwMutex);
+	sceKernelSpinlockLowLock(&process->lwMutexCacheLock);
+	count = process->lwMutexCacheCount + 1;
+	lwMutex->cacheNext = process->lwMutexCache;
+	process->lwMutexCache = (ThreadmgrLwMutex *)pObject;
+	process->lwMutexCacheCount = count;
+	sceKernelSpinlockLowUnlock(&process->lwMutexCacheLock);
 	attr = lwMutex->attr;
 	lwMutex->waiting = 0;
 	lwMutex->next = queue;
@@ -493,7 +500,7 @@ retry:
 	process->lwMutexCount--;
 	sceKernelSpinlockLowUnlock(&process->resourceLock);
 	sceGUIDReleaseObject(guid);
-	if ((wake | wakeOwn) & 1)
+	if (wakeOwn & 1)
 		switchThread(0);
 resume:
 	sceKernelCpuResumeIntr(intr);
@@ -521,13 +528,15 @@ int _sceKernelLockLwMutex(ThreadmgrLwMutexWork *work, int count, SceUInt32 *time
 			  int callbacks)
 {
 	struct ThreadCB *thread;
-	ThreadmgrLwMutexWork userWork;
+	ThreadmgrLwMutexWork userWork __attribute__((aligned(8)));
 	ThreadmgrLwMutex *lwMutex;
 	SceObjectBase *pObject;
+	int locked = 0;
+	SceUID puid;
 	uint64_t wakeup;
 	uint32_t saved;
-	SceUID puid, guid, self;
-	int intr, ret, cbRet, locked = 0;
+	SceUID guid, self;
+	int intr, ret, cbRet;
 
 	thread = currentThreadContext();
 	saved = ThreadmgrUserRoWord();
@@ -611,7 +620,8 @@ int _sceKernelLockLwMutex(ThreadmgrLwMutexWork *work, int count, SceUInt32 *time
 			if (ret < 0)
 				goto release;
 			sceKernelSpinlockLowLock(&lwMutex->lock);
-			if (lwMutex->cacheNext != &lwMutex->uidEntry) {
+			if (((ThreadmgrLwMutex *)pObject)->cacheNext !=
+			    &((ThreadmgrLwMutex *)pObject)->uidEntry) {
 				ret = SCE_KERNEL_ERROR_WAIT_DELETE;
 				goto unlock;
 			}
@@ -679,7 +689,7 @@ restore:
 int _sceKernelUnlockLwMutex(ThreadmgrLwMutexWork *work, int count)
 {
 	struct ThreadCB *first;
-	ThreadmgrLwMutexWork userWork;
+	ThreadmgrLwMutexWork userWork __attribute__((aligned(8)));
 	ThreadmgrLwMutex *lwMutex;
 	SceObjectBase *pObject;
 	uint32_t saved, wake;
@@ -974,7 +984,7 @@ int lockLwMutexForLwCond(SceUID lwMutexId, int count, SceUInt32 *timeout, int ca
 			 SceUID condId)
 {
 	struct ThreadCB *thread;
-	ThreadmgrLwMutexWork userWork;
+	ThreadmgrLwMutexWork userWork __attribute__((aligned(8)));
 	ThreadmgrLwMutex *lwMutex;
 	SceObjectBase *pObject;
 	uint64_t wakeup;
@@ -1088,7 +1098,7 @@ resume:
 int unlockLwMutexForLwCond(SceUID lwMutexId, int count)
 {
 	struct ThreadCB *first;
-	ThreadmgrLwMutexWork userWork;
+	ThreadmgrLwMutexWork userWork __attribute__((aligned(8)));
 	ThreadmgrLwMutex *lwMutex;
 	SceObjectBase *pObject;
 	SceUID self, newOwner;

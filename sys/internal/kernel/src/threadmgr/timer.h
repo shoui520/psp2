@@ -100,7 +100,7 @@ int uidAlarm_ManageCache(int high, int low, int target);
 
 int releaseThreadWaitState(struct ThreadCB *thread,
 			   uintptr_t waitable, int result);
-bool wakeupAndDistributeThread(struct ThreadCB *thread,
+int wakeupAndDistributeThread(struct ThreadCB *thread,
 			       uintptr_t waitable, int result);
 void insertPriorityQueue(uintptr_t head, struct ThreadCB *thread);
 int revalidateWaitState(uintptr_t waitable);
