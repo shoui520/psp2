@@ -7,6 +7,7 @@
  * it was.
  */
 
+#include <fw.h>
 #include "sysmodule_ids.h"
 #include <sysmem/dipsw.h>
 #include <modulemgr/modulemgr.h>
@@ -114,8 +115,8 @@ static const char s_app[] = "app0:sce_module/";
 static int s_storage;
 
 static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, void *common);
-static int procExitHandler(SceUID pid, ProcEventParam *param, void *common);
 static int procKillHandler(SceUID pid, ProcEventParam *param, void *common);
+static int procExitHandler(SceUID pid, ProcEventParam *param, void *common);
 
 static const SceKernelProcEventHandler s_procHandler = {
 	.size = sizeof(SceKernelProcEventHandler),
@@ -141,7 +142,7 @@ static int sysmoduleLoadLib(SysmoduleProc *proc, SceUInt32 *ref, const Sysmodule
 	if (lib->name == NULL || lib->nameLen + prefixLen > SYSMODULE_PATH_MAX)
 		return SCE_SYSMODULE_ERROR_FATAL;
 	memcpy(proc->path, prefix, prefixLen);
-	memcpy(proc->path + prefixLen, lib->name, (SceInt16)lib->nameLen);
+	memcpy(proc->path + prefixLen, lib->name, lib->nameLen);
 	if (lib->flags & SYSMODULE_LIB_APP) {
 		alt = 0x9020;
 		flags = 0x9000;
@@ -277,33 +278,40 @@ static inline SceUInt32 sysmoduleLibAlt(SceUInt32 lib)
 }
 
 /* the user PMU, for libperf (value: 1 on, 0 off) */
+/* the 3.6x build has these messages compiled out */
+#if FW_SINCE(0x04000000)
+#define PMON_PRINTF(_line, _fmt, _ret)	SCE_DBG_PRINTF(0, (_line), _fmt, (_ret))
+#else
+#define PMON_PRINTF(_line, _fmt, _ret)	((void)(_ret))
+#endif
+
 static inline void sceKernelPerfArmPmonOpen(void)
 {
 	int ret;
 
 	ret = SceProcessmgrForDriver_61B9B6FA(0, 0x11);
 	if (ret != 0) {
-		SCE_DBG_PRINTF(0, 1348, "[Error] sceKernelSetInitialPMCR (ret = 0x%08x)\n", ret);
+		PMON_PRINTF(1348, "[Error] sceKernelSetInitialPMCR (ret = 0x%08x)\n", ret);
 		return;
 	}
 	ret = sceKernelPMonSetControlRegister(0, 0x11);
 	if (ret != 0) {
-		SCE_DBG_PRINTF(0, 1354, "[Error] sceKernelPMonSetControlRegister (ret = 0x%08x)\n", ret);
+		PMON_PRINTF(1354, "[Error] sceKernelPMonSetControlRegister (ret = 0x%08x)\n", ret);
 		return;
 	}
 	ret = SceProcessmgrForDriver_B1C3EFCA(0, 1);
 	if (ret != 0) {
-		SCE_DBG_PRINTF(0, 1360, "[Error] sceKernelSetInitialPMUSERENR (ret = 0x%08x)\n", ret);
+		PMON_PRINTF(1360, "[Error] sceKernelSetInitialPMUSERENR (ret = 0x%08x)\n", ret);
 		return;
 	}
 	ret = sceKernelPMonSetUserEnableRegister(0, 1);
 	if (ret != 0) {
-		SCE_DBG_PRINTF(0, 1367, "[Error] sceKernelPMonSetUserEnableRegister (ret = 0x%08x)\n", ret);
+		PMON_PRINTF(1367, "[Error] sceKernelPMonSetUserEnableRegister (ret = 0x%08x)\n", ret);
 		return;
 	}
 	ret = sceKernelSetPMUSERENR(0, 1);
 	if (ret != 0)
-		SCE_DBG_PRINTF(0, 1373, "[Error] sceKernelSetPMUSERENR (ret = 0x%08x)\n", ret);
+		PMON_PRINTF(1373, "[Error] sceKernelSetPMUSERENR (ret = 0x%08x)\n", ret);
 }
 
 static inline void sceKernelPerfArmPmonClose(void)
@@ -312,27 +320,27 @@ static inline void sceKernelPerfArmPmonClose(void)
 
 	ret = SceProcessmgrForDriver_61B9B6FA(0, 0);
 	if (ret != 0) {
-		SCE_DBG_PRINTF(0, 1395, "[Error] sceKernelSetInitialPMCR (ret = 0x%08x)\n", ret);
+		PMON_PRINTF(1395, "[Error] sceKernelSetInitialPMCR (ret = 0x%08x)\n", ret);
 		return;
 	}
 	ret = sceKernelPMonSetControlRegister(0, 0);
 	if (ret != 0) {
-		SCE_DBG_PRINTF(0, 1401, "[Error] sceKernelPMonSetControlRegister (ret = 0x%08x)\n", ret);
+		PMON_PRINTF(1401, "[Error] sceKernelPMonSetControlRegister (ret = 0x%08x)\n", ret);
 		return;
 	}
 	ret = SceProcessmgrForDriver_B1C3EFCA(0, 0);
 	if (ret != 0) {
-		SCE_DBG_PRINTF(0, 1407, "[Error] sceKernelSetInitialPMUSERENR (ret = 0x%08x)\n", ret);
+		PMON_PRINTF(1407, "[Error] sceKernelSetInitialPMUSERENR (ret = 0x%08x)\n", ret);
 		return;
 	}
 	ret = sceKernelPMonSetUserEnableRegister(0, 0);
 	if (ret != 0) {
-		SCE_DBG_PRINTF(0, 1414, "[Error] sceKernelPMonSetUserEnableRegister (ret = 0x%08x)\n", ret);
+		PMON_PRINTF(1414, "[Error] sceKernelPMonSetUserEnableRegister (ret = 0x%08x)\n", ret);
 		return;
 	}
 	ret = sceKernelSetPMUSERENR(0, 0);
 	if (ret != 0)
-		SCE_DBG_PRINTF(0, 1420, "[Error] sceKernelSetPMUSERENR (ret = 0x%08x)\n", ret);
+		PMON_PRINTF(1420, "[Error] sceKernelSetPMUSERENR (ret = 0x%08x)\n", ret);
 }
 
 /* name unknown: whether a library is wanted on this unit */
@@ -635,19 +643,6 @@ out:
 
 /* -- process events ----------------------------------------------------- */
 
-static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, void *common)
-{
-	SysmoduleProc *proc = NULL;
-
-	if (s_storage >= 0 &&
-	    SceProcessmgrForDriver_AF80F39C(pid, s_storage, (void **)&proc, 1) >= 0 &&
-	    proc != NULL) {
-		proc->mutex = sceKernelCreateMutex("SceSysmodule", 0x8000, 0, NULL);
-		proc->waiter = -1;
-	}
-	return 0;
-}
-
 /* name unknown */
 static inline void sysmoduleProcEnd(SceUID pid)
 {
@@ -661,13 +656,36 @@ static inline void sysmoduleProcEnd(SceUID pid)
 	}
 }
 
-static int procExitHandler(SceUID pid, ProcEventParam *param, void *common)
+#if !FW_SINCE(0x04000000)
+static int procKillHandler(SceUID pid, ProcEventParam *param, void *common)
 {
 	sysmoduleProcEnd(pid);
 	return 0;
 }
+#endif
 
+static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, void *common)
+{
+	SysmoduleProc *proc = NULL;
+
+	if (s_storage >= 0 &&
+	    SceProcessmgrForDriver_AF80F39C(pid, s_storage, (void **)&proc, 1) >= 0 &&
+	    proc != NULL) {
+		proc->mutex = sceKernelCreateMutex("SceSysmodule", 0x8000, 0, NULL);
+		proc->waiter = -1;
+	}
+	return 0;
+}
+
+#if FW_SINCE(0x04000000)
 static int procKillHandler(SceUID pid, ProcEventParam *param, void *common)
+{
+	sysmoduleProcEnd(pid);
+	return 0;
+}
+#endif
+
+static int procExitHandler(SceUID pid, ProcEventParam *param, void *common)
 {
 	sysmoduleProcEnd(pid);
 	return 0;
@@ -682,19 +700,21 @@ int module_start(SceSize args, void *argp)
 
 /* -- syscalls ----------------------------------------------------------- */
 
-int sceSysmoduleLoadModule(SceUInt16 id)
+/* the user passes a 16-bit id in a full register: Sony truncates it here */
+
+int sceSysmoduleLoadModule(SceUInt32 id)
 {
-	return sysmoduleLoad(id, NULL);
+	return sysmoduleLoad((SceUInt16)id, NULL);
 }
 
-int sceSysmoduleUnloadModule(SceUInt16 id)
+int sceSysmoduleUnloadModule(SceUInt32 id)
 {
-	return sysmoduleUnload(id, NULL);
+	return sysmoduleUnload((SceUInt16)id, NULL);
 }
 
-int sceSysmoduleIsLoaded(SceUInt16 id)
+int sceSysmoduleIsLoaded(SceUInt32 id)
 {
-	return sysmoduleIsLoaded(id);
+	return sysmoduleIsLoaded((SceUInt16)id);
 }
 
 int sceSysmoduleLoadModuleInternal(SceUInt32 id)
@@ -713,7 +733,7 @@ int sceSysmoduleIsLoadedInternal(SceUInt32 id)
 }
 
 /* name unknown */
-static int sysmoduleLoadWithOpt(SceUInt32 id, SceSize args, void *argp, SceUInt32 flags, int *status)
+static int __attribute__((noinline)) sysmoduleLoadWithOpt(SceUInt32 id, SceSize args, void *argp, SceUInt32 flags, int *status)
 {
 	SysmoduleOpt opt;
 
@@ -731,7 +751,7 @@ static int sysmoduleLoadWithOpt(SceUInt32 id, SceSize args, void *argp, SceUInt3
 }
 
 /* name unknown */
-static int sysmoduleUnloadWithOpt(SceUInt32 id, SceSize args, void *argp, SceUInt32 flags, int *status)
+static int __attribute__((noinline)) sysmoduleUnloadWithOpt(SceUInt32 id, SceSize args, void *argp, SceUInt32 flags, int *status)
 {
 	SysmoduleOpt opt;
 
@@ -758,31 +778,35 @@ typedef struct SysmoduleUserOpt {
 int sceSysmoduleLoadModuleInternalWithArg(SceUInt32 id, SceSize args, void *argp, const SysmoduleUserOpt *uopt)
 {
 	SysmoduleUserOpt opt;
+	int *userStatus;
 	int status, ret, ret2;
 
 	ret = sceKernelCopyFromUser(&opt, uopt, sizeof(opt));
 	if (ret < 0)
 		return ret;
-	if (opt.status == NULL)
+	userStatus = opt.status;
+	if (userStatus == NULL)
 		return sysmoduleLoadWithOpt(id, args, argp, opt.flags, NULL);
 	status = 0;
 	ret = sysmoduleLoadWithOpt(id, args, argp, opt.flags, &status);
-	ret2 = sceKernelCopyToUser(opt.status, &status, sizeof(status));
+	ret2 = sceKernelCopyToUser(userStatus, &status, sizeof(status));
 	return ret2 < 0 ? ret2 : ret;
 }
 
 int sceSysmoduleUnloadModuleInternalWithArg(SceUInt32 id, SceSize args, void *argp, const SysmoduleUserOpt *uopt)
 {
 	SysmoduleUserOpt opt;
+	int *userStatus;
 	int status, ret, ret2;
 
 	ret = sceKernelCopyFromUser(&opt, uopt, sizeof(opt));
 	if (ret < 0)
 		return ret;
-	if (opt.status == NULL)
+	userStatus = opt.status;
+	if (userStatus == NULL)
 		return sysmoduleUnloadWithOpt(id, args, argp, opt.flags, NULL);
 	status = 0;
 	ret = sysmoduleUnloadWithOpt(id, args, argp, opt.flags, &status);
-	ret2 = sceKernelCopyToUser(opt.status, &status, sizeof(status));
+	ret2 = sceKernelCopyToUser(userStatus, &status, sizeof(status));
 	return ret2 < 0 ? ret2 : ret;
 }
