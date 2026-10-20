@@ -1751,6 +1751,7 @@ int sceKernelLoadPreloadingModules(SceUID pid, const ProcessImageInfo *info,
 				ret = ModulemgrLoadSharedModuleForPid(pid, path, lflags);
 			if (ret >= 0)
 				goto next;
+#if FW_DEBUG
 			if (ret == 0x80010002 || (ret & 0xfffeffff) == 0x8008000a) {
 				if (!SceSysrootForKernel_55392965())
 					continue;
@@ -1760,6 +1761,7 @@ int sceKernelLoadPreloadingModules(SceUID pid, const ProcessImageInfo *info,
 				SCE_DBG_PRINTF_LEVEL(1, 0, 3389,
 					"Preloading %s : Failed (0x%08x) (ignored)\n", path, ret);
 			}
+#endif
 		}
 
 		if (!internal)
@@ -1797,7 +1799,7 @@ notfound:
 			return ret;
 		}
 next:
-		SCE_DBG_PRINTF_LEVEL(1, 0, 3446, "");
+		SCE_DBG_PRINTF_LEVEL(1, 0, 3446, "\n");
 	}
 	relocatorFormLogPrint();
 	return 0;
@@ -1974,10 +1976,8 @@ static inline int ModulemgrImportProcParam(SceModuleCB *cb, const SceProcessPara
 		return SCE_KERNEL_ERROR_MODULEMGR_INVALID_PROC_PARAM;
 	}
 
-	ret = ModulemgrCopyFromUser(cb, &param, uparam, size);
-	if (ret < 0)
-		return ret;
-	if (param.magic != SCE_PROCESS_PARAM_MAGIC)
+	if (ModulemgrCopyFromUser(cb, &param, uparam, size) < 0 ||
+	    param.magic != SCE_PROCESS_PARAM_MAGIC)
 		return SCE_KERNEL_ERROR_MODULEMGR_INVALID_PROC_PARAM;
 	if (param.mainThreadPriority != NULL &&
 	    (ret = ModulemgrCopyFromUser(cb, &info->mainThreadPriority,

@@ -254,7 +254,7 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 			type1 = (h << 16) >> 24;
 			d1 = (h << 12) >> 28;
 			if (d1 >= rc.nseg) {
-				SCE_DBG_PRINTF_LEVEL(1, 0xb, 411, "wrong patch segment (%d)\n", d1);
+				SCE_DBG_PRINTF_LEVEL(1, 0xb, 411, "wrong patch segment (%d)\n", patchSeg);
 				return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 			}
 			if (symSeg >= rc.nseg)
@@ -415,7 +415,7 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 				goto wrong_offset;
 			type2 = 0;
 			type1 = 2;
-			*(SceUInt32 *)(kaddr + offset) = S + addend;	/* R_ARM_ABS32 */
+			apply_one_relocation((SceUInt32 *)(kaddr + offset), 2, offset, S, addend, P);
 			step = 4;
 			g_relocForms |= 0x100;
 			break;
@@ -436,8 +436,8 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 				S = rc.seg[symSeg].base;
 				if (offset > limit - 4)
 					goto wrong_offset;
+				apply_one_relocation((SceUInt32 *)(kaddr + offset), 2, offset, S, addend, P);
 				bits >>= width;
-				*(SceUInt32 *)(kaddr + offset) = S + addend;	/* R_ARM_ABS32 */
 			} while (bits != 0);
 			type1 = 2;
 			step = 4;
