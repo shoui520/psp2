@@ -6,8 +6,6 @@
 
 #include <skeleton.h>
 
-STUB_MAIN(SDbgpModuleBoot)
-STUB_MAIN(SDbgpModuleStart)
 
 STUB(sceKernelAddressSpaceGetMMUL1Info)
 STUB(SceDeci4pSdbgpForKernel_17E9BFED)

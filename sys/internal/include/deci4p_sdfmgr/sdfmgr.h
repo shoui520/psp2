@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <scetypes.h>
 #include <sysmem/debug.h>
 #include <deci4p_dfmgr/deci4p.h>
@@ -61,3 +62,16 @@ int sceSDfMgrBreakSystem(void);
 int sceSDfMgrContinueSystem(void);
 int SceDeci4pSDfMgrForKernel_3A25594F(void (*control)(int id));		/* RegisterControlComponent */
 int SceDeci4pSDfMgrForKernel_59C077B3(void (*control)(int id));		/* UnregisterControlComponent */
+
+/* the debugger's per-core break records (deci4p_sdbgp allocates them) */
+struct SdfMgrDebugCpuState;
+
+struct SdfMgrDebugCpuState **SceDeci4pSDfMgrForKernel_BFB482D8(void);
+void SceDeci4pSDfMgrForKernel_4EA65698(uint32_t value);
+uint32_t SceDeci4pSDfMgrForKernel_C38EA67A(void);
+uint32_t SceDeci4pSDfMgrForKernel_0A6437B6(void);
+int SceDeci4pSDfMgrForKernel_682D0EFB(void);
+int SceDeci4pSDfMgrForKernel_58D7597A(void);
+int SceDeci4pSDfMgrForKernel_6BF5553C(void (*hook)(void), unsigned index);
+void *SceDeci4pSDfMgrForKernel_5996E2DB(void *destination, const void *source,
+				   SceSize size);					/* memcpy */

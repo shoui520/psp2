@@ -994,54 +994,6 @@ typedef struct VfsHostRenameArg {
 	SceSize newNameLength;
 } VfsHostRenameArg;
 
-/* vfsGetMntList's entries (name unknown) */
-typedef struct VfsMountListEntry {
-	SceVfsMount *mnt;
-	int mntId;			/* SceVfsMountData.mntId, -1 for PFS */
-	char assignName[0x20];
-	SceUInt32 openedEntryNum;
-	int isPfs;
-	void *data;			/* SceVfsMount.data */
-} VfsMountListEntry;
-_Static_assert(sizeof(VfsMountListEntry) == 0x34, "VfsMountListEntry");
-
-/* vfsGetMntInfo's result (name unknown); the fields copy SceVfsMount and its parts */
-typedef struct VfsMountInfo {
-	SceVfsMount *mnt;
-	int mntId;
-	char assignName[0x20];
-	SceUInt32 openedEntryNum;
-	SceUInt32 state;
-	SceUInt32 mntFlags;
-	SceUInt32 fsType;		/* fs_type and opt */
-	SceVfsMount *self;
-	SceVfsVnode *mntVnode;
-	SceUID allocator;
-	SceUInt32 mntRefCount;
-	SceUInt32 vnodeNum;
-	SceVfsVnode *vnodeList;
-	SceVfsMount *mntedOnList;
-	SceVfsMount *mntedOnListPrev;
-	SceUInt32 defaultIoCacheSize;
-	void *data;
-	struct FdLock *fdLock;
-	SceUID fdLockMutex;
-	SceUID fdLockCond;
-	SceUInt32 fdLockState;
-	SceUInt32 fdLockWaitNum;
-	struct Fumount *fumount;
-	SceUInt32 fumountBusy;
-	SceUInt32 devState;
-	SceUID activationEvf;
-	SceVfsMountData **mntDataPtr;
-	char path[0x400];
-	SceVfsMountData *mntData;
-	char fsName[0x40];
-	char blockdevName[0x40];
-	char blockdevNameNoPart[0x40];
-} VfsMountInfo;
-_Static_assert(__builtin_offsetof(VfsMountInfo, blockdevNameNoPart) == 0x50c, "VfsMountInfo");
-
 int vfs_get_mount_list(VfsMountListEntry *list, int max, int *num);
 int vfs_get_mount_info(SceVfsMount *target, VfsMountInfo *info);
 int vfs_check_fd_vnode(const char *path, SceUID fd);

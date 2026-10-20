@@ -243,7 +243,6 @@ _Static_assert(offsetof(SdfMgrState, sdio) == 0x4f20, "SDIO CPU records");
 
 extern SdfMgrState s_sdfMgrState;
 extern const uint32_t s_sdfMgrCpuTargets[4];
-SdfMgrDebugCpuState **SceDeci4pSDfMgrForKernel_BFB482D8(void);
 void sdfMgrPollCurrentBreakHooks(void);
 void sdfMgrReportPowerState(int state);
 void busErrorHandler(uint32_t status0, uint32_t status1, uint32_t status2);
@@ -273,8 +272,6 @@ void sdfMgrConnect(void);
 void sdfMgrDisconnect(void);
 int sdfmgrStartProtocol(uint32_t protocol);
 int sdfmgrStopProtocol(uint32_t protocol);
-void *SceDeci4pSDfMgrForKernel_5996E2DB(void *destination, const void *source,
-				   SceSize size);
 
 static inline unsigned sdfMgrCoreIndex(void)
 {
