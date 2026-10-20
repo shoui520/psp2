@@ -71,7 +71,7 @@ static SceUID s_deviceUid[ARRAY_SIZE(s_deviceModules)];
 static SceUID s_sdbgpUid[1];
 static SceUID s_sdrfpUid[1];
 #endif
-static SceUInt32 s_panel;
+static SceUInt8 s_hardwareFlags[16];
 #if FW_DEVKIT
 static SceUID s_debugUid[ARRAY_SIZE(s_debugModules)];
 #endif
@@ -80,7 +80,7 @@ static SceUID s_coreUid[ARRAY_SIZE(s_coreModules)];
 
 #if FW_DEVKIT
 /* the debug channel needs dipsw 0xc1 and none of the three boot modes */
-static int DebugChannelEnabled(void)
+static inline __attribute__((always_inline)) int DebugChannelEnabled(void)
 {
 	return SceKblForKernel_C8F4DE71(0xc1) &&
 	       !SceKblForKernel_8A416887() &&
@@ -91,8 +91,6 @@ static int DebugChannelEnabled(void)
 
 int module_start(SceSize args, void *argp)
 {
-	unsigned int i;
-
 	SceKblForKernel_6D7A1F18(s_coreModules, s_coreUid, ARRAY_SIZE(s_coreModules), 0);
 
 #if FW_DEVKIT
@@ -108,12 +106,11 @@ int module_start(SceSize args, void *argp)
 	}
 #endif
 
-	for (i = 0; i < ARRAY_SIZE(s_deviceModules); i++)
-		s_device[i] = s_deviceModules[i];
+	__builtin_memcpy(s_device, s_deviceModules, sizeof(s_device));
 
 	if (SceKblForKernel_B6D00D6D() == 0) {
-		SceKblForKernel_D3A516D5(&s_panel);
-		s_device[2] = (s_panel & PANEL_LCD) ? "lcd.skprx" : "oled.skprx";
+		SceKblForKernel_D3A516D5(s_hardwareFlags);
+		s_device[2] = (s_hardwareFlags[0] & PANEL_LCD) ? "lcd.skprx" : "oled.skprx";
 	} else {
 		s_device[2] = NULL;
 	}

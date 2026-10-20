@@ -19,7 +19,7 @@ int SceKblForKernel_5945F065(void);			/* boolean */
 int SceKblForKernel_C3DDDE15(void);			/* boolean */
 int SceKblForKernel_CE94F329(void);			/* boolean: load deci4p_sdbgp/sdrfp */
 int SceKblForKernel_B6D00D6D(void);			/* 0: unit has a built-in panel */
-int SceKblForKernel_D3A516D5(SceUInt32 *flags);		/* bits 0x9: LCD (else OLED) panel */
+int SceKblForKernel_D3A516D5(SceUInt8 *flags);		/* the 16 hardware-flag bytes; byte 0 & 0x9: LCD (else OLED) */
 int SceKblForKernel_838466E9(void);			/* 0: unit has HDMI */
 
 int SceKblForKernel_261F2747(void);
