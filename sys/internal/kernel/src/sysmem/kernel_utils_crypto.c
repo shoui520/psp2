@@ -15,6 +15,11 @@
 #include "hmac_internal.h"
 
 extern const uint8_t aesRoundConstants[30];
+
+/* the marker word lands at the byte offset of the buffered data: unaligned, and through
+ * the block union's bytes */
+typedef uint32_t __attribute__((may_alias)) UnalignedWord;
+
 uint32_t SceKernelUtilsForDriver_60ED6EA9(uint32_t word);
 uint32_t SceKernelUtilsForDriver_C76A7685(uint32_t column);
 
@@ -35,32 +40,32 @@ int SceKernelUtilsForDriver_E4390FFA(SceSha1Context *ctx)
 
 int SceKernelUtilsForDriver_478A6F3C(SceSha1Context *ctx, const void *plain, SceSize len)
 {
-	const uint8_t *input = plain;
+	const uint8_t *input;
 	uint32_t block[16];
 	uint32_t total, pending;
 
-	if (plain == NULL || ctx == NULL)
+	if (ctx == NULL || plain == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
+	input = plain;
 	pending = ctx->usRemains;
 	total = len + pending;
 	ctx->ullTotalLen += len;
-	if (total > 63) {
+	if (__builtin_expect(total > 63, 1)) {
 		uint32_t remaining = total;
 
 		do {
-			uint32_t consumed;
-
 			if (pending == 0) {
 				do {
 					*(uint32_t *)((uint8_t *)block + pending) =
 						__builtin_bswap32(*(const uint32_t *)(input + pending));
 					pending += sizeof(uint32_t);
 				} while (pending != sizeof(block));
-				consumed = 64;
+				input += sizeof(block);
 			} else {
 				uint32_t *word = block;
+				uint32_t consumed = sizeof(block) - pending;
+				int i;
 
-				consumed = 64 - pending;
 #if FW_SINCE(0x04000000)
 				__builtin___memcpy_chk(block, ctx->buf, pending, sizeof(block));
 #else
@@ -68,12 +73,10 @@ int SceKernelUtilsForDriver_478A6F3C(SceSha1Context *ctx, const void *plain, Sce
 #endif
 				memcpy((uint8_t *)block + ctx->usRemains, input, consumed);
 				ctx->usRemains = 0;
-				do {
-					*word = __builtin_bswap32(*word);
-					word++;
-				} while (word != block + 16);
+				for (i = 0; i < 16; i++)
+					word[i] = __builtin_bswap32(word[i]);
+				input += consumed;
 			}
-			input += consumed;
 			remaining -= 64;
 			Sha1Transform(block, ctx->h);
 			if (remaining <= 63)
@@ -95,12 +98,13 @@ int SceKernelUtilsForDriver_48F24106(SceSha1Context *ctx, void *result)
 	uint32_t block[16];
 	uint8_t *bytes = (uint8_t *)block;
 	uint32_t *cache;
-	uint32_t *output = result;
+	uint32_t *output;
 	uint32_t first, second, third, fourth;
 	uint32_t *word;
 
-	if (result == NULL || ctx == NULL)
+	if (ctx == NULL || result == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
+	output = result;
 	cache = (uint32_t *)ctx->result;
 	if (ctx->usComputed == 0) {
 		uint32_t pending = ctx->usRemains;
@@ -137,9 +141,9 @@ int SceKernelUtilsForDriver_48F24106(SceSha1Context *ctx, void *result)
 			} while (word != block + 16);
 		}
 		bitLength = ctx->ullTotalLen << 3;
-		bytes += 56;
+		bytes += 55;
 		for (shift = 56; shift != -8; shift -= 8)
-			*bytes++ = bitLength >> shift;
+			*++bytes = bitLength >> shift;
 		word = block;
 		do {
 			*word = __builtin_bswap32(*word);
@@ -269,11 +273,21 @@ int SceKernelUtilsForDriver_FBF2A442(SceSha224Context *context, void *result)
 		cached[7] = fourth;
 		memcpy(finalBlocks.bytes, ctx->buf, sizeof(finalBlocks.bytes));
 		blocks = (pending + 72) >> 6;
-		memcpy(finalBlocks.bytes + pending, &marker, sizeof(marker));
-		for (i = (pending >> 2) + 1; i < blocks * 16 - 2; i++)
-			finalBlocks.words[i] = 0;
-		finalBlocks.lengths[blocks * 8 - 1] =
-			__builtin_bswap64(ctx->ullTotalLen << 3);
+		*(UnalignedWord *)(finalBlocks.bytes + pending) = marker;
+		{
+			uint32_t *p = (uint32_t *)((uintptr_t)(finalBlocks.bytes + pending + 4) & ~3U);
+			unsigned int last = blocks * 16 - 3;
+
+			if ((pending >> 2) < last) {
+				unsigned int n = pending >> 2;
+
+				do {
+					n++;
+					*p++ = 0;
+				} while (n != last);
+			}
+			*(uint64_t *)p = __builtin_bswap64(ctx->ullTotalLen << 3);
+		}
 		Sha256Transform(finalBlocks.bytes, blocks, cached);
 	}
 	for (i = 0; i < SCE_SHA224_DIGEST_SIZE / sizeof(uint32_t); i++)
@@ -379,11 +393,21 @@ int SceKernelUtilsForDriver_4899CD4B(SceSha256Context *context, void *result)
 		/* Sony copies two blocks before replacing the unused tail. */
 		memcpy(finalBlocks.bytes, ctx->buf, sizeof(finalBlocks.bytes));
 		blocks = (pending + 72) >> 6;
-		memcpy(finalBlocks.bytes + pending, &marker, sizeof(marker));
-		for (i = (pending >> 2) + 1; i < blocks * 16 - 2; i++)
-			finalBlocks.words[i] = 0;
-		finalBlocks.lengths[blocks * 8 - 1] =
-			__builtin_bswap64(ctx->ullTotalLen << 3);
+		*(UnalignedWord *)(finalBlocks.bytes + pending) = marker;
+		{
+			uint32_t *p = (uint32_t *)((uintptr_t)(finalBlocks.bytes + pending + 4) & ~3U);
+			unsigned int last = blocks * 16 - 3;
+
+			if ((pending >> 2) < last) {
+				unsigned int n = pending >> 2;
+
+				do {
+					n++;
+					*p++ = 0;
+				} while (n != last);
+			}
+			*(uint64_t *)p = __builtin_bswap64(ctx->ullTotalLen << 3);
+		}
 		Sha256Transform(finalBlocks.bytes, blocks, cached);
 	}
 	for (i = 0; i < SCE_SHA256_DIGEST_SIZE / sizeof(uint32_t); i++)
@@ -411,9 +435,7 @@ int AesInit(SceAesCompactContext *ctx, SceSize blocksize, SceSize keysize,
 	unsigned int group, index, constant = 0;
 	unsigned int lastRound;
 
-	if (key == NULL)
-		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	if (ctx == NULL)
+	if (ctx == NULL || key == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	if (((blocksize & ~0x40U) != 128 && blocksize != 256) ||
 	    ((keysize & ~0x40U) != 128 && keysize != 256))
@@ -536,10 +558,10 @@ int HmacDigest(const void *key, SceSize keyLen, const void *plain, SceSize len,
 	SceSize blockSize = algorithm->blockSize;
 	SceSize digestSize = algorithm->digestSize;
 	unsigned char *cursor, *end;
+	int bad;
 
-	if (plain == NULL)
-		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	if (key == NULL)
+	bad = key == NULL || plain == NULL;
+	if (bad)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	if (digest == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
@@ -553,29 +575,15 @@ int HmacDigest(const void *key, SceSize keyLen, const void *plain, SceSize len,
 		memcpy(keybuf, key, keyLen);
 #endif
 	}
-	cursor = keybuf;
 	end = keybuf + blockSize;
-	if (blockSize == 0) {
-		algorithm->init(&context);
-		algorithm->update(&context, keybuf, blockSize);
-		algorithm->update(&context, plain, len);
-		algorithm->result(&context, innerDigest);
-		goto outer;
-	}
-	do {
+	for (cursor = keybuf; cursor != end; cursor++)
 		*cursor ^= 0x36;
-		cursor++;
-	} while (cursor != end);
 	algorithm->init(&context);
 	algorithm->update(&context, keybuf, blockSize);
 	algorithm->update(&context, plain, len);
 	algorithm->result(&context, innerDigest);
-	cursor = keybuf;
-	do {
+	for (cursor = keybuf; cursor != end; cursor++)
 		*cursor ^= 0x6a;
-		cursor++;
-	} while (cursor != end);
-outer:
 	algorithm->init(&context);
 	algorithm->update(&context, keybuf, blockSize);
 	algorithm->update(&context, innerDigest, digestSize);

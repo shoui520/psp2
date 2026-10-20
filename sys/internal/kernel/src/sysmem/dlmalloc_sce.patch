@@ -87,11 +87,11 @@
  */
 -void mspace_malloc_stats(mspace msp);
 +int mspace_malloc_stats(mspace msp);
-+
+ 
 +/* SCE: mspace_malloc_stats' numbers */
 +struct malloc_stats;
 +void mspace_get_malloc_stats(mspace msp, struct malloc_stats* stats);
- 
++
  /*
    mspace_trim behaves as malloc_trim, but
    operates within the given space.
@@ -155,12 +155,12 @@
  {\
 -  unsigned int X = S >> TREEBIN_SHIFT;\
 -  if (X == 0)\
-+  int K = (int)(SIZE_T_BITSIZE - 1) - __builtin_clz(S);\
-+  I = (bindex_t)(((K - TREEBIN_SHIFT) << 1) | ((S >> (K - 1)) & 1));\
-+  if (K - TREEBIN_SHIFT < 0)\
++  int K = (int)(SIZE_T_BITSIZE - 1 - TREEBIN_SHIFT) - __builtin_clz(S);\
++  I = (bindex_t)((K << 1) + ((S >> (K + (TREEBIN_SHIFT-1))) & 1));\
++  if (K < 0)\
      I = 0;\
 -  else if (X > 0xFFFF)\
-+  if (I >= NTREEBINS)\
++  if (I >= NTREEBINS-1)\
      I = NTREEBINS-1;\
 -  else {\
 -    unsigned int K;\
@@ -235,7 +235,7 @@
    ensure_initialization();
    if (!PREACTION(m)) {
      size_t maxfp = 0;
-@@ -3389,14 +3464,75 @@
+@@ -3389,14 +3464,78 @@
        }
      }
  
@@ -258,7 +258,6 @@
 +  mstate m = (mstate)msp;
 +  int count = 0;
 +  int notfound = 1;
-+  uintptr_t pa;
 +  ensure_initialization();
 +  if (!PREACTION(m)) {
 +    if (is_initialized(m)) {
@@ -272,6 +271,7 @@
 +          if (is_inuse(q)) {
 +            if (q != first) {
 +              mstate fm = get_mstate_for(q);
++              uintptr_t pa;
 +              if (sceKernelVAtoPA(fm, &pa) < 0) {
 +                SCE_PRINTF_WITH_INFO(0, 3603,
 +                  "*** Kernel Heap Corruption. BAD ADDRESS (msp=%p[%s], q=%p, fm=%p)\n",
@@ -293,8 +293,6 @@
 +              m, name, q);
 +          }
 +          q = next_chunk(q);
-+          if ((char*)q < s->base)
-+            break;
 +        }
 +        s = s->next;
 +      }
@@ -302,19 +300,24 @@
 +    }
 +    POSTACTION(m);
 +  }
-+  if (mem != 0 && notfound &&
-+      (!ok_address(m, mem2chunk(mem)) || (mem2chunk(mem)->head & INUSE_BITS) != 0)) {
-+    SCE_DBG_PRINTF_LEVEL(1, 0, 3644,
-+      "*** Kernel Heap Invalid operation (msp=%p[%s], ptr=%p)\n", m, name, mem);
-+    count = SCE_DLMALLOC_ERROR_BAD_CHUNK;
++  if (mem != 0 && notfound) {
++    mchunkptr p = mem2chunk(mem);
++    if (!ok_address(m, p) || !is_inuse(p) || pinuse(p))
++      goto invalid;
++    if ((p->head & INUSE_BITS) != 0)
++      goto invalid;
 +  }
 +  return count;
++invalid:
++  SCE_DBG_PRINTF_LEVEL(1, 0, 3644,
++    "*** Kernel Heap Invalid operation (msp=%p[%s], ptr=%p)\n", m, name, mem);
++  return SCE_DLMALLOC_ERROR_BAD_CHUNK;
 +}
 +
  /* ----------------------- Operations on smallbins ----------------------- */
  
  /*
-@@ -3661,7 +3797,7 @@
+@@ -3661,7 +3800,7 @@
  static void* mmap_alloc(mstate m, size_t nb) {
    size_t mmsize = mmap_align(nb + SIX_SIZE_T_SIZES + CHUNK_ALIGN_MASK);
    if (mmsize > nb) {     /* Check for wrap around 0 */
@@ -323,7 +326,7 @@
      if (mm != CMFAIL) {
        size_t offset = align_offset(chunk2mem(mm));
        size_t psize = mmsize - offset - MMAP_FOOT_PAD;
-@@ -3763,50 +3899,9 @@
+@@ -3763,50 +3902,9 @@
    init_bins(m);
  }
  #endif /* PROCEED_ON_ERROR */
@@ -375,7 +378,7 @@
  static void add_segment(mstate m, char* tbase, size_t tsize, flag_t mmapped) {
    /* Determine locations and sizes of segment, fenceposts, old top */
    char* old_top = (char*)m->top;
-@@ -3960,7 +4055,7 @@
+@@ -3960,7 +4058,7 @@
    if (HAVE_MMAP && tbase == CMFAIL) {  /* Try MMAP */
      size_t rsize = granularity_align(nb + SYS_ALLOC_PADDING);
      if (rsize > nb) { /* Fail if wraps around zero */
@@ -384,7 +387,7 @@
        if (mp != CMFAIL) {
          tbase = mp;
          tsize = rsize;
-@@ -4015,35 +4110,10 @@
+@@ -4015,35 +4113,10 @@
      }
  
      else {
@@ -424,7 +427,7 @@
      }
  
      if (nb < m->topsize) { /* Allocate from new or extended top space */
-@@ -4065,6 +4135,7 @@
+@@ -4065,6 +4138,7 @@
  /* -----------------------  system deallocation -------------------------- */
  
  /* Unmap and unlink any mmapped segments that don't contain used chunks */
@@ -432,7 +435,7 @@
  static size_t release_unused_segments(mstate m) {
    size_t released = 0;
    int nsegs = 0;
-@@ -4089,7 +4160,7 @@
+@@ -4089,7 +4163,7 @@
          else {
            unlink_large_chunk(m, tp);
          }
@@ -441,7 +444,7 @@
            released += size;
            m->footprint -= size;
            /* unlink obsoleted record */
-@@ -4112,7 +4183,8 @@
+@@ -4112,7 +4186,8 @@
    return released;
  }
  
@@ -451,7 +454,7 @@
    size_t released = 0;
    ensure_initialization();
    if (pad < MAX_REQUEST && is_initialized(m)) {
-@@ -4133,7 +4205,7 @@
+@@ -4133,7 +4208,7 @@
              size_t newsize = sp->size - extra;
              /* Prefer mremap, fall back to munmap */
              if ((CALL_MREMAP(sp->base, sp->size, newsize, 0) != MFAIL) ||
@@ -460,7 +463,7 @@
                released = extra;
              }
            }
-@@ -4180,6 +4252,7 @@
+@@ -4180,6 +4255,7 @@
  /* ---------------------------- malloc support --------------------------- */
  
  /* allocate a large request from the best fitting chunk in a treebin */
@@ -468,7 +471,7 @@
  static void* tmalloc_large(mstate m, size_t nb) {
    tchunkptr v = 0;
    size_t rsize = -nb; /* Unsigned negation */
-@@ -4251,6 +4324,7 @@
+@@ -4251,6 +4327,7 @@
  }
  
  /* allocate a small request from the best fitting chunk in a treebin */
@@ -476,7 +479,7 @@
  static void* tmalloc_small(mstate m, size_t nb) {
    tchunkptr t, v;
    size_t rsize;
-@@ -4448,138 +4522,8 @@
+@@ -4448,138 +4525,8 @@
      }
    }
    return 0;
@@ -615,7 +618,7 @@
  /* -------------------------- public routines ---------------------------- */
  
  #if !ONLY_MSPACES
-@@ -4747,7 +4691,7 @@
+@@ -4747,7 +4694,7 @@
            size_t prevsize = p->prev_foot;
            if (is_mmapped(p)) {
              psize += prevsize + MMAP_FOOT_PAD;
@@ -624,7 +627,7 @@
                fm->footprint -= psize;
              goto postaction;
            }
-@@ -4928,8 +4872,6 @@
+@@ -4928,8 +4875,6 @@
    return change_mparam(param_number, value);
  }
  
@@ -633,12 +636,13 @@
  size_t dlmalloc_usable_size(void* mem) {
    if (mem != 0) {
      mchunkptr p = mem2chunk(mem);
-@@ -4939,11 +4881,13 @@
+@@ -4938,12 +4883,14 @@
+   }
    return 0;
  }
- 
-+#endif /* !ONLY_MSPACES */ /* SCE: dlmalloc_usable_size with the rest */
 +
++#endif /* !ONLY_MSPACES */ /* SCE: dlmalloc_usable_size with the rest */
+ 
  /* ----------------------------- user mspaces ---------------------------- */
  
  #if MSPACES
@@ -648,7 +652,7 @@
    size_t msize = pad_request(sizeof(struct malloc_state));
    mchunkptr mn;
    mchunkptr msp = align_as_chunk(tbase);
-@@ -4956,7 +4900,7 @@
+@@ -4956,7 +4903,7 @@
    m->magic = mparams.magic;
    m->release_checks = MAX_RELEASE_CHECK_RATE;
    m->mflags = mparams.default_mflags;
@@ -657,7 +661,7 @@
    m->exts = 0;
    disable_contiguous(m);
    init_bins(m);
-@@ -4966,7 +4910,7 @@
+@@ -4966,7 +4913,7 @@
    return m;
  }
  
@@ -666,7 +670,7 @@
    mstate m = 0;
    size_t msize;
    ensure_initialization();
-@@ -4975,9 +4919,9 @@
+@@ -4975,9 +4922,9 @@
      size_t rs = ((capacity == 0)? mparams.granularity :
                   (capacity + TOP_FOOT_SIZE + msize));
      size_t tsize = granularity_align(rs);
@@ -678,7 +682,7 @@
        m->seg.sflags = USE_MMAP_BIT;
        set_lock(m, locked);
      }
-@@ -4985,35 +4929,47 @@
+@@ -4985,35 +4932,47 @@
    return (mspace)m;
  }
  
@@ -700,12 +704,7 @@
  
 -int mspace_track_large_chunks(mspace msp, int enable) {
 -  int ret = 0;
-+/* SCE: the ranges of the mmapped segments, up to max of them; returns how many
-+   there are */
-+size_t mspace_get_mmapped_segments(mspace msp, size_t max,
-+                                   struct malloc_segment_range* list) {
-+  size_t count = 0;
-   mstate ms = (mstate)msp;
+-  mstate ms = (mstate)msp;
 -  if (!PREACTION(ms)) {
 -    if (!use_mmap(ms))
 -      ret = 1;
@@ -714,6 +713,12 @@
 -    else
 -      disable_mmap(ms);
 -    POSTACTION(ms);
++/* SCE: the ranges of the mmapped segments, up to max of them; returns how many
++   there are */
++size_t mspace_get_mmapped_segments(mspace msp, size_t max,
++                                   struct malloc_segment_range* list) {
++  size_t count = 0;
++  mstate ms = (mstate)msp;
 +  if (ok_magic(ms)) {
 +    msegmentptr sp = &ms->seg;
 +    do {
@@ -739,7 +744,7 @@
  size_t destroy_mspace(mspace msp) {
    size_t freed = 0;
    mstate ms = (mstate)msp;
-@@ -5025,7 +4981,7 @@
+@@ -5025,7 +4984,7 @@
        flag_t flag = sp->sflags;
        sp = sp->next;
        if ((flag & USE_MMAP_BIT) && !(flag & EXTERN_BIT) &&
@@ -748,7 +753,7 @@
          freed += size;
      }
    }
-@@ -5165,6 +5121,7 @@
+@@ -5165,6 +5124,7 @@
      mstate fm = (mstate)msp;
  #endif /* FOOTERS */
      if (!ok_magic(fm)) {
@@ -756,7 +761,7 @@
        USAGE_ERROR_ACTION(fm, p);
        return;
      }
-@@ -5177,7 +5134,7 @@
+@@ -5177,7 +5137,7 @@
            size_t prevsize = p->prev_foot;
            if (is_mmapped(p)) {
              psize += prevsize + MMAP_FOOT_PAD;
@@ -765,7 +770,7 @@
                fm->footprint -= psize;
              goto postaction;
            }
-@@ -5256,26 +5213,7 @@
+@@ -5256,26 +5216,7 @@
    }
  }
  
@@ -793,7 +798,7 @@
  void* mspace_realloc(mspace msp, void* oldmem, size_t bytes) {
    if (oldmem == 0)
      return mspace_malloc(msp, bytes);
-@@ -5309,70 +5247,74 @@
+@@ -5309,70 +5250,74 @@
    return internal_memalign(ms, alignment, bytes);
  }
  
@@ -901,8 +906,8 @@
    }
 -  return result;
  }
--
  
+-
 -size_t mspace_max_footprint(mspace msp) {
 +size_t mspace_footprint(mspace msp) {
    size_t result = 0;
@@ -913,7 +918,7 @@
    }
    else {
      USAGE_ERROR_ACTION(ms,ms);
-@@ -5382,6 +5322,7 @@
+@@ -5382,6 +5327,7 @@
  
  
  #if !NO_MALLINFO
@@ -921,7 +926,7 @@
  struct mallinfo mspace_mallinfo(mspace msp) {
    mstate ms = (mstate)msp;
    if (!ok_magic(ms)) {
-@@ -5400,8 +5341,6 @@
+@@ -5400,9 +5346,7 @@
    return 0;
  }
  
@@ -931,3 +936,4 @@
 +/* SCE: no mspace_mallopt, the parameters are fixed */
  
  #endif /* MSPACES */
+ 

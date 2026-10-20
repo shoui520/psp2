@@ -135,7 +135,7 @@ typedef struct PhyMemPartHook {
 
 /* PLACEHOLDER: the partition log; only the creation callback is known */
 typedef struct PhyMemPartLogCallback {
-	void (*create)(void);
+	void (*create)(struct PhyMemPart *part);
 	void (*delete)(struct PhyMemPart *part);
 } PhyMemPartLogCallback;
 
@@ -2060,7 +2060,7 @@ created:
 	if (s_phyMemPartHook != NULL)
 		s_phyMemPartHook->create(*out, __builtin_return_address(0));
 	if (s_phyMemPartLogCallback != NULL)
-		s_phyMemPartLogCallback->create();
+		s_phyMemPartLogCallback->create(*out);
 #endif
 	return 0;
 

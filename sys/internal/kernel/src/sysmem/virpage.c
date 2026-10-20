@@ -48,7 +48,7 @@ static inline int VirPageAllocPhyPageDivide(VirPage *vp, void *partition, void *
 	VirPage *cur = vp, *prev;
 	struct PhyPage *page;
 	uintptr_t va;
-	SceSize chunk = 0x100000, want = rest, size;
+	SceSize chunk = 0x100000, want = rest, request = rest, size;
 	int ret;
 
 	if (PhyMemPartGetFreeSizeInternal(phyPart) < rest) {
@@ -71,13 +71,14 @@ static inline int VirPageAllocPhyPageDivide(VirPage *vp, void *partition, void *
 			ret = SCE_KERNEL_ERROR_NO_FREE_PHYSICAL_PAGE;
 		}
 		for (;;) {
-			if (!PhyMemPartTestAttr(phyPart, PHYMEM_PART_ATTR_DIVIDE))
+			if (!PhyMemPartTestAttr(phyPart, PHYMEM_PART_ATTR_DIVIDE)) {
+				request = want;
 				goto failed;
+			}
 			if (chunk >= 0x100000)
 				chunk = 0x80000;
 			while (rest < chunk)
 				chunk >>= 1;
-			want = chunk;
 			ret = PhyMemPartAllocPhyPage(phyPart, chunk, 0x10, &page);
 			if (ret >= 0) {
 				SCE_DBG_PRINTF(0xb, 195,
@@ -85,8 +86,10 @@ static inline int VirPageAllocPhyPageDivide(VirPage *vp, void *partition, void *
 					       chunk, rest);
 				break;
 			}
-			if (chunk <= 0x1000)
+			if (chunk <= 0x1000) {
+				request = chunk;
 				goto failed;
+			}
 			chunk >>= 1;
 		}
 got:
@@ -112,11 +115,11 @@ failed:
 #if FW_DEBUG
 	SCE_DBG_PRINTF(0xb, 230, "Cannot allocate physical memory from [%s] 0x%08x\n",
 		       PhyMemPartGetName(phyPart), PhyMemPartGetFreeSizeInternal(phyPart));
-	SCE_DBG_PRINTF(0xb, 231, "\tREQUEST=0x%08x\n", want);
+	SCE_DBG_PRINTF(0xb, 231, "\tREQUEST=0x%08x\n", request);
 #else
 	SCE_PRINTF_WITH_INFO(0, 235, "Cannot allocate physical memory from [%s] 0x%08x\n",
 			     PhyMemPartGetName(phyPart), PhyMemPartGetFreeSizeInternal(phyPart));
-	SCE_PRINTF_WITH_INFO(0, 236, "\tREQUEST=0x%08x\n", want);
+	SCE_PRINTF_WITH_INFO(0, 236, "\tREQUEST=0x%08x\n", request);
 #endif
 	for (; vp != cur; vp = vp->next) {
 		PhyMemPartFreePhyPage(phyPart, vp->page);
