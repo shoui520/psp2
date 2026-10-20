@@ -3158,8 +3158,8 @@ modules:
         nid: 0xCD3C89B6
         functions:
           SceSblSmCommForKernel_039C73B1: 0x039C73B1
-          SceSblSmCommForKernel_7863A0CC: 0x7863A0CC
           sceSblSmCommCallFunc: 0xDB9FC204
+          sceSblSmCommStartSm: 0x7863A0CC
           sceSblSmCommStopSm: 0x0631F8ED
   SceSdif:
     nid: 0x00000000

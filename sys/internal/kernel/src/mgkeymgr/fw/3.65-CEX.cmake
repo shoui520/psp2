@@ -36,7 +36,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlockForKernel
 	sceSblSmCommStopSm
-	SceSblSmCommForKernel_7863A0CC
+	sceSblSmCommStartSm
 	sceSblSmCommCallFunc
 	memset
 	memcpy

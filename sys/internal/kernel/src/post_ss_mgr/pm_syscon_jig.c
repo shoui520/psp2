@@ -235,7 +235,7 @@ int invoke_pm_secure_module(const char *path)
 	if (ret < 0)
 		return ret;
 	info.selfType = (info.selfType & ~0xf) | 2;
-	return SceSblSmCommForKernel_7863A0CC(0, path, 0, &info, &g_pmSmId);
+	return sceSblSmCommStartSm(0, path, 0, &info, &g_pmSmId);
 }
 
 int stop_pm_secure_module(void)

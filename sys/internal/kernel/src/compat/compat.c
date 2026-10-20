@@ -2126,7 +2126,7 @@ int compatStartSecureModule(void)
 		&auth.mediaType);
 	if (result == 0) {
 		auth.selfType = (auth.selfType & ~0xfU) | 2;
-		result = SceSblSmCommForKernel_7863A0CC(0, gCompatSecureModulePath,
+		result = sceSblSmCommStartSm(0, gCompatSecureModulePath,
 			0, &auth, &gCompatSecureModuleId);
 	}
 	return result;

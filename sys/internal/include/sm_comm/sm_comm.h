@@ -16,8 +16,7 @@ _Static_assert(sizeof(SceSblSmCommPair) == 8, "secure-module stop result size");
 
 typedef int SceSblSmCommId;
 
-/* vitasdk: ksceSblSmCommStartSmFromFile */
-int SceSblSmCommForKernel_7863A0CC(SceUInt32 priority, const char *path,
+int sceSblSmCommStartSm(SceUInt32 priority, const char *path,
 	SceUInt32 command, SelfAuthRequest *auth, SceSblSmCommId *id);
 /* vitasdk: ksceSblSmCommStartSmFromData */
 int SceSblSmCommForKernel_039C73B1(SceUInt32 priority, const void *data,

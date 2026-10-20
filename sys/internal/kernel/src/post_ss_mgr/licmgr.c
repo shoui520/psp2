@@ -978,7 +978,7 @@ int invoke_act_secure_module(const char *path)	/* name unknown */
 	if (ret < 0)
 		return ret;
 	info.selfType = (info.selfType & ~0xf) | 2;
-	return SceSblSmCommForKernel_7863A0CC(0, path, 0, &info, &g_actSmId);
+	return sceSblSmCommStartSm(0, path, 0, &info, &g_actSmId);
 }
 
 /* PLACEHOLDER: cryptographic routine, deferred: act_sm service 4,

@@ -474,7 +474,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblPostSsMgrForDriver_9D1D8EE5
 	SceSblPostSsMgrForDriver_9D2E2D39
 	sceSblSmCommStopSm
-	SceSblSmCommForKernel_7863A0CC
+	sceSblSmCommStartSm
 	sceSblSmCommCallFunc
 )
 set(MODULE_IMPORT_VARS

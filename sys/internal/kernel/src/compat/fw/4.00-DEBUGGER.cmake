@@ -168,7 +168,7 @@ set(MODULE_IMPORT_FUNCS
 	sceSblFwLoaderSetPath
 	sceSblFwLoaderClose
 	sceSblSmCommStopSm
-	SceSblSmCommForKernel_7863A0CC
+	sceSblSmCommStartSm
 	sceSblSmCommCallFunc
 	SceSblAIMgrForDriver_F4B98F66
 	sceSblACMgrGetMediaType

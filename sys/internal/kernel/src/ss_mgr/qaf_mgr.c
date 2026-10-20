@@ -579,7 +579,7 @@ int qafLoadSecureModule(const char *path)
 	command[1] = 0;
 	command[2] = 0;
 	command[3] = 0;
-	return SceSblSmCommForKernel_7863A0CC(0, path,
+	return sceSblSmCommStartSm(0, path,
 		(uint32_t)(uintptr_t)command, &auth, &qafSmId);
 }
 

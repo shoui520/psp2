@@ -59,7 +59,7 @@ static int __attribute__((noinline)) StartSecureModule(void)
 	if (ret < 0)
 		return ret;
 	auth.selfType = (auth.selfType & ~0xfU) | 2;
-	return SceSblSmCommForKernel_7863A0CC(0, "os0:sm/mgkm_sm.self", 0,
+	return sceSblSmCommStartSm(0, "os0:sm/mgkm_sm.self", 0,
 		&auth, &s_smId);
 }
 

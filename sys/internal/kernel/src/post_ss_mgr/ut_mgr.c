@@ -639,7 +639,7 @@ int utSmStart(const char *path)	/* name unknown */
 	if (ret < 0)
 		return ret;
 	info.selfType = (info.selfType & ~0xf) | 2;
-	return SceSblSmCommForKernel_7863A0CC(0, path, 0, &info, &g_utSmId);
+	return sceSblSmCommStartSm(0, path, 0, &info, &g_utSmId);
 }
 
 /* PLACEHOLDER: cryptographic routine, deferred: utoken_sm services 1

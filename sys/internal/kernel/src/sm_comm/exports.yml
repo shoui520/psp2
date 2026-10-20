@@ -13,5 +13,5 @@ SceSblSsSmComm:
       functions:
         - SceSblSmCommForKernel_039C73B1: 0x039C73B1
         - sceSblSmCommStopSm: 0x0631F8ED
-        - SceSblSmCommForKernel_7863A0CC: 0x7863A0CC
+        - sceSblSmCommStartSm: 0x7863A0CC
         - sceSblSmCommCallFunc: 0xDB9FC204

@@ -201,7 +201,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForKernel_BBA13D9C
 	SceSblACMgrForKernel_sceSblACMgrGetMediaType
 	sceSblSmCommStopSm
-	SceSblSmCommForKernel_7863A0CC
+	sceSblSmCommStartSm
 	sceSblSmCommCallFunc
 	memset
 	strncmp

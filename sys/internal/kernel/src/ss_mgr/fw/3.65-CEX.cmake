@@ -144,7 +144,7 @@ set(MODULE_IMPORT_FUNCS
 	sceSblAuthMgrSetDmac5Key
 	SceSblSmCommForKernel_039C73B1
 	sceSblSmCommStopSm
-	SceSblSmCommForKernel_7863A0CC
+	sceSblSmCommStartSm
 	sceSblSmCommCallFunc
 	sceKernelGetProcessSelfAuthInfo
 	SceSblAIMgrForDriver_274663A0

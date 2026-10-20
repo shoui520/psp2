@@ -30,7 +30,7 @@ int invoke_aimgr_secure_module(void)
 	if (ret)
 		return ret;
 	authInfo.selfType = (authInfo.selfType & ~0xf) | 2;
-	return SceSblSmCommForKernel_7863A0CC(0, "os0:sm/aimgr_sm.self", 0,
+	return sceSblSmCommStartSm(0, "os0:sm/aimgr_sm.self", 0,
 		&authInfo, &aimgrSmId);
 }
 
