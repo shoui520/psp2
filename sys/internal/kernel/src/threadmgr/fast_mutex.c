@@ -57,8 +57,7 @@ static int getFastMutexInfo(struct ThreadmgrFastMutex *mutex, ThreadmgrFastMutex
 		return -1;
 	if (mutex->magic != FAST_MUTEX_MAGIC)
 		return SCE_KERNEL_ERROR_FAST_MUTEX_NOT_INITIALIZED;
-	memset(info, 0, sizeof(*info));
-	info->size = sizeof(*info);
+	*info = (ThreadmgrFastMutexInfo){ .size = sizeof(*info) };
 	name = SceSysmemForDriver_E655852F(mutex->uid);
 	if (name != NULL)
 		strncpy(info->name, name, sizeof(info->name) - 1);
@@ -78,9 +77,10 @@ static int getFastMutexInfo(struct ThreadmgrFastMutex *mutex, ThreadmgrFastMutex
 /* the ceiling of the first (highest-ceiling) fast mutex a thread holds */
 int findFastMutexNextBoostPriority(struct ThreadCB *thread)
 {
-	struct ThreadmgrFastMutex *first = (struct ThreadmgrFastMutex *)thread->ownedFastMutexNext;
+	struct ThreadmgrFastMutex *first;
 
 	SCE_DBG_ASSERT_CHECK(thread->lock != 0, 110);
+	first = (struct ThreadmgrFastMutex *)thread->ownedFastMutexNext;
 	if (first != (struct ThreadmgrFastMutex *)&thread->ownedFastMutexNext &&
 	    (first->queue->attributes & FAST_MUTEX_ATTR_CEILING))
 		return first->ceilingPriority;
@@ -527,7 +527,7 @@ int sceKernelTryLockFastMutex(struct ThreadmgrFastMutex *mutex)
 {
 	struct ThreadCB *thread;
 	uint32_t saved;
-	int intr, ret;
+	int intr, ret, count;
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
@@ -546,10 +546,11 @@ int sceKernelTryLockFastMutex(struct ThreadmgrFastMutex *mutex)
 	thread = currentThreadContext();
 	if (mutex->owner == thread) {
 		if (mutex->queue->attributes & FAST_MUTEX_ATTR_RECURSIVE) {
-			if (mutex->lockCount + 1 < 0) {
+			count = mutex->lockCount + 1;
+			if (count < 0) {
 				ret = SCE_KERNEL_ERROR_FAST_MUTEX_LOCK_OVF;
 			} else {
-				mutex->lockCount++;
+				mutex->lockCount = count;
 				ret = 0;
 			}
 		} else {
@@ -679,22 +680,21 @@ int sceKernelGetFastMutexInfo(struct ThreadmgrFastMutex *mutex, ThreadmgrFastMut
 	} else if (info->size > sizeof(local)) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 	} else {
-		memset(&local, 0, sizeof(local));
-		local.size = sizeof(local);
+		local = (ThreadmgrFastMutexInfo){ .size = sizeof(local) };
 		name = SceSysmemForDriver_E655852F(mutex->uid);
 		if (name != NULL)
 			strncpy(local.name, name, sizeof(local.name) - 1);
 		intr = SceCpuForDriver_821FC0EE();
 		sceKernelSpinlockLowLock(&mutex->queue->lock);
 		local.uid = mutex->uid;
-		local.attr = mutex->queue->attributes;
 		local.lockCount = mutex->lockCount;
+		local.attr = mutex->queue->attributes;
+		local.workArea = mutex;
 		if (mutex->owner != NULL)
 			local.currentOwnerId = mutex->owner->threadId;
 		local.ceilingPriority = mutex->ceilingPriority;
 		local.numWaitThreads = mutex->queue->waiting;
 		local.numSpinThreads = mutex->spinWaitCount;
-		local.workArea = mutex;
 		sceKernelSpinlockLowUnlock(&mutex->queue->lock);
 		sceKernelCpuResumeIntr(intr);
 		size = info->size;
@@ -750,38 +750,41 @@ int SceThreadmgrForDriver_AF302193(SceUID uid, ThreadmgrFastMutexInfo *info)
 int SceThreadmgrForDriver_6D4C1EB7(int level, ThreadmgrFastMutexInfo *infos, SceSize size,
 				   SceSize *count)
 {
+	SceSize got = 0;
 	struct ThreadmgrUidFastMutex *uidMutex;
 	SceObjectBase *pObject;
 	ThreadmgrFastMutexInfo info;
-	SceSize got = 0, at;
 	SceUID *vector;
 	uint32_t saved;
-	int num, total, i, ret, intr;
+	int total, i, ret, intr, err;
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (size >= sizeof(info) && infos == NULL) {
-		ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-		goto restore;
+	if (size >= sizeof(info)) {
+		if (infos == NULL) {
+			ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+			goto restore;
+		}
 	}
 	ret = sceGUIDGetUIDVectorByClass(s_threadmgrRuntime.manager->fastMutexClass,
 					  level, NULL, 0, NULL);
 	if (ret <= 0)
 		goto restore;
-	num = ret;
-	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
-						   num * sizeof(SceUID))) != NULL) {
+	while (1) {
+		vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+						   ret * sizeof(SceUID));
+		if (vector == NULL) {
+			ret = SCE_KERNEL_ERROR_NO_MEMORY;
+			goto restore;
+		}
 		total = sceGUIDGetUIDVectorByClass(
-			s_threadmgrRuntime.manager->fastMutexClass, level, vector, num,
-			&got);
-		if (total <= (int)got)
-			break;
-		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
-		num = total;
-	}
-	if (vector == NULL) {
-		ret = SCE_KERNEL_ERROR_NO_MEMORY;
-		goto restore;
+			s_threadmgrRuntime.manager->fastMutexClass, level, vector, ret, &got);
+		if (total > (int)got) {
+			ret = total;
+			sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+			continue;
+		}
+		break;
 	}
 	ret = 0;
 	got = 0;
@@ -792,18 +795,17 @@ int SceThreadmgrForDriver_6D4C1EB7(int level, ThreadmgrFastMutexInfo *infos, Sce
 			continue;
 		uidMutex = (struct ThreadmgrUidFastMutex *)pObject;
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&uidMutex->lock);
-		num = getFastMutexInfo(uidMutex->workArea, &info);
+		err = getFastMutexInfo(uidMutex->workArea, &info);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&uidMutex->lock, intr);
 		sceGUIDReleaseObject(vector[i]);
-		if (num != 0)
+		if (err != 0)
 			continue;
 		ret++;
 		if (size < ret * sizeof(info)) {
 			ret += total - i - 1;
 			break;
 		}
-		at = got++;
-		memcpy(&infos[at], &info, sizeof(info));
+		memcpy(&infos[got++], &info, sizeof(info));
 	}
 	if (count != NULL)
 		*count = got;

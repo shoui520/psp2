@@ -46,8 +46,7 @@ static int getLwMutexInfo(SceUID lwMutexId, SceKernelLwMutexInfo *info)
 	SceUID owner;
 	int intr, ret;
 
-	memset(info, 0, sizeof(*info));
-	info->size = sizeof(*info);
+	*info = (SceKernelLwMutexInfo){ .size = sizeof(*info) };
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(lwMutexId,
 		s_threadmgrRuntime.manager->lwMutexClass, &pObject);
@@ -131,8 +130,8 @@ void startLwMutex(void)
 /* closes every lw mutex a process still holds, PUID and GUID */
 int lwMutexProcessExit(SceProcessObject *process)
 {
-	SceUID *vector;
 	SceSize got = 0;
+	SceUID *vector;
 	SceUID puid, guid;
 	int num, i, intr, ret;
 
@@ -850,33 +849,42 @@ restore:
 int SceThreadmgrForDriver_C2DA6286(int level, SceKernelLwMutexInfo *infos, SceSize size,
 				   SceSize *count)
 {
-	SceKernelLwMutexInfo info;
 	SceSize got = 0;
+	SceKernelLwMutexInfo info;
 	SceUID *vector;
-	int num, total, i, ret, err;
+	int total, i, ret, err;
 
-	if (size >= sizeof(info) && infos == NULL)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = sceGUIDGetUIDVectorByClass(s_threadmgrRuntime.manager->lwMutexClass,
-					  level, NULL, 0, NULL);
-	if (num <= 0)
-		return num;
-	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
-						   num * sizeof(SceUID))) != NULL) {
-		total = sceGUIDGetUIDVectorByClass(
-			s_threadmgrRuntime.manager->lwMutexClass, level, vector, num, &got);
-		if (total <= (int)got)
-			break;
-		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
-		num = total;
+	if (size >= sizeof(info)) {
+		if (infos == NULL) {
+			ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+			goto end;
+		}
 	}
-	if (vector == NULL)
-		return SCE_KERNEL_ERROR_NO_MEMORY;
+	ret = sceGUIDGetUIDVectorByClass(s_threadmgrRuntime.manager->lwMutexClass,
+					  level, NULL, 0, NULL);
+	if (ret <= 0)
+		goto end;
+	while (1) {
+		vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+						   ret * sizeof(SceUID));
+		if (vector == NULL) {
+			ret = SCE_KERNEL_ERROR_NO_MEMORY;
+			goto end;
+		}
+		total = sceGUIDGetUIDVectorByClass(
+			s_threadmgrRuntime.manager->lwMutexClass, level, vector, ret, &got);
+		if (total > (int)got) {
+			ret = total;
+			sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+			continue;
+		}
+		break;
+	}
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
 		err = getLwMutexInfo(vector[i], &info);
-		if (err != 0 && err != SCE_KERNEL_ERROR_LW_MUTEX_CAN_NOT_ACCESS)
+		if (err != SCE_KERNEL_ERROR_LW_MUTEX_CAN_NOT_ACCESS && err != 0)
 			continue;
 		ret++;
 		if (size < ret * sizeof(info)) {
@@ -888,6 +896,7 @@ int SceThreadmgrForDriver_C2DA6286(int level, SceKernelLwMutexInfo *infos, SceSi
 	if (count != NULL)
 		*count = got;
 	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+end:
 	return ret;
 }
 
@@ -895,34 +904,43 @@ int SceThreadmgrForDriver_C2DA6286(int level, SceKernelLwMutexInfo *infos, SceSi
 int sceKernelGetLwMutexInfoAllProc(SceUID pid, int level, SceKernelLwMutexInfo *infos,
 				   SceSize size, SceSize *count)
 {
-	struct ThreadmgrThreadObject *owner;
-	SceKernelLwMutexInfo info;
 	SceSize got = 0;
+	SceKernelLwMutexInfo info;
+	struct ThreadmgrThreadObject *owner;
 	SceUID *vector;
-	int num, total, i, ret, err;
+	int total, i, ret, err;
 
-	if (size >= sizeof(info) && infos == NULL)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = scePUIDGetUIDVectorByClass(pid,
-		s_threadmgrRuntime.manager->lwMutexClass, level, NULL, 0, NULL);
-	if (num <= 0)
-		return num;
-	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
-						   num * sizeof(SceUID))) != NULL) {
-		total = scePUIDGetUIDVectorByClass(pid,
-			s_threadmgrRuntime.manager->lwMutexClass, level, vector, num, &got);
-		if (total <= (int)got)
-			break;
-		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
-		num = total;
+	if (size >= sizeof(info)) {
+		if (infos == NULL) {
+			ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+			goto end;
+		}
 	}
-	if (vector == NULL)
-		return SCE_KERNEL_ERROR_NO_MEMORY;
+	ret = scePUIDGetUIDVectorByClass(pid,
+		s_threadmgrRuntime.manager->lwMutexClass, level, NULL, 0, NULL);
+	if (ret <= 0)
+		goto end;
+	while (1) {
+		vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+						   ret * sizeof(SceUID));
+		if (vector == NULL) {
+			ret = SCE_KERNEL_ERROR_NO_MEMORY;
+			goto end;
+		}
+		total = scePUIDGetUIDVectorByClass(pid,
+			s_threadmgrRuntime.manager->lwMutexClass, level, vector, ret, &got);
+		if (total > (int)got) {
+			ret = total;
+			sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+			continue;
+		}
+		break;
+	}
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
 		err = getLwMutexInfo(SceSysmemForDriver_45D22597(pid, vector[i]), &info);
-		if (err != 0 && err != SCE_KERNEL_ERROR_LW_MUTEX_CAN_NOT_ACCESS)
+		if (err != SCE_KERNEL_ERROR_LW_MUTEX_CAN_NOT_ACCESS && err != 0)
 			continue;
 		info.uid = vector[i];
 		if (info.currentOwnerId > 0 && !(info.currentOwnerId & USER_THREAD_ID_KERNEL_FLAG)) {
@@ -943,6 +961,7 @@ int sceKernelGetLwMutexInfoAllProc(SceUID pid, int level, SceKernelLwMutexInfo *
 	if (count != NULL)
 		*count = got;
 	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+end:
 	return ret;
 }
 

@@ -27,9 +27,8 @@ static inline int driverSlot(uint32_t slot)
 int SceThreadmgrForDriver_B645C7EF(uint32_t size, void (*destructor)(void *, uintptr_t),
 				   uintptr_t argument)
 {
-	SceKernelSpinlock *lock = &s_threadmgrRuntime.manager->threadMgrCBLock;
 	struct ThreadmgrTlsSlot *descriptor;
-	SceKernelIntrStatus intr = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
+	SceKernelIntrStatus intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_threadmgrRuntime.manager->threadMgrCBLock);
 	uint32_t slot;
 
 	for (slot = TLS_SLOT_FIRST; slot < TLS_SLOT_COUNT; slot++) {
@@ -41,24 +40,23 @@ int SceThreadmgrForDriver_B645C7EF(uint32_t size, void (*destructor)(void *, uin
 		descriptor->active = 1;
 		descriptor->liveCount = 0;
 		descriptor->size = size;
-		sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_threadmgrRuntime.manager->threadMgrCBLock, intr);
 		return slot;
 	}
-	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_threadmgrRuntime.manager->threadMgrCBLock, intr);
 	return SCE_KERNEL_ERROR_KERNEL_TLS_FULL;
 }
 
 /* SceThreadmgrForDriver_8C3C1F78: a slot no thread uses any more goes back */
 int SceThreadmgrForDriver_8C3C1F78(uint32_t slot)
 {
-	SceKernelSpinlock *lock = &s_threadmgrRuntime.manager->threadMgrCBLock;
 	struct ThreadmgrTlsSlot *descriptor;
 	SceKernelIntrStatus intr;
 	int result;
 
 	if (!driverSlot(slot))
 		return SCE_KERNEL_ERROR_ILLEGAL_KERNEL_TLS_INDEX;
-	intr = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_threadmgrRuntime.manager->threadMgrCBLock);
 	descriptor = &s_threadmgrRuntime.manager->tlsSlots[slot];
 	if (!descriptor->active) {
 		result = SCE_KERNEL_ERROR_ILLEGAL_KERNEL_TLS_INDEX;
@@ -68,7 +66,7 @@ int SceThreadmgrForDriver_8C3C1F78(uint32_t slot)
 		descriptor->active = 0;
 		result = 0;
 	}
-	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_threadmgrRuntime.manager->threadMgrCBLock, intr);
 	return result;
 }
 
@@ -134,12 +132,11 @@ void *SceThreadmgrForDriver_3A72C6D8(uint32_t slot)
 /* A thread's slot memory goes when it does (its destructors first) */
 int releaseThreadTlsSlots(struct ThreadCB *thread)
 {
-	SceKernelSpinlock *lock = &s_threadmgrRuntime.manager->threadMgrCBLock;
 	struct ThreadmgrTlsSlot *descriptor;
 	void *memory;
 	uint32_t slot;
 
-	sceKernelSpinlockLowLock(lock);
+	sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadMgrCBLock);
 	for (slot = TLS_SLOT_FIRST; slot < TLS_SLOT_COUNT; slot++) {
 		memory = thread->tlsSlotMemory.slot[slot];
 		if (memory == NULL)
@@ -151,6 +148,6 @@ int releaseThreadTlsSlots(struct ThreadCB *thread)
 		thread->tlsSlotMemory.slot[slot] = NULL;
 		descriptor->liveCount--;
 	}
-	sceKernelSpinlockLowUnlock(lock);
+	sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->threadMgrCBLock);
 	return 0;
 }

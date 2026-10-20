@@ -768,20 +768,26 @@ int sceKernelCancelEventFlag(SceUID evfId, uint32_t setPattern, int *numWaitThre
 int SceThreadmgrForDriver_612277C9(SceUID evfId, SceKernelEventFlagInfo *info)
 {
 	SceKernelEventFlagInfo local;
+	uint32_t saved;
 	SceSize size;
 	int ret;
 
-	if (info == NULL)
-		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	if (info->size > sizeof(local))
-		return SCE_KERNEL_ERROR_ILLEGAL_SIZE;
-	ret = getEventFlagInfo(evfId, &local);
-	if (ret >= 0) {
-		size = info->size;
-		if (size > sizeof(local))
-			size = sizeof(local);
-		memcpy(info, &local, size);
+	saved = ThreadmgrUserRoWord();
+	ThreadmgrSetUserRoWord(saved << 16);
+	if (info == NULL) {
+		ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
+	} else if (info->size > sizeof(local)) {
+		ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
+	} else {
+		ret = getEventFlagInfo(evfId, &local);
+		if (ret >= 0) {
+			size = info->size;
+			if (size > sizeof(local))
+				size = sizeof(local);
+			memcpy(info, &local, size);
+		}
 	}
+	ThreadmgrSetUserRoWord(saved);
 	return ret;
 }
 
@@ -792,26 +798,34 @@ int SceThreadmgrForDriver_5870C73A(int level, SceKernelEventFlagInfo *infos, Sce
 	SceKernelEventFlagInfo info;
 	SceSize got = 0;
 	SceUID *vector;
-	int num, total, i, ret;
+	int total, i, ret;
 
-	if (size >= sizeof(info) && infos == NULL)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = sceGUIDGetUIDVectorByClass(s_threadmgrRuntime.manager->eventFlagClass,
-					  level, NULL, 0, NULL);
-	if (num <= 0)
-		return num;
-	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
-						   num * sizeof(SceUID))) != NULL) {
-		total = sceGUIDGetUIDVectorByClass(
-			s_threadmgrRuntime.manager->eventFlagClass, level, vector, num,
-			&got);
-		if (total <= (int)got)
-			break;
-		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
-		num = total;
+	if (size >= sizeof(info)) {
+		if (infos == NULL) {
+			ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+			goto end;
+		}
 	}
-	if (vector == NULL)
-		return SCE_KERNEL_ERROR_NO_MEMORY;
+	ret = sceGUIDGetUIDVectorByClass(s_threadmgrRuntime.manager->eventFlagClass,
+					  level, NULL, 0, NULL);
+	if (ret <= 0)
+		goto end;
+	while (1) {
+		vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+						   ret * sizeof(SceUID));
+		if (vector == NULL) {
+			ret = SCE_KERNEL_ERROR_NO_MEMORY;
+			goto end;
+		}
+		total = sceGUIDGetUIDVectorByClass(
+			s_threadmgrRuntime.manager->eventFlagClass, level, vector, ret, &got);
+		if (total > (int)got) {
+			ret = total;
+			sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+			continue;
+		}
+		break;
+	}
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
@@ -827,6 +841,7 @@ int SceThreadmgrForDriver_5870C73A(int level, SceKernelEventFlagInfo *infos, Sce
 	if (count != NULL)
 		*count = got;
 	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+end:
 	return ret;
 }
 
@@ -841,26 +856,34 @@ int SceThreadmgrForDriver_0EB0ABF0(SceUID pid, int level, SceKernelEventFlagInfo
 	SceSize got = 0;
 	uint32_t attributes;
 	SceUID *vector;
-	int num, total, i, ret;
+	int total, i, ret;
 
-	if (size >= sizeof(info) && infos == NULL)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = scePUIDGetUIDVectorByClass(pid, s_threadmgrRuntime.manager->eventFlagClass,
-					  level, NULL, 0, NULL);
-	if (num <= 0)
-		return num;
-	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
-						   num * sizeof(SceUID))) != NULL) {
-		total = scePUIDGetUIDVectorByClass(pid,
-			s_threadmgrRuntime.manager->eventFlagClass, level, vector, num,
-			&got);
-		if (total <= (int)got)
-			break;
-		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
-		num = total;
+	if (size >= sizeof(info)) {
+		if (infos == NULL) {
+			ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+			goto end;
+		}
 	}
-	if (vector == NULL)
-		return SCE_KERNEL_ERROR_NO_MEMORY;
+	ret = scePUIDGetUIDVectorByClass(pid, s_threadmgrRuntime.manager->eventFlagClass,
+					  level, NULL, 0, NULL);
+	if (ret <= 0)
+		goto end;
+	while (1) {
+		vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+						   ret * sizeof(SceUID));
+		if (vector == NULL) {
+			ret = SCE_KERNEL_ERROR_NO_MEMORY;
+			goto end;
+		}
+		total = scePUIDGetUIDVectorByClass(pid,
+			s_threadmgrRuntime.manager->eventFlagClass, level, vector, ret, &got);
+		if (total > (int)got) {
+			ret = total;
+			sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+			continue;
+		}
+		break;
+	}
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
@@ -879,5 +902,6 @@ int SceThreadmgrForDriver_0EB0ABF0(SceUID pid, int level, SceKernelEventFlagInfo
 	if (count != NULL)
 		*count = got;
 	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+end:
 	return ret;
 }

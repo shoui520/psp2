@@ -396,7 +396,7 @@ int SceThreadmgrForKernel_392599F1(SceUID threadId, SceUInt32 *timeout);
 int SceThreadmgrForKernel_444CE648(SceUID threadId, uint32_t *vfp);
 int64_t SceThreadmgrForKernel_4BAA5F3B(SceSize size, ThreadmgrStackFunction function, void *arg);
 int SceThreadmgrForKernel_5075AE5E(SceUID threadId, const ThreadmgrDebugRegisters *regs,
-				   uint32_t mask, int mode);
+				   uint32_t mask);
 int SceThreadmgrForKernel_60798313(uint32_t *value);
 int SceThreadmgrForKernel_614BF2BE(SceUID threadId, SceUInt32 *timeout);
 /* vitasdk: ksceKernelGetThreadContextInfo */
@@ -407,7 +407,7 @@ void SceThreadmgrForKernel_8C07C8EC(ThreadmgrTraceHook hook);
 int SceThreadmgrForKernel_sceKernelSetThreadAccessLevel(int permission);
 int SceThreadmgrForKernel_A7E5C83D(int *enable);
 void SceThreadmgrForKernel_ABBE9BA5(ThreadmgrTraceHook hook);
-int SceThreadmgrForKernel_AC726660(SceUID threadId, const uint32_t *vfp, uint32_t mask, int mode);
+int SceThreadmgrForKernel_AC726660(SceUID threadId, const uint32_t *vfp, uint32_t mask);
 int SceThreadmgrForKernel_BB56D42F(void);
 int SceThreadmgrForKernel_C4735A7E(SceUID threadId, ThreadmgrDebugRegisters *regs);
 int SceThreadmgrForKernel_DF59DF99(unsigned int cpuId, void (*fn)(void *), void *arg);

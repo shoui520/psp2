@@ -748,6 +748,15 @@ int waitExceptionCBForUser(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt3
 int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
 
+/*
+ * Sony keeps the callback context word and the words copied into it as plain
+ * ints: a store through the context reloads it (returnFromCallback,
+ * returnFromWorkTask).
+ */
+#define ThreadmgrCallbackContext(regs)	\
+	((struct ThreadRegisterContext *)*(unsigned int *)&(regs)->callbackContext)
+#define ThreadmgrIntWord(word)		(*(unsigned int *)&(word))
+
 /* work_queue.c */
 void startWorkQueue(void);
 int createGlobalWorkQueue(void);

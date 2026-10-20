@@ -317,7 +317,7 @@ int sceKernelGetThreadInfoForUser(SceUID threadId, void *info)
 }
 
 /* the core of _sceKernelGetThreadRunStatus */
-int sceKernelGetThreadRunStatusForUser(void *status)
+int __attribute__((noinline)) sceKernelGetThreadRunStatusForUser(void *status)
 {
 	return SceThreadmgrForDriver_33E85E9E(status);
 }
@@ -1730,15 +1730,16 @@ int _sceKernelLockLwMutexSyscall(void *work, int count, SceUInt32 *userTimeout, 
 	SceUInt32 timeout;
 	int ret, err;
 
-	if (userTimeout == NULL)
-		return _sceKernelLockLwMutex(work, count, NULL, callbacks);
-	ret = sceKernelCopyFromUser(&timeout, userTimeout, sizeof(timeout));
-	if (ret < 0)
-		return ret;
-	ret = _sceKernelLockLwMutex(work, count, &timeout, callbacks);
-	err = sceKernelCopyToUser(userTimeout, &timeout, sizeof(timeout));
-	if (err < 0)
-		ret = err;
+	if (userTimeout == NULL) {
+		ret = _sceKernelLockLwMutex(work, count, NULL, callbacks);
+	} else {
+		ret = sceKernelCopyFromUser(&timeout, userTimeout, sizeof(timeout));
+		if (ret >= 0) {
+			ret = _sceKernelLockLwMutex(work, count, &timeout, callbacks);
+			err = sceKernelCopyToUser(userTimeout, &timeout, sizeof(timeout));
+			ret = err < 0 ? err : ret;
+		}
+	}
 	return ret;
 }
 
@@ -1786,8 +1787,7 @@ int _sceKernelWaitThreadEnd(SceUID threadId, int *userStatus, SceUInt32 *userTim
 	}
 	if (userTimeout != NULL)
 		err = sceKernelCopyToUser(userTimeout, timeoutPtr, sizeof(timeout));
-	if (err < 0)
-		ret = err;
+	ret = err < 0 ? err : ret;
 end:
 	return ret;
 }
@@ -1830,8 +1830,7 @@ int _sceKernelWaitThreadEndCB(SceUID threadId, int *userStatus, SceUInt32 *userT
 	}
 	if (userTimeout != NULL)
 		err = sceKernelCopyToUser(userTimeout, timeoutPtr, sizeof(timeout));
-	if (err < 0)
-		ret = err;
+	ret = err < 0 ? err : ret;
 end:
 	return ret;
 }
@@ -2073,7 +2072,7 @@ int _sceKernelGetThreadRunStatus(void *userInfo, const ThreadmgrSyscallInfoArgs 
 	if (args.size > 0x34)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	info = __builtin_alloca(0x34);
-	memset(info, 0, 0x34);
+	__builtin_memset(info, 0, 0x34);
 	ret = sceKernelCopyFromUser(info, userInfo, args.size);
 	if (ret < 0)
 		return ret;
@@ -3417,8 +3416,8 @@ int _sceKernelSignalLwCondTo(const ThreadmgrLwCondWork *work, SceUID threadId)
 int _sceKernelGetLwCondInfo(const ThreadmgrLwCondWork *work, void *userInfo)
 {
 	ThreadmgrLwCondWork *kWork;
-	uint32_t *info;
-	int ret, err, i;
+	void *info;
+	int ret, err;
 
 	kWork = (ThreadmgrLwCondWork *)work;
 	if (work != NULL) {
@@ -3430,12 +3429,11 @@ int _sceKernelGetLwCondInfo(const ThreadmgrLwCondWork *work, void *userInfo)
 	if (userInfo == NULL)
 		return sceKernelGetLwCondInfoForUser(kWork, NULL);
 	info = __builtin_alloca(LW_COND_INFO_SIZE);
-	for (i = 0; i < LW_COND_INFO_SIZE / 4; i++)
-		info[i] = 0;
+	__builtin_memset(info, 0, LW_COND_INFO_SIZE);
 	ret = sceKernelCopyFromUser(info, userInfo, LW_COND_INFO_SIZE);
 	if (ret < 0)
 		return ret;
-	ret = sceKernelGetLwCondInfoForUser(kWork, (SceKernelLwCondInfo *)info);
+	ret = sceKernelGetLwCondInfoForUser(kWork, info);
 	err = sceKernelCopyToUser(userInfo, info, LW_COND_INFO_SIZE);
 	if (err < 0)
 		ret = err;
@@ -3869,8 +3867,8 @@ int sceKernelOpenEventFlag(const char *userName)
 	result = SceSysmemForKernel_BDE00106(name);
 	if (result < 0)
 		goto end;
-	if (s_threadmgrRuntime.manager->eventFlagClass !=
-	    SceSysmemForKernel_368F1C36(result)) {
+	if (SceSysmemForKernel_368F1C36(result) !=
+	    s_threadmgrRuntime.manager->eventFlagClass) {
 		result = SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS;
 		goto end;
 	}

@@ -151,8 +151,7 @@ int getThreadInfoForDebugger(SceUID threadId, SceUInt32 level, uint32_t flags,
 	SceUID waitId;
 	int intr, ret, nest, i;
 
-	memset(info, 0, sizeof(*info));
-	info->size = sizeof(*info);
+	*info = (ThreadmgrThreadInfoForDebugger){ .size = sizeof(*info) };
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithClassLevel(threadId, THREAD_CLASS(), level,
 					      &pObject) < 0) {
@@ -555,26 +554,35 @@ int getThreadInfoForDebuggerForUser(SceUID threadId, SceUInt32 level, uint32_t f
 int getThreadInfoListForDebugger(uint32_t flags, SceUInt32 level,
 				 ThreadmgrThreadInfoForDebugger *infos, SceSize size, SceSize *count)
 {
-	ThreadmgrThreadInfoForDebugger info;
 	SceSize got = 0;
+	ThreadmgrThreadInfoForDebugger info;
 	SceUID *vector;
-	int num, total, i, ret;
+	int total, i, ret;
 
-	if (size >= sizeof(info) && infos == NULL)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = sceGUIDGetUIDVectorByClass(THREAD_CLASS(), level, NULL, 0, NULL);
-	if (num <= 0)
-		return num;
-	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
-						   num * sizeof(SceUID))) != NULL) {
-		total = sceGUIDGetUIDVectorByClass(THREAD_CLASS(), level, vector, num, &got);
-		if (total <= (int)got)
-			break;
-		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
-		num = total;
+	if (size >= sizeof(info)) {
+		if (infos == NULL) {
+			ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+			goto end;
+		}
 	}
-	if (vector == NULL)
-		return SCE_KERNEL_ERROR_NO_MEMORY;
+	ret = sceGUIDGetUIDVectorByClass(THREAD_CLASS(), level, NULL, 0, NULL);
+	if (ret <= 0)
+		goto end;
+	while (1) {
+		vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+						   ret * sizeof(SceUID));
+		if (vector == NULL) {
+			ret = SCE_KERNEL_ERROR_NO_MEMORY;
+			goto end;
+		}
+		total = sceGUIDGetUIDVectorByClass(THREAD_CLASS(), level, vector, ret, &got);
+		if (total > (int)got) {
+			ret = total;
+			sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+			continue;
+		}
+		break;
+	}
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
@@ -590,6 +598,7 @@ int getThreadInfoListForDebugger(uint32_t flags, SceUInt32 level,
 	if (count != NULL)
 		*count = got;
 	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+end:
 	return ret;
 }
 
@@ -598,26 +607,37 @@ int getThreadInfoListProcForDebugger(SceUID pid, uint32_t flags, SceUInt32 level
 				     ThreadmgrThreadInfoForDebugger *infos, SceSize size,
 				     SceSize *count)
 {
+	SceSize got = 0;
 	ThreadmgrThreadInfoForDebugger info;
-	SceSize got = 0, found;
-	SceUID *vector, puid;
-	int num, total, i, ret;
+	SceUID puid;
+	SceSize found;
+	SceUID *vector;
+	int total, i, ret;
 
-	if (size >= sizeof(info) && infos == NULL)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = scePUIDGetUIDVectorByClass(pid, THREAD_CLASS(), level, NULL, 0, NULL);
-	if (num <= 0)
-		return num;
-	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
-						   num * sizeof(SceUID))) != NULL) {
-		total = scePUIDGetUIDVectorByClass(pid, THREAD_CLASS(), level, vector, num, &got);
-		if (total <= (int)got)
-			break;
-		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
-		num = total;
+	if (size >= sizeof(info)) {
+		if (infos == NULL) {
+			ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+			goto end;
+		}
 	}
-	if (vector == NULL)
-		return SCE_KERNEL_ERROR_NO_MEMORY;
+	ret = scePUIDGetUIDVectorByClass(pid, THREAD_CLASS(), level, NULL, 0, NULL);
+	if (ret <= 0)
+		goto end;
+	while (1) {
+		vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+						   ret * sizeof(SceUID));
+		if (vector == NULL) {
+			ret = SCE_KERNEL_ERROR_NO_MEMORY;
+			goto end;
+		}
+		total = scePUIDGetUIDVectorByClass(pid, THREAD_CLASS(), level, vector, ret, &got);
+		if (total > (int)got) {
+			ret = total;
+			sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+			continue;
+		}
+		break;
+	}
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
@@ -660,6 +680,7 @@ int getThreadInfoListProcForDebugger(SceUID pid, uint32_t flags, SceUInt32 level
 	if (count != NULL)
 		*count = got;
 	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+end:
 	return ret;
 }
 
@@ -967,67 +988,78 @@ resume:
 int getThreadNameListProc(SceUID pid, SceUInt32 level, ThreadmgrThreadName *names, SceSize size,
 			  SceSize *count)
 {
+	SceSize got = 0;
 	struct ThreadmgrThreadObject *object;
 	SceObjectBase *pObject;
 	ThreadmgrThreadName entry;
 	const char *name;
-	SceSize got = 0, need;
+	SceSize need;
 	SceUID *vector;
-	int num, total, found, i, intr, ret;
+	int total, found, i, intr, ret;
 
-	if (size >= sizeof(entry) && names == NULL)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = sceGUIDGetUIDVectorByClass(THREAD_CLASS(), level, NULL, 0, NULL);
-	if (num <= 0)
-		return num;
-	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
-						   num * sizeof(SceUID))) != NULL) {
-		total = sceGUIDGetUIDVectorByClass(THREAD_CLASS(), level, vector, num, &got);
+	if (size >= sizeof(entry)) {
+		if (names == NULL) {
+			found = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+			goto end;
+		}
+	}
+	found = sceGUIDGetUIDVectorByClass(THREAD_CLASS(), level, NULL, 0, NULL);
+	if (found <= 0)
+		goto end;
+	while (1) {
+		vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+						   found * sizeof(SceUID));
+		if (vector == NULL) {
+			found = SCE_KERNEL_ERROR_NO_MEMORY;
+			goto end;
+		}
+		total = sceGUIDGetUIDVectorByClass(THREAD_CLASS(), level, vector, found, &got);
 		if (total > (int)got) {
+			found = total;
 			sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
-			num = total;
 			continue;
 		}
-		if (total < 1) {
-			found = 0;
-			got = 0;
-		} else {
-			/* keep the process's threads, referenced */
-			found = 0;
-			for (i = 0; i < total; i++) {
-				if (sceGUIDReferObjectWithClass(vector[i], THREAD_CLASS(),
-						&pObject) < 0)
-					continue;
-				object = (struct ThreadmgrThreadObject *)pObject;
-				if (object->context.processId == pid) {
-					vector[found++] = vector[i];
-				} else {
-					intr = SceCpuForDriver_821FC0EE();
-					ret = sceGUIDReleaseObject(vector[i]);
-					sceKernelCpuResumeIntr(intr);
-					SCE_DBG_ASSERT_CHECK(ret >= 0, 2710);
-				}
-			}
-			got = 0;
-			for (i = 0, need = sizeof(entry); i < found; i++, need += sizeof(entry)) {
-				if (need <= size) {
-					ret = sceGUIDGetName(vector[i], &name);
-					SCE_DBG_ASSERT_CHECK(ret == 0, 2721);
-					entry.threadId = vector[i];
-					strncpy(entry.name, name, sizeof(entry.name));
-					names[got++] = entry;
-				}
+		break;
+	}
+	if (total < 1) {
+		found = 0;
+		got = 0;
+	} else {
+		/* keep the process's threads, referenced */
+		found = 0;
+		for (i = 0; i < total; i++) {
+			if (sceGUIDReferObjectWithClass(vector[i], THREAD_CLASS(),
+					&pObject) < 0)
+				continue;
+			object = (struct ThreadmgrThreadObject *)pObject;
+			if (object->context.processId == pid) {
+				vector[found++] = vector[i];
+			} else {
 				intr = SceCpuForDriver_821FC0EE();
-				sceGUIDReleaseObject(vector[i]);
+				ret = sceGUIDReleaseObject(vector[i]);
 				sceKernelCpuResumeIntr(intr);
+				SCE_DBG_ASSERT_CHECK(ret >= 0, 2710);
 			}
 		}
-		if (count != NULL)
-			*count = got;
-		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
-		return found;
+		got = 0;
+		for (i = 0, need = sizeof(entry); i < found; i++, need += sizeof(entry)) {
+			if (need <= size) {
+				ret = sceGUIDGetName(vector[i], &name);
+				SCE_DBG_ASSERT_CHECK(ret == 0, 2721);
+				entry.threadId = vector[i];
+				strncpy(entry.name, name, sizeof(entry.name));
+				names[got++] = entry;
+			}
+			intr = SceCpuForDriver_821FC0EE();
+			sceGUIDReleaseObject(vector[i]);
+			sceKernelCpuResumeIntr(intr);
+		}
 	}
-	return SCE_KERNEL_ERROR_NO_MEMORY;
+	if (count != NULL)
+		*count = got;
+	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+end:
+	return found;
 }
 
 /*
@@ -1403,9 +1435,9 @@ done:
 }
 
 int SceThreadmgrForKernel_5075AE5E(SceUID threadId, const ThreadmgrDebugRegisters *regs,
-				   uint32_t mask, int mode)
+				   uint32_t mask)
 {
-	return _sceKernelSetCpuRegisterForDebugger(threadId, regs, mask, mode);
+	return _sceKernelSetCpuRegisterForDebugger(threadId, regs, mask, 0);
 }
 
 /* the driver entry always writes what the thread returns to */
@@ -1524,9 +1556,9 @@ done:
 	return ret;
 }
 
-int SceThreadmgrForKernel_AC726660(SceUID threadId, const uint32_t *vfp, uint32_t mask, int mode)
+int SceThreadmgrForKernel_AC726660(SceUID threadId, const uint32_t *vfp, uint32_t mask)
 {
-	return _sceKernelSetVfpRegisterForDebugger(threadId, vfp, mask, mode);
+	return _sceKernelSetVfpRegisterForDebugger(threadId, vfp, mask, 0);
 }
 
 int SceThreadmgrForDriver_49A0B679(SceUID threadId, const uint32_t *vfp, uint32_t mask)

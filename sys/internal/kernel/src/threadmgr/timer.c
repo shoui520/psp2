@@ -109,21 +109,20 @@ static void unlinkTimer(struct ThreadmgrTimer *timer)
  */
 void setNextTimer(void)
 {
-	struct SceKernelThreadmgrPrivate *manager = s_threadmgrRuntime.manager;
-	struct ThreadmgrTimer *head = (struct ThreadmgrTimer *)&manager->timerQueueNext;
+	struct ThreadmgrTimer *head = (struct ThreadmgrTimer *)&s_threadmgrRuntime.manager->timerQueueNext;
 	struct ThreadmgrTimer *timer;
 	uint64_t first, limit, expiry, chosen, earliest;
 
-	SCE_DBG_ASSERT_CHECK(manager->timerLock != 0, 548);
+	SCE_DBG_ASSERT_CHECK(s_threadmgrRuntime.manager->timerLock != 0, 548);
 	timer = head->next;
 	if (timer == head) {
-		manager->systemTime->compareHi = 0xffffffff;
-		manager->systemTime->compareLo = 0xffffffff;
+		s_threadmgrRuntime.manager->systemTime->compareHi = 0xffffffff;
+		s_threadmgrRuntime.manager->systemTime->compareLo = 0xffffffff;
 		return;
 	}
 	first = timer->expiry;
-	if (manager->timerHandlingId != -1)
-		manager->timerNextToHandle = timer;
+	if (s_threadmgrRuntime.manager->timerHandlingId != -1)
+		s_threadmgrRuntime.manager->timerNextToHandle = timer;
 	/* the last of the timers due within TIMER_MIN_DELAY of the first */
 	limit = first + TIMER_MIN_DELAY;
 	expiry = first;
@@ -138,8 +137,8 @@ void setNextTimer(void)
 	earliest = SceSysrootForKernel_E20F6FC8() + TIMER_MIN_DELAY;
 	if (earliest <= chosen)
 		earliest = chosen;
-	manager->timerCompare = earliest;
-	manager->systemTime->compare = earliest;
+	s_threadmgrRuntime.manager->timerCompare = earliest;
+	s_threadmgrRuntime.manager->systemTime->compare = earliest;
 }
 
 static int uidCpuTimer_Constructor(void *object)
@@ -195,8 +194,6 @@ static int uidCpuTimer_Destructor(void *object)
 /* a delay goes back to the delay cache, its GUID kept for reuse */
 void uidDelay_FreeObject(ThreadmgrDelay *delay)
 {
-	struct SceKernelThreadmgrPrivate *manager;
-
 	SCE_DBG_ASSERT_LEVEL(0, ThreadmgrIntrDisabled(), 3899);
 	delay->base.event.next = (struct ThreadmgrWaitNode *)&delay->base.event.next;
 	delay->base.event.prev = (struct ThreadmgrWaitNode *)&delay->base.event.next;
@@ -206,12 +203,11 @@ void uidDelay_FreeObject(ThreadmgrDelay *delay)
 	memset(&delay->base.timer, 0, sizeof(delay->base.timer));
 	delay->callback = NULL;
 	delay->thread = NULL;
-	manager = s_threadmgrRuntime.manager;
-	sceKernelSpinlockLowLock(&manager->delayCacheLock);
-	delay->base.event.cacheNext = manager->delayCache;
-	manager->delayCacheCount++;
-	manager->delayCache = delay;
-	sceKernelSpinlockLowUnlock(&manager->delayCacheLock);
+	sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->delayCacheLock);
+	delay->base.event.cacheNext = s_threadmgrRuntime.manager->delayCache;
+	s_threadmgrRuntime.manager->delayCacheCount++;
+	s_threadmgrRuntime.manager->delayCache = delay;
+	sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->delayCacheLock);
 }
 
 /*
@@ -592,8 +588,7 @@ static int getTimerInfo(SceUID timerId, SceKernelTimerInfo *info)
 	SceUID pid;
 	int intr, ret;
 
-	memset(info, 0, sizeof(*info));
-	info->size = sizeof(*info);
+	*info = (SceKernelTimerInfo){ .size = sizeof(*info) };
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), &pObject) < 0) {
 		ret = TimerUnknownIdError();
@@ -804,19 +799,18 @@ void suspendCpuTimer(void)
 /* PLACEHOLDER: name; after a resume: the LT5 counts on from the kept count */
 void resumeCpuTimer(void)
 {
-	struct SceKernelThreadmgrPrivate *manager = s_threadmgrRuntime.manager;
 	volatile SceLongTimerRegisters *lt5;
 	uint32_t control;
 
 	sceKernelSysrootCorelockLock(0);
 	if (sceKernelCpuId() == 0) {
-		lt5 = manager->systemTime;
+		lt5 = s_threadmgrRuntime.manager->systemTime;
 		control = lt5->control;
 		lt5->control = 0;
 		lt5->countLo = (uint32_t)s_suspendedTime;
 		lt5->countHi = (uint32_t)(s_suspendedTime >> 32);
-		lt5->compareLo = (uint32_t)manager->timerCompare;
-		lt5->compareHi = (uint32_t)(manager->timerCompare >> 32);
+		lt5->compareLo = (uint32_t)s_threadmgrRuntime.manager->timerCompare;
+		lt5->compareHi = (uint32_t)(s_threadmgrRuntime.manager->timerCompare >> 32);
 		lt5->control = control;
 		sceKernelEnableIntr(TIMER_INTR);
 	}
@@ -999,9 +993,9 @@ void cancelDelayTimer(SceUID delayId, struct ThreadCB *thread)
  */
 int timerProcessExit(SceProcessObject *process)
 {
+	SceSize got = 0;
 	ThreadmgrUidTimer *uidTimer;
 	SceUID *vector, guid, pid;
-	SceSize got = 0;
 	uint32_t flags;
 	bool close;
 	int num, i, intr, ret;
@@ -1939,26 +1933,35 @@ int SceThreadmgrForDriver_19F3E92A(SceUID timerId, SceKernelTimerInfo *info)
 int SceThreadmgrForDriver_3C297724(int level, SceKernelTimerInfo *infos, SceSize size,
 				   SceSize *count)
 {
-	SceKernelTimerInfo info;
 	SceSize got = 0;
+	SceKernelTimerInfo info;
 	SceUID *vector;
-	int num, total, i, ret;
+	int total, i, ret;
 
-	if (size >= sizeof(info) && infos == NULL)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = sceGUIDGetUIDVectorByClass(TIMER_CLASS(), level, NULL, 0, NULL);
-	if (num <= 0)
-		return num;
-	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
-						   num * sizeof(SceUID))) != NULL) {
-		total = sceGUIDGetUIDVectorByClass(TIMER_CLASS(), level, vector, num, &got);
-		if (total <= (int)got)
-			break;
-		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
-		num = total;
+	if (size >= sizeof(info)) {
+		if (infos == NULL) {
+			ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+			goto end;
+		}
 	}
-	if (vector == NULL)
-		return SCE_KERNEL_ERROR_NO_MEMORY;
+	ret = sceGUIDGetUIDVectorByClass(TIMER_CLASS(), level, NULL, 0, NULL);
+	if (ret <= 0)
+		goto end;
+	while (1) {
+		vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+						   ret * sizeof(SceUID));
+		if (vector == NULL) {
+			ret = SCE_KERNEL_ERROR_NO_MEMORY;
+			goto end;
+		}
+		total = sceGUIDGetUIDVectorByClass(TIMER_CLASS(), level, vector, ret, &got);
+		if (total > (int)got) {
+			ret = total;
+			sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+			continue;
+		}
+		break;
+	}
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
@@ -1974,6 +1977,7 @@ int SceThreadmgrForDriver_3C297724(int level, SceKernelTimerInfo *infos, SceSize
 	if (count != NULL)
 		*count = got;
 	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+end:
 	return ret;
 }
 
@@ -1981,27 +1985,36 @@ int SceThreadmgrForDriver_3C297724(int level, SceKernelTimerInfo *infos, SceSize
 int SceThreadmgrForDriver_C327CA7C(SceUID pid, int level, SceKernelTimerInfo *infos,
 				   SceSize size, SceSize *count)
 {
+	SceSize got = 0;
 	SceKernelTimerInfo info;
 	SceUInt32 attr;
-	SceSize got = 0;
 	SceUID *vector;
-	int num, total, i, ret;
+	int total, i, ret;
 
-	if (size >= sizeof(info) && infos == NULL)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = scePUIDGetUIDVectorByClass(pid, TIMER_CLASS(), level, NULL, 0, NULL);
-	if (num <= 0)
-		return num;
-	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
-						   num * sizeof(SceUID))) != NULL) {
-		total = scePUIDGetUIDVectorByClass(pid, TIMER_CLASS(), level, vector, num, &got);
-		if (total <= (int)got)
-			break;
-		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
-		num = total;
+	if (size >= sizeof(info)) {
+		if (infos == NULL) {
+			ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+			goto end;
+		}
 	}
-	if (vector == NULL)
-		return SCE_KERNEL_ERROR_NO_MEMORY;
+	ret = scePUIDGetUIDVectorByClass(pid, TIMER_CLASS(), level, NULL, 0, NULL);
+	if (ret <= 0)
+		goto end;
+	while (1) {
+		vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+						   ret * sizeof(SceUID));
+		if (vector == NULL) {
+			ret = SCE_KERNEL_ERROR_NO_MEMORY;
+			goto end;
+		}
+		total = scePUIDGetUIDVectorByClass(pid, TIMER_CLASS(), level, vector, ret, &got);
+		if (total > (int)got) {
+			ret = total;
+			sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+			continue;
+		}
+		break;
+	}
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
@@ -2020,6 +2033,7 @@ int SceThreadmgrForDriver_C327CA7C(SceUID pid, int level, SceKernelTimerInfo *in
 	if (count != NULL)
 		*count = got;
 	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+end:
 	return ret;
 }
 
@@ -2160,28 +2174,37 @@ int SceThreadmgrForDriver_4A038803(SceUID alarmId, ThreadmgrAlarmInfo *info)
 int SceThreadmgrForDriver_2828F884(int level, ThreadmgrAlarmInfo *infos, SceSize size,
 				   SceSize *count)
 {
-	ThreadmgrAlarmInfo info;
 	SceSize got = 0;
+	ThreadmgrAlarmInfo info;
 	SceUID *vector;
-	int num, total, i, ret;
+	int total, i, ret;
 
-	if (size >= sizeof(info) && infos == NULL)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = sceGUIDGetUIDVectorByClass(s_threadmgrRuntime.manager->alarmClass, level,
-					  NULL, 0, NULL);
-	if (num <= 0)
-		return num;
-	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
-						   num * sizeof(SceUID))) != NULL) {
-		total = sceGUIDGetUIDVectorByClass(
-			s_threadmgrRuntime.manager->alarmClass, level, vector, num, &got);
-		if (total <= (int)got)
-			break;
-		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
-		num = total;
+	if (size >= sizeof(info)) {
+		if (infos == NULL) {
+			ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+			goto end;
+		}
 	}
-	if (vector == NULL)
-		return SCE_KERNEL_ERROR_NO_MEMORY;
+	ret = sceGUIDGetUIDVectorByClass(s_threadmgrRuntime.manager->alarmClass, level,
+					  NULL, 0, NULL);
+	if (ret <= 0)
+		goto end;
+	while (1) {
+		vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+						   ret * sizeof(SceUID));
+		if (vector == NULL) {
+			ret = SCE_KERNEL_ERROR_NO_MEMORY;
+			goto end;
+		}
+		total = sceGUIDGetUIDVectorByClass(
+			s_threadmgrRuntime.manager->alarmClass, level, vector, ret, &got);
+		if (total > (int)got) {
+			ret = total;
+			sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+			continue;
+		}
+		break;
+	}
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
@@ -2197,6 +2220,7 @@ int SceThreadmgrForDriver_2828F884(int level, ThreadmgrAlarmInfo *infos, SceSize
 	if (count != NULL)
 		*count = got;
 	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+end:
 	return ret;
 }
 
@@ -2272,12 +2296,11 @@ static inline __attribute__((always_inline)) void uidDelay_DeleteCache(int targe
 /* the cleaner thread keeps the delay cache between low and high */
 int uidDelay_ManageCache(int high, int low, int target)
 {
-	struct SceKernelThreadmgrPrivate *manager = s_threadmgrRuntime.manager;
 	int intr, count, ret;
 
-	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&manager->delayCacheLock);
-	count = manager->delayCacheCount;
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&manager->delayCacheLock, intr);
+	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_threadmgrRuntime.manager->delayCacheLock);
+	count = s_threadmgrRuntime.manager->delayCacheCount;
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_threadmgrRuntime.manager->delayCacheLock, intr);
 	if (count < low) {
 		ret = uidDelay_CreateCache(target);
 		if (ret < 0)

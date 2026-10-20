@@ -3641,7 +3641,6 @@ void removeReady(struct ThreadCB *thread, int priority)
 /* the CPU thread should run on, of the ones it may (UINT32_MAX: none for now) */
 int selectExecCpu(struct ThreadCB *thread)
 {
-	struct SceKernelThreadmgrPrivate *manager = s_threadmgrRuntime.manager;
 	struct ThreadMgrCpuCB *state;
 	SceProcessObject *process;
 	uint32_t affinity, mask, preferred, sameProcess, lastCpu, rotation, selected;
@@ -3662,7 +3661,7 @@ int selectExecCpu(struct ThreadCB *thread)
 	/* the CPUs running the least urgent threads */
 	preferred = 0;
 	bestPriority = thread->currentPriority + 1;
-	for (cpu = 0, state = manager->cpuCB; cpu < CPU_COUNT; cpu++, state++) {
+	for (cpu = 0, state = s_threadmgrRuntime.manager->cpuCB; cpu < CPU_COUNT; cpu++, state++) {
 		if (!(mask & (1u << cpu)))
 			continue;
 		priority = state->priority;
@@ -3678,7 +3677,7 @@ int selectExecCpu(struct ThreadCB *thread)
 			return 31 - leadingZeros(preferred);
 		/* of those, the ones running its process */
 		sameProcess = preferred;
-		for (cpu = 0, state = manager->cpuCB; cpu < CPU_COUNT; cpu++, state++) {
+		for (cpu = 0, state = s_threadmgrRuntime.manager->cpuCB; cpu < CPU_COUNT; cpu++, state++) {
 			if (state->processId != thread->processId)
 				sameProcess &= ~(1u << cpu);
 		}

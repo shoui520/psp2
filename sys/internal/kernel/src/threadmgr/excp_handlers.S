@@ -242,11 +242,8 @@ idleThreadEntry:
 .endm
 
 	faultHandler threadmgrAbortHandler, EXCP_KIND_DATA_ABORT
-	.ltorg
 	faultHandler threadmgrPrefetchHandler, EXCP_KIND_PREFETCH_ABORT
-	.ltorg
 	faultHandler threadmgrUndefHandler, EXCP_KIND_UNDEFINED
-	.ltorg
 
 	.arm
 	.balign 4
