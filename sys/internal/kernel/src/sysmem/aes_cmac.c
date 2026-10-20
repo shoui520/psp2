@@ -107,9 +107,7 @@ int SceKernelUtilsForDriver_222986EF(struct CmacContext *ctx, void *result)
 {
 	uint32_t blockBytes, index;
 
-	if (result == NULL)
-		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	if (ctx == NULL)
+	if (ctx == NULL || result == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	blockBytes = ctx->aes.blockWords * 4;
 	if (ctx->computed == 0) {

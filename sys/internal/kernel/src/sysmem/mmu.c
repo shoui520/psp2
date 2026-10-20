@@ -922,13 +922,23 @@ int sceKernelMMUL1VAtoPABySW(const uint32_t *l1, uintptr_t va, uintptr_t *pa)
 		}
 		*pa = (va & 0xffffff) | (entry & 0xff000000);
 		return MMU_WALK_SUPERSECTION;
+#if FW_DEBUG
 	case 3:
 		SCE_DBG_ASSERT_FAIL(2101);
 		return SCE_KERNEL_ERROR_CPU_ERROR;
+#endif
 	case MMU_L1_TYPE_PAGE_TABLE:
 		return MMU_WALK_PAGE_TABLE;
+#if !FW_DEBUG
+	case MMU_L1_TYPE_FAULT:
+		return MMU_WALK_FAULT;
+	default:
+		return SCE_KERNEL_ERROR_CPU_ERROR;
+#endif
 	}
+#if FW_DEBUG
 	return MMU_WALK_FAULT;
+#endif
 }
 
 /* the access codes the IsEqualAccessible walkers take */
@@ -944,6 +954,7 @@ int sceKernelMMUL1IsEqualAccessibleBySW(const uint32_t *l1, uint32_t perm, uintp
 {
 	uint32_t entry = l1[va >> 20], want;
 
+#if FW_DEBUG
 	switch (MMU_L1_TYPE(entry)) {
 	case MMU_L1_TYPE_SECTION:
 		break;
@@ -955,6 +966,18 @@ int sceKernelMMUL1IsEqualAccessibleBySW(const uint32_t *l1, uint32_t perm, uintp
 	default:
 		return MMU_WALK_FAULT;
 	}
+#else
+	switch (MMU_L1_TYPE(entry)) {
+	case MMU_L1_TYPE_SECTION:
+		break;
+	case MMU_L1_TYPE_PAGE_TABLE:
+		return MMU_WALK_PAGE_TABLE;
+	case MMU_L1_TYPE_FAULT:
+		return MMU_WALK_FAULT;
+	default:
+		return SCE_KERNEL_ERROR_CPU_ERROR;
+	}
+#endif
 	switch (perm) {
 	case 0x05:
 		want = 0x8400;

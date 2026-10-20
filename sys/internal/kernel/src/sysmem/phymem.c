@@ -262,7 +262,7 @@ PhyPage *PhyPageTableGetPhyPage(PhyPageTable *table, SceUInt32 pindex)
 	}
 	if (pindex >= table->pindexMax)
 		return NULL;
-	page = (PhyPage *)(table->entries + pindex - table->basePindex);
+	page = (PhyPage *)((uintptr_t)table->entries - (table->basePindex << 2) + (pindex << 2));
 	return page;
 }
 
@@ -284,7 +284,8 @@ PhyPage *PhyPageTableMgrGetPhyPage(PhyPageTableMgr *mgr, SceUInt32 pindex)
 }
 
 /* the descriptor of pindex in whichever segment holds it */
-static __attribute__((noinline)) PhyPage *PhyMemPartGetPhyPageByIndexRaw(PhyMemPart *part, SceUInt32 pindex)
+static inline __attribute__((always_inline))
+PhyPage *PhyMemPartGetPhyPageByIndexBody(PhyMemPart *part, SceUInt32 pindex)
 {
 	PhyMemSegment *segment;
 
@@ -298,6 +299,12 @@ static __attribute__((noinline)) PhyPage *PhyMemPartGetPhyPageByIndexRaw(PhyMemP
 				    "pSegment:0x%08x - 0x%08x\n", segment->pindexStart,
 				    segment->pindexEnd);
 	return NULL;
+}
+
+/* Sony's compiler inlined it in most callers and kept this copy for the others */
+static __attribute__((noinline)) PhyPage *PhyMemPartGetPhyPageByIndexRaw(PhyMemPart *part, SceUInt32 pindex)
+{
+	return PhyMemPartGetPhyPageByIndexBody(part, pindex);
 }
 
 static inline SceInt32 PhyMemPartRefer(PhyMemPart *part)
@@ -316,6 +323,22 @@ static inline SceInt32 PhyMemPartRelease(PhyMemPart *part)
 	SCE_DBG_ASSERT_CHECK_FUNC(count > 0, 1499, "PhyMemPartRelease");
 	return count;
 }
+
+#if FW_DEBUG
+/* Sony's compiler kept out-of-line copies for the two debug listings */
+static __attribute__((noinline)) SceInt32 PhyMemPartReferCall(PhyMemPart *part)
+{
+	return PhyMemPartRefer(part);
+}
+
+static __attribute__((noinline)) SceInt32 PhyMemPartReleaseCall(PhyMemPart *part)
+{
+	return PhyMemPartRelease(part);
+}
+#else
+#define PhyMemPartReferCall(_part)	PhyMemPartRefer(_part)
+#define PhyMemPartReleaseCall(_part)	PhyMemPartRelease(_part)
+#endif
 
 /* name unknown: a free 1 MiB run back into the sorted free list, merged with its neighbours */
 int PhyMemPartInsertFreePhyPage1MRaw(PhyMemPart *part, PhyPage *page)
@@ -598,7 +621,7 @@ int PhyMemPartFreeCountLinkByIndexRaw(PhyMemPart *part, SceUInt32 pindex)
 	int count = 1;
 
 	for (;;) {
-		page = PhyMemPartGetPhyPageByIndexRaw(part, pindex);
+		page = PhyMemPartGetPhyPageByIndexBody(part, pindex);
 		info = page->info;
 		if ((info & PHYPAGE_LINK_MASK) != PHYPAGE_LINK_MORE) {
 			if ((info & PHYPAGE_LINK_MASK) == PHYPAGE_LINK_LAST)
@@ -780,7 +803,7 @@ int PhyMemPartGetInfoForDebugger(PhyMemPart *part, SceKernelPhyMemPartInfoForDeb
 	SceSize real, cached;
 	int flags, ret, i, links, n;
 
-	PhyMemPartRefer(part);
+	PhyMemPartReferCall(part);
 	flags = sceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
 	if (!(part->flags & PHYMEM_PART_ACTIVE)) {
 		SCE_DBG_PRINTF(0xb, 4606, "PhyMemPart is not active\n");
@@ -877,7 +900,7 @@ int PhyMemPartGetInfoForDebugger(PhyMemPart *part, SceKernelPhyMemPartInfoForDeb
 	ret = 0;
 out:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, flags);
-	PhyMemPartRelease(part);
+	PhyMemPartReleaseCall(part);
 	return ret;
 }
 
@@ -901,7 +924,7 @@ static inline int PhyMemPartLpddr2CheckRaw(PhyMemPart *part)
 			continue;
 		pindex = part->buddy[i].pindex;
 		for (;;) {
-			page = PhyMemPartGetPhyPageByIndexRaw(part, pindex);
+			page = PhyMemPartGetPhyPageByIndexBody(part, pindex);
 			if (page == NULL) {
 				SCE_DBG_PRINTF(0xb, 1752, "pPhyPage is NULL\n");
 				SCE_DBG_ASSERT_FAIL(1753);
@@ -915,7 +938,7 @@ static inline int PhyMemPartLpddr2CheckRaw(PhyMemPart *part)
 	return 0;
 }
 
-int PhyMemPartCheckRaw(PhyMemPart *part)
+__attribute__((noinline)) int PhyMemPartCheckRaw(PhyMemPart *part)
 {
 	int ret;
 
@@ -951,7 +974,7 @@ void PhyMemPartCannotAllocateRaw(PhyMemPart *part, SceSize request, const char *
 				continue;
 			pindex = part->buddy[i].pindex;
 			for (n = 0; ; n++) {
-				page = PhyMemPartGetPhyPageByIndexRaw(part, pindex);
+				page = PhyMemPartGetPhyPageByIndexBody(part, pindex);
 				SCE_DBG_PRINTF(6, 2492, "\tFreeBuddy:%d:%4d:0x%08x+0x%08x\n", i, n,
 					       PhyMemPartGetPbaseByIndex(part, pindex),
 					       PhyPageGetSize(page));
@@ -975,8 +998,8 @@ void PhyMemPartCannotAllocateRaw(PhyMemPart *part, SceSize request, const char *
 /* name unknown: two buddies joined into the first, one order up */
 void PhyMemPartBuddyMergeRaw(PhyMemPart *part, SceUInt32 pindex, SceUInt32 buddyIndex)
 {
-	PhyPage *page = PhyMemPartGetPhyPageByIndexRaw(part, pindex);
-	PhyPage *buddy = PhyMemPartGetPhyPageByIndexRaw(part, buddyIndex);
+	PhyPage *page = PhyMemPartGetPhyPageByIndexBody(part, pindex);
+	PhyPage *buddy = PhyMemPartGetPhyPageByIndexBody(part, buddyIndex);
 
 	page->info = PHYPAGE_PINDEX(pindex) | (page->info & PHYPAGE_SIZED_MASK) | PHYPAGE_LINK_MASK |
 		     (((page->info & PHYPAGE_ORDER_MASK) + (1 << 20)) & PHYPAGE_ORDER_MASK);
@@ -993,7 +1016,7 @@ static inline void PhyMemPartShowBuddyLinkByIndexRaw(PhyMemPart *part, SceUInt32
 	int n = 1;
 
 	for (;;) {
-		page = PhyMemPartGetPhyPageByIndexRaw(part, pindex);
+		page = PhyMemPartGetPhyPageByIndexBody(part, pindex);
 		SCE_DBG_PRINTF_WITH_INFO_FUNC(0, 2229, "PhyMemPartShowBuddyLinkByIndexRaw",
 					      "\t\t%4d:0x%04x: 0x%08x+0x%08x\n", n, pindex,
 					      PhyMemPartGetPbaseByIndex(part, pindex),
@@ -1159,7 +1182,7 @@ int PhyMemPartAllocPhyPage1MCoreAssertRaw2(PhyMemPart *part, SceSize size, SceUI
 			if (fromHigh) {
 				/* the top of the unit */
 				split = start + ((unit->size - size) >> 20) * PHYMEM_PAGES_PER_1M;
-				rest = PhyMemPartGetPhyPageByIndexRaw(part, split);
+				rest = PhyMemPartGetPhyPageByIndexBody(part, split);
 				rest->size = size;
 				rest->info |= PHYPAGE_SIZED_MASK;
 				unit->size -= size;
@@ -1171,7 +1194,7 @@ int PhyMemPartAllocPhyPage1MCoreAssertRaw2(PhyMemPart *part, SceSize size, SceUI
 			}
 			/* the bottom; the rest stays on the list */
 			split = start + (size >> 20) * PHYMEM_PAGES_PER_1M;
-			rest = PhyMemPartGetPhyPageByIndexRaw(part, split);
+			rest = PhyMemPartGetPhyPageByIndexBody(part, split);
 #if FW_DEBUG
 			if (rest == NULL) {
 				SCE_DBG_PRINTF(0xb, 2561, "%p [%s]\n", part, part->name);
@@ -1221,7 +1244,7 @@ int PhyMemPartAllocPhyPage1MCoreAssertRaw2(PhyMemPart *part, SceSize size, SceUI
 
 /* phymem_low.c */
 
-uintptr_t sceKernelPhyPageTableMgrGetPbase(PhyPageTableMgr *mgr)
+SYSMEM_DEBUG_FUNC uintptr_t sceKernelPhyPageTableMgrGetPbase(PhyPageTableMgr *mgr)
 {
 	SCE_DBG_ASSERT_CHECK(mgr != NULL, 1205);
 	SCE_DBG_ASSERT_CHECK(mgr->tables[0] != NULL, 1206);
@@ -1385,7 +1408,7 @@ static inline int PhyMemPartAllocPhyPageBuddyRaw(PhyMemPart *part, SceSize size,
 		/* halve it down to the order asked for */
 		while (order < i) {
 			pindex = part->buddy[i].pindex;
-			page = PhyMemPartGetPhyPageByIndexRaw(part, pindex);
+			page = PhyMemPartGetPhyPageByIndexBody(part, pindex);
 			switch (page->info & PHYPAGE_LINK_MASK) {
 			case PHYPAGE_LINK_MORE:
 				next = PHYPAGE_PINDEX(page->info);
@@ -1411,7 +1434,7 @@ static inline int PhyMemPartAllocPhyPageBuddyRaw(PhyMemPart *part, SceSize size,
 			next = pindex + (1 << (PHYPAGE_ORDER(newOrder) - PHYMEM_PAGE_SHIFT));
 			page->info = PHYPAGE_PINDEX(next) | (page->info & PHYPAGE_SIZED_MASK) |
 				     PHYPAGE_LINK_MORE | newOrder;
-			half = PhyMemPartGetPhyPageByIndexRaw(part, next);
+			half = PhyMemPartGetPhyPageByIndexBody(part, next);
 			half->info = (page->info & PHYPAGE_ORDER_MASK) | PHYPAGE_BUDDY_FREE_LAST;
 			part->buddy[i].state = PHYMEM_BUDDY_HAS;
 			if (PhyMemPartHasIndex(part, pindex))
@@ -1423,7 +1446,7 @@ static inline int PhyMemPartAllocPhyPageBuddyRaw(PhyMemPart *part, SceSize size,
 
 	/* the first block of the order off its list */
 	pindex = part->buddy[order].pindex;
-	page = PhyMemPartGetPhyPageByIndexRaw(part, pindex);
+	page = PhyMemPartGetPhyPageByIndexBody(part, pindex);
 	info = page->info;
 	switch (info & PHYPAGE_LINK_MASK) {
 	case PHYPAGE_LINK_MORE:
@@ -1719,7 +1742,7 @@ static inline int PhyMemPartFreePhyPageBuddyRaw(PhyMemPart *part, PhyPage *page)
 		break;
 	case PHYMEM_BUDDY_HAS:
 		pindex = part->buddy[PHYMEM_BUDDY_ORDERS - 1].pindex;
-		unit = PhyMemPartGetPhyPageByIndexRaw(part, pindex);
+		unit = PhyMemPartGetPhyPageByIndexBody(part, pindex);
 		unit->size = 0x100000;
 		unit->info = PHYPAGE_PINDEX(pindex) | (unit->info & 0x3ff00000) | PHYPAGE_SIZED_MASK;
 		PhyMemPartInsertFreePhyPage1MRaw(part, unit);
@@ -2312,7 +2335,7 @@ int sceKernelShowPhyMemPart(PhyMemPart *part)
 #if FW_DEBUG
 	int intr, ret;
 
-	PhyMemPartRefer(part);
+	PhyMemPartReferCall(part);
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
 	if (part->flags & PHYMEM_PART_ACTIVE) {
 		ret = 0;
@@ -2322,7 +2345,7 @@ int sceKernelShowPhyMemPart(PhyMemPart *part)
 		ret = SCE_KERNEL_ERROR_PHYMEMPART_NOT_ACTIVE;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
-	PhyMemPartRelease(part);
+	PhyMemPartReleaseCall(part);
 	return ret;
 #else
 	return 0;
@@ -2378,7 +2401,7 @@ int PhyMemModuleStart(const UIDManager *manager)
 			continue;
 		pindex = part->buddy[i].pindex;
 		for (;;) {
-			page = PhyMemPartGetPhyPageByIndexRaw(part, pindex);
+			page = PhyMemPartGetPhyPageByIndexBody(part, pindex);
 			size += PhyPageGetSize(page);
 			if ((page->info & PHYPAGE_LINK_MASK) != PHYPAGE_LINK_MORE)
 				break;

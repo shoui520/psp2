@@ -42,7 +42,7 @@
 +#define ENOMEM 12
 +/* failed usage and corruption checks panic with their source line */
 +#define SCE_DLMALLOC_PANIC()	SCE_PANIC(__LINE__)
-+#define ABORT			SCE_DLMALLOC_PANIC()
++#define ABORT			__builtin_trap()	/* only the configuration check, which never fails */
 +#define USAGE_ERROR_ACTION(m, p)	SCE_DLMALLOC_PANIC()
 +#define CORRUPTION_ERROR_ACTION(m)	SCE_DLMALLOC_PANIC()
 +#define SCE_DLMALLOC_ERROR_BAD_CHUNK	0x80024904

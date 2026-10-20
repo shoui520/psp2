@@ -56,6 +56,7 @@ int vsnprintf(char *destination, size_t capacity, const char *format, va_list ar
 
 /* the checked forms (-D_FORTIFY_SOURCE): capacity is the destination's size */
 void *__memcpy_chk(void *destination, const void *source, size_t size, size_t capacity);
+void *__memmove_chk(void *destination, const void *source, size_t size, size_t capacity);
 void *__memset_chk(void *destination, int value, size_t size, size_t capacity);
 int __snprintf_chk(char *destination, size_t size, int flags, size_t capacity, const char *format,
 		   ...);

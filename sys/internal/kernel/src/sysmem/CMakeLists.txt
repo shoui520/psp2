@@ -50,6 +50,7 @@ psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	fixed_heap.c
 	phymem_low.c
 	dlmalloc/heap.c
+	heaplib.c
 	memblock_db.c
 	memblock_vpl.c
 	memblock_partial.c
@@ -62,6 +63,7 @@ psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	pmmgr.c
 	aimgr.c
 	procevent.c
+	acmgr.c
 	led.c
 	serial.c
 	deflate.S

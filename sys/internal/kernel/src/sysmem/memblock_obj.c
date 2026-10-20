@@ -406,7 +406,7 @@ SceSize MemBlockGetMapSize(MemBlockObject *block)
 }
 
 /* the given physical pages behind the block's first virtual page, marked mapped */
-int MemBlockAssocPhyPage(MemBlockObject *block, struct PhyPage *page)
+SYSMEM_DEBUG_FUNC int MemBlockAssocPhyPage(MemBlockObject *block, struct PhyPage *page)
 {
 	VirPage *vp;
 

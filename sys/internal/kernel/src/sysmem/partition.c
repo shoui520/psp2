@@ -333,8 +333,8 @@ static inline void TinyPartitionSetFreeSizeR1(TinyPartition *tiny, SceSize size)
 	SCE_DBG_ASSERT_CHECK_FUNC(tiny->freeSize <= size, 2780, "TinyPartitionSetFreeSizeR1");
 }
 
-int TinyPartitionInitRaw(TinyPartition *tiny, const char *name, uintptr_t vbase, SceSize size,
-			 AddressSpaceContext *context)
+SYSMEM_DEBUG_FUNC int TinyPartitionInitRaw(TinyPartition *tiny, const char *name, uintptr_t vbase,
+					   SceSize size, AddressSpaceContext *context)
 {
 	if (vbase & 0xffffff) {
 		SCE_DBG_ASSERT_FAIL(3051);
@@ -651,8 +651,7 @@ int AllocMemBlockCommandSetOpt(SceKernelAllocMemBlockCommand *command)
 }
 
 /* name unknown: the last virtual page of a list block */
-__attribute__((noinline))
-static VirPage *MemBlockGetLastVirPage(MemBlockObject *block)
+SYSMEM_DEBUG_STATIC VirPage *MemBlockGetLastVirPage(MemBlockObject *block)
 {
 	VirPage *vp = MemBlockGetVirPageRaw(block), *next;
 

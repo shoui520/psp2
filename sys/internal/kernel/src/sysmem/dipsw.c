@@ -12,6 +12,13 @@ union DipswState {
 static union DipswState s_bootDipsw;
 static union DipswState *s_dipsw;
 
+/* Name unknown; replaces the DIP-switch words the kernel reads (no call reaches it). */
+int DipswSetState(union DipswState *dipsw)
+{
+	s_dipsw = dipsw;
+	return 0;
+}
+
 /* Name unknown; called before the first startup DIP-switch query. */
 int InitializeDipsw(const struct SysmemBootContext *context)
 {

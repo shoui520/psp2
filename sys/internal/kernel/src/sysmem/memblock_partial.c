@@ -51,7 +51,7 @@ int PartialAllocUnit(MemBlockObject *block, SceSize unitSize, SceUInt32 *page)
 }
 
 /* name unknown: one unit's physical pages freed */
-static int PartialFreeUnit(MemBlockObject *block, uint32_t *unit)
+SYSMEM_DEBUG_STATIC int PartialFreeUnit(MemBlockObject *block, uint32_t *unit)
 {
 	int ret = PhyMemPartFreePhyPage(MemBlockGetPhyMemPartRaw(block),
 					(struct PhyPage *)PARTIAL_UNIT_PAGE(*unit));

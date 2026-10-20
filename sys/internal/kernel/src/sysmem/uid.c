@@ -1218,7 +1218,8 @@ int UIDEntryHeapSetPUIDEntryChainRaw(UIDEntryHeap *heap, UIDEntry *entry, SceUID
 }
 
 /* a link entry of a GUID entry, in the GUID entry heap */
-int UIDEntryConstructByBase(UIDEntryHeap *heap, UIDEntry *entry, SceUID pid, UIDEntry *base)
+SYSMEM_DEBUG_FUNC int UIDEntryConstructByBase(UIDEntryHeap *heap, UIDEntry *entry, SceUID pid,
+					     UIDEntry *base)
 {
 	SceUInt32 attr = base->attr;
 	SceObjectBase *object = base->object;
@@ -1310,6 +1311,18 @@ int GUIDUnregister(SceUID guid)
 	return ret;
 }
 
+/* cls is base or one of its subclasses (SceSysmemForKernel_7F7D5C4A; Sony's compiler inlines it) */
+static inline __attribute__((always_inline)) int UIDClassIsSubclass(SceClass *cls, SceClass *base)
+{
+	if (cls == base)
+		return 1;
+	while ((cls = cls->uidclass) != NULL) {
+		if (base == cls)
+			return 1;
+	}
+	return 0;
+}
+
 /* the entry's name, inserted into the name heap its attr selects */
 static inline int UIDEntryConstructNameInsertRaw(UIDEntry *entry, const char *name, SceUInt32 attr)
 {
@@ -1338,7 +1351,7 @@ static inline int UIDEntryConstructNameInsertRaw(UIDEntry *entry, const char *na
 /* a free entry made the GUID entry of object */
 static inline int UIDEntryConstructObjectRaw(UIDEntry *entry, SceClass *cls, const char *name,
 					     SceObjectBase *object, SceUID pid, void *objectHeap,
-					     SceUInt32 attr)
+					     SceUInt32 attr, SceUInt32 entryAttr)
 {
 	int ret;
 
@@ -1346,7 +1359,7 @@ static inline int UIDEntryConstructObjectRaw(UIDEntry *entry, SceClass *cls, con
 	entry->object = object;
 	entry->pid = pid;
 	entry->reserved = 0;
-	entry->attr = (attr & ~(UID_ENTRY_ATTR_PUID | UID_ENTRY_ATTR_ALL)) | UID_ENTRY_ATTR_GUID;
+	entry->attr = entryAttr;
 	if (cls != NULL)
 		entry->classAttr = cls->attributes;
 	else
@@ -1370,6 +1383,7 @@ int UIDEntryHeapAllocateGUIDEntryObject(UIDEntryHeap *heap, SceClass *cls, const
 					       SceUInt32 attr)
 {
 	UIDEntry *entry;
+	SceUInt32 entryAttr = (attr & ~(UID_ENTRY_ATTR_PUID | UID_ENTRY_ATTR_ALL)) | UID_ENTRY_ATTR_GUID;
 	int state, ret;
 
 	state = UID_WRITE_LOCK(heap, 4494);
@@ -1385,7 +1399,7 @@ int UIDEntryHeapAllocateGUIDEntryObject(UIDEntryHeap *heap, SceClass *cls, const
 		FixedHeapFreeObjectRaw(&heap->fixedHeap, entry);
 		goto out;
 	}
-	ret = UIDEntryConstructObjectRaw(entry, cls, name, object, pid, objectHeap, attr);
+	ret = UIDEntryConstructObjectRaw(entry, cls, name, object, pid, objectHeap, attr, entryAttr);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 4526, "UIDEntryConstructObjectRaw failed 0x%08x\n", ret);
 		UIDEntryHeapCheckFreeUIDEntry(heap, entry);
@@ -1817,7 +1831,7 @@ int UIDEntryCloseEntryForPUID(UIDEntryHeap *heap, UIDEntry *entry, int all, SceU
 		if (object != NULL) {
 			cls = object->sce_class;
 			memblockClass = SceSysmemForKernel_86681B64();
-			if (cls != NULL && SceSysmemForKernel_7F7D5C4A(cls, memblockClass)) {
+			if (cls != NULL && UIDClassIsSubclass(cls, memblockClass)) {
 				ret = FreeMemBlockByGUID(guid);
 				goto closed;
 			}
@@ -1906,13 +1920,7 @@ const char *SceSysmemForKernel_5FD15C6E(UIDEntry *entry)
 /* cls is base or a subclass of it */
 int SceSysmemForKernel_7F7D5C4A(SceClass *cls, SceClass *base)
 {
-	if (cls == base)
-		return 1;
-	while ((cls = cls->uidclass) != NULL) {
-		if (base == cls)
-			return 1;
-	}
-	return 0;
+	return UIDClassIsSubclass(cls, base);
 }
 
 /* a GUID for an object the caller made */
@@ -1960,7 +1968,7 @@ static inline int UIDEntrySetCNOA(UIDEntry *entry, SceClass *cls, const char *na
 		if (cls != NULL) {
 			object->sce_class = cls;
 			memblockClass = SceSysmemForKernel_86681B64();
-			if (SceSysmemForKernel_7F7D5C4A(cls, memblockClass)) {
+			if (UIDClassIsSubclass(cls, memblockClass)) {
 				MemBlockObject *block = (MemBlockObject *)object;
 				const char *blockName;
 #if FW_DEBUG

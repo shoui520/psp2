@@ -134,6 +134,7 @@ int RegisterClass(SceClass *cls)
 	SceClass *head = manager->classes, *c;
 	unsigned int index = 0, cindex;
 	unsigned int attributes;
+	const char *name;
 
 	if (head == NULL) {
 		cls->next = cls;
@@ -142,17 +143,20 @@ int RegisterClass(SceClass *cls)
 		manager->classes = cls;
 		return 0;
 	}
+#if !FW_DEBUG
+	name = cls->name;	/* the release build reads it once */
+#endif
 	c = head;
 	do {
-		const char *name;
-
 		if ((SceUInt8)c->attributes == 0)
 			SCE_DBG_PRINTF(0xb, 94, "cinex=0x%08x, %p,0x%08x[%s]\n", index, c, (SceUInt8)c->attributes, c->name);
 		if (c == cls) {
 			SCE_DBG_PRINTF(0xb, 105, "Duplicated %p and %p[new]\n", c, c);
 			return 0;
 		}
+#if FW_DEBUG
 		name = cls->name;
+#endif
 		if (strncmp(c->name, name, 0x1f) == 0) {
 			SCE_DBG_PRINTF(0xb, 109, "Duplicate name %p[%s]\n", cls, name);
 			return 0;

@@ -1,6 +1,7 @@
 /* Debug handler registration and assertion-level state. */
 #include <stdint.h>
 #include <sysmem/debug.h>
+#include <sysmem/sysroot.h>
 #include "sysmem_boot.h"
 #include "sysmem_internal.h"
 
@@ -42,6 +43,15 @@ int InitializeAssertLevel(const struct SysmemBootContext *context)
 	s_crashDumpHandler = NULL;
 	if (!(SysrootGetBootTypeIndicator2() & BOOT_NO_CRASH_DUMP))
 		s_crashDumpEnabled = 1;
+	return 0;
+}
+
+/* name unknown: core 0's lock taken, the lock released (no call reaches it) */
+int InitializeDebugCorelock(void)
+{
+	sceKernelSysrootCorelockLock(0);
+	sceKernelCpuId();
+	sceKernelSysrootCorelockUnlock();
 	return 0;
 }
 

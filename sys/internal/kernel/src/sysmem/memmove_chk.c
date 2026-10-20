@@ -28,3 +28,11 @@ void *memmove(void *destination, const void *source, size_t size)
 	return MoveMemoryCore(destination, source, size);
 }
 #endif
+
+void *__memmove_chk(void *destination, const void *source, size_t size,
+		    size_t capacity)
+{
+	if (__builtin_expect(capacity < size, 0))
+		__asm__ volatile("bkpt #0x81" ::: "memory");
+	return MoveMemoryCore(destination, source, size);
+}

@@ -18,3 +18,9 @@ void SceDebugLedForDriver_51C5325A(SceUInt32 gpi);	/* vitasdk: ksceKernelSetGPI 
 void SceDebugLedForDriver_F62154E7(void (*handle)(int a1, int a2, int a3, int a4));
 void sceDebugLedInvokeHandle0(int a1, int a2, int a3, int a4);
 void sceDebugLedInvokeHandle1(int a1, int a2, int a3, int a4);
+
+/* SceDebugLed (the syscall library) has its own copies of the four calls above */
+SceUInt32 sceKernelGetGPIForUser(void);
+int sceKernelSetGPOForUser(SceUInt32 gpo);
+void sceDebugLedInvokeHandle0ForUser(int a1, int a2, int a3, int a4);
+void sceDebugLedInvokeHandle1ForUser(int a1, int a2, int a3, int a4);

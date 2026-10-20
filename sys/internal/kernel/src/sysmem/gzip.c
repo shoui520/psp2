@@ -49,13 +49,13 @@ int SceKernelUtilsForDriver_5B9BCD75(const void *src, unsigned char *cmf, unsign
 	SceUInt8 method = header->cmf, flags = header->flg;
 
 	/* CMF and FLG as a big-endian halfword are a multiple of 31 */
-	if (((SceUInt32)method << 8 | flags) % 31 != 0)
+	if ((((SceUInt32)method << 8) + flags) % 31 != 0)
 		return SCE_KERNEL_ERROR_ERROR;
 	if (cmf != NULL)
 		*cmf = method;
 	if (flg != NULL)
 		*flg = flags;
-	if (flags & ZLIB_FLG_FDICT) {
+	if (__builtin_expect(flags & ZLIB_FLG_FDICT, 0)) {
 		if (dictid != NULL)
 			*dictid = __builtin_bswap32(header->dictId);
 		src = (const SceUInt8 *)src + 6;
@@ -123,9 +123,11 @@ int SceKernelUtilsForDriver_FFC6A10F(const void *src, const void **extra, const 
 	flags = header->flg;
 	if (flags & GZIP_FLG_FEXTRA) {
 		/* the extra field's start is its length; Sony skips only the field */
+		SceSize length = header->xlen;
+
 		if (extra != NULL)
 			*extra = p;
-		p += header->xlen;
+		p += length;
 	}
 	if (flags & GZIP_FLG_FNAME) {
 		if (name != NULL)
@@ -141,7 +143,7 @@ int SceKernelUtilsForDriver_FFC6A10F(const void *src, const void **extra, const 
 			p++;
 		p++;
 	}
-	if (flags & GZIP_FLG_FHCRC) {
+	if (__builtin_expect(flags & GZIP_FLG_FHCRC, 0)) {
 		if (crc != NULL)
 			*crc = p[0] + (p[1] << 8);
 		p += 2;
@@ -153,8 +155,8 @@ int SceKernelUtilsForDriver_FFC6A10F(const void *src, const void **extra, const 
 
 int SceKernelUtilsForDriver_367EE3DF(void *dst, SceSize dst_size, const void *src, uint32_t *crc32)
 {
-	const GzipTrailer *trailer;
 	const void *data;
+	const GzipTrailer *trailer;
 	int ret;
 
 	ret = SceKernelUtilsForDriver_FFC6A10F(src, NULL, NULL, NULL, NULL, &data);

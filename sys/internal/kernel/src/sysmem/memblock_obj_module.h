@@ -346,7 +346,12 @@ static inline MemBlockObject *MemBlockOptGetBaseInfoRaw(MemBlockObject *block)
 	return (MemBlockObject *)block->opt;
 }
 
+#if FW_DEBUG
 static inline void MemBlockSetVirPageRaw(MemBlockObject *block, VirPage *vp)
+#else
+/* Sony's release build kept this one out of line */
+static __attribute__((noinline)) void MemBlockSetVirPageRaw(MemBlockObject *block, VirPage *vp)
+#endif
 {
 	SceUInt32 flags = block->flags;
 

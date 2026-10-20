@@ -42,6 +42,11 @@ static int LedSuspend(int value, void *args)
 	return 0;
 }
 
+static int LedResume(int value, void *args)
+{
+	return sceKernelSetGPO(s_gpo);
+}
+
 int sceKernelSetGPO(SceUInt32 gpo)
 {
 	s_gpo = gpo;
@@ -49,9 +54,12 @@ int sceKernelSetGPO(SceUInt32 gpo)
 	return 0;
 }
 
-static int LedResume(int value, void *args)
+/* SceDebugLed's own copy of sceKernelSetGPO, the one the user syscall runs */
+int sceKernelSetGPOForUser(SceUInt32 gpo)
 {
-	return sceKernelSetGPO(s_gpo);
+	s_gpo = gpo;
+	LedWriteGPO(gpo);
+	return 0;
 }
 
 int SceDebugLedForDriver_098473B0(SceUInt32 clear, SceUInt32 set)
@@ -81,6 +89,11 @@ SceUInt32 sceKernelGetGPI(void)
 	return s_gpi;
 }
 
+SceUInt32 sceKernelGetGPIForUser(void)
+{
+	return s_gpi;
+}
+
 void SceDebugLedForDriver_F62154E7(void (*handle)(int a1, int a2, int a3, int a4))
 {
 	s_ledHandle1 = handle;
@@ -98,6 +111,18 @@ void sceDebugLedInvokeHandle1(int a1, int a2, int a3, int a4)
 }
 
 void sceDebugLedInvokeHandle0(int a1, int a2, int a3, int a4)
+{
+	if (s_ledHandle0 != NULL)
+		s_ledHandle0(a1, a2, a3, a4);
+}
+
+void sceDebugLedInvokeHandle1ForUser(int a1, int a2, int a3, int a4)
+{
+	if (s_ledHandle1 != NULL)
+		s_ledHandle1(a1, a2, a3, a4);
+}
+
+void sceDebugLedInvokeHandle0ForUser(int a1, int a2, int a3, int a4)
 {
 	if (s_ledHandle0 != NULL)
 		s_ledHandle0(a1, a2, a3, a4);

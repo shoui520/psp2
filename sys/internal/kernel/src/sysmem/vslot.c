@@ -51,7 +51,7 @@ static inline VSlotFIFO *GetFIFO(SceUInt32 type)
 }
 
 /* name unknown: a slot onto the tail of its FIFO (a new one also counted in low) */
-static int VSlotFIFOPush(SceUInt32 type, MemBlockObject *slot, int isNew)
+SYSMEM_DEBUG_LOCAL int VSlotFIFOPush(SceUInt32 type, MemBlockObject *slot, int isNew)
 {
 	VSlotFIFO *fifo = GetFIFO(type);
 	int intr = SceCpuForDriver_4C38CE4D(&fifo->lock);

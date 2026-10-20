@@ -329,10 +329,10 @@ SceSysmem:
       version: 1
       nid: 0xAE004C0A
       functions:
-        - sceDebugLedInvokeHandle1: 0x0E6B9890
-        - sceKernelGetGPI: 0x14F582CF
-        - sceDebugLedInvokeHandle0: 0x2B6EABAD
-        - sceKernelSetGPO: 0x78E702D3
+        - sceDebugLedInvokeHandle1ForUser: 0x0E6B9890
+        - sceKernelGetGPIForUser: 0x14F582CF
+        - sceDebugLedInvokeHandle0ForUser: 0x2B6EABAD
+        - sceKernelSetGPOForUser: 0x78E702D3
     SceDebugLedForDriver:
       syscall: false
       version: 1

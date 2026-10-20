@@ -20,7 +20,7 @@
 #define HARDWARE_MODEL_MASK		0xff0000
 
 /* a big-endian halfword */
-#define SWAP16(x)			((SceUInt16)((x) >> 8 | (x) << 8))
+#define SWAP16(x)			((SceInt16)((x) >> 8 | (x) << 8))
 
 /* the KBL's PS code, copied as two words */
 static union {
@@ -29,17 +29,17 @@ static union {
 } s_psCode;
 static SceUInt32 s_hardwareInfo;
 
-static inline SceUInt16 AimgrProductCode(void)
+static inline SceInt16 AimgrProductCode(void)
 {
 	return SWAP16(s_psCode.code.product_code);
 }
 
-static inline SceUInt16 AimgrProductSubCode(void)
+static inline SceInt16 AimgrProductSubCode(void)
 {
 	return SWAP16(s_psCode.code.product_sub_code);
 }
 
-static inline SceUInt16 AimgrFactoryCode(void)
+static inline SceInt16 AimgrFactoryCode(void)
 {
 	return SWAP16(s_psCode.code.factory_code);
 }
@@ -55,7 +55,6 @@ static inline int AimgrIsDolceHardware(void)
 int AimgrInit(void)
 {
 	SceKblParam *kbl = sceKernelSysrootGetKblParam();
-	const SceUInt32 *psCode;
 
 	if (kbl == NULL) {
 		s_hardwareInfo = 0;
@@ -63,11 +62,8 @@ int AimgrInit(void)
 		s_psCode.words[1] = 0;
 		return 0;
 	}
-	/* the KBL parameters are word aligned */
-	psCode = (const SceUInt32 *)(const void *)&kbl->pscode;
 	s_hardwareInfo = kbl->hardware_info;
-	s_psCode.words[0] = psCode[0];
-	s_psCode.words[1] = psCode[1];
+	s_psCode.code = kbl->pscode;
 	return 0;
 }
 

@@ -7,7 +7,7 @@ extern void *CopyMemoryForward(void *destination, const void *source, size_t siz
 void *__memcpy_chk(void *destination, const void *source, size_t size,
 		   size_t capacity)
 {
-	if (capacity < size)
+	if (__builtin_expect(capacity < size, 0))
 		__asm__ volatile("bkpt #0x81" ::: "memory");
 	return CopyMemoryForward(destination, source, size);
 }

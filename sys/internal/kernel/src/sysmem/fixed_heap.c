@@ -1029,6 +1029,11 @@ int FixedHeapSetUID(struct UIDManager *manager)
 	return ret;
 }
 
+#if FW_DEBUG
+/* FixedHeapStart: this firmware's link keeps only its record (no code reaches it) */
+SCE_DBGINFO_DEFINE(static, fixedHeapStartRecord, 2911, "FixedHeapStart");
+#endif
+
 /* sceKernelGetKernelFixedHeap */
 FixedHeap *SceSysmemForKernel_3717C322(SceSize size)
 {

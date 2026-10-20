@@ -317,7 +317,7 @@ struct Partition *AddressSpaceGetPartitionByIndex(AddressSpaceObject *as, SceUIn
 }
 
 /* name unknown: the physical memory partition of an index (NULL: the default) */
-int AddressSpaceGetPhyMemPartByIndex(AddressSpaceObject *as, SceUInt32 index, void **part)
+__attribute__((noinline)) int AddressSpaceGetPhyMemPartByIndex(AddressSpaceObject *as, SceUInt32 index, void **part)
 {
 	int ret;
 
@@ -337,11 +337,13 @@ static inline int AllocMemBlockCommandSetPhyMemPart(SceKernelAllocMemBlockComman
 {
 	int ret;
 
+#if FW_SINCE(0x04000000)
 	if ((command->typeInfo->attr & MEMBLOCK_TYPE_GIVEN_PHYMEMPART) && command->phyMemPart != NULL) {
 		SCE_DBG_PRINTF(0xb, 748, "Using pCommand->pPhyMemPart=%p[%s]\n", command->phyMemPart,
 			       PhyMemPartGetName(command->phyMemPart));
 		return 0;
 	}
+#endif
 	ret = AddressSpaceGetPhyMemPartByIndex(command->addressSpace, index, &command->phyMemPart);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 756,

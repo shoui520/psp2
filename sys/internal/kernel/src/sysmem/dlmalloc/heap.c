@@ -613,23 +613,25 @@ void HeapUnlock(KernelHeap *heap, int intr)
 }
 
 /* a chunk allocated (aligned when alignment is not 0); the heap is locked */
-void *HeapAllocPrologue(KernelHeap *heap, SceSize size, SceSize alignment)
+static inline __attribute__((always_inline))
+void *HeapAllocPrologueBody(KernelHeap *heap, SceSize size, SceSize alignment)
 {
 	SceSize usable;
 	void *ptr;
 	int ret;
 
 	if (heap->lock == 0) {
-		SCE_DBG_PRINTF(0xb, 1050, "heap must been locked.(heap=%p)\n***\n", heap);
-		SCE_DBG_ASSERT_FAIL(1051);
+		SCE_DBG_PRINTF_FUNC(0xb, 1050, "HeapAllocPrologue",
+				    "heap must been locked.(heap=%p)\n***\n", heap);
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 1051, "HeapAllocPrologue");
 	}
 	if (!(heap->flags & HEAP_ACTIVE)) {
-		SCE_DBG_PRINTF(0xb, 1058, "heap is not active.\n");
+		SCE_DBG_PRINTF_FUNC(0xb, 1058, "HeapAllocPrologue", "heap is not active.\n");
 		return NULL;
 	}
 	if (heap->flags & HEAP_VERIFY) {
 		ret = mspace_verify_all_chunk(heap->msp, heap->name, NULL);
-		SCE_DBG_ASSERT_CHECK(ret >= 0, 1063);
+		SCE_DBG_ASSERT_CHECK_FUNC(ret >= 0, 1063, "HeapAllocPrologue");
 	}
 	if (alignment == 0)
 		ptr = mspace_malloc(heap->msp, size);
@@ -649,6 +651,12 @@ void *HeapAllocPrologue(KernelHeap *heap, SceSize size, SceSize alignment)
 	return ptr;
 }
 
+/* the same for the callers that ask for no alignment (Sony's compiler made this copy) */
+static __attribute__((noinline)) void *HeapAllocPrologueNoAlign(KernelHeap *heap, SceSize size)
+{
+	return HeapAllocPrologueBody(heap, size, 0);
+}
+
 /* name unknown: SceUIDKernelHeapClass's allocation */
 static int HeapObjectAlloc(void *object, SceSize size, void **ptr)
 {
@@ -657,7 +665,7 @@ static int HeapObjectAlloc(void *object, SceSize size, void **ptr)
 	int intr;
 
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
-	mem = HeapAllocPrologue(heap, size, 0);
+	mem = HeapAllocPrologueNoAlign(heap, size);
 #if FW_DEBUG
 	if (mem != NULL && s_hooks.alloc != NULL)
 		s_hooks.alloc((SceUID)heap, mem, size, __builtin_return_address(0),
@@ -666,6 +674,11 @@ static int HeapObjectAlloc(void *object, SceSize size, void **ptr)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&heap->lock, intr);
 	*ptr = mem;
 	return mem != NULL ? 0 : SCE_KERNEL_ERROR_HEAPLIB_ERROR;
+}
+
+void *HeapAllocPrologue(KernelHeap *heap, SceSize size, SceSize alignment)
+{
+	return HeapAllocPrologueBody(heap, size, alignment);
 }
 
 /* name kept from the records: an allocation, reporting the memblock it mapped */
@@ -680,7 +693,7 @@ static void *HeapAllocHeapMemoryWithOption(KernelHeap *heap, SceSize size,
 
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	if (opt == NULL) {
-		ptr = HeapAllocPrologue(heap, size, 0);
+		ptr = HeapAllocPrologueNoAlign(heap, size);
 	} else {
 		align = opt->align;
 		heap->mmapResult = &result;
@@ -1337,3 +1350,8 @@ int HeapModuleStart(const UIDManager *manager)
 	s_uncacheHeap = manager->uncacheHeap;
 	return 0;
 }
+
+#if FW_DEBUG
+/* CreateToolHeap: this firmware's link keeps only its record (no code reaches it) */
+SCE_DBGINFO_DEFINE(static, createToolHeapRecord, 2089, "CreateToolHeap");
+#endif

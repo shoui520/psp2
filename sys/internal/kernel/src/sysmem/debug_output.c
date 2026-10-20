@@ -182,22 +182,25 @@ int DebugPrintfPrefix(const char *format, ...)
 __attribute__((noinline))
 int DebugFormatPrefix(uint32_t flags, const SceKernelDebugInfo *info)
 {
-	char *cursor = s_debugPrefix;
-	uint32_t cpuId;
+	char *cursor;
 
 	if (flags & 1) {
-		cpuId = readMpidr();
-		*cursor++ = '0' + (cpuId & 3);
-		*cursor++ = ':';
+		s_debugPrefix[0] = '0' + (readMpidr() & 3);
+		s_debugPrefix[1] = ':';
+		cursor = &s_debugPrefix[2];
+	} else {
+		cursor = s_debugPrefix;
 	}
 	if (info) {
-		if ((flags & 6) == 2) {
+		switch (flags & 6) {
+		case 2:
 			if (info->file)
 				cursor += snprintf(cursor, 64, "0x%08x(%s):",
 						   info->fileHash, info->file);
 			else
 				cursor += snprintf(cursor, 64, "0x%08x:", info->fileHash);
-		} else if ((flags & 6) == 6) {
+			break;
+		case 6:
 			if (info->file)
 				cursor += snprintf(cursor, 64, "0x%08x%08x(%s:%d):",
 						   info->fileHash, info->lineHash,
@@ -205,6 +208,7 @@ int DebugFormatPrefix(uint32_t flags, const SceKernelDebugInfo *info)
 			else
 				cursor += snprintf(cursor, 64, "0x%08x%08x:",
 						   info->fileHash, info->lineHash);
+			break;
 		}
 		if (flags & 8) {
 			if (info->func)

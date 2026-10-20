@@ -661,7 +661,7 @@ int VARangeToPAVectorForPID(SceUID pid, uint32_t mode, const SceKernelPARange *r
 #define __FILE_NAME__ "memblock_obj_module.h"
 
 /* name from the record: pid leaves the block's clients */
-void MemBlockOptGetClientInfo(MemBlockObject *block, SceUID pid)
+__attribute__((noinline)) void MemBlockOptGetClientInfo(MemBlockObject *block, SceUID pid)
 {
 	if ((block->flags & MEMBLOCK_OPT_MASK) != MEMBLOCK_OPT_CLIENT_INFO)
 		SCE_DBG_PRINTF(0xb, 1052, "Warning:status=0x%08x\n", block->flags);
@@ -1909,6 +1909,7 @@ int sceKernelMemBlockToPAVector(SceUID guid, SceKernelPAVector *vector)
 {
 	SceKernelPARange *cur, *end;
 	MemBlockObject *block;
+	SceUInt32 count;
 	int ret;
 
 	if (vector == NULL) {
@@ -1935,7 +1936,9 @@ int sceKernelMemBlockToPAVector(SceUID guid, SceKernelPAVector *vector)
 	if (ret < 0)
 		return ret;
 	MemBlockGetPhyRangeList(block, vector, cur, end);
-	vector->nDataInVector = vector->capacity < vector->total ? vector->capacity : vector->total;
+	count = vector->total;
+	count = count < vector->capacity ? count : vector->capacity;
+	vector->nDataInVector = count;
 	sceGUIDReleaseObject(guid);
 	return 0;
 }

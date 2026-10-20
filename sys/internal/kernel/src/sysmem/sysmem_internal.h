@@ -19,6 +19,20 @@
 #include <threadmgr/threadcb.h>
 #include <sysmem/sysclib.h>
 
+/*
+ * A function of one file that Sony's debug build leaves out of line and its release builds
+ * fold into the callers (nothing is left of it there).
+ */
+#if FW_DEBUG
+#define SYSMEM_DEBUG_FUNC
+#define SYSMEM_DEBUG_STATIC		static __attribute__((noinline))
+#define SYSMEM_DEBUG_LOCAL		static
+#else
+#define SYSMEM_DEBUG_FUNC		static inline
+#define SYSMEM_DEBUG_STATIC		static inline
+#define SYSMEM_DEBUG_LOCAL		static inline
+#endif
+
 /* memblock_obj_module.h */
 typedef struct MemBlockObject MemBlockObject;
 typedef struct TinyPartitionClientInfoList TinyPartitionClientInfoList;
@@ -859,8 +873,11 @@ int InitializeAssertLevel(void);	/* the boot loaders' own */
 int InitializeAssertLevel(const struct SysmemBootContext *context);
 #endif
 int InitializeDebugNop(void);
+int InitializeDebugCorelock(void);
 
 /* dipsw.c */
+union DipswState;
+int DipswSetState(union DipswState *dipsw);
 #if defined(SYSMEM_SKBL) || defined(SYSMEM_NSKBL)
 struct SceDipsw;
 int InitializeDipsw(struct SceDipsw *dipsw);	/* the boot loaders' own */
