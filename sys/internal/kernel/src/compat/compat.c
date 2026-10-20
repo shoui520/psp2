@@ -813,7 +813,7 @@ int compatInitEx(int mode)
 			return 0;
 		SceGrabForDriver_F13C63DD();
 		ScePowerForDriver_FFC84E69(0);
-		SCE_DBG_PRINTF(1, 931,
+		SCE_DBG_PRINTF_FUNC(0, 931, "sceCompatInitEx",
 			"sceCompatSecLoadSCBootCode failed (0x%08x)\n", result);
 		return result;
 	}
@@ -1339,18 +1339,21 @@ failed:
 int compatInterrupt(int intrCode)
 {
 	volatile SceUInt32 *pending;
+	volatile SceUInt32 status;
 	SceUInt64 start;
-	SceUInt timeout;
 	int result;
 
 	if ((unsigned int)intrCode - 1 > 14) {
 		result = (int)0x80010016;
 		goto out;
 	}
-	timeout = 5000000;
-	if (sceKernelLockMutex(gCompatMutex, 1, &timeout) < 0) {
-		result = (int)0x80028005;
-		goto out;
+	{
+		SceUInt timeout = 5000000;
+
+		if (sceKernelLockMutex(gCompatMutex, 1, &timeout) < 0) {
+			result = (int)0x80028005;
+			goto out;
+		}
 	}
 	if (!gCompatRequestsEnabled) {
 		sceKernelUnlockMutex(gCompatMutex, 1);
@@ -1360,7 +1363,8 @@ int compatInterrupt(int intrCode)
 	pending = &gCompatSharedSram->runtime.interrupts[intrCode].pending;
 	start = SceProcessmgrForDriver_82D94BE9();
 	while (SceProcessmgrForDriver_82D94BE9() - start <= 1000000) {
-		if (!*pending)
+		status = *pending;
+		if (!status)
 			break;
 	}
 	*pending = 1;
