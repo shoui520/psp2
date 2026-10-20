@@ -110,9 +110,141 @@ static SceUInt32 s_defaultFormat;
 static SceUInt32 s_defaultFormatSet;
 static ErrorHistory s_history;
 
-/* ---- error codes ---- */
+/*
+ * Sony keeps every helper out of line (39 functions), in this order: the sysevent
+ * callbacks, the work task and the locked operations, module_start, the error
+ * table and history, the lock and sysevent helpers, then the syscall entries.
+ */
 
-static int ErrorFormatCode(ErrorTable *table, char *buf, SceUInt32 code)
+static int ErrorOnResume(void);
+static int ErrorInitWork(void *arg);
+static int ErrorOnSuspend(void);
+static int ErrorGetExternalString(char *buf, SceUInt32 code);
+static int ErrorPostLocked(ErrorRecord *rec);
+static int ErrorSetDefaultFormatLocked(const SceUInt32 *format);
+static int ErrorGetLocked(SceUInt32 index, ErrorEntry *buf);
+static int ErrorUpdateSequenceInfoLocked(const ErrorSequenceInfo *info, int reserved);
+static int ErrorClearLocked(int reserved);
+static int ErrorFormatCode(ErrorTable *table, char *buf, SceUInt32 code);
+static int ErrorTableInit(ErrorTable *table);
+static int ErrorTableLoad(ErrorTable *table);
+static int ErrorHistoryPost(ErrorTable *table, ErrorRecord *rec);
+static int ErrorHistorySetDefaultFormat(const SceUInt32 *format);
+static int ErrorHistoryGet(SceUInt32 index, ErrorEntry *buf);
+static int ErrorHistoryUpdateSequenceInfo(const ErrorSequenceInfo *info, int reserved);
+static int ErrorHistoryClear(int reserved);
+static int ErrorHistoryLoad(void);
+static int ErrorHistorySave(void);
+static int ErrorSysEventHandler(int resume, int eventid, void *args, void *opt);
+static int ErrorSyncCreate(ErrorSync *sync, SceUInt32 signal, const char *name);
+static int ErrorSyncDelete(ErrorSync *sync);
+static SceUInt32 ErrorSyncLock(ErrorSync *sync);
+static int ErrorSyncUnlock(ErrorSync *sync, SceUInt32 signal);
+static int ErrorSysEventRegister(ErrorSysEvent *ev);
+static int ErrorSysEventUnregister(SceUID uid);
+
+static inline ErrorEntry *ErrorEntryAt(int i)
+{
+	return &s_history.entry[i];
+}
+
+static __attribute__((noinline, noclone)) int ErrorOnResume(void)
+{
+	return 0;
+}
+
+static __attribute__((noinline, noclone)) int ErrorInitWork(void *arg)
+{
+	if (ErrorHistoryLoad() >= 0)
+		ErrorTableLoad(&s_table);
+	return 1;
+}
+
+static __attribute__((noinline, noclone)) int ErrorOnSuspend(void)
+{
+	ErrorHistorySave();
+	return 0;
+}
+
+static __attribute__((noinline, noclone)) int ErrorGetExternalString(char *buf, SceUInt32 code)
+{
+	return ErrorFormatCode(&s_table, buf, code);
+}
+
+static __attribute__((noinline, noclone)) int ErrorPostLocked(ErrorRecord *rec)
+{
+	int ret;
+
+	ErrorSyncLock(&s_sync);
+	ret = ErrorHistoryPost(&s_table, rec);
+	ErrorSyncUnlock(&s_sync, 1);
+	return ret;
+}
+
+static __attribute__((noinline, noclone)) int ErrorSetDefaultFormatLocked(const SceUInt32 *format)
+{
+	int ret;
+
+	ErrorSyncLock(&s_sync);
+	ret = ErrorHistorySetDefaultFormat(format);
+	ErrorSyncUnlock(&s_sync, 1);
+	return ret;
+}
+
+static __attribute__((noinline, noclone)) int ErrorGetLocked(SceUInt32 index, ErrorEntry *buf)
+{
+	int ret;
+
+	ErrorSyncLock(&s_sync);
+	ret = ErrorHistoryGet(index, buf);
+	ErrorSyncUnlock(&s_sync, 1);
+	return ret;
+}
+
+static __attribute__((noinline, noclone)) int ErrorUpdateSequenceInfoLocked(const ErrorSequenceInfo *info, int reserved)
+{
+	int ret;
+
+	ErrorSyncLock(&s_sync);
+	ret = ErrorHistoryUpdateSequenceInfo(info, reserved);
+	ErrorSyncUnlock(&s_sync, 1);
+	return ret;
+}
+
+static __attribute__((noinline, noclone)) int ErrorClearLocked(int reserved)
+{
+	int ret;
+
+	ErrorSyncLock(&s_sync);
+	ret = ErrorHistoryClear(reserved);
+	ErrorSyncUnlock(&s_sync, 1);
+	return ret;
+}
+
+int module_start(SceSize args, void *argp)
+{
+	if (ErrorSyncCreate(&s_sync, 1, "SceErrorSync") < 0)
+		return SCE_KERNEL_START_NO_RESIDENT;
+
+	s_sysEvent.name = "SceError";
+	s_sysEvent.suspend = ErrorOnSuspend;
+	s_sysEvent.uid = 0;
+	s_sysEvent.resume = ErrorOnResume;
+	if (ErrorSysEventRegister(&s_sysEvent) < 0)
+		goto delete;
+	if (ErrorTableInit(&s_table) < 0) {
+		ErrorSysEventUnregister(s_sysEvent.uid);
+		goto delete;
+	}
+	sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceErrorInit", ErrorInitWork, NULL);
+	return SCE_KERNEL_START_SUCCESS;
+
+delete:
+	ErrorSyncDelete(&s_sync);
+	return SCE_KERNEL_START_NO_RESIDENT;
+}
+
+static __attribute__((noinline, noclone)) int ErrorFormatCode(ErrorTable *table, char *buf, SceUInt32 code)
 {
 	const char *prefix;
 	ErrorGroup *g;
@@ -170,7 +302,7 @@ unknown:
 	return 0;
 }
 
-static int ErrorTableInit(ErrorTable *table)
+static __attribute__((noinline, noclone)) int ErrorTableInit(ErrorTable *table)
 {
 	SceKernelHeapCreateOpt opt;
 
@@ -204,7 +336,7 @@ fail:
 	return 0;
 }
 
-static int ErrorTableLoad(ErrorTable *table)
+static __attribute__((noinline, noclone)) int ErrorTableLoad(ErrorTable *table)
 {
 	SceUID fd;
 	int size;
@@ -240,14 +372,7 @@ fail:
 	return 0;
 }
 
-/* ---- history ---- */
-
-static ErrorEntry *ErrorEntryAt(int i)
-{
-	return &s_history.entry[i];
-}
-
-static int ErrorHistoryPost(ErrorTable *table, ErrorRecord *rec)
+static __attribute__((noinline, noclone)) int ErrorHistoryPost(ErrorTable *table, ErrorRecord *rec)
 {
 	SceKernelSystemSwVersion fw;
 	ErrorEntry *e;
@@ -310,7 +435,7 @@ static int ErrorHistoryPost(ErrorTable *table, ErrorRecord *rec)
 	return 0;
 }
 
-static int ErrorHistorySetDefaultFormat(const SceUInt32 *format)
+static __attribute__((noinline, noclone)) int ErrorHistorySetDefaultFormat(const SceUInt32 *format)
 {
 	if (format == NULL || !(format[1] & 1) || (format[1] & ~1))
 		return SCE_ERROR_ERRNO_EINVAL;
@@ -319,8 +444,7 @@ static int ErrorHistorySetDefaultFormat(const SceUInt32 *format)
 	return 0;
 }
 
-/* index 0 is the newest entry */
-static int ErrorHistoryGet(SceUInt32 index, ErrorEntry *buf)
+static __attribute__((noinline, noclone)) int ErrorHistoryGet(SceUInt32 index, ErrorEntry *buf)
 {
 	if (buf == NULL || index > 9)
 		return SCE_ERROR_ERRNO_EINVAL;
@@ -328,7 +452,7 @@ static int ErrorHistoryGet(SceUInt32 index, ErrorEntry *buf)
 	return 0;
 }
 
-static int ErrorHistoryUpdateSequenceInfo(const ErrorSequenceInfo *info, int reserved)
+static __attribute__((noinline, noclone)) int ErrorHistoryUpdateSequenceInfo(const ErrorSequenceInfo *info, int reserved)
 {
 	ErrorEntry *e;
 
@@ -343,7 +467,7 @@ static int ErrorHistoryUpdateSequenceInfo(const ErrorSequenceInfo *info, int res
 	return SCE_ERROR_ERRNO_EINVAL;
 }
 
-static int ErrorHistoryClear(int reserved)
+static __attribute__((noinline, noclone)) int ErrorHistoryClear(int reserved)
 {
 	if (reserved != 0)
 		return SCE_ERROR_ERRNO_EINVAL;
@@ -353,7 +477,7 @@ static int ErrorHistoryClear(int reserved)
 	return 0;
 }
 
-static int ErrorHistoryLoad(void)
+static __attribute__((noinline, noclone)) int ErrorHistoryLoad(void)
 {
 	SceUID fd;
 
@@ -367,7 +491,7 @@ static int ErrorHistoryLoad(void)
 	return 0;
 }
 
-static int ErrorHistorySave(void)
+static __attribute__((noinline, noclone)) int ErrorHistorySave(void)
 {
 	SceUID fd;
 
@@ -386,57 +510,7 @@ static int ErrorHistorySave(void)
 	return 0;
 }
 
-/* ---- lock ---- */
-
-static int ErrorSyncCreate(ErrorSync *sync, SceUInt32 signal, const char *name)
-{
-	SceUID evf;
-
-	evf = sceKernelCreateEventFlag(name, SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
-	if (evf < 0)
-		return evf;
-	sync->evf = evf;
-	sync->signal = signal;
-	sync->waiters = 0;
-	return 0;
-}
-
-static int ErrorSyncDelete(ErrorSync *sync)
-{
-	sceKernelDeleteEventFlag(sync->evf);
-	return 0;
-}
-
-static SceUInt32 ErrorSyncLock(ErrorSync *sync)
-{
-	SceUInt32 bits, signal;
-
-	__atomic_fetch_add(&sync->waiters, 1, __ATOMIC_SEQ_CST);
-	for (;;) {
-		signal = __atomic_exchange_n(&sync->signal, 0, __ATOMIC_SEQ_CST);
-		if (signal != 0)
-			break;
-		if (sceKernelWaitEventFlag(sync->evf, 1,
-					    SCE_KERNEL_EVF_WAITMODE_OR |
-					    SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
-					    &bits, NULL) < 0)
-			break;
-	}
-	__atomic_fetch_sub(&sync->waiters, 1, __ATOMIC_SEQ_CST);
-	return signal;
-}
-
-static int ErrorSyncUnlock(ErrorSync *sync, SceUInt32 signal)
-{
-	__atomic_fetch_or(&sync->signal, signal, __ATOMIC_SEQ_CST);
-	if (sync->waiters == 0)
-		return 0;
-	return sceKernelSetEventFlag(sync->evf, 1);
-}
-
-/* ---- sys events ---- */
-
-static int ErrorSysEventHandler(int resume, int eventid, void *args, void *opt)
+static __attribute__((noinline, noclone)) int ErrorSysEventHandler(int resume, int eventid, void *args, void *opt)
 {
 	ErrorSysEvent *ev = opt;
 
@@ -450,7 +524,53 @@ static int ErrorSysEventHandler(int resume, int eventid, void *args, void *opt)
 	return 0;
 }
 
-static int ErrorSysEventRegister(ErrorSysEvent *ev)
+static __attribute__((noinline, noclone)) int ErrorSyncCreate(ErrorSync *sync, SceUInt32 signal, const char *name)
+{
+	SceUID evf;
+
+	evf = sceKernelCreateEventFlag(name, SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
+	if (evf < 0)
+		return evf;
+	sync->evf = evf;
+	sync->signal = signal;
+	sync->waiters = 0;
+	return 0;
+}
+
+static __attribute__((noinline, noclone)) int ErrorSyncDelete(ErrorSync *sync)
+{
+	sceKernelDeleteEventFlag(sync->evf);
+	return 0;
+}
+
+static __attribute__((noinline, noclone)) SceUInt32 ErrorSyncLock(ErrorSync *sync)
+{
+	SceUInt32 bits, signal;
+
+	__atomic_fetch_add(&sync->waiters, 1, __ATOMIC_RELEASE);
+	for (;;) {
+		signal = __atomic_exchange_n(&sync->signal, 0, __ATOMIC_RELEASE);
+		if (signal != 0)
+			break;
+		if (sceKernelWaitEventFlag(sync->evf, 1,
+					    SCE_KERNEL_EVF_WAITMODE_OR |
+					    SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
+					    &bits, NULL) < 0)
+			break;
+	}
+	__atomic_fetch_sub(&sync->waiters, 1, __ATOMIC_RELEASE);
+	return signal;
+}
+
+static __attribute__((noinline, noclone)) int ErrorSyncUnlock(ErrorSync *sync, SceUInt32 signal)
+{
+	__atomic_fetch_or(&sync->signal, signal, __ATOMIC_RELEASE);
+	if (sync->waiters == 0)
+		return 0;
+	return sceKernelSetEventFlag(sync->evf, 1);
+}
+
+static __attribute__((noinline, noclone)) int ErrorSysEventRegister(ErrorSysEvent *ev)
 {
 	SceUID uid;
 
@@ -461,79 +581,11 @@ static int ErrorSysEventRegister(ErrorSysEvent *ev)
 	return 0;
 }
 
-static int ErrorSysEventUnregister(SceUID uid)
+static __attribute__((noinline, noclone)) int ErrorSysEventUnregister(SceUID uid)
 {
 	int ret = sceKernelUnregisterSysEventHandler(uid);
 
 	return ret < 0 ? ret : 0;
-}
-
-static int ErrorOnSuspend(void)
-{
-	ErrorHistorySave();
-	return 0;
-}
-
-static int ErrorOnResume(void)
-{
-	return 0;
-}
-
-/* ---- locked operations ---- */
-
-static int ErrorGetExternalString(char *buf, SceUInt32 code)
-{
-	return ErrorFormatCode(&s_table, buf, code);
-}
-
-static int ErrorPostLocked(ErrorRecord *rec)
-{
-	int ret;
-
-	ErrorSyncLock(&s_sync);
-	ret = ErrorHistoryPost(&s_table, rec);
-	ErrorSyncUnlock(&s_sync, 1);
-	return ret;
-}
-
-static int ErrorSetDefaultFormatLocked(const SceUInt32 *format)
-{
-	int ret;
-
-	ErrorSyncLock(&s_sync);
-	ret = ErrorHistorySetDefaultFormat(format);
-	ErrorSyncUnlock(&s_sync, 1);
-	return ret;
-}
-
-static int ErrorGetLocked(SceUInt32 index, ErrorEntry *buf)
-{
-	int ret;
-
-	ErrorSyncLock(&s_sync);
-	ret = ErrorHistoryGet(index, buf);
-	ErrorSyncUnlock(&s_sync, 1);
-	return ret;
-}
-
-static int ErrorUpdateSequenceInfoLocked(const ErrorSequenceInfo *info, int reserved)
-{
-	int ret;
-
-	ErrorSyncLock(&s_sync);
-	ret = ErrorHistoryUpdateSequenceInfo(info, reserved);
-	ErrorSyncUnlock(&s_sync, 1);
-	return ret;
-}
-
-static int ErrorClearLocked(int reserved)
-{
-	int ret;
-
-	ErrorSyncLock(&s_sync);
-	ret = ErrorHistoryClear(reserved);
-	ErrorSyncUnlock(&s_sync, 1);
-	return ret;
 }
 
 /* run a kernel call from a syscall with TPIDRURO shifted (restored after) */
@@ -545,7 +597,35 @@ static int ErrorClearLocked(int reserved)
 	__ret;									\
 })
 
-/* ---- SceError syscalls ---- */
+static __attribute__((noinline, noclone)) int ErrorSyscallGetExternalString(char *buf, SceUInt32 code)
+{
+	return ERROR_SYSCALL(ErrorGetExternalString(buf, code));
+}
+
+static __attribute__((noinline, noclone)) int ErrorSyscallPost(ErrorRecord *rec)
+{
+	return ERROR_SYSCALL(ErrorPostLocked(rec));
+}
+
+static __attribute__((noinline, noclone)) int ErrorSyscallSetDefaultFormat(const SceUInt32 *format)
+{
+	return ERROR_SYSCALL(ErrorSetDefaultFormatLocked(format));
+}
+
+static __attribute__((noinline, noclone)) int ErrorSyscallGet(SceUInt32 index, ErrorEntry *buf)
+{
+	return ERROR_SYSCALL(ErrorGetLocked(index, buf));
+}
+
+static __attribute__((noinline, noclone)) int ErrorSyscallUpdateSequenceInfo(const ErrorSequenceInfo *info, int reserved)
+{
+	return ERROR_SYSCALL(ErrorUpdateSequenceInfoLocked(info, reserved));
+}
+
+static __attribute__((noinline, noclone)) int ErrorSyscallClear(int reserved)
+{
+	return ERROR_SYSCALL(ErrorClearLocked(reserved));
+}
 
 int _sceErrorGetExternalString(char *buf, SceUInt32 code)
 {
@@ -553,12 +633,12 @@ int _sceErrorGetExternalString(char *buf, SceUInt32 code)
 	int ret, res;
 
 	if (buf == NULL)
-		return ERROR_SYSCALL(ErrorGetExternalString(NULL, code));
+		return ErrorSyscallGetExternalString(NULL, code);
 	kbuf[0] = 0;
 	kbuf[1] = 0;
 	kbuf[2] = 0;
 	kbuf[3] = 0;
-	res = ERROR_SYSCALL(ErrorGetExternalString((char *)kbuf, code));
+	res = ErrorSyscallGetExternalString((char *)kbuf, code);
 	ret = sceKernelCopyToUser(buf, kbuf, sizeof(kbuf));
 	return ret < 0 ? ret : res;
 }
@@ -575,7 +655,7 @@ int _sceErrorHistoryPostError(const void *rec)
 			return ret;
 		p = &krec;
 	}
-	return ERROR_SYSCALL(ErrorPostLocked(p));
+	return ErrorSyscallPost(p);
 }
 
 int _sceErrorHistorySetDefaultFormat(const void *format)
@@ -590,7 +670,7 @@ int _sceErrorHistorySetDefaultFormat(const void *format)
 			return ret;
 		p = kformat;
 	}
-	return ERROR_SYSCALL(ErrorSetDefaultFormatLocked(p));
+	return ErrorSyscallSetDefaultFormat(p);
 }
 
 int _sceErrorHistoryGetError(SceUInt32 index, void *buf)
@@ -599,9 +679,9 @@ int _sceErrorHistoryGetError(SceUInt32 index, void *buf)
 	int ret, res;
 
 	if (buf == NULL)
-		return ERROR_SYSCALL(ErrorGetLocked(index, NULL));
+		return ErrorSyscallGet(index, NULL);
 	memset(&kbuf, 0, sizeof(kbuf));
-	res = ERROR_SYSCALL(ErrorGetLocked(index, &kbuf));
+	res = ErrorSyscallGet(index, &kbuf);
 	ret = sceKernelCopyToUser(buf, &kbuf, sizeof(kbuf));
 	return ret < 0 ? ret : res;
 }
@@ -618,43 +698,10 @@ int _sceErrorHistoryUpdateSequenceInfo(const void *info, int reserved)
 			return ret;
 		p = &kinfo;
 	}
-	return ERROR_SYSCALL(ErrorUpdateSequenceInfoLocked(p, reserved));
+	return ErrorSyscallUpdateSequenceInfo(p, reserved);
 }
 
 int _sceErrorHistoryClearError(int reserved)
 {
-	return ERROR_SYSCALL(ErrorClearLocked(reserved));
-}
-
-/* ---- module ---- */
-
-/* work queue: load the history and the error table once the file systems are up */
-static int ErrorInitWork(void *arg)
-{
-	if (ErrorHistoryLoad() >= 0)
-		ErrorTableLoad(&s_table);
-	return 1;
-}
-
-int module_start(SceSize args, void *argp)
-{
-	if (ErrorSyncCreate(&s_sync, 1, "SceErrorSync") < 0)
-		return SCE_KERNEL_START_NO_RESIDENT;
-
-	s_sysEvent.name = "SceError";
-	s_sysEvent.suspend = ErrorOnSuspend;
-	s_sysEvent.uid = 0;
-	s_sysEvent.resume = ErrorOnResume;
-	if (ErrorSysEventRegister(&s_sysEvent) < 0)
-		goto delete;
-	if (ErrorTableInit(&s_table) < 0) {
-		ErrorSysEventUnregister(s_sysEvent.uid);
-		goto delete;
-	}
-	sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceErrorInit", ErrorInitWork, NULL);
-	return SCE_KERNEL_START_SUCCESS;
-
-delete:
-	ErrorSyncDelete(&s_sync);
-	return SCE_KERNEL_START_NO_RESIDENT;
+	return ErrorSyscallClear(reserved);
 }
