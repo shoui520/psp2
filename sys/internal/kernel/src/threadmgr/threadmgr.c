@@ -5470,7 +5470,7 @@ int sceKernelChangeThreadCpuAffinityMask(SceUID uid, uint32_t mask)
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
 	if (uid == 0) {
-		if (currentThreadContext() == NULL) {
+		if (ThreadmgrNoContext()) {
 			SCE_DBG_ASSERT_PRINTF_FUNC(0, 5737, "sceKernelChangeThreadCpuAffinityMask",
 						   "*** error: illegal context\n");
 			result = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
@@ -5808,7 +5808,7 @@ int waitThreadEnd(SceUID threadId, int *status, SceUInt32 *timeout, int callback
 	locked = 0;
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF(0, 2367, "*** error: illegal context\n");
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
@@ -6161,7 +6161,7 @@ int sceKernelGetThreadInfo(SceUID threadId, SceKernelThreadInfo *output)
 		goto restore;
 	}
 	if (threadId == 0) {
-		if (currentThreadContext() == NULL) {
+		if (ThreadmgrNoContext()) {
 			ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 			goto restore;
 		}

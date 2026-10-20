@@ -38,8 +38,8 @@ typedef struct ThreadmgrSemaphore {
 _Static_assert(sizeof(ThreadmgrSemaphore) == 0x38, "SceUIDSemaphoreObject size");
 
 /* SCE_KERNEL_ERROR_UNKNOWN_SEMA_ID, with bit 30 set inside a user syscall */
-#define SEMA_ERROR_UNKNOWN_ID()		((ThreadmgrUserRoWord() & USERRO_IN_SYSCALL) ? \
-					 0xc0028101 : 0x80028101)
+#define SEMA_ERROR_UNKNOWN_ID()		(!(ThreadmgrUserRoWord() & USERRO_IN_SYSCALL) ? \
+					 0x80028101 : 0xc0028101)
 
 /* SceUIDSemaphoreClass's revalidation: waiters get the count while it lasts, in queue order */
 int uidSemaphore_RevalidateMethod(void *cls, void *object)
@@ -362,7 +362,7 @@ static inline __attribute__((always_inline)) SceUID sceKernelCreateSemaCore(cons
 		opt.attr = 0;
 		if (ThreadmgrInSyscall()) {
 			opt.pid = thread->processId;
-			opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;
+			opt.flags |= UID_CREATE_OPT_PROCESS_HEAP;
 			if (thread->currentAttr & THREAD_ATTR_UNLIMITED)
 				attr |= SEMA_ATTR_UNLIMITED;
 			opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED) != 0;
@@ -443,7 +443,7 @@ SceUID sceKernelCreateSema(const char *name, SceUInt32 attr, int initCount, int 
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 551, "sceKernelCreateSema", "*** error: illegal context\n");
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	}
@@ -458,7 +458,7 @@ SceUID sceKernelCreateSema(const char *name, SceUInt32 attr, int initCount, int 
 			       attr);
 		return SCE_KERNEL_ERROR_ILLEGAL_ATTR;
 	}
-	if (maxCount < 1 || initCount < 0) {
+	if ((maxCount <= 0) | ((SceUInt32)initCount >> 31)) {
 		SCE_DBG_PRINTF_FUNC(0, 575, "sceKernelCreateSema",
 			" k: error: sceKernelCreateSema(%s), initCount=%d maxCount=%d\n", name,
 			initCount, maxCount);

@@ -410,7 +410,7 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 	thread = currentThreadContext();
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 490, "sceKernelCreateEventFlag", "*** error: illegal context\n");
 		uid = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
@@ -451,9 +451,7 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 			opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED) != 0;
 		}
 	}
-	if (!ThreadmgrInSyscall()) {
-		intr = SceCpuForDriver_821FC0EE();
-	} else {
+	if (ThreadmgrInSyscall()) {
 		process = thread->process;
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
 		if (attr & SCE_KERNEL_ATTR_OPENABLE) {
@@ -485,6 +483,8 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 		if (++process->eventFlagCount > process->eventFlagPeak)
 			process->eventFlagPeak = process->eventFlagCount;
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
+	} else {
+		intr = SceCpuForDriver_821FC0EE();
 	}
 	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->eventFlagClass,
 		name, &opt, &pObject);

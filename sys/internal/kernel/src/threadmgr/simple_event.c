@@ -182,7 +182,7 @@ SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t ini
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 203, "sceKernelCreateSimpleEvent", "*** error: illegal context\n");
 		uid = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
@@ -223,9 +223,7 @@ SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t ini
 			opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED) != 0;
 		}
 	}
-	if (!ThreadmgrInSyscall()) {
-		intr = SceCpuForDriver_821FC0EE();
-	} else {
+	if (ThreadmgrInSyscall()) {
 		process = thread->process;
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
 		if (attr & SCE_KERNEL_ATTR_OPENABLE) {
@@ -257,6 +255,8 @@ SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t ini
 		if (++process->simpleEventCount > process->simpleEventPeak)
 			process->simpleEventPeak = process->simpleEventCount;
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
+	} else {
+		intr = SceCpuForDriver_821FC0EE();
 	}
 	uid = sceGUIDKernelCreateWithOpt(SIMPLE_EVENT_CLASS(), name, &opt,
 					  &pObject);
@@ -354,7 +354,7 @@ SceUID sceKernelOpenSimpleEventForUser(const char *userName)
 	SceUID puid;
 	int ret;
 
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF(0, 509, "*** error: illegal context\n");
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	}

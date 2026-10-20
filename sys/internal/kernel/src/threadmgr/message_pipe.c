@@ -1671,7 +1671,7 @@ int recvMsgPipeVector(ThreadmgrMsgPipeCall *call, int callbacks)
 		goto restore;
 	}
 	wake = 0;
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_FAIL(3863);
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
@@ -1822,7 +1822,7 @@ int sendMsgPipeVector(ThreadmgrMsgPipeCall *call, int callbacks)
 		goto restore;
 	}
 	wake = 0;
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_FAIL(2548);
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
@@ -2173,7 +2173,7 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 att
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF(0, 1088, "*** error: illegal context\n");
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
@@ -2424,7 +2424,7 @@ int sceKernelDeleteMsgPipe(SceUID msgPipeId)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1466, "sceKernelDeleteMsgPipe", "*** error: illegal context. msgPipeId=0x%08x[%s]\n",
 				      msgPipeId, SceSysmemForDriver_E655852F(msgPipeId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
@@ -2477,7 +2477,7 @@ SceUID sceKernelOpenMsgPipeForUser(const char *userName)
 	SceUID puid;
 	int ret;
 
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF(0, 1597, "*** error: illegal context\n");
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	}

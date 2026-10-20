@@ -1101,7 +1101,7 @@ SceUID sceKernelCreateTimer(const char *name, SceUInt32 attr,
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF(0, 1244, "*** error: illegal context\n");
 		uid = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;

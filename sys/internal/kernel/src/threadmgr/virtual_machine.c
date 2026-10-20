@@ -708,7 +708,7 @@ int sceKernelGetThreadContextForVM(SceUID threadId, ThreadmgrVmCpuContext *cpu,
 	uintptr_t vfpContext;
 	int intr, ret, i;
 
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF(0, 1121, "*** error: illegal context. threadId=0x%08x[%s]\n",
 				      threadId, SceSysmemForDriver_E655852F(threadId));
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;

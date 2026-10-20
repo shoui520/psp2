@@ -214,7 +214,7 @@ int _sceKernelCreateLwMutexForUser(ThreadmgrLwMutexWork *work, const char *name,
 	thread = currentThreadContext();
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF(0, 238, "*** error: illegal context\n");
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
@@ -536,7 +536,7 @@ int _sceKernelLockLwMutex(ThreadmgrLwMutexWork *work, int count, SceUInt32 *time
 		ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 		goto restore;
 	}
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF(0, 715, "*** error: illegal context\n");
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
@@ -692,7 +692,7 @@ int _sceKernelUnlockLwMutex(ThreadmgrLwMutexWork *work, int count)
 		ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 		goto restore;
 	}
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF(0, 988, "*** error: illegal context\n");
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
@@ -982,7 +982,7 @@ int lockLwMutexForLwCond(SceUID lwMutexId, int count, SceUInt32 *timeout, int ca
 	int intr, ret, locked = 0;
 
 	thread = currentThreadContext();
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF(0, 1537, "*** error: illegal context. lwMutexId=0x%08x[%s]\n",
 				      lwMutexId, SceSysmemForDriver_E655852F(lwMutexId));
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;

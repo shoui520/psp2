@@ -42,7 +42,7 @@ int getMutexInfo(SceUID mutexId, SceKernelMutexInfo *info)
 	ret = sceGUIDReferObjectWithClass(mutexId,
 		s_threadmgrRuntime.manager->mutexClass, &pObject);
 	if (ret < 0) {
-		ret = ThreadmgrInSyscall() ? 0xc0028141 : 0x80028141;
+		ret = !ThreadmgrInSyscall() ? 0x80028141 : 0xc0028141;
 	} else {
 		mutex = (ThreadmgrMutex *)pObject;
 		info->mutexId = mutexId;
@@ -442,7 +442,7 @@ SceUID sceKernelCreateMutex(const char *name, SceUInt32 attr, int initCount,
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
 	userRo = ThreadmgrUserRoWord();
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 765, "sceKernelCreateMutex", "*** error: illegal context\n");
 		uid = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
@@ -916,7 +916,7 @@ int sceKernelUnlockMutex(SceUID mutexId, int count)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1234, "sceKernelUnlockMutex", "*** error: illegal context. mutexId=0x%08x[%s]\n",
 				      mutexId, SceSysmemForDriver_E655852F(mutexId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;

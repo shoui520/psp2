@@ -447,9 +447,7 @@ SceUID sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 			opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED) != 0;
 		}
 	}
-	if (!ThreadmgrInSyscall()) {
-		intr = SceCpuForDriver_821FC0EE();
-	} else {
+	if (ThreadmgrInSyscall()) {
 		process = thread->process;
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
 		if (attr & SCE_KERNEL_ATTR_OPENABLE) {
@@ -481,6 +479,8 @@ SceUID sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 		if (++process->condCount > process->condPeak)
 			process->condPeak = process->condCount;
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
+	} else {
+		intr = SceCpuForDriver_821FC0EE();
 	}
 	thread = currentThreadContext();
 	uid = sceGUIDReferObjectWithClass(mutexId, s_threadmgrRuntime.manager->mutexClass,
@@ -585,7 +585,7 @@ int waitCondCB(SceUID condId, SceUInt32 *timeout)
  * pending and is inside a syscall, unless the request is a plain suspend of
  * an interruptible cond. Such a signal only marks the thread.
  */
-static inline int CondSignalDeferred(struct ThreadCB *thread, ThreadmgrCond *cond)
+static inline __attribute__((always_inline)) int CondSignalDeferred(struct ThreadCB *thread, ThreadmgrCond *cond)
 {
 	uint32_t status = thread->flags;
 
@@ -609,7 +609,7 @@ int sceKernelSignalCond(SceUID condId)
 	thread = currentThreadContext();
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 845, "sceKernelSignalCond", "*** error: illegal context. condId=0x%08x[%s]\n",
 				      condId, SceSysmemForDriver_E655852F(condId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
@@ -674,7 +674,7 @@ int sceKernelSignalCondAll(SceUID condId)
 	thread = currentThreadContext();
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 938, "sceKernelSignalCondAll", "*** error: illegal context. condId=0x%08x[%s]\n",
 				      condId, SceSysmemForDriver_E655852F(condId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
@@ -762,7 +762,7 @@ int sceKernelSignalCondTo(SceUID condId, SceUID threadId)
 	thread = currentThreadContext();
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1036, "sceKernelSignalCondTo", "*** error: illegal context. condId=0x%08x[%s]\n",
 				      condId, SceSysmemForDriver_E655852F(condId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;

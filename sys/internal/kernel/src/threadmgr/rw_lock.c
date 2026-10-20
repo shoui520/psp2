@@ -497,7 +497,7 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 	thread = currentThreadContext();
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF(0, 658, "*** error: illegal context\n");
 		uid = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
@@ -538,9 +538,7 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 		opt.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_PROCESS_HEAP;
 		opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED) != 0;
 	}
-	if (!ThreadmgrInSyscall()) {
-		intr = SceCpuForDriver_821FC0EE();
-	} else {
+	if (ThreadmgrInSyscall()) {
 		process = thread->process;
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
 		if (attr & SCE_KERNEL_ATTR_OPENABLE) {
@@ -572,6 +570,8 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 		if (++process->rwLockCount > process->rwLockPeak)
 			process->rwLockPeak = process->rwLockCount;
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
+	} else {
+		intr = SceCpuForDriver_821FC0EE();
 	}
 	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->rwLockClass, name,
 		&opt, &pObject);
@@ -784,7 +784,7 @@ int sceKernelTryLockWriteRWLock(SceUID rwLockId)
 	thread = currentThreadContext();
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (currentThreadContext() == NULL) {
+	if (ThreadmgrNoContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1166, "sceKernelTryLockWriteRWLock", "*** error: illegal context. rwLockId=0x%08x[%s]\n",
 				      rwLockId, SceSysmemForDriver_E655852F(rwLockId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;

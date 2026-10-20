@@ -42,6 +42,12 @@ static inline int ThreadmgrInSyscall(void)
 	return (ThreadmgrUserRoWord() & USERRO_IN_SYSCALL) != 0;
 }
 
+/*
+ * No thread context: Sony lays this error block out first, as the likely
+ * path (the exports test it before anything else).
+ */
+#define ThreadmgrNoContext()	__builtin_expect(currentThreadContext() == NULL, 1)
+
 /* the SDK version the calling thread's process was built with */
 static inline void ThreadmgrCallerSdkVersion(struct ThreadCB *thread,
 					     SceUInt32 *version)
