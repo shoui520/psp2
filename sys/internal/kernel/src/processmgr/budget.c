@@ -6,6 +6,9 @@
 #include "processmgr_internal.h"
 #include <processmgr/process_budget.h>
 
+/* a pure lookup: the compiler keeps a local it was given across the call */
+PhyMemPart *SceSysmemForKernel_0B1B4ACA(void) __attribute__((pure));
+
 #define BUDGET_ID_CURRENT		0
 #define BUDGET_ID_GAME			2
 #define BUDGET_ID_SHELL			3
@@ -29,8 +32,13 @@ static PhyMemPart *g_gameDummyPart;		/* ScePhyMemPartGameDummy */
 static PhyMemPart *g_shellCdramPart;		/* ScePhyMemPartShellCdram */
 static PhyMemPart *g_gameCdramPart;		/* ScePhyMemPartGameCdram */
 
-/* the SceUIDProcBudgetClass constructor */
-static int ProcessBudgetConstructor(ProcessBudget *budget)
+/* the SceUIDProcBudgetClass constructor: the debug build calls it, the release builds inline it */
+#if FW_DEBUG
+#define BUDGET_DEBUG_NOINLINE	__attribute__((noinline))
+#else
+#define BUDGET_DEBUG_NOINLINE
+#endif
+static BUDGET_DEBUG_NOINLINE int ProcessBudgetConstructor(ProcessBudget *budget)
 {
 	budget->mutex = -1;
 	budget->uid = -1;
@@ -159,21 +167,21 @@ int sceKernelResetGameBudget(void)
 	return ret;
 }
 
-/* name unknown: the information of one partition of a budget */
-static inline __attribute__((always_inline)) int GetPartInfoForDebugger(
-	SceKernelBudgetInfoForDebugger *info, SceUInt32 n, void *partition)
-{
-	int ret;
-
-	info->part[n].info.size = sizeof(info->part[n].info);
-	info->part[n].info.freeBlockMax = 0;
-	info->part[n].info.freeBlocks = NULL;
-	ret = sceKernelGetPhyMemPartInfoForDebugger(partition, &info->part[n].info);
-	if (ret < 0)
-		return ret;
-	strncpy(info->part[n].name, info->part[n].info.name, sizeof(info->part[n].name));
-	return ret;
-}
+/* name unknown: the information of one partition of a budget; the partition is
+ * fetched after the record is prepared (the kernel's extra one comes from a call) */
+#define GetPartInfoForDebugger(_info, _n, _partition)					\
+({											\
+	int _ret;									\
+											\
+	(_info)->part[_n].info.size = sizeof((_info)->part[_n].info);			\
+	(_info)->part[_n].info.freeBlockMax = 0;					\
+	(_info)->part[_n].info.freeBlocks = NULL;					\
+	_ret = sceKernelGetPhyMemPartInfoForDebugger(_partition, &(_info)->part[_n].info);	\
+	if (_ret >= 0)									\
+		strncpy((_info)->part[_n].name, (_info)->part[_n].info.name,		\
+			sizeof((_info)->part[_n].name));				\
+	_ret;										\
+})
 
 int sceKernelGetBudgetInfoForDebugger(SceUID budgetId, SceUInt32 level,
 				      SceKernelBudgetInfoForDebugger *info)
@@ -182,7 +190,7 @@ int sceKernelGetBudgetInfoForDebugger(SceUID budgetId, SceUInt32 level,
 	const char *name;
 	void *partition;
 	SceUInt32 n;
-	int ret, i;
+	int ret;
 
 	if (info == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -224,7 +232,7 @@ int sceKernelGetBudgetInfoForDebugger(SceUID budgetId, SceUInt32 level,
 		n = 1;
 	}
 	if (budget->type == PROCESS_TYPE_KERNEL && (partition = (void *)SceSysmemForKernel_0B1B4ACA()) != NULL) {
-		ret = GetPartInfoForDebugger(info, n, (void *)SceSysmemForKernel_0B1B4ACA());
+		ret = GetPartInfoForDebugger(info, n, SceSysmemForKernel_0B1B4ACA());
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 476,
 				"sceKernelGetPhyMemPartInfoForDebugger failed. 0x%08x\n", ret);
@@ -261,8 +269,20 @@ int sceKernelGetBudgetInfoForDebugger(SceUID budgetId, SceUInt32 level,
 	}
 	info->count = n;
 	info->processCount = budget->processCount;
-	for (i = 0; i != PROCESS_MAX; i++)
-		info->process[i] = budget->process[i];
+	/* four ids per round, the loop Sony's compiler made of the list copy */
+	{
+		const SceUID *src = budget->process;
+		SceUID *dst = info->process;
+
+		do {
+			SceUID a = *src++, b = *src++, c = *src++, d = *src++;
+
+			*dst++ = a;
+			*dst++ = b;
+			*dst++ = c;
+			*dst++ = d;
+		} while (src != budget->process + PROCESS_MAX);
+	}
 out:
 	sceGUIDReleaseObject(budgetId);
 	return ret;
@@ -451,8 +471,8 @@ int BudgetIDtoBudgetObj(SceUID budgetId, ProcessBudget **budget)
 static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 			    const ProcessBudgetOpt *opt, ProcessBudget **out)
 {
-	ProcessBudget *budget, *other;
 	PhyMemPart *mainPart = NULL, *cdialogPart = NULL, *phyContPart = NULL, *cdramPart = NULL;
+	ProcessBudget *budget;
 	char partName[0x20];
 	SceSize mainSize;
 	SceUID mutex;
@@ -463,10 +483,10 @@ static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 		if (opt == NULL)
 			return SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
 		if (opt->flags & 1) {
-			ret = BudgetIDtoBudgetObj(opt->cdram, &other);
+			ret = BudgetIDtoBudgetObj(opt->cdram, &budget);
 			if (ret < 0)
 				return ret;
-			cdramPart = other->cdramPartition;
+			cdramPart = budget->cdramPartition;
 			SceSysmemForKernel_6D563733(cdramPart);
 		} else if (opt->cdram != 0) {
 			snprintf(partName, 0x1f, "cdram: %s", name);

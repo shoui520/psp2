@@ -13,7 +13,7 @@
 #include <kernel/processmgr.h>
 #define strncpy __builtin_strncpy
 #define memcpy __builtin_memcpy
-#define memset __builtin_memset
+#define memset(_p, _v, _n) __builtin_memset(_p, _v, _n)
 size_t strnlen(const char *string, size_t count) __attribute__((pure));
 SceClass *SceSysmemForDriver_85336A1C(void) __attribute__((pure));
 
@@ -1854,7 +1854,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 			  SceInt32 priority, SceSize stackSize, SceUInt32 cpuAffinity,
 			  SceUID parentPid, SceUInt32 kind, SceUID prevPid, const void *klicensee,
 			  SceUInt32 limit0, SceUInt32 limit1, SceSize uniqueHeapSize,
-			  ProcessBudget *budget, SceUInt16 resolutionFlags, SceUInt16 powerConfigFlags,
+			  ProcessBudget *budget, SceUInt32 resolutionFlags, SceUInt32 powerConfigFlags,
 			  SceProcessObject **out)
 {
 	SceProcessObject *process;
@@ -1911,7 +1911,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 		process->slot = slot;
 		process->pid = pid;
 		if (klicensee == NULL)
-			memset(process->authInfo.klicensee, 0, 0x10);
+			(memset)(process->authInfo.klicensee, 0, 0x10);
 		else
 			memcpy(process->authInfo.klicensee, klicensee, 0x10);
 		process->parentPid = parentPid;
@@ -2289,7 +2289,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 		deleteThreads = 1;
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 4047, "process CREATE handler [%s] failed. 0x%08x\n",
 				     SceSysmemForDriver_E655852F(handler), ret);
-		memset(&failParam, 0, sizeof(failParam));
+		(memset)(&failParam, 0, sizeof(failParam));
 		failParam.size = sizeof(failParam);
 		failParam.kind = kind;
 		failParam.type = process->type;
@@ -2514,14 +2514,16 @@ static int _SuspendProcess(SceProcessObject *process, SceUInt32 state, SceUInt32
 			;
 		ret = sceKernelInvokeProcEventHandler(process->pid, PROC_EVENT_SUSPEND, 0x202, &param,
 						       &handler, 0);
-		if (stopThreads && ret >= 0) {
-			process->threadsStopped = 1;
-			g_event.sgiScan = 1;
-			n = sceKernelCpuScanThreadForProcessmgr(process->pid);
-			if ((int)n < 0)
-				SCE_DBG_PRINTF_LEVEL(1, 0, 1033,
-					"error: sceKernelCpuScanThreadForProcessmgr(0x%08X)=0x%08X\n",
-					process->pid, n);
+		if (stopThreads) {
+			if (ret >= 0) {
+				process->threadsStopped = 1;
+				g_event.sgiScan = 1;
+				n = sceKernelCpuScanThreadForProcessmgr(process->pid);
+				if ((int)n < 0)
+					SCE_DBG_PRINTF_LEVEL(1, 0, 1033,
+						"error: sceKernelCpuScanThreadForProcessmgr(0x%08X)=0x%08X\n",
+						process->pid, n);
+			}
 		}
 		g_event.sgiEnter = 0;
 		__asm__ volatile("dsb" ::: "memory");
@@ -3592,7 +3594,6 @@ static int IncProcessResource(SceUInt32 type)
 {
 	SceProcessObject *process;
 	ProcessResource *resource;
-	SceUInt32 count;
 	int intr, ret;
 
 	if (type > 2) {
@@ -3606,19 +3607,19 @@ static int IncProcessResource(SceUInt32 type)
 	}
 	resource = &process->resource[type];
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&resource->lock);
-	count = ++resource->count;
-	if (count > resource->peak) {
+	resource->count++;
+	if (resource->count > resource->peak) {
 #if FW_DEBUG
 		if (type == 0 && (float)resource->limit * 0.75f < (float)resource->peak)
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 6859,
 				"%p:UPDATE MAX for type=0x%08x, C=0x%08x/M=0x%08x/L=0x%08x\n", process, 0,
-				count, resource->peak, resource->limit);
+				resource->count, resource->peak, resource->limit);
 #endif
-		resource->peak = count;
+		resource->peak = resource->count;
 	}
-	if (count > resource->limit) {
+	if (resource->count > resource->limit) {
 		SCE_PRINTF_WITH_INFO(0xb, FW_LINE(6878, 6877), "%s:type=0x%08x, INC FAILED 0x%08x > 0x%08x\n",
-				     "IncProcessResource", type, count, resource->limit);
+				     "IncProcessResource", type, resource->count, resource->limit);
 		ret = SCE_KERNEL_ERROR_ERROR;
 		ShowProcessResource("INC FAIL:", type, resource);
 		resource->count--;
@@ -3836,7 +3837,7 @@ static int StartProcessCommon(SceUID pid, int waitDebugger, SceSize args, void *
 			SceSysrootForDriver_571E5B79(process->parentPid, pid, 0, process, now);
 			SceSysrootForDriver_F4340469(process->parentPid, pid, now);
 		}
-		memset(&param, 0, sizeof(param));
+		(memset)(&param, 0, sizeof(param));
 		param.process = process;
 		param.waitDebugger = 1;
 		param.args = args;
@@ -3856,7 +3857,7 @@ static int StartProcessCommon(SceUID pid, int waitDebugger, SceSize args, void *
 			    && SceSblACMgrForKernel_49509A83(pid) != 0)
 				SceSysrootForDriver_F4340469(process->parentPid, pid, now);
 		}
-		memset(&param, 0, sizeof(param));
+		(memset)(&param, 0, sizeof(param));
 		param.process = process;
 		param.args = args;
 		param.argp = argp;
@@ -3911,8 +3912,8 @@ static int g_firstCreate;
 SceUID sceKernelCreateProcess(const char *name, SceUInt32 type, const char *path,
 			       const SceKernelProcessOpt *opt)
 {
-	SceProcessObject *process;
 	ProcessBudget *budget;
+	SceProcessObject *process;
 	const void *klicensee;
 	SceUInt32 attr, cpuAffinity, kind, limit0, limit1, resolutionFlags, powerConfigFlags;
 	SceSize stackSize, uniqueHeapSize;
@@ -3923,7 +3924,9 @@ SceUID sceKernelCreateProcess(const char *name, SceUInt32 type, const char *path
 	parentPid = sceKernelGetProcessId();
 	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
-	if (path == NULL || name == NULL)
+	if (path == NULL)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (name == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (g_processmgr.processCount > 15)
 		return SCE_ERROR_ERRNO_EPROCLIM;
