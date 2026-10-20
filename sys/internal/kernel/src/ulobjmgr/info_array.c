@@ -31,6 +31,7 @@ int allocateInfoArray(UlobjProcCB *procCB, SceUInt32 numEntries, SceUInt32 sdkVe
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	SceKernelAllocMemBlockKernelOpt mirrorOpt;
+	SceUID userMemBlock;
 	SceSize size;
 	int ret;
 
@@ -48,16 +49,17 @@ int allocateInfoArray(UlobjProcCB *procCB, SceUInt32 numEntries, SceUInt32 sdkVe
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PID;
 	opt.pid = procCB->pid;
 	size = (numEntries * sizeof(SceUInt32) + sizeof(UlobjInfoArray) + 0xfff) & ~0xfff;
-	procCB->userMemBlock = sceKernelAllocMemBlockForKernel("SceUlobjMgrUser",
+	userMemBlock = sceKernelAllocMemBlockForKernel("SceUlobjMgrUser",
 						       SCE_KERNEL_MEMBLOCK_TYPE_USER_RW, size, &opt);
-	if (procCB->userMemBlock < 0)
+	procCB->userMemBlock = userMemBlock;
+	if (userMemBlock < 0)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 
 	memset(&mirrorOpt, 0, sizeof(mirrorOpt));
 	mirrorOpt.size = sizeof(mirrorOpt);
 	mirrorOpt.attr = ULOBJ_MEMBLOCK_ATTR_MIRROR_MAP | SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PID |
 			 SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_MIRROR_BLOCKID;
-	mirrorOpt.mirror_blockid = procCB->userMemBlock;
+	mirrorOpt.mirror_blockid = userMemBlock;
 	mirrorOpt.pid = procCB->pid;
 	procCB->driverMemBlock = sceKernelAllocMemBlockForKernel("SceUlobjMgrDriver",
 							 SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW, size,

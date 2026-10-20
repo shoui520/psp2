@@ -73,9 +73,12 @@ enum {
  * Count (ids == NULL) or list the ULTs of a runtime, or their fibers; the
  * first *pSkip are skipped and *pCount continues from its current value.
  */
-int traverseUltRuntimeByUltRuntimeInstance(SceUID pid, const UltRuntime *runtime, int mode,
-					   SceUInt32 maxIds, SceUInt32 *ids, SceUInt32 *pSkip,
-					   SceUInt32 *pCount)
+#if FW_DEBUG
+__attribute__((noinline))
+#endif
+static int traverseUltRuntimeByUltRuntimeInstance(SceUID pid, const UltRuntime *runtime,
+						  int mode, SceUInt32 maxIds, SceUInt32 *ids,
+						  SceUInt32 *pSkip, SceUInt32 *pCount)
 {
 	SceUInt32 table[ULT_ID_CHUNK];
 	SceUIntPtr address;
@@ -141,11 +144,14 @@ static inline __attribute__((always_inline))
 SceUInt32 sceUlobjMgrGetFiberId(SceUID pid, UlobjProcCB *procCB, SceUInt32 *ids,
 				SceUInt32 maxIds, SceUInt32 skip)
 {
-	SceUInt32 i, entry, n = 0;
+	SceUInt32 i, entry, numEntries, n = 0;
+	UlobjInfoArray *infoArray;
 
 	SCE_DBG_ASSERT(procCB != NULL, 150);
-	for (i = 0; i < procCB->numEntries; i++) {
-		entry = procCB->infoArray->entry[i];
+	numEntries = procCB->numEntries;
+	infoArray = procCB->infoArray;
+	for (i = 0; i < numEntries; i++) {
+		entry = infoArray->entry[i];
 		if (!(entry & ULOBJ_ENTRY_USED))
 			continue;
 		if ((entry & ULOBJ_ENTRY_KIND_MASK) == ULOBJ_KIND_FIBER) {
@@ -174,11 +180,14 @@ static inline __attribute__((always_inline))
 SceUInt32 sceUlobjMgrGetUltId(SceUID pid, UlobjProcCB *procCB, SceUInt32 *ids,
 			      SceUInt32 maxIds, SceUInt32 skip)
 {
-	SceUInt32 i, entry, n = 0;
+	SceUInt32 i, entry, numEntries, n = 0;
+	UlobjInfoArray *infoArray;
 
 	SCE_DBG_ASSERT(procCB != NULL, 209);
-	for (i = 0; i < procCB->numEntries; i++) {
-		entry = procCB->infoArray->entry[i];
+	numEntries = procCB->numEntries;
+	infoArray = procCB->infoArray;
+	for (i = 0; i < numEntries; i++) {
+		entry = infoArray->entry[i];
 		if ((entry & ULOBJ_ENTRY_TAG_MASK) != (ULOBJ_ENTRY_USED | ULOBJ_KIND_ULT_RUNTIME))
 			continue;
 		traverseUltRuntimeByUltRuntimeId(pid, ULOBJ_ENTRY_ADDRESS(entry), TRAVERSE_ULT,
@@ -193,11 +202,14 @@ static inline __attribute__((always_inline))
 SceUInt32 sceUlobjMgrGetUltRuntimeId(UlobjProcCB *procCB, SceUInt32 *ids, SceUInt32 maxIds,
 				     SceUInt32 skip)
 {
-	SceUInt32 i, entry, n = 0;
+	SceUInt32 i, entry, numEntries, n = 0;
+	UlobjInfoArray *infoArray;
 
 	SCE_DBG_ASSERT(procCB != NULL, 241);
-	for (i = 0; i < procCB->numEntries; i++) {
-		entry = procCB->infoArray->entry[i];
+	numEntries = procCB->numEntries;
+	infoArray = procCB->infoArray;
+	for (i = 0; i < numEntries; i++) {
+		entry = infoArray->entry[i];
 		if (!(entry & ULOBJ_ENTRY_USED) ||
 		    (entry & ULOBJ_ENTRY_KIND_MASK) != ULOBJ_KIND_ULT_RUNTIME)
 			continue;

@@ -242,12 +242,6 @@ int getUltQueueDataResourcePoolInfo(SceUID pid, SceUIntPtr address,
 int getUltWaitingQueueResourcePoolInfo(SceUID pid, SceUIntPtr address,
 				       UlobjWaitingQueueResourcePoolInfo *info);
 
-/* driver_api_for_coredump.c */
-struct UltRuntime;
-int traverseUltRuntimeByUltRuntimeInstance(SceUID pid, const struct UltRuntime *runtime,
-					   int mode, SceUInt32 maxIds, SceUInt32 *ids,
-					   SceUInt32 *pSkip, SceUInt32 *pCount);
-
 /* driver_api_for_ult_sync_obj.c */
 int sceUlobjMgrGetUltSyncObjId(SceUID pid, SceUInt32 *ids, SceUInt32 maxIds, SceUInt32 skip,
 			       int type, UlobjProcCB *procCB);

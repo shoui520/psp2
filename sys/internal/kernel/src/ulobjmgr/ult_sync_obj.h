@@ -8,6 +8,10 @@
 #include "ulobjmgr_internal.h"
 #include "util.h"
 
+#pragma push_macro("__FILE_NAME__")
+#undef __FILE_NAME__
+#define __FILE_NAME__ "ult_sync_obj.h"
+
 /* a thread reference: bit 0 set means tid << 1, else the address of the tid */
 static inline __attribute__((always_inline))
 int getTidUltId(SceUID pid, SceUInt32 thread, SceUInt32 *pTid)
@@ -218,3 +222,5 @@ void packUltQueueInfo(UlobjQueueInfo *info, SceUIntPtr address, const UltQueue *
 	info->numReceiveWaitThreads = numReceiveWaitThreads;
 	info->numData = numData;
 }
+
+#pragma pop_macro("__FILE_NAME__")

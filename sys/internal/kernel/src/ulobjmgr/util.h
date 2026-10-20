@@ -6,6 +6,10 @@
 #include <stdint.h>
 #include "ulobjmgr_internal.h"
 
+#pragma push_macro("__FILE_NAME__")
+#undef __FILE_NAME__
+#define __FILE_NAME__ "util.h"
+
 /* a 32-byte name; the last byte always becomes NUL */
 static inline __attribute__((always_inline))
 void copy32bWithNullTermination(char *dst, const char *src)
@@ -43,3 +47,5 @@ void copy64b(SceUInt64 *dst, const SceUInt64 *src)
 	dst[6] = src[6];
 	dst[7] = src[7];
 }
+
+#pragma pop_macro("__FILE_NAME__")

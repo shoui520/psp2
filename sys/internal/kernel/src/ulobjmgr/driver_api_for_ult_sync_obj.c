@@ -45,13 +45,16 @@ int sceUlobjMgrGetUltSyncObjId(SceUID pid, SceUInt32 *ids, SceUInt32 maxIds, Sce
 		UltObjectHeader header;
 		SceUInt32 reserved;
 	} obj;
-	SceUInt32 i, entry, n = 0;
+	SceUInt32 i, entry, numEntries, n = 0;
+	UlobjInfoArray *infoArray;
 	SceUInt8 objectType;
 
 	SCE_DBG_ASSERT(procCB != NULL, 68);
 	objectType = getSceUltObjectType(type);
-	for (i = 0; i < procCB->numEntries; i++) {
-		entry = procCB->infoArray->entry[i];
+	numEntries = procCB->numEntries;
+	infoArray = procCB->infoArray;
+	for (i = 0; i < numEntries; i++) {
+		entry = infoArray->entry[i];
 		if (!(entry & ULOBJ_ENTRY_USED) ||
 		    (entry & ULOBJ_ENTRY_KIND_MASK) != ULOBJ_KIND_SYNC_OBJECT)
 			continue;
