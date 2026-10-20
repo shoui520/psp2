@@ -1993,8 +1993,9 @@ int AddressSpaceContextAllocL2Tables(AddressSpaceContext *context)
 #define PARTITION_L2C_CACHE_MIN		3
 
 /* a block with a free quarter: one on the partition's list, else a new one */
-static inline MemBlockObject *PartitionL2CAllocMemBlockForL2PageTableRaw(Partition *partition,
-									 SceUInt32 flags)
+static inline void PartitionL2CAllocMemBlockForL2PageTableRaw(Partition *partition,
+							      SceUInt32 flags,
+							      MemBlockObject **out)
 {
 	MemBlockObject *block;
 	const char *name;
@@ -2016,17 +2017,18 @@ static inline MemBlockObject *PartitionL2CAllocMemBlockForL2PageTableRaw(Partiti
 				block->smbNext = NULL;
 				sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2BlockLock,
 										intr);
-				return block;
+				*out = block;
+				return;
 			}
 		}
 	}
 	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2BlockLock, intr);
 	name = SysrootGetMemBlockName(2);
 	if (partition == g_uidManager->kernelPartition)
-		smbType = ((flags & 1) << 4) | 0x21;
+		smbType = ((flags << 4) & 0x30) + 0x21;	/* the mask stays 0x30 in Sony's code */
 	else
 		smbType = 1;
-	ret = AllocSimpleMemBlock(name, 0x1001000, NULL, smbType, &block);
+	ret = AllocSimpleMemBlock(name, 0x1001000, NULL, smbType, out);
 	if (ret < 0) {
 		if (ret == SCE_KERNEL_ERROR_NO_SMB)
 			SceDebugForDriver_391B5B74(SCE_DBGINFO_FUNC(4717, "PartitionL2CAllocMemBlockForL2PageTableRaw"),
@@ -2034,14 +2036,13 @@ static inline MemBlockObject *PartitionL2CAllocMemBlockForL2PageTableRaw(Partiti
 		SceDebugForDriver_391B5B74(SCE_DBGINFO_FUNC(4719, "PartitionL2CAllocMemBlockForL2PageTableRaw"),
 				__builtin_return_address(0));
 	}
-	block->flags |= MEMBLOCK_L2PT;
-	MemBlockL2PageTableSetFreeRaw(block, MEMBLOCK_L2PT_FREE_MASK);
-	block->lock = 0;
-	return block;
+	(*out)->flags |= MEMBLOCK_L2PT;
+	MemBlockL2PageTableSetFreeRaw(*out, MEMBLOCK_L2PT_FREE_MASK);
+	(*out)->lock = 0;
 }
 
 /* the address space's L2 table slots, allocated on first use */
-static inline SceUInt32 *PartitionL2CAllocL2PageTableVectorR1(Partition *partition)
+static inline int PartitionL2CAllocL2PageTableVectorR1(Partition *partition, SceUInt32 **out)
 {
 	AddressSpaceContext *context = partition->tiny.context;
 	SceUInt32 *tables = context->l2Tables;
@@ -2049,13 +2050,14 @@ static inline SceUInt32 *PartitionL2CAllocL2PageTableVectorR1(Partition *partiti
 	if (tables == NULL) {
 		if (partition->attr & 1) {
 			SCE_DBG_ASSERT_CHECK(tables != NULL, 4525);
-			return NULL;
+			return -1;
 		}
 		if (AddressSpaceContextAllocL2Tables(context) < 0)
-			return NULL;
+			return -1;
 		tables = context->l2Tables;
 	}
-	return tables;
+	*out = tables;
+	return 0;
 }
 
 /*
@@ -2069,17 +2071,20 @@ int PartitionL2CAllocL2PageTableRaw(Partition *partition, uintptr_t va, SceUInt3
 	AddressSpaceContext *context;
 	MemBlockObject *block;
 	L2PageTable *l2pt;
-	SceUInt32 *tables, *slot, quarter;
+	SceUInt32 *tables, *slot;
 	uintptr_t tableVa, tablePa;
+	SceUInt32 quarter;
 	int intr, l2Intr = 0, ret;
 
-	if (!(flags & PARTITION_L2C_LOCKED)) {
+	if (__builtin_expect(!(flags & PARTITION_L2C_LOCKED), 0)) {
 		/* keep a few in the cache: no allocation under l2Lock */
 		intr = SceCpuForDriver_4C38CE4D(&partition->l2CacheLock);
 		while (partition->l2CacheCount < PARTITION_L2C_CACHE_MIN) {
-			AllocL2PageTableObject(partition, partition->tiny.context->l2ptHeap, flags, &l2pt);
-			l2pt->next = partition->l2Cache;
-			partition->l2Cache = l2pt;
+			L2PageTable *object;
+
+			AllocL2PageTableObject(partition, partition->tiny.context->l2ptHeap, flags, &object);
+			object->next = partition->l2Cache;
+			partition->l2Cache = object;
 			partition->l2CacheCount++;
 		}
 		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2CacheLock, intr);
@@ -2087,21 +2092,26 @@ int PartitionL2CAllocL2PageTableRaw(Partition *partition, uintptr_t va, SceUInt3
 	}
 	context = partition->tiny.context;
 	intr = SceCpuForDriver_4C38CE4D(&partition->l2CacheLock);
-	if (partition->l2CacheCount == 0) {
-		ret = AllocL2PageTableObject(partition, partition->tiny.context->l2ptHeap, flags, &l2pt);
-		if (ret < 0) {
-			sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2CacheLock, intr);
-			goto out;
-		}
-	} else {
-		l2pt = partition->l2Cache;
-		partition->l2Cache = l2pt->next;
-		l2pt->next = NULL;
-		partition->l2CacheCount--;
-	}
-	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2CacheLock, intr);
+	{
+		L2PageTable *object;
 
-	block = PartitionL2CAllocMemBlockForL2PageTableRaw(partition, flags);
+		if (partition->l2CacheCount == 0) {
+			ret = AllocL2PageTableObject(partition, partition->tiny.context->l2ptHeap, flags, &object);
+			if (ret < 0) {
+				sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2CacheLock, intr);
+				goto out;
+			}
+		} else {
+			object = partition->l2Cache;
+			partition->l2Cache = object->next;
+			object->next = NULL;
+			partition->l2CacheCount--;
+		}
+		l2pt = object;
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2CacheLock, intr);
+	}
+
+	PartitionL2CAllocMemBlockForL2PageTableRaw(partition, flags, &block);
 	l2pt->block = block;
 	ret = MemBlockL2PageTableAllocFreeArea(block, &quarter, &tableVa, &tablePa);
 	if (ret < 0)
@@ -2135,8 +2145,7 @@ int PartitionL2CAllocL2PageTableRaw(Partition *partition, uintptr_t va, SceUInt3
 	ret = L1PageTableSetL2PageTable(context->l1pt, partition->domain, l2pt->vbase, l2pt->tablePa);
 	if (ret < 0)
 		goto out;
-	tables = PartitionL2CAllocL2PageTableVectorR1(partition);
-	if (tables != NULL) {
+	if (PartitionL2CAllocL2PageTableVectorR1(partition, &tables) >= 0) {
 		slot = &tables[l2pt->vbase >> 20];
 		if (AS_L2_SLOT_TYPE(*slot) == AS_L2_SLOT_BLOCK)
 			l2pt->firstBlock = (MemBlockObject *)AS_L2_SLOT_PTR(*slot);
@@ -2145,9 +2154,11 @@ int PartitionL2CAllocL2PageTableRaw(Partition *partition, uintptr_t va, SceUInt3
 		SceCpuForKernel_9DA58A9E((uint32_t *)&partition->l2Count);
 	}
 	if (MemBlockL2PageTableFreeCount(block) > 0) {
+		MemBlockObject *listed = block;	/* Sony reads it before the lock call */
+
 		intr = SceCpuForDriver_4C38CE4D(&partition->l2BlockLock);
-		block->smbNext = partition->l2Blocks;
-		partition->l2Blocks = block;
+		listed->smbNext = partition->l2Blocks;
+		partition->l2Blocks = listed;
 		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2BlockLock, intr);
 	}
 	*out = l2pt;
@@ -2373,6 +2384,7 @@ void PartitionFindAndTryRemoveL2PageTable(Partition *partition, uintptr_t va, Sc
 {
 	AddressSpaceContext *context;
 	L2PageTable *found, *l2pt;
+	SceUInt16 reserved;
 	int intr, l2Intr, ret;
 
 	intr = SceCpuForDriver_4C38CE4D(&partition->mapLock);
@@ -2381,10 +2393,13 @@ void PartitionFindAndTryRemoveL2PageTable(Partition *partition, uintptr_t va, Sc
 		if (PartitionFindL2PageTable(partition, va, 0x100000, 0, &found) < 0)
 			continue;
 		l2pt = found;
-		if (L2PageTableGetPageCount(l2pt) != 0 || (l2pt->flags & 0x8000))
+		if (L2PageTableGetPageCount(l2pt) != 0)
+			continue;
+		reserved = l2pt->flags & 0x8000;	/* Sony stores this value, not 0 */
+		if (reserved)
 			continue;
 		l2Intr = SceCpuForDriver_4C38CE4D(&partition->l2Lock);
-		partition->tiny.context->l2Tables[l2pt->vbase >> 20] = 0;
+		partition->tiny.context->l2Tables[l2pt->vbase >> 20] = reserved;
 		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, l2Intr);
 		SceCpuForKernel_0E04BD2E((uint32_t *)&partition->l2Count);
 		ret = PartitionAsCommonFreeL2PageTable(partition, context, l2pt, 1);
