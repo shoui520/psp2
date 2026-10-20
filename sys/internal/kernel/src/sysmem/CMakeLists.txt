@@ -1,8 +1,11 @@
 # Partial Sysmem foundations; remaining bodies are explicit stubs.
 include(vendor_patch.cmake)
 # Sony built SceSysmem without -fno-delete-null-pointer-checks: a NULL test after a
-# dereference is dropped (dlmalloc's malloc.c, partition.c's free-list helpers)
-set(MODULE_COMPILE_OPTIONS -fdelete-null-pointer-checks)
+# dereference is dropped (dlmalloc's malloc.c, partition.c's free-list helpers).
+# And with -fuse-caller-save (CodeSourcery's, which the toolchain turns off by default): the
+# 3.6x ASLockRangeWithMode keeps its va in r2 across the call to ASLockUnlockModeCheck,
+# a leaf that never writes r2 (3.650.011-TOOL 0x81007870 against 0x81007720)
+set(MODULE_COMPILE_OPTIONS -fdelete-null-pointer-checks -fuse-caller-save)
 # SceSysclib's strtoll (FreeBSD's)
 set(sysmem_strtoll_source "${CMAKE_CURRENT_BINARY_DIR}/strtoll-sce.c")
 sysmem_prepare_patched(
