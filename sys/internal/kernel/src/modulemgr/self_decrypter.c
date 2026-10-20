@@ -245,7 +245,7 @@ const void *selfDecrypterRefill(SceDeflatePartialInputParam *param, unsigned int
 	slot = &g_self.slot[(int)g_self.stream.cookie];
 	size = slot->size;
 	if (slot->state < 2) {
-		ret = SceSblAuthMgrForKernel_BC422443(g_self.reader->authContext, slot->buf, size);
+		ret = SceSblAuthMgrForKernel_BC422443(g_self.reader->authContext, slot->buf, size, 0, 0);
 		if (ret < 0)
 			return NULL;
 		slot->state = 2;
@@ -291,7 +291,7 @@ int selfDecrypter_thread_entry(SceSize args, void *argp)
 			if (ret < 0)
 				goto complete;
 			if (slot->state < 2) {
-				ret = SceSblAuthMgrForKernel_BC422443(g_self.reader->authContext, slot->buf, size);
+				ret = SceSblAuthMgrForKernel_BC422443(g_self.reader->authContext, slot->buf, size, 0, 0);
 				slot->state = 2;
 				if (ret < 0)
 					goto complete;
@@ -424,7 +424,7 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 			g_self.slot[next].state = 1;
 			if (g_self.slot[previous].state == 2) {
 				ret = SceSblAuthMgrForKernel_BC422443(g_self.reader->authContext,
-						g_self.slot[next].buf, chunk);
+						g_self.slot[next].buf, chunk, 0, 0);
 				if (ret < 0)
 					goto drain;
 				g_self.slot[next].state = 2;
