@@ -59,15 +59,17 @@ builds every module of that firmware; each lands in `build/<partition>/<path>/`
 Sony's SELF layout with the original's auth ID (`tools/mkfself.py`), so it can (*hopefully*) be
 used in place of the original on PSP2.
 ## Current status
+
+The priority is: base kernel (`sys/internal/kernel`) -> full kernel (`sys/internal/drivers` and `os0:us` of sys/internal/usermode) -> ScePaf -> SceShell -> ?? anything else.  
+
 To summarize:
-* `os0`: substantial C reimplementation exists for nearly all modules. Not complete and not exact yet. No progress so far on MeP modules.
-* `slb2`: WIP.
-* `pup`: Not started. this is for `psp2swu`. `pup/cui_setupper` is identical to `os0:ue/cui_setupper`.
-* `vs0`: WIP. A little progress made. `os0:ue/safemode.elf` will be deferred until `vs0` becomes the priority.
-* `pd0:app/NPXS10007`: Not started
-* `security/first_loader`: Not started
+* Kernel: substantial C reimplementation exists for nearly all `os0:kd` modules. Not complete and not exact yet. No progress so far on `os0:sm`/MeP/security modules.
+* ScePaf: Not started
+* SceShell: Not started
+* `wp`: Not started
+* `first_loader`: Not started
 * `ernie`: Not started
-* `cp/` (devkit communication processor): Not started
+* `cp` (devkit communication processor): Not started
 
 Contributions welcome!
 ## AI disclosure
