@@ -14,6 +14,7 @@
 #include "mmu.h"
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
+#include <sysmem/heap_info.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include <threadmgr/threadcb.h>
@@ -301,7 +302,6 @@ typedef struct UIDHeap {
 
 /* fixed_heap.c: a heap of equal-size objects carved from 4K or 64K pages */
 #define FIXED_HEAP_MAGIC		0xfd9b28a6
-#define FIXED_HEAP_CPUS			4
 #define FIXED_HEAP_CACHE_MAX		12
 
 #define FIXED_HEAP_ATTR_CPU_CACHE	0x00000001	/* a free-object cache per CPU */
@@ -334,15 +334,6 @@ typedef struct FixedHeapObjectHook {
 	void (*onAlloc)(void *arg, struct FixedHeap *heap, void *object, const void *caller);
 	void (*onFree)(void *arg, struct FixedHeap *heap, void *object, const void *caller);
 } FixedHeapObjectHook;
-
-/* freed objects a CPU keeps for itself, linked through each object's first word */
-typedef struct FixedHeapCpuCache {
-	SceUInt16 max;
-	SceUInt16 count;			/* "nCount" */
-	SceUInt32 reserved;			/* only copied into SceKernelFixedHeapInfo */
-	void *head;
-	void *tail;
-} FixedHeapCpuCache;
 
 struct ObjectHeap;
 typedef struct FixedHeap {
@@ -377,35 +368,6 @@ typedef struct FixedHeap {
 } FixedHeap;
 
 _Static_assert(sizeof(FixedHeap) == 0xa4, "FixedHeap size");
-
-/* sceKernelGetFixedHeapInfo */
-typedef struct SceKernelFixedHeapInfo {
-	SceSize size;				/* 0x90 */
-	SceUInt32 itemSize;
-	SceSize totalSize;			/* of all pages */
-	SceUInt32 perPage;
-	SceUInt32 freeCount;
-	SceUInt32 peakCount;
-	void *cursor;				/* 0x18 */
-	SceUInt16 usedInPage;
-	SceUInt16 perPage16;
-	SceUInt32 listCount;			/* 0x20: "nListCount", counted on the free list */
-	FixedHeapCpuCache caches[FIXED_HEAP_CPUS];	/* 0x24 */
-	void *freeHead;				/* 0x64 */
-	void *freeTail;
-	SceUInt32 attr;
-	SceSize pageSize;			/* 0x70 */
-	SceUInt16 totalCount;
-	SceUInt16 freeCount16;
-	SceUInt32 maxPages;
-	SceUInt32 pageCount;
-	void **pages;				/* 0x80 */
-	void *currentPage;
-	char *name;
-	void **blocks;
-} SceKernelFixedHeapInfo;
-
-_Static_assert(sizeof(SceKernelFixedHeapInfo) == 0x90, "SceKernelFixedHeapInfo size");
 
 /* oheap.c: object heaps, a fixed heap per object size plus per-type limits */
 #define OBJECT_HEAP_TYPES	6
@@ -489,7 +451,6 @@ int FixedHeapApplyRangeWithIndexArgRaw(FixedHeap *heap, SceUInt32 start, SceUInt
 int FixedHeapSetPage(FixedHeap *heap, void *page);
 int FixedHeapSetUID(struct UIDManager *manager);
 int SceSysmemForKernel_811C452B(FixedHeap *heap, FixedHeapObjectHook *hook);
-int sceKernelGetFixedHeapInfo(SceUID uid, SceKernelFixedHeapInfo *info);
 int sceKernelFixedHeapSetHook(SceUID uid, FixedHeapObjectHook *hook);
 
 /* nameheap2.c: kept names, counted, in a hash table */
@@ -528,15 +489,6 @@ typedef struct NameHeapControl {
 } NameHeapControl;
 
 _Static_assert(sizeof(NameHeapControl) == 0x54, "NameHeapControl size");
-
-/* sceKernelNameHeapGetInfo */
-typedef struct SceKernelNameHeapInfo {
-	SceSize size;				/* 0x14 */
-	struct {
-		SceUInt32 count;
-		SceUInt32 peak;
-	} heaps[2];
-} SceKernelNameHeapInfo;
 
 int NameHeapInsert(const char *name, SceUInt32 flags, NameEntry **out);
 int NameHeapLink(const char *name, SceUInt32 flags, NameEntry **out);
@@ -603,16 +555,6 @@ typedef struct SceKernelClassInfo {
 	SceClass *parent;
 	const char *name;
 } SceKernelClassInfo;
-
-/* sceUIDEntryHeapGetInfo */
-typedef struct SceKernelUIDEntryHeapInfo {
-	SceSize size;				/* 0x18 */
-	SceUInt32 itemSize;
-	SceSize totalSize;
-	SceUInt32 perPage;
-	SceUInt32 freeCount;
-	SceUInt32 peakCount;
-} SceKernelUIDEntryHeapInfo;
 
 /* scePUIDGetInfo */
 typedef struct SceKernelPUIDInfo {
@@ -714,20 +656,6 @@ typedef struct UIDEntryHeap {
 } UIDEntryHeap;
 
 _Static_assert(sizeof(UIDEntryHeap) == 0xb0, "UIDEntryHeap size");
-
-/* an entry's info, in the entry info walks */
-typedef struct SceKernelUIDEntryInfo {
-	SceSize size;				/* 0x24 */
-	SceUID uid;
-	SceObjectBase *object;
-	SceClass *cls;
-	SceUID guid;				/* 0x10 */
-	SceUInt16 linkCount;
-	SceUInt16 useCount;
-	SceUInt32 attr;
-	const char *name;
-	SceUID pid;				/* 0x20 */
-} SceKernelUIDEntryInfo;
 
 /* objects a close leaves to free, after the lock is dropped */
 #define DELETE_PARAM_OBJECTS		2

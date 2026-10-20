@@ -147,8 +147,8 @@ int SDbgpModuleStart(SceSize args, const void *argp)
 	s_sdbgpState.debugCpu = base;
 	*debugCpu = base;
 	s_sdbgpState.enabled = 1;
-	SceDeci4pSDfMgrForKernel_8A3B06F2(s_sdbgpState.excpInfo, 0,
-					  sizeof(s_sdbgpState.excpInfo));
+	SceDeci4pSDfMgrForKernel_8A3B06F2(&s_sdbgpState.leakCheck, 0,
+					  sizeof(s_sdbgpState.leakCheck));
 	SceSysrootForKernel_21F5790B(SceDeci4pSDfMgrForKernel_98AEC60E);
 	SceDebugForKernel_A465A31A(0);
 	sdbgpInitProfiler(&s_sdbgpProfiler);

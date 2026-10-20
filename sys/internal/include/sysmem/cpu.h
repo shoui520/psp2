@@ -15,7 +15,11 @@
 extern "C" {
 #endif
 
-struct CpuLongIrqHandlerRecord;
+/* SceCpuForKernel_B331AB16: told of each long interrupts-masked section (name unknown) */
+struct CpuLongIrqHandlerRecord {
+	int (*notify)(int kind, uint32_t duration, unsigned core,
+		       uintptr_t lockedCaller, const void *resumeCaller);
+};
 struct ThreadmgrLwMutexWork;
 
 /*

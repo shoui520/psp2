@@ -12,12 +12,6 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/cpu.h>
 
-/* Name unknown; only the callback prefix is accessed by CPU diagnostics. */
-struct CpuLongIrqHandlerRecord {
-	int (*notify)(int kind, uint32_t duration, unsigned core,
-		       uintptr_t lockedCaller, const void *resumeCaller);
-};
-
 #if FW_DEBUG
 static volatile uintptr_t s_cpuLastLockCaller[4];
 static volatile uint32_t s_cpuIrqDisabledAt[4];

@@ -438,17 +438,6 @@ int SceSysmemForKernel_17D3D4BD(ObjectHeap *heap, SceSize size, void *object)
 	return UIDHeapCallFree(ObjectHeapGetHeap(heap, size), object);
 }
 
-/* the size classes of an object heap */
-typedef struct ObjectHeapInfo {
-	SceSize size;				/* 200 */
-	SceUInt32 count;
-	struct {
-		SceSize size;
-		void *heap;
-		SceUInt32 reserved;
-	} sizeClasses[16];
-} ObjectHeapInfo;
-
 /* name unknown: sceKernelGetObjectHeapInfo */
 int SceSysmemForKernel_DBEACE2C(ObjectHeap *heap, ObjectHeapInfo *info)
 {

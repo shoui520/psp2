@@ -72,6 +72,11 @@ int SceThreadmgrForKernel_C976719E(SceUID threadId, uint32_t flags,
 				   ThreadmgrThreadInfoForDebugger *info);
 int SceThreadmgrForKernel_BFF892B4(SceUID threadId, uint32_t flags,
 				   ThreadmgrThreadInfoForDebugger *info);
+int SceThreadmgrForKernel_B011EA69(uint32_t flags, ThreadmgrThreadInfoForDebugger *infos,
+				   SceSize size, SceSize *count);
+int SceThreadmgrForKernel_6351A13A(SceUID pid, uint32_t flags,
+				   ThreadmgrThreadInfoForDebugger *infos, SceSize size,
+				   SceSize *count);
 /* vitasdk: ksceKernelGetThreadInfoForDebugger */
 int SceThreadmgrForDriver_DD8D9429(SceUID threadId, uint32_t flags,
 				   ThreadmgrThreadInfoForDebugger *info);

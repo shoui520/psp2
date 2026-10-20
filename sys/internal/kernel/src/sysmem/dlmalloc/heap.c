@@ -104,23 +104,6 @@ typedef struct KernelHeap {
 
 _Static_assert(sizeof(KernelHeap) == 0x80, "KernelHeap size");
 
-/* name unknown: called on every allocation and free (SceSysmemForKernel_42834422; debug
-   builds only); an allocation reports its caller and the allocating function by name hash */
-typedef struct HeapHooks {
-	void (*alloc)(SceUID uid, void *ptr, SceSize size, const void *caller, SceUInt32 func);
-	void (*free)(SceUID uid, void *ptr);
-} HeapHooks;
-
-/* the function hashes the allocation hook gets (sha1(name)[0..3], as in the debug records) */
-#define HEAP_FUNC_ALLOC_HEAP_MEMORY		0x3b956c63	/* sceKernelAllocHeapMemory */
-#define HEAP_FUNC_ALLOC_HEAP_MEMORY_WITH_OPTION	0xdb747aeb	/* sceKernelAllocHeapMemoryWithOption */
-#define HEAP_FUNC_ALLOC_HEAP_MEMORY_WITH_OPT	0x16fdddfd	/* PLACEHOLDER: name */
-#define HEAP_FUNC_ALLOC				0x52e5216a	/* sceKernelAlloc */
-#define HEAP_FUNC_ALLOC_WITH_OPT		0x65ff9138	/* sceKernelAllocWithOpt */
-#define HEAP_FUNC_ALLOC_UNCACHE			0x010b9fc3	/* sceKernelAllocUncacheHeapMemory */
-#define HEAP_FUNC_ALLOC_UNCACHE_WITH_OPTION	0xaa952bc9	/* sceKernelAllocUncacheHeapMemoryWithOption */
-#define HEAP_FUNC_OBJECT_ALLOC			0xb2e40fe1	/* PLACEHOLDER: name */
-
 SceUInt32 s_uncacheHeap = (SceUInt32)-1;	/* the uncached heap's UID */
 static KernelHeap *s_kernelHeap;		/* UIDManager +0x44 */
 static SceClass *s_heapClass;			/* "SceUIDKernelHeapClass" */
@@ -669,7 +652,7 @@ static int HeapObjectAlloc(void *object, SceSize size, void **ptr)
 #if FW_DEBUG
 	if (mem != NULL && s_hooks.alloc != NULL)
 		s_hooks.alloc((SceUID)heap, mem, size, __builtin_return_address(0),
-			      HEAP_FUNC_OBJECT_ALLOC);
+			      HEAP_FUNC_ALLOC_METHOD);
 #endif
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&heap->lock, intr);
 	*ptr = mem;

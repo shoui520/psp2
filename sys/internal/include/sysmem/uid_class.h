@@ -52,6 +52,22 @@ int sceUIDClassInitClass(SceClass *cls, const char *name, void *uidclass,
 /* vitasdk: ksceKernelFindClassByName */
 int SceSysmemForKernel_7D87F706(const char *name, SceClass **cls);
 
+/* an entry's info, in the entry info walks */
+typedef struct SceKernelUIDEntryInfo {
+	SceSize size;				/* 0x24 */
+	SceUID uid;
+	SceObjectBase *object;
+	SceClass *cls;
+	SceUID guid;				/* 0x10 */
+	SceUInt16 linkCount;
+	SceUInt16 useCount;
+	SceUInt32 attr;
+	const char *name;
+	SceUID pid;				/* 0x20 */
+} SceKernelUIDEntryInfo;
+
+int SceSysmemForKernel_3BF0DE65(SceUInt32 level, SceUInt32 state, SceKernelUIDEntryInfo *infos,
+				SceSize size, SceSize *ret_num);
 int PUIDGetPUIDVectorByGUID(SceUID pid, SceUID guid, SceUInt32 level, SceUID *vector, SceSize size, SceSize *ret_num);
 int SceSysmemForKernel_02DAD732(void);
 int scePUIDGetUIDVectorByClass(SceUID pid, SceClass *cls, SceUInt32 level, SceUID *vector, SceSize num, SceSize *ret_num);

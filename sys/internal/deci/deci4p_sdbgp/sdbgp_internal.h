@@ -17,6 +17,10 @@
 #include <deci4p_sdfmgr/sdfmgr.h>
 #include <iofilemgr/iofilemgr.h>
 #include <iofilemgr/vfs.h>
+#include <processmgr/process_info.h>
+#include <sysmem/heap_info.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/uid_class.h>
 
 /* the floating-point status register (exception notifications) */
 static inline uint32_t readFpscr(void)
@@ -316,6 +320,33 @@ typedef struct SdbgpHwSlot {
 #define SDBGP_HWWATCH_MAX		1
 
 /* the debugger's global state */
+/*
+ * The UID and heap logs _leakcheckUID and _leakcheckHeap keep (leakcheck.c): the
+ * kernel's UIDs at the first pass, at the current one, and the log of what came
+ * since. The log holds LeakCheckUIDLogEntry or, in heap mode, LeakCheckNamedChunk.
+ */
+#define LEAKCHECK_MODE_UID		2
+#define LEAKCHECK_MODE_HEAP		4
+
+typedef struct SdbgpUIDList {
+	uint32_t mode;				/* LEAKCHECK_MODE_* of the pass that took it */
+	SceUID memblock;
+	SceKernelUIDEntryInfo *entries;
+	SceSize num;				/* capacity in, then the entries of the first pass */
+} SdbgpUIDList;
+
+typedef struct SdbgpLeakCheck {
+	SdbgpUIDList base;			/* 0x00: "SceDeci4pSdbgpLCBase" */
+	SdbgpUIDList current;			/* 0x10: "SceDeci4pSdbgpLCCurr" */
+	SceUID logMemblock;			/* 0x20: "SceDeci4pSdbgpLCLog" */
+	void *log;				/* 0x24 */
+	SceSize logCount;			/* 0x28 */
+	SceSize logMax;				/* 0x2c */
+	uint32_t generation;			/* 0x30: passes taken */
+} SdbgpLeakCheck;
+
+_Static_assert(sizeof(SdbgpLeakCheck) == 0x34, "leak check state");
+
 typedef struct SdbgpState {
 	SceUID memblock;			/* 0x000 */
 	void *base;				/* 0x004 */
@@ -332,7 +363,7 @@ typedef struct SdbgpState {
 	uint32_t stopReason[4];			/* 0x46c: per core, SDBGP_STOP_* */
 	uint32_t reserved5[4];			/* 0x47c */
 	void *debugCpu;				/* 0x48c: the SDfMgr break records */
-	uint8_t excpInfo[52];			/* 0x490 */
+	SdbgpLeakCheck leakCheck;		/* 0x490 */
 	void *traceBase;			/* 0x4c4 */
 	SceUID traceMemblock;			/* 0x4c8 */
 	SceSize traceSize;			/* 0x4cc */
@@ -516,6 +547,118 @@ int swbkptMakeEntry(SceUID pid, SceUID tid, uintptr_t address, uint32_t cpsr,
 int swbkptIsBkpt(SceUID pid, uintptr_t address, uint32_t cpsr, int *isBkpt);
 int swbkptHideInBuffer(SceUID pid, uintptr_t start, SceSize size, uint8_t *buf);
 int swbkptClear(int index);
+
+/* leakcheck.c */
+#define LEAKCHECK_PROCESS_MAX		16
+#define LEAKCHECK_PHYMEMPART_MAX	16
+#define LEAKCHECK_FIXED_HEAP_MAX	8	/* per object heap */
+#define LEAKCHECK_HEAP_MAX		128
+#define LEAKCHECK_HEAP_BLOCK_MAX	16
+#define LEAKCHECK_CLASS_MAX		20
+
+/* the UIDs of one class (_GetResourceGUIDInfo), in the leak check heap */
+typedef struct LeakCheckGUIDVector {
+	SceSize num;
+	SceUID *uid;
+} LeakCheckGUIDVector;
+
+/* a heap's info with room for its block list */
+typedef struct LeakCheckHeapInfo {
+	HeapInfo info;
+	struct malloc_segment_range blocks[LEAKCHECK_HEAP_BLOCK_MAX];
+} LeakCheckHeapInfo;
+
+/*
+ * sceSdbgpGetSystemResourceSnapshot's record of the kernel's resources, one
+ * memblock of its own. Per process: its info, address space, physical memory
+ * partitions, object heaps (0: the process's, 1: its second) and their fixed
+ * heaps; then the kernel's UID classes, fixed heaps and heaps.
+ */
+typedef struct SdbgpSystemResourceSnapshot {
+	SceUInt32 level;
+	int processCount;
+	SceKernelProcessInfo process[LEAKCHECK_PROCESS_MAX];			/* 0x00008 */
+	AddressSpaceInfo addressSpace[LEAKCHECK_PROCESS_MAX];			/* 0x00e88 */
+	SceKernelPhyMemPartInfoForDebugger
+		phyMemPart[LEAKCHECK_PROCESS_MAX][LEAKCHECK_PHYMEMPART_MAX];	/* 0x073c8 */
+	ObjectHeapInfo objectHeap[LEAKCHECK_PROCESS_MAX][2];			/* 0x123c8 */
+	SceKernelFixedHeapInfo
+		fixedHeap[LEAKCHECK_PROCESS_MAX][2][LEAKCHECK_FIXED_HEAP_MAX];	/* 0x13cc8 */
+	HeapInfo processHeap[LEAKCHECK_HEAP_MAX];				/* 0x1ccc8 */
+	struct malloc_segment_range processHeapBlocks[LEAKCHECK_HEAP_BLOCK_MAX];	/* 0x204c8 */
+	uint32_t reserved[4064];						/* 0x20548 */
+	SceKernelUIDEntryHeapInfo uidEntryHeap[LEAKCHECK_PROCESS_MAX];		/* 0x244c8 */
+	SceKernelNameHeapInfo nameHeap;						/* 0x24648 */
+	LeakCheckGUIDVector guid[LEAKCHECK_CLASS_MAX];				/* 0x2465c */
+	SceKernelFixedHeapInfo kernelFixedHeap[6];	/* 0x246fc: 32 to 512 bytes, GUID entries */
+	LeakCheckHeapInfo kernelHeap[2];		/* 0x2485c: cached, uncached */
+	int heapCount;							/* 0x2493c */
+	HeapInfo heap[LEAKCHECK_HEAP_MAX];					/* 0x24940 */
+	struct malloc_segment_range heapBlocks[LEAKCHECK_HEAP_MAX][LEAKCHECK_HEAP_BLOCK_MAX];
+} SdbgpSystemResourceSnapshot;
+
+_Static_assert(offsetof(SdbgpSystemResourceSnapshot, processHeap) == 117960, "snapshot heaps");
+_Static_assert(offsetof(SdbgpSystemResourceSnapshot, uidEntryHeap) == 148680, "snapshot UID heaps");
+_Static_assert(offsetof(SdbgpSystemResourceSnapshot, heapCount) == 150588, "snapshot heap count");
+_Static_assert(sizeof(SdbgpSystemResourceSnapshot) == 181312, "snapshot size");
+
+/* a section run with interrupts masked (the CPU long-mask hook) */
+typedef struct SdbgpCpuMaskEntry {
+	int kind;
+	uint32_t duration;			/* microseconds */
+	uint32_t core;
+	uintptr_t lockedCaller;
+	const void *resumeCaller;
+} SdbgpCpuMaskEntry;
+
+/* CpuMaskShow's log (kernel_util.c) */
+typedef struct SdbgpCpuMaskLog {
+	uint32_t shown;
+	struct CpuLongIrqHandlerRecord hook;
+	SceUID memblock;
+	SdbgpCpuMaskEntry *entries;
+	SceSize count;
+	SceSize max;
+} SdbgpCpuMaskLog;
+
+extern SdbgpCpuMaskLog sdbgpCpuMaskLog;
+
+/* _leakcheckUID's records */
+typedef struct LeakCheckUIDRecord {
+	SceSize size;				/* 80 */
+	SceUID uid;
+	char name[32];
+	char className[32];
+	SceUInt32 attr;
+	uint32_t generation;
+} LeakCheckUIDRecord;
+
+/* _leakcheckHeap's records */
+typedef struct LeakCheckHeapRecord {
+	SceSize size;				/* 60 */
+	SceUID heap;
+	char name[32];
+	void *ptr;
+	SceSize chunkSize;
+	const void *caller;
+	SceUInt32 func;
+	uint32_t generation;
+} LeakCheckHeapRecord;
+
+int sdbgpCpuMaskLogAdd(int kind, uint32_t duration, unsigned core, uintptr_t lockedCaller,
+		       const void *resumeCaller);
+int LeakCheckHeapInit(void);
+int sceKernelHeapLoggingStart(void);
+int chunkAll(int all, uint32_t generation);
+void LeakCheckInit(void);
+int LeakCheckHeapFilerAdd(const char *name);
+int sceSdbgpGetSystemResourceSnapshot(SceUInt32 level, SdbgpSystemResourceSnapshot *snap);
+int sceKernelSnapshot(void);
+int LeakCheckUIDSnapshot(void);
+int LeakCheckHeapSnapshot(void);
+int _leakcheckUID(LeakCheckUIDRecord *out, uint32_t *generation, SceSize *count, SceSize *size);
+int _leakcheckHeap(LeakCheckHeapRecord *out, uint32_t *generation, SceSize *count, SceSize *size);
+int _leakcheckReset(void);
 
 /* group_system.c */
 int sdbgpDecodeOpcode(int thumb, const void *buf, uint32_t *opcode);
