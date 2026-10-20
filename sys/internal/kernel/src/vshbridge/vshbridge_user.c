@@ -33,7 +33,7 @@ typedef struct NpDrmEbootSigConvertParam {
 	const void *oldSignature;
 	void *newSignature;
 	const SyscallUnusedArgs *uargs;
-} NpDrmEbootSigConvertParam;
+} __attribute__((aligned(8))) NpDrmEbootSigConvertParam;
 
 typedef struct AppMgrCloudDataCreateHeaderParam {
 	const void *a;
@@ -52,11 +52,13 @@ static int npDrmGetLegacyDocKey(const void *a, const void *key, void *c, const V
 {
 	VshLegacyDocKeyArgs args;
 	SceUInt8 *pa = NULL, *pkey = NULL, *out;
+	void *uout;
 	int ret;
 
 	ret = sceKernelCopyFromUser(&args, uargs, sizeof(args));
 	if (ret < 0)
 		return ret;
+	uout = args.out;
 	if (a != NULL) {
 		pa = __builtin_alloca(0x200);
 		ret = sceKernelCopyFromUser(pa, a, 0x200);
@@ -71,12 +73,12 @@ static int npDrmGetLegacyDocKey(const void *a, const void *key, void *c, const V
 		if (ret < 0)
 			return ret;
 	}
-	if (args.out == NULL)
+	if (uout == NULL)
 		return vshNpDrmGetLegacyDocKey(pa, pkey, c, NULL);
 	out = __builtin_alloca(0x10);
 	__builtin_memset(out, 0, 0x10);
 	ret = vshNpDrmGetLegacyDocKey(pa, pkey, c, out);
-	return copyResult(ret, sceKernelCopyToUser(args.out, out, 0x10));
+	return copyResult(ret, sceKernelCopyToUser(uout, out, 0x10));
 }
 
 static int npDrmGetLegacyDocKeyOnStack(void *argp)
@@ -465,11 +467,16 @@ int _vshIoMount(int id, const char *path, int permission, const VshIoMountArgs *
 {
 	VshIoMountArgs args;
 	char *p = NULL;
+	void *data;
+	SceUInt32 reservedLow, reservedHigh;
 	int ret;
 
 	ARGS_IN(args, uargs);
+	data = args.data;
+	reservedLow = args.reservedLow;
+	reservedHigh = args.reservedHigh;
 	STRING_IN(p, path, 0x400);
-	return vshIoMount(id, p, permission, args.data, args.reservedLow, args.reservedHigh);
+	return vshIoMount(id, p, permission, data, reservedLow, reservedHigh);
 }
 
 int _vshIoGetstat(const char *path, void *stat, const SyscallUnusedArgs *uargs)
@@ -614,13 +621,15 @@ typedef struct VshEbootSigArgs {
 	VshEbootSigArgs args;						\
 	char *ppath = NULL;						\
 	SceUInt8 *pb = NULL;						\
+	int swVersion;							\
 	int ret;							\
 									\
 	ARGS_IN(args, uargs);						\
+	swVersion = args.swVersion;					\
 	STRING_IN(ppath, path, 0x100);					\
 	BLOCK_IN(pb, b, (_bsize));					\
-	BLOCK_OUT(sig, 0x200, _impl(ppath, pb, NULL, args.swVersion),	\
-		  _impl(ppath, pb, k, args.swVersion));			\
+	BLOCK_OUT(sig, 0x200, _impl(ppath, pb, NULL, swVersion),	\
+		  _impl(ppath, pb, k, swVersion));			\
 } while (0)
 
 int _vshNpDrmEbootSigGenPsp(const char *path, const void *b, void *sig, const VshEbootSigArgs *uargs)
@@ -958,12 +967,15 @@ int _vshCoredumpCafSegmentInit(SceUID ctx, SceUInt32 hashKeySelector, SceUInt32 
 {
 	VshCafSegmentInitArgs args;
 	SceUInt8 *kiv = NULL;
+	SceUInt32 cipherKeySelector;
+	SceSize size;
 	int ret;
 
 	ARGS_IN(args, uargs);
+	cipherKeySelector = args.cipherKeySelector;
+	size = args.size;
 	BLOCK_IN_SIZED(kiv, args.iv, args.ivSize, 0x10);
-	return vshCoredumpCafSegmentInit(ctx, hashKeySelector, cipherMode, args.cipherKeySelector, kiv,
-					 args.size);
+	return vshCoredumpCafSegmentInit(ctx, hashKeySelector, cipherMode, cipherKeySelector, kiv, size);
 }
 
 typedef struct VshCafSegmentTransformArgs {
@@ -978,12 +990,14 @@ int _vshCoredumpCafSegmentTransform(SceUID ctx, const void *in, void *out,
 {
 	VshCafSegmentTransformArgs args;
 	SceUInt8 *pin = NULL;
+	SceSize size;
 	int ret;
 
 	ARGS_IN(args, uargs);
+	size = args.size;
 	BLOCK_IN_SIZED(pin, in, args.inSize, 0x400);
-	BLOCK_OUT_SIZED(out, args.outSize, 0x400, vshCoredumpCafSegmentTransform(ctx, pin, NULL, args.size),
-			vshCoredumpCafSegmentTransform(ctx, pin, k, args.size));
+	BLOCK_OUT_SIZED(out, args.outSize, 0x400, vshCoredumpCafSegmentTransform(ctx, pin, NULL, size),
+			vshCoredumpCafSegmentTransform(ctx, pin, k, size));
 }
 
 int _vshCoredumpCafSegmentFinal(SceUID ctx, void *buf, SceSize size, const SyscallSizeArgs *uargs)
@@ -1012,14 +1026,21 @@ int _vshCoredumpCreateDump(int a, const void *b, int c, const VshCreateDumpArgs 
 {
 	VshCreateDumpArgs args;
 	SceUInt8 *pb = NULL, *kin = NULL;
+	const void *in;
+	int e, f, h;
+	void *out;
 	int ret;
 
 	ARGS_IN(args, uargs);
+	in = args.in;
+	e = args.e;
+	f = args.f;
+	out = args.out;
+	h = args.h;
 	BLOCK_IN_SIZED(pb, b, args.bSize, 0x10);
-	BLOCK_IN_SIZED(kin, args.in, args.inSize, 0x200);
-	BLOCK_OUT_SIZED(args.out, args.outSize, 0x200,
-			vshCoredumpCreateDump(a, pb, c, kin, args.e, args.f, NULL, args.h),
-			vshCoredumpCreateDump(a, pb, c, kin, args.e, args.f, k, args.h));
+	BLOCK_IN_SIZED(kin, in, args.inSize, 0x200);
+	BLOCK_OUT_SIZED(out, args.outSize, 0x200, vshCoredumpCreateDump(a, pb, c, kin, e, f, NULL, h),
+			vshCoredumpCreateDump(a, pb, c, kin, e, f, k, h));
 }
 
 typedef struct VshEventLogArgs {
@@ -1033,11 +1054,13 @@ int _vshEventLogPut(SceUInt16 type, SceUInt16 subtype, SceUInt32 arg, const VshE
 {
 	VshEventLogArgs args;
 	SceUInt8 *kbuf = NULL;
+	SceSize bufSize;
 	int ret;
 
 	ARGS_IN(args, uargs);
+	bufSize = args.bufSize;
 	BLOCK_IN_SIZED(kbuf, args.pBuf, args.copySize, 0x7c0);
-	return vshEventLogPut(type, subtype, arg, kbuf, args.bufSize);
+	return vshEventLogPut(type, subtype, arg, kbuf, bufSize);
 }
 
 /* in and out: the bridge checks the record's size */

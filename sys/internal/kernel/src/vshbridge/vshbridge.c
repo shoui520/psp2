@@ -364,7 +364,7 @@ SceUInt32 vshTouchSetTouchEmulationData(const void *front, const void *back)
 /* LED 2 on early boards (hardware info below 0x800000) is driven in mode 1 */
 SceUInt32 vshLedSetMode(int led, int mode, const void *conf)
 {
-	static const SceUInt32 vshLedDefaultConf[4] = { 8, 9, 0, 0 };
+	static const SceUInt32 vshLedDefaultConf[2] = { 8, 9 };
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
 
@@ -452,7 +452,7 @@ SceUInt32 vshSysconGetLogInfo(void *info)
 {
 	SceUInt32 t = sceSyscallEnter();
 	SceProductMode mode = 0;
-	SceUInt8 buf[8];
+	uint32_t buf[2];
 	int ret;
 
 	if (!sceSblACMgrIsSystemProgram(0)) {
@@ -465,7 +465,7 @@ SceUInt32 vshSysconGetLogInfo(void *info)
 	} else if (!mode) {
 		ret = SCE_SYSCON_ERROR_NOT_PRODUCT_MODE;
 	} else {
-		ret = SceSysconForDriver_701535FC((uint32_t *)buf);
+		ret = SceSysconForDriver_701535FC(buf);
 		if (ret >= 0)
 			ret = sceKernelCopyToUser(info, buf, sizeof(buf));
 	}
@@ -938,8 +938,12 @@ SceUInt32 vshSblSsGetNvsData(SceUInt32 offset, void *buf, SceSize size)
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	ret = sceSblSsGetNvsData(offset, buf, size);
+	if (ret != 0) {
+		sceSyscallLeave(t);
+		return ret;
+	}
 	sceSyscallLeave(t);
-	return ret == 0 ? 0 : ret;
+	return 0;
 }
 
 SceUInt32 vshSblSsSetNvsData(SceUInt32 offset, const void *buf, SceSize size)
@@ -952,8 +956,12 @@ SceUInt32 vshSblSsSetNvsData(SceUInt32 offset, const void *buf, SceSize size)
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	ret = sceSblSsSetNvsData(offset, buf, size);
+	if (ret != 0) {
+		sceSyscallLeave(t);
+		return ret;
+	}
 	sceSyscallLeave(t);
-	return ret == 0 ? 0 : ret;
+	return 0;
 }
 
 /* portability mode 0-20; the output size starts as the input size */
@@ -967,7 +975,11 @@ SceUInt32 vshSblSsEncryptWithPortability(SceUInt32 mode, void *iv, ScePortabilit
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	if (mode >= 0x15 || iv == NULL || in == NULL || out == NULL) {
+	if (mode > 0x14) {
+		sceSyscallLeave(t);
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	}
+	if (in == NULL || iv == NULL || out == NULL) {
 		sceSyscallLeave(t);
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	}
@@ -987,7 +999,11 @@ SceUInt32 vshSblSsDecryptWithPortability(SceUInt32 mode, void *iv, ScePortabilit
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	if (mode >= 0x15 || iv == NULL || out == NULL || in == NULL) {
+	if (mode > 0x14) {
+		sceSyscallLeave(t);
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	}
+	if (in == NULL || iv == NULL || out == NULL) {
 		sceSyscallLeave(t);
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	}
@@ -1127,24 +1143,36 @@ SceUInt32 vshSblGcAuthMgrMlnpsnlAuth2(void *a, void *b, void *c)
 
 /* ===== start ===== */
 
+/* weak imports: module_start checks them before use */
+#pragma weak sceRegMgrGetKeyInt
+#pragma weak SceUdcdForDriver_2D91F8C3
+
 int module_start(SceSize args, void *argp)
 {
-	int (*getKeyInt)(const char *, const char *, int *) = sceRegMgrGetKeyInt;
-	int value, vibration = 1, interval = 0;
+	int (*volatile getKeyInt)(const char *, const char *, int *) = sceRegMgrGetKeyInt;
+	int (*volatile setCharge)(int) = SceUdcdForDriver_2D91F8C3;
+	int value, vibration, interval;
 
 	(void)args;
 	(void)argp;
 
-	if (getKeyInt("/CONFIG/USB", "usb_charge_enable", &value) >= 0) {
+	if (getKeyInt != NULL && setCharge != NULL &&
+	    sceRegMgrGetKeyInt("/CONFIG/USB", "usb_charge_enable", &value) >= 0) {
 		if (sceKernelSysrootIsSafeMode() || SceSysrootForDriver_B0E1FC67())
 			value = 0;
 		SceUdcdForDriver_2D91F8C3(value);
 	}
-	if (getKeyInt("/CONFIG/SYSTEM/", "controller_vibration", &vibration) >= 0) {
+	getKeyInt = sceRegMgrGetKeyInt;
+	vibration = 1;
+	interval = 0;
+	if (getKeyInt != NULL) {
+		if (sceRegMgrGetKeyInt("/CONFIG/SYSTEM/", "controller_vibration", &vibration) < 0)
+			return 0;
 		SceCtrlForDriver_4D8FE670(vibration);
-		if (getKeyInt("/CONFIG/POWER_SAVING/", "controller_off_interval", &interval) >= 0)
-			SceCtrlForDriver_ED8F0129(interval);
 	}
+	if (getKeyInt != NULL &&
+	    sceRegMgrGetKeyInt("/CONFIG/POWER_SAVING/", "controller_off_interval", &interval) >= 0)
+		SceCtrlForDriver_ED8F0129(interval);
 	return 0;
 }
 

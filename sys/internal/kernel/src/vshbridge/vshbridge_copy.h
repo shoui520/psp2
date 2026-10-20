@@ -35,11 +35,13 @@ typedef struct VshMlnpsnlAuth2Args {
 #define MLNPSNL_AUTH1(_impl) do {					\
 	VshMlnpsnlAuth1Args args;					\
 	SceUInt8 *pa = NULL, *pb = NULL, *out1 = NULL, *out2 = NULL;	\
+	void *uout2;							\
 	int ret, ret2;							\
 									\
 	ret = sceKernelCopyFromUser(&args, uargs, sizeof(args));	\
 	if (ret < 0)							\
 		return ret;						\
+	uout2 = args.out2;						\
 	if (a != NULL) {						\
 		if (args.aSize > 0x20)					\
 			return SCE_KERNEL_ERROR_NO_MEMORY;		\
@@ -62,7 +64,7 @@ typedef struct VshMlnpsnlAuth2Args {
 		out1 = __builtin_alloca(0x80);				\
 		__builtin_memset(out1, 0, 0x80);			\
 	}								\
-	if (args.out2 != NULL) {					\
+	if (uout2 != NULL) {						\
 		if (args.out2Size > 0x40)				\
 			return SCE_KERNEL_ERROR_NO_MEMORY;		\
 		out2 = __builtin_alloca(0x40);				\
@@ -74,9 +76,9 @@ typedef struct VshMlnpsnlAuth2Args {
 		if (ret2 < 0)						\
 			return ret2;					\
 	}								\
-	if (args.out2 == NULL)						\
+	if (uout2 == NULL)						\
 		return ret;						\
-	return copyResult(ret, sceKernelCopyToUser(args.out2, out2, args.out2Size));	\
+	return copyResult(ret, sceKernelCopyToUser(uout2, out2, args.out2Size));	\
 } while (0)
 
 /* the body of an Auth2 export: (a, b, out, uargs) to _impl(a, b, out) */
