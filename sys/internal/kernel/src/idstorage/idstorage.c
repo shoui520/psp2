@@ -1,5 +1,6 @@
 /* SceIdStorage: sector index, cached leaves and copy-on-write block commits. */
 
+#include <fw.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <sysmem/cpu.h>
@@ -97,7 +98,7 @@ static int transfer(SceUID fd, SceOff offset, void *buffer, SceSize size, int wr
 }
 
 /* name unknown: the idstorage partition's owner and mode, for type-8 attributes */
-static int loadPermissions(void)
+static int __attribute__((noinline)) loadPermissions(void)
 {
 	SceMbr mbr;
 	int fd, ret, i;
@@ -130,7 +131,19 @@ close:
 	return ret;
 }
 
-static int commitStorage(void);
+/*
+ * 4.00 keeps the commit out of line and inlines the flush into its callers; 3.6x inlines the
+ * commit into the flush and calls that.
+ */
+#if FW_SINCE(0x04000000)
+#define COMMIT_STORAGE	static int __attribute__((noinline))
+#define FLUSH_STORAGE	int
+#else
+#define COMMIT_STORAGE	static inline __attribute__((always_inline)) int
+#define FLUSH_STORAGE	int __attribute__((noinline))
+#endif
+
+COMMIT_STORAGE commitStorage(void);
 
 /* name unknown: invalidate all cached physical slots. */
 static void clearCache(void)
@@ -153,7 +166,7 @@ int SceIdStorageForDriver_B9069BAD(void)
 	return 0;
 }
 
-int SceIdStorageForDriver_3AD32523(void)
+FLUSH_STORAGE SceIdStorageForDriver_3AD32523(void)
 {
 	int ret;
 
@@ -183,10 +196,10 @@ static int storageSysEvent(int resume, int event, void *args, void *opt)
 }
 
 /* name unknown: allocate index/cache and register suspend handling. */
-static int initializeStorage(void)
+static int __attribute__((noinline)) initializeStorage(void)
 {
 	SceKernelHeapCreateOpt createOpt;
-	SceAllocOpt allocOpt = {0x14, 0, 0x1000, 0, 0};
+	SceAllocOpt allocOpt;
 	SceOff bytes;
 	int fd, ret, attempts;
 
@@ -215,12 +228,17 @@ static int initializeStorage(void)
 	} else {
 		device = idDevice;
 		storage.fd = fd;
-		bytes = sceIoLseek(fd, 0, 2);
-		if (bytes < 1)
-			return (int)bytes;
+		bytes = storage.offset == 0 ? sceIoLseek(fd, storage.offset, SCE_SEEK_END) : 0;
 	}
-	if ((bytes >> 9) >> 32)
+	if (bytes < 1)
+		return (int)bytes;
+	if ((SceUInt64)(bytes >> 9) >= 0x100000000ULL)
 		return ID_INVALID_ARGUMENT;
+	allocOpt.size = sizeof(allocOpt);
+	allocOpt.mmapKind = 0;
+	allocOpt.mmapBase = NULL;
+	allocOpt.mmapSize = 0;
+	allocOpt.align = 0x1000;
 	totalLeaves = indexLeaves = (int)(bytes >> 9);
 	storage.index = sceKernelAllocHeapMemoryWithOption(heap, indexLeaves << 1, &allocOpt);
 	if (!storage.index)
@@ -241,13 +259,10 @@ static int initializeStorage(void)
 		return ret;
 	}
 	storage.mutex = ret;
-	for (attempts = 4; attempts; attempts--) {
-		ret = transfer(storage.fd, storage.offset, storage.index, indexLeaves << 1, 0);
-		if (ret >= 0) {
-			storage.formatted = 1;
+	for (attempts = 4; attempts; attempts--)
+		if (transfer(storage.fd, storage.offset, storage.index, indexLeaves << 1, 0) >= 0)
 			break;
-		}
-	}
+	storage.formatted = attempts != 0;
 	ret = loadPermissions();
 	if (ret >= 0) {
 		ret = sceKernelRegisterSysEventHandler(name, storageSysEvent, NULL);
@@ -311,17 +326,19 @@ static int findLeaf(uint32_t leaf)
 	return -1;
 }
 
-/* name unknown: allocate a cached slot, flushing a full cache first. */
-static int cacheSlot(uint32_t leaf, int *slot)
+/* name unknown: the cache entry of a leaf's slot; *fresh when the entry was just claimed. */
+static inline __attribute__((always_inline)) int cacheSlot(uint32_t leaf, int *slot, int *fresh)
 {
 	int i, ret;
 
+	*fresh = 0;
 	*slot = findLeaf(leaf);
 	if (*slot < 0)
 		return ID_NOT_FOUND;
 	for (i = 0; i < CACHE_COUNT; i++)
 		if (storage.cache[i].slot == *slot && storage.cache[i].state)
 			return i;
+	*fresh = 1;
 	for (i = 0; i < CACHE_COUNT; i++) {
 		if (!storage.cache[i].state) {
 			storage.cache[i].slot = *slot;
@@ -349,9 +366,9 @@ static int cacheSlot(uint32_t leaf, int *slot)
 }
 
 /* name unknown: read/write helpers accept caller-held mutexes. */
-static int readLeaf(uint32_t leaf, void *buffer, int lock)
+static int __attribute__((noinline)) readLeaf(uint32_t leaf, void *buffer, int lock)
 {
-	int ret, cache, slot, attempts;
+	int ret, cache, slot, fresh, attempts;
 
 	if (leaf >= 0xfff0)
 		return ID_INVALID_LEAF;
@@ -367,14 +384,14 @@ static int readLeaf(uint32_t leaf, void *buffer, int lock)
 		if (ret < 0)
 			return ret;
 	}
-	cache = cacheSlot(leaf, &slot);
+	cache = cacheSlot(leaf, &slot, &fresh);
 	if (cache < 0 && slot < 0) {
 		ret = cache;
 		goto unlock;
 	}
-	if (storage.cache[cache].state == 1) {
+	if (fresh) {
 		for (attempts = 4; attempts; attempts--) {
-			ret = transfer(storage.fd, storage.offset + (SceOff)slot * LEAF_SIZE,
+			ret = transfer(storage.fd, storage.offset + (SceUInt32)(slot * LEAF_SIZE),
 				       storage.data + cache * LEAF_SIZE, LEAF_SIZE, 0);
 			if (ret >= 0)
 				break;
@@ -393,9 +410,9 @@ unlock:
 	return ret;
 }
 
-static int writeLeaf(uint32_t leaf, const void *buffer, int lock)
+static int __attribute__((noinline)) writeLeaf(uint32_t leaf, const void *buffer, int lock)
 {
-	int ret, cache, slot;
+	int ret, cache, slot, fresh;
 
 	if (leaf >= 0xfff0)
 		return ID_INVALID_LEAF;
@@ -413,7 +430,7 @@ static int writeLeaf(uint32_t leaf, const void *buffer, int lock)
 		if (ret < 0)
 			return ret;
 	}
-	cache = cacheSlot(leaf, &slot);
+	cache = cacheSlot(leaf, &slot, &fresh);
 	if (cache < 0 && slot < 0) {
 		ret = cache;
 		goto unlock;
@@ -545,7 +562,7 @@ int SceIdStorageForDriver_F4BCB3EE(void)
 		return ret;
 	SceKernelSuspendForDriver_4DF40893(0);
 	for (i = 0; i < (unsigned int)totalLeaves; i += storage.blockLeaves)
-		transfer(storage.fd, storage.offset + (SceOff)i * LEAF_SIZE, data, sizeof(data), 1);
+		transfer(storage.fd, storage.offset + (SceUInt32)(i * LEAF_SIZE), data, sizeof(data), 1);
 	SceKernelSuspendForDriver_2BB92967(0);
 	storage.formatted = 0;
 	sceKernelUnlockMutex(storage.mutex, 1);
@@ -752,14 +769,19 @@ int SceIdStorageForDriver_2C97AB36(uint32_t leaf)
 }
 
 /* name unknown: commit dirty blocks through a copy-on-write index. */
-static int commitStorage(void)
+COMMIT_STORAGE commitStorage(void)
 {
-	SceAllocOpt opt = {0x14, 0, 0x1000, 0, 0};
+	SceAllocOpt opt;
 	uint16_t *index;
 	uint8_t *blockData;
 	int i, j, block, destination, ret = 0;
 	int count = storage.blockLeaves;
 
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	opt.align = 0x1000;
 	index = sceKernelAllocHeapMemoryWithOption(heap, indexLeaves << 1, &opt);
 	if (!index)
 		return ID_NO_SPACE;
@@ -774,7 +796,7 @@ static int commitStorage(void)
 			continue;
 		block = storage.cache[i].slot & -storage.blockLeaves;
 		/* Sony ignores the result of this initial block read. */
-		transfer(storage.fd, storage.offset + (SceOff)block * LEAF_SIZE, blockData,
+		transfer(storage.fd, storage.offset + (SceUInt32)(block * LEAF_SIZE), blockData,
 			 storage.blockLeaves * LEAF_SIZE, 0);
 		for (j = 0; j < CACHE_COUNT; j++) {
 			if (storage.cache[j].state == 3 && storage.cache[j].slot >= block &&
@@ -806,7 +828,7 @@ static int commitStorage(void)
 				index[block + j] = INDEX_FREE;
 				storage.index[destination + j] = INDEX_PENDING;
 			}
-			ret = transfer(storage.fd, storage.offset + (SceOff)destination * LEAF_SIZE,
+			ret = transfer(storage.fd, storage.offset + (SceUInt32)(destination * LEAF_SIZE),
 				       blockData, count * LEAF_SIZE, 1);
 			count = storage.blockLeaves;
 			if (ret >= 0)
