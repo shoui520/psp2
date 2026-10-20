@@ -176,7 +176,7 @@ int callThreadEventHandlers(uint32_t mask)
 		threadId = event->user ? thread->userThreadId : thread->threadId;
 		event->running++;
 		hook = s_threadmgrRuntime.threadTraceHook;
-		if (hook != NULL)
+		if (__builtin_expect(hook != NULL, 0))
 			hook(10, 6, thread, event->user, event->handler, mask, threadId, event->arg);
 		sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->threadEventLock);
 		ret = callCallbackEntry(thread, event->user, event->handler, mask, threadId, 0,
@@ -184,7 +184,7 @@ int callThreadEventHandlers(uint32_t mask)
 		SCE_DBG_ASSERT_CHECK(thread->lock != 0, 224);
 		sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadEventLock);
 		hook = s_threadmgrRuntime.threadTraceHook;
-		if (hook != NULL)
+		if (__builtin_expect(hook != NULL, 0))
 			hook(0xf, 3, threadId, thread, thread->waitResult);
 		next = link->next;
 		event->running--;

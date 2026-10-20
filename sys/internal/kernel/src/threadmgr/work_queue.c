@@ -884,7 +884,7 @@ void startWorkQueue(void)
 /* SceKernelGlobalWorkQueue (UID 0x10023): four kernel workers */
 int createGlobalWorkQueue(void)
 {
-	ThreadmgrWorkQueue *queue;
+	ThreadmgrWorkQueue *queue, *pQueue;
 	char name[32];
 	SceUID sema, thread, *threads;
 	int intr, ret, i;
@@ -912,14 +912,15 @@ int createGlobalWorkQueue(void)
 		threads[i] = thread;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	queue = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*queue));
-	if (queue == NULL)
+	pQueue = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*queue));
+	if (pQueue == NULL)
 		SCE_PANIC(285);
 	if (sceGUIDSet(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, WORK_QUEUE_CLASS(),
-					"SceKernelGlobalWorkQueue", (SceObjectBase *)queue) < 0)
+					"SceKernelGlobalWorkQueue", (SceObjectBase *)pQueue) < 0)
 		SCE_PANIC(292);
-	uidWorkQueue_Constructor(queue);
-	uidWaitableConstructor(queue);
+	uidWorkQueue_Constructor(pQueue);
+	uidWaitableConstructor(pQueue);
+	queue = pQueue;
 	queue->attr = 0;
 	queue->threadCount = WORK_QUEUE_MAX_THREADS;
 	queue->uid = SCE_KERNEL_GLOBAL_WORK_QUEUE_ID;
@@ -928,7 +929,7 @@ int createGlobalWorkQueue(void)
 	queue->creatorPid = SCE_KERNEL_PROCESS_ID;
 	queue->reservedId = -1;
 	for (i = 0; i < WORK_QUEUE_MAX_THREADS; i++) {
-		ret = sceKernelStartThread(threads[i], sizeof(queue), &queue);
+		ret = sceKernelStartThread(threads[i], sizeof(pQueue), &pQueue);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xb, 311, " error: sceKernelStartThread(0x%08X)\n", ret);
 			SCE_PANIC(312);

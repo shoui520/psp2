@@ -14,6 +14,7 @@
 int syslibtraceThreadCBInit(struct ThreadCB *thread)
 {
 	SyslibtraceThreadCB *state;
+	SceUID threadId;
 
 	if (thread->syslibtraceState != NULL)
 		return 0;
@@ -26,9 +27,10 @@ int syslibtraceThreadCBInit(struct ThreadCB *thread)
 			thread->threadId);
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	}
+	threadId = thread->threadId;
 	*state = (SyslibtraceThreadCB){ 0 };
 	SCE_DBG_PRINTF_LEVEL(2, 0, 102, "debug: allocated syslibtrace thread state for 0x%08x\n",
-			     thread->threadId);
+			     threadId);
 	return 0;
 }
 

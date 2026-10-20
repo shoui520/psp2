@@ -391,7 +391,7 @@ int SceThreadmgrForDriver_4DE77569(int level, SceKernelEventInfo *infos, SceSize
 {
 	SceSize got = 0;
 	SceKernelEventInfo info;
-	SceUID *vector;
+	SceUID *vector, id;
 	int total, i, ret;
 
 	if (size >= sizeof(info)) {
@@ -422,8 +422,9 @@ int SceThreadmgrForDriver_4DE77569(int level, SceKernelEventInfo *infos, SceSize
 	got = 0;
 	for (i = 0; i < total; i++) {
 		memset(&info, 0, sizeof(info));
+		id = vector[i];
 		info.size = sizeof(info);
-		if (SceThreadmgrForDriver_CBA7FAAA(vector[i], &info) != 0)
+		if (SceThreadmgrForDriver_CBA7FAAA(id, &info) != 0)
 			continue;
 		ret++;
 		if (size < ret * sizeof(info)) {
@@ -446,7 +447,7 @@ int SceThreadmgrForDriver_E0C7BCBB(SceUID pid, int level, SceKernelEventInfo *in
 	SceSize got = 0;
 	SceKernelEventInfo info;
 	SceUInt32 attr;
-	SceUID *vector;
+	SceUID *vector, id;
 	int total, i, ret;
 
 	if (size >= sizeof(info)) {
@@ -477,8 +478,9 @@ int SceThreadmgrForDriver_E0C7BCBB(SceUID pid, int level, SceKernelEventInfo *in
 	got = 0;
 	for (i = 0; i < total; i++) {
 		memset(&info, 0, sizeof(info));
+		id = vector[i];
 		info.size = sizeof(info);
-		if (SceThreadmgrForDriver_CBA7FAAA(SceSysmemForDriver_45D22597(pid, vector[i]), &info) != 0)
+		if (SceThreadmgrForDriver_CBA7FAAA(SceSysmemForDriver_45D22597(pid, id), &info) != 0)
 			continue;
 		info.eventId = vector[i];
 		if (scePUIDGetAttr(pid, info.eventId, &attr) >= 0 && (attr & PUID_ATTR_OPENED))

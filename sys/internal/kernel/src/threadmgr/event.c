@@ -64,10 +64,11 @@ void notifyCallbackToThreadBeforeSetEvent(ThreadmgrEventCallback *head,
 {
 	struct ThreadmgrCallback *callback;
 	ThreadmgrEventCallback *entry;
+	SceUID threadId = thread->threadId;
 	SceUID callbackId;
 
 	for (entry = head->next; entry != head; entry = entry->next) {
-		if (entry->threadId != thread->threadId)
+		if (entry->threadId != threadId)
 			continue;
 		if (sceGUIDReferObjectWithClass(entry->callbackId,
 				s_threadmgrRuntime.manager->callbackClass,
@@ -76,7 +77,7 @@ void notifyCallbackToThreadBeforeSetEvent(ThreadmgrEventCallback *head,
 			entry->prev->next = entry->next;
 			deleteRegisteredCallbackList(entry);
 		} else {
-			SCE_DBG_ASSERT_LEVEL(0, !((entry->notifiedCpus >> sceKernelCpuId()) & 1), 118);
+			SCE_DBG_ASSERT_LEVEL(0, !(((int)entry->notifiedCpus >> sceKernelCpuId()) & 1), 118);
 			entry->notifiedCpus |= 1u << sceKernelCpuId();
 			callbackId = entry->callbackId;
 			callback->cb.notifyId = entry->notifyId;

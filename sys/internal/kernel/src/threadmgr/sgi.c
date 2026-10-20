@@ -100,8 +100,8 @@ void addIntrRequest(unsigned int cpuId, uint32_t mask)
 		SCE_PANIC(SCE_LINE(442, 441));
 	}
 	hook = s_threadmgrRuntime.schedTraceHook;
-	if (hook)
-		hook(61 - (mask ? __builtin_clz(mask) : 32), 1, cpuId);
+	if (__builtin_expect(hook != NULL, 0))
+		hook(61 - __builtin_clz(mask), 1, cpuId);
 	if (SceCpuForDriver_2A40BB93((SceInt32 *)&cpu->intrRequestMask,
 				    mask) == 0 &&
 	    sceKernelGenerateSoftIntr(2, 0, 1u << cpuId) < 0) {

@@ -2866,11 +2866,12 @@ int sceKernelThreadMgrProcessCreate(SceProcessObject *process)
 }
 
 /* a process's threads are deleted with it (its thread list locked) */
-static inline void threadProcessExit(SceProcessObject *process)
+static inline int threadProcessExit(SceProcessObject *process)
 {
 	ListNode *node;
 	struct ThreadCB *thread;
 	SceObjectBase *object;
+	int ret = 0;
 
 	for (node = process->threads.next; node != &process->threads; node = node->next) {
 		thread = THREAD_FROM_PROCESS_LINK(node);
@@ -2880,9 +2881,11 @@ static inline void threadProcessExit(SceProcessObject *process)
 		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		deleteThread(thread);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-		if (sceGUIDReleaseObject(thread->threadId) < 0)
+		ret = sceGUIDReleaseObject(thread->threadId);
+		if (ret < 0)
 			SCE_PANIC_FUNC(SCE_LINE(10320, 10325), "threadProcessExit");
 	}
+	return ret;
 }
 
 /* sceKernelThreadMgrProcessDeleteBeforePUIDClose: the process's objects go */
@@ -2915,10 +2918,10 @@ int sceKernelThreadMgrProcessDeleteBeforePUIDClose(SceProcessObject *process)
 	ret = callbackProcessExit(process);
 	SCE_DBG_ASSERT_LEVEL(0, ret >= 0, 10450);
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&process->lock);
-	threadProcessExit(process);
+	ret = threadProcessExit(process);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 	SCE_DBG_ASSERT_LEVEL(0, 1, 10452);
-	return 0;
+	return ret;
 }
 
 /* sceKernelThreadMgrProcessDeleteAfterPUIDClose: its exception object and worker go */
@@ -3131,7 +3134,7 @@ void _debugSuspendThreadSelf(uint32_t reason)
 	thread->runClock = SceSysrootForKernel_E20F6FC8() + (ran - cpu->lastThreadSwitchTime);
 	thread->threadReleaseCount++;
 	hook = s_threadmgrRuntime.switchHook;
-	if (hook != NULL)
+	if (__builtin_expect(hook != NULL, 0))
 		hook(2, 5, thread->threadId, thread->currentPriority, -1, -1, 8);
 	if (s_threadmgrRuntime.manager->paHooks[0] != 0) {
 		__asm__ volatile("mrc p15, 0, %0, c0, c0, 5" : "=r"(mpidr));
@@ -5719,18 +5722,23 @@ uint32_t SceThreadmgrForDriver_86DAE59B(void)
 	uint32_t saved, result = SCE_ERROR_ERRNO_ENOSYS;
 	int permission;
 
-	saved = ThreadmgrUserRoWord();
-	ThreadmgrSetUserRoWord(saved << 16);
-	permission = thread != NULL ? thread->permission : 0;
-	if (thread != NULL && (permission == THREAD_PERMISSION_SYSTEM ||
-			       permission == THREAD_PERMISSION_KERNEL)) {
-		intr = SceCpuForDriver_821FC0EE();
-		sceKernelSpinlockLowLock(
-			&s_threadmgrRuntime.manager->threadMgrCBLock);
-		result = s_threadmgrRuntime.manager->activeCpuMask;
-		sceKernelSpinlockLowUnlock(
-			&s_threadmgrRuntime.manager->threadMgrCBLock);
-		sceKernelCpuResumeIntr(intr);
+	if (thread != NULL) {
+		permission = thread->permission;
+		saved = ThreadmgrUserRoWord();
+		ThreadmgrSetUserRoWord(saved << 16);
+		if (__builtin_expect(permission == THREAD_PERMISSION_SYSTEM ||
+				     permission == THREAD_PERMISSION_KERNEL, 1)) {
+			intr = SceCpuForDriver_821FC0EE();
+			sceKernelSpinlockLowLock(
+				&s_threadmgrRuntime.manager->threadMgrCBLock);
+			result = s_threadmgrRuntime.manager->activeCpuMask;
+			sceKernelSpinlockLowUnlock(
+				&s_threadmgrRuntime.manager->threadMgrCBLock);
+			sceKernelCpuResumeIntr(intr);
+		}
+	} else {
+		saved = ThreadmgrUserRoWord();
+		ThreadmgrSetUserRoWord(saved << 16);
 	}
 	ThreadmgrSetUserRoWord(saved);
 	return result;
@@ -6344,8 +6352,7 @@ int SceThreadmgrForDriver_7E280B69(SceKernelSystemInfo *output)
 		ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 		goto restore;
 	}
-	memset(&info, 0, sizeof(info));
-	info.size = sizeof(info);
+	info = (SceKernelSystemInfo){ .size = sizeof(info) };
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(
 		&s_threadmgrRuntime.manager->threadMgrCBLock);
 	info.activeCpuMask = s_threadmgrRuntime.manager->activeCpuMask;

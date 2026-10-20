@@ -235,11 +235,13 @@ void pmonThreadSetCounterIntr(struct ThreadmgrPmonRequest *request)
 		else
 			thread->pRegisterContext->pmevent[request->counter].count = request->value;
 		ret = 0;
-	} else if (sceGUIDReferObjectWithClass(threadId,
-			s_threadmgrRuntime.manager->threadClass,
-			&pObject) < 0) {
-		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
+		ret = sceGUIDReferObjectWithClass(threadId,
+			s_threadmgrRuntime.manager->threadClass, &pObject);
+		if (ret < 0) {
+			ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
+			goto done;
+		}
 		object = (struct ThreadmgrThreadObject *)pObject;
 		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		if (object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) {
@@ -254,8 +256,8 @@ void pmonThreadSetCounterIntr(struct ThreadmgrPmonRequest *request)
 			object->context.pRegisterContext->pmevent[request->counter].count = request->value;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 		sceGUIDReleaseObject(threadId);
-		ret = 0;
 	}
+done:
 	*request->result = ret;
 	sceKernelSpinlockLowUnlock(request->done);
 }
@@ -348,7 +350,6 @@ void pmonThreadGetCounterIntr(struct ThreadmgrPmonRequest *request)
 	struct ThreadmgrThreadObject *object;
 	SceObjectBase *pObject;
 	SceUID threadId = request->threadId;
-	uint32_t *out = (uint32_t *)request->value;
 	int ret;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 546);
@@ -359,14 +360,16 @@ void pmonThreadGetCounterIntr(struct ThreadmgrPmonRequest *request)
 		thread = PmonCpuThread();
 		ret = 0;
 		if (request->counter == PMON_CYCLE_COUNTER)
-			*out = thread->pRegisterContext->pmccntr;
+			*(uint32_t *)request->value = thread->pRegisterContext->pmccntr;
 		else
-			*out = thread->pRegisterContext->pmevent[request->counter].count;
-	} else if (sceGUIDReferObjectWithClass(threadId,
-			s_threadmgrRuntime.manager->threadClass,
-			&pObject) < 0) {
-		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
+			*(uint32_t *)request->value = thread->pRegisterContext->pmevent[request->counter].count;
 	} else {
+		ret = sceGUIDReferObjectWithClass(threadId,
+			s_threadmgrRuntime.manager->threadClass, &pObject);
+		if (ret < 0) {
+			ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
+			goto done;
+		}
 		object = (struct ThreadmgrThreadObject *)pObject;
 		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		if (object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) {
@@ -376,13 +379,13 @@ void pmonThreadGetCounterIntr(struct ThreadmgrPmonRequest *request)
 			return;
 		}
 		if (request->counter == PMON_CYCLE_COUNTER)
-			*out = object->context.pRegisterContext->pmccntr;
+			*(uint32_t *)request->value = object->context.pRegisterContext->pmccntr;
 		else
-			*out = object->context.pRegisterContext->pmevent[request->counter].count;
+			*(uint32_t *)request->value = object->context.pRegisterContext->pmevent[request->counter].count;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 		sceGUIDReleaseObject(threadId);
-		ret = 0;
 	}
+done:
 	*request->result = ret;
 	sceKernelSpinlockLowUnlock(request->done);
 }

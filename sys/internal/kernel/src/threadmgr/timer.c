@@ -39,6 +39,7 @@
 #define ALARM_HOOK_END			8
 
 #define TIMER_LOCK()	(&s_threadmgrRuntime.manager->timerLock)
+#define TIMER_QUEUE_HEAD()	((struct ThreadmgrTimer *)&s_threadmgrRuntime.manager->timerQueueNext)
 #define PROCESS_CLASS()	(s_threadmgrRuntime.manager->processClass)
 #define TIMER_CLASS()	(s_threadmgrRuntime.manager->timerClass)
 
@@ -72,12 +73,10 @@ static inline int TimerUnknownIdError(void)
 /* queues a timer behind every timer that expires no later. Called with timerLock held. */
 void insertTimer(struct ThreadmgrTimer *timer)
 {
-	struct ThreadmgrTimer *head =
-		(struct ThreadmgrTimer *)&s_threadmgrRuntime.manager->timerQueueNext;
 	struct ThreadmgrTimer *pos;
 
 	SCE_DBG_ASSERT_CHECK(s_threadmgrRuntime.manager->timerLock != 0, 619);
-	for (pos = head->next; pos != head; pos = pos->next) {
+	for (pos = TIMER_QUEUE_HEAD()->next; pos != TIMER_QUEUE_HEAD(); pos = pos->next) {
 		SCE_DBG_ASSERT_LEVEL(0, pos != NULL, 623);
 		if (timer->expiry < pos->expiry)
 			break;
@@ -109,33 +108,31 @@ static void unlinkTimer(struct ThreadmgrTimer *timer)
  */
 void setNextTimer(void)
 {
-	struct ThreadmgrTimer *head = (struct ThreadmgrTimer *)&s_threadmgrRuntime.manager->timerQueueNext;
-	struct ThreadmgrTimer *timer;
-	uint64_t first, limit, expiry, chosen, earliest;
+	struct ThreadmgrTimer *head, *timer;
+	uint64_t chosen, limit, earliest;
 
 	SCE_DBG_ASSERT_CHECK(s_threadmgrRuntime.manager->timerLock != 0, 548);
-	timer = head->next;
-	if (timer == head) {
+	timer = TIMER_QUEUE_HEAD()->next;
+	head = TIMER_QUEUE_HEAD();
+	if (head == timer) {
 		s_threadmgrRuntime.manager->systemTime->compareHi = 0xffffffff;
 		s_threadmgrRuntime.manager->systemTime->compareLo = 0xffffffff;
 		return;
 	}
-	first = timer->expiry;
+	chosen = timer->expiry;
 	if (s_threadmgrRuntime.manager->timerHandlingId != -1)
 		s_threadmgrRuntime.manager->timerNextToHandle = timer;
-	/* the last of the timers due within TIMER_MIN_DELAY of the first */
-	limit = first + TIMER_MIN_DELAY;
-	expiry = first;
-	chosen = first;
-	while (expiry < limit) {
-		chosen = expiry;
-		timer = timer->next;
-		if (timer == head)
-			break;
-		expiry = timer->expiry;
+	limit = chosen + TIMER_MIN_DELAY;
+	if (chosen < limit) {
+		for (;;) {
+			timer = timer->next;
+			if (head == timer || timer->expiry >= limit)
+				break;
+			chosen = timer->expiry;
+		}
 	}
 	earliest = SceSysrootForKernel_E20F6FC8() + TIMER_MIN_DELAY;
-	if (earliest <= chosen)
+	if (chosen >= earliest)
 		earliest = chosen;
 	s_threadmgrRuntime.manager->timerCompare = earliest;
 	s_threadmgrRuntime.manager->systemTime->compare = earliest;
@@ -266,7 +263,7 @@ static int timerIntrHandler(int code, void *arg)
 			uid = timer->uid;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(TIMER_LOCK(), intr);
 			hook = s_threadmgrRuntime.threadTraceHook;
-			if (hook != NULL)
+			if (__builtin_expect(hook != NULL, 0))
 				hook(ALARM_HOOK_CALL, 3, uid, alarm->handler, alarm->arg);
 			next = alarm->handler(alarm->arg);
 			intr = sceKernelSpinlockLowLockCpuSuspendIntr(TIMER_LOCK());
@@ -280,7 +277,7 @@ static int timerIntrHandler(int code, void *arg)
 					if (sceGUIDClose(uid) < 0)
 						SCE_PANIC(1105);
 					hook = s_threadmgrRuntime.threadTraceHook;
-					if (hook != NULL)
+					if (__builtin_expect(hook != NULL, 0))
 						hook(ALARM_HOOK_END, 1, uid);
 					goto relock;
 				}
@@ -365,7 +362,11 @@ relock:
 static int uidTimer_Destructor(void *object)
 {
 	ThreadmgrUidTimer *uidTimer = object;
+#if FW_DEBUG
 	SceProcessObject *process = NULL;
+#else
+	SceProcessObject *process;
+#endif
 	SceUID pid;
 	int intr;
 
@@ -980,7 +981,7 @@ void cancelDelayTimer(SceUID delayId, struct ThreadCB *thread)
 		unlinkTimer(&delay->base.timer);
 		setNextTimer();
 		sceKernelSpinlockLowUnlock(TIMER_LOCK());
-		uidDelay_FreeObject(delay);
+		uidDelay_FreeObject((ThreadmgrDelay *)pObject);
 	} else {
 		sceKernelSpinlockLowUnlock(TIMER_LOCK());
 	}

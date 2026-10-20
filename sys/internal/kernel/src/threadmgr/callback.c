@@ -191,7 +191,7 @@ void __attribute__((noreturn)) _sceKernelExitCallback(int result)
 	intr = SceCpuForDriver_821FC0EE();
 	thread = currentThreadContext();
 	thread->waitResult = result;
-	if (thread->pRegisterContext->callbackContext == NULL) {
+	if (__builtin_expect(thread->pRegisterContext->callbackContext == NULL, 1)) {
 		/* not in a callback */
 		debugSuspendThreadSelf(DEBUG_SUSPEND_EXIT_CALLBACK, 0, NULL);
 		sceKernelTrapThreadAfterSyscall(0, 0, TRAP_REQUEST_DEBUG_SUSPEND);
@@ -205,19 +205,23 @@ void deleteAllCallback(struct ThreadCB *thread)
 {
 	struct ThreadmgrCallbackCB *cb, *next;
 	SceUID pid = thread->processId;
+	SceUID puid, guid;
 	int ret;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 244);
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	for (cb = thread->callbackNext; cb != CALLBACK_HEAD(thread); cb = next) {
 		next = cb->next;
+		puid = cb->puid;
 		cb->deleted = 1;
-		unlinkCallback(cb);
-		if (cb->puid == -1) {
-			ret = sceGUIDClose(cb->guid);
+		cb->next->prev = cb->prev;
+		guid = cb->guid;
+		cb->prev->next = cb->next;
+		if (puid == -1) {
+			ret = sceGUIDClose(guid);
 			SCE_DBG_ASSERT_CHECK(ret >= 0, 265);
 		} else {
-			ret = SceSysmemForDriver_84A4AF5E(pid, cb->puid);
+			ret = SceSysmemForDriver_84A4AF5E(pid, puid);
 			SCE_DBG_ASSERT_CHECK(ret >= 0, 262);
 		}
 	}
@@ -507,14 +511,14 @@ int callCallbackAll(struct ThreadCB *thread)
 		thread->currentCallback = CALLBACK_FROM_CB(cb);
 		cb->running++;
 		hook = s_threadmgrRuntime.threadTraceHook;
-		if (hook != NULL)
+		if (__builtin_expect(hook != NULL, 0))
 			hook(TRACE_CALLBACK_START, 8, thread->processId, thread->threadId, cb->guid,
 			     cb->entry, notifyId, count, arg, cb->common);
 		ret = callCallbackEntry(thread, cb->user, cb->entry, notifyId, count, arg,
 					(uint32_t)cb->common);
 		SCE_DBG_ASSERT_CHECK(thread->lock != 0, 717);
 		hook = s_threadmgrRuntime.threadTraceHook;
-		if (hook != NULL)
+		if (__builtin_expect(hook != NULL, 0))
 			hook(TRACE_CALLBACK_END, 3, thread->processId, thread->threadId,
 			     thread->waitResult);
 		ran++;
@@ -1300,7 +1304,7 @@ resume:
 
 int sceKernelUnregisterCallbackFromEventAll(SceUID eventId)
 {
-	ThreadmgrEventCallback *entry, *head;
+	ThreadmgrEventCallback *entry;
 	ThreadmgrEvent *event;
 	uint32_t saved;
 	int intr, ret;
@@ -1321,8 +1325,8 @@ int sceKernelUnregisterCallbackFromEventAll(SceUID eventId)
 		goto resume;
 	}
 	sceKernelSpinlockLowLock(&event->lock);
-	head = EVENT_CALLBACK_HEAD(event);
-	for (entry = head->next; entry != head; entry = entry->next) {
+	for (entry = EVENT_CALLBACK_HEAD(event)->next; entry != EVENT_CALLBACK_HEAD(event);
+	     entry = entry->next) {
 		entry->next->prev = entry->prev;
 		entry->prev->next = entry->next;
 		deleteRegisteredCallbackList(entry);

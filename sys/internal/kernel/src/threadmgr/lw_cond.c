@@ -110,7 +110,7 @@ static int getLwCondInfo(SceUID condId, SceKernelLwCondInfo *info)
 	intr = SceCpuForDriver_821FC0EE();
 	ret = sceGUIDReferObjectWithClass(condId,
 		s_threadmgrRuntime.manager->lwCondClass, &pObject);
-	if (ret < 0) {
+	if (__builtin_expect(ret < 0, 1)) {
 		ret = !ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_LW_COND_ID :
 			SCE_KERNEL_ERROR_UNKNOWN_LW_COND_ID | SYSCALL_ERROR_BIT;
 	} else {

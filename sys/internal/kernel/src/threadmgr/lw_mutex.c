@@ -1100,13 +1100,13 @@ int unlockLwMutexForLwCond(SceUID lwMutexId, int count)
 		s_threadmgrRuntime.manager->lwMutexClass, &pObject);
 	if (ret < 0)
 		return SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID | SYSCALL_ERROR_BIT;
+	lwMutex = (ThreadmgrLwMutex *)pObject;
 	ret = sceKernelCopyFromUser(&userWork, lwMutex->work, sizeof(userWork));
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xf, 1770, "sceKernelCopyFromUser(%p, 0x%08x, 0x%08x): error 0x%08x\n",
 			       &userWork, lwMutex->work, sizeof(userWork), ret);
 		goto release;
 	}
-	lwMutex = (ThreadmgrLwMutex *)pObject;
 	sceKernelSpinlockLowLock(&lwMutex->lock);
 	if (count < 1 || (count != 1 && !(lwMutex->attr & SCE_KERNEL_LW_MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;

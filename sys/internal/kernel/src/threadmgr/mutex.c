@@ -177,6 +177,7 @@ static int uidMutex_RevalidateMethod(void *cls, void *object)
 int findNextCeilingPriority(struct ThreadCB *thread)
 {
 	ThreadmgrMutex *first;
+	ListNode *link;
 	SceUInt32 sdkVersion;
 	int ceiling, boost;
 
@@ -186,10 +187,11 @@ int findNextCeilingPriority(struct ThreadCB *thread)
 		sdkVersion = SDK_VERSION_KERNEL;
 	else if (SceSysrootForDriver_CAE820B2(thread->processId, &sdkVersion) < 0)
 		sdkVersion = 0;
-	first = MUTEX_FROM_OWNER_LINK(OWNED_MUTEX_HEAD(thread)->next);
-	if (OWNED_MUTEX_HEAD(thread)->next == OWNED_MUTEX_HEAD(thread) || !(first->attr & SCE_KERNEL_MUTEX_ATTR_CEILING)) {
+	link = OWNED_MUTEX_HEAD(thread)->next;
+	if (link == OWNED_MUTEX_HEAD(thread) || !(MUTEX_FROM_OWNER_LINK(link)->attr & SCE_KERNEL_MUTEX_ATTR_CEILING)) {
 		ceiling = PRIORITY_NONE;
 	} else {
+		first = MUTEX_FROM_OWNER_LINK(link);
 		ceiling = first->core.ceilingPriority;
 		if (sdkVersion < SDK_VERSION_BOOST_LIMITS_END && !(first->attr & MUTEX_ATTR_KERNEL) &&
 		    !s_threadmgrRuntime.manager->testMode) {
@@ -888,7 +890,7 @@ int sceKernelTryLockMutex(SceUID mutexId, int count)
 		ret = SCE_KERNEL_ERROR_MUTEX_FAILED_TO_OWN;
 		if (mutex->core.owner == NULL) {
 			sceKernelSpinlockLowLock(THREAD_LOCK(thread));
-			acquireMutex(mutex, thread, count);
+			acquireMutex((ThreadmgrMutex *)pObject, thread, count);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			ret = 0;
 		}

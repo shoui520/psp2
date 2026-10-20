@@ -169,7 +169,7 @@ void notifyOffCpu(uint32_t reason)
 		probe(&s_schedOffCpuDescriptor, id, thread->process->pid);
 	}
 	hook = s_threadmgrRuntime.offCpuHook;
-	if (hook != NULL) {
+	if (__builtin_expect(hook != NULL, 0)) {
 		thread = (struct ThreadCB *)cpu->runningThread;
 		id = thread->userThreadId;
 		if (id < 0)
@@ -393,7 +393,7 @@ void notifyOffCpuIntr(uint32_t reason)
 		      thread->process->pid);
 	}
 	hook = s_threadmgrRuntime.offCpuHook;
-	if (hook != NULL) {
+	if (__builtin_expect(hook != NULL, 0)) {
 		thread = (struct ThreadCB *)cpu->runningThread;
 		id = thread->userThreadId;
 		if (id < 0)
@@ -575,7 +575,7 @@ struct ThreadCB *setupNextContext_thread(struct ThreadCB *current,
 			/* the debugger decides about the overflow */
 			overflowHook = s_threadmgrRuntime.manager->
 				debugHandlers[0][DEBUG_HANDLER_STACK_OVERFLOW];
-			if (overflowHook != NULL)
+			if (__builtin_expect(overflowHook != NULL, 0))
 				overflowHook(0, NULL);
 			overflowHandler = s_threadmgrRuntime.manager->
 				debugHandlers[1][DEBUG_HANDLER_STACK_OVERFLOW];
@@ -664,7 +664,7 @@ struct ThreadCB *setupNextContext_thread(struct ThreadCB *current,
 	thread = selected;
 notify:
 	hook = s_threadmgrRuntime.switchHook;
-	if (hook != NULL)
+	if (__builtin_expect(hook != NULL, 0))
 		hook(SWITCH_HOOK_THREAD, SWITCH_HOOK_ARGC, oldThreadId, oldPriority, thread->threadId,
 		     thread->currentPriority, reason);
 	if (initialPriority < cpu->priority) {
@@ -884,7 +884,7 @@ overflowed:
 			/* the debugger decides about the overflow */
 			overflowHook = s_threadmgrRuntime.manager->
 				debugHandlers[0][DEBUG_HANDLER_STACK_OVERFLOW];
-			if (overflowHook != NULL)
+			if (__builtin_expect(overflowHook != NULL, 0))
 				overflowHook(0, NULL);
 			overflowHandler = s_threadmgrRuntime.manager->
 				debugHandlers[1][DEBUG_HANDLER_STACK_OVERFLOW];
@@ -931,7 +931,7 @@ overflowed:
 		issueCallPAScheduleHookIntrRequest(SceCpuId(), selected->processId, selected->threadId,
 			     SCHED_TRACE_ON_CPU, selected->currentPriority);
 	hook = s_threadmgrRuntime.switchHook;
-	if (hook != NULL)
+	if (__builtin_expect(hook != NULL, 0))
 		hook(SWITCH_HOOK_INTR, SWITCH_HOOK_ARGC, cpu->runningThreadId, initialPriority,
 		     selected->threadId, selected->currentPriority, reason);
 	cpu->runningThread = (uintptr_t)selected;

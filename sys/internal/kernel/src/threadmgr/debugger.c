@@ -748,13 +748,14 @@ int _sceKernelSetCpuRegisterForDebugger(SceUID threadId, const ThreadmgrDebugReg
 {
 	ThreadmgrDebugSetRequest request;
 	struct ThreadmgrThreadObject *object;
+	int result;
 	SceObjectBase *pObject;
 	SceKernelSpinlock done;
-	int result, cpu, intr;
+	int cpu, intr;
 
 	if (regs == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	if (isSelfOrNone(threadId))
+	if (__builtin_expect(isSelfOrNone(threadId), 1))
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
 	intr = SceCpuForDriver_821FC0EE();
 	result = sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject);
@@ -805,13 +806,14 @@ int _sceKernelGetCpuRegisterForDebugger(SceUID threadId, ThreadmgrDebugRegisters
 {
 	ThreadmgrDebugGetRequest request;
 	struct ThreadmgrThreadObject *object;
+	int result;
 	SceObjectBase *pObject;
 	SceKernelSpinlock done;
-	int result, cpu, intr;
+	int cpu, intr;
 
 	if (regs == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	if (isSelfOrNone(threadId))
+	if (__builtin_expect(isSelfOrNone(threadId), 1))
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
 	intr = SceCpuForDriver_821FC0EE();
 	result = sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject);
@@ -862,14 +864,15 @@ int _sceKernelSetVfpRegisterForDebugger(SceUID threadId, const uint32_t *vfp, ui
 {
 	ThreadmgrDebugSetRequest request;
 	struct ThreadmgrThreadObject *object;
+	int result;
 	SceObjectBase *pObject;
 	SceKernelSpinlock done;
 	uint32_t *q;
-	int result, cpu, intr, i;
+	int cpu, intr, i;
 
 	if (vfp == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	if (isSelfOrNone(threadId))
+	if (__builtin_expect(isSelfOrNone(threadId), 1))
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
 	intr = SceCpuForDriver_821FC0EE();
 	result = sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject);
@@ -909,10 +912,7 @@ int _sceKernelSetVfpRegisterForDebugger(SceUID threadId, const uint32_t *vfp, ui
 			if (!(mask & (1u << i)))
 				continue;
 			q = VFP_Q(object->context.pVfpRegisterContext, i);
-			q[0] = vfp[0];
-			q[1] = vfp[1];
-			q[2] = vfp[2];
-			q[3] = vfp[3];
+			__builtin_memcpy(q, vfp, 16);
 		}
 		result = 0;
 	} else {
@@ -929,13 +929,14 @@ int _sceKernelGetVfpRegisterForDebugger(SceUID threadId, uint32_t *vfp, int mode
 {
 	ThreadmgrDebugGetRequest request;
 	struct ThreadmgrThreadObject *object;
+	int result;
 	SceObjectBase *pObject;
 	SceKernelSpinlock done;
-	int result, cpu, intr, i, j;
+	int cpu, intr, i, j;
 
 	if (vfp == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	if (isSelfOrNone(threadId))
+	if (__builtin_expect(isSelfOrNone(threadId), 1))
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
 	intr = SceCpuForDriver_821FC0EE();
 	result = sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject);
@@ -1395,7 +1396,7 @@ int setCpuRegisterForDebuggerIntr(ThreadmgrDebugSetRequest *request)
 	SceUID threadId = request->threadId;
 	struct ThreadmgrThreadObject *object;
 	SceObjectBase *pObject;
-	int ret;
+	int ret, cpu;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 776);
 	SCE_DBG_ASSERT_CHECK(currentThreadContext() == NULL, 778);
@@ -1413,8 +1414,9 @@ int setCpuRegisterForDebuggerIntr(ThreadmgrDebugSetRequest *request)
 			"error: setCpuRegisterForDebuggerIntr(0x%08X), deleted thread\n", threadId);
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else if (object->context.status & THREAD_STATE_DEBUG_SUSPENDED) {
+		cpu = sceKernelCpuId();
 		if ((object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) &&
-		    object->context.currentCpuId != sceKernelCpuId()) {
+		    object->context.currentCpuId != cpu) {
 			issueSetCpuRegisterIntrRequest(object->context.currentCpuId, request);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 			sceGUIDReleaseObject(threadId);
@@ -1453,7 +1455,7 @@ int getCpuRegisterForDebuggerIntr(ThreadmgrDebugGetRequest *request)
 	SceUID threadId = request->threadId;
 	struct ThreadmgrThreadObject *object;
 	SceObjectBase *pObject;
-	int ret;
+	int ret, cpu;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1018);
 	SCE_DBG_ASSERT_CHECK(currentThreadContext() == NULL, 1020);
@@ -1471,15 +1473,17 @@ int getCpuRegisterForDebuggerIntr(ThreadmgrDebugGetRequest *request)
 			"error: getCpuRegisterForDebuggerIntr(0x%08X), deleted thread\n", threadId);
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else if (object->context.status & THREAD_STATE_DEBUG_SUSPENDED) {
-		if ((object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) &&
-		    object->context.currentCpuId != sceKernelCpuId()) {
+		cpu = sceKernelCpuId();
+		if (!(object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) ||
+		    object->context.currentCpuId == cpu) {
+			getCpuRegisterForDebuggerRaw(&object->context, request->regs);
+			ret = 0;
+		} else {
 			issueGetCpuRegisterIntrRequest(object->context.currentCpuId, request);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 			sceGUIDReleaseObject(threadId);
 			return ret;
 		}
-		getCpuRegisterForDebuggerRaw(&object->context, request->regs);
-		ret = 0;
 	} else {
 		ret = SCE_KERNEL_ERROR_NOT_DEBUG_SUSPENDED;
 	}
@@ -1509,12 +1513,12 @@ int setVfpRegisterForDebuggerIntr(ThreadmgrDebugSetRequest *request)
 	SceObjectBase *pObject;
 	const uint32_t *src;
 	uint32_t *q;
-	int ret, i;
+	int ret, i, cpu;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1193);
 	SCE_DBG_ASSERT_CHECK(currentThreadContext() == NULL, 1195);
 	ret = sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject);
-	if (ret < 0) {
+	if (__builtin_expect(ret < 0, 1)) {
 		SCE_DBG_ASSERT_PRINTF(0, 1200, "*** error: unknown thread id. threadId=0x%08x\n",
 				      threadId);
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
@@ -1527,8 +1531,9 @@ int setVfpRegisterForDebuggerIntr(ThreadmgrDebugSetRequest *request)
 			"error: setVfpRegisterForDebuggerIntr(0x%08X), deleted thread\n", threadId);
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else if (object->context.status & THREAD_STATE_DEBUG_SUSPENDED) {
+		cpu = sceKernelCpuId();
 		if ((object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) &&
-		    object->context.currentCpuId != sceKernelCpuId()) {
+		    object->context.currentCpuId != cpu) {
 			issueSetVfpRegisterIntrRequest(object->context.currentCpuId, request);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 			sceGUIDReleaseObject(threadId);
@@ -1539,10 +1544,7 @@ int setVfpRegisterForDebuggerIntr(ThreadmgrDebugSetRequest *request)
 				continue;
 			src = (const uint32_t *)request->regs + i * 4;
 			q = VFP_Q(object->context.pVfpRegisterContext, i);
-			q[0] = src[0];
-			q[1] = src[1];
-			q[2] = src[2];
-			q[3] = src[3];
+			__builtin_memcpy(q, src, 16);
 		}
 		ret = 0;
 	} else {
@@ -1573,7 +1575,7 @@ int getVfpRegisterForDebuggerIntr(ThreadmgrDebugGetRequest *request)
 	struct ThreadmgrThreadObject *object;
 	SceObjectBase *pObject;
 	uint32_t *dst;
-	int ret, i, j;
+	int ret, i, j, cpu;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1399);
 	SCE_DBG_ASSERT_CHECK(currentThreadContext() == NULL, 1401);
@@ -1591,8 +1593,9 @@ int getVfpRegisterForDebuggerIntr(ThreadmgrDebugGetRequest *request)
 			"error: getVfpRegisterForDebuggerIntr(0x%08X), deleted thread\n", threadId);
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else if (object->context.status & THREAD_STATE_DEBUG_SUSPENDED) {
+		cpu = sceKernelCpuId();
 		if ((object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) &&
-		    object->context.currentCpuId != sceKernelCpuId()) {
+		    object->context.currentCpuId != cpu) {
 			issueGetVfpRegisterIntrRequest(object->context.currentCpuId, request);
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 			sceGUIDReleaseObject(threadId);

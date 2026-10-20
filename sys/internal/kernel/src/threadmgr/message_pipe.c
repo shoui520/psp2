@@ -292,7 +292,7 @@ static inline __attribute__((always_inline)) int sendPipe(struct ThreadmgrMsgPip
 	}
 	ring->write += rest;
 	ring->used += rest;
-	return 0;
+	return ret;
 }
 
 /*
@@ -383,7 +383,7 @@ static inline __attribute__((always_inline)) int recvPipe(struct ThreadmgrMsgPip
 	}
 	ring->read += rest;
 	ring->used -= rest;
-	return 0;
+	return ret;
 }
 
 /* size bytes from the ring into the vector, from buffer *index at *offset on */

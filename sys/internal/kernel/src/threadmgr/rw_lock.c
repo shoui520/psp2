@@ -818,7 +818,7 @@ int sceKernelTryLockWriteRWLock(SceUID rwLockId)
 		}
 	} else if (rwLock->core.writer == NULL && rwLock->core.lockCount == 0) {
 		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
-		acquireRWLock(rwLock, thread);
+		acquireRWLock((ThreadmgrRWLock *)pObject, thread);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		ret = 0;
 	} else {
@@ -1003,7 +1003,7 @@ int sceKernelCancelRWLock(SceUID rwLockId, int *numReadWaitThreads, int *numWrit
 		*numWriteWaitThreads = writers;
 	if (type == 1) {
 		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
-		acquireRWLock(rwLock, thread);
+		acquireRWLock((ThreadmgrRWLock *)pObject, thread);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	}
 	sceKernelSpinlockLowUnlock(&rwLock->lock);
