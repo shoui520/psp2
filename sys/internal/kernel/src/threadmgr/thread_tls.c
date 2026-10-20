@@ -76,7 +76,7 @@ int SceThreadmgrForDriver_8C3C1F78(uint32_t slot)
  */
 void *SceThreadmgrForDriver_89CA5698(uint32_t slot, SceUID threadId, int create)
 {
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	struct ThreadmgrTlsSlot *descriptor;
 	SceKernelIntrStatus intr;
@@ -94,7 +94,7 @@ void *SceThreadmgrForDriver_89CA5698(uint32_t slot, SceUID threadId, int create)
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithClass(threadId,
 	    s_threadmgrRuntime.manager->threadClass, &pObject) >= 0) {
-		object = (struct ThreadmgrThreadObject *)pObject;
+		object = (struct SceUIDThreadObject *)pObject;
 		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		if (!(object->context.status & THREAD_STATE_GONE)) {
 			field = &object->context.tlsSlotMemory.slot[slot];

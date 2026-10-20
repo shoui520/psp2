@@ -285,7 +285,7 @@ SceUID registerThreadEventHandler(const char *name, SceUID target, SceUID pid, u
 				  uintptr_t handler, uint32_t arg, int user)
 {
 	struct ThreadCB *thread;
-	struct ThreadmgrThreadObject *targetThread;
+	struct SceUIDThreadObject *targetThread;
 	SceProcessObject *process, *accounting;
 	UIDCreateOpt opt;
 	SceUIDThreadEventObject *event;
@@ -496,7 +496,7 @@ int sceKernelUnregisterThreadEventHandler(SceUID uid)
 /* SceThreadmgrForDriver_6657429E: a handler's information; a syscall sees user thread IDs */
 int SceThreadmgrForDriver_6657429E(SceUID uid, ThreadmgrThreadEventInfo *info)
 {
-	struct ThreadmgrThreadObject *target;
+	struct SceUIDThreadObject *target;
 	SceObjectBase *pObject;
 	ThreadmgrThreadEventInfo local;
 	uint32_t saved;
@@ -520,7 +520,7 @@ int SceThreadmgrForDriver_6657429E(SceUID uid, ThreadmgrThreadEventInfo *info)
 						&pObject) < 0) {
 					local.target = -1;
 				} else {
-					target = (struct ThreadmgrThreadObject *)pObject;
+					target = (struct SceUIDThreadObject *)pObject;
 					local.target = target->context.userThreadId;
 					sceGUIDReleaseObject(targetId);
 				}
@@ -594,7 +594,7 @@ int SceThreadmgrForDriver_C4456EC9(SceUID pid, int level, ThreadmgrThreadEventIn
 				   SceSize size, SceSize *count)
 {
 	SceSize got = 0;
-	struct ThreadmgrThreadObject *target;
+	struct SceUIDThreadObject *target;
 	SceObjectBase *pObject;
 	ThreadmgrThreadEventInfo info;
 	SceUID *vector, targetId;
@@ -639,7 +639,7 @@ int SceThreadmgrForDriver_C4456EC9(SceUID pid, int level, ThreadmgrThreadEventIn
 					&pObject) < 0) {
 				info.target = -1;
 			} else {
-				target = (struct ThreadmgrThreadObject *)pObject;
+				target = (struct SceUIDThreadObject *)pObject;
 				info.target = target->context.userThreadId;
 				sceGUIDReleaseObject(targetId);
 			}

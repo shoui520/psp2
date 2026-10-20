@@ -37,7 +37,7 @@ int syslibtraceThreadCBInit(struct ThreadCB *thread)
 /* turns per-thread syslibtrace state on (allocating it for every thread) or off */
 int sceKernelSetSyslibtraceThreadCBEnable(int enable)
 {
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceSize count, size, i;
 	SceObjectBase *pObject;
 	SceUID *ids, id;
@@ -80,7 +80,7 @@ int sceKernelSetSyslibtraceThreadCBEnable(int enable)
 				       ret);
 			continue;
 		}
-		object = (struct ThreadmgrThreadObject *)pObject;
+		object = (struct SceUIDThreadObject *)pObject;
 		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		ret = syslibtraceThreadCBInit(&object->context);
 		if (ret < 0)

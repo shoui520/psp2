@@ -140,13 +140,13 @@ struct ThreadmgrExtendedStack {
 	SceSize stackSize;
 };
 struct ThreadmgrWaitNode;
-struct ThreadmgrException;
+struct SceUIDExceptionObject;
 struct ThreadmgrExceptionEntry;
 
 struct ThreadmgrFastMutex;
 
 /* SceUIDExceptionObject (0x38) */
-struct ThreadmgrException {
+struct SceUIDExceptionObject {
 	SceUID ownerPid;
 	void *cls;
 	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */

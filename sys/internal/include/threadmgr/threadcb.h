@@ -301,7 +301,7 @@ _Static_assert(sizeof(ThreadCB) == 0x1b0, "ThreadCB size");
 struct ThreadmgrWaitNode;
 
 /* SceUIDThreadObject: the object base, then the thread context */
-struct ThreadmgrThreadObject {
+struct SceUIDThreadObject {
 	SceUID ownerPid;			/* the object base */
 	void *cls;
 	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
@@ -316,8 +316,8 @@ struct ThreadmgrThreadObject {
 };
 
 /* the thread object a thread context is part of */
-#define THREAD_OBJECT(thread)	((struct ThreadmgrThreadObject *)((uintptr_t)(thread) -	\
-				 __builtin_offsetof(struct ThreadmgrThreadObject, context)))
+#define THREAD_OBJECT(thread)	((struct SceUIDThreadObject *)((uintptr_t)(thread) -	\
+				 __builtin_offsetof(struct SceUIDThreadObject, context)))
 
 /* TPIDRPRW: the running thread's ThreadCB, NULL before the thread manager runs */
 static inline ThreadCB *getCurrentThreadCB(void)

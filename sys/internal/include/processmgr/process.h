@@ -12,7 +12,7 @@
 #include <sysmem/list.h>
 #include <sysmem/utils.h>
 
-struct ThreadmgrException;
+struct SceUIDExceptionObject;
 
 #define PROCESS_MAGIC			0x962e8d55
 #define PROCESS_MAX			16
@@ -132,7 +132,7 @@ typedef struct SceProcessObject {
 	SceUInt64 time;				/* start time, then the run time; off its timers' clock */
 	SceKernelSpinlock timeLock;
 	SceUInt32 timeRunning;
-	ListNode timers;			/* its timers (ThreadmgrUidTimer.processLink) */
+	ListNode timers;			/* its timers (SceUIDTimerObject.processLink) */
 	SceKernelSpinlock timerLock;
 	SceUInt32 status;			/* PROCESS_STATE_*, PROCESS_FLAG_* */
 	SceUInt32 type;				/* PROCESS_TYPE_* */
@@ -202,7 +202,7 @@ typedef struct SceProcessObject {
 	int lwMutexCacheCount;
 	SceUInt32 abortRequested;		/* set once, atomically, by the first abort */
 	SceUID exceptionId;			/* "excp: %s", virtual_machine.c */
-	struct ThreadmgrException *exception;
+	struct SceUIDExceptionObject *exception;
 	SceKernelSpinlock resourceLock;		/* guards the object counts */
 	SceUInt32 uidCount;			/* UID objects of all kinds, at most 0x800 */
 	SceUInt32 uidPeak;

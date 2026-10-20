@@ -203,7 +203,7 @@ _Static_assert(sizeof(SchedDispatcher) == 0xb8, "SchedDispatcher");
 
 /* io_scheduler_async.c: a "SceUIDIoAsyncEventClass" object (name unknown) */
 typedef struct IoAsyncEvent {
-	ThreadmgrEvent base;
+	SceUIDEventObject base;
 	IoRequest request;
 	SceUInt32 reserved[2];			/* not yet traced */
 } IoAsyncEvent;
@@ -697,7 +697,7 @@ void iofile_daemon_notify_mount(int mntId);
  * a file system reports on one mount (names unknown)
  */
 typedef struct IoErrorEvent {
-	ThreadmgrEvent base;
+	SceUIDEventObject base;
 	int mntId;
 	SceUID pid;				/* the creator, whose memory userInfo is */
 	SceUInt32 pattern;			/* the event bits it waits for */

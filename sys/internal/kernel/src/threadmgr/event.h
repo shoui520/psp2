@@ -112,7 +112,7 @@ static inline void markEventReady(WMECB *wme, uint32_t index)
 }
 
 /* the event class's release method for a WME node's thread */
-static inline int releaseEventWaiter(ThreadmgrEvent *event, ThreadmgrEventWaitNode *node,
+static inline int releaseEventWaiter(SceUIDEventObject *event, ThreadmgrEventWaitNode *node,
 				     struct ThreadCB *thread)
 {
 	struct ThreadmgrWaitableClass *cls =
@@ -127,7 +127,7 @@ static inline int releaseEventWaiter(ThreadmgrEvent *event, ThreadmgrEventWaitNo
  * wakes when the wait is over (otherwise the node just leaves the event).
  */
 static inline __attribute__((always_inline)) uint32_t completeEventWaitNode(
-	ThreadmgrEvent *event, ThreadmgrEventWaitNode *node, struct ThreadCB *thread,
+	SceUIDEventObject *event, ThreadmgrEventWaitNode *node, struct ThreadCB *thread,
 	WMECB *wme, uint32_t left, SceUID waitId, int result,
 	uint32_t pattern, uint64_t userData, int notify, uint32_t arg)
 {
@@ -143,7 +143,7 @@ static inline __attribute__((always_inline)) uint32_t completeEventWaitNode(
 	return 0;
 }
 
-uint32_t notifyCallbackAllAfterSetEvent(SceUID eventId, ThreadmgrEvent *event, uint32_t arg);
+uint32_t notifyCallbackAllAfterSetEvent(SceUID eventId, SceUIDEventObject *event, uint32_t arg);
 int freeEventWaitNode(SceUID pid, ThreadmgrEventWaitNode *node);
 void cancelWME(WMECB *wme);
 void startEvent(void);
@@ -151,9 +151,9 @@ int uidEventSubclassInit(struct ThreadmgrWaitableClass *cls, const char *name, S
 			 SceSize size, SceClassCallback create, SceClassCallback destroy,
 			 ThreadmgrCancelWaitMethod cancelWait, ThreadmgrRevalidateMethod revalidate, ThreadmgrReleaseMethod release);
 uint32_t setEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t userData,
-				    uint32_t arg, ThreadmgrEvent *event);
+				    uint32_t arg, SceUIDEventObject *event);
 uint32_t pulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t userData,
-				      uint32_t arg, ThreadmgrEvent *event);
+				      uint32_t arg, SceUIDEventObject *event);
 
 /* event.c */
 int waitMultipleEvents(WMECB *wme, SceUInt32 *timeout,

@@ -31,7 +31,7 @@ static inline int EventUnknownIdError(void)
 }
 
 /* a thread waiting on the event itself: it wakes if the pattern has its bits */
-static inline uint32_t wakeEventWaiter(ThreadmgrEvent *event, struct ThreadCB *thread,
+static inline uint32_t wakeEventWaiter(SceUIDEventObject *event, struct ThreadCB *thread,
 				       uint64_t userData)
 {
 	uint32_t matched, wake;
@@ -54,7 +54,7 @@ static inline uint32_t wakeEventWaiter(ThreadmgrEvent *event, struct ThreadCB *t
 /* SceUIDEventClass's constructor */
 static int uidEvent_Constructor(void *object)
 {
-	__builtin_memset((char *)object + offsetof(ThreadmgrEvent, userData), 0, sizeof(uint64_t));
+	__builtin_memset((char *)object + offsetof(SceUIDEventObject, userData), 0, sizeof(uint64_t));
 	return 0;
 }
 
@@ -94,12 +94,12 @@ void notifyCallbackToThreadBeforeSetEvent(ThreadmgrEventCallback *head,
  * Every callback registered on the event is told, and a thread of theirs
  * waiting with callbacks is woken to run it. Called with the event locked.
  */
-uint32_t notifyCallbackAllAfterSetEvent(SceUID eventId, ThreadmgrEvent *event, uint32_t arg)
+uint32_t notifyCallbackAllAfterSetEvent(SceUID eventId, SceUIDEventObject *event, uint32_t arg)
 {
 	ThreadmgrEventCallback *head = EVENT_CALLBACK_HEAD(event), *entry, *next;
 	struct SceUIDCallbackObject *callback;
-	struct ThreadmgrThreadObject *object;
-	ThreadmgrEvent *waitObject;
+	struct SceUIDThreadObject *object;
+	SceUIDEventObject *waitObject;
 	struct ThreadmgrWaitNode *self;
 	unsigned int cpu = sceKernelCpuId();
 	uint32_t mask = 1u << cpu, wake = 0;
@@ -209,7 +209,7 @@ static int waitEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 		     uint64_t *outUserData, SceUInt32 *timeout, int callbacks)
 {
 	struct ThreadCB *thread;
-	ThreadmgrEvent *event;
+	SceUIDEventObject *event;
 	SceObjectBase *pObject;
 	uint64_t wakeup;
 	uintptr_t queue;
@@ -250,7 +250,7 @@ static int waitEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 		}
 		goto resume;
 	}
-	event = (ThreadmgrEvent *)pObject;
+	event = (SceUIDEventObject *)pObject;
 	last = ret;
 	sceKernelSpinlockLowLock(&event->lock);
 	if (timeout != NULL)
@@ -325,7 +325,7 @@ restore:
 /* an event's information */
 static int getEventInfo(SceUID eventId, SceKernelEventInfo *info)
 {
-	ThreadmgrEvent *event;
+	SceUIDEventObject *event;
 	SceObjectBase *pObject;
 	SceClass *cls;
 	int intr, ret;
@@ -339,7 +339,7 @@ static int getEventInfo(SceUID eventId, SceKernelEventInfo *info)
 		ret = GUIDGetClass(eventId, &cls);
 		/* delays are not reported */
 		if (ret >= 0 && s_threadmgrRuntime.manager->delayClass != cls) {
-			event = (ThreadmgrEvent *)pObject;
+			event = (SceUIDEventObject *)pObject;
 			info->eventId = eventId;
 			strncpy(info->name, SceSysmemForDriver_E655852F(eventId), sizeof(info->name) - 1);
 			sceKernelSpinlockLowLock(&event->lock);
@@ -370,7 +370,7 @@ int freeEventWaitNode(SceUID pid, ThreadmgrEventWaitNode *node)
 /* SceUIDEventClass's destructor: every waiter wakes with SCE_KERNEL_ERROR_WAIT_DELETE */
 static int uidEvent_Destructor(void *object)
 {
-	ThreadmgrEvent *event = object;
+	SceUIDEventObject *event = object;
 	struct ThreadmgrWaitNode *queue = (struct ThreadmgrWaitNode *)EVENT_WAIT_QUEUE(event);
 	struct ThreadmgrWaitNode *node, *next;
 	struct ThreadCB *thread;
@@ -423,7 +423,7 @@ static int uidEvent_Destructor(void *object)
 		switchThread((intr >> 7) & 1);
 resume:
 	sceKernelCpuResumeIntr(intr);
-	__builtin_memset((char *)object + offsetof(ThreadmgrEvent, userData), 0, sizeof(uint64_t));
+	__builtin_memset((char *)object + offsetof(SceUIDEventObject, userData), 0, sizeof(uint64_t));
 	return 0;
 }
 
@@ -437,7 +437,7 @@ void cancelWME(WMECB *wme)
 		currentThreadContext();
 	ListNode *head, *link;
 	ThreadmgrEventWaitNode *node;
-	ThreadmgrEvent *event;
+	SceUIDEventObject *event;
 	SceObjectBase *pObject;
 	SceUID eventId;
 	uint32_t i;
@@ -454,7 +454,7 @@ void cancelWME(WMECB *wme)
 					       eventId);
 				break;
 			}
-			event = (ThreadmgrEvent *)pObject;
+			event = (SceUIDEventObject *)pObject;
 			if (SceCpuForDriver_5AC9D394(&event->lock) >= 0) {
 				unlinkEventWaitNode(node, wme);
 				releaseEventWaiter(event, node, thread);
@@ -485,12 +485,12 @@ void startEvent(void)
 		SCE_PANIC(SCE_LINE(504, 507));
 	if (uidRegisterCallbackClassInit(cls, "SceUIDEventClass",
 			s_threadmgrRuntime.manager->registerCallbackClass,
-			sizeof(ThreadmgrEvent), uidEvent_Constructor, uidEvent_Destructor,
+			sizeof(SceUIDEventObject), uidEvent_Constructor, uidEvent_Destructor,
 			uidDefaultCancelWait, uidDefault_RevalidateMethod,
 			uidDefault_ReleaseMethod) < 0)
 		uidEventClassInit();
 	s_threadmgrRuntime.manager->eventClass = (SceClass *)cls;
-	SCE_DBG_PRINTF_LEVEL(2, 0, 523, " sizeof(SceUIDEventObject)=%d\n", sizeof(ThreadmgrEvent));
+	SCE_DBG_PRINTF_LEVEL(2, 0, 523, " sizeof(SceUIDEventObject)=%d\n", sizeof(SceUIDEventObject));
 }
 
 /* sceKernelUIDInheritedEventClassInit: a subclass of SceUIDEventClass */
@@ -510,7 +510,7 @@ int sceKernelUIDInheritedEventClassInit(struct ThreadmgrWaitableClass *cls, cons
 /* a new event object of a subclass gets its attributes (it comes locked) */
 int sceKernelEventObjectInit(SceUID eventId, uint32_t attr, uint64_t userData, uint32_t pattern)
 {
-	ThreadmgrEvent *event;
+	SceUIDEventObject *event;
 	SceObjectBase *pObject;
 
 	if (pattern & EVENT_PATTERN_RESERVED)
@@ -520,7 +520,7 @@ int sceKernelEventObjectInit(SceUID eventId, uint32_t attr, uint64_t userData, u
 				      eventId);
 		return SCE_KERNEL_ERROR_UNKNOWN_EVENT_ID;
 	}
-	event = (ThreadmgrEvent *)pObject;
+	event = (SceUIDEventObject *)pObject;
 	event->attr = attr;
 	event->pattern = pattern;
 	event->userData = userData;
@@ -535,7 +535,7 @@ int sceKernelSetEvent(SceUID eventId, uint32_t pattern, uint64_t userData)
 	WMECB *wme;
 	ThreadmgrEventWaitNode *wait;
 	SceUID waitId;
-	ThreadmgrEvent *event;
+	SceUIDEventObject *event;
 	SceObjectBase *pObject;
 	uint32_t saved, wake, matched, left;
 	int intr, ret;
@@ -554,7 +554,7 @@ int sceKernelSetEvent(SceUID eventId, uint32_t pattern, uint64_t userData)
 		}
 		goto resume;
 	}
-	event = (ThreadmgrEvent *)pObject;
+	event = (SceUIDEventObject *)pObject;
 	if (pattern & EVENT_PATTERN_RESERVED) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_PATTERN;
 		goto release;
@@ -618,7 +618,7 @@ resume:
  * reschedule is due.
  */
 uint32_t setEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t userData,
-				    uint32_t arg, ThreadmgrEvent *event)
+				    uint32_t arg, SceUIDEventObject *event)
 {
 	struct ThreadmgrWaitNode *queue = (struct ThreadmgrWaitNode *)EVENT_WAIT_QUEUE(event);
 	struct ThreadmgrWaitNode *node, *next;
@@ -672,7 +672,7 @@ uint32_t setEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t u
 int sceKernelSetEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t userData,
 				   uint32_t arg)
 {
-	ThreadmgrEvent *event;
+	SceUIDEventObject *event;
 	uint32_t saved, wake;
 	int intr, ret;
 
@@ -701,7 +701,7 @@ int sceKernelSetEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64
 /* keeps only the bits of keep */
 int sceKernelClearEvent(SceUID eventId, uint32_t keep)
 {
-	ThreadmgrEvent *event;
+	SceUIDEventObject *event;
 	SceObjectBase *pObject;
 	uint32_t saved;
 	int intr, ret;
@@ -718,7 +718,7 @@ int sceKernelClearEvent(SceUID eventId, uint32_t keep)
 			ret = SCE_KERNEL_ERROR_UNKNOWN_EVENT_ID;
 		}
 	} else {
-		event = (ThreadmgrEvent *)pObject;
+		event = (SceUIDEventObject *)pObject;
 		if (keep & EVENT_PATTERN_RESERVED) {
 			ret = SCE_KERNEL_ERROR_ILLEGAL_PATTERN;
 		} else {
@@ -742,7 +742,7 @@ int sceKernelPulseEvent(SceUID eventId, uint32_t pattern, uint64_t userData)
 	WMECB *wme;
 	ThreadmgrEventWaitNode *wait;
 	SceUID waitId;
-	ThreadmgrEvent *event;
+	SceUIDEventObject *event;
 	SceObjectBase *pObject;
 	uint32_t saved, wake, matched, left;
 	int intr, ret;
@@ -761,7 +761,7 @@ int sceKernelPulseEvent(SceUID eventId, uint32_t pattern, uint64_t userData)
 		}
 		goto resume;
 	}
-	event = (ThreadmgrEvent *)pObject;
+	event = (SceUIDEventObject *)pObject;
 	if (pattern & EVENT_PATTERN_RESERVED) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_PATTERN;
 		goto release;
@@ -822,7 +822,7 @@ resume:
 
 /* sceKernelPulseEvent with the callbacks told; called like setEventWithNotifyCallback */
 uint32_t pulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t userData,
-				      uint32_t arg, ThreadmgrEvent *event)
+				      uint32_t arg, SceUIDEventObject *event)
 {
 	struct ThreadmgrWaitNode *queue = (struct ThreadmgrWaitNode *)EVENT_WAIT_QUEUE(event);
 	struct ThreadmgrWaitNode *node, *next;
@@ -876,7 +876,7 @@ uint32_t pulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t
 int sceKernelPulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t userData,
 					  uint32_t arg)
 {
-	ThreadmgrEvent *event;
+	SceUIDEventObject *event;
 	uint32_t saved, wake;
 	int intr, ret;
 
@@ -910,7 +910,7 @@ int sceKernelPulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint
 
 int sceKernelGetEventPattern(SceUID eventId, uint32_t *pattern)
 {
-	ThreadmgrEvent *event;
+	SceUIDEventObject *event;
 	SceObjectBase *pObject;
 	uint32_t saved;
 	int intr, ret;
@@ -931,7 +931,7 @@ int sceKernelGetEventPattern(SceUID eventId, uint32_t *pattern)
 			ret = SCE_KERNEL_ERROR_UNKNOWN_EVENT_ID;
 		}
 	} else {
-		event = (ThreadmgrEvent *)pObject;
+		event = (SceUIDEventObject *)pObject;
 		ret = 0;
 		sceKernelSpinlockLowLock(&event->lock);
 		*pattern = event->pattern;
@@ -953,7 +953,7 @@ int sceKernelCancelEventWithSetPattern(SceUID eventId, uint32_t setPattern, uint
 	WMECB *wme;
 	ThreadmgrEventWaitNode *wait;
 	SceUID waitId;
-	ThreadmgrEvent *event;
+	SceUIDEventObject *event;
 	SceObjectBase *pObject;
 	uint32_t saved, wake, left;
 	int intr, ret, count;
@@ -971,7 +971,7 @@ int sceKernelCancelEventWithSetPattern(SceUID eventId, uint32_t setPattern, uint
 		}
 		goto resume;
 	}
-	event = (ThreadmgrEvent *)pObject;
+	event = (SceUIDEventObject *)pObject;
 	if (setPattern & EVENT_PATTERN_RESERVED) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_PATTERN;
 		sceGUIDReleaseObject(eventId);
@@ -1047,7 +1047,7 @@ int SceThreadmgrForDriver_360C655C(SceUID eventId, uint32_t pattern, uint32_t *o
 int sceKernelPollEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 		       uint64_t *outUserData)
 {
-	ThreadmgrEvent *event;
+	SceUIDEventObject *event;
 	SceObjectBase *pObject;
 	uint32_t saved, matched;
 	int intr, ret;
@@ -1068,7 +1068,7 @@ int sceKernelPollEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 			ret = SCE_KERNEL_ERROR_UNKNOWN_EVENT_ID;
 		}
 	} else {
-		event = (ThreadmgrEvent *)pObject;
+		event = (SceUIDEventObject *)pObject;
 		sceKernelSpinlockLowLock(&event->lock);
 		matched = event->pattern & pattern;
 		if (matched == 0) {
@@ -1099,7 +1099,7 @@ int sceKernelCancelEvent(SceUID eventId, int *numWaitThreads)
 	WMECB *wme;
 	ThreadmgrEventWaitNode *wait;
 	SceUID waitId;
-	ThreadmgrEvent *event;
+	SceUIDEventObject *event;
 	SceObjectBase *pObject;
 	uint32_t saved, wake, left;
 	int intr, ret, count;
@@ -1117,7 +1117,7 @@ int sceKernelCancelEvent(SceUID eventId, int *numWaitThreads)
 		}
 		goto resume;
 	}
-	event = (ThreadmgrEvent *)pObject;
+	event = (SceUIDEventObject *)pObject;
 	queue = (struct ThreadmgrWaitNode *)EVENT_WAIT_QUEUE(event);
 	sceKernelSpinlockLowLock(&event->lock);
 	count = 0;
@@ -1172,7 +1172,7 @@ resume:
 }
 
 /* queues a node for event i of the WME on the event (both locked by the caller as needed) */
-static inline void queueEventWaitNode(ThreadmgrEvent *event, ThreadmgrEventWaitNode *node,
+static inline void queueEventWaitNode(SceUIDEventObject *event, ThreadmgrEventWaitNode *node,
 				      struct ThreadCB *thread,
 				      WMECB *wme, uint32_t i)
 {
@@ -1220,7 +1220,7 @@ int waitMultipleEvents(WMECB *wme, SceUInt32 *timeout,
 	struct ThreadmgrWaitNode *self = (struct ThreadmgrWaitNode *)thread;
 	const SceKernelWaitEvent *wanted;
 	ThreadmgrEventWaitNode *node;
-	ThreadmgrEvent *event;
+	SceUIDEventObject *event;
 	SceAllocOpt opt;
 	uint64_t wakeup;
 	uint32_t saved, matched, i;

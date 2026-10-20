@@ -95,11 +95,11 @@ int closeMsgPipeForUser(SceUID uid, uint32_t pattern)
 		goto invalid;
 	thread = currentThreadContext();
 	ret = 0;
-	sceKernelSpinlockLowLock(&((ThreadmgrEvent *)pObject)->lock);
+	sceKernelSpinlockLowLock(&((SceUIDEventObject *)pObject)->lock);
 	wake = setEventWithNotifyCallback(guid, pattern,
 		((uint64_t)thread->userThreadId << 32) | (int64_t)currentThreadContext()->processId,
-		pattern, (ThreadmgrEvent *)pObject);
-	sceKernelSpinlockLowUnlock(&((ThreadmgrEvent *)pObject)->lock);
+		pattern, (SceUIDEventObject *)pObject);
+	sceKernelSpinlockLowUnlock(&((SceUIDEventObject *)pObject)->lock);
 	goto release;
 invalid:
 	wake = 0;
@@ -151,11 +151,11 @@ int closeSimpleEventForUser(SceUID uid, uint32_t pattern)
 		goto invalid;
 	thread = currentThreadContext();
 	ret = 0;
-	sceKernelSpinlockLowLock(&((ThreadmgrEvent *)pObject)->lock);
+	sceKernelSpinlockLowLock(&((SceUIDEventObject *)pObject)->lock);
 	wake = setEventWithNotifyCallback(guid, pattern,
 		((uint64_t)thread->userThreadId << 32) | (int64_t)currentThreadContext()->processId,
-		pattern, (ThreadmgrEvent *)pObject);
-	sceKernelSpinlockLowUnlock(&((ThreadmgrEvent *)pObject)->lock);
+		pattern, (SceUIDEventObject *)pObject);
+	sceKernelSpinlockLowUnlock(&((SceUIDEventObject *)pObject)->lock);
 	goto release;
 invalid:
 	wake = 0;

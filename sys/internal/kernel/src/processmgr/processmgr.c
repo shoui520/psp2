@@ -2839,7 +2839,7 @@ out:
 static inline __attribute__((always_inline)) void WaitThreadGroup(SceUID *thid, int count,
 								   SceUInt32 flag)
 {
-	struct ThreadmgrThreadObject *thread;
+	struct SceUIDThreadObject *thread;
 	SceUID id;
 	int remaining, i;
 

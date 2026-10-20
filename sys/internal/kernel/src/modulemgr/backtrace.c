@@ -334,7 +334,7 @@ int _sceKernelBacktraceCore(SceUID thid, SceKernelBacktraceFrame *frames, SceSiz
 {
 	const SceExcpmgrContext *exc;
 	ThreadCB *ctx;
-	struct ThreadmgrThreadObject *obj;
+	struct SceUIDThreadObject *obj;
 	ThreadSyscallFrame *u;
 	SceUInt32 saved, pc, sp0, pc0, n, i, found;
 	SceUID pid;
@@ -515,7 +515,7 @@ int _sceKernelBacktraceForKernelCore(SceUID thid, SceKernelBacktraceFrameForKern
 {
 	const SceExcpmgrContext *exc;
 	ThreadCB *ctx;
-	struct ThreadmgrThreadObject *obj;
+	struct SceUIDThreadObject *obj;
 	ThreadSyscallFrame *u;
 	SceUInt32 saved, pc, sp0, pc0, n, i, found, fingerprint;
 	void *textBase;

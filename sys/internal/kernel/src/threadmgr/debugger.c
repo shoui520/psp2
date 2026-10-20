@@ -141,7 +141,7 @@ void setCpuRegisterForDebuggerRaw(struct ThreadCB *thread,
 int getThreadInfoForDebugger(SceUID threadId, SceUInt32 level, uint32_t flags,
 			     ThreadmgrThreadInfoForDebugger *info)
 {
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	struct ThreadCB *thread;
 	struct ThreadRegisterContext *context;
@@ -158,7 +158,7 @@ int getThreadInfoForDebugger(SceUID threadId, SceUInt32 level, uint32_t flags,
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto resume;
 	}
-	object = (struct ThreadmgrThreadObject *)pObject;
+	object = (struct SceUIDThreadObject *)pObject;
 	thread = &object->context;
 	strncpy(info->name, SceSysmemForDriver_E655852F(threadId), sizeof(info->name) - 1);
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
@@ -500,7 +500,7 @@ int getThreadInfoForDebuggerForUser(SceUID threadId, SceUInt32 level, uint32_t f
 				    ThreadmgrThreadInfoForDebugger *info)
 {
 	ThreadmgrThreadInfoForDebugger local;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	SceUID puid;
 	SceSize size, got;
@@ -518,7 +518,7 @@ int getThreadInfoForDebuggerForUser(SceUID threadId, SceUInt32 level, uint32_t f
 	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		local.threadId = -1;
 	} else {
-		object = (struct ThreadmgrThreadObject *)pObject;
+		object = (struct SceUIDThreadObject *)pObject;
 		local.threadId = object->context.userThreadId;
 		sceGUIDReleaseObject(threadId);
 	}
@@ -747,7 +747,7 @@ int _sceKernelSetCpuRegisterForDebugger(SceUID threadId, const ThreadmgrDebugReg
 					uint32_t mask, int mode)
 {
 	ThreadmgrDebugSetRequest request;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	int result;
 	SceObjectBase *pObject;
 	SceKernelSpinlock done;
@@ -763,7 +763,7 @@ int _sceKernelSetCpuRegisterForDebugger(SceUID threadId, const ThreadmgrDebugReg
 		result = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto resume;
 	}
-	object = (struct ThreadmgrThreadObject *)pObject;
+	object = (struct SceUIDThreadObject *)pObject;
 	sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 	if (object->context.status & SCE_KERNEL_THREAD_STATUS_DELETED) {
 		result = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
@@ -805,7 +805,7 @@ resume:
 int _sceKernelGetCpuRegisterForDebugger(SceUID threadId, ThreadmgrDebugRegisters *regs, int mode)
 {
 	ThreadmgrDebugGetRequest request;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	int result;
 	SceObjectBase *pObject;
 	SceKernelSpinlock done;
@@ -821,7 +821,7 @@ int _sceKernelGetCpuRegisterForDebugger(SceUID threadId, ThreadmgrDebugRegisters
 		result = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto resume;
 	}
-	object = (struct ThreadmgrThreadObject *)pObject;
+	object = (struct SceUIDThreadObject *)pObject;
 	sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 	if (object->context.status & SCE_KERNEL_THREAD_STATUS_DELETED) {
 		result = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
@@ -863,7 +863,7 @@ int _sceKernelSetVfpRegisterForDebugger(SceUID threadId, const uint32_t *vfp, ui
 					int mode)
 {
 	ThreadmgrDebugSetRequest request;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	int result;
 	SceObjectBase *pObject;
 	SceKernelSpinlock done;
@@ -880,7 +880,7 @@ int _sceKernelSetVfpRegisterForDebugger(SceUID threadId, const uint32_t *vfp, ui
 		result = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto resume;
 	}
-	object = (struct ThreadmgrThreadObject *)pObject;
+	object = (struct SceUIDThreadObject *)pObject;
 	sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 	if (object->context.status & SCE_KERNEL_THREAD_STATUS_DELETED) {
 		result = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
@@ -928,7 +928,7 @@ resume:
 int _sceKernelGetVfpRegisterForDebugger(SceUID threadId, uint32_t *vfp, int mode)
 {
 	ThreadmgrDebugGetRequest request;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	int result;
 	SceObjectBase *pObject;
 	SceKernelSpinlock done;
@@ -944,7 +944,7 @@ int _sceKernelGetVfpRegisterForDebugger(SceUID threadId, uint32_t *vfp, int mode
 		result = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto resume;
 	}
-	object = (struct ThreadmgrThreadObject *)pObject;
+	object = (struct SceUIDThreadObject *)pObject;
 	sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 	if (object->context.status & SCE_KERNEL_THREAD_STATUS_DELETED) {
 		result = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
@@ -990,7 +990,7 @@ int getThreadNameListProc(SceUID pid, SceUInt32 level, ThreadmgrThreadName *name
 			  SceSize *count)
 {
 	SceSize got = 0;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	ThreadmgrThreadName entry;
 	const char *name;
@@ -1032,7 +1032,7 @@ int getThreadNameListProc(SceUID pid, SceUInt32 level, ThreadmgrThreadName *name
 			if (sceGUIDReferObjectWithClass(vector[i], THREAD_CLASS(),
 					&pObject) < 0)
 				continue;
-			object = (struct ThreadmgrThreadObject *)pObject;
+			object = (struct SceUIDThreadObject *)pObject;
 			if (object->context.processId == pid) {
 				vector[found++] = vector[i];
 			} else {
@@ -1091,7 +1091,7 @@ int debugSuspendThreadIntr(SceUID threadId, uint32_t reason, int *result,
 			    SceKernelSpinlock *done)
 {
 	struct ThreadMgrCpuCB *cpu = currentCpuState();
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	struct ThreadCB *thread;
 	struct ThreadmgrWaitNode *self;
@@ -1105,7 +1105,7 @@ int debugSuspendThreadIntr(SceUID threadId, uint32_t reason, int *result,
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto done;
 	}
-	object = (struct ThreadmgrThreadObject *)pObject;
+	object = (struct SceUIDThreadObject *)pObject;
 	thread = &object->context;
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	status = thread->debugSuspendReason;
@@ -1159,7 +1159,7 @@ int sceKernelDebugSuspendThread(SceUID threadId, uint32_t reason)
 {
 	struct SceKernelThreadmgrPrivate *manager;
 	struct ThreadMgrCpuCB *cpu;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	struct ThreadCB *thread;
 	struct ThreadmgrWaitNode *self;
@@ -1192,7 +1192,7 @@ refused:
 		result = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto resume;
 	}
-	object = (struct ThreadmgrThreadObject *)pObject;
+	object = (struct SceUIDThreadObject *)pObject;
 	thread = &object->context;
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	status = thread->debugSuspendReason;
@@ -1256,7 +1256,7 @@ resume:
 int sceKernelDebugResumeThread(SceUID threadId, uint32_t reason)
 {
 	struct SceKernelThreadmgrPrivate *manager;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	struct ThreadCB *thread;
 	struct ThreadmgrWaitNode *self;
@@ -1272,7 +1272,7 @@ int sceKernelDebugResumeThread(SceUID threadId, uint32_t reason)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto resume;
 	}
-	object = (struct ThreadmgrThreadObject *)pObject;
+	object = (struct SceUIDThreadObject *)pObject;
 	thread = &object->context;
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (!(reason & thread->debugSuspendReason)) {
@@ -1313,7 +1313,7 @@ resume:
 /* replaces a debug-suspended thread's reasons; returns the old ones */
 int SceThreadmgrForDriver_04C6764B(SceUID threadId, uint32_t reason)
 {
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	int intr, ret;
 
@@ -1325,7 +1325,7 @@ int SceThreadmgrForDriver_04C6764B(SceUID threadId, uint32_t reason)
 	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
-		object = (struct ThreadmgrThreadObject *)pObject;
+		object = (struct SceUIDThreadObject *)pObject;
 		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		if (object->context.status & THREAD_STATE_DEBUG_SUSPENDED) {
 			ret = object->context.debugSuspendReason;
@@ -1343,7 +1343,7 @@ int SceThreadmgrForDriver_04C6764B(SceUID threadId, uint32_t reason)
 /* the thread's debug suspend reasons */
 int SceThreadmgrForDriver_A0B1AB21(SceUID threadId)
 {
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	int intr, ret;
 
@@ -1353,7 +1353,7 @@ int SceThreadmgrForDriver_A0B1AB21(SceUID threadId)
 	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
-		object = (struct ThreadmgrThreadObject *)pObject;
+		object = (struct SceUIDThreadObject *)pObject;
 		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		ret = object->context.debugSuspendReason;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
@@ -1366,7 +1366,7 @@ int SceThreadmgrForDriver_A0B1AB21(SceUID threadId)
 /* SceThreadmgrForDriver_D26BFF26: whether a debug-suspended thread stopped inside a syscall */
 int SceThreadmgrForDriver_D26BFF26(SceUID threadId)
 {
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	int intr, ret;
 
@@ -1377,7 +1377,7 @@ int SceThreadmgrForDriver_D26BFF26(SceUID threadId)
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
-		object = (struct ThreadmgrThreadObject *)pObject;
+		object = (struct SceUIDThreadObject *)pObject;
 		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		if (!(object->context.status & THREAD_STATE_DEBUG_SUSPENDED))
 			ret = SCE_KERNEL_ERROR_NOT_DEBUG_SUSPENDED;
@@ -1394,7 +1394,7 @@ int SceThreadmgrForDriver_D26BFF26(SceUID threadId)
 int setCpuRegisterForDebuggerIntr(ThreadmgrDebugSetRequest *request)
 {
 	SceUID threadId = request->threadId;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	int ret, cpu;
 
@@ -1407,7 +1407,7 @@ int setCpuRegisterForDebuggerIntr(ThreadmgrDebugSetRequest *request)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto done;
 	}
-	object = (struct ThreadmgrThreadObject *)pObject;
+	object = (struct SceUIDThreadObject *)pObject;
 	sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 	if (object->context.status & SCE_KERNEL_THREAD_STATUS_DELETED) {
 		SCE_DBG_PRINTF(0, 793,
@@ -1453,7 +1453,7 @@ int SceThreadmgrForDriver_64E89DE9(SceUID threadId, const ThreadmgrDebugRegister
 int getCpuRegisterForDebuggerIntr(ThreadmgrDebugGetRequest *request)
 {
 	SceUID threadId = request->threadId;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	int ret, cpu;
 
@@ -1466,7 +1466,7 @@ int getCpuRegisterForDebuggerIntr(ThreadmgrDebugGetRequest *request)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto done;
 	}
-	object = (struct ThreadmgrThreadObject *)pObject;
+	object = (struct SceUIDThreadObject *)pObject;
 	sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 	if (object->context.status & SCE_KERNEL_THREAD_STATUS_DELETED) {
 		SCE_DBG_PRINTF(0, 1035,
@@ -1509,7 +1509,7 @@ int SceThreadmgrForDriver_5022689D(SceUID threadId, ThreadmgrDebugRegisters *reg
 int setVfpRegisterForDebuggerIntr(ThreadmgrDebugSetRequest *request)
 {
 	SceUID threadId = request->threadId;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	const uint32_t *src;
 	uint32_t *q;
@@ -1524,7 +1524,7 @@ int setVfpRegisterForDebuggerIntr(ThreadmgrDebugSetRequest *request)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto done;
 	}
-	object = (struct ThreadmgrThreadObject *)pObject;
+	object = (struct SceUIDThreadObject *)pObject;
 	sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 	if (object->context.status & SCE_KERNEL_THREAD_STATUS_DELETED) {
 		SCE_DBG_PRINTF(0, 1210,
@@ -1572,7 +1572,7 @@ int SceThreadmgrForDriver_49A0B679(SceUID threadId, const uint32_t *vfp, uint32_
 int getVfpRegisterForDebuggerIntr(ThreadmgrDebugGetRequest *request)
 {
 	SceUID threadId = request->threadId;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	uint32_t *dst;
 	int ret, i, j, cpu;
@@ -1586,7 +1586,7 @@ int getVfpRegisterForDebuggerIntr(ThreadmgrDebugGetRequest *request)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto done;
 	}
-	object = (struct ThreadmgrThreadObject *)pObject;
+	object = (struct SceUIDThreadObject *)pObject;
 	sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 	if (object->context.status & SCE_KERNEL_THREAD_STATUS_DELETED) {
 		SCE_DBG_PRINTF(0, 1416,
@@ -1707,7 +1707,7 @@ int SceThreadmgrForDriver_FD87586C(SceUID pid, ThreadmgrThreadName *names, SceSi
 
 SceUID SceThreadmgrForDriver_F311808F(SceUID threadId)
 {
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	int intr;
 	SceUID ret;
@@ -1716,7 +1716,7 @@ SceUID SceThreadmgrForDriver_F311808F(SceUID threadId)
 	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
-		object = (struct ThreadmgrThreadObject *)pObject;
+		object = (struct SceUIDThreadObject *)pObject;
 		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		ret = object->context.userThreadId;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
@@ -1783,7 +1783,7 @@ resume:
 /* the thread's hardware breakpoint words (selector 5 only); its CPU reloads them */
 int sceKernelSetTHBP(SceUID threadId, int selector, uint32_t value0, uint32_t value1)
 {
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	int intr, ret;
 
@@ -1795,7 +1795,7 @@ int sceKernelSetTHBP(SceUID threadId, int selector, uint32_t value0, uint32_t va
 	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
-		object = (struct ThreadmgrThreadObject *)pObject;
+		object = (struct SceUIDThreadObject *)pObject;
 		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		SCE_DBG_ASSERT_CHECK(object->context.thbp != NULL, 3076);
 		object->context.thbp[0] = value0;
@@ -1813,7 +1813,7 @@ int sceKernelSetTHBP(SceUID threadId, int selector, uint32_t value0, uint32_t va
 
 int sceKernelGetTHBP(SceUID threadId, int selector, uint32_t *value0, uint32_t *value1)
 {
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	int intr, ret;
 
@@ -1827,7 +1827,7 @@ int sceKernelGetTHBP(SceUID threadId, int selector, uint32_t *value0, uint32_t *
 	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
-		object = (struct ThreadmgrThreadObject *)pObject;
+		object = (struct SceUIDThreadObject *)pObject;
 		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		SCE_DBG_ASSERT_CHECK(object->context.thbp != NULL, 3147);
 		ret = 0;

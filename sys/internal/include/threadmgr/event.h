@@ -19,7 +19,7 @@ typedef struct ThreadmgrEventCallback {
 } ThreadmgrEventCallback;
 
 /* SceUIDEventObject; subclasses begin immediately after userData. */
-typedef struct ThreadmgrEvent {
+typedef struct SceUIDEventObject {
 	SceUID ownerPid;
 	SceClass *cls;
 	struct UIDEntry *uidEntry;
@@ -33,9 +33,9 @@ typedef struct ThreadmgrEvent {
 	ThreadmgrEventCallback *callbackNext;
 	ThreadmgrEventCallback *callbackPrev;
 	uint64_t userData __attribute__((packed, aligned(4)));
-} ThreadmgrEvent;
+} SceUIDEventObject;
 
-_Static_assert(sizeof(ThreadmgrEvent) == 0x38, "SceUIDEventObject size");
+_Static_assert(sizeof(SceUIDEventObject) == 0x38, "SceUIDEventObject size");
 
 /* event.c: a subclass of SceUIDEventClass, and a new object of one (it comes locked) */
 int sceKernelUIDInheritedEventClassInit(struct ThreadmgrWaitableClass *cls, const char *name,

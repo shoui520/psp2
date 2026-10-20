@@ -136,7 +136,7 @@ int uidCallback_Destructor(struct SceUIDCallbackObject *callback)
 int getCallbackInfo(SceUID callbackId, SceKernelCallbackInfo *info)
 {
 	struct SceUIDCallbackObject *callback;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	int intr, ret;
 
 	*info = (SceKernelCallbackInfo){ .size = sizeof(*info) };
@@ -551,7 +551,7 @@ int callbackProcessExit(SceProcessObject *process)
 {
 	SceSize got = 0;
 	struct SceUIDCallbackObject *callback;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceUID *vector, guid;
 	int num, i, intr, ret;
 
@@ -771,7 +771,7 @@ restore:
 int sceKernelDeleteCallback(SceUID callbackId)
 {
 	struct SceUIDCallbackObject *callback;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	uint32_t saved;
 	int intr, ret;
 
@@ -833,9 +833,9 @@ restore:
 int sceKernelNotifyCallback(SceUID callbackId, int arg)
 {
 	struct SceUIDCallbackObject *callback;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	struct ThreadmgrWaitNode *self;
-	ThreadmgrEvent *waitObject;
+	SceUIDEventObject *waitObject;
 	ThreadmgrTraceHook hook;
 	SceUID waitId;
 	uint32_t saved, wake;
@@ -956,7 +956,7 @@ int sceKernelCheckCallback(void)
 int SceThreadmgrForDriver_C040EC1C(SceUID callbackId)
 {
 	struct SceUIDCallbackObject *callback;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	uint32_t saved;
 	int intr, ret;
 
@@ -990,7 +990,7 @@ resume:
 int SceThreadmgrForDriver_0892D8DF(SceUID callbackId)
 {
 	struct SceUIDCallbackObject *callback;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	uint32_t saved;
 	int intr, ret;
 
@@ -1022,7 +1022,7 @@ resume:
 int SceThreadmgrForDriver_FDC044AC(SceUID callbackId, SceKernelCallbackInfo *info)
 {
 	SceKernelCallbackInfo local;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceUID puid;
 	SceObjectBase *pObject;
 	SceUID threadId;
@@ -1045,7 +1045,7 @@ int SceThreadmgrForDriver_FDC044AC(SceUID callbackId, SceKernelCallbackInfo *inf
 						&pObject) < 0) {
 					local.threadId = -1;
 				} else {
-					object = (struct ThreadmgrThreadObject *)pObject;
+					object = (struct SceUIDThreadObject *)pObject;
 					local.threadId = object->context.userThreadId;
 					sceGUIDReleaseObject(threadId);
 				}
@@ -1128,7 +1128,7 @@ int SceThreadmgrForDriver_FF8DA217(SceUID pid, int level, SceKernelCallbackInfo 
 	SceUID puid;
 	SceObjectBase *pObject;
 	SceSize found;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceUID *vector, threadId;
 	int total, i, ret;
 
@@ -1167,7 +1167,7 @@ int SceThreadmgrForDriver_FF8DA217(SceUID pid, int level, SceKernelCallbackInfo 
 						 &pObject) < 0) {
 			info.threadId = -1;
 		} else {
-			object = (struct ThreadmgrThreadObject *)pObject;
+			object = (struct SceUIDThreadObject *)pObject;
 			info.threadId = object->context.userThreadId;
 			sceGUIDReleaseObject(threadId);
 		}
@@ -1197,7 +1197,7 @@ int sceKernelRegisterCallbackToEventForDriver(SceUID eventId, SceUID callbackId,
 {
 	ThreadmgrEventCallback *entry, *pos, *head;
 	struct SceUIDCallbackObject *callback;
-	ThreadmgrEvent *event;
+	SceUIDEventObject *event;
 	SceAllocOpt opt;
 	uint32_t saved;
 	int intr, ret;
@@ -1264,7 +1264,7 @@ resume:
 int sceKernelUnregisterCallbackFromEvent(SceUID eventId, SceUID callbackId)
 {
 	ThreadmgrEventCallback *entry, *head;
-	ThreadmgrEvent *event;
+	SceUIDEventObject *event;
 	uint32_t saved;
 	int intr, ret;
 
@@ -1306,7 +1306,7 @@ resume:
 int sceKernelUnregisterCallbackFromEventAll(SceUID eventId)
 {
 	ThreadmgrEventCallback *entry;
-	ThreadmgrEvent *event;
+	SceUIDEventObject *event;
 	uint32_t saved;
 	int intr, ret;
 

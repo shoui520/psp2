@@ -1028,7 +1028,7 @@ resume:
 /* inside a syscall the writer is reported by its user-visible thread ID */
 int sceKernelGetRWLockInfo(SceUID rwLockId, SceKernelRWLockInfo *info)
 {
-	struct ThreadmgrThreadObject *owner;
+	struct SceUIDThreadObject *owner;
 	SceKernelRWLockInfo local;
 	uint32_t saved;
 	SceSize size;
@@ -1124,7 +1124,7 @@ int sceKernelGetRWLockInfoAllProc(SceUID pid, int level, SceKernelRWLockInfo *in
 	SceSize got = 0;
 	SceKernelRWLockInfo info;
 	SceUInt32 attr;
-	struct ThreadmgrThreadObject *owner;
+	struct SceUIDThreadObject *owner;
 	SceUID *vector;
 	int total, i, ret, err;
 

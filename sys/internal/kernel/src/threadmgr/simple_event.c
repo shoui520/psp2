@@ -42,7 +42,7 @@ __attribute__((section(SCE_DBGSRC_SECTION), used)) = {
 
 /* SceUIDSimpleEventObject (0x3c) */
 typedef struct SceUIDSimpleEventObject {
-	ThreadmgrEvent event;
+	SceUIDEventObject event;
 	SceUID uid;				/* 0x38: its own GUID */
 } SceUIDSimpleEventObject;
 

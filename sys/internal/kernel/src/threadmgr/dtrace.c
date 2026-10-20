@@ -47,7 +47,7 @@ unlock:
 /* turns per-thread DTrace state on (allocating it for every thread) or off */
 int sceKernelSetDTraceThreadCBEnable(int enable)
 {
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceSize count, size, i;
 	SceUID *ids, id;
 	int intr, ret;
@@ -111,7 +111,7 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 				       ret);
 			continue;
 		}
-		object = (struct ThreadmgrThreadObject *)pObject;
+		object = (struct SceUIDThreadObject *)pObject;
 		sceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
 		ret = dtraceThreadCBInit(&object->context);
 		if (ret < 0)

@@ -28,7 +28,7 @@
 
 #define EXCEPTION_CLASS()	(s_threadmgrRuntime.manager->exceptionClass)
 
-_Static_assert(sizeof(struct ThreadmgrException) == 0x38 &&
+_Static_assert(sizeof(struct SceUIDExceptionObject) == 0x38 &&
 	       sizeof(ThreadmgrVmCpuContext) == 0x58 && sizeof(ThreadmgrVmVfpContext) == 0x108,
 	       "virtual machine layouts");
 
@@ -40,7 +40,7 @@ static inline void dataMemoryBarrier(void)
 /* the exception object's release method: the end of one wait */
 int uidException_ReleaseMethod(void *cls, void *object, struct ThreadCB *thread)
 {
-	struct ThreadmgrException *exception = object;
+	struct SceUIDExceptionObject *exception = object;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1447);
 	SCE_DBG_ASSERT_CHECK(exception->lock != 0, 1450);
@@ -58,7 +58,7 @@ int uidException_ReleaseMethod(void *cls, void *object, struct ThreadCB *thread)
 }
 
 /* SceUIDExceptionClass's destructor: its waiter wakes with WAIT_DELETE */
-int uidException_Destructor(struct ThreadmgrException *exception)
+int uidException_Destructor(struct SceUIDExceptionObject *exception)
 {
 	uint32_t wake;
 	int intr;
@@ -83,10 +83,10 @@ int uidException_Destructor(struct ThreadmgrException *exception)
 /* SceUIDExceptionClass's constructor */
 static int uidException_Constructor(void *object)
 {
-	struct ThreadmgrException *exception = object;
+	struct SceUIDExceptionObject *exception = object;
 
 	memset(&exception->pendingNext, 0,
-	       sizeof(*exception) - offsetof(struct ThreadmgrException, pendingNext));
+	       sizeof(*exception) - offsetof(struct SceUIDExceptionObject, pendingNext));
 	return 0;
 }
 
@@ -141,7 +141,7 @@ static inline void unlistThread(struct ThreadCB *thread)
 int suspendThreadForVM(SceUID threadId, int *result, SceKernelSpinlock *done)
 {
 	struct ThreadMgrCpuCB *cpu;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	struct ThreadCB *thread;
 	struct ThreadmgrWaitNode *self, *node, *next, *head;
@@ -157,7 +157,7 @@ int suspendThreadForVM(SceUID threadId, int *result, SceKernelSpinlock *done)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
-	object = (struct ThreadmgrThreadObject *)pObject;
+	object = (struct SceUIDThreadObject *)pObject;
 	thread = &object->context;
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (!(thread->currentAttr & THREAD_ATTR_VM) && !isVirtualMachineTitle(thread)) {
@@ -291,10 +291,10 @@ resume:
 /* undoes one sceKernelSuspendThreadForVM; at zero the thread runs again */
 int resumeThreadForVM(SceUID threadId)
 {
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	struct ThreadCB *thread;
-	struct ThreadmgrException *exception;
+	struct SceUIDExceptionObject *exception;
 	struct ThreadmgrExceptionEntry *entry;
 	uint32_t state;
 	int intr, ret, wake;
@@ -311,7 +311,7 @@ int resumeThreadForVM(SceUID threadId)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
-	object = (struct ThreadmgrThreadObject *)pObject;
+	object = (struct SceUIDThreadObject *)pObject;
 	thread = &object->context;
 	if (!(thread->currentAttr & THREAD_ATTR_VM) && !isVirtualMachineTitle(thread)) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_PERMISSION;
@@ -374,7 +374,7 @@ int waitException(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt32 *timeou
 	struct ThreadCB *thread =
 		currentThreadContext();
 	struct ThreadmgrExceptionEntry *entry;
-	struct ThreadmgrException *exception;
+	struct SceUIDExceptionObject *exception;
 	SceObjectBase *pObject;
 	uint64_t wakeup;
 	uint32_t saved;
@@ -417,7 +417,7 @@ int waitException(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt32 *timeou
 		SCE_DBG_ASSERT_FAIL(203);
 		goto resume;
 	}
-	exception = (struct ThreadmgrException *)pObject;
+	exception = (struct SceUIDExceptionObject *)pObject;
 	sceKernelSpinlockLowLock(&exception->lock);
 	if (exception->owner == -1) {
 		exception->owner = thread->threadId;
@@ -521,14 +521,14 @@ void startException(void)
 		SCE_PANIC_FUNC(1385, "uidExceptionClassInit");
 	s_threadmgrRuntime.manager->exceptionClass = (SceClass *)cls;
 	SCE_DBG_PRINTF_LEVEL(2, 0, 368, " sizeof(SceUIDExceptionObject)=%d\n",
-			     sizeof(struct ThreadmgrException));
+			     sizeof(struct SceUIDExceptionObject));
 }
 
 /* a new process's exception object ("excp: <process name>") */
 int createException(SceProcessObject *process)
 {
 	UIDCreateOpt opt;
-	struct ThreadmgrException *exception;
+	struct SceUIDExceptionObject *exception;
 	const char *processName;
 	char name[32];
 	int ret;
@@ -607,7 +607,7 @@ int sceKernelSuspendThreadForVM(SceUID threadId)
 int sceKernelSetThreadContextForVM(SceUID threadId, const ThreadmgrVmCpuContext *cpu,
 				   const ThreadmgrVmVfpContext *vfp)
 {
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	struct ThreadCB *thread;
 	struct ThreadRegisterContext *regs;
@@ -631,7 +631,7 @@ int sceKernelSetThreadContextForVM(SceUID threadId, const ThreadmgrVmCpuContext 
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
-	object = (struct ThreadmgrThreadObject *)pObject;
+	object = (struct SceUIDThreadObject *)pObject;
 	thread = &object->context;
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (!(thread->currentAttr & THREAD_ATTR_VM)) {
@@ -700,7 +700,7 @@ resume:
 int sceKernelGetThreadContextForVM(SceUID threadId, ThreadmgrVmCpuContext *cpu,
 				   ThreadmgrVmVfpContext *vfp)
 {
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	SceObjectBase *pObject;
 	struct ThreadCB *thread;
 	struct ThreadRegisterContext *regs;
@@ -722,7 +722,7 @@ int sceKernelGetThreadContextForVM(SceUID threadId, ThreadmgrVmCpuContext *cpu,
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
-	object = (struct ThreadmgrThreadObject *)pObject;
+	object = (struct SceUIDThreadObject *)pObject;
 	thread = &object->context;
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (!(thread->currentAttr & THREAD_ATTR_VM) && !isVirtualMachineTitle(thread)) {

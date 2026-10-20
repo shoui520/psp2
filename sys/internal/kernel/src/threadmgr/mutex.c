@@ -1073,7 +1073,7 @@ restore:
 /* inside a syscall the owner is reported by its user-visible thread ID */
 int sceKernelGetMutexInfo(SceUID mutexId, SceKernelMutexInfo *info)
 {
-	struct ThreadmgrThreadObject *owner;
+	struct SceUIDThreadObject *owner;
 	SceKernelMutexInfo local;
 	uint32_t saved;
 	SceSize size;
@@ -1169,7 +1169,7 @@ int sceKernelGetMutexInfoAllProc(SceUID pid, int level, SceKernelMutexInfo *info
 	SceSize got = 0;
 	SceKernelMutexInfo info;
 	SceUInt32 attr;
-	struct ThreadmgrThreadObject *owner;
+	struct SceUIDThreadObject *owner;
 	SceUID *vector;
 	int total, i, ret, err;
 

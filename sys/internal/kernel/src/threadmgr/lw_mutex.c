@@ -815,7 +815,7 @@ restore:
  */
 int sceKernelGetLwMutexInfoById(SceUID lwMutexId, SceKernelLwMutexInfo *info)
 {
-	struct ThreadmgrThreadObject *owner;
+	struct SceUIDThreadObject *owner;
 	SceKernelLwMutexInfo local;
 	uint32_t saved;
 	SceSize size;
@@ -916,7 +916,7 @@ int sceKernelGetLwMutexInfoAllProc(SceUID pid, int level, SceKernelLwMutexInfo *
 {
 	SceSize got = 0;
 	SceKernelLwMutexInfo info;
-	struct ThreadmgrThreadObject *owner;
+	struct SceUIDThreadObject *owner;
 	SceUID *vector;
 	int total, i, ret, err;
 

@@ -27,7 +27,7 @@ struct ThreadmgrTimer {
 
 /* SceUIDCpuTimerObject (0x58) */
 typedef struct SceUIDCpuTimerObject {
-	ThreadmgrEvent event;
+	SceUIDEventObject event;
 	struct ThreadmgrTimer timer;		/* 0x38 */
 } SceUIDCpuTimerObject;
 

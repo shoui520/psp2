@@ -5,7 +5,7 @@
 /* Names unknown: the mount daemon's command and mount-point records. */
 typedef struct MountPoint MountPoint;
 typedef struct SceIoMountEvent {
-	ThreadmgrEvent base;
+	SceUIDEventObject base;
 	SceUID uid;
 	SceUInt32 pattern;
 	SceUInt32 reserved;

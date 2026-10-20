@@ -131,7 +131,7 @@ int threadmgrVfpExceptionIntrHandler(int code, void *arg)
 	ThreadmgrVfpExceptionMessage message;
 	struct SceKernelThreadmgrPrivate *manager;
 	struct ThreadMgrCpuCB *cpu;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	struct ThreadCB *thread;
 	ThreadmgrDebugHandler handler;
 	ThreadmgrProcessDebugSuspendHook hook;

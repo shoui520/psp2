@@ -44,7 +44,7 @@ struct ThreadmgrMsgPipeRing {
 
 /* SceUIDMsgPipeObject (0x78) */
 typedef struct SceUIDMsgPipeObject {
-	ThreadmgrEvent event;
+	SceUIDEventObject event;
 	struct ThreadmgrMsgPipeRing ring;	/* 0x38: from here on cleared by the constructor */
 	uint32_t partial;			/* 0x4c: the first waiter is part-way served */
 	SceUID uid;				/* 0x50 */
@@ -1939,7 +1939,7 @@ int msgPipeProcessExit(SceProcessObject *process)
 	struct SceKernelThreadmgrPrivate *manager;
 	ThreadmgrMsgPipeAsyncRequest *request, *next, *head;
 	ListNode *link;
-	struct ThreadmgrThreadObject *object;
+	struct SceUIDThreadObject *object;
 	struct ThreadCB *thread, *waiter;
 	struct ThreadmgrWaitNode *queue, *node, *after;
 	SceUIDMsgPipeObject *pipe;
