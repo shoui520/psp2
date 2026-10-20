@@ -20,7 +20,7 @@
 #define THREAD_EVENT_ATTR_UNLIMITED	0x00004000
 
 /* SceUIDThreadEventObject (0x38) */
-typedef struct ThreadmgrThreadEvent {
+typedef struct SceUIDThreadEventObject {
 	SceUID ownerPid;			/* 0x00: the object base's first word */
 	SceClass *cls;
 	ListNode link;		/* 0x08: in the handler list; cleared from here */
@@ -34,26 +34,26 @@ typedef struct ThreadmgrThreadEvent {
 	uint32_t arg;				/* 0x2c */
 	uint32_t attr;				/* 0x30 */
 	int running;				/* 0x34: calls in progress */
-} ThreadmgrThreadEvent;
+} SceUIDThreadEventObject;
 
-_Static_assert(sizeof(ThreadmgrThreadEvent) == 0x38, "SceUIDThreadEventObject size");
+_Static_assert(sizeof(SceUIDThreadEventObject) == 0x38, "SceUIDThreadEventObject size");
 
 #define THREAD_EVENT_FROM_LINK(l) \
-	((ThreadmgrThreadEvent *)((uintptr_t)(l) - offsetof(ThreadmgrThreadEvent, link)))
+	((SceUIDThreadEventObject *)((uintptr_t)(l) - offsetof(SceUIDThreadEventObject, link)))
 
 /* SceUIDThreadEventClass's constructor */
 static int uidThreadEvent_Constructor(void *object)
 {
-	ThreadmgrThreadEvent *event = object;
+	SceUIDThreadEventObject *event = object;
 
-	memset(&event->link, 0, sizeof(*event) - offsetof(ThreadmgrThreadEvent, link));
+	memset(&event->link, 0, sizeof(*event) - offsetof(SceUIDThreadEventObject, link));
 	return 0;
 }
 
 /* SceUIDThreadEventClass's destructor */
 static int uidThreadEvent_Destructor(void *object)
 {
-	ThreadmgrThreadEvent *event = object;
+	SceUIDThreadEventObject *event = object;
 	SceProcessObject *process;
 	SceUID pid;
 	int intr;
@@ -75,14 +75,14 @@ static int uidThreadEvent_Destructor(void *object)
 		sceGUIDReleaseObject(pid);
 	}
 	sceKernelCpuResumeIntr(intr);
-	memset(&event->link, 0, sizeof(*event) - offsetof(ThreadmgrThreadEvent, link));
+	memset(&event->link, 0, sizeof(*event) - offsetof(SceUIDThreadEventObject, link));
 	return 0;
 }
 
 /* a handler's information (the info exports' core) */
 static int getThreadEventInfo(SceUID uid, ThreadmgrThreadEventInfo *info)
 {
-	ThreadmgrThreadEvent *event;
+	SceUIDThreadEventObject *event;
 	int intr, ret;
 
 	*info = (ThreadmgrThreadEventInfo){ .size = sizeof(*info) };
@@ -126,11 +126,11 @@ void startThreadEvent(void)
 		SCE_PANIC_FUNC(SCE_LINE(988, 984), "uidThreadEventClassInit");
 	s_threadmgrRuntime.manager->threadEventClass = (SceClass *)cls;
 	SCE_DBG_PRINTF_LEVEL(2, 0, 135, " sizeof(SceUIDThreadEventObject)=%d\n",
-			     sizeof(ThreadmgrThreadEvent));
+			     sizeof(SceUIDThreadEventObject));
 }
 
 /* whether a handler fires for thread on mask */
-static inline int ThreadEventMatches(const ThreadmgrThreadEvent *event,
+static inline int ThreadEventMatches(const SceUIDThreadEventObject *event,
 				     const struct ThreadCB *thread, uint32_t mask)
 {
 	if (!(mask & event->mask) || event->deleted)
@@ -154,7 +154,7 @@ int callThreadEventHandlers(uint32_t mask)
 	struct ThreadCB *thread = currentThreadContext();
 	ListNode *head, *link, *next;
 	ThreadmgrTraceHook hook;
-	ThreadmgrThreadEvent *event;
+	SceUIDThreadEventObject *event;
 	SceUID threadId;
 	int ret;
 
@@ -214,7 +214,7 @@ unlock:
 int threadEventProcessExit(SceProcessObject *process)
 {
 	SceSize got = 0;
-	ThreadmgrThreadEvent *event;
+	SceUIDThreadEventObject *event;
 	SceUID *vector;
 	SceUID guid;
 	int num, i, intr, ret;
@@ -288,7 +288,7 @@ SceUID registerThreadEventHandler(const char *name, SceUID target, SceUID pid, u
 	struct ThreadmgrThreadObject *targetThread;
 	SceProcessObject *process, *accounting;
 	UIDCreateOpt opt;
-	ThreadmgrThreadEvent *event;
+	SceUIDThreadEventObject *event;
 	SceObjectBase *object;
 	SceUID ownerPid, eventPid, uid;
 	uint32_t saved, attr;
@@ -459,7 +459,7 @@ SceUID SceThreadmgrForDriver_FD6150D5(const char *name, SceUID target, SceUID pi
 int sceKernelUnregisterThreadEventHandler(SceUID uid)
 {
 	struct ThreadCB *thread;
-	ThreadmgrThreadEvent *event;
+	SceUIDThreadEventObject *event;
 	int intr, ret;
 
 	thread = currentThreadContext();

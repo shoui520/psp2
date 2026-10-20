@@ -20,7 +20,7 @@ _Static_assert(offsetof(struct ThreadCB, currentCpuAffinityMask) == 0xc0,
 	       "thread CPU affinity mask");
 _Static_assert(offsetof(struct ThreadMgrCpuCB, processId) == 0x14,
 	       "CPU process identity");
-_Static_assert(offsetof(struct SceKernelThreadmgrPrivate, lastSelectedCpu) == 0x2208,
+_Static_assert(offsetof(struct SceKernelThreadmgrPrivate, cpuSelectCounter) == 0x2208,
 	       "CPU selection rotation state");
 
 void notifyOffCpu(uint32_t reason);

@@ -16,7 +16,7 @@
 #define FAST_MUTEX_ATTR_LOCKED		0x00000008	/* created locked by the caller */
 
 /* SceUIDFastMutexObject (0x30) */
-struct ThreadmgrUidFastMutex {
+struct SceUIDFastMutexObject {
 	SceUID ownerPid;			/* 0x00 */
 	SceClass *cls;
 	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
@@ -38,7 +38,7 @@ struct ThreadmgrUidFastMutex {
 int findFastMutexNextBoostPriority(struct ThreadCB *thread);
 void acquireFastMutex(struct ThreadmgrFastMutex *mutex, struct ThreadCB *thread);
 
-_Static_assert(sizeof(struct ThreadmgrUidFastMutex) == 0x30, "SceUIDFastMutexObject size");
+_Static_assert(sizeof(struct SceUIDFastMutexObject) == 0x30, "SceUIDFastMutexObject size");
 _Static_assert(sizeof(struct ThreadmgrFastMutex) == 0x40, "fast-mutex work area size");
 _Static_assert(offsetof(struct ThreadmgrFastMutex, spinWaitCount) == 0x14,
 	       "fast-mutex spin waiter count");

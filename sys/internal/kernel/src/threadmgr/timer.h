@@ -26,28 +26,28 @@ struct ThreadmgrTimer {
 };
 
 /* SceUIDCpuTimerObject (0x58) */
-typedef struct ThreadmgrCpuTimer {
+typedef struct SceUIDCpuTimerObject {
 	ThreadmgrEvent event;
 	struct ThreadmgrTimer timer;		/* 0x38 */
-} ThreadmgrCpuTimer;
+} SceUIDCpuTimerObject;
 
 #define CPU_TIMER_FROM_TIMER(t) \
-	((ThreadmgrCpuTimer *)((uintptr_t)(t) - offsetof(ThreadmgrCpuTimer, timer)))
+	((SceUIDCpuTimerObject *)((uintptr_t)(t) - offsetof(SceUIDCpuTimerObject, timer)))
 
 /* SceUIDDelayObject (0x60): a timed wait's timeout */
-typedef struct ThreadmgrDelay {
-	ThreadmgrCpuTimer base;
+typedef struct SceUIDDelayObject {
+	SceUIDCpuTimerObject base;
 	void (*callback)(struct ThreadCB *thread);	/* 0x58 */
 	struct ThreadCB *thread;	/* 0x5c */
-} ThreadmgrDelay;
+} SceUIDDelayObject;
 
 /* SceUIDAlarmObject (0x80) */
-typedef struct ThreadmgrAlarm {
-	ThreadmgrCpuTimer base;
+typedef struct SceUIDAlarmObject {
+	SceUIDCpuTimerObject base;
 	ThreadmgrAlarmHandler handler;		/* 0x58 */
 	void *arg;				/* 0x5c */
 	char name[32];				/* 0x60 */
-} ThreadmgrAlarm;
+} SceUIDAlarmObject;
 
 #define TIMER_FLAG_RUNNING		0x00000001
 #define TIMER_FLAG_EVENT		0x00000002	/* an event time is set */
@@ -56,23 +56,23 @@ typedef struct ThreadmgrAlarm {
 #define TIMER_FLAG_RESCHEDULE		0x00000010	/* changed while its event was being handled */
 
 /* SceUIDTimerObject (0x80): a counter of its process's time */
-typedef struct ThreadmgrUidTimer {
-	ThreadmgrCpuTimer base;
+typedef struct SceUIDTimerObject {
+	SceUIDCpuTimerObject base;
 	uint64_t time;				/* 0x58: stopped, the count; running, where it counts from */
 	uint64_t eventTime;			/* 0x60: the count the event comes at */
 	uint64_t interval;			/* 0x68 */
 	ListNode processLink;	/* 0x70: in its process's timers */
 	uint32_t flags;				/* 0x78: TIMER_FLAG_* */
 	uint32_t pulse;				/* 0x7c: the event is pulsed, not set */
-} ThreadmgrUidTimer;
+} SceUIDTimerObject;
 
-_Static_assert(sizeof(ThreadmgrCpuTimer) == 0x58, "SceUIDCpuTimerObject size");
-_Static_assert(sizeof(ThreadmgrDelay) == 0x60, "SceUIDDelayObject size");
-_Static_assert(sizeof(ThreadmgrAlarm) == 0x80, "SceUIDAlarmObject size");
-_Static_assert(sizeof(ThreadmgrUidTimer) == 0x80, "SceUIDTimerObject size");
+_Static_assert(sizeof(SceUIDCpuTimerObject) == 0x58, "SceUIDCpuTimerObject size");
+_Static_assert(sizeof(SceUIDDelayObject) == 0x60, "SceUIDDelayObject size");
+_Static_assert(sizeof(SceUIDAlarmObject) == 0x80, "SceUIDAlarmObject size");
+_Static_assert(sizeof(SceUIDTimerObject) == 0x80, "SceUIDTimerObject size");
 
 #define UID_TIMER_FROM_PROCESS_LINK(link) \
-	((ThreadmgrUidTimer *)((uintptr_t)(link) - offsetof(ThreadmgrUidTimer, processLink)))
+	((SceUIDTimerObject *)((uintptr_t)(link) - offsetof(SceUIDTimerObject, processLink)))
 
 /* SceThreadmgrForDriver_4A038803 (0x38) */
 typedef struct ThreadmgrAlarmInfo {
@@ -90,7 +90,7 @@ _Static_assert(sizeof(ThreadmgrAlarmInfo) == 0x38 && sizeof(SceKernelTimerInfo) 
 
 void insertTimer(struct ThreadmgrTimer *timer);
 void setNextTimer(void);
-void uidDelay_FreeObject(ThreadmgrDelay *delay);
+void uidDelay_FreeObject(SceUIDDelayObject *delay);
 void getWakeupTime(uint64_t *wakeup, uint32_t timeout);
 int uidDelay_AllocObject(const uint64_t *wakeup, uintptr_t callback);
 void cancelDelayTimer(SceUID uid, struct ThreadCB *thread);

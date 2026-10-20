@@ -40,7 +40,7 @@ __attribute__((section(SCE_DBGSRC_SECTION), used)) = {
 /* SceUIDCondClass's constructor */
 static int uidCond_Constructor(void *object)
 {
-	ThreadmgrCond *cond = object;
+	SceUIDCondObject *cond = object;
 
 	memset(&cond->option, 0, 0x18);
 	return 0;
@@ -52,12 +52,12 @@ static int uidCond_Constructor(void *object)
  */
 static int uidCond_Destructor(void *object)
 {
-	ThreadmgrCond *cond = object;
+	SceUIDCondObject *cond = object;
 	struct ThreadmgrWaitNode *node, *next;
 	struct ThreadCB *waiter;
 	struct ThreadmgrWaitQueue *queue;
 	SceProcessObject *process;
-	ThreadmgrMutex *mutex;
+	SceUIDMutexObject *mutex;
 	SceUID mutexId = cond->mutexId, waitCondId = cond->waitCondId, pid;
 	volatile int delay;
 	SceKernelSpinlock *mutexLock;
@@ -129,7 +129,7 @@ static int uidCond_Destructor(void *object)
 int waitCond(SceUID condId, SceUInt32 *timeout, int callbacks)
 {
 	struct ThreadCB *thread;
-	ThreadmgrCond *cond;
+	SceUIDCondObject *cond;
 	SceObjectBase *pObject;
 	SceUID mutexId;
 	uint64_t wakeup;
@@ -170,7 +170,7 @@ int waitCond(SceUID condId, SceUInt32 *timeout, int callbacks)
 		}
 		goto resume;
 	}
-	cond = (ThreadmgrCond *)pObject;
+	cond = (SceUIDCondObject *)pObject;
 	sceKernelSpinlockLowLock(&cond->lock);
 	mutexId = cond->mutexId;
 	keepMutex = 0;
@@ -276,7 +276,7 @@ restore:
 /* a cond's information (the info exports' core) */
 int getCondInfo(SceUID condId, SceKernelCondInfo *info)
 {
-	ThreadmgrCond *cond;
+	SceUIDCondObject *cond;
 	SceObjectBase *pObject;
 	int intr, ret;
 
@@ -294,7 +294,7 @@ int getCondInfo(SceUID condId, SceKernelCondInfo *info)
 			ret = SCE_KERNEL_ERROR_UNKNOWN_COND_ID;
 		}
 	} else {
-		cond = (ThreadmgrCond *)pObject;
+		cond = (SceUIDCondObject *)pObject;
 		info->condId = condId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(condId), sizeof(info->name) - 1);
 		sceKernelSpinlockLowLock(&cond->lock);
@@ -318,7 +318,7 @@ void startCond(void)
 	cls = sceKernelAllocHeapMemory(manager->heapId, 0x38);
 	if (cls == NULL)
 		SCE_PANIC(103);
-	ret = uidExtendedClassInit(cls, "SceUIDCondClass",
+	ret = uidWaitableClassInit(cls, "SceUIDCondClass",
 		s_threadmgrRuntime.manager->waitableClass, COND_ITEM_SIZE,
 		uidCond_Constructor, (SceClassCallback)uidCond_Destructor,
 		uidDefaultCancelWait, uidDefault_RevalidateMethod,
@@ -326,7 +326,7 @@ void startCond(void)
 	if (ret < 0)
 		SCE_PANIC_FUNC(SCE_LINE(1499, 1492), "uidCondClassInit");
 	s_threadmgrRuntime.manager->condClass = (SceClass *)cls;
-	SCE_DBG_PRINTF_LEVEL(2, 0, 119, " sizeof(SceUIDCondObject)=%d\n", sizeof(ThreadmgrCond));
+	SCE_DBG_PRINTF_LEVEL(2, 0, 119, " sizeof(SceUIDCondObject)=%d\n", sizeof(SceUIDCondObject));
 }
 
 /* closes every cond PUID a process still holds */
@@ -387,8 +387,8 @@ SceUID sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 	struct ThreadCB *thread;
 	SceProcessObject *process = NULL;
 	UIDCreateOpt opt;
-	ThreadmgrCond *cond, *object;
-	ThreadmgrMutex *mutex;
+	SceUIDCondObject *cond, *object;
+	SceUIDMutexObject *mutex;
 	uint32_t saved;
 	SceUID uid, puid, ownerPid;
 	int intr;
@@ -589,7 +589,7 @@ int waitCondCB(SceUID condId, SceUInt32 *timeout)
  * pending and is inside a syscall, unless the request is a plain suspend of
  * an interruptible cond. Such a signal only marks the thread.
  */
-static inline __attribute__((always_inline)) int CondSignalDeferred(struct ThreadCB *thread, ThreadmgrCond *cond)
+static inline __attribute__((always_inline)) int CondSignalDeferred(struct ThreadCB *thread, SceUIDCondObject *cond)
 {
 	uint32_t status = thread->flags;
 
@@ -605,7 +605,7 @@ static inline __attribute__((always_inline)) int CondSignalDeferred(struct Threa
 int sceKernelSignalCond(SceUID condId)
 {
 	struct ThreadCB *thread, *first;
-	ThreadmgrCond *cond;
+	SceUIDCondObject *cond;
 	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	int intr, ret;
@@ -632,7 +632,7 @@ int sceKernelSignalCond(SceUID condId)
 		}
 		goto resume;
 	}
-	cond = (ThreadmgrCond *)pObject;
+	cond = (SceUIDCondObject *)pObject;
 	sceKernelSpinlockLowLock(&cond->lock);
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (CondSignalDeferred(thread, cond)) {
@@ -670,7 +670,7 @@ int sceKernelSignalCondAll(SceUID condId)
 {
 	struct ThreadCB *thread, *first;
 	struct ThreadmgrWaitQueue *queue;
-	ThreadmgrCond *cond;
+	SceUIDCondObject *cond;
 	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	int intr, ret;
@@ -697,7 +697,7 @@ int sceKernelSignalCondAll(SceUID condId)
 		}
 		goto resume;
 	}
-	cond = (ThreadmgrCond *)pObject;
+	cond = (SceUIDCondObject *)pObject;
 	sceKernelSpinlockLowLock(&cond->lock);
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (CondSignalDeferred(thread, cond)) {
@@ -755,7 +755,7 @@ int sceKernelSignalCondTo(SceUID condId, SceUID threadId)
 	struct ThreadCB *thread, *waiter;
 	struct ThreadmgrWaitNode *node, *next;
 	struct ThreadmgrWaitQueue *queue;
-	ThreadmgrCond *cond;
+	SceUIDCondObject *cond;
 	SceObjectBase *pObject;
 	SceUInt32 sdkVersion;
 	const char *name;
@@ -798,7 +798,7 @@ int sceKernelSignalCondTo(SceUID condId, SceUID threadId)
 		}
 		goto resume;
 	}
-	cond = (ThreadmgrCond *)pObject;
+	cond = (SceUIDCondObject *)pObject;
 	sceKernelSpinlockLowLock(&cond->lock);
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	if (CondSignalDeferred(thread, cond)) {
@@ -850,7 +850,7 @@ restore:
 int SceThreadmgrForDriver_D1FBDFA6(SceUID condId, SceKernelCondInfo *info)
 {
 	SceKernelCondInfo local;
-	ThreadmgrMutex *mutex;
+	SceUIDMutexObject *mutex;
 	SceObjectBase *pObject;
 	uint32_t saved;
 	SceSize size;
@@ -873,7 +873,7 @@ int SceThreadmgrForDriver_D1FBDFA6(SceUID condId, SceKernelCondInfo *info)
 						&pObject) < 0) {
 					local.mutexId = -1;
 				} else {
-					mutex = (ThreadmgrMutex *)pObject;
+					mutex = (SceUIDMutexObject *)pObject;
 					local.mutexId = mutex->core.puid;
 					sceGUIDReleaseObject(mutexId);
 				}
@@ -948,7 +948,7 @@ int SceThreadmgrForDriver_CA704239(SceUID pid, int level, SceKernelCondInfo *inf
 {
 	SceSize got = 0;
 	SceKernelCondInfo info;
-	ThreadmgrMutex *mutex;
+	SceUIDMutexObject *mutex;
 	SceObjectBase *pObject;
 	SceUID *vector, mutexId;
 	int total, i, ret;
@@ -991,7 +991,7 @@ int SceThreadmgrForDriver_CA704239(SceUID pid, int level, SceKernelCondInfo *inf
 				&pObject) < 0) {
 			info.mutexId = -1;
 		} else {
-			mutex = (ThreadmgrMutex *)pObject;
+			mutex = (SceUIDMutexObject *)pObject;
 			info.mutexId = mutex->core.puid;
 			sceGUIDReleaseObject(mutexId);
 		}

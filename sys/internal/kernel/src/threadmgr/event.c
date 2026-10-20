@@ -62,7 +62,7 @@ static int uidEvent_Constructor(void *object)
 void notifyCallbackToThreadBeforeSetEvent(ThreadmgrEventCallback *head,
 					  struct ThreadCB *thread, uint32_t arg)
 {
-	struct ThreadmgrCallback *callback;
+	struct SceUIDCallbackObject *callback;
 	ThreadmgrEventCallback *entry;
 	SceUID threadId = thread->threadId;
 	SceUID callbackId;
@@ -97,7 +97,7 @@ void notifyCallbackToThreadBeforeSetEvent(ThreadmgrEventCallback *head,
 uint32_t notifyCallbackAllAfterSetEvent(SceUID eventId, ThreadmgrEvent *event, uint32_t arg)
 {
 	ThreadmgrEventCallback *head = EVENT_CALLBACK_HEAD(event), *entry, *next;
-	struct ThreadmgrCallback *callback;
+	struct SceUIDCallbackObject *callback;
 	struct ThreadmgrThreadObject *object;
 	ThreadmgrEvent *waitObject;
 	struct ThreadmgrWaitNode *self;
@@ -374,7 +374,7 @@ static int uidEvent_Destructor(void *object)
 	struct ThreadmgrWaitNode *queue = (struct ThreadmgrWaitNode *)EVENT_WAIT_QUEUE(event);
 	struct ThreadmgrWaitNode *node, *next;
 	struct ThreadCB *thread;
-	ThreadmgrWaitMultipleEvents *wme;
+	WMECB *wme;
 	ThreadmgrEventWaitNode *wait;
 	SceUID waitId;
 	uint32_t wake = 0, left;
@@ -431,7 +431,7 @@ resume:
  * The current thread's WME leaves every event it is still queued on.
  * Called with the thread locked.
  */
-void cancelWME(ThreadmgrWaitMultipleEvents *wme)
+void cancelWME(WMECB *wme)
 {
 	struct ThreadCB *thread =
 		currentThreadContext();
@@ -532,7 +532,7 @@ int sceKernelSetEvent(SceUID eventId, uint32_t pattern, uint64_t userData)
 {
 	struct ThreadmgrWaitNode *queue, *node, *next;
 	struct ThreadCB *thread;
-	ThreadmgrWaitMultipleEvents *wme;
+	WMECB *wme;
 	ThreadmgrEventWaitNode *wait;
 	SceUID waitId;
 	ThreadmgrEvent *event;
@@ -623,7 +623,7 @@ uint32_t setEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t u
 	struct ThreadmgrWaitNode *queue = (struct ThreadmgrWaitNode *)EVENT_WAIT_QUEUE(event);
 	struct ThreadmgrWaitNode *node, *next;
 	struct ThreadCB *thread;
-	ThreadmgrWaitMultipleEvents *wme;
+	WMECB *wme;
 	ThreadmgrEventWaitNode *wait;
 	SceUID waitId;
 	uint32_t wake = 0, matched, left;
@@ -739,7 +739,7 @@ int sceKernelPulseEvent(SceUID eventId, uint32_t pattern, uint64_t userData)
 {
 	struct ThreadmgrWaitNode *queue, *node, *next;
 	struct ThreadCB *thread;
-	ThreadmgrWaitMultipleEvents *wme;
+	WMECB *wme;
 	ThreadmgrEventWaitNode *wait;
 	SceUID waitId;
 	ThreadmgrEvent *event;
@@ -827,7 +827,7 @@ uint32_t pulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t
 	struct ThreadmgrWaitNode *queue = (struct ThreadmgrWaitNode *)EVENT_WAIT_QUEUE(event);
 	struct ThreadmgrWaitNode *node, *next;
 	struct ThreadCB *thread;
-	ThreadmgrWaitMultipleEvents *wme;
+	WMECB *wme;
 	ThreadmgrEventWaitNode *wait;
 	SceUID waitId;
 	uint32_t wake = 0, matched, left;
@@ -950,7 +950,7 @@ int sceKernelCancelEventWithSetPattern(SceUID eventId, uint32_t setPattern, uint
 {
 	struct ThreadmgrWaitNode *queue, *node, *next;
 	struct ThreadCB *thread;
-	ThreadmgrWaitMultipleEvents *wme;
+	WMECB *wme;
 	ThreadmgrEventWaitNode *wait;
 	SceUID waitId;
 	ThreadmgrEvent *event;
@@ -1096,7 +1096,7 @@ int sceKernelCancelEvent(SceUID eventId, int *numWaitThreads)
 {
 	struct ThreadmgrWaitNode *queue, *node, *next;
 	struct ThreadCB *thread;
-	ThreadmgrWaitMultipleEvents *wme;
+	WMECB *wme;
 	ThreadmgrEventWaitNode *wait;
 	SceUID waitId;
 	ThreadmgrEvent *event;
@@ -1174,7 +1174,7 @@ resume:
 /* queues a node for event i of the WME on the event (both locked by the caller as needed) */
 static inline void queueEventWaitNode(ThreadmgrEvent *event, ThreadmgrEventWaitNode *node,
 				      struct ThreadCB *thread,
-				      ThreadmgrWaitMultipleEvents *wme, uint32_t i)
+				      WMECB *wme, uint32_t i)
 {
 	struct ThreadmgrWaitNode *queue = (struct ThreadmgrWaitNode *)EVENT_WAIT_QUEUE(event);
 	struct ThreadmgrWaitNode *pos, *self = (struct ThreadmgrWaitNode *)node;
@@ -1212,7 +1212,7 @@ static inline void queueEventWaitNode(ThreadmgrEvent *event, ThreadmgrEventWaitN
  * The current thread waits on the WME's events (optionally running
  * callbacks): until any of them comes (WME_MODE_ANY) or all of them have.
  */
-int waitMultipleEvents(ThreadmgrWaitMultipleEvents *wme, SceUInt32 *timeout,
+int waitMultipleEvents(WMECB *wme, SceUInt32 *timeout,
 			      int callbacks, uint32_t *outPattern)
 {
 	struct ThreadCB *thread =
@@ -1412,7 +1412,7 @@ int waitMultipleEvents(ThreadmgrWaitMultipleEvents *wme, SceUInt32 *timeout,
 		wme->prev = self;
 		self->prev->next = self;
 		wme->busy = 0;
-		currentCpuState()->nextRunningThread = 0;
+		currentCpuState()->pNextRunningThreadCB = 0;
 		switchThread(2);
 		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 		cancelWME(wme);
@@ -1443,7 +1443,7 @@ static inline __attribute__((always_inline)) int waitMultipleEventsWith(
 	const SceKernelWaitEvent *events, uint32_t count, uint32_t mode,
 	SceKernelResultEvent *results, SceUInt32 *timeout, int callbacks)
 {
-	ThreadmgrWaitMultipleEvents *wme;
+	WMECB *wme;
 	SceAllocOpt opt;
 	uint32_t i;
 	int ret;
@@ -1462,7 +1462,7 @@ static inline __attribute__((always_inline)) int waitMultipleEventsWith(
 	wme = sceKernelSysrootAllocRemoteProcessHeap(SCE_KERNEL_PROCESS_ID, WME_SIZE(count), &opt);
 	if (wme == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
-	memset(wme, 0, offsetof(ThreadmgrWaitMultipleEvents, nodes));
+	memset(wme, 0, offsetof(WMECB, nodes));
 	wme->next = (struct ThreadmgrWaitNode *)wme;
 	wme->prev = (struct ThreadmgrWaitNode *)wme;
 	for (i = 0; i < count; i++) {

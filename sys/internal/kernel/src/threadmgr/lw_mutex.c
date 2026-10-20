@@ -30,10 +30,10 @@ static int uidLwMutex_Constructor(void *object)
 /* SceUIDLwMutexClass's destructor */
 static int uidLwMutex_Destructor(void *object)
 {
-	ThreadmgrLwMutex *lwMutex = object;
+	SceUIDLwMutexObject *lwMutex = object;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1920);
-	memset(&lwMutex->guid, 0, sizeof(*lwMutex) - offsetof(ThreadmgrLwMutex, guid));
+	memset(&lwMutex->guid, 0, sizeof(*lwMutex) - offsetof(SceUIDLwMutexObject, guid));
 	return 0;
 }
 
@@ -41,7 +41,7 @@ static int uidLwMutex_Destructor(void *object)
 static int getLwMutexInfo(SceUID lwMutexId, SceKernelLwMutexInfo *info)
 {
 	ThreadmgrLwMutexWork work;
-	ThreadmgrLwMutex *lwMutex;
+	SceUIDLwMutexObject *lwMutex;
 	SceObjectBase *pObject;
 	SceUID owner;
 	int intr, ret;
@@ -55,7 +55,7 @@ static int getLwMutexInfo(SceUID lwMutexId, SceKernelLwMutexInfo *info)
 			SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
-	lwMutex = (ThreadmgrLwMutex *)pObject;
+	lwMutex = (SceUIDLwMutexObject *)pObject;
 	if (lwMutex->cacheNext != &lwMutex->uidEntry) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID;
 		goto release;
@@ -98,7 +98,7 @@ resume:
 /* SceUIDLwMutexClass's revalidation: nothing to hand over here (the work area decides) */
 static int uidLwMutex_RevalidateMethod(void *cls, void *object)
 {
-	ThreadmgrLwMutex *lwMutex = object;
+	SceUIDLwMutexObject *lwMutex = object;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1944);
 	SCE_DBG_ASSERT_CHECK(lwMutex->lock != 0, 1947);
@@ -115,7 +115,7 @@ void startLwMutex(void)
 	cls = sceKernelAllocHeapMemory(manager->heapId, 0x38);
 	if (cls == NULL)
 		SCE_PANIC(92);
-	ret = uidExtendedClassInit(cls, "SceUIDLwMutexClass",
+	ret = uidWaitableClassInit(cls, "SceUIDLwMutexClass",
 		s_threadmgrRuntime.manager->waitableClass, LW_MUTEX_ITEM_SIZE,
 		uidLwMutex_Constructor, (SceClassCallback)uidLwMutex_Destructor,
 		uidDefaultCancelWait, uidLwMutex_RevalidateMethod,
@@ -124,7 +124,7 @@ void startLwMutex(void)
 		SCE_PANIC_FUNC(1890, "uidLwMutexClassInit");
 	s_threadmgrRuntime.manager->lwMutexClass = (SceClass *)cls;
 	SCE_DBG_PRINTF_LEVEL(2, 0, 108, " sizeof(SceUIDLwMutexObject)=%d\n",
-			     sizeof(ThreadmgrLwMutex));
+			     sizeof(SceUIDLwMutexObject));
 }
 
 /* closes every lw mutex a process still holds, PUID and GUID */
@@ -182,7 +182,7 @@ int lwMutexProcessExit(SceProcessObject *process)
 }
 
 /* returns an object to its process's cache (both locks free of it) */
-static inline __attribute__((always_inline)) void LwMutexCachePush(SceProcessObject *process, ThreadmgrLwMutex *lwMutex)
+static inline __attribute__((always_inline)) void LwMutexCachePush(SceProcessObject *process, SceUIDLwMutexObject *lwMutex)
 {
 	sceKernelSpinlockLowLock(&process->lwMutexCacheLock);
 	lwMutex->cacheNext = process->lwMutexCache;
@@ -198,13 +198,13 @@ static inline __attribute__((always_inline)) void LwMutexCachePush(SceProcessObj
  * opened (after suspending the thread for the debugger); kept.
  */
 int _sceKernelCreateLwMutexForUser(ThreadmgrLwMutexWork *work, const char *name, SceUInt32 attr,
-				   int initCount, const ThreadmgrLwMutexOptParam *option)
+				   int initCount, const SceKernelLwMutexOptParam *option)
 {
 	struct ThreadCB *thread;
 	SceProcessObject *process, *cacheProcess;
 	UIDCreateOpt opt;
 	ThreadmgrLwMutexWork userWork __attribute__((aligned(8)));
-	ThreadmgrLwMutex *lwMutex, *old;
+	SceUIDLwMutexObject *lwMutex, *old;
 	char newName[32];
 	volatile int delay;
 	uint32_t saved;
@@ -411,8 +411,8 @@ int sceKernelDeleteLwMutexForUser(ThreadmgrLwMutexWork *work)
 {
 	ListNode *link, *next;
 	SceProcessObject *process;
-	ThreadmgrLwCond *cond;
-	ThreadmgrLwMutex *lwMutex;
+	SceUIDLwCondObject *cond;
+	SceUIDLwMutexObject *lwMutex;
 	SceUID puid;
 	SceObjectBase *pObject;
 	volatile int delay;
@@ -451,7 +451,7 @@ int sceKernelDeleteLwMutexForUser(ThreadmgrLwMutexWork *work)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
-	lwMutex = (ThreadmgrLwMutex *)pObject;
+	lwMutex = (SceUIDLwMutexObject *)pObject;
 	if (lwMutex->work != work) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR | SYSCALL_ERROR_BIT;
 		sceGUIDReleaseObject(guid);
@@ -482,7 +482,7 @@ retry:
 	sceKernelSpinlockLowLock(&process->lwMutexCacheLock);
 	count = process->lwMutexCacheCount + 1;
 	lwMutex->cacheNext = process->lwMutexCache;
-	process->lwMutexCache = (ThreadmgrLwMutex *)pObject;
+	process->lwMutexCache = (SceUIDLwMutexObject *)pObject;
 	process->lwMutexCacheCount = count;
 	sceKernelSpinlockLowUnlock(&process->lwMutexCacheLock);
 	attr = lwMutex->attr;
@@ -529,7 +529,7 @@ int _sceKernelLockLwMutex(ThreadmgrLwMutexWork *work, int count, SceUInt32 *time
 {
 	struct ThreadCB *thread;
 	ThreadmgrLwMutexWork userWork __attribute__((aligned(8)));
-	ThreadmgrLwMutex *lwMutex;
+	SceUIDLwMutexObject *lwMutex;
 	SceObjectBase *pObject;
 	int locked = 0;
 	SceUID puid;
@@ -580,7 +580,7 @@ int _sceKernelLockLwMutex(ThreadmgrLwMutexWork *work, int count, SceUInt32 *time
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
-	lwMutex = (ThreadmgrLwMutex *)pObject;
+	lwMutex = (SceUIDLwMutexObject *)pObject;
 	if (lwMutex->work != work) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR | SYSCALL_ERROR_BIT;
 		goto release;
@@ -620,8 +620,8 @@ int _sceKernelLockLwMutex(ThreadmgrLwMutexWork *work, int count, SceUInt32 *time
 			if (ret < 0)
 				goto release;
 			sceKernelSpinlockLowLock(&lwMutex->lock);
-			if (((ThreadmgrLwMutex *)pObject)->cacheNext !=
-			    &((ThreadmgrLwMutex *)pObject)->uidEntry) {
+			if (((SceUIDLwMutexObject *)pObject)->cacheNext !=
+			    &((SceUIDLwMutexObject *)pObject)->uidEntry) {
 				ret = SCE_KERNEL_ERROR_WAIT_DELETE;
 				goto unlock;
 			}
@@ -690,7 +690,7 @@ int _sceKernelUnlockLwMutex(ThreadmgrLwMutexWork *work, int count)
 {
 	struct ThreadCB *first;
 	ThreadmgrLwMutexWork userWork __attribute__((aligned(8)));
-	ThreadmgrLwMutex *lwMutex;
+	SceUIDLwMutexObject *lwMutex;
 	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	SceUID puid, guid, self, newOwner;
@@ -730,7 +730,7 @@ int _sceKernelUnlockLwMutex(ThreadmgrLwMutexWork *work, int count)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
-	lwMutex = (ThreadmgrLwMutex *)pObject;
+	lwMutex = (SceUIDLwMutexObject *)pObject;
 	if (lwMutex->work != work) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR | SYSCALL_ERROR_BIT;
 		goto release;
@@ -985,7 +985,7 @@ int lockLwMutexForLwCond(SceUID lwMutexId, int count, SceUInt32 *timeout, int ca
 {
 	struct ThreadCB *thread;
 	ThreadmgrLwMutexWork userWork __attribute__((aligned(8)));
-	ThreadmgrLwMutex *lwMutex;
+	SceUIDLwMutexObject *lwMutex;
 	SceObjectBase *pObject;
 	uint64_t wakeup;
 	SceUID self;
@@ -1009,7 +1009,7 @@ int lockLwMutexForLwCond(SceUID lwMutexId, int count, SceUInt32 *timeout, int ca
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
-	lwMutex = (ThreadmgrLwMutex *)pObject;
+	lwMutex = (SceUIDLwMutexObject *)pObject;
 	ret = sceKernelCopyFromUser(&userWork, lwMutex->work, sizeof(userWork));
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xf, 1570, "sceKernelCopyFromUser(%p, 0x%08x, 0x%08x): error 0x%08x\n",
@@ -1099,7 +1099,7 @@ int unlockLwMutexForLwCond(SceUID lwMutexId, int count)
 {
 	struct ThreadCB *first;
 	ThreadmgrLwMutexWork userWork __attribute__((aligned(8)));
-	ThreadmgrLwMutex *lwMutex;
+	SceUIDLwMutexObject *lwMutex;
 	SceObjectBase *pObject;
 	SceUID self, newOwner;
 	int ret, waiters, firstCount;
@@ -1110,7 +1110,7 @@ int unlockLwMutexForLwCond(SceUID lwMutexId, int count)
 		s_threadmgrRuntime.manager->lwMutexClass, &pObject);
 	if (ret < 0)
 		return SCE_KERNEL_ERROR_UNKNOWN_LW_MUTEX_ID | SYSCALL_ERROR_BIT;
-	lwMutex = (ThreadmgrLwMutex *)pObject;
+	lwMutex = (SceUIDLwMutexObject *)pObject;
 	ret = sceKernelCopyFromUser(&userWork, lwMutex->work, sizeof(userWork));
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xf, 1770, "sceKernelCopyFromUser(%p, 0x%08x, 0x%08x): error 0x%08x\n",
@@ -1172,7 +1172,7 @@ release:
 int uidLwMutex_CreateCache(SceProcessObject *process, int target)
 {
 	UIDCreateOpt opt;
-	ThreadmgrLwMutex *lwMutex;
+	SceUIDLwMutexObject *lwMutex;
 	SceObjectBase *pObject;
 	bool more = true;
 	SceUID uid;
@@ -1198,7 +1198,7 @@ int uidLwMutex_CreateCache(SceProcessObject *process, int target)
 				"sceGUIDKernelCreateWithAttr()=0x%08X\n", uid);
 			return uid;
 		}
-		lwMutex = (ThreadmgrLwMutex *)pObject;
+		lwMutex = (SceUIDLwMutexObject *)pObject;
 		lwMutex->ownerPid = process->pid;
 		ret = sceGUIDGetEntry(uid, &lwMutex->uidEntry);
 		if (ret < 0) {
@@ -1224,7 +1224,7 @@ int uidLwMutex_CreateCache(SceProcessObject *process, int target)
 /* trims a process's cache down to target */
 int uidLwMutex_DeleteCache(SceProcessObject *process, int target)
 {
-	ThreadmgrLwMutex *lwMutex;
+	SceUIDLwMutexObject *lwMutex;
 	volatile int delay;
 	int intr, ret;
 

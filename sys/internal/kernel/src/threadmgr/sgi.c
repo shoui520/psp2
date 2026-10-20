@@ -32,10 +32,10 @@ static inline int IntrDisabled(void)
 
 /* Native callers cross these function frames; keep their entry LR observable. */
 __attribute__((noinline))
-void issueIntrRequest(unsigned int cpuId, struct ThreadmgrIntrRequest *request)
+void issueIntrRequest(unsigned int cpuId, struct IntrRequest *request)
 {
 	struct ThreadMgrCpuCB *cpu;
-	struct ThreadmgrIntrRequest *oldHead;
+	struct IntrRequest *oldHead;
 
 	cpu = &loadIntrRequestManager()->cpuCB[cpuId];
 	if (cpuId > 3) {
@@ -58,10 +58,10 @@ void issueIntrRequest(unsigned int cpuId, struct ThreadmgrIntrRequest *request)
 }
 
 __attribute__((noinline))
-struct ThreadmgrIntrRequest *allocIntrRequest(uint32_t kind)
+struct IntrRequest *allocIntrRequest(uint32_t kind)
 {
 	struct SceKernelThreadmgrPrivate *manager;
-	struct ThreadmgrIntrRequest *request;
+	struct IntrRequest *request;
 
 	for (;;) {
 		manager = loadIntrRequestManager();
@@ -124,7 +124,7 @@ void SceThreadmgrForKernel_8D53CA9B(unsigned int cpuId)
 void issuePMonThreadChangeCounterEnableIntrRequest(unsigned int cpuId, SceUID threadId,
 						   uint32_t mask, int enable)
 {
-	struct ThreadmgrIntrRequest *request =
+	struct IntrRequest *request =
 		allocIntrRequest(INTR_REQUEST_PMON_THREAD_CHANGE_COUNTER_ENABLE);
 	ThreadmgrTraceHook hook = s_threadmgrRuntime.schedTraceHook;
 
@@ -139,7 +139,7 @@ void issuePMonThreadChangeCounterEnableIntrRequest(unsigned int cpuId, SceUID th
 /* SGI kind 0x11: set a PMU counter of another CPU's running thread (request: pmon.c) */
 void issuePMonThreadSetCounterIntrRequest(unsigned int cpuId, const void *pmonRequest)
 {
-	struct ThreadmgrIntrRequest *request =
+	struct IntrRequest *request =
 		allocIntrRequest(INTR_REQUEST_PMON_THREAD_SET_COUNTER);
 	const struct ThreadmgrPmonRequest *counter = pmonRequest;
 
@@ -153,7 +153,7 @@ void issuePMonThreadSetCounterIntrRequest(unsigned int cpuId, const void *pmonRe
 /* SGI kind 0x12: read a PMU counter of another CPU's running thread */
 void issuePMonThreadGetCounterIntrRequest(unsigned int cpuId, const void *pmonRequest)
 {
-	struct ThreadmgrIntrRequest *request =
+	struct IntrRequest *request =
 		allocIntrRequest(INTR_REQUEST_PMON_THREAD_GET_COUNTER);
 	const struct ThreadmgrPmonRequest *counter = pmonRequest;
 
@@ -178,7 +178,7 @@ static inline int IntrEnabled(void)
  */
 void issueSimpleIntrRequestToOtherCpuAndWait(void)
 {
-	struct ThreadmgrIntrRequest *request;
+	struct IntrRequest *request;
 	volatile uint32_t ack = 0;
 	unsigned int self, cpu;
 	int intr;
@@ -207,7 +207,7 @@ void issueSimpleIntrRequestToOtherCpuAndWait(void)
 void issueDTraceAsyncXCallIntrRequest(unsigned int cpuId, void (*fn)(void *), const void *arg,
 				      SceSize size)
 {
-	struct ThreadmgrIntrRequest *request = allocIntrRequest(INTR_REQUEST_DTRACE_ASYNC_XCALL);
+	struct IntrRequest *request = allocIntrRequest(INTR_REQUEST_DTRACE_ASYNC_XCALL);
 	void *copy;
 
 	if (arg == NULL || size == 0) {
@@ -232,7 +232,7 @@ void issueDTraceAsyncXCallIntrRequest(unsigned int cpuId, void (*fn)(void *), co
 void issueDTraceSyncXCallIntrRequest(unsigned int cpuId, void (*fn)(void *), void *arg,
 				     SceKernelSpinlock *done)
 {
-	struct ThreadmgrIntrRequest *request = allocIntrRequest(INTR_REQUEST_DTRACE_SYNC_XCALL);
+	struct IntrRequest *request = allocIntrRequest(INTR_REQUEST_DTRACE_SYNC_XCALL);
 	ThreadmgrTraceHook hook = s_threadmgrRuntime.schedTraceHook;
 
 	request->payload[0] = (uintptr_t)fn;
@@ -247,7 +247,7 @@ void issueDTraceSyncXCallIntrRequest(unsigned int cpuId, void (*fn)(void *), voi
 void issueDebugSuspendThreadIntrRequest(unsigned int cpuId, SceUID threadId, uint32_t reason,
 					int *result, SceKernelSpinlock *done)
 {
-	struct ThreadmgrIntrRequest *request = allocIntrRequest(INTR_REQUEST_DEBUG_SUSPEND_THREAD);
+	struct IntrRequest *request = allocIntrRequest(INTR_REQUEST_DEBUG_SUSPEND_THREAD);
 	ThreadmgrTraceHook hook = s_threadmgrRuntime.schedTraceHook;
 
 	request->payload[0] = threadId;
@@ -262,7 +262,7 @@ void issueDebugSuspendThreadIntrRequest(unsigned int cpuId, SceUID threadId, uin
 /* SGI kinds 0xb-0xe: debugger.c's register requests for a thread running on cpuId */
 void issueSetCpuRegisterIntrRequest(unsigned int cpuId, void *debugRequest)
 {
-	struct ThreadmgrIntrRequest *request = allocIntrRequest(INTR_REQUEST_SET_CPU_REGISTER);
+	struct IntrRequest *request = allocIntrRequest(INTR_REQUEST_SET_CPU_REGISTER);
 
 	request->payload[0] = (uintptr_t)debugRequest;
 	issueIntrRequest(cpuId, request);
@@ -270,7 +270,7 @@ void issueSetCpuRegisterIntrRequest(unsigned int cpuId, void *debugRequest)
 
 void issueGetCpuRegisterIntrRequest(unsigned int cpuId, void *debugRequest)
 {
-	struct ThreadmgrIntrRequest *request = allocIntrRequest(INTR_REQUEST_GET_CPU_REGISTER);
+	struct IntrRequest *request = allocIntrRequest(INTR_REQUEST_GET_CPU_REGISTER);
 
 	request->payload[0] = (uintptr_t)debugRequest;
 	issueIntrRequest(cpuId, request);
@@ -278,7 +278,7 @@ void issueGetCpuRegisterIntrRequest(unsigned int cpuId, void *debugRequest)
 
 void issueSetVfpRegisterIntrRequest(unsigned int cpuId, void *debugRequest)
 {
-	struct ThreadmgrIntrRequest *request = allocIntrRequest(INTR_REQUEST_SET_VFP_REGISTER);
+	struct IntrRequest *request = allocIntrRequest(INTR_REQUEST_SET_VFP_REGISTER);
 
 	request->payload[0] = (uintptr_t)debugRequest;
 	issueIntrRequest(cpuId, request);
@@ -286,7 +286,7 @@ void issueSetVfpRegisterIntrRequest(unsigned int cpuId, void *debugRequest)
 
 void issueGetVfpRegisterIntrRequest(unsigned int cpuId, void *debugRequest)
 {
-	struct ThreadmgrIntrRequest *request = allocIntrRequest(INTR_REQUEST_GET_VFP_REGISTER);
+	struct IntrRequest *request = allocIntrRequest(INTR_REQUEST_GET_VFP_REGISTER);
 
 	request->payload[0] = (uintptr_t)debugRequest;
 	issueIntrRequest(cpuId, request);
@@ -296,7 +296,7 @@ void issueGetVfpRegisterIntrRequest(unsigned int cpuId, void *debugRequest)
 void issueSuspendThreadForVMIntrRequest(unsigned int cpuId, SceUID threadId, int *result,
 					SceKernelSpinlock *done)
 {
-	struct ThreadmgrIntrRequest *request = allocIntrRequest(INTR_REQUEST_SUSPEND_THREAD_FOR_VM);
+	struct IntrRequest *request = allocIntrRequest(INTR_REQUEST_SUSPEND_THREAD_FOR_VM);
 	ThreadmgrTraceHook hook = s_threadmgrRuntime.schedTraceHook;
 
 	request->payload[0] = threadId;
@@ -374,7 +374,7 @@ static inline void salvageExecutableStagnantThread(void)
 				addReady(thread);
 				if (thread->currentPriority < cpu->priority) {
 					SCE_DBG_ASSERT_LEVEL(0, cpu == currentCpuState(), 106);
-					cpu->nextRunningThread = 0;
+					cpu->pNextRunningThreadCB = 0;
 				}
 			}
 			goto unlock;
@@ -405,7 +405,7 @@ int intrRequestSGIHandler(int code, void *arg)
 {
 	struct ThreadMgrCpuCB *cpu = currentCpuState();
 	ThreadmgrIntrRequestHandler handler;
-	struct ThreadmgrIntrRequest *request, *head;
+	struct IntrRequest *request, *head;
 	const struct ThreadmgrPmonRequest *counter;
 	uint32_t mask, message[4];
 	int intr;
@@ -416,7 +416,7 @@ int intrRequestSGIHandler(int code, void *arg)
 		if (mask & INTR_MASK_SCHEDULING) {
 			SCE_DBG_ASSERT_LEVEL_FUNC(0, cpu == currentCpuState(), 155,
 						  "intrRequestSGIHandler");
-			cpu->nextRunningThread = 0;
+			cpu->pNextRunningThreadCB = 0;
 			if (s_threadmgrRuntime.schedTraceHook)
 				(s_threadmgrRuntime.schedTraceHook)(1, 0);
 		}
@@ -439,7 +439,7 @@ int intrRequestSGIHandler(int code, void *arg)
 					(s_threadmgrRuntime.schedTraceHook)(0x19, 0);
 				return -1;
 			}
-		} while ((struct ThreadmgrIntrRequest *)SceCpuForDriver_CDA96E81(
+		} while ((struct IntrRequest *)SceCpuForDriver_CDA96E81(
 				 (SceInt32 *)&cpu->intrRequestHead, (SceInt32)request,
 				 (SceInt32)request->next) != request);
 		intr = SceCpuForDriver_821FC0EE();
@@ -580,7 +580,7 @@ int intrRequestSGIHandler(int code, void *arg)
 			do {
 				head = s_threadmgrRuntime.manager->freeIntrRequests;
 				request->next = head;
-			} while ((struct ThreadmgrIntrRequest *)SceCpuForDriver_CDA96E81(
+			} while ((struct IntrRequest *)SceCpuForDriver_CDA96E81(
 					 (SceInt32 *)&s_threadmgrRuntime.manager->freeIntrRequests,
 					 (SceInt32)head, (SceInt32)request) != head);
 			mask = 1;
@@ -592,7 +592,7 @@ int intrRequestSGIHandler(int code, void *arg)
 /* SGI kind 9: stopThread on the CPU the thread runs on */
 void issueStopThreadIntrRequest(unsigned int cpuId, SceUID threadId, uint32_t arg1, uint32_t arg2)
 {
-	struct ThreadmgrIntrRequest *request = allocIntrRequest(INTR_REQUEST_STOP_THREAD);
+	struct IntrRequest *request = allocIntrRequest(INTR_REQUEST_STOP_THREAD);
 	ThreadmgrTraceHook hook = s_threadmgrRuntime.schedTraceHook;
 
 	request->payload[0] = threadId;
@@ -606,11 +606,11 @@ void issueStopThreadIntrRequest(unsigned int cpuId, SceUID threadId, uint32_t ar
 /* the preallocated requests (fromPool set: they go back to the free list after use) */
 #define INTR_REQUEST_POOL_SIZE		128
 
-static struct ThreadmgrIntrRequest s_intrRequestPool[INTR_REQUEST_POOL_SIZE];
+static struct IntrRequest s_intrRequestPool[INTR_REQUEST_POOL_SIZE];
 
 void initIntrRequestPool(void)
 {
-	struct ThreadmgrIntrRequest *request;
+	struct IntrRequest *request;
 
 	s_threadmgrRuntime.manager->freeIntrRequests = s_intrRequestPool;
 	for (request = s_intrRequestPool; request != &s_intrRequestPool[INTR_REQUEST_POOL_SIZE];
@@ -624,7 +624,7 @@ void initIntrRequestPool(void)
 /* cpuId sets threadId's affinity */
 void issueChangeThreadCpuAffinityIntrRequest(unsigned int cpuId, SceUID threadId, uint32_t mask)
 {
-	struct ThreadmgrIntrRequest *request =
+	struct IntrRequest *request =
 		allocIntrRequest(INTR_REQUEST_CHANGE_THREAD_CPU_AFFINITY);
 	ThreadmgrTraceHook hook;
 
@@ -639,7 +639,7 @@ void issueChangeThreadCpuAffinityIntrRequest(unsigned int cpuId, SceUID threadId
 /* cpuId changes threadId's priority */
 void issueChangeThreadPriorityIntrRequest(unsigned int cpuId, SceUID threadId, int priority)
 {
-	struct ThreadmgrIntrRequest *request = allocIntrRequest(INTR_REQUEST_CHANGE_THREAD_PRIORITY);
+	struct IntrRequest *request = allocIntrRequest(INTR_REQUEST_CHANGE_THREAD_PRIORITY);
 	ThreadmgrTraceHook hook;
 
 	hook = s_threadmgrRuntime.schedTraceHook;
@@ -654,7 +654,7 @@ void issueChangeThreadPriorityIntrRequest(unsigned int cpuId, SceUID threadId, i
 void issueCallPAScheduleHookIntrRequest(unsigned int cpuId, SceUID processId, SceUID threadId,
 				uint32_t event, int priority)
 {
-	struct ThreadmgrIntrRequest *request = allocIntrRequest(INTR_REQUEST_CALL_PA_SCHEDULE_HOOK);
+	struct IntrRequest *request = allocIntrRequest(INTR_REQUEST_CALL_PA_SCHEDULE_HOOK);
 	ThreadmgrTraceHook hook;
 
 	hook = s_threadmgrRuntime.schedTraceHook;
@@ -688,7 +688,7 @@ void issueCallPAPriorityHookIntrRequest(unsigned int cpuId, SceUID processId,
 					SceUID threadId, int oldPriority,
 					int newPriority)
 {
-	struct ThreadmgrIntrRequest *request;
+	struct IntrRequest *request;
 	ThreadmgrTraceHook hook;
 
 	request = allocIntrRequest(INTR_REQUEST_CALL_PA_PRIORITY_HOOK);

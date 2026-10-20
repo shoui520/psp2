@@ -301,7 +301,7 @@ cancelled:
 	sleep = (ThreadmgrSchedSleepHandler)s_schedSleepHandler;
 	if (sleep != NULL)
 		sleep(&s_schedSleepDescriptor);
-	currentCpuState()->nextRunningThread = 0;
+	currentCpuState()->pNextRunningThreadCB = 0;
 	switchThread(2);
 	if (waitType == SCE_KERNEL_WAITTYPE_EVENT)
 		ret = sceGUIDReferObjectWithSubclass(waitId, WaitTypeClass(waitType), NULL);

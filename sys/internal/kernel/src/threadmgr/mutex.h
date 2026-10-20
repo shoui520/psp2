@@ -32,7 +32,7 @@ typedef struct ThreadmgrMutexCore {
 } ThreadmgrMutexCore;
 
 /* SceUIDMutexObject (0x58) */
-typedef struct ThreadmgrMutex {
+typedef struct SceUIDMutexObject {
 	SceUID ownerPid;			/* 0x00: the object base's first word */
 	SceClass *cls;
 	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
@@ -44,10 +44,10 @@ typedef struct ThreadmgrMutex {
 	uint32_t attr;				/* 0x20 */
 	uint32_t reserved;			/* 0x24: zeroed */
 	ThreadmgrMutexCore core;		/* 0x28 */
-} ThreadmgrMutex;
+} SceUIDMutexObject;
 
 /* SceUIDCondObject (0x40) */
-typedef struct ThreadmgrCond {
+typedef struct SceUIDCondObject {
 	SceUID ownerPid;			/* 0x00: the object base's first word */
 	SceClass *cls;
 	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
@@ -63,14 +63,14 @@ typedef struct ThreadmgrCond {
 	ListNode mutexLink;	/* 0x30: in the mutex's conds list */
 	SceUID waitCondId;			/* 0x38: PLACEHOLDER: -1, matched against waiters' */
 	SceUID puid;				/* 0x3c */
-} ThreadmgrCond;
+} SceUIDCondObject;
 
 #define COND_FROM_MUTEX_LINK(link) \
-	((ThreadmgrCond *)((uintptr_t)(link) - offsetof(ThreadmgrCond, mutexLink)))
+	((SceUIDCondObject *)((uintptr_t)(link) - offsetof(SceUIDCondObject, mutexLink)))
 #define MUTEX_FROM_OWNER_LINK(link) \
-	((ThreadmgrMutex *)((uintptr_t)(link) - offsetof(ThreadmgrMutex, core.ownerLink)))
+	((SceUIDMutexObject *)((uintptr_t)(link) - offsetof(SceUIDMutexObject, core.ownerLink)))
 
-_Static_assert(sizeof(ThreadmgrMutex) == 0x58, "SceUIDMutexObject size");
+_Static_assert(sizeof(SceUIDMutexObject) == 0x58, "SceUIDMutexObject size");
 
 #define PRIORITY_USER_LOW		0x80	/* user priorities are 0x80..0xfb */
 #define PRIORITY_USER_COUNT		0x7c
@@ -125,7 +125,7 @@ static inline void notifyPriorityChange(struct ThreadCB *thread, int oldPriority
 }
 
 int getMutexInfo(SceUID mutexId, SceKernelMutexInfo *info);
-void acquireMutex(ThreadmgrMutex *mutex, struct ThreadCB *thread, int count);
+void acquireMutex(SceUIDMutexObject *mutex, struct ThreadCB *thread, int count);
 int releaseMutex(ThreadmgrMutexCore *core);
 int findNextCeilingPriority(struct ThreadCB *thread);
 uint32_t releaseAllMutex(struct ThreadCB *thread);

@@ -41,12 +41,12 @@ __attribute__((section(SCE_DBGSRC_SECTION), used)) = {
 #define SIMPLE_EVENT_PROCESS_EXITED	0x00000200
 
 /* SceUIDSimpleEventObject (0x3c) */
-typedef struct ThreadmgrSimpleEvent {
+typedef struct SceUIDSimpleEventObject {
 	ThreadmgrEvent event;
 	SceUID uid;				/* 0x38: its own GUID */
-} ThreadmgrSimpleEvent;
+} SceUIDSimpleEventObject;
 
-_Static_assert(sizeof(ThreadmgrSimpleEvent) == 0x3c, "SceUIDSimpleEventObject size");
+_Static_assert(sizeof(SceUIDSimpleEventObject) == 0x3c, "SceUIDSimpleEventObject size");
 
 #define SIMPLE_EVENT_CLASS()	(s_threadmgrRuntime.manager->simpleEventClass)
 
@@ -58,14 +58,14 @@ static inline uint64_t SimpleEventCaller(SceUID threadId, SceUID pid)
 
 static int uidSimpleEvent_Constructor(void *object)
 {
-	__builtin_memset((char *)object + offsetof(ThreadmgrSimpleEvent, uid), 0, sizeof(SceUID));
+	__builtin_memset((char *)object + offsetof(SceUIDSimpleEventObject, uid), 0, sizeof(SceUID));
 	return 0;
 }
 
 /* the owner process's object counts drop */
 static int uidSimpleEvent_Destructor(void *object)
 {
-	ThreadmgrSimpleEvent *simple = object;
+	SceUIDSimpleEventObject *simple = object;
 	SceProcessObject *process;
 	SceUID pid;
 	int intr;
@@ -107,7 +107,7 @@ int startSimpleEvent(void)
 		SCE_PANIC(87);
 	s_threadmgrRuntime.manager->simpleEventClass = (SceClass *)cls;
 	SCE_DBG_PRINTF_LEVEL(2, 0, 90, " sizeof(SceUIDSimpleEventObject)=%d\n",
-			     sizeof(ThreadmgrSimpleEvent));
+			     sizeof(SceUIDSimpleEventObject));
 	return ret;
 }
 
@@ -115,7 +115,7 @@ int startSimpleEvent(void)
 int simpleEventProcessExit(SceProcessObject *process)
 {
 	SceSize got = 0;
-	ThreadmgrSimpleEvent *simple;
+	SceUIDSimpleEventObject *simple;
 	SceUID *vector, guid;
 	uint32_t wake;
 	int num, i, intr, ret;
@@ -174,7 +174,7 @@ SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t ini
 		currentThreadContext();
 	SceProcessObject *process = NULL;
 	UIDCreateOpt opt;
-	ThreadmgrSimpleEvent *simple;
+	SceUIDSimpleEventObject *simple;
 	SceObjectBase *pObject;
 	uint32_t saved;
 	SceUID uid, threadId;
@@ -273,7 +273,7 @@ SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t ini
 			sceKernelSpinlockLowUnlock(&process->resourceLock);
 		}
 	} else {
-		simple = (ThreadmgrSimpleEvent *)pObject;
+		simple = (SceUIDSimpleEventObject *)pObject;
 		simple->uid = uid;
 		simple->event.ownerPid = ThreadmgrInSyscall() ? thread->processId :
 								SCE_KERNEL_PROCESS_ID;
@@ -294,7 +294,7 @@ restore:
 int sceKernelDeleteSimpleEvent(SceUID simpleEventId)
 {
 	struct ThreadCB *thread;
-	ThreadmgrSimpleEvent *simple;
+	SceUIDSimpleEventObject *simple;
 	uint32_t saved, wake;
 	int intr, ret;
 

@@ -29,7 +29,7 @@
 #define EVENT_WAIT_QUEUE(event)		((uintptr_t)&(event)->next)
 
 /* WMECB: one wait on several events ((count + 6) * 8 bytes) */
-typedef struct ThreadmgrWaitMultipleEvents {
+typedef struct WMECB {
 	struct ThreadmgrWaitNode *next;		/* 0x00: the thread waiting on it */
 	struct ThreadmgrWaitNode *prev;
 	uint32_t mode;				/* 0x08: WME_MODE_* */
@@ -42,9 +42,9 @@ typedef struct ThreadmgrWaitMultipleEvents {
 	const SceKernelWaitEvent *events;	/* 0x28 */
 	void *userEventIds;			/* 0x2c: the caller's IDs, kept for a restarted syscall */
 	ListNode nodes[];	/* 0x30: per event, its queued node */
-} ThreadmgrWaitMultipleEvents;
+} WMECB;
 
-#define WME_SIZE(count)	(offsetof(ThreadmgrWaitMultipleEvents, nodes) + \
+#define WME_SIZE(count)	(offsetof(WMECB, nodes) + \
 			 (count) * sizeof(ListNode))
 
 /* a WME's place in one event's waiters (0x40, from the waiting process's heap) */
@@ -77,7 +77,7 @@ static inline int EventWaiterIsThread(struct ThreadmgrWaitNode *node)
 
 /* takes a WME node off its event and its WMECB; returns the nodes the WME still has queued */
 static inline uint32_t unlinkEventWaitNode(ThreadmgrEventWaitNode *node,
-					   ThreadmgrWaitMultipleEvents *wme)
+					   WMECB *wme)
 {
 	struct ThreadmgrWaitNode *link = (struct ThreadmgrWaitNode *)node;
 
@@ -91,7 +91,7 @@ static inline uint32_t unlinkEventWaitNode(ThreadmgrEventWaitNode *node,
 	return --wme->pending;
 }
 
-static inline void addEventWaitResult(ThreadmgrWaitMultipleEvents *wme, SceUID eventId,
+static inline void addEventWaitResult(WMECB *wme, SceUID eventId,
 				      int result, uint32_t pattern, uint64_t userData)
 {
 	SceKernelResultEvent *res;
@@ -106,7 +106,7 @@ static inline void addEventWaitResult(ThreadmgrWaitMultipleEvents *wme, SceUID e
 	wme->resultCount++;
 }
 
-static inline void markEventReady(ThreadmgrWaitMultipleEvents *wme, uint32_t index)
+static inline void markEventReady(WMECB *wme, uint32_t index)
 {
 	wme->ready[index >> 5] |= 1u << (index & 31);
 }
@@ -128,7 +128,7 @@ static inline int releaseEventWaiter(ThreadmgrEvent *event, ThreadmgrEventWaitNo
  */
 static inline __attribute__((always_inline)) uint32_t completeEventWaitNode(
 	ThreadmgrEvent *event, ThreadmgrEventWaitNode *node, struct ThreadCB *thread,
-	ThreadmgrWaitMultipleEvents *wme, uint32_t left, SceUID waitId, int result,
+	WMECB *wme, uint32_t left, SceUID waitId, int result,
 	uint32_t pattern, uint64_t userData, int notify, uint32_t arg)
 {
 	addEventWaitResult(wme, node->eventId, result, pattern, userData);
@@ -145,7 +145,7 @@ static inline __attribute__((always_inline)) uint32_t completeEventWaitNode(
 
 uint32_t notifyCallbackAllAfterSetEvent(SceUID eventId, ThreadmgrEvent *event, uint32_t arg);
 int freeEventWaitNode(SceUID pid, ThreadmgrEventWaitNode *node);
-void cancelWME(ThreadmgrWaitMultipleEvents *wme);
+void cancelWME(WMECB *wme);
 void startEvent(void);
 int uidEventSubclassInit(struct ThreadmgrWaitableClass *cls, const char *name, SceClass *parent,
 			 SceSize size, SceClassCallback create, SceClassCallback destroy,
@@ -156,7 +156,7 @@ uint32_t pulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t
 				      uint32_t arg, ThreadmgrEvent *event);
 
 /* event.c */
-int waitMultipleEvents(ThreadmgrWaitMultipleEvents *wme, SceUInt32 *timeout,
+int waitMultipleEvents(WMECB *wme, SceUInt32 *timeout,
 			      int callbacks, uint32_t *outPattern);
 
 #endif

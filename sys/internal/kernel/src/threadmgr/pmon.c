@@ -24,7 +24,7 @@ static inline int PmonCounterValid(uint32_t counter)
 /* the thread this CPU runs (VBAR's CPU state) */
 static inline struct ThreadCB *PmonCpuThread(void)
 {
-	return (struct ThreadCB *)currentCpuState()->runningThread;
+	return (struct ThreadCB *)currentCpuState()->pRunningThreadCB;
 }
 
 static inline void PmonWriteSelect(uint32_t counter)

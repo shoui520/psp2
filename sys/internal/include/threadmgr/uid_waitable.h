@@ -43,7 +43,7 @@ struct ThreadmgrWaitQueue {
 	uint32_t lwWaiters;			/* 0x50 */
 };
 
-struct ThreadmgrWaitableObject {
+struct SceUIDWaitableObject {
 	SceUID ownerPid;			/* the object base */
 	SceClass *cls;
 	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
@@ -56,13 +56,13 @@ struct ThreadmgrWaitableObject {
 	uint32_t reserved;			/* 0x24: zeroed */
 };
 
-int uidCacheConstructor(void *object);
-int uidCacheDestructor(void *object);
-int uidWaitableConstructor(void *object);
-int uidWaitableDestructor(void *object);
+int uidCache_Constructor(void *object);
+int uidCache_Destructor(void *object);
+int uidWaitable_Constructor(void *object);
+int uidWaitable_Destructor(void *object);
 int uidWaitable_RevalidateMethod(void *cls, void *object);
 int uidWaitable_ReleaseMethod(void *cls, void *object, struct ThreadCB *thread);
-int uidExtendedClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
+int uidWaitableClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
 			SceClass *parent, SceSize itemsize,
 			SceClassCallback create, SceClassCallback destroy,
 			ThreadmgrCancelWaitMethod cancelWait, ThreadmgrRevalidateMethod revalidate,

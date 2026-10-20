@@ -247,10 +247,10 @@ int suspendThreadForVM(SceUID threadId, int *result, SceKernelSpinlock *done)
 			goto later;
 		wake = 0;
 		self = (struct ThreadmgrWaitNode *)thread;
-		sceKernelSpinlockLowLock(&cpu->standbyLock);
+		sceKernelSpinlockLowLock(&cpu->standbyListLock);
 		self->next->prev = self->prev;
 		self->prev->next = self->next;
-		sceKernelSpinlockLowUnlock(&cpu->standbyLock);
+		sceKernelSpinlockLowUnlock(&cpu->standbyListLock);
 		oldState = (uint16_t)(thread->status >> 16);
 		thread->currentCpuId = -1;
 	}
@@ -513,7 +513,7 @@ void startException(void)
 	cls = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
 	if (cls == NULL)
 		SCE_PANIC(352);
-	if (uidExtendedClassInit(cls, "SceUIDExceptionClass",
+	if (uidWaitableClassInit(cls, "SceUIDExceptionClass",
 			s_threadmgrRuntime.manager->waitableClass, 0x80,
 			uidException_Constructor, (SceClassCallback)uidException_Destructor,
 			uidDefaultCancelWait, uidDefault_RevalidateMethod,

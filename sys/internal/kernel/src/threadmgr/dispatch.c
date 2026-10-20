@@ -82,7 +82,7 @@ static inline __attribute__((always_inline)) void distributePreemptedThread(
 			target = UINT32_MAX;
 		}
 	}
-	thread = (struct ThreadCB *)cpu->runningThread;
+	thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	if (target != UINT32_MAX)
 		addIntrRequest(target, INTR_MASK_SCHEDULING);
@@ -106,7 +106,7 @@ uint32_t searchHighestPriority(void)
 	unsigned int word;
 
 	for (word = 0; word < PRIORITY_GLOBAL_FIRST_WORD; word++) {
-		bitmap = cpu->readyBitmap[word];
+		bitmap = cpu->readySummary[word];
 		if (bitmap != 0) {
 			priority = __builtin_clz(bitmap) + word * 32;
 			goto found;
@@ -123,7 +123,7 @@ uint32_t searchHighestPriority(void)
 	sceKernelSpinlockLowUnlock(
 		&s_threadmgrRuntime.manager->globalReadyLock);
 	if (priority == PRIORITY_NO_THREAD) {
-		bitmap = cpu->readyBitmap[PRIORITY_CPU_LAST_WORD];
+		bitmap = cpu->readySummary[PRIORITY_CPU_LAST_WORD];
 		if (bitmap != 0)
 			priority = __builtin_clz(bitmap) + PRIORITY_CPU_LAST_WORD * 32;
 	}
@@ -162,7 +162,7 @@ void notifyOffCpu(uint32_t reason)
 	__asm__ volatile(".global s_schedOffCpuCodeSite\ns_schedOffCpuCodeSite:");
 	probe = (ThreadmgrOffCpuProbe)s_schedOffCpuHandler;
 	if (probe != NULL) {
-		thread = (struct ThreadCB *)cpu->runningThread;
+		thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 		id = thread->userThreadId;
 		if (id < 0)
 			id = thread->threadId;
@@ -170,7 +170,7 @@ void notifyOffCpu(uint32_t reason)
 	}
 	hook = s_threadmgrRuntime.offCpuHook;
 	if (__builtin_expect(hook != NULL, 0)) {
-		thread = (struct ThreadCB *)cpu->runningThread;
+		thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 		id = thread->userThreadId;
 		if (id < 0)
 			id = thread->threadId;
@@ -190,7 +190,7 @@ static inline void takeThread(struct ThreadMgrCpuCB *cpu,
 }
 
 /*
- * Picks the thread this CPU runs next into cpu->nextRunningThread: the most urgent
+ * Picks the thread this CPU runs next into cpu->pNextRunningThreadCB: the most urgent
  * ready one more urgent than current (which stays otherwise).
  */
 void findNextRunningThread(struct ThreadCB *current)
@@ -207,7 +207,7 @@ void findNextRunningThread(struct ThreadCB *current)
 
 	/* this CPU's own queues first */
 	for (word = 0; word < PRIORITY_GLOBAL_FIRST_WORD; word++) {
-		bitmap = cpu->readyBitmap[word];
+		bitmap = cpu->readySummary[word];
 		if (bitmap == 0)
 			continue;
 		priority = __builtin_clz(bitmap) + word * 32;
@@ -289,7 +289,7 @@ retry:
 	sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->globalReadyLock);
 
 	/* the least urgent of this CPU's own */
-	bitmap = cpu->readyBitmap[PRIORITY_CPU_LAST_WORD];
+	bitmap = cpu->readySummary[PRIORITY_CPU_LAST_WORD];
 	if (bitmap == 0)
 		goto selected;
 	priority = __builtin_clz(bitmap) + PRIORITY_CPU_LAST_WORD * 32;
@@ -308,7 +308,7 @@ take:
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 selected:
 	SCE_DBG_ASSERT_LEVEL(0, thread != NULL, 502);
-	cpu->nextRunningThread = (uintptr_t)thread;
+	cpu->pNextRunningThreadCB = (uintptr_t)thread;
 }
 
 void SceThreadmgrForKernel_8C07C8EC(ThreadmgrTraceHook hook)
@@ -347,10 +347,10 @@ int SceThreadmgrForKernel_BB56D42F(void)
 	uintptr_t current;
 
 	if (cpu->disabledDispatch == 0) {
-		current = cpu->runningThread;
+		current = cpu->pRunningThreadCB;
 		if (current == 0)
 			return 1;
-		return current != cpu->nextRunningThread;
+		return current != cpu->pNextRunningThreadCB;
 	}
 	return 0;
 }
@@ -385,7 +385,7 @@ void notifyOffCpuIntr(uint32_t reason)
 	__asm__ volatile(".global s_schedIntrOffCpuCodeSite\ns_schedIntrOffCpuCodeSite:");
 	probe = (ThreadmgrOffCpuProbe)s_schedIntrOffCpuHandler;
 	if (probe != NULL) {
-		thread = (struct ThreadCB *)cpu->runningThread;
+		thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 		id = thread->userThreadId;
 		if (id < 0)
 			id = thread->threadId;
@@ -394,7 +394,7 @@ void notifyOffCpuIntr(uint32_t reason)
 	}
 	hook = s_threadmgrRuntime.offCpuHook;
 	if (__builtin_expect(hook != NULL, 0)) {
-		thread = (struct ThreadCB *)cpu->runningThread;
+		thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 		id = thread->userThreadId;
 		if (id < 0)
 			id = thread->threadId;
@@ -444,9 +444,9 @@ void runningThreadPreemptByIntr(struct ThreadCB *context, uint32_t reason)
 	cpu->processId = -1;
 	cpu->threadId = -1;
 	cpu->priority = PRIORITY_NONE;
-	cpu->runningThread = 0;
+	cpu->pRunningThreadCB = 0;
 	SCE_DBG_ASSERT_LEVEL(0, cpu == currentCpuState(), 1313);
-	cpu->nextRunningThread = 0;
+	cpu->pNextRunningThreadCB = 0;
 }
 
 /*
@@ -512,7 +512,7 @@ struct ThreadCB *setupNextContext_thread(struct ThreadCB *current,
 		SCE_DBG_ASSERT_LEVEL(0, (reason >> 1) & 1, 548);
 		return current;
 	}
-	thread = (struct ThreadCB *)cpu->runningThread;
+	thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 	if (thread != NULL)
 		SCE_DBG_ASSERT_PRINTF(thread->currentCpuId == (int)cpuId &&
 				      (thread->status & SCE_KERNEL_THREAD_STATUS_RUNNING), 556,
@@ -520,12 +520,12 @@ struct ThreadCB *setupNextContext_thread(struct ThreadCB *current,
 			"currentCpuId=0x%08X, status=0x%08X\n",
 			cpuId, thread->threadId, thread->currentCpuId, thread->status);
 	moveStandbyToReady();
-	selected = (struct ThreadCB *)cpu->nextRunningThread;
+	selected = (struct ThreadCB *)cpu->pNextRunningThreadCB;
 	if (selected == NULL) {
-		findNextRunningThread((struct ThreadCB *)cpu->runningThread);
-		selected = (struct ThreadCB *)cpu->nextRunningThread;
+		findNextRunningThread((struct ThreadCB *)cpu->pRunningThreadCB);
+		selected = (struct ThreadCB *)cpu->pNextRunningThreadCB;
 	}
-	thread = (struct ThreadCB *)cpu->runningThread;
+	thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 	if (thread == selected) {
 		cpu->remainCpuCount++;
 		__asm__ volatile("mcr p15, 0, %0, c13, c0, 4" : : "r"(thread) : "memory");
@@ -541,31 +541,31 @@ struct ThreadCB *setupNextContext_thread(struct ThreadCB *current,
 	if (thread != NULL) {
 		SCE_DBG_ASSERT_LEVEL(0, !(reason & SWITCH_REASON_WAIT), 574);
 		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
-		thread = (struct ThreadCB *)cpu->runningThread;
+		thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 		for (mutex = (struct ThreadmgrFastMutex *)thread->ownedFastMutexNext;
 		     mutex != (struct ThreadmgrFastMutex *)&thread->ownedFastMutexNext;
 		     mutex = (struct ThreadmgrFastMutex *)mutex->next) {
 			SCE_DBG_ASSERT_CHECK(mutex->magic == FAST_MUTEX_MAGIC, 583);
 			sceKernelSpinlockLowUnlock(&mutex->lock);
-			thread = (struct ThreadCB *)cpu->runningThread;
+			thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 		}
 		ran = thread->runClock;
 		thread->runClock = ran - cpu->lastThreadSwitchTime + SceSysrootForKernel_E20F6FC8();
-		thread = (struct ThreadCB *)cpu->runningThread;
+		thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 		thread->threadPreemptCount++;
 		if (s_threadmgrRuntime.manager->paHooks[0] != 0)
 			issueCallPAScheduleHookIntrRequest(SceCpuId(), thread->processId, thread->threadId,
 				     SCHED_TRACE_OFF_CPU, thread->currentPriority);
 		notifyOffCpu(reason);
-		thread = (struct ThreadCB *)cpu->runningThread;
+		thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 		if ((int)thread->currentAttr < 0 && !(thread->flags & THREAD_FLAG_EXITING)) {
 			status = checkThreadUserStack((struct ThreadCB *)thread);
-			thread = (struct ThreadCB *)cpu->runningThread;
+			thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 			if (status == 0) {
 				overflow = true;
 				SCE_DBG_PRINTF(0, 611, " k: setupNextContext_thread(), User Stack Overflow "
 					       "was detected. (threadId=0x%08X)\n", thread->threadId);
-				thread = (struct ThreadCB *)cpu->runningThread;
+				thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 				thread->status |= THREAD_STATE_DEBUG_SUSPENDED;
 				thread->debugSuspendReason |= DEBUG_SUSPEND_USER_STACK;
 			}
@@ -582,11 +582,11 @@ struct ThreadCB *setupNextContext_thread(struct ThreadCB *current,
 			status = overflowHandler != NULL ? overflowHandler(0, NULL) :
 							   OVERFLOW_SUSPEND_PROCESS;
 			if (status == OVERFLOW_SUSPEND_PROCESS) {
-				thread = (struct ThreadCB *)cpu->runningThread;
+				thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 				process = thread->process;
 				if (!SceCpuForDriver_CDA96E81((SceInt32 *)&process->abortRequested,
 								     0, 1)) {
-					thread = (struct ThreadCB *)cpu->runningThread;
+					thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 					process->abortCode = DEBUG_KIND_STACK_OVERFLOW;
 					process->abortThread = thread->threadId;
 					status = sceKernelSetEventFlag(process->abortEventFlag,
@@ -604,7 +604,7 @@ struct ThreadCB *setupNextContext_thread(struct ThreadCB *current,
 				SCE_PANIC(653);
 			}
 		}
-		selected = (struct ThreadCB *)cpu->nextRunningThread;
+		selected = (struct ThreadCB *)cpu->pNextRunningThreadCB;
 	}
 
 	/* the selected thread takes it */
@@ -621,7 +621,7 @@ struct ThreadCB *setupNextContext_thread(struct ThreadCB *current,
 	if (s_threadmgrRuntime.manager->paHooks[0] != 0)
 		issueCallPAScheduleHookIntrRequest(SceCpuId(), selected->processId, selected->threadId,
 			     SCHED_TRACE_ON_CPU, selected->currentPriority);
-	cpu->runningThread = (uintptr_t)selected;
+	cpu->pRunningThreadCB = (uintptr_t)selected;
 	cpu->runningProcessId = selected->processId;
 	cpu->runningThreadId = selected->threadId;
 	__asm__ volatile("mcr p15, 0, %0, c13, c0, 4" : : "r"(selected) : "memory");
@@ -669,7 +669,7 @@ notify:
 		     thread->currentPriority, reason);
 	if (initialPriority < cpu->priority) {
 		moveStandbyToReady();
-		if (cpu->nextRunningThread == 0)
+		if (cpu->pNextRunningThreadCB == 0)
 			addIntrRequest(cpuId, INTR_MASK_SCHEDULING);
 	}
 	return (struct ThreadCB *)thread;
@@ -708,7 +708,7 @@ void switchThread2(uint32_t reason)
 		cpu->processId = -1;
 		cpu->threadId = -1;
 		cpu->priority = PRIORITY_NONE;
-		cpu->runningThread = 0;
+		cpu->pRunningThreadCB = 0;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (waitId != WAIT_ID_NONE && waitId != -1 &&
 		    s_threadmgrRuntime.manager->signalId != waitId) {
@@ -717,15 +717,15 @@ void switchThread2(uint32_t reason)
 			cpu->releasingWaitObject = 0;
 		}
 		SCE_DBG_ASSERT_LEVEL(0, cpu == currentCpuState(), 226);
-		cpu->nextRunningThread = 0;
+		cpu->pNextRunningThreadCB = 0;
 		mode = 0;
 	}
 	for (;;) {
 		if (mode & SWITCH_MODE_UNLOCK) {
 			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-			SCE_DBG_ASSERT_CHECK(cpu->runningThread == 0, 231);
+			SCE_DBG_ASSERT_CHECK(cpu->pRunningThreadCB == 0, 231);
 		}
-		selected = setupNextContext_thread((struct ThreadCB *)cpu->runningThread,
+		selected = setupNextContext_thread((struct ThreadCB *)cpu->pRunningThreadCB,
 						   reason, oldThreadId, oldPriority);
 		mode = SceIntrmgrForKernel_08FDB0CE(selected->pRegisterContext, 0, selected->pVfpRegisterContext);
 	}
@@ -804,7 +804,7 @@ struct ThreadRegisterContext *setupNextContext_intr(uintptr_t unused, uint32_t r
 	SceUID id;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 970);
-	thread = (struct ThreadCB *)cpu->runningThread;
+	thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 	if (thread != NULL)
 		SCE_DBG_ASSERT_PRINTF(thread->currentCpuId == (int)cpuId &&
 				      (thread->status & SCE_KERNEL_THREAD_STATUS_RUNNING), 980,
@@ -812,12 +812,12 @@ struct ThreadRegisterContext *setupNextContext_intr(uintptr_t unused, uint32_t r
 			"currentCpuId=0x%08X, status=0x%08X\n",
 			cpuId, thread->threadId, thread->currentCpuId, thread->status);
 	moveStandbyToReady();
-	selected = (struct ThreadCB *)cpu->nextRunningThread;
+	selected = (struct ThreadCB *)cpu->pNextRunningThreadCB;
 	if (selected == NULL) {
-		findNextRunningThread((struct ThreadCB *)cpu->runningThread);
-		selected = (struct ThreadCB *)cpu->nextRunningThread;
+		findNextRunningThread((struct ThreadCB *)cpu->pRunningThreadCB);
+		selected = (struct ThreadCB *)cpu->pNextRunningThreadCB;
 	}
-	thread = (struct ThreadCB *)cpu->runningThread;
+	thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 	if (thread == selected) {
 		cpu->remainCpuCount++;
 		__asm__ volatile("mcr p15, 0, %0, c13, c0, 4" : : "r"(thread) : "memory");
@@ -832,31 +832,31 @@ struct ThreadRegisterContext *setupNextContext_intr(uintptr_t unused, uint32_t r
 	/* the running thread is preempted */
 	if (thread != NULL) {
 		sceKernelSpinlockLowLock(THREAD_LOCK(thread));
-		thread = (struct ThreadCB *)cpu->runningThread;
+		thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 		for (mutex = (struct ThreadmgrFastMutex *)thread->ownedFastMutexNext;
 		     mutex != (struct ThreadmgrFastMutex *)&thread->ownedFastMutexNext;
 		     mutex = (struct ThreadmgrFastMutex *)mutex->next) {
 			SCE_DBG_ASSERT_CHECK(mutex->magic == FAST_MUTEX_MAGIC, 1007);
 			sceKernelSpinlockLowUnlock(&mutex->lock);
-			thread = (struct ThreadCB *)cpu->runningThread;
+			thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 		}
 		ran = thread->runClock;
 		thread->runClock = ran - cpu->lastThreadSwitchTime + SceSysrootForKernel_E20F6FC8();
-		thread = (struct ThreadCB *)cpu->runningThread;
+		thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 		thread->intrPreemptCount++;
 		if (s_threadmgrRuntime.manager->paHooks[0] != 0)
 			issueCallPAScheduleHookIntrRequest(SceCpuId(), thread->processId, thread->threadId,
 				     SCHED_TRACE_OFF_CPU, thread->currentPriority);
 		notifyOffCpuIntr(reason);
-		thread = (struct ThreadCB *)cpu->runningThread;
+		thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 		if ((int)thread->currentAttr < 0 && !(thread->flags & THREAD_FLAG_EXITING)) {
 			status = checkThreadUserStack((struct ThreadCB *)thread);
-			thread = (struct ThreadCB *)cpu->runningThread;
+			thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 			if (status == 0) {
 				overflow = true;
 				SCE_DBG_PRINTF(0, 1034, " k: setupNextContext_intr(), User Stack Overflow "
 					       "was detected. (threadId=0x%08X)\n", thread->threadId);
-				thread = (struct ThreadCB *)cpu->runningThread;
+				thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 				thread->debugSuspendReason |= DEBUG_SUSPEND_USER_STACK;
 				if (thread->userFrame == NULL) {
 					/* not in a syscall: it is debug-suspended now */
@@ -864,14 +864,14 @@ struct ThreadRegisterContext *setupNextContext_intr(uintptr_t unused, uint32_t r
 					thread->status = ((thread->status & 0x7fff) << 16) |
 						THREAD_STATE_DEBUG_SUSPENDED | THREAD_STATE_OFF_CPU;
 					sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadMgrCBLock);
-					thread = (struct ThreadCB *)cpu->runningThread;
+					thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 					thread->next = (uintptr_t)
 						&s_threadmgrRuntime.manager->debugSuspendedNext;
 					thread->prev = s_threadmgrRuntime.manager->debugSuspendedPrev;
 					s_threadmgrRuntime.manager->debugSuspendedPrev = (uintptr_t)thread;
 					*(uintptr_t *)thread->prev = (uintptr_t)thread;
 					sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->threadMgrCBLock);
-					thread = (struct ThreadCB *)cpu->runningThread;
+					thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 					sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 					goto overflowed;
 				}
@@ -891,11 +891,11 @@ overflowed:
 			status = overflowHandler != NULL ? overflowHandler(0, NULL) :
 							   OVERFLOW_SUSPEND_PROCESS;
 			if (status == OVERFLOW_SUSPEND_PROCESS) {
-				thread = (struct ThreadCB *)cpu->runningThread;
+				thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 				process = thread->process;
 				if (!SceCpuForDriver_CDA96E81((SceInt32 *)&process->abortRequested,
 								     0, 1)) {
-					thread = (struct ThreadCB *)cpu->runningThread;
+					thread = (struct ThreadCB *)cpu->pRunningThreadCB;
 					process->abortCode = DEBUG_KIND_STACK_OVERFLOW;
 					process->abortThread = thread->threadId;
 					status = sceKernelSetEventFlag(process->abortEventFlag,
@@ -913,7 +913,7 @@ overflowed:
 				SCE_PANIC(1091);
 			}
 		}
-		selected = (struct ThreadCB *)cpu->nextRunningThread;
+		selected = (struct ThreadCB *)cpu->pNextRunningThreadCB;
 	}
 
 	/* the selected thread takes the CPU */
@@ -934,7 +934,7 @@ overflowed:
 	if (__builtin_expect(hook != NULL, 0))
 		hook(SWITCH_HOOK_INTR, SWITCH_HOOK_ARGC, cpu->runningThreadId, initialPriority,
 		     selected->threadId, selected->currentPriority, reason);
-	cpu->runningThread = (uintptr_t)selected;
+	cpu->pRunningThreadCB = (uintptr_t)selected;
 	cpu->runningProcessId = selected->processId;
 	cpu->runningThreadId = selected->threadId;
 	__asm__ volatile("mcr p15, 0, %0, c13, c0, 4" : : "r"(selected) : "memory");
@@ -978,7 +978,7 @@ overflowed:
 deferred:
 	if (initialPriority < cpu->priority) {
 		moveStandbyToReady();
-		if (cpu->nextRunningThread == 0)
+		if (cpu->pNextRunningThreadCB == 0)
 			addIntrRequest(cpuId, INTR_MASK_SCHEDULING);
 	}
 	return thread->pRegisterContext;

@@ -176,7 +176,7 @@ int threadmgrVfpExceptionIntrHandler(int code, void *arg)
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
 	SCE_DBG_ASSERT_CHECK((uint16_t)thread->status == SCE_KERNEL_THREAD_STATUS_RUNNING, 182);
 	SCE_DBG_ASSERT_CHECK(thread->currentCpuId == cpuId, 183);
-	SCE_DBG_ASSERT_CHECK(thread->threadId != cpu->idleThread->threadId, 185);
+	SCE_DBG_ASSERT_CHECK(thread->threadId != cpu->pIdleThreadCB->threadId, 185);
 
 	/* off the CPU, debug-suspended */
 	runningThreadPreemptByIntr(thread, 2);

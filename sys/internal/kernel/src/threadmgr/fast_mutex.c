@@ -20,12 +20,12 @@
 #define FAST_MUTEX_OPTION_MAX_SIZE	8
 
 #define FAST_MUTEX_UID_OBJECT(queue) \
-	((struct ThreadmgrUidFastMutex *)((uintptr_t)(queue) - offsetof(struct ThreadmgrUidFastMutex, next)))
+	((struct SceUIDFastMutexObject *)((uintptr_t)(queue) - offsetof(struct SceUIDFastMutexObject, next)))
 
 /* SceUIDFastMutexClass's constructor */
 static int uidFastMutex_Constructor(void *object)
 {
-	struct ThreadmgrUidFastMutex *uidMutex = object;
+	struct SceUIDFastMutexObject *uidMutex = object;
 
 	uidMutex->workAreaBytes[0] = 0;
 	uidMutex->workAreaBytes[1] = 0;
@@ -37,7 +37,7 @@ static int uidFastMutex_Constructor(void *object)
 /* SceUIDFastMutexClass's destructor */
 static int uidFastMutex_Destructor(void *object)
 {
-	struct ThreadmgrUidFastMutex *uidMutex = object;
+	struct SceUIDFastMutexObject *uidMutex = object;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1536);
 	uidMutex->workAreaBytes[0] = 0;
@@ -99,7 +99,7 @@ void startFastMutex(void)
 	cls = sceKernelAllocHeapMemory(manager->heapId, 0x38);
 	if (cls == NULL)
 		SCE_PANIC(538);
-	ret = uidExtendedClassInit(cls, "SceUIDFastMutexClass",
+	ret = uidWaitableClassInit(cls, "SceUIDFastMutexClass",
 		s_threadmgrRuntime.manager->waitableClass, FAST_MUTEX_ITEM_SIZE,
 		uidFastMutex_Constructor, (SceClassCallback)uidFastMutex_Destructor,
 		uidDefaultCancelWait, uidFastMutex_RevalidateMethod,
@@ -108,7 +108,7 @@ void startFastMutex(void)
 		SCE_PANIC_FUNC(SCE_LINE(1538, 1509), "uidFastMutexClassInit");
 	s_threadmgrRuntime.manager->fastMutexClass = (SceClass *)cls;
 	SCE_DBG_PRINTF_LEVEL(2, 0, 554, " sizeof(SceUIDFastMutexObject)=%d\n",
-			     sizeof(struct ThreadmgrUidFastMutex));
+			     sizeof(struct SceUIDFastMutexObject));
 }
 
 /* gives the work area to thread (both locked), boosting it to a ceiling */
@@ -166,7 +166,7 @@ void acquireFastMutex(struct ThreadmgrFastMutex *mutex, struct ThreadCB *thread)
 /* SceUIDFastMutexClass's revalidation: the first waiter gets a free mutex */
 static int uidFastMutex_RevalidateMethod(void *cls, void *object)
 {
-	struct ThreadmgrUidFastMutex *uidMutex = object;
+	struct SceUIDFastMutexObject *uidMutex = object;
 	struct ThreadmgrFastMutex *mutex = uidMutex->workArea;
 	struct ThreadmgrWaitQueue *queue = (struct ThreadmgrWaitQueue *)&uidMutex->next;
 	struct ThreadCB *first;
@@ -243,7 +243,7 @@ uint32_t releaseAllFastMutex(struct ThreadCB *thread)
 int sceKernelInitializeFastMutex(struct ThreadmgrFastMutex *mutex, const char *name,
 				 SceUInt32 attr, const ThreadmgrFastMutexOptParam *option)
 {
-	struct ThreadmgrUidFastMutex *uidMutex;
+	struct SceUIDFastMutexObject *uidMutex;
 	struct ThreadCB *thread;
 	uint32_t saved;
 	int ceiling, intr, ret;
@@ -710,7 +710,7 @@ int sceKernelGetFastMutexInfo(struct ThreadmgrFastMutex *mutex, ThreadmgrFastMut
 /* SceThreadmgrForDriver_AF302193: a fast mutex's information by its UID */
 int SceThreadmgrForDriver_AF302193(SceUID uid, ThreadmgrFastMutexInfo *info)
 {
-	struct ThreadmgrUidFastMutex *uidMutex;
+	struct SceUIDFastMutexObject *uidMutex;
 	SceObjectBase *pObject;
 	struct ThreadmgrFastMutex *mutex;
 	ThreadmgrFastMutexInfo local;
@@ -729,7 +729,7 @@ int SceThreadmgrForDriver_AF302193(SceUID uid, ThreadmgrFastMutexInfo *info)
 			&pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_FAST_MUTEX_ID;
 	} else {
-		uidMutex = (struct ThreadmgrUidFastMutex *)pObject;
+		uidMutex = (struct SceUIDFastMutexObject *)pObject;
 		mutex = uidMutex->workArea;
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&uidMutex->lock);
 		ret = getFastMutexInfo(mutex, &local);
@@ -795,9 +795,9 @@ int SceThreadmgrForDriver_6D4C1EB7(int level, ThreadmgrFastMutexInfo *infos, Sce
 				s_threadmgrRuntime.manager->fastMutexClass,
 				&pObject) < 0)
 			continue;
-		lock = &((struct ThreadmgrUidFastMutex *)pObject)->lock;
+		lock = &((struct SceUIDFastMutexObject *)pObject)->lock;
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
-		err = getFastMutexInfo(((struct ThreadmgrUidFastMutex *)pObject)->workArea, &info);
+		err = getFastMutexInfo(((struct SceUIDFastMutexObject *)pObject)->workArea, &info);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intr);
 		sceGUIDReleaseObject(id);
 		if (err != 0)

@@ -628,7 +628,7 @@ int sceKernelWaitMultipleEventsForUser(const SceKernelWaitEvent *userEvents, Sce
 				       SceUInt32 *userTimeout)
 {
 	struct ThreadCB *thread;
-	ThreadmgrWaitMultipleEvents *wme;
+	WMECB *wme;
 	SceKernelResultEvent *results;
 	struct ThreadmgrUserEventId *ids;
 	SceKernelWaitEvent *events;
@@ -692,7 +692,7 @@ int sceKernelWaitMultipleEventsForUser(const SceKernelWaitEvent *userEvents, Sce
 			done = 0;
 			goto freeResults;
 		}
-		memset(wme, 0, offsetof(ThreadmgrWaitMultipleEvents, nodes));
+		memset(wme, 0, offsetof(WMECB, nodes));
 		wme->next = (struct ThreadmgrWaitNode *)wme;
 		wme->prev = (struct ThreadmgrWaitNode *)wme;
 		for (i = 0; i < count; i++) {
@@ -776,7 +776,7 @@ int sceKernelWaitMultipleEventsCBForUser(const SceKernelWaitEvent *userEvents, S
 				       SceUInt32 *userTimeout)
 {
 	struct ThreadCB *thread;
-	ThreadmgrWaitMultipleEvents *wme;
+	WMECB *wme;
 	SceKernelResultEvent *results;
 	struct ThreadmgrUserEventId *ids;
 	SceKernelWaitEvent *events;
@@ -840,7 +840,7 @@ int sceKernelWaitMultipleEventsCBForUser(const SceKernelWaitEvent *userEvents, S
 			done = 0;
 			goto freeResults;
 		}
-		memset(wme, 0, offsetof(ThreadmgrWaitMultipleEvents, nodes));
+		memset(wme, 0, offsetof(WMECB, nodes));
 		wme->next = (struct ThreadmgrWaitNode *)wme;
 		wme->prev = (struct ThreadmgrWaitNode *)wme;
 		for (i = 0; i < count; i++) {
@@ -3228,7 +3228,7 @@ int __sceKernelCreateLwMutex(void *work, const char *name, SceUInt32 attr,
 			     const ThreadmgrSyscallArgs *userArgs)
 {
 	ThreadmgrSyscallArgs args;
-	ThreadmgrLwMutexOptParam *option, *kOption;
+	SceKernelLwMutexOptParam *option, *kOption;
 	int initCount;
 	int ret;
 
@@ -3236,7 +3236,7 @@ int __sceKernelCreateLwMutex(void *work, const char *name, SceUInt32 attr,
 	if (ret < 0)
 		return ret;
 	initCount = args.arg[0];
-	option = (ThreadmgrLwMutexOptParam *)args.arg[1];
+	option = (SceKernelLwMutexOptParam *)args.arg[1];
 	kOption = option;
 	if (option != NULL) {
 		kOption = __builtin_alloca(sizeof(*kOption));
@@ -3974,7 +3974,7 @@ int sceKernelOpenTimerForUser(const char *userName)
 int sceKernelCloseTimerForUser(SceUID uid)
 {
 	SceKernelIntrStatus intrState = SceCpuForDriver_821FC0EE();
-	ThreadmgrUidTimer *object;
+	SceUIDTimerObject *object;
 	SceObjectBase *pObject;
 	struct ThreadCB *thread;
 	SceUID guid;
@@ -3987,7 +3987,7 @@ int sceKernelCloseTimerForUser(SceUID uid)
 	if (guid < 0 || sceGUIDReferObjectWithClass(guid,
 		s_threadmgrRuntime.manager->timerClass, &pObject) < 0)
 		goto resume;
-	object = (ThreadmgrUidTimer *)pObject;
+	object = (SceUIDTimerObject *)pObject;
 	if (scePUIDGetAttr(0, uid, &attributes) < 0)
 		goto release;
 	if (!(attributes & 0x80000)) {

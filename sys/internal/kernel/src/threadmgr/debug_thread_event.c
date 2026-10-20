@@ -2,7 +2,7 @@
 #include "private.h"
 
 /* PLACEHOLDER: name; tells both groups of the debugger's handlers of a thread event */
-void notifyDebugThreadEvent(SceUID processId, SceUID threadId, uint32_t event, int *status)
+void callDebuggerThreadEventHook(SceUID processId, SceUID threadId, uint32_t event, int *status)
 {
 	struct ThreadmgrDebugThreadEvent message;
 	ThreadmgrDebugHandler handler;

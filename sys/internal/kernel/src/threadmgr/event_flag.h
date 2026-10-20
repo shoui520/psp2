@@ -28,7 +28,7 @@ typedef struct ThreadmgrEventFlagCore {
 } ThreadmgrEventFlagCore;
 
 /* SceUIDEventFlagObject (0x40) */
-typedef struct ThreadmgrEventFlag {
+typedef struct SceUIDEventFlagObject {
 	SceUID ownerPid;			/* 0x00: the object base's first word */
 	SceClass *cls;
 	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
@@ -40,12 +40,12 @@ typedef struct ThreadmgrEventFlag {
 	uint32_t attr;				/* 0x20 */
 	uint32_t reserved;			/* 0x24: zeroed */
 	ThreadmgrEventFlagCore core;		/* 0x28 */
-} ThreadmgrEventFlag;
+} SceUIDEventFlagObject;
 
-_Static_assert(sizeof(ThreadmgrEventFlag) == 0x40, "SceUIDEventFlagObject size");
+_Static_assert(sizeof(SceUIDEventFlagObject) == 0x40, "SceUIDEventFlagObject size");
 
 #define EVENT_FLAG_FROM_HOLDER_LINK(link) \
-	((ThreadmgrEventFlag *)((uintptr_t)(link) - offsetof(ThreadmgrEventFlag, core.holderLink)))
+	((SceUIDEventFlagObject *)((uintptr_t)(link) - offsetof(SceUIDEventFlagObject, core.holderLink)))
 
 int getEventFlagInfo(SceUID evfId, SceKernelEventFlagInfo *info);
 int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern,

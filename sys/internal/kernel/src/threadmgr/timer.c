@@ -140,56 +140,56 @@ void setNextTimer(void)
 
 static int uidCpuTimer_Constructor(void *object)
 {
-	memset(&((ThreadmgrCpuTimer *)object)->timer, 0, sizeof(struct ThreadmgrTimer));
+	memset(&((SceUIDCpuTimerObject *)object)->timer, 0, sizeof(struct ThreadmgrTimer));
 	return 0;
 }
 
 static int uidDelay_Constructor(void *object)
 {
-	__builtin_memset((char *)object + offsetof(ThreadmgrDelay, callback), 0,
-			 sizeof(ThreadmgrDelay) - offsetof(ThreadmgrDelay, callback));
+	__builtin_memset((char *)object + offsetof(SceUIDDelayObject, callback), 0,
+			 sizeof(SceUIDDelayObject) - offsetof(SceUIDDelayObject, callback));
 	return 0;
 }
 
 static int uidAlarm_Constructor(void *object)
 {
-	memset(&((ThreadmgrAlarm *)object)->handler, 0,
-	       sizeof(ThreadmgrAlarm) - offsetof(ThreadmgrAlarm, handler));
+	memset(&((SceUIDAlarmObject *)object)->handler, 0,
+	       sizeof(SceUIDAlarmObject) - offsetof(SceUIDAlarmObject, handler));
 	return 0;
 }
 
 static int uidTimer_Constructor(void *object)
 {
-	memset(&((ThreadmgrUidTimer *)object)->time, 0,
-	       sizeof(ThreadmgrUidTimer) - offsetof(ThreadmgrUidTimer, time));
+	memset(&((SceUIDTimerObject *)object)->time, 0,
+	       sizeof(SceUIDTimerObject) - offsetof(SceUIDTimerObject, time));
 	return 0;
 }
 
 static int uidAlarm_Destructor(void *object)
 {
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 3592);
-	memset(&((ThreadmgrAlarm *)object)->handler, 0,
-	       sizeof(ThreadmgrAlarm) - offsetof(ThreadmgrAlarm, handler));
+	memset(&((SceUIDAlarmObject *)object)->handler, 0,
+	       sizeof(SceUIDAlarmObject) - offsetof(SceUIDAlarmObject, handler));
 	return 0;
 }
 
 static int uidDelay_Destructor(void *object)
 {
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 3541);
-	__builtin_memset((char *)object + offsetof(ThreadmgrDelay, callback), 0,
-			 sizeof(ThreadmgrDelay) - offsetof(ThreadmgrDelay, callback));
+	__builtin_memset((char *)object + offsetof(SceUIDDelayObject, callback), 0,
+			 sizeof(SceUIDDelayObject) - offsetof(SceUIDDelayObject, callback));
 	return 0;
 }
 
 static int uidCpuTimer_Destructor(void *object)
 {
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 3489);
-	memset(&((ThreadmgrCpuTimer *)object)->timer, 0, sizeof(struct ThreadmgrTimer));
+	memset(&((SceUIDCpuTimerObject *)object)->timer, 0, sizeof(struct ThreadmgrTimer));
 	return 0;
 }
 
 /* a delay goes back to the delay cache, its GUID kept for reuse */
-void uidDelay_FreeObject(ThreadmgrDelay *delay)
+void uidDelay_FreeObject(SceUIDDelayObject *delay)
 {
 	SCE_DBG_ASSERT_LEVEL(0, ThreadmgrIntrDisabled(), 3899);
 	delay->base.event.next = (struct ThreadmgrWaitNode *)&delay->base.event.next;
@@ -202,7 +202,7 @@ void uidDelay_FreeObject(ThreadmgrDelay *delay)
 	delay->thread = NULL;
 	sceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->delayCacheLock);
 	delay->base.event.cacheNext = s_threadmgrRuntime.manager->delayCache;
-	s_threadmgrRuntime.manager->delayCacheCount++;
+	s_threadmgrRuntime.manager->delayFreeCount++;
 	s_threadmgrRuntime.manager->delayCache = delay;
 	sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->delayCacheLock);
 }
@@ -218,9 +218,9 @@ static int timerIntrHandler(int code, void *arg)
 	struct ThreadmgrTimer *head = (struct ThreadmgrTimer *)&manager->timerQueueNext;
 	ThreadmgrTraceHook hook;
 	struct ThreadmgrTimer *timer;
-	ThreadmgrUidTimer *uidTimer;
-	ThreadmgrDelay *delay;
-	ThreadmgrAlarm *alarm;
+	SceUIDTimerObject *uidTimer;
+	SceUIDDelayObject *delay;
+	SceUIDAlarmObject *alarm;
 	uint64_t now, expiry, interval;
 	SceUInt32 next;
 	SceClass *cls;
@@ -247,7 +247,7 @@ static int timerIntrHandler(int code, void *arg)
 		cls = SceSysmemForKernel_368F1C36(timer->uid);
 		if (cls == manager->delayClass) {
 			/* a timed wait's timeout */
-			delay = (ThreadmgrDelay *)CPU_TIMER_FROM_TIMER(timer);
+			delay = (SceUIDDelayObject *)CPU_TIMER_FROM_TIMER(timer);
 			timer->deleted = 1;
 			sceKernelSpinlockLowUnlock(TIMER_LOCK());
 			delay->callback(delay->thread);
@@ -259,7 +259,7 @@ static int timerIntrHandler(int code, void *arg)
 			continue;
 		}
 		if (cls == manager->alarmClass) {
-			alarm = (ThreadmgrAlarm *)CPU_TIMER_FROM_TIMER(timer);
+			alarm = (SceUIDAlarmObject *)CPU_TIMER_FROM_TIMER(timer);
 			uid = timer->uid;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(TIMER_LOCK(), intr);
 			hook = s_threadmgrRuntime.threadTraceHook;
@@ -296,7 +296,7 @@ static int timerIntrHandler(int code, void *arg)
 			SCE_PANIC(SCE_LINE(1179, 1187));
 		}
 		/* a timer's event time */
-		uidTimer = (ThreadmgrUidTimer *)CPU_TIMER_FROM_TIMER(timer);
+		uidTimer = (SceUIDTimerObject *)CPU_TIMER_FROM_TIMER(timer);
 		pulse = uidTimer->pulse;
 		uid = timer->uid;
 		sceKernelSpinlockLowUnlock(TIMER_LOCK());
@@ -361,7 +361,7 @@ relock:
 /* SceUIDTimerClass's destructor: off its process's list, the counts down */
 static int uidTimer_Destructor(void *object)
 {
-	ThreadmgrUidTimer *uidTimer = object;
+	SceUIDTimerObject *uidTimer = object;
 #if FW_DEBUG
 	SceProcessObject *process = NULL;
 #else
@@ -406,7 +406,7 @@ static int uidTimer_Destructor(void *object)
 		sceGUIDReleaseObject(pid);
 	}
 	sceKernelCpuResumeIntr(intr);
-	memset(&uidTimer->time, 0, sizeof(ThreadmgrUidTimer) - offsetof(ThreadmgrUidTimer, time));
+	memset(&uidTimer->time, 0, sizeof(SceUIDTimerObject) - offsetof(SceUIDTimerObject, time));
 	return 0;
 }
 
@@ -418,7 +418,7 @@ static int deleteTimer(SceUID timerId, SceUID puid)
 {
 	struct ThreadCB *thread =
 		currentThreadContext();
-	ThreadmgrUidTimer *uidTimer;
+	SceUIDTimerObject *uidTimer;
 	SceObjectBase *pObject;
 	uint32_t saved, flags, wake;
 	SceUID threadId;
@@ -445,9 +445,9 @@ static int deleteTimer(SceUID timerId, SceUID puid)
 		}
 		goto resume;
 	}
-	sceKernelSpinlockLowLock(&((ThreadmgrUidTimer *)pObject)->base.event.lock);
+	sceKernelSpinlockLowLock(&((SceUIDTimerObject *)pObject)->base.event.lock);
 	sceKernelSpinlockLowLock(TIMER_LOCK());
-	uidTimer = (ThreadmgrUidTimer *)pObject;
+	uidTimer = (SceUIDTimerObject *)pObject;
 	if (uidTimer->base.timer.deleted == 1) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_TIMER_ID;
 		sceKernelSpinlockLowUnlock(TIMER_LOCK());
@@ -467,7 +467,7 @@ static int deleteTimer(SceUID timerId, SceUID puid)
 			} else {
 				unlinkTimer(&uidTimer->base.timer);
 				setNextTimer();
-				uidTimer = (ThreadmgrUidTimer *)pObject;
+				uidTimer = (SceUIDTimerObject *)pObject;
 				flags = uidTimer->flags;
 			}
 		}
@@ -486,10 +486,10 @@ static int deleteTimer(SceUID timerId, SceUID puid)
 		SCE_PANIC(SCE_LINE(1489, 1490));
 	wake = setEventWithNotifyCallback(timerId, TIMER_EVENT_DELETED,
 		caller, TIMER_EVENT_DELETED,
-		&((ThreadmgrUidTimer *)pObject)->base.event);
+		&((SceUIDTimerObject *)pObject)->base.event);
 	if ((int)wake < 0)
 		SCE_PANIC(SCE_LINE(1495, 1496));
-	sceKernelSpinlockLowUnlock(&((ThreadmgrUidTimer *)pObject)->base.event.lock);
+	sceKernelSpinlockLowUnlock(&((SceUIDTimerObject *)pObject)->base.event.lock);
 	sceGUIDReleaseObject(timerId);
 	ret = 0;
 	if (wake & 1)
@@ -512,7 +512,7 @@ static SceUID setAlarmWithName(const char *name, SceUInt64 delay, ThreadmgrAlarm
 		currentThreadContext();
 	SceProcessObject *process;
 	ThreadmgrTraceHook hook;
-	ThreadmgrAlarm *alarm;
+	SceUIDAlarmObject *alarm;
 	SceUID uid;
 	int intr;
 
@@ -556,7 +556,7 @@ static SceUID setAlarmWithName(const char *name, SceUInt64 delay, ThreadmgrAlarm
 /* an alarm's information */
 static int getAlarmInfo(SceUID alarmId, ThreadmgrAlarmInfo *info)
 {
-	ThreadmgrAlarm *alarm;
+	SceUIDAlarmObject *alarm;
 	SceObjectBase *pObject;
 	int intr, ret;
 
@@ -567,7 +567,7 @@ static int getAlarmInfo(SceUID alarmId, ThreadmgrAlarmInfo *info)
 					 &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_ALARM_ID;
 	} else {
-		alarm = (ThreadmgrAlarm *)pObject;
+		alarm = (SceUIDAlarmObject *)pObject;
 		info->alarmId = alarmId;
 		ret = 0;
 		strncpy(info->name, alarm->name, sizeof(info->name) - 1);
@@ -585,7 +585,7 @@ static int getAlarmInfo(SceUID alarmId, ThreadmgrAlarmInfo *info)
 /* a timer's information */
 static int getTimerInfo(SceUID timerId, SceKernelTimerInfo *info)
 {
-	ThreadmgrUidTimer *uidTimer;
+	SceUIDTimerObject *uidTimer;
 	SceObjectBase *pObject;
 	SceProcessObject *process;
 	uint32_t flags;
@@ -598,7 +598,7 @@ static int getTimerInfo(SceUID timerId, SceKernelTimerInfo *info)
 		ret = TimerUnknownIdError();
 		goto resume;
 	}
-	uidTimer = (ThreadmgrUidTimer *)pObject;
+	uidTimer = (SceUIDTimerObject *)pObject;
 	info->timerId = timerId;
 	strncpy(info->name, SceSysmemForDriver_E655852F(timerId), sizeof(info->name) - 1);
 	sceKernelSpinlockLowLock(&uidTimer->base.event.lock);
@@ -733,7 +733,7 @@ void startCpuTimer(struct ThreadMgrCpuCB *cpu)
 			SCE_PANIC(351);
 		if (uidCpuTimerClassInit(cls, "SceUIDCpuTimerClass",
 				s_threadmgrRuntime.manager->eventClass,
-				sizeof(ThreadmgrCpuTimer), uidCpuTimer_Constructor,
+				sizeof(SceUIDCpuTimerObject), uidCpuTimer_Constructor,
 				uidCpuTimer_Destructor) < 0)
 			SCE_PANIC(361);
 		manager = s_threadmgrRuntime.manager;
@@ -744,21 +744,21 @@ void startCpuTimer(struct ThreadMgrCpuCB *cpu)
 		uidDelayClassInit(cls);
 		s_threadmgrRuntime.manager->delayClass = (SceClass *)cls;
 		SCE_DBG_PRINTF_LEVEL(2, 0, 380, " sizeof(SceUIDDelayObject)=%d\n",
-				     sizeof(ThreadmgrDelay));
+				     sizeof(SceUIDDelayObject));
 		cls = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
 		if (cls == NULL)
 			SCE_PANIC(385);
 		uidAlarmClassInit(cls);
 		s_threadmgrRuntime.manager->alarmClass = (SceClass *)cls;
 		SCE_DBG_PRINTF_LEVEL(2, 0, 398, " sizeof(SceUIDAlarmObject)=%d\n",
-				     sizeof(ThreadmgrAlarm));
+				     sizeof(SceUIDAlarmObject));
 		cls = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
 		if (cls == NULL)
 			SCE_PANIC(403);
 		uidTimerClassInit(cls);
 		s_threadmgrRuntime.manager->timerClass = (SceClass *)cls;
 		SCE_DBG_PRINTF_LEVEL(2, 0, 416, " sizeof(SceUIDTimerObject)=%d\n",
-				     sizeof(ThreadmgrUidTimer));
+				     sizeof(SceUIDTimerObject));
 		manager = s_threadmgrRuntime.manager;
 		manager->timerQueueNext = (struct ThreadmgrTimer *)&manager->timerQueueNext;
 		manager->timerQueuePrev = (struct ThreadmgrTimer *)&manager->timerQueueNext;
@@ -844,7 +844,7 @@ void getWakeupTime(uint64_t *wakeup, uint32_t timeout)
 
 /* the delay object gets its timer and goes on the queue */
 static inline __attribute__((always_inline)) SceUID setDelayTimer(SceUID uid,
-	ThreadmgrDelay *delay, const uint64_t *wakeup, uintptr_t callback,
+	SceUIDDelayObject *delay, const uint64_t *wakeup, uintptr_t callback,
 	struct ThreadCB *thread, SceProcessObject *process)
 {
 	if (uid < 0) {
@@ -880,7 +880,7 @@ int uidDelay_AllocObject(const uint64_t *wakeup, uintptr_t callback)
 		currentThreadContext();
 	SceProcessObject *process = thread->process;
 	struct SceKernelThreadmgrPrivate *manager;
-	ThreadmgrDelay *delay;
+	SceUIDDelayObject *delay;
 	SceUInt32 version;
 	uint64_t now;
 	SceUID uid;
@@ -900,7 +900,7 @@ int uidDelay_AllocObject(const uint64_t *wakeup, uintptr_t callback)
 	SCE_DBG_ASSERT_LEVEL(0, ThreadmgrIntrDisabled(), 3832);
 	manager = s_threadmgrRuntime.manager;
 	sceKernelSpinlockLowLock(&manager->delayCacheLock);
-	if (manager->delayCacheCount < 1) {
+	if (manager->delayFreeCount < 1) {
 		sceKernelSpinlockLowUnlock(&manager->delayCacheLock);
 		uid = sceGUIDKernelCreate(s_threadmgrRuntime.manager->delayClass,
 					   "SceKernelDelayObject", (SceObjectBase **)&delay);
@@ -924,7 +924,7 @@ int uidDelay_AllocObject(const uint64_t *wakeup, uintptr_t callback)
 		}
 	} else {
 		delay = manager->delayCache;
-		manager->delayCacheCount--;
+		manager->delayFreeCount--;
 		manager->delayCache = delay->base.event.cacheNext;
 		sceKernelSpinlockLowUnlock(&manager->delayCacheLock);
 		delay->base.event.cacheNext = &delay->base.event.uidEntry;
@@ -940,7 +940,7 @@ int uidDelay_AllocObject(const uint64_t *wakeup, uintptr_t callback)
  */
 void cancelDelayTimer(SceUID delayId, struct ThreadCB *thread)
 {
-	ThreadmgrDelay *delay;
+	SceUIDDelayObject *delay;
 	SceObjectBase *pObject;
 	SceUInt32 *timeout;
 	SceUInt32 remaining;
@@ -954,7 +954,7 @@ void cancelDelayTimer(SceUID delayId, struct ThreadCB *thread)
 				      delayId, ret);
 		return;
 	}
-	delay = (ThreadmgrDelay *)pObject;
+	delay = (SceUIDDelayObject *)pObject;
 	sceKernelSpinlockLowLock(TIMER_LOCK());
 	if (thread != NULL) {
 		now = SceSysrootForKernel_E20F6FC8();
@@ -984,7 +984,7 @@ void cancelDelayTimer(SceUID delayId, struct ThreadCB *thread)
 		unlinkTimer(&delay->base.timer);
 		setNextTimer();
 		sceKernelSpinlockLowUnlock(TIMER_LOCK());
-		uidDelay_FreeObject((ThreadmgrDelay *)pObject);
+		uidDelay_FreeObject((SceUIDDelayObject *)pObject);
 	} else {
 		sceKernelSpinlockLowUnlock(TIMER_LOCK());
 	}
@@ -998,7 +998,7 @@ void cancelDelayTimer(SceUID delayId, struct ThreadCB *thread)
 int timerProcessExit(SceProcessObject *process)
 {
 	SceSize got = 0;
-	ThreadmgrUidTimer *uidTimer;
+	SceUIDTimerObject *uidTimer;
 	SceUID *vector, guid, pid;
 	uint32_t flags;
 	bool close;
@@ -1096,7 +1096,7 @@ SceUID sceKernelCreateTimer(const char *name, SceUInt32 attr,
 		currentThreadContext();
 	SceProcessObject *process = NULL;
 	UIDCreateOpt opt;
-	ThreadmgrUidTimer *uidTimer;
+	SceUIDTimerObject *uidTimer;
 	SceObjectBase *pObject;
 	uint32_t saved;
 	SceUID uid, threadId;
@@ -1200,7 +1200,7 @@ SceUID sceKernelCreateTimer(const char *name, SceUInt32 attr,
 		}
 		goto resume;
 	}
-	uidTimer = (ThreadmgrUidTimer *)pObject;
+	uidTimer = (SceUIDTimerObject *)pObject;
 	syscall = ThreadmgrInSyscall();
 	process = thread->process;
 	uidTimer->base.timer.process = process;
@@ -1271,7 +1271,7 @@ static inline int lockTimerQueueCpuSuspendIntr(void)
 /* starts counting; returns 1 if it already was */
 int sceKernelStartTimer(SceUID timerId)
 {
-	ThreadmgrUidTimer *uidTimer;
+	SceUIDTimerObject *uidTimer;
 	SceObjectBase *pObject;
 	uint32_t saved;
 	uint64_t now;
@@ -1296,7 +1296,7 @@ int sceKernelStartTimer(SceUID timerId)
 		}
 		goto resume;
 	}
-	uidTimer = (ThreadmgrUidTimer *)pObject;
+	uidTimer = (SceUIDTimerObject *)pObject;
 	sceKernelSpinlockLowLock(&uidTimer->base.event.lock);
 	if (uidTimer->flags & TIMER_FLAG_RUNNING) {
 		ret = 1;
@@ -1327,7 +1327,7 @@ resume:
 /* stops counting; returns 1 if it was counting */
 int sceKernelStopTimer(SceUID timerId)
 {
-	ThreadmgrUidTimer *uidTimer;
+	SceUIDTimerObject *uidTimer;
 	SceObjectBase *pObject;
 	uint32_t saved;
 	uint64_t now;
@@ -1352,7 +1352,7 @@ int sceKernelStopTimer(SceUID timerId)
 		}
 		goto resume;
 	}
-	uidTimer = (ThreadmgrUidTimer *)pObject;
+	uidTimer = (SceUIDTimerObject *)pObject;
 	sceKernelSpinlockLowLock(&uidTimer->base.event.lock);
 	ret = 0;
 	if (uidTimer->flags & TIMER_FLAG_RUNNING) {
@@ -1380,7 +1380,7 @@ resume:
 /* where a running timer counts from (0 when stopped) */
 int sceKernelGetTimerBase(SceUID timerId, SceUInt64 *base)
 {
-	ThreadmgrUidTimer *uidTimer;
+	SceUIDTimerObject *uidTimer;
 	SceObjectBase *pObject;
 	uint32_t saved;
 	int intr, ret;
@@ -1401,7 +1401,7 @@ int sceKernelGetTimerBase(SceUID timerId, SceUInt64 *base)
 			ret = SCE_KERNEL_ERROR_UNKNOWN_TIMER_ID;
 		}
 	} else {
-		uidTimer = (ThreadmgrUidTimer *)pObject;
+		uidTimer = (SceUIDTimerObject *)pObject;
 		sceKernelSpinlockLowLock(&uidTimer->base.event.lock);
 		if (uidTimer->flags & TIMER_FLAG_RUNNING)
 			*base = uidTimer->time;
@@ -1419,7 +1419,7 @@ restore:
 
 SceUInt64 SceThreadmgrForDriver_A6D11DD3(SceUID timerId)
 {
-	ThreadmgrUidTimer *uidTimer;
+	SceUIDTimerObject *uidTimer;
 	SceObjectBase *pObject;
 	SceUInt64 base = (SceUInt64)-1;
 	uint32_t saved;
@@ -1429,7 +1429,7 @@ SceUInt64 SceThreadmgrForDriver_A6D11DD3(SceUID timerId)
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), &pObject) >= 0) {
-		uidTimer = (ThreadmgrUidTimer *)pObject;
+		uidTimer = (SceUIDTimerObject *)pObject;
 		sceKernelSpinlockLowLock(&uidTimer->base.event.lock);
 		if (uidTimer->flags & TIMER_FLAG_RUNNING)
 			base = uidTimer->time;
@@ -1438,7 +1438,7 @@ SceUInt64 SceThreadmgrForDriver_A6D11DD3(SceUID timerId)
 		sceKernelSpinlockLowUnlock(&uidTimer->base.event.lock);
 		sceGUIDReleaseObject(timerId);
 	}
-	uidTimer = (ThreadmgrUidTimer *)pObject;
+	uidTimer = (SceUIDTimerObject *)pObject;
 	sceKernelCpuResumeIntr(intr);
 	ThreadmgrSetUserRoWord(saved);
 	return base;
@@ -1447,7 +1447,7 @@ SceUInt64 SceThreadmgrForDriver_A6D11DD3(SceUID timerId)
 /* the count */
 int sceKernelGetTimerTime(SceUID timerId, SceUInt64 *time)
 {
-	ThreadmgrUidTimer *uidTimer;
+	SceUIDTimerObject *uidTimer;
 	SceObjectBase *pObject;
 	uint32_t saved;
 	int intr, ret;
@@ -1468,7 +1468,7 @@ int sceKernelGetTimerTime(SceUID timerId, SceUInt64 *time)
 			ret = SCE_KERNEL_ERROR_UNKNOWN_TIMER_ID;
 		}
 	} else {
-		uidTimer = (ThreadmgrUidTimer *)pObject;
+		uidTimer = (SceUIDTimerObject *)pObject;
 		sceKernelSpinlockLowLock(&uidTimer->base.event.lock);
 		if (uidTimer->flags & TIMER_FLAG_RUNNING)
 			*time = SceSysrootForKernel_E20F6FC8() -
@@ -1487,7 +1487,7 @@ restore:
 
 SceUInt64 SceThreadmgrForDriver_C1286004(SceUID timerId)
 {
-	ThreadmgrUidTimer *uidTimer;
+	SceUIDTimerObject *uidTimer;
 	SceObjectBase *pObject;
 	SceUInt64 time;
 	uint32_t saved;
@@ -1499,7 +1499,7 @@ SceUInt64 SceThreadmgrForDriver_C1286004(SceUID timerId)
 	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), &pObject) < 0) {
 		time = (SceUInt64)-1;
 	} else {
-		uidTimer = (ThreadmgrUidTimer *)pObject;
+		uidTimer = (SceUIDTimerObject *)pObject;
 		sceKernelSpinlockLowLock(&uidTimer->base.event.lock);
 		if (uidTimer->flags & TIMER_FLAG_RUNNING)
 			time = SceSysrootForKernel_E20F6FC8() -
@@ -1517,7 +1517,7 @@ SceUInt64 SceThreadmgrForDriver_C1286004(SceUID timerId)
 /* sets the count to *time, returning the old count there */
 int sceKernelSetTimerTime(SceUID timerId, SceUInt64 *time)
 {
-	ThreadmgrUidTimer *uidTimer;
+	SceUIDTimerObject *uidTimer;
 	SceObjectBase *pObject;
 	uint64_t now, elapsed, old, previous;
 	uint32_t saved;
@@ -1546,7 +1546,7 @@ int sceKernelSetTimerTime(SceUID timerId, SceUInt64 *time)
 		}
 		goto resume;
 	}
-	uidTimer = (ThreadmgrUidTimer *)pObject;
+	uidTimer = (SceUIDTimerObject *)pObject;
 	sceKernelSpinlockLowLock(&uidTimer->base.event.lock);
 	if (uidTimer->flags & TIMER_FLAG_RUNNING) {
 		now = SceSysrootForKernel_E20F6FC8();
@@ -1582,7 +1582,7 @@ restore:
 /* the same with the count by value; returns the old count, or -1 */
 SceUInt64 SceThreadmgrForDriver_85195A16(SceUID timerId, SceUInt64 time)
 {
-	ThreadmgrUidTimer *uidTimer;
+	SceUIDTimerObject *uidTimer;
 	SceObjectBase *pObject;
 	uint64_t now, elapsed, previous = (uint64_t)-1;
 	uint32_t saved;
@@ -1594,7 +1594,7 @@ SceUInt64 SceThreadmgrForDriver_85195A16(SceUID timerId, SceUInt64 time)
 		goto restore;
 	intr = SceCpuForDriver_821FC0EE();
 	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), &pObject) >= 0) {
-		uidTimer = (ThreadmgrUidTimer *)pObject;
+		uidTimer = (SceUIDTimerObject *)pObject;
 		sceKernelSpinlockLowLock(&uidTimer->base.event.lock);
 		if (uidTimer->flags & TIMER_FLAG_RUNNING) {
 			now = SceSysrootForKernel_E20F6FC8();
@@ -1618,7 +1618,7 @@ SceUInt64 SceThreadmgrForDriver_85195A16(SceUID timerId, SceUInt64 time)
 		sceKernelSpinlockLowUnlock(&uidTimer->base.event.lock);
 		sceGUIDReleaseObject(timerId);
 	}
-	uidTimer = (ThreadmgrUidTimer *)pObject;
+	uidTimer = (SceUIDTimerObject *)pObject;
 	sceKernelCpuResumeIntr(intr);
 restore:
 	ThreadmgrSetUserRoWord(saved);
@@ -1632,7 +1632,7 @@ restore:
  */
 int sceKernelSetTimerEvent(SceUID timerId, SceUInt32 type, SceUInt64 *interval, int repeat)
 {
-	ThreadmgrUidTimer *uidTimer;
+	SceUIDTimerObject *uidTimer;
 	SceObjectBase *pObject;
 	uint32_t saved, flags;
 	bool requeue;
@@ -1669,7 +1669,7 @@ int sceKernelSetTimerEvent(SceUID timerId, SceUInt32 type, SceUInt64 *interval, 
 		}
 		goto resume;
 	}
-	uidTimer = (ThreadmgrUidTimer *)pObject;
+	uidTimer = (SceUIDTimerObject *)pObject;
 	sceKernelSpinlockLowLock(&uidTimer->base.event.lock);
 	sceKernelSpinlockLowLock(TIMER_LOCK());
 	flags = uidTimer->flags;
@@ -1727,9 +1727,9 @@ int sceKernelCancelTimer(SceUID timerId, SceUInt32 *numWaitThreads)
 {
 	struct ThreadmgrWaitNode *queue, *node, *next;
 	struct ThreadCB *thread;
-	ThreadmgrWaitMultipleEvents *wme;
+	WMECB *wme;
 	ThreadmgrEventWaitNode *wait;
-	ThreadmgrUidTimer *uidTimer;
+	SceUIDTimerObject *uidTimer;
 	SceObjectBase *pObject;
 	uint32_t saved, flags, wake, left;
 	SceUID waitId;
@@ -1748,7 +1748,7 @@ int sceKernelCancelTimer(SceUID timerId, SceUInt32 *numWaitThreads)
 		}
 		goto resume;
 	}
-	uidTimer = (ThreadmgrUidTimer *)pObject;
+	uidTimer = (SceUIDTimerObject *)pObject;
 	queue = (struct ThreadmgrWaitNode *)EVENT_WAIT_QUEUE(&uidTimer->base.event);
 	sceKernelSpinlockLowLock(&uidTimer->base.event.lock);
 	flags = uidTimer->flags;
@@ -1824,7 +1824,7 @@ int SceThreadmgrForKernel_7425185E(SceProcessObject *process)
 {
 	ListNode *head = &process->timers;
 	ListNode *link, *next;
-	ThreadmgrUidTimer *uidTimer;
+	SceUIDTimerObject *uidTimer;
 	volatile int spin;
 	uint32_t flags;
 	int intr;
@@ -1868,7 +1868,7 @@ int SceThreadmgrForKernel_89C17825(SceProcessObject *process)
 {
 	ListNode *head = &process->timers;
 	ListNode *link, *next;
-	ThreadmgrUidTimer *uidTimer;
+	SceUIDTimerObject *uidTimer;
 	volatile int spin;
 	uint32_t flags;
 	int intr;
@@ -2046,7 +2046,7 @@ end:
 /* how long until the event (in the timer's count while it is stopped) */
 int sceKernelGetTimerEventRemainingTime(SceUID timerId, SceUInt64 *remaining)
 {
-	ThreadmgrUidTimer *uidTimer;
+	SceUIDTimerObject *uidTimer;
 	SceProcessObject *process;
 	uint32_t saved;
 	int intr, ret;
@@ -2115,7 +2115,7 @@ SceUID SceThreadmgrForDriver_10517330(const char *name, const SceUInt64 *delay,
 int sceKernelCancelAlarm(SceUID alarmId)
 {
 	ThreadmgrTraceHook hook;
-	ThreadmgrAlarm *alarm;
+	SceUIDAlarmObject *alarm;
 	SceObjectBase *pObject;
 	int intr, ret;
 
@@ -2130,7 +2130,7 @@ int sceKernelCancelAlarm(SceUID alarmId)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_ALARM_ID;
 		goto resume;
 	}
-	alarm = (ThreadmgrAlarm *)pObject;
+	alarm = (SceUIDAlarmObject *)pObject;
 	sceKernelSpinlockLowLock(TIMER_LOCK());
 	if (alarm->base.timer.deleted == 0) {
 		alarm->base.timer.deleted = 1;
@@ -2234,7 +2234,7 @@ end:
 static inline __attribute__((always_inline)) int uidDelay_CreateCache(int target)
 {
 	struct SceKernelThreadmgrPrivate *manager;
-	ThreadmgrDelay *delay;
+	SceUIDDelayObject *delay;
 	bool more = true;
 	SceUID uid;
 	int intr, ret;
@@ -2263,9 +2263,9 @@ static inline __attribute__((always_inline)) int uidDelay_CreateCache(int target
 			manager = s_threadmgrRuntime.manager;
 			sceKernelSpinlockLowLock(&manager->delayCacheLock);
 			delay->base.event.cacheNext = manager->delayCache;
-			manager->delayCacheCount++;
+			manager->delayFreeCount++;
 			manager->delayCache = delay;
-			if (manager->delayCacheCount >= target)
+			if (manager->delayFreeCount >= target)
 				more = false;
 			sceKernelSpinlockLowUnlock(&manager->delayCacheLock);
 		}
@@ -2278,17 +2278,17 @@ static inline __attribute__((always_inline)) int uidDelay_CreateCache(int target
 static inline __attribute__((always_inline)) void uidDelay_DeleteCache(int target)
 {
 	struct SceKernelThreadmgrPrivate *manager;
-	ThreadmgrDelay *delay;
+	SceUIDDelayObject *delay;
 	int intr;
 
 	for (;;) {
 		manager = s_threadmgrRuntime.manager;
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(
 			&manager->delayCacheLock);
-		if (manager->delayCacheCount <= target)
+		if (manager->delayFreeCount <= target)
 			break;
 		delay = manager->delayCache;
-		manager->delayCacheCount--;
+		manager->delayFreeCount--;
 		manager->delayCache = delay->base.event.cacheNext;
 		sceKernelSpinlockLowUnlock(&manager->delayCacheLock);
 		if (sceGUIDClose(SceSysmemForKernel_03A2CAF0(delay->base.event.uidEntry)) < 0)
@@ -2305,7 +2305,7 @@ int uidDelay_ManageCache(int high, int low, int target)
 	int intr, count, ret;
 
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&s_threadmgrRuntime.manager->delayCacheLock);
-	count = s_threadmgrRuntime.manager->delayCacheCount;
+	count = s_threadmgrRuntime.manager->delayFreeCount;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_threadmgrRuntime.manager->delayCacheLock, intr);
 	if (count < low) {
 		ret = uidDelay_CreateCache(target);

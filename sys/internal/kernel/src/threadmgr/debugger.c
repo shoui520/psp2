@@ -443,8 +443,8 @@ int getThreadInfoForDebuggerByGUID(SceUID threadId, SceUInt32 level, uint32_t fl
 static inline void convertWaitObjectsLw(ThreadmgrThreadInfoForDebugger *info)
 {
 	ThreadmgrLwMutexWork work;
-	ThreadmgrLwCond *lwCond;
-	ThreadmgrLwMutex *lwMutex;
+	SceUIDLwCondObject *lwCond;
+	SceUIDLwMutexObject *lwMutex;
 	SceUID uid;
 
 	uid = info->waitDetail[1];
@@ -473,8 +473,8 @@ static inline void convertWaitObjectsLw(ThreadmgrThreadInfoForDebugger *info)
 /* a cond wait's mutex and cond as PUIDs */
 static inline void convertWaitObjectsCond(ThreadmgrThreadInfoForDebugger *info)
 {
-	ThreadmgrMutex *mutex;
-	ThreadmgrCond *cond;
+	SceUIDMutexObject *mutex;
+	SceUIDCondObject *cond;
 	SceUID uid;
 
 	uid = info->waitDetail[2];
@@ -1135,10 +1135,10 @@ int debugSuspendThreadIntr(SceUID threadId, uint32_t reason, int *result,
 			if (!(state & SCE_KERNEL_THREAD_STATUS_STANDBY))
 				SCE_PANIC(126);
 			self = (struct ThreadmgrWaitNode *)thread;
-			sceKernelSpinlockLowLock(&cpu->standbyLock);
+			sceKernelSpinlockLowLock(&cpu->standbyListLock);
 			self->next->prev = self->prev;
 			self->prev->next = self->next;
-			sceKernelSpinlockLowUnlock(&cpu->standbyLock);
+			sceKernelSpinlockLowUnlock(&cpu->standbyListLock);
 		}
 		takeThreadOffCpu(thread, reason);
 	} else {
@@ -1178,9 +1178,9 @@ int sceKernelDebugSuspendThread(SceUID threadId, uint32_t reason)
 	}
 	manager = s_threadmgrRuntime.manager;
 	for (i = 0; i < 4; i++)
-		if (manager->cpuCB[i].idleThread->threadId == threadId)
+		if (manager->cpuCB[i].pIdleThreadCB->threadId == threadId)
 			goto refused;
-	if (manager->cleanerThread->threadId == threadId) {
+	if (manager->pCleanerThreadCB->threadId == threadId) {
 refused:
 		result = SCE_KERNEL_ERROR_CAN_NOT_SUSPEND;
 		goto resume;
@@ -1231,10 +1231,10 @@ refused:
 				if (!(state & SCE_KERNEL_THREAD_STATUS_STANDBY))
 					SCE_PANIC_FUNC(278, "sceKernelDebugSuspendThread");
 				self = (struct ThreadmgrWaitNode *)thread;
-				sceKernelSpinlockLowLock(&cpu->standbyLock);
+				sceKernelSpinlockLowLock(&cpu->standbyListLock);
 				self->next->prev = self->prev;
 				self->prev->next = self->next;
-				sceKernelSpinlockLowUnlock(&cpu->standbyLock);
+				sceKernelSpinlockLowUnlock(&cpu->standbyListLock);
 			}
 			takeThreadOffCpu(thread, reason);
 			goto suspended;
@@ -1730,7 +1730,7 @@ SceUID SceThreadmgrForDriver_F311808F(SceUID threadId)
 int sceKernelGetWaitingThreadList(SceUID waitId, ThreadmgrWaitingThread *list, SceSize size,
 				  SceSize *count)
 {
-	struct ThreadmgrWaitableObject *object;
+	struct SceUIDWaitableObject *object;
 	SceObjectBase *pObject;
 	struct ThreadmgrWaitNode *node, *head;
 	struct ThreadCB *thread;
@@ -1747,7 +1747,7 @@ int sceKernelGetWaitingThreadList(SceUID waitId, ThreadmgrWaitingThread *list, S
 		ret = SCE_KERNEL_ERROR_UNKNOWN_UID;
 		goto resume;
 	}
-	object = (struct ThreadmgrWaitableObject *)pObject;
+	object = (struct SceUIDWaitableObject *)pObject;
 	sceKernelSpinlockLowLock(&object->lock);
 	head = (struct ThreadmgrWaitNode *)&object->next;
 	ret = 0;

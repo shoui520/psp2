@@ -31,7 +31,7 @@ static inline int EventFlagMatches(uint32_t pattern, uint32_t request, uint32_t 
 }
 
 /* the holder's last wait ended: the flag is free again */
-static inline void EventFlagDropHolder(ThreadmgrEventFlag *evf)
+static inline void EventFlagDropHolder(SceUIDEventFlagObject *evf)
 {
 	if (evf->core.holder != NULL && --evf->core.holdCount == 0) {
 		evf->core.holder = NULL;
@@ -42,7 +42,7 @@ static inline void EventFlagDropHolder(ThreadmgrEventFlag *evf)
 /* SceUIDEventFlagClass's release: a waiter leaves (woken or cancelled) */
 static int uidEventFlag_ReleaseMethod(void *cls, void *object, struct ThreadCB *thread)
 {
-	ThreadmgrEventFlag *evf = object;
+	SceUIDEventFlagObject *evf = object;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1746);
 	SCE_DBG_ASSERT_CHECK(evf->lock != 0, 1749);
@@ -58,7 +58,7 @@ static int uidEventFlag_ReleaseMethod(void *cls, void *object, struct ThreadCB *
 /* SceUIDEventFlagClass's constructor */
 static int uidEventFlag_Constructor(void *object)
 {
-	ThreadmgrEventFlag *evf = object;
+	SceUIDEventFlagObject *evf = object;
 
 	memset(&evf->core, 0, sizeof(evf->core));
 	return 0;
@@ -67,7 +67,7 @@ static int uidEventFlag_Constructor(void *object)
 /* SceUIDEventFlagClass's destructor: the waiters wake with WAIT_DELETE */
 static int uidEventFlag_Destructor(void *object)
 {
-	ThreadmgrEventFlag *evf = object;
+	SceUIDEventFlagObject *evf = object;
 	SceProcessObject *process;
 	struct ThreadCB *holder;
 	uint32_t wake;
@@ -115,7 +115,7 @@ int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPa
 		  SceUInt32 *timeout, int callbacks)
 {
 	struct ThreadCB *thread;
-	ThreadmgrEventFlag *evf;
+	SceUIDEventFlagObject *evf;
 	SceObjectBase *pObject;
 	uint32_t saved, current;
 	uint64_t wakeup;
@@ -172,7 +172,7 @@ int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPa
 		}
 		goto resume;
 	}
-	evf = (ThreadmgrEventFlag *)pObject;
+	evf = (SceUIDEventFlagObject *)pObject;
 	sceKernelSpinlockLowLock(&evf->lock);
 	if (!(evf->attr & SCE_KERNEL_EVF_ATTR_MULTI)) {
 		if (evf->core.holder == NULL) {
@@ -268,7 +268,7 @@ restore:
 /* an event flag's information (SceThreadmgrForDriver_612277C9's core) */
 int getEventFlagInfo(SceUID evfId, SceKernelEventFlagInfo *info)
 {
-	ThreadmgrEventFlag *evf;
+	SceUIDEventFlagObject *evf;
 	SceObjectBase *pObject;
 	int intr, ret;
 
@@ -281,7 +281,7 @@ int getEventFlagInfo(SceUID evfId, SceKernelEventFlagInfo *info)
 		ret = !ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_EVF_ID :
 			SCE_KERNEL_ERROR_UNKNOWN_EVF_ID | SYSCALL_ERROR_BIT;
 	} else {
-		evf = (ThreadmgrEventFlag *)pObject;
+		evf = (SceUIDEventFlagObject *)pObject;
 		info->evfId = evfId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(evfId), sizeof(info->name) - 1);
 		sceKernelSpinlockLowLock(&evf->lock);
@@ -307,7 +307,7 @@ void startEventFlag(void)
 	cls = sceKernelAllocHeapMemory(manager->heapId, 0x38);
 	if (cls == NULL)
 		SCE_PANIC(323);
-	ret = uidExtendedClassInit(cls, "SceUIDEventFlagClass",
+	ret = uidWaitableClassInit(cls, "SceUIDEventFlagClass",
 		s_threadmgrRuntime.manager->waitableClass, EVF_ITEM_SIZE,
 		uidEventFlag_Constructor, (SceClassCallback)uidEventFlag_Destructor,
 		uidDefaultCancelWait, uidDefault_RevalidateMethod,
@@ -316,7 +316,7 @@ void startEventFlag(void)
 		SCE_PANIC_FUNC(SCE_LINE(1650, 1648), "uidEventFlagClassInit");
 	s_threadmgrRuntime.manager->eventFlagClass = (SceClass *)cls;
 	SCE_DBG_PRINTF_LEVEL(2, 0, 343, " sizeof(SceUIDEventFlagObject)=%d\n",
-			     sizeof(ThreadmgrEventFlag));
+			     sizeof(SceUIDEventFlagObject));
 }
 
 /* an exiting thread lets go of the event flags it holds */
@@ -324,7 +324,7 @@ void releaseAllEventFlag(struct ThreadCB *thread)
 {
 	ListNode *head = (ListNode *)&thread->heldEventFlagNext;
 	ListNode *link;
-	ThreadmgrEventFlag *evf;
+	SceUIDEventFlagObject *evf;
 	volatile int delay;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 365);
@@ -403,7 +403,7 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 	struct ThreadCB *thread;
 	SceProcessObject *process = NULL;
 	UIDCreateOpt opt;
-	ThreadmgrEventFlag *evf;
+	SceUIDEventFlagObject *evf;
 	SceObjectBase *pObject;
 	uint32_t saved;
 	SceUID uid;
@@ -503,7 +503,7 @@ SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initP
 			sceKernelSpinlockLowUnlock(&process->resourceLock);
 		}
 	} else {
-		evf = (ThreadmgrEventFlag *)pObject;
+		evf = (SceUIDEventFlagObject *)pObject;
 		evf->ownerPid = ThreadmgrInSyscall() ? thread->processId : SCE_KERNEL_PROCESS_ID;
 		evf->attr = attr;
 		evf->core.pattern = initPattern;
@@ -558,7 +558,7 @@ int SceThreadmgrForDriver_8A35F714(SceUID evfId, uint32_t pattern, uint32_t mode
 int sceKernelPollEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern)
 {
 	struct ThreadCB *thread;
-	ThreadmgrEventFlag *evf;
+	SceUIDEventFlagObject *evf;
 	SceObjectBase *pObject;
 	uint32_t saved;
 	int intr, ret;
@@ -594,7 +594,7 @@ int sceKernelPollEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32
 		}
 		goto resume;
 	}
-	evf = (ThreadmgrEventFlag *)pObject;
+	evf = (SceUIDEventFlagObject *)pObject;
 	sceKernelSpinlockLowLock(&evf->lock);
 	if (!(evf->attr & SCE_KERNEL_EVF_ATTR_MULTI) && evf->core.holder != NULL &&
 	    evf->core.holder != thread) {
@@ -628,7 +628,7 @@ int sceKernelSetEventFlag(SceUID evfId, uint32_t pattern)
 	struct ThreadmgrWaitNode *node, *next;
 	struct ThreadCB *waiter;
 	struct ThreadmgrWaitQueue *queue;
-	ThreadmgrEventFlag *evf;
+	SceUIDEventFlagObject *evf;
 	SceObjectBase *pObject;
 	uint32_t saved, wake, request, mode;
 	int intr, ret;
@@ -648,7 +648,7 @@ int sceKernelSetEventFlag(SceUID evfId, uint32_t pattern)
 		}
 		goto resume;
 	}
-	evf = (ThreadmgrEventFlag *)pObject;
+	evf = (SceUIDEventFlagObject *)pObject;
 	if (pattern == 0) {
 		sceGUIDReleaseObject(evfId);
 		ret = 0;
@@ -699,7 +699,7 @@ resume:
 /* ANDs the pattern with mask */
 int sceKernelClearEventFlag(SceUID evfId, uint32_t mask)
 {
-	ThreadmgrEventFlag *evf;
+	SceUIDEventFlagObject *evf;
 	SceObjectBase *pObject;
 	uint32_t saved;
 	int intr, ret;
@@ -718,7 +718,7 @@ int sceKernelClearEventFlag(SceUID evfId, uint32_t mask)
 			ret = SCE_KERNEL_ERROR_UNKNOWN_EVF_ID;
 		}
 	} else {
-		evf = (ThreadmgrEventFlag *)pObject;
+		evf = (SceUIDEventFlagObject *)pObject;
 		sceKernelSpinlockLowLock(&evf->lock);
 		evf->core.pattern &= mask;
 		sceKernelSpinlockLowUnlock(&evf->lock);
@@ -732,7 +732,7 @@ int sceKernelClearEventFlag(SceUID evfId, uint32_t mask)
 /* sets the pattern and wakes every waiter with WAIT_CANCEL */
 int sceKernelCancelEventFlag(SceUID evfId, uint32_t setPattern, int *numWaitThreads)
 {
-	ThreadmgrEventFlag *evf;
+	SceUIDEventFlagObject *evf;
 	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	int intr, ret;
@@ -751,7 +751,7 @@ int sceKernelCancelEventFlag(SceUID evfId, uint32_t setPattern, int *numWaitThre
 			ret = SCE_KERNEL_ERROR_UNKNOWN_EVF_ID;
 		}
 	} else {
-		evf = (ThreadmgrEventFlag *)pObject;
+		evf = (SceUIDEventFlagObject *)pObject;
 		sceKernelSpinlockLowLock(&evf->lock);
 		evf->core.pattern = setPattern;
 		wake = wakeupWaitObjectAll((uintptr_t)&evf->next, SCE_KERNEL_ERROR_WAIT_CANCEL,

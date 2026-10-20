@@ -130,7 +130,7 @@ struct ThreadmgrPmonRequest {
 	SceKernelSpinlock *done;		/* held until the target CPU answers */
 };
 
-struct ThreadmgrCallback;
+struct SceUIDCallbackObject;
 
 /* a stack sceKernelExtendKernelStackWide added (freed with the thread) */
 struct ThreadmgrExtendedStack {
@@ -209,22 +209,22 @@ struct ThreadmgrCallbackCB {
 };
 
 /* SceUIDCallbackObject (0x40) */
-struct ThreadmgrCallback {
+struct SceUIDCallbackObject {
 	SceUID ownerPid;			/* 0x00: the object base's first word */
 	void *cls;
 	struct ThreadmgrCallbackCB cb;		/* 0x08 */
 };
 
 /* Intr-request payload layout is known only from individual consumers. */
-struct ThreadmgrIntrRequest {
-	struct ThreadmgrIntrRequest *volatile next;
+struct IntrRequest {
+	struct IntrRequest *volatile next;
 	volatile uint32_t kind;
 	volatile uint32_t fromPool;		/* 0: from the heap, freed when done */
 	uint32_t reserved;
 	uint32_t payload[4];
 };
 
-/* ThreadmgrIntrRequest.kind: one per issue*IntrRequest (names from the 0.990 prototype's) */
+/* IntrRequest.kind: one per issue*IntrRequest (names from the 0.990 prototype's) */
 enum ThreadmgrIntrRequestKind {
 	INTR_REQUEST_CHANGE_THREAD_CPU_AFFINITY		= 0x00,
 	INTR_REQUEST_CHANGE_THREAD_PRIORITY		= 0x01,
@@ -254,8 +254,8 @@ enum ThreadmgrIntrRequestKind {
 
 /* Per-CPU scheduler state begins at the VBAR+0x2c indirection. */
 struct ThreadMgrCpuCB {
-	uintptr_t runningThread;		/* 0x00: pRunningThreadCB (Sony's dump names) */
-	uintptr_t nextRunningThread;		/* 0x04: pNextRunningThreadCB, 0: to be chosen */
+	uintptr_t pRunningThreadCB;		/* 0x00 */
+	uintptr_t pNextRunningThreadCB;		/* 0x04: 0: to be chosen */
 	uint32_t disabledDispatch;		/* 0x08: nonzero: dispatching is disabled */
 	volatile SceUID runningProcessId;	/* 0x0c */
 	volatile SceUID runningThreadId;	/* 0x10 */
@@ -264,17 +264,17 @@ struct ThreadMgrCpuCB {
 	int priority;
 	uintptr_t standbyNext;
 	uintptr_t standbyPrev;
-	SceKernelSpinlock standbyLock;
+	SceKernelSpinlock standbyListLock;
 	uint32_t threadSwitchCount;		/* 0x2c: reported by SceThreadmgrForDriver_7E280B69 */
 	uint32_t remainCpuCount;		/* 0x30: switches that kept the running thread (__sched_:remain__cpu) */
-	struct ThreadCB *idleThread;	/* 0x34: PLACEHOLDER: name; never debug-suspended */
+	struct ThreadCB *pIdleThreadCB;	/* 0x34: never debug-suspended */
 	uint64_t lastThreadSwitchTime;		/* 0x38: when the running thread got the CPU */
-	struct ThreadmgrIntrRequest *intrRequestHead;
+	struct IntrRequest *intrRequestHead;
 	uint32_t intrRequestMask;
 	uintptr_t switchStackTop;		/* 0x48: its page of the switch stack block */
 	uint32_t releasingWaitObject;		/* 0x4c: a switch is releasing the old wait's UID */
 	uint8_t reserved[0x10];
-	uint32_t readyBitmap[8];		/* 0x60: a bit per non-empty ready queue */
+	uint32_t readySummary[8];		/* 0x60: a bit per non-empty ready queue */
 	struct {
 		uintptr_t next;
 		uintptr_t prev;
@@ -297,9 +297,9 @@ struct SceKernelThreadmgrPrivate {
 	struct ThreadMgrCpuCB cpuCB[4];
 	SceKernelSpinlock threadMgrCBLock;
 	uint32_t activeCpuMask;
-	uint32_t lastSelectedCpu;
+	uint32_t cpuSelectCounter;
 	SceKernelSpinlock delayCacheLock;	/* 0x220c: free delay objects (timer.c) */
-	int delayCacheCount;			/* 0x2210 */
+	int delayFreeCount;			/* 0x2210 */
 	void *delayCache;			/* 0x2214: linked through cacheNext */
 	uintptr_t deletedNext;			/* 0x2218: threads ended and deleted, for the cleaner */
 	uintptr_t deletedPrev;
@@ -319,7 +319,7 @@ struct SceKernelThreadmgrPrivate {
 	uintptr_t debugSuspendedPrev;
 	uintptr_t suspendedNext;		/* 0x2258: threads suspended (by a request or a VM) */
 	uintptr_t suspendedPrev;
-	struct ThreadCB *cleanerThread;	/* 0x2260: never debug-suspended either */
+	struct ThreadCB *pCleanerThreadCB;	/* 0x2260: never debug-suspended either */
 	struct ThreadmgrTlsSlot tlsSlots[8];	/* 0x2264: the kernel TLS slots (2-7 for drivers) */
 	SceUID heapId;
 	SceUID timerMemBlockId;			/* 0x2308: "SceLT5" */
@@ -357,7 +357,7 @@ struct SceKernelThreadmgrPrivate {
 	SceClass *cpuTimerClass;		/* 0x238c: parent of delays, alarms and timers */
 	SceClass *processClass;			/* 0x2390: processmgr's (SceThreadmgrForKernel_59D1D5B0) */
 	SceUID signalId;			/* 0x2394: the wait ID of a thread in waitSignal */
-	struct ThreadmgrWaitableObject *signalObject;	/* 0x2398: its waitable (queue at +0x10) */
+	struct SceUIDWaitableObject *signalObject;	/* 0x2398: its waitable (queue at +0x10) */
 	ThreadmgrDebugHandler debugHandlers[2][8];		/* 0x239c: SceThreadmgrForDriver_6C2E3A49 */
 	uintptr_t paHooks[3];			/* 0x23dc: SceThreadmgrForDriver_1378F6EF; [0] schedule, [1] priority */
 	uintptr_t processDebugSuspendHook;	/* 0x23e8: (pid, threadId, kind, arg) after an exception */
@@ -368,7 +368,7 @@ struct SceKernelThreadmgrPrivate {
 	void *kernelAddressSpace;		/* 0x2408 */
 	void *kernelUidEntryHeap;		/* 0x240c */
 	SceUID switchStackBlockId;		/* 0x2410: "SceThreadMgrSwitchStackBlock", a page per CPU */
-	struct ThreadmgrIntrRequest *freeIntrRequests;
+	struct IntrRequest *freeIntrRequests;
 	uint32_t reserved1;			/* 0x2418 */
 	uint32_t reserved2;			/* 0x241c..0x2427: zeroed at boot */
 	uint32_t reserved3;
@@ -417,8 +417,8 @@ struct ThreadmgrRuntime {
 
 extern struct ThreadmgrRuntime s_threadmgrRuntime;
 
-void issueIntrRequest(unsigned int cpuId, struct ThreadmgrIntrRequest *request);
-struct ThreadmgrIntrRequest *allocIntrRequest(uint32_t kind);
+void issueIntrRequest(unsigned int cpuId, struct IntrRequest *request);
+struct IntrRequest *allocIntrRequest(uint32_t kind);
 void addIntrRequest(unsigned int cpuId, uint32_t mask);
 
 struct ThreadmgrExtendedStackCache {
@@ -462,8 +462,8 @@ _Static_assert(offsetof(struct ThreadCB, permission) == 0x2c,
 	       "thread permission layout");
 _Static_assert(offsetof(struct ThreadCB, vfpException) == 0x14,
 	       "thread VFP exception layout");
-_Static_assert(sizeof(struct ThreadmgrCallback) == 0x40 &&
-	       offsetof(struct ThreadmgrCallback, cb.notifyCount) == 0x30,
+_Static_assert(sizeof(struct SceUIDCallbackObject) == 0x40 &&
+	       offsetof(struct SceUIDCallbackObject, cb.notifyCount) == 0x30,
 	       "SceUIDCallbackObject layout");
 _Static_assert(offsetof(struct SceKernelThreadmgrPrivate, debugSuspendedNext) == 0x2250 &&
 	       offsetof(struct SceKernelThreadmgrPrivate, debugHandlers) == 0x239c &&
@@ -471,7 +471,7 @@ _Static_assert(offsetof(struct SceKernelThreadmgrPrivate, debugSuspendedNext) ==
 	       offsetof(struct ThreadCB, intrPreemptCount) == 0x184 &&
 	       offsetof(struct ThreadCB, vmSuspendCount) == 0x180 &&
 	       offsetof(SceProcessObject, TitleId) == 0x4c0 &&
-	       offsetof(struct ThreadMgrCpuCB, idleThread) == 0x34,
+	       offsetof(struct ThreadMgrCpuCB, pIdleThreadCB) == 0x34,
 	       "debugger state layout");
 _Static_assert(sizeof(struct ThreadRegisterContext) == 0x100,
 	       "thread register context size");
@@ -519,7 +519,7 @@ static inline struct ThreadMgrCpuCB *currentCpuState(void)
 	return *(struct ThreadMgrCpuCB *volatile *)(vbar + 0x2c);
 }
 
-_Static_assert(sizeof(struct ThreadmgrIntrRequest) == 0x20,
+_Static_assert(sizeof(struct IntrRequest) == 0x20,
 	       "interrupt request allocation size");
 _Static_assert(offsetof(struct ThreadMgrCpuCB, intrRequestHead) == 0x40,
 	       "interrupt request head layout");
@@ -544,7 +544,7 @@ int condProcessExit(SceProcessObject *process);
 int waitCondCB(SceUID condId, SceUInt32 *timeout);
 
 /* debug_thread_event.c */
-void notifyDebugThreadEvent(SceUID processId, SceUID threadId, uint32_t event, int *status);
+void callDebuggerThreadEventHook(SceUID processId, SceUID threadId, uint32_t event, int *status);
 
 /* a set request for a thread on another CPU (the SGI handler fills result, unlocks done) */
 typedef struct ThreadmgrDebugSetRequest {
@@ -580,15 +580,11 @@ int dtraceThreadCBExit(struct ThreadCB *thread);
 void dtraceAsyncXCallIntr(void (*fn)(void *), void *arg);
 void dtraceSyncXCallIntr(void (*fn)(void *), void *arg, SceKernelSpinlock *done);
 
-typedef struct ThreadmgrLwCondOptParam {
-	SceSize size;
-} ThreadmgrLwCondOptParam;
-
 /* lw_cond.c */
 void startLwCond(void);
 int lwCondProcessExit(SceProcessObject *process);
 int __sceKernelCreateLwCond(void *work, const char *name, SceUInt32 attr, SceUID lwMutexPuid,
-			    const ThreadmgrLwCondOptParam *option);
+			    const SceKernelLwCondOptParam *option);
 int __sceKernelWaitLwCond(SceUID condId, SceUInt32 *timeout, int callbacks);
 int __sceKernelSignalLwCond(SceUID condId);
 int __sceKernelSignalLwCondAll(SceUID condId);

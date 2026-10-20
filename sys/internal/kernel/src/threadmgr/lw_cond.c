@@ -23,7 +23,7 @@
 /* SceUIDLwCondClass's constructor */
 static int uidLwCond_Constructor(void *object)
 {
-	ThreadmgrLwCond *cond = object;
+	SceUIDLwCondObject *cond = object;
 
 	memset(&cond->option, 0, 0x20);
 	return 0;
@@ -35,12 +35,12 @@ static int uidLwCond_Constructor(void *object)
  */
 static int uidLwCond_Destructor(void *object)
 {
-	ThreadmgrLwCond *cond = object;
+	SceUIDLwCondObject *cond = object;
 	struct ThreadmgrWaitNode *node, *next;
 	struct ThreadCB *waiter;
 	struct ThreadmgrWaitQueue *queue;
 	SceProcessObject *process;
-	ThreadmgrLwMutex *lwMutex;
+	SceUIDLwMutexObject *lwMutex;
 	SceUID guid = cond->guid, lwMutexId = cond->lwMutexId, pid;
 	volatile int delay;
 	SceKernelSpinlock *mutexLock;
@@ -104,7 +104,7 @@ static int uidLwCond_Destructor(void *object)
 /* a lw cond's information (the info exports' core) */
 static int getLwCondInfo(SceUID condId, SceKernelLwCondInfo *info)
 {
-	ThreadmgrLwCond *cond;
+	SceUIDLwCondObject *cond;
 	SceObjectBase *pObject;
 	int intr, ret;
 
@@ -117,7 +117,7 @@ static int getLwCondInfo(SceUID condId, SceKernelLwCondInfo *info)
 		ret = !ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_LW_COND_ID :
 			SCE_KERNEL_ERROR_UNKNOWN_LW_COND_ID | SYSCALL_ERROR_BIT;
 	} else {
-		cond = (ThreadmgrLwCond *)pObject;
+		cond = (SceUIDLwCondObject *)pObject;
 		info->uid = condId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(condId), sizeof(info->name) - 1);
 		sceKernelSpinlockLowLock(&cond->lock);
@@ -142,7 +142,7 @@ void startLwCond(void)
 	cls = sceKernelAllocHeapMemory(manager->heapId, 0x38);
 	if (cls == NULL)
 		SCE_PANIC(87);
-	ret = uidExtendedClassInit(cls, "SceUIDLwCondClass",
+	ret = uidWaitableClassInit(cls, "SceUIDLwCondClass",
 		s_threadmgrRuntime.manager->waitableClass, LW_COND_ITEM_SIZE,
 		uidLwCond_Constructor, (SceClassCallback)uidLwCond_Destructor,
 		uidDefaultCancelWait, uidDefault_RevalidateMethod,
@@ -150,7 +150,7 @@ void startLwCond(void)
 	if (ret < 0)
 		SCE_PANIC_FUNC(SCE_LINE(1233, 1231), "uidLwCondClassInit");
 	s_threadmgrRuntime.manager->lwCondClass = (SceClass *)cls;
-	SCE_DBG_PRINTF_LEVEL(2, 0, 103, " sizeof(SceUIDLwCondObject)=%d\n", sizeof(ThreadmgrLwCond));
+	SCE_DBG_PRINTF_LEVEL(2, 0, 103, " sizeof(SceUIDLwCondObject)=%d\n", sizeof(SceUIDLwCondObject));
 }
 
 /* closes every lw cond PUID a process still holds */
@@ -194,14 +194,14 @@ int lwCondProcessExit(SceProcessObject *process)
 
 /* the lw cond create syscall's body: the cond joins the lw mutex's list */
 int __sceKernelCreateLwCond(void *work, const char *name, SceUInt32 attr, SceUID lwMutexPuid,
-			    const ThreadmgrLwCondOptParam *option)
+			    const SceKernelLwCondOptParam *option)
 {
 	struct ThreadCB *thread;
 	SceProcessObject *process;
 	UIDCreateOpt opt;
 	ThreadmgrLwCondWork userWork;
-	ThreadmgrLwMutex *lwMutex;
-	ThreadmgrLwCond *cond;
+	SceUIDLwMutexObject *lwMutex;
+	SceUIDLwCondObject *cond;
 	uint32_t saved;
 	SceUID lwMutexId, uid;
 	int intr, ret;
@@ -274,7 +274,7 @@ int __sceKernelCreateLwCond(void *work, const char *name, SceUInt32 attr, SceUID
 			cond->guid = uid;
 			cond->work = work;
 			cond->lwMutexWork =
-				((ThreadmgrLwMutex *)SceSysmemForKernel_FA6C098C(lwMutexId))->work;
+				((SceUIDLwMutexObject *)SceSysmemForKernel_FA6C098C(lwMutexId))->work;
 			cond->lwMutexLink.next = &lwMutex->conds;
 			cond->lwMutexLink.prev = lwMutex->conds.prev;
 			lwMutex->conds.prev = &cond->lwMutexLink;
@@ -316,7 +316,7 @@ restore:
 int __sceKernelWaitLwCond(SceUID condId, SceUInt32 *timeout, int callbacks)
 {
 	struct ThreadCB *thread;
-	ThreadmgrLwCond *cond;
+	SceUIDLwCondObject *cond;
 	SceObjectBase *pObject;
 	SceUID lwMutexId;
 	uint64_t wakeup;
@@ -351,7 +351,7 @@ int __sceKernelWaitLwCond(SceUID condId, SceUInt32 *timeout, int callbacks)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_COND_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
-	cond = (ThreadmgrLwCond *)pObject;
+	cond = (SceUIDLwCondObject *)pObject;
 	sceKernelSpinlockLowLock(&cond->lock);
 	lwMutexId = cond->lwMutexId;
 	keepMutex = 0;
@@ -464,7 +464,7 @@ static inline int LwCondSignalDeferred(struct ThreadCB *thread)
 int __sceKernelSignalLwCond(SceUID condId)
 {
 	struct ThreadCB *thread, *first;
-	ThreadmgrLwCond *cond;
+	SceUIDLwCondObject *cond;
 	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	int intr, ret;
@@ -487,7 +487,7 @@ int __sceKernelSignalLwCond(SceUID condId)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_COND_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
-	cond = (ThreadmgrLwCond *)pObject;
+	cond = (SceUIDLwCondObject *)pObject;
 	sceKernelSpinlockLowLock(&cond->lock);
 	first = (struct ThreadCB *)cond->next;
 	if ((struct ThreadmgrWaitQueue *)first == (struct ThreadmgrWaitQueue *)&cond->next) {
@@ -516,7 +516,7 @@ int __sceKernelSignalLwCondAll(SceUID condId)
 {
 	struct ThreadCB *thread, *first;
 	struct ThreadmgrWaitQueue *queue;
-	ThreadmgrLwCond *cond;
+	SceUIDLwCondObject *cond;
 	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	int intr, ret;
@@ -539,7 +539,7 @@ int __sceKernelSignalLwCondAll(SceUID condId)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_COND_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
-	cond = (ThreadmgrLwCond *)pObject;
+	cond = (SceUIDLwCondObject *)pObject;
 	queue = (struct ThreadmgrWaitQueue *)&cond->next;
 	sceKernelSpinlockLowLock(&cond->lock);
 	if (queue->next == (struct ThreadmgrWaitNode *)queue) {
@@ -587,7 +587,7 @@ int __sceKernelSignalLwCondTo(SceUID condId, SceUID threadId)
 	struct ThreadCB *thread, *waiter;
 	struct ThreadmgrWaitNode *node, *next;
 	struct ThreadmgrWaitQueue *queue;
-	ThreadmgrLwCond *cond;
+	SceUIDLwCondObject *cond;
 	SceObjectBase *pObject;
 	SceObjectBase *object;
 	SceUInt32 sdkVersion;
@@ -625,7 +625,7 @@ int __sceKernelSignalLwCondTo(SceUID condId, SceUID threadId)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_LW_COND_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
-	cond = (ThreadmgrLwCond *)pObject;
+	cond = (SceUIDLwCondObject *)pObject;
 	queue = (struct ThreadmgrWaitQueue *)&cond->next;
 	sceKernelSpinlockLowLock(&cond->lock);
 	for (node = queue->next; node != (struct ThreadmgrWaitNode *)queue; node = next) {

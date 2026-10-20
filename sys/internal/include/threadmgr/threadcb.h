@@ -104,7 +104,7 @@ typedef struct __attribute__((packed)) SyslibtraceThreadCB {
 
 #include <processmgr/process.h>
 struct ThreadmgrExtendedStack;
-struct ThreadmgrCallback;
+struct SceUIDCallbackObject;
 struct ThreadmgrCallbackCB;
 struct ThreadmgrExceptionEntry;
 struct ThreadmgrFastMutex;
@@ -176,7 +176,7 @@ typedef struct ThreadCB {
 		int waitMode;			/* 0x128: rw lock: 1 = waits to write */
 		uint32_t waitEventPattern;	/* event: the bits waited for */
 		SceSize msgPipeRemaining;	/* msg pipe: the bytes still to move */
-		void *waitMultipleEvents;	/* WME: its ThreadmgrWaitMultipleEvents */
+		void *waitMultipleEvents;	/* WME: its WMECB */
 		struct ThreadmgrFastMutex *spinMutex;	/* fast mutex: the one it spins on */
 	};
 	union {
@@ -201,12 +201,12 @@ typedef struct ThreadCB {
 	SceUID timeoutProcessId;		/* 0x144: the process the wait's pointers are in */
 	uintptr_t heldEventFlagNext;		/* 0x148: the event flags it holds */
 	uintptr_t heldEventFlagPrev;
-	uintptr_t ownedMutexNext;		/* 0x150: the mutexes it holds (ThreadmgrMutex.ownerLink) */
+	uintptr_t ownedMutexNext;		/* 0x150: the mutexes it holds (SceUIDMutexObject.ownerLink) */
 	uintptr_t ownedMutexPrev;
 	uintptr_t ownedRWLockNext;		/* 0x158: the rw locks it holds for writing */
 	uintptr_t ownedRWLockPrev;
 	int callbackNest;			/* 0x160: callbacks running on it */
-	struct ThreadmgrCallback *currentCallback;	/* 0x164 */
+	struct SceUIDCallbackObject *currentCallback;	/* 0x164 */
 	struct ThreadmgrCallbackCB *callbackNext;	/* 0x168: its callbacks */
 	struct ThreadmgrCallbackCB *callbackPrev;
 	uint32_t threadEventMask;		/* 0x170: the thread events being delivered */

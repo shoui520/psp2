@@ -18,7 +18,7 @@
 #define SEMA_ITEM_SIZE			0x80	/* the class's object allocation size */
 
 /* SceUIDSemaphoreObject (0x38) */
-typedef struct ThreadmgrSemaphore {
+typedef struct SceUIDSemaphoreObject {
 	SceUID ownerPid;			/* 0x00: the object base's first word */
 	SceClass *cls;
 	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
@@ -33,9 +33,9 @@ typedef struct ThreadmgrSemaphore {
 	int count;				/* 0x2c */
 	int maxCount;				/* 0x30 */
 	int initCount;				/* 0x34 */
-} ThreadmgrSemaphore;
+} SceUIDSemaphoreObject;
 
-_Static_assert(sizeof(ThreadmgrSemaphore) == 0x38, "SceUIDSemaphoreObject size");
+_Static_assert(sizeof(SceUIDSemaphoreObject) == 0x38, "SceUIDSemaphoreObject size");
 
 /* SCE_KERNEL_ERROR_UNKNOWN_SEMA_ID, with bit 30 set inside a user syscall */
 #define SEMA_ERROR_UNKNOWN_ID()		(!(ThreadmgrUserRoWord() & USERRO_IN_SYSCALL) ? \
@@ -44,7 +44,7 @@ _Static_assert(sizeof(ThreadmgrSemaphore) == 0x38, "SceUIDSemaphoreObject size")
 /* SceUIDSemaphoreClass's revalidation: waiters get the count while it lasts, in queue order */
 int uidSemaphore_RevalidateMethod(void *cls, void *object)
 {
-	ThreadmgrSemaphore *sema = object;
+	SceUIDSemaphoreObject *sema = object;
 	struct ThreadmgrWaitQueue *queue = (struct ThreadmgrWaitQueue *)&sema->next;
 	struct ThreadmgrWaitNode *node, *next;
 	struct ThreadCB *thread;
@@ -79,7 +79,7 @@ int uidSemaphore_RevalidateMethod(void *cls, void *object)
 /* SceUIDSemaphoreClass's constructor */
 static int uidSemaphore_Constructor(void *object)
 {
-	ThreadmgrSemaphore *sema = object;
+	SceUIDSemaphoreObject *sema = object;
 
 	memset(&sema->option, 0, 0x10);
 	return 0;
@@ -90,7 +90,7 @@ static int uidSemaphore_Constructor(void *object)
 /* SceUIDSemaphoreClass's destructor: the waiters wake with WAIT_DELETE, the owner's count drops */
 static int uidSemaphore_Destructor(void *object)
 {
-	ThreadmgrSemaphore *sema = object;
+	SceUIDSemaphoreObject *sema = object;
 	SceProcessObject *process;
 	uint32_t wake;
 	SceUID pid;
@@ -126,7 +126,7 @@ static int uidSemaphore_Destructor(void *object)
 /* a semaphore's information (SceThreadmgrForDriver_C99DCF0D's core) */
 int getSemaInfo(SceUID semaId, SceKernelSemaInfo *info)
 {
-	ThreadmgrSemaphore *sema;
+	SceUIDSemaphoreObject *sema;
 	SceObjectBase *pObject;
 	int intr, ret;
 
@@ -137,7 +137,7 @@ int getSemaInfo(SceUID semaId, SceKernelSemaInfo *info)
 	if (ret < 0) {
 		ret = SEMA_ERROR_UNKNOWN_ID();
 	} else {
-		sema = (ThreadmgrSemaphore *)pObject;
+		sema = (SceUIDSemaphoreObject *)pObject;
 		info->semaId = semaId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(semaId), sizeof(info->name) - 1);
 		sceKernelSpinlockLowLock(&sema->lock);
@@ -175,7 +175,7 @@ int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 {
 	struct ThreadCB *thread;
 	struct ThreadmgrWaitQueue *queue;
-	ThreadmgrSemaphore *sema;
+	SceUIDSemaphoreObject *sema;
 	SceObjectBase *pObject;
 	uint64_t wakeup;
 	uint32_t saved;
@@ -231,7 +231,7 @@ int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 		}
 		goto resume;
 	}
-	sema = (ThreadmgrSemaphore *)pObject;
+	sema = (SceUIDSemaphoreObject *)pObject;
 	sceKernelSpinlockLowLock(&sema->lock);
 	if (sema->maxCount < needCount) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
@@ -347,7 +347,7 @@ static inline __attribute__((always_inline)) SceUID sceKernelCreateSemaCore(cons
 	struct ThreadCB *thread;
 	SceProcessObject *process = NULL;
 	UIDCreateOpt opt;
-	ThreadmgrSemaphore *sema;
+	SceUIDSemaphoreObject *sema;
 	SceUID uid;
 	int intr;
 
@@ -538,7 +538,7 @@ int SceThreadmgrForDriver_F55E4D86(SceUID semaId, int needCount, SceUInt32 *time
 
 int sceKernelPollSema(SceUID semaId, int needCount)
 {
-	ThreadmgrSemaphore *sema;
+	SceUIDSemaphoreObject *sema;
 	SceObjectBase *pObject;
 	uint32_t saved;
 	int intr, ret;
@@ -562,7 +562,7 @@ int sceKernelPollSema(SceUID semaId, int needCount)
 		}
 		goto resume;
 	}
-	sema = (ThreadmgrSemaphore *)pObject;
+	sema = (SceUIDSemaphoreObject *)pObject;
 	sceKernelSpinlockLowLock(&sema->lock);
 	if (sema->maxCount < needCount) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
@@ -590,7 +590,7 @@ int sceKernelSignalSema(SceUID semaId, int signalCount)
 	struct ThreadCB *thread, *waiter;
 	struct ThreadmgrWaitNode *node, *next;
 	struct ThreadmgrWaitQueue *queue;
-	ThreadmgrSemaphore *sema;
+	SceUIDSemaphoreObject *sema;
 	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	SceUInt32 sdkVersion;
@@ -627,7 +627,7 @@ int sceKernelSignalSema(SceUID semaId, int signalCount)
 		}
 		goto resume;
 	}
-	sema = (ThreadmgrSemaphore *)pObject;
+	sema = (SceUIDSemaphoreObject *)pObject;
 	queue = (struct ThreadmgrWaitQueue *)&sema->next;
 	sceKernelSpinlockLowLock(&sema->lock);
 	newCount = sema->count + signalCount;
@@ -691,7 +691,7 @@ restore:
 /* wakes every waiter with WAIT_CANCEL and sets the count (negative: back to initCount) */
 int sceKernelCancelSema(SceUID semaId, int setCount, int *numWaitThreads)
 {
-	ThreadmgrSemaphore *sema;
+	SceUIDSemaphoreObject *sema;
 	SceObjectBase *pObject;
 	uint32_t saved, wake;
 	int intr, ret;
@@ -711,7 +711,7 @@ int sceKernelCancelSema(SceUID semaId, int setCount, int *numWaitThreads)
 		}
 		goto resume;
 	}
-	sema = (ThreadmgrSemaphore *)pObject;
+	sema = (SceUIDSemaphoreObject *)pObject;
 	sceKernelSpinlockLowLock(&sema->lock);
 	if (sema->maxCount < setCount) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
@@ -886,7 +886,7 @@ void startSemaphore(void)
 	cls = sceKernelAllocHeapMemory(manager->heapId, 0x38);
 	if (cls == NULL)
 		SCE_PANIC(301);
-	ret = uidExtendedClassInit(cls, "SceUIDSemaphoreClass",
+	ret = uidWaitableClassInit(cls, "SceUIDSemaphoreClass",
 		s_threadmgrRuntime.manager->waitableClass, SEMA_ITEM_SIZE,
 		uidSemaphore_Constructor, (SceClassCallback)uidSemaphore_Destructor,
 		uidDefaultCancelWait, uidSemaphore_RevalidateMethod,
@@ -895,5 +895,5 @@ void startSemaphore(void)
 		SCE_PANIC_FUNC(SCE_LINE(1342, 1336), "uidSemaphoreClassInit");
 	s_threadmgrRuntime.manager->semaphoreClass = (SceClass *)cls;
 	SCE_DBG_PRINTF_LEVEL(2, 0, 317, " sizeof(SceUIDSemaphoreObject)=%d\n",
-			     sizeof(ThreadmgrSemaphore));
+			     sizeof(SceUIDSemaphoreObject));
 }

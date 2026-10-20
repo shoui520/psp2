@@ -20,7 +20,7 @@ typedef struct ThreadmgrLwCondWork {
 } ThreadmgrLwCondWork;
 
 /* SceUIDLwMutexObject (0x60); freed ones wait in their process's cache */
-typedef struct ThreadmgrLwMutex {
+typedef struct SceUIDLwMutexObject {
 	SceUID ownerPid;			/* 0x00: the object base's first word */
 	SceClass *cls;
 	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
@@ -37,12 +37,12 @@ typedef struct ThreadmgrLwMutex {
 	SceUID pid;				/* 0x34 */
 	ListNode conds;		/* 0x38: the lw conds bound to it */
 	char name[32];				/* 0x40 */
-} ThreadmgrLwMutex;
+} SceUIDLwMutexObject;
 
-_Static_assert(sizeof(ThreadmgrLwMutex) == 0x60, "SceUIDLwMutexObject size");
+_Static_assert(sizeof(SceUIDLwMutexObject) == 0x60, "SceUIDLwMutexObject size");
 
 /* SceUIDLwCondObject (0x48) */
-typedef struct ThreadmgrLwCond {
+typedef struct SceUIDLwCondObject {
 	SceUID ownerPid;			/* 0x00: the object base's first word */
 	SceClass *cls;
 	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
@@ -60,26 +60,22 @@ typedef struct ThreadmgrLwCond {
 	ListNode lwMutexLink;	/* 0x38: in the lw mutex's conds list */
 	SceUID guid;				/* 0x40 */
 	uint32_t reserved1;
-} ThreadmgrLwCond;
+} SceUIDLwCondObject;
 
-_Static_assert(sizeof(ThreadmgrLwCond) == 0x48, "SceUIDLwCondObject size");
+_Static_assert(sizeof(SceUIDLwCondObject) == 0x48, "SceUIDLwCondObject size");
 
 #define LW_COND_FROM_MUTEX_LINK(link) \
-	((ThreadmgrLwCond *)((uintptr_t)(link) - offsetof(ThreadmgrLwCond, lwMutexLink)))
+	((SceUIDLwCondObject *)((uintptr_t)(link) - offsetof(SceUIDLwCondObject, lwMutexLink)))
 
 int lockLwMutexForLwCond(SceUID lwMutexId, int count, SceUInt32 *timeout, int callbacks,
 			 SceUID condId);
 int unlockLwMutexForLwCond(SceUID lwMutexId, int count);
 
-typedef struct ThreadmgrLwMutexOptParam {
-	SceSize size;
-} ThreadmgrLwMutexOptParam;
-
 /* lw_mutex.c */
 void startLwMutex(void);
 int lwMutexProcessExit(SceProcessObject *process);
 int _sceKernelCreateLwMutexForUser(ThreadmgrLwMutexWork *work, const char *name, SceUInt32 attr,
-				   int initCount, const ThreadmgrLwMutexOptParam *option);
+				   int initCount, const SceKernelLwMutexOptParam *option);
 int sceKernelDeleteLwMutexForUser(ThreadmgrLwMutexWork *work);
 int _sceKernelLockLwMutex(ThreadmgrLwMutexWork *work, int count, SceUInt32 *timeout, int callbacks);
 int _sceKernelUnlockLwMutex(ThreadmgrLwMutexWork *work, int count);

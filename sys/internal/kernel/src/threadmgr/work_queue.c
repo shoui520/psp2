@@ -40,7 +40,7 @@
 #define WORK_TASK_CLASS()	(s_threadmgrRuntime.manager->workTaskClass)
 
 /* SceUIDWorkQueueObject (0x68) */
-typedef struct ThreadmgrWorkQueue {
+typedef struct SceUIDWorkQueueObject {
 	SceUID ownerPid;			/* 0x00: the object base's first word */
 	void *cls;
 	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
@@ -63,11 +63,11 @@ typedef struct ThreadmgrWorkQueue {
 	uint32_t threadCount;			/* 0x5c */
 	SceUID *threads;			/* 0x60 */
 	uint32_t reserved1;
-} ThreadmgrWorkQueue;
+} SceUIDWorkQueueObject;
 
 /* a task's control block (SceUIDWorkTaskObject +0x28) */
 typedef struct ThreadmgrWorkTaskCB {
-	ThreadmgrWorkQueue *queue;		/* 0x00: NULL once the queue is gone */
+	SceUIDWorkQueueObject *queue;		/* 0x00: NULL once the queue is gone */
 	SceUID creatorPid;			/* 0x04 */
 	ListNode link;		/* 0x08: in its queue's pending or running list */
 	SceUID guid;				/* 0x10 */
@@ -90,7 +90,7 @@ typedef struct ThreadmgrWorkTaskCB {
 } ThreadmgrWorkTaskCB;
 
 /* SceUIDWorkTaskObject (0x80) */
-typedef struct ThreadmgrWorkTask {
+typedef struct SceUIDWorkTaskObject {
 	SceUID ownerPid;
 	void *cls;
 	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
@@ -102,11 +102,11 @@ typedef struct ThreadmgrWorkTask {
 	uint32_t attributes;			/* 0x20 */
 	uint32_t reserved0;			/* 0x24: zeroed */
 	ThreadmgrWorkTaskCB cb;			/* 0x28 */
-} ThreadmgrWorkTask;
+} SceUIDWorkTaskObject;
 
-_Static_assert(sizeof(ThreadmgrWorkQueue) == 0x68 && sizeof(ThreadmgrWorkTask) == 0x80 &&
-	       offsetof(ThreadmgrWorkTask, cb.sequence) == 0x40 &&
-	       offsetof(ThreadmgrWorkTask, cb.priority) == 0x6c,
+_Static_assert(sizeof(SceUIDWorkQueueObject) == 0x68 && sizeof(SceUIDWorkTaskObject) == 0x80 &&
+	       offsetof(SceUIDWorkTaskObject, cb.sequence) == 0x40 &&
+	       offsetof(SceUIDWorkTaskObject, cb.priority) == 0x6c,
 	       "work queue object layouts");
 
 #define TASK_FROM_LINK(l) \
@@ -194,7 +194,7 @@ static inline void spinDelay(void)
 }
 
 /* whether every task up to target has finished: none of them still runs */
-static inline int isWorkQueueDone(const ThreadmgrWorkQueue *queue, uint64_t target)
+static inline int isWorkQueueDone(const SceUIDWorkQueueObject *queue, uint64_t target)
 {
 	const ListNode *link;
 	uint64_t oldest;
@@ -209,9 +209,9 @@ static inline int isWorkQueueDone(const ThreadmgrWorkQueue *queue, uint64_t targ
 }
 
 /* SceUIDWorkTaskClass's destructor: its waiters wake with WAIT_DELETE */
-int uidWorkTask_Destructor(ThreadmgrWorkTask *task)
+int uidWorkTask_Destructor(SceUIDWorkTaskObject *task)
 {
-	ThreadmgrWorkQueue *queue;
+	SceUIDWorkQueueObject *queue;
 	uint32_t wake;
 	int intr;
 
@@ -237,9 +237,9 @@ int uidWorkTask_Destructor(ThreadmgrWorkTask *task)
 /* SceUIDWorkQueueClass's constructor */
 static int uidWorkQueue_Constructor(void *object)
 {
-	ThreadmgrWorkQueue *queue = object;
+	SceUIDWorkQueueObject *queue = object;
 
-	memset(&queue->pending, 0, sizeof(*queue) - offsetof(ThreadmgrWorkQueue, pending));
+	memset(&queue->pending, 0, sizeof(*queue) - offsetof(SceUIDWorkQueueObject, pending));
 	queue->pending.next = &queue->pending;
 	queue->pending.prev = &queue->pending;
 	queue->running.next = &queue->running;
@@ -250,14 +250,14 @@ static int uidWorkQueue_Constructor(void *object)
 /* SceUIDWorkTaskClass's constructor */
 static int uidWorkTask_Constructor(void *object)
 {
-	memset(&((ThreadmgrWorkTask *)object)->cb, 0, sizeof(ThreadmgrWorkTaskCB));
+	memset(&((SceUIDWorkTaskObject *)object)->cb, 0, sizeof(ThreadmgrWorkTaskCB));
 	return 0;
 }
 
 /* the queue's waiters wake in order while what they wait for is done */
 int uidWorkQueue_RevalidateMethod(void *cls, void *object)
 {
-	ThreadmgrWorkQueue *queue = object;
+	SceUIDWorkQueueObject *queue = object;
 	struct ThreadmgrWaitNode *head = (struct ThreadmgrWaitNode *)&queue->next;
 	struct ThreadCB *thread, *next;
 	uint32_t wake;
@@ -284,7 +284,7 @@ int uidWorkQueue_RevalidateMethod(void *cls, void *object)
 }
 
 /* SceUIDWorkQueueClass's destructor: its tasks are dropped, its workers deleted */
-int uidWorkQueue_Destructor(ThreadmgrWorkQueue *queue)
+int uidWorkQueue_Destructor(SceUIDWorkQueueObject *queue)
 {
 	ListNode *link, *next;
 	ThreadmgrWorkTaskCB *task;
@@ -326,7 +326,7 @@ int uidWorkQueue_Destructor(ThreadmgrWorkQueue *queue)
 int waitWorkQueue(SceUID workQueueId, SceUInt32 *timeout, int callbacks)
 {
 	struct ThreadCB *thread;
-	ThreadmgrWorkQueue *queue;
+	SceUIDWorkQueueObject *queue;
 	uint64_t wakeup, target;
 	uint32_t saved;
 	int intr, ret, cbRet, locked = 0;
@@ -425,7 +425,7 @@ restore:
 int waitWorkTask(SceUID workTaskId, SceUInt32 *timeout, int callbacks)
 {
 	struct ThreadCB *thread;
-	ThreadmgrWorkTask *task;
+	SceUIDWorkTaskObject *task;
 	uint64_t wakeup;
 	uint32_t saved;
 	int intr, ret, cbRet, locked = 0;
@@ -530,7 +530,7 @@ restore:
 	return ret;
 }
 
-static inline uint32_t countPendingTasks(const ThreadmgrWorkQueue *queue)
+static inline uint32_t countPendingTasks(const SceUIDWorkQueueObject *queue)
 {
 	const ListNode *link;
 	uint32_t n = 0;
@@ -543,7 +543,7 @@ static inline uint32_t countPendingTasks(const ThreadmgrWorkQueue *queue)
 /* the queue's information */
 int getWorkQueueInfo(SceUID workQueueId, ThreadmgrWorkQueueInfo *info)
 {
-	ThreadmgrWorkQueue *queue;
+	SceUIDWorkQueueObject *queue;
 	SceObjectBase *pObject;
 	int intr, ret;
 
@@ -555,7 +555,7 @@ int getWorkQueueInfo(SceUID workQueueId, ThreadmgrWorkQueueInfo *info)
 		ret = !ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_WORK_QUEUE_ID :
 			SCE_KERNEL_ERROR_UNKNOWN_WORK_QUEUE_ID | SYSCALL_ERROR_BIT;
 	} else {
-		queue = (ThreadmgrWorkQueue *)pObject;
+		queue = (SceUIDWorkQueueObject *)pObject;
 		info->workQueueId = workQueueId;
 		strncpy(info->name, SceSysmemForDriver_E655852F(workQueueId), sizeof(info->name) - 1);
 		sceKernelSpinlockLowLock(&queue->lock);
@@ -574,7 +574,7 @@ int getWorkQueueInfo(SceUID workQueueId, ThreadmgrWorkQueueInfo *info)
 /* the queue's information with its worker threads; info->size is the room given */
 int getWorkQueueInfoFull(SceUID workQueueId, ThreadmgrWorkQueueInfoFull *info)
 {
-	ThreadmgrWorkQueue *queue;
+	SceUIDWorkQueueObject *queue;
 	SceObjectBase *pObject;
 	int intr, ret;
 
@@ -584,7 +584,7 @@ int getWorkQueueInfoFull(SceUID workQueueId, ThreadmgrWorkQueueInfoFull *info)
 		ret = SCE_KERNEL_ERROR_UNKNOWN_WORK_QUEUE_ID;
 		goto resume;
 	}
-	queue = (ThreadmgrWorkQueue *)pObject;
+	queue = (SceUIDWorkQueueObject *)pObject;
 	sceKernelSpinlockLowLock(&queue->lock);
 	if (info->size < (queue->threadCount + 0x12) * 4) {
 		ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
@@ -612,7 +612,7 @@ resume:
 /* the task's information, read under its queue's lock */
 int getWorkTaskInfo(SceUID workTaskId, ThreadmgrWorkTaskInfo *info)
 {
-	ThreadmgrWorkTask *task;
+	SceUIDWorkTaskObject *task;
 	SceObjectBase *pObject;
 	int intr, ret;
 
@@ -623,7 +623,7 @@ int getWorkTaskInfo(SceUID workTaskId, ThreadmgrWorkTaskInfo *info)
 					 &pObject) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_WORK_TASK_ID;
 	} else {
-		task = (ThreadmgrWorkTask *)pObject;
+		task = (SceUIDWorkTaskObject *)pObject;
 		info->workTaskId = workTaskId;
 		ret = 0;
 		info->creatorPid = task->cb.creatorPid;
@@ -786,10 +786,10 @@ void callWorkTaskEntry(ThreadmgrWorkTaskCB *task, void *arg)
 /* a worker: runs the queue's tasks as its semaphore counts them */
 int workQueueThread(SceSize argSize, void *argp)
 {
-	ThreadmgrWorkQueue *queue = *(ThreadmgrWorkQueue **)argp;
+	SceUIDWorkQueueObject *queue = *(SceUIDWorkQueueObject **)argp;
 	ListNode *link;
 	ThreadmgrWorkTaskCB *cb;
-	ThreadmgrWorkTask *task;
+	SceUIDWorkTaskObject *task;
 	SceObjectBase *pObject;
 	uint32_t wake, revalidated;
 	int intr;
@@ -803,7 +803,7 @@ int workQueueThread(SceSize argSize, void *argp)
 			if (sceGUIDReferObjectWithClass(cb->guid, WORK_TASK_CLASS(),
 							 &pObject) < 0)
 				SCE_PANIC(638);
-			task = (ThreadmgrWorkTask *)pObject;
+			task = (SceUIDWorkTaskObject *)pObject;
 			ListLinkRemove(link);
 			link->next = link;
 			link->prev = link;
@@ -858,7 +858,7 @@ void startWorkQueue(void)
 	cls = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
 	if (cls == NULL)
 		SCE_PANIC(340);
-	if (uidExtendedClassInit(cls, "SceUIDWorkQueueClass",
+	if (uidWaitableClassInit(cls, "SceUIDWorkQueueClass",
 			s_threadmgrRuntime.manager->waitableClass, 0x80,
 			uidWorkQueue_Constructor, (SceClassCallback)uidWorkQueue_Destructor,
 			uidDefaultCancelWait, uidWorkQueue_RevalidateMethod,
@@ -866,11 +866,11 @@ void startWorkQueue(void)
 		SCE_PANIC_FUNC(SCE_LINE(2192, 2189), "uidWorkQueueClassInit");
 	s_threadmgrRuntime.manager->workQueueClass = (SceClass *)cls;
 	SCE_DBG_PRINTF_LEVEL(2, 0, 356, " sizeof(SceUIDWorkQueueObject)=%d\n",
-			     sizeof(ThreadmgrWorkQueue));
+			     sizeof(SceUIDWorkQueueObject));
 	cls = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
 	if (cls == NULL)
 		SCE_PANIC(361);
-	if (uidExtendedClassInit(cls, "SceUIDWorkTaskClass",
+	if (uidWaitableClassInit(cls, "SceUIDWorkTaskClass",
 			s_threadmgrRuntime.manager->waitableClass, 0x80,
 			uidWorkTask_Constructor, (SceClassCallback)uidWorkTask_Destructor,
 			uidDefaultCancelWait, uidDefault_RevalidateMethod,
@@ -878,13 +878,13 @@ void startWorkQueue(void)
 		SCE_PANIC_FUNC(SCE_LINE(2374, 2371), "uidWorkTaskClassInit");
 	s_threadmgrRuntime.manager->workTaskClass = (SceClass *)cls;
 	SCE_DBG_PRINTF_LEVEL(2, 0, 377, " sizeof(SceUIDWorkTaskObject)=%d\n",
-			     sizeof(ThreadmgrWorkTask));
+			     sizeof(SceUIDWorkTaskObject));
 }
 
 /* SceKernelGlobalWorkQueue (UID 0x10023): four kernel workers */
 int createGlobalWorkQueue(void)
 {
-	ThreadmgrWorkQueue *queue, *pQueue;
+	SceUIDWorkQueueObject *queue, *pQueue;
 	char name[32];
 	SceUID sema, thread, *threads;
 	int intr, ret, i;
@@ -919,7 +919,7 @@ int createGlobalWorkQueue(void)
 					"SceKernelGlobalWorkQueue", (SceObjectBase *)pQueue) < 0)
 		SCE_PANIC(292);
 	uidWorkQueue_Constructor(pQueue);
-	uidWaitableConstructor(pQueue);
+	uidWaitable_Constructor(pQueue);
 	queue = pQueue;
 	queue->attr = 0;
 	queue->threadCount = WORK_QUEUE_MAX_THREADS;
@@ -944,7 +944,7 @@ SceUID sceKernelCreateWorkQueue(const char *name, SceUInt32 attr,
 {
 	UIDCreateOpt opt;
 	struct ThreadCB *thread;
-	ThreadmgrWorkQueue *queue;
+	SceUIDWorkQueueObject *queue;
 	char threadName[32];
 	SceUID sema, uid, *threads;
 	uint32_t saved, count, objectAttr;
@@ -1081,8 +1081,8 @@ SceUID sceKernelScheduleWorkTask(SceUID workQueueId, const char *name, int (*ent
 	struct ThreadCB *thread =
 		currentThreadContext();
 	ListNode *pos;
-	ThreadmgrWorkQueue *queue;
-	ThreadmgrWorkTask *task;
+	SceUIDWorkQueueObject *queue;
+	SceUIDWorkTaskObject *task;
 	SceUID creatorPid, sema;
 	uint32_t saved, user;
 	int intr, ret, uid;
@@ -1364,7 +1364,7 @@ end:
 int SceThreadmgrForDriver_0B604A3C(SceUID workTaskId, ThreadmgrWorkTaskInfoShort *info)
 {
 	ThreadmgrWorkTaskInfoShort local;
-	ThreadmgrWorkTask *task;
+	SceUIDWorkTaskObject *task;
 	SceObjectBase *pObject;
 	SceUID puid, queueId;
 	SceSize size, got;
@@ -1386,7 +1386,7 @@ int SceThreadmgrForDriver_0B604A3C(SceUID workTaskId, ThreadmgrWorkTaskInfoShort
 		sceKernelCpuResumeIntr(intr);
 		goto restore;
 	}
-	task = (ThreadmgrWorkTask *)pObject;
+	task = (SceUIDWorkTaskObject *)pObject;
 	local.workTaskId = workTaskId;
 	strncpy(local.name, SceSysmemForDriver_E655852F(workTaskId), sizeof(local.name) - 1);
 	sceKernelSpinlockLowLock(&task->cb.queue->lock);

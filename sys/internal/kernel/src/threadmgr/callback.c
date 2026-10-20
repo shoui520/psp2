@@ -43,14 +43,14 @@
 #define CALLBACK_CLASS()	(s_threadmgrRuntime.manager->callbackClass)
 #define CALLBACK_HEAD(thread)	((struct ThreadmgrCallbackCB *)&(thread)->callbackNext)
 #define CALLBACK_FROM_CB(cb) \
-	((struct ThreadmgrCallback *)((uintptr_t)(cb) - offsetof(struct ThreadmgrCallback, cb)))
+	((struct SceUIDCallbackObject *)((uintptr_t)(cb) - offsetof(struct SceUIDCallbackObject, cb)))
 
 /* SceUIDRegisterCallbackObject (0x30): an object callbacks can be registered on */
-typedef struct ThreadmgrRegisterCallback {
+typedef struct SceUIDRegisterCallbackObject {
 	uint8_t base[0x28];			/* the waitable object */
 	ThreadmgrEventCallback *callbackNext;	/* 0x28 */
 	ThreadmgrEventCallback *callbackPrev;
-} ThreadmgrRegisterCallback;
+} SceUIDRegisterCallbackObject;
 
 void exitDeleteThread(int status, int intr, int error) __attribute__((noreturn));
 void returnFromKernelCallbackEntry(int result) __attribute__((noreturn));
@@ -90,14 +90,14 @@ void __attribute__((noreturn)) returnFromCallback(struct ThreadCB *thread)
 /* SceUIDCallbackClass's constructor */
 static int uidCallback_Constructor(void *object)
 {
-	memset(&((struct ThreadmgrCallback *)object)->cb, 0, sizeof(struct ThreadmgrCallbackCB));
+	memset(&((struct SceUIDCallbackObject *)object)->cb, 0, sizeof(struct ThreadmgrCallbackCB));
 	return 0;
 }
 
 /* SceUIDRegisterCallbackClass's constructor */
 static int uidRegisterCallback_Constructor(void *object)
 {
-	ThreadmgrRegisterCallback *reg = object;
+	SceUIDRegisterCallbackObject *reg = object;
 
 	reg->callbackNext = (ThreadmgrEventCallback *)&reg->callbackNext;
 	reg->callbackPrev = (ThreadmgrEventCallback *)&reg->callbackNext;
@@ -105,7 +105,7 @@ static int uidRegisterCallback_Constructor(void *object)
 }
 
 /* SceUIDCallbackClass's destructor: the callback leaves its process's counts */
-int uidCallback_Destructor(struct ThreadmgrCallback *callback)
+int uidCallback_Destructor(struct SceUIDCallbackObject *callback)
 {
 	SceProcessObject *process;
 	SceUID pid;
@@ -135,7 +135,7 @@ int uidCallback_Destructor(struct ThreadmgrCallback *callback)
 /* the information of a callback, read under its thread's lock */
 int getCallbackInfo(SceUID callbackId, SceKernelCallbackInfo *info)
 {
-	struct ThreadmgrCallback *callback;
+	struct SceUIDCallbackObject *callback;
 	struct ThreadmgrThreadObject *object;
 	int intr, ret;
 
@@ -238,7 +238,7 @@ void __attribute__((noinline)) deleteRegisteredCallbackList(ThreadmgrEventCallba
 /* SceUIDRegisterCallbackClass's destructor: its registrations go */
 static int uidRegisterCallback_Destructor(void *object)
 {
-	ThreadmgrRegisterCallback *reg = object;
+	SceUIDRegisterCallbackObject *reg = object;
 	ThreadmgrEventCallback *head = (ThreadmgrEventCallback *)&reg->callbackNext;
 	ThreadmgrEventCallback *entry, *next;
 	int intr;
@@ -474,7 +474,7 @@ restore:
 int callCallbackAll(struct ThreadCB *thread)
 {
 	struct ThreadmgrCallbackCB *cb, *next;
-	struct ThreadmgrCallback *outer;
+	struct SceUIDCallbackObject *outer;
 	ThreadmgrTraceHook hook;
 	uint32_t notifyId, count, arg;
 	int ran, ret, err;
@@ -550,7 +550,7 @@ int callCallbackAll(struct ThreadCB *thread)
 int callbackProcessExit(SceProcessObject *process)
 {
 	SceSize got = 0;
-	struct ThreadmgrCallback *callback;
+	struct SceUIDCallbackObject *callback;
 	struct ThreadmgrThreadObject *object;
 	SceUID *vector, guid;
 	int num, i, intr, ret;
@@ -644,7 +644,7 @@ SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallba
 	UIDCreateOpt opt;
 	struct ThreadCB *thread;
 	SceProcessObject *process;
-	struct ThreadmgrCallback *callback;
+	struct SceUIDCallbackObject *callback;
 	SceObjectBase *pObject;
 	uint32_t saved, access, limit;
 	int user, intr, ret;
@@ -724,7 +724,7 @@ SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallba
 				    " error: sceGUIDKernelCreate(0x%08X)\n", uid);
 		goto unaccount;
 	}
-	callback = (struct ThreadmgrCallback *)pObject;
+	callback = (struct SceUIDCallbackObject *)pObject;
 	callback->ownerPid = ThreadmgrInSyscall() ? thread->processId : SCE_KERNEL_PROCESS_ID;
 	callback->cb.guid = uid;
 	callback->cb.attr = limit;
@@ -735,7 +735,7 @@ SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallba
 	callback->cb.running = 0;
 	if (ThreadmgrInSyscall()) {
 		callback->cb.puid = scePUIDOpenByGUIDWithFlags(thread->processId, uid, 1);
-		uid = ((struct ThreadmgrCallback *)pObject)->cb.puid;
+		uid = ((struct SceUIDCallbackObject *)pObject)->cb.puid;
 		if (uid < 0) {
 			SCE_DBG_ASSERT_LEVEL_FUNC(0, 0, 1016, "sceKernelCreateCallback");
 			goto unaccount;
@@ -744,7 +744,7 @@ SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallba
 		callback->cb.puid = -1;
 	}
 	sceKernelSpinlockLowLock(THREAD_LOCK(thread));
-	callback = (struct ThreadmgrCallback *)pObject;
+	callback = (struct SceUIDCallbackObject *)pObject;
 	callback->cb.next = CALLBACK_HEAD(thread);
 	callback->cb.prev = CALLBACK_HEAD(thread)->prev;
 	CALLBACK_HEAD(thread)->prev = &callback->cb;
@@ -770,7 +770,7 @@ restore:
 
 int sceKernelDeleteCallback(SceUID callbackId)
 {
-	struct ThreadmgrCallback *callback;
+	struct SceUIDCallbackObject *callback;
 	struct ThreadmgrThreadObject *object;
 	uint32_t saved;
 	int intr, ret;
@@ -832,7 +832,7 @@ restore:
 /* counts a notification of the callback and wakes its thread if it waits with callbacks */
 int sceKernelNotifyCallback(SceUID callbackId, int arg)
 {
-	struct ThreadmgrCallback *callback;
+	struct SceUIDCallbackObject *callback;
 	struct ThreadmgrThreadObject *object;
 	struct ThreadmgrWaitNode *self;
 	ThreadmgrEvent *waitObject;
@@ -955,7 +955,7 @@ int sceKernelCheckCallback(void)
 
 int SceThreadmgrForDriver_C040EC1C(SceUID callbackId)
 {
-	struct ThreadmgrCallback *callback;
+	struct SceUIDCallbackObject *callback;
 	struct ThreadmgrThreadObject *object;
 	uint32_t saved;
 	int intr, ret;
@@ -989,7 +989,7 @@ resume:
 
 int SceThreadmgrForDriver_0892D8DF(SceUID callbackId)
 {
-	struct ThreadmgrCallback *callback;
+	struct SceUIDCallbackObject *callback;
 	struct ThreadmgrThreadObject *object;
 	uint32_t saved;
 	int intr, ret;
@@ -1196,7 +1196,7 @@ end:
 int sceKernelRegisterCallbackToEventForDriver(SceUID eventId, SceUID callbackId, uint32_t notifyId)
 {
 	ThreadmgrEventCallback *entry, *pos, *head;
-	struct ThreadmgrCallback *callback;
+	struct SceUIDCallbackObject *callback;
 	ThreadmgrEvent *event;
 	SceAllocOpt opt;
 	uint32_t saved;
@@ -1348,7 +1348,7 @@ int __attribute__((noinline)) uidRegisterCallbackClassInit(struct ThreadmgrWaita
 {
 	int ret;
 
-	ret = uidExtendedClassInit(cls, name, parent, size, create, destroy, cancelWait,
+	ret = uidWaitableClassInit(cls, name, parent, size, create, destroy, cancelWait,
 				   revalidate, release);
 	if (ret < 0)
 		SCE_PANIC(SCE_LINE(2130, 2121));
@@ -1370,19 +1370,19 @@ void startCallback(void)
 		SCE_PANIC_FUNC(SCE_LINE(2040, 2035), "uidCallbackClassInit");
 	s_threadmgrRuntime.manager->callbackClass = (SceClass *)cls;
 	SCE_DBG_PRINTF_LEVEL(2, 0, 197, " sizeof(SceUIDCallbackObject)=%d\n",
-			     sizeof(struct ThreadmgrCallback));
+			     sizeof(struct SceUIDCallbackObject));
 	registerClass = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						  sizeof(*registerClass));
 	if (registerClass == NULL)
 		SCE_PANIC(202);
 	if (uidRegisterCallbackClassInit(registerClass, "SceUIDRegisterCallbackClass",
 			s_threadmgrRuntime.manager->waitableClass,
-			sizeof(ThreadmgrRegisterCallback), uidRegisterCallback_Constructor,
+			sizeof(SceUIDRegisterCallbackObject), uidRegisterCallback_Constructor,
 			uidRegisterCallback_Destructor, uidDefaultCancelWait,
 			uidDefault_RevalidateMethod,
 			uidDefault_ReleaseMethod) < 0)
 		SCE_PANIC(215);
 	s_threadmgrRuntime.manager->registerCallbackClass = (SceClass *)registerClass;
 	SCE_DBG_PRINTF_LEVEL(2, 0, 218, " sizeof(SceUIDRegisterCallbackObject)=%d\n",
-			     sizeof(ThreadmgrRegisterCallback));
+			     sizeof(SceUIDRegisterCallbackObject));
 }
