@@ -2539,10 +2539,11 @@ int vfsRemove(IofilemgrRemoveParam *param)
 		goto release_dvp;
 	type = vp->core.type;
 	if ((type & SCE_VNODE_TYPE_REG) == 0) {
-		if ((type & SCE_VNODE_TYPE_DIR) != 0)
+		if ((type & SCE_VNODE_TYPE_DIR) != 0) {
 			ret = SCE_ERROR_ERRNO_EISDIR;
-		else
-			ret = SCE_ERROR_ERRNO_EPERM;
+			goto release_vp;
+		}
+		ret = SCE_ERROR_ERRNO_EPERM;
 		goto release_vp;
 	}
 	if (type >= SCE_VNODE_TYPE_ROOTDIR) {
@@ -2592,8 +2593,10 @@ check_linked:
 	if (vp->core.refCount != 1)
 		goto release_vp;
 	ret = sceVopInactive(vp);
-	if (ret < 0 && ret != SCE_ERROR_ERRNO_EUNSUP)
-		SCE_DBG_PRINTF(0xf, 4628, "inactive failed ... %d 0x%x\n", ret, ret);
+	if (ret < 0) {
+		if (ret != SCE_ERROR_ERRNO_EUNSUP)
+			SCE_DBG_PRINTF(0xf, 4628, "inactive failed ... %d 0x%x\n", ret, ret);
+	}
 	vfsLockMnt(vp->core.mnt);
 	if ((int)--vp->core.mnt->mntRefCount < 0)
 		SCE_DBG_PRINTF(0xf, 4636, "vp->mnt->mntRefCount = %d\n", vp->core.mnt->mntRefCount);
@@ -2627,7 +2630,7 @@ whiteout:
 		ret = sceVopWhiteout(dvp, vp, &path, &tmpPath, 0, 0);
 		if (ret == SCE_ERROR_ERRNO_EUNSUP)
 			ret = sceVopRename(dvp, vp, &path, NULL, &nvp, &tmpPath);
-	} while (i < 0x3f8 && ret == SCE_ERROR_ERRNO_EEXIST);
+	} while (ret == SCE_ERROR_ERRNO_EEXIST && i < 0x3f8);
 	if (ret < 0) {
 		if (ret == SCE_ERROR_ERRNO_EEXIST)
 			SCE_DBG_PRINTF(0xf, 4743, "can not create temporal file %s\n", tmp);
@@ -2691,8 +2694,10 @@ whiteout:
 	if (vp->core.refCount != 1)
 		goto release_vp;
 	ret = sceVopInactive(vp);
-	if (ret < 0 && ret != SCE_ERROR_ERRNO_EUNSUP)
-		SCE_DBG_PRINTF_LEVEL(2, 0xf, 4864, "inactive failed ... %d 0x%x\n", ret, ret);
+	if (ret < 0) {
+		if (ret != SCE_ERROR_ERRNO_EUNSUP)
+			SCE_DBG_PRINTF_LEVEL(2, 0xf, 4864, "inactive failed ... %d 0x%x\n", ret, ret);
+	}
 	vfsLockMnt(vp->core.mnt);
 	if ((int)--vp->core.mnt->mntRefCount < 0)
 		SCE_DBG_PRINTF(0xf, 4872, "vp->mnt->mntRefCount = %d\n", vp->core.mnt->mntRefCount);
@@ -2897,8 +2902,10 @@ next:
 		goto release_vp;
 	}
 	ret = sceVopInactive(rvp);
-	if (ret < 0 && ret != SCE_ERROR_ERRNO_EUNSUP)
-		SCE_DBG_PRINTF_LEVEL(2, 0xf, 5807, "inactive failed ... %d 0x%x\n", ret, ret);
+	if (ret < 0) {
+		if (ret != SCE_ERROR_ERRNO_EUNSUP)
+			SCE_DBG_PRINTF_LEVEL(2, 0xf, 5807, "inactive failed ... %d 0x%x\n", ret, ret);
+	}
 	vfsFreeVnode(rvp);
 	if (mnt->mntRefCount != 1 || mnt->openedEntryNum != 0) {
 		vfsUnlockMnt(mnt);
@@ -4169,12 +4176,13 @@ SceUID vfsOpen(IofilemgrOpenParam *param)
 	const VfsPathElem *name;
 	SceVfsVnode *dvp, *vp;
 	SceVfsMount *mnt;
+	int num;
 	SceVfsFile *file, *f;
 	SceVfsPath path;
 	SceIoStat stat;
 	SceUID pid, fd;
 	char *buf;
-	int num, last, creat, writable, exists, ret, err;
+	int last, creat, writable, exists, ret, err;
 
 	if (((unsigned int)flags >> 28) != 0) {
 		flags &= 0x0fffffff;
@@ -4188,8 +4196,10 @@ SceUID vfsOpen(IofilemgrOpenParam *param)
 	if (buf == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 	ret = replace_flat_path(filename, buf, elem, &num, 0);
-	if (ret < 0 || num == 0)
+	if (ret < 0)
 		goto out;
+	if (num == 0)
+		goto done;
 	last = num - 1;
 	ret = vfs_find_in_path(elem, last, &dvp, buf, 1);
 	if (ret < 0)
@@ -4246,56 +4256,74 @@ SceUID vfsOpen(IofilemgrOpenParam *param)
 			if ((flags & SCE_O_TRUNC) != 0)
 				goto check_host;
 		}
-		if ((flags & SCE_O_RDWR) != SCE_O_WRONLY && (flags & SCE_O_RDWR) != SCE_O_RDWR &&
-		    ((flags & SCE_O_RDWR) != SCE_O_RDONLY || (flags & (SCE_O_APPEND | SCE_O_TRUNC)) != 0))
+		if ((flags & SCE_O_RDWR) == SCE_O_WRONLY || (flags & SCE_O_RDWR) == SCE_O_RDWR) {
+			if ((flags & SCE_O_TRUNC) != 0) {
+				if ((exists | creat) == 0) {
+					ret = SCE_ERROR_ERRNO_ENOENT;
+					goto release_dvp;
+				}
+			} else if ((flags & SCE_O_APPEND) != 0 && (exists | creat) == 0) {
+				ret = SCE_ERROR_ERRNO_ENOENT;
+				goto release_dvp;
+			}
+		} else if ((flags & SCE_O_RDWR) != SCE_O_RDONLY || (flags & (SCE_O_APPEND | SCE_O_TRUNC)) != 0) {
 			goto invalid;
-		path.name = name->name;
-		path.nameLength = name->len;
-		path.path = buf;
+		}
 		if (!exists) {
-			if ((mode & VFS_OPEN_MODE_VALID) == 0 || (mode & VFS_OPEN_MODE_INVALID) != 0) {
-				ret = SCE_ERROR_ERRNO_EINVAL;
+			path.name = name->name;
+			path.nameLength = name->len;
+			path.path = buf;
+			if (creat != 0) {
+				if ((mode & VFS_OPEN_MODE_VALID) == 0 ||
+				    (mode & VFS_OPEN_MODE_INVALID) != 0) {
+					ret = SCE_ERROR_ERRNO_EINVAL;
 #if FW_DEBUG
-				SceDebugForDriver_391B74B7("#### Invalid mode !! sceIoOpen(%s, flag=0x%x, mode=0%o(0x%x)) ####\n",
-						 filename, flags, mode, mode);
+					SceDebugForDriver_391B74B7("#### Invalid mode !! sceIoOpen(%s, flag=0x%x, mode=0%o(0x%x)) ####\n",
+							 filename, flags, mode, mode);
 #else
-				SCE_PRINTF_WITH_INFO(0xf, 3231, "::0x10f::002::0%o(0x%x)\n", mode, param->mode);
+					SCE_PRINTF_WITH_INFO(0xf, 3231, "::0x10f::002::0%o(0x%x)\n", mode, param->mode);
 #endif
-				goto release_dvp;
+					goto release_dvp;
+				}
+				ret = sceVopCreate(dvp, &vp, &path, flags, mode);
+				if (ret < 0)
+					goto release_dvp;
+				SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 3243);
+				ret = sceVfsACCheckOpen(vp, flags);
+				if (ret < 0) {
+					SCE_DBG_PRINTF_LEVEL(2, 0xf, 3248, "sceVfsACCheckOpen() failed %d 0x%x\n",
+							     ret, ret);
+					goto unlock_vp;
+				}
+				goto open;
 			}
-			ret = sceVopCreate(dvp, &vp, &path, flags, mode);
-			if (ret < 0)
-				goto release_dvp;
-			SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 3243);
-			ret = sceVfsACCheckOpen(vp, flags);
-			if (ret < 0) {
-				SCE_DBG_PRINTF_LEVEL(2, 0xf, 3248, "sceVfsACCheckOpen() failed %d 0x%x\n",
-						     ret, ret);
-				goto unlock_vp;
+		} else {
+			for (f = vp->core.fdList; f != NULL; f = f->next) {
+				if ((flags & SCE_O_NOBUF) == 0 && (f->openMode & SCE_O_NOBUF) != 0) {
+					ret = SCE_ERROR_ERRNO_EINVAL;
+					goto release_vp;
+				}
 			}
-			goto open;
+			if (vp->core.bc != NULL) {
+				if ((flags & SCE_O_NOBUF) != 0) {
+					ret = SCE_ERROR_ERRNO_EINVAL;
+					goto release_vp;
+				}
+				if (vp->core.mnt->defaultIoCacheSize < vp->core.bc->ioBuffSize &&
+				    (flags & SCE_O_WRONLY) != 0) {
+					ret = SCE_ERROR_ERRNO_EINVAL;
+					goto release_vp;
+				}
+			}
+			path.name = name->name;
+			path.nameLength = name->len;
+			path.path = buf;
+			if (creat == 0 || vp->core.mnt->fsType != SCE_VFS_FS_TYPE_HOSTFS ||
+			    vfs_check_and_sync_on_host(vp, &path) != SCE_ERROR_ERRNO_ENOENT)
+				break;
+			continue;
 		}
-		for (f = vp->core.fdList; f != NULL; f = f->next) {
-			if ((flags & SCE_O_NOBUF) == 0 && (f->openMode & SCE_O_NOBUF) != 0) {
-				ret = SCE_ERROR_ERRNO_EINVAL;
-				goto release_vp;
-			}
-		}
-		if (vp->core.bc != NULL) {
-			if ((flags & SCE_O_NOBUF) != 0) {
-				ret = SCE_ERROR_ERRNO_EINVAL;
-				goto release_vp;
-			}
-			if (vp->core.mnt->defaultIoCacheSize < vp->core.bc->ioBuffSize &&
-			    (flags & SCE_O_WRONLY) != 0) {
-				ret = SCE_ERROR_ERRNO_EINVAL;
-				goto release_vp;
-			}
-		}
-		if (creat == 0 || vp->core.mnt->fsType != SCE_VFS_FS_TYPE_HOSTFS ||
-		    vfs_check_and_sync_on_host(vp, &path) != SCE_ERROR_ERRNO_ENOENT)
-			break;
-		continue;
+		break;
 invalid:
 		ret = SCE_ERROR_ERRNO_EINVAL;
 		if (!exists)
@@ -4312,14 +4340,14 @@ check_host:
 	ret = sceVfsACCheckOpen(vp, flags);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 3257, "sceVfsACCheckOpen() failed %d 0x%x\n", ret, ret);
-		goto release_vp;
+		goto fail;
 	}
 	if ((flags & SCE_O_TRUNC) != 0) {
 		stat.st_size = 0;
 		ret = sceVopChstat(vp, &path, &stat, SCE_CST_SIZE);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(2, 0xf, 3268, "truncate failed %d 0x%x\n", ret, ret);
-			goto release_vp;
+			goto fail;
 		}
 	}
 open:
@@ -4369,6 +4397,7 @@ release_vp:
 	vfs_decrement_vp_mnt_ref_inline(vp);
 release_dvp:
 	vfs_decrement_vp_mnt_ref_inline(dvp);
+done:
 	vfs_path_buff_free(buf);
 	if (ret > 0 && vp->core.bc == NULL &&
 	    (vp->core.mnt->mntFlags & SCE_VFS_MOUNT_FLAG_NOBUF) == 0 && (flags & SCE_O_NOBUF) == 0)

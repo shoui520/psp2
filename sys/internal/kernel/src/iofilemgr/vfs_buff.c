@@ -1011,19 +1011,20 @@ int vfsBuffIoOverWrite(struct BuffCache *bc, SceOff pos, SceSize size, const voi
 int vfsBuffIo2DataBuff(struct BuffCache *bc, SceOff pos, SceVfsVnode *vp, SceVfsFile *file)
 {
 	SceSize lineSize = bc->lineSize;
+	SceOff ioOffset;
 	SceOff lineOffset;
 	int ret;
 
 	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 1594);
+	ioOffset = bc->ioBuffOffset;
 	if (bc->ioBuffState >= VFS_BUFF_LINE_INVALID)
 		return SCE_ERROR_ERRNO_ENOENT;
 	lineOffset = pos & ~(SceOff)(lineSize - 1);
-	if (lineOffset < bc->ioBuffOffset ||
-	    bc->ioBuffOffset + bc->ioBuffCachedSize < lineOffset + lineSize)
+	if (lineOffset < ioOffset || ioOffset + bc->ioBuffCachedSize < lineOffset + lineSize)
 		return SCE_ERROR_ERRNO_ENOENT;
 
 	ret = vfsBuffDataEnter(bc, lineOffset, lineSize,
-			       (char *)bc->ioBuff + (SceSize)(lineOffset - bc->ioBuffOffset),
+			       (char *)bc->ioBuff + (SceSize)(lineOffset - ioOffset),
 			       VFS_BUFF_LINE_FLUSHED, vp, file);
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 1609, "enter failed ... fpos=0x%llx, pos=0x%llx\n", pos,

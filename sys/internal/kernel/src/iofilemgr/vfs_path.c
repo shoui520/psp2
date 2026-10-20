@@ -13,17 +13,18 @@ int vfs_check_path_length(const char *path, SceSize *len, SceSize *nameLen, SceS
 {
 	const SceUInt8 *p = (const SceUInt8 *)path;
 	int bytes = 0, chars = 0, nameChars = 0, colon = 0;
-	int n;
+	int n, i;
 	SceUInt8 c;
-	const SceUInt8 *end;
+	signed char sc;
 
 	while (bytes < (int)max) {
 		c = *p;
-		if ((signed char)c < 0) {
+		sc = (signed char)c;
+		if (sc < 0) {
 			/* a multibyte sequence: its lead byte gives the length */
 			if (c < 0xc2)
 				return SCE_ERROR_ERRNO_EINVAL;
-			n = __builtin_clz(~((SceUInt32)c << 24));
+			n = __builtin_clz(~(sc << 24));
 			if (n > 6)
 				return SCE_ERROR_ERRNO_EINVAL;
 			if (n < 2) {
@@ -33,7 +34,7 @@ int vfs_check_path_length(const char *path, SceSize *len, SceSize *nameLen, SceS
 				p += 2;
 				if ((c & 0xc0) != 0x80)
 					return SCE_ERROR_ERRNO_EINVAL;
-				for (end = p + (n - 2); p != end;)
+				for (i = 2; i < n; i++)
 					if ((*p++ & 0xc0) != 0x80)
 						return SCE_ERROR_ERRNO_EINVAL;
 			}
@@ -47,7 +48,7 @@ int vfs_check_path_length(const char *path, SceSize *len, SceSize *nameLen, SceS
 				return 0;
 			}
 			nameChars++;
-			if (c == ':' && !colon) {
+			if (sc == ':' && !colon) {
 				nameChars = 0;
 				colon = 1;
 			}

@@ -36,7 +36,8 @@ int sceIoChunkCreateIoChunkPool(IoChunk *chunks, int chunkNum, IoChunkPool *pool
 		pool->freeList = chunks;
 		pool->freeNum = chunkNum;
 		count = 0;
-		for (chunk = chunks->next; chunk != NULL; chunk = chunk->next)
+		chunk = chunks;
+		while ((chunk = chunk->next) != NULL)
 			count++;
 		SCE_DBG_ASSERT(count == chunkNum - 1, 70);
 	}

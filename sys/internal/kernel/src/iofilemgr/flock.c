@@ -714,7 +714,8 @@ int vfs_flock_dup(SceVfsVnode *src, SceVfsVnode *dst)
 			dup->refcount = 1;
 			dup->fid = fid;
 			count = lock->use_count;
-			dup->lock = lock;
+			/* the store keeps its place before list->head's load (a pointer store through void **) */
+			*(void **)&dup->lock = lock;
 			head = list->head;
 			lock->use_count = count + 1;
 			dup->next = head;

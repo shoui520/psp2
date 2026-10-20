@@ -158,9 +158,12 @@ int uncached_data_write(struct BuffCache *bc, SceOff start, SceSize nbyte, const
 		ioSize = bc->ioBuffSize;
 		off = pos % ioSize;
 		size = ioSize - off;
-		partial = size < rest;
-		if (!partial)
+		if (size >= rest) {
 			size = rest;
+			partial = 0;
+		} else {
+			partial = 1;
+		}
 		if (off == 0 && pos != vp->core.size && size == ioSize) {
 			ret = vfsBuffIoOverWrite(bc, pos, size, buf, vp);
 			if (ret < 0) {
@@ -180,10 +183,9 @@ int uncached_data_write(struct BuffCache *bc, SceOff start, SceSize nbyte, const
 			goto fail;
 		}
 		if ((file->openMode & SCE_O_APPEND) != 0 && size == bc->ioBuffSize) {
-			bc->ioBuffOffset = pos & ~(SceOff)(SceSize)(size - 1);
+			bc->ioBuffOffset = pos & ~(SceOff)(size - 1);
 			bc->ioBuffCachedSize = 0;
 			bc->ioBuffState = 1;
-			n = size;
 		} else {
 			fetched = vfsBuffIoFetch(bc, pos, vp, file);
 			if ((int)fetched < 0) {
@@ -213,9 +215,8 @@ int uncached_data_write(struct BuffCache *bc, SceOff start, SceSize nbyte, const
 					goto flush;
 				goto next;
 			}
-			n = bc->ioBuffSize;
 		}
-		SCE_DBG_ASSERT(pos % n == 0, 329);
+		SCE_DBG_ASSERT(pos % size == 0, 329);
 		ret = vfsBuffIoSet(bc, pos, size, buf, vp);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(2, 0xf, 334, "vfsBuffIoSet() failed ... %d 0x%x\n", ret,
@@ -460,7 +461,7 @@ io_done:
 					     pos, ioStart, last, ioEnd, nbyte);
 			SCE_DBG_ASSERT(0, 944);
 		}
-		n = ioStart + bc->ioBuffSize - pos;
+		n = ioEnd + 1 - pos;
 		ret = vfsBuffIoWrite(bc, pos, n, buf, vp, (SceSize)-1);
 		if (ret >= 0) {
 			if (pwrite != 1) {

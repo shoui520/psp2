@@ -926,7 +926,7 @@ int vfs_remove_mnt_vnode_list(SceVfsMount *mnt, SceVfsVnode *vp)
 	return ret;
 }
 
-int vfsFreeVnode(SceVfsVnode *vp)
+__attribute__((noinline)) int vfsFreeVnode(SceVfsVnode *vp)
 {
 	int ret;
 
@@ -978,8 +978,11 @@ int vfs_finalize_mount(SceVfsMount *mnt)
 				return SCE_ERROR_ERRNO_EBUSY;
 			}
 			ret = sceVopInactive(vp);
-			if (ret < 0 && ret != SCE_ERROR_ERRNO_EUNSUP)
-				SCE_DBG_PRINTF(0xf, 326, "inactive failed ... %d 0x%x\n", ret, ret);
+			if (ret < 0) {
+				if (ret != SCE_ERROR_ERRNO_EUNSUP)
+					SCE_DBG_PRINTF(0xf, 326, "inactive failed ... %d 0x%x\n", ret,
+						       ret);
+			}
 			vfsFreeVnode(vp);
 			freed++;
 		}
@@ -1104,7 +1107,7 @@ int vfs_release_vfs(const char *name)
 void vfs_initialize_file(SceVfsVnode *vp, SceVfsFile *file)
 {
 	SceVfsMount *mnt = vp->core.mnt;
-	SceUInt32 attr;
+	SceUInt32 flags, attr;
 
 	SCE_DBG_ASSERT_CHECK(vp->vdlock.ownerId == sceKernelGetThreadId(), 1734);
 	vp->core.fdNum++;
@@ -1117,12 +1120,13 @@ void vfs_initialize_file(SceVfsVnode *vp, SceVfsFile *file)
 	file->fd = 0;
 	file->pid = SceThreadmgrForDriver_FA54D49A();
 	file->hasFlockEnt = 0;
-	attr = (mnt->mntFlags & SCE_VFS_MOUNT_FLAG_INTERNAL) != 0;
+	flags = mnt->mntFlags;
+	attr = (flags & SCE_VFS_MOUNT_FLAG_INTERNAL) != 0;
 	file->fdLock = mnt->fdLock;
 	file->idata = attr;
-	if ((mnt->mntFlags & SCE_VFS_MOUNT_FLAG_EXTERNAL) != 0)
-		file->idata = attr | VFS_FILE_ATTR_EXTERNAL;
 	__builtin_memset(file->ioSchedData, 0, sizeof(file->ioSchedData));
+	if ((flags & SCE_VFS_MOUNT_FLAG_EXTERNAL) != 0)
+		file->idata = attr | VFS_FILE_ATTR_EXTERNAL;
 	file->flockBusyCount = 0;
 	file->debugPath = NULL;
 	if (vp->core.fdList != NULL)
@@ -2042,8 +2046,8 @@ SceUID vfs_allocate_file(SceVfsVnode *vp, SceVfsFile **file, const char *name)
 	char objName[0x1f + 1];
 	SceUID uid;
 
-	data = mnt->mntData;
 	SCE_DBG_ASSERT_CHECK(vp->vdlock.ownerId == sceKernelGetThreadId(), 1682);
+	data = mnt->mntData;
 	if (name == NULL) {
 		strncpy(objName, "SceVfsFile", 0x1f);
 	} else {
@@ -2091,8 +2095,7 @@ int vfs_extend_vnode_buffer(int cur)
 	return 0;
 }
 
-static inline __attribute__((always_inline)) void init_vnode(SceVfsVnode *vp, SceVfsMount *mnt,
-							     SceVopTable *ops, SceUID heap)
+static inline __attribute__((always_inline)) void init_vnode(SceVfsVnode *vp)
 {
 	if (vp->core.state != 0) {
 		vfs_dump_vnode(vp, 1);
@@ -2100,32 +2103,22 @@ static inline __attribute__((always_inline)) void init_vnode(SceVfsVnode *vp, Sc
 	}
 	memset(&vp->core, 0, 0x98);
 	vp->core.state = SCE_VNODE_STATE_NEW;
-	vp->core.ops = ops;
-	vp->core.mntOpt = mnt->opt;
-	vp->core.mnt = mnt;
-	vp->core.refCount++;
-	vp->core.allocator = heap;
-	vfsLockMnt(mnt);
-	vp->core.next = NULL;
-	if (mnt->vnodeList != NULL)
-		vp->core.next = mnt->vnodeList;
-	mnt->vnodeList = vp;
-	mnt->vnodeNum++;
-	vfsUnlockMnt(mnt);
 }
 
 int vfsGetNewVnode(SceVfsMount *mnt, SceVopTable *ops, int unused, SceVfsVnode **vpp)
 {
 	SceVfsVnode *vp = NULL;
 	SceUID heap;
-	int cur, ret;
+	volatile int cur, next;	/* Sony's compile keeps both in memory */
+	int ret;
 
 	heap = mnt->allocator;
 	if (heap == 0)
 		heap = g_vfsNcacheHeap;
 	do {
-		while ((cur = g_total_vnode_num) < g_available_vnode_num) {
-			if (SceCpuForDriver_CDA96E81(&g_total_vnode_num, cur, cur + 1) != cur)
+		while (next = cur = g_total_vnode_num, g_available_vnode_num > cur) {
+			next++;
+			if (SceCpuForDriver_CDA96E81(&g_total_vnode_num, cur, next) != cur)
 				continue;
 			vp = bufferPoolAlloc(&g_vnodePool);
 			if (vp == NULL) {
@@ -2148,7 +2141,20 @@ int vfsGetNewVnode(SceVfsMount *mnt, SceVopTable *ops, int unused, SceVfsVnode *
 	SCE_PRINTF_WITH_INFO(0xf, 1221, "::0x10f::001::%d\n", g_total_vnode_num);
 	return ret;
 found:
-	init_vnode(vp, mnt, ops, heap);
+	/* what follows reads vp back from its slot (its address went to vfs_reclaim_vnode) */
+	init_vnode(vp);
+	vp->core.ops = ops;
+	vp->core.mntOpt = (SceInt16)mnt->opt;
+	vp->core.mnt = mnt;
+	vp->core.refCount++;
+	vp->core.allocator = heap;
+	vfsLockMnt(mnt);
+	vp->core.next = NULL;
+	if (mnt->vnodeList != NULL)
+		vp->core.next = mnt->vnodeList;
+	mnt->vnodeList = vp;
+	mnt->vnodeNum++;
+	vfsUnlockMnt(mnt);
 	*vpp = vp;
 	return 0;
 }
