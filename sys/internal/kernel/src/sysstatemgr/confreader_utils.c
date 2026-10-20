@@ -53,14 +53,16 @@ void ConfReaderUtilsFreeCmdBuf(ConfReader *reader) /* name unknown */
 int ConfReaderUtilsRememberLoaded(ConfReader *reader, SceUID uid, const char *path) /* name unknown */
 {
 	ConfLoaded *loaded = sceKernelAllocHeapMemory(SCE_KERNEL_HEAP_ID, sizeof(*loaded));
-	unsigned len;
+	unsigned size;
+	char *copy;
 
 	if (loaded) {
-		len = strnlen(path, 0x100);
-		loaded->path = sceKernelAllocHeapMemory(SCE_KERNEL_HEAP_ID, len + 1);
-		if (loaded->path) {
-			loaded->path[0] = 0;
-			strncpy(loaded->path, path, len + 1);
+		size = strnlen(path, 0x100) + 1;
+		copy = sceKernelAllocHeapMemory(SCE_KERNEL_HEAP_ID, size);
+		loaded->path = copy;
+		if (copy) {
+			copy[0] = 0;
+			strncpy(copy, path, size);
 			loaded->next = reader->loaded;
 			loaded->uid = uid;
 			reader->loaded = loaded;
@@ -83,15 +85,18 @@ SceUID ConfReaderUtilsFindLoaded(ConfReader *reader, const char *path) /* name u
 
 int ConfReaderUtilsForgetLoaded(ConfReader *reader, SceUID uid) /* name unknown */
 {
-	ConfLoaded *loaded = reader->loaded, *previous = loaded;
+	ConfLoaded *loaded = reader->loaded, *previous = loaded, *next;
+	char *path;
 
 	while (loaded) {
 		if (loaded->uid == uid) {
+			next = loaded->next;
+			path = loaded->path;
 			if (loaded == reader->loaded)
-				reader->loaded = loaded->next;
+				reader->loaded = next;
 			else
-				previous->next = loaded->next;
-			sceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, loaded->path);
+				previous->next = next;
+			sceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, path);
 			sceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, loaded);
 			return 0;
 		}
@@ -124,84 +129,129 @@ int ConfReaderUtilsDecimal(const char *text)
 	for (i = 0; i < len; i++) {
 		if ((unsigned)((unsigned char)text[i] - '0') > 9)
 			return 0;
-		result = result * 10 + text[i] - '0';
+		result = result * 10 + (signed char)text[i] - '0';
 	}
 	return result;
 }
 
 /* name unknown: whitespace is tab, form feed, or space (not C isspace). */
+static inline int ConfReaderUtilsIsSpace(char c)
+{
+	switch (c) {
+	case '\t':
+	case '\f':
+	case ' ':
+		return 1;
+	default:
+		return 0;
+	}
+}
+
 int ConfReaderUtilsTokenize(char **argv, int limit, char *buf, unsigned size)
 {
-	unsigned i = 0, c;
+	unsigned i = 0, j;
 	int argc = 0;
 
 	if (size < 2)
 		return 0;
-	while (i < size) {
-		while (i < size - 1) {
-			c = (unsigned char)(buf[i] - 9);
-			if (c > 23 || !(0x800009U & (1U << c)))
-				break;
+	for (;;) {
+		if (ConfReaderUtilsIsSpace(buf[i]) && i < size - 1) {
 			i++;
+			continue;
 		}
 		if (i >= size - 1)
 			return argc;
-		argv[argc++] = buf + i++;
-		if (argc >= limit)
-			return argc;
-		while (i < size) {
-			c = (unsigned char)(buf[i] - 9);
-			if ((c < 24 && (0x800009U & (1U << c))) || i >= size - 1)
-				break;
-			i++;
-		}
+		argv[argc++] = buf + i;
+		j = i + 1;
+		if (argc >= limit || j >= size)
+			break;
+		while (!ConfReaderUtilsIsSpace(buf[j]) && j < size - 1)
+			j++;
+		if (j >= size)
+			break;
+		buf[j] = 0;
+		i = j + 1;
 		if (i >= size)
-			return argc;
-		buf[i++] = 0;
+			break;
 	}
 	return argc;
 }
 
-/* names unknown: the condition callbacks are shared with the parser table. */
+/* The conditions of if/ifmodel/ifnmodel; Sony names them ConfReaderUtilsIs<Mode>
+ * (0.931: ConfReaderUtilsIsSafeMode, ConfReaderUtilsIsUpdateMode). */
 static int ConfAlways(void)
 {
 	return 1;
 }
+
 static int ConfNever(void)
 {
 	return 0;
 }
-static int ConfHasUd0(void)
+
+int ConfReaderUtilsIsManufacturingMode(void)
+{
+	return SceSysrootForKernel_55392965();
+}
+
+static int ConfReaderUtilsIsExternalBootMode(void)
+{
+	return SceSysrootForKernel_89D19090();
+}
+
+static int ConfReaderUtilsIsUpdateMode(void)
+{
+	return SceSysrootForKernel_B0E1FC67();
+}
+
+static int ConfReaderUtilsIsUsbEnumWakeup(void)
+{
+	return SceSysrootForKernel_79C9AE10();
+}
+
+static int ConfReaderUtilsIsBsodReboot(void)
+{
+	return SceSysrootForKernel_4373AC96();
+}
+
+static int ConfReaderUtilsIsUd0Exist(void)
 {
 	SceIoStat stat;
 	return sceIoGetstat("ud0:", &stat) == 0;
 }
-static int ConfDevelopment(void)
+
+static int ConfReaderUtilsIsSafeMode(void)
+{
+	return SceSysrootForKernel_sceKernelSysrootIsSafeMode();
+}
+
+static int ConfReaderUtilsIsDevelopmentMode(void)
 {
 	return SceSblACMgrForKernel_BBA13D9C() != 0;
 }
-static int ConfConexant(void)
+
+static int ConfReaderUtilsIsAuCodecIcConexant(void)
 {
 	unsigned char flags[16];
 	SceSysrootForDriver_46E72428(flags);
 	return (flags[0] >> 6) & 1;
 }
 
-static const struct {
+static struct {
 	int (*evaluate)(void);
 	const char *name;
 } s_conditions[] = {
 	{ ConfAlways, "1" },
 	{ ConfNever, "0" },
-	{ SceSysrootForKernel_55392965, "MANUFACTURING_MODE" },
-	{ SceSysrootForKernel_89D19090, "EXTERNAL_BOOT_MODE" },
-	{ SceSysrootForKernel_B0E1FC67, "UPDATE_MODE" },
-	{ SceSysrootForKernel_79C9AE10, "USB_ENUM_WAKEUP" },
-	{ SceSysrootForKernel_4373AC96, "BSOD_REBOOT" },
-	{ ConfHasUd0, "UD0_EXIST" },
-	{ SceSysrootForKernel_sceKernelSysrootIsSafeMode, "SAFE_MODE" },
-	{ ConfDevelopment, "DEVELOPMENT_MODE" },
-	{ ConfConexant, "AU_CODEC_IC_CONEXANT" },
+	{ ConfReaderUtilsIsManufacturingMode, "MANUFACTURING_MODE" },
+	{ ConfReaderUtilsIsExternalBootMode, "EXTERNAL_BOOT_MODE" },
+	{ ConfReaderUtilsIsUpdateMode, "UPDATE_MODE" },
+	{ ConfReaderUtilsIsUsbEnumWakeup, "USB_ENUM_WAKEUP" },
+	{ ConfReaderUtilsIsBsodReboot, "BSOD_REBOOT" },
+	{ ConfReaderUtilsIsUd0Exist, "UD0_EXIST" },
+	{ ConfReaderUtilsIsSafeMode, "SAFE_MODE" },
+	{ ConfReaderUtilsIsDevelopmentMode, "DEVELOPMENT_MODE" },
+	{ ConfReaderUtilsIsAuCodecIcConexant, "AU_CODEC_IC_CONEXANT" },
 	{ NULL, NULL },
 };
 
@@ -274,4 +324,10 @@ int ConfReaderUtilsPushRepeatInfo(ConfReader *reader, int count, unsigned offset
 	reader->repeat[reader->repeatTop].offset = offset;
 	reader->repeat[reader->repeatTop].count = count;
 	return 0;
+}
+
+/* name unknown: whether a command executes; Sony's build reduces it to its argument. */
+int ConfReaderUtilsIsActive(int active)
+{
+	return active;
 }

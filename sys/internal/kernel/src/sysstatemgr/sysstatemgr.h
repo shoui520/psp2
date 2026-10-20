@@ -68,7 +68,7 @@ typedef struct ConfReader {
 	SceSize confSize;
 	char *confBuf;
 	SceUID confBlock;
-	SceUInt64 cursor;
+	SceInt64 cursor;
 	SceSize cmdSize;
 	unsigned char *cmdBuf;
 	SceUID cmdBlock;
@@ -98,6 +98,7 @@ extern SceUID s_appProcess;
 
 void ConfReaderInit(ConfReader *reader, int depth);
 int ConfReaderExecCommand(const char *path, int depth);
+void ConfReader_setDefaultBootimage(const char *path); /* name unknown */
 void ConfReader_mountDefaultBootimage(void);
 int ConfReaderUtilsAllocConfBuf(ConfReader *reader, SceSize size);
 int ConfReaderUtilsAllocCmdBuf(ConfReader *reader, SceSize size);
@@ -114,4 +115,6 @@ int ConfReaderUtilsPopRepeatInfo(ConfReader *reader, int *count, unsigned *offse
 int ConfReaderUtilsPushRepeatInfo(ConfReader *reader, int count, unsigned offset);
 int ConfReaderUtilsTokenize(char **argv, int limit, char *buf, unsigned size); /* name unknown */
 int ConfReaderUtilsDecimal(const char *text); /* name unknown */
+int ConfReaderUtilsIsActive(int active); /* name unknown */
+int ConfReaderUtilsIsManufacturingMode(void); /* name unknown */
 void afterBoot(void) __attribute__((noreturn));

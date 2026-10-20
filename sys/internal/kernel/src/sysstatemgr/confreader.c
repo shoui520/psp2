@@ -3,13 +3,16 @@
 #include <processmgr/processmgr.h>
 #include "sysstatemgr.h"
 
-static const struct { const char *path; unsigned size; } s_devices[] = {
+/* Sony's tables are not const; the compiler finds them unwritten and puts them in rodata. */
+static struct { const char *path; unsigned size; } s_devices[] = {
 	{ "sd0:", 4 }, { "host0:", 6 }, { "os0:", 4 }, { "vs0:", 4 },
 	{ "ur0:", 4 }, { "ud0:", 4 }, { "ux0:", 4 }, { NULL, 0 },
 };
 
 void ConfReaderInit(ConfReader *reader, int depth)
 {
+	int i;
+
 	memset(reader, 0, sizeof(*reader));
 	reader->depth = depth;
 	reader->confBlock = -1;
@@ -27,6 +30,14 @@ void ConfReaderInit(ConfReader *reader, int depth)
 	if (!reader->remotePath)
 		SCE_DBG_ASSERT_FAIL(179);
 	reader->remotePath[0x3ff] = 0;
+	for (i = 0; i < 4; i++)
+		reader->rpath[i] = NULL;
+	reader->shellFilename = NULL;
+	for (i = 0; i < 32; i++) {
+		reader->env[i].name = NULL;
+		reader->env[i].value = NULL;
+	}
+	reader->envCount = 0;
 }
 
 /* name unknown: release all reader resources after execution. */
@@ -50,8 +61,9 @@ static void ConfReaderClose(ConfReader *reader)
 		SceSysmemForKernel_4233C16D(reader->shellFilename);
 }
 
-static char *ConfReaderRelToAbsPath(ConfReader *reader, char *path)
+static __attribute__((noclone)) char *ConfReaderRelToAbsPath(ConfReader *reader, char *path)
 {
+	const char *cwd;
 	int external, i;
 	unsigned size;
 
@@ -59,7 +71,7 @@ static char *ConfReaderRelToAbsPath(ConfReader *reader, char *path)
 		return NULL;
 	if (path[0] == '/' || path[0] == '\\')
 		return path;
-	external = SceSysrootForKernel_55392965();
+	external = ConfReaderUtilsIsManufacturingMode();
 	for (i = 0; s_devices[i].path; i++) {
 		if (!strncmp(s_devices[i].path, path, s_devices[i].size)) {
 			if (external || (strncmp("sd0:", path, 4) && strncmp("ux0:", path, 4)))
@@ -68,8 +80,9 @@ static char *ConfReaderRelToAbsPath(ConfReader *reader, char *path)
 			return NULL;
 		}
 	}
-	size = strnlen(reader->cwd, 0x3ff);
-	strncpy(reader->absPath, reader->cwd, 0x3ff);
+	cwd = reader->cwd;
+	size = strnlen(cwd, 0x3ff);
+	strncpy(reader->absPath, cwd, 0x3ff);
 	strncpy(reader->absPath + size, path, 0x3ff - size);
 	path = reader->absPath;
 	if (external || (strncmp("sd0:", path, 4) && strncmp("ux0:", path, 4)))
@@ -80,7 +93,7 @@ static char *ConfReaderRelToAbsPath(ConfReader *reader, char *path)
 
 static char *ConfReaderGetRemotePath(char **buffer, const char *path)
 {
-	int i = strnlen(path, 0x3ff);
+	int len = strnlen(path, 0x3ff), i;
 
 	if (s_noRemoteModule || !SceQafMgrForDriver_082A4FC2() ||
 	    !sceKernelCheckDipsw(DIPSW_HOST0_ACCESS) || !strncmp("host0:", path, 6))
@@ -88,7 +101,7 @@ static char *ConfReaderGetRemotePath(char **buffer, const char *path)
 	strncpy(*buffer, "host0:module", 0x3ff);
 	(*buffer)[12] = '/';
 	(*buffer)[13] = 0;
-	while (--i >= 0) {
+	for (i = len - 1; i >= 0; i--) {
 		if (path[i] == '/' || path[i] == '\\' || path[i] == ':') {
 			strncpy(*buffer + 13, path + i + 1, 0x3f2);
 			return *buffer;
@@ -101,14 +114,15 @@ static char *ConfReaderGetRemotePath(char **buffer, const char *path)
 
 static char *ConfReaderGetRemoteRpath(ConfReader *reader, const char *path, int index)
 {
-	int i = strnlen(path, 0x3ff);
+	int len = strnlen(path, 0x3ff), i;
+	char *rpath = reader->rpath[index];
 	unsigned size;
 
-	if (!reader->rpath[index] || s_noRemoteRpath || !strncmp("host0:", path, 6))
+	if (!rpath || s_noRemoteRpath || !strncmp("host0:", path, 6))
 		return NULL;
-	strncpy(reader->remotePath, reader->rpath[index], 0x3ff);
+	strncpy(reader->remotePath, rpath, 0x3ff);
 	size = strnlen(reader->rpath[index], 0x400);
-	while (--i >= 0) {
+	for (i = len - 1; i >= 0; i--) {
 		if (path[i] == '/' || path[i] == '\\' || path[i] == ':') {
 			strncpy(reader->remotePath + size, path + i + 1, 0x3ff - size);
 			return reader->remotePath;
@@ -154,11 +168,15 @@ static int ConfReaderCmdUnknown(ConfReader *reader, int argc, char **argv, unsig
 
 static int ConfReaderCmdSetEnv(ConfReader *reader, int argc, char **argv, unsigned len, char *args)
 {
+	const char *name;
+	int count;
+
 	if (argc <= 1) {
 		SCE_DBG_PRINTF(0, 1935, "syntax error (setenv)\n");
 		return CONF_ERROR(22);
 	}
-	if (!strnlen(argv[0], 0x100)) {
+	name = argv[0];
+	if (!strnlen(name, 0x100)) {
 		SCE_DBG_PRINTF(0, 1940, "syntax error (setenv) : too short name\n");
 		return CONF_ERROR(22);
 	}
@@ -170,22 +188,27 @@ static int ConfReaderCmdSetEnv(ConfReader *reader, int argc, char **argv, unsign
 		SCE_DBG_PRINTF(0, 1950, "syntax error (setenv) : no space\n");
 		return CONF_ERROR(12);
 	}
-	reader->env[reader->envCount].name = argv[0];
-	reader->env[reader->envCount++].value = argv[1];
+	count = reader->envCount;
+	reader->env[count].name = name;
+	reader->env[count].value = argv[1];
+	reader->envCount = count + 1;
 	return 0;
 }
 
 static int ConfReaderCmdCd(ConfReader *reader, int argc, char **argv, unsigned len, char *args)
 {
-	char *path;
+	char *path, *arg;
 	unsigned size;
 	int i;
 
-	if (argc < 1 || !strnlen(argv[0], 0x100)) {
+	if (argc < 1) {
 		SCE_DBG_PRINTF(0, 1894, "syntax error (cd)\n");
 		return CONF_ERROR(22);
 	}
-	path = ConfReaderRelToAbsPath(reader, argv[0]);
+	arg = argv[0];
+	if (!strnlen(arg, 0x100))
+		return CONF_ERROR(22);
+	path = ConfReaderRelToAbsPath(reader, arg);
 	if (!path)
 		return CONF_ERROR(13);
 	size = strnlen(path, 0x3ff);
@@ -375,9 +398,11 @@ static int ConfReaderCmdSpawnWait(ConfReader *reader, int argc, char **argv, uns
 	if (!path)
 		return CONF_ERROR(13);
 	remote = ConfReaderGetRemotePath(&reader->remotePath, path);
-	if (!remote || (pid = sceKernelCreateProcess("main", 0x1000000, remote, NULL)) < 0)
+	if (!remote || (pid = sceKernelCreateProcess("main", 0x1000000, remote, NULL)) < 0) {
+		remote = path;
 		pid = sceKernelCreateProcess("main", 0x1000000, path, NULL);
-	SCE_DBG_PRINTF(0, 1495, "Creating a process from %s : ", path);
+	}
+	SCE_DBG_PRINTF(0, 1495, "Creating a process from %s : ", remote);
 	if (pid < 0) {
 		SCE_DBG_PRINTF(0, 1497, "Failed (err=0x%08x)\n", pid);
 		return pid;
@@ -419,7 +444,7 @@ static int ConfReaderCmdAppSpawn(ConfReader *reader, int argc, char **argv, unsi
 	SceKernelProcessOpt opt;
 	unsigned out[0x205];			/* SceAppMgr's app state */
 	unsigned type;
-	char *path, *remote;
+	char *path, *remote, *budget;
 	int i, pid;
 
 	memset(&opt, 0, sizeof(opt));
@@ -435,15 +460,19 @@ static int ConfReaderCmdAppSpawn(ConfReader *reader, int argc, char **argv, unsi
 	i = strnlen(path, 0x3ff);
 	strncpy(reader->absPath, path, 0x3ff);
 	while (--i >= 0) {
-		char c = reader->absPath[i];
+		char c = reader->absPath[i], *name, *shell;
 		if (c != '/' && c != '\\' && c != ':')
 			continue;
-		if (strncmp(reader->absPath + i + 1, "shell.self", 0x40) || !reader->shellFilename)
+		name = reader->absPath + i + 1;
+		if (strncmp(name, "shell.self", 0x40))
 			continue;
-		if (!strncmp(reader->shellFilename, "no file", 0x40))
+		shell = reader->shellFilename;
+		if (!shell)
+			continue;
+		if (!strncmp(shell, "no file", 0x40))
 			return CONF_ERROR(13);
 		/* Sony bounds this against 0x3f, not the path buffer size. */
-		strncpy(reader->absPath + i + 1, reader->shellFilename, 0x3f - i);
+		strncpy(name, shell, 0x3f - i);
 		break;
 	}
 	path = reader->absPath;
@@ -453,11 +482,12 @@ static int ConfReaderCmdAppSpawn(ConfReader *reader, int argc, char **argv, unsi
 	opt.budgetId = 2;
 	type = 0x1000000;
 	if (argc != 1) {
-		if (!strncmp(argv[1], "SHELL_BUDGET_ID", 15)) {
+		budget = argv[1];
+		if (!strncmp(budget, "SHELL_BUDGET_ID", 15)) {
 			type = 0x4000000;
 			opt.budgetId = 3;
-		} else if (strncmp(argv[1], "GAME_BUDGET_ID", 14)) {
-			SCE_DBG_PRINTF(0, 1357, "appspawn : unknown budget ID (%s)\n", argv[1]);
+		} else if (strncmp(budget, "GAME_BUDGET_ID", 14)) {
+			SCE_DBG_PRINTF(0, 1357, "appspawn : unknown budget ID (%s)\n", budget);
 			return CONF_ERROR(22);
 		}
 	}
@@ -485,7 +515,7 @@ spawned:
 	return 0;
 }
 
-static int checkFreeKernelBudgetSize(void)
+static inline int checkFreeKernelBudgetSize(void)
 {
 	SceKernelPhyMemPartInfoCore info;
 	int ret;
@@ -507,8 +537,7 @@ static int checkFreeKernelBudgetSize(void)
 	return ret;
 }
 
-static __attribute__((always_inline)) inline int ConfReaderCmdUmountBootfs(
-	ConfReader *reader, int argc, char **argv, unsigned len, char *args)
+static int ConfReaderCmdUmountBootfs(ConfReader *reader, int argc, char **argv, unsigned len, char *args)
 {
 	if (s_bootimage) {
 #if FW_DEBUG
@@ -519,6 +548,11 @@ static __attribute__((always_inline)) inline int ConfReaderCmdUmountBootfs(
 		return 0;
 	}
 	return checkFreeKernelBudgetSize();
+}
+
+void ConfReader_setDefaultBootimage(const char *path)
+{
+	s_bootimage = path;
 }
 
 void ConfReader_mountDefaultBootimage(void)
@@ -565,49 +599,84 @@ static int ConfReaderCmdLoadConfig(ConfReader *reader, int argc, char **argv, un
 	return ret;
 }
 
-/* name unknown: command IDs are stored in the bytecode, not table addresses. */
-static const struct {
-	const char *name __attribute__((unused));
+
+/* name unknown: the commands by keyword; the bytecode stores the ID. */
+static struct {
+	unsigned char id;
+	const char *name;
 	int (*execute)(ConfReader *, int, char **, unsigned, char *);
 } s_commands[CONF_CMD_COUNT] = {
-	{ "", ConfReaderCmdUnknown }, { "load", ConfReaderCmdLoad },
-	{ "unload", ConfReaderCmdUnload }, { "loadonly", ConfReaderCmdLoadOnly },
-	{ "start", ConfReaderCmdStart }, { "stop", ConfReaderCmdStop },
-	{ "unloadonly", ConfReaderCmdUnloadOnly }, { "spawn", ConfReaderCmdSpawn },
-	{ "spawnwait", ConfReaderCmdSpawnWait }, { "wait", ConfReaderCmdWait },
-	{ "kill", ConfReaderCmdKill }, { "end", ConfReaderCmdEnd },
-	{ "sleep", ConfReaderCmdSleep }, { "echo", ConfReaderCmdEcho },
-	{ "loadconfig", ConfReaderCmdLoadConfig }, { "ifmodel", ConfReaderCmdUnknown },
-	{ "if", ConfReaderCmdUnknown }, { "ifnmodel", ConfReaderCmdUnknown },
-	{ "else", ConfReaderCmdUnknown }, { "endif", ConfReaderCmdUnknown },
-	{ "include", ConfReaderCmdLoadConfig }, { "cd", ConfReaderCmdCd },
-	{ "setenv", ConfReaderCmdSetEnv }, { "setmodfile", ConfReaderCmdSetEnv },
-	{ "repeat", NULL }, { "endrepeat", NULL }, { "appspawn", ConfReaderCmdAppSpawn },
-	{ "tload", ConfReaderCmdToolLoad }, { "umount_bootfs", NULL },
-	{ "sload", ConfReaderCmdSLoad },
+	{ CONF_CMD_UNKNOWN, "", ConfReaderCmdUnknown },
+	{ CONF_CMD_LOAD, "load", ConfReaderCmdLoad },
+	{ CONF_CMD_UNLOAD, "unload", ConfReaderCmdUnload },
+	{ CONF_CMD_LOADONLY, "loadonly", ConfReaderCmdLoadOnly },
+	{ CONF_CMD_START, "start", ConfReaderCmdStart },
+	{ CONF_CMD_STOP, "stop", ConfReaderCmdStop },
+	{ CONF_CMD_UNLOADONLY, "unloadonly", ConfReaderCmdUnloadOnly },
+	{ CONF_CMD_SPAWN, "spawn", ConfReaderCmdSpawn },
+	{ CONF_CMD_SPAWNWAIT, "spawnwait", ConfReaderCmdSpawnWait },
+	{ CONF_CMD_WAIT, "wait", ConfReaderCmdWait },
+	{ CONF_CMD_KILL, "kill", ConfReaderCmdKill },
+	{ CONF_CMD_END, "end", ConfReaderCmdEnd },
+	{ CONF_CMD_SLEEP, "sleep", ConfReaderCmdSleep },
+	{ CONF_CMD_ECHO, "echo", ConfReaderCmdEcho },
+	{ CONF_CMD_LOADCONFIG, "loadconfig", ConfReaderCmdLoadConfig },
+	{ CONF_CMD_IFMODEL, "ifmodel", ConfReaderCmdUnknown },
+	{ CONF_CMD_IF, "if", ConfReaderCmdUnknown },
+	{ CONF_CMD_IFNMODEL, "ifnmodel", ConfReaderCmdUnknown },
+	{ CONF_CMD_ELSE, "else", ConfReaderCmdUnknown },
+	{ CONF_CMD_ENDIF, "endif", ConfReaderCmdUnknown },
+	{ CONF_CMD_INCLUDE, "include", ConfReaderCmdLoadConfig },
+	{ CONF_CMD_CD, "cd", ConfReaderCmdCd },
+	{ CONF_CMD_SETENV, "setenv", ConfReaderCmdSetEnv },
+	{ CONF_CMD_SETMODFILE, "setmodfile", ConfReaderCmdSetEnv },
+	{ CONF_CMD_REPEAT, "repeat", NULL },
+	{ CONF_CMD_ENDREPEAT, "endrepeat", NULL },
+	{ CONF_CMD_APPSPAWN, "appspawn", ConfReaderCmdAppSpawn },
+	{ CONF_CMD_TLOAD, "tload", ConfReaderCmdToolLoad },
+	{ CONF_CMD_UMOUNT_BOOTFS, "umount_bootfs", ConfReaderCmdUmountBootfs },
+	{ CONF_CMD_SLOAD, "sload", ConfReaderCmdSLoad },
 };
 
+/* name unknown: a keyword's command ID, CONF_CMD_UNKNOWN for none. */
+static __attribute__((noinline)) int ConfReaderGetCommandId(const char *name)
+{
+	int i;
+
+	for (i = 0; i < CONF_CMD_COUNT; i++)
+		if (!strcmp(name, s_commands[i].name))
+			return s_commands[i].id;
+	return CONF_CMD_UNKNOWN;
+}
+
 /* name unknown: bytecode words use network byte order. */
-static void ConfReaderWriteWord(unsigned char *p, unsigned value)
+static __attribute__((noinline)) void ConfReaderWriteWord(unsigned char *p, unsigned value)
 {
 	p[3] = value;
 	p[0] = value >> 24;
 	p[1] = value >> 16;
 	p[2] = value >> 8;
 }
-static unsigned ConfReaderReadWord(const unsigned char *p)
+static __attribute__((noinline)) unsigned ConfReaderReadWord(const unsigned char *p)
 {
-	return (unsigned)p[3] | (unsigned)p[0] << 24 | (unsigned)p[1] << 16 | (unsigned)p[2] << 8;
+	unsigned value = p[3];
+
+	value |= (unsigned)p[0] << 24;
+	value |= (unsigned)p[1] << 16;
+	value |= (unsigned)p[2] << 8;
+	return value;
 }
 
 /* name unknown: strip CR, truncate to 511 bytes and discard the rest of a line. */
 static int ConfReaderReadLine(ConfReader *reader, char *buf)
 {
 	unsigned n = 0;
+	SceSize size;
 	int c;
 
 	while (reader->cursor < reader->confSize) {
-		c = (signed char)reader->confBuf[reader->cursor++];
+		c = (signed char)reader->confBuf[reader->cursor];
+		reader->cursor++;
 		if (c == -1)
 			return 0;
 		if (c == '\n')
@@ -615,9 +684,13 @@ static int ConfReaderReadLine(ConfReader *reader, char *buf)
 		if (c != '\r')
 			buf[n++] = c;
 		if (n >= 511) {
-			while (reader->cursor < reader->confSize)
-				if (reader->confBuf[reader->cursor++] == '\n')
+			size = reader->confSize;
+			while (reader->cursor < size) {
+				c = reader->confBuf[reader->cursor];
+				reader->cursor++;
+				if (c == '\n')
 					break;
+			}
 			goto finished;
 		}
 	}
@@ -642,7 +715,9 @@ static int ConfReaderReadTextFmt(ConfReader *reader)
 		return CONF_ERROR(12);
 	}
 	ret = sceIoRead(reader->fd, reader->confBuf, (unsigned)size);
-	return (unsigned)ret == (unsigned)size ? (int)size : CONF_ERROR(2);
+	if (ret != (int)size)
+		return CONF_ERROR(2);
+	return ret;
 }
 
 static __attribute__((always_inline)) inline int ConfReaderReadPrxFmt(ConfReader *reader, const char *path)
@@ -699,23 +774,27 @@ static __attribute__((always_inline)) inline int ConfReaderOpen(ConfReader *read
 	reader->execTop = -1;
 	reader->repeatTop = -1;
 	ret = sceIoRead(reader->fd, &magic, 4);
-	if (ret == 4) {
-		if (magic == 0x00454353) {
-			ret = ConfReaderReadPrxFmt(reader, path);
-			if (ret < 0)
-				SceDebugForDriver_391B5B74(SCE_DBGINFO_FUNC(315, "ConfReaderOpen"), __builtin_return_address(0));
-			return ret;
-		}
-		if (SceQafMgrForDriver_883E9465()) {
-			ret = ConfReaderReadTextFmt(reader);
-			if (ret < 0)
-				SceDebugForDriver_391B5B74(SCE_DBGINFO_FUNC(323, "ConfReaderOpen"), __builtin_return_address(0));
-		} else {
-			ret = CONF_ERROR(2);
-		}
-	} else {
+	if (ret != 4) {
 		ret = CONF_ERROR(9);
+		goto close;
 	}
+	if (magic == 0x00454353) {
+		ret = ConfReaderReadPrxFmt(reader, path);
+		if (ret >= 0)
+			return ret;
+		SceDebugForDriver_391B5B74(SCE_DBGINFO_FUNC(315, "ConfReaderOpen"), __builtin_return_address(0));
+		goto failed;
+	}
+	if (!SceQafMgrForDriver_883E9465())
+		goto failed;
+	ret = ConfReaderReadTextFmt(reader);
+	if (ret >= 0)
+		goto close;
+	SceDebugForDriver_391B5B74(SCE_DBGINFO_FUNC(323, "ConfReaderOpen"), __builtin_return_address(0));
+	/* The panic returns here in Sony's build: the reader then reports not found. */
+failed:
+	ret = CONF_ERROR(2);
+close:
 	sceIoClose(reader->fd);
 	return ret;
 }
@@ -814,11 +893,7 @@ static __attribute__((always_inline)) inline int ConfReaderParseCmd(ConfReader *
 		first = flags == CONF_FLAG_VALID ? 1 : 2;
 		if (first == 2 && argc == 1)
 			continue;
-		for (id = 0; id < CONF_CMD_COUNT; id++)
-			if (!strcmp(argv[first - 1], s_commands[id].name))
-				break;
-		if (id == CONF_CMD_COUNT)
-			id = CONF_CMD_UNKNOWN;
+		id = ConfReaderGetCommandId(argv[first - 1]);
 		if (!id) {
 #if FW_DEBUG
 			SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO_FUNC(696, "ConfReaderParseCmd"),
@@ -988,7 +1063,7 @@ execute:
 			goto finished;
 		}
 		ret = 0;
-		if (!active)
+		if (!ConfReaderUtilsIsActive(active))
 			goto progress;
 		if (flags & CONF_FLAG_ASYNC) {
 			SCE_DBG_PRINTF(0, 857, "Not supported '&' option\n");
@@ -1012,10 +1087,7 @@ execute:
 		SCE_DBG_PRINTF_LEVEL(2, 0, 879, "ConfReaderExecCommand : %s command start\n", name);
 		if (id != CONF_CMD_UMOUNT_BOOTFS && id != CONF_CMD_SETENV && id != CONF_CMD_ECHO)
 			ConfReader_mountDefaultBootimage();
-		if (id == CONF_CMD_UMOUNT_BOOTFS)
-			ret = ConfReaderCmdUmountBootfs(&reader, argc, argv, len, args);
-		else
-			ret = s_commands[id].execute(&reader, argc, argv, len, args);
+		ret = s_commands[id].execute(&reader, argc, argv, len, args);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0, 896, "ConfReaderExecCommand : %s command failed, err=0x%08x", name, ret);
 			if (argc > 0)

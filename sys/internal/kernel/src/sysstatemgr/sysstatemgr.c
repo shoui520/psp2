@@ -22,7 +22,7 @@ int SysStateMgrModuleStart(SceSize arglen, const void *argp)
 	SCE_PRINTF_WITH_INFO(0, 129, "\nPSP2 Kernel Time : %d [msec]\n\n", time / 1000);
 	sceKernelRegisterModulesAfterBoot();
 	if (!SceSysrootForKernel_89D19090()) {
-		s_bootimage = "os0:kd/bootimage.skprx";
+		ConfReader_setDefaultBootimage("os0:kd/bootimage.skprx");
 		ConfReader_mountDefaultBootimage();
 	}
 	if (SceQafMgrForDriver_082A4FC2()) {
@@ -30,7 +30,7 @@ int SysStateMgrModuleStart(SceSize arglen, const void *argp)
 		if (ret != CONF_NOT_FOUND)
 			goto configured;
 	}
-	if (SceSysrootForKernel_55392965()) {
+	if (ConfReaderUtilsIsManufacturingMode()) {
 		ret = ConfReaderExecCommand("sd0:psp2config.skprx", 0);
 		if (ret != CONF_NOT_FOUND)
 			goto configured;
