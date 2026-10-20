@@ -65,7 +65,7 @@ static void ShowPhyMemPartInfo(SceUIntPtr base, SceSize size)
 /* the SceUIDProcBudgetClass destructor */
 static int ProcessBudgetDestructor(ProcessBudget *budget)
 {
-	SCE_DBG_PRINTF_LEVEL(1, 0xb, 1023, "\n");
+	SCE_DBG_PRINTF_LEVEL(1, 0xb, 1023, "()\n");
 	if (budget->type == PROCESS_TYPE_MINI_APP) {
 		if (budget->mainPartition != NULL)
 			sceKernelDeletePhyMemPart(budget->mainPartition);
@@ -209,8 +209,8 @@ int sceKernelGetBudgetInfoForDebugger(SceUID budgetId, SceUInt32 level,
 		name = SceSysmemForDriver_E655852F(g_kernelBudgetId);
 		break;
 	default:
-		sceGUIDReleaseObject(budgetId);
-		return SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
+		ret = SCE_KERNEL_ERROR_INVALID_PROCESS_TYPE;
+		goto out;
 	}
 	strncpy(info->name, name, sizeof(info->name));
 	n = 0;
@@ -328,13 +328,16 @@ int sceKernelGetBudgetInfo(SceUID budgetId, SceKernelBudgetInfo *info)
 		}
 		count = 1;
 	}
-	if (budget->type == PROCESS_TYPE_KERNEL && (partition = (void *)SceSysmemForKernel_0B1B4ACA()) != NULL) {
-		ret = sceKernelGetPhyMemPartInfoCore(partition, &info->part[BUDGET_PART_KERNEL_EXTRA]);
-		if (ret < 0) {
-			SCE_DBG_PRINTF_LEVEL(1, 0xb, 606, "sceKernelGetPhyMemPartInfoCore failed. 0x%08x\n", ret);
-			goto out;
+	if (budget->type == PROCESS_TYPE_KERNEL) {
+		partition = (void *)SceSysmemForKernel_0B1B4ACA();
+		if (partition != NULL) {
+			ret = sceKernelGetPhyMemPartInfoCore(partition, &info->part[BUDGET_PART_KERNEL_EXTRA]);
+			if (ret < 0) {
+				SCE_DBG_PRINTF_LEVEL(1, 0xb, 606, "sceKernelGetPhyMemPartInfoCore failed. 0x%08x\n", ret);
+				goto out;
+			}
+			count++;
 		}
-		count++;
 	}
 	if (budget->cdialogPartition != NULL) {
 		ret = sceKernelGetPhyMemPartInfoCore(budget->cdialogPartition, &info->part[BUDGET_PART_CDIALOG]);

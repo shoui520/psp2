@@ -10,6 +10,7 @@
 #define PROCESSMGR_INTERNAL_H
 
 #include <scetypes.h>
+#include <fw.h>
 #include <kernel/error.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
@@ -62,6 +63,9 @@
 /* process event handler events: sysmem/procevent.h */
 
 #define PROCESS_THREAD_VECTOR_MAX	192
+
+/* the line of a debug record in Sony's processmgr.c: the source before 4.00 is shorter */
+#define FW_LINE(_line, _lineBefore400)	((_line) - ((_line) - (_lineBefore400)) * FW_BEFORE(0x04000000))
 
 _Static_assert(sizeof(ProcessBudget) == 0x74, "ProcessBudget size");
 
