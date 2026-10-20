@@ -304,7 +304,7 @@ static int LoadelfAllocRelaTmp(SceModuleCB *cb, SceSize size)
 	return sceKernelAllocMemBlockForKernel("SceModuleMgrRelaTmp", memtype, PAGE_ROUND(size), &opt);
 }
 
-int LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, SceUInt32 flags)
+SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, SceUInt32 flags)
 {
 	SceModuleCB *cb = ctx->cb;
 	LoadelfTiming timing, *t;
@@ -603,7 +603,8 @@ int sceKernelLoadPtLoadSegForFwloader(const char *path, int index, void *dst, Sc
 	return ret;
 }
 
-int sceKernelGetProgramIdentificationInfo(const char *path, SceUInt64 *authId, SceUInt64 *version)
+MODULEMGR_COLD int sceKernelGetProgramIdentificationInfo(const char *path, SceUInt64 *authId,
+							 SceUInt64 *version)
 {
 	SelfReader reader;
 	SceUID fd;

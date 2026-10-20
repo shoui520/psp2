@@ -679,6 +679,7 @@ int ModulemgrGetStubInfo(SceUID pid, SceUInt32 addr, ModulemgrStubInfo *info)
 	LibStubCB *stub;
 	SceUID modid;
 	SceNID nid;
+	int ret;
 
 	if (info == NULL || info->size != sizeof(*info))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -697,13 +698,14 @@ int ModulemgrGetStubInfo(SceUID pid, SceUInt32 addr, ModulemgrStubInfo *info)
 	info->fingerprint = obj->cb.fingerprint;
 	info->libname = stub->linked->exports->libname;
 	info->reserved0 = 0;
-	info->funcnid = nid;
 	info->libVersion = stub->imports->version;
+	info->funcnid = nid;
 	sceGUIDReleaseObject(modid);
 	return 0;
 nolib:
+	ret = SCE_KERNEL_ERROR_LIBRARYDB_NO_LIB;
 	sceGUIDReleaseObject(modid);
-	return SCE_KERNEL_ERROR_LIBRARYDB_NO_LIB;
+	return ret;
 }
 
 void ModulemgrReleaseModule(SceUID modid)
@@ -1217,21 +1219,32 @@ static inline int ModulemgrStopModule(SceModuleObject *obj, SceSize args, void *
 	ModulemgrLockLibDB();
 	old = cb->status;
 	if ((flags & 0x200) != 0) {
-		if (old == MODULE_STATUS_LOADED) {
+		switch (old) {
+		case MODULE_STATUS_LOADED:
 			ret = (flags & 0x100) != 0 ? 0 : SCE_KERNEL_ERROR_MODULEMGR_NOT_STARTED;
-		} else if (old == MODULE_STATUS_STOPPED) {
+			break;
+		case MODULE_STATUS_STOPPED:
 			ret = (flags & 0x100) != 0 ? 0 : SCE_KERNEL_ERROR_MODULEMGR_STOPPED;
-		} else if ((flags & 0x30) != 0) {
-			ModuleCBSetStatus(cb, MODULE_STATUS_STOPPING);
-			goto unlink;
-		} else {
+			break;
+		default:
+			if ((flags & 0x30) != 0) {
+				ModuleCBSetStatus(cb, MODULE_STATUS_STOPPING);
+				goto unlink;
+			}
 			ret = SCE_KERNEL_ERROR_MODULEMGR_NOT_STARTED;
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 1648,
 				"Can't stop a module, status:%d, flags 0x%08x\n", old, flags);
+			break;
 		}
-		goto restore;
+	} else {
+		goto notforced;
 	}
+restore:
+	ModuleCBSetStatus(cb, old);
+	ModulemgrUnlockLibDB();
+	return ret;
 
+notforced:
 	if (SceThreadmgrForDriver_20C228E4()) {
 		state = SceThreadmgrForDriver_3A72C6D8(g_threadStateSlot);
 		if ((state->flags & THREAD_STATE_RETRY_START) != 0) {
@@ -1291,10 +1304,7 @@ unlink:
 			old = MODULE_STATUS_STOPPED;
 		}
 	}
-restore:
-	ModuleCBSetStatus(cb, old);
-	ModulemgrUnlockLibDB();
-	return ret;
+	goto restore;
 
 cancel:
 	ret = SCE_KERNEL_ERROR_MODULEMGR_STOP_FAIL;
@@ -1333,14 +1343,20 @@ int stopModuleCommon(SceUID pid, SceUID modid, SceSize args, void *argp, SceUInt
 			sceGUIDReleaseObject(pid);
 		return SCE_KERNEL_ERROR_MODULEMGR_INVALID_PROCESS_UID;
 	}
-	if ((flags & 0x100) == 0 &&
-	    ((obj->cb.attr & 1) != 0 || (obj->cb.flags & MODULE_FLAG_SHARED_ORIGINAL) != 0)) {
+	if ((flags & 0x100) != 0) {
+		mflags = obj->cb.flags;
+	} else {
+		if ((obj->cb.attr & 1) == 0) {
+			mflags = obj->cb.flags;
+			if ((mflags & MODULE_FLAG_SHARED_ORIGINAL) == 0)
+				goto stoppable;
+		}
 		sceGUIDReleaseObject(modid);
 		if (pid != SCE_KERNEL_PROCESS_ID)
 			sceGUIDReleaseObject(pid);
 		return SCE_KERNEL_ERROR_MODULEMGR_CANNOT_STOP;
 	}
-	mflags = obj->cb.flags;
+stoppable:
 	if ((mflags & MODULE_FLAG_NO_STOP) != 0 && !SceSblACMgrForKernel_BBA13D9C()) {
 		sceGUIDReleaseObject(modid);
 		if (pid != SCE_KERNEL_PROCESS_ID)
@@ -1609,7 +1625,8 @@ int SceModulemgrForKernel_37512E29(SceUID modid, SceModuleCB **cb)
 	return 0;
 }
 
-int sceKernelGetMetaDataForDebugger(SceUID pid, SceUID modid, void **metadata, SceSize *size)
+MODULEMGR_COLD int sceKernelGetMetaDataForDebugger(SceUID pid, SceUID modid, void **metadata,
+						   SceSize *size)
 {
 	SceModuleObject *obj;
 	SceUID guid;

@@ -49,6 +49,10 @@
 #define ModulemgrKernelFree(ptr)	SceSysmemForKernel_4233C16D(ptr)
 #endif
 
+/* Sony's debugger and tool entry points are laid out as rarely executed code: no loop
+ * header copy, blocks in source order (measured on the originals, 2026-10-20) */
+#define MODULEMGR_COLD			__attribute__((cold, section(".text")))
+
 #define PAGE_TRUNC(x)			((x) / 0x1000 * 0x1000)
 #define PAGE_ROUND(x)			PAGE_TRUNC((x) + 0xfff)
 
@@ -402,7 +406,7 @@ extern SceUInt32 g_relocForms;
 
 /* loadelf.c */
 SceUInt32 Loadelf_GetAddrBias(LoadelfContext *ctx, const void *addr);
-int LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, SceUInt32 flags);
+SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, SceUInt32 flags);
 int LoadelfFreeImage(SceModuleCB *cb);
 int LoadelfMapImage(LoadelfContext *ctx);
 
@@ -516,7 +520,7 @@ int SharedModuleRelease(SharedModuleEntry *ent);
 void LibraryDBReleaseModule(SceModuleCB *cb);
 void LibraryDBRegisterLostClient(LibStubCB *stub);
 void LibraryDBReleaseLostClient(LibStubCB *stub);
-int LibraryDBRegisterLib(SceUID pid, LibEntCB *ent);
+SceUInt32 LibraryDBRegisterLib(SceUID pid, LibEntCB *ent);
 int LibraryDBReleaseLib(LibraryDB *db, LibEntCB *ent);
 LibEntCB *LibraryDBFindLib(LibStubCB *stub);
 LibEntCB *LibraryDBFindSyscallLib(const char *name);
@@ -579,7 +583,7 @@ int LoadcoreLinkClient(LibEntCB *ent, LibStubCB *stub, const ModulemgrLibraryPat
 int LibraryClassCreate(SceLibraryObject *obj);
 int LibraryClassDestroy(SceLibraryObject *obj);
 int LoadcoreRegisterLibrary(SceModuleCB *cb, int index, SceUInt32 flags);
-int LoadcoreReleaseLibrary(SceModuleCB *cb, int index, SceUInt32 flags);
+SceUInt32 LoadcoreReleaseLibrary(SceModuleCB *cb, int index, SceUInt32 flags);
 int LoadcoreUnlinkLibraries(SceModuleCB *cb, SceUInt32 flags);
 int LoadcoreLinkLibraryEntries(SceModuleCB *cb, SceUInt32 flags, const ModulemgrTitlePatch *patch);
 int LoadcoreIsLibraryImported(SceUID pid, const char *name);
@@ -666,6 +670,6 @@ static inline void ModulemgrSyscallLeave(SceUInt32 t)
 }
 
 /* exidx.c */
-int BacktraceFindExidx(SceUID pid, SceUInt32 addr, SceUInt32 *out, SceUInt32 flags);
+SceUInt32 BacktraceFindExidx(SceUID pid, SceUInt32 addr, SceUInt32 *out, SceUInt32 flags);
 
 #endif

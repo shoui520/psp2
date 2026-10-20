@@ -268,11 +268,10 @@ int ModuleCBIsInRange(SceModuleCB *cb, SceUInt32 addr, SceSize size)
 /* name unknown */
 int ModuleCBGetSegmentIndex(SceModuleCB *cb, SceUInt32 addr)
 {
+	SceModuleSegment *seg;
 	int i;
 
-	for (i = 0; i < cb->nSegments; i++) {
-		SceModuleSegment *seg = &cb->segment[i];
-
+	for (i = 0, seg = cb->segment; i < cb->nSegments; i++, seg++) {
 		if ((SceUInt32)seg->vaddr <= addr && addr < (SceUInt32)seg->vaddr + seg->memsz)
 			return i;
 	}

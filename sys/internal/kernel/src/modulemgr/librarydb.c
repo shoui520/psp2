@@ -139,7 +139,7 @@ int LibraryDBUsesPUID(SceUID pid)
 #define LIBDB_DEBUG_NOINLINE
 #endif
 
-static LIBDB_DEBUG_NOINLINE SceUID GetLibGUIDByLibUID(SceUID pid, SceUID uid)
+static LIBDB_DEBUG_NOINLINE MODULEMGR_COLD SceUID GetLibGUIDByLibUID(SceUID pid, SceUID uid)
 {
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 149);
 	if (pid != SCE_KERNEL_PROCESS_ID && LibraryDBUsesPUID(pid) == 1)
@@ -148,7 +148,7 @@ static LIBDB_DEBUG_NOINLINE SceUID GetLibGUIDByLibUID(SceUID pid, SceUID uid)
 }
 
 /* name unknown: refer a library object and its module */
-SceLibraryObject *LibraryDBReferLibrary(SceUID pid, SceUID uid)
+MODULEMGR_COLD SceLibraryObject *LibraryDBReferLibrary(SceUID pid, SceUID uid)
 {
 	SceLibraryObject *obj;
 	SceUID guid;
@@ -511,7 +511,7 @@ static inline int canRegisterLib(LibraryDB *db, LibEntCB *ent)
 }
 
 /* name unknown: create the UIDs of a library and make it the current version */
-int LibraryDBRegisterLib(SceUID pid, LibEntCB *ent)
+SceUInt32 LibraryDBRegisterLib(SceUID pid, LibEntCB *ent)
 {
 	UIDCreateOpt opt, *optp;
 	SceLibraryObject *obj;
@@ -824,8 +824,8 @@ int LibraryDBGetModuleCBList(SceUID pid, SceModuleCB **list, int *count)
 	return 0;
 }
 
-int sceKernelGetLostLibraryInfo(SceUID pid, SceUID modid, SceNID libnid,
-				SceKernelLostLibraryInfo *info)
+MODULEMGR_COLD int sceKernelGetLostLibraryInfo(SceUID pid, SceUID modid, SceNID libnid,
+					       SceKernelLostLibraryInfo *info)
 {
 	SceModuleImports *imports;
 	LibStubCB *stub;
@@ -839,23 +839,33 @@ int sceKernelGetLostLibraryInfo(SceUID pid, SceUID modid, SceNID libnid,
 		return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
 	for (stub = db->lostClients; stub != NULL; stub = stub->next) {
 		id = pid == SCE_KERNEL_PROCESS_ID ? stub->cb->modid : stub->cb->puid;
-		if (stub->imports->libnid != libnid || id != modid)
-			continue;
-		info->libname[0xff] = 0;
-		info->libnid = libnid;
-		info->modid = id;
-		info->version = stub->imports->version;
-		strncpy(info->libname, stub->imports->libname, 0xff);
 		imports = stub->imports;
-		info->nfunc = imports->nfunc;
-		info->nvar = imports->nvar;
-		info->ntls = 0;
-		info->funcnid = imports->funcnid;
-		info->funcent = imports->funcent;
-		info->varnid = imports->varnid;
-		info->varent = imports->varent;
-		ret = 0;
-		goto out;
+		if (imports->libnid == libnid && id == modid) {
+			SceUInt16 version = imports->version;
+			const char *libname;
+
+			info->libname[0xff] = 0;
+			info->libnid = libnid;
+			info->modid = id;
+			libname = stub->imports->libname;
+			info->version = version;
+			strncpy(info->libname, libname, 0xff);
+			imports = stub->imports;
+			info->nfunc = imports->nfunc;
+			info->nvar = imports->nvar;
+			info->ntls = 0;
+			{
+				/* the four table pointers move as two 64-bit words, as Sony's does */
+				SceUInt64 *dst = (SceUInt64 *)&info->funcnid;
+				const SceUInt64 *src = (const SceUInt64 *)&imports->funcnid;
+				SceUInt64 nids = src[0], ents = src[1];
+
+				dst[0] = nids;
+				dst[1] = ents;
+			}
+			ret = 0;
+			goto out;
+		}
 	}
 	ret = SCE_KERNEL_ERROR_LIBRARYDB_NO_LIB;
 out:
@@ -864,7 +874,7 @@ out:
 }
 
 /* name unknown: the module whose segment holds addr */
-int LibraryDBFindModuleByAddr(LibraryDB *db, SceUInt32 addr, SceModuleCB **out)
+MODULEMGR_COLD int LibraryDBFindModuleByAddr(LibraryDB *db, SceUInt32 addr, SceModuleCB **out)
 {
 	Addr2ModTable *tbl = db->addr2mod;
 	Addr2ModExidx *exidx;
@@ -889,9 +899,12 @@ int LibraryDBFindModuleByAddr(LibraryDB *db, SceUInt32 addr, SceModuleCB **out)
 
 int SceModulemgrForKernel_F1DE6949(SceUID pid, SceUInt32 addr)
 {
-	SceModuleCB *cb = NULL;
 	LibraryDB *db;
-	int ret = 0, intr;
+	int ret, intr;
+	SceModuleCB *cb;
+
+	ret = 0;
+	cb = NULL;
 
 	db = LibraryDBLock(pid, &intr);
 	if (db == NULL)
@@ -902,7 +915,7 @@ int SceModulemgrForKernel_F1DE6949(SceUID pid, SceUInt32 addr)
 	return ret;
 }
 
-int SceModulemgrForKernel_1728612F(SceUID pid, SceUInt32 addr, SceModuleCB **out)
+MODULEMGR_COLD int SceModulemgrForKernel_1728612F(SceUID pid, SceUInt32 addr, SceModuleCB **out)
 {
 	LibraryDB *db;
 	int ret, intr;
@@ -918,7 +931,7 @@ int SceModulemgrForKernel_1728612F(SceUID pid, SceUInt32 addr, SceModuleCB **out
 }
 
 /* name unknown: the module GUID at addr */
-SceUID LibraryDBGetModuleUIDByAddr(SceUID pid, SceUInt32 addr)
+MODULEMGR_COLD SceUID LibraryDBGetModuleUIDByAddr(SceUID pid, SceUInt32 addr)
 {
 	int ret, intr;
 	LibraryDB *db;
@@ -935,7 +948,7 @@ SceUID LibraryDBGetModuleUIDByAddr(SceUID pid, SceUInt32 addr)
 }
 
 /* name unknown: the module id at addr, as the process sees it */
-SceUID LibraryDBGetModuleIdByAddr(SceUID pid, SceUInt32 addr)
+MODULEMGR_COLD SceUID LibraryDBGetModuleIdByAddr(SceUID pid, SceUInt32 addr)
 {
 	SceModuleObject *obj;
 	SceUID modid, puid;
@@ -955,7 +968,7 @@ SceUID LibraryDBGetModuleIdByAddr(SceUID pid, SceUInt32 addr)
 }
 
 /* name unknown */
-SceUID LibraryDBFindModuleByName(SceUID pid, const char *name)
+MODULEMGR_COLD SceUID LibraryDBFindModuleByName(SceUID pid, const char *name)
 {
 	int ret, intr;
 	LibraryDB *db;
@@ -1000,7 +1013,7 @@ SceUID sceKernelGetModuleIdByPid(SceUID pid)
 }
 
 /* the import whose (tool copied) function stubs hold addr */
-LibStubCB *LibraryDBGetStubCBByStubCodeAddrForTool(SceModuleCB *cb, SceUInt32 addr)
+MODULEMGR_COLD LibStubCB *LibraryDBGetStubCBByStubCodeAddrForTool(SceModuleCB *cb, SceUInt32 addr)
 {
 	SceUID pid = cb->pid;
 	LibStubCB *stub;
@@ -1025,7 +1038,7 @@ out:
 	return stub;
 }
 
-int sceKernelGetLibraryDBFlags(SceUID pid, SceUInt32 *flags)
+MODULEMGR_COLD int sceKernelGetLibraryDBFlags(SceUID pid, SceUInt32 *flags)
 {
 	LibraryDB *db;
 	int intr;
@@ -1052,7 +1065,7 @@ void LibraryDBSetAslr(SceUID pid)
 	LibraryDBGetDB(pid)->flags |= LIBDB_FLAG_ASLR;
 }
 
-void LibraryDBRenameAddr2ModTbls(SceUID pid, const char *name)
+MODULEMGR_COLD void LibraryDBRenameAddr2ModTbls(SceUID pid, const char *name)
 {
 	LibraryDB *db;
 	int intr;
@@ -1068,8 +1081,9 @@ void LibraryDBRenameAddr2ModTbls(SceUID pid, const char *name)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 }
 
-int SceModulemgrForKernel_5564A860(SceUID pid, SceUInt32 addr, SceUInt32 *fingerprint,
-				     void **textBase, char *name)
+MODULEMGR_COLD int SceModulemgrForKernel_5564A860(SceUID pid, SceUInt32 addr,
+						  SceUInt32 *fingerprint, void **textBase,
+						  char *name)
 {
 	int ret, intr;
 	LibraryDB *db;
@@ -1153,7 +1167,7 @@ unlock:
 }
 
 /* name unknown */
-void LibraryDBSetShared(SceUID pid)
+MODULEMGR_COLD void LibraryDBSetShared(SceUID pid)
 {
 	LibraryDBGetDB(pid)->flags |= LIBDB_FLAG_SHARED;
 	if (sceKernelGetProcessType(pid) == PROCESS_TYPE_SHARED)
@@ -1184,7 +1198,7 @@ int SceModulemgrForKernel_337A3908(SceUID modid, SceUInt32 *fingerprint)
 	return 0;
 }
 
-int sceKernelGetLibEntCBListForSyslibtrace(LibEntCB **list, SceSize *num)
+MODULEMGR_COLD int sceKernelGetLibEntCBListForSyslibtrace(LibEntCB **list, SceSize *num)
 {
 	LibEntCB *lib, *ver;
 	LibraryDB *db;
@@ -1253,16 +1267,18 @@ static inline int getLostLibrariesInModule(SceUID pid, SceUID modid,
 	return 0;
 }
 
-int sceKernelGetLostLibraryListInModule(SceUID pid, SceUID modid, SceKernelLostLibraryEntry *list,
-					SceSize *num)
+MODULEMGR_COLD int sceKernelGetLostLibraryListInModule(SceUID pid, SceUID modid,
+						       SceKernelLostLibraryEntry *list,
+						       SceSize *num)
 {
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 2258);
-	if (list == NULL)
-		return getNumOfLostLibrariesInModule(pid, modid);
-	return getLostLibrariesInModule(pid, modid, list, num);
+	if (list != NULL)
+		return getLostLibrariesInModule(pid, modid, list, num);
+	return getNumOfLostLibrariesInModule(pid, modid);
 }
 
-int sceKernelGetLostLibraryList(SceUID pid, SceKernelLostLibraryEntry *list, SceSize *num)
+MODULEMGR_COLD int sceKernelGetLostLibraryList(SceUID pid, SceKernelLostLibraryEntry *list,
+					       SceSize *num)
 {
 	LibStubCB *stub;
 	LibraryDB *db;
@@ -1290,7 +1306,7 @@ int sceKernelGetLostLibraryList(SceUID pid, SceKernelLostLibraryEntry *list, Sce
 	return 0;
 }
 
-int sceKernelGetLibraryList(SceUID pid, SceUID *list, SceSize *num)
+MODULEMGR_COLD int sceKernelGetLibraryList(SceUID pid, SceUID *list, SceSize *num)
 {
 	LibEntCB *lib, *ver;
 	LibraryDB *db;
@@ -1334,7 +1350,7 @@ static inline int getNumOfModulesWithType(SceUID pid, SceUInt32 flags)
 		if (pid != SCE_KERNEL_PROCESS_ID) {
 			if ((flags & 1) != 0 && (cb->flags & MODULE_FLAG_1000) == 0)
 				n++;
-			if ((flags & 0x80) == 0 || (cb->flags & MODULE_FLAG_1000) == 0)
+			if ((SceInt8)flags >= 0 || (cb->flags & MODULE_FLAG_1000) == 0)
 				continue;
 		}
 		n++;
@@ -1369,7 +1385,7 @@ static inline int getModuleList(SceUID pid, SceUInt32 flags, SceUInt32 type, Sce
 		if (pid != SCE_KERNEL_PROCESS_ID) {
 			if ((flags & 1) != 0 && (cb->flags & MODULE_FLAG_1000) == 0)
 				n = putModuleId(list, n, cb, type);
-			if ((flags & 0x80) == 0 || (cb->flags & MODULE_FLAG_1000) == 0)
+			if ((SceInt8)flags >= 0 || (cb->flags & MODULE_FLAG_1000) == 0)
 				continue;
 		}
 		n = putModuleId(list, n, cb, type);
@@ -1379,14 +1395,14 @@ static inline int getModuleList(SceUID pid, SceUInt32 flags, SceUInt32 type, Sce
 	return 0;
 }
 
-int sceKernelGetModuleList(SceUID pid, SceUInt32 flags, SceUInt32 type, SceUID *list,
-			   SceSize *num)
+MODULEMGR_COLD int sceKernelGetModuleList(SceUID pid, SceUInt32 flags, SceUInt32 type,
+					  SceUID *list, SceSize *num)
 {
 	if (pid == 0)
 		pid = sceKernelGetProcessId();
-	if (list == NULL)
-		return getNumOfModulesWithType(pid, flags);
-	return getModuleList(pid, flags, type, list, num);
+	if (list != NULL)
+		return getModuleList(pid, flags, type, list, num);
+	return getNumOfModulesWithType(pid, flags);
 }
 
 int SceModulemgrForDriver_1D9E0F7E(SceUInt32 addr, SceKernelModuleInfo *info)
@@ -1412,7 +1428,9 @@ SceUID sceKernelGetModuleIdByAddrForDebugger(SceUID pid, SceUInt32 addr)
 	return LibraryDBGetModuleIdByAddr(pid, addr);
 }
 
-int sceKernelGetModuleInfoForDebugger(SceUID pid, SceKernelModuleInfoForDebugger *info, int *num)
+MODULEMGR_COLD int sceKernelGetModuleInfoForDebugger(SceUID pid,
+						     SceKernelModuleInfoForDebugger *info,
+						     int *num)
 {
 	SceKernelSegmentInfoForDebugger *dst;
 	SceKernelModuleExidxInfo *exidx;
@@ -1422,74 +1440,76 @@ int sceKernelGetModuleInfoForDebugger(SceUID pid, SceKernelModuleInfoForDebugger
 	int n, i, intr;
 
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 2333);
-	if (info == NULL) {
+	if (info != NULL) {
 		db = LibraryDBLock(pid, &intr);
 		if (db == NULL)
-			return 0;
-		n = db->moduleCount;
+			return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
+		cb = db->modules;
+		for (n = 0; n < *num && cb != NULL; n++, cb = cb->next) {
+			info->modid = pid == SCE_KERNEL_PROCESS_ID ? cb->modid : cb->puid;
+			info->sdkVersion = cb->sdkVersion;
+			info->version = cb->version[0] | cb->version[1] << 8;
+			info->reserved0 = 0;
+			info->type = (cb->flags & MODULE_FLAG_SELF_FIXED) != 0 ? 0x20 : 0x10;
+			info->moduleStart = cb->moduleStart;
+			info->moduleStop = cb->moduleStop;
+			info->moduleExit = cb->moduleExit;
+			info->flags = cb->flags;
+			__builtin_memcpy(info->name, cb->name, 26);
+			switch (cb->status) {
+			case MODULE_STATUS_LOADED:
+				info->status = 0;
+				break;
+			case MODULE_STATUS_STARTING:
+			case MODULE_STATUS_START_SUSPENDED:
+				info->status = 1;
+				break;
+			case MODULE_STATUS_STARTED:
+				info->status = 2;
+				break;
+			case MODULE_STATUS_STOPPING:
+				info->status = 3;
+				break;
+			default:
+				info->status = 4;
+				break;
+			}
+			info->nSegments = cb->nSegments;
+			info->fingerprint = cb->fingerprint;
+			info->size = sizeof(*info) + cb->nSegments * sizeof(info->segment[0]) +
+				     sizeof(*exidx);
+			memset(info->segment, 0, cb->nSegments * sizeof(info->segment[0]));
+			for (i = 0; i < cb->nSegments; i++) {
+				seg = &cb->segment[i];
+				dst = &info->segment[i];
+				dst->size = sizeof(*dst);
+				dst->perms = seg->perms | seg->extraPages << 20;
+				dst->vaddr = seg->vaddr;
+				dst->memsz = seg->memsz;
+				dst->align = 1 << (seg->alignLog2 & 0xff);
+			}
+			exidx = (SceKernelModuleExidxInfo *)&info->segment[i];
+			exidx->exidxTop = cb->exidxTop;
+			exidx->exidxBtm = cb->exidxBtm;
+			exidx->extabStart = cb->extabStart;
+			exidx->extabEnd = cb->extabEnd;
+			info = (SceKernelModuleInfoForDebugger *)(exidx + 1);
+		}
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
-		return n;
+		*num = n;
+		return 0;
 	}
 	db = LibraryDBLock(pid, &intr);
 	if (db == NULL)
-		return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
-	cb = db->modules;
-	for (n = 0; n < *num && cb != NULL; n++, cb = cb->next) {
-		info->modid = pid == SCE_KERNEL_PROCESS_ID ? cb->modid : cb->puid;
-		info->sdkVersion = cb->sdkVersion;
-		info->version = cb->version[0] | cb->version[1] << 8;
-		info->reserved0 = 0;
-		info->type = (cb->flags & MODULE_FLAG_SELF_FIXED) != 0 ? 0x20 : 0x10;
-		info->moduleStart = cb->moduleStart;
-		info->moduleStop = cb->moduleStop;
-		info->moduleExit = cb->moduleExit;
-		info->flags = cb->flags;
-		__builtin_memcpy(info->name, cb->name, 26);
-		switch (cb->status) {
-		case MODULE_STATUS_LOADED:
-			info->status = 0;
-			break;
-		case MODULE_STATUS_STARTING:
-		case MODULE_STATUS_START_SUSPENDED:
-			info->status = 1;
-			break;
-		case MODULE_STATUS_STARTED:
-			info->status = 2;
-			break;
-		case MODULE_STATUS_STOPPING:
-			info->status = 3;
-			break;
-		default:
-			info->status = 4;
-			break;
-		}
-		info->nSegments = cb->nSegments;
-		info->fingerprint = cb->fingerprint;
-		info->size = sizeof(*info) + cb->nSegments * sizeof(info->segment[0]) +
-			     sizeof(*exidx);
-		memset(info->segment, 0, cb->nSegments * sizeof(info->segment[0]));
-		for (i = 0; i < cb->nSegments; i++) {
-			seg = &cb->segment[i];
-			dst = &info->segment[i];
-			dst->size = sizeof(*dst);
-			dst->perms = seg->perms | seg->extraPages << 20;
-			dst->vaddr = seg->vaddr;
-			dst->memsz = seg->memsz;
-			dst->align = 1 << (seg->alignLog2 & 0xff);
-		}
-		exidx = (SceKernelModuleExidxInfo *)&info->segment[i];
-		exidx->exidxTop = cb->exidxTop;
-		exidx->exidxBtm = cb->exidxBtm;
-		exidx->extabStart = cb->extabStart;
-		exidx->extabEnd = cb->extabEnd;
-		info = (SceKernelModuleInfoForDebugger *)(exidx + 1);
-	}
+		return 0;
+	n = db->moduleCount;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
-	*num = n;
-	return 0;
+	return n;
 }
 
-int sceKernelGetExportedLibraryListInModule(SceUID pid, SceUID modid, SceUID *list, SceSize *num)
+
+MODULEMGR_COLD int sceKernelGetExportedLibraryListInModule(SceUID pid, SceUID modid,
+							   SceUID *list, SceSize *num)
 {
 	LibEntCB *lib, *ver;
 	LibraryDB *db;
@@ -1533,9 +1553,10 @@ static inline int getImportedLibrariesInModule(SceUID pid, SceUID modid, SceUID 
 					       SceSize *num)
 {
 	SceModuleObject *obj;
-	LibStubCB *stub;
+	LibStubCB *stubs;
 	LibraryDB *db;
-	int n, i, intr;
+	SceUInt32 i;
+	int n, intr;
 
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 1549);
 	if (list == NULL) {
@@ -1547,10 +1568,10 @@ static inline int getImportedLibrariesInModule(SceUID pid, SceUID modid, SceUID 
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 			return SCE_KERNEL_ERROR_MODULEMGR_NO_MOD;
 		}
-		stub = obj->cb.libStubCB;
+		stubs = obj->cb.libStubCB;
 		n = 0;
-		for (i = 0; i < obj->cb.libStubCount; i++, stub++) {
-			if (stub->guid != 0 && stub->linked != NULL)
+		for (i = 0; i < obj->cb.libStubCount; i++) {
+			if (stubs[i].guid != 0 && stubs[i].linked != NULL)
 				n++;
 		}
 		ModulemgrReleaseModule(modid);
@@ -1565,12 +1586,12 @@ static inline int getImportedLibrariesInModule(SceUID pid, SceUID modid, SceUID 
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 		return SCE_KERNEL_ERROR_MODULEMGR_NO_MOD;
 	}
-	stub = obj->cb.libStubCB;
+	stubs = obj->cb.libStubCB;
 	n = 0;
-	for (i = 0; i < obj->cb.libStubCount; i++, stub++) {
-		if (stub->guid != 0 && stub->linked != NULL)
-			list[n++] = GetLibUIDByLibEntCB(pid, &stub->linked->guid,
-							&stub->linked->puid);
+	for (i = 0; i < obj->cb.libStubCount; i++) {
+		if (stubs[i].guid != 0 && stubs[i].linked != NULL)
+			list[n++] = GetLibUIDByLibEntCB(pid, &stubs[i].linked->guid,
+							&stubs[i].linked->puid);
 	}
 	ModulemgrReleaseModule(modid);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
@@ -1578,7 +1599,8 @@ static inline int getImportedLibrariesInModule(SceUID pid, SceUID modid, SceUID 
 	return 0;
 }
 
-int sceKernelGetImportedLibraryListInModule(SceUID pid, SceUID modid, SceUID *list, SceSize *num)
+MODULEMGR_COLD int sceKernelGetImportedLibraryListInModule(SceUID pid, SceUID modid,
+							   SceUID *list, SceSize *num)
 {
 	int ret;
 
@@ -1628,7 +1650,7 @@ int sceKernelGetLibraryInfoForDebugger(SceUID pid, SceUID libid,
 	return ret;
 }
 
-int sceKernelGetLibraryExportInfoForDebugger(SceUID pid, SceUID libid,
+MODULEMGR_COLD int sceKernelGetLibraryExportInfoForDebugger(SceUID pid, SceUID libid,
 					     SceKernelLibraryExportEntry *list, SceSize *num,
 					     SceUInt32 start)
 {
@@ -1672,16 +1694,16 @@ out:
 	return ret;
 }
 
-int sceKernelGetLibraryClientList(SceUID pid, SceUID libid, SceUID *list, SceSize *num,
-				  SceUInt32 start)
+MODULEMGR_COLD int sceKernelGetLibraryClientList(SceUID pid, SceUID libid, SceUID *list,
+						 SceSize *num, SceUInt32 start)
 {
+	int ret, intr;
 	SceLibraryObject *obj;
 	LibStubCB *stub;
 	LibraryDB *db;
 	SceUInt32 i;
 	SceSize n;
 	SceUID guid;
-	int ret, intr;
 
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 2407);
 	ret = ModulemgrReferProcess(pid);

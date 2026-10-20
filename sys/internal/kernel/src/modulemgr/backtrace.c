@@ -271,18 +271,18 @@ int SceBacktraceForDriver_7C878F90(SceUID pid, const SceKernelBacktraceFrameForK
 		fingerprint = 0;
 		textBase = NULL;
 		ret = SceModulemgrForKernel_5564A860(pid, f->pc, &fingerprint, &textBase, name);
-		if (ret < 0) {
-			size = i == count - 1 ? 0 : f[1].sp - f->sp;
-			SceDebugForDriver_391B74B7(
-				"[%d](%d) PC:0x%08X, SP:0x%08X(size=0x%08X byte) [no module info]\n",
-				cpu, i, f->pc, f->sp, size);
-		} else {
+		if (ret >= 0) {
 			if (pid == SCE_KERNEL_PROCESS_ID && !SceQafMgrForDriver_382C71E8())
 				snprintf(name, 0x1b, "0x%08X", fingerprint);
 			size = i == count - 1 ? 0 : f[1].sp - f->sp;
 			SceDebugForDriver_391B74B7(
 				"[%d](%d) PC:0x%08X, SP:0x%08X(size=0x%08X byte) [%s + 0x%08X]\n",
 				cpu, i, f->pc, f->sp, size, name, f->pc - (SceUInt32)textBase);
+		} else {
+			size = i == count - 1 ? 0 : f[1].sp - f->sp;
+			SceDebugForDriver_391B74B7(
+				"[%d](%d) PC:0x%08X, SP:0x%08X(size=0x%08X byte) [no module info]\n",
+				cpu, i, f->pc, f->sp, size);
 		}
 	}
 	SceDebugForDriver_391B74B7("[%d]=====================================\n", cpu);

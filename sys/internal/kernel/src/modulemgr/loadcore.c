@@ -334,7 +334,7 @@ int LoadcoreRegisterLibrary(SceModuleCB *cb, int index, SceUInt32 flags)
 	return 0;
 }
 
-int LoadcoreReleaseLibrary(SceModuleCB *cb, int index, SceUInt32 flags)
+SceUInt32 LoadcoreReleaseLibrary(SceModuleCB *cb, int index, SceUInt32 flags)
 {
 	LibStubCB *stub, *next;
 	LibraryDB *db;
@@ -374,21 +374,20 @@ int LoadcoreReleaseLibrary(SceModuleCB *cb, int index, SceUInt32 flags)
 	ret = 0;
 	next = stub->next;
 	for (;;) {
-		if ((flags & UNLINK_FLAG_NO_UNLINK) != 0) {
-			LibraryDBRegisterLostClient(stub);
-		} else {
+		if ((flags & UNLINK_FLAG_NO_UNLINK) == 0) {
 			ret = LoadcoreUnlinkClient(stub);
 			if (ret < 0)
 				return ret;
 			lib = LibraryDBFindLib(stub);
-			if (lib == NULL) {
-				LibraryDBRegisterLostClient(stub);
-			} else {
+			if (lib != NULL) {
 				ret = LoadcoreLinkClient(lib, stub, NULL);
 				if (ret < 0)
 					return ret;
+				goto advance;
 			}
 		}
+		LibraryDBRegisterLostClient(stub);
+advance:
 		if (next == NULL)
 			return ret;
 		stub = next;

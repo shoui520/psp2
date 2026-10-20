@@ -394,7 +394,7 @@ static inline SceUID getStubGUIDByStubUID(SceUID pid, SceUID stubid)
 	return stubid;
 }
 
-int sceKernelGetStubList(SceUID pid, SceUID *list, SceUInt32 *count)
+MODULEMGR_COLD int sceKernelGetStubList(SceUID pid, SceUID *list, SceUInt32 *count)
 {
 	LibStubCB *stubs, *stub;
 	SceModuleCB *cb;
@@ -405,41 +405,42 @@ int sceKernelGetStubList(SceUID pid, SceUID *list, SceUInt32 *count)
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 832);
 	if (list != NULL) {
 		db = LibraryDBLock(pid, &intr);
-		if (db == NULL)
-			return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
-		n = 0;
-		for (cb = db->modules; cb != NULL; cb = cb->next) {
-			stubs = cb->libStubCB;
-			for (i = 0; n < *count && cb->libStubCount > i; i++) {
-				stub = &stubs[i];
-				if (getStubUIDByLibStubCB(pid, stub) != 0)
-					list[n++] = getStubUIDByLibStubCB(pid, stub);
+		if (db != NULL) {
+			n = 0;
+			for (cb = db->modules; cb != NULL; cb = cb->next) {
+				stubs = cb->libStubCB;
+				for (i = 0; n < *count && cb->libStubCount > i; i++) {
+					stub = &stubs[i];
+					if (getStubUIDByLibStubCB(pid, stub) != 0)
+						list[n++] = getStubUIDByLibStubCB(pid, stub);
+				}
 			}
+			LibraryDBUnlock(db, intr);
+			*count = n;
+			return 0;
 		}
-		LibraryDBUnlock(db, intr);
-		*count = n;
-		return 0;
-	}
-
-	db = LibraryDBLock(pid, &intr);
-	if (db == NULL)
-		return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
-	n = 0;
-	for (cb = db->modules; cb != NULL; cb = cb->next) {
-		stubs = cb->libStubCB;
-		if (stubs == NULL)
-			continue;
-		for (i = 0; cb->libStubCount > i; i++) {
-			if (stubs[i].guid != 0)
-				n++;
+	} else {
+		db = LibraryDBLock(pid, &intr);
+		if (db != NULL) {
+			n = 0;
+			for (cb = db->modules; cb != NULL; cb = cb->next) {
+				stubs = cb->libStubCB;
+				if (stubs == NULL)
+					continue;
+				for (i = 0; cb->libStubCount > i; i++) {
+					if (stubs[i].guid != 0)
+						n++;
+				}
+			}
+			LibraryDBUnlock(db, intr);
+			return n;
 		}
 	}
-	LibraryDBUnlock(db, intr);
-	return n;
+	return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
 }
 
-int sceKernelGetStubInfoForDebugger(SceUID pid, SceUID stubid,
-				    SceKernelStubInfoForDebugger *info)
+MODULEMGR_COLD int sceKernelGetStubInfoForDebugger(SceUID pid, SceUID stubid,
+						   SceKernelStubInfoForDebugger *info)
 {
 	SceLibStubObject *sobj;
 	SceModuleObject *mobj;
@@ -501,8 +502,8 @@ static inline int getStubNidTableInfoForDebugger(SceUID pid, SceUID stubid,
 						 SceKernelStubNidEntry *table, SceUInt32 *count,
 						 SceUInt32 start)
 {
-	SceLibStubObject *sobj;
 	SceModuleObject *mobj;
+	SceLibStubObject *sobj;
 	SceModuleImports *imp;
 	LibStubCB *stub;
 	SceUInt32 i, j, n, nfunc;
@@ -567,8 +568,9 @@ release:
 	return ret;
 }
 
-int sceKernelGetStubNidTableForDebugger(SceUID pid, SceUID stubid, SceKernelStubNidEntry *table,
-					SceUInt32 *count, SceUInt32 start)
+MODULEMGR_COLD int sceKernelGetStubNidTableForDebugger(SceUID pid, SceUID stubid,
+						       SceKernelStubNidEntry *table,
+						       SceUInt32 *count, SceUInt32 start)
 {
 	int ret;
 

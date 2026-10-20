@@ -22,7 +22,7 @@ static inline SceUInt32 prel31(SceUInt32 v)
 }
 
 /* name unknown: out[0] the second word of the entry, out[1] its unwind table or -1 */
-int BacktraceFindExidx(SceUID pid, SceUInt32 addr, SceUInt32 *out, SceUInt32 flags)
+SceUInt32 BacktraceFindExidx(SceUID pid, SceUInt32 addr, SceUInt32 *out, SceUInt32 flags)
 {
 	const ExidxEntry *copy, *e;
 	SceUInt32 top, btm, n, lo, hi, mid, next, fn, fnNext, base, baseNext, w;
