@@ -114,27 +114,30 @@ struct SceKernelBacktraceFrame;
 struct SceKernelBacktraceFrameForKernel;
 struct LibStubCB;
 
-/* SCE module info (version 6), as found in the ELF */
+/*
+ * SCE module info (version 6), as found in the ELF; the field names are the labels
+ * Sony's ModuleCBDumpInfo prints it with ("libent_top : ...", "modver[0]", ...)
+ */
 typedef struct SceModuleInfo {
-	SceUInt16 attr;
-	SceUInt8 version[2];
+	SceUInt16 modattr;
+	SceUInt8 modver[2];
 	char name[27];
-	SceUInt8 infoVersion;		/* 6 */
+	SceUInt8 infover;		/* 6 */
 	SceUInt32 gp;
-	SceUInt32 libentTop;		/* segment index << 30 | offset */
-	SceUInt32 libentBtm;
-	SceUInt32 libstubTop;
-	SceUInt32 libstubBtm;
+	SceUInt32 libent_top;		/* segment index << 30 | offset */
+	SceUInt32 libent_btm;
+	SceUInt32 libstub_top;
+	SceUInt32 libstub_btm;
 	SceUInt32 fingerprint;
 	SceUInt32 tlsStart;
 	SceUInt32 tlsFilesz;
 	SceUInt32 tlsMemsz;
-	SceUInt32 moduleStart;
-	SceUInt32 moduleStop;
-	SceUInt32 exidxTop;
-	SceUInt32 exidxBtm;
-	SceUInt32 extabStart;
-	SceUInt32 extabEnd;
+	SceUInt32 start_entry;
+	SceUInt32 stop_entry;
+	SceUInt32 exidx_top;
+	SceUInt32 exidx_btm;
+	SceUInt32 extab_top;
+	SceUInt32 extab_btm;
 } SceModuleInfo;
 
 /* imported library entry, normalised 0x24-byte form */
@@ -283,8 +286,8 @@ typedef struct LoadelfTiming {
 	const char *path;
 } LoadelfTiming;
 
-/* the SELF/ELF reader (self_decrypter.c) */
-typedef struct SelfReader {
+/* the SELF/ELF parser (Sony's self_parser.h: SelfParserOpen, SelfParserGetPhdrOffset) */
+typedef struct SelfParser {
 	void *header;			/* the first page of the file */
 	SceSize headerSize;
 	void *ehdr;
@@ -299,7 +302,7 @@ typedef struct SelfReader {
 	SceUID fd;
 	SceUID pid;
 	SceUInt32 reserved;
-} SelfReader;
+} SelfParser;
 
 /* bootimage_fs.c */
 typedef struct BootimageEntry {
@@ -552,17 +555,17 @@ int sceLoadcoreIoClose(SceUID fd);
 int sceLoadcoreIoReadFrom(void *buf, SceSize size, SceOff offset);
 
 /* self_decrypter.c */
-int SelfReaderCheckElfHeader(const void *ehdr, SceSize size);
-int SelfReaderOpen(SelfReader *reader, SceUID pid, SceUID fd, SelfAuthRequest *auth);
-int SelfReaderClose(SelfReader *reader);
-int SelfReaderGetType(SelfReader *reader);
-SceUInt16 SelfReaderGetPhnum(SelfReader *reader);
-SceUInt32 SelfReaderGetEntry(SelfReader *reader);
-void *SelfReaderGetSegmentInfo(SelfReader *reader, SceUInt32 index);
-SceUInt32 SelfReaderGetSegmentOffset(SelfReader *reader, SceUInt32 index);
-SceUInt64 SelfReaderGetProgramAuthId(SelfReader *reader);
-SceUInt64 SelfReaderGetProgramVersion(SelfReader *reader);
-int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTiming *timing);
+int SelfParserCheckElfHeader(const void *ehdr, SceSize size);
+int SelfParserOpen(SelfParser *reader, SceUID pid, SceUID fd, SelfAuthRequest *auth);
+int SelfParserClose(SelfParser *reader);
+int SelfParserGetType(SelfParser *reader);
+SceUInt16 SelfParserGetPhnum(SelfParser *reader);
+SceUInt32 SelfParserGetEntry(SelfParser *reader);
+void *SelfParserGetSegmentInfo(SelfParser *reader, SceUInt32 index);
+SceUInt32 SelfParserGetPhdrOffset(SelfParser *reader, SceUInt32 index);
+SceUInt64 SelfParserGetProgramAuthId(SelfParser *reader);
+SceUInt64 SelfParserGetProgramVersion(SelfParser *reader);
+int SelfDecrypterLoadSegment(SelfParser *reader, int index, void *dst, LoadelfTiming *timing);
 int SelfDecrypterInit(void);
 int SelfDecrypterSuspend(SceUInt32 mask);
 void SelfDecrypterLock(void);
@@ -577,7 +580,7 @@ typedef struct StubLinkerInfo {
 } StubLinkerInfo;
 
 int LoadcoreUnlinkClient(LibStubCB *stub);
-int LoadcoreAssignSyscalls(LibEntCB *ent);
+int LoadcoreRegisterSyscallTableEntries(LibEntCB *ent);
 void registerClient(LibEntCB *ent, LibStubCB *stub);
 int LoadcoreLinkClient(LibEntCB *ent, LibStubCB *stub, const ModulemgrLibraryPatch *patch);
 int LibraryClassCreate(SceLibraryObject *obj);
@@ -602,19 +605,19 @@ typedef struct SceKernelModuleSyscallParam {
 	SceUInt32 reserved;
 } SceKernelModuleSyscallParam;
 
-SceUID sceKernelLoadModuleForUser(const char *path, SceUInt32 flags, const SceKernelLoadModuleOpt *opt);
-int sceKernelStartModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
+SceUID _sceKernelLoadModuleWithoutStartForUser(const char *path, SceUInt32 flags, const SceKernelLoadModuleOpt *opt);
+int _sceKernelStartModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
 				const SceKernelStartModuleOpt *opt, int *status);
-int sceKernelStopModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
+int _sceKernelStopModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
 			       const SceKernelStopModuleOpt *opt, int *status);
-int sceKernelUnloadModuleForUser(SceUID modid, SceUInt32 flags, const SceKernelUnloadModuleOpt *opt);
-SceUID sceKernelLoadStartModuleForUser(const char *path, SceSize args, void *argp, SceUInt32 flags,
+int _sceKernelUnloadModuleForUser(SceUID modid, SceUInt32 flags, const SceKernelUnloadModuleOpt *opt);
+SceUID _sceKernelLoadStartModuleForUser(const char *path, SceSize args, void *argp, SceUInt32 flags,
 				       const SceKernelLoadModuleOpt *opt, int *status);
-int sceKernelStopUnloadModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
+int _sceKernelStopUnloadModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
 				     const SceKernelUnloadModuleOpt *opt, int *status);
-SceUID sceKernelOpenModuleForUser(const char *path, SceSize args, void *argp, SceUInt32 flags,
+SceUID _sceKernelOpenModuleForUser(const char *path, SceSize args, void *argp, SceUInt32 flags,
 				  const SceKernelLoadModuleOpt *opt, int *status);
-int sceKernelCloseModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
+int _sceKernelCloseModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
 				const SceKernelUnloadModuleOpt *opt, int *status);
 
 /* stub_linker.c */
@@ -623,7 +626,7 @@ int link_variables(StubLinkerInfo *info, int mode);
 int link_functions(StubLinkerInfo *info, int mode, const ModulemgrLibraryPatch *patch);
 int StubLinkerLinkAll(StubLinkerInfo *info, const ModulemgrLibraryPatch *patch);
 int StubLinkerUnlinkAll(StubLinkerInfo *info);
-int StubLinkerUndefAll(StubLinkerInfo *info);
+int StubLinkerUndefFunctions(StubLinkerInfo *info);
 
 /* syscallcb.c */
 int func_noentry(void);

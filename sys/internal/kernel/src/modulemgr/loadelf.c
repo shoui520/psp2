@@ -117,7 +117,7 @@ static int LoadelfCopySharedSegment(LoadelfContext *ctx, int index)
 	return sceKernelFreeMemBlock(tmp);
 }
 
-int LoadelfLoadSegment(LoadelfContext *ctx, SelfReader *reader, int index, LoadelfTiming *timing)
+int LoadelfLoadSegment(LoadelfContext *ctx, SelfParser *reader, int index, LoadelfTiming *timing)
 {
 	SceModuleCB *cb = ctx->cb;
 	SceModuleSegment *seg = &cb->segment[index];
@@ -248,7 +248,7 @@ int LoadelfLoadSegment(LoadelfContext *ctx, SelfReader *reader, int index, Loade
 		       total - pageOff - seg->filesz);
 
 	if ((cb->flags & MODULE_FLAG_SHARED_MASK) == 0)
-		return SelfReaderLoadSegment(reader, index, ctx->seg[index].kaddr, timing);
+		return SelfDecrypterLoadSegment(reader, index, ctx->seg[index].kaddr, timing);
 	return LoadelfCopySharedSegment(ctx, index);
 }
 
@@ -308,7 +308,7 @@ SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *aut
 {
 	SceModuleCB *cb = ctx->cb;
 	LoadelfTiming timing, *t;
-	SelfReader reader;
+	SelfParser reader;
 	Elf32_Phdr *ph;
 	SceUInt32 rnd, state, align;
 	SceUInt16 phnum;
@@ -322,16 +322,16 @@ SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *aut
 	if ((cb->flags & MODULE_FLAG_SHARED_MASK) != 0)
 		return LoadelfLoadSharedImage(ctx);
 
-	ret = SelfReaderOpen(&reader, cb->pid, fd, auth);
+	ret = SelfParserOpen(&reader, cb->pid, fd, auth);
 	if (ret < 0)
 		return ret;
 
-	ret = SelfReaderGetType(&reader);
+	ret = SelfParserGetType(&reader);
 	if (ret < 0)
 		goto close;
 	if (ret == ET_SCE_FIXEDEXEC)
 		cb->flags |= MODULE_FLAG_SELF_FIXED;
-	ctx->entry = SelfReaderGetEntry(&reader);
+	ctx->entry = SelfParserGetEntry(&reader);
 
 	if ((cb->flags & MODULE_FLAG_PROCESS_IMAGE) != 0 &&
 	    (cb->flags & MODULE_FLAG_SELF_FIXED) != 0 &&
@@ -344,7 +344,7 @@ SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *aut
 		goto close;
 	}
 
-	phnum = SelfReaderGetPhnum(&reader);
+	phnum = SelfParserGetPhnum(&reader);
 	cb = ctx->cb;
 	pid = cb->pid;
 #if FW_DEBUG
@@ -429,7 +429,7 @@ SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *aut
 						ret = SCE_KERNEL_ERROR_MODULEMGR_NOMEM;
 						goto fail;
 					}
-					ret = SelfReaderLoadSegment(&reader, i, buf, NULL);
+					ret = SelfDecrypterLoadSegment(&reader, i, buf, NULL);
 					if (ret < 0) {
 						ModulemgrFree(mpid, buf);
 						goto fail;
@@ -455,7 +455,7 @@ SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *aut
 					if (buf == NULL) {
 						ret = SCE_KERNEL_ERROR_MODULEMGR_NOMEM;
 					} else {
-						ret = SelfReaderLoadSegment(&reader, i, buf, t);
+						ret = SelfDecrypterLoadSegment(&reader, i, buf, t);
 						if (ret >= 0) {
 #if FW_DEBUG
 							if (t == NULL) {
@@ -506,7 +506,7 @@ bad:
 fail:
 	LoadelfFreeSegments(cb, ctx);
 close:
-	SelfReaderClose(&reader);
+	SelfParserClose(&reader);
 	return ret;
 }
 
@@ -559,7 +559,7 @@ int sceKernelLoadPtLoadSegForFwloader(const char *path, int index, void *dst, Sc
 				      int flags, SceSize *out)
 {
 	SelfAuthRequest auth;
-	SelfReader reader;
+	SelfParser reader;
 	Elf32_Phdr *ph;
 	SceUID fd;
 	int ret, type;
@@ -579,22 +579,22 @@ int sceKernelLoadPtLoadSegForFwloader(const char *path, int index, void *dst, Sc
 	fd = sceIoOpen(path, 1, 0);
 	if (fd < 0)
 		return fd;
-	ret = SelfReaderOpen(&reader, SCE_KERNEL_PROCESS_ID, fd, &auth);
+	ret = SelfParserOpen(&reader, SCE_KERNEL_PROCESS_ID, fd, &auth);
 	if (ret >= 0) {
-		type = SelfReaderGetType(&reader);
+		type = SelfParserGetType(&reader);
 		ret = type;
 		if (type >= 0) {
-			if (index < SelfReaderGetPhnum(&reader) && type == ET_SCE_FIXEDEXEC &&
+			if (index < SelfParserGetPhnum(&reader) && type == ET_SCE_FIXEDEXEC &&
 			    (ph = (Elf32_Phdr *)reader.phdr + index, ph->p_type == PT_LOAD) &&
 			    ph->p_filesz != 0 && ph->p_filesz <= size) {
-				ret = SelfReaderLoadSegment(&reader, index, dst, NULL);
+				ret = SelfDecrypterLoadSegment(&reader, index, dst, NULL);
 				if (ret >= 0)
 					*out = ph->p_filesz;
 			} else {
 				ret = SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 			}
 		}
-		SelfReaderClose(&reader);
+		SelfParserClose(&reader);
 	}
 	sceIoClose(fd);
 	SCE_DBG_PRINTF_LEVEL(2, 0, 1098,
@@ -606,7 +606,7 @@ int sceKernelLoadPtLoadSegForFwloader(const char *path, int index, void *dst, Sc
 MODULEMGR_COLD int sceKernelGetProgramIdentificationInfo(const char *path, SceUInt64 *authId,
 							 SceUInt64 *version)
 {
-	SelfReader reader;
+	SelfParser reader;
 	SceUID fd;
 	int ret;
 
@@ -616,11 +616,11 @@ MODULEMGR_COLD int sceKernelGetProgramIdentificationInfo(const char *path, SceUI
 	fd = sceIoOpen(path, 1, 0);
 	if (fd < 0)
 		return fd;
-	ret = SelfReaderOpen(&reader, SCE_KERNEL_PROCESS_ID, fd, NULL);
+	ret = SelfParserOpen(&reader, SCE_KERNEL_PROCESS_ID, fd, NULL);
 	if (ret >= 0) {
-		*authId = SelfReaderGetProgramAuthId(&reader);
-		*version = SelfReaderGetProgramVersion(&reader);
-		SelfReaderClose(&reader);
+		*authId = SelfParserGetProgramAuthId(&reader);
+		*version = SelfParserGetProgramVersion(&reader);
+		SelfParserClose(&reader);
 		ret = 0;
 	}
 	sceIoClose(fd);

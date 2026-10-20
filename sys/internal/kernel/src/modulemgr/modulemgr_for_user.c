@@ -64,8 +64,8 @@ int ModulemgrLoadModuleForUser(const char *upath, SceUInt32 flags,
 	return 0;
 }
 
-/* name unknown */
-SceUID sceKernelLoadModuleForUser(const char *path, SceUInt32 flags,
+/* Sony's name (1.80 records); the kernel side of _sceKernelLoadModule */
+SceUID _sceKernelLoadModuleWithoutStartForUser(const char *path, SceUInt32 flags,
 					 const SceKernelLoadModuleOpt *opt)
 {
 	SceUID puid = 0;
@@ -80,8 +80,8 @@ SceUID sceKernelLoadModuleForUser(const char *path, SceUInt32 flags,
 	return ret;
 }
 
-/* name unknown */
-int sceKernelStartModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
+/* the kernel side of _sceKernelStartModule (name after _sceKernelOpenModuleForUser) */
+int _sceKernelStartModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
 				       const SceKernelStartModuleOpt *opt, int *status)
 {
 	SceUInt32 state;
@@ -102,8 +102,8 @@ int sceKernelStartModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt3
 	return ret;
 }
 
-/* name unknown */
-int sceKernelStopModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
+/* the kernel side of _sceKernelStopModule (name after _sceKernelOpenModuleForUser) */
+int _sceKernelStopModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
 				      const SceKernelStopModuleOpt *opt, int *status)
 {
 	SceUInt32 state;
@@ -124,8 +124,8 @@ int sceKernelStopModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32
 	return ret;
 }
 
-/* name unknown */
-int sceKernelUnloadModuleForUser(SceUID modid, SceUInt32 flags,
+/* the kernel side of _sceKernelUnloadModule (name after _sceKernelOpenModuleForUser) */
+int _sceKernelUnloadModuleForUser(SceUID modid, SceUInt32 flags,
 					const SceKernelUnloadModuleOpt *opt)
 {
 	SceUInt32 state;
@@ -143,8 +143,8 @@ int sceKernelUnloadModuleForUser(SceUID modid, SceUInt32 flags,
 	return ret;
 }
 
-/* name unknown */
-SceUID sceKernelLoadStartModuleForUser(const char *path, SceSize args, void *argp,
+/* the kernel side of _sceKernelLoadStartModule (name after _sceKernelOpenModuleForUser) */
+SceUID _sceKernelLoadStartModuleForUser(const char *path, SceSize args, void *argp,
 					      SceUInt32 flags, const SceKernelLoadModuleOpt *opt,
 					      int *status)
 {
@@ -173,8 +173,8 @@ SceUID sceKernelLoadStartModuleForUser(const char *path, SceSize args, void *arg
 	return ret == 1 ? 0 : ret;
 }
 
-/* name unknown */
-int sceKernelStopUnloadModuleForUser(SceUID modid, SceSize args, void *argp,
+/* the kernel side of _sceKernelStopUnloadModule (name after _sceKernelOpenModuleForUser) */
+int _sceKernelStopUnloadModuleForUser(SceUID modid, SceSize args, void *argp,
 					    SceUInt32 flags, const SceKernelUnloadModuleOpt *opt,
 					    int *status)
 {
@@ -199,8 +199,8 @@ int sceKernelStopUnloadModuleForUser(SceUID modid, SceSize args, void *argp,
 	return ret;
 }
 
-/* name unknown */
-SceUID sceKernelOpenModuleForUser(const char *upath, SceSize args, void *argp,
+/* Sony's name (1.80 records); the kernel side of _sceKernelOpenModule */
+SceUID _sceKernelOpenModuleForUser(const char *upath, SceSize args, void *argp,
 					 SceUInt32 flags, const SceKernelLoadModuleOpt *opt, int *status)
 {
 	SceModuleObject *obj;
@@ -236,8 +236,8 @@ SceUID sceKernelOpenModuleForUser(const char *upath, SceSize args, void *argp,
 	return ret;
 }
 
-/* name unknown */
-int sceKernelCloseModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
+/* the kernel side of _sceKernelCloseModule (name after _sceKernelOpenModuleForUser) */
+int _sceKernelCloseModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
 				       const SceKernelUnloadModuleOpt *opt, int *status)
 {
 	SceUInt32 state;

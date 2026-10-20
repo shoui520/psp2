@@ -35,7 +35,7 @@ typedef struct SelfDecrypterSlot {
 /* the state shared with the decrypter thread, in Sony's order */
 static struct {
 	SelfDecrypterSlot slot[2];
-	SelfReader *reader;
+	SelfParser *reader;
 	SceUID commEvf;
 	SceUID decrypterThread;
 	SceUInt8 *destination;
@@ -50,7 +50,7 @@ static struct {
 #define SELF_DECOMPRESSION_ERROR ((int)0x800f0516)
 static SceUInt8 g_buffer[2][0x10000] __attribute__((aligned(0x40)));
 
-int SelfReaderCheckElfHeader(const void *ehdr, SceSize size)
+int SelfParserCheckElfHeader(const void *ehdr, SceSize size)
 {
 	const Elf32_Ehdr *e = ehdr;
 
@@ -73,7 +73,7 @@ int SelfReaderCheckElfHeader(const void *ehdr, SceSize size)
 	return e->e_phoff <= sizeof(*e) ? 0 : SCE_KERNEL_ERROR_ILLEGAL_ELF_HEADER;
 }
 
-int SelfReaderOpen(SelfReader *reader, SceUID pid, SceUID fd, SelfAuthRequest *auth)
+int SelfParserOpen(SelfParser *reader, SceUID pid, SceUID fd, SelfAuthRequest *auth)
 {
 	const SceSelfImageHeader *self;
 	const Elf32_Ehdr *ehdr;
@@ -123,7 +123,7 @@ int SelfReaderOpen(SelfReader *reader, SceUID pid, SceUID fd, SelfAuthRequest *a
 		}
 		ehdr = (const Elf32_Ehdr *)(p + (SceUInt32)self->header.elfOffset);
 		reader->ehdr = (void *)ehdr;
-		ret = SelfReaderCheckElfHeader(ehdr, size - (SceUInt32)self->header.elfOffset);
+		ret = SelfParserCheckElfHeader(ehdr, size - (SceUInt32)self->header.elfOffset);
 		if (ret < 0)
 			goto fail;
 		reader->phdr = (void *)(p + (SceUInt32)self->header.phdrOffset);
@@ -141,7 +141,7 @@ int SelfReaderOpen(SelfReader *reader, SceUID pid, SceUID fd, SelfAuthRequest *a
 		reader->fd = fd;
 		reader->ehdr = (void *)ehdr;
 		reader->type = 1;
-		ret = SelfReaderCheckElfHeader(ehdr, size);
+		ret = SelfParserCheckElfHeader(ehdr, size);
 		if (ret < 0)
 			goto fail;
 		if (ehdr->e_phnum * sizeof(Elf32_Phdr) <= size - sizeof(*ehdr)) {
@@ -159,7 +159,7 @@ fail:
 	return ret;
 }
 
-int SelfReaderClose(SelfReader *reader)
+int SelfParserClose(SelfParser *reader)
 {
 	if (reader->heap != NULL) {
 		ModulemgrFree(reader->pid, reader->heap);
@@ -172,24 +172,24 @@ int SelfReaderClose(SelfReader *reader)
 	return 0;
 }
 
-int SelfReaderGetType(SelfReader *reader)
+int SelfParserGetType(SelfParser *reader)
 {
 	if (reader->ehdr == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ELF_HEADER;
 	return ((Elf32_Ehdr *)reader->ehdr)->e_type;
 }
 
-SceUInt16 SelfReaderGetPhnum(SelfReader *reader)
+SceUInt16 SelfParserGetPhnum(SelfParser *reader)
 {
 	return ((Elf32_Ehdr *)reader->ehdr)->e_phnum;
 }
 
-SceUInt32 SelfReaderGetEntry(SelfReader *reader)
+SceUInt32 SelfParserGetEntry(SelfParser *reader)
 {
 	return ((Elf32_Ehdr *)reader->ehdr)->e_entry;
 }
 
-__attribute__((noinline)) void *SelfReaderGetSegmentInfo(SelfReader *reader, SceUInt32 index)
+__attribute__((noinline)) void *SelfParserGetSegmentInfo(SelfParser *reader, SceUInt32 index)
 {
 	if (reader->ehdr == NULL)
 		return NULL;
@@ -198,7 +198,7 @@ __attribute__((noinline)) void *SelfReaderGetSegmentInfo(SelfReader *reader, Sce
 	return NULL;
 }
 
-__attribute__((noinline)) SceUInt32 SelfReaderGetSegmentOffset(SelfReader *reader, SceUInt32 index)
+__attribute__((noinline)) SceUInt32 SelfParserGetPhdrOffset(SelfParser *reader, SceUInt32 index)
 {
 	Elf32_Phdr *phdr;
 
@@ -211,12 +211,12 @@ __attribute__((noinline)) SceUInt32 SelfReaderGetSegmentOffset(SelfReader *reade
 	return SCE_KERNEL_ERROR_ILLEGAL_SELF_HEADER;
 }
 
-SceUInt64 SelfReaderGetProgramAuthId(SelfReader *reader)
+SceUInt64 SelfParserGetProgramAuthId(SelfParser *reader)
 {
 	return ((SceSelfImageHeader *)reader->header)->appInfo.authId;
 }
 
-SceUInt64 SelfReaderGetProgramVersion(SelfReader *reader)
+SceUInt64 SelfParserGetProgramVersion(SelfParser *reader)
 {
 	return ((SceSelfImageHeader *)reader->header)->appInfo.version;
 }
@@ -257,7 +257,7 @@ const void *selfDecrypterRefill(SceDeflatePartialInputParam *param, unsigned int
 int selfDecrypter_thread_entry(SceSize args, void *argp)
 {
 	SelfDecrypterSlot *slot;
-	SelfReader *reader;
+	SelfParser *reader;
 	SceUInt32 bits, status;
 	const void *input;
 	SceSize size;
@@ -352,7 +352,7 @@ int SelfDecrypterInit(void)
 	return sceKernelStartThread(ret, 0, NULL);
 }
 
-int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTiming *timing)
+int SelfDecrypterLoadSegment(SelfParser *reader, int index, void *dst, LoadelfTiming *timing)
 {
 	SceSize filesz = ((Elf32_Phdr *)reader->phdr)[index].p_filesz;
 	SceUID fd;
@@ -363,7 +363,7 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 	if (reader->type == 1) {
 		if (reader->fd == BOOTIMAGE_FD && reader->pid == SCE_KERNEL_PROCESS_ID) {
 			if (sceLoadcoreIoReadFrom(dst, filesz,
-						  SelfReaderGetSegmentOffset(reader, index)) != filesz)
+						  SelfParserGetPhdrOffset(reader, index)) != filesz)
 				return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 			return 0;
 		}
@@ -378,7 +378,7 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 		int previous = 1, next, ret, bytesRead;
 
 		g_self.outputLeft = filesz;
-		segment = SelfReaderGetSegmentInfo(reader, index);
+		segment = SelfParserGetSegmentInfo(reader, index);
 		if (segment == NULL || (segment->length >> 32) != 0)
 			return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 		length = segment->length;

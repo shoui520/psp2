@@ -552,8 +552,8 @@ int StubLinkerUnlinkAll(StubLinkerInfo *info)
 	return ret;
 }
 
-/* name unknown */
-int StubLinkerUndefAll(StubLinkerInfo *info)
+/* Sony's name (1.80 records): undefine every function stub of an import */
+int StubLinkerUndefFunctions(StubLinkerInfo *info)
 {
 	return link_functions(info, STUBLINKER_UNDEF, NULL);
 }

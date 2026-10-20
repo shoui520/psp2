@@ -21,7 +21,7 @@ SceUID _sceKernelLoadModule(const char *path, SceUInt32 flags, const SceKernelLo
 		if (ret < 0)
 			return ret;
 	}
-	return sceKernelLoadModuleForUser(path, flags, opt);
+	return _sceKernelLoadModuleWithoutStartForUser(path, flags, opt);
 }
 
 /*
@@ -48,10 +48,10 @@ int _sceKernelStartModule(SceUID modid, SceSize args, void *argp,
 			return ret;
 	}
 	if (ustatus == NULL)
-		return sceKernelStartModuleForUser(modid, args, argp, flags, opt, NULL);
+		return _sceKernelStartModuleForUser(modid, args, argp, flags, opt, NULL);
 	status = __builtin_alloca(sizeof(*status));
 	*status = 0;
-	ret = sceKernelStartModuleForUser(modid, args, argp, flags, opt, status);
+	ret = _sceKernelStartModuleForUser(modid, args, argp, flags, opt, status);
 	res = sceKernelCopyToUser(ustatus, status, sizeof(*status));
 	return res < 0 ? res : ret;
 }
@@ -76,10 +76,10 @@ int _sceKernelStopModule(SceUID modid, SceSize args, void *argp,
 			return ret;
 	}
 	if (ustatus == NULL)
-		return sceKernelStopModuleForUser(modid, args, argp, flags, opt, NULL);
+		return _sceKernelStopModuleForUser(modid, args, argp, flags, opt, NULL);
 	status = __builtin_alloca(sizeof(*status));
 	*status = 0;
-	ret = sceKernelStopModuleForUser(modid, args, argp, flags, opt, status);
+	ret = _sceKernelStopModuleForUser(modid, args, argp, flags, opt, status);
 	res = sceKernelCopyToUser(ustatus, status, sizeof(*status));
 	return res < 0 ? res : ret;
 }
@@ -95,7 +95,7 @@ int _sceKernelUnloadModule(SceUID modid, SceUInt32 flags, const SceKernelUnloadM
 		if (ret < 0)
 			return ret;
 	}
-	return sceKernelUnloadModuleForUser(modid, flags, opt);
+	return _sceKernelUnloadModuleForUser(modid, flags, opt);
 }
 
 SceUID _sceKernelLoadStartModule(const char *path, SceSize args, void *argp,
@@ -118,10 +118,10 @@ SceUID _sceKernelLoadStartModule(const char *path, SceSize args, void *argp,
 			return ret;
 	}
 	if (ustatus == NULL)
-		return sceKernelLoadStartModuleForUser(path, args, argp, flags, opt, NULL);
+		return _sceKernelLoadStartModuleForUser(path, args, argp, flags, opt, NULL);
 	status = __builtin_alloca(sizeof(*status));
 	*status = 0;
-	ret = sceKernelLoadStartModuleForUser(path, args, argp, flags, opt, status);
+	ret = _sceKernelLoadStartModuleForUser(path, args, argp, flags, opt, status);
 	res = sceKernelCopyToUser(ustatus, status, sizeof(*status));
 	return res < 0 ? res : ret;
 }
@@ -146,10 +146,10 @@ int _sceKernelStopUnloadModule(SceUID modid, SceSize args, void *argp,
 			return ret;
 	}
 	if (ustatus == NULL)
-		return sceKernelStopUnloadModuleForUser(modid, args, argp, flags, opt, NULL);
+		return _sceKernelStopUnloadModuleForUser(modid, args, argp, flags, opt, NULL);
 	status = __builtin_alloca(sizeof(*status));
 	*status = 0;
-	ret = sceKernelStopUnloadModuleForUser(modid, args, argp, flags, opt, status);
+	ret = _sceKernelStopUnloadModuleForUser(modid, args, argp, flags, opt, status);
 	res = sceKernelCopyToUser(ustatus, status, sizeof(*status));
 	return res < 0 ? res : ret;
 }
@@ -174,10 +174,10 @@ SceUID _sceKernelOpenModule(const char *path, SceSize args, void *argp,
 			return ret;
 	}
 	if (ustatus == NULL)
-		return sceKernelOpenModuleForUser(path, args, argp, flags, opt, NULL);
+		return _sceKernelOpenModuleForUser(path, args, argp, flags, opt, NULL);
 	status = __builtin_alloca(sizeof(*status));
 	*status = 0;
-	ret = sceKernelOpenModuleForUser(path, args, argp, flags, opt, status);
+	ret = _sceKernelOpenModuleForUser(path, args, argp, flags, opt, status);
 	res = sceKernelCopyToUser(ustatus, status, sizeof(*status));
 	return res < 0 ? res : ret;
 }
@@ -202,10 +202,10 @@ int _sceKernelCloseModule(SceUID modid, SceSize args, void *argp,
 			return ret;
 	}
 	if (ustatus == NULL)
-		return sceKernelCloseModuleForUser(modid, args, argp, flags, opt, NULL);
+		return _sceKernelCloseModuleForUser(modid, args, argp, flags, opt, NULL);
 	status = __builtin_alloca(sizeof(*status));
 	*status = 0;
-	ret = sceKernelCloseModuleForUser(modid, args, argp, flags, opt, status);
+	ret = _sceKernelCloseModuleForUser(modid, args, argp, flags, opt, status);
 	res = sceKernelCopyToUser(ustatus, status, sizeof(*status));
 	return res < 0 ? res : ret;
 }

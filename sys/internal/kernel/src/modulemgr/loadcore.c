@@ -211,8 +211,11 @@ int LoadcoreLinkClient(LibEntCB *ent, LibStubCB *stub, const ModulemgrLibraryPat
 	return ret;
 }
 
-/* name unknown: give a kernel library exported to user mode its syscall numbers */
-int LoadcoreAssignSyscalls(LibEntCB *ent)
+/*
+ * Sony's name (1.80 records, where it also printed "no room"): give a kernel
+ * library exported to user mode its syscall numbers
+ */
+int LoadcoreRegisterSyscallTableEntries(LibEntCB *ent)
 {
 	int ret;
 
@@ -241,7 +244,7 @@ static inline void LoadcoreRegisterModulesAfterBoot(void)
 	if (db == NULL)
 		SCE_PANIC(528);
 	for (ent = db->libList; ent != NULL; ent = ent->next) {
-		if (LoadcoreAssignSyscalls(ent) < 0) {
+		if (LoadcoreRegisterSyscallTableEntries(ent) < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 536, "failed\n");
 			SCE_PANIC(537);
 		}
@@ -293,7 +296,7 @@ int LoadcoreRegisterLibrary(SceModuleCB *cb, int index, SceUInt32 flags)
 	ret = LibraryDBRegisterLib(pid, ent);
 	if (ret < 0)
 		return ret;
-	ret = LoadcoreAssignSyscalls(ent);
+	ret = LoadcoreRegisterSyscallTableEntries(ent);
 	if (ret < 0)
 		return ret;
 
@@ -481,7 +484,7 @@ LoadcoreUnlinkLibraryEntries(SceModuleCB *cb, LibStubCB *stub, SceUInt32 flags)
 		return ret;
 	ret = LibStubGetNidTable(stub, &info.stub);
 	if (ret >= 0)
-		ret = StubLinkerUndefAll(&info);
+		ret = StubLinkerUndefFunctions(&info);
 	LibStubReleaseNidTable(&info.stub);
 	LoadcoreRestoreProcess(stub->cb->pid, &pc);
 	return ret;
