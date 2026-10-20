@@ -1873,6 +1873,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 	SceUInt32 sdkVersion, threadAttr, budgetType, maxSize;
 	SceSize toolHeapSize;
 	int deleteThreads, cpu, permission, intr, ret, slot, i;
+	int objectHeapRet;	/* the object heap calls' result, returned on a bad budget type */
 
 	objectHeap = NULL;
 	if (kind == 1 && prevPid != 0) {
@@ -1960,17 +1961,18 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 	switch (budgetType) {
 	case PROCESS_TYPE_MINI_APP:
 		objectHeap = SceSysmemForKernel_791D6205();
-		ret = 0;
+		objectHeapRet = 0;
 		break;
 	case PROCESS_TYPE_GAME:
 	case PROCESS_TYPE_SHELL:
 	case PROCESS_TYPE_KERNEL:
-		ret = sceKernelCreateObjectHeap(pid, 0, asParam, &objectHeap);
-		if (ret < 0)
-			SCE_DBG_PRINTF_LEVEL(1, 0xb, 3534, "sceKernelCreateObjectHeap failed 0x%08x\n", ret);
+		objectHeapRet = sceKernelCreateObjectHeap(pid, 0, asParam, &objectHeap);
+		if (objectHeapRet < 0)
+			SCE_DBG_PRINTF_LEVEL(1, 0xb, 3534, "sceKernelCreateObjectHeap failed 0x%08x\n",
+					     objectHeapRet);
 		break;
 	default:
-		ret = 0;
+		objectHeapRet = 0;
 		SCE_DBG_ASSERT_FAIL(3541);
 		break;
 	}
@@ -2087,10 +2089,10 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 		case PROCESS_TYPE_GAME:
 		case PROCESS_TYPE_SHELL:
 		case PROCESS_TYPE_KERNEL:
-			ret = sceKernelCreateObjectHeap(pid, 1, asParam, &objectHeap);
-			if (ret < 0)
+			objectHeapRet = sceKernelCreateObjectHeap(pid, 1, asParam, &objectHeap);
+			if (objectHeapRet < 0)
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 3693,
-						     "sceKernelCreateObjectHeap failed 0x%08x\n", ret);
+						     "sceKernelCreateObjectHeap failed 0x%08x\n", objectHeapRet);
 			break;
 		default:
 			SCE_DBG_ASSERT_FAIL(3700);
@@ -2128,16 +2130,16 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 
 	if (budget->type != PROCESS_TYPE_MINI_APP) {
 		if (process->objectHeap[0] != NULL) {
-			ret = sceKernelObjectHeapStart(process->objectHeap[0], pid, heap);
-			if (ret < 0)
+			objectHeapRet = sceKernelObjectHeapStart(process->objectHeap[0], pid, heap);
+			if (objectHeapRet < 0)
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 3742, "sceKernelObjectHeapStart failed 0x%08x\n",
-						     ret);
+						     objectHeapRet);
 		}
 		if (process->objectHeap[1] != NULL) {
-			ret = sceKernelObjectHeapStart(process->objectHeap[1], pid, cdialogHeap);
-			if (ret < 0)
+			objectHeapRet = sceKernelObjectHeapStart(process->objectHeap[1], pid, cdialogHeap);
+			if (objectHeapRet < 0)
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 3751, "sceKernelObjectHeapStart failed 0x%08x\n",
-						     ret);
+						     objectHeapRet);
 		}
 	}
 	if (budget->type != PROCESS_TYPE_MINI_APP || g_objectHeapLimitsSet == 0) {
@@ -2170,6 +2172,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 			break;
 		default:
 			SCE_DBG_ASSERT_FAIL(3814);
+			ret = objectHeapRet;
 			goto failed;
 		}
 		process->cpuAffinityOverride = 0;
@@ -3292,21 +3295,23 @@ dispatch:
 				spawnLog.spawnNameLength = 10;
 				strncpy(spawnLog.spawnName, g_exitSpawn.process->TitleId, 10);
 				_KillProcess(process, state, kind);
-				if (sceKernelCheckDipsw(DIPSW_DECI) != 0) {
-					SCE_DBG_ASSERT_CHECK(g_exitSpawn.pid == pid, 2210);
-					now = sceKernelGetSystemTimeWide();
-					SceSysrootForDriver_77CF3FBD(pid, g_exitSpawn.process->pid, now);
-					SceSysrootForDriver_1D61C837(pid, g_exitSpawn.process->pid, now);
-				}
+				if (sceKernelCheckDipsw(DIPSW_DECI) == 0)
+					goto killed;
+				SCE_DBG_ASSERT_CHECK(g_exitSpawn.pid == pid, 2210);
+				now = sceKernelGetSystemTimeWide();
+				SceSysrootForDriver_77CF3FBD(pid, g_exitSpawn.process->pid, now);
+				SceSysrootForDriver_1D61C837(pid, g_exitSpawn.process->pid, now);
 			} else {
 				_KillProcess(process, state, kind);
+				if (sceKernelCheckDipsw(DIPSW_DECI) == 0)
+					goto killed;
 			}
-			if (sceKernelCheckDipsw(DIPSW_DECI) != 0 &&
-			    state != PROCESS_STATE_CREATED) {
+			if (state != PROCESS_STATE_CREATED) {
 				now = sceKernelGetSystemTimeWide();
 				SceSysrootForDriver_6D44F190(pid, now);
 				SceSysrootForDriver_B501E861(pid, now);
 			}
+killed:
 			if (request == PROCESS_REQUEST_EXIT_SPAWN)
 				k_sceEventLogPut(0x2711, 6, 0, &spawnLog, sizeof(spawnLog));
 			sceKernelSignalSema(g_event.requestSema, 1);
