@@ -45,7 +45,8 @@ _Static_assert(sizeof(BsodCrashRecord) == 0x694, "crash record");
 extern BsodCrashRecord s_bsodException;
 
 void bsodReportRegisters(const BsodCrashRecord *frame);
-void bsodReportStack(const BsodCrashRecord *frame, int user);
+void bsodReportKernelStack(const BsodCrashRecord *frame);
+void bsodReportUserStack(const BsodCrashRecord *frame);
 
 void bsodCaptureException(const SceExcpmgrContext *context, unsigned exception,
-			  const char *name) __attribute__((noreturn));
+			  const SceKernelDebugInfo *info) __attribute__((noreturn));

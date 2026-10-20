@@ -45,7 +45,7 @@ int _sceKernelBsodSysconInit(void);
 int _sceKernelBsodDummyFsInit(void);
 int bsodInitializePutchar(void);
 int bsodReadFramebuffer(unsigned bank, BsodFramebuffer *framebuffer);
-void bsodWriteFramebuffer(unsigned bank, const BsodFramebuffer *framebuffer);
+int bsodWriteFramebuffer(unsigned bank, const BsodFramebuffer *framebuffer);
 void bsodCrashHandler(int kind) __attribute__((noreturn));
 void bsodDebugCrashCallback(void) __attribute__((noreturn));
 extern SceExcpmgrHandler bsodPrefetchEntry;
@@ -58,12 +58,16 @@ void bsodSetFont(unsigned width, unsigned height);
 void bsodSetBackground(uint32_t color);
 void bsodResetColors(void);
 void bsodClearGrid(void);
-void bsodRasterize(void);
+int bsodRasterize(void);
 void bsodPrintf(const char *format, ...);
 
 /* log.c */
 int bsodFreezeLog(void);
 int bsodPrintLog(const void *frame, uint32_t buttons);
+
+/* moncall.S */
+void sceSysconSetPowerModeMonitorCall(uint32_t type, uint32_t mode);
+void sceCrashDumpMonitorCall(uint32_t type, uint32_t ttbr0, uint32_t vbar, uint32_t sysroot);
 
 /* syscon.c */
 uint32_t bsodReadButtons(void);

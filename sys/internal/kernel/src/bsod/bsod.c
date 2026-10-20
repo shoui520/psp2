@@ -2,7 +2,6 @@
 #include <compat/compat_regs.h>
 #include <sysmem/cp15.h>
 #include <excpmgr/excpmgr_cpu.h>
-#include <excpmgr/moncall.h>
 #include <sysmem/sysroot.h>
 
 #include "bsod_internal.h"
@@ -27,12 +26,13 @@ int module_start(unsigned arglen, void *argp)
 	SceKernelAllocMemBlockKernelOpt options;
 	void *base;
 	unsigned state;
-	int uid;
+	int uid, qaf;
 
 	(void)arglen;
 	(void)argp;
-	s_bsodQafEnabled = SceQafMgrForDriver_382C71E8();
-	if ((SceSblAIMgrForDriver_D78B04A2() && !s_bsodQafEnabled) ||
+	qaf = SceQafMgrForDriver_382C71E8();
+	s_bsodQafEnabled = qaf;
+	if ((SceSblAIMgrForDriver_D78B04A2() && !qaf) ||
 	    sceKernelCheckDipsw(DIPSW_SYSTEM_DECI) || sceKernelCheckDipsw(DIPSW_DECI))
 		return 1;
 	memset(&options, 0, sizeof(options));
@@ -82,7 +82,7 @@ static void bsodReboot(unsigned dump)
 {
 	void *sysroot = SceSysrootForKernel_3E455842();
 
-	moncall4(MONCALL_CRASH_DUMP, dump, readTtbr0(), readVbar(), (uintptr_t)sysroot);
+	sceCrashDumpMonitorCall(dump, readTtbr0(), readVbar(), (uintptr_t)sysroot);
 }
 
 void bsodCrashHandler(int kind)
@@ -148,8 +148,8 @@ void bsodCrashHandler(int kind)
 		bsodClearGrid();
 		switch (page) {
 		case 0: bsodReportRegisters(&s_bsodException); break;
-		case 1: bsodReportStack(&s_bsodException, 0); break;
-		case 2: bsodReportStack(&s_bsodException, 1); break;
+		case 1: bsodReportKernelStack(&s_bsodException); break;
+		case 2: bsodReportUserStack(&s_bsodException); break;
 		case 3: bsodPrintLog(&s_bsodException, edge); break;
 		}
 		bsodRasterize();
@@ -164,25 +164,40 @@ void bsodDebugCrashCallback(void)
 /* Capture a saved exception context and the live diagnostic CPU registers. */
 
 void bsodCaptureException(const SceExcpmgrContext *context, unsigned exception,
-			  const char *name)
+			  const SceKernelDebugInfo *info)
 {
 	BsodCrashRecord *record = &s_bsodException;
 	SceSysrootSharedMemory *shared;
 	uint32_t jmcr;
 	uint64_t time;
-	unsigned core, i;
+	unsigned core;
+	int i;
 	char *report;
+	const unsigned int *pmuType = &context->pmuCounter[0].type;
+	const unsigned int *vfp = (const unsigned int *)context->vfp;
 
 	sceKernelSpinlockLowLock(&s_bsodDisplay.captureLock);
 	record->excpCode = context->excpCode;
-	for (i = 0; i < 13; i++)
-		record->r[i] = context->r[i];
+	record->r[0] = context->r[0];
+	record->r[1] = context->r[1];
+	record->r[2] = context->r[2];
+	record->r[3] = context->r[3];
+	record->r[4] = context->r[4];
+	record->r[5] = context->r[5];
+	record->r[6] = context->r[6];
+	record->r[7] = context->r[7];
+	record->r[8] = context->r[8];
+	record->r[9] = context->r[9];
+	record->r[10] = context->r[10];
+	record->r[11] = context->r[11];
+	record->r[12] = context->r[12];
 	record->sp = context->sp;
 	record->lr = context->lr;
 	record->pc = context->pc;
-	for (i = 0; i < 32; i++) {
-		record->vfp[i][0] = context->vfp[i];
-		record->vfp[i][1] = context->vfp[i] >> 32;
+	/* the saved d registers are copied word by word */
+	for (i = 0; i < 64; i += 2) {
+		record->vfp[i / 2][0] = vfp[i];
+		record->vfp[i / 2][1] = vfp[i + 1];
 	}
 	record->cpsr = context->cpsr;
 	record->midr = readMidr();
@@ -226,10 +241,18 @@ void bsodCaptureException(const SceExcpmgrContext *context, unsigned exception,
 	record->pmselr = context->pmselr;
 	record->pmccntr = context->pmccntr;
 	/* Sony repeats the first saved event type for every output counter. */
-	for (i = 0; i < 6; i++)
-		record->pmuType[i] = context->pmuCounter[0].type;
-	for (i = 0; i < 6; i++)
-		record->pmuCount[i] = context->pmuCounter[i].count;
+	record->pmuType[0] = *pmuType;
+	record->pmuType[1] = *pmuType;
+	record->pmuType[2] = *pmuType;
+	record->pmuType[3] = *pmuType;
+	record->pmuType[4] = *pmuType;
+	record->pmuType[5] = *pmuType;
+	record->pmuCount[0] = context->pmuCounter[0].count;
+	record->pmuCount[1] = context->pmuCounter[1].count;
+	record->pmuCount[2] = context->pmuCounter[2].count;
+	record->pmuCount[3] = context->pmuCounter[3].count;
+	record->pmuCount[4] = context->pmuCounter[4].count;
+	record->pmuCount[5] = context->pmuCounter[5].count;
 	record->pmuserenr = context->pmuserenr;
 	record->prrr = readPrrr();
 	record->nmrr = readNmrr();
@@ -274,31 +297,46 @@ void bsodCaptureException(const SceExcpmgrContext *context, unsigned exception,
 	SceDebugForDriver_62466B0A(shared->tty, sizeof(shared->tty));
 	report = shared->report[core];
 	memset(report, 0, sizeof(shared->report[core]));
-	/* the dump takes its hashes from the handler's name, where it expects debug info */
-	SceDebugForKernel_5D6F0CFC((DebugExceptionDumpHeader *)report, core, time,
-				   (const SceKernelDebugInfo *)name, context, exception);
+	SceDebugForKernel_5D6F0CFC((DebugExceptionDumpHeader *)report, core, time, info,
+				   context, exception);
 	bsodCrashHandler(0);
 }
 
 /* Native exception wrappers ignore user-mode exceptions and capture kernel faults. */
+#if FW_DEBUG
+#define BSOD_INFO(lineHash, funcHash, line, func) \
+	{ 0x42b85a92, lineHash, funcHash, "bsod.c", line, func }
+#else
+#define BSOD_INFO(lineHash, funcHash, line, func) \
+	{ 0x42b85a92, lineHash, funcHash, NULL, 0, NULL }
+#endif
 BsodCrashRecord s_bsodException;
 
 void _sceKernelBsodPrefetchAbort(const SceExcpmgrContext *context)
 {
+	static const SceKernelDebugInfo info =
+		BSOD_INFO(0xb23d7445, 0x8c331b02, 276, "_sceKernelBsodPrefetchAbort");
+
 	if ((context->cpsr & 0x1f) != 0x10)
-		bsodCaptureException(context, 4, "_sceKernelBsodPrefetchAbort");
+		bsodCaptureException(context, 4, &info);
 }
 
 void _sceKernelBsodDataAbort(const SceExcpmgrContext *context)
 {
+	static const SceKernelDebugInfo info =
+		BSOD_INFO(0xbaf029ec, 0xc4f68af3, 290, "_sceKernelBsodDataAbort");
+
 	if ((context->cpsr & 0x1f) != 0x10)
-		bsodCaptureException(context, 1, "_sceKernelBsodDataAbort");
+		bsodCaptureException(context, 1, &info);
 }
 
 void _sceKernelBsodUndfinedAbort(const SceExcpmgrContext *context)
 {
+	static const SceKernelDebugInfo info =
+		BSOD_INFO(0x6f08a56d, 0x53bf04dd, 304, "_sceKernelBsodUndfinedAbort");
+
 	if ((context->cpsr & 0x1f) != 0x10)
-		bsodCaptureException(context, 6, "_sceKernelBsodUndfinedAbort");
+		bsodCaptureException(context, 6, &info);
 }
 
 int SceDeci4pUserp_C53CFD12(void)

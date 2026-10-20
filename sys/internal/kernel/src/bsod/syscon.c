@@ -3,7 +3,6 @@
 #include <lowio/gpio_regs.h>
 #include <lowio/spi_regs.h>
 #include <sysmem/barrier.h>
-#include <excpmgr/moncall.h>
 
 uint8_t *s_bsodSyscon[2];
 
@@ -96,5 +95,5 @@ uint32_t bsodReadButtons(void)
 
 void bsodPowerOff(void)
 {
-	moncall2(MONCALL_SYSCON_SET_POWER_MODE, 0, 0);
+	sceSysconSetPowerModeMonitorCall(0, 0);
 }

@@ -40,8 +40,8 @@ int _sceKernelBsodIftuInit(int dolce)
 	unsigned i;
 	int uid;
 
-	for (i = 0; i < 3; i++) {
-		map = &s_iftuMaps[dolce][i];
+	map = s_iftuMaps[dolce];
+	for (i = 0; i < 3; i++, map++) {
 		memset(&options, 0, sizeof(options));
 		options.size = sizeof(options);
 		options.attr = 2;
@@ -64,8 +64,8 @@ int _sceKernelBsodIftuInit(int dolce)
 
 int bsodReadFramebuffer(unsigned bank, BsodFramebuffer *framebuffer)
 {
-	volatile SceIftuRegisters *registers = (void *)s_bsodIftu[bank ? 1 : 0];
-	volatile SceIftuBufferRegisters *buffer = &registers->buffer[0];
+	SceIftuRegisters *registers = (void *)s_bsodIftu[bank ? 1 : 0];
+	SceIftuBufferRegisters *buffer = &registers->buffer[0];
 
 	if (buffer->disabled) {
 		framebuffer->physical = 0;
@@ -87,10 +87,10 @@ int bsodReadFramebuffer(unsigned bank, BsodFramebuffer *framebuffer)
 	return 0;
 }
 
-void bsodWriteFramebuffer(unsigned bank, const BsodFramebuffer *framebuffer)
+int bsodWriteFramebuffer(unsigned bank, const BsodFramebuffer *framebuffer)
 {
-	volatile SceIftuRegisters *registers = (void *)s_bsodIftu[bank ? 1 : 0];
-	volatile SceIftuBufferRegisters *buffer;
+	SceIftuRegisters *registers = (void *)s_bsodIftu[bank ? 1 : 0];
+	SceIftuBufferRegisters *buffer;
 	unsigned i;
 
 	for (i = 0; i < 2; i++) {
@@ -131,4 +131,5 @@ void bsodWriteFramebuffer(unsigned bank, const BsodFramebuffer *framebuffer)
 			buffer->sampleY = 0;
 		}
 	}
+	return 0;
 }

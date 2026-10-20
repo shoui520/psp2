@@ -16,191 +16,312 @@ enum BsodFormatFlags {
 int bsodFormat(BsodFormatCallback callback, void *context, int count,
 	       const char *format, const void *args)
 {
-	static const char lowerDigits[] = "0123456789abcdef";
-	static const char upperDigits[] = "0123456789ABCDEF";
 	const uint32_t *arguments = args;
 	uint32_t state = count;
-	uint32_t total = 0;
+	int total = 0;
+	char number[32];
+	char prefix[2];
 
 	while (*format) {
-		char number[32], prefix[2];
-		const char *text, *digits;
-		char *first = number + sizeof(number);
-		uint32_t flags = 0, width = 0, precision = 0, value;
-		int length, prefixLength = 0, zeros, padding, padCharacter, i;
+		const char *text, *end, *digits;
+		char *digit;
+		uint32_t value;
 		int32_t signedValue;
-		int character;
+		int flags, width, precision, prefixLength, length, zeros, padding, i;
+		int character, padCharacter;
 
 		if (*format != '%') {
-			total += callback(context, &state, (signed char)*format++);
-			continue;
+			total += callback(context, &state, (signed char)*format);
+			goto next;
 		}
-		format++;
+		precision = 0;
+		width = 0;
+		flags = 0;
 		for (;;) {
-			character = (signed char)*format;
+			character = (signed char)*++format;
 			switch (character) {
-			case '-': flags |= FORMAT_LEFT; break;
-			case '+': flags |= FORMAT_PLUS; break;
-			case '0': flags |= FORMAT_ZERO; break;
-			case ' ': flags |= FORMAT_SPACE; break;
-			case '#': flags |= FORMAT_ALTERNATE; break;
-			case 'l': flags |= FORMAT_LONG; break;
-			case 'h': flags |= FORMAT_SHORT; break;
+			case '-':
+				flags |= FORMAT_LEFT;
+				continue;
+			case '+':
+				flags |= FORMAT_PLUS;
+				continue;
+			case '0':
+				flags |= FORMAT_ZERO;
+				continue;
+			case ' ':
+				flags |= FORMAT_SPACE;
+				continue;
+			case '#':
+				flags |= FORMAT_ALTERNATE;
+				continue;
+			case 'l':
+				flags |= FORMAT_LONG;
+				continue;
+			case 'h':
+				flags |= FORMAT_SHORT;
+				continue;
 			case '.':
 				flags |= FORMAT_PRECISION;
 				format++;
 				if (*format == '*') {
 					precision = *arguments++;
-					format++;
-				} else {
-					precision = 0;
-					while ((unsigned char)*format - '0' < 10u)
-						precision = precision * 10 + *format++ - '0';
-				}
-				if ((int32_t)precision < 0)
-					precision = UINT32_MAX;
-				continue;
-			default:
-				if (character >= '1' && character <= '9') {
-					width = 0;
-					do {
-						width = width * 10 + *format++ - '0';
-					} while ((unsigned char)*format - '0' < 10u);
+					if (precision < 0)
+						precision = -1;
 					continue;
 				}
-				goto conversion;
-			}
-			format++;
-		}
-	conversion:
-		if (!character)
-			break;
-		format++;
-		text = first;
-		length = 0;
-		switch (character) {
-		case 's':
-			text = (const char *)(uintptr_t)*arguments++;
-			if (!text) {
-				/* These six callback results do not enter Sony's total. */
-				callback(context, &state, '(');
-				callback(context, &state, 'n');
-				callback(context, &state, 'u');
-				callback(context, &state, 'l');
-				callback(context, &state, 'l');
-				callback(context, &state, ')');
+				precision = 0;
+				while ((unsigned char)*format - '0' <= 9u)
+					precision = *format++ - '0' + precision * 10;
+				if (precision < 0)
+					precision = -1;
+				if (!*format)
+					goto next;
+				format--;
 				continue;
-			}
-			if (flags & FORMAT_PRECISION) {
-				while (length < (int32_t)precision && text[length])
-					length++;
-			} else {
-				while (text[length])
-					length++;
-			}
-			break;
-		case 'd':
-		case 'i':
-			value = *arguments++;
-			if (!(flags & FORMAT_LONG) && (flags & FORMAT_SHORT))
-				value = (int16_t)value;
-			signedValue = (int32_t)value;
-			if (signedValue < 0) {
-				prefix[prefixLength++] = '-';
-				signedValue = (int32_t)(0u - value);
-			} else if (flags & FORMAT_PLUS) {
-				prefix[prefixLength++] = '+';
-			} else if (flags & FORMAT_SPACE) {
-				prefix[prefixLength++] = ' ';
-			}
-			if (signedValue || !(flags & FORMAT_PRECISION) || precision) {
-				/* The original uses signed division even for INT_MIN. */
+			case '1': case '2': case '3': case '4': case '5':
+			case '6': case '7': case '8': case '9':
+				width = 0;
+				for (;;) {
+					width = *format - '0' + width * 10;
+					if ((unsigned char)format[1] - '0' > 9u)
+						break;
+					format++;
+				}
+				if (!format[1]) {
+					format++;
+					goto next;
+				}
+				continue;
+			case 'd':
+			case 'i':
+				if (flags & FORMAT_LONG) {
+					signedValue = *arguments;
+				} else {
+					signedValue = *arguments;
+					if (flags & FORMAT_SHORT)
+						signedValue = (int16_t)signedValue;
+				}
+				arguments++;
+				if (signedValue < 0) {
+					prefixLength = 1;
+					prefix[0] = '-';
+				} else {
+					if (flags & FORMAT_PLUS) {
+						prefix[0] = '+';
+						prefixLength = 1;
+					} else if (flags & FORMAT_SPACE) {
+						prefix[0] = ' ';
+						prefixLength = 1;
+					} else {
+						prefixLength = 0;
+					}
+					if (!signedValue) {
+						if ((flags & FORMAT_PRECISION) && !precision) {
+							digit = &number[31];
+						} else {
+							number[31] = '0';
+							digit = &number[30];
+						}
+						goto digits;
+					}
+				}
+				signedValue = __builtin_abs(signedValue);
+				digit = &number[31];
 				do {
-					*--first = '0' + signedValue % 10;
+					*digit-- = signedValue % 10 + '0';
 					signedValue /= 10;
 				} while (signedValue);
-			}
-			text = first;
-			length = number + sizeof(number) - first;
-			break;
-		case 'u':
-		case 'o':
-		case 'x':
-		case 'X':
-		case 'p':
-			value = *arguments++;
-			if (character != 'p' && !(flags & FORMAT_LONG) &&
-			    (flags & FORMAT_SHORT))
-				value = (uint16_t)value;
-			digits = character == 'X' ? upperDigits : lowerDigits;
-			if (value) {
-				if (character == 'u') {
+			digits:
+				text = digit + 1;
+				length = &number[31] - digit;
+				goto emit;
+			case 'u':
+				if ((flags & FORMAT_LONG) || !(flags & FORMAT_SHORT))
+					value = *arguments;
+				else
+					value = *(const uint16_t *)arguments;
+				arguments++;
+				if (value) {
+					digit = &number[31];
 					do {
-						*--first = '0' + value % 10;
+						*digit-- = value % 10 + '0';
 						value /= 10;
 					} while (value);
-				} else if (character == 'o') {
+				} else if ((flags & FORMAT_PRECISION) && !precision) {
+					digit = &number[31];
+				} else {
+					digit = &number[30];
+					number[31] = '0';
+				}
+				text = digit + 1;
+				length = &number[31] - digit;
+				prefixLength = 0;
+				goto emit;
+			case 'o':
+				if ((flags & FORMAT_LONG) || !(flags & FORMAT_SHORT))
+					value = *arguments;
+				else
+					value = *(const uint16_t *)arguments;
+				arguments++;
+				if (value) {
+					digit = &number[31];
 					do {
-						*--first = '0' + (value & 7);
+						*digit-- = (value & 7) + '0';
 						value >>= 3;
 					} while (value);
 					if (flags & FORMAT_ALTERNATE)
-						*--first = '0';
+						*digit-- = '0';
+				} else if ((flags & FORMAT_PRECISION) && !precision) {
+					digit = &number[31];
 				} else {
+					number[31] = '0';
+					digit = &number[30];
+				}
+				text = digit + 1;
+				length = &number[31] - digit;
+				prefixLength = 0;
+				goto emit;
+			case 'x':
+			case 'X':
+				prefixLength = flags & FORMAT_ALTERNATE;
+				if (flags & FORMAT_ALTERNATE) {
+					prefix[1] = character;
+					prefix[0] = '0';
+					prefixLength = 2;
+				}
+				digits = character == 'X' ? "0123456789ABCDEF" : "0123456789abcdef";
+				if ((flags & FORMAT_LONG) || !(flags & FORMAT_SHORT))
+					value = *arguments;
+				else
+					value = *(const uint16_t *)arguments;
+				arguments++;
+				if (value) {
+					digit = &number[31];
 					do {
-						*--first = digits[value & 15];
+						*digit-- = digits[value & 15];
 						value >>= 4;
 					} while (value);
-					if (flags & FORMAT_ALTERNATE) {
-						prefix[0] = '0';
-						prefix[1] = character;
-						prefixLength = 2;
-					}
+				} else if ((flags & FORMAT_PRECISION) && !precision) {
+					prefixLength = 0;
+					digit = &number[31];
+				} else {
+					prefixLength = 0;
+					number[31] = '0';
+					digit = &number[30];
 				}
-			} else if (!(flags & FORMAT_PRECISION) || precision) {
-				*--first = '0';
-			}
-			if (character == 'p') {
+				text = digit + 1;
+				length = &number[31] - digit;
+				goto emit;
+			case 'p':
+				value = *arguments++;
+				if (value) {
+					digit = &number[31];
+					do {
+						*digit-- = "0123456789abcdef"[value & 15];
+						value >>= 4;
+					} while (value);
+				} else if ((flags & FORMAT_PRECISION) && !precision) {
+					digit = &number[31];
+				} else {
+					number[31] = '0';
+					digit = &number[30];
+				}
 				prefix[0] = '0';
 				prefix[1] = 'x';
+				text = digit + 1;
+				length = &number[31] - digit;
 				prefixLength = 2;
-			}
-			text = first;
-			length = number + sizeof(number) - first;
-			break;
-		default:
-			if (character == 'c')
+				goto emit;
+			case 's':
+				text = (const char *)(uintptr_t)*arguments++;
+				if (!text) {
+					/* These six callback results do not enter Sony's total. */
+					callback(context, &state, '(');
+					callback(context, &state, 'n');
+					callback(context, &state, 'u');
+					callback(context, &state, 'l');
+					callback(context, &state, 'l');
+					callback(context, &state, ')');
+					goto next;
+				}
+				if (!(flags & FORMAT_PRECISION)) {
+					for (length = 0; text[length]; length++)
+						;
+				} else {
+					for (length = 0; length < precision; length++)
+						if (!text[length])
+							break;
+				}
+				prefixLength = 0;
+				goto emit;
+			case 'c':
 				character = *arguments++;
-			*--first = character;
-			text = first;
-			length = 1;
-			flags |= FORMAT_CHARACTER;
-			precision = 1;
-			break;
+				goto single;
+			default:
+				if (!character)
+					goto next;
+			single:
+				length = 1;
+				flags |= FORMAT_CHARACTER;
+				prefixLength = 0;
+				precision = 1;
+				number[31] = character;
+				text = &number[31];
+				goto emit;
+			}
 		}
 
-		zeros = (int32_t)precision > length ? precision - length : 0;
-		padding = (int32_t)(width - length - prefixLength - zeros);
-		padCharacter = ' ';
-		if (padding > 0 &&
-		    ((flags & FORMAT_CHARACTER) ? (flags & FORMAT_ZERO) :
-		     (flags & (FORMAT_ZERO | FORMAT_PRECISION)) == FORMAT_ZERO))
-			padCharacter = '0';
-		if (!(flags & FORMAT_LEFT) && padCharacter != '0')
-			for (i = 0; i < padding; i++)
-				total += callback(context, &state, padCharacter);
-		for (i = 0; i < prefixLength; i++)
-			total += callback(context, &state, (signed char)prefix[i]);
-		if (!(flags & FORMAT_LEFT) && padCharacter == '0')
-			for (i = 0; i < padding; i++)
+	emit:
+		if (precision > length)
+			zeros = precision - length;
+		else
+			zeros = 0;
+		end = text + length;
+		padding = width - length - prefixLength - zeros;
+		if (flags & FORMAT_CHARACTER)
+			padCharacter = (flags & FORMAT_ZERO) && padding > 0 ? '0' : ' ';
+		else
+			padCharacter = (flags & (FORMAT_ZERO | FORMAT_PRECISION)) == FORMAT_ZERO &&
+				       padding > 0 ? '0' : ' ';
+		if (flags & FORMAT_LEFT) {
+			for (i = 0; i < prefixLength; i++)
+				total += callback(context, &state, (signed char)prefix[i]);
+			for (i = 0; i < zeros; i++)
 				total += callback(context, &state, '0');
-		for (i = 0; i < zeros; i++)
-			total += callback(context, &state, '0');
-		for (i = 0; i < length; i++)
-			total += callback(context, &state, (signed char)text[i]);
-		if (flags & FORMAT_LEFT)
+			while (text < end)
+				total += callback(context, &state, (signed char)*text++);
 			for (i = 0; i < padding; i++)
 				total += callback(context, &state, ' ');
+		} else if (flags & FORMAT_ZERO) {
+			if (padCharacter == '0') {
+				for (i = 0; i < prefixLength; i++)
+					total += callback(context, &state, (signed char)prefix[i]);
+				for (i = 0; i < padding; i++)
+					total += callback(context, &state, '0');
+			} else {
+				for (i = 0; i < padding; i++)
+					total += callback(context, &state, padCharacter);
+				for (i = 0; i < prefixLength; i++)
+					total += callback(context, &state, (signed char)prefix[i]);
+			}
+			for (i = 0; i < zeros; i++)
+				total += callback(context, &state, '0');
+			while (text < end)
+				total += callback(context, &state, (signed char)*text++);
+		} else {
+			for (i = 0; i < padding; i++)
+				total += callback(context, &state, padCharacter);
+			for (i = 0; i < prefixLength; i++)
+				total += callback(context, &state, (signed char)prefix[i]);
+			for (i = 0; i < zeros; i++)
+				total += callback(context, &state, '0');
+			while (text < end)
+				total += callback(context, &state, (signed char)*text++);
+		}
+	next:
+		if (*format)
+			format++;
 	}
 	callback(context, &state, 0);
 	return total;

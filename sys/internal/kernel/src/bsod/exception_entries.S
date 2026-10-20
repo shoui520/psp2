@@ -8,22 +8,21 @@
 .macro BsodExceptionEntry name, handler
 .balign 4
 .global \name
-.type \name, %object
+.type \name, %function
 \name:
 	.word 0
 	.word 0
 	push {r0, lr}
 	blx \handler
 	pop {r0, lr}
-	ldr r2, .Lprevious_\name
+	ldr r2, =\name
 	ldr r2, [r2]
 	add r2, r2, #8
 	mov pc, r2
-.Lprevious_\name:
-	.word \name
 .size \name, . - \name
 .endm
 
 BsodExceptionEntry bsodPrefetchEntry, _sceKernelBsodPrefetchAbort
 BsodExceptionEntry bsodDataEntry, _sceKernelBsodDataAbort
 BsodExceptionEntry bsodUndefinedEntry, _sceKernelBsodUndfinedAbort
+.ltorg

@@ -54,7 +54,7 @@ void bsodSetFont(unsigned width, unsigned height)
 	bsodUpdateGrid();
 }
 
-static unsigned bsodColorIndex(uint32_t color, unsigned fallback)
+static inline __attribute__((always_inline)) unsigned bsodColorIndex(uint32_t color, unsigned fallback)
 {
 	int i, count = s_bsodConsole.colorCount;
 
@@ -89,12 +89,14 @@ void bsodResetColors(void)
 
 void bsodClearGrid(void)
 {
-	unsigned i;
+	unsigned row, column;
 	uint8_t attribute = s_bsodConsole.foreground | s_bsodConsole.background << 4;
 
-	for (i = 0; i < sizeof(s_bsodCharacters); i++) {
-		s_bsodCharacters[i] = 0;
-		s_bsodAttributes[i] = attribute;
+	for (row = 0; row < sizeof(s_bsodCharacters); row += 160) {
+		for (column = 0; column < 160; column++) {
+			s_bsodCharacters[row + column] = 0;
+			s_bsodAttributes[row + column] = attribute;
+		}
 	}
 	s_bsodConsole.x = 0;
 	s_bsodConsole.y = 0;
@@ -103,17 +105,16 @@ void bsodClearGrid(void)
 int bsodPutCharacter(int character)
 {
 	unsigned x = s_bsodConsole.x, y = s_bsodConsole.y;
-	unsigned columns = s_bsodConsole.columns, rows = s_bsodConsole.rows;
-	unsigned i, j, end;
+	unsigned columns, rows, i, j, end, line;
 	uint8_t attribute = s_bsodConsole.foreground | s_bsodConsole.background << 4;
 
 	if (character == '\t') {
 		end = (x + 8) & ~7U;
-		if (columns <= end)
-			end = columns;
+		if (end >= s_bsodConsole.columns)
+			end = s_bsodConsole.columns;
 		while (x < end) {
-			s_bsodCharacters[y * 160 + x] = ' ';
-			s_bsodAttributes[y * 160 + x++] = attribute;
+			s_bsodAttributes[y * 160 + x] = attribute;
+			s_bsodCharacters[y * 160 + x++] = ' ';
 		}
 	} else if (character == '\n') {
 		y++;
@@ -122,21 +123,23 @@ int bsodPutCharacter(int character)
 		s_bsodCharacters[y * 160 + x] = character;
 		s_bsodAttributes[y * 160 + x++] = attribute;
 	}
-	if (columns <= x) {
+	columns = s_bsodConsole.columns;
+	rows = s_bsodConsole.rows;
+	if (x >= columns) {
 		y++;
 		x = 0;
 	}
-	if (rows <= y) {
-		for (i = 0; i < rows - 1; i++) {
-			for (j = 0; j < columns; j++) {
-				s_bsodCharacters[i * 160 + j] = s_bsodCharacters[(i + 1) * 160 + j];
-				s_bsodAttributes[i * 160 + j] = s_bsodAttributes[(i + 1) * 160 + j];
+	if (y >= rows) {
+		for (i = 0, line = 0; i < rows - 1; i++, line += 160) {
+			for (j = 0; j != columns; j++) {
+				s_bsodCharacters[line + j] = s_bsodCharacters[line + 160 + j];
+				s_bsodAttributes[line + j] = s_bsodAttributes[line + 160 + j];
 			}
 		}
 		y = rows - 1;
-		for (j = 0; j < columns; j++) {
-			s_bsodCharacters[y * 160 + j] = ' ';
+		for (j = 0; j != columns; j++) {
 			s_bsodAttributes[y * 160 + j] = attribute;
+			s_bsodCharacters[y * 160 + j] = ' ';
 		}
 	}
 	s_bsodConsole.x = x;
@@ -144,55 +147,73 @@ int bsodPutCharacter(int character)
 	return 0;
 }
 
-void bsodRasterize(void)
+int bsodRasterize(void)
 {
 	uint16_t palette[16];
-	unsigned color, r, g, b, a, i, row, column, gy, gx;
-	uint8_t character, attribute, bits;
+	void *pixels;
+	const uint8_t *font, *glyph;
+	unsigned format, color, i, row, column, line, top, left, bit;
+	uint8_t attribute, bits;
 
-	if (!s_bsodConsole.pixels)
-		return;
-	if (s_bsodConsole.format != 3) {
-		for (i = 0; i < 16; i++) {
-			color = s_bsodConsole.colors[i];
-			r = color & 0xff;
-			g = color >> 8 & 0xff;
-			b = color >> 16 & 0xff;
-			a = color >> 24;
-			switch (s_bsodConsole.format) {
-			case 0:
-				palette[i] = r | g << 5 | (b & 0x1f) << 11;
-				break;
-			case 1:
-				palette[i] = r | g << 5 | b << 10 | a << 15;
-				break;
-			case 2:
-				palette[i] = r | g << 4 | b << 8 | a << 12;
-				break;
-			default:
-				palette[i] = 0;
-			}
-		}
-	}
-	for (row = 0; row < s_bsodConsole.rows; row++) {
-		for (column = 0; column < s_bsodConsole.columns; column++) {
-			character = s_bsodCharacters[row * 160 + column];
-			attribute = s_bsodAttributes[row * 160 + column];
-			for (gy = 0; gy < s_bsodConsole.glyphHeight; gy++) {
-				/* any character code indexes the font, not only ASCII */
-				bits = s_bsodConsole.font[character * s_bsodConsole.fontStride + gy];
-				for (gx = 0; gx < s_bsodConsole.glyphWidth; gx++) {
-					i = s_bsodConsole.pitch * (row * s_bsodConsole.glyphHeight + gy) +
-					    column * s_bsodConsole.glyphWidth + gx;
-					color = (gx & 0xff) < 32 && (bits >> (gx & 0xff) & 1) ? attribute & 0xf : attribute >> 4;
-					if (s_bsodConsole.format == 3)
-						((uint32_t *)s_bsodConsole.pixels)[i] = s_bsodConsole.colors[color];
-					else
-						((uint16_t *)s_bsodConsole.pixels)[i] = palette[color];
+	if (s_bsodConsole.pixels) {
+		format = s_bsodConsole.format;
+		if (format != 3) {
+			for (i = 0; i < 16; i++) {
+				color = s_bsodConsole.colors[i];
+				switch (format) {
+				case 0:
+					palette[i] = (color & 0xff) | (color >> 8 & 0xff) << 5 |
+						     (color >> 16 & 0xff) << 11;
+					break;
+				case 1:
+					palette[i] = (color & 0xff) | (color >> 8 & 0xff) << 5 |
+						     (color >> 16 & 0xff) << 10 | (color >> 24) << 15;
+					break;
+				case 2:
+					palette[i] = (color & 0xff) | (color >> 8 & 0xff) << 4 |
+						     (color >> 16 & 0xff) << 8 | (color >> 24) << 12;
+					break;
+				default:
+					palette[i] = 0;
+					break;
 				}
 			}
 		}
+		font = s_bsodConsole.font;
+		pixels = s_bsodConsole.pixels;
+		top = 0;
+		for (row = 0; row < s_bsodConsole.rows; row++) {
+			left = 0;
+			for (column = 0; column < s_bsodConsole.columns; column++) {
+				attribute = s_bsodAttributes[row * 160 + column];
+				/* any character code indexes the font, not only ASCII */
+				glyph = font + s_bsodConsole.fontStride * s_bsodCharacters[row * 160 + column];
+				for (line = top; line - top < s_bsodConsole.glyphHeight; line++) {
+					bits = glyph[line - top];
+					if (s_bsodConsole.format == 3) {
+						uint32_t foreground = s_bsodConsole.colors[attribute & 0xf];
+						uint32_t background = s_bsodConsole.colors[attribute >> 4];
+						uint32_t *pixel = (uint32_t *)pixels +
+							left + s_bsodConsole.pitch * line;
+
+						for (bit = 0; bit < s_bsodConsole.glyphWidth; bit++)
+							pixel[bit] = bits >> bit & 1 ? foreground : background;
+					} else {
+						uint16_t foreground = palette[attribute & 0xf];
+						uint16_t background = palette[attribute >> 4];
+						uint16_t *pixel = (uint16_t *)pixels +
+							left + s_bsodConsole.pitch * line;
+
+						for (bit = 0; bit != s_bsodConsole.glyphWidth; bit++)
+							pixel[bit] = bits >> bit & 1 ? foreground : background;
+					}
+				}
+				left += s_bsodConsole.glyphWidth;
+			}
+			top += s_bsodConsole.glyphHeight;
+		}
 	}
+	return 0;
 }
 
 static int bsodFormatCharacter(void *context, const uint32_t *state, int character)
@@ -204,8 +225,8 @@ static int bsodFormatCharacter(void *context, const uint32_t *state, int charact
 
 void bsodPrintf(const char *format, ...)
 {
-	uint32_t count = 0;
 	va_list args;
+	uint32_t count = 0;
 
 	va_start(args, format);
 	bsodFormat(bsodFormatCharacter, &count, -1, format, args.__ap);

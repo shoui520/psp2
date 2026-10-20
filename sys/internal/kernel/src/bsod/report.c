@@ -98,7 +98,7 @@ void bsodReportRegisters(const BsodCrashRecord *frame)
 	}
 }
 
-void bsodReportStack(const BsodCrashRecord *frame, int user)
+static void bsodReportStack(const BsodCrashRecord *frame, int user)
 {
 	const ThreadCB *context = frame->thread;
 	const BsodStackFrame *entry;
@@ -138,4 +138,14 @@ void bsodReportStack(const BsodCrashRecord *frame, int user)
 				name, entry->pc - (uint32_t)textBase);
 		}
 	}
+}
+
+void bsodReportKernelStack(const BsodCrashRecord *frame)
+{
+	bsodReportStack(frame, 0);
+}
+
+void bsodReportUserStack(const BsodCrashRecord *frame)
+{
+	bsodReportStack(frame, 1);
 }
