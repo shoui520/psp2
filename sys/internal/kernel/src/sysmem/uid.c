@@ -464,51 +464,52 @@ int GUIDEntryHeapFindByNameRaw(UIDEntryHeap *heap, const char *name, int all,
 {
 	NameEntry *nameEntry;
 	UIDEntryFind find;
+	UIDEntry *entry;
 	int ret;
 
 	ret = NameHeapFind(name, NAME_HEAP_FLAG_SECOND, &nameEntry);
 	if (ret >= 0) {
 		if ((nameEntry->attr & NAME_ENTRY_ATTR_KIND_MASK) == NAME_ENTRY_KIND_UID_ENTRY) {
-			UIDEntry *entry = nameEntry->owner;
-			SceUInt32 attr = entry->attr;
-
+			entry = nameEntry->owner;
 			*out = entry;
-			ret = attr;
-			goto check;
+			if (entry->attr & UID_ENTRY_ATTR_NAME_PUBLIC)
+				return 0;
+			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 		}
-		if (ret == 0)
+		if (ret == 0) {
 			SCE_DBG_PRINTF(0xb, 4641, "NameHeapFind(<%s>) attr=0x%08x failed 0x%08x\n",
 				       name, nameEntry->attr, 0);
+			if (all != 1)
+				return UID_ERROR_NAME_NOT_FOUND;
+		}
 	}
 	if (all != 1)
 		return UID_ERROR_NAME_NOT_FOUND;
 	find.key = (SceUInt32)name;
 	ret = FixedHeapWalk(&heap->fixedHeap, UIDEntryFindNamed, &find);
-	if (ret == 0) {
-		ret = UID_ERROR_NAME_NOT_FOUND;
-		if (find.entry != NULL) {
-			*out = find.entry;
-			ret = find.index;
-			goto walked;
-		}
-	} else {
+	if (ret != 0) {
 		*out = NULL;
-walked:
-		if (ret == SCE_KERNEL_ERROR_FIXEDHEAP_ILLEGAL_INDEX) {
+	} else {
+		ret = UID_ERROR_NAME_NOT_FOUND;
+		if (find.entry == NULL) {
 			*out = NULL;
-			return UID_ERROR_NAME_NOT_FOUND;
+			return ret;
 		}
-		if (ret >= 0) {
-			ret = (*out)->attr;
-			goto check;
-		}
+		ret = find.index;
+		*out = find.entry;
+	}
+	if (ret == SCE_KERNEL_ERROR_FIXEDHEAP_ILLEGAL_INDEX) {
+		ret = UID_ERROR_NAME_NOT_FOUND;
+		*out = NULL;
+		return ret;
+	}
+	if (ret >= 0) {
+		if ((*out)->attr & UID_ENTRY_ATTR_NAME_PUBLIC)
+			return 0;
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	*out = NULL;
 	return ret;
-check:
-	if (ret & UID_ENTRY_ATTR_NAME_PUBLIC)
-		return 0;
-	return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 }
 
 /* name unknown: walk callback of a vector */
@@ -1414,9 +1415,8 @@ out:
 }
 
 /* the base info of a GUID entry, one link more */
-static inline void GUIDBaseInfoSetLinks(GUIDBaseInfo *info, const UIDEntry *base)
+static inline void GUIDBaseInfoSetLinks(GUIDBaseInfo *info, const UIDEntry *base, SceUInt32 attr)
 {
-	SceUInt32 attr = base->attr;
 
 	if (attr & UID_ENTRY_ATTR_PUID) {
 		info->heap = NULL;
@@ -1446,7 +1446,7 @@ static inline int UIDEntryIncLinkCountAndGetInfoForByName(UIDEntry *base, SceCla
 	info->name = base->name;
 	if (info->name == NULL)
 		SCE_DBG_PRINTF(0xb, 2640, "ERROR: There is no name.\n");
-	GUIDBaseInfoSetLinks(info, base);
+	GUIDBaseInfoSetLinks(info, base, base->attr);
 	return ret;
 }
 
@@ -1501,7 +1501,7 @@ int PUIDOpenByName(SceUID pid, const char *name, SceClass *cls, int mode, SceUIn
 	UIDEntryHeap *heap = NULL;
 	UIDEntry *entry;
 	GUIDBaseInfo info;
-	int state, ret;
+	int state, ret, linkRet;
 
 	ret = GetPUIDEntryHeap(pid, &heap);
 	if (ret < 0)
@@ -1511,9 +1511,11 @@ int PUIDOpenByName(SceUID pid, const char *name, SceClass *cls, int mode, SceUIn
 		SCE_DBG_PRINTF(0xb, 7355, "UIDEntryHeapAllocateObject failed 0x%08x\n", ret);
 		return ret;
 	}
-	ret = GUIDLinkBaseInfoByName(name, cls, mode, &info);
-	if (ret < 0)
-		goto free;
+	linkRet = GUIDLinkBaseInfoByName(name, cls, mode, &info);
+	if (linkRet < 0) {
+		UIDEntryHeapFreeObject(heap, entry);
+		return linkRet;
+	}
 	state = UID_WRITE_LOCK(heap, 7368);
 	ret = UIDEntryHeapSetPUIDEntryChainRaw(heap, entry, info.guid, &info, attr);
 	UID_WRITE_UNLOCK(heap, state);
@@ -1521,7 +1523,6 @@ int PUIDOpenByName(SceUID pid, const char *name, SceClass *cls, int mode, SceUIn
 		return ret;
 	SCE_DBG_PRINTF(0xb, 7383, "puid=0x%08x\n", ret);
 	GUIDUnlinkBaseByName(name);
-free:
 	UIDEntryHeapFreeObject(heap, entry);
 	return ret;
 }
@@ -1531,6 +1532,7 @@ static inline int GUIDLinkBaseInfoByGUID(SceUID guid, SceClass *cls, int mode,
 {
 	UIDEntryHeap *heap = GUID_ENTRY_HEAP();
 	UIDEntry *entry, *base;
+	SceUInt32 attr;
 	int state, ret;
 
 	state = UID_WRITE_LOCK(heap, 5529);
@@ -1548,12 +1550,13 @@ static inline int GUIDLinkBaseInfoByGUID(SceUID guid, SceClass *cls, int mode,
 	ret = UIDEntryCheckClassRaw(base, cls, mode);
 	if (ret >= 0) {
 		if (UIDEntryIncLinkCountRaw(base) == 1) {
-			info->attr = base->attr;
+			attr = base->attr;
+			info->guid = guid;
+			info->attr = attr;
 			info->object = base->object;
 			info->cls = info->object != NULL ? info->object->sce_class : NULL;
 			info->name = base->name;
-			info->guid = guid;
-			GUIDBaseInfoSetLinks(info, base);
+			GUIDBaseInfoSetLinks(info, base, attr);
 		} else {
 			ret = UID_ERROR_LINK_COUNT;
 		}
@@ -1800,7 +1803,7 @@ int UIDEntryCloseEntryForPUID(UIDEntryHeap *heap, UIDEntry *entry, int all, SceU
 #if FW_DEBUG
 	SceUID puid;
 #endif
-	int ret;
+	int ret, strong;
 
 	if (entry->object == NULL)
 		SCE_DBG_PRINTF(0xb, 2993, "Warning:pEntry[%p]->pObject is SCE_NULL\n", entry);
@@ -1827,7 +1830,8 @@ int UIDEntryCloseEntryForPUID(UIDEntryHeap *heap, UIDEntry *entry, int all, SceU
 		UIDEntryDestructorRaw(entry);
 		goto free;
 	}
-	if (all != 0 && !(attr & UID_ENTRY_ATTR_WEAK)) {
+	strong = !(attr & UID_ENTRY_ATTR_WEAK);
+	if (all != 0 && strong) {
 		if (object != NULL) {
 			cls = object->sce_class;
 			memblockClass = SceSysmemForKernel_86681B64();

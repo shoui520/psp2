@@ -416,8 +416,8 @@ int GetMemBlockInfoByRangeForUser(SceUInt32 mode, uintptr_t va, SceSize size,
 	SCE_DBG_ASSERT_CHECK(info.mappedSize != 0, 5080);
 	code = block->code;
 	MemBlockCode2Type(code, &type);
-	info.memoryType = (code >> 8) & 0xd0;
-	info.access = (code >> 4) & 6;
+	info.memoryType = (SceUInt8)(code >> 8) & 0xd0;
+	info.access = (SceUInt8)code >> 4 & 6;
 	info.type = type;
 	return sceKernelCopyToUser(userInfo, &info, sizeof(info));
 }

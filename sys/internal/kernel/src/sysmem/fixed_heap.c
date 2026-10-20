@@ -948,7 +948,7 @@ int sceKernelGetFixedHeapInfo(SceUID uid, SceKernelFixedHeapInfo *info)
 	FixedHeap *heap = SceSysmemForKernel_FA6C098C(uid);
 
 	if ((uintptr_t)info == 0) {
-		SCE_DBG_ASSERT_FAIL(2492);
+		SCE_DBG_ASSERT_FAIL_RELOAD(2492);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	return FixedHeapGetInfo(heap, info);
@@ -959,7 +959,7 @@ int sceKernelGetFixedHeapInfoByPointer(void *fixedHeap, void *fixedHeapInfo)
 	if (fixedHeap != NULL) {
 		if ((uintptr_t)fixedHeapInfo != 0)
 			return FixedHeapGetInfo(fixedHeap, fixedHeapInfo);
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 2508, "sceKernelGetFixedHeapInfoByPointer");
+		SCE_DBG_ASSERT_CHECK_FUNC_RELOAD(0, 2508, "sceKernelGetFixedHeapInfoByPointer");
 	}
 	return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 }

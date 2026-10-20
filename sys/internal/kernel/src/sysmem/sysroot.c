@@ -1561,11 +1561,20 @@ int SceSysrootForKernel_55392965(void)
 	return (kbl->boot_type_indicator_1 >> 2) & 1;
 }
 
+/* boot_type_indicator_1 as Sony's code reads its upper half (a halfword load) */
+typedef union SysrootBootTypeIndicator {
+	uint32_t word;
+	struct {
+		uint16_t low;
+		uint16_t high;
+	} half;
+} SysrootBootTypeIndicator;
+
 uint32_t SceSysrootForDriver_7918D44E(void)
 {
 	const SceKblParam *kbl = s_sysrootState->kblParam;
 
-	return (kbl->boot_type_indicator_1 >> 16) & 1;
+	return ((const SysrootBootTypeIndicator *)&kbl->boot_type_indicator_1)->half.high & 1;
 }
 
 uint32_t SceSysrootForKernel_7B7F8171(void)

@@ -201,7 +201,8 @@ next:
 static inline int MemBlockCodeIsCdram(SceUInt32 code)
 {
 	return code == MEMBLOCK_CODE_KERNEL_CDRAM_RW || code == MEMBLOCK_CODE_KERNEL_CDRAM_L1WBWA_RW ||
-	       code == MEMBLOCK_CODE_USER_CDRAM_L1WBWA_RW || (code & ~0x20) == MEMBLOCK_CODE_USER_CDRAM_R;
+	       code == MEMBLOCK_CODE_USER_CDRAM_L1WBWA_RW || code == MEMBLOCK_CODE_USER_CDRAM_R ||
+	       code == MEMBLOCK_CODE_USER_CDRAM_RW;
 }
 
 /* the physical address behind a CDRAM block's address */
@@ -330,7 +331,7 @@ void PartitionUnlinkBlockSlots(Partition *partition, MemBlockObject *block)
 static inline void TinyPartitionSetFreeSizeR1(TinyPartition *tiny, SceSize size)
 {
 	tiny->freeSize = size;
-	SCE_DBG_ASSERT_CHECK_FUNC(tiny->freeSize <= size, 2780, "TinyPartitionSetFreeSizeR1");
+	SCE_DBG_ASSERT_CHECK_FUNC_RELOAD(size >= tiny->freeSize, 2780, "TinyPartitionSetFreeSizeR1");
 }
 
 SYSMEM_DEBUG_FUNC int TinyPartitionInitRaw(TinyPartition *tiny, const char *name, uintptr_t vbase,
@@ -904,8 +905,9 @@ int TinyPartitionFreeMemBlock(TinyPartition *tiny, MemBlockObject *block, SceUIn
 	SceUInt32 merged;
 	int intr, ret;
 
-	if (block->vbase < tiny->vbase ||
-	    block->vbase + block->size - tiny->vbase > tiny->size) {
+	/* Sony lays this error path out cold, after the walk */
+	if (__builtin_expect(block->vbase < tiny->vbase ||
+			     block->vbase + block->size - tiny->vbase > tiny->size, 0)) {
 		SCE_DBG_PRINTF(0xb, 3576, "pBlockTarget=%p failed, pPart=%p[%s],nBlock=%d\n", block,
 			       tiny, tiny->name, tiny->blockCount & 0xffff);
 		SCE_DBG_ASSERT_FAIL(3577);
@@ -1224,7 +1226,7 @@ int MemBlockAssocVirPageWithType(MemBlockObject *block, Partition *partition, Sc
 	while (size != 0) {
 		ret = PartitionAllocVirPageRaw(partition, &vp);
 		if (ret < 0) {
-			SCE_DBG_ASSERT_FAIL(1265);
+			SCE_DBG_ASSERT_FAIL_RELOAD(1265);
 			return ret;
 		}
 		vp->vbase = va;
@@ -1244,11 +1246,11 @@ int MemBlockAssocVirPageWithType(MemBlockObject *block, Partition *partition, Sc
 			vp->size = size;
 			chunk = size;
 			rest = 0;
-		} else if (size < (1u << __builtin_ctz(va))) {
-			chunk = 1u << (31 - __builtin_clz(size));
+		} else if ((1u << __builtin_ctz(va)) <= size) {
+			chunk = 1u << __builtin_ctz(va);
 			vp->size = chunk;
 			if (chunk < 0x1000) {
-				SCE_DBG_ASSERT_FAIL(1301);
+				SCE_DBG_ASSERT_FAIL_RELOAD(1312);
 				chunk = vp->size;
 			}
 			if (chunk > 0x1000000) {
@@ -1257,10 +1259,10 @@ int MemBlockAssocVirPageWithType(MemBlockObject *block, Partition *partition, Sc
 			}
 			rest = size - chunk;
 		} else {
-			chunk = 1u << __builtin_ctz(va);
+			chunk = 1u << (31 - __builtin_clz(size));
 			vp->size = chunk;
 			if (chunk < 0x1000) {
-				SCE_DBG_ASSERT_FAIL(1312);
+				SCE_DBG_ASSERT_FAIL_RELOAD(1301);
 				chunk = vp->size;
 			}
 			if (chunk > 0x1000000) {
@@ -1655,8 +1657,8 @@ int MemBlockVirAlloc2MappedByCommand(MemBlockObject *block, SceKernelAllocMemBlo
 	if (result != NULL) {
 		result->mappedBase = block->vbase + MemBlockGetHeadFreeSize(block);
 		result->mappedSize = MemBlockGetAllocMapSizeRaw(block);
-		result->memoryType = (command->code >> 8) & 0xd0;
-		result->access = (command->code >> 4) & 6;
+		result->memoryType = (SceUInt8)(command->code >> 8) & 0xd0;
+		result->access = (SceUInt8)command->code >> 4 & 6;
 	}
 	return 0;
 }
