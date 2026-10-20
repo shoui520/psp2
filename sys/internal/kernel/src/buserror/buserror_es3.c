@@ -82,20 +82,21 @@ FormatBusErrorInfo_ES3(char *buf, SceSize size, const BusErrorRecord *rec)
 	for (i = 0; i < ocp->count; i++) {
 		const BusErrorOcpTarget *target;
 		const BusErrorOcpError *error = &ocp->target[i].error[0];
+		SceUInt32 combined, first;
 
 		if (i < 15) {
-			target = &ocpTargets0[i];
-			if (!(status0 & target->mask))
-				continue;
-			if (!(ocp->status[0][0] & target->mask))
-				error++;
+			target = ocpTargets0 + i;
+			combined = status0;
+			first = ocp->status[0][0];
 		} else {
-			target = &ocpTargets1[i - 15];
-			if (!(status1 & target->mask))
-				continue;
-			if (!(ocp->status[0][1] & target->mask))
-				error++;
+			target = ocpTargets1 + (i - 15);
+			combined = status1;
+			first = ocp->status[0][1];
 		}
+		if (!(combined & target->mask))
+			continue;
+		if (!(first & target->mask))
+			error++;
 		written = FormatOcpTargetInfo_ES3(buf, size, target->name,
 						error->address, error->attribute);
 		buf += written;

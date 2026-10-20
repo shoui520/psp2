@@ -456,15 +456,18 @@ int SceSblACMgrForDriver_E79C7A8D(SceUID pid, const SceChar8 *path)
 	const AcMgrPathRule *rule;
 	SceUInt64 paid = 0;
 	SceSize offset;
+	int i, j;
 
 	if (!hasAttribute(pid, 0x81))
 		return 1;
 	if (sceSblACMgrGetPaid(pid, &paid) != 0 || path == NULL)
 		return 0;
-	for (program = programPaths; program != programPaths + 9; program++) {
+	for (i = 0; i < 9; i++) {
+		program = &programPaths[i];
 		if (program->programAuthorityId != paid)
 			continue;
-		for (rule = program->rules; rule->mountPoint != NULL; rule++) {
+		for (j = 0; program->rules[j].mountPoint != NULL; j++) {
+			rule = &program->rules[j];
 			offset = rule->mountPointLen;
 			if (offset != 0 && !matchEncoded(path, rule->mountPoint, offset))
 				continue;

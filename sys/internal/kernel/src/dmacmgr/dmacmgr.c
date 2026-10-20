@@ -273,6 +273,15 @@ static SceUInt32 chainHashCmd(SceUInt32 cmd, SceUInt32 index)
 	return cmd;
 }
 
+/*
+ * A tag's address word, stored as a plain word: the range loads that follow in
+ * CreateDmaTagChain stay behind the store, as in Sony's code.
+ */
+static inline void setTagWord(SceUInt32 *word, SceUInt32 value)
+{
+	*word = value;
+}
+
 /* one tag per stretch where both the source and the destination are contiguous */
 static int CreateDmaTagChain(int dmacId, SceKernelPAVector *src, SceKernelPAVector *dst,
 			     const SceKernelDmaOpTag *param, DmaTag **head, DmaTag **tail)
@@ -281,6 +290,7 @@ static int CreateDmaTagChain(int dmacId, SceKernelPAVector *src, SceKernelPAVect
 	SceUInt32 srcBlockMask, dstBlockMask, blockMask, cmd, count = 0;
 	SceUInt32 lenFlags, dstModulo, srcModulo;
 	SceSize size, offset = 0;
+	SceUInt32 srcAddr, dstAddr, srcSize, dstSize;
 	DmaTag *tag, *prev = NULL;
 
 	if (src->capacity == 0 || dst->capacity == 0)
@@ -304,25 +314,29 @@ static int CreateDmaTagChain(int dmacId, SceKernelPAVector *src, SceKernelPAVect
 	if (tag == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	for (;;) {
+		srcAddr = srcRange->addr;
 		tag->offset = offset;
-		tag->tag.src = (const void *)srcRange->addr;
-		tag->tag.dst = (void *)dstRange->addr;
-		if (srcRange->size < dstRange->size) {
-			size = srcRange->size;
+		setTagWord(&tag->tag.src, srcAddr);
+		dstAddr = dstRange->addr;
+		setTagWord(&tag->tag.dst, dstAddr);
+		dstSize = dstRange->size;
+		srcSize = srcRange->size;
+		if (srcSize < dstSize) {
+			size = srcSize;
 			if (!dstModulo) {
-				dstRange->addr += size;
-				dstRange->size -= size;
+				dstRange->addr = dstAddr + size;
+				dstRange->size = dstSize - size;
 			}
 			srcRange++;
-		} else if (srcRange->size == dstRange->size) {
-			size = srcRange->size;
+		} else if (srcSize == dstSize) {
+			size = srcSize;
 			srcRange++;
 			dstRange++;
 		} else {
-			size = dstRange->size;
+			size = dstSize;
 			if (!srcModulo) {
-				srcRange->addr += size;
-				srcRange->size -= size;
+				srcRange->addr = srcAddr + size;
+				srcRange->size = srcSize - size;
 			}
 			dstRange++;
 		}
@@ -331,7 +345,7 @@ static int CreateDmaTagChain(int dmacId, SceKernelPAVector *src, SceKernelPAVect
 		if (dmacId == SCE_KERNEL_DMAC_ID_DMAC5) {
 			tag->tag.len = size;
 			tag->tag.keyring = param->keyring;
-			tag->tag.iv = param->iv;
+			tag->tag.iv = (SceUInt32)param->iv;
 			if ((cmd & 7) == SCE_KERNEL_DMAC_CMD_OP_HASH_SHA1)
 				cmd = chainHashCmd(cmd, count);
 		} else {
@@ -349,7 +363,7 @@ static int CreateDmaTagChain(int dmacId, SceKernelPAVector *src, SceKernelPAVect
 			*head = tag;
 		} else {
 			prev->next = tag;
-			prev->tag.pNext = (SceKernelDmaOpTag *)tag->pa;
+			prev->tag.pNext = tag->pa;
 		}
 		tag->param = param;
 		count++;
@@ -371,7 +385,7 @@ static int CreateDmaTagChain(int dmacId, SceKernelPAVector *src, SceKernelPAVect
 			cmd = (cmd & ~DMAC_CMD_HASH_MASK) | DMAC_CMD_HASH_RESULT;
 		}
 	}
-	tag->tag.pNext = SCE_KERNEL_DMAC_CHAIN_END;
+	tag->tag.pNext = (SceUInt32)SCE_KERNEL_DMAC_CHAIN_END;
 	tag->tag.cmd = cmd;
 	tag->next = NULL;
 	*tail = tag;
@@ -398,10 +412,12 @@ void StartQueuedDmaOperation(DmaController *dmac, DmaOp *op)
 			const SceKernelDmaOpEncDec *encDec = op->encDec;
 			const SceUInt32 *key = (const SceUInt32 *)encDec->key;
 
+			SceUInt32 key0 = key[0];
+
 			reg->srcKeyringId = encDec->keyring;
 			reg->iv = (SceUInt32)encDec->iv;
 			reg->ivCoherencyMask = encDec->ivCoherencyMask;
-		reg5->key[0] = key[0];
+		reg5->key[0] = key0;
 		reg5->key[1] = key[1];
 		reg5->key[2] = key[2];
 		reg5->key[3] = key[3];
@@ -455,8 +471,11 @@ void DmacIntrHandler(DmaChannel *channel)
 	reg->intrStatus = intrStatus;
 	dsb();
 	stat = reg->stat;
-	if (!(op->status & DMA_OP_ALLOCATED) ||
-	    !(intrStatus & (DMAC_INTR_COMPLETE | DMAC_INTR_ERROR))) {
+	if (!(op->status & DMA_OP_ALLOCATED)) {
+		sceKernelSpinlockLowUnlock(&op->lock);
+		return;
+	}
+	if (!(intrStatus & (DMAC_INTR_COMPLETE | DMAC_INTR_ERROR))) {
 		sceKernelSpinlockLowUnlock(&op->lock);
 		return;
 	}
@@ -484,9 +503,54 @@ void DmacIntrHandler(DmaChannel *channel)
 
 	head = op->head;
 	error = intrStatus & DMAC_INTR_ERROR;
-	if (!error) {
+	if (error) {
+		/* the tags before the failing one are done, the failing one partly */
+		current = reg->currentTag;
+		prev = NULL;
 		if (head != NULL) {
-			busy = reg->stat & SCE_KERNEL_DMAC_STAT_BUSY;
+			completed = head->tag.len & DMAC_LEN_MASK;
+			if (head->pa == current) {
+				next = head;
+Failed:
+				completed -= reg->errorLen;
+				op->errorTag = next->param;
+				if (prev == NULL)
+					goto Report;
+			} else {
+				for (prev = head; ; prev = prev->next) {
+					next = prev->next;
+					if (next == NULL)
+						break;
+					completed += next->tag.len & DMAC_LEN_MASK;
+					if (next->pa == current)
+						goto Failed;
+				}
+			}
+			ReleaseDmaTagChain(head, prev);
+		} else {
+			next = NULL;
+			completed = 0;
+		}
+Report:
+		if (stat & 0xffdfffff)
+			SCE_DBG_PRINTF(0, 1949, "DMAC transfer error ! stat = 0x%08x, curchain %p, opname %s\n",
+				       stat, op->errorTag, op->name);
+		if (stat & SCE_KERNEL_DMAC_STAT_ABORTED)
+			SCE_DBG_PRINTF(0, 1952, "DMAC transfer is aborted\n");
+		if (stat & SCE_KERNEL_DMAC_STAT_ERROR_READ)
+			SCE_DBG_PRINTF(0, 1955, "DMAC transfer error: read error\n");
+		if (stat & SCE_KERNEL_DMAC_STAT_ERROR_WRITE)
+			SCE_DBG_PRINTF(0, 1958, "DMAC transfer error: write error\n");
+		if (stat & SCE_KERNEL_DMAC_STAT_ERROR_ILLEGAL_CONFIG)
+			SCE_DBG_PRINTF(0, 1961, "DMAC transfer error: illegal configuration\n");
+		if (stat & SCE_KERNEL_DMAC_STAT_ERROR_TAG)
+			SCE_DBG_PRINTF(0, 1964, "DMAC transfer error: tag error\n");
+		if (stat & SCE_KERNEL_DMAC_STAT_ERROR_ZERO_BYTE)
+			SCE_DBG_PRINTF(0, 1967, "DMAC transfer error: zero byte error\n");
+		busy = stat & SCE_KERNEL_DMAC_STAT_BUSY;
+	} else {
+		if (head != NULL) {
+			busy = stat & SCE_KERNEL_DMAC_STAT_BUSY;
 			if (stat & SCE_KERNEL_DMAC_STAT_BUSY) {
 				/* still running: done up to the tag that raised the interrupt */
 				tag = head;
@@ -515,70 +579,28 @@ void DmacIntrHandler(DmaChannel *channel)
 			ReleaseDmaTagChain(head, tag);
 		} else {
 			next = NULL;
-			busy = reg->stat & SCE_KERNEL_DMAC_STAT_BUSY;
+			busy = stat & SCE_KERNEL_DMAC_STAT_BUSY;
 			completed = 0;
 		}
-		goto Continue;
 	}
 
-	/* the tags before the failing one are done, the failing one partly */
-	current = reg->currentTag;
-	prev = NULL;
-	if (head != NULL) {
-		completed = head->tag.len & DMAC_LEN_MASK;
-		if (head->pa == current) {
-			next = head;
-			goto Failed;
-		}
-		for (prev = head; ; prev = prev->next) {
-			next = prev->next;
-			if (next == NULL)
-				break;
-			completed += next->tag.len & DMAC_LEN_MASK;
-			if (next->pa == current)
-				goto Failed;
-		}
-		ReleaseDmaTagChain(head, prev);
-	} else {
-		next = NULL;
-		completed = 0;
-	}
-	goto Report;
-Failed:
-	completed -= reg->errorLen;
-	op->errorTag = next->param;
-	if (prev != NULL)
-		ReleaseDmaTagChain(head, prev);
-Report:
-	if (stat & 0xffdfffff)
-		SCE_DBG_PRINTF(0, 1949, "DMAC transfer error ! stat = 0x%08x, curchain %p, opname %s\n",
-			       stat, op->errorTag, op->name);
-	if (stat & SCE_KERNEL_DMAC_STAT_ABORTED)
-		SCE_DBG_PRINTF(0, 1952, "DMAC transfer is aborted\n");
-	if (stat & SCE_KERNEL_DMAC_STAT_ERROR_READ)
-		SCE_DBG_PRINTF(0, 1955, "DMAC transfer error: read error\n");
-	if (stat & SCE_KERNEL_DMAC_STAT_ERROR_WRITE)
-		SCE_DBG_PRINTF(0, 1958, "DMAC transfer error: write error\n");
-	if (stat & SCE_KERNEL_DMAC_STAT_ERROR_ILLEGAL_CONFIG)
-		SCE_DBG_PRINTF(0, 1961, "DMAC transfer error: illegal configuration\n");
-	if (stat & SCE_KERNEL_DMAC_STAT_ERROR_TAG)
-		SCE_DBG_PRINTF(0, 1964, "DMAC transfer error: tag error\n");
-	if (stat & SCE_KERNEL_DMAC_STAT_ERROR_ZERO_BYTE)
-		SCE_DBG_PRINTF(0, 1967, "DMAC transfer error: zero byte error\n");
-	busy = stat & SCE_KERNEL_DMAC_STAT_BUSY;
-Continue:
 	op->head = next;
 	sceKernelSetEventFlag(op->evfId, 1);
 	if (!busy) {
 		reg->intrStatus = DMAC_INTR_COMPLETE;
 		dsb();
 		head = op->head;
-		if (head != NULL && !error) {
-			/* continue with the rest of the chain */
-			head->prev = NULL;
-			reg->chainStart = head->pa;
-			dsb();
-		} else {
+		if (head != NULL) {
+			if (!error) {
+				/* continue with the rest of the chain */
+				head->prev = NULL;
+				reg->chainStart = head->pa;
+				dsb();
+				goto Callback;
+			}
+		}
+		/* the chain ended or failed: the channel is free again */
+		{
 			DmaController *dmac = op->dmac;
 			SceUInt32 freeChannels = dmac->freeChannels;
 			SceKernelIntrStatus intr;
@@ -594,6 +616,7 @@ Continue:
 		}
 	}
 
+Callback:
 	callback = op->callback;
 	if (callback == NULL) {
 		sceKernelSpinlockLowUnlock(&op->lock);
@@ -736,25 +759,25 @@ int _concatenateChain(DmaOp *op, SceKernelDmaOpFlag flag, const SceKernelDmaOpTa
 
 			if (tag == NULL)
 				return SCE_KERNEL_ERROR_NO_MEMORY;
-			tag->tag.dst = param->dst;
+			tag->tag.dst = (SceUInt32)param->dst;
 			tag->tag.len = param->len;
 			tag->tag.cmd = param->cmd;
 			tag->tag.blockSize = param->blockSize;
-			tag->tag.src = param->src;
+			tag->tag.src = (SceUInt32)param->src;
 			tag->offset = 0;
 			tag->next = NULL;
 			tag->prev = tail;
 			tag->param = param;
 			if (head != NULL) {
 				tail->next = tag;
-				tail->tag.pNext = (SceKernelDmaOpTag *)tag->pa;
+				tail->tag.pNext = tag->pa;
 			} else {
 				head = tag;
 			}
 			param = param->pNext;
 			tail = tag;
 		} while (param != SCE_KERNEL_DMAC_CHAIN_END);
-		tail->tag.pNext = SCE_KERNEL_DMAC_CHAIN_END;
+		tail->tag.pNext = (SceUInt32)SCE_KERNEL_DMAC_CHAIN_END;
 		cmd = tail->tag.cmd;
 		break;
 	case SCE_KERNEL_DMA_OP_VIRTUAL_SRC_ADDR:
@@ -775,7 +798,7 @@ int _concatenateChain(DmaOp *op, SceKernelDmaOpFlag flag, const SceKernelDmaOpTa
 				return res;
 			if (head != NULL) {
 				tail->next = first;
-				tail->tag.pNext = (SceKernelDmaOpTag *)first->pa;
+				tail->tag.pNext = first->pa;
 				first->prev = tail;
 			} else {
 				head = first;
@@ -803,7 +826,7 @@ int _concatenateChain(DmaOp *op, SceKernelDmaOpFlag flag, const SceKernelDmaOpTa
 				return res;
 			if (head != NULL) {
 				tail->next = first;
-				tail->tag.pNext = (SceKernelDmaOpTag *)first->pa;
+				tail->tag.pNext = first->pa;
 				first->prev = tail;
 			} else {
 				head = first;
@@ -836,7 +859,7 @@ int _concatenateChain(DmaOp *op, SceKernelDmaOpFlag flag, const SceKernelDmaOpTa
 				return res;
 			if (head != NULL) {
 				tail->next = first;
-				tail->tag.pNext = (SceKernelDmaOpTag *)first->pa;
+				tail->tag.pNext = first->pa;
 				first->prev = tail;
 			} else {
 				head = first;
@@ -856,28 +879,28 @@ int _concatenateChain(DmaOp *op, SceKernelDmaOpFlag flag, const SceKernelDmaOpTa
 			ReleaseDmaTagChain(head, head);
 			return SCE_KERNEL_ERROR_NO_MEMORY;
 		}
-		cmd = param[1].cmd;
 		head->tag.cmd = param[0].cmd;
 		head->tag.blockSize = param[0].blockSize;
-		head->tag.pNext = param[0].pNext;
+		head->tag.pNext = (SceUInt32)param[0].pNext;
 		head->tag.len = param[0].len;
-		head->tag.src = param[0].src;
-		head->tag.dst = param[0].dst;
+		head->tag.src = (SceUInt32)param[0].src;
+		head->tag.dst = (SceUInt32)param[0].dst;
 		head->param = &param[0];
 		head->next = tail;
 		head->offset = 0;
 		head->prev = NULL;
 		param[1].pNext->pNext = (SceKernelDmaOpTag *)tail->pa;
-		tail->tag.src = param[1].src;
-		tail->tag.dst = param[1].dst;
+		tail->tag.src = (SceUInt32)param[1].src;
+		tail->tag.dst = (SceUInt32)param[1].dst;
 		tail->tag.len = param[1].len;
 		tail->tag.cmd = param[1].cmd;
 		tail->tag.blockSize = param[1].blockSize;
 		tail->offset = 0;
 		tail->next = NULL;
 		tail->prev = head;
-		tail->tag.pNext = SCE_KERNEL_DMAC_CHAIN_END;
+		tail->tag.pNext = (SceUInt32)SCE_KERNEL_DMAC_CHAIN_END;
 		tail->param = &param[1];
+		cmd = tail->tag.cmd;
 		break;
 	default:
 		SCE_DBG_PRINTF(0xb, 1335, "Unknown flag\n");
@@ -887,7 +910,7 @@ int _concatenateChain(DmaOp *op, SceKernelDmaOpFlag flag, const SceKernelDmaOpTa
 	tail->tag.cmd = cmd | DMAC_CMD_INTERRUPT;
 	if (op->head != NULL) {
 		op->tail->next = head;
-		op->tail->tag.pNext = (SceKernelDmaOpTag *)head->pa;
+		op->tail->tag.pNext = head->pa;
 	} else {
 		op->head = head;
 	}
@@ -1117,11 +1140,15 @@ invalidSize:
 	op->coherencyMask = 0x7fc0000;
 	op->head = NULL;
 	if (pParam != NULL) {
-		op->coherencyMask = pParam->coherencyMask | 0x7fc0000;
+		SceUInt32 mask = pParam->coherencyMask | 0x7fc0000;
+		SceUInt32 value;
+
 		if (op->dmacId == SCE_KERNEL_DMAC_ID_DMAC5)
-			op->encDec = &((SceKernelDmaOpEncDecChainParam *)pParam)->encDec;
+			value = (SceUInt32)&((SceKernelDmaOpEncDecChainParam *)pParam)->encDec;
 		else
-			op->setValue = pParam->setValue;
+			value = pParam->setValue;
+		op->coherencyMask = mask;
+		op->setValue = value;
 	}
 	res = _concatenateChain(op, flag, pTag);
 	if (res < 0) {
@@ -1627,7 +1654,7 @@ int sceKernelDmaOpQuit(SceKernelDmaOpId opid)
 		return SCE_KERNEL_ERROR_CANCELING;
 	}
 	if (op->channel != NULL) {
-		op->head->tag.pNext = SCE_KERNEL_DMAC_CHAIN_END;
+		op->head->tag.pNext = (SceUInt32)SCE_KERNEL_DMAC_CHAIN_END;
 		_CancelDmaTransfer(op);
 		if (op->status & DMA_OP_CANCELING) {
 			/* the interrupt handler finishes the cancel */
@@ -1752,14 +1779,14 @@ static inline int isDmac6Intr(int intrCode)
 
 static inline void InitializeTagCache(void)
 {
-	SceKernelDmaOpTag *hw;
 	DmaTag *tag;
+	int i;
 
-	for (hw = &s_tagCache[0].tag; hw != &s_tagCache[64].tag; hw += 2) {
+	for (i = 0; i < 64; i++) {
 		int res;
 
-		tag = (DmaTag *)((char *)hw - __builtin_offsetof(DmaTag, tag));
-		res = sceKernelVAtoPA(hw, &tag->pa);
+		tag = &s_tagCache[i];
+		res = sceKernelVAtoPA(&tag->tag, &tag->pa);
 		tag->pa |= 1;
 		if (res < 0)
 			SCE_PANIC_FUNC(2083, "InitializeTagCache");

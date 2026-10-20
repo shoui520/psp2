@@ -15,7 +15,19 @@
 
 /* ===== operations ===== */
 
-/* a tag as the controller reads it, with what dmacmgr keeps about it */
+/* a tag as the controller reads it: its addresses are physical */
+typedef struct DmacTag {
+	SceUInt32 src;
+	SceUInt32 dst;
+	SceUInt32 len;
+	SceUInt32 cmd;				/* SCE_KERNEL_DMAC_CMD_* */
+	SceUInt32 keyring;
+	SceUInt32 iv;
+	SceUInt32 blockSize;			/* SCE_KERNEL_DMAC_BLOCKSIZE_* */
+	SceUInt32 pNext;			/* the next tag's address, or SCE_KERNEL_DMAC_CHAIN_END */
+} DmacTag;
+
+/* a tag with what dmacmgr keeps about it */
 typedef struct DmaTag {
 	struct DmaTag *next;
 	struct DmaTag *prev;
@@ -24,7 +36,7 @@ typedef struct DmaTag {
 	uintptr_t pa;			/* of tag, bit 0 set */
 	SceUInt32 cached;			/* 1: from the tag cache, 0: from the fixed heap */
 	SceUInt32 reserved[2];
-	SceKernelDmaOpTag tag;
+	DmacTag tag;
 } DmaTag;
 
 struct DmaController;
