@@ -25,9 +25,32 @@ psp2_module(os0_kd_iofilemgr KIND kernel COMPILER gcc48 SCE_LAYOUT SOURCES
 	sched_io_chunk.c
 	sched_io_request_queue.c
 )
-# Sony built the I/O scheduler sources with a signed char
-set_source_files_properties(io_scheduler.c sched_dispatcher.c
-	sched_io_request.c dummy_stdio.c
+# Sony built the module with a signed char (the string tests of the scheduler and the user
+# calls load their bytes with ldrsb)
+set_source_files_properties(
+	iofilemgr.c
+	iofilemgr_for_kernel.c
+	flock.c
+	vfs.c
+	vfs_subr.c
+	rfs_table.c
+	vfs_acl.c
+	vfs_vnops.c
+	vfs_buff.c
+	vfs_path.c
+	buffer_pool.c
+	io_scheduler.c
+	sched_dispatcher.c
+	sched_io_request.c
+	io_scheduler_async.c
+	ioerror.c
+	daemon.c
+	dummy_stdio.c
+	iofilemgr_for_user.c
+	mount.c
+	sched_scheduler.c
+	sched_io_chunk.c
+	sched_io_request_queue.c
 	PROPERTIES COMPILE_OPTIONS "-fsigned-char")
 get_target_property(IOFILEMGR_LINK_OPTIONS os0_kd_iofilemgr LINK_OPTIONS)
 list(FILTER IOFILEMGR_LINK_OPTIONS EXCLUDE REGEX "prx\\.ld$")

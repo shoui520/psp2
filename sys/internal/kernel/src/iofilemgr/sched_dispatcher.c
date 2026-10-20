@@ -157,10 +157,10 @@ int sceIoSchedDispatcherRemoveIoRequest(SchedDispatcher *dispatcher, IoRequest *
 /* cancel the asynchronous requests of a process that ends */
 int sceIoSchedDispatcherFreeAllAsyncEvents(SchedDispatcher *dispatcher, SceUID pid)
 {
+	SceSize num = 0;
 	IoAsyncEvent *event = NULL;
 	IoAsyncEvent *current;
 	SceUID list[8];
-	SceSize num = 0;
 	SceUID guid;
 	int freed, i, ret;
 

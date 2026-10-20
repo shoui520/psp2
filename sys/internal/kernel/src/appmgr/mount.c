@@ -381,7 +381,7 @@ int appmgrReleasePfsMount(SceUID pid, AppmgrPfsMount *mount, int flags)
 	}
 	if (mount->mountId == 600) {
 		permission = sceKernelSetThreadAccessLevel(128);
-		result = SceIofilemgrForDriver_20574100(0x10000, flags, 0);
+		result = SceIofilemgrForDriver_20574100(0x10000, flags, 0, 0);
 		sceKernelSetThreadAccessLevel(permission);
 		if (result < 0)
 			goto restore;
@@ -1772,7 +1772,7 @@ cleanup:
 		}
 		if (pfsMount->mountId == 600) {
 			permission = sceKernelSetThreadAccessLevel(128);
-			status = SceIofilemgrForDriver_20574100(0x10000, 1, 0);
+			status = SceIofilemgrForDriver_20574100(0x10000, 1, 0, 0);
 			sceKernelSetThreadAccessLevel(permission);
 			if (status < 0)
 				goto restoreAuthority;

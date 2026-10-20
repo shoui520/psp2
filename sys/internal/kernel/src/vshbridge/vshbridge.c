@@ -1153,13 +1153,13 @@ int module_start(SceSize args, void *argp)
 SceUInt32 vshIoMount(int id, const char *path, int permission, void *data,
 		     SceUInt32 reservedLow, SceUInt32 reservedHigh)
 {
-	VSH_BRIDGE(SceIofilemgrForDriver_D070BC48(id, path, permission, data,
-						  (SceUInt64)reservedHigh << 32 | reservedLow));
+	VSH_BRIDGE(SceIofilemgrForDriver_D070BC48(id, path, permission, data, reservedLow,
+						  reservedHigh));
 }
 
 SceUInt32 vshIoUmount(int id, int force, SceUInt32 reservedLow, SceUInt32 reservedHigh)
 {
-	VSH_BRIDGE(SceIofilemgrForDriver_20574100(id, force, (SceUInt64)reservedHigh << 32 | reservedLow));
+	VSH_BRIDGE(SceIofilemgrForDriver_20574100(id, force, reservedLow, reservedHigh));
 }
 
 /* a kernel event, handed to the caller as a PUID */

@@ -1162,8 +1162,8 @@ int sceIoGetstatByFd(SceUID fd, SceIoStat *stat)
 
 int sceIoChstatByFd(SceUID fd, SceIoStat *stat, int bits)
 {
-	IofilemgrChstatByFdParam param;
 	IofilemgrSchedInfo info;
+	IofilemgrChstatByFdParam param;
 	SceUInt32 tls;
 	int ret;
 

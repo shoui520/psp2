@@ -47,9 +47,10 @@ typedef struct SceVfsPath {
 	const char *name;
 	SceSize nameLength;
 	const char *path;		/* the whole path the element is from */
+	const char *elem;		/* what vfs_lookup gives sceVopLookup: the undecoded element */
 } SceVfsPath;
 
-_Static_assert(sizeof(SceVfsPath) == 0xC, "SceVfsPath");
+_Static_assert(sizeof(SceVfsPath) == 0x10, "SceVfsPath");
 
 /* a mount point's names ("mnt misc") */
 typedef struct SceVfsMountData {
@@ -165,7 +166,7 @@ struct VfsVnodeCore {
 	SceUInt32 state;		/* SCE_VNODE_STATE_* */
 	SceUInt32 type;			/* SCE_VNODE_TYPE_* */
 	SceVopTable *vopTbl;
-	SceUInt64 size;
+	SceOff size;
 	SceUInt32 aclData[2];
 	SceVfsFile *fdList;
 	SceUInt32 fdNum;
@@ -566,7 +567,7 @@ _Static_assert(offsetof(IofilemgrRmdevParam, flags) == 4, "IofilemgrRmdevParam f
 int vfsRmdev(IofilemgrRmdevParam *param);
 
 /* a2, a3: passed by pfsmgr as 0, meaning not yet traced */
-int vfsMountForPFS(SceVfsMountParam *param, int a2, int a3);
+int vfsMountForPFS(SceVfsMountParam *param, SceUInt32 reservedLow, int reservedHigh);
 
 int SceIofilemgrForDriver_0D8A806E(SceVfsVnode *fvp, SceVfsVnode *tvp);	/* vitasdk: ksceVopUnlink */
 int SceIofilemgrForDriver_942AA61F(SceVfsVnode *fvp, SceVfsVnode *tvp);	/* vitasdk: ksceVopLink */
@@ -620,7 +621,7 @@ int vfsLockMnt(SceVfsMount *mnt);
 int vfsLockVnode(SceVfsVnode *vp);
 int vfsMount(SceVfsMountParam *param);
 int vfsUmount(SceVfsUmountParam *param);
-int vfsUmountForPFS(SceVfsUmountParam *param, int reservedLow, int reservedHigh);
+int vfsUmountForPFS(SceVfsUmountParam *param, SceUInt32 reservedLow, int reservedHigh);
 int vfsUnlockMnt(SceVfsMount *mnt);
 int vfsUnlockVnode(SceVfsVnode *vp);
 

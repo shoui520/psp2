@@ -434,7 +434,7 @@ static inline __attribute__((always_inline)) int clear_negative_cache(SceVfsVnod
 		if (ncdd != nc->ncdd) {
 			SCE_DBG_PRINTF_FUNC(0xf, 8616, "clear_negative_cache", "pnc=%p nc=%p\n",
 					    nc->ncdd, ncdd);
-			SCE_PANIC_FUNC(8617, "clear_negative_cache");
+			SCE_PANIC_FUNC(SCE_LINE(8647, 8617), "clear_negative_cache");
 		}
 		cur = ncdd->child;
 		if (cur == NULL) {
@@ -470,7 +470,7 @@ int vfs_lookup(SceVfsVnode *dvp, const VfsPathElem *elem, const char *path, SceU
 {
 	struct Ncache *ncdd, *nc;
 	struct Ncache copy;
-	VfsLookupPath lpath;
+	SceVfsPath lpath;
 	VfsPathElem name;
 	const char *path2, *path3;
 	SceVfsVnode *vp;
@@ -540,11 +540,11 @@ int vfs_lookup(SceVfsVnode *dvp, const VfsPathElem *elem, const char *path, SceU
 	}
 	vfs_unlock_ncache();
 lookup:
-	lpath.path.name = name.name;
-	lpath.path.nameLength = name.len;
-	lpath.path.path = path;
+	lpath.name = name.name;
+	lpath.nameLength = name.len;
+	lpath.path = path;
 	lpath.elem = elem->name;
-	ret = sceVopLookup(dvp, vpp, &lpath.path, flags & 0xfffff);
+	ret = sceVopLookup(dvp, vpp, &lpath, flags & 0xfffff);
 	if (ret == 0) {
 		SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(*vpp) == 1, 1318);
 		ret = enter_ncache(dvp, *vpp, &name, NCACHE_STATE_VALID, 0);
@@ -1025,9 +1025,10 @@ int vfs_find_in_path(VfsPathElem *elem, int num, SceVfsVnode **vpp, const char *
 		     SceUInt32 flags)
 {
 	SceVfsMount *mnt;
+	int depth;
 	SceVfsVnode *vp, *dvp;
 	SceUInt32 pathLength;
-	int depth, ret, i, type;
+	int ret, i, type;
 
 	if (num < 1)
 		return SCE_ERROR_ERRNO_ENOENT;
@@ -1921,9 +1922,10 @@ int vfsRead(IofilemgrReadParam *param)
 	SceUID fd = param->fd;
 	void *data = param->data;
 	SceSize size = param->size;
+	int result;
 	SceVfsFile *file;
 	SceVfsVnode *vp;
-	int result, ret;
+	int ret;
 
 	ret = vfs_convert_file(fd, &file);
 	if (ret < 0)
@@ -2035,9 +2037,10 @@ int vfsPread(IofilemgrPreadParam *param)
 	void *data = param->data;
 	SceSize size = param->size;
 	SceOff offset = param->offset;
+	int result;
 	SceVfsFile *file;
 	SceVfsVnode *vp;
-	int result, ret;
+	int ret;
 
 	ret = vfs_convert_file(fd, &file);
 	if (ret < 0)
@@ -2085,9 +2088,10 @@ int vfsPwrite(IofilemgrPwriteParam *param)
 	const void *data = param->data;
 	SceSize size = param->size;
 	SceOff offset = param->offset;
+	int result;
 	SceVfsFile *file;
 	SceVfsVnode *vp;
-	int result, ret;
+	int ret;
 
 	ret = vfs_convert_file(fd, &file);
 	if (ret < 0)
@@ -2495,7 +2499,7 @@ int vfsRemove(IofilemgrRemoveParam *param)
 	VfsPathElem elem[VFS_PATH_ELEM_MAX];
 	VfsPathElem *lastElem;
 	VfsPathElem tmpElem;
-	VfsLookupPath path;
+	SceVfsPath path;
 	SceVfsPath tmpPath;
 	SceVfsVnode *dvp, *vp, *nvp;
 	SceVfsFile *fd;
@@ -2565,10 +2569,10 @@ int vfsRemove(IofilemgrRemoveParam *param)
 check_linked:
 		;
 	} while (vp->core.linkedNum != 0);
-	path.path.name = lastElem->name;
-	path.path.nameLength = lastElem->len;
-	path.path.path = buf;
-	ret = sceVopRemove(dvp, vp, &path.path, 0);
+	path.name = lastElem->name;
+	path.nameLength = lastElem->len;
+	path.path = buf;
+	ret = sceVopRemove(dvp, vp, &path, 0);
 	if (ret < 0)
 		goto release_vp;
 	vp->core.state = SCE_VNODE_STATE_INACTIVE;
@@ -2592,9 +2596,9 @@ whiteout:
 	ret = sceVopSync(vp, vp->core.fdList, 0);
 	if (ret < 0)
 		goto unlock_fd;
-	path.path.name = lastElem->name;
-	path.path.nameLength = lastElem->len;
-	path.path.path = buf;
+	path.name = lastElem->name;
+	path.nameLength = lastElem->len;
+	path.path = buf;
 	path.elem = NULL;
 	tmp = vfs_path_buff_alloc();
 	if (tmp == NULL) {
@@ -2611,9 +2615,9 @@ whiteout:
 		tmp[++i + 7] = '~';
 		tmpPath.nameLength = strnlen(tmp, VFS_PATH_BUFF_SIZE);
 		nvp = NULL;
-		ret = sceVopWhiteout(dvp, vp, &path.path, &tmpPath, 0, 0);
+		ret = sceVopWhiteout(dvp, vp, &path, &tmpPath, 0, 0);
 		if (ret == SCE_ERROR_ERRNO_EUNSUP)
-			ret = sceVopRename(dvp, vp, &path.path, NULL, &nvp, &tmpPath);
+			ret = sceVopRename(dvp, vp, &path, NULL, &nvp, &tmpPath);
 	} while (i < 0x3f8 && ret == SCE_ERROR_ERRNO_EEXIST);
 	if (ret < 0) {
 		if (ret == SCE_ERROR_ERRNO_EEXIST)
@@ -2709,12 +2713,13 @@ int vfsUmount(SceVfsUmountParam *param)
 		SceVfsMountData *mnt_data;
 		char path[sizeof(((SceVfsMount *)0)->path)];
 	} subMount;
+	int num;
 	SceVfsVnode *rvp, *vp;
 	SceVfsMount *mnt, *cur, *pmnt;
 	BufferPool *pool;
 	SceSize size;
 	char *buf;
-	int num, avail, force, i, ret, err;
+	int avail, force, i, ret, err;
 	SceUInt32 state;
 	SceUInt8 fsType;
 
@@ -3096,12 +3101,13 @@ int vfsSync(IofilemgrSyncParam *param)
 	const char *device = param->device;
 	unsigned int flag = param->flag;
 	VfsPathElem elem[VFS_PATH_ELEM_MAX];
+	int num;
 	SceVfsVnode *vp, *cur;
 	SceVfsMount *mnt;
 	BufferPool *pool;
 	SceSize size;
 	char *buf;
-	int num, avail, i = 0, ret, err;
+	int avail, i = 0, ret, err;
 
 	buf = vfs_path_buff_alloc();
 	if (buf == NULL)
@@ -3396,7 +3402,7 @@ int vfsGetstatByFd(IofilemgrGetstatByFdParam *param)
 	SceIoStat *stat = param->stat;
 	SceVfsFile *file;
 	SceVfsVnode *vp;
-	VfsLookupPath path;
+	SceVfsPath path;
 	SceSize len;
 	char *buf;
 	int ret;
@@ -3441,15 +3447,15 @@ int vfsGetstatByFd(IofilemgrGetstatByFdParam *param)
 			vfs_path_buff_free(buf);
 			return ret;
 		}
-		path.path.name = buf;
-		path.path.nameLength = len;
-		path.path.path = NULL;
+		path.name = buf;
+		path.nameLength = len;
+		path.path = NULL;
 		path.elem = NULL;
 		if (vp->core.linkTo == NULL) {
-			ret = sceVopGetstat(vp, &path.path, stat);
+			ret = sceVopGetstat(vp, &path, stat);
 		} else {
 			vfsLockVnode(vp->core.linkTo);
-			ret = sceVopGetstat(vp->core.linkTo, &path.path, stat);
+			ret = sceVopGetstat(vp->core.linkTo, &path, stat);
 			vfsUnlockVnode(vp->core.linkTo);
 		}
 	}
@@ -3551,9 +3557,10 @@ int vfsRmdev(IofilemgrRmdevParam *param)
 	VfsPathElem elem[VFS_PATH_ELEM_MAX];
 	VfsPathElem *lastElem;
 	SceVfsVnode *dvp, *vp;
+	int num;
 	SceVfsPath path;
 	char *buf;
-	int num, last, ret;
+	int last, ret, refCount;
 
 	buf = vfs_path_buff_alloc();
 	if (buf == NULL)
@@ -3615,9 +3622,9 @@ int vfsRmdev(IofilemgrRmdevParam *param)
 				SCE_DBG_PRINTF_LEVEL(2, 0xf, 7448, "inactive failed ... %d 0x%x\n", ret, ret);
 		}
 		vfsLockMnt(vp->core.mnt);
-		if ((int)--vp->core.mnt->mntRefCount < 0)
-			SCE_DBG_PRINTF(0xf, 7456, "vp->mnt->mntRefCount = %d\n",
-				       vp->core.mnt->mntRefCount);
+		refCount = --vp->core.mnt->mntRefCount;
+		if (refCount < 0)
+			SCE_DBG_PRINTF(0xf, 7456, "vp->mnt->mntRefCount = %d\n", refCount);
 		vfsUnlockMnt(vp->core.mnt);
 		vfsFreeVnode(vp);
 		goto release_dvp;
@@ -4239,8 +4246,12 @@ SceUID vfsOpen(IofilemgrOpenParam *param)
 		if (!exists) {
 			if ((mode & VFS_OPEN_MODE_VALID) == 0 || (mode & VFS_OPEN_MODE_INVALID) != 0) {
 				ret = SCE_ERROR_ERRNO_EINVAL;
+#if FW_DEBUG
 				SceDebugForDriver_391B74B7("#### Invalid mode !! sceIoOpen(%s, flag=0x%x, mode=0%o(0x%x)) ####\n",
 						 filename, flags, mode, mode);
+#else
+				SCE_PRINTF_WITH_INFO(0xf, 3231, "::0x10f::002::0%o(0x%x)\n", mode, param->mode);
+#endif
 				goto release_dvp;
 			}
 			ret = sceVopCreate(dvp, &vp, &path, flags, mode);
@@ -4359,14 +4370,6 @@ out:
 	return ret;
 }
 
-#if !FW_DEBUG
-static const SceKernelDebugInfo vfsMkdirModeErrorInfo
-__attribute__((section(".sce_dbginfo"), used)) = {
-	.fileHash = 0x45541a74,
-	.lineHash = 0xe80e0af6,
-	.funcHash = 0xfbca1c1f,
-};
-#endif
 
 int vfsMkdir(IofilemgrMkdirParam *param)
 {
@@ -4384,8 +4387,7 @@ int vfsMkdir(IofilemgrMkdirParam *param)
 		SceDebugForDriver_391B74B7("#### Invalid mode !! sceIoMkdir(%s, mode=0%o(0x%x)) ####\n", dir,
 				 mode, mode);
 #else
-		SceDebugForDriver_02B04343(0xf, &vfsMkdirModeErrorInfo, "::0x10f::003::0%o(0x%x)\n",
-					 mode, param->mode);
+		SCE_PRINTF_WITH_INFO(0xf, 4101, "::0x10f::003::0%o(0x%x)\n", mode, param->mode);
 #endif
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
@@ -4449,7 +4451,7 @@ int vfsRename(IofilemgrRenameParam *param)
 	SceVfsVnode *odvp, *ovp, *ndvp, *nvp;
 	SceVfsMount *mnt;
 	SceVfsFile *f;
-	VfsLookupPath opath, npath;
+	SceVfsPath opath, npath;
 	VfsHostRenameArg arg;
 	VfsPathElem resolved;
 	char *obuf, *nbuf;
@@ -4537,11 +4539,11 @@ int vfsRename(IofilemgrRenameParam *param)
 					ret = SCE_ERROR_ERRNO_EEXIST;
 					break;
 				}
-				npath.path.name = nelem[0].name;
-				npath.path.nameLength = nelem[0].len;
-				npath.path.path = nbuf;
+				npath.name = nelem[0].name;
+				npath.nameLength = nelem[0].len;
+				npath.path = nbuf;
 				npath.elem = NULL;
-				if (vfs_check_and_sync_on_host(nvp, &npath.path) != SCE_ERROR_ERRNO_ENOENT) {
+				if (vfs_check_and_sync_on_host(nvp, &npath) != SCE_ERROR_ERRNO_ENOENT) {
 					ret = SCE_ERROR_ERRNO_EEXIST;
 					break;
 				}
@@ -4586,11 +4588,11 @@ int vfsRename(IofilemgrRenameParam *param)
 					vfs_release_lookup(obuf, odvp, ovp, nbuf, ndvp, nvp, 0);
 					return SCE_ERROR_ERRNO_EEXIST;
 				}
-				npath.path.name = nname->name;
-				npath.path.nameLength = nname->len;
-				npath.path.path = nbuf;
+				npath.name = nname->name;
+				npath.nameLength = nname->len;
+				npath.path = nbuf;
 				npath.elem = NULL;
-				if (vfs_check_and_sync_on_host(nvp, &npath.path) != SCE_ERROR_ERRNO_ENOENT) {
+				if (vfs_check_and_sync_on_host(nvp, &npath) != SCE_ERROR_ERRNO_ENOENT) {
 					vfs_release_lookup(obuf, odvp, ovp, nbuf, ndvp, nvp, 0);
 					return SCE_ERROR_ERRNO_EEXIST;
 				}
@@ -4642,15 +4644,15 @@ rename:
 		}
 	}
 do_rename:
-	opath.path.name = oname->name;
-	opath.path.nameLength = oname->len;
-	opath.path.path = obuf;
+	opath.name = oname->name;
+	opath.nameLength = oname->len;
+	opath.path = obuf;
 	opath.elem = NULL;
-	npath.path.name = nname->name;
-	npath.path.nameLength = nname->len;
-	npath.path.path = nbuf;
+	npath.name = nname->name;
+	npath.nameLength = nname->len;
+	npath.path = nbuf;
 	npath.elem = NULL;
-	ret = sceVopRename(odvp, ovp, &opath.path, ndvp, &nvp, &npath.path);
+	ret = sceVopRename(odvp, ovp, &opath, ndvp, &nvp, &npath);
 	if (ret < 0) {
 		vfs_lock_ncache();
 		if (ovp->core.ncache != NULL)

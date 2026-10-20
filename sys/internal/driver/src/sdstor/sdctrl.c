@@ -263,7 +263,7 @@ int sdintr_mount_gc(SceSdstorIntr *interrupt)
 			SCE_DBG_PRINTF_LEVEL(2, 15, 1523,
 					     "ret = 0x%08x, i = %d\n", result, i);
 		permission = id == 0xa00 || !sddev_is_read_write(device) ? 0 : 0x1000;
-		result = SceIofilemgrForDriver_D070BC48(id, NULL, permission, NULL, 0);
+		result = SceIofilemgrForDriver_D070BC48(id, NULL, permission, NULL, 0, 0);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL(2, 15, 1531, "0x%08x, i = %d\n", result, i);
 		else if (!result && (id == 0x900 || id == 0xa00))
@@ -324,7 +324,7 @@ int sdintr_mount_rm(SceSdstorIntr *interrupt)
 		SCE_DBG_PRINTF_LEVEL(2, 15, 1836, "ret = 0x%08x\n", result);
 	if ((SceSysrootForDriver_55392965() || !SceSysrootForDriver_50FE3B4D()) &&
 	    !(interrupt->mountDisabled & 1)) {
-		result = SceIofilemgrForDriver_D070BC48(mountId, NULL, 0, NULL, 0);
+		result = SceIofilemgrForDriver_D070BC48(mountId, NULL, 0, NULL, 0, 0);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL(2, 15, 1852, "0x%08x\n", result);
 	}
@@ -370,7 +370,7 @@ int sdintr_umount_gc(SceSdstorIntr *interrupt)
 	SCE_DBG_ASSERT(interrupt != NULL, 1471);
 	port = interrupt->port;
 	for (i = 0; i != 3; ++i) {
-		result = SceIofilemgrForDriver_20574100(gameCardMountIds[i], 1, 0);
+		result = SceIofilemgrForDriver_20574100(gameCardMountIds[i], 1, 0, 0);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL(2, 15, 1481, "0x%08x, i = %d\n", result, i);
 	}
@@ -411,7 +411,7 @@ int sdintr_umount_rm(SceSdstorIntr *interrupt)
 		selectedPort = sdpart_get_xmc_port();
 	}
 	if (selectedPort == port) {
-		result = SceIofilemgrForDriver_20574100(mountId, 1, 0);
+		result = SceIofilemgrForDriver_20574100(mountId, 1, 0, 0);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL(2, 15, 1779, "0x%08x\n", result);
 	}
@@ -530,7 +530,7 @@ int sdintr_remove(SceSdstorIntr *interrupt)
 		device = sddev_get_object(interrupt->port);
 		SCE_DBG_ASSERT_FUNC(interrupt != NULL, 1941, "sdintr_umount_usb");
 		port = interrupt->port;
-		result = SceIofilemgrForDriver_20574100(0xf00, 1, 0);
+		result = SceIofilemgrForDriver_20574100(0xf00, 1, 0, 0);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 15, 1949, "sdintr_umount_usb",
 				"0x%08x\n", result);

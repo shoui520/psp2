@@ -32,7 +32,7 @@
  * scheduler requests and VFS/VOP callback tables. */
 _Static_assert(sizeof(SceIoFdInfo) == 8, "file descriptor information ABI");
 _Static_assert(sizeof(SceVfsInfo) == 0x20, "filesystem registration ABI");
-_Static_assert(sizeof(SceVfsPath) == 0x0c, "filesystem path ABI");
+_Static_assert(sizeof(SceVfsPath) == 0x10, "filesystem path ABI");
 _Static_assert(sizeof(SceVfsMountData) == 0x14, "mount request ABI");
 
 /* process event phases the handlers act on */
@@ -455,12 +455,6 @@ typedef struct VfsPathElem {
 	SceSize len;
 } VfsPathElem;
 
-/* what vfs_lookup gives sceVopLookup: the path, then the undecoded element */
-typedef struct VfsLookupPath {
-	SceVfsPath path;
-	const char *elem;
-} VfsLookupPath;
-
 /* SceVfsMount.fumount (in the mount's opaque2): a mount whose device can go away */
 struct Fumount {
 	SceVopTable *vops;		/* the vops that fail while the device is gone */
@@ -739,6 +733,12 @@ int vfsBuffIoSet(struct BuffCache *bc, SceOff pos, SceSize size, const void *buf
 		g_vfsVopHook(__VA_ARGS__);				\
 } while (0)
 
+/* the hook after the operation: Sony's compiler laid its call out in line */
+#define VFS_VOP_HOOK_CALL_PLAIN(...) do {				\
+	if (g_vfsVopHook != NULL)					\
+		g_vfsVopHook(__VA_ARGS__);				\
+} while (0)
+
 #define VFS_VOP_HOOK_OPEN		0x02
 #define VFS_VOP_HOOK_CLOSE		0x06
 #define VFS_VOP_HOOK_READ		0x0a
@@ -835,7 +835,7 @@ int vfs_buf_area_invalidate(struct BuffCache *bc, SceOff start, SceOff end, SceV
 int vfsBuffDataEnter(struct BuffCache *bc, SceOff pos, SceSize size, const void *data, int state,
 		     SceVfsVnode *vp, SceVfsFile *file);
 int vfs_buf_free_data_buff(struct BuffCache *bc, SceVfsVnode *vp, SceVfsFile *file);
-int vfs_buf_data_invalidate_all(struct BuffCache *bc);
+int vfs_buf_data_invalidate_all(struct BuffCache *bc, SceVfsVnode *vp);
 int vfs_buf_io_read(struct BuffCache *bc, SceOff pos, SceSize size, void *buf);
 void vfsBuffIoUpdateCachedSize(struct BuffCache *bc, SceSize size);
 int vfsBuffIo2DataBuff(struct BuffCache *bc, SceOff pos, SceVfsVnode *vp, SceVfsFile *file);
@@ -1180,11 +1180,14 @@ extern SceUID g_ioVfsHeapUid;			/* name unknown: the "SceIofile" heap */
 extern int g_ioSchedEnabled;
 /* maps a process's path to the one it opens (sceIoSetPathMappingFunction) */
 extern IoPathMappingFunction g_ioPathMappingFunction;
-/* name unknown: zero and never set, so the Fios2 overlay paths of these calls are off */
-extern int g_ioFiosOpenEnabled;
-extern int g_ioFiosDopenEnabled;
-extern int g_ioFiosDcloseEnabled;
-extern int g_ioFiosPathEnabled;		/* the path calls of SceIofilemgr (user) */
+/*
+ * name unknown: each holds the address of the Fios2 import its calls make, tested
+ * against NULL before the call (the Fios2 overlay paths of these calls)
+ */
+extern void *g_ioFiosOpenEnabled;
+extern void *g_ioFiosDopenEnabled;
+extern void *g_ioFiosDcloseEnabled;
+extern void *g_ioFiosPathEnabled;	/* the path calls of SceIofilemgr (user) */
 extern SchedDispatcher g_schedDispatcher;
 extern SceUID g_ioSchedHeap;		/* "SceIoScheduler" (name unknown) */
 extern struct ThreadmgrWaitableClass g_ioAsyncEventClass;	/* "SceUIDIoAsyncEventClass" (name unknown) */

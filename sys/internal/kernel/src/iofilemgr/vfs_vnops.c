@@ -891,6 +891,7 @@ int sceVopOpen(SceVfsVnode *vp, SceVfsPath *path, int flags, SceVfsFile *file)
 int sceVopCreate(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, int flags, int mode)
 {
 	SceVopCreateArgs args;
+	SceVopTable *ops;
 	int (*op)(SceVopCreateArgs *argp);
 	int ret;
 
@@ -900,11 +901,12 @@ int sceVopCreate(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, int flag
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_CREATE + 1, 2, dvp, SCE_ERROR_ERRNO_EPERM);
 		return SCE_ERROR_ERRNO_EPERM;
 	}
+	ops = dvp->core.ops;
 	if ((dvp->core.mnt->mntFlags & SCE_VFS_MOUNT_FLAG_RDONLY) != 0) {
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_CREATE + 1, 2, dvp, SCE_ERROR_ERRNO_EROFS);
 		return SCE_ERROR_ERRNO_EROFS;
 	}
-	op = dvp->core.ops->vop_create;
+	op = ops->vop_create;
 	if (op == NULL) {
 		ret = SCE_ERROR_ERRNO_EUNSUP;
 	} else {
@@ -1368,6 +1370,7 @@ inval:
 SceOff sceVopLseek(SceVfsVnode *vp, SceVfsFile *file, SceOff offset, int whence)
 {
 	SceVopLseekArgs args;
+	SceVopTable *ops;
 	SceOff (*op)(SceVopLseekArgs *argp);
 	SceOff base, pos;
 	int err;
@@ -1381,9 +1384,11 @@ SceOff sceVopLseek(SceVfsVnode *vp, SceVfsFile *file, SceOff offset, int whence)
 		return err;
 	}
 	if (vp->core.state > 0xfff) {
-		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_LSEEK + 1, 3, vp, 0, SCE_ERROR_ERRNO_EPERM);
-		return SCE_ERROR_ERRNO_EPERM;
+		err = SCE_ERROR_ERRNO_EPERM;
+		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_LSEEK + 1, 3, vp, 0, err);
+		return err;
 	}
+	ops = vp->core.ops;
 	switch (whence) {
 	case SCE_SEEK_CUR:
 		base = file->fpos;
@@ -1395,14 +1400,16 @@ SceOff sceVopLseek(SceVfsVnode *vp, SceVfsFile *file, SceOff offset, int whence)
 		base = 0;
 		break;
 	default:
-		return SCE_ERROR_ERRNO_EINVAL;
+		err = SCE_ERROR_ERRNO_EINVAL;
+		return err;
 	}
 	pos = base + offset;
-	if ((pos == 0x7fffffffffffffffLL) | ((SceUInt64)pos >> 63)) {
-		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_LSEEK + 1, 3, vp, SCE_ERROR_ERRNO_EINVAL);
-		return SCE_ERROR_ERRNO_EINVAL;
+	if (pos == 0x7fffffffffffffffLL || pos < 0) {
+		err = SCE_ERROR_ERRNO_EINVAL;
+		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_LSEEK + 1, 3, vp, err);
+		return err;
 	}
-	op = vp->core.ops->vop_lseek;
+	op = ops->vop_lseek;
 	if (op == NULL) {
 		pos = SCE_ERROR_ERRNO_EUNSUP;
 	} else {
@@ -1415,13 +1422,13 @@ SceOff sceVopLseek(SceVfsVnode *vp, SceVfsFile *file, SceOff offset, int whence)
 	}
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_LSEEK + 1, 3, vp,
 			 (SceUInt32)((SceUInt64)pos >> 32), (SceUInt32)pos);
-	return pos;
-}
+	return pos;}
 
 int sceVopMkdir(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, int mode)
 {
 	SceVfsMount *mnt = dvp->core.mnt;
 	SceVopMkdirArgs args;
+	SceVopTable *ops;
 	int (*op)(SceVopMkdirArgs *argp);
 	int ret;
 
@@ -1431,11 +1438,12 @@ int sceVopMkdir(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, int mode)
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_MKDIR + 1, 2, dvp, SCE_ERROR_ERRNO_EPERM);
 		return SCE_ERROR_ERRNO_EPERM;
 	}
+	ops = dvp->core.ops;
 	if ((mnt->mntFlags & SCE_VFS_MOUNT_FLAG_RDONLY) != 0) {
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_MKDIR + 1, 2, dvp, SCE_ERROR_ERRNO_EROFS);
 		return SCE_ERROR_ERRNO_EROFS;
 	}
-	op = dvp->core.ops->vop_mkdir;
+	op = ops->vop_mkdir;
 	if (op == NULL) {
 		ret = SCE_ERROR_ERRNO_EUNSUP;
 	} else {
@@ -1455,6 +1463,7 @@ int sceVopMkdir(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, int mode)
 int sceVopRmdir(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *path, SceUInt32 flags)
 {
 	SceVfsMount *mnt = dvp->core.mnt;
+	SceVopTable *ops;
 	SceVopRmdirArgs args;
 	int (*op)(SceVopRmdirArgs *argp);
 	int ret;
@@ -1462,7 +1471,11 @@ int sceVopRmdir(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *path, SceUInt32 f
 	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(dvp) == 1, 2728, "sceVopRmdir");
 	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 2729, "sceVopRmdir");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_RMDIR, 3, dvp, flags, path->path);
-	if (dvp->core.state >= SCE_VNODE_STATE_INACTIVE || vp->core.state >= SCE_VNODE_STATE_INACTIVE) {
+	if (dvp->core.state >= SCE_VNODE_STATE_INACTIVE)
+		goto eperm;
+	ops = dvp->core.ops;
+	if (vp->core.state >= SCE_VNODE_STATE_INACTIVE) {
+eperm:
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_RMDIR + 1, 2, dvp, SCE_ERROR_ERRNO_EPERM);
 		return SCE_ERROR_ERRNO_EPERM;
 	}
@@ -1470,7 +1483,7 @@ int sceVopRmdir(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *path, SceUInt32 f
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_RMDIR + 1, 2, dvp, SCE_ERROR_ERRNO_EROFS);
 		return SCE_ERROR_ERRNO_EROFS;
 	}
-	op = dvp->core.ops->vop_rmdir;
+	op = ops->vop_rmdir;
 	if (op == NULL) {
 		ret = SCE_ERROR_ERRNO_EUNSUP;
 	} else {
@@ -1583,6 +1596,7 @@ int sceVopRename(SceVfsVnode *odvp, SceVfsVnode *ovp, SceVfsPath *old_path, SceV
 {
 	SceVfsMount *mnt = odvp->core.mnt;
 	SceVopRenameArgs args;
+	SceVopTable *ops;
 	int (*op)(SceVopRenameArgs *argp);
 	int ret;
 
@@ -1591,8 +1605,12 @@ int sceVopRename(SceVfsVnode *odvp, SceVfsVnode *ovp, SceVfsPath *old_path, SceV
 	if (ndvp != NULL)
 		SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(ndvp) == 1, 3022, "sceVopRename");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_RENAME, 3, odvp, old_path->path, new_path->path);
-	if (odvp->core.state >= SCE_VNODE_STATE_INACTIVE || ovp->core.state >= SCE_VNODE_STATE_INACTIVE ||
+	if (odvp->core.state >= SCE_VNODE_STATE_INACTIVE)
+		goto eperm;
+	ops = odvp->core.ops;
+	if (ovp->core.state >= SCE_VNODE_STATE_INACTIVE ||
 	    (ndvp != NULL && ndvp->core.state >= SCE_VNODE_STATE_INACTIVE)) {
+eperm:
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_RENAME + 1, 2, odvp, SCE_ERROR_ERRNO_EPERM);
 		return SCE_ERROR_ERRNO_EPERM;
 	}
@@ -1600,7 +1618,7 @@ int sceVopRename(SceVfsVnode *odvp, SceVfsVnode *ovp, SceVfsPath *old_path, SceV
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_RENAME + 1, 2, odvp, SCE_ERROR_ERRNO_EROFS);
 		return SCE_ERROR_ERRNO_EROFS;
 	}
-	op = odvp->core.ops->vop_rename;
+	op = ops->vop_rename;
 	if (op == NULL) {
 		ret = SCE_ERROR_ERRNO_EUNSUP;
 	} else {
@@ -1622,6 +1640,7 @@ int sceVopRename(SceVfsVnode *odvp, SceVfsVnode *ovp, SceVfsPath *old_path, SceV
 int sceVopDopen(SceVfsVnode *vp, SceVfsPath *path, SceVfsFile *file)
 {
 	SceVopDopenArgs args;
+	SceVopTable *ops;
 	int (*op)(SceVopDopenArgs *argp);
 	int ret;
 
@@ -1631,8 +1650,9 @@ int sceVopDopen(SceVfsVnode *vp, SceVfsPath *path, SceVfsFile *file)
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_DOPEN + 1, 2, vp, SCE_ERROR_ERRNO_EPERM);
 		return SCE_ERROR_ERRNO_EPERM;
 	}
+	ops = vp->core.ops;
 	ret = SCE_ERROR_ERRNO_EUNSUP;
-	op = vp->core.ops->vop_dopen;
+	op = ops->vop_dopen;
 	if (op != NULL) {
 		args.vp = vp;
 		args.path = path;
@@ -1642,7 +1662,7 @@ int sceVopDopen(SceVfsVnode *vp, SceVfsPath *path, SceVfsFile *file)
 		if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART) != 0)
 			vfs_debug_path_create(file, path->path);
 	}
-	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_DOPEN + 1, 2, vp, ret);
+	VFS_VOP_HOOK_CALL_PLAIN(VFS_VOP_HOOK_DOPEN + 1, 2, vp, ret);
 	return ret;
 }
 
@@ -1778,7 +1798,7 @@ int sceVopChstat(SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat, int bit)
 	if (ret == 0) {
 		if (invalidate) {
 			if (newSize == 0) {
-				err = vfs_buf_data_invalidate_all(bc);
+				err = vfs_buf_data_invalidate_all(bc, vp);
 				if (err < 0)
 					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 3417, "sceVopChstat",
 								  "Data buff invalidate failed ... %d 0x%x file end=0x%llx\n",
@@ -1844,8 +1864,9 @@ int SceIofilemgrForDriver_942AA61F(SceVfsVnode *fvp, SceVfsVnode *tvp)
 int SceIofilemgrForDriver_0D8A806E(SceVfsVnode *fvp, SceVfsVnode *tvp)
 {
 	SceVopUnlinkArgs args;
-	int (*op)(SceVopUnlinkArgs *argp) = fvp->core.ops->vop_unlink;
+	int (*op)(SceVopUnlinkArgs *argp);
 
+	op = fvp->core.ops->vop_unlink;
 	if (op == NULL)
 		return SCE_ERROR_ERRNO_EUNSUP;
 	args.fvp = fvp;
@@ -1988,7 +2009,7 @@ int sceVopFchstat(SceVfsVnode *vp, SceVfsFile *file, SceIoStat *stat, int bit)
 	if (ret == 0) {
 		if (invalidate) {
 			if (newSize == 0) {
-				err = vfs_buf_data_invalidate_all(bc);
+				err = vfs_buf_data_invalidate_all(bc, vp);
 				if (err < 0)
 					SCE_DBG_PRINTF_LEVEL(1, 0xf, 3841,
 							     "Data buff invalidate failed ... %d 0x%x file end=0x%llx\n",

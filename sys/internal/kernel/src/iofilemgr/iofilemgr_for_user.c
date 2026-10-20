@@ -11,7 +11,7 @@
 #include <intrmgr/syscall.h>
 #include "iofilemgr_internal.h"
 
-int g_ioFiosPathEnabled __attribute__((section(".data"))) = 0;
+void *g_ioFiosPathEnabled __attribute__((section(".data"))) = SceFios2KernelForDriver_0F456345;
 
 /* the "critical" bit of an SCE error: a bad fd from a process (name unknown) */
 #define IO_ERROR_CRITICAL	0x40000000
@@ -181,7 +181,7 @@ int sceIoRemoveForUser(const char *file)
 	int ret;
 
 	IO_CHECK_VM_DOMAIN(594);
-	if (g_ioFiosPathEnabled == 0)
+	if (g_ioFiosPathEnabled == NULL)
 		return sceIoRemove(file);
 
 	pid = sceKernelGetProcessId();
@@ -205,7 +205,7 @@ int sceIoRenameForUser(const char *oldname, const char *newname)
 	int ret;
 
 	IO_CHECK_VM_DOMAIN(625);
-	if (g_ioFiosPathEnabled == 0)
+	if (g_ioFiosPathEnabled == NULL)
 		return sceIoRename(oldname, newname);
 
 	pid = sceKernelGetProcessId();
@@ -241,7 +241,7 @@ int sceIoMkdirForUser(const char *dir, SceMode mode)
 	int ret;
 
 	IO_CHECK_VM_DOMAIN(671);
-	if (g_ioFiosPathEnabled == 0)
+	if (g_ioFiosPathEnabled == NULL)
 		return sceIoMkdir(dir, mode);
 
 	pid = sceKernelGetProcessId();
@@ -265,7 +265,7 @@ int sceIoRmdirForUser(const char *path)
 	int ret;
 
 	IO_CHECK_VM_DOMAIN(702);
-	if (g_ioFiosPathEnabled == 0)
+	if (g_ioFiosPathEnabled == NULL)
 		return sceIoRmdir(path);
 
 	pid = sceKernelGetProcessId();
@@ -335,7 +335,7 @@ int sceIoGetstatForUser(const char *file, SceIoStat *stat)
 	int ret;
 
 	IO_CHECK_VM_DOMAIN(800);
-	if (g_ioFiosPathEnabled == 0)
+	if (g_ioFiosPathEnabled == NULL)
 		return sceIoGetstat(file, stat);
 
 	pid = sceKernelGetProcessId();
@@ -359,7 +359,7 @@ int sceIoChstatForUser(const char *file, SceIoStat *stat, int bits)
 	int ret;
 
 	IO_CHECK_VM_DOMAIN(831);
-	if (g_ioFiosPathEnabled == 0)
+	if (g_ioFiosPathEnabled == NULL)
 		return sceIoChstat(file, stat, bits);
 
 	pid = sceKernelGetProcessId();
@@ -383,7 +383,7 @@ int sceIoSyncForUser(const char *device, unsigned int flag)
 	int ret;
 
 	IO_CHECK_VM_DOMAIN(862);
-	if (g_ioFiosPathEnabled == 0)
+	if (g_ioFiosPathEnabled == NULL)
 		return sceIoSync(device, flag);
 
 	pid = sceKernelGetProcessId();
@@ -563,7 +563,7 @@ int sceIoGetstatByFdForUser(SceUID fd, SceIoStat *stat)
 {
 	SceUInt32 tls = sceSyscallEnter();
 	SceUID guid;
-	int handle, ret;
+	int handle, ret, err;
 
 	IO_CHECK_VM_DOMAIN(1135);
 	guid = SceSysmemForDriver_45D22597(0, fd);
@@ -574,9 +574,10 @@ int sceIoGetstatByFdForUser(SceUID fd, SceIoStat *stat)
 		if (handle == 0) {
 			ret = sceIoGetstatByFd(guid, stat);
 		} else {
-			ret = SceFios2KernelForDriver_2649408B(handle, stat);
-			if (ret < 0)
-				ret = ioFiosError(ret);
+			err = SceFios2KernelForDriver_2649408B(handle, stat);
+			if (err < 0)
+				err = ioFiosError(err);
+			ret = err;
 		}
 	}
 	sceSyscallLeave(tls);
@@ -587,7 +588,7 @@ int sceIoChstatByFdForUser(SceUID fd, SceIoStat *stat, int bits)
 {
 	SceUInt32 tls = sceSyscallEnter();
 	SceUID guid;
-	int handle, ret;
+	int handle, ret, err;
 
 	IO_CHECK_VM_DOMAIN(1169);
 	guid = SceSysmemForDriver_45D22597(0, fd);
@@ -598,9 +599,10 @@ int sceIoChstatByFdForUser(SceUID fd, SceIoStat *stat, int bits)
 		if (handle == 0) {
 			ret = sceIoChstatByFd(guid, stat, bits);
 		} else {
-			ret = SceFios2KernelForDriver_35E7E75C(handle, stat, bits);
-			if (ret < 0)
-				ret = ioFiosError(ret);
+			err = SceFios2KernelForDriver_35E7E75C(handle, stat, bits);
+			if (err < 0)
+				err = ioFiosError(err);
+			ret = err;
 		}
 	}
 	sceSyscallLeave(tls);
@@ -611,7 +613,7 @@ int sceIoSyncByFdForUser(SceUID fd, unsigned int flag)
 {
 	SceUInt32 tls = sceSyscallEnter();
 	SceUID guid;
-	int handle, ret;
+	int handle, ret, err;
 
 	IO_CHECK_VM_DOMAIN(1203);
 	guid = SceSysmemForDriver_45D22597(0, fd);
@@ -622,9 +624,10 @@ int sceIoSyncByFdForUser(SceUID fd, unsigned int flag)
 		if (handle == 0) {
 			ret = sceIoSyncByFd(guid, flag);
 		} else {
-			ret = SceFios2KernelForDriver_990F46A5(handle, flag);
-			if (ret < 0)
-				ret = ioFiosError(ret);
+			err = SceFios2KernelForDriver_990F46A5(handle, flag);
+			if (err < 0)
+				err = ioFiosError(err);
+			ret = err;
 		}
 	}
 	sceSyscallLeave(tls);
@@ -638,7 +641,7 @@ SceUID sceIoOpenAsyncForUser(const char *file, int flags, SceMode mode, void *as
 	int resolveMode;
 
 	IO_CHECK_VM_DOMAIN(1241);
-	if (g_ioFiosPathEnabled != 0) {
+	if (g_ioFiosPathEnabled != NULL) {
 		resolveMode = flags & 0x602;
 		pid = sceKernelGetProcessId();
 		if (resolveMode != 0)
@@ -738,7 +741,7 @@ SceUID sceIoRemoveAsyncForUser(const char *file, void *asyncParam)
 	SceUID pid, fd;
 
 	IO_CHECK_VM_DOMAIN(1406);
-	if (g_ioFiosPathEnabled != 0) {
+	if (g_ioFiosPathEnabled != NULL) {
 		pid = sceKernelGetProcessId();
 		resolved = sceKernelAllocHeapMemory(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 		if (resolved == NULL)
@@ -869,7 +872,7 @@ SceUID sceIoMkdirAsyncForUser(const char *file, SceMode mode, void *asyncParam)
 	SceUID pid, fd;
 
 	IO_CHECK_VM_DOMAIN(1594);
-	if (g_ioFiosPathEnabled != 0) {
+	if (g_ioFiosPathEnabled != NULL) {
 		pid = sceKernelGetProcessId();
 		resolved = sceKernelAllocHeapMemory(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 		if (resolved == NULL)
@@ -899,7 +902,7 @@ SceUID sceIoRmdirAsyncForUser(const char *file, void *asyncParam)
 	SceUID pid, fd;
 
 	IO_CHECK_VM_DOMAIN(1629);
-	if (g_ioFiosPathEnabled != 0) {
+	if (g_ioFiosPathEnabled != NULL) {
 		pid = sceKernelGetProcessId();
 		resolved = sceKernelAllocHeapMemory(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 		if (resolved == NULL)
@@ -930,7 +933,7 @@ SceUID sceIoRenameAsyncForUser(const char *oldname, const char *newname, void *a
 	int ret;
 
 	IO_CHECK_VM_DOMAIN(1663);
-	if (g_ioFiosPathEnabled != 0) {
+	if (g_ioFiosPathEnabled != NULL) {
 		pid = sceKernelGetProcessId();
 		resolvedOld = sceKernelAllocHeapMemory(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 		if (resolvedOld == NULL)
@@ -975,7 +978,7 @@ SceUID sceIoChstatAsyncForUser(const char *file, SceIoStat *stat, int bits,
 	int ret, copied;
 
 	IO_CHECK_VM_DOMAIN(1712);
-	if (g_ioFiosPathEnabled != 0) {
+	if (g_ioFiosPathEnabled != NULL) {
 		pid = sceKernelGetProcessId();
 		resolved = sceKernelAllocHeapMemory(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 		if (resolved == NULL)
@@ -1016,7 +1019,7 @@ SceUID sceIoGetstatAsyncForUser(const char *file, SceIoStat *stat, void *asyncPa
 	SceUID pid, fd;
 
 	IO_CHECK_VM_DOMAIN(1761);
-	if (g_ioFiosPathEnabled != 0) {
+	if (g_ioFiosPathEnabled != NULL) {
 		pid = sceKernelGetProcessId();
 		resolved = sceKernelAllocHeapMemory(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 		if (resolved == NULL)
@@ -1137,25 +1140,28 @@ SceSSize sceIoPreadForUser(SceUID fd, void *data, SceSize size, SceOff offset)
 	guid = SceSysmemForDriver_45D22597(0, fd);
 	if (guid < 0)
 		return ioPuidError(guid);
-	kernelData = NULL;
-	if (size != 0) {
-		mapUid = SceSysmemForDriver_7D4F8B5F("SceIoUserMapPRead", IO_USER_MAP_WRITE,
-						    SceSblACMgrForKernel_sceSblACMgrIsGameProgram(0) == 1 ?
-						    IO_USER_MAP_FLAGS_GAME : IO_USER_MAP_FLAGS,
-						    data, size, &kernelPage, &kernelSize,
-						    &kernelOffset);
-		if (mapUid < 0) {
-			if (mapUid == SCE_KERNEL_ERROR_VA2PA_FAULT)
-				return SCE_ERROR_ERRNO_EFAULT;
-			return mapUid;
-		}
-		kernelData = (char *)kernelPage + kernelOffset;
+	if (size == 0) {
+		ret = sceIoPread(guid, NULL, size, offset);
+		return ret < 0 ? 0 : ret;
 	}
+	mapUid = SceSysmemForDriver_7D4F8B5F("SceIoUserMapPRead", IO_USER_MAP_WRITE,
+					    SceSblACMgrForKernel_sceSblACMgrIsGameProgram(0) == 1 ?
+					    IO_USER_MAP_FLAGS_GAME : IO_USER_MAP_FLAGS,
+					    data, size, &kernelPage, &kernelSize,
+					    &kernelOffset);
+	if (mapUid < 0) {
+		if (mapUid == SCE_KERNEL_ERROR_VA2PA_FAULT)
+			return SCE_ERROR_ERRNO_EFAULT;
+		return mapUid;
+	}
+	kernelData = (char *)kernelPage + kernelOffset;
 	ret = sceIoPread(guid, kernelData, size, offset);
 	done = ret < 0 ? 0 : ret;
-	if (kernelData != NULL)
+	if (kernelData != NULL) {
 		ioUserUnmap(mapUid, data, size);
-	return ret < 0 ? ret : done;
+		done = ret < 0 ? ret : done;
+	}
+	return done;
 }
 
 SceSSize sceIoPwriteForUser(SceUID fd, const void *data, SceSize size, SceOff offset)
@@ -1171,25 +1177,28 @@ SceSSize sceIoPwriteForUser(SceUID fd, const void *data, SceSize size, SceOff of
 	guid = SceSysmemForDriver_45D22597(0, fd);
 	if (guid < 0)
 		return ioPuidError(guid);
-	kernelData = NULL;
-	if (size != 0) {
-		mapUid = SceSysmemForDriver_7D4F8B5F("SceIoUserMapPwrite", IO_USER_MAP_READ,
-						    SceSblACMgrForKernel_sceSblACMgrIsGameProgram(0) == 1 ?
-						    IO_USER_MAP_FLAGS_GAME : IO_USER_MAP_FLAGS,
-						    data, size, &kernelPage, &kernelSize,
-						    &kernelOffset);
-		if (mapUid < 0) {
-			if (mapUid == SCE_KERNEL_ERROR_VA2PA_FAULT)
-				return SCE_ERROR_ERRNO_EFAULT;
-			return mapUid;
-		}
-		kernelData = (char *)kernelPage + kernelOffset;
+	if (size == 0) {
+		ret = sceIoPwrite(guid, NULL, size, offset);
+		return ret < 0 ? 0 : ret;
 	}
+	mapUid = SceSysmemForDriver_7D4F8B5F("SceIoUserMapPwrite", IO_USER_MAP_READ,
+					    SceSblACMgrForKernel_sceSblACMgrIsGameProgram(0) == 1 ?
+					    IO_USER_MAP_FLAGS_GAME : IO_USER_MAP_FLAGS,
+					    data, size, &kernelPage, &kernelSize,
+					    &kernelOffset);
+	if (mapUid < 0) {
+		if (mapUid == SCE_KERNEL_ERROR_VA2PA_FAULT)
+			return SCE_ERROR_ERRNO_EFAULT;
+		return mapUid;
+	}
+	kernelData = (char *)kernelPage + kernelOffset;
 	ret = sceIoPwrite(guid, kernelData, size, offset);
 	done = ret < 0 ? 0 : ret;
-	if (kernelData != NULL)
+	if (kernelData != NULL) {
 		ioUserUnmap(mapUid, data, size);
-	return ret < 0 ? ret : done;
+		done = ret < 0 ? ret : done;
+	}
+	return done;
 }
 
 SceUID sceIoPreadAsyncForUser(SceUID fd, void *data, SceSize size, SceOff offset, void *asyncParam)

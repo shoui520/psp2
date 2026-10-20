@@ -662,20 +662,23 @@ int vfs_flock_close(SceVfsFile *file, SceUID pid, SceVfsVnode *vp)
 
 	while (vp->core.flock != NULL) {
 		ret = lockFastMutex(&g_flockMutex);
-		if (ret >= 0) {
+		if (ret < 0) {
+			if (ret == -2)
+				goto unlock_file;
+		} else {
 			list = get_lock_list(vp->core.mnt);
 			if (list != NULL)
 				ret = release_lock_entry(&list->head, vnodeFid(vp), pid,
 							 file->hasFlockEnt);
 			sceKernelUnlockFastMutex(&g_flockMutex);
+			if (ret == -2) {
+unlock_file:
+				/* the process still holds the lock: unlock it, then try again */
+				vfs_flock(file, FLOCK_OP_UN, pid, vp);
+			} else if (ret == 0) {
+				return 0;
+			}
 		}
-		if (ret == -2) {
-			/* the process still holds the lock: unlock it, then try again */
-			vfs_flock(file, FLOCK_OP_UN, pid, vp);
-			continue;
-		}
-		if (ret == 0)
-			break;
 	}
 	return 0;
 }
@@ -683,7 +686,8 @@ int vfs_flock_close(SceVfsFile *file, SceUID pid, SceVfsVnode *vp)
 /* dst shares src's lock under its own file id */
 int vfs_flock_dup(SceVfsVnode *src, SceVfsVnode *dst)
 {
-	struct Flock *flock, *dup;
+	struct Flock *flock, *dup, *head;
+	SceInt16 count;
 	FlockList *list;
 	FlockLock *lock;
 	SceUInt64 fid;
@@ -707,11 +711,13 @@ int vfs_flock_dup(SceVfsVnode *src, SceVfsVnode *dst)
 			ret = SCE_ERROR_ERRNO_ENOMEM;
 		} else {
 			lock = flock->lock;
-			dup->fid = fid;
 			dup->refcount = 1;
+			dup->fid = fid;
+			count = lock->use_count;
 			dup->lock = lock;
-			dup->next = list->head;
-			lock->use_count++;
+			head = list->head;
+			lock->use_count = count + 1;
+			dup->next = head;
 			list->head = dup;
 			dst->core.flock = dup;
 		}

@@ -19,6 +19,14 @@ int sceIoRequestIsValid(IoRequest *req)
 }
 #endif
 
+/*
+ * Sony's sceIoRequestPrintIoRequest is not in the module (the linker dropped it, nothing
+ * called it); the debug record of its line 956 stayed behind.
+ */
+#if FW_DEBUG
+SCE_DBGINFO_DEFINE(static, dbginfoPrintIoRequest, 956, "sceIoRequestPrintIoRequest");
+#endif
+
 int sceIoRequestCreateIoRequest(IoRequest *req, int type, int isAsync, SceUID asyncEvent,
 				IoAsyncParam *asyncParam, int mntOpt, SceInt32 priority, IoChunk *chunks,
 				int chunkNum)

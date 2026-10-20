@@ -1,12 +1,16 @@
 /* SceIofilemgr's queues of requests (Sony's sched_io_request_queue.c). */
 #include "iofilemgr_internal.h"
+#include <pfsmgr/pfsfacade.h>
 
-/* name unknown: diagnostic flag for the optional PFS read hook. */
+/*
+ * Names unknown: each holds the address of the PFS import its calls make, tested against
+ * NULL before the call.
+ */
 #if FW_VERSION >= 0x04000000
-int g_ioPfsPreadEnabled __attribute__((section(".data"))) = 0;
-int g_ioPfsReadEnabled __attribute__((section(".data"))) = 0;
-int g_ioPfsWriteEnabled __attribute__((section(".data"))) = 0;
-int g_ioPfsPwriteEnabled __attribute__((section(".data"))) = 0;
+void *g_ioPfsPreadEnabled __attribute__((section(".data"))) = ScePfsFacadeForKernel_4238D2D2;
+void *g_ioPfsWriteEnabled __attribute__((section(".data"))) = ScePfsFacadeForKernel_CB622FFE;
+void *g_ioPfsPwriteEnabled __attribute__((section(".data"))) = ScePfsFacadeForKernel_58E643C5;
+void *g_ioPfsReadEnabled __attribute__((section(".data"))) = ScePfsFacadeForKernel_BD5B21F6;
 #endif
 
 int readIoChunkByPread(IoRequest *req, IoChunk *chunk)
@@ -27,8 +31,9 @@ int readIoChunkByPread(IoRequest *req, IoChunk *chunk)
 		param.offset = 0;
 	}
 	if (req->mntOpt & 0x10000) {
-		SCE_DBG_ASSERT(g_ioPfsPreadEnabled != 0, 673);
-		ret = SceThreadmgrForDriver_E54FD746(0x2000, NULL, &param);
+		SCE_DBG_ASSERT(g_ioPfsPreadEnabled != NULL, 673);
+		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))ScePfsFacadeForKernel_4238D2D2,
+						     &param);
 	} else {
 		ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsPread, &param);
 	}
@@ -142,7 +147,7 @@ IoRequest *sceIoRequestQueueGetIoRequest(IoRequestQueue *queue, int *waiting)
 					return NULL;
 			} else {
 				type = running->type - 1;
-				if (type <= 26 && (0x05857981U & (1U << type))) {
+				if (type <= 26 && ((1 << type) & 0x05857981)) {
 					ret = vfs_check_fd_vnode(running->args.path.path, fd);
 					if (ret < 0)
 						goto nextPriority;
@@ -378,8 +383,9 @@ static inline __attribute__((always_inline)) int readIoChunkByRead(IoRequest *re
 	param.data = chunk != NULL ? (void *)chunk->data : NULL;
 	param.size = chunk != NULL ? chunk->size : 0;
 	if (req->mntOpt & 0x10000) {
-		SCE_DBG_ASSERT_FUNC(g_ioPfsReadEnabled != 0, 619, "readIoChunkByRead");
-		return SceThreadmgrForDriver_E54FD746(0x2000, NULL, &param);
+		SCE_DBG_ASSERT_FUNC(g_ioPfsReadEnabled != NULL, 619, "readIoChunkByRead");
+		return SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))ScePfsFacadeForKernel_BD5B21F6,
+						      &param);
 	}
 	return SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsRead, &param);
 }
@@ -404,8 +410,10 @@ int sceIoRequestQueueExecuteIoChunk(IoRequest *req, IoChunk *chunk)
 		param.rw.data = chunk != NULL ? (void *)chunk->data : NULL;
 		param.rw.size = chunk != NULL ? chunk->size : 0;
 		if (req->mntOpt & 0x10000) {
-			SCE_DBG_ASSERT(g_ioPfsWriteEnabled != 0, 743);
-			return SceThreadmgrForDriver_E54FD746(0x2000, NULL, &param.rw);
+			SCE_DBG_ASSERT(g_ioPfsWriteEnabled != NULL, 743);
+			return SceThreadmgrForDriver_E54FD746(0x2000,
+							      (int (*)(void *))ScePfsFacadeForKernel_CB622FFE,
+							      &param.rw);
 		}
 		return SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsWrite, &param.rw);
 	case IO_REQUEST_PREAD:
@@ -422,8 +430,10 @@ int sceIoRequestQueueExecuteIoChunk(IoRequest *req, IoChunk *chunk)
 			param.prw.offset = 0;
 		}
 		if (req->mntOpt & 0x10000) {
-			SCE_DBG_ASSERT(g_ioPfsPwriteEnabled != 0, 789);
-			return SceThreadmgrForDriver_E54FD746(0x2000, NULL, &param.prw);
+			SCE_DBG_ASSERT(g_ioPfsPwriteEnabled != NULL, 789);
+			return SceThreadmgrForDriver_E54FD746(0x2000,
+							      (int (*)(void *))ScePfsFacadeForKernel_58E643C5,
+							      &param.prw);
 		}
 		return SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfsPwrite, &param.prw);
 	default:

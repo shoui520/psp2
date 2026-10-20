@@ -21,7 +21,8 @@ int sceIoChunkIsInPool(IoChunkPool *pool, IoChunk *chunk)
 int sceIoChunkCreateIoChunkPool(IoChunk *chunks, int chunkNum, IoChunkPool *pool)
 {
 	IoChunk *chunk;
-	int i, count;
+	SceUInt32 count;
+	int i;
 
 	if (pool != NULL && chunks != NULL && chunkNum != 0) {
 		pool->base = chunks;

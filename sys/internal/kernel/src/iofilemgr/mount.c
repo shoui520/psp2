@@ -439,12 +439,17 @@ SceVfsMountData *mnt_get_mount_data(int id)
 
 int mnt_get_mount_opt(int id)
 {
-	MountPoint *point = mnt_find_mount_point(id);
+	MountPoint *point;
 	VfsPathParam param;
-	int ret;
+	int i, ret;
 
-	if (point == NULL)
+	for (i = 0; i < 32; i++) {
+		if (g_mountPoints[i].id == id)
+			break;
+	}
+	if (i == 32)
 		return 0;
+	point = &g_mountPoints[i];
 	if ((point->param.mntFlags & 0xff) != SCE_VFS_MOUNT_TYPE_STACKFS)
 		return (short)point->param.opt;
 	param.path = mnt_get_mount_data(id)->assignName;
@@ -975,14 +980,16 @@ int mnt_start(void)
 	return ret;
 }
 
-int SceIofilemgrForDriver_D070BC48(int id, const char *path, unsigned int flags, void *data, uint64_t reserved)
+int SceIofilemgrForDriver_D070BC48(int id, const char *path, unsigned int flags, void *data,
+				   SceUInt32 reservedLow, int reservedHigh)
 {
 	MountRequest request;
 	int ret;
 
 	if (id == 0)
 		return SCE_ERROR_ERRNO_EINVAL;
-	if (reserved != 0)
+	ret = reservedLow != 0 ? 1 : reservedHigh != 0;
+	if (ret != 0)
 		return SCE_ERROR_ERRNO_EINVAL;
 	request.data = data;
 	request.pid = 0;
@@ -1005,14 +1012,15 @@ int SceIofilemgrForDriver_D070BC48(int id, const char *path, unsigned int flags,
 	return request.result;
 }
 
-int SceIofilemgrForDriver_20574100(int id, int flags, uint64_t reserved)
+int SceIofilemgrForDriver_20574100(int id, int flags, SceUInt32 reservedLow, int reservedHigh)
 {
 	MountRequest request;
 	int ret;
 
 	if (id == 0)
 		return SCE_ERROR_ERRNO_EINVAL;
-	if (reserved != 0)
+	ret = reservedLow != 0 ? 1 : reservedHigh != 0;
+	if (ret != 0)
 		return SCE_ERROR_ERRNO_EINVAL;
 	request.id = id;
 	request.umountFlags = flags;
@@ -1150,13 +1158,13 @@ int sceIoDeleteMountEvent(SceUID uid)
 	return sceGUIDClose(uid);
 }
 
-int SceIofilemgrForDriver_A39A9CA7(const char *dev, int flags, SceUInt64 reserved)
+int SceIofilemgrForDriver_A39A9CA7(const char *dev, int flags, SceUInt32 reservedLow, int reservedHigh)
 {
 	IofilemgrRmdevParam param = { dev, VFS_RMDEV_FLAG_BUSY_CHECK };
 
-	if (reserved != 0)
-		return SCE_ERROR_ERRNO_EINVAL;
-	return vfsRmdev(&param);
+	if (reservedHigh == 0 && reservedLow == 0)
+		return vfsRmdev(&param);
+	return SCE_ERROR_ERRNO_EINVAL;
 }
 
 int mount_event_process_finalize(SceUID pid)
@@ -1234,12 +1242,13 @@ int sceIoSetMountEvent(int id, SceUInt32 pattern, SceInt64 result, SceUInt32 res
 	return ret;
 }
 
-int vfsMountForPFS(SceVfsMountParam *param, int reservedLow, int reservedHigh)
+int vfsMountForPFS(SceVfsMountParam *param, SceUInt32 reservedLow, int reservedHigh)
 {
 	MountRequest request;
 	int ret;
 
-	if (reservedHigh != 0 || reservedLow != 0)
+	ret = reservedLow != 0 ? 1 : reservedHigh != 0;
+	if (ret != 0)
 		return SCE_ERROR_ERRNO_EINVAL;
 	request.command = 3;
 	request.id = 0;
@@ -1259,12 +1268,13 @@ int vfsMountForPFS(SceVfsMountParam *param, int reservedLow, int reservedHigh)
 	return request.result;
 }
 
-int vfsUmountForPFS(SceVfsUmountParam *param, int reservedLow, int reservedHigh)
+int vfsUmountForPFS(SceVfsUmountParam *param, SceUInt32 reservedLow, int reservedHigh)
 {
 	MountRequest request;
 	int ret;
 
-	if (reservedHigh != 0 || reservedLow != 0)
+	ret = reservedLow != 0 ? 1 : reservedHigh != 0;
+	if (ret != 0)
 		return SCE_ERROR_ERRNO_EINVAL;
 	request.command = 4;
 	request.id = 0;

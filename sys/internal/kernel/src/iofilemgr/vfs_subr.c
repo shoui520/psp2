@@ -616,7 +616,7 @@ SceBool vfsIsLockedFd(SceVfsFile *file)
 		return ret;
 	}
 	if ((info.currentOwnerId & 0x40000000) != 0)
-		info.currentOwnerId = SceSysmemForDriver_45D22597(SCE_KERNEL_PROCESS_ID, info.currentOwnerId);
+		info.currentOwnerId = SceSysmemForDriver_45D22597(0, info.currentOwnerId);
 	owner = info.currentOwnerId;
 	if (sceKernelGetThreadId() != owner) {
 		SCE_DBG_PRINTF(0xf, 1005, "sceKernelGetMutexInfo(0x%08x): 0x%08x\n",
@@ -665,11 +665,13 @@ int vfsUnlockFdAll(SceVfsMount *mnt)
 
 int vfsSignalFd(SceVfsMount *mnt)
 {
+	struct FdLock *lock = mnt->fdLock;
+	SceUID cond = lock->cond;
 	int ret;
 
-	if (mnt->fdLock->waitNum < 1)
+	if (lock->waitNum < 1)
 		return 0;
-	ret = sceKernelSignalCondAll(mnt->fdLock->cond);
+	ret = sceKernelSignalCondAll(cond);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 1074, "::0x10f::020::0x%x\n", ret);
 		SCE_DBG_PRINTF(0xf, 1075, "fdmnt signal failed ret=0x%x\n", ret);
@@ -950,8 +952,7 @@ int vfs_finalize_mount(SceVfsMount *mnt)
 	busy = 1;
 	retry = 11;
 	for (;;) {
-		num = mnt->vnodeNum;
-		if (num < 1 || !busy)
+		if ((num = mnt->vnodeNum) < 1 || !busy)
 			break;
 		if (--retry == 0) {
 			SCE_DBG_PRINTF(0xf, 284, "try next reclaim ... \n");
@@ -1118,8 +1119,8 @@ void vfs_initialize_file(SceVfsVnode *vp, SceVfsFile *file)
 	file->fd = 0;
 	file->pid = SceThreadmgrForDriver_FA54D49A();
 	file->hasFlockEnt = 0;
-	file->fdLock = mnt->fdLock;
 	attr = (mnt->mntFlags & SCE_VFS_MOUNT_FLAG_INTERNAL) != 0;
+	file->fdLock = mnt->fdLock;
 	file->idata = attr;
 	if ((mnt->mntFlags & SCE_VFS_MOUNT_FLAG_EXTERNAL) != 0)
 		file->idata = attr | VFS_FILE_ATTR_EXTERNAL;

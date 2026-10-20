@@ -809,7 +809,7 @@ int sdstor_vfs_initialize(void)
 		}
 		return result;
 	}
-	result = SceIofilemgrForDriver_D070BC48(1, NULL, 0, NULL, 0);
+	result = SceIofilemgrForDriver_D070BC48(1, NULL, 0, NULL, 0, 0);
 	if (result) {
 		error = sceKernelDeleteHeap(sdstorVfsHeapId);
 		SCE_DBG_PRINTF_LEVEL(1, 15, 136, "0x%08x\n", result);

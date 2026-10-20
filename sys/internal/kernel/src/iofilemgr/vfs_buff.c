@@ -44,10 +44,11 @@ int vfsBuffDataRead(struct BuffCache *bc, SceVfsVnode *vp, SceOff pos, SceSize s
 	int set = (pos / lineSize) % bc->setNum;
 	struct BuffLine **head = &bc->lineList[set];
 	int wayNum = bc->wayNum;
-	SceSize inLine = pos % lineSize;
+	SceSize inLine;
 	struct BuffLine *line, *prev, *next;
 	int i;
 
+	inLine = pos % lineSize;
 	line = *head;
 	if (inLine + size > lineSize)
 		return SCE_ERROR_ERRNO_EINVAL;
@@ -669,7 +670,7 @@ int vfsBuffAllocate(SceSize dataCacheSize, int wayNum, SceSize lineSize,
 	}
 
 	lineNum = dataCacheSize / lineSize;
-	setNum = (SceUInt8)((SceUInt8)lineNum / (SceUInt32)wayNum);
+	setNum = (SceUInt8)(lineNum / (SceUInt32)wayNum);
 	bc = vfs_buf_allocate_memory(pid, sizeof(*bc) + setNum * sizeof(bc->lineList[0]), memType);
 	if (bc == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
@@ -692,7 +693,7 @@ int vfsBuffAllocate(SceSize dataCacheSize, int wayNum, SceSize lineSize,
 		vfs_buf_free_memory(pid, lines, memType);
 		return SCE_ERROR_ERRNO_ENOMEM;
 	}
-	data = (char *)(((SceUIntPtr)dataMemory + 0x1ff) & ~0x1ff);
+	data = (char *)((((SceUIntPtr)dataMemory + 0x1ff) >> 9) << 9);
 	memset(data, 0, dataCacheSize);
 	memset(lines, 0, lineNum * sizeof(*lines));
 
@@ -728,13 +729,13 @@ int vfsBuffAllocate(SceSize dataCacheSize, int wayNum, SceSize lineSize,
 			sceKernelFreeMemBlock(bc->hostMemBlock);
 			goto free_bc;
 		}
-		ioBuff = (char *)(((SceUIntPtr)bc->ioBuffMemory + 0x1ff) & ~0x1ff);
+		ioBuff = (char *)((((SceUIntPtr)bc->ioBuffMemory + 0x1ff) >> 9) << 9);
 		memset(ioBuff, 0, ioCacheSize);
 	} else {
 		bc->ioBuffMemory = vfs_buf_allocate_memory(pid, ioCacheSize + 0x200, memType);
 		if (bc->ioBuffMemory == NULL)
 			goto free_data;
-		ioBuff = (char *)(((SceUIntPtr)bc->ioBuffMemory + 0x1ff) & ~0x1ff);
+		ioBuff = (char *)((((SceUIntPtr)bc->ioBuffMemory + 0x1ff) >> 9) << 9);
 		memset(ioBuff, 0, ioCacheSize);
 	}
 	bc->ioBuffCachedSize = 0;
@@ -753,9 +754,9 @@ free_bc:
 }
 
 /* name unknown: drop every line */
-int vfs_buf_data_invalidate_all(struct BuffCache *bc)
+int vfs_buf_data_invalidate_all(struct BuffCache *bc, SceVfsVnode *vp)
 {
-	return vfs_buf_all_op_subr(bc, NULL, NULL, VFS_BUFF_OP_INVALIDATE);
+	return vfs_buf_all_op_subr(bc, vp, NULL, VFS_BUFF_OP_INVALIDATE);
 }
 
 /* name unknown: copy out of the I/O buffer's cached part */

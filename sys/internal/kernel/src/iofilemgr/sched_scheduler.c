@@ -27,9 +27,9 @@ SceOff getFilePosition(IoRequest *req)
 	return sceKernelExtendKernelStackWide(0x2000, (SceInt64 (*)(void *))vfsLseek, &param);
 }
 
-/* Names unknown: the optional PFS stat hooks; initialized to zero. */
-int g_ioPfsChstatEnabled __attribute__((section(".data"))) = 0;
-int g_ioPfsChstatByFdEnabled __attribute__((section(".data"))) = 0;
+/* Names unknown: the address of the PFS import the stat calls make, tested against NULL. */
+void *g_ioPfsChstatByFdEnabled __attribute__((section(".data"))) = ScePfsFacadeForKernel_04352D52;
+void *g_ioPfsChstatEnabled __attribute__((section(".data"))) = ScePfsFacadeForKernel_7F9F4E49;
 
 void sceIoSchedulerExecuteIoCommand(IoRequest *req)
 {
@@ -292,7 +292,7 @@ dcloseComplete:
 
 		getIofilemgrTls()->request = req;
 		if (req->mntOpt & 0x10000) {
-			SCE_DBG_ASSERT(g_ioPfsChstatEnabled != 0, 1754);
+			SCE_DBG_ASSERT(g_ioPfsChstatEnabled != NULL, 1754);
 			ret = ScePfsFacadeForKernel_7F9F4E49(&param);
 		} else {
 			ret = vfsChstat(&param);
@@ -318,7 +318,7 @@ dcloseComplete:
 
 		getIofilemgrTls()->request = req;
 		if (req->mntOpt & 0x10000) {
-			SCE_DBG_ASSERT(g_ioPfsChstatByFdEnabled != 0, 1802);
+			SCE_DBG_ASSERT(g_ioPfsChstatByFdEnabled != NULL, 1802);
 			ret = ScePfsFacadeForKernel_04352D52(&param);
 		} else {
 			ret = vfsChstatByFd(&param);
@@ -1348,6 +1348,15 @@ int sceIoSchedulerExecuteSyncIoRequest(IoScheduler *sched, IoRequest *req)
 	SCE_DBG_ASSERT(ret == 0, 262);
 	return result;
 }
+
+/*
+ * Sony's sceIoSchedulerExecuteIoRequestWorker is not in the module (the linker dropped
+ * it, nothing called it); the debug record of its line 406 stayed behind.
+ */
+#if FW_DEBUG
+SCE_DBGINFO_DEFINE(static, dbginfoExecuteIoRequestWorker, 406,
+		   "sceIoSchedulerExecuteIoRequestWorker");
+#endif
 
 int sceIoSchedulerExecuteIoRequestWorkerForDispatcher(IoScheduler *sched)
 {

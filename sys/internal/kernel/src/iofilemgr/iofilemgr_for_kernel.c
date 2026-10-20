@@ -7,9 +7,9 @@
 #include <intrmgr/syscall.h>
 #include "iofilemgr_internal.h"
 
-int g_ioFiosOpenEnabled __attribute__((section(".data"))) = 0;
-int g_ioFiosDopenEnabled __attribute__((section(".data"))) = 0;
-int g_ioFiosDcloseEnabled __attribute__((section(".data"))) = 0;
+void *g_ioFiosDcloseEnabled __attribute__((section(".data"))) = SceFios2KernelForDriver_DD7627EC;
+void *g_ioFiosDopenEnabled __attribute__((section(".data"))) = SceFios2KernelForDriver_3B329E86;
+void *g_ioFiosOpenEnabled __attribute__((section(".data"))) = SceFios2KernelForDriver_0F456345;
 
 /* the flags that may create or change the file: the overlay resolves them for writing */
 #define IO_OPEN_WRITE_FLAGS	(SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC)
@@ -21,7 +21,7 @@ SceUID SceIofilemgrForDriver_C3D34965(SceUID pid, const char *path, int flags, S
 	SceUID fd;
 	int ret;
 
-	if (g_ioFiosOpenEnabled == 0)
+	if (g_ioFiosOpenEnabled == NULL)
 		return sceIoOpen(path, flags, mode);
 
 	forWrite = (flags & IO_OPEN_WRITE_FLAGS) != 0;
@@ -82,7 +82,7 @@ SceUID sceIoDopenInternal(const char *dirname)
 	SceUID fd;
 	int ret, res;
 
-	if (g_ioFiosDopenEnabled == 0)
+	if (g_ioFiosDopenEnabled == NULL)
 		goto plain;
 
 	priority = getThreadIoPriority();
@@ -164,7 +164,7 @@ int sceIoDreadInternal(SceUID fd, SceIoDirent *dir)
 		return ret;
 	old = swapThreadIoPriority(param.priority);
 	if (old == SCE_ERROR_ERRNO_EINVAL)
-		return ret;
+		return old;
 
 	ret = SceFios2KernelForDriver_28E28A58(handle, dir);
 	if (ret == 0)
@@ -184,7 +184,7 @@ int sceIoDcloseInternal(SceUID fd)
 	int handle;
 	int ret;
 
-	if (g_ioFiosDcloseEnabled != 0) {
+	if (g_ioFiosDcloseEnabled != NULL) {
 		handle = SceIofilemgrForDriver_338DCD68(fd, &ret);
 		if (handle != 0) {
 			ret = SceFios2KernelForDriver_DD7627EC(handle);
