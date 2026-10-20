@@ -70,13 +70,14 @@ out:
 int ModuleCBAllocLinkInfo(LoadelfContext *ctx)
 {
 	SceModuleCB *cb = ctx->cb;
+	SceUID pid = cb->pid;
 	SceSize size;
 
 	size = ctx->libentSize + ctx->linkInfoUnk + ctx->libEntCBSize + ctx->libstubSize +
 	       ctx->libStubCBSize;
 	if (size == 0)
 		return 0;
-	cb->linkInfo = ModulemgrAlloc(cb->pid, size);
+	cb->linkInfo = ModulemgrAlloc(pid, size);
 	if (cb->linkInfo == NULL)
 		return SCE_KERNEL_ERROR_MODULEMGR_NOMEM;
 	memset(cb->linkInfo, 0, size);
@@ -105,7 +106,7 @@ int LibEntCBInit(LoadelfContext *ctx)
 		cb->libent = dst;
 		for (src = (SceModuleExports *)((SceUInt32)cb->libentTop + bias); src < end;
 		     src = (SceModuleExports *)((SceUInt8 *)src + dst->size), dst++) {
-			*dst = *src;
+			__builtin_memcpy(dst, src, sizeof(*dst));
 			if (dst->libname == NULL)
 				continue;
 			name = dst->libname + bias;
@@ -164,8 +165,11 @@ void LibEntFreeNames(SceModuleCB *cb)
 /* name unknown */
 void ModuleCBFreeLinkInfo(SceModuleCB *cb)
 {
-	if (cb->linkInfo != NULL)
-		ModulemgrFree(cb->pid, cb->linkInfo);
+	void *linkInfo = cb->linkInfo;
+	SceUID pid = cb->pid;
+
+	if (linkInfo != NULL)
+		ModulemgrFree(pid, linkInfo);
 }
 
 /* name unknown: index of the export entry at addr */

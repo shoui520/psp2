@@ -16,15 +16,28 @@ SceUInt32 g_relocFormCount[12];
 SceUInt32 g_relocForms;
 LoadelfTiming *g_loadTiming;
 
-static inline int get_addend(RelocSegment *seg, SceUInt32 nseg, SceUInt32 patchSeg, SceUInt32 offset,
+/* the segments the relocations refer to, with their count in front */
+typedef struct RelocContext {
+	SceUInt32 nseg;
+	RelocSegment seg[4];
+} RelocContext;
+
+/* the debug build keeps it out of line */
+#if FW_DEBUG
+static __attribute__((noinline)) int get_addend(SceUInt32 patchSeg, SceUInt32 offset, RelocContext *rc,
+						SceUInt32 *addend, SceUInt32 *symSeg)
+#else
+static inline int get_addend(SceUInt32 patchSeg, SceUInt32 offset, RelocContext *rc,
 			     SceUInt32 *addend, SceUInt32 *symSeg)
+#endif
 {
-	SceUInt32 data = *(SceUInt32 *)(seg[patchSeg].kaddr + offset);
+	SceUInt32 data = *(SceUInt32 *)(rc->seg[patchSeg].kaddr + offset);
 	SceUInt32 i;
 
-	for (i = 0; i < nseg; i++) {
-		if (seg[i].base != 0 && seg[i].vaddr <= data && data < seg[i].memsz + seg[i].vaddr) {
-			*addend = data - seg[i].vaddr;
+	for (i = 0; i < rc->nseg; i++) {
+		if (rc->seg[i].base != 0 && rc->seg[i].vaddr <= data &&
+		    data < rc->seg[i].memsz + rc->seg[i].vaddr) {
+			*addend = data - rc->seg[i].vaddr;
 			*symSeg = i;
 			return 1;
 		}
@@ -177,8 +190,7 @@ int apply_one_relocation(SceUInt32 *where, SceUInt32 type, SceUInt32 offset,
 int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 {
 	SceModuleCB *cb = ctx->cb;
-	RelocSegment seg[4];
-	SceUInt32 nseg;
+	RelocContext rc;
 	SceUInt32 *end;
 	SceUInt32 h, form, step, patchSeg, symSeg, addend, type1, type2;
 	SceUInt32 offset, offset2, offset3, d1, d2, d3, d4, bits, width;
@@ -186,21 +198,21 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 	SceUInt8 *kaddr;
 	int i;
 
-	nseg = 0;
+	rc.nseg = 0;
 	for (i = 0; i < 4; i++) {
 		if (i < cb->nSegments) {
-			nseg = i + 1;
-			seg[i].vaddr = ctx->seg[i].vaddr;
-			seg[i].base = (SceUInt32)cb->segment[i].vaddr;
-			seg[i].filesz = cb->segment[i].filesz;
-			seg[i].memsz = cb->segment[i].memsz;
-			seg[i].kaddr = ctx->seg[i].kaddr;
+			rc.nseg = i + 1;
+			rc.seg[i].vaddr = ctx->seg[i].vaddr;
+			rc.seg[i].base = (SceUInt32)cb->segment[i].vaddr;
+			rc.seg[i].filesz = cb->segment[i].filesz;
+			rc.seg[i].memsz = cb->segment[i].memsz;
+			rc.seg[i].kaddr = ctx->seg[i].kaddr;
 		} else {
-			seg[i].vaddr = 0;
-			seg[i].base = 0;
-			seg[i].filesz = 0;
-			seg[i].memsz = 0;
-			seg[i].kaddr = NULL;
+			rc.seg[i].vaddr = 0;
+			rc.seg[i].base = 0;
+			rc.seg[i].filesz = 0;
+			rc.seg[i].memsz = 0;
+			rc.seg[i].kaddr = NULL;
 		}
 	}
 
@@ -217,10 +229,10 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 	type1 = 0;
 	type2 = 0;
 	patchSeg = 0;
-	S = seg[0].base;
-	P = seg[0].base;
-	limit = seg[0].filesz;
-	kaddr = seg[0].kaddr;
+	S = rc.seg[0].base;
+	P = rc.seg[0].base;
+	limit = rc.seg[0].filesz;
+	kaddr = rc.seg[0].kaddr;
 
 	while (rel < end) {
 		form = h & 0xf;
@@ -238,21 +250,21 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 			symSeg = (h << 24) >> 28;
 			type1 = (h << 16) >> 24;
 			d1 = (h << 12) >> 28;
-			if (d1 >= nseg) {
+			if (d1 >= rc.nseg) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 411, "wrong patch segment (%d)\n", d1);
 				return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 			}
-			if (symSeg >= nseg)
+			if (symSeg >= rc.nseg)
 				goto wrong_sym;
 			if (d1 != patchSeg) {
-				limit = seg[d1].filesz;
-				kaddr = seg[d1].kaddr;
-				P = seg[d1].base;
+				limit = rc.seg[d1].filesz;
+				kaddr = rc.seg[d1].kaddr;
+				P = rc.seg[d1].base;
 				patchSeg = d1;
 				if (limit < 4)
 					goto wrong_offset;
 			}
-			S = seg[symSeg].base;
+			S = rc.seg[symSeg].base;
 			if (offset > limit - 4)
 				goto wrong_offset;
 			apply_one_relocation((SceUInt32 *)(kaddr + offset), type1, offset, S, addend, P);
@@ -284,9 +296,9 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 			symSeg = (h << 24) >> 28;
 			addend = rel[1];
 			type1 = (h << 16) >> 24;
-			if (symSeg >= nseg)
+			if (symSeg >= rc.nseg)
 				goto wrong_sym;
-			S = seg[symSeg].base;
+			S = rc.seg[symSeg].base;
 			if (h >> 16 == 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 274, "form2 - dist_1 == 0\n");
 				return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
@@ -303,7 +315,7 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 			symSeg = (h << 24) >> 28;
 			addend = rel[1];
 			d1 = (h << 5) >> 14;
-			if (symSeg >= nseg)
+			if (symSeg >= rc.nseg)
 				goto wrong_sym;
 			if ((h & 0x100) == 0) {
 				type2 = 0x2c;
@@ -312,7 +324,7 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 				type2 = 0x30;
 				type1 = 0x2f;
 			}
-			S = seg[symSeg].base;
+			S = rc.seg[symSeg].base;
 			if (h >> 27 == 0 || d1 == 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 299, "form3 - dist_1 == 0 or dist_2 == 0\n");
 				return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
@@ -393,9 +405,9 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 				return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 			}
 			offset += h >> 4;
-			if (!get_addend(seg, nseg, patchSeg, offset, &addend, &symSeg))
+			if (!get_addend(patchSeg, offset, &rc, &addend, &symSeg))
 				return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
-			S = seg[symSeg].base;
+			S = rc.seg[symSeg].base;
 			if (offset > limit - 4)
 				goto wrong_offset;
 			type2 = 0;
@@ -416,9 +428,9 @@ int RelocatorRelSegment(LoadelfContext *ctx, SceUInt32 *rel, SceSize size)
 					return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 				}
 				offset += d1 * 4;
-				if (!get_addend(seg, nseg, patchSeg, offset, &addend, &symSeg))
+				if (!get_addend(patchSeg, offset, &rc, &addend, &symSeg))
 					return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
-				S = seg[symSeg].base;
+				S = rc.seg[symSeg].base;
 				if (offset > limit - 4)
 					goto wrong_offset;
 				bits >>= width;

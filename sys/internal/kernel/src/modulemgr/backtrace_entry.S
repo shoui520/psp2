@@ -12,7 +12,7 @@
 	.arm
 	.text
 
-	.macro	BACKTRACE_ENTRY name, core
+	.macro	BACKTRACE_ENTRY name, core, pool=0
 	.global	\name
 	.type	\name, %function
 \name:
@@ -32,10 +32,11 @@
 	sub	sp, fp, #8
 	pop	{r4, fp, lr}
 	bx	lr
+	.if	\pool
+	.ltorg				@ both entries' literals follow the last entry, inside its size
+	.endif
 	.size	\name, . - \name
 	.endm
 
 	BACKTRACE_ENTRY SceBacktraceForDriver_166B9C8C, _sceKernelBacktraceCore
-	BACKTRACE_ENTRY SceBacktraceForDriver_888E99B8, _sceKernelBacktraceForKernelCore
-
-	.ltorg
+	BACKTRACE_ENTRY SceBacktraceForDriver_888E99B8, _sceKernelBacktraceForKernelCore, 1

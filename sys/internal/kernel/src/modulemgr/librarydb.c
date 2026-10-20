@@ -14,6 +14,13 @@ SceKernelSpinlock g_sharedLock;
 SharedModuleEntry *g_sharedModules;
 Addr2ModTable g_kernelAddr2Mod;
 
+/* the assertion's body: LibraryDBLock has it inline, the other callers call the function */
+static inline __attribute__((always_inline)) LibraryDB *LibraryDBGetDBBody(SceUID pid)
+{
+	SCE_DBG_ASSERT_LEVEL_FUNC(0, pid != 0, 67, "LibraryDBGetDB");
+	return sceKernelGetProcessLibdb(pid);
+}
+
 /* the debug build keeps it out of line (its assertion reports the caller) */
 #if FW_DEBUG
 static __attribute__((noinline)) LibraryDB *LibraryDBGetDB(SceUID pid)
@@ -21,8 +28,7 @@ static __attribute__((noinline)) LibraryDB *LibraryDBGetDB(SceUID pid)
 static LibraryDB *LibraryDBGetDB(SceUID pid)
 #endif
 {
-	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 67);
-	return sceKernelGetProcessLibdb(pid);
+	return LibraryDBGetDBBody(pid);
 }
 
 /* name unknown: the database of a process, locked */
@@ -32,7 +38,7 @@ LibraryDB *LibraryDBLock(SceUID pid, int *intr)
 
 	if (ModulemgrReferProcess(pid) < 0)
 		return NULL;
-	db = LibraryDBGetDB(pid);
+	db = LibraryDBGetDBBody(pid);
 	if (db != NULL)
 		*intr = sceKernelSpinlockLowLockCpuSuspendIntr(&db->lock);
 	ModulemgrReleaseProcess(pid);
@@ -110,7 +116,7 @@ void Addr2ModRegister(Addr2ModTable *tbl, SceModuleCB *cb)
 }
 
 /* name unknown: user libraries get process-local UIDs from SDK 0x01800000 on */
-int LibraryDBUsesPUID(SceUID pid)
+static inline __attribute__((always_inline)) int LibraryDBUsesPUIDBody(SceUID pid)
 {
 	SceUInt32 sdkVersion = 0;
 
@@ -121,7 +127,19 @@ int LibraryDBUsesPUID(SceUID pid)
 	return 1;
 }
 
-static SceUID GetLibGUIDByLibUID(SceUID pid, SceUID uid)
+int LibraryDBUsesPUID(SceUID pid)
+{
+	return LibraryDBUsesPUIDBody(pid);
+}
+
+/* Sony calls these two in the debug build (assertions) and has them inlined in the release build */
+#if FW_DEBUG
+#define LIBDB_DEBUG_NOINLINE	__attribute__((noinline))
+#else
+#define LIBDB_DEBUG_NOINLINE
+#endif
+
+static LIBDB_DEBUG_NOINLINE SceUID GetLibGUIDByLibUID(SceUID pid, SceUID uid)
 {
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 149);
 	if (pid != SCE_KERNEL_PROCESS_ID && LibraryDBUsesPUID(pid) == 1)
@@ -136,16 +154,15 @@ SceLibraryObject *LibraryDBReferLibrary(SceUID pid, SceUID uid)
 	SceUID guid;
 
 	guid = GetLibGUIDByLibUID(pid, uid);
-	if (guid < 0 || sceGUIDReferObjectWithClass(guid, g_libraryClass, (SceObjectBase **)&obj) < 0)
-		return NULL;
-	if (ModulemgrReferModule(obj->modid) == NULL) {
+	if (guid >= 0 && sceGUIDReferObjectWithClass(guid, g_libraryClass, (SceObjectBase **)&obj) >= 0) {
+		if (ModulemgrReferModule(obj->modid) != NULL)
+			return obj;
 		sceGUIDReleaseObject(guid);
-		return NULL;
 	}
-	return obj;
+	return NULL;
 }
 
-static SceUID GetLibUIDByLibEntCB(SceUID pid, const SceUID *guid, const SceUID *puid)
+static LIBDB_DEBUG_NOINLINE SceUID GetLibUIDByLibEntCB(SceUID pid, const SceUID *guid, const SceUID *puid)
 {
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 190);
 	if (pid != SCE_KERNEL_PROCESS_ID && LibraryDBUsesPUID(pid) == 1)
@@ -316,26 +333,24 @@ int SharedModuleRelease(SharedModuleEntry *ent)
 	return 0;
 }
 
-static inline void SharedLibraryDBReleaseModule(SceModuleCB *cb)
+static inline __attribute__((always_inline)) void SharedLibraryDBReleaseModule(SceModuleCB *cb)
 {
 	SharedModuleEntry *ent, *prev;
 	int intr;
 
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&g_sharedLock);
-	ent = g_sharedModules;
+	prev = NULL;
+	for (ent = g_sharedModules; ent != NULL; ent = ent->next) {
+		if (ent->cb == cb)
+			break;
+		prev = ent;
+	}
 	if (ent == NULL)
 		goto unlock;
-	if (ent->cb == cb) {
+	if (prev == NULL)
 		g_sharedModules = ent->next;
-	} else {
-		do {
-			prev = ent;
-			ent = prev->next;
-			if (ent == NULL)
-				goto unlock;
-		} while (ent->cb != cb);
+	else
 		prev->next = ent->next;
-	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_sharedLock, intr);
 	if (ent->refCount != 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 565, "shared module with client is killed!?\n");
@@ -352,12 +367,12 @@ unlock:
 
 void LibraryDBReleaseModule(SceModuleCB *cb)
 {
+	int intr;
 	Addr2ModExidx *exidx;
 	SceModuleCB **ent, *cur, *prev;
 	Addr2ModTable *tbl;
 	LibraryDB *db;
 	SceUInt32 vaddr, pages;
-	int intr;
 
 	db = LibraryDBLock(cb->pid, &intr);
 	if (db == NULL) {
@@ -375,20 +390,18 @@ void LibraryDBReleaseModule(SceModuleCB *cb)
 		}
 	}
 
-	cur = db->modules;
+	prev = NULL;
+	for (cur = db->modules; cur != NULL; cur = cur->next) {
+		if (cur == cb)
+			break;
+		prev = cur;
+	}
 	if (cur == NULL)
 		goto notfound;
-	if (cur == cb) {
+	if (prev == NULL)
 		db->modules = cb->next;
-	} else {
-		do {
-			prev = cur;
-			cur = prev->next;
-			if (cur == NULL)
-				goto notfound;
-		} while (cur != cb);
+	else
 		prev->next = cb->next;
-	}
 	tbl = db->addr2mod;
 	db->moduleCount--;
 	cb->next = NULL;
@@ -463,32 +476,33 @@ unlock:
 static inline int canRegisterLib(LibraryDB *db, LibEntCB *ent)
 {
 	SceModuleExports *exports = ent->exports, *cur;
+	SceNID libnid = exports->libnid;
 	LibEntCB *lib;
 
 	for (lib = db->libList; lib != NULL; lib = lib->next) {
-		if (lib->exports->libnid != exports->libnid ||
+		if (lib->exports->libnid != libnid ||
 		    strncmp(lib->exports->libname, exports->libname, 0x100) != 0)
 			continue;
 		ent->older = lib;
 		cur = lib->exports;
-		if ((exports->attr & LIBRARY_ATTR_NOLINK) != 0) {
-			if ((cur->attr & LIBRARY_ATTR_NOLINK) != 0)
+		if ((exports->attr & LIBRARY_ATTR_NOLINK) == 0) {
+			if ((cur->attr & LIBRARY_ATTR_NOLINK) != 0) {
+				SCE_DBG_PRINTF_LEVEL(1, 0, 787,
+						     "Can't register '%s' nolink library version 0x%04X. (current=0x%04X)\n",
+						     exports->libname, exports->version, cur->version);
+				return 0;
+			}
+			if (cur->version < exports->version)
 				return 1;
-			SCE_DBG_PRINTF_LEVEL(1, 0, 780,
-					     "Can't register '%s' public library version 0x%04X. (current=0x%04X)\n",
+			SCE_DBG_PRINTF_LEVEL(1, 0, 793,
+					     "Can't register '%s' library version 0x%04X. (current=0x%04X)\n",
 					     exports->libname, exports->version, cur->version);
 			return 0;
 		}
-		if ((cur->attr & LIBRARY_ATTR_NOLINK) != 0) {
-			SCE_DBG_PRINTF_LEVEL(1, 0, 787,
-					     "Can't register '%s' nolink library version 0x%04X. (current=0x%04X)\n",
-					     exports->libname, exports->version, cur->version);
-			return 0;
-		}
-		if (cur->version < exports->version)
+		if ((cur->attr & LIBRARY_ATTR_NOLINK) != 0)
 			return 1;
-		SCE_DBG_PRINTF_LEVEL(1, 0, 793,
-				     "Can't register '%s' library version 0x%04X. (current=0x%04X)\n",
+		SCE_DBG_PRINTF_LEVEL(1, 0, 780,
+				     "Can't register '%s' public library version 0x%04X. (current=0x%04X)\n",
 				     exports->libname, exports->version, cur->version);
 		return 0;
 	}
@@ -518,7 +532,7 @@ int LibraryDBRegisterLib(SceUID pid, LibEntCB *ent)
 
 	usePuid = 0;
 	optp = NULL;
-	if (pid != SCE_KERNEL_PROCESS_ID && LibraryDBUsesPUID(pid)) {
+	if (pid != SCE_KERNEL_PROCESS_ID && LibraryDBUsesPUIDBody(pid)) {
 		opt.flags = UID_CREATE_OPT_PROCESS_HEAP;
 		opt.object = NULL;
 		opt.heapGuid = 0;
@@ -571,17 +585,17 @@ int LibraryDBReleaseLib(LibraryDB *db, LibEntCB *ent)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 903, "can't find a library\n");
 		return SCE_KERNEL_ERROR_LIBRARYDB_NO_LIB;
 	}
-	if (head == ent) {
-		head = ent->older;
-		ent->older = NULL;
-	} else {
-		for (prev = head; (cur = prev->older) != NULL; prev = cur) {
-			if (cur == ent) {
+	prev = NULL;
+	for (cur = head; cur != NULL; cur = cur->older) {
+		if (cur == ent) {
+			if (prev == NULL)
+				head = ent->older;
+			else
 				prev->older = ent->older;
-				ent->older = NULL;
-				break;
-			}
+			ent->older = NULL;
+			break;
 		}
+		prev = cur;
 	}
 	if (head != NULL) {
 		head->next = db->libList;
@@ -673,13 +687,15 @@ int LibraryDBGetLibraryInfoByNID(SceUID pid, SceUID modid, SceNID libnid,
 	}
 	for (lib = db->libList; lib != NULL; lib = lib->next) {
 		for (ver = lib; ver != NULL; ver = ver->older) {
+			if (ver->cb->modid != modid)
+				continue;
 			exports = ver->exports;
-			if (ver->cb->modid == modid && exports->libnid == libnid) {
+			if (exports->libnid == libnid) {
 				info->version = exports->version;
 				info->attr = exports->attr;
 				info->libnid = libnid;
-				info->libname = exports->libname;
 				info->nfunc = exports->nfunc;
+				info->libname = exports->libname;
 				info->nvar = exports->nvar;
 				info->nidtable = exports->nidtable;
 				info->entrytable = exports->entrytable;
@@ -904,9 +920,9 @@ int SceModulemgrForKernel_1728612F(SceUID pid, SceUInt32 addr, SceModuleCB **out
 /* name unknown: the module GUID at addr */
 SceUID LibraryDBGetModuleUIDByAddr(SceUID pid, SceUInt32 addr)
 {
-	SceModuleCB *cb;
-	LibraryDB *db;
 	int ret, intr;
+	LibraryDB *db;
+	SceModuleCB *cb;
 
 	db = LibraryDBLock(pid, &intr);
 	if (db == NULL)
@@ -941,9 +957,9 @@ SceUID LibraryDBGetModuleIdByAddr(SceUID pid, SceUInt32 addr)
 /* name unknown */
 SceUID LibraryDBFindModuleByName(SceUID pid, const char *name)
 {
-	SceModuleCB *cb;
-	LibraryDB *db;
 	int ret, intr;
+	LibraryDB *db;
+	SceModuleCB *cb;
 
 	db = LibraryDBLock(pid, &intr);
 	if (db == NULL)
@@ -1055,9 +1071,9 @@ void LibraryDBRenameAddr2ModTbls(SceUID pid, const char *name)
 int SceModulemgrForKernel_5564A860(SceUID pid, SceUInt32 addr, SceUInt32 *fingerprint,
 				     void **textBase, char *name)
 {
-	SceModuleCB *cb;
-	LibraryDB *db;
 	int ret, intr;
+	LibraryDB *db;
+	SceModuleCB *cb;
 
 	db = LibraryDBLock(pid, &intr);
 	if (db == NULL)
@@ -1076,7 +1092,7 @@ int SceModulemgrForKernel_5564A860(SceUID pid, SceUInt32 addr, SceUInt32 *finger
 }
 
 /* name unknown */
-int LibraryDBIsShared(SceUID pid)
+__attribute__((noinline)) int LibraryDBIsShared(SceUID pid)
 {
 	return LibraryDBGetDB(pid)->flags & LIBDB_FLAG_SHARED;
 }
@@ -1084,7 +1100,7 @@ int LibraryDBIsShared(SceUID pid)
 /* name unknown: add a module; the original of a shared module is remembered by path */
 void LibraryDBRegisterModule(SceModuleCB *cb)
 {
-	SharedModuleEntry *ent;
+	SharedModuleEntry *ent, *head;
 	SceModuleSegment *seg;
 	LibraryDB *db;
 	SceUID pid;
@@ -1126,8 +1142,9 @@ void LibraryDBRegisterModule(SceModuleCB *cb)
 				ent->dataCopy = copy;
 			}
 			lock = sceKernelSpinlockLowLockCpuSuspendIntr(&g_sharedLock);
-			ent->next = g_sharedModules;
+			head = g_sharedModules;
 			g_sharedModules = ent;
+			ent->next = head;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&g_sharedLock, lock);
 		}
 	}
@@ -1592,16 +1609,16 @@ int sceKernelGetLibraryInfoForDebugger(SceUID pid, SceUID libid,
 	} else {
 		ent = obj->libEntCB;
 		exports = ent->exports;
-		info->libid = ent->guid == libid ? ent->guid : ent->puid;
+		info->nfunc = exports->nfunc;
 		info->libnid = exports->libnid;
+		info->libid = ent->guid == libid ? ent->guid : ent->puid;
+		info->nvar = exports->nvar;
+		info->clientCount = ent->clientCount;
+		info->ntls = 0;
 		info->version = exports->version;
 		info->attr = exports->attr;
-		info->nfunc = exports->nfunc;
-		info->nvar = exports->nvar;
-		info->ntls = 0;
-		info->clientCount = ent->clientCount;
-		info->modid = pid == SCE_KERNEL_PROCESS_ID ? ent->cb->modid : ent->cb->puid;
 		info->libname[0xff] = 0;
+		info->modid = pid == SCE_KERNEL_PROCESS_ID ? ent->cb->modid : ent->cb->puid;
 		strncpy(info->libname, ent->exports->libname, 0xff);
 		ModulemgrReleaseModule(obj->modid);
 		sceGUIDReleaseObject(obj->libEntCB->guid);

@@ -50,12 +50,16 @@ int sceLoadcoreIoReadFrom(void *buf, SceSize size, SceOff offset)
 {
 	BootimageFS *fs = g_bootimage;
 	BootimageEntry *ent;
+	char *data;
+	SceSize entSize;
 
 	SCE_DBG_ASSERT_LEVEL(0, fs != NULL, 84);
 	ent = &fs->table.entry[fs->current];
-	if (ent->size < (SceUInt32)offset + size)
+	data = ent->data;
+	entSize = ent->size;
+	if (entSize < (SceUInt32)offset + size)
 		return 0;
-	memcpy(buf, (char *)ent->data + (SceUInt32)offset, size);
+	memcpy(buf, data + (SceUInt32)offset, size);
 	return size;
 }
 
@@ -72,12 +76,13 @@ int sceKernelMountBootimageFS(const char *path)
 	modid = SceModulemgrForDriver_189BFBBB(path, 0, NULL, 0x100, NULL, NULL);
 	if (modid < 0)
 		return modid;
-	fs = ModulemgrKernelAlloc(sizeof(*fs));
-	g_bootimage = fs;
-	SCE_DBG_ASSERT_LEVEL(0, fs != NULL, 125);
+	g_bootimage = ModulemgrKernelAlloc(sizeof(*fs));
+	SCE_DBG_ASSERT_LEVEL(0, g_bootimage != NULL, 125);
+	fs = g_bootimage;
 	fs->modid = modid;
 	fs->current = -1;
-	fs->table = sceKernelBootimageEntries;
+	fs->table.count = sceKernelBootimageEntries.count;
+	fs->table.entry = sceKernelBootimageEntries.entry;
 	ModulemgrReferModule(modid);
 #if FW_DEBUG
 	for (i = 0; i < fs->table.count; i++)

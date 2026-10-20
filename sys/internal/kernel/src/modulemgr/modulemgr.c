@@ -623,17 +623,16 @@ SceModuleObject *ModulemgrReferModule(SceUID modid)
 /* the function NID of the stub at addr */
 static inline int ModulemgrFindStubNid(LibStubCB *stub, SceUInt32 addr, SceNID *nid)
 {
-	SceUInt32 n = stub->imports->nfunc;
+	SceUInt16 n = stub->imports->nfunc;
 	SceUInt32 i;
 
-	if (n == 0)
-		return -1;
-	for (i = 0; stub->toolCopy[i] != (void *)addr; i++) {
-		if (i + 1 >= n)
-			return -1;
+	for (i = 0; i < n; i++) {
+		if (stub->toolCopy[i] == (void *)addr) {
+			*nid = (SceNID)stub->toolCopy[i + n];
+			return 0;
+		}
 	}
-	*nid = (SceNID)stub->toolCopy[i + n];
-	return 0;
+	return -1;
 }
 
 void ShowCallerInfo(SceUID pid, SceUInt32 addr)
@@ -680,7 +679,6 @@ int ModulemgrGetStubInfo(SceUID pid, SceUInt32 addr, ModulemgrStubInfo *info)
 	SceModuleObject *obj;
 	LibStubCB *stub;
 	SceUID modid;
-	SceUInt32 i, n;
 	SceNID nid;
 
 	if (info == NULL || info->size != sizeof(*info))
@@ -690,13 +688,8 @@ int ModulemgrGetStubInfo(SceUID pid, SceUInt32 addr, ModulemgrStubInfo *info)
 	    (obj = ModulemgrReferModule(modid)) == NULL)
 		return SCE_KERNEL_ERROR_LIBRARYDB_NO_MOD;
 	stub = LibraryDBGetStubCBByStubCodeAddrForTool(&obj->cb, addr);
-	if (stub == NULL || (n = stub->imports->nfunc) == 0)
+	if (stub == NULL || ModulemgrFindStubNid(stub, addr, &nid) != 0)
 		goto nolib;
-	for (i = 0; stub->toolCopy[i] != (void *)addr; i++) {
-		if (i + 1 >= n)
-			goto nolib;
-	}
-	nid = (SceNID)stub->toolCopy[i + n];
 	info->modid = modid;
 	info->attr = obj->cb.attr;
 	info->version[0] = obj->cb.version[0];
@@ -705,8 +698,8 @@ int ModulemgrGetStubInfo(SceUID pid, SceUInt32 addr, ModulemgrStubInfo *info)
 	info->fingerprint = obj->cb.fingerprint;
 	info->libname = stub->linked->exports->libname;
 	info->reserved0 = 0;
-	info->libVersion = stub->imports->version;
 	info->funcnid = nid;
+	info->libVersion = stub->imports->version;
 	sceGUIDReleaseObject(modid);
 	return 0;
 nolib:
@@ -981,7 +974,11 @@ static inline int ModulemgrUnloadModule(SceUID pid, SceModuleObject *obj, SceUID
 	SceUID puid;
 
 	ModulemgrLockLibDB();
-	if (cb->status != MODULE_STATUS_LOADED && cb->status != MODULE_STATUS_STOPPED) {
+	switch (cb->status) {
+	case MODULE_STATUS_LOADED:
+	case MODULE_STATUS_STOPPED:
+		break;
+	default:
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1330, "Can't unload a module, status:0x%02x\n",
 				     cb->status);
 		ModulemgrUnlockLibDB();
@@ -1230,7 +1227,7 @@ static inline int ModulemgrStopModule(SceModuleObject *obj, SceSize args, void *
 			goto unlink;
 		} else {
 			ret = SCE_KERNEL_ERROR_MODULEMGR_NOT_STARTED;
-			SCE_DBG_PRINTF_LEVEL(1, 0xb, 1588,
+			SCE_DBG_PRINTF_LEVEL(1, 0xb, 1648,
 				"Can't stop a module, status:%d, flags 0x%08x\n", old, flags);
 		}
 		goto restore;
@@ -1258,7 +1255,7 @@ static inline int ModulemgrStopModule(SceModuleObject *obj, SceSize args, void *
 		break;
 	default:
 		ret = SCE_KERNEL_ERROR_MODULEMGR_NOT_STARTED;
-		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1648, "Can't stop a module, status:%d\n", old);
+		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1588, "Can't stop a module, status:%d\n", old);
 		break;
 	}
 	goto restore;
@@ -1796,6 +1793,7 @@ int sceKernelStartPreloadingModules(SceUID pid)
 	SceModuleObject *obj;
 	SceUID list[15];
 	SceSize count;
+	SceUInt32 flags;
 	int ret;
 
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 3462);
@@ -1810,8 +1808,8 @@ int sceKernelStartPreloadingModules(SceUID pid)
 			continue;
 		SCE_DBG_PRINTF_LEVEL(1, 0, 3484, "Preloading %s (guid=0x%08x, fingerprint=0x%08x)\n",
 				     obj->cb.path, list[count], obj->cb.fingerprint);
-		ret = startModuleCommon(pid, list[count], 0, NULL,
-					SceSysrootForKernel_55392965() ? 0x4000000 : 0, NULL, NULL);
+		flags = SceSysrootForKernel_55392965() ? 0x4000000 : 0;
+		ret = startModuleCommon(pid, list[count], 0, NULL, flags, NULL, NULL);
 		sceGUIDReleaseObject(list[count]);
 		if (ret < 0 && !SceSysrootForKernel_55392965())
 			return ret;
@@ -1871,7 +1869,7 @@ int ModulemgrInhibitLoadingModule(SceUInt32 flags)
 int ModulemgrModuleStart(SceSize args, void *argp)
 {
 	SceKernelProcEventHandler handler;
-	int ret;
+	int ret, slot;
 
 	g_mutex = sceKernelCreateMutex("SceModuleMgr", 0x2000, 0, NULL);
 	if (g_mutex < 0) {
@@ -1886,19 +1884,20 @@ int ModulemgrModuleStart(SceSize args, void *argp)
 	g_moduleClass->create_cb = (SceClassCallback)ModulemgrConstructor;
 	g_moduleClass->destroy_cb = (SceClassCallback)ModulemgrDestructor;
 	g_private = (ModulemgrPrivate *)g_moduleClass;
+	g_private->libraryClass.name = "SceUIDLibraryClass";
 	g_private->stubClass.name = "SceUIDLibStubClass";
-	g_libraryClass = &g_private->libraryClass;
 	g_private->stubClass.create_cb = LibStubClassCreate;
 	g_private->stubClass.destroy_cb = LibStubClassDestroy;
-	g_stubClass = &g_private->stubClass;
-	g_private->libraryClass.name = "SceUIDLibraryClass";
 	g_private->libraryClass.create_cb = (SceClassCallback)LibraryClassCreate;
 	g_private->libraryClass.destroy_cb = (SceClassCallback)LibraryClassDestroy;
+	g_libraryClass = &g_private->libraryClass;
+	g_stubClass = &g_private->stubClass;
 	sceKernelSetProcessLibdb(SCE_KERNEL_PROCESS_ID, &g_private->kernelDB);
 	SceSysrootForKernel_B171CC2D(&g_sysrootCallbacks);
 
-	g_threadStateSlot = SceThreadmgrForDriver_B645C7EF(sizeof(ModulemgrThreadState), 0, 0);
-	SCE_DBG_ASSERT(g_threadStateSlot >= 0, 3679);
+	slot = SceThreadmgrForDriver_B645C7EF(sizeof(ModulemgrThreadState), 0, 0);
+	SCE_DBG_ASSERT(slot >= 0, 3679);
+	g_threadStateSlot = slot;
 
 	handler.size = sizeof(handler);
 	handler.create = NULL;

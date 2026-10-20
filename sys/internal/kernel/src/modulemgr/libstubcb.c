@@ -33,7 +33,7 @@ SceModuleImports *LibStubNormalize(SceModuleImports *dst, const void *src)
 	const SceModuleImports34 *imp = src;
 
 	if (imp->size == sizeof(SceModuleImports)) {
-		*dst = *(const SceModuleImports *)src;
+		__builtin_memcpy(dst, src, sizeof(*dst));
 		return dst;
 	}
 	dst->size = sizeof(SceModuleImports);
@@ -298,10 +298,10 @@ int LibStubGetNidTable(LibStubCB *stub, LibStubNidTable *info)
 	int local, ret;
 
 	info->funcent = imp->funcent;
-	info->varnid = imp->varnid;
-	info->varent = imp->varent;
 	info->libStubCB = stub;
+	info->varnid = imp->varnid;
 	info->funcnid = imp->funcnid;
+	info->varent = imp->varent;
 	info->nfunc = nfunc;
 	info->nvar = nvar;
 	info->copy = NULL;
@@ -365,11 +365,11 @@ void LibStubReleaseNidTable(LibStubNidTable *info)
 	t = SceThreadmgrForDriver_47F6DE49();
 	imp = stub->imports;
 	if (imp->nvar != 0) {
-		SceSysmemForKernel_FCB5745A((SceUInt32 *)imp->varent, t, imp->nvar);
+		SceSysmemForKernel_FCB5745A((SceUInt32 *)imp->varnid, t, imp->nvar);
 		imp = stub->imports;
 	}
 	if (imp->nfunc != 0)
-		SceSysmemForKernel_FCB5745A((SceUInt32 *)imp->funcent, t, imp->nfunc);
+		SceSysmemForKernel_FCB5745A((SceUInt32 *)imp->funcnid, t, imp->nfunc);
 out:
 	ModulemgrFree(info->libStubCB->cb->pid, info->copy);
 }
@@ -389,27 +389,29 @@ static inline SceUID getStubGUIDByStubUID(SceUID pid, SceUID stubid)
 
 int sceKernelGetStubList(SceUID pid, SceUID *list, SceUInt32 *count)
 {
+	LibStubCB *stubs, *stub;
 	SceModuleCB *cb;
 	LibraryDB *db;
 	SceUInt32 i, n;
 	int intr;
 
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 832);
-	if (list == NULL) {
+	if (list != NULL) {
 		db = LibraryDBLock(pid, &intr);
 		if (db == NULL)
 			return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
 		n = 0;
 		for (cb = db->modules; cb != NULL; cb = cb->next) {
-			if (cb->libStubCB == NULL)
-				continue;
-			for (i = 0; i < cb->libStubCount; i++) {
-				if (cb->libStubCB[i].guid != 0)
-					n++;
+			stubs = cb->libStubCB;
+			for (i = 0; n < *count && cb->libStubCount > i; i++) {
+				stub = &stubs[i];
+				if (getStubUIDByLibStubCB(pid, stub) != 0)
+					list[n++] = getStubUIDByLibStubCB(pid, stub);
 			}
 		}
 		LibraryDBUnlock(db, intr);
-		return n;
+		*count = n;
+		return 0;
 	}
 
 	db = LibraryDBLock(pid, &intr);
@@ -417,14 +419,16 @@ int sceKernelGetStubList(SceUID pid, SceUID *list, SceUInt32 *count)
 		return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
 	n = 0;
 	for (cb = db->modules; cb != NULL; cb = cb->next) {
-		for (i = 0; n < *count && i < cb->libStubCount; i++) {
-			if (getStubUIDByLibStubCB(pid, &cb->libStubCB[i]) != 0)
-				list[n++] = getStubUIDByLibStubCB(pid, &cb->libStubCB[i]);
+		stubs = cb->libStubCB;
+		if (stubs == NULL)
+			continue;
+		for (i = 0; cb->libStubCount > i; i++) {
+			if (stubs[i].guid != 0)
+				n++;
 		}
 	}
 	LibraryDBUnlock(db, intr);
-	*count = n;
-	return 0;
+	return n;
 }
 
 int sceKernelGetStubInfoForDebugger(SceUID pid, SceUID stubid,

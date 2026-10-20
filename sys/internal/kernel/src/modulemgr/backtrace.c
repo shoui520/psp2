@@ -86,17 +86,16 @@ int copyStack(SceUID pid, SceUInt32 *dst, const SceUInt32 *src)
 
 	if (pid == SCE_KERNEL_PROCESS_ID) {
 		ret = SceCpuForKernel_14E0B0C4((uintptr_t)src, &pa);
-		if (ret > 0)
-			ret = 0;
+		ret = ret < 0 ? ret : 0;
 		if (ret == 0)
 			*dst = *src;
-		return ret;
+	} else {
+		ret = sceKernelCopyFromUserProc(pid, dst, src, 4);
+		if (ret < 0)
+			SCE_DBG_PRINTF_LEVEL(1, 0xb, 204,
+				" error: sceKernelCopyFromUserProc(0x%08X, %p %p, 0x%08X) = 0x%08X\n",
+				pid, dst, src, 4, ret);
 	}
-	ret = sceKernelCopyFromUserProc(pid, dst, src, 4);
-	if (ret < 0)
-		SCE_DBG_PRINTF_LEVEL(1, 0xb, 204,
-			" error: sceKernelCopyFromUserProc(0x%08X, %p %p, 0x%08X) = 0x%08X\n",
-			pid, dst, src, 4, ret);
 	return ret;
 }
 

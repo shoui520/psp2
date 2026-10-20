@@ -148,9 +148,10 @@ SceUID sceKernelLoadStartModuleForUser(const char *path, SceSize args, void *arg
 					      SceUInt32 flags, const SceKernelLoadModuleOpt *opt,
 					      int *status)
 {
+	int st;
 	SceUID modid = 0, puid = 0;
 	SceUInt32 state;
-	int st, ret, res;
+	int ret, res;
 
 	state = ModulemgrSyscallEnter();
 	ret = ModulemgrLoadModuleForUser(path, flags, opt, &modid, &puid);

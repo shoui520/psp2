@@ -22,27 +22,43 @@ SceUInt32 LoadelfSetRandomOffset(SceKernelAllocMemBlockKernelOpt *opt, SceUInt32
 	return high + low;
 }
 
-void LoadelfFreeMem(SceModuleCB *cb, void **vaddr, SceUID *memblk, LoadelfSegment *segx)
+/*
+ * 4.00 takes the segment; the release build takes its two fields (the segment
+ * is not printed there).
+ */
+#if FW_DEBUG
+#define SEGMENT_PARAMS		SceModuleSegment *seg
+#define SEGMENT_ARGS(seg)	(seg)
+#define SEGMENT_VADDR		(seg->vaddr)
+#define SEGMENT_MEMBLK		(seg->memblk)
+#else
+#define SEGMENT_PARAMS		void **vaddr, SceUID *memblk
+#define SEGMENT_ARGS(seg)	&(seg)->vaddr, &(seg)->memblk
+#define SEGMENT_VADDR		(*vaddr)
+#define SEGMENT_MEMBLK		(*memblk)
+#endif
+
+void LoadelfFreeMem(SceModuleCB *cb, SEGMENT_PARAMS, LoadelfSegment *segx)
 {
-	if (*memblk <= 0)
+	if (SEGMENT_MEMBLK <= 0)
 		return;
 
 	SCE_DBG_PRINTF_LEVEL(2, 0, 701,
 		"LoadelfFreeMem(%p (uid=%x modname=%s file=%p,%s), seg=%p, segx=%p)\n",
 		cb, cb->modid, cb->name, cb->path, cb->path != NULL ? cb->path : "(null)",
-		vaddr, segx);
+		seg, segx);
 
 	if (cb->pid == SCE_KERNEL_PROCESS_ID) {
-		sceKernelFreeMemBlock(*memblk);
-		*vaddr = NULL;
-		*memblk = 0;
+		sceKernelFreeMemBlock(SEGMENT_MEMBLK);
+		SEGMENT_MEMBLK = 0;
+		SEGMENT_VADDR = NULL;
 		if (segx == NULL)
 			return;
 	} else {
 		if (segx == NULL) {
-			sceKernelFreeMemBlock(*memblk);
-			*vaddr = NULL;
-			*memblk = 0;
+			sceKernelFreeMemBlock(SEGMENT_MEMBLK);
+			SEGMENT_MEMBLK = 0;
+			SEGMENT_VADDR = NULL;
 			return;
 		}
 		if (segx->tmpBlock > 0) {
@@ -50,9 +66,9 @@ void LoadelfFreeMem(SceModuleCB *cb, void **vaddr, SceUID *memblk, LoadelfSegmen
 			segx->tmpBlock = 0;
 			segx->kaddr = NULL;
 		}
-		sceKernelFreeMemBlock(*memblk);
-		*vaddr = NULL;
-		*memblk = 0;
+		sceKernelFreeMemBlock(SEGMENT_MEMBLK);
+		SEGMENT_MEMBLK = 0;
+		SEGMENT_VADDR = NULL;
 	}
 	segx->kaddr = NULL;
 }
@@ -60,11 +76,11 @@ void LoadelfFreeMem(SceModuleCB *cb, void **vaddr, SceUID *memblk, LoadelfSegmen
 /* name unknown */
 void LoadelfFreeSegments(SceModuleCB *cb, LoadelfContext *ctx)
 {
+	LoadelfSegment *segx = ctx != NULL ? ctx->seg : NULL;
 	int i;
 
 	for (i = 0; i < 3; i++)
-		LoadelfFreeMem(cb, &cb->segment[i].vaddr, &cb->segment[i].memblk,
-			       ctx != NULL ? &ctx->seg[i] : NULL);
+		LoadelfFreeMem(cb, SEGMENT_ARGS(&cb->segment[i]), segx != NULL ? &segx[i] : NULL);
 
 	if (cb->metadata != NULL && (cb->flags & MODULE_FLAG_SHARED_MASK) == 0)
 		ModulemgrFree(cb->pid, cb->metadata);
@@ -215,7 +231,7 @@ int LoadelfLoadSegment(LoadelfContext *ctx, SelfReader *reader, int index, Loade
 			opt.mirror_blockid = seg->memblk;
 			ret = sceKernelAllocMemBlockForKernel("SceModuleMgrKernelTmp", 0x6020d006, 0, &opt);
 			if (ret < 0) {
-				LoadelfFreeMem(cb, &seg->vaddr, &seg->memblk, &ctx->seg[index]);
+				LoadelfFreeMem(cb, SEGMENT_ARGS(seg), &ctx->seg[index]);
 				return ret;
 			}
 			ctx->seg[index].tmpBlock = ret;
@@ -510,9 +526,9 @@ int LoadelfMapImage(LoadelfContext *ctx)
 	int i, ret;
 
 	memtype = (cb->flags & MODULE_FLAG_TYPE_MASK) == 2 ? 0x10f0d005 : 0x1020d005;
-	for (i = 0; i < cb->nSegments; i++) {
+	segx = ctx->seg;
+	for (i = 0; i < cb->nSegments; i++, segx++) {
 		seg = &cb->segment[i];
-		segx = &ctx->seg[i];
 		if ((seg->perms & SEGMENT_PERM_MASK) == SEGMENT_PERM_TEXT &&
 		    (cb->flags & MODULE_FLAG_SHARED_COPY) == 0)
 			sceKernelDcacheCleanRange((void *)PAGE_TRUNC((SceUInt32)segx->kaddr),
@@ -568,9 +584,9 @@ int sceKernelLoadPtLoadSegForFwloader(const char *path, int index, void *dst, Sc
 		type = SelfReaderGetType(&reader);
 		ret = type;
 		if (type >= 0) {
-			ph = (Elf32_Phdr *)reader.phdr + index;
 			if (index < SelfReaderGetPhnum(&reader) && type == ET_SCE_FIXEDEXEC &&
-			    ph->p_type == PT_LOAD && ph->p_filesz != 0 && ph->p_filesz <= size) {
+			    (ph = (Elf32_Phdr *)reader.phdr + index, ph->p_type == PT_LOAD) &&
+			    ph->p_filesz != 0 && ph->p_filesz <= size) {
 				ret = SelfReaderLoadSegment(&reader, index, dst, NULL);
 				if (ret >= 0)
 					*out = ph->p_filesz;

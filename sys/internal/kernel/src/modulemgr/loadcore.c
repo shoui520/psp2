@@ -31,8 +31,7 @@
 /* a library and its client switched to the client's address space */
 typedef struct LoadcoreProcessContext {
 	MMUContext *ctx;
-	/* the context switched from, as bytes: the stack protector guards it */
-	SceUInt8 saved[sizeof(MMUContext)];
+	MMUContext saved;			/* the context switched from */
 } LoadcoreProcessContext;
 
 static inline int LoadcoreSwitchProcess(SceUID pid, LoadcoreProcessContext *pc)
@@ -44,13 +43,13 @@ static inline int LoadcoreSwitchProcess(SceUID pid, LoadcoreProcessContext *pc)
 	ret = SceSysmemForDriver_2ECF7944(pid, &pc->ctx);
 	if (ret < 0)
 		return ret;
-	return SceSysmemForDriver_2D711589(pc->ctx, (MMUContext *)pc->saved);
+	return SceSysmemForDriver_2D711589(pc->ctx, &pc->saved);
 }
 
 static inline void LoadcoreRestoreProcess(SceUID pid, LoadcoreProcessContext *pc)
 {
 	if (pid != SCE_KERNEL_PROCESS_ID)
-		SceSysmemForDriver_2D711589((MMUContext *)pc->saved, NULL);
+		SceSysmemForDriver_2D711589(&pc->saved, NULL);
 }
 
 static inline int LoadcoreLibraryMatches(const LibEntCB *ent, const LibStubCB *stub)
@@ -64,8 +63,8 @@ static inline int LoadcoreLibraryMatches(const LibEntCB *ent, const LibStubCB *s
 
 int LoadcoreUnlinkClient(LibStubCB *stub)
 {
-	LoadcoreProcessContext pc;
 	StubLinkerInfo info;
+	LoadcoreProcessContext pc;
 	int ret;
 
 	ret = LoadcoreSwitchProcess(stub->cb->pid, &pc);
@@ -248,6 +247,7 @@ static inline void LoadcoreRegisterModulesAfterBoot(void)
 	LibraryDBUnlock(db, intr);
 }
 
+/* Sony returns what the unlock leaves in r0: no return statement */
 int sceKernelRegisterModulesAfterBoot(void)
 {
 	int ret;
@@ -259,7 +259,6 @@ int sceKernelRegisterModulesAfterBoot(void)
 	}
 	(void)ret;
 	LoadcoreRegisterModulesAfterBoot();
-	return 0;
 }
 
 int LibraryClassCreate(SceLibraryObject *obj)
@@ -530,7 +529,8 @@ LoadcoreFindPatch(const ModulemgrTitlePatch *patch, const char *libname)
 		return NULL;
 	for (i = 0; i < patch->count; i++) {
 		if (strncmp(libname, patch->library[i].libname, 0x100) == 0) {
-			SCE_DBG_PRINTF_LEVEL(1, 0xb, 394, "try patch library (%s)\n", libname);
+			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xb, 394, "LoadcoreLinkLibraryEntries",
+						  "try patch library (%s)\n", libname);
 			return &patch->library[i];
 		}
 	}
@@ -586,22 +586,24 @@ missing:
 			if ((imp->attr & IMPORT_ATTR_WEAK) != 0) {
 				LibraryDBRegisterLostClient(stub);
 				if ((flags & LINK_FLAG_NO_UNDEF) != 0)
-					SCE_DBG_PRINTF_LEVEL(2, 6, 825, "skip undef (lib=%s)\n",
-							     stub->imports->libname);
+					SCE_DBG_PRINTF_LEVEL_FUNC(2, 6, 825, "LoadcoreLinkLibraries",
+								  "skip undef (lib=%s)\n",
+								  stub->imports->libname);
 				else
 					LoadcoreUndefClient(stub);
 				continue;
 			}
 			if ((flags & LINK_FLAG_IGNORE_MISSING) != 0) {
-				SCE_DBG_PRINTF_LEVEL(1, 0xb, 834,
-					"not found %s (ver:%d), but ignored.\n",
-					imp->libname, imp->version);
+				SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xb, 834, "LoadcoreLinkLibraries",
+							  "not found %s (ver:%d), but ignored.\n",
+							  imp->libname, imp->version);
 				goto lost;
 			}
 			ret = SCE_KERNEL_ERROR_MODULEMGR_NO_LIB;
 		}
-		SCE_DBG_PRINTF_LEVEL(1, 0xb, 839, "not found %s (ver:%d)\n", imp->libname,
-				     imp->version);
+		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xb, 839, "LoadcoreLinkLibraries",
+						  "not found %s (ver:%d)\n", imp->libname,
+						  imp->version);
 		LibStubCBClear(stub);
 		goto fail;
 lost:

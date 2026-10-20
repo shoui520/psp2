@@ -22,11 +22,12 @@ static struct {
 
 static inline void SyscallCBWrite(SceUInt32 index, void *func)
 {
+	void **table = g_syscall.table;
 	SceUInt32 dacr;
 
 	dacr = readDacr();
 	writeDacr(SYSCALLCB_DACR_WRITABLE);
-	g_syscall.table[index] = func;
+	table[index] = func;
 	writeDacr(dacr);
 }
 
@@ -98,10 +99,10 @@ void SyscallCBSetEntry(LibEntCB *ent, SceUInt32 index)
 	trace = &g_traceInfo[num];
 	trace->func = func;
 	trace->libnid = exp->libnid;
+	trace->funcnid = exp->nidtable[index];
 	trace->index = index;
 	trace->enterArg = ent->enterArg;
 	trace->returnArg = ent->returnArg;
-	trace->funcnid = exp->nidtable[index];
 }
 
 /* name unknown */

@@ -32,16 +32,19 @@ typedef struct SelfDecrypterSlot {
 	SceSize size;
 } SelfDecrypterSlot;
 
-static SelfDecrypterSlot g_slot[2];
-static SceUID g_commEvf;
-static SceUID g_decrypterThread;
-static SceDeflatePartialInputParam g_stream;	/* its cookie is the slot being inflated */
-static SelfReader *g_reader;
-static SceUInt8 *g_destination;
-static SceSize g_segmentSize;
-static SceSize g_outputLeft;
-static SceUInt16 g_segmentIndex;
-static SceInt16 g_compression;
+/* the state shared with the decrypter thread, in Sony's order */
+static struct {
+	SelfDecrypterSlot slot[2];
+	SelfReader *reader;
+	SceUID commEvf;
+	SceUID decrypterThread;
+	SceUInt8 *destination;
+	SceSize segmentSize;
+	SceSize outputLeft;
+	SceUInt16 segmentIndex;
+	SceInt16 compression;
+	SceDeflatePartialInputParam stream;	/* its cookie is the slot being inflated */
+} g_self;
 
 /* Auth manager's segment decompression failure (official name unknown). */
 #define SELF_DECOMPRESSION_ERROR ((int)0x800f0516)
@@ -186,7 +189,7 @@ SceUInt32 SelfReaderGetEntry(SelfReader *reader)
 	return ((Elf32_Ehdr *)reader->ehdr)->e_entry;
 }
 
-void *SelfReaderGetSegmentInfo(SelfReader *reader, SceUInt32 index)
+__attribute__((noinline)) void *SelfReaderGetSegmentInfo(SelfReader *reader, SceUInt32 index)
 {
 	if (reader->ehdr == NULL)
 		return NULL;
@@ -195,7 +198,7 @@ void *SelfReaderGetSegmentInfo(SelfReader *reader, SceUInt32 index)
 	return NULL;
 }
 
-SceUInt32 SelfReaderGetSegmentOffset(SelfReader *reader, SceUInt32 index)
+__attribute__((noinline)) SceUInt32 SelfReaderGetSegmentOffset(SelfReader *reader, SceUInt32 index)
 {
 	Elf32_Phdr *phdr;
 
@@ -222,8 +225,8 @@ int selfDecrypterWaitBlock(int slot)
 {
 	int ret;
 
-	ret = sceKernelWaitEventFlag(g_commEvf, SELF_EVF_DONE, 5, NULL, NULL);
-	return ret < 0 ? ret : g_slot[slot].result;
+	ret = sceKernelWaitEventFlag(g_self.commEvf, SELF_EVF_DONE, 5, NULL, NULL);
+	return ret < 0 ? ret : g_self.slot[slot].result;
 }
 
 const void *selfDecrypterRefill(SceDeflatePartialInputParam *param, unsigned int outputsize)
@@ -233,21 +236,21 @@ const void *selfDecrypterRefill(SceDeflatePartialInputParam *param, unsigned int
 	SceUInt32 bits;
 	int ret;
 
-	g_slot[(int)param->cookie].result = 0;
-	g_slot[(int)param->cookie].state = 3;
-	sceKernelSetEventFlag(g_commEvf, SELF_EVF_DONE);
-	sceKernelWaitEventFlag(g_commEvf, SELF_EVF_SLOT0 | SELF_EVF_SLOT1,
+	g_self.slot[(int)param->cookie].result = 0;
+	g_self.slot[(int)param->cookie].state = 3;
+	sceKernelSetEventFlag(g_self.commEvf, SELF_EVF_DONE);
+	sceKernelWaitEventFlag(g_self.commEvf, SELF_EVF_SLOT0 | SELF_EVF_SLOT1,
 				5, &bits, NULL);
-	g_stream.cookie = (void *)((bits & SELF_EVF_SLOT0) ^ 1);
-	slot = &g_slot[(int)g_stream.cookie];
+	g_self.stream.cookie = (void *)((bits & SELF_EVF_SLOT0) ^ 1);
+	slot = &g_self.slot[(int)g_self.stream.cookie];
 	size = slot->size;
 	if (slot->state < 2) {
-		ret = SceSblAuthMgrForKernel_BC422443(g_reader->authContext, slot->buf, size);
+		ret = SceSblAuthMgrForKernel_BC422443(g_self.reader->authContext, slot->buf, size);
 		if (ret < 0)
 			return NULL;
 		slot->state = 2;
 	}
-	g_stream.pBufEnd = (void *)(((SceUInt32)slot->buf + size + 3) & ~3);
+	g_self.stream.pBufEnd = (void *)(((SceUInt32)slot->buf + size + 3) & ~3);
 	return slot->buf;
 }
 
@@ -255,8 +258,8 @@ int selfDecrypter_thread_entry(SceSize args, void *argp)
 {
 	SelfDecrypterSlot *slot;
 	SelfReader *reader;
-	const void *input;
 	SceUInt32 bits, status;
+	const void *input;
 	SceSize size;
 	SceUInt16 index;
 	int ret = 0, inflateResult;
@@ -264,12 +267,12 @@ int selfDecrypter_thread_entry(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 	for (;;) {
-		sceKernelWaitEventFlag(g_commEvf, SELF_EVF_SLOT0 | SELF_EVF_SLOT1,
+		sceKernelWaitEventFlag(g_self.commEvf, SELF_EVF_SLOT0 | SELF_EVF_SLOT1,
 					5, &bits, NULL);
-		slot = &g_slot[(bits & SELF_EVF_SLOT0) ^ 1];
-		if (slot->state < 0) {
-			reader = g_reader;
-			index = g_segmentIndex;
+		slot = &g_self.slot[(bits & SELF_EVF_SLOT0) ^ 1];
+		if (__builtin_expect(slot->state < 0, 0)) {
+			reader = g_self.reader;
+			index = g_self.segmentIndex;
 			if (!reader->authenticated) {
 				ret = sceSblAuthMgrOpen(&reader->authContext);
 				if (ret < 0)
@@ -282,70 +285,70 @@ int selfDecrypter_thread_entry(SceSize args, void *argp)
 			}
 			ret = SceSblAuthMgrForKernel_89CCDA2C(reader->authContext, index);
 			if (ret >= 0)
-				g_compression = ret;
+				g_self.compression = ret;
 		} else {
 			size = slot->size;
 			if (ret < 0)
 				goto complete;
 			if (slot->state < 2) {
-				ret = SceSblAuthMgrForKernel_BC422443(g_reader->authContext, slot->buf, size);
+				ret = SceSblAuthMgrForKernel_BC422443(g_self.reader->authContext, slot->buf, size);
 				slot->state = 2;
 				if (ret < 0)
 					goto complete;
 			}
-			if (g_compression == 1) {
-				if (g_outputLeft < size) {
+			if (g_self.compression == 1) {
+				if (g_self.outputLeft < size) {
 					ret = SELF_DECOMPRESSION_ERROR;
 				} else {
-					memcpy(g_destination, slot->buf, size);
-					g_destination += size;
-					g_outputLeft -= size;
+					memcpy(g_self.destination, slot->buf, size);
+					g_self.destination += size;
+					g_self.outputLeft -= size;
 					ret = 0;
 				}
 			} else {
-				SCE_DBG_ASSERT_LEVEL(0, g_compression == 2, 179);
+				SCE_DBG_ASSERT_LEVEL(0, g_self.compression == 2, 179);
 				inflateResult = SceKernelUtilsForDriver_5B9BCD75(slot->buf, NULL, NULL, NULL, &input);
 				if (inflateResult >= 0) {
-					g_stream.pBufEnd = (SceUInt8 *)slot->buf + size;
-					g_stream.cookie = NULL;
-					inflateResult = SceKernelUtilsForDriver_3D74CCDF(g_destination,
-							g_outputLeft, input, NULL, &g_stream);
+					g_self.stream.pBufEnd = (SceUInt8 *)slot->buf + size;
+					g_self.stream.cookie = NULL;
+					inflateResult = SceKernelUtilsForDriver_3D74CCDF(g_self.destination,
+							g_self.outputLeft, input, NULL, &g_self.stream);
 				}
-				status = (int)g_stream.cookie + (inflateResult < 0 ? 2 : 0);
-				slot = &g_slot[status & 1];
+				status = (int)g_self.stream.cookie + (inflateResult < 0 ? 2 : 0);
+				slot = &g_self.slot[status & 1];
 				ret = status & 2 ? SELF_DECOMPRESSION_ERROR : status;
 			}
 			slot->state = 3;
 		}
 complete:
 		slot->result = ret;
-		sceKernelSetEventFlag(g_commEvf, SELF_EVF_DONE);
+		sceKernelSetEventFlag(g_self.commEvf, SELF_EVF_DONE);
 	}
 }
 
 int SelfDecrypterSuspend(SceUInt32 mask)
 {
-	return sceKernelChangeThreadCpuAffinityMask(g_decrypterThread, mask);
+	return sceKernelChangeThreadCpuAffinityMask(g_self.decrypterThread, mask);
 }
 
 int SelfDecrypterInit(void)
 {
 	int ret;
 
-	g_slot[1].buf = g_buffer[1];
-	g_slot[0].buf = g_buffer[0];
+	g_self.slot[1].buf = g_buffer[1];
+	g_self.slot[0].buf = g_buffer[0];
 	ret = sceKernelCreateEventFlag("SceModuleMgrSelfDecryptComm", 0x3000, SELF_EVF_UNLOCKED,
 					NULL);
-	g_commEvf = ret;
+	g_self.commEvf = ret;
 	if (ret < 0)
 		return ret;
 	ret = sceKernelCreateThread("SceModuleMgrSelfDecrypter", selfDecrypter_thread_entry, 0x6e,
 				     0x1000, 0, 0xf, NULL);
-	g_decrypterThread = ret;
+	g_self.decrypterThread = ret;
 	if (ret < 0)
 		return ret;
-	g_stream.callback = selfDecrypterRefill;
-	g_stream.size = sizeof(g_stream);
+	g_self.stream.callback = selfDecrypterRefill;
+	g_self.stream.size = sizeof(g_self.stream);
 	return sceKernelStartThread(ret, 0, NULL);
 }
 
@@ -372,22 +375,24 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 		SceUInt32 now, percent;
 		int previous = 1, next, ret, bytesRead;
 
-		g_outputLeft = filesz;
+		g_self.outputLeft = filesz;
 		segment = SelfReaderGetSegmentInfo(reader, index);
-		if (segment == NULL || segment->length == 0 || segment->length >> 32)
+		if (segment == NULL || (segment->length >> 32) != 0)
 			return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 		length = segment->length;
+		if (length == 0)
+			return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 		offset = segment->offset <= 0x7fffffff ? segment->offset : -0x80000000LL;
 		position = sceIoLseek(reader->fd, offset, SCE_SEEK_SET);
 		if (position != offset)
 			return position < 0 ? (int)position : SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
-		g_segmentIndex = index;
-		g_compression = -1;
-		g_slot[1].state = -1;
-		g_reader = reader;
-		g_destination = dst;
-		g_segmentSize = length;
-		sceKernelSetEventFlag(g_commEvf, SELF_EVF_SLOT1);
+		g_self.reader = reader;
+		g_self.segmentIndex = index;
+		g_self.destination = dst;
+		g_self.segmentSize = length;
+		g_self.compression = -1;
+		g_self.slot[1].state = -1;
+		sceKernelSetEventFlag(g_self.commEvf, SELF_EVF_SLOT1);
 #if FW_DEBUG
 		if (timing != NULL)
 			start = SceThreadmgrForDriver_47F6DE49();
@@ -398,12 +403,12 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 			if (chunk > sizeof(g_buffer[0]))
 				chunk = sizeof(g_buffer[0]);
 			consumed += chunk;
-			g_slot[next].size = chunk;
+			g_self.slot[next].size = chunk;
 #if FW_DEBUG
 			if (timing != NULL)
 				readStart = SceThreadmgrForDriver_47F6DE49();
 #endif
-			bytesRead = sceIoRead(reader->fd, g_slot[next].buf, chunk);
+			bytesRead = sceIoRead(reader->fd, g_self.slot[next].buf, chunk);
 			if ((SceSize)bytesRead != chunk) {
 				/* The original preserves negative errors and treats a
 				 * short or oversized nonnegative read as an execution error. */
@@ -416,18 +421,18 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 			if (timing != NULL)
 				timing->readUsec += SceThreadmgrForDriver_47F6DE49() - readStart;
 #endif
-			g_slot[next].state = 1;
-			if (g_slot[previous].state == 2) {
-				ret = SceSblAuthMgrForKernel_BC422443(g_reader->authContext,
-						g_slot[next].buf, chunk);
+			g_self.slot[next].state = 1;
+			if (g_self.slot[previous].state == 2) {
+				ret = SceSblAuthMgrForKernel_BC422443(g_self.reader->authContext,
+						g_self.slot[next].buf, chunk);
 				if (ret < 0)
 					goto drain;
-				g_slot[next].state = 2;
+				g_self.slot[next].state = 2;
 			}
 			ret = selfDecrypterWaitBlock(previous);
 			if (ret < 0)
 				return ret;
-			sceKernelSetEventFlag(g_commEvf, next + 1);
+			sceKernelSetEventFlag(g_self.commEvf, next + 1);
 			if (timing != NULL && timing->path != NULL) {
 				timing->loadedSize += chunk;
 				now = SceThreadmgrForDriver_47F6DE49();
@@ -459,20 +464,20 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 	return SCE_KERNEL_ERROR_AUTHFAIL;
 }
 
-void SelfDecrypterLock(void)
+__attribute__((noinline)) void SelfDecrypterLock(void)
 {
 	int ret;
 
-	ret = sceKernelWaitEventFlag(g_commEvf, SELF_EVF_UNLOCKED, 5, NULL, NULL);
+	ret = sceKernelWaitEventFlag(g_self.commEvf, SELF_EVF_UNLOCKED, 5, NULL, NULL);
 	SCE_DBG_ASSERT_LEVEL(0, ret == 0, 428);
 	(void)ret;
 }
 
-void SelfDecrypterUnlock(void)
+__attribute__((noinline)) void SelfDecrypterUnlock(void)
 {
 	int ret;
 
-	ret = sceKernelSetEventFlag(g_commEvf, SELF_EVF_UNLOCKED);
+	ret = sceKernelSetEventFlag(g_self.commEvf, SELF_EVF_UNLOCKED);
 	SCE_DBG_ASSERT_LEVEL(0, ret == 0, 435);
 	(void)ret;
 }

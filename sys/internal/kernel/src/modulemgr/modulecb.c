@@ -16,9 +16,7 @@ int ModuleObjNew(SceUID pid, SceUInt32 flags, SceModuleObject **out)
 	SceUID uid;
 	int ret;
 
-	if (pid == SCE_KERNEL_PROCESS_ID) {
-		optp = NULL;
-	} else {
+	if (pid != SCE_KERNEL_PROCESS_ID) {
 		opt.flags = UID_CREATE_OPT_PROCESS_HEAP;
 		opt.object = NULL;
 		opt.heapGuid = 0;
@@ -32,6 +30,8 @@ int ModuleObjNew(SceUID pid, SceUInt32 flags, SceModuleObject **out)
 		optp = &opt;
 		if (ret < 0)
 			return ret;
+	} else {
+		optp = NULL;
 	}
 
 	uid = sceGUIDKernelCreateWithOpt(g_moduleClass, "SceModuleMgrNewModule", optp, (SceObjectBase **)&obj);
@@ -194,24 +194,28 @@ void ModuleCBSetStatus(SceModuleCB *cb, SceUInt8 status)
 /* name unknown */
 int ModuleCBSetPath(SceModuleCB *cb, const char *path, SceUInt32 flags)
 {
+	SceUInt16 cbFlags = cb->flags;
 	SceSize len;
+	SceUInt32 noAuth;
 
-	if ((cb->flags & MODULE_FLAG_SHARED_MASK) != 0) {
+	if ((cbFlags & MODULE_FLAG_SHARED_MASK) != 0) {
 		cb->path = cb->shared->cb->path;
 		return 0;
 	}
 
 	len = strnlen(path, 0xff);
-	if ((cb->flags & MODULE_FLAG_SHARED_ORIGINAL) != 0 && len > 0xfe)
+	if ((cbFlags & MODULE_FLAG_SHARED_ORIGINAL) != 0 && len > 0xfe)
 		return SCE_KERNEL_ERROR_MODULEMGR_NAMETOOLONG;
 
 	cb->path = ModulemgrAlloc(cb->pid, len + 1);
 	if (cb->path == NULL)
 		return SCE_KERNEL_ERROR_MODULEMGR_NOMEM;
 	memcpy(cb->path, path, len);
+	noAuth = flags & LOAD_FLAG_NO_AUTH;
 	cb->path[len] = '\0';
-	if ((flags & LOAD_FLAG_NO_AUTH) != 0)
-		__builtin_memcpy(cb->path, "bootfs:", 7);
+	if (noAuth == 0)
+		return noAuth;
+	__builtin_memcpy(cb->path, "bootfs:", 7);
 	return 0;
 }
 
@@ -236,7 +240,7 @@ void ModuleCBShowStartMessage(SceModuleCB *cb, int noResident, SceUInt32 usec)
 	if (noResident < 1)
 		SCE_PRINTF_WITH_INFO(0, 354, "[%-27s]:Starting...  OK   %8uusec\n", cb->name, usec);
 	else
-		SCE_PRINTF_WITH_INFO(0, 354, "[%-27s]:Starting...  OK(NO_RESIDENT)   %8uusec\n",
+		SCE_PRINTF_WITH_INFO(0, 352, "[%-27s]:Starting...  OK(NO_RESIDENT)   %8uusec\n",
 				     cb->name, usec);
 }
 
@@ -276,53 +280,46 @@ int ModuleCBGetSegmentIndex(SceModuleCB *cb, SceUInt32 addr)
 /* name unknown */
 int ModuleCBIsInText(SceModuleCB *cb, SceUInt32 addr, SceSize size)
 {
-	int i;
+	SceModuleSegment *seg;
+	int idx;
 
 	if (addr + size < addr)
 		return 0;
-	for (i = 0; i < cb->nSegments; i++) {
-		SceModuleSegment *seg = &cb->segment[i];
-
-		if ((SceUInt32)seg->vaddr <= addr && addr < (SceUInt32)seg->vaddr + seg->memsz) {
-			if ((seg->perms & SEGMENT_PERM_MASK) != SEGMENT_PERM_TEXT)
-				return 0;
-			return addr + size <= seg->memsz + (SceUInt32)seg->vaddr;
-		}
-	}
-	return 0;
+	idx = ModuleCBGetSegmentIndex(cb, addr);
+	if (idx < 0)
+		return 0;
+	seg = &cb->segment[idx];
+	if ((seg->perms & SEGMENT_PERM_MASK) != SEGMENT_PERM_TEXT)
+		return 0;
+	return addr + size <= seg->memsz + (SceUInt32)seg->vaddr;
 }
 
 /* name unknown */
 int ModuleCBIsInReadOnly(SceModuleCB *cb, SceUInt32 addr, SceSize size)
 {
-	int i;
+	SceModuleSegment *seg;
+	int idx;
 
 	if (addr + size < addr)
 		return 0;
-	for (i = 0; i < cb->nSegments; i++) {
-		SceModuleSegment *seg = &cb->segment[i];
-
-		if ((SceUInt32)seg->vaddr <= addr && addr < (SceUInt32)seg->vaddr + seg->memsz) {
-			if ((seg->perms & SEGMENT_PERM_WRITE) != 0)
-				return 0;
-			return addr + size <= seg->memsz + (SceUInt32)seg->vaddr;
-		}
-	}
-	return 0;
+	idx = ModuleCBGetSegmentIndex(cb, addr);
+	if (idx < 0)
+		return 0;
+	seg = &cb->segment[idx];
+	if ((seg->perms & SEGMENT_PERM_WRITE) != 0)
+		return 0;
+	return addr + size <= seg->memsz + (SceUInt32)seg->vaddr;
 }
 
 /* name unknown */
 int ModuleCBGetSegmentOffset(SceModuleCB *cb, SceUInt32 addr, int *seg, SceUInt32 *offset)
 {
-	int i;
+	int idx;
 
-	for (i = 0; i < cb->nSegments; i++) {
-		if ((SceUInt32)cb->segment[i].vaddr <= addr &&
-		    addr < (SceUInt32)cb->segment[i].vaddr + cb->segment[i].memsz) {
-			*offset = addr - (SceUInt32)cb->segment[i].vaddr;
-			*seg = i;
-			return 0;
-		}
-	}
-	return -1;
+	idx = ModuleCBGetSegmentIndex(cb, addr);
+	if (idx < 0)
+		return -1;
+	*offset = addr - (SceUInt32)cb->segment[idx].vaddr;
+	*seg = idx;
+	return 0;
 }
