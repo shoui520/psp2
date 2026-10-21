@@ -128,6 +128,9 @@ const struct NgsAudioFormat *ngsGetMixerFormat(void);
 int ngsGetBiquadFilterMemoryInfo(const struct NgsModuleInitParams *params,
 			       NgsModuleMemoryInfo *info);
 const struct NgsAudioFormat *ngsGetBiquadFilterFormat(void);
+int ngsGetParametricEqualizerMemoryInfo(const struct NgsModuleInitParams *params,
+				     NgsModuleMemoryInfo *info);
+const struct NgsAudioFormat *ngsGetParametricEqualizerFormat(void);
 int ngsGetInputMemoryInfo(const struct NgsModuleInitParams *params, NgsModuleMemoryInfo *info);
 const struct NgsAudioFormat *ngsGetInputFormat(void);
 int ngsGetOutputMemoryInfo(const struct NgsModuleInitParams *params, NgsModuleMemoryInfo *info);

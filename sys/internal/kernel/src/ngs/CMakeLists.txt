@@ -25,6 +25,7 @@ psp2_module(os0_kd_bootimage_ngs KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	ngs_reverb.c
 	ngs_mixer.c
 	ngs_biquad_filter.c
+	ngs_parametric_equalizer.c
 	ngs_input.c
 	ngs_output.c
 	ngs_at9_player.c
