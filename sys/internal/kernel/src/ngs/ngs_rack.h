@@ -201,7 +201,7 @@ typedef struct NgsVoiceDsp {
 	SceSize inputMixerStateSize;
 	unsigned int reserved48;
 	NgsRackDsp *rackDsp;
-	unsigned int reserved56;
+	unsigned int initId;		/* the voice's initId as of the update */
 	NgsDspPatchBuffer *patchBuffers;
 	unsigned int reserved64;
 	unsigned int bypassFlags;	/* the voice's bypassFlags as of the update */
@@ -270,7 +270,7 @@ typedef struct NgsVoice {
 	NgsVoiceState callerPlayState;	/* playState as of the last pull */
 	unsigned short dirtyFlags;
 	unsigned short dirtyFlags2;
-	int reserved24;
+	unsigned int initId;		/* ngsGetNextRackId() at the last voice init */
 	unsigned short callerFlags;	/* flags as of the last pull */
 	unsigned char callerDirtyFlags;	/* dirtyFlags as of the last pull */
 	unsigned char padding;
@@ -284,7 +284,7 @@ typedef struct NgsVoice {
 	struct NgsSynRack *rack;
 	NgsVoiceInput *inputs;
 	NgsVoiceModuleParams *moduleParams;
-	int reserved64;
+	SceNgsCallbackFunc finishedCallback;
 	int presetIndex;
 	void *state;
 	void *outputParams;
@@ -354,9 +354,9 @@ typedef struct NgsSynRack {
 	unsigned int *paramsOffsets;
 	unsigned int *paramsSizes;
 	unsigned int *codecModules;
-	void *callbackInfos;
-	void *rackCallbackInfo;
-	void *voiceCallbackInfos;
+	SceNgsCallbackInfo *callbackInfos;
+	SceNgsCallbackInfo *rackCallbackInfo;
+	SceNgsCallbackInfo *voiceCallbackInfos;
 	unsigned int *updateCount;
 	unsigned int *updateCountCaller;
 	unsigned int *updateRequested;
@@ -397,6 +397,7 @@ NgsSynRack *ngsGetRackFromHandle(SceNgsHRack handle);
 SceNgsHVoice ngsGetVoiceHandle(const NgsVoice *voice);
 NgsVoice *ngsGetVoiceFromHandle(SceNgsHVoice handle);
 SceNgsHPatch ngsGetPatchHandle(const NgsPatch *patch);
+NgsSynSystem *ngsGetSystemForVoiceHandle(SceNgsHVoice handle);
 NgsPatch *ngsGetPatchFromHandle(SceNgsHPatch handle, NgsVoice **source);
 NgsSynSystem *ngsGetVoiceSystem(const NgsVoice *voice);
 

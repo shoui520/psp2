@@ -196,3 +196,6 @@ int ngsGetReverbModule(NgsModuleDefinition **module);
 
 /* ngs_signal_generator.c */
 int ngsGetSignalGeneratorModule(NgsModuleDefinition **module);
+
+/* ngs_system.c */
+unsigned int ngsGetNextRackId(NgsSynSystem *system);

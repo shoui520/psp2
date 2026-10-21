@@ -99,7 +99,7 @@ typedef struct NgsSulphaVoiceEvent {
 	unsigned int runState;
 	unsigned int flags;
 	unsigned int channels;
-	int reserved24;
+	unsigned int initId;
 	unsigned int reserved48;
 } __attribute__((may_alias)) NgsSulphaVoiceEvent;
 
@@ -112,7 +112,7 @@ typedef struct NgsSulphaPatchEvent {
 	unsigned int reserved23;
 	unsigned int channels;
 	unsigned int connected;	/* the patch feeds an input mixer */
-	int destinationReserved24;
+	int destinationInitId;
 	SceNgsVolumeMatrix volumes;
 } __attribute__((may_alias)) NgsSulphaPatchEvent;
 
@@ -319,8 +319,8 @@ static inline void ngsSulphaTracePatch(NgsSulphaTrace *trace, NgsPatch *patch)
 	event->reserved23 = patch->reserved23;
 	event->channels = patch->channels;
 	event->connected = patch->mixerContext != NULL;
-	event->destinationReserved24 = patch->destination != NULL ?
-		patch->destination->reserved24 : 0;
+	event->destinationInitId = patch->destination != NULL ?
+		patch->destination->initId : 0;
 	if (patch->volumes != NULL)
 		event->volumes = *patch->volumes;
 	else
@@ -432,7 +432,7 @@ void ngsSulphaTraceVoice(NgsSulphaTrace *trace, NgsVoice *voice)
 	event->runState = voice->playState.runState;
 	event->flags = voice->flags;
 	event->channels = voice->channels;
-	event->reserved24 = voice->reserved24;
+	event->initId = voice->initId;
 	event->reserved48 = 0;
 	event->moduleCount = rack->moduleList.moduleCount;
 	ngsSulphaNextEvent(trace, event->event.size);
