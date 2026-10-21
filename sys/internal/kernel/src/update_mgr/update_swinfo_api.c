@@ -47,8 +47,8 @@ int sceSblUsSetSwInfoStrForUser(const char *name, SceSize nameLength,
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	state = sceSyscallEnter();
-	if (((name == NULL) | (nameLength - 1 > 30)) ||
-	    ((value == NULL) | (valueLength - 1 > 126))) {
+	if (((nameLength - 1 > 30) | (name == NULL)) ||
+	    ((valueLength - 1 > 126) | (value == NULL))) {
 		sceSyscallLeave(state);
 		return (int)0x800f0216;
 	}

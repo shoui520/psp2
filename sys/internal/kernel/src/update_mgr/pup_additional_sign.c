@@ -13,7 +13,7 @@ int PupUtilVerifyPupAdditionalSignMain(SceSize arglen, PupVerifyThreadArgs *args
 	SceUID heapId, fd;
 	void *packet, *buffer;
 	uint32_t serviceResult;
-	uint64_t index, count;
+	uint64_t index;
 	int result, ioFlags, loadSm, residentSm;
 
 	SceKernelSuspendForDriver_4DF40893(0);
@@ -48,19 +48,14 @@ int PupUtilVerifyPupAdditionalSignMain(SceSize arglen, PupVerifyThreadArgs *args
 		&vectorVector, headerDigest, &buffer, 1024);
 	if (result)
 		goto cleanup;
-	count = pupFileHeader.m_segment_num;
-	if (!count)
-		goto notFound;
-	segments = (PupSegment *)(pupFileBuffer + 1);
-	segment = segments;
+	segment = (PupSegment *)(pupFileBuffer + 1);
 	index = 0;
-	while (index != count) {
+	while (index != pupFileHeader.m_segment_num) {
 		if (segment->segment_id == 0x401)
 			goto verify;
 		segment++;
 		index++;
 	}
-notFound:
 	result = (int)0x800f0202;
 	goto cleanup;
 verify:

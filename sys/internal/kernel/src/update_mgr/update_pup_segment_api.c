@@ -14,10 +14,10 @@ int sceSblUsVerifyPupSegmentForUser(const char *path, uint64_t segment_index)
 		return (int)0x800f022c;
 	state = sceSyscallEnter();
 	result = sceKernelStrncpyFromUser(buffer, path, sizeof(buffer));
-	if (result < 0 || result == 1024)
-		result = (int)0x800f0216;
-	else
+	if (result >= 0 && result != 1024)
 		result = sceSblUsVerifyPupSegment(buffer, segment_index);
+	else
+		result = (int)0x800f0216;
 	sceSyscallLeave(state);
 	return result;
 }

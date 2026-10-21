@@ -16,6 +16,7 @@ static const uint32_t pupFallbackVersion = SCE_PSP2_SDK_VERSION;
 int PupUtilVerifyPupHeaderAsync(SceSize arglen, PupVerifyThreadArgs *args)
 {
 	SceKernelPAVector *dataVector, *vectorVector;
+	PupHeader *buffer;
 	void *packet;
 	SceUID fd, heapId;
 	uint32_t serviceResult, version, platform;
@@ -56,7 +57,8 @@ int PupUtilVerifyPupHeaderAsync(SceSize arglen, PupVerifyThreadArgs *args)
 	pupFileBufferSize = (sizeof(PupSegment) + sizeof(PupSegmentSignature)) *
 		(uint32_t)pupFileHeader.m_segment_num + sizeof(PupHeader) + sizeof(PupHeaderDigest);
 	if (pupFileBuffer) {
-		UpdateUtilReleaseBuffer(pupFileBuffer, sceKernelGetProcessId());
+		buffer = pupFileBuffer;
+		UpdateUtilReleaseBuffer(buffer, sceKernelGetProcessId());
 		pupFileBuffer = NULL;
 	}
 	result = UpdateUtilCreatePacketPayloadWithBuffer(&packet, &dataVector,

@@ -36,7 +36,7 @@ int sceSblUsUpdateSpackageBH(SceSize arglen, SpkgThreadArgs *args)
 	unsigned int serviceResult;
 	unsigned char digest[32];
 	uint64_t completed, expected;
-	void *payload;
+	void *buffer, *payload;
 	SceUID heapId, fd;
 	int smId, result, hardwareIndex, isDex, compressed;
 
@@ -114,6 +114,7 @@ int sceSblUsUpdateSpackageBH(SceSize arglen, SpkgThreadArgs *args)
 	serviceResult = 0;
 	dataVector = NULL;
 	vectorVector = NULL;
+	buffer = args->buffer;
 	heapId = UpdateUtilGetHeapId();
 	packet = NULL;
 	smId = -1;
@@ -158,7 +159,7 @@ releasePacket:
 		UpdateUtilStopSm(&smId);
 	if (result)
 		goto error;
-	memcpy(&header, args->buffer, sizeof(header));
+	memcpy(&header, buffer, sizeof(header));
 	if (header.file_offset > 1024)
 		goto invalidRequirements;
 	if (SceSblSsMgrForKernel_sceSblPmMgrGetProductMode(&updateFlag))
@@ -363,7 +364,7 @@ releasePacket:
 	payloadSize = args->size - bodyOffset;
 	if ((uint64_t)payloadSize != chunk.size && (uint64_t)payloadSize != info.decryptedSize)
 		goto invalidFormat;
-	payload = (uint8_t *)args->buffer + bodyOffset;
+	payload = (uint8_t *)buffer + bodyOffset;
 	switch (args->packageType) {
 	case 9:
 		result = SpkgUtilDoPersonalizeSLSK("second_loader.enc", "second_loader.enp",

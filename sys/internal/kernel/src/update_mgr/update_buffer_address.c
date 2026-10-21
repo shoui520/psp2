@@ -12,20 +12,17 @@ int UpdateUtilKA2UA(const void *kernelBuffer, SceUID pid, void **userBuffer)
 	result = lockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	if (result)
 		return result;
-	index = 0;
-	entry = updateBufferTable;
-	while (entry->kernelBuffer != kernelBuffer || entry->pid != pid ||
-			entry->allocated != 1) {
-		index++;
-		entry++;
-		if (index == 4) {
-			result = (int)0x800f0202;
-			goto unlock;
-		}
+	for (index = 0; index < 4; index++) {
+		entry = &updateBufferTable[index];
+		if (entry->kernelBuffer == kernelBuffer && entry->pid == pid && entry->allocated == 1)
+			break;
 	}
-	*userBuffer = updateBufferTable[index].userBuffer;
-	result = 0;
-unlock:
+	if (index == 4) {
+		result = (int)0x800f0202;
+	} else {
+		*userBuffer = updateBufferTable[index].userBuffer;
+		result = 0;
+	}
 	sceKernelUnlockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	return result;
 }
@@ -40,20 +37,17 @@ int UpdateUtilUA2KA(const void *userBuffer, SceUID pid, void **kernelBuffer)
 	result = lockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	if (result)
 		return result;
-	index = 0;
-	entry = updateBufferTable;
-	while (entry->userBuffer != userBuffer || entry->pid != pid ||
-			entry->allocated != 1) {
-		index++;
-		entry++;
-		if (index == 4) {
-			result = (int)0x800f0202;
-			goto unlock;
-		}
+	for (index = 0; index < 4; index++) {
+		entry = &updateBufferTable[index];
+		if (entry->userBuffer == userBuffer && entry->pid == pid && entry->allocated == 1)
+			break;
 	}
-	*kernelBuffer = updateBufferTable[index].kernelBuffer;
-	result = 0;
-unlock:
+	if (index == 4) {
+		result = (int)0x800f0202;
+	} else {
+		*kernelBuffer = updateBufferTable[index].kernelBuffer;
+		result = 0;
+	}
 	sceKernelUnlockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	return result;
 }

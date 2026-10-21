@@ -6,7 +6,7 @@
 int UpdateUtilSetBufferState(unsigned int state, void *buffer)
 {
 	UpdateUtilBufferEntry *entry;
-	int result, bufferResult;
+	int index, result, bufferResult;
 
 	if (!buffer)
 		return (int)0x800f0216;
@@ -14,7 +14,8 @@ int UpdateUtilSetBufferState(unsigned int state, void *buffer)
 	if (result)
 		return result;
 	bufferResult = (int)0x800f0202;
-	for (entry = updateBufferTable; entry != updateBufferTable + 4; entry++) {
+	for (index = 0; index < 4; index++) {
+		entry = &updateBufferTable[index];
 		if (entry->kernelBuffer == buffer) {
 			bufferResult = 0;
 			entry->inUse = state;

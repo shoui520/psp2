@@ -67,10 +67,13 @@ int SpkgInfoUtilGetSpkgInfo(int packageType, SceSblUsSpkgInfo *info)
 	goto statusCheck;
 
 liveVersion:
-	storedVersion = version;
-	memset(info, 0, sizeof(*info));
-	info->size = sizeof(*info);
-	info->version = storedVersion;
+	{
+		uint32_t liveVersion = version;
+
+		memset(info, 0, sizeof(*info));
+		info->size = sizeof(*info);
+		info->version = liveVersion;
+	}
 statusCheck:
 	if (packageType == 13) {
 		if (BbmcUtilGetStatus(&status) || !status)

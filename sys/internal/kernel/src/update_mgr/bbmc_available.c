@@ -3,7 +3,7 @@
 
 int BbmcUtilIsAvailable(void)
 {
-	int (*getVersion)(int, uint32_t *) = sceBbmcDLUpdaterGetArchiveVersionForDriver;
+	int (*volatile getVersion)(int, uint32_t *) = sceBbmcDLUpdaterGetArchiveVersionForDriver;
 
 	if (SceModulemgrForDriver_BBE1771C("SceBbmc") < 0)
 		return 0;

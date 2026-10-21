@@ -15,8 +15,8 @@ extern int updateSysconFirmwareUpdateStarted;
 
 int SpkgUtilPowerControl(int operation, int flags)
 {
+	int (*volatile ledControl)(uint32_t led, uint32_t mode, const void *option);
 	int result;
-	int (*ledControl)(uint32_t led, uint32_t mode, const void *option) = SceLedForDriver_EA24BE03;
 
 	UpdateUtilLockPupHeader();
 	switch (operation) {
@@ -71,6 +71,7 @@ int SpkgUtilPowerControl(int operation, int flags)
 			result = SceKernelSuspendForDriver_2BB92967(0);
 		break;
 	case 4:
+		ledControl = SceLedForDriver_EA24BE03;
 		if (ledControl) {
 			result = ledControl(2, SCE_LED_MODE_ON, NULL);
 		} else {
@@ -80,6 +81,7 @@ int SpkgUtilPowerControl(int operation, int flags)
 		}
 		break;
 	case 5:
+		ledControl = SceLedForDriver_EA24BE03;
 		if (ledControl) {
 			result = ledControl(2, SCE_LED_MODE_OFF, NULL);
 		} else {

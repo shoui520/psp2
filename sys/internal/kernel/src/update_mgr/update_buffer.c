@@ -26,14 +26,13 @@ int UpdateUtilAllocateBuffer(SceSize size, void **buffer, SceUID pid)
 	result = lockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	if (result)
 		return result;
-	index = 0;
-	entry = updateBufferTable;
-	while (entry->kernelBuffer || entry->allocated || entry->inUse) {
-		index++;
-		entry++;
-		if (index == 4)
-			goto failed;
+	for (index = 0; index < 4; index++) {
+		entry = &updateBufferTable[index];
+		if (!entry->kernelBuffer && !entry->allocated && !entry->inUse)
+			break;
 	}
+	if (index == 4)
+		goto failed;
 	if (SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(pid)) {
 		memset(&kernelOption, 0, sizeof(kernelOption));
 		kernelOption.size = sizeof(kernelOption);
@@ -93,7 +92,7 @@ unlock:
 int UpdateUtilReleaseBuffer(void *buffer, SceUID pid)
 {
 	UpdateUtilBufferEntry *entry;
-	int result, freeResult = 0, userFreeResult = 0, kernelFreeResult;
+	int result, freeResult = 0, userFreeResult = 0, kernelFreeResult, index;
 
 	if (!buffer)
 		return (int)0x800f0216;
@@ -101,7 +100,8 @@ int UpdateUtilReleaseBuffer(void *buffer, SceUID pid)
 	if (result)
 		return result;
 	result = (int)0x800f0202;
-	for (entry = updateBufferTable; entry != updateBufferTable + 4; entry++) {
+	for (index = 0; index < 4; index++) {
+		entry = &updateBufferTable[index];
 		if (buffer == entry->kernelBuffer && pid == entry->pid &&
 				entry->allocated == 1) {
 			result = 0;

@@ -36,8 +36,8 @@ static const SpkgPackagePolicy spkgPackagePolicies[29] = {
 	[21] = { .allowed = { 1, 1, 1 } },
 	[22] = { .allowed = { 1, 1, 1 } },
 	[23] = { .allowed = { 1, 1, 1 } },
-	[24] = { .allowed = { 1, 1, 1 } },
-	[25] = { .allowed = { 0, 1, 1 } },
+	[24] = { .allowed = { 1, 1, 0 } },
+	[25] = { .allowed = { 1, 1, 0 } },
 	[27] = { .allowed = { 0, 0, 1 } },
 	[28] = { .allowed = { 1, 1, 1 } }
 };

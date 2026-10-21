@@ -6,12 +6,13 @@
 int UpdateUtilReleaseAllBuffers(SceUID pid)
 {
 	UpdateUtilBufferEntry *entry;
-	int result;
+	int index, result;
 
 	result = lockFastMutex((SceKernelFastMutex *)&updateTableMutex);
 	if (result)
 		return result;
-	for (entry = updateBufferTable; entry != updateBufferTable + 4; entry++) {
+	for (index = 0; index < 4; index++) {
+		entry = &updateBufferTable[index];
 		if (entry->pid == pid && entry->kernelBuffer &&
 				entry->allocated == 1 && !entry->inUse) {
 			sceKernelFreeMemBlock(entry->kernelMemBlock);

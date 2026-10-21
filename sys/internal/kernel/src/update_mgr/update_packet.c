@@ -55,9 +55,9 @@ int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packetOut,
 		goto freeVector;
 	}
 	memset(packet, 0, sizeof(*packet));
-	vectorCount = vectorVector->total;
 	packet->vectorVector = *vectorVector;
 	packet->dataVector = *dataVector;
+	vectorCount = vectorVector->total;
 	if (vectorCount >= 482) {
 		result = (int)0x800f020c;
 		sceKernelFreeHeapMemory(heapId, packet);

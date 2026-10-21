@@ -14,10 +14,10 @@ int sceSblUsVerifyPupHeaderForUser(const char *path)
 		return (int)0x800f022c;
 	state = sceSyscallEnter();
 	result = sceKernelStrncpyFromUser(buffer, path, sizeof(buffer));
-	if (result < 0 || result == 1024)
-		result = (int)0x800f0216;
-	else
+	if (result >= 0 && result != 1024)
 		result = sceSblUsVerifyPupHeader(buffer);
+	else
+		result = (int)0x800f0216;
 	sceSyscallLeave(state);
 	return result;
 }
