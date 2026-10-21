@@ -86,6 +86,9 @@ typedef struct NgsModuleDefinition {
 	unsigned int flags;
 } NgsModuleDefinition;
 
+/* NgsModuleDefinition flags: the module decodes through the codec engine. */
+#define NGS_MODULE_FLAG_CODEC	1
+
 typedef char NgsModuleDefinitionSize[(sizeof(NgsModuleDefinition) == 68) ? 1 : -1];
 
 /* ngs_memory.c */
@@ -98,6 +101,10 @@ void *ngsAllocateMemoryWithAlignment(unsigned char **cursor, SceSize size,
 				     SceSize alignment);
 SceSize ngsAlignAllocationSize(SceSize size, SceSize alignment);
 uintptr_t ngsAlignMemoryAddress(uintptr_t address);
+unsigned int ngsGetVoiceDefinitionInputCount(
+		const struct SceNgsVoiceDefinition *definition);
+unsigned int ngsGetVoiceDefinitionOutputCount(
+		const struct SceNgsVoiceDefinition *definition);
 
 /* ngs_module_memory.c */
 int ngsGetCompressorMemoryInfo(const struct NgsModuleInitParams *params, NgsModuleMemoryInfo *info);

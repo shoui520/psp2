@@ -25,8 +25,8 @@ SceNgsHPatch ngsConnectPatch(NgsVoice *source, unsigned int index,
 	source->dirtyFlags |= 1;
 	source->dirtyFlags2 |= 1;
 	source->patchDirtyMask |= 1 << index;
-	patch->reserved4 = input->reserved12;
-	patch->reserved8 = input->reserved16;
+	patch->mixerContext = input->mixerContext;
+	patch->mixerContextPhysical = input->mixerContextPhysical;
 	memset(patch->volumes, 0, 8 * source->channels);
 	input->patches[input->patchCount] = patch;
 	++input->patchCount;
@@ -219,8 +219,8 @@ SceInt32 sceNgsPatchRemoveRoutingInternal(SceNgsHPatch handle)
 			NULL;
 		--destination->inputs[patch->inputIndex].patchCount;
 		patch->destination = NULL;
-		patch->reserved4 = 0;
-		patch->reserved8 = 0;
+		patch->mixerContext = NULL;
+		patch->mixerContextPhysical = 0;
 		source->patchDirtyMask |= 1 << index;
 		source->dirtyFlags |= 1;
 		source->dirtyFlags2 |= 1;

@@ -2,7 +2,9 @@
 
 #include <stddef.h>
 #include <arm_neon.h>
+#include <string.h>
 #include "ngs_module_memory.h"
+#include "ngs_rack.h"
 #include "ngs_voice_definition.h"
 
 extern const int ngsReverbDelayLengths[16];
@@ -330,6 +332,56 @@ int ngsGetInputMemoryInfo(const struct NgsModuleInitParams *params,
 	info->paramsSize = 0;
 	info->sharedWorkSize = 0;
 	info->extraMemorySize = 0;
+	return 0;
+}
+
+void ngsInitInputMixerContext(NgsSynSystem *system,
+			      const SceNgsRackDescription *description,
+			      void *memory, unsigned char *buffers)
+{
+	unsigned char *cursor = memory;
+	int patchCount = description->nMaxPatchesPerInput;
+	SceSize bufferSize = 4 * system->Granularity;
+	NgsInputMixerContext *context;
+	int slot;
+	unsigned int channel;
+
+	if (patchCount > NGS_INPUT_MIXER_MAX_PATCHES)
+		patchCount = NGS_INPUT_MIXER_MAX_PATCHES;
+	context = ngsAllocateMemory(&cursor, sizeof(*context));
+	context->patchCount = patchCount;
+	context->channels = description->nChannelsPerVoice;
+	memset(context->reserved, 0, sizeof(context->reserved));
+	for (slot = 0; slot < patchCount; slot++) {
+		for (channel = 0; channel < context->channels; channel++) {
+			void *buffer = ngsAllocateMemory(&buffers, bufferSize);
+
+			context->buffers[slot][channel] = (uintptr_t)buffer;
+			context->buffers[slot][channel] =
+				ngsGetPhysicalAddress(buffer);
+		}
+		for (; channel < 2; channel++)
+			context->buffers[slot][channel] = 0;
+	}
+	for (; slot < NGS_INPUT_MIXER_BUFFER_SLOTS; slot++) {
+		context->buffers[slot][0] = 0;
+		context->buffers[slot][1] = 0;
+	}
+	ngsCleanDcacheRange(context, ngsAlignMemorySize(sizeof(*context)));
+}
+
+int ngsGetInputMixerMemorySize(NgsSynSystem *system,
+			       const SceNgsRackDescription *description,
+			       SceSize *contextSize, SceSize *bufferSize)
+{
+	SceSize channelSize = 4 * system->Granularity *
+			      description->nChannelsPerVoice;
+	int patchCount = description->nMaxPatchesPerInput;
+
+	*contextSize = sizeof(NgsInputMixerContext);
+	if (patchCount > NGS_INPUT_MIXER_MAX_PATCHES)
+		patchCount = NGS_INPUT_MIXER_MAX_PATCHES;
+	*bufferSize = channelSize * patchCount;
 	return 0;
 }
 

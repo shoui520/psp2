@@ -146,6 +146,45 @@ typedef struct NgsDspCodecBuffer {
 	unsigned int memorySize;
 } NgsDspCodecBuffer;
 
+/* The module index of an NgsVoiceDspCallback that holds no callback. */
+#define NGS_VOICE_DSP_NO_MODULE	32
+
+/* The most patches an input mixer mixes, and the buffers its context holds. */
+#define NGS_INPUT_MIXER_MAX_PATCHES	3
+#define NGS_INPUT_MIXER_BUFFER_SLOTS	6
+
+/* The codec engine's state of one input mixer of a voice (128 bytes). */
+typedef struct NgsInputMixerContext {
+	unsigned int patchCount;
+	unsigned int channels;
+	unsigned int reserved[6];
+	uintptr_t buffers[NGS_INPUT_MIXER_BUFFER_SLOTS][2];	/* physical */
+	unsigned int padding[12];
+} NgsInputMixerContext;
+
+_Static_assert(sizeof(NgsInputMixerContext) == 128,
+	       "NgsInputMixerContext size");
+
+/* A module callback the codec engine raised for a voice. */
+typedef struct NgsVoiceDspCallback {
+	unsigned int moduleIndex;
+	void *callbackPtr;
+	int callbackData;
+	int callbackData2;
+} NgsVoiceDspCallback;
+
+/* What the codec engine reports for a voice after an update (dsp->status). */
+typedef struct NgsVoiceDspStatus {
+	int presetIndex;
+	unsigned int event;
+	unsigned int reserved[2];
+	unsigned short paramsError;	/* a module's parameters were out of range */
+	unsigned short paramsErrorModule;
+	NgsVoiceDspCallback callbacks[2];
+} NgsVoiceDspStatus;
+
+_Static_assert(sizeof(NgsVoiceDspStatus) == 52, "NgsVoiceDspStatus size");
+
 /* The per-voice block read by the codec engine (rack->voiceDsps[voice]). */
 typedef struct NgsVoiceDsp {
 	SceSize size;
@@ -167,7 +206,7 @@ typedef struct NgsVoiceDsp {
 	unsigned int reserved64;
 	unsigned int bypassFlags;	/* the voice's bypassFlags as of the update */
 	unsigned int updatedParams;	/* modules whose parameters changed, or ~0 */
-	void *status;
+	NgsVoiceDspStatus *status;
 	SceSize statusSize;
 	uintptr_t moduleMemoryPhysical;
 	uintptr_t inputMixerMemoryPhysical;
@@ -186,8 +225,8 @@ _Static_assert(sizeof(NgsVoiceDsp) == 124, "NgsVoiceDsp size");
 /* A patch from one voice output to another voice's input. */
 typedef struct NgsPatch {
 	struct NgsVoice *destination;
-	int reserved4;
-	int reserved8;
+	void *mixerContext;		/* the destination input's mixer context */
+	uintptr_t mixerContextPhysical;
 	SceNgsVolumeMatrix *volumes;
 	struct NgsVoice *source;
 	unsigned char outputIndex;
@@ -206,8 +245,8 @@ typedef struct NgsVoiceInput {
 	unsigned int maxPatches;
 	unsigned int patchCount;
 	NgsPatch **patches;
-	unsigned int reserved12;
-	unsigned int reserved16;
+	void *mixerContext;		/* NgsInputMixerContext */
+	uintptr_t mixerContextPhysical;
 } NgsVoiceInput;
 
 /* A module's parameters of a voice, at the kernel's and the caller's address. */
@@ -215,8 +254,8 @@ typedef struct NgsVoiceModuleParams {
 	void *paramsCaller;
 	void *params;
 	int locked;
-	int reserved12;
-	int reserved16;
+	SceNgsModuleCallbackFunc callback;
+	void *callbackUserData;
 } NgsVoiceModuleParams;
 
 /* Whether a voice plays, and whether it is paused. */
@@ -382,6 +421,14 @@ int ngsFlushInputMixer(NgsSynRack *rack, unsigned int voiceIndex,
 void ngsRelocateRackMemory(NgsSynRack *rack, void *releasedAddress,
 			   SceSize releasedSize);
 
+/* ngs_module_memory.c */
+int ngsGetInputMixerMemorySize(NgsSynSystem *system,
+			       const SceNgsRackDescription *description,
+			       SceSize *contextSize, SceSize *bufferSize);
+void ngsInitInputMixerContext(NgsSynSystem *system,
+			      const SceNgsRackDescription *description,
+			      void *memory, unsigned char *buffers);
+
 /* ngs_buffer.c */
 void ngsAssignModuleBuffers(unsigned char *inputSlots,
 			    unsigned char *outputSlots, const NgsVoiceDsp *dsp,
@@ -392,6 +439,26 @@ int ngsGetPatchIndex(int nPatchesPerOutput, int nSourceOutputIndex,
 		     int nSourceOutputSubIndex);
 
 /* ngs_voice.c */
+unsigned int ngsCountCodecModules(NgsSynSystem *system,
+	const struct SceNgsVoiceDefinition *definition);
+void ngsInitVoice(NgsSynSystem *system, NgsVoice *voice, NgsSynRack *rack,
+		  const SceNgsRackDescription *description,
+		  unsigned char **stateCursor, unsigned char **cursor,
+		  SceSize stateSize, SceSize paramsSize, int sizeOnly);
+NgsVoiceDsp *ngsAllocateVoiceDsp(NgsSynSystem *system, NgsSynRack *rack,
+				 const SceNgsRackDescription *description,
+				 unsigned char **cursor, int sizeOnly,
+				 SceSize paramsSize, unsigned int codecCount);
+void ngsInitVoiceInputMixers(NgsSynSystem *system, NgsVoice *voice,
+			     NgsVoiceDsp *dsp,
+			     const SceNgsRackDescription *description,
+			     unsigned char **cursor, int sizeOnly,
+			     SceSize moduleMemorySize,
+			     SceSize inputMixerMemorySize, SceSize codecSize);
+void ngsAllocateVoiceDspStatus(NgsSynSystem *system, NgsVoiceDsp *dsp,
+			       const SceNgsRackDescription *description,
+			       unsigned char **cursor, int sizeOnly);
+void ngsMapVoiceDsp(NgsVoiceDsp *dsp);
 int ngsUpdateVoiceFlags(NgsVoice *voice, NgsSynRack *rack);
 SceInt32 sceNgsVoiceKillInternal(SceNgsHVoice handle);
 

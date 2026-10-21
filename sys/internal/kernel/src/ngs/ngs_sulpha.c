@@ -111,7 +111,7 @@ typedef struct NgsSulphaPatchEvent {
 	unsigned int eventIndex;
 	unsigned int reserved23;
 	unsigned int channels;
-	unsigned int reserved4;
+	unsigned int connected;	/* the patch feeds an input mixer */
 	int destinationReserved24;
 	SceNgsVolumeMatrix volumes;
 } __attribute__((may_alias)) NgsSulphaPatchEvent;
@@ -318,7 +318,7 @@ static inline void ngsSulphaTracePatch(NgsSulphaTrace *trace, NgsPatch *patch)
 	event->eventIndex = (unsigned short)trace->eventCount;
 	event->reserved23 = patch->reserved23;
 	event->channels = patch->channels;
-	event->reserved4 = patch->reserved4 != 0;
+	event->connected = patch->mixerContext != NULL;
 	event->destinationReserved24 = patch->destination != NULL ?
 		patch->destination->reserved24 : 0;
 	if (patch->volumes != NULL)

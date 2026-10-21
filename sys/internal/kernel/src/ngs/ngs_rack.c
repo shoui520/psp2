@@ -300,7 +300,8 @@ void ngsRelocateRackMemory(NgsSynRack *rack, void *releasedAddress,
 		if (dsp->params != NULL)
 			dsp->params -= releasedSize;
 		if (dsp->status != NULL)
-			dsp->status = (unsigned char *)dsp->status - releasedSize;
+			dsp->status = (NgsVoiceDspStatus *)
+				((unsigned char *)dsp->status - releasedSize);
 		if (dsp->codecBuffers != NULL)
 			dsp->codecBuffers = (NgsDspCodecBuffer *)
 				((unsigned char *)dsp->codecBuffers - releasedSize);
