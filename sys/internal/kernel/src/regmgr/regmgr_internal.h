@@ -26,6 +26,10 @@ int regMgrLoadCache(void);
 #define memset(dst, c, len)	__builtin___memset_chk(dst, c, len, __builtin_object_size(dst, 0))
 #define strncpy(dst, src, len)	__builtin___strncpy_chk(dst, src, len, __builtin_object_size(dst, 1))
 #define strncat(dst, src, len)	__builtin___strncat_chk(dst, src, len, __builtin_object_size(dst, 1))
+#else
+/* 3.6x is built with the compiler builtins: constant clears and copies inline */
+#define memcpy(dst, src, len)	__builtin_memcpy(dst, src, len)
+#define memset(dst, c, len)	__builtin_memset(dst, c, len)
 #endif
 
 #define SCE_REGMGR_ERROR_INVALID_ARGUMENT	0x800d0004	/* names unknown */
@@ -205,8 +209,8 @@ extern int g_regMgrRegionError;
 extern SceUInt32 g_regMgrInitNotice;
 extern SceUInt32 g_regMgrErrEnable;
 
-#define REGMGR_CONFIG_RELEASE	0x1		/* names unknown: a retail console, or a tool not in development mode */
-#define REGMGR_CONFIG_TOOL	0x2
+#define REGMGR_CONFIG_TOOL	0x1		/* names unknown: regMgrIsTool's bit, the tool's development mode */
+#define REGMGR_CONFIG_RELEASE	0x2		/* regMgrIsRelease's bit, read by the ForTool exports */
 
 #define REGMGR_STATUS_INIT	0x10000000	/* names unknown */
 #define REGMGR_STATUS_NOTIFY	0x00000002	/* only the notified keys are accessible */
@@ -231,7 +235,7 @@ int regRemoveCategory(int registry, const char *path, int flags);
 int regDeleteKey(int handle, const char *name);
 int regCreateKey(int handle, const char *name, int type, int size);
 int regSetKey(int handle, const char *name, const void *buf, SceSize size);
-int regGetKey(int handle, const char *name, void *buf, SceSize size);
+int regGetKey(int handle, const char *name, void *buf, int size);
 
 /* regmgr_wrapreg.c */
 extern int g_regMgrRegistryHandle;
@@ -247,7 +251,7 @@ int regMgrWrapRegGetKey(int handle, const char *category, const char *name, void
 int regMgrWrapGetNVSData(const char *category, const char *name, void *buf, SceSize size);
 void regMgrSetLastError(int error);
 int regMgrGetLastError(void);
-int regMgrComputeInitValue(int initType, RegMgrValue *value);
+int regMgrAddinSet(int initType, RegMgrValue *value);
 int regMgrAddinPsIdToken(RegMgrValue *value);
 int regMgrAddinUserName(RegMgrValue *value);
 int regMgrWrapRegRemoveCategory(const char *category);
@@ -278,8 +282,8 @@ int regMgrComApiEpilogue(int lock);
 int regMgrGetRegionNo(void);
 const char *regMgrGetRegionName(int region);
 SceUInt32 regMgrGetErrEnable(void);
-void regMgrRecordError(int error, int api, const char *category, const char *name,
-		       const void *data, SceSize size);
+int regMgrRecordError(int error, int api, const char *category, const char *name,
+		      const void *data, SceSize size);
 int regMgrGetVolatileMode(void);
 int regMgrMakePsIdToken(SceUInt8 *token);
 SceUInt32 regMgrIsTool(void);
@@ -287,7 +291,7 @@ SceUInt32 regMgrIsRelease(void);
 int regMgrIsQaf(void);
 int regMgrLock(int *lock);
 int regMgrUnlock(int lock);
-int regMgrNotifyLevel(int level);
+int regMgrComSyncKeyValue(int level);
 void regMgrClearStatus(void);
 void regMgrSetStatus(SceUInt32 status);
 SceUInt32 regMgrIsInitSettings(void);

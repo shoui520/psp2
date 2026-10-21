@@ -14,11 +14,12 @@ RegCategory *g_regCategoryList;
 RegCategory *g_regCategoryTail;
 
 /* the entry of the category name under parent, searched from its hash slot */
-int regFindCategoryEntry(int registry, RegIndexImage *image, SceUInt32 parent, SceUInt32 slot,
+int __attribute__((noinline)) regFindCategoryEntry(int registry, RegIndexImage *image, SceUInt32 parent, SceUInt32 slot,
 			 const char *name, RegCategoryEntry **entry)
 {
 	RegCategoryEntry *table;
 	RegCategoryEntry *e;
+	SceUInt32 first;
 	SceUInt32 num;
 	SceUInt32 i;
 	int ret;
@@ -30,26 +31,44 @@ int regFindCategoryEntry(int registry, RegIndexImage *image, SceUInt32 parent, S
 		goto fail;
 	}
 
+	/* the first entry in the slot's chain */
 	i = slot;
-	do {
+	for (;;) {
 		e = &table[i];
-		if (e->slot == (SceUInt16)slot && e->parent == (SceUInt16)parent) {
-			if (strncmp(e->name, name, REG_CATEGORY_NAME_LEN) == 0) {
-				e->registry = regGetRegistry(registry);
-				if (e->registry == NULL) {
-					ret = REG_ERROR_NOT_FOUND;
-					goto fail;
-				}
-				*entry = e;
-				return 0;
-			}
-		}
-		i++;
-		if (i >= num)
+		if (e->slot == (SceUInt16)slot && e->parent == (SceUInt16)parent)
+			break;
+		if (++i >= num)
 			i = 0;
-	} while (i != slot);
-	ret = REG_ERROR_CATEGORY_NOT_FOUND;
+		if (i == slot)
+			goto notfound;
+	}
 
+	/* then the one of that name, searched on from the first round to it */
+	if (strncmp(e->name, name, REG_CATEGORY_NAME_LEN) != 0) {
+		first = i;
+		i++;
+		for (;;) {
+			e = &table[i++];
+			if (e->slot == (SceUInt16)slot && e->parent == (SceUInt16)parent &&
+			    strncmp(e->name, name, REG_CATEGORY_NAME_LEN) == 0)
+				break;
+			if (i >= num)
+				i = 0;
+			if (i == first)
+				goto notfound;
+		}
+	}
+
+	e->registry = regGetRegistry(registry);
+	if (e->registry == NULL) {
+		ret = REG_ERROR_NOT_FOUND;
+		goto fail;
+	}
+	*entry = e;
+	return 0;
+
+notfound:
+	ret = REG_ERROR_CATEGORY_NOT_FOUND;
 fail:
 	*entry = NULL;
 
@@ -106,7 +125,7 @@ fail:
 }
 
 /* the 4-byte check of a data block: its SHA-1 folded, the check field zeroed first */
-int regComputeBlockCheck(RegDataBlock *block, SceSize size, SceUInt8 *check)
+int __attribute__((noinline)) regComputeBlockCheck(RegDataBlock *block, SceSize size, SceUInt8 *check)
 {
 	SceUInt8 digest[0x14];
 	int ret;
@@ -142,10 +161,10 @@ void regFreeCategoryEntry(RegCategoryEntry *entry, RegIndexImage *image)
 	int i;
 
 	for (i = 0; i < entry->blockNum; i++) {
-		block = entry->block[i];
 		bitmap = (SceUInt8 *)image + image->bitmapOffset;
-		bitmap[block >> 3] &= ~(1 << (block & 7));
+		bitmap[entry->block[i] >> 3] &= ~(1 << (entry->block[i] & 7));
 		image->freeBlockNum++;
+		block = entry->block[i];
 
 		reg = NULL;
 		fd = -1;
@@ -305,10 +324,12 @@ int regFindCategoryByPath(const char *path, RegIndexImage *image, int *index, co
 	char *parent;
 	char *name;
 	SceUInt32 len;
+	SceUInt32 offset;
 	int start;
 	int ret;
 	int i;
 
+	offset = image->categoryOffset;
 	parent = regMemAlloc(REG_CATEGORY_PATH_LEN + 1);
 	if (parent == NULL)
 		return REG_ERROR_NO_MEMORY_HEAP;
@@ -347,7 +368,7 @@ int regFindCategoryByPath(const char *path, RegIndexImage *image, int *index, co
 	start = *index;
 	i = start;
 	do {
-		entry = (RegCategoryEntry *)((char *)image + image->categoryOffset) + i;
+		entry = (RegCategoryEntry *)((char *)image + offset) + i;
 		if (id != NULL && strncmp(name, entry->name, REG_CATEGORY_NAME_LEN) == 0 &&
 		    entry->id == *id) {
 			*index = i;
@@ -579,6 +600,7 @@ int regGetCategoryNames(int registry, char (*names)[REG_CATEGORY_NAME_LEN + 1], 
 	RegCategoryEntry *entry;
 	RegIndexImage *image;
 	RegRegistry *reg;
+	SceUInt32 total;
 	int count;
 	int state;
 	int ret;
@@ -600,9 +622,10 @@ int regGetCategoryNames(int registry, char (*names)[REG_CATEGORY_NAME_LEN + 1], 
 		ret = REG_ERROR_NOT_FOUND;
 	} else {
 		image = reg->image;
+		total = image->categoryNum;
 		entry = (RegCategoryEntry *)((char *)image + image->categoryOffset);
 		count = 0;
-		for (i = 0; i < image->categoryNum; i++, entry++) {
+		for (i = 0; i != total; i++, entry++) {
 			if (entry->parent != REG_CATEGORY_NONE)
 				continue;
 			memset(names[count], 0, REG_CATEGORY_NAME_LEN + 1);
@@ -742,7 +765,6 @@ int regOpenCategory(int registry, const char *path, int mode, int *handle)
 		goto free;
 	}
 	image = reg->image;
-	table = (RegCategoryEntry *)((char *)image + image->categoryOffset);
 
 	ret = REG_ERROR_BAD_CATEGORY_PATH;
 	if (path[0] != '/')
@@ -807,6 +829,7 @@ int regOpenCategory(int registry, const char *path, int mode, int *handle)
 		image->freeBlockNum--;
 
 		/* a free entry from its hash slot on */
+		table = (RegCategoryEntry *)((char *)image + image->categoryOffset);
 		i = slot;
 		do {
 			if (table[i].slot == REG_CATEGORY_NONE) {
@@ -836,7 +859,7 @@ int regOpenCategory(int registry, const char *path, int mode, int *handle)
 		}
 		parentEntry = NULL;
 		if (e->parent != REG_CATEGORY_NONE) {
-			parentEntry = &table[e->parent];
+			parentEntry = (RegCategoryEntry *)((char *)image + image->categoryOffset) + e->parent;
 			parentEntry->registry = e->registry;
 		}
 		entry = e;

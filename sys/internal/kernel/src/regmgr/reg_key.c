@@ -14,6 +14,7 @@ static inline __attribute__((always_inline)) int regMoveKey(RegDataBlock *data, 
 	SceUInt32 count;
 	SceUInt16 first;
 	SceUInt16 top;
+	SceUInt8 *dest;
 	int record;
 	int j;
 
@@ -42,11 +43,14 @@ static inline __attribute__((always_inline)) int regMoveKey(RegDataBlock *data, 
 		}
 		if (count != 0)
 			first = top + 1 - count;
+		dest = (SceUInt8 *)data + first * sizeof(RegKeyRecord);
 		data->dataRecord = top - count;
+		if (dest == NULL)
+			return REG_ERROR_NO_RECORDS;
 
-		dst->value = (src->value & 0xffffff) | first << 24;
-		memcpy((SceUInt8 *)data + first * sizeof(RegKeyRecord),
-		       (const SceUInt8 *)old + REG_KEY_OFFSET(src->value) * sizeof(RegKeyRecord),
+		/* the record count sign-extended, as Sony's */
+		dst->value = REG_KEY_SIZE(src->value) | (SceInt8)count << 16 | first << 24;
+		memcpy(dest, (const SceUInt8 *)old + REG_KEY_OFFSET(src->value) * sizeof(RegKeyRecord),
 		       count * sizeof(RegKeyRecord));
 
 		record = data->recordNum;
@@ -66,15 +70,15 @@ int regResizeCategoryCache(SceUInt16 *blockNum, RegCategoryCache **cache, RegDat
 	SceUInt16 n;
 	int i;
 
-	n = *blockNum;
-	data = regMemAlloc(n * REG_BLOCK_SIZE);
+	data = regMemAlloc(*blockNum * REG_BLOCK_SIZE);
 	if (data == NULL)
 		return REG_ERROR_NO_MEMORY_HEAP;
 
-	memset(data, 0, n * REG_BLOCK_SIZE);
+	memset(data, 0, *blockNum * REG_BLOCK_SIZE);
 	memcpy(data, old, offsetof(RegDataBlock, recordBitmap) + 8);
 	data->keyNum = 0;
 	memset(data->recordBitmap + 1, 0, 7);
+	n = *blockNum;
 	data->blockNum = n;
 	data->recordMax = n * 16 - 1;
 	data->freeRecordNum = n * 16 - 1;
@@ -140,7 +144,7 @@ int regCreateKey(int handle, const char *name, int type, int size)
 	data = entry->cache->data;
 	for (i = 0; i < data->keyNum; i++) {
 		key = &data->key[i];
-		if (key->name[0] == name[0] && strncmp(key->name, name, REG_CATEGORY_NAME_LEN) == 0) {
+		if (key->name[0] == (SceChar8)name[0] && strncmp(key->name, name, REG_CATEGORY_NAME_LEN) == 0) {
 			ret = REG_ERROR_KEY_EXISTS;
 			goto unlock;
 		}
@@ -192,6 +196,10 @@ int regCreateKey(int handle, const char *name, int type, int size)
 		if (count != 0)
 			first = top + 1 - count;
 		data->dataRecord = top - count;
+		if ((SceUInt8 *)data + first * sizeof(RegKeyRecord) == NULL) {
+			ret = REG_ERROR_NO_RECORDS;
+			goto unlock;
+		}
 
 		memset(key, 0, sizeof(*key));
 		key->type = type;
@@ -248,7 +256,7 @@ int regSetKey(int handle, const char *name, const void *buf, SceSize size)
 	ret = REG_ERROR_KEY_NOT_FOUND;
 	for (i = 0; i < data->recordNum; i++) {
 		key = &data->key[i];
-		if (key->name[0] != name[0] || strncmp(key->name, name, REG_CATEGORY_NAME_LEN) != 0)
+		if (key->name[0] != (SceChar8)name[0] || strncmp(key->name, name, REG_CATEGORY_NAME_LEN) != 0)
 			continue;
 
 		dest = NULL;
@@ -313,7 +321,7 @@ int regGetKeyInfo(int handle, const char *name, int *type, int *size)
 		ret = REG_ERROR_KEY_NOT_FOUND;
 		for (i = 0; i < data->recordNum; i++) {
 			key = &data->key[i];
-			if (key->name[0] != name[0] ||
+			if (key->name[0] != (SceChar8)name[0] ||
 			    strncmp(key->name, name, REG_CATEGORY_NAME_LEN) != 0)
 				continue;
 
@@ -351,7 +359,7 @@ unlock:
 }
 
 /* read a key of an open category */
-int regGetKey(int handle, const char *name, void *buf, SceSize size)
+int regGetKey(int handle, const char *name, void *buf, int size)
 {
 	RegCategoryEntry *entry;
 	RegDataBlock *data;
@@ -385,7 +393,7 @@ int regGetKey(int handle, const char *name, void *buf, SceSize size)
 	ret = REG_ERROR_KEY_NOT_FOUND;
 	for (i = 0; i < data->recordNum; i++) {
 		key = &data->key[i];
-		if (key->name[0] != name[0] || strncmp(key->name, name, REG_CATEGORY_NAME_LEN) != 0)
+		if (key->name[0] != (SceChar8)name[0] || strncmp(key->name, name, REG_CATEGORY_NAME_LEN) != 0)
 			continue;
 
 		if (key->type < REG_TYPE_CATEGORY || key->type > REG_TYPE_BIN) {
@@ -402,7 +410,7 @@ int regGetKey(int handle, const char *name, void *buf, SceSize size)
 			ret = REG_ERROR_KEY_IS_CATEGORY;
 			break;
 		case REG_TYPE_INT:
-			if (size < sizeof(int)) {
+			if (size < (int)sizeof(int)) {
 				ret = REG_ERROR_KEY_BUFFER_SIZE;
 				break;
 			}
@@ -411,7 +419,7 @@ int regGetKey(int handle, const char *name, void *buf, SceSize size)
 			break;
 		case REG_TYPE_STR:
 		case REG_TYPE_BIN:
-			if (REG_KEY_SIZE(key->value) > size) {
+			if (size < (int)REG_KEY_SIZE(key->value)) {
 				ret = REG_ERROR_KEY_BUFFER_SIZE;
 				break;
 			}
@@ -450,7 +458,7 @@ int regDeleteKeyUnlocked(int handle, const char *name)
 	old = entry->cache->data;
 	victim = NULL;
 	for (i = 0; i < old->recordNum; i++) {
-		if (old->key[i].name[0] == name[0] &&
+		if (old->key[i].name[0] == (SceChar8)name[0] &&
 		    strncmp(old->key[i].name, name, REG_CATEGORY_NAME_LEN) == 0) {
 			victim = &old->key[i];
 			break;
@@ -582,7 +590,7 @@ int regGetKeyNames(int handle, char (*names)[REG_CATEGORY_NAME_LEN + 1], int num
 		ret = REG_ERROR_CATEGORY_NOT_OPEN;
 	} else {
 		key = entry->cache->data->key;
-		for (i = 0; i < num; i++, key++) {
+		for (i = 0; i != num; i++, key++) {
 			memset(names[i], 0, REG_CATEGORY_NAME_LEN + 1);
 			memcpy(names[i], key->name, REG_CATEGORY_NAME_LEN);
 		}
@@ -608,7 +616,7 @@ int regAddCategoryKey(RegCategoryEntry *entry, const char *name)
 	data = entry->cache->data;
 	for (i = 0; i < data->keyNum; i++) {
 		key = &data->key[i];
-		if (key->name[0] == name[0] && strncmp(key->name, name, REG_CATEGORY_NAME_LEN) == 0)
+		if (key->name[0] == (SceChar8)name[0] && strncmp(key->name, name, REG_CATEGORY_NAME_LEN) == 0)
 			return REG_ERROR_KEY_EXISTS;
 	}
 

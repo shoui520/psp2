@@ -22,6 +22,12 @@
 #define memset(dst, c, len)	__builtin___memset_chk(dst, c, len, __builtin_object_size(dst, 0))
 #define strncpy(dst, src, len)	__builtin___strncpy_chk(dst, src, len, __builtin_object_size(dst, 0))
 #define strncat(dst, src, len)	__builtin___strncat_chk(dst, src, len, __builtin_object_size(dst, 0))
+#else
+/* 3.6x is built with the compiler builtins: constant clears and copies inline */
+#undef memcpy
+#undef memset
+#define memcpy(dst, src, len)	__builtin_memcpy(dst, src, len)
+#define memset(dst, c, len)	__builtin_memset(dst, c, len)
 #endif
 
 /* the reg library's errors (0x800cXXXX; names unknown) */

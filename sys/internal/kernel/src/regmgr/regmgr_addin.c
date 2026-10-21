@@ -17,9 +17,10 @@ int regMgrAddinPsIdToken(RegMgrValue *value)
 int regMgrAddinUserName(RegMgrValue *value)
 {
 	static const char userName[] = "user";
+	SceUInt32 time;
 
-	snprintf(value->data, value->size, "%s%03d", userName,
-		 SceProcessmgrForDriver_02179E12() % 1000);
+	time = SceProcessmgrForDriver_02179E12();
+	snprintf(value->data, value->size, "%s%03d", userName, time % 1000);
 	value->size = strnlen(value->data, REGMGR_ADDIN_SIZE) + 1;
 	return 0;
 }
@@ -29,7 +30,8 @@ static int (*const addinFunc[])(RegMgrValue *value) = {
 	regMgrAddinPsIdToken,
 };
 
-int regMgrComputeInitValue(int initType, RegMgrValue *value)
+/* the value of a computed initial value (0.990's "regMgrAddinSet(%d) = %08x") */
+int regMgrAddinSet(int initType, RegMgrValue *value)
 {
 	int addin = initType ^ REGMGR_INIT_COMPUTED;
 

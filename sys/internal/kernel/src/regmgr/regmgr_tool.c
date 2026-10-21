@@ -133,8 +133,13 @@ int SceRegMgrForTool_3AAB71EF(char (*names)[REGMGR_REG_NAME_SIZE], int num)
 		ret = SCE_REGMGR_ERROR_INVALID_ARGUMENT;
 		goto out;
 	}
-	for (i = 0; i < num; i++)
+	for (i = 0; i < num; i++) {
+		if (names[i] == NULL) {
+			ret = SCE_REGMGR_ERROR_INVALID_ARGUMENT;
+			goto out;
+		}
 		names[i][0] = '\0';
+	}
 	if (regMgrGetVolatileMode() != 1)
 		ret = regMgrWrapRegSetError(regGetCategoryNames(regMgrWrapRegGetRegistryHandle(),
 								names, num), 306);
@@ -271,8 +276,13 @@ int SceRegMgrForTool_4EDF87F9(int handle, char (*names)[REGMGR_REG_NAME_SIZE], i
 		ret = SCE_REGMGR_ERROR_INVALID_ARGUMENT;
 		goto out;
 	}
-	for (i = 0; i < num; i++)
+	for (i = 0; i < num; i++) {
+		if (names[i] == NULL) {
+			ret = SCE_REGMGR_ERROR_INVALID_ARGUMENT;
+			goto out;
+		}
 		names[i][0] = '\0';
+	}
 	if (regMgrGetVolatileMode() != 1)
 		ret = regMgrWrapRegSetError(regGetKeyNames(handle, names, num), 608);
 out:

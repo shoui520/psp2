@@ -196,6 +196,7 @@ int SceRegMgrForDebugger_B9A0BB77(void)
 /* the size of a tool definition file */
 static inline __attribute__((always_inline)) int regMgrDbgGetToolDefSize(int eventLog, SceSize *uisize)
 {
+	const char *path;
 	SceIoStat stat;
 	int lock = 0;
 	int ret;
@@ -207,8 +208,10 @@ static inline __attribute__((always_inline)) int regMgrDbgGetToolDefSize(int eve
 			if (uisize == NULL) {
 				ret = SCE_REGMGR_ERROR_INVALID_ARGUMENT;
 			} else {
+				path = regMgrGetToolDefPath(eventLog);
 				memset(&stat, 0, sizeof(stat));
-				if (sceIoGetstat(regMgrGetToolDefPath(eventLog), &stat) < 0)
+				ret = sceIoGetstat(path, &stat);
+				if (ret < 0)
 					ret = SCE_REGMGR_ERROR_FILE;
 				else
 					*uisize = stat.st_size;
@@ -248,6 +251,7 @@ int SceRegMgrForDebugger_8AE5757E(SceSize *uisize)
 /* copy the tool definition file to host0: */
 static inline __attribute__((always_inline)) int regMgrDbgCopyToolDef(const RegMgrToolDefCopy *copy)
 {
+	const char *path;
 	SceUID dst, src;
 	int n, written;
 
@@ -255,9 +259,10 @@ static inline __attribute__((always_inline)) int regMgrDbgCopyToolDef(const RegM
 		return SCE_REGMGR_ERROR_INVALID_ARGUMENT;
 	if (copy->size != sizeof(*copy))
 		return SCE_REGMGR_ERROR_BAD_KEYS_INFO;
-	if (copy->path == NULL || copy->mode == 0 || memcmp(copy->path, "host0:", 6) != 0)
+	path = copy->path;
+	if (path == NULL || copy->mode == 0 || memcmp(path, "host0:", 6) != 0)
 		return SCE_REGMGR_ERROR_INVALID_ARGUMENT;
-	dst = sceIoOpen(copy->path, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 0664);
+	dst = sceIoOpen(path, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 0664);
 	if (dst < 0)
 		return SCE_REGMGR_ERROR_FILE;
 	src = sceIoOpen(regMgrGetToolDefPath(0), SCE_O_RDONLY, 0);
@@ -304,7 +309,7 @@ int SceRegMgrForDebugger_46AC0CCB(int cmd, void *arg)
 		ret = regMgrDbgCopyToolDef(arg);
 		break;
 	case 2:
-		ret = regMgrNotifyLevel(0);
+		ret = regMgrComSyncKeyValue(0);
 		break;
 	case 4:
 		ret = sceRegMgrResetRegistryLv(arg, 0x20);

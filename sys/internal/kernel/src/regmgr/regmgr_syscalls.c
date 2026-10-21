@@ -109,7 +109,7 @@ char g_regMgrSysData[REGMGR_SYS_DATA_SIZE];
 
 /* copy the keys out to the user: their values (mode REGMGR_COPY_KERNEL), and the
  * user's names and buffers back in them (name unknown) */
-int regMgrSysCopyOutKeys(RegMgrKeyInfo *keys, int count, int mode)
+int __attribute__((noinline, noclone)) regMgrSysCopyOutKeys(RegMgrKeyInfo *keys, int count, int mode)
 {
 	RegMgrKeyInfo *key;
 	int i, ret;
@@ -216,7 +216,7 @@ static inline __attribute__((always_inline)) const RegMgrSysParam *regMgrSysFind
 }
 
 /* get a system parameter, with the kernel's permission (names unknown) */
-int regMgrSysParamGetInt(int id, int *value, int mode)
+int __attribute__((noinline)) regMgrSysParamGetInt(int id, int *value, int mode)
 {
 	const RegMgrSysParam *param;
 	int lock = 0;
@@ -318,12 +318,12 @@ out:
 	return ret;
 }
 
-int regMgrSysParamGetStr(int id, char *buf, SceSize size, int mode)
+int __attribute__((noinline)) regMgrSysParamGetStr(int id, char *buf, SceSize size, int mode)
 {
 	return regMgrSysParamGet(id, buf, size, mode, 0);
 }
 
-int regMgrSysParamGetBin(int id, void *buf, SceSize size, int mode)
+int __attribute__((noinline)) regMgrSysParamGetBin(int id, void *buf, SceSize size, int mode)
 {
 	return regMgrSysParamGet(id, buf, size, mode, 1);
 }
@@ -346,7 +346,7 @@ static inline __attribute__((always_inline)) int regMgrSysCopyInName(const char 
 	return 0;
 }
 
-int sceRegMgrResetRegistryLvInternal2(const char *category, int level)
+int sceRegMgrResetRegistryLvForUser(const char *category, int level)
 {
 	int lock = 0;
 	int ret;
@@ -377,7 +377,7 @@ out:
 	return ret;
 }
 
-int sceRegMgrSetKeyIntInternal2(const char *category, const char *name, int value)
+int sceRegMgrSetKeyIntForUser(const char *category, const char *name, int value)
 {
 	int lock = 0;
 	int ret;
@@ -404,7 +404,7 @@ int sceRegMgrSetKeyIntInternal2(const char *category, const char *name, int valu
 	return ret;
 }
 
-int sceRegMgrGetKeyIntInternal2(const char *category, const char *name, int *value)
+int sceRegMgrGetKeyIntForUser(const char *category, const char *name, int *value)
 {
 	int lock = 0;
 	int buf = 0;
@@ -505,29 +505,29 @@ out:
 	return ret;
 }
 
-int sceRegMgrSetKeyStrInternal2(const char *category, const char *name, const char *buf,
+int sceRegMgrSetKeyStrForUser(const char *category, const char *name, const char *buf,
 				SceSize size)
 {
 	return regMgrSysSetKey(category, name, buf, size, 0);
 }
 
-int sceRegMgrGetKeyStrInternal2(const char *category, const char *name, char *buf, SceSize size)
+int sceRegMgrGetKeyStrForUser(const char *category, const char *name, char *buf, SceSize size)
 {
 	return regMgrSysGetKey(category, name, buf, size, 0);
 }
 
-int sceRegMgrSetKeyBinInternal2(const char *category, const char *name, const void *buf,
+int sceRegMgrSetKeyBinForUser(const char *category, const char *name, const void *buf,
 				SceSize size)
 {
 	return regMgrSysSetKey(category, name, buf, size, 1);
 }
 
-int sceRegMgrGetKeyBinInternal2(const char *category, const char *name, void *buf, SceSize size)
+int sceRegMgrGetKeyBinForUser(const char *category, const char *name, void *buf, SceSize size)
 {
 	return regMgrSysGetKey(category, name, buf, size, 1);
 }
 
-int sceRegMgrGetKeysInfoInternal2(const char *category, RegMgrKeyInfo *keys, int count)
+int sceRegMgrGetKeysInfoForUser(const char *category, RegMgrKeyInfo *keys, int count)
 {
 	int lock = 0;
 	int ret;
@@ -552,7 +552,7 @@ out:
 	return ret;
 }
 
-int sceRegMgrSetKeysInternal2(const char *category, const RegMgrKeyInfo *keys, int count)
+int sceRegMgrSetKeysForUser(const char *category, const RegMgrKeyInfo *keys, int count)
 {
 	int lock = 0;
 	int ret;
@@ -575,7 +575,7 @@ out:
 	return ret;
 }
 
-int sceRegMgrGetKeysInternal2(const char *category, RegMgrKeyInfo *keys, int count)
+int sceRegMgrGetKeysForUser(const char *category, RegMgrKeyInfo *keys, int count)
 {
 	int lock = 0;
 	int ret;
@@ -600,7 +600,7 @@ out:
 	return ret;
 }
 
-int sceRegMgrGetInitValsInternal2(const char *category, RegMgrKeyInfo *keys, int count)
+int sceRegMgrGetInitValsForUser(const char *category, RegMgrKeyInfo *keys, int count)
 {
 	int lock = 0;
 	int ret;
@@ -648,12 +648,12 @@ static inline __attribute__((always_inline)) int regMgrSysCallback(SceUID cbid, 
 	return ret;
 }
 
-int sceRegMgrRegisterCallbackInternal2(SceUID cbid)
+int sceRegMgrRegisterCallbackForUser(SceUID cbid)
 {
 	return regMgrSysCallback(cbid, sceRegMgrRegisterCallback);
 }
 
-int sceRegMgrAddRegistryCallbackInternal2(SceUID cbid, const char *path)
+int sceRegMgrAddRegistryCallbackForUser(SceUID cbid, const char *path)
 {
 	int lock = 0;
 	int ret, guid;
@@ -688,32 +688,32 @@ int sceRegMgrAddRegistryCallbackInternal2(SceUID cbid, const char *path)
 	return ret;
 }
 
-int sceRegMgrStartCallbackInternal2(SceUID cbid)
+int sceRegMgrStartCallbackForUser(SceUID cbid)
 {
 	return regMgrSysCallback(cbid, sceRegMgrStartCallback);
 }
 
-int sceRegMgrStopCallbackInternal2(SceUID cbid)
+int sceRegMgrStopCallbackForUser(SceUID cbid)
 {
 	return regMgrSysCallback(cbid, sceRegMgrStopCallback);
 }
 
-int sceRegMgrUnregisterCallbackInternal2(SceUID cbid)
+int sceRegMgrUnregisterCallbackForUser(SceUID cbid)
 {
 	return regMgrSysCallback(cbid, sceRegMgrUnregisterCallback);
 }
 
-int sceRegMgrRegisterDrvErrCallbackInternal2(SceUID cbid)
+int sceRegMgrRegisterDrvErrCallbackForUser(SceUID cbid)
 {
 	return regMgrSysCallback(cbid, sceRegMgrRegisterDrvErrCallback);
 }
 
-int sceRegMgrUnregisterDrvErrCallbackInternal2(SceUID cbid)
+int sceRegMgrUnregisterDrvErrCallbackForUser(SceUID cbid)
 {
 	return regMgrSysCallback(cbid, sceRegMgrUnregisterDrvErrCallback);
 }
 
-int sceRegMgrDbBackupInternal2(const char *path, int level)
+int sceRegMgrDbBackupForUser(const char *path, int level)
 {
 	int lock = 0;
 	int ret;
@@ -744,7 +744,7 @@ out:
 	return ret;
 }
 
-int sceRegMgrDbRestoreInternal2(const char *path)
+int sceRegMgrDbRestoreForUser(const char *path)
 {
 	int lock = 0;
 	int ret;
@@ -777,7 +777,7 @@ out:
 
 /* whether an error is one for the blue screen; asked even when the call is not
  * allowed, of that error */
-int sceRegMgrIsBlueScreenInternal2(int error)
+int sceRegMgrIsBlueScreenForUser(int error)
 {
 	int lock = 0;
 	int ret;
@@ -816,17 +816,17 @@ static inline __attribute__((always_inline)) int regMgrSysCall(int (*func)(void)
 	return ret;
 }
 
-int sceRegMgrGetRegVersionInternal2(void)
+int sceRegMgrGetRegVersionForUser(void)
 {
 	return regMgrSysCall(sceRegMgrGetRegVersion);
 }
 
-int sceRegMgrSrvGetRegionInternal2(void)
+int sceRegMgrSrvGetRegionForUser(void)
 {
 	return regMgrSysCall(sceRegMgrSrvGetRegion);
 }
 
-int sceRegMgrSrvGetRegionStrInternal2(char *buf, SceSize size)
+int sceRegMgrSrvGetRegionStrForUser(char *buf, SceSize size)
 {
 	char name[4];
 	int lock = 0;
@@ -857,7 +857,7 @@ int sceRegMgrSrvGetRegionStrInternal2(char *buf, SceSize size)
 	return ret;
 }
 
-int sceRegMgrSrvCnvRegionStrInternal2(int region, char *buf, SceSize size)
+int sceRegMgrSrvCnvRegionStrForUser(int region, char *buf, SceSize size)
 {
 	char name[4];
 	int lock = 0;
@@ -885,7 +885,7 @@ int sceRegMgrSrvCnvRegionStrInternal2(int region, char *buf, SceSize size)
 	return ret;
 }
 
-int sceRegMgrSrvCnvRegionIntInternal2(const char *name)
+int sceRegMgrSrvCnvRegionIntForUser(const char *name)
 {
 	char buf[4];
 	int lock = 0;
@@ -916,7 +916,7 @@ out:
 	return ret;
 }
 
-int sceRegMgrSrvCnvRegionPsCodeInternal2(int region)
+int sceRegMgrSrvCnvRegionPsCodeForUser(int region)
 {
 	int lock = 0;
 	int ret;

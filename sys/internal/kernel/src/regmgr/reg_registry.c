@@ -165,6 +165,7 @@ int regLoadRegistry(const SceUInt32 *param, const char *indexPath, const char *d
 {
 	SceUInt32 digest[5] = { 0 };
 	SceUInt32 saved[5];
+	SceUInt32 imageSize;
 	SceUInt32 size[2];
 	RegCategoryEntry *entry;
 	RegIndexImage *image;
@@ -184,13 +185,13 @@ int regLoadRegistry(const SceUInt32 *param, const char *indexPath, const char *d
 		for (index = 0; index < g_regRegistryNum; index++) {
 			if (reg->id == *param) {
 				*registry = index;
-				break;
+				goto opened;
 			}
 			reg = reg->next;
 		}
-		if (index >= g_regRegistryNum)
-			reg = NULL;
 		/* as the original: a registry not found is not caught */
+		reg = NULL;
+opened:
 		reg->openCount++;
 		return 0;
 	}
@@ -198,7 +199,8 @@ int regLoadRegistry(const SceUInt32 *param, const char *indexPath, const char *d
 	if (regFileGetSize(indexPath, size) != 0)
 		return REG_ERROR_INDEX_SIZE;
 
-	image = regMemAlloc(size[0]);
+	imageSize = size[0];
+	image = regMemAlloc(imageSize);
 	if (image == NULL)
 		return REG_ERROR_NO_MEMORY_HEAP;
 
@@ -216,7 +218,7 @@ int regLoadRegistry(const SceUInt32 *param, const char *indexPath, const char *d
 	}
 
 	memset(reg, 0, sizeof(*reg));
-	if (regFileRead(image, 1, size[0], indexFd, (int *)&size[0]) != 0) {
+	if (regFileRead(image, 1, imageSize, indexFd, (int *)&size[0]) != 0) {
 		ret = REG_ERROR_COPY_READ;
 		goto close;
 	}
@@ -224,7 +226,7 @@ int regLoadRegistry(const SceUInt32 *param, const char *indexPath, const char *d
 	for (i = 0; i < 5; i++)
 		saved[i] = image->digest[i];
 	memset(image->digest, 0, sizeof(image->digest));
-	ret = SceKernelUtilsForDriver_87DC7F2F(image, size[0], digest);
+	ret = SceKernelUtilsForDriver_87DC7F2F(image, imageSize, digest);
 	if (ret < 0)
 		goto close;
 	if (memcmp(digest, saved, sizeof(digest)) != 0) {
@@ -254,7 +256,7 @@ int regLoadRegistry(const SceUInt32 *param, const char *indexPath, const char *d
 	reg->fd[REG_FILE_INDEX] = indexFd;
 	reg->fd[REG_FILE_DATA] = dataFd;
 	reg->id = *param;
-	reg->imageSize = size[0];
+	reg->imageSize = imageSize;
 	reg->dataSize = image->dataSize;
 
 	len = strnlen(indexPath, REG_PATH_LEN);
@@ -312,7 +314,7 @@ close:
 	if (dataFd != 0)
 		regFileClose(dataFd);
 free:
-	memset(image, 0, size[0]);
+	memset(image, 0, imageSize);
 	regMemFree(image);
 	if (reg != NULL) {
 		memset(reg, 0, sizeof(*reg));
@@ -331,7 +333,7 @@ static inline __attribute__((always_inline)) int regMakeRegistryFiles(const RegM
 	RegIndexImage header;
 	RegCategoryEntry *table;
 	RegIndexImage *image;
-	SceUInt32 digest[5];
+	SceUInt32 digest[5] = { 0 };
 	SceUInt32 total;
 	SceUInt32 left;
 	SceUInt32 n;
@@ -392,7 +394,7 @@ static inline __attribute__((always_inline)) int regMakeRegistryFiles(const RegM
 		err = REG_ERROR_NO_MEMORY_HEAP;
 		goto close;
 	}
-	for (i = 0; i < header.categoryNum; i++)
+	for (i = 0; i < (int)header.categoryNum; i++)
 		table[i] = template;
 	err = regFileWrite(table, 1, header.categorySize, fd, &written);
 	memset(table, 0, header.categorySize);
@@ -408,11 +410,10 @@ static inline __attribute__((always_inline)) int regMakeRegistryFiles(const RegM
 		goto close;
 	}
 	ret = regFileSeek(fd, 0, SCE_SEEK_SET);
-	if (ret != 0) {
-		ret = REG_ERROR_COPY_READ;
-	} else {
-		ret = regFileRead(image, 1, total, fd, &written);
-		if (ret == 0) {
+	if (ret == 0) {
+		if (regFileRead(image, 1, total, fd, &written) != 0) {
+			ret = REG_ERROR_COPY_READ;
+		} else {
 			memset(header.digest, 0, sizeof(header.digest));
 			ret = SceKernelUtilsForDriver_87DC7F2F(image, total, digest);
 			if (ret >= 0) {
@@ -426,14 +427,17 @@ static inline __attribute__((always_inline)) int regMakeRegistryFiles(const RegM
 	}
 	memset(image, 0, total);
 	regMemFree(image);
-	if (ret != 0) {
+	if (ret < 0) {
 		if (regFileClose(fd) == 0)
 			return ret;
 		err = REG_ERROR_COPY_CLOSE;
 		goto close;
 	}
-	if (regFileClose(fd) != 0)
-		return err;
+	if (regFileClose(fd) != 0) {
+		ret = 0;
+		err = REG_ERROR_COPY_CLOSE;
+		goto close;
+	}
 
 	/* the data file, zeroed */
 	fd = regFileCreate(data);
@@ -756,11 +760,13 @@ RegRegistry *regGetRegistry(int registry)
 
 	for (i = 0; i < g_regRegistryNum; i++) {
 		if (i == registry)
-			return reg;
+			break;
 		reg = reg->next;
 	}
+	if (i == g_regRegistryNum)
+		return NULL;
 
-	return NULL;
+	return reg;
 }
 
 /* copy the system registry files over the backup ones */

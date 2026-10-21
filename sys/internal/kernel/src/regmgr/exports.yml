@@ -51,38 +51,38 @@ SceRegistryMgr:
       version: 1
       nid: 0xC436F916
       functions:
-        - sceRegMgrGetKeyBinInternal2: 0x0B98D646
-        - sceRegMgrGetKeyIntInternal2: 0x16DDF3DC
-        - sceRegMgrIsBlueScreenInternal2: 0x282027B7
-        - sceRegMgrResetRegistryLvInternal2: 0x2B5F3E20
-        - sceRegMgrSetKeysInternal2: 0x34E550DA
-        - sceRegMgrGetInitValsInternal2: 0x3A9DE7C5
-        - sceRegMgrSetKeyStrInternal2: 0x41D320C5
-        - sceRegMgrSetKeyBinInternal2: 0x566A1793
-        - sceRegMgrGetKeysInfoInternal2: 0x58421DD1
-        - sceRegMgrGetKeysInternal2: 0x5B161504
-        - sceRegMgrStopCallbackInternal2: 0x6A8E2FB4
-        - sceRegMgrGetRegVersionInternal2: 0x74A0FB10
-        - sceRegMgrRegisterCallbackInternal2: 0x82A4464D
-        - sceRegMgrAddRegistryCallbackInternal2: 0xA86F0A71
-        - sceRegMgrDbRestoreInternal2: 0xA87D2562
-        - sceRegMgrDbBackupInternal2: 0xB68B5422
-        - sceRegMgrStartCallbackInternal2: 0xCE84FE2F
-        - sceRegMgrSetKeyIntInternal2: 0xD72EA399
-        - sceRegMgrUnregisterCallbackInternal2: 0xD7BD3607
-        - sceRegMgrUnregisterDrvErrCallbackInternal2: 0xD9E6B7BD
-        - sceRegMgrRegisterDrvErrCallbackInternal2: 0xDDB02D7F
-        - sceRegMgrGetKeyStrInternal2: 0xE188382F
+        - sceRegMgrGetKeyBinForUser: 0x0B98D646
+        - sceRegMgrGetKeyIntForUser: 0x16DDF3DC
+        - sceRegMgrIsBlueScreenForUser: 0x282027B7
+        - sceRegMgrResetRegistryLvForUser: 0x2B5F3E20
+        - sceRegMgrSetKeysForUser: 0x34E550DA
+        - sceRegMgrGetInitValsForUser: 0x3A9DE7C5
+        - sceRegMgrSetKeyStrForUser: 0x41D320C5
+        - sceRegMgrSetKeyBinForUser: 0x566A1793
+        - sceRegMgrGetKeysInfoForUser: 0x58421DD1
+        - sceRegMgrGetKeysForUser: 0x5B161504
+        - sceRegMgrStopCallbackForUser: 0x6A8E2FB4
+        - sceRegMgrGetRegVersionForUser: 0x74A0FB10
+        - sceRegMgrRegisterCallbackForUser: 0x82A4464D
+        - sceRegMgrAddRegistryCallbackForUser: 0xA86F0A71
+        - sceRegMgrDbRestoreForUser: 0xA87D2562
+        - sceRegMgrDbBackupForUser: 0xB68B5422
+        - sceRegMgrStartCallbackForUser: 0xCE84FE2F
+        - sceRegMgrSetKeyIntForUser: 0xD72EA399
+        - sceRegMgrUnregisterCallbackForUser: 0xD7BD3607
+        - sceRegMgrUnregisterDrvErrCallbackForUser: 0xD9E6B7BD
+        - sceRegMgrRegisterDrvErrCallbackForUser: 0xDDB02D7F
+        - sceRegMgrGetKeyStrForUser: 0xE188382F
     SceRegMgrService:
       syscall: true
       version: 1
       nid: 0x23A10D9B
       functions:
-        - sceRegMgrSrvCnvRegionStrInternal2: 0x15B4A5C5
-        - sceRegMgrSrvCnvRegionIntInternal2: 0x7683FC84
-        - sceRegMgrSrvCnvRegionPsCodeInternal2: 0x94D008D2
-        - sceRegMgrSrvGetRegionStrInternal2: 0xBC3FE639
-        - sceRegMgrSrvGetRegionInternal2: 0xBEC3F77A
+        - sceRegMgrSrvCnvRegionStrForUser: 0x15B4A5C5
+        - sceRegMgrSrvCnvRegionIntForUser: 0x7683FC84
+        - sceRegMgrSrvCnvRegionPsCodeForUser: 0x94D008D2
+        - sceRegMgrSrvGetRegionStrForUser: 0xBC3FE639
+        - sceRegMgrSrvGetRegionForUser: 0xBEC3F77A
     SceRegMgrForGame:
       syscall: true
       version: 1

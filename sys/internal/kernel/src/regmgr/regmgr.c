@@ -91,11 +91,14 @@ static int regMgrStrToInt(const char *text, SceSize len, SceSize *used)
 
 	if (len == 0)
 		goto out;
-	while (str[i] == ' ') {
+	while ((c = str[i]) == ' ') {
 		if (++i == len)
 			goto out;
 	}
-	if (str[i] == '0' && (str[i + 1] & ~0x20) == 'X') {
+	sign = 1;
+	if (c == '0') {
+		if ((str[i + 1] & ~0x20) != 'X')
+			goto digits;
 		for (i += 2; i < len; i++) {
 			c = str[i];
 			if (REGMGR_ISDIGIT(c))
@@ -109,19 +112,21 @@ static int regMgrStrToInt(const char *text, SceSize len, SceSize *used)
 		}
 		goto out;
 	}
-	sign = 1;
-	if (str[i] == '-') {
+	if (c == '-') {
 		if (++i >= len)
 			goto out;
+		c = str[i];
 		sign = -1;
 	}
-	if (!REGMGR_ISDIGIT(str[i]))
+	if (!REGMGR_ISDIGIT(c))
 		goto out;
+digits:
 	do {
-		value = value * 10 + str[i] - '0';
+		value = value * 10 + c - '0';
 		if (++i >= len)
 			break;
-	} while (REGMGR_ISDIGIT(str[i]));
+		c = str[i];
+	} while (REGMGR_ISDIGIT(c));
 	value *= sign;
 out:
 	if (used != NULL)
@@ -160,7 +165,7 @@ int regMgrGetKeyInitValue(int keyNo, RegMgrValue *value)
 	if (initType & REGMGR_INIT_COMPUTED) {
 		computed.data = g_regMgrLine;
 		computed.size = s_rgMnKey[keyNo].size;
-		ret = regMgrComputeInitValue(initType, &computed);
+		ret = regMgrAddinSet(initType, &computed);
 		value->data = g_regMgrLine;
 		value->size = computed.size;
 		if (ret != 0)
@@ -343,7 +348,7 @@ int regMgrGetKey(int keyNo, int handle, const char *category, const char *name,
 	if ((key->attribute & REGMGR_ATTR_MASK) == REGMGR_ATTR_VOLATILE) {
 		ret = regMgrWrapGetNVSData(category, name, buf, *size);
 		if (ret > 0)
-			return ret;
+			return 0;
 		if ((key->attr.flags & REGMGR_KEY_CACHED) && key->attr.cacheType == REGMGR_CACHE_BIN) {
 			if (*size != 0)
 				memcpy(buf, &g_regMgrBinCache[key->cache.offset], *size);
@@ -383,8 +388,9 @@ int regMgrGetKey(int keyNo, int handle, const char *category, const char *name,
 	return 0;
 }
 
-/* get a key's value, opening its category unless it is open already (name unknown) */
-int regMgrGetKeyAccess(RegMgrKeyAccess *access)
+/* get a key's value, opening its category unless it is open already (0.990's
+ * "regMgrGetCategoryKey(%s/%s) = %08x") */
+int regMgrGetCategoryKey(RegMgrKeyAccess *access)
 {
 	int ret;
 
@@ -404,7 +410,7 @@ int regMgrGetKeyAccess(RegMgrKeyAccess *access)
 
 /* the category of a word of a path, from start: a name, or a number in a range
  * ("01-10") (name unknown) */
-int regMgrFindCategory(const char *word, SceSize len, int start)
+int __attribute__((noinline)) regMgrFindCategory(const char *word, SceSize len, int start)
 {
 	int cnt = g_regMgrCategoryCnt;
 	const char *name;
@@ -472,7 +478,7 @@ int regMgrGetCategoryNo(const char *path, SceSize len, SceUInt16 *categoryNo)
 }
 
 /* whether a category number is in a range ("01-10"), given as a word or a number (name unknown) */
-int regMgrCheckNumberRange(const char *range, const char *word, int no)
+int __attribute__((noinline)) regMgrCheckNumberRange(const char *range, const char *word, int no)
 {
 	if (range == NULL || strnlen(range, 0x1a) < 5)
 		return SCE_REGMGR_ERROR_INVALID_ARGUMENT;
@@ -528,7 +534,7 @@ static inline __attribute__((always_inline)) int regMgrSetKeyFlag(int keyNo, Sce
 }
 
 /* a category name of a numbered category range: "01-10/" */
-static inline __attribute__((always_inline)) int regMgrIsNumberRange(const char *name)
+static inline int regMgrIsNumberRange(const char *name)
 {
 	return REGMGR_ISDIGIT(name[0]) && REGMGR_ISDIGIT(name[1]) && name[2] == '-' &&
 	       REGMGR_ISDIGIT(name[3]) && REGMGR_ISDIGIT(name[4]) && name[5] == '/';
@@ -886,8 +892,9 @@ static inline __attribute__((always_inline)) int regMgrParseLine(int *section)
 	return 0;
 }
 
-/* load the key definitions of registry.db0 (name unknown) */
-int regMgrLoadDb(void)
+/* load the key definitions of registry.db0 (0.990's "regMgrInitReg() = %08x" before
+ * regMgrInitRegistry in the tool's region change) */
+int regMgrInitReg(void)
 {
 	SceUID fd;
 	SceSize mask;
@@ -984,10 +991,10 @@ out:
 	return ret;
 }
 
-int regMgrSetKeyAccess(RegMgrKeyAccess *access);
+int regMgrCreateSetCategoryKey(RegMgrKeyAccess *access);
 
 /* put the two digits of a category number into a path */
-static inline __attribute__((always_inline)) void regMgrPutNumber(char *path, int pos, int no)
+static inline void regMgrPutNumber(char *path, int pos, int no)
 {
 	if (pos == 0)
 		return;
@@ -1024,8 +1031,9 @@ static inline __attribute__((always_inline)) int regMgrIsResetKey(int keyNo, Sce
 	return permission == 0 || (permission & g_regMgrPermission) == g_regMgrPermission;
 }
 
-/* write the version of the registry: category_version (name unknown) */
-static inline __attribute__((always_inline)) int regMgrWriteVersion(RegMgrKeyAccess *access, int *version)
+/* write the version of the registry: category_version (0.990's
+ * "regMgrSetCategryVersion(%d) = %08x", Sony's spelling) */
+static inline __attribute__((always_inline)) int regMgrSetCategryVersion(RegMgrKeyAccess *access, int *version)
 {
 	int ret;
 
@@ -1038,14 +1046,14 @@ static inline __attribute__((always_inline)) int regMgrWriteVersion(RegMgrKeyAcc
 	access->handle = 0;
 	access->keyNo = 0;
 	access->type = REGMGR_TYPE_INT;
-	ret = regMgrSetKeyAccess(access);
+	ret = regMgrCreateSetCategoryKey(access);
 	g_regMgrWriteVersion = 0;
 	return ret;
 }
 
 /* reset the keys of a level to their initial values: all of them, or those of a category
  * (name unknown) */
-int regMgrInitRegistry(const char *category, SceUInt32 level)
+int regMgrInitRegistry(const char *category, int level)
 {
 	RegMgrKeyAccess access;
 	RegMgrValue value;
@@ -1065,8 +1073,10 @@ int regMgrInitRegistry(const char *category, SceUInt32 level)
 	value.size = 0;
 	switch (level) {
 	case 5:
-		if (category != NULL)
-			return SCE_REGMGR_ERROR_BAD_ATTRIBUTE;
+		if (category != NULL) {
+			ret = SCE_REGMGR_ERROR_BAD_ATTRIBUTE;
+			goto out;
+		}
 		g_regMgrResetLevel = level;
 		regMgrWrapRegCloseRegistry();
 		mode = 3;
@@ -1120,7 +1130,7 @@ version:
 		g_regMgrStatus |= REGMGR_STATUS_INIT;
 		g_regMgrOpenCategory[0] = '\0';
 		start = 1;
-		regMgrWriteVersion(&access, &version);
+		regMgrSetCategryVersion(&access, &version);
 	} else {
 		memset(categoryNo, 0, sizeof(categoryNo));
 		g_regMgrResetLevel = level;
@@ -1264,7 +1274,7 @@ write:
 					access.keyNo = k;
 					access.buf = (void *)value.data;
 					access.valueSize = value.size;
-					ret = regMgrSetKeyAccess(&access);
+					ret = regMgrCreateSetCategoryKey(&access);
 					if (ret != 0)
 						goto fail;
 				}
@@ -1292,7 +1302,7 @@ next:
 			regMgrMoveUpdateValues(g_regMgrVersion, s_rgMnKey[0].init.value);
 		}
 		lastVersion = s_rgMnKey[0].init.value;
-		ret = regMgrWriteVersion(&access, &lastVersion);
+		ret = regMgrSetCategryVersion(&access, &lastVersion);
 	}
 fail:
 	g_regMgrStatus &= ~REGMGR_STATUS_INIT;
@@ -1331,7 +1341,7 @@ int regMgrNotifyChange(const char *category, const RegMgrKeyInfo *param)
 	info->type = param->type;
 	info->valueSize = param->valueSize;
 	if (param->type == REGMGR_TYPE_STR) {
-		info->valueSize = strnlen(param->data, REGMGR_WORD_SIZE);
+		info->valueSize = strnlen(param->data, param->valueSize);
 		if (info->valueSize != 0)
 			memcpy(info->data, param->data, info->valueSize);
 	} else if (param->type == REGMGR_TYPE_BIN) {
@@ -1362,8 +1372,9 @@ int regMgrNotifyChange(const char *category, const RegMgrKeyInfo *param)
 	return ret;
 }
 
-/* set a key's value: create it, or change it, and cache it (name unknown) */
-int regMgrSetKeyAccess(RegMgrKeyAccess *access)
+/* set a key's value: create it, or change it, and cache it (0.990's
+ * "regMgrCreateSetCategoryKey(%d, %s, %s) = %08x") */
+int regMgrCreateSetCategoryKey(RegMgrKeyAccess *access)
 {
 	RegMgrKeyInfo param;
 	RegMgrKey *key;
@@ -1525,7 +1536,7 @@ int regMgrLoadCache(void)
 				access.keyNo = k;
 				access.name = name;
 				access.valueSize = access.size;
-				if (regMgrGetKeyAccess(&access) != 0)
+				if (regMgrGetCategoryKey(&access) != 0)
 					goto next;
 				if (s_rgMnKey[k].attr.cacheType == REGMGR_CACHE_INT ||
 				    s_rgMnKey[k].attr.cacheType == REGMGR_CACHE_BIN)
@@ -1786,8 +1797,10 @@ int regMgrSetKeys(const char *category, RegMgrKeyInfo *info, int *count)
 			}
 			if (handle == 0) {
 				ret = regMgrWrapRegOpenCategory(category, 2, &handle);
-				if (ret != 0)
+				if (ret != 0) {
+					handle = 0;
 					goto out;
+				}
 			}
 			ret = regMgrSetKey(handle, category, info->name, buf, size, k);
 			if (ret != 0)
@@ -1903,8 +1916,10 @@ int regMgrGetKeys(const char *category, RegMgrKeyInfo *info, int *count)
 			}
 			if (handle == 0) {
 				ret = regMgrWrapRegOpenCategory(category, 2, &handle);
-				if (ret != 0)
+				if (ret != 0) {
+					handle = 0;
 					goto fail;
+				}
 			}
 		}
 get:
@@ -2126,7 +2141,9 @@ int regMgrComApiPrologue(int *lock)
 	if (g_regMgrErrorMasquerade << 16) {
 		if (g_regMgrErrorCountdown > 0) {
 			g_regMgrErrorCountdown--;
+#if FW_VERSION >= 0x04000000
 			SCE_DBG_PRINTF(0, 1919, "[REGMGR] Count Down %d\n", g_regMgrErrorCountdown);
+#endif
 			if (g_regMgrErrorCountdown > 0)
 				goto out;
 		}
@@ -2235,7 +2252,7 @@ int regMgrInitWork(void *arg)
 	}
 	g_regMgrStatus = 0;
 	g_regMgrRegion = region;
-	ret = regMgrLoadDb();
+	ret = regMgrInitReg();
 	if (ret != 0)
 		goto out;
 	ret = regMgrWrapRegInit();
@@ -2258,7 +2275,7 @@ int regMgrInitWork(void *arg)
 	access.size = sizeof(int);
 	access.buf = &version;
 	access.valueSize = sizeof(int);
-	found = regMgrGetKeyAccess(&access);
+	found = regMgrGetCategoryKey(&access);
 	regMgrWrapRegCloseCategory(&access.handle);
 	g_regMgrOpenCategory[0] = '\0';
 	ret = regMgrLoadCache();
@@ -2330,12 +2347,13 @@ check:
 			g_regMgrConfig = 2;
 			region = regMgrGetRegion(1);
 			if (region < 0) {
+				g_regMgrRegionError = region;
 				ret = region;
 				goto out;
 			}
 			if (region != g_regMgrRegion) {
 				g_regMgrRegion = region;
-				ret = regMgrLoadDb();
+				ret = regMgrInitReg();
 				if (ret != 0)
 					goto out;
 				ret = regMgrLoadCache();
@@ -2443,7 +2461,7 @@ int regMgrIsQaf(void)
 	return g_regMgrIsQaf;
 }
 
-SceUInt32 regMgrGetErrEnable(void)
+SceUInt32 __attribute__((noinline)) regMgrGetErrEnable(void)
 {
 	return g_regMgrErrEnable;
 }
@@ -2535,14 +2553,14 @@ out:
 	return 0;
 }
 
-SceUInt32 regMgrIsRelease(void)	/* names unknown */
-{
-	return g_regMgrConfig & REGMGR_CONFIG_RELEASE;
-}
-
 SceUInt32 regMgrIsTool(void)
 {
 	return g_regMgrConfig & REGMGR_CONFIG_TOOL;
+}
+
+SceUInt32 regMgrIsRelease(void)	/* names unknown */
+{
+	return g_regMgrConfig & REGMGR_CONFIG_RELEASE;
 }
 
 /* the path of a key's category, with the numbers of its numbered categories left to
@@ -2600,8 +2618,9 @@ static inline __attribute__((always_inline)) int regMgrIsLevelKey(const RegMgrKe
 }
 
 /* tell the notify function the values of the keys a reset of the level resets; then
- * reset the network configurations that are off (name unknown) */
-int regMgrNotifyLevel(int level)
+ * reset the network configurations that are off (0.990's "regMgrComSyncKeyValue() = %08x"
+ * in the debugger's sync) */
+int regMgrComSyncKeyValue(int level)
 {
 	RegMgrNotifyInfo *info = g_regMgrNotifyInfo;
 	int cnt = s_rgMnKeyCnt;
@@ -2656,7 +2675,7 @@ int regMgrNotifyLevel(int level)
 					access.keyNo = n;
 					access.category = path;
 					access.size = access.valueSize;
-					ret = regMgrGetKeyAccess(&access);
+					ret = regMgrGetCategoryKey(&access);
 					if (ret != 0)
 						goto out;
 					path[len - 1] = '/';
@@ -2727,7 +2746,7 @@ SceUInt32 regMgrGetToolDefSerial(int eventLog)
 }
 
 /* the path of the tool's settings (or event log) definitions */
-const char *regMgrGetToolDefPath(SceUInt32 eventLog)
+const char *__attribute__((noinline)) regMgrGetToolDefPath(SceUInt32 eventLog)
 {
 	const char *const *defs;
 
@@ -2800,8 +2819,8 @@ typedef struct RegMgrErrorRecord {
 
 /* record an error of an API in /REGISTRY/ERROR, unless the same one is there
  * (name unknown) */
-void regMgrRecordError(int error, int api, const char *category, const char *name,
-		       const void *data, SceSize size)
+int regMgrRecordError(int error, int api, const char *category, const char *name,
+		      const void *data, SceSize size)
 {
 	SceUInt16 categoryNo[REGMGR_CATEGORY_DEPTH] = { 0 };
 	RegMgrErrorRecord record = { 0 };
@@ -2811,15 +2830,16 @@ void regMgrRecordError(int error, int api, const char *category, const char *nam
 	RegMgrKeyInfo keyInfo;
 	SceUInt64 authId = 0;
 	SceUInt8 number, type;
-	int count, len, bad, max, i, n;
+	int count, len, bad, max, i, n, ret;
 
+	ret = error;
 	if (g_regMgrVolatileMode == 1 || g_regMgrErrEnable == 0)
-		return;
+		goto out;
 	if (!(g_regMgrErrEnable & ~(REGMGR_ERR_ENABLE_NO_PERMISSION | REGMGR_ERR_ENABLE_NO_FLAG | 1)) &&
 	    (((g_regMgrErrEnable & REGMGR_ERR_ENABLE_NO_PERMISSION) &&
 	      error == SCE_REGMGR_ERROR_BAD_PERMISSION) ||
 	     ((g_regMgrErrEnable & REGMGR_ERR_ENABLE_NO_FLAG) && error == SCE_REGMGR_ERROR_BAD_FLAG)))
-		return;
+		goto out;
 	memset(path, 0, sizeof(path));
 	g_regMgrStatus |= REGMGR_STATUS_INIT;
 	type = 0;
@@ -2876,7 +2896,8 @@ void regMgrRecordError(int error, int api, const char *category, const char *nam
 		keyInfo.valueSize = sizeof(record);
 		keyInfo.data = &record;
 		count = 1;
-		if (regMgrGetKeys(errPath, &keyInfo, &count) != 0)
+		ret = regMgrGetKeys(errPath, &keyInfo, &count);
+		if (ret != 0)
 			goto out;
 		if (max < record.count)
 			max = record.count;
@@ -2907,7 +2928,8 @@ void regMgrRecordError(int error, int api, const char *category, const char *nam
 	keyInfo.valueSize = sizeof(record);
 	keyInfo.data = &record;
 	count = 1;
-	if (regMgrSetKeys(errPath, &keyInfo, &count) != 0)
+	ret = regMgrSetKeys(errPath, &keyInfo, &count);
+	if (ret != 0)
 		goto out;
 	/* and the value, or the path that was wrong */
 	if (bad != 0 && category != NULL) {
@@ -2915,7 +2937,7 @@ void regMgrRecordError(int error, int api, const char *category, const char *nam
 			data = path;
 			size = strnlen(path, REGMGR_ERROR_PATH_MAX);
 		} else {
-			data = &path[len - REGMGR_ERROR_PATH_MAX];
+			data = &path[len - REGMGR_ERROR_PATH_MAX + 1];
 			size = REGMGR_ERROR_PATH_MAX;
 		}
 	}
@@ -2931,9 +2953,10 @@ void regMgrRecordError(int error, int api, const char *category, const char *nam
 	keyInfo.valueSize = size;
 	keyInfo.data = data;
 	count = 1;
-	regMgrSetKeys(errPath, &keyInfo, &count);
+	ret = regMgrSetKeys(errPath, &keyInfo, &count);
 out:
 	g_regMgrStatus &= ~REGMGR_STATUS_INIT;
+	return ret;
 }
 
 static inline __attribute__((always_inline)) void regMgrApiError(int error, int api, const char *category,
@@ -3563,14 +3586,14 @@ static inline __attribute__((always_inline)) int regMgrReloadCache(void)
 						if (access.type == REGMGR_TYPE_STR)
 							access.valueSize = strnlen(access.buf, access.size) + 1;
 						g_regMgrWriteVersion = 1;
-						regMgrSetKeyAccess(&access);
+						regMgrCreateSetCategoryKey(&access);
 						g_regMgrWriteVersion = 0;
 					} else {
 						if ((SceUInt32)(k->attr.cacheType - 1) < 2)
 							k->attr.flags &= ~REGMGR_KEY_CACHED;
 						else
 							g_regMgrNumCacheValid[0] &= ~1;
-						if (regMgrGetKeyAccess(&access) == 0) {
+						if (regMgrGetCategoryKey(&access) == 0) {
 							if (k->attr.cacheType == REGMGR_CACHE_INT ||
 							    k->attr.cacheType == REGMGR_CACHE_BIN)
 								k->attr.flags |= REGMGR_KEY_CACHED;
@@ -3616,7 +3639,7 @@ int sceRegMgrDbRestore(const char *path)
 		goto fail;
 	}
 	masquerade = 0;
-	if ((g_regMgrConfig & REGMGR_CONFIG_TOOL) &&
+	if ((g_regMgrConfig & REGMGR_CONFIG_RELEASE) &&
 	    regMgrGetKeyInt("/DEVENV/TOOL", "region_masquerade", &region) == 0)
 		masquerade = region;
 	ret = regMgrWrapRegImportRegistry(path);
@@ -3661,7 +3684,7 @@ int sceRegMgrDbRestore(const char *path)
 		goto fail;
 	}
 	g_regMgrRegion = ret;
-	ret = regMgrLoadDb();
+	ret = regMgrInitReg();
 	if (ret != 0) {
 		step = 7;
 		goto fail;
@@ -3692,7 +3715,7 @@ int sceRegMgrDbRestore(const char *path)
 				goto reset;
 		} else {
 			g_regMgrRegion = ret;
-			ret = regMgrLoadDb();
+			ret = regMgrInitReg();
 			if (ret != 0) {
 				step = 11;
 				goto fail;
@@ -3758,7 +3781,7 @@ int SceRegMgrForDebugger_53970232(int (*func)(RegMgrNotifyInfo *info), RegMgrNot
 	ret = regMgrComApiPrologue(&lock);
 	if (ret < 0)
 		goto fail;
-	if (g_regMgrConfig & REGMGR_CONFIG_RELEASE) {
+	if (g_regMgrConfig & REGMGR_CONFIG_TOOL) {
 		ret = SCE_REGMGR_ERROR_RELEASE;
 		goto fail;
 	}
@@ -3774,7 +3797,7 @@ int SceRegMgrForDebugger_53970232(int (*func)(RegMgrNotifyInfo *info), RegMgrNot
 	g_regMgrStatus |= REGMGR_STATUS_NOTIFY;
 	g_regMgrNotifyInfo = info;
 	g_regMgrNotifyFunc = func;
-	ret = regMgrNotifyLevel(level);
+	ret = regMgrComSyncKeyValue(level);
 	if (ret == 0) {
 		g_regMgrInitNotice &= ~1;
 		if (g_regMgrErrorMasquerade != 0) {
@@ -3808,12 +3831,12 @@ int SceRegMgrForTool_0CFA929B(int region, SceUInt32 config)
 	ret = regMgrComApiPrologue(&lock);
 	if (ret < 0)
 		goto out;
-	if (g_regMgrConfig & REGMGR_CONFIG_RELEASE) {
+	if (g_regMgrConfig & REGMGR_CONFIG_TOOL) {
 		ret = SCE_REGMGR_ERROR_RELEASE;
 	} else if ((SceUInt32)(region - 1) < 0xd && config - 1 < 3) {
 		g_regMgrConfig = config;
 		g_regMgrRegion = region;
-		ret = regMgrLoadDb();
+		ret = regMgrInitReg();
 		if (ret == 0 && (ret = regMgrInitRegistry(NULL, 0x40)) == 0)
 			ret = regMgrSetKeyInt("/DEVENV/TOOL", "region_masquerade", g_regMgrRegion);
 	} else {
@@ -3833,12 +3856,12 @@ int SceRegMgrForTool_E6E81558(int level)
 	ret = regMgrComApiPrologue(&lock);
 	if (ret < 0)
 		goto out;
-	if (g_regMgrConfig & REGMGR_CONFIG_RELEASE) {
+	if (g_regMgrConfig & REGMGR_CONFIG_TOOL) {
 		ret = SCE_REGMGR_ERROR_RELEASE;
 		goto out;
 	}
 	if (level < 0x40 && g_regMgrRegion != REGMGR_REGION_TOOL) {
-		ret = SceRegMgrForTool_0CFA929B(REGMGR_REGION_TOOL, REGMGR_CONFIG_TOOL);
+		ret = SceRegMgrForTool_0CFA929B(REGMGR_REGION_TOOL, REGMGR_CONFIG_RELEASE);
 		if (ret < 0)
 			goto out;
 	}
