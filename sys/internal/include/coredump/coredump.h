@@ -68,11 +68,11 @@ int sceKernelCoredumpCancelForDriver(int requestId);
 struct CoredumpThreadSnapshot;
 int SceCoredumpForDriver_EF20949F(const struct CoredumpThreadSnapshot *snapshot);
 
-/* the CAF (crash report) encryption: placeholders, deferred (coredump.c) */
+/* the CAF (crash report) transforms (caf.c) */
 int SceCoredumpForDriver_9336009B(void);	/* vitasdk: ksceCoredumpCafInit */
 int SceCoredumpForDriver_C90F61AF(void);	/* vitasdk: ksceCoredumpCafFinal */
 /* vitasdk: ksceCoredumpCafHeaderInit */
-int SceCoredumpForDriver_7C8120C5(SceUID context, SceUInt32 algorithm);
+int SceCoredumpForDriver_7C8120C5(SceUID context, SceUInt32 hashKeySelector);
 /* vitasdk: ksceCoredumpCafHeaderTransform */
 int SceCoredumpForDriver_AE2C2793(SceUID context, const void *data, SceSize size);
 /* vitasdk: ksceCoredumpCafHeaderFinal */
