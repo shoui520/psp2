@@ -18,8 +18,6 @@ static void _sceKernelPanicHandlerCommon(SceExcpmgrContext *context, unsigned in
 
 /* registration, default/panic handlers and register report, shared with os0 */
 #include "../excpmgr_handler.h"
-/* the state save and return path of the vector stubs, shared with os0 */
-#include "../excpmgr_context.h"
 
 /*
  * name unknown: copy code into a read-only page (the vector templates) and
@@ -187,90 +185,4 @@ int module_bootstart(SceSize args, void *argp)
 	g_undefStack[cpu] = modeStackPointer(27);
 	writeVbar((unsigned int)sceKernelSysrootGetVbaseResetVector() + cpu * 0x40);
 	return 0;
-}
-
-/*
- * Entry functions, called by the initial-handler stubs on the exception-mode
- * stack: save the rest of the interrupted state, switch to the kernel and
- * return the top of this core's exception stack, where the stub continues in
- * System mode and walks the handler chain.
- */
-void *excpUndefEntry(SceExcpmgrContext *context)
-{
-	excpSaveState(context, SCE_EXCP_UNDEF);
-	excpEnterKernel();
-	return excpEnterNested();
-}
-
-void *excpPabtEntry(SceExcpmgrContext *context)
-{
-	excpSaveState(context, SCE_EXCP_PABT);
-	excpEnterKernel();
-	return excpEnterNested();
-}
-
-void *excpDabtEntry(SceExcpmgrContext *context)
-{
-	excpSaveState(context, SCE_EXCP_DABT);
-	excpEnterKernel();
-	return excpEnterNested();
-}
-
-/*
- * Last handlers of the undef/pabt/dabt chains (priority 7). The stub passes
- * the chain argument the initial handlers set (3); any other request leaves
- * the exception with the context's thread installed and stops this core.
- */
-static void __attribute__((noreturn)) excpPanicLeave(SceExcpmgrContext *context)
-{
-	unsigned int cpu = excpCpu();
-
-	if (g_excpData.nestCount[cpu] - 1 != 0)
-		for (;;)
-			;
-	g_excpData.nestCount[cpu] = 0;
-	writeDfsr(0);
-	writeIfsr(0);
-	writeAdfsr(0);
-	writeAifsr(0);
-	writeDfar(0);
-	writeIfar(0);
-	writeTpidrprw((unsigned int)context->thread);
-	for (;;)
-		;
-}
-
-static inline void __attribute__((noreturn, always_inline))
-excpPanicDispatch(SceExcpmgrContext *context, unsigned int arg,
-		  void (*panic)(SceExcpmgrContext *context))
-{
-	switch (arg & 0xffff) {
-	case 3:
-		panic(context);
-		for (;;)
-			;
-	case 0:
-	case 1:
-	case 2:
-	case 4:
-		excpPanicLeave(context);
-	default:
-		for (;;)
-			;
-	}
-}
-
-void excpPanicUndef(SceExcpmgrContext *context, unsigned int arg)
-{
-	excpPanicDispatch(context, arg, sceKernelPanicHandlerUndefCfunc);
-}
-
-void excpPanicPabt(SceExcpmgrContext *context, unsigned int arg)
-{
-	excpPanicDispatch(context, arg, sceKernelPanicHandlerPabtCfunc);
-}
-
-void excpPanicDabt(SceExcpmgrContext *context, unsigned int arg)
-{
-	excpPanicDispatch(context, arg, sceKernelPanicHandlerDabtCfunc);
 }

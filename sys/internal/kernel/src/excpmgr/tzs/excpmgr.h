@@ -2,8 +2,9 @@
  * SceExcpmgr, secure-world build (slb2:kbl/SceExcpmgr).
  *
  * Sony built this module from the same excpmgr.c as os0:kd/excpmgr.skprx,
- * against the ForTZS libraries of the secure kernel. The shared parts live in
- * ../excpmgr_context.h and ../excpmgr_handler.h and call the os0 import
+ * against the ForTZS libraries of the secure kernel. The shared C lives in
+ * ../excpmgr_handler.h, the shared exception assembly in ../excpmgr_initial.S
+ * and ../excpmgr_context.S (built with EXCPMGR_TZS); both call the os0 import
  * names.
  */
 #pragma once
@@ -31,10 +32,10 @@ extern ExcpHandlerTable g_excpHandlers;
  */
 extern void *g_irqStack[4], *g_svcStack[4], *g_abortStack[4], *g_undefStack[4];
 
-/* excpmgr_vector.S */
+/* excpmgr_vector.S, ../excpmgr_initial.S */
 extern unsigned int exceptionVectors[], monitorVectors[], monitorVectorsEnd[];
 extern SceExcpmgrHandler defaultHandler, resetHandler, svcHandler, reservedHandler;
-extern SceExcpmgrHandler irqHandler, fiqHandler;
+extern SceExcpmgrHandler irqHandler, fiqHandler, monitorHandler, smcHandler;
 extern SceExcpmgrHandler panicUndefHandler, panicPabtHandler, panicDabtHandler;
 extern SceExcpmgrHandler initialUndefHandler, initialPabtHandler, initialDabtHandler;
 

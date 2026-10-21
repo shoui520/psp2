@@ -188,9 +188,16 @@
  *
  * \lrfix: the bytes subtracted from lr to get the faulting address; thumb
  * for the undefined instruction, whose size depends on the T bit.
+ *
+ * The secure build (EXCPMGR_TZS) first switches to this core's stack of the
+ * exception mode (\stack), and has no callback or policy: every exception
+ * goes down the chain.
  */
-	.macro	INITIAL_HANDLER name, excpcode, callback, lrfix, policy, tail
+	.macro	INITIAL_HANDLER name, excpcode, callback, lrfix, policy, tail, stack
 	HANDLER	\name
+#ifdef EXCPMGR_TZS
+	CORE_STACK \stack
+#endif
 	subs	sp, sp, #CTX_SIZE
 	.irp	reg, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
 	str	r\reg, [sp, #\reg * 4]
@@ -214,6 +221,7 @@
 	SAVE_CPU_STATE \excpcode
 	ENTER_KERNEL
 	mov	r0, sp
+#ifndef EXCPMGR_TZS
 	push	{r0-r3, ip, lr}
 	movw	ip, #:lower16:\callback
 	movt	ip, #:upper16:\callback
@@ -239,6 +247,7 @@
 	pop	{r0-r3, ip, lr}
 	bne	\tail
 	.endif
+#endif
 	NEST_COUNT_ADDRESS
 	ldr	r3, [r2]
 	add	r3, r3, #1
@@ -276,6 +285,11 @@
 	END_FUNCTION \name
 	.endm
 
+#ifdef EXCPMGR_TZS
+	INITIAL_HANDLER initialDabtHandler, 4, , 8, , , g_abortStack
+	INITIAL_HANDLER initialPabtHandler, 3, , 4, , , g_abortStack
+	INITIAL_HANDLER initialUndefHandler, 1, , thumb, , , g_undefStack
+#else
 	INITIAL_HANDLER initialDabtHandler, 4, g_dabtCallback, 8, classify, initialDabtResume
 
 /*
@@ -317,3 +331,4 @@
 	adds	sp, sp, #CTX_SIZE
 	RETURN_FROM_CONTEXT
 	END_FUNCTION initialUndefResume
+#endif

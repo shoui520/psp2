@@ -1,30 +1,24 @@
 /*
- * Secure-world exception and monitor vector templates and handler stubs.
+ * Secure-world exception and monitor vector templates, the handlers that only
+ * report, the last handlers of the abort and undefined chains, and the exit
+ * from the terminal chain. The first handlers of the chains are os0's
+ * (../excpmgr_initial.S, built with EXCPMGR_TZS), and so is the return into a
+ * context (../excpmgr_context.S).
  *
- * Only what C cannot express is here: vector instructions executed from the
- * vector pages, code entered in an exception mode before any register may be
- * touched (the per-core stack switch, r0-r12, banked user SP/LR, SPSR), the
- * System-mode stack switch, the d0-d31 store, the chain jump with its
- * register arguments, and the exception return (LDM ^ / RFE). The state
- * handling is in excpmgr.c and ../excpmgr_context.h.
+ * Only what C cannot express: vector instructions executed from the vector
+ * pages, handlers entered in an exception mode before any register may be
+ * touched (the per-core stack switch), CP15 access and the exception return
+ * (LDM ^). The policy they call is in excpmgr.c.
  *
  * Every handler is a SceExcpmgrHandler: two link words patched by the
  * registration functions, then ARM code entered at +8.
  */
 	.syntax	unified
 	.arch	armv7-a
-	.arch_extension sec
 	.fpu	neon
 	.section .text.excpmgr_vector, "ax", %progbits
 	.arm
-
-/* SceExcpmgrContext offsets used by the stubs */
-#define CTX_SIZE	0x400
-#define CTX_SP		0x34
-#define CTX_PC		0x3c
-#define CTX_CPSR	0x44
-#define CTX_VFP		0x100
-
+#include "../excpmgr_asm.h"
 
 /*
  * Exception vector page template, copied to the vector page by module_start:
@@ -74,39 +68,11 @@ monitorSlots:
 monitorVectorsEnd:
 	.size	monitorVectors, . - monitorVectors
 
-	.macro	HANDLER name
-	.global	\name
-	.type	\name, %object
-\name:
-	.word	0, 0
-	.endm
-
-/*
- * Switch to this core's stack of the exception mode: the mode's SP is parked
- * in FCSEIDR, the core number selects the entry of the mode's table.
- */
-	.macro	CORE_STACK table
-	mcr	p15, 0, sp, c13, c0, 0
-	mrc	p15, 0, sp, c0, c0, 5
-	and	sp, sp, #15
-	cmp	sp, #1
-	movwlt	sp, #:lower16:\table
-	movtlt	sp, #:upper16:\table
-	movweq	sp, #:lower16:\table + 4
-	movteq	sp, #:upper16:\table + 4
-	beq	1f
-	blt	1f
-	cmp	sp, #2
-	movweq	sp, #:lower16:\table + 8
-	movteq	sp, #:upper16:\table + 8
-	movwne	sp, #:lower16:\table + 12
-	movtne	sp, #:upper16:\table + 12
-1:	ldr	sp, [sp]
-	.endm
-
 /*
  * Handlers that only report: called directly from a vector, they save the
- * caller-saved registers around the C function and return with LDM ^.
+ * caller-saved registers around the C function and return with LDM ^
+ * (restores CPSR from SPSR). Reset, SVC and IRQ first switch to this core's
+ * stack of their mode.
  */
 	.macro	REPORT_HANDLER name, cfunc, stack=0, lrfix=0
 	HANDLER	\name
@@ -120,6 +86,7 @@ monitorVectorsEnd:
 	blx	\cfunc
 	clrex
 	ldm	sp!, {r0-r3, ip, pc}^
+	END_FUNCTION \name
 	.endm
 
 	REPORT_HANDLER defaultHandler, sceKernelDefaultHandlerCfunc
@@ -132,95 +99,52 @@ monitorVectorsEnd:
 	REPORT_HANDLER smcHandler, sceKernelDefaultHandlerSmcCfunc
 
 /*
- * Last handler of a chain: r0 = context, r1 = chain argument, already in
- * System mode on the exception stack; the C function never returns. BX is
- * the ARM -> Thumb interworking jump.
+ * The last handlers of the chains. r0 = context, r1 = the exception reason;
+ * reasons 0, 1, 2 and 4 leave the exception state, 3 reports the panic,
+ * everything else hangs.
  */
 	.macro	PANIC_HANDLER name, cfunc
 	HANDLER	\name
-	movw	ip, #:lower16:\cfunc
-	movt	ip, #:upper16:\cfunc
-	bx	ip
+	movw	r3, #0xffff
+	and	r2, r1, r3
+	cmp	r2, #5
+	addlt	pc, pc, r2, lsl #2
+	b	.
+	b	excpPanicLeave
+	b	excpPanicLeave
+	b	excpPanicLeave
+	b	1f
+	b	excpPanicLeave
+1:	push	{r0-r3, ip, lr}
+	blx	\cfunc
+	pop	{r0-r3, ip, lr}
+	b	.
+	END_FUNCTION \name
 	.endm
 
-	PANIC_HANDLER panicDabtHandler, excpPanicDabt
-	PANIC_HANDLER panicPabtHandler, excpPanicPabt
-	PANIC_HANDLER panicUndefHandler, excpPanicUndef
+	PANIC_HANDLER panicDabtHandler, sceKernelPanicHandlerDabtCfunc
+	PANIC_HANDLER panicPabtHandler, sceKernelPanicHandlerPabtCfunc
+	PANIC_HANDLER panicUndefHandler, sceKernelPanicHandlerUndefCfunc
 
 /*
- * First handler of the undef/pabt/dabt chains (priority 0).
- *
- * Build the context frame on this core's stack of the exception mode:
- * r0-r12, banked user SP/LR, the faulting PC and SPSR. \entry (C) saves the
- * rest and returns this core's exception stack top. Continue in System mode
- * there, store d0-d31 before any more code runs, copy the frame (C), and jump
- * to the next handler of the chain with r0 = context, r1 = 3, lr = the
- * interrupted lr.
+ * Leave the terminal exception chain: the secure world has no thread to
+ * resume into, so with the fault state cleared and the context's thread
+ * installed this core stops.
  */
-	.macro	INITIAL_HANDLER name, entry, stack, lrfix
-	HANDLER	\name
-	CORE_STACK \stack
-	sub	sp, sp, #CTX_SIZE
-	stm	sp, {r0-r12}
-	add	r0, sp, #CTX_SP
-	stm	r0, {sp, lr}^		@ banked user registers
-	.ifc	\lrfix, thumb
-	mrs	r1, spsr
-	str	r1, [sp, #CTX_CPSR]
-	tst	r1, #0x20		@ undef: the instruction size depends on T
-	subeq	lr, lr, #4
-	subne	lr, lr, #2
-	str	lr, [sp, #CTX_PC]
-	.else
-	sub	lr, lr, #\lrfix
-	str	lr, [sp, #CTX_PC]
-	mrs	lr, spsr
-	str	lr, [sp, #CTX_CPSR]
-	.endif
-	mov	r0, sp
-	bl	\entry
-	mov	r4, sp			@ frame on the exception-mode stack
-	add	sp, sp, #CTX_SIZE
-	cps	#0x1f			@ System mode: user SP/LR banked
-	sub	sp, r0, #CTX_SIZE
-	add	r0, sp, #CTX_VFP
-	vstmia	r0!, {d0-d15}
-	vstmia	r0, {d16-d31}
-	mov	r5, lr
-	mov	r0, sp
-	mov	r1, r4
-	bl	excpCopyFrame
-	mov	lr, r5
-	mov	r0, sp
-	mov	r1, #3
-	movw	r2, #:lower16:\name
-	movt	r2, #:upper16:\name
-	ldr	r2, [r2]		@ next handler of the chain
-	add	pc, r2, #8
-	.endm
-
-	INITIAL_HANDLER initialDabtHandler, excpDabtEntry, g_abortStack, 8
-	INITIAL_HANDLER initialPabtHandler, excpPabtEntry, g_abortStack, 4
-	INITIAL_HANDLER initialUndefHandler, excpUndefEntry, g_undefStack, thumb
-
-/*
- * Return into a context from excpReturnToContext (System mode): r0 = context;
- * registers are reloaded from it and RFE restores PC and CPSR.
- */
-	.global	excpReturnToAbortMode
-	.type	excpReturnToAbortMode, %function
-excpReturnToAbortMode:
-	cps	#0x17
-	mov	ip, r0
-	ldm	ip!, {r0-r11}
-	add	ip, ip, #4
-	ldm	ip, {sp, lr}^
-	sub	ip, ip, #CTX_SP
-	ldr	lr, [ip, #CTX_CPSR]
-	push	{lr}
-	ldr	lr, [ip, #CTX_PC]
-	push	{lr}
-	ldr	ip, [ip, #48]		@ r12 last
-	clrex
-	rfeia	sp!
-	.size	excpReturnToAbortMode, . - excpReturnToAbortMode
+	FUNCTION excpPanicLeave
+	NEST_COUNT_ADDRESS
+	ldr	r3, [r2]
+	subs	r3, r3, #1
+	bne	.
+	str	r3, [r2]
+	mov	r1, #0
+	mcr	p15, 0, r1, c5, c0, 0		@ DFSR
+	mcr	p15, 0, r1, c5, c0, 1		@ IFSR
+	mcr	p15, 0, r1, c5, c1, 0		@ ADFSR
+	mcr	p15, 0, r1, c5, c1, 1		@ AIFSR
+	mcr	p15, 0, r1, c6, c0, 0		@ DFAR
+	mcr	p15, 0, r1, c6, c0, 2		@ IFAR
+	ldr	r1, [r0, #CTX_THREAD]
+	mcr	p15, 0, r1, c13, c0, 4		@ TPIDRPRW
+	b	.
+	END_FUNCTION excpPanicLeave

@@ -87,6 +87,33 @@
 	add	r2, r2, r1, lsl #2
 	.endm
 
+/*
+ * Secure build (EXCPMGR_TZS): switch to this core's stack of the exception
+ * mode. The mode's SP is parked in FCSEIDR, and the core number selects the
+ * entry of the mode's per-core table.
+ */
+	.macro	CORE_STACK table
+	mcr	p15, 0, sp, c13, c0, 0		@ FCSEIDR
+	mrc	p15, 0, sp, c0, c0, 5		@ MPIDR
+	ands	sp, sp, #0xf
+	beq	0f
+	cmp	sp, #2
+	blt	1f
+	beq	2f
+	movw	sp, #:lower16:\table + 12
+	movt	sp, #:upper16:\table + 12
+	b	3f
+0:	movw	sp, #:lower16:\table
+	movt	sp, #:upper16:\table
+	b	3f
+1:	movw	sp, #:lower16:\table + 4
+	movt	sp, #:upper16:\table + 4
+	b	3f
+2:	movw	sp, #:lower16:\table + 8
+	movt	sp, #:upper16:\table + 8
+3:	ldr	sp, [sp]
+	.endm
+
 /* Rearm the hardware trace after the exception state is restored. */
 	.macro	REARM_TRACE
 	mrc	p15, 0, r1, c12, c0, 0		@ VBAR
