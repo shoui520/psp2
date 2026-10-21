@@ -17,11 +17,12 @@ static const SceFiosKernelStorage g_fiosDHStorageTemplate = {
 	"dh", 0, -1, 0, 1, 0, 0, NULL, NULL, 0
 };
 
-/* the stat of path through the overlays from index on */
-static int fiosDHGetstat(SceUID pid, int resolveFlag, const char *path, SceIoStat *stat,
-			 char *scratch, int index, uint8_t minOrder, uint8_t maxOrder)	/* name unknown */
+/* the stat of path through the overlays from index on (name unknown) */
+static __attribute__((noinline, noclone)) int fiosDHGetstat(SceUID pid, int resolveFlag,
+	const char *path, SceIoStat *stat, char *scratch, int index, uint8_t minOrder,
+	uint8_t maxOrder)
 {
-	SceFiosKernelResolveParam param;
+	SceFiosKernelResolveParam param = {};
 	char *resolved;
 	int ret;
 
@@ -50,19 +51,21 @@ static int fiosDHGetstat(SceUID pid, int resolveFlag, const char *path, SceIoSta
 
 /*
  * The overlay applies to the directory path: out is its source with the
- * rest of path behind it.
+ * rest of path behind it (name unknown).
  */
-static int fiosDHOverlayApplies(SceUID pid, const char *path, const SceFiosOverlay *overlay,
-				unsigned int minOrder, uint8_t maxOrder, char *out)	/* name unknown */
+static __attribute__((noinline)) int fiosDHOverlayApplies(SceUID pid, const char *path,
+	const SceFiosOverlay *overlay, unsigned int minOrder, uint8_t maxOrder, char *out)
 {
+	SceUID owner = overlay->pid;
+	unsigned int order = overlay->order;
 	unsigned int dstLen;
 	signed char c;
 	char *joined;
 	int ret;
 
-	if (overlay->pid != -1 && overlay->pid != pid)
+	if (owner != -1 && owner != pid)
 		return 0;
-	if (overlay->order < minOrder || overlay->order > maxOrder)
+	if (order < minOrder || order > maxOrder)
 		return 0;
 	dstLen = overlay->dst_len;
 	if (dstLen != 0 && strncmp(path, overlay->dst, dstLen) != 0)

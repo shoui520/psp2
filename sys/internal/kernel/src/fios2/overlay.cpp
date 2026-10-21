@@ -210,7 +210,7 @@ int sceFiosKernelOverlayRemoveInternal(SceUID pid, SceFiosOverlayID id)
 {
 	SceFiosKernelOverlayTable table;
 	SceUID caller;
-	int i, ret;
+	int n, i, ret;
 
 	caller = SceThreadmgrForDriver_FA54D49A();
 	if (!fiosCallerIsPrivileged(caller) && (pid != caller || pid == -1))
@@ -218,7 +218,8 @@ int sceFiosKernelOverlayRemoveInternal(SceUID pid, SceFiosOverlayID id)
 
 	sceFiosKernelRwlockWriteLock(&g_fiosOverlayLock);
 	table = sceFiosKernelOverlayGetTable(pid);
-	for (i = 0; i < *table.count; i++) {
+	n = *table.count;
+	for (i = 0; i < n; i++) {
 		if (table.overlays[i].id != id)
 			continue;
 		if (pid == -1) {
@@ -228,7 +229,7 @@ int sceFiosKernelOverlayRemoveInternal(SceUID pid, SceFiosOverlayID id)
 		if (fiosOverlayIsAccessible(pid, &table.overlays[i]))
 			break;
 	}
-	if (i < *table.count) {
+	if (i < n) {
 		fiosOverlayDelete(&table, i);
 		ret = 0;
 	} else {
@@ -282,7 +283,7 @@ int sceFiosKernelOverlayGetInfoInternal(SceUID pid, SceFiosOverlayID id, SceFios
 {
 	SceFiosKernelOverlayTable table;
 	SceUID caller;
-	int i, ret;
+	int n, i, ret;
 
 	if (outOverlay == NULL)
 		return SCE_FIOS_ERROR_BAD_PTR;
@@ -293,7 +294,8 @@ int sceFiosKernelOverlayGetInfoInternal(SceUID pid, SceFiosOverlayID id, SceFios
 	sceFiosKernelRwlockReadLock(&g_fiosOverlayLock);
 	table = sceFiosKernelOverlayGetTable(pid);
 	ret = SCE_FIOS_ERROR_BAD_OVERLAY;
-	for (i = 0; i < *table.count; i++) {
+	n = *table.count;
+	for (i = 0; i < n; i++) {
 		if (table.overlays[i].id != id)
 			continue;
 		if (pid == -1 || fiosOverlayIsAccessible(pid, &table.overlays[i])) {
@@ -311,7 +313,7 @@ int sceFiosKernelOverlayModifyInternal(SceUID pid, SceFiosOverlayID id, const Sc
 	SceFiosKernelOverlayTable table;
 	SceFiosOverlay copy;
 	SceUID caller;
-	int i, ret;
+	int n, i, ret;
 
 	caller = SceThreadmgrForDriver_FA54D49A();
 	if (!fiosCallerIsPrivileged(caller) && (pid != caller || pid == -1))
@@ -324,7 +326,8 @@ int sceFiosKernelOverlayModifyInternal(SceUID pid, SceFiosOverlayID id, const Sc
 
 	sceFiosKernelRwlockWriteLock(&g_fiosOverlayLock);
 	table = sceFiosKernelOverlayGetTable(pid);
-	for (i = 0; i < *table.count; i++) {
+	n = *table.count;
+	for (i = 0; i < n; i++) {
 		if (table.overlays[i].id != id)
 			continue;
 		if (pid == -1) {
@@ -334,7 +337,7 @@ int sceFiosKernelOverlayModifyInternal(SceUID pid, SceFiosOverlayID id, const Sc
 		if (fiosOverlayIsAccessible(pid, &table.overlays[i]))
 			break;
 	}
-	if (i >= *table.count) {
+	if (i >= n) {
 		ret = SCE_FIOS_ERROR_BAD_OVERLAY;
 	} else if (overlay->order == table.overlays[i].order) {
 		memcpy(&table.overlays[i], &copy, sizeof(SceFiosOverlay));

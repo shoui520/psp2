@@ -23,6 +23,20 @@ static inline SceFiosKernelThreadState *fiosThreadState(int create)	/* name unkn
 		sceKernelGetThreadId(), create);
 }
 
+/* the calling thread sees only orders 128 and up (name unknown) */
+static inline int fiosOverlayThreadIsDisabled(void)
+{
+	SceFiosKernelThreadState *thread;
+	SceUInt32 state = sceSyscallEnter();
+	int disabled = 0;
+
+	thread = fiosThreadState(0);
+	if (thread != NULL)
+		disabled = thread->overlayDisabled;
+	sceSyscallLeave(state);
+	return disabled;
+}
+
 int SceFios2KernelForDriver_2607EE4C(SceFiosOverlay *overlay, SceFiosOverlayID *outId)
 {
 	SceUID pid = overlay != NULL ? overlay->pid : SceThreadmgrForDriver_FA54D49A();
@@ -136,19 +150,20 @@ int SceFios2KernelForDriver_FF42AAF0(SceUID pid, unsigned int minOrder, unsigned
 	return ret;
 }
 
-int SceFios2KernelForDriver_E71192C5(void);
-
 int SceFios2KernelForDriver_0F456345(SceUID pid, int resolveFlag, const char *inPath, char *outPath,
 				     SceSize maxPath)
 {
-	SceFiosKernelResolveParam param;
+	SceFiosKernelResolveParam param = {};
 	SceFiosKernelResolveArgs args;
 	SceUInt32 state = sceSyscallEnter();
+	uint8_t minOrder = 0;
 	int ret;
 
-	param.minOrder = SceFios2KernelForDriver_E71192C5() ? 0x80 : 0;
+	if (fiosOverlayThreadIsDisabled())
+		minOrder = 0x80;
 	args.param = &param;
 	param.maxPath = maxPath;
+	param.minOrder = minOrder;
 	param.maxOrder = 0xff;
 	args.inPath = inPath;
 	args.outPath = outPath;
@@ -167,12 +182,12 @@ int SceFios2KernelForDriver_D3D968FC(SceUID pid, int resolveFlag, const char *in
 					      char *outPath, SceSize maxPath, uint8_t minOrder,
 					      uint8_t maxOrder)
 {
-	SceFiosKernelResolveParam param;
+	SceFiosKernelResolveParam param = {};
 	SceFiosKernelResolveArgs args;
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
 
-	if (SceFios2KernelForDriver_E71192C5())
+	if (fiosOverlayThreadIsDisabled())
 		minOrder = 0x80;
 	args.param = &param;
 	param.maxPath = maxPath;
@@ -388,16 +403,7 @@ int SceFios2KernelForDriver_03727E5E(int disabled)
 
 int SceFios2KernelForDriver_E71192C5(void)
 {
-	SceFiosKernelThreadState *thread;
-	SceUInt32 state = sceSyscallEnter();
-
-	thread = fiosThreadState(0);
-	if (thread != NULL) {
-		sceSyscallLeave(state);
-		return thread->overlayDisabled;
-	}
-	sceSyscallLeave(state);
-	return 0;
+	return fiosOverlayThreadIsDisabled();
 }
 
 /* a host0..host9 path is served best by the host scheduler */
@@ -409,8 +415,8 @@ int SceFios2KernelForDriver_241BF0D6(int avail, const char *path)
 	if (avail <= 1 || path == NULL || strlen(path) <= 5) {
 		ret = 0;
 	} else {
-		ret = path[0] == 'h' && path[1] == 'o' && path[2] == 's' && path[3] == 't' &&
-		      path[5] == ':' && (unsigned int)(path[4] - '0') <= 9;
+		ret = (path[0] == 'h') & (path[1] == 'o') & (path[2] == 's') & (path[3] == 't') &
+		      (path[5] == ':') & ((unsigned int)(path[4] - '0') <= 9);
 	}
 	sceSyscallLeave(state);
 	return ret;

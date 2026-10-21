@@ -62,12 +62,13 @@ int sceFiosKernelStorageAllocBlocks(SceFiosKernelStorage *storage, SceSize count
 			if (storage->bitmap[i >> 3] & FIOS_STORAGE_BIT(i))
 				break;
 		if (i >= end) {
+			char *blocks = (char *)storage->blocks + storage->blockSize * start;
+
 			for (i = start; i < end; i++)
 				storage->bitmap[i >> 3] |= FIOS_STORAGE_BIT(i);
 			storage->last = end - 1;
 			storage->used += count;
-			memset((char *)storage->blocks + storage->blockSize * start, 0,
-			       storage->blockSize * count);
+			memset(blocks, 0, storage->blockSize * count);
 			return start;
 		}
 		tried += i + 1 - start;
