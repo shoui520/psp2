@@ -115,8 +115,8 @@ SceInt32 sceNgsPatchCreateRoutingInternal(const SceNgsPatchSetupInfo *info,
 		result = SCE_NGS_ERROR_INVALID_VOICE_TYPE;
 		goto unlock;
 	}
-	if (source->runState == NGS_VOICE_RUN_STATE_UNLOADING ||
-	    destination->runState == NGS_VOICE_RUN_STATE_UNLOADING)
+	if (source->playState.runState == NGS_VOICE_RUN_STATE_UNLOADING ||
+	    destination->playState.runState == NGS_VOICE_RUN_STATE_UNLOADING)
 		goto error;
 	if (setup.nSourceOutputSubIndex == SCE_NGS_VOICE_PATCH_AUTO_SUBINDEX) {
 		for (subIndex = 0; subIndex != patchesPerOutput; ++subIndex) {

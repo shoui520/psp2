@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "ngs_platform.h"
+#include "ngs_cache.h"
 
 int ngsAtomicSet(int *value, int replacement, int expected)
 {
@@ -188,13 +189,4 @@ int ngsUnlockTransfer(NgsPlatformContext *context)
 	return (int)0x804a0001;
 }
 
-void ngsCleanDcacheRange(void *address, int size)
-{
-	uintptr_t start = (uintptr_t)address;
-
-	size += start & 31;
-	start &= ~31U;
-	size = (size + 31) & ~31U;
-	if (size > 0 && start != 0)
-		sceKernelDcacheCleanRange((void *)start, size);
-}
+extern void ngsCleanDcacheRange(void *address, int size);

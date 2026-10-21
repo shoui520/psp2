@@ -204,8 +204,8 @@ void ngsRemoveRack(NgsSynSystem *system, unsigned int index, NgsSynRack *rack)
 	}
 	ngsUnlockTransfer(system->context);
 	ngsLockCodec(system->context);
-	for (module = 0; module < rack->moduleCount; ++module) {
-		if (rack->modules[module].moduleId != SCE_NGS_INPUT_MIXER_ID)
+	for (module = 0; module < rack->moduleList.moduleCount; ++module) {
+		if (rack->moduleList.modules[module].moduleId != SCE_NGS_INPUT_MIXER_ID)
 			continue;
 		for (voice = 0; voice < rack->voiceCount; ++voice)
 			ngsFlushInputMixer(rack, voice, module);
@@ -523,9 +523,9 @@ int ngsReleaseRack(SceNgsHRack handle, SceNgsRackReleaseCallbackFunc callback)
 	ngsLockSystemMutex(system->context);
 	rack->state = NGS_RACK_STATE_RELEASING;
 	for (voice = 0; voice < rack->voiceCount; ++voice) {
-		if ((unsigned int)(rack->voices[voice].runState - 1) <= 1)
+		if ((unsigned int)(rack->voices[voice].playState.runState - 1) <= 1)
 			sceNgsVoiceKillInternal(ngsGetVoiceHandle(&rack->voices[voice]));
-		rack->voices[voice].runState = NGS_VOICE_RUN_STATE_UNLOADING;
+		rack->voices[voice].playState.runState = NGS_VOICE_RUN_STATE_UNLOADING;
 		ngsUpdateVoiceFlags(&rack->voices[voice], rack);
 	}
 	for (link = 0; link < system->MaxRacks; ++link) {

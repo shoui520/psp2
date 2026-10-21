@@ -13,7 +13,19 @@ struct NgsModuleDefinition;
 struct NgsSynRack;
 struct NgsVoice;
 struct NgsDspGraph;
-struct NgsCallbackList;
+
+/* NgsSynSystem.state */
+enum {
+	NGS_SYSTEM_STATE_NONE = 0,
+	NGS_SYSTEM_STATE_ACTIVE = 101,
+	NGS_SYSTEM_STATE_RELEASING = 102,
+};
+
+/* A callback the caller runs after an update (sceNgsSystemGetCallbackList). */
+typedef struct NgsCallbackList {
+	void *callback;
+	SceNgsCallbackInfo *info;	/* in the caller's memory */
+} NgsCallbackList;
 
 /* A voice's entry in the batch the codec engine processes (heap offsets). */
 typedef struct NgsDspBatchEntry {
@@ -75,8 +87,8 @@ typedef struct NgsSynSystem {
 	SceUID systemMemBlock;
 	SceNgsCallbackInfo *rackReleaseInfo;
 	SceNgsCallbackInfo *paramErrorInfo;
-	struct NgsCallbackList *callbacks;
-	struct NgsCallbackList *callerCallbacks;
+	NgsCallbackList *callbacks;
+	NgsCallbackList *callerCallbacks;
 	unsigned int callbackCount;
 	unsigned int callbackCapacity;
 	struct NgsVoice **updateVoices;

@@ -1,6 +1,10 @@
 /* SceNgs systems: requests applied at an update, player buffers, sizing. */
 
 #include <scetypes.h>
+#include <string.h>
+#include <kernel/error.h>
+#include <sysmem/sysroot.h>
+#include <vnz_wrapper/vnz_wrapper.h>
 #include <intrmgr/syscall.h>
 #include <sysmem/sysmem.h>
 #include <ngs/error.h>
@@ -186,5 +190,431 @@ int sceNgsSystemGetRequiredMemorySizeInternal(
 		}
 	}
 	sceSyscallLeave(syscallState);
+	return result;
+}
+
+SceInt32 sceNgsSystemReleaseInternal(SceNgsHSynSystem handle)
+{
+	unsigned int syscall = sceSyscallEnter();
+	NgsProcessStorage *storage = NULL;
+	NgsSynSystem *system;
+	SceNgsCallbackInfo *info, *callerInfo;
+	SceNgsRackReleaseCallbackFunc callback;
+	NgsSynRack *rack;
+	unsigned int index;
+	int result;
+
+	result = SceCodecEngineWrapperForDriver_CB8703D8();
+	if (result < 0)
+		goto leave;
+	if (ngsGetProcessStorage(&storage) != 0 ||
+	    ngsLockProcess(storage) != 0) {
+		result = SCE_NGS_ERROR;
+		goto unlock;
+	}
+	system = ngsGetSystemFromHandle(handle);
+	if (system == NULL) {
+		result = SCE_NGS_ERROR_INVALID_HANDLE;
+		goto unlockProcess;
+	}
+	system->state = NGS_SYSTEM_STATE_RELEASING;
+	ngsLockSystemMutex(system->context);
+	ngsUnlockSystemMutex(system->context);
+	result = ngsCheckContextUnlocked(system->context);
+	if (result != 0)
+		goto unlockProcess;
+
+	for (index = 0; index < system->MaxRacks; index++) {
+		rack = system->racks[index];
+		if (rack == NULL)
+			continue;
+		callback = rack->releaseCallback;
+		info = &system->rackReleaseInfo[index];
+		info->pUserData = rack->userReleaseData;
+		info->hRackHandle = ngsGetRackHandle(system->racks[index]);
+		result = ngsReleaseRack(ngsGetRackHandle(system->racks[index]),
+			NULL);
+		if (result == SCE_KERNEL_ERROR_THREAD_STOPPED ||
+		    result == SCE_KERNEL_ERROR_THREAD_SUSPENDED)
+			goto unlockProcess;
+		if (callback != NULL &&
+		    system->callbackCount < system->callbackCapacity) {
+			info = &system->rackReleaseInfo[index];
+			callerInfo = (SceNgsCallbackInfo *)((char *)info +
+				((char *)system->callbackUserMemory -
+				 (char *)system->callbackKernelMemory));
+			system->callbacks[system->callbackCount].callback =
+				(void *)callback;
+			system->callbacks[system->callbackCount].info = callerInfo;
+			system->callbackCount++;
+			ngsCopyToCaller(callerInfo, info, sizeof(*info),
+				system->copyUserData);
+		}
+	}
+	system->signature = 0;
+	result = ngsReleaseSystem(system);
+	system->state = NGS_SYSTEM_STATE_NONE;
+	ngsReleaseDebugBuffer(&system->debugBuffer, system->debugMemBlock);
+	ngsFreeProcessMemory(handle, system->coherentAllocation,
+		system->coherentAllocationSize, system->dspHeapAllocation,
+		system->dspHeapAllocationSize, system->systemAllocation,
+		system->systemAllocationSize, system->systemMemBlock);
+	if (ngsUnlockProcess(storage) != 0 && result == 0)
+		result = SCE_NGS_ERROR;
+	goto unlock;
+unlockProcess:
+	ngsUnlockProcess(storage);
+unlock:
+	_unlockProcessSuspendCore();
+leave:
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+SceInt32 sceNgsSystemLockInternal(SceNgsHSynSystem handle)
+{
+	unsigned int syscall = sceSyscallEnter();
+	NgsSynSystem *system = ngsGetSystemFromHandle(handle);
+	SceInt32 result;
+
+	if (system == NULL)
+		result = SCE_NGS_ERROR_INVALID_HANDLE;
+	else if (ngsLockSystem(system->context) != 0)
+		result = SCE_NGS_ERROR;
+	else
+		result = 0;
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+SceInt32 sceNgsSystemUnlockInternal(SceNgsHSynSystem handle)
+{
+	unsigned int syscall = sceSyscallEnter();
+	NgsSynSystem *system = ngsGetSystemFromHandle(handle);
+	SceInt32 result;
+
+	if (system == NULL)
+		result = SCE_NGS_ERROR_INVALID_HANDLE;
+	else if (ngsUnlockSystem(system->context) != 0)
+		result = SCE_NGS_ERROR;
+	else
+		result = 0;
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+SceInt32 sceNgsSystemSetParamErrorCallbackInternal(SceNgsHSynSystem handle,
+	const SceNgsParamsErrorCallbackFunc callback)
+{
+	unsigned int syscall = sceSyscallEnter();
+	NgsSynSystem *system = ngsGetSystemFromHandle(handle);
+	SceInt32 result;
+
+	if (system != NULL) {
+		system->paramErrorCallback = callback;
+		result = 0;
+	} else {
+		result = SCE_NGS_ERROR_INVALID_HANDLE;
+	}
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+SceInt32 sceNgsSystemGetCallbackListInternal(SceNgsHSynSystem handle,
+	NgsCallbackList **array, SceUInt32 *count)
+{
+	unsigned int syscall = sceSyscallEnter();
+	NgsSynSystem *system = ngsGetSystemFromHandle(handle);
+	SceInt32 result;
+
+	if (system == NULL || array == NULL) {
+		result = system != NULL ? 0 : SCE_NGS_ERROR_INVALID_HANDLE;
+		sceSyscallLeave(syscall);
+		return result;
+	}
+	result = system->callbackCount;
+	if (result != 0) {
+		if (ngsCopyToCaller(system->callerCallbacks, system->callbacks,
+			sizeof(NgsCallbackList) * result,
+			system->copyUserData) != 0 ||
+		    ngsCopyToCaller(array, &system->callerCallbacks,
+			sizeof(*array), system->copyUserData) != 0)
+			result = 0;
+		else
+			result = system->callbackCount;
+	}
+	system->callbackCount = 0;
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+SceInt32 sceNgsSystemSetFlagsInternal(SceNgsHSynSystem handle,
+	const SceUInt32 flags)
+{
+	unsigned int syscall = sceSyscallEnter();
+	NgsSynSystem *system = ngsGetSystemFromHandle(handle);
+	SceInt32 result;
+
+	if (system != NULL) {
+		system->flags = flags;
+		result = 0;
+	} else {
+		result = SCE_NGS_ERROR_INVALID_HANDLE;
+	}
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+SceInt32 sceNgsSulphaSetSynthUpdateCallbackInternal(SceNgsHSynSystem handle,
+	void *callback, const SceNgsBufferInfo *info)
+{
+	unsigned int syscall = sceSyscallEnter();
+	NgsSynSystem *system = ngsGetSystemFromHandle(handle);
+	SceNgsBufferInfo buffer;
+	SceInt32 result = SCE_NGS_ERROR_INVALID_HANDLE;
+
+	if (system != NULL) {
+		system->synthUpdateCallback = callback;
+		if (info != NULL) {
+			result = SCE_NGS_ERROR_INVALID_PARAM;
+			if (ngsCopyFromCaller(&buffer, info, sizeof(buffer),
+				system->copyUserData) == 0) {
+				system->callerDebugBuffer = buffer;
+				ngsReleaseDebugBuffer(&system->debugBuffer,
+					system->debugMemBlock);
+				ngsAllocateDebugBuffer(&system->debugBuffer,
+					&system->debugMemBlock, buffer.size);
+				result = 0;
+			}
+		} else {
+			system->callerDebugBuffer.data = NULL;
+			system->callerDebugBuffer.size = 0;
+			ngsReleaseDebugBuffer(&system->debugBuffer,
+				system->debugMemBlock);
+			result = 0;
+		}
+	}
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+SceInt32 sceNgsSulphaGetSynthUpdateCallbackInternal(SceNgsHSynSystem handle,
+	void **callback, SceNgsBufferInfo *info)
+{
+	unsigned int syscall = sceSyscallEnter();
+	NgsSynSystem *system = ngsGetSystemFromHandle(handle);
+	SceNgsBufferInfo buffer;
+	SceInt32 result;
+
+	if (system == NULL || callback == NULL) {
+		if (system == NULL) {
+			result = SCE_NGS_ERROR_INVALID_HANDLE;
+			goto leave;
+		}
+	} else if (info != NULL) {
+		result = SCE_NGS_ERROR;
+		if (system->synthUpdateCallback == NULL)
+			goto leave;
+		buffer = system->callerDebugBuffer;
+		if (ngsCopyToCaller(callback, &system->synthUpdateCallback,
+			sizeof(*callback), system->copyUserData) == 0 &&
+		    ngsCopyToCaller(info, &buffer, sizeof(buffer),
+			system->copyUserData) == 0 &&
+		    ngsCopyToCaller(buffer.data, system->debugBuffer.data,
+			buffer.size, system->copyUserData) == 0) {
+			result = system->synthUpdateCallback != NULL ?
+				0 : SCE_NGS_ERROR;
+			goto leave;
+		}
+	}
+	result = SCE_NGS_ERROR_INVALID_PARAM;
+leave:
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+/* Titles released before the fix that rely on it too. */
+void ngsCheckFixForBugzilla89940(NgsSynSystem *system)
+{
+	char titleId[32];
+
+	system->fixForBugzilla89940 = 0;
+	if (SceSysrootForKernel_EC3124A3(0, titleId, sizeof(titleId)) < 0)
+		return;
+	if (strncmp(titleId, "PCSG00140", sizeof(titleId)) == 0 ||
+	    strncmp(titleId, "PCSH00044", sizeof(titleId)) == 0 ||
+	    strncmp(titleId, "PCSH00073", sizeof(titleId)) == 0 ||
+	    strncmp(titleId, "PCSE00300", sizeof(titleId)) == 0 ||
+	    strncmp(titleId, "PCSB00471", sizeof(titleId)) == 0 ||
+	    strncmp(titleId, "PCSG90080", sizeof(titleId)) == 0 ||
+	    strncmp(titleId, "PCSG90123", sizeof(titleId)) == 0 ||
+	    strncmp(titleId, "PCSH00046", sizeof(titleId)) == 0 ||
+	    strncmp(titleId, "PCSE00375", sizeof(titleId)) == 0 ||
+	    strncmp(titleId, "PCSB00493", sizeof(titleId)) == 0)
+		system->fixForBugzilla89940 = 1;
+}
+
+unsigned int sceNgsSystemGetSysHandleFromRack(SceNgsHRack handle)
+{
+	NgsSynRack *rack = ngsGetRackFromHandle(handle);
+
+	if (rack == NULL)
+		return 0;
+	return ngsGetSystemHandle(rack->system);
+}
+
+int sceNgsSystemIsFixForBugzilla89940(SceNgsHSynSystem handle)
+{
+	unsigned int syscall = sceSyscallEnter();
+	NgsSynSystem *system;
+	int result;
+
+	/* Sony's returns these without leaving the syscall state. */
+	if (handle == 0)
+		return 0;
+	system = ngsGetSystemFromHandle(handle);
+	if (system == NULL)
+		return 0;
+	result = system->compiledSdkVersion >= 0x3550000 ||
+		system->fixForBugzilla89940 == 1;
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+/* Copies the voices' states for the caller, unless the system is updating. */
+static inline void ngsPullVoiceStates(NgsSynSystem *system, int clearFlags)
+{
+	NgsSynRack *rack;
+	unsigned int index, voice;
+
+	if (ngsTryLockSystem(system->context) != 0) {
+		system->pullDataDeferred = 1;
+		return;
+	}
+	ngsUnlockSystem(system->context);
+	system->pullDataDeferred = 0;
+	for (index = 0; index < system->MaxRacks; index++) {
+		rack = system->racks[index];
+		if (rack == NULL || rack->state != NGS_RACK_STATE_ACTIVE)
+			continue;
+		for (voice = 0; voice < rack->voiceCount; voice++) {
+			if (!clearFlags) {
+				rack->voices[voice].callerPlayState =
+					rack->voices[voice].playState;
+				continue;
+			}
+			rack->voices[voice].callerPlayState =
+				rack->voices[voice].playState;
+			rack->voices[voice].callerDirtyFlags =
+				rack->voices[voice].dirtyFlags;
+			rack->voices[voice].callerFlags =
+				rack->voices[voice].flags;
+			if (rack->voices[voice].callerPlayState.pauseState != 2 &&
+			    rack->voices[voice].callerPlayState.runState - 1 <= 1) {
+				rack->voices[voice].flags = 0;
+				rack->voices[voice].dirtyFlags = 0;
+			}
+		}
+	}
+}
+
+/* Reads the caller's update block of a rack. */
+static inline int ngsPullRackUpdates(NgsSynRack *rack)
+{
+	return ngsCopyFromCaller(rack->updateCount, rack->updateCountCaller,
+		rack->updateBlockSize, rack->system->copyUserData);
+}
+
+SceInt32 sceNgsSystemPullDataInternal(SceNgsHSynSystem handle,
+	const SceUInt32 dirtyFlagsA, const SceUInt32 dirtyFlagsB)
+{
+	unsigned int syscall = sceSyscallEnter();
+	NgsSynSystem *system = ngsGetSystemFromHandle(handle);
+	NgsSynRack *rack;
+	unsigned int count, index;
+	SceInt32 result, status;
+
+	if (system == NULL) {
+		status = SCE_NGS_ERROR_INVALID_HANDLE;
+		goto leave;
+	}
+	count = system->MaxRacks;
+	if (system->compiledSdkVersion >= 0x2000000) {
+		result = ngsLockVoice(system->context);
+	} else {
+		result = ngsLockVoice(system->context);
+		if (result != 0) {
+			status = result;
+			goto leave;
+		}
+		ngsPullVoiceStates(system, 0);
+		result = ngsUnlockVoice(system->context);
+	}
+	if (result != 0) {
+		status = result;
+		goto leave;
+	}
+
+	if (count >= 32)
+		count = 32;
+	status = 0;
+	for (index = 0; index != count; index++) {
+		rack = system->racks[index];
+		if (rack != NULL && ((dirtyFlagsA >> index) & 1) != 0 &&
+		    rack->state == NGS_RACK_STATE_ACTIVE &&
+		    ngsPullRackUpdates(rack) != 0)
+			status = SCE_NGS_ERROR;
+	}
+	for (index = count; index < system->MaxRacks; index++) {
+		rack = system->racks[index];
+		/* Sony's shifts by the rack index here too. */
+		if (rack != NULL && ((dirtyFlagsB >> index) & 1) != 0 &&
+		    rack->state == NGS_RACK_STATE_ACTIVE &&
+		    ngsPullRackUpdates(rack) != 0)
+			status = SCE_NGS_ERROR;
+	}
+
+	if (system->compiledSdkVersion >= 0x2000000) {
+		ngsApplyRackUpdateRequests(&system->MaxRacks, &system->racks);
+		ngsPullVoiceStates(system, 1);
+		status = 0;
+		ngsUnlockVoice(system->context);
+	}
+leave:
+	sceSyscallLeave(syscall);
+	return status;
+}
+
+SceInt32 sceNgsSystemPushDataInternal(SceNgsHSynSystem handle)
+{
+	unsigned int syscall = sceSyscallEnter();
+	NgsSynSystem *system = ngsGetSystemFromHandle(handle);
+	NgsSynRack *rack;
+	unsigned int index;
+	SceInt32 result;
+	int copied;
+
+	if (system == NULL) {
+		result = SCE_NGS_ERROR_INVALID_HANDLE;
+		goto leave;
+	}
+	result = 0;
+	if (system->MaxRacks == 0)
+		goto leave;
+	index = 0;
+	do {
+		rack = system->racks[index++];
+		if (rack == NULL || rack->state != NGS_RACK_STATE_ACTIVE ||
+		    rack->requestsDirty == 0)
+			continue;
+		copied = ngsCopyToCaller(rack->voiceResultsCaller,
+			rack->voiceResults, rack->requestBlockSize,
+			system->copyUserData);
+		rack->requestsDirty = 0;
+		if (copied != 0)
+			result = SCE_NGS_ERROR;
+	} while (index < system->MaxRacks);
+leave:
+	sceSyscallLeave(syscall);
 	return result;
 }

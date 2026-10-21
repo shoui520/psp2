@@ -96,9 +96,9 @@ int ngsProcessRelease(SceUID pid)
 			command[1] = 0;
 			command[2] = 0;
 			command[3] = 0;
-			for (moduleIndex = 0; moduleIndex < rack->moduleCount;
+			for (moduleIndex = 0; moduleIndex < rack->moduleList.moduleCount;
 			     ++moduleIndex) {
-				if (rack->modules[moduleIndex].moduleId !=
+				if (rack->moduleList.modules[moduleIndex].moduleId !=
 				    SCE_NGS_INPUT_MIXER_ID)
 					continue;
 				for (voiceIndex = 0; voiceIndex < rack->voiceCount;

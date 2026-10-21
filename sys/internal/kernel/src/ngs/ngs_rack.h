@@ -73,6 +73,12 @@ typedef struct NgsRackModule {
 	unsigned int *outputBindings;
 } NgsRackModule;
 
+/* The modules of the rack's voice definition. */
+typedef struct NgsRackModuleList {
+	unsigned int moduleCount;
+	NgsRackModule *modules;
+} NgsRackModuleList;
+
 /* A preset of the rack's voice definition; offsets are from the entry. */
 typedef struct NgsRackPreset {
 	int nameOffset;
@@ -213,16 +219,22 @@ typedef struct NgsVoiceModuleParams {
 	int reserved16;
 } NgsVoiceModuleParams;
 
+/* Whether a voice plays, and whether it is paused. */
+typedef struct NgsVoiceState {
+	unsigned int pauseState;
+	unsigned int runState;
+} NgsVoiceState;
+
 typedef struct NgsVoice {
 	unsigned int signature;
-	int reserved4;
-	unsigned int runState;
-	int reserved12;
-	int reserved16;
+	NgsVoiceState playState;
+	NgsVoiceState callerPlayState;	/* playState as of the last pull */
 	unsigned short dirtyFlags;
 	unsigned short dirtyFlags2;
 	int reserved24;
-	int reserved28;
+	unsigned short callerFlags;	/* flags as of the last pull */
+	unsigned char callerDirtyFlags;	/* dirtyFlags as of the last pull */
+	unsigned char padding;
 	unsigned short index;
 	unsigned char flags;
 	unsigned char channels;
@@ -250,8 +262,7 @@ typedef struct NgsSynRack {
 	NgsRackLink *links;
 	NgsDspRackEntry *dspRackList;
 	int *depthScratch;
-	unsigned int moduleCount;
-	NgsRackModule *modules;
+	NgsRackModuleList moduleList;
 	unsigned int routingIndexCount;
 	unsigned int *routingIndices;
 	unsigned int presetCount;
@@ -370,6 +381,11 @@ int ngsFlushInputMixer(NgsSynRack *rack, unsigned int voiceIndex,
 		       unsigned int moduleIndex);
 void ngsRelocateRackMemory(NgsSynRack *rack, void *releasedAddress,
 			   SceSize releasedSize);
+
+/* ngs_buffer.c */
+void ngsAssignModuleBuffers(unsigned char *inputSlots,
+			    unsigned char *outputSlots, const NgsVoiceDsp *dsp,
+			    const NgsRackModuleList *list);
 
 /* ngs_routing.c */
 int ngsGetPatchIndex(int nPatchesPerOutput, int nSourceOutputIndex,

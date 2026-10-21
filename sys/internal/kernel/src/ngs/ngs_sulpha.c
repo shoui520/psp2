@@ -11,6 +11,7 @@
 #include "ngs_module_memory.h"
 #include "ngs_system.h"
 #include "ngs_rack.h"
+#include "ngs_player.h"
 #include <ngs/error.h>
 
 #define NGS_SULPHA_TRACE_MAGIC		0x30405060
@@ -33,17 +34,6 @@ enum NgsSulphaEventType {
 	NGS_SULPHA_EVENT_PLAYER_STATUS = 6,
 	NGS_SULPHA_EVENT_OUTPUT_DATA = 7,
 };
-
-/* The status a player module keeps in its DSP context. */
-typedef struct NgsPlayerStatus {
-	signed char currentBuffer;
-	unsigned char padding[3];
-	unsigned int bufferOffset;
-	unsigned short loopCount;
-} NgsPlayerStatus;
-
-#define NGS_PCM_PLAYER_STATUS_OFFSET	172
-#define NGS_AT9_PLAYER_STATUS_OFFSET	220
 
 /*
  * A buffer of events: a header, then events up to an END event. The events
@@ -105,7 +95,7 @@ typedef struct NgsSulphaVoiceEvent {
 	unsigned int voiceIndex;
 	unsigned int eventIndex;
 	unsigned int moduleCount;
-	int reserved4;
+	unsigned int pauseState;
 	unsigned int runState;
 	unsigned int flags;
 	unsigned int channels;
@@ -360,14 +350,12 @@ static inline void ngsSulphaWritePlayerStatus(NgsSulphaTrace *trace,
 	event->context = context;
 	event->reserved28 = 4;
 	if (moduleId == SCE_NGS_AT9_ID) {
-		status = (const NgsPlayerStatus *)(context +
-			NGS_AT9_PLAYER_STATUS_OFFSET);
+		status = &((const NgsAt9PlayerContext *)context)->status;
 		event->currentBuffer = status->currentBuffer;
 		event->loopCount = status->loopCount;
 		event->bufferOffset = status->bufferOffset;
 	} else {
-		status = (const NgsPlayerStatus *)(context +
-			NGS_PCM_PLAYER_STATUS_OFFSET);
+		status = &((const NgsPcmPlayerContext *)context)->status;
 		event->currentBuffer = status->currentBuffer;
 		event->loopCount = status->loopCount;
 		event->bufferOffset = status->bufferOffset;
@@ -440,13 +428,13 @@ void ngsSulphaTraceVoice(NgsSulphaTrace *trace, NgsVoice *voice)
 	event->rack = ngsGetRackHandle(voice->rack);
 	event->voiceIndex = voice->index;
 	event->eventIndex = (unsigned short)trace->eventCount;
-	event->reserved4 = voice->reserved4;
-	event->runState = voice->runState;
+	event->pauseState = voice->playState.pauseState;
+	event->runState = voice->playState.runState;
 	event->flags = voice->flags;
 	event->channels = voice->channels;
 	event->reserved24 = voice->reserved24;
 	event->reserved48 = 0;
-	event->moduleCount = rack->moduleCount;
+	event->moduleCount = rack->moduleList.moduleCount;
 	ngsSulphaNextEvent(trace, event->event.size);
 }
 
@@ -479,8 +467,8 @@ void ngsSulphaTraceUpdate(NgsSynSystem *system, NgsDspBatchEntry *entries,
 			continue;
 		updated = dsp->updatedParams;
 		rack = voice->rack;
-		modules = rack->modules;
-		for (index = 0; index < rack->moduleCount; index++) {
+		modules = rack->moduleList.modules;
+		for (index = 0; index < rack->moduleList.moduleCount; index++) {
 			if ((updated & (1 << index)) != 0)
 				ngsSulphaTraceModuleParams(trace, voice,
 					modules, index, updated);
@@ -535,8 +523,8 @@ void ngsSulphaEndUpdate(NgsSynSystem *system, NgsDspBatchEntry *entries,
 			entries[entry].heapOffset);
 		voice = dsp->voice;
 		rack = voice->rack;
-		modules = rack->modules;
-		for (index = 0; index < rack->moduleCount; index++) {
+		modules = rack->moduleList.modules;
+		for (index = 0; index < rack->moduleList.moduleCount; index++) {
 			moduleId = modules[index].moduleId;
 			if (moduleId == SCE_NGS_PLAYER_ID)
 				ngsSulphaWritePlayerStatus(trace, voice,
@@ -598,19 +586,19 @@ SceInt32 sceNgsSulphaGetInfoInternal(const NgsSulphaRegistration *registration,
 		patchCount = rack->patchesPerOutput * rack->voiceOutputCount;
 		for (k = 0; k < patchCount; k++)
 			ngsSulphaTracePatch(&trace, &voice->patches[k]);
-		for (index = 0; index < rack->moduleCount; index++) {
-			moduleId = rack->modules[index].moduleId;
-			ngsSulphaTraceModuleParams(&trace, voice, rack->modules,
+		for (index = 0; index < rack->moduleList.moduleCount; index++) {
+			moduleId = rack->moduleList.modules[index].moduleId;
+			ngsSulphaTraceModuleParams(&trace, voice, rack->moduleList.modules,
 						   index, ~0u);
 			if (moduleId == SCE_NGS_PLAYER_ID)
 				ngsSulphaTracePlayerStatus(&trace, voice,
-					rack->modules, index, SCE_NGS_PLAYER_ID);
+					rack->moduleList.modules, index, SCE_NGS_PLAYER_ID);
 			else if (moduleId == SCE_NGS_AT9_ID)
 				ngsSulphaTracePlayerStatus(&trace, voice,
-					rack->modules, index, SCE_NGS_AT9_ID);
+					rack->moduleList.modules, index, SCE_NGS_AT9_ID);
 			else if (moduleId == SCE_NGS_OUTPUT_ID)
 				ngsSulphaTraceOutputData(&trace, voice,
-					rack->modules, index);
+					rack->moduleList.modules, index);
 		}
 		break;
 	case NGS_SULPHA_OBJECT_SYSTEM:
