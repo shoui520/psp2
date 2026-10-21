@@ -13,6 +13,7 @@
 #include "ngs_platform.h"
 #include "ngs_system.h"
 #include "ngs_module_memory.h"
+#include "ngs_rack.h"
 
 NgsPlatformState ngsPlatformState;
 
@@ -67,7 +68,108 @@ int ngsProcessInitialize(SceUID pid)
 	return result;
 }
 
-/* PLACEHOLDER: process release needs the complete NgsSynSystem/rack owners. */
+int ngsProcessRelease(SceUID pid)
+{
+	NgsProcessStorage *storage = NULL;
+	NgsSynSystem *system;
+	NgsSynRack *rack;
+	unsigned int command[4];
+	unsigned int rackIndex;
+	unsigned int moduleIndex;
+	unsigned int voiceIndex;
+	int index;
+	int result;
+
+	result = SceProcessmgrForDriver_AF80F39C(pid,
+		ngsPlatformState.processStorageKey, (void **)&storage, 0);
+	if (result < 0)
+		return result;
+	if (storage->system != NULL) {
+		if (storage->system->context != NULL)
+			ngsLockCodec(storage->system->context);
+		for (rackIndex = 0; storage->system != NULL &&
+		     rackIndex < storage->system->MaxRacks; ++rackIndex) {
+			rack = storage->system->racks[rackIndex];
+			if (rack == NULL)
+				continue;
+			command[0] = 0;
+			command[1] = 0;
+			command[2] = 0;
+			command[3] = 0;
+			for (moduleIndex = 0; moduleIndex < rack->moduleCount;
+			     ++moduleIndex) {
+				if (rack->modules[moduleIndex].moduleId !=
+				    SCE_NGS_INPUT_MIXER_ID)
+					continue;
+				for (voiceIndex = 0; voiceIndex < rack->voiceCount;
+				     ++voiceIndex)
+					ngsFlushInputMixer(rack, voiceIndex,
+						moduleIndex);
+			}
+			command[2] = SceCodecEngineWrapperForDriver_C7C150AE(rack->dsp);
+			command[3] = rack->dspSize;
+			SceCodecEngineWrapperForDriver_391BD4FD(324, command, NULL, NULL);
+		}
+	}
+	if (storage->systemId != -1) {
+		command[0] = ngsPlatformState.sharedPhysicalAddress;
+		command[1] = storage->systemId;
+		result = SceCodecEngineWrapperForDriver_391BD4FD(322, command,
+			NULL, NULL);
+		if (result != 0)
+			return result;
+	}
+	system = storage->system;
+	if (system != NULL && system->context != NULL) {
+		ngsUnlockCodec(system->context);
+		sceKernelFinalizeFastMutex(
+			(SceKernelFastMutex *)&storage->system->context->systemMutex);
+		if (ngsPlatformState.processCount != 0) {
+			--ngsPlatformState.processCount;
+			if (ngsPlatformState.processes[0].storage == storage)
+				index = 0;
+			else if (ngsPlatformState.processes[1].storage == storage)
+				index = 1;
+			else if (ngsPlatformState.processes[2].storage == storage)
+				index = 2;
+			else if (ngsPlatformState.processes[3].storage == storage)
+				index = 3;
+			else if (ngsPlatformState.processes[4].storage == storage)
+				index = 4;
+			else if (ngsPlatformState.processes[5].storage == storage)
+				index = 5;
+			else if (ngsPlatformState.processes[6].storage == storage)
+				index = 6;
+			else if (ngsPlatformState.processes[7].storage == storage)
+				index = 7;
+			else
+				goto released;
+			ngsPlatformState.processes[index].pid = 0;
+			ngsPlatformState.processes[index].storage = NULL;
+		}
+released:
+		storage->systemId = -1;
+		storage->system = NULL;
+	}
+	if (storage->systemHeap != NULL) {
+		SceCodecEngineWrapperForDriver_3C5E9CC3(1, storage->systemHeap,
+			0x40000);
+		storage->systemHeap = NULL;
+	}
+	for (index = 0; index != 65; ++index) {
+		if (storage->memBlocks[index] != 0) {
+			sceKernelFreeMemBlock(storage->memBlocks[index]);
+			storage->memBlocks[index] = 0;
+		}
+	}
+	for (index = 0; index != 65; ++index) {
+		if (storage->allocations[index].address != NULL)
+			SceCodecEngineWrapperForDriver_3C5E9CC3(1,
+				storage->allocations[index].address,
+				storage->allocations[index].size);
+	}
+	return result;
+}
 
 int ngsProcessSuspend(SceUID pid)
 {
@@ -513,9 +615,6 @@ freeCoherent:
 	}
 	return (int)0x804a0011;
 }
-
-void ngsRelocateRackMemory(struct NgsSynRack *rack, void *releasedAddress,
-			  SceSize releasedSize);
 
 void ngsFreeProcessMemory(unsigned int handle, void *coherentMemory,
 	SceSize coherentSize, void *dspHeapMemory, SceSize dspHeapSize,

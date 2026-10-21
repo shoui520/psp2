@@ -62,11 +62,23 @@ int ngsPlatformInitialize(void);
 int ngsPlatformShutdown(void);
 int ngsProcessInitialize(SceUID pid);
 int ngsProcessSuspend(SceUID pid);
+int ngsProcessRelease(SceUID pid);
 int ngsProcessResume(SceUID pid);
 int ngsGetSystemInstanceCount(void);
 int ngsGetSystemExtraMemorySize(SceSize *size);
 int ngsGetProcessStorage(NgsProcessStorage **storage);
 int ngsGetAlignedMemorySize(SceSize size, int unused, int unused2,
 			int unused3, SceSize *alignedSize);
+int ngsCreateSystem(struct NgsSynSystem *system);
+int ngsReleaseSystem(struct NgsSynSystem *system);
+int ngsAllocateProcessMemory(unsigned int handle, SceSize coherentSize,
+	SceSize callbackSize, SceSize dspHeapSize, SceSize systemSize,
+	void *unusedUserMemory, SceSize unusedUserSize, void **callbackMemory,
+	void **coherentMemory, void **dspHeapMemory, void **systemMemory,
+	SceUID *memBlock);
+void ngsFreeProcessMemory(unsigned int handle, void *coherentMemory,
+	SceSize coherentSize, void *dspHeapMemory, SceSize dspHeapSize,
+	void *systemMemory, SceSize systemSize, SceUID memBlock);
+int ngsCheckContextUnlocked(NgsPlatformContext *context);
 int ngsReleaseDebugBuffer(SceNgsBufferInfo *buffer, SceUID memBlock);
 int ngsAllocateDebugBuffer(SceNgsBufferInfo *buffer, SceUID *memBlock, int size);

@@ -10,6 +10,7 @@
 #include "ngs_platform.h"
 #include "ngs_system.h"
 #include "ngs_voice_definition.h"
+#include "ngs_rack.h"
 
 struct SceNgsVoicePreset;
 
@@ -140,6 +141,156 @@ NgsSynSystem *ngsGetSystemFromHandle(unsigned int handle)
 	    (system = storage->system) == NULL || system->signature != 54321)
 		return NULL;
 	return system;
+}
+
+SceNgsHRack ngsGetRackHandle(const NgsSynRack *rack)
+{
+	if (rack == NULL || rack->system == NULL)
+		return 0;
+	return rack->system->systemId << 29 | rack->index << 23 |
+		NGS_RACK_HANDLE_TAG;
+}
+
+NgsSynRack *ngsGetRackFromHandle(SceNgsHRack handle)
+{
+	NgsProcessStorage *storage = NULL;
+	NgsSynSystem *system;
+	NgsSynRack *rack;
+	unsigned int index;
+
+	ngsGetProcessStorage(&storage);
+	if ((handle & 0x7fffff) != NGS_RACK_HANDLE_TAG || storage == NULL)
+		return NULL;
+	system = storage->system;
+	if (system == NULL || (unsigned int)storage->systemId != handle >> 29)
+		return NULL;
+	index = handle >> 23 & 0x3f;
+	if (index >= system->MaxRacks)
+		return NULL;
+	rack = system->racks[index];
+	if (rack != NULL && rack->signature != NGS_RACK_SIGNATURE)
+		return NULL;
+	return rack;
+}
+
+SceNgsHVoice ngsGetVoiceHandle(const NgsVoice *voice)
+{
+	NgsSynRack *rack;
+
+	if (voice == NULL)
+		return 0;
+	rack = voice->rack;
+	if (rack == NULL || rack->system == NULL)
+		return 0;
+	return rack->index << 23 | voice->index << 15 | NGS_VOICE_HANDLE_TAG |
+		rack->system->systemId << 29;
+}
+
+NgsVoice *ngsGetVoiceFromHandle(SceNgsHVoice handle)
+{
+	NgsProcessStorage *storage = NULL;
+	NgsSynSystem *system;
+	NgsSynRack *rack;
+	NgsVoice *voice;
+	unsigned int systemId = handle >> 29;
+	unsigned int tag = handle & 0x7fff;
+	unsigned int index;
+
+	ngsGetProcessStorage(&storage);
+	if (storage == NULL)
+		return NULL;
+	if ((unsigned int)storage->systemId != systemId ||
+	    tag != NGS_VOICE_HANDLE_TAG)
+		return NULL;
+	system = storage->system;
+	if (system == NULL)
+		return NULL;
+	index = handle >> 23 & 0x3f;
+	if (index >= system->MaxRacks)
+		return NULL;
+	rack = system->racks[index];
+	if (rack == NULL)
+		return NULL;
+	index = (unsigned char)(handle >> 15);
+	if (rack->signature != NGS_RACK_SIGNATURE || index >= rack->voiceCount)
+		return NULL;
+	if (rack->voices == NULL)
+		return NULL;
+	voice = &rack->voices[index];
+	if (voice->signature != NGS_VOICE_SIGNATURE)
+		return NULL;
+	return voice;
+}
+
+SceNgsHPatch ngsGetPatchHandle(const NgsPatch *patch)
+{
+	NgsVoice *voice;
+	NgsSynRack *rack;
+
+	if (patch == NULL)
+		return 0;
+	voice = patch->source;
+	if (voice == NULL)
+		return 0;
+	rack = voice->rack;
+	if (rack == NULL || rack->system == NULL)
+		return 0;
+	return voice->index << 15 | patch->index << 7 | NGS_PATCH_HANDLE_TAG |
+		rack->index << 23 | rack->system->systemId << 29;
+}
+
+NgsPatch *ngsGetPatchFromHandle(SceNgsHPatch handle, NgsVoice **source)
+{
+	NgsProcessStorage *storage = NULL;
+	NgsSynSystem *system;
+	NgsSynRack *rack;
+	NgsVoice *voice;
+	NgsPatch *patch;
+	unsigned int systemId = handle >> 29;
+	unsigned int tag = handle & 0x7f;
+	unsigned int index;
+
+	ngsGetProcessStorage(&storage);
+	if (storage == NULL)
+		return NULL;
+	if ((unsigned int)storage->systemId != systemId ||
+	    tag != NGS_PATCH_HANDLE_TAG)
+		return NULL;
+	system = storage->system;
+	if (system == NULL)
+		return NULL;
+	index = handle >> 23 & 0x3f;
+	if (index >= system->MaxRacks)
+		return NULL;
+	rack = system->racks[index];
+	if (rack == NULL)
+		return NULL;
+	index = (unsigned char)(handle >> 15);
+	if (index >= rack->voiceCount)
+		return NULL;
+	voice = &rack->voices[index];
+	index = (unsigned char)(handle >> 7);
+	if (index >= rack->patchesPerVoice)
+		return NULL;
+	patch = &voice->patches[index];
+	if (patch->signature != NGS_PATCH_SIGNATURE)
+		return NULL;
+	if (source != NULL)
+		*source = voice;
+	return patch;
+}
+
+NgsSynSystem *ngsGetVoiceSystem(const NgsVoice *voice)
+{
+	NgsSynRack *rack;
+
+	if (voice == NULL)
+		return NULL;
+	rack = voice->rack;
+	if (rack == NULL || rack->signature != NGS_RACK_SIGNATURE ||
+	    rack->system == NULL || rack->system->signature != 54321)
+		return NULL;
+	return rack->system;
 }
 
 struct NgsSynSystem *ngsGetSystemForVoiceHandle(unsigned int handle)

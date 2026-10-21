@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+/* "bvdf", and the key the voice definition getters encode their result with */
+#define NGS_VOICE_DEFINITION_SIGNATURE	0x66647662
+#define NGS_VOICE_DEFINITION_KEY	0x9e28dcce
+
 /* The packed format descriptor is forwarded intact to the DSP. */
 struct NgsAudioFormat {
 	uint32_t codecFourCC;
@@ -30,7 +34,10 @@ typedef struct NgsVoicePresetDefinition {
 } NgsVoicePresetDefinition;
 
 struct SceNgsVoiceDefinition {
-	char signature[4];
+	union {
+		char signature[4];
+		uint32_t magic;
+	};
 	uint32_t version;
 	uint32_t size;
 	uint32_t modulesOffset;

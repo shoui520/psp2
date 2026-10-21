@@ -2,6 +2,7 @@
 #define NGS_MODULE_MEMORY_H
 
 #include <scetypes.h>
+#include <stdint.h>
 #include <ngs/ngs_top.h>
 
 typedef union NgsParamValue {
@@ -92,6 +93,11 @@ SceSize ngsAlignMemorySize(SceSize size);
 int ngsAlignSize(int size, int alignment);
 void *ngsAlignVoiceDefinitionAddress(void *address, SceSize alignment);
 void *ngsAllocateMemory(unsigned char **cursor, SceSize size);
+void *ngsAllocateAlignedMemory(unsigned char **cursor, SceSize size);
+void *ngsAllocateMemoryWithAlignment(unsigned char **cursor, SceSize size,
+				     SceSize alignment);
+SceSize ngsAlignAllocationSize(SceSize size, SceSize alignment);
+uintptr_t ngsAlignMemoryAddress(uintptr_t address);
 
 /* ngs_module_memory.c */
 int ngsGetCompressorMemoryInfo(const struct NgsModuleInitParams *params, NgsModuleMemoryInfo *info);

@@ -33,7 +33,7 @@ typedef struct NgsSynSystem {
 	SceSize initialCoherentAllocationSize;
 	struct NgsSynRack **racks;
 	struct NgsSynRack **processingRacks;
-	struct NgsSynRack **rackWorkList;
+	int *rackDepths;
 	struct NgsDspGraph *emptyGraph;
 	struct NgsDspBatch *dspBatch;
 	int pendingRackReleases;
@@ -88,20 +88,54 @@ int ngsCopyFromCaller(void *destination, const void *source, SceSize size, int c
 int ngsIsCallerRangeAccessible(const void *address, SceSize size, int copyUserData);
 unsigned int ngsGetSystemHandle(NgsSynSystem *system);
 NgsSynSystem *ngsGetSystemFromHandle(unsigned int handle);
+uintptr_t ngsGetPhysicalAddress(const void *address);
+int ngsIsRangeReadable(const void *address, SceSize size);
 
 /* ngs_at9_player.c */
 int ngsGetAt9PlayerModule(NgsModuleDefinition **module);
 
 /* ngs_atomic.c */
 int ngsAtomicSet(int *value, int replacement, int expected);
+int ngsLockSystemMutex(NgsPlatformContext *context);
+int ngsUnlockSystemMutex(NgsPlatformContext *context);
+int ngsLockVoice(NgsPlatformContext *context);
+int ngsUnlockVoice(NgsPlatformContext *context);
+int ngsLockUpdate(NgsPlatformContext *context);
+int ngsUnlockUpdate(NgsPlatformContext *context);
+int ngsLockSystem(NgsPlatformContext *context);
+int ngsUnlockSystem(NgsPlatformContext *context);
+int ngsTryLockSystem(NgsPlatformContext *context);
+int ngsLockParams(NgsPlatformContext *context);
+int ngsUnlockParams(NgsPlatformContext *context);
 int ngsLockCodec(NgsPlatformContext *context);
 int ngsUnlockCodec(NgsPlatformContext *context);
+int ngsLockProcess(NgsProcessStorage *storage);
+int ngsUnlockProcess(NgsProcessStorage *storage);
+int ngsLockTransfer(NgsPlatformContext *context);
+int ngsUnlockTransfer(NgsPlatformContext *context);
+void ngsCleanDcacheRange(void *address, int size);
 
 /* ngs_biquad_filter.c */
 int ngsGetBiquadFilterModule(NgsModuleDefinition **module);
 
 /* ngs_builtin.c */
 int ngsFindBuiltinModule(unsigned int moduleId, NgsModuleDefinition **module);
+int ngsFindSystemModule(NgsSynSystem *system, unsigned int moduleId,
+			NgsModuleDefinition **module);
+int ngsGetModuleMemoryInfo(NgsSynSystem *system, unsigned int moduleId,
+			   int channels, NgsModuleMemoryInfo *info);
+int ngsIsCodecModule(NgsSynSystem *system, unsigned int moduleId);
+int ngsCheckModuleOutputs(NgsSynSystem *system, unsigned int moduleId,
+			  unsigned int outputCount);
+
+/* ngs_params.c */
+int ngsCheckParamType(uint32_t paramsId, uint32_t expectedParamsId);
+int ngsGetParamsOutOfRange(NgsSynSystem *system, int channels,
+		unsigned int moduleId, const SceNgsParamsDescriptor *params,
+		SceSize paramsSize, char *message);
+int ngsCheckParamsInRange(NgsSynSystem *system, unsigned int channels,
+		unsigned int moduleId, const SceNgsParamsDescriptor *params,
+		SceSize paramsSize);
 
 /* ngs_compressor.c */
 int ngsGetCompressorModule(NgsModuleDefinition **module);

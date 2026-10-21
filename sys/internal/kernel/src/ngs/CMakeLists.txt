@@ -7,6 +7,8 @@ psp2_module(os0_kd_bootimage_ngs KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	ngs_buffer.c
 	ngs_params.c
 	ngs_builtin.c
+	ngs_patch.c
+	ngs_rack.c
 	ngs_sulpha.c
 	ngs_system.c
 	ngs_routing.c
