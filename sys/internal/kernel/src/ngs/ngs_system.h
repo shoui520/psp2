@@ -12,7 +12,7 @@
 struct NgsModuleDefinition;
 struct NgsSynRack;
 struct NgsVoice;
-struct NgsDspGraph;
+struct NgsDspRackEntry;
 
 /* NgsSynSystem.state */
 enum {
@@ -27,17 +27,49 @@ typedef struct NgsCallbackList {
 	SceNgsCallbackInfo *info;	/* in the caller's memory */
 } NgsCallbackList;
 
-/* A voice's entry in the batch the codec engine processes (heap offsets). */
+/* NgsDspBatchEntry.type */
+enum {
+	NGS_DSP_BATCH_VOICE = 0,	/* heapOffset: the voice's NgsVoiceDsp */
+	NGS_DSP_BATCH_RACK = 1,		/* heapOffset: the rack entry (physical) */
+	NGS_DSP_BATCH_STATUS = 2,	/* heapOffset: a codec buffer (physical) */
+	NGS_DSP_BATCH_UNUSED = 3,
+};
+
+/* The status commands that open every batch. */
+#define NGS_DSP_BATCH_STATUS_SLOTS	32
+
+/* A command of the batch the codec engine processes. */
 typedef struct NgsDspBatchEntry {
-	unsigned int status;
+	unsigned int type;
 	unsigned int heapOffset;
-	SceSize size;
+	SceSize size;		/* voice: its rack entry is queued; rack: voices */
 } NgsDspBatchEntry;
 
+/* A rack of the batch; the addresses are made physical before the run. */
+typedef struct NgsDspBatchRack {
+	uintptr_t voiceDspMemory;
+	SceSize voiceDspMemorySize;
+	uintptr_t voiceDspMemoryEnd;
+	SceSize statusMemorySize;
+	void *statusMemory;
+	uintptr_t statusMemoryPhysical;
+	SceSize statusMemorySize2;
+	uintptr_t voiceCountPhysical;
+} NgsDspBatchRack;
+
+_Static_assert(sizeof(NgsDspBatchRack) == 32, "NgsDspBatchRack size");
+
+/* The batch the codec engine processes at an update (system->dspBatch). */
 typedef struct NgsDspBatch {
 	NgsDspBatchEntry *entries;
 	unsigned int entryCount;
 	unsigned int capacity;
+	SceSize size;
+	NgsDspBatchRack *racks;
+	unsigned int rackCount;
+	unsigned int rackCapacity;
+	uintptr_t entriesPhysical;
+	uintptr_t racksPhysical;
 } NgsDspBatch;
 
 typedef struct NgsLockedMemoryRange {
@@ -58,7 +90,7 @@ typedef struct NgsSynSystem {
 	struct NgsSynRack **racks;
 	struct NgsSynRack **processingRacks;
 	int *rackDepths;
-	struct NgsDspGraph *emptyGraph;
+	struct NgsDspRackEntry *emptyGraph;
 	NgsDspBatch *dspBatch;
 	int pendingRackReleases;
 	NgsPlatformContext *context;
@@ -112,8 +144,19 @@ int ngsCopyFromCaller(void *destination, const void *source, SceSize size, int c
 int ngsIsCallerRangeAccessible(const void *address, SceSize size, int copyUserData);
 unsigned int ngsGetSystemHandle(NgsSynSystem *system);
 NgsSynSystem *ngsGetSystemFromHandle(unsigned int handle);
+int ngsRunDspBatch(NgsSynSystem *system, NgsDspBatchEntry *entries,
+		   unsigned int entryCount);
 uintptr_t ngsGetPhysicalAddress(const void *address);
 int ngsIsRangeReadable(const void *address, SceSize size);
+
+/* ngs_builtin.c */
+int ngsRegisterBuiltinModules(NgsSynSystem *system);
+
+/* ngs_sulpha.c */
+void ngsSulphaTraceUpdate(NgsSynSystem *system, NgsDspBatchEntry *entries,
+			  int entryCount, SceNgsBufferInfo *buffer);
+void ngsSulphaEndUpdate(NgsSynSystem *system, NgsDspBatchEntry *entries,
+			int entryCount);
 
 /* ngs_at9_player.c */
 int ngsGetAt9PlayerModule(NgsModuleDefinition **module);

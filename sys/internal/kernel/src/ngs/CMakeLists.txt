@@ -31,5 +31,4 @@ psp2_module(os0_kd_bootimage_ngs KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	ngs_delay.c
 	ngs_pitch_shift.c
 	ngs_voice_definition.c
-	ngs.c
 )

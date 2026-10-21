@@ -57,6 +57,8 @@ typedef struct NgsPlatformState {
 
 _Static_assert(sizeof(NgsPlatformState) == 84, "NgsPlatformState size");
 
+extern NgsPlatformState ngsPlatformState;
+
 /* ngs_platform.c */
 int ngsPlatformInitialize(void);
 int ngsPlatformShutdown(void);

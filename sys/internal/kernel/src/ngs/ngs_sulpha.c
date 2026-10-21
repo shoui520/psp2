@@ -249,7 +249,7 @@ static inline void ngsSulphaTraceRack(NgsSulphaTrace *trace, NgsSynRack *rack)
 	event->rackIndex = rack->index;
 	event->eventIndex = (unsigned short)trace->eventCount;
 	event->voiceCount = rack->voiceCount;
-	event->order = rack->reserved102;
+	event->order = rack->processingIndex;
 	event->state = rack->state;
 	event->channelsPerVoice = rack->channelsPerVoice;
 	event->patchesPerOutput = rack->patchesPerOutput;
@@ -457,7 +457,7 @@ void ngsSulphaTraceUpdate(NgsSynSystem *system, NgsDspBatchEntry *entries,
 		return;
 	ngsSulphaStartTrace(trace, buffer);
 	for (entry = 0; entry < entryCount; entry++) {
-		if (entries[entry].status != 0)
+		if (entries[entry].type != NGS_DSP_BATCH_VOICE)
 			continue;
 		__builtin_prefetch(&entries[entry + 2].heapOffset);
 		dsp = (NgsVoiceDsp *)((unsigned char *)system->context->systemHeap +
@@ -516,7 +516,7 @@ void ngsSulphaEndUpdate(NgsSynSystem *system, NgsDspBatchEntry *entries,
 	ngsSulphaTraceSystem(trace, system,
 		(unsigned int)now - (unsigned int)ngsSulphaUpdateTime);
 	for (entry = 0; entry < entryCount; entry++) {
-		if (entries[entry].status != 0)
+		if (entries[entry].type != NGS_DSP_BATCH_VOICE)
 			continue;
 		__builtin_prefetch(&entries[entry + 2].heapOffset);
 		dsp = (NgsVoiceDsp *)((unsigned char *)system->context->systemHeap +

@@ -45,13 +45,13 @@ struct NgsVoice;
 
 /* The rack's entry in the codec engine's rack list (rack->dspRackList). */
 typedef struct NgsDspRackEntry {
-	unsigned int reserved0;
-	int next;
-	unsigned int *voices;
+	int queuedCount;		/* voices of the batch queued here */
+	unsigned int processingIndex;	/* the rack's place in the batch */
+	unsigned int *voices;		/* batch commands that wait for it */
 	unsigned int voiceCapacity;
 	unsigned int voiceCount;
 	unsigned int rackIndex;
-	unsigned int reserved24;
+	unsigned int commandIndex;	/* its NGS_DSP_BATCH_RACK command */
 	SceSize size;
 	uintptr_t voicesPhysical;
 	unsigned int voiceSlots[];
@@ -159,7 +159,8 @@ typedef struct NgsInputMixerContext {
 	unsigned int channels;
 	unsigned int reserved[6];
 	uintptr_t buffers[NGS_INPUT_MIXER_BUFFER_SLOTS][2];	/* physical */
-	unsigned int padding[12];
+	unsigned int restart[NGS_INPUT_MIXER_BUFFER_SLOTS];	/* set at a voice restart */
+	unsigned int padding[6];
 } NgsInputMixerContext;
 
 _Static_assert(sizeof(NgsInputMixerContext) == 128,
@@ -175,7 +176,7 @@ typedef struct NgsVoiceDspCallback {
 
 /* What the codec engine reports for a voice after an update (dsp->status). */
 typedef struct NgsVoiceDspStatus {
-	int presetIndex;
+	unsigned int moduleUpdateMask;
 	unsigned int event;
 	unsigned int reserved[2];
 	unsigned short paramsError;	/* a module's parameters were out of range */
@@ -199,11 +200,11 @@ typedef struct NgsVoiceDsp {
 	unsigned char *outputs;
 	struct NgsVoice *voice;
 	SceSize inputMixerStateSize;
-	unsigned int reserved48;
+	struct NgsDspRackEntry *rackEntry;	/* where the voice was queued */
 	NgsRackDsp *rackDsp;
 	unsigned int initId;		/* the voice's initId as of the update */
 	NgsDspPatchBuffer *patchBuffers;
-	unsigned int reserved64;
+	unsigned int controlFlags;	/* NGS_VOICE_DSP_* */
 	unsigned int bypassFlags;	/* the voice's bypassFlags as of the update */
 	unsigned int updatedParams;	/* modules whose parameters changed, or ~0 */
 	NgsVoiceDspStatus *status;
@@ -213,7 +214,7 @@ typedef struct NgsVoiceDsp {
 	uintptr_t paramsPhysical;
 	uintptr_t inputsPhysical;
 	uintptr_t outputsPhysical;
-	uintptr_t reserved48Physical;
+	uintptr_t rackEntryPhysical;
 	uintptr_t rackDspPhysical;
 	uintptr_t patchBuffersPhysical;
 	uintptr_t statusPhysical;
@@ -285,7 +286,7 @@ typedef struct NgsVoice {
 	NgsVoiceInput *inputs;
 	NgsVoiceModuleParams *moduleParams;
 	SceNgsCallbackFunc finishedCallback;
-	int presetIndex;
+	unsigned int moduleUpdateMask;	/* player modules to refresh */
 	void *state;
 	void *outputParams;
 	SceSize outputParamsSize;
@@ -320,7 +321,7 @@ typedef struct NgsSynRack {
 	unsigned int state;
 	unsigned char channelsPerVoice;
 	unsigned char index;
-	unsigned char reserved102;
+	unsigned char processingIndex;	/* its place in the update's order */
 	unsigned char codecModuleCount;
 	SceNgsRackReleaseCallbackFunc releaseCallback;
 	SceNgsParamsErrorCallbackFunc paramErrorCallback;

@@ -6,6 +6,7 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/sysclib.h>
 #include <intrmgr/syscall.h>
+#include <vnz_wrapper/vnz_wrapper.h>
 
 #include "ngs_platform.h"
 #include "ngs_system.h"
@@ -50,7 +51,41 @@ invalidIndex:
 	goto out;
 }
 
-uintptr_t ngsGetPhysicalAddress(const void *address)
+/* Hands the update's batch to the codec engine and waits for it to run. */
+int ngsRunDspBatch(NgsSynSystem *system, NgsDspBatchEntry *entries,
+		   unsigned int entryCount)
+{
+	NgsDspBatch *batch = system->dspBatch;
+	NgsDspBatchRack *rack;
+	unsigned int command[4];
+	unsigned int index;
+	int result;
+
+	batch->entryCount = entryCount;
+	for (index = 0; index < system->dspBatch->rackCount; index++) {
+		rack = &system->dspBatch->racks[index];
+		rack->voiceDspMemoryEnd =
+			ngsGetPhysicalAddress((void *)rack->voiceDspMemoryEnd);
+		rack = &system->dspBatch->racks[index];
+		rack->voiceDspMemory =
+			ngsGetPhysicalAddress((void *)rack->voiceDspMemory);
+		rack = &system->dspBatch->racks[index];
+		rack->statusMemoryPhysical =
+			ngsGetPhysicalAddress(rack->statusMemory);
+	}
+	ngsCleanDcacheRange(system->context->systemHeap, system->dspHeapUsed);
+	command[0] = ngsPlatformState.sharedPhysicalAddress;
+	command[1] = ngsGetPhysicalAddress(system->dspBatch);
+	command[2] = system->dspHeapUsed;
+	command[3] = system->systemId;
+	ngsLockCodec(system->context);
+	result = SceCodecEngineWrapperForDriver_391BD4FD(321, command, NULL,
+							 NULL);
+	ngsUnlockCodec(system->context);
+	return result;
+}
+
+inline uintptr_t ngsGetPhysicalAddress(const void *address)
 {
 	SceKernelVARange virtualRange;
 	SceKernelPARange physicalRange;

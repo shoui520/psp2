@@ -45,7 +45,7 @@ void ngsInitVoice(NgsSynSystem *system, NgsVoice *voice, NgsSynRack *rack,
 		voice->channels = description->nChannelsPerVoice;
 		voice->flags = 0;
 		voice->patchDirtyMask = 0;
-		voice->presetIndex = -1;
+		voice->moduleUpdateMask = ~0u;
 		moduleParams = (NgsVoiceModuleParams *)*cursor;
 		voice->moduleParams = moduleParams;
 		voice->dirtyFlags = 9;
@@ -184,7 +184,7 @@ NgsVoiceDsp *ngsAllocateVoiceDsp(NgsSynSystem *system, NgsSynRack *rack,
 
 	dsp->size = size;
 	blockCursor = (unsigned char *)(dsp + 1);
-	dsp->reserved48 = 0;
+	dsp->rackEntry = NULL;
 	dsp->patchBuffers = ngsAllocateMemory(&blockCursor,
 		sizeof(NgsDspPatchBuffer) * patchCount);
 	for (patch = 0; patch < patchCount; patch++) {
@@ -296,8 +296,8 @@ void ngsMapVoiceDsp(NgsVoiceDsp *dsp)
 	dsp->paramsPhysical = ngsGetPhysicalAddress(dsp->params);
 	dsp->inputsPhysical = ngsGetPhysicalAddress(dsp->inputs);
 	dsp->outputsPhysical = ngsGetPhysicalAddress(dsp->outputs);
-	dsp->reserved48Physical =
-		ngsGetPhysicalAddress((const void *)dsp->reserved48);
+	dsp->rackEntryPhysical =
+		ngsGetPhysicalAddress(dsp->rackEntry);
 	dsp->rackDspPhysical = ngsGetPhysicalAddress(dsp->rackDsp);
 	dsp->patchBuffersPhysical = ngsGetPhysicalAddress(dsp->patchBuffers);
 	dsp->statusPhysical = ngsGetPhysicalAddress(dsp->status);
