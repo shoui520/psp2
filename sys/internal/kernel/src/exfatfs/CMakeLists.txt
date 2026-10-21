@@ -1,5 +1,5 @@
 # generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(os0_kd_exfatfs KIND kernel COMPILER gcc48 PARTIAL SOURCES
+psp2_module(os0_kd_exfatfs KIND kernel COMPILER gcc48 SOURCES
     access_control.c
     codepage.c
 	exfatfs.c

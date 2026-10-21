@@ -8,8 +8,19 @@
 #include <exfatfs/exfat_directory.h>
 
 struct SceExfatfsFileSystem;
-struct ExfatfsLegacyOperations;
-struct ExfatfsLegacyFile;
+struct SceExfatfsDrive;
+
+/* The legacy drive interface: only its initialization callback is read. */
+struct ExfatfsLegacyOperations {
+	void *reserved[10];
+	int (*initialize)(struct SceExfatfsDrive *drive);
+};
+
+/* A legacy drive's file: only its cached entry is cleared on a forced unmount. */
+struct ExfatfsLegacyFile {
+	unsigned char reserved[0x684];
+	SceUInt32 cachedEntry;
+};
 
 typedef struct SceExfatfsDeviceFileInfo {
 	SceVfsMountData *mount_misc;
@@ -349,6 +360,9 @@ void *allocateHeapBuffer(struct SceExfatfsDrive *unusedDrive);
 void freeHeapBuffer(int unused, void *buffer);
 void *allocateCommonHeapMemory(int unused, SceSize size);
 void freeCommonHeapMemory(int unused, void *memory);
+
+/* exfatfs.c */
+int initializeLegacyDrive(SceExfatfsDrive *drive);
 
 /* op_devctl_getdev.c */
 int _exfatfs_get_devinf(SceExfatfsFileSystem *fileSystem, void *information,

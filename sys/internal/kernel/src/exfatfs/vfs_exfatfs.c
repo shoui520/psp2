@@ -119,7 +119,31 @@ closed:
 #endif
 
 #if FW_VERSION >= 0x04000000
-extern int get_new_vnode(SceVfsMount *mount, SceVfsVnode **output);
+static int get_new_vnode(SceVfsMount *mount, SceVfsVnode **output)
+{
+	SceVfsVnode *vnode = NULL;
+	int result;
+	int error;
+
+	result = vfsGetNewVnode(mount, mount->mntVfsInf->defaultVops, 0, &vnode);
+	if (result) {
+		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1772, "get_new_vnode",
+			"%s: vfsGetNewVnode failed[%#x]\n", "get_new_vnode", result);
+		return result;
+	}
+	result = vfsLockVnode(vnode);
+	if (result < 0) {
+		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1763, "get_new_vnode",
+			"%s: vfsLockVnode failed[%#x]\n", "get_new_vnode", result);
+		error = vfsFreeVnode(vnode);
+		if (error < 0)
+			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1766, "get_new_vnode",
+				"%s: vfsFreeVnode failed[%#x]\n", "get_new_vnode", error);
+		return result;
+	}
+	*output = vnode;
+	return result;
+}
 #else
 static inline int get_new_vnode(SceVfsMount *mount, SceVfsVnode **output)
 {
@@ -2104,8 +2128,6 @@ int exfatfs_vop_whiteout(SceVopWhiteoutArgs *argp)
 	}
 	return result;
 }
-
-extern int initializeLegacyDrive(SceExfatfsDrive *drive);
 
 int exfatfs_vfs_mount(SceVfsOpMountArgs *argp)
 {
