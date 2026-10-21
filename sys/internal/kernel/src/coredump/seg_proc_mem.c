@@ -188,13 +188,14 @@ static int _calcSize(SegIf *base)
 	ProcMemSegment *segment = (ProcMemSegment *)base;
 	SceKernelModuleInfoForDebugger *modules;
 	MemBlockInfoEx *blocks;
-	SceUInt32 level = segment->dumpLevel;
+	SceUInt32 level;
 	SceUInt32 numThreads, i, k;
 	SceSize size;
 	SceUID *ids;
 	int result;
 
 	SCE_DBG_ASSERT_FUNC(base != NULL, 224, "_calcSize");
+	level = segment->dumpLevel;
 	currentSegment = segment;
 	base->writtenSize = 0;
 	if (level == PROC_MEM_LEVEL_FULL) {

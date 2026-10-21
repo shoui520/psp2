@@ -320,7 +320,8 @@ int decryptBuildVerInfo(void *data, unsigned int size)
 }
 
 #if FW_DEBUG
-int _getAbortedProcessStopReason(SceUID pid, CoredumpStopReason *stopReason)
+int _getAbortedProcessStopReason(const SceKernelProcessInfo *process,
+	CoredumpStopReason *stopReason)
 #else
 int _getAbortedProcessStopReason(CoredumpStopReason *stopReason)
 #endif
@@ -337,7 +338,7 @@ int _getAbortedProcessStopReason(CoredumpStopReason *stopReason)
 	SceSize threadBytes;
 
 #if FW_DEBUG
-	SCE_DBG_ASSERT(pid != 0 && stopReason != NULL, 1848);
+	SCE_DBG_ASSERT(process != NULL && stopReason != NULL, 1848);
 #endif
 	result = (int)(uintptr_t)memset(stopReason, 0, sizeof(*stopReason));
 	triggerReason = coredumpRun.trigger.triggerReason;
@@ -1045,8 +1046,8 @@ SceOff oalFileSeek(SceUID fd, SceOff offset, int whence)
 	return sceIoLseek(fd, offset, whence);
 }
 
-int oalGetThreadStack(SceUID pid, SceUID threadId, uintptr_t *stackBase,
-	SceSize *stackSize)
+__attribute__((noinline)) int oalGetThreadStack(SceUID pid, SceUID threadId,
+	uintptr_t *stackBase, SceSize *stackSize)
 {
 	ThreadmgrThreadInfoForDebugger info;
 	int result;
@@ -1395,7 +1396,7 @@ void oalGetProcessInfo(SceUID pid, CoredumpProcessInfo *info)
 	}
 	if (pid == coredumpRun.pid) {
 #if FW_DEBUG
-		_getAbortedProcessStopReason(pid, &info->stopReason);
+		_getAbortedProcessStopReason(&process, &info->stopReason);
 #else
 		_getAbortedProcessStopReason(&info->stopReason);
 #endif
@@ -3334,7 +3335,7 @@ void oalGetExtnlProcInfo(SceUID pid, SceUID extnlPid, CoredumpExtnlProcInfo *inf
 	}
 	if (extnlPid == coredumpRun.pid) {
 #if FW_DEBUG
-		_getAbortedProcessStopReason(extnlPid, &info->stopReason);
+		_getAbortedProcessStopReason(&process, &info->stopReason);
 #else
 		_getAbortedProcessStopReason(&info->stopReason);
 #endif

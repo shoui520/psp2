@@ -4,6 +4,7 @@
  * this build registers either: no segment table names the segment methods.
  */
 
+#include <fw.h>
 #include <modulemgr/elf.h>
 #include <string.h>
 #include <sysmem/debug.h>
@@ -154,6 +155,11 @@ static int _getDestOffset(Writer *writer, SceOff *offset)
 	(void)offset;
 	return (int)0x80010086;
 }
+
+#if FW_DEBUG && FW_SINCE(0x04000000)
+/* Native data retains this record without an executable reference. */
+SCE_DBGINFO_DEFINE(static, memoryWriterFinalDebugInfo, 191, "memoryWriterFinal");
+#endif
 
 static int _isSetDestOffsetSupported(Writer *writer)
 {

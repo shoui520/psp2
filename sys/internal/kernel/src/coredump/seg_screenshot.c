@@ -40,6 +40,8 @@ static int _init(SegIf *segment)
 static int _calcSize(SegIf *segment)
 {
 	unsigned int vblankcount, width, height, pixelformat;
+	SceUInt32 numPhdr;
+	SceSize dataSize = 0;
 
 	SCE_DBG_ASSERT_FUNC(segment != NULL, 52, "_calcSize");
 	segment->writtenSize = 0;
@@ -51,12 +53,13 @@ static int _calcSize(SegIf *segment)
 	if (oalGetFrameBufferInfo(coredumpRun.pid, 0, &vblankcount, &width,
 				  &height, &pixelformat) >= 0 &&
 	    width <= 960 && height <= 544) {
-		segment->numPhdr = 1;
-		segment->dataSize = (width * height + 13) * 4;
+		numPhdr = 1;
+		dataSize = (width * height + 13) * 4;
 	} else {
-		segment->numPhdr = 0;
-		segment->dataSize = 0;
+		numPhdr = 0;
 	}
+	segment->numPhdr = numPhdr;
+	segment->dataSize = dataSize;
 	return 0;
 }
 
