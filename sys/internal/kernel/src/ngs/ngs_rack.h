@@ -106,7 +106,7 @@ typedef struct NgsRackDsp {
 	unsigned int patchesPerOutput;
 	unsigned int dspModuleCount;
 	SceSize size;
-	unsigned int format[4];
+	struct NgsAudioFormat format;	/* the first module's with a format */
 	uintptr_t dispatchIds;		/* unsigned int[moduleCount] until mapped */
 	uintptr_t dispatchIds2;
 	uintptr_t inputCounts;		/* unsigned char[moduleCount] */
@@ -294,6 +294,41 @@ typedef struct NgsVoice {
 
 _Static_assert(sizeof(NgsVoice) == 84, "NgsVoice size");
 
+/* The rack as the caller's library reads it, at the start of the rack's callback
+ * memory; pointers are at the caller's address (864 bytes; name ours). */
+typedef struct NgsRackCallerInfo {
+	unsigned int voiceCount;
+	unsigned int patchesPerVoice;
+	unsigned int channelsPerVoice;
+	unsigned int inputMixerModuleCount;
+	unsigned int moduleCount;
+	unsigned int voiceOutputCount;
+	unsigned int patchesPerOutput;
+	unsigned int routingIndexCount;
+	unsigned int routingIndices[32];
+	unsigned int moduleIds[32];
+	unsigned int *voiceResults;
+	unsigned int *voiceRequests;
+	unsigned int *updateCount;
+	unsigned int *patchUpdateMasks;
+	float *patchVolumes;
+	unsigned int *paramsUpdateMasks;
+	unsigned int *voiceFlags2;
+	unsigned char *params;
+	SceSize voiceParamsSize;
+	unsigned int paramsOffsets[32];
+	unsigned int paramsSizes[32];
+	SceNgsPatchSetupInfo *patchSetups;
+	unsigned int *patchChannels;
+	unsigned int stateOffsets[32];
+	unsigned int stateSizes[32];
+	unsigned char *voiceStates;
+	SceSize voiceStateSize;
+	unsigned int padding[3];
+} NgsRackCallerInfo;
+
+_Static_assert(sizeof(NgsRackCallerInfo) == 0x360, "NgsRackCallerInfo size");
+
 typedef struct NgsSynRack {
 	unsigned int signature;
 	NgsSynSystem *system;
@@ -463,6 +498,8 @@ void ngsAllocateVoiceDspStatus(NgsSynSystem *system, NgsVoiceDsp *dsp,
 void ngsMapVoiceDsp(NgsVoiceDsp *dsp);
 int ngsUpdateVoiceFlags(NgsVoice *voice, NgsSynRack *rack);
 SceInt32 sceNgsVoiceKillInternal(SceNgsHVoice handle);
+SceInt32 sceNgsVoiceInitInternal(SceNgsHVoice handle,
+	const SceNgsVoicePreset *preset, const SceUInt32 flags);
 
 /* ngs_patch.c */
 SceNgsHPatch ngsConnectPatch(NgsVoice *source, unsigned int index,
