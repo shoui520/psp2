@@ -10,6 +10,10 @@
 #include <scetypes.h>
 #include <stddef.h>
 #include <ngs/ngs_top.h>
+#include <ngs/modules/at9_player.h>
+#include <ngs/modules/input_mixer.h>
+#include <ngs/modules/output.h>
+#include <ngs/modules/pcm_player.h>
 
 #include "ngs_system.h"
 #include "ngs_voice_definition.h"
@@ -18,11 +22,6 @@
 #define NGS_VOICE_SIGNATURE		98232	/* 0x17fb8 */
 #define NGS_PATCH_SIGNATURE		0x93b5
 #define NGS_SYSTEM_SIGNATURE		54321
-
-/* the codec module ids the rack handles itself (Sony's SDK headers) */
-#define SCE_NGS_AT9_ID			(0x5CAA)
-#define SCE_NGS_INPUT_MIXER_ID		(0x5CE0)
-#define SCE_NGS_PLAYER_ID		(0x5CE6)
 
 /* handles: system id, rack index, voice index and patch index, and a tag */
 #define NGS_RACK_HANDLE_TAG		0x1beeba
@@ -153,13 +152,15 @@ typedef struct NgsVoiceDsp {
 	SceSize paramsSize;
 	unsigned char *inputs;
 	unsigned char *outputs;
-	unsigned int reserved40;
+	struct NgsVoice *voice;
 	SceSize inputMixerStateSize;
 	unsigned int reserved48;
 	NgsRackDsp *rackDsp;
 	unsigned int reserved56;
 	NgsDspPatchBuffer *patchBuffers;
-	unsigned int reserved64[3];
+	unsigned int reserved64;
+	unsigned int bypassFlags;	/* the voice's bypassFlags as of the update */
+	unsigned int updatedParams;	/* modules whose parameters changed, or ~0 */
 	void *status;
 	SceSize statusSize;
 	uintptr_t moduleMemoryPhysical;
@@ -181,7 +182,7 @@ typedef struct NgsPatch {
 	struct NgsVoice *destination;
 	int reserved4;
 	int reserved8;
-	float *volumes;
+	SceNgsVolumeMatrix *volumes;
 	struct NgsVoice *source;
 	unsigned char outputIndex;
 	unsigned char channels;
@@ -225,10 +226,10 @@ typedef struct NgsVoice {
 	unsigned short index;
 	unsigned char flags;
 	unsigned char channels;
-	int reserved36;
+	unsigned int bypassFlags;
 	unsigned int patchDirtyMask;
 	NgsPatch *patches;
-	int reserved48;
+	unsigned int paramsDirtyMask;
 	struct NgsSynRack *rack;
 	NgsVoiceInput *inputs;
 	NgsVoiceModuleParams *moduleParams;
@@ -308,10 +309,10 @@ typedef struct NgsSynRack {
 	void *voiceCallbackInfos;
 	unsigned int *updateCount;
 	unsigned int *updateCountCaller;
-	unsigned int *updateCount2;
-	unsigned int *voiceStates;
+	unsigned int *updateRequested;
+	unsigned int *patchUpdateMasks;
 	float *patchVolumes;
-	unsigned int *voiceFlags;
+	unsigned int *paramsUpdateMasks;
 	unsigned int *voiceFlags2;
 	unsigned char *params;
 	unsigned char *paramsCaller;

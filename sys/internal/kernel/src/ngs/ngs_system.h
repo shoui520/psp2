@@ -13,8 +13,20 @@ struct NgsModuleDefinition;
 struct NgsSynRack;
 struct NgsVoice;
 struct NgsDspGraph;
-struct NgsDspBatch;
 struct NgsCallbackList;
+
+/* A voice's entry in the batch the codec engine processes (heap offsets). */
+typedef struct NgsDspBatchEntry {
+	unsigned int status;
+	unsigned int heapOffset;
+	SceSize size;
+} NgsDspBatchEntry;
+
+typedef struct NgsDspBatch {
+	NgsDspBatchEntry *entries;
+	unsigned int entryCount;
+	unsigned int capacity;
+} NgsDspBatch;
 
 typedef struct NgsLockedMemoryRange {
 	void *address;
@@ -35,7 +47,7 @@ typedef struct NgsSynSystem {
 	struct NgsSynRack **processingRacks;
 	int *rackDepths;
 	struct NgsDspGraph *emptyGraph;
-	struct NgsDspBatch *dspBatch;
+	NgsDspBatch *dspBatch;
 	int pendingRackReleases;
 	NgsPlatformContext *context;
 	unsigned int ModulesLinked;

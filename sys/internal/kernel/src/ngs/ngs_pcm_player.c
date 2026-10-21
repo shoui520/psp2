@@ -1,31 +1,9 @@
 /* Built-in PCM/VAG player description and parameter interfaces. */
 
 #include <string.h>
+#include <ngs/modules/pcm_player.h>
 
 #include "ngs_module_memory.h"
-
-typedef struct SceNgsPlayerBufferParams {
-	const void *pBuffer;
-	int nNumBytes;
-	short nLoopCount;
-	short nNextBuff;
-} SceNgsPlayerBufferParams;
-
-typedef struct SceNgsPlayerParams {
-	SceNgsParamsDescriptor desc;
-	SceNgsPlayerBufferParams buffs[4];
-	float fPlaybackFrequency;
-	float fPlaybackScalar;
-	int nLeadInSamples;
-	int nLimitNumberOfSamplesPlayed;
-	int nStartByte;
-	signed char nChannels;
-	signed char nChannelMap[2];
-	signed char nType;
-	signed char reserved;
-	signed char nStartBuffer;
-	signed char pad[2];
-} SceNgsPlayerParams;
 
 extern const char *ngsModuleOutputName;
 
@@ -134,9 +112,9 @@ int ngsGetPcmVagPlayerModule(NgsModuleDefinition **module)
 	ngsPcmPlayerParamInterface.paramsId = 0x01015ce6;
 	ngsPcmPlayerParamInterface.size = 84;
 	ngsPcmPlayerParamInterface.paramCount = 27;
-	ngsPcmPlayerModule.dspDispatchIds[0] = 0x5ce6;
-	ngsPcmPlayerModule.dspDispatchIds[1] = 0x5ce6;
-	ngsPcmPlayerModule.moduleId = 0x5ce6;
+	ngsPcmPlayerModule.dspDispatchIds[0] = SCE_NGS_PLAYER_ID;
+	ngsPcmPlayerModule.dspDispatchIds[1] = SCE_NGS_PLAYER_ID;
+	ngsPcmPlayerModule.moduleId = SCE_NGS_PLAYER_ID;
 	ngsPcmPlayerModule.presets = ngsPcmPlayerPresets;
 	ngsPcmPlayerPresets[0].name = "None initialized state.";
 	ngsPcmPlayerPresets[0].params = &ngsPcmPlayerPresetParams.desc;

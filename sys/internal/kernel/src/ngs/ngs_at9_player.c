@@ -1,30 +1,9 @@
 /* Built-in AT9 player description and parameter interfaces. */
 
 #include <string.h>
+#include <ngs/modules/at9_player.h>
 
 #include "ngs_module_memory.h"
-
-typedef struct SceNgsAT9BufferParams {
-	const void *pBuffer;
-	int nNumBytes;
-	short nLoopCount;
-	short nNextBuff;
-	short nSamplesDiscardStart;
-	short nSamplesDiscardEnd;
-} SceNgsAT9BufferParams;
-
-typedef struct SceNgsAT9Params {
-	SceNgsParamsDescriptor desc;
-	SceNgsAT9BufferParams buffs[4];
-	float fPlaybackFrequency;
-	float fPlaybackScalar;
-	int nLeadInSamples;
-	int nLimitNumberOfSamplesPlayed;
-	signed char nChannels;
-	signed char nChannelMap[2];
-	signed char reserved;
-	int configData;
-} SceNgsAT9Params;
 
 extern const char *ngsModuleOutputName;
 
@@ -127,14 +106,14 @@ int ngsGetAt9PlayerModule(NgsModuleDefinition **module)
 	ngsAt9PlayerModule.presets = ngsAt9PlayerPresets;
 	ngsAt9PlayerPresets[0].name = "None initialized state.";
 	ngsAt9PlayerPresets[0].params = &ngsAt9PlayerPresetParams.desc;
-	ngsAt9PlayerModule.moduleId = 0x5caa;
+	ngsAt9PlayerModule.moduleId = SCE_NGS_AT9_ID;
 	ngsAt9PlayerModule.codecResourceId = 0;
 	ngsAt9PlayerParamDescriptions[24].maximum.real = 192000.0f;
 	ngsAt9PlayerParamDescriptions[24].minimum.real = 0.0f;
 	ngsAt9PlayerParamDescriptions[25].minimum.real = 0.0f;
 	ngsAt9PlayerParamDescriptions[25].maximum.real = 10.0f;
-	ngsAt9PlayerModule.dspDispatchIds[0] = 0x5caa;
-	ngsAt9PlayerModule.dspDispatchIds[1] = 0x5caa;
+	ngsAt9PlayerModule.dspDispatchIds[0] = SCE_NGS_AT9_ID;
+	ngsAt9PlayerModule.dspDispatchIds[1] = SCE_NGS_AT9_ID;
 	ngsAt9PlayerModule.dspControl = 0;
 	*module = &ngsAt9PlayerModule;
 	return 0;
