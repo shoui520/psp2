@@ -152,7 +152,8 @@ struct PamgrState {
 	PamgrSyscallEnterCallback syscallEnterCallback;
 	PamgrSyscallEnterCallback syscallEnterObserver;
 	uint32_t savedTraceControl;
-	ScePerfmonRegisters *pfmRegisters;
+	/* re-read after every register store, as Sony's code does */
+	ScePerfmonRegisters *volatile pfmRegisters;
 	SceUID pfmMemBlock;
 	uint32_t savedTraceBufferControlBits;
 	volatile uint32_t savedTraceConfigHalf;
