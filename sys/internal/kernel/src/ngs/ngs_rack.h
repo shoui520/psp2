@@ -232,8 +232,8 @@ typedef struct NgsPatch {
 	struct NgsVoice *source;
 	unsigned char outputIndex;
 	unsigned char channels;
-	unsigned char reserved22;
-	unsigned char reserved23;
+	unsigned char padding;
+	unsigned char destinationChannels;
 	unsigned char inputIndex;
 	unsigned char index;
 	unsigned short signature;

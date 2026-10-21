@@ -128,7 +128,7 @@ void ngsInitVoice(NgsSynSystem *system, NgsVoice *voice, NgsSynRack *rack,
 				continue;
 			entry = &voice->patches[index];
 			entry->destination = NULL;
-			entry->reserved23 = 0;
+			entry->destinationChannels = 0;
 			entry->outputIndex = output;
 			entry->channels = channels;
 			entry->index = index;

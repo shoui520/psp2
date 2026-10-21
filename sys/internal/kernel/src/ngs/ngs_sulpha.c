@@ -63,8 +63,7 @@ typedef struct NgsSulphaTrace {
 typedef struct NgsSulphaSystemEvent {
 	NgsSulphaEvent event;
 	SceNgsHSynSystem system;
-	unsigned int reserved12;
-	unsigned int reserved16;
+	unsigned int reserved[2];
 	unsigned int eventIndex;
 	unsigned int modulesLinked;
 	unsigned int maxRacks;
@@ -85,7 +84,7 @@ typedef struct NgsSulphaRackEvent {
 	unsigned int state;
 	unsigned int channelsPerVoice;
 	unsigned int patchesPerOutput;
-	unsigned int reserved44;
+	unsigned int reserved;
 } __attribute__((may_alias)) NgsSulphaRackEvent;
 
 typedef struct NgsSulphaVoiceEvent {
@@ -100,7 +99,7 @@ typedef struct NgsSulphaVoiceEvent {
 	unsigned int flags;
 	unsigned int channels;
 	unsigned int initId;
-	unsigned int reserved48;
+	unsigned int reserved;
 } __attribute__((may_alias)) NgsSulphaVoiceEvent;
 
 typedef struct NgsSulphaPatchEvent {
@@ -109,7 +108,7 @@ typedef struct NgsSulphaPatchEvent {
 	SceNgsHVoice source;
 	unsigned int patchIndex;
 	unsigned int eventIndex;
-	unsigned int reserved23;
+	unsigned int destinationChannels;
 	unsigned int channels;
 	unsigned int connected;	/* the patch feeds an input mixer */
 	int destinationInitId;
@@ -123,7 +122,7 @@ typedef struct NgsSulphaModuleParamsEvent {
 	unsigned int moduleIndex;
 	unsigned int eventIndex;
 	unsigned int moduleId;
-	unsigned int reserved28;
+	unsigned int reserved;
 	unsigned int bypassed;
 	SceSize paramsSize;
 	unsigned char params[4];
@@ -135,8 +134,8 @@ typedef struct NgsSulphaPlayerStatusEvent {
 	NgsVoiceModuleParams *moduleParams;
 	unsigned int moduleIndex;
 	unsigned int eventIndex;
-	unsigned int reserved24;
-	unsigned int reserved28;
+	unsigned int reserved;
+	unsigned int statusTag;	/* always 4 */
 	unsigned int bufferOffset;
 	unsigned short loopCount;
 	signed char currentBuffer;
@@ -172,7 +171,7 @@ _Static_assert(sizeof(NgsSulphaOutputDataEvent) == 52,
 typedef struct NgsSulphaRegistration {
 	unsigned int type;
 	unsigned int handle;
-	unsigned int reserved8;
+	unsigned int reserved;
 } NgsSulphaRegistration;
 
 static NgsSulphaTrace ngsSulphaTrace;
@@ -224,8 +223,8 @@ static inline void ngsSulphaTraceSystem(NgsSulphaTrace *trace,
 	event->event.type = NGS_SULPHA_EVENT_SYSTEM;
 	event->event.size = sizeof(*event);
 	event->system = ngsGetSystemHandle(system);
-	event->reserved12 = 0;
-	event->reserved16 = 0;
+	event->reserved[0] = 0;
+	event->reserved[1] = 0;
 	event->eventIndex = (unsigned short)trace->eventCount;
 	event->modulesLinked = system->ModulesLinked;
 	event->maxRacks = system->MaxRacks;
@@ -253,7 +252,7 @@ static inline void ngsSulphaTraceRack(NgsSulphaTrace *trace, NgsSynRack *rack)
 	event->state = rack->state;
 	event->channelsPerVoice = rack->channelsPerVoice;
 	event->patchesPerOutput = rack->patchesPerOutput;
-	event->reserved44 = 0;
+	event->reserved = 0;
 	ngsSulphaNextEvent(trace, event->event.size);
 }
 
@@ -283,7 +282,7 @@ static inline void ngsSulphaTraceModuleParams(NgsSulphaTrace *trace,
 	event->voice = ngsGetVoiceHandle(voice);
 	event->moduleId = modules[index].moduleId;
 	event->paramsSize = 0;
-	event->reserved28 = 0;
+	event->reserved = 0;
 	event->moduleIndex = index;
 	event->eventIndex = (unsigned short)trace->eventCount;
 	event->bypassed = (dsp->bypassFlags >> index) & 1;
@@ -316,7 +315,7 @@ static inline void ngsSulphaTracePatch(NgsSulphaTrace *trace, NgsPatch *patch)
 	event->source = ngsGetVoiceHandle(patch->source);
 	event->patchIndex = patch->index;
 	event->eventIndex = (unsigned short)trace->eventCount;
-	event->reserved23 = patch->reserved23;
+	event->destinationChannels = patch->destinationChannels;
 	event->channels = patch->channels;
 	event->connected = patch->mixerContext != NULL;
 	event->destinationInitId = patch->destination != NULL ?
@@ -348,7 +347,7 @@ static inline void ngsSulphaWritePlayerStatus(NgsSulphaTrace *trace,
 	event->event.type = NGS_SULPHA_EVENT_PLAYER_STATUS;
 	event->event.size = sizeof(*event);
 	event->context = context;
-	event->reserved28 = 4;
+	event->statusTag = 4;
 	if (moduleId == SCE_NGS_AT9_ID) {
 		status = &((const NgsAt9PlayerContext *)context)->status;
 		event->currentBuffer = status->currentBuffer;
@@ -360,7 +359,7 @@ static inline void ngsSulphaWritePlayerStatus(NgsSulphaTrace *trace,
 		event->loopCount = status->loopCount;
 		event->bufferOffset = status->bufferOffset;
 	}
-	event->reserved24 = 0;
+	event->reserved = 0;
 	ngsSulphaNextEvent(trace, event->event.size);
 }
 
@@ -433,7 +432,7 @@ void ngsSulphaTraceVoice(NgsSulphaTrace *trace, NgsVoice *voice)
 	event->flags = voice->flags;
 	event->channels = voice->channels;
 	event->initId = voice->initId;
-	event->reserved48 = 0;
+	event->reserved = 0;
 	event->moduleCount = rack->moduleList.moduleCount;
 	ngsSulphaNextEvent(trace, event->event.size);
 }

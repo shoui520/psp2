@@ -1255,15 +1255,17 @@ inline int ngsFlushInputMixer(NgsSynRack *rack, unsigned int voiceIndex,
 	NgsDspModuleLayout *layout;
 	unsigned int command[2];
 	unsigned char *context;
+	SceSize size;
 
 	if (rack == NULL)
 		return SCE_NGS_ERROR;
 	dsp = rack->voiceDsps[voiceIndex];
 	layout = &dsp->rackDsp->layouts[moduleIndex];
 	context = dsp->moduleMemory + layout->contextOffset;
+	size = layout->contextSize;
 	command[0] = SceCodecEngineWrapperForDriver_C7C150AE(context);
-	command[1] = layout->contextSize;
-	ngsCleanDcacheRange(context, layout->contextSize);
+	command[1] = size;
+	ngsCleanDcacheRange(context, size);
 	return SceCodecEngineWrapperForDriver_391BD4FD(326, command, NULL, NULL);
 }
 
@@ -1330,15 +1332,21 @@ int ngsGetRackDepth(NgsSynRack *rack, NgsSynRack *other,
 
 int ngsAddRackPatch(NgsSynRack *source, NgsSynRack *destination)
 {
-	++source->links[destination->index].outputPatches;
-	++destination->links[source->index].inputPatches;
+	NgsRackLink *output = &source->links[destination->index];
+	NgsRackLink *input = &destination->links[source->index];
+
+	++output->outputPatches;
+	++input->inputPatches;
 	return 0;
 }
 
 int ngsRemoveRackPatch(NgsSynRack *source, NgsSynRack *destination)
 {
-	--source->links[destination->index].outputPatches;
-	--destination->links[source->index].inputPatches;
+	NgsRackLink *output = &source->links[destination->index];
+	NgsRackLink *input = &destination->links[source->index];
+
+	--output->outputPatches;
+	--input->inputPatches;
 	return 0;
 }
 
@@ -1346,6 +1354,7 @@ int ngsRemoveRackPatch(NgsSynRack *source, NgsSynRack *destination)
 void ngsRelocateRackMemory(NgsSynRack *rack, void *releasedAddress,
 			   SceSize releasedSize)
 {
+	NgsRackDsp *rackDsp;
 	NgsVoiceDsp *dsp;
 	NgsDspPatchBuffer *buffer;
 	unsigned int voice;
@@ -1374,9 +1383,10 @@ void ngsRelocateRackMemory(NgsSynRack *rack, void *releasedAddress,
 	if (rack->voiceListCount != NULL)
 		rack->voiceListCount = (unsigned int *)
 			((unsigned char *)rack->voiceListCount - releasedSize);
-	rack->dsp->voiceListPhysical = ngsGetPhysicalAddress(rack->voiceList);
-	rack->dsp->voiceCountPhysical =
-		ngsGetPhysicalAddress(rack->voiceListCount);
+	rackDsp = rack->dsp;
+	rackDsp->voiceListPhysical = ngsGetPhysicalAddress(rack->voiceList);
+	rackDsp = rack->dsp;
+	rackDsp->voiceCountPhysical = ngsGetPhysicalAddress(rack->voiceListCount);
 	for (voice = 0; voice < rack->voiceCount; ++voice) {
 		dsp = rack->voiceDsps[voice];
 		buffer = dsp->patchBuffers;

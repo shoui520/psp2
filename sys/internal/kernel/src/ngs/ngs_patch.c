@@ -19,7 +19,7 @@ SceNgsHPatch ngsConnectPatch(NgsVoice *source, unsigned int index,
 	if (input->patchCount >= input->maxPatches)
 		return 0;
 	patch = &source->patches[index];
-	patch->reserved23 = destination->channels;
+	patch->destinationChannels = destination->channels;
 	patch->destination = destination;
 	patch->inputIndex = inputIndex;
 	source->dirtyFlags |= 1;
@@ -41,14 +41,14 @@ int ngsPublishPatch(unsigned int voiceIndex, NgsSynRack *rack,
 {
 	unsigned int slot = patchIndex + rack->patchesPerVoice * voiceIndex;
 	SceNgsPatchSetupInfo *record = &rack->patchSetups[slot];
+	unsigned int patchesPerOutput = rack->patchesPerOutput;
+	unsigned int subIndex = 0;
 	int result;
 
 	*record = *setup;
-	if (rack->patchesPerOutput <= 1)
-		record->nSourceOutputSubIndex = 0;
-	else
-		record->nSourceOutputSubIndex =
-			patchIndex % rack->patchesPerOutput;
+	if (patchesPerOutput > 1)
+		subIndex = patchIndex % patchesPerOutput;
+	record->nSourceOutputSubIndex = subIndex;
 	rack->patchChannels[slot] = channels;
 	result = ngsCopyToCaller(&rack->patchSetupsCaller[slot], record,
 		sizeof(*record), rack->system->copyUserData);
@@ -249,7 +249,7 @@ inline void ngsCountRackDepth(NgsRackLink **links, unsigned int rackCount, int *
 {
 	unsigned int index;
 
-	for (index = 0; index != rackCount; ++index) {
+	for (index = 0; index < rackCount; ++index) {
 		if ((*links)[index].inputPatches > 0) {
 			++depth[index];
 			ngsCountRackDepth(&(*links)[index].rack->links, rackCount,
