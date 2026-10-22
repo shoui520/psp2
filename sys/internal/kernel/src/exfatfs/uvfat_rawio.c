@@ -356,21 +356,24 @@ int copyFatEntryAttributeToStat(const SceExfatfsFatDirectoryEntry *entry,
 	SceExfatfsStat *stat, SceExfatfsFileSystem *fileSystem)
 {
 	const SceExfatfsBootSector *boot;
+	SceExfatfsDrive *drive;
 	SceUInt16 mode;
 	int attribute;
 
 	stat->st_attr = entry->attribute;
-	stat->st_mode = _sceFatfsWriteModeFromStat(fileSystem->drive, entry->attribute);
+	mode = _sceFatfsWriteModeFromStat(fileSystem->drive, entry->attribute);
+	stat->st_mode = mode;
 	if (!(entry->attribute & 0x20))
-		stat->st_mode |= 0x40;
+		stat->st_mode = mode | 0x40;
 	boot = fileSystem->PBRBuf;
 	stat->st_type = entry->attribute & 0x10 ? 6 : 0;
 	if ((signed char)entry->attribute < 0)
 		stat->st_mode |= 0x200;
 	if (strncmp((const char *)boot->fat16.fileSystemName, "UVFAT", 5)) {
 		attribute = entry->attribute;
+		drive = fileSystem->drive;
 		stat->st_attr = attribute;
-		mode = _sceFatfsWriteModeFromStat(fileSystem->drive, attribute);
+		mode = _sceFatfsWriteModeFromStat(drive, attribute);
 		if (!(attribute & 0x20))
 			mode |= 0x40;
 		stat->st_mode = mode;
@@ -401,10 +404,11 @@ int copyExfatEntryAttributeToStat(const SceExfatfsFileDirectoryEntry *entry,
 	SceExfatfsStat *stat, SceExfatfsFileSystem *fileSystem)
 {
 	int attribute = entry->fileAttributes[0];
+	SceExfatfsDrive *drive = fileSystem->drive;
 	SceUInt16 mode;
 
 	stat->st_attr = attribute;
-	mode = _sceFatfsWriteModeFromStat(fileSystem->drive, attribute);
+	mode = _sceFatfsWriteModeFromStat(drive, attribute);
 	if (!(attribute & 0x20))
 		mode |= 0x40;
 	stat->st_mode = mode;
@@ -644,7 +648,7 @@ int UVFAT_WriteDevice(SceExfatfsFileSystem *fileSystem, SceUInt64 sector,
 	return result;
 }
 
-int flushFatCache(SceExfatfsFileSystem *fileSystem)
+__attribute__((noinline)) int flushFatCache(SceExfatfsFileSystem *fileSystem)
 {
 	SceExfatfsBootSector *boot;
 	SceExfatfsFatCache *cache;
@@ -1142,6 +1146,11 @@ int releaseMediaStorage(SceExfatfsSharedResource *sharedResource,
 	return 0;
 }
 
+/* Sony's 4.00 build keeps the record of UVFAT_GetDevSize, which no code calls. */
+#if FW_DEBUG
+SCE_DBGINFO_DEFINE(static, getDevSizeL2181, 2181, "UVFAT_GetDevSize");
+#endif
+
 int UVFAT_MediaInitialize(SceExfatfsSharedResource *sharedResource,
 	SceExfatfsFileSystem *fileSystem, int mountMode)
 {
@@ -1633,11 +1642,11 @@ int UVFAT_SetGetFAT(SceExfatfsFileSystem *fileSystem, int mode,
 		if (fileSystem->fileSystemType == 2)
 			SCE_DBG_PRINTF_LEVEL(1, 0, 2953,
 				"%s: cn[%#lx], next[%#x]->[%#lx], exFAT mountpoint(%s)\n",
-				"UV", cluster, oldValue, oldValue, fileSystem->drive->assignName);
+				"UVFAT_SetGetFAT", cluster, oldValue, oldValue, fileSystem->drive->assignName);
 		else
 			SCE_DBG_PRINTF_LEVEL(1, 0, 2955,
 				"%s: cn[%#lx], unexpected next[%#x]->[%#lx], FAT mountpoint(%s)\n",
-				"UV", cluster, oldValue, oldValue, fileSystem->drive->assignName);
+				"UVFAT_SetGetFAT", cluster, oldValue, oldValue, fileSystem->drive->assignName);
 		return result;
 	}
 	if (newValue) {

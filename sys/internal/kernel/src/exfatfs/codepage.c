@@ -113,7 +113,7 @@ void _unicodeToGbkKorean(int codepage, unsigned int lowByte, int highByte,
 		for (row = 0; row < rowCount; ++row) {
 			for (column = 0; column < 191; ++column) {
 				if (mapping[column] == unicode) {
-					SceUInt16 code = column + (row << 8) - 32448;
+					SceUInt16 code = column + (row << 8) + 0x8140;
 
 					*firstByte = code >> 8;
 					*secondByte = code;
@@ -130,25 +130,22 @@ void _unicodeToGbkKorean(int codepage, unsigned int lowByte, int highByte,
 void _big5ToUnicode(int codepage, int firstByte, int secondByte,
 		    unsigned char *lowByte, unsigned char *highByte)
 {
-	int originalFirstByte = firstByte;
+	int row;
 	unsigned int column;
 	SceUInt16 unicode;
 	unsigned char convertedLow;
 	unsigned char convertedHigh;
 
-	if (firstByte == 5)
-		goto escapedFirstByte;
-	if (firstByte > 128) {
-		firstByte -= 161;
-		goto convertPair;
+	if (firstByte == 5) {
+		row = 68;
+		firstByte = 229;
+	} else if (firstByte > 128) {
+		row = firstByte - 161;
+	} else {
+		*lowByte = firstByte;
+		*highByte = 0;
+		return;
 	}
-	*lowByte = firstByte;
-	*highByte = 0;
-	return;
-escapedFirstByte:
-	firstByte = 68;
-	originalFirstByte = 229;
-convertPair:
 	if (secondByte > 126) {
 		if (secondByte <= 160)
 			goto invalidPair;
@@ -156,14 +153,14 @@ convertPair:
 	} else {
 		column = secondByte - 64;
 	}
-	if ((unsigned int)(originalFirstByte - 161) > 88 || column > 156)
-		goto invalidPair;
-	unicode = g_big5Table[firstByte][column];
-	if (!unicode)
-		goto invalidPair;
-	convertedLow = unicode;
-	convertedHigh = unicode >> 8;
-	goto writeUnicode;
+	if ((unsigned int)(firstByte - 161) <= 88 && column <= 156) {
+		unicode = g_big5Table[row][column];
+		if (unicode) {
+			convertedLow = unicode;
+			convertedHigh = unicode >> 8;
+			goto writeUnicode;
+		}
+	}
 invalidPair:
 	convertedLow = 0xa0;
 	convertedHigh = 0x25;
@@ -671,7 +668,7 @@ int isCodepageDoubleByte(const unsigned char *source)
 		result = (firstByte == 5) | ((unsigned char)(firstByte + 127) <= 125);
 		if (result) {
 			secondByte = source[1];
-			result = (secondByte - 64 <= 62) | ((secondByte ^ 128) <= 126);
+			result = secondByte - 64 <= 62 || (secondByte ^ 128) <= 126;
 		}
 		break;
 	case 15:
@@ -686,8 +683,8 @@ int isCodepageDoubleByte(const unsigned char *source)
 		result = (firstByte == 5) | ((unsigned char)(firstByte + 95) <= 88);
 		if (result) {
 			secondByte = source[1];
-			result = (secondByte - 64 <= 62) |
-				 ((unsigned char)(secondByte + 95) <= 93);
+			result = secondByte - 64 <= 62 ||
+				 (unsigned char)(secondByte + 95) <= 93;
 		}
 		break;
 	default:
@@ -695,7 +692,7 @@ int isCodepageDoubleByte(const unsigned char *source)
 			 ((unsigned char)(firstByte + 127) <= 30);
 		if (result || firstByte == 5) {
 			secondByte = source[1];
-			result = (secondByte - 64 <= 62) | ((secondByte ^ 128) <= 124);
+			result = secondByte - 64 <= 62 || (secondByte ^ 128) <= 124;
 		}
 		break;
 	}

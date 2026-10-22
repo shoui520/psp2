@@ -145,14 +145,12 @@ static inline int set_attr_info_for_check(SceExfatfsDrive *drive,
 
 int sceFatfsACCheckRDirEntry(SceExfatfsDrive *drive, unsigned char attribute)
 {
-	unsigned char attrInfo[8];
 	SceSblACMgrValue value;
 	SceUID pid;
 	int result;
 
-	attrInfo[0] = attribute;
 	pid = SceThreadmgrForDriver_FA54D49A();
-	result = set_attr_info_for_check(drive, attrInfo, &value);
+	result = set_attr_info_for_check(drive, &attribute, &value);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0, 197, "%s: set_attr_info_for_check failed[%#x]\n",
 			      __func__, result);
@@ -163,13 +161,11 @@ int sceFatfsACCheckRDirEntry(SceExfatfsDrive *drive, unsigned char attribute)
 
 int sceFatfsACGetDirPermission(SceExfatfsDrive *drive, unsigned char attribute)
 {
-	unsigned char attrInfo[8];
 	SceSblACMgrValue value;
 	SceUInt32 permission = 0;
 	int result;
 
-	attrInfo[0] = attribute;
-	result = set_attr_info_for_check(drive, attrInfo, &value);
+	result = set_attr_info_for_check(drive, &attribute, &value);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0, 332, "%s: set_attr_info_for_check failed[%#x]\n",
 			      __func__, result);

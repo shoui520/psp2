@@ -275,13 +275,17 @@ int UVFAT_allocationbitmapentry(SceExfatfsSharedResource *sharedResource,
 entry:
 	bitMask = 1U << (bitIndex & 7);
 	if (mode & 1) {
+		SceUInt32 nextFreeCluster;
+
 		if (((unsigned char *)fileSystem->bitmapBuffer)[byteIndex] & bitMask) {
+			nextFreeCluster = fileSystem->nextFreeCluster;
 			*value = 1;
-			if (fileSystem->nextFreeCluster == cluster)
+			if (nextFreeCluster == cluster)
 				fileSystem->nextFreeCluster = cluster + 1;
 		} else {
+			nextFreeCluster = fileSystem->nextFreeCluster;
 			*value = 0;
-			if (cluster < fileSystem->nextFreeCluster)
+			if (cluster < nextFreeCluster)
 				fileSystem->nextFreeCluster = cluster;
 		}
 	}

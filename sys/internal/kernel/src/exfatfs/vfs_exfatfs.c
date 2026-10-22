@@ -369,8 +369,8 @@ void _cleanup_after_umount(SceExfatfsDrive *drive)
 		"%s: assignName(%s)\n", "_finalize_drive_information", drive->assignName);
 	drive->assignName = NULL;
 	drive->fileSystem = NULL;
-	drive->reservedWords[0] = 0;
-	drive->reservedWords[1] = 0;
+	drive->finalizeClearedWords[0] = 0;
+	drive->finalizeClearedWords[1] = 0;
 	drive->deviceInfo.mount_misc = NULL;
 	freeCommonHeapMemory(0, drive);
 }
@@ -669,7 +669,7 @@ int _exfatfs_create(SceVopCreateArgs *argp)
 	int mode = argp->mode;
 	SceExfatfsFnode *fnode = NULL;
 	SceVfsVnode *vnode = NULL;
-	SceExfatfsDrive *drive = parent->core.mnt->pData;
+	SceExfatfsDrive *drive;
 	SceVfsMount *mount;
 	unsigned char attribute = 0;
 	unsigned char fileAttribute;
@@ -677,6 +677,7 @@ int _exfatfs_create(SceVopCreateArgs *argp)
 	int result, error;
 
 	*output = NULL;
+	drive = parent->core.mnt->pData;
 	if (!(flags & 0x200))
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 4120, "exfatfs_vop_create",
 			"%s: flag[%#x] without SCE_O_CREAT[%#x]\n", "exfatfs_vop_create", flags, 0x200);
@@ -2341,8 +2342,8 @@ finalizeDrive:
 			"%s: assignName(%s)\n", "_finalize_drive_information", drive->assignName);
 		drive->assignName = NULL;
 		drive->fileSystem = NULL;
-		drive->reservedWords[0] = 0;
-		drive->reservedWords[1] = 0;
+		drive->finalizeClearedWords[0] = 0;
+		drive->finalizeClearedWords[1] = 0;
 		drive->deviceInfo.mount_misc = NULL;
 		freeCommonHeapMemory(0, drive);
 	}

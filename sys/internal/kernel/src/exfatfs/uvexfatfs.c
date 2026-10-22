@@ -2150,7 +2150,7 @@ int sceExfatfsVopGetstat(SceExfatfsFnode *fnode, SceIoStat *stat)
 		refCount = fnode->refCount;
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2949,
 			"%s: deleted fnode[%p], refCount(%hd), fdCount(%hd)\n",
-			"sc", fnode, refCount, fdCount);
+			"sceExfatfsVopGetstat", fnode, refCount, fdCount);
 	}
 #else
 	if (fnode->FilePath[0] && !_has_parent_directory(fnode)) {
@@ -2162,40 +2162,31 @@ int sceExfatfsVopGetstat(SceExfatfsFnode *fnode, SceIoStat *stat)
 	return 0;
 }
 
+static inline int _directory_fd_check(unsigned int fd, const char *caller);
+
 #if FW_VERSION >= 0x04000000
 int sceExfatfsVopDclose(unsigned int fd)
 {
 	SceExfatfsFnode *fnode;
 	int result;
 
-	if (!fd || fd >= getInitializedFileCount(&g_sharedResource)) {
-		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1864, "_directory_fd_check",
-			"%s: bad fd(%d)\n", "sceExfatfsVopDclose", fd);
-		return exfatfsErrorToIoError(-48);
+	result = _directory_fd_check(fd, "sceExfatfsVopDclose");
+	if (result == 0) {
+		fnode = g_sharedResource.files[fd].fnode;
+		if (fnode->fileSystem && fnode->fileSystem->drive &&
+		    (fnode->fileSystem->drive->state & 0x4000))
+			SCE_DBG_PRINTF_LEVEL(1, 0, 2973,
+				"%s: force_umounting, fnode[%p], refCount(%hd), fdCount(%hd), ret[%#x]\n",
+				"sceExfatfsVopDclose", fnode, fnode->refCount, fnode->fdCount, 0);
+		if (_deleted_entry(fnode))
+			SCE_DBG_PRINTF_LEVEL(1, 0, 2979,
+				"%s: deleted fnode[%p], refCount(%hd), fdCount(%hd)\n",
+				"sceExfatfsVopDclose", fnode, fnode->refCount, fnode->fdCount);
+		result = closeFileDescriptor(&g_sharedResource, fd);
+		if (result == 0)
+			return 0;
 	}
-	if (g_sharedResource.files[fd].mode != 3) {
-		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1868, "_directory_fd_check",
-			"%s: mode(%d) != expected(%d)\n", "sceExfatfsVopDclose",
-			g_sharedResource.files[fd].mode, 3);
-		return exfatfsErrorToIoError(-2);
-	}
-	result = _directory_vnode_check(g_sharedResource.files[fd].fnode, "sceExfatfsVopDclose");
-	if (result)
-		return exfatfsErrorToIoError(result);
-	fnode = g_sharedResource.files[fd].fnode;
-	if (fnode->fileSystem && fnode->fileSystem->drive &&
-	    (fnode->fileSystem->drive->state & 0x4000))
-		SCE_DBG_PRINTF_LEVEL(1, 0, 2973,
-			"%s: force_umounting, fnode[%p], refCount(%hd), fdCount(%hd), ret[%#x]\n",
-			"sceExfatfsVopDclose", fnode, fnode->refCount, fnode->fdCount, 0);
-	if (_deleted_entry(fnode))
-		SCE_DBG_PRINTF_LEVEL(1, 0, 2979,
-			"%s: deleted fnode[%p], refCount(%hd), fdCount(%hd)\n",
-			"sceExfatfsVopDclose", fnode, fnode->refCount, fnode->fdCount);
-	result = closeFileDescriptor(&g_sharedResource, fd);
-	if (result)
-		return exfatfsErrorToIoError(result);
-	return result;
+	return exfatfsErrorToIoError(result);
 }
 #else
 int sceExfatfsVopDclose(unsigned int fd)

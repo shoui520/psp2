@@ -1398,6 +1398,12 @@ static inline unsigned int _cluster_chain_length(SceExfatfsFnode *fnode,
 	return index;
 }
 
+/* Sony's 4.00 build keeps the records of two _is_directory asserts that compile away. */
+#if FW_DEBUG
+SCE_DBGINFO_DEFINE(static, isDirectoryFnode, 849, "_is_directory");
+SCE_DBGINFO_DEFINE(static, isDirectoryStat, 852, "_is_directory");
+#endif
+
 static inline int _is_directory(SceExfatfsFnode *fnode)
 {
 	unsigned int type = fnode->Stat.st_type;
@@ -1586,6 +1592,11 @@ static inline SceUInt32 _next_block(SceExfatfsFnode *fnode,
 	return _next_cluster(fnode, cluster);
 }
 
+/* Sony's 4.00 build keeps this record of _set_position_and_cluster_index; its call compiles away. */
+#if FW_DEBUG
+SCE_DBGINFO_DEFINE(static, setPositionUnexpectedIndex, 1419, "_set_position_and_cluster_index");
+#endif
+
 int _set_position_and_cluster_index(SceExfatfsFile *file, SceUInt64 offset,
 	unsigned int flags)
 {
@@ -1686,6 +1697,64 @@ end_of_file:
 		file->Position = (SceUInt64)clusterSize * (file->clusterIndex + 1);
 	return -7;
 }
+
+#if !FW_DEBUG
+int setDirectoryPosition(SceExfatfsFile *file, SceUInt64 offset)
+{
+	SceExfatfsFileSystem *fileSystem = file->fnode->fileSystem;
+	SceUInt32 clusterSize = fileSystem->sectorSize * fileSystem->clusterSectorCount;
+	SceUInt32 cluster, index, count, next;
+	SceUInt64 remaining, size;
+	int result;
+
+	result = _get_cached_index(file, offset, 2);
+	if (result != -37) {
+		if (result == -7)
+			goto end_of_file;
+		if (!result)
+			file->Position = offset;
+		return result;
+	}
+	index = file->clusterIndex;
+	cluster = file->Cluster;
+	for (;;) {
+		if (cluster >= file->fnode->fileSystem->clusterCount + 2)
+			goto end_of_file;
+		remaining = offset - (SceUInt64)index * clusterSize;
+		size = _contiguous_block_size(file->fnode, cluster, remaining + 1, 2);
+		if (cluster)
+			_update_cached_index(file->fnode, index, cluster, size, 2);
+		if (remaining < size) {
+			if (cluster) {
+				count = remaining / clusterSize;
+				cluster += count;
+				index += count;
+			}
+			file->Cluster = cluster;
+			file->clusterIndex = index;
+			file->Position = offset;
+			return 0;
+		}
+		if (cluster) {
+			count = (size - 1) / clusterSize;
+			cluster += count;
+			index += count;
+		}
+		file->Cluster = cluster;
+		file->clusterIndex = index;
+		next = _next_block(file->fnode, cluster, 2);
+		if (next == (SceUInt32)-1 || file->Cluster == next)
+			goto end_of_file;
+		cluster = next;
+		index++;
+	}
+
+end_of_file:
+	if (file->Cluster)
+		file->Position = (SceUInt64)clusterSize * (file->clusterIndex + 1);
+	return -7;
+}
+#endif
 
 void _set_root_cluster_and_cluster_count(SceExfatfsFnode *fnode,
 	SceUInt32 cluster, SceUInt64 size)
@@ -1811,6 +1880,15 @@ SceExfatfsFile *invalidateFileCachePosition(SceExfatfsFile *file)
 	file->cacheCluster = enabled ? (SceUInt32)-2 : 0;
 	return file;
 }
+
+/* Sony's 4.00 build keeps the records of UVFAT_SetStatFromDir, which no code calls. */
+#if FW_DEBUG
+SCE_DBGINFO_DEFINE(static, setStatFromDirL4707, 4707, "UVFAT_SetStatFromDir");
+SCE_DBGINFO_DEFINE(static, setStatFromDirL4709, 4709, "UVFAT_SetStatFromDir");
+SCE_DBGINFO_DEFINE(static, setStatFromDirL4718, 4718, "UVFAT_SetStatFromDir");
+SCE_DBGINFO_DEFINE(static, setStatFromDirL4742, 4742, "UVFAT_SetStatFromDir");
+SCE_DBGINFO_DEFINE(static, setStatFromDirL4800, 4800, "UVFAT_SetStatFromDir");
+#endif
 
 SceUInt32 UVFAT_NextCluster(SceExfatfsSharedResource *sharedResource,
 	SceUInt32 cluster, SceExfatfsFileSystem *fileSystem)
@@ -4304,6 +4382,173 @@ int UVFAT_WriteDirEntry_ex(SceExfatfsSharedResource *sharedResource, int fd,
 }
 #endif
 
+#if !FW_DEBUG
+int writeDirectoryEntryBytes(SceExfatfsSharedResource *sharedResource,
+	SceExfatfsFileSystem *fileSystem, SceExfatfsFile *file,
+	const void *entry, int *writeResult)
+{
+	unsigned int contiguousCount = 0;
+	unsigned int remaining = 32, transferred = 0;
+	unsigned int clusterSize, bufferSize;
+	SceExfatfsFnode *fnode;
+	SceUInt64 position;
+	int result;
+
+	clusterSize = fileSystemClusterSize(fileSystem);
+	fnode = file->fnode;
+	position = file->Position;
+	bufferSize = file->fnode->fileSystem->fileBufferSize;
+	for (;;) {
+		SceUInt64 offset = position % bufferSize;
+		SceUInt64 cacheIndex = file->cacheIndex;
+		SceUInt32 startCluster;
+		unsigned int amount;
+		int allocated = 0;
+
+		if (cacheIndex != (SceUInt64)-1) {
+			unsigned int cacheSize = fnode->fileSystem->fileBufferSize;
+			SceUInt64 cacheStart = cacheIndex * cacheSize;
+
+			if (position < cacheStart + cacheSize && cacheStart < position + 1) {
+				unsigned int overlap = position + 1 - cacheStart;
+
+				if (overlap >= cacheSize)
+					overlap = cacheSize;
+				if (overlap)
+					goto copyCached;
+			}
+		}
+		if (file->cacheFlags & 1) {
+			result = UVFAT_FlushFdBuf(file, fnode->fileSystem);
+			if (result)
+				return result;
+			fnode = file->fnode;
+		}
+		startCluster = fnode->DirCluster;
+		if (!startCluster) {
+			SceExfatfsFileSystem *startFileSystem = fnode->fileSystem;
+			SceExfatfsBootSector *boot = startFileSystem->PBRBuf;
+			const unsigned char *rootEntries = (const unsigned char *)&boot->fat32.parameters.rootEntryCount;
+
+			if (!(rootEntries[0] | ((unsigned int)rootEntries[1] << 8)))
+				startCluster = startFileSystem->fileSystemType == 2 ?
+					startFileSystem->firstClusterOfRoot : boot->fat32.rootCluster;
+		}
+		if (startCluster == (SceUInt32)-1) {
+			SceUInt32 cluster = UVFAT_SearchEmptyCluster(sharedResource,
+				fnode->fileSystem, 0);
+
+			fnode = file->fnode;
+			if (cluster >= fnode->fileSystem->clusterCount + 2)
+				return -10;
+			if (fnode->fileSystem->fileSystemType == 2) {
+				fnode->Stat.generalSecondaryFlags |= 3;
+			} else {
+				if (fnode->Stat.generalSecondaryFlags) {
+					fnode->Stat.generalSecondaryFlags = 0;
+					fnode = file->fnode;
+				}
+				result = UVFAT_SetEOF(fnode->fileSystem, cluster);
+				if (result)
+					return result;
+			}
+			fnode = file->fnode;
+			fnode->Stat.StartCluster = cluster;
+			if (!fnode->clusterCount)
+				_set_start_cluster(fnode, cluster, fnode->Stat.st_type);
+			file->Cluster = cluster;
+			file->clusterIndex = 0;
+			contiguousCount = 1;
+			allocated = 1;
+		}
+		result = 0;
+		if (!contiguousCount) {
+			result = setDirectoryPosition(file, file->Position);
+			if (result == -7) {
+				result = _append_contiguous_clusters(file, remaining, 2,
+					sharedResource, &contiguousCount);
+				if (!result) {
+					if (writeResult)
+						*writeResult += contiguousCount;
+					allocated = 1;
+				}
+				goto haveContiguousCount;
+			}
+			if (result)
+				return result;
+		}
+		contiguousCount = _check_contiguous_clusters(file, file->Position, remaining, 2);
+haveContiguousCount:
+		if (!contiguousCount) {
+			if (result)
+				return result;
+		} else if (offset || remaining < bufferSize) {
+			if (allocated) {
+				SceExfatfsFileSystem *cacheFileSystem;
+				unsigned int cacheSize, cacheClusterSize;
+				SceUInt32 cluster;
+
+				memset(file->Buf, 0, bufferSize);
+				position = file->Position;
+				cluster = file->Cluster;
+				cacheFileSystem = file->fnode->fileSystem;
+				cacheSize = cacheFileSystem->fileBufferSize;
+				cacheClusterSize = fileSystemClusterSize(cacheFileSystem);
+				cacheIndex = position / cacheSize;
+				file->cacheIndex = cacheIndex;
+				file->cacheCluster = cluster;
+				file->clustBlockNo = cacheIndex % (cacheClusterSize / cacheSize);
+			} else {
+				result = _read_into_fd_cache(file, file->Cluster);
+				if (result)
+					return result;
+			}
+		} else {
+			result = _write_sectors(file, 2, sharedResource,
+				contiguousCount, remaining, entry);
+			if (result < 0)
+				return result;
+			if (result) {
+				remaining -= result;
+				transferred += result;
+				if (!remaining)
+					return transferred;
+				contiguousCount = 0;
+				position = file->Position;
+				entry = (const unsigned char *)entry + result;
+				fnode = file->fnode;
+				continue;
+			}
+		}
+copyCached:
+		amount = remaining;
+		if ((SceUInt64)bufferSize - offset < remaining)
+			amount = bufferSize - offset;
+		if (amount) {
+			const void *source = entry;
+
+			file->cacheFlags |= 1;
+			entry = (const unsigned char *)entry + amount;
+			memcpy((unsigned char *)file->Buf + offset, source, amount);
+			sync_multi_open(sharedResource, file);
+		}
+		remaining -= amount;
+		transferred += amount;
+		position = file->Position + amount;
+		file->Position = position;
+		if (contiguousCount && !(position % clusterSize)) {
+			if (--contiguousCount) {
+				file->Cluster++;
+				file->clusterIndex++;
+			}
+		}
+		if (!remaining)
+			return transferred;
+		fnode = file->fnode;
+	}
+}
+#endif
+
 int UVFAT_WriteStatDir_ex(SceExfatfsSharedResource *sharedResource,
 	SceExfatfsFileSystem *fileSystem, const SceExfatfsStat *stat)
 {
@@ -4723,6 +4968,11 @@ int UVFAT_SearchFile(SceExfatfsSharedResource *sharedResource,
 #endif
 	return _get_root_fnode(fnode, fileSystem);
 }
+
+/* Sony's 4.00 build keeps the record of _expected_entry_position_vfat, which no code calls. */
+#if FW_DEBUG
+SCE_DBGINFO_DEFINE(static, expectedEntryPositionVfat, 2781, "_expected_entry_position_vfat");
+#endif
 
 int _UVFAT_SearchFile_from_root(SceExfatfsSharedResource *sharedResource,
 	SceFatfsNameset *nameset, SceExfatfsFileSystem **fileSystem,

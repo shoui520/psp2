@@ -34,7 +34,7 @@ typedef struct SceExfatfsDrive {
 	unsigned char reserved[188];
 	const char *assignName;
 	struct SceExfatfsFileSystem *fileSystem;
-	SceUInt32 reservedWords[2];
+	SceUInt32 finalizeClearedWords[2];	/* only cleared, with assignName and fileSystem */
 	const struct ExfatfsLegacyOperations *legacyOperations;
 	struct ExfatfsLegacyFile *legacyFiles[64];
 	unsigned char reservedTail[12];

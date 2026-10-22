@@ -512,6 +512,11 @@ int UVFAT_Mount(SceExfatfsSharedResource *sharedResource, const char *devname,
 	return result;
 }
 
+/* Sony's 4.00 build keeps the record of UVFAT_Umount, which no code calls. */
+#if FW_DEBUG
+SCE_DBGINFO_DEFINE(static, umountL309, 309, "UVFAT_Umount");
+#endif
+
 int UVFAT_Read(SceExfatfsSharedResource *sharedResource, unsigned int fd,
 	void *buffer, unsigned int size)
 {
@@ -999,12 +1004,12 @@ int _AllocateFdBuffer(SceExfatfsFile *file)
 		} else {
 			size = 1024;
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1862, "_fd_cache_size",
-				"%s: unexpected NULL fileSystem\n", "_fd_cach");
+				"%s: unexpected NULL fileSystem\n", "_fd_cache_size");
 		}
 	} else {
 		size = 1024;
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1855, "_fd_cache_size",
-			"%s: unexpected NULL fnode\n", "_fd_cach");
+			"%s: unexpected NULL fnode\n", "_fd_cache_size");
 	}
 	if (file->BufTop || file->Buf)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 1968, "%s: unexpected BufTop[%p], Buf[%p]\n",
@@ -1030,13 +1035,13 @@ void _FreeFpCache(SceExfatfsFile *file)
 				size = file->fnode->fileSystem->fileBufferSize + 512;
 			} else {
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1862, "_fd_cache_size",
-					"%s: unexpected NULL fileSystem\n", "_fd_cach");
+					"%s: unexpected NULL fileSystem\n", "_fd_cache_size");
 				size = 1024;
 				buffer = file->BufTop;
 			}
 		} else {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1855, "_fd_cache_size",
-				"%s: unexpected NULL fnode\n", "_fd_cach");
+				"%s: unexpected NULL fnode\n", "_fd_cache_size");
 			size = 1024;
 			buffer = file->BufTop;
 		}
@@ -1208,3 +1213,9 @@ int closeFileDescriptor(SceExfatfsSharedResource *sharedResource, unsigned int f
 	_ReleaseFp(sharedResource, &sharedResource->files[fd]);
 	return 0;
 }
+
+/* Sony's 4.00 build keeps the records of UVFAT_GetFd, which no code calls. */
+#if FW_DEBUG
+SCE_DBGINFO_DEFINE(static, getFdL2118, 2118, "UVFAT_GetFd");
+SCE_DBGINFO_DEFINE(static, getFdL2122, 2122, "UVFAT_GetFd");
+#endif
