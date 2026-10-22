@@ -39,25 +39,8 @@
 
 /* SceSblPostSsMgr (ut_mgr.c): declared here until its exporter's header declares it */
 
-struct AppmgrMapFile;
-
-typedef struct AppmgrProcessMountCleanup {
-	char driveId[16];
-	char *resolvedPath;
-	struct AppmgrMapFile *mapFile;
-} AppmgrProcessMountCleanup;
-
-_Static_assert(sizeof(AppmgrProcessMountCleanup) == 24,
-	       "process mount cleanup size");
-_Static_assert(offsetof(AppmgrProcessMountCleanup, driveId) == 0 &&
-	       offsetof(AppmgrProcessMountCleanup, resolvedPath) == 16 &&
-	       offsetof(AppmgrProcessMountCleanup, mapFile) == 20,
-	       "process mount cleanup fields");
-
 int appmgrUnmountDrive(SceUID pid, struct AppmgrMountHolder *holder,
 		      const char *driveId, int force);
-int appmgrCleanupProcessMount(struct AppmgrMountHolder *holder,
-			      AppmgrProcessMountCleanup *cleanup);
 
 extern const SceFiosOverlay g_appmgrOverlayTemplate;
 int appmgrAddInvalidOverlay(SceUID pid, const char *driveId,

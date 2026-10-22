@@ -53,8 +53,10 @@ _Static_assert(sizeof(AppmgrSoundOutExclusiveArguments) == 16,
 
 /* appmgr_device.c */
 int dumpBgmState(void);
+void _deviceSetApp(int appId, const char *name, const char *proxyName);
 void _deviceSetRunStatus(int appId, int isRunning);
 void _deviceGetBgmProxyAppName(int appId, char *name);
+void _deviceSetName(int appId, const char *name);
 int appmgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode);
 int appmgrReleaseSoundOutExclusive(void);
 int appmgrAcquireSoundOutExclusive2(int priority, SceUInt32 displayEnabled,

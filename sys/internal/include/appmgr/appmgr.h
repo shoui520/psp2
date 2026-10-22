@@ -87,6 +87,17 @@ int sceAppMgrKillAppByNameForDebugger(const char *titleId);
 int sceAppMgrGetPidByNameForDebugger(const char *titleId, SceUID *pid);
 int sceAppMgrGetAppIdByNameForDebugger(const char *titleId, int *appId);
 
+/* a boot parameter: SceAppMgrForDriver_D2541B4A clears the attribute and version (the words
+ * of the SDK's SceAppUtilBootParam) behind the size */
+typedef struct AppmgrBootParam {
+	SceSize size;
+	SceUInt32 attribute;
+	SceUInt32 appVersion;
+} AppmgrBootParam;
+
+/* vitasdk: ksceAppMgrGetBootParam */
+int SceAppMgrForDriver_D2541B4A(SceUInt32 request, AppmgrBootParam *bootParam);
+
 /* not written in C yet: the prototypes are their callers' (vshbridge, deci4p_loadp, appmgr's
  * system calls) */
 int sceAppMgrLaunchAppByNameForDebugger(const char *titleId, int flags);
@@ -95,7 +106,6 @@ int sceAppMgrLaunchAppForTest2(const char *path, const char *titleId, int flags,
 int sceAppMgrDestroyAppForTest(SceUID pid);
 int SceAppMgrForDriver_3B4F305B(int kind, const char *titleId);	/* tool app control */
 int SceAppMgrForDriver_12CE29F7(int pid, int param, int *value);	/* vitasdk: ksceAppMgrAppParamGetInt */
-int SceAppMgrForDriver_D2541B4A(SceUInt32 request, void *bootParam);	/* vitasdk: ksceAppMgrGetBootParam */
 int SceAppMgrForDriver_EC9D5A35(void *status);	/* vitasdk: ksceAppMgrSaveDataSlotGetStatus */
 int SceAppMgrForDriver_193784A9(void *a);	/* vitasdk: ksceAppMgrCheckContentInstallPeriod */
 int sceAppMgrUpdateRifInfo(const void *info);

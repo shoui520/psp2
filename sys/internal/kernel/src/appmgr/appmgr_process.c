@@ -21,6 +21,8 @@
 #include "appmgr_app_event.h"
 #include "appmgr_device.h"
 #include "appmgr_savedata_slot.h"
+#include "appmgr_shell_event.h"
+#include <processmgr/process_budget.h>
 
 extern int appmgrUsesGxmDebugger(SceUID pid);
 
@@ -51,10 +53,27 @@ extern int _destroyOtherApp(struct AppState *app);
 extern int _sceAppMgrDeactivateAppInternal(struct AppState *app, int, int, int);
 int _appmgrProcessKillProcess(struct AppState *app, int kind);
 extern int appmgrUsesDefaultLibrary(void);
+extern int appmgrPrepareProcessContent(const char *name, const char *path,
+				       const AppmgrLaunchInfo *info,
+				       const AppmgrLaunchOptions *options,
+				       AppmgrMountHolder *mounts, AppmgrProcessContent *content,
+				       AppmgrProcessMountCleanup *cleanup);
+extern int appmgrMountProcessContent(SceUID pid, SceUInt32 mountFlags, const char *path,
+				     const char *titleId, const AppmgrLaunchOptions *options,
+				     AppmgrMountHolder *mounts, int launchOrigin,
+				     AppmgrProcessContent *content);
+extern int appmgrSetupSafeMemoryForProcess(SceUID pid, int safeMemoryMode);
 
 SceUID g_appmgrVideoCodecPid = -1;
 int (*g_appmgrProcTerminatedCallback)(struct AppState *app);
 SceUID g_appmgrProcEventHandlerUid;
+
+/* what mini applications may still take: file descriptors, directories and the two
+ * resource quotas (reserveResource takes, _sceAppMgrDeleteAppInternal gives back) */
+int g_appmgrAvailableFD = 92;
+int g_appmgrAvailableDIR = 552;
+int g_appmgrAvailablePrimaryResourceQuota = 16;
+int g_appmgrAvailableSecondaryResourceQuota = 12;
 
 static const SceKernelProcEventHandler processEventHandlers = {
 	.size = sizeof(SceKernelProcEventHandler),
@@ -1864,6 +1883,547 @@ void appmgrResetProcessState(AppmgrProcessState *process)
 	memset(&process->content, 0, sizeof(process->content));
 }
 
+#if FW_DEBUG
+#define PROCESS_CREATE_LOCK(_result, _line, _func) do { \
+	if ((_result) != 0) { \
+		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, _line, _func, \
+			"Failed to lock ret=0x%08x\n", (_result)); \
+		sceAppMgrDump(); \
+		dumpBgmState(); \
+		SCE_DBG_ASSERT_CHECK_FUNC(0, _line, _func); \
+	} else { \
+		g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
+	} \
+} while (0)
+/* a lock that does not record its owner (Sony's binary keeps none) */
+#define PROCESS_CREATE_CHECK_LOCK(_result, _line, _func) do { \
+	if ((_result) != 0) { \
+		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, _line, _func, \
+			"Failed to lock ret=0x%08x\n", (_result)); \
+		sceAppMgrDump(); \
+		dumpBgmState(); \
+		SCE_DBG_ASSERT_CHECK_FUNC(0, _line, _func); \
+	} else { \
+		(void)sceKernelGetThreadId(); \
+	} \
+} while (0)
+#define PROCESS_CREATE_RESULT(_result, _line, _func) do { \
+	if ((_result) != 0) { \
+		sceAppMgrDump(); \
+		dumpBgmState(); \
+		SCE_DBG_ASSERT_PRINTF_FUNC((_result) == 0, _line, _func, \
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n", \
+			(_result), (_result), 0, 0); \
+	} \
+} while (0)
+#define PROCESS_CREATE_UNLOCK(_result, _line, _func) \
+	PROCESS_CREATE_RESULT(_result, _line, _func)
+#define PROCESS_CREATE_ASSERT(_condition, _line, _func) do { \
+	if (!(_condition)) { \
+		sceAppMgrDump(); \
+		dumpBgmState(); \
+		SCE_DBG_ASSERT_CHECK_FUNC(0, _line, _func); \
+	} \
+} while (0)
+#define PROCESS_CREATE_PANIC(_result, _line, _func, _info) \
+	PROCESS_CREATE_RESULT(_result, _line, _func)
+#else
+static const SceKernelDebugInfo growGameBudgetPanicInfo = {
+	.fileHash = 0xb763dfa2, .lineHash = 0xaa161455, .funcHash = 0xe17648d9,
+};
+static const SceKernelDebugInfo deleteMiniBudgetPanicInfo = {
+	.fileHash = 0xb763dfa2, .lineHash = 0x9a82e494, .funcHash = 0xbdbbfc68,
+};
+
+#define PROCESS_CREATE_LOCK(_result, _line, _func) do { \
+	if ((_result) != 0) \
+		vcStateChangedPanic(); \
+	else \
+		g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
+} while (0)
+#define PROCESS_CREATE_CHECK_LOCK(_result, _line, _func) do { \
+	if ((_result) != 0) \
+		vcStateChangedPanic(); \
+	else \
+		(void)sceKernelGetThreadId(); \
+} while (0)
+#define PROCESS_CREATE_RESULT(_result, _line, _func) do { \
+	if ((_result) != 0) \
+		appmgrProcessPanic(); \
+} while (0)
+#define PROCESS_CREATE_UNLOCK(_result, _line, _func) do { \
+	if ((_result) != 0) \
+		vcStateChangedPanic(); \
+} while (0)
+#define PROCESS_CREATE_ASSERT(_condition, _line, _func) do { \
+	if (!(_condition)) \
+		appmgrProcessPanic(); \
+} while (0)
+#define PROCESS_CREATE_PANIC(_result, _line, _func, _info) do { \
+	if ((_result) != 0) \
+		SceDebugForDriver_00CCE39C(&(_info), __builtin_return_address(0), \
+			"0x%08x,0x%08x\n", (_result), 0); \
+} while (0)
+#endif
+
+SceUID appmgrProcessCreateGame(AppmgrProcessState *process, const char *path,
+			       const char *name, const AppmgrLaunchInfo *info,
+			       SceUInt32 createFlags, const AppmgrLaunchOptions *options,
+			       const SceKernelProcessOpt *opt, SceUID parentPid,
+			       const AppmgrCreateProcessParam *param, signed char launchOrigin,
+			       int *error)
+{
+	AppmgrProcessMountCleanup cleanup;
+	SceKernelProcessOpt processOpt;
+	char titleId[10];
+	struct AppState *app;
+	SceUInt32 memorySize, mode;
+	int found, result;
+	SceUID pid;
+
+	SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1681, "appmgrProcessCreateGame",
+		"[SceAppMgr] Creating game app %s\n", name);
+	if (name != NULL) {
+		strncpy(process->appName, name, sizeof(process->appName));
+		process->appName[sizeof(process->appName) - 1] = '\0';
+	} else {
+		process->appName[0] = '\0';
+	}
+	memset(&processOpt, 0, sizeof(processOpt));
+	processOpt.size = sizeof(processOpt);
+	processOpt.flags = (opt != NULL ? opt->flags | 0x10000 : 0x10000) |
+			   ((info->processAttr & 1) != 0 ? 0x400000 : 0);
+	if (opt != NULL) {
+		processOpt.cpuAffinity = opt->cpuAffinity;
+		processOpt.priority = opt->priority;
+		processOpt.stackSize = opt->stackSize;
+		processOpt.reserved = opt->reserved;
+		processOpt.budgetId = opt->budgetId;
+		processOpt.parentPid = parentPid;
+		processOpt.kind = opt->kind;
+		processOpt.prevPid = opt->prevPid;
+	} else {
+		processOpt.parentPid = parentPid;
+		processOpt.prevPid = 0;
+	}
+	memorySize = info->enlargeGameMemorySize;
+	result = appmgrPrepareProcessContent(process->appName, path, NULL, options,
+					     &process->mounts, &process->content, &cleanup);
+	if (result < 0)
+		return result;
+	if (param != NULL) {
+		mode = (process->content.attribute2 >> 2) & 7;
+		if (mode != 0) {
+			result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+			PROCESS_CREATE_LOCK(result, 1728, "appmgrProcessCreateGame");
+			found = 0;
+			for (app = g_appmgrAppStates; app != g_appmgrAppStates + 20; ++app) {
+				if (app->process.processId >= 0 &&
+				    (app->process.processId & 1) != 0 &&
+				    app->launchInfo.budgetType == 0) {
+					found = 1;
+					break;
+				}
+			}
+			g_appmgrMainMutexOwner = -1;
+			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			PROCESS_CREATE_UNLOCK(result, 1737, "appmgrProcessCreateGame");
+			if (found)
+				return (int)0x8080202a;
+			if (mode == 3)
+				memorySize = 109;
+			else if (mode == 2)
+				memorySize = 77;
+			else if (mode == 1)
+				memorySize = 29;
+			else
+				return SCE_APPMGR_ERROR_INVALID;
+		}
+		if (param->useTitleIdAsName != 0 && process->content.titleId[0] != '\0' &&
+		    name != NULL) {
+			strncpy(process->appName, process->content.titleId, 10);
+			process->appName[10] = '\0';
+		}
+	}
+	if ((process->content.attributeMinor & 0x10) != 0) {
+		processOpt.flags |= 0x1000000;
+		if ((process->content.attributeMinor & 8) != 0)
+			processOpt.powerConfigFlags =
+				(process->content.attributeMinor & 4) != 0 ? 0 : 1;
+		else
+			processOpt.powerConfigFlags =
+				(process->content.attributeMinor & 4) != 0 ? 2 : 3;
+	}
+	processOpt.flags |= 0x1c0000;
+	processOpt.klicensee = process->content.license.klicense;
+	processOpt.limit0 = 64;
+	processOpt.limit1 = 10;
+	if (strncmp(process->appName, "NPXS10031", sizeof(process->appName)) == 0) {
+		processOpt.limit0 = 18;
+		processOpt.limit1 = 12;
+	} else if (strncmp(process->appName, "NPXS10026", sizeof(process->appName)) == 0) {
+		processOpt.limit0 = 18;
+		processOpt.limit1 = 13;
+	}
+	SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1797, "appmgrProcessCreateGame",
+		"[SceAppMgr] Creating app %s(%s), Limit FD=%d, DIR=%d\n",
+		process->content.titleId, process->appName, processOpt.limit0,
+		processOpt.limit1);
+	if ((process->content.attribute & 0x20000000) != 0) {
+		processOpt.resolutionFlags |= 1;
+		processOpt.flags |= 0x800000;
+	}
+	if ((process->content.attribute & 0x40000000) != 0) {
+		processOpt.resolutionFlags |= 2;
+		processOpt.flags |= 0x800000;
+	}
+	if (memorySize != 0) {
+		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1811, "appmgrProcessCreateGame",
+			"Enlarge game memory size %d MiB\n", memorySize);
+		result = sceKernelGrowBudget(2, 0, memorySize << 20);
+		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1816, "appmgrProcessCreateGame",
+			"Grow game budget => %#x\n", result);
+		PROCESS_CREATE_PANIC(result, 1817, "appmgrProcessCreateGame",
+				     growGameBudgetPanicInfo);
+	}
+	pid = sceKernelCreateProcess(process->appName, (createFlags & 0x7effffff) | 0x1000000,
+				     cleanup.resolvedPath, &processOpt);
+	if (pid < 0) {
+		appmgrCleanupProcessMount(&process->mounts, &cleanup);
+		return pid;
+	}
+	process->processId = pid;
+	strncpy(titleId, process->appName, sizeof(titleId));
+	titleId[9] = '\0';
+	result = appmgrMountProcessContent(pid, 7, path, titleId, options, &process->mounts,
+					   launchOrigin, &process->content);
+	if (result < 0) {
+		appmgrCleanupProcessMount(&process->mounts, &cleanup);
+	} else {
+		result = appmgrSetupSafeMemoryForProcess(pid,
+				appmgrSelectSafeMemoryMode(&process->content));
+		appmgrCleanupProcessMount(&process->mounts, &cleanup);
+		if (result >= 0)
+			return pid;
+		appmgrUnmountProcessContent(pid);
+	}
+	sceKernelKillProcess(pid, 1);
+	*error = result;
+	return pid;
+}
+
+/* Sony inlines reserveResource into appmgrProcessCreateMini. */
+static inline void reserveResource(int maxFD, int maxDIR, int primaryResourceQuota,
+				   int secondaryResourceQuota)
+{
+	g_appmgrAvailableFD -= maxFD;
+	PROCESS_CREATE_ASSERT(g_appmgrAvailableFD >= 0, 427, "reserveResource");
+	if (maxFD > 2)
+		maxFD -= 2;
+	g_appmgrAvailableDIR -= maxFD * maxDIR;
+	PROCESS_CREATE_ASSERT(g_appmgrAvailableDIR >= 0, 431, "reserveResource");
+	g_appmgrAvailablePrimaryResourceQuota -= primaryResourceQuota;
+	PROCESS_CREATE_ASSERT(g_appmgrAvailablePrimaryResourceQuota >= 0, 434,
+			      "reserveResource");
+	g_appmgrAvailableSecondaryResourceQuota -= secondaryResourceQuota;
+	PROCESS_CREATE_ASSERT(g_appmgrAvailableSecondaryResourceQuota >= 0, 436,
+			      "reserveResource");
+}
+
+SceUID appmgrProcessCreateMini(AppmgrProcessState *process, const char *path,
+			       const char *name, const AppmgrLaunchInfo *info,
+			       const AppmgrLaunchOptions *options,
+			       const SceKernelProcessOpt *opt, SceUID parentPid,
+			       const AppmgrCreateProcessParam *param)
+{
+	AppmgrProcessMountCleanup cleanup;
+	SceKernelProcessOpt processOpt;
+	ProcessBudgetOpt budgetOpt;
+	char titleId[10];
+	SceUInt32 budgetSize, pycontSize, createFlags, selfControlFlags;
+	int useCommonDialog, maxFD, maxDIR, primaryResourceQuota, secondaryResourceQuota;
+	int directories, result;
+	SceUID budgetId, pid;
+
+	SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1885, "appmgrProcessCreateMini",
+		"[SceAppMgr] Creating mini app %s\n", name);
+	budgetSize = info->budgetSize;
+	pycontSize = info->pycontSize;
+	useCommonDialog = info->useCommonDialog;
+	createFlags = info->processCreateFlags;
+	if (name != NULL) {
+		strncpy(process->appName, name, sizeof(process->appName));
+		process->appName[sizeof(process->appName) - 1] = '\0';
+	} else {
+		process->appName[0] = '\0';
+	}
+	if (budgetSize < pycontSize)
+		return SCE_APPMGR_ERROR_INVALID;
+	budgetOpt.size = sizeof(budgetOpt);
+	budgetOpt.flags = 1;
+	budgetOpt.mainSize = budgetSize - pycontSize;
+	budgetOpt.cdialogSize = useCommonDialog != 0 ? 0x900000 : 0;
+	budgetOpt.phyContSize = pycontSize;
+	budgetOpt.cdram = 3;
+	result = appmgrPrepareProcessContent(process->appName, path, info, options,
+					     &process->mounts, &process->content, &cleanup);
+	if (result < 0)
+		return result;
+	maxFD = process->content.maxFD;
+	maxDIR = process->content.maxDIR;
+	primaryResourceQuota = process->content.primaryResourceQuota;
+	secondaryResourceQuota = process->content.secondaryResourceQuota;
+	selfControlFlags = process->content.selfControlFlags;
+	if (param != NULL && param->useTitleIdAsName != 0 &&
+	    process->content.titleId[0] != '\0') {
+		strncpy(process->appName, process->content.titleId, 10);
+		process->appName[10] = '\0';
+	}
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	PROCESS_CREATE_CHECK_LOCK(result, 1951, "appmgrProcessCreateMini");
+	directories = maxFD > 2 ? maxFD - 2 : maxFD;
+	if (maxFD > g_appmgrAvailableFD ||
+	    maxDIR * directories > g_appmgrAvailableDIR ||
+	    primaryResourceQuota > g_appmgrAvailablePrimaryResourceQuota ||
+	    secondaryResourceQuota > g_appmgrAvailableSecondaryResourceQuota) {
+		g_appmgrMainMutexOwner = -1;
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		PROCESS_CREATE_UNLOCK(result, 1958, "appmgrProcessCreateMini");
+		appmgrCleanupProcessMount(&process->mounts, &cleanup);
+		return (int)0x80802018;
+	}
+	g_appmgrMainMutexOwner = -1;
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	PROCESS_CREATE_UNLOCK(result, 1962, "appmgrProcessCreateMini");
+	SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1965, "appmgrProcessCreateMini",
+		"[SceAppMgr] Creating app %s, Limit FD=%d, DIR=%d\n",
+		process->appName, maxFD, maxDIR);
+	budgetId = SceProcessmgrForKernel_DC18FCEF(process->appName,
+			(createFlags & 0x7dffffff) | 0x2000000, &budgetOpt);
+	if (budgetId < 0) {
+		appmgrCleanupProcessMount(&process->mounts, &cleanup);
+		return budgetId;
+	}
+	memset(&processOpt, 0, sizeof(processOpt));
+	processOpt.size = sizeof(processOpt);
+	processOpt.flags = (opt != NULL ? opt->flags | 0x15000 : 0x15000) |
+			   ((info->processAttr & 1) != 0 ? 0x400000 : 0);
+	if (strncmp(process->appName, "NPXS10084", sizeof(process->appName)) == 0)
+		processOpt.cpuAffinity = 0x70000;
+	else
+		processOpt.cpuAffinity = (selfControlFlags & 8) != 0 ? 0 : 8;
+	processOpt.budgetId = budgetId;
+	processOpt.parentPid = parentPid;
+	if (opt != NULL) {
+		processOpt.kind = opt->kind;
+		processOpt.prevPid = opt->prevPid;
+	} else {
+		processOpt.kind = 0;
+		processOpt.prevPid = 0;
+	}
+	processOpt.klicensee = process->content.license.klicense;
+	processOpt.flags |= 0x1c0000;
+	if ((process->content.attribute & 0x20000000) != 0) {
+		processOpt.resolutionFlags |= 1;
+		processOpt.flags |= 0x800000;
+	}
+	if ((process->content.attribute & 0x40000000) != 0) {
+		processOpt.resolutionFlags |= 2;
+		processOpt.flags |= 0x800000;
+	}
+	processOpt.limit0 = maxFD;
+	processOpt.limit1 = maxDIR;
+	pid = sceKernelCreateProcess(process->appName, 0x2000000, cleanup.resolvedPath,
+				     &processOpt);
+	if (pid < 0) {
+		appmgrCleanupProcessMount(&process->mounts, &cleanup);
+		result = SceProcessmgrForKernel_459A223B(budgetId);
+		PROCESS_CREATE_PANIC(result, 2050, "appmgrProcessCreateMini",
+				     deleteMiniBudgetPanicInfo);
+		return pid;
+	}
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	PROCESS_CREATE_LOCK(result, 2056, "appmgrProcessCreateMini");
+	process->processId = pid;
+	process->budgetId = budgetId;
+	process->maxFD = maxFD;
+	process->maxDIR = maxDIR;
+	process->primaryResourceQuota = primaryResourceQuota;
+	process->secondaryResourceQuota = secondaryResourceQuota;
+	reserveResource(maxFD, maxDIR, primaryResourceQuota, secondaryResourceQuota);
+	g_appmgrMainMutexOwner = -1;
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	PROCESS_CREATE_UNLOCK(result, 2069, "appmgrProcessCreateMini");
+	strncpy(titleId, process->appName, sizeof(titleId));
+	titleId[9] = '\0';
+	result = appmgrMountProcessContent(pid, 7, path, titleId, options, &process->mounts,
+					   info->launchOrigin, &process->content);
+	if (result < 0) {
+		appmgrCleanupProcessMount(&process->mounts, &cleanup);
+		sceKernelKillProcess(pid, 1);
+		return result;
+	}
+	result = appmgrSetupSafeMemoryForProcess(pid,
+			appmgrSelectSafeMemoryMode(&process->content));
+	appmgrCleanupProcessMount(&process->mounts, &cleanup);
+	if (result < 0) {
+		appmgrUnmountProcessContent(pid);
+		__builtin_memset(&process->mounts, 0, sizeof(process->mounts));
+		memset(&process->content, 0, sizeof(process->content));
+		sceKernelKillProcess(pid, 1);
+		return result;
+	}
+	return pid;
+}
+
+#if FW_DEBUG
+#define PROCESS_CREATE_FAILED(_result, _line) \
+	SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, _line, "_appmgrProcessCreateProcess", \
+		"[SceAppMgr] Create process failed : 0x%08x.\n", (_result))
+#else
+#define PROCESS_CREATE_FAILED(_result, _line) do { } while (0)
+#endif
+
+/* Sony inlines appmgrProcessCreateSystem into _appmgrProcessCreateProcess. */
+static inline SceUID appmgrProcessCreateSystem(AppmgrProcessState *process,
+					       const char *path, const char *name,
+					       SceUInt32 createFlags,
+					       const SceKernelProcessOpt *opt,
+					       SceUID parentPid)
+{
+	SceKernelProcessOpt processOpt;
+	SceUID pid;
+
+	SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1628, "appmgrProcessCreateSystem",
+		"[SceAppMgr] Creating mini app %s\n", name);
+	if (opt == NULL)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	memset(&processOpt, 0, sizeof(processOpt));
+	processOpt.size = sizeof(processOpt);
+	processOpt.flags = opt->flags | 0x184000;
+	processOpt.priority = opt->priority;
+	processOpt.stackSize = opt->stackSize;
+	processOpt.budgetId = 3;
+	processOpt.parentPid = parentPid;
+	processOpt.kind = opt->kind;
+	processOpt.limit0 = 46;
+	processOpt.limit1 = 13;
+	pid = sceKernelCreateProcess(name, (createFlags & 0x7bffffff) | 0x4000000, path,
+				     &processOpt);
+	if (pid >= 0)
+		process->processId = pid;
+	return pid;
+}
+
+SceUID _appmgrProcessCreateProcess(struct AppState *app, const char *name,
+				   const AppmgrLaunchOptions *options,
+				   const SceKernelProcessOpt *opt,
+				   const AppmgrCreateProcessParam *param, int *error)
+{
+	struct AppState *other;
+	SceUID owner, pid = 0;
+	int permission, result;
+
+	PROCESS_CREATE_ASSERT(name != app->process.appName, 452,
+			      "_appmgrProcessCreateProcess");
+	PROCESS_CREATE_ASSERT(appmgrGetAppRunStatus(app) == 0x300 ||
+			      appmgrGetAppRunStatus(app) == 0x600, 460,
+			      "_appmgrProcessCreateProcess");
+	permission = sceKernelSetThreadAccessLevel(0x80);
+	switch (app->launchInfo.budgetType) {
+	case 2:
+		pid = appmgrProcessCreateSystem(&app->process, app->launchInfo.appPath, name,
+						app->launchInfo.processCreateFlags, opt,
+						app->launchSourceProcessId);
+		if (pid < 0) {
+			sceKernelSetThreadAccessLevel(permission);
+			PROCESS_CREATE_FAILED(pid, 476);
+			return pid;
+		}
+		break;
+	case 0:
+		pid = appmgrProcessCreateMini(&app->process, app->launchInfo.appPath, name,
+					      &app->launchInfo, options, opt,
+					      app->launchSourceProcessId, param);
+		if (pid < 0) {
+			sceKernelSetThreadAccessLevel(permission);
+			PROCESS_CREATE_FAILED(pid, 497);
+			return pid;
+		}
+		if (param != NULL && param->enableActivationEvents != 0 &&
+		    (app->process.content.attribute & 8) != 0)
+			app->launchInfo.processAttr |= 2;
+		break;
+	case 1:
+		pid = appmgrProcessCreateGame(&app->process, app->launchInfo.appPath, name,
+					      &app->launchInfo,
+					      app->launchInfo.processCreateFlags, options, opt,
+					      app->launchSourceProcessId, param,
+					      app->launchInfo.launchOrigin, error);
+		if (pid < 0) {
+			sceKernelSetThreadAccessLevel(permission);
+			PROCESS_CREATE_FAILED(pid, 529);
+			return pid;
+		}
+		if (param != NULL && param->enableActivationEvents != 0 &&
+		    (app->process.content.attribute & 8) != 0)
+			app->launchInfo.processAttr |= 2;
+		break;
+	default:
+		PROCESS_CREATE_ASSERT(0, 546, "_appmgrProcessCreateProcess");
+		break;
+	}
+	owner = g_appmgrCore2MutexOwner;
+	if (owner == sceKernelGetThreadId() &&
+	    _appListFindAndLockAppByName2(app->process.appName, &other, app->appId) == 0) {
+		other->process.appName[0] = '\0';
+		result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+		PROCESS_CREATE_LOCK(result, 558, "_appmgrProcessCreateProcess");
+		_deviceSetName(other->appId, NULL);
+		g_appmgrMainMutexOwner = -1;
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		PROCESS_CREATE_UNLOCK(result, 560, "_appmgrProcessCreateProcess");
+		result = _appmgrProcessQuitProcess(other, 4, 0, 0);
+		PROCESS_CREATE_RESULT(result, 564, "_appmgrProcessCreateProcess");
+		result = _appListUnlockApp(other);
+		PROCESS_CREATE_RESULT(result, 567, "_appmgrProcessCreateProcess");
+	}
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	PROCESS_CREATE_LOCK(result, 571, "_appmgrProcessCreateProcess");
+	app->process.processId = pid;
+	app->process.requestedProcessState = 1;
+	app->process.notifiedProcessState = 1;
+	app->process.runWhenUiOverlay = 1;
+	_deviceSetApp(app->appId, app->process.appName, app->launchInfo.proxyAppName);
+	_appListSetRunStatus(app, 0x30);
+	app->baseMiniEvictionValue = 100;
+	appmgrClearPendingAppEvents(app);
+	g_appmgrMainMutexOwner = -1;
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	PROCESS_CREATE_UNLOCK(result, 587, "_appmgrProcessCreateProcess");
+	if (app->launchCallbackId > 0) {
+		result = sceKernelNotifyCallback(app->launchCallbackId, app->process.processId);
+		if (result != 0)
+			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 595, "_appmgrProcessCreateProcess",
+				"[SceAppMgr:Error] callbackOnLaunch failed : 0x%08x\n", result);
+	}
+	_deviceSetProcessId(app->appId, app->process.processId);
+	_shellEventOnAppLoadedQueuePush(app->process.processId, app->appId);
+	sceKernelSetThreadAccessLevel(permission);
+	SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 610, "_appmgrProcessCreateProcess",
+		"[SceAppMgr] Create process succeeded : %s, pid=0x%08x.\n",
+		app->process.appName, pid);
+	return pid;
+}
+
+#undef PROCESS_CREATE_FAILED
+#undef PROCESS_CREATE_PANIC
+#undef PROCESS_CREATE_ASSERT
+#undef PROCESS_CREATE_UNLOCK
+#undef PROCESS_CREATE_RESULT
+#undef PROCESS_CREATE_CHECK_LOCK
+#undef PROCESS_CREATE_LOCK
+
 SceUID sceAppMgrSpawnProcessForDriver(const char *name, int type, const char *path,
 			   SceSize args, const void *argp, void *option, void *out)
 {
@@ -1903,4 +2463,14 @@ SceUID sceAppMgrSpawnProcessExtForDriver(const char *name, SceUInt32 type, const
 
 	return sceKernelSpawnProcessExt(name, type, path, args, argp, opt,
 				       useGxmDebugger != 0);
+}
+
+int SceAppMgrForDriver_D2541B4A(SceUInt32 request, AppmgrBootParam *bootParam)
+{
+	(void)request;
+	if (bootParam == NULL)
+		return (int)0x80801001;
+	bootParam->attribute = 0;
+	bootParam->appVersion = 0;
+	return 0;
 }

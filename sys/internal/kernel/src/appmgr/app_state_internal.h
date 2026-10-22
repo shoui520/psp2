@@ -221,6 +221,19 @@ int _appmgrProcessSuspendProcess(struct AppState *app, int flags,
 				struct AppmgrWaitObject *waiter);
 int _appmgrProcessResumeProcess(struct AppState *app);
 int _appmgrProcessStartProcess(struct AppState *app);
+
+struct SceKernelProcessOpt;
+
+/* what a launch asks of process creation */
+typedef struct AppmgrCreateProcessParam {
+	int useTitleIdAsName;		/* the process is named by its content's title ID */
+	int enableActivationEvents;	/* processAttr 2, where the content's attribute allows it */
+} AppmgrCreateProcessParam;
+
+SceUID _appmgrProcessCreateProcess(struct AppState *app, const char *name,
+				   const AppmgrLaunchOptions *options,
+				   const struct SceKernelProcessOpt *opt,
+				   const AppmgrCreateProcessParam *param, int *error);
 int vcStateChanged(SceUID pid, int enabled);
 void appmgrProcessIdleCallback(SceUID pid, unsigned int elapsed, void *argument);
 int videocodecUsageChangedCallback2(SceUID pid, unsigned int usage);
