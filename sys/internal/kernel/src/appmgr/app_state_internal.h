@@ -240,6 +240,11 @@ int videocodecUsageChangedCallback2(SceUID pid, unsigned int usage);
 int _sceAppMgrProcTerminatedHandler(SceUID pid);
 extern int (*g_appmgrProcTerminatedCallback)(struct AppState *app);
 
+/* SceSysroot's debug notifier for the application manager (SceSysrootForDriver_525B24C5) */
+typedef int (*AppmgrDebugNotifier)(int event, int arg1, int arg2, int arg3);
+
+extern AppmgrDebugNotifier g_appmgrDebugNotifier;
+
 /* app_arbitration.c */
 void initProcessStateUpdaterThread(void);
 

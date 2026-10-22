@@ -2,6 +2,7 @@
 
 #include <skeleton.h>
 #include "av_config_internal.h"
+#include <av_config/av_config.h>
 #include <threadmgr/threadmgr.h>
 #include <regmgr/regmgr.h>
 #include <sysmem/cpu.h>
@@ -1965,7 +1966,7 @@ int SceAVConfigForDriver_5662E799(unsigned int policy)
 }
 
 int SceAVConfigForDriver_2A2E9042(unsigned int index, unsigned int enabled,
-		unsigned int mode, int blanked)
+		unsigned int mode, int blanked, int reserved)
 {
 	AvConfigDisplayRequest *request;
 	SceKernelIntrStatus intr;
@@ -2028,7 +2029,7 @@ queued:
 int SceAVConfigForDriver_3817CDA1(unsigned int index, unsigned int enabled,
 		unsigned int mode)
 {
-	return SceAVConfigForDriver_2A2E9042(index, enabled, mode, 1);
+	return SceAVConfigForDriver_2A2E9042(index, enabled, mode, 1, 0);
 }
 int SceAVConfigForDriver_91792D6F(unsigned int index)
 {

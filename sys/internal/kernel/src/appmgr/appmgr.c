@@ -34,12 +34,13 @@ extern void initializeAppMgrDevice(void);
 extern int appmgrMountShellExternalDirectories(SceUID pid);
 extern int appmgrMapPath(const char *path, SceUID pid, char *mapped, SceSize size);
 
+SceUID g_appmgrShellPid;
 int g_appmgrPowerSaveMode;
 SceUID g_appmgrAppMutex = -1;
 int g_appmgrPowerSaveSuspendBackgroundApps;
 SceUID g_appmgrMainMutex = -1;
 SceUID g_appmgrMainMutexOwner = -1;
-SceUInt32 g_appmgrDebugNotifier;
+AppmgrDebugNotifier g_appmgrDebugNotifier;
 SceUID g_appmgrPhotoMutex = -1;
 int g_appmgrSafeMemoryKey;
 SceUID g_appmgrSafeMemoryMutex = -1;
@@ -288,7 +289,7 @@ int _sceAppMgrModuleStart(SceSize arglen, const void *argp)
 	SceSysrootForDriver_E9B4221F(sceAppMgrGetShellPidForDriver);
 	SceIofilemgrForDriver_CFAECF18(appmgrMapPath);
 	sceKernelRegisterSysEventHandler("SceAppMgr", appmgrSysEventHandler, NULL);
-	g_appmgrDebugNotifier = SceSysrootForDriver_525B24C5();
+	g_appmgrDebugNotifier = (AppmgrDebugNotifier)SceSysrootForDriver_525B24C5();
 	return 0;
 }
 

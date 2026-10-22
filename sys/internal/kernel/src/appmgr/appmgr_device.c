@@ -7,10 +7,13 @@
 #include <appmgr/appmgr_debugger.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/sysclib.h>
+#include "app_state_internal.h"
 #include "appmgr_device.h"
+#include "appmgr_shell_event.h"
 #include <display/display.h>
 #include <audio/audio.h>
 #include <audioin/audioin.h>
+#include <av_config/av_config.h>
 #include <appmgr/appmgr.h>
 
 extern SceUID g_appmgrMainMutex;
@@ -18,37 +21,11 @@ extern SceUID g_appmgrMainMutexOwner;
 extern int g_appmgrPowerSaveMode;
 extern int dumpBgmState(void);
 extern int _sceAppMgrReleaseSoundOutExclusive(void);
-extern void updateAudioArbitration2NoLock(void);
 extern int _updateDeviceArbitration2(void);
 
 SceUInt32 g_appmgrDisplayMergeAlpha = 256;
 SceUInt32 g_appmgrDisplayMergeSetting = 128;
-SceUID g_appmgrShellPid;
-int g_appmgrActiveAppId;
-SceUID g_appmgrRenderingPids[8];
-TouchProcessPriorities g_appmgrTouchProcessPriorities;
-int g_appmgrPrioritizeSystemChat;
-int g_appmgrInputImposed;
-int g_appmgrBtrmOwner;
-int g_appmgrRecommendedScreenOrientation;
-int g_appmgrCtrlpMode;
-SceUID g_appmgrSoundExclusivePid;
-int g_appmgrSoundExclusivePriority;
-int g_appmgrShellMainPortEnabled;
-SceUID g_appmgrMainOutPortOwner;
-SceUID g_appmgrBgmOutPortOwner;
-int g_appmgrBgmOutPortOwnerPriority;
-int g_appmgrBgmOutPortOwnerSubPriority;
-SceUID g_appmgrVoiceOutPortOwner;
-SceUID g_appmgrInputPortOwner;
-SceUInt32 g_appmgrOtherPortVolume;
-SceUID g_appmgrDisplayOwner[2];
-SceUID g_appmgrSystemChatPid;
-SceUInt32 g_appmgrSystemChatDuckingVolume;
-int g_appmgrBackRenderAppId;
-AppmgrDeviceOwners g_appmgrDeviceOwners;
-AppmgrAudioApp g_appmgrAudioApps[20];
-SceUID g_appmgrAudioUpdateMutex;
+AppmgrDevice g_appmgrDevice;
 
 #if !FW_DEBUG
 static const SceKernelDebugInfo deviceLockPanicInfo = {
@@ -61,6 +38,12 @@ static const SceKernelDebugInfo mainMutexPanicInfo = {
 	.fileHash = 0xc9656e8e,
 	.lineHash = 0x79d3a1f0,
 	.funcHash = 0x9d536bce,
+};
+
+static const SceKernelDebugInfo disableInPortPanicInfo = {
+	.fileHash = 0xbbec1541,
+	.lineHash = 0x41ac3252,
+	.funcHash = 0x09807dff,
 };
 
 static const SceKernelDebugInfo enableInPortPanicInfo = {
@@ -87,18 +70,84 @@ static const SceKernelDebugInfo enableOutPortPanicInfo = {
 	.funcHash = 0xfdc55a7d,
 };
 
-void appmgrDeviceLockPanic(void)
+static const SceKernelDebugInfo disableOutPortPanicInfo = {
+	.fileHash = 0xbbec1541,
+	.lineHash = 0x2883fc50,
+	.funcHash = 0x04cee74f,
+};
+
+__attribute__((noinline)) _Noreturn void appmgrDeviceLockPanic(void)
 {
 	SceDebugForDriver_391B5B74(&deviceLockPanicInfo, __builtin_return_address(0));
 }
 
-void appmgrMainMutexPanic(void)
+__attribute__((noinline)) _Noreturn void appmgrMainMutexPanic(void)
 {
 	SceDebugForDriver_391B5B74(&mainMutexPanicInfo, __builtin_return_address(0));
 }
 #endif
 
-AppmgrAudioApp *appmgrResolveBgmProxy(AppmgrAudioApp *app)
+#if FW_DEBUG
+#define APPMGR_DEVICE_FAIL(_line, _func) do { \
+	sceAppMgrDump(); \
+	dumpBgmState(); \
+	SCE_DBG_ASSERT_CHECK_FUNC(0, _line, _func); \
+} while (0)
+#else
+#define APPMGR_DEVICE_FAIL(_line, _func) appmgrDeviceLockPanic()
+#endif
+
+/* the device state is read and written with the main mutex held */
+#define APPMGR_DEVICE_ASSERT_LOCKED(_line, _func) do { \
+	SceUID _owner = g_appmgrMainMutexOwner; \
+	if (_owner != sceKernelGetThreadId()) \
+		APPMGR_DEVICE_FAIL(_line, _func); \
+} while (0)
+
+static inline __attribute__((always_inline)) AppmgrAudioApp *getAppByProcessId(SceUID pid)
+{
+	int index;
+
+	APPMGR_DEVICE_ASSERT_LOCKED(414, "getAppByProcessId");
+	if (pid < 0)
+		return NULL;
+	for (index = 0; index < 20; ++index) {
+		if (g_appmgrDevice.apps[index].appId > 0 &&
+		    g_appmgrDevice.apps[index].processId == pid)
+			return &g_appmgrDevice.apps[index];
+	}
+	return NULL;
+}
+
+static inline __attribute__((always_inline)) AppmgrAudioApp *getAppByAppId(int appId)
+{
+	int index;
+
+	APPMGR_DEVICE_ASSERT_LOCKED(382, "getAppByAppId");
+	if (appId < 0)
+		return NULL;
+	for (index = 0; index < 20; ++index) {
+		if (g_appmgrDevice.apps[index].appId == appId)
+			return &g_appmgrDevice.apps[index];
+	}
+	return NULL;
+}
+
+static inline __attribute__((always_inline)) AppmgrAudioApp *getActiveApp(void)
+{
+	APPMGR_DEVICE_ASSERT_LOCKED(398, "getActiveApp");
+	return getAppByAppId(g_appmgrDevice.activeAppId);
+}
+
+/* the shell is declared first, in the first entry */
+static inline __attribute__((always_inline)) AppmgrAudioApp *getShell(void)
+{
+	APPMGR_DEVICE_ASSERT_LOCKED(404, "getShell");
+	return g_appmgrDevice.apps[0].appId > 0 ? &g_appmgrDevice.apps[0] : NULL;
+}
+
+/* follows the BGM proxy names, at most 20 hops; a cycle leaves the BGM with the application */
+static inline AppmgrAudioApp *appmgrResolveBgmProxy(AppmgrAudioApp *app)
 {
 	AppmgrAudioApp *current = app;
 	int remaining = 20;
@@ -108,15 +157,14 @@ AppmgrAudioApp *appmgrResolveBgmProxy(AppmgrAudioApp *app)
 		return app;
 	while (current->proxyAppName[0] != '\0') {
 		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrAudioApps[index];
-
-			if (candidate->appId > 0 &&
-			    strncmp(candidate->appName, current->proxyAppName, 32) == 0)
+			if (g_appmgrDevice.apps[index].appId > 0 &&
+			    strncmp(g_appmgrDevice.apps[index].appName,
+				    (const char *)current->proxyAppName, 32) == 0)
 				break;
 		}
 		if (index == 20)
 			return current;
-		current = &g_appmgrAudioApps[index];
+		current = &g_appmgrDevice.apps[index];
 		if (--remaining == 0)
 			return app;
 	}
@@ -130,31 +178,31 @@ int dumpBgmState(void)
 
 	SCE_DBG_PRINTF_FUNC(0, 503, "dumpBgmState", "------------------------------------------\n");
 	SCE_DBG_PRINTF_FUNC(0, 504, "dumpBgmState", "soundExclusivePid=0x%08x\n",
-		g_appmgrSoundExclusivePid);
+		g_appmgrDevice.bgmState.soundExclusivePid);
 	SCE_DBG_PRINTF_FUNC(0, 505, "dumpBgmState", "soundExclusivePriority=0x%08x\n",
-		g_appmgrSoundExclusivePriority);
+		g_appmgrDevice.bgmState.soundExclusivePriority);
 	SCE_DBG_PRINTF_FUNC(0, 506, "dumpBgmState", "shellMainPortEnabled=0x%08x\n",
-		g_appmgrShellMainPortEnabled);
+		g_appmgrDevice.bgmState.shellMainPortEnabled);
 	SCE_DBG_PRINTF_FUNC(0, 507, "dumpBgmState", "mainOutPortOwner=0x%08x\n",
-		g_appmgrMainOutPortOwner);
+		g_appmgrDevice.bgmState.mainOutPortOwner);
 	SCE_DBG_PRINTF_FUNC(0, 508, "dumpBgmState", "bgmOutPortOwner=0x%08x\n",
-		g_appmgrBgmOutPortOwner);
+		g_appmgrDevice.bgmState.bgmOutPortOwner);
 	SCE_DBG_PRINTF_FUNC(0, 509, "dumpBgmState", "bgmOutPortOwnerPriority=%d\n",
-		g_appmgrBgmOutPortOwnerPriority);
+		g_appmgrDevice.bgmState.bgmOutPortOwnerPriority);
 	SCE_DBG_PRINTF_FUNC(0, 510, "dumpBgmState", "bgmOutPortOwnerSubPriority=%d\n",
-		g_appmgrBgmOutPortOwnerSubPriority);
+		g_appmgrDevice.bgmState.bgmOutPortOwnerSubPriority);
 	SCE_DBG_PRINTF_FUNC(0, 511, "dumpBgmState", "voiceOutPortOwner=0x%08x\n",
-		g_appmgrVoiceOutPortOwner);
+		g_appmgrDevice.bgmState.voiceOutPortOwner);
 	SCE_DBG_PRINTF_FUNC(0, 512, "dumpBgmState", "inputPortOwner=0x%08x\n",
-		g_appmgrInputPortOwner);
+		g_appmgrDevice.bgmState.inputPortOwner);
 	SCE_DBG_PRINTF_FUNC(0, 514, "dumpBgmState", "displayOwner0=0x%08x\n",
-		g_appmgrDisplayOwner[0]);
+		g_appmgrDevice.displayOwner[0]);
 	SCE_DBG_PRINTF_FUNC(0, 515, "dumpBgmState", "displayOwner1=0x%08x\n",
-		g_appmgrDisplayOwner[1]);
+		g_appmgrDevice.displayOwner[1]);
 	SCE_DBG_PRINTF_FUNC(0, 516, "dumpBgmState", "BTRM owner=0x%08x\n",
-		g_appmgrBtrmOwner);
+		g_appmgrDevice.appMgrState.btrmOwner);
 	for (index = 0; index != 20; ++index) {
-		AppmgrAudioApp *app = &g_appmgrAudioApps[index];
+		AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
 
 		if (app->appId > 0)
 			SCE_DBG_PRINTF_FUNC(0, 523, "dumpBgmState",
@@ -176,7 +224,7 @@ int lockAudioUpdate(void)
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 147, "lockAudioUpdate");
 	}
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result != 0 && (SceUInt32)result + 0x7ffd7fd4U > 1) {
 		sceAppMgrDump();
 		dumpBgmState();
@@ -189,7 +237,12 @@ int lockAudioUpdate(void)
 #endif
 
 #if !FW_DEBUG
-void appmgrEnableOutPortPanic(void)
+__attribute__((noinline)) _Noreturn void appmgrDisableOutPortPanic(void)
+{
+	SceDebugForDriver_391B5B74(&disableOutPortPanicInfo, __builtin_return_address(0));
+}
+
+__attribute__((noinline)) _Noreturn void appmgrEnableOutPortPanic(void)
 {
 	SceDebugForDriver_391B5B74(&enableOutPortPanicInfo, __builtin_return_address(0));
 }
@@ -200,7 +253,7 @@ void setVolume(const SceUID *exclusivePid, const SceUInt32 *otherVolume)
 	int index;
 
 	for (index = 0; index != 20; ++index) {
-		AppmgrAudioApp *app = &g_appmgrAudioApps[index];
+		AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
 		SceUID processId;
 		SceUInt32 volume;
 		int result;
@@ -211,7 +264,7 @@ void setVolume(const SceUID *exclusivePid, const SceUInt32 *otherVolume)
 		if (processId <= 0)
 			continue;
 		if (*exclusivePid == -1)
-			volume = processId == g_appmgrSystemChatPid ? 256 : *otherVolume;
+			volume = processId == g_appmgrDevice.systemChatPid ? 256 : *otherVolume;
 		else
 			volume = processId == *exclusivePid ? 256 : 0;
 		result = SceAudioForDriver_629261CD(processId, 6, volume, 0);
@@ -269,7 +322,7 @@ void _deviceAddApp(int appId)
 #endif
 	}
 	for (index = 1; index != 20; ++index) {
-		app = &g_appmgrAudioApps[index];
+		app = &g_appmgrDevice.apps[index];
 		if (app->appId > 0 && app->appId == appId) {
 #if FW_DEBUG
 			sceAppMgrDump();
@@ -281,7 +334,7 @@ void _deviceAddApp(int appId)
 		}
 	}
 	for (index = 1; index != 20; ++index) {
-		app = &g_appmgrAudioApps[index];
+		app = &g_appmgrDevice.apps[index];
 		if (app->appId == -1) {
 			app->appId = appId;
 			__builtin_memset(app->appName, 0, sizeof(app->appName));
@@ -336,7 +389,7 @@ void _deviceSetApp(int appId, const char *name, const char *proxyName)
 #endif
 	}
 	for (index = 1; index != 20; ++index) {
-		app = &g_appmgrAudioApps[index];
+		app = &g_appmgrDevice.apps[index];
 		if (app->appId > 0 && app->appId != appId &&
 		    strncmp(app->appName, name, 32) == 0) {
 #if FW_DEBUG
@@ -349,7 +402,7 @@ void _deviceSetApp(int appId, const char *name, const char *proxyName)
 		}
 	}
 	for (index = 1; index != 20; ++index) {
-		app = &g_appmgrAudioApps[index];
+		app = &g_appmgrDevice.apps[index];
 		if (app->appId == appId) {
 			__builtin_memcpy(app->appName, name, sizeof(app->appName));
 			__builtin_memcpy(app->proxyAppName, proxyName, sizeof(app->proxyAppName));
@@ -378,8 +431,8 @@ void _deviceSetActiveAppId(int appId)
 		appmgrDeviceLockPanic();
 #endif
 	}
-	g_appmgrActiveAppId = appId;
-	g_appmgrBackRenderAppId = appId;
+	g_appmgrDevice.activeAppId = appId;
+	g_appmgrDevice.backRenderAppId = appId;
 }
 
 void _deviceDeactivate(void)
@@ -395,7 +448,7 @@ void _deviceDeactivate(void)
 		appmgrDeviceLockPanic();
 #endif
 	}
-	g_appmgrActiveAppId = -1;
+	g_appmgrDevice.activeAppId = -1;
 }
 
 void _deviceSetRunStatus(int appId, int isRunning)
@@ -425,8 +478,8 @@ void _deviceSetRunStatus(int appId, int isRunning)
 	if (appId < 0)
 		return;
 	for (index = 0; index != 20; ++index) {
-		if (g_appmgrAudioApps[index].appId == appId) {
-			g_appmgrAudioApps[index].isRunning = isRunning;
+		if (g_appmgrDevice.apps[index].appId == appId) {
+			g_appmgrDevice.apps[index].isRunning = isRunning;
 			return;
 		}
 	}
@@ -459,8 +512,8 @@ void _deviceDeleteApp(int appId)
 	}
 	if (appId >= 0) {
 		for (index = 0; index != 20; ++index) {
-			if (g_appmgrAudioApps[index].appId == appId) {
-				app = &g_appmgrAudioApps[index];
+			if (g_appmgrDevice.apps[index].appId == appId) {
+				app = &g_appmgrDevice.apps[index];
 				break;
 			}
 		}
@@ -503,8 +556,8 @@ void _deviceGetBgmProxyAppName(int appId, char *name)
 	}
 	if (appId >= 0) {
 		for (index = 0; index != 20; ++index) {
-			if (g_appmgrAudioApps[index].appId == appId) {
-				__builtin_memcpy(name, g_appmgrAudioApps[index].proxyAppName, 32);
+			if (g_appmgrDevice.apps[index].appId == appId) {
+				__builtin_memcpy(name, g_appmgrDevice.apps[index].proxyAppName, 32);
 				return;
 			}
 		}
@@ -541,7 +594,7 @@ void getDeviceOwner(AppmgrDeviceOwners *owners)
 #endif
 	}
 	mutexOwner = g_appmgrMainMutexOwner;
-	shell = g_appmgrAudioApps[0].appId > 0 ? &g_appmgrAudioApps[0] : NULL;
+	shell = g_appmgrDevice.apps[0].appId > 0 ? &g_appmgrDevice.apps[0] : NULL;
 	if (mutexOwner != sceKernelGetThreadId()) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -552,7 +605,7 @@ void getDeviceOwner(AppmgrDeviceOwners *owners)
 #endif
 	}
 	mutexOwner = g_appmgrMainMutexOwner;
-	appId = g_appmgrActiveAppId;
+	appId = g_appmgrDevice.activeAppId;
 	if (mutexOwner != sceKernelGetThreadId()) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -564,14 +617,14 @@ void getDeviceOwner(AppmgrDeviceOwners *owners)
 	}
 	if (appId >= 0) {
 		for (index = 0; index != 20; ++index) {
-			if (g_appmgrAudioApps[index].appId == appId) {
-				active = &g_appmgrAudioApps[index];
+			if (g_appmgrDevice.apps[index].appId == appId) {
+				active = &g_appmgrDevice.apps[index];
 				break;
 			}
 		}
 	}
 	mutexOwner = g_appmgrMainMutexOwner;
-	appId = g_appmgrBackRenderAppId;
+	appId = g_appmgrDevice.backRenderAppId;
 	if (mutexOwner != sceKernelGetThreadId()) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -583,8 +636,8 @@ void getDeviceOwner(AppmgrDeviceOwners *owners)
 	}
 	if (appId >= 0) {
 		for (index = 0; index != 20; ++index) {
-			if (g_appmgrAudioApps[index].appId == appId) {
-				backRender = &g_appmgrAudioApps[index];
+			if (g_appmgrDevice.apps[index].appId == appId) {
+				backRender = &g_appmgrDevice.apps[index];
 				break;
 			}
 		}
@@ -604,8 +657,8 @@ void getDeviceOwner(AppmgrDeviceOwners *owners)
 		if (shell != NULL)
 			owners->inputPid = shell->processId;
 	}
-	inputImposed = g_appmgrInputImposed != 0 || powerSaveMode != 0;
-	ctrlpMode = g_appmgrCtrlpMode;
+	inputImposed = g_appmgrDevice.appMgrState.inputImposed != 0 || powerSaveMode != 0;
+	ctrlpMode = g_appmgrDevice.appMgrState.ctrlpMode;
 	owners->inputImposed = inputImposed;
 	owners->btrmOwnerAppId = -1;
 	owners->ctrlpMode = ctrlpMode;
@@ -637,12 +690,12 @@ AppmgrAudioApp *getChatOwnerApp2(void)
 
 	APPMGR_CHECK_CHAT_OWNER(752, "getChatOwnerApp2");
 	mutexOwner = g_appmgrMainMutexOwner;
-	if (g_appmgrPrioritizeSystemChat) {
-		processId = g_appmgrSystemChatPid;
+	if (g_appmgrDevice.appMgrState.prioritizeSystemChat) {
+		processId = g_appmgrDevice.systemChatPid;
 		APPMGR_CHECK_CHAT_OWNER(414, "getAppByProcessId");
 		if (processId >= 0) {
 			for (index = 0; index != 20; ++index) {
-				AppmgrAudioApp *app = &g_appmgrAudioApps[index];
+				AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
 
 				if (app->appId > 0 && app->processId == processId) {
 					chat = app;
@@ -655,12 +708,12 @@ AppmgrAudioApp *getChatOwnerApp2(void)
 		mutexOwner = g_appmgrMainMutexOwner;
 		APPMGR_CHECK_CHAT_OWNER(398, "getActiveApp");
 		mutexOwner = g_appmgrMainMutexOwner;
-		appId = g_appmgrActiveAppId;
+		appId = g_appmgrDevice.activeAppId;
 		APPMGR_CHECK_CHAT_OWNER(382, "getAppByAppId");
 		if (appId >= 0) {
 			for (index = 0; index != 20; ++index) {
-				if (g_appmgrAudioApps[index].appId == appId) {
-					active = &g_appmgrAudioApps[index];
+				if (g_appmgrDevice.apps[index].appId == appId) {
+					active = &g_appmgrDevice.apps[index];
 					break;
 				}
 			}
@@ -671,12 +724,12 @@ AppmgrAudioApp *getChatOwnerApp2(void)
 	}
 	APPMGR_CHECK_CHAT_OWNER(398, "getActiveApp");
 	mutexOwner = g_appmgrMainMutexOwner;
-	appId = g_appmgrActiveAppId;
+	appId = g_appmgrDevice.activeAppId;
 	APPMGR_CHECK_CHAT_OWNER(382, "getAppByAppId");
 	if (appId >= 0) {
 		for (index = 0; index != 20; ++index) {
-			if (g_appmgrAudioApps[index].appId == appId) {
-				active = &g_appmgrAudioApps[index];
+			if (g_appmgrDevice.apps[index].appId == appId) {
+				active = &g_appmgrDevice.apps[index];
 				break;
 			}
 		}
@@ -684,12 +737,12 @@ AppmgrAudioApp *getChatOwnerApp2(void)
 	if (active != NULL && active->isRunning && (active->audioPortOpenFlags & 3))
 		return active;
 	mutexOwner = g_appmgrMainMutexOwner;
-	processId = g_appmgrSystemChatPid;
+	processId = g_appmgrDevice.systemChatPid;
 	APPMGR_CHECK_CHAT_OWNER(414, "getAppByProcessId");
 	if (processId < 0)
 		return NULL;
 	for (index = 0; index != 20; ++index) {
-		AppmgrAudioApp *app = &g_appmgrAudioApps[index];
+		AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
 
 		if (app->appId > 0 && app->processId == processId) {
 			chat = app;
@@ -702,13 +755,13 @@ AppmgrAudioApp *getChatOwnerApp2(void)
 		mutexOwner = g_appmgrMainMutexOwner;
 		APPMGR_CHECK_CHAT_OWNER(398, "getActiveApp");
 		mutexOwner = g_appmgrMainMutexOwner;
-		appId = g_appmgrActiveAppId;
+		appId = g_appmgrDevice.activeAppId;
 		APPMGR_CHECK_CHAT_OWNER(382, "getAppByAppId");
 		active = NULL;
 		if (appId >= 0) {
 			for (index = 0; index != 20; ++index) {
-				if (g_appmgrAudioApps[index].appId == appId) {
-					active = &g_appmgrAudioApps[index];
+				if (g_appmgrDevice.apps[index].appId == appId) {
+					active = &g_appmgrDevice.apps[index];
 					break;
 				}
 			}
@@ -717,12 +770,344 @@ AppmgrAudioApp *getChatOwnerApp2(void)
 			return chat;
 	}
 	if (chat->isRunning && (chat->audioPortOpenFlags & 3) &&
-	    g_appmgrVoiceOutPortOwner == chat->processId)
+	    g_appmgrDevice.bgmState.voiceOutPortOwner == chat->processId)
 		return chat;
 	return NULL;
 }
 
 #undef APPMGR_CHECK_CHAT_OWNER
+
+#if FW_DEBUG
+#define APPMGR_PORT_FAIL(_line, _func, _panic) APPMGR_DEVICE_FAIL(_line, _func)
+#else
+#define APPMGR_PORT_FAIL(_line, _func, _panic) _panic
+#endif
+
+/* audio ports are switched with the main mutex released */
+#define APPMGR_DEVICE_ASSERT_UNLOCKED(_line, _func) do { \
+	SceUID _owner = g_appmgrMainMutexOwner; \
+	if (_owner == sceKernelGetThreadId()) \
+		APPMGR_DEVICE_FAIL(_line, _func); \
+} while (0)
+
+static inline __attribute__((always_inline)) void enableOutPort(SceUID pid, int type)
+{
+	if (pid != -1 && SceAudioForDriver_3440C1CA(pid, type, 1, 100, 0) < 0)
+		APPMGR_PORT_FAIL(910, "enableOutPort", appmgrEnableOutPortPanic());
+}
+
+/* an exclusive owner takes the port at once; otherwise it fades out */
+static inline __attribute__((always_inline)) void disableOutPort(SceUID pid, int type, int wait)
+{
+	if (pid != -1 && SceAudioForDriver_3440C1CA(pid, type, 0, wait ? 0 : 400, wait) < 0)
+		APPMGR_PORT_FAIL(921, "disableOutPort", appmgrDisableOutPortPanic());
+}
+
+static inline __attribute__((always_inline)) void enableInPort(SceUID pid)
+{
+	if (pid != -1 && SceAudioInForDriver_E4042F6F(pid, 0, 1, 0) < 0)
+		APPMGR_PORT_FAIL(930, "enableInPort",
+			SceDebugForDriver_391B5B74(&enableInPortPanicInfo, __builtin_return_address(0)));
+}
+
+static inline __attribute__((always_inline)) void disableInPort(SceUID pid)
+{
+	if (pid != -1 && SceAudioInForDriver_E4042F6F(pid, 0, 0, 0) < 0)
+		APPMGR_PORT_FAIL(939, "disableInPort",
+			SceDebugForDriver_391B5B74(&disableInPortPanicInfo, __builtin_return_address(0)));
+}
+
+/*
+ * The BGM port goes to the running application of the highest BGM priority,
+ * else to the active application, else to the shell, each through its BGM
+ * proxy. In power save mode the suspended active application keeps a BGM
+ * priority it has.
+ */
+static inline __attribute__((always_inline)) AppmgrAudioApp *getHighestBgmPriorityApp(
+		int powerSaveMode, int *priority, int *subPriority)
+{
+	AppmgrAudioApp *active, *shell, *proxy;
+	AppmgrAudioApp *highest = NULL, *owner = NULL;
+	int highestPriority = -1, highestSubPriority = 0, subPriorityEnabled = 0;
+	int index;
+
+	APPMGR_DEVICE_ASSERT_LOCKED(583, "getHighestBgmPriorityApp");
+	active = getActiveApp();
+	shell = getShell();
+	for (index = 0; index != 20; ++index) {
+		AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
+
+		if (!app->isRunning &&
+		    !(powerSaveMode && app == active && app->bgmPriority > 0))
+			continue;
+		if (app->bgmPriority > 0 && app->bgmPriority > highestPriority) {
+			highestPriority = app->bgmPriority;
+			highest = app;
+		}
+		if (app->enableBgmSubPriority) {
+			subPriorityEnabled = 1;
+			if (highestSubPriority < app->bgmSubPriority)
+				highestSubPriority = app->bgmSubPriority;
+		}
+	}
+	if (highest != NULL) {
+		if (!subPriorityEnabled || highest->bgmPriority > highestSubPriority) {
+			owner = appmgrResolveBgmProxy(highest);
+			*priority = owner->bgmPriority;
+		} else {
+			if (active != NULL) {
+				if (active->isRunning || !powerSaveMode)
+					owner = appmgrResolveBgmProxy(active);
+			} else if (shell != NULL) {
+				proxy = appmgrResolveBgmProxy(shell);
+				owner = proxy != NULL ? proxy : shell;
+			}
+			*priority = highestSubPriority;
+		}
+	} else {
+		if (active != NULL) {
+			if (active->isRunning || (subPriorityEnabled && !powerSaveMode)) {
+				proxy = appmgrResolveBgmProxy(active);
+				owner = proxy != NULL ? proxy : active;
+			}
+		} else if (shell != NULL) {
+			proxy = appmgrResolveBgmProxy(shell);
+			owner = proxy != NULL ? proxy : shell;
+		}
+		*priority = highestSubPriority;
+	}
+	*subPriority = highestSubPriority;
+	return owner;
+}
+
+/*
+ * The audio ports' owners: a running sound-exclusive application takes them
+ * all (one with a display request first, then by priority); otherwise the
+ * active application has the main port, the chat owner the voice and input
+ * ports, and getHighestBgmPriorityApp's the BGM port.
+ */
+static inline __attribute__((always_inline)) void getCurrentPortOwener(AppmgrBgmState *owner,
+		int powerSaveMode)
+{
+	AppmgrBgmState state;
+	AppmgrAudioApp *exclusive = NULL;
+	AppmgrAudioApp *shell, *active, *chat, *bgmOwner;
+	int priority, subPriority;
+	int index;
+
+	APPMGR_DEVICE_ASSERT_LOCKED(783, "getCurrentPortOwener");
+	if (g_appmgrDevice.audioPortsDisabled) {
+		state.soundExclusivePid = -1;
+		state.soundExclusivePriority = -1;
+		state.displayRequestEnabled = 0;
+		state.displayRequestMode = 0;
+		state.displayRequestBlanked = 0;
+		state.soundExclusiveDisplayRequest = 0;
+		state.shellMainPortEnabled = 0;
+		state.mainOutPortOwner = -1;
+		state.bgmOutPortOwner = -1;
+		state.bgmOutPortOwnerPriority = 0xFFFF;
+		state.bgmOutPortOwnerSubPriority = 0xFFFF;
+		state.voiceOutPortOwner = -1;
+		state.voiceOutPortOwnerAppId = -1;
+		state.inputPortOwner = -1;
+		state.otherPortVolume = 256;
+		state.systemChatDucking = 0;
+		*owner = state;
+		return;
+	}
+	for (index = 0; index != 20; ++index) {
+		AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
+
+		if (!app->isRunning || app->soundExclusivePriority < 0)
+			continue;
+		if (exclusive == NULL)
+			exclusive = app;
+		else if (!exclusive->soundExclusiveDisplayRequest) {
+			if (app->soundExclusiveDisplayRequest ||
+			    app->soundExclusivePriority > exclusive->soundExclusivePriority)
+				exclusive = app;
+		} else if (app->soundExclusiveDisplayRequest &&
+			   app->soundExclusivePriority > exclusive->soundExclusivePriority) {
+			exclusive = app;
+		}
+	}
+	shell = getShell();
+	if (exclusive != NULL) {
+		state.soundExclusivePid = exclusive->processId;
+		state.soundExclusivePriority = exclusive->soundExclusivePriority;
+		state.displayRequestEnabled = exclusive->displayRequestEnabled;
+		state.displayRequestMode = exclusive->displayRequestMode;
+		state.displayRequestBlanked = exclusive->displayRequestBlanked;
+		state.soundExclusiveDisplayRequest = exclusive->soundExclusiveDisplayRequest;
+		state.shellMainPortEnabled = exclusive->processId == g_appmgrDevice.shellPid;
+		state.mainOutPortOwner = exclusive->processId == g_appmgrDevice.shellPid ?
+			-1 : exclusive->processId;
+		state.bgmOutPortOwner = exclusive->processId;
+		state.bgmOutPortOwnerPriority = exclusive->bgmPriority;
+		state.bgmOutPortOwnerSubPriority = 0;
+		chat = getChatOwnerApp2();
+		state.voiceOutPortOwner = chat != NULL ? chat->processId : -1;
+		state.voiceOutPortOwnerAppId = chat != NULL ? chat->appId : -1;
+		state.inputPortOwner = state.voiceOutPortOwner;
+		state.otherPortVolume = 256;
+		state.systemChatDucking = 0;
+		*owner = state;
+		return;
+	}
+	state.soundExclusivePid = -1;
+	state.soundExclusivePriority = -1;
+	state.displayRequestEnabled = 0;
+	state.displayRequestMode = 0;
+	state.displayRequestBlanked = 0;
+	state.soundExclusiveDisplayRequest = 0;
+	state.shellMainPortEnabled = shell != NULL;
+	active = getActiveApp();
+	chat = getChatOwnerApp2();
+	state.mainOutPortOwner = active != NULL ? active->processId : -1;
+	if (chat != NULL) {
+		state.voiceOutPortOwner = chat->processId;
+		state.voiceOutPortOwnerAppId = chat->appId;
+		if (chat->processId == g_appmgrDevice.systemChatPid) {
+			state.systemChatDucking = 1;
+			state.otherPortVolume = g_appmgrDevice.systemChatDuckingVolume;
+		} else {
+			state.otherPortVolume = 256;
+			state.systemChatDucking = 0;
+		}
+	} else {
+		state.voiceOutPortOwner = -1;
+		state.voiceOutPortOwnerAppId = -1;
+		state.otherPortVolume = 256;
+		state.systemChatDucking = 0;
+	}
+	state.inputPortOwner = state.voiceOutPortOwner;
+	bgmOwner = getHighestBgmPriorityApp(powerSaveMode, &priority, &subPriority);
+	if (!g_appmgrDevice.bgmEnabled) {
+		state.bgmOutPortOwner = -1;
+		state.bgmOutPortOwnerPriority = 0xFFFF;
+		state.bgmOutPortOwnerSubPriority = 0xFFFF;
+	} else if (bgmOwner == NULL) {
+		state.bgmOutPortOwner = -1;
+		state.bgmOutPortOwnerPriority = 0xFFFF;
+		state.bgmOutPortOwnerSubPriority = subPriority;
+	} else {
+		state.bgmOutPortOwner = bgmOwner->processId;
+		state.bgmOutPortOwnerPriority = priority;
+		state.bgmOutPortOwnerSubPriority = subPriority;
+	}
+	*owner = state;
+}
+
+/*
+ * Works out the ports' owners under the main mutex, then, with it released,
+ * takes the ports from their old owners and gives them to the new ones.
+ */
+void updateAudioArbitration2NoLock(void)
+{
+	AppmgrBgmState *current = &g_appmgrDevice.bgmState;
+	AppmgrBgmState next;
+	AppmgrAudioApp *shell;
+	int wait, result;
+
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	if (result != 0) {
+#if FW_DEBUG
+		SCE_DBG_PRINTF_FUNC(0, 980, "updateAudioArbitration2NoLock",
+			"Failed to lock ret=0x%08x\n", result);
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 980, "updateAudioArbitration2NoLock");
+#else
+		appmgrMainMutexPanic();
+#endif
+	} else {
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
+	}
+	getCurrentPortOwener(&next, g_appmgrPowerSaveMode);
+	shell = getShell();
+	g_appmgrDevice.appMgrState.systemChatDucking = next.systemChatDucking;
+	g_appmgrMainMutexOwner = -1;
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	if (result != 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_PRINTF_FUNC(0, 986, "updateAudioArbitration2NoLock",
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+			result, result, 0, 0);
+#else
+		appmgrMainMutexPanic();
+#endif
+	}
+
+	wait = next.soundExclusivePid != -1;
+	if (current->shellMainPortEnabled != next.shellMainPortEnabled && shell != NULL &&
+	    current->shellMainPortEnabled)
+		disableOutPort(shell->processId, 0, wait);
+	if (current->mainOutPortOwner != next.mainOutPortOwner)
+		disableOutPort(current->mainOutPortOwner, 0, wait);
+	if (current->bgmOutPortOwner != next.bgmOutPortOwner)
+		disableOutPort(current->bgmOutPortOwner, 1, wait);
+	if (current->voiceOutPortOwner != next.voiceOutPortOwner)
+		disableOutPort(current->voiceOutPortOwner, 2, wait);
+	if (current->inputPortOwner != next.inputPortOwner)
+		disableInPort(current->voiceOutPortOwner);
+
+	if (current->voiceOutPortOwner != next.voiceOutPortOwner &&
+	    current->voiceOutPortOwnerAppId != -1 && next.voiceOutPortOwnerAppId != -1 &&
+	    current->soundExclusivePid == -1 && next.soundExclusivePid == -1) {
+		APPMGR_DEVICE_ASSERT_UNLOCKED(1023, "updateAudioArbitration2NoLock");
+		_shellEventVoiceChatAppChangedQueuePush(current->voiceOutPortOwnerAppId,
+			next.voiceOutPortOwnerAppId, current->voiceOutPortOwner,
+			next.voiceOutPortOwner);
+	}
+
+	if ((next.soundExclusivePid != current->soundExclusivePid ||
+	     current->soundExclusiveDisplayRequest != next.soundExclusiveDisplayRequest ||
+	     current->soundExclusivePriority != next.soundExclusivePriority) &&
+	    current->soundExclusivePid != -1 && current->soundExclusiveDisplayRequest)
+		SceAVConfigForDriver_91792D6F(current->soundExclusivePriority);
+	if (current->otherPortVolume != next.otherPortVolume ||
+	    current->soundExclusivePid != next.soundExclusivePid)
+		setVolume(&next.soundExclusivePid, &next.otherPortVolume);
+	if ((current->soundExclusivePid != next.soundExclusivePid ||
+	     current->soundExclusivePriority != next.soundExclusivePriority ||
+	     current->displayRequestMode != next.displayRequestMode ||
+	     current->displayRequestEnabled != next.displayRequestEnabled ||
+	     current->displayRequestBlanked != next.displayRequestBlanked ||
+	     current->soundExclusiveDisplayRequest != next.soundExclusiveDisplayRequest) &&
+	    next.soundExclusivePid != -1 && next.soundExclusiveDisplayRequest)
+		SceAVConfigForDriver_2A2E9042(next.soundExclusivePriority,
+			next.displayRequestEnabled, next.displayRequestMode,
+			next.displayRequestBlanked, 0);
+
+	if (current->shellMainPortEnabled != next.shellMainPortEnabled && shell != NULL &&
+	    next.shellMainPortEnabled)
+		enableOutPort(shell->processId, 0);
+	if (current->mainOutPortOwner != next.mainOutPortOwner) {
+		if (g_appmgrDebugNotifier != NULL)
+			g_appmgrDebugNotifier(16, next.mainOutPortOwner, current->mainOutPortOwner, 0);
+		enableOutPort(next.mainOutPortOwner, 0);
+	}
+	if (current->bgmOutPortOwner != next.bgmOutPortOwner) {
+		if (g_appmgrDebugNotifier != NULL)
+			g_appmgrDebugNotifier(17, next.bgmOutPortOwner, current->bgmOutPortOwner, 0);
+		enableOutPort(next.bgmOutPortOwner, 1);
+	}
+	if (current->voiceOutPortOwner != next.voiceOutPortOwner) {
+		if (g_appmgrDebugNotifier != NULL)
+			g_appmgrDebugNotifier(18, next.voiceOutPortOwner,
+				current->voiceOutPortOwner, 0);
+		enableOutPort(next.voiceOutPortOwner, 2);
+	}
+	if (current->inputPortOwner != next.inputPortOwner) {
+		if (g_appmgrDebugNotifier != NULL)
+			g_appmgrDebugNotifier(19, next.inputPortOwner, current->inputPortOwner, 0);
+		enableInPort(next.voiceOutPortOwner);
+	}
+	*current = next;
+}
 
 #if FW_DEBUG
 void updateAudioArbitration2(void)
@@ -741,7 +1126,7 @@ void updateAudioArbitration2(void)
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 147, "lockAudioUpdate");
 	}
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result != 0) {
 		if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 			sceAppMgrDump();
@@ -753,7 +1138,7 @@ void updateAudioArbitration2(void)
 		return;
 	}
 	updateAudioArbitration2NoLock();
-	result = sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1);
+	result = sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1);
 	if (result != 0) {
 		sceAppMgrDump();
 		dumpBgmState();
@@ -797,7 +1182,7 @@ void appmgrOnAudioInClose(SceUID pid)
 	}
 	if (pid >= 0) {
 		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrAudioApps[index];
+			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
 
 			if (candidate->appId > 0 && candidate->processId == pid) {
 				app = candidate;
@@ -844,10 +1229,10 @@ void appmgrOnAudioInClose(SceUID pid)
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result == 0) {
 		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 			appmgrDeviceLockPanic();
 	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 		appmgrDeviceLockPanic();
@@ -888,7 +1273,7 @@ void appmgrOnAudioInOpen(SceUID pid)
 	}
 	if (pid >= 0) {
 		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrAudioApps[index];
+			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
 
 			if (candidate->appId > 0 && candidate->processId == pid) {
 				app = candidate;
@@ -935,10 +1320,10 @@ void appmgrOnAudioInOpen(SceUID pid)
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result == 0) {
 		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 			appmgrDeviceLockPanic();
 	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 		appmgrDeviceLockPanic();
@@ -979,7 +1364,7 @@ void appmgrOnAudioOutRelease(SceUID pid)
 	}
 	if (pid >= 0) {
 		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrAudioApps[index];
+			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
 
 			if (candidate->appId > 0 && candidate->processId == pid) {
 				app = candidate;
@@ -1026,10 +1411,10 @@ void appmgrOnAudioOutRelease(SceUID pid)
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result == 0) {
 		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 			appmgrDeviceLockPanic();
 	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 		appmgrDeviceLockPanic();
@@ -1070,7 +1455,7 @@ void appmgrOnAudioOutOpen(SceUID pid)
 	}
 	if (pid >= 0) {
 		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrAudioApps[index];
+			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
 
 			if (candidate->appId > 0 && candidate->processId == pid) {
 				app = candidate;
@@ -1117,10 +1502,10 @@ void appmgrOnAudioOutOpen(SceUID pid)
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result == 0) {
 		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 			appmgrDeviceLockPanic();
 	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 		appmgrDeviceLockPanic();
@@ -1160,7 +1545,7 @@ int _sceAppMgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled,
 	}
 	if (pid >= 0) {
 		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrAudioApps[index];
+			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
 
 			if (candidate->appId > 0 && candidate->processId == pid) {
 				app = candidate;
@@ -1239,7 +1624,7 @@ int _sceAppMgrReleaseSoundOutExclusive(void)
 	}
 	if (pid >= 0) {
 		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrAudioApps[index];
+			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
 
 			if (candidate->appId > 0 && candidate->processId == pid) {
 				app = candidate;
@@ -1308,10 +1693,10 @@ int _sceAppMgrReleaseSoundOutExclusive(void)
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result == 0) {
 		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 			appmgrDeviceLockPanic();
 	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 		appmgrDeviceLockPanic();
@@ -1364,7 +1749,7 @@ int sceAppMgrAcquireBgmPort(void)
 	}
 	if (pid >= 0) {
 		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *app = &g_appmgrAudioApps[index];
+			AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
 
 			if (app->appId > 0 && app->processId == pid) {
 				app->bgmPriority = 256;
@@ -1394,10 +1779,10 @@ int sceAppMgrAcquireBgmPort(void)
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result == 0) {
 		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 			appmgrDeviceLockPanic();
 	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 		appmgrDeviceLockPanic();
@@ -1454,7 +1839,7 @@ int sceAppMgrAcquireBgmPortForMusicPlayer(void)
 	}
 	if (pid >= 0) {
 		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *app = &g_appmgrAudioApps[index];
+			AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
 
 			if (app->appId > 0 && app->processId == pid) {
 				app->bgmPriority = 130;
@@ -1484,10 +1869,10 @@ int sceAppMgrAcquireBgmPortForMusicPlayer(void)
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result == 0) {
 		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 			appmgrDeviceLockPanic();
 	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 		appmgrDeviceLockPanic();
@@ -1540,7 +1925,7 @@ int sceAppMgrReleaseBgmPort(void)
 	}
 	if (pid >= 0) {
 		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *app = &g_appmgrAudioApps[index];
+			AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
 
 			if (app->appId > 0 && app->processId == pid) {
 				app->bgmPriority = 0;
@@ -1570,10 +1955,10 @@ int sceAppMgrReleaseBgmPort(void)
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result == 0) {
 		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 			appmgrDeviceLockPanic();
 	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 		appmgrDeviceLockPanic();
@@ -1634,7 +2019,7 @@ int sceAppMgrAcquireBgmPortWithPriority(int priority)
 	}
 	if (pid >= 0) {
 		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *app = &g_appmgrAudioApps[index];
+			AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
 
 			if (app->appId > 0 && app->processId == pid) {
 				app->bgmPriority = priority;
@@ -1664,10 +2049,10 @@ int sceAppMgrAcquireBgmPortWithPriority(int priority)
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result == 0) {
 		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 			appmgrDeviceLockPanic();
 	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 		appmgrDeviceLockPanic();
@@ -1718,7 +2103,7 @@ int sceAppMgrSetBgmSubPriority(int enabled, int priority)
 	}
 	if (pid >= 0) {
 		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *app = &g_appmgrAudioApps[index];
+			AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
 
 			if (app->appId > 0 && app->processId == pid) {
 				app->enableBgmSubPriority = enabled;
@@ -1749,10 +2134,10 @@ int sceAppMgrSetBgmSubPriority(int enabled, int priority)
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result == 0) {
 		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 			appmgrDeviceLockPanic();
 	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 		appmgrDeviceLockPanic();
@@ -1799,7 +2184,7 @@ int sceAppMgrSetBgmSubPriorityForSystemChat(int enabled)
 	}
 	if (pid >= 0) {
 		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *app = &g_appmgrAudioApps[index];
+			AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
 
 			if (app->appId > 0 && app->processId == pid) {
 				app->enableBgmSubPriority = enabled;
@@ -1830,10 +2215,10 @@ int sceAppMgrSetBgmSubPriorityForSystemChat(int enabled)
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result == 0) {
 		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 			appmgrDeviceLockPanic();
 	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 		appmgrDeviceLockPanic();
@@ -1858,7 +2243,7 @@ void _deviceSetName(int appId, const char *name)
 #endif
 	}
 	for (index = 0; index != 20; ++index) {
-		AppmgrAudioApp *app = &g_appmgrAudioApps[index];
+		AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
 
 		if (app->appId != appId)
 			continue;
@@ -1896,7 +2281,7 @@ int appmgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled,
 		appmgrDeviceLockPanic();
 	if (pid >= 0) {
 		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrAudioApps[index];
+			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
 
 			if (candidate->appId > 0 && candidate->processId == pid) {
 				app = candidate;
@@ -1925,10 +2310,10 @@ int appmgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled,
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result == 0) {
 		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 			appmgrDeviceLockPanic();
 	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 		appmgrDeviceLockPanic();
@@ -1969,7 +2354,7 @@ int appmgrAcquireSoundOutExclusive2(int priority, SceUInt32 displayEnabled,
 		appmgrDeviceLockPanic();
 	if (pid >= 0) {
 		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrAudioApps[index];
+			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
 
 			if (candidate->appId > 0 && candidate->processId == pid) {
 				app = candidate;
@@ -1998,10 +2383,10 @@ int appmgrAcquireSoundOutExclusive2(int priority, SceUInt32 displayEnabled,
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result == 0) {
 		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 			appmgrDeviceLockPanic();
 	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 		appmgrDeviceLockPanic();
@@ -2044,7 +2429,7 @@ int appmgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
 		appmgrDeviceLockPanic();
 	if (pid >= 0) {
 		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrAudioApps[index];
+			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
 
 			if (candidate->appId > 0 && candidate->processId == pid) {
 				app = candidate;
@@ -2073,10 +2458,10 @@ int appmgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result == 0) {
 		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 			appmgrDeviceLockPanic();
 	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 		appmgrDeviceLockPanic();
@@ -2117,7 +2502,7 @@ int sceAppMgrDeclareSystemChatApp(void)
 	} else {
 		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
-	g_appmgrSystemChatPid = sceKernelGetProcessId();
+	g_appmgrDevice.systemChatPid = sceKernelGetProcessId();
 	g_appmgrMainMutexOwner = -1;
 	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
@@ -2137,14 +2522,14 @@ int sceAppMgrDeclareSystemChatApp(void)
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result != 0 && (SceUInt32)result + 0x7ffd7fd4U > 1)
 		appmgrDeviceLockPanic();
 #endif
 	if (result != 0)
 		return result;
-	setVolume(&g_appmgrSoundExclusivePid, &g_appmgrOtherPortVolume);
-	result = sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1);
+	setVolume(&g_appmgrDevice.bgmState.soundExclusivePid, &g_appmgrDevice.bgmState.otherPortVolume);
+	result = sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -2165,10 +2550,10 @@ int sceAppMgrDeclareSystemChatApp(void)
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result == 0) {
 		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 			appmgrDeviceLockPanic();
 	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 		appmgrDeviceLockPanic();
@@ -2203,9 +2588,9 @@ int sceAppMgrEnablePrioritizingSystemChat(int enabled)
 	}
 #if FW_DEBUG
 	g_appmgrMainMutexOwner = -1;
-	g_appmgrPrioritizeSystemChat = enabled;
+	g_appmgrDevice.appMgrState.prioritizeSystemChat = enabled;
 #else
-	g_appmgrPrioritizeSystemChat = enabled;
+	g_appmgrDevice.appMgrState.prioritizeSystemChat = enabled;
 	g_appmgrMainMutexOwner = -1;
 #endif
 	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
@@ -2231,10 +2616,10 @@ int sceAppMgrEnablePrioritizingSystemChat(int enabled)
 		mutexOwner = g_appmgrMainMutexOwner;
 		if (mutexOwner == sceKernelGetThreadId())
 			appmgrDeviceLockPanic();
-		result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+		result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 		if (result == 0) {
 			updateAudioArbitration2NoLock();
-			if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+			if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 				appmgrDeviceLockPanic();
 		} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 			appmgrDeviceLockPanic();
@@ -2275,9 +2660,9 @@ int sceAppMgrEnableDuckingOnSystemChat(int enabled, SceUInt32 volume)
 		}
 #if FW_DEBUG
 		g_appmgrMainMutexOwner = -1;
-		g_appmgrSystemChatDuckingVolume = volume;
+		g_appmgrDevice.systemChatDuckingVolume = volume;
 #else
-		g_appmgrSystemChatDuckingVolume = volume;
+		g_appmgrDevice.systemChatDuckingVolume = volume;
 		g_appmgrMainMutexOwner = -1;
 #endif
 		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
@@ -2309,9 +2694,9 @@ int sceAppMgrEnableDuckingOnSystemChat(int enabled, SceUInt32 volume)
 		}
 #if FW_DEBUG
 		g_appmgrMainMutexOwner = -1;
-		g_appmgrSystemChatDuckingVolume = 256;
+		g_appmgrDevice.systemChatDuckingVolume = 256;
 #else
-		g_appmgrSystemChatDuckingVolume = 256;
+		g_appmgrDevice.systemChatDuckingVolume = 256;
 		g_appmgrMainMutexOwner = -1;
 #endif
 		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
@@ -2338,10 +2723,10 @@ int sceAppMgrEnableDuckingOnSystemChat(int enabled, SceUInt32 volume)
 		mutexOwner = g_appmgrMainMutexOwner;
 		if (mutexOwner == sceKernelGetThreadId())
 			appmgrDeviceLockPanic();
-		result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+		result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 		if (result == 0) {
 			updateAudioArbitration2NoLock();
-			if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+			if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 				appmgrDeviceLockPanic();
 		} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 			appmgrDeviceLockPanic();
@@ -2391,14 +2776,14 @@ int sceAppMgrSetBgmProxyApp(const char *appName)
 	if (pid < 0)
 		goto notFound;
 	for (index = 0; index != 20; ++index) {
-		app = &g_appmgrAudioApps[index];
+		app = &g_appmgrDevice.apps[index];
 		if (app->appId > 0 && app->processId == pid)
 			break;
 	}
 	if (index == 20)
 		goto notFound;
 	if (appName != NULL)
-		strncpy(app->proxyAppName, appName, 32);
+		strncpy((char *)app->proxyAppName, appName, 32);
 	else
 		memset(app->proxyAppName, 0, 32);
 	g_appmgrMainMutexOwner = -1;
@@ -2423,10 +2808,10 @@ int sceAppMgrSetBgmProxyApp(const char *appName)
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result == 0) {
 		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1) != 0)
+		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
 			appmgrDeviceLockPanic();
 	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
 		appmgrDeviceLockPanic();
@@ -2473,12 +2858,12 @@ int _sceAppMgrDeviceDeclareShell(const char *appName, int appId, SceUID pid)
 		sceKernelGetThreadId();
 	}
 	for (index = 0; index != 20; ++index) {
-		app = &g_appmgrAudioApps[index];
+		app = &g_appmgrDevice.apps[index];
 		if (app->appId > 0 && app->processId == pid)
 			app->appId = -1;
 	}
-	if (g_appmgrActiveAppId == appId)
-		g_appmgrActiveAppId = -1;
+	if (g_appmgrDevice.activeAppId == appId)
+		g_appmgrDevice.activeAppId = -1;
 	g_appmgrMainMutexOwner = -1;
 	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
@@ -2507,10 +2892,10 @@ int _sceAppMgrDeviceDeclareShell(const char *appName, int appId, SceUID pid)
 	} else {
 		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
-	app = &g_appmgrAudioApps[0];
+	app = &g_appmgrDevice.apps[0];
 	app->isRunning = 1;
 	app->soundExclusivePriority = -1;
-	g_appmgrShellPid = pid;
+	g_appmgrDevice.shellPid = pid;
 	app->appId = appId;
 	app->processId = pid;
 	__builtin_memset(app->appName, 0, sizeof(app->appName));
@@ -2527,7 +2912,7 @@ int _sceAppMgrDeviceDeclareShell(const char *appName, int appId, SceUID pid)
 	SceDisplayForDriver_BC76296A(0);
 	sceAudioOutSetAdoptMode(1);
 	for (index = 0; index != 20; ++index) {
-		app = &g_appmgrAudioApps[index];
+		app = &g_appmgrDevice.apps[index];
 		if (app->appId > 0 && app->processId == pid) {
 			strncpy(app->appName, appName, 32);
 			break;
@@ -2551,7 +2936,7 @@ int _sceAppMgrDeviceDeclareShell(const char *appName, int appId, SceUID pid)
 
 int _sceAppMgrDeviceUndeclareShell(void)
 {
-	AppmgrAudioApp *app = &g_appmgrAudioApps[0];
+	AppmgrAudioApp *app = &g_appmgrDevice.apps[0];
 	int result;
 
 	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
@@ -2583,7 +2968,7 @@ int _sceAppMgrDeviceUndeclareShell(void)
 	app->audioPortOpenFlags = 0;
 	app->btrmAcquired = 0;
 	__builtin_memset(app->proxyAppName, 0, sizeof(app->proxyAppName));
-	g_appmgrShellPid = -1;
+	g_appmgrDevice.shellPid = -1;
 	SceDisplayForDriver_BC76296A(0);
 	sceAudioOutSetAdoptMode(1);
 	g_appmgrMainMutexOwner = -1;
@@ -2622,9 +3007,9 @@ int _changeDeviceArbitrationForImpose2(int imposed)
 	}
 #if FW_DEBUG
 	g_appmgrMainMutexOwner = -1;
-	g_appmgrInputImposed = imposed;
+	g_appmgrDevice.appMgrState.inputImposed = imposed;
 #else
-	g_appmgrInputImposed = imposed;
+	g_appmgrDevice.appMgrState.inputImposed = imposed;
 	g_appmgrMainMutexOwner = -1;
 #endif
 	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
@@ -2665,8 +3050,8 @@ int _changeDeviceArbitrationForImpose3(SceUInt32 mode)
 		sceKernelGetThreadId();
 	}
 	g_appmgrMainMutexOwner = -1;
-	g_appmgrInputImposed = inputImposed;
-	g_appmgrCtrlpMode = ctrlpMode;
+	g_appmgrDevice.appMgrState.inputImposed = inputImposed;
+	g_appmgrDevice.appMgrState.ctrlpMode = ctrlpMode;
 	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
@@ -2823,7 +3208,7 @@ int sceAppMgrAcquireBtrm(void)
 	if (pid < 0)
 		goto notFound;
 	for (index = 0; index != 20; ++index) {
-		app = &g_appmgrAudioApps[index];
+		app = &g_appmgrDevice.apps[index];
 		if (app->appId > 0 && app->processId == pid)
 			break;
 	}
@@ -2868,8 +3253,7 @@ notFound:
 int sceAppMgrReleaseBtrm(void)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
-	SceUID pid, mutexOwner;
-	int result, index;
+	int result;
 	AppmgrAudioApp *app;
 
 	if (!sceSblACMgrIsSystemProgram(0) && !SceSblACMgrForDriver_6C5AB07F(0)) {
@@ -2890,25 +3274,8 @@ int sceAppMgrReleaseBtrm(void)
 	} else {
 		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
-	pid = sceKernelGetProcessId();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 414, "getAppByProcessId");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	if (pid < 0)
-		goto notFound;
-	for (index = 0; index != 20; ++index) {
-		app = &g_appmgrAudioApps[index];
-		if (app->appId > 0 && app->processId == pid)
-			break;
-	}
-	if (index == 20)
+	app = getAppByProcessId(sceKernelGetProcessId());
+	if (app == NULL)
 		goto notFound;
 	g_appmgrMainMutexOwner = -1;
 	app->btrmAcquired = 0;
@@ -2958,7 +3325,7 @@ void _deviceRefreshAudioPort(SceUID pid)
 	mutexOwner = g_appmgrMainMutexOwner;
 	if (mutexOwner == sceKernelGetThreadId())
 		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrAudioUpdateMutex, 1, NULL);
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
 	if (result != 0 && (SceUInt32)result + 0x7ffd7fd4U > 1)
 		appmgrDeviceLockPanic();
 #endif
@@ -2989,7 +3356,7 @@ void _deviceRefreshAudioPort(SceUID pid)
 #endif
 	}
 	g_appmgrMainMutexOwner = -1;
-	shell = g_appmgrAudioApps[0].appId > 0 ? &g_appmgrAudioApps[0] : NULL;
+	shell = g_appmgrDevice.apps[0].appId > 0 ? &g_appmgrDevice.apps[0] : NULL;
 	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
@@ -3002,7 +3369,7 @@ void _deviceRefreshAudioPort(SceUID pid)
 		appmgrMainMutexPanic();
 #endif
 	}
-	if (shell != NULL && g_appmgrShellMainPortEnabled != 0 &&
+	if (shell != NULL && g_appmgrDevice.bgmState.shellMainPortEnabled != 0 &&
 	    (pid < 0 || shell->processId == pid)) {
 		owner = pid < 0 ? shell->processId : pid;
 		if (owner != -1) {
@@ -3018,7 +3385,7 @@ void _deviceRefreshAudioPort(SceUID pid)
 			}
 		}
 	}
-	owner = g_appmgrMainOutPortOwner;
+	owner = g_appmgrDevice.bgmState.mainOutPortOwner;
 	if (owner != -1 && (pid < 0 || owner == pid)) {
 		result = SceAudioForDriver_3440C1CA(owner, 0, 1, 100, 0);
 		if (result < 0) {
@@ -3031,7 +3398,7 @@ void _deviceRefreshAudioPort(SceUID pid)
 #endif
 		}
 	}
-	owner = g_appmgrBgmOutPortOwner;
+	owner = g_appmgrDevice.bgmState.bgmOutPortOwner;
 	if (owner != -1 && (pid < 0 || owner == pid)) {
 		result = SceAudioForDriver_3440C1CA(owner, 1, 1, 100, 0);
 		if (result < 0) {
@@ -3044,7 +3411,7 @@ void _deviceRefreshAudioPort(SceUID pid)
 #endif
 		}
 	}
-	owner = g_appmgrVoiceOutPortOwner;
+	owner = g_appmgrDevice.bgmState.voiceOutPortOwner;
 	if (owner != -1 && (pid < 0 || owner == pid)) {
 		result = SceAudioForDriver_3440C1CA(owner, 2, 1, 100, 0);
 		if (result < 0) {
@@ -3057,10 +3424,10 @@ void _deviceRefreshAudioPort(SceUID pid)
 #endif
 		}
 	}
-	if (g_appmgrInputPortOwner != -1) {
+	if (g_appmgrDevice.bgmState.inputPortOwner != -1) {
 		if (pid < 0)
-			pid = g_appmgrVoiceOutPortOwner;
-		if (pid == g_appmgrVoiceOutPortOwner && pid != -1) {
+			pid = g_appmgrDevice.bgmState.voiceOutPortOwner;
+		if (pid == g_appmgrDevice.bgmState.voiceOutPortOwner && pid != -1) {
 			result = SceAudioInForDriver_E4042F6F(pid, 0, 1, 0);
 			if (result < 0) {
 #if FW_DEBUG
@@ -3073,8 +3440,8 @@ void _deviceRefreshAudioPort(SceUID pid)
 			}
 		}
 	}
-	setVolume(&g_appmgrSoundExclusivePid, &g_appmgrOtherPortVolume);
-	result = sceKernelUnlockMutex(g_appmgrAudioUpdateMutex, 1);
+	setVolume(&g_appmgrDevice.bgmState.soundExclusivePid, &g_appmgrDevice.bgmState.otherPortVolume);
+	result = sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1);
 	if (result != 0) {
 #if FW_DEBUG
 		sceAppMgrDump();
@@ -3096,39 +3463,39 @@ void appmgrCaptureDeviceInfo(AppMgrDeviceInfo *info)
 	SceUID pid;
 	SceSize tailSize;
 
-	info->soundExclusivePid = g_appmgrSoundExclusivePid;
-	info->mainOutPortOwner = g_appmgrMainOutPortOwner;
-	info->bgmOutPortOwner = g_appmgrBgmOutPortOwner;
-	info->voiceOutPortOwner = g_appmgrVoiceOutPortOwner;
-	info->inputPortOwner = g_appmgrInputPortOwner;
-	info->backRenderPid = g_appmgrDeviceOwners.backRenderPid;
-	info->inputOwnerPid = g_appmgrDeviceOwners.inputPid;
-	info->bgmProxyAppId = g_appmgrDeviceOwners.btrmOwnerAppId;
-	info->shellPid = g_appmgrShellPid;
-	info->activeAppId = g_appmgrActiveAppId;
-	if (g_appmgrRenderingPids[0] != -1)
-		info->renderingPids[renderingCount++] = g_appmgrRenderingPids[0];
-	if (g_appmgrRenderingPids[1] != -1)
-		info->renderingPids[renderingCount++] = g_appmgrRenderingPids[1];
-	if (g_appmgrRenderingPids[2] != -1)
-		info->renderingPids[renderingCount++] = g_appmgrRenderingPids[2];
-	if (g_appmgrRenderingPids[3] != -1)
-		info->renderingPids[renderingCount++] = g_appmgrRenderingPids[3];
-	if (g_appmgrRenderingPids[4] != -1)
-		info->renderingPids[renderingCount++] = g_appmgrRenderingPids[4];
-	if (g_appmgrRenderingPids[5] != -1)
-		info->renderingPids[renderingCount++] = g_appmgrRenderingPids[5];
-	if (g_appmgrRenderingPids[6] != -1)
-		info->renderingPids[renderingCount++] = g_appmgrRenderingPids[6];
-	if (g_appmgrRenderingPids[7] != -1)
-		info->renderingPids[renderingCount++] = g_appmgrRenderingPids[7];
+	info->soundExclusivePid = g_appmgrDevice.bgmState.soundExclusivePid;
+	info->mainOutPortOwner = g_appmgrDevice.bgmState.mainOutPortOwner;
+	info->bgmOutPortOwner = g_appmgrDevice.bgmState.bgmOutPortOwner;
+	info->voiceOutPortOwner = g_appmgrDevice.bgmState.voiceOutPortOwner;
+	info->inputPortOwner = g_appmgrDevice.bgmState.inputPortOwner;
+	info->backRenderPid = g_appmgrDevice.deviceOwners.backRenderPid;
+	info->inputOwnerPid = g_appmgrDevice.deviceOwners.inputPid;
+	info->bgmProxyAppId = g_appmgrDevice.deviceOwners.btrmOwnerAppId;
+	info->shellPid = g_appmgrDevice.shellPid;
+	info->activeAppId = g_appmgrDevice.activeAppId;
+	if (g_appmgrDevice.renderingPids[0] != -1)
+		info->renderingPids[renderingCount++] = g_appmgrDevice.renderingPids[0];
+	if (g_appmgrDevice.renderingPids[1] != -1)
+		info->renderingPids[renderingCount++] = g_appmgrDevice.renderingPids[1];
+	if (g_appmgrDevice.renderingPids[2] != -1)
+		info->renderingPids[renderingCount++] = g_appmgrDevice.renderingPids[2];
+	if (g_appmgrDevice.renderingPids[3] != -1)
+		info->renderingPids[renderingCount++] = g_appmgrDevice.renderingPids[3];
+	if (g_appmgrDevice.renderingPids[4] != -1)
+		info->renderingPids[renderingCount++] = g_appmgrDevice.renderingPids[4];
+	if (g_appmgrDevice.renderingPids[5] != -1)
+		info->renderingPids[renderingCount++] = g_appmgrDevice.renderingPids[5];
+	if (g_appmgrDevice.renderingPids[6] != -1)
+		info->renderingPids[renderingCount++] = g_appmgrDevice.renderingPids[6];
+	if (g_appmgrDevice.renderingPids[7] != -1)
+		info->renderingPids[renderingCount++] = g_appmgrDevice.renderingPids[7];
 	memset(&info->renderingPids[renderingCount], -1,
 		   sizeof(info->renderingPids) - sizeof(SceUID) * renderingCount);
-	count = g_appmgrTouchProcessPriorities.count;
+	count = g_appmgrDevice.touchProcessPriorities.count;
 	if (count) {
 		index = 0;
 		do {
-			pid = g_appmgrTouchProcessPriorities.processIds[index++];
+			pid = g_appmgrDevice.touchProcessPriorities.processIds[index++];
 			if (pid != -1) {
 				info->touchPids[touchCount++] = pid;
 				if (touchCount > 15)
@@ -3141,10 +3508,10 @@ void appmgrCaptureDeviceInfo(AppMgrDeviceInfo *info)
 		tailSize = sizeof(SceUID);
 	memset(&info->touchPids[touchCount], -1, tailSize);
 owners:
-	info->displayOwner0 = g_appmgrDisplayOwner[0];
-	info->displayOwner1 = g_appmgrDisplayOwner[1];
-	info->systemChatPid = g_appmgrSystemChatPid;
-	info->backRenderAppId = g_appmgrBackRenderAppId;
+	info->displayOwner0 = g_appmgrDevice.displayOwner[0];
+	info->displayOwner1 = g_appmgrDevice.displayOwner[1];
+	info->systemChatPid = g_appmgrDevice.systemChatPid;
+	info->backRenderAppId = g_appmgrDevice.backRenderAppId;
 }
 
 void _deviceSetRecommendedScreenOrientation(int orientation)
@@ -3160,6 +3527,6 @@ void _deviceSetRecommendedScreenOrientation(int orientation)
 		appmgrDeviceLockPanic();
 #endif
 	}
-	g_appmgrRecommendedScreenOrientation = orientation;
+	g_appmgrDevice.appMgrState.recommendedScreenOrientation = orientation;
 }
 

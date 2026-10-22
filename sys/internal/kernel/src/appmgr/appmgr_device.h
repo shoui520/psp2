@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <scetypes.h>
+#include <touch/touch.h>
 
 typedef struct AppmgrAudioApp {
 	int appId;
@@ -13,7 +14,7 @@ typedef struct AppmgrAudioApp {
 	int bgmPriority;
 	int enableBgmSubPriority;
 	int bgmSubPriority;
-	char proxyAppName[32];
+	SceChar8 proxyAppName[32];
 	int soundExclusivePriority;
 	SceUInt32 displayRequestEnabled;
 	SceUInt32 displayRequestMode;
@@ -40,6 +41,72 @@ typedef struct AppmgrDeviceOwners {
 } AppmgrDeviceOwners;
 
 _Static_assert(sizeof(AppmgrDeviceOwners) == 28, "device arbitration owners");
+
+/* What sceAppMgrGetAppMgrState copies out (_deviceGetAppMgrState returns it). */
+typedef struct AppMgrState {
+	int prioritizeSystemChat;
+	int inputImposed;
+	int btrmOwner;
+	int systemChatDucking;		/* the BGM state's, copied when it is applied */
+	int recommendedScreenOrientation;
+	int ctrlpMode;
+	SceUInt32 reserved[26];
+} AppMgrState;
+
+_Static_assert(sizeof(AppMgrState) == 0x80, "application manager state");
+
+/*
+ * The audio ports' owners and settings that dumpBgmState prints:
+ * updateAudioArbitration2NoLock builds the next one and applies what changed.
+ */
+typedef struct AppmgrBgmState {
+	SceUID soundExclusivePid;
+	int soundExclusivePriority;
+	SceUInt32 displayRequestEnabled;
+	SceUInt32 displayRequestMode;
+	int displayRequestBlanked;
+	int soundExclusiveDisplayRequest;
+	int shellMainPortEnabled;
+	SceUID mainOutPortOwner;
+	SceUID bgmOutPortOwner;
+	int bgmOutPortOwnerPriority;
+	int bgmOutPortOwnerSubPriority;
+	SceUID voiceOutPortOwner;
+	int voiceOutPortOwnerAppId;
+	SceUID inputPortOwner;
+	SceUInt32 otherPortVolume;
+	int systemChatDucking;
+} AppmgrBgmState;
+
+_Static_assert(sizeof(AppmgrBgmState) == 0x40, "BGM state");
+
+/* appmgr_device.c's state: initializeAppMgrDevice clears it whole. */
+typedef struct AppmgrDevice {
+	SceUID shellPid;
+	int activeAppId;
+	SceUID renderingPids[8];
+	TouchProcessPriorities touchProcessPriorities;
+	AppMgrState appMgrState;
+	AppmgrBgmState bgmState;
+	SceUID displayOwner[2];
+	SceUID systemChatPid;
+	SceUInt32 systemChatDuckingVolume;
+	SceUID reserved;		/* set to -1 at initialization, never read */
+	int audioPortsDisabled;
+	int backRenderAppId;
+	int bgmEnabled;
+	AppmgrDeviceOwners deviceOwners;
+	AppmgrAudioApp apps[20];
+	SceUID audioUpdateMutex;
+} AppmgrDevice;
+
+_Static_assert(offsetof(AppmgrDevice, appMgrState) == 0x6c, "device AppMgrState");
+_Static_assert(offsetof(AppmgrDevice, bgmState) == 0xec, "device BGM state");
+_Static_assert(offsetof(AppmgrDevice, deviceOwners) == 0x14c, "device owners");
+_Static_assert(offsetof(AppmgrDevice, apps) == 0x168, "device applications");
+_Static_assert(sizeof(AppmgrDevice) == 0xa7c, "device state");
+
+extern AppmgrDevice g_appmgrDevice;
 
 /* Complete local copy of acquisition3's sixteen user argument bytes. */
 typedef struct AppmgrSoundOutExclusiveArguments {
