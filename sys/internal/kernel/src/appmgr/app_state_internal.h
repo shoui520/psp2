@@ -79,10 +79,9 @@ typedef struct AppmgrProcessState {
 	struct AppmgrWaitObject *unloadWaiter;
 } AppmgrProcessState;
 
-struct AppState {
-	int appId;
-	int baseMiniEvictionValue;
-	SceUInt32 launchMode;
+/* What a launch asks for: Sony's process creation takes it whole (the game and mini
+ * creators read the budget, attributes and launch origin through it) */
+typedef struct AppmgrLaunchInfo {
 	char appPath[256];
 	char proxyAppName[32];
 	SceUInt32 budgetSize;
@@ -94,12 +93,25 @@ struct AppState {
 	char launchArgs[1024];
 	SceSize launchArgsSize;
 	SceUInt32 launchArgumentMarker;
-	unsigned char launchOrigin;
+	signed char launchOrigin;
 	unsigned char useCommonDialog;
-	unsigned char notifyBootComplete;
+	signed char notifyBootComplete;
 	unsigned char reservedLaunch;
-	SceUInt32 killMiniBeforeLaunch;
-	SceUInt32 reservedProcess;
+	SceUInt32 enlargeGameMemorySize;	/* MiB */
+	SceUInt32 reserved;
+} AppmgrLaunchInfo;
+
+_Static_assert(sizeof(AppmgrLaunchInfo) == 1356, "launch information");
+_Static_assert(offsetof(AppmgrLaunchInfo, processAttr) == 304 &&
+	       offsetof(AppmgrLaunchInfo, launchOrigin) == 1344 &&
+	       offsetof(AppmgrLaunchInfo, enlargeGameMemorySize) == 1348,
+	       "launch information fields");
+
+struct AppState {
+	int appId;
+	int baseMiniEvictionValue;
+	SceUInt32 launchMode;
+	AppmgrLaunchInfo launchInfo;
 	AppmgrProcessState process;
 	SceUID launchSourceProcessId;
 	int launchSourceAppId;
@@ -125,7 +137,7 @@ struct AppState {
 	SceUID creatorPid;
 	SceUID launchCallbackId;
 	SceUInt64 quitStartTime;
-	SceUInt16 quitRequested;
+	SceInt16 quitRequested;
 	SceUInt16 relaunchPending;
 	SceUInt32 unusedLaunchMarker;
 	SceUInt32 protectionMode;
@@ -247,6 +259,7 @@ int appmgrGetRawPathOfApp0ByAppIdForShellSyscall(int appId, char *path);
 int appmgrGetRawPathOfApp0ByPidForShellSyscall(SceUID pid, char *path);
 
 /* appmgr_process.c */
+int sceAppMgrSuspendUntilActivated(void);
 int _appmgrProcessInitialize(int (*callback)(struct AppState *app));
 
 /* appmgr_query_syscalls.c */

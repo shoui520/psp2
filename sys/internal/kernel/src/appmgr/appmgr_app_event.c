@@ -169,12 +169,12 @@ int sceAppMgrReceiveSystemEvent(SceAppMgrSystemEvent *event)
 		goto leave;
 	}
 	if (app->pendingActivate && SceSblACMgrForDriver_6C5AB07F(0) &&
-	    (app->processAttr & 2)) {
+	    (app->launchInfo.processAttr & 2)) {
 		memset(event, 0, sizeof(*event));
 		event->systemEvent = 0x10000001;
 		app->pendingActivate = 0;
 	} else if (app->pendingDeactivate && SceSblACMgrForDriver_6C5AB07F(0) &&
-		   (app->processAttr & 2)) {
+		   (app->launchInfo.processAttr & 2)) {
 		memset(event, 0, sizeof(*event));
 		event->systemEvent = 0x10000002;
 		app->pendingDeactivate = 0;

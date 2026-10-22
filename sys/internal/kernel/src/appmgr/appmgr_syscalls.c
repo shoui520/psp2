@@ -41,6 +41,11 @@ int appmgrCheckRifGDSyscall(const char *path, AppmgrLicenseInfo *info)
 	return appmgrCheckRifGD(path, info);
 }
 
+int appmgrSuspendUntilActivatedSyscall(void)
+{
+	return sceAppMgrSuspendUntilActivated();
+}
+
 int appmgrAcquireBgmPortSyscall(void)
 {
 	return sceAppMgrAcquireBgmPort();

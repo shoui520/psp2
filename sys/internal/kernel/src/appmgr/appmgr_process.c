@@ -1,6 +1,9 @@
 /* Process event adapters. */
 
 #include <processmgr/processmgr.h>
+#include <kernel/error.h>
+#include <acmgr/acmgr.h>
+#include <intrmgr/syscall.h>
 #include <sysmem/debug.h>
 #include <threadmgr/threadmgr.h>
 #include <appmgr.h>
@@ -46,7 +49,7 @@ extern int appmgrUnmountProcessContent(SceUID pid);
 extern int _deviceSetProcessId(int appId, SceUID pid);
 extern int _destroyOtherApp(struct AppState *app);
 extern int _sceAppMgrDeactivateAppInternal(struct AppState *app, int, int, int);
-extern int _appmgrProcessKillProcess(struct AppState *app, int flags);
+int _appmgrProcessKillProcess(struct AppState *app, int kind);
 extern int appmgrUsesDefaultLibrary(void);
 
 SceUID g_appmgrVideoCodecPid = -1;
@@ -192,7 +195,7 @@ int vcStateChanged(SceUID pid, int enabled)
 			    candidate->process.processId != pid &&
 			    candidate->videoCodecUsage != 0) {
 				++count;
-				if (candidate->budgetType == 0) {
+				if (candidate->launchInfo.budgetType == 0) {
 					value = getMiniAppValue(candidate);
 					if (evictPid == -1 || leastValue > value) {
 						leastValue = value;
@@ -230,11 +233,11 @@ int vcStateChanged(SceUID pid, int enabled)
 			VC_RETURN_UNLOCK(result, 1388);
 		}
 		usage = app->videoCodecUsage;
-		if (app->budgetType == 1) {
-			if ((app->processAttr & 1) == 0)
+		if (app->launchInfo.budgetType == 1) {
+			if ((app->launchInfo.processAttr & 1) == 0)
 				usage = enabled;
-		} else if (app->budgetType == 0) {
-			if ((app->processAttr & 3) == 0)
+		} else if (app->launchInfo.budgetType == 0) {
+			if ((app->launchInfo.processAttr & 3) == 0)
 				usage = enabled != 0 && usage != 0;
 		} else {
 			usage = 0;
@@ -411,6 +414,51 @@ int _sceAppMgrProcTerminatedHandler(SceUID pid)
 #endif
 		}
 	}
+	return 0;
+}
+
+int _appmgrProcessKillProcess(struct AppState *app, int kind)
+{
+	SceKernelProcessInfo info;
+	SceUID owner;
+	SceUInt32 state;
+	int result;
+
+	if (app == NULL || (owner = app->mutexOwner) != sceKernelGetThreadId()) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 785, "_appmgrProcessKillProcess");
+#else
+		appmgrProcessPanic();
+#endif
+	}
+	owner = g_appmgrMainMutexOwner;
+	if (owner == sceKernelGetThreadId()) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 786, "_appmgrProcessKillProcess");
+#else
+		appmgrProcessPanic();
+#endif
+	}
+	memset(&info, 0, sizeof(info));
+	info.size = sizeof(info);
+	result = sceKernelGetProcessInfo(app->process.processId, &info);
+	if (result < 0)
+		return result;
+	if ((info.status & 0x10) != 0 && kind != 2)
+		result = sceKernelKillProcess(app->process.processId, 1);
+	else
+		result = sceKernelKillProcess(app->process.processId, kind);
+	if (result != SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS &&
+	    result != SCE_KERNEL_ERROR_INVALID_PID && result != 0)
+		return result;
+	state = app->process.requestedProcessState;
+	app->process.requestedProcessState = 4;
+	if (state == 2)
+		_shellEventAppRunningStatusChangedQueuePush();
 	return 0;
 }
 
@@ -923,7 +971,7 @@ int _appmgrProcessSuspendProcess(struct AppState *app, int flags,
 	g_appmgrMainMutexOwner = -1;
 	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	PROCESS_SUSPEND_RESULT(result, 696);
-	if (app->launchOrigin == 2) {
+	if (app->launchInfo.launchOrigin == 2) {
 		result = sceKernelWaitProcessEventCompletion(app->process.processId,
 			2, NULL);
 #if FW_DEBUG
@@ -991,7 +1039,7 @@ int _suspendAppForDebugger(struct AppState *app,
 		PROCESS_EXIT_RESULT(result, 1068, "_suspendAppForDebugger");
 		return 0;
 	}
-	attributes = app->processAttr;
+	attributes = app->launchInfo.processAttr;
 	if ((attributes & 3) != 0) {
 		/* Sony inlines the existing suspend operation with no waiter. */
 		owner = app->mutexOwner;
@@ -1013,7 +1061,7 @@ int _suspendAppForDebugger(struct AppState *app,
 			g_appmgrMainMutexOwner = -1;
 			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 			PROCESS_SUSPEND_RESULT(result, 696);
-			if (app->launchOrigin == 2) {
+			if (app->launchInfo.launchOrigin == 2) {
 				result = sceKernelWaitProcessEventCompletion(
 					app->process.processId, 2, NULL);
 #if FW_DEBUG
@@ -1047,7 +1095,7 @@ int _suspendAppForDebugger(struct AppState *app,
 				_shellEventAppRunningStatusChangedQueuePush();
 			vcStateChanged(app->process.processId, 0);
 		}
-		attributes = app->processAttr;
+		attributes = app->launchInfo.processAttr;
 	}
 	if ((attributes & 1) == 0 && appmgrGetAppRunState(app) == 2) {
 		result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
@@ -1179,11 +1227,11 @@ int _appmgrProcessStartProcess(struct AppState *app)
 	startFlags = appmgrUsesGxmDebugger(app->process.processId) != 0;
 	startFlags |= appmgrUsesDefaultLibrary() ? 0 : 2;
 	startResult = sceKernelStartProcessExt(app->process.processId,
-		app->processCreateFlags & 0x80000000, app->launchArgsSize,
-		app->launchArgs, startFlags);
+		app->launchInfo.processCreateFlags & 0x80000000, app->launchInfo.launchArgsSize,
+		app->launchInfo.launchArgs, startFlags);
 	if (startResult != 0) {
-		if (app->launchOrigin == 2 && app->relaunchInProgress == 0 &&
-		    app->notifyBootComplete != 0) {
+		if (app->launchInfo.launchOrigin == 2 && app->relaunchInProgress == 0 &&
+		    app->launchInfo.notifyBootComplete != 0) {
 			result = SceSysrootForDriver_421EFC96(startResult);
 #if FW_DEBUG
 			PROCESS_START_RESULT(result, 669);
@@ -1192,7 +1240,7 @@ int _appmgrProcessStartProcess(struct AppState *app)
 				SCE_PANIC_PRINTF_FUNC(669, "_appmgrProcessStartProcess",
 					"0x%08x,0x%08x\n", result, 0);
 #endif
-			app->notifyBootComplete = 0;
+			app->launchInfo.notifyBootComplete = 0;
 		}
 		return startResult;
 	}
@@ -1220,8 +1268,8 @@ int _appmgrProcessStartProcess(struct AppState *app)
 	g_appmgrMainMutexOwner = -1;
 	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	PROCESS_START_RESULT(result, 652);
-	if (app->launchOrigin == 2 && app->relaunchInProgress == 0 &&
-	    app->notifyBootComplete != 0) {
+	if (app->launchInfo.launchOrigin == 2 && app->relaunchInProgress == 0 &&
+	    app->launchInfo.notifyBootComplete != 0) {
 		result = SceSysrootForDriver_421EFC96(0);
 #if FW_DEBUG
 		PROCESS_START_RESULT(result, 656);
@@ -1230,7 +1278,7 @@ int _appmgrProcessStartProcess(struct AppState *app)
 			SCE_PANIC_PRINTF_FUNC(656, "_appmgrProcessStartProcess",
 				"0x%08x,0x%08x\n", result, 0);
 #endif
-		app->notifyBootComplete = 0;
+		app->launchInfo.notifyBootComplete = 0;
 	}
 	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	PROCESS_EXIT_LOCK(result, 661, "_appmgrProcessStartProcess");
@@ -1251,11 +1299,11 @@ int _resumeAppForDebugger(struct AppState *app,
 
 	if (appmgrGetShellApp() == NULL)
 		return _appmgrProcessStartProcess(app);
-	attributes = app->processAttr;
+	attributes = app->launchInfo.processAttr;
 	started = attributes & 3;
 	if (started != 0) {
 		started = _appmgrProcessStartProcess(app);
-		attributes = app->processAttr;
+		attributes = app->launchInfo.processAttr;
 	}
 	if ((attributes & 1) != 0)
 		return started;
@@ -1336,7 +1384,7 @@ int _appmgrProcessQuitProcess(struct AppState *app, int exitReason,
 		return 0x80802013;
 	}
 	if (app->quitRequested != 0 && retry == 0) {
-		if ((app->processAttr & 2) != 0) {
+		if ((app->launchInfo.processAttr & 2) != 0) {
 			g_appmgrMainMutexOwner = -1;
 			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 			PROCESS_QUIT_RESULT(result, 871);
@@ -1413,7 +1461,7 @@ int _appmgrProcessQuitProcess(struct AppState *app, int exitReason,
 				"_appmgrProcessQuitProcess",
 				"[SceAppMgr:Error] _appmgrProcessKillProcess() failed 0x%08x.\n",
 				result);
-	} else if ((app->processAttr & 2) != 0) {
+	} else if ((app->launchInfo.processAttr & 2) != 0) {
 		memset(&event, 0, sizeof(event));
 		event.systemEvent = 0x20000001;
 		_appListPushEvent(app, &event);
@@ -1435,6 +1483,64 @@ int _appmgrProcessQuitProcess(struct AppState *app, int exitReason,
 	return result == (int)0x80029001 ? 0 : result;
 }
 
+#if FW_DEBUG
+#define PROCESS_ACTIVATE_RESULT(_result, _line) \
+	PROCESS_EXIT_RESULT(_result, _line, "sceAppMgrSuspendUntilActivated")
+#else
+#define PROCESS_ACTIVATE_RESULT(_result, _line) do { \
+	if ((_result) != 0) \
+		vcStateChangedPanic(); \
+} while (0)
+#endif
+
+int sceAppMgrSuspendUntilActivated(void)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	struct AppState *app;
+	int result;
+
+	if (sceSblACMgrIsSystemProgram(0) == 0) {
+		sceSyscallLeave(syscall);
+		return (int)0x8080201f;
+	}
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	PROCESS_EXIT_LOCK(result, 1021, "sceAppMgrSuspendUntilActivated");
+	app = appmgrFindAppByName(g_appmgrAppStates, NULL);
+	if (app == NULL) {
+		g_appmgrMainMutexOwner = -1;
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		PROCESS_ACTIVATE_RESULT(result, 1025);
+		sceSyscallLeave(syscall);
+		return (int)0x8080201c;
+	}
+	if (app->quitRequested != 0) {
+		g_appmgrMainMutexOwner = -1;
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		PROCESS_ACTIVATE_RESULT(result, 1030);
+		sceSyscallLeave(syscall);
+		return SCE_APPMGR_ERROR_STATE;
+	}
+	if (appmgrGetAppRunState(app) == 2) {
+		g_appmgrMainMutexOwner = -1;
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		PROCESS_ACTIVATE_RESULT(result, 1036);
+	} else {
+		_appListSetRunStatus(app, 32);
+		result = sceKernelSuspendProcess(sceKernelGetProcessId(), 0, NULL);
+		g_appmgrMainMutexOwner = -1;
+		if (result == 0) {
+			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			PROCESS_ACTIVATE_RESULT(result, 1045);
+		} else {
+			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			PROCESS_ACTIVATE_RESULT(result, 1052);
+		}
+	}
+	sceSyscallLeave(syscall);
+	return 0;
+}
+
+#undef PROCESS_ACTIVATE_RESULT
 #undef PROCESS_QUIT_RESULT
 #undef PROCESS_START_RESULT
 #undef PROCESS_EXIT_RESULT
@@ -1607,6 +1713,100 @@ int sceAppMgrResumeAppByNameForDebugger(const char *appName)
 	}
 	return result;
 }
+
+#if FW_DEBUG
+#define PROCESS_DEBUGGER_RESULT(_result, _line, _func) do { \
+	if ((_result) != 0) { \
+		sceAppMgrDump(); \
+		dumpBgmState(); \
+		SCE_DBG_ASSERT_PRINTF_FUNC((_result) == 0, _line, _func, \
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n", \
+			(_result), (_result), 0, 0); \
+	} \
+} while (0)
+#else
+#define PROCESS_DEBUGGER_RESULT(_result, _line, _func) do { \
+	if ((_result) != 0) \
+		appmgrProcessPanic(); \
+} while (0)
+#endif
+
+static inline int _killAppForDebugger(struct AppState *app)
+{
+	int result;
+
+	if (appmgrGetAppRunState(app) == 2) {
+		result = _sceAppMgrDeactivateAppInternal(app, 0, 0, 0);
+		PROCESS_DEBUGGER_RESULT(result, 1223, "_killAppForDebugger");
+	}
+	_appListSetDebuggerRunStatus(app, 0x20000);
+	app->exitReason = 4;
+	app->selfQuit = 0;
+	return _appmgrProcessKillProcess(app, 1);
+}
+
+int sceAppMgrKillAppForDebugger(SceUID pid)
+{
+	struct AppState *app;
+	int result, unlockResult;
+
+	if (_appListFindAndLockAppByProcessId(pid, &app) != 0)
+		return SCE_APPMGR_ERROR_PARAM;
+	result = _killAppForDebugger(app);
+	unlockResult = _appListUnlockApp(app);
+	PROCESS_DEBUGGER_RESULT(unlockResult, 1250, "sceAppMgrKillAppForDebugger");
+	return result;
+}
+
+int sceAppMgrKillAppByNameForDebugger(const char *titleId)
+{
+	struct AppState *app;
+	int result, unlockResult;
+
+	if (_appListFindAndLockAppByName(titleId, &app) != 0)
+		return SCE_APPMGR_ERROR_PARAM;
+	result = _killAppForDebugger(app);
+	unlockResult = _appListUnlockApp(app);
+	PROCESS_DEBUGGER_RESULT(unlockResult, 1269,
+		"sceAppMgrKillAppByNameForDebugger");
+	return result;
+}
+
+int sceAppMgrGetPidByNameForDebugger(const char *titleId, SceUID *pid)
+{
+	struct AppState *app;
+	int result;
+
+	if (sceKernelGetProcessId() != 0x10005)
+		return SCE_APPMGR_ERROR_NOEXEC;
+	if (pid == NULL)
+		return SCE_APPMGR_ERROR_NULL_POINTER;
+	if (_appListFindAndLockAppByName(titleId, &app) != 0)
+		return SCE_APPMGR_ERROR_PARAM;
+	*pid = app->process.processId;
+	result = _appListUnlockApp(app);
+	PROCESS_DEBUGGER_RESULT(result, 1292, "sceAppMgrGetPidByNameForDebugger");
+	return 0;
+}
+
+int sceAppMgrGetAppIdByNameForDebugger(const char *titleId, int *appId)
+{
+	struct AppState *app;
+	int result;
+
+	if (sceKernelGetProcessId() != 0x10005)
+		return SCE_APPMGR_ERROR_NOEXEC;
+	if (appId == NULL)
+		return SCE_APPMGR_ERROR_NULL_POINTER;
+	if (_appListFindAndLockAppByName(titleId, &app) != 0)
+		return SCE_APPMGR_ERROR_PARAM;
+	*appId = app->appId;
+	result = _appListUnlockApp(app);
+	PROCESS_DEBUGGER_RESULT(result, 1314, "sceAppMgrGetAppIdByNameForDebugger");
+	return 0;
+}
+
+#undef PROCESS_DEBUGGER_RESULT
 
 #if FW_DEBUG
 #define PROCESS_INITIALIZE_CHECK(_failed, _line, _info) do { \

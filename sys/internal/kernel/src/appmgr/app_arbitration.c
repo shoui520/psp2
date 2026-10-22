@@ -224,7 +224,7 @@ int getMiniAppValue(struct AppState *app)
 	}
 	if (appmgrGetAppRunState(app) == 2)
 		value = runningValue;
-	if (app->processAttr & 1)
+	if (app->launchInfo.processAttr & 1)
 		value += 1000;
 	pid = app->process.processId;
 	if (pid == sceKernelGetProcessId())
@@ -344,7 +344,7 @@ int getMiniAppValue(struct AppState *app)
 		GC_MAIN_LOCK(_mainLine, _func); \
 		__builtin_prefetch(&app[1].process.processId); \
 		pid = app->process.processId; \
-		attributes = app->processAttr; \
+		attributes = app->launchInfo.processAttr; \
 		fromMedia = strncmp(app->process.content.devicePrefix, "gro0:", 5) == 0 || \
 			strncmp(app->process.content.devicePrefix, "grw0:", 5) == 0 || \
 			((_includeUx) && strncmp(app->process.content.devicePrefix, "ux0:", 4) == 0); \

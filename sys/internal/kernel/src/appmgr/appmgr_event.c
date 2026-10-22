@@ -218,7 +218,7 @@ int _sendParam(const char *name, const AppmgrParamQueueEntry *entry,
 	} else {
 		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
-	if (app->budgetType == 1 && entry->param[0] == 0) {
+	if (app->launchInfo.budgetType == 1 && entry->param[0] == 0) {
 		if (entry->callbackId > 0 &&
 		    sceKernelNotifyCallback(entry->callbackId, 0) != 0)
 			SCE_DBG_PRINTF(0, 90,

@@ -261,7 +261,7 @@ SceAppMgr:
         - _sceAppMgrLoopBackFormat: 0xEA307D2C
         - _sceAppMgrGetBudgetInfo: 0xEACF2237
         - _sceAppMgrDestroyAppByName: 0xEB318002
-        - sceAppMgrSuspendUntilActivated: 0xECEC7F90
+        - appmgrSuspendUntilActivatedSyscall: 0xECEC7F90
         - _sceAppMgrInstallDirMount: 0xED37D810
         - _sceAppMgrGetBootParam: 0xEEFBC756
         - _sceAppMgrAppParamGetString: 0xEF34CA42

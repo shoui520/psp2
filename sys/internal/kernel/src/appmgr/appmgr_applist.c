@@ -62,8 +62,7 @@ void _appListClearAppState(struct AppState *app)
 	int result;
 	SceUInt32 state;
 
-	memset(app->appPath, 0, offsetof(struct AppState, process) -
-			       offsetof(struct AppState, appPath));
+	memset(&app->launchInfo, 0, sizeof(app->launchInfo));
 	app->appId = -1;
 	app->baseMiniEvictionValue = 0;
 	app->state &= 0xfff;
@@ -161,15 +160,15 @@ int _appListGetAppStatus(struct AppState *app, SceAppMgrAppStatus *status)
 		status->infobar = app->commonDialogInfobar;
 	else
 		status->infobar = app->appInfobar;
-	status->launchArgumentMarker = app->launchArgumentMarker;
-	status->launchOrigin = app->launchOrigin;
+	status->launchArgumentMarker = app->launchInfo.launchArgumentMarker;
+	status->launchOrigin = app->launchInfo.launchOrigin;
 	strncpy(status->appName, app->process.appName, sizeof(status->appName));
 	if (sceKernelGetProcessId() == 0x10005)
 		memset(status->bgmProxyAppName, 0, sizeof(status->bgmProxyAppName));
 	else
 		_deviceGetBgmProxyAppName(app->appId, status->bgmProxyAppName);
-	status->budgetType = app->budgetType;
-	status->processAttr = app->processAttr;
+	status->budgetType = app->launchInfo.budgetType;
+	status->processAttr = app->launchInfo.processAttr;
 	status->systemOrientation = app->systemOrientation;
 	status->recommendedOrientationActivated = app->recommendedOrientationActivated;
 	status->networkDisconnectionWarningDialogEnabled =
@@ -199,17 +198,17 @@ void _appListShowAppState(struct AppState *app)
 #if FW_DEBUG
 	SCE_DBG_PRINTF(0, 200, "\tappId           = 0x%08x\n", app->appId);
 	SCE_DBG_PRINTF(0, 201, "\tappName         = %s\n", app->process.appName);
-	SCE_DBG_PRINTF(0, 202, "\tappPath         = %s\n", app->appPath);
-	SCE_DBG_PRINTF(0, 203, "\tbudgetSize      = 0x%08x\n", app->budgetSize);
-	SCE_DBG_PRINTF(0, 204, "\tpycontSize      = 0x%08x\n", app->pycontSize);
+	SCE_DBG_PRINTF(0, 202, "\tappPath         = %s\n", app->launchInfo.appPath);
+	SCE_DBG_PRINTF(0, 203, "\tbudgetSize      = 0x%08x\n", app->launchInfo.budgetSize);
+	SCE_DBG_PRINTF(0, 204, "\tpycontSize      = 0x%08x\n", app->launchInfo.pycontSize);
 	SCE_DBG_PRINTF(0, 205, "\tlaunchMode      = 0x%08x\n", app->launchMode);
-	SCE_DBG_PRINTF(0, 206, "\tbudgetType      = 0x%08x\n", app->budgetType);
-	SCE_DBG_PRINTF(0, 207, "\tprocessAttr     = 0x%08x\n", app->processAttr);
+	SCE_DBG_PRINTF(0, 206, "\tbudgetType      = 0x%08x\n", app->launchInfo.budgetType);
+	SCE_DBG_PRINTF(0, 207, "\tprocessAttr     = 0x%08x\n", app->launchInfo.processAttr);
 	SCE_DBG_PRINTF(0, 208, "\tstate           = 0x%08x\n", app->state);
 	SCE_DBG_PRINTF(0, 209, "\tprocessId       = 0x%08x\n", app->process.processId);
 	SCE_DBG_PRINTF(0, 210, "\tbudgetId        = 0x%08x\n", app->process.budgetId);
 	SCE_DBG_PRINTF(0, 211, "\tlaunchOrigin    = 0x%08x\n",
-			   (signed char)app->launchOrigin);
+			   (signed char)app->launchInfo.launchOrigin);
 	SCE_DBG_PRINTF(0, 212, "\trequestedProcessState = 0%x08x\n",
 			   app->process.requestedProcessState);
 #else
@@ -253,7 +252,7 @@ struct AppState *appmgrFindCurrentApp(struct AppState *apps)
 	do { \
 		SceUID processId = app->process.processId; \
 		if (processId >= 0 && (processId & 1) && \
-		    app->budgetType == 1 && (app->state & 0xff0) != 0x800) \
+		    app->launchInfo.budgetType == 1 && (app->state & 0xff0) != 0x800) \
 			return app; \
 		++index; \
 		++app; \
@@ -326,7 +325,7 @@ struct AppState *_appListGetBigApp(struct AppState *apps)
 		app = &apps[index]; \
 		do { \
 			if (app->process.processId != -1 && (app->state & 15) == 2) { \
-				if (app->budgetType == 1) \
+				if (app->launchInfo.budgetType == 1) \
 					return app; \
 				break; \
 			} \
@@ -516,7 +515,7 @@ void _appListDeclareShellProcess(struct AppState *apps)
 	apps->appId = 0x1002;
 	pid = sceKernelGetProcessId();
 	apps->state = 0x12;
-	apps->budgetType = 2;
+	apps->launchInfo.budgetType = 2;
 	apps->process.processId = pid;
 	g_appmgrShellPid = pid;
 	memset(apps->process.content.titleId, 0,

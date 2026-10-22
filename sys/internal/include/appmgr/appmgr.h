@@ -83,12 +83,13 @@ SceUID sceAppMgrLaunchAppForDebugger(const char *path, const char *args, SceSize
 				     unsigned int flags, const SceAppMgrLaunchParam *param,
 				     void *opt);
 int sceAppMgrKillAppForDebugger(SceUID pid);
+int sceAppMgrKillAppByNameForDebugger(const char *titleId);
+int sceAppMgrGetPidByNameForDebugger(const char *titleId, SceUID *pid);
+int sceAppMgrGetAppIdByNameForDebugger(const char *titleId, int *appId);
 
 /* not written in C yet: the prototypes are their callers' (vshbridge, deci4p_loadp, appmgr's
  * system calls) */
 int sceAppMgrLaunchAppByNameForDebugger(const char *titleId, int flags);
-int sceAppMgrGetPidByNameForDebugger(const char *titleId, SceUID *pid);
-int sceAppMgrKillAppByNameForDebugger(const char *titleId);
 int sceAppMgrLaunchAppForTest2(const char *path, const char *titleId, int flags, const char *args,
 		int option1, int option2, int option0, const void *data);
 int sceAppMgrDestroyAppForTest(SceUID pid);
