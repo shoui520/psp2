@@ -147,7 +147,7 @@ struct AppState {
 	SceUInt32 videoCodecUsage;
 	SceUInt32 evictionThresholdClass;
 	int coredumpReason;
-	SceUInt32 triggerData;
+	SceUID crashThreadId;		/* the coredump trigger's crash_thid */
 	int systemOrientation;
 	SceUInt32 recommendedOrientationActivated;
 	SceUInt32 networkDisconnectionWarningDialogEnabled;
@@ -360,3 +360,23 @@ int sharedFbInitialize(void);
 int appmgrSystemParamDateTimeGetConf(void *conf);
 int appmgrSystemParamGetInt(int parameter, int *value);
 int appmgrSystemParamGetString(int parameter, char *value, SceSize size);
+
+/* appmgr_aborthandler.c: sceAppMgrGetCoredumpStateForShell's output */
+typedef struct AppmgrShellCoredumpState {
+	SceUID processId;
+	int appId;
+	int progress;		/* percent */
+	int finished;
+	int result;
+	SceSize pathLength;
+	char path[1024];
+	int finishArg;
+	int reserved[3];
+} AppmgrShellCoredumpState;
+
+_Static_assert(sizeof(AppmgrShellCoredumpState) == 0x428, "shell coredump state");
+
+int sceAppMgrGetCoredumpStateForShell(AppmgrShellCoredumpState *state);
+int sceAppMgrFinishCoredumpForShell(void);
+int sceAppMgrEnableCoredumpForTest(void);
+int appmgrGetCoredumpStateForShellSyscall(AppmgrShellCoredumpState *state);

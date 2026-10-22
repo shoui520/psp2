@@ -143,6 +143,21 @@ int appmgrReleaseBtrmSyscall(void)
 	return sceAppMgrReleaseBtrm();
 }
 
+int appmgrGetCoredumpStateForShellSyscall(AppmgrShellCoredumpState *state)
+{
+	return sceAppMgrGetCoredumpStateForShell(state);
+}
+
+int appmgrFinishCoredumpForShellSyscall(void)
+{
+	return sceAppMgrFinishCoredumpForShell();
+}
+
+int appmgrEnableCoredumpForTestSyscall(void)
+{
+	return sceAppMgrEnableCoredumpForTest();
+}
+
 int appmgrSetDisplayMergeConfSyscall(SceUInt32 setting, SceUInt32 alpha)
 {
 	return sceAppMgrSetDisplayMergeConf(setting, alpha);

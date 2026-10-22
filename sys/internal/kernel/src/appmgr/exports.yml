@@ -120,7 +120,7 @@ SceAppMgr:
         - _sceAppMgrGetPidListForShell: 0x29AC9DF0
         - sceAppMgrReleaseSoundOutExclusive2: 0x2BB68701
         - _sceAppMgrAppUmount: 0x2FB40418
-        - sceAppMgrEnableCoredumpForTest: 0x32FD0B99
+        - appmgrEnableCoredumpForTestSyscall: 0x32FD0B99
         - appmgrGetAppIdByAppIdSyscall: 0x332C9D98
         - _sceAppMgrLoopBackMount: 0x3493CDFA
         - sceAppMgrIsOtherAppPresent: 0x371F6F81
@@ -146,7 +146,7 @@ SceAppMgr:
         - _sceAppMgrBgdlGetQueueStatus: 0x5075AE28
         - _sceAppMgrGetDevInfo: 0x52766019
         - appmgrDumpSyscall: 0x527795E8
-        - sceAppMgrFinishCoredumpForShell: 0x52FF63D1
+        - appmgrFinishCoredumpForShellSyscall: 0x52FF63D1
         - _sceAppMgrSaveDataUmount: 0x53623420
         - sceAppMgrLaunchAppCancel: 0x5369BC0A
         - sceAppMgrDestroyOtherAppByPidForShell: 0x5420D23C

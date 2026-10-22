@@ -284,6 +284,15 @@ int _sceAppMgrOverwriteLaunchParamForShell(int appId, const char *param,
 	return appmgrOverwriteLaunchParamForShellSyscall(appId, buffer);
 }
 
+int _sceAppMgrGetCoredumpStateForShell(AppmgrShellCoredumpState *state)
+{
+	int ret;
+
+	BLOCK_OUT(state, sizeof(*state),
+		  appmgrGetCoredumpStateForShellSyscall(NULL),
+		  appmgrGetCoredumpStateForShellSyscall((AppmgrShellCoredumpState *)k));
+}
+
 int _sceAppMgrReceiveNotificationRequestForShell(AppmgrNotificationRequest *request)
 {
 	int ret;

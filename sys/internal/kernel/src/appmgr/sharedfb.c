@@ -68,7 +68,7 @@ _Static_assert(offsetof(struct SharedFbManager, shellRenderPort) == 936, "shared
 struct SharedFbManager gSharedFbManager;
 
 extern int _sceAppMgrIsExistAbortedAppOrDebugSuspendedApp(void);
-extern int _sceAppMgrAbort(SceUID pid);
+extern int appmgrAbortProcess(SceUID processId);
 
 int sharedFbProcessCreate(SceUID pid, ProcEventCreateParam *param, void *common);
 int sharedFbProcessExit(SceUID pid, ProcEventParam *param, void *common);
@@ -652,7 +652,7 @@ int sceSharedFbUpdateProcess(void)
 			timeoutPtr = NULL;
 			continue;
 		}
-		if (!_sceAppMgrAbort(processId))
+		if (!appmgrAbortProcess(processId))
 			continue;
 		if (lockFastMutex(&gSharedFbManager.mutex))
 			goto retry;
