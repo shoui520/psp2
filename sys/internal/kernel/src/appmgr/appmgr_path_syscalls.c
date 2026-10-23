@@ -37,6 +37,12 @@ int appmgrGetRawPathSyscall(char *path, char *resolvedPath, int capacity)
 	return sceAppMgrGetRawPath(path, resolvedPath, capacity);
 }
 
+int appmgrGetSaveDataInfoSyscall(const char *appPath, const char *titleId,
+				 SceUInt32 attributes, AppmgrSaveDataInfo *info)
+{
+	return sceAppMgrGetSaveDataInfo(appPath, titleId, attributes, info);
+}
+
 int appmgrGetUserDirPathSyscall(int partitionId, char *path,
 	unsigned int capacity)
 {

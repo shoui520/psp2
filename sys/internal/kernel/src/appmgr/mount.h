@@ -24,6 +24,19 @@ _Static_assert(offsetof(AppmgrPfsMount, mountId) == 0 &&
 	       offsetof(AppmgrPfsMount, next) == 460,
 	       "PFS mount fields");
 
+/* sceAppMgrGetSaveDataInfo's result */
+typedef struct AppmgrSaveDataInfo {
+	SceUInt32 mediaType;		/* 4 ux0, 3 grw0/gro0, 2 ur0/vs0, 1 other */
+	SceUInt32 mounted;
+	SceUInt32 broken;
+	SceUInt32 savedataVersion;
+	SceUInt32 savedataOwnershipFlags;
+	SceUInt32 maxSize;
+	SceUInt32 freeSizeKiB;
+} AppmgrSaveDataInfo;
+
+_Static_assert(sizeof(AppmgrSaveDataInfo) == 28, "save data information");
+
 /* sceAppMgrAddContMount's parameters: the drive the caller expects add-on content at */
 typedef struct AppmgrAddContMountParam {
 	unsigned char reserved[48];
@@ -110,6 +123,8 @@ int appmgrMountSystemDirectory(SceUID pid, unsigned int mountId, ScePfsRndDriveI
 int sceAppMgrPspSaveDataRootMount(ScePfsRndDriveId *mountPoint);
 int sceAppMgrTrophyMountById(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint);
 int sceAppMgrWorkDirMountById(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint);
+int sceAppMgrGetSaveDataInfo(const char *appPath, const char *titleId, SceUInt32 attributes,
+			     AppmgrSaveDataInfo *info);
 int sceAppMgrInstallDirMount(unsigned int mountId, const char *id, const void *keystone,
 			     ScePfsRndDriveId *mountPoint);
 int sceAppMgrLoopBackMount(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint);

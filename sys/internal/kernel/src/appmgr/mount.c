@@ -37,6 +37,8 @@
 #include <iofilemgr/iofilemgr.h>
 #include <post_ss_mgr/sblpostssmgr.h>
 #include <pfsmgr/pfsmgr.h>
+#include <syscon/syscon.h>
+#include <sysmem/pmmgr.h>
 #include "app_state_internal.h"
 #include "appmgr_device.h"
 #include "appmgr_event.h"
@@ -6396,6 +6398,228 @@ unlock:
 leave:
 	sceSyscallLeave(syscall);
 	return ret;
+}
+
+/*
+ * The save data of an application path: its medium, whether it is mounted already or
+ * broken, its version and ownership, and its size and free space. The save data is
+ * mounted for the query when it is not mounted yet.
+ */
+int sceAppMgrGetSaveDataInfo(const char *appPath, const char *titleId, SceUInt32 attributes,
+			     AppmgrSaveDataInfo *info)
+{
+	SceUInt32 syscallState;
+	SceAllocOpt opt;
+	SceProductMode productMode;
+	AppmgrPfsMount *mount = NULL, *cursor;
+	ScePfsRndDriveId mountPoint = { "" };
+	SceUInt32 quota = 0;
+	char appName[16];
+	union {
+		SceSelfAuthInfo authInfo;
+		SceIoStat stat;
+	} buffer;
+	char path[292] = "";
+	char sdslotPath[64] = "";
+	AppmgrProcessContent *content;
+	struct AppState *app;
+	char *workPath, *normalized;
+	int result;
+
+	productMode = 0;
+	syscallState = sceSyscallEnter();
+	result = sceKernelGetProcessSelfAuthInfo(0, &buffer.authInfo);
+	if (result < 0)
+		goto out;
+	if (buffer.authInfo.programAuthorityId != 0x2800000000000001ULL &&
+	    buffer.authInfo.programAuthorityId != 0x280000000000002dULL &&
+	    buffer.authInfo.programAuthorityId != 0x2800000000000039ULL) {
+		result = 0x80800009;
+		goto out;
+	}
+	if (titleId == NULL || appPath == NULL || info == NULL ||
+	    strnlen(appPath, sizeof(path)) == sizeof(path)) {
+		result = 0x80800001;
+		goto out;
+	}
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 32;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	workPath = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	if (workPath == NULL)
+		goto noMemory;
+	memset(workPath, 0, 292);
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	opt.align = 32;
+	content = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, sizeof(*content), &opt);
+	if (content == NULL)
+		goto noMemory;
+	memset(content, 0, sizeof(*content));
+	__builtin_strcpy(content->category, "gd");
+	memset(info, 0, sizeof(*info));
+	result = appmgrGetSaveDataPath(appPath, titleId, attributes, content->category,
+				       path, sizeof(path));
+	if (result < 0)
+		goto freeContent;
+
+	/* The save data may not be an application's content mount. */
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	opt.mmapKind = 0;
+	opt.align = 32;
+	opt.size = sizeof(opt);
+	cursor = g_appmgrPfsMounts;
+	normalized = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	if (normalized == NULL)
+		goto noMemoryContent;
+	result = appmgrNormalizePath(path, normalized);
+	if (result < 0) {
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+		if (result != 0x80800002)
+			goto freeContent;
+	} else {
+		for (; cursor != NULL; cursor = cursor->next) {
+			if (cursor->mountId == 901 &&
+			    strncmp(cursor->appPath, normalized, 292) == 0) {
+				result = 0x80800017;
+				sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+				goto freeContent;
+			}
+		}
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+	}
+
+	if (strncmp(path, "ux0:", 4) == 0) {
+		info->mediaType = 4;
+		if (appmgrGetFakeNoMemoryCard() == 2) {
+			result = 0x80010013;
+			goto freeContent;
+		}
+	} else if (strncmp(path, "grw0:", 5) == 0 || strncmp(path, "gro0:", 5) == 0) {
+		info->mediaType = 3;
+	} else if (strncmp(path, "ur0:", 4) == 0 || strncmp(path, "vs0:", 4) == 0) {
+		info->mediaType = 2;
+	} else {
+		info->mediaType = 1;
+	}
+
+	/* Mounted already? */
+	opt.align = 32;
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	cursor = g_appmgrPfsMounts;
+	normalized = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	if (normalized == NULL)
+		goto noMemoryContent;
+	result = appmgrNormalizePath(path, normalized);
+	if (result < 0) {
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+		if (result != 0x80800002)
+			goto freeContent;
+	} else {
+		for (; cursor != NULL; cursor = cursor->next) {
+			if (strncmp(cursor->appPath, normalized, 292) == 0) {
+				mount = cursor;
+				sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+				info->mounted = 1;
+				goto createDirectories;
+			}
+		}
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+	}
+
+createDirectories:
+	result = appmgrCreateDirectories(path, 0);
+	if (result < 0)
+		goto freeContent;
+	if (info->mounted)
+		snprintf(workPath, 292, "%s/sce_sys", path);
+	else
+		snprintf(workPath, 292, "%s/sce_pfs", path);
+	result = appmgrCreateDirectories(workPath, 0);
+	if (result < 0)
+		goto freeContent;
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, workPath);
+
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app == NULL) {
+		result = 0x80801002;
+		workPath = NULL;
+		goto freeContent;
+	}
+	__builtin_memset(appName, 0, sizeof(appName));
+	strncpy(appName, app->process.appName, 9);
+	if (!info->mounted) {
+		result = appmgrMount(sceKernelGetProcessId(), &app->process.mounts, 1005,
+				     appName, path, NULL, NULL, &mountPoint);
+		if (result < 0)
+			goto failed;
+		result = appmgrFindPfsMount(g_appmgrPfsMounts, 1005, path, &mount);
+		if (result < 0)
+			goto unmount;
+	}
+	result = appmgrValidateSaveDataMount(sceKernelGetProcessId(), path, 1, content,
+					     &info->maxSize);
+	if (result < 0)
+		goto failed;
+	info->savedataVersion = content->savedataVersion;
+	info->savedataOwnershipFlags = content->savedataOwnershipFlags;
+	if (SceSysconForDriver_CBD6D8BC() & 0x80)
+		info->savedataOwnershipFlags = 0;
+	if (sceSblPmMgrGetProductMode(&productMode) >= 0 && productMode == 1)
+		info->savedataOwnershipFlags = 0;
+	if (ScePfsMgrForKernel_27FB7618(mount->mountPoint.drive_id, &quota, &info->freeSizeKiB) < 0)
+		info->freeSizeKiB = 0;
+	else
+		info->freeSizeKiB >>= 10;
+	if (snprintf(sdslotPath, sizeof(sdslotPath), "%s0:/sce_sys/sdslot.dat",
+		     mount->mountPoint.drive_id) > 0 &&
+	    sceIoGetstat(sdslotPath, &buffer.stat) < 0) {
+		result = 0;
+		info->broken = 1;
+		goto unmount;
+	}
+	result = 0;
+	goto unmount;
+
+failed:
+	if (result == 0x8001002f || result == 0x80010022 ||
+	    result == 0x8001008f || result == 0x8014001b)
+		info->broken = 1;
+	else
+		info->broken = 0;
+unmount:
+	if (mountPoint.drive_id[0] != '\0')
+		appmgrUnmountDrive(sceKernelGetProcessId(), &app->process.mounts,
+				   mountPoint.drive_id, 0);
+	workPath = NULL;
+	goto freeContent;
+
+noMemoryContent:
+	result = 0x80801006;
+freeContent:
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, content);
+	goto freeWork;
+noMemory:
+	result = 0x80801006;
+freeWork:
+	if (workPath != NULL)
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, workPath);
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
 }
 
 int appmgrResolvePath(const char *path, SceUID pid, char *output, SceSize size)
