@@ -105,6 +105,9 @@ _Static_assert(sizeof(SceAppMgrSaveDataUmountParam) == 0x14, "SceAppMgrSaveDataU
 
 int sceAppMgrSaveDataDataSave(SceAppMgrSaveDataData *data);
 int sceAppMgrSaveDataDataRemove(SceAppMgrSaveDataDataDelete *data);
+/* sceAppMgrSaveDataDataSave and sceAppMgrSaveDataDataRemove for system applications */
+int SceAppMgrForDriver_30947DF4(SceAppMgrSaveDataData *operation);
+int SceAppMgrForDriver_EBFE1BE2(SceAppMgrSaveDataDataDelete *operation);
 
 /* vitasdk: ksceAppMgrSaveDataSlotDelete */
 int SceAppMgrForDriver_B544F2A0(SceAppMgrSaveDataSlotDelete *parameters);

@@ -1854,6 +1854,11 @@ leaveSyscall:
 	return result;
 }
 
+int SceAppMgrForDriver_30947DF4(SceAppMgrSaveDataData *operation)
+{
+	return appmgrSaveDataDataSave(operation, 0);
+}
+
 int appmgrSaveDataDataRemove(SceAppMgrSaveDataDataDelete *operation, int normalApplication)
 {
 	SceAppUtilSaveDataDataRemoveItem item;
@@ -2024,6 +2029,11 @@ unlockPower:
 leaveSyscall:
 	sceSyscallLeave(syscallState);
 	return result;
+}
+
+int SceAppMgrForDriver_EBFE1BE2(SceAppMgrSaveDataDataDelete *operation)
+{
+	return appmgrSaveDataDataRemove(operation, 0);
 }
 
 int SceAppMgrForDriver_E104C37E(SceAppMgrSaveDataQuota *quota)
