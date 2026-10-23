@@ -5,6 +5,7 @@
 #include <appmgr/appmgr.h>
 #include "app_state_internal.h"
 #include "mount.h"
+#include "appmgr_savedata_slot.h"
 
 int appmgrSaveDataSlotInitSyscall(void *slot)
 {
@@ -41,14 +42,35 @@ int appmgrSaveDataSlotGetStatusSyscall(void *status)
 	return SceAppMgrForDriver_EC9D5A35(status);
 }
 
+int appmgrSaveDataDataSaveSyscall(SceAppMgrSaveDataData *operation)
+{
+	return appmgrSaveDataDataSave(operation, 1);
+}
+
+int appmgrSaveDataDataSave2Syscall(SceAppMgrSaveDataData *operation)
+{
+	return appmgrSaveDataDataSave(operation, 0);
+}
+
 int appmgrSaveDataGetCachedRequiredSizeKiBSyscall(void)
 {
 	return sceAppMgrSaveDataGetCachedRequiredSizeKiB();
 }
 
+int appmgrSaveDataSlotFileOpenSyscall(const char *mountPoint,
+				     AppmgrSaveDataSlotFileInfo *info)
+{
+	return appmgrOpenSaveDataSlotFile(mountPoint, info);
+}
+
 int appmgrSaveDataSlotFileGetParamSyscall(unsigned int slotId, void *param)
 {
 	return appmgrSaveDataSlotFileGetParam(slotId, param);
+}
+
+int appmgrSaveDataSlotFileCloseSyscall(const char *mountPoint)
+{
+	return appmgrCloseSaveDataSlotFile(mountPoint);
 }
 
 int appmgrSaveDataAddMountSyscall(const AppmgrAddMountParam *param)

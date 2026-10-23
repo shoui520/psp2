@@ -485,6 +485,9 @@ int appmgrGetUserDirPathSyscall(int partitionId, char *path, unsigned int capaci
 int appmgrGetUserDirPathByIdSyscall(int userId, int partitionId, char *path, unsigned int capacity);
 int appmgrAddContMountSyscall(SceUID pid, const struct AppmgrAddContMountParam *param);
 struct ScePfsRndDriveId;
+struct AppmgrSaveDataInfo;
+struct AppmgrLoopBackImageInfo;
+struct AppmgrSaveDataSlotFileInfo;
 int appmgrGameDataMountSyscall(const char *appPath, const char *patchPath,
 			       const char *rifPath, struct ScePfsRndDriveId *mountPoint);
 int appmgrAppDataMountSyscall(unsigned int mountId, struct ScePfsRndDriveId *mountPoint);
@@ -564,7 +567,12 @@ int appmgrSaveDataSlotSetParamSyscall(SceAppMgrSaveDataSlot *slot);
 int appmgrSaveDataSlotGetParamSyscall(SceAppMgrSaveDataSlot *slot);
 int appmgrSaveDataSlotSetStatusSyscall(void *status);
 int appmgrSaveDataSlotGetStatusSyscall(void *status);
+int appmgrSaveDataDataSaveSyscall(SceAppMgrSaveDataData *operation);
+int appmgrSaveDataDataSave2Syscall(SceAppMgrSaveDataData *operation);
 int appmgrSaveDataGetCachedRequiredSizeKiBSyscall(void);
+int appmgrSaveDataSlotFileOpenSyscall(const char *mountPoint,
+				     struct AppmgrSaveDataSlotFileInfo *info);
+int appmgrSaveDataSlotFileCloseSyscall(const char *mountPoint);
 int appmgrSaveDataSlotFileGetParamSyscall(unsigned int slotId, void *param);
 
 /* appmgr_service.c */
@@ -603,7 +611,10 @@ int appmgrInitializeBgdlQueueStorage(void);
 
 /* savedata.c */
 int appmgrCreateSaveDataSlotFile(SceUID pid, const char *path, SceUInt32 slotCount);
+int appmgrSaveDataDataSave(SceAppMgrSaveDataData *operation, int normalApplication);
 int sceAppMgrSaveDataGetCachedRequiredSizeKiB(void);
+int appmgrOpenSaveDataSlotFile(const char *mountPoint, struct AppmgrSaveDataSlotFileInfo *info);
+int appmgrCloseSaveDataSlotFile(const char *mountPoint);
 int appmgrSaveDataSlotFileGetParam(unsigned int slotId, void *param);
 
 /* sharedfb.c */
