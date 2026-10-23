@@ -1692,6 +1692,11 @@ static inline __attribute__((always_inline)) void makeLaunchRequest(AppmgrLaunch
 	request->useCommonDialog = useCommonDialog;
 }
 
+/* The abort handler's hook after an aborted application is handled; empty in this build. */
+void appmgrArbitrationAfterAbort(void)
+{
+}
+
 /*
  * The shell launches an application by path: a slot is reserved under the name, and the
  * launch request is built from the arguments and the shell's options.
