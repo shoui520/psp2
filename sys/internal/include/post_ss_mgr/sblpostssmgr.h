@@ -72,4 +72,5 @@ int SceSblPostSsMgrForDriver_AD3B0078(SceSblSpfsoCtx *ctx);
 /* vitasdk: ksceSblLicMgrGetActivationKey */
 int SceSblPostSsMgrForDriver_F7F1015B(SceActivationKey *key);
 int SceSblPostSsMgrForDriver_128FB35A(SceUID pid);	/* a utoken communication test process */
+int sceSblSsGenerateSealedKey(void *sealedKey);
 int sceSblSsDecryptSealedKey(const void *sealedKey, void *key);

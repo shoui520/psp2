@@ -103,6 +103,7 @@ int appmgrGetMountPointById(int mountId, char *mountPoint);
 int appmgrIsMountIdAllowed(unsigned int mountId);
 int appmgrFindPfsMount(AppmgrPfsMount *mount, int mountId, const char *path,
 		       AppmgrPfsMount **found);
+int appmgrCreatePfsDirectory(unsigned int mountId, const char *path, const void *keystone);
 int appmgrMountPfsAcidDirectory(const char *drive, const char *directory);
 int appmgrUnmountPfsAcidDirectory(const char *drive, const char *directory);
 int sceAppMgrUmountByPid(SceUID pid, const char *driveId);

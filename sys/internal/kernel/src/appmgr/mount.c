@@ -4707,6 +4707,107 @@ out:
 	return result;
 }
 
+/*
+ * Makes a directory a new PFS directory for a mount ID: a new sealed key, the directory
+ * mounted with its key and the save data metadata written. A directory that already has
+ * sce_pfs or sce_sys is left as it is.
+ */
+int appmgrCreatePfsDirectory(unsigned int mountId, const char *path, const void *keystone)
+{
+	unsigned char sealedKey[80];
+	ScePfsRndDriveId key, drive;
+	SceSelfAuthInfo authInfo;
+	SceUInt64 authorityId;
+	SceAllocOpt opt;
+	SceUInt16 mode;
+	char *buffer;
+	int result;
+
+	switch (mountId) {
+	case 110:
+		result = sceKernelGetProcessSelfAuthInfo(0, &authInfo);
+		if (result < 0)
+			return result;
+		opt.size = sizeof(opt);
+		opt.mmapKind = 0;
+		opt.align = 32;
+		opt.mmapBase = NULL;
+		opt.mmapSize = 0;
+		authorityId = authInfo.programAuthorityId;
+		buffer = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+		if (buffer == NULL)
+			return 0x80801006;
+		mode = 5;
+		goto create;
+	case 300:
+	case 302 ... 304:
+	case 504:
+	case 505:
+		mode = 6;
+		break;
+	case 500:
+	case 501:
+		mode = 4;
+		break;
+	default:
+		return 0x80800001;
+	}
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 32;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	buffer = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	if (buffer == NULL)
+		return 0x80801006;
+	if (mountId == 504) {
+		result = appmgrCreateDirectories(path, 0);
+		if (result < 0)
+			goto free;
+	} else if (mountId == 505 && appmgrCreateDirectories(path, 0) == 0) {
+		result = 0x80800045;
+		goto free;
+	}
+	authorityId = 0x2800000000000001ULL;
+
+create:
+	result = appmgrCreateDirectories(path, 1);
+	if (result < 0)
+		goto free;
+	snprintf(buffer, 292, "%s/sce_pfs", path);
+	result = appmgrCreateDirectories(buffer, 0);
+	if (result == 0)
+		goto free;
+	snprintf(buffer, 292, "%s/sce_sys", path);
+	result = appmgrCreateDirectories(buffer, 0);
+	if (result == 0)
+		goto free;
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, buffer);
+
+	memset(sealedKey, 0, sizeof(sealedKey));
+	key = (ScePfsRndDriveId){{0}};
+	drive = (ScePfsRndDriveId){{0}};
+	result = sceSblSsGenerateSealedKey(sealedKey);
+	if (result < 0)
+		return result;
+	result = sceSblSsDecryptSealedKey(sealedKey, &key);
+	if (result < 0)
+		return result;
+	result = appmgrMakeRandomDriveId("ts", drive.drive_id);
+	if (result < 0)
+		return result;
+	result = ScePfsMgrForKernel_A772209C(path, drive.drive_id, authorityId, &key, mode);
+	if (result < 0)
+		return result;
+	result = appmgrCreateSaveDataMetadata(0, path, NULL, mountId, sealedKey, keystone, NULL);
+	ScePfsMgrForKernel_680BC384(drive.drive_id);
+	return result;
+
+free:
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, buffer);
+	return result;
+}
+
 int SceAppMgrForDriver_0813AFCA(int partitionId, char *output,
 	unsigned int capacity)
 {
