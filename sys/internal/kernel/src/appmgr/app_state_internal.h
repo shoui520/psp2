@@ -478,6 +478,12 @@ int appmgrAddContMountSyscall(SceUID pid, const struct AppmgrAddContMountParam *
 struct ScePfsRndDriveId;
 int appmgrGameDataMountSyscall(const char *appPath, const char *patchPath,
 			       const char *rifPath, struct ScePfsRndDriveId *mountPoint);
+int appmgrAppDataMountByIdSyscall(unsigned int mountId, const char *id,
+				  struct ScePfsRndDriveId *mountPoint);
+int appmgrInstallDirMountSyscall(unsigned int mountId, const char *id, const void *keystone,
+				 struct ScePfsRndDriveId *mountPoint);
+int appmgrLoopBackMountSyscall(unsigned int mountId, const char *id,
+			       struct ScePfsRndDriveId *mountPoint);
 int appmgrThemeDataMountSyscall(const char *contentId, const char *themePath,
 				const char *rifPath, struct ScePfsRndDriveId *mountPoint);
 int appmgrSaveDataAddMountSyscall(const struct AppmgrAddMountParam *param);

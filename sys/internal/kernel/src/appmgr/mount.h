@@ -104,6 +104,12 @@ int appmgrIsMountIdAllowed(unsigned int mountId);
 int appmgrFindPfsMount(AppmgrPfsMount *mount, int mountId, const char *path,
 		       AppmgrPfsMount **found);
 int appmgrCreatePfsDirectory(unsigned int mountId, const char *path, const void *keystone);
+int appmgrMountById(SceUID pid, unsigned int mountId, const char *id, const void *keystone,
+		    ScePfsRndDriveId *mountPoint);
+int sceAppMgrTrophyMountById(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint);
+int sceAppMgrInstallDirMount(unsigned int mountId, const char *id, const void *keystone,
+			     ScePfsRndDriveId *mountPoint);
+int sceAppMgrLoopBackMount(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint);
 int appmgrMountPfsAcidDirectory(const char *drive, const char *directory);
 int appmgrUnmountPfsAcidDirectory(const char *drive, const char *directory);
 int sceAppMgrUmountByPid(SceUID pid, const char *driveId);

@@ -4808,6 +4808,554 @@ free:
 	return result;
 }
 
+/* The system paths the mount IDs name, encoded like every system path appmgr keeps */
+static const unsigned char encodedMmsMusic[16] = {
+	(unsigned char)~'u', (unsigned char)~'x', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'m', (unsigned char)~'m', (unsigned char)~'s', (unsigned char)~'/',
+	(unsigned char)~'m', (unsigned char)~'u', (unsigned char)~'s', (unsigned char)~'i',
+	(unsigned char)~'c', 0
+};
+static const unsigned char encodedPspEmu[16] = {
+	(unsigned char)~'u', (unsigned char)~'x', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'p', (unsigned char)~'s', (unsigned char)~'p', (unsigned char)~'e',
+	(unsigned char)~'m', (unsigned char)~'u', 0
+};
+static const unsigned char encodedAppMeta[16] = {
+	(unsigned char)~'u', (unsigned char)~'x', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'a', (unsigned char)~'p', (unsigned char)~'p', (unsigned char)~'m',
+	(unsigned char)~'e', (unsigned char)~'t', (unsigned char)~'a', (unsigned char)~'\0',
+	0
+};
+static const unsigned char encodedGriefReport[24] = {
+	(unsigned char)~'u', (unsigned char)~'r', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'t', (unsigned char)~'e', (unsigned char)~'m', (unsigned char)~'p',
+	(unsigned char)~'/', (unsigned char)~'g', (unsigned char)~'r', (unsigned char)~'i',
+	(unsigned char)~'e', (unsigned char)~'f', (unsigned char)~'_', (unsigned char)~'r',
+	(unsigned char)~'e', (unsigned char)~'p', (unsigned char)~'o', (unsigned char)~'r',
+	(unsigned char)~'t', 0
+};
+static const unsigned char encodedWebBrowser[24] = {
+	(unsigned char)~'u', (unsigned char)~'r', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'t', (unsigned char)~'e', (unsigned char)~'m', (unsigned char)~'p',
+	(unsigned char)~'/', (unsigned char)~'w', (unsigned char)~'e', (unsigned char)~'b',
+	(unsigned char)~'b', (unsigned char)~'r', (unsigned char)~'o', (unsigned char)~'w',
+	(unsigned char)~'s', (unsigned char)~'e', (unsigned char)~'r', 0
+};
+static const unsigned char encodedBook[16] = {
+	(unsigned char)~'u', (unsigned char)~'x', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'b', (unsigned char)~'o', (unsigned char)~'o', (unsigned char)~'k',
+	0
+};
+static const unsigned char encodedMmsVideo[16] = {
+	(unsigned char)~'u', (unsigned char)~'x', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'m', (unsigned char)~'m', (unsigned char)~'s', (unsigned char)~'/',
+	(unsigned char)~'v', (unsigned char)~'i', (unsigned char)~'d', (unsigned char)~'e',
+	(unsigned char)~'o', 0
+};
+static const unsigned char encodedGiftReceived[24] = {
+	(unsigned char)~'n', (unsigned char)~'e', (unsigned char)~'a', (unsigned char)~'r',
+	(unsigned char)~'/', (unsigned char)~'d', (unsigned char)~'a', (unsigned char)~'t',
+	(unsigned char)~'a', (unsigned char)~'/', (unsigned char)~'g', (unsigned char)~'i',
+	(unsigned char)~'f', (unsigned char)~'t', (unsigned char)~'/', (unsigned char)~'r',
+	(unsigned char)~'e', (unsigned char)~'c', (unsigned char)~'e', (unsigned char)~'i',
+	(unsigned char)~'v', (unsigned char)~'e', (unsigned char)~'d', 0
+};
+static const unsigned char encodedCheckout[24] = {
+	(unsigned char)~'u', (unsigned char)~'r', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'t', (unsigned char)~'e', (unsigned char)~'m', (unsigned char)~'p',
+	(unsigned char)~'/', (unsigned char)~'c', (unsigned char)~'h', (unsigned char)~'e',
+	(unsigned char)~'c', (unsigned char)~'k', (unsigned char)~'o', (unsigned char)~'u',
+	(unsigned char)~'t', 0
+};
+static const unsigned char encodedVideo[16] = {
+	(unsigned char)~'u', (unsigned char)~'x', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'v', (unsigned char)~'i', (unsigned char)~'d', (unsigned char)~'e',
+	(unsigned char)~'o', 0
+};
+static const unsigned char encodedNearDataSys[16] = {
+	(unsigned char)~'n', (unsigned char)~'e', (unsigned char)~'a', (unsigned char)~'r',
+	(unsigned char)~'/', (unsigned char)~'d', (unsigned char)~'a', (unsigned char)~'t',
+	(unsigned char)~'a', (unsigned char)~'_', (unsigned char)~'s', (unsigned char)~'y',
+	(unsigned char)~'s', 0
+};
+static const unsigned char encodedSqlite[16] = {
+	(unsigned char)~'u', (unsigned char)~'r', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'t', (unsigned char)~'e', (unsigned char)~'m', (unsigned char)~'p',
+	(unsigned char)~'/', (unsigned char)~'s', (unsigned char)~'q', (unsigned char)~'l',
+	(unsigned char)~'i', (unsigned char)~'t', (unsigned char)~'e', 0
+};
+static const unsigned char encodedTrophySceTrop[24] = {
+	(unsigned char)~'t', (unsigned char)~'r', (unsigned char)~'o', (unsigned char)~'p',
+	(unsigned char)~'h', (unsigned char)~'y', (unsigned char)~'/', (unsigned char)~'d',
+	(unsigned char)~'a', (unsigned char)~'t', (unsigned char)~'a', (unsigned char)~'/',
+	(unsigned char)~'s', (unsigned char)~'c', (unsigned char)~'e', (unsigned char)~'_',
+	(unsigned char)~'t', (unsigned char)~'r', (unsigned char)~'o', (unsigned char)~'p',
+	0
+};
+static const unsigned char encodedPsnMsg[8] = {
+	(unsigned char)~'p', (unsigned char)~'s', (unsigned char)~'n', (unsigned char)~'m',
+	(unsigned char)~'s', (unsigned char)~'g', 0
+};
+static const unsigned char encodedMusic[16] = {
+	(unsigned char)~'u', (unsigned char)~'x', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'m', (unsigned char)~'u', (unsigned char)~'s', (unsigned char)~'i',
+	(unsigned char)~'c', 0
+};
+static const unsigned char encodedPsnFriend[16] = {
+	(unsigned char)~'p', (unsigned char)~'s', (unsigned char)~'n', (unsigned char)~'f',
+	(unsigned char)~'r', (unsigned char)~'i', (unsigned char)~'e', (unsigned char)~'n',
+	(unsigned char)~'d', 0
+};
+static const unsigned char encodedAttach[16] = {
+	(unsigned char)~'u', (unsigned char)~'r', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'t', (unsigned char)~'e', (unsigned char)~'m', (unsigned char)~'p',
+	(unsigned char)~'/', (unsigned char)~'a', (unsigned char)~'t', (unsigned char)~'t',
+	(unsigned char)~'a', (unsigned char)~'c', (unsigned char)~'h', 0
+};
+static const unsigned char encodedCalendar[16] = {
+	(unsigned char)~'u', (unsigned char)~'x', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'c', (unsigned char)~'a', (unsigned char)~'l', (unsigned char)~'e',
+	(unsigned char)~'n', (unsigned char)~'d', (unsigned char)~'a', (unsigned char)~'r',
+	0
+};
+static const unsigned char encodedMmsPhoto[16] = {
+	(unsigned char)~'u', (unsigned char)~'x', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'m', (unsigned char)~'m', (unsigned char)~'s', (unsigned char)~'/',
+	(unsigned char)~'p', (unsigned char)~'h', (unsigned char)~'o', (unsigned char)~'t',
+	(unsigned char)~'o', 0
+};
+static const unsigned char encodedUserData[24] = {
+	(unsigned char)~'u', (unsigned char)~'x', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'d', (unsigned char)~'a', (unsigned char)~'t', (unsigned char)~'a',
+	(unsigned char)~'/', (unsigned char)~'u', (unsigned char)~'s', (unsigned char)~'e',
+	(unsigned char)~'r', (unsigned char)~'d', (unsigned char)~'a', (unsigned char)~'t',
+	(unsigned char)~'a', 0
+};
+static const unsigned char encodedNpHome[16] = {
+	(unsigned char)~'t', (unsigned char)~'m', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'n', (unsigned char)~'p', (unsigned char)~'h', (unsigned char)~'o',
+	(unsigned char)~'m', (unsigned char)~'e', 0
+};
+static const unsigned char encodedPicture[16] = {
+	(unsigned char)~'u', (unsigned char)~'x', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'p', (unsigned char)~'i', (unsigned char)~'c', (unsigned char)~'t',
+	(unsigned char)~'u', (unsigned char)~'r', (unsigned char)~'e', 0
+};
+static const unsigned char encodedTrophyData[16] = {
+	(unsigned char)~'t', (unsigned char)~'r', (unsigned char)~'o', (unsigned char)~'p',
+	(unsigned char)~'h', (unsigned char)~'y', (unsigned char)~'/', (unsigned char)~'d',
+	(unsigned char)~'a', (unsigned char)~'t', (unsigned char)~'a', 0
+};
+
+static char g_appmgrMountByIdComponent[32];
+static char g_appmgrMountByIdRoot[32];
+static char g_appmgrCachePath[32];
+static char g_appmgrPsmPath[32];
+static char g_appmgrAppWorkPath[32];
+static char g_appmgrLoopBackPath[64];
+static char g_appmgrInstallDirPath[32];
+
+/* A title ID: XXXXNNNNN (X upper case, N digit). */
+static int appmgrIsTitleId(const char *id)
+{
+	return APPMGR_IS_UPPER(id[0]) && APPMGR_IS_UPPER(id[1]) &&
+	       APPMGR_IS_UPPER(id[2]) && APPMGR_IS_UPPER(id[3]) &&
+	       APPMGR_IS_DIGIT(id[4]) && APPMGR_IS_DIGIT(id[5]) &&
+	       APPMGR_IS_DIGIT(id[6]) && APPMGR_IS_DIGIT(id[7]) &&
+	       APPMGR_IS_DIGIT(id[8]) && id[9] == '\0';
+}
+
+/* A title ID with a two digit suffix: XXXXNNNNN_NN (a trophy set, a gift). */
+static int appmgrIsTitleIdWithSuffix(const char *id)
+{
+	return APPMGR_IS_UPPER(id[0]) && APPMGR_IS_UPPER(id[1]) &&
+	       APPMGR_IS_UPPER(id[2]) && APPMGR_IS_UPPER(id[3]) &&
+	       APPMGR_IS_DIGIT(id[4]) && APPMGR_IS_DIGIT(id[5]) &&
+	       APPMGR_IS_DIGIT(id[6]) && APPMGR_IS_DIGIT(id[7]) &&
+	       APPMGR_IS_DIGIT(id[8]) && id[9] == '_' &&
+	       APPMGR_IS_DIGIT(id[10]) && APPMGR_IS_DIGIT(id[11]) && id[12] == '\0';
+}
+
+/* A path in the account's folder of ur0:user: root/account/component[/id]. */
+static inline __attribute__((always_inline))
+int appmgrMakeAccountPath(char *path, const unsigned char *component, const char *id,
+				 const char *format)
+{
+	int result;
+
+	result = appmgrDecodeString(encodedUserRoot, g_appmgrMountByIdRoot,
+				    sizeof(g_appmgrMountByIdRoot));
+	if (result < 0)
+		return result;
+	result = appmgrDecodeString(component, g_appmgrMountByIdComponent,
+				    sizeof(g_appmgrMountByIdComponent));
+	if (result < 0)
+		return result;
+	if (g_appmgrAccountDirectory[0] == 0)
+		appmgrUpdateAccountDirectory();
+	if ((unsigned int)snprintf(path, 64, format, g_appmgrMountByIdRoot,
+				   g_appmgrAccountDirectory, g_appmgrMountByIdComponent, id) > 63)
+		return 0x80800001;
+	return 0;
+}
+
+/*
+ * Mounts a system directory by its mount ID for the calling process, the ID (a title ID,
+ * a trophy set, an image name) naming the directory where the mount ID needs one. Mount
+ * ID 300 clones the temporary mounts of process pid instead.
+ */
+int appmgrMountById(SceUID pid, unsigned int mountId, const char *id, const void *keystone,
+		    ScePfsRndDriveId *mountPoint)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	char titleId[16] = {0};
+	unsigned char currentKeystone[96];
+	char buffer[64];
+	struct AppState *app, *source;
+	const char *path, *drive = NULL;
+	int result, i;
+
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	result = 0x80800009;
+	if (!appmgrIsMountIdAllowed(mountId))
+		goto unlock;
+	if (mountPoint == NULL)
+		goto invalid;
+
+	switch (mountId) {
+	case 104:
+	case 303:
+	case 304:
+		if (id == NULL || !appmgrIsTitleIdWithSuffix(id))
+			goto invalid;
+		break;
+	case 106:
+	case 107:
+	case 205:
+	case 207:
+	case 500 ... 503:
+		if (id == NULL || !appmgrIsTitleId(id))
+			goto invalid;
+		break;
+	case 110:
+		if (id == NULL)
+			goto invalid;
+		break;
+	case 600:
+		if (id == NULL)
+			goto invalid;
+		for (i = 0; i < 32; i++) {
+			if ((unsigned int)(id[i] - 'A') > 'F' - 'A' && !APPMGR_IS_DIGIT(id[i]))
+				goto invalid;
+		}
+		if (id[32] != '\0')
+			goto invalid;
+		break;
+	}
+
+	memset(g_appmgrMountByIdComponent, 0, sizeof(g_appmgrMountByIdComponent));
+	memset(g_appmgrMountByIdRoot, 0, sizeof(g_appmgrMountByIdRoot));
+	result = 0;
+	path = buffer;
+	switch (mountId) {
+	case 100:
+		result = appmgrDecodeString(encodedPicture, buffer, sizeof(buffer));
+		drive = "photo0:";
+		break;
+	case 101:
+		result = appmgrMakeAccountPath(buffer, encodedPsnFriend, NULL, "%s/%s/%s");
+		break;
+	case 102:
+		result = appmgrMakeAccountPath(buffer, encodedPsnMsg, NULL, "%s/%s/%s");
+		break;
+	case 103:
+		result = appmgrMakeAccountPath(buffer, encodedNearDataSys, NULL, "%s/%s/%s");
+		break;
+	case 104:
+		result = appmgrMakeAccountPath(buffer, encodedGiftReceived, id, "%s/%s/%s/%s");
+		drive = "gift0:";
+		break;
+	case 105:
+		result = appmgrDecodeString(encodedMusic, buffer, sizeof(buffer));
+		drive = "music0:";
+		break;
+	case 106:
+		snprintf(g_appmgrPsmPath, sizeof(g_appmgrPsmPath), "ux0:psm/%s/RO", id);
+		path = g_appmgrPsmPath;
+		break;
+	case 107:
+		snprintf(g_appmgrPsmPath, sizeof(g_appmgrPsmPath), "ux0:psm/%s/RW", id);
+		path = g_appmgrPsmPath;
+		break;
+	case 108:
+		result = appmgrDecodeString(encodedCalendar, buffer, sizeof(buffer));
+		break;
+	case 109:
+		result = appmgrDecodeString(encodedVideo, buffer, sizeof(buffer));
+		drive = "video0:";
+		break;
+	case 110:
+		result = appmgrDecodeString(encodedAppMeta, g_appmgrMountByIdRoot,
+					    sizeof(g_appmgrMountByIdRoot));
+		if (result < 0)
+			break;
+		if ((unsigned int)snprintf(buffer, sizeof(buffer), "%s/%s",
+					   g_appmgrMountByIdRoot, id) > 63)
+			goto invalid;
+		break;
+	case 111:
+		result = appmgrDecodeString(encodedNpHome, buffer, sizeof(buffer));
+		break;
+	case 112:
+		result = appmgrDecodeString(encodedBook, buffer, sizeof(buffer));
+		break;
+	case 200:
+		result = appmgrDecodeString(encodedSqlite, buffer, sizeof(buffer));
+		break;
+	case 201:
+		result = appmgrDecodeString(encodedAttach, buffer, sizeof(buffer));
+		break;
+	case 202:
+		result = appmgrDecodeString(encodedPspEmu, buffer, sizeof(buffer));
+		break;
+	case 203:
+		result = appmgrDecodeString(encodedGriefReport, buffer, sizeof(buffer));
+		break;
+	case 204:
+		result = appmgrDecodeString(encodedCheckout, buffer, sizeof(buffer));
+		break;
+	case 205:
+		snprintf(g_appmgrCachePath, sizeof(g_appmgrCachePath), "ux0:cache/%s", id);
+		path = g_appmgrCachePath;
+		break;
+	case 206:
+		result = appmgrDecodeString(encodedWebBrowser, buffer, sizeof(buffer));
+		break;
+	case 207:
+		snprintf(g_appmgrAppWorkPath, sizeof(g_appmgrAppWorkPath),
+			 "ux0:temp/app_work/%s/rec", id);
+		path = g_appmgrAppWorkPath;
+		break;
+	case 300:
+		path = NULL;
+		break;
+	case 302:
+		result = appmgrMakeAccountPath(buffer, encodedTrophySceTrop, NULL, "%s/%s/%s");
+		break;
+	case 303:
+		result = appmgrMakeAccountPath(buffer, encodedTrophyData, id, "%s/%s/%s/%s");
+		break;
+	case 304:
+		result = appmgrMakeAccountPath(buffer, encodedTrophyData, id, "%s/%s/%s/%s_BK");
+		break;
+	case 400:
+		result = appmgrDecodeString(encodedMmsPhoto, buffer, sizeof(buffer));
+		break;
+	case 401:
+		result = appmgrDecodeString(encodedMmsMusic, buffer, sizeof(buffer));
+		break;
+	case 402:
+		result = appmgrDecodeString(encodedMmsVideo, buffer, sizeof(buffer));
+		break;
+	case 500:
+		snprintf(g_appmgrInstallDirPath, sizeof(g_appmgrInstallDirPath),
+			 "grw0:addcont/%s", id);
+		path = g_appmgrInstallDirPath;
+		break;
+	case 501:
+		snprintf(g_appmgrInstallDirPath, sizeof(g_appmgrInstallDirPath),
+			 "ux0:addcont/%s", id);
+		path = g_appmgrInstallDirPath;
+		break;
+	case 502:
+		snprintf(g_appmgrInstallDirPath, sizeof(g_appmgrInstallDirPath),
+			 "%spatch/%s", "grw0:", id);
+		path = g_appmgrInstallDirPath;
+		break;
+	case 503:
+		snprintf(g_appmgrInstallDirPath, sizeof(g_appmgrInstallDirPath),
+			 "%spatch/%s", "ux0:", id);
+		path = g_appmgrInstallDirPath;
+		break;
+	case 504:
+		if (g_appmgrAccountDirectory[0] == 0)
+			appmgrUpdateAccountDirectory();
+		snprintf(g_appmgrInstallDirPath, sizeof(g_appmgrInstallDirPath),
+			 "ux0:user/%s/savedata_vc", g_appmgrAccountDirectory);
+		path = g_appmgrInstallDirPath;
+		break;
+	case 505:
+		if (g_appmgrAccountDirectory[0] == 0)
+			appmgrUpdateAccountDirectory();
+		snprintf(g_appmgrInstallDirPath, sizeof(g_appmgrInstallDirPath),
+			 "ux0:user/%s/_temp_savedata_vc", g_appmgrAccountDirectory);
+		path = g_appmgrInstallDirPath;
+		break;
+	case 600:
+		snprintf(g_appmgrLoopBackPath, sizeof(g_appmgrLoopBackPath),
+			 "ux0:umass/%s.img", id);
+		path = g_appmgrLoopBackPath;
+		break;
+	case 1007:
+		result = appmgrDecodeString(encodedSysExternal, buffer, sizeof(buffer));
+		break;
+	case 1008:
+		result = appmgrDecodeString(encodedDataExternal, buffer, sizeof(buffer));
+		break;
+	case 1009:
+		result = appmgrDecodeString(encodedUserData, buffer, sizeof(buffer));
+		break;
+	default:
+		goto invalid;
+	}
+	if (result < 0)
+		goto unlock;
+
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app == NULL)
+		goto noApp;
+	strncpy(titleId, app->process.appName, 10);
+	if ((app->process.content.contentFlags & 0x30) != 0) {
+		result = 0x80800048;
+		if (!appmgrIsMediaDriveMountable(mountId, app->process.content.contentFlags))
+			goto unlock;
+	}
+
+	switch (mountId) {
+	case 205:
+		snprintf(g_appmgrCachePath, sizeof(g_appmgrCachePath), "ux0:cache/%s",
+			 app->process.content.originalTitleId);
+		path = g_appmgrCachePath;
+		goto createDirectories;
+	case 300:
+		source = appmgrFindAppByProcessId(g_appmgrAppStates, pid);
+		if (source == NULL)
+			goto noApp;
+		strncpy(titleId, source->process.appName, 10);
+		result = appmgrCloneTemporaryMounts(sceKernelGetProcessId(), titleId,
+						    &source->process.mounts,
+						    &app->process.mounts, mountPoint);
+		if (result != 0)
+			goto unlock;
+		result = 0;
+		goto unlock;
+	case 110:
+	case 302 ... 304:
+	case 500:
+	case 501:
+	case 504:
+	case 505:
+		result = appmgrCreatePfsDirectory(mountId, path, keystone);
+		if (result != 0)
+			goto unlock;
+		break;
+	case 600:
+		break;
+	default:
+	createDirectories:
+		if ((app->process.content.contentFlags & 0x10) != 0 &&
+		    (mountId == 100 || mountId == 105 || mountId == 109)) {
+			result = 0x80010013;
+			if (appmgrGetFakeNoMemoryCard() != 0)
+				goto unlock;
+		}
+		result = appmgrCreateDirectories(path, 1);
+		if (result != 0)
+			goto unlock;
+		break;
+	}
+
+	result = appmgrMount(sceKernelGetProcessId(), &app->process.mounts, mountId, titleId,
+			     path, (const ScePfsRndDriveId *)drive, NULL, mountPoint);
+	if (result != 0)
+		goto unlock;
+	if (mountId == 500 || mountId == 501) {
+		result = appmgrReadKeystone(sceKernelGetProcessId(), mountPoint->drive_id,
+					    currentKeystone);
+		if (result < 0)
+			goto unmount;
+		if (timingsafe_memcmp(keystone, currentKeystone, sizeof(currentKeystone)) != 0) {
+			result = 0x80800006;
+			goto unmount;
+		}
+	}
+	if ((app->process.content.contentFlags & 0x30) != 0) {
+		switch (mountId) {
+		case 100:
+			app->process.content.contentFlags |= 0x2000000;
+			break;
+		case 105:
+			app->process.content.contentFlags |= 0x4000000;
+			break;
+		case 109:
+			app->process.content.contentFlags |= 0x8000000;
+			break;
+		}
+	}
+	result = 0;
+	goto unlock;
+
+unmount:
+	if (mountPoint->drive_id[0] != '\0')
+		appmgrUnmountDrive(sceKernelGetProcessId(), &app->process.mounts,
+				   mountPoint->drive_id, 0);
+	goto unlock;
+noApp:
+	result = 0x80801002;
+	goto unlock;
+invalid:
+	result = 0x80800001;
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+/* SceAppMgrForDriver 5E311F71: mounts an application data directory by its mount ID. */
+int SceAppMgrForDriver_5E311F71(unsigned int mountId, const char *id,
+				ScePfsRndDriveId *mountPoint)
+{
+	switch (mountId) {
+	case 104:
+	case 106:
+	case 107:
+	case 110:
+		return appmgrMountById(0, mountId, id, NULL, mountPoint);
+	default:
+		return 0x80800001;
+	}
+}
+
+#if !FW_SINCE(0x04000000)
+/* Mounts a trophy set's directory, or its backup. */
+int sceAppMgrTrophyMountById(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint)
+{
+	if (mountId - 303 > 1)
+		return 0x80800001;
+	return appmgrMountById(0, mountId, id, NULL, mountPoint);
+}
+#endif
+
+/* Mounts an install directory: add-on content, a patch or the save data being installed. */
+int sceAppMgrInstallDirMount(unsigned int mountId, const char *id, const void *keystone,
+			     ScePfsRndDriveId *mountPoint)
+{
+	if (mountId - 500 > 5)
+		return 0x80800001;
+	return appmgrMountById(0, mountId, id != NULL ? id : "", keystone, mountPoint);
+}
+
+/* Mounts a loopback image, ux0:umass/<id>.img. */
+int sceAppMgrLoopBackMount(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint)
+{
+	if (mountId != 600)
+		return 0x80800001;
+	return appmgrMountById(sceKernelGetProcessId(), 600, id, NULL, mountPoint);
+}
+
 int SceAppMgrForDriver_0813AFCA(int partitionId, char *output,
 	unsigned int capacity)
 {

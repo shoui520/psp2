@@ -121,6 +121,9 @@ struct ScePfsRndDriveId;
 /* vitasdk: ksceAppMgrGameDataMount */
 int SceAppMgrForDriver_CE356B2D(const char *appPath, const char *patchPath,
 				const char *rifPath, struct ScePfsRndDriveId *mountPoint);
+/* vitasdk: ksceAppMgrAppDataMountById */
+int SceAppMgrForDriver_5E311F71(unsigned int mountId, const char *id,
+				struct ScePfsRndDriveId *mountPoint);
 int SceAppMgrForDriver_EC9D5A35(void *status);	/* vitasdk: ksceAppMgrSaveDataSlotGetStatus */
 int SceAppMgrForDriver_193784A9(void *a);	/* vitasdk: ksceAppMgrCheckContentInstallPeriod */
 int sceAppMgrUpdateRifInfo(const void *info);
