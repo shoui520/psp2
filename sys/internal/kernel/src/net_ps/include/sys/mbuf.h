@@ -1,4 +1,4 @@
-/*	$NetBSD: mbuf.h,v 1.105.2.1 2005/04/28 10:48:07 tron Exp $	*/
+/*	$NetBSD: mbuf.h,v 1.90.2.4 2004/09/11 18:08:57 he Exp $	*/
 
 /*-
  * Copyright (c) 1996, 1997, 1999, 2001 The NetBSD Foundation, Inc.
@@ -139,13 +139,11 @@ struct m_hdr {
 /*
  * record/packet header in first mbuf of chain; valid if M_PKTHDR set
  *
- * A note about csum_data: For the out-bound direction, the low 16 bits
- * indicates the offset after the L4 header where the final L4 checksum value
- * is to be stored and the high 16 bits is the length of the L3 header (the
- * start of the data to be checksumed).  For the in-bound direction, it is only
- * valid if the M_CSUM_DATA flag is set.  In this case, an L4 checksum has been
- * calculated by hardware, but it is up to software to perform final
- * verification.
+ * A note about csum_data: For the out-bound direction, this indicates the
+ * offset after the L4 header where the final L4 checksum value is to be
+ * stored.  For the in-bound direction, it is only valid if the M_CSUM_DATA
+ * flag is set.  In this case, an L4 checksum has been calculated by
+ * hardware, but it is up to software to perform final verification.
  *
  * Note for in-bound TCP/UDP checksums, we expect the csum_data to NOT
  * be bit-wise inverted (the final step in the calculation of an IP
@@ -158,7 +156,7 @@ struct	pkthdr {
 	int	len;			/* total packet length */
 	int	csum_flags;		/* checksum flags */
 	u_int32_t csum_data;		/* checksum data */
-	u_int	segsz;			/* segment size */
+	u_int	segsz;			/* SCE: NetBSD 3.0's segment size (MHLEN is 200) */
 };
 
 /*
@@ -173,28 +171,18 @@ struct	pkthdr {
 #define	M_CSUM_UDPv6		0x00000020	/* IPv6 UDP header/payload */
 #define	M_CSUM_IPv4		0x00000040	/* IPv4 header */
 #define	M_CSUM_IPv4_BAD		0x00000080	/* IPv4 header checksum bad */
-#define	M_CSUM_TSOv4		0x00000100	/* TCPv4 segmentation offload */
 
 /* Checksum-assist quirks: keep separate from jump-table bits. */
-#define	M_CSUM_NO_PSEUDOHDR	0x80000000	/* Rx csum_data does not include
+#define	M_CSUM_NO_PSEUDOHDR	0x80000000	/* Rx M_CSUM_DATA does not include
 						 * the UDP/TCP pseudo-hdr, and
 						 * is not yet 1s-complemented.
 						 */
 
 /*
- * Macros for manipulating csum_data on outgoing packets.  These are
- * used to pass information down from the L4/L3 to the L2.
- */
-#define	M_CSUM_DATA_IPv4_IPHL(x)	((x) >> 16)
-#define	M_CSUM_DATA_IPv4_OFFSET(x)	((x) & 0xffff)
-
-/*
  * Max # of pages we can attach to m_ext.  This is carefully chosen
  * to be able to handle SOSEND_LOAN_CHUNK with our minimum sized page.
  */
-#ifdef MIN_PAGE_SIZE
-#define	M_EXT_MAXPAGES		((65536 / MIN_PAGE_SIZE) + 1)
-#endif
+/* SCE: none; external storage is never loaned pages (_m_ext is 32 bytes) */
 
 /* description of external storage mapped into mbuf, valid if M_EXT set */
 struct _m_ext {
@@ -283,7 +271,6 @@ MBUF_DEFINE(mbuf, MHLEN, MLEN);
 #define	M_EXT		0x0001	/* has associated external storage */
 #define	M_PKTHDR	0x0002	/* start of record */
 #define	M_EOR		0x0004	/* end of record */
-#define	M_PROTO1	0x0008	/* protocol-specific */
 
 /* mbuf pkthdr flags, also in m_flags */
 #define M_AUTHIPHDR	0x0010	/* data origin authentication for IP header */
@@ -304,13 +291,15 @@ MBUF_DEFINE(mbuf, MHLEN, MLEN);
 #define	M_EXT_CLUSTER	0x01000000	/* ext is a cluster */
 #define	M_EXT_PAGES	0x02000000	/* ext_pgs is valid */
 #define	M_EXT_ROMAP	0x04000000	/* ext mapping is r-o at MMU */
-#define	M_EXT_RW	0x08000000	/* ext storage is writable */
 
 /* for source-level compatibility */
 #define	M_CLUSTER	M_EXT_CLUSTER
 
+/* SCE: net_ps's own packet flags (net_ps_emulation.c, net_ps_glue.c), no Sony names known */
+#define	M_SCE_FLAGS	0x00ff0000
+
 /* flags copied when copying m_pkthdr */
-#define	M_COPYFLAGS	(M_PKTHDR|M_EOR|M_BCAST|M_MCAST|M_CANFASTFWD|M_ANYCAST6|M_LINK0|M_LINK1|M_LINK2|M_AUTHIPHDR|M_DECRYPTED|M_LOOP|M_AUTHIPDGM)
+#define	M_COPYFLAGS	(M_PKTHDR|M_EOR|M_BCAST|M_MCAST|M_CANFASTFWD|M_ANYCAST6|M_LINK0|M_LINK1|M_LINK2|M_AUTHIPHDR|M_DECRYPTED|M_LOOP|M_AUTHIPDGM|M_SCE_FLAGS)
 
 /* flag copied when shallow-copying external storage */
 #define	M_EXTCOPYFLAGS	(M_EXT|M_EXT_FLAGS)
@@ -445,14 +434,12 @@ do {									\
 		(m)->m_nextpkt = (struct mbuf *)NULL;			\
 		(m)->m_data = (m)->m_pktdat;				\
 		(m)->m_flags = M_PKTHDR;				\
-		(m)->m_pkthdr.rcvif = NULL;				\
 		(m)->m_pkthdr.csum_flags = 0;				\
 		(m)->m_pkthdr.csum_data = 0;				\
 		SLIST_INIT(&(m)->m_pkthdr.tags);			\
 	}								\
 } while (/* CONSTCOND */ 0)
 
-#if defined(_KERNEL)
 #define	_M_
 /*
  * Macros for tracking external storage associated with an mbuf.
@@ -531,7 +518,6 @@ do {									\
 	);								\
 	if ((m)->m_ext.ext_buf != NULL) {				\
 		(m)->m_data = (m)->m_ext.ext_buf;			\
-		/* SCE: no M_EXT_RW (M_READONLY is 2.1's) */		\
 		(m)->m_flags = ((m)->m_flags & ~M_EXTCOPYFLAGS) |	\
 				M_EXT|M_CLUSTER;			\
 		(m)->m_ext.ext_size = (size);				\
@@ -553,7 +539,6 @@ do {									\
 	    (caddr_t)malloc((size), mbtypes[(m)->m_type], (how));	\
 	if ((m)->m_ext.ext_buf != NULL) {				\
 		(m)->m_data = (m)->m_ext.ext_buf;			\
-		/* SCE: no M_EXT_RW (M_READONLY is 2.1's) */		\
 		(m)->m_flags = ((m)->m_flags & ~M_EXTCOPYFLAGS) | M_EXT;\
 		(m)->m_ext.ext_size = (size);				\
 		(m)->m_ext.ext_free = NULL;				\
@@ -580,8 +565,26 @@ do {									\
 do {									\
 	int _ms_ = splvm(); /* MBUFLOCK */				\
 	_MOWNERREVOKE((m), 0, (m)->m_flags);				\
-	m_ext_free(m, FALSE);						\
-	splx(_ms_);							\
+	if (MCLISREFERENCED(m)) {					\
+		_MCLDEREFERENCE(m);					\
+		splx(_ms_);						\
+	} else if ((m)->m_flags & M_CLUSTER) {				\
+		pool_cache_put_paddr((m)->m_ext.ext_arg,		\
+		    (m)->m_ext.ext_buf, (m)->m_ext.ext_paddr);		\
+		splx(_ms_);						\
+	} else if ((m)->m_ext.ext_free) {				\
+		/*							\
+		 * NOTE: We assume that MEXTREMOVE() is called from	\
+		 * code where it is safe to invoke the free routine	\
+		 * without the mbuf to perform bookkeeping.		\
+		 */							\
+		(*((m)->m_ext.ext_free))(NULL, (m)->m_ext.ext_buf,	\
+		    (m)->m_ext.ext_size, (m)->m_ext.ext_arg);		\
+		splx(_ms_);						\
+	} else {							\
+		splx(_ms_);						\
+		free((m)->m_ext.ext_buf, (m)->m_ext.ext_type);		\
+	}								\
 	(m)->m_flags &= ~M_EXTCOPYFLAGS;				\
 	(m)->m_ext.ext_size = 0;	/* why ??? */			\
 } while (/* CONSTCOND */ 0)
@@ -612,7 +615,28 @@ do {									\
 		(n) = (m)->m_next;					\
 		_MOWNERREVOKE((m), 1, m->m_flags);			\
 		if ((m)->m_flags & M_EXT) {				\
-			m_ext_free(m, TRUE);				\
+			if (MCLISREFERENCED(m)) {			\
+				_MCLDEREFERENCE(m);			\
+				pool_cache_put(&mbpool_cache, (m));	\
+			} else if ((m)->m_flags & M_CLUSTER) {		\
+				pool_cache_put_paddr((m)->m_ext.ext_arg,\
+				    (m)->m_ext.ext_buf,			\
+				    (m)->m_ext.ext_paddr);		\
+				pool_cache_put(&mbpool_cache, (m));	\
+			} else if ((m)->m_ext.ext_free) {		\
+				/*					\
+				 * (*ext_free)() is responsible for	\
+				 * freeing the mbuf when it is safe.	\
+				 */					\
+				(*((m)->m_ext.ext_free))((m),		\
+				    (m)->m_ext.ext_buf,			\
+				    (m)->m_ext.ext_size,		\
+				    (m)->m_ext.ext_arg);		\
+			} else {					\
+				free((m)->m_ext.ext_buf,		\
+				    (m)->m_ext.ext_type);		\
+				pool_cache_put(&mbpool_cache, (m));	\
+			}						\
 		} else {						\
 			pool_cache_put(&mbpool_cache, (m));		\
 		}							\
@@ -652,7 +676,7 @@ do {									\
 /*
  * Determine if an mbuf's data area is read-only.  This is true
  * for non-cluster external storage and for clusters that are
- * being referenced by more than one mbuf (SCE: NetBSD 2.1's test).
+ * being referenced by more than one mbuf.
  */
 #define	M_READONLY(m)							\
 	(((m)->m_flags & M_EXT) != 0 &&					\
@@ -738,8 +762,6 @@ do {									\
  */
 #define	M_GETCTX(m, t)		((t) (m)->m_pkthdr.rcvif + 0)
 #define	M_SETCTX(m, c)		((void) ((m)->m_pkthdr.rcvif = (void *) (c)))
-
-#endif /* defined(_KERNEL) */
 
 /*
  * Mbuf statistics.
@@ -830,17 +852,16 @@ void	m_claimm(struct mbuf *, struct mowner *);
 #endif
 void	m_clget(struct mbuf *, int);
 int	m_mballoc(int, int);
-void	m_copyback(struct mbuf *, int, int, const void *);
-struct	mbuf *m_copyback_cow(struct mbuf *, int, int, const void *, int);
+void	m_copyback(struct mbuf *, int, int, caddr_t);
+struct	mbuf *m_copyback_cow(struct mbuf *, int, int, caddr_t, int);
 int 	m_makewritable(struct mbuf **, int, int, int);
-void	m_copydata(struct mbuf *, int, int, void *);
+void	m_copydata(struct mbuf *, int, int, caddr_t);
 void	m_freem(struct mbuf *);
 void	m_reclaim(void *, int);
 void	mbinit(void);
 
 /* Inline routines. */
-static __inline u_int m_length(struct mbuf *) __unused;
-static __inline void m_ext_free(struct mbuf *, boolean_t) __unused;
+static	u_int m_length(struct mbuf *);
 
 /* Packet tag routines */
 struct	m_tag *m_tag_get(int, int, int);
@@ -878,9 +899,6 @@ struct	m_tag *m_tag_next(struct mbuf *, struct m_tag *);
 #define	PACKET_TAG_IPSEC_SOCKET			22 /* IPSEC socket ref */
 #define	PACKET_TAG_IPSEC_HISTORY		23 /* IPSEC history */
 
-#define	PACKET_TAG_PF_TRANSLATE_LOCALHOST	24 /* translated to localhost */
-#define	PACKET_TAG_IPSEC_NAT_T_PORTS		25 /* two u_int16_t */
-
 /*
  * Return the number of bytes in the mbuf chain, m.
  */
@@ -890,7 +908,7 @@ m_length(struct mbuf *m)
 	struct mbuf *m0;
 	u_int pktlen;
 
-	if ((m->m_flags & M_PKTHDR) != 0)
+	if ((m->m_flags & M_PKTHDR) != 0) 
 		return m->m_pkthdr.len;
 
 	pktlen = 0;
@@ -898,33 +916,6 @@ m_length(struct mbuf *m)
 		pktlen += m0->m_len;
 	return pktlen;
 }
-
-/*
- * m_ext_free: release a reference to the mbuf external storage.
- *
- * => if 'dofree', free the mbuf m itsself as well.
- * => called at splvm.
- */
-static __inline void
-m_ext_free(struct mbuf *m, boolean_t dofree)
-{
-
-	if (MCLISREFERENCED(m)) {
-		_MCLDEREFERENCE(m);
-	} else if (m->m_flags & M_CLUSTER) {
-		pool_cache_put_paddr(m->m_ext.ext_arg,
-		    m->m_ext.ext_buf, m->m_ext.ext_paddr);
-	} else if (m->m_ext.ext_free) {
-		(*m->m_ext.ext_free)(dofree ? m : NULL, m->m_ext.ext_buf,
-		    m->m_ext.ext_size, m->m_ext.ext_arg);
-		dofree = FALSE;
-	} else {
-		free(m->m_ext.ext_buf, m->m_ext.ext_type);
-	}
-	if (dofree)
-		pool_cache_put(&mbpool_cache, m);
-}
-
 
 #endif /* _KERNEL */
 #endif /* !_SYS_MBUF_H_ */

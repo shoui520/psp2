@@ -1,0 +1,216 @@
+--- a/kern/uipc_mbuf.c
++++ b/kern/uipc_mbuf.c
+@@ -106,13 +106,6 @@
+ 
+ static int mb_ctor(void *, void *, int);
+ 
+-void	*mclpool_alloc(struct pool *, int);
+-void	mclpool_release(struct pool *, void *);
+-
+-struct pool_allocator mclpool_allocator = {
+-	mclpool_alloc, mclpool_release, 0,
+-};
+-
+ static struct mbuf *m_copym0(struct mbuf *, int, int, int, int);
+ static struct mbuf *m_split0(struct mbuf *, int, int, int);
+ static int m_copyback0(struct mbuf **, int, int, caddr_t, int, int);
+@@ -123,8 +116,8 @@
+ #define	M_COPYBACK0_COW		0x0004	/* do copy-on-write */
+ #define	M_COPYBACK0_EXTEND	0x0008	/* extend chain */
+ 
+-const char mclpool_warnmsg[] =
+-    "WARNING: mclpool limit reached; increase NMBCLUSTERS";
++/* SCE: no message */
++const char mclpool_warnmsg[] = "";
+ 
+ MALLOC_DEFINE(M_MBUF, "mbuf", "mbuf");
+ 
+@@ -154,7 +147,8 @@
+ 	KASSERT(sizeof(struct mbuf) == MSIZE);
+ 
+ 	pool_init(&mbpool, msize, 0, 0, 0, "mbpl", NULL);
+-	pool_init(&mclpool, mclbytes, 0, 0, 0, "mclpl", &mclpool_allocator);
++	/* SCE: the clusters come from the pool's own allocator */
++	pool_init(&mclpool, mclbytes, 0, 0, 0, "mclpl", NULL);
+ 
+ 	pool_set_drain_hook(&mbpool, m_reclaim, NULL);
+ 	pool_set_drain_hook(&mclpool, m_reclaim, NULL);
+@@ -192,169 +186,7 @@
+ #endif
+ }
+ 
+-/*
+- * sysctl helper routine for the kern.mbuf subtree.  nmbclusters may
+- * or may not be writable, and mblowat and mcllowat need range
+- * checking and pool tweaking after being reset.
+- */
+-static int
+-sysctl_kern_mbuf(SYSCTLFN_ARGS)
+-{
+-	int error, newval;
+-	struct sysctlnode node;
+-
+-	node = *rnode;
+-	node.sysctl_data = &newval;
+-	switch (rnode->sysctl_num) {
+-	case MBUF_NMBCLUSTERS:
+-		if (mb_map != NULL) {
+-			node.sysctl_flags &= ~CTLFLAG_READWRITE;
+-			node.sysctl_flags |= CTLFLAG_READONLY;
+-		}
+-		/* FALLTHROUGH */
+-	case MBUF_MBLOWAT:
+-	case MBUF_MCLLOWAT:
+-		newval = *(int*)rnode->sysctl_data;
+-		break;
+-	default:
+-		return (EOPNOTSUPP);
+-	}
+-
+-	error = sysctl_lookup(SYSCTLFN_CALL(&node));
+-	if (error || newp == NULL)
+-		return (error);
+-	if (newval < 0)
+-		return (EINVAL);
+-
+-	switch (node.sysctl_num) {
+-	case MBUF_NMBCLUSTERS:
+-		if (newval < nmbclusters)
+-			return (EINVAL);
+-		nmbclusters = newval;
+-		pool_sethardlimit(&mclpool, nmbclusters, mclpool_warnmsg, 60);
+-		break;
+-	case MBUF_MBLOWAT:
+-		mblowat = newval;
+-		pool_setlowat(&mbpool, mblowat);
+-		break;
+-	case MBUF_MCLLOWAT:
+-		mcllowat = newval;
+-		pool_setlowat(&mclpool, mcllowat);
+-		break;
+-	}
+-
+-	return (0);
+-}
+-
+-#ifdef MBUFTRACE
+-static int
+-sysctl_kern_mbuf_mowners(SYSCTLFN_ARGS)
+-{
+-	struct mowner *mo;
+-	size_t len = 0;
+-	int error = 0;
+-
+-	if (namelen != 0)
+-		return (EINVAL);
+-	if (newp != NULL)
+-		return (EPERM);
+-
+-	LIST_FOREACH(mo, &mowners, mo_link) {
+-		if (oldp != NULL) {
+-			if (*oldlenp - len < sizeof(*mo)) {
+-				error = ENOMEM;
+-				break;
+-			}
+-			error = copyout(mo, (caddr_t) oldp + len,
+-					sizeof(*mo));
+-			if (error)
+-				break;
+-		}
+-		len += sizeof(*mo);
+-	}
+-
+-	if (error == 0)
+-		*oldlenp = len;
+-
+-	return (error);
+-}
+-#endif /* MBUFTRACE */
+-
+-SYSCTL_SETUP(sysctl_kern_mbuf_setup, "sysctl kern.mbuf subtree setup")
+-{
+-
+-	sysctl_createv(clog, 0, NULL, NULL,
+-		       CTLFLAG_PERMANENT,
+-		       CTLTYPE_NODE, "kern", NULL,
+-		       NULL, 0, NULL, 0,
+-		       CTL_KERN, CTL_EOL);
+-	sysctl_createv(clog, 0, NULL, NULL,
+-		       CTLFLAG_PERMANENT,
+-		       CTLTYPE_NODE, "mbuf",
+-		       SYSCTL_DESCR("mbuf control variables"),
+-		       NULL, 0, NULL, 0,
+-		       CTL_KERN, KERN_MBUF, CTL_EOL);
+-
+-	sysctl_createv(clog, 0, NULL, NULL,
+-		       CTLFLAG_PERMANENT|CTLFLAG_IMMEDIATE,
+-		       CTLTYPE_INT, "msize",
+-		       SYSCTL_DESCR("mbuf base size"),
+-		       NULL, msize, NULL, 0,
+-		       CTL_KERN, KERN_MBUF, MBUF_MSIZE, CTL_EOL);
+-	sysctl_createv(clog, 0, NULL, NULL,
+-		       CTLFLAG_PERMANENT|CTLFLAG_IMMEDIATE,
+-		       CTLTYPE_INT, "mclbytes",
+-		       SYSCTL_DESCR("mbuf cluster size"),
+-		       NULL, mclbytes, NULL, 0,
+-		       CTL_KERN, KERN_MBUF, MBUF_MCLBYTES, CTL_EOL);
+-	sysctl_createv(clog, 0, NULL, NULL,
+-		       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+-		       CTLTYPE_INT, "nmbclusters",
+-		       SYSCTL_DESCR("Limit on the number of mbuf clusters"),
+-		       sysctl_kern_mbuf, 0, &nmbclusters, 0,
+-		       CTL_KERN, KERN_MBUF, MBUF_NMBCLUSTERS, CTL_EOL);
+-	sysctl_createv(clog, 0, NULL, NULL,
+-		       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+-		       CTLTYPE_INT, "mblowat",
+-		       SYSCTL_DESCR("mbuf low water mark"),
+-		       sysctl_kern_mbuf, 0, &mblowat, 0,
+-		       CTL_KERN, KERN_MBUF, MBUF_MBLOWAT, CTL_EOL);
+-	sysctl_createv(clog, 0, NULL, NULL,
+-		       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+-		       CTLTYPE_INT, "mcllowat",
+-		       SYSCTL_DESCR("mbuf cluster low water mark"),
+-		       sysctl_kern_mbuf, 0, &mcllowat, 0,
+-		       CTL_KERN, KERN_MBUF, MBUF_MCLLOWAT, CTL_EOL);
+-	sysctl_createv(clog, 0, NULL, NULL,
+-		       CTLFLAG_PERMANENT,
+-		       CTLTYPE_STRUCT, "stats",
+-		       SYSCTL_DESCR("mbuf allocation statistics"),
+-		       NULL, 0, &mbstat, sizeof(mbstat),
+-		       CTL_KERN, KERN_MBUF, MBUF_STATS, CTL_EOL);
+-#ifdef MBUFTRACE
+-	sysctl_createv(clog, 0, NULL, NULL,
+-		       CTLFLAG_PERMANENT,
+-		       CTLTYPE_STRUCT, "mowners",
+-		       SYSCTL_DESCR("Information about mbuf owners"),
+-		       sysctl_kern_mbuf_mowners, 0, NULL, 0,
+-		       CTL_KERN, KERN_MBUF, MBUF_MOWNERS, CTL_EOL);
+-#endif /* MBUFTRACE */
+-}
+-
+-void *
+-mclpool_alloc(struct pool *pp, int flags)
+-{
+-	boolean_t waitok = (flags & PR_WAITOK) ? TRUE : FALSE;
+-
+-	return ((void *)uvm_km_alloc_poolpage1(mb_map, NULL, waitok));
+-}
+-
+-void
+-mclpool_release(struct pool *pp, void *v)
+-{
+-
+-	uvm_km_free_poolpage1(mb_map, (vaddr_t)v);
+-}
++/* SCE: no kern.mbuf sysctl subtree, and no cluster page allocator */
+ 
+ /*ARGSUSED*/
+ static int
+@@ -946,6 +778,7 @@
+ 			goto extpacket;
+ 		if (remain > MHLEN) {
+ 			/* m can't be the lead packet */
++			n->m_len = 0;	/* SCE: the header mbuf holds no data */
+ 			MH_ALIGN(n, 0);
+ 			n->m_next = m_split(m, len, wait);
+ 			if (n->m_next == 0) {

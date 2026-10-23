@@ -158,7 +158,9 @@ void		pool_cache_init(struct pool_cache *, struct pool *,
 void		pool_cache_destroy(struct pool_cache *);
 void		*pool_cache_get_paddr(struct pool_cache *, int, paddr_t *);
 #define		pool_cache_get(pc, f) pool_cache_get_paddr((pc), (f), NULL)
-void		pool_cache_put_paddr(struct pool_cache *, void *, paddr_t);
+/* SCE: an object goes straight back to its cache's pool (m_free, m_freem) */
+#define		pool_cache_put_paddr(pc, o, pa) \
+			pool_put(((struct pool_cache *)(pc))->pc_pool, (o))
 #define		pool_cache_put(pc, o) pool_cache_put_paddr((pc), (o), \
 				          POOL_PADDR_INVALID)
 void		pool_cache_destruct_object(struct pool_cache *, void *);

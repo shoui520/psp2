@@ -1,0 +1,17 @@
+--- contrib/netbsd-2.1/sys/sys/systm.h
++++ sys/internal/kernel/src/net_ps/include/sys/systm.h
+@@ -212,6 +212,14 @@
+ 
+ void	panic __P((const char *, ...))
+     __attribute__((__noreturn__,__format__(__printf__,1,2)));
++#ifdef NET_PS_NETBSD
++/*
++ * SCE: in NetBSD's own files (NET_PS_NETBSD, set by the build), a panic is net_ps's, with an
++ * empty message and none of its arguments (m_copydata, m_copym0, m_pulldown)
++ */
++void	sce_psnet_panic __P((const char *, ...)) __attribute__((__noreturn__));
++#define	panic(...)	sce_psnet_panic("")
++#endif
+ void	uprintf __P((const char *, ...))
+     __attribute__((__format__(__printf__,1,2)));
+ void	ttyprintf __P((struct tty *, const char *, ...))

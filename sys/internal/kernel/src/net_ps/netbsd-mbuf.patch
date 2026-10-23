@@ -1,41 +1,34 @@
---- contrib/netbsd-3.0/sys/sys/mbuf.h
+--- contrib/netbsd-2.1/sys/sys/mbuf.h
 +++ sys/internal/kernel/src/net_ps/include/sys/mbuf.h
-@@ -531,8 +531,9 @@
- 	);								\
- 	if ((m)->m_ext.ext_buf != NULL) {				\
- 		(m)->m_data = (m)->m_ext.ext_buf;			\
-+		/* SCE: no M_EXT_RW (M_READONLY is 2.1's) */		\
- 		(m)->m_flags = ((m)->m_flags & ~M_EXTCOPYFLAGS) |	\
--				M_EXT|M_CLUSTER|M_EXT_RW;		\
-+				M_EXT|M_CLUSTER;			\
- 		(m)->m_ext.ext_size = (size);				\
- 		(m)->m_ext.ext_free = NULL;				\
- 		(m)->m_ext.ext_arg = (pool_cache);			\
-@@ -552,8 +553,8 @@
- 	    (caddr_t)malloc((size), mbtypes[(m)->m_type], (how));	\
- 	if ((m)->m_ext.ext_buf != NULL) {				\
- 		(m)->m_data = (m)->m_ext.ext_buf;			\
--		(m)->m_flags = ((m)->m_flags & ~M_EXTCOPYFLAGS) |	\
--				M_EXT|M_EXT_RW;				\
-+		/* SCE: no M_EXT_RW (M_READONLY is 2.1's) */		\
-+		(m)->m_flags = ((m)->m_flags & ~M_EXTCOPYFLAGS) | M_EXT;\
- 		(m)->m_ext.ext_size = (size);				\
- 		(m)->m_ext.ext_free = NULL;				\
- 		(m)->m_ext.ext_arg = NULL;				\
-@@ -650,13 +651,12 @@
+@@ -156,6 +156,7 @@
+ 	int	len;			/* total packet length */
+ 	int	csum_flags;		/* checksum flags */
+ 	u_int32_t csum_data;		/* checksum data */
++	u_int	segsz;			/* SCE: NetBSD 3.0's segment size (MHLEN is 200) */
+ };
  
  /*
-  * Determine if an mbuf's data area is read-only.  This is true
-- * if external storage is read-only mapped, or not marked as R/W,
-- * or referenced by more than one mbuf.
-+ * for non-cluster external storage and for clusters that are
-+ * being referenced by more than one mbuf (SCE: NetBSD 2.1's test).
+@@ -181,9 +182,7 @@
+  * Max # of pages we can attach to m_ext.  This is carefully chosen
+  * to be able to handle SOSEND_LOAN_CHUNK with our minimum sized page.
   */
- #define	M_READONLY(m)							\
- 	(((m)->m_flags & M_EXT) != 0 &&					\
--	  (((m)->m_flags & (M_EXT_ROMAP|M_EXT_RW)) != M_EXT_RW ||	\
--	  MCLISREFERENCED(m)))
-+	  (((m)->m_flags & M_CLUSTER) == 0 || MCLISREFERENCED(m)))
+-#ifdef MIN_PAGE_SIZE
+-#define	M_EXT_MAXPAGES		((65536 / MIN_PAGE_SIZE) + 1)
+-#endif
++/* SCE: none; external storage is never loaned pages (_m_ext is 32 bytes) */
  
- /*
-  * Determine if an mbuf's data area is read-only at the MMU.
+ /* description of external storage mapped into mbuf, valid if M_EXT set */
+ struct _m_ext {
+@@ -296,8 +295,11 @@
+ /* for source-level compatibility */
+ #define	M_CLUSTER	M_EXT_CLUSTER
+ 
++/* SCE: net_ps's own packet flags (net_ps_emulation.c, net_ps_glue.c), no Sony names known */
++#define	M_SCE_FLAGS	0x00ff0000
++
+ /* flags copied when copying m_pkthdr */
+-#define	M_COPYFLAGS	(M_PKTHDR|M_EOR|M_BCAST|M_MCAST|M_CANFASTFWD|M_ANYCAST6|M_LINK0|M_LINK1|M_LINK2|M_AUTHIPHDR|M_DECRYPTED|M_LOOP|M_AUTHIPDGM)
++#define	M_COPYFLAGS	(M_PKTHDR|M_EOR|M_BCAST|M_MCAST|M_CANFASTFWD|M_ANYCAST6|M_LINK0|M_LINK1|M_LINK2|M_AUTHIPHDR|M_DECRYPTED|M_LOOP|M_AUTHIPDGM|M_SCE_FLAGS)
+ 
+ /* flag copied when shallow-copying external storage */
+ #define	M_EXTCOPYFLAGS	(M_EXT|M_EXT_FLAGS)

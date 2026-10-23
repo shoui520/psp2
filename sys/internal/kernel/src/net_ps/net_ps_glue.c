@@ -243,7 +243,6 @@ int sceNetPsDeliverRxPacket(struct NetDriver *driver,
 
 extern int gNetPsPacketCaptureActive;
 void sceNetPsCaptureTxPacket(struct NetDriverPacket *packet);
-void m_copydata(struct mbuf *mbuf, int offset, int length, void *destination);
 
 /* Name unknown; convert queued BSD packets to driver-owned transmit storage. */
 void sceNetPsStartTransmit(struct ifnet *interface)
