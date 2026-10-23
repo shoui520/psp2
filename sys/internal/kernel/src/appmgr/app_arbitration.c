@@ -28,6 +28,8 @@ extern int _gcListenerThreadEntry(SceSize args, void *argp);
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrCore2Mutex;
 extern SceUID g_appmgrCore2MutexOwner;
+extern SceUID g_appmgrCoreKmMutex;
+extern SceUID g_appmgrCoreKmMutexOwner;
 extern int g_appmgrSystemSuspended;
 extern int g_appmgrPowerSaveMode;
 extern int g_appmgrPowerSaveSuspendBackgroundApps;
@@ -711,6 +713,131 @@ retry:
 	result = _appListUnlockApp(&g_appmgrAppStates[index]);
 	DELETE_APP_CHECK(result, 0, 331, "findAndLockLeastValuableMiniApp2");
 	goto retry;
+}
+
+#if FW_DEBUG
+#define KILL_CHECK_APP_OWNERS(_line, _func) do { \
+	int ownerIndex; \
+	SceUID appOwner; \
+	for (ownerIndex = 0; ownerIndex != 20; ++ownerIndex) \
+		SCE_DBG_ASSERT_CHECK_FUNC(({ \
+			__builtin_prefetch(&g_appmgrAppStates[ownerIndex + 5].mutexOwner); \
+			appOwner = g_appmgrAppStates[ownerIndex].mutexOwner; \
+			appOwner != sceKernelGetThreadId(); }), _line, _func); \
+} while (0)
+#define KILL_KM_LOCK(_result, _line, _func) do { \
+	_result = sceKernelLockMutex(g_appmgrCoreKmMutex, 1, NULL); \
+	if (_result != 0) { \
+		if ((unsigned int)(_result + 0x7ffd7fd4) > 1) \
+			GC_FAILURE(_result, _line, _func); \
+		return _result; \
+	} \
+	g_appmgrCoreKmMutexOwner = sceKernelGetThreadId(); \
+} while (0)
+#else
+#define KILL_CHECK_APP_OWNERS(_line, _func) do { } while (0)
+#define KILL_KM_LOCK(_result, _line, _func) do { \
+	_result = sceKernelLockMutex(g_appmgrCoreKmMutex, 1, NULL); \
+	if (_result != 0) { \
+		if ((unsigned int)(_result + 0x7ffd7fd4) > 1) \
+			appmgrGcListenerMutexPanic(); \
+		return _result; \
+	} \
+	g_appmgrCoreKmMutexOwner = sceKernelGetThreadId(); \
+} while (0)
+#endif
+#define KILL_KM_UNLOCK(_line, _func) do { \
+	int unlockResult; \
+	g_appmgrCoreKmMutexOwner = -1; \
+	unlockResult = sceKernelUnlockMutex(g_appmgrCoreKmMutex, 1); \
+	DELETE_APP_KM_UNLOCK_CHECK(unlockResult, _line, _func); \
+} while (0)
+#if FW_DEBUG
+#define DELETE_APP_KM_UNLOCK_CHECK(_result, _line, _func) \
+	DELETE_APP_CHECK(_result, 0, _line, _func)
+#else
+#define DELETE_APP_KM_UNLOCK_CHECK(_result, _line, _func) do { \
+	if ((_result) != 0) \
+		appmgrGcListenerMutexPanic(); \
+} while (0)
+#endif
+
+/*
+ * Kills suspended mini applications worth at most maxValue, least valuable first, until one
+ * is gone (waiting up to 15 s for it each time).
+ */
+int killLeastValuableMiniApplication2(int maxValue)
+{
+	struct AppState *app;
+	struct AppmgrWaitObject *waitObject;
+	SceUInt32 timeout;
+	SceUID owner;
+	int result, quitResult;
+
+	owner = g_appmgrMainMutexOwner;
+	DELETE_APP_ASSERT(owner != sceKernelGetThreadId(), 391, "killLeastValuableMiniApplication2");
+	KILL_CHECK_APP_OWNERS(392, "killLeastValuableMiniApplication2");
+	KILL_KM_LOCK(result, 392, "killLeastValuableMiniApplication2");
+	for (;;) {
+		app = NULL;
+		result = findAndLockLeastValuableMiniApp2(&app, maxValue);
+		if (result != 0x80803002) {
+			if (result != 0) {
+				KILL_KM_UNLOCK(407, "killLeastValuableMiniApplication2");
+				return result;
+			}
+			quitResult = _appmgrProcessQuitProcess(app, 3, 0, 0);
+			result = _appListUnlockApp(app);
+			DELETE_APP_CHECK(result, 0, 414, "killLeastValuableMiniApplication2");
+			if (quitResult != 0)
+				continue;
+		}
+		waitObject = appmgrUtilGetWaitObject(1);
+		timeout = 15000000;
+		result = appmgrUtilWaitObjectWait(waitObject, &timeout);
+		if (result == 0 || result == (int)0x8002802d) {
+			KILL_KM_UNLOCK(428, "killLeastValuableMiniApplication2");
+			return result;
+		}
+	}
+}
+
+/* Kills every suspended mini application; 0x8002802d when one does not go within 15 s. */
+int killAllMiniApplication(void)
+{
+	struct AppState *app;
+	struct AppmgrWaitObject *waitObject;
+	SceUInt32 timeout;
+	SceUID owner;
+	int result, quitResult;
+
+	owner = g_appmgrMainMutexOwner;
+	DELETE_APP_ASSERT(owner != sceKernelGetThreadId(), 436, "killAllMiniApplication");
+	KILL_CHECK_APP_OWNERS(437, "killAllMiniApplication");
+	KILL_KM_LOCK(result, 437, "killAllMiniApplication");
+	for (;;) {
+		app = NULL;
+		result = findAndLockLeastValuableMiniApp2(&app, 999999);
+		if (result != 0x80803002) {
+			if (result != 0)
+				break;
+			quitResult = _appmgrProcessQuitProcess(app, 3, 0, 0);
+			result = _appListUnlockApp(app);
+			DELETE_APP_CHECK(result, 0, 464, "killAllMiniApplication");
+			if (quitResult != 0)
+				continue;
+		}
+		waitObject = appmgrUtilGetWaitObject(1);
+		timeout = 15000000;
+		if (appmgrUtilWaitObjectWait(waitObject, &timeout) == (int)0x8002802d) {
+			KILL_KM_UNLOCK(479, "killAllMiniApplication");
+			return 0x8002802d;
+		}
+	}
+	KILL_KM_UNLOCK(453, "killAllMiniApplication");
+	if (result == (int)0x80802013)
+		return 0;
+	return result;
 }
 
 /* The two Sony media helpers are inlined twice into the listener. */

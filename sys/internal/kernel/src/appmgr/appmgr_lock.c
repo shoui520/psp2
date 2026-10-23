@@ -11,6 +11,7 @@ extern SceUID g_appmgrMainMutex;
 SceUID g_appmgrCore2Mutex = -1;
 SceUID g_appmgrCore2MutexOwner = -1;
 SceUID g_appmgrCoreKmMutex;
+SceUID g_appmgrCoreKmMutexOwner = -1;
 
 #if !FW_DEBUG
 static const SceKernelDebugInfo mainMutexInitializePanicInfo = {
