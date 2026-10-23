@@ -93,7 +93,7 @@ int SceCameraForDriver_B312CE90(int dev, int attr, int value)
 	return SCE_CAMERA_ERROR_NOT_MOUNTED;
 }
 
-int SceCameraForDriver_E81EADE1(void)
+int SceCameraForDriver_E81EADE1(SceUID processId)
 {
 	return 0;
 }

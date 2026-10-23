@@ -52,7 +52,6 @@ extern void appmgrDebugConsolePuts(const char *string);
 extern void appmgrDebugConsoleFlush(void);
 
 extern int appmgrStopShellWatchDog(void);
-extern int _SetDisplayOwner(int head, SceUID processId);
 extern void _destroyAllAppForAbortHandler(void);
 extern void appmgrArbitrationAfterAbort(void);
 extern int _updatePowerTickStateForNonSuspendableApp(void);

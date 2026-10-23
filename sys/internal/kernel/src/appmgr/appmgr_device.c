@@ -14,6 +14,10 @@
 #include <audio/audio.h>
 #include <audioin/audioin.h>
 #include <av_config/av_config.h>
+#include <camera/camera.h>
+#include <ctrl/ctrl.h>
+#include <hid/hid.h>
+#include <motion/motion_dev.h>
 #include <appmgr/appmgr.h>
 
 extern SceUID g_appmgrMainMutex;
@@ -21,7 +25,6 @@ extern SceUID g_appmgrMainMutexOwner;
 extern int g_appmgrPowerSaveMode;
 extern int dumpBgmState(void);
 extern int _sceAppMgrReleaseSoundOutExclusive(void);
-extern int _updateDeviceArbitration2(void);
 
 SceUInt32 g_appmgrDisplayMergeAlpha = 256;
 SceUInt32 g_appmgrDisplayMergeSetting = 128;
@@ -74,6 +77,12 @@ static const SceKernelDebugInfo disableOutPortPanicInfo = {
 	.fileHash = 0xbbec1541,
 	.lineHash = 0x2883fc50,
 	.funcHash = 0x04cee74f,
+};
+
+static const SceKernelDebugInfo audioUpdateMutexPanicInfo = {
+	.fileHash = 0xbbec1541,
+	.lineHash = 0x8692d155,
+	.funcHash = 0x13a8e698,
 };
 
 __attribute__((noinline)) _Noreturn void appmgrDeviceLockPanic(void)
@@ -254,6 +263,24 @@ static inline __attribute__((always_inline)) int lockAudioUpdate(void)
 	return result;
 }
 #endif
+
+static inline __attribute__((always_inline)) void unlockAudioUpdate(void)
+{
+	int result;
+
+	result = sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1);
+	if (result != 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_PRINTF_FUNC(0, 161, "unlockAudioUpdate",
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+			result, result, 0, 0);
+#else
+		appmgrDeviceLockPanic();
+#endif
+	}
+}
 
 #if !FW_DEBUG
 __attribute__((noinline)) _Noreturn void appmgrDisableOutPortPanic(void)
@@ -1161,17 +1188,19 @@ void updateAudioArbitration2(void)
 }
 #else
 /* the release build inlines it at every call */
-static inline __attribute__((always_inline)) void updateAudioArbitration2(void)
+static inline __attribute__((always_inline)) int updateAudioArbitration2(void)
 {
 	int result;
 
 	APPMGR_DEVICE_ASSERT_UNLOCKED(1105, "updateAudioArbitration2");
 	result = lockAudioUpdate();
 	if (result != 0)
-		return;
+		return result;
 	updateAudioArbitration2NoLock();
-	if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
+	result = sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1);
+	if (result != 0)
 		appmgrDeviceLockPanic();
+	return result;
 }
 #endif
 
@@ -1529,6 +1558,61 @@ int _sceAppMgrReleaseSoundOutExclusive(void)
 	return 0;
 }
 
+void _deviceSetProcessId(int appId, SceUID pid)
+{
+	AppmgrAudioApp *app;
+	int result;
+
+	result = lockAudioUpdate();
+	if (result != 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_PRINTF_FUNC(0, 447, "_deviceSetProcessId",
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+			result, result, 0, 0);
+#else
+		appmgrDeviceLockPanic();
+#endif
+	}
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	if (result != 0) {
+#if FW_DEBUG
+		SCE_DBG_PRINTF_FUNC(0, 449, "_deviceSetProcessId",
+			"Failed to lock ret=0x%08x\n", result);
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 449, "_deviceSetProcessId");
+#else
+		appmgrMainMutexPanic();
+#endif
+	} else {
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
+	}
+	APPMGR_DEVICE_ASSERT_LOCKED(451, "_deviceSetProcessId");
+	app = getAppByAppId(appId);
+	if (app == NULL)
+		APPMGR_DEVICE_FAIL(453, "_deviceSetProcessId");
+	app->processId = pid;
+	g_appmgrMainMutexOwner = -1;
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	if (result != 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_PRINTF_FUNC(0, 458, "_deviceSetProcessId",
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+			result, result, 0, 0);
+#else
+		appmgrMainMutexPanic();
+#endif
+	}
+	setVolume(&g_appmgrDevice.bgmState.soundExclusivePid,
+		  &g_appmgrDevice.bgmState.otherPortVolume);
+	updateAudioArbitration2NoLock();
+	unlockAudioUpdate();
+}
+
 /* the BGM priority of the calling process's application */
 static inline __attribute__((always_inline)) void int_sceAppMgrGetBGMPort(SceUID pid, int priority)
 {
@@ -1810,6 +1894,110 @@ int sceAppMgrSetBgmSubPriorityForSystemChat(int enabled)
 #endif
 	}
 	updateAudioArbitration2();
+	sceSyscallLeave(syscallState);
+	return 0;
+}
+
+int sceAppMgrGetCurrentBgmState(SceUID *currentBgmId, int *currentBgmState)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *shell;
+	int result;
+
+	if (!SceSblACMgrForDriver_991FDC15(0) || (shell = appmgrGetShellApp()) == NULL ||
+	    shell->process.processId != sceKernelGetProcessId()) {
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201f;
+	}
+	if (currentBgmState == NULL || currentBgmId == NULL) {
+		sceSyscallLeave(syscallState);
+		return (int)0x80802016;
+	}
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	if (result != 0) {
+#if FW_DEBUG
+		SCE_DBG_PRINTF_FUNC(0, 1401, "sceAppMgrGetCurrentBgmState",
+			"Failed to lock ret=0x%08x\n", result);
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 1401, "sceAppMgrGetCurrentBgmState");
+#else
+		appmgrMainMutexPanic();
+#endif
+	} else {
+		sceKernelGetThreadId();
+	}
+	*currentBgmState = g_appmgrDevice.bgmState.bgmOutPortOwnerPriority;
+	*currentBgmId = g_appmgrDevice.bgmState.bgmOutPortOwner;
+	g_appmgrMainMutexOwner = -1;
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	if (result != 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1407, "sceAppMgrGetCurrentBgmState",
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+			result, result, 0, 0);
+#else
+		appmgrMainMutexPanic();
+#endif
+	}
+	sceSyscallLeave(syscallState);
+	return 0;
+}
+
+int sceAppMgrGetCurrentBgmState2(AppmgrCurrentBgmState *state)
+{
+	SceUInt32 syscallState;
+	struct AppState *shell, *app;
+	SceUID owner;
+	int result, appId;
+
+	if (state == NULL)
+		return (int)0x80802016;
+	syscallState = sceSyscallEnter();
+	if (!SceSblACMgrForDriver_991FDC15(0) || (shell = appmgrGetShellApp()) == NULL ||
+	    shell->process.processId != sceKernelGetProcessId()) {
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201f;
+	}
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	if (result != 0) {
+#if FW_DEBUG
+		SCE_DBG_PRINTF_FUNC(0, 1426, "sceAppMgrGetCurrentBgmState2",
+			"Failed to lock ret=0x%08x\n", result);
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 1426, "sceAppMgrGetCurrentBgmState2");
+#else
+		appmgrMainMutexPanic();
+#endif
+	} else {
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
+	}
+	owner = g_appmgrDevice.bgmState.bgmOutPortOwner;
+	if (owner == -1 || (app = appmgrFindAppByProcessId(g_appmgrAppStates, owner)) == NULL)
+		appId = -1;
+	else
+		appId = app->appId;
+	memset(state, 0, sizeof(*state));
+	state->bgmOutPortOwner = owner;
+	state->priority = g_appmgrDevice.bgmState.bgmOutPortOwnerPriority;
+	state->subPriority = g_appmgrDevice.bgmState.bgmOutPortOwnerSubPriority;
+	state->appId = appId;
+	g_appmgrMainMutexOwner = -1;
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	if (result != 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1446, "sceAppMgrGetCurrentBgmState2",
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+			result, result, 0, 0);
+#else
+		appmgrMainMutexPanic();
+#endif
+	}
 	sceSyscallLeave(syscallState);
 	return 0;
 }
@@ -2249,6 +2437,145 @@ notFound:
 	return (int)0x80802012;
 }
 
+/* the shell's touch region first, then the foreground application's unless input is imposed */
+static inline __attribute__((always_inline)) void _RefreshRenderingOrder(
+		const AppmgrDeviceOwners *owners)
+{
+	TouchProcessPriorities *priorities = &g_appmgrDevice.touchProcessPriorities;
+	SceUID memBlock;
+	int count;
+
+	APPMGR_DEVICE_ASSERT_UNLOCKED(1920, "_RefreshRenderingOrder");
+	memset(g_appmgrDevice.renderingPids, -1, sizeof(g_appmgrDevice.renderingPids));
+	count = 0;
+	if (owners->shellPid != -1)
+		priorities->processIds[count++] = owners->shellPid;
+	priorities->count = count;
+	if (owners->renderingPid != -1) {
+		g_appmgrDevice.renderingPids[0] = owners->renderingPid;
+		if (!owners->inputImposed) {
+			priorities->processIds[count++] = owners->renderingPid;
+			priorities->count = count;
+		}
+	}
+	sharedFbGetMemBlockByIndex(1, &memBlock);
+	sharedFbSetRequestedPids(memBlock, g_appmgrDevice.renderingPids);
+	SceTouchForDriver_3F3FBF69(priorities);
+}
+
+/* hands the display, rendering, input and BTRM owners getDeviceOwner picks to the drivers */
+int _updateDeviceArbitration2(void)
+{
+	AppmgrDeviceOwners *current = &g_appmgrDevice.deviceOwners;
+	AppmgrDeviceOwners owners;
+	SceUID oldInput, newInput;
+	int result;
+
+	APPMGR_DEVICE_ASSERT_UNLOCKED(1795, "_updateDeviceArbitration2");
+	result = lockAudioUpdate();
+	if (result != 0)
+		return result;
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	if (result != 0) {
+#if FW_DEBUG
+		SCE_DBG_PRINTF_FUNC(0, 1802, "_updateDeviceArbitration2",
+			"Failed to lock ret=0x%08x\n", result);
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 1802, "_updateDeviceArbitration2");
+#else
+		appmgrMainMutexPanic();
+#endif
+	} else {
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
+	}
+	getDeviceOwner(&owners);
+	g_appmgrMainMutexOwner = -1;
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	if (result != 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1806, "_updateDeviceArbitration2",
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+			result, result, 0, 0);
+#else
+		appmgrMainMutexPanic();
+#endif
+	}
+	if (current->shellPid != owners.shellPid || current->backRenderPid != owners.backRenderPid) {
+		if (owners.shellPid == -1) {
+			_SetDisplayOwner(0, owners.backRenderPid);
+			_SetDisplayOwner(1, -1);
+		} else {
+			_SetDisplayOwner(0, owners.backRenderPid);
+			sharedFbSetShellRenderPort(1);
+			_SetDisplayOwner(1, owners.shellPid);
+		}
+	}
+	if (current->shellPid != owners.shellPid || current->renderingPid != owners.renderingPid ||
+	    current->inputImposed != owners.inputImposed) {
+		if (g_appmgrDebugNotifier != NULL)
+			g_appmgrDebugNotifier(22, owners.renderingPid, current->renderingPid, 0);
+		_RefreshRenderingOrder(&owners);
+	}
+	if (current->shellPid != owners.shellPid || current->inputPid != owners.inputPid ||
+	    current->inputImposed != owners.inputImposed || current->ctrlpMode != owners.ctrlpMode) {
+		if (current->inputPid != owners.inputPid && g_appmgrDebugNotifier != NULL)
+			g_appmgrDebugNotifier(20, owners.inputPid, current->inputPid, 0);
+		SceCameraForDriver_E81EADE1(owners.inputPid);
+		oldInput = current->inputImposed ? current->shellPid : current->inputPid;
+		newInput = owners.inputImposed ? owners.shellPid : owners.inputPid;
+		if (newInput != oldInput) {
+			SceCtrlForDriver_B26C2231(newInput);
+			SceCtrlForDriver_5B708A15(newInput, owners.ctrlpMode != 0);
+			SceHidForDriver_0B7D27CF(newInput);
+		} else if (current->ctrlpMode != owners.ctrlpMode) {
+			SceCtrlForDriver_5B708A15(newInput, owners.ctrlpMode != 0);
+		}
+		if ((newInput != oldInput || current->ctrlpMode != owners.ctrlpMode) &&
+		    g_appmgrDebugNotifier != NULL)
+			g_appmgrDebugNotifier(21, newInput, oldInput, owners.ctrlpMode != 0);
+		SceMotionDevForDriver_22CD6DCA(owners.inputPid);
+	}
+	g_appmgrDevice.appMgrState.btrmOwner = owners.btrmOwnerAppId;
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	if (result != 0) {
+#if FW_DEBUG
+		SCE_DBG_PRINTF_FUNC(0, 1876, "_updateDeviceArbitration2",
+			"Failed to lock ret=0x%08x\n", result);
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 1876, "_updateDeviceArbitration2");
+#else
+		appmgrMainMutexPanic();
+#endif
+	} else {
+		sceKernelGetThreadId();
+	}
+	g_appmgrMainMutexOwner = -1;
+	*current = owners;
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	if (result != 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1878, "_updateDeviceArbitration2",
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+			result, result, 0, 0);
+#else
+		appmgrMainMutexPanic();
+#endif
+	}
+	unlockAudioUpdate();
+#if FW_DEBUG
+	updateAudioArbitration2();
+	return 0;
+#else
+	return updateAudioArbitration2();
+#endif
+}
+
 int _sceAppMgrDeviceDeclareShell(const char *appName, int appId, SceUID pid)
 {
 	AppmgrAudioApp *app;
@@ -2580,6 +2907,111 @@ int sceAppMgrSetDisplayMergeConf(SceUInt32 setting, SceUInt32 alpha)
 	return 0;
 }
 
+int initializeAppMgrDevice(void)
+{
+	int result, index;
+
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	if (result != 0) {
+#if FW_DEBUG
+		SCE_DBG_PRINTF_FUNC(0, 168, "initializeAppMgrDevice",
+			"Failed to lock ret=0x%08x\n", result);
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 168, "initializeAppMgrDevice");
+#else
+		appmgrMainMutexPanic();
+#endif
+	} else {
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
+	}
+	memset(&g_appmgrDevice, 0, sizeof(g_appmgrDevice));
+	g_appmgrDevice.shellPid = -1;
+	for (index = 0; index < 20; ++index)
+		g_appmgrDevice.apps[index].appId = -1;
+	g_appmgrDevice.bgmState.soundExclusivePid = -1;
+	g_appmgrDevice.bgmState.soundExclusivePriority = -1;
+	g_appmgrDevice.bgmState.mainOutPortOwner = -1;
+	g_appmgrDevice.bgmState.bgmOutPortOwner = -1;
+	g_appmgrDevice.bgmState.bgmOutPortOwnerPriority = 0xffff;
+	g_appmgrDevice.bgmState.bgmOutPortOwnerSubPriority = 0xffff;
+	g_appmgrDevice.bgmState.voiceOutPortOwner = -1;
+	g_appmgrDevice.bgmState.voiceOutPortOwnerAppId = -1;
+	g_appmgrDevice.bgmState.inputPortOwner = -1;
+	g_appmgrDevice.systemChatPid = -1;
+	g_appmgrDevice.systemChatDuckingVolume = 256;
+	g_appmgrDevice.reserved = -1;
+	g_appmgrDevice.backRenderAppId = -1;
+	getDeviceOwner(&g_appmgrDevice.deviceOwners);
+	g_appmgrDevice.appMgrState.prioritizeSystemChat = 0;
+	g_appmgrDevice.appMgrState.inputImposed = 0;
+	g_appmgrDevice.appMgrState.btrmOwner = -1;
+	g_appmgrDevice.appMgrState.recommendedScreenOrientation = 1;
+	g_appmgrDevice.appMgrState.ctrlpMode = 0;
+	g_appmgrDevice.bgmEnabled = 1;
+	g_appmgrDevice.audioUpdateMutex = sceKernelCreateMutex("SceAppMgrAudioUdt", 0x8000, 0, NULL);
+	if (g_appmgrDevice.audioUpdateMutex < 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 213, "initializeAppMgrDevice");
+#else
+		SceDebugForDriver_391B5B74(&audioUpdateMutexPanicInfo, __builtin_return_address(0));
+#endif
+	}
+	SceAudioForDriver_F07D34C2(appmgrOnAudioOutOpen);
+	SceAudioForDriver_E87902DF(appmgrOnAudioOutRelease);
+	SceAudioInForDriver_3EC79053(appmgrOnAudioInOpen);
+	SceAudioInForDriver_197CAA1B(appmgrOnAudioInClose);
+	sceAudioOutSetAdoptMode(0);
+	g_appmgrMainMutexOwner = -1;
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	if (result != 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_PRINTF_FUNC(0, 222, "initializeAppMgrDevice",
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+			result, result, 0, 0);
+#else
+		appmgrMainMutexPanic();
+#endif
+	}
+	result = sceAppMgrSetDisplayMergeConf(2, 256);
+	if (result != 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_PRINTF_FUNC(0, 227, "initializeAppMgrDevice",
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+			result, result, 0, 0);
+#else
+		appmgrDeviceLockPanic();
+#endif
+	}
+	return result;
+}
+
+/* plane 0 is the back render application's, plane 1 the shell's, on both heads */
+inline __attribute__((always_inline)) int _SetDisplayOwner(SceUInt32 plane, SceUID pid)
+{
+	APPMGR_DEVICE_ASSERT_UNLOCKED(2026, "_SetDisplayOwner");
+	if (plane > 1)
+		return (int)0x80802002;
+	SceDisplayForDriver_B54962A1(0, plane, pid);
+	SceDisplayForDriver_B54962A1(1, plane, pid);
+	if (plane == 0) {
+		if (g_appmgrDebugNotifier != NULL)
+			g_appmgrDebugNotifier(23, pid, g_appmgrDevice.displayOwner[0], 0);
+		g_appmgrDevice.displayOwner[0] = pid;
+	} else {
+		if (g_appmgrDebugNotifier != NULL)
+			g_appmgrDebugNotifier(24, pid, g_appmgrDevice.displayOwner[1], 0);
+		g_appmgrDevice.displayOwner[1] = pid;
+	}
+	return 0;
+}
+
 int sceAppMgrAcquireBtrm(void)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
@@ -2706,6 +3138,170 @@ notFound:
 	}
 	sceSyscallLeave(syscallState);
 	return (int)0x80802012;
+}
+
+int sceAppMgrGetAppMgrState(AppMgrState *state)
+{
+	SceUInt32 syscallState;
+	int result;
+
+	if (state == NULL)
+		return (int)0x80802016;
+	syscallState = sceSyscallEnter();
+	if (!sceSblACMgrIsSystemProgram(0)) {
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201f;
+	}
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	if (result != 0) {
+#if FW_DEBUG
+		SCE_DBG_PRINTF_FUNC(0, 2124, "sceAppMgrGetAppMgrState",
+			"Failed to lock ret=0x%08x\n", result);
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 2124, "sceAppMgrGetAppMgrState");
+#else
+		appmgrMainMutexPanic();
+#endif
+	} else {
+		sceKernelGetThreadId();
+	}
+	memcpy(state, &g_appmgrDevice.appMgrState, sizeof(*state));
+	g_appmgrMainMutexOwner = -1;
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	if (result != 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_PRINTF_FUNC(0, 2128, "sceAppMgrGetAppMgrState",
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+			result, result, 0, 0);
+#else
+		appmgrMainMutexPanic();
+#endif
+	}
+	sceSyscallLeave(syscallState);
+	return 0;
+}
+
+AppMgrState *_deviceGetAppMgrState(void)
+{
+	APPMGR_DEVICE_ASSERT_LOCKED(2135, "_deviceGetAppMgrState");
+	return &g_appmgrDevice.appMgrState;
+}
+
+void _deviceSetAudioPortsDisabled(int disabled)
+{
+	g_appmgrDevice.audioPortsDisabled = disabled;
+}
+
+int sceAppMgrSetBackRenderPortOwner(int appId)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *shell;
+	int result;
+
+	if (!SceSblACMgrForDriver_991FDC15(0) || (shell = appmgrGetShellApp()) == NULL ||
+	    shell->process.processId != sceKernelGetProcessId()) {
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201c;
+	}
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	if (result != 0) {
+#if FW_DEBUG
+		SCE_DBG_PRINTF_FUNC(0, 2162, "sceAppMgrSetBackRenderPortOwner",
+			"Failed to lock ret=0x%08x\n", result);
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 2162, "sceAppMgrSetBackRenderPortOwner");
+#else
+		appmgrMainMutexPanic();
+#endif
+	} else {
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
+	}
+	if (appId != -1 && appmgrFindAppById(appId) == NULL) {
+		g_appmgrMainMutexOwner = -1;
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+		if (result != 0) {
+#if FW_DEBUG
+			sceAppMgrDump();
+			dumpBgmState();
+			SCE_DBG_ASSERT_PRINTF_FUNC(0, 2168, "sceAppMgrSetBackRenderPortOwner",
+				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+				result, result, 0, 0);
+#else
+			appmgrMainMutexPanic();
+#endif
+		}
+		sceSyscallLeave(syscallState);
+		return (int)0x80802012;
+	}
+	g_appmgrMainMutexOwner = -1;
+	g_appmgrDevice.backRenderAppId = appId;
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	if (result != 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_PRINTF_FUNC(0, 2175, "sceAppMgrSetBackRenderPortOwner",
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+			result, result, 0, 0);
+#else
+		appmgrMainMutexPanic();
+#endif
+	}
+	_updateDeviceArbitration2();
+	sceSyscallLeave(syscallState);
+	return 0;
+}
+
+/* gives the display planes back to the owners _updateDeviceArbitration2 last chose */
+void _deviceRefreshDisplay(void)
+{
+	SceUID shellPid, backRenderPid;
+	int result;
+
+	if (lockAudioUpdate() != 0)
+		return;
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	if (result != 0) {
+#if FW_DEBUG
+		SCE_DBG_PRINTF_FUNC(0, 2190, "_deviceRefreshDisplay",
+			"Failed to lock ret=0x%08x\n", result);
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 2190, "_deviceRefreshDisplay");
+#else
+		appmgrMainMutexPanic();
+#endif
+	} else {
+		sceKernelGetThreadId();
+	}
+	g_appmgrMainMutexOwner = -1;
+	shellPid = g_appmgrDevice.deviceOwners.shellPid;
+	backRenderPid = g_appmgrDevice.deviceOwners.backRenderPid;
+	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	if (result != 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_PRINTF_FUNC(0, 2194, "_deviceRefreshDisplay",
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+			result, result, 0, 0);
+#else
+		appmgrMainMutexPanic();
+#endif
+	}
+	if (shellPid == -1) {
+		_SetDisplayOwner(0, backRenderPid);
+		_SetDisplayOwner(1, -1);
+	} else {
+		_SetDisplayOwner(0, backRenderPid);
+		sharedFbSetShellRenderPort(1);
+		_SetDisplayOwner(1, shellPid);
+	}
+	unlockAudioUpdate();
 }
 
 void _deviceRefreshAudioPort(SceUID pid)
@@ -2898,6 +3494,17 @@ owners:
 	info->displayOwner1 = g_appmgrDevice.displayOwner[1];
 	info->systemChatPid = g_appmgrDevice.systemChatPid;
 	info->backRenderAppId = g_appmgrDevice.backRenderAppId;
+}
+
+int _deviceSetBgmEnabled(int enabled)
+{
+	g_appmgrDevice.bgmEnabled = enabled;
+#if FW_DEBUG
+	updateAudioArbitration2();
+	return 0;
+#else
+	return updateAudioArbitration2();
+#endif
 }
 
 void _deviceSetRecommendedScreenOrientation(int orientation)

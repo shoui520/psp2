@@ -4,6 +4,7 @@
 #include "appmgr_event.h"
 #include <appmgr/appmgr.h>
 #include "app_state_internal.h"
+#include "appmgr_device.h"
 #include "appmgr_app_event.h"
 
 extern int sceAppMgrAppParamGetString(int pid, int param, char *string, SceSize length);
@@ -14,11 +15,8 @@ extern int sceAppMgrGetRunningAppIdListForShell(SceInt32 *appIds, int count);
 extern int sceAppMgrSetNetworkDisconnectionWarningDialogState(SceBool enable,
 							   const void *optParam);
 extern int sceAppMgrGetRecommendedScreenOrientation(int *orientation);
-extern int sceAppMgrGetCurrentBgmState(void *currentBgmId, void *currentBgmState);
-extern int sceAppMgrGetCurrentBgmState2(void *bgmState);
 extern int _sceAppMgrGetParam(char *param);
 extern int sceAppMgrGetAppParam2(void *appParam);
-extern int sceAppMgrGetAppMgrState(void *appMgrState);
 
 int appmgrGetBootParamSyscall(SceUInt32 request, void *bootParam)
 {

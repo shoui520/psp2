@@ -32,7 +32,6 @@ extern int _resumeAppForDebugger(struct AppState *app,
 				struct AppmgrWaitObject **waitObject);
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
-extern int _updateDeviceArbitration2(void);
 extern int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, void *common);
 int appmgrProcKillHandler(SceUID pid, ProcEventParam *param, void *common);
 extern int _sceAppMgrProcSuspendHandler(SceUID pid, int eventType,
@@ -48,7 +47,6 @@ extern int appmgrRemoveContentCache(SceUID pid, const AppmgrProcessContent *cont
 extern int appmgrRemoveTemporaryPhoto(SceUID pid);
 extern int appmgrRemoveAppWorkDirectory(const AppmgrProcessContent *content);
 extern int appmgrUnmountProcessContent(SceUID pid);
-extern int _deviceSetProcessId(int appId, SceUID pid);
 extern int _destroyOtherApp(struct AppState *app);
 extern int _sceAppMgrDeactivateAppInternal(struct AppState *app, int, int, int);
 int _appmgrProcessKillProcess(struct AppState *app, int kind);

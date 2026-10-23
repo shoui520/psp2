@@ -360,6 +360,9 @@ int appmgrSaveDataSlotFileGetParam(unsigned int slotId, void *param);
 
 /* sharedfb.c */
 int sharedFbInitialize(void);
+int sharedFbGetMemBlockByIndex(int index, SceUID *memBlock);
+int sharedFbSetRequestedPids(SceUID memBlock, const SceUID pids[8]);
+int sharedFbSetShellRenderPort(unsigned int port);
 
 /* system_param.c */
 int appmgrSystemParamDateTimeGetConf(void *conf);
