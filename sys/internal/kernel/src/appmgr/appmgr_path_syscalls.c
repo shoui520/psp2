@@ -48,6 +48,11 @@ int appmgrAddContMountSyscall(SceUID pid, const AppmgrAddContMountParam *param)
 	return sceAppMgrAddContMount(pid, param);
 }
 
+int appmgrAddContAddMountSyscall(const AppmgrAddContAddMountParam *param, int add)
+{
+	return sceAppMgrAddContAddMount(param, add);
+}
+
 int appmgrQuitAppSyscall(int appId)
 {
 	return sceAppMgrQuitApp(appId);

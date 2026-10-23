@@ -475,6 +475,7 @@ int appmgrGetRawPathSyscall(char *path, char *resolvedPath, int capacity);
 int appmgrGetUserDirPathSyscall(int partitionId, char *path, unsigned int capacity);
 int appmgrGetUserDirPathByIdSyscall(int userId, int partitionId, char *path, unsigned int capacity);
 int appmgrAddContMountSyscall(SceUID pid, const struct AppmgrAddContMountParam *param);
+int appmgrAddContAddMountSyscall(const struct AppmgrAddContAddMountParam *param, int add);
 int appmgrGetRawPathOfApp0ByAppIdForShellSyscall(int appId, char *path);
 int appmgrGetRawPathOfApp0ByPidForShellSyscall(SceUID pid, char *path);
 

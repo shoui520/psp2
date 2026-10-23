@@ -157,7 +157,6 @@ STUB(_sceAppMgrBgdlGetQueueStatus)
 STUB(_sceAppMgrGetDevInfo)
 STUB(_sceAppMgrSaveDataUmount)
 STUB(sceAppMgrSaveDataGetCachedRequiredSizeKiB)
-STUB(_sceAppMgrAddContAddMount)
 STUB(_sceAppMgrWorkDirMountById)
 
 

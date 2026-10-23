@@ -36,6 +36,23 @@ _Static_assert(sizeof(AppmgrAddContMountParam) == 64 &&
 
 int sceAppMgrAddContMount(SceUID pid, const AppmgrAddContMountParam *param);
 
+/* sceAppMgrAddContAddMount's parameters: the content, its passcode and the drive to use */
+typedef struct AppmgrAddContAddMountParam {
+	char titleId[16];
+	char passcode[32];
+	ScePfsRndDriveId mountPoint;
+} AppmgrAddContAddMountParam;
+
+_Static_assert(sizeof(AppmgrAddContAddMountParam) == 64 &&
+	       offsetof(AppmgrAddContAddMountParam, passcode) == 16 &&
+	       offsetof(AppmgrAddContAddMountParam, mountPoint) == 48,
+	       "add-on content add mount parameters");
+
+int sceAppMgrAddContAddMount(const AppmgrAddContAddMountParam *param, int add);
+
+/* addcont.c */
+int sceAppMgrIsRelativeAddContAdd(const char *titleId, int add);
+
 typedef struct AppmgrLicenseInfo {
 	char contentId[48];
 	int licenseVersion;

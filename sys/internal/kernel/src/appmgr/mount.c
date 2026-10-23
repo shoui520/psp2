@@ -3893,6 +3893,73 @@ out:
 	return result;
 }
 
+int sceAppMgrAddContAddMount(const AppmgrAddContAddMountParam *param, int add)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	ScePfsRndDriveId mountPoint = {{0}};
+	unsigned char keystone[96];
+	char path[64];
+	struct AppmgrMountHolder *holder;
+	AppmgrProcessContent *content;
+	struct AppState *app;
+	int result;
+
+	memset(keystone, 0, sizeof(keystone));
+	if (param == NULL) {
+		result = 0x80800001;
+		goto out;
+	}
+	if (!sceAppMgrIsRelativeAddContAdd(param->titleId, add)) {
+		result = 0x8080000E;
+		goto out;
+	}
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+
+	MOUNT_MAIN_LOCK(5873);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app != NULL) {
+		holder = &app->process.mounts;
+		content = &app->process.content;
+	} else {
+		holder = NULL;
+		content = NULL;
+	}
+	MOUNT_MAIN_UNLOCK(5882);
+
+	if (app == NULL) {
+		result = 0x80801002;
+		goto error;
+	}
+	if (add != 0) {
+		snprintf(path, sizeof(path), "ux0:addcont/%s", param->titleId);
+	} else {
+		result = appmgrGetAddContPath(content, param->titleId, path, sizeof(path));
+		if (result < 0)
+			goto error;
+	}
+	result = appmgrMount(0, holder, 1002, content->titleId, path,
+			     &param->mountPoint, NULL, &mountPoint);
+	if (result < 0)
+		goto error;
+	result = appmgrReadKeystone(0, mountPoint.drive_id, keystone);
+	if (result < 0)
+		goto error;
+	result = SceSblPostSsMgrForDriver_F86F1452(keystone, param->passcode);
+	if (result >= 0)
+		goto unlock;
+	result = 0x80800006;
+error:
+	if (result != 0x80800003 && mountPoint.drive_id[0] != '\0')
+		appmgrUnmountDrive(0, holder, mountPoint.drive_id, 0);
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int appmgrResolveLaunchDirectory(const char *path,
 				const AppmgrLaunchOptions *options,
 				const AppmgrMapFile *mapFile, char *output,
