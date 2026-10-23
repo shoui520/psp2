@@ -172,17 +172,20 @@ void FormatFloating(struct FormatState *state, unsigned int flags, int width,
 		uint64_t bits;
 	} number = { .value = argument };
 	char output[32];
-	int sign = number.bits >> 63 ? '-' : flags & FORMAT_PLUS ? '+' :
-			flags & FORMAT_SPACE ? ' ' : 0;
 	unsigned int binaryExponent = (number.bits >> DOUBLE_EXPONENT_SHIFT) & DOUBLE_EXPONENT_MASK;
 	int lower = conversion == 'a' || conversion == 'e' || conversion == 'f' ||
 			conversion == 'g';
-	char *begin = output + !!sign;
+	char *begin;
 	int firstLength = 0, middleZeroes = 0, lastLength = 0, lastZeroes = 0;
 	int leadingZeroes = 0;
 	int special = binaryExponent == DOUBLE_EXPONENT_MASK;
 	int hexadecimal = conversion == 'a' || conversion == 'A';
+	/* %a takes the sign bit, the others compare: -0.0 and -nan print unsigned. */
+	int negative = hexadecimal ? (int)(number.bits >> 63) : argument < 0.0;
+	int sign = negative ? '-' : flags & FORMAT_PLUS ? '+' :
+			flags & FORMAT_SPACE ? ' ' : 0;
 
+	begin = output + !!sign;
 	if (sign)
 		output[0] = sign;
 	if (special) {
@@ -194,7 +197,7 @@ void FormatFloating(struct FormatState *state, unsigned int flags, int width,
 		begin[2] = text[2];
 		firstLength = 3;
 		if (hexadecimal) {
-			FormatNumber(state, flags, width, 0, begin, 3, sign, "", 0);
+			FormatNumber(state, flags, width, precision, begin, 3, sign, "", 0);
 			return;
 		}
 	} else if (hexadecimal) {
@@ -571,7 +574,7 @@ int FormatEngine(const struct FormatOps *operations, void *context,
 			else if (flags & FORMAT_LONG)
 				*(int *)destination = state.count;
 			else if (flags & FORMAT_QUAD)
-				*(uint64_t *)destination = (unsigned int)state.count;
+				*(int64_t *)destination = state.count;
 			else
 				*(int *)destination = state.count;
 		} else if (character == 'd' || character == 'i') {

@@ -19,9 +19,9 @@ BacktraceCapture:
 	str r4, [fp, #-12]
 	mov r4, sp
 	sub sp, sp, #4
-	push {r4}
+	stmdb sp!, {r4}
 	ldr r4, [fp, #4]
-	push {r4}
+	stmdb sp!, {r4}
 	/* Publish the SP used for BacktraceWalk, including its stack arguments. */
 	str sp, [fp, #-20]
 	blx BacktraceWalk
