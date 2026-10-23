@@ -76,6 +76,11 @@ int appmgrInstallDirMountSyscall(unsigned int mountId, const char *id, const voi
 	return sceAppMgrInstallDirMount(mountId, id, keystone, mountPoint);
 }
 
+int appmgrSetPfsAcidDirectorySyscall(const char *path, const char *directory)
+{
+	return appmgrSetPfsAcidDirectory(path, directory);
+}
+
 int appmgrLoopBackMountSyscall(unsigned int mountId, const char *id,
 			       ScePfsRndDriveId *mountPoint)
 {
@@ -295,6 +300,11 @@ int appmgrSetSystemImposeState2Syscall(int state)
 	return sceAppMgrSetSystemImposeState2(state);
 }
 
+int appmgrDeclareShellProcess2Syscall(const char *appName)
+{
+	return sceAppMgrDeclareShellProcess2(appName);
+}
+
 int appmgrSetInfobarStateSyscall(int visibility, int color, int transparency)
 {
 	return sceAppMgrSetInfobarState(visibility, color, transparency);
@@ -309,4 +319,9 @@ int appmgrSetInfobarStateForShellByAppIdSyscall(int appId, int visibility, int c
 		int transparency)
 {
 	return sceAppMgrSetInfobarStateForShellByAppId(appId, visibility, color, transparency);
+}
+
+int appmgrGetPidListForShellSyscall(SceUID *pidList, unsigned int count)
+{
+	return sceAppMgrGetPidListForShell(pidList, count);
 }

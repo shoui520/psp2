@@ -7,6 +7,7 @@
 #include "appmgr_device.h"
 #include "appmgr_app_event.h"
 #include "mount.h"
+#include "appmgr_savedata_slot.h"
 
 extern int sceAppMgrAppParamGetString(int pid, int param, char *string, SceSize length);
 extern SceInt32 _sceAppMgrGetAppState(SceAppMgrAppState *appState,
@@ -81,6 +82,69 @@ int appmgrSetSystemDataFileSyscall(SceUInt32 location, const void *userData,
 	return appmgrSetSystemDataFile(location, userData, dataSize);
 }
 
+int appmgrPspSaveDataGetParamsSyscall(struct AppmgrPspSaveDataParamSfo *paramSfo)
+{
+	return sceAppMgrPspSaveDataGetParams(paramSfo);
+}
+
+int appmgrPspSaveDataReadSyscall(struct AppmgrPspSaveDataParams *params)
+{
+	return sceAppMgrPspSaveDataRead(params);
+}
+
+int appmgrLaunchApp2Syscall(const char *appPath, const char *name, SceUInt32 budgetSize,
+			    const char *param, SceUInt32 processAttr,
+			    const AppmgrLaunchAppOption *option)
+{
+	return _sceAppMgrLaunchApp2(appPath, name, budgetSize, param, processAttr, option);
+}
+
+int appmgrLaunchAppByNameSyscall(SceUInt32 launchMode, const SceChar8 *name,
+				 const char *param)
+{
+	return appmgrLaunchAppByName(launchMode, name, param);
+}
+
+int appmgrLaunchAppByNameForShellSyscall(SceUInt32 launchMode, const SceChar8 *name,
+					 const char *param)
+{
+	return appmgrLaunchAppByNameForShell(launchMode, name, param);
+}
+
+int appmgrLaunchAppByUriSyscall(SceUInt32 launchMode, const char *uri)
+{
+	return appmgrLaunchAppByUri(launchMode, uri);
+}
+
+int appmgrLaunchAppByUri2Syscall(const char *uri, const AppmgrLaunchAppByNameOption *option)
+{
+	return appmgrLaunchAppByUri2(uri, option);
+}
+
+int appmgrLaunchVideoStreamingAppSyscall(const void *extraParam, SceSize extraParamSize,
+					  const AppmgrLaunchAppByNameOption *option)
+{
+	return appmgrLaunchVideoStreamingApp(extraParam, extraParamSize, option);
+}
+
+int appmgrLaunchAppByName2Syscall(const SceChar8 *name, const char *param,
+				  const AppmgrLaunchAppByNameOption *option)
+{
+	return appmgrLaunchAppByName2(name, param, option);
+}
+
+int appmgrLaunchAppByName2ForShellSyscall(const SceChar8 *name, const char *param,
+					  const AppmgrLaunchAppByNameOption *option)
+{
+	return appmgrLaunchAppByName2ForShell(name, param, option);
+}
+
+int appmgrLaunchAppByName2ndStageSyscall(int appId, const char *appPath, SceUInt32 budgetSize,
+					 SceUInt32 processAttr, const AppmgrLaunchAppOption *option)
+{
+	return sceAppMgrLaunchAppByName2ndStage(appId, appPath, budgetSize, processAttr, option);
+}
+
 int appmgrBgdlGetQueueStatusSyscall(void *status)
 {
 	return appmgrBgdlGetQueueStatus(status);
@@ -94,6 +158,11 @@ int appmgrGetNameByIdSyscall(SceUID id, char *appName)
 int appmgrGetIdByNameSyscall(SceUID *id, const char *appName)
 {
 	return sceAppMgrGetIdByName(id, appName);
+}
+
+int appmgrSendParamSyscall(const char *name, const char *param, const void *option)
+{
+	return sceAppMgrSendParam(name, param, option);
 }
 
 int appmgrGrowMemorySyscall(SceSize size, int killMiniApps)
@@ -153,6 +222,11 @@ int appmgrDestroyAppByAppIdSyscall(int appId)
 	return sceAppMgrDestroyAppByAppId(appId);
 }
 
+int appmgrDestroyAppByNameSyscall(const char *name)
+{
+	return sceAppMgrDestroyAppByName(name);
+}
+
 SceUID appmgrGetProcessIdByAppIdForShellSyscall(SceInt32 appId)
 {
 	return sceAppMgrGetProcessIdByAppIdForShell(appId);
@@ -208,6 +282,16 @@ int appmgrGetAppIdByAppIdSyscall(int appId)
 	return sceAppMgrGetAppIdByAppId(appId);
 }
 
+int appmgrCaptureFrameBufIFTUByAppIdSyscall(int appId, struct SceDisplayFrameBuf *frameBuf)
+{
+	return sceAppMgrCaptureFrameBufIFTUByAppId(appId, frameBuf);
+}
+
+int appmgrCaptureFrameBufDMACByAppIdSyscall(int appId, struct SceDisplayFrameBuf *frameBuf)
+{
+	return sceAppMgrCaptureFrameBufDMACByAppId(appId, frameBuf);
+}
+
 int appmgrGetAppParamSyscall(char *param)
 {
 	return _sceAppMgrGetParam(param);
@@ -226,6 +310,11 @@ int appmgrGetExtraAppParamSyscall(AppmgrExtraAppParam *extraParam)
 int appmgrGetAppMgrStateSyscall(void *appMgrState)
 {
 	return sceAppMgrGetAppMgrState(appMgrState);
+}
+
+int appmgrGetBudgetInfoSyscall(struct SceKernelBudgetInfo *info)
+{
+	return sceAppMgrGetBudgetInfo(info);
 }
 
 int appmgrSetAppProtectionModeOnMemoryShortageSyscall(unsigned int mode)

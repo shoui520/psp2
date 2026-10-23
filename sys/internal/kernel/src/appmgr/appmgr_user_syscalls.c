@@ -7,6 +7,8 @@
 #include "appmgr_shell_event.h"
 #include "appmgr_event.h"
 #include "app_state_internal.h"
+#include <display.h>
+#include <processmgr/process_budget.h>
 
 typedef struct AppmgrAppParamStringArguments {
 	SceSize length;
@@ -15,6 +17,32 @@ typedef struct AppmgrAppParamStringArguments {
 
 _Static_assert(sizeof(AppmgrAppParamStringArguments) == 16,
 	       "application parameter string argument block");
+
+/* the argument block of the launch calls by name: read, not used */
+typedef struct AppmgrLaunchArguments {
+	SceUInt32 reserved[4];
+} AppmgrLaunchArguments;
+
+/* the argument block of _sceAppMgrLaunchAppByPath4 */
+typedef struct AppmgrLaunchAppByPathArguments {
+	const char *param;
+	SceUInt32 processAttr;
+	const AppmgrLaunchAppOption *option;
+	SceUInt32 reserved[5];
+} AppmgrLaunchAppByPathArguments;
+
+/* the argument block of _sceAppMgrLaunchAppByName2ndStage */
+typedef struct AppmgrLaunchAppByName2ndStageArguments {
+	SceUInt32 processAttr;
+	const AppmgrLaunchAppOption *option;
+	SceUInt32 reserved[2];
+} AppmgrLaunchAppByName2ndStageArguments;
+
+_Static_assert(sizeof(AppmgrLaunchArguments) == 16, "launch argument block");
+_Static_assert(sizeof(AppmgrLaunchAppByPathArguments) == 32,
+	       "launch by path argument block");
+_Static_assert(sizeof(AppmgrLaunchAppByName2ndStageArguments) == 16,
+	       "launch second stage argument block");
 
 int __sceAppMgrGetAppState(SceAppMgrAppState *appState, SceSize size,
 			 SceUInt32 buildVersion)
@@ -43,6 +71,18 @@ int _sceAppMgrSetNetworkDisconnectionWarningDialogState(SceBool enable,
 
 	BLOCK_IN(optParam, userOptParam, 128);
 	return appmgrSetNetworkDisconnectionWarningDialogStateSyscall(enable, optParam);
+}
+
+int _sceAppMgrLoadExec(const char *userPath, const char *const *argv, const void *option,
+		       const SyscallUnusedArgs *userArguments)
+{
+	SyscallUnusedArgs arguments;
+	char *path = (char *)userPath;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(path, userPath, 292);
+	return appmgrLoadExecSyscall(path, argv, option);
 }
 
 int _sceAppMgrGetAppInfo(const char *appName, SceAppMgrAppState *appInfo,
@@ -183,6 +223,79 @@ int _sceAppMgrSetSystemDataFile(SceUInt32 location, const void *userData,
 	return appmgrSetSystemDataFileSyscall(location, userData, dataSize);
 }
 
+int _sceAppMgrLaunchAppByName(SceUInt32 launchMode, const char *userName, const char *userParam,
+			       const AppmgrLaunchArguments *userArguments)
+{
+	AppmgrLaunchArguments arguments;
+	char *name = (char *)userName;
+	char *param = (char *)userParam;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(name, userName, 32);
+	STRING_IN(param, userParam, 1024);
+	return appmgrLaunchAppByNameSyscall(launchMode, (const SceChar8 *)name, param);
+}
+
+int _sceAppMgrLaunchAppByNameForShell(SceUInt32 launchMode, const char *userName, const char *userParam,
+				       const AppmgrLaunchArguments *userArguments)
+{
+	AppmgrLaunchArguments arguments;
+	char *name = (char *)userName;
+	char *param = (char *)userParam;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(name, userName, 32);
+	STRING_IN(param, userParam, 1024);
+	return appmgrLaunchAppByNameForShellSyscall(launchMode, (const SceChar8 *)name, param);
+}
+
+int _sceAppMgrLaunchAppByName2(const char *userName, const char *userParam,
+			        const AppmgrLaunchAppByNameOption *userOption,
+			        const AppmgrLaunchArguments *userArguments)
+{
+	AppmgrLaunchArguments arguments;
+	char *name = (char *)userName;
+	char *param = (char *)userParam;
+	void *option = (void *)userOption;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(name, userName, 32);
+	STRING_IN(param, userParam, 1024);
+	BLOCK_IN(option, userOption, 64);
+	return appmgrLaunchAppByName2Syscall((const SceChar8 *)name, param, option);
+}
+
+int _sceAppMgrLaunchAppByName2ForShell(const char *userName, const char *userParam,
+				        const AppmgrLaunchAppByNameOption *userOption,
+				        const AppmgrLaunchArguments *userArguments)
+{
+	AppmgrLaunchArguments arguments;
+	char *name = (char *)userName;
+	char *param = (char *)userParam;
+	void *option = (void *)userOption;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(name, userName, 32);
+	STRING_IN(param, userParam, 1024);
+	BLOCK_IN(option, userOption, 64);
+	return appmgrLaunchAppByName2ForShellSyscall((const SceChar8 *)name, param, option);
+}
+
+int _sceAppMgrDestroyAppByName(const char *userName, const SyscallUnusedArgs *userArguments)
+{
+	SyscallUnusedArgs arguments;
+	char *name = (char *)userName;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(name, userName, 32);
+	return appmgrDestroyAppByNameSyscall(name);
+}
+
 int _sceAppMgrGetAppParam(char *param, const SyscallUnusedArgs *userArguments)
 {
 	SyscallUnusedArgs arguments;
@@ -234,6 +347,59 @@ int _sceAppMgrGetStatusByAppId(int appId, void *appStatus)
 		  appmgrGetStatusByAppIdSyscall(appId, k));
 }
 
+int _sceAppMgrSendParam(const char *userName, const char *userParam, const void *userOption,
+			const AppmgrLaunchArguments *userArguments)
+{
+	AppmgrLaunchArguments arguments;
+	char *name = (char *)userName;
+	char *param = (char *)userParam;
+	void *option = (void *)userOption;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(name, userName, 32);
+	STRING_IN(param, userParam, 1024);
+	BLOCK_IN(option, userOption, 128);
+	return appmgrSendParamSyscall(name, param, option);
+}
+
+int _sceAppMgrLaunchAppByUri(SceUInt32 launchMode, const char *userUri,
+			     const SyscallUnusedArgs *userArguments)
+{
+	SyscallUnusedArgs arguments;
+	char *uri = (char *)userUri;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(uri, userUri, 2083);
+	return appmgrLaunchAppByUriSyscall(launchMode, uri);
+}
+
+int _sceAppMgrLaunchAppByUri2(const char *userUri, const AppmgrLaunchAppByNameOption *userOption,
+			      const SyscallUnusedArgs *userArguments)
+{
+	SyscallUnusedArgs arguments;
+	char *uri = (char *)userUri;
+	void *option = (void *)userOption;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(uri, userUri, 2083);
+	BLOCK_IN(option, userOption, 64);
+	return appmgrLaunchAppByUri2Syscall(uri, option);
+}
+
+int _sceAppMgrDeclareShellProcess2(const char *userName, const SyscallUnusedArgs *userArguments)
+{
+	SyscallUnusedArgs arguments;
+	char *name = (char *)userName;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(name, userName, 32);
+	return appmgrDeclareShellProcess2Syscall(name);
+}
+
 int _sceAppMgrGetCurrentBgmState(void *currentBgmId, void *currentBgmState)
 {
 	int *bgmId = currentBgmId;
@@ -270,6 +436,29 @@ int _sceAppMgrGetCurrentBgmState2(void *bgmState)
 		  appmgrGetCurrentBgmState2Syscall(k));
 }
 
+int _sceAppMgrCaptureFrameBufIFTUByAppId(int appId, const SceDisplayFrameBuf *userFrameBuf)
+{
+	void *frameBuf = (void *)userFrameBuf;
+	int ret;
+
+	BLOCK_IN(frameBuf, userFrameBuf, sizeof(SceDisplayFrameBuf));
+	return appmgrCaptureFrameBufIFTUByAppIdSyscall(appId, frameBuf);
+}
+
+int _sceAppMgrCaptureFrameBufDMACByAppId(int appId, SceDisplayFrameBuf *userFrameBuf)
+{
+	SceDisplayFrameBuf frameBuf = { 0 };
+	int ret;
+
+	if (userFrameBuf == NULL)
+		return appmgrCaptureFrameBufDMACByAppIdSyscall(appId, NULL);
+	ret = sceKernelCopyFromUser(&frameBuf, userFrameBuf, sizeof(frameBuf));
+	if (ret < 0)
+		return ret;
+	ret = appmgrCaptureFrameBufDMACByAppIdSyscall(appId, &frameBuf);
+	return copyResult(ret, sceKernelCopyToUser(userFrameBuf, &frameBuf, sizeof(frameBuf)));
+}
+
 int _sceAppMgrGetAppMgrState(void *appMgrState)
 {
 	int ret;
@@ -277,6 +466,69 @@ int _sceAppMgrGetAppMgrState(void *appMgrState)
 	BLOCK_OUT(appMgrState, 128,
 		  appmgrGetAppMgrStateSyscall(NULL),
 		  appmgrGetAppMgrStateSyscall(k));
+}
+
+int _sceAppMgrLaunchAppByPath4(const char *userPath, const char *userName, SceUInt32 budgetSize,
+			       const AppmgrLaunchAppByPathArguments *userArguments)
+{
+	AppmgrLaunchAppByPathArguments arguments;
+	char *path = (char *)userPath;
+	char *name = (char *)userName;
+	const char *userParam;
+	const AppmgrLaunchAppOption *userOption;
+	char *param;
+	void *option;
+	SceUInt32 processAttr;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	userParam = arguments.param;
+	processAttr = arguments.processAttr;
+	userOption = arguments.option;
+	param = (char *)userParam;
+	option = (void *)userOption;
+	STRING_IN(path, userPath, 292);
+	STRING_IN(name, userName, 32);
+	STRING_IN(param, userParam, 1024);
+	BLOCK_IN(option, userOption, 128);
+	return appmgrLaunchApp2Syscall(path, name, budgetSize, param, processAttr, option);
+}
+
+int _sceAppMgrLaunchAppByName2ndStage(int appId, const char *userPath, SceUInt32 budgetSize,
+		const AppmgrLaunchAppByName2ndStageArguments *userArguments)
+{
+	AppmgrLaunchAppByName2ndStageArguments arguments;
+	char *path = (char *)userPath;
+	const AppmgrLaunchAppOption *userOption;
+	void *option;
+	SceUInt32 processAttr;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	processAttr = arguments.processAttr;
+	userOption = arguments.option;
+	option = (void *)userOption;
+	STRING_IN(path, userPath, 292);
+	BLOCK_IN(option, userOption, 128);
+	return appmgrLaunchAppByName2ndStageSyscall(appId, path, budgetSize, processAttr, option);
+}
+
+int _sceAppMgrLaunchVideoStreamingApp(const void *extraParam, SceSize extraParamSize,
+				      const AppmgrLaunchAppByNameOption *userOption)
+{
+	AppmgrLaunchAppByNameOption buffer;
+	const AppmgrLaunchAppByNameOption *option;
+	int ret;
+
+	if (userOption != NULL) {
+		ret = sceKernelCopyFromUser(&buffer, userOption, sizeof(buffer));
+		option = &buffer;
+		if (ret < 0)
+			return ret;
+	} else {
+		option = NULL;
+	}
+	return appmgrLaunchVideoStreamingAppSyscall(extraParam, extraParamSize, option);
 }
 
 int _sceAppMgrReceiveShellEvent(AppmgrShellEvent *event)
@@ -329,6 +581,18 @@ int _sceAppMgrGetCoredumpStateForShell(AppmgrShellCoredumpState *state)
 		  appmgrGetCoredumpStateForShellSyscall((AppmgrShellCoredumpState *)k));
 }
 
+int _sceAppMgrGetPidListForShell(SceUID *pidList, unsigned int count,
+				const SyscallSizeArgs *userArguments)
+{
+	SyscallSizeArgs arguments;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	BLOCK_OUT_SIZED(pidList, arguments.size, 80,
+		       appmgrGetPidListForShellSyscall(NULL, count),
+		       appmgrGetPidListForShellSyscall((SceUID *)k, count));
+}
+
 int _sceAppMgrReceiveNotificationRequestForShell(AppmgrNotificationRequest *request)
 {
 	int ret;
@@ -357,6 +621,21 @@ int _sceAppMgrGetRunningAppIdListForShell(SceInt32 *appIds, int count,
 	BLOCK_OUT_SIZED(appIds, arguments.size, 80,
 		       appmgrGetRunningAppIdListForShellSyscall(NULL, count),
 		       appmgrGetRunningAppIdListForShellSyscall((SceInt32 *)k, count));
+}
+
+int _sceAppMgrGetBudgetInfo(SceKernelBudgetInfo *userInfo)
+{
+	SceKernelBudgetInfo info;
+	int ret;
+
+	if (userInfo == NULL)
+		return appmgrGetBudgetInfoSyscall(NULL);
+	memset(&info, 0, sizeof(info));
+	ret = sceKernelCopyFromUser(&info, userInfo, sizeof(info));
+	if (ret < 0)
+		return ret;
+	ret = appmgrGetBudgetInfoSyscall(&info);
+	return copyResult(ret, sceKernelCopyToUser(userInfo, &info, sizeof(info)));
 }
 
 int _sceAppMgrGetStatusById(SceUID id, void *appStatus)

@@ -445,7 +445,7 @@ int sceAppMgrDestroyAppByName(const char *name);
 int sceAppMgrDestroyAppByAppId(int appId);
 int sceAppMgrSetAppProtectionModeOnMemoryShortage(unsigned int mode);
 void _updatePowerTickStateForNonSuspendableApp(void);
-int sceAppMgrSendParam(const char *name, const char *param, int option);
+int sceAppMgrSendParam(const char *name, const char *param, const void *option);
 void _appArbitrationOnProcessUnloaded(struct AppState *app);
 int appmgrStopShellWatchDog(void);
 int sceAppMgrLaunchAppByName2ndStage_internal(int appId, const char *name,
@@ -532,6 +532,38 @@ int appmgrSaveDataAddMountSyscall(const struct AppmgrAddMountParam *param);
 int appmgrAddContAddMountSyscall(const struct AppmgrAddMountParam *param, int add);
 int appmgrGetRawPathOfApp0ByAppIdForShellSyscall(int appId, char *path);
 int appmgrGetRawPathOfApp0ByPidForShellSyscall(SceUID pid, char *path);
+int appmgrLoadExecSyscall(const char *path, const char *const *argv, const void *option);
+int appmgrSetPfsAcidDirectory(const char *path, const char *directory);
+int appmgrSetPfsAcidDirectorySyscall(const char *path, const char *directory);
+int sceAppMgrDeclareShellProcess2(const char *appName);
+int appmgrDeclareShellProcess2Syscall(const char *appName);
+int appmgrGetPidListForShellSyscall(SceUID *pidList, unsigned int count);
+struct AppmgrPspSaveDataParamSfo;
+struct AppmgrPspSaveDataParams;
+int appmgrPspSaveDataGetParamsSyscall(struct AppmgrPspSaveDataParamSfo *paramSfo);
+int appmgrPspSaveDataReadSyscall(struct AppmgrPspSaveDataParams *params);
+int appmgrLaunchApp2Syscall(const char *appPath, const char *name, SceUInt32 budgetSize,
+			    const char *param, SceUInt32 processAttr,
+			    const AppmgrLaunchAppOption *option);
+int appmgrLaunchAppByNameSyscall(SceUInt32 launchMode, const SceChar8 *name,
+				 const char *param);
+int appmgrLaunchAppByNameForShellSyscall(SceUInt32 launchMode, const SceChar8 *name,
+					 const char *param);
+int appmgrLaunchAppByUriSyscall(SceUInt32 launchMode, const char *uri);
+int appmgrLaunchAppByUri2Syscall(const char *uri, const AppmgrLaunchAppByNameOption *option);
+int appmgrLaunchVideoStreamingAppSyscall(const void *extraParam, SceSize extraParamSize,
+					  const AppmgrLaunchAppByNameOption *option);
+int appmgrLaunchAppByName2Syscall(const SceChar8 *name, const char *param,
+				  const AppmgrLaunchAppByNameOption *option);
+int appmgrLaunchAppByName2ForShellSyscall(const SceChar8 *name, const char *param,
+					  const AppmgrLaunchAppByNameOption *option);
+int appmgrLaunchAppByName2ndStageSyscall(int appId, const char *appPath, SceUInt32 budgetSize,
+					 SceUInt32 processAttr, const AppmgrLaunchAppOption *option);
+int appmgrSendParamSyscall(const char *name, const char *param, const void *option);
+int appmgrDestroyAppByNameSyscall(const char *name);
+int appmgrCaptureFrameBufIFTUByAppIdSyscall(int appId, struct SceDisplayFrameBuf *frameBuf);
+int appmgrCaptureFrameBufDMACByAppIdSyscall(int appId, struct SceDisplayFrameBuf *frameBuf);
+int appmgrGetBudgetInfoSyscall(struct SceKernelBudgetInfo *info);
 
 /* appmgr_process.c */
 int sceAppMgrSuspendUntilActivated(void);

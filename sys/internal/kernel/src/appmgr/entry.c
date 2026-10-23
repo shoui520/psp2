@@ -217,31 +217,23 @@ int _sceAppMgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
 		displayMode, arguments.displayBlanked, arguments.unsupportedOptions);
 }
 STUB(_sceAppMgrCheckRifGD)
-STUB(_sceAppMgrLaunchVideoStreamingApp)
-STUB(_sceAppMgrGetPidListForShell)
 
 STUB(_sceAppMgrLoopBackMount)
-STUB(_sceAppMgrLaunchAppByUri)
 
 STUB(_sceAppMgrTrophyMountById)
 
 STUB(_sceAppMgrSaveDataDataRemove2)
 
 STUB(_sceAppMgrGetPfsDrive)
-STUB(_sceAppMgrLaunchAppByUri2)
-STUB(_sceAppMgrLaunchAppByNameForShell)
 STUB(_sceAppMgrGetDevInfo)
 STUB(_sceAppMgrSaveDataUmount)
 STUB(_sceAppMgrWorkDirMountById)
 
 
 STUB(_sceAppMgrGetSaveDataInfo)
-STUB(_sceAppMgrAcidDirSet)
 
-STUB(_sceAppMgrPspSaveDataGetParams)
 
 STUB(_sceAppMgrSaveDataSlotFileOpen)
-STUB(_sceAppMgrLaunchAppByPath4)
 
 STUB(_sceAppMgrAppDataMountById)
 STUB(_sceAppMgrSaveDataMount)
@@ -249,32 +241,20 @@ STUB(_sceAppMgrSaveDataDataRemove)
 STUB(_sceAppMgrLoadSaveDataSystemFile)
 STUB(_sceAppMgrPspSaveDataRootMount)
 
-STUB(_sceAppMgrLaunchAppByName2)
 
 STUB(_sceAppMgrPhotoUmount)
 STUB(_sceAppMgrSaveDataDataSave)
 
-STUB(_sceAppMgrDeclareShellProcess2)
-STUB(_sceAppMgrCaptureFrameBufDMACByAppId)
-STUB(_sceAppMgrLaunchAppByName2ForShell)
 STUB(_sceAppMgrGetMediaTypeFromDriveByPid)
 STUB(_sceAppMgrGetMediaTypeFromDrive)
-STUB(_sceAppMgrSendParam)
 
-STUB(_sceAppMgrLaunchAppByName)
-STUB(_sceAppMgrLoadExec)
 STUB(_sceAppMgrGetSaveDataInfoForSpecialExport)
-STUB(_sceAppMgrLaunchAppByName2ndStage)
-STUB(_sceAppMgrPspSaveDataRead)
 STUB(_sceAppMgrMmsMount)
 STUB(_sceAppMgrPhotoMount)
 STUB(_sceAppMgrLoopBackFormat)
-STUB(_sceAppMgrGetBudgetInfo)
-STUB(_sceAppMgrDestroyAppByName)
 STUB(_sceAppMgrInstallDirMount)
 STUB(_sceAppMgrAppDataMount)
 STUB(_sceAppMgrSaveDataGetQuota)
-STUB(_sceAppMgrCaptureFrameBufIFTUByAppId)
 
 int _sceAppMgrSendNotificationRequest(const AppmgrNotificationRequest *request, int wait)
 {

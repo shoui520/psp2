@@ -151,6 +151,11 @@ int appmgrDumpSyscall(void)
 	return sceAppMgrDump();
 }
 
+int appmgrLoadExecSyscall(const char *path, const char *const *argv, const void *option)
+{
+	return sceAppMgrLoadExec(path, argv, option);
+}
+
 int appmgrGetRawPathOfApp0ByAppIdForShellSyscall(int appId, char *path)
 {
 	return sceAppMgrGetRawPathOfApp0ByAppIdForShell(appId, path);

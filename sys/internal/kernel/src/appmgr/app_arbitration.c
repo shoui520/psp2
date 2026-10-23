@@ -3671,7 +3671,7 @@ void _updatePowerTickStateForNonSuspendableApp(void)
 	} while (index <= 19);
 }
 
-int sceAppMgrSendParam(const char *name, const char *param, int option)
+int sceAppMgrSendParam(const char *name, const char *param, const void *option)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
 	struct AppState *app;
@@ -3685,7 +3685,7 @@ int sceAppMgrSendParam(const char *name, const char *param, int option)
 		sceSyscallLeave(syscallState);
 		return SCE_APPMGR_ERROR_NULL_POINTER;
 	}
-	if (name[0] == '\0' || option != 0) {
+	if (name[0] == '\0' || option != NULL) {
 		sceSyscallLeave(syscallState);
 		return SCE_APPMGR_ERROR_INVALID;
 	}

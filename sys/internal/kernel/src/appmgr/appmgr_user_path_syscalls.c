@@ -5,6 +5,7 @@
 #include <sysmem/sysclib.h>
 #include <appmgr/appmgr.h>
 #include "app_state_internal.h"
+#include "appmgr_savedata_slot.h"
 
 typedef struct AppmgrRawPathArguments {
 	unsigned char reserved[16];
@@ -46,6 +47,20 @@ int _sceAppMgrUmountByPid(SceUID pid, const char *driveId)
 
 	BLOCK_IN(buffer, driveId, 16);
 	return appmgrUmountByPidSyscall(pid, buffer);
+}
+
+int _sceAppMgrAcidDirSet(const char *userPath, const char *userDirectory,
+			 const SyscallUnusedArgs *userArguments)
+{
+	SyscallUnusedArgs arguments;
+	char *path = (char *)userPath;
+	char *directory = (char *)userDirectory;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	BLOCK_IN(path, userPath, 16);
+	STRING_IN(directory, userDirectory, 292);
+	return appmgrSetPfsAcidDirectorySyscall(path, directory);
 }
 
 int _sceAppMgrConvertVs0UserDrivePath(const char *path, char *convertedPath,
@@ -195,6 +210,36 @@ int _sceAppMgrContentInstallPeriodStart(void)
 int _sceAppMgrContentInstallPeriodStop(void)
 {
 	return appmgrContentInstallPeriodStopSyscall();
+}
+
+int _sceAppMgrPspSaveDataGetParams(AppmgrPspSaveDataParamSfo *userParamSfo)
+{
+	AppmgrPspSaveDataParamSfo paramSfo;
+	int ret;
+
+	if (userParamSfo == NULL)
+		return appmgrPspSaveDataGetParamsSyscall(NULL);
+	memset(&paramSfo, 0, sizeof(paramSfo));
+	ret = sceKernelCopyFromUser(&paramSfo, userParamSfo, sizeof(paramSfo));
+	if (ret < 0)
+		return ret;
+	ret = appmgrPspSaveDataGetParamsSyscall(&paramSfo);
+	return copyResult(ret, sceKernelCopyToUser(userParamSfo, &paramSfo, sizeof(paramSfo)));
+}
+
+int _sceAppMgrPspSaveDataRead(AppmgrPspSaveDataParams *userParams)
+{
+	AppmgrPspSaveDataParams params;
+	int ret;
+
+	if (userParams == NULL)
+		return appmgrPspSaveDataReadSyscall(NULL);
+	memset(&params, 0, sizeof(params));
+	ret = sceKernelCopyFromUser(&params, userParams, sizeof(params));
+	if (ret < 0)
+		return ret;
+	ret = appmgrPspSaveDataReadSyscall(&params);
+	return copyResult(ret, sceKernelCopyToUser(userParams, &params, sizeof(params)));
 }
 
 int _sceAppMgrGetRawPathOfApp0ByAppIdForShell(int appId, char *path)
