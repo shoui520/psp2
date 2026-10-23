@@ -367,6 +367,7 @@ int SceSblPostSsMgrForDriver_C6684F7E(void *keys)
 int SceSblPostSsMgrForDriver_739C981E(SceUInt32 version, SceUInt32 index, void *keys)
 {
 	const char *key;
+	SceUInt32 size0, size1;
 	int ret;
 
 	if (version != 1 || index > 1 || keys == NULL)
@@ -383,8 +384,10 @@ int SceSblPostSsMgrForDriver_739C981E(SceUInt32 version, SceUInt32 index, void *
 	key = g_cloudKeyTable[index];
 	postSsCopyKey((char *)keys + 0x104, 0x40, key + 0x104, *(const SceUInt32 *)(key + 0x204));
 	key = g_cloudKeyTable[index];
-	*(SceUInt32 *)((char *)keys + 0x100) = *(const SceUInt32 *)(key + 0x100);
-	*(SceUInt32 *)((char *)keys + 0x204) = *(const SceUInt32 *)(key + 0x204);
+	size0 = *(const SceUInt32 *)(key + 0x100);
+	size1 = *(const SceUInt32 *)(key + 0x204);
+	*(SceUInt32 *)((char *)keys + 0x100) = size0;
+	*(SceUInt32 *)((char *)keys + 0x204) = size1;
 	return sceKernelUnlockFastMutex(&g_postSsMgrCloudMutex);
 }
 

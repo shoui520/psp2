@@ -198,12 +198,12 @@ int licMgrLoad(void)	/* name unknown */
 
 	if (!licMgrIsActivationNeeded()) {
 		g_licMgrEndDate = 0xffffffff;
-		g_licMgrLicenseStatus = 0;
 		g_licMgrIssueNo = 0;
+		g_licMgrLicenseStatus = 0;
 		return 0;
 	}
 	ret = licMgrGetCurrentTime(&now);
-	memset(&nvs, 0, sizeof(nvs));
+	nvs = (SceActNvsData){ { 0 } };
 	SceKernelSuspendForDriver_4DF40893(0);
 	nvs_read_data(ACT_NVS_OFFSET, &nvs, sizeof(nvs));
 	SceKernelSuspendForDriver_2BB92967(0);
@@ -327,7 +327,7 @@ int licMgrActivate(const char *path)	/* name unknown */
 	if (memcmp(&act.openPsId, &openPsId, sizeof(openPsId)) != 0)
 		return SCE_SBL_ERROR_LIC_OTHER_CONSOLE;
 
-	memset(&nvs, 0, sizeof(nvs));
+	nvs = (SceActNvsData){ { 0 } };
 	SceKernelSuspendForDriver_4DF40893(0);
 	ret = nvs_read_data(ACT_NVS_OFFSET, &nvs, sizeof(nvs));
 	SceKernelSuspendForDriver_2BB92967(0);
@@ -413,28 +413,33 @@ int licMgrFindCodeFile(const char *dir, char *path, SceSize size)	/* name unknow
 {
 	SceIoDirent dirent;
 	SceUID dfd;
-	SceSize len;
+	SceSize len, dirLen;
 	char *afv, *dot;
 
 	dfd = sceIoDopen(dir);
 	if (dfd < 0)
 		return SCE_SBL_ERROR_LIC_NOT_FOUND;
-	do {
-		do {
-			if (sceIoDread(dfd, &dirent) <= 0) {
-				sceIoDclose(dfd);
-				return SCE_SBL_ERROR_LIC_NOT_FOUND;
-			}
-		} while (strnlen(dirent.d_name, sizeof(dirent.d_name)) >= sizeof(dirent.d_name));
+	for (;;) {
+		if (sceIoDread(dfd, &dirent) <= 0) {
+			sceIoDclose(dfd);
+			return SCE_SBL_ERROR_LIC_NOT_FOUND;
+		}
+		if (strnlen(dirent.d_name, sizeof(dirent.d_name)) >= sizeof(dirent.d_name))
+			continue;
 		afv = strstr(dirent.d_name, ".afv");
 		dot = strrchr(dirent.d_name, '.');
-	} while (afv == NULL || dot == NULL || afv != dot);
+		if (afv != NULL && dot != NULL && afv == dot)
+			break;
+	}
 	sceIoDclose(dfd);
 
 	len = strnlen(dirent.d_name, sizeof(dirent.d_name));
-	if (len >= size || len + strnlen(dir, size) >= size)
+	if (len >= size)
 		return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
-	memcpy(path, dir, strnlen(dir, size));
+	dirLen = strnlen(dir, size);
+	if (len + dirLen >= size)
+		return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
+	memcpy(path, dir, dirLen);
 	memcpy(path + strnlen(dir, size), dirent.d_name, strnlen(dirent.d_name, sizeof(dirent.d_name)));
 	path[strnlen(dir, size) + strnlen(dirent.d_name, sizeof(dirent.d_name))] = '\0';
 	return 0;
@@ -530,12 +535,14 @@ int sceSblLicMgrGetActivationKeyForUser(SceActivationKey *key)
 int sceSblLicMgrGetLicenseStatus(void)
 {
 	SceUInt32 state;
+	int status;
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return SCE_ERROR_ERRNO_ENOSYS;
 	state = sceSyscallEnter();
+	status = g_licMgrLicenseStatus;
 	sceSyscallLeave(state);
-	return g_licMgrLicenseStatus;
+	return status;
 }
 
 /* seconds left of the activation */
@@ -656,27 +663,30 @@ int sceSblLicMgrActivateFromFs(void)
 	return ret;
 }
 
-static inline int licMgrHexDigit(SceUInt8 c, SceUInt8 *digit)	/* name unknown */
+/* the value of a hex digit, or -1 */
+static inline int licMgrHexDigit(SceUInt8 c)	/* name unknown */
 {
-	if (c - '0' < 10)
-		*digit = c - '0';
-	else if (c - 'a' < 6)
-		*digit = c - 'a' + 10;
-	else if (c - 'A' < 6)
-		*digit = c - 'A' + 10;
-	else
-		return 0;
-	return 1;
+	if ((unsigned int)(c - '0') < 10)
+		return c - '0';
+	if ((unsigned int)(c - 'a') < 6)
+		return c - 'a' + 10;
+	if ((unsigned int)(c - 'A') < 6)
+		return c - 'A' + 10;
+	return -1;
 }
 
 int licMgrHexDecode(const char *hex, void *data, SceSize size)
 {
 	const SceUInt8 *s = (const SceUInt8 *)hex;
-	SceUInt8 *out = data;
-	SceUInt8 hi, lo;
+	SceUInt8 *out = data, *end;
+	int hi, lo;
 
-	for (; out != (SceUInt8 *)data + size; s += 2) {
-		if (!licMgrHexDigit(s[0], &hi) || !licMgrHexDigit(s[1], &lo))
+	for (end = out + size; out != end; s += 2) {
+		hi = licMgrHexDigit(s[0]);
+		if (hi < 0)
+			return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
+		lo = licMgrHexDigit(s[1]);
+		if (lo < 0)
 			return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
 		*out++ = hi * 0x10 + lo;
 	}
@@ -691,7 +701,7 @@ static inline __attribute__((always_inline)) int licMgrIsBlank(SceUInt8 c)	/* na
 
 static inline __attribute__((always_inline)) int licMgrIsDigit(SceUInt8 c)	/* name unknown */
 {
-	return c - '0' < 10;
+	return (unsigned int)(c - '0') < 10;
 }
 
 static inline __attribute__((always_inline)) int licMgrIsFieldEnd(SceUInt8 c)	/* name unknown */
@@ -788,7 +798,7 @@ static inline __attribute__((always_inline)) int licMgrParseCode(SceActData *act
 	if (size < ACT_CODE_SIZE_MIN)
 		return SCE_SBL_ERROR_LIC_INVALID_FILE;
 	memset(act, 0, sizeof(*act));
-	memcpy(act->magic, g_actMagic, sizeof(act->magic));
+	__builtin_memcpy(act->magic, "act", sizeof(act->magic));
 	act->version = 1;
 	ret = licMgrHexDecode((const char *)code, &act->openPsId, sizeof(act->openPsId));
 	if (ret != 0)
@@ -815,9 +825,9 @@ int licMgrParseCodeFile(SceActData *act, SceActSig *sig, const char *path)
 	SceKernelOpenPsId openPsId;
 	SceUInt32 value, codeSize = 0, extraSize = 0;
 	SceUInt32 left, chunk, found, i;
-	SceSize headerSize, bufSize, len;
+	SceSize size, headerSize, bufSize, len;
 	SceSSize n;
-	SceOff size;
+	SceOff offset;
 	SceUID fd;
 	char *buf, *p;
 	int ret, newline;
@@ -832,11 +842,12 @@ int licMgrParseCodeFile(SceActData *act, SceActSig *sig, const char *path)
 		ret = SCE_ERROR_ERRNO_ENOENT;
 		goto out;
 	}
-	size = sceIoLseek(fd, 0, SCE_SEEK_END);
-	if (size < 0 || size >= ACT_FILE_SIZE_MAX) {
+	offset = sceIoLseek(fd, 0, SCE_SEEK_END);
+	if ((SceUInt64)offset >= ACT_FILE_SIZE_MAX) {
 		ret = SCE_ERROR_ERRNO_EIO;
 		goto out;
 	}
+	size = offset;
 	if (size < ACT_FILE_SIZE_MIN) {
 		ret = SCE_SBL_ERROR_LIC_INVALID_FILE;
 		goto out;
@@ -853,7 +864,9 @@ int licMgrParseCodeFile(SceActData *act, SceActSig *sig, const char *path)
 		goto out;
 	}
 	memset(buf, 0, ACT_FILE_HEADER_MAX);
-	len = size < ACT_FILE_HEADER_MAX - 1 ? size : ACT_FILE_HEADER_MAX - 1;
+	len = ACT_FILE_HEADER_MAX - 1;
+	if (size < len)
+		len = size;
 	n = licMgrReadAll(fd, buf, len);
 	if (n != len || n < 0) {
 		sceKernelFreeHeapMemory(g_postSsMgrHeap, buf);
@@ -928,7 +941,7 @@ int licMgrParseCodeFile(SceActData *act, SceActSig *sig, const char *path)
 			}
 			if (memcmp(&act->openPsId, &openPsId, sizeof(openPsId)) == 0)
 				goto extra;
-			memset(act->magic, 0, sizeof(act->magic));
+			__builtin_memset(act->magic, 0, sizeof(act->magic));
 		}
 	}
 	ret = SCE_SBL_ERROR_LIC_NOT_FOUND;

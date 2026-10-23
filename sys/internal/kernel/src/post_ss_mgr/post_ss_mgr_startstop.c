@@ -24,27 +24,26 @@ static int postSsMgrRandom(void *buf, SceSize size)	/* name unknown */
 	return sceSblRngPseudoRandomNumber(buf, size);
 }
 
-/* Sony's _sceSblPostSsMgrInitPhase1 (post_ss_mgr_startstop.c) */
-int module_start(SceSize args, void *argp)
+int _sceSblPostSsMgrInitPhase1(SceSize args, void *argp)
 {
 	SceKernelHeapCreateOpt opt;
-	int failed;
 
 	opt.size = sizeof(opt);
 	opt.attr = 1;
 	g_postSsMgrHeap = sceKernelCreateHeap("SceSblPostSsMgr", POST_SS_MGR_HEAP_SIZE, &opt);
-	failed = g_postSsMgrHeap < 0;
-	if (failed) {
+	if (g_postSsMgrHeap < 0) {
 		SCE_DBG_PRINTF(0, 81, "sceKernelCreateHeap() failure\n");
-	} else {
-		sceKernelInitializeFastMutex(&g_postSsMgrKeysMutex, "SceSblSsMgr", 0, 0);
-		sceKernelInitializeFastMutex(&g_postSsMgrSdMutex, "SceSblSsMgr", 0, 0);
-		sceKernelInitializeFastMutex(&g_postSsMgrCloudMutex, "SceSblSsMgr", 0, 0);
-		sceSblPmMgrInit();
-		sceSblRtcMgrInit();
-		sceSblFwLoaderInit();
-		sceSblRsaSetRandom(postSsMgrRandom);
-		sceKernelScheduleWorkTask(0x10023, "SceSblPostSsMgrInit", postSsMgrInitWork, NULL);
+		return 1;
 	}
-	return failed;
+	sceKernelInitializeFastMutex(&g_postSsMgrKeysMutex, "SceSblSsMgr", 0, 0);
+	sceKernelInitializeFastMutex(&g_postSsMgrSdMutex, "SceSblSsMgr", 0, 0);
+	sceKernelInitializeFastMutex(&g_postSsMgrCloudMutex, "SceSblSsMgr", 0, 0);
+	sceSblPmMgrInit();
+	sceSblRtcMgrInit();
+	sceSblFwLoaderInit();
+	sceSblRsaSetRandom(postSsMgrRandom);
+	sceKernelScheduleWorkTask(0x10023, "SceSblPostSsMgrInit", postSsMgrInitWork, NULL);
+	return 0;
 }
+
+int module_start(SceSize args, void *argp) __attribute__((alias("_sceSblPostSsMgrInitPhase1")));

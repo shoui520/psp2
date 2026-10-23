@@ -7,6 +7,7 @@
 #include <iofilemgr/iofilemgr.h>
 #include <rtc/rtc.h>
 #include <sm_comm/sm_comm.h>
+#include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 #include <intrmgr/syscall.h>
 #include "post_ss_mgr_internal.h"
@@ -29,7 +30,7 @@
 #define UT_TRILITHIUM_FLAG	"UT_TRILITHIUM_FLAG"
 
 /* the utoken_sm services (names unknown) */
-#define UT_SM_SEAL		1
+#define UT_SM_CHECK		1
 #define UT_SM_OPEN		2
 
 /* the flags of a utoken (names unknown) */
@@ -59,8 +60,7 @@
 /* a utoken, as utoken_sm opens it (names unknown) */
 typedef struct SceUtokenHeader {
 	SceUInt32 reserved0[4];
-	SceUInt32 flags;
-	SceUInt32 reserved1;
+	SceUInt64 flags;
 	SceUInt32 expireDate;
 	SceUInt32 reserved2[5];
 } SceUtokenHeader;
@@ -100,7 +100,7 @@ typedef struct SceUtSmCommand {
 } SceUtSmCommand;
 
 int utSmOpen(void *utoken, SceSize size, SceUInt32 now);
-int utSmSeal(void *utoken, SceSize size, SceUInt32 now);
+int utSmCheck(void *utoken, SceSize size, SceUInt32 now);
 
 SceUInt8 g_utMgrTrilithiumBufferValid;			/* names unknown */
 SceUInt8 g_utMgrStoreFlag;
@@ -165,25 +165,27 @@ int utMgrFindRecord(const void *records, SceSize size, SceUInt32 type, void *rec
 		    SceSize recordSize)	/* name unknown */
 {
 	const SceUtokenRecord *r;
+	SceUtokenRecord header;
 	SceSize pos;
 
-	if (size < sizeof(*r))
+	if (size < sizeof(header))
 		return SCE_SBL_ERROR_UT_NOT_FOUND;
 	pos = 0;
 	do {
 		r = (const SceUtokenRecord *)((const char *)records + pos);
-		if (r->size < sizeof(*r) || (r->size & 7) != 0)
+		header = *r;
+		if (header.size < sizeof(header) || (header.size & 7) != 0)
 			return SCE_SBL_ERROR_UT_BROKEN;
-		pos += r->size;
+		pos += header.size;
 		if (pos > size)
 			return SCE_SBL_ERROR_UT_BROKEN;
-		if (r->type == type) {
-			if (r->size != recordSize)
+		if (header.type == type) {
+			if (header.size != recordSize)
 				return SCE_SBL_ERROR_UT_BROKEN;
 			memcpy(record, r, recordSize);
 			return 0;
 		}
-	} while (pos + sizeof(*r) <= size);
+	} while (pos + sizeof(header) <= size);
 	return SCE_SBL_ERROR_UT_NOT_FOUND;
 }
 
@@ -225,7 +227,7 @@ int utMgrParseUtoken(const void *utoken, SceSize size)	/* name unknown */
 	SceUtokenTrilithiumRecord trilithium;
 	int ret;
 
-	memset(g_utMgrTrilithiumFlag, 0, sizeof(g_utMgrTrilithiumFlag));
+	__builtin_memset(g_utMgrTrilithiumFlag, 0, sizeof(g_utMgrTrilithiumFlag));
 	header = *p;
 	g_utMgrExpireDate = header.expireDate;
 
@@ -250,7 +252,7 @@ int utMgrParseUtoken(const void *utoken, SceSize size)	/* name unknown */
 		if (ret == SCE_SBL_ERROR_UT_BROKEN)
 			return ret;
 		if (ret == 0)
-			memcpy(g_utMgrTrilithiumFlag, flag.flag, sizeof(g_utMgrTrilithiumFlag));
+			__builtin_memcpy(g_utMgrTrilithiumFlag, flag.flag, sizeof(g_utMgrTrilithiumFlag));
 	}
 	if (header.flags & UT_FLAG_AUTH_ID_LIST) {
 		ret = utMgrFindRecord(records, size, UT_RECORD_AUTH_ID_LIST, &list, sizeof(list));
@@ -377,7 +379,7 @@ int sceSblUtMgrInit(void)
 	SceUInt32 now = 0;
 	SceSize size;
 	void *utoken;
-	int ret;
+	int ret, opened;
 
 	SceSysrootForDriver_E25D2FD5(SceSblPostSsMgrForDriver_22599675);
 	SceSysrootForDriver_A12C9950(SceSblPostSsMgrForDriver_D8A2D465);
@@ -390,23 +392,22 @@ int sceSblUtMgrInit(void)
 	utoken = utMgrAllocUtoken();
 	if (utoken == NULL)
 		return SCE_SBL_ERROR_UT_NO_MEMORY;
-	ret = utMgrReadFile(utoken, &size);
-	if (ret != 0) {
-		sceKernelFreeHeapMemory(g_postSsMgrHeap, utoken);
-		return ret;
-	}
-	SceKernelSuspendForDriver_4DF40893(0);
-	ret = utSmOpen(utoken, UT_SIZE, now);
-	SceKernelSuspendForDriver_2BB92967(0);
-	if (ret == 0) {
-		g_utMgrLoaded = 1;
-		ret = utMgrParseUtoken(utoken, size);
+	/* no utoken, or one that does not open, is not an error */
+	ret = 0;
+	if (utMgrReadFile(utoken, &size) == 0) {
+		SceKernelSuspendForDriver_4DF40893(0);
+		opened = utSmOpen(utoken, UT_SIZE, now);
+		SceKernelSuspendForDriver_2BB92967(0);
+		if (opened == 0) {
+			g_utMgrLoaded = 1;
+			ret = utMgrParseUtoken(utoken, size);
+		}
 	}
 	sceKernelFreeHeapMemory(g_postSsMgrHeap, utoken);
 	return ret;
 }
 
-/* seal a utoken and keep it */
+/* check a utoken and keep it */
 int SceSblPostSsMgrForDriver_C2E58CE3(void *utoken, SceSize size)
 {
 	SceUInt32 now = 0;
@@ -417,14 +418,14 @@ int SceSblPostSsMgrForDriver_C2E58CE3(void *utoken, SceSize size)
 	if (utMgrGetCurrentTime(&now) != 0)
 		now = 0xffffffff;
 	SceKernelSuspendForDriver_4DF40893(0);
-	ret = utSmSeal(utoken, UT_SIZE, now);
+	ret = utSmCheck(utoken, UT_SIZE, now);
 	SceKernelSuspendForDriver_2BB92967(0);
 	if (ret == 0)
 		ret = utMgrWriteFile(utoken);
 	return ret;
 }
 
-/* read the kept utoken and open it */
+/* read the kept utoken and check it */
 int utMgrReadUtoken(void *utoken, SceSize size)	/* name unknown */
 {
 	SceUInt32 now = 0;
@@ -438,7 +439,7 @@ int utMgrReadUtoken(void *utoken, SceSize size)	/* name unknown */
 	if (utMgrGetCurrentTime(&now) != 0)
 		now = 0xffffffff;
 	SceKernelSuspendForDriver_4DF40893(0);
-	ret = utSmOpen(utoken, UT_SIZE, now);
+	ret = utSmCheck(utoken, UT_SIZE, now);
 	SceKernelSuspendForDriver_2BB92967(0);
 	return ret;
 }
@@ -642,24 +643,44 @@ int utSmStart(const char *path)	/* name unknown */
 	return sceSblSmCommStartSm(0, path, 0, &info, &g_utSmId);
 }
 
-/* PLACEHOLDER: cryptographic routine, deferred: utoken_sm services 1
- * and 2, which seal and open a utoken in place */
-POST_SS_DEFERRED int utSmCommand(int service, void *utoken, SceSize size, SceUInt32 now)	/* name unknown */
+/* utoken_sm services 1 and 2: check a utoken, or open it in place */
+int utSmCommand(int service, void *utoken, SceSize size, SceUInt32 now)	/* name unknown */
 {
-	(void)utoken;
-	(void)size;
-	(void)now;
-	if (service != UT_SM_SEAL && service != UT_SM_OPEN)
+	SceUtSmCommand command;
+	SceSblSmCommPair stop;
+	uintptr_t pa;
+	SceUInt32 result = 0;
+	int ret;
+
+	command.now = now;
+	ret = sceKernelVAtoPA(utoken, &pa);
+	if (ret < 0)
+		return ret;
+	if (service == UT_SM_CHECK)
+		sceKernelDcacheCleanRange(utoken, UT_SIZE);
+	else if (service == UT_SM_OPEN)
+		sceKernelDcacheCleanInvalidateRange(utoken, UT_SIZE);
+	else
 		return SCE_SBL_ERROR_UT_INVALID_ARGUMENT;
-	return SCE_SBL_ERROR_UNSUPPORTED;
+	command.paddr = pa;
+	command.size = size;
+	ret = utSmStart(UT_SM_PATH);
+	if (ret != 0)
+		return ret;
+	if (sceSblSmCommCallFunc(g_utSmId, service, &result, &command, sizeof(command)) != 0)
+		result = SCE_SBL_ERROR_UT_SM;
+	ret = sceSblSmCommStopSm(g_utSmId, &stop);
+	if (ret != 0)
+		return ret;
+	return result;
 }
 
-int utSmOpen(void *utoken, SceSize size, SceUInt32 now)	/* name unknown */
+__attribute__((noinline)) int utSmOpen(void *utoken, SceSize size, SceUInt32 now)	/* name unknown */
 {
 	return utSmCommand(UT_SM_OPEN, utoken, size, now);
 }
 
-int utSmSeal(void *utoken, SceSize size, SceUInt32 now)	/* name unknown */
+__attribute__((noinline)) int utSmCheck(void *utoken, SceSize size, SceUInt32 now)	/* name unknown */
 {
-	return utSmCommand(UT_SM_SEAL, utoken, size, now);
+	return utSmCommand(UT_SM_CHECK, utoken, size, now);
 }

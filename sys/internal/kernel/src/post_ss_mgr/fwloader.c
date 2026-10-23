@@ -94,7 +94,7 @@ int sceSblFwLoaderSetPath(const char *path, int flags)
 	dir = NULL;
 	for (p = path; *p != '\0'; p++) {
 		if (*p == ':')
-			device = p;
+			device = dir = p;
 		else if (*p == '/')
 			dir = p;
 	}

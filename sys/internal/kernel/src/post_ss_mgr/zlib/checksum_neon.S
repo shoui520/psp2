@@ -116,10 +116,17 @@ zlibAdler32Neon:
 	addlo r1, r1, r3
 	add.w r0, r2, r1, lsl #16
 	bx lr
+.size zlibAdler32Neon, .-zlibAdler32Neon
+
+/* crc32 of fewer than 16 bytes: Sony's unwind region for crc32 starts here, in
+ * front of its entry */
+.type zlibCrc32NeonBytes, %function
+.thumb_func
+zlibCrc32NeonBytes:	/* name unknown */
 .LcrcBytes:
 	cmp r2, #0
 	b.n .Lcrc7
-.size zlibAdler32Neon, .-zlibAdler32Neon
+.size zlibCrc32NeonBytes, .-zlibCrc32NeonBytes
 
 .global zlibCrc32Neon
 .type zlibCrc32Neon, %function
