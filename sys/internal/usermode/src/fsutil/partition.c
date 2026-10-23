@@ -395,7 +395,7 @@ int _fs_util_prepare_rm_mbr(const char *blockDeviceName, SceUID file,
 invalid:
 	if (bufferSize >= 1024)
 		return 0;
-	switch (blockDeviceName[8]) {
+	switch ((signed char)blockDeviceName[8]) {
 	case 'e':
 		id = 1;
 		break;
@@ -420,7 +420,7 @@ invalid:
 	default:
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 235, "_entire_partition_id",
 			"%s: unexpected (%c), block_device_name(%s)\n",
-			"_entire_partition_id", blockDeviceName[8], blockDeviceName);
+			"_entire_partition_id", (signed char)blockDeviceName[8], blockDeviceName);
 		id = -1;
 		break;
 	}
@@ -523,7 +523,7 @@ device_info_result:
 			__func__, blockDeviceName, result);
 		return result;
 	}
-	switch (blockDeviceName[8]) {
+	switch ((signed char)blockDeviceName[8]) {
 	case 'e':
 		if (volumeSize != 0) {
 			necessarySectors = (volumeSize >> 9) + (info.eraseBlockCount >> 9);
@@ -600,7 +600,7 @@ device_info_result:
 	default:
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 235, "_entire_partition_id",
 			"%s: unexpected (%c), block_device_name(%s)\n",
-			"_entire_partition_id", blockDeviceName[8], blockDeviceName);
+			"_entire_partition_id", (signed char)blockDeviceName[8], blockDeviceName);
 invalid_id:
 		SCE_DBG_PRINTF_LEVEL(1, 0, 890,
 			"%s: invalid id(%d)\n", __func__, -1);
