@@ -272,6 +272,7 @@ int	sosend(struct socket *, struct mbuf *, struct uio *,
 int	sosetopt(struct socket *, int, int, struct mbuf *);
 int	soshutdown(struct socket *, int);
 void	sowakeup(struct socket *, struct sockbuf *, int);
+int	soabortwakeup(struct socket *, struct sockbuf *, int, int);	/* SCE */
 int	sockargs(struct mbuf **, const void *, size_t, int);
 
 int	sendit(struct proc *, int, struct msghdr *, int, register_t *);

@@ -1,0 +1,113 @@
+--- a/kern/uipc_socket2.c
++++ b/kern/uipc_socket2.c
+@@ -50,6 +50,9 @@
+ #include <sys/socketvar.h>
+ #include <sys/signalvar.h>
+ 
++/* SCE: this file's copies are made whatever the length (sbappendaddr, sbcreatecontrol) */
++#undef memcpy
++
+ /*
+  * Primitive routines for operating on sockets and socket buffers
+  */
+@@ -172,10 +175,12 @@
+ 	so->so_state = head->so_state | SS_NOFDREF;
+ 	so->so_proto = head->so_proto;
+ 	so->so_timeo = head->so_timeo;
+-	so->so_pgid = head->so_pgid;
+ 	so->so_send = head->so_send;
+ 	so->so_receive = head->so_receive;
+-	so->so_uid = head->so_uid;
++	/* SCE: the owner process, in place of so_uid, and the thread priority policy */
++	so->processId = head->processId;
++	so->reportedProcessOverride = -1;
++	so->threadPriorityPolicy = head->threadPriorityPolicy;
+ #ifdef MBUFTRACE
+ 	so->so_mowner = head->so_mowner;
+ 	so->so_rcv.sb_mowner = head->so_rcv.sb_mowner;
+@@ -183,6 +188,7 @@
+ #endif
+ 	(void) soreserve(so, head->so_snd.sb_hiwat, head->so_rcv.sb_hiwat);
+ 	soqinsque(head, so, soqueue);
++	bnet_socket_sanity_check(so);	/* SCE */
+ 	if ((*so->so_proto->pr_usrreq)(so, PRU_ATTACH,
+ 	    (struct mbuf *)0, (struct mbuf *)0, (struct mbuf *)0,
+ 	    (struct proc *)0)) {
+@@ -300,6 +306,26 @@
+ }
+ 
+ /*
++ * SCE: wake processes waiting on a socket buffer to give up the wait: canceled,
++ * or interrupted by an address change or an abort; 15 when nothing waits
++ */
++int
++soabortwakeup(struct socket *so, struct sockbuf *sb, int code, int addressChanged)
++{
++	sceNetPsWakeupEpolls(so);
++	sb->sb_flags &= ~SB_SEL;
++	if (sb->sb_flags & SB_WAIT) {
++		sb->sb_flags &= ~SB_WAIT;
++		if (sb->sb_flags & SB_NOINTR)
++			return (sceNetPsWakeupCanceled(&sb->sb_cc));
++		if (addressChanged)
++			return (sceNetPsWakeupAddressChanged(&sb->sb_cc));
++		return (sceNetPsWakeupInterrupted(&sb->sb_cc));
++	}
++	return (15);
++}
++
++/*
+  * Wakeup processes waiting on a socket buffer.
+  * Do asynchronous notification via SIGIO
+  * if the socket buffer has the SB_ASYNC flag set.
+@@ -307,22 +333,16 @@
+ void
+ sowakeup(struct socket *so, struct sockbuf *sb, int code)
+ {
+-	selnotify(&sb->sb_sel, 0);
++	sceNetPsWakeupEpolls(so);	/* SCE: in place of selnotify */
+ 	sb->sb_flags &= ~SB_SEL;
+ 	if (sb->sb_flags & SB_WAIT) {
+ 		sb->sb_flags &= ~SB_WAIT;
+-		wakeup((caddr_t)&sb->sb_cc);
+-	}
+-	if (sb->sb_flags & SB_ASYNC) {
+-		int band;
+-		if (code == POLL_IN)
+-			band = POLLIN|POLLRDNORM;
++		/* SCE: no signal or upcall; a wait that cannot be interrupted is canceled */
++		if (sb->sb_flags & SB_NOINTR)
++			sceNetPsWakeupCanceled(&sb->sb_cc);
+ 		else
+-			band = POLLOUT|POLLWRNORM;
+-		fownsignal(so->so_pgid, SIGIO, code, band, so);
++			wakeup((caddr_t)&sb->sb_cc);
+ 	}
+-	if (sb->sb_flags & SB_UPCALL)
+-		(*so->so_upcall)(so, so->so_upcallarg, M_DONTWAIT);
+ }
+ 
+ /*
+@@ -976,8 +996,7 @@
+ 	if (eor) {
+ 		if (n)
+ 			n->m_flags |= eor;
+-		else
+-			printf("semi-panic: sbcompress\n");
++		/* SCE: no message without a last mbuf */
+ 	}
+ 	SBLASTMBUFCHK(sb, __func__);
+ }
+@@ -1082,10 +1101,8 @@
+ 	struct cmsghdr	*cp;
+ 	struct mbuf	*m;
+ 
+-	if (CMSG_SPACE(size) > MCLBYTES) {
+-		printf("sbcreatecontrol: message too large %d\n", size);
+-		return NULL;
+-	}
++	if (CMSG_SPACE(size) > MCLBYTES)
++		return NULL;	/* SCE: no message */
+ 
+ 	if ((m = m_get(M_DONTWAIT, MT_CONTROL)) == NULL)
+ 		return ((struct mbuf *) NULL);

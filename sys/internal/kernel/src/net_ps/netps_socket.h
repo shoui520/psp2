@@ -45,6 +45,7 @@
 #include <sys/queue.h>
 #include <stddef.h>
 #include <net_ps/netps_gateway.h>
+#include <net_ps/netps_thread.h>
 
 struct socket;
 struct mbuf;
@@ -231,6 +232,8 @@ int sceNetPsDescriptorCreate(const char *name, int flags);
 int sceNetPsDescriptorClose(int descriptorId);
 int sceNetPsDumpClose(int dumpId);
 int sceNetPsDumpAbort(int dumpId, int flags);
+void bnet_socket_sanity_check(struct socket *socket);
+void sceNetPsWakeupEpolls(struct socket *socket);
 int sceNetPsEpollCreate(const char *name, int flags);
 int sceNetPsEpollClose(int epollId);
 int sceNetPsEpollAbort(int epollId, int flags);

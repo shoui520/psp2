@@ -609,6 +609,39 @@ int sceNetPsDumpAbort(int dumpId, int flags)
 	return error ? -error : error;
 }
 
+/* SCE: wake each epoll that watches the socket, directly or through a descriptor */
+void sceNetPsWakeupEpolls(struct socket *socket)
+{
+	SceNetPsEpoll *epoll;
+	SceNetPsEpollEntry *entry;
+	SceNetPsDescriptorEntry *descriptorEntry;
+	int first, last;
+	int epollId;
+
+	sceNetPsGetEpollIdRange(&first, &last);
+	for (epollId = first; epollId <= last; epollId++) {
+		epoll = sceNetPsLookupEpoll(epollId, 1);
+		if (epoll == NULL)
+			continue;
+		for (entry = epoll->entries; entry != NULL; entry = entry->next) {
+			if ((entry->kind & SCE_NETPS_EPOLL_ENTRY_SOCKET) &&
+			    entry->target.socket == socket)
+				goto wakeup;
+			if ((entry->kind & SCE_NETPS_EPOLL_ENTRY_DESCRIPTOR) &&
+			    entry->target.descriptor != NULL) {
+				for (descriptorEntry = entry->target.descriptor->entries;
+				     descriptorEntry != NULL;
+				     descriptorEntry = descriptorEntry->next)
+					if (descriptorEntry->socket == socket)
+						goto wakeup;
+			}
+		}
+		continue;
+wakeup:
+		sceNetPsWakeupNormal(epoll);
+	}
+}
+
 int sceNetPsEpollCreate(const char *name, int flags)
 {
 	SceNetPsEpoll *epoll;

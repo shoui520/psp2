@@ -1,0 +1,21 @@
+--- contrib/netbsd-2.1/sys/sys/proc.h
++++ sys/internal/kernel/src/net_ps/include/sys/proc.h
+@@ -479,6 +479,18 @@
+ /* Compatibility with old, non-interlocked tsleep call */
+ #define	tsleep(chan, pri, wmesg, timo)					\
+ 	ltsleep(chan, pri, wmesg, timo, NULL)
++#ifdef NET_PS_NETBSD
++/*
++ * SCE: in NetBSD's own files (NET_PS_NETBSD, set by the build), a sleep is net_ps's, without
++ * NetBSD's priority (sbwait, sb_lock), and a wakeup is net_ps's normal one
++ */
++int	sceNetPsSleep(const void *, unsigned int, const char *, int);
++int	sceNetPsWakeupNormal(const void *);
++#undef	tsleep
++#define	tsleep(chan, pri, wmesg, timo)					\
++	sceNetPsSleep((chan), 0, (wmesg), (timo))
++#define	wakeup(chan)	sceNetPsWakeupNormal(chan)
++#endif
+ 
+ #if defined(MULTIPROCESSOR)
+ void	proc_trampoline_mp(void);	/* XXX */

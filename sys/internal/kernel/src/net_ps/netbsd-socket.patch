@@ -1,0 +1,15 @@
+--- contrib/netbsd-2.1/sys/sys/socket.h
++++ sys/internal/kernel/src/net_ps/include/sys/socket.h
+@@ -442,7 +442,12 @@
+  * without (2), we can't guarantee binary compatibility in case of future
+  * changes in ALIGNBYTES.
+  */
++#ifdef _KERNEL
++/* SCE: the kernel aligns by its own ALIGNBYTES, a constant (sbcreatecontrol) */
++#define __CMSG_ALIGN(n)	(((n) + ALIGNBYTES) & ~ALIGNBYTES)
++#else
+ #define __CMSG_ALIGN(n)	(((n) + __cmsg_alignbytes()) & ~__cmsg_alignbytes())
++#endif
+ #ifdef _KERNEL
+ #define CMSG_ALIGN(n)	__CMSG_ALIGN(n)
+ #endif

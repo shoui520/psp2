@@ -2,6 +2,9 @@
 #define SCE_NETPS_RESOURCE_H
 
 #include <scetypes.h>
+#include <stddef.h>
+#include <sys/callout.h>
+#include <net/epoll.h>
 
 struct socket;
 struct SceNetPsEpoll;
@@ -10,7 +13,7 @@ struct SceNetPsDump;
 
 struct SceNetPsEpollEntry;
 
-/* Sony's epoll allocation is 44 bytes; the list contains opaque entries. */
+/* Sony's epoll allocation is 44 bytes, its list the registered sockets and descriptors */
 typedef struct SceNetPsEpoll {
 	struct SceNetPsEpollEntry *entries;
 	char name[32];
@@ -26,7 +29,39 @@ typedef struct SceNetPsDescriptor {
 	SceUID processId;
 } SceNetPsDescriptor;
 
+/* SceNetPsEpollEntry kind: what the entry watches */
+#define SCE_NETPS_EPOLL_ENTRY_SOCKET		1
+#define SCE_NETPS_EPOLL_ENTRY_DESCRIPTOR	2
+
+/* one registration of an epoll (sceNetEpollControl ADD), a 56-byte allocation */
+typedef struct SceNetPsEpollEntry {
+	struct SceNetPsEpollEntry *next;
+	struct SceNetPsEpollEntry **prev;
+	unsigned int kind;
+	union {
+		struct socket *socket;
+		struct SceNetPsDescriptor *descriptor;
+	} target;
+	int id;
+	int reserved;
+	SceNetEpollEvent event;
+} SceNetPsEpollEntry;
+
+/* one socket of a descriptor (sceNetDescriptorControl ADD), a 56-byte allocation */
+typedef struct SceNetPsDescriptorEntry {
+	struct SceNetPsDescriptorEntry *next;
+	struct SceNetPsDescriptorEntry **prev;
+	struct socket *socket;
+	SceNetEpollSystemData system;
+	struct callout timeout;
+	unsigned int flags;
+} SceNetPsDescriptorEntry;
+
 _Static_assert(sizeof(SceNetPsEpoll) == 44, "SceNetPsEpoll size");
+_Static_assert(sizeof(SceNetPsEpollEntry) == 56, "SceNetPsEpollEntry size");
+_Static_assert(offsetof(SceNetPsEpollEntry, event) == 24, "epoll entry event");
+_Static_assert(sizeof(SceNetPsDescriptorEntry) == 56, "SceNetPsDescriptorEntry size");
+_Static_assert(offsetof(SceNetPsDescriptorEntry, flags) == 52, "descriptor entry flags");
 _Static_assert(sizeof(SceNetPsDescriptor) == 40, "SceNetPsDescriptor size");
 
 typedef struct SceNetPsResourceTable {

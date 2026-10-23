@@ -1,8 +1,8 @@
 # SCE adaptation; full licensed definitions moved once to netps_socket.h (the net_ps folder).
 # Canonical differences: no selinfo; 32-bit options/linger/buffer flags/timeouts;
 # policy at12; preserved MBUFTRACE owner slots; original-backed SCE tail192..255.
---- contrib/netbsd-2.1/sys/sys/socketvar.h	2026-10-12 19:26:41
-+++ sys/internal/kernel/src/net_ps/include/sys/socketvar.h	2026-10-12 22:25:13
+--- contrib/netbsd-2.1/sys/sys/socketvar.h
++++ sys/internal/kernel/src/net_ps/include/sys/socketvar.h
 @@ -34,35 +34,19 @@
  #ifndef _SYS_SOCKETVAR_H_
  #define	_SYS_SOCKETVAR_H_
@@ -96,9 +96,16 @@
  
  #define	SB_EMPTY_FIXUP(sb)						\
  do {									\
-@@ -383,3 +322,4 @@
+@@ -333,6 +272,7 @@
+ int	sosetopt(struct socket *, int, int, struct mbuf *);
+ int	soshutdown(struct socket *, int);
+ void	sowakeup(struct socket *, struct sockbuf *, int);
++int	soabortwakeup(struct socket *, struct sockbuf *, int, int);	/* SCE */
+ int	sockargs(struct mbuf **, const void *, size_t, int);
+ 
+ int	sendit(struct proc *, int, struct msghdr *, int, register_t *);
+@@ -383,3 +323,4 @@
  #endif /* _KERNEL */
  
  #endif /* !_SYS_SOCKETVAR_H_ */
 +
-
