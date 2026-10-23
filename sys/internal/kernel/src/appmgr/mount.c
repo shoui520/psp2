@@ -7177,6 +7177,94 @@ out:
 	return result;
 }
 
+int sceAppMgrGetSaveDataInfoForSpecialExport(const char *path, SceUInt64 *accountId)
+{
+	SceUInt32 syscallState;
+	ScePfsRndDriveId klicensee;
+	ScePfsRndDriveId mountPoint = { "" };
+	char titleId[16] = "";
+	ScePfsRndDriveId drive = { "" };
+	union {
+		SceSelfAuthInfo authInfo;
+		ScePfsRndDriveId key;
+	} info;
+	unsigned char random[8];
+	struct AppState *app;
+	AppmgrMountHolder *holder;
+	AppmgrProcessContent *content;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	result = sceKernelGetProcessSelfAuthInfo(0, &info.authInfo);
+	if (result < 0)
+		goto out;
+	if (info.authInfo.programAuthorityId != 0x280000000000002dULL) {
+		result = 0x80800009;
+		goto out;
+	}
+	if (accountId == NULL || path == NULL) {
+		result = 0x80800001;
+		goto out;
+	}
+	__builtin_memset((char *)accountId, 0, sizeof(*accountId));
+	if (SceSblPostSsMgrForDriver_1923D80D() == 0) {
+		result = 0x80800009;
+		goto out;
+	}
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	holder = NULL;
+	content = NULL;
+	__builtin_memset(&info.key, 0, sizeof(info.key));
+	__builtin_memset(&klicensee, 0, sizeof(klicensee));
+	result = appmgrReadSealedKey(path, &info.key);
+	if (result < 0)
+		goto unmount;
+	klicensee = info.key;
+	result = sceSblRngPseudoRandomNumber(random, sizeof(random));
+	if (result < 0)
+		goto unmount;
+	snprintf(drive.drive_id, sizeof(drive.drive_id), "%s%02x%02x%02x%02x%02x%02xd", "ts",
+		 random[0], random[1], random[2], random[3], random[4], random[5]);
+	drive.drive_id[14] = ':';
+	drive.drive_id[15] = '\0';
+	MOUNT_MAIN_LOCK(13747);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app != NULL) {
+		holder = &app->process.mounts;
+		/* Sony's: freed below when the mount fails */
+		content = &app->process.content;
+		strncpy(titleId, app->process.appName, 9);
+	}
+	MOUNT_MAIN_UNLOCK(13755);
+	if (app == NULL) {
+		result = 0x80801002;
+		goto unmount;
+	}
+	result = appmgrMount(sceKernelGetProcessId(), holder, 1005, titleId, path, &drive,
+			     &klicensee, &mountPoint);
+	if (result < 0)
+		goto unmount;
+	content = appmgrAllocMountHeapMemory(sizeof(*content));
+	if (content == NULL) {
+		result = 0x80801006;
+		goto unmount;
+	}
+	memset(content, 0, sizeof(*content));
+	result = appmgrReadSaveDataMetadata(path, content, NULL, accountId);
+unmount:
+	if (mountPoint.drive_id[0] != '\0' &&
+	    strncmp(drive.drive_id, mountPoint.drive_id, 16) == 0)
+		appmgrUnmountDrive(sceKernelGetProcessId(), holder, mountPoint.drive_id, 0);
+	if (content != NULL)
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, content);
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int appmgrResolvePath(const char *path, SceUID pid, char *output, SceSize size)
 {
 	int permission, result;

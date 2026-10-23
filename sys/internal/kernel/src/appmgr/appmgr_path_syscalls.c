@@ -43,6 +43,11 @@ int appmgrGetSaveDataInfoSyscall(const char *appPath, const char *titleId,
 	return sceAppMgrGetSaveDataInfo(appPath, titleId, attributes, info);
 }
 
+int appmgrGetSaveDataInfoForSpecialExportSyscall(const char *path, SceUInt64 *accountId)
+{
+	return sceAppMgrGetSaveDataInfoForSpecialExport(path, accountId);
+}
+
 int appmgrLoadSaveDataSystemFileSyscall(const char *path, void *buffer, SceSize size)
 {
 	return sceAppMgrLoadSaveDataSystemFile(path, buffer, size);

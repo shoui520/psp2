@@ -474,6 +474,7 @@ int appmgrConvertVs0UserDrivePathSyscall(const char *path, char *output, SceSize
 int appmgrGetRawPathSyscall(char *path, char *resolvedPath, int capacity);
 int appmgrGetSaveDataInfoSyscall(const char *appPath, const char *titleId,
 				 SceUInt32 attributes, struct AppmgrSaveDataInfo *info);
+int appmgrGetSaveDataInfoForSpecialExportSyscall(const char *path, SceUInt64 *accountId);
 int appmgrLoadSaveDataSystemFileSyscall(const char *path, void *buffer, SceSize size);
 int appmgrGetMediaTypeFromDriveSyscall(const char *drive, int *mediaType);
 int appmgrGetMediaTypeFromDriveByPidSyscall(SceUID pid, const char *drive, int *mediaType);
