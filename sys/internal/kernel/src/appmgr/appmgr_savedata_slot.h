@@ -21,6 +21,16 @@ typedef struct AppmgrSaveDataSlotFileHeader {
 	SceUInt8 occupied[512];
 } AppmgrSaveDataSlotFileHeader;
 
+/* a mounted host0 save data (SceAppMgrForDriver_E73C9516), in a list */
+typedef struct AppmgrSaveDataMount {
+	char titleId[16];
+	SceUID processId;
+	char mountPoint[16];
+	struct AppmgrSaveDataMount *next;
+} AppmgrSaveDataMount;
+
+_Static_assert(sizeof(AppmgrSaveDataMount) == 40, "AppmgrSaveDataMount");
+
 typedef struct AppmgrSaveDataSlotCache {
 	SceUID processId;
 	SceUID fd;

@@ -85,6 +85,24 @@ typedef struct SceAppMgrSaveDataQuota {
 
 _Static_assert(sizeof(SceAppMgrSaveDataQuota) == 0x1c, "SceAppMgrSaveDataQuota");
 
+/* host0 save data to mount on a devkit ("host0:savedata") */
+typedef struct SceAppMgrSaveDataMountParam {
+	SceSize size;				/* sizeof(SceAppMgrSaveDataMountParam) */
+	char titleId[16];
+	SceAppUtilMountPoint mountPoint;
+	SceUInt8 reserved[24];
+} SceAppMgrSaveDataMountParam;
+
+_Static_assert(sizeof(SceAppMgrSaveDataMountParam) == 0x3c, "SceAppMgrSaveDataMountParam");
+
+/* host0 save data to unmount */
+typedef struct SceAppMgrSaveDataUmountParam {
+	SceSize size;				/* sizeof(SceAppMgrSaveDataUmountParam) */
+	SceAppUtilMountPoint mountPoint;
+} SceAppMgrSaveDataUmountParam;
+
+_Static_assert(sizeof(SceAppMgrSaveDataUmountParam) == 0x14, "SceAppMgrSaveDataUmountParam");
+
 int sceAppMgrSaveDataDataSave(SceAppMgrSaveDataData *data);
 int sceAppMgrSaveDataDataRemove(SceAppMgrSaveDataDataDelete *data);
 
@@ -92,6 +110,10 @@ int sceAppMgrSaveDataDataRemove(SceAppMgrSaveDataDataDelete *data);
 int SceAppMgrForDriver_B544F2A0(SceAppMgrSaveDataSlotDelete *parameters);
 /* vitasdk: ksceAppMgrSaveDataGetQuota */
 int SceAppMgrForDriver_E104C37E(SceAppMgrSaveDataQuota *quota);
+/* vitasdk: ksceAppMgrSaveDataMount */
+int SceAppMgrForDriver_E73C9516(const SceAppMgrSaveDataMountParam *param);
+/* vitasdk: ksceAppMgrSaveDataUmount */
+int SceAppMgrForDriver_2B080268(const SceAppMgrSaveDataUmountParam *param);
 /* not written in C yet: the prototype is its caller's (appmgr's system call) */
 int SceAppMgrForDriver_D137D486(SceAppMgrSaveDataSlot *slot);	/* vitasdk: ksceAppMgrSaveDataSlotGetParam */
 

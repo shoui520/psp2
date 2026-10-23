@@ -72,6 +72,16 @@ int appmgrSaveDataGetCachedRequiredSizeKiBSyscall(void)
 	return sceAppMgrSaveDataGetCachedRequiredSizeKiB();
 }
 
+int appmgrSaveDataMountSyscall(const SceAppMgrSaveDataMountParam *param)
+{
+	return SceAppMgrForDriver_E73C9516(param);
+}
+
+int appmgrSaveDataUmountSyscall(const SceAppMgrSaveDataUmountParam *param)
+{
+	return SceAppMgrForDriver_2B080268(param);
+}
+
 int appmgrSaveDataSlotFileOpenSyscall(const char *mountPoint,
 				     AppmgrSaveDataSlotFileInfo *info)
 {

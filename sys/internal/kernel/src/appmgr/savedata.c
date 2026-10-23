@@ -30,6 +30,9 @@ extern int appmgrWriteSaveDataSlot(unsigned int slotId,
 				 const SceAppMgrSaveDataSlotParam *param,
 				 int status, const char *mountPoint);
 extern int appmgrDeleteSaveDataSlot(unsigned int slotId, const char *mountPoint);
+extern int appmgrCheckSaveDataMount(const char *titleId, const char *mountPoint,
+				    const AppmgrSaveDataMount *list);
+extern int appmgrFindSaveDataMount(const char *mountPoint, const AppmgrSaveDataMount *list);
 extern int appmgrValidateSaveDataRemoveItem(const SceAppUtilSaveDataDataRemoveItem *item,
 					    const char *path);
 extern int appmgrRemoveSaveDataPath(const char *path, unsigned int missingPolicy,
@@ -542,6 +545,7 @@ static __attribute__((noinline)) int appmgrFindAppMount(const char *mountPoint, 
 	return 0x80801041;
 }
 
+AppmgrSaveDataMount *g_appmgrSaveDataMountList;
 AppmgrSaveDataSlotCache g_appmgrSaveDataSlotCache;
 
 int appmgrSetRequiredSaveDataSize(SceUInt32 requiredKiB)
@@ -2095,6 +2099,110 @@ leaveSyscall:
 	return result;
 }
 
+int SceAppMgrForDriver_E73C9516(const SceAppMgrSaveDataMountParam *param)
+{
+	SceAllocOpt option;
+	SceUInt8 klicensee[16];
+	char path[128];
+	AppmgrSaveDataMount *mount;
+	AppmgrSaveDataMount *entry;
+	const char *titleId;
+	const char *mountPoint;
+	SceUInt32 syscallState;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (!param || param->size != sizeof(*param)) {
+		result = (int)0x80800001;
+		goto leaveSyscall;
+	}
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		goto leaveSyscall;
+	titleId = param->titleId;
+	mountPoint = (const char *)param->mountPoint.data;
+	result = appmgrCheckSaveDataMount(titleId, mountPoint, g_appmgrSaveDataMountList);
+	if (result != 0)
+		goto unlock;
+	memset(path, 0, sizeof(path));
+	if (strncmp(mountPoint, "savedata0", 10) == 0 ||
+	    strncmp(mountPoint, "savedata0:", 11) == 0)
+		strncpy(path, "host0:savedata", sizeof(path) - 1);
+	result = ScePfsMgrForKernel_A772209C(path, "savedata", 0, klicensee, 0);
+	if (result != 0)
+		goto unlock;
+	option.size = sizeof(option);
+	option.align = 32;
+	mount = sceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap, sizeof(*mount), &option);
+	if (!mount) {
+		ScePfsMgrForKernel_680BC384("savedata");
+		result = (int)0x80801006;
+		goto unlock;
+	}
+	memset(mount, 0, sizeof(*mount));
+	strncpy(mount->titleId, titleId, 9);
+	mount->processId = sceKernelGetProcessId();
+	strncpy(mount->mountPoint, mountPoint, 15);
+	mount->next = g_appmgrSaveDataMountList;
+	g_appmgrSaveDataMountList = mount;
+	for (entry = mount->next; entry; entry = entry->next)
+		;
+	result = 0;
+unlock:
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+leaveSyscall:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int SceAppMgrForDriver_2B080268(const SceAppMgrSaveDataUmountParam *param)
+{
+	AppmgrSaveDataMount *mount;
+	AppmgrSaveDataMount *previous;
+	AppmgrSaveDataMount *entry;
+	const char *mountPoint;
+	SceUInt32 syscallState;
+	SceUID processId;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (!param || param->size != sizeof(*param)) {
+		result = (int)0x80800001;
+		goto leaveSyscall;
+	}
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		goto leaveSyscall;
+	mountPoint = (const char *)param->mountPoint.data;
+	result = appmgrFindSaveDataMount(mountPoint, g_appmgrSaveDataMountList);
+	if (result != 0)
+		goto unlock;
+	result = ScePfsMgrForKernel_680BC384("savedata");
+	if (result != 0)
+		goto unlock;
+	mount = g_appmgrSaveDataMountList;
+	processId = sceKernelGetProcessId();
+	previous = NULL;
+	for (; mount; previous = mount, mount = mount->next) {
+		if (mount->processId == processId &&
+		    strncmp(mountPoint, mount->mountPoint, 15) == 0) {
+			if (previous)
+				previous->next = mount->next;
+			else
+				g_appmgrSaveDataMountList = mount->next;
+			sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, mount);
+			break;
+		}
+	}
+	for (entry = g_appmgrSaveDataMountList; entry; entry = entry->next)
+		;
+unlock:
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+leaveSyscall:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int appmgrValidateSaveDataMountPoint(const char *mountPoint, int requirePrimary)
 {
 	int result;
@@ -2852,6 +2960,47 @@ int appmgrRollbackSaveDataOperation(const SceAppMgrSaveDataData *operation,
 					      (const char *)operation->mountPoint.data);
 	return appmgrSetSaveDataSlotStatus(operation->slotId, 0,
 					  (const char *)operation->mountPoint.data);
+}
+
+int appmgrCheckSaveDataMount(const char *titleId, const char *mountPoint,
+			     const AppmgrSaveDataMount *list)
+{
+	SceIoStat stat;
+	char name[10] = {0};
+	char path[128];
+	char resolvedPath[292];
+	SceUID processId;
+
+	memset(path, 0, sizeof(path));
+	if (strncmp(mountPoint, "savedata0", 10) == 0 ||
+	    strncmp(mountPoint, "savedata0:", 11) == 0)
+		strncpy(path, "host0:savedata", sizeof(path) - 1);
+	appmgrResolvePath(path, 0, resolvedPath, sizeof(resolvedPath));
+	if (sceIoGetstat(resolvedPath, &stat) < 0)
+		return (int)0x80801005;
+	if (titleId)
+		strncpy(name, titleId, 9);
+	processId = sceKernelGetProcessId();
+	for (; list; list = list->next) {
+		if (strncmp(name, list->titleId, 9) == 0 ||
+		    (list->processId == processId &&
+		     strncmp(mountPoint, list->mountPoint, 15) == 0))
+			return (int)0x80801080;
+	}
+	return 0;
+}
+
+int appmgrFindSaveDataMount(const char *mountPoint, const AppmgrSaveDataMount *list)
+{
+	SceUID processId;
+
+	processId = sceKernelGetProcessId();
+	for (; list; list = list->next) {
+		if (list->processId == processId &&
+		    strncmp(mountPoint, list->mountPoint, 15) == 0)
+			return 0;
+	}
+	return (int)0x80801081;
 }
 
 int appmgrAccumulateSaveDataWriteSize(SceUInt32 writtenKiB)
