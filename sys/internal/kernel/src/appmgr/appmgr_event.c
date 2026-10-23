@@ -487,6 +487,38 @@ int _paramQueueCancelAll(AppmgrParamQueue *queue)
 	return 0;
 }
 
+/* Drops the queued parameters that were taken (their string emptied), oldest first. */
+void _paramQueueCompact(AppmgrParamQueue *queue)
+{
+	int count = queue->count;
+	int writeIndex = queue->writeIndex;
+	int first, index, slot;
+
+	for (;;) {
+		first = (writeIndex + 4 - count) % 4;
+		if (count <= 0)
+			return;
+		index = queue->entries[first % 4].param[0];
+		if (index != 0) {
+			for (index = 1; index != count; index++) {
+				if (queue->entries[(first + index) % 4].param[0] == '\0')
+					break;
+			}
+			if (index == count)
+				return;
+		}
+		count--;
+		for (; index < count; index++) {
+			slot = (index + first) % 4;
+			memcpy(&queue->entries[slot], &queue->entries[slot + 1],
+				sizeof(queue->entries[slot]));
+		}
+		queue->count = count;
+		writeIndex = (writeIndex + 3) % 4;
+		queue->writeIndex = writeIndex;
+	}
+}
+
 int _appmgrQueueInit(void)
 {
 	SceUID uid;

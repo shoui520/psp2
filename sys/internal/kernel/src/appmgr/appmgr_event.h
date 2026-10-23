@@ -38,6 +38,8 @@ _Static_assert(offsetof(AppmgrParamQueueEntry, callbackId) == 1024 &&
 	       "launch parameter metadata");
 _Static_assert(sizeof(AppmgrParamQueue) == 4264, "launch parameter queue");
 
+void _paramQueueCompact(AppmgrParamQueue *queue);
+
 typedef struct AppmgrNotificationQueue {
 	unsigned char *buffer;
 	SceSize entrySize;

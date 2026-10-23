@@ -1,10 +1,12 @@
 /* Shell services and application path queries. */
 
+#include <fw.h>
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>
 #include <threadmgr/threadmgr.h>
 #include <appmgr.h>
 #include <acmgr/acmgr.h>
+#include <regmgr/regmgr.h>
 #include <string.h>
 #include "app_state_internal.h"
 #include "appmgr_shell_event.h"
@@ -21,6 +23,7 @@
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
 extern SceUID g_appmgrShellPid;
+extern int g_appmgrPowerSaveMode;
 
 #if FW_DEBUG
 SCE_DBGINFO_DEFINE(static, appmgrDumpSeparatorInfo, 31, "sceAppMgrDump");
@@ -1414,4 +1417,76 @@ int sceAppMgrGetRawPathOfApp0ByPidForShell(SceUID pid, char *path)
 	result = appmgrResolvePath("app0:", pid, path, 292);
 	sceSyscallLeave(syscall);
 	return result;
+}
+
+/* The development tool settings a process starts with. */
+int appmgrUsesGxmDebugger(SceUID pid)
+{
+	int value;
+
+	if (sceSblACMgrIsGameProgram(pid)) {
+		if (sceRegMgrGetKeyInt("/DEVENV/TOOL", "game_uses_gxmdbg", &value) != 0)
+			return 0;
+	} else {
+		if (sceRegMgrGetKeyInt("/DEVENV/TOOL", "vsh_uses_gxmdbg", &value) != 0)
+			return 0;
+	}
+	return value != 0;
+}
+
+int appmgrUsesDefaultLibrary(void)
+{
+	int value = 0;
+
+	return sceRegMgrGetKeyInt("/DEVENV/TOOL", "use_default_lib", &value) == 0 && value != 0;
+}
+
+/* The calling application's pending event counts. */
+SceInt32 _sceAppMgrGetAppState(SceAppMgrAppState *appState, SceUInt32 sizeofSceAppMgrAppState,
+		SceUInt32 buildVersion)
+{
+	SceUInt32 syscall;
+	struct AppState *app;
+	SceUInt32 count;
+
+#if FW_SINCE(0x04000000)
+	if (buildVersion > 0x4000000 || sizeofSceAppMgrAppState != sizeof(*appState))
+#else
+	if (buildVersion > 0x3650011 || sizeofSceAppMgrAppState != sizeof(*appState))
+#endif
+		return 0x8080201a;
+	if (appState == NULL)
+		return 0x80802016;
+	syscall = sceSyscallEnter();
+	SERVICE_MAIN_LOCK(1049);
+	app = appmgrFindCurrentApp(g_appmgrAppStates);
+	if (app == NULL) {
+		SERVICE_MAIN_UNLOCK(1053);
+		sceSyscallLeave(syscall);
+		return 0x80802012;
+	}
+	memset(appState, 0, sizeof(*appState));
+	count = app->pendingNpMessage != 0;
+	if (app->pendingStoreRedemption != 0)
+		count++;
+	if (app->pendingStorePurchase != 0)
+		count++;
+	if (app->pendingResume != 0)
+		count++;
+	appState->systemEventNum = count;
+	if (SceSblACMgrForDriver_6C5AB07F(0)) {
+		count = appState->systemEventNum;
+		if (app->launchInfo.processAttr & 2)
+			count += (app->pendingDeactivate != 0) + (app->pendingActivate != 0);
+		if (app->pendingQuit != 0)
+			count++;
+		appState->systemEventNum = count;
+	}
+	_paramQueueCompact(&app->params);
+	appState->appEventNum = app->params.count;
+	appState->isSystemUiOverlaid = _deviceGetAppMgrState()->inputImposed != 0 ||
+		g_appmgrPowerSaveMode != 0;
+	SERVICE_MAIN_UNLOCK(1079);
+	sceSyscallLeave(syscall);
+	return 0;
 }
