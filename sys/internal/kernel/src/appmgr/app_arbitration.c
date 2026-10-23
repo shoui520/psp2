@@ -18,6 +18,7 @@
 #include "appmgr_device.h"
 #include "appmgr_internal_util.h"
 #include "appmgr_shell_event.h"
+#include "mount.h"
 #include <sysmem/sblaimgr.h>
 #include <acmgr/acmgr.h>
 #include <intrmgr/syscall.h>
@@ -150,48 +151,6 @@ int _onlaunchCallback(int notifyId, int notifyCount, int notifyArg, void *userDa
 }
 
 #if FW_DEBUG
-int copyArgv(char *destination, const char *const *userArgv)
-{
-	int total = 0;
-	char *cursor = destination;
-	const char *argument;
-	int result;
-	int length;
-
-	*cursor = '\0';
-	if (userArgv == NULL)
-		return 0;
-	for (;;) {
-		result = sceKernelCopyFromUser(&argument, userArgv, sizeof(argument));
-		if (result != 0)
-			return result;
-		if (argument == NULL) {
-			if (total > 1024) {
-				sceAppMgrDump();
-				dumpBgmState();
-				SCE_DBG_ASSERT_CHECK_FUNC(0, 925, "copyArgv");
-			}
-			return total;
-		}
-		result = sceKernelStrncpyFromUser(cursor, argument, 1024 - total);
-		if (result == 1024 - total)
-			return (int)0x8001005bU;
-		if (result < 0)
-			return result;
-		length = result + 1;
-		if ((SceUInt32)(1024 - total) < (SceUInt32)length) {
-			sceAppMgrDump();
-			dumpBgmState();
-			SCE_DBG_ASSERT_CHECK_FUNC(0, 942, "copyArgv");
-		}
-		total += length;
-		cursor += length;
-		++userArgv;
-	}
-}
-#endif
-
-#if FW_DEBUG
 #define DELETE_APP_FAILURE(_value, _expected, _line, _func) do { \
 	sceAppMgrDump(); \
 	dumpBgmState(); \
@@ -253,6 +212,44 @@ int copyArgv(char *destination, const char *const *userArgv)
 			"0x%08x,0x%08x\n", _result, 0); \
 } while (0)
 #endif
+
+/* Copies a NULL-terminated user argv into one buffer of 1024 bytes; returns its size. */
+#if FW_DEBUG
+int copyArgv(char *destination, const char *const *userArgv)
+#else
+static inline __attribute__((always_inline)) int copyArgv(char *destination,
+		const char *const *userArgv)
+#endif
+{
+	int total = 0;
+	char *cursor = destination;
+	const char *argument;
+	int result;
+	int length;
+
+	*cursor = '\0';
+	if (userArgv == NULL)
+		return 0;
+	for (;;) {
+		result = sceKernelCopyFromUser(&argument, userArgv, sizeof(argument));
+		if (result != 0)
+			return result;
+		if (argument == NULL) {
+			DELETE_APP_ASSERT(total <= 1024, 925, "copyArgv");
+			return total;
+		}
+		result = sceKernelStrncpyFromUser(cursor, argument, 1024 - total);
+		if (result == 1024 - total)
+			return (int)0x8001005bU;
+		if (result < 0)
+			return result;
+		length = result + 1;
+		DELETE_APP_ASSERT((SceUInt32)(1024 - total) >= (SceUInt32)length, 942, "copyArgv");
+		total += length;
+		cursor += length;
+		++userArgv;
+	}
+}
 
 /* what is left plus what the applications hold must be the whole of each resource */
 static inline __attribute__((always_inline)) void checkFds(void)
@@ -1408,6 +1405,108 @@ int sceAppMgrLaunchAppByName2ndStage(int appId, const char *appPath, SceUInt32 b
 		&launchRequest, 1, 0, NULL, NULL, NULL, option, &error);
 	LAUNCH_CORE2_UNLOCK(1538, "sceAppMgrLaunchAppByName2ndStage");
 	sceSyscallLeave(syscallState);
+	return error != 0 ? error : launchResult;
+}
+
+/*
+ * A test launch: the arguments come as a user argv, and an app0: path is taken from the
+ * calling application's own directory.
+ */
+int sceAppMgrLaunchAppForTest2(const char *appPath, const char *name, SceUInt32 budgetSize,
+		const char *param, SceUInt32 processAttr, int startByUpdater,
+		const char *const *argv, const AppmgrLaunchAppOption *option)
+{
+	static char launchArgs[1024];
+	static char resolvedAppPath[256];
+	static char rawAppPath[256];
+	AppmgrLaunchRequest request, launchRequest;
+	struct AppState *app, *caller;
+	const char *colon;
+	SceUInt32 useCommonDialog;
+	int appId, argsSize, resolved, launchResult, error, result;
+
+	app = NULL;
+	if (option != NULL)
+		useCommonDialog = option->useCommonDialog;
+	else
+		useCommonDialog = 0;
+	KILL_CHECK_APP_OWNERS(1662, "sceAppMgrLaunchAppForTest2");
+	result = sceKernelLockMutex(g_appmgrCore2Mutex, 1, NULL);
+	if (result != 0) {
+		if ((unsigned int)(result + 0x7ffd7fd4) > 1)
+			LAUNCH_CORE2_LOCK_FAILURE(result, 1662, "sceAppMgrLaunchAppForTest2");
+		return result;
+	}
+	g_appmgrCore2MutexOwner = sceKernelGetThreadId();
+	argsSize = copyArgv(launchArgs, argv);
+	if (argsSize < 0) {
+		LAUNCH_CORE2_UNLOCK(1671, "sceAppMgrLaunchAppForTest2");
+		return argsSize;
+	}
+	if (strncmp(appPath, "app0:", 5) == 0) {
+		caller = appmgrFindAppByProcessId(g_appmgrAppStates, -2);
+		if (caller == NULL) {
+			LAUNCH_CORE2_UNLOCK(1687, "sceAppMgrLaunchAppForTest2");
+			return (int)0x8080201c;
+		}
+		if (caller->launchInfo.budgetType == 2) {
+			LAUNCH_CORE2_UNLOCK(1692, "sceAppMgrLaunchAppForTest2");
+			return (int)0x8080201e;
+		}
+		colon = strchr(appPath, ':');
+		if (colon == NULL) {
+			LAUNCH_CORE2_UNLOCK(1701, "sceAppMgrLaunchAppForTest2");
+			return (int)0x8080201e;
+		}
+		resolved = 1;
+		snprintf(rawAppPath, sizeof(rawAppPath), "%s/%s",
+			caller->process.content.appDirectory, colon + 1);
+		SCE_DBG_PRINTF_FUNC(0, 1708, "sceAppMgrLaunchAppForTest2", "rawAppPath=%s\n",
+			rawAppPath);
+		appmgrResolveLaunchPath(rawAppPath, resolvedAppPath, sizeof(resolvedAppPath));
+	} else {
+		resolved = 0;
+	}
+	result = _sceAppMgrAppStateReserve(&app, name, param, -1, 0, -1, -1, 0, 0);
+	if (result != 0) {
+		LAUNCH_CORE2_UNLOCK(1717, "sceAppMgrLaunchAppForTest2");
+		return result;
+	}
+	DELETE_APP_ASSERT(app != NULL, 1722, "sceAppMgrLaunchAppForTest2");
+	appId = app->appId;
+	if (appmgrGetShellApp() == NULL)
+		processAttr |= 1;
+	if (resolved)
+		appPath = resolvedAppPath;
+	memset(&request, 0, sizeof(request));
+	request.appPath = appPath;
+	request.budgetSize = budgetSize;
+	request.pycontSize = option != NULL ? option->pycontSize : 0;
+	request.budgetType = budgetSize == 0;
+	request.processAttr = processAttr;
+	if (argsSize != 0) {
+		request.launchArgs = launchArgs;
+		request.launchArgsSize = (SceUInt32)argsSize < sizeof(launchArgs) ?
+			(SceSize)argsSize : sizeof(launchArgs);
+	}
+	if (option != NULL) {
+		__builtin_memcpy(request.proxyAppName, option->proxyAppName,
+			sizeof(request.proxyAppName));
+		request.proxyAppName[sizeof(request.proxyAppName) - 1] = '\0';
+		request.defaultInfobar = option->defaultInfobar;
+		request.enlargeGameMemorySize = option->enlargeGameMemorySize;
+		request.launchArgumentMarker = option->launchArgumentMarker;
+		if (option->launchOrigin == 1)
+			request.launchOrigin = 1;
+	} else {
+		request.launchArgumentMarker = 1;
+	}
+	request.useCommonDialog = useCommonDialog != 0;
+	launchRequest = request;
+	error = 0;
+	launchResult = sceAppMgrLaunchAppByName2ndStage_internal(appId, name, NULL,
+		&launchRequest, 1, startByUpdater, NULL, NULL, NULL, option, &error);
+	LAUNCH_CORE2_UNLOCK(1752, "sceAppMgrLaunchAppForTest2");
 	return error != 0 ? error : launchResult;
 }
 

@@ -60,6 +60,7 @@ int appmgrCountPfsMountReferences(unsigned int mountId, int flags);
 int appmgrCheckRifGD(const char *path, AppmgrLicenseInfo *info);
 int appmgrGetUserDirPathById(int userId, int partitionId, char *output, unsigned int capacity);
 int appmgrResolvePath(const char *path, SceUID pid, char *output, SceSize size);
+int appmgrResolveLaunchPath(const char *path, char *output, SceSize size);
 int sceAppMgrGetRawPath(char *path, char *resolvedPath, int capacity);
 int appmgrExtractSaveDataDeviceName(const char *path, char *device, SceSize capacity);
 void *appmgrAllocMountHeapMemory(SceSize size);

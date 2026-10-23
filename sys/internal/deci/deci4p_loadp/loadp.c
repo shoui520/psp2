@@ -2310,7 +2310,8 @@ __attribute__((noinline)) int launchAppForTest2(const char *path, int option0, c
 		sceSyscallLeave(t);
 		return SCE_APPMGR_ERROR_NOEXEC;
 	}
-	ret = sceAppMgrLaunchAppForTest2(path, titleId, flags, args, option1, option2, option0, data);
+	ret = sceAppMgrLaunchAppForTest2(path, titleId, flags, args, option1, option2,
+					 (const char *const *)option0, data);
 	sceSyscallLeave(t);
 	return ret;
 }

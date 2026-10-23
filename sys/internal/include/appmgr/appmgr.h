@@ -100,11 +100,14 @@ typedef struct AppmgrBootParam {
 /* vitasdk: ksceAppMgrGetBootParam */
 int SceAppMgrForDriver_D2541B4A(SceUInt32 request, AppmgrBootParam *bootParam);
 
+struct AppmgrLaunchAppOption;
+int sceAppMgrLaunchAppForTest2(const char *appPath, const char *name, SceUInt32 budgetSize,
+		const char *param, SceUInt32 processAttr, int startByUpdater,
+		const char *const *argv, const struct AppmgrLaunchAppOption *option);
+
 /* not written in C yet: the prototypes are their callers' (vshbridge, deci4p_loadp, appmgr's
  * system calls) */
 int sceAppMgrLaunchAppByNameForDebugger(const char *titleId, int flags);
-int sceAppMgrLaunchAppForTest2(const char *path, const char *titleId, int flags, const char *args,
-		int option1, int option2, int option0, const void *data);
 int sceAppMgrDestroyAppForTest(SceUID pid);
 int sceAppMgrLiveAreaOperationByNameForLoadp(int operation, const char *appName);
 int sceAppMgrLiveAreaOperationForLoadp(int operation);
