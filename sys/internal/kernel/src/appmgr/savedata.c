@@ -1376,6 +1376,7 @@ int appmgrSaveDataDataSave(SceAppMgrSaveDataData *operation, int normalApplicati
 	int quotaExceeded;
 	int slotCreated;
 	int changed;
+	int setting;
 	int value;
 	int result;
 	int bytes;
@@ -1427,12 +1428,16 @@ int appmgrSaveDataDataSave(SceAppMgrSaveDataData *operation, int normalApplicati
 	}
 	value = SceSblAIMgrForDriver_D78B04A2();
 	if (!value) {
-		if (sceRegMgrSystemParamGetInt(0x154A2C, &value) == 0 && value == 1)
+		if (sceRegMgrSystemParamGetInt(0x154A2C, &setting) == 0 && setting == 1) {
+			missingFilesystemKiB = 2048;
 			freeBytes = 0;
+			goto checkQuota;
+		}
 		value = SceSblAIMgrForDriver_D78B04A2();
 	}
-	if (freeBytes < 0x200000) {
+	if (freeBytes <= 0x200000) {
 		missingFilesystemKiB = (0x200000 - freeBytes) >> 10;
+checkQuota:
 		value = SceSblAIMgrForDriver_D78B04A2();
 	} else {
 		missingFilesystemKiB = 0;
