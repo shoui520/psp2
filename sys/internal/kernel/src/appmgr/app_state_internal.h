@@ -280,6 +280,9 @@ int appmgrReturnLiveAreaOperationResultForShell(int operationResult);
 int appmgrActivateApp(int appId);
 int appmgrDeactivateApp(int appId);
 int appmgrSetPowerSaveMode(int mode, int suspendBackgroundApps);
+int appmgrSuspendBgAppByShell(int appId);
+int appmgrResumeBgAppByShell(int appId);
+int appmgrIsPidShellAndCrashed(SceUID pid);
 int appmgrSetShellScreenOrientationSyscall(int orientation);
 int appmgrSetRecommendedScreenOrientationForShellSyscall(int orientation);
 

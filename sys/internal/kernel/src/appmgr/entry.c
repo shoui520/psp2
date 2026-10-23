@@ -184,10 +184,8 @@ STUB(_sceAppMgrAddContAddMount)
 STUB(_sceAppMgrWorkDirMountById)
 STUB(_sceAppMgrAppParamSetString)
 
-STUB(sceAppMgrSuspendBgAppByShell)
 STUB(sceAppMgrIsNonGameProgram)
 
-STUB(sceAppMgrResumeBgAppByShell)
 STUB(_sceAppMgrGetSaveDataInfo)
 STUB(_sceAppMgrAcidDirSet)
 
@@ -217,7 +215,6 @@ STUB(_sceAppMgrPhotoUmount)
 STUB(_sceAppMgrSaveDataDataSave)
 
 STUB(_sceAppMgrDeclareShellProcess2)
-STUB(sceAppMgrIsPidShellAndCrashed)
 STUB(_sceAppMgrCaptureFrameBufDMACByAppId)
 STUB(_sceAppMgrLaunchAppByName2ForShell)
 STUB(_sceAppMgrGetMediaTypeFromDriveByPid)

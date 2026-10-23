@@ -153,6 +153,16 @@ int appmgrSetBgmProxyAppSyscall(const char *appName)
 	return sceAppMgrSetBgmProxyApp(appName);
 }
 
+int sceAppMgrSuspendBgAppByShell(int appId)
+{
+	return appmgrSuspendBgAppByShell(appId);
+}
+
+int sceAppMgrResumeBgAppByShell(int appId)
+{
+	return appmgrResumeBgAppByShell(appId);
+}
+
 int appmgrAcquireBtrmSyscall(void)
 {
 	return sceAppMgrAcquireBtrm();
@@ -181,6 +191,11 @@ int appmgrEnableCoredumpForTestSyscall(void)
 int sceAppMgrReturnLiveAreaOperationResultForShell(int operationResult)
 {
 	return appmgrReturnLiveAreaOperationResultForShell(operationResult);
+}
+
+int sceAppMgrIsPidShellAndCrashed(SceUID pid)
+{
+	return appmgrIsPidShellAndCrashed(pid);
 }
 
 int appmgrSetDisplayMergeConfSyscall(SceUInt32 setting, SceUInt32 alpha)

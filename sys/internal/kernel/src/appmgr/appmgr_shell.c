@@ -28,8 +28,12 @@ extern SceUID g_appmgrLiveAreaOperationMutex;
 extern SceUID g_appmgrLiveAreaResultMutex;
 extern SceUID g_appmgrLiveAreaResultCondition;
 
+extern SceUID g_appmgrUpdateNotifySemaphore;
+
 /* what the shell answers to the last LiveArea operation */
 int g_appmgrLiveAreaOperationResult;
+/* set by _sceAppMgrSystemSuspend, cleared by _sceAppMgrSystemResume */
+int g_appmgrSystemSuspended;
 
 SceInt64 g_appmgrShellWatchDogLastActivity;
 SceUID g_appmgrShellWatchDogThreadId;
@@ -54,13 +58,25 @@ static const SceKernelDebugInfo watchDogStartPanicInfo = {
 	.funcHash = 0xcde4b170,
 };
 
+static const SceKernelDebugInfo suspendBgAppPanicInfo = {
+	.fileHash = 0xaa1163e9,
+	.lineHash = 0x0fe71d6d,
+	.funcHash = 0xe581fdf4,
+};
+
+static const SceKernelDebugInfo resumeBgAppPanicInfo = {
+	.fileHash = 0xaa1163e9,
+	.lineHash = 0x550a5499,
+	.funcHash = 0xe581fdf4,
+};
+
 static const SceKernelDebugInfo shellPanicInfo = {
 	.fileHash = 0xc9656e8e,
 	.lineHash = 0xc879dadc,
 	.funcHash = 0x11a05ee1,
 };
 
-void appmgrShellMutexPanic(void)
+__attribute__((noinline)) void appmgrShellMutexPanic(void)
 {
 	SceDebugForDriver_391B5B74(&shellMutexPanicInfo, __builtin_return_address(0));
 }
@@ -549,4 +565,107 @@ SceInt64 appmgrUpdateShellWatchDogActivity(void)
 
 	g_appmgrShellWatchDogLastActivity = activity;
 	return activity;
+}
+
+/* asks the process state updater to suspend or resume a background application */
+static inline __attribute__((always_inline))
+int _sceAppMgrSuspendResumeBgAppByShell(int appId, int suspend)
+{
+	struct AppState *app;
+	int result, unlockResult;
+
+	if (!isShellProcess())
+		return (int)0x8080201c;
+	app = appmgrFindAppById(appId);
+	if (app == NULL)
+		return (int)0x80802016;
+	if (!(app->launchInfo.processAttr & 1))
+		return (int)0x8080201c;
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	if (result != 0) {
+#if FW_DEBUG
+		SCE_DBG_PRINTF_FUNC(0, 504, "_sceAppMgrSuspendResumeBgAppByShell",
+			"Failed to lock ret=0x%08x\n", result);
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 504, "_sceAppMgrSuspendResumeBgAppByShell");
+		SHELL_FAILURE(result, 505, "_sceAppMgrSuspendResumeBgAppByShell");
+#else
+		appmgrShellMutexPanic();
+#endif
+	} else {
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
+	}
+	app->backgroundSuspendRequested = suspend;
+	if (g_appmgrSystemSuspended == 0) {
+		if (!suspend) {
+			if (app->process.requestedProcessState == 3) {
+				if (g_appmgrDebugNotifier != NULL)
+					g_appmgrDebugNotifier(6, app->appId, app->process.processId, 0);
+				result = sceKernelSignalSema(g_appmgrUpdateNotifySemaphore, 1);
+				if (result != 0) {
+#if FW_DEBUG
+					SHELL_FAILURE(result, 515, "_sceAppMgrSuspendResumeBgAppByShell");
+#else
+					SceDebugForDriver_00CCE39C(&resumeBgAppPanicInfo,
+						__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
+#endif
+				}
+			}
+		} else if (app->process.requestedProcessState == 2) {
+			if (g_appmgrDebugNotifier != NULL)
+				g_appmgrDebugNotifier(5, app->appId, app->process.processId, 0);
+			result = sceKernelSignalSema(g_appmgrUpdateNotifySemaphore, 1);
+			if (result != 0) {
+#if FW_DEBUG
+				SHELL_FAILURE(result, 522, "_sceAppMgrSuspendResumeBgAppByShell");
+#else
+				SceDebugForDriver_00CCE39C(&suspendBgAppPanicInfo,
+					__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
+#endif
+			}
+		}
+	}
+	g_appmgrMainMutexOwner = -1;
+	unlockResult = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	if (unlockResult != 0)
+		SHELL_FAILURE(unlockResult, 530, "_sceAppMgrSuspendResumeBgAppByShell");
+	return result;
+}
+
+int appmgrSuspendBgAppByShell(int appId)
+{
+	return _sceAppMgrSuspendResumeBgAppByShell(appId, 1);
+}
+
+int appmgrResumeBgAppByShell(int appId)
+{
+	return _sceAppMgrSuspendResumeBgAppByShell(appId, 0);
+}
+
+int appmgrIsPidShellAndCrashed(SceUID pid)
+{
+	struct AppState *shell;
+	int crashed, result;
+
+	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	if (result != 0) {
+#if FW_DEBUG
+		SCE_DBG_PRINTF_FUNC(0, 554, "sceAppMgrIsPidShellAndCrashed",
+			"Failed to lock ret=0x%08x\n", result);
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 554, "sceAppMgrIsPidShellAndCrashed");
+		SHELL_FAILURE(result, 555, "sceAppMgrIsPidShellAndCrashed");
+#else
+		appmgrShellMutexPanic();
+#endif
+	} else {
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
+	}
+	shell = appmgrGetShellApp();
+	crashed = shell != NULL && shell->process.processId == pid &&
+		  appmgrGetAppRunStatus(shell) != 16;
+	SHELL_MAIN_UNLOCK(566, "sceAppMgrIsPidShellAndCrashed");
+	return crashed;
 }
