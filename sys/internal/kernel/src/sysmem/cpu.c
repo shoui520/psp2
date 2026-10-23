@@ -12,7 +12,14 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/cpu.h>
 
-#if FW_DEBUG
+/* the secure world's SceCpu (SYSMEM_TZS) is the release kernel's in every firmware */
+#if FW_DEBUG && !defined(SYSMEM_TZS)
+#define CPU_DEBUG 1
+#else
+#define CPU_DEBUG 0
+#endif
+
+#if CPU_DEBUG
 static volatile uintptr_t s_cpuLastLockCaller[4];
 static volatile uint32_t s_cpuIrqDisabledAt[4];
 static struct CpuLongIrqHandlerRecord *volatile s_cpuLongIrqHandlerRecord;
@@ -20,14 +27,14 @@ static struct CpuLongIrqHandlerRecord *volatile s_cpuLongIrqHandlerRecord;
 
 void SceCpuForKernel_B331AB16(struct CpuLongIrqHandlerRecord *record)
 {
-#if FW_DEBUG
+#if CPU_DEBUG
 	s_cpuLongIrqHandlerRecord = record;
 #else
 	(void)record;
 #endif
 }
 
-#if FW_DEBUG
+#if CPU_DEBUG
 
 SceKernelIntrStatus SceCpuForDriver_F02467D1(volatile SceKernelRWSpinlock *lock)
 {
@@ -86,6 +93,26 @@ SceKernelIntrStatus SceCpuForDriver_EC53D007(volatile SceKernelRWSpinlock *lock)
 }
 #endif
 
+#ifdef SYSMEM_TZS
+/* the secure world masks FIQs with the IRQs, and returns both bits */
+__attribute__((noinline))
+int CpuSuspendIntrLow(void)
+{
+	uint32_t status = readCpsr() & (PSR_I_BIT | PSR_F_BIT);
+
+	disableIrqFiq();
+	return status;
+}
+
+__attribute__((noinline))
+int CpuResumeIntrLow(int flags)
+{
+	uint32_t masks = (uint32_t)flags >> 6;
+
+	writeCpsrControl((readCpsr() & ~(PSR_I_BIT | PSR_F_BIT)) | (masks & 3) << 6);
+	return masks;
+}
+#else
 __attribute__((noinline))
 int CpuSuspendIntrLow(void)
 {
@@ -105,8 +132,9 @@ int CpuResumeIntrLow(int flags)
 		enableIrq();
 	return (uint32_t)flags >> 8;
 }
+#endif
 
-#if FW_DEBUG
+#if CPU_DEBUG
 SceKernelIntrStatus sceKernelSpinlockLowTrylockCpuSuspendIntr(volatile SceKernelSpinlock *lock)
 {
 	uintptr_t caller = (uintptr_t)__builtin_return_address(0);
@@ -190,7 +218,7 @@ extern __typeof__(CpuResumeIntrLow) sceKernelCpuResumeIntr
 	__attribute__((alias("CpuResumeIntrLow")));
 #endif
 
-#if FW_DEBUG
+#if CPU_DEBUG
 int sceKernelCpuId(void)
 {
 	uint32_t status;
@@ -218,7 +246,7 @@ int sceKernelCpuId(void)
 }
 #endif
 
-#if FW_DEBUG
+#if CPU_DEBUG
 void sceKernelSpinlockLowUnlock(volatile SceKernelSpinlock *lock)
 {
 	if (!*lock) {
@@ -263,7 +291,7 @@ void SceCpuForKernel_C6426313(void)
 	nop();
 }
 
-#if FW_DEBUG
+#if CPU_DEBUG
 void sceKernelSpinlockLowUnlockCpuResumeIntr(volatile SceKernelSpinlock *lock, SceKernelIntrStatus flags)
 {
 	void *caller = __builtin_return_address(0);

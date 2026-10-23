@@ -103,6 +103,22 @@ static inline int MMUInterruptsDisabled(void)
 }
 
 /* cpu.c's CpuSuspendIntrLow/CpuResumeIntrLow, inlined */
+#ifdef SYSMEM_TZS
+static inline int MMUSuspendIntr(void)
+{
+	uint32_t status = readCpsr() & (PSR_I_BIT | PSR_F_BIT);
+
+	disableIrqFiq();
+	return status;
+}
+
+static inline void MMUResumeIntr(int flags)
+{
+	uint32_t masks = (uint32_t)flags >> 6;
+
+	writeCpsrControl((readCpsr() & ~(PSR_I_BIT | PSR_F_BIT)) | (masks & 3) << 6);
+}
+#else
 static inline int MMUSuspendIntr(void)
 {
 	uint32_t status;
@@ -119,6 +135,7 @@ static inline void MMUResumeIntr(int flags)
 	if (!(flags & PSR_I_BIT))
 		enableIrq();
 }
+#endif
 
 /* ATS1CPR/ATS1CPW/ATS1CUR/ATS1CUW, then the result from PAR */
 #define MMU_ATS(_op2, ats)						\

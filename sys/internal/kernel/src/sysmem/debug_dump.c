@@ -152,6 +152,34 @@ static inline int DebugCpuId(void)
 	return readMpidr() & 3;
 }
 
+#ifdef SYSMEM_TZS
+/* name unknown: prints the kernel backtrace, then thid's user one (the secure world has no processes) */
+__attribute__((noinline))
+void DebugPrintBacktrace(SceUID thid, const void *lr)
+{
+	DebugFrame *frames;
+	SceSize count;
+
+	if (s_backtraceHandler == NULL || s_printBacktraceHandler == NULL)
+		return;
+	frames = s_backtraceFrames[sceKernelCpuId()];
+	memset(frames, 0, sizeof(s_backtraceFrames[0]));
+	if (s_backtraceHandler(thid, frames, sizeof(s_backtraceFrames[0]), &count,
+			       DEBUG_BACKTRACE_KERNEL) >= 0)
+		s_printBacktraceHandler(SCE_KERNEL_PROCESS_ID, frames, count, (SceUInt32)lr);
+	memset(frames, 0, sizeof(s_backtraceFrames[0]));
+	if (s_backtraceHandler(thid, frames, sizeof(s_backtraceFrames[0]), &count,
+			       DEBUG_BACKTRACE_USER) >= 0)
+		s_printBacktraceHandler(0, frames, count, 0);
+}
+
+/* name unknown: the secure world has no syscall frames, only the process is looked up */
+static inline void DebugPrintSyscallFrame(SceUID pid)
+{
+	if (pid == 0)
+		pid = SceSysrootForKernel_7385CADE();
+}
+#else
 /* name unknown: prints the kernel backtrace, then thid's user one */
 __attribute__((noinline))
 void DebugPrintBacktrace(SceUID pid, SceUID thid, const void *lr)
@@ -240,6 +268,7 @@ void DebugPrintSyscallFrame(SceUID pid, const ThreadSyscallFrame *frame, const S
 	else
 		SceDebugForDriver_391B74B7("NID:       0x%08x [%s]\n", stub.funcnid, nidName);
 }
+#endif
 
 /* name unknown: copies whole 16-byte blocks into the dump */
 static inline void DebugDumpCopy(void *dst, const void *src, SceSize size)
@@ -266,13 +295,17 @@ void DebugFaultDump(void *argument)
 	DebugDumpHeader header;
 	DebugFrame *frames, *out;
 	DebugDumpHeader *dump;
+#ifndef SYSMEM_TZS
 	const ThreadSyscallFrame *syscall;
 	DebugDumpSyscall *syscallDump;
+#endif
 	SceUInt64 time = SceSysrootForKernel_E20F6FC8();
 	int cpu = sceKernelCpuId();
+#ifndef SYSMEM_TZS
 	SceUInt32 fingerprint;
 	void *textBase;
 	DebugModuleName name;
+#endif
 	char *report;
 	SceSize count, size;
 	const void *caller, *lr;
@@ -300,11 +333,18 @@ void DebugFaultDump(void *argument)
 	if (fault->format != NULL)
 		SceDebugForDriver_411C0733(fault->format, fault->arguments);
 
+#ifdef SYSMEM_TZS
+	dump = (DebugDumpHeader *)(sceKernelSysrootGetSharedMemory() + DEBUG_DUMP_OFFSET +
+				   cpu * 0x1000);
+	caller = fault->caller;
+	lr = fault->lr;
+#else
 	caller = fault->caller;
 	lr = fault->lr;
 	syscall = (const ThreadSyscallFrame *)SceSysrootForDriver_44EA3197();
 	dump = (DebugDumpHeader *)(sceKernelSysrootGetSharedMemory() + DEBUG_DUMP_OFFSET +
 				   cpu * 0x1000);
+#endif
 	out = (DebugFrame *)(dump + 1);
 	memset(dump, 0, 0x1000);
 	header.size = sizeof(header);
@@ -338,6 +378,7 @@ void DebugFaultDump(void *argument)
 			out += count;
 		}
 	}
+#ifndef SYSMEM_TZS
 	if (syscall != NULL) {
 		syscallDump = (DebugDumpSyscall *)out;
 		memcpy(&syscallDump->frame, syscall, sizeof(*syscall));
@@ -351,6 +392,7 @@ void DebugFaultDump(void *argument)
 		syscallDump->fingerprint = fingerprint;
 		syscallDump->textBase = textBase;
 	}
+#endif
 	DebugDumpCopy(dump, &header, sizeof(header));
 	size = header.frameSize * (header.kernelFrames + header.userFrames) +
 	       (header.registerWords + header.syscallWords) * 4 + sizeof(header);
@@ -372,8 +414,13 @@ void DebugFaultDump(void *argument)
 		vbar = readVbar();
 		DebugSecureCrashDump(DEBUG_DUMP_FAULT, ttbr0, vbar, sysroot);
 	}
+#ifdef SYSMEM_TZS
+	DebugPrintBacktrace(0, fault->lr);
+	DebugPrintSyscallFrame(0);
+#else
 	DebugPrintBacktrace(0, 0, fault->lr);
 	DebugPrintSyscallFrame(0, NULL, NULL);
+#endif
 	if (s_faultHandler != NULL)
 		s_faultHandler(time, cpu, info->fileHash, info->lineHash, info->funcHash, 0, 0,
 			       fault->caller, fault->lr);
@@ -456,6 +503,8 @@ void SceDebugForDriver_00CCE39C(const SceKernelDebugInfo *info, const void *lr, 
 		;
 }
 
+/* the secure world has no exception dump */
+#ifndef SYSMEM_TZS
 /* where a kernel code address lies, or -1/NULL for user addresses */
 static inline void DebugDumpResolve(SceUInt32 address, SceUInt32 *fingerprint, void **textBase)
 {
@@ -613,6 +662,7 @@ void SceDebugForKernel_BCC8D0B2(SceUID pid, const ThreadSyscallFrame *frame,
 {
 	DebugPrintSyscallFrame(pid, frame, result);
 }
+#endif
 
 /* the last output in the TTY ring, oldest first */
 int SceDebugForDriver_62466B0A(char *buffer, SceSize size)

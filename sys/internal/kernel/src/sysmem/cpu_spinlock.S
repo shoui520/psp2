@@ -3,7 +3,7 @@
  * sequences that keep no frame. Two entries share one body in the IRQ lock
  * functions (the caller's address from lr, or given in r1).
  *
- * The same object in every firmware. A debug kernel (FW_DEBUG) wraps the exports
+ * The same object in every firmware. A debug kernel (CPU_DEBUG) wraps the exports
  * in cpu.c, which checks the lock and times how long the IRQs stay off; a release
  * kernel exports these functions directly. The internal names are not Sony's
  * (unknown).
@@ -12,12 +12,46 @@
  * writer and the reader count otherwise (RW spinlock).
  */
 
+/* the secure world's SceCpu (SYSMEM_TZS) is the release kernel's in every firmware */
+#if FW_DEBUG && !defined(SYSMEM_TZS)
+#define CPU_DEBUG 1
+#else
+#define CPU_DEBUG 0
+#endif
+
 	.syntax unified
 	.arch armv7-a
 	.thumb
 	.text
 
 #define PSR_I_BIT	0x80
+
+/*
+ * The interrupt masks the IRQ locks take and give back: the secure world
+ * masks FIQs with the IRQs and restores both bits from the saved flags.
+ */
+#ifdef SYSMEM_TZS
+#define PSR_MASK_BITS	0xc0
+#define IRQ_OFF		cpsid	if
+#else
+#define PSR_MASK_BITS	PSR_I_BIT
+#define IRQ_OFF		cpsid	i
+#endif
+
+/* irq_restore flags, scratch: the IRQs (and FIQs) back as flags has them */
+	.macro	irq_restore flags, scratch
+#ifdef SYSMEM_TZS
+	mrs	\scratch, cpsr
+	lsrs	\flags, \flags, #6
+	bfi	\scratch, \flags, #6, #2
+	msr	cpsr_c, \scratch
+#else
+	cbnz	\flags, 1f
+	cpsie	i
+1:
+#endif
+	.endm
+
 #define RW_WRITER	0x80000000
 
 /*
@@ -34,7 +68,7 @@
 
 	.macro	func name, export
 	.balign	4
-#if FW_DEBUG
+#if CPU_DEBUG
 	sym	\name
 #else
 	.ifb	\export
@@ -46,7 +80,7 @@
 	.endm
 
 	.macro	size name, export
-#if FW_DEBUG
+#if CPU_DEBUG
 	.size	\name, . - \name
 #else
 	.ifb	\export
@@ -113,19 +147,19 @@
 	func	CpuSpinlockLockIrqCore, sceKernelSpinlockLowLockCpuSuspendIntr
 	mov	r2, lr
 1:	mrs	r3, cpsr
-	cpsid	i
+	IRQ_OFF
 2:	ldrex	r1, [r0]
 	cbnz	r1, 3f
 	strex	r1, r2, [r0]
 	cbnz	r1, 4f
 	dmb	sy
-	and.w	r0, r3, #PSR_I_BIT
+	and.w	r0, r3, #PSR_MASK_BITS
 	bx	lr
 3:	msr	cpsr_c, r3
 	wfe
-	cpsid	i
+	IRQ_OFF
 4:	b	2b
-#if FW_DEBUG
+#if CPU_DEBUG
 	.size	CpuSpinlockLockIrqCore, . - CpuSpinlockLockIrqCore
 	sym	CpuSpinlockLockIrqWithCaller
 #endif
@@ -140,19 +174,19 @@
 	func	CpuSpinlockTrylockIrqCore, sceKernelSpinlockLowTrylockCpuSuspendIntr
 	mov	r2, lr
 1:	mrs	r3, cpsr
-	cpsid	i
+	IRQ_OFF
 2:	ldrex	r1, [r0]
 	cbnz	r1, 3f
 	strex	r1, r2, [r0]
 	cmp	r1, #0
 	bne	2b
 	dmb	sy
-	and.w	r0, r3, #PSR_I_BIT
+	and.w	r0, r3, #PSR_MASK_BITS
 	bx	lr
 3:	msr	cpsr_c, r3
 	movs.w	r0, #-1
 	bx	lr
-#if FW_DEBUG
+#if CPU_DEBUG
 	.size	CpuSpinlockTrylockIrqCore, . - CpuSpinlockTrylockIrqCore
 	sym	CpuSpinlockTrylockIrqWithCaller
 #endif
@@ -167,9 +201,8 @@
 	str	r2, [r0]
 	dsb	sy
 	sev
-	cbnz	r1, 1f
-	cpsie	i
-1:	bx	lr
+	irq_restore r1, r0
+	bx	lr
 	endfunc	CpuSpinlockUnlockIrq, sceKernelSpinlockLowUnlockCpuResumeIntr
 
 /*
@@ -217,24 +250,24 @@
 	func	CpuRWSpinlockWriteLockIrq, SceCpuForDriver_4C38CE4D
 	mrs	r3, cpsr
 	movs.w	r2, #RW_WRITER
-	cpsid	i
+	IRQ_OFF
 1:	ldrex	r1, [r0]
 	cbnz	r1, 2f
 	strex	r1, r2, [r0]
 	cbnz	r1, 3f
 	dmb	sy
-	and.w	r0, r3, #PSR_I_BIT
+	and.w	r0, r3, #PSR_MASK_BITS
 	bx	lr
 2:	msr	cpsr_c, r3
 	wfe
-	cpsid	i
+	IRQ_OFF
 3:	b	1b
 	endfunc	CpuRWSpinlockWriteLockIrq, SceCpuForDriver_4C38CE4D
 
 /* int CpuRWSpinlockTryWriteLockIrq(lock): the previous I bit, or -1 when held */
 	func	CpuRWSpinlockTryWriteLockIrq, SceCpuForDriver_DE6482C6
 	mrs	r3, cpsr
-	cpsid	i
+	IRQ_OFF
 	movs.w	r2, #RW_WRITER
 1:	ldrex	r1, [r0]
 	cbnz	r1, 2f
@@ -242,7 +275,7 @@
 	cmp	r1, #0
 	bne	1b
 	dmb	sy
-	and.w	r0, r3, #PSR_I_BIT
+	and.w	r0, r3, #PSR_MASK_BITS
 	bx	lr
 2:	msr	cpsr_c, r3
 	movs.w	r0, #-1
@@ -256,9 +289,8 @@
 	str	r2, [r0]
 	dsb	sy
 	sev
-	cbnz	r1, 1f
-	cpsie	i
-1:	bx	lr
+	irq_restore r1, r0
+	bx	lr
 	endfunc	CpuRWSpinlockWriteUnlockIrq, sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr
 
 /* void SceCpuForDriver_CAC9AE80(lock): waits while a writer holds it */
@@ -309,25 +341,25 @@
 /* int CpuRWSpinlockReadLockIrq(lock): the previous I bit */
 	func	CpuRWSpinlockReadLockIrq, SceCpuForDriver_EC53D007
 	mrs	r3, cpsr
-	cpsid	i
+	IRQ_OFF
 1:	ldrex	r1, [r0]
 	adds	r1, #1
 	bmi	2f
 	strex	r2, r1, [r0]
 	cbnz	r2, 3f
 	dmb	sy
-	and.w	r0, r3, #PSR_I_BIT
+	and.w	r0, r3, #PSR_MASK_BITS
 	bx	lr
 2:	msr	cpsr_c, r3
 	wfe
-	cpsid	i
+	IRQ_OFF
 3:	b	1b
 	endfunc	CpuRWSpinlockReadLockIrq, SceCpuForDriver_EC53D007
 
 /* int CpuRWSpinlockTryReadLockIrq(lock): the previous I bit, or -1 */
 	func	CpuRWSpinlockTryReadLockIrq, SceCpuForDriver_F02467D1
 	mrs	r3, cpsr
-	cpsid	i
+	IRQ_OFF
 1:	ldrex	r1, [r0]
 	adds	r1, #1
 	bmi	2f
@@ -335,7 +367,7 @@
 	cmp	r2, #0
 	bne	1b
 	dmb	sy
-	and.w	r0, r3, #PSR_I_BIT
+	and.w	r0, r3, #PSR_MASK_BITS
 	bx	lr
 2:	msr	cpsr_c, r3
 	movs.w	r0, #-1
@@ -353,7 +385,6 @@
 	cbnz	r2, 2f
 	dsb	sy
 	sev
-2:	cbnz	r1, 3f
-	cpsie	i
-3:	bx	lr
+2:	irq_restore r1, r0
+	bx	lr
 	endfunc	CpuRWSpinlockReadUnlockIrq, sceKernelRWSpinlockLowReadUnlockCpuResumeIntr

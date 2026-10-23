@@ -9,8 +9,9 @@
 
 #include <sysmem/barrier.h>
 
-/* the current program status register; I: IRQs masked */
+/* the current program status register; I: IRQs masked, F: FIQs masked */
 #define PSR_I_BIT	0x00000080
+#define PSR_F_BIT	0x00000040
 
 static inline unsigned int readCpsr(void)
 {

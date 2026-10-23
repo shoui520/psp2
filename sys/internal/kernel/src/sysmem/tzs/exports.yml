@@ -116,7 +116,7 @@ SceSysmem:
         - sceKernelDcacheCleanRange: 0x190D96D5
         - CpuL2CacheSyncCore: 0x2B6403F8
         - SceCpuForKernel_9DA58A9E: 0x31E78A4B
-        - sceKernelGetCpuId: 0x44C423D3
+        - sceKernelCpuId: 0x44C423D3
         - SceCpuForDriver_E813EBB2: 0x4FED4BCE
         - sceKernelDcacheCleanRangeForL1WBWA: 0x596784E9
         - sceKernelSpinlockLowLock: 0x71FD9AB5

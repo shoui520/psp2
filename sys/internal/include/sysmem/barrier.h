@@ -14,3 +14,4 @@
 
 #define enableIrq()	__asm__ volatile("cpsie i" ::: "memory")
 #define disableIrq()	__asm__ volatile("cpsid i" ::: "memory")
+#define disableIrqFiq()	__asm__ volatile("cpsid if" ::: "memory")

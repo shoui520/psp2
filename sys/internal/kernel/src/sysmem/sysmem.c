@@ -674,7 +674,9 @@ int SysmemModuleStart(SceSize args, void *argp)
 	SysmemHeapModuleStart(g_uidManager);
 	AsidUserStart(g_uidManager);
 	sceKernelL2CacheRemap();
+#ifndef SYSMEM_TZS
 	SuspendInit();
+#endif
 	if (LedModuleStart(context) < 0)
 		SCE_PANIC(1903);
 	if (SerialInit(context) < 0)
@@ -682,12 +684,17 @@ int SysmemModuleStart(SceSize args, void *argp)
 	if (sceKernelCheckDipsw(DIPSW_UART1_CONSOLE) ||
 	    sceKernelCheckDipsw(DIPSW_UART0_CONSOLE))
 		SceDebugForKernel_22546577((uintptr_t)SerialDebugPutchar, 0);
+#ifdef SYSMEM_TZS
+	ObjectHeapInitShared();
+	AimgrInit();
+#else
 	PhyMemLowModuleStartPhase2(g_uidManager);
 	PhyMemModuleStartPhase2(g_uidManager);
 	ObjectHeapInitShared();
 	AimgrInit();
 	sceKernelSysEventInit();
 	sceKernelProcessEventInit();
+#endif
 	return 0;
 }
 
