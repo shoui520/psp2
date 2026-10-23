@@ -102,3 +102,13 @@ int appmgrSaveDataAddMountSyscall(const AppmgrAddMountParam *param)
 {
 	return sceAppMgrSaveDataAddMount(param);
 }
+
+int appmgrPhotoMountSyscall(const SceAppMgrPhotoMountParam *param)
+{
+	return SceAppMgrForDriver_43A35729(param);
+}
+
+int appmgrPhotoUmountSyscall(const SceAppMgrPhotoUmountParam *param)
+{
+	return SceAppMgrForDriver_DCADB9FE(param);
+}

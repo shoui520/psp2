@@ -125,6 +125,23 @@ int SceAppMgrForDriver_CE356B2D(const char *appPath, const char *patchPath,
 int SceAppMgrForDriver_B1D3C287(unsigned int mountId, struct ScePfsRndDriveId *mountPoint);
 /* vitasdk: ksceAppMgrWorkDirMount */
 int SceAppMgrForDriver_3A0A9B82(unsigned int mountId, struct ScePfsRndDriveId *mountPoint);
+
+/* photo0: to mount for the caller */
+typedef struct SceAppMgrPhotoMountParam {
+	SceSize size;				/* sizeof(SceAppMgrPhotoMountParam) */
+	SceUInt8 reserved[128];
+} SceAppMgrPhotoMountParam;
+
+_Static_assert(sizeof(SceAppMgrPhotoMountParam) == 0x84, "SceAppMgrPhotoMountParam");
+
+/* photo0: to unmount */
+typedef struct SceAppMgrPhotoUmountParam {
+	SceSize size;				/* sizeof(SceAppMgrPhotoUmountParam) */
+} SceAppMgrPhotoUmountParam;
+
+/* vitasdk: ksceAppMgrPhotoMount */
+int SceAppMgrForDriver_43A35729(const SceAppMgrPhotoMountParam *param);
+int SceAppMgrForDriver_DCADB9FE(const SceAppMgrPhotoUmountParam *param);
 /* vitasdk: ksceAppMgrTrophyMount */
 int SceAppMgrForDriver_E977A833(unsigned int mountId, SceUID pid,
 				struct ScePfsRndDriveId *mountPoint);

@@ -3080,6 +3080,45 @@ void appmgrFreeSaveDataDirectories(char **directories)
 	} while (directories != end);
 }
 
+int SceAppMgrForDriver_43A35729(const SceAppMgrPhotoMountParam *param)
+{
+	ScePfsRndDriveId mountPoint = {0};
+	SceUInt32 syscallState;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (!param || param->size != sizeof(*param)) {
+		result = (int)0x80800001;
+		goto leaveSyscall;
+	}
+	result = SceAppMgrForDriver_B1D3C287(100, &mountPoint);
+	if (result == (int)0x80010013)
+		result = (int)0x80801005;
+	else if (result == (int)0x80800003)
+		result = (int)0x808010C0;
+leaveSyscall:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int SceAppMgrForDriver_DCADB9FE(const SceAppMgrPhotoUmountParam *param)
+{
+	SceUInt32 syscallState;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (!param || param->size != sizeof(*param)) {
+		result = (int)0x80800001;
+		goto leaveSyscall;
+	}
+	result = SceAppMgrForDriver_A714BB35("photo0:");
+	if (result == (int)0x80800002)
+		result = (int)0x808010C1;
+leaveSyscall:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int appmgrInitAppInfoCache(SceUID pid)
 {
 	SceAppMgrAppInfoCache *info;
