@@ -52,7 +52,6 @@ extern void appmgrDebugConsolePuts(const char *string);
 extern void appmgrDebugConsoleFlush(void);
 
 extern int appmgrStopShellWatchDog(void);
-extern void _destroyAllAppForAbortHandler(void);
 extern void appmgrArbitrationAfterAbort(void);
 extern int _updatePowerTickStateForNonSuspendableApp(void);
 extern int sharedFbCancelProcessUpdate(SceUID processId);

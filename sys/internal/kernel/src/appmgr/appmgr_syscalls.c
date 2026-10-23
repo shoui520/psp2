@@ -41,6 +41,16 @@ int appmgrCheckRifGDSyscall(const char *path, AppmgrLicenseInfo *info)
 	return appmgrCheckRifGD(path, info);
 }
 
+int appmgrDestroyOtherAppByPidForShellSyscall(SceUID pid)
+{
+	return sceAppMgrDestroyOtherAppByPidForShell(pid);
+}
+
+int appmgrDestroyOtherAppByAppIdForShellSyscall(int appId)
+{
+	return sceAppMgrDestroyOtherAppByAppIdForShell(appId);
+}
+
 int appmgrSuspendUntilActivatedSyscall(void)
 {
 	return sceAppMgrSuspendUntilActivated();

@@ -47,7 +47,6 @@ extern int appmgrRemoveContentCache(SceUID pid, const AppmgrProcessContent *cont
 extern int appmgrRemoveTemporaryPhoto(SceUID pid);
 extern int appmgrRemoveAppWorkDirectory(const AppmgrProcessContent *content);
 extern int appmgrUnmountProcessContent(SceUID pid);
-extern int _destroyOtherApp(struct AppState *app);
 int _appmgrProcessKillProcess(struct AppState *app, int kind);
 extern int appmgrUsesDefaultLibrary(void);
 extern int appmgrPrepareProcessContent(const char *name, const char *path,

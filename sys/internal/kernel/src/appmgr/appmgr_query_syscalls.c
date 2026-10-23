@@ -118,6 +118,11 @@ int appmgrGetStatusByNameSyscall(const char *appName, void *appStatus)
 	return sceAppMgrGetStatusByName(appName, appStatus);
 }
 
+int appmgrDestroyOtherAppSyscall(void)
+{
+	return sceAppMgrDestroyOtherApp();
+}
+
 int appmgrReceiveNotificationRequestForShellSyscall(AppmgrNotificationRequest *request)
 {
 	return _appmgrQueuePop(request);

@@ -28,6 +28,11 @@ int appmgrGetUserDirPathByIdSyscall(int userId, int partitionId, char *path,
 	return appmgrGetUserDirPathById(userId, partitionId, path, capacity);
 }
 
+int appmgrQuitAppSyscall(int appId)
+{
+	return sceAppMgrQuitApp(appId);
+}
+
 int appmgrDumpSyscall(void)
 {
 	return sceAppMgrDump();

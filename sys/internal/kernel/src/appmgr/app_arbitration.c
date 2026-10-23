@@ -23,6 +23,7 @@
 #include <acmgr/acmgr.h>
 #include <intrmgr/syscall.h>
 #include <kernel/error.h>
+#include <sysmem/uid_guid.h>
 
 extern SceUID g_appmgrMainMutexOwner;
 
@@ -2627,6 +2628,209 @@ int _launchApp4(void *argument)
 	unlockResult = _appListUnlockApp(app);
 	DELETE_APP_CHECK(unlockResult, 0, 3468, "_launchApp4");
 	return pid;
+}
+
+int sceAppMgrQuitApp(int appId)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	int result, unlockResult;
+
+	if (!sceSblACMgrIsSystemProgram(0)) {
+		sceSyscallLeave(syscallState);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	result = _appListFindAndLockAppByAppId(appId, &app);
+	if (result != 0) {
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	result = _appmgrProcessQuitProcess(app, 1, 0, 0);
+	unlockResult = _appListUnlockApp(app);
+	DELETE_APP_CHECK(unlockResult, 0, 3550, "sceAppMgrQuitApp");
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+/*
+ * Quits every application process but the shell's, then waits up to 15 s for all of them
+ * to be gone.
+ */
+int _destroyAllAppForAbortHandler(void)
+{
+	struct AppState *app;
+	SceUInt32 remaining;
+	int index, alive, count, result, unlockResult;
+
+	SCE_DBG_PRINTF_FUNC(0, 3561, "_destroyAllAppForAbortHandler",
+		"[SceAppMgr] Kill all apps\n");
+	KILL_CHECK_APP_OWNERS(3562, "_destroyAllAppForAbortHandler");
+	result = sceKernelLockMutex(g_appmgrCore2Mutex, 1, NULL);
+	if (result != 0) {
+		if ((unsigned int)(result + 0x7ffd7fd4) > 1)
+			LAUNCH_CORE2_LOCK_FAILURE(result, 3562, "_destroyAllAppForAbortHandler");
+	} else {
+		g_appmgrCore2MutexOwner = sceKernelGetThreadId();
+	}
+	DELETE_APP_CHECK(result, 0, 3563, "_destroyAllAppForAbortHandler");
+	GC_MAIN_LOCK(3565, "_destroyAllAppForAbortHandler");
+	index = appmgrGetShellApp() != NULL;
+	app = &g_appmgrAppStates[index];
+	do {
+		if (app->process.processId >= 0 && (app->process.processId & 1) != 0) {
+			DELETE_APP_MAIN_UNLOCK(3571, "_destroyAllAppForAbortHandler");
+			GC_APP_LOCK_CHECK(3574, "_destroyAllAppForAbortHandler");
+			GC_PREFETCH_APP(app);
+			unlockResult = sceKernelLockMutex(app->mutex, 1, NULL);
+			if (unlockResult != 0) {
+				if ((unsigned int)(unlockResult + 0x7ffd7fd4) > 1)
+					LAUNCH_CORE2_LOCK_FAILURE(unlockResult, 3574,
+						"_destroyAllAppForAbortHandler");
+			} else {
+				app->mutexOwner = sceKernelGetThreadId();
+			}
+			DELETE_APP_CHECK(result, 0, 3575, "_destroyAllAppForAbortHandler");
+			result = _appmgrProcessQuitProcess(app, 2, 0, 0);
+			DELETE_APP_CHECK(result, 0, 3578, "_destroyAllAppForAbortHandler");
+			unlockResult = _appListUnlockApp(app);
+			DELETE_APP_CHECK(unlockResult, 0, 3581, "_destroyAllAppForAbortHandler");
+			GC_MAIN_LOCK(3583, "_destroyAllAppForAbortHandler");
+		}
+		++index;
+		++app;
+	} while (index <= 19);
+	DELETE_APP_MAIN_UNLOCK(3588, "_destroyAllAppForAbortHandler");
+	SCE_DBG_PRINTF_FUNC(0, 3590, "_destroyAllAppForAbortHandler",
+		"[SceAppMgr] Waiting for the completion of kill of all apps\n");
+	count = 15;
+	do {
+		GC_MAIN_LOCK(3595, "_destroyAllAppForAbortHandler");
+		index = appmgrGetShellApp() != NULL;
+		alive = 0;
+		app = &g_appmgrAppStates[index];
+		do {
+			if (app->process.processId >= 0 && (app->process.processId & 1) != 0) {
+				alive = 1;
+				SCE_DBG_PRINTF_FUNC(0, 3602, "_destroyAllAppForAbortHandler",
+					"[SceAppMgr] PID=0x%08x is not kill yet.\n",
+					app->process.processId);
+			}
+			++index;
+			++app;
+		} while (index <= 19);
+		DELETE_APP_MAIN_UNLOCK(3605, "_destroyAllAppForAbortHandler");
+		if (!alive)
+			break;
+		SceThreadmgrForDriver_E9A99C50(1000000, &remaining);
+	} while (--count != 0);
+	SCE_DBG_PRINTF_FUNC(0, 3617, "_destroyAllAppForAbortHandler",
+		"[SceAppMgr] Apps were completedly killed.\n");
+	LAUNCH_CORE2_UNLOCK(3618, "_destroyAllAppForAbortHandler");
+	return 0;
+}
+
+/* Quits every application process but the shell's and app's own, then tells the shell. */
+int _destroyOtherApp(struct AppState *app)
+{
+	struct AppState *other;
+	int index, result;
+
+	if (app == NULL)
+		return (int)0x80802012;
+	index = appmgrGetShellApp() != NULL;
+	other = &g_appmgrAppStates[index];
+	do {
+		if (other->process.processId >= 0 && (other->process.processId & 1) != 0 &&
+				app->process.processId != other->process.processId) {
+			DELETE_APP_MAIN_UNLOCK(3638, "_destroyOtherApp");
+			GC_APP_LOCK_CHECK(3641, "_destroyOtherApp");
+			GC_PREFETCH_APP(other);
+			result = sceKernelLockMutex(other->mutex, 1, NULL);
+			if (result != 0) {
+				if ((unsigned int)(result + 0x7ffd7fd4) > 1)
+					LAUNCH_CORE2_LOCK_FAILURE(result, 3641, "_destroyOtherApp");
+				if (result < 0)
+					return result;
+			} else {
+				other->mutexOwner = sceKernelGetThreadId();
+			}
+			result = _appmgrProcessQuitProcess(other, 2, 0, 0);
+			DELETE_APP_CHECK(result, 0, 3647, "_destroyOtherApp");
+			result = _appListUnlockApp(other);
+			DELETE_APP_CHECK(result, 0, 3650, "_destroyOtherApp");
+			GC_MAIN_LOCK(3652, "_destroyOtherApp");
+		}
+		++index;
+		++other;
+	} while (index <= 19);
+	_shellEventDestroyOtherAppQueuePush(app->process.processId, app->appId);
+	return 0;
+}
+
+/* Takes the arbitration locks, quits every application but app, and gives the locks back. */
+#define DESTROY_OTHER_APP(_find, _lockLine, _mainLine, _unlockLine, _func) do { \
+	GC_CHECK_APP_OWNERS(_lockLine, _func); \
+	result = sceKernelLockMutex(g_appmgrCore2Mutex, 1, NULL); \
+	if (result != 0) { \
+		if (result != SCE_KERNEL_ERROR_THREAD_STOPPED && \
+				result != SCE_KERNEL_ERROR_THREAD_SUSPENDED) \
+			LAUNCH_CORE2_LOCK_FAILURE(result, _lockLine, _func); \
+		if (result < 0) { \
+			sceSyscallLeave(syscallState); \
+			return result; \
+		} \
+	} else { \
+		g_appmgrCore2MutexOwner = sceKernelGetThreadId(); \
+	} \
+	GC_MAIN_LOCK(_mainLine, _func); \
+	result = _destroyOtherApp(_find); \
+	DELETE_APP_MAIN_UNLOCK(_unlockLine, _func); \
+	LAUNCH_CORE2_UNLOCK((_unlockLine) + 1, _func); \
+} while (0)
+
+int sceAppMgrDestroyOtherAppByPidForShell(SceUID pid)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	int result;
+
+	if (!isShellProcess()) {
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201c;
+	}
+	DESTROY_OTHER_APP(appmgrFindAppByProcessId(g_appmgrAppStates, pid), 3673, 3680, 3687,
+		"sceAppMgrDestroyOtherAppByPidForShell");
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int sceAppMgrDestroyOtherAppByAppIdForShell(int appId)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	int result;
+
+	if (!isShellProcess()) {
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201c;
+	}
+	DESTROY_OTHER_APP(appmgrFindAppById(appId), 3702, 3709, 3716,
+		"sceAppMgrDestroyOtherAppByAppIdForShell");
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int sceAppMgrDestroyOtherApp(void)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	int result;
+
+	if (!sceSblACMgrIsSystemProgram(0) && sceKernelGetProcessId() != SCE_KERNEL_PROCESS_ID) {
+		sceSyscallLeave(syscallState);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	DESTROY_OTHER_APP(appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId()),
+		3736, 3743, 3751, "sceAppMgrDestroyOtherApp");
+	sceSyscallLeave(syscallState);
+	return result;
 }
 
 void appmgrProcessIdleCallback(SceUID pid, unsigned int elapsed, void *argument)

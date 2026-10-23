@@ -100,7 +100,7 @@ SceAppMgr:
         - _sceAppMgrGetNameById: 0x08E93582
         - _sceAppMgrUmountByPid: 0x0A419BC8
         - _sceAppMgrWorkDirMount: 0x0C49659E
-        - sceAppMgrQuitApp: 0x0DD747FB
+        - appmgrQuitAppSyscall: 0x0DD747FB
         - _sceAppMgrSaveDataSlotSetParam: 0x0E216486
         - _sceAppMgrSetShellScreenOrientation: 0x10E23253
         - _sceAppMgrAcquireSoundOutExclusive3: 0x13ED8FFD
@@ -132,7 +132,7 @@ SceAppMgr:
         - appmgrEnablePrioritizingSystemChatSyscall: 0x3E1FAB92
         - appmgrSendLiveBoardModeSyscall: 0x3E4AC082
         - _sceAppMgrReceiveEventNum: 0x3EEEC172
-        - sceAppMgrDestroyOtherApp: 0x3EF143BF
+        - appmgrDestroyOtherAppSyscall: 0x3EF143BF
         - _sceAppMgrGetCurrentBgmState2: 0x3F7B9BB5
         - _sceAppMgrSaveDataDataRemove2: 0x435E0BCB
         - sceAppMgrActivateApp: 0x43631508
@@ -149,7 +149,7 @@ SceAppMgr:
         - appmgrFinishCoredumpForShellSyscall: 0x52FF63D1
         - _sceAppMgrSaveDataUmount: 0x53623420
         - appmgrLaunchAppCancelSyscall: 0x5369BC0A
-        - sceAppMgrDestroyOtherAppByPidForShell: 0x5420D23C
+        - appmgrDestroyOtherAppByPidForShellSyscall: 0x5420D23C
         - sceAppMgrDestroyAppByAppId: 0x54368A0B
         - _sceAppMgrGetRawPathOfApp0ByPidForShell: 0x550422F9
         - _sceAppMgrGetAppMgrState: 0x55C60D20
@@ -245,7 +245,7 @@ SceAppMgr:
         - _sceAppMgrLaunchAppByName: 0xDAC0AF12
         - _sceAppMgrLoadExec: 0xDC2F23E0
         - _sceAppMgrContentInstallPeriodStart: 0xDC478FB1
-        - sceAppMgrDestroyOtherAppByAppIdForShell: 0xDC70C5F7
+        - appmgrDestroyOtherAppByAppIdForShellSyscall: 0xDC70C5F7
         - _sceAppMgrAppParamGetInt: 0xDC7F8DE5
         - _sceAppMgrGetSaveDataInfoForSpecialExport: 0xDC815429
         - _sceAppMgrLaunchAppByName2ndStage: 0xDEDD2AED

@@ -21,7 +21,6 @@ extern int _updatePowerTickStateForNonSuspendableApp(void);
 extern int _sceAppMgrIsExistAbortedAppOrDebugSuspendedApp(void);
 extern SceUID appmgrGetAbortThreadId(void);
 extern int appmgrAbortProcess(SceUID processId);
-extern void _destroyAllAppForAbortHandler(void);
 
 extern SceUID g_appmgrShellPid;
 extern SceUID g_appmgrLiveAreaOperationMutex;

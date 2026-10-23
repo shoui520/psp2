@@ -139,7 +139,6 @@ STUB(_sceAppMgrAddContMount)
 
 STUB(_sceAppMgrUmountByPid)
 STUB(_sceAppMgrWorkDirMount)
-STUB(sceAppMgrQuitApp)
 
 int _sceAppMgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
 		SceUInt32 displayMode, const void *userArguments)
@@ -164,7 +163,6 @@ STUB(_sceAppMgrLaunchAppByUri)
 
 STUB(_sceAppMgrTrophyMountById)
 
-STUB(sceAppMgrDestroyOtherApp)
 STUB(_sceAppMgrSaveDataDataRemove2)
 STUB(sceAppMgrGrowMemory3)
 
@@ -175,7 +173,6 @@ STUB(_sceAppMgrLaunchAppByNameForShell)
 STUB(_sceAppMgrBgdlGetQueueStatus)
 STUB(_sceAppMgrGetDevInfo)
 STUB(_sceAppMgrSaveDataUmount)
-STUB(sceAppMgrDestroyOtherAppByPidForShell)
 STUB(sceAppMgrDestroyAppByAppId)
 STUB(sceAppMgrSaveDataGetCachedRequiredSizeKiB)
 STUB(_sceAppMgrAddContAddMount)
@@ -228,7 +225,6 @@ STUB(_sceAppMgrThemeDataMount)
 STUB(_sceAppMgrLaunchAppByName)
 STUB(_sceAppMgrLoadExec)
 STUB(_sceAppMgrContentInstallPeriodStart)
-STUB(sceAppMgrDestroyOtherAppByAppIdForShell)
 STUB(_sceAppMgrGetSaveDataInfoForSpecialExport)
 STUB(_sceAppMgrLaunchAppByName2ndStage)
 STUB(sceAppMgrIsGameBudgetAppPresent)

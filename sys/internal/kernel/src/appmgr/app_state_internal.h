@@ -406,6 +406,12 @@ int appmgrLaunchAppByNameForShell(SceUInt32 launchMode, const SceChar8 *name,
 int appmgrLaunchAppByUri(SceUInt32 launchMode, const char *uri);
 int appmgrLaunchAppByUri2(const char *uri, const AppmgrLaunchAppByNameOption *option);
 int sceAppMgrLaunchAppCancel(int appId);
+int sceAppMgrQuitApp(int appId);
+int _destroyAllAppForAbortHandler(void);
+int _destroyOtherApp(struct AppState *app);
+int sceAppMgrDestroyOtherAppByPidForShell(SceUID pid);
+int sceAppMgrDestroyOtherAppByAppIdForShell(int appId);
+int sceAppMgrDestroyOtherApp(void);
 void _appArbitrationOnProcessUnloaded(struct AppState *app);
 int appmgrStopShellWatchDog(void);
 int sceAppMgrLaunchAppByName2ndStage_internal(int appId, const char *name,
