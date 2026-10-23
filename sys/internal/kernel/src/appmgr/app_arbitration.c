@@ -14,6 +14,7 @@
 #include <processmgr/processmgr.h>
 #include <appmgr/appmgr.h>
 #include "appmgr_app_event.h"
+#include "appmgr_event.h"
 #include "appmgr_device.h"
 #include "appmgr_internal_util.h"
 #include "appmgr_shell_event.h"
@@ -1143,6 +1144,73 @@ int killLeastValuableMiniApplication(void)
 			return result;
 		}
 	}
+}
+
+/*
+ * Reserves an application slot for a launch (killing the least valuable mini application
+ * while none is free) and fills in who launches it and how; the slot is left unlocked.
+ */
+int _sceAppMgrAppStateReserve(struct AppState **out, const char *name, const char *param,
+		SceUID paramCallbackId, SceUInt32 launchMode, SceUID launchCallbackId,
+		int creatorAppId, SceUInt32 evictionThresholdClass,
+		SceUInt32 resumeCreatorOnLaunchFailure)
+{
+	struct AppState *creator, *app;
+	const char *creatorName;
+	SceUID owner, creatorPid;
+	int creatorId, result;
+
+	owner = g_appmgrMainMutexOwner;
+	DELETE_APP_ASSERT(owner != sceKernelGetThreadId(), 825, "_sceAppMgrAppStateReserve");
+	owner = g_appmgrCoreKmMutexOwner;
+	DELETE_APP_ASSERT(owner != sceKernelGetThreadId(), 826, "_sceAppMgrAppStateReserve");
+	DELETE_APP_MAIN_LOCK(828, "_sceAppMgrAppStateReserve");
+	creator = appmgrFindAppById(creatorAppId);
+	if (creator == NULL)
+		creator = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (creator != NULL) {
+		creatorPid = creator->process.processId;
+		creatorId = creator->appId;
+	} else {
+		creatorPid = -1;
+		creatorId = -1;
+	}
+	DELETE_APP_MAIN_UNLOCK(838, "_sceAppMgrAppStateReserve");
+	while ((result = _appListReserveAndLockApp(&app)) != 0) {
+		if (result != (int)0x80802012)
+			return result;
+		result = killLeastValuableMiniApplication();
+		if (result < 0)
+			return result;
+	}
+	DELETE_APP_MAIN_LOCK(849, "_sceAppMgrAppStateReserve");
+	DELETE_APP_CHECK(app->state, 0x101, 851, "_sceAppMgrAppStateReserve");
+	if (name != NULL)
+		strncpy(app->process.appName, name, sizeof(app->process.appName));
+	else
+		app->process.appName[0] = '\0';
+	creatorName = creator != NULL ? creator->process.appName : NULL;
+	result = appmgrParamQueuePush(&app->params, param, paramCallbackId,
+		sceKernelGetProcessId(), creatorName);
+	DELETE_APP_CHECK(result, 0, 865, "_sceAppMgrAppStateReserve");
+	app->launchSourceProcessId = creatorPid;
+	app->launchSourceAppId = creatorId;
+	_appListSetRunStatus(app, 0x300);
+	_appListSetActiveness(app, 1);
+	app->creatorPid = sceKernelGetProcessId();
+	app->launchCallbackId = launchCallbackId;
+	app->process.processId = app->appId;
+	app->process.notifiedProcessState = 0;
+	app->launchMode = launchMode;
+	app->process.requestedProcessState = 0;
+	app->unusedLaunchMarker = 255;
+	app->protectionMode = 0;
+	app->evictionThresholdClass = evictionThresholdClass;
+	app->resumeCreatorOnLaunchFailure = resumeCreatorOnLaunchFailure;
+	DELETE_APP_MAIN_UNLOCK(881, "_sceAppMgrAppStateReserve");
+	_appListUnlockApp(app);
+	*out = app;
+	return 0;
 }
 
 /* The two Sony media helpers are inlined twice into the listener. */

@@ -362,6 +362,10 @@ int findAndLockLeastValuableMiniApp2(struct AppState **out, int maxValue);
 int killLeastValuableMiniApplication2(int maxValue);
 int killAllMiniApplication(void);
 int killLeastValuableMiniApplication(void);
+int _sceAppMgrAppStateReserve(struct AppState **out, const char *name, const char *param,
+		SceUID paramCallbackId, SceUInt32 launchMode, SceUID launchCallbackId,
+		int creatorAppId, SceUInt32 evictionThresholdClass,
+		SceUInt32 resumeCreatorOnLaunchFailure);
 int sceAppMgrLaunchAppByName2ndStage_internal(int appId, const char *name,
 		SceAppMgrAppStatus *statusOut, const AppmgrLaunchRequest *request,
 		int sendParamToRunning, int startByUpdater, const AppmgrCreateProcessParam *createParam,
