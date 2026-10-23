@@ -158,7 +158,7 @@ MOTION_VFP int sceMotionRotateYaw(float radians)
 	return MotionRotateEntryYaw(&g_motion.entries[g_motion.writeIndex], radians);
 }
 
-SceBool sceMotionGetTiltCorrection(void)
+__attribute__((noinline)) SceBool sceMotionGetTiltCorrection(void)
 {
 	return g_motion.config.tiltCorrection;
 }
@@ -173,7 +173,7 @@ int sceMotionSetTiltCorrection(SceBool setValue)
 	return ErrorOrZero(MotionUnlock());
 }
 
-SceBool sceMotionGetDeadband(void)
+__attribute__((noinline)) SceBool sceMotionGetDeadband(void)
 {
 	return g_motion.config.deadband;
 }

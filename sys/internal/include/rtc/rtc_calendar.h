@@ -41,9 +41,11 @@ int sceRtcGetDaysInMonth(int year, int month)
 {
 	if (year <= 0)
 		return SCE_RTC_ERROR_INVALID_YEAR;
-	if ((unsigned int)(month - 1) > 11)
+	if (month < 1 || month > 12)
 		return SCE_RTC_ERROR_INVALID_MONTH;
-	return s_rtcMonthDays[rtcIsLeap(year)][month - 1];
+	if (rtcIsLeap(year))
+		return s_rtcMonthDays[1][month - 1];
+	return s_rtcMonthDays[0][month - 1];
 }
 
 int sceRtcGetDayOfWeek(int year, int month, int day)
@@ -64,28 +66,30 @@ int sceRtcGetDayOfWeek(int year, int month, int day)
 int sceRtcGetDayOfYear(int year, int month, int day)
 {
 	int days = sceRtcGetDaysInMonth(year, month);
-	int leap, i;
+	int i;
 
 	if (days < 0)
 		return days;
 	if (day <= 0 || day > days)
 		return SCE_RTC_ERROR_INVALID_DAY;
-	leap = rtcIsLeap(year);
 	days = 0;
 	for (i = 1; i < month; i++)
-		days += s_rtcMonthDays[leap][i - 1];
+		days += rtcIsLeap(year) ? s_rtcMonthDays[1][i - 1] : s_rtcMonthDays[0][i - 1];
 	return day - 1 + days;
 }
 
 int sceRtcCheckValid(const SceDateTime *time)
 {
+	int days;
+
 	if (time == NULL)
 		return SCE_RTC_ERROR_INVALID_POINTER;
 	if ((unsigned short)(time->year - 1) > 9998)
 		return SCE_RTC_ERROR_INVALID_YEAR;
 	if ((unsigned int)(time->month - 1) > 11)
 		return SCE_RTC_ERROR_INVALID_MONTH;
-	if (time->day == 0 || time->day > s_rtcMonthDays[rtcIsLeap(time->year)][time->month - 1])
+	days = sceRtcGetDaysInMonth(time->year, time->month);
+	if (time->day == 0 || time->day > days)
 		return SCE_RTC_ERROR_INVALID_DAY;
 	if (time->hour > 23)
 		return SCE_RTC_ERROR_INVALID_HOUR;
@@ -140,11 +144,13 @@ int sceRtcGetDosTime(const SceDateTime *time, unsigned int *dosTime)
 /* tick to calendar fields */
 static inline void rtcTickToDateTime(SceDateTime *time, SceUInt64 tick)
 {
+	SceUInt64 quotient;
 	unsigned int days, seconds, length, month;
 	int year, leap;
 
-	days = __aeabi_uldivmod(tick, RTC_TICKS_PER_DAY);
-	tick -= (SceUInt64)days * RTC_TICKS_PER_DAY;
+	quotient = __aeabi_uldivmod(tick, RTC_TICKS_PER_DAY);
+	days = quotient;
+	tick -= quotient * RTC_TICKS_PER_DAY;
 	seconds = __aeabi_uldivmod(tick, 1000000);
 	time->microsecond = tick - (SceUInt64)seconds * 1000000;
 	time->second = seconds % 60;
@@ -299,7 +305,7 @@ int sceRtcGetTime_t(const SceDateTime *time, unsigned int *time32)
 	return 0;
 }
 
-int sceRtcSetTick(SceDateTime *time, const SceRtcTick *tick)
+__attribute__((noinline)) int sceRtcSetTick(SceDateTime *time, const SceRtcTick *tick)
 {
 	if (time == NULL || tick == NULL)
 		return SCE_RTC_ERROR_INVALID_POINTER;

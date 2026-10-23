@@ -216,8 +216,7 @@ int MotionReadCalibration(MotionAxisCalibration *gyro, MotionAxisCalibration *ac
 	if (ret < 0)
 		return ret;
 	g_motion.deviceType = info.type;
-	if (retry > 9 || MotionReadAccCalibration(-1, acc) < 0 ||
-	    MotionReadGyroCalibration(-1, gyro) < 0)
+	if (MotionReadAccCalibration(-1, acc) < 0 || MotionReadGyroCalibration(-1, gyro) < 0)
 		return SCE_MOTION_ERROR_CALIB_READ_FAIL;
 	if (sceMotionDevGetCurrentMagnCalibData(&data) >= 0)
 		*magn = data.calibration;

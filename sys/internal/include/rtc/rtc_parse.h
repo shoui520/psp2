@@ -79,6 +79,14 @@ static inline int rtcMatch(const char *name, const char *s, unsigned int n)
 	return 1;
 }
 
+/* name unknown: two digits as a number, or -1 */
+static inline int rtcDigits2(char tens, char ones)
+{
+	if (!IS_DIGIT(tens) || !IS_DIGIT(ones))
+		return -1;
+	return (tens - '0') * 10 + ones - '0';
+}
+
 /* name unknown: one or two digits */
 static __attribute__((noinline)) const char *rtcParse2Digits(const char *s, int *value)
 {
@@ -99,28 +107,28 @@ int sceRtcParseRFC3339(SceRtcTick *tick, const char *str)
 	SceDateTime time;
 	const char *p;
 	unsigned int scale;
-	int offset, hours, minutes, ret;
+	int value, offset, hours, minutes, ret;
 
 	if (tick == NULL || str == NULL)
 		return SCE_RTC_ERROR_INVALID_POINTER;
 	if (!IS_DIGIT(str[0]) || !IS_DIGIT(str[1]) || !IS_DIGIT(str[2]) || !IS_DIGIT(str[3]))
 		return SCE_RTC_ERROR_BAD_PARSE;
 	time.year = (str[0] - '0') * 1000 + (str[1] - '0') * 100 + (str[2] - '0') * 10 + str[3] - '0';
-	if (str[4] != '-' || !IS_DIGIT(str[5]) || !IS_DIGIT(str[6]))
+	if (str[4] != '-' || (value = rtcDigits2(str[5], str[6])) < 0)
 		return SCE_RTC_ERROR_BAD_PARSE;
-	time.month = (str[5] - '0') * 10 + str[6] - '0';
-	if (str[7] != '-' || !IS_DIGIT(str[8]) || !IS_DIGIT(str[9]))
+	time.month = value;
+	if (str[7] != '-' || (value = rtcDigits2(str[8], str[9])) < 0)
 		return SCE_RTC_ERROR_BAD_PARSE;
-	time.day = (str[8] - '0') * 10 + str[9] - '0';
-	if (UPPER(str[10]) != 'T' || !IS_DIGIT(str[11]) || !IS_DIGIT(str[12]))
+	time.day = value;
+	if (UPPER(str[10]) != 'T' || (value = rtcDigits2(str[11], str[12])) < 0)
 		return SCE_RTC_ERROR_BAD_PARSE;
-	time.hour = (str[11] - '0') * 10 + str[12] - '0';
-	if (str[13] != ':' || !IS_DIGIT(str[14]) || !IS_DIGIT(str[15]))
+	time.hour = value;
+	if (str[13] != ':' || (value = rtcDigits2(str[14], str[15])) < 0)
 		return SCE_RTC_ERROR_BAD_PARSE;
-	time.minute = (str[14] - '0') * 10 + str[15] - '0';
-	if (str[16] != ':' || !IS_DIGIT(str[17]) || !IS_DIGIT(str[18]))
+	time.minute = value;
+	if (str[16] != ':' || (value = rtcDigits2(str[17], str[18])) < 0)
 		return SCE_RTC_ERROR_BAD_PARSE;
-	time.second = (str[17] - '0') * 10 + str[18] - '0';
+	time.second = value;
 	p = str + 19;
 	time.microsecond = 0;
 	if (*p == '.') {
@@ -137,8 +145,8 @@ int sceRtcParseRFC3339(SceRtcTick *tick, const char *str)
 	} else {
 		if (*p != '-' && *p != '+')
 			return SCE_RTC_ERROR_BAD_PARSE;
-		hours = IS_DIGIT(p[1]) && IS_DIGIT(p[2]) ? (p[1] - '0') * 10 + p[2] - '0' : -1;
-		minutes = IS_DIGIT(p[4]) && IS_DIGIT(p[5]) ? (p[4] - '0') * 10 + p[5] - '0' : -1;
+		hours = rtcDigits2(p[1], p[2]);
+		minutes = rtcDigits2(p[4], p[5]);
 		if (hours == -1 || p[3] != ':' || minutes == -1)
 			return SCE_RTC_ERROR_BAD_PARSE;
 		offset = hours * 60 + minutes;
@@ -197,7 +205,7 @@ int sceRtcParseDateTime(SceRtcTick *tick, const char *str)
 	const char *end;
 	SceDateTime time;
 	unsigned int c;
-	int value, offset, month;
+	int value, minutes, offset, month;
 
 	if (tick == NULL || str == NULL)
 		return SCE_RTC_ERROR_INVALID_POINTER;
@@ -322,10 +330,11 @@ int sceRtcParseDateTime(SceRtcTick *tick, const char *str)
 	if (*p != ' ')
 		goto done;
 	if (p[1] == '+' || p[1] == '-') {
-		value = IS_DIGIT(p[2]) && IS_DIGIT(p[3]) ? (p[2] - '0') * 10 + p[3] - '0' : -1;
-		if (!IS_DIGIT(p[4]) || !IS_DIGIT(p[5]) || value < 0)
+		value = rtcDigits2(p[2], p[3]);
+		minutes = rtcDigits2(p[4], p[5]);
+		if (minutes < 0 || value < 0)
 			goto done;
-		offset = (p[4] - '0') * 10 + p[5] - '0' + value * 60;
+		offset = minutes + value * 60;
 		if (p[1] != '-')
 			offset = -offset;
 	} else if (p[1] != 'U' && p[2] != 'T') {

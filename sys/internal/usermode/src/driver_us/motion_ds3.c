@@ -187,8 +187,7 @@ static inline int Ds3StepsOff(const Ds3Tracker *tracker, int bias)
 
 static DS3_FUNC void Ds3TrackerInit(Ds3Tracker *tracker, const Ds3TrackerConfig *config, int *offset)
 {
-	int bias = config->bias;
-	int scaled, steps, adjust = 0;
+	int bias, scaled, steps, adjust = 0;
 
 	tracker->holdReload = config->holdReload;
 	tracker->holdCount = config->holdCount;
@@ -208,6 +207,7 @@ static DS3_FUNC void Ds3TrackerInit(Ds3Tracker *tracker, const Ds3TrackerConfig 
 	Ds3AverageInit(&tracker->average, config->averageLength);
 	tracker->countdownStep = __aeabi_idiv(config->countdown, config->countdownSteps);
 	tracker->countdown = config->countdown;
+	bias = config->bias;
 	tracker->lastInput = bias;
 	tracker->isPending = 0;
 	scaled = Ds3StepsOff(tracker, bias);
@@ -291,9 +291,10 @@ static DS3_FUNC int Ds3TrackerProcess(Ds3Tracker *tracker, int input, int *offse
 
 	if (tracker->holdCount != 0) {
 		tracker->holdCount--;
+		output = tracker->output;
 		tracker->lastInput = input;
 		*changed = 0;
-		return tracker->output;
+		return output;
 	}
 	output = Usat10(tracker->center + (tracker->state.bias - input));
 	tracker->output = output;
@@ -317,8 +318,9 @@ static DS3_FUNC int Ds3TrackerProcess(Ds3Tracker *tracker, int input, int *offse
 			tracker->pendingCountdown -= tracker->countdownStep;
 		}
 	}
+	output = tracker->output;
 	tracker->lastInput = input;
-	return tracker->output;
+	return output;
 }
 
 /* --- per-axis calibration and filter --- */
@@ -353,10 +355,11 @@ static DS3_FUNC void Ds3CalibrationFromSpan(Ds3Calibration *calibration, const i
 				   int outSpan)
 {
 	int rawRef = reference[0];
+	int outRef = reference[1];
 
 	calibration->rawSpan = rawSpan;
 	calibration->outSpan = outSpan;
-	calibration->outRef = reference[1];
+	calibration->outRef = outRef;
 	calibration->rawRef = rawRef;
 }
 
