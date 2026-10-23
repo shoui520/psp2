@@ -536,6 +536,68 @@ out:
 	return result;
 }
 
+/* Decodes a string stored with each byte complemented into size bytes, zero filled. */
+static inline __attribute__((always_inline))
+int decodeString(const unsigned char *source, char *destination, SceSize size)
+{
+	int index = 0;
+	unsigned char character;
+
+	if (source == NULL || destination == NULL)
+		return (int)0x80800001;
+	memset(destination, 0, size);
+	if (size == 0)
+		return (int)0x80800001;
+	character = *source;
+	if (character != 0) {
+		do {
+			destination[index] = ~character;
+			++index;
+			if (index == size)
+				return (int)0x80800001;
+			character = *++source;
+		} while (character != 0);
+	}
+	destination[index] = 0;
+	return 0;
+}
+
+/*
+ * appmgrDecodeString into a buffer of a fixed size: Sony's compiler specialised it for the
+ * 64 and 32-byte buffers of the mount functions.
+ */
+static inline __attribute__((always_inline))
+int decodeStringFixed(const unsigned char *source, char *destination, int size)
+{
+	unsigned char character;
+	int index;
+
+	if (source == NULL || destination == NULL)
+		return (int)0x80800001;
+	memset(destination, 0, size);
+	for (index = 0; index < size; index++) {
+		character = source[index];
+		if (character == 0) {
+			destination[index] = 0;
+			return 0;
+		}
+		destination[index] = ~character;
+	}
+	return (int)0x80800001;
+}
+
+static __attribute__((noinline)) int appmgrDecodeString64(const unsigned char *source,
+							  char *destination)
+{
+	return decodeStringFixed(source, destination, 64);
+}
+
+static __attribute__((noinline)) int appmgrDecodeString32(const unsigned char *source,
+							  char *destination)
+{
+	return decodeStringFixed(source, destination, 32);
+}
+
 /*
  * Copies a path (shorter than 292) with each run of slashes made one, a
  * trailing slash dropped and a slash after the drive's colon; ".." is refused.
@@ -1900,26 +1962,7 @@ updateParams:
 
 int appmgrDecodeString(const unsigned char *source, char *destination, SceSize size)
 {
-	int index = 0;
-	unsigned char character;
-
-	if (source == NULL || destination == NULL)
-		return (int)0x80800001;
-	memset(destination, 0, size);
-	if (size == 0)
-		return (int)0x80800001;
-	character = *source;
-	if (character != 0) {
-		do {
-			destination[index] = ~character;
-			++index;
-			if (index == size)
-				return (int)0x80800001;
-			character = *++source;
-		} while (character != 0);
-	}
-	destination[index] = 0;
-	return 0;
+	return decodeString(source, destination, size);
 }
 
 int appmgrRegisterMountDebugSettingCallback(void)
@@ -4311,7 +4354,7 @@ int sceAppMgrThemeDataMount(const char *contentId, const char *themePath,
 	if (themePath != NULL) {
 		length = snprintf(directory, 128, "%s", themePath);
 	} else {
-		result = appmgrDecodeString(encodedThemeRoot, root, sizeof(root));
+		result = appmgrDecodeString32(encodedThemeRoot, root);
 		if (result < 0)
 			goto error;
 		length = snprintf(directory, 128, "%s/%s", root, contentId);
@@ -4334,7 +4377,7 @@ int sceAppMgrThemeDataMount(const char *contentId, const char *themePath,
 		strncpy(path, rifPath, 291);
 		result = appmgrReadRif(path, &license);
 	} else {
-		result = appmgrDecodeString(encodedThemeLicenseRoot, root, sizeof(root));
+		result = appmgrDecodeString32(encodedThemeLicenseRoot, root);
 		if (result < 0)
 			goto error;
 		length = snprintf(path, 292, "%s/%s", root, contentId);
@@ -4711,7 +4754,7 @@ int sceAppMgrAcInstGetAcdirParam(const char *titleId, const char *entitlementLab
 	result = appmgrMountPfsAcidDirectory(drive.drive_id, entitlementLabel);
 	if (result < 0)
 		goto unmountDrive;
-	result = appmgrDecodeString(encodedParamSfo, sfoName, sizeof(sfoName));
+	result = appmgrDecodeString64(encodedParamSfo, sfoName);
 	if (result < 0)
 		goto unmountAcid;
 	if ((SceSize)snprintf(path, sizeof(path), "%s/%s/%s/%s", root, titleId,
@@ -5157,12 +5200,10 @@ int appmgrMakeAccountPath(char *path, const unsigned char *component, const char
 {
 	int result;
 
-	result = appmgrDecodeString(encodedUserRoot, g_appmgrMountByIdRoot,
-				    sizeof(g_appmgrMountByIdRoot));
+	result = appmgrDecodeString32(encodedUserRoot, g_appmgrMountByIdRoot);
 	if (result < 0)
 		return result;
-	result = appmgrDecodeString(component, g_appmgrMountByIdComponent,
-				    sizeof(g_appmgrMountByIdComponent));
+	result = appmgrDecodeString32(component, g_appmgrMountByIdComponent);
 	if (result < 0)
 		return result;
 	if (g_appmgrAccountDirectory[0] == 0)
@@ -5268,12 +5309,11 @@ int appmgrMountByIdBody(SceUID pid, unsigned int mountId, const char *id, const 
 		result = appmgrDecodeString(encodedCalendar, buffer, sizeof(buffer));
 		break;
 	case 109:
-		result = appmgrDecodeString(encodedVideo, buffer, sizeof(buffer));
+		result = appmgrDecodeString64(encodedVideo, buffer);
 		drive = "video0:";
 		break;
 	case 110:
-		result = appmgrDecodeString(encodedAppMeta, g_appmgrMountByIdRoot,
-					    sizeof(g_appmgrMountByIdRoot));
+		result = appmgrDecodeString32(encodedAppMeta, g_appmgrMountByIdRoot);
 		if (result < 0)
 			break;
 		if ((unsigned int)snprintf(buffer, sizeof(buffer), "%s/%s",
@@ -5374,10 +5414,10 @@ int appmgrMountByIdBody(SceUID pid, unsigned int mountId, const char *id, const 
 		path = g_appmgrLoopBackPath;
 		break;
 	case 1007:
-		result = appmgrDecodeString(encodedSysExternal, buffer, sizeof(buffer));
+		result = appmgrDecodeString64(encodedSysExternal, buffer);
 		break;
 	case 1008:
-		result = appmgrDecodeString(encodedDataExternal, buffer, sizeof(buffer));
+		result = appmgrDecodeString64(encodedDataExternal, buffer);
 		break;
 	case 1009:
 		result = appmgrDecodeString(encodedUserData, buffer, sizeof(buffer));
@@ -6391,7 +6431,7 @@ int sceAppMgrWorkDirMountById(unsigned int mountId, const char *id, ScePfsRndDri
 	__builtin_memset(g_appmgrMountByIdRoot, 0, sizeof(g_appmgrMountByIdRoot));
 	__builtin_memset(g_appmgrMountByIdComponent, 0, sizeof(g_appmgrMountByIdComponent));
 	if (mountId == 206) {
-		result = appmgrDecodeString(encodedWebBrowser, buffer, sizeof(buffer));
+		result = appmgrDecodeString64(encodedWebBrowser, buffer);
 		if (result < 0)
 			goto unlock;
 		path = buffer;
@@ -7593,7 +7633,7 @@ int sceAppMgrLoopBackFormat(unsigned int mountId, unsigned int command, const ch
 		result = 0x80800046;
 		goto unlock;
 	}
-	result = appmgrDecodeString(encodedUmass, directory, sizeof(directory));
+	result = appmgrDecodeString64(encodedUmass, directory);
 	if (result < 0)
 		goto unlock;
 	result = appmgrCreateDirectories(directory, 1);
