@@ -1,7 +1,8 @@
 /*
  * Sony's module layout (mkprx.py tables generates the SCE sections): text, the
  * import stubs and the SCE tables, read-only data and the unwind tables in one
- * segment; data and bss in the next.
+ * segment; data and bss in the next. The SCE tables are kept when a module
+ * links with --gc-sections (only what its exports and start reach).
  */
 OUTPUT_FORMAT("elf32-littlearm")
 OUTPUT_ARCH(arm)
@@ -22,28 +23,28 @@ SECTIONS
 		*(.sceStub.text)
 	}
 	__sce_text_end = .;
-	.sceModuleInfo.rodata : { *(.sceModuleInfo.rodata) }
+	.sceModuleInfo.rodata : { KEEP(*(.sceModuleInfo.rodata)) }
 	.sceLib.ent : {
 		__sce_libent_top = .;
-		*(.sceLib.ent)
+		KEEP(*(.sceLib.ent))
 		__sce_libent_end = .;
 	}
 	.sceLib.stub : {
 		__sce_libstub_top = .;
-		*(.sceLib.stub)
+		KEEP(*(.sceLib.stub))
 		__sce_libstub_end = .;
 	}
-	.sceExport.rodata : { *(.sceExport.rodata) }
-	.sceImport.rodata : { *(.sceImport.rodata) }
-	.sceFNID.rodata : { *(.sceFNID.rodata) }
-	.sceVNID.rodata : { *(.sceVNID.rodata) }
-	.sceFStub.rodata : { *(.sceFStub.rodata) }
+	.sceExport.rodata : { KEEP(*(.sceExport.rodata)) }
+	.sceImport.rodata : { KEEP(*(.sceImport.rodata)) }
+	.sceFNID.rodata : { KEEP(*(.sceFNID.rodata)) }
+	.sceVNID.rodata : { KEEP(*(.sceVNID.rodata)) }
+	.sceFStub.rodata : { KEEP(*(.sceFStub.rodata)) }
 	.sceVStub.rodata : {
 		__sce_vstub_top = .;
-		*(.sceVStub.rodata)
+		KEEP(*(.sceVStub.rodata))
 	}
 	__sce_tables_end = .;
-	.rodata : { *(.rodata.sceSdkVersion) *(.rodata .rodata.* .sce_dbginfo) }
+	.rodata : { KEEP(*(.rodata.sceSdkVersion)) *(.rodata .rodata.* .sce_dbginfo) }
 	.ARM.exidx : ALIGN(16) {
 		__exidx_start = .;
 		*(.ARM.exidx .ARM.exidx.*)
@@ -54,7 +55,7 @@ SECTIONS
 		*(.ARM.extab .ARM.extab.*)
 		__extab_end = .;
 	}
-	.sceRefs.rodata : { *(.sceRefs.rodata) }
+	.sceRefs.rodata : { KEEP(*(.sceRefs.rodata)) }
 
 	. = ALIGN(0x1000);
 	.data : { *(.data .data.*) } :data

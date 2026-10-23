@@ -1415,6 +1415,14 @@ AddressSpaceObject *SceSysmemForKernel_2E5CC243(void)
 	return s_kernelAddressSpace;
 }
 
+#ifdef SYSMEM_TZS
+/* name unknown: the kernel address space's lower L1 table */
+uint32_t *SceSysmemForTZS_038EAEEE(void)
+{
+	return s_kernelAddressSpace->context->l1pt->low;
+}
+#endif
+
 /* the physical window user I/O mappings get */
 int SceSysmemForDriver_C9928F5E(uintptr_t *base, SceSize *size)
 {
@@ -1451,11 +1459,16 @@ int AddressSpaceKernelReady(void)
 int AsidUserStart(const UIDManager *manager)
 {
 	AddressSpaceObject *kernel;
+#ifndef SYSMEM_TZS
 	struct Bitheap *heap;
+	int i;
+#endif
 	SceClass *cls;
-	int i, ret;
+	int ret;
 
+#ifndef SYSMEM_TZS
 	AddressSpaceInitUserIOPA();
+#endif
 	s_addressSpaceGlobals = manager->addressSpaceGlobals;
 	cls = s_addressSpaceGlobals->cls;
 	cls->create_cb = AddressSpaceObjectCreate;
@@ -1464,6 +1477,10 @@ int AsidUserStart(const UIDManager *manager)
 	ret = sceGUIDGetObject(SCE_KERNEL_ADDRESS_SPACE_ID, &kernel);
 	if (ret < 0)
 		return ret;
+#ifdef SYSMEM_TZS
+	/* the secure world has no user address spaces */
+	s_kernelAddressSpace = kernel;
+#else
 	heap = s_addressSpaceGlobals->asidHeap;
 	s_kernelAddressSpace = kernel;
 	if (BitheapInit(heap, ASID_COUNT, s_addressSpaceGlobals->asidBuffer) < 0) {
@@ -1474,6 +1491,7 @@ int AsidUserStart(const UIDManager *manager)
 	sceKernelBitheapUse(heap, 1);
 	for (i = ASID_RESERVED_HIGH; i != ASID_COUNT; i++)
 		sceKernelBitheapUse(heap, i);
+#endif
 	return ret;
 }
 

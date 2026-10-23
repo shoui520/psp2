@@ -308,6 +308,18 @@ void SceCpuForKernel_A0A70166(void)
 		CachePleFlush();
 }
 
+#ifdef SYSMEM_TZS
+/* the whole data cache, L1 then L2, cleaned and invalidated */
+void sceKernelDcacheCleanInvalidateAll(void)
+{
+	if (CachePleEnabled())
+		CachePleFlush();
+	SceCpuForKernel_4BBA5C82();
+	CpuL2CleanInvalidateAll();
+	CpuL2CacheSyncCore();
+}
+#endif
+
 void sceKernelDcacheCleanInvalidateRangeForL1WBWA(const void *start, SceSize size)
 {
 	_sceKernelDcacheCleanInvalidateRangeCore(start, size, CACHE_RANGE_L1_ONLY

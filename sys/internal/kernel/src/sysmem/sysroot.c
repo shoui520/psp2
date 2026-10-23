@@ -115,7 +115,7 @@ struct SysrootState {
 	void *fallbackAddressSpaceCB;
 	void *intrMMUContext;			/* 0x314 */
 	void *vbaseResetVector;
-	uint32_t mvbar;
+	unsigned int *vbaseMonitorVector;	/* 0x31c: MVBAR */
 	void *sharedMemory;
 	const SysrootAcmgrOps *acmgrOps;
 	SysrootAppMgrSpawnProcess appMgrSpawnProcess;
@@ -548,6 +548,32 @@ void *SceSysrootForKernel_84783B71(void *sessionId)
 	out->words[3] = word3;
 	return sessionId;
 }
+
+#ifdef SYSMEM_TZS
+/* name unknown: the KBL's coredump session key, read a half at a time */
+void *SceSysrootForTZS_32546BDB(void *key)
+{
+	const struct SysrootWordBlock128 *source =
+		(const void *)s_sysrootState->kblParam->coredump_session_key;
+	struct SysrootWordBlock128 *out = key;
+	uint32_t word0 = source[0].words[0], word1 = source[0].words[1];
+	uint32_t word2 = source[0].words[2], word3 = source[0].words[3];
+
+	out[0].words[0] = word0;
+	out[0].words[1] = word1;
+	out[0].words[2] = word2;
+	out[0].words[3] = word3;
+	word0 = source[1].words[0];
+	word1 = source[1].words[1];
+	word2 = source[1].words[2];
+	word3 = source[1].words[3];
+	out[1].words[0] = word0;
+	out[1].words[1] = word1;
+	out[1].words[2] = word2;
+	out[1].words[3] = word3;
+	return key;
+}
+#endif
 
 int SceSysrootForDriver_46E72428(void *flags)
 {
@@ -1190,6 +1216,13 @@ void *SceSysrootForKernel_118657C6(void)
 {
 	return s_sysrootState->intrMMUContext;
 }
+
+#ifdef SYSMEM_TZS
+unsigned int *sceKernelSysrootGetVbaseMonitorVector(void)
+{
+	return s_sysrootState->vbaseMonitorVector;
+}
+#endif
 
 void SceSysrootForKernel_21F5790B(void (*callback)(void))
 {

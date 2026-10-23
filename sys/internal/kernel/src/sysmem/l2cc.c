@@ -1,7 +1,6 @@
 /*
  * SceSysmem: the PL310 L2 cache controller. Its registers are used at their
- * physical address until sceKernelL2CacheRemap maps them. The secure
- * kernel's SceSysmem (SYSMEM_TZS) keeps only the remap here. The sync and
+ * physical address until sceKernelL2CacheRemap maps them. The sync and
  * the by-address maintenance are Sony's assembly (l2cc_maintenance.S), as
  * are SKBL's (SYSMEM_SKBL) setup, enable, disable and whole-cache
  * maintenance; SKBL keeps the registers physical.
@@ -21,8 +20,6 @@
 ScePl310Registers *volatile s_cpuL2RegisterBase =
 	(ScePl310Registers *)PL310_REG_BASE;
 
-#ifndef SYSMEM_TZS
-
 #if defined(SYSMEM_SKBL)
 void CpuL2CacheSetup(void);
 void CpuL2CacheDisable(void);
@@ -41,8 +38,6 @@ void SceCpuForDriver_E813EBB2(void)
 	dsb();
 	CpuL2CacheSyncCore();
 }
-#endif
-
 #endif
 
 #if !defined(SYSMEM_SKBL)

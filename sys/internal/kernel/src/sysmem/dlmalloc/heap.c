@@ -107,7 +107,15 @@ _Static_assert(sizeof(KernelHeap) == 0x80, "KernelHeap size");
 SceUInt32 s_uncacheHeap = (SceUInt32)-1;	/* the uncached heap's UID */
 static KernelHeap *s_kernelHeap;		/* UIDManager +0x44 */
 static SceClass *s_heapClass;			/* "SceUIDKernelHeapClass" */
-#if FW_DEBUG
+
+/* the allocation hooks: a debug kernel's, not the secure world's */
+#if FW_DEBUG && !defined(SYSMEM_TZS)
+#define HEAP_HOOKS 1
+#else
+#define HEAP_HOOKS 0
+#endif
+
+#if HEAP_HOOKS
 static HeapHooks s_hooks;
 #endif
 
@@ -442,10 +450,12 @@ int HeapFree(KernelHeap *heap, void *ptr)
 
 	if (ptr != NULL)
 		size = mspace_usable_size(ptr);
+#ifndef SYSMEM_TZS	/* the secure world does not check the lock */
 	if (heap->lock == 0) {
 		SCE_DBG_PRINTF(0xb, 1148, "heap must been locked.(heap=%p)\n***\n", heap);
 		SCE_DBG_ASSERT_FAIL(1149);
 	}
+#endif
 	if (!(heap->flags & HEAP_ACTIVE)) {
 		SCE_DBG_PRINTF(0xb, 1154, "heap is not active\n");
 		ret = SCE_KERNEL_ERROR_HEAP_NOT_ACTIVE;
@@ -474,7 +484,7 @@ __attribute__((flatten)) static int HeapObjectFree(void *object, void *ptr)
 
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	ret = HeapFree(heap, ptr);
-#if FW_DEBUG
+#if HEAP_HOOKS
 	if (s_hooks.free != NULL)
 		s_hooks.free((SceUID)heap, ptr);
 #endif
@@ -485,7 +495,7 @@ __attribute__((flatten)) static int HeapObjectFree(void *object, void *ptr)
 /* name unknown: hooks on every allocation and free; NULL removes them */
 int SceSysmemForKernel_42834422(const HeapHooks *hooks)
 {
-#if FW_DEBUG
+#if HEAP_HOOKS
 	if (hooks == NULL) {
 		s_hooks.alloc = NULL;
 		s_hooks.free = NULL;
@@ -603,11 +613,13 @@ void *HeapAllocPrologueBody(KernelHeap *heap, SceSize size, SceSize alignment)
 	void *ptr;
 	int ret;
 
+#ifndef SYSMEM_TZS	/* the secure world does not check the lock */
 	if (heap->lock == 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 1050, "HeapAllocPrologue",
 				    "heap must been locked.(heap=%p)\n***\n", heap);
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 1051, "HeapAllocPrologue");
 	}
+#endif
 	if (!(heap->flags & HEAP_ACTIVE)) {
 		SCE_DBG_PRINTF_FUNC(0xb, 1058, "HeapAllocPrologue", "heap is not active.\n");
 		return NULL;
@@ -649,7 +661,7 @@ static int HeapObjectAlloc(void *object, SceSize size, void **ptr)
 
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	mem = HeapAllocPrologueNoAlign(heap, size);
-#if FW_DEBUG
+#if HEAP_HOOKS
 	if (mem != NULL && s_hooks.alloc != NULL)
 		s_hooks.alloc((SceUID)heap, mem, size, __builtin_return_address(0),
 			      HEAP_FUNC_ALLOC_METHOD);
@@ -734,7 +746,7 @@ void *SceSysmemForDriver_B415B5A8(SceUID uid, SceSize size, void *opt, const voi
 {
 	void *ptr = sceKernelAllocHeapMemoryWithOptionCore(uid, size, opt);
 
-#if FW_DEBUG
+#if HEAP_HOOKS
 	if (ptr != NULL && s_hooks.alloc != NULL)
 		s_hooks.alloc(uid, ptr, size, caller, HEAP_FUNC_ALLOC_HEAP_MEMORY_WITH_OPT);
 #endif
@@ -745,7 +757,7 @@ void *sceKernelAllocHeapMemoryWithOption(SceUID uid, SceSize size, SceAllocOpt *
 {
 	void *ptr = sceKernelAllocHeapMemoryWithOptionCore(uid, size, opt);
 
-#if FW_DEBUG
+#if HEAP_HOOKS
 	if (ptr != NULL && s_hooks.alloc != NULL)
 		s_hooks.alloc(uid, ptr, size, __builtin_return_address(0),
 			      HEAP_FUNC_ALLOC_HEAP_MEMORY_WITH_OPTION);
@@ -757,7 +769,7 @@ void *sceKernelAllocHeapMemory(SceUID uid, SceSize size)
 {
 	void *ptr = sceKernelAllocHeapMemoryWithOptionCore(uid, size, NULL);
 
-#if FW_DEBUG
+#if HEAP_HOOKS
 	if (ptr != NULL && s_hooks.alloc != NULL)
 		s_hooks.alloc(uid, ptr, size, __builtin_return_address(0),
 			      HEAP_FUNC_ALLOC_HEAP_MEMORY);
@@ -809,7 +821,7 @@ int sceKernelFreeHeapMemory(SceUID uid, void *ptr)
 	}
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	ret = HeapFree(heap, ptr);
-#if FW_DEBUG
+#if HEAP_HOOKS
 	if (ret == 0 && s_hooks.free != NULL)
 		s_hooks.free(uid, ptr);
 #endif
@@ -875,7 +887,7 @@ void *SceSysmemForKernel_85571907(SceSize size)
 {
 	void *ptr = HeapAllocHeapMemoryWithOption(s_kernelHeap, size, NULL);
 
-#if FW_DEBUG
+#if HEAP_HOOKS
 	if (ptr != NULL && s_hooks.alloc != NULL)
 		s_hooks.alloc(SCE_KERNEL_HEAP_ID, ptr, size, __builtin_return_address(0),
 			      HEAP_FUNC_ALLOC);
@@ -888,7 +900,7 @@ void *SceSysmemForKernel_CF3C3F7A(SceSize size, SceAllocOpt *opt)
 {
 	void *ptr = HeapAllocHeapMemoryWithOption(s_kernelHeap, size, opt);
 
-#if FW_DEBUG
+#if HEAP_HOOKS
 	if (ptr != NULL && s_hooks.alloc != NULL)
 		s_hooks.alloc(SCE_KERNEL_HEAP_ID, ptr, size, __builtin_return_address(0),
 			      HEAP_FUNC_ALLOC_WITH_OPT);
@@ -903,7 +915,7 @@ int SceSysmemForKernel_4233C16D(void *ptr)
 
 	intr = sceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	ret = HeapFree(heap, ptr);
-#if FW_DEBUG
+#if HEAP_HOOKS
 	if (ret == 0 && s_hooks.free != NULL) {
 		s_hooks.free(SCE_KERNEL_HEAP_ID, ptr);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&heap->lock, intr);
@@ -1291,7 +1303,7 @@ void *SceSysmemForDriver_7750CEA7(SceSize size)
 {
 	void *ptr = sceKernelAllocHeapMemoryWithOptionCore(s_uncacheHeap, size, NULL);
 
-#if FW_DEBUG
+#if HEAP_HOOKS
 	if (ptr != NULL && s_hooks.alloc != NULL)
 		s_hooks.alloc(s_uncacheHeap, ptr, size, __builtin_return_address(0),
 			      HEAP_FUNC_ALLOC_UNCACHE);
@@ -1303,7 +1315,7 @@ void *SceSysmemForDriver_0B4ED16A(SceSize size, SceAllocOpt *opt)
 {
 	void *ptr = sceKernelAllocHeapMemoryWithOptionCore(s_uncacheHeap, size, opt);
 
-#if FW_DEBUG
+#if HEAP_HOOKS
 	if (ptr != NULL && s_hooks.alloc != NULL)
 		s_hooks.alloc(s_uncacheHeap, ptr, size, __builtin_return_address(0),
 			      HEAP_FUNC_ALLOC_UNCACHE_WITH_OPTION);
