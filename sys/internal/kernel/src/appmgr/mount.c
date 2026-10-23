@@ -8134,6 +8134,71 @@ out:
 	return result;
 }
 
+/* Whether a running application (not a system one) uses PFS content. */
+int sceAppMgrGetPfsProcessStatus(void)
+{
+	struct AppState *app;
+	int running;
+
+	MOUNT_MAIN_LOCK(16136);
+	for (app = g_appmgrAppStates; app != &g_appmgrAppStates[20]; app++) {
+		if (app->process.requestedProcessState == 2 &&
+		    (app->process.content.contentFlags & 0x30) != 0 &&
+		    (app->launchInfo.processAttr & 1) == 0 &&
+		    (app->process.content.attribute & 8) == 0) {
+			running = 1;
+			goto unlock;
+		}
+	}
+	running = 0;
+unlock:
+	MOUNT_MAIN_UNLOCK(16161);
+	return running;
+}
+
+/*
+ * Whether a running application excludes the caller: one with PFS content (with titleId,
+ * a system one only when its save data is that title's), or the shell for a 0x39 caller.
+ */
+int sceAppMgrIsExclusiveProcessRunning(const char *titleId)
+{
+	SceSelfAuthInfo authInfo;
+	SceUInt64 excludedAuthorityId;
+	struct AppState *app;
+	int result;
+
+	result = sceKernelGetProcessSelfAuthInfo(0, &authInfo);
+	if (result < 0)
+		return result;
+	excludedAuthorityId = authInfo.programAuthorityId == 0x2800000000000039ULL ?
+			      0x280000000000002dULL : 0;
+	MOUNT_MAIN_LOCK(16197);
+	for (app = g_appmgrAppStates; app != &g_appmgrAppStates[20]; app++) {
+		if (app->process.requestedProcessState != 2)
+			continue;
+		result = sceKernelGetProcessSelfAuthInfo(app->process.processId, &authInfo);
+		if (result < 0)
+			goto unlock;
+		if (authInfo.programAuthorityId == excludedAuthorityId)
+			goto found;
+		if ((app->process.content.contentFlags & 0x30) == 0)
+			continue;
+		if ((app->launchInfo.processAttr & 1) == 0 &&
+		    (app->process.content.attribute & 8) == 0)
+			goto found;
+		if (titleId != NULL &&
+		    strncmp(app->process.content.saveDataTitleIds[0], titleId, 10) == 0)
+			goto found;
+	}
+	result = 0;
+	goto unlock;
+found:
+	result = 1;
+unlock:
+	MOUNT_MAIN_UNLOCK(16244);
+	return result;
+}
+
 int appmgrResolvePath(const char *path, SceUID pid, char *output, SceSize size)
 {
 	int permission, result;

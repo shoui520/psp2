@@ -166,7 +166,7 @@ int SceAppMgrForDriver_0B94BB90(int a, const void *id);	/* vitasdk: ksceAppMgrCl
 int SceAppMgrForDriver_1286AF64(int a, void *id);	/* vitasdk: ksceAppMgrCloudDataGetMcId */
 int SceAppMgrForDriver_EC408FEF(int a);	/* vitasdk: ksceAppMgrCloudDataClearMcId */
 int sceAppMgrGetPfsProcessStatus(void);
-int sceAppMgrIsExclusiveProcessRunning(const void *a);
+int sceAppMgrIsExclusiveProcessRunning(const char *titleId);
 /* an additional content's directory in gro0:acinst: its keystone and title */
 typedef struct SceAppMgrAcdirParam {
 	unsigned char keystone[96];
