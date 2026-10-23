@@ -102,7 +102,10 @@ int sceAppMgrLaunchAppForTest2(const char *appPath, const char *name, SceUInt32 
 
 /* not written in C yet: the prototypes are their callers' (vshbridge, deci4p_loadp, appmgr's
  * system calls) */
-int sceAppMgrLaunchAppByNameForDebugger(const char *titleId, int flags);
+int sceAppMgrLaunchAppByNameForDebugger(const char *name, const char *param);
+int SceAppMgrForDriver_99AA37C1(const char *name);
+struct SceAppMgrAppStatus;
+int SceAppMgrForDriver_DC13160A(SceUID pid, struct SceAppMgrAppStatus *status);
 int sceAppMgrDestroyAppForTest(SceUID pid);
 int sceAppMgrLiveAreaOperationByNameForLoadp(int operation, const char *appName);
 int sceAppMgrLiveAreaOperationForLoadp(int operation);

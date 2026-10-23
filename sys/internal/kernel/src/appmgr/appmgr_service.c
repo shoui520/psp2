@@ -306,6 +306,20 @@ int sceAppMgrGetIdByName(SceUID *pid, const char *appName)
 	return status;
 }
 
+/* A driver reads the status of the application of a process, without the lock. */
+int SceAppMgrForDriver_DC13160A(SceUID pid, struct SceAppMgrAppStatus *status)
+{
+	struct AppState *app;
+
+	if (status == NULL)
+		return 0x80802016;
+	app = appmgrFindSpecialApp(g_appmgrAppStates, pid);
+	if (app == NULL)
+		return SCE_APPMGR_ERROR_PARAM;
+	_appListGetAppStatus(app, status);
+	return 0;
+}
+
 SceUID sceAppMgrGetProcessIdByAppIdForShell(SceInt32 appId)
 {
 	SceUInt32 syscall = sceSyscallEnter();

@@ -1884,6 +1884,23 @@ int sceAppMgrLaunchAppForTest2(const char *appPath, const char *name, SceUInt32 
 	return error != 0 ? error : launchResult;
 }
 
+/* A test harness ends the application of a process. */
+int sceAppMgrDestroyAppForTest(SceUID pid)
+{
+	struct AppState *app;
+	int result, unlockResult;
+
+	result = _appListFindAndLockAppByProcessId(pid, &app);
+	if (result != 0)
+		return result;
+	if (g_appmgrDebugNotifier != NULL)
+		g_appmgrDebugNotifier(4, app->appId, app->process.processId, 0);
+	result = _appmgrProcessQuitProcess(app, 2, 0, 0);
+	unlockResult = _appListUnlockApp(app);
+	DELETE_APP_CHECK(unlockResult, 0, 1772, "sceAppMgrDestroyAppForTest");
+	return result;
+}
+
 /* The system calls that launch by name: the shell launches the application later. */
 int appmgrLaunchAppByName2(const SceChar8 *name, const char *param,
 		const AppmgrLaunchAppByNameOption *option)
@@ -2074,6 +2091,58 @@ int appmgrLaunchAppByNameForShell(SceUInt32 launchMode, const SceChar8 *name,
 		NULL, 0, 0);
 	sceSyscallLeave(syscallState);
 	return result;
+}
+
+/*
+ * The debugger launches by name from the kernel process and waits until the shell
+ * has launched the application (the launch callback signals the semaphore).
+ */
+int sceAppMgrLaunchAppByNameForDebugger(const char *name, const char *param)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	SceUID semaphore, callbackId;
+	int appId, result;
+
+	if (sceKernelGetProcessId() != SCE_KERNEL_PROCESS_ID) {
+		sceSyscallLeave(syscallState);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	/* Sony leaves the syscall state set when either object cannot be created. */
+	semaphore = sceKernelCreateSema("SceAppMgr:semafordbg", 0, 0, 1, NULL);
+	if (semaphore < 0)
+		return semaphore;
+	callbackId = sceKernelCreateCallback("SceAppMgr:cbkfordbg", 0, _onlaunchCallback,
+		&semaphore);
+	if (callbackId < 0) {
+		sceKernelDeleteSema(semaphore);
+		return callbackId;
+	}
+	appId = sceAppMgrLaunchAppByNameInternal(0x20000, (const SceChar8 *)name, param,
+		callbackId, -1, -1, 0, NULL, 0, 0);
+	result = SceThreadmgrForDriver_F55E4D86(semaphore, 1, NULL);
+	DELETE_APP_CHECK(result, 0, 2160, "sceAppMgrLaunchAppByNameForDebugger");
+	result = sceKernelDeleteSema(semaphore);
+	DELETE_APP_CHECK(result, 0, 2163, "sceAppMgrLaunchAppByNameForDebugger");
+	result = sceKernelDeleteCallback(callbackId);
+	DELETE_APP_CHECK(result, 0, 2166, "sceAppMgrLaunchAppByNameForDebugger");
+	sceSyscallLeave(syscallState);
+	return appId < 0 ? appId : 0;
+}
+
+/* The kernel process launches an application by name, without a parameter. */
+int SceAppMgrForDriver_99AA37C1(const char *name)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	int result;
+
+	if (sceKernelGetProcessId() != SCE_KERNEL_PROCESS_ID) {
+		sceSyscallLeave(syscallState);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	result = sceAppMgrLaunchAppByNameInternal(0, (const SceChar8 *)name, NULL, -1, -1, -1,
+		0, NULL, 0, 0);
+	sceSyscallLeave(syscallState);
+	return result < 0 ? result : 0;
 }
 
 /* The launches by URI: the shell finds the application from the parameter. */
