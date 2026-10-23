@@ -287,6 +287,9 @@ int appmgrSetShellScreenOrientationSyscall(int orientation);
 int appmgrSetRecommendedScreenOrientationForShellSyscall(int orientation);
 int _sceAppMgrSetPowerSaveModeInternal(int mode, int suspendBackgroundApps);
 
+/* app_arbitration.c */
+int _sceAppMgrDeleteAppInternal(struct AppState *app);
+
 /* appmgr_system.c */
 int _sceAppMgrSystemSuspend(void);
 int _sceAppMgrSystemResume(void);

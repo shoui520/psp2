@@ -133,6 +133,7 @@ _Static_assert(sizeof(AppmgrSoundOutExclusiveArguments) == 16,
 /* appmgr_device.c */
 int dumpBgmState(void);
 void _deviceSetApp(int appId, const char *name, const char *proxyName);
+void _deviceDeleteApp(int appId);
 void _deviceSetRunStatus(int appId, int isRunning);
 void _deviceSetProcessId(int appId, SceUID pid);
 int sceAppMgrGetCurrentBgmState(SceUID *currentBgmId, int *currentBgmState);

@@ -14,6 +14,8 @@
 #include <appmgr/appmgr.h>
 #include "appmgr_app_event.h"
 #include "appmgr_device.h"
+#include "appmgr_internal_util.h"
+#include "appmgr_shell_event.h"
 
 extern SceUID g_appmgrMainMutexOwner;
 
@@ -23,6 +25,10 @@ extern int _gcListenerThreadEntry(SceSize args, void *argp);
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrCore2Mutex;
 extern SceUID g_appmgrCore2MutexOwner;
+extern int g_appmgrAvailableFD;
+extern int g_appmgrAvailableDIR;
+extern int g_appmgrAvailablePrimaryResourceQuota;
+extern int g_appmgrAvailableSecondaryResourceQuota;
 
 SceUID g_appmgrUpdateNotifySemaphore = -1;
 SceUID g_appmgrProcessStateUpdaterThread = -1;
@@ -65,6 +71,9 @@ static const SceKernelDebugInfo gcListenerMutexPanicInfo = {
 	.funcHash = 0x9d536bce,
 };
 
+static const SceKernelDebugInfo deleteBudgetPanicInfo = {
+	.fileHash = 0xb8f4da66, .lineHash = 0x422f9b9f, .funcHash = 0xaad107e4,
+};
 static const SceKernelDebugInfo gcWaitProcessEventsPanicInfo = {
 	.fileHash = 0xb8f4da66, .lineHash = 0x658a5287, .funcHash = 0x1bbf336b,
 };
@@ -90,12 +99,12 @@ static const SceKernelDebugInfo removableGameCheckProcessEventsPanicInfo = {
 	.fileHash = 0xb8f4da66, .lineHash = 0x1b174385, .funcHash = 0x64fee94b,
 };
 
-void appmgrArbitrationPanic(void)
+__attribute__((noinline)) void appmgrArbitrationPanic(void)
 {
 	SceDebugForDriver_391B5B74(&arbitrationPanicInfo, __builtin_return_address(0));
 }
 
-_Noreturn void appmgrGcListenerMutexPanic(void)
+__attribute__((noinline)) _Noreturn void appmgrGcListenerMutexPanic(void)
 {
 	SceDebugForDriver_391B5B74(&gcListenerMutexPanicInfo, __builtin_return_address(0));
 }
@@ -164,7 +173,161 @@ int copyArgv(char *destination, const char *const *userArgv)
 		++userArgv;
 	}
 }
+#endif
 
+#if FW_DEBUG
+#define DELETE_APP_FAILURE(_value, _expected, _line, _func) do { \
+	sceAppMgrDump(); \
+	dumpBgmState(); \
+	SCE_DBG_ASSERT_PRINTF_FUNC(0, _line, _func, \
+		"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n", \
+		_value, _value, _expected, _expected); \
+} while (0)
+#define DELETE_APP_ASSERT(_cond, _line, _func) do { \
+	if (!(_cond)) { \
+		sceAppMgrDump(); \
+		dumpBgmState(); \
+		SCE_DBG_ASSERT_CHECK_FUNC(0, _line, _func); \
+	} \
+} while (0)
+#define DELETE_APP_CHECK(_value, _expected, _line, _func) do { \
+	if ((_value) != (_expected)) \
+		DELETE_APP_FAILURE(_value, _expected, _line, _func); \
+} while (0)
+#define DELETE_APP_MAIN_LOCK(_line, _func) do { \
+	int lockResult = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL); \
+	if (lockResult != 0) { \
+		SCE_DBG_PRINTF_FUNC(0, _line, _func, "Failed to lock ret=0x%08x\n", lockResult); \
+		sceAppMgrDump(); \
+		dumpBgmState(); \
+		SCE_DBG_ASSERT_CHECK_FUNC(0, _line, _func); \
+	} else { \
+		g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
+	} \
+} while (0)
+#define DELETE_APP_MAIN_UNLOCK(_line, _func) do { \
+	int unlockResult; \
+	g_appmgrMainMutexOwner = -1; \
+	unlockResult = sceKernelUnlockMutex(g_appmgrMainMutex, 1); \
+	if (unlockResult != 0) \
+		DELETE_APP_FAILURE(unlockResult, 0, _line, _func); \
+} while (0)
+#define DELETE_APP_PANIC_CHECK(_result, _line, _func) \
+	DELETE_APP_CHECK(_result, 0, _line, _func)
+#else
+#define DELETE_APP_ASSERT(_cond, _line, _func) do { \
+	if (!(_cond)) \
+		appmgrArbitrationPanic(); \
+} while (0)
+#define DELETE_APP_CHECK(_value, _expected, _line, _func) \
+	DELETE_APP_ASSERT((_value) == (_expected), _line, _func)
+#define DELETE_APP_MAIN_LOCK(_line, _func) do { \
+	if (sceKernelLockMutex(g_appmgrMainMutex, 1, NULL) != 0) \
+		appmgrGcListenerMutexPanic(); \
+	g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
+} while (0)
+#define DELETE_APP_MAIN_UNLOCK(_line, _func) do { \
+	g_appmgrMainMutexOwner = -1; \
+	if (sceKernelUnlockMutex(g_appmgrMainMutex, 1) != 0) \
+		appmgrGcListenerMutexPanic(); \
+} while (0)
+#define DELETE_APP_PANIC_CHECK(_result, _line, _func) do { \
+	if ((_result) != 0) \
+		SceDebugForDriver_00CCE39C(&deleteBudgetPanicInfo, __builtin_return_address(0), \
+			"0x%08x,0x%08x\n", _result, 0); \
+} while (0)
+#endif
+
+/* what is left plus what the applications hold must be the whole of each resource */
+static inline __attribute__((always_inline)) void checkFds(void)
+{
+	struct AppState *app;
+	int fd = g_appmgrAvailableFD;
+	int dir = g_appmgrAvailableDIR;
+	int primary = g_appmgrAvailablePrimaryResourceQuota;
+	int secondary = g_appmgrAvailableSecondaryResourceQuota;
+	int maxFD, directoryFds;
+
+	DELETE_APP_ASSERT(g_appmgrMainMutexOwner == sceKernelGetThreadId(), 516, "checkFds");
+	for (app = g_appmgrAppStates; app != &g_appmgrAppStates[20]; ++app) {
+		if (app->launchInfo.budgetType == 0 && app->process.budgetId > 0) {
+			maxFD = app->process.maxFD;
+			directoryFds = maxFD > 2 ? maxFD - 2 : maxFD;
+			fd += maxFD;
+			dir += directoryFds * (int)app->process.maxDIR;
+			primary += app->process.primaryResourceQuota;
+			secondary += app->process.secondaryResourceQuota;
+		}
+	}
+	DELETE_APP_CHECK(fd, 92, 532, "checkFds");
+	DELETE_APP_CHECK(dir, 552, 533, "checkFds");
+	DELETE_APP_CHECK(primary, 16, 534, "checkFds");
+	DELETE_APP_CHECK(secondary, 12, 535, "checkFds");
+}
+
+/* the application is unloaded: gives its resources back and frees its slot */
+int _sceAppMgrDeleteAppInternal(struct AppState *app)
+{
+	struct AppmgrWaitObject *unloadWaiter;
+	SceUInt32 budgetType, requestedProcessState;
+	SceUID budgetId;
+	int maxFD, permission, result;
+
+	DELETE_APP_ASSERT(app != NULL && app->mutexOwner == sceKernelGetThreadId(), 2345,
+		"_sceAppMgrDeleteAppInternal");
+	DELETE_APP_ASSERT(g_appmgrMainMutexOwner != sceKernelGetThreadId(), 2346,
+		"_sceAppMgrDeleteAppInternal");
+	DELETE_APP_MAIN_LOCK(2348, "_sceAppMgrDeleteAppInternal");
+	if (appmgrGetAppRunStatus(app) != 0x800)
+		return (int)0x80802013;
+	budgetType = app->launchInfo.budgetType;
+	budgetId = -1;
+	if (budgetType == 0) {
+		budgetId = app->process.budgetId;
+		app->process.budgetId = -1;
+		if (budgetId > 0) {
+			maxFD = app->process.maxFD;
+			g_appmgrAvailableFD += maxFD;
+			if (maxFD > 2)
+				maxFD -= 2;
+			g_appmgrAvailableDIR += (int)app->process.maxDIR * maxFD;
+			g_appmgrAvailablePrimaryResourceQuota += app->process.primaryResourceQuota;
+			g_appmgrAvailableSecondaryResourceQuota += app->process.secondaryResourceQuota;
+			app->process.maxFD = 0;
+			app->process.maxDIR = 0;
+			app->process.primaryResourceQuota = 0;
+			app->process.secondaryResourceQuota = 0;
+			checkFds();
+		}
+	}
+	DELETE_APP_MAIN_UNLOCK(2374, "_sceAppMgrDeleteAppInternal");
+	if (budgetId > 0) {
+		permission = sceKernelSetThreadAccessLevel(0x80);
+		result = SceProcessmgrForKernel_459A223B(budgetId);
+		DELETE_APP_PANIC_CHECK(result, 2382, "_sceAppMgrDeleteAppInternal");
+		sceKernelSetThreadAccessLevel(permission);
+	}
+	requestedProcessState = app->process.requestedProcessState;
+	DELETE_APP_MAIN_LOCK(2388, "_sceAppMgrDeleteAppInternal");
+	_deviceDeleteApp(app->appId);
+	unloadWaiter = app->process.unloadWaiter;
+	app->process.unloadWaiter = NULL;
+	appmgrClearPendingAppEvents(app);
+	_appListClearAppState(app);
+	DELETE_APP_MAIN_UNLOCK(2397, "_sceAppMgrDeleteAppInternal");
+	if (requestedProcessState == 2)
+		_shellEventAppRunningStatusChangedQueuePush();
+	if (budgetType == 0)
+		appmgrUtilWaitObjectNotify(appmgrUtilGetWaitObject(1));
+	else if (budgetType == 1)
+		appmgrUtilWaitObjectNotify(appmgrUtilGetWaitObject(2));
+	appmgrUtilWaitObjectNotify(appmgrUtilGetWaitObject(3));
+	if (unloadWaiter != NULL)
+		appmgrUtilWaitObjectNotify(unloadWaiter);
+	return 0;
+}
+
+#if FW_DEBUG
 void sendResumeToPid(SceUID pid)
 {
 	struct AppState *app = NULL;
