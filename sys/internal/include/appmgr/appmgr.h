@@ -158,7 +158,8 @@ int SceAppMgrForDriver_B53FB98E(const char *path, void *a);	/* vitasdk: ksceAppM
 int SceAppMgrForDriver_ED87F191(const void *a, int b, const void *c, void *d);
 int SceAppMgrForDriver_55D48190(const void *header);	/* vitasdk: ksceAppMgrCloudDataVerifyHeader */
 int SceAppMgrForDriver_2FAA6ABD(void *key);	/* vitasdk: ksceAppMgrCloudDataSetupKey */
-int sceAppMgrCloudDataSrcMount(int a, const void *b, void *c);
+int sceAppMgrCloudDataSrcMount(unsigned int type, const char *titleId,
+			       struct ScePfsRndDriveId *mountPoint);
 int sceAppMgrCloudDataDstCreateMount(const void *a, void *b);
 int sceAppMgrFakeSaveDataCreateMount(const char *path, void *b);
 int SceAppMgrForDriver_0B94BB90(int a, const void *id);	/* vitasdk: ksceAppMgrCloudDataSetMcId */

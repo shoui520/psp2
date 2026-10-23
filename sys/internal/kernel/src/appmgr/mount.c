@@ -3986,7 +3986,7 @@ int sceAppMgrAddContAddMount(const AppmgrAddMountParam *param, int add)
 	result = appmgrReadKeystone(0, mountPoint.drive_id, keystone);
 	if (result < 0)
 		goto error;
-	result = SceSblPostSsMgrForDriver_F86F1452(keystone, param->passcode);
+	result = SceSblPostSsMgrForDriver_F86F1452((const ScePostSsKeystone *)keystone, param->passcode);
 	if (result >= 0)
 		goto unlock;
 	result = 0x80800006;
@@ -4859,7 +4859,7 @@ int sceAppMgrSaveDataAddMount(const AppmgrAddMountParam *param)
 	result = appmgrReadKeystone(0, mountPoint.drive_id, keystone);
 	if (result < 0)
 		goto error;
-	result = SceSblPostSsMgrForDriver_F86F1452(keystone, param->passcode);
+	result = SceSblPostSsMgrForDriver_F86F1452((const ScePostSsKeystone *)keystone, param->passcode);
 	if (result >= 0)
 		goto unlock;
 	result = 0x80800006;
@@ -5893,7 +5893,7 @@ checkCategory:
 						break;
 					}
 				}
-				result = SceSblPostSsMgrForDriver_DDA6FA6D(content->keystone,
+				result = SceSblPostSsMgrForDriver_DDA6FA6D((const ScePostSsKeystone *)content->keystone,
 									  hasKlicensee);
 				if (result < 0)
 					goto failed;
@@ -7669,6 +7669,88 @@ void appmgrDebugHexDump(const void *data, SceSize size)
 {
 }
 
+/*
+ * Mounts a title's save data (1: grw0, 2 and 3: the account's ux0 folder) for a cloud
+ * upload, under a "ts" drive of the caller.
+ */
+int sceAppMgrCloudDataSrcMount(unsigned int type, const char *titleId,
+			       ScePfsRndDriveId *mountPoint)
+{
+	ScePfsRndDriveId drive = { "" };
+	ScePfsRndDriveId klicensee;
+	union {
+		SceSelfAuthInfo authInfo;
+		ScePfsRndDriveId key;
+	} info;
+	unsigned char random[8];
+	char path[64];
+	struct AppState *app;
+	AppmgrMountHolder *holder;
+	AppmgrProcessContent *content;
+	int result;
+
+	result = sceKernelGetProcessSelfAuthInfo(0, &info.authInfo);
+	if (result < 0)
+		return result;
+	if (info.authInfo.programAuthorityId != 0x280000000000002dULL &&
+	    info.authInfo.programAuthorityId != 0x2800000000000001ULL &&
+	    info.authInfo.programAuthorityId != 0x2800000000000039ULL)
+		return (int)0x80800009;
+	if (mountPoint == NULL || titleId == NULL)
+		return (int)0x80800001;
+	__builtin_memset(&info.key, 0, sizeof(info.key));
+	__builtin_memset(&klicensee, 0, sizeof(klicensee));
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		return result;
+	if (type - 1 > 2 ||
+	    !(APPMGR_IS_UPPER(titleId[0]) && APPMGR_IS_UPPER(titleId[1]) &&
+	      APPMGR_IS_UPPER(titleId[2]) && APPMGR_IS_UPPER(titleId[3]) &&
+	      APPMGR_IS_DIGIT(titleId[4]) && APPMGR_IS_DIGIT(titleId[5]) &&
+	      APPMGR_IS_DIGIT(titleId[6]) && APPMGR_IS_DIGIT(titleId[7]) &&
+	      APPMGR_IS_DIGIT(titleId[8]) && titleId[9] == '\0')) {
+		result = (int)0x80800001;
+		goto unlock;
+	}
+	if (type - 2 <= 1) {
+		if (g_appmgrAccountDirectory[0] == 0)
+			appmgrUpdateAccountDirectory();
+		snprintf(path, sizeof(path), "ux0:/user/%s/savedata/%s",
+			 g_appmgrAccountDirectory, titleId);
+	} else {
+		snprintf(path, sizeof(path), "grw0:savedata/%s", titleId);
+	}
+	result = appmgrReadSealedKey(path, &info.key);
+	if (result < 0)
+		goto unlock;
+	klicensee = info.key;
+	result = sceSblRngPseudoRandomNumber(random, sizeof(random));
+	if (result < 0)
+		goto unlock;
+	snprintf(drive.drive_id, sizeof(drive.drive_id), "%s%02x%02x%02x%02x%02x%02xd", "ts",
+		 random[0], random[1], random[2], random[3], random[4], random[5]);
+	drive.drive_id[14] = ':';
+	drive.drive_id[15] = '\0';
+	MOUNT_MAIN_LOCK(15274);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app != NULL) {
+		content = &app->process.content;
+		holder = &app->process.mounts;
+	} else {
+		holder = NULL;
+		content = NULL;
+	}
+	MOUNT_MAIN_UNLOCK(15281);
+	if (app != NULL)
+		result = appmgrMount(0, holder, 1005, content->titleId, path, &drive,
+				     &klicensee, mountPoint);
+	else
+		result = (int)0x80801002;
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+	return result;
+}
+
 int appmgrResolvePath(const char *path, SceUID pid, char *output, SceSize size)
 {
 	int permission, result;
@@ -8404,7 +8486,7 @@ int sceAppMgrRdrfpMount(unsigned int type, const char *path, const SceAppMgrRdrf
 		if (index == 96) {
 			verified = 0;
 		} else {
-			verified = SceSblPostSsMgrForDriver_DDA6FA6D(keystone, 0);
+			verified = SceSblPostSsMgrForDriver_DDA6FA6D((const ScePostSsKeystone *)keystone, 0);
 			if (verified != 0 && hasPasscode == 0)
 				goto mounted;
 		}
@@ -8434,7 +8516,7 @@ mounted:
 			result = (int)0x80800001;
 			goto failed;
 		}
-		if (SceSblPostSsMgrForDriver_F86F1452(keystone, (const char *)passcode) < 0) {
+		if (SceSblPostSsMgrForDriver_F86F1452((const ScePostSsKeystone *)keystone, passcode) < 0) {
 			result = (int)0x80800006;
 			goto failed;
 		}

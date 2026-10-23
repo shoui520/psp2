@@ -22,6 +22,17 @@ typedef struct SceActivationKey {
 	SceUInt8 sum[4];
 } SceActivationKey;
 
+/* a keystone (names unknown) */
+typedef struct ScePostSsKeystone {
+	char magic[8];
+	SceUInt16 version;
+	SceUInt16 type;
+	SceUInt8 reserved[4];
+	SceUInt8 nonce[0x10];
+	SceUInt8 passcodeHmac[0x20];
+	SceUInt8 hmac[0x20];
+} ScePostSsKeystone;
+
 /* vitasdk: ksceSblPostSsMgrActivate */
 int SceSblPostSsMgrForDriver_0298382B(const char *path);
 /* vitasdk: ksceSblRSA2048CreateSignature */
@@ -56,10 +67,10 @@ int SceSblPostSsMgrForDriver_C977601E(void);
 int SceSblPostSsMgrForDriver_CB5436BD(SceUInt32 type, SceSize size, void *key);
 int SceSblPostSsMgrForDriver_DC68EE5C(void);
 /* vitasdk: ksceSblPostSsMgrVerifyKeystone */
-int SceSblPostSsMgrForDriver_DDA6FA6D(const void *keystone, int hasKlicensee);
+int SceSblPostSsMgrForDriver_DDA6FA6D(const ScePostSsKeystone *keystone, SceUInt16 type);
 int SceSblPostSsMgrForDriver_DE5150FE(SceUInt32 *time);	/* vitasdk: ksceSblRtcMgrGetCpRtcLogical */
 /* vitasdk: ksceSblPostSsMgrVerifyKeystoneWithPasscode */
-int SceSblPostSsMgrForDriver_F86F1452(const void *keystone, const char *passcode);
+int SceSblPostSsMgrForDriver_F86F1452(const ScePostSsKeystone *keystone, const void *passcode);
 /* vitasdk: _ksceSblPostSsMgrExecutePmSmF00dCommand */
 int SceSblPostSsMgrForDriver_FE92A318(SceUInt32 flags);
 int sceSblPmMgrAuthEtoI(void);

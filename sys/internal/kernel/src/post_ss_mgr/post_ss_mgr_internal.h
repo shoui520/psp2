@@ -58,17 +58,6 @@ extern SceKernelFastMutex g_postSsMgrKeysMutex;	/* name unknown */
 extern SceKernelFastMutex g_postSsMgrSdMutex;	/* name unknown */
 extern SceKernelFastMutex g_postSsMgrCloudMutex;	/* name unknown */
 
-/* a keystone (names unknown) */
-typedef struct ScePostSsKeystone {
-	char magic[8];
-	SceUInt16 version;
-	SceUInt16 type;
-	SceUInt8 reserved[4];
-	SceUInt8 nonce[0x10];
-	SceUInt8 passcodeHmac[0x20];
-	SceUInt8 hmac[0x20];
-} ScePostSsKeystone;
-
 /* sealedkey.c */
 int getSealedKeySecret(void *encKey, void *secret);
 
