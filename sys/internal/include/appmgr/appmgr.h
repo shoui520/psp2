@@ -169,9 +169,9 @@ int sceAppMgrCloudDataSrcMount(unsigned int type, const char *titleId,
 			       struct ScePfsRndDriveId *mountPoint);
 int sceAppMgrCloudDataDstCreateMount(const char *name, struct ScePfsRndDriveId *mountPoint);
 int sceAppMgrFakeSaveDataCreateMount(const char *path, struct ScePfsRndDriveId *mountPoint);
-int SceAppMgrForDriver_0B94BB90(int a, const void *id);	/* vitasdk: ksceAppMgrCloudDataSetMcId */
-int SceAppMgrForDriver_1286AF64(int a, void *id);	/* vitasdk: ksceAppMgrCloudDataGetMcId */
-int SceAppMgrForDriver_EC408FEF(int a);	/* vitasdk: ksceAppMgrCloudDataClearMcId */
+int SceAppMgrForDriver_0B94BB90(int location, const SceUInt64 *mcId);	/* vitasdk: ksceAppMgrCloudDataSetMcId */
+int SceAppMgrForDriver_1286AF64(int location, SceUInt64 *mcId);	/* vitasdk: ksceAppMgrCloudDataGetMcId */
+int SceAppMgrForDriver_EC408FEF(int location);	/* vitasdk: ksceAppMgrCloudDataClearMcId */
 int sceAppMgrGetPfsProcessStatus(void);
 int sceAppMgrIsExclusiveProcessRunning(const char *titleId);
 /* an additional content's directory in gro0:acinst: its keystone and title */

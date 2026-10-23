@@ -24,6 +24,7 @@
 #include <sysmem/debug.h>
 #include <gcauthmgr/sblgcauthmgrmssavebb.h>
 #include "param_sfo.h"
+#include <ss_mgr/ss_mgr.h>
 
 extern SceUID g_appmgrSaveDataHeap;
 extern SceUID g_appmgrCoreHeap;
@@ -4330,6 +4331,352 @@ int SceAppMgrForDriver_62E98C42(const void *header)
 	if (header == NULL)
 		return 0x80800001;
 	return 0x80800083;
+}
+
+/*
+ * The cloud data MC ID, kept either in tm0:/clouddata/mcid.dat or in the memory card's
+ * media ID sector; NVS area 5 bit 0 chooses the memory card when the caller does not.
+ */
+typedef struct AppmgrCloudDataMcIdFile {
+	SceUInt32 magic;	/* "CDMI" */
+	SceUInt32 version;
+	SceUInt64 mcId;
+	SceUInt8 reserved[48];
+} AppmgrCloudDataMcIdFile;
+
+typedef struct AppmgrMediaIdSector {
+	SceUInt32 magic;	/* "\0DIM" */
+	SceUInt32 version;
+	SceUInt32 flags;	/* bit 0: the MC ID is set */
+	SceUInt8 mcId[8];
+	SceUInt8 unused[8];
+	SceUInt8 reserved[484];
+} AppmgrMediaIdSector;
+
+_Static_assert(sizeof(AppmgrCloudDataMcIdFile) == 64, "mcid.dat size");
+_Static_assert(sizeof(AppmgrMediaIdSector) == 512, "media ID sector size");
+
+#define MCID_LOCATION_MEMORY_CARD	1
+#define MCID_LOCATION_CLOUD_DATA	2
+#define CLOUD_DATA_MCID_MAGIC		0x494D4443
+#define MEDIA_ID_SECTOR_MAGIC		0x4D494400
+#define MEDIA_ID_SECTOR_OFFSET		512
+
+static const unsigned char encodedMemoryCardMediaId[32] = {
+	(unsigned char)~'s', (unsigned char)~'d', (unsigned char)~'s',
+	(unsigned char)~'t', (unsigned char)~'o', (unsigned char)~'r',
+	(unsigned char)~'0', (unsigned char)~':', (unsigned char)~'x',
+	(unsigned char)~'m', (unsigned char)~'c', (unsigned char)~'-',
+	(unsigned char)~'l', (unsigned char)~'p', (unsigned char)~'-',
+	(unsigned char)~'a', (unsigned char)~'c', (unsigned char)~'t',
+	(unsigned char)~'-', (unsigned char)~'m', (unsigned char)~'e',
+	(unsigned char)~'d', (unsigned char)~'i', (unsigned char)~'a',
+	(unsigned char)~'i', (unsigned char)~'d', 0
+};
+static const unsigned char encodedCloudDataMcIdFile[24] = {
+	(unsigned char)~'t', (unsigned char)~'m', (unsigned char)~'0',
+	(unsigned char)~':', (unsigned char)~'/', (unsigned char)~'c',
+	(unsigned char)~'l', (unsigned char)~'o', (unsigned char)~'u',
+	(unsigned char)~'d', (unsigned char)~'d', (unsigned char)~'a',
+	(unsigned char)~'t', (unsigned char)~'a', (unsigned char)~'/',
+	(unsigned char)~'m', (unsigned char)~'c', (unsigned char)~'i',
+	(unsigned char)~'d', (unsigned char)~'.', (unsigned char)~'d',
+	(unsigned char)~'a', (unsigned char)~'t', 0
+};
+static const unsigned char encodedCloudDataDirectory[16] = {
+	(unsigned char)~'t', (unsigned char)~'m', (unsigned char)~'0',
+	(unsigned char)~':', (unsigned char)~'/', (unsigned char)~'c',
+	(unsigned char)~'l', (unsigned char)~'o', (unsigned char)~'u',
+	(unsigned char)~'d', (unsigned char)~'d', (unsigned char)~'a',
+	(unsigned char)~'t', (unsigned char)~'a', 0
+};
+
+static SceUInt64 g_appmgrCloudDataMcId;
+static SceUInt64 g_appmgrMemoryCardMcId;
+
+int SceAppMgrForDriver_0B94BB90(int location, const SceUInt64 *mcId)
+{
+	AppmgrCloudDataMcIdFile file;
+	AppmgrMediaIdSector *sector;
+	SceUInt64 newMcId;
+	char path[64];
+	int useCloudData, permission, fd, written, result;
+
+	if (location == MCID_LOCATION_MEMORY_CARD) {
+		useCloudData = 0;
+	} else if (location == MCID_LOCATION_CLOUD_DATA) {
+		useCloudData = 1;
+	} else {
+		result = sceSblSsGetNvsData(5, &newMcId, 1);
+		if (result < 0)
+			return result;
+		useCloudData = !(*(SceUInt8 *)&newMcId & 1);
+	}
+
+	if (mcId != NULL) {
+		newMcId = *mcId;
+	} else if (useCloudData && g_appmgrCloudDataMcId != 0) {
+		newMcId = g_appmgrCloudDataMcId;
+	} else if (!useCloudData && g_appmgrMemoryCardMcId != 0) {
+		newMcId = g_appmgrMemoryCardMcId;
+	} else {
+		result = sceSblRngPseudoRandomNumber(&newMcId, sizeof(newMcId));
+		if (result < 0)
+			return result;
+	}
+
+	if (useCloudData) {
+		g_appmgrCloudDataMcId = 0;
+		memset(&file, 0, sizeof(file));
+		__builtin_memcpy(&file.magic, "CDMI", sizeof(file.magic));
+		file.version = 1;
+		file.mcId = newMcId;
+		permission = sceKernelSetThreadAccessLevel(0x80);
+		result = appmgrDecodeString(encodedCloudDataDirectory, path, sizeof(path));
+		if (result < 0)
+			goto restore;
+		result = sceIoMkdir(path, 6);
+		if (result < 0 && result != (int)0x80010011)
+			goto restore;
+		result = appmgrDecodeString(encodedCloudDataMcIdFile, path, sizeof(path));
+		if (result < 0)
+			goto restore;
+		fd = sceIoOpen(path, 0x603, 6);
+		if (fd < 0) {
+			result = 0x80800087;
+			goto restore;
+		}
+		written = sceIoWrite(fd, &file, sizeof(file));
+		sceIoClose(fd);
+		if (written != sizeof(file)) {
+			result = 0x80800089;
+			goto restore;
+		}
+		sceKernelSetThreadAccessLevel(permission);
+		g_appmgrCloudDataMcId = newMcId;
+		return 0;
+	}
+
+	g_appmgrMemoryCardMcId = 0;
+	permission = sceKernelSetThreadAccessLevel(0x80);
+	sector = appmgrAllocMountHeapMemory(sizeof(*sector));
+	if (sector == NULL) {
+		result = 0x80801006;
+		goto restore;
+	}
+	memset(sector, 0xFF, sizeof(*sector));
+	sector->magic = MEDIA_ID_SECTOR_MAGIC;
+	sector->version = 1;
+	__builtin_memcpy(sector->mcId, &newMcId, sizeof(sector->mcId));
+	sector->flags = 1;
+	memset(sector->reserved, 0, sizeof(sector->reserved));
+	result = appmgrDecodeString(encodedMemoryCardMediaId, path, sizeof(path));
+	if (result < 0)
+		goto free_sector;
+	fd = sceIoOpen(path, 3, 0);
+	if (fd < 0) {
+		result = 0x80800087;
+		goto free_sector;
+	}
+	result = 0;
+	if ((int)sceIoLseek(fd, MEDIA_ID_SECTOR_OFFSET, 0) < 0) {
+		result = 0x80800089;
+		sceIoClose(fd);
+		goto free_sector;
+	}
+	written = sceIoWrite(fd, sector, sizeof(*sector));
+	sceIoClose(fd);
+	if (written != sizeof(*sector)) {
+		result = 0x80800089;
+		goto free_sector;
+	}
+	appmgrFreeMountHeapMemory(sector);
+	sceKernelSetThreadAccessLevel(permission);
+	g_appmgrMemoryCardMcId = newMcId;
+	return result;
+free_sector:
+	appmgrFreeMountHeapMemory(sector);
+restore:
+	sceKernelSetThreadAccessLevel(permission);
+	return result;
+}
+
+int SceAppMgrForDriver_1286AF64(int location, SceUInt64 *mcId)
+{
+	AppmgrCloudDataMcIdFile file;
+	AppmgrMediaIdSector *sector;
+	SceUInt64 nvsData;
+	char path[64];
+	int permission, fd, size, result;
+
+	if (mcId == NULL)
+		return 0x80800001;
+	if (location == MCID_LOCATION_MEMORY_CARD)
+		goto memory_card;
+	if (location != MCID_LOCATION_CLOUD_DATA) {
+		result = sceSblSsGetNvsData(5, &nvsData, 1);
+		if (result < 0)
+			return result;
+		if (*(SceUInt8 *)&nvsData & 1)
+			goto memory_card;
+	}
+
+	if (g_appmgrCloudDataMcId != 0) {
+		*mcId = g_appmgrCloudDataMcId;
+		return 0;
+	}
+	memset(&file, 0, sizeof(file));
+	permission = sceKernelSetThreadAccessLevel(0x80);
+	result = appmgrDecodeString(encodedCloudDataMcIdFile, path, sizeof(path));
+	if (result < 0)
+		goto restore;
+	fd = sceIoOpen(path, 1, 0);
+	if (fd < 0) {
+		result = 0x80800087;
+		goto restore;
+	}
+	size = sceIoRead(fd, &file, sizeof(file));
+	sceIoClose(fd);
+	if (size < 0) {
+		result = 0x80800088;
+		goto restore;
+	}
+	if (size == sizeof(file)) {
+		appmgrDebugHexDump(&file, sizeof(file));
+		if (file.magic == CLOUD_DATA_MCID_MAGIC && file.version == 1) {
+			sceKernelSetThreadAccessLevel(permission);
+			*mcId = file.mcId;
+			g_appmgrCloudDataMcId = file.mcId;
+			return 0;
+		}
+	}
+	result = 0x80800086;
+	goto restore;
+
+memory_card:
+	if (g_appmgrMemoryCardMcId != 0) {
+		*mcId = g_appmgrMemoryCardMcId;
+		return 0;
+	}
+	permission = sceKernelSetThreadAccessLevel(0x80);
+	sector = appmgrAllocMountHeapMemory(sizeof(*sector));
+	if (sector == NULL) {
+		result = 0x80801006;
+		goto restore;
+	}
+	memset(sector, 0, sizeof(*sector));
+	result = appmgrDecodeString(encodedMemoryCardMediaId, path, sizeof(path));
+	if (result < 0)
+		goto free_sector;
+	fd = sceIoOpen(path, 1, 0);
+	if (fd < 0) {
+		result = 0x80800087;
+		goto free_sector;
+	}
+	if ((int)sceIoLseek(fd, MEDIA_ID_SECTOR_OFFSET, 0) < 0) {
+		result = 0x80800088;
+		sceIoClose(fd);
+		goto free_sector;
+	}
+	size = sceIoRead(fd, sector, sizeof(*sector));
+	sceIoClose(fd);
+	if (size < 0) {
+		result = 0x80800088;
+		goto free_sector;
+	}
+	if (size != sizeof(*sector)) {
+		result = 0x80800086;
+		goto free_sector;
+	}
+	appmgrDebugHexDump(sector, sizeof(*sector));
+	if (sector->magic != MEDIA_ID_SECTOR_MAGIC || sector->version != 1 ||
+	    !(sector->flags & 1)) {
+		result = 0x80800085;
+		goto free_sector;
+	}
+	__builtin_memcpy(mcId, sector->mcId, sizeof(sector->mcId));
+	appmgrFreeMountHeapMemory(sector);
+	sceKernelSetThreadAccessLevel(permission);
+	g_appmgrMemoryCardMcId = *mcId;
+	return 0;
+free_sector:
+	appmgrFreeMountHeapMemory(sector);
+restore:
+	sceKernelSetThreadAccessLevel(permission);
+	return result;
+}
+
+int SceAppMgrForDriver_EC408FEF(int location)
+{
+	AppmgrMediaIdSector *sector;
+	SceUInt32 nvsData;
+	char path[64];
+	int permission, fd, written, result;
+
+	if (location == MCID_LOCATION_MEMORY_CARD)
+		goto memory_card;
+	if (location != MCID_LOCATION_CLOUD_DATA) {
+		result = sceSblSsGetNvsData(5, &nvsData, 1);
+		if (result < 0)
+			return result;
+		if (*(SceUInt8 *)&nvsData & 1)
+			goto memory_card;
+	}
+
+	permission = sceKernelSetThreadAccessLevel(0x80);
+	result = appmgrDecodeString(encodedCloudDataMcIdFile, path, sizeof(path));
+	if (result < 0)
+		goto restore;
+	result = sceIoRemove(path);
+	if (result < 0 && result != (int)0x80010002)
+		goto restore;
+	result = appmgrDecodeString(encodedCloudDataDirectory, path, sizeof(path));
+	if (result < 0)
+		goto restore;
+	result = sceIoRmdir(path);
+	if (result < 0 && result != (int)0x80010002)
+		goto restore;
+	sceKernelSetThreadAccessLevel(permission);
+	g_appmgrCloudDataMcId = 0;
+	return 0;
+
+memory_card:
+	permission = sceKernelSetThreadAccessLevel(0x80);
+	sector = appmgrAllocMountHeapMemory(sizeof(*sector));
+	if (sector == NULL) {
+		result = 0x80801006;
+		goto restore;
+	}
+	memset(sector, 0xFF, sizeof(*sector));
+	result = appmgrDecodeString(encodedMemoryCardMediaId, path, sizeof(path));
+	if (result < 0)
+		goto free_sector;
+	fd = sceIoOpen(path, 3, 0);
+	if (fd < 0) {
+		result = 0x80800087;
+		goto free_sector;
+	}
+	result = 0;
+	if ((int)sceIoLseek(fd, MEDIA_ID_SECTOR_OFFSET, 0) < 0) {
+		result = 0x80800089;
+		sceIoClose(fd);
+		goto free_sector;
+	}
+	written = sceIoWrite(fd, sector, sizeof(*sector));
+	sceIoClose(fd);
+	if (written != sizeof(*sector)) {
+		result = 0x80800089;
+		goto free_sector;
+	}
+	appmgrFreeMountHeapMemory(sector);
+	sceKernelSetThreadAccessLevel(permission);
+	g_appmgrMemoryCardMcId = 0;
+	return result;
+free_sector:
+	appmgrFreeMountHeapMemory(sector);
+restore:
+	sceKernelSetThreadAccessLevel(permission);
+	return result;
 }
 
 int SceAppMgrForDriver_43A35729(const SceAppMgrPhotoMountParam *param)

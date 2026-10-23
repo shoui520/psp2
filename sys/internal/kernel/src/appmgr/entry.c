@@ -185,14 +185,11 @@ int _sceAppMgrGetVs0UserDataDrive(char *mountPoint)
 }
 
 STUB(SceAppMgrForDriver_088670A6)
-STUB_FUNC(int, SceAppMgrForDriver_0B94BB90, (int a, const void *id))
-STUB_FUNC(int, SceAppMgrForDriver_1286AF64, (int a, void *id))
 STUB_FUNC(int, SceAppMgrForDriver_193784A9, (void *a))
 STUB(sceAppMgrGetSystemDataFile)
 STUB_FUNC(int, SceAppMgrForDriver_B53FB98E, (const char *path, void *a))
 STUB(sceAppMgrSaveSafeMemory)
 STUB(SceAppMgrForDriver_EA75D157)
-STUB_FUNC(int, SceAppMgrForDriver_EC408FEF, (int a))
 STUB(sceAppMgrLoadSafeMemory)
 STUB(_sceAppMgrInitSafeMemoryById)
 
