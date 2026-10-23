@@ -4010,6 +4010,172 @@ error:
 	return result;
 }
 
+/* Mounts a game's data drive (gp) for the caller, and its patch over it when there is one. */
+int SceAppMgrForDriver_CE356B2D(const char *appPath, const char *patchPath,
+				const char *rifPath, ScePfsRndDriveId *mountPoint)
+{
+	ScePfsRndDriveId driveId = {{0}};
+	ScePfsRndDriveId drive = {{0}};
+	SceUInt32 syscallState = sceSyscallEnter();
+	AppmgrProcessContent *content = NULL;
+	AppmgrPfsMount *mount;
+	struct AppState *app;
+	SceAllocOpt opt;
+	SceIoStat stat;
+	char *normalized, *path = NULL;
+	int permission, hasLicense, result;
+
+	if (mountPoint == NULL || appPath == NULL) {
+		result = 0x80800001;
+		goto out;
+	}
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app == NULL) {
+		result = 0x80801002;
+		goto unlock;
+	}
+
+	mount = g_appmgrPfsMounts;
+	normalized = appmgrAllocMountPath();
+	if (normalized == NULL) {
+		result = 0x80801006;
+		goto error;
+	}
+	result = appmgrNormalizePath(appPath, normalized);
+	if (result < 0) {
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+		if (result != 0x80800002)
+			goto error;
+	} else {
+		for (; mount != NULL; mount = mount->next) {
+			if (mount->mountId == 900 &&
+			    strncmp(mount->appPath, normalized, 292) == 0) {
+				result = 0x80800017;
+				sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+				goto error;
+			}
+		}
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+	}
+
+	path = appmgrAllocMountPath();
+	if (path == NULL) {
+		result = 0x80801006;
+		goto error;
+	}
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 32;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	content = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, sizeof(*content), &opt);
+	if (content == NULL) {
+		result = 0x80801006;
+		goto error;
+	}
+	memset(content, 0, sizeof(*content));
+	snprintf(path, 292, "%s/%s", appPath, "sce_sys/param.sfo");
+	permission = sceKernelSetThreadAccessLevel(0x80);
+	result = appmgrReadParamSfo(sceKernelGetProcessId(), path, 1, content);
+	sceKernelSetThreadAccessLevel(permission);
+	if (result < 0) {
+		if (result == 0x80010002)
+			result = 0x8080000D;
+		goto error;
+	}
+
+	permission = sceKernelSetThreadAccessLevel(0x80);
+	result = appmgrIsPfsContent(appPath);
+	sceKernelSetThreadAccessLevel(permission);
+	if (result != 0) {
+		if (rifPath != NULL)
+			result = appmgrReadRif(rifPath, &content->license);
+		else
+			result = appmgrReadApplicationLicense(appPath, content->titleId,
+							      &content->license);
+		if (result < 0)
+			goto error;
+		hasLicense = 1;
+		permission = sceKernelSetThreadAccessLevel(0x80);
+		result = appmgrCheckPackageLicenseFlag(appPath, &hasLicense);
+		sceKernelSetThreadAccessLevel(permission);
+		if (result < 0)
+			goto error;
+		if (hasLicense != 0)
+			memset(content->license.klicense, 0, sizeof(content->license.klicense));
+	}
+
+	result = appmgrMakeRandomDriveId("gp", driveId.drive_id);
+	if (result < 0)
+		goto error;
+	strcpy(&driveId.drive_id[13], "d:");
+	result = appmgrMount(sceKernelGetProcessId(), &app->process.mounts, 1000,
+			     content->titleId, appPath, &driveId,
+			     (const ScePfsRndDriveId *)content->license.klicense, &drive);
+	if (result < 0)
+		goto error;
+	result = appmgrReadParamSfo(sceKernelGetProcessId(), path, 0, content);
+	if (result < 0)
+		goto error;
+	*mountPoint = drive;
+
+	if (patchPath != NULL) {
+		strncpy(path, patchPath, 292);
+		path[291] = '\0';
+		permission = sceKernelSetThreadAccessLevel(0x80);
+		result = sceIoGetstat(path, &stat);
+		sceKernelSetThreadAccessLevel(permission);
+		if (result < 0) {
+			if (strncmp(path, "invalid:", 9) != 0) {
+				result = 0x8080000F;
+				goto error;
+			}
+			result = 0;
+			goto done;
+		}
+	} else {
+		if (appmgrGetPatchPath(appPath, content->patchTitleId, content->attribute,
+				       content->category, path) < 0) {
+			result = 0;
+			goto done;
+		}
+		permission = sceKernelSetThreadAccessLevel(0x80);
+		result = sceIoGetstat(path, &stat);
+		sceKernelSetThreadAccessLevel(permission);
+		if (result < 0) {
+			result = 0;
+			goto done;
+		}
+	}
+	result = appmgrMount(sceKernelGetProcessId(), &app->process.mounts, 1001,
+			     content->titleId, path, &driveId,
+			     (const ScePfsRndDriveId *)content->license.klicense, &drive);
+	if (result < 0)
+		goto error;
+	*mountPoint = drive;
+	goto done;
+
+error:
+	if (drive.drive_id[0] != '\0')
+		appmgrUnmountDrive(sceKernelGetProcessId(), &app->process.mounts,
+				   drive.drive_id, 0);
+	if (path == NULL)
+		goto free;
+done:
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, path);
+free:
+	if (content != NULL)
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, content);
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int appmgrResolveLaunchDirectory(const char *path,
 				const AppmgrLaunchOptions *options,
 				const AppmgrMapFile *mapFile, char *output,

@@ -14,6 +14,8 @@
 #include <appmgr/appmgr.h>
 #include <appmgr/appmgr_savedata.h>
 #include "app_state_internal.h"
+#include <pfsmgr/pfsmgr.h>
+#include <threadmgr/threadmgr.h>
 
 int _sceAppMgrSystemParamDateTimeGetConf(void *conf)
 {
@@ -51,6 +53,59 @@ int _sceAppMgrSystemParamGetString(int parameter, char *value, SceSize size,
 	if (length >= 1024)
 		length = 1024;
 	return copyResult(ret, sceKernelCopyToUser(value, buffer, length));
+}
+
+/* _sceAppMgrGameDataMount's argument block: where the drive is returned */
+typedef struct AppmgrGameDataMountArguments {
+	ScePfsRndDriveId *mountPoint;
+	SceUInt32 reserved[5];
+} AppmgrGameDataMountArguments;
+
+_Static_assert(sizeof(AppmgrGameDataMountArguments) == 24,
+	       "game data mount argument block");
+
+typedef struct AppmgrGameDataMountParam {
+	const char *appPath;
+	const char *patchPath;
+	const char *rifPath;
+	const AppmgrGameDataMountArguments *userArguments;
+} __attribute__((aligned(8))) AppmgrGameDataMountParam;
+
+static int gameDataMount(const char *appPath, const char *patchPath, const char *rifPath,
+			 const AppmgrGameDataMountArguments *userArguments)
+{
+	AppmgrGameDataMountArguments arguments;
+	ScePfsRndDriveId *mountPoint;
+	char *kernelAppPath = (char *)appPath;
+	char *kernelPatchPath = (char *)patchPath;
+	char *kernelRifPath = (char *)rifPath;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	mountPoint = arguments.mountPoint;
+	STRING_IN(kernelAppPath, appPath, 292);
+	STRING_IN(kernelPatchPath, patchPath, 292);
+	STRING_IN(kernelRifPath, rifPath, 292);
+	BLOCK_OUT(mountPoint, sizeof(ScePfsRndDriveId),
+		  appmgrGameDataMountSyscall(kernelAppPath, kernelPatchPath, kernelRifPath, NULL),
+		  appmgrGameDataMountSyscall(kernelAppPath, kernelPatchPath, kernelRifPath,
+					     (ScePfsRndDriveId *)k));
+}
+
+static int gameDataMountOnStack(void *argp)
+{
+	const AppmgrGameDataMountParam *param = argp;
+
+	return gameDataMount(param->appPath, param->patchPath, param->rifPath,
+			     param->userArguments);
+}
+
+int _sceAppMgrGameDataMount(const char *appPath, const char *patchPath, const char *rifPath,
+			    const AppmgrGameDataMountArguments *userArguments)
+{
+	AppmgrGameDataMountParam param = { appPath, patchPath, rifPath, userArguments };
+
+	return SceThreadmgrForDriver_E54FD746(0x2000, gameDataMountOnStack, &param);
 }
 
 int _sceAppMgrGetMountProcessNum(unsigned int mountId, const char *mountPoint,
@@ -110,7 +165,6 @@ STUB(SceAppMgrForDriver_B1D3C287)
 STUB_FUNC(int, sceAppMgrCloudDataDstCreateMount, (const void *a, void *b))
 STUB_FUNC(int, SceAppMgrForDriver_B53FB98E, (const char *path, void *a))
 STUB_FUNC(int, SceAppMgrForDriver_C4EF95BB, (const void *item))
-STUB(SceAppMgrForDriver_CE356B2D)
 STUB_FUNC(int, SceAppMgrForDriver_D137D486, (SceAppMgrSaveDataSlot *slot))
 STUB(sceAppMgrSaveSafeMemory)
 STUB(SceAppMgrForDriver_DCADB9FE)
@@ -149,7 +203,6 @@ STUB(_sceAppMgrTrophyMountById)
 
 STUB(_sceAppMgrSaveDataDataRemove2)
 
-STUB(_sceAppMgrGameDataMount)
 STUB(_sceAppMgrGetPfsDrive)
 STUB(_sceAppMgrLaunchAppByUri2)
 STUB(_sceAppMgrLaunchAppByNameForShell)

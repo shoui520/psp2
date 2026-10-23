@@ -21,6 +21,12 @@ int appmgrSystemParamGetStringSyscall(int parameter, char *value, SceSize size)
 	return appmgrSystemParamGetString(parameter, value, size);
 }
 
+int appmgrGameDataMountSyscall(const char *appPath, const char *patchPath,
+			       const char *rifPath, ScePfsRndDriveId *mountPoint)
+{
+	return SceAppMgrForDriver_CE356B2D(appPath, patchPath, rifPath, mountPoint);
+}
+
 int appmgrCountPfsMountReferencesSyscall(unsigned int mountId, int flags)
 {
 	return appmgrCountPfsMountReferences(mountId, flags);

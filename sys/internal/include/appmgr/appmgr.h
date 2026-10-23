@@ -117,6 +117,10 @@ struct AppmgrAppUmountParam;
 int SceAppMgrForDriver_EF0C9533(const struct AppmgrAppMountParam *param);
 /* vitasdk: ksceAppMgrAppUmount */
 int SceAppMgrForDriver_1DE3B7C4(const struct AppmgrAppUmountParam *param);
+struct ScePfsRndDriveId;
+/* vitasdk: ksceAppMgrGameDataMount */
+int SceAppMgrForDriver_CE356B2D(const char *appPath, const char *patchPath,
+				const char *rifPath, struct ScePfsRndDriveId *mountPoint);
 int SceAppMgrForDriver_EC9D5A35(void *status);	/* vitasdk: ksceAppMgrSaveDataSlotGetStatus */
 int SceAppMgrForDriver_193784A9(void *a);	/* vitasdk: ksceAppMgrCheckContentInstallPeriod */
 int sceAppMgrUpdateRifInfo(const void *info);
