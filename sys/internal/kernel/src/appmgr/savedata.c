@@ -4279,6 +4279,59 @@ leave:
 	return result;
 }
 
+/* PLACEHOLDER: cryptographic routine, deferred (signs a cloud data header: SHA-256, RSA-2048) */
+int SceAppMgrForDriver_ED87F191(const char *accountId, SceSize size, const void *digest,
+				void *header)
+{
+	if (digest == NULL || accountId == NULL || size > 0x40000000 || header == NULL)
+		return 0x80800001;
+	return 0x80800081;
+}
+
+/* PLACEHOLDER: cryptographic routine, deferred (verifies a cloud data header's signature) */
+int SceAppMgrForDriver_55D48190(const void *header)
+{
+	if (header == NULL)
+		return 0x80800001;
+	return 0x80800083;
+}
+
+/* The cloud data key: the account ID in hex and the key's parameters. */
+int SceAppMgrForDriver_2FAA6ABD(SceAppMgrCloudDataKey *key)
+{
+	SceUInt64 accountId = 0;
+	char accountIdString[17] = "";
+	int result;
+
+	if (key == NULL)
+		return 0x80800001;
+	result = appmgrGetAccountIdentity(&accountId, NULL, NULL);
+	if (result < 0)
+		return result;
+	snprintf(accountIdString, sizeof(accountIdString), "%016llx", accountId);
+	if (accountId == 0)
+		result = 0x80800080;
+	key->parameters = 0x0002000100020000ULL;
+	__builtin_memcpy(key->accountId, accountIdString, sizeof(key->accountId));
+	return result;
+}
+
+/* PLACEHOLDER: cryptographic routine, deferred (derives the offline ID: HMAC-SHA256, embedded key) */
+int SceAppMgrForDriver_61B13981(void *offlineId, SceUInt32 *checkWord)
+{
+	if (checkWord == NULL || offlineId == NULL)
+		return 0x80800001;
+	return 0x80800081;
+}
+
+/* PLACEHOLDER: cryptographic routine, deferred (verifies an offline backup header) */
+int SceAppMgrForDriver_62E98C42(const void *header)
+{
+	if (header == NULL)
+		return 0x80800001;
+	return 0x80800083;
+}
+
 int SceAppMgrForDriver_43A35729(const SceAppMgrPhotoMountParam *param)
 {
 	ScePfsRndDriveId mountPoint = {{0}};

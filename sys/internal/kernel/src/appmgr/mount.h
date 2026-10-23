@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <scetypes.h>
 #include <pfsmgr/pfsmgr.h>
+#include <kernel/openpsid.h>
 
 typedef struct AppmgrPfsMount {
 	int mountId;
@@ -82,6 +83,8 @@ int sceAppMgrIsRelativeAddContAdd(const char *titleId, int add);
 int sceAppMgrIsRelativeSaveDataAdd(const char *titleId);
 int appmgrCreateDirectories(const char *path, int create);
 int appmgrIsValidTitleId(const char *titleId, int mode);
+int appmgrGetAccountIdentity(SceUInt64 *accountId, SceKernelOpenPsId *openPsId,
+			    SceUInt32 *currentAccount);
 
 /* 4.00 builds with the fortified string functions */
 #if FW_VERSION >= 0x04000000

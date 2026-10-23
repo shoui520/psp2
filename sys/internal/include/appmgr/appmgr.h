@@ -155,9 +155,16 @@ int SceAppMgrForDriver_193784A9(void *a);	/* vitasdk: ksceAppMgrCheckContentInst
 int sceAppMgrUpdateRifInfo(const char *titleId);
 int SceAppMgrForDriver_B53FB98E(const char *path, void *a);	/* vitasdk: ksceAppMgrRegisterPath */
 /* vitasdk: ksceAppMgrCloudDataCreateHeader */
-int SceAppMgrForDriver_ED87F191(const void *a, int b, const void *c, void *d);
+/* SceAppMgrForDriver_2FAA6ABD's output (names unknown) */
+typedef struct SceAppMgrCloudDataKey {
+	char accountId[16];
+	SceUInt64 parameters;
+} SceAppMgrCloudDataKey;
+
+int SceAppMgrForDriver_ED87F191(const char *accountId, SceSize size, const void *digest,
+				void *header);
 int SceAppMgrForDriver_55D48190(const void *header);	/* vitasdk: ksceAppMgrCloudDataVerifyHeader */
-int SceAppMgrForDriver_2FAA6ABD(void *key);	/* vitasdk: ksceAppMgrCloudDataSetupKey */
+int SceAppMgrForDriver_2FAA6ABD(SceAppMgrCloudDataKey *key);	/* vitasdk: ksceAppMgrCloudDataSetupKey */
 int sceAppMgrCloudDataSrcMount(unsigned int type, const char *titleId,
 			       struct ScePfsRndDriveId *mountPoint);
 int sceAppMgrCloudDataDstCreateMount(const char *name, struct ScePfsRndDriveId *mountPoint);
@@ -181,7 +188,7 @@ int sceAppMgrAcInstGetAcdirParam(const char *titleId, const char *entitlementLab
 int SceAppMgrForDriver_9B3F7D66(void *list);
 /* vitasdk: ksceAppMgrSaveDataLocalBackupTargetRemoveItem */
 int SceAppMgrForDriver_C4EF95BB(const char *saveDataTitleId);
-int SceAppMgrForDriver_61B13981(void *id, void *b);	/* vitasdk: ksceAppMgrLocalBackupGetOfflineId */
+int SceAppMgrForDriver_61B13981(void *offlineId, SceUInt32 *checkWord);	/* vitasdk: ksceAppMgrLocalBackupGetOfflineId */
 /* vitasdk: ksceAppMgrLocalBackupVerifyOfflineHeader */
 int SceAppMgrForDriver_62E98C42(const void *header);
 int sceAppMgrSaveDataNotifyBackupFinished(const char *saveDataTitleId);
