@@ -26,6 +26,15 @@ int _sceAppMgrSystemParamDateTimeGetConf(void *conf)
 		  appmgrSystemParamDateTimeGetConfSyscall(k));
 }
 
+int _sceAppMgrBgdlGetQueueStatus(void *status)
+{
+	int ret;
+
+	BLOCK_OUT(status, 0x700,
+		  appmgrBgdlGetQueueStatusSyscall(NULL),
+		  appmgrBgdlGetQueueStatusSyscall(k));
+}
+
 int _sceAppMgrSystemParamGetInt(int parameter, int *value)
 {
 	int ret;
@@ -231,7 +240,6 @@ STUB(_sceAppMgrSaveDataDataRemove2)
 STUB(_sceAppMgrGetPfsDrive)
 STUB(_sceAppMgrLaunchAppByUri2)
 STUB(_sceAppMgrLaunchAppByNameForShell)
-STUB(_sceAppMgrBgdlGetQueueStatus)
 STUB(_sceAppMgrGetDevInfo)
 STUB(_sceAppMgrSaveDataUmount)
 STUB(_sceAppMgrWorkDirMountById)

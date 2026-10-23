@@ -535,6 +535,7 @@ int appmgrGetSystemDataFilePlayReadySyscall(SceUInt32 location, void *informatio
 int appmgrSetSystemDataFilePlayReadySyscall(SceUInt32 location,
 		const void *information, const void *userData, SceSize dataSize);
 int appmgrSetSystemDataFileSyscall(SceUInt32 location, const void *userData, SceSize dataSize);
+int appmgrBgdlGetQueueStatusSyscall(void *status);
 int appmgrGetNameByIdSyscall(SceUID id, char *appName);
 int appmgrGetIdByNameSyscall(SceUID *id, const char *appName);
 int appmgrGetAppStateSyscall(SceAppMgrAppState *appState, SceSize size, SceUInt32 buildVersion);
@@ -615,6 +616,8 @@ int appmgrSetSystemDataFile(SceUInt32 location, const void *userData, SceSize da
 
 /* bgdl.c */
 int appmgrInitializeBgdlQueueStorage(void);
+struct AppmgrBgdlQueueItem;
+int appmgrBgdlGetQueueStatus(struct AppmgrBgdlQueueItem *status);
 
 /* savedata.c */
 int appmgrCreateSaveDataSlotFile(SceUID pid, const char *path, SceUInt32 slotCount);

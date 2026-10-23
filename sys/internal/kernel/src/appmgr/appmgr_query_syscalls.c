@@ -81,6 +81,11 @@ int appmgrSetSystemDataFileSyscall(SceUInt32 location, const void *userData,
 	return appmgrSetSystemDataFile(location, userData, dataSize);
 }
 
+int appmgrBgdlGetQueueStatusSyscall(void *status)
+{
+	return appmgrBgdlGetQueueStatus(status);
+}
+
 int appmgrGetNameByIdSyscall(SceUID id, char *appName)
 {
 	return sceAppMgrGetNameById(id, appName);
