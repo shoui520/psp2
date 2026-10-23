@@ -68,6 +68,11 @@ int appmgrGetDevInfoSyscall(const char *path, SceOff *maxSize, SceOff *freeSize)
 	return sceAppMgrGetDevInfo(path, maxSize, freeSize);
 }
 
+int appmgrGetPfsDriveSyscall(const char *drive, char *pfsDrive)
+{
+	return sceAppMgrGetPfsDrive(drive, pfsDrive);
+}
+
 int appmgrGetUserDirPathSyscall(int partitionId, char *path,
 	unsigned int capacity)
 {

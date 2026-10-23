@@ -7126,6 +7126,57 @@ invalid:
 	goto out;
 }
 
+/* The PFS drive under the calling shell's install mount at drive (mount IDs 500 and 501). */
+int sceAppMgrGetPfsDrive(const char *drive, char *pfsDrive)
+{
+	SceUInt32 syscallState;
+	SceSelfAuthInfo authInfo;
+	struct AppState *app;
+	AppmgrVirtualMount *mount;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (sceKernelGetProcessSelfAuthInfo(0, &authInfo) < 0 ||
+	    authInfo.programAuthorityId != 0x2800000000000001ULL) {
+		result = 0x80800009;
+		goto out;
+	}
+	if (pfsDrive == NULL || drive == NULL) {
+		result = 0x80800001;
+		goto out;
+	}
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	MOUNT_MAIN_LOCK(14358);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app == NULL) {
+		result = 0x80801002;
+		goto unlock;
+	}
+	for (mount = app->process.mounts.firstMount; mount != NULL; mount = mount->next) {
+		if (strncmp(mount->driveId.drive_id, drive, 16) == 0)
+			break;
+	}
+	if (mount == NULL) {
+		result = 0x80800002;
+		goto unlock;
+	}
+	if ((unsigned int)mount->pfsMount->mountId - 500 > 1) {
+		result = 0x80800001;
+		goto unlock;
+	}
+	result = 0;
+	memset(pfsDrive, 0, 16);
+	strncpy(pfsDrive, mount->pfsMount->mountPoint.drive_id, 15);
+unlock:
+	MOUNT_MAIN_UNLOCK(14386);
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int appmgrResolvePath(const char *path, SceUID pid, char *output, SceSize size)
 {
 	int permission, result;

@@ -130,6 +130,7 @@ int sceAppMgrUpdateSaveDataParam(const char *path);
 int sceAppMgrGetMediaTypeFromDrive(const char *drive, int *mediaType);
 int sceAppMgrGetMediaTypeFromDriveByPid(SceUID pid, const char *drive, int *mediaType);
 int sceAppMgrGetDevInfo(const char *path, SceOff *maxSize, SceOff *freeSize);
+int sceAppMgrGetPfsDrive(const char *drive, char *pfsDrive);
 int sceAppMgrInstallDirMount(unsigned int mountId, const char *id, const void *keystone,
 			     ScePfsRndDriveId *mountPoint);
 int sceAppMgrLoopBackMount(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint);
