@@ -17,6 +17,7 @@
 #include "appmgr_event.h"
 #include "appmgr_device.h"
 #include "appmgr_internal_util.h"
+#include "appmgr_core_internal.h"
 #include "appmgr_shell_event.h"
 #include "mount.h"
 #include <sysmem/sblaimgr.h>
@@ -24,6 +25,8 @@
 #include <intrmgr/syscall.h>
 #include <kernel/error.h>
 #include <sysmem/uid_guid.h>
+#include <sysmem/qafmgr.h>
+#include <stdlib.h>
 
 extern SceUID g_appmgrMainMutexOwner;
 
@@ -1326,6 +1329,331 @@ int sceAppMgrLaunchAppByNameInternal(SceUInt32 launchMode, const SceChar8 *name,
 	unlockResult = sceKernelUnlockMutex(g_appmgrCore2Mutex, 1); \
 	DELETE_APP_KM_UNLOCK_CHECK(unlockResult, _line, _func); \
 } while (0)
+
+/* What a debugger's launch arguments ask for, completed from the SELF's eboot parameters. */
+typedef struct LaunchAppArg {
+	SceUInt32 budgetType;
+	SceSize memSize;
+	SceSize phcontMemSize;
+	const char *titleId;
+	int liveareaType;
+	int background;
+	int nonSuspendable;
+	SceUInt32 launchMode;		/* 0x10000: no LiveArea, 0x40000: exits to exitTo */
+	const char *exitTo;
+	const char *param;
+	int useCommonDialog;
+	int budgetSpecified;
+} LaunchAppArg;
+
+/* A memory size option in MiB, kept when it is 1 to 128. */
+static inline __attribute__((always_inline)) void setLaunchMemSize(SceSize *size,
+		const char *value)
+{
+	long megabytes = strtol(value, NULL, 10);
+
+	if ((unsigned long)(megabytes - 1) <= 127)
+		*size = megabytes << 20;
+}
+
+/* Splits args into its strings (at most 31) and reads the options among them. */
+static inline __attribute__((always_inline)) void initLaunchAppArg(LaunchAppArg *arg,
+		const char *args, SceSize argSize)
+{
+	const char *argv[32];
+	const char *p, *type;
+	int argc, i;
+
+	arg->budgetType = 1;
+	arg->memSize = 0;
+	arg->phcontMemSize = 0;
+	arg->titleId = NULL;
+	arg->liveareaType = 0;
+	arg->background = 0;
+	arg->nonSuspendable = 0;
+	arg->launchMode = 0;
+	arg->exitTo = NULL;
+	arg->param = NULL;
+	arg->useCommonDialog = 0;
+	arg->budgetSpecified = 0;
+	if (SceQafMgrForDriver_7B14DC45() == 0 || args == NULL)
+		return;
+	memset(argv, 0, sizeof(argv));
+	p = args;
+	for (argc = 0; argc < 31; argc++) {
+		if (p - args >= (int)argSize)
+			break;
+		argv[argc] = p;
+		while (*p != '\0' && ++p - args < (int)argSize)
+			;
+		p++;
+	}
+	for (i = 0; i < argc; ) {
+		if (strncmp(argv[i], "-budget", 8) == 0 && i + 1 < argc) {
+			type = argv[i + 1];
+			if (strncmp(type, "big", 4) == 0 || strncmp(type, "game", 5) == 0) {
+				arg->budgetType = 1;
+				arg->memSize = 0;
+			} else if (strncmp(type, "sys", 4) == 0 || strncmp(type, "shell", 6) == 0) {
+				arg->budgetType = 2;
+				arg->memSize = 0;
+			} else if (strncmp(type, "small", 6) == 0 || strncmp(type, "mini", 5) == 0) {
+				arg->budgetType = 0;
+				arg->memSize = 0x2000000;
+			} else {
+				SCE_DBG_PRINTF_FUNC(0, 647, "initLaunchAppArg",
+					"[SceAppMgr] Warning: unknown budgettype %s (ignored)\n", type);
+			}
+			i += 2;
+			arg->budgetSpecified = 1;
+		} else if (strncmp(argv[i], "-memsize", 9) == 0 && i + 1 < argc) {
+			setLaunchMemSize(&arg->memSize, argv[i + 1]);
+			i += 2;
+		} else if (strncmp(argv[i], "-la_type", 9) == 0 && i + 1 < argc) {
+			type = argv[i + 1];
+			if (strncmp(type, "B", 2) == 0)
+				arg->liveareaType = 1;
+			else if (strncmp(type, "C", 2) == 0)
+				arg->liveareaType = 2;
+			i += 2;
+		} else if (strncmp(argv[i], "-bg", 4) == 0) {
+			arg->background = 1;
+			i++;
+		} else if (strncmp(argv[i], "-nonsuspendable", 16) == 0) {
+			arg->nonSuspendable = 1;
+			i++;
+		} else if (strncmp(argv[i], "-titleid", 9) == 0 && i + 1 < argc) {
+			arg->titleId = argv[i + 1];
+			i += 2;
+		} else if (strncmp(argv[i], "-phcontmemsize", 15) == 0 && i + 1 < argc) {
+			setLaunchMemSize(&arg->phcontMemSize, argv[i + 1]);
+			i += 2;
+		} else if (strncmp(argv[i], "-livearea_off", 14) == 0) {
+			arg->launchMode |= 0x10000;
+			i++;
+		} else if (strncmp(argv[i], "-exit_to", 6) == 0 && i + 1 < argc) {
+			arg->launchMode |= 0x40000;
+			arg->exitTo = argv[i + 1];
+			i += 2;
+		} else if (strncmp(argv[i], "-param", 6) == 0 && i + 1 < argc) {
+			arg->param = argv[i + 1];
+			i += 2;
+		} else {
+			if (strncmp(argv[i], "-usecdlg", 8) == 0)
+				arg->useCommonDialog = 1;
+			i++;
+		}
+	}
+}
+
+/* Takes the budget, background and common dialog use the arguments left open from the SELF. */
+static inline __attribute__((always_inline)) void setLaunchAppArgFromEbootparam(
+		LaunchAppArg *arg, const char *path)
+{
+	AppmgrEbootParam *ebootParam;
+	int result;
+
+	ebootParam = appmgrAllocMountHeapMemory(sizeof(*ebootParam));
+	if (ebootParam == NULL) {
+		SCE_DBG_PRINTF_FUNC(0, 731, "setLaunchAppArgFromEbootparam",
+			"Failed mountMalloc\n");
+		return;
+	}
+	result = sceAppMgrGetEbootParam(path, ebootParam);
+	if (result < 0) {
+		SCE_DBG_PRINTF_FUNC(0, 737, "setLaunchAppArgFromEbootparam",
+			"sceAppMgrGetEbootParam = 0x%08x\n", result);
+	} else {
+		if (!arg->budgetSpecified) {
+			if (ebootParam->memSize != 0) {
+				arg->budgetType = 0;
+				arg->memSize = ebootParam->memSize << 10;
+				arg->phcontMemSize = ebootParam->phcontMemSize << 10;
+			} else {
+				arg->budgetType = 1;
+				arg->phcontMemSize = 0;
+				arg->memSize = 0;
+			}
+		}
+		if (!arg->background)
+			arg->background = ebootParam->attribute & 1;
+		if (!arg->useCommonDialog)
+			arg->useCommonDialog = (ebootParam->attribute & 4) != 0;
+	}
+	appmgrFreeMountHeapMemory(ebootParam);
+}
+
+/* The ID of the application the launched one exits to: -1 without one. */
+static inline __attribute__((always_inline)) int initLaunchContext(const LaunchAppArg *arg)
+{
+	struct AppState *app;
+	int creatorAppId;
+
+	if (arg->exitTo == NULL)
+		return -1;
+	DELETE_APP_MAIN_LOCK(801, "initLaunchContext");
+	app = appmgrFindAppByName(g_appmgrAppStates, arg->exitTo);
+	creatorAppId = app != NULL ? app->appId : -1;
+	DELETE_APP_MAIN_UNLOCK(808, "initLaunchContext");
+	return creatorAppId;
+}
+
+/* Quits the shell, for a launch in the system budget; nonzero: the error that stops it. */
+static inline __attribute__((always_inline)) int killShellApplication(void)
+{
+	struct AppState *shell;
+	int result, unlockResult;
+
+	DELETE_APP_MAIN_LOCK(512, "killShellApplication");
+	shell = appmgrGetShellApp();
+	DELETE_APP_MAIN_UNLOCK(514, "killShellApplication");
+	if (shell == NULL)
+		return 0;
+	GC_APP_LOCK_CHECK(519, "killShellApplication");
+	result = sceKernelLockMutex(shell->mutex, 1, NULL);
+	if (result != 0) {
+		if (result != SCE_KERNEL_ERROR_THREAD_STOPPED &&
+				result != SCE_KERNEL_ERROR_THREAD_SUSPENDED)
+			LAUNCH_CORE2_LOCK_FAILURE(result, 519, "killShellApplication");
+		if (result < 0)
+			return result;
+	} else {
+		shell->mutexOwner = sceKernelGetThreadId();
+	}
+	DELETE_APP_MAIN_LOCK(524, "killShellApplication");
+	if (shell != appmgrGetShellApp()) {
+		DELETE_APP_MAIN_UNLOCK(526, "killShellApplication");
+		unlockResult = _appListUnlockApp(shell);
+		DELETE_APP_CHECK(unlockResult, 0, 529, "killShellApplication");
+		return 0;
+	}
+	DELETE_APP_MAIN_UNLOCK(533, "killShellApplication");
+	result = _appmgrProcessQuitProcess(shell, 3, 0, 0);
+	unlockResult = _appListUnlockApp(shell);
+	DELETE_APP_CHECK(unlockResult, 0, 538, "killShellApplication");
+	if (result != 0)
+		return result;
+	appmgrUtilWaitObjectWait(appmgrUtilGetWaitObject(4), NULL);
+	return 0;
+}
+
+SceUID sceAppMgrLaunchAppForDebugger(const char *path, const char *args, SceSize argSize,
+				     SceUInt32 processCreateFlags,
+				     const struct SceKernelProcessOpt *opt,
+				     const AppmgrLaunchOptions *options)
+{
+	AppmgrCreateProcessParam createParam;
+	AppmgrLaunchRequest request, launchRequest;
+	SceAppMgrAppStatus status;
+	LaunchAppArg arg;
+	struct AppState *app;
+	struct AppmgrWaitObject *waitObject;
+	SceUInt32 processAttr;
+	int creatorAppId, appId, hasParam, error, result, unlockResult;
+
+	createParam.useTitleIdAsName = 1;
+	createParam.enableActivationEvents = 1;
+	if (opt->flags & 0x0fd00fff)
+		return SCE_APPMGR_ERROR_PARAM;
+	if (SceProcessmgrForDriver_C715591F() == 1)
+		return (int)0x80802025;
+	initLaunchAppArg(&arg, args, argSize);
+	hasParam = arg.param != NULL;
+	if (!arg.budgetSpecified || !arg.background || !arg.useCommonDialog)
+		setLaunchAppArgFromEbootparam(&arg, path);
+	processAttr = (arg.nonSuspendable ? 2 : 0) | (arg.background ? 1 : 0);
+	creatorAppId = initLaunchContext(&arg);
+	if (!(processAttr & 1) &&
+			waitSemaForDebuggerShellEventCount() == SCE_KERNEL_ERROR_WAIT_TIMEOUT)
+		return (int)0x80802021;
+	if (arg.titleId != NULL)
+		createParam.useTitleIdAsName = 0;
+	else
+		arg.titleId = "NPXS10999";
+	if (arg.nonSuspendable == 1)
+		createParam.enableActivationEvents = 0;
+	GC_CHECK_APP_OWNERS(1003, "sceAppMgrLaunchAppForDebugger");
+	GC_LOCK(g_appmgrCore2Mutex, g_appmgrCore2MutexOwner, 1003,
+		"sceAppMgrLaunchAppForDebugger");
+	if (arg.budgetType == 2) {
+		DELETE_APP_MAIN_LOCK(1008, "sceAppMgrLaunchAppForDebugger");
+		while (appmgrGetShellApp() != NULL) {
+			DELETE_APP_MAIN_UNLOCK(1011, "sceAppMgrLaunchAppForDebugger");
+			LAUNCH_CORE2_UNLOCK(1012, "sceAppMgrLaunchAppForDebugger");
+			result = killShellApplication();
+			if (result != 0)
+				return result;
+			GC_CHECK_APP_OWNERS(1020, "sceAppMgrLaunchAppForDebugger");
+			GC_LOCK(g_appmgrCore2Mutex, g_appmgrCore2MutexOwner, 1020,
+				"sceAppMgrLaunchAppForDebugger");
+			DELETE_APP_MAIN_LOCK(1022, "sceAppMgrLaunchAppForDebugger");
+		}
+		DELETE_APP_MAIN_UNLOCK(1024, "sceAppMgrLaunchAppForDebugger");
+	}
+	if (g_appmgrSystemSuspended) {
+		if (!(processAttr & 1))
+			signalSemaForDebuggerShellEventCount();
+		LAUNCH_CORE2_UNLOCK(1033, "sceAppMgrLaunchAppForDebugger");
+		return SCE_APPMGR_ERROR_STATE;
+	}
+	if (!hasParam) {
+		while (_appListFindAndLockAppByName(arg.titleId, &app) >= 0) {
+			waitObject = appmgrUtilGetWaitObject(3);
+			appmgrUtilWaitObjectClear(waitObject);
+			result = _appmgrProcessQuitProcess(app, 4, 0, 0);
+			DELETE_APP_ASSERT(result == SCE_KERNEL_ERROR_INVALID_PROCESS_STATUS ||
+				result == 0, 1052, "sceAppMgrLaunchAppForDebugger");
+			unlockResult = _appListUnlockApp(app);
+			DELETE_APP_CHECK(unlockResult, 0, 1055, "sceAppMgrLaunchAppForDebugger");
+			appmgrUtilWaitObjectWait(waitObject, NULL);
+		}
+	}
+	app = NULL;
+	result = _sceAppMgrAppStateReserve(&app, arg.titleId, arg.param, -1, arg.launchMode, -1,
+		creatorAppId, 0, 0);
+	if (result != 0) {
+		if (!(processAttr & 1))
+			signalSemaForDebuggerShellEventCount();
+		LAUNCH_CORE2_UNLOCK(1078, "sceAppMgrLaunchAppForDebugger");
+		return result;
+	}
+	DELETE_APP_MAIN_LOCK(1082, "sceAppMgrLaunchAppForDebugger");
+	appId = app->appId;
+	if (options != NULL)
+		memcpy(&app->launchOptions, options, sizeof(app->launchOptions));
+	DELETE_APP_MAIN_UNLOCK(1091, "sceAppMgrLaunchAppForDebugger");
+	if (!(processAttr & 1))
+		_shellEventStartLaunchAppFromDebuggerQueuePush(-1, arg.liveareaType, appId);
+	memset(&status, 0, sizeof(status));
+	memset(&request, 0, sizeof(request));
+	request.appPath = path;
+	request.budgetSize = arg.memSize;
+	request.pycontSize = arg.phcontMemSize;
+	request.processCreateFlags = processCreateFlags;
+	request.budgetType = arg.budgetType;
+	request.processAttr = processAttr;
+	if (args != NULL && argSize != 0) {
+		request.launchArgs = args;
+		request.launchArgsSize = argSize < 0x400 ? argSize : 0x400;
+	}
+	request.launchOrigin = 2;
+	request.useCommonDialog = arg.useCommonDialog;
+	request.launchArgumentMarker = 1;
+	request.notifyBootComplete = 1;
+	launchRequest = request;
+	error = 0;
+	result = sceAppMgrLaunchAppByName2ndStage_internal(appId, arg.titleId, &status,
+		&launchRequest, hasParam, 0, &createParam, opt, options, NULL, &error);
+	if (result >= 0 && error == 0) {
+		if (!(processAttr & 1))
+			_shellEventResultLaunchAppFromDebuggerQueuePush(status.appId, appId,
+				status.processId);
+	} else if (!(processAttr & 1)) {
+		_shellEventResultLaunchAppFromDebuggerQueuePush(-1, appId, result);
+	}
+	LAUNCH_CORE2_UNLOCK(1147, "sceAppMgrLaunchAppForDebugger");
+	return error != 0 ? error : result;
+}
 
 /* The launch request of a launch by the shell, from its arguments and options. */
 static inline __attribute__((always_inline)) void makeLaunchRequest(AppmgrLaunchRequest *request,

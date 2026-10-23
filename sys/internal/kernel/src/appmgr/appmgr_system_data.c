@@ -408,7 +408,7 @@ leave:
 	return result;
 }
 
-int appmgrReadSelfControlInfo(const char *path, void *controlInfo)
+int sceAppMgrGetEbootParam(const char *path, AppmgrEbootParam *ebootParam)
 {
 	SceSelfHeader header;
 	SceAllocOpt opt;
@@ -419,7 +419,7 @@ int appmgrReadSelfControlInfo(const char *path, void *controlInfo)
 	SceUID fd;
 	int result, cleanupResult;
 
-	if (controlInfo == NULL || path == NULL)
+	if (ebootParam == NULL || path == NULL)
 		return (int)0x80800001;
 	fd = sceIoOpen(path, 1, 0);
 	if (fd < 0)
@@ -491,7 +491,7 @@ int appmgrReadSelfControlInfo(const char *path, void *controlInfo)
 			break;
 	} while (offset < size);
 	if (size == offset && selectedOffset != 0) {
-		memcpy(controlInfo, records + selectedOffset, 256);
+		memcpy(ebootParam, records + selectedOffset, sizeof(*ebootParam));
 		result = 0;
 	}
 freeRecords:

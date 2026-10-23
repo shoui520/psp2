@@ -1228,7 +1228,7 @@ static __attribute__((noinline)) void pdLoadpProcSpawnCmd(SceUInt8 flags)
 		}
 		/* appmgr passes the parameter on to process creation as is */
 		pid = sceAppMgrLaunchAppForDebugger(path, argBuf, size, appFlags,
-						(const SceAppMgrLaunchParam *)&param, (void *)launchParam);
+						&param, (const AppmgrLaunchOptions *)launchParam);
 		if (pid < 0) {
 			result = pdLoadpKernelErrToLoadpErr(pid);
 			goto free_args;
@@ -1804,7 +1804,7 @@ reply:
 	memset(info, 0, LOADP_LAUNCH_INFO_SIZE);					\
 	info->size = LOADP_LAUNCH_INFO_SIZE;					\
 	pid = sceAppMgrLaunchAppForDebugger(_self, _args, _argsSize, 0,			\
-					(const SceAppMgrLaunchParam *)&param, info);	\
+					&param, info);	\
 	if (pid < 0) {									\
 		result = pdLoadpKernelErrToLoadpErr(pid);					\
 		goto free_info;								\

@@ -2,6 +2,7 @@
 
 #include <scetypes.h>
 #include <stdint.h>
+#include <appmgr/appmgr_launch.h>
 
 /* SceAppMgr's error codes beyond the SDK's (appmgr.h): the henkaku wiki's and vitasdk's names */
 #define SCE_APPMGR_ERROR_INVALID_PARAM_SFO	0x80800015
@@ -68,22 +69,16 @@ int sceAppMgrSetBgmSubPriority(int enabled, int priority);
 int sceAppMgrSetBgmSubPriorityForSystemChat(int enabled);
 int sceAppMgrSetDisplayMergeConf(SceUInt32 setting, SceUInt32 alpha);
 
+struct SceKernelProcessOpt;
+
 /*
- * SceAppMgrForDriver's debugger launch (deci4p loadp). Not written in C yet: the prototypes
- * and the parameter block follow vitasdk's psp2kern/appmgr.h. Bit 31 of the word after size
- * stops the application at launch.
+ * SceAppMgrForDriver's debugger launch (deci4p loadp): opt goes on to process creation, its
+ * flags limited to those a debugger may give.
  */
-typedef struct SceAppMgrLaunchParam {
-	SceSize size;
-	SceUInt32 flags;
-	SceUInt32 reserved[11];
-} SceAppMgrLaunchParam;
-
-_Static_assert(sizeof(SceAppMgrLaunchParam) == 0x34, "SceAppMgrLaunchParam");
-
 SceUID sceAppMgrLaunchAppForDebugger(const char *path, const char *args, SceSize argSize,
-				     unsigned int flags, const SceAppMgrLaunchParam *param,
-				     void *opt);
+				     SceUInt32 processCreateFlags,
+				     const struct SceKernelProcessOpt *opt,
+				     const AppmgrLaunchOptions *options);
 int sceAppMgrKillAppForDebugger(SceUID pid);
 int sceAppMgrKillAppByNameForDebugger(const char *titleId);
 int sceAppMgrGetPidByNameForDebugger(const char *titleId, SceUID *pid);

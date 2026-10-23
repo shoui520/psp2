@@ -111,8 +111,6 @@ STUB_FUNC(int, SceAppMgrForDriver_9B3F7D66, (void *list))
 STUB(SceAppMgrForDriver_A714BB35)
 STUB_FUNC(int, sceAppMgrIsExclusiveProcessRunning, (const void *a))
 STUB(sceAppMgrGetSystemDataFile)
-STUB_FUNC(SceUID, sceAppMgrLaunchAppForDebugger, (const char *path, const char *args, SceSize argSize,
-	  unsigned int flags, const SceAppMgrLaunchParam *param, void *opt))
 STUB(SceAppMgrForDriver_B1D3C287)
 STUB_FUNC(int, sceAppMgrCloudDataDstCreateMount, (const void *a, void *b))
 STUB_FUNC(int, SceAppMgrForDriver_B53FB98E, (const char *path, void *a))

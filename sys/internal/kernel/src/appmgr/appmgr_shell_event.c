@@ -9,10 +9,10 @@
 #include "appmgr_shell_event.h"
 #include <appmgr/appmgr.h>
 #include "appmgr_device.h"
+#include "appmgr_core_internal.h"
 
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
-extern SceUID g_appmgrDebugShellEventSemaphore;
 extern int appmgrCoalesceShellEvent(const AppmgrShellEvent *event);
 extern int appmgrHasLoadExecShellEvents(int appId);
 extern int _deleteDuplicatedShellEventQueueByLoadExec(int appId);
@@ -471,33 +471,6 @@ void _shellEventDestroyOtherAppQueuePush(SceUID processId, int appId)
 		appmgrShellEventOwnerPanic();
 #endif
 	}
-}
-
-static const SceKernelDebugInfo debuggerShellEventCountPanicInfo = {
-	.fileHash = 0x38fc9b3e,
-	.lineHash = 0xe4bf4f91,
-	.funcHash = 0x7c920bfa,
-#if FW_DEBUG
-	.file = "appmgr_core_internal.h",
-	.line = 176,
-	.func = "signalSemaForDebuggerShellEventCount",
-#endif
-};
-
-static inline void signalSemaForDebuggerShellEventCount(void)
-{
-	if (sceKernelSignalSema(g_appmgrDebugShellEventSemaphore, 1) == 0)
-		return;
-#if FW_DEBUG
-	sceAppMgrDump();
-	dumpBgmState();
-	if (SceDebugForDriver_374B7868() > 0)
-		SceDebugForDriver_FD753E7A(1, 0, &debuggerShellEventCountPanicInfo,
-				     __builtin_return_address(0));
-#else
-	SceDebugForDriver_391B5B74(&debuggerShellEventCountPanicInfo,
-		       __builtin_return_address(0));
-#endif
 }
 
 void _shellEventStartLaunchAppFromDebuggerQueuePush(SceUID processId,

@@ -65,3 +65,16 @@ int sceAppMgrGetRawPath(char *path, char *resolvedPath, int capacity);
 int appmgrExtractSaveDataDeviceName(const char *path, char *device, SceSize capacity);
 void *appmgrAllocMountHeapMemory(SceSize size);
 int appmgrFreeMountHeapMemory(void *memory);
+
+/* The SELF's eboot parameters (its control record 6), as sceAppMgrGetEbootParam copies them */
+typedef struct AppmgrEbootParam {
+	SceUInt32 reserved;
+	SceUInt32 attribute;		/* 1: runs in the background, 4: uses common dialogs */
+	SceSize phcontMemSize;		/* KiB */
+	SceSize memSize;		/* KiB; 0: the game budget */
+	unsigned char padding[240];
+} AppmgrEbootParam;
+
+_Static_assert(sizeof(AppmgrEbootParam) == 256, "eboot parameters");
+
+int sceAppMgrGetEbootParam(const char *path, AppmgrEbootParam *ebootParam);
