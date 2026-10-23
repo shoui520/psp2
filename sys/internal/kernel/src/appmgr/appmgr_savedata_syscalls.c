@@ -41,6 +41,11 @@ int appmgrSaveDataSlotGetStatusSyscall(void *status)
 	return SceAppMgrForDriver_EC9D5A35(status);
 }
 
+int appmgrSaveDataGetCachedRequiredSizeKiBSyscall(void)
+{
+	return sceAppMgrSaveDataGetCachedRequiredSizeKiB();
+}
+
 int appmgrSaveDataSlotFileGetParamSyscall(unsigned int slotId, void *param)
 {
 	return appmgrSaveDataSlotFileGetParam(slotId, param);

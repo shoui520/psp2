@@ -153,7 +153,7 @@ SceAppMgr:
         - appmgrDestroyAppByAppIdSyscall: 0x54368A0B
         - _sceAppMgrGetRawPathOfApp0ByPidForShell: 0x550422F9
         - _sceAppMgrGetAppMgrState: 0x55C60D20
-        - sceAppMgrSaveDataGetCachedRequiredSizeKiB: 0x56EDE09A
+        - appmgrSaveDataGetCachedRequiredSizeKiBSyscall: 0x56EDE09A
         - _sceAppMgrAddContAddMount: 0x581DB1BE
         - _sceAppMgrWorkDirMountById: 0x58E4CC90
         - _sceAppMgrAppParamSetString: 0x5957390F

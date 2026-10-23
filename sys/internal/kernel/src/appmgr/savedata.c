@@ -588,6 +588,34 @@ int appmgrLoadSaveDataSlotCache(const char *mountPoint)
 	return result;
 }
 
+int sceAppMgrSaveDataGetCachedRequiredSizeKiB(void)
+{
+	SceUInt32 syscallState;
+	SceAppMgrAppInfoCache *info;
+	void *storage = NULL;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	result = SceProcessmgrForDriver_AF80F39C(0, g_appmgrAppInfoCacheKey, &storage, 0);
+	if (result >= 0) {
+		if (storage != NULL) {
+			info = storage;
+			result = info->neededSaveDataKiB;
+			if (result < 0)
+				result = 0x7fffffff;
+		} else {
+			result = 0x80800012;
+		}
+	}
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int appmgrInitializeSaveDataSlotCache(void)
 {
 	SceAllocOpt option;

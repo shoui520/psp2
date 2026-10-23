@@ -564,6 +564,7 @@ int appmgrSaveDataSlotSetParamSyscall(SceAppMgrSaveDataSlot *slot);
 int appmgrSaveDataSlotGetParamSyscall(SceAppMgrSaveDataSlot *slot);
 int appmgrSaveDataSlotSetStatusSyscall(void *status);
 int appmgrSaveDataSlotGetStatusSyscall(void *status);
+int appmgrSaveDataGetCachedRequiredSizeKiBSyscall(void);
 int appmgrSaveDataSlotFileGetParamSyscall(unsigned int slotId, void *param);
 
 /* appmgr_service.c */
@@ -602,6 +603,7 @@ int appmgrInitializeBgdlQueueStorage(void);
 
 /* savedata.c */
 int appmgrCreateSaveDataSlotFile(SceUID pid, const char *path, SceUInt32 slotCount);
+int sceAppMgrSaveDataGetCachedRequiredSizeKiB(void);
 int appmgrSaveDataSlotFileGetParam(unsigned int slotId, void *param);
 
 /* sharedfb.c */
