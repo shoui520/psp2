@@ -115,7 +115,7 @@ static int pfsSysEventHandler(int resume, int eventid, void *args, void *opt)	/*
 	return 0;
 }
 
-int ScePfsMgrForKernel_2D48AEA2(const char *path, const char *name, const void *klicensee, SceUInt16 mode)
+int ScePfsMgrForKernel_2D48AEA2(const char *path, const char *name, const void *klicensee, SceUInt32 mode)
 {
 	SceVfsMountParam param;
 	SceVfsUmountParam umountParam;
@@ -166,7 +166,7 @@ bad_mode:
 	param.data = pmi;
 	param.misc = &pmi->mountData;
 	param.vops = NULL;
-	if (mode == 20 || mode - 12 <= 1 || mode == 2)
+	if (mode == 20 || (unsigned int)(mode - 12) <= 1 || mode == 2)
 		param.mntFlags = SCE_VFS_MOUNT_TYPE_PFS | SCE_VFS_MOUNT_FLAG_RDONLY;
 	if (mode == 3)
 		param.mntFlags |= SCE_VFS_MOUNT_FLAG_NOBUF;
@@ -290,7 +290,7 @@ int ScePfsMgrForKernel_2D67D8CA(const char *name, SceUInt64 authId)
 
 /* mounts and approves; mode 0x28 only checks an approved mount and returns its mode */
 int ScePfsMgrForKernel_A772209C(const char *path, const char *name, SceUInt64 authId, const void *klicensee,
-		 SceUInt16 mode)
+		 SceUInt32 mode)
 {
 	ScePfsPmi *pmi;
 	int ret;

@@ -8,11 +8,9 @@
 #include "pfsmgr_internal.h"
 
 int pfsRedirectVnodeCreate(SceVfsVnode **vpp, SceVfsVnode *dvp, SceVfsVnode *lowerVp,
-			   SceUInt16 attr)
+			   SceUInt32 attr)
 {
-	SceVfsMount *mnt;
 	ScePfsVd *vd;
-	SceVfsVnode *vp;
 	int ret;
 
 	ret = vfsGetNewVnode(dvp->core.mnt, (SceVopTable *)dvp->core.mnt->mntVfsInf->defaultVops,
@@ -33,17 +31,15 @@ int pfsRedirectVnodeCreate(SceVfsVnode **vpp, SceVfsVnode *dvp, SceVfsVnode *low
 	vd->pages.next = &vd->pages;
 	vd->pages.prev = &vd->pages;
 	vfsLockVnode(*vpp);
-	mnt = dvp->core.mnt;
 	(*vpp)->core.dd = dvp;
-	(*vpp)->core.mnt = mnt;
-	vp = *vpp;
-	vp->core.nodeData = vd;
-	vp->core.state = SCE_VNODE_STATE_ACTIVE;
-	vp->core.type = lowerVp->core.type;
-	vp->core.size = lowerVp->core.size;
-	*(SceUInt64 *)vp->core.aclData = attr;
-	*(SceUInt64 *)vp->core.fid = *(SceUInt64 *)lowerVp->core.fid;
-	vp->core.refCount = 1;
+	(*vpp)->core.mnt = dvp->core.mnt;
+	(*vpp)->core.nodeData = vd;
+	(*vpp)->core.state = SCE_VNODE_STATE_ACTIVE;
+	(*vpp)->core.type = lowerVp->core.type;
+	(*vpp)->core.size = lowerVp->core.size;
+	*(SceUInt64 *)(*vpp)->core.aclData = (SceUInt16)attr;
+	*(SceUInt64 *)(*vpp)->core.fid = *(SceUInt64 *)lowerVp->core.fid;
+	(*vpp)->core.refCount = 1;
 	vfsUnlockVnode(lowerVp);
 	return 0;
 }
@@ -335,6 +331,7 @@ int pfsRedirectPread(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, void *bu
 {
 	ScePfsVd *vd;
 	ScePfsFi *fi;
+	SceVfsFile *lowerFile;
 	SceVfsVnode *lowerVp;
 	SceSize n;
 	int perm, ret;
@@ -350,8 +347,9 @@ int pfsRedirectPread(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, void *bu
 		fi = (ScePfsFi *)file->fd;
 		ret = SCE_ERROR_ERRNO_EBADFD;
 		if (fi->type == PFS_FI_FILE) {
+			lowerFile = fi->lower.file;
 			vfsLockVnode(lowerVp);
-			ret = sceVopPread(lowerVp, fi->lower.file, buf, nbyte, offset, &n);
+			ret = sceVopPread(lowerVp, lowerFile, buf, nbyte, offset, &n);
 			vfsUnlockVnode(lowerVp);
 			if (ret >= 0)
 				ret = n;
@@ -366,6 +364,7 @@ int pfsRedirectPwrite(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, const v
 {
 	ScePfsVd *vd;
 	ScePfsFi *fi;
+	SceVfsFile *lowerFile;
 	SceVfsVnode *lowerVp;
 	SceSize n;
 	int perm, ret;
@@ -381,8 +380,9 @@ int pfsRedirectPwrite(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, const v
 		fi = (ScePfsFi *)file->fd;
 		ret = SCE_ERROR_ERRNO_EBADFD;
 		if (fi->type == PFS_FI_FILE) {
+			lowerFile = fi->lower.file;
 			vfsLockVnode(lowerVp);
-			ret = sceVopPwrite(lowerVp, fi->lower.file, buf, nbyte, offset, &n);
+			ret = sceVopPwrite(lowerVp, lowerFile, buf, nbyte, offset, &n);
 			vfsUnlockVnode(lowerVp);
 			if (ret >= 0) {
 				vp->core.size = lowerVp->core.size;
@@ -425,7 +425,10 @@ SceOff pfsRedirectLseek(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceOf
 				return pos;
 			}
 			pfsAccessEnd(perm);
-			return (int)pos;
+			ret = (int)pos;
+			if (ret != 0)
+				return ret;
+			return pos;
 		}
 		ret = SCE_ERROR_ERRNO_EBADFD;
 	}
@@ -438,6 +441,7 @@ int pfsRedirectIoctl(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, int cmd,
 {
 	ScePfsVd *vd;
 	ScePfsFi *fi;
+	SceVfsFile *lowerFile;
 	SceVfsVnode *lowerVp;
 	int perm, ret;
 
@@ -452,8 +456,9 @@ int pfsRedirectIoctl(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, int cmd,
 		fi = (ScePfsFi *)file->fd;
 		ret = SCE_ERROR_ERRNO_EBADFD;
 		if (fi->type == PFS_FI_FILE) {
+			lowerFile = fi->lower.file;
 			vfsLockVnode(lowerVp);
-			ret = sceVopIoctl(lowerVp, fi->lower.file, cmd, in, inLen, out, outLen);
+			ret = sceVopIoctl(lowerVp, lowerFile, cmd, in, inLen, out, outLen);
 			vfsUnlockVnode(lowerVp);
 		}
 	}
@@ -640,6 +645,7 @@ int pfsRedirectDread(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceIoDir
 {
 	ScePfsVd *vd;
 	ScePfsFi *fi;
+	SceVfsFile *lowerFile;
 	SceVfsVnode *lowerVp;
 	SceUInt32 attr, mode;
 	int perm, ret, err;
@@ -654,8 +660,9 @@ int pfsRedirectDread(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceIoDir
 		lowerVp = vd->lowerVp;
 		fi = (ScePfsFi *)file->fd;
 		if (fi->type == PFS_FI_DIR) {
+			lowerFile = fi->lower.file;
 			vfsLockVnode(lowerVp);
-			ret = sceVopDread(lowerVp, fi->lower.file, dir);
+			ret = sceVopDread(lowerVp, lowerFile, dir);
 			vfsUnlockVnode(lowerVp);
 			if (ret >= 0) {
 				attr = pfsCreateAttr(pmi, dir->d_stat.st_attr);
@@ -932,6 +939,7 @@ int pfsRedirectVnodeSync(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, int 
 {
 	ScePfsVd *vd;
 	ScePfsFi *fi;
+	SceVfsFile *lowerFile;
 	SceVfsVnode *lowerVp;
 	int perm, ret;
 
@@ -947,8 +955,9 @@ int pfsRedirectVnodeSync(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, int 
 		lowerVp = vd->lowerVp;
 		fi = (ScePfsFi *)file->fd;
 		if (fi->type == PFS_FI_FILE) {
+			lowerFile = fi->lower.file;
 			vfsLockVnode(lowerVp);
-			ret = sceVopSync(lowerVp, fi->lower.file, flags);
+			ret = sceVopSync(lowerVp, lowerFile, flags);
 			vfsUnlockVnode(lowerVp);
 		} else if (fi->type == PFS_FI_DIR) {
 			ret = 0;
@@ -992,6 +1001,7 @@ int pfsRedirectCleanup(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceUIn
 {
 	ScePfsVd *vd;
 	ScePfsFi *fi;
+	SceVfsFile *lowerFile;
 	SceVfsVnode *lowerVp;
 	int perm, ret;
 
@@ -1005,8 +1015,9 @@ int pfsRedirectCleanup(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceUIn
 		ret = SCE_ERROR_ERRNO_EINVAL;
 	} else {
 		lowerVp = vd->lowerVp;
+		lowerFile = fi->lower.file;
 		vfsLockVnode(lowerVp);
-		ret = sceVopCleanup(lowerVp, fi->lower.file, a2, a3);
+		ret = sceVopCleanup(lowerVp, lowerFile, a2, a3);
 		vfsUnlockVnode(lowerVp);
 	}
 	pfsAccessEnd(perm);

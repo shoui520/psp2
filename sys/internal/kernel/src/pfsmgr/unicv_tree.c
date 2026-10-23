@@ -24,10 +24,9 @@ static inline SceOff pfsUnicvIndexOffset(ScePfsUnicv *unicv, SceUInt32 index)	/*
 	return offset;
 }
 
-static int pfsUnicvTreeGetCount(ScePfsCrypt *ctx, SceUInt32 *count)
+static void pfsUnicvTreeGetCount(ScePfsCrypt *ctx, SceUInt32 *count)
 {
 	*count = ctx->entry.record.count;
-	return 0;
 }
 
 static SceSize pfsUnicvTreeBlockSize(ScePfsCrypt *ctx)
@@ -173,10 +172,9 @@ void pfsUnicvTreeTerm(ScePfsCrypt *ctx)
 
 /* kind 3: a block count only */
 
-static int pfsUnicvTree3GetCount(ScePfsCrypt *ctx, SceUInt32 *count)
+static void pfsUnicvTree3GetCount(ScePfsCrypt *ctx, SceUInt32 *count)
 {
 	*count = ctx->entry.record.count;
-	return 0;
 }
 
 static int pfsUnicvTree3Resize(ScePfsCrypt *ctx, SceUInt32 count)

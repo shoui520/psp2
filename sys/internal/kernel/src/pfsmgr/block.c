@@ -340,6 +340,6 @@ int pfsFileResize(ScePfsLowerFile *lf, SceUInt32 index, SceOff size, SceUInt16 a
 		size = reached;
 		pfsBlockRequestFree(&req);
 		pfsFileKeyClear(&key);
-	} while (size < newSize);
+	} while (reached < newSize);
 	return ret;
 }

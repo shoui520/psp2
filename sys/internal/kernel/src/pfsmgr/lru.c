@@ -139,7 +139,7 @@ int pfsLruRelease(ScePfsLru *lru, ScePfsLruEntry *e)
 int pfsLruGet(ScePfsLru *lru, ScePfsLruEntry **out, ScePfsLowerFile *lf, SceUInt32 unused,
 	      SceOff base, SceOff offset)
 {
-	ScePfsLruEntry *e, *next;
+	ScePfsLruEntry *e, *next, *first;
 	SceUInt32 cookie, b;
 	SceUInt64 size;
 	SceSize n;
@@ -150,8 +150,9 @@ int pfsLruGet(ScePfsLru *lru, ScePfsLruEntry **out, ScePfsLowerFile *lf, SceUInt
 		return SCE_PFS_ERROR_LRU_ALIGN;
 	key = offset + base;
 	cookie = pfsLowerCookie(lf);
+	first = lru->buckets[pfsLruBucket(lru, cookie, key)];
 again:
-	for (e = lru->buckets[pfsLruBucket(lru, cookie, key)]; e != NULL; e = e->next) {
+	for (e = first; e != NULL; e = e->next) {
 		if (cookie != e->cookie || e->offset != key)
 			continue;
 		if (e->flags & PFS_LRU_BUSY)

@@ -58,7 +58,12 @@ static const ScePfsCryptBufDevice g_pfsCryptBufDevices[PFS_CRYPT_BUF_POOLS] = {
 	{ 2, 0x100 },				/* eMMC */
 };
 
-static ScePfsHash g_pfsCryptBufIcvs[PFS_CRYPT_BUF_POOLS][PFS_CRYPT_BUF_BLOCKS];
+/* a pool's icvs, a block of their own for the DMA */
+typedef struct ScePfsCryptBufIcvs {		/* name unknown */
+	ScePfsHash icv[PFS_CRYPT_BUF_BLOCKS];
+} __attribute__((aligned(0x40))) ScePfsCryptBufIcvs;
+
+static ScePfsCryptBufIcvs g_pfsCryptBufIcvs[PFS_CRYPT_BUF_POOLS];
 static SceUID g_pfsCryptBufMutex[PFS_CRYPT_BUF_POOLS];
 static ScePfsCryptBufPool g_pfsCryptBufPools[PFS_CRYPT_BUF_POOLS];
 static SceUID g_pfsCryptBufCond[PFS_CRYPT_BUF_POOLS];
@@ -111,7 +116,7 @@ int pfsCryptBufferInit(void)
 		if (ret != 0)
 			goto fail;
 
-		memset(g_pfsCryptBufIcvs[i], 0, sizeof(g_pfsCryptBufIcvs[i]));
+		memset(&g_pfsCryptBufIcvs[i], 0, sizeof(g_pfsCryptBufIcvs[i]));
 		pool->freeMask = PFS_CRYPT_BUF_ALL_FREE;
 		SceIofilemgrForDriver_C722DF35(g_pfsCryptBufDevices[i].weight | 0x10000);
 	}
@@ -261,7 +266,7 @@ take:
 	pool->freeMask = freeMask & ~shifted;
 	*plain = (char *)pool->base + shift * PFS_CRYPT_BUF_BLOCK_SIZE;
 	*disk = (char *)pool->sharedBase + shift * PFS_CRYPT_BUF_BLOCK_SIZE;
-	*icvs = &g_pfsCryptBufIcvs[p][shift];
+	*icvs = &g_pfsCryptBufIcvs[p].icv[shift];
 	ret = 0;
 unlock:
 	sceKernelUnlockMutex(g_pfsCryptBufMutex[p], 1);
@@ -284,7 +289,7 @@ int pfsCryptBufferFree(SceInt32 weight, SceInt32 priority, SceUInt32 count, void
 	ret = sceKernelLockMutex(g_pfsCryptBufMutex[p], 1, NULL);
 	if (ret != 0)
 		return ret;
-	shift = ((char *)plain - (char *)pool->base) / PFS_CRYPT_BUF_BLOCK_SIZE;
+	shift = (SceUInt32)((char *)plain - (char *)pool->base) / PFS_CRYPT_BUF_BLOCK_SIZE;
 	if (shift + count <= PFS_CRYPT_BUF_BLOCKS && count <= PFS_CRYPT_BUF_BLOCKS) {
 		mask = pfsCryptBufMask(count) << shift;
 		if ((mask & ~pool->freeMask) == mask) {

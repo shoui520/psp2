@@ -95,7 +95,7 @@ int pfsPmiCreate(ScePfsPmi **outPmi, const char *path, const char *name, const v
 		memset(pmi->klicensee, 0, sizeof(pmi->klicensee));
 		pmi->flags |= PFS_PMI_NO_KLICENSEE;
 	} else {
-		memcpy(pmi->klicensee, klicensee, sizeof(pmi->klicensee));
+		__builtin_memcpy(pmi->klicensee, klicensee, sizeof(pmi->klicensee));
 	}
 	if (!SceSblACMgrForDriver_E87D1777())
 		pmi->flags |= PFS_PMI_NOT_DEVELOPMENT;
@@ -158,7 +158,7 @@ int pfsPmiApprove(ScePfsPmi *pmi, SceUInt64 authId)
 		for (i = 0; i < pmi->approvedMax; i++)
 			if (pmi->approved[i] == (SceUInt64)-1)
 				break;
-		if (i == pmi->approvedMax) {
+		if (i >= pmi->approvedMax) {
 			ret = SCE_ERROR_ERRNO_ENOSPC;
 		} else {
 			pmi->approved[i] = authId;

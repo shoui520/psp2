@@ -540,7 +540,7 @@ typedef struct ScePfsCrypt {			/* name unknown */
 	int (*fini)(struct ScePfsCrypt *ctx);
 	int (*getIcv)(struct ScePfsCrypt *ctx, SceUInt32 index, ScePfsHash *icv);
 	int (*setIcv)(struct ScePfsCrypt *ctx, SceUInt32 index, const ScePfsHash *icv);
-	int (*getCount)(struct ScePfsCrypt *ctx, SceUInt32 *count);
+	void (*getCount)(struct ScePfsCrypt *ctx, SceUInt32 *count);
 	int (*resize)(struct ScePfsCrypt *ctx, SceUInt32 count);
 	SceSize (*blockSize)(struct ScePfsCrypt *ctx);
 	int (*getHash)(struct ScePfsCrypt *ctx, void *hash);
@@ -718,7 +718,9 @@ int pfsNodeCreate(ScePfsNode *node, int mode);
 int pfsLowerOpen(ScePfsLowerFile *lf, ScePfsNode *node, SceUInt32 cookie, int flags);
 int pfsLowerClose(ScePfsLowerFile *lf);
 int pfsLowerCloseForce(ScePfsLowerFile *lf);
+#if FW_VERSION >= 0x04000000
 int pfsLowerCloseLocked(ScePfsLowerFile *lf);
+#endif
 int pfsLowerCleanup(ScePfsLowerFile *lf, SceUInt32 a2, SceUInt32 a3);
 int pfsLowerPread(ScePfsLowerFile *lf, void *buf, SceSize nbyte, SceOff offset, SceSize *read);
 int pfsLowerPwrite(ScePfsLowerFile *lf, const void *buf, SceSize nbyte, SceOff offset,
@@ -1210,7 +1212,7 @@ int pfsAcidDirUmount(ScePfsPmi *pmi, SceVfsVnode *vp);
 
 /* redirect layer (0xeae8+): a pmi without files.db of its own */
 int pfsRedirectVnodeCreate(SceVfsVnode **vpp, SceVfsVnode *dvp, SceVfsVnode *lowerVp,
-			   SceUInt16 attr);
+			   SceUInt32 attr);
 int pfsRedirectSetRoot(ScePfsPmi *pmi, SceVfsMount *mnt, int unk, SceVfsVnode *vp);
 int pfsRedirectDevctl(ScePfsPmi *pmi, SceVfsMount *mnt, const char *dev, unsigned int cmd,
 		      const void *arg, SceSize argLen, void *buf, SceSize bufLen);
@@ -1296,7 +1298,7 @@ int pfsCoreVnodeSync(ScePfsFi *fi, ScePfsPmi *pmi, int flags);
 int pfsCoreDopen(ScePfsFi *fi, ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path);
 int pfsCoreDread(ScePfsFi *fi, ScePfsPmi *pmi, SceIoDirent *dir, int a3);
 int pfsCoreDclose(ScePfsFi *fi, ScePfsPmi *pmi);
-int pfsCoreDevctl(ScePfsPmi *pmi, const char *dev, unsigned int cmd, const void *arg,
+int pfsCoreDevctl(ScePfsPmi *pmi, const char *dev, int cmd, const void *arg,
 		  SceSize argLen, void *buf, SceSize bufLen);
 int pfsCoreWhiteout(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *oldPath,
 		    SceVfsPath *newPath, SceUInt32 a4, SceUInt32 a5);

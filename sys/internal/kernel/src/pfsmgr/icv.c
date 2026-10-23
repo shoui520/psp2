@@ -19,10 +19,9 @@ static inline SceUInt32 pfsRoundUp32(SceUInt32 x, SceUInt32 align)	/* name unkno
 
 /* kind 1: a hash tree */
 
-static int pfsIcvTreeGetCount(ScePfsCrypt *ctx, SceUInt32 *count)
+static void pfsIcvTreeGetCount(ScePfsCrypt *ctx, SceUInt32 *count)
 {
 	*count = ctx->tree.header.count;
-	return 0;
 }
 
 static SceSize pfsIcvTreeBlockSize(ScePfsCrypt *ctx)
@@ -170,10 +169,9 @@ int pfsIcvTreeOpen(ScePfsCrypt *ctx, ScePfsLru *lru, ScePfsLowerFile *lf, const 
 
 /* kind 2: no icvs */
 
-static int pfsIcvFlatGetCount(ScePfsCrypt *ctx, SceUInt32 *count)
+static void pfsIcvFlatGetCount(ScePfsCrypt *ctx, SceUInt32 *count)
 {
 	*count = ctx->flat.record.count;
-	return 0;
 }
 
 static int pfsIcvFlatResize(ScePfsCrypt *ctx, SceUInt32 count)

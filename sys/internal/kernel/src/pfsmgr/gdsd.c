@@ -115,7 +115,8 @@ int pfsGdsdSetRoot(ScePfsPmi *pmi, SceVfsMount *mnt, int unk, SceVfsVnode *vp)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	lower = mnt->mntVnode;
-	vd->index = -1;
+	vd->slot = -1;
+	vd->parentIndex = -1;
 	vd->attr = PFS_ATTR_DIR;
 	vd->pages.next = &vd->pages;
 	vd->pages.prev = &vd->pages;
@@ -347,6 +348,7 @@ int pfsGdsdIoctl(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, int cmd, con
 	ScePfsVd *vd;
 	ScePfsFi *fi;
 	SceVfsVnode *lower;
+	SceVfsFile *lowerFile;
 	int perm, ret;
 
 	ret = pfsAccessBegin(pmi, PFS_OP_IOCTL, cmd, &perm);
@@ -361,8 +363,9 @@ int pfsGdsdIoctl(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, int cmd, con
 			ret = SCE_ERROR_ERRNO_EINVAL;
 		} else {
 			lower = vd->lowerVp;
+			lowerFile = fi->lower.file;
 			vfsLockVnode(lower);
-			ret = sceVopIoctl(lower, fi->lower.file, cmd, in, inLen, out, outLen);
+			ret = sceVopIoctl(lower, lowerFile, cmd, in, inLen, out, outLen);
 			vfsUnlockVnode(lower);
 		}
 	}
@@ -389,7 +392,7 @@ int pfsGdsdInactive(SceVfsVnode *vp)
 	pfsNodeRelease(&node);
 	if (icvVp != NULL) {
 		vfsLockVnode(icvVp);
-		if (icvVp->core.refCount > 1) {
+		if ((int)icvVp->core.refCount > 1) {
 			icvVp->core.refCount--;
 			vfsUnlockVnode(icvVp);
 			return 0;

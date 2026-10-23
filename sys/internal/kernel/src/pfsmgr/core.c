@@ -106,9 +106,7 @@ int pfsVnodeCreate(SceVfsVnode **vpp, SceVfsVnode *dvp, SceVfsVnode *lowerVp,
 		   SceVfsVnode *icvVp, SceUInt32 index, SceUInt32 parentIndex, SceUInt16 attr,
 		   SceUInt32 unused, SceUInt64 size)
 {
-	SceVfsMount *mnt;
 	ScePfsVd *vd;
-	SceVfsVnode *vp;
 	int ret;
 
 	ret = vfsGetNewVnode(dvp->core.mnt, (SceVopTable *)dvp->core.mnt->mntVfsInf->defaultVops,
@@ -131,19 +129,17 @@ int pfsVnodeCreate(SceVfsVnode **vpp, SceVfsVnode *dvp, SceVfsVnode *lowerVp,
 	vd->pages.prev = &vd->pages;
 	vd->index = index;
 	vfsLockVnode(*vpp);
-	mnt = dvp->core.mnt;
 	(*vpp)->core.dd = dvp;
-	(*vpp)->core.mnt = mnt;
-	vp = *vpp;
-	vp->core.nodeData = vd;
-	vp->core.state = SCE_VNODE_STATE_ACTIVE;
-	vp->core.type = lowerVp->core.type;
-	vp->core.aclData[0] = attr;
-	vp->core.aclData[1] = 0;
-	*(SceUInt64 *)vp->core.fid = *(SceUInt64 *)lowerVp->core.fid;
-	vp->core.size = size;
-	vp->core.mntOpt = lowerVp->core.mntOpt | 0x10000;
-	vp->core.refCount = 1;
+	(*vpp)->core.mnt = dvp->core.mnt;
+	(*vpp)->core.nodeData = vd;
+	(*vpp)->core.state = SCE_VNODE_STATE_ACTIVE;
+	(*vpp)->core.type = lowerVp->core.type;
+	(*vpp)->core.aclData[0] = attr;
+	(*vpp)->core.aclData[1] = 0;
+	*(SceUInt64 *)(*vpp)->core.fid = *(SceUInt64 *)lowerVp->core.fid;
+	(*vpp)->core.size = size;
+	(*vpp)->core.mntOpt = lowerVp->core.mntOpt | 0x10000;
+	(*vpp)->core.refCount = 1;
 	vfsUnlockVnode(lowerVp);
 	return 0;
 }
@@ -606,7 +602,7 @@ int pfsCoreLookup(ScePfsPmi *pmi, ScePfsNode *node, SceUInt32 flags)
 		goto out;
 	}
 	mode = pmi->mode;
-	if (mode != 3)
+	if (mode == 3)
 		goto out;
 
 cleanup:
@@ -813,7 +809,24 @@ closeLower:
 int pfsCoreClose(ScePfsFi *fi, ScePfsPmi *pmi)
 {
 	const ScePfsModeInfo *info = pfsModeInfo(pmi->mode);
+#if FW_VERSION < 0x04000000
+	int ret;
 
+	if (info->icvType != PFS_ICV_UNICV) {
+		if (pmi->flags & PFS_PMI_NOT_MOUNTED) {
+			pfsLowerCloseForce(&fi->icv);
+		} else {
+			ret = pfsLowerClose(&fi->icv);
+			if (ret != 0)
+				return ret;
+		}
+	}
+	if (pmi->flags & PFS_PMI_NOT_MOUNTED) {
+		pfsLowerCloseForce(&fi->lower);
+		return 0;
+	}
+	return pfsLowerClose(&fi->lower);
+#else
 	if (info->icvType != PFS_ICV_UNICV) {
 		if (pmi->flags & PFS_PMI_NOT_MOUNTED)
 			pfsLowerCloseForce(&fi->icv);
@@ -825,6 +838,7 @@ int pfsCoreClose(ScePfsFi *fi, ScePfsPmi *pmi)
 	else
 		pfsLowerCloseLocked(&fi->lower);
 	return 0;
+#endif
 }
 
 /* after a change of vp's size: its new hash and size into files.db */
@@ -872,7 +886,7 @@ int pfsCoreWrite(ScePfsFi *fi, ScePfsPmi *pmi, const void *buf, SceSize nbyte, S
 	SceUInt64 oldDisk;
 	ScePfsCrypt ctx;
 	SceOff size, end;
-	int ret;
+	int grow, ret;
 
 	if (vd == NULL)
 		return SCE_ERROR_ERRNO_EINVAL;
@@ -891,8 +905,9 @@ int pfsCoreWrite(ScePfsFi *fi, ScePfsPmi *pmi, const void *buf, SceSize nbyte, S
 		end = offset + nbyte;
 		if (end < size)
 			end = size;
-		if (end - size > 0) {
-			ret = pfsQuotaCheckGrow(pmi, &ctx, size, end - size);
+		grow = (int)end - (int)size;	/* Sony's 32-bit difference */
+		if (grow > 0) {
+			ret = pfsQuotaCheckGrow(pmi, &ctx, size, grow);
 			if (ret != 0)
 				goto out;
 			size = vp->core.size;
@@ -929,10 +944,13 @@ out:
 
 int pfsCoreLseek(ScePfsFi *fi, ScePfsPmi *pmi, SceOff offset, int whence, SceOff *position)
 {
+	SceVfsVnode *vp = fi->vp;
+	SceOff cur = *position;
+
 	if (whence == SCE_SEEK_CUR) {
-		offset += *position;
+		offset += cur;
 	} else if (whence == SCE_SEEK_END) {
-		offset += fi->vp->core.size;
+		offset += vp->core.size;
 		if (offset < 0)
 			return SCE_ERROR_ERRNO_EINVAL;
 	} else if (whence != SCE_SEEK_SET) {
@@ -990,8 +1008,8 @@ int pfsCoreRemove(ScePfsPmi *pmi, ScePfsNode *dir, ScePfsNode *node)
 
 int pfsCoreMkdir(ScePfsPmi *pmi, ScePfsNode *node, int mode)
 {
-	SceVfsVnode *dvp = node->vp;
 	const ScePfsModeInfo *info = pfsModeInfo(pmi->mode);
+	SceVfsVnode *dvp = node->vp;
 	ScePfsVd *vd = dvp->core.nodeData;
 	SceUInt64 size = PFS_PAGE_SIZE, oldDisk, dirDisk, newDisk;
 	SceVfsVnode *lowerDvp, *lowerVp, *icvVp, *vp;
@@ -1260,7 +1278,7 @@ int pfsCoreTruncate(ScePfsFi *fi, ScePfsPmi *pmi, SceOff newSize)
 	ScePfsCrypt ctx;
 	SceOff size;
 	SceUInt32 pad;
-	int ret;
+	int grow, ret;
 
 	if (pmi->mode == 3)
 		return SCE_PFS_ERROR_READ_ONLY;
@@ -1277,14 +1295,15 @@ int pfsCoreTruncate(ScePfsFi *fi, ScePfsPmi *pmi, SceOff newSize)
 		return ret;
 
 	size = vp->core.size;
-	if (pmi->quota != 0 && newSize - size > 0) {
-		ret = pfsQuotaCheckGrow(pmi, &ctx, size, newSize - size);
+	grow = (int)newSize - (int)size;	/* Sony's 32-bit difference */
+	if (pmi->quota != 0 && grow > 0) {
+		ret = pfsQuotaCheckGrow(pmi, &ctx, size, grow);
 		if (ret != 0)
 			goto out;
 		size = vp->core.size;
 	}
-	if (newSize < size) {
-		/* the underlying file keeps whole pages */
+	if (size < newSize) {
+		/* the underlying file grows to whole pages */
 		pad = (PFS_PAGE_SIZE - newSize % PFS_PAGE_SIZE) % PFS_PAGE_SIZE;
 		ret = pfsLowerSetSize(&fi->lower, newSize + pad);
 		if (ret != 0)
@@ -1423,7 +1442,7 @@ int pfsCoreDclose(ScePfsFi *fi, ScePfsPmi *pmi)
 	return 0;
 }
 
-int pfsCoreDevctl(ScePfsPmi *pmi, const char *dev, unsigned int cmd, const void *arg,
+int pfsCoreDevctl(ScePfsPmi *pmi, const char *dev, int cmd, const void *arg,
 		  SceSize argLen, void *buf, SceSize bufLen)
 {
 	SceUInt64 usage, disk;
@@ -1531,9 +1550,12 @@ int pfsCoreWhiteout(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPat
 int pfsCoreCleanup(ScePfsFi *fi, ScePfsPmi *pmi, SceUInt32 a2, SceUInt32 a3)
 {
 	const ScePfsModeInfo *info = pfsModeInfo(pmi->mode);
+	int ret;
 
-	if (info->icvType != PFS_ICV_UNICV && pfsLowerCleanup(&fi->icv, a2, a3) != 0)
-		return 0;
-	pfsLowerCleanup(&fi->lower, a2, a3);
-	return 0;
+	if (info->icvType != PFS_ICV_UNICV) {
+		ret = pfsLowerCleanup(&fi->icv, a2, a3);
+		if (ret != 0)
+			return ret;
+	}
+	return pfsLowerCleanup(&fi->lower, a2, a3);
 }

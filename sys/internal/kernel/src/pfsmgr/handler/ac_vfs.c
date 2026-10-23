@@ -104,28 +104,29 @@ static int dev_ac_mount(SceVfsOpMountArgs *arg)
 static int dev_ac_umount(SceVfsOpUmountArgs *arg)
 {
 	ScePfsPmi *pmi = (ScePfsPmi *)arg->mnt->pData;
-	ScePfsListNode *node;
+	ScePfsListNode *node, *next;
 	int ret;
 
 	sceKernelLockMutex(pmi->mutex, 1, NULL);
 	node = pmi->acidDirs.next;
-	if (node == NULL) {
-		sceKernelUnlockMutex(pmi->mutex, 1);
-		return pfsErrorToErrno(SCE_PFS_ERROR_NOT_IN_LIST);
-	}
-	for (; node != &pmi->acidDirs; node = node->next) {
+	if (node == NULL)
+		goto notInList;
+	for (; node != &pmi->acidDirs; node = next) {
+		next = node->next;
+		if (next == NULL)
+			goto notInList;
 		ret = pfsCoreUmount((ScePfsPmi *)node, arg->flags);
 		if (ret != 0) {
 			sceKernelUnlockMutex(pmi->mutex, 1);
 			return pfsErrorToErrno(ret);
 		}
-		if (node->next == NULL) {
-			sceKernelUnlockMutex(pmi->mutex, 1);
-			return pfsErrorToErrno(SCE_PFS_ERROR_NOT_IN_LIST);
-		}
 	}
 	sceKernelUnlockMutex(pmi->mutex, 1);
 	return pfsErrorToErrno(pfsGdsdUmount(pmi, arg->mnt, arg->flags));
+
+notInList:
+	sceKernelUnlockMutex(pmi->mutex, 1);
+	return pfsErrorToErrno(SCE_PFS_ERROR_NOT_IN_LIST);
 }
 
 static int dev_ac_sync(SceVfsOpSyncArgs *arg)

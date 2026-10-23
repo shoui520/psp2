@@ -234,14 +234,14 @@ int pfsIcvCreate(ScePfsPmi *pmi, SceUInt32 index, SceUInt16 attr, int mode, void
 		}
 		ctx.key = key;
 		ret = pfsIcvTreeCreate(&ctx, &pmi->icvLru, &lf, mode, &key,
-				       pfsVersionIcvParam(pmi->version));
+				       pfsVersionHashParam(pmi->version));
 	} else {
 		ctx.key = key;
 		if (icvType == 2) {
 		flat:
 			ctx.key = key;
 			icvType = 2;
-			ret = pfsIcvFlatCreate(&ctx, &lf, mode, &key, pfsVersionHashParam(pmi->version));
+			ret = pfsIcvFlatCreate(&ctx, &lf, mode, &key, pfsVersionIcvParam(pmi->version));
 		} else if (icvType == 3) {
 			ret = pfsUnicvTree3Create(&ctx, &pmi->unicv, index, mode);
 		} else {
@@ -302,12 +302,12 @@ int pfsCryptInit(ScePfsCrypt *ctx, ScePfsPmi *pmi, ScePfsLowerFile *icv, SceUInt
 	ctx->key = key;
 	ctx->kind = kind;
 	if (kind == 2) {
-		ret = pfsIcvFlatOpen(ctx, icv, &key, 0, pfsVersionHashParam(pmi->version));
+		ret = pfsIcvFlatOpen(ctx, icv, &key, size, pfsVersionIcvParam(pmi->version));
 	} else if (kind == 3) {
 		ret = pfsUnicvTree3Open(ctx, &pmi->unicv, icv->cookie, &key, size);
 	} else if (kind == 1) {
 		ret = pfsIcvTreeOpen(ctx, &pmi->icvLru, icv, &key, size,
-				     pfsVersionIcvParam(pmi->version));
+				     pfsVersionHashParam(pmi->version));
 	} else {
 		return SCE_PFS_ERROR_BAD_ICV_TYPE;
 	}

@@ -564,12 +564,12 @@ int pfsDbTreeDeleteEntry(ScePfsDbTree *tree, const ScePfsHash *key, ScePfsDbNode
 		node = pfsDbNodeOf(page);
 		if (node->count == 0) {
 			if (!node->internal) {
-				if (page->offset != -1)
+				if (page->offset != 0xffffffff)	/* a 32-bit -1, as Sony compares */
 					pfsDbNodePageFree(page);
 				tree->root = -1;
 			} else {
 				tree->root = pfsDbNodeRecords(node, tree->order)[0].index;
-				if (page->offset != -1)
+				if (page->offset != 0xffffffff)
 					pfsDbNodePageFree(page);
 				ret = pfsDbNodePageLoad(page, pfsDbTreePageOffset(tree, tree->root),
 							tree->order);
@@ -692,7 +692,7 @@ int pfsDbTreeDeleteEntry(ScePfsDbTree *tree, const ScePfsHash *key, ScePfsDbNode
 		pfsHashCopy(&pfsDbNodeHashes(pfsDbNodeOf(&parent), tree->order)[slot], &hash);
 		err = pfsDbNodePageRelease(left);
 		if (err == 0) {
-			if (right->offset != -1)
+			if (right->offset != 0xffffffff)
 				pfsDbNodePageFree(right);
 			err = pfsDbTreeRemoveEntry(tree, &parent, &kprime, 1);
 			if (err == 0)

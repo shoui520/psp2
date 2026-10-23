@@ -20,6 +20,7 @@ int pfsDbCreate(ScePfsPmi *pmi, ScePfsNode *node)
 	ScePfsNode dir;
 	ScePfsHash key;
 	SceUInt16 fsType;
+	SceUInt32 type;
 	SceUID pid;
 	int ret;
 
@@ -34,9 +35,9 @@ int pfsDbCreate(ScePfsPmi *pmi, ScePfsNode *node)
 	if (ret == 0) {
 		pfsDeriveKey(&key, pmi->klicensee, pmi->a8, pmi->flags, 0, pmi->a6);
 		fsType = pfsModeFsType(pmi->mode);
+		type = pfsFsTypeIsX(fsType) ? PFS_DB_TYPE_X : PFS_DB_TYPE;
 		pfsDbTableInit(&table, &pmi->filesDbLru);
-		ret = pfsDbTableCreate(&table, &pmi->filesDb, &key, fsType, pmi->a6,
-				       pfsFsTypeIsX(fsType) ? PFS_DB_TYPE_X : PFS_DB_TYPE, pmi->a8);
+		ret = pfsDbTableCreate(&table, &pmi->filesDb, &key, fsType, pmi->a6, type, pmi->a8);
 		if (ret == 0) {
 			pmi->version = table.header.type;
 			ret = pfsDbTableFlush(&table);

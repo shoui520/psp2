@@ -179,15 +179,16 @@ int pfsNodeCreate(ScePfsNode *node, int mode)
 
 int pfsLowerOpen(ScePfsLowerFile *lf, ScePfsNode *node, SceUInt32 cookie, int flags)
 {
+	SceVfsVnode *vp = node->vp;
 	SceVfsPath path;
 	int ret;
 
 	path.name = node->name;
 	lf->cookie = cookie;
-	lf->vp = node->vp;
+	lf->vp = vp;
 	path.nameLength = strnlen(path.name, PFS_NAME_MAX - 1);
 	path.path = NULL;
-	vfsLockVnode(lf->vp);
+	vfsLockVnode(vp);
 	lf->fd = vfsAllocateFile(lf->vp, &lf->file, path.name);
 	vfsUnlockVnode(lf->vp);
 	ret = lf->fd;
@@ -241,6 +242,7 @@ int pfsLowerCloseForce(ScePfsLowerFile *lf)
 	return 0;
 }
 
+#if FW_VERSION >= 0x04000000
 int pfsLowerCloseLocked(ScePfsLowerFile *lf)
 {
 	vfsLockVnode(lf->vp);
@@ -252,6 +254,7 @@ int pfsLowerCloseLocked(ScePfsLowerFile *lf)
 	vfsUnlockVnode(lf->vp);
 	return 0;
 }
+#endif
 
 int pfsLowerCleanup(ScePfsLowerFile *lf, SceUInt32 a2, SceUInt32 a3)
 {

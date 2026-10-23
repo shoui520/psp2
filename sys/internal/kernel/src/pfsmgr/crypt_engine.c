@@ -207,7 +207,7 @@ int pfsCryptEngineWait(ScePfsCryptJob *job)
 
 /* PLACEHOLDER: cryptographic routine, deferred: encrypts or decrypts
  * the job's blocks between its plain and disk buffers and hashes their icvs */
-void pfsCryptEngineProcess(ScePfsCryptJob *job)
+__attribute__((noinline)) void pfsCryptEngineProcess(ScePfsCryptJob *job)
 {
 	job->result = 0;
 }
