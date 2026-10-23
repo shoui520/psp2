@@ -42,9 +42,21 @@ int appmgrPspSaveDataRootMountSyscall(ScePfsRndDriveId *mountPoint)
 	return sceAppMgrPspSaveDataRootMount(mountPoint);
 }
 
+int appmgrWorkDirMountByIdSyscall(unsigned int mountId, const char *id,
+				  ScePfsRndDriveId *mountPoint)
+{
+	return sceAppMgrWorkDirMountById(mountId, id, mountPoint);
+}
+
 int appmgrTrophyMountSyscall(unsigned int mountId, SceUID pid, ScePfsRndDriveId *mountPoint)
 {
 	return SceAppMgrForDriver_E977A833(mountId, pid, mountPoint);
+}
+
+int appmgrTrophyMountByIdSyscall(unsigned int mountId, const char *id,
+				 ScePfsRndDriveId *mountPoint)
+{
+	return sceAppMgrTrophyMountById(mountId, id, mountPoint);
 }
 
 int appmgrMmsMountSyscall(unsigned int mountId, ScePfsRndDriveId *mountPoint)

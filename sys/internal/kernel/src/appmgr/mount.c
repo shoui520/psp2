@@ -4970,7 +4970,7 @@ static __attribute__((noinline)) int appmgrIsTitleId(const char *id)
 }
 
 /* A title ID with a two digit suffix: XXXXNNNNN_NN (a trophy set, a gift). */
-static int appmgrIsTitleIdWithSuffix(const char *id)
+static inline int appmgrIsTitleIdWithSuffix(const char *id)
 {
 	return APPMGR_IS_UPPER(id[0]) && APPMGR_IS_UPPER(id[1]) &&
 	       APPMGR_IS_UPPER(id[2]) && APPMGR_IS_UPPER(id[3]) &&
@@ -6128,6 +6128,139 @@ failed:
 	}
 unlock:
 	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+	return result;
+}
+
+#if FW_SINCE(0x04000000)
+/* Mounts a trophy set's directory, or its backup, for the calling process. */
+int sceAppMgrTrophyMountById(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint)
+{
+	SceUInt32 syscallState;
+	char titleId[16];
+	char path[64];
+	struct AppState *app;
+	SceUInt32 contentFlags;
+	int result;
+
+	if (mountId - 303 > 1)
+		return 0x80800001;
+	__builtin_memset(titleId, 0, sizeof(titleId));
+	syscallState = sceSyscallEnter();
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	result = 0x80800009;
+	if (!appmgrIsMountIdAllowed(mountId))
+		goto unlock;
+	if (mountPoint == NULL || id == NULL || !appmgrIsTitleIdWithSuffix(id))
+		goto invalid;
+	__builtin_memset(g_appmgrMountByIdRoot, 0, sizeof(g_appmgrMountByIdRoot));
+	__builtin_memset(g_appmgrMountByIdComponent, 0, sizeof(g_appmgrMountByIdComponent));
+	result = appmgrMakeAccountPath(path, encodedTrophyData, id,
+				       mountId == 304 ? "%s/%s/%s/%s_BK" : "%s/%s/%s/%s");
+	if (result != 0)
+		goto unlock;
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app == NULL) {
+		result = 0x80801002;
+		goto unlock;
+	}
+	strncpy(titleId, app->process.appName, 10);
+	contentFlags = app->process.content.contentFlags;
+	if ((contentFlags & 0x30) != 0) {
+		result = 0x80800048;
+		if (!appmgrIsMediaDriveMountable(mountId, contentFlags))
+			goto unlock;
+	}
+	result = appmgrCreatePfsDirectory(mountId, path, NULL);
+	if (result == 0)
+		result = appmgrMount(sceKernelGetProcessId(), &app->process.mounts, mountId,
+				     titleId, path, NULL, NULL, mountPoint);
+	goto unlock;
+
+invalid:
+	result = 0x80800001;
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+#endif
+
+/* Mounts the calling application's cache (205) or its recording work directory (207). */
+int sceAppMgrWorkDirMountById(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint)
+{
+	SceUInt32 syscallState;
+	char titleId[16];
+	char buffer[64];
+	struct AppState *app;
+	char *path;
+	int result;
+
+	if (mountId != 205 && mountId != 207)
+		return 0x80800001;
+	__builtin_memset(titleId, 0, sizeof(titleId));
+	syscallState = sceSyscallEnter();
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	result = 0x80800009;
+	if (!appmgrIsMountIdAllowed(mountId))
+		goto unlock;
+	if (mountPoint == NULL)
+		goto invalid;
+	if ((mountId == 205 || mountId == 207) &&
+	    (id == NULL ||
+	     !(APPMGR_IS_UPPER(id[0]) && APPMGR_IS_UPPER(id[1]) &&
+	       APPMGR_IS_UPPER(id[2]) && APPMGR_IS_UPPER(id[3]) &&
+	       APPMGR_IS_DIGIT(id[4]) && APPMGR_IS_DIGIT(id[5]) &&
+	       APPMGR_IS_DIGIT(id[6]) && APPMGR_IS_DIGIT(id[7]) &&
+	       APPMGR_IS_DIGIT(id[8]) && id[9] == '\0')))
+		goto invalid;
+	__builtin_memset(g_appmgrMountByIdRoot, 0, sizeof(g_appmgrMountByIdRoot));
+	__builtin_memset(g_appmgrMountByIdComponent, 0, sizeof(g_appmgrMountByIdComponent));
+	if (mountId == 206) {
+		result = appmgrDecodeString(encodedWebBrowser, buffer, sizeof(buffer));
+		if (result < 0)
+			goto unlock;
+		path = buffer;
+	} else if (mountId == 207) {
+		path = g_appmgrAppWorkPath;
+		snprintf(g_appmgrAppWorkPath, sizeof(g_appmgrAppWorkPath),
+			 "ux0:temp/app_work/%s/rec", id);
+	} else {
+		path = g_appmgrCachePath;
+		snprintf(g_appmgrCachePath, sizeof(g_appmgrCachePath), "ux0:cache/%s", id);
+	}
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app == NULL) {
+		result = 0x80801002;
+		goto unlock;
+	}
+	strncpy(titleId, app->process.appName, 10);
+	if ((app->process.content.contentFlags & 0x30) != 0) {
+		result = 0x80800048;
+		if (!appmgrIsMediaDriveMountable(mountId, app->process.content.contentFlags))
+			goto unlock;
+	}
+	if (mountId == 205) {
+		path = g_appmgrCachePath;
+		snprintf(g_appmgrCachePath, sizeof(g_appmgrCachePath), "ux0:cache/%s",
+			 app->process.content.originalTitleId);
+	}
+	result = appmgrCreateDirectories(path, 1);
+	if (result == 0)
+		result = appmgrMount(sceKernelGetProcessId(), &app->process.mounts, mountId,
+				     titleId, path, NULL, NULL, mountPoint);
+	goto unlock;
+
+invalid:
+	result = 0x80800001;
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
 	return result;
 }
 

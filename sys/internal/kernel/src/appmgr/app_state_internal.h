@@ -481,7 +481,11 @@ int appmgrGameDataMountSyscall(const char *appPath, const char *patchPath,
 int appmgrAppDataMountSyscall(unsigned int mountId, struct ScePfsRndDriveId *mountPoint);
 int appmgrWorkDirMountSyscall(unsigned int mountId, struct ScePfsRndDriveId *mountPoint);
 int appmgrPspSaveDataRootMountSyscall(struct ScePfsRndDriveId *mountPoint);
+int appmgrWorkDirMountByIdSyscall(unsigned int mountId, const char *id,
+				  struct ScePfsRndDriveId *mountPoint);
 int appmgrTrophyMountSyscall(unsigned int mountId, SceUID pid, struct ScePfsRndDriveId *mountPoint);
+int appmgrTrophyMountByIdSyscall(unsigned int mountId, const char *id,
+				 struct ScePfsRndDriveId *mountPoint);
 int appmgrMmsMountSyscall(unsigned int mountId, struct ScePfsRndDriveId *mountPoint);
 int appmgrAppDataMountByIdSyscall(unsigned int mountId, const char *id,
 				  struct ScePfsRndDriveId *mountPoint);

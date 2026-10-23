@@ -109,6 +109,7 @@ int appmgrMountById(SceUID pid, unsigned int mountId, const char *id, const void
 int appmgrMountSystemDirectory(SceUID pid, unsigned int mountId, ScePfsRndDriveId *mountPoint);
 int sceAppMgrPspSaveDataRootMount(ScePfsRndDriveId *mountPoint);
 int sceAppMgrTrophyMountById(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint);
+int sceAppMgrWorkDirMountById(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint);
 int sceAppMgrInstallDirMount(unsigned int mountId, const char *id, const void *keystone,
 			     ScePfsRndDriveId *mountPoint);
 int sceAppMgrLoopBackMount(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint);
