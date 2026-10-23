@@ -500,6 +500,8 @@ int appmgrAppDataMountByIdSyscall(unsigned int mountId, const char *id,
 				  struct ScePfsRndDriveId *mountPoint);
 int appmgrInstallDirMountSyscall(unsigned int mountId, const char *id, const void *keystone,
 				 struct ScePfsRndDriveId *mountPoint);
+int appmgrLoopBackFormatSyscall(unsigned int mountId, unsigned int command, const char *id,
+				struct AppmgrLoopBackImageInfo *info);
 int appmgrLoopBackMountSyscall(unsigned int mountId, const char *id,
 			       struct ScePfsRndDriveId *mountPoint);
 int appmgrThemeDataMountSyscall(const char *contentId, const char *themePath,

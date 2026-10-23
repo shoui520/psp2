@@ -87,6 +87,12 @@ int appmgrCountPfsMountReferencesSyscall(unsigned int mountId, int flags)
 	return appmgrCountPfsMountReferences(mountId, flags);
 }
 
+int appmgrLoopBackFormatSyscall(unsigned int mountId, unsigned int command, const char *id,
+				AppmgrLoopBackImageInfo *info)
+{
+	return sceAppMgrLoopBackFormat(mountId, command, id, info);
+}
+
 int appmgrGetVs0UserModuleDriveSyscall(char *mountPoint)
 {
 	return appmgrGetVs0UserModuleDrive(mountPoint);

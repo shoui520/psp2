@@ -90,3 +90,6 @@ int error_notification(AppmgrFatFormatArguments *const *arguments,
 int _prepare_FAT_PBR(AppmgrFatFormatContext *context);
 int zero_fill(AppmgrFatFormatContext *context, unsigned int bufferOffset,
 	unsigned int length, uint64_t byteOffset, int index);
+
+unsigned int appmgrPackFatDateTime(const SceDateTime *time);
+int FatFormat(AppmgrFatFormatArguments *arguments);

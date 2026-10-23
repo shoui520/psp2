@@ -40,6 +40,7 @@
 #include <syscon/syscon.h>
 #include <sysmem/pmmgr.h>
 #include "app_state_internal.h"
+#include "fat_format_internal.h"
 #include "appmgr_device.h"
 #include "appmgr_event.h"
 #include "appmgr_savedata_slot.h"
@@ -4960,6 +4961,12 @@ static const unsigned char encodedParamSfo[24] = {
 	(unsigned char)~'m', (unsigned char)~'.', (unsigned char)~'s', (unsigned char)~'f',
 	(unsigned char)~'o', (unsigned char)~'\0', 0
 };
+/* ux0:umass */
+static const unsigned char encodedUmass[16] = {
+	(unsigned char)~'u', (unsigned char)~'x', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'u', (unsigned char)~'m', (unsigned char)~'a', (unsigned char)~'s',
+	(unsigned char)~'s', 0
+};
 
 static char g_appmgrMountByIdComponent[32];
 static char g_appmgrMountByIdRoot[32];
@@ -4968,6 +4975,7 @@ static char g_appmgrPsmPath[32];
 static char g_appmgrAppWorkPath[32];
 static char g_appmgrLoopBackPath[64];
 static char g_appmgrInstallDirPath[32];
+static SceUID g_appmgrLoopBackOwner = -1;
 
 /* A title ID: XXXXNNNNN (X upper case, N digit). */
 static __attribute__((noinline)) int appmgrIsTitleId(const char *id)
@@ -7261,6 +7269,225 @@ unmount:
 		sceKernelFreeHeapMemory(g_appmgrMountHeap, content);
 	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
 out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+static __attribute__((noinline, noclone)) void *appmgrAllocProcessHeap(SceSize size)
+{
+	SceAllocOpt opt;
+
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 0x1000;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	return sceKernelAllocRemoteProcessHeap(sceKernelGetProcessId(), size, &opt);
+}
+
+static __attribute__((noinline)) int appmgrFreeProcessHeap(void *pointer)
+{
+	return sceKernelFreeRemoteProcessHeap(sceKernelGetProcessId(), pointer);
+}
+
+/*
+ * The loop back images (ux0:umass/<id>.img), one per 32-digit hex ID: create (0, a FAT
+ * image of one of the allowed sizes), query (1), delete (2), take (3) and release (5) the
+ * owner, shrink a deleted one (4, ".img_", 128 MiB a call).
+ */
+int sceAppMgrLoopBackFormat(unsigned int mountId, unsigned int command, const char *id,
+			    AppmgrLoopBackImageInfo *info)
+{
+	AppmgrFatFormatArguments arguments;
+	SceDateTime time;
+	SceUInt64 size;
+	union {
+		SceSelfAuthInfo authInfo;
+		SceIoStat stat;
+	} stat;
+	char directory[64];
+	char imagePath[64];
+	char workPath[64];
+	void *buffer;
+	unsigned int serial;
+	SceUID pid, fd;
+	SceUInt32 syscallState;
+	int permission, result, index;
+
+	syscallState = sceSyscallEnter();
+	permission = sceKernelSetThreadAccessLevel(128);
+	SceKernelSuspendForDriver_4DF40893(0);
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	if (mountId != 100)
+		goto invalid;
+	if (command == 1) {
+		if (SceSblACMgrForDriver_4DB7F512(0) == 0 || SceSblACMgrForDriver_D0E11C89(0) == 0)
+			goto denied;
+	} else if (command == 5) {
+		if (sceKernelGetProcessSelfAuthInfo(0, &stat.authInfo) < 0 ||
+		    stat.authInfo.programAuthorityId != 0x2800000000000001ULL)
+			goto denied;
+		result = 0;
+		g_appmgrLoopBackOwner = -1;
+		goto unlock;
+	} else {
+		if (SceSblACMgrForDriver_D0E11C89(0) == 0)
+			goto denied;
+		if (command == 3) {
+			pid = sceKernelGetProcessId();
+			if (g_appmgrLoopBackOwner == -1) {
+				g_appmgrLoopBackOwner = pid;
+				result = 0;
+			} else {
+				result = pid != g_appmgrLoopBackOwner ? 0x80800046 : 0;
+			}
+			goto unlock;
+		}
+	}
+	if (id == NULL)
+		goto invalid;
+	for (index = 0; index < 32; index++) {
+		if ((unsigned int)(id[index] - 'A') > 5 && (unsigned int)(id[index] - '0') > 9)
+			goto invalid;
+	}
+	if (id[32] != '\0')
+		goto invalid;
+	snprintf(imagePath, sizeof(imagePath), "ux0:umass/%s.img", id);
+	snprintf(workPath, sizeof(workPath), "ux0:umass/%s.img_", id);
+	if (command == 4) {
+		if (info != NULL)
+			memset(info, 0, sizeof(*info));
+		if (sceIoGetstat(workPath, &stat.stat) < 0) {
+			result = sceIoRename(imagePath, workPath);
+			if (result < 0)
+				goto unlock;
+			g_appmgrLoopBackOwner = -1;
+		}
+		result = sceIoGetstat(workPath, &stat.stat);
+		if (result < 0)
+			goto unlock;
+		if (stat.stat.st_size <= 0x8000000) {
+			result = sceIoRemove(workPath);
+			if (result < 0)
+				goto unlock;
+			if (info != NULL) {
+				result = 0;
+				info->size = 0;
+				goto unlock;
+			}
+		} else {
+			stat.stat.st_size -= 0x8000000;
+			result = sceIoChstat(workPath, &stat.stat, SCE_CST_SIZE);
+			if (result < 0)
+				goto unlock;
+			if (info != NULL) {
+				result = 0;
+				info->size = stat.stat.st_size;
+				goto unlock;
+			}
+		}
+		result = 0;
+		goto unlock;
+	}
+	appmgrRemoveFileInSteps(workPath, 128);
+	switch (command) {
+	case 1:
+		result = sceIoGetstat(imagePath, &stat.stat);
+		if (result >= 0 && info != NULL)
+			info->size = stat.stat.st_size;
+		goto unlock;
+	case 2:
+		result = sceIoRename(imagePath, workPath);
+		if (result < 0)
+			goto unlock;
+		g_appmgrLoopBackOwner = -1;
+		result = appmgrRemoveFileInSteps(workPath, 128);
+		goto unlock;
+	case 0:
+		break;
+	default:
+		goto invalid;
+	}
+	if (info == NULL)
+		goto invalid;
+	size = info->size;
+	if (size != 0x800a0000ULL && size != 0x100000000ULL && size != 0x180000000ULL &&
+	    size != 0x300000000ULL && size != 0x600000000ULL && size != 0xe00000000ULL &&
+	    size != 0xc00000000ULL)
+		goto invalid;
+	if (g_appmgrLoopBackOwner != -1 && sceKernelGetProcessId() != g_appmgrLoopBackOwner) {
+		result = 0x80800046;
+		goto unlock;
+	}
+	result = appmgrDecodeString(encodedUmass, directory, sizeof(directory));
+	if (result < 0)
+		goto unlock;
+	result = appmgrCreateDirectories(directory, 1);
+	if (result < 0)
+		goto unlock;
+	sceIoRename(imagePath, workPath);
+	appmgrRemoveFileInSteps(workPath, 128);
+	size = info->size;
+	SceKernelSuspendForDriver_4DF40893(0);
+	fd = appmgrCheckSaveDataFreeSpace(workPath, size);
+	if (fd >= 0)
+		fd = sceIoOpen(workPath, 0x10603, 0606);
+	if (fd < 0) {
+		result = fd;
+		SceKernelSuspendForDriver_2BB92967(0);
+		goto remove;
+	}
+	memset(&stat.stat, 0, sizeof(stat.stat));
+	stat.stat.st_size = size;
+	result = sceIoChstatByFd(fd, &stat.stat, SCE_CST_SIZE);
+	sceIoClose(fd);
+	SceKernelSuspendForDriver_2BB92967(0);
+	if (result < 0)
+		goto remove;
+	result = sceRtcGetCurrentClockLocalTime(&time);
+	if (result < 0)
+		goto remove;
+	serial = appmgrPackFatDateTime(&time);
+	buffer = appmgrAllocProcessHeap(0x40000);
+	if (buffer == NULL) {
+		result = 0x80801006;
+		goto remove;
+	}
+	arguments.volumeSize = 0;
+	arguments.deviceName = workPath;
+	arguments.buffer = buffer;
+	arguments.bufferSize = 0x40000;
+	arguments.clusterSize = 0x8000;
+	arguments.initialImageSize = 0;
+	arguments.writtenDataSize = 0;
+	arguments.serial = serial;
+	arguments.volumeLabel = NULL;
+	arguments.phase = 0;
+	arguments.type = 3;
+	result = FatFormat(&arguments);
+	if (result >= 0)
+		sceIoSync(arguments.deviceName, 0);
+	appmgrFreeProcessHeap(buffer);
+	if (result >= 0) {
+		result = sceIoRename(workPath, imagePath);
+		if (result >= 0)
+			goto unlock;
+	}
+remove:
+	appmgrRemoveFileInSteps(workPath, 128);
+	goto unlock;
+denied:
+	result = 0x80800009;
+	goto unlock;
+invalid:
+	result = 0x80800001;
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	SceKernelSuspendForDriver_2BB92967(0);
+	sceKernelSetThreadAccessLevel(permission);
 	sceSyscallLeave(syscallState);
 	return result;
 }

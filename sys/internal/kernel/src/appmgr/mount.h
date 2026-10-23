@@ -24,6 +24,14 @@ _Static_assert(offsetof(AppmgrPfsMount, mountId) == 0 &&
 	       offsetof(AppmgrPfsMount, next) == 460,
 	       "PFS mount fields");
 
+/* sceAppMgrLoopBackFormat's image size: in for create, out for query and shrink */
+typedef struct AppmgrLoopBackImageInfo {
+	SceUInt64 size;
+	SceUInt8 reserved[32];
+} AppmgrLoopBackImageInfo;
+
+_Static_assert(sizeof(AppmgrLoopBackImageInfo) == 40, "loop back image info");
+
 /* sceAppMgrGetSaveDataInfo's result */
 typedef struct AppmgrSaveDataInfo {
 	SceUInt32 mediaType;		/* 4 ux0, 3 grw0/gro0, 2 ur0/vs0, 1 other */
@@ -132,6 +140,8 @@ int sceAppMgrGetMediaTypeFromDriveByPid(SceUID pid, const char *drive, int *medi
 int sceAppMgrGetDevInfo(const char *path, SceOff *maxSize, SceOff *freeSize);
 int sceAppMgrGetPfsDrive(const char *drive, char *pfsDrive);
 int sceAppMgrGetSaveDataInfoForSpecialExport(const char *path, SceUInt64 *accountId);
+int sceAppMgrLoopBackFormat(unsigned int mountId, unsigned int command, const char *id,
+			    AppmgrLoopBackImageInfo *info);
 int sceAppMgrInstallDirMount(unsigned int mountId, const char *id, const void *keystone,
 			     ScePfsRndDriveId *mountPoint);
 int sceAppMgrLoopBackMount(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint);
