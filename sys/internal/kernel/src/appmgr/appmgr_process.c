@@ -20,6 +20,7 @@
 #include <appmgr/appmgr_rdrfp.h>
 #include "appmgr_app_event.h"
 #include "appmgr_device.h"
+#include "mount.h"
 #include "appmgr_savedata_slot.h"
 #include "appmgr_shell_event.h"
 #include "addcont_internal.h"
@@ -44,7 +45,6 @@ extern SceUID g_appmgrCore2Mutex;
 extern SceUID g_appmgrCore2MutexOwner;
 extern int appmgrRemoveContentCache(SceUID pid, const AppmgrProcessContent *content);
 extern int appmgrRemoveAppWorkDirectory(const AppmgrProcessContent *content);
-extern int appmgrUnmountProcessContent(SceUID pid);
 int _appmgrProcessKillProcess(struct AppState *app, int kind);
 extern int appmgrUsesDefaultLibrary(void);
 extern int appmgrPrepareProcessContent(const char *name, const char *path,
@@ -831,7 +831,7 @@ int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, void *common)
 	appmgrRemoveContentCache(pid, &app->process.content);
 	appmgrRemoveTemporaryPhoto(pid);
 	appmgrRemoveAppWorkDirectory(&app->process.content);
-	result = appmgrUnmountProcessContent(pid);
+	result = appmgrReleaseProcessMounts(pid);
 	if (result != 0) {
 		PROCESS_EXIT_ASSERT(result >= 0, 122, "_sceAppMgrProcExitHandler");
 		result = _appListUnlockApp(app);
@@ -2098,7 +2098,7 @@ SceUID appmgrProcessCreateGame(AppmgrProcessState *process, const char *path,
 		appmgrCleanupProcessMount(&process->mounts, &cleanup);
 		if (result >= 0)
 			return pid;
-		appmgrUnmountProcessContent(pid);
+		appmgrReleaseProcessMounts(pid);
 	}
 	sceKernelKillProcess(pid, 1);
 	*error = result;
@@ -2260,7 +2260,7 @@ SceUID appmgrProcessCreateMini(AppmgrProcessState *process, const char *path,
 			appmgrSelectSafeMemoryMode(&process->content));
 	appmgrCleanupProcessMount(&process->mounts, &cleanup);
 	if (result < 0) {
-		appmgrUnmountProcessContent(pid);
+		appmgrReleaseProcessMounts(pid);
 		__builtin_memset(&process->mounts, 0, sizeof(process->mounts));
 		memset(&process->content, 0, sizeof(process->content));
 		sceKernelKillProcess(pid, 1);

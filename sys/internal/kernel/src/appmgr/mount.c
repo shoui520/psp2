@@ -3369,37 +3369,37 @@ int appmgrMount(SceUID pid, AppmgrMountHolder *holder, unsigned int mountId,
 			break;
 		case 202:
 			if (SceSblACMgrForDriver_0B6E6CD7(0) != 0) {
-				strcpy(drive.drive_id, "ms0:");
+				__builtin_strcpy(drive.drive_id, "ms0:");
 				break;
 			}
 			result = appmgrMakeRandomDriveId("ms", drive.drive_id);
 			if (result != 0)
 				return result;
-			strcpy(&drive.drive_id[14], ":");
+			__builtin_strcpy(&drive.drive_id[14], ":");
 			break;
 		case 205:
-			strcpy(drive.drive_id, "cache0:");
+			__builtin_strcpy(drive.drive_id, "cache0:");
 			break;
 		case 302:
-			strcpy(drive.drive_id, "trophy_sys0:");
+			__builtin_strcpy(drive.drive_id, "trophy_sys0:");
 			break;
 		case 303:
-			strcpy(drive.drive_id, "trophy_dat0:");
+			__builtin_strcpy(drive.drive_id, "trophy_dat0:");
 			break;
 		case 304:
-			strcpy(drive.drive_id, "trophy_dbk0:");
+			__builtin_strcpy(drive.drive_id, "trophy_dbk0:");
 			break;
 		case 504:
-			strcpy(drive.drive_id, "sdimport0:");
+			__builtin_strcpy(drive.drive_id, "sdimport0:");
 			break;
 		case 505:
-			strcpy(drive.drive_id, "sdimport_tmp0:");
+			__builtin_strcpy(drive.drive_id, "sdimport_tmp0:");
 			break;
 		case 600:
 			result = appmgrMakeRandomDriveId("lm", drive.drive_id);
 			if (result != 0)
 				return result;
-			strcpy(&drive.drive_id[14], ":");
+			__builtin_strcpy(&drive.drive_id[14], ":");
 			break;
 		case 1000:
 		case 1001:
@@ -3418,13 +3418,13 @@ int appmgrMount(SceUID pid, AppmgrMountHolder *holder, unsigned int mountId,
 			result = appmgrMakeRandomDriveId("sd", drive.drive_id);
 			if (result != 0)
 				return result;
-			strcpy(&drive.drive_id[14], ":");
+			__builtin_strcpy(&drive.drive_id[14], ":");
 			break;
 		case 1009:
 			result = appmgrMakeRandomDriveId("ud", drive.drive_id);
 			if (result != 0)
 				return result;
-			strcpy(&drive.drive_id[14], ":");
+			__builtin_strcpy(&drive.drive_id[14], ":");
 			break;
 		default:
 			return (int)0x80800001;
@@ -4151,7 +4151,7 @@ int SceAppMgrForDriver_CE356B2D(const char *appPath, const char *patchPath,
 	result = appmgrMakeRandomDriveId("gp", driveId.drive_id);
 	if (result < 0)
 		goto error;
-	strcpy(&driveId.drive_id[13], "d:");
+	__builtin_strcpy(&driveId.drive_id[13], "d:");
 	result = appmgrMount(sceKernelGetProcessId(), &app->process.mounts, 1000,
 			     content->titleId, appPath, &driveId,
 			     (const ScePfsRndDriveId *)content->license.klicense, &drive);
@@ -4355,7 +4355,7 @@ int sceAppMgrThemeDataMount(const char *contentId, const char *themePath,
 	result = appmgrMakeRandomDriveId("tm", driveId.drive_id);
 	if (result < 0)
 		goto error;
-	strcpy(&driveId.drive_id[13], "d:");
+	__builtin_strcpy(&driveId.drive_id[13], "d:");
 	result = appmgrMount(sceKernelGetProcessId(), &app->process.mounts, 1004, titleId,
 			     directory, &driveId, (const ScePfsRndDriveId *)license.klicense,
 			     mountPoint);
@@ -8499,7 +8499,7 @@ mountApplication:
 	result = appmgrMakeRandomDriveId("eb", driveId.drive_id);
 	if (result < 0)
 		goto error;
-	strcpy(&driveId.drive_id[13], "d:");
+	__builtin_strcpy(&driveId.drive_id[13], "d:");
 	result = appmgrMount(sceKernelGetProcessId(), mounts, 1000, titleId, appPath, &driveId,
 			     (const ScePfsRndDriveId *)content->license.klicense,
 			     (ScePfsRndDriveId *)cleanup->driveId);

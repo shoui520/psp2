@@ -415,7 +415,6 @@ int _applicationShouldMakeRun(struct AppState *app)
 	return run;
 }
 
-#if FW_SINCE(0x04000000)
 /* spawns the application again in place of the process that just ended, pid */
 int relaunchApp(struct AppState *app, SceUID pid)
 {
@@ -457,7 +456,6 @@ int relaunchApp(struct AppState *app, SceUID pid)
 		_updateDeviceArbitration2();
 	return result;
 }
-#endif
 
 /* runs or suspends the application as the power state now asks */
 int _updateAppOnPowerTickState(struct AppState *app)

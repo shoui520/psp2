@@ -113,6 +113,8 @@ int appmgrPsfGetSize(void *object, SceSize *size);
 int appmgrPsfDestroy(void *psf);
 int appmgrPsfParse(const void *data, SceSize size, void **object);
 int appmgrPsfCreate(void **object);
+int appmgrPsfGetEntryInfo(void *object, void *entryObject, const char **key,
+	SceSize *length, SceSize *capacity);
 int appmgrPsfInitializeHeader(void *object, const void *magic,
 	unsigned int majorVersion, unsigned int minorVersion);
 

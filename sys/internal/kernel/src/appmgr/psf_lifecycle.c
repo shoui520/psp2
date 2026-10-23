@@ -155,6 +155,28 @@ int appmgrPsfCreate(void **object)
 	return 0;
 }
 
+int appmgrPsfGetEntryInfo(void *object, void *entryObject, const char **key,
+	SceSize *length, SceSize *capacity)
+{
+	AppmgrPsfContext *context = object;
+	AppmgrPsfEntry *entry = entryObject;
+	AppmgrPsfDiskEntry *diskEntry = entryObject;
+
+	if (context == NULL || entryObject == NULL)
+		return (int)0x80120003;
+	if ((context->flags & 2) != 0) {
+		*key = (const char *)context->keyTable + diskEntry->keyOffset;
+	} else {
+		diskEntry = entry->diskEntry;
+		if (diskEntry == NULL)
+			return (int)0x80120003;
+		*key = (const char *)entry->key;
+	}
+	*length = diskEntry->length;
+	*capacity = diskEntry->capacity;
+	return 0;
+}
+
 int appmgrPsfInitializeHeader(void *object, const void *magic,
 	unsigned int majorVersion, unsigned int minorVersion)
 {

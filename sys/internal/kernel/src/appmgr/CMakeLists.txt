@@ -1,5 +1,5 @@
 # generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(os0_kd_bootimage_appmgr KIND kernel COMPILER gcc48 PARTIAL SOURCES
+psp2_module(os0_kd_bootimage_appmgr KIND kernel COMPILER gcc48 SOURCES
 	appmgr.c
 	appmgr_process.c
 	appmgr_applist.c
@@ -44,4 +44,9 @@ psp2_module(os0_kd_bootimage_appmgr KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	fat_format.c
 	fat_format_storage.c
 	../../../usermode/src/fsutil/partition.c
+	debug_console.c
 )
+
+# Sony built the debug console at -O3: its scroll copies are vectorized and its drawing
+# loops prefetched.
+set_source_files_properties(debug_console.c PROPERTIES COMPILE_OPTIONS "-O3")

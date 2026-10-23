@@ -19,6 +19,7 @@
 #include "debug_setting.h"
 #include "appmgr_savedata_slot.h"
 #include "appmgr_device.h"
+#include "mount.h"
 
 extern int sceAppMgrInit(void);
 extern SceUID g_appmgrCoreHeap;
@@ -28,7 +29,6 @@ extern SceUID g_appmgrSaveDataHeap;
 extern SceUID g_appmgrSaveDataMutex;
 extern int g_appmgrAppInfoCacheKey;
 extern int appmgrMountShellExternalDirectories(SceUID pid);
-extern int appmgrMapPath(const char *path, SceUID pid, char *mapped, SceSize size);
 
 SceUID g_appmgrShellPid;
 int g_appmgrPowerSaveMode;
@@ -283,7 +283,7 @@ int _sceAppMgrModuleStart(SceSize arglen, const void *argp)
 	SceSysrootForDriver_9A8871F1(sceAppMgrSpawnProcessForDriver);
 	appmgrRegisterDebuggerCallbacks();
 	SceSysrootForDriver_E9B4221F(sceAppMgrGetShellPidForDriver);
-	SceIofilemgrForDriver_CFAECF18(appmgrMapPath);
+	SceIofilemgrForDriver_CFAECF18(appmgrResolveRawPath);
 	sceKernelRegisterSysEventHandler("SceAppMgr", appmgrSysEventHandler, NULL);
 	g_appmgrDebugNotifier = (AppmgrDebugNotifier)SceSysrootForDriver_525B24C5();
 	return 0;

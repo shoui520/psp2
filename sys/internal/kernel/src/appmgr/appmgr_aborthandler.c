@@ -21,6 +21,7 @@
 #include <display/display.h>
 #include <appmgr/appmgr.h>
 #include <appmgr.h>
+#include "debug_console.h"
 #include "app_state_internal.h"
 #include "appmgr_device.h"
 #include "appmgr_shell_event.h"
@@ -42,14 +43,6 @@ typedef struct AppmgrCoredumpState {
 _Static_assert(sizeof(AppmgrCoredumpState) == 0x424, "coredump state");
 
 /* the debug console the GPU crash screen is drawn with */
-extern int appmgrDebugConsoleInitialize(void);
-extern void appmgrDebugConsoleSetBuffer(void *buffer, int columns, int rows, int format);
-extern void appmgrDebugConsoleSetForeColor(SceUInt32 color);
-extern void appmgrDebugConsoleSetBackColor(SceUInt32 color);
-extern void appmgrDebugConsoleSetCursor(int x, int y);
-extern void appmgrDebugConsoleClear(void);
-extern void appmgrDebugConsolePuts(const char *string);
-extern void appmgrDebugConsoleFlush(void);
 
 extern int appmgrStopShellWatchDog(void);
 extern void appmgrArbitrationAfterAbort(void);
@@ -346,7 +339,7 @@ static inline __attribute__((always_inline)) void renderGpuCoredumpText(const ch
 	appmgrDebugConsoleSetForeColor(0xffffffff);
 	appmgrDebugConsoleSetBackColor(0xff000000);
 	appmgrDebugConsoleClear();
-	appmgrDebugConsolePuts(text);
+	appmgrDebugConsolePuts((const SceChar8 *)text);
 	appmgrDebugConsoleFlush();
 }
 

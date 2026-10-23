@@ -7,8 +7,6 @@
 #include "mount.h"
 #include "psf_internal.h"
 
-extern int appmgrPsfGetEntryInfo(void *psf, void *entry, const char **key,
-			       SceSize *length, SceSize *capacity);
 
 static const char emptySfoString[4] = "";
 static const char savedataCategory[4] = "sd";
