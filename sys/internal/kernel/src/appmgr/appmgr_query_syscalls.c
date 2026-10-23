@@ -10,11 +10,7 @@
 extern int sceAppMgrAppParamGetString(int pid, int param, char *string, SceSize length);
 extern SceInt32 _sceAppMgrGetAppState(SceAppMgrAppState *appState,
 				      SceUInt32 sizeofSceAppMgrAppState, SceUInt32 buildVersion);
-extern int sceAppMgrGetRunningAppIdListForShell(SceInt32 *appIds, int count);
 
-extern int sceAppMgrSetNetworkDisconnectionWarningDialogState(SceBool enable,
-							   const void *optParam);
-extern int sceAppMgrGetRecommendedScreenOrientation(int *orientation);
 extern int _sceAppMgrGetParam(char *param);
 extern int sceAppMgrGetAppParam2(void *appParam);
 
@@ -138,6 +134,16 @@ int appmgrGetStatusByNameSyscall(const char *appName, void *appStatus)
 	return sceAppMgrGetStatusByName(appName, appStatus);
 }
 
+int appmgrIsOtherAppPresentSyscall(void)
+{
+	return sceAppMgrIsOtherAppPresent();
+}
+
+int appmgrIsGameBudgetAppPresentSyscall(void)
+{
+	return sceAppMgrIsGameBudgetAppPresent();
+}
+
 int appmgrDestroyOtherAppSyscall(void)
 {
 	return sceAppMgrDestroyOtherApp();
@@ -206,4 +212,9 @@ int appmgrGetRecommendedScreenOrientationSyscall(int *orientation)
 int appmgrGetRunningAppIdListForShellSyscall(SceInt32 *appIds, int count)
 {
 	return sceAppMgrGetRunningAppIdListForShell(appIds, count);
+}
+
+int appmgrSetRecommendedScreenOrientationActivatedSyscall(int activated)
+{
+	return sceAppMgrSetRecommendedScreenOrientationActivated(activated);
 }

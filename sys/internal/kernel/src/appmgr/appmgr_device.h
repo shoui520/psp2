@@ -164,4 +164,5 @@ void _deviceRefreshDisplay(void);
 int _deviceSetBgmEnabled(int enabled);
 int _SetDisplayOwner(SceUInt32 plane, SceUID pid);
 void _deviceRefreshAudioPort(SceUID pid);
+void _deviceSetRecommendedScreenOrientation(int orientation);
 void appmgrCaptureDeviceInfo(AppMgrDeviceInfo *info);

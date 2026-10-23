@@ -86,46 +86,54 @@ SCE_DBGINFO_DEFINE(static, appmgrDumpIndexInfo, 37, "sceAppMgrDump");
 } while (0)
 #endif
 
+/* A result that must be 0, and a call that must succeed. */
 #if FW_DEBUG
+#define SERVICE_CHECK_ZERO(_result, _line) do { \
+	sceAppMgrDumpInline(); \
+	SCE_DBG_ASSERT_PRINTF(0, _line, \
+		"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n", \
+		_result, _result, 0, 0); \
+} while (0)
+#define SERVICE_ASSERT_FAIL(_line) do { \
+	sceAppMgrDumpInline(); \
+	SCE_DBG_ASSERT_FAIL(_line); \
+} while (0)
+#else
+static const SceKernelDebugInfo servicePanicInfo = {
+	.fileHash = 0xc9656e8e,
+	.lineHash = 0xc879dadc,
+	.funcHash = 0x11a05ee1,
+};
+
+static __attribute__((noinline)) _Noreturn void appmgrServicePanic(void)
+{
+	SceDebugForDriver_391B5B74(&servicePanicInfo, __builtin_return_address(0));
+}
+
+#define SERVICE_CHECK_ZERO(_result, _line) appmgrServicePanic()
+#define SERVICE_ASSERT_FAIL(_line) appmgrServicePanic()
+#endif
+
 /* Release builds inline this method into its two service callers. */
+#if FW_DEBUG
 int _sceAppMgrSendSysOrientation(int orientation)
+#else
+static inline int _sceAppMgrSendSysOrientation(int orientation)
+#endif
 {
 	struct AppState *app;
-	int result;
 
-	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
-	if (result != 0) {
-		SCE_DBG_PRINTF(0, 1141, "Failed to lock ret=0x%08x\n", result);
-		sceAppMgrDumpInline();
-		SCE_DBG_ASSERT_FAIL(1141);
-	} else {
-		g_appmgrMainMutexOwner = sceKernelGetThreadId();
-	}
+	SERVICE_MAIN_LOCK(1141);
 	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
 	if (!app) {
-		g_appmgrMainMutexOwner = -1;
-		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
-		if (result != 0) {
-			sceAppMgrDumpInline();
-			SCE_DBG_ASSERT_PRINTF(0, 1145,
-				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
-				result, result, 0, 0);
-		}
+		SERVICE_MAIN_UNLOCK(1145);
 		return 0x8080201c;
 	}
 	app->systemOrientation = orientation;
-	g_appmgrMainMutexOwner = -1;
-	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
-	if (result != 0) {
-		sceAppMgrDumpInline();
-		SCE_DBG_ASSERT_PRINTF(0, 1151,
-			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
-			result, result, 0, 0);
-	}
+	SERVICE_MAIN_UNLOCK(1151);
 	_shellEventRecommendedScreenOrientationStatusChangedQueuePush();
 	return 0;
 }
-#endif
 
 int sceAppMgrDump(void)
 {
@@ -1487,6 +1495,219 @@ SceInt32 _sceAppMgrGetAppState(SceAppMgrAppState *appState, SceUInt32 sizeofSceA
 	appState->isSystemUiOverlaid = _deviceGetAppMgrState()->inputImposed != 0 ||
 		g_appmgrPowerSaveMode != 0;
 	SERVICE_MAIN_UNLOCK(1079);
+	sceSyscallLeave(syscall);
+	return 0;
+}
+
+/* Whether a process other than the caller's runs, the shell's slot left out. */
+int sceAppMgrIsOtherAppPresent(void)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	SceUID processId;
+	int present;
+	int index;
+
+	if (!sceSblACMgrIsSystemProgram(0) && sceKernelGetProcessId() != 0x10005) {
+		sceSyscallLeave(syscall);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	SERVICE_MAIN_LOCK(1097);
+	processId = sceKernelGetProcessId();
+	present = 0;
+	for (index = appmgrGetShellApp() != NULL; index <= 19; index++) {
+		SceUID pid = g_appmgrAppStates[index].process.processId;
+
+		if (pid >= 0 && (pid & 1) != 0 && pid != processId) {
+			present = 1;
+			break;
+		}
+	}
+	SERVICE_MAIN_UNLOCK(1112);
+	sceSyscallLeave(syscall);
+	return present;
+}
+
+/* Whether an application with the game budget runs. */
+int sceAppMgrIsGameBudgetAppPresent(void)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	int present;
+
+	SERVICE_MAIN_LOCK(1122);
+	present = _appListGetBigApp(g_appmgrAppStates) != NULL;
+	SERVICE_MAIN_UNLOCK(1132);
+	sceSyscallLeave(syscall);
+	return present;
+}
+
+/* System programs set their own screen orientation. */
+int sceAppMgrSetShellScreenOrientation(int orientation)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	int result;
+
+	if ((unsigned int)(orientation - 1) > 3) {
+		sceSyscallLeave(syscall);
+		return 0x80802002;
+	}
+	if (!sceSblACMgrIsSystemProgram(0)) {
+		sceSyscallLeave(syscall);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	result = _sceAppMgrSendSysOrientation(orientation);
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+/*
+ * The shell recommends a screen orientation: the active application gets a
+ * system event, or without one the shell takes it itself.
+ */
+int sceAppMgrSetRecommendedScreenOrientationForShell(int orientation)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	struct AppState *app;
+	SceAppMgrSystemEvent event;
+	int sendResult;
+	int result;
+
+	if ((unsigned int)(orientation - 1) > 3) {
+		sceSyscallLeave(syscall);
+		return 0x80802002;
+	}
+	if (!isShellProcess()) {
+		sceSyscallLeave(syscall);
+		return 0x8080201c;
+	}
+	SERVICE_MAIN_LOCK(1204);
+	_deviceSetRecommendedScreenOrientation(orientation);
+	SERVICE_MAIN_UNLOCK(1208);
+	result = _appListFindAndLockActiveApp(&app);
+	if (result != 0) {
+		sendResult = _sceAppMgrSendSysOrientation(orientation);
+		if (sendResult != 0)
+			SERVICE_CHECK_ZERO(sendResult, 1214);
+		sceSyscallLeave(syscall);
+		return result;
+	}
+	SERVICE_MAIN_LOCK(1220);
+	event.systemEvent = 0x20000010;
+	if (_appListPushEvent(app, &event) != 0)
+		SERVICE_ASSERT_FAIL(1225);
+	SERVICE_MAIN_UNLOCK(1227);
+	result = _appListUnlockApp(app);
+	if (result != 0)
+		SERVICE_CHECK_ZERO(result, 1230);
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+/* The orientation the shell recommends. */
+int sceAppMgrGetRecommendedScreenOrientation(int *orientation)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+
+	if (!sceSblACMgrIsSystemProgram(0)) {
+		sceSyscallLeave(syscall);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	if (orientation == NULL) {
+		sceSyscallLeave(syscall);
+		return 0x80802016;
+	}
+	SERVICE_MAIN_LOCK(1255);
+	*orientation = _deviceGetAppMgrState()->recommendedScreenOrientation;
+	SERVICE_MAIN_UNLOCK(1259);
+	sceSyscallLeave(syscall);
+	return 0;
+}
+
+/*
+ * An application says whether it follows the recommended orientation. Sony
+ * returns without leaving the syscall when the caller has no application.
+ */
+int sceAppMgrSetRecommendedScreenOrientationActivated(int activated)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	struct AppState *app;
+
+	SERVICE_MAIN_LOCK(1275);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app == NULL) {
+		SERVICE_MAIN_UNLOCK(1279);
+		return 0x8080201c;
+	}
+	app->recommendedOrientationActivated = activated;
+	SERVICE_MAIN_UNLOCK(1285);
+	_shellEventRecommendedScreenOrientationStatusChangedQueuePush();
+	sceSyscallLeave(syscall);
+	return 0;
+}
+
+/* The application IDs of the running processes, for the shell. */
+int sceAppMgrGetRunningAppIdListForShell(SceInt32 *appIds, unsigned int count)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	unsigned int found;
+	int index;
+
+	if (!isShellProcess()) {
+		sceSyscallLeave(syscall);
+		return 0x8080201c;
+	}
+	if (appIds == NULL) {
+		sceSyscallLeave(syscall);
+		return 0x80802016;
+	}
+	SERVICE_MAIN_LOCK(1321);
+	found = 0;
+	for (index = 0; index < 20; index++) {
+		struct AppState *app = &g_appmgrAppStates[index];
+		SceUID pid = app->process.processId;
+
+		if (pid >= 0 && (pid & 1) != 0 && app->process.requestedProcessState == 2) {
+			appIds[found++] = app->appId;
+			if (found >= count)
+				break;
+		}
+	}
+	SERVICE_MAIN_UNLOCK(1337);
+	sceSyscallLeave(syscall);
+	return found;
+}
+
+/*
+ * The caller's application enables or disables the network disconnection
+ * warning dialog; the shell hears of it through a notification.
+ */
+int sceAppMgrSetNetworkDisconnectionWarningDialogState(SceBool enable, const void *optParam)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	AppmgrNotificationRequest request;
+	struct AppState *app;
+
+	if (optParam != NULL) {
+		sceSyscallLeave(syscall);
+		return 0x8080201a;
+	}
+	SERVICE_MAIN_LOCK(1351);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, -2);
+	if (app == NULL) {
+		SERVICE_MAIN_UNLOCK(1355);
+		sceSyscallLeave(syscall);
+		return 0x80802012;
+	}
+	app->networkDisconnectionWarningDialogEnabled = enable;
+	memset(&request, 0, sizeof(request));
+	if (enable)
+		__builtin_strcpy((char *)request.payload,
+				 "AppMgr:\nNetworkDisconnection\nWarningDialog -\nEnable");
+	else
+		__builtin_strcpy((char *)request.payload,
+				 "AppMgr:\nNetworkDisconnection\nWarningDialog -\nDisable");
+	if (_appmgrQueuePush(&request, 0) != 0)
+		SERVICE_ASSERT_FAIL(1372);
+	SERVICE_MAIN_UNLOCK(1374);
 	sceSyscallLeave(syscall);
 	return 0;
 }

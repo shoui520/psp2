@@ -3,9 +3,6 @@
 #include "appmgr_device.h"
 #include "app_state_internal.h"
 
-extern int appmgrSetShellScreenOrientation(int orientation);
-extern int sceAppMgrSetRecommendedScreenOrientationForShell(int orientation);
-
 int appmgrSetBackRenderPortOwnerSyscall(int appId)
 {
 	return sceAppMgrSetBackRenderPortOwner(appId);
@@ -23,7 +20,7 @@ int appmgrSetPowerSaveModeSyscall(int mode, int suspendBackgroundApps)
 
 int appmgrSetShellScreenOrientationSyscall(int orientation)
 {
-	return appmgrSetShellScreenOrientation(orientation);
+	return sceAppMgrSetShellScreenOrientation(orientation);
 }
 
 int appmgrSetRecommendedScreenOrientationForShellSyscall(int orientation)

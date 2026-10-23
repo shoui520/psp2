@@ -196,6 +196,14 @@ int sceAppMgrSetInfobarStateForCommonDialog(int visibility, int color, int trans
 int sceAppMgrSetInfobarStateForShellByAppId(int appId, int visibility, int color,
 		int transparency);
 int sceAppMgrGetPidListForShell(SceUID *pidList, unsigned int count);
+int sceAppMgrIsOtherAppPresent(void);
+int sceAppMgrIsGameBudgetAppPresent(void);
+int sceAppMgrSetShellScreenOrientation(int orientation);
+int sceAppMgrSetRecommendedScreenOrientationForShell(int orientation);
+int sceAppMgrGetRecommendedScreenOrientation(int *orientation);
+int sceAppMgrSetRecommendedScreenOrientationActivated(int activated);
+int sceAppMgrGetRunningAppIdListForShell(SceInt32 *appIds, unsigned int count);
+int sceAppMgrSetNetworkDisconnectionWarningDialogState(SceBool enable, const void *optParam);
 int sceAppMgrSetSystemImposeState(int state);
 int sceAppMgrSetSystemImposeState2(int state);
 
@@ -499,6 +507,9 @@ int appmgrGetAppInfoSyscall(const char *appName, SceAppMgrAppState *appInfo);
 int appmgrGetFgAppInfoSyscall(void *appInfo);
 int appmgrGetRecommendedScreenOrientationSyscall(int *orientation);
 int appmgrGetRunningAppIdListForShellSyscall(SceInt32 *appIds, int count);
+int appmgrSetRecommendedScreenOrientationActivatedSyscall(int activated);
+int appmgrIsOtherAppPresentSyscall(void);
+int appmgrIsGameBudgetAppPresentSyscall(void);
 
 /* appmgr_savedata_syscalls.c */
 int appmgrSaveDataSlotInitSyscall(void *slot);

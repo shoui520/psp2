@@ -123,7 +123,7 @@ SceAppMgr:
         - appmgrEnableCoredumpForTestSyscall: 0x32FD0B99
         - appmgrGetAppIdByAppIdSyscall: 0x332C9D98
         - _sceAppMgrLoopBackMount: 0x3493CDFA
-        - sceAppMgrIsOtherAppPresent: 0x371F6F81
+        - appmgrIsOtherAppPresentSyscall: 0x371F6F81
         - _sceAppMgrLaunchAppByUri: 0x37CE3984
         - _sceAppMgrGetRecommendedScreenOrientation: 0x37E94672
         - appmgrNotifyLiveBoardModeForShellSyscall: 0x389F048D
@@ -172,7 +172,7 @@ SceAppMgr:
         - _sceAppMgrReceiveSystemEvent: 0x7240375B
         - appmgrSetBgmSubPrioritySyscall: 0x7333C2F1
         - _sceAppMgrSaveDataSlotGetParam: 0x74D789E2
-        - sceAppMgrSetRecommendedScreenOrientationActivated: 0x75876896
+        - appmgrSetRecommendedScreenOrientationActivatedSyscall: 0x75876896
         - _sceAppMgrPspSaveDataGetParams: 0x77A51E82
         - appmgrDeclareSystemChatAppSyscall: 0x77EE891D
         - _sceAppMgrSetSystemDataFile: 0x78F5AF66
@@ -250,7 +250,7 @@ SceAppMgr:
         - _sceAppMgrGetSaveDataInfoForSpecialExport: 0xDC815429
         - _sceAppMgrLaunchAppByName2ndStage: 0xDEDD2AED
         - _sceAppMgrReceiveShellEvent: 0xE0DADF51
-        - sceAppMgrIsGameBudgetAppPresent: 0xE134F5A0
+        - appmgrIsGameBudgetAppPresentSyscall: 0xE134F5A0
         - appmgrQuitForNonSuspendableAppSyscall: 0xE3F719A0
         - sceAppMgrRestoreDisplaySettingForShell: 0xE455922D
         - _sceAppMgrDrmClose: 0xE4CE4A0C

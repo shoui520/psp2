@@ -150,7 +150,6 @@ STUB(_sceAppMgrGetPidListForShell)
 
 STUB(_sceAppMgrAppUmount)
 STUB(_sceAppMgrLoopBackMount)
-STUB(sceAppMgrIsOtherAppPresent)
 STUB(_sceAppMgrLaunchAppByUri)
 
 STUB(_sceAppMgrTrophyMountById)
@@ -174,7 +173,6 @@ STUB(sceAppMgrIsNonGameProgram)
 STUB(_sceAppMgrGetSaveDataInfo)
 STUB(_sceAppMgrAcidDirSet)
 
-STUB(sceAppMgrSetRecommendedScreenOrientationActivated)
 STUB(_sceAppMgrPspSaveDataGetParams)
 
 STUB(sceAppMgrIsDevelopmentMode)
@@ -211,7 +209,6 @@ STUB(_sceAppMgrLoadExec)
 STUB(_sceAppMgrContentInstallPeriodStart)
 STUB(_sceAppMgrGetSaveDataInfoForSpecialExport)
 STUB(_sceAppMgrLaunchAppByName2ndStage)
-STUB(sceAppMgrIsGameBudgetAppPresent)
 STUB(_sceAppMgrDrmClose)
 STUB(_sceAppMgrPspSaveDataRead)
 STUB(_sceAppMgrMmsMount)
