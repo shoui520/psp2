@@ -427,28 +427,23 @@ int appmgrParamQueueInit(AppmgrParamQueue *queue)
 	return 0;
 }
 
-int appmgrParamQueuePush(AppmgrParamQueue *queue, const char *param,
+inline int appmgrParamQueuePush(AppmgrParamQueue *queue, const char *param,
 		SceUID callbackId, SceUID sourcePid, const char *sourceAppName)
 {
-	AppmgrParamQueueEntry *entry;
-	int nextIndex;
-
 	if (queue->count == 4)
 		return 0x80802014;
 	if (param)
 		strncpy(queue->entries[queue->writeIndex].param, param, 1024);
 	else
 		memset(queue->entries[queue->writeIndex].param, 0, 1024);
-	entry = &queue->entries[queue->writeIndex];
-	entry->callbackId = callbackId;
-	entry->sourcePid = sourcePid;
+	queue->entries[queue->writeIndex].callbackId = callbackId;
+	queue->entries[queue->writeIndex].sourcePid = sourcePid;
 	if (sourceAppName)
-		strncpy(entry->sourceAppName, sourceAppName, 32);
+		strncpy(queue->entries[queue->writeIndex].sourceAppName, sourceAppName, 32);
 	else
-		memset(entry->sourceAppName, 0, 32);
-	nextIndex = queue->writeIndex + 1;
-	++queue->count;
-	queue->writeIndex = nextIndex % 4;
+		memset(queue->entries[queue->writeIndex].sourceAppName, 0, 32);
+	queue->count++;
+	queue->writeIndex = (queue->writeIndex + 1) % 4;
 	return 0;
 }
 
