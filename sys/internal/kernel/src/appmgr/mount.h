@@ -168,6 +168,7 @@ void *appmgrAllocMountHeapMemory(SceSize size);
 
 /* appmgr_system_data.c */
 int appmgrRemoveDirectoryTree(const char *path);
+int appmgrResolveRawPath(const char *path, SceUID pid, char *output, SceSize size);
 int appmgrRemoveFileInSteps(const char *path, unsigned int stepMiB);
 
 /* savedata.c */

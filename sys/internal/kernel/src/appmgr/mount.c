@@ -6942,6 +6942,26 @@ static inline int appmgrGetMediaType(const char *path)
 	return 1;
 }
 
+int appmgrRemoveContentCache(SceUID pid, const AppmgrProcessContent *content)
+{
+	char path[64];
+
+	if (!SceSblACMgrForDriver_456DA7AC(pid) || !(content->attribute & 0x800000))
+		return 0;
+	snprintf(path, sizeof(path), "ux0:cache/%s", content->originalTitleId);
+	return appmgrRemoveDirectoryTree(path);
+}
+
+int appmgrRemoveAppWorkDirectory(const AppmgrProcessContent *content)
+{
+	char path[64];
+
+	if (!(content->contentFlags & 0x30))
+		return 0;
+	snprintf(path, sizeof(path), "ux0:temp/app_work/%s", content->titleId);
+	return appmgrRemoveDirectoryTree(path);
+}
+
 /* The medium of the calling application's mount at drive. */
 int sceAppMgrGetMediaTypeFromDrive(const char *drive, int *mediaType)
 {
@@ -7541,6 +7561,72 @@ int appmgrExtractSaveDataDeviceName(const char *path, char *device,
 	}
 	device[capacity - 1] = 0;
 	return -1;
+}
+
+int appmgrResolveRawPath(const char *path, SceUID pid, char *output, SceSize size)
+{
+	SceAllocOpt option;
+	AppmgrPfsMount *mount;
+	const char *source;
+	char *resolvedPath;
+	SceUInt32 syscallState;
+	SceSize length;
+	int permission;
+	int index;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto leaveSyscall;
+	option.size = sizeof(option);
+	option.mmapKind = 0;
+	option.align = 32;
+	option.mmapBase = NULL;
+	option.mmapSize = 0;
+	resolvedPath = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &option);
+	if (!resolvedPath) {
+		result = (int)0x80801006;
+		goto unlock;
+	}
+	if (pid == 0)
+		pid = sceKernelGetProcessId();
+	permission = sceKernelSetThreadAccessLevel(128);
+	result = SceFios2KernelForDriver_0F456345(pid, 0, path, resolvedPath, 292);
+	sceKernelSetThreadAccessLevel(permission);
+	if (result >= 0) {
+		length = size >= 292 ? 292 : size;
+		source = resolvedPath;
+		/* a PFS drive: the application path it mounts */
+		if (strncmp(resolvedPath, "PD", 2) == 0) {
+			char drive[33] = {0};
+
+			for (index = 0; ; ) {
+				drive[index] = resolvedPath[index];
+				if (drive[index] == ':')
+					break;
+				if (++index == sizeof(drive))
+					goto copy;
+			}
+			drive[15] = 0;
+			for (mount = g_appmgrPfsMounts; mount; mount = mount->next) {
+				if (strncmp(mount->mountPoint.drive_id, drive, 16) == 0) {
+					source = mount->appPath;
+					break;
+				}
+			}
+		}
+copy:
+		strncpy(output, source, length);
+		output[length - 1] = 0;
+		result = 0;
+	}
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, resolvedPath);
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+leaveSyscall:
+	sceSyscallLeave(syscallState);
+	return result;
 }
 
 void *appmgrAllocMountHeapMemory(SceSize size)
