@@ -8337,17 +8337,6 @@ static const unsigned char encodedLicenseApplicationDirectory[16] = {
 
 static char g_appmgrMapFilePath[256];
 
-#if FW_VERSION >= 0x04000000
-#define APPMGR_STRCAT(destination, source, capacity) \
-	__strcat_chk(destination, source, capacity)
-#define APPMGR_STRNCPY(destination, source, count, capacity) \
-	__strncpy_chk(destination, source, count, capacity)
-#else
-#define APPMGR_STRCAT(destination, source, capacity) \
-	__builtin_strcat(destination, source)
-#define APPMGR_STRNCPY(destination, source, count, capacity) \
-	strncpy(destination, source, count)
-#endif
 
 int appmgrPrepareProcessContent(const char *name, const char *path,
 				const AppmgrLaunchInfo *info, const AppmgrLaunchOptions *options,

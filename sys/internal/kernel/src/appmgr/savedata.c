@@ -20,6 +20,8 @@
 #include "mount.h"
 #include "debug_setting.h"
 #include "app_state_internal.h"
+#include "appmgr_device.h"
+#include <sysmem/debug.h>
 
 extern SceUID g_appmgrSaveDataHeap;
 extern SceUID g_appmgrCoreHeap;
@@ -2358,6 +2360,127 @@ leaveSyscall:
 	return result;
 }
 
+extern SceUID g_appmgrMainMutex;
+extern SceUID g_appmgrMainMutexOwner;
+
+#if FW_DEBUG
+#define SAVEDATA_MAIN_LOCK(_line) do { \
+	int lockResult = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL); \
+	if (lockResult != 0) { \
+		SCE_DBG_PRINTF(0, _line, "Failed to lock ret=0x%08x\n", lockResult); \
+		sceAppMgrDump(); \
+		dumpBgmState(); \
+		SCE_DBG_ASSERT_FAIL(_line); \
+	} else { \
+		g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
+	} \
+} while (0)
+#define SAVEDATA_MAIN_UNLOCK(_line) do { \
+	int unlockResult; \
+	g_appmgrMainMutexOwner = -1; \
+	unlockResult = sceKernelUnlockMutex(g_appmgrMainMutex, 1); \
+	if (unlockResult != 0) { \
+		sceAppMgrDump(); \
+		dumpBgmState(); \
+		SCE_DBG_ASSERT_PRINTF(0, _line, \
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n", \
+			unlockResult, unlockResult, 0, 0); \
+	} \
+} while (0)
+#else
+static const SceKernelDebugInfo saveDataPanicInfo = {
+	.fileHash = 0xc9656e8e,
+	.lineHash = 0x79d3a1f0,
+	.funcHash = 0x9d536bce,
+};
+
+static __attribute__((noinline)) _Noreturn void appmgrSaveDataPanic(void)
+{
+	SceDebugForDriver_391B5B74(&saveDataPanicInfo, __builtin_return_address(0));
+}
+
+#define SAVEDATA_MAIN_LOCK(_line) do { \
+	if (sceKernelLockMutex(g_appmgrMainMutex, 1, NULL) != 0) \
+		appmgrSaveDataPanic(); \
+	g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
+} while (0)
+#define SAVEDATA_MAIN_UNLOCK(_line) do { \
+	g_appmgrMainMutexOwner = -1; \
+	if (sceKernelUnlockMutex(g_appmgrMainMutex, 1) != 0) \
+		appmgrSaveDataPanic(); \
+} while (0)
+#endif
+
+/* 1 when titleId is one of the calling application's other save data titles. */
+int sceAppMgrIsRelativeSaveDataAdd(const char *titleId)
+{
+	struct AppState *app;
+	int i, result = 0;
+
+	SAVEDATA_MAIN_LOCK(3983);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app != NULL &&
+	    strncmp(app->process.content.saveDataTitleIds[0], titleId, 16) != 0) {
+		for (i = 1; i < 8; i++) {
+			if (app->process.content.saveDataTitleIds[i][0] == '\0')
+				break;
+			if (strncmp(app->process.content.saveDataTitleIds[i], titleId, 16) == 0) {
+				result = 1;
+				break;
+			}
+		}
+	}
+	SAVEDATA_MAIN_UNLOCK(4013);
+	return result;
+}
+
+static __attribute__((noinline)) int appmgrIsAutoUploadApp(const char *titleId);
+static __attribute__((noinline)) int appmgrAddAutoUploadSaveData(const char *saveDataTitleId,
+		const char *titleId, const char *shortTitle, int mode);
+static __attribute__((noinline)) int appmgrUpdateSaveDataBackupList(const char *saveDataTitleId,
+		const char *titleId, int mode);
+
+/*
+ * The first suspend after the application wrote save data: records the save data in the
+ * backup list and, when the application is in the auto-upload list, in the upload list.
+ */
+int appmgrUpdateSaveDataOnSuspend(SceUID pid, AppmgrProcessContent *content)
+{
+	SceAppMgrAppInfoCache *info = NULL;
+	int mode;
+	int result;
+
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		return result;
+	if ((content->contentFlags & 0x31) == 0)
+		goto done;
+	result = SceProcessmgrForDriver_AF80F39C(pid, g_appmgrAppInfoCacheKey, (void **)&info, 0);
+	if (result < 0)
+		goto unlock;
+	if (info == NULL) {
+		result = 0x80800012;
+		goto unlock;
+	}
+	if ((info->saveDataFlags & 4) != 0 || (info->saveDataFlags & 2) == 0)
+		goto done;
+	info->saveDataFlags |= 4;
+	mode = 2;
+	if (strncmp(content->appDirectory, "gro0:", 5) == 0)
+		mode = content->attribute & 1;
+	appmgrUpdateSaveDataBackupList(content->saveDataTitleIds[0], content->titleId, mode);
+	result = appmgrIsAutoUploadApp(content->titleId);
+	if (result >= 0)
+		result = appmgrAddAutoUploadSaveData(content->saveDataTitleIds[0], content->titleId,
+						     content->shortTitle, mode);
+	goto unlock;
+done:
+	result = 0;
+unlock:
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+	return result;
+}
+
 int appmgrValidateSaveDataMountPoint(const char *mountPoint, int requirePrimary)
 {
 	int result;
@@ -3246,6 +3369,259 @@ void appmgrFreeSaveDataDirectories(char **directories)
 			directories[-1] = NULL;
 		}
 	} while (directories != end);
+}
+
+/* savedata_plus/auto_upload/up_app_list.dat: the applications whose save data is uploaded */
+typedef struct AppmgrAutoUploadAppListHeader {
+	char magic[4];
+	SceUInt8 reserved[8];
+	SceUInt32 count;
+	SceUInt8 reserved2[40];
+} AppmgrAutoUploadAppListHeader;
+
+typedef struct AppmgrAutoUploadAppListEntry {
+	char titleId[16];
+	SceInt32 enabled;
+	SceUInt8 reserved[44];
+} AppmgrAutoUploadAppListEntry;
+
+_Static_assert(sizeof(AppmgrAutoUploadAppListHeader) == 56, "auto-upload application list header");
+_Static_assert(sizeof(AppmgrAutoUploadAppListEntry) == 64, "auto-upload application list entry");
+
+/* savedata_plus/auto_upload/up_savedata_list.dat: the save data waiting for upload */
+typedef struct AppmgrAutoUploadSaveDataListHeader {
+	char magic[4];
+	SceUInt8 reserved[4];
+	SceUInt32 count;
+	SceUInt8 reserved2[44];
+} AppmgrAutoUploadSaveDataListHeader;
+
+typedef struct AppmgrAutoUploadSaveDataListEntry {
+	char saveDataTitleId[16];
+	char titleId[16];
+	char shortTitle[64];
+	SceInt32 mode;
+	SceUInt8 reserved[64];
+} AppmgrAutoUploadSaveDataListEntry;
+
+_Static_assert(sizeof(AppmgrAutoUploadSaveDataListHeader) == 56, "auto-upload save data list header");
+_Static_assert(sizeof(AppmgrAutoUploadSaveDataListEntry) == 164, "auto-upload save data list entry");
+
+/* savedata_backup/list.dat: the three save data written last, newest first */
+typedef struct AppmgrSaveDataBackupListEntry {
+	char saveDataTitleId[16];
+	char titleId[16];
+	SceInt32 mode;
+	SceUInt8 reserved[28];
+} AppmgrSaveDataBackupListEntry;
+
+_Static_assert(sizeof(AppmgrSaveDataBackupListEntry) == 64, "save data backup list entry");
+
+/* 0 when titleId is enabled in the auto-upload application list. */
+static __attribute__((noinline)) int appmgrIsAutoUploadApp(const char *titleId)
+{
+	char path[64] = "";
+	AppmgrAutoUploadAppListHeader header = {{0}};
+	AppmgrAutoUploadAppListEntry entry;
+	SceUInt32 index;
+	SceUID fd;
+	int result;
+
+	result = SceAppMgrForDriver_0813AFCA(2, path, sizeof(path));
+	if (result < 0)
+		return result;
+	APPMGR_STRCAT(path, "/savedata_plus/auto_upload/up_app_list.dat", sizeof(path));
+	if (titleId == NULL)
+		return 0x80800001;
+	fd = sceIoOpen(path, 0x10001, 6);
+	if (fd < 0)
+		return fd;
+	result = sceIoRead(fd, &header, sizeof(header));
+	if (result < 0)
+		goto close;
+	if (result != sizeof(header) || memcmp(header.magic, "SDUT", 4) != 0) {
+		result = 0x80801092;
+		goto close;
+	}
+	index = 0;
+	while (index < header.count) {
+		memset(&entry, 0, sizeof(entry));
+		if (sceIoRead(fd, &entry, sizeof(entry)) != sizeof(entry)) {
+			result = 0x80801093;
+			goto close;
+		}
+		if (entry.titleId[0] == '\0')
+			continue;
+		if (entry.enabled != 0 && strncmp(entry.titleId, titleId, 16) == 0) {
+			result = 0;
+			goto close;
+		}
+		index++;
+	}
+	result = 0x80801094;
+close:
+	sceIoClose(fd);
+	return result;
+}
+
+/* Adds the save data to the upload list, in the first free entry or at the end. */
+static __attribute__((noinline)) int appmgrAddAutoUploadSaveData(const char *saveDataTitleId,
+		const char *titleId, const char *shortTitle, int mode)
+{
+	char path[64] = "";
+	AppmgrAutoUploadSaveDataListHeader header = {{0}};
+	AppmgrAutoUploadSaveDataListEntry entry;
+	SceUInt32 index, used;
+	int freeIndex;
+	SceUID fd;
+	int result;
+
+	result = SceAppMgrForDriver_0813AFCA(2, path, sizeof(path));
+	if (result < 0)
+		return result;
+	APPMGR_STRCAT(path, "/savedata_plus/auto_upload/up_savedata_list.dat", sizeof(path));
+	if (titleId == NULL || saveDataTitleId == NULL || shortTitle == NULL)
+		return 0x80800001;
+	fd = sceIoOpen(path, 0x10003, 6);
+	if (fd < 0)
+		return fd;
+	result = sceIoRead(fd, &header, sizeof(header));
+	if (result < 0)
+		goto close;
+	if (result != sizeof(header) || memcmp(header.magic, "SDUS", 4) != 0) {
+		result = 0x80801095;
+		goto close;
+	}
+	if (header.count > 99) {
+		result = 0x80801096;
+		goto close;
+	}
+	index = 0;
+	freeIndex = -1;
+	for (used = 0; used < header.count; index++) {
+		memset(&entry, 0, sizeof(entry));
+		if (sceIoRead(fd, &entry, sizeof(entry)) != sizeof(entry)) {
+			result = 0x80801097;
+			goto close;
+		}
+		if (entry.titleId[0] == '\0') {
+			if (freeIndex == -1)
+				freeIndex = index;
+			continue;
+		}
+		if (strncmp(entry.titleId, titleId, 16) == 0) {
+			result = 0x80801098;
+			goto close;
+		}
+		used++;
+	}
+	if (freeIndex != -1) {
+		result = sceIoLseek(fd, sizeof(header) + freeIndex * sizeof(entry), SCE_SEEK_SET);
+		if (result < 0)
+			goto close;
+	}
+	memset(&entry, 0, sizeof(entry));
+	strncpy(entry.saveDataTitleId, saveDataTitleId, 15);
+	strncpy(entry.titleId, titleId, 15);
+	strncpy(entry.shortTitle, shortTitle, 63);
+	entry.mode = mode;
+	result = sceIoWrite(fd, &entry, sizeof(entry));
+	if (result < 0)
+		goto close;
+	if (result != sizeof(entry)) {
+		result = 0x80801099;
+		goto close;
+	}
+	header.count++;
+	result = sceIoLseek(fd, 0, SCE_SEEK_SET);
+	if (result < 0)
+		goto close;
+	result = sceIoWrite(fd, &header, sizeof(header));
+	if (result < 0)
+		goto close;
+	result = result != sizeof(header) ? 0x80801099 : 0;
+close:
+	sceIoClose(fd);
+	return result;
+}
+
+/* Moves the save data to the front of the backup list; mode 0 keeps no backup. */
+static __attribute__((noinline)) int appmgrUpdateSaveDataBackupList(const char *saveDataTitleId,
+		const char *titleId, int mode)
+{
+	char base[32] = "";
+	char path[64] = "";
+	AppmgrSaveDataBackupListEntry list[3];
+	SceIoStat stat;
+	int index;
+	SceUID fd;
+	int result;
+
+	memset(list, 0, sizeof(list));
+	if (titleId == NULL || saveDataTitleId == NULL)
+		return 0x80800001;
+	if (mode == 0)
+		return 0;
+	if ((unsigned int)(mode - 1) > 1)
+		return 0x80800001;
+	result = SceAppMgrForDriver_0813AFCA(2, base, sizeof(base));
+	if (result < 0)
+		return result;
+	if ((unsigned int)snprintf(path, sizeof(path), "%s/savedata_backup", base) >= sizeof(path))
+		return 0x8080000A;
+	result = appmgrCreateDirectories(path, 1);
+	if (result < 0)
+		return result;
+	if ((unsigned int)snprintf(path, sizeof(path), "%s/savedata_backup/list.dat", base) >=
+	    sizeof(path))
+		return 0x8080000A;
+	if (sceIoGetstat(path, &stat) >= 0) {
+		fd = sceIoOpen(path, 0x10003, 6);
+		if (fd < 0)
+			return fd;
+		result = sceIoRead(fd, list, sizeof(list));
+		if (result < 0)
+			goto remove;
+		if (result != sizeof(list)) {
+			result = 0x8080008A;
+			goto remove;
+		}
+	} else {
+		fd = sceIoOpen(path, 0x10203, 6);
+		if (fd < 0)
+			return fd;
+	}
+	index = strncmp(list[0].saveDataTitleId, saveDataTitleId, 10) != 0 ? 2 : 0;
+	if (strncmp(list[1].saveDataTitleId, saveDataTitleId, 10) == 0)
+		index = 1;
+	if (strncmp(list[2].saveDataTitleId, saveDataTitleId, 10) == 0)
+		index = 2;
+	for (; index != 0; index--)
+		list[index] = list[index - 1];
+	memset(&list[0], 0, sizeof(list[0]));
+	strncpy(list[0].saveDataTitleId, saveDataTitleId, 9);
+	strncpy(list[0].titleId, titleId, 9);
+	list[0].mode = mode;
+	result = sceIoLseek(fd, 0, SCE_SEEK_SET);
+	if (result < 0)
+		goto remove;
+	result = sceIoWrite(fd, list, sizeof(list));
+	if (result < 0)
+		goto remove;
+	if (result != sizeof(list)) {
+		result = 0x8080008B;
+		goto remove;
+	}
+	stat.st_size = sizeof(list);
+	result = sceIoChstatByFd(fd, &stat, SCE_CST_SIZE);
+	if (result < 0)
+		goto remove;
+	sceIoClose(fd);
+	return 0;
+remove:
+	sceIoClose(fd);
+	sceIoRemove(path);
+	return result;
 }
 
 int SceAppMgrForDriver_43A35729(const SceAppMgrPhotoMountParam *param)

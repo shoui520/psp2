@@ -1,5 +1,6 @@
 #pragma once
 
+#include <fw.h>
 #include <stddef.h>
 #include <scetypes.h>
 #include <pfsmgr/pfsmgr.h>
@@ -79,6 +80,20 @@ int sceAppMgrIsRelativeAddContAdd(const char *titleId, int add);
 
 /* savedata.c */
 int sceAppMgrIsRelativeSaveDataAdd(const char *titleId);
+int appmgrCreateDirectories(const char *path, int create);
+
+/* 4.00 builds with the fortified string functions */
+#if FW_VERSION >= 0x04000000
+#define APPMGR_STRCAT(destination, source, capacity) \
+	__strcat_chk(destination, source, capacity)
+#define APPMGR_STRNCPY(destination, source, count, capacity) \
+	__strncpy_chk(destination, source, count, capacity)
+#else
+#define APPMGR_STRCAT(destination, source, capacity) \
+	__builtin_strcat(destination, source)
+#define APPMGR_STRNCPY(destination, source, count, capacity) \
+	strncpy(destination, source, count)
+#endif
 
 typedef struct AppmgrLicenseInfo {
 	char contentId[48];
