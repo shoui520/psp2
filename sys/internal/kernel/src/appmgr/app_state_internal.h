@@ -370,6 +370,8 @@ int sceAppMgrLaunchAppByNameInternal(SceUInt32 launchMode, const SceChar8 *name,
 		const char *param, SceUID launchCallbackId, SceUID paramCallbackId,
 		int creatorAppId, SceUInt32 evictionThresholdClass, const void *extraParam,
 		SceSize extraParamSize, SceUInt32 resumeCreatorOnLaunchFailure);
+int _sceAppMgrLaunchApp2(const char *appPath, const char *name, SceUInt32 budgetSize,
+		const char *param, SceUInt32 processAttr, const AppmgrLaunchAppOption *option);
 int sceAppMgrLaunchAppByName2ndStage_internal(int appId, const char *name,
 		SceAppMgrAppStatus *statusOut, const AppmgrLaunchRequest *request,
 		int sendParamToRunning, int startByUpdater, const AppmgrCreateProcessParam *createParam,

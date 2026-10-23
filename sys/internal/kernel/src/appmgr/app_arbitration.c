@@ -20,6 +20,7 @@
 #include "appmgr_shell_event.h"
 #include <sysmem/sblaimgr.h>
 #include <acmgr/acmgr.h>
+#include <intrmgr/syscall.h>
 
 extern SceUID g_appmgrMainMutexOwner;
 
@@ -1268,6 +1269,95 @@ int sceAppMgrLaunchAppByNameInternal(SceUInt32 launchMode, const SceChar8 *name,
 	result = app->appId;
 	DELETE_APP_MAIN_UNLOCK(1910, "sceAppMgrLaunchAppByNameInternal");
 	return result;
+}
+
+#if FW_DEBUG
+#define LAUNCH_CORE2_LOCK_FAILURE(_result, _line, _func) \
+	GC_FAILURE(_result, _line, _func)
+#else
+#define LAUNCH_CORE2_LOCK_FAILURE(_result, _line, _func) appmgrGcListenerMutexPanic()
+#endif
+#define LAUNCH_CORE2_UNLOCK(_line, _func) do { \
+	int unlockResult; \
+	g_appmgrCore2MutexOwner = -1; \
+	unlockResult = sceKernelUnlockMutex(g_appmgrCore2Mutex, 1); \
+	DELETE_APP_KM_UNLOCK_CHECK(unlockResult, _line, _func); \
+} while (0)
+
+/*
+ * The shell launches an application by path: a slot is reserved under the name, and the
+ * launch request is built from the arguments and the shell's options.
+ */
+int _sceAppMgrLaunchApp2(const char *appPath, const char *name, SceUInt32 budgetSize,
+		const char *param, SceUInt32 processAttr, const AppmgrLaunchAppOption *option)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	AppmgrLaunchRequest request, launchRequest;
+	struct AppState *app;
+	SceUInt32 pycontSize;
+	int appId, useCommonDialog, launchResult, error, result;
+
+	if (!isShellProcess()) {
+		sceSyscallLeave(syscallState);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	if ((processAttr & ~7) != 0 ||
+	    (option != NULL && option->enlargeGameMemorySize > 109)) {
+		sceSyscallLeave(syscallState);
+		return SCE_APPMGR_ERROR_PARAM;
+	}
+	app = NULL;
+	KILL_CHECK_APP_OWNERS(1573, "_sceAppMgrLaunchApp2");
+	result = sceKernelLockMutex(g_appmgrCore2Mutex, 1, NULL);
+	if (result != 0) {
+		if ((unsigned int)(result + 0x7ffd7fd4) > 1)
+			LAUNCH_CORE2_LOCK_FAILURE(result, 1573, "_sceAppMgrLaunchApp2");
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	g_appmgrCore2MutexOwner = sceKernelGetThreadId();
+	result = _sceAppMgrAppStateReserve(&app, name, param, -1, 0, -1, -1, 0, 0);
+	if (result != 0) {
+		LAUNCH_CORE2_UNLOCK(1593, "_sceAppMgrLaunchApp2");
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	DELETE_APP_ASSERT(app != NULL, 1597, "_sceAppMgrLaunchApp2");
+	appId = app->appId;
+	if (option != NULL) {
+		pycontSize = option->pycontSize;
+		useCommonDialog = option->useCommonDialog != 0;
+		memset(&request, 0, sizeof(request));
+		request.appPath = appPath;
+		__builtin_memcpy(request.proxyAppName, option->proxyAppName,
+			sizeof(request.proxyAppName));
+		request.proxyAppName[sizeof(request.proxyAppName) - 1] = '\0';
+		request.budgetSize = budgetSize;
+		request.pycontSize = pycontSize;
+		request.budgetType = budgetSize == 0;
+		request.processAttr = processAttr;
+		request.defaultInfobar = option->defaultInfobar;
+		request.launchArgumentMarker = option->launchArgumentMarker;
+		if (option->launchOrigin == 1)
+			request.launchOrigin = 1;
+		request.enlargeGameMemorySize = option->enlargeGameMemorySize;
+	} else {
+		memset(&request, 0, sizeof(request));
+		useCommonDialog = 0;
+		request.launchArgumentMarker = 1;
+		request.appPath = appPath;
+		request.budgetSize = budgetSize;
+		request.budgetType = budgetSize == 0;
+		request.processAttr = processAttr;
+	}
+	request.useCommonDialog = useCommonDialog;
+	launchRequest = request;
+	error = 0;
+	launchResult = sceAppMgrLaunchAppByName2ndStage_internal(appId, name, NULL,
+		&launchRequest, 1, 0, NULL, NULL, NULL, option, &error);
+	LAUNCH_CORE2_UNLOCK(1626, "_sceAppMgrLaunchApp2");
+	sceSyscallLeave(syscallState);
+	return error != 0 ? error : launchResult;
 }
 
 /* The two Sony media helpers are inlined twice into the listener. */
