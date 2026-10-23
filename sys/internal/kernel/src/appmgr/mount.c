@@ -1,6 +1,8 @@
 /* Application content mounts. */
 
+#include <fw.h>
 #include <scetypes.h>
+#include <sysmem/debug.h>
 #include <kernel/types.h>
 #include <authmgr/sblauthmgr.h>
 #include <sysmem/sysmem.h>
@@ -36,6 +38,7 @@
 #include <post_ss_mgr/sblpostssmgr.h>
 #include <pfsmgr/pfsmgr.h>
 #include "app_state_internal.h"
+#include "appmgr_device.h"
 
 /* SceSblPostSsMgr (ut_mgr.c): declared here until its exporter's header declares it */
 
@@ -1164,6 +1167,69 @@ int appmgrUpdateFakeNoMemoryCardOverlays(SceUID pid, AppmgrProcessContent *conte
 			return result;
 		overlayIds[15] = 0;
 	}
+	return result;
+}
+
+extern SceUID g_appmgrMainMutex;
+extern SceUID g_appmgrMainMutexOwner;
+
+#if !FW_DEBUG
+static const SceKernelDebugInfo debugSettingCallBackPanicInfo = {
+	.fileHash = 0xc9656e8e,
+	.lineHash = 0x79d3a1f0,
+	.funcHash = 0x9d536bce,
+};
+
+static __attribute__((noinline)) _Noreturn void appmgrDebugSettingCallBackPanic(void)
+{
+	SceDebugForDriver_391B5B74(&debugSettingCallBackPanicInfo,
+				   __builtin_return_address(0));
+}
+#endif
+
+/* Applies a changed debug setting (0: fake no memory card) to the big application. */
+int _debugSettingCallBack(int setting, int value, void *context)
+{
+	struct AppState *app;
+	int lockResult, unlockResult;
+	int result = 0;
+
+	if (setting != 0)
+		return result;
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		return result;
+	lockResult = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+	if (lockResult != 0) {
+#if FW_DEBUG
+		SCE_DBG_PRINTF(0, 14729, "Failed to lock ret=0x%08x\n", lockResult);
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_FAIL(14729);
+#else
+		appmgrDebugSettingCallBackPanic();
+#endif
+	} else {
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
+	}
+	app = _appListGetBigApp(g_appmgrAppStates);
+	if (app != NULL && (app->process.content.contentFlags & 0x10) != 0)
+		result = appmgrUpdateFakeNoMemoryCardOverlays(app->process.processId,
+							      &app->process.content);
+	g_appmgrMainMutexOwner = -1;
+	unlockResult = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	if (unlockResult != 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_PRINTF(0, 14742,
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+			unlockResult, unlockResult, 0, 0);
+#else
+		appmgrDebugSettingCallBackPanic();
+#endif
+	}
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
 	return result;
 }
 
