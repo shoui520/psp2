@@ -3082,7 +3082,7 @@ void appmgrFreeSaveDataDirectories(char **directories)
 
 int SceAppMgrForDriver_43A35729(const SceAppMgrPhotoMountParam *param)
 {
-	ScePfsRndDriveId mountPoint = {0};
+	ScePfsRndDriveId mountPoint = {{0}};
 	SceUInt32 syscallState;
 	int result;
 
