@@ -16,6 +16,8 @@ net_ps_prepare_patched(${netbsd}/kern/uipc_domain.c ${CMAKE_CURRENT_SOURCE_DIR}/
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/uipc_domain.c)
 net_ps_prepare_patched(${netbsd}/kern/uipc_mbuf.c ${CMAKE_CURRENT_SOURCE_DIR}/uipc_mbuf_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/uipc_mbuf.c)
+net_ps_prepare_patched(${netbsd}/kern/uipc_socket.c ${CMAKE_CURRENT_SOURCE_DIR}/uipc_socket_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/uipc_socket.c)
 net_ps_prepare_patched(${netbsd}/kern/uipc_socket2.c ${CMAKE_CURRENT_SOURCE_DIR}/uipc_socket2_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/uipc_socket2.c)
 set(netbsd_sources
@@ -24,6 +26,7 @@ set(netbsd_sources
 	${netbsd}/kern/uipc_mbuf2.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/uipc_mbuf.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/uipc_socket2.c
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/uipc_socket.c
 )
 set_source_files_properties(${netbsd_sources} PROPERTIES COMPILE_OPTIONS "-fno-strict-aliasing;-fgnu89-inline"
 	COMPILE_DEFINITIONS NET_PS_NETBSD)

@@ -98,6 +98,8 @@ do {									\
 					 * more data coming
 					 */
 #define 	SS_ISAPIPE 		0x800 /* socket is implementing a pipe */
+#define	SS_RCVFLUSHFULL		0x1000	/* SCE: the receive buffer was full when flushed */
+#define	SS_SCE_8000		0x8000	/* SCE: SO_SCE_STATE_8000; meaning unknown */
 
 
 /*
@@ -267,9 +269,10 @@ int	soreceive(struct socket *, struct mbuf **, struct uio *,
 	    struct mbuf **, struct mbuf **, int *);
 int	soreserve(struct socket *, u_long, u_long);
 void	sorflush(struct socket *);
+void	sowflush(struct socket *);	/* SCE */
 int	sosend(struct socket *, struct mbuf *, struct uio *,
 	    struct mbuf *, struct mbuf *, int);
-int	sosetopt(struct socket *, int, int, struct mbuf *);
+int	sosetopt(struct socket *, int, int, struct mbuf *, int);	/* SCE: kernel */
 int	soshutdown(struct socket *, int);
 void	sowakeup(struct socket *, struct sockbuf *, int);
 int	soabortwakeup(struct socket *, struct sockbuf *, int, int);	/* SCE */

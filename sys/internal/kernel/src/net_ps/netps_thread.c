@@ -3,6 +3,8 @@
 #include "net_ps_internal.h"
 #include <net_ps/netps.h>
 #include <string.h>
+#include <sys/protosw.h>
+#include <sys/socketvar.h>
 
 int gNetPsSoftTick = 10000;
 SceNetPsMutex gNetPsJumboMutex;
@@ -39,7 +41,6 @@ void sceNetPsReceivePackets(void);
 void sceNetPsIsdnInterrupt(void);
 void arpintr(void);
 void ipintr(void);
-void sce_psnet_panic(const char *message, ...) __attribute__((noreturn));
 
 /* Name unknown; signal every network thread waiting on this channel. */
 int sceNetPsWakeup(const void *waitChannel, unsigned int events)
@@ -357,8 +358,10 @@ int sceNetPsSleep(const void *waitChannel, unsigned int flags,
 	sce_psnet_bnet_mutex_lock(&gNetPsThreadMutex, NULL);
 	thread = sceNetPsGetThread(sceNetPsGetThreadId(), 1);
 	sce_psnet_bnet_mutex_unlock(&gNetPsThreadMutex);
-	if (thread == NULL)
+	if (thread == NULL) {
 		sce_psnet_panic("", thread);
+		__builtin_unreachable();
+	}
 	thread->waitChannel = waitChannel;
 	if (delay > 0) {
 		timeout = delay;
@@ -485,6 +488,56 @@ int sceNetPsNormalizeTimeout(int timeout)
 	return timeout | (timeout >> 31);
 }
 
+/*
+ * The bounds of the sanity checks: a protocol switch lies in the data segment's first
+ * 0x105c bytes, a protocol function in the text segment's first 0x558e0 bytes (the
+ * original's relocations; its link's symbols are unknown)
+ */
+extern const char bnet_protosw_start[], bnet_protosw_end[];
+extern const char bnet_text_start[], bnet_text_end[];
+
+/*
+ * A bad socket does not come back from the panic; a bad protocol switch is reported
+ * and the checks go on (the original's code)
+ */
+#define BNET_SANITY_PANIC(value) \
+	do { \
+		sce_psnet_panic("", __func__, (value)); \
+		__builtin_unreachable(); \
+	} while (0)
+
+static int bnet_outside(const void *pointer, const char *start, const char *end)
+{
+	return (const char *)pointer < start || (const char *)pointer > end;
+}
+
+static void bnet_protosw_check(const struct protosw *pr)
+{
+	if (pr != NULL && bnet_outside(pr, bnet_protosw_start, bnet_protosw_end))
+		sce_psnet_panic("", __func__, pr);
+	if (pr->pr_usrreq != NULL &&
+	    bnet_outside(pr->pr_usrreq, bnet_text_start, bnet_text_end))
+		sce_psnet_panic("", __func__, pr->pr_usrreq);
+	if (pr->pr_output != NULL &&
+	    bnet_outside(pr->pr_output, bnet_text_start, bnet_text_end))
+		sce_psnet_panic("", __func__, pr->pr_output);
+	if (pr->pr_ctloutput != NULL &&
+	    bnet_outside(pr->pr_ctloutput, bnet_text_start, bnet_text_end))
+		sce_psnet_panic("", __func__, pr->pr_ctloutput);
+}
+
+/* Check a socket before its protocol is called: a heap block with net_ps's handlers */
+void bnet_socket_sanity_check(struct socket *so)
+{
+	if (!sceNetPsIsHeapAddress(so))
+		BNET_SANITY_PANIC(so);
+	if (so->so_send != sosend)
+		BNET_SANITY_PANIC(so->so_send);
+	if (so->so_receive != soreceive)
+		BNET_SANITY_PANIC(so->so_receive);
+	bnet_protosw_check(so->so_proto);
+}
+
 /* Name unknown; initialize the kernel network synchronization objects. */
 int sceNetPsInitializeSync(void)
 {
@@ -505,11 +558,15 @@ int sceNetPsStartStack(const SceNetPsThreadParam *param)
 {
 	SceUInt64 now;
 
-	if (gNetPsRuntime.flags & 1)
+	if (gNetPsRuntime.flags & 1) {
 		sce_psnet_panic("", 0);
+		__builtin_unreachable();
+	}
 	sceNetPsSeedRandom();
-	if (init_crypto(sceNetPsCalloc, sceNetPsRelease) < 0)
+	if (init_crypto(sceNetPsCalloc, sceNetPsRelease) < 0) {
 		sce_psnet_panic("init_crypto", 0);
+		__builtin_unreachable();
+	}
 	callout_startup();
 	mbinit();
 	soinit();

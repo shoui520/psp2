@@ -90,7 +90,8 @@ struct socket {
 	short so_qlimit;
 	short so_timeo;
 	u_short so_error;
-	pid_t so_pgid;
+	/* SCE: in place of so_pgid, the libnetctl error while so_error is SCE_NET_ERETURN */
+	int returnedError;
 	u_long so_oobmark;
 	struct sockbuf so_snd;
 	struct sockbuf so_rcv;
@@ -172,8 +173,8 @@ _Static_assert(offsetof(struct socket, so_timeo) == 66,
 	       "socket so_timeo");
 _Static_assert(offsetof(struct socket, so_error) == 68,
 	       "socket so_error");
-_Static_assert(offsetof(struct socket, so_pgid) == 72,
-	       "socket so_pgid");
+_Static_assert(offsetof(struct socket, returnedError) == 72,
+	       "socket returnedError");
 _Static_assert(offsetof(struct socket, so_oobmark) == 76,
 	       "socket so_oobmark");
 _Static_assert(offsetof(struct socket, so_snd) == 80,
@@ -234,6 +235,8 @@ int sceNetPsDumpClose(int dumpId);
 int sceNetPsDumpAbort(int dumpId, int flags);
 void bnet_socket_sanity_check(struct socket *socket);
 void sceNetPsWakeupEpolls(struct socket *socket);
+int sceNetPsCopyString(const char *source, char *destination, size_t length,
+		       size_t *copied, int kernel);
 int sceNetPsEpollCreate(const char *name, int flags);
 int sceNetPsEpollClose(int epollId);
 int sceNetPsEpollAbort(int epollId, int flags);

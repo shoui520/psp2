@@ -1,6 +1,18 @@
 --- contrib/netbsd-2.1/sys/sys/proc.h
 +++ sys/internal/kernel/src/net_ps/include/sys/proc.h
-@@ -479,6 +479,18 @@
+@@ -391,6 +391,11 @@
+ 	return l->l_proc;
+ }
+ #define	curproc	__curproc()
++#ifdef NET_PS_NETBSD
++/* SCE: in NetBSD's own files, the current process is a variable, as in NetBSD 1.x */
++#undef	curproc
++extern struct proc	*curproc;
++#endif
+ 
+ extern struct proc	proc0;		/* Process slot for swapper */
+ extern int		nprocs, maxproc; /* Current and max number of procs */
+@@ -479,6 +484,18 @@
  /* Compatibility with old, non-interlocked tsleep call */
  #define	tsleep(chan, pri, wmesg, timo)					\
  	ltsleep(chan, pri, wmesg, timo, NULL)

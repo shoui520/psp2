@@ -285,7 +285,7 @@ int sceNetPsGetKernelStatistics(SceNetPsKernelStatistics *statistics, int networ
 /* src/ps/osdependence/ngp/system_os.c */
 int init_crypto(void *(*allocate)(SceSize), void (*release)(void *));
 void sce_psnet_panic(const char *message, ...);
-int sceNetPsIsApplicationProgram(int *error);
+int sceNetPsIsHeapAddress(const void *address);
 int sceNetPsIsGameBudget(void);
 int sceNetPsIsDevelopmentMode(void);
 int sceNetPsIsCEX(void);

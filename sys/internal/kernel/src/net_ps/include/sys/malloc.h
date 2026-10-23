@@ -208,6 +208,7 @@ extern struct kmembuckets	bucket[];
  */
 void	*sceNetPsMalloc(unsigned int, int, unsigned int);	/* SceSize, int, SceSize */
 int	sceNetPsFree(void *);
+unsigned int	sceNetPsGetFreeMemory(int);	/* SCE: sosend's memory check */
 
 static __inline void *
 malloc(unsigned long size, struct malloc_type *type, int flags)
