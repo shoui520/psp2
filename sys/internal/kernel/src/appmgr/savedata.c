@@ -30,7 +30,7 @@ extern int appmgrWriteSaveDataSlot(unsigned int slotId,
 				 const SceAppMgrSaveDataSlotParam *param,
 				 int status, const char *mountPoint);
 extern int appmgrDeleteSaveDataSlot(unsigned int slotId, const char *mountPoint);
-extern extern int appmgrValidateSaveDataRemoveItem(const SceAppUtilSaveDataDataRemoveItem *item,
+extern int appmgrValidateSaveDataRemoveItem(const SceAppUtilSaveDataDataRemoveItem *item,
 					    const char *path);
 extern int appmgrRemoveSaveDataPath(const char *path, unsigned int missingPolicy,
 				    unsigned int *entryCount);
@@ -2141,7 +2141,7 @@ int appmgrValidateSaveDataFile(const SceAppUtilSaveDataDataSaveItem *file, const
 	return 0;
 }
 
-extern int appmgrValidateSaveDataRemoveItem(const SceAppUtilSaveDataDataRemoveItem *item,
+int appmgrValidateSaveDataRemoveItem(const SceAppUtilSaveDataDataRemoveItem *item,
 				     const char *path)
 {
 	int index;
