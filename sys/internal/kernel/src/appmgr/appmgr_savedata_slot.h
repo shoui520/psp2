@@ -155,4 +155,6 @@ extern AppmgrSaveDataSlotCache g_appmgrSaveDataSlotCache;
 int appmgrInitializeSaveDataSlotCache(void);
 int appmgrResetSaveDataSlotCache(SceUID pid);
 
+extern int g_appmgrAppInfoCacheKey;
+
 #endif

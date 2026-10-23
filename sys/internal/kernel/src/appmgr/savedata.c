@@ -2574,3 +2574,23 @@ void appmgrFreeSaveDataDirectories(char **directories)
 		}
 	} while (directories != end);
 }
+
+int appmgrInitAppInfoCache(SceUID pid)
+{
+	SceAppMgrAppInfoCache *info;
+	void *storage = NULL;
+	int addContentCapacity = 16;
+	int result;
+
+	if (!sceSblACMgrIsGameProgram(pid))
+		addContentCapacity = SceSblACMgrForDriver_6C5AB07F(pid) != 0;
+	result = SceProcessmgrForDriver_AF80F39C(pid, g_appmgrAppInfoCacheKey, &storage, 1);
+	if (result < 0)
+		return result;
+	if (storage == NULL)
+		return (int)0x80800012;
+	info = storage;
+	memset(info, 0, 1024);
+	info->addContentCapacity = addContentCapacity;
+	return result;
+}

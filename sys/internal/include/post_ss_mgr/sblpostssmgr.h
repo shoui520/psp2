@@ -55,6 +55,8 @@ SceUInt8 SceSblPostSsMgrForDriver_C93C0A0D(void);
 int SceSblPostSsMgrForDriver_C977601E(void);
 int SceSblPostSsMgrForDriver_CB5436BD(SceUInt32 type, SceSize size, void *key);
 int SceSblPostSsMgrForDriver_DC68EE5C(void);
+/* vitasdk: ksceSblPostSsMgrVerifyKeystone */
+int SceSblPostSsMgrForDriver_DDA6FA6D(const void *keystone, int hasKlicensee);
 int SceSblPostSsMgrForDriver_DE5150FE(SceUInt32 *time);	/* vitasdk: ksceSblRtcMgrGetCpRtcLogical */
 /* vitasdk: ksceSblPostSsMgrVerifyKeystoneWithPasscode */
 int SceSblPostSsMgrForDriver_F86F1452(const void *keystone, const char *passcode);

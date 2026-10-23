@@ -13,5 +13,6 @@ int appmgrGetFakeSdSlotBroken(void);
 int appmgrIsTrcCheckNotifyEnabled(void);
 int appmgrGetButtonAssign(void);
 int appmgrGetDebugUpgradable(void);
+int appmgrInitializeFakeNoMemoryCard(void);
 
 #endif

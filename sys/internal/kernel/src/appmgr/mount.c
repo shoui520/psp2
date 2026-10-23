@@ -39,6 +39,8 @@
 #include <pfsmgr/pfsmgr.h>
 #include "app_state_internal.h"
 #include "appmgr_device.h"
+#include "appmgr_event.h"
+#include "appmgr_savedata_slot.h"
 
 /* SceSblPostSsMgr (ut_mgr.c): declared here until its exporter's header declares it */
 
@@ -1839,8 +1841,11 @@ out:
 }
 
 #if FW_VERSION >= 0x04000000
-
-int appmgrValidateSaveDataMount(SceUID pid, const char *path, int skipVerification,
+int
+#else
+static inline __attribute__((always_inline)) int
+#endif
+appmgrValidateSaveDataMount(SceUID pid, const char *path, int skipVerification,
 			       AppmgrProcessContent *content, SceUInt32 *maxSize)
 {
 	SceUInt32 saveDataFlag = 0;
@@ -1888,7 +1893,6 @@ updateParams:
 	}
 	return result;
 }
-#endif
 
 int appmgrDecodeString(const unsigned char *source, char *destination, SceSize size)
 {
@@ -4956,7 +4960,7 @@ static char g_appmgrLoopBackPath[64];
 static char g_appmgrInstallDirPath[32];
 
 /* A title ID: XXXXNNNNN (X upper case, N digit). */
-static int appmgrIsTitleId(const char *id)
+static __attribute__((noinline)) int appmgrIsTitleId(const char *id)
 {
 	return APPMGR_IS_UPPER(id[0]) && APPMGR_IS_UPPER(id[1]) &&
 	       APPMGR_IS_UPPER(id[2]) && APPMGR_IS_UPPER(id[3]) &&
@@ -5428,6 +5432,703 @@ int SceAppMgrForDriver_13D54107(unsigned int mountId, ScePfsRndDriveId *mountPoi
 	if (mountId - 400 > 2)
 		return 0x80800001;
 	return appmgrMountSystemDirectory(0, mountId, mountPoint);
+}
+
+static char g_appmgrContentPath[1024];
+
+/* the drives a process without access to them sees through an invalid overlay */
+static const char *g_appmgrOverlayDrives[] = {
+	"gro0:", "grw0:", "os0:", "ur0:", "ux0:", "vd0:", "vs0:", "pd0:", "tm0:", "ud0:",
+	NULL
+};
+
+int appmgrMountProcessContent(SceUID pid, SceUInt32 mountFlags, const char *path,
+			      const char *titleId, const AppmgrLaunchOptions *options,
+			      AppmgrMountHolder *mounts, int launchOrigin,
+			      AppmgrProcessContent *content)
+{
+	ScePfsRndDriveId appDrive = {{0}}, saveDataDrive = {{0}}, addContDrive = {{0}};
+	ScePfsRndDriveId sysExternalDrive = {{0}}, dataExternalDrive = {{0}};
+	ScePfsRndDriveId patchDrive = {{0}}, pfsDrive, userDataDrive;
+	AppmgrNotificationRequest request;
+	SceSelfAuthInfo authInfo;
+	AppmgrSfoFile file;
+	SceFiosOverlay overlay;
+	SceFiosOverlayID overlayId;
+	SceAppMgrAppInfoCache *info;
+	AppmgrPfsMount *pfsMount;
+	AppmgrVirtualMount *virtualMount;
+	const AppmgrMapFile *mapFile;
+	const AppmgrMapFileOverlay *mapOverlay;
+	const char *const *drive;
+	const char *message, *name, *slash, *backslash, *colon;
+	const void *klicensee;
+	unsigned char sealedKey[80], key[16];
+	char decoded[64];
+	char *normalized, *patchPath, *sfoPath, *workPath, *pfsPath;
+	void *storage, *value;
+	SceSize length, capacity;
+	SceUInt64 accountId;
+	SceUInt32 flags, mountId;
+	SceUID owner;
+	int result, status, permission, development, hasKlicensee, ownerFlag, consoleType;
+	int index, saved;
+#if !FW_SINCE(0x04000000)
+	SceUInt64 programAuthorityId;
+#endif
+
+	memset(g_appmgrContentPath, 0, sizeof(g_appmgrContentPath));
+	memset(content->overlayIds, 0, sizeof(content->overlayIds));
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		return result;
+
+	if (SceSblACMgrForDriver_6C5AB07F(pid)) {
+		if (!(content->selfControlFlags & 2)) {
+			result = 0x8080001c;
+			goto failed;
+		}
+		content->contentFlags |= 0x20;
+	}
+	if (sceSblACMgrIsGameProgram(pid))
+		content->contentFlags |= 0x10;
+	if (!SceSblACMgrForDriver_426A4E8C(pid))
+		content->contentFlags |= 8;
+	if (SceSblACMgrForDriver_A67E8E5B(pid))
+		content->contentFlags |= 0x80;
+	if (launchOrigin == 2)
+		content->launchFlags |= 2;
+	result = appmgrInitAppInfoCache(pid);
+	if (result < 0)
+		goto failed;
+
+	if (mountFlags & 1) {
+		/* app0: the application, unless its directory is mounted as an application image */
+		result = appmgrResolveLaunchDirectory(path, options, content->mapFile,
+						      g_appmgrContentPath,
+						      sizeof(g_appmgrContentPath));
+		if (result != 0)
+			goto failed;
+		pfsMount = g_appmgrPfsMounts;
+		normalized = appmgrAllocMountPath();
+		if (normalized == NULL) {
+			result = 0x80801006;
+			goto failed;
+		}
+		result = appmgrNormalizePath(g_appmgrContentPath, normalized);
+		if (result < 0) {
+			sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+			if (result != 0x80800002)
+				goto failed;
+		} else {
+			for (; pfsMount != NULL; pfsMount = pfsMount->next) {
+				if (pfsMount->mountId == 900 &&
+				    strncmp(pfsMount->appPath, normalized, 292) == 0) {
+					sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+					goto alreadyMounted;
+				}
+			}
+			sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+		}
+		result = appmgrMount(pid, mounts, 1000, titleId, g_appmgrContentPath, NULL,
+				     (const ScePfsRndDriveId *)content->license.klicense,
+				     &appDrive);
+		if (result != 0)
+			goto failed;
+#if !FW_SINCE(0x04000000)
+		/* bind the application's PFS image to this program */
+		if (sceKernelGetProcessSelfAuthInfo(pid, &authInfo) >= 0) {
+			programAuthorityId = authInfo.programAuthorityId;
+			pfsMount = g_appmgrPfsMounts;
+			normalized = appmgrAllocMountPath();
+			if (normalized != NULL) {
+				if (appmgrNormalizePath(g_appmgrContentPath, normalized) < 0)
+					pfsMount = NULL;
+				for (; pfsMount != NULL; pfsMount = pfsMount->next)
+					if (strncmp(pfsMount->appPath, normalized, 292) == 0)
+						break;
+				sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+				if (pfsMount != NULL) {
+					status = ScePfsMgrForKernel_A772209C(g_appmgrContentPath,
+							pfsMount->mountPoint.drive_id,
+							programAuthorityId,
+							content->license.klicense, 40);
+					if (strncmp("ux0:", g_appmgrContentPath, 4) == 0 &&
+					    status != 2 && SceSblAIMgrForDriver_D78B04A2() == 1) {
+						result = 0x8080004c;
+						goto failed;
+					}
+				}
+			}
+		}
+#endif
+
+		/* the patch, mounted over app0: */
+		patchPath = appmgrAllocMountPath();
+		if (patchPath == NULL) {
+			result = 0x80801006;
+			goto failed;
+		}
+		memset(patchPath, 0, 292);
+		if (appmgrGetPatchPath(content->appDirectory, content->patchTitleId,
+				       content->attribute, content->category, patchPath) == 0 &&
+		    appmgrCreateDirectories(patchPath, 0) >= 0) {
+			result = appmgrMount(pid, mounts, 1001, content->patchTitleId, patchPath,
+					     NULL,
+					     (const ScePfsRndDriveId *)content->license.klicense,
+					     &patchDrive);
+			sceKernelFreeHeapMemory(g_appmgrMountHeap, patchPath);
+			if (result < 0)
+				goto failed;
+		} else {
+			sceKernelFreeHeapMemory(g_appmgrMountHeap, patchPath);
+		}
+
+		/* the application's parameters, or what the launcher knows of them */
+		appDrive = (ScePfsRndDriveId){ "app0:" };
+		result = appmgrReadParamSfo(pid, "app0:/sce_sys/param.sfo", 0, content);
+		if (result < 0) {
+			if (result == 0x80010002)
+				result = 0x80800013;
+			if (!(content->launchFlags & 2))
+				goto failed;
+			flags = content->contentFlags;
+			content->contentFlags = flags | 2;
+			if (flags & 1) {
+				if (flags & 0x10)
+					strncpy(content->category, appmgrProgramCategories[1], 4);
+				else if (flags & 0x20)
+					__builtin_memcpy(content->category, (flags & 0x40) ?
+							 appmgrProgramCategories[5] :
+							 appmgrProgramCategories[3], 4);
+				else
+					__builtin_strcpy(content->category, "gda");
+				content->category[3] = '\0';
+				strncpy(content->titleId, titleId, 10);
+				content->titleId[9] = '\0';
+				__builtin_memcpy(content->patchTitleId, content->titleId, 16);
+				__builtin_memcpy(content->originalTitleId, content->titleId, 16);
+			}
+			content->attribute = 0;
+			content->attribute2 = 0;
+			content->appVersion = 0;
+			content->savedataMaxSize = 0;
+			__builtin_memcpy(content->saveDataTitleIds[0], content->titleId, 16);
+			__builtin_memcpy(content->addContTitleIds[0], content->titleId, 16);
+			strncpy(content->contentId, "", 48);
+			content->contentId[47] = '\0';
+			strncpy(content->npCommunicationId, "", 13);
+			content->npCommunicationId[12] = '\0';
+		}
+
+		/* a non-game program's own category and title from param2.sfo */
+		if (content->contentFlags & 0x40) {
+			file = (AppmgrSfoFile){ 0 };
+			value = NULL;
+			length = 0;
+			capacity = 0;
+			owner = pid ? pid : sceKernelGetProcessId();
+			SceKernelSuspendForDriver_4DF40893(0);
+			sfoPath = appmgrAllocMountPath();
+			if (sfoPath == NULL) {
+				result = 0x80801006;
+				appmgrReleaseSfoFile(&file);
+				SceKernelSuspendForDriver_2BB92967(0);
+				goto param2Failed;
+			}
+			memset(sfoPath, 0, 292);
+			permission = sceKernelSetThreadAccessLevel(128);
+			result = SceFios2KernelForDriver_0F456345(owner, 0, "app0:/sce_sys/param2.sfo",
+								  sfoPath, 292);
+			sceKernelSetThreadAccessLevel(permission);
+			if (result != 0) {
+				sceKernelFreeHeapMemory(g_appmgrMountHeap, sfoPath);
+				appmgrReleaseSfoFile(&file);
+				SceKernelSuspendForDriver_2BB92967(0);
+				if (result >= 0)
+					goto checkCategory;
+				goto param2Failed;
+			}
+			result = appmgrLoadSfoFile(sfoPath, &file);
+			if (result < 0)
+				goto param2Release;
+			result = appmgrGetSfoEntry(&file, "CATEGORY", &value, &length, &capacity);
+			if (result < 0)
+				goto param2Release;
+			if (length > 2 && capacity == 4) {
+				if (strncmp(value, appmgrProgramCategories[4], 4) != 0)
+					strncpy(content->category, value, 4);
+				else
+					__builtin_strcpy(content->category, "gdd");
+				content->category[3] = '\0';
+				result = appmgrGetSfoEntry(&file, "TITLE_ID", &value, &length,
+							   &capacity);
+				if (result < 0)
+					goto param2Release;
+				if (length > 9 && capacity == 12) {
+					strncpy(content->titleId, value, 10);
+					content->titleId[9] = '\0';
+					sceKernelFreeHeapMemory(g_appmgrMountHeap, sfoPath);
+					appmgrReleaseSfoFile(&file);
+					SceKernelSuspendForDriver_2BB92967(0);
+					goto checkCategory;
+				}
+			}
+			result = 0x80800034;
+param2Release:
+			sceKernelFreeHeapMemory(g_appmgrMountHeap, sfoPath);
+			appmgrReleaseSfoFile(&file);
+			SceKernelSuspendForDriver_2BB92967(0);
+param2Failed:
+			if (!(content->contentFlags & 1))
+				goto failed;
+		}
+
+checkCategory:
+		flags = content->contentFlags;
+		if (flags & 0x20) {
+			if (flags & 0x40) {
+				if (strncmp(content->category, appmgrProgramCategories[5], 4) != 0)
+					goto badCategory;
+			} else if (strncmp(content->category, appmgrProgramCategories[3], 4) != 0) {
+				goto badCategory;
+			}
+			if (!appmgrIsTitleId(content->titleId) ||
+			    !appmgrIsTitleId(content->addContTitleIds[0]) ||
+			    !appmgrIsTitleId(content->saveDataTitleIds[0]) ||
+			    !appmgrIsTitleId(content->originalTitleId))
+				goto badCategory;
+		} else if (flags & 0x10) {
+			if (strncmp(content->category, appmgrProgramCategories[1], 3) != 0 ||
+			    !appmgrIsValidTitleId(content->titleId, 1) ||
+			    !appmgrIsValidTitleId(content->addContTitleIds[0], 1) ||
+			    !appmgrIsValidTitleId(content->saveDataTitleIds[0], 1))
+				goto badCategory;
+		}
+
+		/* a game's keystone, checked against its license */
+		memset(content->keystone, 0, sizeof(content->keystone));
+		if (strncmp(content->category, appmgrProgramCategories[1], 3) == 0 ||
+		    strncmp(content->category, appmgrProgramCategories[3], 4) == 0 ||
+		    strncmp(content->category, appmgrProgramCategories[5], 4) == 0) {
+			result = appmgrReadKeystone(pid, appDrive.drive_id, content->keystone);
+			if (result < 0) {
+				if (!(content->contentFlags & 1))
+					goto failed;
+			} else {
+				hasKlicensee = 0;
+				for (index = 0; index < 16; index++) {
+					if (content->license.klicense[index] != 0) {
+						hasKlicensee = 1;
+						break;
+					}
+				}
+				result = SceSblPostSsMgrForDriver_DDA6FA6D(content->keystone,
+									  hasKlicensee);
+				if (result < 0)
+					goto failed;
+			}
+		}
+	}
+
+	storage = NULL;
+	result = SceProcessmgrForDriver_AF80F39C(pid, g_appmgrAppInfoCacheKey, &storage, 0);
+	if (result < 0)
+		goto failed;
+	if (storage == NULL) {
+		result = 0x80800012;
+		goto failed;
+	}
+	info = storage;
+	memset(info->titleId, 0, sizeof(info->titleId));
+	strncpy(info->titleId, content->titleId, 9);
+
+	if (mountFlags & 4)
+		appmgrMountAddCont(pid, titleId, mounts, content, &addContDrive);
+
+	if (!(mountFlags & 2))
+		goto systemMounts;
+	if (sceKernelGetProcessSelfAuthInfo(pid, &authInfo) >= 0 &&
+	    (authInfo.programAuthorityId == 0x2800000000000001ULL ||
+	     authInfo.programAuthorityId == 0x2800000000007001ULL))
+		goto systemMounts;
+
+	/* savedata0: where the save data is */
+	if (SceSblACMgrForDriver_5C4BC352(pid)) {
+		strncpy(content->saveDataTitleIds[0], titleId, 10);
+		content->saveDataTitleIds[0][9] = '\0';
+	}
+	mapFile = content->mapFile;
+	memset(g_appmgrContentPath, 0, sizeof(g_appmgrContentPath));
+	if (!(content->contentFlags & 0x80) || !(content->launchFlags & 2) ||
+	    SceSblAIMgrForDriver_D78B04A2() || SceSblAIMgrForDriver_F4B98F66() ||
+	    !SceSblACMgrForDriver_E87D1777()) {
+		if ((content->contentFlags & 0x18) == 0x18)
+			goto defaultSaveData;
+	}
+	if (SceSblAIMgrForDriver_D78B04A2() || SceSblAIMgrForDriver_F4B98F66())
+		goto defaultSaveData;
+	if (SceSblACMgrForDriver_E87D1777() && mapFile != NULL && mapFile->file > 0 &&
+	    mapFile->savedata0[0] != '\0') {
+		strncpy(g_appmgrContentPath, mapFile->savedata0, sizeof(g_appmgrContentPath));
+		goto findSaveData;
+	}
+	if ((content->contentFlags & 0x30) == 0)
+		goto defaultSaveData;
+	if (appmgrCreateDirectories("host0:savedata", 0) == 0) {
+		__builtin_strcpy(g_appmgrContentPath, "host0:savedata");
+		goto findSaveData;
+	}
+	__builtin_strcpy(g_appmgrContentPath, "ux0:data/savedata");
+	if (content->contentFlags & 1)
+		goto findSaveData;
+	result = appmgrCreateDirectories("ux0:data/savedata", 0);
+	if (result >= 0) {
+		if (result != 0)
+			goto saveDataPathFailed;
+		goto findSaveData;
+	}
+defaultSaveData:
+	result = appmgrGetSaveDataPath(content->appDirectory, content->saveDataTitleIds[0],
+				       content->attribute, content->category,
+				       g_appmgrContentPath, sizeof(g_appmgrContentPath));
+	if (result != 0 && result != 0x80800020) {
+saveDataPathFailed:
+		if (result != 0x8080000b)
+			goto failed;
+		goto systemMounts;
+	}
+
+findSaveData:
+	result = appmgrFindPfsMount(g_appmgrPfsMounts, 901, g_appmgrContentPath, NULL);
+	if (result != 0x80800002) {
+		if (result != 0)
+			goto failed;
+		goto alreadyMounted;
+	}
+
+	/* a new save data directory becomes a PFS image first */
+	if (strncmp(g_appmgrContentPath, "grw0:", 5) == 0)
+		mountId = 1005;
+	else
+		mountId = strncmp(g_appmgrContentPath, "ux0:", 4) == 0 ? 1005 : 1006;
+	workPath = appmgrAllocMountPath();
+	if (workPath == NULL) {
+		result = 0x80801006;
+		goto failed;
+	}
+	if (appmgrIsDevelopmentPath(g_appmgrContentPath)) {
+		status = appmgrCreateDirectories(g_appmgrContentPath, 0);
+		if (status < 0)
+			goto pfsFailed;
+		development = 1;
+	} else {
+		status = appmgrCreateDirectories(g_appmgrContentPath, 1);
+		if (status < 0)
+			goto pfsFailed;
+		development = 0;
+	}
+	snprintf(workPath, 292, "%s/sce_pfs", g_appmgrContentPath);
+	if (appmgrCreateDirectories(workPath, 0) == 0)
+		goto pfsExists;
+	snprintf(workPath, 292, "%s/sce_sys", g_appmgrContentPath);
+	if (appmgrCreateDirectories(workPath, 0) == 0) {
+pfsExists:
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, workPath);
+		goto mountSaveData;
+	}
+	if (development) {
+		pfsPath = g_appmgrContentPath;
+	} else {
+		snprintf(workPath, 292, "%s_TMP", g_appmgrContentPath);
+		appmgrRemoveDirectoryTree(workPath);
+		status = sceIoRename(g_appmgrContentPath, workPath);
+		if (status < 0)
+			goto pfsFailed;
+		pfsPath = workPath;
+	}
+	if (mountId != 1006) {
+		memset(sealedKey, 0, sizeof(sealedKey));
+		memset(key, 0, sizeof(key));
+		memset(&pfsDrive, 0, sizeof(pfsDrive));
+		status = sceSblSsGenerateSealedKey(sealedKey);
+		if (status < 0)
+			goto pfsFailed;
+		status = sceSblSsDecryptSealedKey(sealedKey, key);
+		if (status < 0)
+			goto pfsFailed;
+		if (development)
+			memset(key, 0, sizeof(key));
+		status = appmgrMakeRandomDriveId("ts", pfsDrive.drive_id);
+		if (status < 0)
+			goto pfsFailed;
+		status = sceKernelGetProcessSelfAuthInfo(0, &authInfo);
+		if (status < 0)
+			goto pfsFailed;
+		klicensee = NULL;
+		for (index = 0; index < 16; index++) {
+			if (key[index] != 0) {
+				klicensee = key;
+				break;
+			}
+		}
+		status = ScePfsMgrForKernel_A772209C(pfsPath, pfsDrive.drive_id,
+						     authInfo.programAuthorityId, klicensee, 5);
+		if (status < 0)
+			goto pfsFailed;
+	}
+	slash = strrchr(g_appmgrContentPath, '/');
+	backslash = strrchr(g_appmgrContentPath, '\\');
+	colon = strrchr(g_appmgrContentPath, ':');
+	name = slash;
+	if (slash <= backslash) {
+		if (backslash > colon)
+			name = backslash;
+		else if (colon != NULL)
+			name = colon + 1;
+		else
+			name = NULL;
+	}
+	status = appmgrCreateSaveDataMetadata(pid, pfsPath, name, mountId, sealedKey,
+					      content->keystone, content->titleId);
+	if (mountId != 1006)
+		ScePfsMgrForKernel_680BC384(pfsDrive.drive_id);
+	if (!development) {
+		if (status < 0) {
+			appmgrRemoveDirectoryTree(workPath);
+			goto pfsFailed;
+		}
+		status = sceIoRename(workPath, g_appmgrContentPath);
+	}
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, workPath);
+	if (status < 0)
+		goto saveDataFailed;
+	if (status != 0)
+		goto checkSaveData;
+
+mountSaveData:
+	status = appmgrMount(pid, mounts, mountId, titleId, g_appmgrContentPath, NULL, NULL,
+			     &saveDataDrive);
+	if (status < 0)
+		goto saveDataMissing;
+
+checkSaveData:
+	if (strncmp(g_appmgrContentPath, "ur0:", 4) != 0) {
+		status = appmgrValidateSaveDataMount(pid, g_appmgrContentPath, 0, content, NULL);
+		if (status < 0) {
+			result = status;
+			goto failed;
+		}
+		for (virtualMount = mounts->firstMount; virtualMount != NULL;
+		     virtualMount = virtualMount->next)
+			if (strncmp(virtualMount->driveId.drive_id, saveDataDrive.drive_id,
+				    16) == 0)
+				break;
+		if (virtualMount == NULL)
+			goto failed;
+		pfsMount = virtualMount->pfsMount;
+		result = 0;
+		if (pfsMount->mountId == 1005 && pfsMount->mountPoint.drive_id[0] != '\0' &&
+		    content->savedataMaxSize != 0) {
+			result = ScePfsMgrForKernel_806D2EA1(pfsMount->mountPoint.drive_id,
+							     content->savedataMaxSize << 10);
+			if (result < 0) {
+				if (result == 0x8001001c)
+					result = 0x80800019;
+				goto failed;
+			}
+		}
+		status = result;
+	}
+	goto notify;
+
+pfsFailed:
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, workPath);
+saveDataFailed:
+	if (status != 0x80010002 && status != 0x80010013) {
+		if (status == 0x8001001c) {
+			result = 0x80800016;
+			goto failed;
+		}
+		result = status;
+		goto failed;
+	}
+saveDataMissing:
+	if ((content->attribute & 0x100001) == 0x100001) {
+		/* a fake save data owner (devkits) */
+		content->savedataEnvironmentFlags = 0;
+		ownerFlag = 0;
+		consoleType = appmgrGetConsoleType();
+		if (consoleType == 0)
+			content->savedataEnvironmentFlags |= 1;
+		else if (consoleType == 1)
+			content->savedataEnvironmentFlags |= 2;
+		else
+			content->savedataEnvironmentFlags |= 4;
+		if (sceRegMgrGetKeyInt("/CONFIG/GAME", "fake_savedata_owner", &ownerFlag) < 0)
+			ownerFlag = 0;
+		else if (ownerFlag == 1)
+			content->savedataEnvironmentFlags |= 8;
+		content->savedataOwnershipFlags = 0;
+		result = appmgrGetAccountIdentity(&accountId, NULL, NULL);
+		if (result < 0)
+			goto failed;
+		if (accountId == 0)
+			content->savedataOwnershipFlags |= 2;
+		content->savedataAttribute = 0;
+		content->savedataVersion = 0;
+	} else if (!(content->contentFlags & 1)) {
+		result = status;
+		goto failed;
+	}
+
+notify:
+	if ((content->contentFlags & 0x30) == 0)
+		goto systemMounts;
+	memset(&request, 0, sizeof(request));
+	switch (status) {
+	case 0:
+		snprintf((char *)request.payload, sizeof(request.payload),
+			 "AppMgr:\nsavedata0: OK -\n%s", g_appmgrContentPath);
+		if (strnlen("AppMgr:\nsavedata0: OK -\n", 60) +
+		    strnlen(g_appmgrContentPath, 1024) > 59)
+			memset(&request.payload[56], '.', 3);
+		break;
+	case 0x80010002:
+		message = "AppMgr:\nsavedata0: NG -\nSCE_ERROR_ERRNO_ENOENT";
+		goto copyMessage;
+	case 0x80010013:
+		message = "AppMgr:\nsavedata0: NG -\nSCE_ERROR_ERRNO_ENODEV";
+copyMessage:
+		__builtin_memcpy(request.payload, message,
+				 sizeof("AppMgr:\nsavedata0: NG -\nSCE_ERROR_ERRNO_ENOENT"));
+		break;
+	default:
+		snprintf((char *)request.payload, sizeof(request.payload),
+			 "AppMgr:\nsavedata0: NG -\n0x%08x", status);
+		break;
+	}
+	_appmgrQueuePush(&request, 1);
+
+systemMounts:
+	if (SceSblACMgrForDriver_E79C7A8D(pid, (const SceChar8 *)"vs0:sys/external")) {
+		result = appmgrDecodeString(encodedSysExternal, decoded, sizeof(decoded));
+		if (result != 0)
+			goto failed;
+		result = appmgrMount(pid, mounts, 1007, titleId, decoded, NULL, NULL,
+				     &sysExternalDrive);
+		if (result != 0)
+			goto failed;
+	}
+	result = appmgrDecodeString(encodedDataExternal, decoded, sizeof(decoded));
+	if (result != 0)
+		goto failed;
+	result = appmgrMount(pid, mounts, 1008, titleId, decoded, NULL, NULL, &dataExternalDrive);
+	if (result != 0)
+		goto failed;
+
+	/* the map file's overlays (development) */
+	mapFile = content->mapFile;
+	if (mapFile != NULL && mapFile->file > 0) {
+		for (index = 0; index != 8; index++) {
+			if (!sceAppMgrMapFileIsValidOverlay(index, (AppmgrMapFile *)mapFile))
+				continue;
+			mapOverlay = &mapFile->overlays[index];
+			memcpy(&overlay, &g_appmgrOverlayTemplate, sizeof(overlay));
+			overlayId = 0;
+			owner = pid ? pid : sceKernelGetProcessId();
+			overlay.type = mapOverlay->type;
+			overlay.order = mapOverlay->order;
+			overlay.src_len = strnlen(mapOverlay->src, 292);
+			strncpy(overlay.src, mapOverlay->src, 292);
+			overlay.src[291] = '\0';
+			overlay.dst_len = strnlen(mapOverlay->dst, 292);
+			strncpy(overlay.dst, mapOverlay->dst, 292);
+			overlay.dst[291] = '\0';
+			overlay.pid = owner;
+			status = SceFios2KernelForDriver_17E65A1C(owner, &overlay, &overlayId);
+			if (status != 0) {
+				result = 0x80800021;
+				sceAppMgrMapFilePrintMappingError(status);
+				goto failed;
+			}
+		}
+		result = 0;
+	}
+
+	/* ux0:user/00/userdata for games */
+	if (content->contentFlags & 0x10) {
+		result = appmgrDecodeString(encodedUserData, decoded, sizeof(decoded));
+		if (result != 0)
+			goto failed;
+		if (appmgrCreateDirectories(decoded, 0) == 0 &&
+		    SceSblACMgrForDriver_5F9AF49C(pid, (const SceChar8 *)"ux0:")) {
+			status = appmgrMount(pid, mounts, 1009, content->titleId, decoded, NULL,
+					     NULL, &userDataDrive);
+			if (status < 0) {
+				result = status;
+				goto failed;
+			}
+		}
+	}
+
+	/* the drives the process may not see */
+	memset(content->overlayIds, 0, sizeof(content->overlayIds));
+	saved = result;
+	for (drive = g_appmgrOverlayDrives, index = 0; *drive != NULL; drive++, index++) {
+		if (SceSblACMgrForDriver_5F9AF49C(pid, (const SceChar8 *)*drive))
+			continue;
+		status = appmgrAddInvalidOverlay(pid, *drive, &content->overlayIds[index]);
+		if (status != 0) {
+			result = status;
+			if (status < 0)
+				goto failed;
+			goto fakeNoMemoryCard;
+		}
+	}
+	result = saved;
+fakeNoMemoryCard:
+	if (content->contentFlags & 0x10) {
+		appmgrInitializeFakeNoMemoryCard();
+		result = appmgrUpdateFakeNoMemoryCardOverlays(pid, content);
+		if (result != 0)
+			goto failed;
+	} else if (result != 0) {
+		goto failed;
+	}
+	goto unlock;
+
+badCategory:
+	result = 0x80800015;
+	goto failed;
+alreadyMounted:
+	result = 0x80800017;
+	goto failed;
+failed:
+	if (saveDataDrive.drive_id[0] != '\0')
+		appmgrUnmountDrive(pid, mounts, saveDataDrive.drive_id, 0);
+	if (addContDrive.drive_id[0] != '\0')
+		appmgrUnmountDrive(pid, mounts, addContDrive.drive_id, 0);
+	if (appDrive.drive_id[0] != '\0')
+		appmgrUnmountDrive(pid, mounts, appDrive.drive_id, 0);
+	if (sysExternalDrive.drive_id[0] != '\0')
+		appmgrUnmountDrive(pid, mounts, sysExternalDrive.drive_id, 0);
+	if (dataExternalDrive.drive_id[0] != '\0')
+		appmgrUnmountDrive(pid, mounts, dataExternalDrive.drive_id, 0);
+	for (index = 0; index < 16; index++) {
+		if (content->overlayIds[index] == 0)
+			continue;
+		owner = pid ? pid : sceKernelGetProcessId();
+		permission = sceKernelSetThreadAccessLevel(128);
+		status = SceFios2KernelForDriver_23247EFB(owner, content->overlayIds[index]);
+		sceKernelSetThreadAccessLevel(permission);
+		if (status != 0)
+			break;
+		content->overlayIds[index] = 0;
+	}
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+	return result;
 }
 
 int SceAppMgrForDriver_0813AFCA(int partitionId, char *output,

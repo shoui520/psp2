@@ -31,3 +31,5 @@ _Static_assert(offsetof(AppmgrMapFile, file) == 1024, "map-file descriptor");
 _Static_assert(offsetof(AppmgrMapFile, app0) == 1036, "map-file paths");
 _Static_assert(offsetof(AppmgrMapFile, overlays) == 3080, "map-file overlays");
 _Static_assert(sizeof(AppmgrMapFile) == 7768, "complete map-file configuration");
+int sceAppMgrMapFilePrintMappingError(int error);
+int sceAppMgrMapFileIsValidOverlay(unsigned int index, AppmgrMapFile *mapFile);

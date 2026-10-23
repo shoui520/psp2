@@ -132,6 +132,13 @@ int appmgrResolveLaunchPath(const char *path, char *output, SceSize size);
 int sceAppMgrGetRawPath(char *path, char *resolvedPath, int capacity);
 int appmgrExtractSaveDataDeviceName(const char *path, char *device, SceSize capacity);
 void *appmgrAllocMountHeapMemory(SceSize size);
+
+/* appmgr_system_data.c */
+int appmgrRemoveDirectoryTree(const char *path);
+int appmgrRemoveFileInSteps(const char *path, unsigned int stepMiB);
+
+/* savedata.c */
+int appmgrInitAppInfoCache(SceUID pid);
 int appmgrFreeMountHeapMemory(void *memory);
 
 /* The SELF's eboot parameters (its control record 6), as sceAppMgrGetEbootParam copies them */
