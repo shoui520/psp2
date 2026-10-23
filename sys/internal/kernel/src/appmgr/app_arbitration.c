@@ -78,6 +78,24 @@ static const SceKernelDebugInfo activateSignalPanicInfo = {
 	.funcHash = 0x606d92dd,
 };
 
+static const SceKernelDebugInfo spawnUpdaterSignalPanicInfo = {
+	.fileHash = 0xb8f4da66,
+	.lineHash = 0x6557fb22,
+	.funcHash = 0x3840945d,
+};
+
+static const SceKernelDebugInfo spawnGameSignalPanicInfo = {
+	.fileHash = 0xb8f4da66,
+	.lineHash = 0x6a9427b8,
+	.funcHash = 0x3840945d,
+};
+
+static const SceKernelDebugInfo spawnBackgroundSignalPanicInfo = {
+	.fileHash = 0xb8f4da66,
+	.lineHash = 0xb835d657,
+	.funcHash = 0x3840945d,
+};
+
 static const SceKernelDebugInfo processStateUpdaterStartPanicInfo = {
 	.fileHash = 0xb8f4da66,
 	.lineHash = 0x0a3acb7c,
@@ -2347,6 +2365,268 @@ int _sceAppMgrActivateAppInternal(struct AppState *app)
 		DELETE_APP_MAIN_UNLOCK(3078, "_sceAppMgrActivateAppInternal");
 	}
 	return 0;
+}
+
+#if FW_DEBUG
+#define SPAWN_SIGNAL_CHECK(_result, _line, _info) \
+	DELETE_APP_CHECK(_result, 0, _line, "_spawnApp")
+#else
+#define SPAWN_SIGNAL_CHECK(_result, _line, _info) do { \
+	if ((_result) != 0) \
+		SceDebugForDriver_00CCE39C(&_info, __builtin_return_address(0), \
+			"0x%08x,0x%08x\n", _result, 0); \
+} while (0)
+#endif
+
+/* the mini application value a launch of each eviction threshold class may kill below */
+static const int launchEvictionThresholds[4] = { 99999, 9999, 999, 0 };
+
+/*
+ * Creates app's process; with no shell the process starts and takes the activation at
+ * once, otherwise the update thread or the launcher starts it.
+ */
+static inline __attribute__((always_inline)) int spawnApp(const AppmgrSpawnAppParam *param)
+{
+	struct AppState *app = param->app;
+	const struct SceKernelProcessOpt *opt = param->opt;
+	const AppmgrLaunchOptions *options = param->options;
+	int started = param->started;
+	const AppmgrCreateProcessParam *createParam = param->createParam;
+	int *error = param->error;
+	char name[32];
+	char pathStart;
+	SceUInt32 state;
+	SceUID owner;
+	int result;
+
+	DELETE_APP_ASSERT(app != NULL && app->mutexOwner == sceKernelGetThreadId(), 3171,
+		"_spawnApp");
+	owner = g_appmgrMainMutexOwner;
+	DELETE_APP_ASSERT(owner != sceKernelGetThreadId(), 3172, "_spawnApp");
+	DELETE_APP_MAIN_LOCK(3176, "_spawnApp");
+	pathStart = app->launchInfo.appPath[0];
+	state = app->state;
+	if (pathStart == '\0') {
+		DELETE_APP_MAIN_UNLOCK(3181, "_spawnApp");
+		return 0x80802016;
+	}
+	if (app->launchInfo.budgetType == 1 && _appListGetBigApp(g_appmgrAppStates) != NULL) {
+		DELETE_APP_MAIN_UNLOCK(3188, "_spawnApp");
+		return 0x80802019;
+	}
+	if (app->launchInfo.budgetType == 2 && appmgrGetShellApp() != NULL) {
+		DELETE_APP_MAIN_UNLOCK(3195, "_spawnApp");
+		return 0x80802022;
+	}
+	DELETE_APP_MAIN_UNLOCK(3200, "_spawnApp");
+	strncpy(name, app->process.appName, sizeof(name));
+	name[sizeof(name) - 1] = '\0';
+	result = _appmgrProcessCreateProcess(app, name, options, opt, createParam, error);
+	if (result < 0)
+		return result;
+	if (appmgrGetShellApp() == NULL) {
+		result = _appmgrProcessStartProcess(app);
+		if (result != 0) {
+			int quitResult = _appmgrProcessQuitProcess(app, 2, 0, 0);
+			DELETE_APP_CHECK(quitResult, 0, 3220, "_spawnApp");
+			app->state = state;
+			return result;
+		}
+		if (!(app->launchInfo.processAttr & 1)) {
+			result = _sceAppMgrActivateAppInternal(app);
+			DELETE_APP_CHECK(result, 0, 3226, "_spawnApp");
+		}
+		return 0;
+	}
+	if (started) {
+		result = sceKernelSignalSema(g_appmgrUpdateNotifySemaphore, 1);
+		SPAWN_SIGNAL_CHECK(result, 3231, spawnUpdaterSignalPanicInfo);
+		return 0;
+	}
+	switch (app->launchInfo.budgetType) {
+	case 0:
+		if (app->launchInfo.processAttr & 1) {
+			result = sceKernelSignalSema(g_appmgrUpdateNotifySemaphore, 1);
+			SPAWN_SIGNAL_CHECK(result, 3253, spawnBackgroundSignalPanicInfo);
+		}
+		break;
+	case 1:
+		if (app->launchInfo.processAttr & 1) {
+			result = sceKernelSignalSema(g_appmgrUpdateNotifySemaphore, 1);
+			SPAWN_SIGNAL_CHECK(result, 3261, spawnGameSignalPanicInfo);
+		}
+		break;
+	case 2:
+		result = _appmgrProcessStartProcess(app);
+		if (result != 0) {
+			int quitResult = _appmgrProcessQuitProcess(app, 2, 0, 0);
+			DELETE_APP_CHECK(quitResult, 0, 3242, "_spawnApp");
+			app->state = state;
+			return result;
+		}
+		break;
+	default:
+		DELETE_APP_ASSERT(0, 3267, "_spawnApp");
+		break;
+	}
+	return 0;
+}
+
+/* run on a stack of its own (SceThreadmgrForDriver_E54FD746) */
+int _spawnApp(void *argument)
+{
+	return spawnApp(argument);
+}
+
+/* quits the running game and waits for it to end */
+static inline __attribute__((always_inline)) int killGameApplication(void)
+{
+	struct AppState *game;
+	SceUID owner;
+	int result, unlockResult;
+
+	owner = g_appmgrMainMutexOwner;
+	DELETE_APP_ASSERT(owner != sceKernelGetThreadId(), 486, "killGameApplication");
+	if (_appListFindAndLockAppByAppId(-3, &game) != 0)
+		return 0;
+	result = _appmgrProcessQuitProcess(game, 3, 0, 0);
+	unlockResult = _appListUnlockApp(game);
+	DELETE_APP_CHECK(unlockResult, 0, 498, "killGameApplication");
+	if (result != 0)
+		return result;
+	appmgrUtilWaitObjectWait(appmgrUtilGetWaitObject(2), NULL);
+	return 0;
+}
+
+/* queues an application event carrying one word */
+static inline __attribute__((always_inline)) int utilSendEvent(struct AppState *app,
+		int type, int argument)
+{
+	SceAppMgrSystemEvent event;
+	int result;
+
+	memset(&event, 0, sizeof(event));
+	event.systemEvent = type;
+	__builtin_memcpy(event.data.reserved, &argument, sizeof(argument));
+	result = _appListPushEvent(app, &event);
+	DELETE_APP_CHECK(result, 0, 50, "utilSendEvent");
+	return result;
+}
+
+/*
+ * Starts the reserved application appId: a running one is handed the launch parameter
+ * instead; a launch the memory does not fit kills the game or mini applications and is
+ * tried again. Returns the process id.
+ */
+int _launchApp4(void *argument)
+{
+	const AppmgrLaunchApp4Param *param = argument;
+	int appId = param->appId;
+	const struct SceKernelProcessOpt *opt = param->opt;
+	const AppmgrLaunchOptions *options = param->options;
+	int sendParamToRunning = param->sendParamToRunning;
+	int startByUpdater = param->startByUpdater;
+	const AppmgrCreateProcessParam *createParam = param->createParam;
+	SceAppMgrAppStatus *status = param->status;
+	unsigned int *paramResult = param->paramResult;
+	int *error = param->error;
+	AppmgrSpawnAppParam spawn;
+	struct AppState *app, *target;
+	SceUInt32 budgetType, attributes, flags;
+	SceUID pid;
+	int result, unlockResult, maxValue;
+
+	for (;;) {
+		result = _appListFindAndLockAppByAppId(appId, &app);
+		if (result != 0)
+			return result;
+		if (appmgrGetAppRunStatus(app) != 0x300 && appmgrGetAppRunStatus(app) != 0x600) {
+			unlockResult = _appListUnlockApp(app);
+			DELETE_APP_CHECK(unlockResult, 0, 3395, "_launchApp4");
+			return 0x80802013;
+		}
+		if (sendParamToRunning) {
+			result = _sendParam(app->process.appName,
+				(const AppmgrParamQueueEntry *)appmgrParamQueuePeek(&app->params),
+				paramResult, appId);
+			if (result >= 0) {
+				unlockResult = _appListFindAndLockAppByProcessId(result, &target);
+				DELETE_APP_CHECK(unlockResult, 0, 3408, "_launchApp4");
+				if (status != NULL) {
+					DELETE_APP_MAIN_LOCK(3411, "_launchApp4");
+					_appListGetAppStatus(target, status);
+					DELETE_APP_MAIN_UNLOCK(3413, "_launchApp4");
+				}
+				unlockResult = _appListUnlockApp(target);
+				DELETE_APP_CHECK(unlockResult, 0, 3420, "_launchApp4");
+				unlockResult = _appListUnlockApp(app);
+				DELETE_APP_CHECK(unlockResult, 0, 3423, "_launchApp4");
+				return result;
+			}
+			if (result != (int)0x80802012) {
+				unlockResult = _appListUnlockApp(app);
+				DELETE_APP_CHECK(unlockResult, 0, 3428, "_launchApp4");
+				return result;
+			}
+		}
+		spawn.app = app;
+		spawn.opt = opt;
+		spawn.options = options;
+		spawn.started = startByUpdater;
+		spawn.createParam = createParam;
+		spawn.error = error;
+		result = spawnApp(&spawn);
+		if (result >= 0)
+			break;
+		budgetType = app->launchInfo.budgetType;
+		attributes = app->launchInfo.processAttr & 4;
+		unlockResult = _appListUnlockApp(app);
+		DELETE_APP_CHECK(unlockResult, 0, 3478, "_launchApp4");
+		if (result == (int)0x8080202a) {
+			if (killAllMiniApplication() != 0)
+				return result;
+			continue;
+		}
+		if (attributes)
+			return result;
+		if (result == (int)0x80802019) {
+			result = killGameApplication();
+			if (result != 0)
+				return result;
+			continue;
+		}
+		if (budgetType != 0)
+			return result;
+		if (result != SCE_KERNEL_ERROR_CANNOT_ALLOC_PHYMEMLOW && result != (int)0x80802018)
+			return result;
+		if (app->evictionThresholdClass - 1 <= 3)
+			maxValue = launchEvictionThresholds[app->evictionThresholdClass - 1];
+		else
+			maxValue = 999999;
+		if (killLeastValuableMiniApplication2(maxValue) != 0) {
+			DELETE_APP_ASSERT((unsigned int)(result + 0x7ffd7fd4) > 1, 3514, "_launchApp4");
+			return SCE_KERNEL_ERROR_CANNOT_ALLOC_PHYMEMLOW;
+		}
+	}
+	if (status != NULL) {
+		DELETE_APP_MAIN_LOCK(3447, "_launchApp4");
+		_appListGetAppStatus(app, status);
+		DELETE_APP_MAIN_UNLOCK(3449, "_launchApp4");
+	}
+	pid = app->process.processId;
+	result = utilSendEvent(app, 0x20000004, app->launchSourceProcessId);
+	DELETE_APP_CHECK(result, 0, 3454, "_launchApp4");
+	flags = app->launchInfo.processAttr & 3;
+	if (app->launchInfo.budgetType == 0)
+		flags |= 4;
+	if (strncmp(app->process.content.devicePrefix, "gro0:", 5) == 0 ||
+			strncmp(app->process.content.devicePrefix, "grw0:", 5) == 0)
+		flags |= 8;
+	if (g_appmgrDebugNotifier != NULL)
+		g_appmgrDebugNotifier(1, app->appId, app->process.processId, flags);
+	unlockResult = _appListUnlockApp(app);
+	DELETE_APP_CHECK(unlockResult, 0, 3468, "_launchApp4");
+	return pid;
 }
 
 void appmgrProcessIdleCallback(SceUID pid, unsigned int elapsed, void *argument)

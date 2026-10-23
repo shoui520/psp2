@@ -68,6 +68,9 @@ int appmgrParamQueuePush(AppmgrParamQueue *queue, const char *param,
 int sceAppMgrPeekLaunchParamForShell(int appId, char *param);
 int sceAppMgrOverwriteLaunchParamForShell(int appId, const char *param);
 int _paramQueueCancelAll(AppmgrParamQueue *queue);
+const char *appmgrParamQueuePeek(const AppmgrParamQueue *queue);
+int _sendParam(const char *name, const AppmgrParamQueueEntry *entry,
+	       unsigned int *flags, int excludedAppId);
 int _appmgrQueueInit(void);
 
 /* appmgr_event_syscalls.c */
