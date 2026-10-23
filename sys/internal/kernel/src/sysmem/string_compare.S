@@ -31,6 +31,10 @@ strncmp:
 	.size	strncmp, . - strncmp
 
 	.thumb
+#ifdef SYSMEM_TZS
+	/* a section of its own: the secure world's link keeps only what is called */
+	.section .text.timingsafe_memcmp, "ax", %progbits
+#endif
 	.global	timingsafe_memcmp
 	.type	timingsafe_memcmp, %function
 	.thumb_func

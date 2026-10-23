@@ -59,6 +59,10 @@ strnlen:
 	.balign	16
 	.size	strnlen, . - strnlen
 
+#ifdef SYSMEM_TZS
+	/* a section of its own: the secure world's link keeps only what is called */
+	.section .text.memchr, "ax", %progbits
+#endif
 	.global	memchr
 	.type	memchr, %function
 	.thumb_func
@@ -99,6 +103,9 @@ memchr:
 	pop	{r4, pc}
 	.size	memchr, . - memchr
 
+#ifdef SYSMEM_TZS
+	.section .text.strchr, "ax", %progbits
+#endif
 	.global	strchr
 	.type	strchr, %function
 	.thumb_func
@@ -137,6 +144,9 @@ strchr:
 	pop	{r4, pc}
 	.size	strchr, . - strchr
 
+#ifdef SYSMEM_TZS
+	.section .text.strrchr, "ax", %progbits
+#endif
 	.global	strrchr
 	.type	strrchr, %function
 	.thumb_func

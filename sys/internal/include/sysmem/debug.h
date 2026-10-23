@@ -91,10 +91,17 @@ typedef struct SceKernelDebugInfoSource {
 #endif
 
 /* section flags "" (non-alloc): the rest of the directive is an ARM comment */
-#define SCE_DBGSRC_SECTION	".sce_dbgsrc,\"\",%progbits @"
+#define SCE_DBGSRC_SECTION	".debug_sce_dbgsrc,\"\",%progbits @"
 
 #ifndef SCE_DBGINFO_SECTION
+#ifdef SCE_DBGINFO_GC
+/* a section per record, so a link with --gc-sections keeps only the records of kept code */
+#define SCE_DBGINFO_STR(_n)		#_n
+#define SCE_DBGINFO_GC_SECTION(_n)	".sce_dbginfo." SCE_DBGINFO_STR(_n)
+#define SCE_DBGINFO_SECTION		SCE_DBGINFO_GC_SECTION(__COUNTER__)
+#else
 #define SCE_DBGINFO_SECTION ".sce_dbginfo"
+#endif
 #endif
 
 /* Named records allow a module to retain its original readonly-data order. */

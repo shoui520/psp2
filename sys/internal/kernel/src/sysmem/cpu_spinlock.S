@@ -67,6 +67,10 @@
 	.endm
 
 	.macro	func name, export
+#ifdef SYSMEM_TZS
+	/* a section per function, as the C's: the link keeps what the exports reach */
+	.section .text.\name, "ax", %progbits
+#endif
 	.balign	4
 #if CPU_DEBUG
 	sym	\name

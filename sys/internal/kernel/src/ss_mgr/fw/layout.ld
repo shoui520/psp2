@@ -93,7 +93,7 @@ SECTIONS
 
 	.ARM.attributes 0 : { *(.ARM.attributes) }
 	.comment 0 : { *(.comment) }
-	.sce_dbgsrc 0 : { *(.sce_dbgsrc) }
+	.sce_dbgsrc 0 : { *(.debug_sce_dbgsrc) }
 	.sce_vstub 0 : { *(.sce_vstub) }
 	/DISCARD/ : { *(.note.GNU-stack) }
 }

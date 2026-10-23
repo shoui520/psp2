@@ -93,12 +93,17 @@ def main():
     raw = out / target
     velf = raw.with_suffix('.velf')
     link[link.index('-o') + 1] = str(raw)
+    # the module's own map (the secure world's sysmem: dbginfo.py reads it) goes beside
+    # this build's output, not over the configured build's
+    map_path = raw.with_name(raw.name + '.map')
+    link = ['-Wl,-Map=' + str(map_path) if t.startswith('-Wl,-Map=') else t for t in link]
     if args.link_map is not None:
         map_path = args.link_map.resolve()
         map_path.parent.mkdir(parents=True, exist_ok=True)
         link.append('-Wl,-Map,' + str(map_path))
     subprocess.run(link, cwd=cwd, check=True)
-    subprocess.run([sys.executable, str(ROOT / 'tools/dbginfo.py'), str(raw)], check=True)
+    subprocess.run([sys.executable, str(ROOT / 'tools/dbginfo.py'), str(raw), str(map_path),
+                    str(cwd)], check=True)
     packaged_raw = raw
     if any(h['type'] == 4 for h in elfsections.Sections(raw.read_bytes()).headers):
         # SNC emits RELA; vita-elf-create only consumes REL. Linked bytes

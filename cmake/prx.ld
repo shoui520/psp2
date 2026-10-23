@@ -44,7 +44,7 @@ SECTIONS
 		KEEP(*(.sceVStub.rodata))
 	}
 	__sce_tables_end = .;
-	.rodata : { KEEP(*(.rodata.sceSdkVersion)) *(.rodata .rodata.* .sce_dbginfo) }
+	.rodata : { KEEP(*(.rodata.sceSdkVersion)) *(.rodata .rodata.* .sce_dbginfo .sce_dbginfo.*) }
 	.ARM.exidx : ALIGN(16) {
 		__exidx_start = .;
 		*(.ARM.exidx .ARM.exidx.*)
@@ -63,7 +63,7 @@ SECTIONS
 
 	.ARM.attributes 0 : { *(.ARM.attributes) }
 	.comment 0 : { *(.comment) }
-	.sce_dbgsrc 0 : { *(.sce_dbgsrc) }
+	.sce_dbgsrc 0 : { *(.debug_sce_dbgsrc) }
 	.sce_vstub 0 : { *(.sce_vstub) }
 	/DISCARD/ : { *(.note.GNU-stack) }
 }
