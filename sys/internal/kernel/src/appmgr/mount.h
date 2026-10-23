@@ -181,7 +181,11 @@ typedef struct AppmgrEbootParam {
 	SceUInt32 attribute;		/* 1: runs in the background, 4: uses common dialogs */
 	SceSize phcontMemSize;		/* KiB */
 	SceSize memSize;		/* KiB; 0: the game budget */
-	unsigned char padding[240];
+	SceUInt32 maxFD;
+	SceUInt32 maxDIR;
+	SceUInt32 primaryResourceQuota;
+	SceUInt32 secondaryResourceQuota;
+	unsigned char padding[224];
 } AppmgrEbootParam;
 
 _Static_assert(sizeof(AppmgrEbootParam) == 256, "eboot parameters");
