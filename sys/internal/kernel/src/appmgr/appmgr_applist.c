@@ -220,18 +220,12 @@ void _appListShowAppState(struct AppState *app)
 struct AppState *appmgrFindCurrentApp(struct AppState *apps)
 {
 	SceUID pid = sceKernelGetProcessId();
-	struct AppState *app = apps;
-	int index = 0;
+	int index;
 
-	do {
-		struct AppState *current = app;
-		SceUID processId = app->process.processId;
-
-		++index;
-		++app;
-		if (processId == pid)
-			return current;
-	} while (index != 20);
+	for (index = 0; index < 20; index++) {
+		if (apps[index].process.processId == pid)
+			return &apps[index];
+	}
 	return NULL;
 }
 
@@ -289,7 +283,6 @@ struct AppState *_appListGetBigApp(struct AppState *apps)
 	struct AppState *app; \
 	SceUID shellPid; \
 	int index; \
-	int remaining; \
 	if (pid == -1) \
 		return NULL; \
 	if (pid == -2) { \
@@ -355,13 +348,10 @@ struct AppState *_appListGetBigApp(struct AppState *apps)
 			return NULL; \
 		return shellPid == g_appmgrShellPid ? g_appmgrAppStates : NULL; \
 	} \
-	app = apps; \
-	remaining = 20; \
-	do { \
-		struct AppState *candidate = app++; \
-		if (candidate->process.processId == pid) \
-			return candidate; \
-	} while (--remaining != 0); \
+	for (index = 0; index < 20; index++) { \
+		if (apps[index].process.processId == pid) \
+			return &apps[index]; \
+	} \
 	return NULL; \
 } while (0)
 
@@ -500,18 +490,14 @@ void _appListDeclareShellProcess(struct AppState *apps)
 		appmgrAppListOwnerPanic();
 #endif
 	}
-	app = &apps[1];
-	index = 1;
-	do {
-		pid = app->process.processId;
-		if (pid == sceKernelGetProcessId()) {
+	for (index = 1; index < 20; index++) {
+		app = &apps[index];
+		if (app->process.processId == sceKernelGetProcessId()) {
 			appmgrClearPendingAppEvents(app);
 			_appListClearAppState(app);
 			break;
 		}
-		++index;
-		++app;
-	} while (index != 20);
+	}
 	apps->appId = 0x1002;
 	pid = sceKernelGetProcessId();
 	apps->state = 0x12;
@@ -703,12 +689,12 @@ void appmgrMaskAppStateFlags(struct AppState *app, unsigned int mask)
 #define APP_LIST_ASSERT_SLOT_LOCK_ORDER(line) do { \
 	SceUID owner = g_appmgrCore2MutexOwner; \
 	if (owner != sceKernelGetThreadId()) { \
-		int slot; \
-		for (slot = 0; slot < 20; ++slot) { \
+		struct AppState *slot; \
+		for (slot = g_appmgrAppStates; slot != g_appmgrAppStates + 20; ++slot) { \
 			int level = SceDebugForDriver_374B7868(); \
-			__builtin_prefetch(&g_appmgrAppStates[slot + 5].mutexOwner); \
+			__builtin_prefetch(&slot[5].mutexOwner); \
 			if (level > 0) { \
-				SceUID slotOwner = g_appmgrAppStates[slot].mutexOwner; \
+				SceUID slotOwner = slot->mutexOwner; \
 				SCE_DBG_ASSERT_LEVEL(1, slotOwner != sceKernelGetThreadId(), line); \
 			} \
 		} \
@@ -752,16 +738,16 @@ int _appListReserveAndLockApp(struct AppState **output)
 				APP_LIST_MUTEX_ERROR(result, 580);
 			return error;
 		}
-		index = 0;
-		while (g_appmgrAppStates[index].appId != -1) {
-			++index;
-			if (index == 20) {
-				g_appmgrMainMutexOwner = -1;
-				result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
-				if (result != 0)
-					APP_LIST_MUTEX_ERROR(result, 592);
-				return (int)0x80802012;
-			}
+		for (index = 0; index < 20; index++) {
+			if (g_appmgrAppStates[index].appId == -1)
+				break;
+		}
+		if (index == 20) {
+			g_appmgrMainMutexOwner = -1;
+			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			if (result != 0)
+				APP_LIST_MUTEX_ERROR(result, 592);
+			return (int)0x80802012;
 		}
 		g_appmgrMainMutexOwner = -1;
 		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
