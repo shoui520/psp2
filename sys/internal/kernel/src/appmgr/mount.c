@@ -1095,6 +1095,78 @@ out:
 	return result;
 }
 
+static inline int appmgrRemoveOverlay(SceUID pid, SceFiosOverlayID overlayId)
+{
+	int permission, result;
+
+	if (pid == 0)
+		pid = sceKernelGetProcessId();
+	permission = sceKernelSetThreadAccessLevel(128);
+	result = SceFios2KernelForDriver_23247EFB(pid, overlayId);
+	sceKernelSetThreadAccessLevel(permission);
+	return result;
+}
+
+/*
+ * Hide (or show again) the memory card drives a process sees, as the debug
+ * setting "fake no memory card" asks: 2 hides savedata0: and addcont0:, any
+ * mode hides photo0: and music0:.
+ */
+int appmgrUpdateFakeNoMemoryCardOverlays(SceUID pid, AppmgrProcessContent *content)
+{
+	SceFiosOverlayID *overlayIds = content->overlayIds;
+	int result = 0;
+
+	if (appmgrGetFakeNoMemoryCard() == 2) {
+		if (overlayIds[12] == 0) {
+			result = appmgrAddInvalidOverlay(pid, "savedata0:", &overlayIds[12]);
+			if (result < 0)
+				return result;
+		}
+		if (overlayIds[13] == 0) {
+			result = appmgrAddInvalidOverlay(pid, "addcont0:", &overlayIds[13]);
+			if (result < 0)
+				return result;
+		}
+	} else {
+		if (overlayIds[12] != 0) {
+			result = appmgrRemoveOverlay(pid, overlayIds[12]);
+			if (result < 0)
+				return result;
+			overlayIds[12] = 0;
+		}
+		if (overlayIds[13] != 0) {
+			result = appmgrRemoveOverlay(pid, overlayIds[13]);
+			if (result < 0)
+				return result;
+			overlayIds[13] = 0;
+		}
+	}
+	if (appmgrGetFakeNoMemoryCard() != 0) {
+		if (overlayIds[14] == 0) {
+			result = appmgrAddInvalidOverlay(pid, "photo0:", &overlayIds[14]);
+			if (result < 0)
+				return result;
+		}
+		if (overlayIds[15] == 0)
+			return appmgrAddInvalidOverlay(pid, "music0:", &overlayIds[15]);
+		return result;
+	}
+	if (overlayIds[14] != 0) {
+		result = appmgrRemoveOverlay(pid, overlayIds[14]);
+		if (result < 0)
+			return result;
+		overlayIds[14] = 0;
+	}
+	if (overlayIds[15] != 0) {
+		result = appmgrRemoveOverlay(pid, overlayIds[15]);
+		if (result < 0)
+			return result;
+		overlayIds[15] = 0;
+	}
+	return result;
+}
+
 int appmgrGetPatchPath(const char *appPath, const char *titleId,
 		      SceUInt32 attributes, const char *category, char *patchPath)
 {

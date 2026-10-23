@@ -45,7 +45,7 @@ typedef struct AppmgrProcessContent {
 	char originalTitleId[16];
 	char foregroundLookupName[16];
 	struct AppmgrMapFile *mapFile;
-	SceUInt32 overlayIds[16];
+	SceFiosOverlayID overlayIds[16];
 	unsigned char reservedTail[12];
 } AppmgrProcessContent;
 
@@ -139,6 +139,7 @@ extern const char appmgrProgramCategories[6][4];
 int appmgrValidateSaveDataMount(SceUID pid, const char *path, int skipVerification,
 			      AppmgrProcessContent *content, SceUInt32 *maxSize);
 int appmgrReadKeystone(SceUID pid, const char *driveId, void *keystone);
+int appmgrUpdateFakeNoMemoryCardOverlays(SceUID pid, AppmgrProcessContent *content);
 int appmgrReadSaveDataMetadata(const char *path, AppmgrProcessContent *content,
 			     SceUInt32 *maxSize, SceUInt64 *accountId);
 int appmgrUpdateSaveDataParams(const char *path, const char *titleId,
