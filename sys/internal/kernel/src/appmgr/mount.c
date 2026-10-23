@@ -7933,6 +7933,207 @@ unlock:
 	return result;
 }
 
+/*
+ * Creates an empty save data at a ux0: path with a new sealed key and an empty keystone,
+ * and mounts it under a "ts" drive of the caller.
+ */
+int sceAppMgrFakeSaveDataCreateMount(const char *path, ScePfsRndDriveId *mountPoint)
+{
+	ScePfsRndDriveId drive = { "" };
+	unsigned char sealedKey[80];
+	unsigned char keystone[96];
+	ScePfsRndDriveId klicensee = { "" };
+	union {
+		SceSelfAuthInfo authInfo;
+		SceIoStat stat;
+	} info;
+	SceAllocOpt opt;
+	struct AppState *app;
+	AppmgrMountHolder *holder;
+	AppmgrProcessContent *content;
+	char *resolved, *metadataPath;
+	SceUID pid, fd;
+	int result, status, permission, remove;
+
+	memset(sealedKey, 0, sizeof(sealedKey));
+	memset(keystone, 0, sizeof(keystone));
+	result = sceKernelGetProcessSelfAuthInfo(0, &info.authInfo);
+	if (result < 0)
+		return result;
+	if (info.authInfo.programAuthorityId != 0x280000000000002eULL)
+		return (int)0x80800009;
+	if (mountPoint == NULL || path == NULL)
+		return (int)0x80800001;
+	remove = 0;
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		return result;
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 32;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	resolved = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	if (resolved == NULL)
+		goto noMemory;
+	memset(resolved, 0, 292);
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	opt.align = 32;
+	metadataPath = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	if (metadataPath == NULL)
+		goto noMemory;
+	memset(metadataPath, 0, 292);
+	pid = sceKernelGetProcessId();
+	permission = sceKernelSetThreadAccessLevel(128);
+	result = SceFios2KernelForDriver_0F456345(pid, 0, path, resolved, 292);
+	sceKernelSetThreadAccessLevel(permission);
+	if (result < 0)
+		goto failed;
+	result = (int)0x80800001;
+	if (strncmp(resolved, "ux0:", 4) != 0)
+		goto out;
+	result = appmgrCreateDirectories(resolved, 0);
+	if (result != (int)0x80010002) {
+		if (result == 0) {
+			result = (int)0x80801045;
+			goto out;
+		}
+		remove = 0;
+		goto failed;
+	}
+	result = appmgrCheckSaveDataFreeSpace(resolved, 0x40000);
+	if (result < 0) {
+		remove = 0;
+		goto failed;
+	}
+	result = appmgrCreateDirectories(resolved, 1);
+	if (result < 0)
+		goto created;
+	result = appmgrMakeRandomDriveId("PD", drive.drive_id);
+	if (result < 0)
+		goto created;
+	result = sceSblSsGenerateSealedKey(sealedKey);
+	if (result < 0)
+		goto created;
+	result = ScePfsMgrForKernel_A772209C(resolved, drive.drive_id, 0x280000000000002eULL,
+					     NULL, 5);
+	if (result < 0)
+		goto created;
+
+	/* the sealed key and the empty keystone, into its sce_sys */
+	if ((unsigned int)snprintf(metadataPath, 292, "%s/sce_sys", resolved) > 291)
+		goto pathTooLong;
+	status = sceIoMkdir(metadataPath, 6);
+	if (status < 0)
+		goto unmountStatus;
+	if ((unsigned int)snprintf(metadataPath, 292, "%s/sce_sys/sealedkey", resolved) > 291)
+		goto pathTooLong;
+	fd = sceIoOpen(metadataPath, 1539, 1048582);
+	status = fd;
+	if (fd < 0)
+		goto unmountStatus;
+	result = sceIoWrite(fd, sealedKey, 80);
+	if (result < 0)
+		goto close;
+	if (result != 80)
+		goto shortWrite;
+	memset(&info.stat, 0, sizeof(info.stat));
+	info.stat.st_mode = 4;
+	result = sceIoChstatByFd(fd, &info.stat, 1);
+	if (result < 0)
+		goto close;
+	result = sceIoSyncByFd(fd, 0);
+	if (result < 0)
+		goto close;
+	result = sceIoClose(fd);
+	if (result < 0)
+		goto close;
+	if ((unsigned int)snprintf(metadataPath, 292, "%s/sce_sys/keystone", resolved) >= 292)
+		goto pathTooLong;
+	fd = sceIoOpen(metadataPath, 1539, 6);
+	status = fd;
+	if (fd < 0)
+		goto unmountStatus;
+	result = sceIoWrite(fd, keystone, 96);
+	if (result < 0)
+		goto close;
+	if (result != 96)
+		goto shortWrite;
+	result = sceIoChstatByFd(fd, &info.stat, 1);
+	if (result < 0)
+		goto close;
+	result = sceIoSyncByFd(fd, 0);
+	if (result < 0)
+		goto close;
+	result = sceIoClose(fd);
+	if (result < 0)
+		goto close;
+	status = ScePfsMgrForKernel_680BC384(drive.drive_id);
+	if (status < 0)
+		goto unmountStatus;
+
+	/* remounted under a "ts" drive of the caller */
+	result = appmgrMakeRandomDriveId("ts", drive.drive_id);
+	if (result < 0)
+		goto created;
+	drive.drive_id[14] = ':';
+	drive.drive_id[15] = '\0';
+	MOUNT_MAIN_LOCK(15907);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app != NULL) {
+		content = &app->process.content;
+		holder = &app->process.mounts;
+	} else {
+		holder = NULL;
+		content = NULL;
+	}
+	MOUNT_MAIN_UNLOCK(15916);
+	if (app == NULL) {
+		result = (int)0x80801002;
+		goto removeTree;
+	}
+	remove = 1;
+	result = appmgrMount(0, holder, 1005, content->titleId, resolved, &drive, &klicensee,
+			     mountPoint);
+	goto failed;
+
+pathTooLong:
+	status = (int)0x80800001;
+unmountStatus:
+	result = status;
+	goto unmount;
+shortWrite:
+	result = (int)0x8080104b;
+close:
+	sceIoClose(fd);
+unmount:
+	ScePfsMgrForKernel_680BC384(drive.drive_id);
+	if (result >= 0)
+		goto out;
+	goto removeTree;
+created:
+	remove = 1;
+failed:
+	if (result >= 0 || remove == 0)
+		goto out;
+removeTree:
+	appmgrRemoveDirectoryTree(resolved);
+	goto out;
+noMemory:
+	result = (int)0x80801006;
+	metadataPath = NULL;
+out:
+	if (resolved != NULL)
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, resolved);
+	if (metadataPath != NULL)
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, metadataPath);
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+	return result;
+}
+
 int appmgrResolvePath(const char *path, SceUID pid, char *output, SceSize size)
 {
 	int permission, result;
