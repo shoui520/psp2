@@ -1233,6 +1233,41 @@ int _debugSettingCallBack(int setting, int value, void *context)
 	return result;
 }
 
+/* The PFS mount in the list with this mount ID and path, which is normalized first. */
+int appmgrFindPfsMount(AppmgrPfsMount *mount, int mountId, const char *path,
+		       AppmgrPfsMount **found)
+{
+	SceAllocOpt opt;
+	char *normalized;
+	int result;
+
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 32;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	normalized = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	if (normalized == NULL)
+		return 0x80801006;
+	result = appmgrNormalizePath(path, normalized);
+	if (result >= 0) {
+		for (; mount != NULL; mount = mount->next) {
+			if (mount->mountId == mountId &&
+			    strncmp(mount->appPath, normalized, 292) == 0)
+				break;
+		}
+		if (mount == NULL) {
+			result = 0x80800002;
+		} else {
+			result = 0;
+			if (found != NULL)
+				*found = mount;
+		}
+	}
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+	return result;
+}
+
 int appmgrGetPatchPath(const char *appPath, const char *titleId,
 		      SceUInt32 attributes, const char *category, char *patchPath)
 {
@@ -2032,6 +2067,41 @@ int appmgrResolveLaunchPath(const char *path, char *output, SceSize size)
 		sceKernelUnlockMutex(g_appmgrMountMutex, 1);
 	}
 	return result;
+}
+
+/* Release every mount and drive overlay a process holds. */
+int appmgrReleaseProcessMounts(SceUID pid)
+{
+	struct AppState *app;
+	AppmgrVirtualMount *mount, *next;
+	SceFiosOverlayID *overlayIds;
+	int index, result;
+
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, pid);
+	if (app == NULL)
+		return 0x80801002;
+	mount = app->process.mounts.firstMount;
+	if (mount != NULL) {
+		do {
+			appmgrReleasePfsMount(pid, mount->pfsMount, 1);
+			appmgrRemoveOverlay(pid, mount->overlayId);
+			next = mount->next;
+			sceKernelFreeHeapMemory(g_appmgrMountHeap, mount);
+			mount = next;
+		} while (mount != NULL);
+		app->process.mounts.firstMount = NULL;
+	}
+	app->process.content.contentFlags &= ~0x0e000000;
+	overlayIds = app->process.content.overlayIds;
+	for (index = 0; index != 16; ++index) {
+		if (overlayIds[index] == 0)
+			continue;
+		result = appmgrRemoveOverlay(pid, overlayIds[index]);
+		if (result != 0)
+			return result;
+		overlayIds[index] = 0;
+	}
+	return 0;
 }
 
 int SceAppMgrForDriver_0B1BEEE0(const char *path)

@@ -62,6 +62,8 @@ int appmgrGetAddcontTitleId(const char *sfoPath, char *titleId);
 int appmgrMakeRandomDriveId(const char *prefix, char *driveId);
 int appmgrGetMountPointById(int mountId, char *mountPoint);
 int appmgrIsMountIdAllowed(unsigned int mountId);
+int appmgrFindPfsMount(AppmgrPfsMount *mount, int mountId, const char *path,
+		       AppmgrPfsMount **found);
 int appmgrNormalizePath(const char *path, char *normalized);
 struct AppmgrProcessContent;
 int appmgrReadParamSfo(SceUID pid, const char *path, int isSfoPath,
@@ -73,6 +75,7 @@ int appmgrCountPfsMountReferences(unsigned int mountId, int flags);
 int appmgrCheckRifGD(const char *path, AppmgrLicenseInfo *info);
 int appmgrGetUserDirPathById(int userId, int partitionId, char *output, unsigned int capacity);
 int appmgrResolvePath(const char *path, SceUID pid, char *output, SceSize size);
+int appmgrReleaseProcessMounts(SceUID pid);
 int appmgrResolveLaunchPath(const char *path, char *output, SceSize size);
 int sceAppMgrGetRawPath(char *path, char *resolvedPath, int capacity);
 int appmgrExtractSaveDataDeviceName(const char *path, char *device, SceSize capacity);
