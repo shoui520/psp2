@@ -218,7 +218,7 @@ extern SceNetPsMutex gNetPsThreadMutex;
 extern SceNetPsMutex gNetPsJumboMutex;
 extern SceNetPsRuntime gNetPsRuntime;
 
-void *sceNetPsMalloc(SceSize size, char flags, SceSize align);
+void *sceNetPsMalloc(SceSize size, int flags, SceSize align);
 int sceNetPsFree(void *ptr);
 int sceNetPsCopyIn(const void *source, void *destination, size_t length,
 		   int kernel);

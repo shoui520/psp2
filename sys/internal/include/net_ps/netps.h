@@ -7,7 +7,7 @@
 #include <stddef.h>
 
 /* Shared allocator adapters; implementations retain each module's heap. */
-void *sceNetPsMalloc(SceSize size, char flags, SceSize align);
+void *sceNetPsMalloc(SceSize size, int flags, SceSize align);
 int sceNetPsFree(void *ptr);
 void *sceNetPsCalloc(SceSize size);
 void sceNetPsRelease(void *ptr);

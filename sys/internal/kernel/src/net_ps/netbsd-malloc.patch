@@ -1,0 +1,38 @@
+--- contrib/netbsd-2.1/sys/sys/malloc.h
++++ sys/internal/kernel/src/net_ps/include/sys/malloc.h
+@@ -202,17 +202,24 @@
+ extern char			*kmembase;
+ extern struct kmembuckets	bucket[];
+ 
+-#ifdef MALLOCLOG
+-void	*_malloc(unsigned long, struct malloc_type *, int, const char *, long);
+-void	_free(void *, struct malloc_type *, const char *, long);
+-#define	malloc(size, type, flags) \
+-	    _malloc((size), (type), (flags), __FILE__, __LINE__)
+-#define	free(addr, type) \
+-	    _free((addr), (type), __FILE__, __LINE__)
+-#else
+-void	*malloc(unsigned long, struct malloc_type *, int);
+-void	free(void *, struct malloc_type *);
+-#endif /* MALLOCLOG */
++/*
++ * SCE: the kernel allocator is net_ps's (net_ps_glue.c): the wait flags go to it, the
++ * malloc type does not, and every block is 8-byte aligned (m_tag_get, m_tag_delete)
++ */
++void	*sceNetPsMalloc(unsigned int, int, unsigned int);	/* SceSize, int, SceSize */
++int	sceNetPsFree(void *);
++
++static __inline void *
++malloc(unsigned long size, struct malloc_type *type, int flags)
++{
++	return sceNetPsMalloc(size, flags, 8);
++}
++
++static __inline void
++free(void *addr, struct malloc_type *type)
++{
++	sceNetPsFree(addr);
++}
+ 
+ #ifdef MALLOC_DEBUG
+ int	debug_malloc(unsigned long, struct malloc_type *, int, void **);

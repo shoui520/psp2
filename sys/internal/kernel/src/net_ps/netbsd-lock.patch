@@ -1,0 +1,19 @@
+--- contrib/netbsd-2.1/sys/sys/lock.h
++++ sys/internal/kernel/src/net_ps/include/sys/lock.h
+@@ -354,9 +354,13 @@
+ #else
+ #define	simple_lock_try(alp)	(1)
+ #ifndef __lint__
+-#define	simple_lock_init(alp)	(void)(alp)
+-#define	simple_lock(alp)	(void)(alp)
+-#define	simple_unlock(alp)	(void)(alp)
++/*
++ * SCE: a simple lock is a plain, non-volatile store of its state (callout_startup,
++ * callout_reset; callout_hardclock keeps only the unlock)
++ */
++#define	simple_lock_init(alp)	(*(int *)&(alp)->lock_data = __SIMPLELOCK_UNLOCKED)
++#define	simple_lock(alp)	(*(int *)&(alp)->lock_data = __SIMPLELOCK_LOCKED)
++#define	simple_unlock(alp)	(*(int *)&(alp)->lock_data = __SIMPLELOCK_UNLOCKED)
+ #else /* __lint__ */
+ #define	simple_lock_init(alp)	/* nothing */
+ #define	simple_lock(alp)	/* nothing */

@@ -1276,7 +1276,7 @@ int sceNetPsInitializeHeap(void *base, int size)
 }
 
 /* Name unknown; take the best-fitting free block, splitting when possible. */
-void *sceNetPsMalloc(SceSize size, char flags, SceSize align)
+void *sceNetPsMalloc(SceSize size, int flags, SceSize align)
 {
 	SceNetPsHeapBlock *block, *split, *whole, *allocated, *following;
 	unsigned int alignment = (align + 7) & ~7u;
@@ -1607,7 +1607,7 @@ void *pool_get(struct pool *pool, int flags)
 	struct SceNetPsPoolFreeItem *object = pool->freeList;
 
 	if (!object)
-		return sceNetPsMalloc(pool->pr_size, ((flags ^ 2) & 2) != 0,
+		return sceNetPsMalloc(pool->pr_size, ((flags ^ 2) >> 1) & 1,
 				      pool->pr_align);
 	pool->freeList = object->next;
 	--pool->freeCount;

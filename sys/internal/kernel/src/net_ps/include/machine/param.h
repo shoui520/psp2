@@ -12,4 +12,8 @@
 
 #include <arm/param.h>
 
+#ifdef _KERNEL
+#include <machine/intr.h>	/* SCE: the spl levels, as arm32's param.h brings them */
+#endif
+
 #endif /* _PSP2_PARAM_H_ */
