@@ -111,6 +111,12 @@ int sceAppMgrDestroyAppForTest(SceUID pid);
 int sceAppMgrLiveAreaOperationByNameForLoadp(int operation, const char *appName);
 int sceAppMgrLiveAreaOperationForLoadp(int operation);
 int SceAppMgrForDriver_12CE29F7(int pid, int param, int *value);	/* vitasdk: ksceAppMgrAppParamGetInt */
+struct AppmgrAppMountParam;
+struct AppmgrAppUmountParam;
+/* vitasdk: ksceAppMgrAppMount */
+int SceAppMgrForDriver_EF0C9533(const struct AppmgrAppMountParam *param);
+/* vitasdk: ksceAppMgrAppUmount */
+int SceAppMgrForDriver_1DE3B7C4(const struct AppmgrAppUmountParam *param);
 int SceAppMgrForDriver_EC9D5A35(void *status);	/* vitasdk: ksceAppMgrSaveDataSlotGetStatus */
 int SceAppMgrForDriver_193784A9(void *a);	/* vitasdk: ksceAppMgrCheckContentInstallPeriod */
 int sceAppMgrUpdateRifInfo(const void *info);

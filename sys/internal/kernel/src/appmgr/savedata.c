@@ -19,8 +19,11 @@
 #include <appmgr/appmgr_rdrfp.h>
 #include "mount.h"
 #include "debug_setting.h"
+#include "app_state_internal.h"
 
 extern SceUID g_appmgrSaveDataHeap;
+extern SceUID g_appmgrCoreHeap;
+extern SceUID g_appmgrAppMutex;
 extern SceUID g_appmgrSaveDataMutex;
 extern int g_appmgrSafeMemoryKey;
 extern int appmgrWriteSaveDataSlot(unsigned int slotId,
@@ -61,6 +64,305 @@ extern int appmgrRollbackSaveDataOperation(const SceAppMgrSaveDataData *operatio
 		int slotCreated, SceUInt32 *requiredSizeKiB);
 
 int g_appmgrAppInfoCacheKey;
+
+/* A PFS "app" mount a process made with SceAppMgrForDriver_EF0C9533. */
+typedef struct AppmgrAppMount {
+	char path[128];
+	SceUID processId;
+	char mountPoint[8];
+	struct AppmgrAppMount *next;
+} AppmgrAppMount;
+
+_Static_assert(sizeof(AppmgrAppMount) == 144, "app mount");
+
+typedef struct AppmgrAppMountParam {
+	SceSize size;
+	char path[128];
+	char mountPoint[8];
+} AppmgrAppMountParam;
+
+_Static_assert(sizeof(AppmgrAppMountParam) == 140, "app mount parameter");
+
+typedef struct AppmgrAppUmountParam {
+	SceSize size;
+	char mountPoint[8];
+} AppmgrAppUmountParam;
+
+_Static_assert(sizeof(AppmgrAppUmountParam) == 12, "app unmount parameter");
+
+AppmgrAppMount *g_appmgrAppMounts;
+
+static __attribute__((noinline)) int appmgrCheckAppMount(const char *path, const char *mountPoint,
+			       const AppmgrAppMount *mount);
+static __attribute__((noinline)) int appmgrFindAppMount(const char *mountPoint, const AppmgrAppMount *mount);
+
+/* A string of a process's cached application information (100: PSM content ID, 101: PSM title). */
+int sceAppMgrAppParamGetString(int pid, int param, char *string, SceSize length)
+{
+	SceAppMgrAppInfoCache *info;
+	void *storage = NULL;
+	int result;
+
+	if (pid != 0 && SceSblACMgrForDriver_8A54DF3A(0) != 0 &&
+	    pid != sceKernelGetProcessId())
+		return 0x80800009;
+	if (string == NULL) {
+		result = 0x80801000;
+		goto unlock;
+	}
+	if (length >= 1024)
+		length = 1024;
+	memset(string, 0, length);
+	result = sceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
+	if (result < 0)
+		return result;
+	result = SceProcessmgrForDriver_AF80F39C(pid, g_appmgrAppInfoCacheKey, &storage, 0);
+	if (result < 0)
+		goto unlock;
+	if (storage == NULL) {
+		result = 0x80800012;
+		goto unlock;
+	}
+	info = storage;
+	if (param == 100) {
+		if (length <= 47) {
+			result = 0x80801000;
+			goto unlock;
+		}
+		result = 0;
+		strncpy(string, info->psmContentId, 47);
+	} else if (param == 101) {
+		if (length <= 127) {
+			result = 0x80801000;
+			goto unlock;
+		}
+		result = 0;
+		strncpy(string, info->psmTitle, 127);
+	} else {
+		result = 0x80800009;
+	}
+unlock:
+	sceKernelUnlockMutex(g_appmgrAppMutex, 1);
+	return result;
+}
+
+/* Mount a PFS image as the calling process's "app" drive. */
+int SceAppMgrForDriver_EF0C9533(const AppmgrAppMountParam *param)
+{
+	SceUInt32 syscallState;
+	char klicensee[16];
+	AppmgrAppMount *mount, *entry;
+	SceAllocOpt opt;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	__builtin_memset(klicensee, 0, sizeof(klicensee));
+	if (param == NULL || param->size != sizeof(*param)) {
+		sceSyscallLeave(syscallState);
+		return 0x80800001;
+	}
+	result = sceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
+	if (result < 0) {
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	result = appmgrCheckAppMount(param->path, param->mountPoint, g_appmgrAppMounts);
+	if (result != 0) {
+		sceKernelUnlockMutex(g_appmgrAppMutex, 1);
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	result = ScePfsMgrForKernel_A772209C(param->path, "app", 0, klicensee, 0);
+	if (result != 0) {
+		sceKernelUnlockMutex(g_appmgrAppMutex, 1);
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	opt.size = sizeof(opt);
+	opt.align = 32;
+	mount = sceKernelAllocHeapMemoryWithOption(g_appmgrCoreHeap, sizeof(*mount), &opt);
+	if (mount == NULL) {
+		ScePfsMgrForKernel_680BC384("app");
+		sceKernelUnlockMutex(g_appmgrAppMutex, 1);
+		sceSyscallLeave(syscallState);
+		return 0x80801006;
+	}
+	memset(mount, 0, sizeof(*mount));
+	strncpy(mount->path, param->path, sizeof(mount->path) - 1);
+	mount->processId = sceKernelGetProcessId();
+	strncpy(mount->mountPoint, param->mountPoint, sizeof(mount->mountPoint) - 1);
+	mount->next = g_appmgrAppMounts;
+	g_appmgrAppMounts = mount;
+	for (entry = g_appmgrAppMounts; entry != NULL; entry = entry->next)
+		;
+	sceKernelUnlockMutex(g_appmgrAppMutex, 1);
+	sceSyscallLeave(syscallState);
+	return 0;
+}
+
+/* Unmount the calling process's "app" drive. */
+int SceAppMgrForDriver_1DE3B7C4(const AppmgrAppUmountParam *param)
+{
+	SceUInt32 syscallState;
+	AppmgrAppMount *mount, *previous;
+	SceUID pid;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (param == NULL || param->size != sizeof(*param)) {
+		sceSyscallLeave(syscallState);
+		return 0x80800001;
+	}
+	result = sceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
+	if (result < 0) {
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	result = appmgrFindAppMount(param->mountPoint, g_appmgrAppMounts);
+	if (result != 0 || (result = ScePfsMgrForKernel_680BC384("app")) != 0) {
+		sceKernelUnlockMutex(g_appmgrAppMutex, 1);
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	pid = sceKernelGetProcessId();
+	previous = NULL;
+	for (mount = g_appmgrAppMounts; mount != NULL; mount = mount->next) {
+		if (mount->processId == pid &&
+		    strncmp(param->mountPoint, mount->mountPoint, 7) == 0) {
+			if (previous != NULL)
+				previous->next = mount->next;
+			else
+				g_appmgrAppMounts = mount->next;
+			sceKernelFreeHeapMemory(g_appmgrCoreHeap, mount);
+			break;
+		}
+		previous = mount;
+	}
+	for (mount = g_appmgrAppMounts; mount != NULL; mount = mount->next)
+		;
+	sceKernelUnlockMutex(g_appmgrAppMutex, 1);
+	sceSyscallLeave(syscallState);
+	return 0;
+}
+
+/* An integer parameter of a process's application. */
+int SceAppMgrForDriver_12CE29F7(int pid, int param, int *value)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	AppmgrProcessContent *content;
+	int setting;
+	int result;
+
+	if ((pid != 0 && SceSblACMgrForDriver_8A54DF3A(0) != 0 &&
+	     pid != sceKernelGetProcessId()) ||
+	    ((param == 15 || param == 17) && SceSblACMgrForDriver_991FDC15(0) == 0)) {
+		result = 0x80800009;
+		goto out;
+	}
+	if (value == NULL) {
+		result = 0x80800001;
+		goto out;
+	}
+	app = appmgrFindAppByProcessId(g_appmgrAppStates,
+				       pid != 0 ? pid : sceKernelGetProcessId());
+	if (app == NULL) {
+		result = 0x80802012;
+		goto out;
+	}
+	content = &app->process.content;
+	result = 0;
+	switch (param) {
+	case 1:
+		if (strncmp(content->category, "gdb", 4) == 0) {
+			*value = content->license.flags & ~1;
+			break;
+		}
+		setting = appmgrGetDebugUpgradable();
+		if (setting == 0)
+			*value = content->license.flags;
+		else if (setting == 1)
+			*value = content->license.flags | 1;
+		else
+			*value = content->license.flags & ~1;
+		break;
+	case 2:
+		setting = appmgrGetDebugUpgradable();
+		if (setting == 0)
+			setting = content->license.skuFlags;
+		*value = setting;
+		break;
+	case 3:
+		*value = content->appVersion;
+		break;
+	case 4:
+		*value = content->savedataVersion;
+		break;
+	case 5:
+		*value = content->savedataOwnershipFlags;
+		break;
+	case 11:
+		*value = content->savedataMaxSize;
+		break;
+	case 13:
+		*value = content->savedataEnvironmentFlags;
+		break;
+	case 15:
+		*value = content->attribute;
+		break;
+	case 16:
+		if (content->attributeMinorMode == 1)
+			*value = 0;
+		else if (content->attributeMinorMode != 0)
+			*value = 1;
+		else
+			*value = appmgrGetButtonAssign() == 1;
+		break;
+	case 17:
+		*value = content->attribute2;
+		break;
+	default:
+		result = 0x80801042;
+		break;
+	}
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+/* 0 when the path exists and neither it nor the mount point is mounted yet. */
+static __attribute__((noinline)) int appmgrCheckAppMount(const char *path, const char *mountPoint,
+			       const AppmgrAppMount *mount)
+{
+	SceIoStat stat;
+	SceUID pid;
+
+	if (sceIoGetstat(path, &stat) < 0)
+		return 0x80801005;
+	pid = sceKernelGetProcessId();
+	for (; mount != NULL; mount = mount->next) {
+		if (strncmp(path, mount->path, 127) == 0)
+			return 0x80801040;
+		if (mount->processId == pid &&
+		    strncmp(mountPoint, mount->mountPoint, 7) == 0)
+			return 0x80801040;
+	}
+	return 0;
+}
+
+/* 0 when the calling process has an app mount at this mount point. */
+static __attribute__((noinline)) int appmgrFindAppMount(const char *mountPoint, const AppmgrAppMount *mount)
+{
+	SceUID pid = sceKernelGetProcessId();
+
+	for (; mount != NULL; mount = mount->next) {
+		if (mount->processId == pid &&
+		    strncmp(mountPoint, mount->mountPoint, 7) == 0)
+			return 0;
+	}
+	return 0x80801041;
+}
+
 AppmgrSaveDataSlotCache g_appmgrSaveDataSlotCache;
 
 int appmgrSetRequiredSaveDataSize(SceUInt32 requiredKiB)
