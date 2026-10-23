@@ -143,7 +143,6 @@ STUB(_sceAppMgrCheckRifGD)
 STUB(_sceAppMgrLaunchVideoStreamingApp)
 STUB(_sceAppMgrGetPidListForShell)
 
-STUB(_sceAppMgrAppUmount)
 STUB(_sceAppMgrLoopBackMount)
 STUB(_sceAppMgrLaunchAppByUri)
 
@@ -190,7 +189,6 @@ STUB(_sceAppMgrLaunchAppByName2ForShell)
 STUB(_sceAppMgrGetMediaTypeFromDriveByPid)
 STUB(_sceAppMgrGetMediaTypeFromDrive)
 STUB(_sceAppMgrContentInstallPeriodStop)
-STUB(_sceAppMgrAppMount)
 STUB(_sceAppMgrSaveDataAddMount)
 STUB(_sceAppMgrSendParam)
 

@@ -38,6 +38,16 @@ int appmgrGetBootParamSyscall(SceUInt32 request, void *bootParam)
 	return SceAppMgrForDriver_D2541B4A(request, bootParam);
 }
 
+int appmgrAppMountSyscall(const struct AppmgrAppMountParam *param)
+{
+	return SceAppMgrForDriver_EF0C9533(param);
+}
+
+int appmgrAppUmountSyscall(const struct AppmgrAppUmountParam *param)
+{
+	return SceAppMgrForDriver_1DE3B7C4(param);
+}
+
 int appmgrAppParamGetIntSyscall(int pid, int param, int *value)
 {
 	return SceAppMgrForDriver_12CE29F7(pid, param, value);

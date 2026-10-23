@@ -88,6 +88,30 @@ int _sceAppMgrGetBootParam(SceUInt32 request, void *bootParam,
 	return copyResult(ret, sceKernelCopyToUser(bootParam, buffer, arguments.size));
 }
 
+int _sceAppMgrAppMount(const struct AppmgrAppMountParam *userParam,
+		       const SyscallSizeArgs *userArguments)
+{
+	SyscallSizeArgs arguments;
+	void *param = (void *)userParam;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	BLOCK_IN_SIZED(param, userParam, arguments.size, 140);
+	return appmgrAppMountSyscall(param);
+}
+
+int _sceAppMgrAppUmount(const struct AppmgrAppUmountParam *userParam,
+			const SyscallSizeArgs *userArguments)
+{
+	SyscallSizeArgs arguments;
+	void *param = (void *)userParam;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	BLOCK_IN_SIZED(param, userParam, arguments.size, 12);
+	return appmgrAppUmountSyscall(param);
+}
+
 int _sceAppMgrAppParamGetInt(int pid, int param, int *value)
 {
 	int ret;

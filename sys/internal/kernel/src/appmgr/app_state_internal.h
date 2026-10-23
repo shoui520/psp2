@@ -487,6 +487,8 @@ int appmgrIsNonGameProgramSyscall(void);
 int appmgrIsPsNowClientSyscall(void);
 int appmgrIsDevelopmentModeSyscall(void);
 int appmgrGetBootParamSyscall(SceUInt32 request, void *bootParam);
+int appmgrAppMountSyscall(const struct AppmgrAppMountParam *param);
+int appmgrAppUmountSyscall(const struct AppmgrAppUmountParam *param);
 int appmgrAppParamGetIntSyscall(int pid, int param, int *value);
 int appmgrAppParamGetStringSyscall(int pid, int param, char *string, SceSize length);
 int appmgrGetSystemDataFilePlayReadySyscall(SceUInt32 location, void *information,
