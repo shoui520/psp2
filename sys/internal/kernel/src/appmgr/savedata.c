@@ -1236,6 +1236,73 @@ leaveSyscall:
 	return result;
 }
 
+int SceAppMgrForDriver_EC9D5A35(void *parameters)
+{
+	AppmgrSaveDataSlotStatusParam *slot = parameters;
+	char path[128];
+	char resolvedPath[292];
+	SceUInt32 syscallState;
+	const char *mountPoint;
+	SceUID fd;
+	int permission;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (!slot || slot->size != sizeof(*slot)) {
+		result = (int)0x80800001;
+		goto leaveSyscall;
+	}
+	mountPoint = (const char *)slot->mountPoint.data;
+	result = appmgrValidateSaveDataMountPoint(mountPoint, 0);
+	if (result < 0)
+		goto leaveSyscall;
+	SceKernelSuspendForDriver_4DF40893(0);
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		goto unlockPower;
+	permission = sceKernelSetThreadAccessLevel(128);
+	if (g_appmgrSaveDataSlotCache.processId == sceKernelGetProcessId()) {
+		fd = g_appmgrSaveDataSlotCache.fd;
+		if (fd != -1 &&
+		    strncmp(g_appmgrSaveDataSlotCache.mountPoint, mountPoint, 16) == 0) {
+			result = sceIoClose(fd);
+			if (result < 0)
+				goto restorePermission;
+			g_appmgrSaveDataSlotCache.fd = -1;
+		}
+	}
+	result = appmgrCheckSaveDataSlot(slot->slotId, mountPoint, 1);
+	if (result != 0)
+		goto restorePermission;
+	appmgrNotifySaveDataSlotRead(slot->slotId);
+	memset(path, 0, sizeof(path));
+	snprintf(path, sizeof(path), "%s%s/%s", mountPoint, "sce_sys", "sdslot.dat");
+	appmgrResolvePath(path, 0, resolvedPath, sizeof(resolvedPath));
+	fd = sceIoOpen(resolvedPath, 1, 390);
+	if (fd < 0) {
+		result = fd == (int)0x80010013 ? fd : (int)0x80801087;
+		goto restorePermission;
+	}
+	if (sceIoLseek(fd, (SceOff)((slot->slotId + 1) << 10), 0) < 0 ||
+	    sceIoRead(fd, &slot->status, sizeof(slot->status)) != sizeof(slot->status)) {
+		sceIoClose(fd);
+		result = (int)0x80801088;
+		goto restorePermission;
+	}
+	sceIoClose(fd);
+	if (slot->slotId == (SceUInt32)appmgrGetFakeSdSlotBroken())
+		slot->status = 1;
+	result = 0;
+restorePermission:
+	sceKernelSetThreadAccessLevel(permission);
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+unlockPower:
+	SceKernelSuspendForDriver_2BB92967(0);
+leaveSyscall:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int appmgrOpenSaveDataSlotFile(const char *mountPoint,
 			      AppmgrSaveDataSlotFileInfo *info)
 {
