@@ -81,6 +81,7 @@ int sceAppMgrIsRelativeAddContAdd(const char *titleId, int add);
 /* savedata.c */
 int sceAppMgrIsRelativeSaveDataAdd(const char *titleId);
 int appmgrCreateDirectories(const char *path, int create);
+int appmgrIsValidTitleId(const char *titleId, int mode);
 
 /* 4.00 builds with the fortified string functions */
 #if FW_VERSION >= 0x04000000

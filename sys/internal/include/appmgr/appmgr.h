@@ -180,8 +180,8 @@ int sceAppMgrAcInstGetAcdirParam(const char *titleId, const char *entitlementLab
 /* vitasdk: ksceAppMgrSaveDataLocalBackupTargetGetList */
 int SceAppMgrForDriver_9B3F7D66(void *list);
 /* vitasdk: ksceAppMgrSaveDataLocalBackupTargetRemoveItem */
-int SceAppMgrForDriver_C4EF95BB(const void *item);
+int SceAppMgrForDriver_C4EF95BB(const char *saveDataTitleId);
 int SceAppMgrForDriver_61B13981(void *id, void *b);	/* vitasdk: ksceAppMgrLocalBackupGetOfflineId */
 /* vitasdk: ksceAppMgrLocalBackupVerifyOfflineHeader */
 int SceAppMgrForDriver_62E98C42(const void *header);
-int sceAppMgrSaveDataNotifyBackupFinished(const void *a);
+int sceAppMgrSaveDataNotifyBackupFinished(const char *saveDataTitleId);
