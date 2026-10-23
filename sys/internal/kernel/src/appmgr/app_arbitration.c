@@ -22,6 +22,7 @@
 #include <sysmem/sblaimgr.h>
 #include <acmgr/acmgr.h>
 #include <intrmgr/syscall.h>
+#include <kernel/error.h>
 
 extern SceUID g_appmgrMainMutexOwner;
 
@@ -41,6 +42,7 @@ extern int g_appmgrAvailableDIR;
 extern int g_appmgrAvailablePrimaryResourceQuota;
 extern int g_appmgrAvailableSecondaryResourceQuota;
 
+int g_appmgrActiveAppId = -1;
 SceUID g_appmgrUpdateNotifySemaphore = -1;
 SceUID g_appmgrProcessStateUpdaterThread = -1;
 SceUID g_appmgrGcListenerThread = -1;
@@ -62,6 +64,18 @@ static const SceKernelDebugInfo gcListenerStartPanicInfo = {
 	.fileHash = 0xb8f4da66,
 	.lineHash = 0x85948057,
 	.funcHash = 0xa0a0ebb7,
+};
+
+static const SceKernelDebugInfo processUpdateWaitPanicInfo = {
+	.fileHash = 0xb8f4da66,
+	.lineHash = 0x4589b95f,
+	.funcHash = 0x03a58fab,
+};
+
+static const SceKernelDebugInfo activateSignalPanicInfo = {
+	.fileHash = 0xb8f4da66,
+	.lineHash = 0xe97d9e12,
+	.funcHash = 0x606d92dd,
 };
 
 static const SceKernelDebugInfo processStateUpdaterStartPanicInfo = {
@@ -1797,6 +1811,84 @@ int sceAppMgrLaunchAppCancel(int appId)
 	return 0;
 }
 
+/*
+ * Called with the application locked once its process is gone: the shell's end takes the
+ * shell down, a pending relaunch spawns the process again, anything else deletes the slot.
+ */
+void _appArbitrationOnProcessUnloaded(struct AppState *app)
+{
+	struct AppState *shell;
+	SceUID owner, pid;
+	int relaunchPending, result;
+
+	DELETE_APP_ASSERT(app != NULL && app->mutexOwner == sceKernelGetThreadId(), 2423, "_appArbitrationOnProcessUnloaded");
+	owner = g_appmgrMainMutexOwner;
+	DELETE_APP_ASSERT(owner != sceKernelGetThreadId(), 2424, "_appArbitrationOnProcessUnloaded");
+	DELETE_APP_MAIN_LOCK(2427, "_appArbitrationOnProcessUnloaded");
+	shell = appmgrGetShellApp();
+	relaunchPending = app->relaunchPending;
+	if (app->launchInfo.budgetType == 1) {
+		result = sceKernelResetGameBudget();
+		SCE_DBG_PRINTF_FUNC(0, 2434, "_appArbitrationOnProcessUnloaded", "sceKernelResetGameBudget() => %#x\n", result);
+	}
+	DELETE_APP_MAIN_UNLOCK(2437, "_appArbitrationOnProcessUnloaded");
+	if (app == shell) {
+		result = appmgrStopShellWatchDog();
+		DELETE_APP_CHECK(result, 0, 2443, "_appArbitrationOnProcessUnloaded");
+		DELETE_APP_MAIN_LOCK(2445, "_appArbitrationOnProcessUnloaded");
+		_appListUndeclareShellProcess(g_appmgrAppStates);
+		DELETE_APP_MAIN_UNLOCK(2447, "_appArbitrationOnProcessUnloaded");
+		_sceAppMgrDeviceUndeclareShell();
+		appmgrUtilWaitObjectNotify(appmgrUtilGetWaitObject(4));
+		appmgrUtilWaitObjectNotify(appmgrUtilGetWaitObject(3));
+		return;
+	}
+	if (shell != NULL) {
+		if (relaunchPending) {
+			DELETE_APP_MAIN_LOCK(2490, "_appArbitrationOnProcessUnloaded");
+			pid = app->process.processId;
+			app->process.processId = -1;
+			_appListSetRunStatus(app, 0x600);
+			app->quitRequested = 0;
+			DELETE_APP_MAIN_UNLOCK(2495, "_appArbitrationOnProcessUnloaded");
+			result = relaunchApp(app, pid);
+			if (result >= 0)
+				return;
+			SCE_DBG_PRINTF_FUNC(0, 2499, "_appArbitrationOnProcessUnloaded", "[AppMgr:Error] ExitSpawn failed\n");
+			DELETE_APP_MAIN_LOCK(2501, "_appArbitrationOnProcessUnloaded");
+			_appListSetRunStatus(app, 0x800);
+			_shellEventFatalErrorQueuePush(app->appId, result);
+			DELETE_APP_MAIN_UNLOCK(2504, "_appArbitrationOnProcessUnloaded");
+			result = _sceAppMgrDeleteAppInternal(app);
+			DELETE_APP_CHECK(result, 0, 2507, "_appArbitrationOnProcessUnloaded");
+			return;
+		}
+		result = _sceAppMgrDeleteAppInternal(app);
+		DELETE_APP_CHECK(result, 0, 2512, "_appArbitrationOnProcessUnloaded");
+		return;
+	}
+	if (relaunchPending) {
+		DELETE_APP_MAIN_LOCK(2463, "_appArbitrationOnProcessUnloaded");
+		_appListSetRunStatus(app, 0x600);
+		pid = app->process.processId;
+		app->process.processId = -1;
+		app->quitRequested = 0;
+		DELETE_APP_MAIN_UNLOCK(2468, "_appArbitrationOnProcessUnloaded");
+		result = relaunchApp(app, pid);
+		if (result >= 0)
+			return;
+		SCE_DBG_PRINTF_FUNC(0, 2472, "_appArbitrationOnProcessUnloaded", "[AppMgr:Error] ExitSpawn failed\n");
+		DELETE_APP_MAIN_LOCK(2473, "_appArbitrationOnProcessUnloaded");
+		_appListSetRunStatus(app, 0x800);
+		DELETE_APP_MAIN_UNLOCK(2475, "_appArbitrationOnProcessUnloaded");
+		result = _sceAppMgrDeleteAppInternal(app);
+		DELETE_APP_CHECK(result, 0, 2478, "_appArbitrationOnProcessUnloaded");
+		return;
+	}
+	result = _sceAppMgrDeleteAppInternal(app);
+	DELETE_APP_CHECK(result, 0, 2483, "_appArbitrationOnProcessUnloaded");
+}
+
 /* The two Sony media helpers are inlined twice into the listener. */
 #define GC_SUSPEND_MEDIA(_func, _lockLine, _mainLine, _unlockLine, \
 		_suspendLine, _appUnlockLine, _waitLine, _checkLine, \
@@ -1979,6 +2071,282 @@ void initProcessStateUpdaterThread(void)
 		SceDebugForDriver_391B5B74(&gcListenerStartPanicInfo, __builtin_return_address(0));
 #endif
 	}
+}
+
+/*
+ * Runs or suspends the active application's process as the power state asks; a process
+ * that fails to start or suspend loses the activation.
+ */
+void updateActiveAppState(void)
+{
+	struct AppState *app;
+	int result;
+
+	if (_appListFindAndLockActiveApp(&app) != 0)
+		return;
+	if (app != NULL && (app->state & 0xff0) == 0x700) {
+		_appListUnlockApp(app);
+		return;
+	}
+	if (_applicationShouldMakeRun(app))
+		result = _appmgrProcessStartProcess(app);
+	else if (app->process.requestedProcessState == 3)
+		goto unlock;
+	else
+		result = _appmgrProcessSuspendProcess(app, 0, NULL);
+	if (result != 0) {
+		DELETE_APP_MAIN_LOCK(2922, "updateActiveAppState");
+		_appListSetActiveness(app, 1);
+		g_appmgrActiveAppId = -1;
+		DELETE_APP_MAIN_UNLOCK(2925, "updateActiveAppState");
+		result = _appListUnlockApp(app);
+		DELETE_APP_CHECK(result, 0, 2927, "updateActiveAppState");
+		return;
+	}
+unlock:
+	result = _appListUnlockApp(app);
+	DELETE_APP_CHECK(result, 0, 2932, "updateActiveAppState");
+	_updateDeviceArbitration2();
+}
+
+/* what the update thread does with a process */
+#define PROCESS_UPDATE_NONE	0
+#define PROCESS_UPDATE_START	1
+#define PROCESS_UPDATE_SUSPEND	2
+
+/*
+ * The process state updater: woken through g_appmgrUpdateNotifySemaphore, it brings the
+ * active application up to date, then starts or suspends every other process as its
+ * attributes and the power state ask.
+ */
+int _processUpdateThreadEntry(SceSize args, void *argp)
+{
+	struct AppState *app;
+	SceUInt32 attributes;
+	int index, action, result;
+
+	(void)args;
+	(void)argp;
+	for (;;) {
+		result = sceKernelWaitSema(g_appmgrUpdateNotifySemaphore, 1, NULL);
+		if (result != 0) {
+#if FW_DEBUG
+			sceAppMgrDump();
+			dumpBgmState();
+			SCE_DBG_ASSERT_CHECK_FUNC(0, 2654, "_processUpdateThreadEntry");
+#else
+			SceDebugForDriver_391B5B74(&processUpdateWaitPanicInfo,
+				__builtin_return_address(0));
+#endif
+		}
+		dmb();
+		updateActiveAppState();
+		index = appmgrGetShellApp() != NULL;
+		app = &g_appmgrAppStates[index];
+		do {
+			GC_APP_LOCK_CHECK(2663, "_processUpdateThreadEntry");
+			GC_PREFETCH_APP(app);
+			result = sceKernelLockMutex(app->mutex, 1, NULL);
+			if (result != 0) {
+				if ((unsigned int)(result + 0x7ffd7fd4) > 1) {
+#if FW_DEBUG
+					GC_FAILURE(result, 2663, "_processUpdateThreadEntry");
+#else
+					appmgrGcListenerMutexPanic();
+#endif
+				}
+			} else {
+				app->mutexOwner = sceKernelGetThreadId();
+			}
+			GC_MAIN_LOCK(2668, "_processUpdateThreadEntry");
+			action = PROCESS_UPDATE_NONE;
+			if (appmgrGetAppRunState(app) == 2)
+				;
+			else if (g_appmgrSystemSuspended)
+				goto suspend;
+			else if ((attributes = app->launchInfo.processAttr) & 1) {
+				if (app->backgroundSuspendRequested == 1)
+					goto suspend;
+				if (app->backgroundSuspendRequested == 0)
+					action = app->process.requestedProcessState != 2;
+			} else if (attributes & 2) {
+				if (!SceSblAIMgrForDriver_71608CA3() || !g_appmgrPowerSaveMode)
+					action = app->process.requestedProcessState != 2;
+				else if (g_appmgrPowerSaveSuspendBackgroundApps)
+					goto suspend;
+				else if (app->process.runWhenUiOverlay &&
+						app->process.requestedProcessState != 2)
+					action = PROCESS_UPDATE_START;
+				else if (!app->process.runWhenUiOverlay) {
+suspend:
+					if (app->process.requestedProcessState == 2)
+						action = PROCESS_UPDATE_SUSPEND;
+				}
+			}
+			g_appmgrMainMutexOwner = -1;
+			result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			GC_UNLOCK_CHECK(result, 2713, "_processUpdateThreadEntry");
+			if (app->quitRequested && app->gameCardRemovalQuitPending)
+				result = _appmgrProcessQuitProcess(app, 1, 0, 1);
+			else if (action == PROCESS_UPDATE_SUSPEND)
+				result = _appmgrProcessSuspendProcess(app, 0, NULL);
+			else if (action == PROCESS_UPDATE_START)
+				result = _appmgrProcessStartProcess(app);
+			else
+				goto unlock;
+			if (result != 0)
+				_appmgrProcessQuitProcess(app, 2, 0, 0);
+unlock:
+			GC_APP_UNLOCK_CHECK(2728, "_processUpdateThreadEntry");
+			app->mutexOwner = -1;
+			result = sceKernelUnlockMutex(app->mutex, 1);
+			GC_UNLOCK_CHECK(result, 2728, "_processUpdateThreadEntry");
+			++index;
+			++app;
+		} while (index <= 19);
+	}
+}
+
+/*
+ * Takes the activation from app, suspending its process when suspend asks for it and the
+ * process is a running one of the background kind (waiter is notified when it is not).
+ */
+int _sceAppMgrDeactivateAppInternal(struct AppState *app, int suspend, int flags,
+		struct AppmgrWaitObject *waiter)
+{
+	SceAppMgrSystemEvent event;
+	SceUInt32 attributes;
+	SceUID owner;
+	int runStatus, result;
+
+	DELETE_APP_ASSERT(app != NULL && app->mutexOwner == sceKernelGetThreadId(), 3092,
+		"_sceAppMgrDeactivateAppInternal");
+	owner = g_appmgrMainMutexOwner;
+	DELETE_APP_ASSERT(owner != sceKernelGetThreadId(), 3093, "_sceAppMgrDeactivateAppInternal");
+	DELETE_APP_MAIN_LOCK(3095, "_sceAppMgrDeactivateAppInternal");
+	if (appmgrGetAppRunState(app) != 2) {
+		DELETE_APP_MAIN_UNLOCK(3098, "_sceAppMgrDeactivateAppInternal");
+		return 0x80802013;
+	}
+	runStatus = appmgrGetAppRunStatus(app);
+	attributes = app->launchInfo.processAttr;
+	if (attributes & 1) {
+		DELETE_APP_MAIN_UNLOCK(3104, "_sceAppMgrDeactivateAppInternal");
+		return 0x8080201a;
+	}
+	if (suspend) {
+		if (attributes & 3)
+			suspend = attributes & 1;
+		else if (runStatus == 0x10) {
+			suspend = 1;
+			_appListSetRunStatus(app, 0x20);
+		} else
+			suspend = 0;
+	}
+	DELETE_APP_MAIN_UNLOCK(3120, "_sceAppMgrDeactivateAppInternal");
+	if (suspend) {
+		result = _appmgrProcessSuspendProcess(app, flags, waiter);
+		DELETE_APP_CHECK(result, 0, 3125, "_sceAppMgrDeactivateAppInternal");
+	} else if (waiter != NULL) {
+		appmgrUtilWaitObjectNotify(waiter);
+	}
+	DELETE_APP_MAIN_LOCK(3132, "_sceAppMgrDeactivateAppInternal");
+	_appListSetActiveness(app, 1);
+	g_appmgrActiveAppId = -1;
+	_deviceDeactivate();
+	if (app->launchInfo.processAttr & 2) {
+		memset(&event, 0, sizeof(event));
+		event.systemEvent = 0x10000002;
+		result = _appListPushEvent(app, &event);
+		DELETE_APP_CHECK(result, 0, 3146, "_sceAppMgrDeactivateAppInternal");
+	}
+	DELETE_APP_MAIN_UNLOCK(3148, "_sceAppMgrDeactivateAppInternal");
+	_updateDeviceArbitration2();
+	return 0;
+}
+
+/*
+ * Gives app the activation. On the core thread the application active now is deactivated
+ * first; elsewhere an active application fails it with 0x80803001.
+ */
+int _sceAppMgrActivateAppInternal(struct AppState *app)
+{
+	SceAppMgrSystemEvent event;
+	struct AppState *active, *other;
+	SceUID owner, pid;
+	int index, result;
+
+	DELETE_APP_ASSERT(app != NULL && app->mutexOwner == sceKernelGetThreadId(), 2943,
+		"_sceAppMgrActivateAppInternal");
+	owner = g_appmgrMainMutexOwner;
+	DELETE_APP_ASSERT(owner != sceKernelGetThreadId(), 2944, "_sceAppMgrActivateAppInternal");
+	if (app->launchInfo.processAttr & 1)
+		return 0x8080201a;
+	owner = g_appmgrCore2MutexOwner;
+	if (owner == sceKernelGetThreadId()) {
+		for (;;) {
+			if (_appListFindAndLockActiveApp(&active) == 0) {
+				if (sceKernelGetProcessId() == active->process.processId) {
+					result = _appListUnlockApp(active);
+					DELETE_APP_CHECK(result, 0, 2967, "_sceAppMgrActivateAppInternal");
+					return 0x80802013;
+				}
+				result = _sceAppMgrDeactivateAppInternal(active, 1, 0, NULL);
+				DELETE_APP_CHECK(result, 0, 2973, "_sceAppMgrActivateAppInternal");
+				result = _appListUnlockApp(active);
+				DELETE_APP_CHECK(result, 0, 2976, "_sceAppMgrActivateAppInternal");
+			}
+			DELETE_APP_MAIN_LOCK(2980, "_sceAppMgrActivateAppInternal");
+			if (appmgrFindActiveApp(g_appmgrAppStates) == NULL)
+				break;
+			DELETE_APP_MAIN_UNLOCK(2984, "_sceAppMgrActivateAppInternal");
+		}
+	} else {
+		DELETE_APP_MAIN_LOCK(2992, "_sceAppMgrActivateAppInternal");
+		if (appmgrFindActiveApp(g_appmgrAppStates) != NULL) {
+			DELETE_APP_MAIN_UNLOCK(2996, "_sceAppMgrActivateAppInternal");
+			return 0x80803001;
+		}
+	}
+	owner = g_appmgrMainMutexOwner;
+	DELETE_APP_ASSERT(owner == sceKernelGetThreadId(), 3001, "_sceAppMgrActivateAppInternal");
+	_appListSetActiveness(app, 2);
+	_deviceSetActiveAppId(app->appId);
+	g_appmgrActiveAppId = app->appId;
+	SCE_DBG_PRINTF_FUNC(0, 3010, "_sceAppMgrActivateAppInternal",
+		"[SceAppMgr] Activate app : %s, appid=0x%08x, pid=0x%08x.\n",
+		app->process.appName, g_appmgrActiveAppId, app->process.processId);
+	app->baseMiniEvictionValue = 100;
+	for (index = appmgrGetShellApp() != NULL; index <= 19; index++) {
+		other = &g_appmgrAppStates[index];
+		if (other == app)
+			continue;
+		pid = other->process.processId;
+		if (pid >= 0 && (pid & 1) != 0 && other->launchInfo.budgetSize != 0 &&
+				other->baseMiniEvictionValue > 0)
+			other->baseMiniEvictionValue--;
+	}
+	_deviceSetRunStatus(app->appId, 1);
+	DELETE_APP_MAIN_UNLOCK(3028, "_sceAppMgrActivateAppInternal");
+	result = sceKernelSignalSema(g_appmgrUpdateNotifySemaphore, 1);
+	if (result != 0 && result != SCE_KERNEL_ERROR_SEMA_OVF) {
+#if FW_DEBUG
+		DELETE_APP_FAILURE(result, SCE_KERNEL_ERROR_SEMA_OVF, 3064, "_sceAppMgrActivateAppInternal");
+#else
+		SceDebugForDriver_00CCE39C(&activateSignalPanicInfo, __builtin_return_address(0),
+			"0x%08x,0x%08x\n", result, SCE_KERNEL_ERROR_SEMA_OVF);
+#endif
+	}
+	_updateDeviceArbitration2();
+	if (app->launchInfo.processAttr & 2) {
+		DELETE_APP_MAIN_LOCK(3071, "_sceAppMgrActivateAppInternal");
+		memset(&event, 0, sizeof(event));
+		event.systemEvent = 0x10000001;
+		result = _appListPushEvent(app, &event);
+		DELETE_APP_CHECK(result, 0, 3077, "_sceAppMgrActivateAppInternal");
+		DELETE_APP_MAIN_UNLOCK(3078, "_sceAppMgrActivateAppInternal");
+	}
+	return 0;
 }
 
 void appmgrProcessIdleCallback(SceUID pid, unsigned int elapsed, void *argument)

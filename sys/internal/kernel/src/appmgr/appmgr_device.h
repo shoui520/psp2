@@ -135,6 +135,8 @@ int dumpBgmState(void);
 void _deviceSetApp(int appId, const char *name, const char *proxyName);
 void _deviceAddApp(int appId);
 void _deviceDeleteApp(int appId);
+void _deviceSetActiveAppId(int appId);
+void _deviceDeactivate(void);
 void _deviceSetRunStatus(int appId, int isRunning);
 void _deviceSetProcessId(int appId, SceUID pid);
 int sceAppMgrGetCurrentBgmState(SceUID *currentBgmId, int *currentBgmState);
@@ -151,6 +153,7 @@ int appmgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
 int appmgrReleaseSoundOutExclusive3(void);
 int sceAppMgrSetBgmProxyApp(const char *appName);
 int _sceAppMgrDeviceDeclareShell(const char *appName, int appId, SceUID pid);
+int _sceAppMgrDeviceUndeclareShell(void);
 int _updateDeviceArbitration2(void);
 int initializeAppMgrDevice(void);
 int sceAppMgrGetAppMgrState(AppMgrState *state);

@@ -214,7 +214,9 @@ int _appListFindAndLockAppByProcessId(SceUID pid, struct AppState **output);
 int _appListUnlockApp(struct AppState *app);
 int _appListGetAppStatus(struct AppState *app, SceAppMgrAppStatus *status);
 int _sceAppMgrActivateAppInternal(struct AppState *app);
-int _sceAppMgrDeactivateAppInternal(struct AppState *app, int, int, int);
+int _sceAppMgrDeactivateAppInternal(struct AppState *app, int suspend, int flags,
+		struct AppmgrWaitObject *waiter);
+void updateActiveAppState(void);
 void appmgrResetProcessState(AppmgrProcessState *process);
 void appmgrClearPendingAppEvents(struct AppState *app);
 int appmgrInitializeShellEventQueue(void);
@@ -251,7 +253,7 @@ int vcStateChanged(SceUID pid, int enabled);
 void appmgrProcessIdleCallback(SceUID pid, unsigned int elapsed, void *argument);
 int videocodecUsageChangedCallback2(SceUID pid, unsigned int usage);
 int _sceAppMgrProcTerminatedHandler(SceUID pid);
-extern int (*g_appmgrProcTerminatedCallback)(struct AppState *app);
+extern void (*g_appmgrProcTerminatedCallback)(struct AppState *app);
 
 /* SceSysroot's debug notifier for the application manager (SceSysrootForDriver_525B24C5) */
 typedef int (*AppmgrDebugNotifier)(int event, int arg1, int arg2, int arg3);
@@ -404,6 +406,8 @@ int appmgrLaunchAppByNameForShell(SceUInt32 launchMode, const SceChar8 *name,
 int appmgrLaunchAppByUri(SceUInt32 launchMode, const char *uri);
 int appmgrLaunchAppByUri2(const char *uri, const AppmgrLaunchAppByNameOption *option);
 int sceAppMgrLaunchAppCancel(int appId);
+void _appArbitrationOnProcessUnloaded(struct AppState *app);
+int appmgrStopShellWatchDog(void);
 int sceAppMgrLaunchAppByName2ndStage_internal(int appId, const char *name,
 		SceAppMgrAppStatus *statusOut, const AppmgrLaunchRequest *request,
 		int sendParamToRunning, int startByUpdater, const AppmgrCreateProcessParam *createParam,
@@ -433,7 +437,7 @@ int appmgrGetRawPathOfApp0ByPidForShellSyscall(SceUID pid, char *path);
 
 /* appmgr_process.c */
 int sceAppMgrSuspendUntilActivated(void);
-int _appmgrProcessInitialize(int (*callback)(struct AppState *app));
+int _appmgrProcessInitialize(void (*callback)(struct AppState *app));
 
 /* appmgr_query_syscalls.c */
 int appmgrGetBootParamSyscall(SceUInt32 request, void *bootParam);

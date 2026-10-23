@@ -62,7 +62,7 @@ extern int appmgrMountProcessContent(SceUID pid, SceUInt32 mountFlags, const cha
 extern int appmgrSetupSafeMemoryForProcess(SceUID pid, int safeMemoryMode);
 
 SceUID g_appmgrVideoCodecPid = -1;
-int (*g_appmgrProcTerminatedCallback)(struct AppState *app);
+void (*g_appmgrProcTerminatedCallback)(struct AppState *app);
 SceUID g_appmgrProcEventHandlerUid;
 
 /* what mini applications may still take: file descriptors, directories and the two
@@ -1839,7 +1839,7 @@ int sceAppMgrGetAppIdByNameForDebugger(const char *titleId, int *appId)
 } while (0)
 #endif
 
-int _appmgrProcessInitialize(int (*callback)(struct AppState *app))
+int _appmgrProcessInitialize(void (*callback)(struct AppState *app))
 {
 	int result;
 

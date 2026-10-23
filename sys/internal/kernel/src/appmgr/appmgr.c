@@ -27,7 +27,6 @@ extern SceUID g_appmgrMountMutex;
 extern SceUID g_appmgrSaveDataHeap;
 extern SceUID g_appmgrSaveDataMutex;
 extern int g_appmgrAppInfoCacheKey;
-extern int _appArbitrationOnProcessUnloaded(struct AppState *app);
 extern int appmgrMountShellExternalDirectories(SceUID pid);
 extern int appmgrMapPath(const char *path, SceUID pid, char *mapped, SceSize size);
 
