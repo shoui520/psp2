@@ -297,15 +297,15 @@
 +
 +/* SCE: only reviewed native entry points are selected at this checkpoint. */
 +void *sceClibMspaceCreate(void *base, SceSize capacity) {
-+  static const struct malloc_params defaults = {
-+    0x58585858, 0x10000, 0x10000, (size_t)-1, (size_t)-1, 7
-+  };
 +  mchunkptr chunk;
 +  mstate space;
 +  char name[36];
  
-+  if (!mparams.page_size)
-+    mparams = defaults;
++  if (!mparams.page_size) {
++    mparams.magic = 0x58585858; mparams.page_size = 0x10000;
++    mparams.granularity = 0x10000; mparams.mmap_threshold = (size_t)-1;
++    mparams.trim_threshold = (size_t)-1; mparams.default_mflags = 7;
++  }
 +  if (capacity <= 0x270 || capacity >= (size_t)-(mparams.page_size + 0x270))
 +    return 0;
 +  chunk = align_as_chunk((char *)base);
@@ -676,7 +676,7 @@
  #ifdef REALLOC_ZERO_BYTES_FREES
    if (bytes == 0) {
      mspace_free(msp, oldmem);
-@@ -4680,29 +5033,363 @@
+@@ -4680,29 +5033,368 @@
    }
  #endif /* REALLOC_ZERO_BYTES_FREES */
    else {
@@ -748,8 +748,8 @@
 +    set_inuse(m, remainder, remainderSize);
 +    trailer = chunk2mem(remainder);
 +  }
-+  if (chunksize(p) < nb) ABORT;
-+  if ((size_t)chunk2mem(p) % alignment != 0) ABORT;
++  assert(chunksize(p) >= nb);
++  assert((size_t)chunk2mem(p) % alignment == 0);
 +  POSTACTION(m);
 +  if (leader != 0)
 +    mspace_free(m, leader);
@@ -1032,12 +1032,17 @@
 +    value.currentInUse = m->current_in_use;
 +    if (m->top != 0) {
 +      msegmentptr segment = &m->seg;
++      size_t used = m->footprint - (m->topsize - 8);
 +      do {
 +        mchunkptr p = align_as_chunk(segment->base);
-+        while (segment_holds(segment, p) && p != m->top && p->head != FENCEPOST_HEAD)
++        while (segment_holds(segment, p) && p != m->top && p->head != FENCEPOST_HEAD) {
++          if (!cinuse(p))
++            used -= chunksize(p);
 +          p = next_chunk(p);
++        }
 +        segment = segment->next;
 +      } while (segment != 0);
++      value.currentInUse = used;
 +    }
 +  }
 +  if (locked && sceKernelUnlockLwMutex(&m->mutex, 1) < 0)
@@ -1052,7 +1057,7 @@
  void** mspace_independent_calloc(mspace msp, size_t n_elements,
                                   size_t elem_size, void* chunks[]) {
    size_t sz = elem_size; /* serves as 1-element array */
-@@ -4785,6 +5472,7 @@
+@@ -4785,6 +5477,7 @@
    return change_mparam(param_number, value);
  }
  

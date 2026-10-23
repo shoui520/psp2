@@ -7,6 +7,7 @@
 #define HAVE_MORECORE 0
 #define HAVE_MMAP 0
 #define HAVE_MREMAP 0
+#define MMAP_CLEARS 0
 #define USE_LOCKS 0
 #define MALLOC_ALIGNMENT 16
 #define MALLOC_FAILURE_ACTION

@@ -166,6 +166,10 @@ set_source_files_properties("${libkernel_heap_source}" PROPERTIES
 	COMPILE_OPTIONS "-O3"
 	COMPILE_DEFINITIONS "memcpy=sceClibMemcpy_safe")
 
+# The heap inspectors sit inside Sony's heap object, built the same way.
+set_source_files_properties(heap_inspect.c PROPERTIES
+	COMPILE_OPTIONS "-O3")
+
 set_source_files_properties(format.c PROPERTIES
 	COMPILE_DEFINITIONS "memcpy=sceClibMemcpy_safe")
 
