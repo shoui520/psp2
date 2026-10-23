@@ -30,6 +30,10 @@ extern int appmgrWriteSaveDataSlot(unsigned int slotId,
 				 const SceAppMgrSaveDataSlotParam *param,
 				 int status, const char *mountPoint);
 extern int appmgrDeleteSaveDataSlot(unsigned int slotId, const char *mountPoint);
+extern extern int appmgrValidateSaveDataRemoveItem(const SceAppUtilSaveDataDataRemoveItem *item,
+					    const char *path);
+extern int appmgrRemoveSaveDataPath(const char *path, unsigned int missingPolicy,
+				    unsigned int *entryCount);
 extern int appmgrOverwriteSaveDataSlot(unsigned int slotId,
 				     const SceAppMgrSaveDataSlotParam *param,
 				     int status, const char *mountPoint);
@@ -1846,6 +1850,178 @@ leaveSyscall:
 	return result;
 }
 
+int appmgrSaveDataDataRemove(SceAppMgrSaveDataDataDelete *operation, int normalApplication)
+{
+	SceAppUtilSaveDataDataRemoveItem item;
+	SceAppMgrAppInfoCache *info;
+	SceIoDevInfo deviceInfo;
+	SceIoStat clockStat;
+	char filePath[200];
+	char path[210];
+	char resolvedPath[292];
+	char mountDevice[32];
+	char mountPath[64];
+	const char *mountPoint;
+	void *storage;
+	void *mappedPage;
+	SceSize mappedSize;
+	SceUInt32 mappedOffset;
+	SceUInt32 syscallState;
+	SceUInt32 clusterSize;
+	SceUInt32 removedBytes;
+	unsigned int entryCount;
+	unsigned int index;
+	SceUID mapping;
+	SceUID fd;
+	int permission;
+	int slotChanged;
+	int keepSlot;
+	int changed;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (normalApplication) {
+		if (SceSblACMgrForDriver_0924896F(0)) {
+			result = (int)0x80800009;
+			goto leaveSyscall;
+		}
+	} else if (!SceSblACMgrForDriver_0924896F(0)) {
+		result = (int)0x80800009;
+		goto leaveSyscall;
+	}
+	if (!operation || operation->size != sizeof(*operation)) {
+		result = (int)0x80800001;
+		goto leaveSyscall;
+	}
+	mountPoint = (const char *)operation->mountPoint.data;
+	result = appmgrValidateSaveDataMountPoint(mountPoint, 1);
+	if (result < 0)
+		goto leaveSyscall;
+	SceKernelSuspendForDriver_4DF40893(0);
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		goto unlockPower;
+	permission = sceKernelSetThreadAccessLevel(128);
+	memset(path, 0, sizeof(path));
+	memset(resolvedPath, 0, sizeof(resolvedPath));
+	memset(mountDevice, 0, sizeof(mountDevice));
+	snprintf(path, sizeof(path), "%s%s", mountPoint, "sce_sys");
+	appmgrResolvePath(path, 0, resolvedPath, sizeof(resolvedPath));
+	appmgrExtractSaveDataDeviceName(resolvedPath, mountDevice, sizeof(mountDevice));
+	if (strncmp(mountDevice, "host0:", 6) != 0) {
+		memset(&deviceInfo, 0, sizeof(deviceInfo));
+		result = sceIoDevctl(mountDevice, 0x3001, NULL, 0, &deviceInfo, sizeof(deviceInfo));
+		if (result != 0)
+			goto restorePermission;
+		clusterSize = deviceInfo.clusterSize;
+	} else {
+		clusterSize = 0x8000;
+	}
+	changed = 0;
+	slotChanged = 0;
+	if (operation->slotId != (unsigned int)-1) {
+		if (g_appmgrSaveDataSlotCache.processId == sceKernelGetProcessId()) {
+			fd = g_appmgrSaveDataSlotCache.fd;
+			if (fd != -1 &&
+			    strncmp(g_appmgrSaveDataSlotCache.mountPoint, mountPoint, 16) == 0) {
+				result = sceIoClose(fd);
+				if (result < 0)
+					goto restorePermission;
+				g_appmgrSaveDataSlotCache.fd = -1;
+			}
+		}
+		result = appmgrCheckSaveDataSlot(operation->slotId, mountPoint, 1);
+		if (result != 0) {
+			if (result != (int)0x8080108B)
+				goto restorePermission;
+		} else {
+			result = appmgrSetSaveDataSlotStatus(operation->slotId, 1, mountPoint);
+			if (result != 0)
+				goto restorePermission;
+			storage = NULL;
+			if (SceProcessmgrForDriver_AF80F39C(0,
+				g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
+				info = storage;
+				info->saveDataFlags |= 2;
+				if (SceRtcForDriver_A930CD1A(&clockStat.st_mtime, 0) >= 0 &&
+				    appmgrResolvePath(mountPoint, 0, filePath, 64) >= 0)
+					sceIoChstat(filePath, &clockStat, 32);
+			}
+			slotChanged = 1;
+			changed = 1;
+		}
+	}
+	keepSlot = 0;
+	removedBytes = 0;
+	for (index = 0; index < 5 && operation->itemNum > index; index++) {
+		memset(&item, 0, sizeof(item));
+		memset(filePath, 0, sizeof(filePath));
+		entryCount = 0;
+		result = sceKernelCopyFromUser(&item, operation->items + index, sizeof(item));
+		if (result != 0)
+			goto restorePermission;
+		result = sceKernelStrncpyFromUser(filePath, (const char *)item.dataPath, 199);
+		if (result < 0)
+			goto restorePermission;
+		result = appmgrValidateSaveDataRemoveItem(&item, filePath);
+		if (result < 0)
+			goto restorePermission;
+		if (item.mode == 1)
+			keepSlot = 1;
+		memset(path, 0, sizeof(path));
+		memset(resolvedPath, 0, sizeof(resolvedPath));
+		snprintf(path, sizeof(path), "%s%s", mountPoint, filePath);
+		appmgrResolvePath(path, 0, resolvedPath, sizeof(resolvedPath));
+		result = appmgrRemoveSaveDataPath(resolvedPath, item.mode, &entryCount);
+		if (result < 0)
+			goto restorePermission;
+		if (!changed) {
+			storage = NULL;
+			if (SceProcessmgrForDriver_AF80F39C(0,
+				g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
+				info = storage;
+				info->saveDataFlags |= 2;
+				if (SceRtcForDriver_A930CD1A(&clockStat.st_mtime, 0) >= 0 &&
+				    appmgrResolvePath(mountPoint, 0, mountPath, sizeof(mountPath)) >= 0)
+					sceIoChstat(mountPath, &clockStat, 32);
+			}
+		}
+		changed = 1;
+		removedBytes += entryCount * clusterSize;
+	}
+	appmgrAccumulateSaveDataWriteSize(removedBytes >> 10);
+	result = 0;
+	if (!slotChanged)
+		goto restorePermission;
+	if (!keepSlot) {
+		result = appmgrDeleteSaveDataSlot(operation->slotId, mountPoint);
+	} else if (!operation->slotParam || operation->slotId == (unsigned int)-1) {
+		result = appmgrSetSaveDataSlotStatus(operation->slotId, 0, mountPoint);
+	} else {
+		mappedPage = NULL;
+		mappedSize = 0;
+		mappedOffset = 0;
+		mapping = sceKernelUserMap("SceAppMgrSaveDataSlotParam", 1,
+			operation->slotParam, 1024, &mappedPage, &mappedSize, &mappedOffset);
+		if (mapping < 0) {
+			result = mapping;
+			goto restorePermission;
+		}
+		result = appmgrOverwriteSaveDataSlot(operation->slotId,
+			(SceAppMgrSaveDataSlotParam *)((char *)mappedPage + mappedOffset),
+			0, mountPoint);
+		sceKernelUserUnmap(mapping, operation->slotParam, 1024);
+	}
+restorePermission:
+	sceKernelSetThreadAccessLevel(permission);
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+unlockPower:
+	SceKernelSuspendForDriver_2BB92967(0);
+leaveSyscall:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int appmgrValidateSaveDataMountPoint(const char *mountPoint, int requirePrimary)
 {
 	int result;
@@ -1965,7 +2141,7 @@ int appmgrValidateSaveDataFile(const SceAppUtilSaveDataDataSaveItem *file, const
 	return 0;
 }
 
-int appmgrValidateSaveDataRemoveItem(const SceAppUtilSaveDataDataRemoveItem *item,
+extern int appmgrValidateSaveDataRemoveItem(const SceAppUtilSaveDataDataRemoveItem *item,
 				     const char *path)
 {
 	int index;

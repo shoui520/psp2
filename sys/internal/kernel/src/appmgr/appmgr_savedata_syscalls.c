@@ -52,6 +52,16 @@ int appmgrSaveDataDataSave2Syscall(SceAppMgrSaveDataData *operation)
 	return appmgrSaveDataDataSave(operation, 0);
 }
 
+int appmgrSaveDataDataRemoveSyscall(SceAppMgrSaveDataDataDelete *operation)
+{
+	return appmgrSaveDataDataRemove(operation, 1);
+}
+
+int appmgrSaveDataDataRemove2Syscall(SceAppMgrSaveDataDataDelete *operation)
+{
+	return appmgrSaveDataDataRemove(operation, 0);
+}
+
 int appmgrSaveDataGetCachedRequiredSizeKiBSyscall(void)
 {
 	return sceAppMgrSaveDataGetCachedRequiredSizeKiB();

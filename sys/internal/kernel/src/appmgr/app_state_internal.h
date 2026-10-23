@@ -569,6 +569,8 @@ int appmgrSaveDataSlotSetStatusSyscall(void *status);
 int appmgrSaveDataSlotGetStatusSyscall(void *status);
 int appmgrSaveDataDataSaveSyscall(SceAppMgrSaveDataData *operation);
 int appmgrSaveDataDataSave2Syscall(SceAppMgrSaveDataData *operation);
+int appmgrSaveDataDataRemoveSyscall(SceAppMgrSaveDataDataDelete *operation);
+int appmgrSaveDataDataRemove2Syscall(SceAppMgrSaveDataDataDelete *operation);
 int appmgrSaveDataGetCachedRequiredSizeKiBSyscall(void);
 int appmgrSaveDataSlotFileOpenSyscall(const char *mountPoint,
 				     struct AppmgrSaveDataSlotFileInfo *info);
@@ -612,6 +614,7 @@ int appmgrInitializeBgdlQueueStorage(void);
 /* savedata.c */
 int appmgrCreateSaveDataSlotFile(SceUID pid, const char *path, SceUInt32 slotCount);
 int appmgrSaveDataDataSave(SceAppMgrSaveDataData *operation, int normalApplication);
+int appmgrSaveDataDataRemove(SceAppMgrSaveDataDataDelete *operation, int normalApplication);
 int sceAppMgrSaveDataGetCachedRequiredSizeKiB(void);
 int appmgrOpenSaveDataSlotFile(const char *mountPoint, struct AppmgrSaveDataSlotFileInfo *info);
 int appmgrCloseSaveDataSlotFile(const char *mountPoint);
