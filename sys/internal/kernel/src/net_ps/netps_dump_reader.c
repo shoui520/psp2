@@ -29,7 +29,7 @@ int sceNetPsDumpRead(int dumpId, void *buffer, int length, int *flags)
 		goto failed;
 	}
 	if (flags) {
-		if (sceNetPsCheckedCopyUserIn(flags, &userFlags, sizeof(userFlags)))
+		if (copyin(flags, &userFlags, sizeof(userFlags)))
 			goto badAddress;
 	} else {
 		memset(&userFlags, 0, sizeof(userFlags));
@@ -50,7 +50,7 @@ int sceNetPsDumpRead(int dumpId, void *buffer, int length, int *flags)
 		--dump->waiters;
 	}
 	userFlags = dump->flags & SCE_NET_DUMP_OVERFLOW;
-	if (flags && sceNetPsCheckedCopyUserOut(&userFlags, flags, sizeof(userFlags)))
+	if (flags && copyout(&userFlags, flags, sizeof(userFlags)))
 		goto badAddress;
 	if (length >= dump->bufferedLength)
 		length = dump->bufferedLength;
@@ -58,7 +58,7 @@ int sceNetPsDumpRead(int dumpId, void *buffer, int length, int *flags)
 	if (length < first)
 		first = length;
 	if (first > 0) {
-		if (destination && sceNetPsCheckedCopyUserOut(
+		if (destination && copyout(
 			    dump->buffer + dump->readPosition, destination, first))
 			goto badAddress;
 		if (!(inputFlags & SCE_NET_DUMP_PEEK)) {
@@ -68,7 +68,7 @@ int sceNetPsDumpRead(int dumpId, void *buffer, int length, int *flags)
 		length -= first;
 		if (length > 0) {
 			if (destination && destination + first &&
-			    sceNetPsCheckedCopyUserOut(dump->buffer,
+			    copyout(dump->buffer,
 						      destination + first, length))
 				goto badAddress;
 			if (!(inputFlags & SCE_NET_DUMP_PEEK)) {

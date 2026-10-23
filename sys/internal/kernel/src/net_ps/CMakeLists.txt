@@ -12,6 +12,8 @@ add_compile_definitions(_KERNEL)
 # them only (libkern.h's memcpy)
 set(netbsd ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/netbsd-2.1/sys)
 include(${CMAKE_CURRENT_SOURCE_DIR}/vendor_patch.cmake)
+net_ps_prepare_patched(${netbsd}/kern/kern_subr.c ${CMAKE_CURRENT_SOURCE_DIR}/kern_subr_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/kern_subr.c)
 net_ps_prepare_patched(${netbsd}/kern/uipc_domain.c ${CMAKE_CURRENT_SOURCE_DIR}/uipc_domain_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/uipc_domain.c)
 net_ps_prepare_patched(${netbsd}/kern/uipc_mbuf.c ${CMAKE_CURRENT_SOURCE_DIR}/uipc_mbuf_sce.patch
@@ -21,6 +23,7 @@ net_ps_prepare_patched(${netbsd}/kern/uipc_socket.c ${CMAKE_CURRENT_SOURCE_DIR}/
 net_ps_prepare_patched(${netbsd}/kern/uipc_socket2.c ${CMAKE_CURRENT_SOURCE_DIR}/uipc_socket2_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/uipc_socket2.c)
 set(netbsd_sources
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/kern_subr.c
 	${netbsd}/kern/kern_timeout.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/uipc_domain.c
 	${netbsd}/kern/uipc_mbuf2.c

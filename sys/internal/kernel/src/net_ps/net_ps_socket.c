@@ -322,7 +322,7 @@ int sceNetPsGetIfList(void *list, int count)
 	result = sceNetPsGetInterfaceList(buffer, count);
 	if (result < 0)
 		goto freeBuffer;
-	error = sceNetPsCheckedCopyUserOut(buffer, list, size);
+	error = copyout(buffer, list, size);
 	sceNetPsFree(buffer);
 	if (error < 0) {
 		error = -error;
@@ -353,7 +353,7 @@ int sceNetPsControl(int interfaceIndex, int command, void *data, int length)
 			goto freeBuffer;
 		}
 		if (command & 0x30000000) {
-			error = sceNetPsCheckedCopyUserIn(data, buffer, length);
+			error = copyin(data, buffer, length);
 			if (error)
 				goto copyError;
 		}
@@ -364,7 +364,7 @@ int sceNetPsControl(int interfaceIndex, int command, void *data, int length)
 		result = sceNetPsStackControl(0, command, buffer, length);
 	if (result >= 0 && data != NULL &&
 	    (command & 0x30000000) != 0x20000000) {
-		error = sceNetPsCheckedCopyUserOut(buffer, data, length);
+		error = copyout(buffer, data, length);
 		goto copyError;
 	}
 freeBuffer:
@@ -396,7 +396,7 @@ int sceNetPsSysctl(const int *name, unsigned int nameLength, void *oldData,
 
 	sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
 	if (oldLength != NULL) {
-		error = sceNetPsCheckedCopyUserIn(oldLength, &length, sizeof(length));
+		error = copyin(oldLength, &length, sizeof(length));
 		if (error)
 			goto copyError;
 		lengthPointer = &length;
@@ -409,7 +409,7 @@ int sceNetPsSysctl(const int *name, unsigned int nameLength, void *oldData,
 		error = 22;
 		goto out;
 	}
-	error = sceNetPsCheckedCopyUserIn(name, identifiers,
+	error = copyin(name, identifiers,
 					nameLength * sizeof(*identifiers));
 	if (error)
 		goto copyError;
@@ -433,7 +433,7 @@ int sceNetPsSysctl(const int *name, unsigned int nameLength, void *oldData,
 			goto copyError;
 	}
 	if (oldLength != NULL) {
-		error = sceNetPsCheckedCopyUserOut(&length, oldLength, sizeof(length));
+		error = copyout(&length, oldLength, sizeof(length));
 		if (error)
 			goto copyError;
 	}

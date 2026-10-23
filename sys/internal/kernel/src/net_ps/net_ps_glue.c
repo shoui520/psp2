@@ -1566,16 +1566,16 @@ int sceNetPsCopyInString(const char *source, char *destination, size_t length,
 	return result;
 }
 
-/* Name unknown; checked user-only copy of kernel bytes. */
-int sceNetPsCheckedCopyUserOut(const void *source, void *destination, size_t length)
+/* NetBSD's copyout: kernel bytes to a user address, EFAULT for a NULL pointer */
+int copyout(const void *source, void *destination, size_t length)
 {
 	if (!source || !destination)
 		return 14;
 	return sceNetPsCopyUserOut(source, destination, length);
 }
 
-/* Name unknown; checked user-only copy into kernel storage. */
-int sceNetPsCheckedCopyUserIn(const void *source, void *destination, size_t length)
+/* NetBSD's copyin: user bytes into the kernel, EFAULT for a NULL pointer */
+int copyin(const void *source, void *destination, size_t length)
 {
 	if (!source || !destination)
 		return 14;

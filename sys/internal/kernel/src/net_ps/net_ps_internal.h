@@ -224,8 +224,8 @@ int sceNetPsCopyIn(const void *source, void *destination, size_t length,
 		   int kernel);
 int sceNetPsCopyInString(const char *source, char *destination, size_t length,
 			 size_t *copied);
-int sceNetPsCheckedCopyUserIn(const void *source, void *destination, size_t length);
-int sceNetPsCheckedCopyUserOut(const void *source, void *destination, size_t length);
+int copyin(const void *source, void *destination, size_t length);
+int copyout(const void *source, void *destination, size_t length);
 int sceNetPsAllocateDescriptorId(void);
 int sceNetPsAllocateDumpId(void);
 void sceNetPsSetDump(unsigned int dumpId, SceNetPsDump *dump);
