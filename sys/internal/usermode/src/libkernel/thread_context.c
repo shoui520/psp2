@@ -36,11 +36,12 @@ SceSize sceKernelCheckThreadStack(void)
 {
 	register intptr_t stack __asm__("sp");
 	struct ThreadLocalStorage *storage = currentThreadStorage();
+	intptr_t top = (intptr_t)storage->kernel.thread.stackTop;
+	intptr_t bottom = (intptr_t)storage->kernel.thread.stackBottom;
 
-	if ((intptr_t)storage->kernel.thread.stackTop < stack ||
-	    stack < (intptr_t)storage->kernel.thread.stackBottom)
+	if (top < stack || stack < bottom)
 		return 0;
-	return stack - (intptr_t)storage->kernel.thread.stackBottom;
+	return stack - bottom;
 }
 
 SceInt32 sceKernelGetCurrentThreadVfpException(void)

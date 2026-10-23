@@ -8,17 +8,6 @@ extern void *SetMemoryCore(void *destination, int value, size_t size);
 extern int CompareMemoryCore(const void *left, const void *right, size_t size);
 extern void *MoveMemoryCore(void *destination, const void *source, size_t size);
 
-/* Name and the meanings of the two unused arguments are unknown. */
-int SceLibKernel_70867F93(SceUInt unused0, SceUInt unused1, SceSize count,
-		SceUInt32 *words)
-{
-	(void)unused0;
-	(void)unused1;
-	if (count)
-		sceClibMemset(words, 0, count << 2);
-	return 0;
-}
-
 void *sceClibMemcpy_safe(void *destination, const void *source, SceSize size)
 {
 	uintptr_t dst = (uintptr_t)destination;
@@ -29,7 +18,8 @@ void *sceClibMemcpy_safe(void *destination, const void *source, SceSize size)
 			sceClibPrintf("*** error: sceClibMemcpy(%p,%p,0x%08x) src == dst(lr=%p)\n",
 				     destination, source, size, __builtin_return_address(0));
 			__breakpoint(BKPT_CHECK_FAILED);
-		} else if (size > (dst < src ? src - dst : dst - src)) {
+		} else if ((dst <= src && size > src - dst) ||
+			   (dst >= src && size > dst - src)) {
 			sceClibPrintf("*** error: sceClibMemcpy(%p,%p,0x%08x) src/dst overlap(lr=%p)\n",
 				     destination, source, size, __builtin_return_address(0));
 			__breakpoint(BKPT_CHECK_FAILED);

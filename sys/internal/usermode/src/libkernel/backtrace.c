@@ -22,7 +22,7 @@ int sceKernelBacktrace(SceUID threadId, SceKernelCallFrame *frames, SceSize size
 int sceKernelBacktraceSelf(SceKernelCallFrame *frames, SceSize size,
 		SceUInt32 *count, SceUInt32 flags)
 {
-	if (!libkernelState.backtraceAvailable)
+	if (!backtraceAvailable)
 		return SCE_KERNEL_ERROR_ILLEGAL_PERMISSION;
 	return BacktraceCapture(0, frames, size, count, flags);
 }

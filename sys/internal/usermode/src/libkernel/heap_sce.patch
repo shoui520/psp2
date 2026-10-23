@@ -400,8 +400,8 @@
      }
  
 -    mem = sys_alloc(ms, nb);
-+    /* SCE supplies a kernel memblock-backed growth boundary. */
-+    mem = HeapGrow(ms, nb, 0);
++    /* SCE grows only the primary heap and spaces that own their memblocks. */
++    mem = ((void *)ms == primaryHeap || (ms->mflags & MSPACE_OWN_SEGMENTS)) ? HeapGrow(ms, nb, 0) : 0;
  
    postaction:
 +    /* SCE tracks total allocated chunk sizes, including native overhead. */
@@ -659,7 +659,7 @@
 +  void *newmem = HeapMallocCall(m, bytes);
 +  if (newmem != 0) {
 +    size_t capacity = oldsize - overhead;
-+    sceClibMemcpy(newmem, oldmem, capacity < bytes ? capacity : bytes);
++    memcpy(newmem, oldmem, capacity < bytes ? capacity : bytes);
 +    mspace_free(m, oldmem);
 +  }
 +  return newmem;
@@ -748,8 +748,8 @@
 +    set_inuse(m, remainder, remainderSize);
 +    trailer = chunk2mem(remainder);
 +  }
-+  assert(chunksize(p) >= nb);
-+  assert((size_t)chunk2mem(p) % alignment == 0);
++  if (chunksize(p) < nb) ABORT;
++  if ((size_t)chunk2mem(p) % alignment != 0) ABORT;
 +  POSTACTION(m);
 +  if (leader != 0)
 +    mspace_free(m, leader);
@@ -812,7 +812,7 @@
 +  if (mem == 0)
 +    return 0;
 +  size_t capacity = oldsize - overhead;
-+  sceClibMemcpy(mem, oldmem, capacity < bytes ? capacity : bytes);
++  memcpy(mem, oldmem, capacity < bytes ? capacity : bytes);
 +  mspace_free(msp, oldmem);
 +  return mem;
 +}

@@ -13,15 +13,11 @@ union ProcessTimeBase {
 	} words;
 };
 
-struct LibkernelState {
-	uint32_t processSdkVersion;
-	SceLongTimerRegisters *timer;	/* the LT5, read-only */
-	union ProcessTimeBase processTimeBase;
-	unsigned int backtraceAvailable;
-	uint32_t pmUserEnable;
-	uint32_t exitStarted;
-};
-
-extern struct LibkernelState libkernelState;
+extern uint32_t processSdkVersion;
+extern SceLongTimerRegisters *processTimer;	/* the LT5, read-only */
+extern union ProcessTimeBase processTimeBase;
+extern unsigned int backtraceAvailable;
+extern uint32_t pmUserEnable;
+extern uint32_t exitStarted;
 
 #endif

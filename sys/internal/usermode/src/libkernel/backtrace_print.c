@@ -20,7 +20,7 @@ int SceLibKernel_20E2D4B7(SceUID processId, const SceKernelCallFrame *frames,
 	SceUInt32 frameSize;
 	int result;
 
-	if (!libkernelState.backtraceAvailable)
+	if (!backtraceAvailable)
 		return SCE_KERNEL_ERROR_ILLEGAL_PERMISSION;
 	if (processId && sceKernelGetProcessId() != processId)
 		return SCE_KERNEL_ERROR_INVALID_PID;

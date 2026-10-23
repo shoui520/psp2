@@ -1,5 +1,6 @@
 #include <stdarg.h>
 #include <stdint.h>
+#include <string.h>
 #include "format.h"
 
 /* the fields of an IEEE 754 double */
@@ -33,7 +34,6 @@ struct FormatState {
 
 static inline __attribute__((always_inline))
 void FormatFloating(struct FormatState *, unsigned int, int, int, int, double);
-extern void *sceClibMemcpy(void *, const void *, unsigned int);
 extern void *sceClibMemset(void *, int, unsigned int);
 
 static inline __attribute__((always_inline))
@@ -369,18 +369,18 @@ void FormatFloating(struct FormatState *state, unsigned int flags, int width,
 				if (lastLength > digitLength)
 					lastLength = digitLength;
 				lastZeroes = precision - middleZeroes - lastLength;
-				sceClibMemcpy(begin + firstLength, digits, lastLength);
+				memcpy(begin + firstLength, digits, lastLength);
 			} else if (digitLength < point) {
 				firstLength = digitLength;
 				middleZeroes = point - digitLength;
-				sceClibMemcpy(begin, digits, firstLength);
+				memcpy(begin, digits, firstLength);
 				if (precision || (flags & FORMAT_ALTERNATE)) {
 					begin[firstLength] = '.';
 					lastLength = 1;
 				}
 				lastZeroes = precision;
 			} else {
-				sceClibMemcpy(begin, digits, point);
+				memcpy(begin, digits, point);
 				firstLength = point;
 				if (precision || (flags & FORMAT_ALTERNATE))
 					begin[firstLength++] = '.';
@@ -389,7 +389,7 @@ void FormatFloating(struct FormatState *state, unsigned int flags, int width,
 				if (fraction > precision)
 					fraction = precision;
 				middleZeroes = precision - fraction;
-				sceClibMemcpy(begin + firstLength, digits + point, fraction);
+				memcpy(begin + firstLength, digits + point, fraction);
 				firstLength += fraction;
 			}
 		} else {
@@ -401,7 +401,7 @@ void FormatFloating(struct FormatState *state, unsigned int flags, int width,
 				if (fraction > precision)
 					fraction = precision;
 				begin[firstLength++] = '.';
-				sceClibMemcpy(begin + firstLength, digits + 1, fraction);
+				memcpy(begin + firstLength, digits + 1, fraction);
 				firstLength += fraction;
 				middleZeroes = precision - fraction;
 			} else if (flags & FORMAT_ALTERNATE) {

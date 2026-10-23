@@ -6,16 +6,16 @@
 
 SceUInt32 sceKernelGetProcessTimeLow(void)
 {
-	SceLongTimerRegisters *timer = libkernelState.timer;
+	SceLongTimerRegisters *timer = processTimer;
 
 	if (!timer)
 		return sceKernelGetProcessTimeLowCore();
-	return timer->countLo - libkernelState.processTimeBase.words.low;
+	return timer->countLo - processTimeBase.words.low;
 }
 
 SceUInt64 sceKernelGetProcessTimeWide(void)
 {
-	SceLongTimerRegisters *timer = libkernelState.timer;
+	SceLongTimerRegisters *timer = processTimer;
 	uint32_t high, low, nextHigh;
 
 	if (!timer)
@@ -25,12 +25,12 @@ SceUInt64 sceKernelGetProcessTimeWide(void)
 		low = timer->countLo;
 		nextHigh = timer->countHi;
 	} while (high != nextHigh);
-	return (((uint64_t)high << 32) | low) - libkernelState.processTimeBase.clock;
+	return (((uint64_t)high << 32) | low) - processTimeBase.clock;
 }
 
 int sceKernelGetProcessTime(SceKernelSysClock *clock)
 {
-	SceLongTimerRegisters *timer = libkernelState.timer;
+	SceLongTimerRegisters *timer = processTimer;
 	uint32_t high, low, nextHigh;
 
 	if (!timer)
@@ -42,6 +42,6 @@ int sceKernelGetProcessTime(SceKernelSysClock *clock)
 		low = timer->countLo;
 		nextHigh = timer->countHi;
 	} while (high != nextHigh);
-	clock->quad = (((uint64_t)high << 32) | low) - libkernelState.processTimeBase.clock;
+	clock->quad = (((uint64_t)high << 32) | low) - processTimeBase.clock;
 	return 0;
 }

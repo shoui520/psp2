@@ -58,7 +58,7 @@ int SceLibKernel_6C7365C4(uintptr_t address, struct ExidxResult *result)
 	const struct ExidxEntry *begin, *end;
 	uintptr_t offset = address - USER_BASE;
 
-	if (!libkernelState.backtraceAvailable || offset >= USER_END - USER_BASE)
+	if (!backtraceAvailable || offset >= USER_END - USER_BASE)
 		return SCE_KERNEL_ERROR_ILLEGAL_PERMISSION;
 	begin = pages[offset >> 12].begin;
 	end = pages[offset >> 12].end;

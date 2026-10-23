@@ -41,12 +41,13 @@ int FormatPutFile(void *argument, uintptr_t *state, int character)
 	struct FormatFile *file = argument;
 	int count = file->buffered;
 	int descriptor = file->descriptor;
+	int next = count + 1;
 
-	file->buffered = count + 1;
+	file->buffered = next;
 	file->data[count] = character;
-	if (count + 1 >= 1024) {
+	if (next >= 1024) {
 		if (descriptor >= 0)
-			sceIoWrite(descriptor, file->data, count + 1);
+			sceIoWrite(descriptor, file->data, next);
 		file->buffered = 0;
 	}
 	return 1;

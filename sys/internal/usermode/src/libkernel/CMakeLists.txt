@@ -118,9 +118,12 @@ if(NOT PSP2_TOOLCHAIN STREQUAL "sony")
 		DEPENDS "${PSP2_SRC}/tools/fixup_unwind.py")
 endif()
 
-# Structure copies emitted by GCC use LibKernel's own native memory engine.
+# Sony built LibKernel with a signed char (ldrsb in its string walks).
+target_compile_options(os0_us_libkernel PRIVATE -fsigned-char)
+
+# memcpy is LibKernel's checked copy, as every memcpy call in Sony's build is.
 target_link_options(os0_us_libkernel PRIVATE
-	"-Wl,--defsym=memcpy=sceClibMemcpy")
+	"-Wl,--defsym=memcpy=sceClibMemcpy_safe")
 
 target_include_directories(os0_us_libkernel PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}"
@@ -148,11 +151,23 @@ set_source_files_properties(../../../../../toolchains/libgcc/unwind_pr.c PROPERT
 set_source_files_properties("${libkernel_unwind_source}" PROPERTIES
 	COMPILE_OPTIONS "-std=gnu99;-fno-inline;-fno-stack-protector"
 	COMPILE_DEFINITIONS
-	"_Unwind_VRS_Get=SceLibGcc_0DFF2B2C;_Unwind_VRS_Set=SceLibGcc_DAB28374;_Unwind_VRS_Pop=SceLibGcc_F16E32FC;_Unwind_Complete=SceLibGcc_8A5F29D8;_Unwind_DeleteException=SceLibGcc_4BB45B70;_Unwind_GetCFA=SceLibGcc_DBE840D6")
+	"_Unwind_VRS_Get=SceLibGcc_0DFF2B2C;_Unwind_VRS_Set=SceLibGcc_DAB28374;_Unwind_VRS_Pop=SceLibGcc_F16E32FC;_Unwind_Complete=SceLibGcc_8A5F29D8;_Unwind_DeleteException=SceLibGcc_4BB45B70;_Unwind_GetCFA=SceLibGcc_DBE840D6;memcpy=sceClibMemcpy_safe")
 
 # These syscall marshalling wrappers have no strong stack guards in the original.
 set_source_files_properties(lw_mutex_arm.c PROPERTIES
 	COMPILE_OPTIONS "-marm;-fno-inline;-fno-stack-protector")
+
+# Sony's builds of these files reach their imports and helpers by tail calls.
+set_source_files_properties(process_clock.c thread_context.c lw_mutex.c PROPERTIES
+	COMPILE_OPTIONS "-foptimize-sibling-calls")
+
+# dlmalloc's documented build (-O3), as Sony's heap is.
+set_source_files_properties("${libkernel_heap_source}" PROPERTIES
+	COMPILE_OPTIONS "-O3"
+	COMPILE_DEFINITIONS "memcpy=sceClibMemcpy_safe")
+
+set_source_files_properties(format.c PROPERTIES
+	COMPILE_DEFINITIONS "memcpy=sceClibMemcpy_safe")
 
 set_source_files_properties(backtrace_exidx.c PROPERTIES
 	COMPILE_OPTIONS "-fno-inline")

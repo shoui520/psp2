@@ -81,7 +81,7 @@ void sceKernelAtomicClearMask64(uint64_t *address, uint64_t mask)
 	AtomicUpdate64(address, mask, ATOMIC_CLEAR, 1);
 }
 
-int sceKernelAtomicAddUnless64(uint64_t *address, uint64_t value, int64_t limit)
+uint64_t sceKernelAtomicAddUnless64(uint64_t *address, uint64_t value, int64_t limit)
 {
 	return AtomicAddWithLimit64(address, value, limit);
 }

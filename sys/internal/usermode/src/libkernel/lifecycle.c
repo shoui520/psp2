@@ -36,7 +36,12 @@ struct LibkernelAddresses {
 	uint32_t *pmUserEnable;
 };
 
-struct LibkernelState libkernelState;
+uint32_t processSdkVersion;
+SceLongTimerRegisters *processTimer;
+union ProcessTimeBase processTimeBase;
+unsigned int backtraceAvailable;
+uint32_t pmUserEnable;
+uint32_t exitStarted;
 uint32_t __stack_chk_guard = 0;
 uint32_t SceKernelStackChkGuard = 0;
 extern uint32_t sceLibSspStackChkGuard __attribute__((alias("__stack_chk_guard")));
@@ -66,30 +71,31 @@ void InvokeThreadEntry(SceSize size, const struct ThreadEntryCall *entry)
 
 int module_start(SceSize size, void *argument)
 {
-	struct LibkernelAddresses addresses = {
-		sizeof(addresses), ExitThreadEntry, ExitDeleteThreadEntry,
-		ExitCallbackEntry, InvokeThreadEntry,
-		&libkernelState.processTimeBase.clock, &libkernelState.pmUserEnable
-	};
+	struct LibkernelAddresses addresses;
 	const struct ProcessParamHeader *parameter;
 	SceKernelCallFrame frames[1];
 	SceUInt32 count;
 	int result;
-	uint32_t guard;
 
+	addresses.size = sizeof(addresses);
+	addresses.exitThread = ExitThreadEntry;
+	addresses.exitDeleteThread = ExitDeleteThreadEntry;
+	addresses.exitCallback = ExitCallbackEntry;
+	addresses.invokeEntry = InvokeThreadEntry;
+	addresses.processTimeBase = &processTimeBase.clock;
+	addresses.pmUserEnable = &pmUserEnable;
 	_sceKernelRegisterLibkernelAddresses(&addresses);
-	_sceKernelGetTimer5Reg(&libkernelState.timer);
+	_sceKernelGetTimer5Reg(&processTimer);
 	result = sceKernelBacktrace(sceKernelGetThreadId(), frames, sizeof(frames),
 				    &count, 0);
-	libkernelState.backtraceAvailable = (uint32_t)~result >> 31;
-	guard = *(uint32_t *)sceKernelGetTLSAddr(7);
-	SceKernelStackChkGuard = guard;
-	__stack_chk_guard = guard;
+	backtraceAvailable = (uint32_t)~result >> 31;
+	SceKernelStackChkGuard = *(uint32_t *)sceKernelGetTLSAddr(7);
+	__stack_chk_guard = SceKernelStackChkGuard;
 	parameter = sceKernelGetProcessParam();
 	if (!parameter || parameter->magic != SCE_PROCESS_PARAM_MAGIC || !parameter->version)
-		libkernelState.processSdkVersion = 0;
+		processSdkVersion = 0;
 	else
-		libkernelState.processSdkVersion = parameter->sdkVersion;
+		processSdkVersion = parameter->sdkVersion;
 	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	for (;;)
 		;
@@ -101,12 +107,12 @@ void SceLibKernel_023EAA62(void)
 
 uint32_t sceKernelGetPMUSERENR(void)
 {
-	return libkernelState.pmUserEnable;
+	return pmUserEnable;
 }
 
 uint32_t SceLibKernel_9F793F84(void)
 {
-	return libkernelState.processSdkVersion;
+	return processSdkVersion;
 }
 
 int sceKernelChangeCurrentThreadAttr(uint32_t clear, uint32_t set)
@@ -136,7 +142,7 @@ void sceKernelCallModuleExit(int type)
 
 int sceKernelExitProcess(int status)
 {
-	if (sceKernelAtomicCompareAndSet32(&libkernelState.exitStarted, 0, 1)) {
+	if (sceKernelAtomicCompareAndSet32(&exitStarted, 0, 1)) {
 		SceThreadmgrCoredumpTime_sceKernelExitThread(status);
 		return 0;
 	}
