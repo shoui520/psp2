@@ -2327,6 +2327,63 @@ out:
 	return result;
 }
 
+/* Unmount the PFS ACID directory of a drive of the calling application. */
+int appmgrUnmountPfsAcidDirectory(const char *drive, const char *directory)
+{
+	char path[64] = "";
+	char driveName[33];
+	SceAllocOpt opt;
+	struct AppState *app;
+	char *resolvedPath;
+	SceUID pid;
+	int index, permission, result;
+
+	if (directory == NULL || drive == NULL)
+		return 0x80800001;
+	__builtin_memset(driveName, 0, sizeof(driveName));
+	memset(path, 0, sizeof(path));
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app == NULL)
+		return 0x80802012;
+	snprintf(path, sizeof(path), "%s%s", drive, directory);
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 32;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	resolvedPath = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	if (resolvedPath == NULL)
+		return 0x80801006;
+	memset(resolvedPath, 0, 292);
+	pid = sceKernelGetProcessId();
+	permission = sceKernelSetThreadAccessLevel(128);
+	result = SceFios2KernelForDriver_0F456345(pid, 0, path, resolvedPath, 292);
+	sceKernelSetThreadAccessLevel(permission);
+	if (result < 0)
+		goto free;
+	__builtin_memset(driveName, 0, sizeof(driveName));
+	for (index = 0; ; ) {
+		driveName[index] = resolvedPath[index];
+		if (resolvedPath[index] == ':')
+			break;
+		if (++index == 33) {
+			result = 0x8080000c;
+			driveName[32] = '\0';
+			goto free;
+		}
+	}
+	driveName[15] = '\0';
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, resolvedPath);
+	if ((app->process.content.contentFlags & 0x10) != 0 &&
+	    appmgrGetFakeNoMemoryCard() == 2)
+		return 0x80800002;
+	return ScePfsMgrForKernel_00C8AF80(driveName, directory);
+
+free:
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, resolvedPath);
+	return result;
+}
+
 int appmgrCloneTemporaryMounts(SceUID pid, const char *titleId,
 			       const AppmgrMountHolder *source,
 			       AppmgrMountHolder *destination,

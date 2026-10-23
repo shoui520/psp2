@@ -64,6 +64,7 @@ int appmgrGetMountPointById(int mountId, char *mountPoint);
 int appmgrIsMountIdAllowed(unsigned int mountId);
 int appmgrFindPfsMount(AppmgrPfsMount *mount, int mountId, const char *path,
 		       AppmgrPfsMount **found);
+int appmgrUnmountPfsAcidDirectory(const char *drive, const char *directory);
 int appmgrNormalizePath(const char *path, char *normalized);
 struct AppmgrProcessContent;
 int appmgrReadParamSfo(SceUID pid, const char *path, int isSfoPath,
