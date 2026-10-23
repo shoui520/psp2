@@ -5004,8 +5004,9 @@ int appmgrMakeAccountPath(char *path, const unsigned char *component, const char
  * a trophy set, an image name) naming the directory where the mount ID needs one. Mount
  * ID 300 clones the temporary mounts of process pid instead.
  */
-int appmgrMountById(SceUID pid, unsigned int mountId, const char *id, const void *keystone,
-		    ScePfsRndDriveId *mountPoint)
+static inline __attribute__((always_inline))
+int appmgrMountByIdBody(SceUID pid, unsigned int mountId, const char *id, const void *keystone,
+			ScePfsRndDriveId *mountPoint)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
 	char titleId[16] = {0};
@@ -5314,6 +5315,18 @@ out:
 	return result;
 }
 
+int appmgrMountById(SceUID pid, unsigned int mountId, const char *id, const void *keystone,
+		    ScePfsRndDriveId *mountPoint)
+{
+	return appmgrMountByIdBody(pid, mountId, id, keystone, mountPoint);
+}
+
+/* A mount ID that names its directory without an ID or keystone. */
+int appmgrMountSystemDirectory(SceUID pid, unsigned int mountId, ScePfsRndDriveId *mountPoint)
+{
+	return appmgrMountByIdBody(pid, mountId, NULL, NULL, mountPoint);
+}
+
 /* SceAppMgrForDriver 5E311F71: mounts an application data directory by its mount ID. */
 int SceAppMgrForDriver_5E311F71(unsigned int mountId, const char *id,
 				ScePfsRndDriveId *mountPoint)
@@ -5354,6 +5367,67 @@ int sceAppMgrLoopBackMount(unsigned int mountId, const char *id, ScePfsRndDriveI
 	if (mountId != 600)
 		return 0x80800001;
 	return appmgrMountById(sceKernelGetProcessId(), 600, id, NULL, mountPoint);
+}
+
+/* SceAppMgrForDriver B1D3C287: mounts a system application data directory. */
+int SceAppMgrForDriver_B1D3C287(unsigned int mountId, ScePfsRndDriveId *mountPoint)
+{
+	switch (mountId) {
+	case 100 ... 103:
+	case 105:
+	case 108:
+	case 109:
+	case 111:
+	case 112:
+		return appmgrMountSystemDirectory(0, mountId, mountPoint);
+	default:
+		return 0x80800001;
+	}
+}
+
+/* SceAppMgrForDriver 3A0A9B82: mounts a work directory; the PSP emulator's only unsandboxed. */
+int SceAppMgrForDriver_3A0A9B82(unsigned int mountId, ScePfsRndDriveId *mountPoint)
+{
+	if (mountId == 202) {
+		if (SceSblACMgrForDriver_0B6E6CD7(0) == 0)
+			return 0x80800009;
+		return appmgrMountSystemDirectory(0, mountId, mountPoint);
+	}
+	switch (mountId) {
+	case 200 ... 204:
+	case 206:
+		return appmgrMountSystemDirectory(0, mountId, mountPoint);
+	default:
+		return 0x80800001;
+	}
+}
+
+/* Mounts the PSP emulator's save data root (ux0:pspemu). */
+int sceAppMgrPspSaveDataRootMount(ScePfsRndDriveId *mountPoint)
+{
+	if (SceSblACMgrForDriver_6D8A88B7(0) == 0)
+		return 0x80800009;
+	return appmgrMountSystemDirectory(0, 202, mountPoint);
+}
+
+/* SceAppMgrForDriver E977A833: mounts process pid's temporary mounts (300) or the trophy data (302). */
+int SceAppMgrForDriver_E977A833(unsigned int mountId, SceUID pid, ScePfsRndDriveId *mountPoint)
+{
+	switch (mountId) {
+	case 300:
+	case 302:
+		return appmgrMountSystemDirectory(pid, mountId, mountPoint);
+	default:
+		return 0x80800001;
+	}
+}
+
+/* SceAppMgrForDriver 13D54107: mounts a multimedia directory (ux0:mms). */
+int SceAppMgrForDriver_13D54107(unsigned int mountId, ScePfsRndDriveId *mountPoint)
+{
+	if (mountId - 400 > 2)
+		return 0x80800001;
+	return appmgrMountSystemDirectory(0, mountId, mountPoint);
 }
 
 int SceAppMgrForDriver_0813AFCA(int partitionId, char *output,

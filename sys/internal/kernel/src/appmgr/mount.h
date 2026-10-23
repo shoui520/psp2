@@ -106,6 +106,8 @@ int appmgrFindPfsMount(AppmgrPfsMount *mount, int mountId, const char *path,
 int appmgrCreatePfsDirectory(unsigned int mountId, const char *path, const void *keystone);
 int appmgrMountById(SceUID pid, unsigned int mountId, const char *id, const void *keystone,
 		    ScePfsRndDriveId *mountPoint);
+int appmgrMountSystemDirectory(SceUID pid, unsigned int mountId, ScePfsRndDriveId *mountPoint);
+int sceAppMgrPspSaveDataRootMount(ScePfsRndDriveId *mountPoint);
 int sceAppMgrTrophyMountById(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint);
 int sceAppMgrInstallDirMount(unsigned int mountId, const char *id, const void *keystone,
 			     ScePfsRndDriveId *mountPoint);
