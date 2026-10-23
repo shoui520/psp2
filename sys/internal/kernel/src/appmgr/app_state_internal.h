@@ -480,7 +480,8 @@ int appmgrGameDataMountSyscall(const char *appPath, const char *patchPath,
 			       const char *rifPath, struct ScePfsRndDriveId *mountPoint);
 int appmgrThemeDataMountSyscall(const char *contentId, const char *themePath,
 				const char *rifPath, struct ScePfsRndDriveId *mountPoint);
-int appmgrAddContAddMountSyscall(const struct AppmgrAddContAddMountParam *param, int add);
+int appmgrSaveDataAddMountSyscall(const struct AppmgrAddMountParam *param);
+int appmgrAddContAddMountSyscall(const struct AppmgrAddMountParam *param, int add);
 int appmgrGetRawPathOfApp0ByAppIdForShellSyscall(int appId, char *path);
 int appmgrGetRawPathOfApp0ByPidForShellSyscall(SceUID pid, char *path);
 

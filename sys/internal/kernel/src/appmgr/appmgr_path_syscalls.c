@@ -54,7 +54,7 @@ int appmgrAddContMountSyscall(SceUID pid, const AppmgrAddContMountParam *param)
 	return sceAppMgrAddContMount(pid, param);
 }
 
-int appmgrAddContAddMountSyscall(const AppmgrAddContAddMountParam *param, int add)
+int appmgrAddContAddMountSyscall(const AppmgrAddMountParam *param, int add)
 {
 	return sceAppMgrAddContAddMount(param, add);
 }

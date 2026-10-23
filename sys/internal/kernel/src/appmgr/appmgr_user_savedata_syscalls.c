@@ -5,6 +5,7 @@
 #include <intrmgr/syscall_copy.h>
 #include <string.h>
 #include "app_state_internal.h"
+#include "mount.h"
 
 typedef struct AppmgrSaveDataSlotGetParamArguments {
 	SceAppMgrSaveDataSlot *slot;
@@ -146,4 +147,13 @@ int _sceAppMgrSaveDataSlotFileGetParam(unsigned int slotId, void *param)
 	BLOCK_OUT(param, 1024,
 		  appmgrSaveDataSlotFileGetParamSyscall(slotId, NULL),
 		  appmgrSaveDataSlotFileGetParamSyscall(slotId, k));
+}
+
+int _sceAppMgrSaveDataAddMount(const AppmgrAddMountParam *userParam)
+{
+	void *param = (void *)userParam;
+	int ret;
+
+	BLOCK_IN(param, userParam, sizeof(AppmgrAddMountParam));
+	return appmgrSaveDataAddMountSyscall(param);
 }

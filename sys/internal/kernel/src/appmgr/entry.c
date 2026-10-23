@@ -276,7 +276,6 @@ STUB(_sceAppMgrLaunchAppByName2ForShell)
 STUB(_sceAppMgrGetMediaTypeFromDriveByPid)
 STUB(_sceAppMgrGetMediaTypeFromDrive)
 STUB(_sceAppMgrContentInstallPeriodStop)
-STUB(_sceAppMgrSaveDataAddMount)
 STUB(_sceAppMgrSendParam)
 
 STUB(_sceAppMgrLaunchAppByName)

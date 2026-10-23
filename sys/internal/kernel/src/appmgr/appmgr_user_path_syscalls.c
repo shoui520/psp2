@@ -141,12 +141,12 @@ int _sceAppMgrAddContMount(SceUID pid, const AppmgrAddContMountParam *userParam)
 	return appmgrAddContMountSyscall(pid, param);
 }
 
-int _sceAppMgrAddContAddMount(const AppmgrAddContAddMountParam *userParam, int add)
+int _sceAppMgrAddContAddMount(const AppmgrAddMountParam *userParam, int add)
 {
 	void *param = (void *)userParam;
 	int ret;
 
-	BLOCK_IN(param, userParam, sizeof(AppmgrAddContAddMountParam));
+	BLOCK_IN(param, userParam, sizeof(AppmgrAddMountParam));
 	return appmgrAddContAddMountSyscall(param, add);
 }
 

@@ -3893,7 +3893,7 @@ out:
 	return result;
 }
 
-int sceAppMgrAddContAddMount(const AppmgrAddContAddMountParam *param, int add)
+int sceAppMgrAddContAddMount(const AppmgrAddMountParam *param, int add)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
 	ScePfsRndDriveId mountPoint = {{0}};
@@ -4586,6 +4586,124 @@ retry:
 
 free:
 	sceKernelFreeHeapMemory(g_appmgrMountHeap, resolvedPath);
+	return result;
+}
+
+int sceAppMgrSaveDataAddMount(const AppmgrAddMountParam *param)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	ScePfsRndDriveId mountPoint = {{0}};
+	unsigned char keystone[96];
+	char path[64];
+	struct AppmgrMountHolder *holder;
+	AppmgrProcessContent *content;
+	AppmgrVirtualMount *virtualMount;
+	AppmgrPfsMount *mount;
+	struct AppState *app;
+	SceAllocOpt opt;
+	char *normalized;
+	int permission, result;
+
+	memset(keystone, 0, sizeof(keystone));
+	permission = sceKernelSetThreadAccessLevel(128);
+	if (param == NULL) {
+		result = 0x80800001;
+		goto out;
+	}
+	if (!sceAppMgrIsRelativeSaveDataAdd(param->titleId)) {
+		result = 0x8080000B;
+		goto out;
+	}
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+
+	MOUNT_MAIN_LOCK(5521);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app != NULL) {
+		holder = &app->process.mounts;
+		content = &app->process.content;
+	} else {
+		holder = NULL;
+		content = NULL;
+	}
+	MOUNT_MAIN_UNLOCK(5530);
+
+	if (app == NULL) {
+		result = 0x80801002;
+		goto error;
+	}
+	if (g_appmgrAccountDirectory[0] == 0)
+		appmgrUpdateAccountDirectory();
+	snprintf(path, sizeof(path), "ux0:/user/%s/savedata_vc/%s",
+		 g_appmgrAccountDirectory, param->titleId);
+	if (appmgrCreateDirectories(path, 0) != 0) {
+		if (g_appmgrAccountDirectory[0] == 0)
+			appmgrUpdateAccountDirectory();
+		snprintf(path, sizeof(path), "ux0:/user/%s/savedata/%s",
+			 g_appmgrAccountDirectory, param->titleId);
+		result = appmgrCreateDirectories(path, 0);
+		if (result < 0)
+			goto error;
+	}
+
+	for (virtualMount = holder->firstMount; virtualMount != NULL;
+	     virtualMount = virtualMount->next) {
+		if (strncmp(virtualMount->driveId.drive_id, param->mountPoint.drive_id, 16) == 0) {
+			result = 0x80801080;
+			if (strncmp(virtualMount->pfsMount->appPath, path, sizeof(path)) == 0)
+				result = 0x80800003;
+			goto error;
+		}
+	}
+
+	mount = g_appmgrPfsMounts;
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 32;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	normalized = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	if (normalized == NULL) {
+		result = 0x80801006;
+		goto error;
+	}
+	result = appmgrNormalizePath(path, normalized);
+	if (result < 0) {
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+		if (result != 0x80800002)
+			goto error;
+	} else {
+		for (; mount != NULL; mount = mount->next) {
+			if (mount->mountId == 901 &&
+			    strncmp(mount->appPath, normalized, 292) == 0) {
+				result = 0x80800017;
+				sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+				goto error;
+			}
+		}
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+	}
+
+	result = appmgrMount(0, holder, 1005, content->titleId, path,
+			     &param->mountPoint, NULL, &mountPoint);
+	if (result < 0)
+		goto error;
+	result = appmgrReadKeystone(0, mountPoint.drive_id, keystone);
+	if (result < 0)
+		goto error;
+	result = SceSblPostSsMgrForDriver_F86F1452(keystone, param->passcode);
+	if (result >= 0)
+		goto unlock;
+	result = 0x80800006;
+error:
+	if (result != 0x80800003 && mountPoint.drive_id[0] != '\0')
+		appmgrUnmountDrive(0, holder, mountPoint.drive_id, 0);
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceKernelSetThreadAccessLevel(permission);
+	sceSyscallLeave(syscallState);
 	return result;
 }
 

@@ -4,6 +4,7 @@
 #include <appmgr/appmgr_rdrfp.h>
 #include <appmgr/appmgr.h>
 #include "app_state_internal.h"
+#include "mount.h"
 
 int appmgrSaveDataSlotInitSyscall(void *slot)
 {
@@ -43,4 +44,9 @@ int appmgrSaveDataSlotGetStatusSyscall(void *status)
 int appmgrSaveDataSlotFileGetParamSyscall(unsigned int slotId, void *param)
 {
 	return appmgrSaveDataSlotFileGetParam(slotId, param);
+}
+
+int appmgrSaveDataAddMountSyscall(const AppmgrAddMountParam *param)
+{
+	return sceAppMgrSaveDataAddMount(param);
 }
