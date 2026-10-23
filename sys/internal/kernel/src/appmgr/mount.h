@@ -24,6 +24,18 @@ _Static_assert(offsetof(AppmgrPfsMount, mountId) == 0 &&
 	       offsetof(AppmgrPfsMount, next) == 460,
 	       "PFS mount fields");
 
+/* sceAppMgrAddContMount's parameters: the drive the caller expects add-on content at */
+typedef struct AppmgrAddContMountParam {
+	unsigned char reserved[48];
+	char mountPoint[16];
+} AppmgrAddContMountParam;
+
+_Static_assert(sizeof(AppmgrAddContMountParam) == 64 &&
+	       offsetof(AppmgrAddContMountParam, mountPoint) == 48,
+	       "add-on content mount parameters");
+
+int sceAppMgrAddContMount(SceUID pid, const AppmgrAddContMountParam *param);
+
 typedef struct AppmgrLicenseInfo {
 	char contentId[48];
 	int licenseVersion;

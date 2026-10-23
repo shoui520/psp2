@@ -3851,6 +3851,48 @@ out:
 	return result;
 }
 
+/* Mount the calling application's add-on content at the drive it expects. */
+int sceAppMgrAddContMount(SceUID pid, const AppmgrAddContMountParam *param)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	ScePfsRndDriveId mountPoint;
+	struct AppState *app;
+	int result;
+
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	if (pid != 0 && SceSblACMgrForDriver_8A54DF3A(0) != 0 &&
+	    pid != sceKernelGetProcessId()) {
+		result = 0x80800009;
+	} else if (param == NULL) {
+		result = 0x80801001;
+	} else {
+		result = 0x80800001;
+		if (strncmp(param->mountPoint, "addcont0:", 10) == 0) {
+			app = appmgrFindAppByProcessId(g_appmgrAppStates, pid);
+			if (app == NULL) {
+				result = 0x80802012;
+			} else {
+				mountPoint = (ScePfsRndDriveId){{0}};
+				result = appmgrMountAddCont(pid, app->process.content.titleId,
+						&app->process.mounts, &app->process.content,
+						&mountPoint);
+				if (result >= 0 &&
+				    strncmp(mountPoint.drive_id, param->mountPoint, 16) != 0) {
+					result = 0x80800040;
+					appmgrUnmountDrive(pid, &app->process.mounts,
+							   mountPoint.drive_id, 0);
+				}
+			}
+		}
+	}
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int appmgrResolveLaunchDirectory(const char *path,
 				const AppmgrLaunchOptions *options,
 				const AppmgrMapFile *mapFile, char *output,

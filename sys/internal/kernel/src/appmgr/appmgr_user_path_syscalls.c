@@ -132,6 +132,15 @@ int _sceAppMgrGetUserDirPathById(int userId, int partitionId, char *path,
 	return copyResult(ret, sceKernelCopyToUser(path, buffer, length));
 }
 
+int _sceAppMgrAddContMount(SceUID pid, const AppmgrAddContMountParam *userParam)
+{
+	void *param = (void *)userParam;
+	int ret;
+
+	BLOCK_IN(param, userParam, sizeof(AppmgrAddContMountParam));
+	return appmgrAddContMountSyscall(pid, param);
+}
+
 int _sceAppMgrGetRawPathOfApp0ByAppIdForShell(int appId, char *path)
 {
 	char *buffer;

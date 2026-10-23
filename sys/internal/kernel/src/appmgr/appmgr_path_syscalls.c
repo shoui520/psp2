@@ -43,6 +43,11 @@ int appmgrGetUserDirPathByIdSyscall(int userId, int partitionId, char *path,
 	return appmgrGetUserDirPathById(userId, partitionId, path, capacity);
 }
 
+int appmgrAddContMountSyscall(SceUID pid, const AppmgrAddContMountParam *param)
+{
+	return sceAppMgrAddContMount(pid, param);
+}
+
 int appmgrQuitAppSyscall(int appId)
 {
 	return sceAppMgrQuitApp(appId);

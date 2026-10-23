@@ -125,7 +125,6 @@ STUB_FUNC(int, SceAppMgrForDriver_EC9D5A35, (void *status))
 STUB_FUNC(int, SceAppMgrForDriver_ED87F191, (const void *a, int b, const void *c, void *d))
 STUB(sceAppMgrLoadSafeMemory)
 STUB(_sceAppMgrInitSafeMemoryById)
-STUB(_sceAppMgrAddContMount)
 
 STUB(_sceAppMgrWorkDirMount)
 
