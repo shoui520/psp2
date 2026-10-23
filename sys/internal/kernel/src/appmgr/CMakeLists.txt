@@ -17,6 +17,7 @@ psp2_module(os0_kd_bootimage_appmgr KIND kernel COMPILER gcc48 SOURCES
 	appmgr_control.c
 	appmgr_control_syscalls.c
 	mount.c
+	appmgr_savedata_slot.c
 	savedata.c
 	addcont.c
 	system_param.c
