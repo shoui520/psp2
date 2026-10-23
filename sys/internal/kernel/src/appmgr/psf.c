@@ -312,7 +312,6 @@ int appmgrPsfValidateEntries(const void *data, SceSize entryOffset,
 		}
 		if (++index == count)
 			return 0;
-		__builtin_prefetch(entry + 8);
 		entry++;
 	}
 	return (int)0x80120003;

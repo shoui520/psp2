@@ -227,7 +227,6 @@ _Noreturn void appmgrAbortHandlerLockPanic(void)
 		int slot; \
 		for (slot = 0; slot != 20; ++slot) { \
 			int level = SceDebugForDriver_374B7868(); \
-			__builtin_prefetch(&g_appmgrAppStates[slot + 5].mutexOwner); \
 			if (level > 0) { \
 				SceUID slotOwner = g_appmgrAppStates[slot].mutexOwner; \
 				SceUID tid = sceKernelGetThreadId(); \

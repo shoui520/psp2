@@ -1000,7 +1000,6 @@ int appmgrRollbackSaveDataOperation(const SceAppMgrSaveDataData *operation,
 				sceIoRemove(resolvedPath);
 			} else if (file.mode != 2) {
 				stat.st_size = originalSizes[index];
-				__builtin_prefetch(originalSizes + index + 1);
 				sceIoChstat(resolvedPath, &stat, 4);
 			}
 			sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);

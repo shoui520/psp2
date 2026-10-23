@@ -692,7 +692,6 @@ void appmgrMaskAppStateFlags(struct AppState *app, unsigned int mask)
 		struct AppState *slot; \
 		for (slot = g_appmgrAppStates; slot != g_appmgrAppStates + 20; ++slot) { \
 			int level = SceDebugForDriver_374B7868(); \
-			__builtin_prefetch(&slot[5].mutexOwner); \
 			if (level > 0) { \
 				SceUID slotOwner = slot->mutexOwner; \
 				SCE_DBG_ASSERT_LEVEL(1, slotOwner != sceKernelGetThreadId(), line); \

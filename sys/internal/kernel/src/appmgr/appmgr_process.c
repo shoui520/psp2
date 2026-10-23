@@ -202,7 +202,6 @@ int vcStateChanged(SceUID pid, int enabled)
 		do {
 			struct AppState *candidate = &g_appmgrAppStates[index];
 
-			__builtin_prefetch(&candidate[7].process.processId);
 			if (candidate->process.processId >= 0 &&
 			    candidate->process.processId != pid &&
 			    candidate->videoCodecUsage != 0) {
@@ -889,7 +888,6 @@ int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, void *common)
 #if FW_DEBUG
 	for (index = 0; index != 20; ++index) {
 		if (SceDebugForDriver_374B7868() > 0) {
-			__builtin_prefetch(&g_appmgrAppStates[index + 5].mutexOwner);
 			owner = g_appmgrAppStates[index].mutexOwner;
 			SCE_DBG_ASSERT_CHECK_FUNC(owner != sceKernelGetThreadId(),
 				161, "_sceAppMgrProcExitHandler");

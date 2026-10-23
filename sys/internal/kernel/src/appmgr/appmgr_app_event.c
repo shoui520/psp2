@@ -402,11 +402,6 @@ int sceAppMgrSendSystemEvent2(const char *appName, const char *titleId, int even
 	if (!appName) {
 		do {
 			SceUID processId = app->process.processId;
-#if FW_DEBUG
-			__builtin_prefetch(&app[3].process.processId);
-#else
-			__builtin_prefetch(&app[4].process.processId);
-#endif
 			if (processId >= 0 && (processId & 1)) {
 				result = _appListPushEvent(app, &systemEvent);
 				APP_EVENT_CHECK_RESULT(result, 424);
@@ -418,7 +413,6 @@ int sceAppMgrSendSystemEvent2(const char *appName, const char *titleId, int even
 	}
 	do {
 		SceUID processId = app->process.processId;
-		__builtin_prefetch(&app[8].process.processId);
 		if (processId >= 0 && (processId & 1) &&
 		    strncmp(app->process.appName, appName, 32) == 0) {
 			result = _appListPushEvent(app, &systemEvent);
@@ -433,11 +427,6 @@ int sceAppMgrSendSystemEvent2(const char *appName, const char *titleId, int even
 		app = &g_appmgrAppStates[index];
 		do {
 			SceUID processId = app->process.processId;
-#if FW_DEBUG
-			__builtin_prefetch(&app[3].process.processId);
-#else
-			__builtin_prefetch(&app[5].process.processId);
-#endif
 			if (processId >= 0 && (processId & 1)) {
 				result = sceAppMgrAppParamGetString(processId, 7,
 						communicationId, 13);

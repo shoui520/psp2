@@ -1,4 +1,5 @@
 # generated skeleton (T2): stub bodies, original module/export/import tables
+set(MODULE_COMPILE_OPTIONS -fprefetch-loop-arrays)
 psp2_module(os0_kd_bootimage_appmgr KIND kernel COMPILER gcc48 SOURCES
 	appmgr.c
 	appmgr_process.c

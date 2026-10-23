@@ -586,7 +586,6 @@ int getMiniAppValue(struct AppState *app)
 #define GC_CHECK_APP_OWNERS(_line, _func) do { \
 	int ownerIndex; \
 	for (ownerIndex = 0; ownerIndex != 20; ++ownerIndex) { \
-		__builtin_prefetch(&g_appmgrAppStates[ownerIndex + 5].mutexOwner); \
 		SCE_DBG_ASSERT_CHECK_FUNC(g_appmgrAppStates[ownerIndex].mutexOwner != \
 			sceKernelGetThreadId(), _line, _func); \
 	} \
@@ -633,7 +632,6 @@ int getMiniAppValue(struct AppState *app)
 #define GC_APP_UNLOCK_CHECK(_line, _func) \
 	SCE_DBG_ASSERT_CHECK_FUNC(g_appmgrMainMutexOwner != \
 		sceKernelGetThreadId(), _line, _func)
-#define GC_PREFETCH_APP(_app) __builtin_prefetch(&(_app)[1].mutex)
 #else
 #define GC_CHECK_APP_OWNERS(_line, _func) do { } while (0)
 #define GC_LOCK(_mutex, _owner, _line, _func) do { \
@@ -666,13 +664,6 @@ int getMiniAppValue(struct AppState *app)
 #define GC_APP_LOCK_CHECK(_line, _func) \
 	((void)sceKernelGetThreadId())
 #define GC_APP_UNLOCK_CHECK(_line, _func) do { } while (0)
-#define GC_PREFETCH_APP(_app) __builtin_prefetch(&(_app)[2].mutex)
-#endif
-
-#if FW_DEBUG
-#define MINI_APP_PREFETCH	4
-#else
-#define MINI_APP_PREFETCH	3
 #endif
 
 /*
@@ -697,7 +688,6 @@ retry:
 		app = &g_appmgrAppStates[i];
 		if (app == current)
 			continue;
-		__builtin_prefetch(&g_appmgrAppStates[i + MINI_APP_PREFETCH].process.processId);
 		if (app->process.processId < 0 || !(app->process.processId & 1) ||
 		    app->launchInfo.budgetSize == 0)
 			continue;
@@ -730,7 +720,6 @@ retry:
 	owner = g_appmgrCore2MutexOwner;
 	if (owner != sceKernelGetThreadId()) {
 		for (i = 0; i != 20; i++) {
-			__builtin_prefetch(&g_appmgrAppStates[i + 5].mutexOwner);
 			SCE_DBG_ASSERT_CHECK_FUNC(({ owner = g_appmgrAppStates[i].mutexOwner;
 				owner != sceKernelGetThreadId(); }), 325,
 				"findAndLockLeastValuableMiniApp2");
@@ -769,7 +758,6 @@ retry:
 	SceUID appOwner; \
 	for (ownerIndex = 0; ownerIndex != 20; ++ownerIndex) \
 		SCE_DBG_ASSERT_CHECK_FUNC(({ \
-			__builtin_prefetch(&g_appmgrAppStates[ownerIndex + 5].mutexOwner); \
 			appOwner = g_appmgrAppStates[ownerIndex].mutexOwner; \
 			appOwner != sceKernelGetThreadId(); }), _line, _func); \
 } while (0)
@@ -1095,7 +1083,6 @@ retry:
 		app = &g_appmgrAppStates[i];
 		if (app == current)
 			continue;
-		__builtin_prefetch(&g_appmgrAppStates[i + MINI_APP_PREFETCH].process.processId);
 		if (app->process.processId < 0 || !(app->process.processId & 1) ||
 		    app->launchInfo.budgetSize == 0)
 			continue;
@@ -2333,10 +2320,8 @@ void _appArbitrationOnProcessUnloaded(struct AppState *app)
 		SceUInt32 attributes; \
 		int fromMedia; \
 		GC_APP_LOCK_CHECK(_lockLine, _func); \
-		GC_PREFETCH_APP(app); \
 		GC_LOCK(app->mutex, app->mutexOwner, _lockLine, _func); \
 		GC_MAIN_LOCK(_mainLine, _func); \
-		__builtin_prefetch(&app[1].process.processId); \
 		pid = app->process.processId; \
 		attributes = app->launchInfo.processAttr; \
 		fromMedia = strncmp(app->process.content.devicePrefix, "gro0:", 5) == 0 || \
@@ -2348,7 +2333,6 @@ void _appArbitrationOnProcessUnloaded(struct AppState *app)
 		if (fromMedia && pid >= 0 && (pid & 1) != 0 && \
 			(attributes & 1) == (_game)) { \
 			if (_markRemoval) { \
-				__builtin_prefetch(&app[1].gameCardRemovalQuitPending); \
 				app->gameCardRemovalQuitPending = 1; \
 			} \
 			result = _appmgrProcessSuspendProcess(app, 0, NULL); \
@@ -2577,7 +2561,6 @@ int _processUpdateThreadEntry(SceSize args, void *argp)
 		app = &g_appmgrAppStates[index];
 		do {
 			GC_APP_LOCK_CHECK(2663, "_processUpdateThreadEntry");
-			GC_PREFETCH_APP(app);
 			result = sceKernelLockMutex(app->mutex, 1, NULL);
 			if (result != 0) {
 				if ((unsigned int)(result + 0x7ffd7fd4) > 1) {
@@ -3093,7 +3076,6 @@ int _destroyAllAppForAbortHandler(void)
 		if (app->process.processId >= 0 && (app->process.processId & 1) != 0) {
 			DELETE_APP_MAIN_UNLOCK(3571, "_destroyAllAppForAbortHandler");
 			GC_APP_LOCK_CHECK(3574, "_destroyAllAppForAbortHandler");
-			GC_PREFETCH_APP(app);
 			unlockResult = sceKernelLockMutex(app->mutex, 1, NULL);
 			if (unlockResult != 0) {
 				if ((unsigned int)(unlockResult + 0x7ffd7fd4) > 1)
@@ -3157,7 +3139,6 @@ int _destroyOtherApp(struct AppState *app)
 				app->process.processId != other->process.processId) {
 			DELETE_APP_MAIN_UNLOCK(3638, "_destroyOtherApp");
 			GC_APP_LOCK_CHECK(3641, "_destroyOtherApp");
-			GC_PREFETCH_APP(other);
 			result = sceKernelLockMutex(other->mutex, 1, NULL);
 			if (result != 0) {
 				if ((unsigned int)(result + 0x7ffd7fd4) > 1)
@@ -3648,7 +3629,6 @@ void _updatePowerTickStateForNonSuspendableApp(void)
 	app = &g_appmgrAppStates[index];
 	do {
 		GC_APP_LOCK_CHECK(4378, "_updatePowerTickStateForNonSuspendableApp");
-		GC_PREFETCH_APP(app);
 		result = sceKernelLockMutex(app->mutex, 1, NULL);
 		if (result != 0) {
 			if ((unsigned int)(result + 0x7ffd7fd4) > 1)

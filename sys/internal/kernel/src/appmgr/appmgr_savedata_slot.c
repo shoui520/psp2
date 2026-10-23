@@ -1936,7 +1936,6 @@ checkQuota:
 				if (result < 0)
 					goto freeSecondFilePath;
 			}
-			__builtin_prefetch(originalSizes + index + 1);
 			if (originalSizes[index] < file.offset && file.bufSize) {
 				growth = file.offset - originalSizes[index] + file.bufSize;
 				if (growth % allocationUnit)

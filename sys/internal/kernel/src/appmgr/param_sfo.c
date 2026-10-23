@@ -30,7 +30,6 @@ int appmgrBuildSfoFile(AppmgrSfoFile *file, const AppmgrSfoEntry *entries,
 				entries->capacity);
 			if (result != 0)
 				goto fail;
-			__builtin_prefetch(next + 7);
 			entries = next++;
 		} while (entries->key[0] != 0);
 	}
