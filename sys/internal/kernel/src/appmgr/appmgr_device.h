@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <scetypes.h>
 #include <touch/touch.h>
+#include <appmgr/appmgr_debugger.h>
 
 typedef struct AppmgrAudioApp {
 	int appId;
@@ -158,3 +159,4 @@ void _deviceRefreshDisplay(void);
 int _deviceSetBgmEnabled(int enabled);
 int _SetDisplayOwner(SceUInt32 plane, SceUID pid);
 void _deviceRefreshAudioPort(SceUID pid);
+void appmgrCaptureDeviceInfo(AppMgrDeviceInfo *info);
