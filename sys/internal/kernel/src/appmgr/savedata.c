@@ -1095,6 +1095,84 @@ leaveSyscall:
 	return result;
 }
 
+int SceAppMgrForDriver_D137D486(SceAppMgrSaveDataSlot *slot)
+{
+	SceUInt32 syscallState;
+	const char *mountPoint;
+	char *path, *resolvedPath;
+	SceUID fd;
+	int permission;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (!slot || slot->size != sizeof(*slot)) {
+		result = (int)0x80800001;
+		goto leaveSyscall;
+	}
+	mountPoint = (const char *)slot->mountPoint.data;
+	result = appmgrValidateSaveDataMountPoint(mountPoint, 0);
+	if (result < 0)
+		goto leaveSyscall;
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		goto leaveSyscall;
+	SceKernelSuspendForDriver_4DF40893(0);
+	permission = sceKernelSetThreadAccessLevel(128);
+	path = appmgrAllocSaveDataHeapMemory(128);
+	if (!path) {
+		result = (int)0x80801006;
+		goto restorePermission;
+	}
+	resolvedPath = appmgrAllocSaveDataHeapMemory(292);
+	if (!resolvedPath) {
+		result = (int)0x80801006;
+		appmgrFreeSaveDataHeapMemory(path);
+		goto restorePermission;
+	}
+	if (g_appmgrSaveDataSlotCache.processId == sceKernelGetProcessId()) {
+		fd = g_appmgrSaveDataSlotCache.fd;
+		if (fd != -1 &&
+		    strncmp(g_appmgrSaveDataSlotCache.mountPoint, mountPoint, 16) == 0) {
+			result = sceIoClose(fd);
+			if (result < 0)
+				goto freePaths;
+			g_appmgrSaveDataSlotCache.fd = -1;
+		}
+	}
+	result = appmgrCheckSaveDataSlot(slot->slotId, mountPoint, 1);
+	if (result != 0)
+		goto freePaths;
+	appmgrNotifySaveDataSlotRead(slot->slotId);
+	memset(path, 0, 128);
+	memset(resolvedPath, 0, 292);
+	snprintf(path, 128, "%s%s/%s", mountPoint, "sce_sys", "sdslot.dat");
+	appmgrResolvePath(path, 0, resolvedPath, 292);
+	fd = sceIoOpen(resolvedPath, 1, 390);
+	if (fd < 0) {
+		result = fd == (int)0x80010013 ? fd : (int)0x80801087;
+		goto freePaths;
+	}
+	if (sceIoLseek(fd, (SceOff)((slot->slotId + 1) << 10), 0) < 0 ||
+	    sceIoRead(fd, &slot->slotParam, sizeof(slot->slotParam)) != sizeof(slot->slotParam)) {
+		result = (int)0x80801088;
+		sceIoClose(fd);
+		goto freePaths;
+	}
+	sceIoClose(fd);
+	if (slot->slotId == (SceUInt32)appmgrGetFakeSdSlotBroken())
+		slot->slotParam.status = 1;
+freePaths:
+	appmgrFreeSaveDataHeapMemory(path);
+	appmgrFreeSaveDataHeapMemory(resolvedPath);
+restorePermission:
+	sceKernelSetThreadAccessLevel(permission);
+	SceKernelSuspendForDriver_2BB92967(0);
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+leaveSyscall:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int SceAppMgrForDriver_9ADB00FA(void *parameters)
 {
 	const AppmgrSaveDataSlotStatusParam *slot = parameters;
@@ -3073,6 +3151,19 @@ void appmgrNotifySaveDataSpaceError(int error, SceUInt32 requiredKiB)
 	} else {
 		return;
 	}
+	_appmgrQueuePush(&notification, 1);
+}
+
+/* With the debug information shown, tells the user that a slot's status was read. */
+void appmgrNotifySaveDataSlotRead(SceUInt32 slotId)
+{
+	AppmgrNotificationRequest notification;
+
+	memset(&notification, 0, sizeof(notification));
+	if (appmgrIsShowDebugInfoEnabled() == 0)
+		return;
+	snprintf((char *)notification.payload, sizeof(notification.payload),
+		 "AppUtil:\nRead Slot Status %03d", slotId);
 	_appmgrQueuePush(&notification, 1);
 }
 

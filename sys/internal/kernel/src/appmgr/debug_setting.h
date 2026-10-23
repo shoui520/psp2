@@ -11,6 +11,7 @@ int appmgrInitializeDebugSettings(void);
 int appmgrGetFakeNoMemoryCard(void);
 int appmgrGetFakeSdSlotBroken(void);
 int appmgrIsTrcCheckNotifyEnabled(void);
+int appmgrIsShowDebugInfoEnabled(void);
 int appmgrGetButtonAssign(void);
 int appmgrGetDebugUpgradable(void);
 int appmgrInitializeFakeNoMemoryCard(void);

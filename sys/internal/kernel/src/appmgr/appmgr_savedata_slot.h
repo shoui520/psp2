@@ -164,6 +164,9 @@ _Static_assert(offsetof(AppmgrSaveDataSlotCache, readWindow) == 36,
 extern AppmgrSaveDataSlotCache g_appmgrSaveDataSlotCache;
 int appmgrInitializeSaveDataSlotCache(void);
 int appmgrResetSaveDataSlotCache(SceUID pid);
+void appmgrNotifySaveDataSlotRead(SceUInt32 slotId);
+void *appmgrAllocSaveDataHeapMemory(SceSize size);
+int appmgrFreeSaveDataHeapMemory(void *memory);
 
 extern int g_appmgrAppInfoCacheKey;
 
