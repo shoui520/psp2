@@ -1,9 +1,9 @@
 /* Scalar control syscall adapters; the family filename is inferred. */
 
 #include "appmgr_device.h"
+#include "app_state_internal.h"
 
 extern int sceAppMgrIsCameraActive(int appId, int *active);
-extern int appmgrSetPowerSaveMode(int mode, int suspendBackgroundApps);
 extern int appmgrSetShellScreenOrientation(int orientation);
 extern int sceAppMgrSetRecommendedScreenOrientationForShell(int orientation);
 

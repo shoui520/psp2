@@ -106,7 +106,8 @@ int sceAppMgrLaunchAppByNameForDebugger(const char *titleId, int flags);
 int sceAppMgrLaunchAppForTest2(const char *path, const char *titleId, int flags, const char *args,
 		int option1, int option2, int option0, const void *data);
 int sceAppMgrDestroyAppForTest(SceUID pid);
-int SceAppMgrForDriver_3B4F305B(int kind, const char *titleId);	/* tool app control */
+int sceAppMgrLiveAreaOperationByNameForLoadp(int operation, const char *appName);
+int sceAppMgrLiveAreaOperationForLoadp(int operation);
 int SceAppMgrForDriver_12CE29F7(int pid, int param, int *value);	/* vitasdk: ksceAppMgrAppParamGetInt */
 int SceAppMgrForDriver_EC9D5A35(void *status);	/* vitasdk: ksceAppMgrSaveDataSlotGetStatus */
 int SceAppMgrForDriver_193784A9(void *a);	/* vitasdk: ksceAppMgrCheckContentInstallPeriod */

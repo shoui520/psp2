@@ -1758,7 +1758,7 @@ static inline __attribute__((always_inline)) void loadpToolAppCmd(SceUInt8 cmd, 
 		else
 			memcpy(titleId, req->titleId, req->size);
 	}
-	ret = SceAppMgrForDriver_3B4F305B(kind, titleId);
+	ret = sceAppMgrLiveAreaOperationByNameForLoadp(kind, titleId);
 	if (ret < 0) {
 		result = pdLoadpKernelErrToLoadpErr(ret);
 		goto reply;

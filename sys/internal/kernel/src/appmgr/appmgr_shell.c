@@ -10,6 +10,7 @@
 #include <sysmem/sysclib.h>
 #include "app_state_internal.h"
 #include "appmgr_device.h"
+#include "appmgr_shell_event.h"
 
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
@@ -23,6 +24,12 @@ extern int appmgrAbortProcess(SceUID processId);
 extern void _destroyAllAppForAbortHandler(void);
 
 extern SceUID g_appmgrShellPid;
+extern SceUID g_appmgrLiveAreaOperationMutex;
+extern SceUID g_appmgrLiveAreaResultMutex;
+extern SceUID g_appmgrLiveAreaResultCondition;
+
+/* what the shell answers to the last LiveArea operation */
+int g_appmgrLiveAreaOperationResult;
 
 SceInt64 g_appmgrShellWatchDogLastActivity;
 SceUID g_appmgrShellWatchDogThreadId;
@@ -102,6 +109,45 @@ __attribute__((noinline)) _Noreturn void appmgrShellPanic(void)
 #define SHELL_ASSERT_MAIN_UNOWNED(_line, _func) do { } while (0)
 #define SHELL_APP_LOCK_CHECK(_line, _func) ((void)sceKernelGetThreadId())
 #endif
+
+/* a failure the release build stops on with appmgrShellPanic */
+#if FW_DEBUG
+#define SHELL_PANIC_FAILURE(_value, _line, _func) SHELL_FAILURE(_value, _line, _func)
+#else
+#define SHELL_PANIC_FAILURE(_value, _line, _func) appmgrShellPanic()
+#endif
+
+/* main lock: the owner is recorded only when the lock is taken */
+#if FW_DEBUG
+#define SHELL_MAIN_LOCK(_line, _func) do { \
+	int lockResult = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL); \
+	if (lockResult != 0) { \
+		SCE_DBG_PRINTF_FUNC(0, _line, _func, "Failed to lock ret=0x%08x\n", lockResult); \
+		sceAppMgrDump(); \
+		dumpBgmState(); \
+		SCE_DBG_ASSERT_CHECK_FUNC(0, _line, _func); \
+	} else { \
+		g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
+	} \
+} while (0)
+#else
+#define SHELL_MAIN_LOCK(_line, _func) do { \
+	if (sceKernelLockMutex(g_appmgrMainMutex, 1, NULL) != 0) \
+		appmgrShellMutexPanic(); \
+	else \
+		g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
+} while (0)
+#endif
+#define SHELL_MAIN_UNLOCK(_line, _func) do { \
+	int unlockResult; \
+	g_appmgrMainMutexOwner = -1; \
+	unlockResult = sceKernelUnlockMutex(g_appmgrMainMutex, 1); \
+	if (unlockResult != 0) \
+		SHELL_FAILURE(unlockResult, _line, _func); \
+} while (0)
+
+/* a lock the caller may already hold (0x8002802c, 0x8002802d) is not a failure */
+#define SHELL_LOCK_FAILED(_result) ((unsigned int)((_result) + 0x7ffd7fd4) > 1)
 
 /* kills a shell that has not reported activity for 30 seconds, unless an application is aborted or suspended */
 int _shellWatchDogThreadEntry(SceSize args, void *argp)
@@ -265,6 +311,179 @@ int sceAppMgrDeclareShellProcess2(const char *appName)
 	return 0;
 }
 
+int appmgrRestoreDisplaySettingForShell(void)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+
+	if (!isShellProcess()) {
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201c;
+	}
+	_deviceRefreshDisplay();
+	SHELL_MAIN_LOCK(85, "sceAppMgrRestoreDisplaySettingForShell");
+	_deviceSetAudioPortsDisabled(0);
+	SHELL_MAIN_UNLOCK(87, "sceAppMgrRestoreDisplaySettingForShell");
+	_updateDeviceArbitration2();
+	sceSyscallLeave(syscallState);
+	return 0;
+}
+
+int appmgrRestoreBgmSettingForShell(void)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+
+	if (!isShellProcess()) {
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201c;
+	}
+	_deviceSetBgmEnabled(1);
+	sceSyscallLeave(syscallState);
+	return 0;
+}
+
+/* asks the shell to perform a LiveArea operation and waits for its answer */
+inline __attribute__((always_inline))
+int sceAppMgrLiveAreaOperationByNameForLoadp(int operation, const char *appName)
+{
+	int result, waitResult;
+
+	result = sceKernelLockMutex(g_appmgrLiveAreaOperationMutex, 1, NULL);
+	if (result != 0) {
+		if (SHELL_LOCK_FAILED(result))
+			SHELL_PANIC_FAILURE(result, 119, "sceAppMgrLiveAreaOperationByNameForLoadp");
+		return result;
+	}
+	result = sceKernelLockMutex(g_appmgrLiveAreaResultMutex, 1, NULL);
+	if (result != 0) {
+		if (SHELL_LOCK_FAILED(result))
+			SHELL_PANIC_FAILURE(result, 129, "sceAppMgrLiveAreaOperationByNameForLoadp");
+		return result;
+	}
+	_shellEventLiveAreaOperationQueuePush(operation, appName);
+	waitResult = sceKernelWaitCond(g_appmgrLiveAreaResultCondition, NULL);
+	result = sceKernelUnlockMutex(g_appmgrLiveAreaResultMutex, 1);
+	if (result != 0)
+		SHELL_PANIC_FAILURE(result, 139, "sceAppMgrLiveAreaOperationByNameForLoadp");
+	if (waitResult < 0) {
+		if (SHELL_LOCK_FAILED(waitResult))
+			SHELL_PANIC_FAILURE(waitResult, 143, "sceAppMgrLiveAreaOperationByNameForLoadp");
+		result = sceKernelUnlockMutex(g_appmgrLiveAreaOperationMutex, 1);
+		if (result != 0)
+			SHELL_PANIC_FAILURE(result, 146, "sceAppMgrLiveAreaOperationByNameForLoadp");
+		return waitResult;
+	}
+	waitResult = g_appmgrLiveAreaOperationResult;
+	result = sceKernelUnlockMutex(g_appmgrLiveAreaOperationMutex, 1);
+	if (result != 0)
+		SHELL_PANIC_FAILURE(result, 155, "sceAppMgrLiveAreaOperationByNameForLoadp");
+	return waitResult;
+}
+
+int sceAppMgrLiveAreaOperationForLoadp(int operation)
+{
+	return sceAppMgrLiveAreaOperationByNameForLoadp(operation, "NPXS10998");
+}
+
+int appmgrReturnLiveAreaOperationResultForShell(int operationResult)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	int result;
+
+	if (!isShellProcess()) {
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201c;
+	}
+	g_appmgrLiveAreaOperationResult = operationResult;
+	result = sceKernelLockMutex(g_appmgrLiveAreaResultMutex, 1, NULL);
+	if (result != 0) {
+		if (SHELL_LOCK_FAILED(result))
+			SHELL_PANIC_FAILURE(result, 185, "sceAppMgrReturnLiveAreaOperationResultForShell");
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	result = sceKernelSignalCond(g_appmgrLiveAreaResultCondition);
+	if (result != 0)
+		SHELL_PANIC_FAILURE(result, 191, "sceAppMgrReturnLiveAreaOperationResultForShell");
+	result = sceKernelUnlockMutex(g_appmgrLiveAreaResultMutex, 1);
+	if (result != 0)
+		SHELL_PANIC_FAILURE(result, 193, "sceAppMgrReturnLiveAreaOperationResultForShell");
+	sceSyscallLeave(syscallState);
+	return 0;
+}
+
+/* deactivates the active application (unless it is the shell) and activates appId */
+int appmgrActivateApp(int appId)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app, *active;
+	int result;
+
+	if (!isShellProcess()) {
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201f;
+	}
+	for (;;) {
+		if (_appListFindAndLockActiveApp(&active) == 0) {
+			if (sceKernelGetProcessId() == active->process.processId) {
+				result = _appListUnlockApp(active);
+				if (result != 0)
+					SHELL_PANIC_FAILURE(result, 222, "sceAppMgrActivateApp");
+				sceSyscallLeave(syscallState);
+				return (int)0x80802013;
+			}
+			result = _sceAppMgrDeactivateAppInternal(active, 1, 0, 0);
+			if (result != 0)
+				SHELL_PANIC_FAILURE(result, 229, "sceAppMgrActivateApp");
+			result = _appListUnlockApp(active);
+			if (result != 0)
+				SHELL_PANIC_FAILURE(result, 232, "sceAppMgrActivateApp");
+		}
+		result = _appListFindAndLockAppByAppId(appId, &app);
+		if (result != 0) {
+			sceSyscallLeave(syscallState);
+			return result;
+		}
+		if (g_appmgrDebugNotifier != NULL)
+			g_appmgrDebugNotifier(2, app->appId, app->process.processId, 0);
+		result = _sceAppMgrActivateAppInternal(app);
+		{
+			int unlockResult = _appListUnlockApp(app);
+
+			if (unlockResult != 0)
+				SHELL_PANIC_FAILURE(unlockResult, 246, "sceAppMgrActivateApp");
+		}
+		if (result != (int)0x80803001) {
+			sceSyscallLeave(syscallState);
+			return result;
+		}
+	}
+}
+
+int appmgrDeactivateApp(int appId)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	int result, unlockResult;
+
+	if (!isShellProcess()) {
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201f;
+	}
+	result = _appListFindAndLockAppByAppId(appId, &app);
+	if (result != 0) {
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	if (g_appmgrDebugNotifier != NULL)
+		g_appmgrDebugNotifier(3, app->appId, app->process.processId, 0);
+	result = _sceAppMgrDeactivateAppInternal(app, 1, 0, 0);
+	unlockResult = _appListUnlockApp(app);
+	if (unlockResult != 0)
+		SHELL_PANIC_FAILURE(unlockResult, 287, "sceAppMgrDeactivateApp");
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int _sceAppMgrSetPowerSaveModeInternal(int mode, int suspendBackgroundApps)
 {
 	int result;
@@ -302,6 +521,20 @@ int _sceAppMgrSetPowerSaveModeInternal(int mode, int suspendBackgroundApps)
 	_deviceRefreshAudioPort(-1);
 	_updateDeviceArbitration2();
 	return 0;
+}
+
+int appmgrSetPowerSaveMode(int mode, int suspendBackgroundApps)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	int result;
+
+	if (!isShellProcess()) {
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201c;
+	}
+	result = _sceAppMgrSetPowerSaveModeInternal(mode, suspendBackgroundApps);
+	sceSyscallLeave(syscallState);
+	return result;
 }
 
 int appmgrStopShellWatchDog(void)

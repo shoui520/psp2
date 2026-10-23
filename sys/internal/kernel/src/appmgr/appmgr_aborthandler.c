@@ -946,14 +946,6 @@ int sceAppMgrSetFakeSettingBug51800ForUser(int abortCurrentProcess,
 	return 0;
 }
 
-static inline int isShellProcess(void)
-{
-	struct AppState *shell;
-
-	return SceSblACMgrForDriver_991FDC15(0) && (shell = appmgrGetShellApp()) != NULL &&
-	       shell->process.processId == sceKernelGetProcessId();
-}
-
 int sceAppMgrGetCoredumpStateForShell(AppmgrShellCoredumpState *state)
 {
 	SceUInt32 syscallState = sceSyscallEnter();

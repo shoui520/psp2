@@ -6,6 +6,8 @@
 #include <appmgr/appmgr_launch.h>
 #include <appmgr/appmgr_savedata.h>
 #include <appmgr.h>
+#include <acmgr/acmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "appmgr_event.h"
 #include "appmgr_internal_util.h"
 #include "mount_holder_internal.h"
@@ -181,6 +183,15 @@ struct AppState *appmgrFindSpecialApp(struct AppState *apps, SceUID pid);
 struct AppState *appmgrFindCurrentApp(struct AppState *apps);
 struct AppState *appmgrFindAppByProcessId(struct AppState *apps, SceUID pid);
 struct AppState *appmgrGetShellApp(void);
+
+/* the caller is the declared shell process */
+static inline int isShellProcess(void)
+{
+	struct AppState *shell;
+
+	return SceSblACMgrForDriver_991FDC15(0) && (shell = appmgrGetShellApp()) != NULL &&
+	       shell->process.processId == sceKernelGetProcessId();
+}
 void _appListShowAppState(struct AppState *app);
 void _appListSetRunStatus(struct AppState *app, unsigned int status);
 void _appListSetDebuggerRunStatus(struct AppState *app, unsigned int status);
@@ -202,6 +213,8 @@ int _appListFindAndLockActiveApp(struct AppState **output);
 int _appListFindAndLockAppByProcessId(SceUID pid, struct AppState **output);
 int _appListUnlockApp(struct AppState *app);
 int _appListGetAppStatus(struct AppState *app, SceAppMgrAppStatus *status);
+int _sceAppMgrActivateAppInternal(struct AppState *app);
+int _sceAppMgrDeactivateAppInternal(struct AppState *app, int, int, int);
 void appmgrResetProcessState(AppmgrProcessState *process);
 void appmgrClearPendingAppEvents(struct AppState *app);
 int appmgrInitializeShellEventQueue(void);
@@ -259,6 +272,14 @@ int _sceAppMgrAbortHandlerInitialize(void);
 int appmgrSetBackRenderPortOwnerSyscall(int appId);
 int appmgrIsCameraActiveSyscall(int appId, int *active);
 int appmgrSetPowerSaveModeSyscall(int mode, int suspendBackgroundApps);
+
+/* appmgr_shell.c */
+int appmgrRestoreDisplaySettingForShell(void);
+int appmgrRestoreBgmSettingForShell(void);
+int appmgrReturnLiveAreaOperationResultForShell(int operationResult);
+int appmgrActivateApp(int appId);
+int appmgrDeactivateApp(int appId);
+int appmgrSetPowerSaveMode(int mode, int suspendBackgroundApps);
 int appmgrSetShellScreenOrientationSyscall(int orientation);
 int appmgrSetRecommendedScreenOrientationForShellSyscall(int orientation);
 

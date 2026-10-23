@@ -91,6 +91,16 @@ int appmgrSendNotificationRequest(const AppmgrNotificationRequest *request, int 
 	return _appmgrQueuePush(request, wait);
 }
 
+int sceAppMgrRestoreDisplaySettingForShell(void)
+{
+	return appmgrRestoreDisplaySettingForShell();
+}
+
+int sceAppMgrRestoreBgmSettingForShell(void)
+{
+	return appmgrRestoreBgmSettingForShell();
+}
+
 int sceAppMgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode)
 {
 	return appmgrAcquireSoundOutExclusive(priority, displayEnabled, displayMode);
@@ -121,6 +131,16 @@ int appmgrAcquireSoundOutExclusive3Syscall(int priority, SceUInt32 displayEnable
 int sceAppMgrReleaseSoundOutExclusive3(void)
 {
 	return appmgrReleaseSoundOutExclusive3();
+}
+
+int sceAppMgrActivateApp(int appId)
+{
+	return appmgrActivateApp(appId);
+}
+
+int sceAppMgrDeactivateApp(int appId)
+{
+	return appmgrDeactivateApp(appId);
 }
 
 int appmgrDeclareSystemChatAppSyscall(void)
@@ -156,6 +176,11 @@ int appmgrFinishCoredumpForShellSyscall(void)
 int appmgrEnableCoredumpForTestSyscall(void)
 {
 	return sceAppMgrEnableCoredumpForTest();
+}
+
+int sceAppMgrReturnLiveAreaOperationResultForShell(int operationResult)
+{
+	return appmgrReturnLiveAreaOperationResultForShell(operationResult);
 }
 
 int appmgrSetDisplayMergeConfSyscall(SceUInt32 setting, SceUInt32 alpha)

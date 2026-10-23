@@ -37,7 +37,6 @@ modules:
           SceAppMgrForDriver_2FAA6ABD: 0x2FAA6ABD
           SceAppMgrForDriver_30947DF4: 0x30947DF4
           SceAppMgrForDriver_3A0A9B82: 0x3A0A9B82
-          SceAppMgrForDriver_3B4F305B: 0x3B4F305B
           SceAppMgrForDriver_43A35729: 0x43A35729
           SceAppMgrForDriver_55D48190: 0x55D48190
           SceAppMgrForDriver_5B1BE482: 0x5B1BE482
@@ -60,7 +59,6 @@ modules:
           SceAppMgrForDriver_D2541B4A: 0xD2541B4A
           SceAppMgrForDriver_DC13160A: 0xDC13160A
           SceAppMgrForDriver_DCADB9FE: 0xDCADB9FE
-          SceAppMgrForDriver_DD5BEEE3: 0xDD5BEEE3
           SceAppMgrForDriver_E104C37E: 0xE104C37E
           SceAppMgrForDriver_E6F389B8: 0xE6F389B8
           SceAppMgrForDriver_E73C9516: 0xE73C9516
@@ -87,6 +85,8 @@ modules:
           sceAppMgrLaunchAppByNameForDebugger: 0x1B6C2FED
           sceAppMgrLaunchAppForDebugger: 0xB0A37065
           sceAppMgrLaunchAppForTest2: 0x504023C8
+          sceAppMgrLiveAreaOperationByNameForLoadp: 0x3B4F305B
+          sceAppMgrLiveAreaOperationForLoadp: 0xDD5BEEE3
           sceAppMgrLoadSafeMemory: 0xFAF3DAAA
           sceAppMgrRdrfpMount: 0x1574E1A4
           sceAppMgrRdrfpUmount: 0xE8DB7942

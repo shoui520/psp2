@@ -33,7 +33,7 @@ SceAppMgr:
         - SceAppMgrForDriver_30947DF4: 0x30947DF4
         - sceAppMgrSpawnProcessForDriver: 0x324DD34E
         - SceAppMgrForDriver_3A0A9B82: 0x3A0A9B82
-        - SceAppMgrForDriver_3B4F305B: 0x3B4F305B
+        - sceAppMgrLiveAreaOperationByNameForLoadp: 0x3B4F305B
         - SceAppMgrForDriver_43A35729: 0x43A35729
         - sceAppMgrAcInstGetAcdirParam: 0x474AABDF
         - sceAppMgrGetAppIdByNameForDebugger: 0x4FA62A46
@@ -69,7 +69,7 @@ SceAppMgr:
         - sceAppMgrKillAppForDebugger: 0xD80566DB
         - SceAppMgrForDriver_DC13160A: 0xDC13160A
         - SceAppMgrForDriver_DCADB9FE: 0xDCADB9FE
-        - SceAppMgrForDriver_DD5BEEE3: 0xDD5BEEE3
+        - sceAppMgrLiveAreaOperationForLoadp: 0xDD5BEEE3
         - SceAppMgrForDriver_E104C37E: 0xE104C37E
         - SceAppMgrForDriver_E6F389B8: 0xE6F389B8
         - sceAppMgrGetPfsProcessStatus: 0xE72D2A4A
