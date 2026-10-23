@@ -29,7 +29,7 @@ BacktraceCapture:
 	pop {r4, fp, lr}
 	bx lr
 	.fnend
-	.size BacktraceCapture, .-BacktraceCapture
 .LcaptureEntry:
 	.word BacktraceCapture
+	.size BacktraceCapture, .-BacktraceCapture
 	.section .note.GNU-stack,"",%progbits

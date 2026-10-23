@@ -1,5 +1,5 @@
-/* Compiler stack-protector traps. Debugger continuation retains the native
- * second trap and the following long-long multiply boundary.
+/* Compiler stack-protector traps. A debugger continuing past the second one falls into
+ * __aeabi_lmul, linked right after this file as in Sony's layout (CMakeLists.txt).
  */
 	.syntax unified
 	.arch armv7-a
@@ -23,7 +23,6 @@ sceKernelStackChkFail:
 	.fnstart
 	bkpt #0x81
 	nop
-	b __aeabi_lmul
 	.fnend
 	.size sceKernelStackChkFail, .-sceKernelStackChkFail
 	.section .note.GNU-stack,"",%progbits

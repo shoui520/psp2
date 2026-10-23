@@ -1,12 +1,16 @@
 /* LibKernel public entry points for the shared Sysclib memory engines. */
 #include <stddef.h>
 #include <stdint.h>
+#include <fw.h>
 #include <libkernel/libkernel.h>
 #include <sysmem/compiler.h>
 
 extern void *SetMemoryCore(void *destination, int value, size_t size);
 extern int CompareMemoryCore(const void *left, const void *right, size_t size);
 extern void *MoveMemoryCore(void *destination, const void *source, size_t size);
+
+/* Before 4.00 LibKernel exports the cores themselves as sceClibMemmove, sceClibMemset and
+ * sceClibMemcmp (CMakeLists.txt); 4.00 reaches them through these wrappers. */
 
 void *sceClibMemcpy_safe(void *destination, const void *source, SceSize size)
 {
@@ -36,10 +40,12 @@ void *sceClibMemcpyChk(void *destination, const void *source, SceSize size,
 	return sceClibMemcpy(destination, source, size);
 }
 
+#if FW_SINCE(0x04000000)
 void *sceClibMemmove(void *destination, const void *source, SceSize size)
 {
 	return MoveMemoryCore(destination, source, size);
 }
+#endif
 
 void *sceClibMemmoveChk(void *destination, const void *source, SceSize size,
 		      SceSize capacity)
@@ -49,10 +55,12 @@ void *sceClibMemmoveChk(void *destination, const void *source, SceSize size,
 	return MoveMemoryCore(destination, source, size);
 }
 
+#if FW_SINCE(0x04000000)
 void *sceClibMemset(void *destination, int value, SceSize size)
 {
 	return SetMemoryCore(destination, value, size);
 }
+#endif
 
 void *sceClibMemsetChk(void *destination, int value, SceSize size,
 		     SceSize capacity)
@@ -62,7 +70,9 @@ void *sceClibMemsetChk(void *destination, int value, SceSize size,
 	return SetMemoryCore(destination, value, size);
 }
 
+#if FW_SINCE(0x04000000)
 int sceClibMemcmp(const void *left, const void *right, SceSize size)
 {
 	return CompareMemoryCore(left, right, size);
 }
+#endif

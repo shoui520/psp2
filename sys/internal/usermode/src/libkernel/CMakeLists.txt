@@ -4,6 +4,10 @@ set(libkernel_unwind_source "${CMAKE_CURRENT_BINARY_DIR}/gcc48-unwind.c")
 gcc48_prepare_unwind(
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/gcc-4.8-2014.05/libgcc/config/arm/unwind-arm.c"
 	"${libkernel_unwind_source}")
+set(libkernel_libunwind_source "${CMAKE_CURRENT_BINARY_DIR}/libunwind.S")
+gcc48_prepare_libunwind(
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/gcc-4.8-2014.05/libgcc/config/arm/libunwind.S"
+	"${libkernel_libunwind_source}")
 include(heap.cmake)
 set(libkernel_heap_source "${CMAKE_CURRENT_BINARY_DIR}/dlmalloc-sce.c")
 libkernel_prepare_heap(
@@ -31,7 +35,6 @@ psp2_module(os0_us_libkernel KIND user COMPILER gcc48 SOURCES
 	thread_context.c
 	cpu_context.S
 	change_stack.S
-	stack_fail.S
 	thread_objects.c
 	thread_status.c
 	events.c
@@ -74,11 +77,9 @@ psp2_module(os0_us_libkernel KIND user COMPILER gcc48 SOURCES
 	heap_inspect.c
 	format_io.c
 	../../../kernel/src/sysmem/fill_core.S
-	../../../kernel/src/sysmem/fill.c
 	../../../kernel/src/sysmem/compare_core.S
 	../../../kernel/src/sysmem/compare.c
 	../../../kernel/src/sysmem/copy_forward.S
-	../../../kernel/src/sysmem/copy.c
 	../../../kernel/src/sysmem/move.S
 	../../../kernel/src/sysmem/ctype.c
 	../../../kernel/src/sysmem/strings.c
@@ -91,7 +92,8 @@ psp2_module(os0_us_libkernel KIND user COMPILER gcc48 SOURCES
 	../../../kernel/src/sysmem/strcat_chk.c
 	../../../kernel/src/sysmem/strncat_chk.c
 	../../../../../contrib/gcc-4.8-2014.05/libgcc/config/arm/lib1funcs.S
-	../../../../../contrib/gcc-4.8-2014.05/libgcc/config/arm/libunwind.S
+	"${libkernel_libunwind_source}"
+	stack_fail.S
 	../../../../../toolchains/libgcc/mul.c
 	../../../../../toolchains/libgcc/f2lz.c
 	../../../../../toolchains/libgcc/f2ulz.c
@@ -118,12 +120,25 @@ if(NOT PSP2_TOOLCHAIN STREQUAL "sony")
 		DEPENDS "${PSP2_SRC}/tools/fixup_unwind.py")
 endif()
 
+# The exit entries' unwind pads sit right before each entry, in source order (lifecycle.c).
+set_source_files_properties(lifecycle.c PROPERTIES COMPILE_OPTIONS
+	"-fno-toplevel-reorder;-fno-section-anchors")
+
 # Sony built LibKernel with a signed char (ldrsb in its string walks).
 target_compile_options(os0_us_libkernel PRIVATE -fsigned-char)
 
 # memcpy is LibKernel's checked copy, as every memcpy call in Sony's build is.
 target_link_options(os0_us_libkernel PRIVATE
 	"-Wl,--defsym=memcpy=sceClibMemcpy_safe")
+
+# Before 4.00 the move, fill and compare cores are the exports themselves (clib_memory.c).
+math(EXPR libkernel_fw "${FW_VERSION}")
+if(libkernel_fw LESS 67108864)	# 0x04000000
+	target_link_options(os0_us_libkernel PRIVATE
+		"-Wl,--defsym=sceClibMemmove=MoveMemoryCore"
+		"-Wl,--defsym=sceClibMemset=SetMemoryCore"
+		"-Wl,--defsym=sceClibMemcmp=CompareMemoryCore")
+endif()
 
 target_include_directories(os0_us_libkernel PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}"
@@ -187,7 +202,6 @@ set_source_files_properties(thread_objects.c thread_status.c
 # This core is itself exported by LibKernel, rather than reached via a wrapper; its memcpy is
 # the --defsym above, not the core's own alias.
 set_source_files_properties(../../../kernel/src/sysmem/copy_forward.S
-	../../../kernel/src/sysmem/copy.c
 	../../../kernel/src/sysmem/move.S PROPERTIES
 	COMPILE_DEFINITIONS "CopyMemoryForward=sceClibMemcpy;SYSCLIB_NO_STANDARD_ALIASES")
 

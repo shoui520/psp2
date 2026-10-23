@@ -46,19 +46,36 @@ uint32_t __stack_chk_guard = 0;
 uint32_t SceKernelStackChkGuard = 0;
 extern uint32_t sceLibSspStackChkGuard __attribute__((alias("__stack_chk_guard")));
 
-void ExitThreadEntry(int status)
+/*
+ * The exit entries are where a thread or callback returns to. Neither they nor the two nops
+ * before each can be unwound, so an unwinder that looks up the return address (or the
+ * instruction before it) stops at the thread's last frame.
+ */
+#define EXIT_ENTRY_PAD(name)						\
+	__asm__("\t.text\n\t.thumb\n\t.type " #name ", %function\n"	\
+		"\t.thumb_func\n" #name ":\n\t.fnstart\n\tnop\n\tnop\n"	\
+		"\t.cantunwind\n\t.fnend\n\t.size " #name ", .-" #name)
+#define EXIT_ENTRY	__attribute__((optimize("no-unwind-tables", "no-section-anchors")))
+
+EXIT_ENTRY_PAD(ExitThreadEntryPad);
+
+EXIT_ENTRY void ExitThreadEntry(int status)
 {
 	SceThreadmgrCoredumpTime_sceKernelExitThread(status);
 	__breakpoint(BKPT_ABORT);
 }
 
-void ExitDeleteThreadEntry(int status)
+EXIT_ENTRY_PAD(ExitDeleteThreadEntryPad);
+
+EXIT_ENTRY void ExitDeleteThreadEntry(int status)
 {
 	sceKernelExitDeleteThread(status);
 	__breakpoint(BKPT_ABORT);
 }
 
-void ExitCallbackEntry(int status)
+EXIT_ENTRY_PAD(ExitCallbackEntryPad);
+
+EXIT_ENTRY void ExitCallbackEntry(int status)
 {
 	_sceKernelExitCallback(status);
 	__breakpoint(BKPT_ABORT);
