@@ -1904,6 +1904,80 @@ int appmgrCheckSaveDataSlot(unsigned int slotId, const char *mountPoint,
 	return result;
 }
 
+/*
+ * A save data path: at most 199 characters of letters, digits, '-', '_', '.', '/' and '\',
+ * no "..", and no "sce_" component (the system's) after the leading separators.
+ */
+static inline int appmgrIsSaveDataPathValid(const char *path)
+{
+	const char *name;
+	int length, prefix;
+	char character;
+
+	for (length = 0; length < 200; length++) {
+		character = path[length];
+		if (character == '\0')
+			break;
+		if ((unsigned int)((character & 0xdf) - 'A') <= 'Z' - 'A' ||
+		    (unsigned int)(character - '0') <= 9 || character == '-' || character == '_')
+			continue;
+		if (character == '.') {
+			if (length + 1 < 200 && path[length + 1] == '.')
+				return 0;
+			continue;
+		}
+		if (character != '/' && character != '\\')
+			return 0;
+	}
+	name = path;
+	while (*name == '/' || *name == '\\')
+		name++;
+	prefix = name - path + 3;
+	if (length > prefix && (name[0] & 0xdf) == 'S' && (name[1] & 0xdf) == 'C' &&
+	    (name[2] & 0xdf) == 'E' && name[3] == '_')
+		return 0;
+	return 1;
+}
+
+int appmgrValidateSaveDataFile(const SceAppUtilSaveDataDataSaveItem *file, const char *path)
+{
+	int index;
+
+	if (file == NULL || file->dataPath == NULL || path == NULL || strnlen(path, 200) > 199)
+		return 0x80800001;
+	if (!appmgrIsSaveDataPathValid(path))
+		return 0x80800001;
+	for (index = 0; index < (int)sizeof(file->padding); index++) {
+		if (file->padding[index] != 0)
+			return 0x80800001;
+	}
+	if (file->mode > 2)
+		return 0x80800001;
+	for (index = 0; index < (int)sizeof(file->reserved); index++) {
+		if (file->reserved[index] != 0)
+			return 0x80800001;
+	}
+	return 0;
+}
+
+int appmgrValidateSaveDataRemoveItem(const SceAppUtilSaveDataDataRemoveItem *item,
+				     const char *path)
+{
+	int index;
+
+	if (item == NULL || item->dataPath == NULL || path == NULL || strnlen(path, 200) > 199)
+		return 0x80800001;
+	if (!appmgrIsSaveDataPathValid(path))
+		return 0x80800001;
+	if (item->mode > 1)
+		return 0x80800001;
+	for (index = 0; index < (int)sizeof(item->reserved); index++) {
+		if (item->reserved[index] != 0)
+			return 0x80800001;
+	}
+	return 0;
+}
+
 int appmgrValidateSaveDataSlotParam(const SceAppMgrSaveDataSlotParam *param)
 {
 	unsigned int index;
