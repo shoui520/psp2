@@ -16,6 +16,7 @@
 #include "app_state_internal.h"
 #include <pfsmgr/pfsmgr.h>
 #include <threadmgr/threadmgr.h>
+#include "mount.h"
 
 int _sceAppMgrSystemParamDateTimeGetConf(void *conf)
 {
@@ -62,6 +63,121 @@ int _sceAppMgrSystemParamGetString(int parameter, char *value, SceSize size,
 	if (length >= 1024)
 		length = 1024;
 	return copyResult(ret, sceKernelCopyToUser(value, buffer, length));
+}
+
+/* the stack arguments of the mounts by ID (application data, trophy) */
+typedef struct AppmgrMountByIdArguments {
+	unsigned int mountId;
+	const char *id;
+	ScePfsRndDriveId *mountPoint;
+	const SyscallUnusedArgs *userArguments;
+} AppmgrMountByIdArguments;
+
+/* the stack arguments of the trophy mount */
+typedef struct AppmgrTrophyMountArguments {
+	unsigned int mountId;
+	SceUID pid;
+	ScePfsRndDriveId *mountPoint;
+} AppmgrTrophyMountArguments;
+
+/* the stack arguments of the install directory mount */
+typedef struct AppmgrInstallDirMountArguments {
+	unsigned int mountId;
+	const char *id;
+	const void *keystone;
+	ScePfsRndDriveId *mountPoint;
+} AppmgrInstallDirMountArguments;
+
+/* the argument block of the loop back format: where the image information is */
+typedef struct AppmgrLoopBackFormatArguments {
+	AppmgrLoopBackImageInfo *info;
+	SceUInt32 reserved[3];
+} AppmgrLoopBackFormatArguments;
+
+_Static_assert(sizeof(AppmgrLoopBackFormatArguments) == 16,
+	       "loop back format argument block");
+
+static int appDataMountById(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint,
+			    const SyscallUnusedArgs *userArguments)
+{
+	SyscallUnusedArgs arguments;
+	char *kernelId = (char *)id;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(kernelId, id, 64);
+	BLOCK_OUT(mountPoint, sizeof(ScePfsRndDriveId),
+		  appmgrAppDataMountByIdSyscall(mountId, kernelId, NULL),
+		  appmgrAppDataMountByIdSyscall(mountId, kernelId, (ScePfsRndDriveId *)k));
+}
+
+static int appDataMountByIdOnStack(void *argp)
+{
+	const AppmgrMountByIdArguments *arguments = argp;
+
+	return appDataMountById(arguments->mountId, arguments->id, arguments->mountPoint,
+				arguments->userArguments);
+}
+
+static int trophyMount(unsigned int mountId, SceUID pid, ScePfsRndDriveId *mountPoint)
+{
+	int ret;
+
+	BLOCK_OUT(mountPoint, sizeof(ScePfsRndDriveId),
+		  appmgrTrophyMountSyscall(mountId, pid, NULL),
+		  appmgrTrophyMountSyscall(mountId, pid, (ScePfsRndDriveId *)k));
+}
+
+static int trophyMountOnStack(void *argp)
+{
+	const AppmgrTrophyMountArguments *arguments = argp;
+
+	return trophyMount(arguments->mountId, arguments->pid, arguments->mountPoint);
+}
+
+static int trophyMountById(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint,
+			   const SyscallUnusedArgs *userArguments)
+{
+	SyscallUnusedArgs arguments;
+	char *kernelId = (char *)id;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(kernelId, id, 64);
+	BLOCK_OUT(mountPoint, sizeof(ScePfsRndDriveId),
+		  appmgrTrophyMountByIdSyscall(mountId, kernelId, NULL),
+		  appmgrTrophyMountByIdSyscall(mountId, kernelId, (ScePfsRndDriveId *)k));
+}
+
+static int trophyMountByIdOnStack(void *argp)
+{
+	const AppmgrMountByIdArguments *arguments = argp;
+
+	return trophyMountById(arguments->mountId, arguments->id, arguments->mountPoint,
+			       arguments->userArguments);
+}
+
+static int installDirMount(unsigned int mountId, const char *id, const void *keystone,
+			   ScePfsRndDriveId *mountPoint)
+{
+	void *kernelId = (void *)id;
+	void *kernelKeystone = (void *)keystone;
+	int ret;
+
+	BLOCK_IN(kernelId, id, 16);
+	BLOCK_IN(kernelKeystone, keystone, 96);
+	BLOCK_OUT(mountPoint, sizeof(ScePfsRndDriveId),
+		  appmgrInstallDirMountSyscall(mountId, kernelId, kernelKeystone, NULL),
+		  appmgrInstallDirMountSyscall(mountId, kernelId, kernelKeystone,
+					       (ScePfsRndDriveId *)k));
+}
+
+static int installDirMountOnStack(void *argp)
+{
+	const AppmgrInstallDirMountArguments *arguments = argp;
+
+	return installDirMount(arguments->mountId, arguments->id, arguments->keystone,
+			       arguments->mountPoint);
 }
 
 /* the argument block of the data mounts (game, theme): where the drive is returned */
@@ -154,6 +270,192 @@ int _sceAppMgrThemeDataMount(const char *contentId, const char *themePath, const
 	return SceThreadmgrForDriver_E54FD746(0x2000, themeDataMountOnStack, &param);
 }
 
+int _sceAppMgrAppDataMount(unsigned int mountId, ScePfsRndDriveId *mountPoint)
+{
+	int ret;
+
+	BLOCK_OUT(mountPoint, sizeof(ScePfsRndDriveId),
+		  appmgrAppDataMountSyscall(mountId, NULL),
+		  appmgrAppDataMountSyscall(mountId, (ScePfsRndDriveId *)k));
+}
+
+int _sceAppMgrAppDataMountById(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint,
+			       const SyscallUnusedArgs *userArguments)
+{
+	AppmgrMountByIdArguments arguments = { mountId, id, mountPoint, userArguments };
+
+	return SceThreadmgrForDriver_E54FD746(0x2000, appDataMountByIdOnStack, &arguments);
+}
+
+int _sceAppMgrWorkDirMount(unsigned int mountId, ScePfsRndDriveId *mountPoint)
+{
+	int ret;
+
+	BLOCK_OUT(mountPoint, sizeof(ScePfsRndDriveId),
+		  appmgrWorkDirMountSyscall(mountId, NULL),
+		  appmgrWorkDirMountSyscall(mountId, (ScePfsRndDriveId *)k));
+}
+
+int _sceAppMgrPspSaveDataRootMount(ScePfsRndDriveId *mountPoint)
+{
+	int ret;
+
+	BLOCK_OUT(mountPoint, sizeof(ScePfsRndDriveId),
+		  appmgrPspSaveDataRootMountSyscall(NULL),
+		  appmgrPspSaveDataRootMountSyscall((ScePfsRndDriveId *)k));
+}
+
+int _sceAppMgrWorkDirMountById(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint,
+       const SyscallUnusedArgs *userArguments)
+{
+	SyscallUnusedArgs arguments;
+	char *kernelId = (char *)id;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(kernelId, id, 64);
+	BLOCK_OUT(mountPoint, sizeof(ScePfsRndDriveId),
+		  appmgrWorkDirMountByIdSyscall(mountId, kernelId, NULL),
+		  appmgrWorkDirMountByIdSyscall(mountId, kernelId, (ScePfsRndDriveId *)k));
+}
+
+int _sceAppMgrTrophyMount(unsigned int mountId, SceUID pid, ScePfsRndDriveId *mountPoint)
+{
+	AppmgrTrophyMountArguments arguments = { mountId, pid, mountPoint };
+
+	return SceThreadmgrForDriver_E54FD746(0x2000, trophyMountOnStack, &arguments);
+}
+
+int _sceAppMgrTrophyMountById(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint,
+			      const SyscallUnusedArgs *userArguments)
+{
+	AppmgrMountByIdArguments arguments = { mountId, id, mountPoint, userArguments };
+
+	return SceThreadmgrForDriver_E54FD746(0x2000, trophyMountByIdOnStack, &arguments);
+}
+
+int _sceAppMgrMmsMount(unsigned int mountId, ScePfsRndDriveId *mountPoint)
+{
+	int ret;
+
+	BLOCK_OUT(mountPoint, sizeof(ScePfsRndDriveId),
+		  appmgrMmsMountSyscall(mountId, NULL),
+		  appmgrMmsMountSyscall(mountId, (ScePfsRndDriveId *)k));
+}
+
+int _sceAppMgrInstallDirMount(unsigned int mountId, const char *id, const void *keystone,
+			      ScePfsRndDriveId *mountPoint)
+{
+	AppmgrInstallDirMountArguments arguments = { mountId, id, keystone, mountPoint };
+
+	return SceThreadmgrForDriver_E54FD746(0x2000, installDirMountOnStack, &arguments);
+}
+
+int _sceAppMgrLoopBackMount(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint,
+       const SyscallUnusedArgs *userArguments)
+{
+	SyscallUnusedArgs arguments;
+	char *kernelId = (char *)id;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(kernelId, id, 64);
+	BLOCK_OUT(mountPoint, sizeof(ScePfsRndDriveId),
+		  appmgrLoopBackMountSyscall(mountId, kernelId, NULL),
+		  appmgrLoopBackMountSyscall(mountId, kernelId, (ScePfsRndDriveId *)k));
+}
+
+int _sceAppMgrLoopBackFormat(unsigned int mountId, unsigned int command, const char *id,
+			     const AppmgrLoopBackFormatArguments *userArguments)
+{
+	AppmgrLoopBackFormatArguments arguments;
+	AppmgrLoopBackImageInfo *info;
+	AppmgrLoopBackImageInfo *kernelInfo;
+	char *kernelId = (char *)id;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	info = arguments.info;
+	STRING_IN(kernelId, id, 64);
+	if (info == NULL)
+		return appmgrLoopBackFormatSyscall(mountId, command, kernelId, NULL);
+	kernelInfo = __builtin_alloca(sizeof(*kernelInfo));
+	__builtin_memset(kernelInfo, 0, sizeof(*kernelInfo));
+	ret = sceKernelCopyFromUser(kernelInfo, info, sizeof(*kernelInfo));
+	if (ret < 0)
+		return ret;
+	ret = appmgrLoopBackFormatSyscall(mountId, command, kernelId, kernelInfo);
+	return copyResult(ret, sceKernelCopyToUser(info, kernelInfo, sizeof(*kernelInfo)));
+}
+
+int appmgrGetSaveDataInfoForUser(const char *appPath, const char *titleId,
+				 SceUInt32 attributes,
+				 const AppmgrSaveDataInfoArguments *userArguments)
+{
+	AppmgrSaveDataInfoArguments arguments;
+	AppmgrSaveDataInfo *info;
+	char *kernelAppPath = (char *)appPath;
+	void *kernelTitleId = (void *)titleId;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	info = arguments.info;
+	STRING_IN(kernelAppPath, appPath, 292);
+	BLOCK_IN(kernelTitleId, titleId, 16);
+	BLOCK_OUT(info, sizeof(AppmgrSaveDataInfo),
+		  appmgrGetSaveDataInfoSyscall(kernelAppPath, kernelTitleId, attributes, NULL),
+		  appmgrGetSaveDataInfoSyscall(kernelAppPath, kernelTitleId, attributes,
+					       (AppmgrSaveDataInfo *)k));
+}
+
+int appmgrGetSaveDataInfoOnStack(void *argp)
+{
+	const AppmgrGetSaveDataInfoArguments *arguments = argp;
+
+	return appmgrGetSaveDataInfoForUser(arguments->appPath, arguments->titleId,
+					    arguments->attributes, arguments->userArguments);
+}
+
+int appmgrCheckRifGDForUser(const char *path, AppmgrLicenseInfo *info,
+			    const SyscallUnusedArgs *userArguments)
+{
+	SyscallUnusedArgs arguments;
+	char *kernelPath = (char *)path;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(kernelPath, path, 292);
+	BLOCK_OUT(info, sizeof(AppmgrLicenseInfo),
+		  appmgrCheckRifGDSyscall(kernelPath, NULL),
+		  appmgrCheckRifGDSyscall(kernelPath, (AppmgrLicenseInfo *)k));
+}
+
+int appmgrCheckRifGDOnStack(void *argp)
+{
+	const AppmgrCheckRifGDArguments *arguments = argp;
+
+	return appmgrCheckRifGDForUser(arguments->path, arguments->info,
+				       arguments->userArguments);
+}
+
+int appmgrUpdateSaveDataParamForUser(const char *path, const SyscallUnusedArgs *userArguments)
+{
+	SyscallUnusedArgs arguments;
+	char *kernelPath = (char *)path;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(kernelPath, path, 292);
+	return appmgrUpdateSaveDataParamSyscall(kernelPath);
+}
+
+int appmgrUpdateSaveDataParamOnStack(void *argp)
+{
+	const AppmgrUpdateSaveDataParamArguments *arguments = argp;
+
+	return appmgrUpdateSaveDataParamForUser(arguments->path, arguments->userArguments);
+}
+
 int appmgrDrmOpenForUser(const SceAppMgrDrmOpenParam *userParam,
 			 const SyscallSizeArgs *userArguments)
 {
@@ -204,7 +506,6 @@ int _sceAppMgrGetVs0UserDataDrive(char *mountPoint)
 }
 
 
-STUB(_sceAppMgrWorkDirMount)
 
 int _sceAppMgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
 		SceUInt32 displayMode, const void *userArguments)
@@ -216,45 +517,19 @@ int _sceAppMgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
 	return appmgrAcquireSoundOutExclusive3Syscall(priority, displayEnabled,
 		displayMode, arguments.displayBlanked, arguments.unsupportedOptions);
 }
-STUB(_sceAppMgrCheckRifGD)
-
-STUB(_sceAppMgrLoopBackMount)
-
-STUB(_sceAppMgrTrophyMountById)
-
-STUB(_sceAppMgrSaveDataDataRemove2)
-
-STUB(_sceAppMgrGetPfsDrive)
-STUB(_sceAppMgrGetDevInfo)
-STUB(_sceAppMgrSaveDataUmount)
-STUB(_sceAppMgrWorkDirMountById)
 
 
-STUB(_sceAppMgrGetSaveDataInfo)
 
 
-STUB(_sceAppMgrSaveDataSlotFileOpen)
-
-STUB(_sceAppMgrAppDataMountById)
-STUB(_sceAppMgrSaveDataMount)
-STUB(_sceAppMgrSaveDataDataRemove)
-STUB(_sceAppMgrLoadSaveDataSystemFile)
-STUB(_sceAppMgrPspSaveDataRootMount)
 
 
-STUB(_sceAppMgrPhotoUmount)
-STUB(_sceAppMgrSaveDataDataSave)
 
-STUB(_sceAppMgrGetMediaTypeFromDriveByPid)
-STUB(_sceAppMgrGetMediaTypeFromDrive)
 
-STUB(_sceAppMgrGetSaveDataInfoForSpecialExport)
-STUB(_sceAppMgrMmsMount)
-STUB(_sceAppMgrPhotoMount)
-STUB(_sceAppMgrLoopBackFormat)
-STUB(_sceAppMgrInstallDirMount)
-STUB(_sceAppMgrAppDataMount)
-STUB(_sceAppMgrSaveDataGetQuota)
+
+
+
+
+
 
 int _sceAppMgrSendNotificationRequest(const AppmgrNotificationRequest *request, int wait)
 {
@@ -264,7 +539,6 @@ int _sceAppMgrSendNotificationRequest(const AppmgrNotificationRequest *request, 
 	BLOCK_IN(kernelRequest, request, sizeof(*kernelRequest));
 	return appmgrSendNotificationRequest(kernelRequest, wait);
 }
-STUB(_sceAppMgrUpdateSaveDataParam)
 
 int _sceAppMgrSetBgmProxyApp(const char *appName, const SyscallUnusedArgs *userArguments)
 {
@@ -276,9 +550,6 @@ int _sceAppMgrSetBgmProxyApp(const char *appName, const SyscallUnusedArgs *userA
 	STRING_IN(name, appName, 32);
 	return appmgrSetBgmProxyAppSyscall(name);
 }
-STUB(_sceAppMgrTrophyMount)
-STUB(_sceAppMgrSaveDataDataSave2)
-STUB(_sceAppMgrSaveDataSlotFileClose)
 STUB(sceSharedFbClose)
 STUB(sceSharedFbBegin)
 STUB(sceSharedFbGetInfo)

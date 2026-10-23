@@ -6,6 +6,8 @@
 #include <appmgr/appmgr.h>
 #include "app_state_internal.h"
 #include "appmgr_savedata_slot.h"
+#include "mount.h"
+#include <threadmgr/threadmgr.h>
 
 typedef struct AppmgrRawPathArguments {
 	unsigned char reserved[16];
@@ -105,6 +107,120 @@ int _sceAppMgrGetRawPath(char *path, char *resolvedPath, int capacity,
 	if (length >= 292)
 		length = 292;
 	return copyResult(ret, sceKernelCopyToUser(resolvedPath, buffer, length));
+}
+
+int _sceAppMgrGetSaveDataInfo(const char *appPath, const char *titleId, SceUInt32 attributes,
+			      const AppmgrSaveDataInfoArguments *userArguments)
+{
+	AppmgrGetSaveDataInfoArguments arguments = { appPath, titleId, attributes, userArguments };
+
+	return SceThreadmgrForDriver_E54FD746(0x2000, appmgrGetSaveDataInfoOnStack, &arguments);
+}
+
+int _sceAppMgrLoadSaveDataSystemFile(const char *path, void *buffer, SceSize size,
+				     const SyscallUnusedArgs *userArguments)
+{
+	SyscallUnusedArgs arguments;
+	char *kernelPath = (char *)path;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(kernelPath, path, 292);
+	return appmgrLoadSaveDataSystemFileSyscall(kernelPath, buffer, size);
+}
+
+int _sceAppMgrGetSaveDataInfoForSpecialExport(const char *path, SceUInt64 *accountId,
+					      const SyscallUnusedArgs *userArguments)
+{
+	SyscallUnusedArgs arguments;
+	char *kernelPath = (char *)path;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(kernelPath, path, 292);
+	BLOCK_OUT(accountId, sizeof(*accountId),
+		  appmgrGetSaveDataInfoForSpecialExportSyscall(kernelPath, NULL),
+		  appmgrGetSaveDataInfoForSpecialExportSyscall(kernelPath, (SceUInt64 *)k));
+}
+
+int _sceAppMgrGetMediaTypeFromDrive(const char *drive, int *mediaType)
+{
+	void *kernelDrive = (void *)drive;
+	int ret;
+
+	BLOCK_IN(kernelDrive, drive, 16);
+	BLOCK_OUT(mediaType, sizeof(*mediaType),
+		  appmgrGetMediaTypeFromDriveSyscall(kernelDrive, NULL),
+		  appmgrGetMediaTypeFromDriveSyscall(kernelDrive, (int *)k));
+}
+
+int _sceAppMgrGetMediaTypeFromDriveByPid(SceUID pid, const char *drive, int *mediaType)
+{
+	void *kernelDrive = (void *)drive;
+	int ret;
+
+	BLOCK_IN(kernelDrive, drive, 16);
+	BLOCK_OUT(mediaType, sizeof(*mediaType),
+		  appmgrGetMediaTypeFromDriveByPidSyscall(pid, kernelDrive, NULL),
+		  appmgrGetMediaTypeFromDriveByPidSyscall(pid, kernelDrive, (int *)k));
+}
+
+int _sceAppMgrCheckRifGD(const char *path, AppmgrLicenseInfo *info,
+			 const SyscallUnusedArgs *userArguments)
+{
+	AppmgrCheckRifGDArguments arguments = { path, info, userArguments };
+
+	return SceThreadmgrForDriver_E54FD746(0x2000, appmgrCheckRifGDOnStack, &arguments);
+}
+
+int _sceAppMgrUpdateSaveDataParam(const char *path, const SyscallUnusedArgs *userArguments)
+{
+	AppmgrUpdateSaveDataParamArguments arguments = { path, userArguments };
+
+	return SceThreadmgrForDriver_E54FD746(0x2000, appmgrUpdateSaveDataParamOnStack,
+				      &arguments);
+}
+
+int _sceAppMgrGetDevInfo(const char *drive, SceOff *maxSize, SceOff *freeSize,
+			 const SyscallUnusedArgs *userArguments)
+{
+	SyscallUnusedArgs arguments;
+	char *kernelDrive = (char *)drive;
+	SceOff *kernelMaxSize = maxSize;
+	SceOff *kernelFreeSize = freeSize;
+	int ret, copy;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(kernelDrive, drive, 16);
+	if (maxSize != NULL) {
+		kernelMaxSize = __builtin_alloca(sizeof(*kernelMaxSize));
+		*kernelMaxSize = 0;
+	}
+	if (freeSize != NULL) {
+		kernelFreeSize = __builtin_alloca(sizeof(*kernelFreeSize));
+		*kernelFreeSize = 0;
+	}
+	ret = appmgrGetDevInfoSyscall(kernelDrive, kernelMaxSize, kernelFreeSize);
+	if (maxSize != NULL) {
+		copy = sceKernelCopyToUser(maxSize, kernelMaxSize, sizeof(*maxSize));
+		if (copy < 0)
+			return copy;
+	}
+	if (freeSize != NULL)
+		return copyResult(ret, sceKernelCopyToUser(freeSize, kernelFreeSize,
+							 sizeof(*freeSize)));
+	return ret;
+}
+
+int _sceAppMgrGetPfsDrive(const char *drive, char *pfsDrive)
+{
+	void *kernelDrive = (void *)drive;
+	int ret;
+
+	BLOCK_IN(kernelDrive, drive, 16);
+	BLOCK_OUT(pfsDrive, 16,
+		  appmgrGetPfsDriveSyscall(kernelDrive, NULL),
+		  appmgrGetPfsDriveSyscall(kernelDrive, (char *)k));
 }
 
 int _sceAppMgrGetUserDirPath(int partitionId, char *path, unsigned int capacity,

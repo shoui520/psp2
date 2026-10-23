@@ -502,6 +502,48 @@ typedef struct AppmgrDrmOpenArguments {
 int appmgrDrmOpenForUser(const SceAppMgrDrmOpenParam *userParam,
 			 const struct SyscallSizeArgs *userArguments);
 int appmgrDrmOpenOnStack(void *argp);
+
+struct AppmgrSaveDataInfo;
+struct AppmgrLicenseInfo;
+
+/* the argument block of _sceAppMgrGetSaveDataInfo: where the information is returned */
+typedef struct AppmgrSaveDataInfoArguments {
+	struct AppmgrSaveDataInfo *info;
+	SceUInt32 reserved[3];
+} AppmgrSaveDataInfoArguments;
+
+/* the arguments _sceAppMgrGetSaveDataInfo passes to its stack */
+typedef struct AppmgrGetSaveDataInfoArguments {
+	const char *appPath;
+	const char *titleId;
+	SceUInt32 attributes;
+	const AppmgrSaveDataInfoArguments *userArguments;
+} AppmgrGetSaveDataInfoArguments;
+
+/* the arguments _sceAppMgrCheckRifGD passes to its stack */
+typedef struct AppmgrCheckRifGDArguments {
+	const char *path;
+	struct AppmgrLicenseInfo *info;
+	const struct SyscallUnusedArgs *userArguments;
+} AppmgrCheckRifGDArguments;
+
+/* the arguments _sceAppMgrUpdateSaveDataParam passes to its stack */
+typedef struct AppmgrUpdateSaveDataParamArguments {
+	const char *path;
+	const struct SyscallUnusedArgs *userArguments;
+} AppmgrUpdateSaveDataParamArguments;
+
+int appmgrGetSaveDataInfoForUser(const char *appPath, const char *titleId,
+				 SceUInt32 attributes,
+				 const AppmgrSaveDataInfoArguments *userArguments);
+int appmgrGetSaveDataInfoOnStack(void *argp);
+int appmgrCheckRifGDSyscall(const char *path, struct AppmgrLicenseInfo *info);
+int appmgrCheckRifGDForUser(const char *path, struct AppmgrLicenseInfo *info,
+			    const struct SyscallUnusedArgs *userArguments);
+int appmgrCheckRifGDOnStack(void *argp);
+int appmgrUpdateSaveDataParamForUser(const char *path,
+				     const struct SyscallUnusedArgs *userArguments);
+int appmgrUpdateSaveDataParamOnStack(void *argp);
 int appmgrAddContMountSyscall(SceUID pid, const struct AppmgrAddContMountParam *param);
 struct ScePfsRndDriveId;
 struct AppmgrSaveDataInfo;
