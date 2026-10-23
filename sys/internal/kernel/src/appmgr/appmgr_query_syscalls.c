@@ -58,6 +58,11 @@ int appmgrAppParamGetStringSyscall(int pid, int param, char *string, SceSize len
 	return sceAppMgrAppParamGetString(pid, param, string, length);
 }
 
+int appmgrAppParamSetStringSyscall(int param, const char *string)
+{
+	return sceAppMgrAppParamSetString(param, string);
+}
+
 int appmgrGetSystemDataFilePlayReadySyscall(SceUInt32 location, void *information,
 					  void *userData, SceSize dataSize)
 {

@@ -160,7 +160,6 @@ STUB(_sceAppMgrSaveDataUmount)
 STUB(sceAppMgrSaveDataGetCachedRequiredSizeKiB)
 STUB(_sceAppMgrAddContAddMount)
 STUB(_sceAppMgrWorkDirMountById)
-STUB(_sceAppMgrAppParamSetString)
 
 
 STUB(_sceAppMgrGetSaveDataInfo)

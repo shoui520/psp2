@@ -142,6 +142,18 @@ int _sceAppMgrAppParamGetString(int pid, int param, char *string,
 	return copyResult(ret, sceKernelCopyToUser(string, buffer, length));
 }
 
+int _sceAppMgrAppParamSetString(int param, const char *userString,
+				const SyscallUnusedArgs *userArguments)
+{
+	SyscallUnusedArgs arguments;
+	char *string = (char *)userString;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(string, userString, 1024);
+	return appmgrAppParamSetStringSyscall(param, string);
+}
+
 int _sceAppMgrGetSystemDataFilePlayReady(SceUInt32 location, void *information,
 				      void *userData, SceSize dataSize)
 {

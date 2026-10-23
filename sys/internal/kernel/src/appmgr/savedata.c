@@ -97,7 +97,8 @@ static __attribute__((noinline)) int appmgrCheckAppMount(const char *path, const
 static __attribute__((noinline)) int appmgrFindAppMount(const char *mountPoint, const AppmgrAppMount *mount);
 
 /* A string of a process's cached application information (100: PSM content ID, 101: PSM title). */
-int sceAppMgrAppParamGetString(int pid, int param, char *string, SceSize length)
+static __attribute__((noinline)) int appmgrGetAppInfoCacheString(int pid, int param, char *string,
+								 SceSize length)
 {
 	SceAppMgrAppInfoCache *info;
 	void *storage = NULL;
@@ -325,6 +326,183 @@ int SceAppMgrForDriver_12CE29F7(int pid, int param, int *value)
 		result = 0x80801042;
 		break;
 	}
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+/* A string parameter of a process's application. */
+int sceAppMgrAppParamGetString(int pid, int param, char *string, SceSize length)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	AppmgrProcessContent *content;
+	int result;
+
+	if ((param == 14 && SceThreadmgrForDriver_332E127C() != 128) ||
+	    (pid != 0 && SceSblACMgrForDriver_8A54DF3A(0) != 0 &&
+	     pid != sceKernelGetProcessId())) {
+		result = 0x80800009;
+		goto out;
+	}
+	if (string == NULL) {
+		result = 0x80800001;
+		goto out;
+	}
+	if (param == 100) {
+		result = appmgrGetAppInfoCacheString(pid, 100, string, length);
+		if (result != 0x80800012) {
+			if (result < 0)
+				goto out;
+			if (string[0] != '\0') {
+				sceSyscallLeave(syscallState);
+				return 0;
+			}
+		}
+		param = 6;
+	} else if (param == 101) {
+		result = appmgrGetAppInfoCacheString(pid, 101, string, length);
+		if (result != 0x80800012) {
+			if (result < 0)
+				goto out;
+			if (string[0] != '\0') {
+				sceSyscallLeave(syscallState);
+				return 0;
+			}
+		}
+		param = 9;
+	}
+	app = appmgrFindAppByProcessId(g_appmgrAppStates,
+				       pid != 0 ? pid : sceKernelGetProcessId());
+	if (app == NULL) {
+		result = 0x80802012;
+		goto out;
+	}
+	if (length >= 1024)
+		length = 1024;
+	memset(string, 0, length);
+	content = &app->process.content;
+	switch (param) {
+	case 6:
+		if (length < sizeof(content->contentId))
+			goto tooSmall;
+		strncpy(string, content->contentId, length - 1);
+		break;
+	case 7:
+		if (length < sizeof(content->npCommunicationId))
+			goto tooSmall;
+		strncpy(string, content->npCommunicationId, length - 1);
+		break;
+	case 8:
+		if (length < sizeof(content->category))
+			goto tooSmall;
+		strncpy(string, content->category, length - 1);
+		break;
+	case 9:
+		if (length < sizeof(content->title))
+			goto tooSmall;
+		strncpy(string, content->title, length - 1);
+		break;
+	case 10:
+		if (length < sizeof(content->shortTitle))
+			goto tooSmall;
+		strncpy(string, content->shortTitle, length - 1);
+		break;
+	case 12:
+		if (length < 10)
+			goto tooSmall;
+		strncpy(string, content->titleId, length - 1);
+		break;
+	case 14:
+		if (length < sizeof(content->appDirectory))
+			goto tooSmall;
+		strncpy(string, content->appDirectory, length - 1);
+		break;
+	default:
+	tooSmall:
+		sceSyscallLeave(syscallState);
+		return 0x80801000;
+	}
+	result = 0;
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+#define APPMGR_IS_UPPER(c)	((unsigned int)((c) - 'A') <= 'Z' - 'A')
+#define APPMGR_IS_DIGIT(c)	((unsigned int)((c) - '0') <= 9)
+
+/* A PSM content ID: XXYYYY-XXXXNNNNN_NN-ZZZZZZZZZZZZZZZZ (X upper case, N digit, Y and Z either). */
+static inline int appmgrIsPsmContentId(const unsigned char *id)
+{
+	int i;
+
+	if (!APPMGR_IS_UPPER(id[0]) || !APPMGR_IS_UPPER(id[1]))
+		return 0;
+	for (i = 2; i < 6; i++)
+		if (!APPMGR_IS_UPPER(id[i]) && !APPMGR_IS_DIGIT(id[i]))
+			return 0;
+	if (id[6] != '-')
+		return 0;
+	for (i = 7; i < 11; i++)
+		if (!APPMGR_IS_UPPER(id[i]))
+			return 0;
+	for (i = 11; i < 16; i++)
+		if (!APPMGR_IS_DIGIT(id[i]))
+			return 0;
+	if (id[16] != '_' || !APPMGR_IS_DIGIT(id[17]) || !APPMGR_IS_DIGIT(id[18]) ||
+	    id[19] != '-')
+		return 0;
+	for (i = 20; i < 36; i++)
+		if (!APPMGR_IS_DIGIT(id[i]) && !APPMGR_IS_UPPER(id[i]))
+			return 0;
+	return id[36] == '\0';
+}
+
+/* Set a string of the calling PSM process's cached application information. */
+int sceAppMgrAppParamSetString(int param, const char *string)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	SceAppMgrAppInfoCache *info;
+	void *storage;
+	int result;
+
+	if ((unsigned int)(param - 100) > 1) {
+		result = 0x80800009;
+		goto out;
+	}
+	storage = NULL;
+	if (SceSblACMgrForDriver_091F7247(0) == 0) {
+		result = 0x80800009;
+		goto out;
+	}
+	result = sceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	result = SceProcessmgrForDriver_AF80F39C(0, g_appmgrAppInfoCacheKey, &storage, 0);
+	if (result < 0)
+		goto unlock;
+	if (storage == NULL) {
+		result = 0x80800012;
+		goto unlock;
+	}
+	info = storage;
+	if (param == 101) {
+		if (string != NULL && strnlen(string, 128) != 128) {
+			result = 0;
+			memset(info->psmTitle, 0, sizeof(info->psmTitle));
+			strncpy(info->psmTitle, string, sizeof(info->psmTitle) - 1);
+			goto unlock;
+		}
+	} else if (string != NULL && appmgrIsPsmContentId((const unsigned char *)string)) {
+		result = 0;
+		memset(info->psmContentId, 0, sizeof(info->psmContentId));
+		strncpy(info->psmContentId, string, sizeof(info->psmContentId) - 1);
+		goto unlock;
+	}
+	result = 0x80801000;
+unlock:
+	sceKernelUnlockMutex(g_appmgrAppMutex, 1);
 out:
 	sceSyscallLeave(syscallState);
 	return result;

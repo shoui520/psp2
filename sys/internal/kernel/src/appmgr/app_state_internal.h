@@ -491,6 +491,8 @@ int appmgrAppMountSyscall(const struct AppmgrAppMountParam *param);
 int appmgrAppUmountSyscall(const struct AppmgrAppUmountParam *param);
 int appmgrAppParamGetIntSyscall(int pid, int param, int *value);
 int appmgrAppParamGetStringSyscall(int pid, int param, char *string, SceSize length);
+int appmgrAppParamSetStringSyscall(int param, const char *string);
+int sceAppMgrAppParamSetString(int param, const char *string);
 int appmgrGetSystemDataFilePlayReadySyscall(SceUInt32 location, void *information,
 					  void *userData, SceSize dataSize);
 int appmgrSetSystemDataFilePlayReadySyscall(SceUInt32 location,
