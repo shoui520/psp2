@@ -421,6 +421,7 @@ int sceAppMgrDestroyAppByName(const char *name);
 int sceAppMgrDestroyAppByAppId(int appId);
 int sceAppMgrSetAppProtectionModeOnMemoryShortage(unsigned int mode);
 void _updatePowerTickStateForNonSuspendableApp(void);
+int sceAppMgrSendParam(const char *name, const char *param, int option);
 void _appArbitrationOnProcessUnloaded(struct AppState *app);
 int appmgrStopShellWatchDog(void);
 int sceAppMgrLaunchAppByName2ndStage_internal(int appId, const char *name,

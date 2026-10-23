@@ -3268,3 +3268,35 @@ void _updatePowerTickStateForNonSuspendableApp(void)
 		++app;
 	} while (index <= 19);
 }
+
+int sceAppMgrSendParam(const char *name, const char *param, int option)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	int result;
+
+	if (!sceSblACMgrIsSystemProgram(0)) {
+		sceSyscallLeave(syscallState);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	if (name == NULL) {
+		sceSyscallLeave(syscallState);
+		return SCE_APPMGR_ERROR_NULL_POINTER;
+	}
+	if (name[0] == '\0' || option != 0) {
+		sceSyscallLeave(syscallState);
+		return SCE_APPMGR_ERROR_INVALID;
+	}
+	DELETE_APP_MAIN_LOCK(4438, "sceAppMgrSendParam");
+	app = appmgrFindAppByName(g_appmgrAppStates, name);
+	if (app == NULL) {
+		DELETE_APP_MAIN_UNLOCK(4443, "sceAppMgrSendParam");
+		sceSyscallLeave(syscallState);
+		return (int)0x80802012;
+	}
+	result = appmgrParamQueuePush(&app->params, param, -1,
+		sceKernelGetProcessId(), NULL);
+	DELETE_APP_MAIN_UNLOCK(4451, "sceAppMgrSendParam");
+	sceSyscallLeave(syscallState);
+	return result;
+}
