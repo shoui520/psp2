@@ -8,18 +8,19 @@ add_compile_definitions(_KERNEL)
 # NetBSD's own files, built from the pristine tree in contrib (or with Sony's patch). Sony built
 # them as NetBSD's kernel builds are: without strict aliasing (callout_hardclock reloads
 # hardclock_ticks after every store to a bucket) and with gnu89 inline semantics (uvm_extern.h's
-# extern inline functions are never emitted)
+# extern inline functions are never emitted), and with NET_PS_NETBSD for what Sony changed in
+# them only (libkern.h's memcpy)
 set(netbsd ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/netbsd-2.1/sys)
-set(netbsd30 ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/netbsd-3.0/sys)
 include(${CMAKE_CURRENT_SOURCE_DIR}/vendor_patch.cmake)
 net_ps_prepare_patched(${netbsd}/kern/uipc_domain.c ${CMAKE_CURRENT_SOURCE_DIR}/uipc_domain_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/uipc_domain.c)
 set(netbsd_sources
 	${netbsd}/kern/kern_timeout.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/uipc_domain.c
-	${netbsd30}/kern/uipc_mbuf2.c
+	${netbsd}/kern/uipc_mbuf2.c
 )
-set_source_files_properties(${netbsd_sources} PROPERTIES COMPILE_OPTIONS "-fno-strict-aliasing;-fgnu89-inline")
+set_source_files_properties(${netbsd_sources} PROPERTIES COMPILE_OPTIONS "-fno-strict-aliasing;-fgnu89-inline"
+	COMPILE_DEFINITIONS NET_PS_NETBSD)
 psp2_module(os0_kd_bootimage_net_ps KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	netps_allocator_adapters.c
 	netps_thread.c

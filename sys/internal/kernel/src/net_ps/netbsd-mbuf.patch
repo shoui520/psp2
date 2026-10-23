@@ -1,0 +1,41 @@
+--- contrib/netbsd-3.0/sys/sys/mbuf.h
++++ sys/internal/kernel/src/net_ps/include/sys/mbuf.h
+@@ -531,8 +531,9 @@
+ 	);								\
+ 	if ((m)->m_ext.ext_buf != NULL) {				\
+ 		(m)->m_data = (m)->m_ext.ext_buf;			\
++		/* SCE: no M_EXT_RW (M_READONLY is 2.1's) */		\
+ 		(m)->m_flags = ((m)->m_flags & ~M_EXTCOPYFLAGS) |	\
+-				M_EXT|M_CLUSTER|M_EXT_RW;		\
++				M_EXT|M_CLUSTER;			\
+ 		(m)->m_ext.ext_size = (size);				\
+ 		(m)->m_ext.ext_free = NULL;				\
+ 		(m)->m_ext.ext_arg = (pool_cache);			\
+@@ -552,8 +553,8 @@
+ 	    (caddr_t)malloc((size), mbtypes[(m)->m_type], (how));	\
+ 	if ((m)->m_ext.ext_buf != NULL) {				\
+ 		(m)->m_data = (m)->m_ext.ext_buf;			\
+-		(m)->m_flags = ((m)->m_flags & ~M_EXTCOPYFLAGS) |	\
+-				M_EXT|M_EXT_RW;				\
++		/* SCE: no M_EXT_RW (M_READONLY is 2.1's) */		\
++		(m)->m_flags = ((m)->m_flags & ~M_EXTCOPYFLAGS) | M_EXT;\
+ 		(m)->m_ext.ext_size = (size);				\
+ 		(m)->m_ext.ext_free = NULL;				\
+ 		(m)->m_ext.ext_arg = NULL;				\
+@@ -650,13 +651,12 @@
+ 
+ /*
+  * Determine if an mbuf's data area is read-only.  This is true
+- * if external storage is read-only mapped, or not marked as R/W,
+- * or referenced by more than one mbuf.
++ * for non-cluster external storage and for clusters that are
++ * being referenced by more than one mbuf (SCE: NetBSD 2.1's test).
+  */
+ #define	M_READONLY(m)							\
+ 	(((m)->m_flags & M_EXT) != 0 &&					\
+-	  (((m)->m_flags & (M_EXT_ROMAP|M_EXT_RW)) != M_EXT_RW ||	\
+-	  MCLISREFERENCED(m)))
++	  (((m)->m_flags & M_CLUSTER) == 0 || MCLISREFERENCED(m)))
+ 
+ /*
+  * Determine if an mbuf's data area is read-only at the MMU.

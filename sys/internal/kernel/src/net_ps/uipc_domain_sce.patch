@@ -1,6 +1,16 @@
---- contrib/netbsd-2.1/sys/kern/uipc_domain.c
-+++ sys/internal/kernel/src/net_ps/kern/uipc_domain.c
-@@ -89,7 +89,7 @@
+--- a/kern/uipc_domain.c
++++ b/kern/uipc_domain.c
+@@ -45,6 +45,9 @@
+ #include "arp.h"
+ 
+ #include <sys/param.h>
++
++/* SCE: the socket type of the inet domain's P2P raw protocol (no Sony name known) */
++#define	SOCK_RAW_P2P	9
+ #include <sys/socket.h>
+ #include <sys/protosw.h>
+ #include <sys/domain.h>
+@@ -89,7 +92,7 @@
  	 * it will be initialized as the *first* element.  confusing!
  	 */
  #ifndef lint
@@ -9,3 +19,14 @@
  #ifdef INET
  	ADDDOMAIN(inet);
  #endif
+@@ -198,7 +201,9 @@
+ 		if ((pr->pr_protocol == protocol) && (pr->pr_type == type))
+ 			return (pr);
+ 
+-		if (type == SOCK_RAW && pr->pr_type == SOCK_RAW &&
++		/* SCE: the P2P raw sockets fall back to their protocol 0 too */
++		if (((type == SOCK_RAW_P2P && pr->pr_type == SOCK_RAW_P2P) ||
++		    (type == SOCK_RAW && pr->pr_type == SOCK_RAW)) &&
+ 		    pr->pr_protocol == 0 && maybe == NULL)
+ 			maybe = pr;
+ 	}

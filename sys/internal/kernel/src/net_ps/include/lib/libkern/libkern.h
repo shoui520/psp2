@@ -12,3 +12,11 @@
 #undef strcmp
 #undef strlen
 #undef ffs
+
+/*
+ * SCE: in NetBSD's own files (NET_PS_NETBSD, set by the build), a copy of no bytes calls nothing
+ * (m_pulldown, m_tag_copy: the length is tested, signed, before every call)
+ */
+#ifdef NET_PS_NETBSD
+#define	memcpy(d, s, l)		((l) > 0 ? memcpy((d), (s), (l)) : (d))
+#endif
