@@ -148,7 +148,7 @@ SceAppMgr:
         - appmgrDumpSyscall: 0x527795E8
         - appmgrFinishCoredumpForShellSyscall: 0x52FF63D1
         - _sceAppMgrSaveDataUmount: 0x53623420
-        - sceAppMgrLaunchAppCancel: 0x5369BC0A
+        - appmgrLaunchAppCancelSyscall: 0x5369BC0A
         - sceAppMgrDestroyOtherAppByPidForShell: 0x5420D23C
         - sceAppMgrDestroyAppByAppId: 0x54368A0B
         - _sceAppMgrGetRawPathOfApp0ByPidForShell: 0x550422F9

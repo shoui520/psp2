@@ -392,15 +392,18 @@ int _sceAppMgrLaunchApp2(const char *appPath, const char *name, SceUInt32 budget
 		const char *param, SceUInt32 processAttr, const AppmgrLaunchAppOption *option);
 int sceAppMgrLaunchAppByName2ndStage(int appId, const char *appPath, SceUInt32 budgetSize,
 		SceUInt32 processAttr, const AppmgrLaunchAppOption *option);
-int appmgrLaunchAppByName2Syscall(const SceChar8 *name, const char *param,
+int appmgrLaunchAppByName2(const SceChar8 *name, const char *param,
 		const AppmgrLaunchAppByNameOption *option);
-int appmgrLaunchVideoStreamingAppSyscall(const void *extraParam, SceSize extraParamSize,
+int appmgrLaunchVideoStreamingApp(const void *extraParam, SceSize extraParamSize,
 		const AppmgrLaunchAppByNameOption *option);
-int appmgrLaunchAppByName2ForShellSyscall(const SceChar8 *name, const char *param,
+int appmgrLaunchAppByName2ForShell(const SceChar8 *name, const char *param,
 		const AppmgrLaunchAppByNameOption *option);
-int appmgrLaunchAppByNameSyscall(SceUInt32 launchMode, const SceChar8 *name, const char *param);
-int appmgrLaunchAppByNameForShellSyscall(SceUInt32 launchMode, const SceChar8 *name,
+int appmgrLaunchAppByName(SceUInt32 launchMode, const SceChar8 *name, const char *param);
+int appmgrLaunchAppByNameForShell(SceUInt32 launchMode, const SceChar8 *name,
 		const char *param);
+int appmgrLaunchAppByUri(SceUInt32 launchMode, const char *uri);
+int appmgrLaunchAppByUri2(const char *uri, const AppmgrLaunchAppByNameOption *option);
+int sceAppMgrLaunchAppCancel(int appId);
 int sceAppMgrLaunchAppByName2ndStage_internal(int appId, const char *name,
 		SceAppMgrAppStatus *statusOut, const AppmgrLaunchRequest *request,
 		int sendParamToRunning, int startByUpdater, const AppmgrCreateProcessParam *createParam,

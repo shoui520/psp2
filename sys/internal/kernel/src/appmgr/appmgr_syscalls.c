@@ -101,6 +101,11 @@ int sceAppMgrRestoreBgmSettingForShell(void)
 	return appmgrRestoreBgmSettingForShell();
 }
 
+int appmgrLaunchAppCancelSyscall(int appId)
+{
+	return sceAppMgrLaunchAppCancel(appId);
+}
+
 int sceAppMgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode)
 {
 	return appmgrAcquireSoundOutExclusive(priority, displayEnabled, displayMode);

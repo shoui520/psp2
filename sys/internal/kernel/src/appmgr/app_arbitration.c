@@ -1511,7 +1511,7 @@ int sceAppMgrLaunchAppForTest2(const char *appPath, const char *name, SceUInt32 
 }
 
 /* The system calls that launch by name: the shell launches the application later. */
-int appmgrLaunchAppByName2Syscall(const SceChar8 *name, const char *param,
+int appmgrLaunchAppByName2(const SceChar8 *name, const char *param,
 		const AppmgrLaunchAppByNameOption *option)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
@@ -1565,7 +1565,7 @@ int appmgrLaunchAppByName2Syscall(const SceChar8 *name, const char *param,
 }
 
 /* The video streaming application, with its extra parameters, for the web browser too */
-int appmgrLaunchVideoStreamingAppSyscall(const void *extraParam, SceSize extraParamSize,
+int appmgrLaunchVideoStreamingApp(const void *extraParam, SceSize extraParamSize,
 		const AppmgrLaunchAppByNameOption *option)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
@@ -1618,7 +1618,7 @@ int appmgrLaunchVideoStreamingAppSyscall(const void *extraParam, SceSize extraPa
 	return result < 0 ? result : 0;
 }
 
-int appmgrLaunchAppByName2ForShellSyscall(const SceChar8 *name, const char *param,
+int appmgrLaunchAppByName2ForShell(const SceChar8 *name, const char *param,
 		const AppmgrLaunchAppByNameOption *option)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
@@ -1671,7 +1671,7 @@ int appmgrLaunchAppByName2ForShellSyscall(const SceChar8 *name, const char *para
 	return result;
 }
 
-int appmgrLaunchAppByNameSyscall(SceUInt32 launchMode, const SceChar8 *name, const char *param)
+int appmgrLaunchAppByName(SceUInt32 launchMode, const SceChar8 *name, const char *param)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
 	int result;
@@ -1686,7 +1686,7 @@ int appmgrLaunchAppByNameSyscall(SceUInt32 launchMode, const SceChar8 *name, con
 	return result < 0 ? result : 0;
 }
 
-int appmgrLaunchAppByNameForShellSyscall(SceUInt32 launchMode, const SceChar8 *name,
+int appmgrLaunchAppByNameForShell(SceUInt32 launchMode, const SceChar8 *name,
 		const char *param)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
@@ -1700,6 +1700,101 @@ int appmgrLaunchAppByNameForShellSyscall(SceUInt32 launchMode, const SceChar8 *n
 		NULL, 0, 0);
 	sceSyscallLeave(syscallState);
 	return result;
+}
+
+/* The launches by URI: the shell finds the application from the parameter. */
+int appmgrLaunchAppByUri(SceUInt32 launchMode, const char *uri)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	int result;
+
+	result = sceAppMgrLaunchAppByNameInternal(launchMode | 0x100000, NULL, uri, -1, -1, -1,
+		0, NULL, 0, 0);
+	sceSyscallLeave(syscallState);
+	return result < 0 ? result : 0;
+}
+
+int appmgrLaunchAppByUri2(const char *uri, const AppmgrLaunchAppByNameOption *option)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	SceUInt32 launchMode, evictionThresholdClass, resumeCreatorOnLaunchFailure;
+	SceUID launchCallbackId, paramCallbackId;
+	int creatorAppId, i, result;
+
+	if (option != NULL) {
+		for (i = 0; i < sizeof(option->reservedTail); i++) {
+			if (option->reservedTail[i] != 0) {
+				sceSyscallLeave(syscallState);
+				return SCE_APPMGR_ERROR_PARAM;
+			}
+		}
+		launchMode = option->launchMode;
+		launchCallbackId = option->launchCallbackId;
+		paramCallbackId = option->paramCallbackId;
+		if (launchMode & 0x40000)
+			creatorAppId = option->creatorAppId;
+		else
+			creatorAppId = -1;
+		evictionThresholdClass = option->evictionThresholdClass;
+		launchMode |= 0x100000;
+		if (launchCallbackId > 0)
+			launchCallbackId = SceSysmemForDriver_45D22597(sceKernelGetProcessId(),
+				launchCallbackId);
+		else
+			launchCallbackId = -1;
+		if (paramCallbackId > 0)
+			paramCallbackId = SceSysmemForDriver_45D22597(sceKernelGetProcessId(),
+				paramCallbackId);
+		else
+			paramCallbackId = -1;
+		resumeCreatorOnLaunchFailure = option->resumeCreatorOnLaunchFailure;
+	} else {
+		creatorAppId = -1;
+		evictionThresholdClass = 0;
+		resumeCreatorOnLaunchFailure = 0;
+		launchCallbackId = -1;
+		paramCallbackId = -1;
+		launchMode = 0x100000;
+	}
+	result = sceAppMgrLaunchAppByNameInternal(launchMode, NULL, uri, launchCallbackId,
+		paramCallbackId, creatorAppId, evictionThresholdClass, NULL, 0,
+		resumeCreatorOnLaunchFailure);
+	sceSyscallLeave(syscallState);
+	return result < 0 ? result : 0;
+}
+
+/* The shell cancels a launch that has not started yet. */
+int sceAppMgrLaunchAppCancel(int appId)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	SceUID creatorPid;
+	int result;
+
+	if (!isShellProcess()) {
+		sceSyscallLeave(syscallState);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	DELETE_APP_MAIN_LOCK(2310, "sceAppMgrLaunchAppCancel");
+	app = appmgrFindAppById(appId);
+	if (app == NULL) {
+		DELETE_APP_MAIN_UNLOCK(2315, "sceAppMgrLaunchAppCancel");
+		sceSyscallLeave(syscallState);
+		return (int)0x80802012;
+	}
+	if (appmgrGetAppRunStatus(app) != 0x300) {
+		DELETE_APP_MAIN_UNLOCK(2323, "sceAppMgrLaunchAppCancel");
+		sceSyscallLeave(syscallState);
+		return (int)0x80802013;
+	}
+	creatorPid = -1;
+	result = appmgrClearFailedAppLaunch(app, -1, &creatorPid);
+	DELETE_APP_CHECK(result, 0, 2331, "sceAppMgrLaunchAppCancel");
+	DELETE_APP_MAIN_UNLOCK(2333, "sceAppMgrLaunchAppCancel");
+	if (creatorPid >= 0)
+		sendResumeToPid(creatorPid);
+	sceSyscallLeave(syscallState);
+	return 0;
 }
 
 /* The two Sony media helpers are inlined twice into the listener. */
