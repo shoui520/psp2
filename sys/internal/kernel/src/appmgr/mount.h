@@ -165,6 +165,7 @@ int appmgrResolveLaunchPath(const char *path, char *output, SceSize size);
 int sceAppMgrGetRawPath(char *path, char *resolvedPath, int capacity);
 int appmgrExtractSaveDataDeviceName(const char *path, char *device, SceSize capacity);
 void *appmgrAllocMountHeapMemory(SceSize size);
+void appmgrDebugHexDump(const void *data, SceSize size);
 
 /* appmgr_system_data.c */
 int appmgrRemoveDirectoryTree(const char *path);

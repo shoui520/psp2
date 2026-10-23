@@ -7512,6 +7512,11 @@ out:
 	return result;
 }
 
+/* the hex dump of local-backup and cloud-data buffers: empty in release builds */
+void appmgrDebugHexDump(const void *data, SceSize size)
+{
+}
+
 int appmgrResolvePath(const char *path, SceUID pid, char *output, SceSize size)
 {
 	int permission, result;
