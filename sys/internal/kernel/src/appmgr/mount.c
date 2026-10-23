@@ -3249,6 +3249,37 @@ out:
 	return result;
 }
 
+/* An application directory is PFS content when it has sce_pfs or a signed sce_sys. */
+int appmgrIsPfsContent(const char *path)
+{
+	SceAllocOpt opt;
+	SceIoStat stat;
+	char *buffer;
+
+	if (strncmp(path, "host0:", 6) == 0 || strncmp(path, "ux0:data", 8) == 0 ||
+	    strncmp(path, "ux0:\\data", 9) == 0 || strncmp(path, "ux0:/data", 9) == 0 ||
+	    strncmp(path, "vs0:", 4) == 0)
+		return 0;
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 32;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	buffer = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	if (buffer == NULL)
+		return 0;
+	snprintf(buffer, 292, "%s/sce_pfs", path);
+	if (appmgrCreateDirectories(buffer, 0) < 0) {
+		snprintf(buffer, 292, "%s/sce_sys/clearsign", path);
+		if (sceIoGetstat(buffer, &stat) < 0) {
+			sceKernelFreeHeapMemory(g_appmgrMountHeap, buffer);
+			return 0;
+		}
+	}
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, buffer);
+	return 1;
+}
+
 int appmgrResolveLaunchDirectory(const char *path,
 				const AppmgrLaunchOptions *options,
 				const AppmgrMapFile *mapFile, char *output,
