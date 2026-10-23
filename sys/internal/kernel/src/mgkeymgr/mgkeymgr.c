@@ -27,8 +27,21 @@ static const uint32_t s_request[0x90 / 4] = {
 	0, 0, 0, 0xffffffff,
 };
 
+int MapKeyRegisters(void);
+
+int module_start(unsigned args, void *argp)
+{
+	MapKeyRegisters();
+	return 0;
+}
+
+int module_stop(unsigned args, void *argp)
+{
+	return 0;
+}
+
 /* name unknown: map the DMAC5 key-register page. */
-static int __attribute__((noinline)) MapKeyRegisters(void)
+int __attribute__((noinline)) MapKeyRegisters(void)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	void *base;
@@ -47,42 +60,15 @@ static int __attribute__((noinline)) MapKeyRegisters(void)
 	return 0;
 }
 
-/* name unknown: start mgkm_sm with the original authorization request. */
-static int __attribute__((noinline)) StartSecureModule(void)
+int SceSblMgKeyMgrForDriver_B6AC3AE1(const void *input, void *output)
 {
-	SelfAuthRequest auth;
-	int ret;
-
-	memset(&auth, 0, sizeof(auth));
-	memcpy(&auth.caller, s_request, sizeof(s_request));
-	ret = sceSblACMgrGetMediaType("os0:sm/mgkm_sm.self", &auth.mediaType);
-	if (ret < 0)
-		return ret;
-	auth.selfType = (auth.selfType & ~0xfU) | 2;
-	return sceSblSmCommStartSm(0, "os0:sm/mgkm_sm.self", 0,
-		&auth, &s_smId);
+	if ((input == NULL) | (output == NULL))
+		return MG_ERROR_ARGUMENT;
+	return MG_ERROR_UNSUPPORTED;
 }
 
-/* The secure-module command payload is intentionally not initialized by Sony. */
-static int __attribute__((noinline)) call_set_key_command(unsigned command)
-{
-	SceSblSmCommPair stopResult;
-	uint32_t result = 0;
-	uint8_t data[0x30];
-	int ret;
-
-	ret = StartSecureModule();
-	if (ret != 0)
-		return ret;
-	ret = sceSblSmCommCallFunc(s_smId, command, &result, data, sizeof(data));
-	if (ret != 0)
-		result = MG_ERROR_OPERATION;
-	ret = sceSblSmCommStopSm(s_smId, &stopResult);
-	return ret != 0 ? MG_ERROR_OPERATION : (int)result;
-}
-
-/* name unknown: stage an aligned AES block before calling DMAC5. */
-static int __attribute__((noinline)) AesTransform(const void *input, void *output,
+/* name unknown: stage a block of up to 32 bytes and run DMAC5 AES-ECB with a keyslot. */
+int __attribute__((noinline)) AesTransform(const void *input, void *output,
 	unsigned size, unsigned slot, unsigned encrypt)
 {
 	uint8_t plain[32] __attribute__((aligned(16)));
@@ -90,10 +76,10 @@ static int __attribute__((noinline)) AesTransform(const void *input, void *outpu
 	void *staged;
 	int ret;
 
-	if (size > 32 || encrypt > 1)
+	if (encrypt > 1 || size > 32)
 		return MG_ERROR_ARGUMENT;
 	staged = __memcpy_chk(plain, input, size, sizeof(plain));
-	if (encrypt)
+	if (encrypt == 1)
 		ret = SceSblSsMgrForDriver_01BE0374(staged, cipher, size,
 			slot, 0x80, 1);
 	else
@@ -105,12 +91,27 @@ static int __attribute__((noinline)) AesTransform(const void *input, void *outpu
 	return 0;
 }
 
+int __attribute__((noinline)) AesDecrypt32(const void *input, void *output, unsigned slot)
+{
+	return AesTransform(input, output, 32, slot, 0);
+}
+
+int __attribute__((noinline)) AesEncrypt(const void *input, void *output, unsigned slot)
+{
+	return AesTransform(input, output, 16, slot, 1);
+}
+
+int __attribute__((noinline)) AesDecrypt(const void *input, void *output, unsigned slot)
+{
+	return AesTransform(input, output, 16, slot, 0);
+}
+
 /* name unknown: the DES stage copies words, without a memcpy import. */
-static int __attribute__((noinline)) DesTransform(const uint32_t *input, uint32_t *output,
+int __attribute__((noinline)) DesTransform(const uint32_t *input, uint32_t *output,
 	unsigned slot, unsigned encrypt)
 {
-	uint32_t plain[4] __attribute__((aligned(16)));
-	uint32_t cipher[4] __attribute__((aligned(16)));
+	uint32_t plain[8] __attribute__((aligned(16)));
+	uint32_t cipher[8] __attribute__((aligned(16)));
 	int ret;
 
 	if (encrypt > 1)
@@ -119,9 +120,9 @@ static int __attribute__((noinline)) DesTransform(const uint32_t *input, uint32_
 	plain[1] = input[1];
 	plain[2] = input[2];
 	plain[3] = input[3];
-	if (encrypt)
+	if (encrypt == 1)
 		ret = SceSblSsMgrForDriver_37DD5CBF(plain, cipher, 16,
-			slot, 0xc0, 1);
+			slot, 0xc0, encrypt);
 	else
 		ret = SceSblSsMgrForDriver_8EAFB18A(plain, cipher, 16,
 			slot, 0xc0, 1);
@@ -134,127 +135,164 @@ static int __attribute__((noinline)) DesTransform(const uint32_t *input, uint32_
 	return 0;
 }
 
-static int ValidInputs(const void *first, const void *second, const void *third)
+int __attribute__((noinline)) DesDecrypt(const void *input, void *output, unsigned slot)
 {
-	return first && second && third;
+	return DesTransform(input, output, slot, 0);
 }
 
-/* Two identical halves form the 32-byte wrapped key. */
-static int __attribute__((noinline)) InstallDesKey(const uint32_t *key)
+int __attribute__((noinline)) DesEncrypt(const void *input, void *output, unsigned slot)
+{
+	return DesTransform(input, output, slot, 1);
+}
+
+/* name unknown: start a secure module with the original authorization request. */
+int __attribute__((noinline)) StartSecureModule(const char *path)
+{
+	SelfAuthRequest auth;
+	int ret;
+
+	memset(&auth, 0, sizeof(auth));
+	memcpy(&auth.caller, s_request, sizeof(s_request));
+	ret = sceSblACMgrGetMediaType(path, &auth.mediaType);
+	if (ret < 0)
+		return ret;
+	auth.selfType = (auth.selfType & ~0xfU) | 2;
+	return sceSblSmCommStartSm(0, path, 0, &auth, &s_smId);
+}
+
+int __attribute__((noinline)) StopSecureModule(void)
+{
+	SceSblSmCommPair stopResult;
+
+	return sceSblSmCommStopSm(s_smId, &stopResult);
+}
+
+/* The secure-module command payload is intentionally not initialized by Sony. */
+int __attribute__((noinline)) CallSecureModule(unsigned command)
+{
+	uint32_t result = 0;
+	uint8_t data[0x30];
+	int ret;
+
+	ret = StartSecureModule("os0:sm/mgkm_sm.self");
+	if (ret != 0)
+		return ret;
+	if (sceSblSmCommCallFunc(s_smId, command, &result, data, sizeof(data)) != 0)
+		result = MG_ERROR_OPERATION;
+	if (StopSecureModule() != 0)
+		return MG_ERROR_OPERATION;
+	return result;
+}
+
+/* name unknown: mgkm_sm command 2 sets up the keyslots the exports use. */
+int __attribute__((noinline)) SetKeyslots(void)
+{
+	return CallSecureModule(2);
+}
+
+/* Two identical halves form the 32-byte wrapped DES key, decrypted into keyslot 0x1d. */
+static inline int InstallDesKey(const uint32_t *key)
 {
 	uint32_t wrapped[8];
 
-	for (unsigned i = 0; i < 4; i++) {
-		wrapped[i] = key[i];
-		wrapped[i + 4] = wrapped[i];
-	}
-	return AesTransform(wrapped, (void *)s_keyring->slot[0x1d].words, 32, 0x1e, 0);
-}
-
-/* name unknown: decode two keys, xor them, and install keyslot 0x1d. */
-static int __attribute__((noinline)) InstallXorKey(const void *first, const void *second)
-{
-	uint32_t left[4], right[4];
-	int ret;
-
-	ret = AesTransform(first, left, 16, 0x1e, 0);
-	if (ret != 0)
-		return ret;
-	ret = AesTransform(second, right, 16, 0x1e, 0);
-	if (ret != 0)
-		return ret;
-	for (unsigned i = 0; i < 4; i++)
-		right[i] ^= left[i];
-	for (unsigned i = 0; i < 4; i++)
-		s_keyring->slot[0x1d].words[i] = right[i];
-	return 0;
-}
-
-int SceSblMgKeyMgrForDriver_B6AC3AE1(const void *input, void *output)
-{
-	return (uintptr_t)input == 0 || !output ? MG_ERROR_ARGUMENT : MG_ERROR_UNSUPPORTED;
-}
-
-static int __attribute__((noinline)) DesOperation(const uint32_t *key, const void *input,
-	void *output, unsigned encrypt)
-{
-	int ret;
-
-	if (!ValidInputs(key, input, output))
-		return MG_ERROR_ARGUMENT;
-	SceKernelSuspendForDriver_4DF40893(0);
-	ret = call_set_key_command(2);
-	if (ret == 0)
-		ret = InstallDesKey(key);
-	if (ret == 0)
-		ret = DesTransform(input, output, 0x1d, encrypt);
-	SceKernelSuspendForDriver_2BB92967(0);
-	return ret;
+	wrapped[0] = key[0];
+	wrapped[1] = key[1];
+	wrapped[2] = key[2];
+	wrapped[3] = key[3];
+	wrapped[4] = wrapped[0];
+	wrapped[5] = wrapped[1];
+	wrapped[6] = wrapped[2];
+	wrapped[7] = wrapped[3];
+	return AesDecrypt32(wrapped, (void *)s_keyring->slot[0x1d].words, 0x1e);
 }
 
 int SceSblMgKeyMgrForDriver_20B66ADA(const uint32_t *key, const void *input, void *output)
 {
-	return DesOperation(key, input, output, 1);
+	int ret;
+
+	if (((key == NULL) | (output == NULL)) || input == NULL)
+		return MG_ERROR_ARGUMENT;
+	SceKernelSuspendForDriver_4DF40893(0);
+	ret = SetKeyslots();
+	if (ret == 0) {
+		ret = InstallDesKey(key);
+		if (ret == 0)
+			ret = DesEncrypt(input, output, 0x1d);
+	}
+	SceKernelSuspendForDriver_2BB92967(0);
+	return ret;
 }
 
 int SceSblMgKeyMgrForDriver_5FECCE03(const uint32_t *key, const void *input, void *output)
 {
-	return DesOperation(key, input, output, 0);
-}
-
-static int __attribute__((noinline)) XorKeyOperation(const void *first, const void *second,
-	const void *input, void *output, unsigned encrypt)
-{
 	int ret;
 
-	if (!ValidInputs(first, second, output) || !input)
+	if (((key == NULL) | (output == NULL)) || input == NULL)
 		return MG_ERROR_ARGUMENT;
 	SceKernelSuspendForDriver_4DF40893(0);
-	ret = call_set_key_command(2);
-	if (ret == 0)
-		ret = InstallXorKey(first, second);
-	if (ret == 0)
-		ret = AesTransform(input, output, 16, 0x1d, encrypt);
+	ret = SetKeyslots();
+	if (ret == 0) {
+		ret = InstallDesKey(key);
+		if (ret == 0)
+			ret = DesDecrypt(input, output, 0x1d);
+	}
 	SceKernelSuspendForDriver_2BB92967(0);
 	return ret;
+}
+
+/* name unknown: decrypt two key halves, xor them, and install keyslot 0x1d. */
+static inline int InstallXorKey(const void *first, const void *second)
+{
+	uint32_t left[4], right[4];
+	uint8_t *l = (uint8_t *)left, *r = (uint8_t *)right;
+	int ret;
+
+	ret = AesDecrypt(first, left, 0x1e);
+	if (ret != 0)
+		return ret;
+	ret = AesDecrypt(second, right, 0x1e);
+	if (ret != 0)
+		return ret;
+	for (unsigned i = 0; i < 16; i++)
+		r[i] ^= l[i];
+	s_keyring->slot[0x1d].words[0] = right[0];
+	s_keyring->slot[0x1d].words[1] = right[1];
+	s_keyring->slot[0x1d].words[2] = right[2];
+	s_keyring->slot[0x1d].words[3] = right[3];
+	return 0;
 }
 
 int SceSblMgKeyMgrForDriver_EA534495(const void *first, const void *second,
 	const void *input, void *output)
 {
-	return XorKeyOperation(first, second, input, output, 1);
+	int ret;
+
+	if (((first == NULL) | (second == NULL)) || ((input == NULL) | (output == NULL)))
+		return MG_ERROR_ARGUMENT;
+	SceKernelSuspendForDriver_4DF40893(0);
+	ret = SetKeyslots();
+	if (ret == 0) {
+		ret = InstallXorKey(first, second);
+		if (ret == 0)
+			ret = AesEncrypt(input, output, 0x1d);
+	}
+	SceKernelSuspendForDriver_2BB92967(0);
+	return ret;
 }
 
 int SceSblMgKeyMgrForDriver_DF3B808D(const void *first, const void *second,
 	const void *input, void *output)
 {
-	return XorKeyOperation(first, second, input, output, 0);
-}
-
-/* name unknown: translate between DES and the wrapping AES keyslot. */
-static int __attribute__((noinline)) TranslateDes(const uint32_t *key, void *wrapped,
-	void *plain, unsigned decrypt)
-{
-	uint32_t intermediate[4];
 	int ret;
 
-	if (!ValidInputs(key, wrapped, plain))
+	if (((first == NULL) | (second == NULL)) || ((input == NULL) | (output == NULL)))
 		return MG_ERROR_ARGUMENT;
 	SceKernelSuspendForDriver_4DF40893(0);
-	ret = call_set_key_command(2);
-	if (ret == 0)
-		ret = InstallDesKey(key);
+	ret = SetKeyslots();
 	if (ret == 0) {
-		if (decrypt)
-			ret = AesTransform(wrapped, intermediate, 16, 0x1e, 0);
-		else
-			ret = DesTransform(plain, intermediate, 0x1d, 1);
-	}
-	if (ret == 0) {
-		if (decrypt)
-			ret = DesTransform(intermediate, plain, 0x1d, 1);
-		else
-			ret = AesTransform(intermediate, wrapped, 16, 0x1e, 1);
+		ret = InstallXorKey(first, second);
+		if (ret == 0)
+			ret = AesDecrypt(input, output, 0x1d);
 	}
 	SceKernelSuspendForDriver_2BB92967(0);
 	return ret;
@@ -262,57 +300,62 @@ static int __attribute__((noinline)) TranslateDes(const uint32_t *key, void *wra
 
 int SceSblMgKeyMgrForDriver_BC7D86EE(const uint32_t *key, void *wrapped, void *plain)
 {
-	return TranslateDes(key, wrapped, plain, 0);
-}
-
-int SceSblMgKeyMgrForDriver_D37C3DAE(const uint32_t *key, void *wrapped, void *plain)
-{
-	int ret;
 	uint32_t intermediate[4];
+	int ret;
 
-	if (!ValidInputs(key, wrapped, plain))
+	if (((key == NULL) | (wrapped == NULL)) || plain == NULL)
 		return MG_ERROR_ARGUMENT;
 	SceKernelSuspendForDriver_4DF40893(0);
-	ret = call_set_key_command(2);
-	if (ret == 0)
+	ret = SetKeyslots();
+	if (ret == 0) {
 		ret = InstallDesKey(key);
-	if (ret == 0)
-		ret = DesTransform(plain, intermediate, 0x1d, 0);
-	if (ret == 0)
-		ret = AesTransform(intermediate, wrapped, 16, 0x1e, 1);
+		if (ret == 0) {
+			ret = DesEncrypt(plain, intermediate, 0x1d);
+			if (ret == 0)
+				ret = AesEncrypt(intermediate, wrapped, 0x1e);
+		}
+	}
 	SceKernelSuspendForDriver_2BB92967(0);
 	return ret;
 }
 
 int SceSblMgKeyMgrForDriver_4C82A466(const uint32_t *key, void *wrapped, void *plain)
 {
-	return TranslateDes(key, wrapped, plain, 1);
-}
-
-/* name unknown: translate a block using a decoded 128-bit AES key. */
-static int __attribute__((noinline)) TranslateAes(const void *key, void *wrapped, void *plain,
-	unsigned operation)
-{
-	uint8_t intermediate[16];
+	uint32_t intermediate[4];
 	int ret;
 
-	if (!ValidInputs(key, wrapped, plain))
+	if (((key == NULL) | (wrapped == NULL)) || plain == NULL)
 		return MG_ERROR_ARGUMENT;
 	SceKernelSuspendForDriver_4DF40893(0);
-	ret = call_set_key_command(2);
-	if (ret == 0)
-		ret = AesTransform(key, (void *)s_keyring->slot[0x1d].words, 16, 0x1e, 0);
+	ret = SetKeyslots();
 	if (ret == 0) {
-		if (operation == 1)
-			ret = AesTransform(wrapped, intermediate, 16, 0x1e, 0);
-		else
-			ret = AesTransform(plain, intermediate, 16, 0x1d, operation == 0);
+		ret = InstallDesKey(key);
+		if (ret == 0) {
+			ret = AesDecrypt(wrapped, intermediate, 0x1e);
+			if (ret == 0)
+				ret = DesEncrypt(intermediate, plain, 0x1d);
+		}
 	}
+	SceKernelSuspendForDriver_2BB92967(0);
+	return ret;
+}
+
+int SceSblMgKeyMgrForDriver_D37C3DAE(const uint32_t *key, void *wrapped, void *plain)
+{
+	uint32_t intermediate[4];
+	int ret;
+
+	if (((key == NULL) | (wrapped == NULL)) || plain == NULL)
+		return MG_ERROR_ARGUMENT;
+	SceKernelSuspendForDriver_4DF40893(0);
+	ret = SetKeyslots();
 	if (ret == 0) {
-		if (operation == 1)
-			ret = AesTransform(intermediate, plain, 16, 0x1d, 1);
-		else
-			ret = AesTransform(intermediate, wrapped, 16, 0x1e, 1);
+		ret = InstallDesKey(key);
+		if (ret == 0) {
+			ret = DesDecrypt(plain, intermediate, 0x1d);
+			if (ret == 0)
+				ret = AesEncrypt(intermediate, wrapped, 0x1e);
+		}
 	}
 	SceKernelSuspendForDriver_2BB92967(0);
 	return ret;
@@ -320,17 +363,65 @@ static int __attribute__((noinline)) TranslateAes(const void *key, void *wrapped
 
 int SceSblMgKeyMgrForDriver_8CFCAA52(const void *key, void *wrapped, void *plain)
 {
-	return TranslateAes(key, wrapped, plain, 0);
+	uint8_t intermediate[16];
+	int ret;
+
+	if (((key == NULL) | (wrapped == NULL)) || plain == NULL)
+		return MG_ERROR_ARGUMENT;
+	SceKernelSuspendForDriver_4DF40893(0);
+	ret = SetKeyslots();
+	if (ret == 0) {
+		ret = AesDecrypt(key, (void *)s_keyring->slot[0x1d].words, 0x1e);
+		if (ret == 0) {
+			ret = AesEncrypt(plain, intermediate, 0x1d);
+			if (ret == 0)
+				ret = AesEncrypt(intermediate, wrapped, 0x1e);
+		}
+	}
+	SceKernelSuspendForDriver_2BB92967(0);
+	return ret;
 }
 
 int SceSblMgKeyMgrForDriver_F8F856FC(const void *key, void *wrapped, void *plain)
 {
-	return TranslateAes(key, wrapped, plain, 1);
+	uint8_t intermediate[16];
+	int ret;
+
+	if (((key == NULL) | (wrapped == NULL)) || plain == NULL)
+		return MG_ERROR_ARGUMENT;
+	SceKernelSuspendForDriver_4DF40893(0);
+	ret = SetKeyslots();
+	if (ret == 0) {
+		ret = AesDecrypt(key, (void *)s_keyring->slot[0x1d].words, 0x1e);
+		if (ret == 0) {
+			ret = AesDecrypt(wrapped, intermediate, 0x1e);
+			if (ret == 0)
+				ret = AesEncrypt(intermediate, plain, 0x1d);
+		}
+	}
+	SceKernelSuspendForDriver_2BB92967(0);
+	return ret;
 }
 
 int SceSblMgKeyMgrForDriver_8ECFFD7A(const void *key, void *wrapped, void *plain)
 {
-	return TranslateAes(key, wrapped, plain, 2);
+	uint8_t intermediate[16];
+	int ret;
+
+	if (((key == NULL) | (wrapped == NULL)) || plain == NULL)
+		return MG_ERROR_ARGUMENT;
+	SceKernelSuspendForDriver_4DF40893(0);
+	ret = SetKeyslots();
+	if (ret == 0) {
+		ret = AesDecrypt(key, (void *)s_keyring->slot[0x1d].words, 0x1e);
+		if (ret == 0) {
+			ret = AesDecrypt(plain, intermediate, 0x1d);
+			if (ret == 0)
+				ret = AesEncrypt(intermediate, wrapped, 0x1e);
+		}
+	}
+	SceKernelSuspendForDriver_2BB92967(0);
+	return ret;
 }
 
 int SceSblMgKeyMgrForDriver_71FA16B0(const void *first, void *second)
@@ -338,61 +429,69 @@ int SceSblMgKeyMgrForDriver_71FA16B0(const void *first, void *second)
 	uint8_t left[16], right[16];
 	int ret;
 
-	if (!ValidInputs(first, second, second))
+	if ((first == NULL) | (second == NULL))
 		return MG_ERROR_ARGUMENT;
 	SceKernelSuspendForDriver_4DF40893(0);
-	ret = call_set_key_command(2);
-	if (ret == 0)
-		ret = AesTransform(first, left, 16, 0x1e, 0);
-	if (ret == 0)
-		ret = AesTransform(second, right, 16, 0x1e, 0);
+	ret = SetKeyslots();
 	if (ret == 0) {
-		for (unsigned i = 0; i < 16; i++)
-			right[i] ^= left[i];
-		ret = AesTransform(right, second, 16, 0x1e, 1);
+		ret = AesDecrypt(first, left, 0x1e);
+		if (ret == 0) {
+			ret = AesDecrypt(second, right, 0x1e);
+			if (ret == 0) {
+				for (unsigned i = 0; i < 16; i++)
+					right[i] ^= left[i];
+				ret = AesEncrypt(right, second, 0x1e);
+			}
+		}
 	}
 	SceKernelSuspendForDriver_2BB92967(0);
 	return ret;
 }
 
-static int __attribute__((noinline)) RewrapKey(void *first, void *second, unsigned decrypt)
+/* name unknown: mgkm_sm command 1 sets up keyslot 0x1f for the rewrap exports. */
+int __attribute__((noinline)) SetRewrapKeyslot(void)
 {
-	uint8_t intermediate[16];
-	int ret;
-
-	if (!ValidInputs(first, second, second))
-		return MG_ERROR_ARGUMENT;
-	SceKernelSuspendForDriver_4DF40893(0);
-	ret = call_set_key_command(1);
-	if (ret == 0)
-		ret = call_set_key_command(2);
-	if (ret == 0)
-		ret = AesTransform(decrypt ? second : first, intermediate, 16,
-			decrypt ? 0x1f : 0x1e, 0);
-	if (ret == 0)
-		ret = AesTransform(intermediate, decrypt ? first : second, 16,
-			decrypt ? 0x1e : 0x1f, 1);
-	SceKernelSuspendForDriver_2BB92967(0);
-	return ret;
+	return CallSecureModule(1);
 }
 
 int SceSblMgKeyMgrForDriver_1C5388D0(void *first, void *second)
 {
-	return RewrapKey(first, second, 0);
+	uint8_t intermediate[16];
+	int ret;
+
+	if ((first == NULL) | (second == NULL))
+		return MG_ERROR_ARGUMENT;
+	SceKernelSuspendForDriver_4DF40893(0);
+	ret = SetRewrapKeyslot();
+	if (ret == 0) {
+		ret = SetKeyslots();
+		if (ret == 0) {
+			ret = AesDecrypt(first, intermediate, 0x1e);
+			if (ret == 0)
+				ret = AesEncrypt(intermediate, second, 0x1f);
+		}
+	}
+	SceKernelSuspendForDriver_2BB92967(0);
+	return ret;
 }
 
 int SceSblMgKeyMgrForDriver_1263FB04(void *first, void *second)
 {
-	return RewrapKey(first, second, 1);
-}
+	uint8_t intermediate[16];
+	int ret;
 
-int module_start(unsigned args, void *argp)
-{
-	MapKeyRegisters();
-	return 0;
-}
-
-int module_stop(unsigned args, void *argp)
-{
-	return 0;
+	if ((first == NULL) | (second == NULL))
+		return MG_ERROR_ARGUMENT;
+	SceKernelSuspendForDriver_4DF40893(0);
+	ret = SetRewrapKeyslot();
+	if (ret == 0) {
+		ret = SetKeyslots();
+		if (ret == 0) {
+			ret = AesDecrypt(second, intermediate, 0x1f);
+			if (ret == 0)
+				ret = AesEncrypt(intermediate, first, 0x1e);
+		}
+	}
+	SceKernelSuspendForDriver_2BB92967(0);
+	return ret;
 }
