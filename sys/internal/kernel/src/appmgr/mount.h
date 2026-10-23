@@ -49,6 +49,8 @@ _Static_assert(sizeof(AppmgrAddContAddMountParam) == 64 &&
 	       "add-on content add mount parameters");
 
 int sceAppMgrAddContAddMount(const AppmgrAddContAddMountParam *param, int add);
+int sceAppMgrThemeDataMount(const char *contentId, const char *themePath,
+			    const char *rifPath, ScePfsRndDriveId *mountPoint);
 
 /* addcont.c */
 int sceAppMgrIsRelativeAddContAdd(const char *titleId, int add);
@@ -80,6 +82,10 @@ _Static_assert(offsetof(AppmgrLicenseInfo, licenseVersion) == 48 &&
 
 /* mount.c */
 int appmgrDecodeString(const unsigned char *source, char *destination, SceSize size);
+
+/* the character classes of title and content IDs */
+#define APPMGR_IS_UPPER(c)	((unsigned int)((c) - 'A') <= 'Z' - 'A')
+#define APPMGR_IS_DIGIT(c)	((unsigned int)((c) - '0') <= 9)
 int appmgrRegisterMountDebugSettingCallback(void);
 int appmgrIsDevelopmentPath(const char *path);
 int sceAppMgrIsGameProgram(void);

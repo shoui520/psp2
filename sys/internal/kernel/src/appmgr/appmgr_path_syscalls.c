@@ -20,6 +20,12 @@ int appmgrUmountByPidSyscall(SceUID pid, const char *driveId)
 	return sceAppMgrUmountByPid(pid, driveId);
 }
 
+int appmgrThemeDataMountSyscall(const char *contentId, const char *themePath,
+				const char *rifPath, ScePfsRndDriveId *mountPoint)
+{
+	return sceAppMgrThemeDataMount(contentId, themePath, rifPath, mountPoint);
+}
+
 int appmgrConvertVs0UserDrivePathSyscall(const char *path, char *output,
 	SceSize size)
 {

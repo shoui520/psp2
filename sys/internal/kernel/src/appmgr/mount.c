@@ -4176,6 +4176,174 @@ out:
 	return result;
 }
 
+static const unsigned char encodedThemeRoot[32] = {
+	(unsigned char)~'u', (unsigned char)~'x', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'t', (unsigned char)~'h', (unsigned char)~'e', (unsigned char)~'m',
+	(unsigned char)~'e', 0
+};
+static const unsigned char encodedThemeLicenseRoot[32] = {
+	(unsigned char)~'u', (unsigned char)~'x', (unsigned char)~'0', (unsigned char)~':',
+	(unsigned char)~'l', (unsigned char)~'i', (unsigned char)~'c', (unsigned char)~'e',
+	(unsigned char)~'n', (unsigned char)~'s', (unsigned char)~'e', (unsigned char)~'/',
+	(unsigned char)~'t', (unsigned char)~'h', (unsigned char)~'e', (unsigned char)~'m',
+	(unsigned char)~'e', 0
+};
+
+/* A theme's content ID: XXXXNNNNN-ZZZZZZZZZZZZZZZZ (X upper case, N digit, Z either). */
+static inline int appmgrIsThemeContentId(const unsigned char *id)
+{
+	int i;
+
+	for (i = 0; i < 4; i++)
+		if (!APPMGR_IS_UPPER(id[i]))
+			return 0;
+	for (i = 4; i < 9; i++)
+		if (!APPMGR_IS_DIGIT(id[i]))
+			return 0;
+	if (id[9] != '-')
+		return 0;
+	for (i = 10; i < 13; i++)
+		if (!APPMGR_IS_UPPER(id[i]) && !APPMGR_IS_DIGIT(id[i]))
+			return 0;
+	for (i = 13; i < 26; i++)
+		if (!APPMGR_IS_DIGIT(id[i]) && !APPMGR_IS_UPPER(id[i]))
+			return 0;
+	return id[26] == '\0';
+}
+
+/* Mounts a theme (tm) for the shell, from ux0:theme or the directory given. */
+int sceAppMgrThemeDataMount(const char *contentId, const char *themePath,
+			    const char *rifPath, ScePfsRndDriveId *mountPoint)
+{
+	ScePfsRndDriveId driveId = {{0}};
+	SceUInt32 syscallState = sceSyscallEnter();
+	SceSelfAuthInfo authInfo;
+	AppmgrLicenseInfo license;
+	struct AppState *app;
+	SceAllocOpt opt;
+	char titleId[16], root[32];
+	char *directory = NULL, *path = NULL;
+	int hasLicense = 1, result;
+	unsigned int length;
+
+	result = sceKernelGetProcessSelfAuthInfo(0, &authInfo);
+	if (result < 0)
+		goto out;
+	if (authInfo.programAuthorityId != 0x2800000000000001ULL &&
+	    authInfo.programAuthorityId != 0x2800000000000010ULL) {
+		result = 0x80800009;
+		goto out;
+	}
+	if (contentId == NULL || (themePath != NULL && rifPath == NULL) ||
+	    mountPoint == NULL) {
+		result = 0x80800001;
+		goto out;
+	}
+	memset(mountPoint, 0, sizeof(*mountPoint));
+	if (!appmgrIsThemeContentId((const unsigned char *)contentId)) {
+		result = 0x80800001;
+		goto out;
+	}
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app == NULL) {
+		result = 0x80801002;
+		goto error;
+	}
+
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 32;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	directory = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 128, &opt);
+	if (directory == NULL) {
+		result = 0x80801006;
+		goto error;
+	}
+	path = appmgrAllocMountPath();
+	if (path == NULL) {
+		result = 0x80801006;
+		goto error;
+	}
+	if (themePath != NULL) {
+		length = snprintf(directory, 128, "%s", themePath);
+	} else {
+		result = appmgrDecodeString(encodedThemeRoot, root, sizeof(root));
+		if (result < 0)
+			goto error;
+		length = snprintf(directory, 128, "%s/%s", root, contentId);
+	}
+	if (length >= 128) {
+		result = 0x80800001;
+		goto error;
+	}
+	length = snprintf(path, 292, "%s/%s", directory, "sce_sys/param.sfo");
+	if (length >= 292) {
+		result = 0x80800001;
+		goto error;
+	}
+	result = appmgrGetAddcontTitleId(path, titleId);
+	if (result < 0)
+		goto error;
+
+	memset(path, 0, 292);
+	if (rifPath != NULL) {
+		strncpy(path, rifPath, 291);
+		result = appmgrReadRif(path, &license);
+	} else {
+		result = appmgrDecodeString(encodedThemeLicenseRoot, root, sizeof(root));
+		if (result < 0)
+			goto error;
+		length = snprintf(path, 292, "%s/%s", root, contentId);
+		if (length >= 292) {
+			result = 0x80800001;
+			goto error;
+		}
+		result = appmgrReadDirectoryLicense(path, &license);
+	}
+	if (result < 0)
+		goto error;
+	result = appmgrCheckPackageLicenseFlag(directory, &hasLicense);
+	if (result < 0)
+		goto error;
+	if (hasLicense != 0)
+		memset(license.klicense, 0, sizeof(license.klicense));
+
+	result = appmgrMakeRandomDriveId("tm", driveId.drive_id);
+	if (result < 0)
+		goto error;
+	strcpy(&driveId.drive_id[13], "d:");
+	result = appmgrMount(sceKernelGetProcessId(), &app->process.mounts, 1004, titleId,
+			     directory, &driveId, (const ScePfsRndDriveId *)license.klicense,
+			     mountPoint);
+	if (result < 0) {
+		if (result == 0x80800003)
+			goto done;
+		goto error;
+	}
+	snprintf(path, 292, "%s/%s", directory, "sce_sys/param.sfo");
+	result = appmgrGetAddcontTitleId(path, titleId);
+	if (result >= 0)
+		goto done;
+
+error:
+	if (mountPoint->drive_id[0] != '\0' && app != NULL)
+		appmgrUnmountDrive(sceKernelGetProcessId(), &app->process.mounts,
+				   mountPoint->drive_id, 0);
+done:
+	if (directory != NULL)
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, directory);
+	if (path != NULL)
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, path);
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int appmgrResolveLaunchDirectory(const char *path,
 				const AppmgrLaunchOptions *options,
 				const AppmgrMapFile *mapFile, char *output,

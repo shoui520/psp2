@@ -55,26 +55,26 @@ int _sceAppMgrSystemParamGetString(int parameter, char *value, SceSize size,
 	return copyResult(ret, sceKernelCopyToUser(value, buffer, length));
 }
 
-/* _sceAppMgrGameDataMount's argument block: where the drive is returned */
-typedef struct AppmgrGameDataMountArguments {
+/* the argument block of the data mounts (game, theme): where the drive is returned */
+typedef struct AppmgrDataMountArguments {
 	ScePfsRndDriveId *mountPoint;
 	SceUInt32 reserved[5];
-} AppmgrGameDataMountArguments;
+} AppmgrDataMountArguments;
 
-_Static_assert(sizeof(AppmgrGameDataMountArguments) == 24,
-	       "game data mount argument block");
+_Static_assert(sizeof(AppmgrDataMountArguments) == 24,
+	       "data mount argument block");
 
-typedef struct AppmgrGameDataMountParam {
+typedef struct AppmgrDataMountParam {
 	const char *appPath;
 	const char *patchPath;
 	const char *rifPath;
-	const AppmgrGameDataMountArguments *userArguments;
-} __attribute__((aligned(8))) AppmgrGameDataMountParam;
+	const AppmgrDataMountArguments *userArguments;
+} __attribute__((aligned(8))) AppmgrDataMountParam;
 
 static int gameDataMount(const char *appPath, const char *patchPath, const char *rifPath,
-			 const AppmgrGameDataMountArguments *userArguments)
+			 const AppmgrDataMountArguments *userArguments)
 {
-	AppmgrGameDataMountArguments arguments;
+	AppmgrDataMountArguments arguments;
 	ScePfsRndDriveId *mountPoint;
 	char *kernelAppPath = (char *)appPath;
 	char *kernelPatchPath = (char *)patchPath;
@@ -94,18 +94,55 @@ static int gameDataMount(const char *appPath, const char *patchPath, const char 
 
 static int gameDataMountOnStack(void *argp)
 {
-	const AppmgrGameDataMountParam *param = argp;
+	const AppmgrDataMountParam *param = argp;
 
 	return gameDataMount(param->appPath, param->patchPath, param->rifPath,
 			     param->userArguments);
 }
 
 int _sceAppMgrGameDataMount(const char *appPath, const char *patchPath, const char *rifPath,
-			    const AppmgrGameDataMountArguments *userArguments)
+			    const AppmgrDataMountArguments *userArguments)
 {
-	AppmgrGameDataMountParam param = { appPath, patchPath, rifPath, userArguments };
+	AppmgrDataMountParam param = { appPath, patchPath, rifPath, userArguments };
 
 	return SceThreadmgrForDriver_E54FD746(0x2000, gameDataMountOnStack, &param);
+}
+
+static int themeDataMount(const char *contentId, const char *themePath, const char *rifPath,
+			  const AppmgrDataMountArguments *userArguments)
+{
+	AppmgrDataMountArguments arguments;
+	ScePfsRndDriveId *mountPoint;
+	char *kernelContentId = (char *)contentId;
+	char *kernelThemePath = (char *)themePath;
+	char *kernelRifPath = (char *)rifPath;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	mountPoint = arguments.mountPoint;
+	STRING_IN(kernelContentId, contentId, 27);
+	STRING_IN(kernelThemePath, themePath, 128);
+	STRING_IN(kernelRifPath, rifPath, 128);
+	BLOCK_OUT(mountPoint, sizeof(ScePfsRndDriveId),
+		  appmgrThemeDataMountSyscall(kernelContentId, kernelThemePath, kernelRifPath, NULL),
+		  appmgrThemeDataMountSyscall(kernelContentId, kernelThemePath, kernelRifPath,
+					      (ScePfsRndDriveId *)k));
+}
+
+static int themeDataMountOnStack(void *argp)
+{
+	const AppmgrDataMountParam *param = argp;
+
+	return themeDataMount(param->appPath, param->patchPath, param->rifPath,
+			      param->userArguments);
+}
+
+int _sceAppMgrThemeDataMount(const char *contentId, const char *themePath, const char *rifPath,
+			     const AppmgrDataMountArguments *userArguments)
+{
+	AppmgrDataMountParam param = { contentId, themePath, rifPath, userArguments };
+
+	return SceThreadmgrForDriver_E54FD746(0x2000, themeDataMountOnStack, &param);
 }
 
 int _sceAppMgrGetMountProcessNum(unsigned int mountId, const char *mountPoint,
@@ -242,7 +279,6 @@ STUB(_sceAppMgrContentInstallPeriodStop)
 STUB(_sceAppMgrSaveDataAddMount)
 STUB(_sceAppMgrSendParam)
 
-STUB(_sceAppMgrThemeDataMount)
 STUB(_sceAppMgrLaunchAppByName)
 STUB(_sceAppMgrLoadExec)
 STUB(_sceAppMgrContentInstallPeriodStart)

@@ -429,9 +429,6 @@ out:
 	return result;
 }
 
-#define APPMGR_IS_UPPER(c)	((unsigned int)((c) - 'A') <= 'Z' - 'A')
-#define APPMGR_IS_DIGIT(c)	((unsigned int)((c) - '0') <= 9)
-
 /* A PSM content ID: XXYYYY-XXXXNNNNN_NN-ZZZZZZZZZZZZZZZZ (X upper case, N digit, Y and Z either). */
 static inline int appmgrIsPsmContentId(const unsigned char *id)
 {
