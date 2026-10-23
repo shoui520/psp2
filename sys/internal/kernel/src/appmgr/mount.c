@@ -44,6 +44,7 @@
 #include "appmgr_device.h"
 #include "appmgr_event.h"
 #include "appmgr_savedata_slot.h"
+#include "addcont_internal.h"
 
 /* SceSblPostSsMgr (ut_mgr.c): declared here until its exporter's header declares it */
 
@@ -3257,6 +3258,38 @@ out:
 }
 
 /* An application directory is PFS content when it has sce_pfs or a signed sce_sys. */
+/* Re-reads the license of the running big application with this title ID. */
+int sceAppMgrUpdateRifInfo(const char *titleId)
+{
+	struct AppState *app;
+	SceUInt32 syscallState = sceSyscallEnter();
+	int result;
+
+	if (titleId == NULL) {
+		result = (int)0x80800009;
+		goto leave;
+	}
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto leave;
+	MOUNT_MAIN_LOCK(12885);
+	app = _appListGetBigApp(g_appmgrAppStates);
+	if (app == NULL) {
+		result = 0;
+	} else if ((app->process.content.contentFlags & 0x10) != 0 &&
+		   strncmp(app->process.content.titleId, titleId, 16) == 0) {
+		result = appmgrCheckRifUpdatable(&app->process.content);
+		if (result >= 0)
+			result = appmgrReadApplicationLicense(app->process.content.appDirectory,
+							      titleId, &app->process.content.license);
+	}
+	MOUNT_MAIN_UNLOCK(12912);
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+leave:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int appmgrIsPfsContent(const char *path)
 {
 	SceAllocOpt opt;

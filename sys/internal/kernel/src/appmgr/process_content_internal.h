@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fw.h>
+#include <fios2/fios2.h>
 #include "mount.h"
 
 struct AppmgrMapFile;
