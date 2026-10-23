@@ -399,6 +399,27 @@ int KrmDeleteKey(KrmState *state, const void *keyId)
 	return 0;
 }
 
+/* name unknown: the index of the key with this id, or of the default key
+ * when keyId is NULL; -1 when there is none */
+static inline int KrmFindKey(KrmState *state, const void *keyId)
+{
+	int index;
+
+	if (!keyId) {
+		index = g_krmDefaultKeyIndex;
+		if (index < 0 || index >= state->config.keyCount ||
+		    !state->keys[index].info.keyWords)
+			return -1;
+		return index;
+	}
+	for (index = 0; index < state->config.keyCount; ++index) {
+		if (state->keys[index].info.keyWords &&
+		    timingsafe_memcmp(keyId, state->keys[index].info.id, 16) == 0)
+			return index;
+	}
+	return -1;
+}
+
 int KrmCryptData(KrmState *state, const void *keyId, const void *src,
 		 SceSize srcSize, void *dst, SceSize dstSize, void *iv, int encrypt)
 {
@@ -413,20 +434,9 @@ int KrmCryptData(KrmState *state, const void *keyId, const void *src,
 		return (int)0x80a00000;
 	if (state->config.maxDataSize < srcSize || state->config.maxDataSize < dstSize)
 		return (int)0x80a00000;
-	if (keyId) {
-		for (index = 0; index < state->config.keyCount; ++index) {
-			if (state->keys[index].info.keyWords &&
-			    timingsafe_memcmp(keyId, state->keys[index].info.id, 16) == 0)
-				break;
-		}
-		if (index >= state->config.keyCount)
-			return (int)0x80a00002;
-	} else {
-		index = g_krmDefaultKeyIndex;
-		if (index < 0 || index >= state->config.keyCount ||
-		    !state->keys[index].info.keyWords)
-			return (int)0x80a00002;
-	}
+	index = KrmFindKey(state, keyId);
+	if (index < 0)
+		return (int)0x80a00002;
 	key = &state->keys[index];
 	permission = encrypt ? 0x40 : 0x20;
 	if (!(key->info.permissions & permission))
@@ -451,24 +461,9 @@ int KrmSignData(KrmState *state, const void *keyId, const void *src,
 		return (int)0x80a00000;
 	if (!signature)
 		return (int)0x80a00000;
-	if (keyId) {
-		index = 0;
-		key = state->keys;
-		while (index < state->config.keyCount) {
-			if (key->info.keyWords &&
-			    timingsafe_memcmp(keyId, key->info.id, 16) == 0)
-				break;
-			++index;
-			++key;
-		}
-		if (index >= state->config.keyCount)
-			return (int)0x80a00002;
-	} else {
-		index = g_krmDefaultKeyIndex;
-		if (index < 0 || index >= state->config.keyCount ||
-		    !state->keys[index].info.keyWords)
-			return (int)0x80a00002;
-	}
+	index = KrmFindKey(state, keyId);
+	if (index < 0)
+		return (int)0x80a00002;
 	key = &state->keys[index];
 	if (!(key->info.permissions & 0x80))
 		return (int)0x80a00006;
@@ -492,24 +487,9 @@ int KrmVerifyData(KrmState *state, const void *keyId, const void *src,
 		return (int)0x80a00000;
 	if (!signature)
 		return (int)0x80a00000;
-	if (keyId) {
-		index = 0;
-		key = state->keys;
-		while (index < state->config.keyCount) {
-			if (key->info.keyWords &&
-			    timingsafe_memcmp(keyId, key->info.id, 16) == 0)
-				break;
-			++index;
-			++key;
-		}
-		if (index >= state->config.keyCount)
-			return (int)0x80a00002;
-	} else {
-		index = g_krmDefaultKeyIndex;
-		if (index < 0 || index >= state->config.keyCount ||
-		    !state->keys[index].info.keyWords)
-			return (int)0x80a00002;
-	}
+	index = KrmFindKey(state, keyId);
+	if (index < 0)
+		return (int)0x80a00002;
 	key = &state->keys[index];
 	if (!(key->info.permissions & 0x100))
 		return (int)0x80a00006;
@@ -530,20 +510,9 @@ int KrmGetKeyInfo(KrmState *state, const void *keyId, KrmKey *result)
 
 	if (!result || !state)
 		return (int)0x80a00000;
-	if (keyId) {
-		for (index = 0; index < state->config.keyCount; ++index) {
-			if (state->keys[index].info.keyWords &&
-			    timingsafe_memcmp(keyId, state->keys[index].info.id, 16) == 0)
-				break;
-		}
-		if (index >= state->config.keyCount)
-			return (int)0x80a00002;
-	} else {
-		index = g_krmDefaultKeyIndex;
-		if (index < 0 || index >= state->config.keyCount ||
-		    !state->keys[index].info.keyWords)
-			return (int)0x80a00002;
-	}
+	index = KrmFindKey(state, keyId);
+	if (index < 0)
+		return (int)0x80a00002;
 	key = &state->keys[index];
 	ret = KrmDriverCheckExpiration(&key->info);
 	if (ret < 0)

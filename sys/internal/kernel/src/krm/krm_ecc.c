@@ -9,7 +9,7 @@ int KrmEccAllocateAligned(KrmEccContext *ctx, unsigned int size,
 			  unsigned int alignment, void **allocation, void **result);
 int KrmEccRelease(KrmEccContext *ctx, void *ptr);
 
-int KrmEccInitialize(KrmEccContext *ctx)
+__attribute__((noinline)) int KrmEccInitialize(KrmEccContext *ctx)
 {
 	return KrmEccInitializeAllocator(ctx);
 }
@@ -1696,7 +1696,7 @@ int KrmEccDivideWord(const uint32_t *value, uint32_t divisor,
 uint32_t KrmEccAddWords(const uint32_t *left, const uint32_t *right,
 	uint32_t *result, unsigned int count);
 
-int KrmEccReduce(const uint32_t *value, unsigned int valueWords,
+__attribute__((noinline)) int KrmEccReduce(const uint32_t *value, unsigned int valueWords,
 	const uint32_t *modulus, unsigned int modulusWords,
 	const uint32_t *reciprocal, uint32_t *quotient, uint32_t *remainder)
 {
@@ -3967,10 +3967,12 @@ int KrmEccExtendedGcd(const uint32_t *left, unsigned int leftWords,
 	secondWords = (secondCount); \
 	multiplicand = (first); \
 	multiplier = (second); \
-	if (firstWords < secondWords) { \
+	if (firstWords <= secondWords) { \
 		count = firstWords; firstWords = secondWords; secondWords = count; \
 		multiplicand = (second); multiplier = (first); \
 	} \
+	if ((destination) == multiplicand || (destination) == multiplier) \
+		goto out; \
 	if (secondWords) { \
 		(destination)[firstWords] = KrmEccMultiplyWord(multiplicand, multiplier[0], destination, firstWords); \
 		j = 1; \
@@ -4033,34 +4035,54 @@ int KrmEccExtendedGcd(const uint32_t *left, unsigned int leftWords,
 		if (count == 1) {
 			a = remainders[0][0];
 			b = remainders[1][0];
+			proceed = 1;
 			if (a > ~b) {
 				if (side) b -= a; else a -= b;
 				overflow = KrmEccAddWords(coefficients[0], coefficients[1],
 					coefficients[side], coefficientWords);
 				if (overflow) {
 					if (rightWords <= coefficientWords)
-						goto out;
-					coefficients[side][coefficientWords++] = overflow;
+						proceed = 0;
+					else
+						coefficients[side][coefficientWords++] = overflow;
 				}
 			}
-			while (b) {
+			while (b && proceed) {
 				if (a >= b) {
-					q = a / b;
-					a -= b * q;
-					matrix.leftScale += matrix.rightSubtract * q;
-					matrix.leftSubtract += matrix.rightScale * q;
+					if (b > a >> 2) {
+						do {
+							a -= b;
+							matrix.leftScale += matrix.rightSubtract;
+							matrix.leftSubtract += matrix.rightScale;
+						} while (a >= b);
+					} else {
+						q = a / b;
+						a -= b * q;
+						matrix.leftScale += matrix.rightSubtract * q;
+						matrix.leftSubtract += matrix.rightScale * q;
+					}
 				}
 				if (!a)
 					break;
-				q = b / a;
-				b -= a * q;
-				matrix.rightSubtract += matrix.leftScale * q;
-				matrix.rightScale += matrix.leftSubtract * q;
+				if (a > b >> 2) {
+					do {
+						b -= a;
+						matrix.rightSubtract += matrix.leftScale;
+						matrix.rightScale += matrix.leftSubtract;
+					} while (b >= a);
+				} else {
+					q = b / a;
+					b -= a * q;
+					matrix.rightSubtract += matrix.leftScale * q;
+					matrix.rightScale += matrix.leftSubtract * q;
+				}
 			}
 			remainders[0][0] = a;
 			remainders[1][0] = b;
 			lengths[0] = a != 0;
 			lengths[1] = b != 0;
+			if (!proceed)
+				goto out;
 		} else {
 			for (i = 0; i < 2; i++) {
 				temporary = remainders[i][lengths[i] - 1] | 1;
@@ -4184,6 +4206,7 @@ int KrmEccExtendedGcd(const uint32_t *left, unsigned int leftWords,
 						low[1] -= wide;
 						if ((matrix.rightScale | matrix.rightSubtract) & 0x80000000U)
 							active = 0;
+						proceed = 1;
 					}
 				}
 			}
@@ -4224,11 +4247,8 @@ int KrmEccExtendedGcd(const uint32_t *left, unsigned int leftWords,
 	else
 		for (i = 0; i < rightWords; i++)
 			coefficient[i] = coefficients[0][i];
-	if (secondCoefficient) {
-		if (secondCoefficient == left || secondCoefficient == terminal)
-			goto out;
+	if (secondCoefficient)
 		GCD_PRODUCT(left, leftWords, terminal, rightWords, (uint32_t *)secondCoefficient);
-	}
 	if (coefficientInfo) {
 		KrmEccSubtractWords(terminal, coefficient, terminal, rightWords);
 		GCD_PRODUCT(left, leftWords, terminal, rightWords, product);
@@ -4626,14 +4646,16 @@ int KrmEccPowerModulo(const uint32_t *value, const uint32_t *exponent,
 			bit = (exponent[position >> 5] >> (position & 31)) & 1;
 			if (seeded) {
 				if (!KrmEccMultiplyModulo(allocation, allocation, allocation, modulus, table->workspace, ctx) ||
-				    (bit && !KrmEccAddModulo(allocation, allocation, allocation, modulus->modulus, modulus->wordCount)))
-					goto out;
+				    (bit && !KrmEccAddModulo(allocation, allocation, allocation, modulus->modulus, modulus->wordCount))) {
+					seeded = 0;
+					break;
+				}
 			} else {
 				accumulated = bit + 2 * accumulated;
 				if (position && threshold > 2 * accumulated)
 					continue;
 				if (!KrmEccShiftModulo(modulus->one, accumulated, allocation, modulus))
-					goto out;
+					break;
 			}
 			seeded = 1;
 		}

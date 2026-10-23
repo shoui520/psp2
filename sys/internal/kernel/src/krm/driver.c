@@ -470,10 +470,9 @@ xorTail:
 				KRM_CBC_XOR_BYTE(11);
 				KRM_CBC_XOR_BYTE(12);
 				KRM_CBC_XOR_BYTE(13);
-				KRM_CBC_XOR_BYTE(14);
 #undef KRM_CBC_XOR_BYTE
-				plainBlock[i + 15] = src[i + 15] ^
-					ctx.chainingBlock[i + 15];
+				plainBlock[i + 14] = src[i + 14] ^
+					ctx.chainingBlock[i + 14];
 			}
 encryptBlock:
 			KrmAesEncryptBlock(&ctx.aes, plainBlock, dst);
