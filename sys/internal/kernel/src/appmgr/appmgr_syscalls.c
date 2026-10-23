@@ -217,3 +217,29 @@ int appmgrSetDisplayMergeConfSyscall(SceUInt32 setting, SceUInt32 alpha)
 {
 	return sceAppMgrSetDisplayMergeConf(setting, alpha);
 }
+
+int appmgrSetSystemImposeStateSyscall(int state)
+{
+	return sceAppMgrSetSystemImposeState(state);
+}
+
+int appmgrSetSystemImposeState2Syscall(int state)
+{
+	return sceAppMgrSetSystemImposeState2(state);
+}
+
+int appmgrSetInfobarStateSyscall(int visibility, int color, int transparency)
+{
+	return sceAppMgrSetInfobarState(visibility, color, transparency);
+}
+
+int appmgrSetInfobarStateForCommonDialogSyscall(int visibility, int color, int transparency)
+{
+	return sceAppMgrSetInfobarStateForCommonDialog(visibility, color, transparency);
+}
+
+int appmgrSetInfobarStateForShellByAppIdSyscall(int appId, int visibility, int color,
+		int transparency)
+{
+	return sceAppMgrSetInfobarStateForShellByAppId(appId, visibility, color, transparency);
+}

@@ -106,6 +106,7 @@ int sceAppMgrLaunchAppByNameForDebugger(const char *name, const char *param);
 int SceAppMgrForDriver_99AA37C1(const char *name);
 struct SceAppMgrAppStatus;
 int SceAppMgrForDriver_DC13160A(SceUID pid, struct SceAppMgrAppStatus *status);
+int SceAppMgrForDriver_A714BB35(const char *driveId);
 int sceAppMgrDestroyAppForTest(SceUID pid);
 int sceAppMgrLiveAreaOperationByNameForLoadp(int operation, const char *appName);
 int sceAppMgrLiveAreaOperationForLoadp(int operation);

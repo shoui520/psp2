@@ -8,6 +8,7 @@ int _debugSettingCallBack(int setting, int value, void *context);
 
 /* debug_setting.c */
 int appmgrInitializeDebugSettings(void);
+int appmgrGetFakeNoMemoryCard(void);
 int appmgrGetFakeSdSlotBroken(void);
 int appmgrIsTrcCheckNotifyEnabled(void);
 

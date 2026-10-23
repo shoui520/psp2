@@ -12,6 +12,11 @@
 #include <appmgr/appmgr_rdrfp.h>
 #include "appmgr_app_event.h"
 #include "appmgr_device.h"
+#include <display/display.h>
+#include <camera/camera.h>
+#include <processmgr/processmgr.h>
+#include <processmgr/process_info.h>
+#include <processmgr/process_budget.h>
 
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
@@ -40,6 +45,41 @@ SCE_DBGINFO_DEFINE(static, appmgrDumpIndexInfo, 37, "sceAppMgrDump");
 		} \
 	} \
 	dumpBgmState(); \
+} while (0)
+#endif
+
+#if FW_DEBUG
+#define SERVICE_MAIN_LOCK(_line) do { \
+	int lockResult = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL); \
+	if (lockResult != 0) { \
+		SCE_DBG_PRINTF(0, _line, "Failed to lock ret=0x%08x\n", lockResult); \
+		sceAppMgrDumpInline(); \
+		SCE_DBG_ASSERT_FAIL(_line); \
+	} else { \
+		g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
+	} \
+} while (0)
+#define SERVICE_MAIN_UNLOCK(_line) do { \
+	int unlockResult; \
+	g_appmgrMainMutexOwner = -1; \
+	unlockResult = sceKernelUnlockMutex(g_appmgrMainMutex, 1); \
+	if (unlockResult != 0) { \
+		sceAppMgrDumpInline(); \
+		SCE_DBG_ASSERT_PRINTF(0, _line, \
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n", \
+			unlockResult, unlockResult, 0, 0); \
+	} \
+} while (0)
+#else
+#define SERVICE_MAIN_LOCK(_line) do { \
+	if (sceKernelLockMutex(g_appmgrMainMutex, 1, NULL) != 0) \
+		appmgrAppListPanic(); \
+	g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
+} while (0)
+#define SERVICE_MAIN_UNLOCK(_line) do { \
+	g_appmgrMainMutexOwner = -1; \
+	if (sceKernelUnlockMutex(g_appmgrMainMutex, 1) != 0) \
+		appmgrAppListPanic(); \
 } while (0)
 #endif
 
@@ -895,6 +935,349 @@ int sceAppMgrNotifyLiveBoardModeForShell(int appId, int mode)
 denied:
 	sceSyscallLeave(syscall);
 	return 0x8080201c;
+}
+
+/* The plane a capture reads: the shell's and the game's are the second one. */
+static inline int captureFrameBufPlane(struct AppState *app)
+{
+	if (app == appmgrGetShellApp())
+		return 1;
+	return app->launchInfo.budgetType == 0;
+}
+
+int sceAppMgrCaptureFrameBufIFTUByAppId(int appId, SceDisplayFrameBuf *frameBuf)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	struct AppState *app;
+	SceUID pid;
+	int plane, result;
+
+	if (!sceSblACMgrIsSystemProgram(0)) {
+		sceSyscallLeave(syscall);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	result = _appListFindAndLockAppByAppId(appId, &app);
+	if (result != 0) {
+		sceSyscallLeave(syscall);
+		return result;
+	}
+	SERVICE_MAIN_LOCK(561);
+	pid = app->process.processId;
+	plane = captureFrameBufPlane(app);
+	SERVICE_MAIN_UNLOCK(571);
+	result = SceDisplayForDriver_D4C812E5(pid, SceDisplayForDriver_C8E554C5(), plane, frameBuf);
+	if (result >= 0) {
+		_appListUnlockApp(app);
+		sceSyscallLeave(syscall);
+		return 0;
+	}
+	_appListUnlockApp(app);
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+/* The frame buffer the process shows must fit the screen before and after the copy. */
+static inline int checkProcFrameBuf(SceUID pid, int plane)
+{
+	SceDisplayFrameBufInfo info;
+	int result;
+
+	info.size = sizeof(info);
+	result = SceDisplayForDriver_3BC165EF(pid, SceDisplayForDriver_C8E554C5(), plane, &info);
+	if (result != 0)
+		return result;
+	if (info.size < sizeof(info))
+		return 0x80802001;
+	if (info.framebuf.size != 0) {
+		if (info.framebuf.size < sizeof(info.framebuf))
+			return 0x80802001;
+		if (info.framebuf.width > 960 || info.framebuf.height > 544)
+			return 0x80802029;
+	}
+	return 0;
+}
+
+int sceAppMgrCaptureFrameBufDMACByAppId(int appId, SceDisplayFrameBuf *frameBuf)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	struct AppState *app;
+	SceUID pid;
+	int plane, result;
+
+	if (!sceSblACMgrIsSystemProgram(0)) {
+		sceSyscallLeave(syscall);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	result = _appListFindAndLockAppByAppId(appId, &app);
+	if (result != 0) {
+		sceSyscallLeave(syscall);
+		return result;
+	}
+	SERVICE_MAIN_LOCK(635);
+	pid = app->process.processId;
+	plane = captureFrameBufPlane(app);
+	SERVICE_MAIN_UNLOCK(645);
+	result = checkProcFrameBuf(pid, plane);
+	if (result == 0) {
+		result = SceDisplayForDriver_707EEE2E(pid, SceDisplayForDriver_C8E554C5(), plane,
+			frameBuf);
+		if (result < 0) {
+			_appListUnlockApp(app);
+			sceSyscallLeave(syscall);
+			return result;
+		}
+		result = checkProcFrameBuf(pid, plane);
+	}
+	_appListUnlockApp(app);
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+#if FW_DEBUG
+#define SERVICE_GET_PROCESS_INFO_CHECK(_result) do { \
+	sceAppMgrDumpInline(); \
+	SCE_DBG_ASSERT_PRINTF(0, 701, \
+		"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n", \
+		_result, _result, 0, 0); \
+} while (0)
+#else
+SCE_DBGINFO_DEFINE(static, getBudgetInfoProcessInfoPanicInfo, 701, "sceAppMgrGetBudgetInfo");
+#define SERVICE_GET_PROCESS_INFO_CHECK(_result) \
+	SceDebugForDriver_00CCE39C(&getBudgetInfoProcessInfoPanicInfo, \
+		__builtin_return_address(0), "0x%08x,0x%08x\n", _result, 0)
+#endif
+
+int sceAppMgrGetBudgetInfo(SceKernelBudgetInfo *info)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	SceKernelProcessInfo processInfo;
+	struct AppState *app;
+	int result;
+
+	if (!SceSblACMgrForDriver_0139FC20(0) && !sceSblACMgrIsSystemProgram(0) &&
+	    !isShellProcess()) {
+		sceSyscallLeave(syscall);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	if (info == NULL) {
+		sceSyscallLeave(syscall);
+		return 0x80802016;
+	}
+	SERVICE_MAIN_LOCK(691);
+	if (isShellProcess()) {
+		memset(&processInfo, 0, sizeof(processInfo));
+		processInfo.size = sizeof(processInfo);
+		result = sceKernelGetProcessInfo(sceKernelGetProcessId(), &processInfo);
+		if (result != 0)
+			SERVICE_GET_PROCESS_INFO_CHECK(result);
+		result = sceKernelGetBudgetInfo(processInfo.budgetId, info);
+	} else {
+		app = appmgrFindAppByProcessId(g_appmgrAppStates, -2);
+		if (app == NULL) {
+#if FW_DEBUG
+			int unlockResult;
+
+			g_appmgrMainMutexOwner = -1;
+			unlockResult = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+			if (unlockResult != 0) {
+				sceAppMgrDump();
+				dumpBgmState();
+				SCE_DBG_ASSERT_PRINTF(0, 707,
+					"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+					unlockResult, unlockResult, 0, 0);
+			}
+#else
+			SERVICE_MAIN_UNLOCK(707);
+#endif
+			sceSyscallLeave(syscall);
+			return 0x80802012;
+		}
+		if (app->launchInfo.budgetType != 0) {
+			SERVICE_MAIN_UNLOCK(714);
+			sceSyscallLeave(syscall);
+			return 0x8080201c;
+		}
+		result = sceKernelGetBudgetInfo(app->process.budgetId, info);
+	}
+	SERVICE_MAIN_UNLOCK(722);
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+int sceAppMgrIsCameraActive(SceUID pid, int *devices)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	struct AppState *app;
+	int result;
+
+	if (!isShellProcess()) {
+		sceSyscallLeave(syscall);
+		return 0x8080201c;
+	}
+	if (!sceSblACMgrIsSystemProgram(0)) {
+		sceSyscallLeave(syscall);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	SERVICE_MAIN_LOCK(743);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, pid);
+	if (app == NULL) {
+		SERVICE_MAIN_UNLOCK(747);
+		sceSyscallLeave(syscall);
+		return 0x80802012;
+	}
+	result = SceCameraForDriver_EB1CC2CA(app->process.processId, devices);
+	SERVICE_MAIN_UNLOCK(754);
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+/* The game application sets how the information bar shows over it. */
+int sceAppMgrSetInfobarState(int visibility, int color, int transparency)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	struct AppState *app;
+
+	if (visibility > 1 || color > 1 || transparency > 1) {
+		sceSyscallLeave(syscall);
+		return 0x8080201a;
+	}
+	if (visibility < 0 || color < 0 || transparency < 0) {
+		sceSyscallLeave(syscall);
+		return 0x8080201a;
+	}
+	SERVICE_MAIN_LOCK(772);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, -2);
+	if (app == NULL) {
+		SERVICE_MAIN_UNLOCK(776);
+		sceSyscallLeave(syscall);
+		return 0x80802012;
+	}
+	app->appInfobar.visibility = visibility;
+	app->appInfobar.color = color;
+	app->appInfobar.transparency = transparency;
+	SERVICE_MAIN_UNLOCK(785);
+	sceSyscallLeave(syscall);
+	return 0;
+}
+
+int sceAppMgrSetInfobarStateForCommonDialog(int visibility, int color, int transparency)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	struct AppState *app;
+
+	if (visibility > 2 || color > 1 || transparency > 1) {
+		sceSyscallLeave(syscall);
+		return 0x8080201a;
+	}
+	if (visibility < 0 || color < 0 || transparency < 0) {
+		sceSyscallLeave(syscall);
+		return 0x8080201a;
+	}
+	SERVICE_MAIN_LOCK(803);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, -2);
+	if (app == NULL) {
+		SERVICE_MAIN_UNLOCK(807);
+		sceSyscallLeave(syscall);
+		return 0x80802012;
+	}
+	app->commonDialogInfobar.visibility = visibility;
+	app->commonDialogInfobar.color = color;
+	app->commonDialogInfobar.transparency = transparency;
+	SERVICE_MAIN_UNLOCK(816);
+	sceSyscallLeave(syscall);
+	return 0;
+}
+
+int sceAppMgrSetInfobarStateForShellByAppId(int appId, int visibility, int color,
+		int transparency)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	struct AppState *app;
+
+	if (!isShellProcess()) {
+		sceSyscallLeave(syscall);
+		return 0x8080201c;
+	}
+	if (visibility > 2 || color > 1 || transparency > 1) {
+		sceSyscallLeave(syscall);
+		return 0x8080201a;
+	}
+	if (visibility < 0 || color < 0 || transparency < 0) {
+		sceSyscallLeave(syscall);
+		return 0x8080201a;
+	}
+	SERVICE_MAIN_LOCK(838);
+	app = appmgrFindAppById(appId);
+	if (app == NULL) {
+		SERVICE_MAIN_UNLOCK(842);
+		sceSyscallLeave(syscall);
+		return 0x80802012;
+	}
+	app->shellInfobar.visibility = visibility;
+	app->shellInfobar.color = color;
+	app->shellInfobar.transparency = transparency;
+	SERVICE_MAIN_UNLOCK(851);
+	sceSyscallLeave(syscall);
+	return 0;
+}
+
+/* The shell lists the processes of the applications, at most count of them. */
+int sceAppMgrGetPidListForShell(SceUID *pidList, unsigned int count)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	unsigned int found;
+	int index;
+
+	if (!isShellProcess()) {
+		sceSyscallLeave(syscall);
+		return 0x8080201c;
+	}
+	if (pidList == NULL) {
+		sceSyscallLeave(syscall);
+		return 0x80802016;
+	}
+	SERVICE_MAIN_LOCK(871);
+	found = 0;
+	for (index = 0; index < 20; index++) {
+		SceUID pid = g_appmgrAppStates[index].process.processId;
+
+		if (pid >= 0 && (pid & 1) != 0) {
+			pidList[found++] = pid;
+			if (found >= count)
+				break;
+		}
+	}
+	SERVICE_MAIN_UNLOCK(885);
+	sceSyscallLeave(syscall);
+	return found;
+}
+
+/* System programs impose or release the system's own impose states. */
+int sceAppMgrSetSystemImposeState(int state)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+
+	if (!sceSblACMgrIsSystemProgram(0)) {
+		sceSyscallLeave(syscall);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	_changeDeviceArbitrationForImpose2(state);
+	sceSyscallLeave(syscall);
+	return 0;
+}
+
+int sceAppMgrSetSystemImposeState2(int state)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	int result;
+
+	if (!sceSblACMgrIsSystemProgram(0)) {
+		sceSyscallLeave(syscall);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	result = _changeDeviceArbitrationForImpose3(state);
+	sceSyscallLeave(syscall);
+	return result;
 }
 
 int sceAppMgrGetRawPathOfApp0ByAppIdForShell(int appId, char path[292])

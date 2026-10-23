@@ -111,7 +111,7 @@ SceAppMgr:
         - _sceAppMgrGetMountProcessNum: 0x1A844716
         - __sceAppMgrGetAppState: 0x210C0046
         - _sceAppMgrGetStatusById: 0x211D9558
-        - sceAppMgrSetSystemImposeState2: 0x2163759A
+        - appmgrSetSystemImposeState2Syscall: 0x2163759A
         - _sceAppMgrReceiveNotificationRequestForShell: 0x21A86141
         - _sceAppMgrGetAppParam: 0x258C3E3C
         - _sceAppMgrForceUmount: 0x2598EC8A
@@ -205,7 +205,7 @@ SceAppMgr:
         - _sceAppMgrGetFgAppInfo: 0xAC9968B7
         - sceAppMgrAcquireSoundOutExclusive: 0xACB48075
         - appmgrReleaseBtrmSyscall: 0xACDCE4DB
-        - sceAppMgrSetInfobarState: 0xAD9022A1
+        - appmgrSetInfobarStateSyscall: 0xAD9022A1
         - sceAppMgrGetSystemDataFile: 0xAEC49533
         - _sceAppMgrLaunchAppByName2: 0xAEF06983
         - _sceAppMgrSystemParamGetString: 0xAF5F9497
@@ -232,11 +232,11 @@ SceAppMgr:
         - _sceAppMgrAppMount: 0xCF1C0C0C
         - _sceAppMgrSaveDataAddMount: 0xD1391ACE
         - _sceAppMgrSetRecommendedScreenOrientationForShell: 0xD14D39F5
-        - sceAppMgrSetSystemImposeState: 0xD16B91B5
+        - appmgrSetSystemImposeStateSyscall: 0xD16B91B5
         - _sceAppMgrSendParam: 0xD29236AD
         - sceAppMgrSaveSafeMemory: 0xD366AA44
         - _sceAppMgrSetNetworkDisconnectionWarningDialogState: 0xD4B0CDB4
-        - sceAppMgrSetInfobarStateForCommonDialog: 0xD6758B4E
+        - appmgrSetInfobarStateForCommonDialogSyscall: 0xD6758B4E
         - _sceAppMgrSendSystemEvent2: 0xD70D5EEC
         - appmgrAcquireBtrmSyscall: 0xD752695D
         - _sceAppMgrThemeDataMount: 0xD9B7A5AF
@@ -273,7 +273,7 @@ SceAppMgr:
         - sceAppMgrSetFakeSettingBug51800ForUser: 0xF46C81F3
         - _sceAppMgrUpdateSaveDataParam: 0xF4703412
         - _sceAppMgrSetBgmProxyApp: 0xF6B093BC
-        - sceAppMgrSetInfobarStateForShellByAppId: 0xF7DFE96E
+        - appmgrSetInfobarStateForShellByAppIdSyscall: 0xF7DFE96E
         - _sceAppMgrTrophyMount: 0xF8B80AC2
         - sceAppMgrLoadSafeMemory: 0xFAF3DAAA
         - appmgrReceiveShellEventNumSyscall: 0xFB67BABD

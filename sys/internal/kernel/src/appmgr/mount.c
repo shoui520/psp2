@@ -1889,6 +1889,63 @@ finished:
 	return removed ? 0 : (int)0x80800002;
 }
 
+/* The calling process unmounts one of its drives. */
+int SceAppMgrForDriver_A714BB35(const char *driveId)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	int result, mountId;
+
+	if (driveId == NULL) {
+		result = 0x80800001;
+		goto out;
+	}
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app == NULL) {
+		result = 0x80801002;
+		goto unlock;
+	}
+	mountId = 0;
+	if ((app->process.content.contentFlags & 0x30) != 0) {
+		if (strncmp(driveId, "photo0:", 8) == 0)
+			mountId = 100;
+		else if (strncmp(driveId, "music0:", 8) == 0)
+			mountId = 105;
+		else if (strncmp(driveId, "video0:", 8) == 0)
+			mountId = 109;
+		if (mountId != 0) {
+			result = 0x80800002;
+			if (appmgrGetFakeNoMemoryCard() != 0)
+				goto unlock;
+		}
+	}
+	result = appmgrUnmountDrive(sceKernelGetProcessId(), &app->process.mounts, driveId, 0);
+	if (driveId[0] == 'a' && (strncmp(driveId, "addcont0:", 10) == 0 ||
+	    strncmp(driveId, "addcont1:", 10) == 0))
+		appmgrRemoveAddcontMountEntries(app, driveId);
+	if (result == 0 && (app->process.content.contentFlags & 0x30) != 0) {
+		switch (mountId) {
+		case 100:
+			app->process.content.contentFlags &= ~0x02000000;
+			break;
+		case 105:
+			app->process.content.contentFlags &= ~0x04000000;
+			break;
+		case 109:
+			app->process.content.contentFlags &= ~0x08000000;
+			break;
+		}
+	}
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int appmgrCleanupProcessMount(struct AppmgrMountHolder *holder,
 			      AppmgrProcessMountCleanup *cleanup)
 {

@@ -106,7 +106,6 @@ STUB_FUNC(int, sceAppMgrSaveDataNotifyBackupFinished, (const void *a))
 STUB_FUNC(int, sceAppMgrCloudDataSrcMount, (int a, const void *b, void *c))
 STUB_FUNC(int, sceAppMgrUpdateRifInfo, (const void *info))
 STUB_FUNC(int, SceAppMgrForDriver_9B3F7D66, (void *list))
-STUB(SceAppMgrForDriver_A714BB35)
 STUB_FUNC(int, sceAppMgrIsExclusiveProcessRunning, (const void *a))
 STUB(sceAppMgrGetSystemDataFile)
 STUB(SceAppMgrForDriver_B1D3C287)
@@ -145,7 +144,6 @@ int _sceAppMgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
 		displayMode, arguments.displayBlanked, arguments.unsupportedOptions);
 }
 STUB(_sceAppMgrCheckRifGD)
-STUB(sceAppMgrSetSystemImposeState2)
 STUB(_sceAppMgrForceUmount)
 STUB(_sceAppMgrLaunchVideoStreamingApp)
 STUB(_sceAppMgrGetPidListForShell)
@@ -192,7 +190,6 @@ STUB(_sceAppMgrLoadSaveDataSystemFile)
 STUB(_sceAppMgrPspSaveDataRootMount)
 STUB(_sceAppMgrDrmOpen)
 
-STUB(sceAppMgrSetInfobarState)
 STUB(_sceAppMgrLaunchAppByName2)
 
 STUB(_sceAppMgrPhotoUmount)
@@ -206,9 +203,7 @@ STUB(_sceAppMgrGetMediaTypeFromDrive)
 STUB(_sceAppMgrContentInstallPeriodStop)
 STUB(_sceAppMgrAppMount)
 STUB(_sceAppMgrSaveDataAddMount)
-STUB(sceAppMgrSetSystemImposeState)
 STUB(_sceAppMgrSendParam)
-STUB(sceAppMgrSetInfobarStateForCommonDialog)
 
 STUB(_sceAppMgrThemeDataMount)
 STUB(_sceAppMgrLaunchAppByName)
@@ -249,7 +244,6 @@ int _sceAppMgrSetBgmProxyApp(const char *appName, const SyscallUnusedArgs *userA
 	STRING_IN(name, appName, 32);
 	return appmgrSetBgmProxyAppSyscall(name);
 }
-STUB(sceAppMgrSetInfobarStateForShellByAppId)
 STUB(_sceAppMgrTrophyMount)
 STUB(_sceAppMgrSaveDataDataSave2)
 STUB(_sceAppMgrSaveDataSlotFileClose)

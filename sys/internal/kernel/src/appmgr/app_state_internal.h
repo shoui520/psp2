@@ -183,6 +183,21 @@ struct AppState *appmgrFindSpecialApp(struct AppState *apps, SceUID pid);
 struct AppState *appmgrFindCurrentApp(struct AppState *apps);
 struct AppState *appmgrFindAppByProcessId(struct AppState *apps, SceUID pid);
 struct AppState *appmgrGetShellApp(void);
+int _changeDeviceArbitrationForImpose2(int imposed);
+int _changeDeviceArbitrationForImpose3(SceUInt32 mode);
+struct SceDisplayFrameBuf;
+struct SceKernelBudgetInfo;
+int sceAppMgrCaptureFrameBufIFTUByAppId(int appId, struct SceDisplayFrameBuf *frameBuf);
+int sceAppMgrCaptureFrameBufDMACByAppId(int appId, struct SceDisplayFrameBuf *frameBuf);
+int sceAppMgrGetBudgetInfo(struct SceKernelBudgetInfo *info);
+int sceAppMgrIsCameraActive(SceUID pid, int *devices);
+int sceAppMgrSetInfobarState(int visibility, int color, int transparency);
+int sceAppMgrSetInfobarStateForCommonDialog(int visibility, int color, int transparency);
+int sceAppMgrSetInfobarStateForShellByAppId(int appId, int visibility, int color,
+		int transparency);
+int sceAppMgrGetPidListForShell(SceUID *pidList, unsigned int count);
+int sceAppMgrSetSystemImposeState(int state);
+int sceAppMgrSetSystemImposeState2(int state);
 
 /* the caller is the declared shell process */
 static inline int isShellProcess(void)

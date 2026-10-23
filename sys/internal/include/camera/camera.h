@@ -20,6 +20,8 @@ int SceCameraForDriver_45EB69C9(void);
 int SceCameraForDriver_5338BE86(int devnum);
 int SceCameraForDriver_8C3354E5(int devnum);
 int SceCameraForDriver_C2E71BE8(int devnum, int attribute, int *pValue, int flags);
+/* vitasdk: ksceCameraIsActive */
+int SceCameraForDriver_EB1CC2CA(SceUID processId, int *devices);
 int SceCameraForDriver_E81EADE1(SceUID processId);
 int SceCameraForDriver_F7A0C99F(void);
 int SceCameraForDriver_FE3C170C(int devnum, int attribute, int *pValue, int flags);

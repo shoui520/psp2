@@ -78,3 +78,5 @@ typedef struct AppmgrEbootParam {
 _Static_assert(sizeof(AppmgrEbootParam) == 256, "eboot parameters");
 
 int sceAppMgrGetEbootParam(const char *path, AppmgrEbootParam *ebootParam);
+struct AppState;
+int appmgrRemoveAddcontMountEntries(struct AppState *app, const char *driveId);
