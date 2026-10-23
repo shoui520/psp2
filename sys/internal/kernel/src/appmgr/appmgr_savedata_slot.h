@@ -202,4 +202,8 @@ _Static_assert(offsetof(AppmgrPspSaveDataParams, paramSfo) == 168, "PSP save dat
 int sceAppMgrPspSaveDataGetParams(AppmgrPspSaveDataParamSfo *paramSfo);
 int sceAppMgrPspSaveDataRead(AppmgrPspSaveDataParams *params);
 
+int appmgrSetupSafeMemoryForProcess(SceUID pid, int safeMemoryMode);
+int appmgrSaveSafeMemoryForProcess(SceUID pid);
+int appmgrPrepareSafeMemoryForProcess(SceUID pid);
+
 #endif

@@ -21,6 +21,10 @@ typedef struct AppmgrUserDirPathArguments {
 _Static_assert(sizeof(AppmgrUserDirPathArguments) == 16,
 	"user directory argument block");
 
+typedef struct AppmgrInitSafeMemoryArguments {
+	unsigned char reserved[8];
+} AppmgrInitSafeMemoryArguments;
+
 int _sceAppMgrForceUmount(int mountId)
 {
 	return appmgrForceUmountSyscall(mountId);
@@ -130,6 +134,17 @@ int _sceAppMgrGetUserDirPathById(int userId, int partitionId, char *path,
 	if (length >= 32)
 		length = 32;
 	return copyResult(ret, sceKernelCopyToUser(path, buffer, length));
+}
+
+int _sceAppMgrInitSafeMemoryById(const char *id, const AppmgrInitSafeMemoryArguments *userArguments)
+{
+	AppmgrInitSafeMemoryArguments arguments;
+	char *name = (char *)id;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	STRING_IN(name, id, 64);
+	return appmgrInitSafeMemoryByIdSyscall(name);
 }
 
 int _sceAppMgrAddContMount(SceUID pid, const AppmgrAddContMountParam *userParam)

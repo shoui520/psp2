@@ -4718,6 +4718,421 @@ leaveSyscall:
 	return result;
 }
 
+/*
+ * Safe memory: a buffer of the application's (its KPLS block or its heap) kept in a file in
+ * the save data's sce_sys (PSM and system applications: under ux0:/psm or ux0:/cache), which
+ * a working copy "_<file>" shadows while the application runs when flag bit 0 is set.
+ */
+extern SceUID g_appmgrSafeMemoryMutex;
+
+static const char safeMemoryFileName[] = "safemem.dat";
+static const char psmDevAssistantSafeMemoryFileName[] = "pm.dat";
+
+static int appmgrSyncSafeMemoryFile(SceUID pid, SceUInt32 flags, char *directory,
+				    void *memory, SceSize size)
+{
+	SceIoStat stat;
+	char path[292] = "";
+	const char *fileName = safeMemoryFileName;
+	int initialize = 0;
+	int working, fd, transferred, result;
+
+	if (SceSblACMgrForDriver_C98D82EE(pid))
+		fileName = psmDevAssistantSafeMemoryFileName;
+	if (directory == NULL || strnlen(directory, sizeof(path)) >= 0x110)
+		return 0x80800001;
+
+	working = flags & 1;
+	if (working) {
+		snprintf(path, sizeof(path), "%s/_%s", directory, fileName);
+		sceIoRemove(path);
+		if (sceRegMgrGetKeyInt("/CONFIG/GAME", "init_safememory", &initialize) < 0) {
+			initialize = 0;
+		} else if (initialize == 1) {
+			snprintf(path, sizeof(path), "%s/%s", directory, fileName);
+			sceIoRemove(path);
+		}
+	}
+
+	snprintf(path, sizeof(path), "%s/%s", directory, fileName);
+	if (sceIoGetstat(path, &stat) < 0 || stat.st_size != (SceOff)size) {
+		if (working)
+			snprintf(path, sizeof(path), "%s/_%s", directory, fileName);
+		fd = sceIoOpen(path, 0x603, 6);
+		if (fd < 0)
+			return 0;
+		transferred = sceIoWrite(fd, memory, size);
+		sceIoClose(fd);
+		if (transferred != size)
+			return 0x80800014;
+		return 0;
+	}
+
+	fd = sceIoOpen(path, 1, 6);
+	if (fd < 0)
+		return fd;
+	transferred = sceIoRead(fd, memory, size);
+	sceIoClose(fd);
+	if (transferred != 0x10000 && transferred != size)
+		return 0x80800014;
+	if (!working)
+		return 0;
+	__builtin_strcat(directory, "/_");
+	strncat(directory, fileName, 13);
+	directory[291] = 0;
+	result = sceIoRename(path, directory);
+	return result < 0 ? result : 0;
+}
+
+static inline int appmgrGetSafeMemoryDirectory(SceUID pid, const SceAppMgrAppInfoCache *info,
+					       char *directory)
+{
+	memset(directory, 0, 292);
+	if (SceSblACMgrForDriver_091F7247(pid)) {
+		snprintf(directory, 292, "ux0:/psm/%s/RW/System", info->safeMemoryDirectory);
+		return 0;
+	}
+	if (SceSblACMgrForDriver_A67E8E5B(pid)) {
+		snprintf(directory, 292, "ux0:/cache/%s/%s/System", info->titleId,
+			 info->safeMemoryDirectory);
+		return 0;
+	}
+	return appmgrResolvePath("savedata0:sce_sys", pid, directory, 292);
+}
+
+int appmgrSetupSafeMemoryForProcess(SceUID pid, int safeMemoryMode)
+{
+	SceAppMgrAppInfoCache *info = NULL;
+	void *memory = NULL;
+	SceAllocOpt opt;
+	char directory[292] = "";
+	SceSize size;
+	int result;
+
+	result = SceProcessmgrForDriver_AF80F39C(pid, g_appmgrAppInfoCacheKey, (void **)&info, 0);
+	if (result < 0)
+		return result;
+	if (info == NULL)
+		return 0x80800012;
+	info->safeMemoryFlags = safeMemoryMode;
+	info->safeMemoryInitialized = 0;
+
+	if (safeMemoryMode & 2) {
+		result = SceProcessmgrForDriver_AF80F39C(pid, g_appmgrSafeMemoryKey, &memory, 1);
+		if (result < 0)
+			return result;
+		size = 0x10000;
+	} else {
+		if (safeMemoryMode & 4)
+			size = 0x20000;
+		else if (safeMemoryMode & 8)
+			size = 0x40000;
+		else if (safeMemoryMode & 0x10)
+			size = 0x80000;
+		else if (safeMemoryMode & 0x20)
+			size = 0x100000;
+		else
+			return 0x80800001;
+		opt.size = sizeof(opt);
+		opt.mmapKind = 0;
+		opt.align = 32;
+		opt.mmapBase = NULL;
+		opt.mmapSize = 0;
+		memory = sceKernelAllocRemoteProcessHeap(pid, size, &opt);
+	}
+	if (memory == NULL)
+		return 0x80800013;
+
+	memset(memory, 0, size);
+	info->safeMemory = memory;
+	info->safeMemorySize = size;
+	if (SceSblACMgrForDriver_C98D82EE(pid))
+		return 0;
+	result = appmgrGetSafeMemoryDirectory(pid, info, directory);
+	if (result < 0)
+		return result;
+	result = appmgrSyncSafeMemoryFile(pid, safeMemoryMode, directory, memory, size);
+	if (result < 0)
+		return result;
+	info->safeMemoryInitialized = 1;
+	return 0;
+}
+
+int sceAppMgrInitSafeMemoryById(const char *id)
+{
+	SceAppMgrAppInfoCache *info = NULL;
+	char directory[292] = "";
+	const unsigned char *character;
+	void *memory;
+	SceSize size;
+	int syscallState, length, permission, result;
+
+	syscallState = sceSyscallEnter();
+	if (!SceSblACMgrForDriver_C98D82EE(0)) {
+		result = 0x80800009;
+		goto leave;
+	}
+	if (SceSblACMgrForDriver_091F7247(0) && id == NULL) {
+		result = 0x80800001;
+		goto leave;
+	}
+	if (SceSblACMgrForDriver_A67E8E5B(0) && id == NULL) {
+		result = 0x80801001;
+		goto leave;
+	}
+
+	result = sceKernelLockMutex(g_appmgrSafeMemoryMutex, 1, NULL);
+	if (result < 0)
+		goto leave;
+	result = SceProcessmgrForDriver_AF80F39C(0, g_appmgrAppInfoCacheKey, (void **)&info, 0);
+	if (result < 0)
+		goto unlock;
+	if (info == NULL) {
+		result = 0x80800012;
+		goto unlock;
+	}
+	if (info->safeMemoryInitialized != 0) {
+		result = 0x8080004A;
+		goto unlock;
+	}
+	memory = info->safeMemory;
+	size = info->safeMemorySize;
+
+	if (SceSblACMgrForDriver_091F7247(0)) {
+		if (!appmgrIsValidTitleId(id, 0)) {
+			result = 0x80800001;
+			goto unlock;
+		}
+	} else {
+		result = 0x80800009;
+		if (!SceSblACMgrForDriver_A67E8E5B(0))
+			goto unlock;
+		length = 0;
+		for (character = (const unsigned char *)id; *character != 0; character++) {
+			if ((unsigned int)(*character - '0') > 9 &&
+			    (unsigned int)((*character & 0xDF) - 'A') > 25 &&
+			    *character != '-' && *character != '_') {
+				result = 0x80800001;
+				goto unlock;
+			}
+			if (++length == 64) {
+				result = 0x80800001;
+				goto unlock;
+			}
+		}
+	}
+	memset(info->safeMemoryDirectory, 0, sizeof(info->safeMemoryDirectory));
+	strncpy(info->safeMemoryDirectory, id, sizeof(info->safeMemoryDirectory) - 1);
+	result = appmgrGetSafeMemoryDirectory(0, info, directory);
+	if (result < 0)
+		goto unlock;
+
+	permission = sceKernelSetThreadAccessLevel(0x80);
+	result = appmgrCreateDirectories(directory, 0);
+	sceKernelSetThreadAccessLevel(permission);
+	if (result < 0) {
+		result = 0x80800049;
+		goto unlock;
+	}
+	SceKernelSuspendForDriver_4DF40893(0);
+	permission = sceKernelSetThreadAccessLevel(0x80);
+	result = appmgrSyncSafeMemoryFile(0, info->safeMemoryFlags, directory, memory, size);
+	sceKernelSetThreadAccessLevel(permission);
+	SceKernelSuspendForDriver_2BB92967(0);
+	if (result >= 0)
+		info->safeMemoryInitialized = 1;
+unlock:
+	sceKernelUnlockMutex(g_appmgrSafeMemoryMutex, 1);
+leave:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int appmgrSaveSafeMemoryForProcess(SceUID pid)
+{
+	SceAppMgrAppInfoCache *info = NULL;
+	SceIoStat stat;
+	char root[64];
+	char directory[292] = "";
+	char path[292] = "";
+	const char *fileName;
+	void *memory;
+	SceSize size;
+	int fd, written, result;
+
+	result = SceProcessmgrForDriver_AF80F39C(pid, g_appmgrAppInfoCacheKey, (void **)&info, 0);
+	if (result < 0)
+		return result;
+	if (info == NULL)
+		return 0x80800012;
+	if (info->safeMemoryInitialized == 0)
+		return 0;
+	memory = info->safeMemory;
+	size = info->safeMemorySize;
+	if (memory == NULL)
+		return 0x80800013;
+
+	fileName = psmDevAssistantSafeMemoryFileName;
+	if (!SceSblACMgrForDriver_C98D82EE(pid))
+		fileName = safeMemoryFileName;
+	result = appmgrGetSafeMemoryDirectory(pid, info, directory);
+	if (result < 0)
+		return result;
+	snprintf(path, sizeof(path), (info->safeMemoryFlags & 1) ? "%s/_%s" : "%s/%s",
+		 directory, fileName);
+
+	if (info->safeMemoryDirty != 0) {
+		fd = sceIoOpen(path, 0x603, 6);
+		if (fd < 0)
+			return fd;
+		written = sceIoWrite(fd, memory, size);
+		sceIoClose(fd);
+		if (written != size)
+			return 0x80800014;
+		if (info != NULL) {
+			info->saveDataFlags |= 2;
+			if (SceRtcForDriver_A930CD1A(&stat.st_mtime, 0) >= 0 &&
+			    appmgrResolvePath("savedata0:", pid, root, sizeof(root)) >= 0)
+				sceIoChstat(root, &stat, 0x20);
+		}
+	}
+	info->safeMemoryDirty = 0;
+	if (!(info->safeMemoryFlags & 1))
+		return 0;
+	APPMGR_STRCAT(directory, "/", sizeof(directory));
+	APPMGR_STRNCAT(directory, fileName, 13, sizeof(directory));
+	directory[291] = 0;
+	sceIoRemove(directory);
+	result = sceIoRename(path, directory);
+	return result < 0 ? result : 0;
+}
+
+int appmgrPrepareSafeMemoryForProcess(SceUID pid)
+{
+	SceAppMgrAppInfoCache *info = NULL;
+	char directory[292] = "";
+	char path[292] = "";
+	const char *fileName;
+	int result;
+
+	result = SceProcessmgrForDriver_AF80F39C(pid, g_appmgrAppInfoCacheKey, (void **)&info, 0);
+	if (result < 0)
+		return result;
+	if (info == NULL)
+		return 0x80800012;
+	if (info->safeMemoryInitialized == 0)
+		return 0;
+	if (!(info->safeMemoryFlags & 1))
+		return 0;
+
+	if (SceSblACMgrForDriver_C98D82EE(pid))
+		fileName = psmDevAssistantSafeMemoryFileName;
+	else
+		fileName = safeMemoryFileName;
+	result = appmgrGetSafeMemoryDirectory(pid, info, directory);
+	if (result < 0)
+		return result;
+	snprintf(path, sizeof(path), "%s/%s", directory, fileName);
+	APPMGR_STRCAT(directory, "/_", sizeof(directory));
+	APPMGR_STRNCAT(directory, fileName, 13, sizeof(directory));
+	directory[291] = 0;
+	result = sceIoRename(path, directory);
+	return result < 0 ? result : 0;
+}
+
+int sceAppMgrSaveSafeMemory(const void *data, SceSize size, SceOff offset)
+{
+	SceAppMgrAppInfoCache *info;
+	int syscallState, result;
+
+	syscallState = sceSyscallEnter();
+	result = sceKernelLockMutex(g_appmgrSafeMemoryMutex, 1, NULL);
+	if (result < 0) {
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	SceKernelSuspendForDriver_4DF40893(0);
+	info = SceProcessmgrForDriver_EE694840(g_appmgrAppInfoCacheKey);
+	if (info == NULL) {
+		result = 0x80800012;
+		goto unlock;
+	}
+	if (info->safeMemory == NULL) {
+		result = 0x808010E0;
+		goto unlock;
+	}
+	if (data == NULL) {
+		result = 0x80801001;
+		goto unlock;
+	}
+	if (offset < 0 || (SceOff)info->safeMemorySize < offset || info->safeMemorySize < size ||
+	    (SceOff)info->safeMemorySize < offset + size) {
+		result = 0x80801000;
+		goto unlock;
+	}
+	result = size;
+	if (size != 0) {
+		int copied = sceKernelCopyFromUser((char *)info->safeMemory + offset, data, size);
+
+		info->safeMemoryDirty = 1;
+		SceKernelSuspendForDriver_2BB92967(0);
+		sceKernelUnlockMutex(g_appmgrSafeMemoryMutex, 1);
+		sceSyscallLeave(syscallState);
+		return copied < 0 ? copied : (int)size;
+	}
+	info->safeMemoryDirty = 1;
+unlock:
+	SceKernelSuspendForDriver_2BB92967(0);
+	sceKernelUnlockMutex(g_appmgrSafeMemoryMutex, 1);
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int sceAppMgrLoadSafeMemory(void *data, SceSize size, SceOff offset)
+{
+	SceAppMgrAppInfoCache *info;
+	int syscallState, copied, result;
+
+	syscallState = sceSyscallEnter();
+	result = sceKernelLockMutex(g_appmgrSafeMemoryMutex, 1, NULL);
+	if (result < 0) {
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	SceKernelSuspendForDriver_4DF40893(0);
+	info = SceProcessmgrForDriver_EE694840(g_appmgrAppInfoCacheKey);
+	if (info == NULL) {
+		result = 0x80800012;
+		goto unlock;
+	}
+	if (info->safeMemory == NULL) {
+		result = 0x808010E0;
+		goto unlock;
+	}
+	if (data == NULL) {
+		result = 0x80801001;
+		goto unlock;
+	}
+	if (offset < 0 || (SceOff)info->safeMemorySize < offset || info->safeMemorySize < size ||
+	    (SceOff)info->safeMemorySize < offset + size) {
+		result = 0x80801000;
+		goto unlock;
+	}
+	result = size;
+	if (size == 0)
+		goto unlock;
+	copied = sceKernelCopyToUser(data, (char *)info->safeMemory + offset, size);
+	SceKernelSuspendForDriver_2BB92967(0);
+	sceKernelUnlockMutex(g_appmgrSafeMemoryMutex, 1);
+	sceSyscallLeave(syscallState);
+	return copied < 0 ? copied : (int)size;
+unlock:
+	SceKernelSuspendForDriver_2BB92967(0);
+	sceKernelUnlockMutex(g_appmgrSafeMemoryMutex, 1);
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int appmgrInitAppInfoCache(SceUID pid)
 {
 	SceAppMgrAppInfoCache *info;

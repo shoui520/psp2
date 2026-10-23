@@ -90,6 +90,21 @@ int appmgrGetUserDirPathByIdSyscall(int userId, int partitionId, char *path,
 	return appmgrGetUserDirPathById(userId, partitionId, path, capacity);
 }
 
+int appmgrInitSafeMemoryByIdSyscall(const char *id)
+{
+	return sceAppMgrInitSafeMemoryById(id);
+}
+
+int appmgrSaveSafeMemorySyscall(const void *data, SceSize size, SceOff offset)
+{
+	return sceAppMgrSaveSafeMemory(data, size, offset);
+}
+
+int appmgrLoadSafeMemorySyscall(void *data, SceSize size, SceOff offset)
+{
+	return sceAppMgrLoadSafeMemory(data, size, offset);
+}
+
 int appmgrAddContMountSyscall(SceUID pid, const AppmgrAddContMountParam *param)
 {
 	return sceAppMgrAddContMount(pid, param);

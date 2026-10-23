@@ -38,9 +38,7 @@ extern int _sceAppMgrProcSuspendHandler(SceUID pid, int eventType,
 		ProcEventParam *param, void *common);
 extern int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
 		ProcEventParam *param, void *common);
-extern int appmgrSaveSafeMemoryForProcess(SceUID pid);
 extern int appmgrUpdateSaveDataOnSuspend(SceUID pid, AppmgrProcessContent *content);
-extern int appmgrPrepareSafeMemoryForProcess(SceUID pid);
 extern SceUID g_appmgrCore2Mutex;
 extern SceUID g_appmgrCore2MutexOwner;
 extern int appmgrRemoveContentCache(SceUID pid, const AppmgrProcessContent *content);
@@ -58,7 +56,6 @@ extern int appmgrMountProcessContent(SceUID pid, SceUInt32 mountFlags, const cha
 				     const char *titleId, const AppmgrLaunchOptions *options,
 				     AppmgrMountHolder *mounts, int launchOrigin,
 				     AppmgrProcessContent *content);
-extern int appmgrSetupSafeMemoryForProcess(SceUID pid, int safeMemoryMode);
 
 SceUID g_appmgrVideoCodecPid = -1;
 void (*g_appmgrProcTerminatedCallback)(struct AppState *app);

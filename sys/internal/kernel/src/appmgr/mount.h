@@ -92,11 +92,15 @@ int appmgrGetAccountIdentity(SceUInt64 *accountId, SceKernelOpenPsId *openPsId,
 	__strcat_chk(destination, source, capacity)
 #define APPMGR_STRNCPY(destination, source, count, capacity) \
 	__strncpy_chk(destination, source, count, capacity)
+#define APPMGR_STRNCAT(destination, source, count, capacity) \
+	__strncat_chk(destination, source, count, capacity)
 #else
 #define APPMGR_STRCAT(destination, source, capacity) \
 	__builtin_strcat(destination, source)
 #define APPMGR_STRNCPY(destination, source, count, capacity) \
 	strncpy(destination, source, count)
+#define APPMGR_STRNCAT(destination, source, count, capacity) \
+	strncat(destination, source, count)
 #endif
 
 typedef struct AppmgrLicenseInfo {

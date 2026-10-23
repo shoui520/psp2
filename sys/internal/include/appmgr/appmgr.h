@@ -172,6 +172,9 @@ int sceAppMgrFakeSaveDataCreateMount(const char *path, struct ScePfsRndDriveId *
 int SceAppMgrForDriver_0B94BB90(int location, const SceUInt64 *mcId);	/* vitasdk: ksceAppMgrCloudDataSetMcId */
 int SceAppMgrForDriver_1286AF64(int location, SceUInt64 *mcId);	/* vitasdk: ksceAppMgrCloudDataGetMcId */
 int SceAppMgrForDriver_EC408FEF(int location);	/* vitasdk: ksceAppMgrCloudDataClearMcId */
+int sceAppMgrInitSafeMemoryById(const char *id);
+int sceAppMgrSaveSafeMemory(const void *data, SceSize size, SceOff offset);
+int sceAppMgrLoadSafeMemory(void *data, SceSize size, SceOff offset);
 int sceAppMgrGetPfsProcessStatus(void);
 int sceAppMgrIsExclusiveProcessRunning(const char *titleId);
 /* an additional content's directory in gro0:acinst: its keystone and title */

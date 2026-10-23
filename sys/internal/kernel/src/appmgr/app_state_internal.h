@@ -483,6 +483,9 @@ int appmgrGetDevInfoSyscall(const char *path, SceOff *maxSize, SceOff *freeSize)
 int appmgrGetPfsDriveSyscall(const char *drive, char *pfsDrive);
 int appmgrGetUserDirPathSyscall(int partitionId, char *path, unsigned int capacity);
 int appmgrGetUserDirPathByIdSyscall(int userId, int partitionId, char *path, unsigned int capacity);
+int appmgrInitSafeMemoryByIdSyscall(const char *id);
+int appmgrSaveSafeMemorySyscall(const void *data, SceSize size, SceOff offset);
+int appmgrLoadSafeMemorySyscall(void *data, SceSize size, SceOff offset);
 int appmgrAddContMountSyscall(SceUID pid, const struct AppmgrAddContMountParam *param);
 struct ScePfsRndDriveId;
 struct AppmgrSaveDataInfo;

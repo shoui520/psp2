@@ -188,10 +188,7 @@ STUB(SceAppMgrForDriver_088670A6)
 STUB_FUNC(int, SceAppMgrForDriver_193784A9, (void *a))
 STUB(sceAppMgrGetSystemDataFile)
 STUB_FUNC(int, SceAppMgrForDriver_B53FB98E, (const char *path, void *a))
-STUB(sceAppMgrSaveSafeMemory)
 STUB(SceAppMgrForDriver_EA75D157)
-STUB(sceAppMgrLoadSafeMemory)
-STUB(_sceAppMgrInitSafeMemoryById)
 
 STUB(_sceAppMgrWorkDirMount)
 
