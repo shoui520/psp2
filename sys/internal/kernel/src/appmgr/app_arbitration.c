@@ -32,6 +32,7 @@ extern int _processUpdateThreadEntry(SceSize args, void *argp);
 extern int _gcListenerThreadEntry(SceSize args, void *argp);
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrCore2Mutex;
+extern SceUID g_appmgrBottomSemaphore;
 extern SceUID g_appmgrCore2MutexOwner;
 extern SceUID g_appmgrCoreKmMutex;
 extern SceUID g_appmgrCoreKmMutexOwner;
@@ -95,6 +96,18 @@ static const SceKernelDebugInfo spawnBackgroundSignalPanicInfo = {
 	.fileHash = 0xb8f4da66,
 	.lineHash = 0xb835d657,
 	.funcHash = 0x3840945d,
+};
+
+static const SceKernelDebugInfo loadExecQuitWaitPanicInfo = {
+	.fileHash = 0xb8f4da66,
+	.lineHash = 0xe145442a,
+	.funcHash = 0x46a5d58e,
+};
+
+static const SceKernelDebugInfo loadExecRelaunchWaitPanicInfo = {
+	.fileHash = 0xb8f4da66,
+	.lineHash = 0x6f07793a,
+	.funcHash = 0x46a5d58e,
 };
 
 static const SceKernelDebugInfo processStateUpdaterStartPanicInfo = {
@@ -2767,14 +2780,14 @@ int _destroyOtherApp(struct AppState *app)
 	return 0;
 }
 
-/* Takes the arbitration locks, quits every application but app, and gives the locks back. */
-#define DESTROY_OTHER_APP(_find, _lockLine, _mainLine, _unlockLine, _func) do { \
-	GC_CHECK_APP_OWNERS(_lockLine, _func); \
+/* A system call's core2 lock: a lock error other than a stopped or suspended thread fails. */
+#define SYSCALL_CORE2_LOCK(_line, _func) do { \
+	GC_CHECK_APP_OWNERS(_line, _func); \
 	result = sceKernelLockMutex(g_appmgrCore2Mutex, 1, NULL); \
 	if (result != 0) { \
 		if (result != SCE_KERNEL_ERROR_THREAD_STOPPED && \
 				result != SCE_KERNEL_ERROR_THREAD_SUSPENDED) \
-			LAUNCH_CORE2_LOCK_FAILURE(result, _lockLine, _func); \
+			LAUNCH_CORE2_LOCK_FAILURE(result, _line, _func); \
 		if (result < 0) { \
 			sceSyscallLeave(syscallState); \
 			return result; \
@@ -2782,6 +2795,11 @@ int _destroyOtherApp(struct AppState *app)
 	} else { \
 		g_appmgrCore2MutexOwner = sceKernelGetThreadId(); \
 	} \
+} while (0)
+
+/* Takes the arbitration locks, quits every application but app, and gives the locks back. */
+#define DESTROY_OTHER_APP(_find, _lockLine, _mainLine, _unlockLine, _func) do { \
+	SYSCALL_CORE2_LOCK(_lockLine, _func); \
 	GC_MAIN_LOCK(_mainLine, _func); \
 	result = _destroyOtherApp(_find); \
 	DELETE_APP_MAIN_UNLOCK(_unlockLine, _func); \
@@ -2833,6 +2851,352 @@ int sceAppMgrDestroyOtherApp(void)
 	return result;
 }
 
+/*
+ * Grows the game's budget by size; with killMiniApps set, mini applications are killed,
+ * least valuable first, while the budget cannot grow.
+ */
+int sceAppMgrGrowMemory(SceSize size, int killMiniApps)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	SceUID budgetId;
+	int result;
+
+	if (!SceSblACMgrForDriver_0139FC20(0) && !sceSblACMgrIsSystemProgram(0)) {
+		sceSyscallLeave(syscallState);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	SYSCALL_CORE2_LOCK(3769, "sceAppMgrGrowMemory");
+	GC_MAIN_LOCK(3776, "sceAppMgrGrowMemory");
+	app = appmgrFindAppByName(g_appmgrAppStates, NULL);
+	if (app->launchInfo.budgetType != 0) {
+		DELETE_APP_MAIN_UNLOCK(3781, "sceAppMgrGrowMemory");
+		LAUNCH_CORE2_UNLOCK(3782, "sceAppMgrGrowMemory");
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201c;
+	}
+	DELETE_APP_MAIN_UNLOCK(3786, "sceAppMgrGrowMemory");
+	budgetId = app->process.budgetId;
+	if (killMiniApps) {
+		do {
+			result = sceKernelGrowBudget(budgetId, 0, size);
+			if (result != SCE_KERNEL_ERROR_CANNOT_GROW_PHYMEMPART)
+				break;
+			result = killLeastValuableMiniApplication();
+		} while (result >= 0);
+	} else {
+		result = sceKernelGrowBudget(budgetId, 0, size);
+	}
+	LAUNCH_CORE2_UNLOCK(3807, "sceAppMgrGrowMemory");
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+/*
+ * Grows the game's budget by size, killing mini applications worth less than the eviction
+ * threshold of thresholdClass while the budget cannot grow.
+ */
+int sceAppMgrGrowMemory3(SceSize size, unsigned int thresholdClass)
+{
+	SceUInt32 syscallState;
+	struct AppState *app;
+	SceUID budgetId;
+	int maxValue, result;
+
+	if (thresholdClass > 4)
+		return (int)0x8080201a;
+	if (thresholdClass - 1 <= 3)
+		maxValue = launchEvictionThresholds[thresholdClass - 1];
+	else
+		maxValue = 999999;
+	syscallState = sceSyscallEnter();
+	if (!SceSblACMgrForDriver_0139FC20(0) && !sceSblACMgrIsSystemProgram(0)) {
+		sceSyscallLeave(syscallState);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	SYSCALL_CORE2_LOCK(3837, "sceAppMgrGrowMemory3");
+	GC_MAIN_LOCK(3844, "sceAppMgrGrowMemory3");
+	app = appmgrFindAppByName(g_appmgrAppStates, NULL);
+	if (app->launchInfo.budgetType != 0) {
+		DELETE_APP_MAIN_UNLOCK(3849, "sceAppMgrGrowMemory3");
+		LAUNCH_CORE2_UNLOCK(3850, "sceAppMgrGrowMemory3");
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201c;
+	}
+	DELETE_APP_MAIN_UNLOCK(3854, "sceAppMgrGrowMemory3");
+	budgetId = app->process.budgetId;
+	if (maxValue > 0) {
+		do {
+			result = sceKernelGrowBudget(budgetId, 0, size);
+			if (result != SCE_KERNEL_ERROR_CANNOT_GROW_PHYMEMPART)
+				break;
+			result = killLeastValuableMiniApplication2(maxValue);
+		} while (result >= 0);
+	} else {
+		result = sceKernelGrowBudget(budgetId, 0, size);
+	}
+	LAUNCH_CORE2_UNLOCK(3875, "sceAppMgrGrowMemory3");
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+#if FW_DEBUG
+#define LOAD_EXEC_WAIT_CHECK(_result, _line, _info) \
+	DELETE_APP_FAILURE(_result, 0, _line, "sceAppMgrLoadExec")
+#else
+#define LOAD_EXEC_WAIT_CHECK(_result, _line, _info) \
+	SceDebugForDriver_00CCE39C(&_info, __builtin_return_address(0), "0x%08x,0x%08x\n", \
+		_result, 0)
+#endif
+
+/*
+ * Relaunches the calling game with another of its executables (app0:<name>) and argv: the
+ * process quits for the relaunch and this call does not return when that succeeds.
+ */
+int sceAppMgrLoadExec(const char *path, const char *const *argv, const void *option)
+{
+	SceUInt32 syscallState;
+	struct AppState *app;
+	char launchPath[256];
+	SceUInt32 remaining;
+	const char *colon;
+	int i, c, result, unlockResult;
+
+	if (path == NULL)
+		return (int)0x80802016;
+	if (option != NULL)
+		return (int)0x8080201a;
+	syscallState = sceSyscallEnter();
+	_appListFindAndLockAppByAppId(-2, &app);
+	if (app == NULL) {
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201c;
+	}
+	if (app->launchInfo.budgetType != 1) {
+		unlockResult = _appListUnlockApp(app);
+		DELETE_APP_CHECK(unlockResult, 0, 3951, "sceAppMgrLoadExec");
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201c;
+	}
+	if (app->quitRequested) {
+		unlockResult = _appListUnlockApp(app);
+		DELETE_APP_CHECK(unlockResult, 0, 3959, "sceAppMgrLoadExec");
+		result = sceKernelWaitSema(g_appmgrBottomSemaphore, 1, NULL);
+		if (result != SCE_KERNEL_ERROR_THREAD_STOPPED &&
+				result != SCE_KERNEL_ERROR_THREAD_SUSPENDED && result != 0)
+			LOAD_EXEC_WAIT_CHECK(result, 3963, loadExecQuitWaitPanicInfo);
+		sceSyscallLeave(syscallState);
+		return (int)0x80802013;
+	}
+	if (app->relaunchPending) {
+		unlockResult = _appListUnlockApp(app);
+		DELETE_APP_CHECK(unlockResult, 0, 3973, "sceAppMgrLoadExec");
+		result = sceKernelWaitSema(g_appmgrBottomSemaphore, 1, NULL);
+		if (result != SCE_KERNEL_ERROR_THREAD_STOPPED &&
+				result != SCE_KERNEL_ERROR_THREAD_SUSPENDED && result != 0)
+			LOAD_EXEC_WAIT_CHECK(result, 3977, loadExecRelaunchWaitPanicInfo);
+		sceSyscallLeave(syscallState);
+		return (int)0x80802013;
+	}
+
+	/* app0:, one optional separator, then a name without separators */
+	i = 0;
+	do {
+		if ("app0:"[i] == '\0')
+			break;
+		if ("app0:"[i] != path[i])
+			goto invalid;
+		++i;
+	} while (i != 256);
+	if (path[i] == '/' || path[i] == '\\')
+		++i;
+	if (i > 255)
+		goto invalid;
+	for (c = path[i]; c != '\0'; c = path[i])
+		if (c == '/' || c == '\\' || c == ':' || ++i == 256)
+			goto invalid;
+
+	result = copyArgv(app->launchInfo.launchArgs, argv);
+	if (result < 0) {
+		unlockResult = _appListUnlockApp(app);
+		DELETE_APP_CHECK(unlockResult, 0, 3999, "sceAppMgrLoadExec");
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	app->launchInfo.launchArgsSize = result;
+	colon = strchr(path, ':');
+	if (colon == NULL) {
+		unlockResult = _appListUnlockApp(app);
+		DELETE_APP_CHECK(unlockResult, 0, 4015, "sceAppMgrLoadExec");
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201e;
+	}
+	if (app->launchInfo.launchOrigin != 2) {
+		snprintf(launchPath, sizeof(launchPath), "%s/%s",
+			app->process.content.appDirectory, colon + 1);
+	} else if (appmgrResolvePath(path, 0, launchPath, sizeof(launchPath)) < 0 ||
+			(strncmp(launchPath, "ux0:", 4) == 0 &&
+			 strncmp(launchPath, "ux0:/data/", 10) != 0)) {
+		unlockResult = _appListUnlockApp(app);
+		DELETE_APP_CHECK(unlockResult, 0, 4031, "sceAppMgrLoadExec");
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201e;
+	}
+	appmgrResolveLaunchPath(launchPath, app->launchInfo.appPath,
+		sizeof(app->launchInfo.appPath));
+	app->relaunchPending = 1;
+	result = _appmgrProcessQuitProcess(app, 5, 1, 0);
+	unlockResult = _appListUnlockApp(app);
+	DELETE_APP_CHECK(unlockResult, 0, 4054, "sceAppMgrLoadExec");
+	if (result == 0)
+		while (SceThreadmgrForDriver_E9A99C50(15000000, &remaining) == 0)
+			;
+	sceSyscallLeave(syscallState);
+	return result;
+
+invalid:
+	unlockResult = _appListUnlockApp(app);
+	DELETE_APP_CHECK(unlockResult, 0, 3990, "sceAppMgrLoadExec");
+	sceSyscallLeave(syscallState);
+	return (int)0x8080201e;
+}
+
+/* A background application that may not be suspended quits itself, once. */
+int sceAppMgrQuitForNonSuspendableApp(void)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	int result, unlockResult;
+
+	if (!SceSblACMgrForDriver_6C5AB07F(0)) {
+		sceSyscallLeave(syscallState);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	result = _appListFindAndLockAppByProcessId(sceKernelGetProcessId(), &app);
+	if (result != 0) {
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	if (!(app->launchInfo.processAttr & 2)) {
+		unlockResult = _appListUnlockApp(app);
+		DELETE_APP_CHECK(unlockResult, 0, 4092, "sceAppMgrQuitForNonSuspendableApp");
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201c;
+	}
+	GC_MAIN_LOCK(4095, "sceAppMgrQuitForNonSuspendableApp");
+	g_appmgrMainMutexOwner = -1;
+	app->quitRequested = 0;
+	app->launchInfo.processAttr &= ~2;
+	unlockResult = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+	DELETE_APP_KM_UNLOCK_CHECK(unlockResult, 4098, "sceAppMgrQuitForNonSuspendableApp");
+	result = _appmgrProcessQuitProcess(app, 2, 0, 0);
+	unlockResult = _appListUnlockApp(app);
+	DELETE_APP_CHECK(unlockResult, 0, 4103, "sceAppMgrQuitForNonSuspendableApp");
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+/* The calling game quits to the LiveArea. */
+int sceAppMgrExitToLiveboardForGameApp(void)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	int result, unlockResult;
+
+	result = _appListFindAndLockAppByProcessId(sceKernelGetProcessId(), &app);
+	if (result != 0) {
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	if (app->launchInfo.budgetType != 1) {
+		unlockResult = _appListUnlockApp(app);
+		DELETE_APP_CHECK(unlockResult, 0, 4128, "sceAppMgrExitToLiveboardForGameApp");
+		sceSyscallLeave(syscallState);
+		return (int)0x8080201c;
+	}
+	result = _appmgrProcessQuitProcess(app, 1, 0, 0);
+	unlockResult = _appListUnlockApp(app);
+	DELETE_APP_CHECK(unlockResult, 0, 4139, "sceAppMgrExitToLiveboardForGameApp");
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int sceAppMgrDestroyAppByName(const char *name)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	int result, unlockResult;
+
+	if (!sceSblACMgrIsSystemProgram(0)) {
+		sceSyscallLeave(syscallState);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	result = _appListFindAndLockAppByName2(name, &app, -1);
+	if (result != 0) {
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	if (g_appmgrDebugNotifier != NULL)
+		g_appmgrDebugNotifier(4, app->appId, app->process.processId, 0);
+	result = _appmgrProcessQuitProcess(app, 2, 0, 0);
+	unlockResult = _appListUnlockApp(app);
+	DELETE_APP_CHECK(unlockResult, 0, 4174, "sceAppMgrDestroyAppByName");
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int sceAppMgrDestroyAppByAppId(int appId)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	int result, unlockResult;
+
+	if (!sceSblACMgrIsSystemProgram(0)) {
+		sceSyscallLeave(syscallState);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	result = _appListFindAndLockAppByAppId(appId, &app);
+	if (result != 0) {
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	if (g_appmgrDebugNotifier != NULL)
+		g_appmgrDebugNotifier(4, app->appId, app->process.processId, 0);
+	result = _appmgrProcessQuitProcess(app, 2, 0, 0);
+	unlockResult = _appListUnlockApp(app);
+	DELETE_APP_CHECK(unlockResult, 0, 4208, "sceAppMgrDestroyAppByAppId");
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+/* A background or system application sets what happens to it when memory runs short. */
+int sceAppMgrSetAppProtectionModeOnMemoryShortage(unsigned int mode)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	int result, unlockResult;
+
+	if (!sceSblACMgrIsSystemProgram(0) && !SceSblACMgrForDriver_6C5AB07F(0)) {
+		sceSyscallLeave(syscallState);
+		return SCE_APPMGR_ERROR_NOEXEC;
+	}
+	result = _appListFindAndLockAppByProcessId(sceKernelGetProcessId(), &app);
+	if (result != 0) {
+		sceSyscallLeave(syscallState);
+		return result;
+	}
+	GC_MAIN_LOCK(4233, "sceAppMgrSetAppProtectionModeOnMemoryShortage");
+	if (app->launchInfo.budgetType == 0 && (app->launchInfo.processAttr & 3) != 0)
+		app->protectionMode = mode;
+	else
+		result = (int)0x8080201c;
+	DELETE_APP_MAIN_UNLOCK(4245, "sceAppMgrSetAppProtectionModeOnMemoryShortage");
+	unlockResult = _appListUnlockApp(app);
+	DELETE_APP_CHECK(unlockResult, 0, 4248, "sceAppMgrSetAppProtectionModeOnMemoryShortage");
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 void appmgrProcessIdleCallback(SceUID pid, unsigned int elapsed, void *argument)
 {
 	struct AppState *app;
@@ -2844,4 +3208,63 @@ void appmgrProcessIdleCallback(SceUID pid, unsigned int elapsed, void *argument)
 	app->process.runWhenUiOverlay = elapsed == 0;
 	dmb();
 	_sceAppMgrNotifyAppMgrHandler();
+}
+
+/* The active application leaves the activation when the power tick state stops it. */
+static inline __attribute__((always_inline)) void _updatePowerTickStateForActiveApp(void)
+{
+	struct AppState *app;
+	int result;
+
+	if (_appListFindAndLockActiveApp(&app) != 0)
+		return;
+	if (_updateAppOnPowerTickState(app) != 0) {
+		GC_MAIN_LOCK(4351, "_updatePowerTickStateForActiveApp");
+		_appListSetActiveness(app, 1);
+		g_appmgrActiveAppId = -1;
+		DELETE_APP_MAIN_UNLOCK(4354, "_updatePowerTickStateForActiveApp");
+		result = _appListUnlockApp(app);
+		DELETE_APP_CHECK(result, 0, 4357, "_updatePowerTickStateForActiveApp");
+	} else {
+		result = _appListUnlockApp(app);
+		DELETE_APP_CHECK(result, 0, 4360, "_updatePowerTickStateForActiveApp");
+		_updateDeviceArbitration2();
+	}
+}
+
+/*
+ * Applies the power tick state to the active application and, on a PS TV, to every
+ * background application that may not be suspended.
+ */
+void _updatePowerTickStateForNonSuspendableApp(void)
+{
+	struct AppState *app;
+	int index, result;
+
+	_updatePowerTickStateForActiveApp();
+	if (!SceSblAIMgrForDriver_71608CA3())
+		return;
+	index = appmgrGetShellApp() != NULL;
+	app = &g_appmgrAppStates[index];
+	do {
+		GC_APP_LOCK_CHECK(4378, "_updatePowerTickStateForNonSuspendableApp");
+		GC_PREFETCH_APP(app);
+		result = sceKernelLockMutex(app->mutex, 1, NULL);
+		if (result != 0) {
+			if ((unsigned int)(result + 0x7ffd7fd4) > 1)
+				LAUNCH_CORE2_LOCK_FAILURE(result, 4378,
+					"_updatePowerTickStateForNonSuspendableApp");
+		} else {
+			app->mutexOwner = sceKernelGetThreadId();
+		}
+		if ((app->launchInfo.processAttr & 2) && appmgrGetAppRunState(app) != 2)
+			_updateAppOnPowerTickState(app);
+		GC_APP_UNLOCK_CHECK(4388, "_updatePowerTickStateForNonSuspendableApp");
+		app->mutexOwner = -1;
+		result = sceKernelUnlockMutex(app->mutex, 1);
+		GC_UNLOCK_CHECK(result, 4388, "_updatePowerTickStateForNonSuspendableApp");
+		DELETE_APP_CHECK(result, 0, 4389, "_updatePowerTickStateForNonSuspendableApp");
+		++index;
+		++app;
+	} while (index <= 19);
 }

@@ -136,7 +136,7 @@ SceAppMgr:
         - _sceAppMgrGetCurrentBgmState2: 0x3F7B9BB5
         - _sceAppMgrSaveDataDataRemove2: 0x435E0BCB
         - sceAppMgrActivateApp: 0x43631508
-        - sceAppMgrGrowMemory3: 0x4401EDCD
+        - appmgrGrowMemory3Syscall: 0x4401EDCD
         - appmgrAcquireBgmPortForMusicPlayerSyscall: 0x44EC36FA
         - _sceAppMgrGameDataMount: 0x454EB183
         - _sceAppMgrGetStatusByName: 0x46998AFC
@@ -150,7 +150,7 @@ SceAppMgr:
         - _sceAppMgrSaveDataUmount: 0x53623420
         - appmgrLaunchAppCancelSyscall: 0x5369BC0A
         - appmgrDestroyOtherAppByPidForShellSyscall: 0x5420D23C
-        - sceAppMgrDestroyAppByAppId: 0x54368A0B
+        - appmgrDestroyAppByAppIdSyscall: 0x54368A0B
         - _sceAppMgrGetRawPathOfApp0ByPidForShell: 0x550422F9
         - _sceAppMgrGetAppMgrState: 0x55C60D20
         - sceAppMgrSaveDataGetCachedRequiredSizeKiB: 0x56EDE09A
@@ -182,12 +182,12 @@ SceAppMgr:
         - sceAppMgrIsDevelopmentMode: 0x7D4F8F83
         - _sceAppMgrIsCameraActive: 0x7F0C9410
         - _sceAppMgrGetCurrentBgmState: 0x81569A58
-        - sceAppMgrGrowMemory: 0x842FCE8C
+        - appmgrGrowMemorySyscall: 0x842FCE8C
         - _sceAppMgrGetUserDirPath: 0x84B138BF
         - _sceAppMgrGetVs0UserModuleDrive: 0x85589E87
         - _sceAppMgrSaveDataSlotFileOpen: 0x855CDAA4
         - _sceAppMgrSetSystemDataFilePlayReady: 0x8964E793
-        - sceAppMgrExitToLiveboardForGameApp: 0x89D1DA55
+        - appmgrExitToLiveboardForGameAppSyscall: 0x89D1DA55
         - _sceAppMgrPeekLaunchParamForShell: 0x8CC3DC46
         - _sceAppMgrLaunchAppByPath4: 0x8FE4F651
         - appmgrSetBgmSubPriorityForSystemChatSyscall: 0x90E42B4D
@@ -210,7 +210,7 @@ SceAppMgr:
         - _sceAppMgrLaunchAppByName2: 0xAEF06983
         - _sceAppMgrSystemParamGetString: 0xAF5F9497
         - _sceAppMgrSaveDataSlotGetStatus: 0xAF8258D4
-        - sceAppMgrSetAppProtectionModeOnMemoryShortage: 0xAF8C7FFB
+        - appmgrSetAppProtectionModeOnMemoryShortageSyscall: 0xAF8C7FFB
         - appmgrAcquireBgmPortSyscall: 0xAFCEAB96
         - _sceAppMgrSetPowerSaveMode: 0xB0ECB9C2
         - _sceAppMgrPhotoUmount: 0xB2EA376F
@@ -251,7 +251,7 @@ SceAppMgr:
         - _sceAppMgrLaunchAppByName2ndStage: 0xDEDD2AED
         - _sceAppMgrReceiveShellEvent: 0xE0DADF51
         - sceAppMgrIsGameBudgetAppPresent: 0xE134F5A0
-        - sceAppMgrQuitForNonSuspendableApp: 0xE3F719A0
+        - appmgrQuitForNonSuspendableAppSyscall: 0xE3F719A0
         - sceAppMgrRestoreDisplaySettingForShell: 0xE455922D
         - _sceAppMgrDrmClose: 0xE4CE4A0C
         - _sceAppMgrPspSaveDataRead: 0xE535161F

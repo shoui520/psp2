@@ -412,6 +412,15 @@ int _destroyOtherApp(struct AppState *app);
 int sceAppMgrDestroyOtherAppByPidForShell(SceUID pid);
 int sceAppMgrDestroyOtherAppByAppIdForShell(int appId);
 int sceAppMgrDestroyOtherApp(void);
+int sceAppMgrGrowMemory(SceSize size, int killMiniApps);
+int sceAppMgrGrowMemory3(SceSize size, unsigned int thresholdClass);
+int sceAppMgrLoadExec(const char *path, const char *const *argv, const void *option);
+int sceAppMgrQuitForNonSuspendableApp(void);
+int sceAppMgrExitToLiveboardForGameApp(void);
+int sceAppMgrDestroyAppByName(const char *name);
+int sceAppMgrDestroyAppByAppId(int appId);
+int sceAppMgrSetAppProtectionModeOnMemoryShortage(unsigned int mode);
+void _updatePowerTickStateForNonSuspendableApp(void);
 void _appArbitrationOnProcessUnloaded(struct AppState *app);
 int appmgrStopShellWatchDog(void);
 int sceAppMgrLaunchAppByName2ndStage_internal(int appId, const char *name,

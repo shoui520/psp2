@@ -18,7 +18,6 @@ extern SceUID g_appmgrCore2Mutex;
 extern SceUID g_appmgrCore2MutexOwner;
 extern SceUID g_appmgrUpdateNotifySemaphore;
 extern int g_appmgrSystemSuspended;
-extern int _updatePowerTickStateForNonSuspendableApp(void);
 
 #if !FW_DEBUG
 static const SceKernelDebugInfo systemPanicInfo = {

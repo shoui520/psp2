@@ -61,6 +61,16 @@ int appmgrGetIdByNameSyscall(SceUID *id, const char *appName)
 	return sceAppMgrGetIdByName(id, appName);
 }
 
+int appmgrGrowMemorySyscall(SceSize size, int killMiniApps)
+{
+	return sceAppMgrGrowMemory(size, killMiniApps);
+}
+
+int appmgrGrowMemory3Syscall(SceSize size, unsigned int thresholdClass)
+{
+	return sceAppMgrGrowMemory3(size, thresholdClass);
+}
+
 int appmgrGetAppStateSyscall(SceAppMgrAppState *appState, SceSize size,
 			   SceUInt32 buildVersion)
 {
@@ -88,6 +98,11 @@ int appmgrGetCurrentBgmState2Syscall(void *bgmState)
 	return sceAppMgrGetCurrentBgmState2(bgmState);
 }
 
+int appmgrExitToLiveboardForGameAppSyscall(void)
+{
+	return sceAppMgrExitToLiveboardForGameApp();
+}
+
 int appmgrSendLiveBoardModeSyscall(int mode)
 {
 	return sceAppMgrSendLiveBoardMode(mode);
@@ -96,6 +111,11 @@ int appmgrSendLiveBoardModeSyscall(int mode)
 int appmgrNotifyLiveBoardModeForShellSyscall(int appId, int mode)
 {
 	return sceAppMgrNotifyLiveBoardModeForShell(appId, mode);
+}
+
+int appmgrDestroyAppByAppIdSyscall(int appId)
+{
+	return sceAppMgrDestroyAppByAppId(appId);
 }
 
 SceUID appmgrGetProcessIdByAppIdForShellSyscall(SceInt32 appId)
@@ -158,6 +178,11 @@ int appmgrGetAppMgrStateSyscall(void *appMgrState)
 	return sceAppMgrGetAppMgrState(appMgrState);
 }
 
+int appmgrSetAppProtectionModeOnMemoryShortageSyscall(unsigned int mode)
+{
+	return sceAppMgrSetAppProtectionModeOnMemoryShortage(mode);
+}
+
 int appmgrGetAppInfoSyscall(const char *appName, SceAppMgrAppState *appInfo)
 {
 	return sceAppMgrGetAppInfo(appName, appInfo);
@@ -166,6 +191,11 @@ int appmgrGetAppInfoSyscall(const char *appName, SceAppMgrAppState *appInfo)
 int appmgrGetFgAppInfoSyscall(void *appInfo)
 {
 	return sceAppMgrGetFgAppInfo(appInfo);
+}
+
+int appmgrQuitForNonSuspendableAppSyscall(void)
+{
+	return sceAppMgrQuitForNonSuspendableApp();
 }
 
 int appmgrGetRecommendedScreenOrientationSyscall(int *orientation)

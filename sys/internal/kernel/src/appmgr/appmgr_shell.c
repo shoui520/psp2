@@ -17,7 +17,6 @@ extern SceUID g_appmgrMainMutexOwner;
 extern int g_appmgrPowerSaveMode;
 extern int g_appmgrPowerSaveSuspendBackgroundApps;
 extern SceUID g_appmgrCore2MutexOwner;
-extern int _updatePowerTickStateForNonSuspendableApp(void);
 extern int _sceAppMgrIsExistAbortedAppOrDebugSuspendedApp(void);
 extern SceUID appmgrGetAbortThreadId(void);
 extern int appmgrAbortProcess(SceUID processId);
