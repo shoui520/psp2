@@ -48,6 +48,16 @@ int appmgrLoadSaveDataSystemFileSyscall(const char *path, void *buffer, SceSize 
 	return sceAppMgrLoadSaveDataSystemFile(path, buffer, size);
 }
 
+int appmgrGetMediaTypeFromDriveSyscall(const char *drive, int *mediaType)
+{
+	return sceAppMgrGetMediaTypeFromDrive(drive, mediaType);
+}
+
+int appmgrGetMediaTypeFromDriveByPidSyscall(SceUID pid, const char *drive, int *mediaType)
+{
+	return sceAppMgrGetMediaTypeFromDriveByPid(pid, drive, mediaType);
+}
+
 int appmgrUpdateSaveDataParamSyscall(const char *path)
 {
 	return sceAppMgrUpdateSaveDataParam(path);

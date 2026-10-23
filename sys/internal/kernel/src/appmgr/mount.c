@@ -6922,6 +6922,99 @@ out:
 	return result;
 }
 
+/* The medium of a mounted application path: 4 ux0, 3 grw0/gro0, 2 ur0/vs0, 1 other. */
+static inline int appmgrGetMediaType(const char *path)
+{
+	if (strncmp(path, "ux0:", 4) == 0)
+		return 4;
+	if (strncmp(path, "grw0:", 5) == 0 || strncmp(path, "gro0:", 5) == 0)
+		return 3;
+	if (strncmp(path, "ur0:", 4) == 0 || strncmp(path, "vs0:", 4) == 0)
+		return 2;
+	return 1;
+}
+
+/* The medium of the calling application's mount at drive. */
+int sceAppMgrGetMediaTypeFromDrive(const char *drive, int *mediaType)
+{
+	SceUInt32 syscallState;
+	struct AppState *app;
+	AppmgrVirtualMount *mount;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (mediaType == NULL || drive == NULL) {
+		result = 0x80800001;
+		goto out;
+	}
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app == NULL) {
+		result = 0x80801002;
+		goto unlock;
+	}
+	for (mount = app->process.mounts.firstMount; mount != NULL; mount = mount->next) {
+		if (strncmp(mount->driveId.drive_id, drive, 16) == 0)
+			break;
+	}
+	if (mount == NULL) {
+		result = 0x80800002;
+		goto unlock;
+	}
+	*mediaType = appmgrGetMediaType(mount->pfsMount->appPath);
+	result = 0;
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+/* The medium of process pid's mount at drive; another process's only for system programs. */
+int sceAppMgrGetMediaTypeFromDriveByPid(SceUID pid, const char *drive, int *mediaType)
+{
+	SceUInt32 syscallState;
+	struct AppState *app;
+	AppmgrVirtualMount *mount;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (mediaType == NULL || drive == NULL) {
+		result = 0x80800001;
+		goto out;
+	}
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	if (pid != 0 && SceSblACMgrForDriver_8A54DF3A(0) != 0 &&
+	    pid != sceKernelGetProcessId()) {
+		result = 0x80800009;
+		goto unlock;
+	}
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, pid);
+	if (app == NULL) {
+		result = 0x80801002;
+		goto unlock;
+	}
+	for (mount = app->process.mounts.firstMount; mount != NULL; mount = mount->next) {
+		if (strncmp(mount->driveId.drive_id, drive, 16) == 0)
+			break;
+	}
+	if (mount == NULL) {
+		result = 0x80800002;
+		goto unlock;
+	}
+	*mediaType = appmgrGetMediaType(mount->pfsMount->appPath);
+	result = 0;
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int appmgrResolvePath(const char *path, SceUID pid, char *output, SceSize size)
 {
 	int permission, result;
