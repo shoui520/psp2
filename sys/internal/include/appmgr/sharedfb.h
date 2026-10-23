@@ -11,7 +11,8 @@ typedef struct SharedFbInfo {
 	void *base;
 	int size;
 	unsigned char update[64];
-	unsigned char reserved[16];
+	signed char vsync;
+	unsigned char reserved[15];
 } SharedFbInfo;
 
 _Static_assert(sizeof(SharedFbInfo) == 0x58, "SharedFb information");
@@ -25,6 +26,11 @@ typedef struct SceSharedFbCreate {
 _Static_assert(sizeof(SceSharedFbCreate) == 24, "SharedFb creation parameter ABI");
 
 SceUID sceSharedFbCreate(int index, const SceSharedFbCreate *param);
+SceUID _sceSharedFbOpen(int index, SceUInt32 sdkVersion);
+int sceSharedFbClose(SceUID fbId);
+int sceSharedFbBegin(SceUID fbId, SharedFbInfo *info);
+int sceSharedFbEnd(SceUID fbId);
+int sceSharedFbGetInfo(SceUID fbId, SharedFbInfo *info);
 
 int sceSharedFbDelete(SceUID fbId);
 int sceSharedFbGetRenderingInfo(SceUID processId);

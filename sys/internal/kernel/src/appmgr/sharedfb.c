@@ -2,6 +2,8 @@
 
 #include <sysmem/debug.h>
 #include <processmgr/processmgr.h>
+#include <processmgr/process.h>
+#include <processmgr/process_info.h>
 #include <intrmgr/syscall.h>
 #include <appmgr/sharedfb.h>
 #include <threadmgr/threadmgr.h>
@@ -113,6 +115,27 @@ int sharedFbProcessCreate(SceUID pid, ProcEventCreateParam *param, void *common)
 		else if (SHARED_FB_PROCESS_MATCHES(port, processId, 14)) index = 14; \
 		else if (SHARED_FB_PROCESS_MATCHES(port, processId, 15)) index = 15; \
 		else goto missing; \
+	} while (0)
+
+#define SHARED_FB_SELECT_FREE_PROCESS(port, index, full) \
+	do { \
+		if ((port)->processes[0].pid == -1) index = 0; \
+		else if ((port)->processes[1].pid == -1) index = 1; \
+		else if ((port)->processes[2].pid == -1) index = 2; \
+		else if ((port)->processes[3].pid == -1) index = 3; \
+		else if ((port)->processes[4].pid == -1) index = 4; \
+		else if ((port)->processes[5].pid == -1) index = 5; \
+		else if ((port)->processes[6].pid == -1) index = 6; \
+		else if ((port)->processes[7].pid == -1) index = 7; \
+		else if ((port)->processes[8].pid == -1) index = 8; \
+		else if ((port)->processes[9].pid == -1) index = 9; \
+		else if ((port)->processes[10].pid == -1) index = 10; \
+		else if ((port)->processes[11].pid == -1) index = 11; \
+		else if ((port)->processes[12].pid == -1) index = 12; \
+		else if ((port)->processes[13].pid == -1) index = 13; \
+		else if ((port)->processes[14].pid == -1) index = 14; \
+		else if ((port)->processes[15].pid == -1) index = 15; \
+		else goto full; \
 	} while (0)
 
 #define SHARED_FB_CONTAINS_PID(port, processId) \
@@ -338,6 +361,301 @@ SceUID sharedFbGetRenderMemBlock(int *size)
 	}
 	sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
 	return (int)0x80200004;
+}
+
+/*
+ * May the calling process use a shared framebuffer: a system program, or a non-game program
+ * that is a mini application.
+ */
+static inline int sharedFbCheckAccess(SceUID processId)
+{
+	SceKernelProcessInfo info;
+	int systemProgram, nonGameProgram, result;
+
+	systemProgram = sceSblACMgrIsSystemProgram(0);
+	nonGameProgram = SceSblACMgrForDriver_6C5AB07F(processId);
+	if (!(systemProgram | nonGameProgram))
+		return (int)0x80010058;
+	if (nonGameProgram != 1)
+		return 0;
+	memset(&info, 0, sizeof(info));
+	info.size = sizeof(info);
+	result = sceKernelGetProcessInfo(processId, &info);
+	if (result < 0)
+		return result;
+	if (info.type != PROCESS_TYPE_MINI_APP)
+		return (int)0x80010058;
+	return 0;
+}
+
+SceUID _sceSharedFbOpen(int index, SceUInt32 sdkVersion)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	SceKernelAllocMemBlockKernelOpt opt;
+	struct SharedFbPort *port;
+	struct SharedFbProcess *process;
+	SceUID processId, shareMemBlock;
+	int result, portIndex, processIndex;
+
+	/* SDK 1.00 up to this firmware's */
+	if ((sdkVersion & 0xffff0000) - 0x01000000 >
+	    (FW_SDK_VERSION & 0xffff0000) - 0x01000000 || index < 0) {
+		result = (int)0x80200007;
+		goto done;
+	}
+	processId = sceKernelGetProcessId();
+	result = sharedFbCheckAccess(processId);
+	if (result)
+		goto done;
+	result = lockFastMutex(&gSharedFbManager.mutex);
+	if (result)
+		goto done;
+	if (index == gSharedFbManager.ports[0].index)
+		portIndex = 0;
+	else if (index == gSharedFbManager.ports[1].index)
+		portIndex = 1;
+	else {
+		result = (int)0x80200004;
+		goto unlock;
+	}
+	port = &gSharedFbManager.ports[portIndex];
+	SHARED_FB_SELECT_FREE_PROCESS(port, processIndex, full);
+	process = &port->processes[processIndex];
+	*process = (struct SharedFbProcess){ .pid = processId, .state = 1 };
+	memset(&opt, 0, sizeof(opt));
+	opt.attr = ALLOC_ATTR_SHARE_PHYPAGE | SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_MIRROR_BLOCKID;
+	opt.mirror_blockid = port->memBlock;
+	opt.size = sizeof(opt);
+	shareMemBlock = sceKernelAllocMemBlockForKernel("SceSharedFbShare",
+					SCE_KERNEL_MEMBLOCK_TYPE_USER_CDRAM_RW,
+					port->info.size, &opt);
+	if (shareMemBlock < 0) {
+		result = shareMemBlock;
+		goto unlock;
+	}
+	process->shareMemBlock = shareMemBlock;
+	result = scePUIDOpenByGUIDWithFlags(processId, port->memBlock, 2);
+	goto unlock;
+full:
+	result = (int)0x80200003;
+unlock:
+	sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
+done:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int sceSharedFbClose(SceUID fbId)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct SharedFbPort *port;
+	struct SharedFbProcess *process;
+	SceUID processId, memBlock;
+	unsigned int index, previous;
+	int result, portIndex;
+
+	processId = sceKernelGetProcessId();
+	memBlock = SceSysmemForDriver_45D22597(processId, fbId);
+	result = memBlock;
+	if (memBlock < 0)
+		goto done;
+	result = sharedFbCheckAccess(processId);
+	if (result)
+		goto done;
+	result = lockFastMutex(&gSharedFbManager.mutex);
+	if (result)
+		goto done;
+	if (memBlock == gSharedFbManager.ports[0].memBlock)
+		portIndex = 0;
+	else if (memBlock == gSharedFbManager.ports[1].memBlock)
+		portIndex = 1;
+	else
+		goto missing;
+	port = &gSharedFbManager.ports[portIndex];
+	SHARED_FB_SELECT_PROCESS(port, processId, index, missing);
+	process = &port->processes[index];
+	if (!process)
+		goto missing;
+	result = sceKernelFreeMemBlock(process->shareMemBlock);
+	if (result < 0)
+		goto unlock;
+	previous = __atomic_exchange_n(&process->state, 0, __ATOMIC_RELAXED);
+	if (previous == 2 || previous == 4)
+		sceKernelSetEventFlag(port->endEvent, 1u << index);
+	*process = (struct SharedFbProcess){ .pid = -1, .shareMemBlock = -1 };
+	sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
+	result = SceSysmemForDriver_84A4AF5E(processId, fbId);
+	if (result >= 0)
+		result = 0;
+	goto done;
+missing:
+	result = (int)0x80200004;
+unlock:
+	sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
+done:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int sceSharedFbBegin(SceUID fbId, SharedFbInfo *info)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	SharedFbInfo record;
+	struct SharedFbPort *port;
+	struct SharedFbProcess *process;
+	SceUID processId, memBlock, beginEvent, endEvent;
+	unsigned int index, pattern, expected;
+	SceUInt32 timeout;
+	signed char vsync;
+	int result, portIndex, assigned;
+
+	processId = sceKernelGetProcessId();
+	memBlock = SceSysmemForDriver_45D22597(processId, fbId);
+	result = memBlock;
+	if (memBlock < 0)
+		goto done;
+	result = sharedFbCheckAccess(processId);
+	if (result)
+		goto done;
+	result = lockFastMutex(&gSharedFbManager.mutex);
+	if (result)
+		goto done;
+	result = sceKernelCopyFromUser(&record, info, sizeof(record));
+	if (result)
+		goto unlock;
+	vsync = record.vsync;
+	memset(&record, 0, sizeof(record));
+	result = sceKernelCopyToUser(info, &record, sizeof(record));
+	if (result)
+		goto unlock;
+	if (memBlock == gSharedFbManager.ports[0].memBlock)
+		portIndex = 0;
+	else if (memBlock == gSharedFbManager.ports[1].memBlock)
+		portIndex = 1;
+	else
+		goto missing;
+	port = &gSharedFbManager.ports[portIndex];
+	SHARED_FB_SELECT_PROCESS(port, processId, index, missing);
+	pattern = 1u << index;
+	beginEvent = port->beginEvent;
+	process = &port->processes[index];
+	endEvent = port->endEvent;
+	if (process->state == 3) {
+		result = (int)0x80200008;
+		goto unlock;
+	}
+	sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
+	for (;;) {
+		timeout = 160000;
+		result = sceKernelWaitEventFlag(beginEvent, pattern, 4, NULL, &timeout);
+		if (result != (int)0x80028005)
+			break;
+		result = lockFastMutex(&gSharedFbManager.mutex);
+		if (result)
+			goto done;
+		assigned = port->assignedPids[0] == processId ||
+			   port->assignedPids[1] == processId ||
+			   port->assignedPids[2] == processId ||
+			   port->assignedPids[3] == processId ||
+			   port->assignedPids[4] == processId ||
+			   port->assignedPids[5] == processId ||
+			   port->assignedPids[6] == processId ||
+			   port->assignedPids[7] == processId;
+		sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
+		if (!assigned) {
+			SceDebugForDriver_391B74B7("PID=%#x is running, but sharedfb is not assigned\n",
+						   processId);
+			result = (int)0x80200008;
+			goto done;
+		}
+	}
+	if (result)
+		goto done;
+	if (SceSysrootForDriver_9AF075D4(processId)) {
+		expected = 2;
+		if (__atomic_compare_exchange_n(&process->state, &expected, 1, 0,
+						__ATOMIC_RELAXED, __ATOMIC_RELAXED))
+			sceKernelSetEventFlag(port->endEvent, pattern);
+		result = (int)0x80200008;
+		goto done;
+	}
+	expected = 2;
+	if (!__atomic_compare_exchange_n(&process->state, &expected, 4, 0,
+					 __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
+		SceSysrootForDriver_1B3FA457(processId);
+		result = (int)0x80200008;
+		goto done;
+	}
+	result = lockFastMutex(&gSharedFbManager.mutex);
+	if (!result) {
+		result = sceKernelCopyToUser(info, &port->info, sizeof(port->info));
+		if (!result) {
+			process->vsync = vsync;
+			sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
+			goto done;
+		}
+		sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
+	}
+	process->state = 1;
+	sceKernelSetEventFlag(endEvent, pattern);
+	goto done;
+missing:
+	result = (int)0x80200004;
+unlock:
+	sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
+done:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int sceSharedFbEnd(SceUID fbId)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct SharedFbPort *port;
+	struct SharedFbProcess *process;
+	SceUID processId, memBlock, endEvent;
+	unsigned int index, pattern;
+	int result, portIndex;
+
+	processId = sceKernelGetProcessId();
+	memBlock = SceSysmemForDriver_45D22597(processId, fbId);
+	result = memBlock;
+	if (memBlock < 0)
+		goto done;
+	result = sharedFbCheckAccess(processId);
+	if (result)
+		goto done;
+	result = lockFastMutex(&gSharedFbManager.mutex);
+	if (result)
+		goto done;
+	if (memBlock == gSharedFbManager.ports[0].memBlock)
+		portIndex = 0;
+	else if (memBlock == gSharedFbManager.ports[1].memBlock)
+		portIndex = 1;
+	else
+		goto missing;
+	port = &gSharedFbManager.ports[portIndex];
+	SHARED_FB_SELECT_PROCESS(port, processId, index, missing);
+	process = &port->processes[index];
+	endEvent = port->endEvent;
+	pattern = 1u << index;
+	if (process->state != 4) {
+		sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
+		result = -1;
+		goto done;
+	}
+	sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
+	process->state = 1;
+	sceKernelSetEventFlag(endEvent, pattern);
+	SceSysrootForDriver_1B3FA457(sceKernelGetProcessId());
+	result = 0;
+	goto done;
+missing:
+	sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
+	result = (int)0x80200004;
+done:
+	sceSyscallLeave(syscallState);
+	return result;
 }
 
 #define SHARED_FB_INITIALIZE_PROCESS(port, index) \
@@ -731,6 +1049,40 @@ int sceSharedFbUpdateProcessEnd(void)
 	sceKernelClearEventFlag(event, 0);
 	sceSyscallLeave(syscallState);
 	return 0;
+}
+
+int sceSharedFbGetInfo(SceUID fbId, SharedFbInfo *info)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	SceUID processId, memBlock;
+	int result, portIndex;
+
+	processId = sceKernelGetProcessId();
+	memBlock = SceSysmemForDriver_45D22597(processId, fbId);
+	result = memBlock;
+	if (memBlock < 0)
+		goto done;
+	result = sharedFbCheckAccess(processId);
+	if (result)
+		goto done;
+	result = lockFastMutex(&gSharedFbManager.mutex);
+	if (result)
+		goto done;
+	if (memBlock == gSharedFbManager.ports[0].memBlock)
+		portIndex = 0;
+	else if (memBlock == gSharedFbManager.ports[1].memBlock)
+		portIndex = 1;
+	else {
+		sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
+		result = (int)0x80200004;
+		goto done;
+	}
+	result = sceKernelCopyToUser(info, &gSharedFbManager.ports[portIndex].info,
+				     sizeof(SharedFbInfo));
+	sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
+done:
+	sceSyscallLeave(syscallState);
+	return result;
 }
 
 int sceSharedFbGetShellRenderPort(void)

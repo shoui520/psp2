@@ -550,8 +550,3 @@ int _sceAppMgrSetBgmProxyApp(const char *appName, const SyscallUnusedArgs *userA
 	STRING_IN(name, appName, 32);
 	return appmgrSetBgmProxyAppSyscall(name);
 }
-STUB(sceSharedFbClose)
-STUB(sceSharedFbBegin)
-STUB(sceSharedFbGetInfo)
-STUB(_sceSharedFbOpen)
-STUB(sceSharedFbEnd)
