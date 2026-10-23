@@ -22,6 +22,7 @@
 #include "appmgr_device.h"
 #include "appmgr_savedata_slot.h"
 #include "appmgr_shell_event.h"
+#include "addcont_internal.h"
 #include <processmgr/process_budget.h>
 
 extern int appmgrUsesGxmDebugger(SceUID pid);
@@ -42,7 +43,6 @@ extern int appmgrUpdateSaveDataOnSuspend(SceUID pid, AppmgrProcessContent *conte
 extern SceUID g_appmgrCore2Mutex;
 extern SceUID g_appmgrCore2MutexOwner;
 extern int appmgrRemoveContentCache(SceUID pid, const AppmgrProcessContent *content);
-extern int appmgrRemoveTemporaryPhoto(SceUID pid);
 extern int appmgrRemoveAppWorkDirectory(const AppmgrProcessContent *content);
 extern int appmgrUnmountProcessContent(SceUID pid);
 int _appmgrProcessKillProcess(struct AppState *app, int kind);

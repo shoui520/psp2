@@ -154,6 +154,25 @@ int _sceAppMgrThemeDataMount(const char *contentId, const char *themePath, const
 	return SceThreadmgrForDriver_E54FD746(0x2000, themeDataMountOnStack, &param);
 }
 
+int appmgrDrmOpenForUser(const SceAppMgrDrmOpenParam *userParam,
+			 const SyscallSizeArgs *userArguments)
+{
+	SyscallSizeArgs arguments;
+	SceAppMgrDrmOpenParam *param = (SceAppMgrDrmOpenParam *)userParam;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	BLOCK_IN_SIZED(param, userParam, arguments.size, sizeof(*param));
+	return appmgrDrmOpenSyscall(param);
+}
+
+int appmgrDrmOpenOnStack(void *argp)
+{
+	const AppmgrDrmOpenArguments *arguments = argp;
+
+	return appmgrDrmOpenForUser(arguments->param, arguments->userArguments);
+}
+
 int _sceAppMgrGetMountProcessNum(unsigned int mountId, const char *mountPoint,
 			       const SyscallUnusedArgs *userArguments)
 {
@@ -184,11 +203,7 @@ int _sceAppMgrGetVs0UserDataDrive(char *mountPoint)
 		  appmgrGetVs0UserDataDriveSyscall((char *)k));
 }
 
-STUB(SceAppMgrForDriver_088670A6)
-STUB_FUNC(int, SceAppMgrForDriver_193784A9, (void *a))
 STUB(sceAppMgrGetSystemDataFile)
-STUB_FUNC(int, SceAppMgrForDriver_B53FB98E, (const char *path, void *a))
-STUB(SceAppMgrForDriver_EA75D157)
 
 STUB(_sceAppMgrWorkDirMount)
 
@@ -234,7 +249,6 @@ STUB(_sceAppMgrSaveDataMount)
 STUB(_sceAppMgrSaveDataDataRemove)
 STUB(_sceAppMgrLoadSaveDataSystemFile)
 STUB(_sceAppMgrPspSaveDataRootMount)
-STUB(_sceAppMgrDrmOpen)
 
 STUB(_sceAppMgrLaunchAppByName2)
 
@@ -246,15 +260,12 @@ STUB(_sceAppMgrCaptureFrameBufDMACByAppId)
 STUB(_sceAppMgrLaunchAppByName2ForShell)
 STUB(_sceAppMgrGetMediaTypeFromDriveByPid)
 STUB(_sceAppMgrGetMediaTypeFromDrive)
-STUB(_sceAppMgrContentInstallPeriodStop)
 STUB(_sceAppMgrSendParam)
 
 STUB(_sceAppMgrLaunchAppByName)
 STUB(_sceAppMgrLoadExec)
-STUB(_sceAppMgrContentInstallPeriodStart)
 STUB(_sceAppMgrGetSaveDataInfoForSpecialExport)
 STUB(_sceAppMgrLaunchAppByName2ndStage)
-STUB(_sceAppMgrDrmClose)
 STUB(_sceAppMgrPspSaveDataRead)
 STUB(_sceAppMgrMmsMount)
 STUB(_sceAppMgrPhotoMount)

@@ -49,7 +49,8 @@ _Static_assert(sizeof(AppmgrSaveDataInfo) == 28, "save data information");
 
 /* sceAppMgrAddContMount's parameters: the drive the caller expects add-on content at */
 typedef struct AppmgrAddContMountParam {
-	unsigned char reserved[48];
+	char titleId[16];
+	unsigned char reserved[32];
 	char mountPoint[16];
 } AppmgrAddContMountParam;
 

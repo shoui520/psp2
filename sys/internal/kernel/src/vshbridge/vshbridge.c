@@ -1525,7 +1525,7 @@ SceUInt32 vshAppMgrDebugSettingNotifyUpdate(int setting)
 
 SceUInt32 vshAppMgrCheckContentInstallPeriod(void *a)
 {
-	VSH_BRIDGE(SceAppMgrForDriver_193784A9(a));
+	VSH_BRIDGE(SceAppMgrForDriver_193784A9((SceUID)a));
 }
 
 SceUInt32 vshAppMgrUpdateRifInfo(const void *info)
@@ -1535,7 +1535,7 @@ SceUInt32 vshAppMgrUpdateRifInfo(const void *info)
 
 SceUInt32 vshAppMgrRegisterPath(const char *path, void *a)
 {
-	VSH_BRIDGE(SceAppMgrForDriver_B53FB98E(path, a));
+	VSH_BRIDGE(SceAppMgrForDriver_B53FB98E(path, (int)a));
 }
 
 SceUInt32 vshAppMgrCheckPfsMounted(const char *path)

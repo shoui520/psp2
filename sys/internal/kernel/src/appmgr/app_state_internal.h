@@ -6,6 +6,7 @@
 #include <appmgr/appmgr_launch.h>
 #include <appmgr/appmgr_savedata.h>
 #include <appmgr.h>
+#include <appmgr/appmgr.h>
 #include <acmgr/acmgr.h>
 #include <threadmgr/threadmgr.h>
 #include "appmgr_event.h"
@@ -486,6 +487,20 @@ int appmgrGetUserDirPathByIdSyscall(int userId, int partitionId, char *path, uns
 int appmgrInitSafeMemoryByIdSyscall(const char *id);
 int appmgrSaveSafeMemorySyscall(const void *data, SceSize size, SceOff offset);
 int appmgrLoadSafeMemorySyscall(void *data, SceSize size, SceOff offset);
+int appmgrDrmOpenSyscall(const SceAppMgrDrmOpenParam *param);
+int appmgrDrmCloseSyscall(const SceAppMgrDrmOpenParam *param);
+int appmgrContentInstallPeriodStartSyscall(void);
+int appmgrContentInstallPeriodStopSyscall(void);
+
+/* the argument block _sceAppMgrDrmOpen passes to its stack */
+typedef struct AppmgrDrmOpenArguments {
+	const SceAppMgrDrmOpenParam *param;
+	const struct SyscallSizeArgs *userArguments;
+} AppmgrDrmOpenArguments;
+
+int appmgrDrmOpenForUser(const SceAppMgrDrmOpenParam *userParam,
+			 const struct SyscallSizeArgs *userArguments);
+int appmgrDrmOpenOnStack(void *argp);
 int appmgrAddContMountSyscall(SceUID pid, const struct AppmgrAddContMountParam *param);
 struct ScePfsRndDriveId;
 struct AppmgrSaveDataInfo;

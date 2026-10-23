@@ -151,9 +151,27 @@ int SceAppMgrForDriver_13D54107(unsigned int mountId, struct ScePfsRndDriveId *m
 int SceAppMgrForDriver_5E311F71(unsigned int mountId, const char *id,
 				struct ScePfsRndDriveId *mountPoint);
 int SceAppMgrForDriver_EC9D5A35(void *status);	/* vitasdk: ksceAppMgrSaveDataSlotGetStatus */
-int SceAppMgrForDriver_193784A9(void *a);	/* vitasdk: ksceAppMgrCheckContentInstallPeriod */
+int SceAppMgrForDriver_193784A9(SceUID pid);	/* vitasdk: ksceAppMgrCheckContentInstallPeriod */
 int sceAppMgrUpdateRifInfo(const char *titleId);
-int SceAppMgrForDriver_B53FB98E(const char *path, void *a);	/* vitasdk: ksceAppMgrRegisterPath */
+int SceAppMgrForDriver_B53FB98E(const char *path, int kind);	/* vitasdk: ksceAppMgrRegisterPath */
+
+/* an add-on content directory name (the SDK's SceAppUtilDrmAddcontId) */
+typedef struct SceAppMgrDrmAddcontId {
+	char data[17];
+	char padding[3];
+} SceAppMgrDrmAddcontId;
+
+/* the add-on content directory to open or close (names from sceAppUtilDrmOpen) */
+typedef struct SceAppMgrDrmOpenParam {
+	SceSize size;
+	SceAppMgrDrmAddcontId dirName;
+	char mountPoint[16];
+} SceAppMgrDrmOpenParam;
+
+/* vitasdk: ksceAppMgrDrmOpen */
+int SceAppMgrForDriver_EA75D157(const SceAppMgrDrmOpenParam *param);
+/* vitasdk: ksceAppMgrDrmClose */
+int SceAppMgrForDriver_088670A6(const SceAppMgrDrmOpenParam *param);
 /* vitasdk: ksceAppMgrCloudDataCreateHeader */
 /* SceAppMgrForDriver_2FAA6ABD's output (names unknown) */
 typedef struct SceAppMgrCloudDataKey {

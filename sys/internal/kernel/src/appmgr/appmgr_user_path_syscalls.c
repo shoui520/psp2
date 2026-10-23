@@ -165,6 +165,38 @@ int _sceAppMgrAddContAddMount(const AppmgrAddMountParam *userParam, int add)
 	return appmgrAddContAddMountSyscall(param, add);
 }
 
+int _sceAppMgrDrmOpen(const SceAppMgrDrmOpenParam *param,
+		      const SyscallSizeArgs *userArguments)
+{
+	AppmgrDrmOpenArguments arguments;
+
+	arguments.param = param;
+	arguments.userArguments = userArguments;
+	return SceThreadmgrForDriver_E54FD746(0x4000, appmgrDrmOpenOnStack, &arguments);
+}
+
+int _sceAppMgrDrmClose(const SceAppMgrDrmOpenParam *userParam,
+		       const SyscallSizeArgs *userArguments)
+{
+	SyscallSizeArgs arguments;
+	SceAppMgrDrmOpenParam *param = (SceAppMgrDrmOpenParam *)userParam;
+	int ret;
+
+	ARGS_IN(arguments, userArguments);
+	BLOCK_IN_SIZED(param, userParam, arguments.size, sizeof(*param));
+	return appmgrDrmCloseSyscall(param);
+}
+
+int _sceAppMgrContentInstallPeriodStart(void)
+{
+	return appmgrContentInstallPeriodStartSyscall();
+}
+
+int _sceAppMgrContentInstallPeriodStop(void)
+{
+	return appmgrContentInstallPeriodStopSyscall();
+}
+
 int _sceAppMgrGetRawPathOfApp0ByAppIdForShell(int appId, char *path)
 {
 	char *buffer;

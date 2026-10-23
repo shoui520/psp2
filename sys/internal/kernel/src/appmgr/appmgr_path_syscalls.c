@@ -4,6 +4,7 @@
 #include <appmgr/appmgr.h>
 #include "mount.h"
 #include "app_state_internal.h"
+#include "addcont_internal.h"
 
 int appmgrForceUmountSyscall(int mountId)
 {
@@ -113,6 +114,26 @@ int appmgrAddContMountSyscall(SceUID pid, const AppmgrAddContMountParam *param)
 int appmgrAddContAddMountSyscall(const AppmgrAddMountParam *param, int add)
 {
 	return sceAppMgrAddContAddMount(param, add);
+}
+
+int appmgrDrmOpenSyscall(const SceAppMgrDrmOpenParam *param)
+{
+	return SceAppMgrForDriver_EA75D157(param);
+}
+
+int appmgrDrmCloseSyscall(const SceAppMgrDrmOpenParam *param)
+{
+	return SceAppMgrForDriver_088670A6(param);
+}
+
+int appmgrContentInstallPeriodStartSyscall(void)
+{
+	return sceAppMgrContentInstallPeriodStart();
+}
+
+int appmgrContentInstallPeriodStopSyscall(void)
+{
+	return sceAppMgrContentInstallPeriodStop();
 }
 
 int appmgrQuitAppSyscall(int appId)
