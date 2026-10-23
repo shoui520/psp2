@@ -341,6 +341,24 @@ _Static_assert(sizeof(AppmgrLaunchAppOption) == 108 &&
 	       offsetof(AppmgrLaunchAppOption, proxyAppName) == 56 &&
 	       offsetof(AppmgrLaunchAppOption, paramResult) == 96, "launch option fields");
 
+/* The option block of the launches by name (the system calls copy it in whole) */
+typedef struct AppmgrLaunchAppByNameOption {
+	SceSize size;
+	SceUInt32 launchMode;
+	SceUInt32 reserved;
+	SceUID launchCallbackId;		/* the caller's own UIDs */
+	SceUID paramCallbackId;
+	int creatorAppId;			/* taken when launchMode has 0x840000 */
+	SceUInt32 evictionThresholdClass;
+	SceUInt32 resumeCreatorOnLaunchFailure;
+	signed char reservedTail[32];		/* must be zero */
+} AppmgrLaunchAppByNameOption;
+
+_Static_assert(sizeof(AppmgrLaunchAppByNameOption) == 64 &&
+	       offsetof(AppmgrLaunchAppByNameOption, launchCallbackId) == 12 &&
+	       offsetof(AppmgrLaunchAppByNameOption, reservedTail) == 32,
+	       "launch by name option fields");
+
 /* _launchApp4's argument: the launch, run on a stack of its own */
 typedef struct AppmgrLaunchApp4Param {
 	int appId;
@@ -374,6 +392,15 @@ int _sceAppMgrLaunchApp2(const char *appPath, const char *name, SceUInt32 budget
 		const char *param, SceUInt32 processAttr, const AppmgrLaunchAppOption *option);
 int sceAppMgrLaunchAppByName2ndStage(int appId, const char *appPath, SceUInt32 budgetSize,
 		SceUInt32 processAttr, const AppmgrLaunchAppOption *option);
+int appmgrLaunchAppByName2Syscall(const SceChar8 *name, const char *param,
+		const AppmgrLaunchAppByNameOption *option);
+int appmgrLaunchVideoStreamingAppSyscall(const void *extraParam, SceSize extraParamSize,
+		const AppmgrLaunchAppByNameOption *option);
+int appmgrLaunchAppByName2ForShellSyscall(const SceChar8 *name, const char *param,
+		const AppmgrLaunchAppByNameOption *option);
+int appmgrLaunchAppByNameSyscall(SceUInt32 launchMode, const SceChar8 *name, const char *param);
+int appmgrLaunchAppByNameForShellSyscall(SceUInt32 launchMode, const SceChar8 *name,
+		const char *param);
 int sceAppMgrLaunchAppByName2ndStage_internal(int appId, const char *name,
 		SceAppMgrAppStatus *statusOut, const AppmgrLaunchRequest *request,
 		int sendParamToRunning, int startByUpdater, const AppmgrCreateProcessParam *createParam,
