@@ -56,8 +56,6 @@ int appmgrCloneTemporaryMounts(SceUID pid, const char *titleId,
 			       AppmgrMountHolder *destination,
 			       ScePfsRndDriveId *outDriveId);
 
-extern int appmgrGetMountPointById(int mountId, char *mountPoint);
-
 SceUID g_appmgrCoreHeap;
 SceUID g_appmgrMountHeap = -1;
 SceUID g_appmgrMountMutex = -1;
@@ -614,6 +612,93 @@ char *appmgrAllocMountPath(void)
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
 	return sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+}
+
+/* The drive a mount of the calling application with this mount ID is reached by. */
+int appmgrGetMountPointById(int mountId, char *mountPoint)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	AppmgrVirtualMount *mount;
+	struct AppState *app;
+	int result;
+
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app == NULL) {
+		result = 0x80801002;
+		goto unlock;
+	}
+	for (mount = app->process.mounts.firstMount; mount != NULL; mount = mount->next) {
+		if (mount->pfsMount != NULL && mount->pfsMount->mountId == mountId)
+			break;
+	}
+	if (mount == NULL) {
+		result = 0x80800002;
+	} else {
+		result = 0;
+		if (mountPoint != NULL)
+			__builtin_memcpy(mountPoint, &mount->driveId, sizeof(mount->driveId));
+	}
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+/* Whether the calling process may mount the drive with this mount ID. */
+int appmgrIsMountIdAllowed(unsigned int mountId)
+{
+	SceSelfAuthInfo authInfo;
+	SceUInt64 authorityId;
+
+	switch (mountId) {
+	case 106:
+	case 107:
+		if (SceSblACMgrForDriver_C98D82EE(0) != 0)
+			return 1;
+		return sceSblACMgrIsSystemProgram(0) != 0;
+	case 205:
+		return SceSblACMgrForDriver_456DA7AC(0);
+	case 600:
+		return SceSblACMgrForDriver_4DB7F512(0);
+	case 110:
+	case 111:
+	case 112:
+	case 302:
+	case 303:
+	case 304:
+	case 500:
+	case 501:
+	case 502:
+	case 503:
+	case 504:
+	case 505:
+	case 900:
+	case 901:
+		break;
+	default:
+		return 1;
+	}
+	if (sceKernelGetProcessSelfAuthInfo(0, &authInfo) < 0)
+		return 0;
+	authorityId = authInfo.programAuthorityId;
+	switch (mountId) {
+	case 112:
+		return SceSblACMgrForDriver_6C5AB07F(0);
+	case 900:
+	case 901:
+		return authorityId == 0x2808000000000001ULL;
+	case 110:
+		return authorityId == 0x280000000000002DULL ||
+		       authorityId == 0x2800000000000001ULL;
+	case 111:
+		return SceSblACMgrForDriver_F5AE24AC(0) != 0;
+	default:
+		return authorityId == 0x2800000000000001ULL;
+	}
 }
 
 int appmgrCheckSaveDataFreeSpace(const char *path, SceUInt64 requiredBytes)
