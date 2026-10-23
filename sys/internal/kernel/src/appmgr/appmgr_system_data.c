@@ -14,6 +14,8 @@
 #include <string.h>
 #include <sysmem/sysclib.h>
 #include <acmgr/acmgr.h>
+#include <appmgr/appmgr.h>
+#include <appmgr/appmgr_rdrfp.h>
 #include "mount.h"
 
 typedef struct AppmgrPlayReadyFileHeader {
@@ -49,6 +51,17 @@ SceUID g_appmgrSaveDataHeap = -1;
 SceUID g_appmgrSaveDataMutex = -1;
 static int g_appmgrRemoveTreeCancelled;
 
+static const unsigned char encodedNpTitleFile[32] = {
+	(unsigned char)~'a', (unsigned char)~'p', (unsigned char)~'p',
+	(unsigned char)~'0', (unsigned char)~':', (unsigned char)~'s',
+	(unsigned char)~'c', (unsigned char)~'e', (unsigned char)~'_',
+	(unsigned char)~'s', (unsigned char)~'y', (unsigned char)~'s',
+	(unsigned char)~'/', (unsigned char)~'n', (unsigned char)~'p',
+	(unsigned char)~'t', (unsigned char)~'i', (unsigned char)~'t',
+	(unsigned char)~'l', (unsigned char)~'e', (unsigned char)~'.',
+	(unsigned char)~'d', (unsigned char)~'a', (unsigned char)~'t', 0,
+};
+
 static const unsigned char encodedPlayReadyFile[24] = {
 	(unsigned char)~'u', (unsigned char)~'r', (unsigned char)~'0',
 	(unsigned char)~':', (unsigned char)~'p', (unsigned char)~'l',
@@ -82,6 +95,194 @@ void *appmgrAllocSaveDataHeapMemory(SceSize size)
 __attribute__((noinline)) int appmgrFreeSaveDataHeapMemory(void *memory)
 {
 	return sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, memory);
+}
+
+/*
+ * Read a system data file into a user buffer: 0 the account's NP profile, 3 the Marlin IPTV
+ * device keys from the registry, 4 the application's NP title file.
+ */
+int sceAppMgrGetSystemDataFile(SceUInt32 location, void *buffer, SceSize size)
+{
+	void *mapPage = NULL;
+	SceSize mapSize = 0;
+	SceUInt32 mapOffset = 0;
+	SceUInt32 syscallState = sceSyscallEnter();
+	int accessLevel = sceKernelSetThreadAccessLevel(0x40);
+	SceIoStat stat;
+	int result;
+
+	switch (location) {
+	case 0: {
+		char path[64];
+		SceUID fd, mapId;
+		void *data;
+
+		if (buffer == NULL || size > 0x8000) {
+			result = 0x80801001;
+			break;
+		}
+		memset(path, 0, sizeof(path));
+		result = SceAppMgrForDriver_0813AFCA(1, path, 32);
+		if (result != 0)
+			break;
+		APPMGR_STRCAT(path, "/np/myprofile.dat", sizeof(path));
+		result = sceIoGetstat(path, &stat);
+		if (result < 0)
+			break;
+		if ((SceInt64)size < stat.st_size) {
+			result = 0x80801000;
+			break;
+		}
+		fd = sceIoOpen(path, SCE_O_RDONLY, 6);
+		if (fd < 0) {
+			result = fd;
+			break;
+		}
+		if (stat.st_size < 1) {
+			result = 0x808010F0;
+			sceIoClose(fd);
+			break;
+		}
+		result = sceKernelIsAccessibleRange(0x30, buffer, (SceSize)stat.st_size);
+		if (result < 0) {
+			sceIoClose(fd);
+			break;
+		}
+		mapId = sceKernelUserMap("SceAppMgrGetSystemData", 2, buffer, (SceSize)stat.st_size,
+					 &mapPage, &mapSize, &mapOffset);
+		if (mapId < 0) {
+			result = mapId;
+			sceIoClose(fd);
+			break;
+		}
+		data = (char *)mapPage + mapOffset;
+		if (sceIoRead(fd, data, (SceSize)stat.st_size) != (SceSize)stat.st_size) {
+			result = 0x808010F0;
+			memset(data, 0, (SceSize)stat.st_size);
+			sceKernelUserUnmap(mapId, buffer, (SceSize)stat.st_size);
+			sceIoClose(fd);
+			break;
+		}
+		result = (SceSize)stat.st_size;
+		sceKernelUserUnmap(mapId, buffer, result);
+		sceIoClose(fd);
+		break;
+	}
+	case 3: {
+		AppmgrMarlinDeviceKeys *keys;
+		int dirty;
+
+		if (SceSblACMgrForDriver_A92CD636(0) == 0) {
+			result = 0x80800009;
+			break;
+		}
+		if (size != 0x1000 || buffer == NULL) {
+			result = 0x80800001;
+			break;
+		}
+		keys = sceKernelAllocHeapMemory(SCE_KERNEL_HEAP_ID, sizeof(*keys));
+		if (keys == NULL) {
+			result = 0x80801006;
+			break;
+		}
+		dirty = 0;
+		result = sceRegMgrGetKeyInt("/CONFIG/VIDEOSERVICE/MARLINIPTV", "dirty_flag", &dirty);
+		if (result >= 0) {
+			if (dirty != 0) {
+				result = 0x808010F5;
+			} else {
+				result = sceRegMgrGetKeyBin("/CONFIG/VIDEOSERVICE/MARLINIPTV/01",
+							    "device_key", keys->deviceKey[0],
+							    sizeof(keys->deviceKey[0]));
+				if (result >= 0)
+					result = sceRegMgrGetKeyBin("/CONFIG/VIDEOSERVICE/MARLINIPTV/02",
+								    "device_key", keys->deviceKey[1],
+								    sizeof(keys->deviceKey[1]));
+				if (result >= 0)
+					result = sceRegMgrGetKeyBin("/CONFIG/VIDEOSERVICE/MARLINIPTV/03",
+								    "device_key", keys->deviceKey[2],
+								    sizeof(keys->deviceKey[2]));
+				if (result >= 0)
+					result = sceKernelCopyToUser(buffer, keys, 0x1000);
+			}
+		}
+		sceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, keys);
+		break;
+	}
+	case 4: {
+		void *page = NULL;
+		SceSize pageSize = 0;
+		SceUInt32 pageOffset = 0;
+		char path[32] = { 0 };
+		char *resolvedPath;
+		void *data;
+		SceUID mapId, fd;
+		int readSize;
+
+		memset(&stat, 0, sizeof(stat));
+		if (size > 0x1000 || buffer == NULL) {
+			result = 0x80800001;
+			break;
+		}
+		result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+		if (result < 0)
+			break;
+		mapId = sceKernelUserMap("SceAppMgrGetSystemData", 2, buffer, size,
+					 &page, &pageSize, &pageOffset);
+		if (mapId < 0) {
+			result = mapId;
+			goto unlock;
+		}
+		data = (char *)page + pageOffset;
+		memset(data, 0, size);
+		resolvedPath = appmgrAllocSaveDataHeapMemory(292);
+		if (resolvedPath == NULL) {
+			result = 0x80801006;
+			goto unmap;
+		}
+		memset(resolvedPath, 0, 292);
+		result = appmgrDecodeString(encodedNpTitleFile, path, sizeof(path));
+		if (result < 0)
+			goto unmap;
+		result = appmgrResolvePath(path, 0, resolvedPath, 292);
+		if (result < 0)
+			goto unmap;
+		result = sceIoGetstat(resolvedPath, &stat);
+		if (result < 0)
+			goto unmap;
+		if ((SceInt64)size < stat.st_size) {
+			result = 0x808010F1;
+			goto unmap;
+		}
+		fd = sceIoOpen(resolvedPath, SCE_O_RDONLY, 0);
+		result = fd;
+		if (fd < 0)
+			goto unmap;
+		readSize = sceIoRead(fd, data, (SceSize)stat.st_size);
+		if (readSize == stat.st_size) {
+			sceIoClose(fd);
+			result = readSize;
+		} else {
+			memset(data, 0, size);
+			sceIoClose(fd);
+			result = 0x808010F0;
+		}
+unmap:
+		if (data != NULL)
+			sceKernelUserUnmap(mapId, buffer, size);
+		if (resolvedPath != NULL)
+			appmgrFreeSaveDataHeapMemory(resolvedPath);
+unlock:
+		sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+		break;
+	}
+	default:
+		result = 0x80801000;
+		break;
+	}
+	sceKernelSetThreadAccessLevel(accessLevel);
+	sceSyscallLeave(syscallState);
+	return result;
 }
 
 int appmgrReadPlayReadySystemData(SceUInt32 location, void *information,

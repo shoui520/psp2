@@ -96,6 +96,11 @@ int appmgrInitSafeMemoryByIdSyscall(const char *id)
 	return sceAppMgrInitSafeMemoryById(id);
 }
 
+int appmgrGetSystemDataFileSyscall(SceUInt32 location, void *buffer, SceSize size)
+{
+	return sceAppMgrGetSystemDataFile(location, buffer, size);
+}
+
 int appmgrSaveSafeMemorySyscall(const void *data, SceSize size, SceOff offset)
 {
 	return sceAppMgrSaveSafeMemory(data, size, offset);

@@ -203,7 +203,6 @@ int _sceAppMgrGetVs0UserDataDrive(char *mountPoint)
 		  appmgrGetVs0UserDataDriveSyscall((char *)k));
 }
 
-STUB(sceAppMgrGetSystemDataFile)
 
 STUB(_sceAppMgrWorkDirMount)
 

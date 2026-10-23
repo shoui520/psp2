@@ -151,6 +151,7 @@ int SceAppMgrForDriver_13D54107(unsigned int mountId, struct ScePfsRndDriveId *m
 int SceAppMgrForDriver_5E311F71(unsigned int mountId, const char *id,
 				struct ScePfsRndDriveId *mountPoint);
 int SceAppMgrForDriver_EC9D5A35(void *status);	/* vitasdk: ksceAppMgrSaveDataSlotGetStatus */
+int sceAppMgrGetSystemDataFile(SceUInt32 location, void *buffer, SceSize size);
 int SceAppMgrForDriver_193784A9(SceUID pid);	/* vitasdk: ksceAppMgrCheckContentInstallPeriod */
 int sceAppMgrUpdateRifInfo(const char *titleId);
 int SceAppMgrForDriver_B53FB98E(const char *path, int kind);	/* vitasdk: ksceAppMgrRegisterPath */

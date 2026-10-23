@@ -206,7 +206,7 @@ SceAppMgr:
         - sceAppMgrAcquireSoundOutExclusive: 0xACB48075
         - appmgrReleaseBtrmSyscall: 0xACDCE4DB
         - appmgrSetInfobarStateSyscall: 0xAD9022A1
-        - sceAppMgrGetSystemDataFile: 0xAEC49533
+        - appmgrGetSystemDataFileSyscall: 0xAEC49533
         - _sceAppMgrLaunchAppByName2: 0xAEF06983
         - _sceAppMgrSystemParamGetString: 0xAF5F9497
         - _sceAppMgrSaveDataSlotGetStatus: 0xAF8258D4
