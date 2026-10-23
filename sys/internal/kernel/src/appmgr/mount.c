@@ -95,6 +95,114 @@ static const unsigned char encodedSavedataComponent[16] = SAVEDATA_COMPONENT;
 #undef USER_ROOT_COMPONENT
 #undef SAVEDATA_COMPONENT
 
+/* The caller's program class, for user programs. */
+int sceAppMgrIsGameProgram(void)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	int result = sceSblACMgrIsGameProgram(0);
+
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+int sceAppMgrIsNonGameProgram(void)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	int result = SceSblACMgrForDriver_6C5AB07F(0);
+
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+int sceAppMgrIsPsNowClient(void)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	int result = SceSblACMgrForDriver_0924896F(0);
+
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+int sceAppMgrIsDevelopmentMode(void)
+{
+	SceUInt32 syscall = sceSyscallEnter();
+	int result = SceSblACMgrForDriver_E87D1777();
+
+	sceSyscallLeave(syscall);
+	return result;
+}
+
+/*
+ * Of the media drives photo0 (100), music0 (105) and video0 (109) a process
+ * mounts at most two: a drive whose content flag is set stays mountable.
+ */
+int appmgrIsMediaDriveMountable(int mountId, SceUInt32 contentFlags)
+{
+	if (mountId == 105) {
+		if (contentFlags & 0x04000000)
+			return 1;
+		return (contentFlags & 0x0a000000) != 0x0a000000;
+	}
+	if (mountId == 109) {
+		if (contentFlags & 0x08000000)
+			return 1;
+		return (contentFlags & 0x06000000) != 0x06000000;
+	}
+	if (mountId == 100 && (contentFlags & 0x02000000) == 0)
+		return (contentFlags & 0x0c000000) != 0x0c000000;
+	return 1;
+}
+
+/* The title ID of an additional content's param.sfo (category "ac"). */
+int appmgrGetAddcontTitleId(const char *sfoPath, char *titleId)
+{
+	AppmgrSfoFile file = {0};
+	void *data = NULL;
+	SceSize length = 0, capacity = 0;
+	int result;
+
+	if (titleId == NULL) {
+		result = (int)0x80801001;
+		goto release;
+	}
+	memset(titleId, 0, 16);
+	result = appmgrLoadSfoFile(sfoPath, &file);
+	if (result < 0)
+		goto release;
+	result = appmgrGetSfoEntry(&file, "CATEGORY", &data, &length, &capacity);
+	if (result < 0)
+		goto release;
+	if (length <= 2 || capacity != 4 || strncmp("ac", data, 4) != 0)
+		goto badData;
+	result = appmgrGetSfoEntry(&file, "TITLE_ID", &data, &length, &capacity);
+	if (result < 0)
+		goto release;
+	if (length <= 9 || capacity != 12)
+		goto badData;
+	strncpy(titleId, data, 9);
+	result = 0;
+	goto release;
+badData:
+	result = (int)0x80801034;
+release:
+	appmgrReleaseSfoFile(&file);
+	return result;
+}
+
+/* A drive name of its prefix and six random bytes in hex. */
+int appmgrMakeRandomDriveId(const char *prefix, char *driveId)
+{
+	unsigned char random[8];
+	int result;
+
+	result = sceSblRngPseudoRandomNumber(random, sizeof(random));
+	if (result < 0)
+		return result;
+	snprintf(driveId, 16, "%s%02x%02x%02x%02x%02x%02xd", prefix, random[0],
+		 random[1], random[2], random[3], random[4], random[5]);
+	return 0;
+}
+
 const SceFiosOverlay g_appmgrOverlayTemplate = {0};
 
 int appmgrAddInvalidOverlay(SceUID pid, const char *driveId,

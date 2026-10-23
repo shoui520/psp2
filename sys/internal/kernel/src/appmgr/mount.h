@@ -53,6 +53,13 @@ _Static_assert(offsetof(AppmgrLicenseInfo, licenseVersion) == 48 &&
 int appmgrDecodeString(const unsigned char *source, char *destination, SceSize size);
 int appmgrRegisterMountDebugSettingCallback(void);
 int appmgrIsDevelopmentPath(const char *path);
+int sceAppMgrIsGameProgram(void);
+int sceAppMgrIsNonGameProgram(void);
+int sceAppMgrIsPsNowClient(void);
+int sceAppMgrIsDevelopmentMode(void);
+int appmgrIsMediaDriveMountable(int mountId, SceUInt32 contentFlags);
+int appmgrGetAddcontTitleId(const char *sfoPath, char *titleId);
+int appmgrMakeRandomDriveId(const char *prefix, char *driveId);
 int appmgrGetVs0UserModuleDrive(char *mountPoint);
 int appmgrGetVs0UserDataDrive(char *mountPoint);
 int appmgrConvertVs0UserDrivePath(const char *path, char *output, SceSize size);

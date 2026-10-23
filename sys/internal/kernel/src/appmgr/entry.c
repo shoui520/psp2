@@ -168,20 +168,17 @@ STUB(_sceAppMgrAddContAddMount)
 STUB(_sceAppMgrWorkDirMountById)
 STUB(_sceAppMgrAppParamSetString)
 
-STUB(sceAppMgrIsNonGameProgram)
 
 STUB(_sceAppMgrGetSaveDataInfo)
 STUB(_sceAppMgrAcidDirSet)
 
 STUB(_sceAppMgrPspSaveDataGetParams)
 
-STUB(sceAppMgrIsDevelopmentMode)
 STUB(_sceAppMgrSaveDataSlotFileOpen)
 STUB(_sceAppMgrLaunchAppByPath4)
 
 STUB(_sceAppMgrAppDataMountById)
 STUB(_sceAppMgrSaveDataMount)
-STUB(sceAppMgrIsPsNowClient)
 STUB(_sceAppMgrSaveDataDataRemove)
 STUB(_sceAppMgrLoadSaveDataSystemFile)
 STUB(_sceAppMgrPspSaveDataRootMount)
@@ -244,7 +241,6 @@ STUB(_sceAppMgrTrophyMount)
 STUB(_sceAppMgrSaveDataDataSave2)
 STUB(_sceAppMgrSaveDataSlotFileClose)
 STUB(_sceAppMgrUmount)
-STUB(sceAppMgrIsGameProgram)
 STUB(sceSharedFbClose)
 STUB(sceSharedFbBegin)
 STUB(sceSharedFbGetInfo)

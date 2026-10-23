@@ -6,11 +6,32 @@
 #include "app_state_internal.h"
 #include "appmgr_device.h"
 #include "appmgr_app_event.h"
+#include "mount.h"
 
 extern int sceAppMgrAppParamGetString(int pid, int param, char *string, SceSize length);
 extern SceInt32 _sceAppMgrGetAppState(SceAppMgrAppState *appState,
 				      SceUInt32 sizeofSceAppMgrAppState, SceUInt32 buildVersion);
 
+
+int appmgrIsGameProgramSyscall(void)
+{
+	return sceAppMgrIsGameProgram();
+}
+
+int appmgrIsNonGameProgramSyscall(void)
+{
+	return sceAppMgrIsNonGameProgram();
+}
+
+int appmgrIsPsNowClientSyscall(void)
+{
+	return sceAppMgrIsPsNowClient();
+}
+
+int appmgrIsDevelopmentModeSyscall(void)
+{
+	return sceAppMgrIsDevelopmentMode();
+}
 
 int appmgrGetBootParamSyscall(SceUInt32 request, void *bootParam)
 {

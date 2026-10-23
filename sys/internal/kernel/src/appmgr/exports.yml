@@ -160,7 +160,7 @@ SceAppMgr:
         - appmgrEnableDuckingOnSystemChatSyscall: 0x5AB230DE
         - sceAppMgrSuspendBgAppByShell: 0x5BCF6927
         - sceAppMgrReturnLiveAreaOperationResultForShell: 0x5CF3BA39
-        - sceAppMgrIsNonGameProgram: 0x5F22E192
+        - appmgrIsNonGameProgramSyscall: 0x5F22E192
         - _sceAppMgrGetUserDirPathById: 0x617D78DA
         - sceAppMgrReleaseSoundOutExclusive3: 0x626C339D
         - appmgrGetProcessIdByAppIdForShellSyscall: 0x63FAC2A9
@@ -179,7 +179,7 @@ SceAppMgr:
         - _sceAppMgrSaveDataSlotInit: 0x79689A1D
         - _sceAppMgrGetSystemDataFilePlayReady: 0x7C44FE5D
         - _sceAppMgrGetRawPathOfApp0ByAppIdForShell: 0x7D210054
-        - sceAppMgrIsDevelopmentMode: 0x7D4F8F83
+        - appmgrIsDevelopmentModeSyscall: 0x7D4F8F83
         - _sceAppMgrIsCameraActive: 0x7F0C9410
         - _sceAppMgrGetCurrentBgmState: 0x81569A58
         - appmgrGrowMemorySyscall: 0x842FCE8C
@@ -194,7 +194,7 @@ SceAppMgr:
         - _sceAppMgrAppDataMountById: 0x9275414A
         - appmgrGetExtraAppParamSyscall: 0x94A722BC
         - _sceAppMgrSaveDataMount: 0x95A6B1BF
-        - sceAppMgrIsPsNowClient: 0x972EA7BA
+        - appmgrIsPsNowClientSyscall: 0x972EA7BA
         - _sceAppMgrGetRawPath: 0x9FB3E2C8
         - _sceAppMgrSaveDataDataRemove: 0xA579A39E
         - _sceAppMgrLoadSaveDataSystemFile: 0xA630BC5D
@@ -282,7 +282,7 @@ SceAppMgr:
         - _sceAppMgrSaveDataSlotFileClose: 0xFE821175
         - sceAppMgrDeactivateApp: 0xFFA093D9
         - _sceAppMgrUmount: 0xFFCA54E0
-        - sceAppMgrIsGameProgram: 0xFFF8F7F0
+        - appmgrIsGameProgramSyscall: 0xFFF8F7F0
     SceSharedFb:
       syscall: true
       version: 1

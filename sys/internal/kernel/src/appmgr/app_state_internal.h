@@ -479,6 +479,10 @@ int sceAppMgrSuspendUntilActivated(void);
 int _appmgrProcessInitialize(void (*callback)(struct AppState *app));
 
 /* appmgr_query_syscalls.c */
+int appmgrIsGameProgramSyscall(void);
+int appmgrIsNonGameProgramSyscall(void);
+int appmgrIsPsNowClientSyscall(void);
+int appmgrIsDevelopmentModeSyscall(void);
 int appmgrGetBootParamSyscall(SceUInt32 request, void *bootParam);
 int appmgrAppParamGetIntSyscall(int pid, int param, int *value);
 int appmgrAppParamGetStringSyscall(int pid, int param, char *string, SceSize length);
