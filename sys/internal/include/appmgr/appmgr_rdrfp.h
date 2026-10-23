@@ -17,7 +17,7 @@ typedef struct SceAppMgrRdrfpPasscode {
 	SceUInt32 data[8];
 } SceAppMgrRdrfpPasscode;
 
-int sceAppMgrRdrfpMount(int type, const char *path, const SceAppMgrRdrfpPasscode *passcode,
+int sceAppMgrRdrfpMount(unsigned int type, const char *path, const SceAppMgrRdrfpPasscode *passcode,
 				SceAppMgrRdrfpMountPoint *mountPoint);	/* sceAppMgrRdrfpMount */
 int sceAppMgrRdrfpUmount(const SceAppMgrRdrfpMountPoint *mountPoint);	/* sceAppMgrRdrfpUmount */
 int SceAppMgrForDriver_0813AFCA(int id, char *path, SceSize size);	/* a mount's path */

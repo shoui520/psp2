@@ -8225,3 +8225,270 @@ int appmgrFreeMountHeapMemory(void *memory)
 {
 	return sceKernelFreeHeapMemory(g_appmgrMountHeap, memory);
 }
+
+/*
+ * A host's mount of an application (900) or its save data (901) for
+ * SceDeci4pRDrfp, under the host's authority ID.
+ */
+int sceAppMgrRdrfpMount(unsigned int type, const char *path, const SceAppMgrRdrfpPasscode *passcode,
+			SceAppMgrRdrfpMountPoint *mountPoint)
+{
+	unsigned char keystone[96];
+	char titleId[16];
+	ScePfsRndDriveId key;
+	SceSelfAuthInfo authInfo;
+	SceAllocOpt opt;
+	AppmgrPfsMount *pfsMount, *mount;
+	char *resolved, *normalized;
+	SceUInt32 state;
+	SceUID pid;
+	int result, resolveResult, permission, allowed, verified, hasPasscode, index;
+
+	state = sceSyscallEnter();
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	switch (type) {
+	case 106:
+	case 107:
+		if (SceSblACMgrForDriver_C98D82EE(0) == 0 && sceSblACMgrIsSystemProgram(0) == 0)
+			goto denied;
+		break;
+	case 110 ... 112:
+	case 302 ... 304:
+	case 500 ... 505:
+	case 900:
+	case 901:
+		if (sceKernelGetProcessSelfAuthInfo(0, &authInfo) < 0)
+			goto denied;
+		if (type == 112)
+			allowed = SceSblACMgrForDriver_6C5AB07F(0);
+		else if (type > 112)
+			allowed = (type - 900) <= 1 ?
+				  authInfo.programAuthorityId == 0x2808000000000001ULL :
+				  authInfo.programAuthorityId == 0x2800000000000001ULL;
+		else if (type == 110)
+			allowed = authInfo.programAuthorityId == 0x280000000000002DULL ||
+				  authInfo.programAuthorityId == 0x2800000000000001ULL;
+		else
+			allowed = SceSblACMgrForDriver_F5AE24AC(0) != 0;
+		if (allowed == 0)
+			goto denied;
+		break;
+	case 205:
+		if (SceSblACMgrForDriver_456DA7AC(0) == 0)
+			goto denied;
+		break;
+	case 600:
+		if (SceSblACMgrForDriver_4DB7F512(0) == 0)
+			goto denied;
+		break;
+	}
+	if ((type - 900) > 1 || mountPoint == NULL || path == NULL) {
+		result = (int)0x80800001;
+		goto unlock;
+	}
+
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 32;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	resolved = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	if (resolved == NULL)
+		goto noMemory;
+	memset(resolved, 0, 292);
+	pid = sceKernelGetProcessId();
+	permission = sceKernelSetThreadAccessLevel(128);
+	resolveResult = SceFios2KernelForDriver_0F456345(pid, 0, path, resolved, 292);
+	sceKernelSetThreadAccessLevel(permission);
+	if (resolveResult < 0)
+		goto badPath;
+	if (type == 900) {
+		if (strncmp(resolved, "ux0:/app/", 9) != 0 &&
+		    strncmp(resolved, "ux0:/patch/", 11) != 0 &&
+		    strncmp(resolved, "gro0:/app/", 10) != 0 &&
+		    strncmp(resolved, "grw0:/patch/", 12) != 0)
+			goto badPath;
+	} else if ((strncmp(resolved, "ux0:/user/", 10) != 0 ||
+		    strncmp(resolved + 12, "/savedata/", 10) != 0) &&
+		   strncmp(resolved, "grw0:/savedata/", 15) != 0 &&
+		   strncmp(resolved, "ux0:/data/savedata", 18) != 0) {
+		goto badPath;
+	}
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, resolved);
+	if (resolveResult != 0)
+		goto noMemory;
+
+	__builtin_memcpy(titleId, (const char [16]){"NPXS10989"}, sizeof(titleId));
+	memset(keystone, 0, sizeof(keystone));
+	key = (ScePfsRndDriveId){{0}};
+	memset(mountPoint, 0, sizeof(*mountPoint));
+	mount = g_appmgrPfsMounts;
+	normalized = appmgrAllocMountPath();
+	if (normalized == NULL) {
+		result = (int)0x80801006;
+		pfsMount = NULL;
+		goto failed;
+	}
+	result = appmgrNormalizePath(path, normalized);
+	if (result >= 0) {
+		for (; mount != NULL; mount = mount->next) {
+			if (strncmp(mount->appPath, normalized, 292) == 0) {
+				result = (int)0x80800003;
+				pfsMount = NULL;
+				sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+				goto failed;
+			}
+		}
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+	} else {
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+		if (result != (int)0x80800002) {
+			pfsMount = NULL;
+			goto failed;
+		}
+	}
+
+	pfsMount = appmgrAllocMountHeapMemory(sizeof(*pfsMount));
+	if (pfsMount == NULL) {
+		result = (int)0x80801006;
+		goto failed;
+	}
+	memset(pfsMount, 0, sizeof(*pfsMount));
+	pfsMount->mountId = type;
+	strncpy(pfsMount->appPath, path, sizeof(pfsMount->appPath) - 1);
+	result = appmgrMakeRandomDriveId("PD", pfsMount->mountPoint.drive_id);
+	if (result < 0)
+		goto failed;
+	pfsMount->mountPoint.drive_id[12] = 'd';
+	pfsMount->mountPoint.drive_id[13] = '\0';
+	for (index = 0; index < 16; index++)
+		if (pfsMount->programAuthorityIds[index] == 0)
+			break;
+	if (index == 16) {
+		result = (int)0x8080001e;
+		goto failed;
+	}
+	pfsMount->programAuthorityIds[index] = 0x2F00000000000001ULL;
+	hasPasscode = SceSblPostSsMgrForDriver_C93C0A0D();
+
+	if (type == 900) {
+		result = ScePfsMgrForKernel_A772209C(path, pfsMount->mountPoint.drive_id,
+						     0x2F00000000000001ULL, NULL, 10);
+		if (result < 0)
+			goto failed;
+		verified = 0;
+	} else {
+		result = appmgrReadSealedKey(path, &key);
+		if (result < 0)
+			goto failed;
+		for (index = 0; index < 16; index++)
+			if (key.drive_id[index] != 0)
+				break;
+		result = ScePfsMgrForKernel_A772209C(path, pfsMount->mountPoint.drive_id,
+						     0x2F00000000000001ULL,
+						     index != 16 ? &key : NULL, 9);
+		if (result < 0)
+			goto failed;
+		*mountPoint = *(SceAppMgrRdrfpMountPoint *)&pfsMount->mountPoint;
+		mountPoint->path[15] = '\0';
+		mountPoint->path[13] = '0';
+		mountPoint->path[14] = ':';
+		result = appmgrReadKeystone(sceKernelGetProcessId(), mountPoint->path, keystone);
+		if (result < 0)
+			goto failed;
+		for (index = 0; index < 96; index++)
+			if (keystone[index] != 0)
+				break;
+		if (index == 96) {
+			verified = 0;
+		} else {
+			verified = SceSblPostSsMgrForDriver_DDA6FA6D(keystone, 0);
+			if (verified != 0 && hasPasscode == 0)
+				goto mounted;
+		}
+		result = ScePfsMgrForKernel_680BC384(pfsMount->mountPoint.drive_id);
+		if (result < 0)
+			goto failed;
+		memset(mountPoint, 0, sizeof(*mountPoint));
+		for (index = 0; index < 16; index++)
+			if (key.drive_id[index] != 0)
+				break;
+		result = ScePfsMgrForKernel_A772209C(path, pfsMount->mountPoint.drive_id,
+						     0x2F00000000000001ULL,
+						     index != 16 ? &key : NULL, 7);
+		if (result < 0)
+			goto failed;
+	}
+mounted:
+	*mountPoint = *(SceAppMgrRdrfpMountPoint *)&pfsMount->mountPoint;
+	mountPoint->path[13] = '0';
+	mountPoint->path[14] = ':';
+	mountPoint->path[15] = '\0';
+	result = appmgrReadKeystone(sceKernelGetProcessId(), mountPoint->path, keystone);
+	if (result < 0)
+		goto failed;
+	if (appmgrIsDevelopmentPath(path) == 0) {
+		if (passcode == NULL) {
+			result = (int)0x80800001;
+			goto failed;
+		}
+		if (SceSblPostSsMgrForDriver_F86F1452(keystone, (const char *)passcode) < 0) {
+			result = (int)0x80800006;
+			goto failed;
+		}
+	}
+	if (type == 901 && (verified == 0 || hasPasscode != 0)) {
+		result = appmgrUpdateSaveDataParams(path, titleId, 0, NULL);
+		if (result < 0)
+			goto failed;
+	}
+	result = ScePfsMgrForKernel_D8D0FEE5(pfsMount->mountPoint.drive_id, 0x2800000000000001ULL);
+	if (result < 0)
+		goto failed;
+	result = ScePfsMgrForKernel_D8D0FEE5(pfsMount->mountPoint.drive_id, 0x2800000000007001ULL);
+	if (result != (int)0x80010011 && result < 0)
+		goto unlock;
+	if (g_appmgrPfsMounts == NULL) {
+		g_appmgrPfsMounts = pfsMount;
+		pfsMount->prev = NULL;
+		pfsMount->next = NULL;
+	} else {
+		mount = g_appmgrPfsMounts;
+		if (mount == pfsMount)
+			goto duplicate;
+		while (mount->next != NULL) {
+			if (mount == pfsMount)
+				goto duplicate;
+			mount = mount->next;
+		}
+		mount->next = pfsMount;
+		pfsMount->prev = mount;
+		pfsMount->next = NULL;
+	}
+	result = 0;
+	goto unlock;
+
+duplicate:
+	result = (int)0x80800003;
+failed:
+	if (mountPoint->path[0] != '\0')
+		ScePfsMgrForKernel_680BC384(pfsMount->mountPoint.drive_id);
+	memset(mountPoint, 0, sizeof(*mountPoint));
+	if (pfsMount != NULL)
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, pfsMount);
+	goto unlock;
+badPath:
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, resolved);
+noMemory:
+	result = (int)0x8080000c;
+	goto unlock;
+denied:
+	result = (int)0x80800009;
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(state);
+	return result;
+}
