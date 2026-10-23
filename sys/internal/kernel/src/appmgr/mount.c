@@ -7751,6 +7751,188 @@ unlock:
 	return result;
 }
 
+static const unsigned char encodedSavedataPlusWork[24] = {
+	(unsigned char)~'s', (unsigned char)~'a', (unsigned char)~'v', (unsigned char)~'e',
+	(unsigned char)~'d', (unsigned char)~'a', (unsigned char)~'t', (unsigned char)~'a',
+	(unsigned char)~'_', (unsigned char)~'p', (unsigned char)~'l', (unsigned char)~'u',
+	(unsigned char)~'s', (unsigned char)~'/', (unsigned char)~'w', (unsigned char)~'o',
+	(unsigned char)~'r', (unsigned char)~'k', 0
+};
+
+/*
+ * Creates a cloud download's save data, ux0:user/<account>/savedata_plus/work/<name>, with
+ * a new sealed key, and mounts it under a "ts" drive of the caller.
+ */
+int sceAppMgrCloudDataDstCreateMount(const char *name, ScePfsRndDriveId *mountPoint)
+{
+	ScePfsRndDriveId drive = { "" };
+	ScePfsRndDriveId key, klicensee;
+	union {
+		SceSelfAuthInfo authInfo;
+		SceIoStat stat;
+	} info;
+	unsigned char sealedKey[80];
+	unsigned char random[8];
+	char userRoot[16];
+	char directory[32];
+	char path[80];
+	struct AppState *app;
+	AppmgrMountHolder *holder;
+	AppmgrProcessContent *content;
+	SceUInt64 authorityId;
+	SceUID fd;
+	int result, status, index;
+	char c;
+
+	result = sceKernelGetProcessSelfAuthInfo(0, &info.authInfo);
+	if (result < 0)
+		return result;
+	authorityId = info.authInfo.programAuthorityId;
+	if (authorityId != 0x2800000000000001ULL && authorityId != 0x280000000000002dULL)
+		return (int)0x80800009;
+	if (mountPoint == NULL || name == NULL)
+		return (int)0x80800001;
+	for (index = 0; name[index] != '\0'; ) {
+		c = name[index];
+		if (!(APPMGR_IS_UPPER(c & 0xdf) || APPMGR_IS_DIGIT(c) || c == '-' || c == '_') ||
+		    ++index == 32)
+			return (int)0x80800001;
+	}
+	__builtin_memcpy(userRoot, (const char [16]){"ux0:user"}, sizeof(userRoot));
+	if (appmgrDecodeString(encodedSavedataPlusWork, directory, sizeof(directory)) < 0)
+		return (int)0x80800001;
+	if (g_appmgrAccountDirectory[0] == 0)
+		appmgrUpdateAccountDirectory();
+	if ((unsigned int)snprintf(path, sizeof(path), "%s/%s/%s/%s", userRoot,
+				   g_appmgrAccountDirectory, directory, name) >= sizeof(path))
+		return (int)0x80800001;
+	result = appmgrCreateDirectories(path, 0);
+	if (result != (int)0x80010002) {
+		if (result == 0)
+			result = (int)0x80010011;
+		return result;
+	}
+
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		return result;
+	SceKernelSuspendForDriver_4DF40893(0);
+	result = appmgrCheckSaveDataFreeSpace(path, 0x40000);
+	if (result < 0)
+		goto remove;
+	result = appmgrCreateDirectories(path, 1);
+	if (result < 0)
+		goto remove;
+	result = sceSblRngPseudoRandomNumber(random, sizeof(random));
+	if (result < 0)
+		goto remove;
+	snprintf(drive.drive_id, sizeof(drive.drive_id), "%s%02x%02x%02x%02x%02x%02xd", "PD",
+		 random[0], random[1], random[2], random[3], random[4], random[5]);
+	result = sceSblSsGenerateSealedKey(sealedKey);
+	if (result < 0)
+		goto remove;
+	result = sceSblSsDecryptSealedKey(sealedKey, &key);
+	if (result < 0)
+		goto remove;
+	result = ScePfsMgrForKernel_A772209C(path, drive.drive_id, authorityId, &key, 5);
+	if (result < 0)
+		goto remove;
+
+	/* the sealed key, into the new save data's sce_sys */
+	if (g_appmgrAccountDirectory[0] == 0)
+		appmgrUpdateAccountDirectory();
+	if ((unsigned int)snprintf(path, sizeof(path), "%s/%s/%s/%s/sce_sys", userRoot,
+				   g_appmgrAccountDirectory, directory, name) >= sizeof(path)) {
+		result = (int)0x80800001;
+		goto unmount;
+	}
+	result = sceIoMkdir(path, 6);
+	if (result < 0)
+		goto unmount;
+	if (g_appmgrAccountDirectory[0] == 0)
+		appmgrUpdateAccountDirectory();
+	if ((unsigned int)snprintf(path, sizeof(path), "%s/%s/%s/%s/sce_sys/sealedkey",
+				   userRoot, g_appmgrAccountDirectory, directory,
+				   name) >= sizeof(path)) {
+		result = (int)0x80800001;
+		goto unmount;
+	}
+	fd = sceIoOpen(path, 1539, 1048582);
+	result = fd;
+	if (fd < 0)
+		goto unmount;
+	result = sceIoWrite(fd, sealedKey, 80);
+	if (result != 80)
+		goto close;
+	memset(&info.stat, 0, sizeof(info.stat));
+	info.stat.st_mode = 4;
+	result = sceIoChstatByFd(fd, &info.stat, 1);
+	if (result < 0)
+		goto close;
+	result = sceIoSyncByFd(fd, 0);
+	if (result < 0)
+		goto close;
+	result = sceIoClose(fd);
+	if (result < 0)
+		goto close;
+	status = ScePfsMgrForKernel_680BC384(drive.drive_id);
+	if (status < 0) {
+		result = status;
+		goto unmount;
+	}
+
+	/* remounted under a "ts" drive of the caller */
+	result = appmgrMakeRandomDriveId("ts", drive.drive_id);
+	if (result < 0)
+		goto remove;
+	drive.drive_id[14] = ':';
+	drive.drive_id[15] = '\0';
+	MOUNT_MAIN_LOCK(15523);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app != NULL) {
+		holder = &app->process.mounts;
+		content = &app->process.content;
+	} else {
+		holder = NULL;
+		content = NULL;
+	}
+	MOUNT_MAIN_UNLOCK(15532);
+	if (app == NULL) {
+		result = (int)0x80801002;
+		goto remove;
+	}
+	if (g_appmgrAccountDirectory[0] == 0)
+		appmgrUpdateAccountDirectory();
+	if ((unsigned int)snprintf(path, sizeof(path), "%s/%s/%s/%s", userRoot,
+				   g_appmgrAccountDirectory, directory, name) >= sizeof(path)) {
+		result = (int)0x80800001;
+		goto remove;
+	}
+	klicensee = key;
+	result = appmgrMount(0, holder, 1005, content->titleId, path, &drive, &klicensee,
+			     mountPoint);
+	goto done;
+
+close:
+	sceIoClose(fd);
+	goto unmount;
+unmount:
+	ScePfsMgrForKernel_680BC384(drive.drive_id);
+done:
+	if (result >= 0)
+		goto unlock;
+remove:
+	if (g_appmgrAccountDirectory[0] == 0)
+		appmgrUpdateAccountDirectory();
+	if ((unsigned int)snprintf(path, sizeof(path), "%s/%s/%s/%s", userRoot,
+				   g_appmgrAccountDirectory, directory, name) < sizeof(path))
+		appmgrRemoveDirectoryTree(path);
+unlock:
+	SceKernelSuspendForDriver_2BB92967(0);
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+	return result;
+}
+
 int appmgrResolvePath(const char *path, SceUID pid, char *output, SceSize size)
 {
 	int permission, result;
