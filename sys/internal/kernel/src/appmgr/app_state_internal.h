@@ -571,6 +571,7 @@ int appmgrSaveDataDataSaveSyscall(SceAppMgrSaveDataData *operation);
 int appmgrSaveDataDataSave2Syscall(SceAppMgrSaveDataData *operation);
 int appmgrSaveDataDataRemoveSyscall(SceAppMgrSaveDataDataDelete *operation);
 int appmgrSaveDataDataRemove2Syscall(SceAppMgrSaveDataDataDelete *operation);
+int appmgrSaveDataGetQuotaSyscall(SceAppMgrSaveDataQuota *quota);
 int appmgrSaveDataGetCachedRequiredSizeKiBSyscall(void);
 int appmgrSaveDataSlotFileOpenSyscall(const char *mountPoint,
 				     struct AppmgrSaveDataSlotFileInfo *info);

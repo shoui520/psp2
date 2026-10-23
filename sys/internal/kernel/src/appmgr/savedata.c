@@ -2022,6 +2022,79 @@ leaveSyscall:
 	return result;
 }
 
+int SceAppMgrForDriver_E104C37E(SceAppMgrSaveDataQuota *quota)
+{
+	char path[128];
+	char resolvedPath[292];
+	char mountDevice[32] = {0};
+	const char *mountPoint;
+	SceUInt32 syscallState;
+	SceUInt32 quotaBytes;
+	SceUInt32 usedBytes;
+	int permission;
+	int setting;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (!quota || quota->size != sizeof(*quota)) {
+		result = (int)0x80800001;
+		goto leaveSyscall;
+	}
+	mountPoint = (const char *)quota->mountPoint.data;
+	result = appmgrValidateSaveDataMountPoint(mountPoint, 0);
+	if (result < 0)
+		goto leaveSyscall;
+	SceKernelSuspendForDriver_4DF40893(0);
+	result = sceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		goto unlockPower;
+	permission = sceKernelSetThreadAccessLevel(128);
+	memset(path, 0, sizeof(path));
+	memset(resolvedPath, 0, sizeof(resolvedPath));
+	snprintf(path, sizeof(path), "%s%s", mountPoint, "sce_sys");
+	appmgrResolvePath(path, 0, resolvedPath, sizeof(resolvedPath));
+	appmgrExtractSaveDataDeviceName(resolvedPath, mountDevice, sizeof(mountDevice));
+	quota->quotaSizeKiB = 0;
+	quota->usedSizeKiB = 0;
+	quotaBytes = 0;
+	usedBytes = 0;
+	if (strncmp(mountDevice, "host0:", 6) != 0) {
+		char partition[32] = {0};
+
+#if FW_VERSION >= 0x04000000
+		__memcpy_chk(partition, mountDevice, strnlen(mountDevice, sizeof(mountDevice)) - 2,
+			     sizeof(partition));
+#else
+		memcpy(partition, mountDevice, strnlen(mountDevice, sizeof(mountDevice)) - 2);
+#endif
+		result = ScePfsMgrForKernel_27FB7618(partition, &quotaBytes, &usedBytes);
+		if (result == 0) {
+			quota->quotaSizeKiB = quotaBytes >> 10;
+			quota->usedSizeKiB = usedBytes >> 10;
+			goto checkFull;
+		}
+		if (result != (int)0x80010030)
+			goto restorePermission;
+	}
+	result = SceAppMgrForDriver_12CE29F7(0, 11, (int *)&quotaBytes);
+	if (result != 0)
+		goto restorePermission;
+	quota->quotaSizeKiB = quotaBytes;
+checkFull:
+	if (!SceSblAIMgrForDriver_D78B04A2() &&
+	    sceRegMgrSystemParamGetInt(0x25CE9A, &setting) == 0 && setting == 1)
+		quota->usedSizeKiB = quota->quotaSizeKiB;
+	result = 0;
+restorePermission:
+	sceKernelSetThreadAccessLevel(permission);
+	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+unlockPower:
+	SceKernelSuspendForDriver_2BB92967(0);
+leaveSyscall:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int appmgrValidateSaveDataMountPoint(const char *mountPoint, int requirePrimary)
 {
 	int result;

@@ -62,6 +62,11 @@ int appmgrSaveDataDataRemove2Syscall(SceAppMgrSaveDataDataDelete *operation)
 	return appmgrSaveDataDataRemove(operation, 0);
 }
 
+int appmgrSaveDataGetQuotaSyscall(SceAppMgrSaveDataQuota *quota)
+{
+	return SceAppMgrForDriver_E104C37E(quota);
+}
+
 int appmgrSaveDataGetCachedRequiredSizeKiBSyscall(void)
 {
 	return sceAppMgrSaveDataGetCachedRequiredSizeKiB();

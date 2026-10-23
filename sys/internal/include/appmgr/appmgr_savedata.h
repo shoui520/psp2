@@ -75,11 +75,23 @@ typedef struct SceAppMgrSaveDataSlotDelete {
 
 _Static_assert(sizeof(SceAppMgrSaveDataSlotDelete) == 0x18, "SceAppMgrSaveDataSlotDelete");
 
+/* a save data's quota and use */
+typedef struct SceAppMgrSaveDataQuota {
+	SceSize size;				/* sizeof(SceAppMgrSaveDataQuota) */
+	SceSize quotaSizeKiB;			/* out */
+	SceSize usedSizeKiB;			/* out */
+	SceAppUtilMountPoint mountPoint;
+} SceAppMgrSaveDataQuota;
+
+_Static_assert(sizeof(SceAppMgrSaveDataQuota) == 0x1c, "SceAppMgrSaveDataQuota");
+
 int sceAppMgrSaveDataDataSave(SceAppMgrSaveDataData *data);
 int sceAppMgrSaveDataDataRemove(SceAppMgrSaveDataDataDelete *data);
 
 /* vitasdk: ksceAppMgrSaveDataSlotDelete */
 int SceAppMgrForDriver_B544F2A0(SceAppMgrSaveDataSlotDelete *parameters);
+/* vitasdk: ksceAppMgrSaveDataGetQuota */
+int SceAppMgrForDriver_E104C37E(SceAppMgrSaveDataQuota *quota);
 /* not written in C yet: the prototype is its caller's (appmgr's system call) */
 int SceAppMgrForDriver_D137D486(SceAppMgrSaveDataSlot *slot);	/* vitasdk: ksceAppMgrSaveDataSlotGetParam */
 
