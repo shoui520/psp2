@@ -11,8 +11,6 @@ extern int sceAppMgrAppParamGetString(int pid, int param, char *string, SceSize 
 extern SceInt32 _sceAppMgrGetAppState(SceAppMgrAppState *appState,
 				      SceUInt32 sizeofSceAppMgrAppState, SceUInt32 buildVersion);
 
-extern int _sceAppMgrGetParam(char *param);
-extern int sceAppMgrGetAppParam2(void *appParam);
 
 int appmgrGetBootParamSyscall(SceUInt32 request, void *bootParam)
 {
@@ -177,6 +175,11 @@ int appmgrGetAppParamSyscall(char *param)
 int appmgrGetAppParam2Syscall(void *appParam)
 {
 	return sceAppMgrGetAppParam2(appParam);
+}
+
+int appmgrGetExtraAppParamSyscall(AppmgrExtraAppParam *extraParam)
+{
+	return sceAppMgrGetExtraAppParam(extraParam);
 }
 
 int appmgrGetAppMgrStateSyscall(void *appMgrState)

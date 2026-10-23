@@ -4,6 +4,7 @@
 #include <intrmgr/syscall.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysclib.h>
+#include <sysmem/sysmem.h>
 #include <acmgr/acmgr.h>
 #include <appmgr.h>
 #include "app_state_internal.h"
@@ -517,6 +518,194 @@ void _paramQueueCompact(AppmgrParamQueue *queue)
 		writeIndex = (writeIndex + 3) % 4;
 		queue->writeIndex = writeIndex;
 	}
+}
+
+/* Takes the oldest parameter, telling its sender's callback it was taken. */
+static inline int _paramQueuePop(AppmgrParamQueue *queue, char *param,
+				 char *sourceAppName)
+{
+	AppmgrParamQueueEntry *entry;
+	int count = queue->count;
+	int result;
+
+	if (count == 0)
+		return 0x80802015;
+	entry = &queue->entries[(queue->writeIndex + 4 - count) % 4];
+	memcpy(param, entry->param, sizeof(entry->param));
+	if (sourceAppName != NULL)
+		__builtin_memcpy(sourceAppName, entry->sourceAppName,
+				 sizeof(entry->sourceAppName));
+	if (entry->callbackId > 0) {
+		result = sceKernelNotifyCallback(entry->callbackId, 0);
+#if FW_DEBUG
+		if (result)
+			SCE_DBG_PRINTF_FUNC(0, 354, "_paramQueuePop",
+				"[SceAppMgr:Error] Notifying param pop callback failed\n");
+#else
+		(void)result;
+#endif
+	}
+	queue->count--;
+	return 0;
+}
+
+/*
+ * The caller's application takes its oldest launch parameter; while it is in
+ * run status 0x300 only the shell may read (not take) it.
+ */
+int _sceAppMgrGetParam(char *param)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	const char *source;
+	int count;
+	int result;
+
+	if (param == NULL) {
+		sceSyscallLeave(syscallState);
+		return 0x80802016;
+	}
+	memset(param, 0, 1024);
+	PARAM_LOCK(145);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, -2);
+	if (app == NULL) {
+		PARAM_UNLOCK(150);
+		sceSyscallLeave(syscallState);
+		return 0x80802012;
+	}
+	if (app->process.processId != sceKernelGetProcessId() &&
+	    appmgrGetShellApp()->process.processId != sceKernelGetProcessId()) {
+		PARAM_UNLOCK(158);
+		sceSyscallLeave(syscallState);
+		return 0x8080201c;
+	}
+	if (appmgrGetAppRunStatus(app) != 0x300) {
+		result = _paramQueuePop(&app->params, param, NULL);
+	} else if (isShellProcess()) {
+		count = app->params.count;
+		if (count == 0) {
+#if FW_DEBUG
+			sceAppMgrDump();
+			dumpBgmState();
+			SCE_DBG_ASSERT_FAIL(170);
+#else
+			appmgrNotificationOverflowPanic();
+#endif
+			source = NULL;
+		} else {
+			source = app->params.entries[
+				(app->params.writeIndex + 4 - count) % 4].param;
+		}
+		strncpy(param, source, 1024);
+		result = 0;
+	} else {
+		PARAM_UNLOCK(165);
+		sceSyscallLeave(syscallState);
+		return 0x80802013;
+	}
+	PARAM_UNLOCK(182);
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+/* _sceAppMgrGetParam for system programs, with the sender's name. */
+int sceAppMgrGetAppParam2(AppmgrAppParam *appParam)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	const AppmgrParamQueueEntry *entry;
+	int count;
+	int result;
+
+	if (!sceSblACMgrIsSystemProgram(0)) {
+		sceSyscallLeave(syscallState);
+		return 0x8080201f;
+	}
+	if (appParam == NULL) {
+		sceSyscallLeave(syscallState);
+		return 0x80802016;
+	}
+	memset(appParam, 0, sizeof(*appParam));
+	PARAM_LOCK(504);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, -2);
+	if (app == NULL) {
+		PARAM_UNLOCK(508);
+		sceSyscallLeave(syscallState);
+		return 0x80802012;
+	}
+	if (appmgrGetAppRunStatus(app) != 0x300) {
+		result = _paramQueuePop(&app->params, appParam->param,
+					appParam->sourceAppName);
+	} else if (isShellProcess()) {
+		count = app->params.count;
+		if (count == 0) {
+#if FW_DEBUG
+			sceAppMgrDump();
+			dumpBgmState();
+			SCE_DBG_ASSERT_FAIL(521);
+#else
+			appmgrNotificationOverflowPanic();
+#endif
+			entry = NULL;
+		} else {
+			entry = &app->params.entries[
+				(app->params.writeIndex + 4 - count) % 4];
+		}
+		strncpy(appParam->param, entry->param, 1024);
+		strncpy(appParam->sourceAppName, entry->sourceAppName, 32);
+		result = 0;
+	} else {
+		PARAM_UNLOCK(516);
+		sceSyscallLeave(syscallState);
+		return 0x80802013;
+	}
+	PARAM_UNLOCK(537);
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+/*
+ * A system program takes the extra launch parameters (into its own memory),
+ * once, when its launch allowed them.
+ */
+int sceAppMgrGetExtraAppParam(AppmgrExtraAppParam *extraParam)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	int result;
+
+	if (!sceSblACMgrIsSystemProgram(0)) {
+		sceSyscallLeave(syscallState);
+		return 0x8080201f;
+	}
+	if (extraParam == NULL) {
+		sceSyscallLeave(syscallState);
+		return 0x80802016;
+	}
+	PARAM_LOCK(561);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, -2);
+	if (app == NULL) {
+		PARAM_UNLOCK(565);
+		sceSyscallLeave(syscallState);
+		return 0x80802012;
+	}
+	if (!app->extraAppParamAllowed) {
+		PARAM_UNLOCK(571);
+		sceSyscallLeave(syscallState);
+		return 0x8080201a;
+	}
+	if (g_appmgrExtraAppParam.argumentSize == 0) {
+		PARAM_UNLOCK(577);
+		sceSyscallLeave(syscallState);
+		return 0x80802013;
+	}
+	result = sceKernelCopyToUser(extraParam, &g_appmgrExtraAppParam,
+				     sizeof(g_appmgrExtraAppParam));
+	if (result >= 0)
+		g_appmgrExtraAppParam.argumentSize = 0;
+	PARAM_UNLOCK(586);
+	sceSyscallLeave(syscallState);
+	return result;
 }
 
 int _appmgrQueueInit(void)

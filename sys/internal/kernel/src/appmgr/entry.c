@@ -180,7 +180,6 @@ STUB(_sceAppMgrSaveDataSlotFileOpen)
 STUB(_sceAppMgrLaunchAppByPath4)
 
 STUB(_sceAppMgrAppDataMountById)
-STUB(sceAppMgrGetExtraAppParam)
 STUB(_sceAppMgrSaveDataMount)
 STUB(sceAppMgrIsPsNowClient)
 STUB(_sceAppMgrSaveDataDataRemove)

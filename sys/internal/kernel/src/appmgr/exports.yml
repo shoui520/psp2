@@ -192,7 +192,7 @@ SceAppMgr:
         - _sceAppMgrLaunchAppByPath4: 0x8FE4F651
         - appmgrSetBgmSubPriorityForSystemChatSyscall: 0x90E42B4D
         - _sceAppMgrAppDataMountById: 0x9275414A
-        - sceAppMgrGetExtraAppParam: 0x94A722BC
+        - appmgrGetExtraAppParamSyscall: 0x94A722BC
         - _sceAppMgrSaveDataMount: 0x95A6B1BF
         - sceAppMgrIsPsNowClient: 0x972EA7BA
         - _sceAppMgrGetRawPath: 0x9FB3E2C8
