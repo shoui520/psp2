@@ -48,6 +48,6 @@ psp2_module(os0_kd_bootimage_appmgr KIND kernel COMPILER gcc48 SOURCES
 	debug_console.c
 )
 
-# Sony built the debug console at -O3: its scroll copies are vectorized and its drawing
-# loops prefetched.
-set_source_files_properties(debug_console.c PROPERTIES COMPILE_OPTIONS "-O3")
+# Sony built the debug console and the PSF utilities at -O3: their byte copies and swaps are
+# vectorized and the console's drawing loops prefetched.
+set_source_files_properties(psf_util.c debug_console.c PROPERTIES COMPILE_OPTIONS "-O3")

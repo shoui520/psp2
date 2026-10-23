@@ -244,35 +244,25 @@ int appmgrPsfSetEntry(void *object, const char *key, const void *value,
 void appmgrPsfRemoveEntry(void *object, AppmgrPsfEntry *entry)
 {
 	AppmgrPsfContext *context = object;
-	AppmgrPsfDiskEntry *diskEntry;
-	unsigned char *key;
-	SceUInt32 flags;
-	AppmgrPsfHeader *header;
 
 	if (entry == NULL || context == NULL)
 		return;
-	flags = context->flags;
-	if ((flags & 2) != 0)
+	if ((context->flags & 2) != 0)
 		return;
-	diskEntry = entry->diskEntry;
-	if (diskEntry != NULL && (entry->flags & 2) != 0) {
-		key = entry->key;
-		if (key != NULL) {
-			*key = 0;
-			diskEntry = entry->diskEntry;
-			flags = context->flags;
+	if (entry->diskEntry != NULL && (entry->flags & 2) != 0) {
+		if (entry->key != NULL) {
+			*entry->key = 0;
 			entry->key = NULL;
 		}
-		diskEntry->keyOffset = 0xffff;
+		entry->diskEntry->keyOffset = 0xffff;
 		entry->diskEntry = NULL;
 	}
-	header = context->header;
 	entry->value = NULL;
 	entry->flags = 0;
-	header->entryCount--;
-	if ((flags & 4) != 0)
-		flags ^= 4;
-	context->flags = flags | 0x40;
+	context->header->entryCount--;
+	if ((context->flags & 4) != 0)
+		context->flags ^= 4;
+	context->flags |= 0x40;
 }
 
 int appmgrPsfValidateEntries(const void *data, SceSize entryOffset,
