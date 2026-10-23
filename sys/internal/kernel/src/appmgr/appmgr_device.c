@@ -104,6 +104,13 @@ __attribute__((noinline)) _Noreturn void appmgrMainMutexPanic(void)
 		APPMGR_DEVICE_FAIL(_line, _func); \
 } while (0)
 
+/* audio ports are switched with the main mutex released */
+#define APPMGR_DEVICE_ASSERT_UNLOCKED(_line, _func) do { \
+	SceUID _owner = g_appmgrMainMutexOwner; \
+	if (_owner == sceKernelGetThreadId()) \
+		APPMGR_DEVICE_FAIL(_line, _func); \
+} while (0)
+
 static inline __attribute__((always_inline)) AppmgrAudioApp *getAppByProcessId(SceUID pid)
 {
 	int index;
@@ -232,6 +239,18 @@ int lockAudioUpdate(void)
 			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 			result, result, 0, 0);
 	}
+	return result;
+}
+#else
+/* the release build inlines it at every call */
+static inline __attribute__((always_inline)) int lockAudioUpdate(void)
+{
+	int result;
+
+	APPMGR_DEVICE_ASSERT_UNLOCKED(147, "lockAudioUpdate");
+	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
+	if (result != 0 && (SceUInt32)result + 0x7ffd7fd4U > 1)
+		appmgrDeviceLockPanic();
 	return result;
 }
 #endif
@@ -783,13 +802,6 @@ AppmgrAudioApp *getChatOwnerApp2(void)
 #define APPMGR_PORT_FAIL(_line, _func, _panic) _panic
 #endif
 
-/* audio ports are switched with the main mutex released */
-#define APPMGR_DEVICE_ASSERT_UNLOCKED(_line, _func) do { \
-	SceUID _owner = g_appmgrMainMutexOwner; \
-	if (_owner == sceKernelGetThreadId()) \
-		APPMGR_DEVICE_FAIL(_line, _func); \
-} while (0)
-
 static inline __attribute__((always_inline)) void enableOutPort(SceUID pid, int type)
 {
 	if (pid != -1 && SceAudioForDriver_3440C1CA(pid, type, 1, 100, 0) < 0)
@@ -1147,13 +1159,26 @@ void updateAudioArbitration2(void)
 			result, result, 0, 0);
 	}
 }
+#else
+/* the release build inlines it at every call */
+static inline __attribute__((always_inline)) void updateAudioArbitration2(void)
+{
+	int result;
+
+	APPMGR_DEVICE_ASSERT_UNLOCKED(1105, "updateAudioArbitration2");
+	result = lockAudioUpdate();
+	if (result != 0)
+		return;
+	updateAudioArbitration2NoLock();
+	if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
+		appmgrDeviceLockPanic();
+}
 #endif
 
 void appmgrOnAudioInClose(SceUID pid)
 {
-	AppmgrAudioApp *app = NULL;
-	SceUID mutexOwner;
-	int result, index;
+	AppmgrAudioApp *app;
+	int result;
 
 	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
@@ -1163,33 +1188,13 @@ void appmgrOnAudioInClose(SceUID pid)
 		sceAppMgrDump();
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 1173, "appmgrOnAudioInClose");
-		mutexOwner = g_appmgrMainMutexOwner;
 #else
 		appmgrMainMutexPanic();
 #endif
 	} else {
-		mutexOwner = sceKernelGetThreadId();
-		g_appmgrMainMutexOwner = mutexOwner;
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 414, "getAppByProcessId");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	if (pid >= 0) {
-		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
-
-			if (candidate->appId > 0 && candidate->processId == pid) {
-				app = candidate;
-				break;
-			}
-		}
-	}
+	app = getAppByProcessId(pid);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
 		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
@@ -1220,31 +1225,13 @@ void appmgrOnAudioInClose(SceUID pid)
 		appmgrMainMutexPanic();
 #endif
 	}
-#if FW_DEBUG
 	updateAudioArbitration2();
-#else
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result == 0) {
-		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-			appmgrDeviceLockPanic();
-	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-		appmgrDeviceLockPanic();
-	}
-#endif
 }
 
 void appmgrOnAudioInOpen(SceUID pid)
 {
-	AppmgrAudioApp *app = NULL;
-	SceUID mutexOwner;
-	int result, index;
+	AppmgrAudioApp *app;
+	int result;
 
 	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
@@ -1254,33 +1241,13 @@ void appmgrOnAudioInOpen(SceUID pid)
 		sceAppMgrDump();
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 1157, "appmgrOnAudioInOpen");
-		mutexOwner = g_appmgrMainMutexOwner;
 #else
 		appmgrMainMutexPanic();
 #endif
 	} else {
-		mutexOwner = sceKernelGetThreadId();
-		g_appmgrMainMutexOwner = mutexOwner;
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 414, "getAppByProcessId");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	if (pid >= 0) {
-		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
-
-			if (candidate->appId > 0 && candidate->processId == pid) {
-				app = candidate;
-				break;
-			}
-		}
-	}
+	app = getAppByProcessId(pid);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
 		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
@@ -1311,31 +1278,13 @@ void appmgrOnAudioInOpen(SceUID pid)
 		appmgrMainMutexPanic();
 #endif
 	}
-#if FW_DEBUG
 	updateAudioArbitration2();
-#else
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result == 0) {
-		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-			appmgrDeviceLockPanic();
-	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-		appmgrDeviceLockPanic();
-	}
-#endif
 }
 
 void appmgrOnAudioOutRelease(SceUID pid)
 {
-	AppmgrAudioApp *app = NULL;
-	SceUID mutexOwner;
-	int result, index;
+	AppmgrAudioApp *app;
+	int result;
 
 	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
@@ -1345,33 +1294,13 @@ void appmgrOnAudioOutRelease(SceUID pid)
 		sceAppMgrDump();
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 1141, "appmgrOnAudioOutRelease");
-		mutexOwner = g_appmgrMainMutexOwner;
 #else
 		appmgrMainMutexPanic();
 #endif
 	} else {
-		mutexOwner = sceKernelGetThreadId();
-		g_appmgrMainMutexOwner = mutexOwner;
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 414, "getAppByProcessId");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	if (pid >= 0) {
-		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
-
-			if (candidate->appId > 0 && candidate->processId == pid) {
-				app = candidate;
-				break;
-			}
-		}
-	}
+	app = getAppByProcessId(pid);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
 		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
@@ -1402,31 +1331,13 @@ void appmgrOnAudioOutRelease(SceUID pid)
 		appmgrMainMutexPanic();
 #endif
 	}
-#if FW_DEBUG
 	updateAudioArbitration2();
-#else
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result == 0) {
-		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-			appmgrDeviceLockPanic();
-	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-		appmgrDeviceLockPanic();
-	}
-#endif
 }
 
 void appmgrOnAudioOutOpen(SceUID pid)
 {
-	AppmgrAudioApp *app = NULL;
-	SceUID mutexOwner;
-	int result, index;
+	AppmgrAudioApp *app;
+	int result;
 
 	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
@@ -1436,33 +1347,13 @@ void appmgrOnAudioOutOpen(SceUID pid)
 		sceAppMgrDump();
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 1125, "appmgrOnAudioOutOpen");
-		mutexOwner = g_appmgrMainMutexOwner;
 #else
 		appmgrMainMutexPanic();
 #endif
 	} else {
-		mutexOwner = sceKernelGetThreadId();
-		g_appmgrMainMutexOwner = mutexOwner;
+		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 414, "getAppByProcessId");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	if (pid >= 0) {
-		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
-
-			if (candidate->appId > 0 && candidate->processId == pid) {
-				app = candidate;
-				break;
-			}
-		}
-	}
+	app = getAppByProcessId(pid);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
 		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
@@ -1493,24 +1384,7 @@ void appmgrOnAudioOutOpen(SceUID pid)
 		appmgrMainMutexPanic();
 #endif
 	}
-#if FW_DEBUG
 	updateAudioArbitration2();
-#else
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result == 0) {
-		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-			appmgrDeviceLockPanic();
-	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-		appmgrDeviceLockPanic();
-	}
-#endif
 }
 
 #if FW_DEBUG
@@ -1519,8 +1393,8 @@ int _sceAppMgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled,
 {
 	SceUInt32 syscallState = sceSyscallEnter();
 	AppmgrAudioApp *app = NULL;
-	SceUID pid, mutexOwner;
-	int result, index;
+	SceUID pid;
+	int result;
 
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscallState);
@@ -1537,22 +1411,7 @@ int _sceAppMgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled,
 		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	pid = sceKernelGetProcessId();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId()) {
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 414, "getAppByProcessId");
-	}
-	if (pid >= 0) {
-		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
-
-			if (candidate->appId > 0 && candidate->processId == pid) {
-				app = candidate;
-				break;
-			}
-		}
-	}
+	app = getAppByProcessId(pid);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
 		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
@@ -1590,8 +1449,8 @@ int _sceAppMgrReleaseSoundOutExclusive(void)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
 	AppmgrAudioApp *app = NULL;
-	SceUID pid, mutexOwner;
-	int result, index;
+	SceUID pid;
+	int result;
 
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscallState);
@@ -1612,26 +1471,7 @@ int _sceAppMgrReleaseSoundOutExclusive(void)
 		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	pid = sceKernelGetProcessId();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 414, "getAppByProcessId");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	if (pid >= 0) {
-		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
-
-			if (candidate->appId > 0 && candidate->processId == pid) {
-				app = candidate;
-				break;
-			}
-		}
-	}
+	app = getAppByProcessId(pid);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
 		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
@@ -1684,33 +1524,27 @@ int _sceAppMgrReleaseSoundOutExclusive(void)
 		appmgrMainMutexPanic();
 #endif
 	}
-#if FW_DEBUG
 	updateAudioArbitration2();
-#else
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result == 0) {
-		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-			appmgrDeviceLockPanic();
-	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-		appmgrDeviceLockPanic();
-	}
-#endif
 	sceSyscallLeave(syscallState);
 	return 0;
+}
+
+/* the BGM priority of the calling process's application */
+static inline __attribute__((always_inline)) void int_sceAppMgrGetBGMPort(SceUID pid, int priority)
+{
+	AppmgrAudioApp *app;
+
+	APPMGR_DEVICE_ASSERT_LOCKED(1190, "int_sceAppMgrGetBGMPort");
+	app = getAppByProcessId(pid);
+	if (app != NULL)
+		app->bgmPriority = priority;
 }
 
 int sceAppMgrAcquireBgmPort(void)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
-	SceUID pid, mutexOwner;
-	int result, index;
+	SceUID pid;
+	int result;
 
 	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
@@ -1727,36 +1561,7 @@ int sceAppMgrAcquireBgmPort(void)
 		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	pid = sceKernelGetProcessId();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 1190, "int_sceAppMgrGetBGMPort");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 414, "getAppByProcessId");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	if (pid >= 0) {
-		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
-
-			if (app->appId > 0 && app->processId == pid) {
-				app->bgmPriority = 256;
-				break;
-			}
-		}
-	}
+	int_sceAppMgrGetBGMPort(pid, 256);
 	g_appmgrMainMutexOwner = -1;
 	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
@@ -1770,24 +1575,7 @@ int sceAppMgrAcquireBgmPort(void)
 		appmgrMainMutexPanic();
 #endif
 	}
-#if FW_DEBUG
 	updateAudioArbitration2();
-#else
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result == 0) {
-		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-			appmgrDeviceLockPanic();
-	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-		appmgrDeviceLockPanic();
-	}
-#endif
 	sceSyscallLeave(syscallState);
 	return 0;
 }
@@ -1795,8 +1583,8 @@ int sceAppMgrAcquireBgmPort(void)
 int sceAppMgrAcquireBgmPortForMusicPlayer(void)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
-	SceUID pid, mutexOwner;
-	int result, index;
+	SceUID pid;
+	int result;
 
 	if (!sceSblACMgrIsSystemProgram(0) && !SceSblACMgrForDriver_6C5AB07F(0)) {
 		sceSyscallLeave(syscallState);
@@ -1817,36 +1605,7 @@ int sceAppMgrAcquireBgmPortForMusicPlayer(void)
 		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	pid = sceKernelGetProcessId();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 1190, "int_sceAppMgrGetBGMPort");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 414, "getAppByProcessId");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	if (pid >= 0) {
-		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
-
-			if (app->appId > 0 && app->processId == pid) {
-				app->bgmPriority = 130;
-				break;
-			}
-		}
-	}
+	int_sceAppMgrGetBGMPort(pid, 130);
 	g_appmgrMainMutexOwner = -1;
 	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
@@ -1860,24 +1619,7 @@ int sceAppMgrAcquireBgmPortForMusicPlayer(void)
 		appmgrMainMutexPanic();
 #endif
 	}
-#if FW_DEBUG
 	updateAudioArbitration2();
-#else
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result == 0) {
-		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-			appmgrDeviceLockPanic();
-	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-		appmgrDeviceLockPanic();
-	}
-#endif
 	sceSyscallLeave(syscallState);
 	return 0;
 }
@@ -1885,8 +1627,8 @@ int sceAppMgrAcquireBgmPortForMusicPlayer(void)
 int sceAppMgrReleaseBgmPort(void)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
-	SceUID pid, mutexOwner;
-	int result, index;
+	SceUID pid;
+	int result;
 
 	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
 	if (result != 0) {
@@ -1903,36 +1645,7 @@ int sceAppMgrReleaseBgmPort(void)
 		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	pid = sceKernelGetProcessId();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 1190, "int_sceAppMgrGetBGMPort");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 414, "getAppByProcessId");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	if (pid >= 0) {
-		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
-
-			if (app->appId > 0 && app->processId == pid) {
-				app->bgmPriority = 0;
-				break;
-			}
-		}
-	}
+	int_sceAppMgrGetBGMPort(pid, 0);
 	g_appmgrMainMutexOwner = -1;
 	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
@@ -1946,24 +1659,7 @@ int sceAppMgrReleaseBgmPort(void)
 		appmgrMainMutexPanic();
 #endif
 	}
-#if FW_DEBUG
 	updateAudioArbitration2();
-#else
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result == 0) {
-		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-			appmgrDeviceLockPanic();
-	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-		appmgrDeviceLockPanic();
-	}
-#endif
 	sceSyscallLeave(syscallState);
 	return 0;
 }
@@ -1971,8 +1667,8 @@ int sceAppMgrReleaseBgmPort(void)
 int sceAppMgrAcquireBgmPortWithPriority(int priority)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
-	SceUID pid, mutexOwner;
-	int result, index;
+	SceUID pid;
+	int result;
 
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscallState);
@@ -1997,36 +1693,7 @@ int sceAppMgrAcquireBgmPortWithPriority(int priority)
 		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	pid = sceKernelGetProcessId();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 1190, "int_sceAppMgrGetBGMPort");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 414, "getAppByProcessId");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	if (pid >= 0) {
-		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
-
-			if (app->appId > 0 && app->processId == pid) {
-				app->bgmPriority = priority;
-				break;
-			}
-		}
-	}
+	int_sceAppMgrGetBGMPort(pid, priority);
 	g_appmgrMainMutexOwner = -1;
 	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 	if (result != 0) {
@@ -2040,24 +1707,7 @@ int sceAppMgrAcquireBgmPortWithPriority(int priority)
 		appmgrMainMutexPanic();
 #endif
 	}
-#if FW_DEBUG
 	updateAudioArbitration2();
-#else
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result == 0) {
-		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-			appmgrDeviceLockPanic();
-	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-		appmgrDeviceLockPanic();
-	}
-#endif
 	sceSyscallLeave(syscallState);
 	return 0;
 }
@@ -2065,8 +1715,9 @@ int sceAppMgrAcquireBgmPortWithPriority(int priority)
 int sceAppMgrSetBgmSubPriority(int enabled, int priority)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
-	SceUID pid, mutexOwner;
-	int result, index;
+	SceUID pid;
+	AppmgrAudioApp *app;
+	int result;
 
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscallState);
@@ -2091,26 +1742,10 @@ int sceAppMgrSetBgmSubPriority(int enabled, int priority)
 		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	pid = sceKernelGetProcessId();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 414, "getAppByProcessId");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	if (pid >= 0) {
-		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
-
-			if (app->appId > 0 && app->processId == pid) {
-				app->enableBgmSubPriority = enabled;
-				app->bgmSubPriority = priority;
-				break;
-			}
-		}
+	app = getAppByProcessId(pid);
+	if (app != NULL) {
+		app->enableBgmSubPriority = enabled;
+		app->bgmSubPriority = priority;
 	}
 	g_appmgrMainMutexOwner = -1;
 	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
@@ -2125,24 +1760,7 @@ int sceAppMgrSetBgmSubPriority(int enabled, int priority)
 		appmgrMainMutexPanic();
 #endif
 	}
-#if FW_DEBUG
 	updateAudioArbitration2();
-#else
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result == 0) {
-		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-			appmgrDeviceLockPanic();
-	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-		appmgrDeviceLockPanic();
-	}
-#endif
 	sceSyscallLeave(syscallState);
 	return 0;
 }
@@ -2150,8 +1768,9 @@ int sceAppMgrSetBgmSubPriority(int enabled, int priority)
 int sceAppMgrSetBgmSubPriorityForSystemChat(int enabled)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
-	SceUID pid, mutexOwner;
-	int result, index;
+	SceUID pid;
+	AppmgrAudioApp *app;
+	int result;
 
 	if (!sceSblACMgrIsSystemProgram(0) && !SceSblACMgrForDriver_6C5AB07F(0)) {
 		sceSyscallLeave(syscallState);
@@ -2172,26 +1791,10 @@ int sceAppMgrSetBgmSubPriorityForSystemChat(int enabled)
 		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	pid = sceKernelGetProcessId();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 414, "getAppByProcessId");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	if (pid >= 0) {
-		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *app = &g_appmgrDevice.apps[index];
-
-			if (app->appId > 0 && app->processId == pid) {
-				app->enableBgmSubPriority = enabled;
-				app->bgmSubPriority = 194;
-				break;
-			}
-		}
+	app = getAppByProcessId(pid);
+	if (app != NULL) {
+		app->enableBgmSubPriority = enabled;
+		app->bgmSubPriority = 194;
 	}
 	g_appmgrMainMutexOwner = -1;
 	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
@@ -2206,24 +1809,7 @@ int sceAppMgrSetBgmSubPriorityForSystemChat(int enabled)
 		appmgrMainMutexPanic();
 #endif
 	}
-#if FW_DEBUG
 	updateAudioArbitration2();
-#else
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result == 0) {
-		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-			appmgrDeviceLockPanic();
-	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-		appmgrDeviceLockPanic();
-	}
-#endif
 	sceSyscallLeave(syscallState);
 	return 0;
 }
@@ -2264,8 +1850,8 @@ int appmgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled,
 #else
 	SceUInt32 syscallState = sceSyscallEnter();
 	AppmgrAudioApp *app = NULL;
-	SceUID pid, mutexOwner;
-	int result, index;
+	SceUID pid;
+	int result;
 
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscallState);
@@ -2276,19 +1862,7 @@ int appmgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled,
 		appmgrMainMutexPanic();
 	g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	pid = sceKernelGetProcessId();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	if (pid >= 0) {
-		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
-
-			if (candidate->appId > 0 && candidate->processId == pid) {
-				app = candidate;
-				break;
-			}
-		}
-	}
+	app = getAppByProcessId(pid);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
 		if (sceKernelUnlockMutex(g_appmgrMainMutex, 1) != 0)
@@ -2304,20 +1878,7 @@ int appmgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled,
 	app->soundExclusiveDisplayRequest = 1;
 	if (sceKernelUnlockMutex(g_appmgrMainMutex, 1) != 0)
 		appmgrMainMutexPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result == 0) {
-		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-			appmgrDeviceLockPanic();
-	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-		appmgrDeviceLockPanic();
-	}
+	updateAudioArbitration2();
 	sceSyscallLeave(syscallState);
 	return 0;
 #endif
@@ -2337,8 +1898,8 @@ int appmgrAcquireSoundOutExclusive2(int priority, SceUInt32 displayEnabled,
 #else
 	SceUInt32 syscallState = sceSyscallEnter();
 	AppmgrAudioApp *app = NULL;
-	SceUID pid, mutexOwner;
-	int result, index;
+	SceUID pid;
+	int result;
 
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscallState);
@@ -2349,19 +1910,7 @@ int appmgrAcquireSoundOutExclusive2(int priority, SceUInt32 displayEnabled,
 		appmgrMainMutexPanic();
 	g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	pid = sceKernelGetProcessId();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	if (pid >= 0) {
-		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
-
-			if (candidate->appId > 0 && candidate->processId == pid) {
-				app = candidate;
-				break;
-			}
-		}
-	}
+	app = getAppByProcessId(pid);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
 		if (sceKernelUnlockMutex(g_appmgrMainMutex, 1) != 0)
@@ -2377,20 +1926,7 @@ int appmgrAcquireSoundOutExclusive2(int priority, SceUInt32 displayEnabled,
 	app->soundExclusiveDisplayRequest = displayRequest;
 	if (sceKernelUnlockMutex(g_appmgrMainMutex, 1) != 0)
 		appmgrMainMutexPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result == 0) {
-		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-			appmgrDeviceLockPanic();
-	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-		appmgrDeviceLockPanic();
-	}
+	updateAudioArbitration2();
 	sceSyscallLeave(syscallState);
 	return 0;
 #endif
@@ -2412,8 +1948,8 @@ int appmgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
 #else
 	SceUInt32 syscallState = sceSyscallEnter();
 	AppmgrAudioApp *app = NULL;
-	SceUID pid, mutexOwner;
-	int result, index;
+	SceUID pid;
+	int result;
 
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscallState);
@@ -2424,19 +1960,7 @@ int appmgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
 		appmgrMainMutexPanic();
 	g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	pid = sceKernelGetProcessId();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	if (pid >= 0) {
-		for (index = 0; index != 20; ++index) {
-			AppmgrAudioApp *candidate = &g_appmgrDevice.apps[index];
-
-			if (candidate->appId > 0 && candidate->processId == pid) {
-				app = candidate;
-				break;
-			}
-		}
-	}
+	app = getAppByProcessId(pid);
 	if (app == NULL) {
 		g_appmgrMainMutexOwner = -1;
 		if (sceKernelUnlockMutex(g_appmgrMainMutex, 1) != 0)
@@ -2452,20 +1976,7 @@ int appmgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
 	app->soundExclusiveDisplayRequest = 1;
 	if (sceKernelUnlockMutex(g_appmgrMainMutex, 1) != 0)
 		appmgrMainMutexPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result == 0) {
-		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-			appmgrDeviceLockPanic();
-	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-		appmgrDeviceLockPanic();
-	}
+	updateAudioArbitration2();
 	sceSyscallLeave(syscallState);
 	return 0;
 #endif
@@ -2481,7 +1992,6 @@ int sceAppMgrDeclareSystemChatApp(void)
 	SceUInt32 syscallState = sceSyscallEnter();
 	int result;
 #if !FW_DEBUG
-	SceUID mutexOwner;
 #endif
 
 	if (!sceSblACMgrIsSystemProgram(0) && !SceSblACMgrForDriver_6C5AB07F(0)) {
@@ -2516,16 +2026,7 @@ int sceAppMgrDeclareSystemChatApp(void)
 		appmgrMainMutexPanic();
 #endif
 	}
-#if FW_DEBUG
 	result = lockAudioUpdate();
-#else
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result != 0 && (SceUInt32)result + 0x7ffd7fd4U > 1)
-		appmgrDeviceLockPanic();
-#endif
 	if (result != 0)
 		return result;
 	setVolume(&g_appmgrDevice.bgmState.soundExclusivePid, &g_appmgrDevice.bgmState.otherPortVolume);
@@ -2541,24 +2042,7 @@ int sceAppMgrDeclareSystemChatApp(void)
 		appmgrDeviceLockPanic();
 #endif
 	}
-#if FW_DEBUG
 	updateAudioArbitration2();
-#else
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result == 0) {
-		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-			appmgrDeviceLockPanic();
-	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-		appmgrDeviceLockPanic();
-	}
-#endif
 	sceSyscallLeave(syscallState);
 	return 0;
 }
@@ -2605,27 +2089,7 @@ int sceAppMgrEnablePrioritizingSystemChat(int enabled)
 		appmgrMainMutexPanic();
 #endif
 	}
-#if FW_DEBUG
 	updateAudioArbitration2();
-#else
-	{
-		SceUID mutexOwner = g_appmgrMainMutexOwner;
-
-		if (mutexOwner == sceKernelGetThreadId())
-			appmgrDeviceLockPanic();
-		mutexOwner = g_appmgrMainMutexOwner;
-		if (mutexOwner == sceKernelGetThreadId())
-			appmgrDeviceLockPanic();
-		result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-		if (result == 0) {
-			updateAudioArbitration2NoLock();
-			if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-				appmgrDeviceLockPanic();
-		} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-			appmgrDeviceLockPanic();
-		}
-	}
-#endif
 	sceSyscallLeave(syscallState);
 	return 0;
 }
@@ -2712,27 +2176,7 @@ int sceAppMgrEnableDuckingOnSystemChat(int enabled, SceUInt32 volume)
 #endif
 		}
 	}
-#if FW_DEBUG
 	updateAudioArbitration2();
-#else
-	{
-		SceUID mutexOwner = g_appmgrMainMutexOwner;
-
-		if (mutexOwner == sceKernelGetThreadId())
-			appmgrDeviceLockPanic();
-		mutexOwner = g_appmgrMainMutexOwner;
-		if (mutexOwner == sceKernelGetThreadId())
-			appmgrDeviceLockPanic();
-		result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-		if (result == 0) {
-			updateAudioArbitration2NoLock();
-			if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-				appmgrDeviceLockPanic();
-		} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-			appmgrDeviceLockPanic();
-		}
-	}
-#endif
 	sceSyscallLeave(syscallState);
 	return 0;
 }
@@ -2740,8 +2184,8 @@ int sceAppMgrEnableDuckingOnSystemChat(int enabled, SceUInt32 volume)
 int sceAppMgrSetBgmProxyApp(const char *appName)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
-	SceUID pid, mutexOwner;
-	int result, index;
+	SceUID pid;
+	int result;
 	AppmgrAudioApp *app;
 
 	if (!sceSblACMgrIsSystemProgram(0)) {
@@ -2763,24 +2207,8 @@ int sceAppMgrSetBgmProxyApp(const char *appName)
 		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	pid = sceKernelGetProcessId();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 414, "getAppByProcessId");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	if (pid < 0)
-		goto notFound;
-	for (index = 0; index != 20; ++index) {
-		app = &g_appmgrDevice.apps[index];
-		if (app->appId > 0 && app->processId == pid)
-			break;
-	}
-	if (index == 20)
+	app = getAppByProcessId(pid);
+	if (app == NULL)
 		goto notFound;
 	if (appName != NULL)
 		strncpy((char *)app->proxyAppName, appName, 32);
@@ -2799,24 +2227,7 @@ int sceAppMgrSetBgmProxyApp(const char *appName)
 		appmgrMainMutexPanic();
 #endif
 	}
-#if FW_DEBUG
 	updateAudioArbitration2();
-#else
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result == 0) {
-		updateAudioArbitration2NoLock();
-		if (sceKernelUnlockMutex(g_appmgrDevice.audioUpdateMutex, 1) != 0)
-			appmgrDeviceLockPanic();
-	} else if ((SceUInt32)result + 0x7ffd7fd4U > 1) {
-		appmgrDeviceLockPanic();
-	}
-#endif
 	sceSyscallLeave(syscallState);
 	return 0;
 
@@ -3172,8 +2583,8 @@ int sceAppMgrSetDisplayMergeConf(SceUInt32 setting, SceUInt32 alpha)
 int sceAppMgrAcquireBtrm(void)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
-	SceUID pid, mutexOwner;
-	int result, index;
+	SceUID pid;
+	int result;
 	AppmgrAudioApp *app;
 
 	if (!sceSblACMgrIsSystemProgram(0) && !SceSblACMgrForDriver_6C5AB07F(0)) {
@@ -3195,24 +2606,8 @@ int sceAppMgrAcquireBtrm(void)
 		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 	}
 	pid = sceKernelGetProcessId();
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner != sceKernelGetThreadId()) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 414, "getAppByProcessId");
-#else
-		appmgrDeviceLockPanic();
-#endif
-	}
-	if (pid < 0)
-		goto notFound;
-	for (index = 0; index != 20; ++index) {
-		app = &g_appmgrDevice.apps[index];
-		if (app->appId > 0 && app->processId == pid)
-			break;
-	}
-	if (index == 20)
+	app = getAppByProcessId(pid);
+	if (app == NULL)
 		goto notFound;
 	g_appmgrMainMutexOwner = -1;
 	app->btrmAcquired = 1;
@@ -3319,16 +2714,7 @@ void _deviceRefreshAudioPort(SceUID pid)
 	SceUID mutexOwner, owner;
 	int result;
 
-#if FW_DEBUG
 	result = lockAudioUpdate();
-#else
-	mutexOwner = g_appmgrMainMutexOwner;
-	if (mutexOwner == sceKernelGetThreadId())
-		appmgrDeviceLockPanic();
-	result = sceKernelLockMutex(g_appmgrDevice.audioUpdateMutex, 1, NULL);
-	if (result != 0 && (SceUInt32)result + 0x7ffd7fd4U > 1)
-		appmgrDeviceLockPanic();
-#endif
 	if (result != 0)
 		return;
 	result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
