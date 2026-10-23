@@ -3960,6 +3960,56 @@ out:
 	return result;
 }
 
+/* The shell's external drives, encoded like every system path appmgr keeps */
+static const unsigned char encodedSysExternal[] = {
+	(unsigned char)~'v', (unsigned char)~'s', (unsigned char)~'0',
+	(unsigned char)~':', (unsigned char)~'s', (unsigned char)~'y',
+	(unsigned char)~'s', (unsigned char)~'/', (unsigned char)~'e',
+	(unsigned char)~'x', (unsigned char)~'t', (unsigned char)~'e',
+	(unsigned char)~'r', (unsigned char)~'n', (unsigned char)~'a',
+	(unsigned char)~'l', 0
+};
+static const unsigned char encodedDataExternal[] = {
+	(unsigned char)~'v', (unsigned char)~'s', (unsigned char)~'0',
+	(unsigned char)~':', (unsigned char)~'d', (unsigned char)~'a',
+	(unsigned char)~'t', (unsigned char)~'a', (unsigned char)~'/',
+	(unsigned char)~'e', (unsigned char)~'x', (unsigned char)~'t',
+	(unsigned char)~'e', (unsigned char)~'r', (unsigned char)~'n',
+	(unsigned char)~'a', (unsigned char)~'l', 0
+};
+
+static AppmgrMountHolder g_appmgrShellMounts;
+
+int appmgrMountShellExternalDirectories(SceUID pid)
+{
+	char titleId[16] = "NPXS19999";
+	ScePfsRndDriveId sysDrive = {{0}};
+	ScePfsRndDriveId dataDrive = {{0}};
+	char path[64];
+	int result;
+
+	result = appmgrDecodeString(encodedSysExternal, path, sizeof(path));
+	if (result < 0)
+		goto error;
+	result = appmgrMount(pid, &g_appmgrShellMounts, 1007, titleId, path,
+			     NULL, NULL, &sysDrive);
+	if (result < 0)
+		goto error;
+	result = appmgrDecodeString(encodedDataExternal, path, sizeof(path));
+	if (result < 0)
+		goto error;
+	result = appmgrMount(pid, &g_appmgrShellMounts, 1008, titleId, path,
+			     NULL, NULL, &dataDrive);
+	if (result >= 0)
+		return result;
+error:
+	if (sysDrive.drive_id[0] != '\0')
+		appmgrUnmountDrive(pid, &g_appmgrShellMounts, sysDrive.drive_id, 0);
+	if (dataDrive.drive_id[0] != '\0')
+		appmgrUnmountDrive(pid, &g_appmgrShellMounts, dataDrive.drive_id, 0);
+	return result;
+}
+
 int appmgrResolveLaunchDirectory(const char *path,
 				const AppmgrLaunchOptions *options,
 				const AppmgrMapFile *mapFile, char *output,
