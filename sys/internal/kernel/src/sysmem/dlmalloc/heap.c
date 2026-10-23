@@ -971,6 +971,13 @@ added:
 	heap->blocks->count++;
 }
 
+/* the size from which the default heap's growth is reported */
+#ifdef SYSMEM_TZS
+#define HEAP_GROW_REPORT_SIZE	0x2000
+#else
+#define HEAP_GROW_REPORT_SIZE	0xff000
+#endif
+
 /* the heap grows by a new memblock (dlmalloc's mmap) */
 void *sceKernelDlMmap(KernelHeap *heap, SceSize size)
 {
@@ -994,7 +1001,7 @@ void *sceKernelDlMmap(KernelHeap *heap, SceSize size)
 		return (void *)-1;
 	}
 	if ((g_uidManager->heapDefault == NULL || heap == g_uidManager->heapDefault) &&
-	    heap->size >= 0xff000)
+	    heap->size >= HEAP_GROW_REPORT_SIZE)
 		SCE_DBG_PRINTF(0xb, 1534, "Grow request for pHeap %p[%s], 0x%08x += 0x%08x\n", heap,
 			       heap->name, heap->size, size);
 	if (heap->size + size > heap->maxSize) {

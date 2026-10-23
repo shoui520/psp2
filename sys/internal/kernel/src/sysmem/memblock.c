@@ -768,6 +768,7 @@ SceUID sceKernelAllocMemBlockWithInfoForKernel(const char *name, SceUInt32 type,
 	int ret;
 
 	AllocMemBlockCommandInitWithType(&command, name, type, size);
+#ifndef SYSMEM_TZS	/* no user mode threads in the secure world */
 	switch (type) {
 	case SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TMP_NC_R:
 	case SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TMP_NC_RW:
@@ -776,6 +777,7 @@ SceUID sceKernelAllocMemBlockWithInfoForKernel(const char *name, SceUInt32 type,
 		KernelTmp2UserKtmpType(type);
 		break;
 	}
+#endif
 	ret = MemBlockType2TypeInfo(type, &command.typeInfo);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 747, "sceKernelAllocMemBlockWithInfoForKernel",
@@ -833,7 +835,11 @@ SceUID sceKernelAllocMemBlockWithInfoForKernel(const char *name, SceUInt32 type,
 	}
 	if (!(attr & SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PID)) {
 		command.opt.attr = attr | SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PID;
+#ifdef SYSMEM_TZS
+		command.opt.pid = SCE_KERNEL_PROCESS_ID;
+#else
 		command.opt.pid = SceSysrootForKernel_7385CADE();
+#endif
 	}
 	if (info != NULL && info->size == sizeof(*info))
 		command.result = info;
@@ -1060,8 +1066,12 @@ int sceKernelUnmapMemBlock(SceUID guid)
  * A block freed by its GUID once nobody else refers to it: its base info
  * dropped (or handed back), the clients mapping it unmapped first.
  */
+#ifdef SYSMEM_TZS	/* the secure world's callers want neither the type nor the attributes */
+int FreeMemBlockCore(SceUID guid, int checkLock, MemBlockObject **freed, MemBlockObject **base)
+#else
 int FreeMemBlockCore(SceUID guid, int checkLock, MemBlockObject **freed, MemBlockObject **base,
 		     SceUInt32 *type, SceUInt32 *attr)
+#endif
 {
 	MemBlockClientInfo *client;
 	void *info = NULL;
@@ -1083,10 +1093,12 @@ int FreeMemBlockCore(SceUID guid, int checkLock, MemBlockObject **freed, MemBloc
 		GUIDReleaseObject(guid);
 		return SCE_KERNEL_ERROR_MEMBLOCK_LOCKED;
 	}
+#ifndef SYSMEM_TZS
 	if (attr != NULL)
 		*attr = block->attr;
 	if (type != NULL)
 		MemBlockCode2Type(block->code, type);
+#endif
 	if (base != NULL) {
 		MemBlockOptGetBase(block, base, &info);
 		if (info != NULL)
@@ -1123,6 +1135,12 @@ int FreeMemBlockCore(SceUID guid, int checkLock, MemBlockObject **freed, MemBloc
 		*freed = block;
 	return ret;
 }
+
+#ifdef SYSMEM_TZS
+/* the secure world's FreeMemBlockCore takes no type or attribute pointers */
+#define FreeMemBlockCore(guid, checkLock, freed, base, type, attr) \
+	FreeMemBlockCore(guid, checkLock, freed, base)
+#endif
 
 int sceKernelFreeMemBlock(SceUID guid)
 {

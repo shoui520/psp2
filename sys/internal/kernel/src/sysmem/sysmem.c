@@ -698,6 +698,7 @@ int SysmemModuleStart(SceSize args, void *argp)
 	return 0;
 }
 
+#ifndef SYSMEM_TZS	/* the secure world has no process manager */
 int sceKernelSysmemModuleStartAfterProcessmgr(void)
 {
 	int key;
@@ -713,6 +714,7 @@ int sceKernelSysmemModuleStartAfterProcessmgr(void)
 	VSlotModuleStart();
 	return 0;
 }
+#endif
 
 int sceKernelSysmemCleaner(void)
 {

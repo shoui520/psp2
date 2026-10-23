@@ -643,8 +643,10 @@ int PhyMemPartGetFreeSizeRaw(PhyMemPart *part, SceSize *freeSize)
 	switch (PHYMEM_PART_TYPE(part)) {
 	case PHYMEM_PART_TYPE_LPDDR2:
 		break;
+#ifndef SYSMEM_TZS	/* the secure world has no CDRAM */
 	case PHYMEM_PART_TYPE_CDRAM:
 		return PhyMemLowGetFreeSize(part->segments->phyMemLow, freeSize);
+#endif
 	default:
 		SCE_DBG_ASSERT_FAIL(4066);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;

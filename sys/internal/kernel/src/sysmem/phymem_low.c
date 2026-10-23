@@ -457,8 +457,10 @@ int SceSysmemForKernel_05822B82(SceUInt32 type, SceSize *free)
 /* name unknown: the main and sub allocators, made before sysmem starts */
 int PhyMemLowModuleStart(const UIDManager *manager)
 {
+#ifndef SYSMEM_TZS	/* the secure world has no CDRAM allocators */
 	s_phyMemLowMain = manager->phyMemLowMain;
 	s_phyMemLowSub = manager->phyMemLowSub;
+#endif
 	return 0;
 }
 

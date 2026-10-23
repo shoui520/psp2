@@ -225,8 +225,10 @@ static inline uintptr_t MemBlockCdramPbase(SceUInt32 code, uintptr_t vbase)
 int PartitionFreeMemBlockMappedToVirAllocRaw(Partition *partition, MemBlockObject *block)
 {
 	void *phyPart;
+#ifndef SYSMEM_TZS
 	uintptr_t pa;
 	SceUInt32 code;
+#endif
 	int ret;
 
 	if (block->attr & MEMBLOCK_ATTR_MAPPED) {
@@ -237,6 +239,7 @@ int PartitionFreeMemBlockMappedToVirAllocRaw(Partition *partition, MemBlockObjec
 		}
 	}
 	MemBlockStatusStateChangePhyAllocFromMA(block);
+#ifndef SYSMEM_TZS	/* the secure world has no CDRAM */
 	code = block->code;
 	if (MemBlockCodeIsCdram(code)) {
 		if (block->attr & MEMBLOCK_ATTR_KEEP_PHY) {
@@ -250,9 +253,11 @@ int PartitionFreeMemBlockMappedToVirAllocRaw(Partition *partition, MemBlockObjec
 			else if (PhyMemPartCdramFree(phyPart, pa, block->size) < 0)
 				SCE_DBG_PRINTF(0xb, 5798, "PhyMemPartCdramFree failed\n");
 		}
-	} else if (((block->flags & MEMBLOCK_OPT_MASK) != MEMBLOCK_OPT_BASE_BLOCK &&
-		    (block->flags & MEMBLOCK_OPT_MASK) != MEMBLOCK_OPT_BASE_INFO) ||
-		   !(block->attr & MEMBLOCK_ATTR_KEEP_PHY)) {
+	} else
+#endif
+	if (((block->flags & MEMBLOCK_OPT_MASK) != MEMBLOCK_OPT_BASE_BLOCK &&
+	     (block->flags & MEMBLOCK_OPT_MASK) != MEMBLOCK_OPT_BASE_INFO) ||
+	    !(block->attr & MEMBLOCK_ATTR_KEEP_PHY)) {
 		phyPart = MemBlockGetPhyMemPartRaw(block);
 		if (block->attr & MEMBLOCK_ATTR_PARTIAL) {
 			MemBlockPartialFreeRaw(block, partition);
@@ -616,6 +621,7 @@ int MemBlockMapWithOpt(MemBlockObject *block, const SceKernelAllocMemBlockComman
 	return MemBlockVirPageListMapRaw(block, command, partition, 0);
 }
 
+#ifndef SYSMEM_TZS
 /* whether the code is a CDRAM one exactly when res2 says it is */
 static void AllocMemBlockCommandAssertCdramCode(SceUInt32 code, int res2)
 {
@@ -626,6 +632,7 @@ static void AllocMemBlockCommandAssertCdramCode(SceUInt32 code, int res2)
 		SCE_DBG_ASSERT_FAIL(315);
 	}
 }
+#endif
 
 /* name unknown: the block's options: the type bits, partial ops, the mirrored block */
 int AllocMemBlockCommandSetOpt(SceKernelAllocMemBlockCommand *command)
@@ -1009,7 +1016,11 @@ out:
 }
 
 /* the kernel/user shared tiny partition (CreateTinyPartitionRaw) */
+#ifdef SYSMEM_TZS	/* the secure world has none */
+#define s_tinyPartitionUserShared	((TinyPartition *)NULL)
+#else
 static TinyPartition *s_tinyPartitionUserShared;
+#endif
 
 /* a block freed with what it carried: its base block (out) and base info (out) */
 int PartitionFreeMemBlockWithBaseRaw(Partition *partition, MemBlockObject *block,
@@ -1604,8 +1615,10 @@ int MemBlockVirAlloc2MappedByCommand(MemBlockObject *block, SceKernelAllocMemBlo
 	block->virPages = NULL;
 	block->flags &= ~MEMBLOCK_KIND_MASK;
 	block->code = command->code;
+#ifndef SYSMEM_TZS	/* no clients in the secure world */
 	if (command->opt.attr & ALLOC_ATTR_CLIENT_INFO)
 		MemBlockOptSetClientInfoRaw(block, &command->opt);
+#endif
 	MemBlockSetNameRaw(block, command->name);
 
 	typeAttr = command->typeInfo->attr;
@@ -1619,12 +1632,15 @@ int MemBlockVirAlloc2MappedByCommand(MemBlockObject *block, SceKernelAllocMemBlo
 		if (!(attr & (SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR |
 			      SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR_LIST))) {
 			block->attr |= MEMBLOCK_ATTR_NEEDS_CLEAR;
-		} else {
+		}
+#ifndef SYSMEM_TZS	/* the secure world has no CDRAM */
+		else {
 			typeAttr &= MEMBLOCK_TYPE_CDRAM;
 			AllocMemBlockCommandAssertCdramCode(command->code, typeAttr);
 			if (typeAttr != 0)
 				block->attr |= MEMBLOCK_ATTR_NEEDS_CLEAR;
 		}
+#endif
 		attr = command->opt.attr;
 	}
 	if (attr & ALLOC_ATTR_SHARE_PHYPAGE)
@@ -1678,9 +1694,9 @@ static inline void AllocMemBlockCommandRoundupUnitSize(SceKernelAllocMemBlockCom
 }
 
 /* a block allocated at va, taken through to mapped */
-int PartitionAllocMemBlockCoreByAddrByCommandRaw(Partition *partition,
-						 SceKernelAllocMemBlockCommand *command,
-						 uintptr_t va)
+static int PartitionAllocMemBlockCoreByAddrByCommandRaw(Partition *partition,
+							SceKernelAllocMemBlockCommand *command,
+							uintptr_t va)
 {
 	MemBlockObject *block;
 	SceSize unit;
@@ -1863,6 +1879,25 @@ static inline uintptr_t MemBlockCdramVirToPhy(SceUInt32 code, uintptr_t va)
  * first (given, a mirror's, or from the CDRAM partition) and sit at the
  * matching fixed address.
  */
+#ifdef SYSMEM_TZS
+/* the secure world has no CDRAM: the LPDDR2 path alone */
+int PartitionAllocMemBlockByCommandRaw(Partition *partition, SceKernelAllocMemBlockCommand *command)
+{
+	int ret;
+
+	if (command->opt.attr & ALLOC_ATTR_HAS_VBASE)
+		ret = PartitionAllocMemBlockCoreByAddrByCommandRaw(partition, command,
+								   command->opt.vbase);
+	else
+		ret = PartitionAllocMemBlockCoreByCommandRaw(partition, command);
+	if (command->block != NULL)
+		MemBlockSetNameRaw(command->block, command->name);
+	if (ret < 0)
+		return ret;
+	MemBlockFill(command->block);
+	return ret;
+}
+#else
 int PartitionAllocMemBlockByCommandRaw(Partition *partition, SceKernelAllocMemBlockCommand *command)
 {
 	MemBlockObject *base = NULL, *block;
@@ -1937,6 +1972,7 @@ name:
 	MemBlockFill(command->block);
 	return ret;
 }
+#endif
 
 /* name unknown: a block of the code in the partition, backed from phyMemPart */
 int PartitionAllocMemBlockWithPhyMemPart(Partition *partition, void *phyMemPart, const char *name,
@@ -3133,6 +3169,7 @@ int PartitionModuleStart(const UIDManager *manager)
 	return ret;
 }
 
+#ifndef SYSMEM_TZS	/* the secure world has no user shared partition */
 /* the user shared tiny partition's context: only its memblock heap */
 static AddressSpaceContext s_userSharedContext;
 
@@ -3165,3 +3202,4 @@ int CreateTinyPartitionRaw(void)
 	sceGUIDSet(SCE_KERNEL_PARTITION_USER_SHARED_ID, s_partitionClass, NULL, (SceObjectBase *)tiny);
 	return 0;
 }
+#endif

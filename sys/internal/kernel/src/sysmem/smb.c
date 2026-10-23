@@ -390,10 +390,19 @@ int SimpleMemBlockModuleStart(const UIDManager *manager)
 			     (SceClassCallback)SimpleMemBlockCreate,
 			     (SceClassCallback)SimpleMemBlockDestroy);
 	s_smbFifo = manager->smbFifo;
+#ifdef SYSMEM_TZS
+	for (i = 504; i != 0; i--)
+		SimpleMemBlockNew(0x1000);
+	for (i = 60; i != 0; i--)
+		SimpleMemBlockNew(0x4002);
+	for (i = 6; i != 0; i--)
+		SimpleMemBlockNew(0x10004);
+#else
 	for (i = 0x400; i != 0; i--)
 		SimpleMemBlockNew(0x1000);
 	for (i = 0x60; i != 0; i--)
 		SimpleMemBlockNew(0x4002);
+#endif
 	for (i = 0; i < 128; i++)
 		sectionUsed[i] = 0;
 	for (i = 0; i < SMB_FIFO_COUNT; i++) {
