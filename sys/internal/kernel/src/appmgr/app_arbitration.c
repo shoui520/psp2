@@ -82,6 +82,12 @@ static const SceKernelDebugInfo gcListenerMutexPanicInfo = {
 static const SceKernelDebugInfo deleteBudgetPanicInfo = {
 	.fileHash = 0xb8f4da66, .lineHash = 0x422f9b9f, .funcHash = 0xaad107e4,
 };
+static const SceKernelDebugInfo launchStatusCopyPanicInfo = {
+	.fileHash = 0xb8f4da66, .lineHash = 0xbc110f71, .funcHash = 0x7e21b0b3,
+};
+static const SceKernelDebugInfo launchParamResultCopyPanicInfo = {
+	.fileHash = 0xb8f4da66, .lineHash = 0x6cf3815c, .funcHash = 0x7e21b0b3,
+};
 static const SceKernelDebugInfo gcWaitProcessEventsPanicInfo = {
 	.fileHash = 0xb8f4da66, .lineHash = 0x658a5287, .funcHash = 0x1bbf336b,
 };
@@ -454,36 +460,32 @@ int _updateAppOnPowerTickState(struct AppState *app)
 	return result;
 }
 
+/* tells a launcher whose launch failed to resume */
 #if FW_DEBUG
 void sendResumeToPid(SceUID pid)
+#else
+static inline __attribute__((always_inline)) void sendResumeToPid(SceUID pid)
+#endif
 {
 	struct AppState *app = NULL;
 	struct AppState *lockedApp;
 	SceAppMgrSystemEvent event;
+	int result;
 
 	if (_appListFindAndLockAppByProcessId(pid, &app) != 0)
 		return;
 	lockedApp = app;
 	if (lockedApp == NULL) {
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 134, "sendResumeToPid");
+		DELETE_APP_ASSERT(0, 134, "sendResumeToPid");
 		lockedApp = app;
 	}
 	memset(&event, 0, sizeof(event));
 	event.systemEvent = SCE_APPMGR_SYSTEMEVENT_ON_RESUME;
-	if (_appListPushEvent(lockedApp, &event) != 0) {
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 139, "sendResumeToPid");
-	}
-	if (_appListUnlockApp(app) != 0) {
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_CHECK_FUNC(0, 142, "sendResumeToPid");
-	}
+	result = _appListPushEvent(lockedApp, &event);
+	DELETE_APP_ASSERT(result == 0, 139, "sendResumeToPid");
+	result = _appListUnlockApp(app);
+	DELETE_APP_ASSERT(result == 0, 142, "sendResumeToPid");
 }
-#endif
 
 #if !FW_DEBUG
 inline __attribute__((always_inline, gnu_inline))
@@ -838,6 +840,193 @@ int killAllMiniApplication(void)
 	if (result == (int)0x80802013)
 		return 0;
 	return result;
+}
+
+/*
+ * Quits the application of that name, if one runs, and waits for it to unload; 0 when there
+ * is none or it is gone.
+ */
+static inline int killAndWaitByNameIfExist(const char *name)
+{
+	struct AppmgrWaitObject *waitObject;
+	struct AppState *app;
+	SceUID owner;
+	int result;
+
+	owner = g_appmgrCore2MutexOwner;
+	DELETE_APP_ASSERT(owner == sceKernelGetThreadId(), 1249, "killAndWaitByNameIfExist");
+	waitObject = appmgrUtilGetWaitObject(6);
+	appmgrUtilWaitObjectClear(waitObject);
+	if (_appListFindAndLockAppByName2(name, &app, -1) != 0)
+		return 0;
+	DELETE_APP_MAIN_LOCK(1261, "killAndWaitByNameIfExist");
+	app->process.unloadWaiter = waitObject;
+	DELETE_APP_MAIN_UNLOCK(1263, "killAndWaitByNameIfExist");
+	result = _appmgrProcessQuitProcess(app, 1, 0, 0);
+	if (result != 0) {
+		DELETE_APP_MAIN_LOCK(1269, "killAndWaitByNameIfExist");
+		app->process.unloadWaiter = NULL;
+		DELETE_APP_MAIN_UNLOCK(1271, "killAndWaitByNameIfExist");
+		_appListUnlockApp(app);
+		return result;
+	}
+	_appListUnlockApp(app);
+	return appmgrUtilWaitObjectWait(waitObject, NULL);
+}
+
+#if FW_DEBUG
+#define LAUNCH_COPY_OUT(_user, _kernel, _size, _line, _info) do { \
+	if ((_user) != NULL && sceKernelCopyToUser(_user, _kernel, _size) < 0) { \
+		sceAppMgrDump(); \
+		dumpBgmState(); \
+		SCE_DBG_ASSERT_CHECK_FUNC(0, _line, "sceAppMgrLaunchAppByName2ndStage_internal"); \
+	} \
+} while (0)
+#else
+#define LAUNCH_COPY_OUT(_user, _kernel, _size, _line, _info) do { \
+	if ((_user) != NULL && sceKernelCopyToUser(_user, _kernel, _size) < 0) \
+		SceDebugForDriver_391B5B74(&_info, __builtin_return_address(0)); \
+} while (0)
+#endif
+
+/*
+ * Launches into the application slot appId: an application of the same name is quit first
+ * when the slot asks for it, the slot takes the request, and _launchApp4 starts it.
+ */
+int sceAppMgrLaunchAppByName2ndStage_internal(int appId, const char *name,
+		SceAppMgrAppStatus *statusOut, const AppmgrLaunchRequest *request,
+		int sendParamToRunning, int startByUpdater, const AppmgrCreateProcessParam *createParam,
+		const struct SceKernelProcessOpt *opt, const AppmgrLaunchOptions *options,
+		const AppmgrLaunchAppOption *option, int *error)
+{
+	struct AppState *app, *slot;
+	AppmgrLaunchInfo *launchInfo;
+	AppmgrLaunchApp4Param param;
+	SceAppMgrAppStatus status;
+	unsigned int paramResult[4];
+	char appName[32];
+	SceUID owner, creatorPid;
+	int newAppId, killByName, launchResult, result;
+
+	owner = g_appmgrCore2MutexOwner;
+	DELETE_APP_ASSERT(owner == sceKernelGetThreadId(), 1295,
+		"sceAppMgrLaunchAppByName2ndStage_internal");
+	DELETE_APP_MAIN_LOCK(1301, "sceAppMgrLaunchAppByName2ndStage_internal");
+	slot = appmgrFindAppById(appId);
+	if (slot == NULL) {
+		DELETE_APP_MAIN_UNLOCK(1324, "sceAppMgrLaunchAppByName2ndStage_internal");
+	} else {
+		if (name != NULL && name[0] != '\0')
+			strncpy(slot->process.appName, name, sizeof(slot->process.appName));
+		killByName = slot->launchMode & 0x400000;
+		__builtin_memcpy(appName, slot->process.appName, sizeof(appName));
+		DELETE_APP_MAIN_UNLOCK(1314, "sceAppMgrLaunchAppByName2ndStage_internal");
+		if (killByName) {
+			result = killAndWaitByNameIfExist(appName);
+			if (result != 0)
+				return result;
+		}
+	}
+
+	result = _appListFindAndLockAppByAppId(appId, &app);
+	if (result != 0)
+		return result;
+	DELETE_APP_MAIN_LOCK(1335, "sceAppMgrLaunchAppByName2ndStage_internal");
+	if (appmgrGetAppRunStatus(app) != 0x300 && appmgrGetAppRunStatus(app) != 0x600) {
+		DELETE_APP_MAIN_UNLOCK(1338, "sceAppMgrLaunchAppByName2ndStage_internal");
+		result = _appListUnlockApp(app);
+		DELETE_APP_CHECK(result, 0, 1340, "sceAppMgrLaunchAppByName2ndStage_internal");
+		return 0x8080201a;
+	}
+	if (app->process.appName[0] == '\0') {
+		DELETE_APP_MAIN_UNLOCK(1347, "sceAppMgrLaunchAppByName2ndStage_internal");
+		result = _appListUnlockApp(app);
+		DELETE_APP_CHECK(result, 0, 1349, "sceAppMgrLaunchAppByName2ndStage_internal");
+		return 0x8080201a;
+	}
+	launchInfo = &app->launchInfo;
+	if (request->appPath != NULL)
+		strncpy(launchInfo->appPath, request->appPath, sizeof(launchInfo->appPath));
+	else
+		launchInfo->appPath[0] = '\0';
+	__builtin_memcpy(launchInfo->proxyAppName, request->proxyAppName,
+		sizeof(launchInfo->proxyAppName));
+	launchInfo->budgetSize = request->budgetSize;
+	launchInfo->pycontSize = request->pycontSize;
+	launchInfo->processCreateFlags = request->processCreateFlags;
+	launchInfo->budgetType = request->budgetType;
+	launchInfo->processAttr = request->processAttr;
+	launchInfo->defaultInfobar = request->defaultInfobar;
+	if (request->launchArgs != NULL)
+		memcpy(launchInfo->launchArgs, request->launchArgs, request->launchArgsSize);
+	else
+		memset(launchInfo->launchArgs, 0, sizeof(launchInfo->launchArgs));
+	launchInfo->launchArgsSize = request->launchArgsSize;
+	launchInfo->launchArgumentMarker = request->launchArgumentMarker;
+	launchInfo->launchOrigin = request->launchOrigin;
+	launchInfo->useCommonDialog = request->useCommonDialog;
+	launchInfo->notifyBootComplete = request->notifyBootComplete;
+	launchInfo->enlargeGameMemorySize = request->enlargeGameMemorySize;
+	app->appInfobar = app->launchInfo.defaultInfobar;
+	newAppId = app->appId | 0x1000;
+	app->appId = newAppId;
+	_deviceAddApp(newAppId);
+	DELETE_APP_MAIN_UNLOCK(1360, "sceAppMgrLaunchAppByName2ndStage_internal");
+	_appListUnlockApp(app);
+
+	if (request->budgetType == 1 && request->enlargeGameMemorySize != 0) {
+		killAllMiniApplication();
+		SCE_DBG_PRINTF_FUNC(0, 1369, "sceAppMgrLaunchAppByName2ndStage_internal",
+			"Failed to kill all mini-app.\n");
+	}
+	memset(&status, 0, sizeof(status));
+	__builtin_memset(paramResult, 0, sizeof(paramResult));
+	param.appId = newAppId;
+	param.opt = opt;
+	param.options = options;
+	param.sendParamToRunning = sendParamToRunning;
+	param.startByUpdater = startByUpdater;
+	param.createParam = createParam;
+	param.status = &status;
+	param.paramResult = paramResult;
+	param.error = error;
+	launchResult = SceThreadmgrForDriver_E54FD746(0x4000, _launchApp4, &param);
+	if (launchResult < 0) {
+		creatorPid = -1;
+		DELETE_APP_MAIN_LOCK(1404, "sceAppMgrLaunchAppByName2ndStage_internal");
+		app = appmgrFindAppById(newAppId);
+		if (app != NULL &&
+		    (app->process.processId < 0 || !(app->process.processId & 1))) {
+			_deviceDeleteApp(newAppId);
+			appmgrClearFailedAppLaunch(app, launchResult, &creatorPid);
+		}
+		DELETE_APP_MAIN_UNLOCK(1412, "sceAppMgrLaunchAppByName2ndStage_internal");
+		if (creatorPid >= 0)
+			sendResumeToPid(creatorPid);
+		return launchResult;
+	}
+	if (status.paramDeliveryHandled) {
+		DELETE_APP_MAIN_LOCK(1417, "sceAppMgrLaunchAppByName2ndStage_internal");
+		_deviceDeleteApp(newAppId);
+		DELETE_APP_MAIN_UNLOCK(1419, "sceAppMgrLaunchAppByName2ndStage_internal");
+		creatorPid = -1;
+		slot = appmgrFindAppById(newAppId);
+		if (slot != NULL)
+			result = appmgrClearFailedAppLaunch(slot, launchResult, &creatorPid);
+		else
+			result = 0x80802012;
+		DELETE_APP_CHECK(result, 0, 1424, "sceAppMgrLaunchAppByName2ndStage_internal");
+		if (creatorPid >= 0)
+			sendResumeToPid(creatorPid);
+	}
+	if (option != NULL) {
+		LAUNCH_COPY_OUT(option->status, &status, sizeof(status), 1434, launchStatusCopyPanicInfo);
+		LAUNCH_COPY_OUT(option->paramResult, paramResult, sizeof(paramResult), 1439,
+			launchParamResultCopyPanicInfo);
+	}
+	if (statusOut != NULL)
+		memcpy(statusOut, &status, sizeof(status));
+	return launchResult;
 }
 
 /* The two Sony media helpers are inlined twice into the listener. */

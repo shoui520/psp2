@@ -296,6 +296,64 @@ typedef struct AppmgrSpawnAppParam {
 	int *error;
 } AppmgrSpawnAppParam;
 
+/* What a launch asks for: AppmgrLaunchInfo with the path and the arguments by reference */
+typedef struct AppmgrLaunchRequest {
+	const char *appPath;
+	char proxyAppName[32];
+	SceUInt32 budgetSize;
+	SceUInt32 pycontSize;
+	SceUInt32 processCreateFlags;
+	SceUInt32 budgetType;
+	SceUInt32 processAttr;
+	AppmgrInfobarState defaultInfobar;
+	const void *launchArgs;
+	SceSize launchArgsSize;
+	SceUInt32 launchArgumentMarker;
+	signed char launchOrigin;
+	unsigned char useCommonDialog;
+	signed char notifyBootComplete;
+	unsigned char reservedLaunch;
+	SceUInt32 enlargeGameMemorySize;	/* MiB */
+} AppmgrLaunchRequest;
+
+_Static_assert(sizeof(AppmgrLaunchRequest) == 80, "launch request");
+
+/* The launcher's options (sceAppMgrLaunchAppByName2ndStage): the status and the parameter
+ * delivery result are copied out to its user pointers */
+typedef struct AppmgrLaunchAppOption {
+	SceSize size;
+	SceUInt32 flags;
+	char appName[32];			/* taken when flags has 0x100000 */
+	SceAppMgrAppStatus *status;
+	SceUInt32 pycontSize;
+	AppmgrInfobarState defaultInfobar;
+	SceUInt32 launchArgumentMarker;
+	char proxyAppName[32];
+	SceUInt32 launchOrigin;
+	SceUInt32 reserved;
+	SceUInt32 *paramResult;			/* four words */
+	SceUInt32 useCommonDialog;
+	SceUInt32 enlargeGameMemorySize;	/* MiB, at most 109 */
+} AppmgrLaunchAppOption;
+
+_Static_assert(sizeof(AppmgrLaunchAppOption) == 108 &&
+	       offsetof(AppmgrLaunchAppOption, status) == 40 &&
+	       offsetof(AppmgrLaunchAppOption, proxyAppName) == 56 &&
+	       offsetof(AppmgrLaunchAppOption, paramResult) == 96, "launch option fields");
+
+/* _launchApp4's argument: the launch, run on a stack of its own */
+typedef struct AppmgrLaunchApp4Param {
+	int appId;
+	const struct SceKernelProcessOpt *opt;
+	const AppmgrLaunchOptions *options;
+	int sendParamToRunning;
+	int startByUpdater;
+	const AppmgrCreateProcessParam *createParam;
+	SceAppMgrAppStatus *status;
+	unsigned int *paramResult;
+	int *error;
+} AppmgrLaunchApp4Param;
+
 int _sceAppMgrDeleteAppInternal(struct AppState *app);
 int _applicationShouldMakeRun(struct AppState *app);
 int relaunchApp(struct AppState *app, SceUID pid);
@@ -303,6 +361,12 @@ int _updateAppOnPowerTickState(struct AppState *app);
 int findAndLockLeastValuableMiniApp2(struct AppState **out, int maxValue);
 int killLeastValuableMiniApplication2(int maxValue);
 int killAllMiniApplication(void);
+int sceAppMgrLaunchAppByName2ndStage_internal(int appId, const char *name,
+		SceAppMgrAppStatus *statusOut, const AppmgrLaunchRequest *request,
+		int sendParamToRunning, int startByUpdater, const AppmgrCreateProcessParam *createParam,
+		const struct SceKernelProcessOpt *opt, const AppmgrLaunchOptions *options,
+		const AppmgrLaunchAppOption *option, int *error);
+int _launchApp4(void *argument);
 int _spawnApp(void *argument);
 void initProcessStateUpdaterThread(void);
 
