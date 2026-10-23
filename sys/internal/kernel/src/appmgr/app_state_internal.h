@@ -467,6 +467,9 @@ void appmgrRegisterDebuggerCallbacks(void);
 int appMgrLockInitialize(void);
 
 /* appmgr_path_syscalls.c */
+int appmgrForceUmountSyscall(int mountId);
+int appmgrUmountSyscall(const char *driveId);
+int appmgrUmountByPidSyscall(SceUID pid, const char *driveId);
 int appmgrConvertVs0UserDrivePathSyscall(const char *path, char *output, SceSize size);
 int appmgrGetRawPathSyscall(char *path, char *resolvedPath, int capacity);
 int appmgrGetUserDirPathSyscall(int partitionId, char *path, unsigned int capacity);

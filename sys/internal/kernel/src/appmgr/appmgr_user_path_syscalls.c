@@ -21,6 +21,29 @@ typedef struct AppmgrUserDirPathArguments {
 _Static_assert(sizeof(AppmgrUserDirPathArguments) == 16,
 	"user directory argument block");
 
+int _sceAppMgrForceUmount(int mountId)
+{
+	return appmgrForceUmountSyscall(mountId);
+}
+
+int _sceAppMgrUmount(const char *driveId)
+{
+	char *buffer = NULL;
+	int ret;
+
+	BLOCK_IN(buffer, driveId, 16);
+	return appmgrUmountSyscall(buffer);
+}
+
+int _sceAppMgrUmountByPid(SceUID pid, const char *driveId)
+{
+	char *buffer = (char *)driveId;
+	int ret;
+
+	BLOCK_IN(buffer, driveId, 16);
+	return appmgrUmountByPidSyscall(pid, buffer);
+}
+
 int _sceAppMgrConvertVs0UserDrivePath(const char *path, char *convertedPath,
 	SceSize capacity, const AppmgrRawPathArguments *userArguments)
 {

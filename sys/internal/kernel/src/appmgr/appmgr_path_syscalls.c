@@ -5,6 +5,21 @@
 #include "mount.h"
 #include "app_state_internal.h"
 
+int appmgrForceUmountSyscall(int mountId)
+{
+	return sceAppMgrForceUmount(mountId);
+}
+
+int appmgrUmountSyscall(const char *driveId)
+{
+	return SceAppMgrForDriver_A714BB35(driveId);
+}
+
+int appmgrUmountByPidSyscall(SceUID pid, const char *driveId)
+{
+	return sceAppMgrUmountByPid(pid, driveId);
+}
+
 int appmgrConvertVs0UserDrivePathSyscall(const char *path, char *output,
 	SceSize size)
 {

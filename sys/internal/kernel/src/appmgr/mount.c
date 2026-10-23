@@ -1173,25 +1173,58 @@ int appmgrUpdateFakeNoMemoryCardOverlays(SceUID pid, AppmgrProcessContent *conte
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
 
-#if !FW_DEBUG
-static const SceKernelDebugInfo debugSettingCallBackPanicInfo = {
+#if FW_DEBUG
+#define MOUNT_MAIN_LOCK(_line) do { \
+	int lockResult = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL); \
+	if (lockResult != 0) { \
+		SCE_DBG_PRINTF(0, _line, "Failed to lock ret=0x%08x\n", lockResult); \
+		sceAppMgrDump(); \
+		dumpBgmState(); \
+		SCE_DBG_ASSERT_FAIL(_line); \
+	} else { \
+		g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
+	} \
+} while (0)
+#define MOUNT_MAIN_UNLOCK(_line) do { \
+	int unlockResult; \
+	g_appmgrMainMutexOwner = -1; \
+	unlockResult = sceKernelUnlockMutex(g_appmgrMainMutex, 1); \
+	if (unlockResult != 0) { \
+		sceAppMgrDump(); \
+		dumpBgmState(); \
+		SCE_DBG_ASSERT_PRINTF(0, _line, \
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n", \
+			unlockResult, unlockResult, 0, 0); \
+	} \
+} while (0)
+#else
+static const SceKernelDebugInfo mountPanicInfo = {
 	.fileHash = 0xc9656e8e,
 	.lineHash = 0x79d3a1f0,
 	.funcHash = 0x9d536bce,
 };
 
-static __attribute__((noinline)) _Noreturn void appmgrDebugSettingCallBackPanic(void)
+static __attribute__((noinline)) _Noreturn void appmgrMountPanic(void)
 {
-	SceDebugForDriver_391B5B74(&debugSettingCallBackPanicInfo,
-				   __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&mountPanicInfo, __builtin_return_address(0));
 }
+
+#define MOUNT_MAIN_LOCK(_line) do { \
+	if (sceKernelLockMutex(g_appmgrMainMutex, 1, NULL) != 0) \
+		appmgrMountPanic(); \
+	g_appmgrMainMutexOwner = sceKernelGetThreadId(); \
+} while (0)
+#define MOUNT_MAIN_UNLOCK(_line) do { \
+	g_appmgrMainMutexOwner = -1; \
+	if (sceKernelUnlockMutex(g_appmgrMainMutex, 1) != 0) \
+		appmgrMountPanic(); \
+} while (0)
 #endif
 
 /* Applies a changed debug setting (0: fake no memory card) to the big application. */
 int _debugSettingCallBack(int setting, int value, void *context)
 {
 	struct AppState *app;
-	int lockResult, unlockResult;
 	int result = 0;
 
 	if (setting != 0)
@@ -1199,36 +1232,12 @@ int _debugSettingCallBack(int setting, int value, void *context)
 	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
 	if (result < 0)
 		return result;
-	lockResult = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
-	if (lockResult != 0) {
-#if FW_DEBUG
-		SCE_DBG_PRINTF(0, 14729, "Failed to lock ret=0x%08x\n", lockResult);
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_FAIL(14729);
-#else
-		appmgrDebugSettingCallBackPanic();
-#endif
-	} else {
-		g_appmgrMainMutexOwner = sceKernelGetThreadId();
-	}
+	MOUNT_MAIN_LOCK(14729);
 	app = _appListGetBigApp(g_appmgrAppStates);
 	if (app != NULL && (app->process.content.contentFlags & 0x10) != 0)
 		result = appmgrUpdateFakeNoMemoryCardOverlays(app->process.processId,
 							      &app->process.content);
-	g_appmgrMainMutexOwner = -1;
-	unlockResult = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
-	if (unlockResult != 0) {
-#if FW_DEBUG
-		sceAppMgrDump();
-		dumpBgmState();
-		SCE_DBG_ASSERT_PRINTF(0, 14742,
-			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
-			unlockResult, unlockResult, 0, 0);
-#else
-		appmgrDebugSettingCallBackPanic();
-#endif
-	}
+	MOUNT_MAIN_UNLOCK(14742);
 	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
 	return result;
 }
@@ -2674,6 +2683,96 @@ int SceAppMgrForDriver_A714BB35(const char *driveId)
 		}
 	}
 unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+/* Unmount a drive of another process; game programs may unmount only their own. */
+int sceAppMgrUmountByPid(SceUID pid, const char *driveId)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	SceUInt32 contentFlags;
+	int result;
+
+	if (driveId == NULL) {
+		result = 0x80800001;
+		goto out;
+	}
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	if (pid != 0 && SceSblACMgrForDriver_8A54DF3A(0) != 0 &&
+	    pid != sceKernelGetProcessId()) {
+		result = 0x80800009;
+		goto unlock;
+	}
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, pid);
+	if (app == NULL) {
+		result = 0x80801002;
+		goto unlock;
+	}
+	result = appmgrUnmountDrive(pid, &app->process.mounts, driveId, 0);
+	if (result == 0) {
+		contentFlags = app->process.content.contentFlags;
+		if ((contentFlags & 0x30) != 0) {
+			if (strncmp(driveId, "photo0:", 8) == 0)
+				app->process.content.contentFlags = contentFlags & ~0x02000000;
+			else if (strncmp(driveId, "music0:", 8) == 0)
+				app->process.content.contentFlags = contentFlags & ~0x04000000;
+			else if (strncmp(driveId, "video0:", 8) == 0)
+				app->process.content.contentFlags = contentFlags & ~0x08000000;
+		}
+	}
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+/* Unmount the QA drive (mount ID 600) from every process that has it. */
+int sceAppMgrForceUmount(int mountId)
+{
+	SceUInt32 syscallState = sceSyscallEnter();
+	struct AppState *app;
+	AppmgrVirtualMount *mount;
+	SceUID pid;
+	int result;
+
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	MOUNT_MAIN_LOCK(8420);
+	if (mountId != 600) {
+		result = 0x80800001;
+		goto unlock;
+	}
+	if (SceSblACMgrForDriver_D0E11C89(0) == 0) {
+		result = 0x80800009;
+		goto unlock;
+	}
+	for (app = g_appmgrAppStates; app != &g_appmgrAppStates[20]; app++) {
+		pid = app->process.processId;
+		if (pid < 0 || (pid & 1) == 0)
+			continue;
+		for (mount = app->process.mounts.firstMount; mount != NULL; mount = mount->next) {
+			if (mount->pfsMount != NULL && mount->pfsMount->mountId == 600)
+				break;
+		}
+		if (mount == NULL) {
+			result = 0x80800002;
+			continue;
+		}
+		result = appmgrUnmountDrive(pid, &app->process.mounts,
+					    mount->driveId.drive_id, 1);
+		if (result != 0)
+			break;
+	}
+unlock:
+	MOUNT_MAIN_UNLOCK(8460);
 	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
 out:
 	sceSyscallLeave(syscallState);

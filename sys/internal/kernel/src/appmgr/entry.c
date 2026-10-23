@@ -130,7 +130,6 @@ STUB(sceAppMgrLoadSafeMemory)
 STUB(_sceAppMgrInitSafeMemoryById)
 STUB(_sceAppMgrAddContMount)
 
-STUB(_sceAppMgrUmountByPid)
 STUB(_sceAppMgrWorkDirMount)
 
 int _sceAppMgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
@@ -144,7 +143,6 @@ int _sceAppMgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
 		displayMode, arguments.displayBlanked, arguments.unsupportedOptions);
 }
 STUB(_sceAppMgrCheckRifGD)
-STUB(_sceAppMgrForceUmount)
 STUB(_sceAppMgrLaunchVideoStreamingApp)
 STUB(_sceAppMgrGetPidListForShell)
 
@@ -240,7 +238,6 @@ int _sceAppMgrSetBgmProxyApp(const char *appName, const SyscallUnusedArgs *userA
 STUB(_sceAppMgrTrophyMount)
 STUB(_sceAppMgrSaveDataDataSave2)
 STUB(_sceAppMgrSaveDataSlotFileClose)
-STUB(_sceAppMgrUmount)
 STUB(sceSharedFbClose)
 STUB(sceSharedFbBegin)
 STUB(sceSharedFbGetInfo)
