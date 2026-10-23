@@ -140,13 +140,12 @@ int appmgrPsfSetEntry(void *object, const char *key, const void *value,
 {
 	AppmgrPsfContext *context = object;
 	AppmgrPsfWriteContext *writeContext = object;
-	AppmgrPsfHeader *header;
-	AppmgrPsfEntry *entry, *candidate;
+	AppmgrPsfEntry *entry;
 	AppmgrPsfDiskEntry *diskEntry;
-	signed char (*keySlots)[32];
-	signed char *keySlot;
+	AppmgrPsfHeader *header;
+	unsigned char *keySlot;
 	SceUInt32 flags;
-	SceSize count, limit, highWater, index, keyLength;
+	SceSize limit, index;
 
 	if (context == NULL || (context->flags & 2) != 0 ||
 	    appmgrPsfStringLength((const signed char *)key) - 1 > 30)
@@ -154,11 +153,8 @@ int appmgrPsfSetEntry(void *object, const char *key, const void *value,
 	if ((context->flags & 6) == 0) {
 		appmgrPsfShellSort(writeContext->entries, writeContext->entryHighWater,
 			sizeof(AppmgrPsfEntry), appmgrPsfCompareEntries);
-		flags = context->flags;
-		header = context->header;
-		count = header->entryCount;
-		context->flags = flags | 4;
-		writeContext->entryHighWater = count;
+		context->flags |= 4;
+		writeContext->entryHighWater = context->header->entryCount;
 	}
 	entry = appmgrPsfBinarySearch(key, writeContext->entries,
 		context->header->entryCount, sizeof(AppmgrPsfEntry),
@@ -168,66 +164,56 @@ int appmgrPsfSetEntry(void *object, const char *key, const void *value,
 	limit = context->storage.entryCapacity;
 	if (context->header->entryCount + 1 > limit)
 		return (int)0x80120001;
-	highWater = writeContext->entryHighWater;
-	if (limit > highWater) {
-		writeContext->entryHighWater = highWater + 1;
-		entry = writeContext->entries + highWater;
+
+	/* a free entry, a free key slot and a free disk entry */
+	if (limit > writeContext->entryHighWater) {
+		entry = &writeContext->entries[writeContext->entryHighWater++];
 	} else {
-		candidate = writeContext->entries;
-		if (limit == 0)
-			return (int)0x80120001;
-		for (index = 0; index < limit; index++, candidate++) {
-			if (candidate->diskEntry == NULL) {
-				entry = candidate;
+		for (index = 0; index < limit; index++) {
+			if (writeContext->entries[index].diskEntry == NULL) {
+				entry = &writeContext->entries[index];
 				break;
 			}
 		}
 	}
-	highWater = writeContext->keyHighWater;
-	keySlots = (signed char (*)[32])writeContext->keys;
-	if (limit > highWater) {
-		keySlot = keySlots[highWater];
-		writeContext->keyHighWater = highWater + 1;
+	if (limit > writeContext->keyHighWater) {
+		keySlot = writeContext->keys[writeContext->keyHighWater++];
 		if (keySlot == NULL)
 			return (int)0x80120001;
 	} else {
-		if (limit == 0)
-			return (int)0x80120001;
-		keySlot = keySlots[0];
-		for (index = 0; *keySlot != 0; index++, keySlot += 32) {
-			if (index + 1 == limit)
-				return (int)0x80120001;
+		for (index = 0; index < limit; index++) {
+			if (writeContext->keys[index][0] == 0)
+				break;
 		}
+		if (index == limit)
+			return (int)0x80120001;
+		keySlot = writeContext->keys[index];
 	}
-	highWater = writeContext->diskEntryHighWater;
-	if (limit > highWater) {
-		writeContext->diskEntryHighWater = highWater + 1;
-		diskEntry = context->diskEntries + highWater;
+	if (limit > writeContext->diskEntryHighWater) {
+		diskEntry = &context->diskEntries[writeContext->diskEntryHighWater++];
 		if (diskEntry == NULL) {
 			*keySlot = 0;
 			return (int)0x80120001;
 		}
 	} else {
-		diskEntry = context->diskEntries;
-		if (limit == 0) {
+		for (index = 0; index < limit; index++) {
+			if (context->diskEntries[index].keyOffset == 0xffff)
+				break;
+		}
+		if (index == limit) {
 			*keySlot = 0;
 			return (int)0x80120001;
 		}
-		for (index = 0; diskEntry->keyOffset != 0xffff; index++, diskEntry++) {
-			if (index + 1 == limit) {
-				*keySlot = 0;
-				return (int)0x80120001;
-			}
-		}
+		diskEntry = &context->diskEntries[index];
 	}
-	keyLength = appmgrPsfStringLength((const signed char *)key);
-	appmgrPsfCopyMemory(keySlot, key, keyLength);
+
+	appmgrPsfCopyMemory(keySlot, key, appmgrPsfStringLength((const signed char *)key));
 	appmgrPsfSetMemory(diskEntry, 0, sizeof(*diskEntry));
 	flags = context->flags;
 	header = context->header;
 	entry->flags = 3;
 	entry->diskEntry = diskEntry;
-	entry->key = (unsigned char *)keySlot;
+	entry->key = keySlot;
 	if ((flags & 4) != 0)
 		flags ^= 4;
 	header->entryCount++;
@@ -270,47 +256,31 @@ int appmgrPsfValidateEntries(const void *data, SceSize entryOffset,
 {
 	const AppmgrPsfDiskEntry *entry =
 		(const AppmgrPsfDiskEntry *)((const unsigned char *)data + entryOffset);
-	SceSize count = header->entryCount;
-	SceUInt32 keyTableOffset, valueTableOffset, valueEnd, format;
-	SceSize index = 0;
+	SceSize index = 0, valueEnd;
 
-	if (count == 0)
+	if (header->entryCount == 0)
 		return 0;
-	keyTableOffset = header->keyTableOffset;
-	valueTableOffset = header->valueTableOffset;
-	while (keyTableOffset + entry->keyOffset < valueTableOffset) {
-		format = entry->format;
-		if (format != 0x104) {
-			if (format <= 0x104) {
-				if (format != 8) {
-					if (format <= 8) {
-						if (format != 0 && format != 4)
-							return (int)0x80120003;
-					} else if (format != 32 && format != 256 && format != 16) {
-						return (int)0x80120003;
-					}
-				}
-			} else if (format != 0x204) {
-				if (format > 0x204) {
-					if (format != 0x404 && format != 0x504 && format != 0x304)
-						return (int)0x80120003;
-				} else if (format != 0x110 && format != 0x120 && format != 0x108) {
-					return (int)0x80120003;
-				}
-			}
+	while (header->keyTableOffset + entry->keyOffset < header->valueTableOffset) {
+		switch (entry->format) {
+		case 0x000: case 0x004: case 0x008: case 0x010: case 0x020:
+		case 0x100: case 0x104: case 0x108: case 0x110: case 0x120:
+		case 0x204: case 0x304: case 0x404: case 0x504:
+			break;
+		default:
+			return (int)0x80120003;
 		}
 		if (entry->capacity < entry->length)
 			return (int)0x80120003;
-		valueEnd = entry->capacity + entry->valueOffset;
+		valueEnd = entry->valueOffset + entry->capacity;
 		if (valueEnd > size)
 			return (int)0x80120003;
-		if (index == count - 1) {
-			if (valueEnd + valueTableOffset != size)
+		if (index == header->entryCount - 1) {
+			if (header->valueTableOffset + valueEnd != size)
 				return (int)0x80120003;
 		} else if (valueEnd != entry[1].valueOffset) {
 			return (int)0x80120003;
 		}
-		if (++index == count)
+		if (++index == header->entryCount)
 			return 0;
 		entry++;
 	}

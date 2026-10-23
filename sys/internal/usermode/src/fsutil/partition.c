@@ -102,99 +102,33 @@ int _select_partition_table(int id, uint64_t volumeSize,
 	uint64_t selectedSize = 0;
 	int selected = (int)0x80010016;
 	int configuration = 0;
-	unsigned int remaining = defaultTableSize;
+	unsigned int remaining;
 	const SceMbrPartitionEntry *end;
-	unsigned char found;
+	int found;
 
-#if !FW_DEBUG
-	if (remaining < 272)
-		return selected;
-	do {
-		end = table + 16;
-		found = 0;
-		if (volumeSize != 0) {
-			if (id == 2) {
-				do {
-					if (table->code == 9 && table->size == volumeSectors) {
-						selected = configuration;
-						found = 1;
-					}
-					++table;
-				} while (table != end);
-			} else if (id == 3) {
-				do {
-					if (table->code == 8) {
-						if (table->size == 0) {
-							selected = configuration;
-							found = 1;
-						} else if (table->offset + table->size <= *sectorCount &&
-							   volumeSectors >= table->size &&
-							   selectedSize < table->size) {
-							selectedSize = table->size;
-							selected = configuration;
-						}
-					}
-					++table;
-				} while (table != end);
-			} else {
-				table = end;
-			}
-		} else if (id == 2) {
-			do {
-				if (table->code == 9 && table->offset + table->size <= *sectorCount) {
-					selected = configuration;
-					found = 1;
-				}
-				++table;
-			} while (table != end);
-		} else if (id == 3) {
-			do {
-				if (table->code == 8) {
-					if (table->size == 0) {
-						selected = configuration;
-						found = 1;
-					} else if (table->offset + table->size <= *sectorCount &&
-						   selectedSize < table->size) {
-						selectedSize = table->size;
-						selected = configuration;
-					}
-				}
-				++table;
-			} while (table != end);
-		} else {
-			table = end;
-		}
-		remaining -= 272;
-		++configuration;
-	} while (remaining > 271 && !found);
-	return selected;
-#else
-	if ((unsigned int)(id - 2) > 1)
+	if (id != 2 && id != 3)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 265,
 			"%s: unsupported id(%d), default_table_size(%u), configuration_count(%u)\n",
 			__func__, id, defaultTableSize, defaultTableSize / 272);
-	if (remaining < 272)
-		return selected;
-	do {
-		end = table + 16;
+	for (remaining = defaultTableSize; remaining >= 272; remaining -= 272) {
 		found = 0;
-		do {
+		for (end = table + 16; table != end; table++) {
 			if (id == 2) {
-				if (table->code == 9) {
-					if (volumeSize != 0) {
-						if (table->size == volumeSectors) {
-							selected = configuration;
-							found = 1;
-						}
-					} else if (table->offset + table->size <= *sectorCount) {
+				if (table->code != 9)
+					continue;
+				if (volumeSize != 0) {
+					if (table->size == volumeSectors) {
 						selected = configuration;
 						found = 1;
-					} else {
-						SCE_DBG_PRINTF_LEVEL(1, 0, 296,
-							"%s: request is any configuration but device size is too small, necessary lba[%#x] > sectorCount[%#x]\n",
-							__func__, table->offset + table->size,
-							*sectorCount);
 					}
+				} else if (table->offset + table->size <= *sectorCount) {
+					selected = configuration;
+					found = 1;
+				} else {
+					SCE_DBG_PRINTF_LEVEL(1, 0, 296,
+						"%s: request is any configuration but device size is too small, necessary lba[%#x] > sectorCount[%#x]\n",
+						__func__, table->offset + table->size,
+						*sectorCount);
 				}
 			} else if (id == 3 && table->code == 8) {
 				if (table->size == 0) {
@@ -207,14 +141,16 @@ int _select_partition_table(int id, uint64_t volumeSize,
 					selected = configuration;
 				}
 			}
-			++table;
-		} while (table != end);
-		remaining -= 272;
-		++configuration;
-	} while (remaining > 271 && !found);
+		}
+		configuration++;
+		if (found)
+			break;
+	}
 	return selected;
-#endif
 }
+
+/* The device every block device name must start with. */
+static const char blockDevicePrefix[] = "sdstor0:";
 
 int _fs_util_get_device_info(const char *blockDeviceName, void *buffer,
 			     unsigned int bufferSize)
@@ -227,7 +163,7 @@ int _fs_util_get_device_info(const char *blockDeviceName, void *buffer,
 
 	if (!blockDeviceName || blockDeviceName[0] != 's')
 		goto unsupported;
-	prefix = "sdstor0:";
+	prefix = blockDevicePrefix;
 	cursor = blockDeviceName;
 	while (*++prefix) {
 		if (*prefix != *++cursor)
@@ -267,7 +203,7 @@ int _fs_util_device_format(const char *blockDeviceName)
 
 	if (!blockDeviceName || blockDeviceName[0] != 's')
 		goto unsupported;
-	prefix = "sdstor0:";
+	prefix = blockDevicePrefix;
 	cursor = blockDeviceName;
 	while (*++prefix) {
 		if (*prefix != *++cursor)
@@ -365,15 +301,13 @@ unsigned int appmgrMbrGetClusterSize(const SceMbr *mbr, int index)
 	code = mbr->partitions[index].code;
 	if (code == 8)
 		return 0x8000;
-	if (code < 8 || code > 10)
-		return 0;
-	configuration = partitionConfiguration;
-	end = configuration + 3;
-	do {
-		if (configuration->code == code)
-			return configuration->clusterSize;
-		configuration++;
-	} while (configuration != end);
+	if (code >= 8 && code <= 10) {
+		for (configuration = partitionConfiguration, end = configuration + 3;
+		     configuration != end; configuration++) {
+			if (configuration->code == code)
+				return configuration->clusterSize;
+		}
+	}
 	return 0;
 }
 
@@ -402,7 +336,7 @@ int _fs_util_prepare_rm_mbr(const char *blockDeviceName, SceUID file,
 
 	if (!blockDeviceName || blockDeviceName[0] != 's')
 		goto unsupported_device;
-	prefix = "sdstor0:";
+	prefix = blockDevicePrefix;
 	cursor = blockDeviceName;
 	while (*++prefix) {
 		if (*prefix != *++cursor)
@@ -562,7 +496,7 @@ int _fs_util_prepare_mbr(const char *blockDeviceName, unsigned char systemId,
 
 	if (!blockDeviceName || blockDeviceName[0] != 's')
 		goto unsupported_device;
-	prefix = "sdstor0:";
+	prefix = blockDevicePrefix;
 	cursor = blockDeviceName;
 	while (*++prefix) {
 		if (*prefix != *++cursor)
