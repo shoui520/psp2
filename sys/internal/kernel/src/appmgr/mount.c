@@ -4952,6 +4952,14 @@ static const unsigned char encodedTrophyData[16] = {
 	(unsigned char)~'h', (unsigned char)~'y', (unsigned char)~'/', (unsigned char)~'d',
 	(unsigned char)~'a', (unsigned char)~'t', (unsigned char)~'a', 0
 };
+/* sce_sys/param.sfo, its terminator encoded too */
+static const unsigned char encodedParamSfo[24] = {
+	(unsigned char)~'s', (unsigned char)~'c', (unsigned char)~'e', (unsigned char)~'_',
+	(unsigned char)~'s', (unsigned char)~'y', (unsigned char)~'s', (unsigned char)~'/',
+	(unsigned char)~'p', (unsigned char)~'a', (unsigned char)~'r', (unsigned char)~'a',
+	(unsigned char)~'m', (unsigned char)~'.', (unsigned char)~'s', (unsigned char)~'f',
+	(unsigned char)~'o', (unsigned char)~'\0', 0
+};
 
 static char g_appmgrMountByIdComponent[32];
 static char g_appmgrMountByIdRoot[32];
@@ -6610,6 +6618,169 @@ noMemoryContent:
 	result = 0x80801006;
 freeContent:
 	sceKernelFreeHeapMemory(g_appmgrMountHeap, content);
+	goto freeWork;
+noMemory:
+	result = 0x80801006;
+freeWork:
+	if (workPath != NULL)
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, workPath);
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+/* Reads the save data's sce_sys/param.sfo at path into the caller's buffer; returns its size. */
+int sceAppMgrLoadSaveDataSystemFile(const char *path, void *buffer, SceSize size)
+{
+	SceUInt32 syscallState;
+	SceAllocOpt opt;
+	ScePfsRndDriveId mountPoint = { "" };
+	char appName[16];
+	union {
+		SceSelfAuthInfo authInfo;
+		SceIoStat stat;
+	} info;
+	char name[64];
+	char resolvedPath[292];
+	AppmgrPfsMount *cursor;
+	AppmgrMountHolder *mounts;
+	struct AppState *app;
+	char *workPath, *normalized;
+	void *readBuffer;
+	SceUID pid, fd;
+	int permission, result, offset, length;
+
+	syscallState = sceSyscallEnter();
+	result = sceKernelGetProcessSelfAuthInfo(0, &info.authInfo);
+	if (result < 0)
+		goto out;
+	if (info.authInfo.programAuthorityId != 0x2800000000000001ULL &&
+	    info.authInfo.programAuthorityId != 0x280000000000002eULL) {
+		result = 0x80800009;
+		goto out;
+	}
+	if (buffer == NULL || path == NULL) {
+		result = 0x80800001;
+		goto out;
+	}
+	pid = sceKernelGetProcessId();
+	permission = sceKernelSetThreadAccessLevel(128);
+	result = SceFios2KernelForDriver_0F456345(pid, 0, path, resolvedPath, sizeof(resolvedPath));
+	sceKernelSetThreadAccessLevel(permission);
+	if (result < 0) {
+		result = 0x80800001;
+		goto out;
+	}
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 32;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	workPath = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	if (workPath == NULL)
+		goto noMemory;
+	memset(workPath, 0, 292);
+	opt.mmapKind = 0;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	opt.size = sizeof(opt);
+	opt.align = 32;
+	readBuffer = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 1024, &opt);
+	if (readBuffer == NULL)
+		goto noMemory;
+	memset(readBuffer, 0, 1024);
+
+	opt.mmapKind = 0;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	opt.align = 32;
+	opt.size = sizeof(opt);
+	cursor = g_appmgrPfsMounts;
+	normalized = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	if (normalized == NULL) {
+		result = 0x80801006;
+		goto freeReadBuffer;
+	}
+	result = appmgrNormalizePath(resolvedPath, normalized);
+	if (result < 0) {
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+		if (result != 0x80800002)
+			goto freeReadBuffer;
+	} else {
+		for (; cursor != NULL; cursor = cursor->next) {
+			if (strncmp(cursor->appPath, normalized, 292) == 0)
+				break;
+		}
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, normalized);
+	}
+
+	result = appmgrCreateDirectories(resolvedPath, 0);
+	if (result < 0)
+		goto freeReadBuffer;
+	snprintf(workPath, 292, "%s/sce_pfs", resolvedPath);
+	result = appmgrCreateDirectories(workPath, 0);
+	if (result < 0)
+		goto freeReadBuffer;
+
+	MOUNT_MAIN_LOCK(13551);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app == NULL) {
+		result = 0x80801002;
+		goto freeReadBuffer;
+	}
+	mounts = &app->process.mounts;
+	__builtin_memset(appName, 0, sizeof(appName));
+	strncpy(appName, app->process.appName, 9);
+	MOUNT_MAIN_UNLOCK(13561);
+
+	result = appmgrMount(sceKernelGetProcessId(), mounts, 1005, appName, resolvedPath,
+			     NULL, NULL, &mountPoint);
+	if (result < 0)
+		goto unmount;
+	result = appmgrDecodeString(encodedParamSfo, name, sizeof(name));
+	if (result < 0)
+		goto unmount;
+	if ((unsigned int)snprintf(workPath, 292, "%s/%s", resolvedPath, name) >= 292) {
+		result = 0x80800001;
+		goto unmount;
+	}
+	fd = sceIoOpen(workPath, 0x10001, 0);
+	if (fd < 0) {
+		result = fd;
+		goto unmount;
+	}
+	result = sceIoGetstatByFd(fd, &info.stat);
+	if (result >= 0) {
+		if ((SceOff)size < info.stat.st_size) {
+			result = 0x8080001f;
+		} else {
+			for (offset = 0; offset < info.stat.st_size; offset += length) {
+				length = sceIoRead(fd, readBuffer, 1024);
+				if (length < 0) {
+					result = length;
+					goto close;
+				}
+				if (length == 0)
+					break;
+				result = sceKernelCopyToUser((char *)buffer + offset, readBuffer, length);
+				if (result < 0)
+					goto close;
+			}
+			result = offset;
+		}
+	}
+close:
+	sceIoClose(fd);
+unmount:
+	if (mounts != NULL && mountPoint.drive_id[0] != '\0')
+		appmgrUnmountDrive(sceKernelGetProcessId(), mounts, mountPoint.drive_id, 0);
+freeReadBuffer:
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, readBuffer);
 	goto freeWork;
 noMemory:
 	result = 0x80801006;

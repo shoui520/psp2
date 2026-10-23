@@ -125,6 +125,7 @@ int sceAppMgrTrophyMountById(unsigned int mountId, const char *id, ScePfsRndDriv
 int sceAppMgrWorkDirMountById(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint);
 int sceAppMgrGetSaveDataInfo(const char *appPath, const char *titleId, SceUInt32 attributes,
 			     AppmgrSaveDataInfo *info);
+int sceAppMgrLoadSaveDataSystemFile(const char *path, void *buffer, SceSize size);
 int sceAppMgrInstallDirMount(unsigned int mountId, const char *id, const void *keystone,
 			     ScePfsRndDriveId *mountPoint);
 int sceAppMgrLoopBackMount(unsigned int mountId, const char *id, ScePfsRndDriveId *mountPoint);

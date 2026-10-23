@@ -43,6 +43,11 @@ int appmgrGetSaveDataInfoSyscall(const char *appPath, const char *titleId,
 	return sceAppMgrGetSaveDataInfo(appPath, titleId, attributes, info);
 }
 
+int appmgrLoadSaveDataSystemFileSyscall(const char *path, void *buffer, SceSize size)
+{
+	return sceAppMgrLoadSaveDataSystemFile(path, buffer, size);
+}
+
 int appmgrGetUserDirPathSyscall(int partitionId, char *path,
 	unsigned int capacity)
 {
