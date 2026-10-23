@@ -48,6 +48,11 @@ int appmgrLoadSaveDataSystemFileSyscall(const char *path, void *buffer, SceSize 
 	return sceAppMgrLoadSaveDataSystemFile(path, buffer, size);
 }
 
+int appmgrUpdateSaveDataParamSyscall(const char *path)
+{
+	return sceAppMgrUpdateSaveDataParam(path);
+}
+
 int appmgrGetUserDirPathSyscall(int partitionId, char *path,
 	unsigned int capacity)
 {

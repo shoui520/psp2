@@ -6793,6 +6793,135 @@ out:
 	return result;
 }
 
+/*
+ * Updates the parameters of the save data at path, or, for "ux0:/" or "grw0:/", of
+ * every save data of the account there, mounting each one for the update.
+ */
+int sceAppMgrUpdateSaveDataParam(const char *path)
+{
+	SceUInt32 syscallState;
+	SceAllocOpt opt;
+	char titleId[16] = "NPXS19999";
+	ScePfsRndDriveId driveId, mountPoint;
+	SceIoDirent entry;
+	char savedataPath[64];
+	struct AppState *app;
+	char *resolvedPath, *name;
+	SceUID pid, directory;
+	SceSize nameSize;
+	int permission, result;
+
+	syscallState = sceSyscallEnter();
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	if (path == NULL || strnlen(path, 292) == 292) {
+		result = 0x80800001;
+		goto unlock;
+	}
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app == NULL) {
+		result = 0x80801002;
+		goto unlock;
+	}
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	opt.align = 32;
+	resolvedPath = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	if (resolvedPath == NULL) {
+		result = 0x80801006;
+		goto unlock;
+	}
+	pid = sceKernelGetProcessId();
+	permission = sceKernelSetThreadAccessLevel(128);
+	result = SceFios2KernelForDriver_0F456345(pid, 0, path, resolvedPath, 292);
+	sceKernelSetThreadAccessLevel(permission);
+	if (result < 0)
+		goto free;
+
+	if (strncmp(resolvedPath, "ux0:/", 6) != 0 && strncmp(resolvedPath, "grw0:/", 7) != 0) {
+		/* One save data. */
+		if (!(strncmp(resolvedPath, "ux0:/user/", 10) == 0 &&
+		      strncmp(resolvedPath + 12, "/savedata", 9) == 0)) {
+			result = 0x8080000c;
+			if (strncmp(resolvedPath, "grw0:/savedata/", 15) != 0)
+				goto free;
+		}
+		__builtin_memset(&driveId, 0, sizeof(driveId));
+		__builtin_memset(&mountPoint, 0, sizeof(mountPoint));
+		result = appmgrMakeRandomDriveId("ts", driveId.drive_id);
+		if (result < 0)
+			goto free;
+		result = appmgrMount(sceKernelGetProcessId(), &app->process.mounts, 1005, titleId,
+				     path, &driveId, NULL, &mountPoint);
+		if (result < 0) {
+			if (result == 0x80800003)
+				result = appmgrUpdateSaveDataParams(resolvedPath, NULL, 0, NULL);
+		} else {
+			result = appmgrUpdateSaveDataParams(resolvedPath, NULL, 0, NULL);
+			appmgrUnmountDrive(sceKernelGetProcessId(), &app->process.mounts,
+					   mountPoint.drive_id, 0);
+		}
+	} else {
+		/* Every save data of the account. */
+		char allTitleId[16] = "NPXS19999";
+
+		pid = sceKernelGetProcessId();
+		__builtin_memset(&driveId, 0, sizeof(driveId));
+		__builtin_memset(&mountPoint, 0, sizeof(mountPoint));
+		permission = sceKernelSetThreadAccessLevel(64);
+		if (strncmp(resolvedPath, "ux0:/", 6) != 0 &&
+		    strncmp(resolvedPath, "grw0:/", 7) != 0) {
+			result = 0x80800001;
+			goto restore;
+		}
+		result = appmgrMakeRandomDriveId("ts", driveId.drive_id);
+		if (result < 0)
+			goto restore;
+		if (g_appmgrAccountDirectory[0] == '\0')
+			appmgrUpdateAccountDirectory();
+		snprintf(savedataPath, sizeof(savedataPath), "%suser/%s/savedata/%s", resolvedPath,
+			 g_appmgrAccountDirectory, "");
+		nameSize = strnlen(savedataPath, sizeof(savedataPath));
+		directory = sceIoDopen(savedataPath);
+		if (directory < 0) {
+			result = 0;
+			goto restore;
+		}
+		memset(&entry, 0, sizeof(entry));
+		name = savedataPath + nameSize;
+		nameSize = sizeof(savedataPath) - 1 - nameSize;
+		while ((result = sceIoDread(directory, &entry)) > 0) {
+			if (entry.d_stat.st_mode & SCE_STM_FDIR) {
+				strncpy(name, entry.d_name, nameSize);
+				result = appmgrMount(pid, &app->process.mounts, 1005, allTitleId,
+						     savedataPath, &driveId, NULL, &mountPoint);
+				if (result < 0) {
+					if (result != 0x80800003)
+						continue;
+					appmgrUpdateSaveDataParams(savedataPath, NULL, 0, NULL);
+				} else {
+					appmgrUpdateSaveDataParams(savedataPath, NULL, 0, NULL);
+					appmgrUnmountDrive(pid, &app->process.mounts, mountPoint.drive_id, 0);
+				}
+			}
+			memset(&entry, 0, sizeof(entry));
+		}
+		sceIoDclose(directory);
+restore:
+		sceKernelSetThreadAccessLevel(permission);
+	}
+free:
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, resolvedPath);
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
 int appmgrResolvePath(const char *path, SceUID pid, char *output, SceSize size)
 {
 	int permission, result;
