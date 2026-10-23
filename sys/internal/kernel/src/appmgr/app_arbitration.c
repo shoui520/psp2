@@ -1029,6 +1029,122 @@ int sceAppMgrLaunchAppByName2ndStage_internal(int appId, const char *name,
 	return launchResult;
 }
 
+/*
+ * Locks the suspended mini application worth least, or the one already being killed;
+ * 0x80803002 when an application that may not be killed is being killed.
+ */
+static inline int findAndLockLeastValuableMiniApp(struct AppState **out)
+{
+	struct AppState *current, *app;
+	SceUID owner, pid;
+	int leastValue = -1, index = -1, killing = 0;
+	int i, status, value, result;
+
+	owner = g_appmgrMainMutexOwner;
+	DELETE_APP_ASSERT(owner != sceKernelGetThreadId(), 177, "findAndLockLeastValuableMiniApp");
+retry:
+	DELETE_APP_MAIN_LOCK(183, "findAndLockLeastValuableMiniApp");
+	current = appmgrFindAppByName(g_appmgrAppStates, NULL);
+	for (i = appmgrGetShellApp() != NULL; i <= 19; i++) {
+		app = &g_appmgrAppStates[i];
+		if (app == current)
+			continue;
+		__builtin_prefetch(&g_appmgrAppStates[i + MINI_APP_PREFETCH].process.processId);
+		if (app->process.processId < 0 || !(app->process.processId & 1) ||
+		    app->launchInfo.budgetSize == 0)
+			continue;
+		status = appmgrGetAppRunStatus(app);
+		if ((status == 32 || status == 16 || status == 48) && !killing) {
+			value = getMiniAppValue(app);
+			if (index == -1 || value < leastValue) {
+				leastValue = value;
+				index = i;
+			}
+			continue;
+		}
+		if (status == 128) {
+			if (!(app->launchInfo.processAttr & 2)) {
+				DELETE_APP_MAIN_UNLOCK(219, "findAndLockLeastValuableMiniApp");
+				return 0x80803002;
+			}
+			index = i;
+			killing = 1;
+		}
+	}
+	pid = index == -1 ? -1 : g_appmgrAppStates[index].process.processId;
+	DELETE_APP_MAIN_UNLOCK(229, "findAndLockLeastValuableMiniApp");
+	if (index == -1)
+		return 0x80802013;
+	app = &g_appmgrAppStates[index];
+#if FW_DEBUG
+	SCE_DBG_ASSERT_CHECK_FUNC(({ owner = g_appmgrMainMutexOwner;
+		owner != sceKernelGetThreadId(); }), 237, "findAndLockLeastValuableMiniApp");
+	owner = g_appmgrCore2MutexOwner;
+	if (owner != sceKernelGetThreadId())
+		KILL_CHECK_APP_OWNERS(237, "findAndLockLeastValuableMiniApp");
+#else
+	sceKernelGetThreadId();
+#endif
+	result = sceKernelLockMutex(app->mutex, 1, NULL);
+	if (result != 0) {
+#if FW_DEBUG
+		if ((unsigned int)(result + 0x7ffd7fd4) > 1)
+			GC_FAILURE(result, 237, "findAndLockLeastValuableMiniApp");
+		if (result < 0)
+			return result;
+#else
+		if ((unsigned int)(result + 0x7ffd7fd4) > 1)
+			appmgrGcListenerMutexPanic();
+		return result;
+#endif
+	} else {
+		app->mutexOwner = sceKernelGetThreadId();
+	}
+	if (app->process.processId == pid) {
+		*out = app;
+		return 0;
+	}
+	result = _appListUnlockApp(&g_appmgrAppStates[index]);
+	DELETE_APP_CHECK(result, 0, 243, "findAndLockLeastValuableMiniApp");
+	goto retry;
+}
+
+/* Kills the least valuable suspended mini application (waiting up to 15 s for it to go). */
+int killLeastValuableMiniApplication(void)
+{
+	struct AppState *app;
+	struct AppmgrWaitObject *waitObject;
+	SceUInt32 timeout;
+	SceUID owner;
+	int result, quitResult;
+
+	owner = g_appmgrMainMutexOwner;
+	DELETE_APP_ASSERT(owner != sceKernelGetThreadId(), 344, "killLeastValuableMiniApplication");
+	KILL_CHECK_APP_OWNERS(346, "killLeastValuableMiniApplication");
+	KILL_KM_LOCK(result, 346, "killLeastValuableMiniApplication");
+	for (;;) {
+		result = findAndLockLeastValuableMiniApp(&app);
+		if (result != 0x80803002) {
+			if (result != 0) {
+				KILL_KM_UNLOCK(361, "killLeastValuableMiniApplication");
+				return result;
+			}
+			quitResult = _appmgrProcessQuitProcess(app, 3, 0, 0);
+			result = _appListUnlockApp(app);
+			DELETE_APP_CHECK(result, 0, 368, "killLeastValuableMiniApplication");
+			if (quitResult != 0)
+				continue;
+		}
+		waitObject = appmgrUtilGetWaitObject(1);
+		timeout = 15000000;
+		result = appmgrUtilWaitObjectWait(waitObject, &timeout);
+		if (result == 0 || result == (int)0x8002802d) {
+			KILL_KM_UNLOCK(382, "killLeastValuableMiniApplication");
+			return result;
+		}
+	}
+}
+
 /* The two Sony media helpers are inlined twice into the listener. */
 #define GC_SUSPEND_MEDIA(_func, _lockLine, _mainLine, _unlockLine, \
 		_suspendLine, _appUnlockLine, _waitLine, _checkLine, \
