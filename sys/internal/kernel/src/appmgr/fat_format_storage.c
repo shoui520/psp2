@@ -9,11 +9,11 @@
 /* Byte stores preserve the FAT wire encoding, including unaligned members. */
 #define STORE_LE16(member, value) do { \
 	((unsigned char *)&(member))[0] = (unsigned char)(value); \
-	((unsigned char *)&(member))[1] = (unsigned char)((value) >> 8); \
+	((unsigned char *)&(member))[1] = (unsigned char)((unsigned short)(value) >> 8); \
 } while (0)
 #define STORE_LE32(member, value) do { \
 	((unsigned char *)&(member))[0] = (unsigned char)(value); \
-	((unsigned char *)&(member))[1] = (unsigned char)((value) >> 8); \
+	((unsigned char *)&(member))[1] = (unsigned char)((unsigned short)(value) >> 8); \
 	((unsigned char *)&(member))[2] = (unsigned char)((value) >> 16); \
 	((unsigned char *)&(member))[3] = (unsigned char)((value) >> 24); \
 } while (0)
@@ -49,7 +49,7 @@ int _prepare_FAT_PBR(AppmgrFatFormatContext *context)
 	parameters->jump[2] = 0x90;
 	parameters->jump[1] = 0xfe;
 	__builtin_memcpy(parameters->oemName, "SCEI    ", 8);
-	parameters->bytesPerSector = context->bytesPerSector;
+	STORE_LE16(parameters->bytesPerSector, context->bytesPerSector);
 	parameters->sectorsPerCluster = context->arguments->clusterSize /
 		context->bytesPerSector;
 	STORE_LE16(parameters->reservedSectorCount, context->reservedSectors);
@@ -85,10 +85,7 @@ int _prepare_FAT_PBR(AppmgrFatFormatContext *context)
 				context->arguments->volumeLabel, 11);
 		}
 	} else {
-		boot->fat16.volumeSerial[0] = context->arguments->serial;
-		boot->fat16.volumeSerial[1] = context->arguments->serial >> 8;
-		boot->fat16.volumeSerial[2] = context->arguments->serial >> 16;
-		boot->fat16.volumeSerial[3] = context->arguments->serial >> 24;
+		STORE_LE32(boot->fat16.volumeSerial, context->arguments->serial);
 		STORE_LE16(parameters->fatSectors16, context->fatSectors);
 		boot->fat16.driveNumber = 0x80;
 		boot->fat16.extendedSignature = 0x29;
@@ -123,13 +120,12 @@ static inline uint64_t _start_lba(AppmgrFatFormatContext *context, int index)
 int zero_fill(AppmgrFatFormatContext *context, unsigned int bufferOffset,
 	      unsigned int length, uint64_t byteOffset, int regionIndex)
 {
-	uint64_t currentLba = context->currentLba;
 	SceOff seekResult;
 	unsigned int capacity, fillSize, written;
 	unsigned char *buffer;
 	int result;
 
-	if (_start_lba(context, regionIndex) != currentLba)
+	if (_start_lba(context, regionIndex) != context->currentLba)
 		byteOffset += (_start_lba(context, regionIndex) - context->currentLba) *
 			context->bytesPerSector;
 	seekResult = sceIoLseek(context->file, byteOffset, SCE_SEEK_SET);
