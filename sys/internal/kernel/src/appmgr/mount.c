@@ -3761,6 +3761,96 @@ cleanup:
 	return result;
 }
 
+/*
+ * Mount a process's add-on content at addcont0: and check its keystone. A game card's
+ * add-on content (gro0:) is mounted first, and the downloaded one over it.
+ */
+int appmgrMountAddCont(SceUID pid, const char *titleId, AppmgrMountHolder *holder,
+		       const AppmgrProcessContent *content, ScePfsRndDriveId *mountPoint)
+{
+	unsigned char keystone[96];
+	SceAllocOpt opt;
+	char *path;
+	unsigned int mountId;
+	int result, gameCard;
+
+	memset(mountPoint, 0, sizeof(*mountPoint));
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 32;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	path = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	if (path == NULL)
+		return (int)0x80801006;
+	if (strncmp(content->appDirectory, "gro0:", 5) == 0) {
+		gameCard = 1;
+		snprintf(path, 292, "gro0:addcont/%s", content->addContTitleIds[0]);
+	} else {
+		result = appmgrGetAddContPath(content, NULL, path, 292);
+		if (result < 0)
+			goto out;
+		gameCard = 0;
+	}
+	result = appmgrMount(pid, holder, 1002, titleId, path, NULL, NULL, mountPoint);
+	if (result == (int)0x80800003)
+		goto out;
+	if (result < 0) {
+		if (!gameCard)
+			goto out;
+		result = appmgrGetAddContPath(content, NULL, path, 292);
+		if (result < 0)
+			goto out;
+		mountId = 1002;
+	} else {
+		ScePfsRndDriveId drive = { .drive_id = "addcont0:" };
+
+		memset(keystone, 0, sizeof(keystone));
+		result = appmgrReadKeystone(pid, drive.drive_id, keystone);
+		if (result < 0)
+			goto unmount;
+		if (timingsafe_memcmp(keystone, content->keystone, sizeof(keystone)) != 0) {
+			result = (int)0x80800006;
+			goto unmount;
+		}
+		if (!gameCard) {
+			result = 0;
+			goto out;
+		}
+		result = appmgrGetAddContPath(content, NULL, path, 292);
+		if (result < 0)
+			goto unmount;
+		mountId = 1003;
+	}
+	result = appmgrMount(pid, holder, mountId, titleId, path, NULL, NULL, mountPoint);
+	if (result == (int)0x80800003)
+		goto out;
+	if (result < 0) {
+		result = 0;
+		goto out;
+	}
+	{
+		ScePfsRndDriveId drive = { .drive_id = "addcont0:" };
+
+		memset(keystone, 0, sizeof(keystone));
+		result = appmgrReadKeystone(pid, drive.drive_id, keystone);
+		if (result < 0)
+			goto unmount;
+		if (timingsafe_memcmp(keystone, content->keystone, sizeof(keystone)) != 0) {
+			result = (int)0x80800006;
+			goto unmount;
+		}
+		result = 0;
+		goto out;
+	}
+unmount:
+	appmgrUnmountDrive(pid, holder, mountPoint->drive_id, 0);
+	memset(mountPoint, 0, sizeof(*mountPoint));
+out:
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, path);
+	return result;
+}
+
 int appmgrResolveLaunchDirectory(const char *path,
 				const AppmgrLaunchOptions *options,
 				const AppmgrMapFile *mapFile, char *output,
