@@ -4421,6 +4421,174 @@ free_path:
 	return result;
 }
 
+static const unsigned char encodedAddcontLicenseDirectory[16] = {
+	(unsigned char)~'l', (unsigned char)~'i', (unsigned char)~'c', (unsigned char)~'e',
+	(unsigned char)~'n', (unsigned char)~'s', (unsigned char)~'e', (unsigned char)~'/',
+	(unsigned char)~'a', (unsigned char)~'d', (unsigned char)~'d', (unsigned char)~'c',
+	(unsigned char)~'o', (unsigned char)~'n', (unsigned char)~'t', 0
+};
+
+static char g_appmgrAddcontLicenseDirectory[32];
+
+/*
+ * Mounts an add-on content directory (acid) of the PFS drive a path resolves to, once its
+ * license under <drive root>/license/addcont is current; a gro0: application retries with
+ * the license on gro0:.
+ */
+int appmgrMountPfsAcidDirectory(const char *drive, const char *directory)
+{
+	SceUID pid = sceKernelGetProcessId();
+	char path[64] = "";
+	char driveName[33];
+	char root[16];
+	char licensePath[128];
+	AppmgrLicenseInfo license;
+	AppmgrPfsMount *mount;
+	struct AppState *app;
+	SceAllocOpt opt;
+	SceUInt64 tick;
+	const char *name, *backslash, *colon;
+	const void *klicensee;
+	char *resolvedPath;
+	int index, permission, isGameCard, result;
+
+	if (directory == NULL || drive == NULL)
+		return 0x80800001;
+	memset(driveName, 0, sizeof(driveName));
+	memset(&license, 0, sizeof(license));
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, pid);
+	if (app == NULL)
+		return 0x80802012;
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 32;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	resolvedPath = sceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	if (resolvedPath == NULL)
+		return 0x80801006;
+	snprintf(path, sizeof(path), "%s%s", drive, directory);
+	pid = sceKernelGetProcessId();
+	permission = sceKernelSetThreadAccessLevel(128);
+	result = SceFios2KernelForDriver_0F456345(pid, 0, path, resolvedPath, 292);
+	sceKernelSetThreadAccessLevel(permission);
+	if (result < 0)
+		goto free;
+	memset(driveName, 0, sizeof(driveName));
+	for (index = 0; ; ) {
+		driveName[index] = resolvedPath[index];
+		if (resolvedPath[index] == ':')
+			break;
+		if (++index == 33) {
+			result = 0x8080000c;
+			goto free;
+		}
+	}
+	driveName[15] = '\0';
+	for (mount = g_appmgrPfsMounts; mount != NULL; mount = mount->next)
+		if (strncmp(mount->mountPoint.drive_id, driveName, 16) == 0)
+			break;
+	if (mount == NULL || mount->mountPoint.drive_id[0] == '\0') {
+		result = 0x80800002;
+		goto free;
+	}
+	result = appmgrCreateDirectories(resolvedPath, 0);
+	if (result < 0)
+		goto free;
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, resolvedPath);
+
+	isGameCard = strncmp(mount->appPath, "gro0:", 5) == 0;
+	if ((app->process.content.contentFlags & 0x10) != 0 &&
+	    appmgrGetFakeNoMemoryCard() == 2) {
+		if (!isGameCard)
+			return 0x80800002;
+		isGameCard = 1;
+	}
+	memset(root, 0, sizeof(root));
+	if (isGameCard) {
+		strncpy(root, "gro0:", sizeof(root));
+	} else {
+		memset(root, 0, sizeof(root));
+		for (index = 0; ; index++) {
+			root[index] = mount->appPath[index];
+			if (root[index] == ':')
+				break;
+			if (index == 15) {
+				result = 0x8080000c;
+				goto retry;
+			}
+		}
+	}
+
+	for (;;) {
+		name = strrchr(mount->appPath, '/');
+		backslash = strrchr(mount->appPath, '\\');
+		colon = strrchr(mount->appPath, ':');
+		if (name <= backslash) {
+			if (backslash <= colon)
+				name = colon != NULL ? colon + 1 : NULL;
+			else
+				name = backslash;
+		}
+		if (name == NULL) {
+			result = 0x8080000c;
+			goto failed;
+		}
+		memset(licensePath, 0, sizeof(licensePath));
+		if (appmgrDecodeString(encodedAddcontLicenseDirectory,
+				       g_appmgrAddcontLicenseDirectory,
+				       sizeof(g_appmgrAddcontLicenseDirectory)) < 0 ||
+		    (unsigned int)snprintf(licensePath, sizeof(licensePath), "%s/%s/%s/%s", root,
+					   g_appmgrAddcontLicenseDirectory, name,
+					   directory) >= sizeof(licensePath)) {
+			result = 0x80800001;
+			goto failed;
+		}
+		result = appmgrReadDirectoryLicense(licensePath, &license);
+		if (result < 0)
+			goto failed;
+		result = SceRtcForDriver_401C0954((SceRtcTick *)&tick);
+		if (result >= 0) {
+			if (tick < license.licStartTime)
+				result = 0x80800018;
+			else if (license.licExpTime < tick)
+				result = 0x80800011;
+			else
+				break;
+		} else if ((license.flags & 2) == 0 &&
+			   license.licExpTime == 0x7FFFFFFFFFFFFFFFULL) {
+			break;
+		}
+failed:
+		if (isGameCard)
+			return result;
+retry:
+		if (strncmp(app->process.content.appDirectory, "gro0:", 5) != 0)
+			return result;
+		isGameCard = 1;
+		memset(root, 0, sizeof(root));
+		strncpy(root, "gro0:", sizeof(root));
+	}
+
+	permission = sceKernelSetThreadAccessLevel(0x40);
+	klicensee = NULL;
+	for (index = 0; index < 16; index++) {
+		if (license.klicense[index] != 0) {
+			klicensee = license.klicense;
+			break;
+		}
+	}
+	result = ScePfsMgrForKernel_4A4A8243(mount->mountPoint.drive_id, directory, klicensee);
+	sceKernelSetThreadAccessLevel(permission);
+	if (result < 0)
+		return result;
+	return ScePfsMgrForKernel_8CDA249A(mount->mountPoint.drive_id, directory);
+
+free:
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, resolvedPath);
+	return result;
+}
+
 int SceAppMgrForDriver_0813AFCA(int partitionId, char *output,
 	unsigned int capacity)
 {
