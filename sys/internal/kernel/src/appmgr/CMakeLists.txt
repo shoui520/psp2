@@ -6,6 +6,7 @@ psp2_module(os0_kd_bootimage_appmgr KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	appmgr_aborthandler.c
 	appmgr_device.c
 	appmgr_shell.c
+	appmgr_system.c
 	appmgr_lock.c
 	appmgr_internal_util.c
 	app_arbitration.c

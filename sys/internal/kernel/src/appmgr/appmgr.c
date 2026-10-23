@@ -20,8 +20,6 @@
 #include "appmgr_savedata_slot.h"
 #include "appmgr_device.h"
 
-extern int _sceAppMgrSystemResume(void);
-extern int _sceAppMgrSystemSuspend(void);
 extern int sceAppMgrInit(void);
 extern SceUID g_appmgrCoreHeap;
 extern SceUID g_appmgrMountHeap;

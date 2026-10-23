@@ -285,6 +285,11 @@ int appmgrResumeBgAppByShell(int appId);
 int appmgrIsPidShellAndCrashed(SceUID pid);
 int appmgrSetShellScreenOrientationSyscall(int orientation);
 int appmgrSetRecommendedScreenOrientationForShellSyscall(int orientation);
+int _sceAppMgrSetPowerSaveModeInternal(int mode, int suspendBackgroundApps);
+
+/* appmgr_system.c */
+int _sceAppMgrSystemSuspend(void);
+int _sceAppMgrSystemResume(void);
 
 /* appmgr_for_debugger.c */
 void appmgrRegisterDebuggerCallbacks(void);
