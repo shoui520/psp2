@@ -166,7 +166,16 @@ int SceAppMgrForDriver_1286AF64(int a, void *id);	/* vitasdk: ksceAppMgrCloudDat
 int SceAppMgrForDriver_EC408FEF(int a);	/* vitasdk: ksceAppMgrCloudDataClearMcId */
 int sceAppMgrGetPfsProcessStatus(void);
 int sceAppMgrIsExclusiveProcessRunning(const void *a);
-int sceAppMgrAcInstGetAcdirParam(const void *a, const void *b, void *c);
+/* an additional content's directory in gro0:acinst: its keystone and title */
+typedef struct SceAppMgrAcdirParam {
+	unsigned char keystone[96];
+	char title[128];
+} SceAppMgrAcdirParam;
+
+_Static_assert(sizeof(SceAppMgrAcdirParam) == 0xe0, "acdir parameters");
+
+int sceAppMgrAcInstGetAcdirParam(const char *titleId, const char *entitlementLabel,
+				 SceAppMgrAcdirParam *param);
 /* vitasdk: ksceAppMgrSaveDataLocalBackupTargetGetList */
 int SceAppMgrForDriver_9B3F7D66(void *list);
 /* vitasdk: ksceAppMgrSaveDataLocalBackupTargetRemoveItem */

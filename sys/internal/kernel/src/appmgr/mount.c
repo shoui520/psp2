@@ -4629,6 +4629,133 @@ free:
 	return result;
 }
 
+/* sce_sys/param.sfo, its terminator encoded too */
+static const unsigned char encodedParamSfo[24] = {
+	(unsigned char)~'s', (unsigned char)~'c', (unsigned char)~'e', (unsigned char)~'_',
+	(unsigned char)~'s', (unsigned char)~'y', (unsigned char)~'s', (unsigned char)~'/',
+	(unsigned char)~'p', (unsigned char)~'a', (unsigned char)~'r', (unsigned char)~'a',
+	(unsigned char)~'m', (unsigned char)~'.', (unsigned char)~'s', (unsigned char)~'f',
+	(unsigned char)~'o', (unsigned char)~'\0', 0
+};
+/* gro0:acinst, its terminator encoded too */
+static const unsigned char encodedAcinstRoot[16] = {
+	(unsigned char)~'g', (unsigned char)~'r', (unsigned char)~'o', (unsigned char)~'0',
+	(unsigned char)~':', (unsigned char)~'a', (unsigned char)~'c', (unsigned char)~'i',
+	(unsigned char)~'n', (unsigned char)~'s', (unsigned char)~'t', (unsigned char)~'\0', 0
+};
+
+static int appmgrIsTitleId(const char *id);
+
+/* An entitlement label: 16 upper case letters and digits. */
+static inline int appmgrIsEntitlementLabel(const char *label)
+{
+	int i;
+
+	for (i = 0; i < 6; i++)
+		if (!APPMGR_IS_UPPER(label[i]) && !APPMGR_IS_DIGIT(label[i]))
+			return 0;
+	for (i = 6; i < 16; i++)
+		if (!APPMGR_IS_DIGIT(label[i]) && !APPMGR_IS_UPPER(label[i]))
+			return 0;
+	return label[16] == '\0';
+}
+
+/*
+ * Mounts the caller's additional content left in gro0:acinst (title ID and entitlement
+ * label), reads its keystone and title, and unmounts it again.
+ */
+int sceAppMgrAcInstGetAcdirParam(const char *titleId, const char *entitlementLabel,
+				 SceAppMgrAcdirParam *param)
+{
+	ScePfsRndDriveId drive = {{0}};
+	AppmgrSfoFile file = {0};
+	struct AppState *app;
+	AppmgrMountHolder *mounts;
+	AppmgrProcessContent *content;
+	void *data = NULL;
+	SceSize length = 0, capacity = 0;
+	SceUInt32 language;
+	char key[32], path[64], root[64], sfoName[64];
+	int result, failed;
+
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		return result;
+	MOUNT_MAIN_LOCK(5675);
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app != NULL) {
+		mounts = &app->process.mounts;
+		content = &app->process.content;
+	} else {
+		mounts = NULL;
+		content = NULL;
+	}
+	MOUNT_MAIN_UNLOCK(5684);
+	if (app == NULL) {
+		result = (int)0x80801002;
+		goto fail;
+	}
+	if (titleId == NULL || !appmgrIsTitleId(titleId) || entitlementLabel == NULL ||
+	    !appmgrIsEntitlementLabel(entitlementLabel) || param == NULL)
+		goto invalid;
+	memset(param, 0, sizeof(*param));
+	if (appmgrDecodeString(encodedAcinstRoot, root, sizeof(root)) < 0 ||
+	    (SceSize)snprintf(path, sizeof(path), "%s/%s", root, titleId) >= sizeof(path))
+		goto invalid;
+	result = appmgrMount(0, mounts, 1002, content->titleId, path, NULL, NULL, &drive);
+	if (result < 0)
+		goto fail;
+	result = appmgrReadKeystone(0, drive.drive_id, param->keystone);
+	if (result < 0)
+		goto unmountDrive;
+	result = appmgrMountPfsAcidDirectory(drive.drive_id, entitlementLabel);
+	if (result < 0)
+		goto unmountDrive;
+	result = appmgrDecodeString(encodedParamSfo, sfoName, sizeof(sfoName));
+	if (result < 0)
+		goto unmountAcid;
+	if ((SceSize)snprintf(path, sizeof(path), "%s/%s/%s/%s", root, titleId,
+			      entitlementLabel, sfoName) >= sizeof(path)) {
+		result = (int)0x80800001;
+		goto unmountAcid;
+	}
+	result = appmgrLoadSfoFile(path, &file);
+	if (result < 0)
+		goto unmountAcid;
+	result = sceRegMgrGetKeyInt("/CONFIG/SYSTEM", "language", (int *)&language);
+	if (result == 0 && language <= 99) {
+		snprintf(key, sizeof(key), "TITLE_%02u", language);
+		result = appmgrGetSfoEntry(&file, key, &data, &length, &capacity);
+		if (result < 0 || length == 0 || capacity != 128)
+			data = NULL;
+	}
+	if (data == NULL) {
+		result = appmgrGetSfoEntry(&file, "TITLE", &data, &length, &capacity);
+		if (result < 0 || length == 0 || capacity != 128)
+			data = NULL;
+	}
+	strncpy(param->title, data != NULL ? data : "", sizeof(param->title) - 1);
+unmountAcid:
+	failed = result < 0;
+	appmgrUnmountPfsAcidDirectory(drive.drive_id, entitlementLabel);
+	goto unmount;
+unmountDrive:
+	failed = 1;
+unmount:
+	appmgrUnmountDrive(0, mounts, drive.drive_id, 0);
+	goto release;
+invalid:
+	result = (int)0x80800001;
+fail:
+	failed = 1;
+release:
+	appmgrReleaseSfoFile(&file);
+	if (param != NULL && failed)
+		memset(param, 0, sizeof(*param));
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+	return result;
+}
+
 int sceAppMgrSaveDataAddMount(const AppmgrAddMountParam *param)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
@@ -4985,14 +5112,6 @@ static const unsigned char encodedTrophyData[16] = {
 	(unsigned char)~'t', (unsigned char)~'r', (unsigned char)~'o', (unsigned char)~'p',
 	(unsigned char)~'h', (unsigned char)~'y', (unsigned char)~'/', (unsigned char)~'d',
 	(unsigned char)~'a', (unsigned char)~'t', (unsigned char)~'a', 0
-};
-/* sce_sys/param.sfo, its terminator encoded too */
-static const unsigned char encodedParamSfo[24] = {
-	(unsigned char)~'s', (unsigned char)~'c', (unsigned char)~'e', (unsigned char)~'_',
-	(unsigned char)~'s', (unsigned char)~'y', (unsigned char)~'s', (unsigned char)~'/',
-	(unsigned char)~'p', (unsigned char)~'a', (unsigned char)~'r', (unsigned char)~'a',
-	(unsigned char)~'m', (unsigned char)~'.', (unsigned char)~'s', (unsigned char)~'f',
-	(unsigned char)~'o', (unsigned char)~'\0', 0
 };
 /* ux0:umass */
 static const unsigned char encodedUmass[16] = {
