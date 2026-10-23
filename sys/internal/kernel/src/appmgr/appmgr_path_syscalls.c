@@ -63,6 +63,11 @@ int appmgrUpdateSaveDataParamSyscall(const char *path)
 	return sceAppMgrUpdateSaveDataParam(path);
 }
 
+int appmgrGetDevInfoSyscall(const char *path, SceOff *maxSize, SceOff *freeSize)
+{
+	return sceAppMgrGetDevInfo(path, maxSize, freeSize);
+}
+
 int appmgrGetUserDirPathSyscall(int partitionId, char *path,
 	unsigned int capacity)
 {

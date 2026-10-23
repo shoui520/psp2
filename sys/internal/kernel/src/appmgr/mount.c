@@ -7015,6 +7015,117 @@ out:
 	return result;
 }
 
+/*
+ * The size and free space of the device of path (its drive up to the colon): ux0:
+ * directly, otherwise one of the calling application's mounts it may query.
+ */
+int sceAppMgrGetDevInfo(const char *path, SceOff *maxSize, SceOff *freeSize)
+{
+	SceUInt32 syscallState;
+	SceIoDevInfo info;
+	char drive[16];
+	char resolvedPath[64];
+	struct AppState *app;
+	AppmgrVirtualMount *mount;
+	SceUID pid;
+	int permission, result;
+
+	syscallState = sceSyscallEnter();
+	__builtin_memset(&info, 0, sizeof(info));
+	if (path == NULL)
+		goto invalid;
+	__builtin_memset(drive, 0, sizeof(drive));
+#define COPY_DRIVE_CHAR(index) \
+	if ((drive[index] = path[index]) == ':') \
+		goto lock; \
+	if (drive[index] == '\0') \
+		goto invalid
+	COPY_DRIVE_CHAR(0);
+	COPY_DRIVE_CHAR(1);
+	COPY_DRIVE_CHAR(2);
+	COPY_DRIVE_CHAR(3);
+	COPY_DRIVE_CHAR(4);
+	COPY_DRIVE_CHAR(5);
+	COPY_DRIVE_CHAR(6);
+	COPY_DRIVE_CHAR(7);
+	COPY_DRIVE_CHAR(8);
+	COPY_DRIVE_CHAR(9);
+	COPY_DRIVE_CHAR(10);
+	COPY_DRIVE_CHAR(11);
+	COPY_DRIVE_CHAR(12);
+	COPY_DRIVE_CHAR(13);
+	if ((drive[14] = path[14]) == ':')
+		goto lock;
+#undef COPY_DRIVE_CHAR
+	goto invalid;
+
+lock:
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto out;
+	if (strncmp(drive, "ux0:", 5) == 0) {
+		permission = sceKernelSetThreadAccessLevel(128);
+		result = sceIoDevctl(drive, 0x3001, NULL, 0, &info, sizeof(info));
+		sceKernelSetThreadAccessLevel(permission);
+		if (result < 0)
+			goto unlock;
+		goto copy;
+	}
+	app = appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId());
+	if (app == NULL) {
+		result = 0x80801002;
+		goto unlock;
+	}
+	for (mount = app->process.mounts.firstMount; mount != NULL; mount = mount->next) {
+		if (strncmp(mount->driveId.drive_id, drive, 16) == 0)
+			break;
+	}
+	if (mount == NULL) {
+		result = 0x80010013;
+		goto unlock;
+	}
+	switch (mount->pfsMount->mountId) {
+	case 108:
+		break;
+	case 205:
+		if (SceSblACMgrForDriver_456DA7AC(0) == 0)
+			goto denied;
+		break;
+	case 112:
+	case 600:
+		if (SceSblACMgrForDriver_6C5AB07F(0) == 0)
+			goto denied;
+		break;
+	default:
+	denied:
+		result = 0x80800009;
+		goto unlock;
+	}
+	pid = sceKernelGetProcessId();
+	permission = sceKernelSetThreadAccessLevel(128);
+	result = SceFios2KernelForDriver_0F456345(pid, 0, drive, resolvedPath, sizeof(resolvedPath));
+	sceKernelSetThreadAccessLevel(permission);
+	if (result < 0)
+		goto unlock;
+	result = sceIoDevctl(resolvedPath, 0x3001, NULL, 0, &info, sizeof(info));
+	if (result < 0)
+		goto unlock;
+copy:
+	if (maxSize != NULL)
+		*maxSize = info.maxSize;
+	if (freeSize != NULL)
+		*freeSize = info.freeSize;
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+out:
+	sceSyscallLeave(syscallState);
+	return result;
+
+invalid:
+	result = 0x80800001;
+	goto out;
+}
+
 int appmgrResolvePath(const char *path, SceUID pid, char *output, SceSize size)
 {
 	int permission, result;

@@ -478,6 +478,7 @@ int appmgrLoadSaveDataSystemFileSyscall(const char *path, void *buffer, SceSize 
 int appmgrGetMediaTypeFromDriveSyscall(const char *drive, int *mediaType);
 int appmgrGetMediaTypeFromDriveByPidSyscall(SceUID pid, const char *drive, int *mediaType);
 int appmgrUpdateSaveDataParamSyscall(const char *path);
+int appmgrGetDevInfoSyscall(const char *path, SceOff *maxSize, SceOff *freeSize);
 int appmgrGetUserDirPathSyscall(int partitionId, char *path, unsigned int capacity);
 int appmgrGetUserDirPathByIdSyscall(int userId, int partitionId, char *path, unsigned int capacity);
 int appmgrAddContMountSyscall(SceUID pid, const struct AppmgrAddContMountParam *param);
