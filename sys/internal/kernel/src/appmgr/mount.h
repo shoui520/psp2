@@ -60,6 +60,10 @@ int sceAppMgrIsDevelopmentMode(void);
 int appmgrIsMediaDriveMountable(int mountId, SceUInt32 contentFlags);
 int appmgrGetAddcontTitleId(const char *sfoPath, char *titleId);
 int appmgrMakeRandomDriveId(const char *prefix, char *driveId);
+int appmgrNormalizePath(const char *path, char *normalized);
+struct AppmgrProcessContent;
+int appmgrReadParamSfo(SceUID pid, const char *path, int isSfoPath,
+		       struct AppmgrProcessContent *content);
 int appmgrGetVs0UserModuleDrive(char *mountPoint);
 int appmgrGetVs0UserDataDrive(char *mountPoint);
 int appmgrConvertVs0UserDrivePath(const char *path, char *output, SceSize size);

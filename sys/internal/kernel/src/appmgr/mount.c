@@ -162,7 +162,7 @@ int appmgrGetAddcontTitleId(const char *sfoPath, char *titleId)
 	int result;
 
 	if (titleId == NULL) {
-		result = (int)0x80801001;
+		result = (int)0x80800001;
 		goto release;
 	}
 	memset(titleId, 0, 16);
@@ -183,7 +183,7 @@ int appmgrGetAddcontTitleId(const char *sfoPath, char *titleId)
 	result = 0;
 	goto release;
 badData:
-	result = (int)0x80801034;
+	result = (int)0x80800034;
 release:
 	appmgrReleaseSfoFile(&file);
 	return result;
@@ -326,6 +326,282 @@ void appmgrUpdateAccountDirectory(void)
 	g_appmgrAccountDirectory[0] = tens;
 	g_appmgrAccountDirectory[1] = units;
 	g_appmgrAccountDirectory[2] = 0;
+}
+
+/* A title ID of param.sfo (10 bytes in a 12-byte field) or the application's own. */
+#define SFO_TITLE_ID_OK(_length, _capacity) ((_length) > 9 && (_capacity) == 12)
+
+/*
+ * Reads an application's param.sfo into its process content: the category and
+ * title IDs, the attributes, and for a resolved application path (not an SFO
+ * path given directly) the version, save data, install directories, content
+ * and NP IDs and the titles in the system language.
+ */
+int appmgrReadParamSfo(SceUID pid, const char *path, int isSfoPath,
+		       AppmgrProcessContent *content)
+{
+	AppmgrSfoFile file = {0};
+	void *data = NULL;
+	SceSize length = 0, capacity = 0;
+	SceUInt32 language;
+	char key[32];
+	const char *category;
+	SceUInt32 attribute, value;
+	int permission, index, result;
+
+	memset(g_appmgrDirectoryPath, 0, sizeof(g_appmgrDirectoryPath));
+	if (pid == 0)
+		pid = sceKernelGetProcessId();
+	SceKernelSuspendForDriver_4DF40893(0);
+	if (isSfoPath) {
+		strncpy(g_appmgrDirectoryPath, path, sizeof(g_appmgrDirectoryPath));
+		result = appmgrLoadSfoFile(g_appmgrDirectoryPath, &file);
+		if (result < 0)
+			goto out;
+	} else {
+		permission = sceKernelSetThreadAccessLevel(128);
+		result = SceFios2KernelForDriver_0F456345(pid, 0, path, g_appmgrDirectoryPath,
+							  sizeof(g_appmgrDirectoryPath));
+		sceKernelSetThreadAccessLevel(permission);
+		if (result != 0)
+			goto out;
+		result = appmgrLoadSfoFile(g_appmgrDirectoryPath, &file);
+		if (result < 0)
+			goto out;
+		if ((content->contentFlags & 1) == 0)
+			goto readAttributes;
+	}
+	result = appmgrGetSfoEntry(&file, "CATEGORY", &data, &length, &capacity);
+	if (result < 0)
+		goto out;
+	if (length <= 2 || capacity != 4)
+		goto badData;
+	category = data;
+	if (strncmp(category, appmgrProgramCategories[0], 4) == 0) {
+		if (content->contentFlags & 1)
+			strncpy(content->category, appmgrProgramCategories[1], 4);
+	} else if (strncmp(category, appmgrProgramCategories[2], 4) == 0) {
+		if (content->contentFlags & 1)
+			__builtin_memcpy(content->category, appmgrProgramCategories[3], 4);
+	} else if (strncmp(category, appmgrProgramCategories[4], 4) == 0) {
+		if (content->contentFlags & 1)
+			__builtin_memcpy(content->category, appmgrProgramCategories[5], 4);
+	} else {
+		strncpy(content->category, category, 4);
+		content->category[3] = '\0';
+	}
+	result = appmgrGetSfoEntry(&file, "TITLE_ID", &data, &length, &capacity);
+	if (result < 0)
+		goto out;
+	if (!SFO_TITLE_ID_OK(length, capacity))
+		goto badData;
+	strncpy(content->titleId, data, 10);
+	content->titleId[9] = '\0';
+	__builtin_memcpy(content->patchTitleId, content->titleId, 16);
+	__builtin_memcpy(content->originalTitleId, content->titleId, 16);
+
+readAttributes:
+	if (appmgrGetSfoEntry(&file, "ATTRIBUTE", &data, &length, &capacity) >= 0 &&
+	    length > 3 && capacity == 4) {
+		if (isSfoPath) {
+			content->attribute = *(const SceUInt32 *)data;
+		} else {
+			attribute = content->attribute;
+			value = *(const SceUInt32 *)data;
+			value = (attribute & 1) ? value | 1 : value & ~1U;
+			content->attribute = value;
+			value = (attribute & 0x100000) ? value | 0x100000 : value & ~0x100000U;
+			content->attribute = value;
+		}
+	} else {
+		content->attribute = 0;
+	}
+	if (appmgrGetSfoEntry(&file, "ATTRIBUTE2", &data, &length, &capacity) >= 0 &&
+	    length > 3 && capacity == 4)
+		content->attribute2 = *(const SceUInt32 *)data;
+	else
+		content->attribute2 = 0;
+	if (appmgrGetSfoEntry(&file, "ATTRIBUTE_MINOR", &data, &length, &capacity) >= 0 &&
+	    length > 3 && capacity == 4) {
+		content->attributeMinorMode = *(const SceUInt32 *)data & 3;
+		content->attributeMinor = *(const SceUInt32 *)data;
+	} else {
+		content->attributeMinorMode = 0;
+		content->attributeMinor = 0;
+	}
+	if (isSfoPath)
+		goto done;
+
+	if (appmgrGetSfoEntry(&file, "APP_VER", &data, &length, &capacity) < 0 ||
+	    length <= 5 || capacity != 8)
+		content->appVersion = 0;
+	content->appVersion = appmgrParseSfoVersion(data);
+	if (appmgrGetSfoEntry(&file, "SAVEDATA_MAX_SIZE", &data, &length, &capacity) >= 0 &&
+	    length > 3 && capacity == 4)
+		content->savedataMaxSize = *(const SceUInt32 *)data;
+	else
+		content->savedataMaxSize = 0;
+	if (appmgrGetSfoEntry(&file, "SAFEMEMORY_MODE", &data, &length, &capacity) >= 0 &&
+	    length > 3 && capacity == 4)
+		content->safeMemoryMode = *(const SceInt32 *)data;
+	else
+		content->safeMemoryMode = 0;
+
+	if (appmgrGetSfoEntry(&file, "INSTALL_DIR_SAVEDATA", &data, &length, &capacity) >= 0 &&
+	    SFO_TITLE_ID_OK(length, capacity)) {
+		strncpy(content->saveDataTitleIds[0], data, 10);
+		content->saveDataTitleIds[0][9] = '\0';
+	} else {
+		__builtin_memcpy(content->saveDataTitleIds[0], content->titleId, 16);
+	}
+	for (index = 1; index != 8; index++) {
+		char *titleId = content->saveDataTitleIds[index];
+
+		snprintf(key, sizeof(key), "INSTALL_DIR_SAVEDATA_ADD_%d", index);
+		__builtin_memset(titleId, 0, 10);
+		if (appmgrGetSfoEntry(&file, key, &data, &length, &capacity) >= 0 &&
+		    SFO_TITLE_ID_OK(length, capacity))
+			strncpy(titleId, data, 9);
+	}
+	if (appmgrGetSfoEntry(&file, "INSTALL_DIR_ADDCONT", &data, &length, &capacity) >= 0 &&
+	    SFO_TITLE_ID_OK(length, capacity)) {
+		strncpy(content->addContTitleIds[0], data, 10);
+		content->addContTitleIds[0][9] = '\0';
+	} else {
+		__builtin_memcpy(content->addContTitleIds[0], content->titleId, 16);
+	}
+	for (index = 1; index != 8; index++) {
+		char *titleId = content->addContTitleIds[index];
+
+		snprintf(key, sizeof(key), "INSTALL_DIR_ADDCONT_ADD_%d", index);
+		__builtin_memset(titleId, 0, 10);
+		if (appmgrGetSfoEntry(&file, key, &data, &length, &capacity) >= 0 &&
+		    SFO_TITLE_ID_OK(length, capacity))
+			strncpy(titleId, data, 9);
+	}
+
+	if (appmgrGetSfoEntry(&file, "CONTENT_ID", &data, &length, &capacity) >= 0 &&
+	    length > 36 && capacity == 48)
+		strncpy(content->contentId, data, 48);
+	else
+		strncpy(content->contentId, "", 48);
+	content->contentId[47] = '\0';
+	if (appmgrGetSfoEntry(&file, "NP_COMMUNICATION_ID", &data, &length, &capacity) >= 0 &&
+	    length > 12 && capacity == 16)
+		strncpy(content->npCommunicationId, data, 13);
+	else
+		strncpy(content->npCommunicationId, "", 13);
+	content->npCommunicationId[12] = '\0';
+
+	result = sceRegMgrGetKeyInt("/CONFIG/SYSTEM", "language", (int *)&language);
+	if (result != 0 || language > 99)
+		goto done;
+	snprintf(key, sizeof(key), "TITLE_%02u", language);
+	if (!((appmgrGetSfoEntry(&file, key, &data, &length, &capacity) >= 0 &&
+	       length != 0 && capacity == 128) ||
+	      (appmgrGetSfoEntry(&file, "TITLE", &data, &length, &capacity) >= 0 &&
+	       length != 0 && capacity == 128)))
+		data = NULL;
+	if (data != NULL)
+		strncpy(content->title, data, 128);
+	else
+		strncpy(content->title, "", 128);
+	content->title[127] = '\0';
+	snprintf(key, sizeof(key), "STITLE_%02u", language);
+	if (!((appmgrGetSfoEntry(&file, key, &data, &length, &capacity) >= 0 &&
+	       length != 0 && capacity == 52) ||
+	      (appmgrGetSfoEntry(&file, "STITLE", &data, &length, &capacity) >= 0 &&
+	       length != 0 && capacity == 52)))
+		data = NULL;
+	if (data != NULL)
+		strncpy(content->shortTitle, data, 52);
+	else
+		strncpy(content->shortTitle, "", 52);
+	content->shortTitle[51] = '\0';
+done:
+	result = 0;
+	goto out;
+badData:
+	result = (int)0x80800034;
+out:
+	appmgrReleaseSfoFile(&file);
+	SceKernelSuspendForDriver_2BB92967(0);
+	return result;
+}
+
+/*
+ * Copies a path (shorter than 292) with each run of slashes made one, a
+ * trailing slash dropped and a slash after the drive's colon; ".." is refused.
+ * host0: paths are copied as they are.
+ */
+int appmgrNormalizePath(const char *path, char *normalized)
+{
+	unsigned int out = 0;
+	int in = 0;
+	char *slash;
+	char c;
+
+	if (normalized == NULL || path == NULL) {
+		if (normalized != NULL)
+			goto invalid;
+		return (int)0x80800001;
+	}
+	if (strnlen(path, 292) >= 292)
+		goto invalid;
+	memset(normalized, 0, 292);
+	if (strncmp(path, "host0:", 6) == 0) {
+		strncpy(normalized, path, 291);
+		return 0;
+	}
+	c = path[0];
+	if (c == '\0')
+		return 0;
+	for (;;) {
+		if (c == ':') {
+			normalized[out] = c;
+			c = path[++in];
+			if (c != '/') {
+				if (out == 291)
+					goto invalid;
+				normalized[out + 1] = '/';
+				out += 2;
+				c = path[in];
+			} else {
+				out++;
+			}
+		} else if (c == '/') {
+			slash = &normalized[out];
+			*slash = '/';
+			out++;
+			do {
+				c = path[++in];
+			} while (c == '/');
+			if (c == '\0') {
+				*slash = '\0';
+				c = path[in];
+			}
+		} else {
+			in++;
+			if (c == '.') {
+				normalized[out++] = '.';
+				c = path[in];
+				if (c == '.')
+					goto invalid;
+			} else {
+				normalized[out++] = c;
+				c = path[in];
+			}
+		}
+		if (c == '\0')
+			break;
+		if (out >= 292)
+			goto invalid;
+	}
+	if (out < 292)
+		return 0;
+invalid:
+	*normalized = '\0';
+	return (int)0x80800001;
 }
 
 char *appmgrAllocMountPath(void)
