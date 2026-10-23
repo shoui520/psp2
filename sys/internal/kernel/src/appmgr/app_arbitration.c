@@ -1213,6 +1213,63 @@ int _sceAppMgrAppStateReserve(struct AppState **out, const char *name, const cha
 	return 0;
 }
 
+/*
+ * Reserves a slot for an application launched by name and keeps the caller's extra
+ * parameters (at most 6 KiB) for it; the launch itself is left to the shell, which
+ * the queued event tells. Returns the new application's ID.
+ */
+int sceAppMgrLaunchAppByNameInternal(SceUInt32 launchMode, const SceChar8 *name,
+		const char *param, SceUID launchCallbackId, SceUID paramCallbackId,
+		int creatorAppId, SceUInt32 evictionThresholdClass, const void *extraParam,
+		SceSize extraParamSize, SceUInt32 resumeCreatorOnLaunchFailure)
+{
+	struct AppState *app;
+	SceUID owner, creatorPid;
+	int hasExtraParam, result;
+
+	owner = g_appmgrMainMutexOwner;
+	DELETE_APP_ASSERT(owner != sceKernelGetThreadId(), 1847, "sceAppMgrLaunchAppByNameInternal");
+	if (!(launchMode & 0x100000)) {
+		if (name == NULL)
+			return 0x80802016;
+		if (name[0] == '\0')
+			return 0x8080201a;
+	}
+	if (evictionThresholdClass > 4)
+		return 0x8080201a;
+	hasExtraParam = extraParam != NULL;
+	if (extraParamSize > sizeof(g_appmgrExtraAppParam.arguments) && hasExtraParam)
+		return 0x8080201a;
+	app = NULL;
+	result = _sceAppMgrAppStateReserve(&app, (const char *)name, param, paramCallbackId, launchMode,
+		launchCallbackId, creatorAppId, evictionThresholdClass,
+		resumeCreatorOnLaunchFailure);
+	if (result != 0)
+		return result;
+	DELETE_APP_MAIN_LOCK(1884, "sceAppMgrLaunchAppByNameInternal");
+	if (extraParamSize != 0 && hasExtraParam) {
+		app->extraAppParamAllowed = 1;
+		memset(&g_appmgrExtraAppParam, 0, sizeof(g_appmgrExtraAppParam));
+		result = sceKernelCopyFromUser(&g_appmgrExtraAppParam, extraParam, extraParamSize);
+		if (result != 0) {
+			creatorPid = -1;
+			appmgrClearFailedAppLaunch(app, result, &creatorPid);
+			DELETE_APP_MAIN_UNLOCK(1895, "sceAppMgrLaunchAppByNameInternal");
+			if (creatorPid >= 0)
+				sendResumeToPid(creatorPid);
+			return result;
+		}
+		g_appmgrExtraAppParam.argumentSize = extraParamSize;
+		if (appmgrFindAppByProcessId(g_appmgrAppStates, sceKernelGetProcessId()) != NULL)
+			__builtin_memcpy(g_appmgrExtraAppParam.appName, app->process.appName,
+				sizeof(g_appmgrExtraAppParam.appName));
+	}
+	_shellEventOnAppLaunchByNameQueuePush(app->appId, app->appId);
+	result = app->appId;
+	DELETE_APP_MAIN_UNLOCK(1910, "sceAppMgrLaunchAppByNameInternal");
+	return result;
+}
+
 /* The two Sony media helpers are inlined twice into the listener. */
 #define GC_SUSPEND_MEDIA(_func, _lockLine, _mainLine, _unlockLine, \
 		_suspendLine, _appUnlockLine, _waitLine, _checkLine, \
