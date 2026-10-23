@@ -140,7 +140,7 @@ struct AppState {
 	SceUID launchCallbackId;
 	SceUInt64 quitStartTime;
 	SceInt16 quitRequested;
-	SceUInt16 relaunchPending;
+	SceInt16 relaunchPending;
 	SceUInt32 unusedLaunchMarker;
 	SceUInt32 protectionMode;
 	SceUID mutex;
@@ -258,9 +258,6 @@ typedef int (*AppmgrDebugNotifier)(int event, int arg1, int arg2, int arg3);
 
 extern AppmgrDebugNotifier g_appmgrDebugNotifier;
 
-/* app_arbitration.c */
-void initProcessStateUpdaterThread(void);
-
 /* appmgr.c */
 int appmgrReturnSuccess(void);
 
@@ -288,7 +285,23 @@ int appmgrSetRecommendedScreenOrientationForShellSyscall(int orientation);
 int _sceAppMgrSetPowerSaveModeInternal(int mode, int suspendBackgroundApps);
 
 /* app_arbitration.c */
+
+/* what _spawnApp takes on the stack SceThreadmgrForDriver_E54FD746 gives it */
+typedef struct AppmgrSpawnAppParam {
+	struct AppState *app;
+	const struct SceKernelProcessOpt *opt;
+	const AppmgrLaunchOptions *options;
+	int started;			/* the application ran before: start it again */
+	const AppmgrCreateProcessParam *createParam;
+	int *error;
+} AppmgrSpawnAppParam;
+
 int _sceAppMgrDeleteAppInternal(struct AppState *app);
+int _applicationShouldMakeRun(struct AppState *app);
+int relaunchApp(struct AppState *app, SceUID pid);
+int _updateAppOnPowerTickState(struct AppState *app);
+int _spawnApp(void *argument);
+void initProcessStateUpdaterThread(void);
 
 /* appmgr_system.c */
 int _sceAppMgrSystemSuspend(void);

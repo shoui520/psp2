@@ -1,5 +1,6 @@
 /* Application launch and arbitration helpers. */
 
+#include <fw.h>
 #include <sysmem/debug.h>
 #include <sysmem/barrier.h>
 #include <threadmgr/threadmgr.h>
@@ -16,6 +17,8 @@
 #include "appmgr_device.h"
 #include "appmgr_internal_util.h"
 #include "appmgr_shell_event.h"
+#include <sysmem/sblaimgr.h>
+#include <acmgr/acmgr.h>
 
 extern SceUID g_appmgrMainMutexOwner;
 
@@ -25,6 +28,9 @@ extern int _gcListenerThreadEntry(SceSize args, void *argp);
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrCore2Mutex;
 extern SceUID g_appmgrCore2MutexOwner;
+extern int g_appmgrSystemSuspended;
+extern int g_appmgrPowerSaveMode;
+extern int g_appmgrPowerSaveSuspendBackgroundApps;
 extern int g_appmgrAvailableFD;
 extern int g_appmgrAvailableDIR;
 extern int g_appmgrAvailablePrimaryResourceQuota;
@@ -270,13 +276,13 @@ int _sceAppMgrDeleteAppInternal(struct AppState *app)
 {
 	struct AppmgrWaitObject *unloadWaiter;
 	SceUInt32 budgetType, requestedProcessState;
-	SceUID budgetId;
+	SceUID budgetId, owner;
 	int maxFD, permission, result;
 
 	DELETE_APP_ASSERT(app != NULL && app->mutexOwner == sceKernelGetThreadId(), 2345,
 		"_sceAppMgrDeleteAppInternal");
-	DELETE_APP_ASSERT(g_appmgrMainMutexOwner != sceKernelGetThreadId(), 2346,
-		"_sceAppMgrDeleteAppInternal");
+	owner = g_appmgrMainMutexOwner;
+	DELETE_APP_ASSERT(owner != sceKernelGetThreadId(), 2346, "_sceAppMgrDeleteAppInternal");
 	DELETE_APP_MAIN_LOCK(2348, "_sceAppMgrDeleteAppInternal");
 	if (appmgrGetAppRunStatus(app) != 0x800)
 		return (int)0x80802013;
@@ -325,6 +331,125 @@ int _sceAppMgrDeleteAppInternal(struct AppState *app)
 	if (unloadWaiter != NULL)
 		appmgrUtilWaitObjectNotify(unloadWaiter);
 	return 0;
+}
+
+/* whether the application runs now: not while the system sleeps, nor in power save mode */
+int _applicationShouldMakeRun(struct AppState *app)
+{
+	SceUInt32 attributes;
+	int run;
+
+	DELETE_APP_MAIN_LOCK(2853, "_applicationShouldMakeRun");
+	if (g_appmgrSystemSuspended) {
+		run = 0;
+	} else {
+		attributes = app->launchInfo.processAttr;
+		if (attributes & 1)
+			run = 1;
+		else if (attributes & 2)
+			run = SceSblAIMgrForDriver_71608CA3() && g_appmgrPowerSaveMode ?
+				!g_appmgrPowerSaveSuspendBackgroundApps : 1;
+		else if (!g_appmgrPowerSaveMode)
+			run = 1;
+		else
+			run = g_appmgrPowerSaveSuspendBackgroundApps ? 0 :
+				app->process.runWhenUiOverlay;
+	}
+	DELETE_APP_MAIN_UNLOCK(2883, "_applicationShouldMakeRun");
+	return run;
+}
+
+#if FW_SINCE(0x04000000)
+/* spawns the application again in place of the process that just ended, pid */
+int relaunchApp(struct AppState *app, SceUID pid)
+{
+	AppmgrSpawnAppParam param;
+	SceKernelProcessOpt opt;
+	struct {
+		SceUInt32 reserved[4];
+		char reservedBuffer[128];
+	} unused;
+	SceUID owner;
+	int error, result;
+
+	DELETE_APP_ASSERT(app != NULL && app->mutexOwner == sceKernelGetThreadId(), 1779,
+		"relaunchApp");
+	owner = g_appmgrMainMutexOwner;
+	DELETE_APP_ASSERT(owner != sceKernelGetThreadId(), 1780, "relaunchApp");
+	DELETE_APP_ASSERT(app->relaunchPending != 0, 1782, "relaunchApp");
+	app->relaunchPending = 0;
+	app->relaunchInProgress = 1;
+	memset(unused.reservedBuffer, 0, sizeof(unused.reservedBuffer));
+	unused.reserved[0] = 0;
+	unused.reserved[1] = 0;
+	unused.reserved[2] = 0;
+	unused.reserved[3] = 0;
+	param.started = appmgrGetAppRunState(app) == 2;
+	memset(&opt, 0, sizeof(opt));
+	opt.flags = 0x20000;
+	opt.kind = 1;
+	opt.prevPid = pid;
+	param.app = app;
+	param.opt = &opt;
+	param.options = &app->launchOptions;
+	param.createParam = NULL;
+	param.error = &error;
+	result = (int)SceThreadmgrForDriver_E54FD746(0x4000, _spawnApp, &param);
+	if (result != 0)
+		SceProcessmgrForKernel_344DDE0B(pid, result);
+	else
+		_updateDeviceArbitration2();
+	return result;
+}
+#endif
+
+/* runs or suspends the application as the power state now asks */
+int _updateAppOnPowerTickState(struct AppState *app)
+{
+	SceUInt32 requestedProcessState;
+	int result;
+
+	if (app != NULL && (app->state & 0xff0) == 0x700)
+		return 0;
+	if (_applicationShouldMakeRun(app)) {
+		result = sceKernelLockMutex(g_appmgrMainMutex, 1, NULL);
+#if FW_DEBUG
+		if (result != 0) {
+			SCE_DBG_PRINTF_FUNC(0, 4306, "_updateAppOnPowerTickState",
+				"Failed to lock ret=0x%08x\n", result);
+			sceAppMgrDump();
+			dumpBgmState();
+			SCE_DBG_ASSERT_CHECK_FUNC(0, 4306, "_updateAppOnPowerTickState");
+		} else {
+			sceKernelGetThreadId();
+		}
+#else
+		if (result != 0)
+			appmgrGcListenerMutexPanic();
+		sceKernelGetThreadId();
+#endif
+		g_appmgrMainMutexOwner = -1;
+		requestedProcessState = app->process.requestedProcessState;
+		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
+#if FW_DEBUG
+		if (result != 0)
+			DELETE_APP_FAILURE(result, 0, 4308, "_updateAppOnPowerTickState");
+#else
+		if (result != 0)
+			appmgrGcListenerMutexPanic();
+#endif
+		if (requestedProcessState == 3)
+			return _appmgrProcessStartProcess(app);
+		result = sceKernelSignalSema(g_appmgrUpdateNotifySemaphore, 1);
+		DELETE_APP_CHECK(result, 0, 4317, "_updateAppOnPowerTickState");
+		return result;
+	}
+	if (SceSblACMgrForDriver_E87D1777() && SceProcessmgrForDriver_C715591F())
+		return 0;
+	_appListSetRunStatus(app, 0x20);
+	result = _appmgrProcessSuspendProcess(app, 0, NULL);
+	DELETE_APP_CHECK(result, 0, 4332, "_updateAppOnPowerTickState");
+	return result;
 }
 
 #if FW_DEBUG

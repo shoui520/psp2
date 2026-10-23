@@ -380,7 +380,7 @@ int _sceAppMgrProcTerminatedHandler(SceUID pid)
 		app->exitReason,
 		(app->launchMode & 0x40000) ? app->launchSourceProcessId : -1,
 		(app->launchMode & 0x40000) ? app->launchSourceAppId : -1,
-		(short)app->relaunchPending, app->process.appName);
+		app->relaunchPending, app->process.appName);
 	g_appmgrMainMutexOwner = -1;
 	result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
 #if FW_DEBUG
