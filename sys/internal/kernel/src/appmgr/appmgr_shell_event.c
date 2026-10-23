@@ -98,7 +98,13 @@ int appmgrRemoveShellEventAtIndex(int index)
 	return 0;
 }
 
-static void _shellEventQueueRemoveEventAll(int eventType)
+/* 4.00 keeps it a function; before, Sony's compiler inlined it into both callers. */
+#if FW_SINCE(0x04000000)
+static void
+#else
+static inline __attribute__((always_inline)) void
+#endif
+_shellEventQueueRemoveEventAll(int eventType)
 {
 	SceUID owner = g_appmgrMainMutexOwner;
 

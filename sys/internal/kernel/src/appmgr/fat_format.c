@@ -1420,8 +1420,9 @@ static inline void appmgrClearFatEntries(AppmgrFatFormatContext *context,
 }
 
 #if !FW_DEBUG
-static inline int device_fd_write(AppmgrFatFormatContext *context,
-	const void *buffer, unsigned int size, uint64_t byteOffset)
+static inline __attribute__((always_inline))
+int device_fd_write(AppmgrFatFormatContext *context, const void *buffer, unsigned int size,
+		    uint64_t byteOffset)
 {
 	SceOff position;
 	AppmgrFatFormatArguments *arguments;
@@ -2687,7 +2688,8 @@ static inline int appmgrFatNotifyTransferred(AppmgrFatFormatContext *context, in
 	return result;
 }
 
-static inline int appmgrFatNotifyWrite(AppmgrFatFormatContext *context, int result)
+static inline __attribute__((always_inline))
+int appmgrFatNotifyWrite(AppmgrFatFormatContext *context, int result)
 {
 	AppmgrFatFormatArguments *arguments;
 	AppmgrFatFormatNotification notification;
