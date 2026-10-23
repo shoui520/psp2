@@ -300,6 +300,7 @@ int _sceAppMgrDeleteAppInternal(struct AppState *app);
 int _applicationShouldMakeRun(struct AppState *app);
 int relaunchApp(struct AppState *app, SceUID pid);
 int _updateAppOnPowerTickState(struct AppState *app);
+int findAndLockLeastValuableMiniApp2(struct AppState **out, int maxValue);
 int _spawnApp(void *argument);
 void initProcessStateUpdaterThread(void);
 

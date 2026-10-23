@@ -483,6 +483,9 @@ void sendResumeToPid(SceUID pid)
 }
 #endif
 
+#if !FW_DEBUG
+inline __attribute__((always_inline, gnu_inline))
+#endif
 int getMiniAppValue(struct AppState *app)
 {
 	SceUID owner = g_appmgrMainMutexOwner;
@@ -519,6 +522,7 @@ int getMiniAppValue(struct AppState *app)
 		value += 100;
 	return app->baseMiniEvictionValue + value;
 }
+
 
 #if FW_DEBUG
 #define GC_FAILURE(_value, _line, _func) do { \
@@ -614,6 +618,100 @@ int getMiniAppValue(struct AppState *app)
 #define GC_APP_UNLOCK_CHECK(_line, _func) do { } while (0)
 #define GC_PREFETCH_APP(_app) __builtin_prefetch(&(_app)[2].mutex)
 #endif
+
+#if FW_DEBUG
+#define MINI_APP_PREFETCH	4
+#else
+#define MINI_APP_PREFETCH	3
+#endif
+
+/*
+ * Locks the suspended mini application worth least (at most maxValue), or the
+ * one already being killed; 0x80803002 when an application that may not be
+ * killed is being killed.
+ */
+int findAndLockLeastValuableMiniApp2(struct AppState **out, int maxValue)
+{
+	struct AppState *current, *app;
+	SceUID owner, pid;
+	int leastValue = -1, index = -1, killing = 0;
+	int i, status, value, result;
+
+	owner = g_appmgrMainMutexOwner;
+	DELETE_APP_ASSERT(owner != sceKernelGetThreadId(), 261,
+		"findAndLockLeastValuableMiniApp2");
+retry:
+	DELETE_APP_MAIN_LOCK(267, "findAndLockLeastValuableMiniApp2");
+	current = appmgrFindAppByName(g_appmgrAppStates, NULL);
+	for (i = appmgrGetShellApp() != NULL; i <= 19; i++) {
+		app = &g_appmgrAppStates[i];
+		if (app == current)
+			continue;
+		__builtin_prefetch(&g_appmgrAppStates[i + MINI_APP_PREFETCH].process.processId);
+		if (app->process.processId < 0 || !(app->process.processId & 1) ||
+		    app->launchInfo.budgetSize == 0)
+			continue;
+		status = appmgrGetAppRunStatus(app);
+		if ((status == 32 || status == 16 || status == 48) && !killing) {
+			value = getMiniAppValue(app);
+			if (value <= maxValue && (index == -1 || value < leastValue)) {
+				leastValue = value;
+				index = i;
+			}
+			continue;
+		}
+		if (status == 128) {
+			if (!(app->launchInfo.processAttr & 2)) {
+				DELETE_APP_MAIN_UNLOCK(306, "findAndLockLeastValuableMiniApp2");
+				return 0x80803002;
+			}
+			index = i;
+			killing = 1;
+		}
+	}
+	pid = index == -1 ? -1 : g_appmgrAppStates[index].process.processId;
+	DELETE_APP_MAIN_UNLOCK(316, "findAndLockLeastValuableMiniApp2");
+	if (index == -1)
+		return 0x80802013;
+	app = &g_appmgrAppStates[index];
+#if FW_DEBUG
+	SCE_DBG_ASSERT_CHECK_FUNC(({ owner = g_appmgrMainMutexOwner;
+		owner != sceKernelGetThreadId(); }), 325, "findAndLockLeastValuableMiniApp2");
+	owner = g_appmgrCore2MutexOwner;
+	if (owner != sceKernelGetThreadId()) {
+		for (i = 0; i != 20; i++) {
+			__builtin_prefetch(&g_appmgrAppStates[i + 5].mutexOwner);
+			SCE_DBG_ASSERT_CHECK_FUNC(({ owner = g_appmgrAppStates[i].mutexOwner;
+				owner != sceKernelGetThreadId(); }), 325,
+				"findAndLockLeastValuableMiniApp2");
+		}
+	}
+#else
+	sceKernelGetThreadId();
+#endif
+	result = sceKernelLockMutex(app->mutex, 1, NULL);
+	if (result != 0) {
+#if FW_DEBUG
+		if ((unsigned int)(result + 0x7ffd7fd4) > 1)
+			GC_FAILURE(result, 325, "findAndLockLeastValuableMiniApp2");
+		if (result < 0)
+			return result;
+#else
+		if ((unsigned int)(result + 0x7ffd7fd4) > 1)
+			appmgrGcListenerMutexPanic();
+		return result;
+#endif
+	} else {
+		app->mutexOwner = sceKernelGetThreadId();
+	}
+	if (app->process.processId == pid) {
+		*out = app;
+		return 0;
+	}
+	result = _appListUnlockApp(&g_appmgrAppStates[index]);
+	DELETE_APP_CHECK(result, 0, 331, "findAndLockLeastValuableMiniApp2");
+	goto retry;
+}
 
 /* The two Sony media helpers are inlined twice into the listener. */
 #define GC_SUSPEND_MEDIA(_func, _lockLine, _mainLine, _unlockLine, \
