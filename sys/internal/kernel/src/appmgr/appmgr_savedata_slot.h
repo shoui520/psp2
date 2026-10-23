@@ -170,4 +170,36 @@ int appmgrFreeSaveDataHeapMemory(void *memory);
 
 extern int g_appmgrAppInfoCacheKey;
 
+/* _sceAppMgrPspSaveDataGetParams' buffer: SceAppUtilPspSaveDataParamSfo with a longer directory */
+typedef struct AppmgrPspSaveDataParamSfo {
+	char saveDataDirectory[64];
+	char title[128];
+	char saveDataTitle[128];
+	char detail[1024];
+	SceUInt8 parentalLev;
+	char reserved[3];
+} AppmgrPspSaveDataParamSfo;
+
+_Static_assert(sizeof(AppmgrPspSaveDataParamSfo) == 1348, "PSP save data PARAM.SFO parameters");
+
+/* _sceAppMgrPspSaveDataRead's parameters: SceAppUtilPspSaveDataParams, the file ID copied in */
+typedef struct AppmgrPspSaveDataParams {
+	char dirName[128];
+	char fileName[13];
+	char reserved[3];
+	SceUInt32 fileType;
+	SceUInt32 dataVersion;
+	SceUInt8 secureFileId[16];
+	AppmgrPspSaveDataParamSfo *paramSfo;
+	void *dataBuf;
+	SceSize dataBufSize;
+} AppmgrPspSaveDataParams;
+
+_Static_assert(sizeof(AppmgrPspSaveDataParams) == 180, "PSP save data read parameters");
+_Static_assert(offsetof(AppmgrPspSaveDataParams, fileType) == 144, "PSP save data file type");
+_Static_assert(offsetof(AppmgrPspSaveDataParams, paramSfo) == 168, "PSP save data PARAM.SFO buffer");
+
+int sceAppMgrPspSaveDataGetParams(AppmgrPspSaveDataParamSfo *paramSfo);
+int sceAppMgrPspSaveDataRead(AppmgrPspSaveDataParams *params);
+
 #endif

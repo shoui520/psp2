@@ -22,11 +22,14 @@
 #include "app_state_internal.h"
 #include "appmgr_device.h"
 #include <sysmem/debug.h>
+#include <gcauthmgr/sblgcauthmgrmssavebb.h>
+#include "param_sfo.h"
 
 extern SceUID g_appmgrSaveDataHeap;
 extern SceUID g_appmgrCoreHeap;
 extern SceUID g_appmgrAppMutex;
 extern SceUID g_appmgrSaveDataMutex;
+extern SceUID g_appmgrMountMutex;
 extern int g_appmgrSafeMemoryKey;
 extern int appmgrWriteSaveDataSlot(unsigned int slotId,
 				 const SceAppMgrSaveDataSlotParam *param,
@@ -3783,6 +3786,496 @@ static __attribute__((noinline)) int appmgrGetSaveDataBackupList(void *list)
 	if (result >= 0)
 		result = result == sizeof(AppmgrSaveDataBackupListEntry[3]) ? 0 : 0x8080008A;
 	sceIoClose(fd);
+	return result;
+}
+
+/* The MAC key type of each PSP save data format (SceAppUtilPspSaveDataVersion). */
+static const int pspSaveDataKeyTypes[3] = { 1, 3, 5 };
+
+/* Copies the PARAM.SFO entries _sceAppMgrPspSaveDataGetParams returns. */
+static __attribute__((noinline)) int appmgrGetPspSaveDataParamSfo(AppmgrSfoFile *sfo,
+		AppmgrPspSaveDataParamSfo *paramSfo)
+{
+	void *value = NULL;
+	SceSize length = 0;
+	SceSize capacity = 0;
+	int result;
+
+	result = appmgrGetSfoEntry(sfo, "SAVEDATA_DIRECTORY", &value, &length, &capacity);
+	if (result < 0)
+		return result;
+	if (length == 0 || capacity != sizeof(paramSfo->saveDataDirectory))
+		return 0x80800034;
+	memcpy(paramSfo->saveDataDirectory, value, length);
+	result = appmgrGetSfoEntry(sfo, "TITLE", &value, &length, &capacity);
+	if (result < 0)
+		return result;
+	if (length == 0 || capacity != sizeof(paramSfo->title))
+		return 0x80800034;
+	memcpy(paramSfo->title, value, length);
+	result = appmgrGetSfoEntry(sfo, "SAVEDATA_TITLE", &value, &length, &capacity);
+	if (result < 0)
+		return result;
+	if (length == 0 || capacity != sizeof(paramSfo->saveDataTitle))
+		return 0x80800034;
+	memcpy(paramSfo->saveDataTitle, value, length);
+	result = appmgrGetSfoEntry(sfo, "SAVEDATA_DETAIL", &value, &length, &capacity);
+	if (result < 0)
+		return result;
+	if (length == 0 || capacity != sizeof(paramSfo->detail))
+		return 0x80800034;
+	memcpy(paramSfo->detail, value, length);
+	result = appmgrGetSfoEntry(sfo, "PARENTAL_LEVEL", &value, &length, &capacity);
+	if (result < 0)
+		return result;
+	if (length < 4 || capacity != 4)
+		return 0x80800034;
+	memcpy(&paramSfo->parentalLev, value, length);
+	return result;
+}
+
+/*
+ * Checks SAVEDATA_PARAMS: the MAC of the whole PARAM.SFO and, with checkVersion, the MAC of
+ * the save data format and its flags. Both MACs are zero while computed and put back.
+ */
+static __attribute__((noinline)) int appmgrVerifyPspSaveDataSfo(AppmgrSfoFile *sfo,
+		unsigned int dataVersion, int checkVersion)
+{
+	unsigned char *params = NULL;
+	SceSize length = 0;
+	SceSize capacity = 0;
+	SceUInt8 macContext[40];
+	SceUInt8 sfoMac[16], versionMac[16];
+	SceUInt8 digest[16];
+	SceUInt8 flags;
+	int result;
+
+	result = appmgrGetSfoEntry(sfo, "SAVEDATA_PARAMS", (void **)&params, &length, &capacity);
+	if (result < 0)
+		return result;
+	if (length < 128 || capacity != 128)
+		return 0x80800034;
+	memcpy(sfoMac, params + 16, sizeof(sfoMac));
+	memcpy(versionMac, params + 112, sizeof(versionMac));
+	memset(params + 16, 0, 16);
+	result = SceSblGcAuthMgrMsSaveBBForDriver_4A249828(macContext, 1);
+	if (result < 0)
+		goto restore;
+	result = SceSblGcAuthMgrMsSaveBBForDriver_79A9BE44(macContext, sfo->buffer, sfo->size);
+	if (result < 0)
+		goto restore;
+	result = SceSblGcAuthMgrMsSaveBBForDriver_8E6626A0(macContext, digest, NULL);
+	if (result < 0)
+		goto restore;
+	if (memcmp(digest, sfoMac, sizeof(digest)) != 0) {
+		result = 0x80800060;
+		goto restore;
+	}
+	if (!checkVersion) {
+		result = 0;
+		goto restore;
+	}
+	if (dataVersion == 0) {
+		if ((params[0] & 0x61) != 0x01)
+			goto broken;
+		goto checkReserved;
+	}
+	if (dataVersion > 2) {
+		result = 0x80800001;
+		goto restore;
+	}
+	result = pspSaveDataKeyTypes[dataVersion];
+	if (result < 0)
+		goto restore;
+	memset(params + 112, 0, 16);
+	result = SceSblGcAuthMgrMsSaveBBForDriver_4A249828(macContext, result);
+	if (result < 0)
+		goto restore;
+	result = SceSblGcAuthMgrMsSaveBBForDriver_79A9BE44(macContext, sfo->buffer, sfo->size);
+	if (result < 0)
+		goto restore;
+	result = SceSblGcAuthMgrMsSaveBBForDriver_8E6626A0(macContext, digest, NULL);
+	if (result < 0)
+		goto restore;
+	if (memcmp(digest, versionMac, sizeof(digest)) != 0) {
+		result = 0x80800060;
+		goto restore;
+	}
+	flags = params[0] & 0x61;
+	if (dataVersion == 2) {
+		if (flags != 0x41)
+			goto broken;
+	} else if (flags != 0x21) {
+		goto broken;
+	}
+checkReserved:
+	result = params[1];
+	if (result == 0)
+		goto restore;
+broken:
+	result = 0x80800064;
+restore:
+	memcpy(params + 16, sfoMac, sizeof(sfoMac));
+	memcpy(params + 112, versionMac, sizeof(versionMac));
+	return result;
+}
+
+/* A PSP save data directory: four capital letters, five digits, then a file name. */
+static __attribute__((noinline)) int appmgrIsValidPspSaveDataDirectory(const char *dirName)
+{
+	const unsigned char *name = (const unsigned char *)dirName;
+	unsigned int c;
+	int index;
+
+	for (index = 0; index < 4; index++) {
+		if (name[index] < 'A' || name[index] > 'Z')
+			return 0;
+	}
+	for (; index < 9; index++) {
+		if (name[index] < '0' || name[index] > '9')
+			return 0;
+	}
+	for (index = 9; ; index++) {
+		c = name[index];
+		if (c == '\0')
+			return 1;
+		if (c < 0x20 || c > 0x7e || c == '\\' || c == '/' || c == ':' || c == '"' ||
+		    c == '*' || c == '<' || c == '|' || c == '>' || c == '?' || index == 63)
+			return 0;
+	}
+}
+
+int sceAppMgrPspSaveDataGetParams(AppmgrPspSaveDataParamSfo *paramSfo)
+{
+	AppmgrSfoFile sfo = {0};
+	char path[104];
+	SceUInt32 syscallState;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (paramSfo == NULL || !appmgrIsValidPspSaveDataDirectory(paramSfo->saveDataDirectory)) {
+		result = 0x80800001;
+		goto leave;
+	}
+	memset(path, 0, sizeof(path));
+	snprintf(path, sizeof(path), "ux0:pspemu/PSP/SAVEDATA/%s/PARAM.SFO",
+		 paramSfo->saveDataDirectory);
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto leave;
+	result = appmgrLoadSfoFile(path, &sfo);
+	if (result >= 0) {
+		result = appmgrVerifyPspSaveDataSfo(&sfo, 0, 0);
+		if (result >= 0) {
+			memset(paramSfo, 0, sizeof(*paramSfo));
+			result = appmgrGetPspSaveDataParamSfo(&sfo, paramSfo);
+		}
+	}
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+leave:
+	appmgrReleaseSfoFile(&sfo);
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+/* A PSP save data file name: up to eight characters, a dot and up to three. */
+static inline int appmgrIsValidPspSaveDataFileName(const char *fileName)
+{
+	int dot = 0, nameLength = 0, extensionLength = -1;
+	int index;
+	char c;
+
+	for (index = 0; index < 12; index++) {
+		c = fileName[index];
+		if (c == '\0') {
+			if (index == 0)
+				return 0;
+			goto lengths;
+		}
+		if ((c < '0' || c > '9') && (c < 'A' || c > 'Z') && c != '-' && c != '_') {
+			if (c != '.')
+				return 0;
+			dot = 1;
+		}
+		if (dot)
+			extensionLength++;
+		else
+			nameLength++;
+	}
+	if (fileName[12] != '\0')
+		return 0;
+lengths:
+	return nameLength <= 8 && extensionLength <= 3;
+}
+
+/* Reads a plain file of the save data into the caller's buffer. */
+static inline int appmgrReadPspSaveDataNormalFile(const char *path,
+		const AppmgrPspSaveDataParams *params)
+{
+	void *page = NULL;
+	SceSize pageSize = 0;
+	SceUInt32 offset = 0;
+	SceIoStat stat;
+	SceUID mapping, fd;
+	char *buffer;
+	int length = 0;
+	int result;
+
+	result = sceIoGetstat(path, &stat);
+	if (result < 0)
+		goto done;
+	if (stat.st_size > 0x2000000) {
+		result = 0x80800066;
+		goto done;
+	}
+	if (params->dataBufSize < stat.st_size) {
+		result = 0x80800063;
+		goto done;
+	}
+	mapping = sceKernelUserMap("SceAppMgrPspSaveDataReadFileBuf", 3, params->dataBuf,
+				   params->dataBufSize, &page, &pageSize, &offset);
+	if (mapping < 0) {
+		result = 0x80800001;
+		goto done;
+	}
+	buffer = (char *)page + offset;
+	memset(buffer, 0, params->dataBufSize);
+	fd = sceIoOpen(path, 0x10001, 0);
+	result = fd;
+	if (fd >= 0) {
+		length = sceIoRead(fd, buffer, stat.st_size);
+		if (length < 0) {
+			result = length;
+			length = 0;
+			goto close;
+		}
+		if ((SceOff)length != stat.st_size) {
+			result = 0x80800065;
+			length = 0;
+			goto close;
+		}
+		result = sceIoClose(fd);
+		if (result < 0)
+			goto close;
+	}
+	if (result < 0)
+		goto clear;
+	goto unmap;
+close:
+	sceIoClose(fd);
+clear:
+	memset(buffer, 0, 4);
+unmap:
+	sceKernelUserUnmap(mapping, params->dataBuf, params->dataBufSize);
+done:
+	return result < 0 ? result : length;
+}
+
+/* Reads and decrypts a protected file of the save data, checking it against its MAC. */
+static inline int appmgrReadPspSaveDataSecureFile(const char *path,
+		const AppmgrPspSaveDataParams *params, const unsigned char *fileEntry)
+{
+	SceUInt8 header[16] = {0};
+	SceUInt8 digest[16] = {0};
+	SceUInt8 macContext[40];
+	SceUInt8 cipherContext[24];
+	void *page = NULL;
+	SceSize pageSize = 0;
+	SceUInt32 offset = 0;
+	SceIoStat stat;
+	SceUID mapping, fd;
+	SceUInt32 dataVersion = params->dataVersion;
+	SceSize alignedSize;
+	char *buffer;
+	int keyType;
+	int length = 0;
+	int result;
+
+	result = sceIoGetstat(path, &stat);
+	if (result < 0)
+		goto done;
+	if ((SceUInt64)(stat.st_size - 16) > 0x1fffff0) {
+		result = 0x80800066;
+		goto done;
+	}
+	if (params->dataBufSize < (((SceUInt32)stat.st_size - 1) & ~0xfu)) {
+		result = 0x80800063;
+		goto done;
+	}
+	mapping = sceKernelUserMap("SceAppMgrPspSaveDataReadFileBuf", 3, params->dataBuf,
+				   params->dataBufSize, &page, &pageSize, &offset);
+	if (mapping < 0) {
+		result = 0x80800001;
+		goto done;
+	}
+	buffer = (char *)page + offset;
+	memset(buffer, 0, params->dataBufSize);
+	if (dataVersion > 2) {
+		result = 0x80800001;
+		goto clear;
+	}
+	keyType = pspSaveDataKeyTypes[dataVersion];
+	result = keyType;
+	if (result < 0)
+		goto clear;
+	result = SceSblGcAuthMgrMsSaveBBForDriver_4A249828(macContext, keyType);
+	if (result < 0)
+		goto clear;
+	fd = sceIoOpen(path, 0x10001, 0);
+	result = fd;
+	if (fd < 0)
+		goto clear;
+	result = sceIoRead(fd, header, sizeof(header));
+	if (result < 0)
+		goto close;
+	if (result != sizeof(header)) {
+		result = 0x80800065;
+		goto close;
+	}
+	result = SceSblGcAuthMgrMsSaveBBForDriver_79A9BE44(macContext, header, sizeof(header));
+	if (result < 0)
+		goto close;
+	result = sceIoRead(fd, buffer, stat.st_size - 16);
+	if (result < 0)
+		goto close;
+	length = result;
+	alignedSize = (length + 15) & ~15;
+	result = sceIoClose(fd);
+	if (result < 0) {
+		length = 0;
+		goto close;
+	}
+	result = SceSblGcAuthMgrMsSaveBBForDriver_79A9BE44(macContext, buffer, alignedSize);
+	if (result < 0)
+		goto clear;
+	result = SceSblGcAuthMgrMsSaveBBForDriver_3C185A67(cipherContext, keyType, 2, header,
+			dataVersion != 0 ? params->secureFileId : NULL);
+	if (result < 0)
+		goto clear;
+	result = SceSblGcAuthMgrMsSaveBBForDriver_F66D5F76(cipherContext, buffer, alignedSize);
+	if (result < 0)
+		goto clear;
+	result = SceSblGcAuthMgrMsSaveBBForDriver_805C860B(cipherContext);
+	if (result < 0)
+		goto clear;
+	result = SceSblGcAuthMgrMsSaveBBForDriver_8E6626A0(macContext, digest,
+			dataVersion != 0 ? params->secureFileId : NULL);
+	if (result < 0)
+		goto clear;
+	if (memcmp(fileEntry + 13, digest, sizeof(digest)) != 0) {
+		result = 0x80800067;
+		goto clear;
+	}
+	goto unmap;
+close:
+	sceIoClose(fd);
+clear:
+	memset(buffer, 0, 4);
+unmap:
+	sceKernelUserUnmap(mapping, params->dataBuf, params->dataBufSize);
+done:
+	return result == 0 ? length : result;
+}
+
+int sceAppMgrPspSaveDataRead(AppmgrPspSaveDataParams *params)
+{
+	AppmgrSfoFile sfo = {0};
+	char path[104];
+	void *page, *value;
+	SceSize pageSize, length, capacity;
+	SceUInt32 offset;
+	SceIoStat stat;
+	AppmgrPspSaveDataParamSfo *paramSfo;
+	const unsigned char *fileList;
+	SceUInt32 syscallState;
+	SceUID mapping;
+	int index;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (params == NULL || !appmgrIsValidPspSaveDataDirectory(params->dirName) ||
+	    !appmgrIsValidPspSaveDataFileName(params->fileName)) {
+		result = 0x80800001;
+		goto leave;
+	}
+	memset(path, 0, sizeof(path));
+	snprintf(path, sizeof(path), "ux0:pspemu/PSP/SAVEDATA/%s/PARAM.SFO", params->dirName);
+	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
+	if (result < 0)
+		goto leave;
+	result = appmgrLoadSfoFile(path, &sfo);
+	if (result < 0)
+		goto unlock;
+	result = appmgrVerifyPspSaveDataSfo(&sfo, params->dataVersion, 1);
+	if (result < 0)
+		goto unlock;
+	if (params->paramSfo != NULL) {
+		page = NULL;
+		pageSize = 0;
+		offset = 0;
+		mapping = sceKernelUserMap("SceAppMgrPspSaveDataReadSfoBuf", 2, params->paramSfo,
+					   sizeof(*paramSfo), &page, &pageSize, &offset);
+		if (mapping < 0) {
+			result = 0x80800001;
+			goto unlock;
+		}
+		paramSfo = (AppmgrPspSaveDataParamSfo *)((char *)page + offset);
+		memset(paramSfo, 0, sizeof(*paramSfo));
+		result = appmgrGetPspSaveDataParamSfo(&sfo, paramSfo);
+		if (result < 0) {
+			memset(paramSfo, 0, sizeof(*paramSfo));
+			sceKernelUserUnmap(mapping, params->paramSfo, sizeof(*paramSfo));
+			goto unlock;
+		}
+		sceKernelUserUnmap(mapping, params->paramSfo, sizeof(*paramSfo));
+	}
+	if (params->dataBuf == NULL) {
+		result = 0;
+		goto unlock;
+	}
+	memset(path, 0, sizeof(path));
+	snprintf(path, sizeof(path), "ux0:pspemu/PSP/SAVEDATA/%s/%s", params->dirName,
+		 params->fileName);
+	value = NULL;
+	length = 0;
+	capacity = 0;
+	result = appmgrGetSfoEntry(&sfo, "SAVEDATA_FILE_LIST", &value, &length, &capacity);
+	if (result >= 0) {
+		if (length < 3168 || capacity != 3168) {
+			result = 0x80800034;
+			goto unlock;
+		}
+		fileList = value;
+		for (index = 0; index < 99; index++, fileList += 32) {
+			if (fileList[0] != '\0' &&
+			    strncmp(params->fileName, (const char *)fileList, 13) == 0)
+				break;
+		}
+		if (index < 99) {
+			if (params->fileType != 0) {
+				result = 0x80800062;
+				goto unlock;
+			}
+			result = appmgrReadPspSaveDataSecureFile(path, params, fileList);
+			goto unlock;
+		}
+	} else if (result != (int)0x80800061) {
+		goto unlock;
+	}
+	if (params->fileType == 0) {
+		result = sceIoGetstat(path, &stat);
+		if (result >= 0)
+			result = 0x80800062;
+	} else if (params->fileType == 1) {
+		result = appmgrReadPspSaveDataNormalFile(path, params);
+	} else {
+		result = 0x80800001;
+	}
+unlock:
+	sceKernelUnlockMutex(g_appmgrMountMutex, 1);
+leave:
+	appmgrReleaseSfoFile(&sfo);
+	sceSyscallLeave(syscallState);
 	return result;
 }
 
