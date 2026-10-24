@@ -1,0 +1,69 @@
+--- contrib/netbsd-2.1/sys/arch/arm/include/byte_swap.h
++++ sys/internal/kernel/src/net_ps/include/arm/byte_swap.h
+@@ -41,58 +41,29 @@
+ 
+ #include <sys/types.h>
+ 
++/*
++ * SCE: the psp2 port swaps with ARMv6's rev and rev16, in a word, and never
++ * folds a constant (htons(ETHERTYPE_IP) is swapped at run time)
++ */
+ static __inline u_int32_t
+ __byte_swap_32_variable(u_int32_t v)
+ {
+-	u_int32_t t1;
+ 
+-	t1 = v ^ ((v << 16) | (v >> 16));
+-	t1 &= 0xff00ffffU;
+-	v = (v >> 8) | (v << 24);
+-	v ^= (t1 >> 8);
++	__asm("rev	%0, %1" : "=r" (v) : "r" (v));
+ 
+ 	return (v);
+ }
+ 
+-static __inline u_int16_t
+-__byte_swap_16_variable(u_int16_t v)
++static __inline u_int32_t
++__byte_swap_16_variable(u_int32_t v)
+ {
+ 
+-	__asm __volatile(
+-		"mov	%0, %1, ror #8\n"
+-		"orr	%0, %0, %0, lsr #16\n"
+-		"bic	%0, %0, %0, lsl #16"
+-	: "=r" (v)
+-	: "0" (v));
++	__asm("rev16	%0, %1" : "=r" (v) : "r" (v));
+ 
+ 	return (v);
+ }
+ 
+-#ifdef __OPTIMIZE__
+-
+-#define __byte_swap_32_constant(x)	\
+-	((((x) & 0xff000000U) >> 24) |	\
+-	 (((x) & 0x00ff0000U) >>  8) |	\
+-	 (((x) & 0x0000ff00U) <<  8) |	\
+-	 (((x) & 0x000000ffU) << 24))
+-
+-#define	__byte_swap_16_constant(x)	\
+-	((((x) & 0xff00) >> 8) |	\
+-	 (((x) & 0x00ff) << 8))
+-
+-#define	__byte_swap_32(x)		\
+-	(__builtin_constant_p((x)) ?	\
+-	 __byte_swap_32_constant(x) :	__byte_swap_32_variable(x))
+-
+-#define	__byte_swap_16(x)		\
+-	(__builtin_constant_p((x)) ?	\
+-	 __byte_swap_16_constant(x) : __byte_swap_16_variable(x))
+-
+-#else
+-
+ #define	__byte_swap_32(x)	__byte_swap_32_variable(x)
+ #define	__byte_swap_16(x)	__byte_swap_16_variable(x)
+ 
+-#endif /* __OPTIMIZE__ */
+-
+ #endif /* _ARM_BYTE_SWAP_H_ */

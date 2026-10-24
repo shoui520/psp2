@@ -1,0 +1,50 @@
+--- a/net/if_loop.c
++++ b/net/if_loop.c
+@@ -93,6 +93,8 @@
+ #include <net/netisr.h>
+ #include <net/route.h>
+ 
++#include "netps_driver.h"
++
+ #ifdef	INET
+ #include <netinet/in.h>
+ #include <netinet/in_systm.h>
+@@ -158,7 +160,7 @@
+ 
+ 	for (i = 0; i < NLOOP; i++) {
+ 		ifp = &loif[i];
+-		sprintf(ifp->if_xname, "lo%d", i);
++		snprintf(ifp->if_xname, sizeof(ifp->if_xname), "lo%d", i);	/* SCE */
+ 		ifp->if_softc = NULL;
+ 		ifp->if_mtu = LOMTU;
+ 		ifp->if_flags = IFF_LOOPBACK | IFF_MULTICAST;
+@@ -265,6 +267,10 @@
+ 
+ #ifdef INET
+ 	case AF_INET:
++		/* SCE: traffic to an address other than 127/8 keeps it alive */
++		if ((ntohl(satosin(dst)->sin_addr.s_addr) >> IN_CLASSA_NSHIFT) !=
++		    IN_LOOPBACKNET)
++			sceNetPsResetAddressIdleTime(satosin(dst));
+ 		ifq = &ipintrq;
+ 		isr = NETISR_IP;
+ 		break;
+@@ -301,8 +307,6 @@
+ 		break;
+ #endif
+ 	default:
+-		printf("%s: can't handle af%d\n", ifp->if_xname,
+-		    dst->sa_family);
+ 		m_freem(m);
+ 		return (EAFNOSUPPORT);
+ 	}
+@@ -438,6 +442,9 @@
+ 		 */
+ 		break;
+ 
++	case SIOCSIFFLAGS:	/* SCE: accepted, nothing to do */
++		break;
++
+ 	case SIOCSIFMTU:
+ 		ifr = (struct ifreq *)data;
+ 		if ((unsigned)ifr->ifr_mtu > LOMTU_MAX)

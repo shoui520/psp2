@@ -26,6 +26,8 @@ net_ps_prepare_patched(${netbsd}/net/if.c ${CMAKE_CURRENT_SOURCE_DIR}/if_sce.pat
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/if.c)
 net_ps_prepare_patched(${netbsd}/net/if_ethersubr.c ${CMAKE_CURRENT_SOURCE_DIR}/if_ethersubr_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/if_ethersubr.c)
+net_ps_prepare_patched(${netbsd}/net/if_loop.c ${CMAKE_CURRENT_SOURCE_DIR}/if_loop_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/if_loop.c)
 set(netbsd_sources
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/kern_subr.c
 	${netbsd}/kern/kern_timeout.c
@@ -36,6 +38,7 @@ set(netbsd_sources
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/uipc_socket.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/if.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/if_ethersubr.c
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/if_loop.c
 )
 set_source_files_properties(${netbsd_sources} PROPERTIES COMPILE_OPTIONS "-fno-strict-aliasing;-fgnu89-inline"
 	COMPILE_DEFINITIONS NET_PS_NETBSD)

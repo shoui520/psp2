@@ -1,0 +1,16 @@
+--- contrib/netbsd-2.1/sys/arch/arm/include/endian_machdep.h
++++ sys/internal/kernel/src/net_ps/include/arm/endian_machdep.h
+@@ -12,10 +12,11 @@
+ #include <arm/byte_swap.h>
+ 
+ #if _BYTE_ORDER == _LITTLE_ENDIAN
++/* SCE: a halfword is swapped as the word rev16 takes and leaves */
+ #define	ntohl(x)	((uint32_t)__byte_swap_32((uint32_t)(x)))
+-#define	ntohs(x)	((uint16_t)__byte_swap_16((uint16_t)(x)))
++#define	ntohs(x)	__byte_swap_16(x)
+ #define	htonl(x)	((uint32_t)__byte_swap_32((uint32_t)(x)))
+-#define	htons(x)	((uint16_t)__byte_swap_16((uint16_t)(x)))
++#define	htons(x)	__byte_swap_16(x)
+ #endif
+ 
+ #endif
