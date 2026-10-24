@@ -1,0 +1,11 @@
+--- contrib/netbsd-3.0/sys/netinet/tcp_timer.h
++++ sys/internal/kernel/src/net_ps/include/netinet/tcp_timer.h
+@@ -125,7 +125,7 @@
+ #define	TCPTV_MSL	( 30*PR_SLOWHZ)		/* max seg lifetime (hah!) */
+ #define	TCPTV_SRTTBASE	0			/* base roundtrip time;
+ 						   if 0, no idea yet */
+-#define	TCPTV_SRTTDFLT	(  3*PR_SLOWHZ)		/* assumed RTT if no info */
++#define	TCPTV_SRTTDFLT	(  1*PR_SLOWHZ)		/* SCE: assumed RTT if no info */
+ 
+ #define	TCPTV_PERSMIN	(  5*PR_SLOWHZ)		/* retransmit persistance */
+ #define	TCPTV_PERSMAX	( 60*PR_SLOWHZ)		/* maximum persist interval */

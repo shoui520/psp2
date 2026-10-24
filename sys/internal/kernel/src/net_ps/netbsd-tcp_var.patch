@@ -1,0 +1,67 @@
+--- contrib/netbsd-3.0/sys/netinet/tcp_var.h
++++ sys/internal/kernel/src/net_ps/include/netinet/tcp_var.h
+@@ -200,6 +200,7 @@
+ 	short	t_partialacks;		/* partials acks during fast rexmit */
+ 	u_short	t_peermss;		/* peer's maximum segment size */
+ 	u_short	t_ourmss;		/* our's maximum segment size */
++	u_short	t_mss_to_advertise;	/* SCE: TCP_MSS_TO_ADVERTISE's cap, 0 for none */
+ 	u_short t_segsz;		/* current segment size in use */
+ 	char	t_force;		/* 1 if forcing out a byte */
+ 	u_int	t_flags;
+@@ -216,6 +217,9 @@
+ #define	TF_WILL_SACK	0x0800		/* try to use SACK */
+ #define	TF_REASSEMBLING	0x1000		/* we're busy reassembling */
+ #define	TF_DEAD		0x2000		/* dead and to-be-released */
++#define	TF_SCE_P2P	0x10000		/* SCE: a SOCK_STREAM_P2P connection */
++#define	TF_SCE_USECRYPTO 0x20000	/* SCE: SO_USECRYPTO */
++#define	TF_SCE_USESIGNATURE 0x40000	/* SCE: SO_USESIGNATURE */
+ #define	TF_SIGNATURE	0x400000	/* require MD5 digests (RFC2385) */
+ 
+ 
+@@ -312,6 +316,10 @@
+ 	int	t_inoff;		/* data offset in previous mbuf */
+ 	int	t_lastoff;		/* last data address in mbuf chain */
+ 	int	t_lastlen;		/* last length read from mbuf chain */
++
++/* SCE: the virtual ports of a SOCK_STREAM_P2P connection (the SDK's local_vport, remote_vport) */
++	in_port_t t_local_vport;
++	in_port_t t_remote_vport;
+ };
+ 
+ /*
+@@ -485,6 +493,7 @@
+ 
+ 	struct tcpcb *sc_tp;			/* tcb for listening socket */
+ 	LIST_ENTRY(syn_cache) sc_tpq;		/* list of entries by same tp */
++	in_port_t sc_remote_vport;		/* SCE: the SYN's virtual port */
+ };
+ 
+ struct syn_cache_head {
+@@ -824,7 +833,7 @@
+ void	 tcp6_quench(struct in6pcb *, int);
+ #endif
+ 
+-struct ipqent *tcpipqent_alloc(void);
++/* SCE: tcpipqent_alloc is tcp_input.c's own */
+ void	 tcpipqent_free(struct ipqent *);
+ 
+ int	 tcp_reass(struct tcpcb *, struct tcphdr *, struct mbuf *, int *);
+@@ -861,7 +870,8 @@
+ 
+ int	 syn_cache_add(struct sockaddr *, struct sockaddr *,
+ 		struct tcphdr *, unsigned int, struct socket *,
+-		struct mbuf *, u_char *, int, struct tcp_opt_info *);
++		struct mbuf *, u_char *, int, struct tcp_opt_info *,
++		in_port_t);	/* SCE: the remote virtual port */
+ void	 syn_cache_unreach(struct sockaddr *, struct sockaddr *,
+ 	   struct tcphdr *);
+ struct socket *syn_cache_get(struct sockaddr *, struct sockaddr *,
+@@ -877,7 +887,7 @@
+ void	 syn_cache_timer(void *);
+ void	 syn_cache_cleanup(struct tcpcb *);
+ 
+-void	 tcp_reno_newack(struct tcpcb *, struct tcphdr *);
++/* SCE: tcp_reno_newack is tcp_input.c's own */
+ void	 tcp_newreno_newack(struct tcpcb *, struct tcphdr *);
+ 
+ int	 tcp_input_checksum(int, struct mbuf *, const struct tcphdr *, int, int,

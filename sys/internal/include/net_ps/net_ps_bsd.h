@@ -38,9 +38,8 @@ extern struct ifnet loif[];
 _Static_assert(sizeof(struct in_ifaddr) == 152, "NetBSD IPv4 interface address size");
 _Static_assert(sizeof(struct in6_addrlifetime) == 16,
 	       "NetBSD IPv6 address lifetime size");
-/* Sony's sockaddr_in6 has a virtual port (netinet6/in6.h) */
-_Static_assert(sizeof(struct in6_ifaddr) == 232,
-	       "SDK IPv6 interface address size");
+/* NetBSD's sockaddr_in6, without a virtual port: Sony's struct syn_cache is 0xb0 bytes with sc_dst at 0x64 */
+_Static_assert(sizeof(struct sockaddr_in6) == 28, "NetBSD IPv6 socket address size");
 _Static_assert(offsetof(struct in_ifaddr, ia_addr.sin_addr) == 96,
 	       "NetBSD IPv4 interface address offset");
 _Static_assert(sizeof(struct ifnet) == 480, "NetBSD ifnet size");

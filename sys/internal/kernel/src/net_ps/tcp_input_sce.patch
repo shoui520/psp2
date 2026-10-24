@@ -1,0 +1,279 @@
+--- a/netinet/tcp_input.c
++++ b/netinet/tcp_input.c
+@@ -209,6 +209,8 @@
+ #include <netinet/tcp_var.h>
+ #include <netinet/tcpip.h>
+ #include <netinet/tcp_debug.h>
++#include <netinet/udpp2p_var.h>	/* SCE */
++#include "netps_socket.h"	/* SCE */
+ 
+ #include <machine/stdarg.h>
+ 
+@@ -232,6 +234,9 @@
+ #endif
+ #endif	/* FAST_IPSEC*/
+ 
++/* SCE: this file's copies are made whatever the length (tcp_pulloutofband) */
++#undef memcpy
++
+ int	tcprexmtthresh = 3;
+ int	tcp_log_refused;
+ 
+@@ -345,12 +350,14 @@
+ #ifdef INET6
+ static void tcp6_log_refused(const struct ip6_hdr *, const struct tcphdr *);
+ #endif
++static void tcp_reno_newack(struct tcpcb *, struct tcphdr *);	/* SCE */
+ 
+ #define	TRAVERSE(x) while ((x)->m_next) (x) = (x)->m_next
+ 
+-POOL_INIT(tcpipqent_pool, sizeof(struct ipqent), 0, 0, 0, "tcpipqepl", NULL);
++/* SCE: the pools are initialised by hand, as in NetBSD 2.1 (tcp_init) */
++struct pool tcpipqent_pool;
+ 
+-struct ipqent *
++static struct ipqent *	/* SCE: tcp_input.c's own, inlined */
+ tcpipqent_alloc()
+ {
+ 	struct ipqent *ipqe;
+@@ -535,6 +542,10 @@
+ 		    SEQ_LEQ(q->ipqe_seq + q->ipqe_len, pkt_seq + pkt_len)) {
+ 			rcvpartdupbyte += q->ipqe_len;
+ 			m_freem(q->ipqe_m);
++			/* SCE: forget the freed chain */
++			if (q->ipqe_m == m)
++				m = NULL;
++			q->ipqe_m = NULL;
+ 			TCP_REASS_COUNTER_INCR(&tcp_reass_fragdup);
+ 			goto free_ipqe;
+ 		}
+@@ -773,18 +784,9 @@
+ 	char src[4*sizeof "123"];
+ 	char dst[4*sizeof "123"];
+ 
+-	if (ip) {
+-		strlcpy(src, inet_ntoa(ip->ip_src), sizeof(src));
+-		strlcpy(dst, inet_ntoa(ip->ip_dst), sizeof(dst));
+-	}
+-	else {
+-		strlcpy(src, "(unknown)", sizeof(src));
+-		strlcpy(dst, "(unknown)", sizeof(dst));
+-	}
+-	log(LOG_INFO,
+-	    "Connection attempt to TCP %s:%d from %s:%d\n",
+-	    dst, ntohs(th->th_dport),
+-	    src, ntohs(th->th_sport));
++	/* SCE: no message, and always a header */
++	strlcpy(src, inet_ntoa(ip->ip_src), sizeof(src));
++	strlcpy(dst, inet_ntoa(ip->ip_dst), sizeof(dst));
+ }
+ #endif
+ 
+@@ -922,11 +924,13 @@
+ 	va_list ap;
+ 	int af;		/* af on the wire */
+ 	struct mbuf *tcp_saveti = NULL;
++	in_port_t vport = 0;	/* SCE: the virtual port of a SOCK_STREAM_P2P segment */
++	in_port_t p2pvport;	/* SCE */
+ 
+ 	MCLAIM(m, &tcp_rx_mowner);
+ 	va_start(ap, m);
+ 	toff = va_arg(ap, int);
+-	(void)va_arg(ap, int);		/* ignore value, advance ap */
++	p2pvport = va_arg(ap, int);	/* SCE: the virtual port, for a P2P segment */
+ 	va_end(ap);
+ 
+ 	tcpstat.tcps_rcvtotal++;
+@@ -1077,9 +1081,13 @@
+ 			optp[TCPOLEN_TSTAMP_APPA] == TCPOPT_EOL)) &&
+ 		     *(u_int32_t *)optp == htonl(TCPOPT_TSTAMP_HDR) &&
+ 		     (th->th_flags & TH_SYN) == 0) {
++			u_int32_t ts;	/* SCE: read unaligned */
++
+ 			opti.ts_present = 1;
+-			opti.ts_val = ntohl(*(u_int32_t *)(optp + 4));
+-			opti.ts_ecr = ntohl(*(u_int32_t *)(optp + 8));
++			bcopy(optp + 4, &ts, sizeof(ts));
++			opti.ts_val = ntohl(ts);
++			bcopy(optp + 8, &ts, sizeof(ts));
++			opti.ts_ecr = ntohl(ts);
+ 			optp = NULL;	/* we've parsed the options */
+ 		}
+ 	}
+@@ -1209,6 +1217,17 @@
+ 		so = in6p->in6p_socket;
+ 	}
+ #endif
++	/* SCE: what a socket with SO_SCE_OPTION_8000 sent reaches only such sockets */
++	if ((so->so_options & SO_SCE_OPTION_8000) == 0 &&
++	    (m->m_flags & M_SCE_OPTION_8000))
++		goto drop;
++	/* SCE: IP_TTLCHK records the highest TTL received */
++	if (inp->inp_flags & INP_TTLCHK)
++		inp->inp_maxttl = max(inp->inp_maxttl, ip->ip_ttl);
++	/* SCE: a packet the receive emulation chose to drop is filtered per socket */
++	if ((m->m_flags & M_SCE_EMULATION_DROP) &&
++	    sceNetPsFilterRxSocket(m, m->m_pkthdr.rcvif, so))
++		goto drop;
+ 	if (tp == 0) {
+ 		TCP_FIELDS_TO_HOST(th);
+ 		goto dropwithreset_ratelim;
+@@ -1219,7 +1238,9 @@
+ 	/*
+ 	 * Checksum extended TCP header and data.
+ 	 */
+-	if (tcp_input_checksum(af, m, th, toff, off, tlen))
++	if (tp->t_flags & TF_SCE_P2P)
++		vport = p2pvport;	/* SCE: UDP checked it */
++	else if (tcp_input_checksum(af, m, th, toff, off, tlen))
+ 		goto badcsum;
+ 
+ 	TCP_FIELDS_TO_HOST(th);
+@@ -1491,7 +1512,7 @@
+ 				 */
+ 				if (so->so_qlen <= so->so_qlimit &&
+ 				    syn_cache_add(&src.sa, &dst.sa, th, tlen,
+-						so, m, optp, optlen, &opti))
++						so, m, optp, optlen, &opti, vport))
+ 					m = NULL;
+ 			}
+ 			goto drop;
+@@ -2837,27 +2858,7 @@
+ 			tp->t_flags |= TF_RCVD_SCALE;
+ 			tp->requested_s_scale = cp[2];
+ 			if (tp->requested_s_scale > TCP_MAX_WINSHIFT) {
+-#if 0	/*XXX*/
+-				char *p;
+-
+-				if (ip)
+-					p = ntohl(ip->ip_src);
+-#ifdef INET6
+-				else if (ip6)
+-					p = ip6_sprintf(&ip6->ip6_src);
+-#endif
+-				else
+-					p = "(unknown)";
+-				log(LOG_ERR, "TCP: invalid wscale %d from %s, "
+-				    "assuming %d\n",
+-				    tp->requested_s_scale, p,
+-				    TCP_MAX_WINSHIFT);
+-#else
+-				log(LOG_ERR, "TCP: invalid wscale %d, "
+-				    "assuming %d\n",
+-				    tp->requested_s_scale,
+-				    TCP_MAX_WINSHIFT);
+-#endif
++				/* SCE: no message */
+ 				tp->requested_s_scale = TCP_MAX_WINSHIFT;
+ 			}
+ 			break;
+@@ -3076,7 +3077,7 @@
+ 	tp->t_softerror = 0;
+ }
+ 
+-void
++static void	/* SCE: tcp_input.c's own, inlined */
+ tcp_reno_newack(struct tcpcb *tp, struct tcphdr *th)
+ {
+ 	if (tp->t_partialacks < 0) {
+@@ -3230,7 +3231,7 @@
+ 		pool_put(&syn_cache_pool, (sc));			\
+ } while (/*CONSTCOND*/0)
+ 
+-POOL_INIT(syn_cache_pool, sizeof(struct syn_cache), 0, 0, 0, "synpl", NULL);
++struct pool syn_cache_pool;	/* SCE: initialised by syn_cache_init */
+ 
+ /*
+  * We don't estimate RTT with SYNs, so each packet starts with the default
+@@ -3255,6 +3256,10 @@
+ 	/* Initialize the hash buckets. */
+ 	for (i = 0; i < tcp_syn_cache_size; i++)
+ 		TAILQ_INIT(&tcp_syn_cache[i].sch_bucket);
++
++	/* SCE: Initialize the syn cache pool. */
++	pool_init(&syn_cache_pool, sizeof(struct syn_cache), 0, 0, 0,
++	    "synpl", NULL);
+ }
+ 
+ void
+@@ -3695,6 +3700,11 @@
+ 	else
+ 		tp = NULL;
+ 	tp->t_flags = sototcpcb(oso)->t_flags & TF_NODELAY;
++	/* SCE: the listener's P2P and crypto flags, its virtual port and the SYN's */
++	tp->t_flags |= sototcpcb(oso)->t_flags &
++	    (TF_SCE_P2P | TF_SCE_USECRYPTO | TF_SCE_USESIGNATURE);
++	tp->t_local_vport = sototcpcb(oso)->t_local_vport;
++	tp->t_remote_vport = sc->sc_remote_vport;
+ 	if (sc->sc_request_r_scale != 15) {
+ 		tp->requested_s_scale = sc->sc_requested_s_scale;
+ 		tp->request_r_scale = sc->sc_request_r_scale;
+@@ -3869,7 +3879,7 @@
+ int
+ syn_cache_add(struct sockaddr *src, struct sockaddr *dst, struct tcphdr *th,
+     unsigned int hlen, struct socket *so, struct mbuf *m, u_char *optp,
+-    int optlen, struct tcp_opt_info *oi)
++    int optlen, struct tcp_opt_info *oi, in_port_t vport)	/* SCE: vport */
+ {
+ 	struct tcpcb tb, *tp;
+ 	long win;
+@@ -4021,6 +4031,7 @@
+ 		sc->sc_flags |= SCF_SIGNATURE;
+ #endif
+ 	sc->sc_tp = tp;
++	sc->sc_remote_vport = vport;	/* SCE */
+ 	if (syn_cache_respond(sc, m) == 0) {
+ 		syn_cache_insert(sc, tp);
+ 		tcpstat.tcps_sndacks++;
+@@ -4085,7 +4096,7 @@
+ 		return (ENOBUFS);
+ #endif
+ 	MGETHDR(m, M_DONTWAIT, MT_DATA);
+-	if (m && tlen > MHLEN) {
++	if (m && max_linkhdr + tlen > MHLEN) {	/* SCE: with the link header */
+ 		MCLGET(m, M_DONTWAIT);
+ 		if ((m->m_flags & M_EXT) == 0) {
+ 			m_freem(m);
+@@ -4099,8 +4110,8 @@
+ 	/* Fixup the mbuf. */
+ 	m->m_data += max_linkhdr;
+ 	m->m_len = m->m_pkthdr.len = tlen;
+-	if (sc->sc_tp) {
+-		tp = sc->sc_tp;
++	tp = sc->sc_tp;	/* SCE: kept for the checksum */
++	if (tp) {
+ 		if (tp->t_inpcb)
+ 			so = tp->t_inpcb->inp_socket;
+ #ifdef INET6
+@@ -4221,7 +4232,10 @@
+ 	case AF_INET:
+ 		ip->ip_len = htons(tlen - hlen);
+ 		th->th_sum = 0;
+-		th->th_sum = in4_cksum(m, IPPROTO_TCP, hlen, tlen - hlen);
++		/* SCE: a P2P segment goes out without a checksum */
++		if (tp == NULL || (tp->t_flags & TF_SCE_P2P) == 0)
++			th->th_sum = in4_cksum(m, IPPROTO_TCP, hlen,
++			    tlen - hlen);
+ 		break;
+ #ifdef INET6
+ 	case AF_INET6:
+@@ -4261,6 +4275,19 @@
+ 	switch (sc->sc_src.sa.sa_family) {
+ #ifdef INET
+ 	case AF_INET:
++		/* SCE: a P2P listener answers over UDP, from its virtual port */
++		if (tp != NULL && (tp->t_flags & TF_SCE_P2P) != 0) {
++			struct sockaddr_in src, dst;
++
++			src.sin_port = tp->t_local_vport;
++			src.sin_addr = ip->ip_src;
++			dst.sin_port = sc->sc_remote_vport;
++			dst.sin_addr = ip->ip_dst;
++			m_adj(m, sizeof(struct ip));
++			return (udpp2p_output(&src, &dst, m, ro, so,
++			    tp->t_flags & TF_SCE_USECRYPTO,
++			    tp->t_flags & TF_SCE_USESIGNATURE));
++		}
+ 		error = ip_output(m, sc->sc_ipopts, ro,
+ 		    (ip_mtudisc ? IP_MTUDISC : 0),
+ 		    (struct ip_moptions *)NULL, so);
