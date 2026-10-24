@@ -50,6 +50,8 @@ net_ps_prepare_patched(${netbsd}/netinet/in.c ${CMAKE_CURRENT_SOURCE_DIR}/in_sce
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/in.c)
 net_ps_prepare_patched(${netbsd}/netinet/in_cksum.c ${CMAKE_CURRENT_SOURCE_DIR}/in_cksum_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/in_cksum.c)
+net_ps_prepare_patched(${netbsd}/netinet/in_pcb.c ${CMAKE_CURRENT_SOURCE_DIR}/in_pcb_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/in_pcb.c)
 set(netbsd_sources
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/kern_subr.c
 	${netbsd}/kern/kern_timeout.c
@@ -73,6 +75,7 @@ set(netbsd_sources
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/in4_cksum.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/in.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/in_cksum.c
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/in_pcb.c
 )
 set_source_files_properties(${netbsd_sources} PROPERTIES COMPILE_OPTIONS "-fno-strict-aliasing;-fgnu89-inline"
 	COMPILE_DEFINITIONS NET_PS_NETBSD)

@@ -1,0 +1,10 @@
+--- contrib/netbsd-2.1/sys/netinet/in_pcb.h
++++ sys/internal/kernel/src/net_ps/include/netinet/in_pcb.h
+@@ -91,6 +91,7 @@
+ 	struct	  mbuf *inp_options;	/* IP options */
+ 	struct	  ip_moptions *inp_moptions; /* IP multicast options */
+ 	int	  inp_errormtu;		/* MTU of last xmit status = EMSGSIZE */
++	int	  inp_maxttl;		/* SCE: highest TTL received (SCE_NET_IP_MAXTTL) */
+ };
+ 
+ #define	inp_faddr	inp_ip.ip_dst

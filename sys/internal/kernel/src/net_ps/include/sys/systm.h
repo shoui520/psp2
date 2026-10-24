@@ -219,6 +219,9 @@ void	panic __P((const char *, ...))
  */
 void	sce_psnet_panic __P((const char *, ...)) __attribute__((__noreturn__));
 #define	panic(...)	sce_psnet_panic("")
+/* SCE: a message they print goes to the kernel's printf (in_pcbbind's reserved-port warning) */
+#include <sysmem/debug.h>
+#define	printf	SceDebugForDriver_391B74B7
 #endif
 void	uprintf __P((const char *, ...))
     __attribute__((__format__(__printf__,1,2)));

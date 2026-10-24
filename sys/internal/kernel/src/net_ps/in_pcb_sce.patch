@@ -1,0 +1,202 @@
+--- a/netinet/in_pcb.c
++++ b/netinet/in_pcb.c
+@@ -126,6 +126,8 @@
+ #include <netinet/in_var.h>
+ #include <netinet/ip_var.h>
+ 
++#include <net_ps/netps_thread.h>	/* SCE: the reserved-port checks */
++
+ #ifdef INET6
+ #include <netinet/ip6.h>
+ #include <netinet6/ip6_var.h>
+@@ -180,7 +182,9 @@
+ 	table->inpt_connecthashtbl = hashinit(connecthashsize, HASH_LIST,
+ 	    M_PCB, M_WAITOK, &table->inpt_connecthash);
+ 	table->inpt_lastlow = IPPORT_RESERVEDMAX;
+-	table->inpt_lastport = (u_int16_t)anonportmax;
++	/* SCE: the first anonymous port is random */
++	table->inpt_lastport = anonportmin +
++	    random() % (anonportmax - anonportmin + 1);
+ }
+ 
+ int
+@@ -203,6 +207,7 @@
+ 	inp->inp_table = table;
+ 	inp->inp_socket = so;
+ 	inp->inp_errormtu = -1;
++	inp->inp_maxttl = 0;	/* SCE */
+ #if defined(IPSEC) || defined(FAST_IPSEC)
+ 	error = ipsec_init_pcbpolicy(so, &inp->inp_sp);
+ 	if (error != 0) {
+@@ -268,6 +273,23 @@
+ 		/* check for broadcast addresses */
+ 		if (ia == NULL)
+ 			ia = ifatoia(ifa_ifwithaddr(sintosa(sin)));
++		/*
++		 * SCE: with SO_ONESBCAST, the broadcast address binds to the
++		 * multicast interface's broadcast-capable address
++		 */
++		if (ia == NULL &&
++		    sin->sin_addr.s_addr == INADDR_BROADCAST &&
++		    (inp->inp_socket->so_options & SO_ONESBCAST) != 0 &&
++		    inp->inp_moptions != NULL &&
++		    inp->inp_moptions->imo_multicast_ifp != NULL) {
++			struct ifnet *ifp = inp->inp_moptions->imo_multicast_ifp;
++
++			TAILQ_FOREACH(ia, &in_ifaddrhead, ia_list) {
++				if ((ia->ia_ifp->if_flags & IFF_BROADCAST) != 0 &&
++				    ifp->if_index == ia->ia_ifp->if_index)
++					break;
++			}
++		}
+ 		if (ia == NULL)
+ 			return (EADDRNOTAVAIL);
+ 	}
+@@ -277,12 +299,39 @@
+ 		struct in6pcb *t6;
+ 		struct in6_addr mapped;
+ #endif
+-#ifndef IPNOPRIVPORTS
+-		/* GROSS */
+-		if (ntohs(lport) < IPPORT_RESERVED &&
+-		    (p == 0 || suser(p->p_ucred, &p->p_acflag)))
+-			return (EACCES);
+-#endif
++		/*
++		 * SCE: the ports a released title may not bind; outside
++		 * development mode they are refused, in it a warning is printed
++		 */
++		u_int port = ntohs(lport);
++		int reserved;
++
++		if (port >= IPPORT_RESERVED)
++			reserved = 0;
++		else
++			reserved = (p == 0 || sceNetPsIsApplicationProgram(NULL));
++		if (port >= 9293 && port <= 9308 &&
++		    (p == 0 || sceNetPsIsApplicationProgram(NULL)))
++			reserved = 1;
++		if (port >= 9305 && port <= 9308 &&
++		    (p == 0 || sceNetPsIsApplicationProgram(NULL)) &&
++		    (so->so_state & SS_SCE_8000) != 0)
++			reserved = 0;
++		if (port >= 40000 && port < 49152 &&
++		    (p == 0 || sceNetPsIsApplicationProgram(NULL)))
++			reserved = 1;
++		if (port >= 49152 && port < anonportmin &&
++		    (p == 0 || sceNetPsIsApplicationProgram(NULL)))
++			reserved = 1;
++		if (port >= anonportmin && port <= anonportmax &&
++		    (p == 0 || sceNetPsIsApplicationProgram(NULL)))
++			reserved = 1;
++		if (reserved) {
++			if (!sceNetPsIsDevelopmentMode())
++				return (EACCES);
++			printf("warning: %d is a reserved port that cannot be used when the title is released.\n",
++			    port);
++		}
+ #ifdef INET6
+ 		memset(&mapped, 0, sizeof(mapped));
+ 		mapped.s6_addr16[5] = 0xffff;
+@@ -292,21 +341,7 @@
+ 		if (t6 && (reuseport & t6->in6p_socket->so_options) == 0)
+ 			return (EADDRINUSE);
+ #endif
+-		if (so->so_uid && !IN_MULTICAST(sin->sin_addr.s_addr)) {
+-			t = in_pcblookup_port(table, sin->sin_addr, lport, 1);
+-		/*
+-		 * XXX:	investigate ramifications of loosening this
+-		 *	restriction so that as long as both ports have
+-		 *	SO_REUSEPORT allow the bind
+-		 */
+-			if (t &&
+-			    (!in_nullhost(sin->sin_addr) ||
+-			     !in_nullhost(t->inp_laddr) ||
+-			     (t->inp_socket->so_options & SO_REUSEPORT) == 0)
+-			    && (so->so_uid != t->inp_socket->so_uid)) {
+-				return (EADDRINUSE);
+-			}
+-		}
++		/* SCE: no owner check (Sony's sockets have no uid) */
+ 		t = in_pcblookup_port(table, sin->sin_addr, lport, wild);
+ 		if (t && (reuseport & t->inp_socket->so_options) == 0)
+ 			return (EADDRINUSE);
+@@ -320,10 +355,8 @@
+ 		u_int16_t *lastport;
+ 
+ 		if (inp->inp_flags & INP_LOWPORT) {
+-#ifndef IPNOPRIVPORTS
+-			if (p == 0 || suser(p->p_ucred, &p->p_acflag))
++			if (p == 0)	/* SCE: no privilege check */
+ 				return (EACCES);
+-#endif
+ 			min = lowportmin;
+ 			max = lowportmax;
+ 			lastport = &table->inpt_lastlow;
+@@ -402,12 +435,26 @@
+ 		if (in_nullhost(sin->sin_addr)) {
+ 			sin->sin_addr =
+ 			    TAILQ_FIRST(&in_ifaddrhead)->ia_addr.sin_addr;
+-		} else if (sin->sin_addr.s_addr == INADDR_BROADCAST) {
++		} else if (sin->sin_addr.s_addr == INADDR_BROADCAST &&
++		    (inp->inp_socket->so_options & SO_ONESBCAST) == 0) {
++			/*
++			 * SCE: the broadcast address of the multicast
++			 * interface, if one is set, preferring one that is up
++			 */
++			struct ifnet *ifp = NULL;
++
++			if (inp->inp_moptions != NULL)
++				ifp = inp->inp_moptions->imo_multicast_ifp;
+ 			TAILQ_FOREACH(ia, &in_ifaddrhead, ia_list) {
+-				if (ia->ia_ifp->if_flags & IFF_BROADCAST) {
++				int flags = ia->ia_ifp->if_flags;
++
++				if ((flags & IFF_BROADCAST) != 0 &&
++				    (ifp == NULL ||
++				     ifp->if_index == ia->ia_ifp->if_index)) {
+ 					sin->sin_addr =
+ 					    ia->ia_broadaddr.sin_addr;
+-					break;
++					if (flags & IFF_UP)
++						break;
+ 				}
+ 			}
+ 		}
+@@ -507,6 +554,7 @@
+ 	if (inp->inp_route.ro_rt)
+ 		rtfree(inp->inp_route.ro_rt);
+ 	ip_freemoptions(inp->inp_moptions);
++	inp->inp_moptions = NULL;	/* SCE */
+ 	s = splnet();
+ 	in_pcbstate(inp, INP_ATTACHED);
+ 	LIST_REMOVE(&inp->inp_head, inph_lhash);
+@@ -982,8 +1030,15 @@
+ 	 *
+ 	 * XXX Is this still true?  Do we care?
+ 	 */
+-	if (ro->ro_rt && !(ro->ro_rt->rt_ifp->if_flags & IFF_LOOPBACK))
+-		ia = ifatoia(ro->ro_rt->rt_ifa);
++	if (ro->ro_rt && !(ro->ro_rt->rt_ifp->if_flags & IFF_LOOPBACK)) {
++		/* SCE: a route through an interface that is down is dropped */
++		if (ro->ro_rt->rt_ifp->if_flags & IFF_UP)
++			ia = ifatoia(ro->ro_rt->rt_ifa);
++		else {
++			rtfree(ro->ro_rt);
++			ro->ro_rt = NULL;
++		}
++	}
+ 	if (ia == NULL) {
+ 		u_int16_t fport = sin->sin_port;
+ 
+@@ -1007,7 +1062,9 @@
+ 	 * interface has been set as a multicast option, use the
+ 	 * address of that interface as our source address.
+ 	 */
+-	if (IN_MULTICAST(sin->sin_addr.s_addr) && mopts != NULL) {
++	if ((IN_MULTICAST(sin->sin_addr.s_addr) ||
++	    sin->sin_addr.s_addr == INADDR_BROADCAST) &&	/* SCE */
++	    mopts != NULL) {
+ 		struct ip_moptions *imo;
+ 		struct ifnet *ifp;
+ 

@@ -287,7 +287,6 @@ int init_crypto(void *(*allocate)(SceSize), void (*release)(void *));
 void sce_psnet_panic(const char *message, ...);
 int sceNetPsIsHeapAddress(const void *address);
 int sceNetPsIsGameBudget(void);
-int sceNetPsIsDevelopmentMode(void);
 int sceNetPsIsCEX(void);
 int sceNetPsIsSdkVersion2OrLater(void);
 int sceNetPsCopyUserOut(const void *source, void *destination, size_t length);

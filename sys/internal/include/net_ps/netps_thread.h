@@ -113,6 +113,7 @@ int sceNetPsGetThreadList(SceNetPsThreadInfo *info, int capacity);
 int sceNetPsGetSleepCount(SceNetPsSleepCount *count, int index);
 int sceNetPsRecordSleep(unsigned int identifier, int clear);
 int sceNetPsIsApplicationProgram(int *error);
+int sceNetPsIsDevelopmentMode(void);
 int sceNetPsSleep(const void *waitChannel, unsigned int flags,
 		 const char *message, int delay);
 int sceNetPsConsumeWakeup(const void *waitChannel, unsigned int events);
