@@ -14,7 +14,7 @@ SceUID gNetPsProcessEventId;
 void *gNetPsMemoryBase;
 int gNetPsMemorySize;
 SceNetPsGatewayState gNetPsGatewayState;
-void *gNetPsDebugInterface;
+SceNetPsDebugClient *gNetPsDebugInterface;
 struct SceNetPsDriverContext *gNetPsAllocatedDriverContext;
 
 /* Name unknown; initialize platform services and prime the packet cache. */

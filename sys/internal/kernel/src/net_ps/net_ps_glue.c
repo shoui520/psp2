@@ -76,7 +76,7 @@ SceNetPsConfigSubscriber *gNetPsConfigSubscriberTail;
 SceNetPsSysEventHooks gNetPsSystemHooks;
 SceNetPsThreadEventHooks gNetPsThreadHooks;
 SceNetPsProcessHooks gNetPsProcessHooks;
-void *gNetPsDebugInterfaceSlot;
+SceNetPsDebugClient **gNetPsDebugInterfaceSlot;
 SceNetPsGatewayState *gNetPsGatewayInterfaceSlot;
 struct NetDriver *gNetPsDebugDriver;
 struct NetDriver *gNetPsGatewayDriver;
@@ -1596,6 +1596,29 @@ unlock:
 	return result;
 }
 
+int sceNetPsSuspendDrivers(void);
+
+/* Name unknown; connect the complete network-owned platform hook records. */
+int sceNetPsInitializeModule(void)
+{
+	sceNetPsInitializeSync();
+	sceNetPsInitializePacketCallbacks(sceNetPsPreparePacketQueue,
+					 sceNetPsKickTransmit);
+	memset(&gNetPsSystemHooks, 0, sizeof(gNetPsSystemHooks));
+	gNetPsSystemHooks.suspend = sceNetPsSuspendDrivers;
+	gNetPsSystemHooks.resume = sceNetPsDispatchDriverEvents;
+	memset(&gNetPsThreadHooks, 0, sizeof(gNetPsThreadHooks));
+	gNetPsThreadHooks.exit = sceNetPsOnThreadExit;
+	memset(&gNetPsProcessHooks, 0, sizeof(gNetPsProcessHooks));
+	gNetPsProcessHooks.create = sceNetPsOnProcessCreate;
+	gNetPsProcessHooks.exit = sceNetPsOnProcessExit;
+	gNetPsProcessHooks.kill = sceNetPsOnProcessKill;
+	gNetPsProcessHooks.suspend = sceNetPsSuspendProcessSockets;
+	gNetPsProcessHooks.resume = sceNetPsResumeProcessSockets;
+	return sceNetPsInitializePlatform(sceNetPsStartModule,
+			&gNetPsSystemHooks, &gNetPsThreadHooks, &gNetPsProcessHooks);
+}
+
 unsigned int sceNetPsQueryDebugEmulation(
 		const SceNetPsDebugEmulationSelector *selector,
 		unsigned int selectorSize, SceNetPsDebugEmulationInfo *info,
@@ -1663,6 +1686,77 @@ int sceNetPsSetDebugEmulation(SceNetPsDebugEmulationRequest *request,
 	return result;
 }
 
+/* Name unknown; validate and translate the kernel statistics query result. */
+int sceNetPsQueryKernelStatistics(int flags, SceNetPsKernelStatistics *statistics,
+			       unsigned int size)
+{
+	int result;
+
+	if (flags)
+		return 0x8041810c;
+	if (!statistics)
+		return 0x80418101;
+	if (size < sizeof(*statistics))
+		return 0x8041810c;
+	result = sceNetPsGetKernelStatistics(statistics, 0);
+	if (result >= 0)
+		return sizeof(*statistics);
+	if (((unsigned int)result & 0xffff0000u) == 0xffff0000u)
+		return -result | 0x80410100;
+	return result;
+}
+
+/* SCE: debug command 4, one interface's record by type (as in SceNetIfType) */
+int sceNetPsQueryDebugInterface(const int *interfaceType, unsigned int selectorSize,
+				SceNetPsDebugInterfaceInfo *info,
+				unsigned int infoSize)
+{
+	struct ifnet *interface;
+	int result;
+
+	if (!interfaceType)
+		return 0x80418101;
+	if (selectorSize < sizeof(*interfaceType))
+		return 0x8041810c;
+	if (!info)
+		return 0x80418101;
+	if (infoSize < sizeof(*info))
+		return 0x8041810c;
+	switch (*interfaceType) {
+	case 1:
+		interface = sceNetPsFindInterface("lo0");
+		break;
+	case 2:
+		interface = sceNetPsFindInterface("eth0");
+		break;
+	case 3:
+		interface = sceNetPsFindInterface("wlan0");
+		break;
+	case 4:
+		interface = sceNetPsFindInterface("bt0");
+		break;
+	case 5:
+		interface = sceNetPsFindInterface("phone0");
+		break;
+	case 6:
+		interface = sceNetPsFindInterface("pppoe");
+		break;
+	default:
+		return 0x8041810d;
+	}
+	if (!interface)
+		return 0x8041810e;
+	result = sceNetPsSerializeInterfaceInfo(interface, &info->info, 0);
+	if (result < 0) {
+		if (((unsigned int)result & 0xffff0000) == 0xffff0000)
+			return -result | 0x80410100;
+		return result;
+	}
+	info->interfaceType = *interfaceType;
+	info->infoSize = sizeof(info->info);
+	return sizeof(*info);
+}
+
 int sceNetPsCollectSockInfo(int socket, SceNetSockInfo *records, int capacity,
 			 int flags, int *count, SceUID processId,
 			 int kernel);
@@ -1697,55 +1791,184 @@ int sceNetPsQueryDebugSockInfo(const SceUID *processId, unsigned int processSize
 	return result;
 }
 
-int sceNetPsSuspendDrivers(void);
-
-/* Name unknown; connect the complete network-owned platform hook records. */
-int sceNetPsInitializeModule(void)
+/* SCE: the public query exposes the DNS addresses and configuration flags. */
+int sceNetPsQueryDnsConfig(int flags, void *buffer, unsigned int length)
 {
-	sceNetPsInitializeSync();
-	sceNetPsInitializePacketCallbacks(sceNetPsPreparePacketQueue,
-					 sceNetPsKickTransmit);
-	memset(&gNetPsSystemHooks, 0, sizeof(gNetPsSystemHooks));
-	gNetPsSystemHooks.suspend = sceNetPsSuspendDrivers;
-	gNetPsSystemHooks.resume = sceNetPsDispatchDriverEvents;
-	memset(&gNetPsThreadHooks, 0, sizeof(gNetPsThreadHooks));
-	gNetPsThreadHooks.exit = sceNetPsOnThreadExit;
-	memset(&gNetPsProcessHooks, 0, sizeof(gNetPsProcessHooks));
-	gNetPsProcessHooks.create = sceNetPsOnProcessCreate;
-	gNetPsProcessHooks.exit = sceNetPsOnProcessExit;
-	gNetPsProcessHooks.kill = sceNetPsOnProcessKill;
-	gNetPsProcessHooks.suspend = sceNetPsSuspendProcessSockets;
-	gNetPsProcessHooks.resume = sceNetPsResumeProcessSockets;
-	return sceNetPsInitializePlatform(sceNetPsStartModule,
-			&gNetPsSystemHooks, &gNetPsThreadHooks, &gNetPsProcessHooks);
-}
-
-/* Name unknown; validate and translate the kernel statistics query result. */
-int sceNetPsQueryKernelStatistics(int flags, SceNetPsKernelStatistics *statistics,
-			       unsigned int size)
-{
+	SceNetPsDnsConfig config;
 	int result;
 
 	if (flags)
 		return 0x8041810c;
-	if (!statistics)
+	if (!buffer)
 		return 0x80418101;
-	if (size < sizeof(*statistics))
+	if (length <= 11)
 		return 0x8041810c;
-	result = sceNetPsGetKernelStatistics(statistics, 0);
-	if (result >= 0)
-		return sizeof(*statistics);
-	if (((unsigned int)result & 0xffff0000u) == 0xffff0000u)
-		return -result | 0x80410100;
+	result = sceNetPsGetDnsConfig(&config, 0, 1);
+	if (result >= 0) {
+		memcpy(buffer, &config, 12);
+		return 12;
+	}
+	if ((result & 0xffff0000) == 0xffff0000)
+		result = -result | 0x80410100;
+	return result;
+}
+
+/* SCE: a debug command; each returns its result size or an error */
+static inline int sceNetPsRunDebugCommand(int command, void *input,
+					  unsigned int inputSize, void *output,
+					  unsigned int outputSize)
+{
+	switch (command) {
+	case 1:
+		return sceNetPsQueryDebugEmulation(input, inputSize, output,
+						  outputSize);
+	case 2:
+		return sceNetPsSetDebugEmulation(input, inputSize, outputSize);
+	case 3:
+		return sceNetPsQueryKernelStatistics(inputSize, output, outputSize);
+	case 4:
+		return sceNetPsQueryDebugInterface(input, inputSize, output,
+						   outputSize);
+	case 5:
+		return sceNetPsQueryDebugSockInfo(input, inputSize, output,
+						  outputSize);
+	case 6:
+		return sceNetPsQueryDnsConfig(inputSize, output, outputSize);
+	default:
+		return 0x8041810b;
+	}
+}
+
+/* SCE: a registered debugger's command, from a caller holding the stack lock */
+int sceNetPsDebugControlUnlocked(SceNetPsDebugClient *client, int command,
+				 void *input, unsigned int inputSize,
+				 void *output, unsigned int outputSize)
+{
+	SceNetPsDebugClient *registered = *gNetPsDebugInterfaceSlot;
+
+	if (registered != client)
+		return 0x8041810a;
+	if (!registered)
+		return 0x80418109;
+	return sceNetPsRunDebugCommand(command, input, inputSize, output,
+				       outputSize);
+}
+
+/*
+ * SCE: a registered debugger's command under the stack lock; with flag 2
+ * the lock is waited for at most three seconds.
+ */
+int sceNetPsDebugControl(SceNetPsDebugClient *client, int command, void *input,
+			 unsigned int inputSize, void *output,
+			 unsigned int outputSize)
+{
+	SceNetPsDebugClient *registered = *gNetPsDebugInterfaceSlot;
+	int timeout = 3000000;
+	int result;
+
+	if (registered != client)
+		return 0x8041810a;
+	if (!registered)
+		return 0x80418109;
+	if (registered->flags & 2) {
+		sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex,
+					  (unsigned int *)&timeout);
+	} else {
+		timeout = 0;
+		sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
+	}
+	if (timeout < 0)
+		return 0x8041810f;
+	result = sceNetPsRunDebugCommand(command, input, inputSize, output,
+					 outputSize);
+	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 	return result;
 }
 
 /* Name unknown; retain the debug interface slot and its initial driver. */
-int sceNetPsInitializeDebugInterface(void *slot, struct NetDriver *driver)
+int sceNetPsInitializeDebugInterface(SceNetPsDebugClient **slot,
+				     struct NetDriver *driver)
 {
 	gNetPsDebugInterfaceSlot = slot;
 	gNetPsDebugDriver = driver;
 	return 0;
+}
+
+/*
+ * SCE: take the locks a debugger registration needs, unless the debugger
+ * holds them (flag 1); with flag 2 the stack lock is waited for at most
+ * three seconds.
+ */
+static inline int sceNetPsLockForDebugClient(unsigned int flags)
+{
+	int timeout = 3000000;
+
+	if (flags & 2) {
+		sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex,
+					  (unsigned int *)&timeout);
+	} else {
+		timeout = 0;
+		sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
+	}
+	if (timeout < 0)
+		return 0x8041810f;
+	sce_psnet_bnet_mutex_lock(&gNetPsDevRecvMutex, NULL);
+	sce_psnet_bnet_mutex_lock(&gNetPsDevSendMutex, NULL);
+	return 0;
+}
+
+static inline void sceNetPsUnlockForDebugClient(void)
+{
+	sce_psnet_bnet_mutex_unlock(&gNetPsDevSendMutex);
+	sce_psnet_bnet_mutex_unlock(&gNetPsDevRecvMutex);
+	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
+}
+
+/* SCE: register a debugger and give it its two command entry points. */
+int SceNetPsForDriver_83A12CCC(SceNetPsDebugClient *client)
+{
+	int result;
+
+	if (!client)
+		return 0x80418101;
+	if (!(client->flags & 1) && (result = sceNetPsLockForDebugClient(client->flags)))
+		return result;
+	if (!gNetPsDebugInterfaceSlot) {
+		result = 0x80418106;
+	} else if (*gNetPsDebugInterfaceSlot) {
+		result = 0x80418101;
+	} else {
+		*gNetPsDebugInterfaceSlot = client;
+		client->control = sceNetPsDebugControl;
+		(*gNetPsDebugInterfaceSlot)->controlUnlocked =
+			sceNetPsDebugControlUnlocked;
+		result = 0;
+	}
+	if (!(client->flags & 1))
+		sceNetPsUnlockForDebugClient();
+	return result;
+}
+
+/* SCE: unregister the debugger registered by SceNetPsForDriver 83A12CCC. */
+int SceNetPsForDriver_C000CA8F(SceNetPsDebugClient *client)
+{
+	int result;
+
+	if (!client)
+		return 0x80418101;
+	if (!(client->flags & 1) && (result = sceNetPsLockForDebugClient(client->flags)))
+		return result;
+	if (!gNetPsDebugInterfaceSlot) {
+		result = 0x80418106;
+	} else if (*gNetPsDebugInterfaceSlot == client) {
+		*gNetPsDebugInterfaceSlot = NULL;
+		result = 0;
+	} else {
+		result = 0x80418101;
+	}
+	if (!(client->flags & 1))
+		sceNetPsUnlockForDebugClient();
+	return result;
 }
 
 /* Name unknown; retain the kernel gateway interface slot and initial driver. */

@@ -44,28 +44,6 @@ int sceNetPsRoutingSysctl(const int *name, unsigned int nameLength, void *oldDat
 			  unsigned int *oldLength, const void *newData,
 			  unsigned int newLength);
 
-/* SCE: the public query exposes the DNS addresses and configuration flags. */
-int sceNetPsQueryDnsConfig(int flags, void *buffer, unsigned int length)
-{
-	SceNetPsDnsConfig config;
-	int result;
-
-	if (flags)
-		return 0x8041810c;
-	if (!buffer)
-		return 0x80418101;
-	if (length <= 11)
-		return 0x8041810c;
-	result = sceNetPsGetDnsConfig(&config, 0, 1);
-	if (result >= 0) {
-		memcpy(buffer, &config, 12);
-		return 12;
-	}
-	if ((result & 0xffff0000) == 0xffff0000)
-		result = -result | 0x80410100;
-	return result;
-}
-
 /* SCE: the gateway allocator callbacks ignore their interface argument. */
 int sceNetPsGatewayFree(struct SceNetKernelGateway *interface, void *pointer)
 {

@@ -8,8 +8,6 @@
 
 STUB_MAIN(module_start)
 
-STUB(SceNetPsForDriver_83A12CCC)
-STUB(SceNetPsForDriver_C000CA8F)
 STUB(SceNetPsForDriver_E41C0794)
 STUB(sceNetSyscallSetsockopt)
 STUB(sceNetSyscallGetsockopt)

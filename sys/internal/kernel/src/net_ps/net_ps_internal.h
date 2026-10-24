@@ -178,6 +178,34 @@ _Static_assert(offsetof(SceNetPsDebugSockInfo, count) == 4,
 	       "debug sockinfo count");
 _Static_assert(offsetof(SceNetPsDebugSockInfo, recordSize) == 8,
 	       "debug sockinfo record size");
+
+/* SCE: debug command 4's result, one interface's record */
+typedef struct SceNetPsDebugInterfaceInfo {
+	int interfaceType;
+	unsigned int infoSize;
+	SceNetPsInterfaceInfo info;
+} SceNetPsDebugInterfaceInfo;
+
+_Static_assert(sizeof(SceNetPsDebugInterfaceInfo) == 328,
+	       "debug interface info size");
+
+/*
+ * SCE: a debugger registered with SceNetPsForDriver 83A12CCC; the stack
+ * fills in its two command entry points.
+ */
+typedef struct SceNetPsDebugClient {
+	/* takes the stack lock */
+	int (*control)(struct SceNetPsDebugClient *client, int command,
+		       void *input, unsigned int inputSize, void *output,
+		       unsigned int outputSize);
+	/* for a caller that holds it */
+	int (*controlUnlocked)(struct SceNetPsDebugClient *client, int command,
+			       void *input, unsigned int inputSize,
+			       void *output, unsigned int outputSize);
+	unsigned int flags;	/* 1: the debugger holds the locks; 2: wait at most 3 s */
+} SceNetPsDebugClient;
+
+_Static_assert(sizeof(SceNetPsDebugClient) == 12, "debug client size");
 _Static_assert(offsetof(SceNetPsDebugSockInfo, sockets) == 12,
 	       "debug sockinfo records");
 
@@ -283,7 +311,8 @@ int sceNetPsRecordSender(SceUID processId);
 int sceNetPsTakeSenders(SceNetPsSenderList *list);
 int sceNetPsPollDevices(void);
 int sceNetPsGetDnsConfig(SceNetPsDnsConfig *config, int networkOrder, int addressesOnly);
-int sceNetPsInitializeDebugInterface(void *slot, struct NetDriver *driver);
+int sceNetPsInitializeDebugInterface(SceNetPsDebugClient **slot,
+				     struct NetDriver *driver);
 int sceNetPsInitializeGateway(SceNetPsGatewayState *slot, struct NetDriver *driver);
 int sceNetPsNotifyDriverCallbacks(struct SceNetPsDriverContext *context, SceUInt64 events);
 int sceNetPsHasDriverCallbacks(struct SceNetPsDriverContext *context);
