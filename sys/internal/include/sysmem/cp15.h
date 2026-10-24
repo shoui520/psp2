@@ -162,6 +162,8 @@
 #define readJaolr()		CP_READ(p14, 7, c3, c0, 0)
 
 /* breakpoint and watchpoint n (a constant: it is part of the instruction) */
+#define readDbgbvr(n)		CP_READ(p14, 0, c0, c##n, 4)
+#define readDbgbcr(n)		CP_READ(p14, 0, c0, c##n, 5)
 #define writeDbgbvr(n, v)	CP_WRITE(p14, 0, c0, c##n, 4, v)
 #define writeDbgbcr(n, v)	CP_WRITE(p14, 0, c0, c##n, 5, v)
 #define writeDbgwvr(n, v)	CP_WRITE(p14, 0, c0, c##n, 6, v)

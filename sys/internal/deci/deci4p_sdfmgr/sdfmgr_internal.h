@@ -81,25 +81,6 @@ typedef struct SdfMgrCpuState {
 	SdfMgrTransport *transport;
 } SdfMgrCpuState;
 
-/* SDfMgr step modes (SdfMgrDebugCpuState.stepMode) */
-#define SDFMGR_STEP_ARM			0x01	/* break when leaving pc */
-#define SDFMGR_STEP_THUMB		0x02	/* break at stepAddress */
-#define SDFMGR_STEP_ARM_POLL		0x10	/* also ends the SDIO poll loop */
-#define SDFMGR_STEP_THUMB_POLL		0x20
-
-/* the debugger's (deci4p_sdbgp) per-core break record; the rest is its own */
-typedef struct SdfMgrDebugCpuState {
-	uint8_t reserved0[0x18c];
-	SceUID pid;				/* of the stopped thread */
-	SceUID tid;
-	uint32_t pc;				/* where it stopped */
-	uint32_t reserved1;
-	uint32_t stepMode;			/* SDFMGR_STEP_* */
-	uint8_t reserved2[0x10];
-	uint32_t stepAddress;			/* Thumb step; bit 1: the upper halfword */
-	uint8_t reserved3[0x1dc];
-} SdfMgrDebugCpuState;
-
 typedef struct SdfMgrPacketQueue {
 	int write;
 	int read;

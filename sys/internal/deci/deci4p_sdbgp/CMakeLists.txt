@@ -4,6 +4,7 @@ psp2_module(os0_kd_deci4p_sdbgp KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	sdbgp.c
 	check.c
 	swbkpt.c
+	hwbkpt.c
 	leakcheck.c
 	deci4p_sdbgp.c
 )

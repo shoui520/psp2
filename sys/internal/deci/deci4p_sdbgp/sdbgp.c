@@ -104,7 +104,7 @@ int sdbgpResume(int value, void *args)
 	{
 		uint32_t address = slot->value;
 
-		control = hwwatchMakeControl(slot->control);
+		control = hwwtptMakeControl(slot->control);
 		writeDbgwvr(0, address);
 		writeDbgwcr(0, control);
 	}
@@ -188,7 +188,7 @@ int SDbgpModuleBoot(SceSize args, const void *argp)
 						  SDBGP_TRACE_CPU_SIZE);
 		traceInit();
 	}
-	result = sceSDfMgrOpen((SceSDfMgrHandler)_sdbgpRecvData,
+	result = sceSDfMgrOpen(_sdbgpRecvData,
 			       &s_sdbgpProtocols[sceKernelCpuId()], cpu);
 	if (result < 0)
 		return result;
@@ -202,7 +202,7 @@ int SDbgpModuleBoot(SceSize args, const void *argp)
 	cpu->hostMode = 1;
 	if (sceKernelCpuId() != 0)
 		return 0;
-	hwwatchClear(SDBGP_HWWATCH_MAX);
+	hwwtptClear(SDBGP_HWWATCH_MAX);
 	hwbkptClear(SDBGP_HWBKPT_MAX);
 	sdbgpInitPhysicalAccess(swbkptClear(SDBGP_SWBKPT_MAX));
 	SceExcpmgrForKernel_44CE04B8((uintptr_t)sdbgpProbeStart, (uintptr_t)sdbgpProbeEnd);
@@ -590,7 +590,7 @@ static inline int _sdbgpEventSend(SdbgpCpuState *cpu)
 	return _sdbgpSendData(cpu->handle, packet, size);
 }
 
-int _sdbgpRecvData(int event, void *arg, void *context)
+void _sdbgpRecvData(int event, void *arg, void *context)
 {
 	SdbgpCpuState *cpu = context;
 	const SceDfMgrStatus *status;
@@ -601,13 +601,15 @@ int _sdbgpRecvData(int event, void *arg, void *context)
 
 	switch (event) {
 	case SCE_DFMGR_EVENT_RECV:
-		hwwatchDisable();
+		hwwtptDisable();
 		if (cpu->recvStatus & SDBGP_BUF_LOCKED)
-			return hwwatchEnable(cpu);
+			hwwtptEnable(cpu);
+			return;
 		sdbgpUpdateBufStatus(&cpu->recvStatus, SDBGP_BUF_LOCKED, 1);
 		packet = cpu->recvBuf;
 		if (!packet)
-			return hwwatchEnable(cpu);
+			hwwtptEnable(cpu);
+			return;
 		size = (SceSize)arg;
 		if (size) {
 			p = (char *)packet;
@@ -617,11 +619,13 @@ int _sdbgpRecvData(int event, void *arg, void *context)
 				if (result < 0) {
 					SceDeci4pSDfMgrForKernel_501CE61D(15, SCE_DBGINFO(728),
 						"sceSDfMgrExRecv() failed (0x%08X)\n", result);
-					return hwwatchEnable(cpu);
+					hwwtptEnable(cpu);
+					return;
 				}
 			}
 			if ((int)size < 0)
-				return hwwatchEnable(cpu);
+				hwwtptEnable(cpu);
+				return;
 			packet = cpu->recvBuf;
 		}
 		cpu->recvSize = size;
@@ -639,34 +643,37 @@ int _sdbgpRecvData(int event, void *arg, void *context)
 				sdbgpUpdateStatus(cpu, SDBGP_STATUS_SENDING, 0);
 			}
 		}
-		return hwwatchEnable(cpu);
+		hwwtptEnable(cpu);
+		return;
 	case SCE_DFMGR_EVENT_SEND:
-		return _sdbgpEventSend(cpu);
+		_sdbgpEventSend(cpu);
+		return;
 	case SCE_DFMGR_EVENT_SENT:
 		if (cpu->sendStatus & SDBGP_BUF_FRAGMENTED)
-			return sceSDfMgrExReqSend(cpu->handle);
+			sceSDfMgrExReqSend(cpu->handle);
+			return;
 		if (cpu->sendStatus & SDBGP_BUF_LOCKED)
 			_sdbgpFreeSendBuf(cpu);
 		result = SceDeci4pSDfMgrForKernel_C38EA67A();
 		if (result)
-			return SceDeci4pSDfMgrForKernel_58D7597A();
-		return result;
+			SceDeci4pSDfMgrForKernel_58D7597A();
+			return;
+		return;
 	case SCE_DFMGR_EVENT_STATUS:
 		status = arg;
 		if (status->kind == 0) {
 			result = status->connected;
 		} else {
 			if (status->kind != 1)
-				return event - 1;
+				return;
 			result = status->enabled;
 		}
 		if (result == 0)
 			cpu->hostMode = 0;
 		else if (result == 1)
 			cpu->hostMode = 1;
-		return event - 1;
+		return;
 	}
-	return event - 1;
 }
 
 void sdbgpSetSendSize(SdbgpCpuState *cpu, SceSize size)

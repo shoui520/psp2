@@ -21,6 +21,7 @@
 #include <sysmem/heap_info.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/uid_class.h>
+#include <threadmgr/threadmgr_debugger.h>
 
 /* the floating-point status register (exception notifications) */
 static inline uint32_t readFpscr(void)
@@ -97,10 +98,32 @@ static inline uint32_t readFpscr(void)
 #define SDBGP_STOP_BKPT_E0		18	/* BKPT 0xe0-0xff */
 #define SDBGP_STOP_BKPT_C0		19	/* BKPT 0xc0-0xdf, or a BKPT debug event */
 #define SDBGP_STOP_STEPPING		32
+#define SDBGP_STOP_HWBKPT		32	/* hwbkptCheckStop: it stops here */
+#define SDBGP_STOP_HWBKPT_PASS		33	/* not for this context */
+#define SDBGP_STOP_HWWTPT		48	/* hwwtptCheckStop: it stops here */
+#define SDBGP_STOP_HWWTPT_PASS		50
 #define SDBGP_STOP_USER_DEBUG_EVENT	64
 
 /* dipsw: hardware break and watch points */
 #define SDBGP_DIPSW_HW_DEBUG		0xe4
+
+/* the debug registers of a core's CoreSight page (CORESIGHT_DBG_BASE) */
+#define DBG_BVR(n)			(0x100 + (n) * 4)
+#define DBG_BCR(n)			(0x140 + (n) * 4)
+#define DBG_WVR(n)			(0x180 + (n) * 4)
+#define DBG_WCR(n)			(0x1c0 + (n) * 4)
+#define DBG_LAR				0xfb0	/* lock access */
+#define DBG_LAR_KEY			0xc5acce55
+
+/* DBGBCR / DBGWCR */
+#define DBGBCR_ENABLE			0x00000001
+#define DBGBCR_PMC_MASK			0x00000006	/* privileged mode control */
+#define DBGBCR_PMC_PRIVILEGED		0x00000002
+#define DBGBCR_PMC_USER			0x00000004
+#define DBGBCR_PMC_ANY			0x00000006
+#define DBGBCR_BAS_MASK			0x000001e0	/* byte address select */
+#define DBGBCR_BAS_THUMB_HIGH		0x00000180
+#define DBGBCR_MISMATCH			0x00400000
 
 /* DBGDSCR method of debug entry (bits 2-5) */
 #define DBGDSCR_MOE_MASK		0x3c
@@ -114,6 +137,8 @@ static inline uint32_t readFpscr(void)
 
 #define PSR_MODE_MASK			0x1f
 #define PSR_MODE_USR			0x10
+#define PSR_MODE_SVC			0x13
+#define PSR_MODE_SYS			0x1f
 #define PSR_THUMB			0x20
 
 /* SdbgpHeader.flags */
@@ -202,6 +227,43 @@ typedef struct SdbgpSwbkptListReply {
 	uint32_t num;				/* 0x1c */
 	SdbgpSwbkptInfo info[];			/* 0x20 */
 } SdbgpSwbkptListReply;
+
+/* one hardware break point of a list */
+typedef struct SdbgpHwbkptInfo {
+	SceSize size;				/* sizeof(SdbgpHwbkptInfo) */
+	SceUID processId;
+	SceUID threadId;
+	uint32_t value;				/* DBGBVR */
+	uint32_t control;			/* DBGBCR */
+} SdbgpHwbkptInfo;
+
+/* the hardware watch point */
+typedef struct SdbgpHwwtptInfo {
+	uint32_t size;				/* sizeof(SdbgpHwwtptInfo) */
+	SceUID processId;
+	SceUID threadId;
+	uint32_t id;
+	uint32_t value;				/* DBGWVR */
+	uint32_t control;			/* DBGWCR */
+} SdbgpHwwtptInfo;
+
+/* the hardware break points of a thread or process */
+typedef struct SdbgpHwbkptListReply {
+	SdbgpHeader header;
+	uint32_t num;				/* 0x1c */
+	SdbgpHwbkptInfo info[];			/* 0x20 */
+} SdbgpHwbkptListReply;
+
+typedef struct SdbgpHwwtptGetReply {
+	SdbgpHeader header;
+	uint32_t num;				/* 0x1c */
+	SdbgpHwwtptInfo info;			/* 0x20 */
+} SdbgpHwwtptGetReply;
+
+typedef struct SdbgpHwwtptSetReply {
+	SdbgpHeader header;
+	uint32_t id;				/* 0x1c */
+} SdbgpHwwtptSetReply;
 
 /* the stop details an exception notification carries (excp_handler.c) */
 typedef struct SdbgpExcpDetail {
@@ -319,6 +381,59 @@ typedef struct SdbgpHwSlot {
 #define SDBGP_HWBKPT_MAX		6
 #define SDBGP_HWWATCH_MAX		1
 
+/* where hwbkptDisableHWBP found the break point it took out */
+#define SDBGP_HWBKPT_IN_BP0		0	/* DBGBCR0 */
+#define SDBGP_HWBKPT_IN_BP1		1	/* DBGBCR1 */
+#define SDBGP_HWBKPT_IN_PROCESS		4	/* the process's PHBP */
+#define SDBGP_HWBKPT_IN_THREAD		5	/* the thread's THBP */
+
+/* hwbkptEnableHWBP: forget the break point after putting it back */
+#define SDBGP_HWBKPT_ENABLE_CLEAR	0x100
+
+/* the break point taken out while the core stops at it */
+typedef struct SdbgpDisabledHwbkpt {
+	uint32_t where;				/* 0x00: SDBGP_HWBKPT_IN_* */
+	uint32_t value;				/* 0x04 */
+	uint32_t control;			/* 0x08 */
+	uint32_t reserved;			/* 0x0c */
+	SceUID threadId;			/* 0x10 */
+	SceUID processId;			/* 0x14 */
+} SdbgpDisabledHwbkpt;
+
+/* the watch point taken out while the core stops at it */
+typedef struct SdbgpDisabledHwwtpt {
+	uint32_t value;				/* 0x00: DBGWVR0 */
+	uint32_t control;			/* 0x04: DBGWCR0 */
+	uint32_t disabled;			/* 0x08 */
+} SdbgpDisabledHwwtpt;
+
+/* the id a hardware watch point is given */
+#define SDBGP_HWWTPT_ID			0x30000
+
+/* SdbgpCpuState.hostMode: leave the watch point off after this packet */
+#define SDBGP_HOST_HWWTPT_OFF		0x100000
+
+/* set a hardware break point (SDBGP_GROUP_SYSTEM) */
+typedef struct SdbgpHwbkptSetRequest {
+	SdbgpRequest header;
+	uint32_t reserved;			/* 0x14 */
+	SceUID processId;			/* 0x18 */
+	SceUID threadId;			/* 0x1c */
+	uint32_t value;				/* 0x20 */
+	uint32_t control;			/* 0x24 */
+} SdbgpHwbkptSetRequest;
+
+/* set the hardware watch point (SDBGP_GROUP_SYSTEM) */
+typedef struct SdbgpHwwtptSetRequest {
+	SdbgpRequest header;
+	uint32_t reserved0;			/* 0x14 */
+	SceUID processId;			/* 0x18 */
+	SceUID threadId;			/* 0x1c */
+	uint32_t reserved1;			/* 0x20 */
+	uint32_t value;				/* 0x24 */
+	uint32_t control;			/* 0x28 */
+} SdbgpHwwtptSetRequest;
+
 /* the debugger's global state */
 /*
  * The UID and heap logs _leakcheckUID and _leakcheckHeap keep (leakcheck.c): the
@@ -355,14 +470,16 @@ typedef struct SdbgpState {
 	SdbgpSwbkpt sysSwbkpt;			/* 0x330: one taken out to step over it */
 	uint32_t reserved1[10];			/* 0x358 */
 	SdbgpHwSlot hwbkpt[SDBGP_HWBKPT_MAX];	/* 0x380 */
-	uint32_t reserved2[6];			/* 0x410 */
+	SdbgpDisabledHwbkpt disabledHwbkpt;	/* 0x410: hwbkptDisableHWBP */
 	SdbgpHwSlot hwwatch[SDBGP_HWWATCH_MAX];	/* 0x428 */
-	uint32_t reserved3[6];			/* 0x440 */
+	uint32_t reserved3;			/* 0x440 */
+	SdbgpDisabledHwwtpt disabledHwwtpt;	/* 0x444: hwwtptDisableHWWP */
+	uint32_t reserved4[2];			/* 0x450 */
 	uint32_t enabled;			/* 0x458 */
-	uint32_t reserved4[4];			/* 0x45c */
+	uint32_t reserved5[4];			/* 0x45c */
 	uint32_t stopReason[4];			/* 0x46c: per core, SDBGP_STOP_* */
-	uint32_t reserved5[4];			/* 0x47c */
-	void *debugCpu;				/* 0x48c: the SDfMgr break records */
+	uint32_t reserved6[4];			/* 0x47c */
+	SdfMgrDebugCpuState *debugCpu;		/* 0x48c: the SDfMgr break records */
 	SdbgpLeakCheck leakCheck;		/* 0x490 */
 	void *traceBase;			/* 0x4c4 */
 	SceUID traceMemblock;			/* 0x4c8 */
@@ -392,7 +509,7 @@ void *sdbgpAllocSendBuf(SdbgpCpuState *cpu, SceSize size);
 int sdbgpSendNotification(SdbgpCpuState *cpu, SceUID pid, SceUID tid, uint32_t pc,
 			  uint32_t cpsr, const SdbgpExcpDetail *detail);
 void sdbgpControl(int id);
-int _sdbgpRecvData(int event, void *arg, void *context);
+void _sdbgpRecvData(int event, void *arg, void *context);
 int sdbgpSendError(SdbgpCpuState *cpu, uint8_t group, uint8_t command, uint8_t tag,
 		   uint32_t result);
 void sdbgpSetSendSize(SdbgpCpuState *cpu, SceSize size);
@@ -664,16 +781,35 @@ int _leakcheckReset(void);
 int sdbgpDecodeOpcode(int thumb, const void *buf, uint32_t *opcode);
 
 /* hwbkpt.c */
+int hwbkptWriteAllCpu(uint32_t value, uint32_t control);
 int hwbkptCheckStop(SceUID pid, SceUID tid, uintptr_t pc, uint32_t cpsr);
-int hwwatchCheckStop(SceUID tid, uintptr_t address, int mode);
+void hwbkptClear(int index);
+int _getHwbkpt(SdbgpHwbkptListReply *reply, SceUID pid, SceUID tid,
+	       ThreadmgrThreadInfoForDebugger *info);
+int hwbkptGetHwbkptAll(SdbgpHwbkptInfo *info, SceSize *num);
+int hwbkptSetHwbkpt(const SdbgpHwbkptSetRequest *request);
+int clearHwbkpt(SceUID pid, SceUID tid, uint32_t value);
+int hwbkptClearHwbkptAll(ThreadmgrThreadInfoForDebugger *threads);
+int hwbkptDisableHWBP(void);
+int hwbkptEnableHWBP(int flags);
 uint32_t hwbkptMakeControl(uint32_t control);
-uint32_t hwwatchMakeControl(uint32_t control);
-int hwbkptClear(int count);
-int hwwatchClear(int count);
-void hwwatchDisable(void);
-int hwwatchEnable(SdbgpCpuState *cpu);
+int hwwtptWriteAllCpu(uint32_t value, uint32_t control);
+int hwwtptCheckStop(SceUID tid, uintptr_t address, int mode);
+void hwwtptClear(int index);
+int hwwtptIsSet(void);
+int _getHwwtpt(SdbgpHwwtptGetReply *reply, uint32_t id);
+uint32_t hwwtptMakeControl(uint32_t control);
+int hwwtptSetHwwtpt(const SdbgpHwwtptSetRequest *request, SdbgpHwwtptSetReply *reply);
+int clearHwwtpt(uint32_t id);
+int hwwtptDisableHWWP(void);
+int hwwtptEnableHWWP(void);
+void hwwtptDisable(void);
+void hwwtptEnable(SdbgpCpuState *cpu);
 
 /* phymem.c */
+int sceKernelPhysicalMemReadForDebugger(void *dest, uintptr_t psrc, SceSize size, SceSize width);
+int sceKernelPhysicalMemWriteForDebugger(uintptr_t pdest, const void *src, SceSize size,
+					 SceSize width);
 void sdbgpInitPhysicalAccess(int unused);
 
 /* kernel_util.c */

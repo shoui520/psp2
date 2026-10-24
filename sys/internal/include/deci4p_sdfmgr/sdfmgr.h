@@ -63,10 +63,26 @@ int sceSDfMgrContinueSystem(void);
 int SceDeci4pSDfMgrForKernel_3A25594F(void (*control)(int id));		/* RegisterControlComponent */
 int SceDeci4pSDfMgrForKernel_59C077B3(void (*control)(int id));		/* UnregisterControlComponent */
 
-/* the debugger's per-core break records (deci4p_sdbgp allocates them) */
-struct SdfMgrDebugCpuState;
+/* SDfMgr step modes (SdfMgrDebugCpuState.stepMode) */
+#define SDFMGR_STEP_ARM			0x01	/* break when leaving pc */
+#define SDFMGR_STEP_THUMB		0x02	/* break at stepAddress */
+#define SDFMGR_STEP_ARM_POLL		0x10	/* also ends the SDIO poll loop */
+#define SDFMGR_STEP_THUMB_POLL		0x20
 
-struct SdfMgrDebugCpuState **SceDeci4pSDfMgrForKernel_BFB482D8(void);
+/* the debugger's per-core break records (deci4p_sdbgp allocates them; the rest is its own) */
+typedef struct SdfMgrDebugCpuState {
+	uint8_t reserved0[0x18c];
+	SceUID pid;				/* of the stopped thread */
+	SceUID tid;
+	uint32_t pc;				/* where it stopped */
+	uint32_t reserved1;
+	uint32_t stepMode;			/* SDFMGR_STEP_* */
+	uint8_t reserved2[0x10];
+	uint32_t stepAddress;			/* Thumb step; bit 1: the upper halfword */
+	uint8_t reserved3[0x1dc];
+} SdfMgrDebugCpuState;
+
+SdfMgrDebugCpuState **SceDeci4pSDfMgrForKernel_BFB482D8(void);
 void SceDeci4pSDfMgrForKernel_4EA65698(uint32_t value);
 uint32_t SceDeci4pSDfMgrForKernel_C38EA67A(void);
 uint32_t SceDeci4pSDfMgrForKernel_0A6437B6(void);
