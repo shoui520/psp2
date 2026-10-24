@@ -12,7 +12,7 @@ copies net_ps changes, unchanged. Everything else in the set is left out.
 
 net_ps, net_ps_dev and wlanbt include them through `sys/internal/kernel/src/net_ps/include`,
 which also holds the psp2 port's `machine/` headers and Sony's changed copies (`net/if.h`,
-`netinet/in.h`, `netinet6/in6.h`, `sys/lock.h`, `sys/malloc.h`, `sys/mbuf.h`, `sys/pool.h`,
+`net/if_arp.h`, `netinet/in.h`, `netinet6/in6.h`, `sys/lock.h`, `sys/malloc.h`, `sys/mbuf.h`, `sys/pool.h`,
 `sys/proc.h`, `sys/socket.h`, `sys/socketvar.h`, `sys/sockio.h`, `sys/systm.h`), each change marked `SCE`. A kernel file Sony changed is
 patched at configure time from its pristine copy here (`net_ps/<file>_sce.patch`), and the kernel configuration's option and count headers
 (`opt_*.h`, `arp.h`, `sl.h`, ...) are written in `include/`.

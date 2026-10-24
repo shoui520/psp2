@@ -19,4 +19,8 @@
 #define spl0()		0
 #define splx(s)		((void)(s))
 
+/* SCE: the network soft interrupt (schednetisr) wakes net_ps's soft thread */
+int	sceNetPsScheduleProtocols(void);
+#define setsoftnet()	sceNetPsScheduleProtocols()
+
 #endif /* _PSP2_INTR_H_ */

@@ -1,0 +1,329 @@
+--- a/net/if_ethersubr.c
++++ b/net/if_ethersubr.c
+@@ -112,6 +112,8 @@
+ #endif
+ 
+ #include <net/if_ether.h>
++#include "netps_driver.h"	/* SCE: ether_input's drop count */
++#include <net/errno.h>		/* SCE: SCE_NET_EDISABLEDIF */
+ #if NVLAN > 0
+ #include <net/if_vlanvar.h>
+ #endif
+@@ -176,6 +178,11 @@
+ extern u_char	aarp_org_code[3];
+ #endif /* NETATALK */
+ 
++/* SCE: this file's copies are made whatever the length (ether_ifattach) */
++#undef memcpy
++
++extern struct ifqueue isdnintrq;	/* SCE */
++
+ u_char	etherbroadcastaddr[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+ #define senderr(e) { error = (e); goto bad;}
+ 
+@@ -215,6 +222,9 @@
+ #endif
+ 	if ((ifp->if_flags & (IFF_UP|IFF_RUNNING)) != (IFF_UP|IFF_RUNNING))
+ 		senderr(ENETDOWN);
++	/* SCE: an interface held promiscuous sends nothing */
++	if (ifp->if_flags & IFF_PPROMISC)
++		senderr(SCE_NET_EDISABLEDIF);
+ 	if ((rt = rt0) != NULL) {
+ 		if ((rt->rt_flags & RTF_UP) == 0) {
+ 			if ((rt0 = rt = rtalloc1(dst, 1)) != NULL) {
+@@ -242,7 +252,8 @@
+ 				}
+ 			}
+ 		}
+-		if (rt->rt_flags & RTF_REJECT)
++		/* SCE: a broadcast goes out through a rejecting route */
++		if ((rt->rt_flags & RTF_REJECT) && (m->m_flags & M_BCAST) == 0)
+ 			if (rt->rt_rmx.rmx_expire == 0 ||
+ 			    (u_long) time.tv_sec < rt->rt_rmx.rmx_expire)
+ 				senderr(rt == rt0 ? EHOSTDOWN : EHOSTUNREACH);
+@@ -455,13 +466,17 @@
+ 	case AF_UNSPEC:
+ 		eh = (struct ether_header *)dst->sa_data;
+  		bcopy((caddr_t)eh->ether_dhost, (caddr_t)edst, sizeof (edst));
++		/* SCE: a 32-byte address also carries the source */
++		if (dst->sa_len == 32) {
++			hdrcmplt = 1;
++			bcopy((caddr_t)&dst->sa_data[16], (caddr_t)esrc,
++			    sizeof (esrc));
++		}
+ 		/* AF_UNSPEC doesn't swap the byte order of the ether_type. */
+ 		etype = eh->ether_type;
+ 		break;
+ 
+-	default:
+-		printf("%s: can't handle af%d\n", ifp->if_xname,
+-			dst->sa_family);
++	default:	/* SCE: without a message */
+ 		senderr(EAFNOSUPPORT);
+ 	}
+ 
+@@ -682,8 +697,9 @@
+ 	 */
+ 	if (m->m_pkthdr.len >
+ 	    ETHER_MAX_FRAME(ifp, etype, m->m_flags & M_HASFCS)) {
+-		printf("%s: discarding oversize frame (len=%d)\n",
+-		    ifp->if_xname, m->m_pkthdr.len);
++		/* SCE: counted by the driver's context, not printed */
++		if (ifp->if_softc != NULL)
++			((struct SceNetPsDriverContext *)ifp->if_softc)->rxEmulationDrops++;
+ 		m_freem(m);
+ 		return;
+ 	}
+@@ -1028,8 +1044,10 @@
+ 			return;
+ 		}
+ #else /* ISO || LLC  || NETATALK*/
+-	    m_freem(m);
+-	    return;
++		/* SCE: any other frame goes to net_ps's raw queue */
++		schednetisr(NETISR_ISDN);
++		inq = &isdnintrq;
++		break;
+ #endif /* ISO || LLC || NETATALK*/
+ 	}
+ 
+@@ -1041,27 +1059,6 @@
+ 		IF_ENQUEUE(inq, m);
+ 	splx(s);
+ }
+-
+-/*
+- * Convert Ethernet address to printable (loggable) representation.
+- */
+-static char digits[] = "0123456789abcdef";
+-char *
+-ether_sprintf(const u_char *ap)
+-{
+-	static char etherbuf[18];
+-	char *cp = etherbuf;
+-	int i;
+-
+-	for (i = 0; i < 6; i++) {
+-		*cp++ = digits[*ap >> 4];
+-		*cp++ = digits[*ap++ & 0xf];
+-		*cp++ = ':';
+-	}
+-	*--cp = 0;
+-	return (etherbuf);
+-}
+-
+ /*
+  * Perform common duties while attaching to interface list
+  */
+@@ -1140,80 +1137,6 @@
+ 	MOWNER_DETACH(&ec->ec_tx_mowner);
+ }
+ 
+-#if 0
+-/*
+- * This is for reference.  We have a table-driven version
+- * of the little-endian crc32 generator, which is faster
+- * than the double-loop.
+- */
+-u_int32_t
+-ether_crc32_le(const u_int8_t *buf, size_t len)
+-{
+-	u_int32_t c, crc, carry;
+-	size_t i, j;
+-
+-	crc = 0xffffffffU;	/* initial value */
+-
+-	for (i = 0; i < len; i++) {
+-		c = buf[i];
+-		for (j = 0; j < 8; j++) {
+-			carry = ((crc & 0x01) ? 1 : 0) ^ (c & 0x01);
+-			crc >>= 1;
+-			c >>= 1;
+-			if (carry)
+-				crc = (crc ^ ETHER_CRC_POLY_LE);
+-		}
+-	}
+-
+-	return (crc);
+-}
+-#else
+-u_int32_t
+-ether_crc32_le(const u_int8_t *buf, size_t len)
+-{
+-	static const u_int32_t crctab[] = {
+-		0x00000000, 0x1db71064, 0x3b6e20c8, 0x26d930ac,
+-		0x76dc4190, 0x6b6b51f4, 0x4db26158, 0x5005713c,
+-		0xedb88320, 0xf00f9344, 0xd6d6a3e8, 0xcb61b38c,
+-		0x9b64c2b0, 0x86d3d2d4, 0xa00ae278, 0xbdbdf21c
+-	};
+-	u_int32_t crc;
+-	size_t i;
+-
+-	crc = 0xffffffffU;	/* initial value */
+-
+-	for (i = 0; i < len; i++) {
+-		crc ^= buf[i];
+-		crc = (crc >> 4) ^ crctab[crc & 0xf];
+-		crc = (crc >> 4) ^ crctab[crc & 0xf];
+-	}
+-
+-	return (crc);
+-}
+-#endif
+-
+-u_int32_t
+-ether_crc32_be(const u_int8_t *buf, size_t len)
+-{
+-	u_int32_t c, crc, carry;
+-	size_t i, j;
+-
+-	crc = 0xffffffffU;	/* initial value */
+-
+-	for (i = 0; i < len; i++) {
+-		c = buf[i];
+-		for (j = 0; j < 8; j++) {
+-			carry = ((crc & 0x80000000U) ? 1 : 0) ^ (c & 0x01);
+-			crc <<= 1;
+-			c >>= 1;
+-			if (carry)
+-				crc = (crc ^ ETHER_CRC_POLY_BE) | carry;
+-		}
+-	}
+-
+-	return (crc);
+-}
+-
+ #ifdef INET
+ u_char	ether_ipmulticast_min[6] = { 0x01, 0x00, 0x5e, 0x00, 0x00, 0x00 };
+ u_char	ether_ipmulticast_max[6] = { 0x01, 0x00, 0x5e, 0x7f, 0xff, 0xff };
+@@ -1395,130 +1318,4 @@
+ 	return (ENETRESET);
+ }
+ 
+-/*
+- * Common ioctls for Ethernet interfaces.  Note, we must be
+- * called at splnet().
+- */
+-int
+-ether_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
+-{
+-	struct ethercom *ec = (void *) ifp;
+-	struct ifreq *ifr = (struct ifreq *)data;
+-	struct ifaddr *ifa = (struct ifaddr *)data;
+-	int error = 0;
+-
+-	switch (cmd) {
+-	case SIOCSIFADDR:
+-		ifp->if_flags |= IFF_UP;
+-		switch (ifa->ifa_addr->sa_family) {
+-		case AF_LINK:
+-		    {
+-			struct sockaddr_dl *sdl =
+-			    (struct sockaddr_dl *) ifa->ifa_addr;
+-
+-			if (sdl->sdl_type != IFT_ETHER ||
+-			    sdl->sdl_alen != ifp->if_addrlen) {
+-				error = EINVAL;
+-				break;
+-			}
+-
+-			memcpy(LLADDR(ifp->if_sadl), LLADDR(sdl),
+-			    ifp->if_addrlen);
+ 
+-			/* Set new address. */
+-			error = (*ifp->if_init)(ifp);
+-			break;
+-		    }
+-#ifdef INET
+-		case AF_INET:
+-			if ((ifp->if_flags & IFF_RUNNING) == 0 &&
+-			    (error = (*ifp->if_init)(ifp)) != 0)
+-				break;
+-			arp_ifinit(ifp, ifa);
+-			break;
+-#endif /* INET */
+-#ifdef NS
+-		case AF_NS:
+-		    {
+-			struct ns_addr *ina = &IA_SNS(ifa)->sns_addr;
+-
+-			if (ns_nullhost(*ina))
+-				ina->x_host = *(union ns_host *)
+-				    LLADDR(ifp->if_sadl);
+-			else
+-				memcpy(LLADDR(ifp->if_sadl),
+-				    ina->x_host.c_host, ifp->if_addrlen);
+-			/* Set new address. */
+-			error = (*ifp->if_init)(ifp);
+-			break;
+-		    }
+-#endif /* NS */
+-		default:
+-			if ((ifp->if_flags & IFF_RUNNING) == 0)
+-				error = (*ifp->if_init)(ifp);
+-			break;
+-		}
+-		break;
+-
+-	case SIOCGIFADDR:
+-		memcpy(((struct sockaddr *)&ifr->ifr_data)->sa_data,
+-		    LLADDR(ifp->if_sadl), ETHER_ADDR_LEN);
+-		break;
+-
+-	case SIOCSIFMTU:
+-	    {
+-		int maxmtu;
+-
+-		if (ec->ec_capabilities & ETHERCAP_JUMBO_MTU)
+-			maxmtu = ETHERMTU_JUMBO;
+-		else
+-			maxmtu = ETHERMTU;
+-
+-		if (ifr->ifr_mtu < ETHERMIN || ifr->ifr_mtu > maxmtu)
+-			error = EINVAL;
+-		else {
+-			ifp->if_mtu = ifr->ifr_mtu;
+-
+-			/* Make sure the device notices the MTU change. */
+-			if (ifp->if_flags & IFF_UP)
+-				error = (*ifp->if_init)(ifp);
+-		}
+-		break;
+-	    }
+-
+-	case SIOCSIFFLAGS:
+-		if ((ifp->if_flags & (IFF_UP|IFF_RUNNING)) == IFF_RUNNING) {
+-			/*
+-			 * If interface is marked down and it is running,
+-			 * then stop and disable it.
+-			 */
+-			(*ifp->if_stop)(ifp, 1);
+-		} else if ((ifp->if_flags & (IFF_UP|IFF_RUNNING)) == IFF_UP) {
+-			/*
+-			 * If interface is marked up and it is stopped, then
+-			 * start it.
+-			 */
+-			error = (*ifp->if_init)(ifp);
+-		} else if ((ifp->if_flags & IFF_UP) != 0) {
+-			/*
+-			 * Reset the interface to pick up changes in any other
+-			 * flags that affect the hardware state.
+-			 */
+-			error = (*ifp->if_init)(ifp);
+-		}
+-		break;
+-
+-	case SIOCADDMULTI:
+-		error = ether_addmulti(ifr, ec);
+-		break;
+-
+-	case SIOCDELMULTI:
+-		error = ether_delmulti(ifr, ec);
+-		break;
+-
+-	default:
+-		error = ENOTTY;
+-	}
+-
+-	return (error);
+-}

@@ -1,0 +1,11 @@
+--- contrib/netbsd-2.1/sys/net/if_arp.h
++++ sys/internal/kernel/src/net_ps/include/net/if_arp.h
+@@ -80,7 +80,7 @@
+ 	(ntohs((ap)->ar_hrd) == ARPHRD_IEEE1394 \
+ 		? (((caddr_t)((ap)+1))+(ap)->ar_hln+(ap)->ar_pln) \
+ 		: (((caddr_t)((ap)+1))+(ap)->ar_hln+(ap)->ar_pln+(ap)->ar_hln))
+-} __attribute__((__packed__));
++};	/* SCE: not packed (ether_output stores ar_hrd as one halfword) */
+ 
+ 
+ /*
