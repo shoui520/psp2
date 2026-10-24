@@ -1,0 +1,11 @@
+--- a/netinet/in_cksum.c
++++ b/netinet/in_cksum.c
+@@ -138,8 +138,6 @@
+ 		} else if (mlen == -1)
+ 			s_util.c[0] = *(u_int8_t *)w;
+ 	}
+-	if (len)
+-		printf("cksum: out of data\n");
+ 	if (mlen == -1) {
+ 		/* The last mbuf has odd # of bytes. Follow the
+ 		   standard (the odd byte may be shifted left by 8 bits
