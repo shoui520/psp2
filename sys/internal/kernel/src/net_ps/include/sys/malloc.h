@@ -149,9 +149,9 @@ extern struct simplelock malloc_slock;
 
 /*
  * Macro versions for the usual cases of malloc/free
+ * SCE: net_ps's allocator has no buckets, so always the functions
  */
-#if defined(KMEMSTATS) || defined(DIAGNOSTIC) || defined(_LKM) || \
-    defined(MALLOCLOG) || defined(LOCKDEBUG) || defined(MALLOC_NOINLINE)
+#if 1
 #define	MALLOC(space, cast, size, type, flags) \
 	(space) = (cast)malloc((u_long)(size), (type), (flags))
 #define	FREE(addr, type) free((caddr_t)(addr), (type))

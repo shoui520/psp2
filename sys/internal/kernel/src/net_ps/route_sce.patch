@@ -1,0 +1,143 @@
+--- a/net/route.c
++++ b/net/route.c
+@@ -126,6 +126,9 @@
+ #include <netns/ns.h>
+ #endif
+ 
++/* SCE: this file's copies are made whatever the length (rtrequest1, rt_setgate) */
++#undef memcpy
++
+ #define	SA(p) ((struct sockaddr *)(p))
+ 
+ struct	route_cb route_cb;
+@@ -244,7 +247,6 @@
+ 			panic ("rtfree 2");
+ 		rttrash--;
+ 		if (rt->rt_refcnt < 0) {
+-			printf("rtfree: %p not freed (neg refs)\n", rt);
+ 			return;
+ 		}
+ 		rt_timer_remove_all(rt, 0);
+@@ -266,9 +268,6 @@
+ 	if (ifa->ifa_refcnt != 0)
+ 		panic("ifafree: ifa_refcnt != 0 (%d)", ifa->ifa_refcnt);
+ #endif
+-#ifdef IFAREF_DEBUG
+-	printf("ifafree: freeing ifaddr %p\n", ifa);
+-#endif
+ 	free(ifa, M_IFADDR);
+ }
+ 
+@@ -823,8 +822,6 @@
+ 	if (cmd == RTM_ADD && error == 0 && (rt = nrt)) {
+ 		rt->rt_refcnt--;
+ 		if (rt->rt_ifa != ifa) {
+-			printf("rtinit: wrong ifa (%p) was (%p)\n", ifa,
+-				rt->rt_ifa);
+ 			if (rt->rt_ifa->ifa_rtrequest)
+ 				rt->rt_ifa->ifa_rtrequest(RTM_DELETE, rt, NULL);
+ 			IFAFREE(rt->rt_ifa);
+@@ -871,8 +868,6 @@
+ void	 
+ rt_timer_init()
+ {
+-	assert(rt_init_done == 0);
+-
+ 	pool_init(&rttimer_pool, sizeof(struct rttimer), 0, 0, 0, "rttmrpl",
+ 	    NULL);
+ 
+@@ -904,16 +899,7 @@
+ 	return (rtq);
+ }
+ 
+-void
+-rt_timer_queue_change(rtq, timeout)
+-	struct rttimer_queue *rtq;
+-	long timeout;
+-{
+-
+-	rtq->rtq_timeout = timeout;
+-}
+-
+-void
++static void	/* SCE */
+ rt_timer_queue_remove_all(rtq, destroy)
+ 	struct rttimer_queue *rtq;
+ 	int destroy;
+@@ -928,35 +914,9 @@
+ 		pool_put(&rttimer_pool, r);
+ 		if (rtq->rtq_count > 0)
+ 			rtq->rtq_count--;
+-		else
+-			printf("rt_timer_queue_remove_all: "
+-			    "rtq_count reached 0\n");
+ 	}
+ }
+ 
+-void
+-rt_timer_queue_destroy(rtq, destroy)
+-	struct rttimer_queue *rtq;
+-	int destroy;
+-{
+-
+-	rt_timer_queue_remove_all(rtq, destroy);
+-
+-	LIST_REMOVE(rtq, rtq_link);
+-
+-	/*
+-	 * Caller is responsible for freeing the rttimer_queue structure.
+-	 */
+-}
+-
+-unsigned long
+-rt_timer_count(rtq)
+-	struct rttimer_queue *rtq;
+-{
+-
+-	return rtq->rtq_count;
+-}
+-
+ void     
+ rt_timer_remove_all(rt, destroy)
+ 	struct rtentry *rt;
+@@ -971,8 +931,6 @@
+ 			RTTIMER_CALLOUT(r);
+ 		if (r->rtt_queue->rtq_count > 0)
+ 			r->rtt_queue->rtq_count--;
+-		else
+-			printf("rt_timer_remove_all: rtq_count reached 0\n");
+ 		pool_put(&rttimer_pool, r);
+ 	}
+ }
+@@ -1002,8 +960,6 @@
+ 			TAILQ_REMOVE(&r->rtt_queue->rtq_head, r, rtt_next);
+ 			if (r->rtt_queue->rtq_count > 0)
+ 				r->rtt_queue->rtq_count--;
+-			else
+-				printf("rt_timer_add: rtq_count reached 0\n");
+ 			pool_put(&rttimer_pool, r);
+ 			break;  /* only one per list, so we can quit... */
+ 		}
+@@ -1050,11 +1006,20 @@
+ 			pool_put(&rttimer_pool, r);
+ 			if (rtq->rtq_count > 0)
+ 				rtq->rtq_count--;
+-			else
+-				printf("rt_timer_timer: rtq_count reached 0\n");
+ 		}
+ 	}
+ 	splx(s);
+ 
+ 	callout_reset(&rt_timer_ch, hz, rt_timer_timer, NULL);
+ }
++
++/* SCE: every timer of every queue, run and freed */
++void
++rt_timer_remove_all_queues()
++{
++	struct rttimer_queue *rtq;
++
++	for (rtq = LIST_FIRST(&rttimer_queue_head); rtq != NULL;
++	     rtq = LIST_NEXT(rtq, rtq_link))
++		rt_timer_queue_remove_all(rtq, 1);
++}

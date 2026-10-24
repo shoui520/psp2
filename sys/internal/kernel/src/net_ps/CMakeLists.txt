@@ -38,6 +38,10 @@ net_ps_prepare_patched(${netbsd}/net/radix.c ${CMAKE_CURRENT_SOURCE_DIR}/radix_s
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/radix.c)
 net_ps_prepare_patched(${netbsd}/net/raw_usrreq.c ${CMAKE_CURRENT_SOURCE_DIR}/raw_usrreq_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/raw_usrreq.c)
+net_ps_prepare_patched(${netbsd}/net/route.c ${CMAKE_CURRENT_SOURCE_DIR}/route_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/route.c)
+net_ps_prepare_patched(${netbsd}/net/rtsock.c ${CMAKE_CURRENT_SOURCE_DIR}/rtsock_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/rtsock.c)
 set(netbsd_sources
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/kern_subr.c
 	${netbsd}/kern/kern_timeout.c
@@ -54,6 +58,8 @@ set(netbsd_sources
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/radix.c
 	${netbsd}/net/raw_cb.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/raw_usrreq.c
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/route.c
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/rtsock.c
 )
 set_source_files_properties(${netbsd_sources} PROPERTIES COMPILE_OPTIONS "-fno-strict-aliasing;-fgnu89-inline"
 	COMPILE_DEFINITIONS NET_PS_NETBSD)
