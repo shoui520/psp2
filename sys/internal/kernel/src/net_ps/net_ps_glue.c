@@ -5,6 +5,16 @@
 #include <net_ps/netps.h>
 #include <net_ps/netps_gateway.h>
 #include <string.h>
+#include <sys/domain.h>
+#include <sys/kernel.h>
+#include <sys/protosw.h>
+#include <sys/sockio.h>
+#include <net/route.h>
+#include <netinet/in_systm.h>
+#include <netinet/ip.h>
+#include <netinet/in_pcb.h>
+#include <netinet/if_inarp.h>
+#include <net/errno.h>
 
 int sceNetPsCheckMemoryAvailability(int size, int count);
 int sceNetPsAccept(int socket, SceNetSockaddr *address,
@@ -54,6 +64,9 @@ unsigned int gNetPsSocketSuspendPolicy;
 struct ifnet_head ifnet;
 int gNetPsPacketCount;
 int gNetPsQosPacketCount;
+SceNetPsPendingRequest *gNetPsPendingRequestHead;
+SceNetPsPendingRequest *gNetPsPendingRequestTail;
+SceNetPsSenderList gNetPsSenders;
 struct NetDriverPacket *gNetPsPacketCacheHead;
 struct NetDriverPacket *gNetPsPacketCacheTail;
 int gNetPsPacketCacheCount;
@@ -130,6 +143,7 @@ void sce_psnet_panic(const char *message, ...) __attribute__((noreturn));
 /* SetDump requires the complete Sony dump owner; allocation is unresolved. */
 
 /* Name unknown; find a socket without checking its process or state. */
+__attribute__((noinline))
 struct socket *sceNetPsLookupSocketUnchecked(unsigned int socketId, int *error)
 {
 	if (socketId < 1024)
@@ -367,8 +381,81 @@ void sceNetPsGetInterfaceInfo(struct ifnet *interface, SceNetPsInterfaceInfo *in
 	}
 }
 
+/*
+ * Name unknown; take an interface down: close its driver unless the system
+ * is suspending, drop the configuration subscribers and every socket's cached
+ * route.
+ */
 int sceNetPsCloseInterface(struct SceNetPsDriverContext *context,
-			   unsigned int *flags, int suspended);
+			   unsigned int *flags, int suspended)
+{
+	struct NetDriver *driver = context->driver;
+	SceNetPsConfigSubscriber *subscriber;
+	struct socket *socket;
+	struct inpcb *pcb;
+	int result = 0;
+	int first, last, error, i;
+
+	*flags &= ~IFF_SCEINET;
+	if (!suspended) {
+		struct SceNetPsDriverContext *owner = driver->context;
+		struct ifnet *interface = owner->interface;
+
+		if (owner->flags & 1) {
+			result = driver->close(driver, 0);
+			if (result < 0)
+				return result;
+			owner->flags &= ~1;
+			interface->if_flags &= ~IFF_RUNNING;
+			interface->if_flags |= IFF_OACTIVE;
+		} else {
+			/* the driver was not open */
+			owner->lastError = 0x80418110;
+			result = 0;
+			sceNetPsNotifyDriver(driver, 0x4000000, NULL, 0);
+		}
+	}
+	if (context->autoConnectPolicy > 0) {
+		if (context->connectionState != 1) {
+			context->connectionState = 4;
+			context->autoConnectEnabled = 0;
+		}
+	} else {
+		*flags |= IFF_SCERESET;
+		sceNetPsNotifyDriver(NULL, 0x10000000, NULL, 0);
+		context->connectionState = 0;
+		context->autoConnectEnabled = 0;
+	}
+	while ((subscriber = gNetPsConfigSubscriberHead) != NULL) {
+		if (subscriber->next)
+			subscriber->next->prev = subscriber->prev;
+		else
+			gNetPsConfigSubscriberTail = subscriber->prev;
+		if (subscriber->prev)
+			subscriber->prev->next = subscriber->next;
+		else
+			gNetPsConfigSubscriberHead = subscriber->next;
+		sceNetPsFree(subscriber);
+	}
+	error = 0;
+	sceNetPsGetSocketIdRange(&first, &last);
+	for (i = first; i <= last; ++i) {
+		socket = sceNetPsLookupSocket(i, &error, 1);
+		if (!socket)
+			continue;
+		if (socket->so_proto && socket->so_proto->pr_domain &&
+		    socket->so_proto->pr_domain->dom_family == AF_ROUTE)
+			continue;
+		pcb = sotoinpcb(socket);
+		if (pcb && pcb->inp_route.ro_rt) {
+			RTFREE(pcb->inp_route.ro_rt);
+			pcb->inp_route.ro_rt = NULL;
+		}
+	}
+	rt_timer_remove_all_queues();
+	*flags &= ~(IFF_UP | IFF_RUNNING);
+	return result;
+}
 
 /* Name unknown; suspend active interfaces while holding the driver lock. */
 int sceNetPsSuspendDrivers(void)
@@ -389,6 +476,76 @@ int sceNetPsSuspendDrivers(void)
 	gNetPsDriverFlags |= 1;
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 	return 0;
+}
+
+/* The if_ioctl of the driver interfaces. */
+int sceNetPsDriverIoctl(struct ifnet *interface, unsigned long command,
+			caddr_t argument)
+{
+	struct SceNetPsDriverContext *context = interface->if_softc;
+	struct NetDriver *driver = context->driver;
+	struct ifaddr *address = (struct ifaddr *)argument;
+	struct ifreq *request = (struct ifreq *)argument;
+	int result;
+
+	switch (command) {
+	case SIOCSIFADDR:
+		if (address->ifa_addr->sa_family == AF_INET) {
+			if (((struct in_ifaddr *)address)->ia_addr.sin_addr.s_addr)
+				interface->if_flags |= IFF_SCEINET;
+			else
+				interface->if_flags &= ~IFF_SCEINET;
+			arp_ifinit(interface, address);
+		}
+		return 0;
+	case SIOCSIFFLAGS:
+		if (!(interface->if_flags & IFF_UP)) {
+			if ((interface->if_flags & IFF_SCEINET) &&
+			    (gNetPsSocketSuspendPolicy & 1))
+				sceNetPsManageProcessSockets(0, 0x1000009);
+			return sceNetPsCloseInterface(interface->if_softc,
+						      &interface->if_flags, 0);
+		}
+		if (interface->if_flags & IFF_SCERESET) {
+			interface->if_flags &= ~IFF_SCERESET;
+			++context->generation;
+			memset(&driver->txBytes, 0, 64);
+			memset(&context->uptime, 0, sizeof(context->uptime));
+			memset(&context->rxPackets, 0, 32);
+		}
+		context = driver->context;
+		if (!(context->flags & 1)) {
+			result = driver->open(driver, 0);
+			if (result < 0)
+				return result;
+			context->flags |= 1;
+		}
+		return 0;
+	case SIOCADDMULTI:
+		ether_addmulti(request, (struct ethercom *)context->interface);
+		return sceNetPsUpdateDriverMulticast(driver);
+	case SIOCDELMULTI:
+		ether_delmulti(request, (struct ethercom *)context->interface);
+		return sceNetPsUpdateDriverMulticast(driver);
+	case SIOCSIFMTU:
+		if ((unsigned int)request->ifr_mtu > driver->mtu)
+			return EINVAL;
+		interface->if_mtu = request->ifr_mtu;
+		if (driver->capabilities & 0x10000000) {
+			sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
+			driver->control(driver, NET_DRIVER_CTL_SET_MTU,
+					(int *)&interface->if_mtu,
+					sizeof(interface->if_mtu));
+			sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
+		}
+		return 0;
+	case SIOCGIFSCEDRV:
+		request->ifr_addr.sa_len = ETHER_ADDR_LEN;
+		request->ifr_addr.sa_family = AF_LINK;
+		memcpy(request->ifr_addr.sa_data, &driver->mac, ETHER_ADDR_LEN);
+		return 0;
+	}
+	return EINVAL;
 }
 
 /* SCE: publish periodic events and expire idle interfaces. */
@@ -423,6 +580,154 @@ int sceNetPsPollDevices(void)
 	return 0;
 }
 
+/*
+ * SCE: ask the preferred driver to connect for a socket's traffic. A driver
+ * qualifies when it has callbacks and is connected or idle-disconnected, or is
+ * disconnected under the manual policy; the lowest policy wins. With
+ * checkStates nothing is asked unless every driver is disconnected (0),
+ * connected (1) or idle-disconnected (4).
+ */
+int sceNetPsRequestAutoConnect(struct socket *so, struct mbuf *m,
+			       int checkStates)
+{
+	struct NetDriver *driver = gNetPsDriverHead;
+	struct NetDriver *best = NULL;
+	struct SceNetPsDriverContext *context;
+	int requested = 0, lowest = 99, policy;
+	unsigned int flags;
+
+	if (so && (so->so_options & (SO_SCE_OPTION_10000 | SO_SCE_OPTION_20000)))
+		return 0;
+	if (checkStates) {
+		struct NetDriver *cursor;
+
+		for (cursor = driver; cursor; cursor = cursor->next) {
+			int state = cursor->context->connectionState;
+
+			if (state != 0 && state != 1 && state != 4)
+				return 0;
+		}
+	}
+	if (!driver)
+		return 0;
+	for (; driver; driver = driver->next) {
+		context = driver->context;
+		if (!sceNetPsHasDriverCallbacks(context))
+			continue;
+		if (context->connectionState == 1 || context->connectionState == 4) {
+			policy = context->autoConnectPolicy;
+		} else if (context->connectionState == 0 && !best &&
+			   context->autoConnectPolicy == -1) {
+			policy = -1;
+		} else {
+			continue;
+		}
+		requested = 1;
+		if (policy < lowest) {
+			lowest = policy;
+			best = driver;
+		}
+		if (so) {
+			so->so_snd.sb_flags &= ~SB_SCE_CONNECTED;
+			so->so_snd.sb_flags |= SB_SCE_CONNECTING;
+			sceNetPsRecordSleep(so->processId, 0);
+			so->so_error = 0;
+		}
+	}
+	if (!best)
+		return requested;
+	flags = gNetPsDriverFlags;
+	context = best->context;
+	if (flags & 2)
+		return 0;
+	context->loopbackRequested = 0;
+	if (m && ntohl(mtod(m, struct sockaddr_in *)->sin_addr.s_addr) >> 24 ==
+	    IN_LOOPBACKNET)
+		context->loopbackRequested = 1;
+	if (!context->connectionState) {
+		context = best->context;
+		context->flags |= 2;
+		if (flags & 1)
+			context->flags |= 8;
+		else
+			sceNetPsNotifyDriver(best, 0x8000000, NULL, 0);
+		return requested;
+	}
+	context = best->context;
+	if (context->autoConnectPolicy != -1) {
+		context->autoConnectEnabled = context->autoConnectPolicy > 0;
+		context->connectionState = 1;
+	}
+	if (flags & 1)
+		context->flags |= 4;
+	else
+		sceNetPsNotifyDriver(best, 0x1000000, NULL, 0);
+	return requested;
+}
+
+/* SCE: queue a request until the automatic connection completes or fails. */
+int sceNetPsQueuePendingRequest(SceNetPsPendingRequest *request)
+{
+	request->prev = gNetPsPendingRequestTail;
+	if (gNetPsPendingRequestTail)
+		gNetPsPendingRequestTail->next = request;
+	else
+		gNetPsPendingRequestHead = request;
+	request->next = NULL;
+	gNetPsPendingRequestTail = request;
+	return 0;
+}
+
+/*
+ * SCE: sleep until a connecting driver's automatic connection ends or its
+ * timeout passes; a failed connection returns the driver's connection error.
+ */
+int sceNetPsWaitAutoConnect(struct socket *so)
+{
+	const void *waitChannel = &so->emulationWaitChannel;
+	struct NetDriver *driver;
+	struct SceNetPsDriverContext *context;
+	SceUInt64 elapsed, now;
+	int error = 0, delay;
+
+again:
+	for (driver = gNetPsDriverHead; driver; driver = driver->next) {
+		context = driver->context;
+		if (context->connectionState == 1 || (context->flags & 2))
+			break;
+	}
+	if (!driver)
+		return error;
+	if (context->connectTimeoutSeconds < 0)
+		delay = -1;
+	else
+		delay = 1000 * context->connectTimeoutSeconds * hz;
+	for (elapsed = 0;; elapsed = now - elapsed) {
+		if (delay > 0) {
+			if (elapsed >= delay)
+				break;
+			delay -= elapsed;
+		}
+		if (!delay)
+			break;
+		/* the start of the sleep */
+		sceNetPsGetSystemTime(&elapsed);
+		error = sceNetPsSleep(waitChannel, 0, NULL, delay);
+		if (error != EWOULDBLOCK) {
+			if (error == SCE_NET_EIPADDRCHANGED || error == EINTR ||
+			    error == SCE_NET_ECANCELED)
+				return error;
+			error = context->connectionError;
+			if (!context->connectionState &&
+			    context->autoConnectPolicy != -1)
+				goto again;
+			return error;
+		}
+		sceNetPsGetSystemTime(&now);
+	}
+	return error;
+}
+
 /* SCE: wake this socket's emulation waiters once for each registered driver. */
 int sceNetPsInterruptEmulationWait(struct socket *socket)
 {
@@ -443,6 +748,7 @@ int sceNetPsInterruptEmulationWait(struct socket *socket)
 	return result;
 }
 
+/* SCE: cancel this socket's emulation waits once for each registered driver. */
 int sceNetPsCancelEmulationWait(struct socket *socket)
 {
 	struct NetDriver *driver = gNetPsDriverHead;
@@ -460,6 +766,248 @@ int sceNetPsCancelEmulationWait(struct socket *socket)
 		} while (driver);
 	}
 	return result;
+}
+
+/* SCE: hand a driver's received packets to its interface as mbufs. */
+static void sceNetPsInputPackets(struct NetDriver *driver)
+{
+	struct SceNetPsDriverContext *context = driver->context;
+	struct ifnet *interface = context->interface;
+	struct NetDriverPacket *packet;
+
+	sce_psnet_bnet_mutex_lock(&gNetPsDevRecvMutex, NULL);
+	while ((packet = sceNetPsDequeuePacket(context, &context->receiveQueue,
+					       0, 1)) != NULL) {
+		struct SceNetPsDriverContext *owner;
+		struct ifnet *receiver;
+		struct mbuf *m;
+		unsigned int length;
+		int freeMemory;
+
+		if ((interface->if_flags & (IFF_UP | IFF_RUNNING)) !=
+		    (IFF_UP | IFF_RUNNING)) {
+			++context->rxDrops;
+			sceNetPsFreePacket(packet);
+			continue;
+		}
+		owner = driver->context;
+		length = packet->length;
+		receiver = owner->interface;
+		if (gNetPsPacketCaptureActive)
+			sceNetPsCaptureTxPacket(packet);
+		MGETHDR(m, M_DONTWAIT, MT_DATA);
+		if (!m)
+			goto drop;
+		sceNetPsFilterRxMbuf(owner, m, length);
+		freeMemory = sceNetPsGetFreeMemory(0);
+		if (freeMemory < 0x8000) {
+			m_freem(m);
+			goto drop;
+		}
+		/* short of memory: sockets that ask for it drop the packet */
+		if (freeMemory < 0x10000)
+			m->m_flags |= M_SCE_OPTION_8000;
+		else if (freeMemory < 102400 &&
+			 (int)(arc4random() % 101) >
+			 100 * (freeMemory - 0x10000) / 36864)
+			m->m_flags |= M_SCE_OPTION_8000;
+		MEXTADD(m, packet->buffer->data, length, M_MBUF,
+			sceNetPsReleaseRxMbuf, packet);
+		m->m_pkthdr.len = m->m_len = length;
+		m->m_pkthdr.rcvif = receiver;
+		m->m_pkthdr.csum_flags = 0;
+		if ((receiver->if_csum_flags_rx & M_CSUM_IPv4) &&
+		    (packet->checksumFlags & 1))
+			m->m_pkthdr.csum_flags = M_CSUM_IPv4;
+		if ((receiver->if_csum_flags_rx & (M_CSUM_UDPv4 | M_CSUM_UDPv6)) &&
+		    (packet->checksumFlags & 2))
+			m->m_pkthdr.csum_flags |= M_CSUM_UDPv4 | M_CSUM_UDPv6;
+		if ((receiver->if_csum_flags_rx & (M_CSUM_TCPv4 | M_CSUM_TCPv6)) &&
+		    (packet->checksumFlags & 4))
+			m->m_pkthdr.csum_flags |= M_CSUM_TCPv4 | M_CSUM_TCPv6;
+		++owner->rxPackets;
+		owner->rxBytes += length;
+		++gNetPsQosPacketCount;
+		(*receiver->if_input)(receiver, m);
+		continue;
+drop:
+		++context->rxDrops;
+		sceNetPsFreePacket(packet);
+	}
+	sce_psnet_bnet_mutex_unlock(&gNetPsDevRecvMutex);
+}
+
+/* SCE: complete (or cancel) a pending request and drop it from the queue. */
+static inline void sceNetPsCompletePendingRequest(SceNetPsPendingRequest *request,
+						  int cancel)
+{
+	request->complete(request->argument, cancel);
+	if (request->next)
+		request->next->prev = request->prev;
+	else
+		gNetPsPendingRequestTail = request->prev;
+	if (request->prev)
+		request->prev->next = request->next;
+	else
+		gNetPsPendingRequestHead = request->next;
+	sceNetPsFree(request);
+}
+
+/*
+ * SCE: apply a driver's new connection state: run the requests that waited
+ * for it (cancel them when the interface has no address), and wake the
+ * sockets that waited, with the connection error if there is one.
+ */
+static void sceNetPsApplyConnection(struct NetDriver *driver)
+{
+	struct SceNetPsDriverContext *context = driver->context;
+	struct ifnet *interface = context->interface;
+	SceNetPsPendingRequest *request, *last;
+	struct ifaddr *address;
+	struct socket *so;
+	int first, last_, error, connectionError, i;
+
+	if ((unsigned int)(context->connectionState - 2) > 1 && !(context->flags & 2))
+		return;
+	TAILQ_FOREACH(address, &interface->if_addrlist, ifa_list) {
+		if (address->ifa_addr->sa_family == AF_INET)
+			break;
+	}
+	if (context->loopbackRequested) {
+		gNetPsDriverFlags |= 2;
+		while ((request = gNetPsPendingRequestHead) != NULL)
+			sceNetPsCompletePendingRequest(request, 0);
+		gNetPsDriverFlags &= ~2;
+		if (context->autoConnectPolicy != -1) {
+			context->connectionState = 4;
+			context->autoConnectEnabled = 0;
+		}
+	} else if ((interface->if_flags & (IFF_UP | IFF_RUNNING)) !=
+		   (IFF_UP | IFF_RUNNING) || !address ||
+		   !((struct in_ifaddr *)address)->ia_addr.sin_addr.s_addr) {
+		while ((request = gNetPsPendingRequestHead) != NULL)
+			sceNetPsCompletePendingRequest(request, 1);
+		if (context->autoConnectPolicy != -1) {
+			context->connectionState = 4;
+			context->autoConnectEnabled = 0;
+		}
+	} else {
+		/* run the requests queued so far; cancel those they queue */
+		last = gNetPsPendingRequestTail;
+		gNetPsDriverFlags |= 2;
+		while ((request = gNetPsPendingRequestHead) != NULL) {
+			sceNetPsCompletePendingRequest(request, 0);
+			if (request == last)
+				break;
+		}
+		while ((request = gNetPsPendingRequestHead) != NULL)
+			sceNetPsCompletePendingRequest(request, 1);
+		gNetPsDriverFlags &= ~2;
+		if (context->autoConnectPolicy != -1) {
+			context->autoConnectEnabled = context->autoConnectPolicy > 0;
+			context->connectionState = 3;
+		}
+	}
+	memset(&context->idle, 0, sizeof(context->idle));
+	error = 0;
+	connectionError = context->connectionError;
+	sceNetPsGetSocketIdRange(&first, &last_);
+	for (i = first; i <= last_; ++i) {
+		so = sceNetPsLookupSocketUnchecked(i, &error);
+		if (!so || !(so->so_snd.sb_flags & SB_SCE_CONNECTING))
+			continue;
+		so->so_snd.sb_flags &= ~SB_SCE_CONNECTING;
+		so->so_snd.sb_flags |= SB_SCE_CONNECTED;
+		if (connectionError) {
+			so->so_error = SCE_NET_ERETURN;
+			so->returnedError = connectionError;
+		}
+		sceNetPsWakeupEpolls(so);
+		sceNetPsWakeupNormal(&so->emulationWaitChannel);
+	}
+	sceNetPsRecordSleep(0, 1);
+	context->flags &= ~2;
+}
+
+/* SCE: the soft thread's handling of every driver's pending events. */
+void sceNetPsReceivePackets(void)
+{
+	struct NetDriver *driver;
+
+	for (driver = gNetPsDriverHead; driver; driver = driver->next) {
+		struct SceNetPsDriverContext *context = driver->context;
+
+		if (context->pendingEvents & NET_PS_EVENT_STARTED) {
+			struct ifnet *interface = context->interface;
+
+			interface->if_flags &= ~IFF_OACTIVE;
+			interface->if_flags |= IFF_RUNNING;
+			/* start with an empty multicast list */
+			if (driver->multicast)
+				driver->multicast(driver, NULL, 0);
+			sceNetPsNotifyDriver(driver, 0x20000000, NULL, 0);
+			context->pendingEvents &= ~NET_PS_EVENT_STARTED;
+		}
+		if (context->pendingEvents & NET_PS_EVENT_STOPPED) {
+			sceNetPsNotifyDriver(driver, 0x40000000, NULL, 0);
+			context->pendingEvents &= ~NET_PS_EVENT_STOPPED;
+		}
+		if (context->pendingEvents & NET_PS_EVENT_RECEIVED) {
+			sceNetPsInputPackets(driver);
+			context->pendingEvents &= ~NET_PS_EVENT_RECEIVED;
+		}
+		if (context->pendingEvents & NET_PS_EVENT_ERROR) {
+			sceNetPsNotifyDriver(driver, 0x4000000, NULL, 0);
+			context->pendingEvents &= ~NET_PS_EVENT_ERROR;
+		}
+		if (context->pendingEvents &
+		    NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS, 0x10)) {
+			sceNetPsNotifyDriver(driver, 0x80000000, NULL, 0);
+			context->pendingEvents &=
+				~NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS, 0x10);
+		}
+		if (context->pendingEvents &
+		    NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS, 0xc0)) {
+			unsigned int events = 0;
+
+			if (context->pendingEvents &
+			    NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS, 0x40))
+				events = 0x20;
+			if (context->pendingEvents &
+			    NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS, 0x80))
+				events |= 0x40;
+			sceNetPsNotifyDriver(NULL, events, NULL, 0);
+			context->pendingEvents &=
+				~NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS, 0xc0);
+		}
+		if (context->pendingEvents & NET_PS_EVENT_CONNECTION) {
+			sceNetPsApplyConnection(driver);
+			context->pendingEvents &= ~NET_PS_EVENT_CONNECTION;
+			sceNetPsScheduleReceive();
+		}
+	}
+}
+
+/* SCE: remember a process that sent data, sixteen at most. */
+int sceNetPsRecordSender(SceUID processId)
+{
+	int i;
+
+	for (i = 0; i < gNetPsSenders.count; ++i) {
+		if (gNetPsSenders.processId[i] == processId)
+			return 0;
+	}
+	if (gNetPsSenders.count < 16)
+		gNetPsSenders.processId[gNetPsSenders.count++] = processId;
+	return 0;
+}
+
+/* SCE: take the processes that sent data and start a new list. */
+int sceNetPsTakeSenders(SceNetPsSenderList *list)
+{
+	memcpy(list, &gNetPsSenders, sizeof(*list));
+	memset(&gNetPsSenders, 0, sizeof(gNetPsSenders));
+	return 0;
 }
 
 /* Name unknown; serialize the interface record for host or network consumers. */
@@ -607,7 +1155,7 @@ int sceNetPsSetDnsConfig(const SceNetPsDnsConfig *config)
 int sceNetPsGetConnectionParam(struct SceNetPsDriverContext *context,
 			       SceNetPsConnectionParam *parameters)
 {
-	parameters->lastLinkStatus = context->lastLinkStatus;
+	parameters->connectTimeoutSeconds = context->connectTimeoutSeconds;
 	parameters->autoConnectEnabled = context->autoConnectEnabled;
 	parameters->idleTimeoutSeconds = context->idleTimeoutSeconds;
 	parameters->autoConnectPolicy = context->autoConnectPolicy;
@@ -628,8 +1176,8 @@ int sceNetPsSetConnectionParam(struct SceNetPsDriverContext *context,
 
 	if (timeout < 0 || (unsigned int)parameters->autoConnectPolicy + 1 > 100)
 		return -22;
-	if (parameters->lastLinkStatus) {
-		context->lastLinkStatus = parameters->lastLinkStatus;
+	if (parameters->connectTimeoutSeconds) {
+		context->connectTimeoutSeconds = parameters->connectTimeoutSeconds;
 		timeout = parameters->idleTimeoutSeconds;
 	}
 	if (timeout)
@@ -658,7 +1206,7 @@ int sceNetPsSetConnectionParam(struct SceNetPsDriverContext *context,
 		}
 		return 0;
 	}
-	interface->if_flags |= 0x40000;
+	interface->if_flags |= IFF_SCERESET;
 	sceNetPsNotifyDriver(NULL, 0x10000000, NULL, 0);
 	if (context->connectionState == 1) {
 		context->connectionState = 0;
@@ -724,8 +1272,6 @@ int sceNetPsSetPromiscuous(struct SceNetPsDriverContext *context,
 extern void *gNetPsMemoryBase;
 extern int gNetPsMemorySize;
 extern struct SceNetPsDriverContext *gNetPsAllocatedDriverContext;
-int sceNetPsDriverIoctl(struct ifnet *interface, unsigned long command,
-			caddr_t argument);
 void if_attach(struct ifnet *interface);
 void ether_ifattach(struct ifnet *interface, const unsigned char *address);
 
@@ -838,7 +1384,7 @@ int SceNetPsForDriver_1ABF937D(void *argument)
 		}
 	}
 	context->idleTimeoutSeconds = 60;
-	context->lastLinkStatus = -1;
+	context->connectTimeoutSeconds = -1;
 	if (context->autoConnectPolicy > 0) {
 		context->connectionState = 4;
 		context->autoConnectEnabled = 0;
@@ -1106,6 +1652,7 @@ int sceNetPsInitializeGateway(SceNetPsGatewayState *slot, struct NetDriver *driv
 }
 
 /* Name unknown; determine whether any driver event callback is registered. */
+__attribute__((noinline))
 int sceNetPsHasDriverCallbacks(struct SceNetPsDriverContext *context)
 {
 	int index;

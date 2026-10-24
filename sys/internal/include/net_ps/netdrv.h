@@ -64,11 +64,12 @@ _Static_assert(sizeof(struct NetDriverPacket) == 44, "NetDriverPacket size");
 #define NET_DRIVER_STATUS_RECEIVED	4
 #define NET_DRIVER_STATUS_ERROR		8	/* data: the error code */
 
-/* NetDriver.control commands; the argument is one int */
+/* NetDriver.control commands; the argument is one int unless noted */
 #define NET_DRIVER_CTL_GET_LINK		0x40200001	/* NET_DRIVER_LINK_* */
 #define NET_DRIVER_CTL_GET_PROMISCUOUS	0x40200002
 #define NET_DRIVER_CTL_SET_LINK		0x60200001
 #define NET_DRIVER_CTL_SET_PROMISCUOUS	0x60200002
+#define NET_DRIVER_CTL_SET_MTU		0x61000002	/* the argument: a 64-bit MTU */
 
 /* link modes: what NET_DRIVER_CTL_SET_LINK asks for, GET_LINK reports */
 #define NET_DRIVER_LINK_UP		0x01

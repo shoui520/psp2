@@ -255,13 +255,38 @@ int sceNetPsFilterTxMbuf(struct SceNetPsDriverContext *context,
 			struct mbuf *mbuf, int *duplicates);
 int sceNetPsSetTxEmulation(struct SceNetPsDriverContext *context,
 			  struct mbuf *mbuf, struct NetDriverPacket *packet);
+int sceNetPsFilterRxMbuf(struct SceNetPsDriverContext *context,
+			struct mbuf *mbuf, unsigned int length);
+
+/* SCE: a socket request waiting for an interface's automatic connection */
+typedef struct SceNetPsPendingRequest {
+	struct SceNetPsPendingRequest *next;
+	struct SceNetPsPendingRequest *prev;
+	void (*complete)(void *argument, int cancel);
+	void *argument;
+} SceNetPsPendingRequest;
+
+_Static_assert(sizeof(SceNetPsPendingRequest) == 16, "SceNetPsPendingRequest size");
+
+/* SCE: the processes that sent data since the list was last taken */
+typedef struct SceNetPsSenderList {
+	SceUID processId[16];
+	int count;
+} SceNetPsSenderList;
+
+_Static_assert(sizeof(SceNetPsSenderList) == 68, "SceNetPsSenderList size");
 
 /* net_ps_glue.c */
+int sceNetPsQueuePendingRequest(SceNetPsPendingRequest *request);
+int sceNetPsWaitAutoConnect(struct socket *so);
+int sceNetPsRecordSender(SceUID processId);
+int sceNetPsTakeSenders(SceNetPsSenderList *list);
 int sceNetPsPollDevices(void);
 int sceNetPsGetDnsConfig(SceNetPsDnsConfig *config, int networkOrder, int addressesOnly);
 int sceNetPsInitializeDebugInterface(void *slot, struct NetDriver *driver);
 int sceNetPsInitializeGateway(SceNetPsGatewayState *slot, struct NetDriver *driver);
 int sceNetPsNotifyDriverCallbacks(struct SceNetPsDriverContext *context, SceUInt64 events);
+int sceNetPsHasDriverCallbacks(struct SceNetPsDriverContext *context);
 unsigned int sceNetPsGetFreeMemory(int lowest);
 int sceNetPsInitializeHeap(void *base, int size);
 

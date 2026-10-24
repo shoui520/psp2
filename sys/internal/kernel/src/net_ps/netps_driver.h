@@ -55,8 +55,8 @@ struct SceNetPsDriverContext {
 	int lastError;
 	SceNetPsDriverEvent eventHandlers[3];
 	unsigned int flags;
-	int pendingReceiveArgument;
-	int lastLinkStatus;
+	int connectionError;
+	int connectTimeoutSeconds;
 	int autoConnectEnabled;
 	SceNetPsDriverCounter idle;
 	SceNetPsDriverCounter uptime;
@@ -90,9 +90,21 @@ _Static_assert(offsetof(struct SceNetPsDriverContext, emulation) == 340,
 _Static_assert(sizeof(struct SceNetPsDriverContext) == 864,
 	       "SceNetPsDriverContext size");
 
+/* SceNetPsDriverContext.pendingEvents the soft thread handles */
+#define NET_PS_EVENT_STARTED \
+	NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_STARTED)
+#define NET_PS_EVENT_STOPPED \
+	NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_STOPPED)
+#define NET_PS_EVENT_RECEIVED \
+	NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_RECEIVED)
+#define NET_PS_EVENT_ERROR \
+	NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_ERROR)
+/* sceNetPsUpdateConnection: apply the connection state */
+#define NET_PS_EVENT_CONNECTION	NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS, 0x10000)
+
 int sceNetPsSetDriverMtu(struct NetDriver *driver, unsigned int mtu);
 int sceNetPsUpdateConnection(struct SceNetPsDriverContext *context,
-			    int receiveArgument);
+			    int error);
 struct NetDriverPacket *sceNetPsPreparePacketQueue(SceNetPsPacketQueue *queue,
 						 int sending, int locked);
 int sceNetPsDispatchDriverEvents(void);
@@ -118,7 +130,7 @@ void sceNetPsSwapCounterByteOrder(unsigned int counters[8]);
 struct mbuf;
 void sceNetPsFreePacket(struct NetDriverPacket *packet);
 void sceNetPsReleaseRxMbuf(struct mbuf *mbuf, char *buffer, size_t size,
-			 struct NetDriverPacket *packet);
+			   void *packet);
 void sceNetPsReleaseTxPacket(struct NetDriver *driver,
 			     struct NetDriverPacket *packet);
 struct NetDriverBuffer *sceNetPsAppendBuffer(struct NetDriver *driver,
@@ -127,7 +139,7 @@ struct NetDriverBuffer *sceNetPsAppendBuffer(struct NetDriver *driver,
 					   unsigned int alignment);
 
 int sceNetPsUpdateConnections(struct SceNetPsDriverContext *context,
-			     int receiveArgument);
+			     int error);
 int sceNetPsResetIdleTime(struct SceNetPsDriverContext *context);
 int sceNetPsNotifyLinkState(struct SceNetPsDriverContext *context);
 struct sockaddr_in;

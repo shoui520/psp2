@@ -17,7 +17,7 @@ int sceNetPsSetDriverMtu(struct NetDriver *driver, unsigned int mtu)
 
 /* Name unknown; advance the driver's connection state and schedule reception. */
 int sceNetPsUpdateConnection(struct SceNetPsDriverContext *context,
-			    int receiveArgument)
+			    int error)
 {
 	struct ifnet *interface = context->interface;
 	struct ifaddr *address;
@@ -44,7 +44,7 @@ int sceNetPsUpdateConnection(struct SceNetPsDriverContext *context,
 	default:
 		if (context->flags & 2)
 			goto schedule;
-		context->pendingReceiveArgument = 0;
+		context->connectionError = 0;
 		return 0;
 	}
 updatePolicy:
@@ -53,8 +53,8 @@ updatePolicy:
 		context->connectionState = 2;
 	}
 schedule:
-	context->pendingReceiveArgument = receiveArgument;
-	context->pendingEvents |= (SceUInt64)0x10000 << 32;
+	context->connectionError = error;
+	context->pendingEvents |= NET_PS_EVENT_CONNECTION;
 	sceNetPsScheduleReceive();
 	return 1;
 }

@@ -326,6 +326,8 @@ struct ifnet {				/* and the entries */
 #define	IFF_LINK2	0x4000		/* per link layer defined bit */
 #define	IFF_MULTICAST	0x8000		/* supports multicast */
 #define	IFF_PPROMISC	0x10000		/* SCE: promiscuous reception held (sceNetPsSetPromiscuous) */
+#define	IFF_SCEINET	0x20000		/* SCE: an IPv4 address is assigned */
+#define	IFF_SCERESET	0x40000		/* SCE: clear the counters when brought up */
 
 /* flags set internally only: */
 #define	IFF_CANTCHANGE \

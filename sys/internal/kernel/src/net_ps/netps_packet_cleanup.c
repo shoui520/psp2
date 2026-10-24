@@ -43,7 +43,7 @@ void sceNetPsFreePacket(struct NetDriverPacket *packet)
 
 /* Name unknown; return an externally backed receive mbuf and its packet. */
 void sceNetPsReleaseRxMbuf(struct mbuf *mbuf, char *buffer, size_t size,
-			 struct NetDriverPacket *packet)
+			   void *packet)
 {
 	sceNetPsFreePacket(packet);
 	pool_put(mb_cache.pc_pool, mbuf);

@@ -6,16 +6,16 @@
 extern struct NetDriver *gNetPsDriverHead;
 
 int sceNetPsUpdateConnections(struct SceNetPsDriverContext *context,
-			     int receiveArgument)
+			     int error)
 {
 	struct NetDriver *driver;
 	int updated = 0;
 
 	if (context)
-		return sceNetPsUpdateConnection(context, receiveArgument);
+		return sceNetPsUpdateConnection(context, error);
 	for (driver = gNetPsDriverHead; driver; driver = driver->next)
 		updated += sceNetPsUpdateConnection(driver->context,
-						   receiveArgument);
+						   error);
 	return updated;
 }
 

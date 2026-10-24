@@ -61,6 +61,8 @@ struct uio;
 #define	SB_NOINTR	0x40		/* operations not interruptible */
     	/* XXXLUKEM: 0x80 left for FreeBSD's SB_AIO */
 #define	SB_KNOTE	0x100		/* kernel note attached */
+#define	SB_SCE_CONNECTED 0x4000		/* SCE: the automatic connection ended */
+#define	SB_SCE_CONNECTING 0x8000	/* SCE: waiting for an automatic connection */
 
 /*
  * Kernel structure per socket.

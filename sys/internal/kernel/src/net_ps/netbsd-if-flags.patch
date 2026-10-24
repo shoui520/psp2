@@ -11,3 +11,37 @@
  	struct	if_data if_data;	/* statistics and other data about if */
  	/*
  	 * Procedure handles.  If you add more of these, don't forget the
+@@ -325,11 +325,15 @@
+ #define	IFF_LINK1	0x2000		/* per link layer defined bit */
+ #define	IFF_LINK2	0x4000		/* per link layer defined bit */
+ #define	IFF_MULTICAST	0x8000		/* supports multicast */
++#define	IFF_PPROMISC	0x10000		/* SCE: promiscuous reception held (sceNetPsSetPromiscuous) */
++#define	IFF_SCEINET	0x20000		/* SCE: an IPv4 address is assigned */
++#define	IFF_SCERESET	0x40000		/* SCE: clear the counters when brought up */
+ 
+ /* flags set internally only: */
+ #define	IFF_CANTCHANGE \
+ 	(IFF_BROADCAST|IFF_POINTOPOINT|IFF_RUNNING|IFF_OACTIVE|\
+-	    IFF_SIMPLEX|IFF_MULTICAST|IFF_ALLMULTI|IFF_PROMISC)
++	    IFF_SIMPLEX|IFF_MULTICAST|IFF_ALLMULTI|IFF_PROMISC|\
++	    IFF_PPROMISC)	/* SCE: IFF_PPROMISC */
+ 
+ /*
+  * Some convenience macros used for setting ifi_baudrate.
+@@ -347,6 +351,7 @@
+ #define	IFCAP_CSUM_UDPv6	0x0010	/* can do IPv6/UDP checksums */
+ #define	IFCAP_CSUM_TCPv4_Rx	0x0020	/* can do IPv4/TCP (Rx only) */
+ #define	IFCAP_CSUM_UDPv4_Rx	0x0040	/* can do IPv4/UDP (Rx only) */
++#define	IFCAP_TSOv4	0x0080		/* SCE: NetBSD 3.0's IPv4/TCP segment offload */
+ 
+ /*
+  * Output queues (ifp->if_snd) and internetwork datagram level (pup level 1)
+@@ -500,7 +505,7 @@
+ 		struct	sockaddr ifru_addr;
+ 		struct	sockaddr ifru_dstaddr;
+ 		struct	sockaddr ifru_broadaddr;
+-		short	ifru_flags;
++		int	ifru_flags;	/* SCE: all of if_flags */
+ 		int	ifru_metric;
+ 		int	ifru_mtu;
+ 		int	ifru_dlt;

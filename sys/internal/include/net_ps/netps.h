@@ -58,7 +58,7 @@ _Static_assert(offsetof(SceNetPsDebugEmulationRequest, parameters) == 12,
 
 /* The connection-control getter reports all five words of this record. */
 typedef struct SceNetPsConnectionParam {
-	int lastLinkStatus;
+	int connectTimeoutSeconds;
 	int autoConnectEnabled;
 	int idleTimeoutSeconds;
 	int autoConnectPolicy;
@@ -67,7 +67,7 @@ typedef struct SceNetPsConnectionParam {
 
 _Static_assert(sizeof(SceNetPsConnectionParam) == 20,
 	       "connection parameter size");
-_Static_assert(offsetof(SceNetPsConnectionParam, lastLinkStatus) == 0,
+_Static_assert(offsetof(SceNetPsConnectionParam, connectTimeoutSeconds) == 0,
 	       "connection last link status");
 _Static_assert(offsetof(SceNetPsConnectionParam, autoConnectEnabled) == 4,
 	       "connection auto connect enabled");
