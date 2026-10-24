@@ -815,7 +815,11 @@ void	 tcp_init(void);
 int	 tcp6_input(struct mbuf **, int *, int);
 #endif
 void	 tcp_input(struct mbuf *, ...);
-u_long	 tcp_mss_to_advertise(const struct ifnet *, int);
+u_long	 tcp_mss_to_advertise(const struct ifnet *, int,
+	    const struct tcpcb *);	/* SCE: the tcpcb's own limit */
+extern u_long tcp_maxmss_to_advertise;	/* SCE */
+extern u_long tcp_maxmss_from_peer;	/* SCE */
+void	 tcp_drop_peer(struct sockaddr_in *);	/* SCE: udpp2p's peer is gone */
 void	 tcp_mss_from_peer(struct tcpcb *, int);
 void	 tcp_tcpcb_template(void);
 struct tcpcb *
@@ -859,6 +863,7 @@ tcp_seq  tcp_new_iss1(void *, void *, u_int16_t, u_int16_t, size_t,
 	    tcp_seq);
 
 void	 tcp_sack_init(void);	/* SCE: initialises sackhole_pool */
+extern struct pool tcpipqent_pool;	/* SCE: tcp_input.c's, initialised by tcp_init */
 void	 tcp_new_dsack(struct tcpcb *, tcp_seq, u_int32_t);
 void	 tcp_sack_option(struct tcpcb *, struct tcphdr *, u_char *, int);
 void	 tcp_del_sackholes(struct tcpcb *, struct tcphdr *);

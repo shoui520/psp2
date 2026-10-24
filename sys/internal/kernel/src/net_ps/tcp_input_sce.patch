@@ -217,6 +217,15 @@
  {
  	struct tcpcb tb, *tp;
  	long win;
+@@ -3995,7 +4005,7 @@
+ 	sc->sc_peermaxseg = oi->maxseg;
+ 	sc->sc_ourmaxseg = tcp_mss_to_advertise(m->m_flags & M_PKTHDR ?
+ 						m->m_pkthdr.rcvif : NULL,
+-						sc->sc_src.sa.sa_family);
++						sc->sc_src.sa.sa_family, tp);	/* SCE */
+ 	sc->sc_win = win;
+ 	sc->sc_timebase = tcp_now;	/* see tcp_newtcpcb() */
+ 	sc->sc_timestamp = tb.ts_recent;
 @@ -4021,6 +4031,7 @@
  		sc->sc_flags |= SCF_SIGNATURE;
  #endif

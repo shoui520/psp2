@@ -658,7 +658,7 @@
 -				*((u_int32_t *) (opt + optlen)) = htonl(
 +		f->tp->snd_nxt = f->tp->iss;
 +		f->tp->t_ourmss = tcp_mss_to_advertise(rt != NULL ?
-+						    rt->rt_ifp : NULL, f->af);
++						    rt->rt_ifp : NULL, f->af, f->tp);	/* SCE */
 +		if ((f->tp->t_flags & TF_NOOPT) == 0) {
 +			f->opt[0] = TCPOPT_MAXSEG;
 +			f->opt[1] = 4;

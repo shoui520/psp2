@@ -1,0 +1,213 @@
+--- a/netinet/tcp_subr.c
++++ b/netinet/tcp_subr.c
+@@ -152,6 +152,7 @@
+ #include <netinet/tcp_timer.h>
+ #include <netinet/tcp_var.h>
+ #include <netinet/tcpip.h>
++#include <netinet/udpp2p_var.h>	/* SCE */
+ 
+ #ifdef IPSEC
+ #include <netinet6/ipsec.h>
+@@ -192,7 +193,7 @@
+ #endif
+ int	tcp_init_win = TCP_INIT_WIN;
+ int	tcp_init_win_local = TCP_INIT_WIN_LOCAL;
+-int	tcp_mss_ifmtu = 0;
++int	tcp_mss_ifmtu = 1;	/* SCE: the interface's MTU is advertised */
+ #ifdef TCP_COMPAT_42
+ int	tcp_compat_42 = 1;
+ #else
+@@ -233,7 +234,12 @@
+ void	tcp6_mtudisc(struct in6pcb *, int);
+ #endif
+ 
+-POOL_INIT(tcpcb_pool, sizeof(struct tcpcb), 0, 0, 0, "tcpcbpl", NULL);
++/* SCE: the pools are initialised by hand, as in NetBSD 2.1 (tcp_init) */
++struct pool tcpcb_pool;
++
++/* SCE: the stack's MSS limits, 0 for none (set by sceNetPs's control call) */
++u_long	tcp_maxmss_to_advertise;
++u_long	tcp_maxmss_from_peer;
+ 
+ #ifdef TCP_CSUM_COUNTERS
+ #include <sys/device.h>
+@@ -357,7 +363,13 @@
+ 	/* Initialize the TCPCB template. */
+ 	tcp_tcpcb_template();
+ 
++	/* SCE */
++	pool_init(&tcpcb_pool, sizeof(struct tcpcb), 0, 0, 0, "tcpcbpl",
++	    NULL);
+ 	in_pcbinit(&tcbtable, tcbhashsize, tcbhashsize);
++	/* SCE */
++	pool_init(&tcpipqent_pool, sizeof(struct ipqent), 0, 0, 0,
++	    "tcpipqepl", NULL);
+ 
+ 	hlen = sizeof(struct ip) + sizeof(struct tcphdr);
+ #ifdef INET6
+@@ -382,6 +394,9 @@
+ 	/* Initialize the compressed state engine. */
+ 	syn_cache_init();
+ 
++	/* SCE */
++	tcp_sack_init();
++
+ 	MOWNER_ATTACH(&tcp_tx_mowner);
+ 	MOWNER_ATTACH(&tcp_rx_mowner);
+ 	MOWNER_ATTACH(&tcp_mowner);
+@@ -489,9 +504,11 @@
+ 		 * checksum right before the packet is sent off onto
+ 		 * the wire.
+ 		 */
+-		n->th_sum = in_cksum_phdr(ipov->ih_src.s_addr,
+-		    ipov->ih_dst.s_addr,
+-		    htons(sizeof(struct tcphdr) + IPPROTO_TCP));
++		/* SCE: a P2P segment has no TCP checksum */
++		if ((tp->t_flags & TF_SCE_P2P) == 0)
++			n->th_sum = in_cksum_phdr(ipov->ih_src.s_addr,
++			    ipov->ih_dst.s_addr,
++			    htons(sizeof(struct tcphdr) + IPPROTO_TCP));
+ 		break;
+ 	    }
+ #ifdef INET6
+@@ -789,7 +806,9 @@
+ 		ipov->ih_len = htons((u_int16_t)tlen);
+ 
+ 		th->th_sum = 0;
+-		th->th_sum = in_cksum(m, hlen + tlen);
++		/* SCE: a P2P segment has no TCP checksum */
++		if (tp == NULL || (tp->t_flags & TF_SCE_P2P) == 0)
++			th->th_sum = in_cksum(m, hlen + tlen);
+ 		ip->ip_len = htons(hlen + tlen);
+ 		ip->ip_ttl = ip_defttl;
+ 		break;
+@@ -867,6 +886,20 @@
+ 	switch (family) {
+ #ifdef INET
+ 	case AF_INET:
++		/* SCE: a P2P connection answers over UDP, from its virtual port */
++		if (tp != NULL && (tp->t_flags & TF_SCE_P2P) != 0) {
++			struct sockaddr_in src, dst;
++
++			src.sin_port = tp->t_local_vport;
++			src.sin_addr = ip->ip_src;
++			dst.sin_port = tp->t_remote_vport;
++			dst.sin_addr = ip->ip_dst;
++			m_adj(m, sizeof(struct ip));
++			error = udpp2p_output(&src, &dst, m, ro, so,
++			    tp->t_flags & TF_SCE_USECRYPTO,
++			    tp->t_flags & TF_SCE_USESIGNATURE);
++			break;
++		}
+ 		error = ip_output(m, NULL, ro,
+ 		    (tp && tp->t_mtudisc ? IP_MTUDISC : 0),
+ 		    (struct ip_moptions *)0, so);
+@@ -1015,6 +1048,10 @@
+ 	 */
+ 	tp->ts_timebase = tcp_now;
+ 
++	/* SCE: no virtual ports until a P2P connection sets them */
++	tp->t_local_vport = 0;
++	tp->t_remote_vport = 0;
++
+ 	return (tp);
+ }
+ 
+@@ -1633,7 +1670,7 @@
+ 		/*
+ 		 * Resend unacknowledged packets.
+ 		 */
+-		tp->snd_nxt = tp->snd_una;
++		tp->snd_nxt = tp->sack_newdata = tp->snd_una;	/* SCE */
+ 		tcp_output(tp);
+ 	}
+ }
+@@ -1710,7 +1747,7 @@
+  *	 max(if mtu) - ip header - tcp header
+  */
+ u_long
+-tcp_mss_to_advertise(const struct ifnet *ifp, int af)
++tcp_mss_to_advertise(const struct ifnet *ifp, int af, const struct tcpcb *tp)
+ {
+ 	extern u_long in_maxmtu;
+ 	u_long mss = 0;
+@@ -1772,6 +1809,12 @@
+ 	if (mss > hdrsiz)
+ 		mss -= hdrsiz;
+ 
++	/* SCE: the stack's limit, then the socket's (SCE_NET_TCP_MSS_TO_ADVERTISE) */
++	if (tcp_maxmss_to_advertise != 0)
++		mss = min(mss, tcp_maxmss_to_advertise);
++	if (tp->t_mss_to_advertise != 0)
++		mss = min(mss, tp->t_mss_to_advertise);
++
+ 	mss = max(tcp_mssdflt, mss);
+ 	return (mss);
+ }
+@@ -1827,6 +1870,9 @@
+ 	if (offer)
+ 		mss = offer;
+ 	mss = max(mss, 256);		/* sanity */
++	/* SCE: the stack's limit on the peer's offer */
++	if (tcp_maxmss_from_peer != 0)
++		mss = min(mss, tcp_maxmss_from_peer);
+ 	tp->t_peermss = mss;
+ 	mss -= tcp_optlen(tp);
+ #ifdef INET
+@@ -1856,7 +1902,7 @@
+ 		bufsize = roundup(bufsize, mss);
+ 		if (bufsize > sb_max)
+ 			bufsize = sb_max;
+-		(void) sbreserve(&so->so_snd, bufsize, so);
++		(void) sbreserve(&so->so_snd, bufsize);	/* SCE: NetBSD 2.1's sbreserve */
+ 	}
+ 	tp->t_segsz = mss;
+ 
+@@ -1921,7 +1967,7 @@
+ 		bufsize = roundup(bufsize, tp->t_ourmss);
+ 		if (bufsize > sb_max)
+ 			bufsize = sb_max;
+-		(void) sbreserve(&so->so_rcv, bufsize, so);
++		(void) sbreserve(&so->so_rcv, bufsize);	/* SCE: NetBSD 2.1's sbreserve */
+ 	}
+ }
+ 
+@@ -2008,7 +2054,7 @@
+ 	}
+ #endif
+ 	/* Not possible. */
+-	panic("tcp_new_iss");
++	return (0);	/* SCE: no panic */
+ }
+ 
+ /*
+@@ -2203,3 +2249,29 @@
+ 
+ 	return optlen;
+ }
++
++/*
++ * SCE: drop every P2P connection to a peer udpp2p forgets (its address and
++ * virtual port in sin).
++ */
++void
++tcp_drop_peer(struct sockaddr_in *sin)
++{
++	struct inpcb_hdr *inph;
++	struct inpcb *inp;
++	struct tcpcb *tp;
++
++	CIRCLEQ_FOREACH(inph, &tcbtable.inpt_queue, inph_queue) {
++		if (inph->inph_af != AF_INET)
++			continue;
++		tp = intotcpcb((struct inpcb *)inph);
++		if (tp == NULL)
++			continue;
++		inp = tp->t_inpcb;
++		if (inp == NULL || (tp->t_flags & TF_SCE_P2P) == 0)
++			continue;
++		if (in_hosteq(inp->inp_faddr, sin->sin_addr) &&
++		    tp->t_remote_vport == sin->sin_port)
++			(void) tcp_drop(tp, ECONNRESET);
++	}
++}
