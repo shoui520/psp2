@@ -477,7 +477,7 @@ int	in_cksum __P((struct mbuf *, int));
 int	in4_cksum __P((struct mbuf *, u_int8_t, int, int));
 void	in_delayed_cksum __P((struct mbuf *));
 int	in_localaddr __P((struct in_addr));
-void	in_socktrim __P((struct sockaddr_in *));
+/* SCE: in_socktrim is in.c's own */
 
 #define	in_hosteq(s,t)	((s).s_addr == (t).s_addr)
 #define	in_nullhost(x)	((x).s_addr == INADDR_ANY)

@@ -1,0 +1,84 @@
+--- a/netinet/in.c
++++ b/netinet/in.c
+@@ -129,6 +129,9 @@
+ #include <netinet/ip_mroute.h>
+ #include <netinet/igmp_var.h>
+ 
++/* SCE: this file's copies are made whatever the length */
++#undef memcpy
++
+ #ifdef INET
+ 
+ static u_int in_mask2len __P((struct in_addr *));
+@@ -205,7 +208,7 @@
+ /*
+  * Trim a mask in a sockaddr
+  */
+-void
++static void	/* SCE */
+ in_socktrim(ap)
+ 	struct sockaddr_in *ap;
+ {
+@@ -220,25 +223,7 @@
+ 		}
+ }
+ 
+-/*
+- *  Routine to take an Internet address and convert into a
+- *  "dotted quad" representation for printing.
+- */
+-const char *
+-in_fmtaddr(addr)
+-	struct in_addr addr;
+-{
+-	static char buf[sizeof("123.456.789.123")];
+-
+-	addr.s_addr = ntohl(addr.s_addr);
+-
+-	sprintf(buf, "%d.%d.%d.%d",
+-		(addr.s_addr >> 24) & 0xFF,
+-		(addr.s_addr >> 16) & 0xFF,
+-		(addr.s_addr >>  8) & 0xFF,
+-		(addr.s_addr >>  0) & 0xFF);
+-	return buf;
+-}
++/* SCE: no in_fmtaddr (nothing logs) */
+ 
+ /*
+  * Maintain the "in_maxmtu" variable, which is the largest
+@@ -300,7 +285,7 @@
+ 	bzero(mask, sizeof(*mask));
+ 	for (i = 0; i < len / 8; i++)
+ 		p[i] = 0xff;
+-	if (len % 8)
++	if (len % 8 && i < sizeof(*mask))	/* SCE: within the mask */
+ 		p[i] = (0xff00 >> (len % 8)) & 0xff;
+ }
+ 
+@@ -326,7 +311,7 @@
+ 	switch (cmd) {
+ 	case SIOCALIFADDR:
+ 	case SIOCDLIFADDR:
+-		if (p == 0 || (error = suser(p->p_ucred, &p->p_acflag)))
++		if (p == 0)	/* SCE: no privilege check */
+ 			return (EPERM);
+ 		/*fall through*/
+ 	case SIOCGLIFADDR:
+@@ -376,7 +361,7 @@
+ 		if (cmd == SIOCGIFALIAS)
+ 			break;
+ 
+-		if (p == 0 || (error = suser(p->p_ucred, &p->p_acflag)))
++		if (p == 0)	/* SCE: no privilege check */
+ 			return (EPERM);
+ 
+ 		if (ia == 0) {
+@@ -404,7 +389,7 @@
+ 		break;
+ 
+ 	case SIOCSIFBRDADDR:
+-		if (p == 0 || (error = suser(p->p_ucred, &p->p_acflag)))
++		if (p == 0)	/* SCE: no privilege check */
+ 			return (EPERM);
+ 		/* FALLTHROUGH */
+ 
