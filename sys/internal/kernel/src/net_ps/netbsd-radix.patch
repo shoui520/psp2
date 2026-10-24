@@ -1,0 +1,11 @@
+--- contrib/netbsd-2.1/sys/net/radix.h
++++ sys/internal/kernel/src/net_ps/include/net/radix.h
+@@ -151,7 +151,7 @@
+ 			struct radix_node [2])),
+ 	 *rn_lookup __P((void *, void *, struct radix_node_head *)),
+ 	 *rn_match __P((void *, struct radix_node_head *)),
+-	 *rn_newpair __P((void *, int, struct radix_node[2])),
++	/* SCE: rn_newpair is radix.c's own */
+ 	 *rn_search __P((void *, struct radix_node *)),
+ 	 *rn_search_m __P((void *, struct radix_node *, void *));
+ 

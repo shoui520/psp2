@@ -1,0 +1,128 @@
+--- a/net/radix.c
++++ b/net/radix.c
+@@ -56,7 +56,7 @@
+ struct radix_mask *rn_mkfreelist;
+ struct radix_node_head *mask_rnhead;
+ static char *addmask_key;
+-static char normal_chars[] = {0, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe, -1};
++static const char normal_chars[] = {0, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe, -1};	/* SCE: const */
+ static char *rn_zeros, *rn_ones;
+ 
+ #define rn_masktop (mask_rnhead->rnh_treetop)
+@@ -246,13 +246,7 @@
+ 	for (; cp < cplim; cp++, cp2++)
+ 		if (*cp != *cp2)
+ 			goto on1;
+-	/*
+-	 * This extra grot is in case we are explicitly asked
+-	 * to look up the default.  Ugh!
+-	 */
+-	if ((t->rn_flags & RNF_ROOT) && t->rn_dupedkey)
+-		t = t->rn_dupedkey;
+-	return t;
++	return t;	/* SCE: no default lookup through a root's duped key */
+ on1:
+ 	test = (*cp ^ *cp2) & 0xff; /* find first bit that differs */
+ 	for (b = 7; (test >>= 1) > 0;)
+@@ -315,7 +309,7 @@
+ int	rn_debug =  1;
+ #endif
+ 
+-struct radix_node *
++static struct radix_node *	/* SCE */
+ rn_newpair(v, b, nodes)
+ 	void *v;
+ 	int b;
+@@ -436,7 +430,7 @@
+ 		Bzero(addmask_key + m0, last_zeroed - m0);
+ 	*addmask_key = last_zeroed = mlen;
+ 	x = rn_search(addmask_key, rn_masktop);
+-	if (Bcmp(addmask_key, x->rn_key, mlen) != 0)
++	if (mlen != 0 && Bcmp(addmask_key, x->rn_key, mlen) != 0)	/* SCE */
+ 		x = 0;
+ 	if (x || search)
+ 		return (x);
+@@ -448,7 +442,6 @@
+ 	Bcopy(addmask_key, cp, mlen);
+ 	x = rn_insert(cp, mask_rnhead, &maskduplicated, x);
+ 	if (maskduplicated) {
+-		log(LOG_ERR, "rn_addmask: mask impossibly already in tree\n");
+ 		Free(saved_x);
+ 		return (x);
+ 	}
+@@ -495,7 +488,6 @@
+ 
+ 	MKGet(m);
+ 	if (m == 0) {
+-		log(LOG_ERR, "Mask for route not entered\n");
+ 		return (0);
+ 	}
+ 	Bzero(m, sizeof *m);
+@@ -643,8 +635,6 @@
+ 		if (m->rm_flags & RNF_NORMAL) {
+ 			mmask = m->rm_leaf->rn_mask;
+ 			if (tt->rn_flags & RNF_NORMAL) {
+-				log(LOG_ERR, "Non-unique normal route,"
+-				    " mask not entered\n");
+ 				return tt;
+ 			}
+ 		} else
+@@ -680,8 +670,7 @@
+ 	vlen =  *(u_char *)v;
+ 	saved_tt = tt;
+ 	top = x;
+-	if (tt == 0 ||
+-	    Bcmp(v + head_off, tt->rn_key + head_off, vlen - head_off))
++	if (Bcmp(v + head_off, tt->rn_key + head_off, vlen - head_off))	/* SCE */
+ 		return (0);
+ 	/*
+ 	 * Delete our route from mask lists.
+@@ -698,12 +687,10 @@
+ 		goto on1;
+ 	if (tt->rn_flags & RNF_NORMAL) {
+ 		if (m->rm_leaf != tt || m->rm_refs > 0) {
+-			log(LOG_ERR, "rn_delete: inconsistent annotation\n");
+ 			return 0;  /* dangling ref could cause disaster */
+ 		}
+ 	} else { 
+ 		if (m->rm_mask != tt->rn_mask) {
+-			log(LOG_ERR, "rn_delete: inconsistent annotation\n");
+ 			goto on1;
+ 		}
+ 		if (--m->rm_refs >= 0)
+@@ -724,7 +711,6 @@
+ 			break;
+ 		}
+ 	if (m == 0) {
+-		log(LOG_ERR, "rn_delete: couldn't find our annotation\n");
+ 		if (tt->rn_flags & RNF_NORMAL)
+ 			return (0); /* Dangling ref to us */
+ 	}
+@@ -757,7 +743,7 @@
+ 				p->rn_dupedkey = tt->rn_dupedkey;
+ 				if (tt->rn_dupedkey)
+ 					tt->rn_dupedkey->rn_p = p;
+-			} else log(LOG_ERR, "rn_delete: couldn't find us\n");
++			}
+ 		}
+ 		t = tt + 1;
+ 		if  (t->rn_flags & RNF_ACTIVE) {
+@@ -795,9 +781,6 @@
+ 						MKFree(m);
+ 					m = mm;
+ 				}
+-			if (m)
+-				log(LOG_ERR, "%s %p at %p\n",
+-				    "rn_delete: Orphaned Mask", m, x);
+ 		}
+ 	}
+ 	/*
+@@ -913,8 +896,6 @@
+ 			max_keylen = dom->dom_maxrtkey;
+ #endif
+ 	if (max_keylen == 0) {
+-		log(LOG_ERR,
+-		    "rn_init: radix functions require max_keylen be set\n");
+ 		return;
+ 	}
+ 	R_Malloc(rn_zeros, char *, 3 * max_keylen);
