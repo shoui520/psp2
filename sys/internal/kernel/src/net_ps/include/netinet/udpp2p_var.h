@@ -47,6 +47,9 @@ struct udpp2pcb {
 	int	  up_reserve;		/* counted against IP_MAXPACKET; nothing sets it */
 };
 
+LIST_HEAD(udpp2pcbhead, udpp2pcb);
+extern struct udpp2pcbhead udpp2pcbs;	/* every udpp2pcb, for sceNetPsCollectSockInfo */
+
 /* a peer a process exchanges keys with (SIOCP2PADDPEER) */
 struct udpp2p_peer {
 	LIST_ENTRY(udpp2p_peer) upp_list;	/* udpp2p_ctx's upc_peers */

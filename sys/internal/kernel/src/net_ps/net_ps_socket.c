@@ -48,7 +48,17 @@
 #include <netinet/tcp_seq.h>
 #include <netinet/tcp_timer.h>
 #include <netinet/tcp_var.h>
+#include <netinet/udp.h>
+#include <netinet/udp_var.h>
+#include <netinet/udpp2p_var.h>
+#include <net/sockinfo.h>
 #include <string.h>
+
+extern struct domain inetdomain;
+extern struct inpcbtable rawcbtable;
+
+int sceNetPsCollectSockInfo(int socket, SceNetSockInfo *records, int capacity,
+			    int flags, int *count, SceUID processId, int kernel);
 
 struct mbuf *m_get(int how, int type);
 void sce_psnet_panic(const char *message, ...) __attribute__((noreturn));
@@ -813,10 +823,6 @@ int sceNetPsAbortSocket(struct socket *so, int addressChanged)
 	sceNetPsCloseSocket(so, &error, 1);
 	return 0;
 }
-
-int sceNetPsCollectSockInfo(int socket, SceNetSockInfo *records, int capacity,
-			 int flags, int *count, SceUID processId,
-			 int kernel);
 
 unsigned int sceNetPsGetSockinfo(int socket, void *buffer, int capacity, int flags)
 {
@@ -3187,4 +3193,340 @@ void sceNetPsRemoveDescriptorFromEpolls(SceNetPsDescriptor *descriptor)
 		if (epoll->flags & SCE_NETPS_EPOLL_WAITING)
 			sceNetPsWakeupNormal(epoll);
 	}
+}
+
+/* if_arp.c: the ARP and raw Ethernet sockets */
+extern struct inpcbtable arpcbtable;
+extern struct inpcbtable isdncbtable;
+
+/* SCE: a tcp_fsm.h state as sceNetGetSockInfo reports it */
+static inline int sceNetPsSockInfoTcpState(int state)
+{
+	switch (state) {
+	case TCPS_CLOSED:	return SCE_NET_SOCKINFO_STATE_CLOSED;
+	case TCPS_LISTEN:	return SCE_NET_SOCKINFO_STATE_LISTEN;
+	case TCPS_SYN_SENT:	return SCE_NET_SOCKINFO_STATE_SYN_SENT;
+	case TCPS_SYN_RECEIVED:	return SCE_NET_SOCKINFO_STATE_SYN_RECEIVED;
+	case TCPS_ESTABLISHED:	return SCE_NET_SOCKINFO_STATE_ESTABLISHED;
+	case TCPS_CLOSE_WAIT:	return SCE_NET_SOCKINFO_STATE_CLOSE_WAIT;
+	case TCPS_FIN_WAIT_1:	return SCE_NET_SOCKINFO_STATE_FIN_WAIT_1;
+	case TCPS_CLOSING:	return SCE_NET_SOCKINFO_STATE_CLOSING;
+	case TCPS_LAST_ACK:	return SCE_NET_SOCKINFO_STATE_LAST_ACK;
+	case TCPS_FIN_WAIT_2:	return SCE_NET_SOCKINFO_STATE_FIN_WAIT_2;
+	case TCPS_TIME_WAIT:	return SCE_NET_SOCKINFO_STATE_TIME_WAIT;
+	}
+	return SCE_NET_SOCKINFO_STATE_UNKNOWN;
+}
+
+/*
+ * SCE: copy out the socket's sceNetGetSockInfo record when the caller may
+ * see it; with no buffer only count it. A record of the identifier walk
+ * (overwrite) is written without moving on: the protocol tables write
+ * every socket again.
+ */
+static int sceNetPsWriteSockInfo(int socketId, struct socket *so,
+				 SceNetSockInfo **cursor, int capacity,
+				 int *count, unsigned char flags,
+				 SceNetSockInfo *record, SceUID processId,
+				 int overwrite, int kernel)
+{
+	struct inpcb *inp, *p2p;
+	struct tcpcb *tp;
+	unsigned int recvLength, sendLength, owner;
+	int descriptorId, error;
+
+	if (flags & SCE_NET_SOCKINFO_F_OTHERS) {
+		if (processId) {
+			if (so->processId != processId)
+				return 0;
+			owner = SCE_NET_SOCKINFO_F_SELF;
+		} else {
+			owner = SCE_NET_SOCKINFO_F_OTHERS;
+		}
+	} else {
+		if (so->processId == sceNetPsGetProcessId()) {
+			owner = SCE_NET_SOCKINFO_F_SELF;
+		} else if (so->processId == gNetPsInitialProcessId) {
+			if (sceNetPsIsApplicationProgram(NULL))
+				return 0;
+			owner = SCE_NET_SOCKINFO_F_KERNEL;
+		} else {
+			if (sceNetPsIsApplicationProgram(NULL))
+				return 0;
+			owner = SCE_NET_SOCKINFO_F_OTHERS;
+		}
+		if (!((owner | flags) & SCE_NET_SOCKINFO_F_SELF))
+			return 0;
+	}
+	if (so->so_proto < inetdomain.dom_protosw ||
+	    so->so_proto >= inetdomain.dom_protoswNPROTOSW)
+		return 0;
+	if (*cursor == NULL) {
+		(*count)++;
+		return 0;
+	}
+	if (*count >= capacity)
+		return 0;
+	memset(record, 0, sizeof(*record));
+	if (flags & SCE_NET_SOCKINFO_F_KERNEL)
+		memcpy(record->name, so->name, sizeof(record->name));
+	record->pid = so->reportedProcessOverride != -1 ?
+		      so->reportedProcessOverride : so->processId;
+	descriptorId = sceNetPsFindSocketDescriptor(so);
+	record->s = descriptorId < 0 ? socketId : descriptorId;
+	inp = sotoinpcb(so);
+	tp = NULL;
+	p2p = NULL;
+	switch (so->so_type) {
+	case SCE_NET_SOCK_DGRAM_P2P:
+		p2p = inp;
+		break;
+	case SCE_NET_SOCK_STREAM_P2P:
+		/* a stream without its pcb is closing: its record is kept */
+		if (inp == NULL) {
+			overwrite = 0;
+			break;
+		}
+		tp = intotcpcb(inp);
+		p2p = inp;
+		break;
+	case SOCK_STREAM:
+		if (inp == NULL) {
+			overwrite = 0;
+			break;
+		}
+		tp = intotcpcb(inp);
+		break;
+	}
+	recvLength = so->so_rcv.sb_cc;
+	record->recv_queue_length = recvLength;
+	sendLength = so->so_snd.sb_cc;
+	record->send_queue_length = sendLength;
+	if (inp) {
+		record->local_adr.s_addr = inp->inp_laddr.s_addr;
+		record->local_port = inp->inp_lport;
+		record->remote_adr.s_addr = inp->inp_faddr.s_addr;
+		record->remote_port = inp->inp_fport;
+	}
+	if (tp) {
+		record->state = sceNetPsSockInfoTcpState(tp->t_state);
+		record->socket_type = so->so_type;
+		record->policy = so->threadPriorityPolicy;
+		if (p2p) {
+			record->local_vport = tp->t_local_vport;
+			record->remote_vport = tp->t_remote_vport;
+		}
+		goto flags;
+	}
+	record->state = SCE_NET_SOCKINFO_STATE_OPENED;
+	record->socket_type = so->so_type;
+	record->policy = so->threadPriorityPolicy;
+	if (p2p) {
+		record->local_vport = ((struct udpp2pcb *)p2p)->up_lvport;
+		record->remote_vport = ((struct udpp2pcb *)p2p)->up_fvport;
+	}
+flags:
+	if (so->so_rcv.sb_flags & SB_WAIT)
+		owner |= SCE_NET_SOCKINFO_F_RECV_WAIT;
+	if (so->so_snd.sb_flags & SB_WAIT)
+		owner |= SCE_NET_SOCKINFO_F_SEND_WAIT;
+	if (so->so_rcv.sb_flags & SB_SEL)
+		owner |= SCE_NET_SOCKINFO_F_RECV_EWAIT;
+	if (so->so_snd.sb_flags & SB_SEL)
+		owner |= SCE_NET_SOCKINFO_F_SEND_EWAIT;
+	if (so->so_snd.sb_flags & SB_SCE_CONNECTING)
+		owner |= SCE_NET_SOCKINFO_F_WAKEUP_SIGNAL;
+	record->flags = owner;
+	if (flags & 8) {
+		record->pid = htonl(record->pid);
+		record->s = htonl(record->s);
+		record->recv_queue_length = htonl(recvLength);
+		record->send_queue_length = htonl(sendLength);
+		record->state = htonl(record->state);
+		record->flags = htonl(owner);
+	}
+	if (flags & 0x10) {
+		record->local_port = htons(record->local_port);
+		record->remote_port = htons(record->remote_port);
+		record->local_vport = htons(record->local_vport);
+		record->remote_vport = htons(record->remote_vport);
+		record->local_adr.s_addr = htonl(record->local_adr.s_addr);
+		record->remote_adr.s_addr = htonl(record->remote_adr.s_addr);
+	}
+	error = sceNetPsCopyOut(record, *cursor, sizeof(*record), kernel);
+	if (error)
+		return error;
+	if (overwrite)
+		return 0;
+	(*cursor)++;
+	(*count)++;
+	return 0;
+}
+
+/* SCE: the record of a socket lost to a resume or an address change: its identifier only */
+static int sceNetPsWriteLostSockInfo(int socketId, SceNetSockInfo **cursor,
+				     int capacity, int *count,
+				     SceNetSockInfo *record, int kernel)
+{
+	int error;
+
+	if (*cursor == NULL) {
+		(*count)++;
+		return 0;
+	}
+	if (*count >= capacity)
+		return 0;
+	memset(record, 0, sizeof(*record));
+	record->s = socketId;
+	error = sceNetPsCopyOut(record, *cursor, sizeof(*record), kernel);
+	if (error == 0) {
+		(*cursor)++;
+		(*count)++;
+	}
+	return error;
+}
+
+/* SCE: write every socket of one protocol table */
+static inline int sceNetPsWriteTableSockInfo(struct inpcbtable *table,
+					     SceNetSockInfo **cursor,
+					     int capacity, int *count,
+					     unsigned char flags,
+					     SceNetSockInfo *record,
+					     SceUID processId, int kernel)
+{
+	struct inpcb_hdr *inph;
+	struct socket *so;
+	int error;
+
+	CIRCLEQ_FOREACH(inph, &table->inpt_queue, inph_queue) {
+		so = ((struct inpcb *)inph)->inp_socket;
+		if (so == NULL)
+			continue;
+		error = sceNetPsWriteSockInfo(sceNetPsFindSocketId(so), so,
+					      cursor, capacity, count, flags,
+					      record, processId, 0, kernel);
+		if (error)
+			return error;
+	}
+	return 0;
+}
+
+/*
+ * SCE: sceNetGetSockInfo's records: one socket, or every socket by
+ * identifier and protocol table, and with flags 0x20 the epolls too.
+ * Returns a positive error.
+ */
+int sceNetPsCollectSockInfo(int socket, SceNetSockInfo *records, int capacity,
+			    int flags, int *count, SceUID processId, int kernel)
+{
+	SceNetSockInfo record;
+	SceNetSockInfo *cursor = records;
+	struct udpp2pcb *up;
+	struct socket *so;
+	SceNetPsEpoll *epoll;
+	unsigned int owner;
+	int first, last, id, error;
+
+	if (capacity < 0)
+		return EINVAL;
+	error = 0;
+	if (socket >= 0) {
+		so = sceNetPsLookupSocket(socket, &error, 1);
+		if (so)
+			return sceNetPsWriteSockInfo(socket, so, &cursor,
+						     capacity, count, flags,
+						     &record, processId, 0, kernel);
+		if (error == SCE_NET_ERESUME || error == SCE_NET_EIPADDRCHANGED)
+			return sceNetPsWriteLostSockInfo(socket, &cursor,
+							 capacity, count,
+							 &record, kernel);
+		return error;
+	}
+	sceNetPsGetSocketIdRange(&first, &last);
+	for (id = first; id <= last; id++) {
+		so = sceNetPsLookupSocket(id, &error, 1);
+		if (so) {
+			error = sceNetPsWriteSockInfo(id, so, &cursor, capacity,
+						      count, flags, &record,
+						      processId, 1, kernel);
+			if (error)
+				return error;
+		} else if (error == SCE_NET_ERESUME ||
+			   error == SCE_NET_EIPADDRCHANGED) {
+			error = sceNetPsWriteLostSockInfo(id, &cursor, capacity,
+							  count, &record, kernel);
+			if (error)
+				return error;
+		}
+	}
+	error = sceNetPsWriteTableSockInfo(&tcbtable, &cursor, capacity, count,
+					   flags, &record, processId, kernel);
+	if (error)
+		return error;
+	error = sceNetPsWriteTableSockInfo(&udbtable, &cursor, capacity, count,
+					   flags, &record, processId, kernel);
+	if (error)
+		return error;
+	LIST_FOREACH(up, &udpp2pcbs, up_list) {
+		so = up->up_inpcb.inp_socket;
+		if (so == NULL)
+			continue;
+		error = sceNetPsWriteSockInfo(sceNetPsFindSocketId(so), so,
+					      &cursor, capacity, count, flags,
+					      &record, processId, 0, kernel);
+		if (error)
+			return error;
+	}
+	error = sceNetPsWriteTableSockInfo(&rawcbtable, &cursor, capacity, count,
+					   flags, &record, processId, kernel);
+	if (error)
+		return error;
+	error = sceNetPsWriteTableSockInfo(&arpcbtable, &cursor, capacity, count,
+					   flags, &record, processId, kernel);
+	if (error)
+		return error;
+	error = sceNetPsWriteTableSockInfo(&isdncbtable, &cursor, capacity,
+					   count, flags, &record, processId, kernel);
+	if (error)
+		return error;
+	if (!(flags & 0x20))
+		return 0;
+	sceNetPsGetEpollIdRange(&first, &last);
+	for (id = first; id <= last; id++) {
+		epoll = sceNetPsLookupEpoll(id, 1);
+		if (epoll == NULL)
+			continue;
+		if (flags & SCE_NET_SOCKINFO_F_OTHERS) {
+			if (processId == 0)
+				owner = SCE_NET_SOCKINFO_F_OTHERS;
+			else if (processId != epoll->processId)
+				continue;
+			else
+				owner = SCE_NET_SOCKINFO_F_SELF;
+		} else if (epoll->processId == sceNetPsGetProcessId()) {
+			owner = SCE_NET_SOCKINFO_F_SELF;
+		} else {
+			owner = SCE_NET_SOCKINFO_F_OTHERS;
+		}
+		if (cursor == NULL) {
+			(*count)++;
+			continue;
+		}
+		if (*count >= capacity)
+			continue;
+		memset(&record, 0, sizeof(record));
+		record.s = id;
+		record.pid = epoll->processId;
+		record.state = SCE_NET_SOCKINFO_STATE_OPENED;
+		record.socket_type = 11;	/* an epoll */
+		if (flags & SCE_NET_SOCKINFO_F_KERNEL)
+			memcpy(record.name, epoll->name, sizeof(record.name));
+		record.flags = owner;
+		error = sceNetPsCopyOut(&record, cursor, sizeof(record), kernel);
+		if (error)
+			return error;
+		cursor++;
+		(*count)++;
+	}
+	return 0;
 }

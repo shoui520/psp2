@@ -62,8 +62,8 @@
 +struct	ifnet *myip_ifp = NULL;	/* SCE: not static; nothing here sets it */
 +
 +/* SCE: the ARP and raw Ethernet sockets */
-+static struct	inpcbtable arpcbtable;
-+static struct	inpcbtable isdncbtable;
++struct	inpcbtable arpcbtable;	/* SCE: sceNetPsCollectSockInfo walks it */
++struct	inpcbtable isdncbtable;	/* SCE: sceNetPsCollectSockInfo walks it */
  
  #ifdef DDB
  static void db_print_sa __P((struct sockaddr *));

@@ -86,7 +86,7 @@ struct udpp2p_decrypt {
 	u_int	  ud_maclen;
 };
 
-LIST_HEAD(, udpp2pcb) udpp2pcbs;
+struct udpp2pcbhead udpp2pcbs;
 struct pool udpp2pcb_pool;
 in_port_t udpp2p_lastport;
 struct udpp2pstat udpp2pstat;
