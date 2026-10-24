@@ -63,6 +63,7 @@ set(netbsd_sources
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/route.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/rtsock.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/if_arp.c
+	${netbsd}/netinet/igmp.c
 )
 set_source_files_properties(${netbsd_sources} PROPERTIES COMPILE_OPTIONS "-fno-strict-aliasing;-fgnu89-inline"
 	COMPILE_DEFINITIONS NET_PS_NETBSD)
