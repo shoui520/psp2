@@ -14,6 +14,7 @@
 #define	UDPP2P_SIGLEN		8	/* SO_USESIGNATURE */
 
 #ifdef _KERNEL
+int	 udpp2p_hasproc(void);	/* the calling process has a udpp2p entry */
 int	 udpp2p_hastag(struct socket *);
 int	 udpp2p_output(struct sockaddr_in *, struct sockaddr_in *,
 	    struct mbuf *, struct route *, struct socket *, int, int);
