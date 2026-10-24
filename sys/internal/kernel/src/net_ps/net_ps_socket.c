@@ -31,7 +31,9 @@
 #include "net_ps_internal.h"
 #include <net_ps/netps_gateway.h>
 #include <net_ps/netps.h>
+#include <sys/domain.h>
 #include <sys/proc.h>
+#include <sys/protosw.h>
 #include <string.h>
 
 struct mbuf *m_get(int how, int type);
@@ -541,6 +543,206 @@ static int sceNetPsConnectPending(void *argument, int cancel)
 	}
 	sceNetPsConnectSocket(param->socket, so, &param->address,
 			      param->addressLength, &error, 1);
+	return error;
+}
+
+static int sceNetPsSendPending(void *argument, int cancel);
+
+/*
+ * SCE adaptation of NetBSD uipc_syscalls.c sendit: the locals live in a
+ * heap frame with a copy of the iovecs, so that after an unreachable
+ * destination (except on a routing socket) the send can be retried once the
+ * interface's automatic connection is up, or, non-blocking, queued with its
+ * data copied.  A pending returned error is reported first.
+ */
+struct SceNetPsSenditFrame {
+	struct uio	auio;
+	struct iovec	*iov;
+	struct mbuf	*to;
+	struct mbuf	*control;
+	int		i;
+	int		len;
+	struct iovec	savedIov[32];
+	int		retries;
+};
+
+_Static_assert(sizeof(struct SceNetPsSenditFrame) == 0x138,
+	       "SceNetPsSenditFrame size");
+
+int sceNetPsSendit(int s, struct socket *so, struct msghdr *mp, int flags,
+		   int *retsize, int kernel)
+{
+	struct SceNetPsSenditFrame *f;
+	SceNetPsSendRequest *request;
+	char *buffer, *p;
+	int error = 0;
+	int len, i;
+
+	f = sceNetPsMalloc(sizeof(*f), 3, 8);
+	if (f == NULL)
+		return -ENOMEM;
+	f->to = NULL;
+	f->retries = 1;
+	for (;;) {
+		if (so == NULL) {
+			so = sceNetPsLookupSocket(s, &error, 0);
+			if (so == NULL)
+				goto out;
+		}
+		if (so->returnedError) {
+			error = so->returnedError;
+			so->returnedError = 0;
+			goto bad;
+		}
+		f->auio.uio_iov = mp->msg_iov;
+		f->auio.uio_iovcnt = mp->msg_iovlen;
+		f->auio.uio_segflg = kernel ? UIO_SYSSPACE : UIO_USERSPACE;
+		f->auio.uio_rw = UIO_WRITE;
+		f->auio.uio_procp = curproc;
+		f->auio.uio_offset = 0;		/* XXX */
+		f->auio.uio_resid = 0;
+		f->iov = mp->msg_iov;
+		for (f->i = 0; f->i < mp->msg_iovlen; f->i++, f->iov++) {
+			f->auio.uio_resid += f->iov->iov_len;
+			if (f->iov->iov_len > SSIZE_MAX ||
+			    f->auio.uio_resid > SSIZE_MAX) {
+				error = EINVAL;
+				goto bad;
+			}
+			f->savedIov[f->i] = *f->iov;
+		}
+		if (mp->msg_name) {
+			if (mp->msg_namelen > 255) {
+				error = EINVAL;
+				goto bad;
+			}
+			error = sceNetPsSockargs(&f->to, mp->msg_name,
+						 mp->msg_namelen, MT_SONAME,
+						 kernel);
+			if (error)
+				goto bad;
+		}
+		if (mp->msg_control) {
+			if (mp->msg_controllen < sizeof(struct cmsghdr) ||
+			    mp->msg_controllen > 4096) {
+				error = EINVAL;
+				goto bad;
+			}
+			error = sceNetPsSockargs(&f->control, mp->msg_control,
+						 mp->msg_controllen, MT_CONTROL,
+						 kernel);
+			if (error)
+				goto bad;
+		}
+		f->len = f->auio.uio_resid;
+		bnet_socket_sanity_check(so);
+		error = (*so->so_send)(so, f->to, &f->auio, NULL, f->control,
+				       flags);
+		if (error) {
+			if (f->auio.uio_resid == f->len ||
+			    (error != EINTR && error != EWOULDBLOCK)) {
+				/* SCE: an interrupted send leaves no socket error behind. */
+				if (error == EINTR)
+					so->so_error = 0;
+				goto bad;
+			}
+			error = 0;
+		}
+		*retsize = f->len - f->auio.uio_resid;
+bad:
+		if (so->so_proto->pr_domain->dom_family == PF_ROUTE)
+			goto out;
+		if ((error < EADDRNOTAVAIL || error > ENETUNREACH) &&
+		    error != EHOSTUNREACH)
+			goto out;
+		if (f->retries <= 0)
+			goto out;
+		f->retries--;
+		if (!sceNetPsRequestAutoConnect(so, f->to, 0))
+			goto out;
+		f->iov = mp->msg_iov;
+		for (f->i = 0; f->i < mp->msg_iovlen; f->i++, f->iov++)
+			*f->iov = f->savedIov[f->i];
+		len = f->len;
+		if (so->so_state & SS_NBIO)
+			break;
+		error = sceNetPsWaitAutoConnect(so);
+		*retsize = error;
+		if (error)
+			goto out;
+		so = NULL;
+		m_freem(f->to);
+		f->to = NULL;
+	}
+	request = sceNetPsMalloc(sizeof(*request), 3, 8);
+	if (request == NULL) {
+		error = ENOMEM;
+		goto out;
+	}
+	buffer = sceNetPsMalloc(mp->msg_namelen + len, 1, 8);
+	if (buffer == NULL) {
+		sceNetPsFree(request);
+		error = ENOMEM;
+		goto out;
+	}
+	request->request.argument = &request->param;
+	request->request.complete = sceNetPsSendPending;
+	request->param.socket = s;
+	request->param.message.msg_name = buffer + len;
+	error = sceNetPsCopyIn(mp->msg_name, buffer + len, mp->msg_namelen,
+			       kernel);
+	if (error)
+		goto free;
+	request->param.message.msg_namelen = mp->msg_namelen;
+	request->param.message.msg_iov = &request->param.iov;
+	request->param.message.msg_iovlen = 1;
+	for (i = 0, p = buffer; i < mp->msg_iovlen; i++) {
+		error = sceNetPsCopyIn(mp->msg_iov[i].iov_base, p,
+				       mp->msg_iov[i].iov_len, kernel);
+		if (error)
+			goto free;
+		p += mp->msg_iov[i].iov_len;
+	}
+	request->param.iov.iov_base = buffer;
+	request->param.iov.iov_len = len;
+	request->param.message.msg_control = NULL;
+	request->param.message.msg_controllen = 0;
+	request->param.flags = flags;
+	sceNetPsQueuePendingRequest(&request->request);
+	error = 0;
+	*retsize = len;
+	goto out;
+free:
+	sceNetPsFree(buffer);
+	sceNetPsFree(request);
+out:
+	m_freem(f->to);
+	sceNetPsFree(f);
+	return error;
+}
+
+/* SCE: the queued send, run when the automatic connection is up */
+static int sceNetPsSendPending(void *argument, int cancel)
+{
+	SceNetPsSendParam *param = argument;
+	struct socket *so;
+	void *buffer;
+	int retsize = 0;
+	int error = 0;
+
+	if (cancel) {
+		sceNetPsFree(param->iov.iov_base);
+		return 0;
+	}
+	so = sceNetPsLookupSocket(param->socket, &error, 1);
+	if (so == NULL)
+		return error;
+	so->refCount++;
+	buffer = param->iov.iov_base;
+	error = sceNetPsSendit(param->socket, so, &param->message, param->flags,
+			       &retsize, 1);
+	sceNetPsFree(buffer);
+	bnet_sorele(so);
 	return error;
 }
 

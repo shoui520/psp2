@@ -331,6 +331,21 @@ typedef struct SceNetPsConnectRequest {
 
 _Static_assert(sizeof(SceNetPsConnectRequest) == 40, "SceNetPsConnectRequest size");
 
+/* SCE: a non-blocking send queued until the automatic connection is up */
+typedef struct SceNetPsSendParam {
+	int socket;
+	struct msghdr message;
+	struct iovec iov;
+	int flags;
+} SceNetPsSendParam;
+
+typedef struct SceNetPsSendRequest {
+	SceNetPsPendingRequest request;
+	SceNetPsSendParam param;
+} SceNetPsSendRequest;
+
+_Static_assert(sizeof(SceNetPsSendRequest) == 60, "SceNetPsSendRequest size");
+
 /* SCE: the processes that sent data since the list was last taken */
 typedef struct SceNetPsSenderList {
 	SceUID processId[16];

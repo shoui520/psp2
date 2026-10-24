@@ -230,6 +230,8 @@ int sceNetPsRecvit(int s, struct msghdr *mp, void *namelenp, int *retsize,
 		   int kernel);
 int sceNetPsConnectSocket(int s, struct socket *so, const void *address,
 			  unsigned int addressLength, int *errorp, int kernel);
+int sceNetPsSendit(int s, struct socket *so, struct msghdr *mp, int flags,
+		   int *retsize, int kernel);
 unsigned int sceNetPsGetSockinfo(int socket, void *buffer, int capacity, int flags);
 int sceNetPsGetIfList(void *list, int count);
 int sceNetPsControl(int interfaceIndex, int command, void *data, int length);
