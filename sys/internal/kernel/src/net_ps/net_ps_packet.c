@@ -5,7 +5,7 @@
 
 SceNetPsPacketService gNetPsPacketService;
 
-extern int gNetPsSoftTick;
+extern int tick;
 void callout_reset(struct callout *timer, int ticks,
 		   void (*callback)(void *), void *argument);
 void callout_stop(struct callout *timer);
@@ -15,7 +15,7 @@ int sceNetPsStartBandwidthTimer(struct ifnet *interface)
 {
 	gNetPsPacketService.flags |= 0x100000;
 	callout_reset(&gNetPsPacketService.bandwidthCallout,
-		      100000 / gNetPsSoftTick, sceNetPsBandwidthTimer, interface);
+		      100000 / tick, sceNetPsBandwidthTimer, interface);
 	return 0;
 }
 

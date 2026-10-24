@@ -52,6 +52,8 @@ net_ps_prepare_patched(${netbsd}/netinet/in_cksum.c ${CMAKE_CURRENT_SOURCE_DIR}/
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/in_cksum.c)
 net_ps_prepare_patched(${netbsd}/netinet/in_pcb.c ${CMAKE_CURRENT_SOURCE_DIR}/in_pcb_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/in_pcb.c)
+net_ps_prepare_patched(${netbsd}/netinet/in_proto.c ${CMAKE_CURRENT_SOURCE_DIR}/in_proto_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/in_proto.c)
 net_ps_prepare_patched(${netbsd}/netinet/ip_icmp.c ${CMAKE_CURRENT_SOURCE_DIR}/ip_icmp_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/ip_icmp.c)
 net_ps_prepare_patched(${netbsd}/netinet/ip_id.c ${CMAKE_CURRENT_SOURCE_DIR}/ip_id_sce.patch
@@ -100,6 +102,7 @@ set(netbsd_sources
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/in.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/in_cksum.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/in_pcb.c
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/in_proto.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/ip_icmp.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/ip_id.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/ip_input.c
@@ -119,7 +122,7 @@ set_source_files_properties(${netbsd_sources} PROPERTIES COMPILE_OPTIONS "-fno-s
 # Sony's kernel options: a PADT answers data for a session nobody owns
 set_property(SOURCE ${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/if_pppoe.c APPEND PROPERTY COMPILE_DEFINITIONS
 	PPPOE_TERM_UNKNOWN_SESSIONS)
-psp2_module(os0_kd_bootimage_net_ps KIND kernel COMPILER gcc48 PARTIAL SOURCES
+psp2_module(os0_kd_bootimage_net_ps KIND kernel COMPILER gcc48 SOURCES
 	netps_allocator_adapters.c
 	netps_thread.c
 	netps_process.c

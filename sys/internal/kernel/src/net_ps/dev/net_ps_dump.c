@@ -25,7 +25,7 @@ int sceNetPsDumpCreate(const char *name, int length, int flags)
 		} else {
 			dump = sceNetPsMalloc(length + sizeof(*dump), 3, 8);
 			if (dump != NULL) {
-				sceNetPsCopyInString(name, dump->name, 31, &copied);
+				copyinstr(name, dump->name, 31, &copied);
 				sceNetPsSetDump(dumpId, dump);
 				dump->length = length;
 				dump->flags = flags;

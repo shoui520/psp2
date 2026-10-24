@@ -1,12 +1,30 @@
 /* Shared SceNetPs thread adapters; original source filename is unavailable. */
 
 #include "net_ps_internal.h"
+#include "netps_resource.h"
 #include <net_ps/netps.h>
 #include <string.h>
+#include <sys/kernel.h>
+#include <sys/mbuf.h>
+#include <sys/proc.h>
 #include <sys/protosw.h>
 #include <sys/socketvar.h>
 
+/* NetBSD's kernel parameters (conf/param.c, kern_clock.c), with net_ps's configuration */
+int mcllowat = 8;
+int mblowat = 16;
+int tick = 1000000 / 1000;
+struct proc *curproc = &proc0;
+int hz = 1000;
+int nmbclusters = 1024;
 int gNetPsSoftTick = 10000;
+const int msize = MSIZE;
+const int mclbytes = MCLBYTES;
+struct timeval boottime;
+int hardclock_ticks;
+volatile struct timeval time __attribute__((__aligned__(__alignof__(quad_t))));
+volatile struct timeval mono_time;
+struct proc proc0;
 SceNetPsMutex gNetPsJumboMutex;
 SceNetPsMutex gNetPsDevSendMutex;
 SceNetPsMutex gNetPsDevRecvMutex;
@@ -18,13 +36,7 @@ SceUID gNetPsInitialProcessId;
 SceNetPsRuntime gNetPsRuntime;
 SceNetPsThreadParam gNetPsSoftThreadParam;
 
-extern int tick;
-extern int ticks;
 extern int netisr;
-extern int gNetPsSoftTick;
-extern volatile struct timeval gNetPsTime;
-extern volatile struct timeval mono_time;
-extern int gNetPsStartTime;
 extern int gNetPsInitialized;
 
 void callout_startup(void);
@@ -96,9 +108,9 @@ int sceNetPsSoftThread(void)
 			}
 		}
 		deadline += gNetPsSoftTick;
-		if ((gNetPsTime.tv_usec += gNetPsSoftTick) > 999999) {
-			gNetPsTime.tv_usec -= 1000000;
-			gNetPsTime.tv_sec++;
+		if ((time.tv_usec += gNetPsSoftTick) > 999999) {
+			time.tv_usec -= 1000000;
+			time.tv_sec++;
 		}
 		if ((mono_time.tv_usec += gNetPsSoftTick) > 999999) {
 			mono_time.tv_usec -= 1000000;
@@ -107,7 +119,7 @@ int sceNetPsSoftThread(void)
 		count = 0;
 		while (count < gNetPsSoftTick / tick) {
 			count++;
-			ticks++;
+			hardclock_ticks++;
 			if (callout_hardclock() != 0)
 				softclock(NULL);
 		}
@@ -458,8 +470,8 @@ int sceNetPsWakeupAddressChanged(const void *waitChannel)
 /* NetBSD's microtime: the network stack's current wall clock (if_up, if_down). */
 void microtime(struct timeval *tv)
 {
-	tv->tv_sec = gNetPsTime.tv_sec;
-	tv->tv_usec = gNetPsTime.tv_usec;
+	tv->tv_sec = time.tv_sec;
+	tv->tv_usec = time.tv_usec;
 }
 
 /* SCE replacement: NetBSD's packet-rate limiter always permits the packet. */
@@ -488,11 +500,13 @@ int sceNetPsNormalizeTimeout(int timeout)
 
 /*
  * The bounds of the sanity checks: a protocol switch lies in the data segment's first
- * 0x105c bytes, a protocol function in the text segment's first 0x558e0 bytes (the
- * original's relocations; its link's symbols are unknown)
+ * 0x105c bytes (from its first object), a protocol function between the first function and
+ * 0x810558e0, which the original compares without a relocation (its link's symbols are unknown)
  */
-extern const char bnet_protosw_start[], bnet_protosw_end[];
-extern const char bnet_text_start[], bnet_text_end[];
+#define bnet_protosw_start	((const char *)&gNetPsOtherDumpCursor)
+#define bnet_protosw_end	((const char *)&gNetPsOtherDumpCursor + 0x105c)
+#define bnet_text_start		((const char *)sceNetPsCalloc)
+#define bnet_text_end		((const char *)0x810558e0)
 
 /*
  * A bad socket does not come back from the panic; a bad protocol switch is reported
@@ -574,9 +588,9 @@ int sceNetPsStartStack(const SceNetPsThreadParam *param)
 	loopattach(1);
 	pppoeattach(1);
 	sceNetPsGetSystemTime(&now);
-	gNetPsTime.tv_sec = (int)now;
+	time.tv_sec = (int)now;
 	mono_time.tv_sec = (int)now;
-	gNetPsStartTime = (int)now;
+	boottime.tv_sec = (int)now;
 	gNetPsSoftThreadParam = *param;
 	gNetPsSoftThreadParam.arg = NULL;
 	gNetPsSoftThreadParam.entry = (void (*)(void *))sceNetPsSoftThread;

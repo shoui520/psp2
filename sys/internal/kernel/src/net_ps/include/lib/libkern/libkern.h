@@ -20,3 +20,6 @@
 #ifdef NET_PS_NETBSD
 #define	memcpy(d, s, l)		((l) > 0 ? memcpy((d), (s), (l)) : (d))
 #endif
+
+/* SCE: the stack's one random number source is arc4random (igmp_input, in_pcbinit) */
+#define	random()		arc4random()

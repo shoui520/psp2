@@ -19,7 +19,7 @@
  #ifdef IPSEC
  #include <netinet6/ipsec.h>
  #include <netkey/key.h>
-@@ -147,109 +152,100 @@
+@@ -147,109 +152,102 @@
  #include <netipsec/xform.h>
  #endif	/* FAST_IPSEC*/
  
@@ -36,6 +36,8 @@
  extern struct pfil_head inet_pfil_hook;			/* XXX */
  #endif
  
++int	tcp_do_loopback_cksum = 0;	/* SCE: NetBSD 3.0's, which tcp_input reads */
++
  /*
 - * IP output.  The packet in mbuf chain m contains a skeletal IP
 - * header (with len, off, ttl, proto, tos, src, dst).
@@ -186,7 +188,7 @@
  	/*
  	 * If there is a cached route,
  	 * check that it is to the same destination
-@@ -257,78 +253,101 @@
+@@ -257,78 +255,101 @@
  	 * The address family should also be checked in case of sharing the
  	 * cache with IPv6.
  	 */
@@ -331,7 +333,7 @@
  			ipstat.ips_noroute++;
  			error = ENETUNREACH;
  			goto bad;
-@@ -338,10 +357,10 @@
+@@ -338,10 +359,10 @@
  		 * If the packet is multicast or broadcast, confirm that
  		 * the outgoing interface can transmit it.
  		 */
@@ -346,7 +348,7 @@
  			ipstat.ips_noroute++;
  			error = ENETUNREACH;
  			goto bad;
-@@ -350,51 +369,25 @@
+@@ -350,51 +371,25 @@
  		 * If source address not specified yet, use an address
  		 * of outgoing interface.
  		 */
@@ -376,7 +378,8 @@
  			 * forbid loopback, loop back a copy.
  			 */
 -			ip_mloopback(ifp, m, dst);
--		}
++			ip_mloopback(f->ifp, f->m, f->dst);
+ 		}
 -#ifdef MROUTING
 -		else {
 -			/*
@@ -399,13 +402,12 @@
 -					goto done;
 -				}
 -			}
-+			ip_mloopback(f->ifp, f->m, f->dst);
- 		}
+-		}
 -#endif
  		/*
  		 * Multicasts with a time-to-live of zero may be looped-
  		 * back, above, but must not be transmitted on a network.
-@@ -403,27 +396,25 @@
+@@ -403,27 +398,25 @@
  		 * loop back a copy if this host actually belongs to the
  		 * destination group on the loopback interface.
  		 */
@@ -438,7 +440,7 @@
  		ipstat.ips_odropped++;
  		error = EADDRNOTAVAIL;
  		goto bad;
-@@ -434,354 +425,98 @@
+@@ -434,354 +427,98 @@
  	 * and verify user is allowed to send
  	 * such a packet.
  	 */
@@ -529,7 +531,10 @@
 -	 * ipsec4_output() expects ip_len and ip_off in network
 -	 * order.  They have been set to network order above.
 -	 */
--
++	if ((f->flags & IP_MTUDISC) != 0 && f->ro->ro_rt != NULL &&
++	    (f->ro->ro_rt->rt_rmx.rmx_locks & RTV_MTU) == 0)
++		f->ip->ip_off |= htons(IP_DF);
+ 
 -    {
 -	struct ipsec_output_state state;
 -	bzero(&state, sizeof(state));
@@ -540,8 +545,9 @@
 -	} else
 -		state.ro = ro;
 -	state.dst = (struct sockaddr *)dst;
--
--	/*
++	f->ip_len = ntohs(f->ip->ip_len);
+ 
+ 	/*
 -	 * We can't defer the checksum of payload data if
 -	 * we're about to encrypt/authenticate it.
 -	 *
@@ -549,7 +555,9 @@
 -	 * XXX network interfaces, we need to reconsider this,
 -	 * XXX since it's likely that they'll support checksumming,
 -	 * XXX as well.
--	 */
++	 * SCE: a packet whose TCP or UDP checksum is left to the
++	 * interface gets the pseudo-header sum here.
+ 	 */
 -	if (m->m_pkthdr.csum_flags & (M_CSUM_TCPv4|M_CSUM_UDPv4)) {
 -		in_delayed_cksum(m);
 -		m->m_pkthdr.csum_flags &= ~(M_CSUM_TCPv4|M_CSUM_UDPv4);
@@ -590,16 +598,12 @@
 -		}
 -		goto bad;
 -	}
-+	if ((f->flags & IP_MTUDISC) != 0 && f->ro->ro_rt != NULL &&
-+	    (f->ro->ro_rt->rt_rmx.rmx_locks & RTV_MTU) == 0)
-+		f->ip->ip_off |= htons(IP_DF);
- 
+-
 -	/* be sure to update variables that are affected by ipsec4_output() */
 -	ip = mtod(m, struct ip *);
 -	hlen = ip->ip_hl << 2;
 -	ip_len = ntohs(ip->ip_len);
-+	f->ip_len = ntohs(f->ip->ip_len);
- 
+-
 -	if (ro->ro_rt == NULL) {
 -		if ((flags & IP_ROUTETOIF) == 0) {
 -			printf("ip_output: "
@@ -616,7 +620,7 @@
 -skip_ipsec:
 -#endif /*IPSEC*/
 -#ifdef FAST_IPSEC
- 	/*
+-	/*
 -	 * Check the security policy (SP) for the packet and, if
 -	 * required, do IPsec-related processing.  There are two
 -	 * cases here; the first time a packet is sent through
@@ -624,9 +628,7 @@
 -	 * If the packet is resubmitted to ip_output (e.g. after
 -	 * AH, ESP, etc. processing), there will be a tag to bypass
 -	 * the lookup and related policy checking.
-+	 * SCE: a packet whose TCP or UDP checksum is left to the
-+	 * interface gets the pseudo-header sum here.
- 	 */
+-	 */
 -	mtag = m_tag_find(m, PACKET_TAG_IPSEC_PENDING_TDB, NULL);
 -	s = splsoftnet();
 -	if (mtag != NULL) {
@@ -850,7 +852,7 @@
  		goto done;
  	}
  
-@@ -791,79 +526,53 @@
+@@ -791,79 +528,53 @@
  	 *
  	 * XXX Some hardware can do this.
  	 */
@@ -952,7 +954,7 @@
  	goto done;
  }
  
-@@ -1166,6 +875,8 @@
+@@ -1166,6 +877,8 @@
  		case IP_RECVRETOPTS:
  		case IP_RECVDSTADDR:
  		case IP_RECVIF:
@@ -961,7 +963,7 @@
  			if (m == NULL || m->m_len != sizeof(int))
  				error = EINVAL;
  			else {
-@@ -1200,6 +911,19 @@
+@@ -1200,6 +913,19 @@
  				case IP_RECVIF:
  					OPTSET(INP_RECVIF);
  					break;
@@ -981,7 +983,7 @@
  				}
  			}
  			break;
-@@ -1290,6 +1014,9 @@
+@@ -1290,6 +1016,9 @@
  		case IP_RECVDSTADDR:
  		case IP_RECVIF:
  		case IP_ERRORMTU:
@@ -991,7 +993,7 @@
  			*mp = m = m_get(M_WAIT, MT_SOOPTS);
  			MCLAIM(m, so->so_mowner);
  			m->m_len = sizeof(int);
-@@ -1324,6 +1051,18 @@
+@@ -1324,6 +1053,18 @@
  			case IP_RECVIF:
  				optval = OPTBIT(INP_RECVIF);
  				break;
@@ -1010,7 +1012,7 @@
  			}
  			*mtod(m, int *) = optval;
  			break;
-@@ -1469,7 +1208,7 @@
+@@ -1469,7 +1210,7 @@
  			 */
  			memmove(&cp[IPOPT_OFFSET+1],
  			    (caddr_t)(&cp[IPOPT_OFFSET+1] + sizeof(struct in_addr)),

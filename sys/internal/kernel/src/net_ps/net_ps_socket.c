@@ -193,8 +193,8 @@ int sceNetPsUnregisterGateway(struct SceNetKernelGateway *interface)
 	int result;
 
 	sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
-	sce_psnet_bnet_mutex_lock(&gNetPsDevSendMutex, NULL);
 	sce_psnet_bnet_mutex_lock(&gNetPsDevRecvMutex, NULL);
+	sce_psnet_bnet_mutex_lock(&gNetPsDevSendMutex, NULL);
 	if (!gNetPsGatewayInterfaceSlot) {
 		result = 0x80418106;
 		goto failed;
@@ -205,15 +205,15 @@ int sceNetPsUnregisterGateway(struct SceNetKernelGateway *interface)
 	}
 	gNetPsGatewayInterfaceSlot->interface = NULL;
 	socket = gNetPsGatewayInterfaceSlot->socket;
-	sce_psnet_bnet_mutex_unlock(&gNetPsDevRecvMutex);
 	sce_psnet_bnet_mutex_unlock(&gNetPsDevSendMutex);
+	sce_psnet_bnet_mutex_unlock(&gNetPsDevRecvMutex);
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 	if (socket >= 0)
 		SceNetPsForDriver_21F4428D(socket);
 	return 0;
 failed:
-	sce_psnet_bnet_mutex_unlock(&gNetPsDevRecvMutex);
 	sce_psnet_bnet_mutex_unlock(&gNetPsDevSendMutex);
+	sce_psnet_bnet_mutex_unlock(&gNetPsDevRecvMutex);
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 	return result;
 }
@@ -2315,7 +2315,7 @@ int sceNetPsDescriptorCreate(const char *name, int flags)
 		sceNetPsFree(descriptor);
 		goto out;
 	}
-	sceNetPsCopyInString(name, descriptor->name, 31, &copied);
+	copyinstr(name, descriptor->name, 31, &copied);
 	sceNetPsSetDescriptor(result, descriptor);
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 	return result;
@@ -2804,7 +2804,7 @@ int sceNetPsEpollCreate(const char *name, int flags)
 		sceNetPsFree(epoll);
 		goto out;
 	}
-	sceNetPsCopyInString(name, epoll->name, 31, &copied);
+	copyinstr(name, epoll->name, 31, &copied);
 	sceNetPsSetEpoll(result, epoll);
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 	return result;

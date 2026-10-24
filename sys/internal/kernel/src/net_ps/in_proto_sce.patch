@@ -1,0 +1,58 @@
+--- a/netinet/in_proto.c
++++ b/netinet/in_proto.c
+@@ -104,7 +104,10 @@
+ #include <netinet/tcp_debug.h>
+ #include <netinet/udp.h>
+ #include <netinet/udp_var.h>
+-#include <netinet/ip_encap.h>
++/* SCE: no ip_encap (no IP in IP) */
++#include <netinet/udpp2p_var.h>	/* SCE */
++#include <netinet/if_inarp.h>	/* SCE */
++#include <net/socket.h>		/* SCE: SCE_NET_SOCK_*_P2P */
+ /*
+  * TCP/IP protocol family: IP, ICMP, UDP, TCP.
+  */
+@@ -208,11 +211,7 @@
+   0,		0,		0,		0,		NULL
+ },
+ #endif /* FAST_IPSEC */
+-{ SOCK_RAW,	&inetdomain,	IPPROTO_IPV4,	PR_ATOMIC|PR_ADDR|PR_LASTHDR,
+-  encap4_input,	rip_output, 	rip_ctlinput,	rip_ctloutput,
+-  rip_usrreq,	/*XXX*/
+-  encap_init,	0,		0,		0,
+-},
++/* SCE: no IP in IP */
+ #ifdef INET6
+ { SOCK_RAW,	&inetdomain,	IPPROTO_IPV6,	PR_ATOMIC|PR_ADDR|PR_LASTHDR,
+   encap4_input,	rip_output, 	rip_ctlinput,	rip_ctloutput,
+@@ -267,6 +266,30 @@
+   0,		0,		0,		0,
+ },
+ #endif /* NSIP */
++/* SCE: UDP's peer-to-peer sockets */
++{ SCE_NET_SOCK_DGRAM_P2P, &inetdomain, 0,		PR_ATOMIC|PR_ADDR,
++  udp_input,	0,		0,		ip_ctloutput,
++  udpp2p_usrreq,
++  udpp2p_init,	0,		0,		0,
++},
++/* SCE: the ARP socket */
++{ 7,		&inetdomain,	0,		PR_ATOMIC|PR_ADDR,
++  0,		0,		0,		ip_ctloutput,
++  arpsock_usrreq,
++  arpsock_init,	0,		0,		0,
++},
++/* SCE: the ISDN socket */
++{ 9,		&inetdomain,	0,		PR_ATOMIC|PR_ADDR,
++  0,		0,		0,		ip_ctloutput,
++  isdn_usrreq,
++  isdn_init,	0,		0,		0,
++},
++/* SCE: TCP's peer-to-peer sockets, slow-timed with TCP's */
++{ SCE_NET_SOCK_STREAM_P2P, &inetdomain, IPPROTO_TCP,	PR_CONNREQUIRED|PR_WANTRCVD|PR_LISTEN|PR_ABRTACPTDIS,
++  tcp_input,	0,		tcp_ctlinput,	tcp_ctloutput,
++  tcp_usrreq,
++  tcp_init,	0,		0,		tcp_drain,
++},
+ /* raw wildcard */
+ { SOCK_RAW,	&inetdomain,	0,		PR_ATOMIC|PR_ADDR|PR_LASTHDR,
+   rip_input,	rip_output,	rip_ctlinput,	rip_ctloutput,

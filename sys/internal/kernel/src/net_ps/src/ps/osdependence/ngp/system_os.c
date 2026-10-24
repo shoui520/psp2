@@ -25,6 +25,7 @@ int gNetPsFake3gInterface = -1;
 SceNetPsSyncList gNetPsSyncList;
 void (*gNetPsCryptoRelease)(void *);
 void *(*gNetPsCryptoAllocate)(SceSize);
+int gNetPsInitialized;
 SceNetPsThreadEventHooks *gNetPsThreadEventHooks;
 
 int sceNetPsTimingSafeCompare(const void *first, const void *second,

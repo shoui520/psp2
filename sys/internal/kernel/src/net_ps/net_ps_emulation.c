@@ -5,13 +5,12 @@
 #include <net/socket.h>
 
 extern SceNetPsPacketService gNetPsPacketService;
-extern int gNetPsSoftTick;
+extern int tick;
 void callout_reset(struct callout *timer, int ticks,
 		   void (*callback)(void *), void *argument);
 void sceNetPsDelayTimer(void *argument);
 extern SceNetPsMutex gNetPsPktMutex;
 extern SceNetPsMutex gNetPsDevSendMutex;
-unsigned int sceNetPsGetEmulationSeed(void);
 void callout_init(struct callout *timer);
 void callout_stop(struct callout *timer);
 
@@ -189,7 +188,7 @@ int sceNetPsCheckPacketDelay(unsigned int *releaseTime, unsigned int *flags,
 	microtime(&now);
 	callout_reset(&gNetPsPacketService.delayCallout,
 		      1000 * (deadline - (now.tv_usec / 1000 + 1000 * now.tv_sec)) /
-		      gNetPsSoftTick, sceNetPsDelayTimer, interface);
+		      tick, sceNetPsDelayTimer, interface);
 	gNetPsPacketService.flags |= 0x10000;
 	if (*flags & 1)
 		gNetPsPacketService.flags |= 0x20000;
@@ -294,7 +293,7 @@ int sceNetPsSetDriverEmulation(struct SceNetPsDriverContext *context,
 		goto invalid;
 	}
 	if (!parameters->seed)
-		parameters->seed = sceNetPsGetEmulationSeed();
+		parameters->seed = arc4random();
 	sceNetPsSeedEmulationRandom(parameters->seed);
 	for (index = 0; index < sizeof(parameters->reserved); ++index) {
 		if (parameters->reserved[index]) {

@@ -46,7 +46,7 @@ void sceNetPsReleaseRxMbuf(struct mbuf *mbuf, char *buffer, size_t size,
 			   void *packet)
 {
 	sceNetPsFreePacket(packet);
-	pool_put(mb_cache.pc_pool, mbuf);
+	pool_put(mbpool_cache.pc_pool, mbuf);
 	--gNetPsQosPacketCount;
 }
 

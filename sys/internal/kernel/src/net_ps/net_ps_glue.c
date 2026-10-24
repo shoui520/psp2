@@ -78,14 +78,7 @@ int sceNetPsCheckPacketReady(struct SceNetPsDriverContext *context,
 int sceNetPsRequeuePacket(struct SceNetPsDriverContext *context,
 			 struct NetDriverPacket *packet);
 
-extern int tick;
-extern int ticks;
 extern int netisr;
-extern int gNetPsSoftTick;
-extern volatile struct timeval gNetPsTime;
-extern volatile struct timeval mono_time;
-extern int gNetPsStartTime;
-extern int gNetPsInitialized;
 
 void callout_startup(void);
 void mbinit(void);
@@ -223,7 +216,7 @@ int sceNetPsDeliverRxPacket(struct NetDriver *driver,
 	return sce_psnet_bnet_mutex_unlock(&gNetPsDevRecvMutex);
 }
 
-extern int gNetPsPacketCaptureActive;
+int gNetPsPacketCaptureActive;
 int sceNetPsCaptureTxPacket(struct NetDriverPacket *packet);
 
 /* Name unknown; convert queued BSD packets to driver-owned transmit storage. */
@@ -522,9 +515,9 @@ int sceNetPsPollDevices(void)
 {
 	struct NetDriver *driver;
 
-	if (ticks % 60000 == 0)
+	if (hardclock_ticks % 60000 == 0)
 		sceNetPsNotifyDriver(NULL, 0x10000000, NULL, 0);
-	if (ticks % 1000 != 0)
+	if (hardclock_ticks % 1000 != 0)
 		return 0;
 	for (driver = gNetPsDriverHead; driver; driver = driver->next) {
 		struct SceNetPsDriverContext *context = driver->context;
@@ -2437,9 +2430,8 @@ int sceNetPsCopyIn(const void *source, void *destination, size_t length,
 	return 0;
 }
 
-/* Name unknown; user-only string copy returning the terminator-inclusive count. */
-int sceNetPsCopyInString(const char *source, char *destination, size_t length,
-			size_t *copied)
+/* NetBSD's copyinstr: a user string into the kernel, the count with its terminator */
+int copyinstr(const void *source, void *destination, size_t length, size_t *copied)
 {
 	signed char *cursor;
 	int result;
