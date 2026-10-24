@@ -77,8 +77,16 @@ struct pppoeidletimeoutcfg {
 /* SCE: how far discovery got, and the last error the concentrator sent */
 struct pppoemaxstate {
 	char	ifname[IFNAMSIZ];	/* pppoe interface name */
-	int	max_state;		/* highest PPPOE_STATE_ reached */
+	int	max_state;		/* highest PPPOE_MAXSTATE_ reached */
 };
+
+#define	PPPOE_MAXSTATE_INITIAL		0
+#define	PPPOE_MAXSTATE_PADI_SENT	1
+#define	PPPOE_MAXSTATE_PADO_ERROR	2	/* a PADO with an error tag */
+#define	PPPOE_MAXSTATE_PADR_SENT	3
+#define	PPPOE_MAXSTATE_PADS_ERROR	4	/* a PADS with an error tag */
+#define	PPPOE_MAXSTATE_SESSION		5
+#define	PPPOE_MAXSTATE_PADT		6	/* the session terminated */
 
 #define	PPPOERESETMAXSTATE	_IOW('i', 115, struct pppoemaxstate)
 #define	PPPOEGETMAXSTATE	_IOWR('i', 116, struct pppoemaxstate)

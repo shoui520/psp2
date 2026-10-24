@@ -24,7 +24,7 @@
  	int sc_padi_retried;		/* number of PADI retries already done */
  	int sc_padr_retried;		/* number of PADR retries already done */
 +	/* SCE: how far discovery got, and the last error the concentrator sent */
-+	int sc_max_state;		/* highest PPPOE_STATE_ reached */
++	int sc_max_state;		/* highest PPPOE_MAXSTATE_ reached */
 +	int sc_error_tag;		/* PPPOE_TAG_*_ERR of the last error */
 +	char sc_error_text[256];	/* its text */
  };
@@ -60,8 +60,11 @@
  		return NULL;
  	}
  	return sc;
-@@ -422,6 +428,8 @@
- 	const char *err_msg, *err_txt;
+@@ -419,9 +425,10 @@
+ 	u_int16_t tag, len;
+ 	u_int16_t session, plen;
+ 	struct pppoe_softc *sc;
+-	const char *err_msg, *err_txt;
  	u_int8_t *ac_cookie;
  	size_t ac_cookie_len;
 +	u_int8_t *relay_sid;	/* SCE: from NetBSD 1.94 (PR/40690) */
@@ -69,7 +72,19 @@
  #ifdef PPPOE_SERVER
  	u_int8_t *hunique;
  	size_t hunique_len;
-@@ -444,26 +452,24 @@
+@@ -429,10 +436,9 @@
+ 	struct pppoehdr *ph;
+ 	struct pppoetag *pt;
+ 	struct mbuf *n;
+-	int noff, err, errortag;
++	int noff, err, errortag, code;
+ 	struct ether_header *eh;
+ 
+-	err_msg = err_txt = NULL;
+ 	errortag = 0;
+ 	if (m->m_len < sizeof(*eh)) {
+ 		m = m_pullup(m, sizeof(*eh));
+@@ -444,35 +450,32 @@
  
  	ac_cookie = NULL;
  	ac_cookie_len = 0;
@@ -98,7 +113,8 @@
  		goto done;
  	}
  	session = ntohs(ph->session);
-@@ -471,8 +477,6 @@
+ 	plen = ntohs(ph->plen);
++	code = ph->code;	/* SCE: for the error tags */
  	off += sizeof(*ph);
  
  	if (plen + off > m->m_pkthdr.len) {
@@ -107,7 +123,7 @@
  		goto done;
  	}
  	m_adj(m, off + plen - m->m_pkthdr.len);	/* ignore trailing garbage */
-@@ -482,8 +486,6 @@
+@@ -482,8 +485,6 @@
  	while (off + sizeof(*pt) <= m->m_pkthdr.len) {
  		n = m_pulldown(m, off, sizeof(*pt), &noff);
  		if (!n) {
@@ -116,7 +132,7 @@
  			m = NULL;
  			goto done;
  		}
-@@ -491,8 +493,6 @@
+@@ -491,8 +492,6 @@
  		tag = ntohs(pt->tag);
  		len = ntohs(pt->len);
  		if (off + len > m->m_pkthdr.len) {
@@ -125,7 +141,26 @@
  			goto done;
  		}
  		switch (tag) {
-@@ -531,6 +531,19 @@
+@@ -508,8 +507,7 @@
+ 			n = m_pulldown(m, off + sizeof(*pt), len, &noff);
+ 			if (!n) {
+ 				m = NULL;
+-				err_msg = "TAG HUNIQUE ERROR";
+-				break;
++				goto done;
+ 			}
+ #ifdef PPPOE_SERVER
+ 			hunique = mtod(n, caddr_t) + noff;
+@@ -523,40 +521,60 @@
+ 				n = m_pulldown(m, off + sizeof(*pt), len,
+ 				    &noff);
+ 				if (!n) {
+-					err_msg = "TAG ACCOOKIE ERROR";
+ 					m = NULL;
+-					break;
++					goto done;
+ 				}
+ 				ac_cookie = mtod(n, caddr_t) + noff;
  				ac_cookie_len = len;
  			}
  			break;
@@ -134,28 +169,68 @@
 +				n = m_pulldown(m, off + sizeof(*pt), len,
 +				    &noff);
 +				if (!n) {
-+					err_msg = "TAG RELAYSID ERROR";
 +					m = NULL;
-+					break;
++					goto done;
 +				}
 +				relay_sid = mtod(n, caddr_t) + noff;
 +				relay_sid_len = len;
 +			}
 +			break;
  		case PPPOE_TAG_SNAME_ERR:
- 			err_msg = "SERVICE NAME ERROR";
- 			errortag = 1;
-@@ -552,9 +565,6 @@
- 				if (n)
- 					err_txt = mtod(n, caddr_t) + noff;
+-			err_msg = "SERVICE NAME ERROR";
+-			errortag = 1;
++			errortag = tag;	/* SCE: the tag itself */
+ 			break;
+ 		case PPPOE_TAG_ACSYS_ERR:
+-			err_msg = "AC SYSTEM ERROR";
+-			errortag = 1;
++			errortag = tag;	/* SCE: the tag itself */
+ 			break;
+ 		case PPPOE_TAG_GENERIC_ERR:
+-			err_msg = "GENERIC ERROR";
+-			errortag = 1;
++			errortag = tag;	/* SCE: the tag itself */
+ 			break;
+ 		}
+-		if (err_msg) {
+-			err_txt = "";
+-			if (errortag && len) {
++		/* SCE: an error for one of ours is kept for PPPOEGETERROR */
++		if (sc != NULL && errortag) {
++			sc->sc_error_tag = errortag;
++			if (code == PPPOE_CODE_PADO) {
++				sc->sc_max_state = imax(sc->sc_max_state, PPPOE_MAXSTATE_PADO_ERROR);
++			} else if (code == PPPOE_CODE_PADS) {
++				sc->sc_max_state = imax(sc->sc_max_state, PPPOE_MAXSTATE_PADS_ERROR);
++			}
++			if (len) {
+ 				n = m_pulldown(m, off + sizeof(*pt), len,
+ 				    &noff);
+-				if (n)
+-					err_txt = mtod(n, caddr_t) + noff;
++				if (!n) {
++					m = NULL;
++					goto done;
++				}
++				/* SCE: the text read as signed chars */
++				if (*(int8_t *)(mtod(n, caddr_t) + noff) != 0) {
++					memset(sc->sc_error_text, 0,
++					    sizeof(sc->sc_error_text));
++					memcpy(sc->sc_error_text,
++					    mtod(n, caddr_t) + noff,
++					    min(len, sizeof(sc->sc_error_text) - 1));
++				}
  			}
 -			printf("%s: %s: %*s\n",
 -			    sc ? sc->sc_sppp.pp_if.if_xname : "pppoe*",
 -			    err_msg, len, err_txt);
- 			if (errortag)
- 				goto done;
+-			if (errortag)
+-				goto done;
++			goto done;
  		}
-@@ -604,7 +614,6 @@
+ 		off += sizeof(*pt) + len;
+ 	}
+@@ -604,7 +622,6 @@
  		 */
  		if (ac_cookie == NULL) {
  			/* be quiet if there is not a single pppoe instance */
@@ -163,7 +238,7 @@
  			goto done;
  		}
  		sc = pppoe_find_softc_by_hunique(ac_cookie,
-@@ -612,13 +621,9 @@
+@@ -612,13 +629,9 @@
  						 m->m_pkthdr.rcvif);
  		if (sc == NULL) {
  			/* be quiet if there is not a single pppoe instance */
@@ -177,7 +252,7 @@
  			goto done;
  		}
  		if (hunique) {
-@@ -642,13 +647,9 @@
+@@ -642,13 +655,9 @@
  	case PPPOE_CODE_PADO:
  		if (sc == NULL) {
  			/* be quiet if there is not a single pppoe instance */
@@ -191,7 +266,7 @@
  			goto done;
  		}
  		if (ac_cookie) {
-@@ -661,16 +662,22 @@
+@@ -661,16 +670,23 @@
  			sc->sc_ac_cookie_len = ac_cookie_len;
  			memcpy(sc->sc_ac_cookie, ac_cookie, ac_cookie_len);
  		}
@@ -216,11 +291,12 @@
 -				    "error=%d\n", sc->sc_sppp.pp_if.if_xname,
 -				    err);
 -		}
++		sc->sc_max_state = imax(sc->sc_max_state, PPPOE_MAXSTATE_PADR_SENT);
 +		(void)pppoe_send_padr(sc);
  		callout_reset(&sc->sc_timeout,
  		    PPPOE_DISC_TIMEOUT * (1 + sc->sc_padr_retried),
  		    pppoe_timeout, sc);
-@@ -680,9 +687,6 @@
+@@ -680,21 +696,18 @@
  			goto done;
  		sc->sc_session = session;
  		callout_stop(&sc->sc_timeout);
@@ -228,9 +304,14 @@
 -			printf("%s: session 0x%x connected\n",
 -			    sc->sc_sppp.pp_if.if_xname, session);
  		sc->sc_state = PPPOE_STATE_SESSION;
++		sc->sc_max_state = imax(sc->sc_max_state, PPPOE_MAXSTATE_SESSION);
  		sc->sc_sppp.pp_up(&sc->sc_sppp);	/* notify upper layers */
  		break;
-@@ -692,9 +696,6 @@
+ 	case PPPOE_CODE_PADT:
++		/* SCE: the session's own softc */
++		sc = pppoe_find_softc_by_session(session, m->m_pkthdr.rcvif);
+ 		if (sc == NULL)
+ 			goto done;
  		pppoe_clear_softc(sc, "received PADT");
  		break;
  	default:
@@ -240,7 +321,7 @@
  		break;
  	}
  
-@@ -732,23 +733,18 @@
+@@ -732,23 +745,18 @@
  #endif
  	m_adj(m, sizeof(struct ether_header));
  	if (m->m_pkthdr.len <= PPPOE_HEADERLEN) {
@@ -264,7 +345,7 @@
  		goto drop;
  	}
  	if (ph->code != 0)
-@@ -758,8 +754,6 @@
+@@ -758,8 +766,6 @@
  	sc = pppoe_find_softc_by_session(session, m->m_pkthdr.rcvif);
  	if (sc == NULL) {
  #ifdef PPPOE_TERM_UNKNOWN_SESSIONS
@@ -273,7 +354,7 @@
  		pppoe_send_padt(m->m_pkthdr.rcvif, session, shost);
  #endif
  		goto drop;
-@@ -778,15 +772,10 @@
+@@ -778,15 +784,10 @@
  	{
  		struct mbuf *p;
  
@@ -289,7 +370,7 @@
  	}
  #endif
  
-@@ -812,10 +801,8 @@
+@@ -812,10 +813,8 @@
  	struct ether_header *eh;
  	u_int16_t etype;
  
@@ -302,7 +383,7 @@
  
  	memset(&dst, 0, sizeof dst);
  	dst.sa_family = AF_UNSPEC;
-@@ -825,10 +812,6 @@
+@@ -825,10 +824,6 @@
  	memcpy(&eh->ether_dhost, &sc->sc_dest, sizeof sc->sc_dest);
  
  #ifdef PPPOE_DEBUG
@@ -313,7 +394,7 @@
  #endif
  
  	m->m_flags &= ~(M_BCAST|M_MCAST);
-@@ -839,7 +822,6 @@
+@@ -839,7 +834,6 @@
  static int
  pppoe_ioctl(struct ifnet *ifp, unsigned long cmd, caddr_t data)
  {
@@ -321,7 +402,7 @@
  	struct pppoe_softc *sc = (struct pppoe_softc*)ifp;
  	int error = 0;
  
-@@ -847,8 +829,7 @@
+@@ -847,8 +841,7 @@
  	case PPPOESETPARMS:
  	{
  		struct pppoediscparms *parms = (struct pppoediscparms*)data;
@@ -331,12 +412,12 @@
  		if (parms->eth_ifname[0] != 0) {
  			sc->sc_eth_if = ifunit(parms->eth_ifname);
  			if (sc->sc_eth_if == NULL)
-@@ -916,6 +897,22 @@
+@@ -916,6 +909,22 @@
  		return 0;
  	}
  	break;
 +	case PPPOERESETMAXSTATE:	/* SCE */
-+		sc->sc_max_state = PPPOE_STATE_INITIAL;
++		sc->sc_max_state = PPPOE_MAXSTATE_INITIAL;
 +		return 0;
 +	case PPPOEGETMAXSTATE:	/* SCE */
 +	{
@@ -354,7 +435,7 @@
  	case SIOCSIFFLAGS:
  	{
  		struct ifreq *ifr = (struct ifreq*) data;
-@@ -986,7 +983,7 @@
+@@ -986,7 +995,7 @@
  	u_int8_t *p;
  
  	if (sc->sc_state >PPPOE_STATE_PADI_SENT)
@@ -363,7 +444,7 @@
  
  	/* calculate length of frame (excluding ethernet header + pppoe header) */
  	len = 2 + 2 + 2 + 2 + sizeof sc;	/* service name tag is required, host unique is send too */
-@@ -1043,7 +1040,6 @@
+@@ -1043,7 +1052,6 @@
  	struct pppoe_softc *sc = (struct pppoe_softc*)arg;
  
  #ifdef PPPOE_DEBUG
@@ -371,7 +452,7 @@
  #endif
  
  	switch (sc->sc_state) {
-@@ -1075,10 +1071,6 @@
+@@ -1075,10 +1083,6 @@
  		}
  		if ((err = pppoe_send_padi(sc)) != 0) {
  			sc->sc_padi_retried--;
@@ -382,7 +463,7 @@
  		}
  		callout_reset(&sc->sc_timeout, retry_wait,
  		    pppoe_timeout, sc);
-@@ -1093,13 +1085,7 @@
+@@ -1093,13 +1097,7 @@
  			    sizeof(sc->sc_dest));
  			sc->sc_state = PPPOE_STATE_PADI_SENT;
  			sc->sc_padr_retried = 0;
@@ -397,7 +478,7 @@
  			callout_reset(&sc->sc_timeout,
  			    PPPOE_DISC_TIMEOUT * (1 + sc->sc_padi_retried),
  			    pppoe_timeout, sc);
-@@ -1108,10 +1094,6 @@
+@@ -1108,10 +1106,6 @@
  		}
  		if ((err = pppoe_send_padr(sc)) != 0) {
  			sc->sc_padr_retried--;
@@ -408,7 +489,7 @@
  		}
  		callout_reset(&sc->sc_timeout,
  		    PPPOE_DISC_TIMEOUT * (1 + sc->sc_padr_retried),
-@@ -1145,9 +1127,6 @@
+@@ -1145,9 +1139,6 @@
  	sc->sc_state = PPPOE_STATE_PADI_SENT;
  	sc->sc_padr_retried = 0;
  	err = pppoe_send_padi(sc);
@@ -418,7 +499,7 @@
  	callout_reset(&sc->sc_timeout, PPPOE_DISC_TIMEOUT, pppoe_timeout, sc);
  	splx(x);
  	return err;
-@@ -1164,9 +1143,6 @@
+@@ -1164,9 +1155,6 @@
  	if (sc->sc_state < PPPOE_STATE_SESSION)
  		err = EBUSY;
  	else {
@@ -428,7 +509,7 @@
  		err = pppoe_send_padt(sc->sc_eth_if, sc->sc_session, (const u_int8_t *)&sc->sc_dest);
  	}
  
-@@ -1177,7 +1153,12 @@
+@@ -1177,7 +1165,12 @@
  		free(sc->sc_ac_cookie, M_DEVBUF);
  		sc->sc_ac_cookie = NULL;
  	}
@@ -441,7 +522,7 @@
  #ifdef PPPOE_SERVER
  	if (sc->sc_hunique) {
  		free(sc->sc_hunique, M_DEVBUF);
-@@ -1199,8 +1180,6 @@
+@@ -1199,8 +1192,6 @@
  static void
  pppoe_abort_connect(struct pppoe_softc *sc)
  {
@@ -450,7 +531,7 @@
  	sc->sc_state = PPPOE_STATE_CLOSING;
  
  	/* notify upper layer */
-@@ -1229,6 +1208,8 @@
+@@ -1229,6 +1220,8 @@
  	}
  	if (sc->sc_ac_cookie_len > 0)
  		len += 2 + 2 + sc->sc_ac_cookie_len;	/* AC cookie */
@@ -459,7 +540,7 @@
  	m0 = pppoe_get_mbuf(len + PPPOE_HEADERLEN);
  	if (!m0)
  		return ENOBUFS;
-@@ -1248,6 +1229,12 @@
+@@ -1248,6 +1241,12 @@
  		memcpy(p, sc->sc_ac_cookie, sc->sc_ac_cookie_len);
  		p += sc->sc_ac_cookie_len;
  	}
@@ -472,7 +553,7 @@
  	PPPOE_ADD_16(p, PPPOE_TAG_HUNIQUE);
  	PPPOE_ADD_16(p, sizeof(sc));
  	memcpy(p, &sc, sizeof sc);
-@@ -1284,6 +1271,7 @@
+@@ -1284,6 +1283,7 @@
  	memcpy(&eh->ether_dhost, dest, ETHER_ADDR_LEN);
  
  	m0->m_flags &= ~(M_BCAST|M_MCAST);
@@ -480,7 +561,7 @@
  	return outgoing_if->if_output(outgoing_if, m0, &dst, NULL);
  }
  
-@@ -1362,9 +1350,19 @@
+@@ -1362,9 +1362,18 @@
  pppoe_tls(struct sppp *sp)
  {
  	struct pppoe_softc *sc = (void *)sp;
@@ -493,15 +574,14 @@
 +	x = splnet();
 +	sc->sc_state = PPPOE_STATE_PADI_SENT;
 +	sc->sc_padr_retried = 0;
-+	if (sc->sc_max_state < sc->sc_state)
-+		sc->sc_max_state = sc->sc_state;
++	sc->sc_max_state = imax(sc->sc_max_state, sc->sc_state);
 +	(void)pppoe_send_padi(sc);
 +	callout_reset(&sc->sc_timeout, PPPOE_DISC_TIMEOUT, pppoe_timeout, sc);
 +	splx(x);
  }
  
  static void
-@@ -1435,8 +1433,6 @@
+@@ -1435,8 +1444,6 @@
  			continue;
  		if (sc->sc_sppp.pp_if.if_flags & IFF_UP) {
  			sc->sc_sppp.pp_if.if_flags &= ~(IFF_UP|IFF_RUNNING);
@@ -510,7 +590,7 @@
  		}
  		sc->sc_eth_if = NULL;
  		pppoe_clear_softc(sc, "ethernet interface detached");
-@@ -1452,9 +1448,6 @@
+@@ -1452,15 +1459,10 @@
  {
  	/* stop timer */
  	callout_stop(&sc->sc_timeout);
@@ -520,7 +600,14 @@
  
  	/* fix our state */
  	sc->sc_state = PPPOE_STATE_INITIAL;
-@@ -1468,6 +1461,10 @@
+-
+-	/* signal upper layer */
+-	sc->sc_sppp.pp_down(&sc->sc_sppp);
++	sc->sc_max_state = imax(sc->sc_max_state, PPPOE_MAXSTATE_PADT);
+ 
+ 	/* clean up softc */
+ 	memcpy(&sc->sc_dest, etherbroadcastaddr, sizeof(sc->sc_dest));
+@@ -1468,6 +1470,14 @@
  		free(sc->sc_ac_cookie, M_DEVBUF);
  		sc->sc_ac_cookie = NULL;
  	}
@@ -529,5 +616,9 @@
 +		sc->sc_relay_sid = NULL;
 +	}
  	sc->sc_ac_cookie_len = 0;
++	sc->sc_relay_sid_len = 0;
  	sc->sc_session = 0;
++
++	/* signal upper layer (SCE: last) */
++	sc->sc_sppp.pp_down(&sc->sc_sppp);
  }
