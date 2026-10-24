@@ -456,12 +456,11 @@ int sceNetPsWakeupAddressChanged(const void *waitChannel)
 	return sceNetPsWakeup(waitChannel, 0x80000);
 }
 
-/* Name unknown; copy the network stack's current wall clock. */
-struct timeval *sceNetPsGetTime(struct timeval *value)
+/* NetBSD's microtime: the network stack's current wall clock (if_up, if_down). */
+void microtime(struct timeval *tv)
 {
-	value->tv_sec = gNetPsTime.tv_sec;
-	value->tv_usec = gNetPsTime.tv_usec;
-	return value;
+	tv->tv_sec = gNetPsTime.tv_sec;
+	tv->tv_usec = gNetPsTime.tv_usec;
 }
 
 /* SCE replacement: NetBSD's packet-rate limiter always permits the packet. */

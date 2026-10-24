@@ -1,0 +1,11 @@
+--- contrib/netbsd-2.1/sys/sys/sockio.h
++++ sys/internal/kernel/src/net_ps/include/sys/sockio.h
+@@ -124,4 +124,8 @@
+ #define	SIOCGIFCAP	_IOWR('i', 118, struct ifcapreq)/* get capabilities */
+ #define	SIOCSIFCAP	 _IOW('i', 117, struct ifcapreq)/* set capabilities */
+ 
++/* SCE: net_ps's driver ioctls, passed to the interface's if_ioctl */
++#define	SIOCGIFSCEDRV	_IOWR('i', 140, struct ifreq)	/* get driver state */
++#define	SIOCSIFSCEDRV	 _IOW('i', 141, struct ifreq)	/* set driver state */
++
+ #endif /* !_SYS_SOCKIO_H_ */

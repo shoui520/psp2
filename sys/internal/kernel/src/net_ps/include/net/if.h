@@ -325,11 +325,13 @@ struct ifnet {				/* and the entries */
 #define	IFF_LINK1	0x2000		/* per link layer defined bit */
 #define	IFF_LINK2	0x4000		/* per link layer defined bit */
 #define	IFF_MULTICAST	0x8000		/* supports multicast */
+#define	IFF_PPROMISC	0x10000		/* SCE: promiscuous reception held (sceNetPsSetPromiscuous) */
 
 /* flags set internally only: */
 #define	IFF_CANTCHANGE \
 	(IFF_BROADCAST|IFF_POINTOPOINT|IFF_RUNNING|IFF_OACTIVE|\
-	    IFF_SIMPLEX|IFF_MULTICAST|IFF_ALLMULTI|IFF_PROMISC)
+	    IFF_SIMPLEX|IFF_MULTICAST|IFF_ALLMULTI|IFF_PROMISC|\
+	    IFF_PPROMISC)	/* SCE: IFF_PPROMISC */
 
 /*
  * Some convenience macros used for setting ifi_baudrate.
@@ -500,7 +502,7 @@ struct	ifreq {
 		struct	sockaddr ifru_addr;
 		struct	sockaddr ifru_dstaddr;
 		struct	sockaddr ifru_broadaddr;
-		short	ifru_flags;
+		int	ifru_flags;	/* SCE: all of if_flags */
 		int	ifru_metric;
 		int	ifru_mtu;
 		int	ifru_dlt;

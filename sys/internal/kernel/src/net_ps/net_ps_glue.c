@@ -709,14 +709,14 @@ int sceNetPsSetPromiscuous(struct SceNetPsDriverContext *context,
 		--context->promiscuousReferences;
 		if (context->promiscuousReferences <= 0) {
 			context->promiscuousEnabled = parameters->enabled;
-			interface->if_flags &= ~0x10000u;
+			interface->if_flags &= ~IFF_PPROMISC;
 		}
 		return enabled;
 	}
 	if (enabled == 1) {
 		++context->promiscuousReferences;
 		context->promiscuousEnabled = parameters->enabled;
-		interface->if_flags |= 0x10000;
+		interface->if_flags |= IFF_PPROMISC;
 		return 0;
 	}
 	return -22;

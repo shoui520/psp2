@@ -177,17 +177,17 @@ int sceNetPsCheckPacketDelay(unsigned int *releaseTime, unsigned int *flags,
 			*flags &= ~1u;
 			*releaseTime -= context->emulation.send.order_delay_time;
 		} else {
-			sceNetPsGetTime(&now);
+			microtime(&now);
 			*releaseTime = now.tv_usec / 1000 + 1000 * now.tv_sec;
 		}
 		*firstPacket = 1;
 	}
 	deadline = *releaseTime;
-	sceNetPsGetTime(&now);
+	microtime(&now);
 	if (deadline <= now.tv_usec / 1000 + 1000 * now.tv_sec)
 		return 0;
 	deadline = *releaseTime;
-	sceNetPsGetTime(&now);
+	microtime(&now);
 	callout_reset(&gNetPsPacketService.delayCallout,
 		      1000 * (deadline - (now.tv_usec / 1000 + 1000 * now.tv_sec)) /
 		      gNetPsSoftTick, sceNetPsDelayTimer, interface);
@@ -214,7 +214,7 @@ int sceNetPsProcessDelayedPackets(struct ifnet *interface)
 		goto unlockReady;
 	if (gNetPsPacketService.flags & 0x20000) {
 		gNetPsPacketService.flags &= ~0xf0000u;
-		sceNetPsGetTime(&now);
+		microtime(&now);
 		delayed = 0;
 		firstPacket = 0;
 		packet->releaseTimeMs = now.tv_usec / 1000 + 1000 * now.tv_sec;
@@ -424,13 +424,13 @@ int sceNetPsFilterTxMbuf(struct SceNetPsDriverContext *context,
 	flags = gNetPsPacketService.filterFlags;
 	if (flags & 1) {
 		deadline = gNetPsPacketService.releaseTimeMs;
-		sceNetPsGetTime(&now);
+		microtime(&now);
 		if (deadline > now.tv_usec / 1000 + 1000 * now.tv_sec)
 			goto drop;
 		flags = gNetPsPacketService.filterFlags & ~1u;
 		gNetPsPacketService.filterFlags = flags;
 		if (context->emulation.send.pass_duration) {
-			sceNetPsGetTime(&now);
+			microtime(&now);
 			gNetPsPacketService.filterFlags |= 2;
 			gNetPsPacketService.releaseTimeMs = now.tv_usec / 1000 +
 				1000 * now.tv_sec + context->emulation.send.pass_duration;
@@ -439,7 +439,7 @@ int sceNetPsFilterTxMbuf(struct SceNetPsDriverContext *context,
 	}
 	if (flags & 2) {
 		deadline = gNetPsPacketService.releaseTimeMs;
-		sceNetPsGetTime(&now);
+		microtime(&now);
 		if (deadline > now.tv_usec / 1000 + 1000 * now.tv_sec)
 			goto duplicate;
 		gNetPsPacketService.filterFlags &= ~2u;
@@ -448,7 +448,7 @@ int sceNetPsFilterTxMbuf(struct SceNetPsDriverContext *context,
 		unsigned int random = sceNetPsEmulationRandom();
 
 		if (context->emulation.send.drop_rate > (int)(random % 101)) {
-			sceNetPsGetTime(&now);
+			microtime(&now);
 			gNetPsPacketService.filterFlags |= 1;
 			gNetPsPacketService.releaseTimeMs = now.tv_usec / 1000 +
 				1000 * now.tv_sec + context->emulation.send.drop_duration;
@@ -482,7 +482,7 @@ int sceNetPsSetTxEmulation(struct SceNetPsDriverContext *context,
 		packet->emulationFlags |= 2;
 	if (!(mbuf->m_flags & 0x100000))
 		return 0;
-	sceNetPsGetTime(&now);
+	microtime(&now);
 	releaseTime = now.tv_usec / 1000 + 1000 * now.tv_sec +
 		context->emulation.send.delay_time;
 	jitter = context->emulation.send.delay_jitter;

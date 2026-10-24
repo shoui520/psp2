@@ -121,7 +121,7 @@ int sceNetPsWakeupNormal(const void *waitChannel);
 int sceNetPsWakeupCanceled(const void *waitChannel);
 int sceNetPsWakeupInterrupted(const void *waitChannel);
 int sceNetPsWakeupAddressChanged(const void *waitChannel);
-struct timeval *sceNetPsGetTime(struct timeval *value);
+void microtime(struct timeval *tv);
 int ppsratecheck(struct timeval *lasttime, int *curpps, int maxpps);
 int sceNetPsScheduleProtocols(void);
 int sceNetPsScheduleReceive(void);
