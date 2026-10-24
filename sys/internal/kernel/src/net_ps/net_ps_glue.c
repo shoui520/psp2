@@ -1083,6 +1083,35 @@ int sceNetPsHasPendingDriverEvents(SceUInt64 events)
 	return 0;
 }
 
+/*
+ * SCE: sceNetControl on one interface: the driver's own commands (bit 30)
+ * go to its control entry point without the stack lock, the rest to the
+ * stack's handling for that interface.
+ */
+int sceNetPsInterfaceControl(int interfaceIndex, int command, void *data,
+			     int length)
+{
+	struct NetDriver *driver;
+	struct SceNetPsDriverContext *context;
+	int error = -EIO, result;
+
+	for (driver = gNetPsDriverHead; driver; driver = driver->next) {
+		context = driver->context;
+		if (context->interface->if_index == interfaceIndex)
+			break;
+	}
+	if (!driver)
+		return -EIO;
+	if (!(command & 0x40000000))
+		return sceNetPsStackControl(context, command, data, length);
+	if (sceNetPsIsApplicationProgram(&error))
+		return error;
+	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
+	result = driver->control(driver, command, data, length);
+	sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
+	return result;
+}
+
 /* SCE: bounded debug lookup, separate from upstream ifunit's index lookup. */
 struct ifnet *sceNetPsFindInterface(const char *name)
 {
@@ -1093,6 +1122,82 @@ struct ifnet *sceNetPsFindInterface(const char *name)
 			return interface;
 	}
 	return NULL;
+}
+
+/* SCE: mark a packet of a socket that must not start a connection. */
+int sceNetPsSetNoAutoConnect(struct mbuf *m, struct ifnet *ifp,
+			     struct socket *so)
+{
+	if (so && (ifp->if_flags & IFF_RUNNING) &&
+	    (so->so_options & SO_SCE_OPTION_10000))
+		m->m_flags |= M_SCE_NOAUTOCONNECT;
+	return 0;
+}
+
+/* SCE: whether a socket, its process or its thread disables an interface type */
+static inline int sceNetPsIsInterfaceDisabled(struct SceNetPsDriverContext *context,
+					      struct socket *so, int processFlags,
+					      int threadFlags, unsigned int bit)
+{
+	return ((context->instanceMask & 1) && (so->filterFlags & bit)) ||
+	       (processFlags & bit) || (threadFlags & bit);
+}
+
+/*
+ * SCE: refuse a packet on an interface its socket, process or thread has
+ * disabled; the bit for each driver type is the same in all three masks.
+ */
+int sceNetPsCheckDisabledInterface(struct mbuf *m, struct ifnet *ifp,
+				   struct socket *so)
+{
+	struct SceNetPsDriverContext *context = ifp->if_softc;
+	struct NetDriver *driver;
+	int processFlags, threadFlags;
+	SceUID threadId;
+
+	if (!context)
+		return 0;
+	driver = context->driver;
+	if (!so)
+		return 0;
+	sceNetPsGetProcessError(so->processId, &processFlags);
+	if (sceNetPsIsSoftThread()) {
+		threadId = so->initiatingThreadId;
+	} else {
+		threadId = sceNetPsGetThreadId();
+		so->initiatingThreadId = threadId;
+	}
+	sceNetPsGetThreadError(threadId, &threadFlags);
+	switch (driver->type) {
+	case NET_DRIVER_TYPE_ETHER:
+		/* the fake 3G interface is an Ethernet or wireless LAN one */
+		if (sceNetPsGetFake3gInterface())
+			goto modem;
+		if (sceNetPsIsInterfaceDisabled(context, so, processFlags,
+						threadFlags, 1))
+			return -SCE_NET_EDISABLEDIF;
+		return 0;
+	case 2:
+		if (sceNetPsGetFake3gInterface())
+			goto modem;
+		if (sceNetPsIsInterfaceDisabled(context, so, processFlags,
+						threadFlags, 2))
+			return -SCE_NET_EDISABLEDIF;
+		return 0;
+	case 3:
+		if (sceNetPsIsInterfaceDisabled(context, so, processFlags,
+						threadFlags, 4))
+			return -SCE_NET_EDISABLEDIF;
+		return 0;
+	case 4:
+modem:
+		if (sceNetPsIsInterfaceDisabled(context, so, processFlags,
+						threadFlags, 8))
+			return -SCE_NET_EDISABLEDIF;
+		return 0;
+	default:
+		return 0;
+	}
 }
 
 /* Name unknown; select socket handling when an interface is suspended. */

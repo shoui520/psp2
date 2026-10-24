@@ -40,9 +40,6 @@ int sceNetPsDestroyDump(unsigned int dumpId, struct SceNetPsDump *dump);
 int sceNetPsDestroyEpoll(unsigned int epollId, SceNetPsEpoll *epoll);
 int sceNetPsDestroyDescriptor(unsigned int descriptorId,
 			     SceNetPsDescriptor *descriptor);
-int sceNetPsInterfaceControl(int interfaceIndex, int command, void *data,
-			    int length);
-int sceNetPsStackControl(int flags, int command, void *data, int length);
 int sceNetPsRoutingSysctl(const int *name, unsigned int nameLength, void *oldData,
 			  unsigned int *oldLength, const void *newData,
 			  unsigned int newLength);
@@ -361,7 +358,7 @@ int sceNetPsControl(int interfaceIndex, int command, void *data, int length)
 	if (interfaceIndex >= 0)
 		result = sceNetPsInterfaceControl(interfaceIndex, command, buffer, length);
 	else
-		result = sceNetPsStackControl(0, command, buffer, length);
+		result = sceNetPsStackControl(NULL, command, buffer, length);
 	if (result >= 0 && data != NULL &&
 	    (command & 0x30000000) != 0x20000000) {
 		error = copyout(buffer, data, length);

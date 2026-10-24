@@ -221,11 +221,15 @@ void sceNetPsSetSocket(unsigned int socketId, struct socket *socket);
 struct socket *sceNetPsLookupSocket(unsigned int socketId, int *error,
 				  unsigned int flags);
 
+struct SceNetPsDriverContext;
+
 /* net_ps_socket.c */
 int sceNetPsNotifyGatewayDns(const SceNetPsDnsConfig *config);
 unsigned int sceNetPsGetSockinfo(int socket, void *buffer, int capacity, int flags);
 int sceNetPsGetIfList(void *list, int count);
 int sceNetPsControl(int interfaceIndex, int command, void *data, int length);
+int sceNetPsStackControl(struct SceNetPsDriverContext *context, int command,
+			 void *data, int length);
 int sceNetPsSysctl(const int *name, unsigned int nameLength, void *oldData,
 		   unsigned int *oldLength, const void *newData,
 		   unsigned int newLength);
@@ -250,6 +254,8 @@ int sceNetPsSetNoAutoConnect(struct mbuf *m, struct ifnet *ifp,
 			     struct socket *so);
 int sceNetPsCheckDisabledInterface(struct mbuf *m, struct ifnet *ifp,
 				   struct socket *so);
+int sceNetPsInterfaceControl(int interfaceIndex, int command, void *data,
+			     int length);
 
 /* net_ps_packet.c */
 int sceNetPsFilterTxSocket(struct mbuf *m, struct ifnet *ifp,
