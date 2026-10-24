@@ -2232,6 +2232,7 @@ int sceNetPsLinkDescriptorEntry(int socketId, SceNetPsDescriptor *descriptor,
 }
 
 /* SCE: stop the entry's timeout once its socket is reported */
+__attribute__((noinline))
 void sceNetPsStopDescriptorEntry(SceNetPsDescriptorEntry *entry)
 {
 	callout_stop(&entry->timeout);
@@ -2266,6 +2267,7 @@ int sceNetPsRemoveSocketFromDescriptors(struct socket *so, int abort)
 }
 
 /* SCE: descriptors keep nothing by socket identifier */
+__attribute__((noinline))
 int sceNetPsRemoveSocketIdFromDescriptors(unsigned int socketId)
 {
 	return 0;
@@ -2540,6 +2542,54 @@ int sceNetPsCaptureTxPacket(struct NetDriverPacket *packet)
 	return 0;
 }
 
+#ifdef NET_PS_PACKET_CAPTURE
+/* the development kits' capture: a dump buffer that starts with the PCAP file header */
+int sceNetPsDumpCreate(const char *name, int length, int flags)
+{
+	extern int gNetPsPacketCaptureActive;
+	SceNetPsPcapHeader header;
+	SceNetPsDump *dump;
+	size_t copied;
+	int dumpId;
+	int result;
+
+	sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
+	if (length < 2048 || flags != 0 || name == NULL) {
+		result = -22;
+	} else {
+		dumpId = sceNetPsAllocateDumpId();
+		if (dumpId < 0) {
+			result = -24;
+		} else {
+			dump = sceNetPsMalloc(length + sizeof(*dump), 3, 8);
+			if (dump != NULL) {
+				copyinstr(name, dump->name, 31, &copied);
+				sceNetPsSetDump(dumpId, dump);
+				dump->length = length;
+				dump->flags = flags;
+				dump->buffer = (char *)(dump + 1);
+				header.magic = 0xa1b2c3d4;
+				header.timeZone = 0;
+				header.significantFigures = 0;
+				result = dumpId;
+				header.versionMajor = 2;
+				header.versionMinor = 4;
+				header.snapshotLength = 0xffff;
+				header.linkType = 1;
+				sceNetPsWriteDump(dump, &header, sizeof(header));
+				++gNetPsPacketCaptureActive;
+				sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
+				goto done;
+			}
+			result = -12;
+		}
+	}
+	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
+done:
+	return result;
+}
+#else
+/* the bootimage's: the arguments are checked and an identifier taken, nothing is captured */
 int sceNetPsDumpCreate(const char *name, int length, int flags)
 {
 	int result;
@@ -2555,6 +2605,7 @@ int sceNetPsDumpCreate(const char *name, int length, int flags)
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 	return result;
 }
+#endif
 
 int sceNetPsDumpClose(int dumpId)
 {

@@ -1,5 +1,6 @@
 /* Shared SceNetPs thread adapters; original source filename is unavailable. */
 
+#include <fw.h>
 #include "net_ps_internal.h"
 #include "netps_resource.h"
 #include <net_ps/netps.h>
@@ -501,12 +502,23 @@ int sceNetPsNormalizeTimeout(int timeout)
 /*
  * The bounds of the sanity checks: a protocol switch lies in the data segment's first
  * 0x105c bytes (from its first object), a protocol function between the first function and
- * 0x810558e0, which the original compares without a relocation (its link's symbols are unknown)
+ * an end the original compares without a relocation (its link's symbols are unknown, and
+ * the value is neither segment's end): 0x40 bytes further in 4.00, 0x120 in the development
+ * kits' build
  */
 #define bnet_protosw_start	((const char *)&gNetPsOtherDumpCursor)
 #define bnet_protosw_end	((const char *)&gNetPsOtherDumpCursor + 0x105c)
 #define bnet_text_start		((const char *)sceNetPsCalloc)
-#define bnet_text_end		((const char *)0x810558e0)
+#if FW_SINCE(0x04000000)
+#define bnet_text_base		0x810558e0
+#else
+#define bnet_text_base		0x810558a0
+#endif
+#ifdef NET_PS_PACKET_CAPTURE
+#define bnet_text_end		((const char *)(bnet_text_base + 0x120))
+#else
+#define bnet_text_end		((const char *)bnet_text_base)
+#endif
 
 /*
  * A bad socket does not come back from the panic; a bad protocol switch is reported
