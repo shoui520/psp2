@@ -262,10 +262,39 @@ int sceNetPsCopyString(const char *source, char *destination, size_t length,
 int sceNetPsEpollCreate(const char *name, int flags);
 int sceNetPsEpollClose(int epollId);
 int sceNetPsEpollAbort(int epollId, int flags);
+int sceNetPsAccept(int socket, SceNetSockaddr *address,
+		   unsigned int *addressLength, int kernel);
+int sceNetPsBind(int socket, const SceNetSockaddr *address,
+		 unsigned int addressLength, int kernel);
+int sceNetPsConnect(int socket, const SceNetSockaddr *address,
+		    unsigned int addressLength, int kernel);
+int sceNetPsGetpeername(int socket, SceNetSockaddr *address,
+			unsigned int *addressLength, int kernel);
+int sceNetPsGetsockname(int socket, SceNetSockaddr *address,
+			unsigned int *addressLength, int kernel);
+int sceNetPsGetsockopt(int socket, int level, int option, void *value,
+		       unsigned int *length, int kernel);
+int sceNetPsListen(int socket, int backlog, int kernel);
+int sceNetPsRecvfrom(int socket, void *buffer, unsigned int length, int flags,
+		     SceNetSockaddr *from, unsigned int *fromLength, int kernel);
+int sceNetPsSendto(int socket, const void *buffer, unsigned int length, int flags,
+		   const SceNetSockaddr *to, unsigned int toLength, int kernel);
+int sceNetPsSetsockopt(int socket, int level, int option, const void *value,
+		       unsigned int length, int kernel);
+int sceNetPsShutdown(int socket, int how, int kernel);
+int sceNetPsSocket(const char *name, int domain, int type, int protocol, int kernel);
+int sceNetPsClose(int socket, int kernel);
+int sceNetPsSocketAbort(int socket, int flags);
+int sceNetPsIcmConnect(int socket, int flags);
+int sceNetPsSendmsg(int socket, const SceNetMsghdr *message, int flags);
+int sceNetPsRecvmsg(int socket, SceNetMsghdr *message, int flags);
+int sceNetPsIoctl(int socket, unsigned int command, void *data);
 
 struct ifnet;
 
 /* net_ps_glue.c */
+int sceNetPsInterruptEmulationWait(struct socket *socket);
+int sceNetPsCancelEmulationWait(struct socket *socket);
 int sceNetPsRequestAutoConnect(struct socket *so, struct mbuf *m,
 			       int checkStates);
 int sceNetPsSetNoAutoConnect(struct mbuf *m, struct ifnet *ifp,
