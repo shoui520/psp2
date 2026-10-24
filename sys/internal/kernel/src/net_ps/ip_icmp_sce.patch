@@ -1,0 +1,230 @@
+--- a/netinet/ip_icmp.c
++++ b/netinet/ip_icmp.c
+@@ -140,6 +140,9 @@
+ 
+ #include <machine/stdarg.h>
+ 
++/* SCE: this file's copies are made whatever the length */
++#undef memcpy
++
+ /*
+  * ICMP routines: error generation, receive packet processing, and
+  * routines to turnaround packets back to the originator, and
+@@ -165,11 +168,6 @@
+ LIST_HEAD(, icmp_mtudisc_callback) icmp_mtudisc_callbacks =
+     LIST_HEAD_INITIALIZER(&icmp_mtudisc_callbacks);
+ 
+-#if 0
+-static int	ip_next_mtu __P((int, int));
+-#else
+-/*static*/ int	ip_next_mtu __P((int, int));
+-#endif
+ 
+ extern int icmperrppslim;
+ static int icmperrpps_count = 0;
+@@ -571,8 +569,7 @@
+ 	case ICMP_REDIRECT:
+ 		if (code > 3)
+ 			goto badcode;
+-		if (icmp_rediraccept == 0)
+-			goto freeit;
++		/* SCE: redirects are always accepted */
+ 		if (icmplen < ICMP_ADVLENMIN || icmplen < ICMP_ADVLEN(icp) ||
+ 		    icp->icmp_ip.ip_hl < (sizeof(struct ip) >> 2)) {
+ 			icmpstat.icps_badlen++;
+@@ -597,15 +594,10 @@
+ 		rtredirect(sintosa(&icmpsrc), sintosa(&icmpdst),
+ 		    (struct sockaddr *)0, RTF_GATEWAY | RTF_HOST,
+ 		    sintosa(&icmpgw), (struct rtentry **)&rt);
+-		if (rt != NULL && icmp_redirtimeout != 0) {
+-			i = rt_timer_add(rt, icmp_redirect_timeout,
+-					 icmp_redirect_timeout_q);
+-			if (i)
+-				log(LOG_ERR, "ICMP:  redirect failed to "
+-				    "register timeout for route to %x, "
+-				    "code %d\n",
+-				    icp->icmp_ip.ip_dst.s_addr, i);
+-		}
++		/* SCE: the timeout is always added, and a failure not logged */
++		if (rt != NULL)
++			(void)rt_timer_add(rt, icmp_redirect_timeout,
++			    icmp_redirect_timeout_q);
+ 		if (rt != NULL)
+ 			rtfree(rt);
+ 
+@@ -893,133 +885,7 @@
+ 	return (htonl(t));
+ }
+ 
+-/*
+- * sysctl helper routine for net.inet.icmp.returndatabytes.  ensures
+- * that the new value is in the correct range.
+- */
+-static int
+-sysctl_net_inet_icmp_returndatabytes(SYSCTLFN_ARGS)
+-{
+-	int error, t;
+-	struct sysctlnode node;
+-
+-	node = *rnode;
+-	node.sysctl_data = &t;
+-	t = icmpreturndatabytes;
+-	error = sysctl_lookup(SYSCTLFN_CALL(&node));
+-	if (error || newp == NULL)
+-		return (error);
+-
+-	if (t < 8 || t > 512)
+-		return (EINVAL);
+-	icmpreturndatabytes = t;
+-
+-	return (0);
+-}
+-
+-/*
+- * sysctl helper routine for net.inet.icmp.redirtimeout.  ensures that
+- * the given value is not less than zero and then resets the timeout
+- * queue.
+- */
+-static int
+-sysctl_net_inet_icmp_redirtimeout(SYSCTLFN_ARGS)
+-{
+-	int error, tmp;
+-	struct sysctlnode node;
+-
+-	node = *rnode;
+-	node.sysctl_data = &tmp;
+-	tmp = icmp_redirtimeout;
+-	error = sysctl_lookup(SYSCTLFN_CALL(&node));
+-	if (error || newp == NULL)
+-		return (error);
+-	if (tmp < 0)
+-		return (EINVAL);
+-	icmp_redirtimeout = tmp;
+-
+-	/*
+-	 * was it a *defined* side-effect that anyone even *reading*
+-	 * this value causes these things to happen?
+-	 */
+-	if (icmp_redirect_timeout_q != NULL) {
+-		if (icmp_redirtimeout == 0) {
+-			rt_timer_queue_destroy(icmp_redirect_timeout_q,
+-			    TRUE);
+-			icmp_redirect_timeout_q = NULL;
+-		} else {
+-			rt_timer_queue_change(icmp_redirect_timeout_q,
+-			    icmp_redirtimeout);
+-		}
+-	} else if (icmp_redirtimeout > 0) {
+-		icmp_redirect_timeout_q =
+-		    rt_timer_queue_create(icmp_redirtimeout);
+-	}
+-	
+-	return (0);
+-}
+-
+-SYSCTL_SETUP(sysctl_net_inet_icmp_setup, "sysctl net.inet.icmp subtree setup")
+-{
+-
+-	sysctl_createv(clog, 0, NULL, NULL,
+-		       CTLFLAG_PERMANENT,
+-		       CTLTYPE_NODE, "net", NULL,
+-		       NULL, 0, NULL, 0,
+-		       CTL_NET, CTL_EOL);
+-	sysctl_createv(clog, 0, NULL, NULL,
+-		       CTLFLAG_PERMANENT,
+-		       CTLTYPE_NODE, "inet", NULL,
+-		       NULL, 0, NULL, 0,
+-		       CTL_NET, PF_INET, CTL_EOL);
+-	sysctl_createv(clog, 0, NULL, NULL,
+-		       CTLFLAG_PERMANENT,
+-		       CTLTYPE_NODE, "icmp",
+-		       SYSCTL_DESCR("ICMPv4 related settings"),
+-		       NULL, 0, NULL, 0,
+-		       CTL_NET, PF_INET, IPPROTO_ICMP, CTL_EOL);
+-
+-	sysctl_createv(clog, 0, NULL, NULL,
+-		       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+-		       CTLTYPE_INT, "maskrepl",
+-		       SYSCTL_DESCR("Respond to ICMP_MASKREQ messages"),
+-		       NULL, 0, &icmpmaskrepl, 0,
+-		       CTL_NET, PF_INET, IPPROTO_ICMP,
+-		       ICMPCTL_MASKREPL, CTL_EOL);
+-	sysctl_createv(clog, 0, NULL, NULL,
+-		       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+-		       CTLTYPE_INT, "returndatabytes",
+-		       SYSCTL_DESCR("Number of bytes to return in an ICMP "
+-				    "error message"),
+-		       sysctl_net_inet_icmp_returndatabytes, 0,
+-		       &icmpreturndatabytes, 0,
+-		       CTL_NET, PF_INET, IPPROTO_ICMP,
+-		       ICMPCTL_RETURNDATABYTES, CTL_EOL);
+-	sysctl_createv(clog, 0, NULL, NULL,
+-		       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+-		       CTLTYPE_INT, "errppslimit",
+-		       SYSCTL_DESCR("Maximum number of outgoing ICMP error "
+-				    "messages per second"),
+-		       NULL, 0, &icmperrppslim, 0,
+-		       CTL_NET, PF_INET, IPPROTO_ICMP,
+-		       ICMPCTL_ERRPPSLIMIT, CTL_EOL);
+-	sysctl_createv(clog, 0, NULL, NULL,
+-		       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+-		       CTLTYPE_INT, "rediraccept",
+-		       SYSCTL_DESCR("Accept ICMP_REDIRECT messages"),
+-		       NULL, 0, &icmp_rediraccept, 0,
+-		       CTL_NET, PF_INET, IPPROTO_ICMP,
+-		       ICMPCTL_REDIRACCEPT, CTL_EOL);
+-	sysctl_createv(clog, 0, NULL, NULL,
+-		       CTLFLAG_PERMANENT|CTLFLAG_READWRITE,
+-		       CTLTYPE_INT, "redirtimeout",
+-		       SYSCTL_DESCR("Lifetime of ICMP_REDIRECT generated "
+-				    "routes"),
+-		       sysctl_net_inet_icmp_redirtimeout, 0,
+-		       &icmp_redirtimeout, 0,
+-		       CTL_NET, PF_INET, IPPROTO_ICMP,
+-		       ICMPCTL_REDIRTIMEOUT, CTL_EOL);
+-}
++/* SCE: no net.inet.icmp sysctl subtree */
+ 
+ /* Table of common MTUs: */
+ 
+@@ -1122,39 +988,7 @@
+ 		(*mc->mc_func)(faddr);
+ }
+ 
+-/*
+- * Return the next larger or smaller MTU plateau (table from RFC 1191)
+- * given current value MTU.  If DIR is less than zero, a larger plateau
+- * is returned; otherwise, a smaller value is returned.
+- */
+-int
+-ip_next_mtu(mtu, dir)	/* XXX */
+-	int mtu;
+-	int dir;
+-{
+-	int i;
+-
+-	for (i = 0; i < (sizeof mtu_table) / (sizeof mtu_table[0]); i++) {
+-		if (mtu >= mtu_table[i])
+-			break;
+-	}
+-
+-	if (dir < 0) {
+-		if (i == 0) {
+-			return 0;
+-		} else {
+-			return mtu_table[i - 1];
+-		}
+-	} else {
+-		if (mtu_table[i] == 0) {
+-			return 0;
+-		} else if (mtu > mtu_table[i]) {
+-			return mtu_table[i];
+-		} else {
+-			return mtu_table[i + 1];
+-		}
+-	}
+-}
++/* SCE: no ip_next_mtu (nothing calls it) */
+ 
+ static void
+ icmp_mtudisc_timeout(rt, r)
