@@ -8,7 +8,70 @@ Names like the "TOOL" or "DEBUGGER" suffixes are mine/whatever:
 * 3.630.011-DEBUGGER (PDEL internal system debugger, `os0`, `slb2`, `pup`, `vs0`,`vs0_tarpatch`)
 * 3.65-CEX (retail, `os0`, `slb2`, `pup`, `vs0`,`vs0_tarpatch`)
 
-Extra type names and strings have been taken from the `0.990.030-I` internal system debugger firmware. 
+Extra type names, strings and paths not included in the above firmwares, were mined from Programmer Tool Runtime Library 3.570 and a collection of PUPs:
+
+<details>
+<summary>Click to view PUPs mined</summary>
+
+**type2 E-tool (32)** - from Princess-of-Sleeping
+
+```
+PSP2UPDAT-type2-E-tool-0.931.010.PUP
+PSP2UPDAT-type2-E-tool-0.931.010-2.PUP
+PSP2UPDAT-type2-E-tool-0.940.050.PUP
+PSP2UPDAT-type2-E-tool-0.945.040.PUP
+PSP2UPDAT-type2-E-tool-0.945.040-2.PUP
+PSP2UPDAT-type2-E-tool-0.990.080.PUP
+PSP2UPDAT-type2-E-tool-0.990.140.PUP
+PSP2UPDAT-type2-E-tool-0.995.070.PUP
+PSP2UPDAT-type2-E-tool-0.996.070.PUP
+PSP2UPDAT-type2-E-tool-0.996.090.PUP
+PSP2UPDAT-type2-E-tool-0.996.090-2.PUP
+PSP2UPDAT-type2-E-tool-1.000.041.PUP
+PSP2UPDAT-type2-E-tool-1.000.071.PUP
+PSP2UPDAT-type2-E-tool-1.000.071-2.PUP
+PSP2UPDAT-type2-E-tool-1.030.071.PUP
+PSP2UPDAT-type2-E-tool-1.030.071-2.PUP
+PSP2UPDAT-type2-E-tool-1.040.011.PUP
+PSP2UPDAT-type2-E-tool-1.050.021.PUP
+PSP2UPDAT-type2-E-tool-1.060.031.PUP
+PSP2UPDAT-type2-E-tool-1.500.151.PUP
+PSP2UPDAT-type2-E-tool-1.500.151-2.PUP
+PSP2UPDAT-type2-E-tool-1.510.021.PUP
+PSP2UPDAT-type2-E-tool-1.510.021-2.PUP
+PSP2UPDAT-type2-E-tool-1.520.011.PUP
+PSP2UPDAT-type2-E-tool-1.520.011-2.PUP
+PSP2UPDAT-type2-E-tool-1.600.061.PUP
+PSP2UPDAT-type2-E-tool-1.600.061-2.PUP
+PSP2UPDAT-type2-E-tool-1.610.061.PUP
+PSP2UPDAT-type2-E-tool-1.660.011.PUP
+PSP2UPDAT-type2-E-tool-1.670.011.PUP
+PSP2UPDAT-type2-E-tool-1.690.011.PUP
+PSP2UPDAT-type2-E-tool-1.691.011.PUP
+```
+
+**Other internal / devtool builds (6)** - from Princess-of-Sleeping
+
+```
+PSP2UPDAT-type2-I-0.995.000-devtool-release-qaf.PUP
+PSP2UPDAT-type2-I-cex_for_tool-release-qaf-0.990.030.PUP
+PSP2UPDAT.PUP-1_800._000.I.devtool.prerelease.type3.bricks.qaf
+PSP2UPDAT.PUP-3_200._010.I.cex_for_tool.release.type3.qaf
+PSP2UPDAT.PUP-type3-I-cex_for_tool-3.650.000.PUP
+PSP2UPDAT.PUP-type3-I-tool-1.692.000-downver.PUP
+```
+
+**Internal System Debugger firmwares (4)** - downloaded from Darthsernie
+
+```
+0.940.040-I/PSP2UPDAT.PUP
+3.600.011-I/PSP2UPDAT.PUP
+3.630.011-I/PSP2UPDAT.PUP
+3.720.011-I/PSP2UPDAT.PUP
+```
+
+</details>
+
 
 ## Layout
 The source tree mirrors Sony's own, as far as Sony's binaries show it: folder and file names
