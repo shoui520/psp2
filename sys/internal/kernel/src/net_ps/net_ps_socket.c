@@ -746,6 +746,61 @@ static int sceNetPsSendPending(void *argument, int cancel)
 	return error;
 }
 
+/*
+ * SCE: drop the socket from the epolls and descriptors that name it and,
+ * unless aborting, close it; returns the registrations that remain.
+ */
+int sceNetPsCloseSocket(struct socket *so, int *errorp, int abort)
+{
+	int references = so->epollReferences;
+
+	if (references)
+		references = sceNetPsRemoveSocketFromEpolls(so, abort);
+	if (so->descriptorReferences)
+		references += sceNetPsRemoveSocketFromDescriptors(so, abort);
+	if (!abort) {
+		so->refCount--;
+		*errorp = soclose(so);
+	}
+	return references;
+}
+
+/* SCE: close a socket by its identifier and forget everything kept for it */
+int sceNetPsDestroySocket(unsigned int socketId)
+{
+	struct socket *so;
+	int error;
+
+	so = sceNetPsLookupSocketUnchecked(socketId, &error);
+	if (so) {
+		sceNetPsCloseSocket(so, &error, 0);
+		sceNetPsSetSocket(socketId, NULL);
+	}
+	sceNetPsSetSocketResume(socketId, 0);
+	sceNetPsSetSocketAddressChanged(socketId, 0);
+	sceNetPsRemoveSocketIdFromEpolls(socketId);
+	sceNetPsRemoveSocketIdFromDescriptors(socketId);
+	sceNetPsConsumeWakeup((const void *)socketId, 0);
+	return 0;
+}
+
+/*
+ * SCE: wake the socket's waiters with the abort, then reset it on close
+ * (zero linger) with SCE_NET_EIPADDRCHANGED as its error.
+ */
+int sceNetPsAbortSocket(struct socket *so, int addressChanged)
+{
+	int error;
+
+	soabortwakeup(so, &so->so_snd, 2, addressChanged);
+	soabortwakeup(so, &so->so_rcv, 1, addressChanged);
+	so->so_error = SCE_NET_EIPADDRCHANGED;
+	so->so_linger = 0;
+	so->so_options |= SO_LINGER;
+	sceNetPsCloseSocket(so, &error, 1);
+	return 0;
+}
+
 int sceNetPsCollectSockInfo(int socket, SceNetSockInfo *records, int capacity,
 			 int flags, int *count, SceUID processId,
 			 int kernel);
@@ -930,6 +985,50 @@ positiveError:
 	return -error;
 }
 
+/* SCE: stop the entry's timeout and take it off its descriptor */
+int sceNetPsUnlinkDescriptorEntry(SceNetPsDescriptorEntry *entry)
+{
+	callout_stop(&entry->timeout);
+	if (entry->next)
+		entry->next->prev = entry->prev;
+	*entry->prev = entry->next;
+	return 0;
+}
+
+/* SCE: drop the socket from every descriptor; returns the registrations left */
+int sceNetPsRemoveSocketFromDescriptors(struct socket *so, int abort)
+{
+	SceNetPsDescriptor *descriptor;
+	SceNetPsDescriptorEntry *entry;
+	int first, last;
+	int descriptorId;
+
+	if (abort)
+		return 0;
+	sceNetPsGetDescriptorIdRange(&first, &last);
+	for (descriptorId = first; descriptorId <= last; descriptorId++) {
+		descriptor = sceNetPsLookupDescriptor(descriptorId, 1);
+		if (descriptor == NULL)
+			continue;
+		for (entry = descriptor->entries; entry != NULL;
+		     entry = entry->next) {
+			if (entry->socket == so) {
+				so->descriptorReferences--;
+				sceNetPsUnlinkDescriptorEntry(entry);
+				sceNetPsFree(entry);
+				break;
+			}
+		}
+	}
+	return so->descriptorReferences;
+}
+
+/* SCE: descriptors keep nothing by socket identifier */
+int sceNetPsRemoveSocketIdFromDescriptors(unsigned int socketId)
+{
+	return 0;
+}
+
 int sceNetPsDescriptorCreate(const char *name, int flags)
 {
 	SceNetPsDescriptor *descriptor;
@@ -1082,6 +1181,70 @@ int sceNetPsDumpAbort(int dumpId, int flags)
 	}
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 	return error ? -error : error;
+}
+
+/*
+ * SCE: mark the socket's epoll entries closed and, unless aborting, free
+ * them, waking each epoll that waits; returns the registrations left.
+ */
+int sceNetPsRemoveSocketFromEpolls(struct socket *so, int abort)
+{
+	SceNetPsEpoll *epoll;
+	SceNetPsEpollEntry *entry;
+	int first, last;
+	int epollId;
+
+	sceNetPsGetEpollIdRange(&first, &last);
+	for (epollId = first; epollId <= last; epollId++) {
+		epoll = sceNetPsLookupEpoll(epollId, 1);
+		if (epoll == NULL)
+			continue;
+		for (entry = epoll->entries; entry != NULL; entry = entry->next)
+			if ((entry->kind & SCE_NETPS_EPOLL_ENTRY_SOCKET) &&
+			    entry->target.socket == so)
+				break;
+		if (entry == NULL)
+			continue;
+		if (!(entry->kind & SCE_NETPS_EPOLL_ENTRY_CLOSED))
+			so->epollReferences--;
+		entry->kind |= SCE_NETPS_EPOLL_ENTRY_CLOSED;
+		if (!abort) {
+			if (entry->next)
+				entry->next->prev = entry->prev;
+			*entry->prev = entry->next;
+			sceNetPsFree(entry);
+		}
+		if (epoll->flags & SCE_NETPS_EPOLL_WAITING)
+			sceNetPsWakeupNormal(epoll);
+	}
+	return so->epollReferences;
+}
+
+/* SCE: free the epoll entries left for a socket identifier */
+int sceNetPsRemoveSocketIdFromEpolls(unsigned int socketId)
+{
+	SceNetPsEpoll *epoll;
+	SceNetPsEpollEntry *entry;
+	int first, last;
+	int epollId;
+
+	sceNetPsGetEpollIdRange(&first, &last);
+	for (epollId = first; epollId <= last; epollId++) {
+		epoll = sceNetPsLookupEpoll(epollId, 1);
+		if (epoll == NULL)
+			continue;
+		for (entry = epoll->entries; entry != NULL; entry = entry->next) {
+			if ((entry->kind & SCE_NETPS_EPOLL_ENTRY_SOCKET) &&
+			    entry->id == socketId) {
+				if (entry->next)
+					entry->next->prev = entry->prev;
+				*entry->prev = entry->next;
+				sceNetPsFree(entry);
+				break;
+			}
+		}
+	}
+	return 0;
 }
 
 /* SCE: wake each epoll that watches the socket, directly or through a descriptor */

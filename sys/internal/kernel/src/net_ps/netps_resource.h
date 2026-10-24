@@ -32,6 +32,11 @@ typedef struct SceNetPsDescriptor {
 /* SceNetPsEpollEntry kind: what the entry watches */
 #define SCE_NETPS_EPOLL_ENTRY_SOCKET		1
 #define SCE_NETPS_EPOLL_ENTRY_DESCRIPTOR	2
+/* the socket was closed; the entry stays until the epoll removes it */
+#define SCE_NETPS_EPOLL_ENTRY_CLOSED		4
+
+/* SceNetPsEpoll.flags: a thread sleeps in sceNetEpollWait */
+#define SCE_NETPS_EPOLL_WAITING		1
 
 /* one registration of an epoll (sceNetEpollControl ADD), a 56-byte allocation */
 typedef struct SceNetPsEpollEntry {

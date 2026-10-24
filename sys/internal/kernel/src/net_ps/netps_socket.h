@@ -105,8 +105,9 @@ struct socket {
 	struct mowner *so_mowner;
 	/* SCE extension, replacing upstream so_uid and extending the owner. */
 	SceUID processId;
-	struct SceNetPsEpoll *epoll;
-	struct SceNetPsDescriptor *descriptor;
+	/* SCE: the epoll and descriptor registrations that still name the socket */
+	int epollReferences;
+	int descriptorReferences;
 	char name[32];
 	unsigned int filterFlags;
 	SceUID reportedProcessOverride;
@@ -195,10 +196,10 @@ _Static_assert(offsetof(struct socket, so_mowner) == 188,
 	       "socket so_mowner");
 _Static_assert(offsetof(struct socket, processId) == 192,
 	       "socket processId");
-_Static_assert(offsetof(struct socket, epoll) == 196,
-	       "socket epoll");
-_Static_assert(offsetof(struct socket, descriptor) == 200,
-	       "socket descriptor");
+_Static_assert(offsetof(struct socket, epollReferences) == 196,
+	       "socket epollReferences");
+_Static_assert(offsetof(struct socket, descriptorReferences) == 200,
+	       "socket descriptorReferences");
 _Static_assert(offsetof(struct socket, name) == 204,
 	       "socket name");
 _Static_assert(offsetof(struct socket, filterFlags) == 236,
@@ -220,6 +221,7 @@ _Static_assert(offsetof(struct soqhead, tqh_last) == 4, "soqhead last");
 void sceNetPsSetSocket(unsigned int socketId, struct socket *socket);
 struct socket *sceNetPsLookupSocket(unsigned int socketId, int *error,
 				  unsigned int flags);
+struct socket *sceNetPsLookupSocketUnchecked(unsigned int socketId, int *error);
 
 struct SceNetPsDriverContext;
 
@@ -232,6 +234,15 @@ int sceNetPsConnectSocket(int s, struct socket *so, const void *address,
 			  unsigned int addressLength, int *errorp, int kernel);
 int sceNetPsSendit(int s, struct socket *so, struct msghdr *mp, int flags,
 		   int *retsize, int kernel);
+int sceNetPsCloseSocket(struct socket *so, int *errorp, int abort);
+int sceNetPsDestroySocket(unsigned int socketId);
+int sceNetPsAbortSocket(struct socket *so, int addressChanged);
+struct SceNetPsDescriptorEntry;
+int sceNetPsUnlinkDescriptorEntry(struct SceNetPsDescriptorEntry *entry);
+int sceNetPsRemoveSocketFromDescriptors(struct socket *so, int abort);
+int sceNetPsRemoveSocketIdFromDescriptors(unsigned int socketId);
+int sceNetPsRemoveSocketFromEpolls(struct socket *so, int abort);
+int sceNetPsRemoveSocketIdFromEpolls(unsigned int socketId);
 unsigned int sceNetPsGetSockinfo(int socket, void *buffer, int capacity, int flags);
 int sceNetPsGetIfList(void *list, int count);
 int sceNetPsControl(int interfaceIndex, int command, void *data, int length);
