@@ -11,6 +11,8 @@ add_compile_definitions(_KERNEL)
 # extern inline functions are never emitted), and with NET_PS_NETBSD for what Sony changed in
 # them only (libkern.h's memcpy)
 set(netbsd ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/netbsd-2.1/sys)
+# the files where Sony followed NetBSD 3.0 (the PPPoE driver)
+set(netbsd3 ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/netbsd-3.0/sys)
 include(${CMAKE_CURRENT_SOURCE_DIR}/vendor_patch.cmake)
 net_ps_prepare_patched(${netbsd}/kern/kern_subr.c ${CMAKE_CURRENT_SOURCE_DIR}/kern_subr_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/kern_subr.c)
@@ -28,6 +30,8 @@ net_ps_prepare_patched(${netbsd}/net/if_ethersubr.c ${CMAKE_CURRENT_SOURCE_DIR}/
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/if_ethersubr.c)
 net_ps_prepare_patched(${netbsd}/net/if_loop.c ${CMAKE_CURRENT_SOURCE_DIR}/if_loop_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/if_loop.c)
+net_ps_prepare_patched(${netbsd3}/net/if_pppoe.c ${CMAKE_CURRENT_SOURCE_DIR}/if_pppoe_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/if_pppoe.c)
 set(netbsd_sources
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/kern_subr.c
 	${netbsd}/kern/kern_timeout.c
@@ -39,9 +43,13 @@ set(netbsd_sources
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/if.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/if_ethersubr.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/if_loop.c
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/if_pppoe.c
 )
 set_source_files_properties(${netbsd_sources} PROPERTIES COMPILE_OPTIONS "-fno-strict-aliasing;-fgnu89-inline"
 	COMPILE_DEFINITIONS NET_PS_NETBSD)
+# Sony's kernel options: a PADT answers data for a session nobody owns
+set_property(SOURCE ${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/if_pppoe.c APPEND PROPERTY COMPILE_DEFINITIONS
+	PPPOE_TERM_UNKNOWN_SESSIONS)
 psp2_module(os0_kd_bootimage_net_ps KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	netps_allocator_adapters.c
 	netps_thread.c

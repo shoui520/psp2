@@ -1,0 +1,21 @@
+--- contrib/netbsd-2.1/sys/net/if_spppvar.h
++++ sys/internal/kernel/src/net_ps/include/net/if_spppvar.h
+@@ -97,16 +97,16 @@
+ 	int	pp_auth_failures;	/* authorization failures */
+ 	int	pp_max_auth_fail;	/* max. allowed authorization failures */
+ 	int	pp_phase;	/* phase we're currently in */
++	int	pp_max_phase;	/* SCE: highest phase reached */
+ 	int	query_dns;	/* 1 if we want to know the dns addresses */
+ 	u_int32_t	dns_addrs[2];
+ 	int	state[IDX_COUNT];	/* state machine */
+ 	u_char  confid[IDX_COUNT];	/* id of last configuration request */
+ 	int	rst_counter[IDX_COUNT];	/* restart counter */
+ 	int	fail_counter[IDX_COUNT]; /* negotiation failure counter */
+-#if defined(__NetBSD__)
++	/* SCE: NetBSD's callouts, without __NetBSD__ */
+ 	struct	callout ch[IDX_COUNT];	/* per-proto and if callouts */
+ 	struct	callout pap_my_to_ch;	/* PAP needs one more... */
+-#endif
+ #if defined(__FreeBSD__) && __FreeBSD__ >= 3
+ 	struct callout_handle ch[IDX_COUNT]; /* per-proto and if callouts */
+ 	struct callout_handle pap_my_to_ch; /* PAP needs one more... */

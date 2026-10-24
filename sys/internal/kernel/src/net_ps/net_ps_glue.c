@@ -315,7 +315,7 @@ void sceNetPsStartTransmit(struct ifnet *interface)
 				break;
 			--duplicates;
 		} while (1);
-		if (!(mbuf->m_flags & 0x400000) && context->connectionState == 4) {
+		if (!(mbuf->m_flags & M_SCE_NOAUTOCONNECT) && context->connectionState == 4) {
 			struct SceNetPsDriverContext *owner = driver->context;
 
 			if (owner->autoConnectPolicy != -1) {
@@ -325,7 +325,7 @@ void sceNetPsStartTransmit(struct ifnet *interface)
 			if (!(gNetPsDriverFlags & 1))
 				sceNetPsNotifyDriver(driver, NULL, 0x1000000, 0, NULL, 0);
 		}
-		if (!(mbuf->m_flags & 0x800000))
+		if (!(mbuf->m_flags & M_SCE_NOIDLERESET))
 			resetIdle = 1;
 		m_freem(mbuf);
 	}

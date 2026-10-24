@@ -1,0 +1,26 @@
+--- contrib/netbsd-2.1/sys/net/if_pppoe.h
++++ sys/internal/kernel/src/net_ps/include/net/if_pppoe.h
+@@ -74,6 +74,23 @@
+ #define	PPPOEGETIDLETIMEOUT	_IOWR('i', 113, struct pppoeidletimeoutcfg)
+ #define	PPPOESETIDLETIMEOUT	_IOW('i', 114, struct pppoeidletimeoutcfg)
+ 
++/* SCE: how far discovery got, and the last error the concentrator sent */
++struct pppoemaxstate {
++	char	ifname[IFNAMSIZ];	/* pppoe interface name */
++	int	max_state;		/* highest PPPOE_STATE_ reached */
++};
++
++#define	PPPOERESETMAXSTATE	_IOW('i', 115, struct pppoemaxstate)
++#define	PPPOEGETMAXSTATE	_IOWR('i', 116, struct pppoemaxstate)
++
++struct pppoeerror {
++	char	ifname[IFNAMSIZ];	/* pppoe interface name */
++	int	tag;			/* PPPOE_TAG_*_ERR of the last error */
++	char	text[256];		/* its text */
++};
++
++#define	PPPOEGETERROR	_IOWR('i', 117, struct pppoeerror)
++
+ #ifdef _KERNEL
+ 
+ extern struct ifqueue ppoediscinq;

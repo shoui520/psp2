@@ -7,6 +7,13 @@ The original Regents three-clause notice remains in the pristine source.
 This pins that file as an upstream baseline; it does not identify one release
 for the whole SceNetPs stack. Sony adaptations are marked separately in the module.
 
+sys/net/if_pppoe.c: NetBSD revision 1.59 (2005-02-26), from the NetBSD 3.0
+source release. SHA256:
+004aeaf24ac1ad89f7f44a991f94b553cd967b5268d177eb1b426972ff540845
+The pristine source retains its original NetBSD Foundation notice. Sony's PPPoE
+follows this revision (3.1's if_dlt check is absent) with the relay session id
+of NetBSD's PR/40690 (2009) added; those changes are marked separately in the module.
+
 md5c.c and md5.h: RSA Data Security, Inc. MD5 Message-Digest Algorithm
 
 Copyright (C) 1991-2, RSA Data Security, Inc. Created 1991. All
