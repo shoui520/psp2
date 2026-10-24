@@ -291,8 +291,10 @@ int sce_psnet_bnet_mutex_lock(SceNetPsMutex *mutex, unsigned int *timeout)
 		if (result < 0) {
 			if (result != (int)0x80028005 &&
 			    (result < (int)0x80028005 ||
-			     (unsigned int)(result + 0x7ffd7fd4) > 1))
+			     (unsigned int)(result + 0x7ffd7fd4) > 1)) {
 				SCE_PANIC(432);
+				__builtin_unreachable();
+			}
 			if (timeout)
 				*timeout = -1;
 			break;
@@ -383,8 +385,10 @@ int sce_psnet_bnet_sync_wait(SceNetPsSync *sync,
 		if (result < 0) {
 			if (result != (int)0x80028005 &&
 			    (result < (int)0x80028005 ||
-			     (unsigned int)(result + 0x7ffd7fd4) > 1))
+			     (unsigned int)(result + 0x7ffd7fd4) > 1)) {
 				SCE_PANIC(575);
+				__builtin_unreachable();
+			}
 			if (timeout)
 				*timeout = -1;
 			break;

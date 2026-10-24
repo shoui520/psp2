@@ -156,8 +156,8 @@ int SceNetKernelGateway(struct SceNetKernelGateway *interface)
 	if (SceNetPsForDriver_4BF5FAB4(socket, 0, 25, &value, sizeof(value)) < 0)
 		goto socketFailed;
 	sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
-	sce_psnet_bnet_mutex_lock(&gNetPsDevSendMutex, NULL);
 	sce_psnet_bnet_mutex_lock(&gNetPsDevRecvMutex, NULL);
+	sce_psnet_bnet_mutex_lock(&gNetPsDevSendMutex, NULL);
 	if (!gNetPsGatewayInterfaceSlot) {
 		result = 0x80418106;
 	} else if (gNetPsGatewayInterfaceSlot->interface) {
@@ -170,13 +170,13 @@ int SceNetKernelGateway(struct SceNetKernelGateway *interface)
 		gNetPsGatewayInterfaceSlot->interface->send = sceNetPsGatewaySend;
 		gNetPsGatewayInterfaceSlot->interface->portBase = 40000;
 		gNetPsGatewayInterfaceSlot->interface->portCount = 9152;
-		sce_psnet_bnet_mutex_unlock(&gNetPsDevRecvMutex);
 		sce_psnet_bnet_mutex_unlock(&gNetPsDevSendMutex);
+		sce_psnet_bnet_mutex_unlock(&gNetPsDevRecvMutex);
 		sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 		return 0;
 	}
-	sce_psnet_bnet_mutex_unlock(&gNetPsDevRecvMutex);
 	sce_psnet_bnet_mutex_unlock(&gNetPsDevSendMutex);
+	sce_psnet_bnet_mutex_unlock(&gNetPsDevRecvMutex);
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 	goto closeSocket;
 socketFailed:

@@ -9,7 +9,7 @@ extern int tick;
 void callout_reset(struct callout *timer, int ticks,
 		   void (*callback)(void *), void *argument);
 void sceNetPsDelayTimer(void *argument);
-extern SceNetPsMutex gNetPsPktMutex;
+extern SceNetPsMutex gNetPsEmuMutex;
 extern SceNetPsMutex gNetPsDevSendMutex;
 void callout_init(struct callout *timer);
 void callout_stop(struct callout *timer);
@@ -206,7 +206,7 @@ int sceNetPsProcessDelayedPackets(struct ifnet *interface)
 
 	if ((gNetPsPacketService.flags & 0xf0000) == 0x10000)
 		return 1;
-	sce_psnet_bnet_mutex_lock(&gNetPsPktMutex, NULL);
+	sce_psnet_bnet_mutex_lock(&gNetPsEmuMutex, NULL);
 	packet = gNetPsPacketService.prepareQueue(&context->sendQueue, 1, 0);
 	if (!packet)
 		goto unlockReady;
@@ -224,7 +224,7 @@ int sceNetPsProcessDelayedPackets(struct ifnet *interface)
 					    interface))
 			goto unlockReady;
 	}
-	sce_psnet_bnet_mutex_unlock(&gNetPsPktMutex);
+	sce_psnet_bnet_mutex_unlock(&gNetPsEmuMutex);
 	sce_psnet_bnet_mutex_lock(&gNetPsDevSendMutex, NULL);
 	for (packet = context->sendQueue.pendingHead; packet; packet = packet->next) {
 		if (sceNetPsCheckPacketDelay(&packet->releaseTimeMs,
@@ -238,7 +238,7 @@ int sceNetPsProcessDelayedPackets(struct ifnet *interface)
 	return 0;
 
 unlockReady:
-	sce_psnet_bnet_mutex_unlock(&gNetPsPktMutex);
+	sce_psnet_bnet_mutex_unlock(&gNetPsEmuMutex);
 	return delayed;
 }
 
