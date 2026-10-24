@@ -44,6 +44,8 @@ net_ps_prepare_patched(${netbsd}/net/rtsock.c ${CMAKE_CURRENT_SOURCE_DIR}/rtsock
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/rtsock.c)
 net_ps_prepare_patched(${netbsd}/netinet/if_arp.c ${CMAKE_CURRENT_SOURCE_DIR}/if_arp_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/if_arp.c)
+net_ps_prepare_patched(${netbsd}/netinet/in4_cksum.c ${CMAKE_CURRENT_SOURCE_DIR}/in4_cksum_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/in4_cksum.c)
 set(netbsd_sources
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/kern_subr.c
 	${netbsd}/kern/kern_timeout.c
@@ -64,6 +66,7 @@ set(netbsd_sources
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/net/rtsock.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/if_arp.c
 	${netbsd}/netinet/igmp.c
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/in4_cksum.c
 )
 set_source_files_properties(${netbsd_sources} PROPERTIES COMPILE_OPTIONS "-fno-strict-aliasing;-fgnu89-inline"
 	COMPILE_DEFINITIONS NET_PS_NETBSD)
