@@ -2,6 +2,7 @@
 
 #include "net_ps_internal.h"
 #include <string.h>
+#include <net/socket.h>
 
 extern SceNetPsPacketService gNetPsPacketService;
 extern int gNetPsSoftTick;
@@ -404,6 +405,91 @@ invalid:
 	return -28;
 }
 
+/*
+ * SCE: whether an emulation's policy pattern selects a thread priority
+ * policy; the system side's top eight bits always read as 0.
+ */
+static inline int sceNetPsPolicySelected(const SceNetEmulationData *data,
+					 int policy)
+{
+	SceUInt64 bit = 1ULL << policy;
+
+	return (data->system_policy_pattern & 0xffffff & (unsigned int)(bit >> 32)) ||
+	       (data->game_policy_pattern & (unsigned int)bit);
+}
+
+/* SCE: the policy flag bit for a socket type */
+static inline unsigned int sceNetPsPolicyTypeFlag(unsigned int flags, int type)
+{
+	switch (type) {
+	case SOCK_STREAM:
+		return flags & 1;
+	case SOCK_DGRAM:
+		return flags & 2;
+	case SOCK_RAW:
+		return flags & 4;
+	case SCE_NET_SOCK_DGRAM_P2P:
+		return flags & 0x10;
+	case SCE_NET_SOCK_STREAM_P2P:
+		return flags & 8;
+	default:
+		return flags & 0x80;
+	}
+}
+
+/* SCE: mark a socket's packet for the send emulation its policy selects. */
+int sceNetPsFilterTxSocket(struct mbuf *m, struct ifnet *ifp,
+			   struct socket *so)
+{
+	struct SceNetPsDriverContext *context;
+	unsigned int flags;
+
+	if (!so || !ifp)
+		return 0;
+	context = ifp->if_softc;
+	if (!(ifp->if_flags & IFF_RUNNING))
+		return 0;
+	if (so->so_options & SO_SCE_OPTION_8000)
+		m->m_flags |= M_SCE_OPTION_8000;
+	if (sceNetPsPolicySelected(&context->emulation.send,
+				   so->threadPriorityPolicy)) {
+		m->m_flags |= M_SCE_EMULATED | M_SCE_EMULATED_POLICY;
+		return 0;
+	}
+	flags = context->emulation.send.policy_flags[so->threadPriorityPolicy];
+	if (sceNetPsPolicyTypeFlag(flags, so->so_type))
+		m->m_flags |= (flags & 0x100) ?
+			M_SCE_EMULATED | M_SCE_EMULATED_POLICY : M_SCE_EMULATED;
+	return 0;
+}
+
+/*
+ * SCE: whether the receive emulation drops a socket's packet; a drop the
+ * receive filter has not counted yet is counted here.
+ */
+int sceNetPsFilterRxSocket(struct mbuf *m, struct ifnet *ifp,
+			   struct socket *so)
+{
+	struct SceNetPsDriverContext *context;
+	unsigned int flags;
+
+	if (!so)
+		return 0;
+	if (!ifp)
+		return 0;
+	context = ifp->if_softc;
+	if (!sceNetPsPolicySelected(&context->emulation.recv,
+				    so->threadPriorityPolicy)) {
+		flags = context->emulation.recv.policy_flags[so->threadPriorityPolicy];
+		if (!sceNetPsPolicyTypeFlag(flags, (unsigned short)so->so_type) ||
+		    !(flags & 0x100))
+			return 0;
+	}
+	if (!(m->m_flags & M_SCE_FILTER_COUNTED))
+		++context->rxDrops;
+	return 1;
+}
+
 /* SCE: apply frame-size, drop-interval and duplication controls. */
 int sceNetPsFilterTxMbuf(struct SceNetPsDriverContext *context,
 			struct mbuf *mbuf, int *duplicates)
@@ -413,11 +499,11 @@ int sceNetPsFilterTxMbuf(struct SceNetPsDriverContext *context,
 	unsigned int flags, deadline;
 
 	if (context->emulation.send.lower_size_limit > length)
-		mbuf->m_flags &= ~0x100000u;
+		mbuf->m_flags &= ~M_SCE_EMULATED;
 	if (context->emulation.send.upper_size_limit &&
 	    length > context->emulation.send.upper_size_limit)
-		mbuf->m_flags &= ~0x100000u;
-	if (!(mbuf->m_flags & 0x100000))
+		mbuf->m_flags &= ~M_SCE_EMULATED;
+	if (!(mbuf->m_flags & M_SCE_EMULATED))
 		return 0;
 	flags = gNetPsPacketService.filterFlags;
 	if (flags & 1) {
@@ -476,9 +562,9 @@ int sceNetPsSetTxEmulation(struct SceNetPsDriverContext *context,
 	unsigned int releaseTime;
 	int jitter;
 
-	if (mbuf->m_flags & 0x200000)
+	if (mbuf->m_flags & M_SCE_EMULATED_POLICY)
 		packet->emulationFlags |= 2;
-	if (!(mbuf->m_flags & 0x100000))
+	if (!(mbuf->m_flags & M_SCE_EMULATED))
 		return 0;
 	microtime(&now);
 	releaseTime = now.tv_usec / 1000 + 1000 * now.tv_sec +

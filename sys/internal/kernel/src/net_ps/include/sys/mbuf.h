@@ -302,6 +302,8 @@ MBUF_DEFINE(mbuf, MHLEN, MLEN);
 #define	M_SCE_OPTION_8000	0x00010000	/* sent by a socket with SO_SCE_OPTION_8000 */
 #define	M_SCE_EMULATION_DROP	0x00020000	/* the receive emulation chose it to drop */
 #define	M_SCE_FILTER_COUNTED	0x00040000	/* the receive filter has counted its drop */
+#define	M_SCE_EMULATED		0x00100000	/* the send emulation applies to it */
+#define	M_SCE_EMULATED_POLICY	0x00200000	/* its socket's policy applies all of it */
 #define	M_SCE_NOAUTOCONNECT	0x00400000	/* sending it does not redial the driver */
 #define	M_SCE_NOIDLERESET	0x00800000	/* sending it does not reset the idle time */
 

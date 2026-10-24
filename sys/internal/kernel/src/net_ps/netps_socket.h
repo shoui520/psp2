@@ -257,7 +257,7 @@ int sceNetPsCheckDisabledInterface(struct mbuf *m, struct ifnet *ifp,
 int sceNetPsInterfaceControl(int interfaceIndex, int command, void *data,
 			     int length);
 
-/* net_ps_packet.c */
+/* net_ps_emulation.c */
 int sceNetPsFilterTxSocket(struct mbuf *m, struct ifnet *ifp,
 			   struct socket *so);
 int sceNetPsFilterRxSocket(struct mbuf *m, struct ifnet *ifp,
