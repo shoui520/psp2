@@ -298,6 +298,12 @@ int sceNetPsFormatUidName(SceUID uid, char *name, int length);
 int sceNetPsCreateThread(SceUID *threadId, SceNetPsThreadParam *param, const char *name);
 SceUID sceNetPsGetThreadId(void);
 SceUID sceNetPsGetProcessId(void);
+unsigned int sceNetPsGetRandom(void);
+
+/* net_ps_random.c */
+void sceNetPsSeedRandom(void);
+int sceNetPsSeedEmulationRandom(unsigned int seed);
+unsigned int sceNetPsEmulationRandom(void);
 
 /* net_ps_hmac.c, net_ps_aes.c, system_os.c: what udpp2p signs, encrypts and compares with */
 int sceNetPsHmacSha1Init(SceHmacSha1Context *pContext,

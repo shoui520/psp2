@@ -10,9 +10,7 @@ void callout_reset(struct callout *timer, int ticks,
 void sceNetPsDelayTimer(void *argument);
 extern SceNetPsMutex gNetPsPktMutex;
 extern SceNetPsMutex gNetPsDevSendMutex;
-int sceNetPsSeedEmulationRandom(unsigned int seed);
 unsigned int sceNetPsGetEmulationSeed(void);
-unsigned int sceNetPsEmulationRandom(void);
 void callout_init(struct callout *timer);
 void callout_stop(struct callout *timer);
 

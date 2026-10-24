@@ -27,7 +27,6 @@ extern volatile struct timeval mono_time;
 extern int gNetPsStartTime;
 extern int gNetPsInitialized;
 
-void sceNetPsSeedRandom(void);
 void callout_startup(void);
 void mbinit(void);
 void ifinit(void);

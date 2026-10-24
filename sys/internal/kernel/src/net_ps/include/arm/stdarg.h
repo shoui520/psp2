@@ -46,7 +46,9 @@ typedef _BSD_VA_LIST_	va_list;
 #define	__builtin_va_copy(d, s)		((d) = (s))
 #endif
 
-#if __GNUC_PREREQ__(2, 96)
+/* SCE: the compiler's <stdarg.h> (sysmem/debug.h) may have defined them first */
+#if defined(va_start)
+#elif __GNUC_PREREQ__(2, 96)
 #define	va_start(ap, last)	__builtin_va_start((ap), (last))	/* SCE: GCC 4.8 */
 #define	va_arg			__builtin_va_arg
 #define	va_end			__builtin_va_end
@@ -67,7 +69,7 @@ typedef _BSD_VA_LIST_	va_list;
 
 #endif /* __GNUC_PREREQ__(2, 96) */
 
-#if !defined(_ANSI_SOURCE) &&						\
+#if !defined(va_copy) && !defined(_ANSI_SOURCE) &&			\
     (defined(_ISOC99_SOURCE) || (__STDC_VERSION__ - 0) >= 199901L ||	\
      defined(_NETBSD_SOURCE))
 #define	va_copy(dest, src)	__va_copy((dest), (src))
