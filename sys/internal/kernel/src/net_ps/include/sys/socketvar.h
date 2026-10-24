@@ -102,6 +102,7 @@ do {									\
 #define 	SS_ISAPIPE 		0x800 /* socket is implementing a pipe */
 #define	SS_RCVFLUSHFULL		0x1000	/* SCE: the receive buffer was full when flushed */
 #define	SS_SCE_AUTOCONNECT	0x2000	/* SCE: a connect waits for an automatic connection */
+#define	SS_SCE_SUSPENDED	0x4000	/* SCE: the owner process is suspended */
 #define	SS_SCE_8000		0x8000	/* SCE: SO_SCE_STATE_8000; meaning unknown */
 
 

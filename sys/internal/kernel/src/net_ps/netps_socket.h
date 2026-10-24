@@ -221,7 +221,8 @@ _Static_assert(offsetof(struct soqhead, tqh_last) == 4, "soqhead last");
 void sceNetPsSetSocket(unsigned int socketId, struct socket *socket);
 struct socket *sceNetPsLookupSocket(unsigned int socketId, int *error,
 				  unsigned int flags);
-struct socket *sceNetPsLookupSocketUnchecked(unsigned int socketId, int *error);
+struct socket *sceNetPsLookupSocketUnchecked(unsigned int socketId, int *error,
+					      unsigned int flags);
 
 struct SceNetPsDriverContext;
 
@@ -246,6 +247,7 @@ int sceNetPsRemoveSocketIdFromEpolls(unsigned int socketId);
 unsigned int sceNetPsGetSockinfo(int socket, void *buffer, int capacity, int flags);
 int sceNetPsGetIfList(void *list, int count);
 int sceNetPsControl(int interfaceIndex, int command, void *data, int length);
+int sceNetPsManageProcessSockets(SceUID processId, unsigned int flags);
 int sceNetPsStackControl(struct SceNetPsDriverContext *context, int command,
 			 void *data, int length);
 int sceNetPsSysctl(const int *name, unsigned int nameLength, void *oldData,

@@ -70,7 +70,6 @@ unsigned char *gNetPsHeapStart;
 int gNetPsSuspendResult;
 
 unsigned int sceNetPsGetFreeMemory(int lowest);
-int sceNetPsManageProcessSockets(SceUID processId, unsigned int flags);
 int sceNetPsInitializeProcessProtocol(SceUID processId);
 int sceNetPsDestroyProcessEpolls(SceUID processId);
 int sceNetPsDestroyProcessDescriptors(SceUID processId);
@@ -115,9 +114,13 @@ void sce_psnet_panic(const char *message, ...) __attribute__((noreturn));
 
 /* SetDump requires the complete Sony dump owner; allocation is unresolved. */
 
-/* Name unknown; find a socket without checking its process or state. */
+/*
+ * Name unknown; find a socket without checking its process or state.
+ * Sony's callers pass a third argument, 0, that it does not read.
+ */
 __attribute__((noinline))
-struct socket *sceNetPsLookupSocketUnchecked(unsigned int socketId, int *error)
+struct socket *sceNetPsLookupSocketUnchecked(unsigned int socketId, int *error,
+					      unsigned int flags)
 {
 	if (socketId < 1024)
 		return gNetPsResources.sockets[socketId];
@@ -886,7 +889,7 @@ static void sceNetPsApplyConnection(struct NetDriver *driver)
 	connectionError = context->connectionError;
 	sceNetPsGetSocketIdRange(&first, &last_);
 	for (i = first; i <= last_; ++i) {
-		so = sceNetPsLookupSocketUnchecked(i, &error);
+		so = sceNetPsLookupSocketUnchecked(i, &error, 0);
 		if (!so || !(so->so_snd.sb_flags & SB_SCE_CONNECTING))
 			continue;
 		so->so_snd.sb_flags &= ~SB_SCE_CONNECTING;

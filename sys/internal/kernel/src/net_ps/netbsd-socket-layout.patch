@@ -105,17 +105,18 @@
  
  #define	SB_EMPTY_FIXUP(sb)						\
  do {									\
-@@ -159,6 +100,9 @@
+@@ -159,6 +100,10 @@
  					 * more data coming
  					 */
  #define 	SS_ISAPIPE 		0x800 /* socket is implementing a pipe */
 +#define	SS_RCVFLUSHFULL		0x1000	/* SCE: the receive buffer was full when flushed */
 +#define	SS_SCE_AUTOCONNECT	0x2000	/* SCE: a connect waits for an automatic connection */
++#define	SS_SCE_SUSPENDED	0x4000	/* SCE: the owner process is suspended */
 +#define	SS_SCE_8000		0x8000	/* SCE: SO_SCE_STATE_8000; meaning unknown */
  
  
  /*
-@@ -328,11 +272,13 @@
+@@ -328,11 +273,13 @@
  	    struct mbuf **, struct mbuf **, int *);
  int	soreserve(struct socket *, u_long, u_long);
  void	sorflush(struct socket *);
@@ -130,7 +131,7 @@
  int	sockargs(struct mbuf **, const void *, size_t, int);
  
  int	sendit(struct proc *, int, struct msghdr *, int, register_t *);
-@@ -383,3 +329,4 @@
+@@ -383,3 +330,4 @@
  #endif /* _KERNEL */
  
  #endif /* !_SYS_SOCKETVAR_H_ */

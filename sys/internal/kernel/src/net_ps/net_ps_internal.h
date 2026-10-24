@@ -5,6 +5,7 @@
 #include <libhmac.h>
 #include <net.h>
 #include <net_ps/netdrv.h>
+#include <net_ps/netps.h>
 #include <net_ps/netps_gateway.h>
 #include <net_ps/netps_thread.h>
 #include "netps_process.h"
@@ -372,6 +373,21 @@ int sceNetPsPostDriverEvents(struct SceNetPsDriverContext *context,
 			     SceUID callbackId,
 			     const SceNetPsDriverEventControl *control);
 int sceNetPsHasDriverCallbacks(struct SceNetPsDriverContext *context);
+int sceNetPsHasPendingDriverEvents(SceUInt64 events);
+int sceNetPsSetSocketSuspendPolicy(unsigned int policy);
+int sceNetPsSetDnsConfig(const SceNetPsDnsConfig *config);
+int sceNetPsGetConnectionParam(struct SceNetPsDriverContext *context,
+			       SceNetPsConnectionParam *parameters);
+int sceNetPsSetConnectionParam(struct SceNetPsDriverContext *context,
+			       const SceNetPsConnectionParam *parameters);
+int sceNetPsGetPromiscuous(struct SceNetPsDriverContext *context,
+			   SceNetPsPromiscuousParam *parameters);
+int sceNetPsSetPromiscuous(struct SceNetPsDriverContext *context,
+			   const SceNetPsPromiscuousParam *parameters);
+int sceNetPsRegisterDriverCallback(struct SceNetPsDriverContext *context,
+				   SceUID callbackId, int clearPending);
+int sceNetPsUnregisterDriverCallback(struct SceNetPsDriverContext *context,
+				     SceUID callbackId);
 unsigned int sceNetPsGetFreeMemory(int lowest);
 int sceNetPsInitializeHeap(void *base, int size);
 
@@ -409,6 +425,7 @@ int sceNetPsCreateThread(SceUID *threadId, SceNetPsThreadParam *param, const cha
 SceUID sceNetPsGetThreadId(void);
 SceUID sceNetPsGetProcessId(void);
 unsigned int sceNetPsGetRandom(void);
+SceUID bnet_puid_to_guid(SceUID puid);
 
 /* net_ps_random.c */
 void sceNetPsSeedRandom(void);

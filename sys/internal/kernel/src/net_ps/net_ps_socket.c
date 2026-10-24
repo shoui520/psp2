@@ -39,6 +39,15 @@
 #include <net/if.h>
 #include <net/route.h>
 #include <netinet/in.h>
+#include <netinet/in_systm.h>
+#include <netinet/ip.h>
+#include <netinet/in_pcb.h>
+#include <netinet/ip_var.h>
+#include <netinet/tcp.h>
+#include <netinet/tcp_fsm.h>
+#include <netinet/tcp_seq.h>
+#include <netinet/tcp_timer.h>
+#include <netinet/tcp_var.h>
 #include <string.h>
 
 struct mbuf *m_get(int how, int type);
@@ -776,7 +785,7 @@ int sceNetPsDestroySocket(unsigned int socketId)
 	struct socket *so;
 	int error;
 
-	so = sceNetPsLookupSocketUnchecked(socketId, &error);
+	so = sceNetPsLookupSocketUnchecked(socketId, &error, 0);
 	if (so) {
 		sceNetPsCloseSocket(so, &error, 0);
 		sceNetPsSetSocket(socketId, NULL);
@@ -1841,6 +1850,311 @@ copyError:
 positiveError:
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 	return -error;
+}
+
+/*
+ * SCE: act on a process's sockets, or on all of them with flags bit 0:
+ * 8 aborts the connected ones after an address change, 2 suspends them
+ * (aborting those that asked for it), 4 resumes them, none closes them;
+ * sockets lost to a resume or an address change are forgotten. 0x1000000:
+ * the caller holds the stack lock; 0x2000000: only try the lock.
+ */
+int sceNetPsManageProcessSockets(SceUID processId, unsigned int flags)
+{
+	struct socket *so;
+	struct inpcb *inp;
+	int first, error = 0, last, id, count;
+
+	if (!(flags & 0x1000000)) {
+		if (flags & 0x2000000) {
+			/* Sony's timeout is the range's last */
+			last = 0;
+			sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex,
+						  (unsigned int *)&last);
+			if (last < 0)
+				return -ENOLCK;
+		} else {
+			sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
+		}
+	}
+	sceNetPsGetSocketIdRange(&first, &last);
+	count = 0;
+	for (id = first; id <= last; id++) {
+		so = sceNetPsLookupSocketUnchecked(id, &error, 0);
+		if (so && !(flags & 1) && so->processId != processId)
+			continue;
+		so = sceNetPsLookupSocket(id, &error, 1);
+		if (so == NULL) {
+			if (flags == 0 && (error == SCE_NET_ERESUME ||
+					   error == SCE_NET_EIPADDRCHANGED)) {
+				count++;
+				sceNetPsDestroySocket(id);
+			}
+			continue;
+		}
+		if (flags & 8) {
+			switch (so->so_type) {
+			case SOCK_STREAM:
+				inp = sotoinpcb(so);
+				if (inp && intotcpcb(inp)->t_state == TCPS_CLOSED)
+					continue;
+				break;
+			case SOCK_DGRAM:
+				if (!(so->so_state & SS_ISCONNECTED))
+					continue;
+				break;
+			case SCE_NET_SOCK_DGRAM_P2P:
+				if (!(so->so_state & SS_ISCONNECTED)) {
+					inp = sotoinpcb(so);
+					if (!inp || inp->inp_state != INP_BOUND)
+						continue;
+				}
+				break;
+			case SCE_NET_SOCK_STREAM_P2P:
+				break;
+			default:
+				continue;
+			}
+			count++;
+			so->so_options |= SO_SCE_OPTION_10000;
+			sceNetPsAbortSocket(so, 1);
+			sceNetPsSetSocketAddressChanged(id, 1);
+		} else if (flags & 2) {
+			so->so_state |= SS_SCE_SUSPENDED;
+			if (so->so_options & SO_SCE_OPTION_80000) {
+				count++;
+				sceNetPsAbortSocket(so, 1);
+				sceNetPsSetSocketResume(id, 1);
+			}
+		} else if (flags & 4) {
+			so->so_state &= ~SS_SCE_SUSPENDED;
+		} else {
+			count++;
+			sceNetPsAbortSocket(so, 0);
+			sceNetPsDestroySocket(id);
+		}
+	}
+	if (flags & 0x1000000)
+		return count;
+	return sceNetPsUnlockResult(error, count);
+}
+
+/* SCE: a buffer sceNetControl 0x20000008 reserves from the stack's heap */
+typedef struct SceNetPsReservedMemory {
+	void *address;
+	SceSize size;
+	unsigned int flags;		/* 1: reserved */
+} SceNetPsReservedMemory;
+
+static SceNetPsReservedMemory gNetPsReservedMemory[4];
+
+/*
+ * SCE: sceNetControl's stack commands, on one interface (context) or on
+ * the stack (NULL): 0x1xxxxxxx and the small ones get, 0x2xxxxxxx set
+ */
+int sceNetPsStackControl(struct SceNetPsDriverContext *context, int command,
+			 void *data, int length)
+{
+	unsigned int *args = data;
+	SceNetPsReservedMemory *memory;
+	SceNetPsSleepCount *counts;
+	SceUID threadId;
+	int index, total, count;
+
+	if (data == NULL)
+		return -EINVAL;
+	switch (command) {
+	case 1:
+		if (context)
+			return -EIO;
+		if (length <= 15)
+			return -EINVAL;
+		return sceNetPsGetKernelStatistics(data, 0);
+	case 2:
+		if (context)
+			return -EIO;
+		if (length <= 39)
+			return -EINVAL;
+		return sceNetPsGetDnsConfig(data, 0, 0);
+	case 4:
+		if (!context)
+			return -EIO;
+		if (length <= 19)
+			return -EINVAL;
+		return sceNetPsGetConnectionParam(context, data);
+	case 0x13:
+		if (!context)
+			return -EIO;
+		if (length <= 7)
+			return -EINVAL;
+		return sceNetPsGetPromiscuous(context, data);
+	case 0x14:
+		if (length <= 3)
+			return -EINVAL;
+		args[0] = sceNetPsGetRandom();
+		return 0;
+	case 0x16:
+		total = length / (int)sizeof(*counts);
+		if (total < 0)
+			return -EINVAL;
+		if (total == 0)
+			return 0;
+		counts = data;
+		count = 0;
+		for (index = 0; index != total; index++) {
+			if (sceNetPsGetSleepCount(&counts[count], index) == 1) {
+				sceNetPsGetProcessPolicy(counts[count].identifier,
+							 &counts[count].policy);
+				count++;
+			}
+		}
+		return count;
+	case 0x21:
+		total = length / (int)sizeof(SceNetPsThreadInfo);
+		if (total < 0)
+			return -EINVAL;
+		return sceNetPsGetThreadList(data, total);
+	case 0x22:
+		if (context)
+			return -EIO;
+		if (length <= 67)
+			return -EINVAL;
+		return sceNetPsTakeSenders(data);
+	case 0x10000002:
+		if (length <= 31)
+			return -EINVAL;
+		return sceNetPsTakeDriverEvents(context, args[0], data);
+	case 0x10000012:
+		if (length < 512)
+			return -EINVAL;
+		return sceNetPsGetDriverEmulation(context, data, 0);
+	case 0x10000017:
+		if (length <= 7 || args[1] != 0)
+			return -EINVAL;
+		return sceNetPsGetProcessPolicy(args[0], (int *)&args[1]);
+	case 0x10000018:
+		if (length <= 7)
+			return -EINVAL;
+		if (args[1] & 1)
+			return sceNetPsGetThreadError(sceNetPsGetThreadId(),
+						      (int *)&args[0]);
+		return sceNetPsGetProcessError(sceNetPsGetProcessId(),
+					       (int *)&args[0]);
+	case 0x10000019:
+		if (length <= 11 || args[2] != 0)
+			return -EINVAL;
+		if (args[1] & 1)
+			return sceNetPsGetThreadMode(args[0], (int *)&args[2]);
+		threadId = bnet_puid_to_guid(args[0]);
+		if (threadId < 0)
+			return -EINVAL;
+		return sceNetPsGetThreadMode(threadId, (int *)&args[2]);
+	case 0x20000002:
+		if (context)
+			return -EIO;
+		if (length <= 39 || ((SceNetPsDnsConfig *)data)->flags != 0)
+			return -EINVAL;
+		return sceNetPsSetDnsConfig(data);
+	case 0x20000003:
+		if (length <= 7)
+			return -EINVAL;
+		return sceNetPsRegisterDriverCallback(context, args[0], args[1]);
+	case 0x20000004:
+		if (!context)
+			return -EIO;
+		if (length <= 19)
+			return -EINVAL;
+		return sceNetPsSetConnectionParam(context, data);
+	case 0x20000005:
+		if (length <= 31)
+			return -EINVAL;
+		return sceNetPsPostDriverEvents(context, args[0], data);
+	case 0x20000006:
+		if (length <= 7)
+			return -EINVAL;
+		if ((args[1] & 1) && sceNetPsHasPendingDriverEvents(0x1000000))
+			return 0;
+		return sceNetPsUpdateConnections(context, args[0]);
+	case 0x20000007:
+		if (length <= 7)
+			return -EINVAL;
+		return sceNetPsUnregisterDriverCallback(context, args[0]);
+	case 0x20000008:
+		if (context)
+			return -EIO;
+		if (length <= 7 || args[0] > 3)
+			return -EINVAL;
+		memory = &gNetPsReservedMemory[args[0]];
+		if (memory->flags & 1)
+			return -EEXIST;
+		memory->address = sceNetPsMalloc(args[1], 1, 8);
+		if (memory->address == NULL)
+			return 0;
+		memory->size = args[1];
+		memory->flags |= 1;
+		return 0;
+	case 0x20000009:
+		if (context)
+			return -EIO;
+		if (length <= 7 || args[0] > 3)
+			return -EINVAL;
+		memory = &gNetPsReservedMemory[args[0]];
+		if (!(memory->flags & 1))
+			return -EBADF;
+		sceNetPsFree(memory->address);
+		memory->size = 0;
+		memory->flags &= ~1;
+		return 0;
+	case 0x20000010:
+		if (!context)
+			return -EIO;
+		if (length <= 3)
+			return -EINVAL;
+		return sceNetPsNotifyLinkState(context);
+	case 0x20000011:
+		if (length <= 3 || args[0] != 0)
+			return -EINVAL;
+		return sceNetPsResetIdleTime(context);
+	case 0x20000012:
+		if (length < 512)
+			return -EINVAL;
+		return sceNetPsSetDriverEmulation(context, data, 0, 0);
+	case 0x20000013:
+		if (!context)
+			return -EIO;
+		if (length <= 7)
+			return -EINVAL;
+		return sceNetPsSetPromiscuous(context, data);
+	case 0x20000017:
+		if (length <= 7)
+			return -EINVAL;
+		return sceNetPsSetProcessPolicy(args[0], args[1]);
+	case 0x20000018:
+		if (length <= 7)
+			return -EINVAL;
+		if (args[1] & 1)
+			return sceNetPsSetThreadError(sceNetPsGetThreadId(), args[0]);
+		return sceNetPsSetProcessError(sceNetPsGetProcessId(), args[0]);
+	case 0x20000019:
+		if (length <= 11)
+			return -EINVAL;
+		threadId = bnet_puid_to_guid(args[0]);
+		if (threadId < 0)
+			return -EINVAL;
+		return sceNetPsSetThreadMode(threadId, args[2]);
+	case 0x20000020:
+		if (length <= 3)
+			return -EINVAL;
+		sceNetPsSetSocketSuspendPolicy(args[0]);
+		return 0;
+	case 0x20000023:
+		if (length <= 7)
+			return -EINVAL;
+		tcp_maxmss_to_advertise = args[0];
+		tcp_maxmss_from_peer = args[1];
+		return 0;
+	}
+	return -EINVAL;
 }
 
 /* SCE: stop the entry's timeout and take it off its descriptor */

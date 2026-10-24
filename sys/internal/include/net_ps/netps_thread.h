@@ -54,7 +54,7 @@ typedef struct SceNetPsThreadInfo {
 
 typedef struct SceNetPsSleepCount {
 	unsigned int identifier;
-	unsigned int reserved;
+	int policy;		/* the identifier's process policy (sceNetPsStackControl 0x16) */
 	unsigned int count;
 } SceNetPsSleepCount;
 
