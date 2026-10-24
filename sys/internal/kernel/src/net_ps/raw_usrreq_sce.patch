@@ -1,0 +1,57 @@
+--- a/net/raw_usrreq.c
++++ b/net/raw_usrreq.c
+@@ -50,6 +50,11 @@
+ #include <net/raw_cb.h>
+ 
+ #include <machine/stdarg.h>
++
++#include "netps_socket.h"
++
++/* SCE: this file's copies are made whatever the length (raw_setsockaddr) */
++#undef memcpy
+ /*
+  * Initialize raw connection block q.
+  */
+@@ -154,7 +159,7 @@
+ 	/* INCOMPLETE */
+ }
+ 
+-void
++static void	/* SCE */
+ raw_setsockaddr(rp, nam)
+ 	struct rawcb *rp;
+ 	struct mbuf *nam;
+@@ -164,7 +169,7 @@
+ 	bcopy(rp->rcb_laddr, mtod(nam, caddr_t), (size_t)nam->m_len);
+ }
+ 
+-void
++static void	/* SCE */
+ raw_setpeeraddr(rp, nam)
+ 	struct rawcb *rp;
+ 	struct mbuf *nam;
+@@ -208,7 +213,7 @@
+ 	 * the appropriate raw interface routine.
+ 	 */
+ 	case PRU_ATTACH:
+-		if (p == 0 || (error = suser(p->p_ucred, &p->p_acflag))) {
++		if (p == 0) {	/* SCE: no privilege check */
+ 			error = EACCES;
+ 			break;
+ 		}
+@@ -268,6 +273,7 @@
+ 				error = EISCONN;
+ 				goto die;
+ 			}
++			bnet_socket_sanity_check(so);	/* SCE */
+ 			error = (*so->so_proto->pr_usrreq)(so, PRU_CONNECT,
+ 			    (struct mbuf *)0, nam, (struct mbuf *)0, p);
+ 			if (error) {
+@@ -281,6 +287,7 @@
+ 				goto die;
+ 			}
+ 		}
++		bnet_socket_sanity_check(so);	/* SCE */
+ 		error = (*so->so_proto->pr_output)(m, so);
+ 		if (nam)
+ 			raw_disconnect(rp);

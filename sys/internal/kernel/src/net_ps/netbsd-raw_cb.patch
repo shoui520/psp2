@@ -1,0 +1,12 @@
+--- contrib/netbsd-2.1/sys/net/raw_cb.h
++++ sys/internal/kernel/src/net_ps/include/net/raw_cb.h
+@@ -66,8 +66,7 @@
+ void	raw_input __P((struct mbuf *, ...));
+ int	raw_usrreq __P((struct socket *,
+ 	    int, struct mbuf *, struct mbuf *, struct mbuf *, struct proc *));
+-void	raw_setsockaddr __P((struct rawcb *, struct mbuf *));
+-void	raw_setpeeraddr __P((struct rawcb *, struct mbuf *));
++/* SCE: raw_setsockaddr and raw_setpeeraddr are raw_usrreq.c's own */
+ 
+ #endif /* _KERNEL */
+ 
