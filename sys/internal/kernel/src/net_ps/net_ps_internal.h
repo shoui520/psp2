@@ -179,6 +179,25 @@ _Static_assert(offsetof(SceNetPsDebugSockInfo, count) == 4,
 _Static_assert(offsetof(SceNetPsDebugSockInfo, recordSize) == 8,
 	       "debug sockinfo record size");
 
+/*
+ * SCE: the sceNetControl record of the driver event commands: register a
+ * callback (0x20000003), take its events (0x10000002), post events
+ * (0x20000005)
+ */
+typedef struct SceNetPsDriverEventControl {
+	SceUID callbackId;
+	int clearPending;
+	unsigned int reserved[2];
+	SceUInt64 events;
+	int error;
+	unsigned int reserved2;
+} SceNetPsDriverEventControl;
+
+_Static_assert(sizeof(SceNetPsDriverEventControl) == 32,
+	       "driver event control size");
+_Static_assert(offsetof(SceNetPsDriverEventControl, events) == 16,
+	       "driver event control events");
+
 /* SCE: debug command 4's result, one interface's record */
 typedef struct SceNetPsDebugInterfaceInfo {
 	int interfaceType;
@@ -315,6 +334,12 @@ int sceNetPsInitializeDebugInterface(SceNetPsDebugClient **slot,
 				     struct NetDriver *driver);
 int sceNetPsInitializeGateway(SceNetPsGatewayState *slot, struct NetDriver *driver);
 int sceNetPsNotifyDriverCallbacks(struct SceNetPsDriverContext *context, SceUInt64 events);
+int sceNetPsTakeDriverEvents(struct SceNetPsDriverContext *context,
+			     SceUID callbackId,
+			     SceNetPsDriverEventControl *control);
+int sceNetPsPostDriverEvents(struct SceNetPsDriverContext *context,
+			     SceUID callbackId,
+			     const SceNetPsDriverEventControl *control);
 int sceNetPsHasDriverCallbacks(struct SceNetPsDriverContext *context);
 unsigned int sceNetPsGetFreeMemory(int lowest);
 int sceNetPsInitializeHeap(void *base, int size);

@@ -2071,6 +2071,7 @@ int sceNetPsNotifyDriverCallbacks(struct SceNetPsDriverContext *context,
 }
 
 /* Name unknown; test pending events in each registered driver callback. */
+__attribute__((noinline))
 int sceNetPsDriverHasPendingEvents(struct SceNetPsDriverContext *context,
 				  SceUInt64 events)
 {
@@ -2084,6 +2085,53 @@ int sceNetPsDriverHasPendingEvents(struct SceNetPsDriverContext *context,
 		if ((handler->flags & 1) && (handler->events & events) == events)
 			return 1;
 	}
+	return 0;
+}
+
+/* SCE: take a callback's pending events and the driver's last error. */
+int sceNetPsTakeDriverEvents(struct SceNetPsDriverContext *context,
+			     SceUID callbackId,
+			     SceNetPsDriverEventControl *control)
+{
+	SceNetPsDriverEvent *handler;
+	int index;
+
+	if (!context)
+		context = &gNetPsDefaultDriverContext;
+	for (index = 0; index < 3; index++) {
+		handler = &context->eventHandlers[index];
+		if ((handler->flags & 1) && handler->callbackId == callbackId)
+			break;
+	}
+	if (index == 3)
+		return -5;
+	handler = &context->eventHandlers[index];
+	control->events = handler->events;
+	control->error = context->lastError;
+	handler->events = 0;
+	return 0;
+}
+
+/* SCE: add events to a callback's pending set, and the error if one is given. */
+int sceNetPsPostDriverEvents(struct SceNetPsDriverContext *context,
+			     SceUID callbackId,
+			     const SceNetPsDriverEventControl *control)
+{
+	SceNetPsDriverEvent *handler;
+	int index;
+
+	if (!context)
+		context = &gNetPsDefaultDriverContext;
+	for (index = 0; index < 3; index++) {
+		handler = &context->eventHandlers[index];
+		if ((handler->flags & 1) && handler->callbackId == callbackId)
+			break;
+	}
+	if (index == 3)
+		return -5;
+	context->eventHandlers[index].events |= control->events;
+	if (control->error)
+		context->lastError = control->error;
 	return 0;
 }
 
