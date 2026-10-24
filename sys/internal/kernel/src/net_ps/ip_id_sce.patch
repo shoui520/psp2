@@ -1,0 +1,20 @@
+--- a/netinet/ip_id.c
++++ b/netinet/ip_id.c
+@@ -89,7 +89,7 @@
+ static u_int32_t tmp;		/* Storage for unused random */
+ 
+ static u_int16_t pmod(u_int16_t, u_int16_t, u_int16_t);
+-static void ip_initid(void);
++static void ip_initid(void) __attribute__((noinline));	/* SCE: called, not inlined */
+ 
+ /*
+  * Do a fast modular exponation, returned value will be in the range
+@@ -175,7 +175,7 @@
+ 	if (ru_counter >= RU_MAX || time.tv_sec > ru_reseed)
+ 		ip_initid();
+ 
+-#if 0
++#if 1	/* SCE: a random number of ids is skipped */
+ 	if (!tmp)
+ 		tmp = arc4random();
+ 
