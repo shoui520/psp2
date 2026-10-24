@@ -456,6 +456,8 @@ unsigned int sce_psnet_bnet_sync_clear(SceNetPsSync *sync);
 int sceNetPsBindCallback(SceNetPsDriverCallback *callback, SceUID callbackId, const char *name);
 void sceNetPsUnbindCallback(SceNetPsDriverCallback *callback);
 int sceNetPsNotifyCallback(SceNetPsDriverCallback *callback, unsigned int argument);
+int sceNetPsInitializeModule(void);
+int sceNetPsGetCurrentTick(SceUInt64 *tick);
 unsigned int sceNetPsSyscallEnter(void);
 void sceNetPsSyscallLeave(unsigned int state);
 

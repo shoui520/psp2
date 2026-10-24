@@ -66,9 +66,8 @@ extern struct malloc_type *mbtypes[8];
 int sceNetPsDestroyDump(unsigned int dumpId, struct SceNetPsDump *dump);
 int sceNetPsDestroyDescriptor(unsigned int descriptorId,
 			     SceNetPsDescriptor *descriptor);
-int sceNetPsRoutingSysctl(const int *name, unsigned int nameLength, void *oldData,
-			  unsigned int *oldLength, const void *newData,
-			  unsigned int newLength);
+int sysctl_rtable(int *name, u_int namelen, void *where, size_t *given,
+		  void *new, size_t newlen);
 
 /* SCE: the gateway allocator callbacks ignore their interface argument. */
 int sceNetPsGatewayFree(struct SceNetKernelGateway *interface, void *pointer)
@@ -1828,9 +1827,8 @@ int sceNetPsSysctl(const int *name, unsigned int nameLength, void *oldData,
 			error = 42;
 			goto positiveError;
 		}
-		error = sceNetPsRoutingSysctl(identifiers + 3, nameLength - 3,
-					      oldData, lengthPointer,
-					      newData, newLength);
+		error = sysctl_rtable(identifiers + 3, nameLength - 3, oldData,
+				      lengthPointer, (void *)newData, newLength);
 		if (error)
 			goto copyError;
 	}
@@ -2500,6 +2498,48 @@ int sceNetPsDestroyDump(unsigned int dumpId, SceNetPsDump *dump)
 	return 0;
 }
 
+/*
+ * SCE: a transmitted packet, padded to Ethernet's minimum frame, goes to
+ * every capture ring with room for it; a ring without room overflows.
+ */
+int sceNetPsCaptureTxPacket(struct NetDriverPacket *packet)
+{
+	SceNetPsPcapRecordHeader header;
+	struct NetDriverBuffer *buffer;
+	SceNetPsDump *dump;
+	SceUInt64 tick;
+	int first, last, dumpId, length, padding;
+
+	sceNetPsGetCurrentTick(&tick);
+	header.seconds = tick / 1000000;
+	header.microseconds = tick % 1000000;
+	length = packet->length;
+	padding = 60 - length;
+	if (padding < 0)
+		padding = 0;
+	header.capturedLength = length + padding;
+	header.length = length + padding;
+	sceNetPsGetDumpIdRange(&first, &last);
+	for (dumpId = first; dumpId <= last; dumpId++) {
+		dump = sceNetPsLookupDump(dumpId, 1);
+		if (dump == NULL || (dump->flags & SCE_NET_DUMP_OVERFLOW))
+			continue;
+		if (dump->length - dump->bufferedLength <
+		    (int)sizeof(header) + length + padding) {
+			dump->flags |= SCE_NET_DUMP_OVERFLOW;
+			continue;
+		}
+		sceNetPsWriteDump(dump, &header, sizeof(header));
+		for (buffer = packet->buffer; buffer; buffer = buffer->next)
+			sceNetPsWriteDump(dump, buffer->data,
+					  buffer->end - buffer->data);
+		if (padding)
+			sceNetPsWriteDump(dump, NULL, padding);
+		sceNetPsWakeupNormal(dump);
+	}
+	return 0;
+}
+
 int sceNetPsDumpCreate(const char *name, int length, int flags)
 {
 	int result;
@@ -2558,6 +2598,23 @@ int sceNetPsDumpAbort(int dumpId, int flags)
 	}
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 	return error ? -error : error;
+}
+
+/* SCE: destroy the capture rings a process owns */
+int sceNetPsDestroyProcessDumps(SceUID processId)
+{
+	SceNetPsDump *dump;
+	int first, last, dumpId;
+
+	sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
+	sceNetPsGetDumpIdRange(&first, &last);
+	for (dumpId = first; dumpId <= last; dumpId++) {
+		dump = sceNetPsLookupDump(dumpId, 1);
+		if (dump && dump->processId == processId)
+			sceNetPsDestroyDump(dumpId, dump);
+	}
+	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
+	return 0;
 }
 
 /* SCE: free an epoll with its entries, wake its waiter and release its identifier */

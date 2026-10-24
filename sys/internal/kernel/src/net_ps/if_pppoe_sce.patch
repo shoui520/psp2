@@ -607,7 +607,7 @@
  
  	/* clean up softc */
  	memcpy(&sc->sc_dest, etherbroadcastaddr, sizeof(sc->sc_dest));
-@@ -1468,6 +1470,14 @@
+@@ -1468,6 +1470,21 @@
  		free(sc->sc_ac_cookie, M_DEVBUF);
  		sc->sc_ac_cookie = NULL;
  	}
@@ -621,4 +621,11 @@
 +
 +	/* signal upper layer (SCE: last) */
 +	sc->sc_sppp.pp_down(&sc->sc_sppp);
++}
++
++/* SCE: the Ethernet interface a PPPoE link runs on, for net_ps's interface records */
++struct ifnet *
++sceNetPsGetPppoeParentInterface(struct pppoe_softc *sc)
++{
++	return sc->sc_eth_if;
  }

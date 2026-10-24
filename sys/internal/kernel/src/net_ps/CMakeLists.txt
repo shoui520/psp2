@@ -145,5 +145,4 @@ psp2_module(os0_kd_bootimage_net_ps KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	net_ps_hmac.c
 	net_ps_aes.c
 	src/ps/osdependence/ngp/system_os.c
-	net_ps.c
 )

@@ -627,7 +627,54 @@
  			else {
  				rt->rt_flags |= RTF_REJECT;
  				rt->rt_expire += arpt_down;
-@@ -835,8 +1122,6 @@
+@@ -806,6 +1093,46 @@
+ }
+ 
+ /*
++ * Lookup or enter a new address in arptab.
++ */
++static struct llinfo_arp *
++arplookup(m, addr, create, proxy)
++	struct mbuf *m;
++	struct in_addr *addr;
++	int create, proxy;
++{
++	struct rtentry *rt;
++	static struct sockaddr_inarp sin;
++
++	sin.sin_len = sizeof(sin);
++	sin.sin_family = AF_INET;
++	sin.sin_addr = *addr;
++	sin.sin_other = proxy ? SIN_PROXY : 0;
++	rt = rtalloc1(sintosa(&sin), create);
++	if (rt == 0)
++		return (0);
++	rt->rt_refcnt--;
++
++	if (rt->rt_flags & RTF_GATEWAY)
++		;
++	else if ((rt->rt_flags & RTF_LLINFO) == 0)
++		arpstat.as_allocfail++;
++	else if (rt->rt_gateway->sa_family != AF_LINK)
++		;
++	else
++		return ((struct llinfo_arp *)rt->rt_llinfo);
++
++	/* SCE: no log of the failed entry */
++	if (create) {
++		if (rt->rt_refcnt <= 0 && (rt->rt_flags & RTF_CLONED) != 0) {
++			rtrequest(RTM_DELETE, (struct sockaddr *)rt_key(rt),
++		    	    rt->rt_gateway, rt_mask(rt), rt->rt_flags, 0);
++		}
++	}
++	return (0);
++}
++
++/*
+  * ARP for Internet protocols on 10 Mb/s Ethernet.
+  * Algorithm is that given in RFC 826.
+  * In addition, a sanity check is performed on the sender
+@@ -835,8 +1162,6 @@
  	struct sockaddr sa;
  	struct in_addr isaddr, itaddr, myaddr;
  	int op;
@@ -636,7 +683,7 @@
  
  	ah = mtod(m, struct arphdr *);
  	op = ntohs(ah->ar_op);
-@@ -863,6 +1148,8 @@
+@@ -863,6 +1188,8 @@
  	bcopy((caddr_t)ar_spa(ah), (caddr_t)&isaddr, sizeof (isaddr));
  	bcopy((caddr_t)ar_tpa(ah), (caddr_t)&itaddr, sizeof (itaddr));
  
@@ -645,7 +692,7 @@
  	if (m->m_flags & (M_BCAST|M_MCAST))
  		arpstat.as_rcvmcast++;
  
-@@ -946,17 +1233,11 @@
+@@ -946,17 +1273,11 @@
  	if (!bcmp((caddr_t)ar_sha(ah), (caddr_t)ifp->if_broadcastaddr,
  	    ifp->if_addrlen)) {
  		arpstat.as_rcvbcastsha++;
@@ -663,7 +710,7 @@
  		itaddr = myaddr;
  		goto reply;
  	}
-@@ -966,27 +1247,12 @@
+@@ -966,27 +1287,12 @@
  		    bcmp((caddr_t)ar_sha(ah), LLADDR(sdl), sdl->sdl_alen)) {
  			if (rt->rt_flags & RTF_STATIC) {
  				arpstat.as_rcvoverperm++;
@@ -691,7 +738,7 @@
  			}
  		}
  		/*
-@@ -997,16 +1263,9 @@
+@@ -997,16 +1303,9 @@
  		if (sdl->sdl_alen &&
  		    sdl->sdl_alen != ah->ar_hln) {
  			arpstat.as_rcvlenchg++;
@@ -708,7 +755,7 @@
  			goto reply;
  		}
  #if NTOKEN > 0
-@@ -1043,15 +1302,7 @@
+@@ -1043,15 +1342,7 @@
  		rt->rt_flags &= ~RTF_REJECT;
  		la->la_asked = 0;
  
@@ -725,7 +772,7 @@
  	}
  reply:
  	if (op != ARPOP_REQUEST) {
-@@ -1120,8 +1371,7 @@
+@@ -1120,8 +1411,7 @@
  
  	ARP_LOCK_CHECK();
  
@@ -735,7 +782,7 @@
  	if (rt->rt_refcnt > 0 && (sdl = SDL(rt->rt_gateway)) &&
  	    sdl->sdl_family == AF_LINK) {
  		sdl->sdl_alen = 0;
-@@ -1133,62 +1383,7 @@
+@@ -1133,62 +1423,7 @@
  	    0, (struct rtentry **)0);
  }
  
@@ -799,7 +846,7 @@
  
  void
  arp_ifinit(ifp, ifa)
-@@ -1203,7 +1398,7 @@
+@@ -1203,7 +1438,7 @@
  	 */
  	ip = &IA_SIN(ifa)->sin_addr;
  	if (!in_nullhost(*ip))
@@ -808,7 +855,7 @@
  
  	ifa->ifa_rtrequest = arp_rtrequest;
  	ifa->ifa_flags |= RTF_CLONING;
-@@ -1303,77 +1498,28 @@
+@@ -1303,77 +1538,28 @@
  	m_freem(m);
  }
  

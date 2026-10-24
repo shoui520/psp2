@@ -28,6 +28,14 @@ typedef struct SceNetPsPcapHeader {
 	unsigned int linkType;
 } SceNetPsPcapHeader;
 
+/* PCAP's record header before each captured packet */
+typedef struct SceNetPsPcapRecordHeader {
+	unsigned int seconds;
+	unsigned int microseconds;
+	unsigned int capturedLength;
+	unsigned int length;
+} SceNetPsPcapRecordHeader;
+
 _Static_assert(sizeof(SceNetPsDump) == 64, "capture ring size");
 _Static_assert(offsetof(SceNetPsDump, name) == 0, "capture name");
 _Static_assert(offsetof(SceNetPsDump, processId) == 32, "capture process");
@@ -48,6 +56,7 @@ _Static_assert(offsetof(SceNetPsPcapHeader, significantFigures) == 12,
 _Static_assert(offsetof(SceNetPsPcapHeader, snapshotLength) == 16,
 	       "PCAP capture limit");
 _Static_assert(offsetof(SceNetPsPcapHeader, linkType) == 20, "PCAP link type");
+_Static_assert(sizeof(SceNetPsPcapRecordHeader) == 16, "PCAP record header size");
 
 /* dev/net_ps_dump.c */
 int sceNetPsDumpCreate(const char *name, int length, int flags);

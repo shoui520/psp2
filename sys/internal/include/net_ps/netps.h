@@ -110,6 +110,33 @@ typedef struct SceNetSyscallRecvfromParam {
 	unsigned int *addressLength;
 } SceNetSyscallRecvfromParam;
 
+typedef struct SceNetSyscallSetsockoptParam {
+	int socket;
+	int level;
+	int option;
+	const void *value;
+	unsigned int length;
+	int reserved;
+} SceNetSyscallSetsockoptParam;
+
+typedef struct SceNetSyscallGetsockoptParam {
+	int socket;
+	int level;
+	int option;
+	void *value;
+	unsigned int *length;
+	int reserved;
+} SceNetSyscallGetsockoptParam;
+
+typedef struct SceNetSyscallEpollWaitParam {
+	int epoll;
+	SceNetEpollEvent *events;
+	int maxevents;
+	int *timeout;
+	int callback;
+	int reserved;
+} SceNetSyscallEpollWaitParam;
+
 typedef struct SceNetSyscallSysctlParam {
 	const int *name;
 	unsigned int nameLength;
@@ -136,6 +163,12 @@ _Static_assert(offsetof(SceNetSyscallRecvfromParam, address) == 16,
 	       "recvfrom address");
 _Static_assert(offsetof(SceNetSyscallRecvfromParam, addressLength) == 20,
 	       "recvfrom address length");
+_Static_assert(sizeof(SceNetSyscallSetsockoptParam) == 24,
+	       "setsockopt argument size");
+_Static_assert(sizeof(SceNetSyscallGetsockoptParam) == 24,
+	       "getsockopt argument size");
+_Static_assert(sizeof(SceNetSyscallEpollWaitParam) == 24,
+	       "epoll wait argument size");
 _Static_assert(sizeof(SceNetSyscallSysctlParam) == 24, "sysctl argument size");
 _Static_assert(offsetof(SceNetSyscallSysctlParam, name) == 0, "sysctl name");
 _Static_assert(offsetof(SceNetSyscallSysctlParam, nameLength) == 4,
@@ -157,3 +190,4 @@ int SceNetPsForDriver_4BF5FAB4(int socket, int level, int option, const void *va
 		     unsigned int length);
 int SceNetPsForDriver_EB95B024(const char *name, int domain, int type, int protocol);
 int SceNetPsForDriver_21F4428D(int socket);
+int SceNetPsForDriver_E41C0794(void);

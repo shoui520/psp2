@@ -19,9 +19,6 @@
 int sceNetPsCheckMemoryAvailability(int size, int count);
 struct mbuf *m_get(int how, int type);
 extern struct malloc_type *mbtypes[8];
-int sceNetPsRoutingSysctl(const int *name, unsigned int nameLength, void *oldData,
-			  unsigned int *oldLength, const void *newData,
-			  unsigned int newLength);
 
 static const unsigned int gNetPsHeapTailMagic = 0x4d61416b;
 
@@ -227,7 +224,7 @@ int sceNetPsDeliverRxPacket(struct NetDriver *driver,
 }
 
 extern int gNetPsPacketCaptureActive;
-void sceNetPsCaptureTxPacket(struct NetDriverPacket *packet);
+int sceNetPsCaptureTxPacket(struct NetDriverPacket *packet);
 
 /* Name unknown; convert queued BSD packets to driver-owned transmit storage. */
 void sceNetPsStartTransmit(struct ifnet *interface)
@@ -2666,6 +2663,11 @@ int SceNetPsForDriver_21F4428D(int socket)
 	return sceNetPsClose(socket, 1);
 }
 
+int SceNetPsForDriver_E41C0794(void)
+{
+	return 0;
+}
+
 int sceNetSyscallGetSockinfo(int socket, void *buffer, int count, int flags)
 {
 	unsigned int state = sceNetPsSyscallEnter();
@@ -2854,6 +2856,26 @@ int sceNetSyscallShutdown(int socket, int how)
 	return result;
 }
 
+int sceNetSyscallSetsockopt(const SceNetSyscallSetsockoptParam *parameter)
+{
+	unsigned int state = sceNetPsSyscallEnter();
+	SceNetSyscallSetsockoptParam arguments;
+	int result;
+
+	if (sceNetPsCheckMemoryAvailability(2048, 5)) {
+		if (sceNetPsCopyUserIn(parameter, &arguments, sizeof(arguments)))
+			result = -8;
+		else
+			result = sceNetPsSetsockopt(arguments.socket, arguments.level,
+						    arguments.option, arguments.value,
+						    arguments.length, 0);
+	} else {
+		result = -55;
+	}
+	sceNetPsSyscallLeave(state);
+	return result;
+}
+
 int sceNetSyscallGetsockname(int socket, SceNetSockaddr *address,
 			    unsigned int *addressLength)
 {
@@ -2864,6 +2886,26 @@ int sceNetSyscallGetsockname(int socket, SceNetSockaddr *address,
 		result = sceNetPsGetsockname(socket, address, addressLength, 0);
 	else
 		result = -55;
+	sceNetPsSyscallLeave(state);
+	return result;
+}
+
+int sceNetSyscallGetsockopt(const SceNetSyscallGetsockoptParam *parameter)
+{
+	unsigned int state = sceNetPsSyscallEnter();
+	SceNetSyscallGetsockoptParam arguments;
+	int result;
+
+	if (sceNetPsCheckMemoryAvailability(2048, 5)) {
+		if (sceNetPsCopyUserIn(parameter, &arguments, sizeof(arguments)))
+			result = -8;
+		else
+			result = sceNetPsGetsockopt(arguments.socket, arguments.level,
+						    arguments.option, arguments.value,
+						    arguments.length, 0);
+	} else {
+		result = -55;
+	}
 	sceNetPsSyscallLeave(state);
 	return result;
 }
@@ -2927,6 +2969,27 @@ int sceNetSyscallEpollCtl(int epoll, int operation, int socket,
 		result = sceNetPsEpollCtl(epoll, operation, socket, event);
 	else
 		result = -55;
+	sceNetPsSyscallLeave(state);
+	return result;
+}
+
+int sceNetSyscallEpollWait(const SceNetSyscallEpollWaitParam *parameter)
+{
+	unsigned int state = sceNetPsSyscallEnter();
+	SceNetSyscallEpollWaitParam arguments;
+	int result;
+
+	if (sceNetPsCheckMemoryAvailability(2048, 5)) {
+		if (sceNetPsCopyUserIn(parameter, &arguments, sizeof(arguments)))
+			result = -8;
+		else
+			result = sceNetPsEpollWait(arguments.epoll, arguments.events,
+						   arguments.maxevents,
+						   arguments.timeout,
+						   arguments.callback);
+	} else {
+		result = -55;
+	}
 	sceNetPsSyscallLeave(state);
 	return result;
 }

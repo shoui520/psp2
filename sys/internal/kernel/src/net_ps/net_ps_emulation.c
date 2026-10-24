@@ -490,6 +490,57 @@ int sceNetPsFilterRxSocket(struct mbuf *m, struct ifnet *ifp,
 	return 1;
 }
 
+/*
+ * SCE: whether a transmit packet may go now: its release time has come and
+ * the bandwidth limit has room for it, which it then takes.
+ */
+int sceNetPsCheckPacketReady(struct SceNetPsDriverContext *context,
+			     struct NetDriverPacket *packet)
+{
+	struct timeval now;
+	unsigned int releaseTime;
+
+	if (gNetPsPacketService.flags & 1) {
+		releaseTime = packet->releaseTimeMs;
+		microtime(&now);
+		if (releaseTime > now.tv_usec / 1000 + 1000 * now.tv_sec)
+			return -1;
+	}
+	if (!(packet->emulationFlags & 2))
+		return 0;
+	if (!(gNetPsPacketService.flags & 2))
+		return 0;
+	if (!(context->emulation.flags &
+	      SCE_NET_EMULATION_PARAM_FLAGS_BPS_LIMIT_SHORT_TIME) ||
+	    context->sendBpsPackets) {
+		if (context->emulation.send.bps_limit &&
+		    context->emulation.send.bps_limit < 8 * context->sendBpsBytes)
+			return -1;
+	}
+	context->sendBpsPackets++;
+	context->sendBpsBytes += packet->length;
+	return 0;
+}
+
+/* SCE: a packet the emulation held back goes to the end of the pending send queue */
+int sceNetPsRequeuePacket(struct SceNetPsDriverContext *context,
+			  struct NetDriverPacket *packet)
+{
+	if (!(packet->emulationFlags & 1))
+		return 0;
+	packet->emulationFlags &= ~1u;
+	sce_psnet_bnet_mutex_lock(&gNetPsDevSendMutex, NULL);
+	packet->prev = context->sendQueue.pendingTail;
+	if (context->sendQueue.pendingTail)
+		context->sendQueue.pendingTail->next = packet;
+	else
+		context->sendQueue.pendingHead = packet;
+	packet->next = NULL;
+	context->sendQueue.pendingTail = packet;
+	sce_psnet_bnet_mutex_unlock(&gNetPsDevSendMutex);
+	return 1;
+}
+
 /* SCE: apply frame-size, drop-interval and duplication controls. */
 int sceNetPsFilterTxMbuf(struct SceNetPsDriverContext *context,
 			struct mbuf *mbuf, int *duplicates)

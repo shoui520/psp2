@@ -41,6 +41,11 @@ int init_crypto(void *(*allocate)(SceSize), void (*release)(void *))
 	return 0;
 }
 
+int module_start(SceSize arglen, const void *argp)
+{
+	return sceNetPsInitializeModule();
+}
+
 int sceNetPsThreadEntry(SceSize args, SceNetPsThreadParam *param)
 {
 	param->entry(param->arg);
