@@ -1,0 +1,52 @@
+--- contrib/netbsd-2.1/sys/netinet/if_inarp.h
++++ sys/internal/kernel/src/net_ps/include/netinet/if_inarp.h
+@@ -34,10 +34,14 @@
+ #ifndef _NETINET_IF_INARP_H_
+ #define _NETINET_IF_INARP_H_
+ 
++#define	LA_HOLD_MAX	10	/* SCE: packets held per entry */
++
+ struct llinfo_arp {
+ 	LIST_ENTRY(llinfo_arp) la_list;
+ 	struct	rtentry *la_rt;
+-	struct	mbuf *la_hold;		/* last packet until resolved/timeout */
++	/* SCE: the last packets until resolved/timeout, a ring */
++	struct	mbuf *la_hold[LA_HOLD_MAX];
++	int	la_holdnext;		/* SCE: the slot the next packet takes */
+ 	long	la_asked;		/* last time we QUERIED for this addr */
+ #define la_timer la_rt->rt_rmx.rmx_expire /* deletion time in seconds */
+ };
+@@ -61,20 +65,30 @@
+ 
+ #ifdef _KERNEL
+ extern struct ifqueue arpintrq;
++extern struct ifqueue isdnintrq;	/* SCE: the raw Ethernet sockets' input */
+ void arp_ifinit __P((struct ifnet *, struct ifaddr *));
+ void arp_rtrequest __P((int, struct rtentry *, struct rt_addrinfo *));
+ int arpresolve __P((struct ifnet *, struct rtentry *, struct mbuf *,
+ 		    struct sockaddr *, u_char *));
+ void arpintr __P((void));
+ void arp_drain __P((void));
++/* SCE: the ARP and raw Ethernet (ISDN) sockets' protocols */
++void arpsock_init __P((void));
++int arpsock_input __P((struct mbuf *));
++int arpsock_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
++    struct mbuf *, struct proc *));
++void isdn_init __P((void));
++int isdn_input __P((struct mbuf *));
++int isdn_output __P((struct mbuf *, struct socket *, int));
++int isdn_usrreq __P((struct socket *, int, struct mbuf *, struct mbuf *,
++    struct mbuf *, struct proc *));
++void sceNetPsIsdnInterrupt __P((void));
+ 
+-int arpioctl __P((u_long, caddr_t));
+ void arpwhohas __P((struct ifnet *, struct in_addr *));
+ 
++/* SCE: no arpioctl, revarprequest or revarpwhoarewe */
+ void revarpinput __P((struct mbuf *));
+ void in_revarpinput __P((struct mbuf *));
+-void revarprequest __P((struct ifnet *));
+-int revarpwhoarewe __P((struct ifnet *, struct in_addr *, struct in_addr *));
+ #endif
+ 
+ #endif /* _NETINET_IF_INARP_H_ */

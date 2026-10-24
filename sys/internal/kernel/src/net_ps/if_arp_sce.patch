@@ -1,0 +1,901 @@
+--- a/netinet/if_arp.c
++++ b/netinet/if_arp.c
+@@ -98,10 +98,12 @@
+ #include <sys/proc.h>
+ #include <sys/protosw.h>
+ #include <sys/domain.h>
++#include <sys/socketvar.h>	/* SCE */
+ 
+ #include <net/ethertypes.h>
+ #include <net/if.h>
+ #include <net/if_dl.h>
++#include <net/if_ether.h>	/* SCE */
+ #include <net/if_token.h>
+ #include <net/if_types.h>
+ #include <net/route.h>
+@@ -110,6 +112,8 @@
+ #include <netinet/in_systm.h>
+ #include <netinet/in_var.h>
+ #include <netinet/ip.h>
++#include <netinet/ip_var.h>	/* SCE */
++#include <netinet/in_pcb.h>	/* SCE */
+ #include <netinet/if_inarp.h>
+ 
+ #include "loop.h"
+@@ -123,6 +127,11 @@
+ #endif
+ #include "token.h"
+ 
++#include "netps_socket.h"
++
++/* SCE: this file's copies are made whatever the length */
++#undef memcpy
++
+ #define SIN(s) ((struct sockaddr_in *)s)
+ #define SDL(s) ((struct sockaddr_dl *)s)
+ #define SRP(s) ((struct sockaddr_inarp *)s)
+@@ -142,7 +151,8 @@
+ extern	struct domain arpdomain;
+ 
+ static	void arprequest __P((struct ifnet *,
+-	    struct in_addr *, struct in_addr *, u_int8_t *));
++	    struct in_addr *, struct in_addr *, u_int8_t *, int));	/* SCE */
++static	int arp_hold_drain __P((struct llinfo_arp *));	/* SCE */
+ static	void arptfree __P((struct llinfo_arp *));
+ static	void arptimer __P((void *));
+ static	struct llinfo_arp *arplookup __P((struct mbuf *, struct in_addr *,
+@@ -154,6 +164,7 @@
+ #endif
+ LIST_HEAD(, llinfo_arp) llinfo_arp;
+ struct	ifqueue arpintrq = {0, 0, 0, 50};
++struct	ifqueue isdnintrq = {0, 0, 0, 50};	/* SCE */
+ int	arp_inuse, arp_allocated, arp_intimer;
+ int	arp_maxtries = 5;
+ int	useloopback = 1;	/* use loopback interface for local traffic */
+@@ -166,8 +177,12 @@
+ /* revarp state */
+ static struct	in_addr myip, srv_ip;
+ static int	myip_initialized = 0;
+-static int	revarp_in_progress = 0;
+-static struct	ifnet *myip_ifp = NULL;
++int	revarp_in_progress = 0;	/* SCE: not static; nothing here sets it */
++struct	ifnet *myip_ifp = NULL;	/* SCE: not static; nothing here sets it */
++
++/* SCE: the ARP and raw Ethernet sockets */
++static struct	inpcbtable arpcbtable;
++static struct	inpcbtable isdncbtable;
+ 
+ #ifdef DDB
+ static void db_print_sa __P((struct sockaddr *));
+@@ -176,45 +191,7 @@
+ static int db_show_radix_node __P((struct radix_node *, void *));
+ #endif
+ 
+-/*
+- * this should be elsewhere.
+- */
+-
+-static char *
+-lla_snprintf __P((u_int8_t *, int));
+-
+-static char *
+-lla_snprintf(adrp, len)
+-	u_int8_t *adrp;
+-	int len;
+-{
+-#define NUMBUFS 3
+-	static char buf[NUMBUFS][16*3];
+-	static int bnum = 0;
+-	static const char hexdigits[] = {
+-	    '0','1','2','3','4','5','6','7',
+-	    '8','9','a','b','c','d','e','f'
+-	};
+-
+-	int i;
+-	char *p;
+-
+-	p = buf[bnum];
+-
+-	*p++ = hexdigits[(*adrp)>>4];
+-	*p++ = hexdigits[(*adrp++)&0xf];
+-
+-	for (i=1; i<len && i<16; i++) {
+-		*p++ = ':';
+-		*p++ = hexdigits[(*adrp)>>4];
+-		*p++ = hexdigits[(*adrp++)&0xf];
+-	}
+-
+-	*p = 0;
+-	p = buf[bnum];
+-	bnum = (bnum + 1) % NUMBUFS;
+-	return p;
+-}
++/* SCE: no lla_snprintf (nothing logs) */
+ 
+ struct protosw arpsw[] = {
+ 	{ 0, 0, 0, 0,
+@@ -281,14 +258,14 @@
+ #define	ARP_LOCK(recurse)						\
+ do {									\
+ 	if (arp_lock_try(recurse) == 0) {				\
+-		printf("%s:%d: arp already locked\n", __FILE__, __LINE__); \
++ \
+ 		panic("arp_lock");					\
+ 	}								\
+ } while (/*CONSTCOND*/ 0)
+ #define	ARP_LOCK_CHECK()						\
+ do {									\
+ 	if (arp_locked == 0) {						\
+-		printf("%s:%d: arp lock not held\n", __FILE__, __LINE__); \
++ \
+ 		panic("arp lock check");				\
+ 	}								\
+ } while (/*CONSTCOND*/ 0)
+@@ -300,6 +277,284 @@
+ #define	ARP_UNLOCK()		arp_unlock()
+ 
+ /*
++ * SCE: the ARP socket.  Every ARP packet received is handed to its sockets,
++ * and an address added on one sends a gratuitous ARP request for it.
++ */
++void
++arpsock_init()
++{
++
++	in_pcbinit(&arpcbtable, 1, 1);
++}
++
++int
++arpsock_input(m)
++	struct mbuf *m;
++{
++	struct inpcb_hdr *inph;
++	struct inpcb *inp;
++	struct sockaddr_in sin;
++	struct mbuf *n;
++
++	memset(&sin, 0, sizeof(sin));
++	sin.sin_family = AF_INET;
++	sin.sin_len = sizeof(sin);
++	CIRCLEQ_FOREACH(inph, &arpcbtable.inpt_queue, inph_queue) {
++		inp = (struct inpcb *)inph;
++		if ((inp->inp_flags & INP_CONTROLOPTS) == 0)
++			continue;
++		if ((n = m_copym(m, 0, M_COPYALL, M_DONTWAIT)) == NULL)
++			continue;
++		if (sbappendaddr(&inp->inp_socket->so_rcv, sintosa(&sin), n,
++		    NULL) == 0) {
++			m_freem(n);
++			continue;
++		}
++		sorwakeup(inp->inp_socket);
++	}
++	return (0);
++}
++
++int
++arpsock_usrreq(so, req, m, nam, control, p)
++	struct socket *so;
++	int req;
++	struct mbuf *m, *nam, *control;
++	struct proc *p;
++{
++	struct in_aliasreq *ifra;
++	struct ifnet *ifp;
++	struct inpcb *inp;
++	int error;
++
++	if (req == PRU_CONTROL) {
++		if ((u_long)m != SIOCAIFADDR)
++			return (EINVAL);
++		ifra = (struct in_aliasreq *)nam;
++		ifp = (struct ifnet *)control;
++		arprequest(ifp, &ifra->ifra_addr.sin_addr,
++		    &ifra->ifra_dstaddr.sin_addr, LLADDR(ifp->if_sadl),
++		    so != NULL && (so->so_options & SO_SCE_OPTION_10000));
++		return (0);
++	}
++	inp = sotoinpcb(so);
++	switch (req) {
++
++	case PRU_ATTACH:
++		if (inp != NULL)
++			return (EISCONN);
++		if (p == 0)
++			return (EACCES);
++		if ((error = soreserve(so, 512, 512)) != 0)
++			return (error);
++		if ((error = in_pcballoc(so, &arpcbtable)) != 0)
++			return (error);
++		inp = sotoinpcb(so);
++		inp->inp_ip.ip_p = (long)nam;
++		inp->inp_flags = INP_CONTROLOPTS;
++		return (0);
++
++	case PRU_DETACH:
++		in_pcbdetach(inp);
++		return (0);
++
++	default:
++		return (EOPNOTSUPP);
++	}
++}
++
++/*
++ * SCE: the raw Ethernet (ISDN) socket.  It sends whole Ethernet frames out of
++ * the multicast interface or the first broadcast interface that is up, and
++ * receives the frames of its ether type (every frame for type 0).
++ */
++int
++isdn_output(m, so, withsrc)
++	struct mbuf *m;
++	struct socket *so;
++	int withsrc;
++{
++	struct inpcb *inp = sotoinpcb(so);
++	struct ifnet *ifp;
++	struct ether_header *eh;
++	union {
++		struct sockaddr sa;
++		u_int8_t data[32];	/* the header, the source at sa_data[16] */
++	} dst;
++	int error;
++
++	if (inp->inp_moptions == NULL ||
++	    (ifp = inp->inp_moptions->imo_multicast_ifp) == NULL) {
++		TAILQ_FOREACH(ifp, &ifnet, if_list) {
++			if (ifp->if_flags & (IFF_LOOPBACK|IFF_POINTOPOINT))
++				continue;
++			if (ifp->if_flags & IFF_UP)
++				break;
++		}
++		if (ifp == NULL) {
++			error = ENETUNREACH;
++			goto release;
++		}
++	}
++	if ((error = sceNetPsCheckDisabledInterface(m, ifp, so)) != 0)
++		goto release;
++	eh = mtod(m, struct ether_header *);
++	dst.sa.sa_len = sizeof(dst.sa);
++	dst.sa.sa_family = AF_UNSPEC;
++	memcpy(dst.sa.sa_data, eh, ETHER_HDR_LEN);
++	if (withsrc) {
++		dst.sa.sa_len = sizeof(dst);
++		memcpy(&dst.data[18], eh->ether_shost, ETHER_ADDR_LEN);
++	}
++	m_adj(m, ETHER_HDR_LEN);
++	sceNetPsFilterTxSocket(m, ifp, inp->inp_socket);
++	sceNetPsSetNoAutoConnect(m, ifp, inp->inp_socket);
++	error = (*ifp->if_output)(ifp, m, &dst.sa, NULL);
++	m = NULL;
++release:
++	m_freem(m);
++	return (error);
++}
++
++void
++isdn_init()
++{
++
++	in_pcbinit(&isdncbtable, 1, 1);
++}
++
++int
++isdn_input(m)
++	struct mbuf *m;
++{
++	struct inpcb_hdr *inph;
++	struct inpcb *inp;
++	struct ether_header *eh;
++	union {
++		struct sockaddr_in sin;
++		u_int8_t data[20];	/* the addresses at sin_zero */
++	} src;
++	struct mbuf *n;
++
++	memset(&src, 0, sizeof(src));
++	src.sin.sin_family = AF_INET;
++	src.sin.sin_len = sizeof(src);
++	/* the Ethernet header back in front */
++	m->m_len += ETHER_HDR_LEN;
++	m->m_data -= ETHER_HDR_LEN;
++	if (m->m_flags & M_PKTHDR)
++		m->m_pkthdr.len += ETHER_HDR_LEN;
++	eh = mtod(m, struct ether_header *);
++	memcpy(src.sin.sin_zero, eh, 2 * ETHER_ADDR_LEN);
++	CIRCLEQ_FOREACH(inph, &isdncbtable.inpt_queue, inph_queue) {
++		inp = (struct inpcb *)inph;
++		if (inp->inp_ip.ip_id != 0 &&
++		    inp->inp_ip.ip_id != ntohs(eh->ether_type))
++			continue;
++		if ((m->m_flags & M_SCE_EMULATION_DROP) &&
++		    sceNetPsFilterRxSocket(m, m->m_pkthdr.rcvif,
++		    inp->inp_socket))
++			continue;
++		if ((inp->inp_flags & INP_CONTROLOPTS) == 0)
++			continue;
++		if ((n = m_copym(m, 0, M_COPYALL, M_DONTWAIT)) == NULL)
++			continue;
++		if (sbappendaddr(&inp->inp_socket->so_rcv,
++		    (struct sockaddr *)&src, n, NULL) == 0) {
++			m_freem(n);
++			continue;
++		}
++		sorwakeup(inp->inp_socket);
++	}
++	return (0);
++}
++
++int
++isdn_usrreq(so, req, m, nam, control, p)
++	struct socket *so;
++	int req;
++	struct mbuf *m, *nam, *control;
++	struct proc *p;
++{
++	struct inpcb *inp;
++	int error;
++
++	if (req == PRU_CONTROL)
++		return (EINVAL);
++	inp = sotoinpcb(so);
++	switch (req) {
++
++	case PRU_ATTACH:
++		if (inp != NULL) {
++			error = EISCONN;
++			break;
++		}
++		if (p == 0) {
++			error = EACCES;
++			break;
++		}
++		if ((error = soreserve(so, 2048, 2048)) != 0)
++			break;
++		if ((error = in_pcballoc(so, &isdncbtable)) != 0)
++			break;
++		inp = sotoinpcb(so);
++		inp->inp_ip.ip_id = (long)nam;
++		inp->inp_flags = INP_CONTROLOPTS;
++		so->so_state |= SS_ISCONNECTED | SS_ISDISCONNECTING;
++		break;
++
++	case PRU_DETACH:
++		in_pcbdetach(inp);
++		break;
++
++	case PRU_SEND:
++		if (control && control->m_len) {
++			m_freem(control);
++			m_freem(m);
++			error = EINVAL;
++			break;
++		}
++		error = isdn_output(m, so, 1);
++		break;
++
++	case PRU_SENDOOB:
++		if (control && control->m_len) {
++			m_freem(control);
++			m_freem(m);
++			error = EINVAL;
++			break;
++		}
++		error = isdn_output(m, so, 0);
++		break;
++
++	default:
++		error = EOPNOTSUPP;
++		break;
++	}
++	return (error);
++}
++
++/*
++ * SCE: free every packet an entry holds, oldest first; the count freed.
++ */
++static int
++arp_hold_drain(la)
++	struct llinfo_arp *la;
++{
++	int i, j, count = 0;
++
++	for (i = 0; i < LA_HOLD_MAX; i++) {
++		j = (la->la_holdnext + i) % LA_HOLD_MAX;
++		if (la->la_hold[j]) {
++			count++;
++			m_freem(la->la_hold[j]);
++			la->la_hold[j] = NULL;
++		}
++	}
++	return (count);
++}
++
++/*
+  * ARP protocol drain routine.  Called when memory is in short supply.
+  * Called at splvm();
+  */
+@@ -309,23 +564,15 @@
+ {
+ 	struct llinfo_arp *la, *nla;
+ 	int count = 0;
+-	struct mbuf *mold;
+ 
+ 	if (arp_lock_try(0) == 0) {
+-		printf("arp_drain: locked; punting\n");
+ 		return;
+ 	}
+ 
+ 	for (la = LIST_FIRST(&llinfo_arp); la != 0; la = nla) {
+ 		nla = LIST_NEXT(la, la_list);
+ 
+-		mold = la->la_hold;
+-		la->la_hold = 0;
+-
+-		if (mold) {
+-			m_freem(mold);
+-			count++;
+-		}
++		count += arp_hold_drain(la);	/* SCE */
+ 	}
+ 	ARP_UNLOCK();
+ 	arpstat.as_dfrdropped += count;
+@@ -494,12 +741,11 @@
+ 			arprequest(rt->rt_ifp,
+ 			    &SIN(rt_key(rt))->sin_addr,
+ 			    &SIN(rt_key(rt))->sin_addr,
+-			    (u_char *)LLADDR(SDL(gate)));
++			    (u_char *)LLADDR(SDL(gate)), 0);	/* SCE */
+ 		/*FALLTHROUGH*/
+ 	case RTM_RESOLVE:
+ 		if (gate->sa_family != AF_LINK ||
+ 		    gate->sa_len < sizeof(null_sdl)) {
+-			log(LOG_DEBUG, "arp_rtrequest: bad gateway value\n");
+ 			break;
+ 		}
+ 		SDL(gate)->sdl_type = rt->rt_ifp->if_type;
+@@ -522,7 +768,6 @@
+ 		R_Malloc(la, struct llinfo_arp *, allocsize);
+ 		rt->rt_llinfo = (caddr_t)la;
+ 		if (la == 0) {
+-			log(LOG_DEBUG, "arp_rtrequest: malloc failed\n");
+ 			break;
+ 		}
+ 		arp_inuse++, arp_allocated++;
+@@ -582,13 +827,7 @@
+ 		rt->rt_llinfo = 0;
+ 		rt->rt_flags &= ~RTF_LLINFO;
+ 
+-		s = splnet();
+-		mold = la->la_hold;
+-		la->la_hold = 0;
+-		splx(s);
+-
+-		if (mold)
+-			m_freem(mold);
++		arp_hold_drain(la);	/* SCE */
+ 
+ 		Free((caddr_t)la);
+ 	}
+@@ -602,10 +841,11 @@
+  *	- arp header source ethernet address
+  */
+ static void
+-arprequest(ifp, sip, tip, enaddr)
++arprequest(ifp, sip, tip, enaddr, noautoconnect)
+ 	struct ifnet *ifp;
+ 	struct in_addr *sip, *tip;
+ 	u_int8_t *enaddr;
++	int noautoconnect;	/* SCE: the request does not redial the driver */
+ {
+ 	struct mbuf *m;
+ 	struct arphdr *ah;
+@@ -649,10 +889,54 @@
+ 	m->m_flags |= M_BCAST;
+ 	arpstat.as_sndtotal++;
+ 	arpstat.as_sndrequest++;
++	if (noautoconnect)	/* SCE */
++		m->m_flags |= M_SCE_NOAUTOCONNECT;
+ 	(*ifp->if_output)(ifp, m, &sa, (struct rtentry *)0);
+ }
+ 
+ /*
++ * SCE: hold a packet until the address is resolved, in place of the oldest
++ * one when the ring is full; 1 if one was freed.
++ */
++static __inline int
++arp_hold_enqueue(la, m)
++	struct llinfo_arp *la;
++	struct mbuf *m;
++{
++	int dropped = 0;
++
++	if (la->la_hold[la->la_holdnext]) {
++		m_freem(la->la_hold[la->la_holdnext]);
++		dropped = 1;
++	}
++	la->la_hold[la->la_holdnext] = m;
++	la->la_holdnext = (la->la_holdnext + 1) % LA_HOLD_MAX;
++	return (dropped);
++}
++
++/*
++ * SCE: send every packet an entry holds, oldest first; the count sent.
++ */
++static __inline int
++arp_hold_send(la, ifp, rt)
++	struct llinfo_arp *la;
++	struct ifnet *ifp;
++	struct rtentry *rt;
++{
++	int i, j, count = 0;
++
++	for (i = 0; i < LA_HOLD_MAX; i++) {
++		j = (la->la_holdnext + i) % LA_HOLD_MAX;
++		if (la->la_hold[j]) {
++			count++;
++			(*ifp->if_output)(ifp, la->la_hold[j], rt_key(rt), rt);
++			la->la_hold[j] = NULL;
++		}
++	}
++	return (count);
++}
++
++/*
+  * Resolve an IP address into an ethernet address.  If success,
+  * desten is filled in.  If there is no entry in arptab,
+  * set one up and broadcast a request for the IP address.
+@@ -672,8 +956,7 @@
+ {
+ 	struct llinfo_arp *la;
+ 	struct sockaddr_dl *sdl;
+-	struct mbuf *mold;
+-	int s;
++	long t;
+ 
+ 	if (rt)
+ 		la = (struct llinfo_arp *)rt->rt_llinfo;
+@@ -683,9 +966,6 @@
+ 	}
+ 	if (la == 0 || rt == 0) {
+ 		arpstat.as_allocfail++;
+-		log(LOG_DEBUG,
+-		    "arpresolve: can't allocate llinfo on %s for %s\n",
+-		    ifp->if_xname, in_fmtaddr(SIN(dst)->sin_addr));
+ 		m_freem(m);
+ 		return (0);
+ 	}
+@@ -698,24 +978,31 @@
+ 	    sdl->sdl_family == AF_LINK && sdl->sdl_alen != 0) {
+ 		bcopy(LLADDR(sdl), desten,
+ 		    min(sdl->sdl_alen, ifp->if_addrlen));
++		/*
++		 * SCE: in the entry's last five minutes, ask again
++		 * once a minute.
++		 */
++		if (rt->rt_expire) {
++			t = time.tv_sec - rt->rt_expire + 5*60;
++			if (t >= 0 && la->la_asked < t / 60 + 1) {
++				la->la_asked = t / 60 + 1;
++				arprequest(ifp,
++				    &SIN(rt->rt_ifa->ifa_addr)->sin_addr,
++				    &SIN(dst)->sin_addr,
++				    LLADDR(ifp->if_sadl),
++				    m && (m->m_flags & M_SCE_NOAUTOCONNECT));
++			}
++		}
+ 		return 1;
+ 	}
+ 	/*
+ 	 * There is an arptab entry, but no ethernet address
+-	 * response yet.  Replace the held mbuf with this
+-	 * latest one.
++	 * response yet.  SCE: add this latest mbuf to the held
++	 * ones, replacing the oldest when they are full.
+ 	 */
+ 
+ 	arpstat.as_dfrtotal++;
+-	s = splnet();
+-	mold = la->la_hold;
+-	la->la_hold = m;
+-	splx(s);
+-
+-	if (mold) {
+-		arpstat.as_dfrdropped++;
+-		m_freem(mold);
+-	}
++	arpstat.as_dfrdropped += arp_hold_enqueue(la, m);
+ 
+ 	/*
+ 	 * Re-send the ARP request when appropriate.
+@@ -723,7 +1010,6 @@
+ #ifdef	DIAGNOSTIC
+ 	if (rt->rt_expire == 0) {
+ 		/* This should never happen. (Should it? -gwr) */
+-		printf("arpresolve: unresolved and rt_expire == 0\n");
+ 		/* Set expiration time to now (expired). */
+ 		rt->rt_expire = time.tv_sec;
+ 	}
+@@ -736,7 +1022,8 @@
+ 				arprequest(ifp,
+ 				    &SIN(rt->rt_ifa->ifa_addr)->sin_addr,
+ 				    &SIN(dst)->sin_addr,
+-				    LLADDR(ifp->if_sadl));
++				    LLADDR(ifp->if_sadl),
++				    m && (m->m_flags & M_SCE_NOAUTOCONNECT));	/* SCE */
+ 			else {
+ 				rt->rt_flags |= RTF_REJECT;
+ 				rt->rt_expire += arpt_down;
+@@ -835,8 +1122,6 @@
+ 	struct sockaddr sa;
+ 	struct in_addr isaddr, itaddr, myaddr;
+ 	int op;
+-	struct mbuf *mold;
+-	int s;
+ 
+ 	ah = mtod(m, struct arphdr *);
+ 	op = ntohs(ah->ar_op);
+@@ -863,6 +1148,8 @@
+ 	bcopy((caddr_t)ar_spa(ah), (caddr_t)&isaddr, sizeof (isaddr));
+ 	bcopy((caddr_t)ar_tpa(ah), (caddr_t)&itaddr, sizeof (itaddr));
+ 
++	arpsock_input(m);	/* SCE */
++
+ 	if (m->m_flags & (M_BCAST|M_MCAST))
+ 		arpstat.as_rcvmcast++;
+ 
+@@ -946,17 +1233,11 @@
+ 	if (!bcmp((caddr_t)ar_sha(ah), (caddr_t)ifp->if_broadcastaddr,
+ 	    ifp->if_addrlen)) {
+ 		arpstat.as_rcvbcastsha++;
+-		log(LOG_ERR,
+-		    "%s: arp: link address is broadcast for IP address %s!\n",
+-		    ifp->if_xname, in_fmtaddr(isaddr));
+ 		goto out;
+ 	}
+ 
+ 	if (in_hosteq(isaddr, myaddr)) {
+ 		arpstat.as_rcvlocalspa++;
+-		log(LOG_ERR,
+-		   "duplicate IP address %s sent from link address %s\n",
+-		   in_fmtaddr(isaddr), lla_snprintf(ar_sha(ah), ah->ar_hln));
+ 		itaddr = myaddr;
+ 		goto reply;
+ 	}
+@@ -966,27 +1247,12 @@
+ 		    bcmp((caddr_t)ar_sha(ah), LLADDR(sdl), sdl->sdl_alen)) {
+ 			if (rt->rt_flags & RTF_STATIC) {
+ 				arpstat.as_rcvoverperm++;
+-				log(LOG_INFO,
+-				    "%s tried to overwrite permanent arp info"
+-				    " for %s\n",
+-				    lla_snprintf(ar_sha(ah), ah->ar_hln),
+-				    in_fmtaddr(isaddr));
+ 				goto out;
+ 			} else if (rt->rt_ifp != ifp) {
+ 				arpstat.as_rcvoverint++;
+-				log(LOG_INFO,
+-				    "%s on %s tried to overwrite "
+-				    "arp info for %s on %s\n",
+-				    lla_snprintf(ar_sha(ah), ah->ar_hln),
+-				    ifp->if_xname, in_fmtaddr(isaddr),
+-				    rt->rt_ifp->if_xname);
+ 				    goto out;
+ 			} else {
+ 				arpstat.as_rcvover++;
+-				log(LOG_INFO,
+-				    "arp info overwritten for %s by %s\n",
+-				    in_fmtaddr(isaddr),
+-				    lla_snprintf(ar_sha(ah), ah->ar_hln));
+ 			}
+ 		}
+ 		/*
+@@ -997,16 +1263,9 @@
+ 		if (sdl->sdl_alen &&
+ 		    sdl->sdl_alen != ah->ar_hln) {
+ 			arpstat.as_rcvlenchg++;
+-			log(LOG_WARNING,
+-			    "arp from %s: new addr len %d, was %d",
+-			    in_fmtaddr(isaddr), ah->ar_hln, sdl->sdl_alen);
+ 		}
+ 		if (ifp->if_addrlen != ah->ar_hln) {
+ 			arpstat.as_rcvbadlen++;
+-			log(LOG_WARNING,
+-			    "arp from %s: addr len: new %d, i/f %d (ignored)",
+-			    in_fmtaddr(isaddr), ah->ar_hln,
+-			    ifp->if_addrlen);
+ 			goto reply;
+ 		}
+ #if NTOKEN > 0
+@@ -1043,15 +1302,7 @@
+ 		rt->rt_flags &= ~RTF_REJECT;
+ 		la->la_asked = 0;
+ 
+-		s = splnet();
+-		mold = la->la_hold;
+-		la->la_hold = 0;
+-		splx(s);
+-
+-		if (mold) {
+-			arpstat.as_dfrsent++;
+-			(*ifp->if_output)(ifp, mold, rt_key(rt), rt);
+-		}
++		arpstat.as_dfrsent += arp_hold_send(la, ifp, rt);	/* SCE */
+ 	}
+ reply:
+ 	if (op != ARPOP_REQUEST) {
+@@ -1120,8 +1371,7 @@
+ 
+ 	ARP_LOCK_CHECK();
+ 
+-	if (rt == 0)
+-		panic("arptfree");
++	/* SCE: no panic without a route */
+ 	if (rt->rt_refcnt > 0 && (sdl = SDL(rt->rt_gateway)) &&
+ 	    sdl->sdl_family == AF_LINK) {
+ 		sdl->sdl_alen = 0;
+@@ -1133,62 +1383,7 @@
+ 	    0, (struct rtentry **)0);
+ }
+ 
+-/*
+- * Lookup or enter a new address in arptab.
+- */
+-static struct llinfo_arp *
+-arplookup(m, addr, create, proxy)
+-	struct mbuf *m;
+-	struct in_addr *addr;
+-	int create, proxy;
+-{
+-	struct arphdr *ah;
+-	struct ifnet *ifp = m->m_pkthdr.rcvif;
+-	struct rtentry *rt;
+-	static struct sockaddr_inarp sin;
+-	const char *why = 0;
+-
+-	ah = mtod(m, struct arphdr *);
+-	sin.sin_len = sizeof(sin);
+-	sin.sin_family = AF_INET;
+-	sin.sin_addr = *addr;
+-	sin.sin_other = proxy ? SIN_PROXY : 0;
+-	rt = rtalloc1(sintosa(&sin), create);
+-	if (rt == 0)
+-		return (0);
+-	rt->rt_refcnt--;
+-
+-	if (rt->rt_flags & RTF_GATEWAY)
+-		why = "host is not on local network";
+-	else if ((rt->rt_flags & RTF_LLINFO) == 0) {
+-		arpstat.as_allocfail++;
+-		why = "could not allocate llinfo";
+-	} else if (rt->rt_gateway->sa_family != AF_LINK)
+-		why = "gateway route is not ours";
+-	else
+-		return ((struct llinfo_arp *)rt->rt_llinfo);
+-
+-	if (create) {
+-		log(LOG_DEBUG, "arplookup: unable to enter address"
+-		    " for %s@%s on %s (%s)\n",
+-		    in_fmtaddr(*addr), lla_snprintf(ar_sha(ah), ah->ar_hln),
+-		    (ifp) ? ifp->if_xname : 0, why);
+-		if (rt->rt_refcnt <= 0 && (rt->rt_flags & RTF_CLONED) != 0) {
+-			rtrequest(RTM_DELETE, (struct sockaddr *)rt_key(rt),
+-		    	    rt->rt_gateway, rt_mask(rt), rt->rt_flags, 0);
+-		}
+-	}
+-	return (0);
+-}
+-
+-int
+-arpioctl(cmd, data)
+-	u_long cmd;
+-	caddr_t data;
+-{
+-
+-	return (EOPNOTSUPP);
+-}
++/* SCE: no arpioctl */
+ 
+ void
+ arp_ifinit(ifp, ifa)
+@@ -1203,7 +1398,7 @@
+ 	 */
+ 	ip = &IA_SIN(ifa)->sin_addr;
+ 	if (!in_nullhost(*ip))
+-		arprequest(ifp, ip, ip, LLADDR(ifp->if_sadl));
++		arprequest(ifp, ip, ip, LLADDR(ifp->if_sadl), 1);	/* SCE */
+ 
+ 	ifa->ifa_rtrequest = arp_rtrequest;
+ 	ifa->ifa_flags |= RTF_CLONING;
+@@ -1303,77 +1498,28 @@
+ 	m_freem(m);
+ }
+ 
++/* SCE: no revarprequest or revarpwhoarewe */
++
+ /*
+- * Send a RARP request for the ip address of the specified interface.
+- * The request should be RFC 903-compliant.
++ * SCE: the raw Ethernet sockets' software interrupt.
+  */
+ void
+-revarprequest(ifp)
+-	struct ifnet *ifp;
++sceNetPsIsdnInterrupt()
+ {
+-	struct sockaddr sa;
+ 	struct mbuf *m;
+-	struct arphdr *ah;
+-
+-	if ((m = m_gethdr(M_DONTWAIT, MT_DATA)) == NULL)
+-		return;
+-	MCLAIM(m, &arpdomain.dom_mowner);
+-	m->m_len = sizeof(*ah) + 2*sizeof(struct in_addr) +
+-	    2*ifp->if_addrlen;
+-	m->m_pkthdr.len = m->m_len;
+-	MH_ALIGN(m, m->m_len);
+-	ah = mtod(m, struct arphdr *);
+-	bzero((caddr_t)ah, m->m_len);
+-	ah->ar_pro = htons(ETHERTYPE_IP);
+-	ah->ar_hln = ifp->if_addrlen;		/* hardware address length */
+-	ah->ar_pln = sizeof(struct in_addr);	/* protocol address length */
+-	ah->ar_op = htons(ARPOP_REVREQUEST);
+-
+-	bcopy(LLADDR(ifp->if_sadl), (caddr_t)ar_sha(ah), ah->ar_hln);
+-	bcopy(LLADDR(ifp->if_sadl), (caddr_t)ar_tha(ah), ah->ar_hln);
+-
+-	sa.sa_family = AF_ARP;
+-	sa.sa_len = 2;
+-	m->m_flags |= M_BCAST;
+-	(*ifp->if_output)(ifp, m, &sa, (struct rtentry *)0);
+-
+-}
+-
+-/*
+- * RARP for the ip address of the specified interface, but also
+- * save the ip address of the server that sent the answer.
+- * Timeout if no response is received.
+- */
+-int
+-revarpwhoarewe(ifp, serv_in, clnt_in)
+-	struct ifnet *ifp;
+-	struct in_addr *serv_in;
+-	struct in_addr *clnt_in;
+-{
+-	int result, count = 20;
+-
+-	myip_initialized = 0;
+-	myip_ifp = ifp;
++	int s;
+ 
+-	revarp_in_progress = 1;
+-	while (count--) {
+-		revarprequest(ifp);
+-		result = tsleep((caddr_t)&myip, PSOCK, "revarp", hz/2);
+-		if (result != EWOULDBLOCK)
+-			break;
++	while (isdnintrq.ifq_head) {
++		s = splnet();
++		IF_DEQUEUE(&isdnintrq, m);
++		splx(s);
++		if (m == 0 || (m->m_flags & M_PKTHDR) == 0)
++			panic("sceNetPsIsdnInterrupt");
++		isdn_input(m);
++		m_freem(m);
+ 	}
+-	revarp_in_progress = 0;
+-
+-	if (!myip_initialized)
+-		return ENETUNREACH;
+-
+-	bcopy((caddr_t)&srv_ip, serv_in, sizeof(*serv_in));
+-	bcopy((caddr_t)&myip, clnt_in, sizeof(*clnt_in));
+-	return 0;
+ }
+ 
+-
+-
+ #ifdef DDB
+ 
+ #include <machine/db_machdep.h>

@@ -73,9 +73,10 @@ struct	arphdr {
 #endif
 #define ar_sha(ap) (((caddr_t)((ap)+1))+0)
 #define ar_spa(ap) (((caddr_t)((ap)+1))+(ap)->ar_hln)
+/* SCE: (caddr_t)1, not NULL, for an IEEE 1394 header */
 #define ar_tha(ap) \
 	(ntohs((ap)->ar_hrd) == ARPHRD_IEEE1394 \
-		? NULL : (((caddr_t)((ap)+1))+(ap)->ar_hln+(ap)->ar_pln))
+		? (caddr_t)1 : (((caddr_t)((ap)+1))+(ap)->ar_hln+(ap)->ar_pln))
 #define ar_tpa(ap) \
 	(ntohs((ap)->ar_hrd) == ARPHRD_IEEE1394 \
 		? (((caddr_t)((ap)+1))+(ap)->ar_hln+(ap)->ar_pln) \

@@ -241,5 +241,19 @@ int sceNetPsEpollCreate(const char *name, int flags);
 int sceNetPsEpollClose(int epollId);
 int sceNetPsEpollAbort(int epollId, int flags);
 
+struct ifnet;
+
+/* net_ps_glue.c */
+int sceNetPsSetNoAutoConnect(struct mbuf *m, struct ifnet *ifp,
+			     struct socket *so);
+int sceNetPsCheckDisabledInterface(struct mbuf *m, struct ifnet *ifp,
+				   struct socket *so);
+
+/* net_ps_packet.c */
+int sceNetPsFilterTxSocket(struct mbuf *m, struct ifnet *ifp,
+			   struct socket *so);
+int sceNetPsFilterRxSocket(struct mbuf *m, struct ifnet *ifp,
+			   struct socket *so);
+
 #endif
 

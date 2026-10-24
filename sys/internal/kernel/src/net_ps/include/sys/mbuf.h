@@ -297,6 +297,7 @@ MBUF_DEFINE(mbuf, MHLEN, MLEN);
 
 /* SCE: net_ps's own packet flags (net_ps_emulation.c, net_ps_glue.c), no Sony names known */
 #define	M_SCE_FLAGS	0x00ff0000
+#define	M_SCE_EMULATION_DROP	0x00020000	/* the receive emulation chose it to drop */
 #define	M_SCE_NOAUTOCONNECT	0x00400000	/* sending it does not redial the driver */
 #define	M_SCE_NOIDLERESET	0x00800000	/* sending it does not reset the idle time */
 
