@@ -42,8 +42,9 @@
 #include <sys/types.h>
 
 /*
- * SCE: the psp2 port swaps with ARMv6's rev and rev16, in a word, and never
- * folds a constant (htons(ETHERTYPE_IP) is swapped at run time)
+ * SCE: the psp2 port swaps with ARMv6's rev and rev16, a halfword in a word;
+ * a constant word is folded, a constant halfword is not (htons(ETHERTYPE_IP)
+ * is swapped at run time)
  */
 static __inline u_int32_t
 __byte_swap_32_variable(u_int32_t v)
@@ -63,7 +64,24 @@ __byte_swap_16_variable(u_int32_t v)
 	return (v);
 }
 
+#ifdef __OPTIMIZE__
+
+#define __byte_swap_32_constant(x)	\
+	((((x) & 0xff000000U) >> 24) |	\
+	 (((x) & 0x00ff0000U) >>  8) |	\
+	 (((x) & 0x0000ff00U) <<  8) |	\
+	 (((x) & 0x000000ffU) << 24))
+
+#define	__byte_swap_32(x)		\
+	(__builtin_constant_p((x)) ?	\
+	 __byte_swap_32_constant(x) :	__byte_swap_32_variable(x))
+
+#else
+
 #define	__byte_swap_32(x)	__byte_swap_32_variable(x)
+
+#endif /* __OPTIMIZE__ */
+
 #define	__byte_swap_16(x)	__byte_swap_16_variable(x)
 
 #endif /* _ARM_BYTE_SWAP_H_ */
