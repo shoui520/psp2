@@ -107,6 +107,7 @@ struct inpcb {
 #define	INP_ANONPORT		0x40	/* port chosen for user */
 #define	INP_RECVIF		0x80	/* receive incoming interface */
 #define	INP_TTLCHK		0x100	/* SCE: record the highest TTL received */
+#define	INP_SCE_PSEUDOHDR	0x200	/* SCE: IP_SCE_PSEUDOHDR */
 #define	INP_DONTFRAG		0x800	/* SCE: send with IP_DF */
 #define	INP_CONTROLOPTS		(INP_RECVOPTS|INP_RECVRETOPTS|INP_RECVDSTADDR|\
 				INP_RECVIF)

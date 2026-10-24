@@ -1,0 +1,143 @@
+--- a/netinet/raw_ip.c
++++ b/netinet/raw_ip.c
+@@ -91,6 +91,8 @@
+ 
+ #include <machine/stdarg.h>
+ 
++#include "netps_socket.h"	/* SCE */
++
+ #ifdef IPSEC
+ #include <netinet6/ipsec.h>
+ #endif /*IPSEC*/
+@@ -105,8 +107,9 @@
+ int	 rip_pcbnotify __P((struct inpcbtable *, struct in_addr,
+     struct in_addr, int, int, void (*) __P((struct inpcb *, int))));
+ int	 rip_bind __P((struct inpcb *, struct mbuf *));
+-int	 rip_connect __P((struct inpcb *, struct mbuf *));
+-void	 rip_disconnect __P((struct inpcb *));
++/* SCE: rip_connect and rip_disconnect are inlined */
++static int	 rip_connect __P((struct inpcb *, struct mbuf *));
++static void	 rip_disconnect __P((struct inpcb *));
+ 
+ /*
+  * Nominal space allocated to a raw ip socket.
+@@ -160,7 +163,9 @@
+ 	ripsrc.sin_len = sizeof(struct sockaddr_in);
+ 	ripsrc.sin_addr = ip->ip_src;
+ 	ripsrc.sin_port = 0;
+-	bzero((caddr_t)ripsrc.sin_zero, sizeof(ripsrc.sin_zero));
++	/* SCE: the virtual port too */
++	bzero((caddr_t)&ripsrc.sin_vport, sizeof(ripsrc.sin_vport) +
++	    sizeof(ripsrc.sin_zero));
+ 
+ 	/*
+ 	 * XXX Compatibility: programs using raw IP expect ip_len
+@@ -182,6 +187,17 @@
+ 		if (!in_nullhost(inp->inp_faddr) &&
+ 		    !in_hosteq(inp->inp_faddr, ip->ip_src))
+ 			continue;
++		/* SCE: what a socket with SO_SCE_OPTION_8000 sent reaches only such sockets */
++		if (inp->inp_socket != NULL &&
++		    (inp->inp_socket->so_options & SO_SCE_OPTION_8000) == 0 &&
++		    (m->m_flags & M_SCE_OPTION_8000))
++			continue;
++		/* SCE: a packet the receive emulation chose to drop is filtered per socket */
++		if ((m->m_flags & M_SCE_EMULATION_DROP) &&
++		    sceNetPsFilterRxSocket(m, m->m_pkthdr.rcvif, inp->inp_socket)) {
++			m->m_flags |= M_SCE_FILTER_COUNTED;
++			continue;
++		}
+ 		if (last) {
+ 			struct mbuf *n;
+ 
+@@ -350,7 +366,7 @@
+ 		ip->ip_len = htons(m->m_pkthdr.len);
+ 		ip->ip_src = inp->inp_laddr;
+ 		ip->ip_dst = inp->inp_faddr;
+-		ip->ip_ttl = MAXTTL;
++		ip->ip_ttl = inp->inp_ip.ip_ttl;	/* SCE: the socket's TTL */
+ 		opts = inp->inp_options;
+ 	} else {
+ 		if (m->m_pkthdr.len > IP_MAXPACKET) {
+@@ -387,6 +403,12 @@
+ 		flags |= IP_RAWOUTPUT;
+ 		ipstat.ips_rawout++;
+ 	}
++	/* SCE: IP_SCE_PSEUDOHDR has ip_output fill the TCP/UDP pseudo-header sum */
++	if (inp->inp_flags & INP_SCE_PSEUDOHDR)
++		m->m_pkthdr.csum_flags = M_CSUM_SCE_PSEUDOHDR;
++	/* SCE: IP_DONTFRAG on a header we filled in sends it as it is */
++	if ((inp->inp_flags & (INP_DONTFRAG|INP_HDRINCL)) == INP_DONTFRAG)
++		flags |= IP_FORWARDING;
+ 	return (ip_output(m, opts, &inp->inp_route, flags, inp->inp_moptions,
+ 	     inp->inp_socket, &inp->inp_errormtu));
+ }
+@@ -425,6 +447,19 @@
+ 				(void) m_free(*m);
+ 			break;
+ 
++		case IP_SCE_PSEUDOHDR:	/* SCE */
++			if (*m == 0 || (*m)->m_len < sizeof (int))
++				error = EINVAL;
++			else {
++				if (*mtod(*m, int *))
++					inp->inp_flags |= INP_SCE_PSEUDOHDR;
++				else
++					inp->inp_flags &= ~INP_SCE_PSEUDOHDR;
++			}
++			if (*m != 0)
++				(void) m_free(*m);
++			break;
++
+ #ifdef MROUTING
+ 		case MRT_INIT:
+ 		case MRT_DONE:
+@@ -452,6 +487,13 @@
+ 			*mtod(*m, int *) = inp->inp_flags & INP_HDRINCL ? 1 : 0;
+ 			break;
+ 
++		case IP_SCE_PSEUDOHDR:	/* SCE */
++			*m = m_get(M_WAIT, MT_SOOPTS);
++			MCLAIM((*m), so->so_mowner);
++			(*m)->m_len = sizeof (int);
++			*mtod(*m, int *) = inp->inp_flags & INP_SCE_PSEUDOHDR ? 1 : 0;
++			break;
++
+ #ifdef MROUTING
+ 		case MRT_VERSION:
+ 		case MRT_ASSERT:
+@@ -489,7 +531,7 @@
+ 	return (0);
+ }
+ 
+-int
++static int
+ rip_connect(inp, nam)
+ 	struct inpcb *inp;
+ 	struct mbuf *nam;
+@@ -507,7 +549,7 @@
+ 	return (0);
+ }
+ 
+-void
++static void
+ rip_disconnect(inp)
+ 	struct inpcb *inp;
+ {
+@@ -562,7 +604,7 @@
+ 			error = EISCONN;
+ 			break;
+ 		}
+-		if (p == 0 || (error = suser(p->p_ucred, &p->p_acflag))) {
++		if (p == 0) {	/* SCE: no privilege check */
+ 			error = EACCES;
+ 			break;
+ 		}
+@@ -576,6 +618,7 @@
+ 			break;
+ 		inp = sotoinpcb(so);
+ 		inp->inp_ip.ip_p = (long)nam;
++		inp->inp_ip.ip_ttl = MAXTTL;	/* SCE: rip_output sends with it */
+ 		break;
+ 
+ 	case PRU_DETACH:

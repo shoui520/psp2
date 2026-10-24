@@ -274,6 +274,7 @@ struct ip_opts {
 /* SCE: Sony's options (the SDK's SCE_NET_IP_TTLCHK, SCE_NET_IP_MAXTTL, SCE_NET_IP_DONTFRAG) */
 #define	IP_TTLCHK		23   /* bool; record the highest TTL received */
 #define	IP_MAXTTL		24   /* int; get the highest TTL received */
+#define	IP_SCE_PSEUDOHDR	25   /* bool; SCE: raw output gets the TCP/UDP pseudo-header sum (no SDK name) */
 #define	IP_DONTFRAG		26   /* bool; send with IP_DF */
 
 /*

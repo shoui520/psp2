@@ -60,6 +60,8 @@ net_ps_prepare_patched(${netbsd}/netinet/ip_input.c ${CMAKE_CURRENT_SOURCE_DIR}/
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/ip_input.c)
 net_ps_prepare_patched(${netbsd}/netinet/ip_output.c ${CMAKE_CURRENT_SOURCE_DIR}/ip_output_sce.patch
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/ip_output.c)
+net_ps_prepare_patched(${netbsd}/netinet/raw_ip.c ${CMAKE_CURRENT_SOURCE_DIR}/raw_ip_sce.patch
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/raw_ip.c)
 set(netbsd_sources
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/kern/kern_subr.c
 	${netbsd}/kern/kern_timeout.c
@@ -88,6 +90,7 @@ set(netbsd_sources
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/ip_id.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/ip_input.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/ip_output.c
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/raw_ip.c
 )
 set_source_files_properties(${netbsd_sources} PROPERTIES COMPILE_OPTIONS "-fno-strict-aliasing;-fgnu89-inline"
 	COMPILE_DEFINITIONS NET_PS_NETBSD)
