@@ -17,7 +17,6 @@
 #include <net/errno.h>
 
 int sceNetPsCheckMemoryAvailability(int size, int count);
-int sceNetPsEpollCtl(int epoll, int operation, int socket, SceNetEpollEvent *event);
 struct mbuf *m_get(int how, int type);
 extern struct malloc_type *mbtypes[8];
 int sceNetPsRoutingSysctl(const int *name, unsigned int nameLength, void *oldData,

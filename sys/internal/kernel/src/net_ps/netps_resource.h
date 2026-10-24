@@ -35,6 +35,10 @@ typedef struct SceNetPsDescriptor {
 /* the socket was closed; the entry stays until the epoll removes it */
 #define SCE_NETPS_EPOLL_ENTRY_CLOSED		4
 
+/* SceNetEpollEvent.events bits of SCE's own (the SDK names none) */
+#define SCE_NETPS_EPOLL_NOTICE		0x20000	/* OUT: a timeout or an automatic connection ended */
+#define SCE_NETPS_EPOLL_CONNECTED	0x40000	/* IN/OUT: the automatic connection ended */
+
 /* SceNetPsEpoll.flags: a thread sleeps in sceNetEpollWait */
 #define SCE_NETPS_EPOLL_WAITING		1
 

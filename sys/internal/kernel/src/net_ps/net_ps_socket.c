@@ -54,7 +54,6 @@ struct mbuf *m_get(int how, int type);
 void sce_psnet_panic(const char *message, ...) __attribute__((noreturn));
 extern struct malloc_type *mbtypes[8];
 int sceNetPsDestroyDump(unsigned int dumpId, struct SceNetPsDump *dump);
-int sceNetPsDestroyEpoll(unsigned int epollId, SceNetPsEpoll *epoll);
 int sceNetPsDestroyDescriptor(unsigned int descriptorId,
 			     SceNetPsDescriptor *descriptor);
 int sceNetPsRoutingSysctl(const int *name, unsigned int nameLength, void *oldData,
@@ -2555,6 +2554,74 @@ int sceNetPsDumpAbort(int dumpId, int flags)
 	return error ? -error : error;
 }
 
+/* SCE: free an epoll with its entries, wake its waiter and release its identifier */
+int sceNetPsDestroyEpoll(unsigned int epollId, SceNetPsEpoll *epoll)
+{
+	SceNetPsEpollEntry *entry;
+
+	if (epoll->flags & SCE_NETPS_EPOLL_WAITING)
+		sceNetPsWakeupCanceled(epoll);
+	while ((entry = epoll->entries) != NULL) {
+		if ((entry->kind & SCE_NETPS_EPOLL_ENTRY_SOCKET) &&
+		    entry->target.socket)
+			entry->target.socket->epollReferences--;
+		if (entry->next)
+			entry->next->prev = entry->prev;
+		*entry->prev = entry->next;
+		sceNetPsFree(entry);
+	}
+	sceNetPsConsumeWakeup((const void *)(uintptr_t)epollId, 0);
+	sceNetPsFree(epoll);
+	sceNetPsSetEpoll(epollId, NULL);
+	return 0;
+}
+
+/*
+ * SCE: NetBSD's soreadable and sowritable for the requested events, with
+ * SB_SEL set on the buffers that are not ready; a closed entry reports what
+ * it asked for
+ */
+static int sceNetPsPollEpollEntry(unsigned int kind, const unsigned int *events,
+				  struct socket *so)
+{
+	int revents, error;
+
+	if (kind & SCE_NETPS_EPOLL_ENTRY_CLOSED)
+		return *events & (SCE_NET_EPOLLIN | SCE_NET_EPOLLOUT);
+	if (so == NULL)
+		return 0;
+	revents = 0;
+	if (*events & SCE_NET_EPOLLIN) {
+		if (soreadable(so))
+			revents = SCE_NET_EPOLLIN;
+		else
+			so->so_rcv.sb_flags |= SB_SEL;
+	}
+	error = so->so_error;
+	if (*events & SCE_NET_EPOLLOUT) {
+		if ((sbspace(&so->so_snd) >= so->so_snd.sb_lowat &&
+		     ((so->so_state & SS_ISCONNECTED) ||
+		      (so->so_proto->pr_flags & PR_CONNREQUIRED) == 0)) ||
+		    (so->so_state & SS_CANTSENDMORE) || error)
+			revents |= SCE_NET_EPOLLOUT;
+		else
+			so->so_snd.sb_flags |= SB_SEL;
+	}
+	if (so->so_snd.sb_flags & SB_SCE_CONNECTED) {
+		revents |= SCE_NETPS_EPOLL_CONNECTED | SCE_NETPS_EPOLL_NOTICE;
+		so->so_snd.sb_flags &= ~SB_SCE_CONNECTED;
+	}
+	if (error == EINTR)
+		return SCE_NET_EPOLLHUP;
+	if (error == SCE_NET_ETIME) {
+		so->so_error = 0;
+		return revents | SCE_NETPS_EPOLL_NOTICE;
+	}
+	if (error && !(revents & (SCE_NET_EPOLLIN | SCE_NET_EPOLLOUT)))
+		return SCE_NET_EPOLLERR;
+	return revents;
+}
+
 /*
  * SCE: mark the socket's epoll entries closed and, unless aborting, free
  * them, waking each epoll that waits; returns the registrations left.
@@ -2681,6 +2748,335 @@ int sceNetPsEpollCreate(const char *name, int flags)
 out:
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 	return result;
+}
+
+/* SCE: the epoll's entry for the socket or the descriptor */
+static inline SceNetPsEpollEntry *sceNetPsFindEpollEntry(SceNetPsEpoll *epoll,
+							 struct socket *so,
+							 SceNetPsDescriptor *descriptor)
+{
+	SceNetPsEpollEntry *entry;
+
+	for (entry = epoll->entries; entry != NULL; entry = entry->next) {
+		if ((entry->kind & SCE_NETPS_EPOLL_ENTRY_SOCKET) &&
+		    entry->target.socket == so)
+			break;
+		if ((entry->kind & SCE_NETPS_EPOLL_ENTRY_DESCRIPTOR) &&
+		    entry->target.descriptor == descriptor)
+			break;
+	}
+	return entry;
+}
+
+/* SCE: the event's system words are the kernel's; the caller leaves them 0 */
+static inline int sceNetPsIsEpollSystemDataClear(const SceNetEpollEvent *event)
+{
+	return event->system.system[0] == 0 && event->system.system[1] == 0 &&
+	       event->system.system[2] == 0 && event->system.system[3] == 0;
+}
+
+/*
+ * SCE: sceNetEpollControl: an identifier in the descriptor range names a
+ * descriptor, any other a socket
+ */
+int sceNetPsEpollCtl(int epollId, int operation, int id,
+		     const SceNetEpollEvent *event)
+{
+	SceNetPsEpoll *epoll;
+	SceNetPsEpollEntry *entry;
+	SceNetPsDescriptor *descriptor;
+	SceNetPsDescriptorEntry *member;
+	struct socket *so;
+	int first, last, error = 0;
+
+	sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
+	epoll = sceNetPsLookupEpoll(epollId, 0);
+	if (epoll == NULL)
+		goto badf;
+	sceNetPsGetDescriptorIdRange(&first, &last);
+	if (id >= first && id <= last) {
+		so = NULL;
+		descriptor = sceNetPsLookupDescriptor(id, 0);
+		if (descriptor == NULL)
+			goto badf;
+	} else {
+		descriptor = NULL;
+		so = sceNetPsLookupSocket(id, &error, 0);
+		if (so == NULL)
+			goto out;
+	}
+	if (operation == SCE_NET_EPOLL_CTL_MOD) {
+		if (event == NULL)
+			goto inval;
+		entry = sceNetPsFindEpollEntry(epoll, so, descriptor);
+		if (entry == NULL)
+			goto badf;
+		error = copyin(event, &entry->event, sizeof(entry->event));
+		if (error)
+			goto out;
+		if (!sceNetPsIsEpollSystemDataClear(&entry->event))
+			goto inval;
+		goto wakeup;
+	}
+	if (operation == SCE_NET_EPOLL_CTL_DEL) {
+		if (event != NULL)
+			goto inval;
+		entry = sceNetPsFindEpollEntry(epoll, so, descriptor);
+		if (entry == NULL)
+			goto badf;
+		if ((entry->kind & SCE_NETPS_EPOLL_ENTRY_SOCKET) &&
+		    entry->target.socket == so) {
+			so->so_rcv.sb_flags &= ~SB_SEL;
+			so->so_snd.sb_flags &= ~SB_SEL;
+			so->epollReferences--;
+		} else {
+			for (member = descriptor->entries; member != NULL;
+			     member = member->next) {
+				so = member->socket;
+				if (so) {
+					so->so_rcv.sb_flags &= ~SB_SEL;
+					so->so_snd.sb_flags &= ~SB_SEL;
+				}
+			}
+		}
+		if (entry->next)
+			entry->next->prev = entry->prev;
+		*entry->prev = entry->next;
+		sceNetPsFree(entry);
+		goto wakeup;
+	}
+	if (operation != SCE_NET_EPOLL_CTL_ADD || event == NULL)
+		goto inval;
+	if (sceNetPsFindEpollEntry(epoll, so, descriptor) != NULL) {
+		error = EEXIST;
+		goto fail;
+	}
+	entry = sceNetPsMalloc(sizeof(*entry), 3, 8);
+	if (entry == NULL) {
+		error = ENOMEM;
+		goto fail;
+	}
+	error = copyin(event, &entry->event, sizeof(entry->event));
+	if (error) {
+		sceNetPsFree(entry);
+		goto out;
+	}
+	if (!sceNetPsIsEpollSystemDataClear(&entry->event)) {
+		error = EINVAL;
+		sceNetPsFree(entry);
+		goto out;
+	}
+	if (so) {
+		entry->kind = SCE_NETPS_EPOLL_ENTRY_SOCKET;
+		entry->target.socket = so;
+		so->epollReferences++;
+	} else if (descriptor) {
+		entry->kind = SCE_NETPS_EPOLL_ENTRY_DESCRIPTOR;
+		entry->target.descriptor = descriptor;
+	} else {
+		error = ENOSPC;
+		sceNetPsFree(entry);
+		goto out;
+	}
+	entry->id = id;
+	entry->next = epoll->entries;
+	if (epoll->entries)
+		epoll->entries->prev = &entry->next;
+	epoll->entries = entry;
+	entry->prev = &epoll->entries;
+wakeup:
+	if (epoll->flags & SCE_NETPS_EPOLL_WAITING)
+		sceNetPsWakeupNormal(epoll);
+out:
+	return sceNetPsUnlockResult(error, 0);
+inval:
+	error = EINVAL;
+	goto fail;
+badf:
+	error = EBADF;
+fail:
+	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
+	return -error;
+}
+
+/*
+ * SCE: sceNetEpollWait: collect up to maxevents ready entries, sleeping
+ * until one is ready or the timeout ends; a descriptor reports its first
+ * ready socket with that entry's system data, and a watched socket once
+ * when its connection is writable. The time left goes back to *timeoutp.
+ */
+int sceNetPsEpollWait(int epollId, SceNetEpollEvent *events, int maxevents,
+		      int *timeoutp, int callback)
+{
+	SceNetPsEpoll *epoll;
+	SceNetPsEpollEntry *entry;
+	SceNetPsDescriptor *descriptor;
+	SceNetPsDescriptorEntry *member;
+	SceNetEpollEvent *ready;
+	struct socket *so;
+	SceUInt64 elapsed = 0, now;
+	unsigned int sleepFlags;
+	int timeout, delay, size, count, revents, result, error;
+
+	sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
+	epoll = sceNetPsLookupEpoll(epollId, 0);
+	if (epoll == NULL) {
+		error = EBADF;
+		goto fail;
+	}
+	if (events == NULL || maxevents <= 0) {
+		error = EINVAL;
+		goto fail;
+	}
+	count = 0;
+	error = copyin(timeoutp, &timeout, sizeof(timeout));
+	if (error)
+		goto out;
+	if (sceNetPsConsumeWakeup((const void *)(uintptr_t)epollId, 1)) {
+		error = EINTR;
+		goto fail;
+	}
+	size = maxevents * sizeof(*ready);
+	ready = sceNetPsMalloc(size, 3, 8);
+	if (ready == NULL) {
+		error = ENOMEM;
+		goto fail;
+	}
+	error = 0;
+	delay = sceNetPsNormalizeTimeout(timeout);
+	sleepFlags = callback != 0;
+	for (;;) {
+		count = 0;
+		for (entry = epoll->entries; entry != NULL; entry = entry->next) {
+			if (entry->kind & SCE_NETPS_EPOLL_ENTRY_SOCKET) {
+				revents = sceNetPsPollEpollEntry(entry->kind,
+						&entry->event.events,
+						entry->target.socket);
+				if (entry->event.events & SCE_NETPS_EPOLL_CONNECTED)
+					revents &= ~SCE_NETPS_EPOLL_NOTICE;
+				else
+					revents &= ~(SCE_NETPS_EPOLL_NOTICE |
+						     SCE_NETPS_EPOLL_CONNECTED);
+				if (revents == 0)
+					continue;
+				ready[count] = entry->event;
+				ready[count].events = revents;
+			} else if (entry->kind & SCE_NETPS_EPOLL_ENTRY_DESCRIPTOR) {
+				descriptor = entry->target.descriptor;
+				if (descriptor == NULL)
+					continue;
+				for (member = descriptor->entries; member != NULL;
+				     member = member->next) {
+					so = member->socket;
+					if ((member->flags &
+					     (SCE_NETPS_DESCRIPTOR_ENTRY_WATCH |
+					      SCE_NETPS_DESCRIPTOR_ENTRY_FIRED)) ==
+					    SCE_NETPS_DESCRIPTOR_ENTRY_WATCH &&
+					    so->so_type == SOCK_STREAM &&
+					    sowritable(so)) {
+						revents = SCE_NET_EPOLLIN |
+							  SCE_NET_EPOLLDESCID |
+							  SCE_NETPS_EPOLL_NOTICE;
+						member->flags |=
+							SCE_NETPS_DESCRIPTOR_ENTRY_FIRED;
+						sceNetPsPollEpollEntry(entry->kind,
+							&entry->event.events, so);
+						break;
+					}
+					revents = sceNetPsPollEpollEntry(entry->kind,
+							&entry->event.events, so);
+					if (revents) {
+						if (revents & ~(SCE_NETPS_EPOLL_NOTICE |
+								SCE_NET_EPOLLHUP))
+							revents |= SCE_NET_EPOLLDESCID;
+						break;
+					}
+				}
+				if (member == NULL)
+					continue;
+				sceNetPsStopDescriptorEntry(member);
+				ready[count] = entry->event;
+				ready[count].events = revents;
+				memcpy(&ready[count].system, &member->system,
+				       sizeof(member->system));
+			} else {
+				continue;
+			}
+			if (++count >= maxevents)
+				break;
+		}
+		if (count) {
+			error = 0;
+			break;
+		}
+		if (error)
+			break;
+		if (delay > 0) {
+			if (elapsed >= (SceUInt64)delay)
+				break;
+			delay -= (int)elapsed;
+		}
+		if (delay == 0)
+			break;
+		/* elapsed holds the time the sleep starts until it ends */
+		sceNetPsGetSystemTime(&elapsed);
+		epoll->flags |= SCE_NETPS_EPOLL_WAITING;
+		error = sceNetPsSleep(epoll, sleepFlags, NULL, delay);
+		if (error == ECANCELED) {
+			count = 0;
+			goto release;
+		}
+		epoll->flags &= ~SCE_NETPS_EPOLL_WAITING;
+		sceNetPsGetSystemTime(&now);
+		if (delay > 0) {
+			if (timeout - (int)(now - elapsed) >= 0)
+				timeout -= now - elapsed;
+			else
+				timeout = 0;
+			elapsed = now - elapsed;
+		}
+	}
+	for (entry = epoll->entries; entry != NULL; entry = entry->next) {
+		if (entry->kind & SCE_NETPS_EPOLL_ENTRY_SOCKET) {
+			so = entry->target.socket;
+			if (so) {
+				if (entry->event.events & SCE_NET_EPOLLIN)
+					so->so_rcv.sb_flags &= ~SB_SEL;
+				if (entry->event.events & SCE_NET_EPOLLOUT)
+					so->so_snd.sb_flags &= ~SB_SEL;
+			}
+		} else if (entry->kind & SCE_NETPS_EPOLL_ENTRY_DESCRIPTOR) {
+			descriptor = entry->target.descriptor;
+			if (descriptor == NULL)
+				continue;
+			for (member = descriptor->entries; member != NULL;
+			     member = member->next) {
+				so = member->socket;
+				if (so == NULL)
+					continue;
+				if (entry->event.events & SCE_NET_EPOLLIN)
+					so->so_rcv.sb_flags &= ~SB_SEL;
+				if (entry->event.events & SCE_NET_EPOLLOUT)
+					so->so_snd.sb_flags &= ~SB_SEL;
+			}
+		}
+	}
+	/* a timed-out sleep is a wait that found nothing */
+	result = copyout(&timeout, timeoutp, sizeof(timeout));
+	if (error == 0 || error == EWOULDBLOCK) {
+		error = copyout(ready, events, size);
+		if (result)
+			error = result;
+	} else {
+		copyout(ready, events, size);
+	}
+release:
+	sceNetPsFree(ready);
+out:
+	return sceNetPsUnlockResult(error, count);
+fail:
+	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
+	return -error;
 }
 
 int sceNetPsEpollClose(int epollId)

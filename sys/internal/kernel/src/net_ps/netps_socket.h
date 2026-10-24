@@ -246,6 +246,11 @@ int sceNetPsDescriptorCtl(int descriptorId, int operation, int socketId,
 			  const void *system);
 int sceNetPsDestroyProcessDescriptors(SceUID processId);
 int sceNetPsDestroyProcessEpolls(SceUID processId);
+int sceNetPsDestroyEpoll(unsigned int epollId, struct SceNetPsEpoll *epoll);
+int sceNetPsEpollCtl(int epollId, int operation, int id,
+		     const SceNetEpollEvent *event);
+int sceNetPsEpollWait(int epollId, SceNetEpollEvent *events, int maxevents,
+		      int *timeoutp, int callback);
 struct SceNetPsDescriptor;
 void sceNetPsRemoveDescriptorFromEpolls(struct SceNetPsDescriptor *descriptor);
 int sceNetPsRemoveSocketFromDescriptors(struct socket *so, int abort);
