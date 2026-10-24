@@ -1,0 +1,20 @@
+--- a/netinet/tcp_sack.c
++++ b/netinet/tcp_sack.c
+@@ -169,7 +169,16 @@
+ #include <machine/stdarg.h>
+ 
+ /* SACK block pool. */
+-POOL_INIT(sackhole_pool, sizeof(struct sackhole), 0, 0, 0, "sackholepl", NULL);
++/* SCE: the pool is initialised by hand, as in NetBSD 2.1 (tcp_init) */
++struct pool sackhole_pool;
++
++/* SCE */
++void
++tcp_sack_init(void)
++{
++	pool_init(&sackhole_pool, sizeof(struct sackhole), 0, 0, 0,
++	    "sackholepl", NULL);
++}
+ 
+ void
+ tcp_new_dsack(struct tcpcb *tp, tcp_seq seq, u_int32_t len)

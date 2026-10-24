@@ -46,7 +46,15 @@
  void	 tcpipqent_free(struct ipqent *);
  
  int	 tcp_reass(struct tcpcb *, struct tcphdr *, struct mbuf *, int *);
-@@ -861,7 +870,8 @@
+@@ -849,6 +858,7 @@
+ tcp_seq  tcp_new_iss1(void *, void *, u_int16_t, u_int16_t, size_t,
+ 	    tcp_seq);
+ 
++void	 tcp_sack_init(void);	/* SCE: initialises sackhole_pool */
+ void	 tcp_new_dsack(struct tcpcb *, tcp_seq, u_int32_t);
+ void	 tcp_sack_option(struct tcpcb *, struct tcphdr *, u_char *, int);
+ void	 tcp_del_sackholes(struct tcpcb *, struct tcphdr *);
+@@ -861,7 +871,8 @@
  
  int	 syn_cache_add(struct sockaddr *, struct sockaddr *,
  		struct tcphdr *, unsigned int, struct socket *,
@@ -56,7 +64,7 @@
  void	 syn_cache_unreach(struct sockaddr *, struct sockaddr *,
  	   struct tcphdr *);
  struct socket *syn_cache_get(struct sockaddr *, struct sockaddr *,
-@@ -877,7 +887,7 @@
+@@ -877,7 +888,7 @@
  void	 syn_cache_timer(void *);
  void	 syn_cache_cleanup(struct tcpcb *);
  

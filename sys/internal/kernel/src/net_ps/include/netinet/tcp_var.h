@@ -858,6 +858,7 @@ tcp_seq	 tcp_new_iss(struct tcpcb *, tcp_seq);
 tcp_seq  tcp_new_iss1(void *, void *, u_int16_t, u_int16_t, size_t,
 	    tcp_seq);
 
+void	 tcp_sack_init(void);	/* SCE: initialises sackhole_pool */
 void	 tcp_new_dsack(struct tcpcb *, tcp_seq, u_int32_t);
 void	 tcp_sack_option(struct tcpcb *, struct tcphdr *, u_char *, int);
 void	 tcp_del_sackholes(struct tcpcb *, struct tcphdr *);
