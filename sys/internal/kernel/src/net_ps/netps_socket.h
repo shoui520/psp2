@@ -244,6 +244,8 @@ int sceNetPsEpollAbort(int epollId, int flags);
 struct ifnet;
 
 /* net_ps_glue.c */
+int sceNetPsRequestAutoConnect(struct socket *so, struct mbuf *m,
+			       int checkStates);
 int sceNetPsSetNoAutoConnect(struct mbuf *m, struct ifnet *ifp,
 			     struct socket *so);
 int sceNetPsCheckDisabledInterface(struct mbuf *m, struct ifnet *ifp,

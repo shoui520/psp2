@@ -271,6 +271,10 @@ struct ip_opts {
 #if 1 /*IPSEC*/
 #define	IP_IPSEC_POLICY		22 /* struct; get/set security policy */
 #endif
+/* SCE: Sony's options (the SDK's SCE_NET_IP_TTLCHK, SCE_NET_IP_MAXTTL, SCE_NET_IP_DONTFRAG) */
+#define	IP_TTLCHK		23   /* bool; record the highest TTL received */
+#define	IP_MAXTTL		24   /* int; get the highest TTL received */
+#define	IP_DONTFRAG		26   /* bool; send with IP_DF */
 
 /*
  * Defaults and limits for options

@@ -171,6 +171,7 @@ struct	pkthdr {
 #define	M_CSUM_UDPv6		0x00000020	/* IPv6 UDP header/payload */
 #define	M_CSUM_IPv4		0x00000040	/* IPv4 header */
 #define	M_CSUM_IPv4_BAD		0x00000080	/* IPv4 header checksum bad */
+#define	M_CSUM_SCE_PSEUDOHDR	0x00010000	/* SCE: ip_output fills the TCP/UDP pseudo-header sum */
 
 /* Checksum-assist quirks: keep separate from jump-table bits. */
 #define	M_CSUM_NO_PSEUDOHDR	0x80000000	/* Rx M_CSUM_DATA does not include
