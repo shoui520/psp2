@@ -1,15 +1,16 @@
 --- a/netinet/tcp_input.c
 +++ b/netinet/tcp_input.c
-@@ -209,6 +209,8 @@
+@@ -209,6 +209,9 @@
  #include <netinet/tcp_var.h>
  #include <netinet/tcpip.h>
  #include <netinet/tcp_debug.h>
 +#include <netinet/udpp2p_var.h>	/* SCE */
 +#include "netps_socket.h"	/* SCE */
++#include <net/socket.h>		/* SCE: SCE_NET_ADHOC_PORT */
  
  #include <machine/stdarg.h>
  
-@@ -232,6 +234,9 @@
+@@ -232,6 +235,9 @@
  #endif
  #endif	/* FAST_IPSEC*/
  
@@ -19,7 +20,7 @@
  int	tcprexmtthresh = 3;
  int	tcp_log_refused;
  
-@@ -345,12 +350,14 @@
+@@ -345,12 +351,14 @@
  #ifdef INET6
  static void tcp6_log_refused(const struct ip6_hdr *, const struct tcphdr *);
  #endif
@@ -36,7 +37,7 @@
  tcpipqent_alloc()
  {
  	struct ipqent *ipqe;
-@@ -535,6 +542,10 @@
+@@ -535,6 +543,10 @@
  		    SEQ_LEQ(q->ipqe_seq + q->ipqe_len, pkt_seq + pkt_len)) {
  			rcvpartdupbyte += q->ipqe_len;
  			m_freem(q->ipqe_m);
@@ -47,7 +48,7 @@
  			TCP_REASS_COUNTER_INCR(&tcp_reass_fragdup);
  			goto free_ipqe;
  		}
-@@ -773,18 +784,9 @@
+@@ -773,18 +785,9 @@
  	char src[4*sizeof "123"];
  	char dst[4*sizeof "123"];
  
@@ -69,7 +70,7 @@
  }
  #endif
  
-@@ -922,11 +924,13 @@
+@@ -922,11 +925,13 @@
  	va_list ap;
  	int af;		/* af on the wire */
  	struct mbuf *tcp_saveti = NULL;
@@ -84,7 +85,7 @@
  	va_end(ap);
  
  	tcpstat.tcps_rcvtotal++;
-@@ -1077,9 +1081,13 @@
+@@ -1077,9 +1082,13 @@
  			optp[TCPOLEN_TSTAMP_APPA] == TCPOPT_EOL)) &&
  		     *(u_int32_t *)optp == htonl(TCPOPT_TSTAMP_HDR) &&
  		     (th->th_flags & TH_SYN) == 0) {
@@ -100,7 +101,7 @@
  			optp = NULL;	/* we've parsed the options */
  		}
  	}
-@@ -1209,6 +1217,17 @@
+@@ -1209,6 +1218,17 @@
  		so = in6p->in6p_socket;
  	}
  #endif
@@ -118,7 +119,7 @@
  	if (tp == 0) {
  		TCP_FIELDS_TO_HOST(th);
  		goto dropwithreset_ratelim;
-@@ -1219,7 +1238,9 @@
+@@ -1219,7 +1239,9 @@
  	/*
  	 * Checksum extended TCP header and data.
  	 */
@@ -129,7 +130,7 @@
  		goto badcsum;
  
  	TCP_FIELDS_TO_HOST(th);
-@@ -1491,7 +1512,7 @@
+@@ -1491,7 +1513,7 @@
  				 */
  				if (so->so_qlen <= so->so_qlimit &&
  				    syn_cache_add(&src.sa, &dst.sa, th, tlen,
@@ -138,7 +139,125 @@
  					m = NULL;
  			}
  			goto drop;
-@@ -2837,27 +2858,7 @@
+@@ -2662,6 +2684,117 @@
+ 	return;
+ }
+ 
++
++/*
++ * SCE: a SOCK_STREAM_P2P segment udpp2p carried from src to dst: udpp2p's
++ * tag and crypto are taken off, the segment goes to the connection whose
++ * flags its type matches, behind an IP header of its own, and on to
++ * tcp_input with the sender's UDP port as its virtual port.
++ */
++int
++tcp_p2p_input(struct sockaddr_in *src, struct sockaddr_in *dst,
++    struct mbuf *m, int off, int len, u_int8_t type)
++{
++	struct udpp2p_peer *peer;
++	struct udpp2p_ctx *ctx;
++	struct mbuf *n;
++	struct tcphdr *th;
++	struct inpcb *inp;
++	struct tcpcb *tp;
++	struct ip *ip, *oip;
++	const u_char *key;
++	u_char tag[UDPP2P_TAGLEN];
++	u_int8_t tagged;
++	in_port_t port;
++	int t, taglen, flags;
++
++	peer = udpp2p_peer_lookup_all(src->sin_addr.s_addr, src->sin_port,
++	    dst->sin_port, 0);
++	if (peer != NULL) {
++		ctx = udpp2p_getctx(peer->upp_pid);
++		key = ctx != NULL ? ctx->upc_key : NULL;
++		t = type & UDPP2P_TYPE;
++	} else {
++		/* without a peer, only plain segments */
++		t = type & UDPP2P_TYPE;
++		if (t != UDPP2P_T_STREAM)
++			return (0);
++		key = NULL;
++		ctx = NULL;
++	}
++	tagged = type & UDPP2P_F_TAG;
++	taglen = 0;
++	if (tagged) {
++		taglen = udpp2p_gettag(m, &off, &len, tag);
++		if (taglen < 0)
++			return (0);
++	}
++	n = udpp2p_crypt_input(m, off, len, type, key);
++	if (n == NULL)
++		return (0);
++	n = m_pullup(n, sizeof(struct tcphdr));
++	if (n == NULL)
++		return (0);
++	th = mtod(n, struct tcphdr *);
++	inp = in_pcblookup_connect(&tcbtable, src->sin_addr, th->th_sport,
++	    dst->sin_addr, th->th_dport);
++	if (inp == NULL) {
++		inp = in_pcblookup_bind(&tcbtable, dst->sin_addr, th->th_dport);
++		if (inp == NULL)
++			goto drop;
++	}
++	if (tagged && udpp2p_checktag(tag, taglen, inp->inp_socket) < 0)
++		goto drop;
++	tp = intotcpcb(inp);
++	if (tp == NULL)
++		goto drop;
++
++	/* the ad hoc port stands for the process's own UDP port */
++	port = dst->sin_port;
++	if (peer != NULL) {
++		if (ctx != NULL && peer->upp_lport == port)
++			port = htons(SCE_NET_ADHOC_PORT);
++	} else {
++		ctx = udpp2p_getctx_byport(port);
++		if (ctx != NULL && ctx->upc_lport == port)
++			port = htons(SCE_NET_ADHOC_PORT);
++	}
++	flags = tp->t_flags;
++	if ((flags & TF_SCE_P2P) == 0 || tp->t_local_vport != port)
++		goto drop;
++	if (flags & TF_SCE_USECRYPTO) {
++		if (t == UDPP2P_T_STREAM_CRYPTO) {
++			if (flags & TF_SCE_USESIGNATURE)
++				goto drop;
++		} else if (t != UDPP2P_T_STREAM_CRYPTOSIG)
++			goto drop;
++	} else if (flags & TF_SCE_USESIGNATURE) {
++		if (t != UDPP2P_T_STREAM_SIG && t != UDPP2P_T_STREAM_CRYPTOSIG)
++			goto drop;
++	}
++
++	M_PREPEND(n, sizeof(struct ip), M_DONTWAIT);
++	if (n == NULL)
++		return (0);
++	ip = mtod(n, struct ip *);
++	oip = mtod(m, struct ip *);
++	memset(ip, 0, sizeof(struct ip));
++	ip->ip_v = IPVERSION;
++	ip->ip_hl = sizeof(struct ip) >> 2;
++	ip->ip_p = IPPROTO_TCP;
++	ip->ip_len = htons(n->m_pkthdr.len);
++	ip->ip_src = src->sin_addr;
++	ip->ip_dst = dst->sin_addr;
++	ip->ip_ttl = oip->ip_ttl;
++	ip->ip_tos = oip->ip_tos;
++	tcp_input(n, sizeof(struct ip), src->sin_port);
++	return (1);
++
++drop:
++	m_freem(n);
++	return (0);
++}
++
+ #ifdef TCP_SIGNATURE
+ int
+ tcp_signature_apply(void *fstate, caddr_t data, u_int len)
+@@ -2837,27 +2970,7 @@
  			tp->t_flags |= TF_RCVD_SCALE;
  			tp->requested_s_scale = cp[2];
  			if (tp->requested_s_scale > TCP_MAX_WINSHIFT) {
@@ -167,7 +286,7 @@
  				tp->requested_s_scale = TCP_MAX_WINSHIFT;
  			}
  			break;
-@@ -3076,7 +3077,7 @@
+@@ -3076,7 +3189,7 @@
  	tp->t_softerror = 0;
  }
  
@@ -176,7 +295,7 @@
  tcp_reno_newack(struct tcpcb *tp, struct tcphdr *th)
  {
  	if (tp->t_partialacks < 0) {
-@@ -3230,7 +3231,7 @@
+@@ -3230,7 +3343,7 @@
  		pool_put(&syn_cache_pool, (sc));			\
  } while (/*CONSTCOND*/0)
  
@@ -185,7 +304,7 @@
  
  /*
   * We don't estimate RTT with SYNs, so each packet starts with the default
-@@ -3255,6 +3256,10 @@
+@@ -3255,6 +3368,10 @@
  	/* Initialize the hash buckets. */
  	for (i = 0; i < tcp_syn_cache_size; i++)
  		TAILQ_INIT(&tcp_syn_cache[i].sch_bucket);
@@ -196,7 +315,7 @@
  }
  
  void
-@@ -3695,6 +3700,11 @@
+@@ -3695,6 +3812,11 @@
  	else
  		tp = NULL;
  	tp->t_flags = sototcpcb(oso)->t_flags & TF_NODELAY;
@@ -208,7 +327,7 @@
  	if (sc->sc_request_r_scale != 15) {
  		tp->requested_s_scale = sc->sc_requested_s_scale;
  		tp->request_r_scale = sc->sc_request_r_scale;
-@@ -3869,7 +3879,7 @@
+@@ -3869,7 +3991,7 @@
  int
  syn_cache_add(struct sockaddr *src, struct sockaddr *dst, struct tcphdr *th,
      unsigned int hlen, struct socket *so, struct mbuf *m, u_char *optp,
@@ -217,7 +336,7 @@
  {
  	struct tcpcb tb, *tp;
  	long win;
-@@ -3995,7 +4005,7 @@
+@@ -3995,7 +4117,7 @@
  	sc->sc_peermaxseg = oi->maxseg;
  	sc->sc_ourmaxseg = tcp_mss_to_advertise(m->m_flags & M_PKTHDR ?
  						m->m_pkthdr.rcvif : NULL,
@@ -226,7 +345,7 @@
  	sc->sc_win = win;
  	sc->sc_timebase = tcp_now;	/* see tcp_newtcpcb() */
  	sc->sc_timestamp = tb.ts_recent;
-@@ -4021,6 +4031,7 @@
+@@ -4021,6 +4143,7 @@
  		sc->sc_flags |= SCF_SIGNATURE;
  #endif
  	sc->sc_tp = tp;
@@ -234,7 +353,7 @@
  	if (syn_cache_respond(sc, m) == 0) {
  		syn_cache_insert(sc, tp);
  		tcpstat.tcps_sndacks++;
-@@ -4085,7 +4096,7 @@
+@@ -4085,7 +4208,7 @@
  		return (ENOBUFS);
  #endif
  	MGETHDR(m, M_DONTWAIT, MT_DATA);
@@ -243,7 +362,7 @@
  		MCLGET(m, M_DONTWAIT);
  		if ((m->m_flags & M_EXT) == 0) {
  			m_freem(m);
-@@ -4099,8 +4110,8 @@
+@@ -4099,8 +4222,8 @@
  	/* Fixup the mbuf. */
  	m->m_data += max_linkhdr;
  	m->m_len = m->m_pkthdr.len = tlen;
@@ -254,7 +373,7 @@
  		if (tp->t_inpcb)
  			so = tp->t_inpcb->inp_socket;
  #ifdef INET6
-@@ -4221,7 +4232,10 @@
+@@ -4221,7 +4344,10 @@
  	case AF_INET:
  		ip->ip_len = htons(tlen - hlen);
  		th->th_sum = 0;
@@ -266,7 +385,7 @@
  		break;
  #ifdef INET6
  	case AF_INET6:
-@@ -4261,6 +4275,19 @@
+@@ -4261,6 +4387,19 @@
  	switch (sc->sc_src.sa.sa_family) {
  #ifdef INET
  	case AF_INET:
