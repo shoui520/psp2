@@ -3199,25 +3199,6 @@ void sceNetPsRemoveDescriptorFromEpolls(SceNetPsDescriptor *descriptor)
 extern struct inpcbtable arpcbtable;
 extern struct inpcbtable isdncbtable;
 
-/* SCE: a tcp_fsm.h state as sceNetGetSockInfo reports it */
-static inline int sceNetPsSockInfoTcpState(int state)
-{
-	switch (state) {
-	case TCPS_CLOSED:	return SCE_NET_SOCKINFO_STATE_CLOSED;
-	case TCPS_LISTEN:	return SCE_NET_SOCKINFO_STATE_LISTEN;
-	case TCPS_SYN_SENT:	return SCE_NET_SOCKINFO_STATE_SYN_SENT;
-	case TCPS_SYN_RECEIVED:	return SCE_NET_SOCKINFO_STATE_SYN_RECEIVED;
-	case TCPS_ESTABLISHED:	return SCE_NET_SOCKINFO_STATE_ESTABLISHED;
-	case TCPS_CLOSE_WAIT:	return SCE_NET_SOCKINFO_STATE_CLOSE_WAIT;
-	case TCPS_FIN_WAIT_1:	return SCE_NET_SOCKINFO_STATE_FIN_WAIT_1;
-	case TCPS_CLOSING:	return SCE_NET_SOCKINFO_STATE_CLOSING;
-	case TCPS_LAST_ACK:	return SCE_NET_SOCKINFO_STATE_LAST_ACK;
-	case TCPS_FIN_WAIT_2:	return SCE_NET_SOCKINFO_STATE_FIN_WAIT_2;
-	case TCPS_TIME_WAIT:	return SCE_NET_SOCKINFO_STATE_TIME_WAIT;
-	}
-	return SCE_NET_SOCKINFO_STATE_UNKNOWN;
-}
-
 /*
  * SCE: copy out the socket's sceNetGetSockInfo record when the caller may
  * see it; with no buffer only count it. A record of the identifier walk
@@ -3226,7 +3207,7 @@ static inline int sceNetPsSockInfoTcpState(int state)
  */
 static int sceNetPsWriteSockInfo(int socketId, struct socket *so,
 				 SceNetSockInfo **cursor, int capacity,
-				 int *count, unsigned char flags,
+				 int *count, int flags,
 				 SceNetSockInfo *record, SceUID processId,
 				 int overwrite, int kernel)
 {
@@ -3309,7 +3290,44 @@ static int sceNetPsWriteSockInfo(int socketId, struct socket *so,
 		record->remote_port = inp->inp_fport;
 	}
 	if (tp) {
-		record->state = sceNetPsSockInfoTcpState(tp->t_state);
+		switch (tp->t_state) {
+		case TCPS_CLOSED:
+			record->state = SCE_NET_SOCKINFO_STATE_CLOSED;
+			break;
+		case TCPS_LISTEN:
+			record->state = SCE_NET_SOCKINFO_STATE_LISTEN;
+			break;
+		case TCPS_SYN_SENT:
+			record->state = SCE_NET_SOCKINFO_STATE_SYN_SENT;
+			break;
+		case TCPS_SYN_RECEIVED:
+			record->state = SCE_NET_SOCKINFO_STATE_SYN_RECEIVED;
+			break;
+		case TCPS_ESTABLISHED:
+			record->state = SCE_NET_SOCKINFO_STATE_ESTABLISHED;
+			break;
+		case TCPS_CLOSE_WAIT:
+			record->state = SCE_NET_SOCKINFO_STATE_CLOSE_WAIT;
+			break;
+		case TCPS_FIN_WAIT_1:
+			record->state = SCE_NET_SOCKINFO_STATE_FIN_WAIT_1;
+			break;
+		case TCPS_CLOSING:
+			record->state = SCE_NET_SOCKINFO_STATE_CLOSING;
+			break;
+		case TCPS_LAST_ACK:
+			record->state = SCE_NET_SOCKINFO_STATE_LAST_ACK;
+			break;
+		case TCPS_FIN_WAIT_2:
+			record->state = SCE_NET_SOCKINFO_STATE_FIN_WAIT_2;
+			break;
+		case TCPS_TIME_WAIT:
+			record->state = SCE_NET_SOCKINFO_STATE_TIME_WAIT;
+			break;
+		default:
+			record->state = SCE_NET_SOCKINFO_STATE_UNKNOWN;
+			break;
+		}
 		record->socket_type = so->so_type;
 		record->policy = so->threadPriorityPolicy;
 		if (p2p) {
@@ -3390,16 +3408,18 @@ static int sceNetPsWriteLostSockInfo(int socketId, SceNetSockInfo **cursor,
 static inline int sceNetPsWriteTableSockInfo(struct inpcbtable *table,
 					     SceNetSockInfo **cursor,
 					     int capacity, int *count,
-					     unsigned char flags,
+					     int flags,
 					     SceNetSockInfo *record,
 					     SceUID processId, int kernel)
 {
-	struct inpcb_hdr *inph;
+	struct inpcb_hdr *inph, *next;
 	struct socket *so;
 	int error;
 
-	CIRCLEQ_FOREACH(inph, &table->inpt_queue, inph_queue) {
+	for (inph = CIRCLEQ_FIRST(&table->inpt_queue);
+	     inph != (void *)&table->inpt_queue; inph = next) {
 		so = ((struct inpcb *)inph)->inp_socket;
+		next = CIRCLEQ_NEXT(inph, inph_queue);
 		if (so == NULL)
 			continue;
 		error = sceNetPsWriteSockInfo(sceNetPsFindSocketId(so), so,
@@ -3459,6 +3479,7 @@ int sceNetPsCollectSockInfo(int socket, SceNetSockInfo *records, int capacity,
 				return error;
 		}
 	}
+	error = 0;
 	error = sceNetPsWriteTableSockInfo(&tcbtable, &cursor, capacity, count,
 					   flags, &record, processId, kernel);
 	if (error)
@@ -3490,7 +3511,7 @@ int sceNetPsCollectSockInfo(int socket, SceNetSockInfo *records, int capacity,
 	if (error)
 		return error;
 	if (!(flags & 0x20))
-		return 0;
+		return error;
 	sceNetPsGetEpollIdRange(&first, &last);
 	for (id = first; id <= last; id++) {
 		epoll = sceNetPsLookupEpoll(id, 1);
@@ -3528,5 +3549,5 @@ int sceNetPsCollectSockInfo(int socket, SceNetSockInfo *records, int capacity,
 		cursor++;
 		(*count)++;
 	}
-	return 0;
+	return error;
 }
