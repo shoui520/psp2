@@ -225,6 +225,9 @@ struct SceNetPsDriverContext;
 
 /* net_ps_socket.c */
 int sceNetPsNotifyGatewayDns(const SceNetPsDnsConfig *config);
+struct msghdr;
+int sceNetPsRecvit(int s, struct msghdr *mp, void *namelenp, int *retsize,
+		   int kernel);
 unsigned int sceNetPsGetSockinfo(int socket, void *buffer, int capacity, int flags);
 int sceNetPsGetIfList(void *list, int count);
 int sceNetPsControl(int interfaceIndex, int command, void *data, int length);

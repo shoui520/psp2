@@ -270,6 +270,8 @@ void *sceNetPsMalloc(SceSize size, int flags, SceSize align);
 int sceNetPsFree(void *ptr);
 int sceNetPsCopyIn(const void *source, void *destination, size_t length,
 		   int kernel);
+int sceNetPsCopyOut(const void *source, void *destination, size_t length,
+		    int kernel);
 int sceNetPsCopyInString(const char *source, char *destination, size_t length,
 			 size_t *copied);
 int copyin(const void *source, void *destination, size_t length);

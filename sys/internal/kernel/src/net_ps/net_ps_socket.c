@@ -31,6 +31,7 @@
 #include "net_ps_internal.h"
 #include <net_ps/netps_gateway.h>
 #include <net_ps/netps.h>
+#include <sys/proc.h>
 #include <string.h>
 
 struct mbuf *m_get(int how, int type);
@@ -193,11 +194,6 @@ failed:
 	return result;
 }
 
-/*
- * SCE adaptation of NetBSD uipc_syscalls.c 1.90.2.4 sockargs:
- * copy selector, platform external allocation, M_EXT without M_EXT_RW,
- * no upstream length rejection, and m_freem on copy failure.
- */
 /* SCE: references in Sony's complete socket owner guard upstream sofree. */
 void bnet_sorele(struct socket *socket)
 {
@@ -209,6 +205,131 @@ void bnet_sorele(struct socket *socket)
 	}
 }
 
+/*
+ * SCE adaptation of NetBSD uipc_syscalls.c recvit: the locals live in a
+ * heap frame, the socket comes from the net_ps socket table, copies go
+ * through sceNetPsCopyOut with the caller's kernel flag, an interrupted
+ * receive clears so_error, and from and control are always freed.
+ */
+struct SceNetPsRecvitFrame {
+	struct socket	*so;
+	unsigned int	padding;
+	struct uio	auio;
+	struct iovec	*iov;
+	struct mbuf	*from;
+	struct mbuf	*control;
+	int		i;
+	int		len;
+	struct mbuf	*m;
+	caddr_t		p;
+};
+
+_Static_assert(sizeof(struct SceNetPsRecvitFrame) == 0x48,
+	       "SceNetPsRecvitFrame size");
+
+int sceNetPsRecvit(int s, struct msghdr *mp, void *namelenp, int *retsize,
+		   int kernel)
+{
+	struct SceNetPsRecvitFrame *f;
+	int error = 0;
+
+	f = sceNetPsMalloc(sizeof(*f), 3, 8);
+	if (f == NULL)
+		return -ENOMEM;
+	f->from = NULL;
+	f->control = NULL;
+	f->so = sceNetPsLookupSocket(s, &error, 0);
+	if (f->so == NULL)
+		goto out;
+	f->auio.uio_iov = mp->msg_iov;
+	f->auio.uio_iovcnt = mp->msg_iovlen;
+	f->auio.uio_segflg = UIO_USERSPACE;
+	f->auio.uio_rw = UIO_READ;
+	f->auio.uio_procp = curproc;
+	f->auio.uio_offset = 0;			/* XXX */
+	f->auio.uio_resid = 0;
+	f->iov = mp->msg_iov;
+	for (f->i = 0; f->i < mp->msg_iovlen; f->i++, f->iov++) {
+		f->auio.uio_resid += f->iov->iov_len;
+		if (f->iov->iov_len > SSIZE_MAX ||
+		    f->auio.uio_resid > SSIZE_MAX) {
+			error = EINVAL;
+			goto out;
+		}
+	}
+	f->len = f->auio.uio_resid;
+	bnet_socket_sanity_check(f->so);
+	error = (*f->so->so_receive)(f->so, &f->from, &f->auio, NULL,
+				     mp->msg_control ? &f->control : NULL,
+				     &mp->msg_flags);
+	if (error) {
+		if (f->auio.uio_resid != f->len &&
+		    (error == EINTR || error == EWOULDBLOCK))
+			error = 0;
+	}
+	if (error) {
+		/* SCE: an interrupted receive leaves no socket error behind. */
+		if (error == EINTR)
+			f->so->so_error = 0;
+		goto out;
+	}
+	*retsize = f->len - f->auio.uio_resid;
+	if (mp->msg_name) {
+		f->len = mp->msg_namelen;
+		if (f->len <= 0 || f->from == NULL) {
+			f->len = 0;
+		} else {
+			if (f->len > f->from->m_len)
+				f->len = f->from->m_len;
+			error = sceNetPsCopyOut(mtod(f->from, caddr_t),
+						mp->msg_name, f->len, kernel);
+			if (error)
+				goto out;
+		}
+		mp->msg_namelen = f->len;
+		if (namelenp &&
+		    (error = sceNetPsCopyOut(&f->len, namelenp, sizeof(int),
+					     kernel)))
+			goto out;
+	}
+	if (mp->msg_control) {
+		f->len = mp->msg_controllen;
+		if (f->len <= 0 || f->control == NULL) {
+			f->len = 0;
+		} else {
+			f->m = f->control;
+			f->p = mp->msg_control;
+			do {
+				f->i = f->m->m_len;
+				if (f->len < f->i) {
+					mp->msg_flags |= MSG_CTRUNC;
+					f->i = f->len;
+				}
+				error = sceNetPsCopyOut(mtod(f->m, caddr_t),
+							f->p, f->i, kernel);
+				if (f->m->m_next)
+					f->i = ALIGN(f->i);
+				f->p += f->i;
+				f->len -= f->i;
+				if (error != 0 || f->len <= 0)
+					break;
+			} while ((f->m = f->m->m_next) != NULL);
+			f->len = f->p - (caddr_t)mp->msg_control;
+		}
+		mp->msg_controllen = f->len;
+	}
+out:
+	m_freem(f->from);
+	m_freem(f->control);
+	sceNetPsFree(f);
+	return error;
+}
+
+/*
+ * SCE adaptation of NetBSD uipc_syscalls.c 1.90.2.4 sockargs:
+ * copy selector, platform external allocation, M_EXT without M_EXT_RW,
+ * no upstream length rejection, and m_freem on copy failure.
+ */
 int sceNetPsSockargs(struct mbuf **result, const void *buffer,
 		     unsigned int length, int type, int kernel)
 {

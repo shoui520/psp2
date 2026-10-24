@@ -391,11 +391,9 @@ __curproc()
 	return l->l_proc;
 }
 #define	curproc	__curproc()
-#ifdef NET_PS_NETBSD
-/* SCE: in NetBSD's own files, the current process is a variable, as in NetBSD 1.x */
+/* SCE: in net_ps, the current process is a variable, as in NetBSD 1.x */
 #undef	curproc
 extern struct proc	*curproc;
-#endif
 
 extern struct proc	proc0;		/* Process slot for swapper */
 extern int		nprocs, maxproc; /* Current and max number of procs */
