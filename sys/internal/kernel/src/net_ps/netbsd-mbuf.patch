@@ -8,15 +8,16 @@
  };
  
  /*
-@@ -170,6 +171,7 @@
+@@ -170,6 +171,8 @@
  #define	M_CSUM_UDPv6		0x00000020	/* IPv6 UDP header/payload */
  #define	M_CSUM_IPv4		0x00000040	/* IPv4 header */
  #define	M_CSUM_IPv4_BAD		0x00000080	/* IPv4 header checksum bad */
++#define	M_CSUM_TSOv4		0x00000100	/* SCE: NetBSD 3.0's TCPv4 segmentation offload */
 +#define	M_CSUM_SCE_PSEUDOHDR	0x00010000	/* SCE: ip_output fills the TCP/UDP pseudo-header sum */
  
  /* Checksum-assist quirks: keep separate from jump-table bits. */
  #define	M_CSUM_NO_PSEUDOHDR	0x80000000	/* Rx M_CSUM_DATA does not include
-@@ -181,9 +183,7 @@
+@@ -181,9 +184,7 @@
   * Max # of pages we can attach to m_ext.  This is carefully chosen
   * to be able to handle SOSEND_LOAN_CHUNK with our minimum sized page.
   */
@@ -27,7 +28,7 @@
  
  /* description of external storage mapped into mbuf, valid if M_EXT set */
  struct _m_ext {
-@@ -296,8 +296,16 @@
+@@ -296,8 +297,16 @@
  /* for source-level compatibility */
  #define	M_CLUSTER	M_EXT_CLUSTER
  

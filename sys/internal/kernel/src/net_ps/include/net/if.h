@@ -349,6 +349,7 @@ struct ifnet {				/* and the entries */
 #define	IFCAP_CSUM_UDPv6	0x0010	/* can do IPv6/UDP checksums */
 #define	IFCAP_CSUM_TCPv4_Rx	0x0020	/* can do IPv4/TCP (Rx only) */
 #define	IFCAP_CSUM_UDPv4_Rx	0x0040	/* can do IPv4/UDP (Rx only) */
+#define	IFCAP_TSOv4	0x0080		/* SCE: NetBSD 3.0's IPv4/TCP segment offload */
 
 /*
  * Output queues (ifp->if_snd) and internetwork datagram level (pup level 1)

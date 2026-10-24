@@ -1,0 +1,1367 @@
+--- a/netinet/tcp_output.c
++++ b/netinet/tcp_output.c
+@@ -196,6 +196,7 @@
+ #include <netinet/tcp_var.h>
+ #include <netinet/tcpip.h>
+ #include <netinet/tcp_debug.h>
++#include <netinet/udpp2p_var.h>	/* SCE */
+ 
+ #ifdef IPSEC
+ #include <netkey/key.h>
+@@ -374,6 +375,17 @@
+ 		optlen += ip6_optlen(in6p);
+ 	}
+ #endif
++	/* SCE: a P2P segment travels inside UDP, behind udpp2p's header */
++	if (tp->t_flags & TF_SCE_P2P) {
++		if (udpp2p_hastag(so))
++			optlen += UDPP2P_HDRLEN + UDPP2P_TAGLEN;
++		else
++			optlen += UDPP2P_HDRLEN;
++		if (tp->t_flags & TF_SCE_USECRYPTO)
++			optlen += UDPP2P_CRYPTOLEN;
++		if (tp->t_flags & TF_SCE_USESIGNATURE)
++			optlen += UDPP2P_SIGLEN;
++	}
+ 	size -= optlen;
+ 
+ 	/* there may not be any room for data if mtu is too small */
+@@ -533,11 +545,12 @@
+ }
+ 
+ /*
+- * Tcp output routine: figure out what should be sent and send it.
++ * SCE: tcp_output's locals live in an allocation of their own, not on the
++ * kernel stack, in the order they are declared, with the connection first and
++ * the P2P addresses last
+  */
+-int
+-tcp_output(struct tcpcb *tp)
+-{
++struct tcp_output_frame {
++	struct tcpcb *tp;
+ 	struct socket *so;
+ 	struct route *ro;
+ 	long len, win;
+@@ -553,60 +566,82 @@
+ 	unsigned int sack_numblks;
+ 	int idle, sendalot, txsegsize, rxsegsize;
+ 	int txsegsize_nosack;
+-	int maxburst = TCP_MAXBURST;
++	int maxburst;
+ 	int af;		/* address family on the wire */
+ 	int iphdrlen;
+ 	int has_tso, use_tso;
+ 	int sack_rxmit;
+ 	int sack_bytes_rxmt;
+ 	struct sackhole *p;
++	struct sockaddr_in src, dst;	/* a P2P segment's virtual ports */
++};
++
++/*
++ * Tcp output routine: figure out what should be sent and send it.
++ */
++int
++tcp_output(struct tcpcb *tp)
++{
++	struct tcp_output_frame *f;
++	int result;
+ #ifdef TCP_SIGNATURE
+ 	int sigoff = 0;
+ #endif
+ 
++	f = malloc(sizeof(*f), M_TEMP, M_NOWAIT|M_ZERO);
++	if (f == NULL)
++		return (ENOMEM);
++	f->tp = tp;
++	f->maxburst = TCP_MAXBURST;
++
+ #ifdef DIAGNOSTIC
+-	if (tp->t_inpcb && tp->t_in6pcb)
++	if (f->tp->t_inpcb && f->tp->t_in6pcb)
+ 		panic("tcp_output: both t_inpcb and t_in6pcb are set");
+ #endif
+-	so = NULL;
+-	ro = NULL;
+-	if (tp->t_inpcb) {
+-		so = tp->t_inpcb->inp_socket;
+-		ro = &tp->t_inpcb->inp_route;
++	f->so = NULL;
++	f->ro = NULL;
++	if (f->tp->t_inpcb) {
++		f->so = f->tp->t_inpcb->inp_socket;
++		f->ro = &f->tp->t_inpcb->inp_route;
+ 	}
+ #ifdef INET6
+-	else if (tp->t_in6pcb) {
+-		so = tp->t_in6pcb->in6p_socket;
+-		ro = (struct route *)&tp->t_in6pcb->in6p_route;
++	else if (f->tp->t_in6pcb) {
++		f->so = f->tp->t_in6pcb->in6p_socket;
++		f->ro = (struct route *)&f->tp->t_in6pcb->in6p_route;
+ 	}
+ #endif
+ 
+-	switch (af = tp->t_family) {
++	switch (f->af = f->tp->t_family) {
+ #ifdef INET
+ 	case AF_INET:
+-		if (tp->t_inpcb)
++		if (f->tp->t_inpcb)
+ 			break;
+ #ifdef INET6
+ 		/* mapped addr case */
+-		if (tp->t_in6pcb)
++		if (f->tp->t_in6pcb)
+ 			break;
+ #endif
+-		return (EINVAL);
++		result = EINVAL;
++		goto release;
+ #endif
+ #ifdef INET6
+ 	case AF_INET6:
+-		if (tp->t_in6pcb)
++		if (f->tp->t_in6pcb)
+ 			break;
+-		return (EINVAL);
++		result = EINVAL;
++		goto release;
+ #endif
+ 	default:
+-		return (EAFNOSUPPORT);
++		result = EAFNOSUPPORT;
++		goto release;
+ 	}
+ 
+-	if (tcp_segsize(tp, &txsegsize, &rxsegsize))
+-		return (EMSGSIZE);
++	if (tcp_segsize(f->tp, &f->txsegsize, &f->rxsegsize)) {
++		result = EMSGSIZE;
++		goto release;
++	}
+ 
+-	idle = (tp->snd_max == tp->snd_una);
++	f->idle = (f->tp->snd_max == f->tp->snd_una);
+ 
+ 	/*
+ 	 * Determine if we can use TCP segmentation offload:
+@@ -614,13 +649,13 @@
+ 	 * - If there is not an IPsec policy that prevents it
+ 	 * - If the interface can do it
+ 	 */
+-	has_tso = tp->t_inpcb != NULL &&
++	f->has_tso = f->tp->t_inpcb != NULL &&
+ #if defined(IPSEC) || defined(FAST_IPSEC)
+-		  IPSEC_PCB_SKIP_IPSEC(tp->t_inpcb->inp_sp,
++		  IPSEC_PCB_SKIP_IPSEC(f->tp->t_inpcb->inp_sp,
+ 		  		       IPSEC_DIR_OUTBOUND) &&
+ #endif
+-		  tp->t_inpcb->inp_route.ro_rt != NULL &&
+-		  (tp->t_inpcb->inp_route.ro_rt->rt_ifp->if_capenable &
++		  f->tp->t_inpcb->inp_route.ro_rt != NULL &&
++		  (f->tp->t_inpcb->inp_route.ro_rt->rt_ifp->if_capenable &
+ 		   IFCAP_TSOv4) != 0;
+ 
+ 	/*
+@@ -643,11 +678,11 @@
+ 		 *
+ 		 * XXX Link this to Initial Window?
+ 		 */
+-		tp->snd_cwnd = min(tp->snd_cwnd,
+-		    (tcp_cwm_burstsize * txsegsize) +
+-		    (tp->snd_nxt - tp->snd_una));
++		f->tp->snd_cwnd = min(f->tp->snd_cwnd,
++		    (tcp_cwm_burstsize * f->txsegsize) +
++		    (f->tp->snd_nxt - f->tp->snd_una));
+ 	} else {
+-		if (idle && (tcp_now - tp->t_rcvtime) >= tp->t_rxtcur) {
++		if (f->idle && (tcp_now - f->tp->t_rcvtime) >= f->tp->t_rxtcur) {
+ 			/*
+ 			 * We have been idle for "a while" and no acks are
+ 			 * expected to clock out any data we send --
+@@ -655,33 +690,33 @@
+ 			 */
+ 			int ss = tcp_init_win;
+ #ifdef INET
+-			if (tp->t_inpcb &&
+-			    in_localaddr(tp->t_inpcb->inp_faddr))
++			if (f->tp->t_inpcb &&
++			    in_localaddr(f->tp->t_inpcb->inp_faddr))
+ 				ss = tcp_init_win_local;
+ #endif
+ #ifdef INET6
+-			if (tp->t_in6pcb &&
+-			    in6_localaddr(&tp->t_in6pcb->in6p_faddr))
++			if (f->tp->t_in6pcb &&
++			    in6_localaddr(&f->tp->t_in6pcb->in6p_faddr))
+ 				ss = tcp_init_win_local;
+ #endif
+-			tp->snd_cwnd = min(tp->snd_cwnd,
+-			    TCP_INITIAL_WINDOW(ss, txsegsize));
++			f->tp->snd_cwnd = min(f->tp->snd_cwnd,
++			    TCP_INITIAL_WINDOW(ss, f->txsegsize));
+ 		}
+ 	}
+ 
+-	txsegsize_nosack = txsegsize;
++	f->txsegsize_nosack = f->txsegsize;
+ again:
+-	use_tso = has_tso;
+-	TCP_REASS_LOCK(tp);
+-	sack_numblks = tcp_sack_numblks(tp);
+-	if (sack_numblks) {
+-		if ((tp->rcv_sack_flags & TCPSACK_HAVED) != 0) {
++	f->use_tso = f->has_tso;
++	TCP_REASS_LOCK(f->tp);
++	f->sack_numblks = tcp_sack_numblks(f->tp);
++	if (f->sack_numblks) {
++		if ((f->tp->rcv_sack_flags & TCPSACK_HAVED) != 0) {
+ 			/* don't duplicate D-SACK. */
+-			use_tso = 0;
++			f->use_tso = 0;
+ 		}
+-		txsegsize = txsegsize_nosack - TCP_SACK_OPTLEN(sack_numblks);
++		f->txsegsize = f->txsegsize_nosack - TCP_SACK_OPTLEN(f->sack_numblks);
+ 	} else {
+-		txsegsize = txsegsize_nosack;
++		f->txsegsize = f->txsegsize_nosack;
+ 	}
+ 
+ 	/*
+@@ -692,13 +727,13 @@
+ 	 *
+ 	 * Readjust SACK information to avoid resending duplicate data.
+ 	 */
+-	if (TCP_SACK_ENABLED(tp) && SEQ_LT(tp->snd_nxt, tp->snd_max))
+-		tcp_sack_adjust(tp);
+-	sendalot = 0;
+-	off = tp->snd_nxt - tp->snd_una;
+-	win = min(tp->snd_wnd, tp->snd_cwnd);
++	if (TCP_SACK_ENABLED(f->tp) && SEQ_LT(f->tp->snd_nxt, f->tp->snd_max))
++		tcp_sack_adjust(f->tp);
++	f->sendalot = 0;
++	f->off = f->tp->snd_nxt - f->tp->snd_una;
++	f->win = min(f->tp->snd_wnd, f->tp->snd_cwnd);
+ 
+-	flags = tcp_outflags[tp->t_state];
++	f->flags = tcp_outflags[f->tp->t_state];
+ 
+ 	/*
+ 	 * Send any SACK-generated retransmissions.  If we're explicitly trying
+@@ -710,54 +745,54 @@
+ 	/*
+ 	 * Still in sack recovery , reset rxmit flag to zero.
+ 	 */
+-	sack_rxmit = 0;
+-	sack_bytes_rxmt = 0;
+-	len = 0;
+-	p = NULL;
++	f->sack_rxmit = 0;
++	f->sack_bytes_rxmt = 0;
++	f->len = 0;
++	f->p = NULL;
+ 	do {
+ 		long cwin;
+-		if (!TCP_SACK_ENABLED(tp))
++		if (!TCP_SACK_ENABLED(f->tp))
+ 			break;
+-		if (tp->t_partialacks < 0) 
++		if (f->tp->t_partialacks < 0) 
+ 			break;
+-		p = tcp_sack_output(tp, &sack_bytes_rxmt);
+-		if (p == NULL)
++		f->p = tcp_sack_output(f->tp, &f->sack_bytes_rxmt);
++		if (f->p == NULL)
+ 			break;
+ 		
+-		cwin = min(tp->snd_wnd, tp->snd_cwnd) - sack_bytes_rxmt;
++		cwin = min(f->tp->snd_wnd, f->tp->snd_cwnd) - f->sack_bytes_rxmt;
+ 		if (cwin < 0)
+ 			cwin = 0;
+ 		/* Do not retransmit SACK segments beyond snd_recover */
+-		if (SEQ_GT(p->end, tp->snd_recover)) {
++		if (SEQ_GT(f->p->end, f->tp->snd_recover)) {
+ 			/*
+ 			 * (At least) part of sack hole extends beyond
+ 			 * snd_recover. Check to see if we can rexmit data
+ 			 * for this hole.
+ 			 */
+-			if (SEQ_GEQ(p->rxmit, tp->snd_recover)) {
++			if (SEQ_GEQ(f->p->rxmit, f->tp->snd_recover)) {
+ 				/*
+ 				 * Can't rexmit any more data for this hole.
+ 				 * That data will be rexmitted in the next
+ 				 * sack recovery episode, when snd_recover
+ 				 * moves past p->rxmit.
+ 				 */
+-				p = NULL;
++				f->p = NULL;
+ 				break;
+ 			}
+ 			/* Can rexmit part of the current hole */
+-			len = ((long)ulmin(cwin, tp->snd_recover - p->rxmit));
++			f->len = ((long)ulmin(cwin, f->tp->snd_recover - f->p->rxmit));
+ 		} else
+-			len = ((long)ulmin(cwin, p->end - p->rxmit));
+-		off = p->rxmit - tp->snd_una;
+-		if (off + len > so->so_snd.sb_cc) {
++			f->len = ((long)ulmin(cwin, f->p->end - f->p->rxmit));
++		f->off = f->p->rxmit - f->tp->snd_una;
++		if (f->off + f->len > f->so->so_snd.sb_cc) {
+ 			/* 1 for TH_FIN */
+-			KASSERT(off + len == so->so_snd.sb_cc + 1);
+-			KASSERT(p->rxmit + len == tp->snd_max);
+-			len = so->so_snd.sb_cc - off;
+-		}
+-		if (len > 0) {
+-			sack_rxmit = 1;
+-			sendalot = 1;
++			KASSERT(f->off + f->len == f->so->so_snd.sb_cc + 1);
++			KASSERT(f->p->rxmit + f->len == f->tp->snd_max);
++			f->len = f->so->so_snd.sb_cc - f->off;
++		}
++		if (f->len > 0) {
++			f->sack_rxmit = 1;
++			f->sendalot = 1;
+ 		}
+ 	} while (/*CONSTCOND*/0);
+ 
+@@ -767,8 +802,8 @@
+ 	 * and timer expired, we will send what we can
+ 	 * and go to transmit state.
+ 	 */
+-	if (tp->t_force) {
+-		if (win == 0) {
++	if (f->tp->t_force) {
++		if (f->win == 0) {
+ 			/*
+ 			 * If we still have some data to send, then
+ 			 * clear the FIN bit.  Usually this would
+@@ -785,23 +820,23 @@
+ 			 * to send then the probe will be the FIN
+ 			 * itself.
+ 			 */
+-			if (off < so->so_snd.sb_cc)
+-				flags &= ~TH_FIN;
+-			win = 1;
++			if (f->off < f->so->so_snd.sb_cc)
++				f->flags &= ~TH_FIN;
++			f->win = 1;
+ 		} else {
+-			TCP_TIMER_DISARM(tp, TCPT_PERSIST);
+-			tp->t_rxtshift = 0;
++			TCP_TIMER_DISARM(f->tp, TCPT_PERSIST);
++			f->tp->t_rxtshift = 0;
+ 		}
+ 	}
+ 
+-	if (!TCP_SACK_ENABLED(tp)) {
+-		if (win < so->so_snd.sb_cc) {
+-			len = win - off;
+-			flags &= ~TH_FIN;
++	if (!TCP_SACK_ENABLED(f->tp)) {
++		if (f->win < f->so->so_snd.sb_cc) {
++			f->len = f->win - f->off;
++			f->flags &= ~TH_FIN;
+ 		} else
+-			len = so->so_snd.sb_cc - off;
+-	} else if (sack_rxmit == 0) {
+-		if (sack_bytes_rxmt != 0) {
++			f->len = f->so->so_snd.sb_cc - f->off;
++	} else if (f->sack_rxmit == 0) {
++		if (f->sack_bytes_rxmt != 0) {
+ 			long cwin;
+ 
+ 			/*
+@@ -809,11 +844,11 @@
+ 			 * sending new data, having retransmitted all the
+ 			 * data possible in the scoreboard.
+ 			 */
+-			if (tp->snd_wnd < so->so_snd.sb_cc) {
+-				len = tp->snd_wnd - off;
+-				flags &= ~TH_FIN;
++			if (f->tp->snd_wnd < f->so->so_snd.sb_cc) {
++				f->len = f->tp->snd_wnd - f->off;
++				f->flags &= ~TH_FIN;
+ 			} else {
+-				len = so->so_snd.sb_cc - off;
++				f->len = f->so->so_snd.sb_cc - f->off;
+ 			}
+ 
+ 			/*
+@@ -825,25 +860,25 @@
+ 			 *  len above. Without this check, the computation
+ 			 *  of len is bungled by the optimizer.
+ 			 */
+-			if (len > 0) {
+-				cwin = tp->snd_cwnd - 
+-						(tp->snd_nxt - tp->sack_newdata) -
+-						sack_bytes_rxmt;
++			if (f->len > 0) {
++				cwin = f->tp->snd_cwnd - 
++						(f->tp->snd_nxt - f->tp->sack_newdata) -
++						f->sack_bytes_rxmt;
+ 				if (cwin < 0)
+ 					cwin = 0;
+-				if (cwin < len) {
+-					len = cwin;
+-					flags &= ~TH_FIN;
++				if (cwin < f->len) {
++					f->len = cwin;
++					f->flags &= ~TH_FIN;
+ 				}
+ 			}
+-		} else if (win < so->so_snd.sb_cc) {
+-			len = win - off;
+-			flags &= ~TH_FIN;
++		} else if (f->win < f->so->so_snd.sb_cc) {
++			f->len = f->win - f->off;
++			f->flags &= ~TH_FIN;
+ 		} else
+-			len = so->so_snd.sb_cc - off;
++			f->len = f->so->so_snd.sb_cc - f->off;
+ 	}
+ 
+-	if (len < 0) {
++	if (f->len < 0) {
+ 		/*
+ 		 * If FIN has been sent but not acked,
+ 		 * but we haven't been called to retransmit,
+@@ -863,39 +898,39 @@
+ 		 * to back up snd_nxt before the FIN so that the sequence
+ 		 * number is correct).
+ 		 */
+-		len = 0;
+-		flags &= ~TH_FIN;
+-		if (win == 0) {
+-			TCP_TIMER_DISARM(tp, TCPT_REXMT);
+-			tp->t_rxtshift = 0;
+-			tp->snd_nxt = tp->snd_una;
+-			if (TCP_TIMER_ISARMED(tp, TCPT_PERSIST) == 0)
+-				tcp_setpersist(tp);
++		f->len = 0;
++		f->flags &= ~TH_FIN;
++		if (f->win == 0) {
++			TCP_TIMER_DISARM(f->tp, TCPT_REXMT);
++			f->tp->t_rxtshift = 0;
++			f->tp->snd_nxt = f->tp->snd_una;
++			if (TCP_TIMER_ISARMED(f->tp, TCPT_PERSIST) == 0)
++				tcp_setpersist(f->tp);
+ 		}
+ 	}
+-	if (len > txsegsize) {
+-		if (use_tso) {
++	if (f->len > f->txsegsize) {
++		if (f->use_tso) {
+ 			/*
+ 			 * Truncate TSO transfers to IP_MAXPACKET, and make
+ 			 * sure that we send equal size transfers down the
+ 			 * stack (rather than big-small-big-small-...).
+ 			 */
+-			len = (min(len, IP_MAXPACKET) / txsegsize) * txsegsize;
+-			if (len <= txsegsize) {
+-				use_tso = 0;
++			f->len = (min(f->len, IP_MAXPACKET) / f->txsegsize) * f->txsegsize;
++			if (f->len <= f->txsegsize) {
++				f->use_tso = 0;
+ 			}
+ 		} else
+-			len = txsegsize;
+-		flags &= ~TH_FIN;
+-		sendalot = 1;
++			f->len = f->txsegsize;
++		f->flags &= ~TH_FIN;
++		f->sendalot = 1;
+ 	} else
+-		use_tso = 0;
+-	if (sack_rxmit) {
+-		if (SEQ_LT(p->rxmit + len, tp->snd_una + so->so_snd.sb_cc))
+-			flags &= ~TH_FIN;
++		f->use_tso = 0;
++	if (f->sack_rxmit) {
++		if (SEQ_LT(f->p->rxmit + f->len, f->tp->snd_una + f->so->so_snd.sb_cc))
++			f->flags &= ~TH_FIN;
+ 	}
+ 
+-	win = sbspace(&so->so_rcv);
++	f->win = sbspace(&f->so->so_rcv);
+ 
+ 	/*
+ 	 * Sender silly window avoidance.  If connection is idle
+@@ -907,20 +942,20 @@
+ 	 * If retransmitting (possibly after persist timer forced us
+ 	 * to send into a small window), then must resend.
+ 	 */
+-	if (len) {
+-		if (len >= txsegsize)
++	if (f->len) {
++		if (f->len >= f->txsegsize)
+ 			goto send;
+-		if ((so->so_state & SS_MORETOCOME) == 0 &&
+-		    ((idle || tp->t_flags & TF_NODELAY) &&
+-		     len + off >= so->so_snd.sb_cc))
++		if ((f->so->so_state & SS_MORETOCOME) == 0 &&
++		    ((f->idle || f->tp->t_flags & TF_NODELAY) &&
++		     f->len + f->off >= f->so->so_snd.sb_cc))
+ 			goto send;
+-		if (tp->t_force)
++		if (f->tp->t_force)
+ 			goto send;
+-		if (len >= tp->max_sndwnd / 2)
++		if (f->len >= f->tp->max_sndwnd / 2)
+ 			goto send;
+-		if (SEQ_LT(tp->snd_nxt, tp->snd_max))
++		if (SEQ_LT(f->tp->snd_nxt, f->tp->snd_max))
+ 			goto send;
+-		if (sack_rxmit)
++		if (f->sack_rxmit)
+ 			goto send;
+ 	}
+ 
+@@ -932,39 +967,39 @@
+ 	 * the maximum possible window, then want to send a window update
+ 	 * to peer.
+ 	 */
+-	if (win > 0) {
++	if (f->win > 0) {
+ 		/*
+ 		 * "adv" is the amount we can increase the window,
+ 		 * taking into account that we are limited by
+ 		 * TCP_MAXWIN << tp->rcv_scale.
+ 		 */
+-		long adv = min(win, (long)TCP_MAXWIN << tp->rcv_scale) -
+-			(tp->rcv_adv - tp->rcv_nxt);
++		long adv = min(f->win, (long)TCP_MAXWIN << f->tp->rcv_scale) -
++			(f->tp->rcv_adv - f->tp->rcv_nxt);
+ 
+-		if (adv >= (long) (2 * rxsegsize))
++		if (adv >= (long) (2 * f->rxsegsize))
+ 			goto send;
+-		if (2 * adv >= (long) so->so_rcv.sb_hiwat)
++		if (2 * adv >= (long) f->so->so_rcv.sb_hiwat)
+ 			goto send;
+ 	}
+ 
+ 	/*
+ 	 * Send if we owe peer an ACK.
+ 	 */
+-	if (tp->t_flags & TF_ACKNOW)
++	if (f->tp->t_flags & TF_ACKNOW)
+ 		goto send;
+-	if (flags & (TH_SYN|TH_FIN|TH_RST))
++	if (f->flags & (TH_SYN|TH_FIN|TH_RST))
+ 		goto send;
+-	if (SEQ_GT(tp->snd_up, tp->snd_una))
++	if (SEQ_GT(f->tp->snd_up, f->tp->snd_una))
+ 		goto send;
+ 	/*
+ 	 * In SACK, it is possible for tcp_output to fail to send a segment
+ 	 * after the retransmission timer has been turned off.  Make sure
+ 	 * that the retransmission timer is set.
+ 	 */
+-	if (TCP_SACK_ENABLED(tp) && SEQ_GT(tp->snd_max, tp->snd_una) &&
+-	    !TCP_TIMER_ISARMED(tp, TCPT_REXMT) &&
+-	    !TCP_TIMER_ISARMED(tp, TCPT_PERSIST)) {
+-		TCP_TIMER_ARM(tp, TCPT_REXMT, tp->t_rxtcur);
++	if (TCP_SACK_ENABLED(f->tp) && SEQ_GT(f->tp->snd_max, f->tp->snd_una) &&
++	    !TCP_TIMER_ISARMED(f->tp, TCPT_REXMT) &&
++	    !TCP_TIMER_ISARMED(f->tp, TCPT_PERSIST)) {
++		TCP_TIMER_ARM(f->tp, TCPT_REXMT, f->tp->t_rxtcur);
+ 		goto just_return;
+ 	}
+ 
+@@ -990,18 +1025,19 @@
+ 	 * if window is nonzero, transmit what we can,
+ 	 * otherwise force out a byte.
+ 	 */
+-	if (so->so_snd.sb_cc && TCP_TIMER_ISARMED(tp, TCPT_REXMT) == 0 &&
+-	    TCP_TIMER_ISARMED(tp, TCPT_PERSIST) == 0) {
+-		tp->t_rxtshift = 0;
+-		tcp_setpersist(tp);
++	if (f->so->so_snd.sb_cc && TCP_TIMER_ISARMED(f->tp, TCPT_REXMT) == 0 &&
++	    TCP_TIMER_ISARMED(f->tp, TCPT_PERSIST) == 0) {
++		f->tp->t_rxtshift = 0;
++		tcp_setpersist(f->tp);
+ 	}
+ 
+ 	/*
+ 	 * No reason to send a segment, just return.
+ 	 */
+ just_return:
+-	TCP_REASS_UNLOCK(tp);
+-	return (0);
++	TCP_REASS_UNLOCK(f->tp);
++	result = 0;
++	goto release;
+ 
+ send:
+ 	/*
+@@ -1012,64 +1048,64 @@
+ 	 * link header, i.e.
+ 	 *	max_linkhdr + sizeof (struct tcpiphdr) + optlen <= MCLBYTES
+ 	 */
+-	optlen = 0;
+-	switch (af) {
++	f->optlen = 0;
++	switch (f->af) {
+ #ifdef INET
+ 	case AF_INET:
+-		iphdrlen = sizeof(struct ip) + sizeof(struct tcphdr);
++		f->iphdrlen = sizeof(struct ip) + sizeof(struct tcphdr);
+ 		break;
+ #endif
+ #ifdef INET6
+ 	case AF_INET6:
+-		iphdrlen = sizeof(struct ip6_hdr) + sizeof(struct tcphdr);
++		f->iphdrlen = sizeof(struct ip6_hdr) + sizeof(struct tcphdr);
+ 		break;
+ #endif
+ 	default:	/*pacify gcc*/
+-		iphdrlen = 0;
++		f->iphdrlen = 0;
+ 		break;
+ 	}
+-	hdrlen = iphdrlen;
+-	if (flags & TH_SYN) {
++	f->hdrlen = f->iphdrlen;
++	if (f->flags & TH_SYN) {
+ 		struct rtentry *rt;
+ 
+ 		rt = NULL;
+ #ifdef INET
+-		if (tp->t_inpcb)
+-			rt = in_pcbrtentry(tp->t_inpcb);
++		if (f->tp->t_inpcb)
++			rt = in_pcbrtentry(f->tp->t_inpcb);
+ #endif
+ #ifdef INET6
+-		if (tp->t_in6pcb)
+-			rt = in6_pcbrtentry(tp->t_in6pcb);
++		if (f->tp->t_in6pcb)
++			rt = in6_pcbrtentry(f->tp->t_in6pcb);
+ #endif
+ 
+-		tp->snd_nxt = tp->iss;
+-		tp->t_ourmss = tcp_mss_to_advertise(rt != NULL ?
+-						    rt->rt_ifp : NULL, af);
+-		if ((tp->t_flags & TF_NOOPT) == 0) {
+-			opt[0] = TCPOPT_MAXSEG;
+-			opt[1] = 4;
+-			opt[2] = (tp->t_ourmss >> 8) & 0xff;
+-			opt[3] = tp->t_ourmss & 0xff;
+-			optlen = 4;
+-
+-			if ((tp->t_flags & TF_REQ_SCALE) &&
+-			    ((flags & TH_ACK) == 0 ||
+-			    (tp->t_flags & TF_RCVD_SCALE))) {
+-				*((u_int32_t *) (opt + optlen)) = htonl(
++		f->tp->snd_nxt = f->tp->iss;
++		f->tp->t_ourmss = tcp_mss_to_advertise(rt != NULL ?
++						    rt->rt_ifp : NULL, f->af);
++		if ((f->tp->t_flags & TF_NOOPT) == 0) {
++			f->opt[0] = TCPOPT_MAXSEG;
++			f->opt[1] = 4;
++			f->opt[2] = (f->tp->t_ourmss >> 8) & 0xff;
++			f->opt[3] = f->tp->t_ourmss & 0xff;
++			f->optlen = 4;
++
++			if ((f->tp->t_flags & TF_REQ_SCALE) &&
++			    ((f->flags & TH_ACK) == 0 ||
++			    (f->tp->t_flags & TF_RCVD_SCALE))) {
++				*((u_int32_t *) (f->opt + f->optlen)) = htonl(
+ 					TCPOPT_NOP << 24 |
+ 					TCPOPT_WINDOW << 16 |
+ 					TCPOLEN_WINDOW << 8 |
+-					tp->request_r_scale);
+-				optlen += 4;
++					f->tp->request_r_scale);
++				f->optlen += 4;
+ 			}
+ 			if (tcp_do_sack) {
+-				u_int8_t *p = (u_int8_t *)(opt + optlen);
++				u_int8_t *p = (u_int8_t *)(f->opt + f->optlen);
+ 
+ 				p[0] = TCPOPT_SACK_PERMITTED;
+ 				p[1] = 2;
+ 				p[2] = TCPOPT_NOP;
+ 				p[3] = TCPOPT_NOP;
+-				optlen += 4;
++				f->optlen += 4;
+ 			}
+ 		}
+ 	}
+@@ -1079,84 +1115,84 @@
+ 	 * wants to use timestamps (TF_REQ_TSTMP is set) or both our side
+ 	 * and our peer have sent timestamps in our SYN's.
+ 	 */
+-	if ((tp->t_flags & (TF_REQ_TSTMP|TF_NOOPT)) == TF_REQ_TSTMP &&
+-	     (flags & TH_RST) == 0 &&
+-	    ((flags & (TH_SYN|TH_ACK)) == TH_SYN ||
+-	     (tp->t_flags & TF_RCVD_TSTMP))) {
+-		u_int32_t *lp = (u_int32_t *)(opt + optlen);
++	if ((f->tp->t_flags & (TF_REQ_TSTMP|TF_NOOPT)) == TF_REQ_TSTMP &&
++	     (f->flags & TH_RST) == 0 &&
++	    ((f->flags & (TH_SYN|TH_ACK)) == TH_SYN ||
++	     (f->tp->t_flags & TF_RCVD_TSTMP))) {
++		u_int32_t *lp = (u_int32_t *)(f->opt + f->optlen);
+ 
+ 		/* Form timestamp option as shown in appendix A of RFC 1323. */
+ 		*lp++ = htonl(TCPOPT_TSTAMP_HDR);
+-		*lp++ = htonl(TCP_TIMESTAMP(tp));
+-		*lp   = htonl(tp->ts_recent);
+-		optlen += TCPOLEN_TSTAMP_APPA;
++		*lp++ = htonl(TCP_TIMESTAMP(f->tp));
++		*lp   = htonl(f->tp->ts_recent);
++		f->optlen += TCPOLEN_TSTAMP_APPA;
+ 	}
+ 
+ 	/*
+ 	 * Tack on the SACK block if it is necessary.
+ 	 */
+-	if (sack_numblks) {
++	if (f->sack_numblks) {
+ 		int sack_len;
+-		u_char *bp = (u_char *)(opt + optlen);
++		u_char *bp = (u_char *)(f->opt + f->optlen);
+ 		u_int32_t *lp = (u_int32_t *)(bp + 4);
+ 		struct ipqent *tiqe;
+ 
+-		sack_len = sack_numblks * 8 + 2;
++		sack_len = f->sack_numblks * 8 + 2;
+ 		bp[0] = TCPOPT_NOP;
+ 		bp[1] = TCPOPT_NOP;
+ 		bp[2] = TCPOPT_SACK;
+ 		bp[3] = sack_len;
+-		if ((tp->rcv_sack_flags & TCPSACK_HAVED) != 0) {
+-			sack_numblks--;
+-			*lp++ = htonl(tp->rcv_dsack_block.left);
+-			*lp++ = htonl(tp->rcv_dsack_block.right);
+-			tp->rcv_sack_flags &= ~TCPSACK_HAVED;
++		if ((f->tp->rcv_sack_flags & TCPSACK_HAVED) != 0) {
++			f->sack_numblks--;
++			*lp++ = htonl(f->tp->rcv_dsack_block.left);
++			*lp++ = htonl(f->tp->rcv_dsack_block.right);
++			f->tp->rcv_sack_flags &= ~TCPSACK_HAVED;
+ 		}
+-		for (tiqe = TAILQ_FIRST(&tp->timeq);
+-		    sack_numblks > 0; tiqe = TAILQ_NEXT(tiqe, ipqe_timeq)) {
++		for (tiqe = TAILQ_FIRST(&f->tp->timeq);
++		    f->sack_numblks > 0; tiqe = TAILQ_NEXT(tiqe, ipqe_timeq)) {
+ 			KASSERT(tiqe != NULL);
+-			sack_numblks--;
++			f->sack_numblks--;
+ 			*lp++ = htonl(tiqe->ipqe_seq);
+ 			*lp++ = htonl(tiqe->ipqe_seq + tiqe->ipqe_len +
+ 			    ((tiqe->ipqe_flags & TH_FIN) != 0 ? 1 : 0));
+ 		}
+-		optlen += sack_len + 2;
++		f->optlen += sack_len + 2;
+ 	}
+-	TCP_REASS_UNLOCK(tp);
++	TCP_REASS_UNLOCK(f->tp);
+ 
+ #ifdef TCP_SIGNATURE
+ #if defined(INET6) && defined(FAST_IPSEC)
+-	if (tp->t_family == AF_INET)
++	if (f->tp->t_family == AF_INET)
+ #endif
+-	if (tp->t_flags & TF_SIGNATURE) {
++	if (f->tp->t_flags & TF_SIGNATURE) {
+ 		u_char *bp;
+ 		/*
+ 		 * Initialize TCP-MD5 option (RFC2385)
+ 		 */
+-		bp = (u_char *)opt + optlen;
++		bp = (u_char *)f->opt + f->optlen;
+ 		*bp++ = TCPOPT_SIGNATURE;
+ 		*bp++ = TCPOLEN_SIGNATURE;
+-		sigoff = optlen + 2;
++		sigoff = f->optlen + 2;
+ 		bzero(bp, TCP_SIGLEN);
+ 		bp += TCP_SIGLEN;
+-		optlen += TCPOLEN_SIGNATURE;
++		f->optlen += TCPOLEN_SIGNATURE;
+ 		/*
+ 		 * Terminate options list and maintain 32-bit alignment.
+  		 */
+ 		*bp++ = TCPOPT_NOP;
+ 		*bp++ = TCPOPT_EOL;
+- 		optlen += 2;
++ 		f->optlen += 2;
+  	}
+ #endif /* TCP_SIGNATURE */
+ 
+-	hdrlen += optlen;
++	f->hdrlen += f->optlen;
+ 
+ #ifdef DIAGNOSTIC
+-	if (!use_tso && len > txsegsize)
++	if (!f->use_tso && f->len > f->txsegsize)
+ 		panic("tcp data to be sent is larger than segment");
+-	else if (use_tso && len > IP_MAXPACKET)
++	else if (f->use_tso && f->len > IP_MAXPACKET)
+ 		panic("tcp data to be sent is larger than max TSO size");
+-	if (max_linkhdr + hdrlen > MCLBYTES)
++	if (max_linkhdr + f->hdrlen > MCLBYTES)
+ 		panic("tcphdr too big");
+ #endif
+ 
+@@ -1165,9 +1201,9 @@
+ 	 * be transmitted, and initialize the header from
+ 	 * the template for sends on this connection.
+ 	 */
+-	if (len) {
+-		error = tcp_build_datapkt(tp, so, off, len, hdrlen, &m);
+-		if (error)
++	if (f->len) {
++		f->error = tcp_build_datapkt(f->tp, f->so, f->off, f->len, f->hdrlen, &f->m);
++		if (f->error)
+ 			goto out;
+ 		/*
+ 		 * If we're sending everything we've got, set PUSH.
+@@ -1175,65 +1211,65 @@
+ 		 * give data to the user when a buffer fills or
+ 		 * a PUSH comes in.)
+ 		 */
+-		if (off + len == so->so_snd.sb_cc)
+-			flags |= TH_PUSH;
++		if (f->off + f->len == f->so->so_snd.sb_cc)
++			f->flags |= TH_PUSH;
+ 	} else {
+-		if (tp->t_flags & TF_ACKNOW)
++		if (f->tp->t_flags & TF_ACKNOW)
+ 			tcpstat.tcps_sndacks++;
+-		else if (flags & (TH_SYN|TH_FIN|TH_RST))
++		else if (f->flags & (TH_SYN|TH_FIN|TH_RST))
+ 			tcpstat.tcps_sndctrl++;
+-		else if (SEQ_GT(tp->snd_up, tp->snd_una))
++		else if (SEQ_GT(f->tp->snd_up, f->tp->snd_una))
+ 			tcpstat.tcps_sndurg++;
+ 		else
+ 			tcpstat.tcps_sndwinup++;
+ 
+-		MGETHDR(m, M_DONTWAIT, MT_HEADER);
+-		if (m != NULL && max_linkhdr + hdrlen > MHLEN) {
+-			MCLGET(m, M_DONTWAIT);
+-			if ((m->m_flags & M_EXT) == 0) {
+-				m_freem(m);
+-				m = NULL;
++		MGETHDR(f->m, M_DONTWAIT, MT_HEADER);
++		if (f->m != NULL && max_linkhdr + f->hdrlen > MHLEN) {
++			MCLGET(f->m, M_DONTWAIT);
++			if ((f->m->m_flags & M_EXT) == 0) {
++				m_freem(f->m);
++				f->m = NULL;
+ 			}
+ 		}
+-		if (m == NULL) {
+-			error = ENOBUFS;
++		if (f->m == NULL) {
++			f->error = ENOBUFS;
+ 			goto out;
+ 		}
+-		MCLAIM(m, &tcp_tx_mowner);
+-		m->m_data += max_linkhdr;
+-		m->m_len = hdrlen;
++		MCLAIM(f->m, &tcp_tx_mowner);
++		f->m->m_data += max_linkhdr;
++		f->m->m_len = f->hdrlen;
+ 	}
+-	m->m_pkthdr.rcvif = (struct ifnet *)0;
+-	switch (af) {
++	f->m->m_pkthdr.rcvif = (struct ifnet *)0;
++	switch (f->af) {
+ #ifdef INET
+ 	case AF_INET:
+-		ip = mtod(m, struct ip *);
++		f->ip = mtod(f->m, struct ip *);
+ #ifdef INET6
+-		ip6 = NULL;
++		f->ip6 = NULL;
+ #endif
+-		th = (struct tcphdr *)(ip + 1);
++		f->th = (struct tcphdr *)(f->ip + 1);
+ 		break;
+ #endif
+ #ifdef INET6
+ 	case AF_INET6:
+-		ip = NULL;
+-		ip6 = mtod(m, struct ip6_hdr *);
+-		th = (struct tcphdr *)(ip6 + 1);
++		f->ip = NULL;
++		f->ip6 = mtod(f->m, struct ip6_hdr *);
++		f->th = (struct tcphdr *)(f->ip6 + 1);
+ 		break;
+ #endif
+ 	default:	/*pacify gcc*/
+-		ip = NULL;
++		f->ip = NULL;
+ #ifdef INET6
+-		ip6 = NULL;
++		f->ip6 = NULL;
+ #endif
+-		th = NULL;
++		f->th = NULL;
+ 		break;
+ 	}
+-	if (tp->t_template == 0)
++	if (f->tp->t_template == 0)
+ 		panic("tcp_output");
+-	if (tp->t_template->m_len < iphdrlen)
++	if (f->tp->t_template->m_len < f->iphdrlen)
+ 		panic("tcp_output");
+-	bcopy(mtod(tp->t_template, caddr_t), mtod(m, caddr_t), iphdrlen);
++	bcopy(mtod(f->tp->t_template, caddr_t), mtod(f->m, caddr_t), f->iphdrlen);
+ 
+ 	/*
+ 	 * If we are doing retransmissions, then snd_nxt will
+@@ -1248,39 +1284,42 @@
+ 	 * case, since we know we aren't doing a retransmission.
+ 	 * (retransmit and persist are mutually exclusive...)
+ 	 */
+-	if (TCP_SACK_ENABLED(tp) && sack_rxmit) {
+-		th->th_seq = htonl(p->rxmit);
+-		p->rxmit += len;
++	if (TCP_SACK_ENABLED(f->tp) && f->sack_rxmit) {
++		f->th->th_seq = htonl(f->p->rxmit);
++		f->p->rxmit += f->len;
+ 	} else {
+-		if (len || (flags & (TH_SYN|TH_FIN)) ||
+-		    TCP_TIMER_ISARMED(tp, TCPT_PERSIST))
+-			th->th_seq = htonl(tp->snd_nxt);
++		if (f->len || (f->flags & (TH_SYN|TH_FIN)) ||
++		    TCP_TIMER_ISARMED(f->tp, TCPT_PERSIST))
++			f->th->th_seq = htonl(f->tp->snd_nxt);
+ 		else
+-			th->th_seq = htonl(tp->snd_max);
++			f->th->th_seq = htonl(f->tp->snd_max);
+ 	}
+-	th->th_ack = htonl(tp->rcv_nxt);
+-	if (optlen) {
+-		bcopy((caddr_t)opt, (caddr_t)(th + 1), optlen);
+-		th->th_off = (sizeof (struct tcphdr) + optlen) >> 2;
++	f->th->th_ack = htonl(f->tp->rcv_nxt);
++	if (f->optlen) {
++		bcopy((caddr_t)f->opt, (caddr_t)(f->th + 1), f->optlen);
++		f->th->th_off = (sizeof (struct tcphdr) + f->optlen) >> 2;
+ 	}
+-	th->th_flags = flags;
++	f->th->th_flags = f->flags;
+ 	/*
+ 	 * Calculate receive window.  Don't shrink window,
+ 	 * but avoid silly window syndrome.
+ 	 */
+-	if (win < (long)(so->so_rcv.sb_hiwat / 4) && win < (long)rxsegsize)
+-		win = 0;
+-	if (win > (long)TCP_MAXWIN << tp->rcv_scale)
+-		win = (long)TCP_MAXWIN << tp->rcv_scale;
+-	if (win < (long)(int32_t)(tp->rcv_adv - tp->rcv_nxt))
+-		win = (long)(int32_t)(tp->rcv_adv - tp->rcv_nxt);
+-	th->th_win = htons((u_int16_t) (win>>tp->rcv_scale));
+-	if (SEQ_GT(tp->snd_up, tp->snd_nxt)) {
+-		u_int32_t urp = tp->snd_up - tp->snd_nxt;
++	if (f->win < (long)(f->so->so_rcv.sb_hiwat / 4) && f->win < (long)f->rxsegsize)
++		f->win = 0;
++	if (f->win > (long)TCP_MAXWIN << f->tp->rcv_scale)
++		f->win = (long)TCP_MAXWIN << f->tp->rcv_scale;
++	if (f->win < (long)(int32_t)(f->tp->rcv_adv - f->tp->rcv_nxt))
++		f->win = (long)(int32_t)(f->tp->rcv_adv - f->tp->rcv_nxt);
++	/* SCE: a closed receive side that offers no window was flushed full */
++	if ((f->so->so_state & SS_CANTRCVMORE) && f->win == 0)
++		f->so->so_state |= SS_RCVFLUSHFULL;
++	f->th->th_win = htons((u_int16_t) (f->win>>tp->rcv_scale));
++	if (SEQ_GT(f->tp->snd_up, f->tp->snd_nxt)) {
++		u_int32_t urp = f->tp->snd_up - f->tp->snd_nxt;
+ 		if (urp > IP_MAXPACKET)
+ 			urp = IP_MAXPACKET;
+-		th->th_urp = htons((u_int16_t)urp);
+-		th->th_flags |= TH_URG;
++		f->th->th_urp = htons((u_int16_t)urp);
++		f->th->th_flags |= TH_URG;
+ 	} else
+ 		/*
+ 		 * If no urgent pointer to send, then we pull
+@@ -1288,29 +1327,30 @@
+ 		 * so that it doesn't drift into the send window on sequence
+ 		 * number wraparound.
+ 		 */
+-		tp->snd_up = tp->snd_una;		/* drag it along */
++		f->tp->snd_up = f->tp->snd_una;		/* drag it along */
+ 
+ #ifdef TCP_SIGNATURE
+ #if defined(INET6) && defined(FAST_IPSEC)
+-	if (tp->t_family == AF_INET) /* XXX */
++	if (f->tp->t_family == AF_INET) /* XXX */
+ #endif
+-	if (sigoff && (tp->t_flags & TF_SIGNATURE)) {
++	if (sigoff && (f->tp->t_flags & TF_SIGNATURE)) {
+ 		struct secasvar *sav;
+ 		u_int8_t *sigp;
+ 
+-		sav = tcp_signature_getsav(m, th);
++		sav = tcp_signature_getsav(f->m, f->th);
+ 
+ 		if (sav == NULL) {
+-			if (m)
+-				m_freem(m);
+-			return (EPERM);
++			if (f->m)
++				m_freem(f->m);
++			result = EPERM;
++			goto release;
+ 		}
+ 
+-		m->m_pkthdr.len = hdrlen + len;
+-		sigp = (caddr_t)th + sizeof(*th) + sigoff;
+-		tcp_signature(m, th, (caddr_t)th - mtod(m, caddr_t), sav, sigp);
++		f->m->m_pkthdr.len = f->hdrlen + f->len;
++		sigp = (caddr_t)f->th + sizeof(*f->th) + sigoff;
++		tcp_signature(f->m, f->th, (caddr_t)f->th - mtod(f->m, caddr_t), sav, sigp);
+ 
+-		key_sa_recordxfer(sav, m);
++		key_sa_recordxfer(sav, f->m);
+ #ifdef FAST_IPSEC
+ 		KEY_FREESAV(&sav);
+ #else
+@@ -1323,20 +1363,23 @@
+ 	 * Set ourselves up to be checksummed just before the packet
+ 	 * hits the wire.
+ 	 */
+-	switch (af) {
++	switch (f->af) {
+ #ifdef INET
+ 	case AF_INET:
+-		m->m_pkthdr.csum_data = offsetof(struct tcphdr, th_sum);
+-		if (use_tso) {
+-			m->m_pkthdr.segsz = txsegsize;
+-			m->m_pkthdr.csum_flags = M_CSUM_TSOv4;
++		/* SCE: a P2P segment goes out in udpp2p, without a TCP checksum */
++		if (f->tp->t_flags & TF_SCE_P2P)
++			break;
++		f->m->m_pkthdr.csum_data = offsetof(struct tcphdr, th_sum);
++		if (f->use_tso) {
++			f->m->m_pkthdr.segsz = f->txsegsize;
++			f->m->m_pkthdr.csum_flags = M_CSUM_TSOv4;
+ 		} else {
+-			m->m_pkthdr.csum_flags = M_CSUM_TCPv4;
+-			if (len + optlen) {
++			f->m->m_pkthdr.csum_flags = M_CSUM_TCPv4;
++			if (f->len + f->optlen) {
+ 				/* Fixup the pseudo-header checksum. */
+ 				/* XXXJRT Not IP Jumbogram safe. */
+-				th->th_sum = in_cksum_addword(th->th_sum,
+-				    htons((u_int16_t) (len + optlen)));
++				f->th->th_sum = in_cksum_addword(f->th->th_sum,
++				    htons((u_int16_t) (f->len + f->optlen)));
+ 			}
+ 		}
+ 		break;
+@@ -1350,20 +1393,20 @@
+ 		 * XXX of the cached pseudo-header checksum.
+ 		 */
+ 		/* equals to hdrlen + len */
+-		m->m_pkthdr.len = sizeof(struct ip6_hdr)
+-			+ sizeof(struct tcphdr) + optlen + len;
++		f->m->m_pkthdr.len = sizeof(struct ip6_hdr)
++			+ sizeof(struct tcphdr) + f->optlen + f->len;
+ #ifdef notyet
+-		m->m_pkthdr.csum_flags = M_CSUM_TCPv6;
+-		m->m_pkthdr.csum_data = offsetof(struct tcphdr, th_sum);
++		f->m->m_pkthdr.csum_flags = M_CSUM_TCPv6;
++		f->m->m_pkthdr.csum_data = offsetof(struct tcphdr, th_sum);
+ #endif
+-		if (len + optlen) {
++		if (f->len + f->optlen) {
+ 			/* Fixup the pseudo-header checksum. */
+ 			/* XXXJRT: Not IPv6 Jumbogram safe. */
+-			th->th_sum = in_cksum_addword(th->th_sum,
+-			    htons((u_int16_t) (len + optlen)));
++			f->th->th_sum = in_cksum_addword(f->th->th_sum,
++			    htons((u_int16_t) (f->len + f->optlen)));
+ 		}
+-		th->th_sum = in6_cksum(m, 0, sizeof(struct ip6_hdr),
+-		    sizeof(struct tcphdr) + optlen + len);
++		f->th->th_sum = in6_cksum(f->m, 0, sizeof(struct ip6_hdr),
++		    sizeof(struct tcphdr) + f->optlen + f->len);
+ 		break;
+ #endif
+ 	}
+@@ -1372,28 +1415,28 @@
+ 	 * In transmit state, time the transmission and arrange for
+ 	 * the retransmit.  In persist state, just set snd_max.
+ 	 */
+-	if (tp->t_force == 0 || TCP_TIMER_ISARMED(tp, TCPT_PERSIST) == 0) {
+-		tcp_seq startseq = tp->snd_nxt;
++	if (f->tp->t_force == 0 || TCP_TIMER_ISARMED(f->tp, TCPT_PERSIST) == 0) {
++		tcp_seq startseq = f->tp->snd_nxt;
+ 
+ 		/*
+ 		 * Advance snd_nxt over sequence space of this segment.
+ 		 * There are no states in which we send both a SYN and a FIN,
+ 		 * so we collapse the tests for these flags.
+ 		 */
+-		if (flags & (TH_SYN|TH_FIN))
+-			tp->snd_nxt++;
+-		if (sack_rxmit)
++		if (f->flags & (TH_SYN|TH_FIN))
++			f->tp->snd_nxt++;
++		if (f->sack_rxmit)
+ 			goto timer;
+-		tp->snd_nxt += len;
+-		if (SEQ_GT(tp->snd_nxt, tp->snd_max)) {
+-			tp->snd_max = tp->snd_nxt;
++		f->tp->snd_nxt += f->len;
++		if (SEQ_GT(f->tp->snd_nxt, f->tp->snd_max)) {
++			f->tp->snd_max = f->tp->snd_nxt;
+ 			/*
+ 			 * Time this transmission if not a retransmission and
+ 			 * not currently timing anything.
+ 			 */
+-			if (tp->t_rtttime == 0) {
+-				tp->t_rtttime = tcp_now;
+-				tp->t_rtseq = startseq;
++			if (f->tp->t_rtttime == 0) {
++				f->tp->t_rtttime = tcp_now;
++				f->tp->t_rtseq = startseq;
+ 				tcpstat.tcps_segstimed++;
+ 			}
+ 		}
+@@ -1407,25 +1450,25 @@
+ 		 * of retransmit time.
+ 		 */
+ timer:
+-		if (TCP_TIMER_ISARMED(tp, TCPT_REXMT) == 0 &&
+-			((sack_rxmit && tp->snd_nxt != tp->snd_max) ||
+-		    tp->snd_nxt != tp->snd_una)) {
+-			if (TCP_TIMER_ISARMED(tp, TCPT_PERSIST)) {
+-				TCP_TIMER_DISARM(tp, TCPT_PERSIST);
+-				tp->t_rxtshift = 0;
++		if (TCP_TIMER_ISARMED(f->tp, TCPT_REXMT) == 0 &&
++			((f->sack_rxmit && f->tp->snd_nxt != f->tp->snd_max) ||
++		    f->tp->snd_nxt != f->tp->snd_una)) {
++			if (TCP_TIMER_ISARMED(f->tp, TCPT_PERSIST)) {
++				TCP_TIMER_DISARM(f->tp, TCPT_PERSIST);
++				f->tp->t_rxtshift = 0;
+ 			}
+-			TCP_TIMER_ARM(tp, TCPT_REXMT, tp->t_rxtcur);
++			TCP_TIMER_ARM(f->tp, TCPT_REXMT, f->tp->t_rxtcur);
+ 		}
+ 	} else
+-		if (SEQ_GT(tp->snd_nxt + len, tp->snd_max))
+-			tp->snd_max = tp->snd_nxt + len;
++		if (SEQ_GT(f->tp->snd_nxt + f->len, f->tp->snd_max))
++			f->tp->snd_max = f->tp->snd_nxt + f->len;
+ 
+ #ifdef TCP_DEBUG
+ 	/*
+ 	 * Trace.
+ 	 */
+-	if (so->so_options & SO_DEBUG)
+-		tcp_trace(TA_OUTPUT, tp->t_state, tp, m, 0);
++	if (f->so->so_options & SO_DEBUG)
++		tcp_trace(TA_OUTPUT, f->tp->t_state, f->tp, f->m, 0);
+ #endif
+ 
+ 	/*
+@@ -1434,36 +1477,36 @@
+ 	 * to handle ttl and tos; we could keep them in
+ 	 * the template, but need a way to checksum without them.
+ 	 */
+-	m->m_pkthdr.len = hdrlen + len;
++	f->m->m_pkthdr.len = f->hdrlen + f->len;
+ 
+-	switch (af) {
++	switch (f->af) {
+ #ifdef INET
+ 	case AF_INET:
+-		ip->ip_len = htons(m->m_pkthdr.len);
+-		if (tp->t_inpcb) {
+-			ip->ip_ttl = tp->t_inpcb->inp_ip.ip_ttl;
+-			ip->ip_tos = tp->t_inpcb->inp_ip.ip_tos;
++		f->ip->ip_len = htons(f->m->m_pkthdr.len);
++		if (f->tp->t_inpcb) {
++			f->ip->ip_ttl = f->tp->t_inpcb->inp_ip.ip_ttl;
++			f->ip->ip_tos = f->tp->t_inpcb->inp_ip.ip_tos;
+ 		}
+ #ifdef INET6
+-		else if (tp->t_in6pcb) {
+-			ip->ip_ttl = in6_selecthlim(tp->t_in6pcb, NULL); /*XXX*/
+-			ip->ip_tos = 0;	/*XXX*/
++		else if (f->tp->t_in6pcb) {
++			f->ip->ip_ttl = in6_selecthlim(f->tp->t_in6pcb, NULL); /*XXX*/
++			f->ip->ip_tos = 0;	/*XXX*/
+ 		}
+ #endif
+ 		break;
+ #endif
+ #ifdef INET6
+ 	case AF_INET6:
+-		ip6->ip6_nxt = IPPROTO_TCP;
+-		if (tp->t_in6pcb) {
++		f->ip6->ip6_nxt = IPPROTO_TCP;
++		if (f->tp->t_in6pcb) {
+ 			/*
+ 			 * we separately set hoplimit for every segment, since
+ 			 * the user might want to change the value via
+ 			 * setsockopt. Also, desired default hop limit might
+ 			 * be changed via Neighbor Discovery.
+ 			 */
+-			ip6->ip6_hlim = in6_selecthlim(tp->t_in6pcb,
+-				ro->ro_rt ? ro->ro_rt->rt_ifp : NULL);
++			f->ip6->ip6_hlim = in6_selecthlim(f->tp->t_in6pcb,
++				f->ro->ro_rt ? f->ro->ro_rt->rt_ifp : NULL);
+ 		}
+ 		/* ip6->ip6_flow = ??? */
+ 		/* ip6_plen will be filled in ip6_output(). */
+@@ -1471,20 +1514,36 @@
+ #endif
+ 	}
+ 
+-	switch (af) {
++	/* SCE: a closing connection neither connects the interface nor keeps it awake */
++	if (f->tp->t_state > TCPS_CLOSE_WAIT)
++		f->m->m_flags |= M_SCE_NOAUTOCONNECT | M_SCE_NOIDLERESET;
++
++	switch (f->af) {
+ #ifdef INET
+ 	case AF_INET:
+ 	    {
+ 		struct mbuf *opts;
+ 
+-		if (tp->t_inpcb)
+-			opts = tp->t_inpcb->inp_options;
++		if (f->tp->t_inpcb)
++			opts = f->tp->t_inpcb->inp_options;
+ 		else
+ 			opts = NULL;
+-		error = ip_output(m, opts, ro,
+-			(tp->t_mtudisc ? IP_MTUDISC : 0) |
+-			(so->so_options & SO_DONTROUTE),
+-			(struct ip_moptions *)0, so);
++		/* SCE: a P2P segment goes to udpp2p without its IP header */
++		if (f->tp->t_flags & TF_SCE_P2P) {
++			f->src.sin_addr = f->ip->ip_src;
++			f->dst.sin_addr = f->ip->ip_dst;
++			f->src.sin_port = f->tp->t_local_vport;
++			f->dst.sin_port = f->tp->t_remote_vport;
++			m_adj(f->m, sizeof(struct ip));
++			f->error = udpp2p_output(&f->src, &f->dst, f->m, f->ro,
++			    f->so, f->tp->t_flags & TF_SCE_USECRYPTO,
++			    f->tp->t_flags & TF_SCE_USESIGNATURE);
++			break;
++		}
++		f->error = ip_output(f->m, opts, f->ro,
++			(f->tp->t_mtudisc ? IP_MTUDISC : 0) |
++			(f->so->so_options & SO_DONTROUTE),
++			(struct ip_moptions *)0, f->so);
+ 		break;
+ 	    }
+ #endif
+@@ -1493,51 +1552,52 @@
+ 	    {
+ 		struct ip6_pktopts *opts;
+ 
+-		if (tp->t_in6pcb)
+-			opts = tp->t_in6pcb->in6p_outputopts;
++		if (f->tp->t_in6pcb)
++			opts = f->tp->t_in6pcb->in6p_outputopts;
+ 		else
+ 			opts = NULL;
+-		error = ip6_output(m, opts, (struct route_in6 *)ro,
+-			so->so_options & SO_DONTROUTE,
+-			(struct ip6_moptions *)0, so, NULL);
++		f->error = ip6_output(f->m, opts, (struct route_in6 *)f->ro,
++			f->so->so_options & SO_DONTROUTE,
++			(struct ip6_moptions *)0, f->so, NULL);
+ 		break;
+ 	    }
+ #endif
+ 	default:
+-		error = EAFNOSUPPORT;
++		f->error = EAFNOSUPPORT;
+ 		break;
+ 	}
+-	if (error) {
++	if (f->error) {
+ out:
+-		if (error == ENOBUFS) {
++		if (f->error == ENOBUFS) {
+ 			tcpstat.tcps_selfquench++;
+ #ifdef INET
+-			if (tp->t_inpcb)
+-				tcp_quench(tp->t_inpcb, 0);
++			if (f->tp->t_inpcb)
++				tcp_quench(f->tp->t_inpcb, 0);
+ #endif
+ #ifdef INET6
+-			if (tp->t_in6pcb)
+-				tcp6_quench(tp->t_in6pcb, 0);
++			if (f->tp->t_in6pcb)
++				tcp6_quench(f->tp->t_in6pcb, 0);
+ #endif
+-			error = 0;
+-		} else if ((error == EHOSTUNREACH || error == ENETDOWN) &&
+-		    TCPS_HAVERCVDSYN(tp->t_state)) {
+-			tp->t_softerror = error;
+-			error = 0;
++			f->error = 0;
++		} else if ((f->error == EHOSTUNREACH || f->error == ENETDOWN) &&
++		    TCPS_HAVERCVDSYN(f->tp->t_state)) {
++			f->tp->t_softerror = f->error;
++			f->error = 0;
+ 		}
+ 
+ 		/* Back out the seqence number advance. */
+-		if (sack_rxmit)
+-			p->rxmit -= len;
++		if (f->sack_rxmit)
++			f->p->rxmit -= f->len;
+ 
+ 		/* Restart the delayed ACK timer, if necessary. */
+-		if (tp->t_flags & TF_DELACK)
+-			TCP_RESTART_DELACK(tp);
++		if (f->tp->t_flags & TF_DELACK)
++			TCP_RESTART_DELACK(f->tp);
+ 
+-		return (error);
++		result = f->error;
++		goto release;
+ 	}
+ 	tcpstat.tcps_sndtotal++;
+-	if (tp->t_flags & TF_DELACK)
++	if (f->tp->t_flags & TF_DELACK)
+ 		tcpstat.tcps_delack++;
+ 
+ 	/*
+@@ -1546,18 +1606,21 @@
+ 	 * then remember the size of the advertised window.
+ 	 * Any pending ACK has now been sent.
+ 	 */
+-	if (win > 0 && SEQ_GT(tp->rcv_nxt+win, tp->rcv_adv))
+-		tp->rcv_adv = tp->rcv_nxt + win;
+-	tp->last_ack_sent = tp->rcv_nxt;
+-	tp->t_flags &= ~TF_ACKNOW;
+-	TCP_CLEAR_DELACK(tp);
++	if (f->win > 0 && SEQ_GT(f->tp->rcv_nxt+f->win, f->tp->rcv_adv))
++		f->tp->rcv_adv = f->tp->rcv_nxt + f->win;
++	f->tp->last_ack_sent = f->tp->rcv_nxt;
++	f->tp->t_flags &= ~TF_ACKNOW;
++	TCP_CLEAR_DELACK(f->tp);
+ #ifdef DIAGNOSTIC
+-	if (maxburst < 0)
+-		printf("tcp_output: maxburst exceeded by %d\n", -maxburst);
++	if (f->maxburst < 0)
++		printf("tcp_output: maxburst exceeded by %d\n", -f->maxburst);
+ #endif
+-	if (sendalot && (!tcp_do_newreno || --maxburst))
++	if (f->sendalot && (!tcp_do_newreno || --f->maxburst))
+ 		goto again;
+-	return (0);
++	result = 0;
++release:
++	free(f, M_TEMP);
++	return (result);
+ }
+ 
+ void
