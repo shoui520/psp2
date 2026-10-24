@@ -41,9 +41,9 @@ int sceNetPsNotifyLinkState(struct SceNetPsDriverContext *context)
 		return -5;
 	driver->control(driver, NET_DRIVER_CTL_GET_LINK, &link, sizeof(link));
 	if (!link)
-		sceNetPsNotifyDriver(driver, NULL, 8, 0, NULL, 0);
+		sceNetPsNotifyDriver(driver, 8, NULL, 0);
 	else
-		sceNetPsNotifyDriver(driver, NULL, 4, 0, NULL, 0);
+		sceNetPsNotifyDriver(driver, 4, NULL, 0);
 	return 0;
 }
 

@@ -58,15 +58,15 @@ int sceNetPsDispatchDriverEvents(void)
 	struct SceNetPsDriverContext *context;
 
 	sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
-	sceNetPsNotifyDriver(NULL, NULL, 8, 0, NULL, 0);
+	sceNetPsNotifyDriver(NULL, 8, NULL, 0);
 	for (driver = gNetPsDriverHead; driver; driver = driver->next) {
 		context = driver->context;
 		if (context->flags & 4) {
-			sceNetPsNotifyDriver(driver, NULL, 0x1000000, 0, NULL, 0);
+			sceNetPsNotifyDriver(driver, 0x1000000, NULL, 0);
 			context->flags &= ~4u;
 		}
 		if (context->flags & 8) {
-			sceNetPsNotifyDriver(driver, NULL, 0x8000000, 0, NULL, 0);
+			sceNetPsNotifyDriver(driver, 0x8000000, NULL, 0);
 			context->flags &= ~8u;
 		}
 	}

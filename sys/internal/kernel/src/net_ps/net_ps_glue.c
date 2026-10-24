@@ -322,7 +322,7 @@ void sceNetPsStartTransmit(struct ifnet *interface)
 				owner->connectionState = 3;
 			}
 			if (!(gNetPsDriverFlags & 1))
-				sceNetPsNotifyDriver(driver, NULL, 0x1000000, 0, NULL, 0);
+				sceNetPsNotifyDriver(driver, 0x1000000, NULL, 0);
 		}
 		if (!(mbuf->m_flags & M_SCE_NOIDLERESET))
 			resetIdle = 1;
@@ -377,7 +377,7 @@ int sceNetPsSuspendDrivers(void)
 	struct ifnet *interface;
 
 	sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
-	sceNetPsNotifyDriver(NULL, NULL, 4, 0, NULL, 0);
+	sceNetPsNotifyDriver(NULL, 4, NULL, 0);
 	if (gNetPsSocketSuspendPolicy & 1)
 		sceNetPsManageProcessSockets(0, 0x1000009);
 	for (driver = gNetPsDriverHead; driver; driver = driver->next) {
@@ -397,7 +397,7 @@ int sceNetPsPollDevices(void)
 	struct NetDriver *driver;
 
 	if (ticks % 60000 == 0)
-		sceNetPsNotifyDriver(NULL, NULL, 0x10000000, 0, NULL, 0);
+		sceNetPsNotifyDriver(NULL, 0x10000000, NULL, 0);
 	if (ticks % 1000 != 0)
 		return 0;
 	for (driver = gNetPsDriverHead; driver; driver = driver->next) {
@@ -417,7 +417,7 @@ int sceNetPsPollDevices(void)
 			context->connectionState = 4;
 			context->autoConnectEnabled = 0;
 		}
-		sceNetPsNotifyDriver(driver, NULL, 0x2000000, 0, NULL, 0);
+		sceNetPsNotifyDriver(driver, 0x2000000, NULL, 0);
 		memset(&context->idle, 0, sizeof(context->idle));
 	}
 	return 0;
@@ -659,7 +659,7 @@ int sceNetPsSetConnectionParam(struct SceNetPsDriverContext *context,
 		return 0;
 	}
 	interface->if_flags |= 0x40000;
-	sceNetPsNotifyDriver(NULL, interface, 0x10000000, 0, NULL, 0);
+	sceNetPsNotifyDriver(NULL, 0x10000000, NULL, 0);
 	if (context->connectionState == 1) {
 		context->connectionState = 0;
 		context->autoConnectEnabled = 0;
@@ -845,7 +845,7 @@ int SceNetPsForDriver_1ABF937D(void *argument)
 	}
 	if (driver->type == 1 && gNetPsAllocatedDriverContext) {
 		context->generation = gNetPsAllocatedDriverContext->generation + 1;
-		sceNetPsNotifyDriver(NULL, NULL, 0x10000000, 0, NULL, 0);
+		sceNetPsNotifyDriver(NULL, 0x10000000, NULL, 0);
 		saved = gNetPsAllocatedDriverContext;
 		if (saved->flags & 4) {
 			policy = saved->autoConnectPolicy;
@@ -858,13 +858,13 @@ int SceNetPsForDriver_1ABF937D(void *argument)
 				context->connectionState = 0;
 				context->autoConnectEnabled = 0;
 			}
-			sceNetPsNotifyDriver(driver, NULL, 0x1000000, 0, NULL, 0);
+			sceNetPsNotifyDriver(driver, 0x1000000, NULL, 0);
 			saved = gNetPsAllocatedDriverContext;
 		}
 		memset(saved, 0, sizeof(*saved));
 	} else if (driver->type == 4 && gNetPsAllocatedDriverContext) {
 		context->generation = gNetPsAllocatedDriverContext->generation + 1;
-		sceNetPsNotifyDriver(NULL, NULL, 0x10000000, 0, NULL, 0);
+		sceNetPsNotifyDriver(NULL, 0x10000000, NULL, 0);
 	}
 	if_attach(interface);
 	ether_ifattach(interface, driver->mac.data);
@@ -876,7 +876,7 @@ int SceNetPsForDriver_1ABF937D(void *argument)
 		gNetPsDriverHead = driver;
 	driver->next = NULL;
 	gNetPsDriverTail = driver;
-	sceNetPsNotifyDriver(NULL, context->hardwareAddress, 1, 0, NULL, 0);
+	sceNetPsNotifyDriver(NULL, 1, NULL, 0);
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 	return 0;
 failed:
@@ -910,7 +910,7 @@ int SceNetPsForDriver_F5788FF8(void *argument)
 		goto unlock;
 	}
 	sceNetPsStopDriverEmulation(driver);
-	sceNetPsNotifyDriver(NULL, NULL, 2, 0, NULL, 0);
+	sceNetPsNotifyDriver(NULL, 2, NULL, 0);
 	if (driver->next)
 		driver->next->prev = driver->prev;
 	else

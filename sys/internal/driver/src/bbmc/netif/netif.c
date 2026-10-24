@@ -123,9 +123,9 @@ int bbmcReplyToArp(BbmcPacketInterface *control,
 	packet->buffer->end += length;
 	packet->length = length;
 	driver->deliverRx(driver, packet);
-	/* The registered NetPs callback ignores context for event zero. */
-	return driver->notify(driver, NULL, NET_DRIVER_EVENT_STATUS,
-		NET_DRIVER_STATUS_RECEIVED, NULL, 0);
+	return driver->notify(driver,
+		NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+				 NET_DRIVER_STATUS_RECEIVED), NULL, 0);
 }
 
 /* name unknown: combine modem registration, USB attachment and power events. */
@@ -198,8 +198,9 @@ int bbmcPacketReceiveCompleted(int result, int count, void *context)
 				packet->buffer->end += length;
 				packet->length = length;
 				driver->deliverRx(driver, packet);
-				driver->notify(driver, NULL, NET_DRIVER_EVENT_STATUS,
-					NET_DRIVER_STATUS_RECEIVED, NULL, 0);
+				driver->notify(driver,
+					NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+							 NET_DRIVER_STATUS_RECEIVED), NULL, 0);
 			} else {
 				driver->rxDrops++;
 			}

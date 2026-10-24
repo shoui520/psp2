@@ -111,8 +111,8 @@ void *sceNetPsMallocForDriver(struct NetDriver *driver, SceSize size,
 			    SceSize alignment);
 int sceNetPsUpdateDriverMulticast(struct NetDriver *driver);
 int sceNetPsKickTransmit(struct NetDriver *driver, int resetIdle);
-int sceNetPsNotifyDriver(struct NetDriver *driver, const void *reserved,
-			int event, int argument, const void *data, int size);
+int sceNetPsNotifyDriver(struct NetDriver *driver, SceUInt64 events,
+			 const void *data, int size);
 void sceNetPsSwapCounterByteOrder(unsigned int counters[8]);
 
 struct mbuf;

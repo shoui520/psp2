@@ -45,6 +45,13 @@ _Static_assert(offsetof(struct NetDriverPacket, buffer) == 32, "NetDriverPacket 
 _Static_assert(offsetof(struct NetDriverPacket, next) == 36, "NetDriverPacket next");
 _Static_assert(sizeof(struct NetDriverPacket) == 44, "NetDriverPacket size");
 
+/*
+ * NetDriver.notify takes 64-bit events: an event in the low word, its
+ * argument in the high word
+ */
+#define NET_DRIVER_EVENT(event, argument) \
+	((SceUInt64)(unsigned int)(argument) << 32 | (unsigned int)(event))
+
 /* NetDriver.notify events */
 #define NET_DRIVER_EVENT_STATUS		0	/* argument: NET_DRIVER_STATUS_* */
 #define NET_DRIVER_EVENT_LINK_UP	1
@@ -97,8 +104,8 @@ struct NetDriver {
 	void (*releaseTx)(struct NetDriver *driver, struct NetDriverPacket *packet);
 	int (*deliverRx)(struct NetDriver *driver, struct NetDriverPacket *packet);
 	struct NetDriverPacket *(*dequeueTx)(struct NetDriver *driver);
-	int (*notify)(struct NetDriver *driver, const void *context, int event, int argument,
-		      const void *data, int size);
+	int (*notify)(struct NetDriver *driver, SceUInt64 events, const void *data,
+		      int size);
 	int (*setMtu)(struct NetDriver *driver, unsigned int mtu);
 	unsigned int reserved2[2];
 	struct SceNetPsDriverContext *context;

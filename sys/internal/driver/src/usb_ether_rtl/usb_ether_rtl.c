@@ -118,7 +118,9 @@ static int interfaceClose(struct NetDriver *driver, int argument)
 	if (a->state & 1)
 		sceKernelSetEventFlag(a->workerEvent, 4);
 	else
-		driver->notify(driver, driver->notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_STOPPED, NULL, 0);
+		driver->notify(driver,
+			NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+					 NET_DRIVER_STATUS_STOPPED), NULL, 0);
 	return 0;
 }
 
@@ -132,7 +134,9 @@ static int interfaceOpen(struct NetDriver *driver, int argument)
 	if (a->state & 1)
 		sceKernelSetEventFlag(a->workerEvent, 2);
 	else
-		driver->notify(driver, &error, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_ERROR, &error, 4);
+		driver->notify(driver,
+			NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+					 NET_DRIVER_STATUS_ERROR), &error, 4);
 	return 0;
 }
 
@@ -210,7 +214,7 @@ void rtlPowerEvent(int event, int value)
 	}
 	a->state &= ~1;
 	if (a->flags & 2)
-		a->driver.notify(&a->driver, a->driver.notify, NET_DRIVER_EVENT_RESUMED, 0, NULL, 0);
+		a->driver.notify(&a->driver, NET_DRIVER_EVENT_RESUMED, NULL, 0);
 }
 
 /* name unknown */
@@ -292,7 +296,7 @@ static int setLink(struct RtlAdapter *a, unsigned int mode)
 	}
 	a->link = 0;
 	if (a->flags & 2)
-		a->driver.notify(&a->driver, a->driver.notify, NET_DRIVER_EVENT_LINK_DOWN, 0, NULL, 0);
+		a->driver.notify(&a->driver, NET_DRIVER_EVENT_LINK_DOWN, NULL, 0);
 	ret = rtlWriteRegister(a, 0xde00, 0x10f, 4, 0);
 	if (ret < 0)
 		return ret;
@@ -387,7 +391,7 @@ int rtlUpdateLink(struct RtlAdapter *a)
 	if (a->link & 1) {
 		if (!(value & 4)) {
 			a->link = 0;
-			a->driver.notify(&a->driver, a->driver.notify, NET_DRIVER_EVENT_LINK_DOWN, 0, NULL, 0);
+			a->driver.notify(&a->driver, NET_DRIVER_EVENT_LINK_DOWN, NULL, 0);
 		}
 		goto out;
 	}
@@ -426,7 +430,7 @@ int rtlUpdateLink(struct RtlAdapter *a)
 		else if (value & 0x20)
 			a->link = 0x15;
 	}
-	a->driver.notify(&a->driver, a->driver.notify, NET_DRIVER_EVENT_LINK_UP, 0, NULL, 0);
+	a->driver.notify(&a->driver, NET_DRIVER_EVENT_LINK_UP, NULL, 0);
 out:
 	sceKernelUnlockFastMutex(&a->mutex);
 	return ret;

@@ -140,8 +140,9 @@ int robinWlanDriverOpen(struct NetDriver *driver, int argument)
 		sceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x800000);
 	} else {
 		error = context->intError;
-		context->driver.notify(&context->driver, NULL, NET_DRIVER_EVENT_STATUS,
-				       NET_DRIVER_STATUS_ERROR, &error, sizeof(error));
+		context->driver.notify(&context->driver,
+			NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+					 NET_DRIVER_STATUS_ERROR), &error, sizeof(error));
 	}
 	sceKernelUnlockFastMutex(&context->mutex);
 	return 0;
@@ -863,8 +864,9 @@ reconcile:
 			sceKernelSetEventFlag(gWlanContext.workerEventFlag, 0x800000);
 		} else {
 			error = context->intError;
-			context->driver.notify(&context->driver, NULL, NET_DRIVER_EVENT_STATUS,
-					       NET_DRIVER_STATUS_ERROR, &error, sizeof(error));
+			context->driver.notify(&context->driver,
+				NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+						 NET_DRIVER_STATUS_ERROR), &error, sizeof(error));
 		}
 		context->driverNotifyPending = 0;
 	}
@@ -929,11 +931,11 @@ int robinWlanCompleteConfiguration(SceWlanBtRobinWlanContext *context, int opera
 	} else {
 		error = context->intError;
 		if (error == (int)0x80411681) {
-			context->driver.notify(&context->driver, NULL, 0x100000, 0, NULL, 0);
+			context->driver.notify(&context->driver, 0x100000, NULL, 0);
 			if (context->workPending)
 				goto unlock;
 		} else if (error == (int)0x80411682 && !(status & 0x400000)) {
-			context->driver.notify(&context->driver, NULL, 0x200000, 0, NULL, 0);
+			context->driver.notify(&context->driver, 0x200000, NULL, 0);
 			if (context->workPending)
 				goto unlock;
 		}
@@ -1364,13 +1366,15 @@ wakeResult:
 		}
 		if (events & 0x800000) {
 			__atomic_fetch_or(&context->status, 0x1000, __ATOMIC_RELEASE);
-			context->driver.notify(&context->driver, NULL, NET_DRIVER_EVENT_STATUS,
-					       NET_DRIVER_STATUS_STARTED, NULL, 0);
+			context->driver.notify(&context->driver,
+				NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+						 NET_DRIVER_STATUS_STARTED), NULL, 0);
 		}
 		if (events & 0x1000000) {
 			__atomic_fetch_and(&context->status, ~0x1000, __ATOMIC_RELEASE);
-			context->driver.notify(&context->driver, NULL, NET_DRIVER_EVENT_STATUS,
-					       NET_DRIVER_STATUS_STOPPED, NULL, 0);
+			context->driver.notify(&context->driver,
+				NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+						 NET_DRIVER_STATUS_STOPPED), NULL, 0);
 		}
 		if (events & 0x2000000) {
 			if (context->status & 2)
@@ -1558,7 +1562,9 @@ int robinWlanSetConfiguration(int request, int force)
 		}
 		context->interfaceStopRequested = 1;
 		if (context->status & 4)
-			context->driver.notify(&context->driver, NULL, 0, 0xc0, NULL, 0);
+			context->driver.notify(&context->driver,
+				NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS, 0xc0),
+				NULL, 0);
 		break;
 	case 6:
 		if (context->currentConfiguration & 0x100)
@@ -1577,7 +1583,9 @@ int robinWlanSetConfiguration(int request, int force)
 		break;
 	case 10:
 		if (context->status & 4)
-			context->driver.notify(&context->driver, NULL, 0, 0x80, NULL, 0);
+			context->driver.notify(&context->driver,
+				NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS, 0x80),
+				NULL, 0);
 		context->interfaceStopRequested = 1;
 		break;
 	case 11:

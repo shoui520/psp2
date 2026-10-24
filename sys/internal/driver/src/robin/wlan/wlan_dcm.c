@@ -389,8 +389,9 @@ readBatch:
 			}
 		}
 		if (received)
-			context->driver.notify(&context->driver, NULL,
-				NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_RECEIVED, NULL, 0);
+			context->driver.notify(&context->driver,
+				NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+						 NET_DRIVER_STATUS_RECEIVED), NULL, 0);
 		if (result < 0)
 			break;
 		bitmap = dcm->readBitmap;

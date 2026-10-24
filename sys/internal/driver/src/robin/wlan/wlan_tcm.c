@@ -1344,15 +1344,15 @@ void robinWlanTcmEventReceive(SceWlanBtRobinWlanContext *context, const void *in
 		if (context->status & 0x200000)
 			context->wakeReasonFlags |= 8;
 		else
-			driver->notify(driver, NULL, NET_DRIVER_EVENT_LINK_UP, 0, NULL, 0);
+			driver->notify(driver, NET_DRIVER_EVENT_LINK_UP, NULL, 0);
 		break;
 	case 8:
 		sceKernelSetEventFlag(context->tcm.eventFlag, 2);
-		driver->notify(driver, NULL, NET_DRIVER_EVENT_LINK_DOWN, 0, NULL, 0);
+		driver->notify(driver, NET_DRIVER_EVENT_LINK_DOWN, NULL, 0);
 		break;
 	case 9:
 		sceKernelSetEventFlag(context->tcm.eventFlag, 4);
-		driver->notify(driver, NULL, 8, 0, NULL, 0);
+		driver->notify(driver, 8, NULL, 0);
 		break;
 	case 10:
 		robinWlanNotifyWorker(0x20000);
@@ -1362,11 +1362,11 @@ void robinWlanTcmEventReceive(SceWlanBtRobinWlanContext *context, const void *in
 		robinWlanNotifyWorker(0x4000);
 		break;
 	case 24:
-		driver->notify(driver, NULL, 16, 0, NULL, 0);
+		driver->notify(driver, 16, NULL, 0);
 		break;
 	case 25:
 		if (!(context->status & 0x800))
-			driver->notify(driver, NULL, 4, 0, NULL, 0);
+			driver->notify(driver, 4, NULL, 0);
 		break;
 	case 43:
 		sceKernelSetEventFlag(context->tcm.eventFlag, 1);

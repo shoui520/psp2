@@ -70,12 +70,10 @@ int sceNetPsKickTransmit(struct NetDriver *driver, int resetIdle)
 }
 
 /* Name unknown; deliver driver events to the worker and registered callbacks. */
-int sceNetPsNotifyDriver(struct NetDriver *driver, const void *reserved,
-			int event, int argument, const void *data, int size)
+int sceNetPsNotifyDriver(struct NetDriver *driver, SceUInt64 events,
+			 const void *data, int size)
 {
 	struct SceNetPsDriverContext *context = driver ? driver->context : NULL;
-	SceUInt64 events = (SceUInt64)(unsigned int)argument << 32 |
-			  (unsigned int)event;
 
 	if (driver && (events & 0xffffffff00000000ULL) && context) {
 		context->pendingEvents |= events;
@@ -84,7 +82,7 @@ int sceNetPsNotifyDriver(struct NetDriver *driver, const void *reserved,
 			context->lastError = *(const int *)data;
 		sceNetPsScheduleReceive();
 	}
-	if (event)
+	if ((unsigned int)events)
 		sceNetPsNotifyDriverCallbacks(context, events);
 	return 0;
 }

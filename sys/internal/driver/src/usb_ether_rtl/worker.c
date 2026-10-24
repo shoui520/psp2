@@ -414,13 +414,17 @@ static void startReceive(struct RtlAdapter *a, int *retries)
 		ret = rtlEnableReceive(a);
 		if (ret < 0)
 			goto errorReset;
-		a->driver.notify(&a->driver, a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_STARTED, NULL, 0);
+		a->driver.notify(&a->driver,
+			NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+					 NET_DRIVER_STATUS_STARTED), NULL, 0);
 		__atomic_fetch_or(&a->flags, 8, __ATOMIC_SEQ_CST);
 		*retries = 0;
 	} else if (*retries == 10) {
 		ret = RTL_ERROR(3);
 		*retries = 0;
-		a->driver.notify(&a->driver, a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_ERROR, &ret, 4);
+		a->driver.notify(&a->driver,
+			NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+					 NET_DRIVER_STATUS_ERROR), &ret, 4);
 		rtlUpdateLink(a);
 	} else {
 		sceKernelSetEventFlag(a->workerEvent, 2);
@@ -431,7 +435,9 @@ static void startReceive(struct RtlAdapter *a, int *retries)
 errorReset:
 	*retries = 0;
 error:
-	a->driver.notify(&a->driver, a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_ERROR, &ret, 4);
+	a->driver.notify(&a->driver,
+		NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+				 NET_DRIVER_STATUS_ERROR), &ret, 4);
 }
 
 /* name unknown */
@@ -441,7 +447,9 @@ static void stopReceive(struct RtlAdapter *a)
 	int ret;
 
 	if ((a->flags & 12) != 12) {
-		a->driver.notify(&a->driver, a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_STOPPED, NULL, 0);
+		a->driver.notify(&a->driver,
+			NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+					 NET_DRIVER_STATUS_STOPPED), NULL, 0);
 		return;
 	}
 	__atomic_fetch_and(&a->flags, ~8U, __ATOMIC_SEQ_CST);
@@ -472,9 +480,13 @@ unlock:
 	sceKernelUnlockFastMutex(&a->mutex);
 out:
 	if (ret < 0)
-		a->driver.notify(&a->driver, a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_ERROR, &ret, 4);
+		a->driver.notify(&a->driver,
+			NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+					 NET_DRIVER_STATUS_ERROR), &ret, 4);
 	else
-		a->driver.notify(&a->driver, a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_STOPPED, NULL, 0);
+		a->driver.notify(&a->driver,
+			NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+					 NET_DRIVER_STATUS_STOPPED), NULL, 0);
 }
 
 /* name unknown */
@@ -579,7 +591,9 @@ static void receive(struct RtlAdapter *a)
 			header = (unsigned char *)(((unsigned int)header + length + 0x23) & ~7U);
 		}
 		if (delivered)
-			a->driver.notify(&a->driver, a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_RECEIVED, NULL, 0);
+			a->driver.notify(&a->driver,
+				NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+						 NET_DRIVER_STATUS_RECEIVED), NULL, 0);
 	}
 	rtlReceiveBuffer(a, a->rxBuffer, a->rxBufferSize);
 	sceKernelDelayThread(500);

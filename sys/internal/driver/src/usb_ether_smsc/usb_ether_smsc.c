@@ -509,7 +509,7 @@ static int updateLink(struct SceUsbEtherSmscContext *a)
 	if (a->link & NET_DRIVER_LINK_UP) {
 		if (!(data & BMSR_LSTATUS)) {
 			a->link = 0;
-			a->driver.notify(&a->driver, (void *)a->driver.notify, NET_DRIVER_EVENT_LINK_DOWN, 0, NULL, 0);
+			a->driver.notify(&a->driver, NET_DRIVER_EVENT_LINK_DOWN, NULL, 0);
 		}
 		goto out;
 	}
@@ -544,7 +544,7 @@ static int updateLink(struct SceUsbEtherSmscContext *a)
 	a->macControl = mac;
 	ret = writeRegister(a, SMSC_MAC_CR, mac);
 	if (ret >= 0)
-		a->driver.notify(&a->driver, (void *)a->driver.notify, NET_DRIVER_EVENT_LINK_UP, 0, NULL, 0);
+		a->driver.notify(&a->driver, NET_DRIVER_EVENT_LINK_UP, NULL, 0);
 out:
 	sceKernelUnlockFastMutex(&a->mutex);
 	return ret;
@@ -605,7 +605,7 @@ static int setLink(struct SceUsbEtherSmscContext *a, unsigned int mode)
 	}
 	a->link = 0;
 	if (a->flags & SMSC_FLAG_REGISTERED)
-		a->driver.notify(&a->driver, (void *)a->driver.notify, NET_DRIVER_EVENT_LINK_DOWN, 0, NULL, 0);
+		a->driver.notify(&a->driver, NET_DRIVER_EVENT_LINK_DOWN, NULL, 0);
 	ret = readPhy(a, MII_BMCR, (unsigned short *)&data);
 	if (ret < 0)
 		goto out;
@@ -715,7 +715,9 @@ static int interfaceClose(struct NetDriver *driver, int argument)
 	if (a->state & SMSC_STATE_USB_POWER)
 		sceKernelSetEventFlag(a->workerEvent, WORKER_CLOSE);
 	else
-		driver->notify(driver, (void *)driver->notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_STOPPED, NULL, 0);
+		driver->notify(driver,
+			NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+					 NET_DRIVER_STATUS_STOPPED), NULL, 0);
 	return 0;
 }
 static int interfaceOpen(struct NetDriver *driver, int argument)
@@ -727,7 +729,9 @@ static int interfaceOpen(struct NetDriver *driver, int argument)
 	if (a->state & SMSC_STATE_USB_POWER)
 		sceKernelSetEventFlag(a->workerEvent, WORKER_OPEN);
 	else
-		driver->notify(driver, &error, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_ERROR, &error, 4);
+		driver->notify(driver,
+			NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+					 NET_DRIVER_STATUS_ERROR), &error, 4);
 	return 0;
 }
 static int interfaceControl(struct NetDriver *driver, unsigned int command,
@@ -817,7 +821,7 @@ static void powerEvent(int event, int value)
 	} else {
 		s_context.state &= ~SMSC_STATE_USB_POWER;
 		if (s_context.flags & SMSC_FLAG_REGISTERED)
-			s_context.driver.notify(&s_context.driver, (void *)s_context.driver.notify, NET_DRIVER_EVENT_RESUMED, 0, NULL, 0);
+			s_context.driver.notify(&s_context.driver, NET_DRIVER_EVENT_RESUMED, NULL, 0);
 	}
 }
 
@@ -1037,13 +1041,17 @@ attached:
 		sceKernelUnlockFastMutex(&a->mutex);
 		if (ret < 0)
 			goto error;
-		a->driver.notify(&a->driver, (void *)a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_STARTED, NULL, 0);
+		a->driver.notify(&a->driver,
+			NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+					 NET_DRIVER_STATUS_STARTED), NULL, 0);
 		__atomic_fetch_or(&a->flags, SMSC_FLAG_OPEN, __ATOMIC_SEQ_CST);
 		*retries = 0;
 	} else if (*retries == 10) {
 		ret = SMSC_ERROR_TIMEOUT;
 		*retries = 0;
-		a->driver.notify(&a->driver, (void *)a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_ERROR, &ret, 4);
+		a->driver.notify(&a->driver,
+			NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+					 NET_DRIVER_STATUS_ERROR), &ret, 4);
 		updateLink(a);
 	} else {
 		sceKernelSetEventFlag(a->workerEvent, WORKER_OPEN);
@@ -1053,7 +1061,9 @@ attached:
 	return 0;
 error:
 	*retries = 0;
-	a->driver.notify(&a->driver, (void *)a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_ERROR, &ret, 4);
+	a->driver.notify(&a->driver,
+		NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+				 NET_DRIVER_STATUS_ERROR), &ret, 4);
 	return ret;
 }
 static int stopInterface(struct SceUsbEtherSmscContext *a)
@@ -1063,7 +1073,9 @@ static int stopInterface(struct SceUsbEtherSmscContext *a)
 
 	if ((a->flags & (SMSC_FLAG_INITIALIZED | SMSC_FLAG_OPEN)) !=
 	    (SMSC_FLAG_INITIALIZED | SMSC_FLAG_OPEN)) {
-		a->driver.notify(&a->driver, (void *)a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_STOPPED, NULL, 0);
+		a->driver.notify(&a->driver,
+			NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+					 NET_DRIVER_STATUS_STOPPED), NULL, 0);
 		return 0;
 	}
 	__atomic_fetch_and(&a->flags, ~SMSC_FLAG_OPEN, __ATOMIC_SEQ_CST);
@@ -1128,11 +1140,15 @@ static int stopInterface(struct SceUsbEtherSmscContext *a)
 		goto errorUnlock;
 	}
 	sceKernelUnlockFastMutex(&a->mutex);
-	a->driver.notify(&a->driver, (void *)a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_STOPPED, NULL, 0);
+	a->driver.notify(&a->driver,
+		NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+				 NET_DRIVER_STATUS_STOPPED), NULL, 0);
 	return 0;
 errorUnlock:
 	sceKernelUnlockFastMutex(&a->mutex);
-	a->driver.notify(&a->driver, (void *)a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_ERROR, &ret, 4);
+	a->driver.notify(&a->driver,
+		NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+				 NET_DRIVER_STATUS_ERROR), &ret, 4);
 	return ret;
 }
 static void startTx(struct SceUsbEtherSmscContext *a)
@@ -1233,7 +1249,9 @@ static void startRx(struct SceUsbEtherSmscContext *a)
 		data = (void *)(((unsigned int)data + length + 0xf) & ~3U);
 	}
 	if (delivered)
-		a->driver.notify(&a->driver, (void *)a->driver.notify, NET_DRIVER_EVENT_STATUS, NET_DRIVER_STATUS_RECEIVED, NULL, 0);
+		a->driver.notify(&a->driver,
+			NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+					 NET_DRIVER_STATUS_RECEIVED), NULL, 0);
 	receiveBuffer(a, a->rxBuffer, a->bufferSize);
 	sceKernelDelayThread(500);
 }

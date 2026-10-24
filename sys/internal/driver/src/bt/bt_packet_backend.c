@@ -43,8 +43,9 @@ int BtOpenBnepInterface(struct NetDriver *driver, int argument)
 			return BtUnlockTransport(0);
 		}
 		BtUnlockTransport(0);
-		driver->notify(driver, NULL, NET_DRIVER_EVENT_STATUS,
-			       NET_DRIVER_STATUS_STARTED, NULL, 0);
+		driver->notify(driver,
+			NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+					 NET_DRIVER_STATUS_STARTED), NULL, 0);
 		result = BtLockTransport();
 		return BtUnlockTransport(result);
 	}
@@ -77,8 +78,9 @@ int BtCloseBnepInterface(struct NetDriver *driver, int argument)
 	if (result)
 		return result;
 	BtUnlockTransport(0);
-	driver->notify(driver, NULL, NET_DRIVER_EVENT_STATUS,
-		       NET_DRIVER_STATUS_STOPPED, NULL, 0);
+	driver->notify(driver,
+		NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+				 NET_DRIVER_STATUS_STOPPED), NULL, 0);
 	BtLockTransport();
 	return BtUnlockTransport(0);
 }
@@ -119,9 +121,9 @@ uintptr_t BtNotifyBnepDisconnected(BtConnection *connection)
 		return result;
 	if (gBtBnepInterface.connected) {
 		BtUnlockTransport(0);
-		gBtBnepInterface.driver.notify(&gBtBnepInterface.driver, NULL,
-					      NET_DRIVER_EVENT_STATUS,
-					      NET_DRIVER_STATUS_STOPPED, NULL, 0);
+		gBtBnepInterface.driver.notify(&gBtBnepInterface.driver,
+			NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+					 NET_DRIVER_STATUS_STOPPED), NULL, 0);
 		result = BtLockTransport();
 	}
 	gBtBnepInterface.pendingConnection = 0;
@@ -155,9 +157,9 @@ int BtNotifyBnepConnected(BtConnection *connection)
 	}
 	interface->pendingConnection = 0;
 	BtUnlockTransport(0);
-	interface->driver.notify(&interface->driver, NULL,
-				 NET_DRIVER_EVENT_STATUS,
-				 NET_DRIVER_STATUS_STARTED, NULL, 0);
+	interface->driver.notify(&interface->driver,
+		NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+				 NET_DRIVER_STATUS_STARTED), NULL, 0);
 	return BtLockTransport();
 }
 
@@ -207,8 +209,9 @@ int BtReceiveNetworkPacket(BtStack *stack, uint64_t deviceAddress,
 	packet->length = length;
 	driver->deliverRx(driver, packet);
 	BtUnlockTransport(0);
-	driver->notify(driver, NULL, NET_DRIVER_EVENT_STATUS,
-		       NET_DRIVER_STATUS_RECEIVED, NULL, 0);
+	driver->notify(driver,
+		NET_DRIVER_EVENT(NET_DRIVER_EVENT_STATUS,
+				 NET_DRIVER_STATUS_RECEIVED), NULL, 0);
 	return BtLockTransport();
 }
 
