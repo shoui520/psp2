@@ -6,8 +6,6 @@ extern int gNetPsSuspendResult;
 extern SceNetPsConfigSubscriber *gNetPsConfigSubscriberHead;
 extern SceNetPsConfigSubscriber *gNetPsConfigSubscriberTail;
 int sceNetPsManageProcessSockets(SceUID, unsigned int);
-int sceNetPsDestroyProcessEpolls(SceUID);
-int sceNetPsDestroyProcessDescriptors(SceUID);
 int sceNetPsDestroyProcessDumps(SceUID);
 int sceNetPsUnregisterProcessNetworkState(SceUID);
 int sceNetPsReleaseProcessProtocol(SceUID);

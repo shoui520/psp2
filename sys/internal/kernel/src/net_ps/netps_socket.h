@@ -240,6 +240,14 @@ int sceNetPsDestroySocket(unsigned int socketId);
 int sceNetPsAbortSocket(struct socket *so, int addressChanged);
 struct SceNetPsDescriptorEntry;
 int sceNetPsUnlinkDescriptorEntry(struct SceNetPsDescriptorEntry *entry);
+void sceNetPsStopDescriptorEntry(struct SceNetPsDescriptorEntry *entry);
+int sceNetPsFindSocketDescriptor(struct socket *so);
+int sceNetPsDescriptorCtl(int descriptorId, int operation, int socketId,
+			  const void *system);
+int sceNetPsDestroyProcessDescriptors(SceUID processId);
+int sceNetPsDestroyProcessEpolls(SceUID processId);
+struct SceNetPsDescriptor;
+void sceNetPsRemoveDescriptorFromEpolls(struct SceNetPsDescriptor *descriptor);
 int sceNetPsRemoveSocketFromDescriptors(struct socket *so, int abort);
 int sceNetPsRemoveSocketIdFromDescriptors(unsigned int socketId);
 int sceNetPsRemoveSocketFromEpolls(struct socket *so, int abort);

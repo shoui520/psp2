@@ -2167,6 +2167,73 @@ int sceNetPsUnlinkDescriptorEntry(SceNetPsDescriptorEntry *entry)
 	return 0;
 }
 
+/* SCE: the entry's timeout: report SCE_NET_ETIME on its socket */
+static void sceNetPsDescriptorEntryTimeout(void *argument)
+{
+	SceNetPsDescriptorEntry *entry = argument;
+
+	entry->flags &= ~SCE_NETPS_DESCRIPTOR_ENTRY_TIMER;
+	entry->socket->so_error = SCE_NET_ETIME;
+	sceNetPsWakeupEpolls(entry->socket);
+}
+
+/* SCE: free a descriptor with its entries and release its identifier */
+int sceNetPsDestroyDescriptor(unsigned int descriptorId,
+			      SceNetPsDescriptor *descriptor)
+{
+	SceNetPsDescriptorEntry *entry;
+
+	sceNetPsRemoveDescriptorFromEpolls(descriptor);
+	while ((entry = descriptor->entries) != NULL) {
+		if (entry->socket)
+			entry->socket->descriptorReferences--;
+		sceNetPsUnlinkDescriptorEntry(entry);
+		sceNetPsFree(entry);
+	}
+	sceNetPsFree(descriptor);
+	sceNetPsSetDescriptor(descriptorId, NULL);
+	return 0;
+}
+
+/*
+ * SCE: put the entry at the head of the descriptor; the caller's system
+ * data names the socket again and may carry a timeout
+ */
+static __attribute__((noinline))
+int sceNetPsLinkDescriptorEntry(int socketId, SceNetPsDescriptor *descriptor,
+				SceNetPsDescriptorEntry *entry,
+				const void *system)
+{
+	int error, timeout;
+
+	if (system) {
+		error = copyin(system, &entry->system, sizeof(entry->system));
+		if (error)
+			return error;
+		if (entry->system.system[2] != socketId)
+			return EINVAL;
+		timeout = sceNetPsNormalizeTimeout(entry->system.system[3]);
+		if (timeout >= 0) {
+			callout_init(&entry->timeout);
+			callout_reset(&entry->timeout, timeout / 1000,
+				      sceNetPsDescriptorEntryTimeout, entry);
+			entry->flags |= SCE_NETPS_DESCRIPTOR_ENTRY_TIMER;
+		}
+	}
+	entry->next = descriptor->entries;
+	if (descriptor->entries)
+		descriptor->entries->prev = &entry->next;
+	descriptor->entries = entry;
+	entry->prev = &descriptor->entries;
+	return 0;
+}
+
+/* SCE: stop the entry's timeout once its socket is reported */
+void sceNetPsStopDescriptorEntry(SceNetPsDescriptorEntry *entry)
+{
+	callout_stop(&entry->timeout);
+}
+
 /* SCE: drop the socket from every descriptor; returns the registrations left */
 int sceNetPsRemoveSocketFromDescriptors(struct socket *so, int abort)
 {
@@ -2201,6 +2268,28 @@ int sceNetPsRemoveSocketIdFromDescriptors(unsigned int socketId)
 	return 0;
 }
 
+/* SCE: the first descriptor that holds the socket, or -1 */
+int sceNetPsFindSocketDescriptor(struct socket *so)
+{
+	SceNetPsDescriptor *descriptor;
+	SceNetPsDescriptorEntry *entry;
+	int first, last;
+	unsigned int descriptorId;
+
+	sceNetPsGetDescriptorIdRange(&first, &last);
+	for (descriptorId = first; (int)descriptorId <= last; descriptorId++) {
+		descriptor = sceNetPsLookupDescriptor(descriptorId, 1);
+		if (descriptor == NULL)
+			continue;
+		for (entry = descriptor->entries; entry != NULL;
+		     entry = entry->next) {
+			if (entry->socket == so)
+				return descriptorId;
+		}
+	}
+	return -1;
+}
+
 int sceNetPsDescriptorCreate(const char *name, int flags)
 {
 	SceNetPsDescriptor *descriptor;
@@ -2232,6 +2321,100 @@ out:
 	return result;
 }
 
+/*
+ * SCE: sceNetDescriptorControl: add (or add watched), modify or delete
+ * the socket's entry in the descriptor
+ */
+int sceNetPsDescriptorCtl(int descriptorId, int operation, int socketId,
+			  const void *system)
+{
+	SceNetPsDescriptor *descriptor;
+	SceNetPsDescriptorEntry *entry;
+	struct socket *so;
+	unsigned int flags;
+	int error = 0;
+
+	sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
+	descriptor = sceNetPsLookupDescriptor(descriptorId, 0);
+	if (descriptor == NULL)
+		goto badf;
+	so = sceNetPsLookupSocket(socketId, &error, 0);
+	if (so == NULL)
+		goto out;
+	switch (operation) {
+	case SCE_NET_EPOLL_CTL_ADD:
+	case SCE_NETPS_DESCRIPTOR_CTL_WATCH:
+		for (entry = descriptor->entries; entry != NULL;
+		     entry = entry->next) {
+			if (entry->socket == so) {
+				error = EEXIST;
+				goto fail;
+			}
+		}
+		entry = sceNetPsMalloc(sizeof(*entry), 3, 8);
+		if (entry == NULL) {
+			error = ENOMEM;
+			goto fail;
+		}
+		error = sceNetPsLinkDescriptorEntry(socketId, descriptor, entry,
+						    system);
+		if (error)
+			goto release;
+		entry->socket = so;
+		if (operation == SCE_NETPS_DESCRIPTOR_CTL_WATCH)
+			entry->flags |= SCE_NETPS_DESCRIPTOR_ENTRY_WATCH;
+		sceNetPsWakeupEpolls(so);
+		so->descriptorReferences++;
+		break;
+	case SCE_NET_EPOLL_CTL_MOD:
+		for (entry = descriptor->entries; entry != NULL;
+		     entry = entry->next) {
+			if (entry->socket == so)
+				break;
+		}
+		if (entry == NULL)
+			goto badf;
+		flags = entry->flags;
+		sceNetPsUnlinkDescriptorEntry(entry);
+		error = sceNetPsLinkDescriptorEntry(socketId, descriptor, entry,
+						    system);
+		if (error)
+			goto release;
+		entry->socket = so;
+		entry->flags = flags;
+		sceNetPsWakeupEpolls(so);
+		break;
+	case SCE_NET_EPOLL_CTL_DEL:
+		if (system) {
+			error = EINVAL;
+			goto fail;
+		}
+		for (entry = descriptor->entries; entry != NULL;
+		     entry = entry->next) {
+			if (entry->socket == so)
+				break;
+		}
+		if (entry == NULL)
+			goto badf;
+		so->descriptorReferences--;
+		sceNetPsUnlinkDescriptorEntry(entry);
+		goto release;
+	default:
+		error = EINVAL;
+		goto fail;
+	}
+out:
+	return sceNetPsUnlockResult(error, 0);
+release:
+	sceNetPsFree(entry);
+	goto out;
+badf:
+	error = EBADF;
+fail:
+	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
+	return -error;
+}
+
 int sceNetPsDescriptorClose(int descriptorId)
 {
 	SceNetPsDescriptor *descriptor;
@@ -2245,6 +2428,23 @@ int sceNetPsDescriptorClose(int descriptorId)
 	}
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 	return -9;
+}
+
+/* SCE: destroy every descriptor the process owns */
+int sceNetPsDestroyProcessDescriptors(SceUID processId)
+{
+	SceNetPsDescriptor *descriptor;
+	int first, last, descriptorId;
+
+	sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
+	sceNetPsGetDescriptorIdRange(&first, &last);
+	for (descriptorId = first; descriptorId <= last; descriptorId++) {
+		descriptor = sceNetPsLookupDescriptor(descriptorId, 1);
+		if (descriptor && descriptor->processId == processId)
+			sceNetPsDestroyDescriptor(descriptorId, descriptor);
+	}
+	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
+	return 0;
 }
 
 /* SCE: append a bounded record to the capture ring, or set overflow. */
@@ -2533,4 +2733,62 @@ int sceNetPsEpollAbort(int epollId, int flags)
 out:
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 	return -error;
+}
+
+/* SCE: destroy every epoll the process owns */
+int sceNetPsDestroyProcessEpolls(SceUID processId)
+{
+	SceNetPsEpoll *epoll;
+	int first, last, epollId;
+
+	sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
+	sceNetPsGetEpollIdRange(&first, &last);
+	for (epollId = first; epollId <= last; epollId++) {
+		epoll = sceNetPsLookupEpoll(epollId, 1);
+		if (epoll && epoll->processId == processId)
+			sceNetPsDestroyEpoll(epollId, epoll);
+	}
+	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
+	return 0;
+}
+
+/*
+ * SCE: take the descriptor out of every epoll that watches it, with the
+ * select marks of its sockets, and wake the epolls that wait
+ */
+void sceNetPsRemoveDescriptorFromEpolls(SceNetPsDescriptor *descriptor)
+{
+	SceNetPsEpoll *epoll;
+	SceNetPsEpollEntry *entry;
+	SceNetPsDescriptorEntry *member;
+	struct socket *so;
+	int first, last, epollId;
+
+	sceNetPsGetEpollIdRange(&first, &last);
+	for (epollId = first; epollId <= last; epollId++) {
+		epoll = sceNetPsLookupEpoll(epollId, 1);
+		if (epoll == NULL)
+			continue;
+		for (entry = epoll->entries; entry != NULL; entry = entry->next) {
+			if ((entry->kind & SCE_NETPS_EPOLL_ENTRY_DESCRIPTOR) &&
+			    entry->target.descriptor == descriptor)
+				break;
+		}
+		if (entry == NULL)
+			continue;
+		for (member = descriptor->entries; member != NULL;
+		     member = member->next) {
+			so = member->socket;
+			if (so) {
+				so->so_rcv.sb_flags &= ~SB_SEL;
+				so->so_snd.sb_flags &= ~SB_SEL;
+			}
+		}
+		if (entry->next)
+			entry->next->prev = entry->prev;
+		*entry->prev = entry->next;
+		sceNetPsFree(entry);
+		if (epoll->flags & SCE_NETPS_EPOLL_WAITING)
+			sceNetPsWakeupNormal(epoll);
+	}
 }

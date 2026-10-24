@@ -62,6 +62,14 @@ typedef struct SceNetPsDescriptorEntry {
 	unsigned int flags;
 } SceNetPsDescriptorEntry;
 
+/* SceNetPsDescriptorEntry.flags */
+#define SCE_NETPS_DESCRIPTOR_ENTRY_TIMER	1	/* the entry's timeout is armed */
+#define SCE_NETPS_DESCRIPTOR_ENTRY_WATCH	2	/* added by operation 11: report the socket once */
+#define SCE_NETPS_DESCRIPTOR_ENTRY_FIRED	4	/* the watched socket was reported */
+
+/* sceNetDescriptorControl's operation 11: SCE_NET_EPOLL_CTL_ADD of a watched entry */
+#define SCE_NETPS_DESCRIPTOR_CTL_WATCH		11
+
 _Static_assert(sizeof(SceNetPsEpoll) == 44, "SceNetPsEpoll size");
 _Static_assert(sizeof(SceNetPsEpollEntry) == 56, "SceNetPsEpollEntry size");
 _Static_assert(offsetof(SceNetPsEpollEntry, event) == 24, "epoll entry event");

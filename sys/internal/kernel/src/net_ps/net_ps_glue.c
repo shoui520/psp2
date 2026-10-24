@@ -18,7 +18,6 @@
 
 int sceNetPsCheckMemoryAvailability(int size, int count);
 int sceNetPsEpollCtl(int epoll, int operation, int socket, SceNetEpollEvent *event);
-int sceNetPsDescriptorCtl(int descriptor, int operation, int socket, void *info);
 struct mbuf *m_get(int how, int type);
 extern struct malloc_type *mbtypes[8];
 int sceNetPsRoutingSysctl(const int *name, unsigned int nameLength, void *oldData,
@@ -71,8 +70,6 @@ int gNetPsSuspendResult;
 
 unsigned int sceNetPsGetFreeMemory(int lowest);
 int sceNetPsInitializeProcessProtocol(SceUID processId);
-int sceNetPsDestroyProcessEpolls(SceUID processId);
-int sceNetPsDestroyProcessDescriptors(SceUID processId);
 int sceNetPsDestroyProcessDumps(SceUID processId);
 int sceNetPsUnregisterProcessNetworkState(SceUID processId);
 int sceNetPsReleaseProcessProtocol(SceUID processId);
