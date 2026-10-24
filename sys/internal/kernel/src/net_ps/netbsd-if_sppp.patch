@@ -1,0 +1,12 @@
+--- contrib/netbsd-2.1/sys/net/if_sppp.h
++++ sys/internal/kernel/src/net_ps/include/net/if_sppp.h
+@@ -149,3 +149,9 @@
+ #define	SPPPGETKEEPALIVE	_IOWR('i', 133, struct spppkeepalivesettings)
+ 
+ /* 134 already used! */
++
++/* SCE: the furthest phase reached since the last SPPPRESETCONF */
++#define	SPPPGETMAXPHASE		_IOWR('i', 136, struct spppstatus)
++
++/* SCE: LCP, IPCP, PAP and CHAP back to their initial settings */
++#define	SPPPRESETCONF		_IOW('i', 135, struct spppstatus)
