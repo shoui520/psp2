@@ -111,8 +111,8 @@ set(netbsd_sources
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/tcp_subr.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/tcp_timer.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/tcp_usrreq.c
-	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/udp_usrreq.c
 	${CMAKE_CURRENT_SOURCE_DIR}/netinet/udpp2p_usrreq.c
+	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/udp_usrreq.c
 )
 set_source_files_properties(${netbsd_sources} PROPERTIES COMPILE_OPTIONS "-fno-strict-aliasing;-fgnu89-inline"
 	COMPILE_DEFINITIONS NET_PS_NETBSD)
@@ -138,6 +138,8 @@ psp2_module(os0_kd_bootimage_net_ps KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	net_ps_emulation.c
 	net_ps_socket.c
 	${netbsd_sources}
+	${netbsd3}/lib/libkern/intoa.c
+	${netbsd3}/lib/libkern/md5c.c
 	strlcpy.c
 	net_ps_random.c
 	net_ps_hmac.c
