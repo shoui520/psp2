@@ -820,6 +820,8 @@ u_long	 tcp_mss_to_advertise(const struct ifnet *, int,
 extern u_long tcp_maxmss_to_advertise;	/* SCE */
 extern u_long tcp_maxmss_from_peer;	/* SCE */
 void	 tcp_drop_peer(struct sockaddr_in *);	/* SCE: udpp2p's peer is gone */
+int	 tcp_p2p_input(struct sockaddr_in *, struct sockaddr_in *,	/* SCE: a segment udpp2p carried */
+	    struct mbuf *, int, int, int);
 void	 tcp_mss_from_peer(struct tcpcb *, int);
 void	 tcp_tcpcb_template(void);
 struct tcpcb *

@@ -1246,7 +1246,7 @@
 +			f->src.sin_port = f->tp->t_local_vport;
 +			f->dst.sin_port = f->tp->t_remote_vport;
 +			m_adj(f->m, sizeof(struct ip));
-+			f->error = udpp2p_output(&f->src, &f->dst, f->m, f->ro,
++			f->error = udpp2p_tcp_output(&f->src, &f->dst, f->m, f->ro,
 +			    f->so, f->tp->t_flags & TF_SCE_USECRYPTO,
 +			    f->tp->t_flags & TF_SCE_USESIGNATURE);
 +			break;

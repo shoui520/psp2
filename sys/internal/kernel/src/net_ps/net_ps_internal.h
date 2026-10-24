@@ -2,6 +2,7 @@
 #define SCE_NET_PS_INTERNAL_H
 
 #include <scetypes.h>
+#include <libhmac.h>
 #include <net.h>
 #include <net_ps/netdrv.h>
 #include <net_ps/netps_gateway.h>
@@ -297,6 +298,22 @@ int sceNetPsFormatUidName(SceUID uid, char *name, int length);
 int sceNetPsCreateThread(SceUID *threadId, SceNetPsThreadParam *param, const char *name);
 SceUID sceNetPsGetThreadId(void);
 SceUID sceNetPsGetProcessId(void);
+
+/* net_ps_hmac.c, net_ps_aes.c, system_os.c: what udpp2p signs, encrypts and compares with */
+int sceNetPsHmacSha1Init(SceHmacSha1Context *pContext,
+		       const void *secretkey, unsigned int keylen);
+int sceNetPsHmacSha1Update(SceHmacSha1Context *pContext,
+			 const void *plain, unsigned int len);
+int sceNetPsHmacSha1Result(unsigned char *digest,
+			 SceHmacSha1Context *pContext);
+int sceNetPsAesEncrypt(unsigned char *destination, const unsigned char *source,
+		       int length, const void *key, unsigned int keyBits,
+		       const unsigned char *initialVector);
+int sceNetPsAesDecrypt(unsigned char *destination, const unsigned char *source,
+		       int length, const void *key, unsigned int keyBits,
+		       const unsigned char *initialVector);
+int sceNetPsTimingSafeCompare(const void *first, const void *second,
+			    SceSize length);
 int sceNetPsExitThread(void);
 int sce_psnet_bnet_mutex_create(SceNetPsMutex *mutex, const char *name);
 int sce_psnet_bnet_sync_create(SceNetPsSync *sync, unsigned int events, const char *name);

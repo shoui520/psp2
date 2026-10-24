@@ -109,6 +109,7 @@ set(netbsd_sources
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/tcp_subr.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/tcp_timer.c
 	${CMAKE_CURRENT_BINARY_DIR}/netbsd/netinet/tcp_usrreq.c
+	${CMAKE_CURRENT_SOURCE_DIR}/netinet/udpp2p_usrreq.c
 )
 set_source_files_properties(${netbsd_sources} PROPERTIES COMPILE_OPTIONS "-fno-strict-aliasing;-fgnu89-inline"
 	COMPILE_DEFINITIONS NET_PS_NETBSD)

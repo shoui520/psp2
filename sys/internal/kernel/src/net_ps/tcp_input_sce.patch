@@ -279,7 +279,7 @@
 +			dst.sin_port = sc->sc_remote_vport;
 +			dst.sin_addr = ip->ip_dst;
 +			m_adj(m, sizeof(struct ip));
-+			return (udpp2p_output(&src, &dst, m, ro, so,
++			return (udpp2p_tcp_output(&src, &dst, m, ro, so,
 +			    tp->t_flags & TF_SCE_USECRYPTO,
 +			    tp->t_flags & TF_SCE_USESIGNATURE));
 +		}
