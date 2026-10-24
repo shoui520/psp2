@@ -135,6 +135,15 @@ To summarize:
 * `cp` (devkit communication processor): Not started
 
 Contributions welcome!
+
+## Tiers
+* T0: Inventoried
+* T1: mapped
+* T2: skeleton generated
+* T3: C implementation in progress
+* T4: Functionally identical
+* T5: Byte identical
+
 ## AI disclosure
 This was done using Claude and Codex.  
 ## Special Thanks
