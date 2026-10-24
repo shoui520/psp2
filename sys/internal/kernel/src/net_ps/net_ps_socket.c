@@ -367,6 +367,183 @@ int sceNetPsSockargs(struct mbuf **result, const void *buffer,
 	return error;
 }
 
+static int sceNetPsConnectPending(void *argument, int cancel);
+
+/* SCE: the errors after which a connect waits for an automatic connection */
+static inline int sceNetPsIsUnreachable(int error)
+{
+	return error == EADDRNOTAVAIL || error == ENETUNREACH ||
+	       error == EHOSTUNREACH;
+}
+
+/*
+ * SCE adaptation of NetBSD uipc_syscalls.c sys_connect: a pending
+ * returned error is reported first, the wait is a timed sleep on the send
+ * buffer, and an unreachable destination asks for the interface's
+ * automatic connection, then retries once or, non-blocking, queues the
+ * connect until the connection is up.  Returns the socket's returned error;
+ * the errno goes to *errorp.
+ */
+int sceNetPsConnectSocket(int s, struct socket *so, const void *address,
+			  unsigned int addressLength, int *errorp, int kernel)
+{
+	SceNetPsConnectRequest *request;
+	SceUInt64 start, now;
+	struct mbuf *nam;
+	int result, error, retry, delay;
+
+	so->refCount++;
+	result = so->returnedError;
+	if (result) {
+		error = result;
+		so->returnedError = 0;
+		result = 0;
+		goto out;
+	}
+	if (address == NULL || addressLength < sizeof(struct sockaddr)) {
+		error = EINVAL;
+		goto out;
+	}
+	if (sceNetPsIsRetriedSyscall() && (so->so_state & SS_ISCONNECTED)) {
+		error = result;
+		goto out;
+	}
+	if ((so->so_state & (SS_NBIO | SS_ISCONNECTING)) == SS_ISCONNECTING) {
+		error = EALREADY;
+		goto out;
+	}
+	if (addressLength > 255) {
+		error = EINVAL;
+		goto out;
+	}
+	error = sceNetPsSockargs(&nam, address, addressLength, MT_SONAME,
+				 kernel);
+	result = error;
+	if (error)
+		goto out;
+	retry = 1;
+again:
+	result = soconnect(so, nam);
+	if (result) {
+		if (sceNetPsIsUnreachable(result))
+			goto autoconnect;
+		error = result;
+		if ((so->so_state & (SS_NBIO | SS_ISCONNECTED)) == SS_NBIO)
+			error = EINPROGRESS;
+		result = 0;
+		goto bad;
+	}
+	if ((so->so_state & (SS_NBIO | SS_ISCONNECTING)) ==
+	    (SS_NBIO | SS_ISCONNECTING)) {
+		m_freem(nam);
+		error = EINPROGRESS;
+		goto out;
+	}
+	sceNetPsGetSystemTime(&start);
+	while (so->so_state & SS_ISCONNECTING) {
+		if (so->so_error) {
+			result = so->so_error;
+			goto clear;
+		}
+		sceNetPsGetSystemTime(&now);
+		delay = (int)(start - now) + so->so_snd.sb_timeo;
+		if (so->so_snd.sb_timeo > 0 && delay <= 0) {
+			result = 0;
+			error = EWOULDBLOCK;
+			goto out;
+		}
+		so->so_snd.sb_flags |= SB_WAIT;
+		result = sceNetPsSleep(&so->so_snd.sb_cc, 0, NULL, delay);
+		so->so_snd.sb_flags &= ~SB_WAIT;
+		if (result)
+			goto check;
+	}
+	result = so->so_error;
+clear:
+	so->so_error = 0;
+check:
+	if (!sceNetPsIsUnreachable(result)) {
+		error = result;
+		result = 0;
+		goto bad;
+	}
+autoconnect:
+	if (!retry || !sceNetPsRequestAutoConnect(so, nam, 0)) {
+		error = result;
+		result = 0;
+		goto done;
+	}
+	if (!(so->so_state & SS_NBIO)) {
+		result = sceNetPsWaitAutoConnect(so);
+		if (result) {
+			error = result;
+			goto bad;
+		}
+		retry = 0;
+		if (so->so_state & SS_ISCONNECTING)
+			so->so_state &= ~SS_ISCONNECTING;
+		goto again;
+	}
+	request = sceNetPsMalloc(sizeof(*request), 3, 8);
+	if (request == NULL) {
+		result = 0;
+		error = ENOMEM;
+		goto done;
+	}
+	request->param.socket = s;
+	request->request.complete = sceNetPsConnectPending;
+	request->request.argument = &request->param;
+	result = sceNetPsCopyIn(address, &request->param.address,
+				sizeof(request->param.address), kernel);
+	if (result) {
+		error = result;
+		sceNetPsFree(request);
+		result = 0;
+		goto bad;
+	}
+	request->param.addressLength = addressLength;
+	sceNetPsQueuePendingRequest(&request->request);
+	error = EINPROGRESS;
+	so->so_state |= SS_SCE_AUTOCONNECT;
+	goto done;
+bad:
+	/* SCE: a cancelled wait leaves the socket connecting. */
+	if (error == ECANCELED)
+		goto free;
+done:
+	so->so_state &= ~SS_ISCONNECTING;
+free:
+	m_freem(nam);
+out:
+	bnet_sorele(so);
+	*errorp = error;
+	return result;
+}
+
+/* SCE: the queued connect, run when the automatic connection is up */
+static int sceNetPsConnectPending(void *argument, int cancel)
+{
+	SceNetPsConnectParam *param = argument;
+	struct socket *so;
+	int error = 0;
+
+	if (cancel)
+		return 0;
+	so = sceNetPsLookupSocket(param->socket, &error, 1);
+	if (so == NULL)
+		return error;
+	if (!(so->so_state & SS_NBIO)) {
+		so->so_state |= SS_NBIO;
+		sceNetPsConnectSocket(param->socket, so, &param->address,
+				      param->addressLength, &error, 1);
+		so->so_state &= ~SS_NBIO;
+		return error;
+	}
+	sceNetPsConnectSocket(param->socket, so, &param->address,
+			      param->addressLength, &error, 1);
+	return error;
+}
+
 int sceNetPsCollectSockInfo(int socket, SceNetSockInfo *records, int capacity,
 			 int flags, int *count, SceUID processId,
 			 int kernel);

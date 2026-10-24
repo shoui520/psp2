@@ -311,11 +311,25 @@ int sceNetPsFilterRxMbuf(struct SceNetPsDriverContext *context,
 typedef struct SceNetPsPendingRequest {
 	struct SceNetPsPendingRequest *next;
 	struct SceNetPsPendingRequest *prev;
-	void (*complete)(void *argument, int cancel);
+	int (*complete)(void *argument, int cancel);
 	void *argument;
 } SceNetPsPendingRequest;
 
 _Static_assert(sizeof(SceNetPsPendingRequest) == 16, "SceNetPsPendingRequest size");
+
+/* SCE: a non-blocking connect retried once the automatic connection is up */
+typedef struct SceNetPsConnectParam {
+	int socket;
+	struct sockaddr address;
+	unsigned int addressLength;
+} SceNetPsConnectParam;
+
+typedef struct SceNetPsConnectRequest {
+	SceNetPsPendingRequest request;
+	SceNetPsConnectParam param;
+} SceNetPsConnectRequest;
+
+_Static_assert(sizeof(SceNetPsConnectRequest) == 40, "SceNetPsConnectRequest size");
 
 /* SCE: the processes that sent data since the list was last taken */
 typedef struct SceNetPsSenderList {

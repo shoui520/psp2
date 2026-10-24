@@ -112,6 +112,7 @@ int sceNetPsSetThreadMode(SceUID threadId, int mode);
 int sceNetPsGetThreadList(SceNetPsThreadInfo *info, int capacity);
 int sceNetPsGetSleepCount(SceNetPsSleepCount *count, int index);
 int sceNetPsRecordSleep(unsigned int identifier, int clear);
+int sceNetPsIsRetriedSyscall(void);
 int sceNetPsIsApplicationProgram(int *error);
 int sceNetPsIsDevelopmentMode(void);
 int sceNetPsGetFake3gInterface(void);

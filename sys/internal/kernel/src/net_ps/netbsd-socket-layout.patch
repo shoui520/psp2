@@ -42,7 +42,16 @@
  
  #ifndef SB_MAX
  #define	SB_MAX		(256*1024)	/* default for max chars in sockbuf */
-@@ -84,52 +68,7 @@
+@@ -77,6 +61,8 @@
+ #define	SB_NOINTR	0x40		/* operations not interruptible */
+     	/* XXXLUKEM: 0x80 left for FreeBSD's SB_AIO */
+ #define	SB_KNOTE	0x100		/* kernel note attached */
++#define	SB_SCE_CONNECTED 0x4000		/* SCE: the automatic connection ended */
++#define	SB_SCE_CONNECTING 0x8000	/* SCE: waiting for an automatic connection */
+ 
+ /*
+  * Kernel structure per socket.
+@@ -84,52 +70,7 @@
   * handle on protocol and pointer to protocol
   * private data and error information.
   */
@@ -96,16 +105,17 @@
  
  #define	SB_EMPTY_FIXUP(sb)						\
  do {									\
-@@ -159,6 +98,8 @@
+@@ -159,6 +100,9 @@
  					 * more data coming
  					 */
  #define 	SS_ISAPIPE 		0x800 /* socket is implementing a pipe */
 +#define	SS_RCVFLUSHFULL		0x1000	/* SCE: the receive buffer was full when flushed */
++#define	SS_SCE_AUTOCONNECT	0x2000	/* SCE: a connect waits for an automatic connection */
 +#define	SS_SCE_8000		0x8000	/* SCE: SO_SCE_STATE_8000; meaning unknown */
  
  
  /*
-@@ -328,11 +269,13 @@
+@@ -328,11 +272,13 @@
  	    struct mbuf **, struct mbuf **, int *);
  int	soreserve(struct socket *, u_long, u_long);
  void	sorflush(struct socket *);
@@ -120,7 +130,7 @@
  int	sockargs(struct mbuf **, const void *, size_t, int);
  
  int	sendit(struct proc *, int, struct msghdr *, int, register_t *);
-@@ -383,3 +326,4 @@
+@@ -383,3 +329,4 @@
  #endif /* _KERNEL */
  
  #endif /* !_SYS_SOCKETVAR_H_ */
