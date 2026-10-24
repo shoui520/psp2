@@ -1,0 +1,104 @@
+--- a/netinet/udp_usrreq.c
++++ b/netinet/udp_usrreq.c
+@@ -76,7 +76,8 @@
+ #include <sys/socket.h>
+ #include <sys/socketvar.h>
+ #include <sys/errno.h>
+-#include <sys/stat.h>
++#include <net/errno.h>	/* SCE: SCE_NET_EADHOC */
++/* SCE: no sys/stat.h */
+ #include <sys/systm.h>
+ #include <sys/proc.h>
+ #include <sys/domain.h>
+@@ -94,6 +95,8 @@
+ #include <netinet/ip_icmp.h>
+ #include <netinet/udp.h>
+ #include <netinet/udp_var.h>
++#include <netinet/udpp2p_var.h>	/* SCE */
++#include "netps_socket.h"	/* SCE */
+ 
+ #ifdef INET6
+ #include <netinet/ip6.h>
+@@ -315,6 +318,12 @@
+ 	bcopy(&ip->ip_dst, &dst.sin_addr, sizeof(dst.sin_addr));
+ 	dst.sin_port = uh->uh_dport;
+ 
++	/* SCE: SOCK_DGRAM_P2P datagrams and SOCK_STREAM_P2P segments */
++	if (udpp2p_input(&src, &dst, m, iphlen))
++		goto bad;
++	if (udpp2p_tcpinput(&src, &dst, m, iphlen))
++		goto bad;
++
+ 	n = udp4_realinput(&src, &dst, m, iphlen);
+ #ifdef INET6
+ 	if (IN_MULTICAST(ip->ip_dst.s_addr) || n == 0) {
+@@ -488,6 +497,14 @@
+ 
+ 	if (!so)
+ 		return;
++	/* SCE: what a socket with SO_SCE_OPTION_8000 sent reaches only such sockets */
++	if ((so->so_options & SO_SCE_OPTION_8000) == 0 &&
++	    (m->m_flags & M_SCE_OPTION_8000))
++		return;
++	/* SCE: a packet the receive emulation chose to drop is filtered per socket */
++	if ((m->m_flags & M_SCE_EMULATION_DROP) &&
++	    sceNetPsFilterRxSocket(m, m->m_pkthdr.rcvif, so))
++		return;
+ 	switch (so->so_proto->pr_domain->dom_family) {
+ 	case AF_INET:
+ 		inp = sotoinpcb(so);
+@@ -512,10 +529,16 @@
+ #endif /*IPSEC*/
+ 
+ 	if ((n = m_copy(m, 0, M_COPYALL)) != NULL) {
+-		if (inp && (inp->inp_flags & INP_CONTROLOPTS
+-			 || so->so_options & SO_TIMESTAMP)) {
+-			struct ip *ip = mtod(n, struct ip *);
+-			ip_savecontrol(inp, &opts, ip, n);
++		if (inp) {
++			if (inp->inp_flags & INP_CONTROLOPTS
++			    || so->so_options & SO_TIMESTAMP) {
++				struct ip *ip = mtod(n, struct ip *);
++				ip_savecontrol(inp, &opts, ip, n);
++			}
++			/* SCE: IP_TTLCHK records the highest TTL received */
++			if (inp->inp_flags & INP_TTLCHK)
++				inp->inp_maxttl = max(inp->inp_maxttl,
++				    mtod(n, struct ip *)->ip_ttl);
+ 		}
+ 
+ 		m_adj(n, off);
+@@ -924,7 +947,8 @@
+ 	udpstat.udps_opackets++;
+ 
+ 	return (ip_output(m, inp->inp_options, &inp->inp_route,
+-	    inp->inp_socket->so_options & (SO_DONTROUTE | SO_BROADCAST),
++	    (inp->inp_socket->so_options & (SO_DONTROUTE | SO_BROADCAST)) |
++	    (inp->inp_flags & INP_DONTFRAG ? IP_MTUDISC : 0),	/* SCE */
+ 	    inp->inp_moptions, inp->inp_socket));
+ 
+ release:
+@@ -970,6 +994,23 @@
+ 		goto release;
+ 	}
+ 
++	/* SCE: a process udpp2p serves has no plain UDP socket but to close it */
++	if (udpp2p_hasproc()) {
++		switch (req) {
++		case PRU_DETACH:
++			break;
++		case PRU_SEND:
++		case PRU_SENDOOB:
++			m_freem(control);
++			m_freem(m);
++			error = SCE_NET_EADHOC;
++			goto release;
++		default:
++			error = SCE_NET_EADHOC;
++			goto release;
++		}
++	}
++
+ 	/*
+ 	 * Note: need to block udp_input while changing
+ 	 * the udp pcb queue and/or pcb addresses.
