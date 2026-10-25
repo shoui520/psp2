@@ -20,17 +20,11 @@
 #include "config.h"
 #include "input.h"
 #include "kernel.h"
+#include "nvsreq.h"
 #include "sleepfactor.h"
 
 #define LENGTH(list)	(sizeof(list) / sizeof((list)[0]))
 
-/* the store's requests (their module is not written yet) */
-extern int sub_1D4D9(unsigned char id, unsigned int size, unsigned char *data,
-		     unsigned char count, unsigned char command,
-		     void (*done)(unsigned char command, unsigned char result));
-extern int sub_1D573(unsigned char id, unsigned int size, unsigned char *data,
-		     unsigned char count, unsigned char command,
-		     void (*done)(unsigned char command, unsigned char result));
 extern void sub_2C2ED(int, int);
 extern void sub_2C342(ID flgid, FLGPTN setptn);
 
@@ -237,18 +231,21 @@ void analogCalibrationDefault(void)
 	analogCalibration = sub_2C658()->analogCalibration;
 }
 
-/* reads the store's calibration record into data; done(command, result) when it is read */
+/* reads the calibration kept in the NVS's syscon area into data; done(command, result) when
+   it is read */
 int analogStoreRead(unsigned char *data, unsigned char command,
 		    void (*done)(unsigned char command, unsigned char result))
 {
-	return sub_1D4D9(0x30, sizeof(struct AnalogCalibration), data, 1, command, done);
+	return nvsJobRead(0x30, sizeof(struct AnalogCalibration), data, NVS_AREA_SYSCON, command,
+			  done);
 }
 
-/* writes data to the store's calibration record */
+/* writes data to the NVS's calibration */
 int analogStoreWrite(unsigned char *data, unsigned char command,
 		     void (*done)(unsigned char command, unsigned char result))
 {
-	return sub_1D573(0x30, sizeof(struct AnalogCalibration), data, 1, command, done);
+	return nvsJobWrite(0x30, sizeof(struct AnalogCalibration), data, NVS_AREA_SYSCON, command,
+			   done);
 }
 
 /* the stored calibration, checked by analogCalibrationLoaded */

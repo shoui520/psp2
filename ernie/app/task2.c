@@ -6,6 +6,7 @@
 #include "ernie.h"
 #include "command.h"
 #include "kernel.h"
+#include "nvsreq.h"
 #include "rtc.h"
 #include "serial.h"
 #include "sleepfactor.h"
@@ -13,7 +14,6 @@
 
 extern unsigned int sub_2AB46(void);
 extern unsigned char sub_10D7A(void);
-extern void sub_1D162(void);
 extern void sub_21F93(void);
 extern void sub_2E8C6(void);
 extern void sub_263AD(void);
@@ -33,13 +33,11 @@ extern unsigned char sub_11D4B(void);
 extern void sub_2607C(int);
 extern void sub_260A4(void);
 extern void sub_261C9(FLGPTN ptn);
-extern void sub_1D1A9(FLGPTN ptn);
 extern void sub_2D2A8(FLGPTN ptn);
 extern void sub_1F33A(FLGPTN ptn);
 extern void sub_2C415(void);
 extern unsigned long sub_2AA79(void);
 extern unsigned char sub_2AB49(int);
-extern void sub_1D60D(void);
 extern void sub_2D724(void);
 extern void sub_2C57D(void);
 extern void sub_2C57E(void);
@@ -78,7 +76,7 @@ void task2(VP_INT exinf)
 				sub_261C9(ptn);
 			if (ptn & 0x00a0) {
 				clr_flg(3, ~(ptn & 0x00a0));
-				sub_1D1A9(ptn);
+				nvsRequestEvent(ptn);
 			}
 			if (ptn & 0x8000) {
 				clr_flg(3, ~0x8000);
@@ -194,7 +192,7 @@ unsigned char sub_10D08(void)
 
 	ret = 0;
 	commandRequestInit();
-	sub_1D162();
+	nvsRequestInit();
 	sub_21F93();
 	sub_2E8C6();
 	sub_263AD();
@@ -282,7 +280,7 @@ unsigned char sub_10E32(void)
 		sleepFactorSet3(0);
 	}
 	if (state != 0x0010 && (clock & 3) == 3)
-		sub_1D60D();
+		nvsJobService();
 	sub_2D724();
 	if (state != 0x0004 && state != 0x0008)
 		sub_2C57D();
