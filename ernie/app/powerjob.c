@@ -17,6 +17,7 @@
 #include "powerjob.h"
 #include "powerreq.h"
 #include "powerseq.h"
+#include "powerwait.h"
 #include "sysmode.h"
 #include "timer.h"
 
@@ -25,8 +26,6 @@
 
 extern void sub_11D73(void);
 extern void sub_11D7B(void);
-extern void sub_2A6A0(unsigned int);
-extern void sub_2A816(void);
 extern unsigned char sub_2AB49(int transition);
 extern void sub_2C315(ID flgid, FLGPTN setptn);
 extern void sub_2DF1F(void);
@@ -45,8 +44,7 @@ extern unsigned char sub_2E8B4(void);
 
 unsigned char powerResumed;		/* set by a resume, cleared by a power on */
 static unsigned char padding;		/* 0xff2ed: nothing uses it */
-unsigned char powerJobId;		/* the job task 5 runs next (POWER_JOB_*) */
-unsigned char powerJobFlag;		/* only ever cleared */
+struct PowerJobState powerJobState;
 unsigned int powerCutReg0;		/* registers 0xb0-0xb2 of elmoRead's device, read at a */
 unsigned int powerCutReg1;		/* power cut and cleared at a power on */
 unsigned int powerCutReg2;
@@ -64,7 +62,7 @@ static void powerJobReset(void);
 /* task 5, event 0x0002 of flag 4: runs the job posted */
 void powerJob(void)
 {
-	switch (powerJobId) {
+	switch (powerJobState.id) {
 	case POWER_JOB_ON:
 		powerJobOn();
 		return;
@@ -107,7 +105,7 @@ static void powerJobOn(void)
 	PMK0 = 0;
 	powerSeqOn();
 	powerCutReg0 = powerCutReg1 = powerCutReg2 = 0;
-	sub_2A816();
+	powerTimersInit();
 	powerSeqInit();
 	sub_2E4BB();
 	sub_2DF1F();
@@ -124,7 +122,7 @@ static void powerJobResume(void)
 	powerResumed = 1;
 	if (elmoRegA6 & 0x8000) {
 		sub_2E854(0);
-		sub_2A6A0(4);
+		powerSleep(4);
 		sub_2E854(1);
 	}
 	powerSeqResume();

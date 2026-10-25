@@ -17,7 +17,7 @@ struct BatteryInfo {
 /* a step of a sequence: the Elmo masks it sets or clears, then a wait */
 struct PowerStep {
 	struct ElmoMasks	masks;
-	unsigned int		delay;	/* sub_2A619's */
+	unsigned int		delay;	/* powerWaitMs's */
 };
 
 /* what the power-on reads (powerSeqOn) */

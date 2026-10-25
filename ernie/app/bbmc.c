@@ -19,6 +19,7 @@
 #include "input.h"
 #include "kernel.h"
 #include "nvsreq.h"
+#include "powerwait.h"
 #include "sleepfactor.h"
 #include "task5.h"
 #include "timer.h"
@@ -45,7 +46,6 @@ extern unsigned int sub_2AB46(void);
 extern unsigned char sub_2AB49(int transition);
 extern unsigned char sub_2BB99(void);
 extern unsigned char sub_2BBE9(void);
-extern void sub_2A6A0(unsigned int);
 extern unsigned char sub_11D57(void);
 extern unsigned char sub_11D61(void);
 extern void sub_123DB(int);
@@ -193,7 +193,7 @@ unsigned char bbmcStart(void)
 	case 1:
 		P125 = 1;
 		bbmc.state = 3;
-		sub_2A6A0(100);
+		powerSleep(100);
 		timerStart(0x19, 0x14);
 		break;
 	case 6:

@@ -19,22 +19,17 @@
 #include "motion.h"
 #include "powerreq.h"
 #include "powerseq.h"
+#include "powerwait.h"
 #include "serial2.h"
 #include "sleepfactor.h"
 #include "sysmode.h"
 #include "timer.h"
 
 extern void sub_2DAE1(int);
-extern void sub_2A6A0(unsigned int);
-extern void sub_2A71B(unsigned int);
-extern void sub_2A5FE(void);
-extern void sub_2A619(unsigned int);
-extern void sub_2A73A(unsigned int, unsigned int, unsigned int);
 extern unsigned int sub_2AB46(void);
 extern void sub_2E03A(unsigned int);
 extern unsigned char sub_11D57(void);
 extern unsigned char sub_11D61(void);
-extern void sub_2A6D8(unsigned int, unsigned int);
 
 struct DeviceVersions deviceVersions;
 unsigned char elmoCommand[12];
@@ -109,13 +104,13 @@ void powerSeqOn(void)
 				cookieReadStatus1(&status);
 				if (status & 0x02) {
 					if (deviceVersions.battery.version[1] >= 0x408 && deviceVersions.battery.version[1] < 0x412)
-						sub_2A6A0(0x2a8);
+						powerSleep(0x2a8);
 					break;
 				}
 			}
 			if (sub_2C658()->batteryNoRetry)
 				break;
-			sub_2A6A0(500);
+			powerSleep(500);
 		}
 	} else if (deviceVersions.cookie[0] == 0) {
 		for (i = 0; i < 3; i++) {
@@ -136,15 +131,15 @@ unsigned char powerSeqResume(void)
 	struct SystemMode mode;
 
 	powerSeqLevels();
-	sub_2A71B(1);
+	powerWaitTimers(1);
 	P95 = 1;
-	sub_2A5FE();
+	powerWaitInit();
 	for (i = 0; i < boardResumeSteps(); i++) {
 		length = elmoSetMasks((struct ElmoMasks *)&powerResumeSteps[i].masks, elmoCommand);
 		result = elmoWrite(elmoCommand, length);
 		if (result != 0)
 			goto out;
-		sub_2A619(powerResumeSteps[i].delay);
+		powerWaitMs(powerResumeSteps[i].delay);
 	}
 	mode = *sub_2AB39();
 	if (mode.mode == 0x0c)
@@ -203,7 +198,7 @@ void powerSeqWaitP67(void)
 
 	P31 = 0;
 	for (i = 0; i < 6; i++) {
-		sub_2A619(5);
+		powerWaitMs(5);
 		if (!P6.7)
 			break;
 	}
@@ -226,13 +221,13 @@ unsigned char powerSeqOff(void)
 	clockOutputStop();
 	powerMultiCnOff();
 	powerRmrOff();
-	sub_2A5FE();
+	powerWaitInit();
 	for (i = 0; i < boardOffSteps(); i++) {
 		length = elmoClearMasks((struct ElmoMasks *)&powerOffSteps[i].masks, elmoCommand);
 		result = elmoWrite(elmoCommand, length);
 		if (result != 0)
 			goto out;
-		sub_2A619(powerOffSteps[i].delay);
+		powerWaitMs(powerOffSteps[i].delay);
 	}
 	P95 = 0;
 	powerLedSet(0);
@@ -243,7 +238,7 @@ unsigned char powerSeqOff(void)
 out:
 	TT0L = 0x08;
 	TMMK03 = 1;
-	sub_2A73A(1, 4, 0x1c);
+	powerStartTimer(1, 4, 0x1c);
 	return result;
 }
 
@@ -260,13 +255,13 @@ unsigned char powerSeqSuspend(void)
 		clockOutputStop();
 	powerMultiCnOff();
 	powerRmrOff();
-	sub_2A5FE();
+	powerWaitInit();
 	for (i = 0; i < boardSuspendSteps(); i++) {
 		length = elmoClearMasks((struct ElmoMasks *)&powerSuspendSteps[i].masks, elmoCommand);
 		result = elmoWrite(elmoCommand, length);
 		if (result != 0)
 			goto out;
-		sub_2A619(powerSuspendSteps[i].delay);
+		powerWaitMs(powerSuspendSteps[i].delay);
 	}
 	if (!(elmoStatusMask.reg[0] & 0x10))
 		P95 = 0;
@@ -276,7 +271,7 @@ unsigned char powerSeqSuspend(void)
 out:
 	TT0L = 0x08;
 	TMMK03 = 1;
-	sub_2A73A(1, 4, 0x1c);
+	powerStartTimer(1, 4, 0x1c);
 	return result;
 }
 
@@ -306,7 +301,7 @@ unsigned char powerAccOn(void)
 	if (elmoStatusMask.reg[4] & 0x8000) {
 		result = 0;
 	} else {
-		sub_2A71B(0x10);
+		powerWaitTimers(0x10);
 		mask = elmoStatusMask.reg[4] | 0x8000;
 		elmoCommand[0] = 0xa4;
 		elmoCommand[1] = ((unsigned char *)&mask)[1];
@@ -335,7 +330,7 @@ unsigned char powerAccOff(void)
 			elmoStatusMask.reg[4] = mask;
 			timerStop(0x11);
 			sleepFactorSet2(0);
-			sub_2A73A(0x10, 8, 0x4b);
+			powerStartTimer(0x10, 8, 0x4b);
 		}
 	} else {
 		result = 0;
@@ -352,9 +347,9 @@ unsigned char powerWirelessOn(void)
 	if (elmoStatusMask.reg[0] & 0x0010) {
 		result = 0;
 	} else {
-		sub_2A71B(0x20);
+		powerWaitTimers(0x20);
 		clockOutputStart();
-		sub_2A6A0(1);
+		powerSleep(1);
 		mask0 = elmoStatusMask.reg[0] | 0x0010;
 		mask2 = elmoStatusMask.reg[2] | 0x1000;
 		elmoCommand[0] = 0xa0;
@@ -368,7 +363,7 @@ unsigned char powerWirelessOn(void)
 			elmoStatusMask.reg[0] = mask0;
 			elmoStatusMask.reg[2] = mask2;
 			sleepFactorSet0(1);
-			sub_2A6A0(2);
+			powerSleep(2);
 			P31 = 1;
 		}
 	}
@@ -398,7 +393,7 @@ unsigned char powerWirelessOff(void)
 			elmoStatusMask.reg[0] = mask0;
 			elmoStatusMask.reg[2] = mask2;
 			sleepFactorSet0(0);
-			sub_2A73A(0x20, 9, 0x64);
+			powerStartTimer(0x20, 9, 0x64);
 			if (sub_2AB46() & 0x080c)
 				P95 = 0;
 		}
@@ -418,7 +413,7 @@ unsigned char powerSetVoltage(unsigned char regulator, unsigned char level)
 		elmoCommand[1] = level & 0x3f;
 		elmoCommand[2] = 0;
 		result = elmoWrite(elmoCommand, 3);
-		sub_2A6A0(2);
+		powerSleep(2);
 	}
 	return result;
 }
@@ -464,7 +459,7 @@ unsigned char powerRmrOn(void)
 	if (elmoRegAA & 0x8000) {
 		result = 0;
 	} else {
-		sub_2A71B(0x1000);
+		powerWaitTimers(0x1000);
 		mask = elmoRegAA | 0x8000;
 		elmoCommand[0] = 0xaa;
 		elmoCommand[1] = ((unsigned char *)&mask)[1];
@@ -472,7 +467,7 @@ unsigned char powerRmrOn(void)
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
 			elmoRegAA = mask;
-			sub_2A6A0(0x0d);
+			powerSleep(0x0d);
 		}
 	}
 	return result;
@@ -491,7 +486,7 @@ unsigned char powerRmrOff(void)
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
 			elmoRegAA = mask;
-			sub_2A73A(0x1000, 0x0d, 0x4b);
+			powerStartTimer(0x1000, 0x0d, 0x4b);
 		}
 	} else {
 		result = 0;
@@ -507,7 +502,7 @@ unsigned char powerSdOn(void)
 	if (elmoStatusMask.reg[0] & 0x0001) {
 		result = 0;
 	} else {
-		sub_2A71B(0x2000);
+		powerWaitTimers(0x2000);
 		mask = elmoStatusMask.reg[0] | 0x0001;
 		elmoCommand[0] = 0xa0;
 		elmoCommand[1] = ((unsigned char *)&mask)[1];
@@ -536,7 +531,7 @@ unsigned char powerSdOff(void)
 			elmoStatusMask.reg[0] = mask;
 			timerStop(0x12);
 			sleepFactorSet10(0);
-			sub_2A73A(0x2000, 0x0e, 0x11f);
+			powerStartTimer(0x2000, 0x0e, 0x11f);
 		}
 	} else {
 		result = 0;
@@ -559,7 +554,7 @@ unsigned char powerMultiCnOn(void)
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
 			elmoRegAB = mask;
-			sub_2A6A0(0x28);
+			powerSleep(0x28);
 		}
 	}
 	return result;
@@ -577,7 +572,7 @@ unsigned char powerMultiCnOff(void)
 	result = elmoWrite(elmoCommand, 3);
 	if (result == 0) {
 		elmoRegAB = mask;
-		sub_2A6A0(0x64);
+		powerSleep(0x64);
 	}
 	return result;
 }
@@ -642,7 +637,7 @@ unsigned char powerBbmcOff(void)
 	bbmcSetOff();
 	if (sub_11D57() == 1 && bbmcGetMode() == 0) {
 		P6.5 = 1;
-		sub_2A6A0(0x14);
+		powerSleep(0x14);
 		P6.5 = 0;
 	}
 	return result;
@@ -654,17 +649,17 @@ unsigned char powerBbmcOn(void)
 
 	if (bbmcGetMode()) {
 		P33 = 1;
-		sub_2A6D8(1, 0x4e2);
+		powerWaitInput(1, 0x4e2);
 		P33 = 0;
 		if (sub_11D57() == 0)
 			return 0;
 		return 2;
 	}
 	if (sub_11D57() == 1) {
-		sub_2A6D8(1, sub_2C658()->bbmcPowerDelay);
+		powerWaitInput(1, sub_2C658()->bbmcPowerDelay);
 		if (sub_11D57())
 			powerBbmcPulse();
-		sub_2A6A0(0x20);
+		powerSleep(0x20);
 		if (sub_11D61() == 0) {
 			sleepFactorSet9(0);
 			result = 0;
@@ -683,7 +678,7 @@ unsigned char powerBbmcOn(void)
 void powerBbmcPulse(void)
 {
 	P33 = 1;
-	sub_2A6A0(0x0e74);
+	powerSleep(0x0e74);
 	P33 = 0;
 }
 
@@ -694,7 +689,7 @@ unsigned char powerElmoA0Set(unsigned char bit14, unsigned char bit13)
 	unsigned char result;
 	unsigned int mask;
 
-	sub_2A71B(0x40);
+	powerWaitTimers(0x40);
 	if (bit14)
 		mask = elmoStatusMask.reg[0] | 0x4000;
 	if (bit13)
@@ -705,7 +700,7 @@ unsigned char powerElmoA0Set(unsigned char bit14, unsigned char bit13)
 	result = elmoWrite(elmoCommand, 3);
 	if (result == 0) {
 		elmoStatusMask.reg[0] = mask;
-		sub_2A6A0(2);
+		powerSleep(2);
 	}
 	return result;
 }
@@ -716,7 +711,7 @@ unsigned char powerElmoA0Clear(unsigned char bit14, unsigned char bit13)
 	unsigned char result;
 	unsigned int mask;
 
-	sub_2A71B(0x40);
+	powerWaitTimers(0x40);
 	if (bit14)
 		mask = elmoStatusMask.reg[0] & 0xbfff;
 	if (bit13)
@@ -727,7 +722,7 @@ unsigned char powerElmoA0Clear(unsigned char bit14, unsigned char bit13)
 	result = elmoWrite(elmoCommand, 3);
 	if (result == 0) {
 		elmoStatusMask.reg[0] = mask;
-		sub_2A73A(0x40, 0x0a, 0x1e);
+		powerStartTimer(0x40, 0x0a, 0x1e);
 	}
 	return result;
 }
@@ -738,7 +733,7 @@ unsigned char powerElmoA0Set2(unsigned char bit12, unsigned char unused1, unsign
 	unsigned char result;
 	unsigned int mask;
 
-	sub_2A71B(0x80);
+	powerWaitTimers(0x80);
 	if (bit12)
 		mask = elmoStatusMask.reg[0] | 0x1000;
 	elmoCommand[0] = 0xa0;
@@ -747,7 +742,7 @@ unsigned char powerElmoA0Set2(unsigned char bit12, unsigned char unused1, unsign
 	result = elmoWrite(elmoCommand, 3);
 	if (result == 0) {
 		elmoStatusMask.reg[0] = mask;
-		sub_2A6A0(2);
+		powerSleep(2);
 	}
 	return result;
 }
@@ -758,7 +753,7 @@ unsigned char powerElmoA0Clear2(unsigned char bit12, unsigned char unused1, unsi
 	unsigned char result;
 	unsigned int mask;
 
-	sub_2A71B(0x80);
+	powerWaitTimers(0x80);
 	if (bit12)
 		mask = elmoStatusMask.reg[0] & 0xefff;
 	elmoCommand[0] = 0xa0;
@@ -767,7 +762,7 @@ unsigned char powerElmoA0Clear2(unsigned char bit12, unsigned char unused1, unsi
 	result = elmoWrite(elmoCommand, 3);
 	if (result == 0) {
 		elmoStatusMask.reg[0] = mask;
-		sub_2A73A(0x80, 0x0b, 0x1e);
+		powerStartTimer(0x80, 0x0b, 0x1e);
 	}
 	return result;
 }
@@ -781,7 +776,7 @@ unsigned char powerHdmiCecOn(void)
 	if (elmoStatusMask.reg[1] & 0x8000) {
 		result = 0;
 	} else {
-		sub_2A71B(2);
+		powerWaitTimers(2);
 		mask = elmoStatusMask.reg[1] | 0x8000;
 		elmoCommand[0] = 0xa1;
 		elmoCommand[1] = ((unsigned char *)&mask)[1];
@@ -789,7 +784,7 @@ unsigned char powerHdmiCecOn(void)
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
 			elmoStatusMask.reg[1] = mask;
-			sub_2A6A0(3);
+			powerSleep(3);
 		}
 	}
 	return result;
@@ -808,7 +803,7 @@ unsigned char powerHdmiCecOff(void)
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
 			elmoStatusMask.reg[1] = mask;
-			sub_2A73A(2, 5, 0x32);
+			powerStartTimer(2, 5, 0x32);
 		}
 	} else {
 		result = 0;
@@ -825,7 +820,7 @@ unsigned char powerMotionOn(void)
 	if (elmoStatusMask.reg[2] & 0x0080) {
 		result = 0;
 	} else {
-		sub_2A71B(4);
+		powerWaitTimers(4);
 		mask = elmoStatusMask.reg[2] | 0x0080;
 		elmoCommand[0] = 0xa2;
 		elmoCommand[1] = ((unsigned char *)&mask)[1];
@@ -833,7 +828,7 @@ unsigned char powerMotionOn(void)
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
 			elmoStatusMask.reg[2] = mask;
-			sub_2A6A0(3);
+			powerSleep(3);
 			if (P7.2)
 				motionOpen();
 			else
@@ -859,7 +854,7 @@ unsigned char powerMotionOff(void)
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
 			elmoStatusMask.reg[2] = mask;
-			sub_2A73A(4, 6, 0x4b);
+			powerStartTimer(4, 6, 0x4b);
 		}
 	} else {
 		result = 0;
@@ -909,7 +904,7 @@ unsigned char powerHpremoteOn(void)
 	if (elmoStatusMask.reg[2] & 0x0800) {
 		result = 0;
 	} else {
-		sub_2A71B(0x800);
+		powerWaitTimers(0x800);
 		mask = elmoStatusMask.reg[2] | 0x0800;
 		elmoCommand[0] = 0xa2;
 		elmoCommand[1] = ((unsigned char *)&mask)[1];
@@ -918,7 +913,7 @@ unsigned char powerHpremoteOn(void)
 		if (result == 0) {
 			elmoStatusMask.reg[2] = mask;
 			sleepFactorSet1(1);
-			sub_2A6A0(4);
+			powerSleep(4);
 		}
 	}
 	return result;
@@ -938,7 +933,7 @@ unsigned char powerHpremoteOff(void)
 		if (result == 0) {
 			elmoStatusMask.reg[2] = mask;
 			sleepFactorSet1(0);
-			sub_2A73A(0x800, 0x0c, 0x19);
+			powerStartTimer(0x800, 0x0c, 0x19);
 		}
 	} else {
 		result = 0;
@@ -954,7 +949,7 @@ unsigned char powerBbmcStart(void)
 	bbmcStart();
 	if (sub_11D57() == 0) {
 		P6.5 = 1;
-		sub_2A6D8(2, 0x2ee);
+		powerWaitInput(2, 0x2ee);
 		P6.5 = 0;
 		if (sub_11D57() == 1 && sub_11D61() == 1) {
 			sleepFactorSet9(1);

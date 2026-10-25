@@ -14,9 +14,9 @@
 #include <string.h>
 
 #include "ernie.h"
+#include "battery.h"
 #include "charge.h"
 #include "chip.h"
-#include "battery.h"
 #include "config.h"
 #include "cookie.h"
 #include "elmo.h"
@@ -26,6 +26,7 @@
 #include "motion.h"
 #include "powerreq.h"
 #include "powerseq.h"
+#include "powerwait.h"
 #include "serial2.h"
 #include "task5.h"
 #include "version.h"
@@ -51,7 +52,6 @@ extern unsigned char sub_11D61(void);
 extern void sub_11D6B(void);
 extern void sub_11D73(void);
 extern void sub_11D7B(void);
-extern void sub_2A6A0(unsigned int);
 extern void sub_2E165(unsigned int);
 extern unsigned char sub_2E8B4(void);
 extern void sub_2E0A6(void);
@@ -593,7 +593,7 @@ static void powerRequest088D(void)
 				if (powerRequestData[0] & 0x80) {
 					if (sub_11D57() == 1) {
 						powerBbmcPulse();
-						sub_2A6A0(500);
+						powerSleep(500);
 					}
 				}
 				result = powerBbmcStart();

@@ -15,8 +15,7 @@
 #include "iica.h"
 #include "kernel.h"
 #include "powerseq.h"
-
-extern void sub_2A6BC(unsigned int);
+#include "powerwait.h"
 
 static struct IicaRequest batteryIica;
 static unsigned char batteryBLBuffer[BATTERY_BL_SIZE - 1];
@@ -128,7 +127,7 @@ unsigned char batteryReadInfo(unsigned int *info)
 					elmoCommand[1] = 0;
 					result = batteryWrite(elmoCommand, 2);
 					if (result == 0) {
-						sub_2A6BC(4);
+						powerSleep2(4);
 						elmoCommand[0] = 0x40;
 						result = batteryRead(elmoCommand,
 								     (unsigned char *)(info + 3), 2);

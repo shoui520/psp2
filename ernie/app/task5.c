@@ -11,13 +11,12 @@
 #include "powerjob.h"
 #include "powerreq.h"
 #include "powerseq.h"
+#include "powerwait.h"
 #include "task5.h"
 
 
-unsigned int wordFF24E;
+unsigned int powerDevicePending;
 
-extern void sub_2A5EC(void);
-extern void sub_2A593(void);
 extern void sub_2E499(void);
 extern void sub_2DF06(void);
 extern void sub_2E528(void);
@@ -38,18 +37,18 @@ void task5(VP_INT exinf)
 	ER ercd;
 	FLGPTN ptn;
 
-	sub_2A5EC();
+	powerDeviceInit();
 	for (;;) {
 		ercd = wai_flg(4, 0xffab, TWF_ORW, &ptn);
 		if (ercd == E_OK) {
 			if (ptn & 0x0002) {
 				clr_flg(4, ~0x0002);
-				powerJobFlag = 0;
+				powerJobState.flag = 0;
 				powerJob();
 			}
 			if (ptn & 0x0080) {
 				clr_flg(4, ~0x0080);
-				sub_2A593();
+				powerDeviceRun();
 			}
 			if (ptn & 0x0001) {
 				clr_flg(4, ~0x0001);
@@ -101,63 +100,63 @@ void task5(VP_INT exinf)
 
 void powerJobPostOn(void)
 {
-	powerJobId = POWER_JOB_ON;
+	powerJobState.id = POWER_JOB_ON;
 	sub_2C315(4, 0x0002);
 	return;
 }
 
 void powerJobPostResume(void)
 {
-	powerJobId = POWER_JOB_RESUME;
+	powerJobState.id = POWER_JOB_RESUME;
 	sub_2C315(4, 0x0002);
 	return;
 }
 
 void powerJobPostOff(void)
 {
-	powerJobId = POWER_JOB_OFF;
+	powerJobState.id = POWER_JOB_OFF;
 	sub_2C315(4, 0x0002);
 	return;
 }
 
 void powerJobPostSuspend(void)
 {
-	powerJobId = POWER_JOB_SUSPEND;
+	powerJobState.id = POWER_JOB_SUSPEND;
 	sub_2C315(4, 0x0002);
 	return;
 }
 
 void powerJobPostShutdown(void)
 {
-	powerJobId = POWER_JOB_SHUTDOWN;
+	powerJobState.id = POWER_JOB_SHUTDOWN;
 	sub_2C315(4, 0x0002);
 	return;
 }
 
 void powerJobPostCut(void)
 {
-	powerJobId = POWER_JOB_CUT;
+	powerJobState.id = POWER_JOB_CUT;
 	sub_2C315(4, 0x0002);
 	return;
 }
 
 void powerJobPostOffEnd(void)
 {
-	powerJobId = POWER_JOB_OFF_END;
+	powerJobState.id = POWER_JOB_OFF_END;
 	sub_2C315(4, 0x0002);
 	return;
 }
 
 void powerJobPostReset(void)
 {
-	powerJobId = POWER_JOB_RESET;
+	powerJobState.id = POWER_JOB_RESET;
 	sub_2C315(4, 0x0002);
 	return;
 }
 
 void powerJobPostUpdate(void)
 {
-	powerJobId = POWER_JOB_UPDATE;
+	powerJobState.id = POWER_JOB_UPDATE;
 	sub_2C315(4, 0x0002);
 	return;
 }
@@ -169,7 +168,7 @@ unsigned char sub_21F2A(void)
 
 void sub_21F33(unsigned int bits)
 {
-	wordFF24E |= bits;
+	powerDevicePending |= bits;
 	sub_2C315(4, 0x0080);
 	return;
 }

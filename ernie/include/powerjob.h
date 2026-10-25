@@ -15,8 +15,13 @@
 #define POWER_JOB_UPDATE	8	/* powerUpdate */
 #define POWER_JOB_RESET		9	/* powerReset */
 
-extern unsigned char powerJobId;
-extern unsigned char powerJobFlag;
+/* what task 5 runs next */
+struct PowerJobState {
+	unsigned char	id;		/* POWER_JOB_* */
+	unsigned char	flag;		/* only ever cleared */
+};
+
+extern struct PowerJobState powerJobState;
 
 extern void powerJob(void);
 
