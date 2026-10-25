@@ -4,6 +4,7 @@
 #pragma rtos_task task2
 
 #include "ernie.h"
+#include "board.h"
 #include "command.h"
 #include "kernel.h"
 #include "nvs.h"
@@ -25,10 +26,6 @@ extern void sub_2D254(void);
 extern void sub_2D67C(void);
 extern unsigned char sub_10CB3(void);
 extern unsigned char sub_11D1B(void);
-extern unsigned char sub_27642(void);
-extern void sub_275F0(int);
-extern unsigned char sub_2764F(void);
-extern void sub_27631(void);
 extern unsigned char sub_11D4B(void);
 extern void sub_2D2A8(FLGPTN ptn);
 extern void sub_2C415(void);
@@ -98,8 +95,8 @@ void sub_10B67(FLGPTN ptn)
 	state = serialGetMode();
 	if (ptn & 0x0001) {
 		if (sub_11D1B()) {
-			if (sub_27642()) {
-				sub_275F0(0);
+			if (boardMultiCnIsDongle()) {
+				boardSetMultiCnOutput(0);
 				switch (state) {
 				case 0:
 				case 3:
@@ -110,19 +107,19 @@ void sub_10B67(FLGPTN ptn)
 				case 1:
 					break;
 				}
-			} else if (sub_2764F()) {
+			} else if (boardMultiCnIsDebug()) {
 				serialClose1();
 				serialOpen3(3);
-				sub_275F0(0);
+				boardSetMultiCnOutput(0);
 			} else {
 				serialClose3();
 				serialClose1();
-				sub_27631();
+				boardMultiCnStop();
 			}
 		} else {
 			serialClose3();
 			serialClose1();
-			sub_27631();
+			boardMultiCnStop();
 		}
 	}
 	if (ptn & 0x0100) {
@@ -192,10 +189,10 @@ unsigned char sub_10D08(void)
 	serialAuthInit();
 	sub_2E8C6();
 	serial4StartTimers();
-	if (sub_27642() || sub_2764F())
-		sub_275F0(0);
+	if (boardMultiCnIsDongle() || boardMultiCnIsDebug())
+		boardSetMultiCnOutput(0);
 	else
-		sub_27631();
+		boardMultiCnStop();
 	updaterRequestInit();
 	sub_2D254();
 	sub_2D67C();
@@ -212,10 +209,10 @@ unsigned char sub_10DC1(void)
 
 	ret = 0;
 	serialAuthInit();
-	if (sub_27642() || sub_2764F())
-		sub_275F0(0);
+	if (boardMultiCnIsDongle() || boardMultiCnIsDebug())
+		boardSetMultiCnOutput(0);
 	else
-		sub_27631();
+		boardMultiCnStop();
 	sub_2D67C();
 	return ret;
 }
@@ -226,7 +223,7 @@ unsigned char sub_10DEA(void)
 
 	ret = 0;
 	serial4Close2();
-	sub_27631();
+	boardMultiCnStop();
 	serialClose1();
 	serial1Reset();
 	sub_2D67C();
@@ -239,7 +236,7 @@ unsigned char sub_10E06(void)
 
 	ret = 0;
 	serial4Close2();
-	sub_27631();
+	boardMultiCnStop();
 	serialClose1();
 	serial1Reset();
 	sub_2D67C();

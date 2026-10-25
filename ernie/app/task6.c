@@ -5,10 +5,10 @@
 #pragma rtos_task task6
 
 #include "ernie.h"
+#include "trace.h"
 #include "bbmc.h"
 #include "kernel.h"
 
-extern void sub_2745D(void);
 extern void sub_2C4FF(void);
 
 void task6(VP_INT exinf)
@@ -16,7 +16,7 @@ void task6(VP_INT exinf)
 	FLGPTN ptn;
 	ER ercd;
 
-	sub_2745D();
+	traceInit();
 	bbmcInit();
 	for (;;) {
 		ercd = wai_flg(6, 0x73ff, TWF_ORW, &ptn);

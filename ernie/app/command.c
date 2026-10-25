@@ -15,6 +15,7 @@
 #include <string.h>
 
 #include "ernie.h"
+#include "board.h"
 #include "clockout.h"
 #include "command.h"
 #include "host.h"
@@ -37,8 +38,6 @@ extern unsigned char sub_2D685(void);
 extern void sub_2C2ED(int, int);
 extern unsigned char sub_2C15B(unsigned int offset, unsigned int size, unsigned char *buf);
 extern unsigned char sub_2C199(unsigned int offset, unsigned int size, unsigned char *buf);
-extern unsigned char sub_27642(void);
-extern void sub_275F0(int);
 extern void sub_2AA60(unsigned long);
 extern unsigned char sub_2AB49(int);
 extern unsigned char sub_2B61F(unsigned char *buf);
@@ -391,17 +390,17 @@ allowed:
 			break;
 		case 0x00b2:		/* sceSysconCtrlHostOutputViaDongle */
 			if (commandRequest.length == 1) {
-				if (sub_27642() == 0)
+				if (boardMultiCnIsDongle() == 0)
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 4, 0);
 				else if (commandRequestData[0] == 0) {
-					sub_275F0(0);
+					boardSetMultiCnOutput(0);
 					sub_21F33(0x20);
 					dly_tsk(25);
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 				} else if (serialGetState() != 0 && serialGetState() != 1)
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 5, 0);
 				else {
-					sub_275F0(1);
+					boardSetMultiCnOutput(1);
 					sub_21F33(0x10);
 					dly_tsk(10);
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);

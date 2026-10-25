@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include "ernie.h"
+#include "board.h"
 #include "analog.h"
 #include "csi01.h"
 #include "host.h"
@@ -66,8 +67,6 @@ struct InputRequests {
 };
 
 extern unsigned char sub_11D1B(void);
-extern unsigned char sub_275E0(void);
-extern unsigned char sub_275F0(unsigned char value);
 extern unsigned char sub_2BB99(void);
 extern unsigned char sub_2BBE9(void);
 extern void sub_2C342(ID flgid, FLGPTN setptn);
@@ -517,7 +516,7 @@ unsigned char hostCommandMultiCnInfo(unsigned char *out, unsigned char *length)
 	else
 		out[0] = 0;
 	out[1] = analogGetMultiCn();
-	out[2] = sub_275E0();
+	out[2] = boardGetMultiCnOutput();
 	out[3] = 0;
 	*length = 4;
 	return 0;
@@ -640,7 +639,7 @@ static void controlsRequest0185(void)
 static void controlsRequest0190(void)
 {
 	if (controlsRequest.length == 2) {
-		if (sub_275F0(controlsRequest.data[0]) != 0)
+		if (boardSetMultiCnOutput(controlsRequest.data[0]) != 0)
 			controlsRequest.status = 0x3c;
 		else
 			controlsRequest.status = 0;

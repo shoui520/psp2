@@ -7,13 +7,12 @@
 #pragma DI
 
 #include "ernie.h"
+#include "board.h"
 #include "clockout.h"
 #include "host.h"
 #include "keepram.h"
 #include "rtc.h"
 #include "tau.h"
-
-extern void sub_27651(void);
 
 void intInit(void);
 
@@ -38,7 +37,7 @@ void hdwinit(void)
 		;
 	HIOSTOP = 1;
 	XTSTOP = 0;
-	sub_27651();
+	boardPortInit();
 	intInit();
 	tickStart();
 	rtcInit();
