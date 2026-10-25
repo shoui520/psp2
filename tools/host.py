@@ -1,9 +1,9 @@
 """How this host runs the project's compilers, decided from the operating system.
 
 The project's GCC 4.8 and MeP toolchains are Linux programs, and Sony's SNC (psp2snc.exe)
-is a Windows program:
+and Renesas' CA78K0R (the syscon's compiler) are Windows programs:
 
-  host      Linux toolchains                      psp2snc.exe
+  host      Linux toolchains                      Windows programs
   Linux     run natively                          through Wine (required)
   macOS     in a Lima VM (limactl required)       through Wine (required)
   Windows   through WSL2's bash (required)        run natively
@@ -21,6 +21,7 @@ Locations, from the environment:
 
   python3 host.py check                 report what this host will use
   python3 host.py linux -- PROG ARGS    run a Linux program (used by the shell wrappers)
+  python3 host.py windows -- PROG ARGS  run a Windows program
 """
 from pathlib import Path, PureWindowsPath
 import os
@@ -102,10 +103,14 @@ def linux_command(argv, cwd=None):
 	cwd = str(cwd or os.getcwd())
 	if SYSTEM == 'linux':
 		return argv
+	# the recipes install into PSP2_TOOLCHAINS: the Linux side sees this host's setting
+	tc = os.environ.get('PSP2_TOOLCHAINS')
 	if SYSTEM == 'macos':
-		return ['limactl', 'shell', '--workdir', cwd, _lima_instance(), '--', *argv]
+		env = ['env', f'PSP2_TOOLCHAINS={tc}'] if tc else []
+		return ['limactl', 'shell', '--workdir', cwd, _lima_instance(), '--', *env, *argv]
 	if SYSTEM == 'windows':
-		return [_wsl(), '--cd', wsl_path(cwd), '-e', *map(wsl_path, argv)]
+		env = ['env', f'PSP2_TOOLCHAINS={wsl_path(tc)}'] if tc else []
+		return [_wsl(), '--cd', wsl_path(cwd), '-e', *env, *map(wsl_path, argv)]
 	raise HostError(f'unsupported host system: {sys.platform}')
 
 
@@ -130,36 +135,36 @@ def linux_wrapper(program, path):
 	return path
 
 
-# --- psp2snc.exe ----------------------------------------------------------------------
+# --- Windows programs (psp2snc.exe, CA78K0R) -------------------------------------------
 
 def _wine():
 	if 'wine' in _checked:
 		return _checked['wine']
 	wine = os.environ.get('WINE') or shutil.which('wine64') or shutil.which('wine')
 	if not wine or not Path(wine).exists():
-		raise HostError('psp2snc.exe is a Windows program, and Wine is not installed '
-				'(or set WINE to the wine program)')
+		raise HostError('psp2snc.exe and CA78K0R are Windows programs, and Wine is not '
+				'installed (or set WINE to the wine program)')
 	# Keep a wineserver and the booted prefix alive between compiles (a cold prefix costs
 	# seconds per compile); both start detached from our stdio, or the caller would wait
 	# for Wine to exit.
 	server = Path(wine).with_name('wineserver')
-	if server.exists() and subprocess.run([str(server), '-p'], stdin=subprocess.DEVNULL,
-					      capture_output=True).returncode == 0:
-		subprocess.run([wine, 'wineboot'], stdin=subprocess.DEVNULL, capture_output=True)
+	quiet = dict(stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+	if server.exists() and subprocess.run([str(server), '-p'], **quiet).returncode == 0:
+		subprocess.run([wine, 'wineboot'], **quiet)
 	os.environ.setdefault('WINEDEBUG', '-all')
 	_checked['wine'] = wine
 	return wine
 
 
 def windows_path(p):
-	"""A path as psp2snc.exe sees it: native on Windows, Wine's Z: drive (= /) elsewhere."""
+	"""A path as a Windows program sees it: native on Windows, Wine's Z: drive (= /) elsewhere."""
 	if SYSTEM == 'windows':
 		return str(PureWindowsPath(p))
 	return 'Z:' + str(Path(p).resolve()).replace('/', '\\')
 
 
 def windows_command(argv):
-	"""The command that runs the Windows program argv (psp2snc.exe) on this host."""
+	"""The command that runs the Windows program argv (psp2snc.exe, CA78K0R) on this host."""
 	argv = [str(a) for a in argv]
 	if SYSTEM == 'windows':
 		return argv
@@ -172,10 +177,11 @@ def windows_command(argv):
 
 def main():
 	args = sys.argv[1:]
-	if args[:1] == ['linux'] and '--' in args:
+	if args[:1] in (['linux'], ['windows']) and '--' in args:
 		argv = args[args.index('--') + 1:]
 		try:
-			return subprocess.run(linux_command(argv)).returncode
+			command = linux_command(argv) if args[0] == 'linux' else windows_command(argv)
+			return subprocess.run(command).returncode
 		except HostError as e:
 			sys.stderr.write(f'host.py: {e}\n')
 			return 1
