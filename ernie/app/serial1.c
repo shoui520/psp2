@@ -17,12 +17,12 @@
 #include "rtc.h"
 #include "serial.h"
 #include "serial1.h"
+#include "serialauth.h"
 #include "sleepfactor.h"
 #include "spidev.h"
 #include "sysmode.h"
 #include "version.h"
 
-extern void sub_21F93(void);
 extern void sub_2C2ED(int, int);
 extern unsigned int sub_2AB46(void);
 extern unsigned char sub_2AB49(int);
@@ -30,9 +30,6 @@ extern unsigned char sub_29C4B(void);
 extern unsigned char sub_29CC0(void);
 extern int sub_25664(void);
 extern int sub_256E1(void);
-extern unsigned char sub_220BD(unsigned char *data);
-extern unsigned char sub_224DF(void);
-extern unsigned char sub_224EE(void);
 extern unsigned char sub_2D6DE(void);
 extern unsigned char sub_22542(unsigned int offset, unsigned int size, unsigned char *data,
 			       unsigned char area);
@@ -122,7 +119,7 @@ void serial1Reset(void)
 	sleepFactorSet25(0);
 	serial1BufferClear();
 	memset(&serial1Data, 0, sizeof(serial1Data));
-	sub_21F93();
+	serialAuthInit();
 	serial1State = 0;
 	serial1Key = SERIAL1_KEY_CLOSED;
 }
@@ -149,7 +146,7 @@ unsigned char serialCommand1(unsigned int command, struct SerialBuffer *request,
 				serialSetAnswer(SERIAL_ANSWER);
 				return 0x20;
 			}
-			if ((flags & SERIAL1_NVS_KEY2) && !sub_224DF()) {
+			if ((flags & SERIAL1_NVS_KEY2) && !serialAuthUnlocked1()) {
 				serialSetAnswer(SERIAL_ANSWER);
 				return 0x10;
 			}
@@ -157,7 +154,7 @@ unsigned char serialCommand1(unsigned int command, struct SerialBuffer *request,
 				serialSetAnswer(SERIAL_ANSWER);
 				return 1;
 			}
-			if ((flags & SERIAL1_NVS_KEY3) && !sub_224EE()) {
+			if ((flags & SERIAL1_NVS_KEY3) && !serialAuthUnlocked14()) {
 				serialSetAnswer(SERIAL_ANSWER);
 				return 0x10;
 			}
@@ -366,7 +363,7 @@ static unsigned char serial1Command0106(struct SerialBuffer *request, struct Ser
 	return 0;
 }
 
-/* 0x0110: sub_220BD on the request's 0x28 bytes, which answers in their place */
+/* 0x0110: serialAuthCommand on the request's 0x28 bytes, which answers in their place */
 static unsigned char serial1Command0110(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result = 0;
@@ -377,7 +374,7 @@ static unsigned char serial1Command0110(struct SerialBuffer *request, struct Ser
 		return 0x32;
 	}
 	memcpy(serial1Data.byte, request->data, sizeof(serial1Data));
-	result = sub_220BD(serial1Data.byte);
+	result = serialAuthCommand(serial1Data.byte);
 	response->data = serial1Data.byte;
 	response->length = sizeof(serial1Data);
 	serialSetAnswer(SERIAL_ANSWER);

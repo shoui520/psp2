@@ -21,6 +21,7 @@
 #include "kernel.h"
 #include "motion.h"
 #include "serial1.h"
+#include "serialauth.h"
 #include "sleepfactor.h"
 #include "sysmode.h"
 #include "task5.h"
@@ -97,7 +98,6 @@ extern void sub_172BC(void);
 extern void sub_2B475(void);
 extern void sub_25263(void);
 extern void sub_2526B(void);
-extern void sub_224FD(void);
 extern void sub_2B4BC(void);
 extern void sub_29B68(void);
 

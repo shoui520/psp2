@@ -9,9 +9,9 @@
 
 /* a command's flags: what it needs */
 #define SERIAL1_UNLOCKED	0x01	/* the link unlocked (0x0103), else status 0x20 */
-#define SERIAL1_NVS_KEY2	0x02	/* sub_224DF, else status 0x10 */
+#define SERIAL1_NVS_KEY2	0x02	/* serialAuthUnlocked1, else status 0x10 */
 #define SERIAL1_KEY		0x04	/* serial1Key at SERIAL1_KEY_OPEN, else status 1 */
-#define SERIAL1_NVS_KEY3	0x08	/* sub_224EE, else status 0x10 */
+#define SERIAL1_NVS_KEY3	0x08	/* serialAuthUnlocked14, else status 0x10 */
 
 #define SERIAL1_KEY_OPEN	0xa5a5
 #define SERIAL1_KEY_CLOSED	0x5a5a

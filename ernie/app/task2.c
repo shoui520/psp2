@@ -10,13 +10,13 @@
 #include "rtc.h"
 #include "serial.h"
 #include "serial1.h"
+#include "serialauth.h"
 #include "sleepfactor.h"
 #include "updatereq.h"
 #include "version.h"
 
 extern unsigned int sub_2AB46(void);
 extern unsigned char sub_10D7A(void);
-extern void sub_21F93(void);
 extern void sub_2E8C6(void);
 extern void sub_263AD(void);
 extern void sub_2D254(void);
@@ -192,7 +192,7 @@ unsigned char sub_10D08(void)
 	ret = 0;
 	commandRequestInit();
 	nvsRequestInit();
-	sub_21F93();
+	serialAuthInit();
 	sub_2E8C6();
 	sub_263AD();
 	if (sub_27642() || sub_2764F())
@@ -214,7 +214,7 @@ unsigned char sub_10DC1(void)
 	unsigned char ret;
 
 	ret = 0;
-	sub_21F93();
+	serialAuthInit();
 	if (sub_27642() || sub_2764F())
 		sub_275F0(0);
 	else
@@ -254,7 +254,7 @@ unsigned char sub_10E22(void)
 	unsigned char ret;
 
 	ret = 0;
-	sub_21F93();
+	serialAuthInit();
 	sub_2D67C();
 	return ret;
 }
