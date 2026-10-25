@@ -15,6 +15,7 @@
 #include <string.h>
 
 #include "ernie.h"
+#include "clockout.h"
 #include "command.h"
 #include "host.h"
 #include "kernel.h"
@@ -35,8 +36,6 @@ extern unsigned char sub_1D0E6(unsigned int offset, unsigned int size, unsigned 
 extern unsigned char sub_1D124(unsigned int offset, unsigned int size, unsigned char *buf);
 extern unsigned char sub_2C15B(unsigned int offset, unsigned int size, unsigned char *buf);
 extern unsigned char sub_2C199(unsigned int offset, unsigned int size, unsigned char *buf);
-extern void sub_16E70(void);
-extern void sub_16E7D(void);
 extern unsigned char sub_27642(void);
 extern void sub_275F0(int);
 extern void sub_21F33(int);
@@ -381,9 +380,9 @@ allowed:
 		case 0x00b0:		/* sceSysconOutputClock */
 			if (commandRequest.length == 1) {
 				if (commandRequestData[0] == 1)
-					sub_16E70();
+					clockOutputStart();
 				else
-					sub_16E7D();
+					clockOutputStop();
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 			} else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);

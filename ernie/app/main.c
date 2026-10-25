@@ -7,13 +7,13 @@
 #pragma DI
 
 #include "ernie.h"
+#include "clockout.h"
 #include "host.h"
 #include "keepram.h"
 #include "rtc.h"
 
 extern void sub_27651(void);
 extern void tickStart(void);
-extern void sub_16E7D(void);
 
 void intInit(void);
 
@@ -42,7 +42,7 @@ void hdwinit(void)
 	intInit();
 	tickStart();
 	rtcInit();
-	sub_16E7D();
+	clockOutputStop();
 	return;
 }
 
