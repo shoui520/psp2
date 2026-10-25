@@ -10,8 +10,8 @@
 #include "csi.h"
 #include "dma.h"
 #include "kernel.h"
+#include "task.h"
 
-extern void sub_2C342(ID flgid, FLGPTN setptn);
 
 /* sets channel 0 up for a transfer from request->sfr; 1 if one is running */
 unsigned char dma0Setup(struct DmaRequest *request)
@@ -106,11 +106,11 @@ void dma0Interrupt(void)
 	dma0End();
 	dma1End();
 	if ((0x0f & DMC0) == DMA_TRIGGER_SR0)
-		sub_2C342(2, 0x0002);
+		task3SetFlag(2, 0x0002);
 	else if ((0x0f & DMC0) == DMA_TRIGGER_CSI10)
-		sub_2C342(2, 0x0001);
+		task3SetFlag(2, 0x0001);
 	else if ((0x0f & DMC0) == DMA_TRIGGER_CSI00) {
 		csi.state &= ~CSI_BUSY;
-		sub_2C342(1, 0x0002);
+		task3SetFlag(1, 0x0002);
 	}
 }

@@ -11,8 +11,8 @@
 #include "kernel.h"
 #include "nvs.h"
 #include "nvsreq.h"
+#include "task.h"
 
-extern void sub_2C2ED(int, int);
 
 static struct NvsJob *nvsJobAlloc(void);
 static struct NvsJob *nvsJobNext(void);
@@ -162,7 +162,7 @@ int nvsJobRead(unsigned int offset, unsigned int size, unsigned char *data, unsi
 	job->size = size;
 	job->data = data;
 	job->area = area;
-	sub_2C2ED(3, 0x0080);
+	task2SetFlag(3, 0x0080);
 	return 0;
 }
 
@@ -183,7 +183,7 @@ int nvsJobWrite(unsigned int offset, unsigned int size, unsigned char *data, uns
 	job->size = size;
 	job->data = data;
 	job->area = area;
-	sub_2C2ED(3, 0x0080);
+	task2SetFlag(3, 0x0080);
 	return 0;
 }
 
@@ -197,7 +197,7 @@ int nvsJobService(void)
 	job->state = NVS_JOB_SERVICE;
 	job->done = NULL;
 	job->command = 0;
-	sub_2C2ED(3, 0x0080);
+	task2SetFlag(3, 0x0080);
 	return 0;
 }
 
@@ -207,7 +207,7 @@ void nvsRequestNotify(void)
 	switch (nvsRequest.event) {
 	case HOST_EVENT_COMMAND:
 		hostRequestSetState(&nvsRequest, HOST_REQUEST_BUSY);
-		sub_2C2ED(3, 0x0020);
+		task2SetFlag(3, 0x0020);
 		break;
 	case HOST_EVENT_ANSWERED:
 		hostRequestSetState(&nvsRequest, HOST_REQUEST_RECEIVE);

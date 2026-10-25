@@ -17,6 +17,7 @@
 #include "serialauth.h"
 #include "sleepfactor.h"
 #include "state.h"
+#include "task.h"
 #include "updatereq.h"
 #include "version.h"
 
@@ -28,10 +29,7 @@ extern unsigned char sub_10CB3(void);
 extern unsigned char sub_11D1B(void);
 extern unsigned char sub_11D4B(void);
 extern void sub_2D2A8(FLGPTN ptn);
-extern void sub_2C415(void);
 extern void sub_2D724(void);
-extern void sub_2C57D(void);
-extern void sub_2C57E(void);
 
 void sub_10B67(FLGPTN ptn);
 unsigned char sub_10C03(void);
@@ -82,7 +80,7 @@ void task2(VP_INT exinf)
 				updaterRequestEvent(ptn);
 			}
 		}
-		sub_2C415();
+		task2Idle();
 	}
 }
 
@@ -274,7 +272,7 @@ unsigned char sub_10E32(void)
 		nvsJobService();
 	sub_2D724();
 	if (state != 0x0004 && state != 0x0008)
-		sub_2C57D();
-	sub_2C57E();
+		taskHookStandby();
+	taskHookTick();
 	return ret;
 }

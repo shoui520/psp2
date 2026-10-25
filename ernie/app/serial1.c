@@ -26,9 +26,9 @@
 #include "sleepfactor.h"
 #include "spidev.h"
 #include "state.h"
+#include "task.h"
 #include "version.h"
 
-extern void sub_2C2ED(int, int);
 extern unsigned char sub_2D6DE(void);
 extern unsigned char sub_2C66A(unsigned char *data);
 extern unsigned char sub_2C6F0(unsigned int id, unsigned char size, unsigned char *data);
@@ -46,7 +46,6 @@ extern unsigned char sub_2DC3C(unsigned int id, unsigned char size, unsigned cha
 extern unsigned char sub_2DC57(unsigned int id);
 extern unsigned char sub_2DC8B(void);
 extern unsigned char sub_2D05F(void);
-extern void sub_2C315(int, int);
 extern unsigned char sub_11D4B(void);
 
 extern const struct SerialCommand1 serialCommands1[];
@@ -173,7 +172,7 @@ unsigned char serial1BufferClear(void)
 /* an input bit's handler: event flag 3's bit 0x0001 */
 void serial1InputHandler(void)
 {
-	sub_2C2ED(3, 0x0001);
+	task2SetFlag(3, 0x0001);
 }
 
 /* sleep factor 25 (sleepFactorSet25), in the low word of the factors: always 0; never
@@ -881,7 +880,7 @@ static unsigned char serial1Command0180(struct SerialBuffer *request, struct Ser
 		return 0x61;
 	}
 	serialSetAnswer(SERIAL_ANSWER_LATER);
-	sub_2C315(4, 0x4000);
+	task5SetFlag(4, 0x4000);
 	return result;
 }
 
@@ -897,7 +896,7 @@ static unsigned char serial1Command0181(struct SerialBuffer *request, struct Ser
 		return 0x61;
 	}
 	serialSetAnswer(SERIAL_ANSWER_LATER);
-	sub_2C315(4, 0x4000);
+	task5SetFlag(4, 0x4000);
 	return result;
 }
 
@@ -913,7 +912,7 @@ static unsigned char serial1Command0182(struct SerialBuffer *request, struct Ser
 		return 0x61;
 	}
 	serialSetAnswer(SERIAL_ANSWER_LATER);
-	sub_2C315(4, 0x4000);
+	task5SetFlag(4, 0x4000);
 	return result;
 }
 
@@ -994,7 +993,7 @@ static unsigned char serial1Command0940(struct SerialBuffer *request, struct Ser
 	}
 	serial1Args.byte[0] = request->data[0];
 	serialSetAnswer(SERIAL_ANSWER_LATER);
-	sub_2C315(4, 0x4000);
+	task5SetFlag(4, 0x4000);
 	return result;
 }
 
@@ -1024,7 +1023,7 @@ static unsigned char serial1Command0941(struct SerialBuffer *request, struct Ser
 	serial1Args.byte[1] = request->data[1];
 	serial1Args.byte[2] = request->data[2];
 	serialSetAnswer(SERIAL_ANSWER_LATER);
-	sub_2C315(4, 0x4000);
+	task5SetFlag(4, 0x4000);
 	return result;
 }
 

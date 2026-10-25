@@ -19,6 +19,7 @@
 #include "powerseq.h"
 #include "powerwait.h"
 #include "state.h"
+#include "task.h"
 #include "timer.h"
 
 #define POWER_JOB_PART	5	/* the power part the jobs report */
@@ -26,7 +27,6 @@
 
 extern void sub_11D73(void);
 extern void sub_11D7B(void);
-extern void sub_2C315(ID flgid, FLGPTN setptn);
 extern void sub_2DF1F(void);
 extern void sub_2DF86(unsigned int on);
 extern void sub_2DFAA(unsigned int on);
@@ -131,7 +131,7 @@ static void powerJobResume(void)
 	sub_11D7B();
 	powerRequestInit();
 	chargeSetAcDelay();
-	sub_2C315(4, 0x20);
+	task5SetFlag(4, 0x20);
 	mode = stateGetWakeupFactor();
 	if (mode->bits.mode == 0x0f && !mode->bits.notify)
 		sub_2E05E(1);
@@ -167,7 +167,7 @@ static void powerJobOff(void)
 		POWER_JOB_MODE();
 	}
 	chargeSetAcDelay();
-	sub_2C315(4, 0x20);
+	task5SetFlag(4, 0x20);
 	chargeVbus.0 = 1;
 	chargeControl.1 = 1;
 	sub_2E0D8(2);
@@ -211,7 +211,7 @@ static void powerJobSuspend(void)
 	if (!sub_2E0CF())
 		sub_2E0D8(2);
 	chargeSetAcDelay();
-	sub_2C315(4, 0x20);
+	task5SetFlag(4, 0x20);
 	chargeVbus.0 = 1;
 	chargeControl.1 = 1;
 	powerCookieHold();

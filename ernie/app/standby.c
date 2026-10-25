@@ -11,10 +11,9 @@
 #include "ernie.h"
 #include "serial.h"
 #include "state.h"
+#include "task.h"
 #include "tau.h"
 
-extern int sub_2C564(void);
-extern void sub_2C57D(void);
 
 void standbyPrepare(void);
 void standbyResume(void);
@@ -26,14 +25,14 @@ void standby(void)
 	case 0x0008:
 	case 0x0010:
 	case 0x0800:
-		if (sub_2C564()) {
-			sub_2C57D();
+		if (taskStandbyHalt()) {
+			taskHookStandby();
 			HALT();
 			return;
 		}
 		DI();
 		standbyPrepare();
-		sub_2C57D();
+		taskHookStandby();
 		STOP();
 		standbyResume();
 		EI();

@@ -27,6 +27,7 @@
 #include "inputreq.h"
 #include "kernel.h"
 #include "motion.h"
+#include "task.h"
 #include "tau.h"
 #include "touch.h"
 
@@ -68,7 +69,6 @@ struct InputRequests {
 };
 
 extern unsigned char sub_11D1B(void);
-extern void sub_2C342(ID flgid, FLGPTN setptn);
 extern void sub_2DAE1(int);
 
 
@@ -335,7 +335,7 @@ void controlsRequestNotify(void)
 		break;
 	case HOST_EVENT_COMMAND:
 		controlsRequest.state = HOST_REQUEST_BUSY;
-		sub_2C342(2, 0x0010);
+		task3SetFlag(2, 0x0010);
 		break;
 	case HOST_EVENT_ANSWERED:
 		controlsRequest.state = HOST_REQUEST_RECEIVE;

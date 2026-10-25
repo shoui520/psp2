@@ -17,6 +17,7 @@
 #include "powerseq.h"
 #include "sleepfactor.h"
 #include "state.h"
+#include "task.h"
 #include "timer.h"
 
 extern void sub_1276A(void);
@@ -25,7 +26,6 @@ extern void sub_2DAE1(int);
 extern void sub_2DFCE(unsigned int);
 extern void sub_2E03A(unsigned int);
 extern void sub_2E082(unsigned int);
-extern void sub_2C315(ID flgid, FLGPTN setptn);
 
 __sreg union CookieStatus1 cookieStatus1;
 __sreg union CookieStatus2 cookieStatus2;
@@ -487,13 +487,13 @@ void chargeTimer(void)
 		timerStart(0x17, 1);
 	else
 		timerStart(0x17, charge.acDelay);
-	sub_2C315(4, 0x0020);
+	task5SetFlag(4, 0x0020);
 }
 
 /* timer 0x1e (powerCookieHold): task 5 runs powerCookieRelease */
 void chargeCookieTimer(void)
 {
-	sub_2C315(4, 0x0400);
+	task5SetFlag(4, 0x0400);
 }
 
 /* timer 0x1f */
@@ -507,8 +507,8 @@ void chargeTimer1f(void)
 void chargeUpdateSoon(void)
 {
 	dly_tsk(5);
-	sub_2C315(4, 0x0020);
-	sub_2C315(4, 0x1000);
+	task5SetFlag(4, 0x0020);
+	task5SetFlag(4, 0x1000);
 }
 
 /* the Cookie's charge setting for the USB status and chargeUsbMode */

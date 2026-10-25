@@ -27,6 +27,7 @@
 #include "serialauth.h"
 #include "sleepfactor.h"
 #include "state.h"
+#include "task.h"
 #include "task5.h"
 #include "timer.h"
 #include "touch.h"
@@ -87,8 +88,6 @@ struct ButtonPress {
 };
 
 extern unsigned char getResetCause(void);
-extern void sub_2C342(ID flgid, FLGPTN setptn);
-extern void sub_2C394(int, int);
 extern void sub_17159(void);
 extern void sub_17204(void);
 extern void sub_17544(void);
@@ -1216,7 +1215,7 @@ void sub_12424(unsigned char enable)
 
 void sub_1244E(void)
 {
-	sub_2C394(6, 0x0200);
+	task6SetFlag(6, 0x0200);
 }
 
 void sub_1245B(void)
@@ -1276,7 +1275,7 @@ void inputScanTimer(void)
 		inputKeys.events |= inputKeys.state & 0x000c;
 	if (toggled & 0x04)
 		inputKeys.events |= inputKeys.state & 0x00a1;
-	sub_2C342(2, 0x0008);
+	task3SetFlag(2, 0x0008);
 	if (inputScan.hold != 0) {
 		inputScan.hold--;
 		timerStart(3, 1);
@@ -1291,11 +1290,11 @@ void inputScanTimer(void)
 	}
 	if (inputDelays.flag40 != 0) {
 		if (--inputDelays.flag40 == 0)
-			sub_2C342(2, 0x0040);
+			task3SetFlag(2, 0x0040);
 	}
 	if (inputDelays.flag80 != 0) {
 		if (--inputDelays.flag80 == 0)
-			sub_2C342(2, 0x0080);
+			task3SetFlag(2, 0x0080);
 	}
 	if (inputDelays.latchOn != 0) {
 		if (--inputDelays.latchOn == 0)

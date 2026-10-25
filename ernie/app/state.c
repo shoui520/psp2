@@ -19,6 +19,7 @@
 #include "serialauth.h"
 #include "sleepfactor.h"
 #include "state.h"
+#include "task.h"
 #include "tau.h"
 #include "timer.h"
 #include "updatereq.h"
@@ -45,12 +46,6 @@ extern int sub_12019(void);
 extern int sub_1203A(void);
 extern int sub_1204D(void);
 extern int sub_1206E(void);
-extern void sub_2C2C1(ID mbxid, T_MSG *msg);
-extern void sub_2C315(ID flgid, FLGPTN setptn);
-extern void sub_2C394(int, int);
-extern unsigned int sub_2C561(void);
-extern void sub_2C572(void);
-extern void sub_2C573(struct StateEvent *event);
 
 static int stateStartEnter(void);
 static int stateOnEnter(void);
@@ -125,21 +120,21 @@ void stateEvent(struct StateEvent *event)
 				stateTable[i].enter();
 				statePhase = 0;
 				stateEvents = stateEventsOf(powerState);
-				sub_2C572();
+				taskHookState();
 				break;
 			case STATE_EVENT_TRANSITION:
 				stateTable[i].handle(event);
 				stateEvents |= stateNext;
-				sub_2C573(event);
+				taskHookEvent(event);
 				if (statePhase != 0)
 					return;
 				break;
 			case STATE_EVENT_CHECK:
-				status = sub_2C561();
+				status = taskGetPending();
 				if (status & 0x20)
-					sub_2C394(6, 0x4000);
+					task6SetFlag(6, 0x4000);
 				if (status & 0x10)
-					sub_2C315(4, 0x8000);
+					task5SetFlag(4, 0x8000);
 				if (status & 0x38)
 					timerStart(0x1a, 0x14);
 				return;
@@ -149,7 +144,7 @@ void stateEvent(struct StateEvent *event)
 				powerState = stateNext | 0x8000;
 				statePhase = 1;
 				stateCause = event->transition;
-				sub_2C572();
+				taskHookState();
 				stateNext = 0;
 			}
 			return;
@@ -213,7 +208,7 @@ int stateTransition(unsigned char transition)
 		event.type = STATE_EVENT_TRANSITION;
 		event.transition = transition;
 		memcpy(&msg->event, &event, sizeof(event));
-		sub_2C2C1(1, (T_MSG *)msg);
+		task1SendMessage(1, (T_MSG *)msg);
 	} else if (ercd == E_TMOUT)
 		return 1;
 	else
@@ -232,7 +227,7 @@ int stateEnter(void)
 		event.type = STATE_EVENT_ENTER;
 		event.arg.state = stateGet();
 		memcpy(&msg->event, &event, sizeof(event));
-		sub_2C2C1(1, (T_MSG *)msg);
+		task1SendMessage(1, (T_MSG *)msg);
 	} else if (ercd == E_TMOUT)
 		return 1;
 	else

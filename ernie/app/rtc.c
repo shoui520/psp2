@@ -14,9 +14,9 @@
 #include "rtc.h"
 #include "sleepfactor.h"
 #include "state.h"
+#include "task.h"
 #include "timer.h"
 
-extern void sub_2C2ED(int, int);
 extern int sub_2D6C6(void);
 extern int sub_2D69C(void);
 
@@ -159,7 +159,7 @@ void rtcInterrupt(void)
 	} else if (state == 0x0800)
 		sub_125F2();
 	if (rtcClockLow & 0x0001) {
-		sub_2C2ED(3, 0x8000);
+		task2SetFlag(3, 0x8000);
 		if (sub_2D6C6() != 0) {
 			byteFDD2D++;
 			byteFDD2C = 1;

@@ -12,12 +12,12 @@
 #include "serial.h"
 #include "serial2.h"
 #include "serial4.h"
+#include "task.h"
 #include "timer.h"
 #include "uart.h"
 #include "uart4.h"
 #include "util.h"
 
-extern ER sub_2C2ED(unsigned char flgid, FLGPTN setptn);
 
 struct Serial serial4;
 unsigned char serial4Text[0x80];
@@ -337,7 +337,7 @@ void serial4SetAnswer(unsigned char state)
 
 void serial4PostAnswer(void)
 {
-	sub_2C2ED(3, 0x0800);
+	task2SetFlag(3, 0x0800);
 }
 
 /* answers command 0x0205, if it waits to (status 0, no data) */
@@ -455,13 +455,13 @@ unsigned char serial4Event(FLGPTN ptn)
 
 void serial4PostTimeout(void)
 {
-	sub_2C2ED(3, 0x0400);
+	task2SetFlag(3, 0x0400);
 }
 
 /* UART3's timeout (as serialPostTimeout) */
 void serial4PostTimeout3(void)
 {
-	sub_2C2ED(3, 0x0004);
+	task2SetFlag(3, 0x0004);
 }
 
 /* the timers of the two links' timeouts: 0x0f UART4's, 0x10 UART3's */

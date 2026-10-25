@@ -21,6 +21,17 @@ typedef struct t_msg {
 	struct t_msg	*next;
 } T_MSG;
 
+/* ref_flg's and ref_mbx's packets */
+typedef struct t_rflg {
+	ID		wtskid;		/* the task waiting, 0 none */
+	FLGPTN		flgptn;		/* the flag's pattern */
+} T_RFLG;
+
+typedef struct t_rmbx {
+	ID		wtskid;
+	T_MSG		*pk_msg;	/* the first message queued, NULL none */
+} T_RMBX;
+
 #define E_OK		0
 #define E_TMOUT		(-50)
 
@@ -42,9 +53,11 @@ extern ER	iset_flg(ID flgid, FLGPTN setptn);
 extern ER	clr_flg(ID flgid, FLGPTN clrptn);
 extern ER	wai_flg(ID flgid, FLGPTN waiptn, MODE wfmode, FLGPTN *p_flgptn);
 extern ER	twai_flg(ID flgid, FLGPTN waiptn, MODE wfmode, FLGPTN *p_flgptn, TMO tmout);
+extern ER	ref_flg(ID flgid, T_RFLG *pk_rflg);
 
 extern ER	snd_mbx(ID mbxid, T_MSG *pk_msg);
 extern ER	rcv_mbx(ID mbxid, T_MSG **ppk_msg);
+extern ER	ref_mbx(ID mbxid, T_RMBX *pk_rmbx);
 
 extern ER	get_mpf(ID mpfid, VP *p_blk);
 extern ER	pget_mpf(ID mpfid, VP *p_blk);

@@ -13,6 +13,7 @@
 #include "powerseq.h"
 #include "powerwait.h"
 #include "serial1.h"
+#include "task.h"
 #include "task5.h"
 
 
@@ -21,8 +22,6 @@ unsigned int powerDevicePending;
 extern void sub_2E499(void);
 extern void sub_2DF06(void);
 extern void sub_2E528(void);
-extern void sub_2C44F(void);
-extern void sub_2C315(ID flgid, FLGPTN setptn);
 extern unsigned char sub_126C9(void);
 extern void sub_2DF86(unsigned int on);
 extern void sub_2DFCE(unsigned int on);
@@ -94,70 +93,70 @@ void task5(VP_INT exinf)
 			if (ptn & 0x8000)
 				clr_flg(4, ~0x8000);
 		}
-		sub_2C44F();
+		task5Idle();
 	}
 }
 
 void powerJobPostOn(void)
 {
 	powerJobState.id = POWER_JOB_ON;
-	sub_2C315(4, 0x0002);
+	task5SetFlag(4, 0x0002);
 	return;
 }
 
 void powerJobPostResume(void)
 {
 	powerJobState.id = POWER_JOB_RESUME;
-	sub_2C315(4, 0x0002);
+	task5SetFlag(4, 0x0002);
 	return;
 }
 
 void powerJobPostOff(void)
 {
 	powerJobState.id = POWER_JOB_OFF;
-	sub_2C315(4, 0x0002);
+	task5SetFlag(4, 0x0002);
 	return;
 }
 
 void powerJobPostSuspend(void)
 {
 	powerJobState.id = POWER_JOB_SUSPEND;
-	sub_2C315(4, 0x0002);
+	task5SetFlag(4, 0x0002);
 	return;
 }
 
 void powerJobPostShutdown(void)
 {
 	powerJobState.id = POWER_JOB_SHUTDOWN;
-	sub_2C315(4, 0x0002);
+	task5SetFlag(4, 0x0002);
 	return;
 }
 
 void powerJobPostCut(void)
 {
 	powerJobState.id = POWER_JOB_CUT;
-	sub_2C315(4, 0x0002);
+	task5SetFlag(4, 0x0002);
 	return;
 }
 
 void powerJobPostOffEnd(void)
 {
 	powerJobState.id = POWER_JOB_OFF_END;
-	sub_2C315(4, 0x0002);
+	task5SetFlag(4, 0x0002);
 	return;
 }
 
 void powerJobPostReset(void)
 {
 	powerJobState.id = POWER_JOB_RESET;
-	sub_2C315(4, 0x0002);
+	task5SetFlag(4, 0x0002);
 	return;
 }
 
 void powerJobPostUpdate(void)
 {
 	powerJobState.id = POWER_JOB_UPDATE;
-	sub_2C315(4, 0x0002);
+	task5SetFlag(4, 0x0002);
 	return;
 }
 
@@ -169,7 +168,7 @@ unsigned char sub_21F2A(void)
 void sub_21F33(unsigned int bits)
 {
 	powerDevicePending |= bits;
-	sub_2C315(4, 0x0080);
+	task5SetFlag(4, 0x0080);
 	return;
 }
 

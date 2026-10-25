@@ -23,6 +23,7 @@
 #include "powerwait.h"
 #include "sleepfactor.h"
 #include "state.h"
+#include "task.h"
 #include "task5.h"
 #include "timer.h"
 #include "uart.h"
@@ -43,7 +44,6 @@
 #define BBMC_REG_OR		1
 #define BBMC_REG_READ_ONLY	3
 
-extern void sub_2C394(int, int);
 extern unsigned char sub_11D57(void);
 extern unsigned char sub_11D61(void);
 extern void sub_123DB(int);
@@ -131,7 +131,7 @@ unsigned char bbmcPowerOn(void)
 	case 3:
 		break;
 	case 4:
-		sub_2C394(6, BBMC_EVENT_MODE);
+		task6SetFlag(6, BBMC_EVENT_MODE);
 		break;
 	default:
 		timerStart(0x13, 5000);
@@ -342,7 +342,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 				uart2Close(1);
 				sub_123DB(1);
 				if (P7.4)
-					sub_2C394(6, BBMC_EVENT_RESUME);
+					task6SetFlag(6, BBMC_EVENT_RESUME);
 				bbmc.transition = 0;
 			}
 			break;
@@ -705,7 +705,7 @@ void bbmcRequestNotify(void)
 	switch (bbmcRequest.event) {
 	case HOST_EVENT_COMMAND:
 		bbmcRequest.state = HOST_REQUEST_BUSY;
-		sub_2C394(6, BBMC_EVENT_REQUEST);
+		task6SetFlag(6, BBMC_EVENT_REQUEST);
 		break;
 	case HOST_EVENT_ANSWERED:
 		bbmcRequest.state = HOST_REQUEST_RECEIVE;
@@ -786,30 +786,30 @@ void bbmcRequestRun(void)
 
 void bbmcPostRxTimeout(void)
 {
-	sub_2C394(6, BBMC_EVENT_RX_TIMEOUT);
+	task6SetFlag(6, BBMC_EVENT_RX_TIMEOUT);
 }
 
 void bbmcPostLinkTimeout(void)
 {
-	sub_2C394(6, BBMC_EVENT_LINK_TIMEOUT);
+	task6SetFlag(6, BBMC_EVENT_LINK_TIMEOUT);
 }
 
 void bbmcPostStart(void)
 {
-	sub_2C394(6, BBMC_EVENT_START);
+	task6SetFlag(6, BBMC_EVENT_START);
 }
 
 void bbmcPostMode(void)
 {
-	sub_2C394(6, BBMC_EVENT_MODE);
+	task6SetFlag(6, BBMC_EVENT_MODE);
 }
 
 void bbmcPostPower(void)
 {
-	sub_2C394(6, BBMC_EVENT_POWER);
+	task6SetFlag(6, BBMC_EVENT_POWER);
 }
 
 void bbmcPostWake(void)
 {
-	sub_2C394(6, BBMC_EVENT_WAKE);
+	task6SetFlag(6, BBMC_EVENT_WAKE);
 }

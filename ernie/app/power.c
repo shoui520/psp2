@@ -19,6 +19,7 @@
 #include "sleepfactor.h"
 #include "spidev.h"
 #include "state.h"
+#include "task.h"
 #include "task5.h"
 #include "updatereq.h"
 #include "version.h"
@@ -33,9 +34,6 @@ struct PowerPart {
 };
 
 extern void inputInit(void);
-extern void sub_2C2ED(int, int);
-extern void sub_2C394(int, int);
-extern void sub_2C572(void);
 extern unsigned char sub_2CD3F(void);
 extern void sub_11572(void);
 extern void sub_1159F(void);
@@ -111,13 +109,13 @@ void powerSequence(void)
 		powerState &= 0x7fff;
 		statePhase = 2;
 		stateEnter();
-		sub_2C2ED(3, 0x1000);
-		sub_2C394(6, 0x80);
+		task2SetFlag(3, 0x1000);
+		task6SetFlag(6, 0x80);
 	} else {
 		powerState &= 0x7fff;
 		statePhase = 3;
 	}
-	sub_2C572();
+	taskHookState();
 }
 
 void sub_23A30(void)
@@ -209,7 +207,7 @@ unsigned char powerOn(void)
 	sub_23A30();
 	spiDevInit();
 	powerPendingClear(1);
-	sub_2C2ED(3, 0x1000);
+	task2SetFlag(3, 0x1000);
 	powerWait(0x19);
 	powerPendingClear(2);
 	inputInit();
@@ -241,10 +239,10 @@ unsigned char powerResume(union PowerRequest *request)
 	sleepFactorSet20(0);
 	stateWakeupFactor.word = request->word;
 	sub_11572();
-	sub_2C2ED(3, 0x1000);
+	task2SetFlag(3, 0x1000);
 	powerWait(0x19);
 	powerPendingClear(2);
-	sub_2C394(6, 0x80);
+	task6SetFlag(6, 0x80);
 	powerPendingClear(6);
 	if (request->bits.mode != 0x54) {
 		powerJobPostResume();
@@ -327,13 +325,13 @@ unsigned char powerOff(void)
 	P1.7 = 0;
 	dly_tsk(1);
 	powerPendingClear(1);
-	sub_2C2ED(3, 0x1000);
+	task2SetFlag(3, 0x1000);
 	powerWait(0x19);
 	powerPendingClear(2);
 	powerJobPostOff();
 	powerWait(0x8ca);
 	powerPendingClear(5);
-	sub_2C394(6, 0x80);
+	task6SetFlag(6, 0x80);
 	powerWait(5);
 	powerPendingClear(6);
 	PER0.2 = 0;
@@ -367,13 +365,13 @@ unsigned char powerSuspend(void)
 	P1.7 = 0;
 	dly_tsk(1);
 	powerPendingClear(1);
-	sub_2C2ED(3, 0x1000);
+	task2SetFlag(3, 0x1000);
 	powerWait(0x19);
 	powerPendingClear(2);
 	powerJobPostSuspend();
 	powerWait(0xfa);
 	powerPendingClear(5);
-	sub_2C394(6, 0x80);
+	task6SetFlag(6, 0x80);
 	powerWait(5);
 	powerPendingClear(6);
 	PER0.2 = 0;
@@ -404,7 +402,7 @@ unsigned char powerShutdown(void)
 	P1.7 = 0;
 	dly_tsk(1);
 	powerPendingClear(1);
-	sub_2C2ED(3, 0x1000);
+	task2SetFlag(3, 0x1000);
 	powerWait(0x19);
 	powerPendingClear(2);
 	powerJobPostShutdown();
@@ -445,7 +443,7 @@ unsigned char powerCut(void)
 	sub_116B7();
 	powerPendingClear(3);
 	powerPendingClear(6);
-	sub_2C2ED(3, 0x1000);
+	task2SetFlag(3, 0x1000);
 	powerWait(0x19);
 	powerPendingClear(2);
 	if (powerPendingGet() != 0)
@@ -478,7 +476,7 @@ unsigned char powerReset(void)
 	powerWait(0x19);
 	powerPendingClear(5);
 	powerPendingClear(6);
-	sub_2C2ED(3, 0x1000);
+	task2SetFlag(3, 0x1000);
 	powerWait(0x19);
 	powerPendingClear(2);
 	P1.7 = 0;

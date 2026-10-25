@@ -10,8 +10,8 @@
 #include "input.h"
 #include "kernel.h"
 #include "state.h"
+#include "task.h"
 
-extern void sub_2C342(ID flgid, FLGPTN setptn);
 
 static __near unsigned char adcMask;		/* the channels to convert */
 static __near unsigned char adcBit;		/* the channel being converted, as its mask bit */
@@ -133,7 +133,7 @@ void adcInterrupt(void)
 			ADIF = 0;
 		} else {
 			ADCS = 0;
-			sub_2C342(2, 0x0004);
+			task3SetFlag(2, 0x0004);
 		}
 	}
 }

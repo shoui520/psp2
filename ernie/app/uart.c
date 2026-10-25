@@ -20,6 +20,7 @@
 
 #include "chip.h"
 #include "kernel.h"
+#include "task.h"
 #include "timer.h"
 #include "uart.h"
 
@@ -51,7 +52,6 @@ struct UartBaud {
 };
 
 extern unsigned char byteFECB8;
-extern void sub_2C2ED(int, int);
 
 void uart2Timeout(void);
 void uart3Timeout(void);
@@ -426,7 +426,7 @@ void uart3SendInterrupt(void)
 	} else {
 		p->flags &= ~UART_SENDING;
 		if (byteFECB8 != 3)
-			sub_2C2ED(3, 2);
+			task2SetFlag(3, 2);
 	}
 }
 

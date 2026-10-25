@@ -30,6 +30,7 @@
 #include "powerwait.h"
 #include "serial2.h"
 #include "state.h"
+#include "task.h"
 #include "task5.h"
 #include "version.h"
 
@@ -45,7 +46,6 @@ struct PowerCommand {
 	void		(*handler)(void);
 };
 
-extern void sub_2C315(ID flgid, FLGPTN setptn);
 extern unsigned char sub_11D57(void);
 extern unsigned char sub_11D61(void);
 extern void sub_11D6B(void);
@@ -223,7 +223,7 @@ void powerRequestInit(void)
 /* the power input bit changed: event flag 4's 0x0040 */
 void powerInputChanged(void)
 {
-	sub_2C315(4, 0x0040);
+	task5SetFlag(4, 0x0040);
 }
 
 void powerRequestNotify(void)
@@ -234,7 +234,7 @@ void powerRequestNotify(void)
 	case HOST_EVENT_COMMAND:
 		powerRequest.state = HOST_REQUEST_BUSY;
 		powerCommand = powerRequest.command;
-		sub_2C315(4, 0x0001);
+		task5SetFlag(4, 0x0001);
 		break;
 	case HOST_EVENT_ANSWERED:
 		powerRequest.state = HOST_REQUEST_RECEIVE;
@@ -249,7 +249,7 @@ void batteryRequestNotify(void)
 		break;
 	case HOST_EVENT_COMMAND:
 		batteryRequest.state = HOST_REQUEST_BUSY;
-		sub_2C315(4, 0x0100);
+		task5SetFlag(4, 0x0100);
 		break;
 	case HOST_EVENT_ANSWERED:
 		batteryRequest.state = HOST_REQUEST_RECEIVE;

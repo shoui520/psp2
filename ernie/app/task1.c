@@ -13,6 +13,7 @@
 #include "power.h"
 #include "scratchpad.h"
 #include "state.h"
+#include "task.h"
 #include "timer.h"
 #include "version.h"
 
@@ -23,13 +24,10 @@
 extern __near unsigned char resetFlags;
 
 extern void sub_2C57F(void);
-extern void sub_2C54C(int);
-extern void sub_2C539(int);
 extern unsigned char getResetCause(void);
 extern void sub_2D6EF(void);
 extern void sub_2D712(void);
 extern void sub_2DAE1(int);
-extern void sub_2C3BD(void);
 
 void systemInit(void);
 
@@ -48,7 +46,7 @@ void task1(VP_INT exinf)
 			stateEvent(&event);
 			powerSequence();
 		}
-		sub_2C3BD();
+		task1Idle();
 	}
 }
 
@@ -66,8 +64,8 @@ void systemInit(void)
 	sub_2C57F();
 	timerInit();
 	paramInit();
-	sub_2C54C(-1);
-	sub_2C539(1);
+	taskClearPending(-1);
+	taskSetPending(1);
 	timer.handler = stateCheck;
 	timerSetHandler(0x1a, &timer);
 	versionInit();

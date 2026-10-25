@@ -11,9 +11,9 @@
 #include "inputreq.h"
 #include "kernel.h"
 #include "state.h"
+#include "task.h"
 #include "touch.h"
 
-extern void sub_2C48E(void);
 
 void task3(VP_INT exinf)
 {
@@ -56,7 +56,7 @@ void task3(VP_INT exinf)
 				touchUpdateState();
 			}
 		}
-		sub_2C48E();
+		task3Idle();
 	}
 	ext_tsk();
 }

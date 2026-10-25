@@ -13,11 +13,11 @@
 #include "kernel.h"
 #include "serial.h"
 #include "serial2.h"
+#include "task.h"
 #include "timer.h"
 #include "uart.h"
 #include "util.h"
 
-extern ER sub_2C2ED(unsigned char flgid, FLGPTN setptn);
 
 struct Serial serial;
 unsigned char serialText[0x80];
@@ -511,12 +511,12 @@ void serialSetAnswer(unsigned char state)
 
 void serialPostAnswer(void)
 {
-	sub_2C2ED(3, 0x0008);
+	task2SetFlag(3, 0x0008);
 }
 
 void serialPostTimeout(void)
 {
-	sub_2C2ED(3, 0x0004);
+	task2SetFlag(3, 0x0004);
 }
 
 /* never called */

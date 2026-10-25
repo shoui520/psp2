@@ -5,11 +5,11 @@
 #pragma rtos_task task6
 
 #include "ernie.h"
+#include "task.h"
 #include "trace.h"
 #include "bbmc.h"
 #include "kernel.h"
 
-extern void sub_2C4FF(void);
 
 void task6(VP_INT exinf)
 {
@@ -30,6 +30,6 @@ void task6(VP_INT exinf)
 			clr_flg(6, ~(ptn & 0x3000));
 		if (ptn & 0x4000)
 			clr_flg(6, ~(ptn & 0x4000));
-		sub_2C4FF();
+		task6Idle();
 	}
 }

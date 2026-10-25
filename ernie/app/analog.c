@@ -22,11 +22,10 @@
 #include "kernel.h"
 #include "nvsreq.h"
 #include "sleepfactor.h"
+#include "task.h"
 
 #define LENGTH(list)	(sizeof(list) / sizeof((list)[0]))
 
-extern void sub_2C2ED(int, int);
-extern void sub_2C342(ID flgid, FLGPTN setptn);
 
 void analogScale00(unsigned int position);
 void analogScale01(unsigned int position);
@@ -288,7 +287,7 @@ void analogCalibrationSave(void)
 
 static void analogCalibrationSaved(unsigned char command, unsigned char result)
 {
-	sub_2C342(2, 0x0020);
+	task3SetFlag(2, 0x0020);
 }
 
 void analogCalibrationGet(unsigned char *out)
@@ -364,7 +363,7 @@ void analogEvent(unsigned int inputs)
 			analogMultiCnStop();
 			sleepFactorSet6(1);
 			sleepFactorSet5(1);
-			sub_2C2ED(3, 0x0001);
+			task2SetFlag(3, 0x0001);
 		}
 		analogMultiCnPrevious = analogMultiCn;
 	}

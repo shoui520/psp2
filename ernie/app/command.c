@@ -26,6 +26,7 @@
 #include "scratchpad.h"
 #include "serial.h"
 #include "state.h"
+#include "task.h"
 #include "task5.h"
 #include "version.h"
 
@@ -35,7 +36,6 @@ extern int sub_2D626(unsigned int *value);
 extern unsigned char sub_2D662(void);
 extern unsigned char sub_2D67C(void);
 extern unsigned char sub_2D685(void);
-extern void sub_2C2ED(int, int);
 extern unsigned char sub_2DB73(void);
 extern unsigned char sub_2DAEA(unsigned char *buf);
 extern unsigned char sub_2DC1F(unsigned int offset, unsigned char *data, unsigned char *length);
@@ -307,7 +307,7 @@ allowed:
 		case 0x0086:		/* the log: sceSysconGetLogInfo */
 		case 0x0087:		/* sceSysconLogStart */
 		case 0x0088:		/* sceSysconLogReadData */
-			sub_2C2ED(3, 0x2000);
+			task2SetFlag(3, 0x2000);
 			hostRequestSetState(&commandRequest, HOST_REQUEST_BUSY);
 			break;
 		case 0x0090:		/* sceSysconReadScratchPad */
@@ -365,7 +365,7 @@ allowed:
 				break;
 			}
 			if (commandRequest.length == 0x28) {
-				sub_2C2ED(3, 0x2000);
+				task2SetFlag(3, 0x2000);
 				hostRequestSetState(&commandRequest, HOST_REQUEST_BUSY);
 			} else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 2, 0x28);
@@ -466,19 +466,19 @@ allowed:
 			break;
 		case 0x00d0:		/* the handshake before the SNVS */
 			if (commandRequest.length == 0x28) {
-				sub_2C2ED(3, 0x2000);
+				task2SetFlag(3, 0x2000);
 				hostRequestSetState(&commandRequest, HOST_REQUEST_BUSY);
 			} else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 2, 0x28);
 			break;
 		case 0x00d1:
-			sub_2C2ED(3, 0x2000);
+			task2SetFlag(3, 0x2000);
 			hostRequestSetState(&commandRequest, HOST_REQUEST_BUSY);
 			return;
 		case 0x00d2:		/* sceSysconSnvsReadData */
 		case 0x00d3:		/* sceSysconSnvsWriteData */
 			if ((commandRequest.length & 0x0f) == 0) {
-				sub_2C2ED(3, 0x2000);
+				task2SetFlag(3, 0x2000);
 				hostRequestSetState(&commandRequest, HOST_REQUEST_BUSY);
 				return;
 			}

@@ -18,12 +18,12 @@
 #include "serial2.h"
 #include "serial4.h"
 #include "state.h"
+#include "task.h"
 #include "version.h"
 
 #define SERIAL2_TEST_AREA	0xe0	/* the scratch pad's test area */
 #define SERIAL2_TEST_SIZE	0x20
 
-extern ER sub_2C2ED(unsigned char flgid, FLGPTN setptn);
 extern unsigned char sub_11D4B(void);
 
 static unsigned char serial2Data[0x20];
@@ -68,7 +68,7 @@ void serial2InputRequest(void)
 /* an input's edges: event 0x0100 of flag 3, and P7.1 high unless sub_11D4B holds */
 void serial2InputLink(void)
 {
-	sub_2C2ED(3, 0x0100);
+	task2SetFlag(3, 0x0100);
 	if (!sub_11D4B())
 		serial2SetP71(1);
 }

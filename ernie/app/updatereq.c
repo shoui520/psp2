@@ -26,10 +26,10 @@
 #include "sha1.h"
 #include "sleepfactor.h"
 #include "state.h"
+#include "task.h"
 #include "updatereq.h"
 #include "version.h"
 
-extern ER sub_2C2ED(unsigned char flgid, FLGPTN setptn);
 extern unsigned char sub_2CCA2(void);
 extern unsigned char sub_2CC93(void);
 extern unsigned char sub_2CCDE(void);
@@ -133,7 +133,7 @@ void updaterRequestNotify(void)
 	switch (updaterRequest.event) {
 	case HOST_EVENT_COMMAND:
 		hostRequestSetState(&updaterRequest, HOST_REQUEST_BUSY);
-		sub_2C2ED(3, 0x0040);
+		task2SetFlag(3, 0x0040);
 		break;
 	case HOST_EVENT_ANSWERED:
 		updaterRequest.state = HOST_REQUEST_RECEIVE;
@@ -273,7 +273,7 @@ void updaterRequestEvent(FLGPTN ptn)
 		if (updaterRequest.length == SHA1HashSize) {
 			result = updaterExecFinalize(updaterRequestData);
 			if (result == 0x81) {
-				sub_2C2ED(3, 0x0040);
+				task2SetFlag(3, 0x0040);
 				break;
 			}
 		}
