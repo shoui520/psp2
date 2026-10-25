@@ -275,7 +275,3 @@ void sleepFactorSet20(unsigned char on)
 		ena_dsp();
 	}
 }
-
-void sleepFactorStart(void)
-{
-}

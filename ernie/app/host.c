@@ -102,7 +102,7 @@ static struct {
 } hostThrottle;
 
 unsigned char hostCommandNull(unsigned char *out, unsigned char *length);
-unsigned char hostCommandCounter(unsigned char *out, unsigned char *length);
+unsigned char hostCommandSleepFactor(unsigned char *out, unsigned char *length);
 unsigned char hostCommandRequests(unsigned char *out, unsigned char *length);
 
 /* the commands, in order: all of them, and those taken before sub_2BB99 allows the rest */
@@ -110,7 +110,7 @@ static const struct HostCommand hostCommands[] = {
 	{ 0x0000, hostCommandNull, 0 },
 	{ 0x0001, sub_1547B, 0 },
 	{ 0x0002, sub_1549A, 0 },
-	{ 0x0003, hostCommandCounter, 0 },
+	{ 0x0003, hostCommandSleepFactor, 0 },
 	{ 0x0004, hostCommandRequests, 0 },
 	{ 0x0005, sub_154E9, 0 },
 	{ 0x0010, sub_15508, 0 },
@@ -741,30 +741,30 @@ unsigned char hostCommandNull(unsigned char *out, unsigned char *length)
 	return 0;
 }
 
-/* command 0x0003: the driver's counter */
-unsigned char hostCommandCounter(unsigned char *out, unsigned char *length)
+/* command 0x0003: the sleep factor */
+unsigned char hostCommandSleepFactor(unsigned char *out, unsigned char *length)
 {
-	unsigned long counter;
+	unsigned long factor;
 
-	counter = sleepFactorGet();
+	factor = sleepFactorGet();
 	sleepFactorAcknowledge();
-	memcpy(out, &counter, sizeof(counter));
+	memcpy(out, &factor, sizeof(factor));
 	*length = 4;
 	return 0;
 }
 
-/* command 0x0004: the driver's counter, then the command of every request taking or
+/* command 0x0004: the sleep factor, then the command of every request taking or
    handling one (bit 15: handling) */
 unsigned char hostCommandRequests(unsigned char *out, unsigned char *length)
 {
 	unsigned int i;
 	unsigned int count;
 	struct HostRequest *request;
-	unsigned long counter;
+	unsigned long factor;
 
-	counter = sleepFactorGet();
+	factor = sleepFactorGet();
 	sleepFactorAcknowledge();
-	memcpy(out, &counter, sizeof(counter));
+	memcpy(out, &factor, sizeof(factor));
 	out += 4;
 	*length = 4;
 	count = hostRequestCount();

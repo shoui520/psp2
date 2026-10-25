@@ -33,6 +33,5 @@ extern void sleepFactorSet19(unsigned char on);
 extern void sleepFactorSet22(unsigned char on);
 extern void sleepFactorSet23(unsigned char on);
 extern void sleepFactorSet20(unsigned char on);
-extern void sleepFactorStart(void);
 
 #endif
