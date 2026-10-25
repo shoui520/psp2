@@ -6,6 +6,7 @@
 #pragma sfr
 
 #include "ernie.h"
+#include "battery.h"
 #include "bbmc.h"
 #include "board.h"
 #include "chip.h"
@@ -22,12 +23,10 @@
 #include "timer.h"
 
 extern void sub_29E5D(void);
-extern void sub_2871B(void);
 extern unsigned char sub_29FF0(unsigned char *version);
 extern void sub_2A2B3(unsigned char *status);
 extern unsigned char sub_2A0ED(unsigned char);
 extern void sub_2DAE1(int);
-extern unsigned char sub_2894D(struct BatteryInfo *info);
 extern void sub_2A6A0(unsigned int);
 extern void sub_28E41(void);
 extern void sub_2A71B(unsigned int);
@@ -82,7 +81,7 @@ void powerSeqOn(void)
 	deviceVersions.battery.id = 0;
 	elmoInitRegs();
 	sub_29E5D();
-	sub_2871B();
+	batteryInit();
 	if (iicaInit()) {
 		deviceVersions.cookie[1] = 0xff;
 		deviceVersions.cookie[0] = 0xff;
@@ -115,7 +114,7 @@ void powerSeqOn(void)
 			sub_2DAE1(0x0d);
 		}
 		for (i = 0; i < 6; i++) {
-			if (!sub_2894D(&deviceVersions.battery)) {
+			if (!batteryReadInfo(&deviceVersions.battery.id)) {
 				sub_2A2B3(&status);
 				if (status & 0x02) {
 					if (deviceVersions.battery.version[1] >= 0x408 && deviceVersions.battery.version[1] < 0x412)
@@ -129,7 +128,7 @@ void powerSeqOn(void)
 		}
 	} else if (deviceVersions.cookie[0] == 0) {
 		for (i = 0; i < 3; i++) {
-			if (!sub_2894D(&deviceVersions.battery))
+			if (!batteryReadInfo(&deviceVersions.battery.id))
 				break;
 		}
 	}

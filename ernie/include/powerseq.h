@@ -8,7 +8,7 @@
 
 #include "elmo.h"
 
-/* the battery's identity, which the battery module reads (sub_2894D) */
+/* the battery's identity, which batteryReadInfo reads */
 struct BatteryInfo {
 	unsigned int	id;
 	unsigned int	version[3];	/* 0xffff: no battery answered */

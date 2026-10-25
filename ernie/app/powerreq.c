@@ -15,6 +15,7 @@
 
 #include "ernie.h"
 #include "chip.h"
+#include "battery.h"
 #include "config.h"
 #include "elmo.h"
 #include "host.h"
@@ -32,15 +33,6 @@ union BatteryBuffer {
 	unsigned char	byte[0x20];
 	unsigned int	word[0x10];
 };
-
-/* a command to the battery's bootloader (0x09b2-0x09b4) */
-struct BatteryBLCommand {
-	unsigned int	command;
-	unsigned char	length;
-	unsigned char	*buffer;
-};
-
-#define BATTERY_BL_SIZE		0x63	/* the most the buffer holds */
 
 /* a request's command and its handler */
 struct PowerCommand {
@@ -72,19 +64,6 @@ extern void sub_2E016(unsigned int);
 extern unsigned char sub_2A379(unsigned char);
 extern unsigned char sub_29F40(unsigned char *reg, unsigned char *value);
 extern unsigned char sub_29E85(unsigned char *data, unsigned int length);
-extern void sub_28DE5(void);
-extern void sub_2894D(struct BatteryInfo *info);
-extern unsigned char sub_28ACF(unsigned int *temp);
-extern unsigned char sub_28AF3(unsigned int *temp);
-extern unsigned char sub_287ED(unsigned char *reg, unsigned char *data, unsigned int length);
-extern unsigned char sub_28733(unsigned char *data, unsigned int length);
-extern unsigned char sub_288C9(unsigned int reg, unsigned char *data, unsigned int length);
-extern unsigned char sub_28DBE(void);
-extern unsigned char sub_28E1A(void);
-extern unsigned char sub_28CE1(void);
-extern unsigned char sub_28D42(void);
-extern unsigned char sub_28C24(unsigned char *buffer, unsigned int length);
-extern unsigned char sub_28B55(unsigned char *data, unsigned char *answer, unsigned int length);
 extern unsigned char sub_2A0ED(unsigned char);
 extern unsigned char sub_2A029(unsigned char);
 extern unsigned char sub_2A1EF(unsigned char);
@@ -100,7 +79,6 @@ extern unsigned int wordFF690;			/* the battery's remaining capacity */
 extern unsigned int wordFF692;			/* and voltage */
 extern unsigned int wordFF698;			/* the battery's life in percent */
 extern unsigned char byteFF6D6[6][2];		/* the Cookie's registers 3-8 as written */
-extern struct BatteryBLCommand batteryBLCommand;
 
 void powerInputChanged(void);
 void powerRequestNotify(void);
@@ -1069,7 +1047,7 @@ static void powerRequestWriteCookieReg(void)
 /* 0x08b0 (sceSysconBatteryStartBLMode, to version 0x70503) */
 static void powerRequestBatteryStartBLMode(void)
 {
-	sub_28DE5();
+	batteryBLLineOn();
 	powerRequestDone(0);
 }
 
@@ -1184,7 +1162,7 @@ unsigned char hostCommandBatteryLifePercent(unsigned char *out, unsigned char *l
 /* 0x0980 (sceSysconGetBatteryVersion) */
 static void batteryRequestGetVersion(void)
 {
-	sub_2894D(&deviceVersions.battery);
+	batteryReadInfo(&deviceVersions.battery.id);
 	batteryRequestAnswer.word[0] = deviceVersions.battery.version[0];
 	batteryRequestAnswer.word[1] = deviceVersions.battery.version[1];
 	batteryRequestAnswer.word[2] = deviceVersions.battery.version[2];
@@ -1203,7 +1181,7 @@ static void batteryRequestGetTemp(void)
 			batteryRequestAnswer.word[0] = sub_2C658()->batteryTemp;
 			result = batteryResult(0);
 		} else
-			result = batteryResult(sub_28ACF(batteryRequestAnswer.word));
+			result = batteryResult(batteryReadTemp(batteryRequestAnswer.word));
 	} else
 		result = 0x3b;
 	batteryRequest.answerLength = 2;
@@ -1221,7 +1199,7 @@ static void batteryRequestGetBicTemp(void)
 			batteryRequestAnswer.word[0] = sub_2C658()->batteryBicTemp;
 			result = batteryResult(0);
 		} else
-			result = batteryResult(sub_28AF3(batteryRequestAnswer.word));
+			result = batteryResult(batteryReadBicTemp(batteryRequestAnswer.word));
 	} else
 		result = 0x3b;
 	batteryRequest.answerLength = 2;
@@ -1241,7 +1219,7 @@ static void batteryRequestGetFullCap(void)
 			result = batteryResult(0);
 		} else {
 			reg = 0x3c;
-			result = batteryResult(sub_287ED(&reg, batteryRequestAnswer.byte, 2));
+			result = batteryResult(batteryRead(&reg, batteryRequestAnswer.byte, 2));
 		}
 	} else
 		result = 0x3b;
@@ -1262,7 +1240,7 @@ static void batteryRequestGetElec(void)
 			result = batteryResult(0);
 		} else {
 			reg = 0x14;
-			result = batteryResult(sub_287ED(&reg, batteryRequestAnswer.byte, 2));
+			result = batteryResult(batteryRead(&reg, batteryRequestAnswer.byte, 2));
 		}
 	} else
 		result = 0x3b;
@@ -1283,7 +1261,7 @@ static void batteryRequestGetTTE(void)
 			result = batteryResult(0);
 		} else {
 			reg = 0x16;
-			result = batteryResult(sub_287ED(&reg, batteryRequestAnswer.byte, 2));
+			result = batteryResult(batteryRead(&reg, batteryRequestAnswer.byte, 2));
 		}
 	} else
 		result = 0x3b;
@@ -1304,7 +1282,7 @@ static void batteryRequestGetSOH(void)
 			result = batteryResult(0);
 		} else {
 			reg = 0x28;
-			result = batteryResult(sub_287ED(&reg, batteryRequestAnswer.byte, 2));
+			result = batteryResult(batteryRead(&reg, batteryRequestAnswer.byte, 2));
 		}
 	} else
 		result = 0x3b;
@@ -1325,7 +1303,7 @@ static void batteryRequestGetFullCap2(void)
 			result = batteryResult(0);
 		} else {
 			reg = 0x12;
-			result = batteryResult(sub_287ED(&reg, batteryRequestAnswer.byte, 2));
+			result = batteryResult(batteryRead(&reg, batteryRequestAnswer.byte, 2));
 		}
 	} else
 		result = 0x3b;
@@ -1346,7 +1324,7 @@ static void batteryRequestGetCycleCount(void)
 			result = batteryResult(0);
 		} else {
 			reg = 0x2a;
-			result = batteryResult(sub_287ED(&reg, batteryRequestAnswer.byte, 2));
+			result = batteryResult(batteryRead(&reg, batteryRequestAnswer.byte, 2));
 		}
 	} else
 		result = 0x3b;
@@ -1360,7 +1338,7 @@ static void batteryRequest098D(void)
 {
 	unsigned char result;
 
-	result = batteryResult(sub_28E1A());
+	result = batteryResult(batteryControl0015());
 	batteryRequest.answerLength = 0;
 	hostRequestAnswerReady(&batteryRequest.state);
 	batteryRequest.status = result;
@@ -1372,7 +1350,7 @@ static void batteryRequestReadReg(void)
 	unsigned char result;
 
 	if (batteryRequest.length == 2)
-		result = batteryResult(sub_287ED(batteryRequestData.byte, batteryRequestAnswer.byte,
+		result = batteryResult(batteryRead(batteryRequestData.byte, batteryRequestAnswer.byte,
 						 2));
 	else
 		result = 0x3b;
@@ -1388,7 +1366,7 @@ static void batteryRequestWriteReg(void)
 
 	if (batteryRequest.length == 4) {
 		batteryRequestData.byte[1] = batteryRequestData.byte[0];
-		result = batteryResult(sub_28733(&batteryRequestData.byte[1], 3));
+		result = batteryResult(batteryWrite(&batteryRequestData.byte[1], 3));
 	} else
 		result = 0x3b;
 	batteryRequest.answerLength = 0;
@@ -1402,7 +1380,7 @@ static void batteryRequest0988(void)
 	unsigned char result;
 
 	if (batteryRequest.length == 2)
-		result = batteryResult(sub_288C9(batteryRequestData.word[0],
+		result = batteryResult(batteryControl(batteryRequestData.word[0],
 						 batteryRequestAnswer.byte, 2));
 	else
 		result = 0x3b;
@@ -1416,7 +1394,7 @@ static void batteryRequestSWReset(void)
 {
 	unsigned char result;
 
-	result = batteryResult(sub_28DBE());
+	result = batteryResult(batterySWReset());
 	batteryRequest.answerLength = 0;
 	hostRequestAnswerReady(&batteryRequest.state);
 	batteryRequest.status = result;
@@ -1427,7 +1405,7 @@ static void batteryRequestStartBLMode(void)
 {
 	unsigned char result;
 
-	result = batteryResult(sub_28CE1());
+	result = batteryResult(batteryStartBLMode());
 	batteryRequest.answerLength = 0;
 	hostRequestAnswerReady(&batteryRequest.state);
 	batteryRequest.status = result;
@@ -1438,7 +1416,7 @@ static void batteryRequestStopBLMode(void)
 {
 	unsigned char result;
 
-	result = batteryResult(sub_28D42());
+	result = batteryResult(batteryStopBLMode());
 	batteryRequest.answerLength = 0;
 	hostRequestAnswerReady(&batteryRequest.state);
 	batteryRequest.status = result;
@@ -1481,7 +1459,7 @@ static void batteryRequestExecBLCommand(void)
 	if (batteryRequest.length == 2) {
 		command = batteryRequestData.word[0];
 		if (batteryBLCommand.command == command)
-			result = batteryResult(sub_28C24(batteryBLCommand.buffer,
+			result = batteryResult(batteryWriteAt(batteryBLCommand.buffer,
 							 batteryBLCommand.length));
 		else
 			result = 0x3c;
@@ -1505,7 +1483,7 @@ static void batteryRequestReadBLCommand(void)
 		batteryBLCommand.command = batteryRequestData.word[0];
 		batteryBLCommand.length = batteryRequestData.byte[2];
 		if (batteryBLCommand.length < BATTERY_BL_SIZE)
-			result = batteryResult(sub_28B55(&batteryRequestData.byte[3],
+			result = batteryResult(batteryReadAt(&batteryRequestData.byte[3],
 							 &batteryRequestAnswer.byte[2],
 							 batteryBLCommand.length));
 		else

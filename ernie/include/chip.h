@@ -57,6 +57,9 @@ struct SfrBits {
 #define P91			SFR_BITS(0xfff09).b1
 #define P92			SFR_BITS(0xfff09).b2
 
+/* port 9's bit 6 (P9.6): the battery's bootloader line (0x08b0) */
+#define P96			SFR_BITS(0xfff09).b6
+
 /* port 9's bit 7 (P9.7): the analog sticks' power */
 #define P97			SFR_BITS(0xfff09).b7
 

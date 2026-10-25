@@ -5,6 +5,7 @@
 #pragma sfr
 
 #include "ernie.h"
+#include "battery.h"
 #include "bbmc.h"
 #include "config.h"
 #include "elmo.h"
@@ -25,8 +26,6 @@ extern __sreg unsigned char saddr_FFE63;
 
 extern void sub_11D73(void);
 extern void sub_11D7B(void);
-extern void sub_28DE9(void);
-extern void sub_28DED(void);
 extern unsigned char sub_29B88(void);
 extern unsigned char sub_29CCF(void);
 extern void sub_29DC2(void);
@@ -127,7 +126,7 @@ static void powerJobResume(void)
 {
 	struct SystemMode *mode;
 
-	sub_28DE9();
+	batteryBLLineOff();
 	powerResumed = 1;
 	if (elmoRegA6 & 0x8000) {
 		sub_2E854(0);
@@ -253,7 +252,7 @@ static void powerJobCut(void)
 
 static void powerJobOffEnd(void)
 {
-	sub_28DED();
+	batteryHibernate();
 	sub_29DC2();
 }
 
