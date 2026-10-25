@@ -13,6 +13,19 @@ struct VersionFlags {
 						   report the downloader's version */
 };
 
+/* Subversion's $Date$ of each build */
+#if ERNIE_HW == 0x00415000 && ERNIE_FW == 0x01000306
+#define APP_TIME_STAMP	"$Date:: 2012-01-26 14:43:38 +0900#$"
+#endif
+
+/* the version block at 0xf00 */
+const struct AppVersionInfo appVersionInfo = {
+	{ ERNIE_HW & 0xff, (ERNIE_HW >> 8) & 0xff, (ERNIE_HW >> 16) & 0xff, ERNIE_HW >> 24 },
+	{ ERNIE_FW & 0xff, (ERNIE_FW >> 8) & 0xff, (ERNIE_FW >> 16) & 0xff, ERNIE_FW >> 24 }
+};
+static const char timeStamp[] = APP_TIME_STAMP;
+const char * const appTimeStamp = timeStamp;
+
 struct VersionFlags versionFlags;
 
 void versionInit(void)

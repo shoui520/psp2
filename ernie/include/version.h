@@ -15,7 +15,9 @@ struct AppVersionInfo {
 struct UpdaterVersionInfo {
 	unsigned char	dlVersion[4];
 	unsigned char	hardwareInfo[4];
-	unsigned char	version[4];
+	unsigned char	version[4];		/* the application's it was built with */
+	char		timeStamp[0x30];	/* Subversion's $Date$ of its build */
+	char		timeStamp2[0x30];	/* and an earlier one */
 };
 
 #define UPDATER_VERSION_INFO	((const struct UpdaterVersionInfo __far *)0x1f00)
