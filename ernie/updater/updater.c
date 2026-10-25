@@ -246,7 +246,7 @@ unsigned char updModeChange(unsigned char mode)
 		updEventTake(0x67);
 		updEventTake(0x14);
 		updEventTake(0x15);
-		sub_AD21();
+		serial4Answer0205();
 		serialAnswer0105();
 	}
 	return refused;
@@ -529,9 +529,9 @@ int multiCnChanged(void)
 int p77Changed(void)
 {
 	if (sub_4D63())
-		sub_AC3C(2);
+		serial4Open2(2);
 	else
-		sub_AC65();
+		serial4Close2();
 	return 0;
 }
 

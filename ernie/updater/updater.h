@@ -144,11 +144,8 @@ extern void sub_3B1AE(void);
 extern void sub_3598A(void);
 extern void sub_3B604(unsigned int);
 extern int sub_3B718(void);
-extern void sub_AD21(void);
 extern void sub_3AC35(void);
 extern unsigned char sub_3B175(void);
-extern void sub_AC3C(int);
-extern void sub_AC65(void);
 extern void sub_3AF74(void);
 extern unsigned char sub_A5F9(unsigned char level);
 
