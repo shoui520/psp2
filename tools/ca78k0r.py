@@ -123,11 +123,17 @@ class Module:
 		extern(name) is the address of an EXTRN symbol, defined here as a label."""
 		out, n = list(self.header), 0
 		out += [f'\tPUBLIC\t{p}' for p in self.public]
+		data = []
 		for name in self.extrn:
 			address = extern(name)
 			kind = 'DSEG' if address >= 0xf0000 else 'CSEG'
 			out += [f'@@E{n}\t{kind}\tAT(0{address:X}H)', f'{name}:']
 			n += 1
+			if kind == 'DSEG':
+				data.append(re.escape(name))
+		# the compiler takes a RAM symbol's word as an immediate (movw de,#_@SEGAX), which
+		# the linker resolves to its low word; placed here, the assembler wants loww
+		near = re.compile(r'#(%s)(?![\w?@])' % '|'.join(data)) if data else None
 		if self.extbit:
 			raise CAError(f'EXTBIT not supported yet: {", ".join(self.extbit)}')
 		for seg in self.segments:
@@ -143,6 +149,8 @@ class Module:
 				if address is not None:
 					out.append(f'@@A{n}\t{seg.kind}\tAT(0{address:X}H)')
 					n, opened = n + 1, True
+				if near and seg.kind == 'CSEG':
+					line = near.sub(r'#loww (\1)', line)
 				out.append(line)
 		out.append('\tEND')
 		return '\n'.join(out) + '\n'
