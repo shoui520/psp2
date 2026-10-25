@@ -7,6 +7,7 @@
 #include "command.h"
 #include "kernel.h"
 #include "rtc.h"
+#include "serial.h"
 #include "sleepfactor.h"
 #include "version.h"
 
@@ -22,16 +23,11 @@ extern void sub_2D67C(void);
 extern unsigned char sub_22542(unsigned char reg, int a, unsigned char *buf, int n);
 extern unsigned char sub_10CB3(void);
 extern void sub_23A42(int);
-extern unsigned char sub_1B4B4(void);
 extern unsigned char sub_11D1B(void);
 extern unsigned char sub_27642(void);
 extern void sub_275F0(int);
-extern void sub_1BBCB(void);
 extern void sub_1D728(void);
-extern void sub_1BB60(int);
 extern unsigned char sub_2764F(void);
-extern void sub_1BB76(void);
-extern void sub_1BBB2(int);
 extern void sub_27631(void);
 extern unsigned char sub_11D4B(void);
 extern void sub_2607C(int);
@@ -105,7 +101,7 @@ void sub_10B67(FLGPTN ptn)
 {
 	unsigned char state;
 
-	state = sub_1B4B4();
+	state = serialGetMode();
 	if (ptn & 0x0001) {
 		if (sub_11D1B()) {
 			if (sub_27642()) {
@@ -113,25 +109,25 @@ void sub_10B67(FLGPTN ptn)
 				switch (state) {
 				case 0:
 				case 3:
-					sub_1BBCB();
+					serialClose3();
 					sub_1D728();
-					sub_1BB60(2);
+					serialOpen1(2);
 					break;
 				case 1:
 					break;
 				}
 			} else if (sub_2764F()) {
-				sub_1BB76();
-				sub_1BBB2(3);
+				serialClose1();
+				serialOpen3(3);
 				sub_275F0(0);
 			} else {
-				sub_1BBCB();
-				sub_1BB76();
+				serialClose3();
+				serialClose1();
 				sub_27631();
 			}
 		} else {
-			sub_1BBCB();
-			sub_1BB76();
+			serialClose3();
+			serialClose1();
 			sub_27631();
 		}
 	}
@@ -237,7 +233,7 @@ unsigned char sub_10DEA(void)
 	ret = 0;
 	sub_260A4();
 	sub_27631();
-	sub_1BB76();
+	serialClose1();
 	sub_1D728();
 	sub_2D67C();
 	return ret;
@@ -250,7 +246,7 @@ unsigned char sub_10E06(void)
 	ret = 0;
 	sub_260A4();
 	sub_27631();
-	sub_1BB76();
+	serialClose1();
 	sub_1D728();
 	sub_2D67C();
 	return ret;

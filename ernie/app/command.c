@@ -20,6 +20,7 @@
 #include "host.h"
 #include "kernel.h"
 #include "rtc.h"
+#include "serial.h"
 #include "version.h"
 
 extern struct SystemMode *sub_2AB39(void);
@@ -39,7 +40,6 @@ extern unsigned char sub_2C199(unsigned int offset, unsigned int size, unsigned 
 extern unsigned char sub_27642(void);
 extern void sub_275F0(int);
 extern void sub_21F33(int);
-extern unsigned char sub_1B538(void);
 extern void sub_2AA60(unsigned long);
 extern unsigned char sub_2AB49(int);
 extern unsigned char sub_2B61F(unsigned char *buf);
@@ -399,7 +399,7 @@ allowed:
 					sub_21F33(0x20);
 					dly_tsk(25);
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
-				} else if (sub_1B538() != 0 && sub_1B538() != 1)
+				} else if (serialGetState() != 0 && serialGetState() != 1)
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 5, 0);
 				else {
 					sub_275F0(1);

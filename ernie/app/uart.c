@@ -148,7 +148,7 @@ void uartReset(unsigned char port)
 }
 
 /* opens UART3 at one of uartBauds' speeds (115200 bit/s when none is baud) */
-int uart3Open(unsigned char baud)
+unsigned char uart3Open(unsigned char baud)
 {
 	unsigned char i;
 	struct UartConfig config = { 1, 0x11, 0x0097 };
@@ -201,7 +201,7 @@ int uart3Open(unsigned char baud)
 }
 
 /* takes up to size bytes received; their count */
-int uartRead(unsigned char port, unsigned char *buf, unsigned char size)
+unsigned char uartRead(unsigned char port, unsigned char *buf, unsigned char size)
 {
 	unsigned char length;
 	unsigned char count;
@@ -223,7 +223,7 @@ int uartRead(unsigned char port, unsigned char *buf, unsigned char size)
 }
 
 /* queues up to size bytes to send, and starts sending; their count */
-int uartWrite(unsigned char port, unsigned char *buf, unsigned char size)
+unsigned char uartWrite(unsigned char port, unsigned char *buf, unsigned char size)
 {
 	unsigned char length;
 	unsigned char space;
@@ -254,7 +254,7 @@ int uartWrite(unsigned char port, unsigned char *buf, unsigned char size)
 }
 
 /* the count of bytes received */
-int uartReceived(unsigned char port)
+unsigned char uartReceived(unsigned char port)
 {
 	struct UartPort *p;
 

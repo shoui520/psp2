@@ -16,10 +16,10 @@ struct UartTimeout {
 extern void uartStopTx(unsigned char port);
 extern void uartStopRx(unsigned char port);
 extern void uartReset(unsigned char port);
-extern int uart3Open(unsigned char baud);
-extern int uartRead(unsigned char port, unsigned char *buf, unsigned char size);
-extern int uartWrite(unsigned char port, unsigned char *buf, unsigned char size);
-extern int uartReceived(unsigned char port);
+extern unsigned char uart3Open(unsigned char baud);
+extern unsigned char uartRead(unsigned char port, unsigned char *buf, unsigned char size);
+extern unsigned char uartWrite(unsigned char port, unsigned char *buf, unsigned char size);
+extern unsigned char uartReceived(unsigned char port);
 extern int uartFlush(unsigned char port);
 extern int uartSetTimeout(unsigned char port, struct UartTimeout *timeout);
 extern int uart2Open(void);

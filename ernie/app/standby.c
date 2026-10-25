@@ -9,12 +9,12 @@
 #pragma STOP
 
 #include "ernie.h"
+#include "serial.h"
 #include "tau.h"
 
 extern unsigned int sub_2AB46(void);
 extern int sub_2C564(void);
 extern void sub_2C57D(void);
-extern void sub_1BBCB(void);
 
 void standbyPrepare(void);
 void standbyResume(void);
@@ -44,7 +44,7 @@ void standby(void)
 
 void standbyPrepare(void)
 {
-	sub_1BBCB();
+	serialClose3();
 	SAU1EN = 0;
 	tickStop();
 	return;
