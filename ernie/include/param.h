@@ -34,6 +34,12 @@ extern int paramLoad(void);
 extern unsigned char paramRead(unsigned int offset, unsigned int size, unsigned char *buf);
 extern unsigned char paramWrite(unsigned int offset, unsigned int size, unsigned char *buf);
 extern void paramGetChargeLevels(struct ChargeLevel *levels);
+#ifdef ERNIE_UPDATER
+extern void paramGetLevel0(unsigned char *level);
+extern void paramGetLevel1(unsigned char *level);
+extern void paramGetLevel2(unsigned char *level);
+extern void paramGetLevel3(unsigned char *level);
+#endif
 extern void paramGetBase(unsigned char *base);
 extern void paramGetAdjust(unsigned char *adjust);
 extern void paramGetPattern1(unsigned char *pattern);
