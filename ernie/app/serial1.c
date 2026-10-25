@@ -9,6 +9,7 @@
 
 #include <string.h>
 
+#include "charge.h"
 #include "chip.h"
 #include "config.h"
 #include "csi.h"
@@ -29,8 +30,6 @@
 extern void sub_2C2ED(int, int);
 extern unsigned int sub_2AB46(void);
 extern unsigned char sub_2AB49(int);
-extern unsigned char sub_29C4B(void);
-extern unsigned char sub_29CC0(void);
 extern unsigned char sub_2D6DE(void);
 extern unsigned char sub_2C66A(unsigned char *data);
 extern unsigned char sub_2C6F0(unsigned int id, unsigned char size, unsigned char *data);
@@ -312,11 +311,11 @@ static unsigned char serial1Command0105(struct SerialBuffer *request, struct Ser
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
-		if (!sub_29C4B()) {
+		if (!chargeMayStart()) {
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x51;
 		}
-		if (sub_29CC0()) {
+		if (chargeAlarm0On()) {
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x53;
 		}

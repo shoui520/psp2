@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "ernie.h"
+#include "charge.h"
 #include "config.h"
 #include "kernel.h"
 #include "rtc.h"
@@ -25,8 +26,6 @@ extern ER sub_2C2ED(unsigned char flgid, FLGPTN setptn);
 extern unsigned int sub_2AB46(void);
 extern unsigned char sub_2AB49(int transition);
 extern unsigned char sub_11D4B(void);
-extern unsigned char sub_29C4B(void);
-extern unsigned char sub_29CC0(void);
 
 static unsigned char serial2Data[0x20];
 static unsigned char serial2Armed;	/* the test area was empty: notification 0x0211 may run */
@@ -183,11 +182,11 @@ static unsigned char serial2Command0205(struct SerialBuffer *request, struct Ser
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
-		if (!sub_29C4B()) {
+		if (!chargeMayStart()) {
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x51;
 		}
-		if (sub_29CC0()) {
+		if (chargeAlarm0On()) {
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x53;
 		}

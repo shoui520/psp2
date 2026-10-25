@@ -5,6 +5,7 @@
 #pragma rtos_task task5
 
 #include "ernie.h"
+#include "charge.h"
 #include "config.h"
 #include "kernel.h"
 #include "powerjob.h"
@@ -17,7 +18,6 @@ unsigned int wordFF24E;
 
 extern void sub_2A5EC(void);
 extern void sub_2A593(void);
-extern void sub_28F92(void);
 extern void sub_2E499(void);
 extern void sub_2DF06(void);
 extern void sub_2E528(void);
@@ -25,7 +25,6 @@ extern void sub_2BBF2(void);
 extern void sub_2C44F(void);
 extern void sub_2C315(ID flgid, FLGPTN setptn);
 extern unsigned char sub_126C9(void);
-extern unsigned char sub_29CCF(void);
 extern void sub_2DF86(unsigned int on);
 extern void sub_2DFCE(unsigned int on);
 extern void sub_2E03A(unsigned int on);
@@ -62,7 +61,7 @@ void task5(VP_INT exinf)
 			}
 			if (ptn & 0x0020) {
 				clr_flg(4, ~0x0020);
-				sub_28F92();
+				chargeUpdate();
 				sub_2E499();
 			}
 			if (ptn & 0x0400) {
@@ -183,7 +182,7 @@ static void sub_21F53(void)
 			return;
 		}
 		sub_2DF86(0);
-		if (sub_29CCF())
+		if (chargeBatteryLevel9())
 			sub_2DFCE(1);
 	} else {
 		sub_2DFCE(0);

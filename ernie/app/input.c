@@ -13,6 +13,7 @@
 #include "ernie.h"
 #include "adc.h"
 #include "analog.h"
+#include "charge.h"
 #include "chip.h"
 #include "config.h"
 #include "input.h"
@@ -98,7 +99,6 @@ extern void sub_17580(void);
 extern void sub_172BC(void);
 extern void sub_2B475(void);
 extern void sub_2B4BC(void);
-extern void sub_29B68(void);
 
 void sub_11D97(unsigned char enable);
 void sub_11D83(unsigned char enable);
@@ -281,7 +281,7 @@ void inputInit(void)
 	inputHandler2B4BC.handler = sub_2B4BC;
 	inputHandler29B68.type = 1;
 	inputHandler29B68.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
-	inputHandler29B68.handler = sub_29B68;
+	inputHandler29B68.handler = chargeUpdateSoon;
 	inputHandler1275F.type = 1;
 	inputHandler1275F.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandler1275F.handler = sub_1275F;

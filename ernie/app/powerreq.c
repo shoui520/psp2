@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include "ernie.h"
+#include "charge.h"
 #include "chip.h"
 #include "battery.h"
 #include "config.h"
@@ -44,9 +45,7 @@ extern unsigned char sub_2BB99(void);
 extern unsigned char sub_2BBE9(void);
 extern void sub_2C315(ID flgid, FLGPTN setptn);
 extern unsigned char sub_2AB49(int transition);
-extern unsigned char sub_29DDF(void);
 extern void sub_2A2EC(unsigned char *status);
-extern unsigned char sub_29B88(void);
 extern unsigned char sub_11D57(void);
 extern unsigned char sub_11D61(void);
 extern void sub_11D6B(void);
@@ -70,14 +69,6 @@ extern unsigned char sub_2A1EF(unsigned char);
 extern unsigned char sub_2A191(unsigned char);
 
 /* the power status (0x0800) and the USB state (0x0804, 0x089a), the power module's */
-extern __sreg unsigned char saddr_FFE60;
-extern __sreg unsigned char saddr_FFE61;
-extern __sreg unsigned char saddr_FFE62;
-extern __sreg unsigned char saddr_FFE57;
-extern __sreg unsigned char saddr_FFE63;
-extern unsigned int wordFF690;			/* the battery's remaining capacity */
-extern unsigned int wordFF692;			/* and voltage */
-extern unsigned int wordFF698;			/* the battery's life in percent */
 extern unsigned char byteFF6D6[6][2];		/* the Cookie's registers 3-8 as written */
 
 void powerInputChanged(void);
@@ -317,8 +308,8 @@ void batteryRequestEvent(void)
 unsigned char hostCommandPowerStatus(unsigned char *out, unsigned char *length)
 {
 	dis_dsp();
-	*out++ = saddr_FFE54.byte[0];
-	*out = saddr_FFE54.byte[1];
+	*out++ = powerStatus.byte[0];
+	*out = powerStatus.byte[1];
 	ena_dsp();
 	*length = 2;
 	return 0;
@@ -335,8 +326,8 @@ unsigned char hostCommand0801(unsigned char *out, unsigned char *length)
 /* 0x0802 (sceSysconGetBatteryRemainCap, to version 0x70503) */
 unsigned char hostCommandBatteryRemainCapOld(unsigned char *out, unsigned char *length)
 {
-	out[0] = (unsigned char)(wordFF690 & 0xff);
-	out[1] = (unsigned char)(wordFF690 >> 8);
+	out[0] = (unsigned char)(charge.batteryRemainCap & 0xff);
+	out[1] = (unsigned char)(charge.batteryRemainCap >> 8);
 	*length = 2;
 	return 0;
 }
@@ -344,8 +335,8 @@ unsigned char hostCommandBatteryRemainCapOld(unsigned char *out, unsigned char *
 /* 0x0803 (sceSysconGetBatteryVolt, to version 0x70503) */
 unsigned char hostCommandBatteryVoltOld(unsigned char *out, unsigned char *length)
 {
-	out[0] = (unsigned char)(wordFF692 & 0xff);
-	out[1] = (unsigned char)(wordFF692 >> 8);
+	out[0] = (unsigned char)(charge.batteryVolt & 0xff);
+	out[1] = (unsigned char)(charge.batteryVolt >> 8);
 	*length = 2;
 	return 0;
 }
@@ -353,9 +344,9 @@ unsigned char hostCommandBatteryVoltOld(unsigned char *out, unsigned char *lengt
 /* 0x0804: the USB state 4 */
 unsigned char hostCommand0804(unsigned char *out, unsigned char *length)
 {
-	if (saddr_FFE60 != 0xff) {
-		saddr_FFE60 = 0xff;
-		saddr_FFE61 = 4;
+	if (chargeCurrent != 0xff) {
+		chargeCurrent = 0xff;
+		chargeUsbMode = 4;
 		sub_21F33(0x1000);
 	}
 	*length = 0;
@@ -572,10 +563,10 @@ static void powerRequestCtrlUsbStatus(void)
 	unsigned char status[3];
 
 	if (powerRequest.length < 3) {
-		saddr_FFE61 = powerRequestData[0];
-		switch (saddr_FFE61) {
+		chargeUsbMode = powerRequestData[0];
+		switch (chargeUsbMode) {
 		case 3:
-			saddr_FFE62 = 0;
+			chargeUsbHold = 0;
 			break;
 		case 0:
 		case 1:
@@ -583,15 +574,15 @@ static void powerRequestCtrlUsbStatus(void)
 		case 4:
 			break;
 		case 5:
-			if (sub_29DDF() != 0)
-				saddr_FFE62 = 0xff;
+			if (chargeGetCharging() != 0)
+				chargeUsbHold = 0xff;
 			break;
 		}
 		sub_2A2EC(status);
 		dis_dsp();
-		saddr_FFE54.bits.usb = status[1] >> 2;
+		powerStatus.bits.usb = status[1] >> 2;
 		ena_dsp();
-		result = powerResult(sub_29B88());
+		result = powerResult(chargeSetCurrent());
 	} else
 		result = 0x3b;
 	powerRequestDone(result);
@@ -900,10 +891,10 @@ static void powerRequestCtrlChargeAC(void)
 
 	if (powerRequest.length == 1) {
 		if (powerRequestData[0] != 0) {
-			saddr_FFE57.1 = 1;
+			chargeControl.1 = 1;
 			on = 1;
 		} else {
-			saddr_FFE57.1 = 0;
+			chargeControl.1 = 0;
 			on = 0;
 		}
 		result = powerResult(sub_2A379(on));
@@ -920,16 +911,16 @@ static void powerRequestCtrlChargeVBUS(void)
 	if (powerRequest.length < 3) {
 		if (powerRequestData[0] != 0) {
 			if (powerRequestData[1] == 1)
-				saddr_FFE63.1 = 1;
+				chargeVbus.1 = 1;
 			else if (powerRequestData[1] == 0)
-				saddr_FFE63.0 = 1;
+				chargeVbus.0 = 1;
 		} else {
 			if (powerRequestData[1] == 1)
-				saddr_FFE63.1 = 0;
+				chargeVbus.1 = 0;
 			else if (powerRequestData[1] == 0)
-				saddr_FFE63.0 = 0;
+				chargeVbus.0 = 0;
 		}
-		result = powerResult(sub_29B88());
+		result = powerResult(chargeSetCurrent());
 	} else
 		result = 0x3b;
 	powerRequestDone(result);
@@ -1132,8 +1123,8 @@ void powerReadStatus(unsigned char *out)
 /* 0x0900 (sceSysconGetBatteryRemainCap) */
 unsigned char hostCommandBatteryRemainCap(unsigned char *out, unsigned char *length)
 {
-	out[0] = (unsigned char)(wordFF690 & 0xff);
-	out[1] = (unsigned char)(wordFF690 >> 8);
+	out[0] = (unsigned char)(charge.batteryRemainCap & 0xff);
+	out[1] = (unsigned char)(charge.batteryRemainCap >> 8);
 	*length = 2;
 	return 0;
 }
@@ -1141,8 +1132,8 @@ unsigned char hostCommandBatteryRemainCap(unsigned char *out, unsigned char *len
 /* 0x0901 (sceSysconGetBatteryVolt) */
 unsigned char hostCommandBatteryVolt(unsigned char *out, unsigned char *length)
 {
-	out[0] = (unsigned char)(wordFF692 & 0xff);
-	out[1] = (unsigned char)(wordFF692 >> 8);
+	out[0] = (unsigned char)(charge.batteryVolt & 0xff);
+	out[1] = (unsigned char)(charge.batteryVolt >> 8);
 	*length = 2;
 	return 0;
 }
@@ -1150,8 +1141,8 @@ unsigned char hostCommandBatteryVolt(unsigned char *out, unsigned char *length)
 /* 0x0902 (sceSysconGetBatteryLifePercent) */
 unsigned char hostCommandBatteryLifePercent(unsigned char *out, unsigned char *length)
 {
-	out[0] = (unsigned char)(wordFF698 & 0xff);
-	out[1] = (unsigned char)(wordFF698 >> 8);
+	out[0] = (unsigned char)(charge.batteryLifePercent & 0xff);
+	out[1] = (unsigned char)(charge.batteryLifePercent >> 8);
 	*length = 2;
 	return 0;
 }

@@ -12,6 +12,7 @@
 
 #include "ernie.h"
 #include "bbmc.h"
+#include "charge.h"
 #include "chip.h"
 #include "config.h"
 #include "host.h"
@@ -45,7 +46,6 @@ extern unsigned char sub_2AB49(int transition);
 extern unsigned char sub_2BB99(void);
 extern unsigned char sub_2BBE9(void);
 extern void sub_2A6A0(unsigned int);
-extern unsigned char sub_29CCF(void);
 extern unsigned char sub_11D57(void);
 extern unsigned char sub_11D61(void);
 extern void sub_123DB(int);
@@ -168,7 +168,7 @@ unsigned char bbmcPowerOff(void)
 		break;
 	case 0x0008:
 	case 0x8008:
-		if (sub_29CCF())
+		if (chargeBatteryLevel9())
 			bbmcSetStatus(0xa0);
 		else
 			bbmcSetStatus(0x22);

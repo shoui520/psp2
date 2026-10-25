@@ -7,6 +7,7 @@
 #include "ernie.h"
 #include "battery.h"
 #include "bbmc.h"
+#include "charge.h"
 #include "config.h"
 #include "elmo.h"
 #include "iica.h"
@@ -20,16 +21,9 @@
 
 #define POWER_JOB_PART	5	/* the power part the jobs report */
 
-extern __sreg unsigned char saddr_FFE61;
-extern __sreg unsigned char saddr_FFE57;
-extern __sreg unsigned char saddr_FFE63;
 
 extern void sub_11D73(void);
 extern void sub_11D7B(void);
-extern unsigned char sub_29B88(void);
-extern unsigned char sub_29CCF(void);
-extern void sub_29DC2(void);
-extern void sub_29E09(void);
 extern unsigned char sub_2A0ED(unsigned char);
 extern void sub_2A6A0(unsigned int);
 extern void sub_2A816(void);
@@ -139,7 +133,7 @@ static void powerJobResume(void)
 	sub_11D73();
 	sub_11D7B();
 	powerRequestInit();
-	sub_29E09();
+	chargeSetAcDelay();
 	sub_2C315(4, 0x20);
 	mode = sub_2AB39();
 	if (mode->mode == 0x0f && !mode->flag)
@@ -147,17 +141,17 @@ static void powerJobResume(void)
 	powerReady(POWER_JOB_PART);
 }
 
-/* the mode saddr_FFE61 asks for, applied again */
+/* the mode chargeUsbMode asks for, applied again */
 #define POWER_JOB_MODE()						\
-	switch (saddr_FFE61) {						\
+	switch (chargeUsbMode) {						\
 	case 1:								\
 	case 2:								\
 	case 3:								\
-		if (sub_29CCF())					\
-			saddr_FFE61 = 1;				\
+		if (chargeBatteryLevel9())					\
+			chargeUsbMode = 1;				\
 		else							\
-			saddr_FFE61 = 4;				\
-		sub_29B88();						\
+			chargeUsbMode = 4;				\
+		chargeSetCurrent();						\
 		break;							\
 	case 0:								\
 	case 4:								\
@@ -175,10 +169,10 @@ static void powerJobOff(void)
 		powerCookieHold();
 		POWER_JOB_MODE();
 	}
-	sub_29E09();
+	chargeSetAcDelay();
 	sub_2C315(4, 0x20);
-	saddr_FFE63.0 = 1;
-	saddr_FFE57.1 = 1;
+	chargeVbus.0 = 1;
+	chargeControl.1 = 1;
 	sub_2E0D8(2);
 	sub_2E165(0);
 	if (sub_2C658()->indicatorOn0)
@@ -199,7 +193,7 @@ static void powerJobShutdown(void)
 {
 	powerSeqOff();
 	iicaClose();
-	sub_29DC2();
+	chargeTimerStop();
 	sub_2E0D8(2);
 	sub_2E165(0);
 	sub_2DFF2(0);
@@ -211,7 +205,7 @@ static void powerJobShutdown(void)
 static void powerJobSuspend(void)
 {
 	powerSeqSuspend();
-	if (sub_29CCF()) {
+	if (chargeBatteryLevel9()) {
 		powerWirelessOff();
 		if (!bbmcModeIsNone() || sub_2C658()->suspendCheck)
 			powerBbmcCycle();
@@ -219,10 +213,10 @@ static void powerJobSuspend(void)
 	POWER_JOB_MODE();
 	if (!sub_2E0CF())
 		sub_2E0D8(2);
-	sub_29E09();
+	chargeSetAcDelay();
 	sub_2C315(4, 0x20);
-	saddr_FFE63.0 = 1;
-	saddr_FFE57.1 = 1;
+	chargeVbus.0 = 1;
+	chargeControl.1 = 1;
 	powerCookieHold();
 	sub_2E05E(0);
 	sub_2E165(0);
@@ -246,14 +240,14 @@ static void powerJobCut(void)
 	result = elmoRead(&reg, (unsigned char *)&powerCutReg2);
 	sub_2DF1F();
 	iicaClose();
-	sub_29DC2();
+	chargeTimerStop();
 	powerReady(POWER_JOB_PART);
 }
 
 static void powerJobOffEnd(void)
 {
 	batteryHibernate();
-	sub_29DC2();
+	chargeTimerStop();
 }
 
 static void powerJobUpdate(void)

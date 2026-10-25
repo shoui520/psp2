@@ -9,6 +9,7 @@
 #include "battery.h"
 #include "bbmc.h"
 #include "board.h"
+#include "charge.h"
 #include "chip.h"
 #include "clockout.h"
 #include "config.h"
@@ -28,7 +29,6 @@ extern void sub_2A2B3(unsigned char *status);
 extern unsigned char sub_2A0ED(unsigned char);
 extern void sub_2DAE1(int);
 extern void sub_2A6A0(unsigned int);
-extern void sub_28E41(void);
 extern void sub_2A71B(unsigned int);
 extern void sub_2A5FE(void);
 extern void sub_2A619(unsigned int);
@@ -36,8 +36,6 @@ extern void sub_2A73A(unsigned int, unsigned int, unsigned int);
 extern unsigned int sub_2AB46(void);
 extern void sub_2A326(void);
 extern unsigned char sub_29E85(unsigned char *data, unsigned int length);
-extern __sreg unsigned char saddr_FFE67;
-extern __sreg unsigned char saddr_FFE50;
 extern unsigned char sub_2A175(unsigned char clear);
 extern void sub_2E03A(unsigned int);
 extern unsigned char sub_11D57(void);
@@ -133,7 +131,7 @@ void powerSeqOn(void)
 		}
 	}
 	sub_2A0ED(1);
-	sub_28E41();
+	chargeInit();
 }
 
 /* the regulators' levels, then the resume's Elmo steps; 0 or elmoWrite's error */
@@ -447,13 +445,13 @@ unsigned char powerCookieSet(void)
 	return result;
 }
 
-/* and clear, unless the power status or saddr_FFE67 holds it */
+/* and clear, unless the power status or chargeCookieHeld holds it */
 unsigned char powerCookieClear(void)
 {
 	unsigned char result;
 
 	result = 0;
-	if (!saddr_FFE54.bits.cookieLock0 && !saddr_FFE54.bits.cookieLock1 && !saddr_FFE67) {
+	if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1 && !chargeCookieHeld) {
 		sub_2A326();
 		elmoCommand[0] = sub_2C658()->cookieRegHigh ? 0xa3 : 0x03;
 		elmoCommand[1] = byteFF6D6[0][0] & 0x7f;
@@ -617,19 +615,19 @@ void powerSeqInit(void)
 void powerCookieHold(void)
 {
 	sub_2A326();
-	if ((saddr_FFE50 & 0xe0) == 0x80 && !(byteFF6D6[0][0] & 0x80)) {
+	if ((cookieStatus1.byte[0] & 0xe0) == 0x80 && !(byteFF6D6[0][0] & 0x80)) {
 		sub_2A175(0);
-		saddr_FFE67 = 1;
+		chargeCookieHeld = 1;
 		timerStart(0x1e, 2);
 		return;
 	}
-	saddr_FFE67 = 0;
+	chargeCookieHeld = 0;
 }
 
-/* timer 0x1e */
+/* task 5's, after timer 0x1e (powerCookieHold) */
 void powerCookieRelease(void)
 {
-	saddr_FFE67 = 0;
+	chargeCookieHeld = 0;
 	sub_2E03A(1);
 	sub_2A175(1);
 }

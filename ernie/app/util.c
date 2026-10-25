@@ -2,6 +2,7 @@
  * Helpers: bytes as hex text, two digits each, most significant first, and back; the random
  * generator the handshakes' nonces come from.
  */
+#include "charge.h"
 #include "util.h"
 
 static const char hexDigits[] = "0123456789ABCDEF";
@@ -59,7 +60,7 @@ unsigned char hexDecode(unsigned char *out, const char *in, unsigned int length)
 /*
  * PLACEHOLDER: cryptographic routine, deferred (the handshakes' nonce generator: for each 16
  * bytes of out, a block of the seed, sub_2D6E4's word, 2 bytes of the settings block
- * (sub_29DE9, sub_2C658) and randomCounter, XORed with randomBlock, is encrypted with AES under
+ * (chargeReadTempVolt, sub_2C658) and randomCounter, XORed with randomBlock, is encrypted with AES under
  * the key at 0x105b8 (Keys.wiki's SharedKey_B_B; the schedule at 0xfaa4 when memory pool 2 has
  * no block) into randomBlock, which goes to out; randomCounter counts the blocks).
  */

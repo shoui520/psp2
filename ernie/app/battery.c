@@ -8,6 +8,7 @@
 
 #include "ernie.h"
 #include "battery.h"
+#include "charge.h"
 #include "chip.h"
 #include "config.h"
 #include "iica.h"
@@ -16,8 +17,6 @@
 
 extern void sub_2A6BC(unsigned int);
 extern unsigned char sub_2A0ED(unsigned char);
-extern void sub_29DC2(void);
-extern void sub_29DA9(unsigned int);
 
 static struct IicaRequest batteryIica;
 static unsigned char batteryBLBuffer[BATTERY_BL_SIZE - 1];
@@ -282,7 +281,7 @@ unsigned char batteryStartBLMode(void)
 	}
 	if (result == 0) {
 		sub_2A0ED(0);
-		sub_29DC2();
+		chargeTimerStop();
 	}
 	return result;
 }
@@ -292,7 +291,7 @@ unsigned char batteryStopBLMode(void)
 {
 	unsigned char result;
 
-	sub_29DA9(0x0a);
+	chargeTimerStart(0x0a);
 	elmoCommand[0] = 0x16;
 	elmoCommand[1] = 0;
 	elmoCommand[2] = 0x0f;
@@ -316,7 +315,7 @@ unsigned char batteryStopBLMode(void)
 /* 0x0989: the gauge's control command 0x0041 (its reset) */
 unsigned char batterySWReset(void)
 {
-	sub_29DA9(0x0a);
+	chargeTimerStart(0x0a);
 	elmoCommand[0] = 0;
 	elmoCommand[1] = 0x41;
 	elmoCommand[2] = 0;
@@ -349,7 +348,7 @@ unsigned char batteryHibernate(void)
 /* 0x098d: the gauge's control command 0x0015 */
 unsigned char batteryControl0015(void)
 {
-	sub_29DA9(0x0a);
+	chargeTimerStart(0x0a);
 	elmoCommand[0] = 0;
 	elmoCommand[1] = 0x15;
 	elmoCommand[2] = 0;
