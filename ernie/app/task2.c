@@ -4,6 +4,7 @@
 #pragma rtos_task task2
 
 #include "ernie.h"
+#include "command.h"
 #include "kernel.h"
 #include "rtc.h"
 #include "sleepfactor.h"
@@ -11,7 +12,6 @@
 
 extern unsigned int sub_2AB46(void);
 extern unsigned char sub_10D7A(void);
-extern void sub_15667(void);
 extern void sub_1D162(void);
 extern void sub_21F93(void);
 extern void sub_2E8C6(void);
@@ -198,7 +198,7 @@ unsigned char sub_10D08(void)
 	unsigned char value;
 
 	ret = 0;
-	sub_15667();
+	commandRequestInit();
 	sub_1D162();
 	sub_21F93();
 	sub_2E8C6();

@@ -112,7 +112,7 @@ extern unsigned int sub_2AB46(void);
 extern unsigned char sub_2AB49(int);
 extern struct SystemMode *sub_2AB39(void);
 extern unsigned long sub_2AA79(void);
-extern unsigned char sub_2C15B(unsigned char offset, int size, unsigned char *buf);
+extern unsigned char sub_2C15B(unsigned int offset, unsigned int size, unsigned char *buf);
 extern void sub_2C342(ID flgid, FLGPTN setptn);
 extern void sub_2C394(int, int);
 extern void sub_17159(void);

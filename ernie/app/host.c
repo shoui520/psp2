@@ -19,6 +19,7 @@
 
 #include "ernie.h"
 #include "chip.h"
+#include "command.h"
 #include "config.h"
 #include "csi.h"
 #include "host.h"
@@ -56,14 +57,6 @@ extern unsigned char sub_2BBE9(void);
 extern unsigned char sub_2D685(void);
 
 /* the commands' handlers and streams (their files not written yet) */
-extern unsigned char sub_1547B(unsigned char *out, unsigned char *length);
-extern unsigned char sub_1549A(unsigned char *out, unsigned char *length);
-extern unsigned char sub_154E9(unsigned char *out, unsigned char *length);
-extern unsigned char sub_15508(unsigned char *out, unsigned char *length);
-extern unsigned char sub_15544(unsigned char *out, unsigned char *length);
-extern unsigned char sub_15576(unsigned char *out, unsigned char *length);
-extern unsigned char sub_155D9(unsigned char *out, unsigned char *length);
-extern unsigned char sub_15611(unsigned char *out, unsigned char *length);
 extern unsigned char sub_18F6A(unsigned char *out, unsigned char *length);
 extern unsigned char sub_18FD6(unsigned char *out, unsigned char *length);
 extern unsigned char sub_190C6(unsigned char *out, unsigned char *length);
@@ -108,16 +101,16 @@ unsigned char hostCommandRequests(unsigned char *out, unsigned char *length);
 /* the commands, in order: all of them, and those taken before sub_2BB99 allows the rest */
 static const struct HostCommand hostCommands[] = {
 	{ 0x0000, hostCommandNull, 0 },
-	{ 0x0001, sub_1547B, 0 },
-	{ 0x0002, sub_1549A, 0 },
+	{ 0x0001, hostCommandErnieVersion, 0 },
+	{ 0x0002, hostCommandTimeStamp, 0 },
 	{ 0x0003, hostCommandSleepFactor, 0 },
 	{ 0x0004, hostCommandRequests, 0 },
-	{ 0x0005, sub_154E9, 0 },
-	{ 0x0010, sub_15508, 0 },
-	{ 0x0011, sub_15544, 0 },
-	{ 0x0012, sub_15576, 0 },
-	{ 0x0013, sub_155D9, 0 },
-	{ 0x0014, sub_15611, 0 },
+	{ 0x0005, hostCommandHardwareInfo, 0 },
+	{ 0x0010, hostCommandWakeupFactor, 0 },
+	{ 0x0011, hostCommandClock, 0 },
+	{ 0x0012, hostCommandAlarm, 0 },
+	{ 0x0013, hostCommand0013, 0 },
+	{ 0x0014, hostCommandPins, 0 },
 	{ 0x0100, sub_18F6A, 0 },
 	{ 0x0101, sub_18FD6, 0 },
 	{ 0x0102, sub_190C6, 0 },
@@ -144,12 +137,12 @@ static const struct HostCommand hostCommands[] = {
 
 static const struct HostCommand hostBaseCommands[] = {
 	{ 0x0000, hostCommandNull, 0 },
-	{ 0x0001, sub_1547B, 0 },
-	{ 0x0002, sub_1549A, 0 },
+	{ 0x0001, hostCommandErnieVersion, 0 },
+	{ 0x0002, hostCommandTimeStamp, 0 },
 	{ 0x0004, hostCommandRequests, 0 },
-	{ 0x0005, sub_154E9, 0 },
-	{ 0x0010, sub_15508, 0 },
-	{ 0x0013, sub_155D9, 0 },
+	{ 0x0005, hostCommandHardwareInfo, 0 },
+	{ 0x0010, hostCommandWakeupFactor, 0 },
+	{ 0x0013, hostCommand0013, 0 },
 	{ 0x1100, sub_1EFE6, 0 },
 	{ 0x1101, sub_1F005, 0 },
 	{ 0x1300, sub_2D289, 0 },

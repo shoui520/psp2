@@ -21,6 +21,8 @@ struct UpdaterVersionInfo {
 #define UPDATER_VERSION_INFO	((const struct UpdaterVersionInfo __far *)0x1f00)
 
 extern const struct AppVersionInfo appVersionInfo;
+/* the Subversion $Date$ of the build, after appVersionInfo (command 0x0002) */
+extern const char * const appTimeStamp;
 
 extern void		versionInit(void);
 extern void		getErnieVersion(unsigned char *buf);

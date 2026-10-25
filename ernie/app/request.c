@@ -4,9 +4,9 @@
  */
 #include <string.h>
 
+#include "command.h"
 #include "host.h"
 
-extern struct HostRequest hostRequestFE38C;
 extern struct HostRequest hostRequestFF57E;
 extern struct HostRequest hostRequestFFC3A;
 extern struct HostRequest hostRequestFEA82;
@@ -19,7 +19,7 @@ extern struct HostRequest hostRequestFF174;
 extern struct HostRequest hostRequestFFBE0;
 
 struct HostRequest * const hostRequests[] = {
-	&hostRequestFE38C,
+	&commandRequest,
 	&hostRequestFF57E,
 	&hostRequestFFC3A,
 	&hostRequestFEA82,
