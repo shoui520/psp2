@@ -21,10 +21,10 @@
 #include "task.h"
 #include "updatereq.h"
 #include "version.h"
+#include "watchdog.h"
 
 extern unsigned char sub_10D7A(void);
 extern void sub_2E8C6(void);
-extern void sub_2D67C(void);
 extern unsigned char sub_10CB3(void);
 extern unsigned char sub_11D1B(void);
 extern unsigned char sub_11D4B(void);
@@ -190,7 +190,7 @@ unsigned char sub_10D08(void)
 		boardMultiCnStop();
 	updaterRequestInit();
 	configRequestInit();
-	sub_2D67C();
+	watchdogStop();
 	if (nvsRead(0x2d, 1, &value, 1) == 0)
 		setDlFlags(value);
 	if (getAlarmMode() == 1)
@@ -208,7 +208,7 @@ unsigned char sub_10DC1(void)
 		boardSetMultiCnOutput(0);
 	else
 		boardMultiCnStop();
-	sub_2D67C();
+	watchdogStop();
 	return ret;
 }
 
@@ -221,7 +221,7 @@ unsigned char sub_10DEA(void)
 	boardMultiCnStop();
 	serialClose1();
 	serial1Reset();
-	sub_2D67C();
+	watchdogStop();
 	return ret;
 }
 
@@ -234,7 +234,7 @@ unsigned char sub_10E06(void)
 	boardMultiCnStop();
 	serialClose1();
 	serial1Reset();
-	sub_2D67C();
+	watchdogStop();
 	return ret;
 }
 
@@ -244,7 +244,7 @@ unsigned char sub_10E22(void)
 
 	ret = 0;
 	serialAuthInit();
-	sub_2D67C();
+	watchdogStop();
 	return ret;
 }
 

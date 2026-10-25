@@ -8,6 +8,7 @@
 
 #include "analog.h"
 #include "charge.h"
+#include "watchdog.h"
 
 #define CONFIG_SIZE		0x3f0	/* a bank's block */
 #define CONFIG_VERSION		0x31	/* this build's layout */
@@ -40,7 +41,16 @@ struct ConfigBlock {
 			unsigned int	reserved17:15;
 		} bits;
 	} board;				/* kept across a new layout */
-	unsigned char	reserved18[0x1a - 0x16];
+	union Watchdog	watchdog;		/* the host's watchdog at a power-on (watchdogSetup) */
+	union ConfigWatchdogKeep {
+		unsigned int	value;
+		struct {
+			unsigned int	keepOff:1;	/* set: the watchdog's setting is kept at a
+							   power-on whose wakeup factor has no notify */
+			unsigned int	keepNotify:1;	/* and at one that has */
+			unsigned int	reserved19:14;
+		} bits;
+	} watchdogKeep;
 	struct ChargeTempLevel chargeTempLevels[8];	/* the battery temperature's ranges */
 	struct ChargeTempLevel chargeTempLevelsCharge[8];	/* and in system state 0x20 */
 	struct ChargeLevel chargeLevels[10];	/* the battery's levels (paramLoad), with

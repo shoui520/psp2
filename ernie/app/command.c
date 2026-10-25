@@ -29,13 +29,9 @@
 #include "task.h"
 #include "task5.h"
 #include "version.h"
+#include "watchdog.h"
 
-extern int sub_2D646(unsigned int *value);
 extern int sub_2ED36(void);
-extern int sub_2D626(unsigned int *value);
-extern unsigned char sub_2D662(void);
-extern unsigned char sub_2D67C(void);
-extern unsigned char sub_2D685(void);
 extern unsigned char sub_2DB73(void);
 extern unsigned char sub_2DAEA(unsigned char *buf);
 extern unsigned char sub_2DC1F(unsigned int offset, unsigned char *data, unsigned char *length);
@@ -93,6 +89,7 @@ union CommandWord {
 	unsigned int	value;
 	unsigned char	byte[2];
 	struct HostLinkConfig config;
+	union Watchdog	watchdog;
 };
 
 /* the commands request 0 takes before the handshake */
@@ -167,12 +164,12 @@ unsigned char hostCommandAlarm(unsigned char *out, unsigned char *length)
 	return 0;
 }
 
-/* 0x0013: the word of the module at 0x2d646 */
+/* 0x0013: the host's watchdog's setting */
 unsigned char hostCommand0013(unsigned char *out, unsigned char *length)
 {
 	union CommandWord value;
 
-	sub_2D646(&value.value);
+	watchdogGet(&value.watchdog);
 	out[0] = value.byte[0];
 	out[1] = value.byte[1];
 	*length = 2;
@@ -290,18 +287,18 @@ allowed:
 			if (commandRequest.length == 2) {
 				word.byte[0] = commandRequestData[0];
 				word.byte[1] = commandRequestData[1];
-				sub_2D626(&word.value);
-				result = sub_2D662();
+				watchdogSet(&word.watchdog);
+				result = watchdogStart();
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, result, 0);
 			} else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
 			break;
 		case 0x0084:
-			result = sub_2D67C();
+			result = watchdogStop();
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, result, 0);
 			break;
 		case 0x0085:
-			result = sub_2D685();
+			result = (unsigned char)watchdogKick();
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, result, 0);
 			break;
 		case 0x0086:		/* the log: sceSysconGetLogInfo */

@@ -31,6 +31,7 @@
 #include "sleepfactor.h"
 #include "tau.h"
 #include "updatereq.h"
+#include "watchdog.h"
 
 #define MIN(a, b)		((a) < (b) ? (a) : (b))
 
@@ -57,7 +58,6 @@ struct HostCommand {
 
 extern void sub_1706C(void);
 extern void sub_170DA(void);
-extern unsigned char sub_2D685(void);
 
 
 struct HostLink hostLink;
@@ -425,7 +425,7 @@ int hostFrameCommand(void)
 		else
 			hostLink.rx[3] = 0x3f;
 		hostLink.rx[2] = length + 2;
-		sub_2D685();
+		watchdogKick();
 	} else {
 		request = hostFindRequest(hostLink.tx[1]);
 		if (request != NULL) {
@@ -447,7 +447,7 @@ int hostFrameCommand(void)
 					hostLink.rx[3] = 0x82;
 				}
 				hostLink.rx[2] = length + 2;
-				sub_2D685();
+				watchdogKick();
 				break;
 			case HOST_REQUEST_IDLE:
 				hostLink.rx[3] = 0x3e;
@@ -456,7 +456,7 @@ int hostFrameCommand(void)
 			case HOST_REQUEST_RECEIVE:
 				hostLink.rx[3] = 0x80;
 				hostLink.rx[2] = 2;
-				sub_2D685();
+				watchdogKick();
 				break;
 			case HOST_REQUEST_BUSY:
 				if (request->command == FRAME_COMMAND(hostLink.tx)) {
@@ -466,7 +466,7 @@ int hostFrameCommand(void)
 					hostLink.rx[3] = 0x82;
 				}
 				hostLink.rx[2] = 2;
-				sub_2D685();
+				watchdogKick();
 				break;
 			case HOST_REQUEST_ERROR:
 				hostLink.rx[3] = 0x83;
