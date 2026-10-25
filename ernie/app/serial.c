@@ -11,12 +11,12 @@
 
 #include "kernel.h"
 #include "serial.h"
+#include "serial2.h"
 #include "timer.h"
 #include "uart.h"
 #include "util.h"
 
 extern ER sub_2C2ED(unsigned char flgid, FLGPTN setptn);
-extern unsigned char sub_25653(unsigned char level);
 
 struct Serial serial;
 unsigned char serialText[0x80];
@@ -375,14 +375,14 @@ unsigned char serialOpen2(int baud)
 {
 	uart3Open(baud);
 	serialStart(2);
-	sub_25653(0);
+	serial2SetP71(0);
 	serial.link = 2;
 	return 0;
 }
 
 unsigned char serialClose2(void)
 {
-	sub_25653(1);
+	serial2SetP71(1);
 	serialReset(0);
 	serial.link = 0;
 	return 0;

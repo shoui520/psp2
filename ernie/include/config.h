@@ -33,9 +33,14 @@ struct ConfigBlock {
 	unsigned char	voltageTrim;		/* passed with a regulator's level (0x088e) */
 	unsigned char	reserved7[0x184 - 0xf4];
 	unsigned char	startCheckOff:1;	/* set: mode 1's command 0x0105 starts state 9
-						   although sub_25664 and sub_256E1 refuse */
-	unsigned char	reserved4:7;
-	unsigned char	reserved5[0x18c - 0x185];
+						   although serial2TestAreaUsed and serial2InTime
+						   refuse */
+	unsigned char	testDisarm:1;		/* set: notification 0x0211 runs transition 0 once
+						   armed (serial2Arm) */
+	unsigned char	reserved4:6;
+	unsigned char	startClockLimit;	/* the clock's low byte up to which serial2InTime
+						   holds */
+	unsigned char	reserved5[0x18c - 0x186];
 	unsigned char	chargeLedHost;		/* the host may hand the charge LED over (0x089e
 						   mode 2) */
 	unsigned char	reserved8[0x1a6 - 0x18d];

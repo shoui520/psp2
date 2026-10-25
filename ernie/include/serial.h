@@ -81,7 +81,8 @@ struct SerialNotify {
 	unsigned char	(*handler)(void);
 };
 
-/* the modes' commands and notifications: mode 1's in app/serial1.c, mode 2's module is not written yet */
+/* the modes' commands and notifications: mode 1's in app/serial1.c, mode 2's in
+   app/serial2.c */
 extern const struct SerialCommand serialCommands2[];
 extern const struct SerialNotify serialNotifies1[];
 extern const struct SerialNotify serialNotifies2[];

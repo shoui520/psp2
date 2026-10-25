@@ -21,6 +21,7 @@
 #include "kernel.h"
 #include "motion.h"
 #include "serial1.h"
+#include "serial2.h"
 #include "serialauth.h"
 #include "sleepfactor.h"
 #include "sysmode.h"
@@ -96,8 +97,6 @@ extern void sub_17544(void);
 extern void sub_17580(void);
 extern void sub_172BC(void);
 extern void sub_2B475(void);
-extern void sub_25263(void);
-extern void sub_2526B(void);
 extern void sub_2B4BC(void);
 extern void sub_29B68(void);
 
@@ -180,8 +179,8 @@ struct InputGroup inputGroup3;
 struct InputHandler inputHandler2B475;
 struct InputHandler inputHandler1245B;
 struct InputHandler inputHandler1245C;
-struct InputHandler inputHandler25263;
-struct InputHandler inputHandler2526B;
+struct InputHandler inputHandlerSerial2Request;
+struct InputHandler inputHandlerSerial2Link;
 struct InputHandler inputHandlerSerial1;
 struct InputHandler inputHandler224FD;
 struct InputHandler inputHandler1245D;
@@ -262,12 +261,12 @@ void inputInit(void)
 	inputHandler1245C.type = 1;
 	inputHandler1245C.edges = INPUT_EDGE_HIGH;
 	inputHandler1245C.handler = sub_1245C;
-	inputHandler25263.type = 1;
-	inputHandler25263.edges = INPUT_EDGE_HIGH;
-	inputHandler25263.handler = sub_25263;
-	inputHandler2526B.type = 1;
-	inputHandler2526B.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
-	inputHandler2526B.handler = sub_2526B;
+	inputHandlerSerial2Request.type = 1;
+	inputHandlerSerial2Request.edges = INPUT_EDGE_HIGH;
+	inputHandlerSerial2Request.handler = serial2InputRequest;
+	inputHandlerSerial2Link.type = 1;
+	inputHandlerSerial2Link.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	inputHandlerSerial2Link.handler = serial2InputLink;
 	inputHandlerSerial1.type = 1;
 	inputHandlerSerial1.edges = INPUT_EDGE_HIGH;
 	inputHandlerSerial1.handler = serial1InputHandler;

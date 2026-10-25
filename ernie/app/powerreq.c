@@ -22,6 +22,7 @@
 #include "kernel.h"
 #include "motion.h"
 #include "powerreq.h"
+#include "serial2.h"
 #include "task5.h"
 #include "version.h"
 
@@ -96,7 +97,6 @@ extern void sub_2E0D8(unsigned int);
 extern void sub_2E0C4(unsigned int);
 extern void sub_2DFF2(unsigned int);
 extern void sub_2E016(unsigned int);
-extern unsigned char sub_25224(unsigned char, unsigned char);
 extern unsigned char sub_27D9E(unsigned char, unsigned char);
 extern unsigned char sub_2A379(unsigned char);
 extern unsigned char sub_29F40(unsigned char *reg, unsigned char *value);
@@ -849,7 +849,7 @@ static void powerRequestCtrlVoltage(void)
 			result = 3;
 		} else {
 			trim = sub_2C658()->voltageTrim;
-			level = sub_25224(powerRequestData[1], trim);
+			level = levelTrim(powerRequestData[1], trim);
 			result = powerResult(sub_27D9E(regulator, level));
 		}
 	} else

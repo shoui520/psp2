@@ -18,6 +18,7 @@
 #include "rtc.h"
 #include "serial.h"
 #include "serial1.h"
+#include "serial2.h"
 #include "serialauth.h"
 #include "sleepfactor.h"
 #include "spidev.h"
@@ -29,8 +30,6 @@ extern unsigned int sub_2AB46(void);
 extern unsigned char sub_2AB49(int);
 extern unsigned char sub_29C4B(void);
 extern unsigned char sub_29CC0(void);
-extern int sub_25664(void);
-extern int sub_256E1(void);
 extern unsigned char sub_2D6DE(void);
 extern unsigned char sub_2C66A(unsigned char *data);
 extern unsigned char sub_2C6F0(unsigned int id, unsigned char size, unsigned char *data);
@@ -55,7 +54,6 @@ extern unsigned char sub_11D4B(void);
 extern unsigned char sub_261B5(void);
 extern unsigned int sub_261A5(void);
 extern unsigned char sub_261AC(void);
-extern unsigned char sub_256A7(void);
 extern unsigned char sub_2C15B(unsigned int offset, unsigned int size, unsigned char *buf);
 extern unsigned char sub_2C199(unsigned int offset, unsigned int size, unsigned char *buf);
 extern void sub_2C229(unsigned char *base);
@@ -324,7 +322,7 @@ static unsigned char serial1Command0105(struct SerialBuffer *request, struct Ser
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x53;
 		}
-		if (sub_25664() == 0 && !sub_2C658()->startCheckOff && sub_256E1() != 0) {
+		if (serial2TestAreaUsed() == 0 && !sub_2C658()->startCheckOff && serial2InTime() != 0) {
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x52;
 		}
@@ -946,9 +944,9 @@ static unsigned char serial1Command0190(struct SerialBuffer *request, struct Ser
 	value = sub_261A5();
 	memcpy(&serial1Data.byte[2], &value, 2);
 	serial1Data.byte[4] = sub_261AC();
-	serial1Data.byte[5] = (unsigned char)sub_25664();
-	serial1Data.byte[6] = sub_256A7();
-	serial1Data.byte[7] = (unsigned char)sub_256E1();
+	serial1Data.byte[5] = (unsigned char)serial2TestAreaUsed();
+	serial1Data.byte[6] = (unsigned char)serial2GetArmed();
+	serial1Data.byte[7] = (unsigned char)serial2InTime();
 	serialSetAnswer(SERIAL_ANSWER);
 	return result;
 }
