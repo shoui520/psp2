@@ -22,6 +22,36 @@ struct InputDelays {
 };
 
 extern struct InputDelays inputDelays;
+
+/* a handler of an input bit: called when the bit changes to the levels in edges */
+struct InputHandler {
+	unsigned char	type;		/* 1: called on the edges below */
+	unsigned char	edges;		/* INPUT_EDGE_* */
+	void		(*handler)(void);
+};
+
+#define INPUT_EDGE_LOW		0x01	/* the bit became 0 */
+#define INPUT_EDGE_HIGH		0x02	/* the bit became 1 */
+
+/* the handlers of one bit of a group: count() of them, in a constant list (app/inputbits.c) */
+struct InputBit {
+	struct InputHandler * const	*handlers;
+	unsigned char			(*count)(void);
+};
+
+extern struct InputHandler inputHandler2B475;
+extern struct InputHandler inputHandler1245B;
+extern struct InputHandler inputHandler1245C;
+extern struct InputHandler inputHandler25263;
+extern struct InputHandler inputHandler2526B;
+extern struct InputHandler inputHandler1D8ED;
+extern struct InputHandler inputHandler224FD;
+extern struct InputHandler inputHandler1245D;
+extern struct InputHandler inputHandler2B4BC;
+extern struct InputHandler inputHandler29B68;
+extern struct InputHandler inputHandler1275F;
+extern struct InputHandler inputHandler12698;
+extern struct InputHandler inputHandler12489;
 extern __sreg unsigned char inputState1;
 extern __near unsigned char holdTicks;
 extern __near unsigned char holdReached;

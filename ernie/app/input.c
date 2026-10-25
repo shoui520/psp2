@@ -14,28 +14,13 @@
 #include "chip.h"
 #include "config.h"
 #include "input.h"
+#include "inputbits.h"
 #include "inputreq.h"
 #include "kernel.h"
 #include "motion.h"
 #include "sleepfactor.h"
 #include "timer.h"
 #include "touch.h"
-
-/* a handler of an input bit: called when the bit changes to the levels in edges */
-struct InputHandler {
-	unsigned char	type;		/* 1: called on the edges below */
-	unsigned char	edges;		/* INPUT_EDGE_* */
-	void		(*handler)(void);
-};
-
-#define INPUT_EDGE_LOW		0x01	/* the bit became 0 */
-#define INPUT_EDGE_HIGH		0x02	/* the bit became 1 */
-
-/* the handlers of one bit of a group: count() of them, in a constant table */
-struct InputBit {
-	struct InputHandler	**handlers;
-	unsigned char		(*count)(void);
-};
 
 /* a group of input bits, debounced over two samples */
 struct InputGroup {
@@ -135,14 +120,6 @@ extern void sub_1D8ED(void);
 extern void sub_224FD(void);
 extern void sub_2B4BC(void);
 extern void sub_29B68(void);
-extern unsigned char sub_1B2C8(void);
-extern unsigned char sub_1B2CC(void);
-extern unsigned char sub_1B2D0(void);
-
-/* the handlers of each group's bits (the constant tables beside sub_1B2C8) */
-extern const struct InputBit inputBits1[];
-extern const struct InputBit inputBits2[];
-extern const struct InputBit inputBits3[];
 
 void sub_11D97(unsigned char enable);
 void sub_11D83(unsigned char enable);
@@ -279,7 +256,7 @@ void inputInit(void)
 	inputGroup1.pending = 0xa1;
 	inputGroup1.enable = 0xff;
 	inputGroup1.bits = inputBits1;
-	inputGroup1.count = sub_1B2C8;
+	inputGroup1.count = inputBits1Count;
 	inputRaw2 = 0;
 	inputState2 = 0;
 	inputGroup2.prev = 0;
@@ -287,7 +264,7 @@ void inputInit(void)
 	inputGroup2.pending = 0;
 	inputGroup2.enable = 0x0f;
 	inputGroup2.bits = inputBits2;
-	inputGroup2.count = sub_1B2CC;
+	inputGroup2.count = inputBits2Count;
 	inputRaw3 = 0x04;
 	inputState3 = 0x04;
 	inputGroup3.prev = 0x04;
@@ -295,7 +272,7 @@ void inputInit(void)
 	inputGroup3.pending = 0x24;
 	inputGroup3.enable = 0x3d;
 	inputGroup3.bits = inputBits3;
-	inputGroup3.count = sub_1B2D0;
+	inputGroup3.count = inputBits3Count;
 	inputHandler2B475.type = 1;
 	inputHandler2B475.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandler2B475.handler = sub_2B475;
