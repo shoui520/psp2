@@ -13,7 +13,8 @@ struct KeepRam {
 	unsigned char	resetCause;	/* why the last reset was made */
 	unsigned long	clock;		/* the RTC's count of 0.5 s (rtc.h) */
 	unsigned long	alarm;		/* the clock value the alarm wakes the system at */
-	unsigned char	data[0xf2];
+	unsigned char	scratchPad[0x100];	/* the host's (scratchpad.h); the checksum covers
+					   the first 0xf2 bytes */
 };
 
 extern __far struct KeepRam keepRam;

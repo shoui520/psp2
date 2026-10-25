@@ -20,6 +20,7 @@
 #include "host.h"
 #include "kernel.h"
 #include "rtc.h"
+#include "scratchpad.h"
 #include "serial.h"
 #include "version.h"
 
@@ -33,8 +34,6 @@ extern unsigned char sub_2D662(void);
 extern unsigned char sub_2D67C(void);
 extern unsigned char sub_2D685(void);
 extern void sub_2C2ED(int, int);
-extern unsigned char sub_1D0E6(unsigned int offset, unsigned int size, unsigned char *buf);
-extern unsigned char sub_1D124(unsigned int offset, unsigned int size, unsigned char *buf);
 extern unsigned char sub_2C15B(unsigned int offset, unsigned int size, unsigned char *buf);
 extern unsigned char sub_2C199(unsigned int offset, unsigned int size, unsigned char *buf);
 extern unsigned char sub_27642(void);
@@ -324,7 +323,7 @@ allowed:
 			}
 			offset = commandRequestData[0] | (unsigned int)commandRequestData[1] << 8;
 			size = commandRequestData[2];
-			if (sub_1D0E6(offset, size, commandRequestAnswer) == 0)
+			if (scratchPadRead(offset, size, commandRequestAnswer) == 0)
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, size);
 			else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 2, 0);
@@ -336,7 +335,7 @@ allowed:
 			}
 			offset = commandRequestData[0] | (unsigned int)commandRequestData[1] << 8;
 			size = commandRequestData[2];
-			if (sub_1D124(offset, size, &commandRequestData[3]) == 0)
+			if (scratchPadWrite(offset, size, &commandRequestData[3]) == 0)
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 			else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 2, 0);

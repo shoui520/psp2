@@ -9,6 +9,7 @@
 #include <string.h>
 #include "ernie.h"
 #include "kernel.h"
+#include "scratchpad.h"
 #include "timer.h"
 #include "version.h"
 
@@ -32,7 +33,6 @@ extern void sub_2AC15(void);
 extern unsigned char getResetCause(void);
 extern void sub_2D6EF(void);
 extern void sub_2D712(void);
-extern void sub_1D0CD(void);
 extern void sub_2DAE1(int);
 extern void sub_2ABAE(void);
 extern void sub_2A92E(unsigned char *data);
@@ -89,14 +89,14 @@ void systemInit(void)
 	sub_2D712();
 	if (cause == 0) {
 		if (resetFlags & RESF_TRAP)
-			sub_1D0CD();
+			scratchPadClear();
 		if (resetFlags & RESF_WDRF) {
-			sub_1D0CD();
+			scratchPadClear();
 			sub_2DAE1(7);
 		}
 	} else if (cause == 0x30) {
 		if (resetFlags & RESF_TRAP) {
-			sub_1D0CD();
+			scratchPadClear();
 			sub_2DAE1(6);
 		}
 	}
