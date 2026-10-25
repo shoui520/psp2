@@ -20,7 +20,9 @@
 #include "inputreq.h"
 #include "kernel.h"
 #include "motion.h"
+#include "serial1.h"
 #include "sleepfactor.h"
+#include "sysmode.h"
 #include "timer.h"
 #include "touch.h"
 
@@ -79,19 +81,9 @@ struct ButtonPress {
 	unsigned int	state;		/* the system state the presses were counted in */
 };
 
-/* PLACEHOLDER: the word sub_2AB39 returns (its owner not written yet): a 7-bit mode
-   (sub_2457F compares it with 0x0f) and a flag that keeps a button's presses counted across
-   a state change */
-struct SystemMode {
-	unsigned int	mode:7;
-	unsigned int	flag:1;
-	unsigned int	reserved:8;
-};
-
 extern unsigned char getResetCause(void);
 extern unsigned int sub_2AB46(void);
 extern unsigned char sub_2AB49(int);
-extern struct SystemMode *sub_2AB39(void);
 extern unsigned long sub_2AA79(void);
 extern unsigned char sub_2C15B(unsigned int offset, unsigned int size, unsigned char *buf);
 extern void sub_2C342(ID flgid, FLGPTN setptn);
@@ -106,7 +98,6 @@ extern void sub_21F33(int);
 extern void sub_2B475(void);
 extern void sub_25263(void);
 extern void sub_2526B(void);
-extern void sub_1D8ED(void);
 extern void sub_224FD(void);
 extern void sub_2B4BC(void);
 extern void sub_29B68(void);
@@ -192,7 +183,7 @@ struct InputHandler inputHandler1245B;
 struct InputHandler inputHandler1245C;
 struct InputHandler inputHandler25263;
 struct InputHandler inputHandler2526B;
-struct InputHandler inputHandler1D8ED;
+struct InputHandler inputHandlerSerial1;
 struct InputHandler inputHandler224FD;
 struct InputHandler inputHandler1245D;
 struct InputHandler inputHandler2B4BC;
@@ -278,9 +269,9 @@ void inputInit(void)
 	inputHandler2526B.type = 1;
 	inputHandler2526B.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandler2526B.handler = sub_2526B;
-	inputHandler1D8ED.type = 1;
-	inputHandler1D8ED.edges = INPUT_EDGE_HIGH;
-	inputHandler1D8ED.handler = sub_1D8ED;
+	inputHandlerSerial1.type = 1;
+	inputHandlerSerial1.edges = INPUT_EDGE_HIGH;
+	inputHandlerSerial1.handler = serial1InputHandler;
 	inputHandler1245D.type = 1;
 	inputHandler1245D.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandler1245D.handler = sub_1245D;

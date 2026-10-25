@@ -22,9 +22,9 @@
 #include "rtc.h"
 #include "scratchpad.h"
 #include "serial.h"
+#include "sysmode.h"
 #include "version.h"
 
-extern struct SystemMode *sub_2AB39(void);
 extern int sub_2D646(unsigned int *value);
 extern unsigned char sub_2BB99(void);
 extern unsigned char sub_2BBE9(void);

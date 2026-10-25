@@ -19,13 +19,17 @@ struct ConfigBlock {
 						   loaded one's may be */
 	unsigned int	analogMax;		/* its max at a reset, the least a loaded one's */
 	unsigned char	analogMinRange;		/* the least high byte of a calibration's range */
-	unsigned char	reserved3[0x1b0 - 0xd3];
+	unsigned char	reserved3[0x184 - 0xd3];
+	unsigned char	startCheckOff:1;	/* set: mode 1's command 0x0105 starts state 9
+						   although sub_25664 and sub_256E1 refuse */
+	unsigned char	reserved4:7;
+	unsigned char	reserved5[0x1b0 - 0x185];
 	unsigned char	touchDelaySelect;	/* Touch's delays, in NOPs */
 	unsigned char	touchDelayByte;
 	unsigned char	touchDelayDeselect;
 	unsigned char	touchWriteTries;	/* a verified write's tries */
 	unsigned char	touchWriteReads;	/* and the reads each try compares */
-	unsigned char	reserved4;
+	unsigned char	reserved6;
 	unsigned int	hostBusyLimit;		/* the host link's busy time before a pause */
 	unsigned int	hostIdleLimit;		/* the idle time that clears the busy time */
 	unsigned int	hostPause;		/* the pause, in ticks */

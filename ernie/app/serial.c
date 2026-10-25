@@ -112,14 +112,14 @@ unsigned char serialGetMode(void)
 	return serial.mode;
 }
 
-unsigned char serialGetOption(void)
+unsigned char serialGetNextMode(void)
 {
-	return serial.option;
+	return serial.nextMode;
 }
 
-unsigned char serialSetOption(unsigned char option)
+unsigned char serialSetNextMode(unsigned char mode)
 {
-	return serial.option = option;
+	return serial.nextMode = mode;
 }
 
 unsigned char serialGetBaud(void)

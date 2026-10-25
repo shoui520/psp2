@@ -9,6 +9,7 @@
 #include "nvsreq.h"
 #include "rtc.h"
 #include "serial.h"
+#include "serial1.h"
 #include "sleepfactor.h"
 #include "version.h"
 
@@ -26,7 +27,6 @@ extern void sub_23A42(int);
 extern unsigned char sub_11D1B(void);
 extern unsigned char sub_27642(void);
 extern void sub_275F0(int);
-extern void sub_1D728(void);
 extern unsigned char sub_2764F(void);
 extern void sub_27631(void);
 extern unsigned char sub_11D4B(void);
@@ -108,7 +108,7 @@ void sub_10B67(FLGPTN ptn)
 				case 0:
 				case 3:
 					serialClose3();
-					sub_1D728();
+					serial1Reset();
 					serialOpen1(2);
 					break;
 				case 1:
@@ -232,7 +232,7 @@ unsigned char sub_10DEA(void)
 	sub_260A4();
 	sub_27631();
 	serialClose1();
-	sub_1D728();
+	serial1Reset();
 	sub_2D67C();
 	return ret;
 }
@@ -245,7 +245,7 @@ unsigned char sub_10E06(void)
 	sub_260A4();
 	sub_27631();
 	serialClose1();
-	sub_1D728();
+	serial1Reset();
 	sub_2D67C();
 	return ret;
 }

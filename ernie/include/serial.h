@@ -54,7 +54,7 @@ struct Serial {
 	unsigned char	link;		/* 0 closed, else the mode it was opened in */
 	unsigned char	locked;		/* the commands marked so are refused */
 	unsigned char	mode;		/* SERIAL_MODE, SERIAL_BINARY */
-	unsigned char	option;		/* kept for a getter and a setter nobody calls */
+	unsigned char	nextMode;	/* the mode command 0x0102 restarts the link in */
 	unsigned char	baud;		/* a uart3Open baud (serialSelectBaud) */
 	unsigned char	state;		/* SERIAL_RECEIVE ... */
 	unsigned char	*buffer;	/* frame (binary) or text */
@@ -81,7 +81,7 @@ struct SerialNotify {
 	unsigned char	(*handler)(void);
 };
 
-/* the modes' commands and notifications: their modules are not written yet */
+/* the modes' commands and notifications: mode 1's in app/serial1.c, mode 2's module is not written yet */
 extern const struct SerialCommand serialCommands2[];
 extern const struct SerialNotify serialNotifies1[];
 extern const struct SerialNotify serialNotifies2[];
@@ -94,8 +94,8 @@ extern unsigned char serialCommand1(unsigned int command, struct SerialBuffer *r
 extern unsigned char serialEvent(FLGPTN ptn);
 extern unsigned char serialGetLink(void);
 extern unsigned char serialGetMode(void);
-extern unsigned char serialGetOption(void);
-extern unsigned char serialSetOption(unsigned char option);
+extern unsigned char serialGetNextMode(void);
+extern unsigned char serialSetNextMode(unsigned char mode);
 extern unsigned char serialGetBaud(void);
 extern unsigned char serialSetBaud(unsigned char baud);
 extern unsigned char serialSelectBaud(unsigned char code);

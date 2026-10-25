@@ -22,7 +22,7 @@ static struct InputHandler * const inputHandlers1Bit2[] = {
 };
 static struct InputHandler * const inputHandlers1Bit1[] = { &inputHandlerFE16C };
 static struct InputHandler * const inputHandlers1Bit5[] = {
-	&inputHandler1D8ED, &inputHandler1245D
+	&inputHandlerSerial1, &inputHandler1245D
 };
 static struct InputHandler * const inputHandlers1Bit6[] = { &inputHandler2B4BC };
 static struct InputHandler * const inputHandlers1Bit7[] = {
