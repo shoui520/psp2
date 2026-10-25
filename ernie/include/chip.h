@@ -2,7 +2,7 @@
  * The microcontroller's registers that the build's device file does not describe. The build
  * compiles for the uPD78F1030 (hw/<id>.mk), whose device file names the registers of Sony's
  * D79F0109 but has no external interrupt 13: its edge bits, EGP1.5 and EGN1.5, are
- * read-only there, and so are ports 3 and 9 and their mode registers. They are written through a
+ * read-only there, and so are ports 3 and 9, their mode registers and PU9. They are written through a
  * bit-field at their addresses (the same CLR1/SET1 on the sfr).
  */
 #ifndef ERNIE_CHIP_H
@@ -35,6 +35,12 @@ struct SfrBits {
 /* port 9's bit 0 (P9.0) and its mode (PM9.0) */
 #define P90			SFR_BITS(0xfff09).b0
 #define PM90			SFR_BITS(0xfff29).b0
+
+/* port 9's bits 3 and 4 (RxD4, TxD4), their modes and bit 3's pull-up (PU9.3) */
+#define P94			SFR_BITS(0xfff09).b4
+#define PM93			SFR_BITS(0xfff29).b3
+#define PM94			SFR_BITS(0xfff29).b4
+#define PU93			SFR_BITS(0xf0039).b3
 
 /* port 9's bits 1 and 2 (P9.1, P9.2): low while the host is off */
 #define P91			SFR_BITS(0xfff09).b1

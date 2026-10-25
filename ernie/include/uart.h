@@ -13,6 +13,22 @@ struct UartTimeout {
 	unsigned int	pattern;
 };
 
+/* a port: its buffers (each a power of two, mask its size - 1) and their indexes */
+struct UartPort {
+	unsigned char	*txBuffer;
+	unsigned char	*rxBuffer;
+	unsigned char	txMask;
+	unsigned char	rxMask;
+	unsigned char	rxRead;
+	unsigned char	rxWrite;
+	unsigned char	txRead;
+	unsigned char	txWrite;
+	unsigned char	flags;		/* UART_* (app/uart.c) */
+	struct UartTimeout timeout;
+};
+
+extern struct UartPort uart4;
+
 extern void uartStopTx(unsigned char port);
 extern void uartStopRx(unsigned char port);
 extern void uartReset(unsigned char port);

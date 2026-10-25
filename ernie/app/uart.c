@@ -27,20 +27,6 @@
 #define UART_CLOSED		0x02	/* opened before, then closed */
 #define UART_SENDING		0x04	/* INTST sends the next byte */
 
-/* a port: its buffers (each a power of two, mask its size - 1) and their indexes */
-struct UartPort {
-	unsigned char	*txBuffer;
-	unsigned char	*rxBuffer;
-	unsigned char	txMask;
-	unsigned char	rxMask;
-	unsigned char	rxRead;
-	unsigned char	rxWrite;
-	unsigned char	txRead;
-	unsigned char	txWrite;
-	unsigned char	flags;		/* UART_* */
-	struct UartTimeout timeout;
-};
-
 /* a port's channels: the data registers and the status registers */
 struct UartRegisters {
 	volatile unsigned int *tx;
