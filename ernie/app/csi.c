@@ -18,19 +18,11 @@
 
 /* SDR00's low byte, as DMA's SFR address */
 #define CSI_SFR_SDR00		0x10
-/* DMA's trigger: INTCSI00 */
-#define CSI_DMA_TRIGGER		6
 
 static struct DmaRequest csiDmaReceive;
 static struct DmaRequest csiDmaSend;
 
-static struct {
-	unsigned char	*receive;	/* where the next byte received goes */
-	unsigned char	*send;		/* the next byte to send */
-	unsigned char	sendCount;	/* the bytes left to send */
-	unsigned char	receiveCount;	/* the bytes left to receive */
-	unsigned char	state;		/* CSI_* */
-} csi;
+struct Csi csi;
 
 /* opens the channel, the least significant bit first */
 int csiOpenLsb(void)
@@ -139,16 +131,16 @@ int csiTransferDma(unsigned char *receive, unsigned char *send, unsigned int len
 		csiDmaReceive.count = length;
 		csiDmaReceive.address = receive;
 		csiDmaReceive.sfr = CSI_SFR_SDR00;
-		csiDmaReceive.trigger = CSI_DMA_TRIGGER;
-		if (sub_16FFF(&csiDmaReceive) == 0) {
+		csiDmaReceive.trigger = DMA_TRIGGER_CSI00;
+		if (dma0Setup(&csiDmaReceive) == 0) {
 			csiDmaSend.count = length;
 			csiDmaSend.address = send;
 			csiDmaSend.sfr = CSI_SFR_SDR00;
-			csiDmaSend.trigger = CSI_DMA_TRIGGER;
-			if (sub_17076(&csiDmaSend) == 0) {
-				sub_1704B();
-				sub_170CA();
-				sub_1704F();
+			csiDmaSend.trigger = DMA_TRIGGER_CSI00;
+			if (dma1Setup(&csiDmaSend) == 0) {
+				dma0Start();
+				dma1Start();
+				dma0EnableInterrupt();
 				return 0;
 			}
 		}
@@ -175,16 +167,16 @@ int csiTransferDmaWait(unsigned char *receive, unsigned char *send, unsigned int
 		csiDmaReceive.count = length;
 		csiDmaReceive.address = receive;
 		csiDmaReceive.sfr = CSI_SFR_SDR00;
-		csiDmaReceive.trigger = CSI_DMA_TRIGGER;
-		if (sub_16FFF(&csiDmaReceive) == 0) {
+		csiDmaReceive.trigger = DMA_TRIGGER_CSI00;
+		if (dma0Setup(&csiDmaReceive) == 0) {
 			csiDmaSend.count = length;
 			csiDmaSend.address = send;
 			csiDmaSend.sfr = CSI_SFR_SDR00;
-			csiDmaSend.trigger = CSI_DMA_TRIGGER;
-			if (sub_17076(&csiDmaSend) == 0) {
-				sub_17056();
-				sub_1704B();
-				sub_170CA();
+			csiDmaSend.trigger = DMA_TRIGGER_CSI00;
+			if (dma1Setup(&csiDmaSend) == 0) {
+				dma0DisableInterrupt();
+				dma0Start();
+				dma1Start();
 				return 0;
 			}
 		}

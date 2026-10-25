@@ -5,9 +5,20 @@
 #ifndef ERNIE_CSI_H
 #define ERNIE_CSI_H
 
+/* a transfer's state: what INTCSI00 (or the DMA) has left to do */
+struct Csi {
+	unsigned char	*receive;	/* where the next byte received goes */
+	unsigned char	*send;		/* the next byte to send */
+	unsigned char	sendCount;	/* the bytes left to send */
+	unsigned char	receiveCount;	/* the bytes left to receive */
+	unsigned char	state;		/* CSI_* */
+};
+
 /* csiGetState() */
 #define CSI_BUSY		0x01	/* a transfer is running */
 #define CSI_OPEN		0x02	/* the channel is set up */
+
+extern struct Csi csi;
 
 extern int csiOpenLsb(void);
 extern int csiTransfer(unsigned char *receive, unsigned int receiveLength,
