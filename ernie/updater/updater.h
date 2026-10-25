@@ -27,7 +27,8 @@ extern int inputPoll(void);
 
 /* the host link (host.c) */
 struct UpdHostLink {
-	unsigned char	statusBit1;	/* the answers' status bit 1 (0x02) */
+	unsigned char	statusBit1;	/* the answers' status bit 1 (0x02): the last command's
+					   checksum was wrong */
 	unsigned char	statusBit5;	/* and bit 5 (0x20): slow commands queued */
 	unsigned int	config;		/* HostLinkConfig's */
 	unsigned char	frameSize;
@@ -35,14 +36,50 @@ struct UpdHostLink {
 	unsigned int	resetWait;	/* the rounds a reset waits for the slow commands */
 };
 
+/* a frame's command, as the host sends it */
+struct HostCommandFrame {
+	unsigned int	command;
+	unsigned char	length;		/* of data, the checksum included */
+	unsigned char	data[0x7d];
+};
+
+/* and the answer */
+struct HostAnswerFrame {
+	unsigned char	status;
+	unsigned char	reserved;
+	unsigned char	length;		/* of result and data, the checksum included */
+	unsigned char	result;
+	unsigned char	data[0x7c];
+};
+
+/* PLACEHOLDER: a queued slow command; only the fields read so far */
+struct HostSlowCommand {
+	unsigned int	command;	/* 0: the entry is free */
+	struct HostAnswerFrame answer;	/* the handler's, sent from its length on */
+	unsigned char	reserved[0x90];
+	void		(*handler)(struct HostSlowCommand *slow);	/* run from the main loop */
+	signed char	state;		/* HOST_SLOW_* */
+	unsigned char	reserved2;
+};
+
 extern struct UpdHostLink hostLink;
+extern unsigned char logMode;		/* 3: the log goes out */
 extern int hostOpen(void);
 extern int hostClose(void);
 extern unsigned char hostPoll(void);
+extern int csiTransferPoll(unsigned char *rx, unsigned char *tx, unsigned char count);
+extern int uart3WritePoll(unsigned char *data, unsigned char count);
 extern void logPrintf(const char *format, ...);
+extern unsigned char hostChecksum(unsigned char *data, unsigned char length);
 extern int timeStampDigits(char *digits, const char *stamp);
-extern unsigned char sub_4BC9(void);
-extern void sub_4BF3(void);
+extern struct HostSlowCommand *hostSlowFind(unsigned int command);
+extern struct HostSlowCommand *hostSlowAlloc(unsigned int command);
+extern int hostSlowFree(struct HostSlowCommand *slow);
+extern unsigned char hostSlowPending(void);
+extern void hostSlowRun(void);
+extern unsigned char hostCommandFast(unsigned int command);
+extern unsigned char hostCommandSlow(unsigned int command, struct HostSlowCommand *slow);
+extern void sub_3B721(void);
 
 extern unsigned char resetFlags;
 extern void rtcInit(void);

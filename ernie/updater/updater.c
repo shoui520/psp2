@@ -204,7 +204,7 @@ unsigned char updModeChange(unsigned char mode)
 			refused = 0;
 			break;
 		case 5:
-			if (sub_4BC9() && hostLink.resetWait--) {
+			if (hostSlowPending() && hostLink.resetWait--) {
 				updEventSet(0x1f);
 				break;
 			}
@@ -215,7 +215,7 @@ unsigned char updModeChange(unsigned char mode)
 			resetSystem();
 			break;
 		case 6:
-			if (sub_4BC9() && hostLink.resetWait--) {
+			if (hostSlowPending() && hostLink.resetWait--) {
 				updEventSet(0x20);
 				break;
 			}
@@ -676,7 +676,7 @@ void mainLoop(void)
 			if (P1.6)
 				hostResult = hostPoll();
 			if ((updLoops & 7) == 0)
-				sub_4BF3();
+				hostSlowRun();
 			break;
 		case 4:
 			if (updEventTake(0x66))
@@ -694,7 +694,7 @@ void mainLoop(void)
 			if (updEventTake(5))
 				updModeChange(5);
 			if ((updLoops & 7) == 0)
-				sub_4BF3();
+				hostSlowRun();
 			break;
 		}
 		updLoops++;
