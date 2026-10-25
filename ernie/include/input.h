@@ -52,6 +52,36 @@ extern struct InputHandler inputHandler29B68;
 extern struct InputHandler inputHandler1275F;
 extern struct InputHandler inputHandler12698;
 extern struct InputHandler inputHandler12489;
+/* a group of input bits, debounced over two samples */
+struct InputGroup {
+	unsigned char	enable;		/* the bits dispatched */
+	unsigned char	pending;	/* bits dispatched at the next sample even unchanged */
+	unsigned char	prev;		/* the previous sample */
+	unsigned char	changed;	/* the bits the last sample changed */
+	const struct InputBit *bits;
+	unsigned char	(*count)(void);	/* how many bits */
+};
+
+/* a pin watched for a level held reload ticks of the scan, then handler called */
+struct PinConfig {
+	void		(*handler)(void);
+	unsigned char	reload;
+};
+
+struct PinMonitor {
+	struct PinConfig config;
+	unsigned char	count;		/* the ticks left */
+	unsigned char	last;		/* the level at the last tick */
+};
+
+struct PinMonitors {
+	unsigned char	mask;		/* bit n: pin monitor n runs */
+	struct PinMonitor pin[7];	/* P11.5, P4.6, -, -, P3.0, P7.6, P7.4 */
+};
+
+extern struct InputGroup inputGroup1;
+extern struct PinMonitors pinMonitors;
+extern unsigned char intp11Level;
 extern __sreg unsigned char inputState1;
 extern __near unsigned char holdTicks;
 extern __near unsigned char holdReached;
@@ -63,5 +93,10 @@ extern void sub_1267E(void);
 extern unsigned char sub_12775(unsigned char ticks);
 extern void sub_1278E(void);
 extern void inputScanHold(unsigned int ticks);
+extern void pinMonitor0Enable(unsigned char enable);
+extern void pinMonitor1Enable(unsigned char enable);
+extern void pinMonitor4Enable(unsigned char enable);
+extern void pinMonitor5Enable(unsigned char enable);
+extern void pinMonitor6Enable(unsigned char enable);
 
 #endif

@@ -37,8 +37,8 @@ extern unsigned char sub_126C9(void);
 extern int sub_23A40(void);
 extern unsigned char sub_11CFB(void);
 extern unsigned char sub_11D03(void);
-extern void sub_11DE0(unsigned char enable);
-extern void sub_11FEF(unsigned char enable);
+extern void pinMonitor1Enable(unsigned char enable);
+extern void pinMonitor0Enable(unsigned char enable);
 extern int sub_12019(void);
 extern int sub_1203A(void);
 extern int sub_1204D(void);
@@ -652,7 +652,7 @@ void stateInputWake2(void)
 		if (state == STATE_SUSPEND)
 			stateTransition(0);
 		sub_1204D();
-		sub_11DE0(1);
+		pinMonitor1Enable(1);
 	} else {
 		if (!(unsigned char)sub_1206E() && !sub_11D03() && state == STATE_OFF) {
 			stateTransition(0);
@@ -672,7 +672,7 @@ void stateInputWake1(void)
 		if (state == STATE_SUSPEND)
 			stateTransition(0x12);
 		sub_12019();
-		sub_11FEF(1);
+		pinMonitor0Enable(1);
 	} else {
 		if ((unsigned char)sub_1203A()) {
 		}

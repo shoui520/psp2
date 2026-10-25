@@ -32,33 +32,6 @@
 #include "timer.h"
 #include "touch.h"
 
-/* a group of input bits, debounced over two samples */
-struct InputGroup {
-	unsigned char	enable;		/* the bits dispatched */
-	unsigned char	pending;	/* bits dispatched at the next sample even unchanged */
-	unsigned char	prev;		/* the previous sample */
-	unsigned char	changed;	/* the bits the last sample changed */
-	const struct InputBit *bits;
-	unsigned char	(*count)(void);	/* how many bits */
-};
-
-/* a pin watched for a level held reload ticks of the scan, then handler called */
-struct PinConfig {
-	void		(*handler)(void);
-	unsigned char	reload;
-};
-
-struct PinMonitor {
-	struct PinConfig config;
-	unsigned char	count;		/* the ticks left */
-	unsigned char	last;		/* the level at the last tick */
-};
-
-struct PinMonitors {
-	unsigned char	mask;		/* bit n: pin monitor n runs */
-	struct PinMonitor pin[7];	/* P11.5, P4.6, -, -, P3.0, P7.6, P7.4 */
-};
-
 /* a port bit watched by the RTC's interrupt: state follows the level once two ticks agree */
 struct LevelMonitor {
 	unsigned char	last;
@@ -113,11 +86,11 @@ void pinMonitorPoll(void);
 unsigned char sub_11D1B(void);
 unsigned char sub_11D23(void);
 unsigned char sub_11D2B(void);
-void sub_11DB9(struct PinConfig *config);
-void sub_11DE0(unsigned char enable);
+void pinMonitor1Set(struct PinConfig *config);
+void pinMonitor1Enable(unsigned char enable);
 void sub_11E0A(void);
-void sub_11FC8(struct PinConfig *config);
-void sub_11FEF(unsigned char enable);
+void pinMonitor0Set(struct PinConfig *config);
+void pinMonitor0Enable(unsigned char enable);
 int sub_12019(void);
 int sub_12040(void);
 int sub_12044(unsigned int state);
@@ -129,20 +102,20 @@ unsigned char sub_120B8(unsigned char *keys);
 unsigned char sub_120E7(unsigned char *keys);
 unsigned char sub_12111(void);
 void sub_1217E(void);
-void sub_1225F(struct PinConfig *config);
-void sub_12286(unsigned char enable);
+void pinMonitor2Set(struct PinConfig *config);
+void pinMonitor2Enable(unsigned char enable);
 void sub_12295(void);
-void sub_122AA(struct PinConfig *config);
-void sub_122D1(unsigned char enable);
+void pinMonitor3Set(struct PinConfig *config);
+void pinMonitor3Enable(unsigned char enable);
 void sub_122E0(void);
-void sub_12309(struct PinConfig *config);
-void sub_12330(unsigned char enable);
+void pinMonitor4Set(struct PinConfig *config);
+void pinMonitor4Enable(unsigned char enable);
 void sub_1235A(void);
-void sub_12382(struct PinConfig *config);
-void sub_123A9(unsigned char enable);
+void pinMonitor5Set(struct PinConfig *config);
+void pinMonitor5Enable(unsigned char enable);
 void sub_123D3(void);
-void sub_123FD(struct PinConfig *config);
-void sub_12424(unsigned char enable);
+void pinMonitor6Set(struct PinConfig *config);
+void pinMonitor6Enable(unsigned char enable);
 void sub_1244E(void);
 void sub_1245B(void);
 void sub_1245C(void);
@@ -287,34 +260,34 @@ void inputInit(void)
 	inputHandler12489.handler = sub_12489;
 	config.reload = 0x40;
 	config.handler = sub_1217E;
-	sub_11FC8(&config);
-	sub_11FEF(0);
+	pinMonitor0Set(&config);
+	pinMonitor0Enable(0);
 	sub_12019();
 	config.reload = 0x40;
 	config.handler = sub_11E0A;
-	sub_11DB9(&config);
-	sub_11DE0(0);
+	pinMonitor1Set(&config);
+	pinMonitor1Enable(0);
 	sub_1204D();
 	config.reload = 3;
 	config.handler = sub_1235A;
-	sub_12309(&config);
-	sub_12330(0);
+	pinMonitor4Set(&config);
+	pinMonitor4Enable(0);
 	config.reload = 3;
 	config.handler = sub_122E0;
-	sub_122AA(&config);
-	sub_122D1(0);
+	pinMonitor3Set(&config);
+	pinMonitor3Enable(0);
 	config.reload = 3;
 	config.handler = sub_12295;
-	sub_1225F(&config);
-	sub_12286(0);
+	pinMonitor2Set(&config);
+	pinMonitor2Enable(0);
 	config.reload = 3;
 	config.handler = sub_123D3;
-	sub_12382(&config);
-	sub_123A9(0);
+	pinMonitor5Set(&config);
+	pinMonitor5Enable(0);
 	config.reload = 0;
 	config.handler = sub_1244E;
-	sub_123FD(&config);
-	sub_12424(0);
+	pinMonitor6Set(&config);
+	pinMonitor6Enable(0);
 	inputDelays.flag40 = 0;
 	inputDelays.flag80 = 0;
 	inputDelays.motionInfo = 0;
@@ -375,7 +348,7 @@ void sub_115F0(void)
 	if ((flags & 0x00010000) == 0) {
 		sub_12360(1);
 		if (!P7.6) {
-			sub_123A9(1);
+			pinMonitor5Enable(1);
 			pinMonitors.pin[5].last = 0;
 			inputScanHold(0x1a);
 		}
@@ -445,7 +418,7 @@ void sub_116D8(void)
 	if ((flags & 0x00000004) == 0) {
 		sub_122E7(1);
 		if (!P3.0) {
-			sub_12330(1);
+			pinMonitor4Enable(1);
 			pinMonitors.pin[4].last = 0;
 			inputScanHold(0x1a);
 		}
@@ -455,7 +428,7 @@ void sub_116D8(void)
 	if ((flags & 0x00010000) == 0) {
 		sub_12360(1);
 		if (!P7.6) {
-			sub_123A9(1);
+			pinMonitor5Enable(1);
 			pinMonitors.pin[5].last = 0;
 			inputScanHold(0x1a);
 		}
@@ -631,11 +604,11 @@ void pinMonitorPoll(void)
 			level = P11.5;
 			if (pinMonitors.pin[0].last == level) {
 				if (pinMonitors.pin[0].count-- == 0) {
-					sub_11FEF(0);
+					pinMonitor0Enable(0);
 					pinMonitors.pin[0].config.handler();
 				}
 			} else {
-				sub_11FEF(0);
+				pinMonitor0Enable(0);
 			}
 			pinMonitors.pin[0].last = level;
 		}
@@ -643,11 +616,11 @@ void pinMonitorPoll(void)
 			level = P4.6;
 			if (pinMonitors.pin[1].last == level) {
 				if (pinMonitors.pin[1].count-- == 0) {
-					sub_11DE0(0);
+					pinMonitor1Enable(0);
 					pinMonitors.pin[1].config.handler();
 				}
 			} else {
-				sub_11DE0(0);
+				pinMonitor1Enable(0);
 			}
 			pinMonitors.pin[1].last = level;
 		}
@@ -659,11 +632,11 @@ void pinMonitorPoll(void)
 			level = P3.0;
 			if (pinMonitors.pin[4].last == level) {
 				if (pinMonitors.pin[4].count-- == 0) {
-					sub_12330(0);
+					pinMonitor4Enable(0);
 					pinMonitors.pin[4].config.handler();
 				}
 			} else {
-				sub_12330(0);
+				pinMonitor4Enable(0);
 			}
 			pinMonitors.pin[4].last = level;
 		}
@@ -671,11 +644,11 @@ void pinMonitorPoll(void)
 			level = P7.6;
 			if (pinMonitors.pin[5].last == level) {
 				if (pinMonitors.pin[5].count-- == 0) {
-					sub_123A9(0);
+					pinMonitor5Enable(0);
 					pinMonitors.pin[5].config.handler();
 				}
 			} else {
-				sub_123A9(0);
+				pinMonitor5Enable(0);
 			}
 			pinMonitors.pin[5].last = level;
 		}
@@ -683,11 +656,11 @@ void pinMonitorPoll(void)
 			level = P7.4;
 			if (pinMonitors.pin[6].last == level) {
 				if (pinMonitors.pin[6].count-- == 0) {
-					sub_12424(0);
+					pinMonitor6Enable(0);
 					pinMonitors.pin[6].config.handler();
 				}
 			} else {
-				sub_12424(0);
+				pinMonitor6Enable(0);
 			}
 			pinMonitors.pin[6].last = level;
 		}
@@ -800,13 +773,13 @@ void sub_11D97(unsigned char enable)
 	}
 }
 
-void sub_11DB9(struct PinConfig *config)
+void pinMonitor1Set(struct PinConfig *config)
 {
 	pinMonitors.pin[1].config = *config;
 	pinMonitors.pin[1].count = 0;
 }
 
-void sub_11DE0(unsigned char enable)
+void pinMonitor1Enable(unsigned char enable)
 {
 	if (enable == 0) {
 		pinMonitors.mask &= ~0x02;
@@ -827,12 +800,12 @@ void sub_11E0A(void)
 	buttonPress2.count++;
 	state = stateGet();
 	if (buttonPress2.count < 2) {
-		sub_11DE0(1);
+		pinMonitor1Enable(1);
 	} else if (buttonPress2.count == 2) {
 		sub_1179E();
 		dly_tsk(3);
 		buttonPress2.keys = sub_12081();
-		sub_11DE0(1);
+		pinMonitor1Enable(1);
 		paramRead(0x2e, 1, &value);
 		buttonPress2.time1 = value >= 4 ? value : 3;
 		paramRead(0x2f, 1, &value);
@@ -850,7 +823,7 @@ void sub_11E0A(void)
 				}
 				buttonPress2.result = buttonPress2.keys;
 				stateTransition(0x14);
-				sub_11DE0(1);
+				pinMonitor1Enable(1);
 			} else if (buttonPress2.count == buttonPress2.time2 || sub_12784()) {
 				if (state != sub_12074() && state != 0x0008 && !mode.bits.notify &&
 				    !configGet()->pressAnyState) {
@@ -860,7 +833,7 @@ void sub_11E0A(void)
 				buttonPress2.result = 2;
 				stateTransition(0x31);
 			} else {
-				sub_11DE0(1);
+				pinMonitor1Enable(1);
 			}
 			break;
 		}
@@ -905,13 +878,13 @@ void sub_11FA6(unsigned char enable)
 	}
 }
 
-void sub_11FC8(struct PinConfig *config)
+void pinMonitor0Set(struct PinConfig *config)
 {
 	pinMonitors.pin[0].config = *config;
 	pinMonitors.pin[0].count = 0;
 }
 
-void sub_11FEF(unsigned char enable)
+void pinMonitor0Enable(unsigned char enable)
 {
 	if (enable == 0) {
 		pinMonitors.mask &= ~0x01;
@@ -1029,12 +1002,12 @@ void sub_1217E(void)
 	if (stateGet() != sub_12040() && !configGet()->pressAnyState) {
 		sub_12044(0);
 	} else if (buttonPress1.count < 2) {
-		sub_11FEF(1);
+		pinMonitor0Enable(1);
 	} else if (buttonPress1.count == 2) {
 		sub_1179E();
 		dly_tsk(3);
 		buttonPress1.keys = sub_12111();
-		sub_11FEF(1);
+		pinMonitor0Enable(1);
 		paramRead(0x2e, 1, &value);
 		buttonPress1.time1 = value >= 4 ? value : 3;
 		paramRead(0x2f, 1, &value);
@@ -1046,7 +1019,7 @@ void sub_1217E(void)
 				buttonPress1.result = buttonPress1.keys;
 				stateTransition(0x0b);
 			} else {
-				sub_11FEF(1);
+				pinMonitor0Enable(1);
 			}
 			break;
 		}
@@ -1063,13 +1036,13 @@ void sub_1224B(unsigned char enable)
 	}
 }
 
-void sub_1225F(struct PinConfig *config)
+void pinMonitor2Set(struct PinConfig *config)
 {
 	pinMonitors.pin[2].config = *config;
 	pinMonitors.pin[2].count = 0;
 }
 
-void sub_12286(unsigned char enable)
+void pinMonitor2Enable(unsigned char enable)
 {
 	if (enable == 0)
 		pinMonitors.mask &= ~0x04;
@@ -1089,13 +1062,13 @@ void sub_12296(unsigned char enable)
 	}
 }
 
-void sub_122AA(struct PinConfig *config)
+void pinMonitor3Set(struct PinConfig *config)
 {
 	pinMonitors.pin[3].config = *config;
 	pinMonitors.pin[3].count = 0;
 }
 
-void sub_122D1(unsigned char enable)
+void pinMonitor3Enable(unsigned char enable)
 {
 	if (enable == 0)
 		pinMonitors.mask &= ~0x08;
@@ -1121,13 +1094,13 @@ void sub_122E7(unsigned char enable)
 	}
 }
 
-void sub_12309(struct PinConfig *config)
+void pinMonitor4Set(struct PinConfig *config)
 {
 	pinMonitors.pin[4].config = *config;
 	pinMonitors.pin[4].count = 0;
 }
 
-void sub_12330(unsigned char enable)
+void pinMonitor4Enable(unsigned char enable)
 {
 	if (enable == 0) {
 		pinMonitors.mask &= ~0x10;
@@ -1158,13 +1131,13 @@ void sub_12360(unsigned char enable)
 	}
 }
 
-void sub_12382(struct PinConfig *config)
+void pinMonitor5Set(struct PinConfig *config)
 {
 	pinMonitors.pin[5].config = *config;
 	pinMonitors.pin[5].count = 0;
 }
 
-void sub_123A9(unsigned char enable)
+void pinMonitor5Enable(unsigned char enable)
 {
 	if (enable == 0) {
 		pinMonitors.mask &= ~0x20;
@@ -1196,13 +1169,13 @@ void sub_123DB(unsigned char enable)
 	}
 }
 
-void sub_123FD(struct PinConfig *config)
+void pinMonitor6Set(struct PinConfig *config)
 {
 	pinMonitors.pin[6].config = *config;
 	pinMonitors.pin[6].count = 0;
 }
 
-void sub_12424(unsigned char enable)
+void pinMonitor6Enable(unsigned char enable)
 {
 	if (enable == 0) {
 		pinMonitors.mask &= ~0x40;
