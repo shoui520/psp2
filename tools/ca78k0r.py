@@ -165,13 +165,18 @@ class Listing:
 	addresses and the segments."""
 
 	MAIN = re.compile(r'^ *\d+ +(\d+) (.{5})  (.{8})(.{6})(.*)$')
-	MORE = re.compile(r'^ {12}([0-9A-F]{5})  ([0-9A-F]+)\s*$')
+	MORE = re.compile(r'^ {12}([0-9A-F]{5})  ([0-9A-F]+)(?:\s.*)?$')
 	SEG = re.compile(r'^([0-9A-F]{5}) ([0-9A-F]{5})H +(\S+)\s*$')
 
 	def __init__(self, text):
 		self.statements, self.labels, self.segments = [], {}, []
 		st = None
 		for line in text.replace('\r', '').splitlines():
+			# a statement's further bytes, with the rest of its source when that wrapped
+			m = self.MORE.match(line)
+			if m and st:
+				st.data += bytes.fromhex(m.group(2))
+				continue
 			m = self.MAIN.match(line.ljust(33))
 			if m:
 				no, adrs, obj, _, source = m.groups()
@@ -182,10 +187,6 @@ class Listing:
 				label = LABEL.match(source)
 				if label and address is not None:
 					self.labels[label.group(1)] = address
-				continue
-			m = self.MORE.match(line)
-			if m and st:
-				st.data += bytes.fromhex(m.group(2))
 				continue
 			m = self.SEG.match(line)
 			if m:
