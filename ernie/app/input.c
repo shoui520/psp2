@@ -15,6 +15,7 @@
 #include "config.h"
 #include "input.h"
 #include "kernel.h"
+#include "sleepfactor.h"
 #include "timer.h"
 
 /* a handler of an input bit: called when the bit changes to the levels in edges */
@@ -133,14 +134,10 @@ extern void sub_1D0CC(void);
 extern void sub_1AE6A(void);
 extern void sub_172BC(void);
 extern void sub_1C3B9(unsigned int keys);
-extern void sub_14D13(unsigned char on);
-extern void sub_14D33(unsigned char on);
 extern void sub_1CFFC(void);
 extern void sub_1D012(void);
 extern void sub_21F33(int);
-extern void sub_14CCF(int);
 extern void sub_1C3A1(void);
-extern void sub_14ED3(int);
 extern void sub_1AFD8(void);
 extern void sub_1D0CB(void);
 extern void sub_2B475(void);
@@ -623,8 +620,8 @@ void sampleInputs1(void)
 	inputGroupUpdate(&inputRaw1, &inputState1, &inputGroup1);
 	if (inputGroup1.changed) {
 	}
-	sub_14D13(inputState1.4 ? 0 : 1);
-	sub_14D33(inputState1.6 ? 0 : 1);
+	sleepFactorSet4(inputState1.4 ? 0 : 1);
+	sleepFactorSet7(inputState1.6 ? 0 : 1);
 }
 
 void sampleInputs2(void)
@@ -1308,7 +1305,7 @@ void sub_1245D(void)
 	} else {
 		sub_1D012();
 		sub_21F33(0x20);
-		sub_14CCF(0);
+		sleepFactorSet5(0);
 		sub_1C3A1();
 	}
 	set_flg(2, 0x0100);
@@ -1317,10 +1314,10 @@ void sub_1245D(void)
 void sub_12489(void)
 {
 	if (sub_11D23() == 1) {
-		sub_14ED3(1);
+		sleepFactorSet15(1);
 	} else {
 		sub_21F33(2);
-		sub_14ED3(0);
+		sleepFactorSet15(0);
 	}
 	set_flg(2, 0x0100);
 }

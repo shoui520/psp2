@@ -6,6 +6,7 @@
 #include "ernie.h"
 #include "kernel.h"
 #include "rtc.h"
+#include "sleepfactor.h"
 #include "version.h"
 
 extern unsigned int sub_2AB46(void);
@@ -41,7 +42,6 @@ extern void sub_1D1A9(FLGPTN ptn);
 extern void sub_2D2A8(FLGPTN ptn);
 extern void sub_1F33A(FLGPTN ptn);
 extern void sub_2C415(void);
-extern void sub_14D53(int);
 extern unsigned long sub_2AA79(void);
 extern unsigned char sub_2AB49(int);
 extern void sub_1D60D(void);
@@ -278,13 +278,13 @@ unsigned char sub_10E32(void)
 	state = sub_2AB46();
 	clock = getClock().byte[0];
 	if (isAlarmReached()) {
-		sub_14D53(1);
+		sleepFactorSet3(1);
 		if ((sub_2AA79() & 2) == 0) {
 			if ((state == 0x0004 && getAlarmMode() != 1) || state == 0x0008)
 				ret = sub_2AB49(1);
 		}
 	} else {
-		sub_14D53(0);
+		sleepFactorSet3(0);
 	}
 	if (state != 0x0010 && (clock & 3) == 3)
 		sub_1D60D();

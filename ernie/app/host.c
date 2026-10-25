@@ -23,6 +23,7 @@
 #include "csi.h"
 #include "host.h"
 #include "kernel.h"
+#include "sleepfactor.h"
 
 #define MIN(a, b)		((a) < (b) ? (a) : (b))
 
@@ -48,9 +49,6 @@ struct HostCommand {
 };
 
 extern void tau0PowerOn(void);
-extern unsigned char sub_14C9D(void);
-extern void sub_14CBA(void);
-extern unsigned long sub_14CCA(void);
 extern void sub_1706C(void);
 extern void sub_170DA(void);
 extern unsigned char sub_2BB99(void);
@@ -429,7 +427,7 @@ void hostRequestAnswerReady(unsigned char *state)
 /* the frame's first two bytes: the link's status and flags out, the command's word in */
 int hostFrameBegin(void)
 {
-	hostLink.rx[0] = sub_14C9D() | hostLink.flags.value;
+	hostLink.rx[0] = sleepFactorSnapshot() | hostLink.flags.value;
 	hostLink.flags.bits.overflow = 0;
 	hostLink.flags.bits.checksum = 0;
 	P5.6 = 1;
@@ -748,8 +746,8 @@ unsigned char hostCommandCounter(unsigned char *out, unsigned char *length)
 {
 	unsigned long counter;
 
-	counter = sub_14CCA();
-	sub_14CBA();
+	counter = sleepFactorGet();
+	sleepFactorAcknowledge();
 	memcpy(out, &counter, sizeof(counter));
 	*length = 4;
 	return 0;
@@ -764,8 +762,8 @@ unsigned char hostCommandRequests(unsigned char *out, unsigned char *length)
 	struct HostRequest *request;
 	unsigned long counter;
 
-	counter = sub_14CCA();
-	sub_14CBA();
+	counter = sleepFactorGet();
+	sleepFactorAcknowledge();
 	memcpy(out, &counter, sizeof(counter));
 	out += 4;
 	*length = 4;

@@ -12,10 +12,9 @@
 #include "input.h"
 #include "keepram.h"
 #include "rtc.h"
+#include "sleepfactor.h"
 #include "timer.h"
 
-extern void sub_14D53(int);
-extern unsigned long sub_14CCA(void);
 extern unsigned int sub_2AB46(void);
 extern void sub_2C2ED(int, int);
 extern int sub_2D6C6(void);
@@ -62,7 +61,7 @@ void rtcStart(void)
 	case 0x10:
 	case 0x11:
 		setAlarm(RTC_ALARM_NONE);
-		sub_14D53(0);
+		sleepFactorSet3(0);
 		setAlarmMode(0);
 		break;
 	case 0x40:
@@ -70,7 +69,7 @@ void rtcStart(void)
 	default:
 		setClock(0);
 		setAlarm(RTC_ALARM_NONE);
-		sub_14D53(0);
+		sleepFactorSet3(0);
 		setAlarmMode(0);
 		break;
 	}
@@ -125,7 +124,7 @@ int isAlarmReached(void)
 
 unsigned int sub_11118(void)
 {
-	return sub_14CCA() & 8;
+	return sleepFactorGet() & 8;
 }
 
 void setAlarmMode(unsigned char mode)
