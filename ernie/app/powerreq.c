@@ -16,6 +16,7 @@
 #include "ernie.h"
 #include "chip.h"
 #include "config.h"
+#include "elmo.h"
 #include "host.h"
 #include "input.h"
 #include "kernel.h"
@@ -97,10 +98,7 @@ extern void sub_2DFF2(unsigned int);
 extern void sub_2E016(unsigned int);
 extern unsigned char sub_25224(unsigned char, unsigned char);
 extern unsigned char sub_27D9E(unsigned char, unsigned char);
-extern unsigned char sub_2489D(unsigned char *data, unsigned int length);
 extern unsigned char sub_2A379(unsigned char);
-extern unsigned char sub_25041(unsigned int, unsigned char *buffer);
-extern unsigned char sub_24933(unsigned char *data, unsigned char *value);
 extern unsigned char sub_29F40(unsigned char *reg, unsigned char *value);
 extern unsigned char sub_29E85(unsigned char *data, unsigned int length);
 extern void sub_28DE5(void);
@@ -142,9 +140,6 @@ extern unsigned int wordFF692;			/* and voltage */
 extern unsigned char elmoVersion[2];		/* low byte first */
 extern unsigned char cookieVersion[2];
 extern unsigned char byteFF232[3];		/* the LED's command to the Elmo */
-extern unsigned int wordFF300;			/* the LEDs' state */
-extern unsigned char byteFF2F6[10];		/* the Elmo's status registers 0xa0-0xa4, high byte
-						   first */
 extern unsigned int wordFF698;			/* the battery's life in percent */
 extern unsigned char byteFF6D6[6][2];		/* the Cookie's registers 3-8 as written */
 extern struct BatteryInfo batteryInfo;
@@ -936,26 +931,26 @@ static void powerRequestCtrlLED(void)
 		} else {
 			if (powerRequestData[0] & 0x20) {
 				if (powerRequestData[0] & 0x80)
-					wordFF300 |= 0x4000;
+					elmoLed |= 0x4000;
 				else
-					wordFF300 &= ~0x4000;
+					elmoLed &= ~0x4000;
 			}
 			if (powerRequestData[0] & 0x10) {
 				if (powerRequestData[0] & 0x80)
-					wordFF300 |= 0x2000;
+					elmoLed |= 0x2000;
 				else
-					wordFF300 &= ~0x2000;
+					elmoLed &= ~0x2000;
 			}
 			if (powerRequestData[0] & 0x08) {
 				if (powerRequestData[0] & 0x80)
-					wordFF300 |= 0x1000;
+					elmoLed |= 0x1000;
 				else
-					wordFF300 &= ~0x1000;
+					elmoLed &= ~0x1000;
 			}
 			byteFF232[0] = 0xa5;
-			byteFF232[1] = ((unsigned char *)&wordFF300)[1];
-			byteFF232[2] = (unsigned char)wordFF300;
-			result = powerResult(sub_2489D(byteFF232, 3));
+			byteFF232[1] = ((unsigned char *)&elmoLed)[1];
+			byteFF232[2] = (unsigned char)elmoLed;
+			result = powerResult(elmoWrite(byteFF232, 3));
 		}
 	} else
 		result = 0x3b;
@@ -1011,21 +1006,21 @@ static void powerRequest0894(void)
 	unsigned char result;
 
 	if (powerRequestData[0] != 0) {
-		byteFF2F6[1] |= powerRequestData[1];
-		byteFF2F6[0] |= powerRequestData[2];
-		byteFF2F6[3] |= powerRequestData[3];
-		byteFF2F6[5] |= powerRequestData[5];
-		byteFF2F6[4] |= powerRequestData[6];
+		elmoStatusMask.byte[1] |= powerRequestData[1];
+		elmoStatusMask.byte[0] |= powerRequestData[2];
+		elmoStatusMask.byte[3] |= powerRequestData[3];
+		elmoStatusMask.byte[5] |= powerRequestData[5];
+		elmoStatusMask.byte[4] |= powerRequestData[6];
 	} else {
-		byteFF2F6[1] &= ~powerRequestData[1];
-		byteFF2F6[0] &= ~powerRequestData[2];
-		byteFF2F6[3] &= ~powerRequestData[3];
-		byteFF2F6[5] &= ~powerRequestData[5];
-		byteFF2F6[4] &= ~powerRequestData[6];
-		byteFF2F6[7] &= ~powerRequestData[7];
-		byteFF2F6[9] &= ~powerRequestData[8];
+		elmoStatusMask.byte[1] &= ~powerRequestData[1];
+		elmoStatusMask.byte[0] &= ~powerRequestData[2];
+		elmoStatusMask.byte[3] &= ~powerRequestData[3];
+		elmoStatusMask.byte[5] &= ~powerRequestData[5];
+		elmoStatusMask.byte[4] &= ~powerRequestData[6];
+		elmoStatusMask.byte[7] &= ~powerRequestData[7];
+		elmoStatusMask.byte[9] &= ~powerRequestData[8];
 	}
-	result = sub_2489D(byteFF232, sub_25041(0x1f, byteFF232));
+	result = elmoWrite(byteFF232, elmoGetMasks(0x1f, byteFF232));
 	result = powerResult(result);
 	powerRequestDone(result);
 }
@@ -1037,7 +1032,7 @@ static void powerRequestReadElmoReg(void)
 	unsigned char value[2];
 
 	if (powerRequest.length < 3) {
-		result = powerResult(sub_24933(powerRequestData, value));
+		result = powerResult(elmoRead(powerRequestData, value));
 		if (result == 0) {
 			powerRequestAnswer[0] = value[1];
 			powerRequestAnswer[1] = value[0];
@@ -1059,7 +1054,7 @@ static void powerRequestWriteElmoReg(void)
 		write[0] = powerRequestData[0];
 		write[1] = powerRequestData[2];
 		write[2] = powerRequestData[1];
-		result = powerResult(sub_2489D(write, 3));
+		result = powerResult(elmoWrite(write, 3));
 	} else
 		result = 0x3b;
 	powerRequestDone(result);
@@ -1189,14 +1184,14 @@ static void powerRequestCtrlSupplyCurrentUsb(void)
 /* the Elmo's status registers 0xa0-0xa3 and 0xa4's high byte, high byte first */
 void powerReadStatus(unsigned char *out)
 {
-	*out++ = byteFF2F6[1];
-	*out++ = byteFF2F6[0];
-	*out++ = byteFF2F6[3];
-	*out++ = byteFF2F6[2];
-	*out++ = byteFF2F6[5];
-	*out++ = byteFF2F6[4];
-	*out++ = byteFF2F6[7];
-	*out++ = byteFF2F6[9];
+	*out++ = elmoStatusMask.byte[1];
+	*out++ = elmoStatusMask.byte[0];
+	*out++ = elmoStatusMask.byte[3];
+	*out++ = elmoStatusMask.byte[2];
+	*out++ = elmoStatusMask.byte[5];
+	*out++ = elmoStatusMask.byte[4];
+	*out++ = elmoStatusMask.byte[7];
+	*out++ = elmoStatusMask.byte[9];
 }
 
 /* 0x0900 (sceSysconGetBatteryRemainCap) */

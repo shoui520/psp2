@@ -21,6 +21,7 @@ typedef struct t_msg {
 } T_MSG;
 
 #define E_OK		0
+#define E_TMOUT		(-50)
 
 #define TWF_ANDW	0x00
 #define TWF_ORW		0x01

@@ -6,6 +6,7 @@
 
 #include "ernie.h"
 #include "config.h"
+#include "elmo.h"
 #include "iica.h"
 #include "kernel.h"
 #include "power.h"
@@ -19,11 +20,9 @@
 extern __sreg unsigned char saddr_FFE61;
 extern __sreg unsigned char saddr_FFE57;
 extern __sreg unsigned char saddr_FFE63;
-extern unsigned int wordFF302;
 
 extern void sub_11D73(void);
 extern void sub_11D7B(void);
-extern unsigned char sub_24933(unsigned char *data, unsigned char *value);
 extern unsigned char sub_267C2(void);
 extern void sub_276A3(void);
 extern void sub_2782D(void);
@@ -64,7 +63,7 @@ unsigned char powerResumed;		/* set by a resume, cleared by a power on */
 static unsigned char padding;		/* 0xff2ed: nothing uses it */
 unsigned char powerJobId;		/* the job task 5 runs next (POWER_JOB_*) */
 unsigned char powerJobFlag;		/* only ever cleared */
-unsigned int powerCutReg0;		/* registers 0xb0-0xb2 of sub_24933's device, read at a */
+unsigned int powerCutReg0;		/* registers 0xb0-0xb2 of elmoRead's device, read at a */
 unsigned int powerCutReg1;		/* power cut and cleared at a power on */
 unsigned int powerCutReg2;
 
@@ -139,7 +138,7 @@ static void powerJobResume(void)
 
 	sub_28DE9();
 	powerResumed = 1;
-	if (wordFF302 & 0x8000) {
+	if (elmoRegA6 & 0x8000) {
 		sub_2E854(0);
 		sub_2A6A0(4);
 		sub_2E854(1);
@@ -250,11 +249,11 @@ static void powerJobCut(void)
 	P6.3 = 0;
 	P13.1 = 0;
 	reg = 0xb0;
-	result = sub_24933(&reg, (unsigned char *)&powerCutReg0);
+	result = elmoRead(&reg, (unsigned char *)&powerCutReg0);
 	reg = 0xb1;
-	result = sub_24933(&reg, (unsigned char *)&powerCutReg1);
+	result = elmoRead(&reg, (unsigned char *)&powerCutReg1);
 	reg = 0xb2;
-	result = sub_24933(&reg, (unsigned char *)&powerCutReg2);
+	result = elmoRead(&reg, (unsigned char *)&powerCutReg2);
 	sub_2DF1F();
 	iicaClose();
 	sub_29DC2();
