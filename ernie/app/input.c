@@ -17,6 +17,7 @@
 #include "kernel.h"
 #include "sleepfactor.h"
 #include "timer.h"
+#include "touch.h"
 
 /* a handler of an input bit: called when the bit changes to the levels in edges */
 struct InputHandler {
@@ -158,7 +159,6 @@ struct RecordFEBBC {
 	unsigned int	value[2];
 };
 
-extern unsigned char byteFE9DE;
 extern struct RecordFEBBC recordFEBBC;
 
 /* the handlers of each group's bits (the constant tables beside sub_1B2C8) */
@@ -589,7 +589,7 @@ void inputProcess(void)
 	case 0x0020:
 		if (events & 0x0400)
 			sub_1AE6A();
-		if (byteFE9DE == 0 && (events & 0x000c))
+		if (touch.rate == 0 && (events & 0x000c))
 			sub_172BC();
 	case 0x0004:
 	case 0x0008:
