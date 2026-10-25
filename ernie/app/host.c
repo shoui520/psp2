@@ -1,6 +1,6 @@
 /*
  * The host link: the frames the host (the main processor) exchanges with the syscon over SPI
- * (CSI00, the driver at 0x14889). Each frame starts on the host's interrupt (INTP5): the
+ * (CSI00, csi.c). Each frame starts on the host's interrupt (INTP5): the
  * first two bytes go both ways, then the host's command (its word, a length, the data and a
  * checksum) and the syscon's answer to the frame before (the link's status, a length, a
  * result, the data and a checksum). A command is handled at once from the command table, or,
@@ -9,6 +9,7 @@
  * flag 1, and pauses the link when the host keeps it busy too long.
  */
 #pragma rtos_task hostTask
+#pragma rtos_interrupt INTP5 hostInterrupt
 #pragma sfr
 #pragma NOP
 #pragma inline
@@ -19,6 +20,7 @@
 #include "ernie.h"
 #include "chip.h"
 #include "config.h"
+#include "csi.h"
 #include "host.h"
 #include "kernel.h"
 
@@ -45,24 +47,10 @@ struct HostCommand {
 	unsigned char	type;
 };
 
-/* the requests (the driver's file) */
-extern struct HostRequest * const hostRequests[];
-
 extern void tau0PowerOn(void);
-extern unsigned int hostRequestCount(void);
 extern unsigned char sub_14C9D(void);
 extern void sub_14CBA(void);
 extern unsigned long sub_14CCA(void);
-extern void sub_1499E(unsigned char *tx, unsigned char txLength, unsigned char *rx,
-		      unsigned char rxLength);
-extern void sub_1492A(unsigned char *tx, unsigned char txLength, unsigned char *rx,
-		      unsigned char rxLength);
-extern void sub_14B05(unsigned char *tx, unsigned char *rx, unsigned char length);
-extern void sub_14C87(void);
-extern unsigned char sub_14BCA(void);
-extern void sub_14BF5(void);
-extern void sub_14C16(void);
-extern void sub_148CA(void);
 extern void sub_1706C(void);
 extern void sub_170DA(void);
 extern unsigned char sub_2BB99(void);
@@ -216,6 +204,12 @@ void hostIntCancel(void)
 	clr_flg(1, ~0x0001);
 }
 
+/* the host starts a frame */
+void hostInterrupt(void)
+{
+	iset_flg(1, 0x0001);
+}
+
 int hostInit(void)
 {
 	hostLink.frameSize = 0x20;
@@ -350,7 +344,7 @@ int hostStep(FLGPTN flgptn)
 		break;
 	case HOST_ABORT:
 	default:
-		sub_14BCA();
+		csiCancel();
 		hostFrameFinish();
 		hostLink.state = HOST_IDLE;
 		break;
@@ -441,7 +435,7 @@ int hostFrameBegin(void)
 	P5.6 = 1;
 	P90 = 0;
 	P5.7 = 0;
-	sub_1499E(hostLink.tx, 2, hostLink.rx, 2);
+	csiTransferWait(hostLink.tx, 2, hostLink.rx, 2);
 	hostLink.position = 2;
 	return 0;
 }
@@ -520,18 +514,18 @@ int hostFrameCommand(void)
 		}
 	}
 	length += 2;
-	sub_14B05(hostLink.tx + hostLink.position, hostLink.rx + hostLink.position, length);
+	csiTransferDmaWait(hostLink.tx + hostLink.position, hostLink.rx + hostLink.position, length);
 	hostLink.rx[hostLink.rx[2] + 2] = hostChecksum(hostLink.rx, hostLink.rx[2] + 2);
 	hostLink.position += length;
 	while (DST0)
 		NOP();
-	sub_14C87();
+	csiRelease();
 	sub_1706C();
 	sub_170DA();
 	length = 1;
 	if ((hostLink.rx[2] & 1) == 0)
 		length++;
-	sub_1499E(hostLink.tx + hostLink.position, length, hostLink.rx + hostLink.position, length);
+	csiTransferWait(hostLink.tx + hostLink.position, length, hostLink.rx + hostLink.position, length);
 	hostLink.position += length;
 	return 0;
 }
@@ -551,7 +545,7 @@ unsigned char hostFrameData(void)
 	length -= hostLink.position;
 	if ((hostLink.tx[2] & 1) == 0)
 		length++;
-	sub_1499E(hostLink.tx + hostLink.position, length, NULL, 0);
+	csiTransferWait(hostLink.tx + hostLink.position, length, NULL, 0);
 	hostLink.position += length;
 	return 1;
 }
@@ -624,7 +618,7 @@ int sub_141DF(void)
 
 	request = hostLink.request;
 	if (request != NULL)
-		sub_1492A(NULL, 0, (unsigned char *)&request->command + 1, 1);
+		csiTransfer(NULL, 0, (unsigned char *)&request->command + 1, 1);
 	return 0;
 }
 
@@ -845,8 +839,8 @@ void hostTask(VP_INT exinf)
 			clr_flg(1, ~0x0080);
 			paused = 1;
 			hostIntDisable();
-			sub_14BF5();
-			sub_14C16();
+			csiClose();
+			csiOpenMsb();
 			P5.6 = 0;
 		} else if (flgptn & 0x0100) {
 			clr_flg(1, ~0x0100);
@@ -856,8 +850,8 @@ void hostTask(VP_INT exinf)
 		} else if (flgptn & 0x0040) {
 			clr_flg(1, ~0x0040);
 			paused = 0;
-			sub_14BF5();
-			sub_148CA();
+			csiClose();
+			csiOpenLsb();
 			if (hostPollRequests())
 				;
 			hostIntEnable();

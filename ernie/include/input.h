@@ -1,5 +1,6 @@
 /*
- * The inputs (app/input.c): the keys the scan latches for task 3.
+ * The inputs (app/input.c): the keys the scan latches for task 3, the power key's hold
+ * that the RTC's interrupt counts.
  */
 #ifndef ERNIE_INPUT_H
 #define ERNIE_INPUT_H
@@ -10,7 +11,14 @@ struct InputKeys {
 };
 
 extern struct InputKeys inputKeys;
+extern __near unsigned char holdTicks;
+extern __near unsigned char holdReached;
 
 extern void inputProcess(void);
+extern unsigned char sub_12081(void);
+extern void sub_125F2(void);
+extern void sub_1267E(void);
+extern unsigned char sub_12775(unsigned char ticks);
+extern void sub_1278E(void);
 
 #endif

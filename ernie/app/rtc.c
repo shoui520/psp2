@@ -3,21 +3,32 @@
  * clock and the alarm kept in the RAM kept over a reset, read and written with interrupts
  * disabled (the RTC's interrupt counts the clock).
  */
+#pragma rtos_interrupt INTRTC rtcInterrupt
 #pragma sfr
 #pragma DI
 #pragma EI
 
 #include "ernie.h"
+#include "input.h"
 #include "keepram.h"
 #include "rtc.h"
+#include "timer.h"
 
-extern void sub_1278E(void);
-extern unsigned char getResetCause(void);
 extern void sub_14D53(int);
 extern unsigned long sub_14CCA(void);
+extern unsigned int sub_2AB46(void);
+extern void sub_2C2ED(int, int);
+extern int sub_2D6C6(void);
+extern int sub_2D69C(void);
+
+extern __near unsigned char byteFDD2C;
+extern __near unsigned char byteFDD2D;
 
 /* the alarm's mode, the fifth byte of commands 0x0012 and 0x0082 */
 unsigned char alarmMode;
+
+/* the clock's low word at the last interrupt: odd every other one, once a second */
+static __sreg unsigned int rtcClockLow;
 
 /* the counters at 0 (1 January), the 24-hour clock, an interrupt every 0.5 s */
 void rtcInit(void)
@@ -125,4 +136,59 @@ void setAlarmMode(unsigned char mode)
 unsigned char getAlarmMode(void)
 {
 	return alarmMode;
+}
+
+/*
+ * Every 0.5 s: the clock and the RTC timers' ticks counted, the input's hold checks, once a
+ * second the check that resets the system after 8 failing seconds, then the RTC timers
+ * whose time came.
+ */
+void rtcInterrupt(void)
+{
+	unsigned char i;
+	unsigned int state;
+
+	state = sub_2AB46();
+	DI();
+	keepRam.clock++;
+	timerRtcTicks++;
+	EI();
+	rtcClockLow = keepRam.clock;
+	if (state == 0x0010) {
+		sub_125F2();
+		sub_1267E();
+	} else if (state == 0x0800)
+		sub_125F2();
+	if (rtcClockLow & 0x0001) {
+		sub_2C2ED(3, 0x8000);
+		if (sub_2D6C6() != 0) {
+			byteFDD2D++;
+			byteFDD2C = 1;
+			if (byteFDD2D >= 8 && sub_2D69C() != 0) {
+				DI();
+				byteFDD2C = 2;
+				setResetCause(0x30);
+				resetSystem();
+			}
+		} else {
+			byteFDD2D = 0;
+			byteFDD2C = 0;
+		}
+	}
+	if (!P4.6) {
+		if (sub_12081() == 1) {
+			holdTicks++;
+			if (sub_12775(holdTicks) != 0)
+				holdReached = 1;
+		}
+	} else {
+		holdTicks = 0;
+		holdReached = 0;
+	}
+	for (i = TIMER_RTC_FIRST; i < TIMER_COUNT; i++) {
+		if (timers[i].state == 1 && timers[i].time == timerRtcTicks) {
+			timers[i].state = 0;
+			timers[i].handler();
+		}
+	}
 }

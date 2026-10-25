@@ -7,13 +7,13 @@
 #pragma DI
 
 #include "ernie.h"
+#include "host.h"
 #include "keepram.h"
 #include "rtc.h"
 
 extern void sub_27651(void);
 extern void tickStart(void);
 extern void sub_16E7D(void);
-extern void sub_1488D(void);
 
 void intInit(void);
 
@@ -48,7 +48,7 @@ void hdwinit(void)
 
 void main(void)
 {
-	sub_1488D();
+	hostRequestInit();
 	return;
 }
 

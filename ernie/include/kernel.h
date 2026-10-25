@@ -32,6 +32,7 @@ extern void	ext_tsk(void);
 extern ER	dly_tsk(RELTIM dlytim);
 
 extern ER	set_flg(ID flgid, FLGPTN setptn);
+extern ER	iset_flg(ID flgid, FLGPTN setptn);
 extern ER	clr_flg(ID flgid, FLGPTN clrptn);
 extern ER	wai_flg(ID flgid, FLGPTN waiptn, MODE wfmode, FLGPTN *p_flgptn);
 extern ER	twai_flg(ID flgid, FLGPTN waiptn, MODE wfmode, FLGPTN *p_flgptn, TMO tmout);
@@ -42,6 +43,8 @@ extern ER	rcv_mbx(ID mbxid, T_MSG **ppk_msg);
 extern ER	get_mpf(ID mpfid, VP *p_blk);
 extern ER	pget_mpf(ID mpfid, VP *p_blk);
 extern ER	rel_mpf(ID mpfid, VP blk);
+
+extern ER	isig_tim(void);
 
 extern ER	dis_dsp(void);
 extern ER	ena_dsp(void);

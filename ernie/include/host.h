@@ -87,6 +87,12 @@ struct HostLink {
 
 extern struct HostLink hostLink;
 
+/* the requests (request.c) */
+extern struct HostRequest * const hostRequests[];
+
+extern unsigned int hostRequestCount(void);
+extern void hostRequestInit(void);
+
 extern void hostIntInit(void);
 extern void hostIntEnable(void);
 extern void hostIntDisable(void);

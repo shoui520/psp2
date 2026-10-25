@@ -2,9 +2,11 @@
  * The timer array units: TAU0 and TAU1 powered on and off, and the interval timers on
  * channels 0 of TAU0 and 0 and 1 of TAU1 started and stopped. TM10 is the tick.
  */
+#pragma rtos_interrupt INTTM10 tickInterrupt
 #pragma sfr
 
 #include "ernie.h"
+#include "kernel.h"
 
 void tau1PowerOn(void);
 void tau1PowerOff(void);
@@ -23,6 +25,12 @@ void tickStop(void)
 	tm10Stop();
 	tau1PowerOff();
 	return;
+}
+
+/* TM10's interrupt: a tick of the kernel's time */
+void tickInterrupt(void)
+{
+	isig_tim();
 }
 
 void tau0PowerOn(void)

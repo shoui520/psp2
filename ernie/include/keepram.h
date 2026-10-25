@@ -18,4 +18,8 @@ struct KeepRam {
 
 extern __far struct KeepRam keepRam;
 
+extern void setResetCause(unsigned char cause);
+extern unsigned char getResetCause(void);
+extern void resetSystem(void);
+
 #endif
