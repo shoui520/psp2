@@ -15,6 +15,7 @@
 #include "charge.h"
 #include "chip.h"
 #include "config.h"
+#include "handshake.h"
 #include "host.h"
 #include "input.h"
 #include "kernel.h"
@@ -43,8 +44,6 @@
 #define BBMC_REG_READ_ONLY	3
 
 extern void sub_2C394(int, int);
-extern unsigned char sub_2BB99(void);
-extern unsigned char sub_2BBE9(void);
 extern unsigned char sub_11D57(void);
 extern unsigned char sub_11D61(void);
 extern void sub_123DB(int);
@@ -719,9 +718,9 @@ void bbmcRequestRun(void)
 {
 	unsigned char result;
 
-	if (!sub_2BB99()) {
+	if (!handshakeUnlocked11()) {
 		hostRequestAnswer(&bbmcRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
-		sub_2BBE9();
+		handshakeRefuse();
 		return;
 	}
 	if (!(getHardwareInfoFlags() & 0x02)) {

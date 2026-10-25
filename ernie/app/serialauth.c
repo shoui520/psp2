@@ -9,6 +9,7 @@
 
 #include "ernie.h"
 #include "serialauth.h"
+#include "state.h"
 
 #define SERIAL_AUTH_MODES	3
 
@@ -44,8 +45,6 @@ static unsigned int serialAuthUnlocked[SERIAL_AUTH_MODES];
 
 static __near struct SerialAuthPacket serialAuthPacket;
 
-extern unsigned char sub_2B4EC(void);
-extern void sub_2B501(void);
 extern void sub_2DAE1(int);
 
 static unsigned char serialAuthUnlock0(void);
@@ -143,7 +142,7 @@ static unsigned char serialAuthUnlock0(void)
 {
 	unsigned char result;
 
-	if (sub_2B4EC())
+	if (stateSerialUnlock())
 		result = 0x11;
 	else
 		result = 0;
@@ -152,7 +151,7 @@ static unsigned char serialAuthUnlock0(void)
 
 static unsigned char serialAuthLock0(void)
 {
-	sub_2B501();
+	stateSerialLock();
 	sub_2DAE1(0x0f);
 	return 0;
 }

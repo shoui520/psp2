@@ -39,7 +39,7 @@ struct InputBit {
 	unsigned char			(*count)(void);
 };
 
-extern struct InputHandler inputHandler2B475;
+extern struct InputHandler inputHandlerWake2;
 extern struct InputHandler inputHandler1245B;
 extern struct InputHandler inputHandler1245C;
 extern struct InputHandler inputHandler25263;
@@ -47,7 +47,7 @@ extern struct InputHandler inputHandler2526B;
 extern struct InputHandler inputHandlerSerial1;
 extern struct InputHandler inputHandler224FD;
 extern struct InputHandler inputHandler1245D;
-extern struct InputHandler inputHandler2B4BC;
+extern struct InputHandler inputHandlerWake1;
 extern struct InputHandler inputHandler29B68;
 extern struct InputHandler inputHandler1275F;
 extern struct InputHandler inputHandler12698;

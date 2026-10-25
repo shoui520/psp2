@@ -37,6 +37,14 @@ extern unsigned char sub_1267F(void);
 extern unsigned char sub_1268B(void);
 extern unsigned char sub_126C9(void);
 extern int sub_23A40(void);
+extern unsigned char sub_11CFB(void);
+extern unsigned char sub_11D03(void);
+extern void sub_11DE0(unsigned char enable);
+extern void sub_11FEF(unsigned char enable);
+extern int sub_12019(void);
+extern int sub_1203A(void);
+extern int sub_1204D(void);
+extern int sub_1206E(void);
 extern void sub_2C2C1(ID mbxid, T_MSG *msg);
 extern void sub_2C315(ID flgid, FLGPTN setptn);
 extern void sub_2C394(int, int);
@@ -639,4 +647,57 @@ static unsigned int stateNextOf(void)
 		}
 	}
 	return next;
+}
+
+/* input handler: input 1.4 (sub_11CFB) wakes a suspended system; its release with button 2
+   not pressed and input 1.6 up starts an off one */
+void stateInputWake2(void)
+{
+	unsigned int state;
+
+	state = stateGet();
+	if (sub_11CFB()) {
+		if (state == STATE_SUSPEND)
+			stateTransition(0);
+		sub_1204D();
+		sub_11DE0(1);
+	} else {
+		if (!(unsigned char)sub_1206E() && !sub_11D03() && state == STATE_OFF) {
+			stateTransition(0);
+			serial2Arm();
+		}
+		sub_1204D();
+	}
+}
+
+/* input handler: input 1.6 (sub_11D03) wakes a suspended system by transition 0x12 */
+void stateInputWake1(void)
+{
+	unsigned int state;
+
+	state = stateGet();
+	if (sub_11D03()) {
+		if (state == STATE_SUSPEND)
+			stateTransition(0x12);
+		sub_12019();
+		sub_11FEF(1);
+	} else {
+		if ((unsigned char)sub_1203A()) {
+		}
+		sub_12019();
+	}
+}
+
+/* serial mode 0's unlock (serialAuthUnlock0): an off system starts by transition 0x0c */
+unsigned char stateSerialUnlock(void)
+{
+	if (stateGet() != STATE_OFF)
+		return 1;
+	return (unsigned char)stateTransition(0x0c);
+}
+
+/* and its lock: transition 0x34 */
+int stateSerialLock(void)
+{
+	return (unsigned char)stateTransition(0x34);
 }

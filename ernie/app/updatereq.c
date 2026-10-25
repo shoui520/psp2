@@ -18,6 +18,7 @@
 #include "aes.h"
 #include "command.h"
 #include "downloader.h"
+#include "handshake.h"
 #include "host.h"
 #include "kernel.h"
 #include "nvs.h"
@@ -28,8 +29,6 @@
 #include "updatereq.h"
 #include "version.h"
 
-extern unsigned char sub_2BB99(void);
-extern unsigned char sub_2BBE9(void);
 extern ER sub_2C2ED(unsigned char flgid, FLGPTN setptn);
 extern unsigned char sub_2CCA2(void);
 extern unsigned char sub_2CC93(void);
@@ -229,9 +228,9 @@ void updaterRequestEvent(FLGPTN ptn)
 
 	if (!(ptn & 0x0040))
 		return;
-	if (!sub_2BB99()) {
+	if (!handshakeUnlocked11()) {
 		hostRequestAnswer(&updaterRequest, HOST_REQUEST_UNKNOWN, 0x3f, 0);
-		sub_2BBE9();
+		handshakeRefuse();
 		return;
 	}
 	result = 0x3b;

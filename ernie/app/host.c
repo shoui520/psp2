@@ -22,6 +22,7 @@
 #include "command.h"
 #include "config.h"
 #include "csi.h"
+#include "handshake.h"
 #include "host.h"
 #include "inputreq.h"
 #include "kernel.h"
@@ -55,8 +56,6 @@ struct HostCommand {
 
 extern void sub_1706C(void);
 extern void sub_170DA(void);
-extern unsigned char sub_2BB99(void);
-extern unsigned char sub_2BBE9(void);
 extern unsigned char sub_2D685(void);
 
 /* the commands' handlers and streams (their files not written yet) */
@@ -79,7 +78,7 @@ unsigned char hostCommandNull(unsigned char *out, unsigned char *length);
 unsigned char hostCommandSleepFactor(unsigned char *out, unsigned char *length);
 unsigned char hostCommandRequests(unsigned char *out, unsigned char *length);
 
-/* the commands, in order: all of them, and those taken before sub_2BB99 allows the rest */
+/* the commands, in order: all of them, and those taken before handshakeUnlocked11 allows the rest */
 static const struct HostCommand hostCommands[] = {
 	{ 0x0000, hostCommandNull, 0 },
 	{ 0x0001, hostCommandErnieVersion, 0 },
@@ -615,7 +614,7 @@ int hostDispatch(unsigned int command, unsigned char *out, unsigned char *length
 	struct HostStream *stream;
 
 	low = 0;
-	if (sub_2BB99()) {
+	if (handshakeUnlocked11()) {
 		high = hostCommandCount();
 		table = hostCommands;
 	} else {
@@ -659,8 +658,8 @@ int hostDispatch(unsigned int command, unsigned char *out, unsigned char *length
 		else if (entry->command < command)
 			low = middle + 1;
 	}
-	if (!sub_2BB99())
-		sub_2BBE9();
+	if (!handshakeUnlocked11())
+		handshakeRefuse();
 	return -1;
 }
 

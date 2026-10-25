@@ -18,6 +18,7 @@
 #include "board.h"
 #include "clockout.h"
 #include "command.h"
+#include "handshake.h"
 #include "host.h"
 #include "kernel.h"
 #include "rtc.h"
@@ -28,8 +29,6 @@
 #include "version.h"
 
 extern int sub_2D646(unsigned int *value);
-extern unsigned char sub_2BB99(void);
-extern unsigned char sub_2BBE9(void);
 extern int sub_2ED36(void);
 extern int sub_2D626(unsigned int *value);
 extern unsigned char sub_2D662(void);
@@ -38,7 +37,6 @@ extern unsigned char sub_2D685(void);
 extern void sub_2C2ED(int, int);
 extern unsigned char sub_2C15B(unsigned int offset, unsigned int size, unsigned char *buf);
 extern unsigned char sub_2C199(unsigned int offset, unsigned int size, unsigned char *buf);
-extern unsigned char sub_2B61F(unsigned char *buf);
 extern unsigned char sub_2DB73(void);
 extern unsigned char sub_2DAEA(unsigned char *buf);
 extern unsigned char sub_2DC1F(unsigned int offset, unsigned char *data, unsigned char *length);
@@ -228,13 +226,13 @@ void commandRequestNotify(void)
 	unsigned long parameter;
 	union CommandWord word;
 
-	if (!sub_2BB99()) {
+	if (!handshakeUnlocked11()) {
 		for (i = 0; i < 6; i++) {
 			if (commandBaseRequests[i] == commandRequest.command)
 				goto allowed;
 		}
 		hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
-		sub_2BBE9();
+		handshakeRefuse();
 		return;
 	}
 allowed:
@@ -538,7 +536,7 @@ int commandHandshake(unsigned char *data, unsigned char command, CommandDone don
 	unsigned char result;
 
 	memcpy(commandRequestAnswer, data, 0x28);
-	result = sub_2B61F(commandRequestAnswer);
+	result = handshakeCommand(commandRequestAnswer);
 	done(command, result);
 	return 0;
 }

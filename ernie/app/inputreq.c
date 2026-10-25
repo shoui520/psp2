@@ -21,6 +21,7 @@
 #include "board.h"
 #include "analog.h"
 #include "csi01.h"
+#include "handshake.h"
 #include "host.h"
 #include "input.h"
 #include "inputreq.h"
@@ -67,8 +68,6 @@ struct InputRequests {
 };
 
 extern unsigned char sub_11D1B(void);
-extern unsigned char sub_2BB99(void);
-extern unsigned char sub_2BBE9(void);
 extern void sub_2C342(ID flgid, FLGPTN setptn);
 extern void sub_2DAE1(int);
 
@@ -350,9 +349,9 @@ static void touchRequestRun(void)
 	unsigned char i;
 
 	if (inputRequests.touchPending != 0) {
-		if (!sub_2BB99()) {
+		if (!handshakeUnlocked11()) {
 			hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
-			sub_2BBE9();
+			handshakeRefuse();
 		} else {
 			for (i = 0; i < sizeof(touchCommands) / sizeof(touchCommands[0]); i++) {
 				if (touchCommands[i].command == touchRequest.command) {
@@ -376,9 +375,9 @@ static void motionRequestRun(void)
 	if (inputRequests.motionFlags & MOTION_PENDING) {
 		if (inputRequests.motionDelay != 0)
 			inputRequests.motionDelay--;
-		else if (!sub_2BB99()) {
+		else if (!handshakeUnlocked11()) {
 			hostRequestAnswer(&motionRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
-			sub_2BBE9();
+			handshakeRefuse();
 			return;
 		} else
 			motionCommands[inputRequests.motionCommand]();
@@ -414,9 +413,9 @@ void controlsRequestRun(void)
 {
 	unsigned char i;
 
-	if (!sub_2BB99()) {
+	if (!handshakeUnlocked11()) {
 		hostRequestAnswer(&controlsRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
-		sub_2BBE9();
+		handshakeRefuse();
 	} else {
 		for (i = 0; i < sizeof(controlsCommands) / sizeof(controlsCommands[0]); i++) {
 			if (controlsCommands[i].command == controlsRequest.command) {

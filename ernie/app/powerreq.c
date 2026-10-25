@@ -20,6 +20,7 @@
 #include "config.h"
 #include "cookie.h"
 #include "elmo.h"
+#include "handshake.h"
 #include "host.h"
 #include "input.h"
 #include "kernel.h"
@@ -44,8 +45,6 @@ struct PowerCommand {
 	void		(*handler)(void);
 };
 
-extern unsigned char sub_2BB99(void);
-extern unsigned char sub_2BBE9(void);
 extern void sub_2C315(ID flgid, FLGPTN setptn);
 extern unsigned char sub_11D57(void);
 extern unsigned char sub_11D61(void);
@@ -263,9 +262,9 @@ void powerRequestEvent(void)
 {
 	unsigned char i;
 
-	if (!sub_2BB99()) {
+	if (!handshakeUnlocked11()) {
 		hostRequestAnswer(&powerRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
-		sub_2BBE9();
+		handshakeRefuse();
 	} else {
 		for (i = 0; i < sizeof(powerCommands) / sizeof(powerCommands[0]); i++) {
 			if (powerCommands[i].command == powerCommand) {
@@ -282,9 +281,9 @@ void batteryRequestEvent(void)
 {
 	unsigned char i;
 
-	if (!sub_2BB99()) {
+	if (!handshakeUnlocked11()) {
 		hostRequestAnswer(&batteryRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
-		sub_2BBE9();
+		handshakeRefuse();
 	} else {
 		for (i = 0; i < sizeof(batteryCommands) / sizeof(batteryCommands[0]); i++) {
 			if (batteryCommands[i].command == batteryRequest.command) {

@@ -81,5 +81,9 @@ extern unsigned int stateGet(void);
 extern int stateTransition(unsigned char transition);
 extern int stateEnter(void);
 extern int stateCheck(void);
+extern void stateInputWake2(void);
+extern void stateInputWake1(void);
+extern unsigned char stateSerialUnlock(void);
+extern int stateSerialLock(void);
 
 #endif

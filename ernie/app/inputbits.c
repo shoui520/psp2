@@ -15,7 +15,7 @@ extern struct InputHandler inputHandlerFE16C;
 
 #define LENGTH(list)	(sizeof(list) / sizeof((list)[0]))
 
-static struct InputHandler * const inputHandlers1Bit4[] = { &inputHandler2B475 };
+static struct InputHandler * const inputHandlers1Bit4[] = { &inputHandlerWake2 };
 static struct InputHandler * const inputHandlers1Bit2[] = {
 	&inputHandler1245B, &inputHandler1245C
 };
@@ -23,7 +23,7 @@ static struct InputHandler * const inputHandlers1Bit1[] = { &inputHandlerFE16C }
 static struct InputHandler * const inputHandlers1Bit5[] = {
 	&inputHandlerSerial1, &inputHandler1245D
 };
-static struct InputHandler * const inputHandlers1Bit6[] = { &inputHandler2B4BC };
+static struct InputHandler * const inputHandlers1Bit6[] = { &inputHandlerWake1 };
 static struct InputHandler * const inputHandlers1Bit7[] = {
 	&inputHandler29B68, &inputHandler1275F
 };

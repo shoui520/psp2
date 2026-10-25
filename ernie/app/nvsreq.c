@@ -6,13 +6,12 @@
  */
 #include <string.h>
 
+#include "handshake.h"
 #include "host.h"
 #include "kernel.h"
 #include "nvs.h"
 #include "nvsreq.h"
 
-extern unsigned char sub_2BB99(void);
-extern unsigned char sub_2BBE9(void);
 extern void sub_2C2ED(int, int);
 
 static struct NvsJob *nvsJobAlloc(void);
@@ -46,9 +45,9 @@ void nvsRequestEvent(FLGPTN ptn)
 		unsigned int offset;
 		unsigned char size;
 
-		if (!sub_2BB99()) {
+		if (!handshakeUnlocked11()) {
 			hostRequestAnswer(&nvsRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
-			sub_2BBE9();
+			handshakeRefuse();
 		} else {
 			switch (nvsRequest.command) {
 			case 0x1080:
