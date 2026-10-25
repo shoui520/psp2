@@ -106,7 +106,7 @@ unsigned char handshakeSetMode(unsigned char state, unsigned char mode)
  * 0x00a0: the 0x28-byte packet is taken into handshakePacket; in state 0 the mode asked for
  * (0x0b or 0x0f) is taken, getIdRecordsLength called and a nonce made with randomGenerate into
  * handshake.challenge, step 2 sent back (mode 0x0f first clears its key and calls
- * sub_2ED26); in state 1 the host's step 2 is AES-CBC decrypted under the mode's first key
+ * snvsReset); in state 1 the host's step 2 is AES-CBC decrypted under the mode's first key
  * (the table at 0x1053c) with the IV at 0x10588, its nonce and the mode's check value
  * compared, and the reply AES-CBC encrypted under the second key, step 3; in state 3 (mode
  * 0x0f) the challenges are encrypted under the third key into the session key, copied to

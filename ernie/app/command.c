@@ -26,17 +26,13 @@
 #include "rtc.h"
 #include "scratchpad.h"
 #include "serial.h"
+#include "snvs.h"
 #include "state.h"
 #include "task.h"
 #include "task5.h"
 #include "version.h"
 #include "watchdog.h"
 
-extern int sub_2ED36(void);
-extern int sub_2ED3C(unsigned char *data);
-extern int sub_2ED5A(unsigned char *data);
-extern int sub_2ED75(unsigned char *data, unsigned char *answer);
-extern int sub_2EE8D(unsigned char *data, unsigned char *answer);
 
 /* a task-side command is done: the answer from its result */
 typedef void (*CommandDone)(unsigned char command, unsigned char result);
@@ -233,7 +229,7 @@ allowed:
 	switch (commandRequest.event) {
 	case HOST_EVENT_COMMAND:
 		if (commandRequest.command >= 0x00d2 && commandRequest.command < 0x00d4 &&
-		    sub_2ED36() == 0) {
+		    snvsUnlocked() == 0) {
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x11, 0);
 			return;
 		}
@@ -615,7 +611,7 @@ int commandSnvsHandshake(unsigned char *data, unsigned char command, CommandDone
 {
 	int result;
 
-	result = sub_2ED3C(data);
+	result = snvsHandshake(data);
 	memcpy(commandRequestAnswer, data, 0x28);
 	if (result != 0)
 		result = 0x12;
@@ -627,7 +623,7 @@ int commandSnvs00D1(unsigned char *data, unsigned char command, CommandDone done
 {
 	int result;
 
-	result = sub_2ED5A(data);
+	result = snvsLock(data);
 	done(command, result);
 	return result;
 }
@@ -638,7 +634,7 @@ int commandSnvsRead(unsigned char *data, unsigned char *answer, unsigned char co
 {
 	int result;
 
-	result = sub_2ED75(data, answer);
+	result = snvsRead(data, answer);
 	done(command, result);
 	return result;
 }
@@ -649,7 +645,7 @@ int commandSnvsWrite(unsigned char *data, unsigned char *answer, unsigned char c
 {
 	int result;
 
-	result = sub_2EE8D(data, answer);
+	result = snvsWrite(data, answer);
 	done(command, result);
 	return result;
 }
