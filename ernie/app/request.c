@@ -8,10 +8,10 @@
 #include "host.h"
 #include "inputreq.h"
 #include "nvsreq.h"
+#include "updatereq.h"
 
 extern struct HostRequest hostRequestFF57E;
 extern struct HostRequest hostRequestFFC3A;
-extern struct HostRequest hostRequestFEE86;
 extern struct HostRequest hostRequestFF15E;
 extern struct HostRequest hostRequestFF174;
 extern struct HostRequest hostRequestFFBE0;
@@ -24,7 +24,7 @@ struct HostRequest * const hostRequests[] = {
 	&motionRequest,
 	&controlsRequest,
 	&nvsRequest,
-	&hostRequestFEE86,
+	&updaterRequest,
 	&hostRequestFF15E,
 	&hostRequestFF174,
 	&hostRequestFFBE0,

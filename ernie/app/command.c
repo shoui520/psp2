@@ -107,7 +107,7 @@ static const unsigned int commandBaseRequests[6] = {
 };
 
 /* the time stamp's digits in appTimeStamp: the year, month, day, hour and minute */
-static const unsigned char timeStampDigits[12] = {
+const unsigned char timeStampDigits[12] = {
 	8, 9, 10, 11, 13, 14, 16, 17, 19, 20, 22, 23,
 };
 

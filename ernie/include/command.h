@@ -8,6 +8,7 @@
 #include "host.h"
 
 extern struct HostRequest commandRequest;
+extern const unsigned char timeStampDigits[12];
 
 extern unsigned char hostCommandErnieVersion(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommandTimeStamp(unsigned char *out, unsigned char *length);

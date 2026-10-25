@@ -27,6 +27,7 @@
 #include "kernel.h"
 #include "sleepfactor.h"
 #include "tau.h"
+#include "updatereq.h"
 
 #define MIN(a, b)		((a) < (b) ? (a) : (b))
 
@@ -66,8 +67,6 @@ extern unsigned char sub_207A7(unsigned char *out, unsigned char *length);
 extern unsigned char sub_21540(unsigned char *out, unsigned char *length);
 extern unsigned char sub_21584(unsigned char *out, unsigned char *length);
 extern unsigned char sub_215C8(unsigned char *out, unsigned char *length);
-extern unsigned char sub_1EFE6(unsigned char *out, unsigned char *length);
-extern unsigned char sub_1F005(unsigned char *out, unsigned char *length);
 extern unsigned char sub_2D289(unsigned char *out, unsigned char *length);
 
 struct HostLink hostLink;
@@ -120,7 +119,7 @@ static const struct HostCommand hostCommands[] = {
 	{ 0x0900, sub_21540, 0 },
 	{ 0x0901, sub_21584, 0 },
 	{ 0x0902, sub_215C8, 0 },
-	{ 0x1100, sub_1EFE6, 0 },
+	{ 0x1100, hostCommandErnieDlVersion, 0 },
 	{ 0x1300, sub_2D289, 0 },
 };
 
@@ -132,8 +131,8 @@ static const struct HostCommand hostBaseCommands[] = {
 	{ 0x0005, hostCommandHardwareInfo, 0 },
 	{ 0x0010, hostCommandWakeupFactor, 0 },
 	{ 0x0013, hostCommand0013, 0 },
-	{ 0x1100, sub_1EFE6, 0 },
-	{ 0x1101, sub_1F005, 0 },
+	{ 0x1100, hostCommandErnieDlVersion, 0 },
+	{ 0x1101, hostCommandUpdaterProgress, 0 },
 	{ 0x1300, sub_2D289, 0 },
 };
 

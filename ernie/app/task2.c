@@ -11,6 +11,7 @@
 #include "serial.h"
 #include "serial1.h"
 #include "sleepfactor.h"
+#include "updatereq.h"
 #include "version.h"
 
 extern unsigned int sub_2AB46(void);
@@ -18,7 +19,6 @@ extern unsigned char sub_10D7A(void);
 extern void sub_21F93(void);
 extern void sub_2E8C6(void);
 extern void sub_263AD(void);
-extern void sub_1EF84(void);
 extern void sub_2D254(void);
 extern void sub_2D67C(void);
 extern unsigned char sub_22542(unsigned char reg, int a, unsigned char *buf, int n);
@@ -34,7 +34,6 @@ extern void sub_2607C(int);
 extern void sub_260A4(void);
 extern void sub_261C9(FLGPTN ptn);
 extern void sub_2D2A8(FLGPTN ptn);
-extern void sub_1F33A(FLGPTN ptn);
 extern void sub_2C415(void);
 extern unsigned long sub_2AA79(void);
 extern unsigned char sub_2AB49(int);
@@ -88,7 +87,7 @@ void task2(VP_INT exinf)
 			}
 			if (ptn & 0x0040) {
 				clr_flg(3, ~(ptn & 0x0040));
-				sub_1F33A(ptn);
+				updaterRequestEvent(ptn);
 			}
 		}
 		sub_2C415();
@@ -200,7 +199,7 @@ unsigned char sub_10D08(void)
 		sub_275F0(0);
 	else
 		sub_27631();
-	sub_1EF84();
+	updaterRequestInit();
 	sub_2D254();
 	sub_2D67C();
 	if (sub_22542(0x2d, 1, &value, 1) == 0)
