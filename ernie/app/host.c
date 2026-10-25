@@ -26,6 +26,7 @@
 #include "inputreq.h"
 #include "kernel.h"
 #include "sleepfactor.h"
+#include "tau.h"
 
 #define MIN(a, b)		((a) < (b) ? (a) : (b))
 
@@ -50,7 +51,6 @@ struct HostCommand {
 	unsigned char	type;
 };
 
-extern void tau0PowerOn(void);
 extern void sub_1706C(void);
 extern void sub_170DA(void);
 extern unsigned char sub_2BB99(void);

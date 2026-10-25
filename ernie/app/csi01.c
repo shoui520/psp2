@@ -120,8 +120,8 @@ void csi01Interrupt(void)
 		case CSI01_TRANSFER:
 			break;
 		case CSI01_FRAME:
-			hostStream0400.first = recordFEBBC.block;
-			recordFEBBC.flag |= 0x80;
+			hostStream0400.first = motion.block;
+			motion.status |= MOTION_FRAME;
 			break;
 		}
 		csi01.state = CSI01_OPEN;

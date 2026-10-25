@@ -24,6 +24,7 @@
 #include "inputreq.h"
 #include "kernel.h"
 #include "motion.h"
+#include "tau.h"
 #include "touch.h"
 
 /* touchPending: touchRequest's command waits for the run */
@@ -35,9 +36,6 @@
 #define MOTION_ANSWER		0x20	/* and then answers */
 #define MOTION_BOOT		0x02	/* the sensor is in its bootloader (0x0484) */
 #define MOTION_STARTED		0x01	/* the sensor's frames go to stream 0x0400 (0x0481) */
-
-/* the motion sensor's packets on CSI01 */
-#define MOTION_PACKET_SIZE	0x3b
 
 /* a request's command and its handler */
 struct InputCommand {
@@ -87,7 +85,6 @@ extern unsigned char sub_2BB99(void);
 extern unsigned char sub_2BBE9(void);
 extern void sub_2C342(ID flgid, FLGPTN setptn);
 extern void sub_2DAE1(int);
-extern void tau0PowerOn(void);
 
 /* the analog sticks' values, two sets (the analog module's) */
 extern __near unsigned char analogSticks0[4];
@@ -307,13 +304,13 @@ void motionRequestNotify(void)
 {
 	switch (motionRequest.event) {
 	case HOST_EVENT_COMMAND:
-		if (recordFEBBC.flag == 0xff) {
+		if (motion.status == MOTION_ABSENT) {
 			switch (motionRequest.command) {
 			case 0x0480:
-				inputRequests.motionAnswer[0] = recordFEBBC.value[1].byte[0];
-				inputRequests.motionAnswer[1] = recordFEBBC.value[1].byte[1];
-				inputRequests.motionAnswer[2] = recordFEBBC.value[0].byte[0];
-				inputRequests.motionAnswer[3] = recordFEBBC.value[0].byte[1];
+				inputRequests.motionAnswer[0] = motion.info[1].byte[0];
+				inputRequests.motionAnswer[1] = motion.info[1].byte[1];
+				inputRequests.motionAnswer[2] = motion.info[0].byte[0];
+				inputRequests.motionAnswer[3] = motion.info[0].byte[1];
 				hostRequestAnswer(&motionRequest, HOST_REQUEST_ANSWER, 0, 4);
 				break;
 			case 0x0481:
@@ -1522,10 +1519,10 @@ static void motionRequest0480(void)
 {
 	switch (inputRequests.motionPhase) {
 	case 0:
-		if (inputDelays.call1AFD8 != 0)
+		if (inputDelays.motionInfo != 0)
 			return;
 		if (P6.3) {
-			sub_1AFD8();
+			motionInfoStart();
 			inputRequests.motionPhase = 1;
 		} else {
 			inputRequests.motionAnswer[0] = 0;
@@ -1538,11 +1535,11 @@ static void motionRequest0480(void)
 	case 1:
 		if (inputKeys.state & 0x0400)
 			break;
-		if (byteFECB5 == 0) {
-			inputRequests.motionAnswer[0] = recordFEBBC.value[1].byte[0];
-			inputRequests.motionAnswer[1] = recordFEBBC.value[1].byte[1];
-			inputRequests.motionAnswer[2] = recordFEBBC.value[0].byte[0];
-			inputRequests.motionAnswer[3] = recordFEBBC.value[0].byte[1];
+		if (motionInfoResult == 0) {
+			inputRequests.motionAnswer[0] = motion.info[1].byte[0];
+			inputRequests.motionAnswer[1] = motion.info[1].byte[1];
+			inputRequests.motionAnswer[2] = motion.info[0].byte[0];
+			inputRequests.motionAnswer[3] = motion.info[0].byte[1];
 			goto answer;
 		}
 		inputRequests.motionFlags &= ~MOTION_PENDING;
@@ -1565,20 +1562,20 @@ static void motionRequest0481(void)
 		if (inputRequests.motionData[0] == 0) {
 			inputRequests.motionFlags &= ~MOTION_STARTED;
 			hostStream0400.state = 0;
-			sub_1AB70();
+			motionStop();
 			inputRequests.motionAnswer[0] = 0;
 			inputRequests.motionFlags &= ~MOTION_PENDING;
 			hostRequestAnswer(&motionRequest, HOST_REQUEST_ANSWER, 0, 1);
 			return;
 		}
 		if (inputRequests.motionData[1] >= 50)
-			byteFECB2 = inputRequests.motionData[1];
-		sub_1AB25();
-		sub_1AB89();
+			motionPeriod = inputRequests.motionData[1];
+		motionStart();
+		motionReadFrame();
 		inputRequests.motionPhase = 1;
 		break;
 	case 1:
-		if (recordFEBBC.flag & 0x80) {
+		if (motion.status & MOTION_FRAME) {
 			inputRequests.motionFlags |= MOTION_STARTED;
 			hostStream0400.state = 3;
 			inputRequests.motionAnswer[0] = 0;
@@ -1605,9 +1602,9 @@ static void motionRequest0483(void)
 			hostRequestAnswer(&motionRequest, HOST_REQUEST_ANSWER, 0x3c, 0);
 			inputRequests.motionFlags &= ~MOTION_PENDING;
 		} else {
-			memcpy(&bufferFEC3A[offset], &inputRequests.motionData[2], length);
+			memcpy(&motionSend[offset], &inputRequests.motionData[2], length);
 			if (offset + length == MOTION_PACKET_SIZE) {
-				sub_1B013(bufferFEC3A, inputRequests.motionAnswer);
+				motionTransfer(motionSend, inputRequests.motionAnswer);
 				inputRequests.motionFlags |= MOTION_TRANSFER | MOTION_ANSWER;
 				inputRequests.motionPhase = 0;
 			} else {
@@ -1645,18 +1642,18 @@ static void motionRequest0484(void)
 			inputRequests.motionPhase = 2;
 			break;
 		case 2:
-			memset(bufferFEC3A, 0, MOTION_FRAME_SIZE);
-			sub_1ACCB(0x80, NULL, 0);
-			sub_1ADA7();
-			sub_1B013(bufferFEC3A, bufferFEC76);
+			memset(motionSend, 0, MOTION_FRAME_SIZE);
+			motionPacketAdd(0x80, NULL, 0);
+			motionPacketFinish();
+			motionTransfer(motionSend, motionReceive);
 			inputRequests.motionFlags |= MOTION_TRANSFER;
 			inputRequests.motionPhase = 3;
 			break;
 		case 3:
 			if (!P7.2) {
-				memset(bufferFEC3A, 0, MOTION_FRAME_SIZE);
-				sub_1ADA7();
-				sub_1B013(bufferFEC3A, inputRequests.motionAnswer);
+				memset(motionSend, 0, MOTION_FRAME_SIZE);
+				motionPacketFinish();
+				motionTransfer(motionSend, inputRequests.motionAnswer);
 				inputRequests.motionFlags |= MOTION_TRANSFER | MOTION_ANSWER;
 				motionRequest.answerLength = MOTION_PACKET_SIZE;
 				inputRequests.motionPhase = 0;
@@ -1677,18 +1674,18 @@ static void motionRequest0485(void)
 	if (inputRequests.motionFlags & MOTION_BOOT) {
 		switch (inputRequests.motionPhase) {
 		case 0:
-			memset(bufferFEC3A, 0, MOTION_FRAME_SIZE);
-			sub_1ACCB(0x84, NULL, 0);
-			sub_1ADA7();
-			sub_1B013(bufferFEC3A, bufferFEC76);
+			memset(motionSend, 0, MOTION_FRAME_SIZE);
+			motionPacketAdd(0x84, NULL, 0);
+			motionPacketFinish();
+			motionTransfer(motionSend, motionReceive);
 			inputRequests.motionFlags |= MOTION_TRANSFER;
 			inputRequests.motionPhase = 1;
 			break;
 		case 1:
 			if (!P7.2) {
-				memset(bufferFEC3A, 0, MOTION_FRAME_SIZE);
-				sub_1ADA7();
-				sub_1B013(bufferFEC3A, inputRequests.motionAnswer);
+				memset(motionSend, 0, MOTION_FRAME_SIZE);
+				motionPacketFinish();
+				motionTransfer(motionSend, inputRequests.motionAnswer);
 				inputRequests.motionFlags |= MOTION_TRANSFER | MOTION_ANSWER;
 				motionRequest.answerLength = MOTION_PACKET_SIZE;
 				inputRequests.motionPhase = 0;
@@ -1718,9 +1715,9 @@ static void motionRequest0486(void)
 				hostRequestAnswer(&motionRequest, HOST_REQUEST_ANSWER, 0x3c, 0);
 				inputRequests.motionFlags &= ~MOTION_PENDING;
 			} else {
-				memcpy(&bufferFEC3A[offset], &inputRequests.motionData[2], length);
+				memcpy(&motionSend[offset], &inputRequests.motionData[2], length);
 				if (offset + length == MOTION_PACKET_SIZE) {
-					sub_1B013(bufferFEC3A, bufferFEC76);
+					motionTransfer(motionSend, motionReceive);
 					motionRequest.answerLength = MOTION_PACKET_SIZE;
 					inputRequests.motionFlags |= MOTION_TRANSFER;
 					inputRequests.motionPhase = 1;
@@ -1734,9 +1731,9 @@ static void motionRequest0486(void)
 			break;
 		case 1:
 			if (!P7.2) {
-				memset(bufferFEC3A, 0, MOTION_FRAME_SIZE);
-				sub_1ADA7();
-				sub_1B013(bufferFEC3A, inputRequests.motionAnswer);
+				memset(motionSend, 0, MOTION_FRAME_SIZE);
+				motionPacketFinish();
+				motionTransfer(motionSend, inputRequests.motionAnswer);
 				inputRequests.motionFlags |= MOTION_TRANSFER | MOTION_ANSWER;
 				motionRequest.answerLength = MOTION_PACKET_SIZE;
 				inputRequests.motionPhase = 0;
@@ -1764,9 +1761,9 @@ static void motionRequest0487(void)
 				hostRequestAnswer(&motionRequest, HOST_REQUEST_ANSWER, 0x3c, 0);
 				inputRequests.motionFlags &= ~MOTION_PENDING;
 			} else {
-				memcpy(&bufferFEC3A[offset], &inputRequests.motionData[2], length);
+				memcpy(&motionSend[offset], &inputRequests.motionData[2], length);
 				if (offset + length == MOTION_PACKET_SIZE) {
-					sub_1B013(bufferFEC3A, bufferFEC76);
+					motionTransfer(motionSend, motionReceive);
 					motionRequest.answerLength = MOTION_PACKET_SIZE;
 					inputRequests.motionFlags |= MOTION_TRANSFER;
 					inputRequests.motionPhase = 1;
@@ -1780,9 +1777,9 @@ static void motionRequest0487(void)
 			break;
 		case 1:
 			if (!P7.2) {
-				memset(bufferFEC3A, 0, MOTION_FRAME_SIZE);
-				sub_1ADA7();
-				sub_1B013(bufferFEC3A, inputRequests.motionAnswer);
+				memset(motionSend, 0, MOTION_FRAME_SIZE);
+				motionPacketFinish();
+				motionTransfer(motionSend, inputRequests.motionAnswer);
 				inputRequests.motionFlags |= MOTION_TRANSFER | MOTION_ANSWER;
 				motionRequest.answerLength = MOTION_PACKET_SIZE;
 				inputRequests.motionPhase = 0;
@@ -1810,9 +1807,9 @@ static void motionRequest0488(void)
 				hostRequestAnswer(&motionRequest, HOST_REQUEST_ANSWER, 0x3c, 0);
 				inputRequests.motionFlags &= ~MOTION_PENDING;
 			} else {
-				memcpy(&bufferFEC3A[offset], &inputRequests.motionData[2], length);
+				memcpy(&motionSend[offset], &inputRequests.motionData[2], length);
 				if (offset + length == MOTION_PACKET_SIZE) {
-					sub_1B013(bufferFEC3A, bufferFEC76);
+					motionTransfer(motionSend, motionReceive);
 					motionRequest.answerLength = MOTION_PACKET_SIZE;
 					inputRequests.motionFlags |= MOTION_TRANSFER;
 					inputRequests.motionPhase = 1;
@@ -1826,9 +1823,9 @@ static void motionRequest0488(void)
 			break;
 		case 1:
 			if (!P7.2) {
-				memset(bufferFEC3A, 0, MOTION_FRAME_SIZE);
-				sub_1ADA7();
-				sub_1B013(bufferFEC3A, inputRequests.motionAnswer);
+				memset(motionSend, 0, MOTION_FRAME_SIZE);
+				motionPacketFinish();
+				motionTransfer(motionSend, inputRequests.motionAnswer);
 				inputRequests.motionFlags |= MOTION_TRANSFER | MOTION_ANSWER;
 				motionRequest.answerLength = MOTION_PACKET_SIZE;
 				inputRequests.motionPhase = 0;

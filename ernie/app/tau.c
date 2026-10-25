@@ -7,11 +7,7 @@
 
 #include "ernie.h"
 #include "kernel.h"
-
-void tau1PowerOn(void);
-void tau1PowerOff(void);
-void tm10Start(void);
-void tm10Stop(void);
+#include "tau.h"
 
 void tickStart(void)
 {

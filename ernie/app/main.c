@@ -11,9 +11,9 @@
 #include "host.h"
 #include "keepram.h"
 #include "rtc.h"
+#include "tau.h"
 
 extern void sub_27651(void);
-extern void tickStart(void);
 
 void intInit(void);
 

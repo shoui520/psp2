@@ -121,7 +121,6 @@ extern void sub_1D0A8(void);
 extern void sub_17544(void);
 extern void sub_17580(void);
 extern void sub_1D0CC(void);
-extern void sub_1AE6A(void);
 extern void sub_172BC(void);
 extern void sub_1C3B9(unsigned int keys);
 extern void sub_1CFFC(void);
@@ -368,7 +367,7 @@ void inputInit(void)
 	sub_12424(0);
 	inputDelays.flag40 = 0;
 	inputDelays.flag80 = 0;
-	inputDelays.call1AFD8 = 0;
+	inputDelays.motionInfo = 0;
 	inputDelays.reserved = 0;
 	inputDelays.call1D0CB = 0;
 	inputKeys.state = 0;
@@ -410,10 +409,10 @@ void sub_1159F(void)
 	sub_1BFAB();
 	inputGroup1.pending |= 0x08;
 	if (sub_21F2A() == 0xff)
-		sub_1AAD3();
-	recordFEBBC.flag = 0;
-	recordFEBBC.value[0].value = 0;
-	recordFEBBC.value[1].value = 0;
+		motionOpen();
+	motion.status = 0;
+	motion.info[0].value = 0;
+	motion.info[1].value = 0;
 	inputRequestInit();
 	return;
 }
@@ -432,7 +431,7 @@ void sub_115F0(void)
 		}
 	}
 	sub_17204();
-	sub_1AB0E();
+	motionClose();
 	sub_117C4();
 	sub_1CFC6();
 	sub_1BFE9();
@@ -458,7 +457,7 @@ void sub_1164E(void)
 void sub_1168D(void)
 {
 	sub_17204();
-	sub_1AB0E();
+	motionClose();
 	sub_117C4();
 	sub_1CFC6();
 	sub_1BFE9();
@@ -475,7 +474,7 @@ void sub_116A1(void)
 void sub_116B7(void)
 {
 	sub_17204();
-	sub_1AB0E();
+	motionClose();
 	sub_117C4();
 	sub_1CFC6();
 	sub_1BFE9();
@@ -512,7 +511,7 @@ void sub_116D8(void)
 		}
 	}
 	sub_17204();
-	sub_1AB0E();
+	motionClose();
 	sub_117C4();
 	sub_1CFC6();
 	sub_1BFE9();
@@ -530,7 +529,7 @@ void sub_1178A(void)
 {
 	sub_17544();
 	sub_17580();
-	sub_1AB70();
+	motionStop();
 	sub_1CFC6();
 	sub_1D0CC();
 }
@@ -567,7 +566,7 @@ void inputProcess(void)
 	switch (sub_2AB46() & 0x7fff) {
 	case 0x0020:
 		if (events & 0x0400)
-			sub_1AE6A();
+			motionInfoPoll();
 		if (touch.rate == 0 && (events & 0x000c))
 			sub_172BC();
 	case 0x0004:
@@ -812,7 +811,7 @@ int sub_11D61(void)
 
 void sub_11D6B(void)
 {
-	inputDelays.call1AFD8 = 0x10;
+	inputDelays.motionInfo = 0x10;
 }
 
 void sub_11D73(void)
@@ -1335,9 +1334,9 @@ void inputScanTimer(void)
 	} else {
 		sub_24110(3, inputScan.interval);
 	}
-	if (inputDelays.call1AFD8 != 0) {
-		if (--inputDelays.call1AFD8 == 0)
-			sub_1AFD8();
+	if (inputDelays.motionInfo != 0) {
+		if (--inputDelays.motionInfo == 0)
+			motionInfoStart();
 	}
 	if (inputDelays.flag40 != 0) {
 		if (--inputDelays.flag40 == 0)

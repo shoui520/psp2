@@ -9,13 +9,12 @@
 #pragma STOP
 
 #include "ernie.h"
+#include "tau.h"
 
 extern unsigned int sub_2AB46(void);
 extern int sub_2C564(void);
 extern void sub_2C57D(void);
 extern void sub_1BBCB(void);
-extern void tickStart(void);
-extern void tickStop(void);
 
 void standbyPrepare(void);
 void standbyResume(void);

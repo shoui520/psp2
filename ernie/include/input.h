@@ -16,7 +16,7 @@ extern struct InputKeys inputKeys;
 struct InputDelays {
 	unsigned char	flag40;		/* sets bit 0x0040 of event flag 2 */
 	unsigned char	flag80;		/* sets bit 0x0080 of event flag 2 */
-	unsigned char	call1AFD8;
+	unsigned char	motionInfo;	/* starts reading the motion sensor's information */
 	unsigned char	reserved;	/* cleared by inputInit, otherwise unused */
 	unsigned char	call1D0CB;
 };
