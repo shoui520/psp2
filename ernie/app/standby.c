@@ -10,9 +10,9 @@
 
 #include "ernie.h"
 #include "serial.h"
+#include "state.h"
 #include "tau.h"
 
-extern unsigned int sub_2AB46(void);
 extern int sub_2C564(void);
 extern void sub_2C57D(void);
 
@@ -21,7 +21,7 @@ void standbyResume(void);
 
 void standby(void)
 {
-	switch (sub_2AB46()) {
+	switch (stateGet()) {
 	case 0x0004:
 	case 0x0008:
 	case 0x0010:

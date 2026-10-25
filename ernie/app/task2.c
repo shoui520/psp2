@@ -16,10 +16,10 @@
 #include "serial4.h"
 #include "serialauth.h"
 #include "sleepfactor.h"
+#include "state.h"
 #include "updatereq.h"
 #include "version.h"
 
-extern unsigned int sub_2AB46(void);
 extern unsigned char sub_10D7A(void);
 extern void sub_2E8C6(void);
 extern void sub_2D254(void);
@@ -29,8 +29,6 @@ extern unsigned char sub_11D1B(void);
 extern unsigned char sub_11D4B(void);
 extern void sub_2D2A8(FLGPTN ptn);
 extern void sub_2C415(void);
-extern unsigned long sub_2AA79(void);
-extern unsigned char sub_2AB49(int);
 extern void sub_2D724(void);
 extern void sub_2C57D(void);
 extern void sub_2C57E(void);
@@ -137,7 +135,7 @@ unsigned char sub_10C03(void)
 	unsigned int state;
 
 	ret = 0;
-	state = sub_2AB46();
+	state = stateGet();
 	if (state & 0x8000) {
 		switch (state) {
 		case 0x8020:
@@ -261,13 +259,13 @@ unsigned char sub_10E32(void)
 	unsigned int state;
 
 	ret = 0;
-	state = sub_2AB46();
+	state = stateGet();
 	clock = getClock().byte[0];
 	if (isAlarmReached()) {
 		sleepFactorSet3(1);
-		if ((sub_2AA79() & 2) == 0) {
+		if ((stateGetWakeMask() & 2) == 0) {
 			if ((state == 0x0004 && getAlarmMode() != 1) || state == 0x0008)
-				ret = sub_2AB49(1);
+				ret = stateTransition(1);
 		}
 	} else {
 		sleepFactorSet3(0);

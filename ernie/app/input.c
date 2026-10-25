@@ -25,7 +25,7 @@
 #include "serial2.h"
 #include "serialauth.h"
 #include "sleepfactor.h"
-#include "sysmode.h"
+#include "state.h"
 #include "task5.h"
 #include "timer.h"
 #include "touch.h"
@@ -86,9 +86,6 @@ struct ButtonPress {
 };
 
 extern unsigned char getResetCause(void);
-extern unsigned int sub_2AB46(void);
-extern unsigned char sub_2AB49(int);
-extern unsigned long sub_2AA79(void);
 extern unsigned char sub_2C15B(unsigned int offset, unsigned int size, unsigned char *buf);
 extern void sub_2C342(ID flgid, FLGPTN setptn);
 extern void sub_2C394(int, int);
@@ -354,12 +351,12 @@ void sub_11572(void)
 
 void sub_1159F(void)
 {
-	struct SystemMode mode;
+	union PowerRequest mode;
 
 	sub_1179E();
 	sub_17159();
-	mode = *sub_2AB39();
-	if (!mode.flag)
+	mode = *stateGetWakeupFactor();
+	if (!mode.bits.notify)
 		analogCalibrationLoad();
 	analogInit();
 	adcOpenForBoard();
@@ -377,7 +374,7 @@ void sub_115F0(void)
 {
 	unsigned long flags;
 
-	flags = sub_2AA79();
+	flags = stateGetWakeMask();
 	if ((flags & 0x00010000) == 0) {
 		sub_12360(1);
 		if (!P7.6) {
@@ -447,7 +444,7 @@ void sub_116D8(void)
 {
 	unsigned long flags;
 
-	flags = sub_2AA79();
+	flags = stateGetWakeMask();
 	if ((flags & 0x00000004) == 0) {
 		sub_122E7(1);
 		if (!P3.0) {
@@ -519,7 +516,7 @@ void inputProcess(void)
 	unsigned int events;
 
 	events = inputKeys.events;
-	switch (sub_2AB46() & 0x7fff) {
+	switch (stateGet() & 0x7fff) {
 	case 0x0020:
 		if (events & 0x0400)
 			motionInfoPoll();
@@ -549,7 +546,7 @@ void sampleInputs1(void)
 	inputRaw1.4 = P4.6;
 	inputRaw1.5 = P2.0;
 	inputRaw1.6 = P11.5;
-	if (sub_2AB46() == 0x0020)
+	if (stateGet() == 0x0020)
 		inputRaw1.0 = P11.0;
 	inputGroupUpdate(&inputRaw1, &inputState1, &inputGroup1);
 	if (inputGroup1.changed) {
@@ -828,10 +825,10 @@ void sub_11E0A(void)
 {
 	unsigned int state;
 	unsigned char value;
-	struct SystemMode mode;
+	union PowerRequest mode;
 
 	buttonPress2.count++;
-	state = sub_2AB46();
+	state = stateGet();
 	if (buttonPress2.count < 2) {
 		sub_11DE0(1);
 	} else if (buttonPress2.count == 2) {
@@ -847,24 +844,24 @@ void sub_11E0A(void)
 		switch (buttonPress2.keys) {
 		case 1:
 		case 2:
-			mode = *sub_2AB39();
+			mode = *stateGetWakeupFactor();
 			if (buttonPress2.count == buttonPress2.time1) {
-				if (state != sub_12074() && !mode.flag &&
+				if (state != sub_12074() && !mode.bits.notify &&
 				    !sub_2C658()->pressAnyState) {
 					sub_12078(0);
 					return;
 				}
 				buttonPress2.result = buttonPress2.keys;
-				sub_2AB49(0x14);
+				stateTransition(0x14);
 				sub_11DE0(1);
 			} else if (buttonPress2.count == buttonPress2.time2 || sub_12784()) {
-				if (state != sub_12074() && state != 0x0008 && !mode.flag &&
+				if (state != sub_12074() && state != 0x0008 && !mode.bits.notify &&
 				    !sub_2C658()->pressAnyState) {
 					sub_12078(0);
 					return;
 				}
 				buttonPress2.result = 2;
-				sub_2AB49(0x31);
+				stateTransition(0x31);
 			} else {
 				sub_11DE0(1);
 			}
@@ -877,7 +874,7 @@ void sub_11E0A(void)
 		}
 		buttonPress1.keys = 1;
 		buttonPress2.result = buttonPress2.keys;
-		sub_2AB49(0x14);
+		stateTransition(0x14);
 	}
 }
 
@@ -935,7 +932,7 @@ int sub_12019(void)
 	buttonPress1.count = 0;
 	buttonPress1.keys = 0;
 	buttonPress1.result = 0;
-	sub_12044(sub_2AB46());
+	sub_12044(stateGet());
 	return 0;
 }
 
@@ -962,7 +959,7 @@ int sub_1204D(void)
 	buttonPress2.count = 0;
 	buttonPress2.keys = 0;
 	buttonPress2.result = 0;
-	sub_12078(sub_2AB46());
+	sub_12078(stateGet());
 	return 0;
 }
 
@@ -1017,7 +1014,7 @@ unsigned char sub_12111(void)
 	keys[1] = (0x0f & P5) | ((!P11.5 ? (unsigned char)0xef : (unsigned char)0xff) &
 				 (!P4.6 ? (unsigned char)0xbf : (unsigned char)0xff) & 0xf0);
 	result = 0;
-	if (sub_120B8(keys) && sub_2AB46() == 0x0004)
+	if (sub_120B8(keys) && stateGet() == 0x0004)
 		result = 3;
 	else if (sub_120E7(keys))
 		result = 2;
@@ -1032,7 +1029,7 @@ void sub_1217E(void)
 	unsigned char value;
 
 	buttonPress1.count++;
-	if (sub_2AB46() != sub_12040() && !sub_2C658()->pressAnyState) {
+	if (stateGet() != sub_12040() && !sub_2C658()->pressAnyState) {
 		sub_12044(0);
 	} else if (buttonPress1.count < 2) {
 		sub_11FEF(1);
@@ -1050,7 +1047,7 @@ void sub_1217E(void)
 		case 3:
 			if (buttonPress1.count == buttonPress1.time1) {
 				buttonPress1.result = buttonPress1.keys;
-				sub_2AB49(0x0b);
+				stateTransition(0x0b);
 			} else {
 				sub_11FEF(1);
 			}
@@ -1109,7 +1106,7 @@ void sub_122D1(unsigned char enable)
 
 void sub_122E0(void)
 {
-	sub_2AB49(5);
+	stateTransition(5);
 }
 
 void sub_122E7(unsigned char enable)
@@ -1146,7 +1143,7 @@ void sub_12330(unsigned char enable)
 
 void sub_1235A(void)
 {
-	sub_2AB49(2);
+	stateTransition(2);
 }
 
 void sub_12360(unsigned char enable)
@@ -1183,7 +1180,7 @@ void sub_123A9(unsigned char enable)
 
 void sub_123D3(void)
 {
-	sub_2AB49(0x10);
+	stateTransition(0x10);
 	return;
 }
 
@@ -1316,7 +1313,7 @@ void sub_125F2(void)
 		if (levelMonitor1.state != levelMonitor1.now && levelMonitor1.last == levelMonitor1.now) {
 			levelMonitor1.state = levelMonitor1.now;
 			if (levelMonitor1.state != 0)
-				sub_2AB49(0x61);
+				stateTransition(0x61);
 		}
 		levelMonitor1.last = levelMonitor1.now;
 	}
@@ -1330,7 +1327,7 @@ void sub_12638(void)
 		if (levelMonitor2.state != levelMonitor2.now && levelMonitor2.last == levelMonitor2.now) {
 			levelMonitor2.state = levelMonitor2.now;
 			if (levelMonitor2.state != 0)
-				sub_2AB49(0x42);
+				stateTransition(0x42);
 		}
 		levelMonitor2.last = levelMonitor2.now;
 	}
@@ -1353,7 +1350,7 @@ unsigned char sub_1268B(void)
 void sub_12698(void)
 {
 	if (sub_11D2B() == 1) {
-		if (sub_2AB46() == 0x0020)
+		if (stateGet() == 0x0020)
 			inputDelays.latchOn = 0x40;
 	} else {
 		sub_21F33(8);

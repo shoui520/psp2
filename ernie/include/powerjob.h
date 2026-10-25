@@ -11,7 +11,7 @@
 #define POWER_JOB_SUSPEND	4	/* powerSuspend */
 #define POWER_JOB_SHUTDOWN	5	/* powerShutdown */
 #define POWER_JOB_CUT		6	/* powerCut */
-#define POWER_JOB_OFF_END	7	/* powerOff, when saddr_FFE70 is 0x56 */
+#define POWER_JOB_OFF_END	7	/* powerOff, when stateCause is 0x56 */
 #define POWER_JOB_UPDATE	8	/* powerUpdate */
 #define POWER_JOB_RESET		9	/* powerReset */
 

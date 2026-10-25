@@ -17,14 +17,13 @@
 #include "serial.h"
 #include "serial2.h"
 #include "serial4.h"
+#include "state.h"
 #include "version.h"
 
 #define SERIAL2_TEST_AREA	0xe0	/* the scratch pad's test area */
 #define SERIAL2_TEST_SIZE	0x20
 
 extern ER sub_2C2ED(unsigned char flgid, FLGPTN setptn);
-extern unsigned int sub_2AB46(void);
-extern unsigned char sub_2AB49(int transition);
 extern unsigned char sub_11D4B(void);
 
 static unsigned char serial2Data[0x20];
@@ -62,7 +61,7 @@ unsigned char serialNotifies2Count(void)
 /* an input's rising edge: transition 0x57 */
 void serial2InputRequest(void)
 {
-	sub_2AB49(0x57);
+	stateTransition(0x57);
 	return;
 }
 
@@ -166,7 +165,7 @@ static unsigned char serial2Command0205(struct SerialBuffer *request, struct Ser
 	unsigned int state;
 
 	result = 0;
-	state = sub_2AB46();
+	state = stateGet();
 	mode = request->data[0];
 	response->length = 0;
 	if (mode == 0) {
@@ -175,7 +174,7 @@ static unsigned char serial2Command0205(struct SerialBuffer *request, struct Ser
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
-		result = sub_2AB49(0x52);
+		result = stateTransition(0x52);
 		serial4SetAnswer(SERIAL_ANSWER_LATER);
 	} else if (mode == 2) {
 		if (state != 0x0004 && state != 0x0008) {
@@ -194,7 +193,7 @@ static unsigned char serial2Command0205(struct SerialBuffer *request, struct Ser
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x52;
 		}
-		result = sub_2AB49(0x0e);
+		result = stateTransition(0x0e);
 		serial4SetAnswer(SERIAL_ANSWER_LATER);
 	} else {
 		serial4SetAnswer(SERIAL_ANSWER);
@@ -209,7 +208,7 @@ static unsigned char serial2Command0206(struct SerialBuffer *request, struct Ser
 	unsigned int state;
 
 	response->length = 2;
-	state = sub_2AB46();
+	state = stateGet();
 	memcpy(serial2Data, &state, response->length);
 	response->data = serial2Data;
 	serial4SetAnswer(SERIAL_ANSWER);
@@ -240,7 +239,7 @@ static unsigned char serial2Notify0211(void)
 	result = 0;
 	if (serial2GetArmed() != 0 && sub_2C658()->testDisarm) {
 		serial2Disarm();
-		result = sub_2AB49(0);
+		result = stateTransition(0);
 	}
 	return result;
 }

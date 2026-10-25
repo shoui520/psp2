@@ -10,6 +10,7 @@
 #include "iica.h"
 #include "kernel.h"
 #include "powerseq.h"
+#include "state.h"
 
 #define ELMO_TRIES	3		/* a transfer's tries */
 #define ELMO_TIMEOUT	0x4b		/* the wait for a transfer's end, in ticks */
@@ -24,7 +25,6 @@ struct ElmoRegInit {
 };
 
 
-extern unsigned int sub_2AB46(void);
 
 union ElmoStatusMask elmoStatusMask;
 unsigned int elmoLed;
@@ -193,7 +193,7 @@ unsigned char elmoClearMasks(struct ElmoMasks *masks, unsigned char *command)
 	length = 0;
 	if (masks->status0 != 0) {
 		elmoStatusMask.reg[0] &= ~masks->status0;
-		if ((masks->status0 & 0x0004) && (sub_2AB46() & 0x8008) &&
+		if ((masks->status0 & 0x0004) && (stateGet() & 0x8008) &&
 		    (elmoStatusMask.reg[2] & 0x1000))
 			elmoStatusMask.reg[0] |= 0x0004;
 		command[length++] = 0xa0;

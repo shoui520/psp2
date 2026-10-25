@@ -18,7 +18,7 @@
 #include "powerreq.h"
 #include "powerseq.h"
 #include "powerwait.h"
-#include "sysmode.h"
+#include "state.h"
 #include "timer.h"
 
 #define POWER_JOB_PART	5	/* the power part the jobs report */
@@ -26,7 +26,6 @@
 
 extern void sub_11D73(void);
 extern void sub_11D7B(void);
-extern unsigned char sub_2AB49(int transition);
 extern void sub_2C315(ID flgid, FLGPTN setptn);
 extern void sub_2DF1F(void);
 extern void sub_2DF86(unsigned int on);
@@ -97,7 +96,7 @@ static void powerJobOn(void)
 {
 	if (!P12.0) {
 		P6.2 = 0;
-		sub_2AB49(0x41);
+		stateTransition(0x41);
 	}
 	EGP0.0 = 0;
 	EGN0.0 = 1;
@@ -116,7 +115,7 @@ static void powerJobOn(void)
 
 static void powerJobResume(void)
 {
-	struct SystemMode *mode;
+	union PowerRequest *mode;
 
 	batteryBLLineOff();
 	powerResumed = 1;
@@ -133,8 +132,8 @@ static void powerJobResume(void)
 	powerRequestInit();
 	chargeSetAcDelay();
 	sub_2C315(4, 0x20);
-	mode = sub_2AB39();
-	if (mode->mode == 0x0f && !mode->flag)
+	mode = stateGetWakeupFactor();
+	if (mode->bits.mode == 0x0f && !mode->bits.notify)
 		sub_2E05E(1);
 	powerReady(POWER_JOB_PART);
 }

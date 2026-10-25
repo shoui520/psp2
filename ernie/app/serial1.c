@@ -13,8 +13,8 @@
 #include "chip.h"
 #include "config.h"
 #include "csi.h"
-#include "kernel.h"
 #include "keepram.h"
+#include "kernel.h"
 #include "nvs.h"
 #include "rtc.h"
 #include "serial.h"
@@ -24,12 +24,10 @@
 #include "serialauth.h"
 #include "sleepfactor.h"
 #include "spidev.h"
-#include "sysmode.h"
+#include "state.h"
 #include "version.h"
 
 extern void sub_2C2ED(int, int);
-extern unsigned int sub_2AB46(void);
-extern unsigned char sub_2AB49(int);
 extern unsigned char sub_2D6DE(void);
 extern unsigned char sub_2C66A(unsigned char *data);
 extern unsigned char sub_2C6F0(unsigned int id, unsigned char size, unsigned char *data);
@@ -39,8 +37,6 @@ extern unsigned char sub_2CC93(void);
 extern unsigned char sub_2C7EE(void);
 extern unsigned char sub_2C998(unsigned int id, unsigned char size, unsigned char *data,
 			       int flag);
-extern unsigned char sub_2AB41(void);
-extern unsigned long sub_2AA79(void);
 extern unsigned char sub_2DAEA(unsigned char *data);
 extern unsigned char sub_2DB73(void);
 extern unsigned char sub_2DBDF(void);
@@ -296,7 +292,7 @@ static unsigned char serial1Command0105(struct SerialBuffer *request, struct Ser
 	unsigned int state;
 
 	result = 0;
-	state = sub_2AB46();
+	state = stateGet();
 	mode = request->data[0];
 	response->length = 0;
 	if (mode == 0) {
@@ -304,7 +300,7 @@ static unsigned char serial1Command0105(struct SerialBuffer *request, struct Ser
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
-		result = sub_2AB49(0x53);
+		result = stateTransition(0x53);
 		serialSetAnswer(SERIAL_ANSWER_LATER);
 	} else if (mode == 2) {
 		if (state != 0x0004 && state != 0x0008) {
@@ -323,14 +319,14 @@ static unsigned char serial1Command0105(struct SerialBuffer *request, struct Ser
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x52;
 		}
-		result = sub_2AB49(9);
+		result = stateTransition(9);
 		serialSetAnswer(SERIAL_ANSWER_LATER);
 	} else if (mode == 3) {
 		if (state != 0x0004) {
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
-		result = sub_2AB49(0x11);
+		result = stateTransition(0x11);
 		serialSetAnswer(SERIAL_ANSWER_LATER);
 	} else {
 		serialSetAnswer(SERIAL_ANSWER);
@@ -345,7 +341,7 @@ static unsigned char serial1Command0106(struct SerialBuffer *request, struct Ser
 	unsigned int state;
 
 	response->length = 2;
-	state = sub_2AB46();
+	state = stateGet();
 	memcpy(serial1Data.byte, &state, response->length);
 	response->data = serial1Data.byte;
 	serialSetAnswer(SERIAL_ANSWER);
@@ -374,13 +370,13 @@ static unsigned char serial1Command0110(struct SerialBuffer *request, struct Ser
 static unsigned char serial1Command0120(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result;
-	struct SystemMode mode;
+	union PowerRequest mode;
 	unsigned char send[3];
 
 	result = 0;
 	response->length = 0;
-	mode = *sub_2AB39();
-	if (mode.mode != 0x11 || sub_2AB46() != 0x0020) {
+	mode = *stateGetWakeupFactor();
+	if (mode.bits.mode != 0x11 || stateGet() != 0x0020) {
 		serialSetAnswer(SERIAL_ANSWER);
 		return 0x40;
 	}
@@ -402,13 +398,13 @@ static unsigned char serial1Command0120(struct SerialBuffer *request, struct Ser
 static unsigned char serial1Command0121(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result;
-	struct SystemMode mode;
+	union PowerRequest mode;
 	union Serial1Word reg;
 
 	result = 0;
 	response->length = 0;
-	mode = *sub_2AB39();
-	if (mode.mode != 0x11 || sub_2AB46() != 0x0020) {
+	mode = *stateGetWakeupFactor();
+	if (mode.bits.mode != 0x11 || stateGet() != 0x0020) {
 		serialSetAnswer(SERIAL_ANSWER);
 		return 0x40;
 	}
@@ -628,7 +624,7 @@ static unsigned char serial1Command0147(struct SerialBuffer *request, struct Ser
 	return result == 0 ? 0 : result;
 }
 
-/* 0x0171: sub_2D6DE's flags, the reset's cause, sub_2AB41, the system mode, sub_2AA79 */
+/* 0x0171: sub_2D6DE's flags, the reset's cause, stateGetCause, the system mode, stateGetWakeMask */
 static unsigned char serial1Command0171(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned long state;
@@ -637,9 +633,9 @@ static unsigned char serial1Command0171(struct SerialBuffer *request, struct Ser
 	response->length = 9;
 	serial1Data.byte[0] = sub_2D6DE();
 	serial1Data.byte[1] = getResetCause();
-	serial1Data.byte[2] = sub_2AB41();
-	memcpy(&serial1Data.byte[3], sub_2AB39(), 2);
-	state = sub_2AA79();
+	serial1Data.byte[2] = stateGetCause();
+	memcpy(&serial1Data.byte[3], stateGetWakeupFactor(), 2);
+	state = stateGetWakeMask();
 	memcpy(&serial1Data.byte[5], &state, 4);
 	serialSetAnswer(SERIAL_ANSWER);
 	return 0;
@@ -789,7 +785,7 @@ static unsigned char serial1Command0160(struct SerialBuffer *request, struct Ser
 	unsigned char *buffer;
 	unsigned int state;
 
-	state = sub_2AB46();
+	state = stateGet();
 	what = request->data[0];
 	mask = request->data[1];
 	if (state != 0x0004) {

@@ -13,9 +13,9 @@
 #include "keepram.h"
 #include "rtc.h"
 #include "sleepfactor.h"
+#include "state.h"
 #include "timer.h"
 
-extern unsigned int sub_2AB46(void);
 extern void sub_2C2ED(int, int);
 extern int sub_2D6C6(void);
 extern int sub_2D69C(void);
@@ -147,7 +147,7 @@ void rtcInterrupt(void)
 	unsigned char i;
 	unsigned int state;
 
-	state = sub_2AB46();
+	state = stateGet();
 	DI();
 	keepRam.clock++;
 	timerRtcTicks++;

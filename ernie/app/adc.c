@@ -9,8 +9,8 @@
 #include "adc.h"
 #include "input.h"
 #include "kernel.h"
+#include "state.h"
 
-extern unsigned int sub_2AB46(void);
 extern void sub_2C342(ID flgid, FLGPTN setptn);
 
 static __near unsigned char adcMask;		/* the channels to convert */
@@ -69,7 +69,7 @@ unsigned char adcStart(unsigned char mask, int skip)
 /* opens the converter on the boards that have the channels */
 void adcOpenForBoard(void)
 {
-	switch (sub_2AB46() & 0x7fff) {
+	switch (stateGet() & 0x7fff) {
 	case 0x0004:
 	case 0x0008:
 	case 0x0020:
@@ -91,7 +91,7 @@ void adcOpenForBoard(void)
 /* closes the converter, unless a key of 0x00e3 is held on the boards that have it */
 void adcCloseForBoard(void)
 {
-	switch (sub_2AB46() & 0x7fff) {
+	switch (stateGet() & 0x7fff) {
 	case 0x0004:
 	case 0x0008:
 		if (inputKeys.state & 0x00e3)

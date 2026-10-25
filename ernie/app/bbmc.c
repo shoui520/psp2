@@ -21,6 +21,7 @@
 #include "nvsreq.h"
 #include "powerwait.h"
 #include "sleepfactor.h"
+#include "state.h"
 #include "task5.h"
 #include "timer.h"
 #include "uart.h"
@@ -42,8 +43,6 @@
 #define BBMC_REG_READ_ONLY	3
 
 extern void sub_2C394(int, int);
-extern unsigned int sub_2AB46(void);
-extern unsigned char sub_2AB49(int transition);
 extern unsigned char sub_2BB99(void);
 extern unsigned char sub_2BBE9(void);
 extern unsigned char sub_11D57(void);
@@ -161,7 +160,7 @@ unsigned char bbmcPowerOff(void)
 	bbmcWriteRegs(3, 1, bbmcZero12, BBMC_WRITE_RESET);
 	bbmcWriteRegs(6, 0x10, bbmcZero16, BBMC_WRITE_RESET);
 	bbmcWriteRegs(0x18, 0x0c, bbmcZero12, BBMC_WRITE_RESET);
-	switch (sub_2AB46()) {
+	switch (stateGet()) {
 	case 0x0004:
 	case 0x8004:
 		bbmcSetStatus(0);
@@ -277,7 +276,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 
 		level = sub_11D57();
 		if (level != 0) {
-			if (bbmc.state == 1 || sub_2AB46() == 0x0004)
+			if (bbmc.state == 1 || stateGet() == 0x0004)
 				sub_21F33(0x0200);
 			else
 				bbmcPowerOn();
@@ -309,7 +308,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 	if (ptn & BBMC_EVENT_RX_TIMEOUT)
 		bbmc.rxLength = 0;
 	if (ptn & BBMC_EVENT_LINK_TIMEOUT) {
-		if (sub_2AB46() == 0x0008) {
+		if (stateGet() == 0x0008) {
 			uart2Close(1);
 			sub_123DB(1);
 		}
@@ -324,7 +323,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 	if (ptn & BBMC_EVENT_STATE) {
 		unsigned int state;
 
-		state = sub_2AB46();
+		state = stateGet();
 		switch (state) {
 		case 0x0020:
 			break;
@@ -335,7 +334,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 			break;
 		case 0x0008:
 			if (bbmcRegs.r.events != 0) {
-				sub_2AB49(8);
+				stateTransition(8);
 				bbmc.transition = 1;
 			}
 			break;
@@ -615,9 +614,9 @@ unsigned char bbmcWriteRegs(unsigned char reg, unsigned char count, unsigned cha
 	sleepFactorSet8(bbmc.pending);
 	if (bbmcRegs.r.events & 8)
 		sleepFactorSet20(1);
-	if (bbmcRegs.r.events != 0 && !bbmc.transition && sub_2AB46() == 0x0008) {
+	if (bbmcRegs.r.events != 0 && !bbmc.transition && stateGet() == 0x0008) {
 		bbmc.transition = 1;
-		sub_2AB49(8);
+		stateTransition(8);
 	}
 	if (changed) {
 		result = nvsJobRead(BBMC_NVS_MODE, 2, (unsigned char *)&bbmcSavedMode, 1,

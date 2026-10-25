@@ -11,6 +11,7 @@
 #include "kernel.h"
 #include "power.h"
 #include "scratchpad.h"
+#include "state.h"
 #include "timer.h"
 #include "version.h"
 
@@ -18,46 +19,33 @@
 #define RESF_TRAP	0x80
 #define RESF_WDRF	0x10
 
-extern __sreg unsigned char saddr_FFE68;
-extern __sreg unsigned int powerState;
-extern __sreg unsigned int saddr_FFE6C;
-extern __sreg unsigned int saddr_FFE6E;
-extern __sreg unsigned char saddr_FFE70;
 extern __near unsigned char resetFlags;
 
 extern void sub_2C57F(void);
 extern void sub_2C051(void);
 extern void sub_2C54C(int);
 extern void sub_2C539(int);
-extern void sub_2AC15(void);
 extern unsigned char getResetCause(void);
 extern void sub_2D6EF(void);
 extern void sub_2D712(void);
 extern void sub_2DAE1(int);
-extern void sub_2ABAE(void);
-extern void sub_2A92E(unsigned char *data);
 extern void sub_2C3BD(void);
-
-struct Task1Msg {
-	T_MSG		header;
-	unsigned char	data[8];
-};
 
 void systemInit(void);
 
 void task1(VP_INT exinf)
 {
 	ER ercd;
-	struct Task1Msg *msg;
-	unsigned char data[8];
+	struct StateMsg *msg;
+	struct StateEvent event;
 
 	systemInit();
 	for (;;) {
 		ercd = rcv_mbx(1, (T_MSG **)&msg);
-		memcpy(data, msg->data, sizeof(data));
+		memcpy(&event, &msg->event, sizeof(event));
 		rel_mpf(1, msg);
 		if (ercd == E_OK) {
-			sub_2A92E(data);
+			stateEvent(&event);
 			powerSequence();
 		}
 		sub_2C3BD();
@@ -70,17 +58,17 @@ void systemInit(void)
 	unsigned char cause;
 
 	powerState = 1;
-	saddr_FFE68 = 2;
-	saddr_FFE6C = 0;
-	saddr_FFE6E = 0;
-	saddr_FFE70 = 0x7f;
+	statePhase = 2;
+	stateNext = 0;
+	stateEvents = 0;
+	stateCause = 0x7f;
 	resetFlags = RESF;
 	sub_2C57F();
 	timerInit();
 	sub_2C051();
 	sub_2C54C(-1);
 	sub_2C539(1);
-	timer.handler = sub_2AC15;
+	timer.handler = stateCheck;
 	timerSetHandler(0x1a, &timer);
 	versionInit();
 	cause = getResetCause() & 0xf0;
@@ -99,6 +87,6 @@ void systemInit(void)
 			sub_2DAE1(6);
 		}
 	}
-	sub_2ABAE();
+	stateEnter();
 	return;
 }

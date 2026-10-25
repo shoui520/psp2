@@ -12,10 +12,12 @@ struct ConfigBlock {
 	struct AnalogCalibration analogCalibration;	/* the sticks' default calibration */
 	unsigned char	analogScale0;		/* set 0's margin, in 1/1000 of the range */
 	unsigned char	analogScale1;		/* set 1's */
-	unsigned char	reserved19:1;
+	unsigned char	wakeOff22:1;		/* set: wake factor 22 off (stateInit) */
 	unsigned char	batteryNoRetry:1;	/* set: the battery is read once at the power-on
 						   (powerSeqOn) */
-	unsigned char	reserved20:6;
+	unsigned char	reserved20:2;
+	unsigned char	wakeOff15:1;		/* set: wake factor 15 off */
+	unsigned char	reserved26:3;
 	unsigned char	reserved21;
 	unsigned char	bbmcDetect:1;		/* set: P3.2 low at the start means a 3G modem
 						   (bbmcInit) */
@@ -51,7 +53,10 @@ struct ConfigBlock {
 	unsigned char	voltage84;
 	unsigned char	reserved22;
 	unsigned char	voltageTrim;		/* passed with a regulator's level (0x088e) */
-	unsigned char	reserved7[0x12c - 0xf4];
+	unsigned char	reserved7[0x108 - 0xf4];
+	unsigned long	wakeMaskOff;		/* the wake factors off, and on, at the start */
+	unsigned long	wakeMaskOn;		/* (stateInit) */
+	unsigned char	reserved27[0x12c - 0x110];
 	struct ChargeAlarmLimit chargeAlarmLimits[4];	/* the battery temperature's alarms */
 	unsigned int	chargeAlarm0Delay;	/* timer 0x1d's, when alarm 0 comes on */
 	unsigned int	chargeTempInterval;	/* the ticks between two chargeAlarmUpdate */

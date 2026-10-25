@@ -17,6 +17,7 @@
 #include "power.h"
 #include "sleepfactor.h"
 #include "spidev.h"
+#include "state.h"
 #include "task5.h"
 #include "updatereq.h"
 #include "version.h"
@@ -24,27 +25,13 @@
 #define POWER_PARTS	6
 #define POWER_ALL	0x3f		/* every part's bit */
 
-/* the request powerResume runs: the mode picks its last step */
-struct PowerRequest {
-	unsigned char	mode:7;
-	unsigned char	notify:1;		/* set: event 0x08 of flag 4 */
-	unsigned char	data;
-};
-
 /* a part of a sequence and its bit in powerPending and in event flag 5 */
 struct PowerPart {
 	unsigned char	id;
 	unsigned int	flag;
 };
 
-extern __sreg unsigned char saddr_FFE68;	/* the phase: 1 to run, 2 done, 3 failed */
-extern __sreg unsigned int powerState;
-extern __sreg unsigned char saddr_FFE70;
-extern unsigned int wordFF6EE;
-extern struct PowerRequest byteFF6F0;
-
 extern void inputInit(void);
-extern void sub_2ABAE(void);
 extern void sub_2C2ED(int, int);
 extern void sub_2C394(int, int);
 extern void sub_2C572(void);
@@ -73,7 +60,7 @@ static const struct PowerPart powerParts[POWER_PARTS] = {
 };
 
 unsigned char powerOn(void);
-unsigned char powerResume(struct PowerRequest *request);
+unsigned char powerResume(union PowerRequest *request);
 unsigned char powerOff(void);
 unsigned char powerSuspend(void);
 unsigned char powerShutdown(void);
@@ -89,11 +76,11 @@ void powerSequence(void)
 	unsigned char result;
 
 	result = 0;
-	if (saddr_FFE68 != 1)
+	if (statePhase != 1)
 		return;
 	switch (powerState) {
 	case 0x8020:
-		result = powerResume(&byteFF6F0);
+		result = powerResume(&stateRequest);
 		break;
 	case 0x8008:
 		result = powerSuspend();
@@ -122,13 +109,13 @@ void powerSequence(void)
 	}
 	if (result == 0) {
 		powerState &= 0x7fff;
-		saddr_FFE68 = 2;
-		sub_2ABAE();
+		statePhase = 2;
+		stateEnter();
 		sub_2C2ED(3, 0x1000);
 		sub_2C394(6, 0x80);
 	} else {
 		powerState &= 0x7fff;
-		saddr_FFE68 = 3;
+		statePhase = 3;
 	}
 	sub_2C572();
 }
@@ -238,12 +225,12 @@ unsigned char powerOn(void)
 }
 
 /* 0x8020: brings the host up; the request's mode (bits 0-6) picks the last step */
-unsigned char powerResume(struct PowerRequest *request)
+unsigned char powerResume(union PowerRequest *request)
 {
 	unsigned char result;
 
 	result = 0;
-	if (saddr_FFE70 == 0x72) {
+	if (stateCause == 0x72) {
 		updaterRequestAnswerOk();
 		powerPendingClear(5);
 		return result;
@@ -252,14 +239,14 @@ unsigned char powerResume(struct PowerRequest *request)
 	if (sub_2CD3F() != 0)
 		sub_24076();
 	sleepFactorSet20(0);
-	wordFF6EE = *(unsigned int *)request;
+	stateWakeupFactor.word = request->word;
 	sub_11572();
 	sub_2C2ED(3, 0x1000);
 	powerWait(0x19);
 	powerPendingClear(2);
 	sub_2C394(6, 0x80);
 	powerPendingClear(6);
-	if (request->mode != 0x54) {
+	if (request->bits.mode != 0x54) {
 		powerJobPostResume();
 		powerWait(0x19);
 	}
@@ -273,7 +260,7 @@ unsigned char powerResume(struct PowerRequest *request)
 	set_flg(1, 0x40);
 	dly_tsk(3);
 	powerPendingClear(4);
-	switch (request->mode) {
+	switch (request->bits.mode) {
 	case 0x0c:
 		spiDevInit();
 		result = spiDevAuthenticate();
@@ -291,7 +278,7 @@ unsigned char powerResume(struct PowerRequest *request)
 		P1.5 = 0;
 		dly_tsk(1);
 		P1.7 = 1;
-		if (request->notify)
+		if (request->bits.notify)
 			set_flg(4, 0x08);
 		dly_tsk(1);
 		result = 0;
@@ -350,7 +337,7 @@ unsigned char powerOff(void)
 	powerWait(5);
 	powerPendingClear(6);
 	PER0.2 = 0;
-	if (saddr_FFE70 == 0x56)
+	if (stateCause == 0x56)
 		powerJobPostOffEnd();
 	if (powerPendingGet() != 0)
 		result = 1;

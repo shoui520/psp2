@@ -16,21 +16,21 @@
 
 #include "ernie.h"
 #include "aes.h"
-#include "downloader.h"
 #include "command.h"
+#include "downloader.h"
 #include "host.h"
 #include "kernel.h"
 #include "nvs.h"
 #include "serial.h"
 #include "sha1.h"
 #include "sleepfactor.h"
+#include "state.h"
 #include "updatereq.h"
 #include "version.h"
 
 extern unsigned char sub_2BB99(void);
 extern unsigned char sub_2BBE9(void);
 extern ER sub_2C2ED(unsigned char flgid, FLGPTN setptn);
-extern unsigned char sub_2AB49(int transition);
 extern unsigned char sub_2CCA2(void);
 extern unsigned char sub_2CC93(void);
 extern unsigned char sub_2CCDE(void);
@@ -402,7 +402,7 @@ static unsigned char updaterSetRunMode(unsigned int mode)
 		if (result != 0)
 			return 1;
 		updater.state = 0x13;
-		sub_2AB49(0x70);
+		stateTransition(0x70);
 		return 0x80;
 	case 0xc5e7:
 		switch (updater.state) {
@@ -413,7 +413,7 @@ static unsigned char updaterSetRunMode(unsigned int mode)
 			result = updaterWriteDlFlags(flags & 0xfe);
 			if (result == 0) {
 				updater.state = 0x10;
-				sub_2AB49(0x71);
+				stateTransition(0x71);
 				return 0x80;
 			}
 			return 0x22;
@@ -439,7 +439,7 @@ static unsigned char updaterSetRunMode(unsigned int mode)
 			break;
 		}
 		updater.state = 0;
-		sub_2AB49(0x72);
+		stateTransition(0x72);
 		return 0x80;
 	case 0x152e:
 		if (updater.state == 1) {
@@ -448,7 +448,7 @@ static unsigned char updaterSetRunMode(unsigned int mode)
 			result = updaterWriteDlFlags(flags & 0xfd);
 			if (result == 0) {
 				updater.state = 0x13;
-				sub_2AB49(0x70);
+				stateTransition(0x70);
 				return 0x80;
 			}
 			return 0x22;
@@ -462,7 +462,7 @@ static unsigned char updaterSetRunMode(unsigned int mode)
 			if (result == 0) {
 				updater.state = 0x20;
 				sub_2CC93();
-				sub_2AB49(0x71);
+				stateTransition(0x71);
 				return 0x80;
 			}
 			return 1;

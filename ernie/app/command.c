@@ -23,7 +23,7 @@
 #include "rtc.h"
 #include "scratchpad.h"
 #include "serial.h"
-#include "sysmode.h"
+#include "state.h"
 #include "task5.h"
 #include "version.h"
 
@@ -38,8 +38,6 @@ extern unsigned char sub_2D685(void);
 extern void sub_2C2ED(int, int);
 extern unsigned char sub_2C15B(unsigned int offset, unsigned int size, unsigned char *buf);
 extern unsigned char sub_2C199(unsigned int offset, unsigned int size, unsigned char *buf);
-extern void sub_2AA60(unsigned long);
-extern unsigned char sub_2AB49(int);
 extern unsigned char sub_2B61F(unsigned char *buf);
 extern unsigned char sub_2DB73(void);
 extern unsigned char sub_2DAEA(unsigned char *buf);
@@ -142,7 +140,7 @@ unsigned char hostCommandWakeupFactor(unsigned char *out, unsigned char *length)
 {
 	union CommandWord factor;
 
-	factor.value = *(unsigned int *)sub_2AB39();
+	factor.value = stateGetWakeupFactor()->word;
 	out[0] = factor.byte[0];
 	out[1] = factor.byte[1];
 	*length = 2;
@@ -417,36 +415,36 @@ allowed:
 				if (commandRequestData[0] == 0x00) {
 					transition = 0x50;
 					parameter = COMMAND_PARAMETER(commandRequestData);
-					sub_2AA60(parameter);
+					stateSetWakeMask(parameter);
 				} else if (commandRequestData[0] == 0x01) {
 					transition = 0x51;
 					parameter = COMMAND_PARAMETER(commandRequestData);
-					sub_2AA60(parameter);
+					stateSetWakeMask(parameter);
 				} else if (commandRequestData[0] == 0x10) {
 					transition = 0x58;
 					parameter = COMMAND_PARAMETER(commandRequestData);
 					parameter &= ~0x00000400;
-					sub_2AA60(parameter);
+					stateSetWakeMask(parameter);
 				} else if (commandRequestData[0] == 0x11) {
 					transition = 0x59;
 					parameter = COMMAND_PARAMETER(commandRequestData);
 					parameter &= ~0x00000400;
-					sub_2AA60(parameter);
+					stateSetWakeMask(parameter);
 				} else if (commandRequestData[0] == 0x12) {
 					transition = 0x5a;
 					parameter = COMMAND_PARAMETER(commandRequestData);
 					parameter &= ~0x00800000;
-					sub_2AA60(parameter);
+					stateSetWakeMask(parameter);
 				} else if (commandRequestData[0] == 0x13) {
 					transition = 0x5b;
 					parameter = COMMAND_PARAMETER(commandRequestData);
 					parameter &= ~0x02000000;
-					sub_2AA60(parameter);
+					stateSetWakeMask(parameter);
 				} else {
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3c, 0);
 					break;
 				}
-				if (sub_2AB49(transition) == 0)
+				if (stateTransition(transition) == 0)
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 				else
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 6, 0);
@@ -460,7 +458,7 @@ allowed:
 			if (commandRequest.length == 1) {
 				if (commandRequestData[0] == 0x5a) {
 					transition = 0x56;
-					if (sub_2AB49(transition) == 0)
+					if (stateTransition(transition) == 0)
 						hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 					else
 						hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 6, 0);

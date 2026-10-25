@@ -28,6 +28,7 @@
 #include "powerseq.h"
 #include "powerwait.h"
 #include "serial2.h"
+#include "state.h"
 #include "task5.h"
 #include "version.h"
 
@@ -46,7 +47,6 @@ struct PowerCommand {
 extern unsigned char sub_2BB99(void);
 extern unsigned char sub_2BBE9(void);
 extern void sub_2C315(ID flgid, FLGPTN setptn);
-extern unsigned char sub_2AB49(int transition);
 extern unsigned char sub_11D57(void);
 extern unsigned char sub_11D61(void);
 extern void sub_11D6B(void);
@@ -310,7 +310,7 @@ unsigned char hostCommandPowerStatus(unsigned char *out, unsigned char *length)
 /* 0x0801: the system mode's transition 0x54 */
 unsigned char hostCommand0801(unsigned char *out, unsigned char *length)
 {
-	sub_2AB49(0x54);
+	stateTransition(0x54);
 	*length = 0;
 	return 0;
 }

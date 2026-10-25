@@ -10,9 +10,9 @@
 #include "input.h"
 #include "inputreq.h"
 #include "kernel.h"
+#include "state.h"
 #include "touch.h"
 
-extern unsigned int sub_2AB46(void);
 extern void sub_2C48E(void);
 
 void task3(VP_INT exinf)
@@ -27,7 +27,7 @@ void task3(VP_INT exinf)
 			if (ptn & 0x0008) {
 				clr_flg(2, ~0x0008);
 				inputProcess();
-				if (sub_2AB46() == 0x0020)
+				if (stateGet() == 0x0020)
 					devicesRequestRun();
 				if (P4.0)
 					P4.0 = 0;

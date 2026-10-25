@@ -22,11 +22,10 @@
 #include "powerwait.h"
 #include "serial2.h"
 #include "sleepfactor.h"
-#include "sysmode.h"
+#include "state.h"
 #include "timer.h"
 
 extern void sub_2DAE1(int);
-extern unsigned int sub_2AB46(void);
 extern void sub_2E03A(unsigned int);
 extern unsigned char sub_11D57(void);
 extern unsigned char sub_11D61(void);
@@ -128,7 +127,7 @@ unsigned char powerSeqResume(void)
 	unsigned char length;
 	unsigned char result;
 	unsigned char i;
-	struct SystemMode mode;
+	union PowerRequest mode;
 
 	powerSeqLevels();
 	powerWaitTimers(1);
@@ -141,8 +140,8 @@ unsigned char powerSeqResume(void)
 			goto out;
 		powerWaitMs(powerResumeSteps[i].delay);
 	}
-	mode = *sub_2AB39();
-	if (mode.mode == 0x0c)
+	mode = *stateGetWakeupFactor();
+	if (mode.bits.mode == 0x0c)
 		powerSdOn();
 	if (elmoStatusMask.reg[0] & 0x10)
 		powerSeqWaitP67();
@@ -394,7 +393,7 @@ unsigned char powerWirelessOff(void)
 			elmoStatusMask.reg[2] = mask2;
 			sleepFactorSet0(0);
 			powerStartTimer(0x20, 9, 0x64);
-			if (sub_2AB46() & 0x080c)
+			if (stateGet() & 0x080c)
 				P95 = 0;
 		}
 	} else {

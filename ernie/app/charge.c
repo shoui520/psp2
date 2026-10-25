@@ -15,11 +15,9 @@
 #include "powerreq.h"
 #include "powerseq.h"
 #include "sleepfactor.h"
+#include "state.h"
 #include "timer.h"
 
-extern unsigned char sub_2AB49(int transition);
-extern unsigned int sub_2AB46(void);
-extern unsigned long sub_2AA79(void);
 extern void sub_1276A(void);
 extern unsigned char sub_126C9(void);
 extern void sub_2DAE1(int);
@@ -108,7 +106,7 @@ void chargeInit(void)
 
 void chargeTransition(int transition)
 {
-	sub_2AB49((unsigned char)transition);
+	stateTransition((unsigned char)transition);
 }
 
 /* task 5's event 0x20 */
@@ -127,7 +125,7 @@ void chargeUpdate(void)
 	cookieReadStatus1(cookieStatus1.byte);
 	cookieReadStatus2(cookieStatus2.byte);
 	cookieReadReg3();
-	state = sub_2AB46();
+	state = stateGet();
 	if (status1.word != cookieStatus1.word || status2.word != cookieStatus2.word) {
 		chargeSetPowerStatus();
 		if ((status1.bits.ac ^ cookieStatus1.bits.ac) ||
@@ -216,7 +214,7 @@ void chargeUpdate(void)
 				sub_2E082(0);
 			}
 			if (charge.flags & 0x0020) {
-				if (!(sub_2AA79() & 0x40) && !(state & 0x8000) && (state & 0x0008))
+				if (!(stateGetWakeMask() & 0x40) && !(state & 0x8000) && (state & 0x0008))
 					chargeTransition(0x06);
 				else if (!(state & 0x8000) && (state & 0x0028))
 					chargeTransition(0x37);
@@ -231,7 +229,7 @@ void chargeUpdate(void)
 				chargeControl.0 = 0;
 			}
 			if (!sub_2C658()->chargeHold && (cookieStatus2.byte[1] & 0x0c) == 0x04 &&
-			    !(sub_2AA79() & 0x8000) && chargeUsbHold == 0 &&
+			    !(stateGetWakeMask() & 0x8000) && chargeUsbHold == 0 &&
 			    (!(charge.flags & 0x0004) || chargeMayStart()) &&
 			    !powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1)
 				chargeTransition(0x0f);
@@ -271,7 +269,7 @@ void chargeSetPowerStatus(void)
 	sleepFactorSetStatus3(chargeFactors.0);
 	if (ac != chargeFactors.0) {
 		if (chargeFactors.0) {
-			if (!(sub_2AA79() & 0x00400000))
+			if (!(stateGetWakeMask() & 0x00400000))
 				chargeControl.0 = 1;
 		} else {
 			chargeControl.0 = 0;
@@ -324,7 +322,7 @@ void chargeTempUpdate(unsigned int temp, struct ChargeTemp *t)
 	struct ChargeTempLevel *levels;
 
 	i = 0;
-	if (sub_2AB46() == 0x0020)
+	if (stateGet() == 0x0020)
 		levels = sub_2C658()->chargeTempLevelsCharge;
 	else
 		levels = sub_2C658()->chargeTempLevels;
@@ -428,7 +426,7 @@ static void chargeAlarm0(void)
 /* timer 0x1d */
 static void chargeAlarm0Timer(void)
 {
-	if (sub_2AB46() == 0x0020)
+	if (stateGet() == 0x0020)
 		chargeTransition(0x39);
 }
 
@@ -502,7 +500,7 @@ void chargeCookieTimer(void)
 /* timer 0x1f */
 void chargeTimer1f(void)
 {
-	if (!(sub_2AB46() & 0x0004))
+	if (!(stateGet() & 0x0004))
 		chargeTransition(0x3a);
 	charge.timer1fPending = 0;
 }
@@ -548,7 +546,7 @@ int chargeMayStart(void)
 {
 	unsigned int state;
 
-	state = sub_2AB46();
+	state = stateGet();
 	if (sub_2C658()->batteryNoRetry)
 		return 1;
 	if (deviceVersions.battery.id == 0xfffe)
@@ -675,7 +673,7 @@ void chargeSetAcDelay(void)
 		charge.acDelay = 10;
 		return;
 	}
-	switch (sub_2AB46() & 0x7fff) {
+	switch (stateGet() & 0x7fff) {
 	case 0x0020:
 		charge.acDelay = 10;
 		break;
