@@ -30,5 +30,7 @@ extern int snvsHandshake(unsigned char *data);
 extern int snvsLock(unsigned char *data);
 extern int snvsRead(unsigned char *data, unsigned char *answer);
 extern int snvsWrite(unsigned char *data, unsigned char *answer);
+extern int snvsReserved0(unsigned char *data);
+extern int snvsReserved1(unsigned char *data);
 
 #endif

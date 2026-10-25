@@ -105,3 +105,14 @@ static int snvsCheck(struct SnvsPacket *packet, unsigned int length)
 		return SNVS_BAD_CHECKSUM;
 	return result;
 }
+
+/* two handlers nothing calls (no command table entry): each takes a packet and returns 0 */
+int snvsReserved0(unsigned char *data)
+{
+	return 0;
+}
+
+int snvsReserved1(unsigned char *data)
+{
+	return 0;
+}
