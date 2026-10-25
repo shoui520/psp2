@@ -22,6 +22,16 @@ struct SerialCommand1 {
 	unsigned char	flags;		/* SERIAL1_* */
 };
 
+/* the operation task 5 runs (serial1Operation, flag 4's 0x4000: 0x0180-0x0182 and
+   0x0940-0x0945), 0 when none, and its arguments, which its answer's data replace */
+union Serial1Args {
+	unsigned char	byte[12];
+	unsigned int	word[6];
+};
+
+extern unsigned char serial1State;
+extern union Serial1Args serial1Args;
+
 extern void serial1Reset(void);
 extern unsigned char serial1BufferRead(unsigned char offset, unsigned char size,
 				       unsigned char *data);
@@ -32,5 +42,6 @@ extern void serial1InputHandler(void);
 extern unsigned int serial1SleepFactor(void);
 extern unsigned char serialCommands1Count(void);
 extern int serial1KeyOpen(void);
+extern void serial1Operation(void);
 
 #endif

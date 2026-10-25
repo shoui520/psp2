@@ -12,6 +12,7 @@
 #include "powerreq.h"
 #include "powerseq.h"
 #include "powerwait.h"
+#include "serial1.h"
 #include "task5.h"
 
 
@@ -20,7 +21,6 @@ unsigned int powerDevicePending;
 extern void sub_2E499(void);
 extern void sub_2DF06(void);
 extern void sub_2E528(void);
-extern void sub_2BBF2(void);
 extern void sub_2C44F(void);
 extern void sub_2C315(ID flgid, FLGPTN setptn);
 extern unsigned char sub_126C9(void);
@@ -89,7 +89,7 @@ void task5(VP_INT exinf)
 			}
 			if (ptn & 0x4000) {
 				clr_flg(4, ~0x4000);
-				sub_2BBF2();
+				serial1Operation();
 			}
 			if (ptn & 0x8000)
 				clr_flg(4, ~0x8000);

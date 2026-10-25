@@ -88,13 +88,8 @@ static union {
 	} version;				/* command 0x0101's */
 } serial1Data;
 
-/* the operation task 4 runs (sub_2BBF2: 0x0180-0x0182, 0x0940-0x0945), 0 when none, and
-   its arguments */
 unsigned char serial1State;
-union {
-	unsigned char	byte[12];
-	unsigned int	word[6];
-} serial1Args;
+union Serial1Args serial1Args;
 
 static unsigned int serial1Key;		/* SERIAL1_KEY_OPEN or SERIAL1_KEY_CLOSED */
 
