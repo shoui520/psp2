@@ -18,4 +18,10 @@
 #define HW_IS(id)		(ERNIE_HW == (id))
 #define FW_SINCE(version)	(ERNIE_FW >= (version))
 
+/*
+ * a far pointer moved by n bytes over all its 24 bits: Sony's compiler adds to a far pointer
+ * as a long (@@luadd), the build's CA78K0R V1.72 to its low 16 bits only
+ */
+#define FAR_ADD(p, n)		((void *)((unsigned long)(p) + (n)))
+
 #endif
