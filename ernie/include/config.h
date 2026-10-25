@@ -38,7 +38,9 @@ struct ConfigBlock {
 	unsigned char	reserved5[0x18c - 0x185];
 	unsigned char	chargeLedHost;		/* the host may hand the charge LED over (0x089e
 						   mode 2) */
-	unsigned char	reserved8[0x1aa - 0x18d];
+	unsigned char	reserved8[0x1a8 - 0x18d];
+	unsigned int	hardwareInfoSelect;	/* power-off's hardware info flags: 1 sets 0x80,
+						   3 sets 0x40, others clear both */
 	unsigned char	reserved11:2;
 	unsigned char	indicatorOn0:1;		/* sub_2DF86's indicator on at a reset, and while
 						   sub_126C9 holds */

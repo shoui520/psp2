@@ -9,6 +9,7 @@
 #include <string.h>
 #include "ernie.h"
 #include "kernel.h"
+#include "power.h"
 #include "scratchpad.h"
 #include "timer.h"
 #include "version.h"
@@ -36,7 +37,6 @@ extern void sub_2D712(void);
 extern void sub_2DAE1(int);
 extern void sub_2ABAE(void);
 extern void sub_2A92E(unsigned char *data);
-extern void sub_23975(void);
 extern void sub_2C3BD(void);
 
 struct Task1Msg {
@@ -59,7 +59,7 @@ void task1(VP_INT exinf)
 		rel_mpf(1, msg);
 		if (ercd == E_OK) {
 			sub_2A92E(data);
-			sub_23975();
+			powerSequence();
 		}
 		sub_2C3BD();
 	}

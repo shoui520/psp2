@@ -8,6 +8,7 @@
 #include "kernel.h"
 #include "nvs.h"
 #include "nvsreq.h"
+#include "power.h"
 #include "rtc.h"
 #include "serial.h"
 #include "serial1.h"
@@ -23,7 +24,6 @@ extern void sub_263AD(void);
 extern void sub_2D254(void);
 extern void sub_2D67C(void);
 extern unsigned char sub_10CB3(void);
-extern void sub_23A42(int);
 extern unsigned char sub_11D1B(void);
 extern unsigned char sub_27642(void);
 extern void sub_275F0(int);
@@ -168,7 +168,7 @@ unsigned char sub_10C03(void)
 			ret = sub_10E22();
 			break;
 		}
-		sub_23A42(2);
+		powerReady(2);
 	} else {
 		switch (state) {
 		case 0x0002:
