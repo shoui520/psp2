@@ -62,5 +62,6 @@ extern void sub_125F2(void);
 extern void sub_1267E(void);
 extern unsigned char sub_12775(unsigned char ticks);
 extern void sub_1278E(void);
+extern void inputScanHold(unsigned int ticks);
 
 #endif
