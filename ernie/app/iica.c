@@ -3,10 +3,13 @@
  * rxCount is not 0, reads rxCount bytes after a repeated start, and leaves its result (0, or
  * 1 and 2 for a missing acknowledge) in *status.
  */
+#pragma rtos_interrupt INTIICA iicaInterrupt
 #pragma sfr
+#pragma NOP
 
 #include "ernie.h"
 #include "iica.h"
+#include "task.h"
 
 #define IICA_IDLE		0
 #define IICA_ADDRESS		2	/* the address byte sent */
@@ -183,4 +186,71 @@ void iicaClose(void)
 	IICAIF = 0;
 	iicaRequest.state = IICA_IDLE;
 	IICAEN = 0;
+}
+
+/* INTIIC0: the next step of iicaStart's transfer; at its end, event 0x10 of flag 4 */
+void iicaInterrupt(void)
+{
+	switch (iicaRequest.state) {
+	case IICA_ADDRESS:
+		if (ACKD) {
+			if (TRC) {
+				IICA = *iicaRequest.txData;
+				iicaRequest.txData++;
+				iicaRequest.txCount--;
+				iicaRequest.state = IICA_SEND;
+			} else {
+				ACKE = 1;
+				WTIM = 0;
+				WREL = 1;
+				iicaRequest.state = IICA_RECEIVE;
+			}
+		} else {
+			*iicaRequest.status = 1;
+			goto stop;
+		}
+		break;
+	case IICA_SEND:
+		if (ACKD) {
+			if (iicaRequest.txCount != 0) {
+				IICA = *iicaRequest.txData;
+				iicaRequest.txData++;
+				iicaRequest.txCount--;
+			} else if (iicaRequest.rxCount != 0) {
+				STT = 1;
+				IICA = iicaRequest.address | 1;
+				iicaRequest.state = IICA_ADDRESS;
+			} else {
+				*iicaRequest.status = 0;
+				goto stop;
+			}
+		} else {
+			*iicaRequest.status = 2;
+			goto stop;
+		}
+		break;
+	case IICA_RECEIVE:
+		*iicaRequest.rxData = IICA;
+		iicaRequest.rxData++;
+		iicaRequest.rxCount--;
+		if (iicaRequest.rxCount != 0) {
+			WREL = 1;
+			break;
+		}
+		IICAIF = 0;
+		ACKE = 0;
+		WTIM = 1;
+		WREL = 1;
+		while (!IICAIF)
+			NOP();
+		*iicaRequest.status = 0;
+		goto stop;
+	default:
+		break;
+	}
+	return;
+stop:
+	SPT = 1;
+	iicaRequest.state = IICA_DONE;
+	task5SetFlag(4, 0x0010);
 }

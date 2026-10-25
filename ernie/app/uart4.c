@@ -2,11 +2,16 @@
  * UART4 on SAU2 (channel 0 sends, channel 1 receives; TxD4 P9.4, RxD4 P9.3): opened at one of
  * uart4Bauds' speeds, and read and written through uart4's ring buffers.
  */
+#pragma rtos_interrupt INTSRE1 uart4ErrorInterrupt
+#pragma rtos_interrupt INTSR4 uart4ReceiveInterrupt
+#pragma rtos_interrupt INTST4 uart4SendInterrupt
 #pragma sfr
 
 #include "ernie.h"
 #include "chip.h"
 #include "kernel.h"
+#include "task.h"
+#include "timer.h"
 #include "uart.h"
 #include "uart4.h"
 
@@ -165,4 +170,38 @@ unsigned char uart4Write(unsigned char *buf, unsigned char size)
 	}
 	ena_dsp();
 	return length;
+}
+
+/* a reception error: cleared (SREIF1 is UART4's error interrupt) */
+void uart4ErrorInterrupt(void)
+{
+	unsigned char status;
+
+	status = SDR21;	/* the byte in error, dropped */
+	status = SSR21;
+	SIR21 = status & 0x07;
+}
+
+void uart4ReceiveInterrupt(void)
+{
+	unsigned char data;
+
+	data = SDR21;
+	if ((uart4.rxWrite + 1 & uart4.rxMask) != uart4.rxRead) {
+		uart4.rxBuffer[uart4.rxWrite] = data;
+		uart4.rxWrite = uart4.rxWrite + 1 & uart4.rxMask;
+		timerStart(0x0f, 2);
+	}
+}
+
+/* the next byte queued, or, with none left, event 0x0200 of flag 3 */
+void uart4SendInterrupt(void)
+{
+	struct UartPort *p = &uart4;
+
+	if (p->txWrite - p->txRead & p->txMask) {
+		SDR20 = p->txBuffer[p->txRead];
+		p->txRead = p->txRead + 1 & p->txMask;
+	} else
+		task2SetFlag(3, 0x0200);
 }
