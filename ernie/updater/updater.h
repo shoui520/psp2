@@ -150,9 +150,6 @@ extern unsigned char sub_3B175(void);
 extern void sub_AC3C(int);
 extern void sub_AC65(void);
 extern void sub_3AF74(void);
-extern void sub_A1E5(void);
-extern void sub_A219(void);
-extern void sub_A065(int);
 extern unsigned char sub_A5F9(unsigned char level);
 
 #endif

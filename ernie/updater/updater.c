@@ -25,6 +25,8 @@
 #include "param.h"
 #include "serial.h"
 #include "serial1.h"
+#include "serial2.h"
+#include "serial4.h"
 #include "sleepfactor.h"
 #include "tau.h"
 #include "timer.h"
@@ -565,8 +567,8 @@ void mainLoop(void)
 	tm00Start();
 	sub_3AF74();
 	serial1Reset();
-	sub_A1E5();
-	sub_A219();
+	serial4StartTimers();
+	serial2Init();
 	updEventSet(4);
 	serialStartTimer();
 	powerInit();
@@ -599,11 +601,11 @@ void mainLoop(void)
 			if (updEventTake(0x35))
 				serialEvent(0x10);
 			if (updEventTake(1))
-				sub_A065(0x400);
+				serial4Event(0x400);
 			if (updEventTake(2))
-				sub_A065(0x200);
+				serial4Event(0x200);
 			if (updEventTake(3))
-				sub_A065(0x800);
+				serial4Event(0x800);
 			if (updEventTake(4))
 				p77Changed();
 			if (updEventTake(5))
@@ -647,11 +649,11 @@ void mainLoop(void)
 			if (updEventTake(0x35))
 				serialEvent(0x10);
 			if (updEventTake(1))
-				sub_A065(0x400);
+				serial4Event(0x400);
 			if (updEventTake(2))
-				sub_A065(0x200);
+				serial4Event(0x200);
 			if (updEventTake(3))
-				sub_A065(0x800);
+				serial4Event(0x800);
 			if (updEventTake(4))
 				p77Changed();
 			if (updEventTake(5))
