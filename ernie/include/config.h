@@ -11,7 +11,11 @@ struct ConfigBlock {
 	struct AnalogCalibration analogCalibration;	/* the sticks' default calibration */
 	unsigned char	analogScale0;		/* set 0's margin, in 1/1000 of the range */
 	unsigned char	analogScale1;		/* set 1's */
-	unsigned char	reserved1[0x14 - 0x12];
+	unsigned char	reserved19:1;
+	unsigned char	batteryNoRetry:1;	/* set: the battery is read once at the power-on
+						   (powerSeqOn) */
+	unsigned char	reserved20:6;
+	unsigned char	reserved21;
 	unsigned char	bbmcDetect:1;		/* set: P3.2 low at the start means a 3G modem
 						   (bbmcInit) */
 	unsigned char	reserved17:7;
@@ -33,9 +37,18 @@ struct ConfigBlock {
 	unsigned int	batteryTte;
 	unsigned int	batterySoh;
 	unsigned int	batteryFullCap2;
-	unsigned char	reserved10[0xf3 - 0xea];
+	unsigned char	reserved10[0xee - 0xea];
+	unsigned char	voltage81;		/* the Elmo's regulators 0x81-0x84: their levels at a
+						   resume */
+	unsigned char	voltage82;
+	unsigned char	voltage83;
+	unsigned char	voltage84;
+	unsigned char	reserved22;
 	unsigned char	voltageTrim;		/* passed with a regulator's level (0x088e) */
-	unsigned char	reserved7[0x184 - 0xf4];
+	unsigned char	reserved7[0x15a - 0xf4];
+	unsigned int	bbmcPowerDelay;		/* the 3G modem's power line's hold at a power-on
+						   when its power input is up (powerBbmcOn) */
+	unsigned char	reserved23[0x184 - 0x15c];
 	unsigned char	startCheckOff:1;	/* set: mode 1's command 0x0105 starts state 9
 						   although serial2TestAreaUsed and serial2InTime
 						   refuse */
@@ -48,7 +61,7 @@ struct ConfigBlock {
 	unsigned char	chargeLedHost;		/* the host may hand the charge LED over (0x089e
 						   mode 2) */
 	unsigned char	reserved8[0x1a6 - 0x18d];
-	unsigned char	suspendCheck:1;		/* set: a suspend runs sub_2818A also when
+	unsigned char	suspendCheck:1;		/* set: a suspend runs powerBbmcCycle also when
 						   the 3G modem has no mode (bbmcModeIsNone) */
 	unsigned char	reserved15:7;
 	unsigned char	reserved16;

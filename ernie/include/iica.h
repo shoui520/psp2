@@ -15,7 +15,7 @@ struct IicaRequest {
 	unsigned char	*status;		/* 0, or 1 and 2: no acknowledge */
 };
 
-extern int iicaInit(void);
+extern unsigned char iicaInit(void);
 extern int iicaStart(struct IicaRequest *request);
 extern int iicaTransfer(struct IicaRequest *request);
 extern void iicaClose(void);

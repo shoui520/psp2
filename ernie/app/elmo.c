@@ -9,6 +9,7 @@
 #include "elmo.h"
 #include "iica.h"
 #include "kernel.h"
+#include "powerseq.h"
 
 #define ELMO_TRIES	3		/* a transfer's tries */
 #define ELMO_TIMEOUT	0x4b		/* the wait for a transfer's end, in ticks */
@@ -22,8 +23,6 @@ struct ElmoRegInit {
 	unsigned int	initial;
 };
 
-extern unsigned char elmoVersion[2];
-extern unsigned char byteFF232[3];		/* the Elmo command a power request sends */
 
 extern unsigned int sub_2AB46(void);
 
@@ -57,10 +56,10 @@ void elmoInitRegs(void)
 
 	for (i = 0; i < 11; i++) {
 		*elmoRegInit[i].value = elmoRegInit[i].initial;
-		byteFF232[0] = elmoRegInit[i].reg;
-		byteFF232[1] = ((unsigned char *)elmoRegInit[i].value)[1];
-		byteFF232[2] = *(unsigned char *)elmoRegInit[i].value;
-		result = elmoWrite(byteFF232, 3);
+		elmoCommand[0] = elmoRegInit[i].reg;
+		elmoCommand[1] = ((unsigned char *)elmoRegInit[i].value)[1];
+		elmoCommand[2] = *(unsigned char *)elmoRegInit[i].value;
+		result = elmoWrite(elmoCommand, 3);
 	}
 }
 
@@ -74,7 +73,7 @@ unsigned char elmoWrite(unsigned char *data, unsigned char length)
 	unsigned char tries;
 
 	tries = ELMO_TRIES - 1;
-	if (elmoVersion[0] == 0xff)
+	if (deviceVersions.elmo[0] == 0xff)
 		return 0;
 	do {
 		request.rxData = NULL;
@@ -106,7 +105,7 @@ unsigned char elmoRead(unsigned char *reg, unsigned char *value)
 	unsigned char tries;
 
 	tries = ELMO_TRIES - 1;
-	if (elmoVersion[0] == 0xff) {
+	if (deviceVersions.elmo[0] == 0xff) {
 		*value++ = 0;
 		*value = 0;
 		return 0;

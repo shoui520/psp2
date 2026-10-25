@@ -22,6 +22,7 @@
 #include "kernel.h"
 #include "motion.h"
 #include "powerreq.h"
+#include "powerseq.h"
 #include "serial2.h"
 #include "task5.h"
 #include "version.h"
@@ -30,12 +31,6 @@
 union BatteryBuffer {
 	unsigned char	byte[0x20];
 	unsigned int	word[0x10];
-};
-
-/* the battery's identity, which the battery module reads (sub_2894D) */
-struct BatteryInfo {
-	unsigned int	id;
-	unsigned int	version[3];	/* 0xffff: no battery answered */
 };
 
 /* a command to the battery's bootloader (0x09b2-0x09b4) */
@@ -57,22 +52,6 @@ extern unsigned char sub_2BB99(void);
 extern unsigned char sub_2BBE9(void);
 extern void sub_2C315(ID flgid, FLGPTN setptn);
 extern unsigned char sub_2AB49(int transition);
-extern unsigned char sub_28243(unsigned char, unsigned char);
-extern unsigned char sub_282AA(unsigned char, unsigned char);
-extern unsigned char sub_2831A(unsigned char, unsigned char, unsigned char);
-extern unsigned char sub_28373(unsigned char, unsigned char, unsigned char);
-extern unsigned char sub_283D5(void);
-extern unsigned char sub_2843A(void);
-extern unsigned char sub_2849F(void);
-extern unsigned char sub_28516(void);
-extern unsigned char sub_27F89(void);
-extern unsigned char sub_27FF3(void);
-extern unsigned char sub_27B80(void);
-extern unsigned char sub_27BE8(void);
-extern unsigned char sub_27C59(void);
-extern unsigned char sub_27CF1(void);
-extern unsigned char sub_285AB(void);
-extern unsigned char sub_28616(void);
 extern unsigned char sub_29DDF(void);
 extern void sub_2A2EC(unsigned char *status);
 extern unsigned char sub_29B88(void);
@@ -81,14 +60,7 @@ extern unsigned char sub_11D61(void);
 extern void sub_11D6B(void);
 extern void sub_11D73(void);
 extern void sub_11D7B(void);
-extern void sub_28235(void);
 extern void sub_2A6A0(unsigned int);
-extern unsigned char sub_28681(void);
-extern unsigned char sub_2818A(void);
-extern unsigned char sub_27EBD(void);
-extern unsigned char sub_27F23(void);
-extern unsigned char sub_28068(void);
-extern unsigned char sub_280C7(void);
 extern void sub_2E165(unsigned int);
 extern unsigned char sub_2E8B4(void);
 extern void sub_2E0A6(void);
@@ -97,7 +69,6 @@ extern void sub_2E0D8(unsigned int);
 extern void sub_2E0C4(unsigned int);
 extern void sub_2DFF2(unsigned int);
 extern void sub_2E016(unsigned int);
-extern unsigned char sub_27D9E(unsigned char, unsigned char);
 extern unsigned char sub_2A379(unsigned char);
 extern unsigned char sub_29F40(unsigned char *reg, unsigned char *value);
 extern unsigned char sub_29E85(unsigned char *data, unsigned int length);
@@ -120,16 +91,6 @@ extern unsigned char sub_2A1EF(unsigned char);
 extern unsigned char sub_2A191(unsigned char);
 
 /* the power status (0x0800) and the USB state (0x0804, 0x089a), the power module's */
-union PowerStatus {
-	unsigned char	byte[2];
-	struct {
-		unsigned char	flags;
-		unsigned char	usb:2;		/* the USB status's bits 2-3 (0x089a) */
-		unsigned char	other:6;
-	} bits;
-};
-
-extern __sreg union PowerStatus saddr_FFE54;
 extern __sreg unsigned char saddr_FFE60;
 extern __sreg unsigned char saddr_FFE61;
 extern __sreg unsigned char saddr_FFE62;
@@ -137,12 +98,8 @@ extern __sreg unsigned char saddr_FFE57;
 extern __sreg unsigned char saddr_FFE63;
 extern unsigned int wordFF690;			/* the battery's remaining capacity */
 extern unsigned int wordFF692;			/* and voltage */
-extern unsigned char elmoVersion[2];		/* low byte first */
-extern unsigned char cookieVersion[2];
-extern unsigned char byteFF232[3];		/* the LED's command to the Elmo */
 extern unsigned int wordFF698;			/* the battery's life in percent */
 extern unsigned char byteFF6D6[6][2];		/* the Cookie's registers 3-8 as written */
-extern struct BatteryInfo batteryInfo;
 extern struct BatteryBLCommand batteryBLCommand;
 
 void powerInputChanged(void);
@@ -445,8 +402,8 @@ void powerRequestDone(unsigned char status)
 /* 0x0880 (sceSysconGetElmoVersion) */
 static void powerRequestGetElmoVersion(void)
 {
-	powerRequestAnswer[0] = elmoVersion[1];
-	powerRequestAnswer[1] = elmoVersion[0];
+	powerRequestAnswer[0] = deviceVersions.elmo[1];
+	powerRequestAnswer[1] = deviceVersions.elmo[0];
 	powerRequest.answerLength = 2;
 	hostRequestAnswerReady(&powerRequest.state);
 	powerRequest.status = 0;
@@ -455,8 +412,8 @@ static void powerRequestGetElmoVersion(void)
 /* 0x0881 (sceSysconGetCookieVersion) */
 static void powerRequestGetCookieVersion(void)
 {
-	powerRequestAnswer[0] = cookieVersion[1];
-	powerRequestAnswer[1] = cookieVersion[0];
+	powerRequestAnswer[0] = deviceVersions.cookie[1];
+	powerRequestAnswer[1] = deviceVersions.cookie[0];
 	powerRequest.answerLength = 2;
 	hostRequestAnswerReady(&powerRequest.state);
 	powerRequest.status = 0;
@@ -484,13 +441,13 @@ static void powerRequest0884(void)
 				on0 = 1;
 			if (powerRequestData[0] & 0x02)
 				on1 = 1;
-			result = sub_28243(on1, on0);
+			result = powerElmoA0Set(on1, on0);
 		} else {
 			if (powerRequestData[0] & 0x01)
 				on0 = 1;
 			if (powerRequestData[0] & 0x02)
 				on1 = 1;
-			result = sub_282AA(on1, on0);
+			result = powerElmoA0Clear(on1, on0);
 		}
 		result = powerResult(result);
 	} else
@@ -510,11 +467,11 @@ static void powerRequest0885(void)
 		if (powerRequestData[0] & 0x80) {
 			if (powerRequestData[0] & 0x04)
 				on2 = 1;
-			result = sub_2831A(on2, on1, on0);
+			result = powerElmoA0Set2(on2, on1, on0);
 		} else {
 			if (powerRequestData[0] & 0x02)
 				on2 = 1;
-			result = sub_28373(on2, on1, on0);
+			result = powerElmoA0Clear2(on2, on1, on0);
 		}
 		result = powerResult(result);
 	} else
@@ -529,9 +486,9 @@ static void powerRequestCtrlHdmiCecPower(void)
 
 	if (powerRequest.length == 1) {
 		if (powerRequestData[0] != 0)
-			result = sub_283D5();
+			result = powerHdmiCecOn();
 		else
-			result = sub_2843A();
+			result = powerHdmiCecOff();
 		result = powerResult(result);
 	} else
 		result = 0x3b;
@@ -545,9 +502,9 @@ static void powerRequestCtrlMotionSensorPower(void)
 
 	if (powerRequest.length == 1) {
 		if (powerRequestData[0] != 0)
-			result = sub_2849F();
+			result = powerMotionOn();
 		else
-			result = sub_28516();
+			result = powerMotionOff();
 		result = powerResult(result);
 	} else
 		result = 0x3b;
@@ -561,9 +518,9 @@ static void powerRequestCtrlSdPower(void)
 
 	if (powerRequest.length == 1) {
 		if (powerRequestData[0] != 0)
-			result = sub_27F89();
+			result = powerSdOn();
 		else
-			result = sub_27FF3();
+			result = powerSdOff();
 		result = powerResult(result);
 	} else
 		result = 0x3b;
@@ -577,9 +534,9 @@ static void powerRequestCtrlAccPower(void)
 
 	if (powerRequest.length == 1) {
 		if (powerRequestData[0] != 0)
-			result = sub_27B80();
+			result = powerAccOn();
 		else
-			result = sub_27BE8();
+			result = powerAccOff();
 		result = powerResult(result);
 	} else
 		result = 0x3b;
@@ -593,9 +550,9 @@ static void powerRequestCtrlWirelessPower(void)
 
 	if (powerRequest.length == 1) {
 		if (powerRequestData[0] != 0)
-			result = sub_27C59();
+			result = powerWirelessOn();
 		else
-			result = sub_27CF1();
+			result = powerWirelessOff();
 		result = powerResult(result);
 	} else
 		result = 0x3b;
@@ -621,9 +578,9 @@ static void powerRequestCtrlHpremote(void)
 
 	if (powerRequest.length == 1) {
 		if (powerRequestData[0] != 0)
-			result = sub_285AB();
+			result = powerHpremoteOn();
 		else
-			result = sub_28616();
+			result = powerHpremoteOff();
 		result = powerResult(result);
 	} else
 		result = 0x3b;
@@ -674,16 +631,16 @@ static void powerRequest088D(void)
 			if (powerRequestData[0] & 0x01) {
 				if (powerRequestData[0] & 0x80) {
 					if (sub_11D57() == 1) {
-						sub_28235();
+						powerBbmcPulse();
 						sub_2A6A0(500);
 					}
 				}
-				result = sub_28681();
+				result = powerBbmcStart();
 			} else {
-				result = sub_2818A();
+				result = powerBbmcCycle();
 				if (powerRequestData[0] & 0x80) {
 					if (sub_11D57() == 1)
-						sub_28235();
+						powerBbmcPulse();
 					if (result != 0 && sub_11D61() == 0)
 						result = 0;
 				}
@@ -701,9 +658,9 @@ static void powerRequestCtrlRMRPower(void)
 
 	if (powerRequest.length == 1) {
 		if (powerRequestData[0] != 0)
-			result = sub_27EBD();
+			result = powerRmrOn();
 		else
-			result = sub_27F23();
+			result = powerRmrOff();
 		result = powerResult(result);
 	} else
 		result = 0x3b;
@@ -717,9 +674,9 @@ static void powerRequestCtrlMultiCnPower(void)
 
 	if (powerRequest.length == 1) {
 		if (powerRequestData[0] != 0)
-			result = sub_28068();
+			result = powerMultiCnOn();
 		else
-			result = sub_280C7();
+			result = powerMultiCnOff();
 		result = powerResult(result);
 	} else
 		result = 0x3b;
@@ -850,7 +807,7 @@ static void powerRequestCtrlVoltage(void)
 		} else {
 			trim = sub_2C658()->voltageTrim;
 			level = levelTrim(powerRequestData[1], trim);
-			result = powerResult(sub_27D9E(regulator, level));
+			result = powerResult(powerSetVoltage(regulator, level));
 		}
 	} else
 		result = 0x3b;
@@ -947,10 +904,10 @@ static void powerRequestCtrlLED(void)
 				else
 					elmoLed &= ~0x1000;
 			}
-			byteFF232[0] = 0xa5;
-			byteFF232[1] = ((unsigned char *)&elmoLed)[1];
-			byteFF232[2] = (unsigned char)elmoLed;
-			result = powerResult(elmoWrite(byteFF232, 3));
+			elmoCommand[0] = 0xa5;
+			elmoCommand[1] = ((unsigned char *)&elmoLed)[1];
+			elmoCommand[2] = (unsigned char)elmoLed;
+			result = powerResult(elmoWrite(elmoCommand, 3));
 		}
 	} else
 		result = 0x3b;
@@ -1020,7 +977,7 @@ static void powerRequest0894(void)
 		elmoStatusMask.byte[7] &= ~powerRequestData[7];
 		elmoStatusMask.byte[9] &= ~powerRequestData[8];
 	}
-	result = elmoWrite(byteFF232, elmoGetMasks(0x1f, byteFF232));
+	result = elmoWrite(elmoCommand, elmoGetMasks(0x1f, elmoCommand));
 	result = powerResult(result);
 	powerRequestDone(result);
 }
@@ -1222,15 +1179,15 @@ unsigned char hostCommandBatteryLifePercent(unsigned char *out, unsigned char *l
 }
 
 /* the battery's word for the host, or the setting's when no battery answered */
-#define BATTERY_ABSENT()	(batteryInfo.version[0] == 0xffff)
+#define BATTERY_ABSENT()	(deviceVersions.battery.version[0] == 0xffff)
 
 /* 0x0980 (sceSysconGetBatteryVersion) */
 static void batteryRequestGetVersion(void)
 {
-	sub_2894D(&batteryInfo);
-	batteryRequestAnswer.word[0] = batteryInfo.version[0];
-	batteryRequestAnswer.word[1] = batteryInfo.version[1];
-	batteryRequestAnswer.word[2] = batteryInfo.version[2];
+	sub_2894D(&deviceVersions.battery);
+	batteryRequestAnswer.word[0] = deviceVersions.battery.version[0];
+	batteryRequestAnswer.word[1] = deviceVersions.battery.version[1];
+	batteryRequestAnswer.word[2] = deviceVersions.battery.version[2];
 	batteryRequest.answerLength = 6;
 	hostRequestAnswerReady(&batteryRequest.state);
 	batteryRequest.status = 0;

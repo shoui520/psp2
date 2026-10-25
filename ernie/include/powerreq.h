@@ -10,6 +10,20 @@
 #include "host.h"
 #include "input.h"
 
+/* the power status (host command 0x0800) */
+union PowerStatus {
+	unsigned char	byte[2];
+	struct {
+		unsigned char	flags;
+		unsigned char	usb:2;		/* the USB status's bits 2-3 (0x089a) */
+		unsigned char	reserved1:2;
+		unsigned char	cookieLock0:1;	/* either set: the Cookie's register 3 keeps */
+		unsigned char	cookieLock1:1;	/* its bits (powerCookieClear, sub_2A379) */
+		unsigned char	reserved2:2;
+	} bits;
+};
+
+extern __sreg union PowerStatus saddr_FFE54;
 extern struct HostRequest powerRequest;
 extern struct HostRequest batteryRequest;
 extern struct InputHandler powerInputHandler;

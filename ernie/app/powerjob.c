@@ -13,6 +13,7 @@
 #include "power.h"
 #include "powerjob.h"
 #include "powerreq.h"
+#include "powerseq.h"
 #include "sysmode.h"
 #include "timer.h"
 
@@ -24,16 +25,6 @@ extern __sreg unsigned char saddr_FFE63;
 
 extern void sub_11D73(void);
 extern void sub_11D7B(void);
-extern void sub_276A3(void);
-extern void sub_2782D(void);
-extern void sub_27A04(void);
-extern void sub_27AB7(void);
-extern void sub_27CF1(void);
-extern void sub_2811E(void);
-extern void sub_28152(void);
-extern void sub_2818A(void);
-extern void sub_28194(void);
-extern void sub_281C1(void);
 extern void sub_28DE9(void);
 extern void sub_28DED(void);
 extern unsigned char sub_29B88(void);
@@ -121,10 +112,10 @@ static void powerJobOn(void)
 	EGN0.0 = 1;
 	PIF0 = 0;
 	PMK0 = 0;
-	sub_276A3();
+	powerSeqOn();
 	powerCutReg0 = powerCutReg1 = powerCutReg2 = 0;
 	sub_2A816();
-	sub_2811E();
+	powerSeqInit();
 	sub_2E4BB();
 	sub_2DF1F();
 	timerStart(0x17, 1);
@@ -143,7 +134,7 @@ static void powerJobResume(void)
 		sub_2A6A0(4);
 		sub_2E854(1);
 	}
-	sub_2782D();
+	powerSeqResume();
 	P0.6 = 1;
 	P0.5 = 1;
 	sub_11D73();
@@ -177,12 +168,12 @@ static void powerJobResume(void)
 
 static void powerJobOff(void)
 {
-	sub_28194();
-	sub_27A04();
-	sub_281C1();
+	powerBbmcOff();
+	powerSeqOff();
+	powerBbmcOn();
 	sub_2A0ED(1);
 	if (powerResumed) {
-		sub_28152();
+		powerCookieHold();
 		POWER_JOB_MODE();
 	}
 	sub_29E09();
@@ -207,7 +198,7 @@ static void powerJobOff(void)
 
 static void powerJobShutdown(void)
 {
-	sub_27A04();
+	powerSeqOff();
 	iicaClose();
 	sub_29DC2();
 	sub_2E0D8(2);
@@ -220,11 +211,11 @@ static void powerJobShutdown(void)
 
 static void powerJobSuspend(void)
 {
-	sub_27AB7();
+	powerSeqSuspend();
 	if (sub_29CCF()) {
-		sub_27CF1();
+		powerWirelessOff();
 		if (!bbmcModeIsNone() || sub_2C658()->suspendCheck)
-			sub_2818A();
+			powerBbmcCycle();
 	}
 	POWER_JOB_MODE();
 	if (!sub_2E0CF())
@@ -233,7 +224,7 @@ static void powerJobSuspend(void)
 	sub_2C315(4, 0x20);
 	saddr_FFE63.0 = 1;
 	saddr_FFE57.1 = 1;
-	sub_28152();
+	powerCookieHold();
 	sub_2E05E(0);
 	sub_2E165(0);
 	powerReady(POWER_JOB_PART);

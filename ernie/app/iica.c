@@ -19,7 +19,7 @@
 static struct IicaRequest iicaRequest;
 
 /* enables the IICA and frees the bus; 1 when the bus stayed busy */
-int iicaInit(void)
+unsigned char iicaInit(void)
 {
 	unsigned char retry;
 	unsigned char i;

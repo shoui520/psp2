@@ -28,6 +28,9 @@ struct SfrBits {
 /* port 3's bit 3 (P3.3) */
 #define P33			SFR_BITS(0xfff03).b3
 
+/* port 3's bit 1 (P3.1) */
+#define P31			SFR_BITS(0xfff03).b1
+
 /* port 3's bit 4 (P3.4) and its mode (PM3.4), and bit 7 (P3.7): the 3G modem's lines (bbmc.c) */
 #define P34			SFR_BITS(0xfff03).b4
 #define PM34			SFR_BITS(0xfff23).b4
@@ -46,6 +49,9 @@ struct SfrBits {
 #define PM93			SFR_BITS(0xfff29).b3
 #define PM94			SFR_BITS(0xfff29).b4
 #define PU93			SFR_BITS(0xf0039).b3
+
+/* port 9's bit 5 (P9.5): on while the system is on (powerseq.c) */
+#define P95			SFR_BITS(0xfff09).b5
 
 /* port 9's bits 1 and 2 (P9.1, P9.2): low while the host is off */
 #define P91			SFR_BITS(0xfff09).b1

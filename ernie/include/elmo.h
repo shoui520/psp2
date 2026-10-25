@@ -29,6 +29,8 @@ extern union ElmoStatusMask elmoStatusMask;
 extern unsigned int elmoLed;			/* 0xa5: the LEDs' state */
 extern unsigned int elmoRegA6;			/* 0xa6 */
 extern unsigned int elmoRegA7;			/* 0xa7: a mask the clears set */
+extern unsigned int elmoRegAA;			/* 0xaa: the RMR's power (bit 15) */
+extern unsigned int elmoRegAB;			/* 0xab: the multi connector's power (bit 15) */
 
 extern void elmoInitRegs(void);
 extern unsigned char elmoWrite(unsigned char *data, unsigned char length);

@@ -9,9 +9,9 @@
 #include "kernel.h"
 #include "powerjob.h"
 #include "powerreq.h"
+#include "powerseq.h"
 #include "task5.h"
 
-extern unsigned char elmoVersion[2];
 
 unsigned int wordFF24E;
 
@@ -19,7 +19,6 @@ extern void sub_2A5EC(void);
 extern void sub_2A593(void);
 extern void sub_28F92(void);
 extern void sub_2E499(void);
-extern void sub_2817E(void);
 extern void sub_2DF06(void);
 extern void sub_2E528(void);
 extern void sub_2BBF2(void);
@@ -68,7 +67,7 @@ void task5(VP_INT exinf)
 			}
 			if (ptn & 0x0400) {
 				clr_flg(4, ~0x0400);
-				sub_2817E();
+				powerCookieRelease();
 			}
 			if (ptn & 0x0008) {
 				clr_flg(4, ~0x0008);
@@ -166,7 +165,7 @@ void powerJobPostUpdate(void)
 
 unsigned char sub_21F2A(void)
 {
-	return elmoVersion[0];
+	return deviceVersions.elmo[0];
 }
 
 void sub_21F33(unsigned int bits)
