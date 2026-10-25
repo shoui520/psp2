@@ -6,6 +6,7 @@
 #include "ernie.h"
 #include "command.h"
 #include "kernel.h"
+#include "nvs.h"
 #include "nvsreq.h"
 #include "rtc.h"
 #include "serial.h"
@@ -21,7 +22,6 @@ extern void sub_2E8C6(void);
 extern void sub_263AD(void);
 extern void sub_2D254(void);
 extern void sub_2D67C(void);
-extern unsigned char sub_22542(unsigned char reg, int a, unsigned char *buf, int n);
 extern unsigned char sub_10CB3(void);
 extern void sub_23A42(int);
 extern unsigned char sub_11D1B(void);
@@ -202,7 +202,7 @@ unsigned char sub_10D08(void)
 	updaterRequestInit();
 	sub_2D254();
 	sub_2D67C();
-	if (sub_22542(0x2d, 1, &value, 1) == 0)
+	if (nvsRead(0x2d, 1, &value, 1) == 0)
 		setDlFlags(value);
 	if (getAlarmMode() == 1)
 		setAlarm(RTC_ALARM_NONE);

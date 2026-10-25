@@ -20,6 +20,7 @@
 #include "command.h"
 #include "host.h"
 #include "kernel.h"
+#include "nvs.h"
 #include "serial.h"
 #include "sha1.h"
 #include "sleepfactor.h"
@@ -30,10 +31,6 @@ extern unsigned char sub_2BB99(void);
 extern unsigned char sub_2BBE9(void);
 extern ER sub_2C2ED(unsigned char flgid, FLGPTN setptn);
 extern unsigned char sub_2AB49(int transition);
-extern unsigned char sub_22542(unsigned int offset, unsigned int size, unsigned char *data,
-			       unsigned char area);
-extern unsigned char sub_225E1(unsigned int offset, unsigned int size, unsigned char *data,
-			       unsigned char area);
 extern unsigned char sub_2CCA2(void);
 extern unsigned char sub_2CC93(void);
 extern unsigned char sub_2CCDE(void);
@@ -393,7 +390,7 @@ static unsigned char updaterSetRunMode(unsigned int mode)
 	unsigned char result;
 	unsigned char flags;
 
-	result = sub_22542(UPDATER_NVS_DL_FLAGS, 1, &flags, UPDATER_NVS_AREA);
+	result = nvsRead(UPDATER_NVS_DL_FLAGS, 1, &flags, UPDATER_NVS_AREA);
 	if (result != 0)
 		return 0x22;
 	switch (mode) {
@@ -619,7 +616,7 @@ static unsigned char updaterExecFinalize(unsigned char *data)
 			return 1;
 		result = (unsigned char)memcmp(data, updater.hash, SHA1HashSize);
 		if (updater.state == 0x12 && result == 0) {
-			result = sub_22542(UPDATER_NVS_DL_FLAGS, 1, &flags, UPDATER_NVS_AREA);
+			result = nvsRead(UPDATER_NVS_DL_FLAGS, 1, &flags, UPDATER_NVS_AREA);
 			if (result != 0)
 				return 0x22;
 			flags |= 0x01;
@@ -640,7 +637,7 @@ static unsigned char updaterWriteDlFlags(unsigned char flags)
 {
 	unsigned char result;
 
-	result = sub_225E1(UPDATER_NVS_DL_FLAGS, 1, &flags, UPDATER_NVS_AREA);
+	result = nvsWrite(UPDATER_NVS_DL_FLAGS, 1, &flags, UPDATER_NVS_AREA);
 	if (result != 0)
 		return 0x22;
 	setDlFlags(flags);

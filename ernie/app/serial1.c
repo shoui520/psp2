@@ -14,6 +14,7 @@
 #include "csi.h"
 #include "kernel.h"
 #include "keepram.h"
+#include "nvs.h"
 #include "rtc.h"
 #include "serial.h"
 #include "serial1.h"
@@ -31,12 +32,6 @@ extern unsigned char sub_29CC0(void);
 extern int sub_25664(void);
 extern int sub_256E1(void);
 extern unsigned char sub_2D6DE(void);
-extern unsigned char sub_22542(unsigned int offset, unsigned int size, unsigned char *data,
-			       unsigned char area);
-extern unsigned char sub_225E1(unsigned int offset, unsigned int size, unsigned char *data,
-			       unsigned char area);
-extern unsigned char sub_22960(void);
-extern unsigned char sub_23325(unsigned char *a, unsigned char *b, unsigned int *c);
 extern unsigned char sub_2C66A(unsigned char *data);
 extern unsigned char sub_2C6F0(unsigned int id, unsigned char size, unsigned char *data);
 extern unsigned char sub_2C736(unsigned int id, unsigned char size, unsigned char *data);
@@ -55,7 +50,6 @@ extern unsigned char sub_2DC3C(unsigned int id, unsigned char size, unsigned cha
 extern unsigned char sub_2DC57(unsigned int id);
 extern unsigned char sub_2DC8B(void);
 extern unsigned char sub_2D05F(void);
-extern unsigned char sub_2296F(void);
 extern void sub_2C315(int, int);
 extern unsigned char sub_11D4B(void);
 extern unsigned char sub_261B5(void);
@@ -451,7 +445,7 @@ static unsigned char serial1Command0131(struct SerialBuffer *request, struct Ser
 	size = request->data[2];
 	response->data = serial1Data.byte;
 	response->length = size;
-	result = sub_22542(offset.value, size, serial1Data.byte, 0);
+	result = nvsRead(offset.value, size, serial1Data.byte, 0);
 	serialSetAnswer(SERIAL_ANSWER);
 	return result;
 }
@@ -468,12 +462,12 @@ static unsigned char serial1Command0132(struct SerialBuffer *request, struct Ser
 	offset.byte[0] = request->data[0];
 	offset.byte[1] = request->data[1];
 	size = request->data[2];
-	result = sub_225E1(offset.value, size, &request->data[3], 0);
+	result = nvsWrite(offset.value, size, &request->data[3], 0);
 	serialSetAnswer(SERIAL_ANSWER);
 	return result;
 }
 
-/* 0x0170: the NVS's status and sub_23325's */
+/* 0x0170: the NVS's state and info */
 static unsigned char serial1Command0170(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result;
@@ -482,8 +476,8 @@ static unsigned char serial1Command0170(struct SerialBuffer *request, struct Ser
 	response->data = serial1Data.byte;
 	response->length = 5;
 	memset(serial1Data.byte, 0, 5);
-	serial1Data.byte[0] = sub_22960();
-	result = sub_23325(&serial1Data.byte[1], &serial1Data.byte[2], &info.value);
+	serial1Data.byte[0] = nvsGetState();
+	result = nvsGetInfo(&serial1Data.byte[1], &serial1Data.byte[2], &info.value);
 	serial1Data.byte[3] = info.byte[0];
 	serial1Data.byte[4] = info.byte[1];
 	serialSetAnswer(SERIAL_ANSWER);
@@ -790,7 +784,7 @@ static unsigned char serial1Command0156(struct SerialBuffer *request, struct Ser
 }
 
 /* 0x0160: in state 4, clears (1) the NVS's syscon area (mask bit 0, then sub_2DC8B) and
-   sub_2D05F's (bit 1), or (2) runs sub_2296F and sub_2DC8B */
+   sub_2D05F's (bit 1), or (2) runs nvsFormat and sub_2DC8B */
 static unsigned char serial1Command0160(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result = 0;
@@ -815,7 +809,7 @@ static unsigned char serial1Command0160(struct SerialBuffer *request, struct Ser
 			buffer = serial1Data.byte;
 			memset(buffer, 0xff, 0x20);
 			for (offset = 0; offset < 0x40; offset += 0x20) {
-				result = sub_225E1(offset, 0x20, buffer, 1);
+				result = nvsWrite(offset, 0x20, buffer, 1);
 				if (result != 0) {
 					result = 0x91;
 					goto done;
@@ -835,7 +829,7 @@ static unsigned char serial1Command0160(struct SerialBuffer *request, struct Ser
 			}
 		}
 	} else if (what == 2) {
-		result = sub_2296F();
+		result = nvsFormat();
 		if (result != 0) {
 			result = 0x91;
 			goto done;

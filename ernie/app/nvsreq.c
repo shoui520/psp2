@@ -8,19 +8,12 @@
 
 #include "host.h"
 #include "kernel.h"
+#include "nvs.h"
 #include "nvsreq.h"
 
 extern unsigned char sub_2BB99(void);
 extern unsigned char sub_2BBE9(void);
 extern void sub_2C2ED(int, int);
-extern unsigned char sub_22542(unsigned int offset, unsigned int size, unsigned char *data,
-			       unsigned char area);
-extern unsigned char sub_225E1(unsigned int offset, unsigned int size, unsigned char *data,
-			       unsigned char area);
-extern unsigned char sub_22960(void);
-extern unsigned char sub_2296F(void);
-extern unsigned char sub_22A9A(void);
-extern unsigned char sub_22C98(int);
 
 static struct NvsJob *nvsJobAlloc(void);
 static struct NvsJob *nvsJobNext(void);
@@ -63,7 +56,7 @@ void nvsRequestEvent(FLGPTN ptn)
 				break;
 			case 0x1081:
 				if (nvsRequestData[0] == 0x55) {
-					result = sub_2296F();
+					result = nvsFormat();
 					hostRequestAnswer(&nvsRequest, HOST_REQUEST_ANSWER,
 							  result == 0 ? 0 : result, 0);
 				} else {
@@ -75,7 +68,7 @@ void nvsRequestEvent(FLGPTN ptn)
 					offset = nvsRequestData[0] | (unsigned int)nvsRequestData[1] << 8;
 					size = nvsRequestData[2];
 					if (offset >= nvsHostOffsetMin)
-						result = sub_22542(offset, size, nvsRequestAnswer,
+						result = nvsRead(offset, size, nvsRequestAnswer,
 								   NVS_AREA_HOST);
 					else
 						result = 0x3c;
@@ -94,7 +87,7 @@ void nvsRequestEvent(FLGPTN ptn)
 					offset = nvsRequestData[0] | (unsigned int)nvsRequestData[1] << 8;
 					size = nvsRequestData[2];
 					if (offset >= nvsHostOffsetMin)
-						result = sub_225E1(offset, size, &nvsRequestData[3],
+						result = nvsWrite(offset, size, &nvsRequestData[3],
 								   NVS_AREA_HOST);
 					else
 						result = 0x3c;
@@ -116,31 +109,31 @@ void nvsRequestEvent(FLGPTN ptn)
 		while ((job = nvsJobNext()) != NULL) {
 			switch (job->state) {
 			case NVS_JOB_READ:
-				result = sub_22542(job->offset, job->size, job->data, job->area);
+				result = nvsRead(job->offset, job->size, job->data, job->area);
 				job->done(job->command, result);
 				break;
 			case NVS_JOB_WRITE:
-				result = sub_225E1(job->offset, job->size, job->data, job->area);
+				result = nvsWrite(job->offset, job->size, job->data, job->area);
 				job->done(job->command, result);
 				break;
 			case NVS_JOB_SERVICE:
-				status = sub_22960();
+				status = nvsGetState();
 				switch (status) {
 				case 0xf0:
-					result = sub_2296F();
+					result = nvsFormat();
 					break;
 				case 0x03:
-					result = sub_22A9A();
+					result = nvsMove();
 					if (result == 0x0a)
 						;
 					break;
 				case 0x12:
-					result = sub_22C98(2);
+					result = nvsClean(2);
 					if (result == 0x20)
 						;
 					break;
 				default:
-					result = sub_22C98(2);
+					result = nvsClean(2);
 					if (result == 0x20)
 						;
 					break;
