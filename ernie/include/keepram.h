@@ -19,10 +19,6 @@ struct KeepRam {
 
 extern __far struct KeepRam keepRam;
 
-/* PLACEHOLDER: the settings kept after keepRam (0xfda0e), read and written by sub_2C15B and
-   sub_2C199 (their module is not written yet) */
-extern __far unsigned char keepSettings[0x80];
-
 extern void setResetCause(unsigned char cause);
 extern unsigned char getResetCause(void);
 extern void resetSystem(void);

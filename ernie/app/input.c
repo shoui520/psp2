@@ -21,6 +21,7 @@
 #include "inputreq.h"
 #include "kernel.h"
 #include "motion.h"
+#include "param.h"
 #include "serial1.h"
 #include "serial2.h"
 #include "serialauth.h"
@@ -86,7 +87,6 @@ struct ButtonPress {
 };
 
 extern unsigned char getResetCause(void);
-extern unsigned char sub_2C15B(unsigned int offset, unsigned int size, unsigned char *buf);
 extern void sub_2C342(ID flgid, FLGPTN setptn);
 extern void sub_2C394(int, int);
 extern void sub_17159(void);
@@ -834,9 +834,9 @@ void sub_11E0A(void)
 		dly_tsk(3);
 		buttonPress2.keys = sub_12081();
 		sub_11DE0(1);
-		sub_2C15B(0x2e, 1, &value);
+		paramRead(0x2e, 1, &value);
 		buttonPress2.time1 = value >= 4 ? value : 3;
-		sub_2C15B(0x2f, 1, &value);
+		paramRead(0x2f, 1, &value);
 		buttonPress2.time2 = value >= 4 ? value : 3;
 	} else if (buttonPress2.keys == sub_12081()) {
 		switch (buttonPress2.keys) {
@@ -1036,9 +1036,9 @@ void sub_1217E(void)
 		dly_tsk(3);
 		buttonPress1.keys = sub_12111();
 		sub_11FEF(1);
-		sub_2C15B(0x2e, 1, &value);
+		paramRead(0x2e, 1, &value);
 		buttonPress1.time1 = value >= 4 ? value : 3;
-		sub_2C15B(0x2f, 1, &value);
+		paramRead(0x2f, 1, &value);
 		buttonPress1.time2 = value >= 4 ? value : 3;
 	} else if (buttonPress1.keys == sub_12111()) {
 		switch (buttonPress1.keys) {
@@ -1444,6 +1444,6 @@ void sub_1278E(void)
 
 	holdTicks = 0;
 	holdReached = 0;
-	sub_2C15B(0x2f, 1, &value);
+	paramRead(0x2f, 1, &value);
 	buttonPress2.time2 = value >= 4 ? value : 3;
 }

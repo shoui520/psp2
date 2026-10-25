@@ -12,6 +12,7 @@
 #include "config.h"
 #include "cookie.h"
 #include "kernel.h"
+#include "param.h"
 #include "powerreq.h"
 #include "powerseq.h"
 #include "sleepfactor.h"
@@ -24,9 +25,7 @@ extern void sub_2DAE1(int);
 extern void sub_2DFCE(unsigned int);
 extern void sub_2E03A(unsigned int);
 extern void sub_2E082(unsigned int);
-extern void sub_2C24D(unsigned char *adjust);
 extern void sub_2C315(ID flgid, FLGPTN setptn);
-extern void sub_2C1D7(struct ChargeLevel *levels);
 
 __sreg union CookieStatus1 cookieStatus1;
 __sreg union CookieStatus2 cookieStatus2;
@@ -294,7 +293,7 @@ unsigned int chargeReadFlags(void)
 	unsigned char i;
 
 	flags = 0;
-	sub_2C1D7(chargeLevels);
+	paramGetChargeLevels(chargeLevels);
 	for (i = 0; i < 10; i++) {
 		if ((chargeLevels[i].remainCap & 0x7fff) >= charge.batteryRemainCap)
 			capBelow = 1;
@@ -531,7 +530,7 @@ int chargeSetCurrent(void)
 			if (deviceVersions.cookie[1] < 0x31 && setting >= 0x11)
 				setting = (setting >> 1) & 0xf0;
 			if (chargeBbmcVersion == 0 && powerStatus.bits.usb >= 2 && setting >= 0x11) {
-				sub_2C24D(&adjust);
+				paramGetAdjust(&adjust);
 				setting -= adjust;
 			}
 			chargeCurrent = setting;

@@ -14,6 +14,7 @@
 #include "csi.h"
 #include "host.h"
 #include "kernel.h"
+#include "param.h"
 #include "power.h"
 #include "sleepfactor.h"
 #include "spidev.h"
@@ -36,7 +37,6 @@ extern void sub_2C2ED(int, int);
 extern void sub_2C394(int, int);
 extern void sub_2C572(void);
 extern unsigned char sub_2CD3F(void);
-extern void sub_2C0C0(void);
 extern void sub_11572(void);
 extern void sub_1159F(void);
 extern void sub_115F0(void);
@@ -523,5 +523,5 @@ unsigned char powerUpdate(void)
 
 void sub_24076(void)
 {
-	sub_2C0C0();
+	paramLoad();
 }

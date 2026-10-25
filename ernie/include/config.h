@@ -25,7 +25,12 @@ struct ConfigBlock {
 	unsigned char	reserved18[0x1a - 0x15];
 	struct ChargeTempLevel chargeTempLevels[8];	/* the battery temperature's ranges */
 	struct ChargeTempLevel chargeTempLevelsCharge[8];	/* and in system state 0x20 */
-	unsigned char	reserved25[0xcd - 0x7a];
+	struct ChargeLevel chargeLevels[10];	/* the battery's levels (paramLoad), with
+						   bbmcDetect set */
+	struct ChargeLevel chargeLevelsNoDetect[10];	/* and without */
+	unsigned char	pressTime1;		/* the parameter block's button times */
+	unsigned char	pressTime2;
+	unsigned char	reserved25;
 	unsigned char	pressAnyState:1;	/* a button's presses go on being counted when the
 						   system state changes */
 	unsigned char	reserved2:7;
@@ -45,7 +50,9 @@ struct ConfigBlock {
 	unsigned int	batteryTte;
 	unsigned int	batterySoh;
 	unsigned int	batteryFullCap2;
-	unsigned char	reserved10[0xee - 0xea];
+	unsigned char	reserved10[0xec - 0xea];
+	unsigned char	paramSetting1;		/* the parameter block's, for the host */
+	unsigned char	paramSetting2;
 	unsigned char	voltage81;		/* the Elmo's regulators 0x81-0x84: their levels at a
 						   resume */
 	unsigned char	voltage82;

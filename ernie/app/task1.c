@@ -9,6 +9,7 @@
 #include <string.h>
 #include "ernie.h"
 #include "kernel.h"
+#include "param.h"
 #include "power.h"
 #include "scratchpad.h"
 #include "state.h"
@@ -22,7 +23,6 @@
 extern __near unsigned char resetFlags;
 
 extern void sub_2C57F(void);
-extern void sub_2C051(void);
 extern void sub_2C54C(int);
 extern void sub_2C539(int);
 extern unsigned char getResetCause(void);
@@ -65,7 +65,7 @@ void systemInit(void)
 	resetFlags = RESF;
 	sub_2C57F();
 	timerInit();
-	sub_2C051();
+	paramInit();
 	sub_2C54C(-1);
 	sub_2C539(1);
 	timer.handler = stateCheck;

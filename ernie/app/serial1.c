@@ -16,6 +16,7 @@
 #include "keepram.h"
 #include "kernel.h"
 #include "nvs.h"
+#include "param.h"
 #include "rtc.h"
 #include "serial.h"
 #include "serial1.h"
@@ -47,13 +48,10 @@ extern unsigned char sub_2DC8B(void);
 extern unsigned char sub_2D05F(void);
 extern void sub_2C315(int, int);
 extern unsigned char sub_11D4B(void);
-extern unsigned char sub_2C15B(unsigned int offset, unsigned int size, unsigned char *buf);
-extern unsigned char sub_2C199(unsigned int offset, unsigned int size, unsigned char *buf);
-extern void sub_2C229(unsigned char *base);
 
 extern const struct SerialCommand1 serialCommands1[];
 
-/* a level of commands 0x0950 and 0x0951 and its byte of keepSettings */
+/* a level of commands 0x0950 and 0x0951 and its byte of the parameter block */
 struct Serial1Level {
 	unsigned char	channel;		/* 0x81-0x84 */
 	unsigned char	*setting;
@@ -1030,7 +1028,7 @@ static unsigned char serial1Command0941(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
-/* 0x0950: a channel's level, as 1400 less 10 for each step above sub_2C229's base, most
+/* 0x0950: a channel's level, as 1400 less 10 for each step above paramGetBase's base, most
    significant byte first */
 static unsigned char serial1Command0950(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -1054,11 +1052,11 @@ static unsigned char serial1Command0950(struct SerialBuffer *request, struct Ser
 	}
 	for (i = 0; i < SERIAL1_LEVELS; i++) {
 		if (serial1Levels[i].channel == channel) {
-			result = sub_2C15B(serial1Levels[i].setting - keepSettings, 1, &level);
+			result = paramRead(serial1Levels[i].setting - (unsigned char *)&param, 1, &level);
 			break;
 		}
 	}
-	sub_2C229(&base);
+	paramGetBase(&base);
 	step = level - base;
 	value.value = 1400 - step * 10;
 	response->length = 2;
@@ -1098,11 +1096,11 @@ static unsigned char serial1Command0951(struct SerialBuffer *request, struct Ser
 		goto done;
 	}
 	step = (unsigned char)((1400 - value.value) / 10);
-	sub_2C229(&base);
+	paramGetBase(&base);
 	level = step + base;
 	for (i = 0; i < SERIAL1_LEVELS; i++) {
 		if (serial1Levels[i].channel == channel) {
-			result = sub_2C199(serial1Levels[i].setting - keepSettings, 1, &level);
+			result = paramWrite(serial1Levels[i].setting - (unsigned char *)&param, 1, &level);
 			break;
 		}
 	}
@@ -1171,8 +1169,8 @@ const struct SerialNotify serialNotifies1[] = {
 };
 
 const struct Serial1Level serial1Levels[SERIAL1_LEVELS] = {
-	{ 0x81, &keepSettings[0x28] },
-	{ 0x82, &keepSettings[0x29] },
-	{ 0x83, &keepSettings[0x2a] },
-	{ 0x84, &keepSettings[0x2b] },
+	{ 0x81, &param.levels[0] },
+	{ 0x82, &param.levels[1] },
+	{ 0x83, &param.levels[2] },
+	{ 0x84, &param.levels[3] },
 };

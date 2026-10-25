@@ -21,6 +21,7 @@
 #include "handshake.h"
 #include "host.h"
 #include "kernel.h"
+#include "param.h"
 #include "rtc.h"
 #include "scratchpad.h"
 #include "serial.h"
@@ -35,8 +36,6 @@ extern unsigned char sub_2D662(void);
 extern unsigned char sub_2D67C(void);
 extern unsigned char sub_2D685(void);
 extern void sub_2C2ED(int, int);
-extern unsigned char sub_2C15B(unsigned int offset, unsigned int size, unsigned char *buf);
-extern unsigned char sub_2C199(unsigned int offset, unsigned int size, unsigned char *buf);
 extern unsigned char sub_2DB73(void);
 extern unsigned char sub_2DAEA(unsigned char *buf);
 extern unsigned char sub_2DC1F(unsigned int offset, unsigned char *data, unsigned char *length);
@@ -342,7 +341,7 @@ allowed:
 			}
 			offset = commandRequestData[0] | (unsigned int)commandRequestData[1] << 8;
 			size = commandRequestData[2];
-			if (sub_2C15B(offset, size, commandRequestAnswer) == 0)
+			if (paramRead(offset, size, commandRequestAnswer) == 0)
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, size);
 			else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 2, 0);
@@ -354,7 +353,7 @@ allowed:
 			}
 			offset = commandRequestData[0] | (unsigned int)commandRequestData[1] << 8;
 			size = commandRequestData[2];
-			if (sub_2C199(offset, size, &commandRequestData[3]) == 0)
+			if (paramWrite(offset, size, &commandRequestData[3]) == 0)
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 			else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 2, 0);
