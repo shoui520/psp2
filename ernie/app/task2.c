@@ -6,7 +6,9 @@
 #include "ernie.h"
 #include "board.h"
 #include "command.h"
+#include "config.h"
 #include "configreq.h"
+#include "handshake.h"
 #include "kernel.h"
 #include "log.h"
 #include "nvs.h"
@@ -15,29 +17,31 @@
 #include "rtc.h"
 #include "serial.h"
 #include "serial1.h"
+#include "serial2.h"
 #include "serial4.h"
 #include "serialauth.h"
 #include "serialreq.h"
 #include "sleepfactor.h"
+#include "snvs.h"
 #include "state.h"
 #include "task.h"
 #include "updatereq.h"
 #include "version.h"
 #include "watchdog.h"
 
-extern unsigned char sub_10D7A(void);
-extern unsigned char sub_10CB3(void);
 extern unsigned char sub_11D1B(void);
 extern unsigned char sub_11D4B(void);
 
-void sub_10B67(FLGPTN ptn);
-unsigned char sub_10C03(void);
-unsigned char sub_10D08(void);
-unsigned char sub_10DC1(void);
-unsigned char sub_10DEA(void);
-unsigned char sub_10E06(void);
-unsigned char sub_10E22(void);
-unsigned char sub_10E32(void);
+void task2MultiCnEvent(FLGPTN ptn);
+unsigned char task2StateEvent(void);
+unsigned char task2On(void);
+unsigned char task2Off(void);
+unsigned char task2Resume(void);
+unsigned char task2Suspend(void);
+unsigned char task2Shutdown(void);
+unsigned char task2Cut(void);
+unsigned char task2Reset(void);
+unsigned char task2Tick(void);
 
 void task2(VP_INT exinf)
 {
@@ -50,11 +54,11 @@ void task2(VP_INT exinf)
 		if (ercd == E_OK) {
 			if (ptn & 0x1000) {
 				clr_flg(3, ~0x1000);
-				sub_10C03();
+				task2StateEvent();
 			}
 			if (ptn & 0x0101) {
 				clr_flg(3, ~(ptn & 0x0101));
-				sub_10B67(ptn);
+				task2MultiCnEvent(ptn);
 			}
 			if (ptn & 0x2000) {
 				clr_flg(3, ~(ptn & 0x2000));
@@ -68,7 +72,7 @@ void task2(VP_INT exinf)
 			}
 			if (ptn & 0x8000) {
 				clr_flg(3, ~0x8000);
-				sub_10E32();
+				task2Tick();
 			}
 			if (ptn & 0x4000) {
 				clr_flg(3, ~0x4000);
@@ -83,7 +87,7 @@ void task2(VP_INT exinf)
 	}
 }
 
-void sub_10B67(FLGPTN ptn)
+void task2MultiCnEvent(FLGPTN ptn)
 {
 	unsigned char state;
 
@@ -126,54 +130,75 @@ void sub_10B67(FLGPTN ptn)
 	return;
 }
 
-unsigned char sub_10C03(void)
+unsigned char task2StateEvent(void)
 {
 	unsigned char ret;
 	unsigned int state;
 
 	ret = 0;
 	state = stateGet();
-	if (state & 0x8000) {
+	if (state & 0x8000) {		/* the state's power sequence ran: what follows it */
 		switch (state) {
-		case 0x8020:
-			ret = sub_10D7A();
+		case 0x8000 | STATE_RESUME:
+			ret = task2Resume();
 			break;
-		case 0x8008:
-			ret = sub_10DC1();
+		case 0x8000 | STATE_SUSPEND:
+			ret = task2Suspend();
 			break;
-		case 0x8004:
-			ret = sub_10D08();
+		case 0x8000 | STATE_OFF:
+			ret = task2Off();
 			break;
-		case 0x8002:
-			ret = sub_10CB3();
+		case 0x8000 | STATE_ON:
+			ret = task2On();
 			break;
-		case 0x8010:
-			ret = sub_10DEA();
+		case 0x8000 | STATE_SHUTDOWN:
+			ret = task2Shutdown();
 			break;
-		case 0x8800:
-			ret = sub_10E06();
+		case 0x8000 | STATE_CUT:
+			ret = task2Cut();
 			break;
-		case 0x8040:
-			ret = sub_10E22();
+		case 0x8000 | STATE_RESET:
+			ret = task2Reset();
 			break;
 		}
 		powerReady(2);
 	} else {
 		switch (state) {
-		case 0x0002:
-		case 0x0004:
-		case 0x0008:
-		case 0x0010:
-		case 0x0020:
-		case 0x0040:
-		case 0x0800:
+		case STATE_ON:
+		case STATE_OFF:
+		case STATE_SUSPEND:
+		case STATE_SHUTDOWN:
+		case STATE_RESUME:
+		case STATE_RESET:
+		case STATE_CUT:
 			break;
 		}
 	}
 	return ret;
 }
 
-unsigned char sub_10D08(void)
+/* the end of the power-on sequence: the clock started after a cold start (cause 0x60), the
+   links opened, the NVS loaded, and the host's watchdog set as configured */
+unsigned char task2On(void)
+{
+	unsigned char ret;
+
+	ret = 0;
+	if (stateGetCause() == 0x60)
+		rtcStart();
+	serialReset(3);
+	serial4Reopen(2);
+	serial2Init();
+	if (nvsInit() != 0)
+		nvsJobService();
+	serial1Reset();
+	boardMultiCnOutputOff();
+	watchdogSet(&configGet()->watchdog);
+	watchdogStop();
+	return ret;
+}
+
+unsigned char task2Off(void)
 {
 	unsigned char ret;
 	unsigned char value;
@@ -198,7 +223,30 @@ unsigned char sub_10D08(void)
 	return ret;
 }
 
-unsigned char sub_10DC1(void)
+/* the end of the resume sequence: the handshake's session key kept only for a wakeup that
+   notifies (else the secure NVS starts over), and the host's requests opened again */
+unsigned char task2Resume(void)
+{
+	unsigned char ret;
+	unsigned char keepKey;
+	union PowerRequest *factor;
+
+	ret = 0;
+	factor = stateGetWakeupFactor();
+	if (factor->bits.notify)
+		keepKey = 1;
+	else {
+		keepKey = 0;
+		snvsReset();
+	}
+	handshakeInit(keepKey);
+	commandRequestReceive();
+	serialRequestReset();
+	watchdogSetup();
+	return ret;
+}
+
+unsigned char task2Suspend(void)
 {
 	unsigned char ret;
 
@@ -212,7 +260,7 @@ unsigned char sub_10DC1(void)
 	return ret;
 }
 
-unsigned char sub_10DEA(void)
+unsigned char task2Shutdown(void)
 {
 	unsigned char ret;
 
@@ -225,7 +273,7 @@ unsigned char sub_10DEA(void)
 	return ret;
 }
 
-unsigned char sub_10E06(void)
+unsigned char task2Cut(void)
 {
 	unsigned char ret;
 
@@ -238,7 +286,7 @@ unsigned char sub_10E06(void)
 	return ret;
 }
 
-unsigned char sub_10E22(void)
+unsigned char task2Reset(void)
 {
 	unsigned char ret;
 
@@ -249,7 +297,7 @@ unsigned char sub_10E22(void)
 }
 
 /* every second (the RTC's interrupt sets flag 0x8000): the alarm checked against the clock */
-unsigned char sub_10E32(void)
+unsigned char task2Tick(void)
 {
 	unsigned char ret;
 	unsigned char clock;
