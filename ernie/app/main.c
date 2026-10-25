@@ -8,10 +8,10 @@
 
 #include "ernie.h"
 #include "keepram.h"
+#include "rtc.h"
 
 extern void sub_27651(void);
 extern void tickStart(void);
-extern void sub_10FC9(void);
 extern void sub_16E7D(void);
 extern void sub_1488D(void);
 
@@ -41,7 +41,7 @@ void hdwinit(void)
 	sub_27651();
 	intInit();
 	tickStart();
-	sub_10FC9();
+	rtcInit();
 	sub_16E7D();
 	return;
 }

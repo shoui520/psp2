@@ -11,7 +11,9 @@ struct KeepRam {
 	unsigned int	magic;		/* KEEP_RAM_MAGIC */
 	unsigned int	checksum;	/* 0xffff - the sum of the bytes from resetCause on */
 	unsigned char	resetCause;	/* why the last reset was made */
-	unsigned char	data[0xfb];
+	unsigned long	clock;		/* the RTC's count of 0.5 s (rtc.h) */
+	unsigned long	alarm;		/* the clock value the alarm wakes the system at */
+	unsigned char	data[0xf2];
 };
 
 extern __far struct KeepRam keepRam;

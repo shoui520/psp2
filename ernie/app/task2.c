@@ -5,10 +5,11 @@
 
 #include "ernie.h"
 #include "kernel.h"
+#include "rtc.h"
+#include "version.h"
 
 extern unsigned int sub_2AB46(void);
 extern unsigned char sub_10D7A(void);
-extern unsigned char sub_10DC1(void);
 extern void sub_15667(void);
 extern void sub_1D162(void);
 extern void sub_21F93(void);
@@ -18,13 +19,7 @@ extern void sub_1EF84(void);
 extern void sub_2D254(void);
 extern void sub_2D67C(void);
 extern unsigned char sub_22542(unsigned char reg, int a, unsigned char *buf, int n);
-extern void sub_10F77(unsigned char);
-extern unsigned char sub_11138(void);
-extern void sub_110D3(long);
 extern unsigned char sub_10CB3(void);
-extern unsigned char sub_10DEA(void);
-extern unsigned char sub_10E06(void);
-extern unsigned char sub_10E22(void);
 extern void sub_23A42(int);
 extern unsigned char sub_1B4B4(void);
 extern unsigned char sub_11D1B(void);
@@ -43,14 +38,25 @@ extern void sub_260A4(void);
 extern void sub_162E8(void);
 extern void sub_261C9(FLGPTN ptn);
 extern void sub_1D1A9(FLGPTN ptn);
-extern void sub_10E32(void);
 extern void sub_2D2A8(FLGPTN ptn);
 extern void sub_1F33A(FLGPTN ptn);
 extern void sub_2C415(void);
+extern void sub_14D53(int);
+extern unsigned long sub_2AA79(void);
+extern unsigned char sub_2AB49(int);
+extern void sub_1D60D(void);
+extern void sub_2D724(void);
+extern void sub_2C57D(void);
+extern void sub_2C57E(void);
 
+void sub_10B67(FLGPTN ptn);
 unsigned char sub_10C03(void);
 unsigned char sub_10D08(void);
-void sub_10B67(FLGPTN ptn);
+unsigned char sub_10DC1(void);
+unsigned char sub_10DEA(void);
+unsigned char sub_10E06(void);
+unsigned char sub_10E22(void);
+unsigned char sub_10E32(void);
 
 void task2(VP_INT exinf)
 {
@@ -205,8 +211,86 @@ unsigned char sub_10D08(void)
 	sub_2D254();
 	sub_2D67C();
 	if (sub_22542(0x2d, 1, &value, 1) == 0)
-		sub_10F77(value);
-	if (sub_11138() == 1)
-		sub_110D3(-1);
+		setDlFlags(value);
+	if (getAlarmMode() == 1)
+		setAlarm(RTC_ALARM_NONE);
+	return ret;
+}
+
+unsigned char sub_10DC1(void)
+{
+	unsigned char ret;
+
+	ret = 0;
+	sub_21F93();
+	if (sub_27642() || sub_2764F())
+		sub_275F0(0);
+	else
+		sub_27631();
+	sub_2D67C();
+	return ret;
+}
+
+unsigned char sub_10DEA(void)
+{
+	unsigned char ret;
+
+	ret = 0;
+	sub_260A4();
+	sub_27631();
+	sub_1BB76();
+	sub_1D728();
+	sub_2D67C();
+	return ret;
+}
+
+unsigned char sub_10E06(void)
+{
+	unsigned char ret;
+
+	ret = 0;
+	sub_260A4();
+	sub_27631();
+	sub_1BB76();
+	sub_1D728();
+	sub_2D67C();
+	return ret;
+}
+
+unsigned char sub_10E22(void)
+{
+	unsigned char ret;
+
+	ret = 0;
+	sub_21F93();
+	sub_2D67C();
+	return ret;
+}
+
+/* every second (the RTC's interrupt sets flag 0x8000): the alarm checked against the clock */
+unsigned char sub_10E32(void)
+{
+	unsigned char ret;
+	unsigned char clock;
+	unsigned int state;
+
+	ret = 0;
+	state = sub_2AB46();
+	clock = getClock().byte[0];
+	if (isAlarmReached()) {
+		sub_14D53(1);
+		if ((sub_2AA79() & 2) == 0) {
+			if ((state == 0x0004 && getAlarmMode() != 1) || state == 0x0008)
+				ret = sub_2AB49(1);
+		}
+	} else {
+		sub_14D53(0);
+	}
+	if (state != 0x0010 && (clock & 3) == 3)
+		sub_1D60D();
+	sub_2D724();
+	if (state != 0x0004 && state != 0x0008)
+		sub_2C57D();
+	sub_2C57E();
 	return ret;
 }

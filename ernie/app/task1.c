@@ -9,6 +9,7 @@
 #include <string.h>
 #include "ernie.h"
 #include "kernel.h"
+#include "version.h"
 
 /* the reset control flags (RESF) the chip had at the start: TRAP, WDRF, LVIRF */
 #define RESF_TRAP	0x80
@@ -32,7 +33,6 @@ extern void sub_2C54C(int);
 extern void sub_2C539(int);
 extern int sub_240CF(unsigned char id, struct TimerHandler *handler);
 extern void sub_2AC15(void);
-extern void sub_10ED4(void);
 extern unsigned char getResetCause(void);
 extern void sub_2D6EF(void);
 extern void sub_2D712(void);
@@ -87,7 +87,7 @@ void systemInit(void)
 	sub_2C539(1);
 	timer.handler = sub_2AC15;
 	sub_240CF(0x1a, &timer);
-	sub_10ED4();
+	versionInit();
 	cause = getResetCause() & 0xf0;
 	sub_2D6EF();
 	sub_2D712();
