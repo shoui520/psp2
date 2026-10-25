@@ -4,13 +4,22 @@
 #ifndef ERNIE_CONFIG_H
 #define ERNIE_CONFIG_H
 
+#include "analog.h"
+
 /* PLACEHOLDER: only the fields read so far */
 struct ConfigBlock {
-	unsigned char	reserved1[0xcd];
+	struct AnalogCalibration analogCalibration;	/* the sticks' default calibration */
+	unsigned char	analogScale0;		/* set 0's margin, in 1/1000 of the range */
+	unsigned char	analogScale1;		/* set 1's */
+	unsigned char	reserved1[0xcd - 0x12];
 	unsigned char	pressAnyState:1;	/* a button's presses go on being counted when the
 						   system state changes */
 	unsigned char	reserved2:7;
-	unsigned char	reserved3[0x1b0 - 0xce];
+	unsigned int	analogMin;		/* a calibration's min at a reset, and the most a
+						   loaded one's may be */
+	unsigned int	analogMax;		/* its max at a reset, the least a loaded one's */
+	unsigned char	analogMinRange;		/* the least high byte of a calibration's range */
+	unsigned char	reserved3[0x1b0 - 0xd3];
 	unsigned char	touchDelaySelect;	/* Touch's delays, in NOPs */
 	unsigned char	touchDelayByte;
 	unsigned char	touchDelayDeselect;

@@ -18,7 +18,7 @@ struct InputDelays {
 	unsigned char	flag80;		/* sets bit 0x0080 of event flag 2 */
 	unsigned char	motionInfo;	/* starts reading the motion sensor's information */
 	unsigned char	reserved;	/* cleared by inputInit, otherwise unused */
-	unsigned char	call1D0CB;
+	unsigned char	latchOn;	/* calls analogLatchOn */
 };
 
 extern struct InputDelays inputDelays;

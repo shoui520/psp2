@@ -11,6 +11,8 @@
 #include <stddef.h>
 
 #include "ernie.h"
+#include "adc.h"
+#include "analog.h"
 #include "chip.h"
 #include "config.h"
 #include "input.h"
@@ -95,24 +97,12 @@ extern unsigned char sub_2C15B(unsigned int offset, unsigned int size, unsigned 
 extern void sub_2C342(ID flgid, FLGPTN setptn);
 extern void sub_2C394(int, int);
 extern void sub_17159(void);
-extern void sub_1C265(void);
-extern void sub_1C042(void);
-extern void sub_1BFAB(void);
 extern unsigned char sub_21F2A(void);
 extern void sub_17204(void);
-extern void sub_1CFC6(void);
-extern void sub_1BFE9(void);
-extern void sub_1D0A8(void);
 extern void sub_17544(void);
 extern void sub_17580(void);
-extern void sub_1D0CC(void);
 extern void sub_172BC(void);
-extern void sub_1C3B9(unsigned int keys);
-extern void sub_1CFFC(void);
-extern void sub_1D012(void);
 extern void sub_21F33(int);
-extern void sub_1C3A1(void);
-extern void sub_1D0CB(void);
 extern void sub_2B475(void);
 extern void sub_25263(void);
 extern void sub_2526B(void);
@@ -346,7 +336,7 @@ void inputInit(void)
 	inputDelays.flag80 = 0;
 	inputDelays.motionInfo = 0;
 	inputDelays.reserved = 0;
-	inputDelays.call1D0CB = 0;
+	inputDelays.latchOn = 0;
 	inputKeys.state = 0;
 	inputKeys.events = 0;
 	inputFlag126F7 = 0;
@@ -381,9 +371,9 @@ void sub_1159F(void)
 	sub_17159();
 	mode = *sub_2AB39();
 	if (!mode.flag)
-		sub_1C265();
-	sub_1C042();
-	sub_1BFAB();
+		analogCalibrationLoad();
+	analogInit();
+	adcOpenForBoard();
 	inputGroup1.pending |= 0x08;
 	if (sub_21F2A() == 0xff)
 		motionOpen();
@@ -410,9 +400,9 @@ void sub_115F0(void)
 	sub_17204();
 	motionClose();
 	sub_117C4();
-	sub_1CFC6();
-	sub_1BFE9();
-	sub_1D0A8();
+	analogStop();
+	adcCloseForBoard();
+	analogLatchInit();
 	return;
 }
 
@@ -436,8 +426,8 @@ void sub_1168D(void)
 	sub_17204();
 	motionClose();
 	sub_117C4();
-	sub_1CFC6();
-	sub_1BFE9();
+	analogStop();
+	adcCloseForBoard();
 }
 
 void sub_116A1(void)
@@ -453,8 +443,8 @@ void sub_116B7(void)
 	sub_17204();
 	motionClose();
 	sub_117C4();
-	sub_1CFC6();
-	sub_1BFE9();
+	analogStop();
+	adcCloseForBoard();
 }
 
 void sub_116CB(void)
@@ -490,8 +480,8 @@ void sub_116D8(void)
 	sub_17204();
 	motionClose();
 	sub_117C4();
-	sub_1CFC6();
-	sub_1BFE9();
+	analogStop();
+	adcCloseForBoard();
 	return;
 }
 
@@ -507,8 +497,8 @@ void sub_1178A(void)
 	sub_17544();
 	sub_17580();
 	motionStop();
-	sub_1CFC6();
-	sub_1D0CC();
+	analogStop();
+	analogLatchOff();
 }
 
 /* P5.0-3, P8 and P11.2-3 inputs with their pull-ups (the keys sub_12111 reads) */
@@ -554,7 +544,7 @@ void inputProcess(void)
 		pinMonitorPoll();
 		keys = events & 0x00e3;
 		if (keys != 0)
-			sub_1C3B9(keys);
+			analogStart(keys);
 		break;
 	case 0x0800:
 		sub_12638();
@@ -1256,12 +1246,12 @@ void sub_1245C(void)
 void sub_1245D(void)
 {
 	if (sub_11D1B() == 1) {
-		sub_1CFFC();
+		analogMultiCnStart();
 	} else {
-		sub_1D012();
+		analogMultiCnStop();
 		sub_21F33(0x20);
 		sleepFactorSet5(0);
-		sub_1C3A1();
+		analogMultiCnInit();
 	}
 	set_flg(2, 0x0100);
 }
@@ -1323,9 +1313,9 @@ void inputScanTimer(void)
 		if (--inputDelays.flag80 == 0)
 			sub_2C342(2, 0x0080);
 	}
-	if (inputDelays.call1D0CB != 0) {
-		if (--inputDelays.call1D0CB == 0)
-			sub_1D0CB();
+	if (inputDelays.latchOn != 0) {
+		if (--inputDelays.latchOn == 0)
+			analogLatchOn();
 	}
 }
 
@@ -1375,10 +1365,10 @@ void sub_12698(void)
 {
 	if (sub_11D2B() == 1) {
 		if (sub_2AB46() == 0x0020)
-			inputDelays.call1D0CB = 0x40;
+			inputDelays.latchOn = 0x40;
 	} else {
 		sub_21F33(8);
-		sub_1D0A8();
+		analogLatchInit();
 	}
 	set_flg(2, 0x0100);
 }

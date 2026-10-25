@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include "ernie.h"
+#include "analog.h"
 #include "csi01.h"
 #include "host.h"
 #include "input.h"
@@ -65,20 +66,6 @@ struct InputRequests {
 };
 
 extern unsigned char sub_11D1B(void);
-extern void sub_1C1BA(void);
-extern void sub_1C1F7(void);
-extern int sub_1C211(unsigned char *data, unsigned char command,
-		     void (*done)(unsigned char command, unsigned char result));
-extern int sub_1C23B(unsigned char *data, unsigned char command,
-		     void (*done)(unsigned char command, unsigned char result));
-extern void sub_1C30A(void);
-extern void sub_1C369(unsigned char *data);
-extern void sub_1CF65(unsigned char value);
-extern void sub_1CFC6(void);
-extern unsigned char sub_1D024(void);
-extern void sub_1D02A(unsigned char *out);
-extern void sub_1D0CB(void);
-extern void sub_1D0CC(void);
 extern unsigned char sub_275E0(void);
 extern unsigned char sub_275F0(unsigned char value);
 extern unsigned char sub_2BB99(void);
@@ -86,10 +73,6 @@ extern unsigned char sub_2BBE9(void);
 extern void sub_2C342(ID flgid, FLGPTN setptn);
 extern void sub_2DAE1(int);
 
-/* the analog sticks' values, two sets (the analog module's) */
-extern __near unsigned char analogSticks0[4];
-extern __near unsigned char analogSticks1[4];
-extern __near unsigned char analogFlags;	/* bit 0: the commands report set 0 */
 
 void controlsRequestNotify(void);
 void touchRequestNotify(void);
@@ -533,26 +516,26 @@ unsigned char hostCommandMultiCnInfo(unsigned char *out, unsigned char *length)
 		out[0] = 0x80;
 	else
 		out[0] = 0;
-	out[1] = sub_1D024();
+	out[1] = analogGetMultiCn();
 	out[2] = sub_275E0();
 	out[3] = 0;
 	*length = 4;
 	return 0;
 }
 
-/* 0x0112: the eight bytes of the module at 0x1d02a */
+/* 0x0112: each axis's last sample */
 unsigned char hostCommand0112(unsigned char *out, unsigned char *length)
 {
-	sub_1D02A(out);
+	analogGetSamples((unsigned int *)out);
 	*length = 8;
 	return 0;
 }
 
-/* 0x0102: the buttons and 0x0112's bytes */
+/* 0x0102: the buttons and each axis's last sample */
 unsigned char hostCommand0102(unsigned char *out, unsigned char *length)
 {
 	controlsReadButtons(out);
-	sub_1D02A(out + 4);
+	analogGetSamples((unsigned int *)(out + 4));
 	*length = 12;
 	return 0;
 }
@@ -561,9 +544,9 @@ static void controlsRequest0180(void)
 {
 	if (controlsRequest.length == 1) {
 		if (controlsRequest.data[0] != 0)
-			sub_1CF65(controlsRequest.data[0]);
+			analogSetMode(controlsRequest.data[0]);
 		else
-			sub_1CFC6();
+			analogStop();
 		controlsRequest.status = 0;
 	} else
 		controlsRequest.status = 0x3b;
@@ -576,13 +559,13 @@ static void controlsRequest0181(void)
 {
 	if (controlsRequest.length == 1) {
 		if (controlsRequest.data[0] == 0)
-			sub_1C1BA();
+			analogCalibrationReset();
 		else if (controlsRequest.data[0] == 1) {
-			sub_1C1BA();
-			sub_1C30A();
+			analogCalibrationReset();
+			analogCalibrationSave();
 		} else if (controlsRequest.data[0] == 2) {
-			sub_1C1F7();
-			sub_1C30A();
+			analogCalibrationDefault();
+			analogCalibrationSave();
 		}
 		controlsRequest.status = 0;
 	} else
@@ -594,7 +577,7 @@ static void controlsRequest0181(void)
 
 static void controlsRequest0182(void)
 {
-	sub_1C369(inputRequests.controlsAnswer.byte);
+	analogCalibrationGet(inputRequests.controlsAnswer.byte);
 	controlsRequest.answerLength = sizeof(inputRequests.controlsAnswer);
 	hostRequestAnswerReady(&controlsRequest.state);
 	return;
@@ -603,7 +586,7 @@ static void controlsRequest0182(void)
 /* answered by controlsRequest0183Done */
 static void controlsRequest0183(void)
 {
-	sub_1C211(inputRequests.controlsAnswer.byte, 0, controlsRequest0183Done);
+	analogStoreRead(inputRequests.controlsAnswer.byte, 0, controlsRequest0183Done);
 }
 
 static void controlsRequest0183Done(unsigned char command, unsigned char result)
@@ -620,7 +603,7 @@ static void controlsRequest0183Done(unsigned char command, unsigned char result)
 static void controlsRequest0184(void)
 {
 	if (controlsRequest.length == sizeof(inputRequests.controlsData))
-		sub_1C23B(inputRequests.controlsData, 0, controlsRequest0184Done);
+		analogStoreWrite(inputRequests.controlsData, 0, controlsRequest0184Done);
 	else {
 		controlsRequest.status = 0x3b;
 		controlsRequest.answerLength = 0;
@@ -683,9 +666,9 @@ static void controlsRequest01A1(void)
 {
 	if (controlsRequest.length == 1) {
 		if (controlsRequest.data[0] == 0)
-			sub_1D0CC();
+			analogLatchOff();
 		else
-			sub_1D0CB();
+			analogLatchOn();
 		controlsRequest.status = 0;
 	} else
 		controlsRequest.status = 0x3b;

@@ -7,6 +7,7 @@
 
 #define ADC_FIRST_CHANNEL	0x0b
 #define ADC_CHANNELS		5
+#define ADC_RESULT_MASK		0xffc0	/* ADCR: the result in its 10 high bits */
 
 /* adcStart's mask: bit 3 for channel 11 up to bit 7 for channel 15 */
 #define ADC_CHANNEL_BIT(channel)	(1 << ((channel) - ADC_FIRST_CHANNEL + 3))

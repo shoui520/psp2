@@ -6,13 +6,13 @@
 #pragma sfr
 
 #include "ernie.h"
+#include "analog.h"
 #include "input.h"
 #include "inputreq.h"
 #include "kernel.h"
 #include "touch.h"
 
 extern unsigned int sub_2AB46(void);
-extern void sub_1C40A(unsigned int keys);
 extern void sub_2C48E(void);
 
 void task3(VP_INT exinf)
@@ -36,7 +36,7 @@ void task3(VP_INT exinf)
 			}
 			if (ptn & 0x0004) {
 				clr_flg(2, ~0x0004);
-				sub_1C40A(inputKeys.events & 0xe3);
+				analogEvent(inputKeys.events & 0xe3);
 			}
 			if (ptn & 0x0010) {
 				clr_flg(2, ~0x0010);

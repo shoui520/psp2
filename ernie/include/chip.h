@@ -33,4 +33,7 @@ struct SfrBits {
 #define P90			SFR_BITS(0xfff09).b0
 #define PM90			SFR_BITS(0xfff29).b0
 
+/* port 9's bit 7 (P9.7): the analog sticks' power */
+#define P97			SFR_BITS(0xfff09).b7
+
 #endif
