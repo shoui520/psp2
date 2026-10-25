@@ -14,6 +14,7 @@
 #include "power.h"
 #include "scratchpad.h"
 #include "state.h"
+#include "sysinfo.h"
 #include "task.h"
 #include "timer.h"
 #include "version.h"
@@ -21,8 +22,6 @@
 /* the reset control flags (RESF) the chip had at the start: TRAP, WDRF, LVIRF */
 #define RESF_TRAP	0x80
 #define RESF_WDRF	0x10
-
-extern __near unsigned char resetFlags;
 
 extern unsigned char getResetCause(void);
 extern void sub_2D6EF(void);

@@ -14,14 +14,9 @@
 #include "rtc.h"
 #include "sleepfactor.h"
 #include "state.h"
+#include "sysinfo.h"
 #include "task.h"
 #include "timer.h"
-
-extern int sub_2D6C6(void);
-extern int sub_2D69C(void);
-
-extern __near unsigned char byteFDD2C;
-extern __near unsigned char byteFDD2D;
 
 /* the alarm's mode, the fifth byte of commands 0x0012 and 0x0082 */
 unsigned char alarmMode;
@@ -160,18 +155,18 @@ void rtcInterrupt(void)
 		sub_125F2();
 	if (rtcClockLow & 0x0001) {
 		task2SetFlag(3, 0x8000);
-		if (sub_2D6C6() != 0) {
-			byteFDD2D++;
-			byteFDD2C = 1;
-			if (byteFDD2D >= 8 && sub_2D69C() != 0) {
+		if (hangDetected() != 0) {
+			hangCount++;
+			hangState = HANG_COUNTING;
+			if (hangCount >= 8 && hangLimitReached() != 0) {
 				DI();
-				byteFDD2C = 2;
+				hangState = HANG_RESET;
 				setResetCause(0x30);
 				resetSystem();
 			}
 		} else {
-			byteFDD2D = 0;
-			byteFDD2C = 0;
+			hangCount = 0;
+			hangState = HANG_NONE;
 		}
 	}
 	if (!P4.6) {

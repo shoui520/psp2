@@ -58,7 +58,8 @@ struct ConfigBlock {
 	struct ChargeLevel chargeLevelsNoDetect[10];	/* and without */
 	unsigned char	pressTime1;		/* the parameter block's button times */
 	unsigned char	pressTime2;
-	unsigned char	reserved25;
+	unsigned char	hangLimit;		/* the hang counter's count that resets the system
+						   (at least 8) */
 	unsigned char	pressAnyState:1;	/* a button's presses go on being counted when the
 						   system state changes */
 	unsigned char	reserved2:7;

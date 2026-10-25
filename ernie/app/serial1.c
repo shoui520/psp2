@@ -26,10 +26,10 @@
 #include "sleepfactor.h"
 #include "spidev.h"
 #include "state.h"
+#include "sysinfo.h"
 #include "task.h"
 #include "version.h"
 
-extern unsigned char sub_2D6DE(void);
 extern unsigned char sub_2DAEA(unsigned char *data);
 extern unsigned char sub_2DB73(void);
 extern unsigned char sub_2DBDF(void);
@@ -71,7 +71,7 @@ static union {
 		unsigned char	hardwareInfo[4];
 		unsigned char	version[4];
 		unsigned char	dlVersion[4];
-		unsigned char	flags;		/* sub_2D6DE's */
+		unsigned char	flags;		/* getResetFlags's */
 		unsigned char	reserved[3];
 	} version;				/* command 0x0101's */
 	struct ConfigVersions versions;		/* command 0x0140's */
@@ -192,13 +192,13 @@ static unsigned char serial1Command0100(struct SerialBuffer *request, struct Ser
 	return 0;
 }
 
-/* 0x0101: the hardware, the versions and sub_2D6DE's flags */
+/* 0x0101: the hardware, the versions and getResetFlags's flags */
 static unsigned char serial1Command0101(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	getHardwareInfo(serial1Data.version.hardwareInfo);
 	getErnieVersion(serial1Data.version.version);
 	getErnieDlVersion(serial1Data.version.dlVersion);
-	serial1Data.version.flags = sub_2D6DE();
+	serial1Data.version.flags = getResetFlags();
 	memset(serial1Data.version.reserved, 0, sizeof(serial1Data.version.reserved));
 	response->data = serial1Data.byte;
 	response->length = sizeof(serial1Data.version);
@@ -608,14 +608,14 @@ static unsigned char serial1Command0147(struct SerialBuffer *request, struct Ser
 	return result == 0 ? 0 : result;
 }
 
-/* 0x0171: sub_2D6DE's flags, the reset's cause, stateGetCause, the system mode, stateGetWakeMask */
+/* 0x0171: getResetFlags's flags, the reset's cause, stateGetCause, the system mode, stateGetWakeMask */
 static unsigned char serial1Command0171(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned long state;
 
 	response->data = serial1Data.byte;
 	response->length = 9;
-	serial1Data.byte[0] = sub_2D6DE();
+	serial1Data.byte[0] = getResetFlags();
 	serial1Data.byte[1] = getResetCause();
 	serial1Data.byte[2] = stateGetCause();
 	memcpy(&serial1Data.byte[3], stateGetWakeupFactor(), 2);

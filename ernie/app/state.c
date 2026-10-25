@@ -19,14 +19,12 @@
 #include "serialauth.h"
 #include "sleepfactor.h"
 #include "state.h"
+#include "sysinfo.h"
 #include "task.h"
 #include "tau.h"
 #include "timer.h"
 #include "updatereq.h"
 
-extern __near unsigned int idRecordsLength;	/* the lengths of id records 0x0f, 0x10, 0x12
-						   and 0x16 */
-extern __near unsigned char idRecord1[];
 extern void sub_2DAE1(int);
 extern unsigned char sub_2DC1F(unsigned int id, unsigned char *data, unsigned char *length);
 extern void sub_1164E(void);
@@ -309,7 +307,7 @@ static int stateOffEnter(void)
 			stateTransition(0x18);
 	} else if (stateCause == 0x5b)
 		stateTransition(0x19);
-	sub_2DC1F(1, (unsigned char *)idRecord1, &length);
+	sub_2DC1F(1, (unsigned char *)&idRecord1, &length);
 	sub_2DC1F(0x0f, &size, &length);
 	idRecordsLength = size;
 	sub_2DC1F(0x10, &size, &length);

@@ -104,7 +104,7 @@ unsigned char handshakeSetMode(unsigned char state, unsigned char mode)
 /*
  * PLACEHOLDER: cryptographic routine, deferred (the challenge and response of host command
  * 0x00a0: the 0x28-byte packet is taken into handshakePacket; in state 0 the mode asked for
- * (0x0b or 0x0f) is taken, sub_2D6EB called and a nonce made with randomGenerate into
+ * (0x0b or 0x0f) is taken, getIdRecordsLength called and a nonce made with randomGenerate into
  * handshake.challenge, step 2 sent back (mode 0x0f first clears its key and calls
  * sub_2ED26); in state 1 the host's step 2 is AES-CBC decrypted under the mode's first key
  * (the table at 0x1053c) with the IV at 0x10588, its nonce and the mode's check value
