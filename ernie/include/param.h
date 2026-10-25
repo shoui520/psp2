@@ -20,7 +20,7 @@ struct Param {
 	unsigned char	pressTime1;		/* the buttons' press times (input.c) */
 	unsigned char	pressTime2;
 	unsigned char	reserved2[2];
-	unsigned char	pattern1[PARAM_PATTERN_SIZE];	/* blink pattern 1 (sub_2E75D) */
+	unsigned char	pattern1[PARAM_PATTERN_SIZE];	/* blink pattern 1 (powerLedFadeStart) */
 	unsigned char	setting1;		/* the settings block's, for the host */
 	unsigned char	setting2;
 	unsigned char	pattern2[PARAM_PATTERN_SIZE];	/* blink pattern 2 */

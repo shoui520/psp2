@@ -419,8 +419,8 @@ static unsigned char configMerge(unsigned char from, unsigned char to)
 	}
 	copy->block.hardwareInfoSelect = kept->block.hardwareInfoSelect;
 	copy->block.state.value = kept->block.state.value;
-	if (kept->block.start.bits.indicatorOn0)
-		copy->block.state.bits.indicatorOn0 = kept->block.start.bits.indicatorOn0;
+	if (kept->block.start.bits.chargeLedOff)
+		copy->block.state.bits.chargeLedOff = kept->block.start.bits.chargeLedOff;
 	copy->block.offTransitionBlock = kept->block.offTransitionBlock;
 	config.bank = to;
 	result = configCommit();

@@ -27,8 +27,8 @@ struct ConfigBlock {
 			unsigned int	batteryNoRetry:1;	/* set: the battery is read once at the
 								   power-on (powerSeqOn) */
 			unsigned int	reserved20:1;
-			unsigned int	indicatorOn0:1;	/* where layouts before 0x31 kept
-							   indicatorOn0 (configMerge) */
+			unsigned int	chargeLedOff:1;	/* where layouts before 0x31 kept
+							   chargeLedOff (configMerge) */
 			unsigned int	wakeUnmask15:1;	/* set: wake factor 15 unmasked */
 			unsigned int	reserved26:11;
 		} bits;
@@ -120,7 +120,7 @@ struct ConfigBlock {
 	unsigned char	startClockLimit;	/* the clock's low byte up to which serial2InTime
 						   holds */
 	unsigned char	reserved5[0x18a - 0x186];
-	unsigned int	batteryLowVolt;		/* below it, chargeUpdate calls sub_2E03A(0) */
+	unsigned int	batteryLowVolt;		/* below it, chargeUpdate calls chargeLedSetReleased(0) */
 	unsigned char	chargeLedHost;		/* the host may hand the charge LED over (0x089e
 						   mode 2) */
 	unsigned char	reserved8;
@@ -139,10 +139,11 @@ struct ConfigBlock {
 			unsigned int	offWakeUnmask22:1;	/* set: wake factor 22 unmasked in the
 								   off state */
 			unsigned int	reserved11:1;
-			unsigned int	indicatorOn0:1;	/* sub_2DF86's indicator on at a reset, and
-							   while sub_126C9 holds */
+			unsigned int	chargeLedOff:1;	/* the charge LED off at a reset, and while
+							   sub_126C9 holds (chargeLedSetOff) */
 			unsigned int	chargeHold:1;	/* set: no transition 0x0f in chargeUpdate */
-			unsigned int	indicatorOn1:1;	/* sub_2DFAA's indicator on at a reset */
+			unsigned int	chargeLedStateOff:1;	/* the charge LED off in the system
+									   states with bit 5 (chargeLedSetStateOff) */
 			unsigned int	reserved13:11;
 		} bits;
 	} state;				/* kept across a new layout */

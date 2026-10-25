@@ -16,6 +16,7 @@
 #include "cookie.h"
 #include "elmo.h"
 #include "iica.h"
+#include "led.h"
 #include "log.h"
 #include "motion.h"
 #include "powerreq.h"
@@ -26,7 +27,6 @@
 #include "state.h"
 #include "timer.h"
 
-extern void sub_2E03A(unsigned int);
 extern unsigned char sub_11D57(void);
 extern unsigned char sub_11D61(void);
 
@@ -615,7 +615,7 @@ void powerCookieHold(void)
 void powerCookieRelease(void)
 {
 	chargeCookieHeld = 0;
-	sub_2E03A(1);
+	chargeLedSetReleased(1);
 	cookieCtrlCharge(1);
 }
 

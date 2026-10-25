@@ -8,6 +8,7 @@
 #include "charge.h"
 #include "config.h"
 #include "kernel.h"
+#include "led.h"
 #include "powerjob.h"
 #include "powerreq.h"
 #include "powerseq.h"
@@ -19,14 +20,7 @@
 
 unsigned int powerDevicePending;
 
-extern void sub_2E499(void);
-extern void sub_2DF06(void);
-extern void sub_2E528(void);
 extern unsigned char sub_126C9(void);
-extern void sub_2DF86(unsigned int on);
-extern void sub_2DFCE(unsigned int on);
-extern void sub_2E03A(unsigned int on);
-extern void sub_2E165(unsigned int);
 
 static void sub_21F53(void);
 static void sub_21F8E(void);
@@ -60,7 +54,7 @@ void task5(VP_INT exinf)
 			if (ptn & 0x0020) {
 				clr_flg(4, ~0x0020);
 				chargeUpdate();
-				sub_2E499();
+				ledUpdate();
 			}
 			if (ptn & 0x0400) {
 				clr_flg(4, ~0x0400);
@@ -76,15 +70,15 @@ void task5(VP_INT exinf)
 			}
 			if (ptn & 0x0800) {
 				clr_flg(4, ~0x0800);
-				sub_2E499();
+				ledUpdate();
 			}
 			if (ptn & 0x2000) {
 				clr_flg(4, ~0x2000);
-				sub_2DF06();
+				chargeLedBlinkUpdate();
 			}
 			if (ptn & 0x0200) {
 				clr_flg(4, ~0x0200);
-				sub_2E528();
+				powerLedFadeStep();
 			}
 			if (ptn & 0x4000) {
 				clr_flg(4, ~0x4000);
@@ -175,21 +169,21 @@ void sub_21F33(unsigned int bits)
 static void sub_21F53(void)
 {
 	if (sub_126C9()) {
-		if (configGet()->state.bits.indicatorOn0) {
-			sub_2DF86(1);
+		if (configGet()->state.bits.chargeLedOff) {
+			chargeLedSetOff(1);
 			return;
 		}
-		sub_2DF86(0);
+		chargeLedSetOff(0);
 		if (chargeBatteryLevel9())
-			sub_2DFCE(1);
+			chargeLedSetBlink(1);
 	} else {
-		sub_2DFCE(0);
-		sub_2E03A(0);
+		chargeLedSetBlink(0);
+		chargeLedSetReleased(0);
 	}
 	return;
 }
 
 static void sub_21F8E(void)
 {
-	sub_2E165(1);
+	ledSetOff(1);
 }

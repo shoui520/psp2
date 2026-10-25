@@ -24,6 +24,7 @@
 #include "host.h"
 #include "input.h"
 #include "kernel.h"
+#include "led.h"
 #include "motion.h"
 #include "powerreq.h"
 #include "powerseq.h"
@@ -51,14 +52,6 @@ extern unsigned char sub_11D61(void);
 extern void sub_11D6B(void);
 extern void sub_11D73(void);
 extern void sub_11D7B(void);
-extern void sub_2E165(unsigned int);
-extern unsigned char sub_2E8B4(void);
-extern void sub_2E0A6(void);
-extern void sub_2E0B5(void);
-extern void sub_2E0D8(unsigned int);
-extern void sub_2E0C4(unsigned int);
-extern void sub_2DFF2(unsigned int);
-extern void sub_2E016(unsigned int);
 
 /* the power status (0x0800) and the USB state (0x0804, 0x089a), the power module's */
 
@@ -654,41 +647,41 @@ static void powerRequestCtrlLedPwmBlink(void)
 	if (powerRequest.length == 2) {
 		switch (powerRequestData[0]) {
 		case 1:
-			sub_2E165(0);
+			ledSetOff(0);
 			switch (powerRequestData[1] & 0x0f) {
 			case 0:
 				if (powerRequestData[1] & 0x80) {
-					if (sub_2E8B4() & 0x1c) {
+					if (powerLedGetState() & POWER_LED_REQUEST_PATTERNS) {
 						if (powerRequestData[1] & 0x40)
-							sub_2E0A6();
+							powerLedFadeOff();
 						else
-							sub_2E0B5();
+							powerLedFadeOn();
 						return;
 					}
 				} else {
 					if (powerRequestData[1] & 0x40)
-						sub_2E0D8(1);
+						powerLedSetMode(POWER_LED_SET_OFF);
 					else
-						sub_2E0D8(2);
+						powerLedSetMode(POWER_LED_SET_ON);
 				}
 				break;
 			case 1:
-				sub_2E0D8(4);
+				powerLedSetMode(POWER_LED_SET_PATTERN1);
 				break;
 			case 2:
-				sub_2E0D8(8);
+				powerLedSetMode(POWER_LED_SET_PATTERN2);
 				break;
 			case 3:
-				sub_2E0D8(0x10);
+				powerLedSetMode(POWER_LED_SET_PATTERN3);
 				break;
 			default:
 				result = 3;
 				break;
 			}
 			if (powerRequestData[1] & 0x20)
-				sub_2E0C4(1);
+				powerLedSetKeep(1);
 			else
-				sub_2E0C4(0);
+				powerLedSetKeep(0);
 			break;
 		default:
 			result = 3;
@@ -714,17 +707,17 @@ static void powerRequestSetChargeLedCtrl(void)
 	if (powerRequest.length == 1) {
 		switch (powerRequestData[0]) {
 		case 0:
-			sub_2DFF2(0);
-			sub_2E016(1);
+			chargeLedSetHost(0);
+			chargeLedSetHostOff(1);
 			break;
 		case 1:
-			sub_2DFF2(0);
-			sub_2E016(0);
+			chargeLedSetHost(0);
+			chargeLedSetHostOff(0);
 			break;
 		case 2:
 			if (configGet()->chargeLedHost) {
-				sub_2E016(0);
-				sub_2DFF2(1);
+				chargeLedSetHostOff(0);
+				chargeLedSetHost(1);
 			}
 			break;
 		default:
@@ -837,12 +830,12 @@ static void powerRequestCtrlLED(void)
 
 	if (powerRequest.length == 1) {
 		if (powerRequestData[0] & 0x40) {
-			sub_2E165(0);
+			ledSetOff(0);
 			if (powerRequestData[0] & 0x80) {
-				sub_2E0D8(1);
+				powerLedSetMode(POWER_LED_SET_OFF);
 				result = 0;
 			} else {
-				sub_2E0D8(2);
+				powerLedSetMode(POWER_LED_SET_ON);
 				result = 0;
 			}
 		} else {

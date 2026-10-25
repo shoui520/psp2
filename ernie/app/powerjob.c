@@ -13,6 +13,7 @@
 #include "elmo.h"
 #include "iica.h"
 #include "kernel.h"
+#include "led.h"
 #include "power.h"
 #include "powerjob.h"
 #include "powerreq.h"
@@ -27,19 +28,6 @@
 
 extern void sub_11D73(void);
 extern void sub_11D7B(void);
-extern void sub_2DF1F(void);
-extern void sub_2DF86(unsigned int on);
-extern void sub_2DFAA(unsigned int on);
-extern void sub_2DFF2(unsigned int);
-extern void sub_2E016(unsigned int);
-extern void sub_2E05E(unsigned int);
-extern unsigned char sub_2E0CF(void);
-extern void sub_2E0D8(unsigned int);
-extern void sub_2E165(unsigned int);
-extern void sub_2E499(void);
-extern void sub_2E4BB(void);
-extern void sub_2E854(unsigned int);
-extern unsigned char sub_2E8B4(void);
 
 unsigned char powerResumed;		/* set by a resume, cleared by a power on */
 static unsigned char padding;		/* 0xff2ed: nothing uses it */
@@ -106,8 +94,8 @@ static void powerJobOn(void)
 	powerCutReg0 = powerCutReg1 = powerCutReg2 = 0;
 	powerTimersInit();
 	powerSeqInit();
-	sub_2E4BB();
-	sub_2DF1F();
+	powerLedInit();
+	chargeLedInit();
 	timerStart(0x17, 1);
 	powerResumed = 0;
 	powerReady(POWER_JOB_PART);
@@ -120,9 +108,9 @@ static void powerJobResume(void)
 	batteryBLLineOff();
 	powerResumed = 1;
 	if (elmoRegA6 & 0x8000) {
-		sub_2E854(0);
+		powerLedSetPwm(0);
 		powerSleep(4);
-		sub_2E854(1);
+		powerLedSetPwm(1);
 	}
 	powerSeqResume();
 	P0.6 = 1;
@@ -134,7 +122,7 @@ static void powerJobResume(void)
 	task5SetFlag(4, 0x20);
 	mode = stateGetWakeupFactor();
 	if (mode->bits.mode == 0x0f && !mode->bits.notify)
-		sub_2E05E(1);
+		chargeLedSetCharging(1);
 	powerReady(POWER_JOB_PART);
 }
 
@@ -170,19 +158,19 @@ static void powerJobOff(void)
 	task5SetFlag(4, 0x20);
 	chargeVbus.0 = 1;
 	chargeControl.1 = 1;
-	sub_2E0D8(2);
-	sub_2E165(0);
-	if (configGet()->state.bits.indicatorOn0)
-		sub_2DF86(1);
+	powerLedSetMode(POWER_LED_SET_ON);
+	ledSetOff(0);
+	if (configGet()->state.bits.chargeLedOff)
+		chargeLedSetOff(1);
 	else
-		sub_2DF86(0);
-	if (configGet()->state.bits.indicatorOn1)
-		sub_2DFAA(1);
+		chargeLedSetOff(0);
+	if (configGet()->state.bits.chargeLedStateOff)
+		chargeLedSetStateOff(1);
 	else
-		sub_2DFAA(0);
-	sub_2DFF2(0);
-	sub_2E016(0);
-	sub_2E05E(0);
+		chargeLedSetStateOff(0);
+	chargeLedSetHost(0);
+	chargeLedSetHostOff(0);
+	chargeLedSetCharging(0);
 	powerReady(POWER_JOB_PART);
 }
 
@@ -191,11 +179,11 @@ static void powerJobShutdown(void)
 	powerSeqOff();
 	iicaClose();
 	chargeTimerStop();
-	sub_2E0D8(2);
-	sub_2E165(0);
-	sub_2DFF2(0);
-	sub_2E016(0);
-	sub_2E05E(0);
+	powerLedSetMode(POWER_LED_SET_ON);
+	ledSetOff(0);
+	chargeLedSetHost(0);
+	chargeLedSetHostOff(0);
+	chargeLedSetCharging(0);
 	powerReady(POWER_JOB_PART);
 }
 
@@ -208,15 +196,15 @@ static void powerJobSuspend(void)
 			powerBbmcCycle();
 	}
 	POWER_JOB_MODE();
-	if (!sub_2E0CF())
-		sub_2E0D8(2);
+	if (!powerLedGetKeep())
+		powerLedSetMode(POWER_LED_SET_ON);
 	chargeSetAcDelay();
 	task5SetFlag(4, 0x20);
 	chargeVbus.0 = 1;
 	chargeControl.1 = 1;
 	powerCookieHold();
-	sub_2E05E(0);
-	sub_2E165(0);
+	chargeLedSetCharging(0);
+	ledSetOff(0);
 	powerReady(POWER_JOB_PART);
 }
 
@@ -235,7 +223,7 @@ static void powerJobCut(void)
 	result = elmoRead(&reg, (unsigned char *)&powerCutReg1);
 	reg = 0xb2;
 	result = elmoRead(&reg, (unsigned char *)&powerCutReg2);
-	sub_2DF1F();
+	chargeLedInit();
 	iicaClose();
 	chargeTimerStop();
 	powerReady(POWER_JOB_PART);
@@ -249,15 +237,15 @@ static void powerJobOffEnd(void)
 
 static void powerJobUpdate(void)
 {
-	sub_2DF1F();
-	if (sub_2E8B4() & 0x1c)
-		sub_2E0D8(1);
-	sub_2E499();
+	chargeLedInit();
+	if (powerLedGetState() & POWER_LED_REQUEST_PATTERNS)
+		powerLedSetMode(POWER_LED_SET_OFF);
+	ledUpdate();
 	powerReady(POWER_JOB_PART);
 }
 
 static void powerJobReset(void)
 {
-	sub_2E05E(0);
+	chargeLedSetCharging(0);
 	powerReady(POWER_JOB_PART);
 }

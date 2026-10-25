@@ -12,6 +12,7 @@
 #include "config.h"
 #include "cookie.h"
 #include "kernel.h"
+#include "led.h"
 #include "log.h"
 #include "param.h"
 #include "powerreq.h"
@@ -23,9 +24,6 @@
 
 extern void sub_1276A(void);
 extern unsigned char sub_126C9(void);
-extern void sub_2DFCE(unsigned int);
-extern void sub_2E03A(unsigned int);
-extern void sub_2E082(unsigned int);
 
 __sreg union CookieStatus1 cookieStatus1;
 __sreg union CookieStatus2 cookieStatus2;
@@ -183,7 +181,7 @@ void chargeUpdate(void)
 		batteryReadVolt(&charge.batteryVolt);
 		batteryReadLifePercent(&charge.batteryLifePercent);
 		if (configGet()->batteryLowVolt > charge.batteryVolt)
-			sub_2E03A(0);
+			chargeLedSetReleased(0);
 		charge.flagsRead = chargeReadFlags();
 		changed = ~(charge.flagsRead ^ charge.flagsLast) & (charge.flags ^ charge.flagsRead);
 		if (changed != 0) {
@@ -206,11 +204,11 @@ void chargeUpdate(void)
 			sleepFactorSet18(chargeFactors.4);
 			if (chargeFactors.5) {
 				if (sub_126C9())
-					sub_2DFCE(1);
-				sub_2E082(1);
+					chargeLedSetBlink(1);
+				powerLedSetAlarm(1);
 			} else {
-				sub_2DFCE(0);
-				sub_2E082(0);
+				chargeLedSetBlink(0);
+				powerLedSetAlarm(0);
 			}
 			if (charge.flags & 0x0020) {
 				if (!(stateGetWakeMask() & 0x40) && !(state & 0x8000) && (state & 0x0008))
