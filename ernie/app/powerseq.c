@@ -13,6 +13,7 @@
 #include "chip.h"
 #include "clockout.h"
 #include "config.h"
+#include "cookie.h"
 #include "elmo.h"
 #include "iica.h"
 #include "motion.h"
@@ -23,10 +24,6 @@
 #include "sysmode.h"
 #include "timer.h"
 
-extern void sub_29E5D(void);
-extern unsigned char sub_29FF0(unsigned char *version);
-extern void sub_2A2B3(unsigned char *status);
-extern unsigned char sub_2A0ED(unsigned char);
 extern void sub_2DAE1(int);
 extern void sub_2A6A0(unsigned int);
 extern void sub_2A71B(unsigned int);
@@ -34,14 +31,10 @@ extern void sub_2A5FE(void);
 extern void sub_2A619(unsigned int);
 extern void sub_2A73A(unsigned int, unsigned int, unsigned int);
 extern unsigned int sub_2AB46(void);
-extern void sub_2A326(void);
-extern unsigned char sub_29E85(unsigned char *data, unsigned int length);
-extern unsigned char sub_2A175(unsigned char clear);
 extern void sub_2E03A(unsigned int);
 extern unsigned char sub_11D57(void);
 extern unsigned char sub_11D61(void);
 extern void sub_2A6D8(unsigned int, unsigned int);
-extern unsigned char byteFF6D6[6][2];		/* the Cookie's registers 3-8 as written */
 
 struct DeviceVersions deviceVersions;
 unsigned char elmoCommand[12];
@@ -78,7 +71,7 @@ void powerSeqOn(void)
 	deviceVersions.battery.version[0] = 0;
 	deviceVersions.battery.id = 0;
 	elmoInitRegs();
-	sub_29E5D();
+	cookieInit();
 	batteryInit();
 	if (iicaInit()) {
 		deviceVersions.cookie[1] = 0xff;
@@ -95,7 +88,7 @@ void powerSeqOn(void)
 			deviceVersions.elmo[0] = 0xff;
 		}
 		for (i = 0; i < 3; i++) {
-			if (!sub_29FF0(deviceVersions.cookie))
+			if (!cookieReadVersion(deviceVersions.cookie))
 				break;
 			deviceVersions.cookie[1] = 0xff;
 			deviceVersions.cookie[0] = 0xff;
@@ -105,15 +98,15 @@ void powerSeqOn(void)
 		}
 	}
 	if (deviceVersions.cookie[0] == 0x80) {
-		sub_2A2B3(&status);
+		cookieReadStatus1(&status);
 		if (!(status & 0x02)) {
 			if ((status & 0xe0) == 5)
-				sub_2A0ED(0);
+				cookieCtrlBatteryCharge(0);
 			sub_2DAE1(0x0d);
 		}
 		for (i = 0; i < 6; i++) {
 			if (!batteryReadInfo(&deviceVersions.battery.id)) {
-				sub_2A2B3(&status);
+				cookieReadStatus1(&status);
 				if (status & 0x02) {
 					if (deviceVersions.battery.version[1] >= 0x408 && deviceVersions.battery.version[1] < 0x412)
 						sub_2A6A0(0x2a8);
@@ -130,7 +123,7 @@ void powerSeqOn(void)
 				break;
 		}
 	}
-	sub_2A0ED(1);
+	cookieCtrlBatteryCharge(1);
 	chargeInit();
 }
 
@@ -435,13 +428,13 @@ unsigned char powerCookieSet(void)
 {
 	unsigned char result;
 
-	sub_2A326();
+	cookieReadReg3();
 	elmoCommand[0] = sub_2C658()->cookieRegHigh ? 0xa3 : 0x03;
-	elmoCommand[1] = byteFF6D6[0][0] | 0x80;
-	elmoCommand[2] = byteFF6D6[0][1];
-	result = sub_29E85(elmoCommand, 3);
+	elmoCommand[1] = cookieRegs[0].byte[0] | 0x80;
+	elmoCommand[2] = cookieRegs[0].byte[1];
+	result = cookieWrite(elmoCommand, 3);
 	if (result == 0)
-		byteFF6D6[0][0] = elmoCommand[1];
+		cookieRegs[0].byte[0] = elmoCommand[1];
 	return result;
 }
 
@@ -452,13 +445,13 @@ unsigned char powerCookieClear(void)
 
 	result = 0;
 	if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1 && !chargeCookieHeld) {
-		sub_2A326();
+		cookieReadReg3();
 		elmoCommand[0] = sub_2C658()->cookieRegHigh ? 0xa3 : 0x03;
-		elmoCommand[1] = byteFF6D6[0][0] & 0x7f;
-		elmoCommand[2] = byteFF6D6[0][1];
-		result = sub_29E85(elmoCommand, 3);
+		elmoCommand[1] = cookieRegs[0].byte[0] & 0x7f;
+		elmoCommand[2] = cookieRegs[0].byte[1];
+		result = cookieWrite(elmoCommand, 3);
 		if (result == 0)
-			byteFF6D6[0][0] = elmoCommand[1];
+			cookieRegs[0].byte[0] = elmoCommand[1];
 	}
 	return result;
 }
@@ -614,9 +607,9 @@ void powerSeqInit(void)
 /* at the off and the suspend: the Cookie's register 3's bit 7 set for a while (timer 0x1e) */
 void powerCookieHold(void)
 {
-	sub_2A326();
-	if ((cookieStatus1.byte[0] & 0xe0) == 0x80 && !(byteFF6D6[0][0] & 0x80)) {
-		sub_2A175(0);
+	cookieReadReg3();
+	if ((cookieStatus1.byte[0] & 0xe0) == 0x80 && !(cookieRegs[0].byte[0] & 0x80)) {
+		cookieCtrlCharge(0);
 		chargeCookieHeld = 1;
 		timerStart(0x1e, 2);
 		return;
@@ -629,7 +622,7 @@ void powerCookieRelease(void)
 {
 	chargeCookieHeld = 0;
 	sub_2E03A(1);
-	sub_2A175(1);
+	cookieCtrlCharge(1);
 }
 
 /* the 3G modem's power: at the suspend, both */

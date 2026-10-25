@@ -5,7 +5,7 @@
 #ifndef ERNIE_CHARGE_H
 #define ERNIE_CHARGE_H
 
-/* the Cookie's status register 1 (sub_2A2B3), which the power status copies
+/* the Cookie's status register 1 (cookieReadStatus1), which the power status copies
    (chargeSetPowerStatus) */
 union CookieStatus1 {
 	unsigned int	word;
@@ -23,7 +23,7 @@ union CookieStatus1 {
 	} bits;
 };
 
-/* register 2 (sub_2A2EC) */
+/* register 2 (cookieReadStatus2) */
 union CookieStatus2 {
 	unsigned int	word;
 	unsigned char	byte[2];
@@ -41,8 +41,8 @@ union CookieStatus2 {
    fell or held since the last change of range) */
 struct ChargeTempLevel {
 	unsigned int	limit[2];
-	unsigned char	setting1;		/* sub_2A029's; 0xff: no charge */
-	unsigned char	setting2;		/* sub_2A08B's; 0xff: left as it is */
+	unsigned char	setting1;		/* cookieCtrlChargingCurrent's; 0xff: no charge */
+	unsigned char	setting2;		/* cookieCtrlReg8's; 0xff: left as it is */
 };
 
 /* the battery temperature's range (chargeTempUpdate) */
@@ -129,12 +129,12 @@ extern __sreg unsigned char chargeFactors;	/* the charge's sleep factors: 0 stat
 extern __sreg unsigned char chargeControl;	/* 0: transition 0x16 due at the AC (chargeUpdate);
 						   1: the AC's charge on (0x0892) */
 extern __sreg struct ChargeTemp chargeTemp;
-extern __sreg unsigned char chargeCurrent;	/* the charge setting sent (sub_2A191); 0xff none */
+extern __sreg unsigned char chargeCurrent;	/* the charge setting sent (cookieCtrlSupplyCurrentUsb); 0xff none */
 extern __sreg unsigned char chargeUsbMode;	/* the USB status's mode (0x089a) */
 extern __sreg unsigned char chargeUsbHold;	/* 0xff: mode 5 while charging; no transition 0x0f */
 extern __sreg unsigned char chargeVbus;		/* the VBUS charge's bits (0x0893) */
 extern __sreg unsigned char chargeBbmcVersion;	/* the 3G modem's version at the last update */
-extern __sreg unsigned char chargeCookieSetting;	/* sub_2A1EF's (alarm 2) */
+extern __sreg unsigned char chargeCookieSetting;	/* cookieCtrlSupplyCurrentAc's (alarm 2) */
 extern __sreg unsigned char chargeCookieHeld;	/* powerCookieHold's */
 extern struct Charge charge;
 

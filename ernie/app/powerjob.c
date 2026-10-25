@@ -9,6 +9,7 @@
 #include "bbmc.h"
 #include "charge.h"
 #include "config.h"
+#include "cookie.h"
 #include "elmo.h"
 #include "iica.h"
 #include "kernel.h"
@@ -24,7 +25,6 @@
 
 extern void sub_11D73(void);
 extern void sub_11D7B(void);
-extern unsigned char sub_2A0ED(unsigned char);
 extern void sub_2A6A0(unsigned int);
 extern void sub_2A816(void);
 extern unsigned char sub_2AB49(int transition);
@@ -164,7 +164,7 @@ static void powerJobOff(void)
 	powerBbmcOff();
 	powerSeqOff();
 	powerBbmcOn();
-	sub_2A0ED(1);
+	cookieCtrlBatteryCharge(1);
 	if (powerResumed) {
 		powerCookieHold();
 		POWER_JOB_MODE();

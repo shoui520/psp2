@@ -25,7 +25,7 @@ union PowerStatus {
 		unsigned char	usb:2;		/* the USB status's bits 2-3 (0x089a) */
 		unsigned char	reserved1:2;
 		unsigned char	cookieLock0:1;	/* either set: the Cookie's register 3 keeps */
-		unsigned char	cookieLock1:1;	/* its bits (powerCookieClear, sub_2A379) */
+		unsigned char	cookieLock1:1;	/* its bits (powerCookieClear, cookieCtrlChargeAc) */
 		unsigned char	level:2;	/* the Cookie's status 1's bits 3-4 */
 	} bits;
 };

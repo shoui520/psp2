@@ -10,6 +10,7 @@
 #include "bbmc.h"
 #include "charge.h"
 #include "config.h"
+#include "cookie.h"
 #include "kernel.h"
 #include "powerreq.h"
 #include "powerseq.h"
@@ -19,26 +20,15 @@
 extern unsigned char sub_2AB49(int transition);
 extern unsigned int sub_2AB46(void);
 extern unsigned long sub_2AA79(void);
-extern void sub_2A2B3(unsigned char *status);
-extern void sub_2A2EC(unsigned char *status);
-extern void sub_2A326(void);
-extern unsigned char sub_2A379(unsigned char);
-extern unsigned char sub_2A175(unsigned char clear);
-extern void sub_2A1EF(unsigned int);
 extern void sub_1276A(void);
 extern unsigned char sub_126C9(void);
 extern void sub_2DAE1(int);
 extern void sub_2DFCE(unsigned int);
 extern void sub_2E03A(unsigned int);
 extern void sub_2E082(unsigned int);
-extern void sub_2A029(unsigned char);
-extern void sub_2A08B(unsigned char);
-extern unsigned char sub_2A191(unsigned char setting);
-extern void sub_2A25A(unsigned char);
 extern void sub_2C24D(unsigned char *adjust);
 extern void sub_2C315(ID flgid, FLGPTN setptn);
 extern void sub_2C1D7(struct ChargeLevel *levels);
-extern unsigned char byteFF6D6[6][2];		/* the Cookie's registers 3-8 as written */
 
 __sreg union CookieStatus1 cookieStatus1;
 __sreg union CookieStatus2 cookieStatus2;
@@ -98,8 +88,8 @@ void chargeInit(void)
 		chargeResetBattery();
 		sleepFactorSetStatus3(0);
 		sleepFactorSetStatus4(0);
-		sub_2A1EF(0xc0);
-		sub_2A175(1);
+		cookieCtrlSupplyCurrentAc(0xc0);
+		cookieCtrlCharge(1);
 		if (deviceVersions.battery.id != 0) {
 			batteryReadRemainCap(&charge.batteryRemainCap);
 			batteryReadVolt(&charge.batteryVolt);
@@ -134,9 +124,9 @@ void chargeUpdate(void)
 		return;
 	status1 = cookieStatus1;
 	status2 = cookieStatus2;
-	sub_2A2B3(cookieStatus1.byte);
-	sub_2A2EC(cookieStatus2.byte);
-	sub_2A326();
+	cookieReadStatus1(cookieStatus1.byte);
+	cookieReadStatus2(cookieStatus2.byte);
+	cookieReadReg3();
 	state = sub_2AB46();
 	if (status1.word != cookieStatus1.word || status2.word != cookieStatus2.word) {
 		chargeSetPowerStatus();
@@ -155,19 +145,19 @@ void chargeUpdate(void)
 		chargeUsbMode = 0;
 		chargeUsbHold = 0;
 		if (deviceVersions.cookie[1] < 0x31)
-			sub_2A191(0x10);
+			cookieCtrlSupplyCurrentUsb(0x10);
 	}
 	if (powerStatus.bits.cookieLock0 || powerStatus.bits.cookieLock1 || !chargeControl.1) {
 		if (cookieStatus1.bits.status2)
-			sub_2A379(0);
-	} else if (byteFF6D6[0][0] & 0x40) {
-		sub_2A379(1);
+			cookieCtrlChargeAc(0);
+	} else if (cookieRegs[0].byte[0] & 0x40) {
+		cookieCtrlChargeAc(1);
 	}
 	if (powerStatus.bits.cookieLock0 || powerStatus.bits.cookieLock1 ||
 	    (powerStatus.bits.usb == 1 && !chargeVbus.1) || !chargeVbus.0) {
 		if (cookieStatus1.bits.status3)
 			powerCookieSet();
-	} else if (chargeCurrent != 0xff && (byteFF6D6[0][0] & 0x80)) {
+	} else if (chargeCurrent != 0xff && (cookieRegs[0].byte[0] & 0x80)) {
 		powerCookieClear();
 	}
 	if (deviceVersions.battery.id == 0) {
@@ -355,7 +345,7 @@ void chargeTempUpdate(unsigned int temp, struct ChargeTemp *t)
 		}
 		if (t->setting1 != levels[t->level].setting1) {
 			if (levels[t->level].setting1 == 0xff) {
-				sub_2A175(0);
+				cookieCtrlCharge(0);
 				if (t->level == 0) {
 					powerStatus.bits.cookieLock0 = 1;
 					sub_2DAE1(9);
@@ -366,14 +356,14 @@ void chargeTempUpdate(unsigned int temp, struct ChargeTemp *t)
 			} else {
 				if (t->setting1 == 0xff) {
 					powerStatus.byte[1] &= 0xcf;
-					sub_2A175(1);
+					cookieCtrlCharge(1);
 				}
-				sub_2A029(levels[t->level].setting1);
+				cookieCtrlChargingCurrent(levels[t->level].setting1);
 			}
 			t->setting1 = levels[t->level].setting1;
 		}
 		if (levels[t->level].setting2 != 0xff && t->setting2 != levels[t->level].setting2) {
-			sub_2A08B(levels[t->level].setting2);
+			cookieCtrlReg8(levels[t->level].setting2);
 			t->setting2 = levels[t->level].setting2;
 		}
 	}
@@ -453,7 +443,7 @@ static void chargeAlarm1(void)
 	sleepFactorSet22(chargeFactors.6);
 }
 
-/* alarm 2's: the Cookie's setting sub_2A1EF */
+/* alarm 2's: the Cookie's setting cookieCtrlSupplyCurrentAc */
 static void chargeAlarm2(void)
 {
 	if (charge.alarms[2].flags.bits.on) {
@@ -464,7 +454,7 @@ static void chargeAlarm2(void)
 		chargeCookieSetting = 0xc0;
 	}
 	chargeSetCurrent();
-	sub_2A1EF(chargeCookieSetting);
+	cookieCtrlSupplyCurrentAc(chargeCookieSetting);
 }
 
 static void chargeAlarm3(void)
@@ -538,7 +528,7 @@ int chargeSetCurrent(void)
 			chargeCurrent = 0xff;
 			result = powerCookieSet();
 		} else {
-			if (byteFF6D6[0][0] & 0x80)
+			if (cookieRegs[0].byte[0] & 0x80)
 				result = powerCookieClear();
 			if (deviceVersions.cookie[1] < 0x31 && setting >= 0x11)
 				setting = (setting >> 1) & 0xf0;
@@ -547,7 +537,7 @@ int chargeSetCurrent(void)
 				setting -= adjust;
 			}
 			chargeCurrent = setting;
-			result = sub_2A191(setting);
+			result = cookieCtrlSupplyCurrentUsb(setting);
 		}
 	}
 	return result;
@@ -606,18 +596,18 @@ char chargeBatteryLevel1(void)
 void chargeSetBattery(void)
 {
 	if (deviceVersions.battery.version[2] < 0x30) {
-		sub_2A25A(0x20);
+		cookieCtrlReg7(0x20);
 		return;
 	}
 	if (deviceVersions.battery.version[2] < 0x40) {
-		sub_2A25A(0x40);
+		cookieCtrlReg7(0x40);
 		return;
 	}
 	if (deviceVersions.battery.version[2] < 0x50) {
-		sub_2A25A(sub_2C658()->batterySetting4x);
+		cookieCtrlReg7(sub_2C658()->batterySetting4x);
 		return;
 	}
-	sub_2A25A(sub_2C658()->batterySetting5x);
+	cookieCtrlReg7(sub_2C658()->batterySetting5x);
 }
 
 /* whether the 3G modem's version changed since the last call */

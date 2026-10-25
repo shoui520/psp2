@@ -18,6 +18,7 @@
 #include "chip.h"
 #include "battery.h"
 #include "config.h"
+#include "cookie.h"
 #include "elmo.h"
 #include "host.h"
 #include "input.h"
@@ -45,7 +46,6 @@ extern unsigned char sub_2BB99(void);
 extern unsigned char sub_2BBE9(void);
 extern void sub_2C315(ID flgid, FLGPTN setptn);
 extern unsigned char sub_2AB49(int transition);
-extern void sub_2A2EC(unsigned char *status);
 extern unsigned char sub_11D57(void);
 extern unsigned char sub_11D61(void);
 extern void sub_11D6B(void);
@@ -60,16 +60,8 @@ extern void sub_2E0D8(unsigned int);
 extern void sub_2E0C4(unsigned int);
 extern void sub_2DFF2(unsigned int);
 extern void sub_2E016(unsigned int);
-extern unsigned char sub_2A379(unsigned char);
-extern unsigned char sub_29F40(unsigned char *reg, unsigned char *value);
-extern unsigned char sub_29E85(unsigned char *data, unsigned int length);
-extern unsigned char sub_2A0ED(unsigned char);
-extern unsigned char sub_2A029(unsigned char);
-extern unsigned char sub_2A1EF(unsigned char);
-extern unsigned char sub_2A191(unsigned char);
 
 /* the power status (0x0800) and the USB state (0x0804, 0x089a), the power module's */
-extern unsigned char byteFF6D6[6][2];		/* the Cookie's registers 3-8 as written */
 
 void powerInputChanged(void);
 void powerRequestNotify(void);
@@ -578,7 +570,7 @@ static void powerRequestCtrlUsbStatus(void)
 				chargeUsbHold = 0xff;
 			break;
 		}
-		sub_2A2EC(status);
+		cookieReadStatus2(status);
 		dis_dsp();
 		powerStatus.bits.usb = status[1] >> 2;
 		ena_dsp();
@@ -897,7 +889,7 @@ static void powerRequestCtrlChargeAC(void)
 			chargeControl.1 = 0;
 			on = 0;
 		}
-		result = powerResult(sub_2A379(on));
+		result = powerResult(cookieCtrlChargeAc(on));
 	} else
 		result = 0x3b;
 	powerRequestDone(result);
@@ -986,9 +978,6 @@ static void powerRequestWriteElmoReg(void)
 	powerRequestDone(result);
 }
 
-/* the Cookie's register numbers: 0xa0 on with the setting 0xd4 */
-#define COOKIE_REG(reg)		((unsigned char)(sub_2C658()->cookieRegHigh ? (reg) + 0xa0 : (reg)))
-
 /* 0x0897 (sceSysconReadCookieReg) */
 static void powerRequestReadCookieReg(void)
 {
@@ -998,7 +987,7 @@ static void powerRequestReadCookieReg(void)
 
 	if (powerRequest.length < 3) {
 		reg = sub_2C658()->cookieRegHigh ? powerRequestData[0] + 0xa0 : powerRequestData[0];
-		result = powerResult(sub_29F40(&reg, value));
+		result = powerResult(cookieRead(&reg, value));
 		if (result == 0) {
 			powerRequestAnswer[0] = value[1];
 			powerRequestAnswer[1] = value[0];
@@ -1010,7 +999,7 @@ static void powerRequestReadCookieReg(void)
 	powerRequest.status = result;
 }
 
-/* 0x0898 (sceSysconWriteCookieReg): registers 3-8 are kept in byteFF6D6 */
+/* 0x0898 (sceSysconWriteCookieReg): registers 3-8 are kept in cookieRegs */
 static void powerRequestWriteCookieReg(void)
 {
 	unsigned char result;
@@ -1022,12 +1011,12 @@ static void powerRequestWriteCookieReg(void)
 			   powerRequestData[0];
 		write[1] = powerRequestData[2];
 		write[2] = powerRequestData[1];
-		result = powerResult(sub_29E85(write, 3));
+		result = powerResult(cookieWrite(write, 3));
 		if (result == 0) {
 			if (write[0] >= COOKIE_REG(3) && write[0] <= COOKIE_REG(8)) {
 				index = write[0] - COOKIE_REG(3);
-				byteFF6D6[index][0] = write[1];
-				byteFF6D6[index][1] = write[2];
+				cookieRegs[index].byte[0] = write[1];
+				cookieRegs[index].byte[1] = write[2];
 			}
 		}
 	} else
@@ -1059,7 +1048,7 @@ static void powerRequestCtrlBatteryCharge(void)
 			on = 1;
 		else
 			on = 0;
-		result = powerResult(sub_2A0ED(on));
+		result = powerResult(cookieCtrlBatteryCharge(on));
 	} else
 		result = 0x3b;
 	powerRequestDone(result);
@@ -1073,7 +1062,7 @@ static void powerRequestCtrlChargingCurrent(void)
 
 	if (powerRequest.length == 1) {
 		current = powerRequestData[0] << 4;
-		result = powerResult(sub_2A029(current));
+		result = powerResult(cookieCtrlChargingCurrent(current));
 	} else
 		result = 0x3b;
 	powerRequestDone(result);
@@ -1087,7 +1076,7 @@ static void powerRequestCtrlSupplyCurrentAc(void)
 
 	if (powerRequest.length == 1) {
 		current = powerRequestData[0] << 4;
-		result = powerResult(sub_2A1EF(current));
+		result = powerResult(cookieCtrlSupplyCurrentAc(current));
 	} else
 		result = 0x3b;
 	powerRequestDone(result);
@@ -1101,7 +1090,7 @@ static void powerRequestCtrlSupplyCurrentUsb(void)
 
 	if (powerRequest.length == 1) {
 		current = powerRequestData[0] << 4;
-		result = powerResult(sub_2A191(current));
+		result = powerResult(cookieCtrlSupplyCurrentUsb(current));
 	} else
 		result = 0x3b;
 	powerRequestDone(result);

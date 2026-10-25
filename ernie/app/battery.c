@@ -11,12 +11,12 @@
 #include "charge.h"
 #include "chip.h"
 #include "config.h"
+#include "cookie.h"
 #include "iica.h"
 #include "kernel.h"
 #include "powerseq.h"
 
 extern void sub_2A6BC(unsigned int);
-extern unsigned char sub_2A0ED(unsigned char);
 
 static struct IicaRequest batteryIica;
 static unsigned char batteryBLBuffer[BATTERY_BL_SIZE - 1];
@@ -280,7 +280,7 @@ unsigned char batteryStartBLMode(void)
 			;
 	}
 	if (result == 0) {
-		sub_2A0ED(0);
+		cookieCtrlBatteryCharge(0);
 		chargeTimerStop();
 	}
 	return result;
@@ -308,7 +308,7 @@ unsigned char batteryStopBLMode(void)
 			result = batteryWriteAt(elmoCommand, 3);
 		}
 	}
-	sub_2A0ED(1);
+	cookieCtrlBatteryCharge(1);
 	return result;
 }
 

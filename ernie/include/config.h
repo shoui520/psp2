@@ -55,7 +55,7 @@ struct ConfigBlock {
 	struct ChargeAlarmLimit chargeAlarmLimits[4];	/* the battery temperature's alarms */
 	unsigned int	chargeAlarm0Delay;	/* timer 0x1d's, when alarm 0 comes on */
 	unsigned int	chargeTempInterval;	/* the ticks between two chargeAlarmUpdate */
-	unsigned char	chargeAlarm2Setting;	/* sub_2A1EF's while alarm 2 is on (else 0xc0) */
+	unsigned char	chargeAlarm2Setting;	/* cookieCtrlSupplyCurrentAc's while alarm 2 is on (else 0xc0) */
 	unsigned char	reserved24;
 	unsigned int	bbmcPowerDelay;		/* the 3G modem's power line's hold at a power-on
 						   when its power input is up (powerBbmcOn) */
@@ -73,7 +73,7 @@ struct ConfigBlock {
 	unsigned char	chargeLedHost;		/* the host may hand the charge LED over (0x089e
 						   mode 2) */
 	unsigned char	reserved8;
-	unsigned char	chargeCurrents[4][6];	/* sub_2A191's charge settings by the USB status
+	unsigned char	chargeCurrents[4][6];	/* cookieCtrlSupplyCurrentUsb's charge settings by the USB status
 						   (the power status's bits 8-9) and chargeUsbMode;
 						   0xff: no charge */
 	unsigned char	suspendCheck:1;		/* set: a suspend runs powerBbmcCycle also when
@@ -89,7 +89,7 @@ struct ConfigBlock {
 	unsigned char	indicatorOn1:1;		/* sub_2DFAA's indicator on at a reset */
 	unsigned char	reserved13:3;
 	unsigned char	reserved14[0x1ae - 0x1ab];
-	unsigned char	batterySetting4x;	/* sub_2A25A's for a battery version[2] 0x40-0x4f */
+	unsigned char	batterySetting4x;	/* cookieCtrlReg7's for a battery version[2] 0x40-0x4f */
 	unsigned char	batterySetting5x;	/* and 0x50 or above */
 	unsigned char	touchDelaySelect;	/* Touch's delays, in NOPs */
 	unsigned char	touchDelayByte;
