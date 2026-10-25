@@ -35,21 +35,6 @@
  */
 #define APP_VERSION_INFO	((const struct UpdaterVersionInfo __far *)0xf00)
 
-/* the inputs inputPoll follows: each level, its last, and for P2.0 the one reported */
-union UpdInput {
-	unsigned char	value;
-	struct {
-		unsigned char	multiCn:1;	/* P2.0 low: something on the multi connector */
-		unsigned char	multiCnLast:1;
-		unsigned char	multiCnReported:1;
-		unsigned char	p77:1;		/* P7.7 */
-		unsigned char	p77Last:1;
-		unsigned char	p73:1;		/* P7.3 */
-		unsigned char	p73Last:1;
-		unsigned char	reserved:1;
-	} bits;
-};
-
 /* the events (updEventSet) */
 struct UpdEvents {
 	unsigned int	event01:1;

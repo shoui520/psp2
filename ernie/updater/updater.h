@@ -12,10 +12,26 @@ extern void csiClose(void);
 extern int uartsOpen(void);
 
 /* updater.c */
+/* the inputs inputPoll follows: each level, its last, and for P2.0 the one reported */
+union UpdInput {
+	unsigned char	value;
+	struct {
+		unsigned char	multiCn:1;	/* P2.0 low: something on the multi connector */
+		unsigned char	multiCnLast:1;
+		unsigned char	multiCnReported:1;
+		unsigned char	p77:1;		/* P7.7 */
+		unsigned char	p77Last:1;
+		unsigned char	p73:1;		/* P7.3 */
+		unsigned char	p73Last:1;
+		unsigned char	reserved:1;
+	} bits;
+};
+
 extern unsigned char updMode;
 extern unsigned char updReset;
 extern unsigned char updVersion[4];
 extern char updBuild[12];
+extern union UpdInput updInput;
 extern int updaterInitErnieUpdMode(void);
 extern unsigned char updModeGet(void);
 extern unsigned char updModeChange(unsigned char mode);
@@ -81,6 +97,24 @@ extern unsigned char hostCommandFast(unsigned int command);
 extern unsigned char hostCommandSlow(unsigned int command, struct HostSlowCommand *slow);
 extern void sub_3B721(void);
 
+/* stub.c */
+struct StateEvent;
+extern int updStateEvent(struct StateEvent *event);
+extern int sub_4D3F(void);
+extern int sub_4D47(void);
+extern int sub_4D4F(void);
+extern int sub_4D57(void);
+extern unsigned char sub_4D63(void);
+extern int sub_4D6B(void);
+extern void sub_4DC5(unsigned int ms);
+extern int sub_4E1F(void);
+extern int sub_4E21(void);
+extern void sub_4E23(void);
+extern void sub_4E24(void);
+extern int sub_4E25(void);
+extern void sub_6BFE(void);
+extern void sub_6CFF(void);
+
 extern unsigned char resetFlags;
 extern void rtcInit(void);
 extern unsigned char configStorageInit(void);
@@ -101,7 +135,6 @@ extern unsigned char sub_3B175(void);
 extern void sub_9CA4(int);
 extern void sub_8AE4(void);
 extern void sub_9CBF(void);
-extern unsigned char sub_4D63(void);
 extern void sub_AC3C(int);
 extern void sub_AC65(void);
 extern void sub_3AF74(void);
