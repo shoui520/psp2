@@ -38,7 +38,14 @@ struct ConfigBlock {
 	unsigned char	reserved5[0x18c - 0x185];
 	unsigned char	chargeLedHost;		/* the host may hand the charge LED over (0x089e
 						   mode 2) */
-	unsigned char	reserved8[0x1b0 - 0x18d];
+	unsigned char	reserved8[0x1aa - 0x18d];
+	unsigned char	reserved11:2;
+	unsigned char	indicatorOn0:1;		/* sub_2DF86's indicator on at a reset, and while
+						   sub_126C9 holds */
+	unsigned char	reserved12:1;
+	unsigned char	indicatorOn1:1;		/* sub_2DFAA's indicator on at a reset */
+	unsigned char	reserved13:3;
+	unsigned char	reserved14[0x1b0 - 0x1ab];
 	unsigned char	touchDelaySelect;	/* Touch's delays, in NOPs */
 	unsigned char	touchDelayByte;
 	unsigned char	touchDelayDeselect;

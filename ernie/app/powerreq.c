@@ -21,6 +21,7 @@
 #include "kernel.h"
 #include "motion.h"
 #include "powerreq.h"
+#include "task5.h"
 #include "version.h"
 
 /* request 9's data and answer: the battery's registers are words */
@@ -54,7 +55,6 @@ extern unsigned char sub_2BB99(void);
 extern unsigned char sub_2BBE9(void);
 extern void sub_2C315(ID flgid, FLGPTN setptn);
 extern unsigned char sub_2AB49(int transition);
-extern void sub_21F33(unsigned int);
 extern unsigned char sub_28243(unsigned char, unsigned char);
 extern unsigned char sub_282AA(unsigned char, unsigned char);
 extern unsigned char sub_2831A(unsigned char, unsigned char, unsigned char);

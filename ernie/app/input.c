@@ -23,6 +23,7 @@
 #include "serial1.h"
 #include "sleepfactor.h"
 #include "sysmode.h"
+#include "task5.h"
 #include "timer.h"
 #include "touch.h"
 
@@ -89,12 +90,10 @@ extern unsigned char sub_2C15B(unsigned int offset, unsigned int size, unsigned 
 extern void sub_2C342(ID flgid, FLGPTN setptn);
 extern void sub_2C394(int, int);
 extern void sub_17159(void);
-extern unsigned char sub_21F2A(void);
 extern void sub_17204(void);
 extern void sub_17544(void);
 extern void sub_17580(void);
 extern void sub_172BC(void);
-extern void sub_21F33(int);
 extern void sub_2B475(void);
 extern void sub_25263(void);
 extern void sub_2526B(void);

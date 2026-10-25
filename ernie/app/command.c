@@ -23,6 +23,7 @@
 #include "scratchpad.h"
 #include "serial.h"
 #include "sysmode.h"
+#include "task5.h"
 #include "version.h"
 
 extern int sub_2D646(unsigned int *value);
@@ -38,7 +39,6 @@ extern unsigned char sub_2C15B(unsigned int offset, unsigned int size, unsigned 
 extern unsigned char sub_2C199(unsigned int offset, unsigned int size, unsigned char *buf);
 extern unsigned char sub_27642(void);
 extern void sub_275F0(int);
-extern void sub_21F33(int);
 extern void sub_2AA60(unsigned long);
 extern unsigned char sub_2AB49(int);
 extern unsigned char sub_2B61F(unsigned char *buf);
