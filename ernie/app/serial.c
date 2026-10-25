@@ -45,7 +45,7 @@ unsigned char serialEvent(FLGPTN ptn)
 		case 0:
 		case SERIAL_RECEIVE:
 		case SERIAL_RECEIVED:
-			sub_24163(0x10);
+			timerStop(0x10);
 			serial.status = serialReceive();
 			serialDispatch();
 			break;
@@ -79,7 +79,7 @@ unsigned char serialEvent(FLGPTN ptn)
 		case 0:
 		case SERIAL_RECEIVE:
 		case SERIAL_RECEIVED:
-			sub_24163(0x10);
+			timerStop(0x10);
 			serial.status = serialReceive();
 			serialDispatch();
 			break;
@@ -524,7 +524,7 @@ void serialStartTimer(void)
 	struct TimerHandler handler;
 
 	handler.handler = serialPostTimeout;
-	sub_240CF(0x10, &handler);
+	timerSetHandler(0x10, &handler);
 }
 
 /* answers command 0x0105, if it waits to (status 0, no data) */

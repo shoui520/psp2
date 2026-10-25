@@ -26,7 +26,6 @@ extern __sreg unsigned char saddr_FFE70;
 extern __near unsigned char resetFlags;
 
 extern void sub_2C57F(void);
-extern void sub_2407A(void);
 extern void sub_2C051(void);
 extern void sub_2C54C(int);
 extern void sub_2C539(int);
@@ -77,12 +76,12 @@ void systemInit(void)
 	saddr_FFE70 = 0x7f;
 	resetFlags = RESF;
 	sub_2C57F();
-	sub_2407A();
+	timerInit();
 	sub_2C051();
 	sub_2C54C(-1);
 	sub_2C539(1);
 	timer.handler = sub_2AC15;
-	sub_240CF(0x1a, &timer);
+	timerSetHandler(0x1a, &timer);
 	versionInit();
 	cause = getResetCause() & 0xf0;
 	sub_2D6EF();

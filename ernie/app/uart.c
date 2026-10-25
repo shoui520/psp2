@@ -293,7 +293,7 @@ int uartSetTimeout(unsigned char port, struct UartTimeout *timeout)
 	if (timeout != NULL) {
 		p->timeout = *timeout;
 		handler.handler = uartTimeoutHandlers[port];
-		result = sub_240CF(timeout->timer, &handler);
+		result = timerSetHandler(timeout->timer, &handler);
 	} else {
 		p->timeout.timeout = 0;
 		p->timeout.flgid = 0;
@@ -422,9 +422,9 @@ void uart3ReceiveInterrupt(void)
 		p->rxWrite = p->rxWrite + 1 & p->rxMask;
 		if (byteFECB8 == 3) {
 			if (p->timeout.flgid != 0)
-				sub_24110(p->timeout.timer, p->timeout.timeout);
+				timerStart(p->timeout.timer, p->timeout.timeout);
 		} else
-			sub_24110(0x10, 2);
+			timerStart(0x10, 2);
 	}
 }
 
@@ -465,7 +465,7 @@ void uart2ReceiveInterrupt(void)
 		p->rxBuffer[p->rxWrite] = (unsigned char)SDR11;
 		p->rxWrite = p->rxWrite + 1 & p->rxMask;
 		if (p->timeout.flgid != 0)
-			sub_24110(p->timeout.timer, p->timeout.timeout);
+			timerStart(p->timeout.timer, p->timeout.timeout);
 	}
 }
 

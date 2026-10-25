@@ -336,8 +336,8 @@ void inputInit(void)
 	inputScan.interval = 0;
 	inputScan.hold = 0;
 	timer.handler = inputScanTimer;
-	sub_240CF(3, &timer);
-	sub_240CF(0x16, &timer);
+	timerSetHandler(3, &timer);
+	timerSetHandler(0x16, &timer);
 }
 
 void sub_11572(void)
@@ -424,8 +424,8 @@ void sub_116A1(void)
 {
 	sub_126D1();
 	sub_126F7();
-	sub_24163(3);
-	sub_24163(0x16);
+	timerStop(3);
+	timerStop(0x16);
 }
 
 void sub_116B7(void)
@@ -1262,9 +1262,9 @@ void inputScanHold(unsigned int ticks)
 {
 	DI();
 	if (inputScan.hold < ticks) {
-		sub_24163(0x16);
+		timerStop(0x16);
 		inputScan.hold = ticks;
-		sub_24110(3, 1);
+		timerStart(3, 1);
 	}
 	EI();
 }
@@ -1285,11 +1285,11 @@ void inputScanTimer(void)
 	sub_2C342(2, 0x0008);
 	if (inputScan.hold != 0) {
 		inputScan.hold--;
-		sub_24110(3, 1);
+		timerStart(3, 1);
 	} else if (inputScan.mode == 2) {
-		sub_24110(0x16, inputScan.interval);
+		timerStart(0x16, inputScan.interval);
 	} else {
-		sub_24110(3, inputScan.interval);
+		timerStart(3, inputScan.interval);
 	}
 	if (inputDelays.motionInfo != 0) {
 		if (--inputDelays.motionInfo == 0)
@@ -1398,11 +1398,11 @@ void inputScanMode1(unsigned int interval)
 {
 	DI();
 	if (inputScan.mode != 1) {
-		sub_24163(0x16);
+		timerStop(0x16);
 		inputScan.mode = 1;
 		inputScan.interval = interval;
 		inputScan.hold = 0;
-		sub_24110(3, interval);
+		timerStart(3, interval);
 	}
 	EI();
 	return;
@@ -1413,10 +1413,10 @@ void inputScanMode2(unsigned int interval)
 {
 	DI();
 	if (inputScan.mode != 2) {
-		sub_24163(3);
+		timerStop(3);
 		inputScan.mode = 2;
 		inputScan.interval = interval;
-		sub_24110(0x16, interval);
+		timerStart(0x16, interval);
 	}
 	EI();
 	return;

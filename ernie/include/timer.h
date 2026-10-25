@@ -1,6 +1,6 @@
 /*
- * The software timers (the module at 0x2407a, not written yet): a timer runs its handler when
- * its count of ticks runs out.
+ * The software timers (app/timer.c): a timer runs its handler when its count of ticks runs
+ * out.
  */
 #ifndef ERNIE_TIMER_H
 #define ERNIE_TIMER_H
@@ -24,8 +24,15 @@ extern __near struct Timer timers[TIMER_COUNT];
 extern __sreg unsigned int timerTicks;
 extern __sreg unsigned int timerRtcTicks;
 
-extern int sub_240CF(unsigned char id, struct TimerHandler *handler);
-extern void sub_24110(int id, unsigned int ticks);
-extern void sub_24163(int id);
+extern int timerInit(void);
+extern int timerSetHandler(unsigned char id, struct TimerHandler *handler);
+extern int timerStart(unsigned char id, unsigned int ticks);
+extern int timerStop(unsigned char id);
+extern int timerGetTicks(unsigned int *ticks);
+extern int timerSetTicks(unsigned int *ticks);
+extern int timerArmed(void);
+extern int timerSetRtcTicks(unsigned int *ticks);
+extern int timerGetRtcTicks(unsigned int *ticks);
+extern void timerTick(void);
 
 #endif

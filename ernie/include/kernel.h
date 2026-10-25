@@ -44,6 +44,8 @@ extern ER	get_mpf(ID mpfid, VP *p_blk);
 extern ER	pget_mpf(ID mpfid, VP *p_blk);
 extern ER	rel_mpf(ID mpfid, VP blk);
 
+extern ER	sta_cyc(ID cycid);
+
 extern ER	isig_tim(void);
 
 extern ER	dis_dsp(void);
