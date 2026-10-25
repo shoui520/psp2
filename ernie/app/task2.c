@@ -17,6 +17,7 @@
 #include "serial1.h"
 #include "serial4.h"
 #include "serialauth.h"
+#include "serialreq.h"
 #include "sleepfactor.h"
 #include "state.h"
 #include "task.h"
@@ -25,7 +26,6 @@
 #include "watchdog.h"
 
 extern unsigned char sub_10D7A(void);
-extern void sub_2E8C6(void);
 extern unsigned char sub_10CB3(void);
 extern unsigned char sub_11D1B(void);
 extern unsigned char sub_11D4B(void);
@@ -182,7 +182,7 @@ unsigned char sub_10D08(void)
 	commandRequestInit();
 	nvsRequestInit();
 	serialAuthInit();
-	sub_2E8C6();
+	serialRequestInit();
 	serial4StartTimers();
 	if (boardMultiCnIsDongle() || boardMultiCnIsDebug())
 		boardSetMultiCnOutput(0);

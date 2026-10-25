@@ -11,14 +11,13 @@
 #include "inputreq.h"
 #include "nvsreq.h"
 #include "powerreq.h"
+#include "serialreq.h"
 #include "updatereq.h"
-
-extern struct HostRequest hostRequestFFC3A;
 
 struct HostRequest * const hostRequests[] = {
 	&commandRequest,
 	&bbmcRequest,
-	&hostRequestFFC3A,
+	&serialRequest,
 	&touchRequest,
 	&motionRequest,
 	&controlsRequest,
