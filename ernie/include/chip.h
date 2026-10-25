@@ -25,6 +25,9 @@ struct SfrBits {
 #define EGP13			SFR_BITS(0xfff3a).b5
 #define EGN13			SFR_BITS(0xfff3b).b5
 
+/* port 3's bit 3 (P3.3) */
+#define P33			SFR_BITS(0xfff03).b3
+
 /* port 3's bit 6 (P3.6) and its mode (PM3.6) */
 #define P36			SFR_BITS(0xfff03).b6
 #define PM36			SFR_BITS(0xfff23).b6

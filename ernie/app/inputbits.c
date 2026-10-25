@@ -6,11 +6,11 @@
 
 #include "input.h"
 #include "inputbits.h"
+#include "powerreq.h"
 
 /* set up by modules not written yet; inputHandlerFE16C never is (nothing else refers to it, so
    its owner is not known): type 0, never called */
 extern struct InputHandler inputHandlerFE16C;
-extern struct InputHandler inputHandler2059C;
 extern struct InputHandler inputHandler27446;
 extern struct InputHandler inputHandler27452;
 
@@ -33,7 +33,7 @@ static struct InputHandler * const inputHandlers3Bit0[] = { &inputHandler25263 }
 static struct InputHandler * const inputHandlers3Bit1[] = { &inputHandler2526B };
 static struct InputHandler * const inputHandlers3Bit2[] = { &inputHandler224FD };
 static struct InputHandler * const inputHandlers2Bit0[] = {
-	&inputHandler2059C, &inputHandler27446
+	&powerInputHandler, &inputHandler27446
 };
 static struct InputHandler * const inputHandlers2Bit1[] = { &inputHandler27452 };
 static struct InputHandler * const inputHandlers1Bit0[] = { &inputHandler12489 };

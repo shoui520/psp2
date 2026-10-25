@@ -25,6 +25,7 @@
 #include "host.h"
 #include "inputreq.h"
 #include "kernel.h"
+#include "powerreq.h"
 #include "sleepfactor.h"
 #include "tau.h"
 #include "updatereq.h"
@@ -59,14 +60,6 @@ extern unsigned char sub_2BBE9(void);
 extern unsigned char sub_2D685(void);
 
 /* the commands' handlers and streams (their files not written yet) */
-extern unsigned char sub_206CA(unsigned char *out, unsigned char *length);
-extern unsigned char sub_20702(unsigned char *out, unsigned char *length);
-extern unsigned char sub_2071F(unsigned char *out, unsigned char *length);
-extern unsigned char sub_20763(unsigned char *out, unsigned char *length);
-extern unsigned char sub_207A7(unsigned char *out, unsigned char *length);
-extern unsigned char sub_21540(unsigned char *out, unsigned char *length);
-extern unsigned char sub_21584(unsigned char *out, unsigned char *length);
-extern unsigned char sub_215C8(unsigned char *out, unsigned char *length);
 extern unsigned char sub_2D289(unsigned char *out, unsigned char *length);
 
 struct HostLink hostLink;
@@ -111,14 +104,14 @@ static const struct HostCommand hostCommands[] = {
 	{ 0x0301, (HostCommandHandler)&hostStream0301, 1 },
 	{ 0x0302, (HostCommandHandler)&hostStream0302, 1 },
 	{ 0x0400, (HostCommandHandler)&hostStream0400, 1 },
-	{ 0x0800, sub_206CA, 0 },
-	{ 0x0801, sub_20702, 0 },
-	{ 0x0802, sub_2071F, 0 },
-	{ 0x0803, sub_20763, 0 },
-	{ 0x0804, sub_207A7, 0 },
-	{ 0x0900, sub_21540, 0 },
-	{ 0x0901, sub_21584, 0 },
-	{ 0x0902, sub_215C8, 0 },
+	{ 0x0800, hostCommandPowerStatus, 0 },
+	{ 0x0801, hostCommand0801, 0 },
+	{ 0x0802, hostCommandBatteryRemainCapOld, 0 },
+	{ 0x0803, hostCommandBatteryVoltOld, 0 },
+	{ 0x0804, hostCommand0804, 0 },
+	{ 0x0900, hostCommandBatteryRemainCap, 0 },
+	{ 0x0901, hostCommandBatteryVolt, 0 },
+	{ 0x0902, hostCommandBatteryLifePercent, 0 },
 	{ 0x1100, hostCommandErnieDlVersion, 0 },
 	{ 0x1300, sub_2D289, 0 },
 };

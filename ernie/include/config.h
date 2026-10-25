@@ -19,11 +19,26 @@ struct ConfigBlock {
 						   loaded one's may be */
 	unsigned int	analogMax;		/* its max at a reset, the least a loaded one's */
 	unsigned char	analogMinRange;		/* the least high byte of a calibration's range */
-	unsigned char	reserved3[0x184 - 0xd3];
+	unsigned char	reserved3;
+	unsigned int	cookieRegHigh;		/* the Cookie's registers are numbered from 0xa0 */
+	unsigned char	reserved9[0xdc - 0xd6];
+	unsigned int	batteryTemp;		/* the battery's answers when none answered: */
+	unsigned int	batteryBicTemp;		/* 0x0981, 0x098b, 0x0982, 0x0983, 0x0984, */
+	unsigned int	batteryFullCap;		/* 0x0985 and 0x098a */
+	unsigned int	batteryElec;
+	unsigned int	batteryTte;
+	unsigned int	batterySoh;
+	unsigned int	batteryFullCap2;
+	unsigned char	reserved10[0xf3 - 0xea];
+	unsigned char	voltageTrim;		/* passed with a regulator's level (0x088e) */
+	unsigned char	reserved7[0x184 - 0xf4];
 	unsigned char	startCheckOff:1;	/* set: mode 1's command 0x0105 starts state 9
 						   although sub_25664 and sub_256E1 refuse */
 	unsigned char	reserved4:7;
-	unsigned char	reserved5[0x1b0 - 0x185];
+	unsigned char	reserved5[0x18c - 0x185];
+	unsigned char	chargeLedHost;		/* the host may hand the charge LED over (0x089e
+						   mode 2) */
+	unsigned char	reserved8[0x1b0 - 0x18d];
 	unsigned char	touchDelaySelect;	/* Touch's delays, in NOPs */
 	unsigned char	touchDelayByte;
 	unsigned char	touchDelayDeselect;
