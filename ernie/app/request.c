@@ -4,6 +4,7 @@
  */
 #include <string.h>
 
+#include "bbmc.h"
 #include "command.h"
 #include "host.h"
 #include "inputreq.h"
@@ -11,13 +12,12 @@
 #include "powerreq.h"
 #include "updatereq.h"
 
-extern struct HostRequest hostRequestFF57E;
 extern struct HostRequest hostRequestFFC3A;
 extern struct HostRequest hostRequestFFBE0;
 
 struct HostRequest * const hostRequests[] = {
 	&commandRequest,
-	&hostRequestFF57E,
+	&bbmcRequest,
 	&hostRequestFFC3A,
 	&touchRequest,
 	&motionRequest,

@@ -5,6 +5,7 @@
 #pragma sfr
 
 #include "ernie.h"
+#include "bbmc.h"
 #include "config.h"
 #include "elmo.h"
 #include "iica.h"
@@ -23,7 +24,6 @@ extern __sreg unsigned char saddr_FFE63;
 
 extern void sub_11D73(void);
 extern void sub_11D7B(void);
-extern unsigned char sub_267C2(void);
 extern void sub_276A3(void);
 extern void sub_2782D(void);
 extern void sub_27A04(void);
@@ -223,7 +223,7 @@ static void powerJobSuspend(void)
 	sub_27AB7();
 	if (sub_29CCF()) {
 		sub_27CF1();
-		if (!sub_267C2() || sub_2C658()->suspendCheck)
+		if (!bbmcModeIsNone() || sub_2C658()->suspendCheck)
 			sub_2818A();
 	}
 	POWER_JOB_MODE();

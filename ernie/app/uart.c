@@ -267,7 +267,7 @@ int uartFlush(unsigned char port)
 }
 
 /* sets a port's timeout (NULL: none) */
-int uartSetTimeout(unsigned char port, struct UartTimeout *timeout)
+unsigned char uartSetTimeout(unsigned char port, struct UartTimeout *timeout)
 {
 	struct TimerHandler handler;
 	struct UartPort *p;

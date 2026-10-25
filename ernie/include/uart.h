@@ -37,7 +37,7 @@ extern unsigned char uartRead(unsigned char port, unsigned char *buf, unsigned c
 extern unsigned char uartWrite(unsigned char port, unsigned char *buf, unsigned char size);
 extern unsigned char uartReceived(unsigned char port);
 extern int uartFlush(unsigned char port);
-extern int uartSetTimeout(unsigned char port, struct UartTimeout *timeout);
+extern unsigned char uartSetTimeout(unsigned char port, struct UartTimeout *timeout);
 extern int uart2Open(void);
 extern int uart2Close(unsigned char keep);
 

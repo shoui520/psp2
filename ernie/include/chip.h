@@ -28,6 +28,11 @@ struct SfrBits {
 /* port 3's bit 3 (P3.3) */
 #define P33			SFR_BITS(0xfff03).b3
 
+/* port 3's bit 4 (P3.4) and its mode (PM3.4), and bit 7 (P3.7): the 3G modem's lines (bbmc.c) */
+#define P34			SFR_BITS(0xfff03).b4
+#define PM34			SFR_BITS(0xfff23).b4
+#define P37			SFR_BITS(0xfff03).b7
+
 /* port 3's bit 6 (P3.6) and its mode (PM3.6) */
 #define P36			SFR_BITS(0xfff03).b6
 #define PM36			SFR_BITS(0xfff23).b6
@@ -48,5 +53,8 @@ struct SfrBits {
 
 /* port 9's bit 7 (P9.7): the analog sticks' power */
 #define P97			SFR_BITS(0xfff09).b7
+
+/* port 12's bit 5 (P12.5): the 3G modem's power in mode 1 (bbmc.c) */
+#define P125			SFR_BITS(0xfff0c).b5
 
 #endif

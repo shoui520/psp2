@@ -11,7 +11,11 @@ struct ConfigBlock {
 	struct AnalogCalibration analogCalibration;	/* the sticks' default calibration */
 	unsigned char	analogScale0;		/* set 0's margin, in 1/1000 of the range */
 	unsigned char	analogScale1;		/* set 1's */
-	unsigned char	reserved1[0xcd - 0x12];
+	unsigned char	reserved1[0x14 - 0x12];
+	unsigned char	bbmcDetect:1;		/* set: P3.2 low at the start means a 3G modem
+						   (bbmcInit) */
+	unsigned char	reserved17:7;
+	unsigned char	reserved18[0xcd - 0x15];
 	unsigned char	pressAnyState:1;	/* a button's presses go on being counted when the
 						   system state changes */
 	unsigned char	reserved2:7;
@@ -45,7 +49,7 @@ struct ConfigBlock {
 						   mode 2) */
 	unsigned char	reserved8[0x1a6 - 0x18d];
 	unsigned char	suspendCheck:1;		/* set: a suspend runs sub_2818A also when
-						   sub_267C2 holds */
+						   the 3G modem has no mode (bbmcModeIsNone) */
 	unsigned char	reserved15:7;
 	unsigned char	reserved16;
 	unsigned int	hardwareInfoSelect;	/* power-off's hardware info flags: 1 sets 0x80,
