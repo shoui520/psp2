@@ -18,9 +18,13 @@
 #include "chip.h"
 #include "ernie.h"
 #include "board.h"
+#include "charge.h"
 #include "config.h"
 #include "keepram.h"
 #include "nvs.h"
+#include "param.h"
+#include "serial.h"
+#include "serial1.h"
 #include "sleepfactor.h"
 #include "tau.h"
 #include "timer.h"
@@ -98,7 +102,7 @@ int updaterInitErnieUpdMode(void)
 {
 	if (updReset) {
 		updMode = 0;
-		sub_7E89();
+		paramInit();
 		watchdogSet(&configGet()->watchdog);
 		sub_3B718();
 		updInput.bits.multiCnReported = updInput.bits.multiCn = updInput.bits.multiCnLast =
@@ -136,7 +140,7 @@ unsigned char updModeChange(unsigned char mode)
 			refused = 0;
 			break;
 		case 3:
-			if (sub_7A2B()) {
+			if (chargeMayStart()) {
 				sub_3B1AE();
 				watchdogSetup();
 				sub_3598A();
@@ -241,7 +245,7 @@ unsigned char updModeChange(unsigned char mode)
 		updEventTake(0x14);
 		updEventTake(0x15);
 		sub_AD21();
-		sub_A026();
+		serialAnswer0105();
 	}
 	return refused;
 }
@@ -507,12 +511,12 @@ int multiCnChanged(void)
 	boardSetMultiCnOutput(BOARD_MULTICN_HOST);
 	sub_3AC35();
 	if (sub_3B175()) {
-		sub_9CA4(2);
+		serialOpen1(2);
 		sleepFactorSet6(1);
 		sleepFactorSet5(1);
 	} else {
-		sub_8AE4();
-		sub_9CBF();
+		serial1Reset();
+		serialClose1();
 		sleepFactorSet6(0);
 		sleepFactorSet5(0);
 	}
@@ -535,7 +539,7 @@ void mainLoop(void)
 	unsigned char result;
 	unsigned char count;
 
-	sub_969D(0);
+	serialReset(0);
 	resetFlags = RESF;
 	result = configStorageInit();
 	if (result)
@@ -560,11 +564,11 @@ void mainLoop(void)
 	tau0PowerOn();
 	tm00Start();
 	sub_3AF74();
-	sub_8AE4();
+	serial1Reset();
 	sub_A1E5();
 	sub_A219();
 	updEventSet(4);
-	sub_A007();
+	serialStartTimer();
 	powerInit();
 	powerOn();
 	EI();
@@ -587,13 +591,13 @@ void mainLoop(void)
 			if (updEventTake(0x69))
 				updModeChange(5);
 			if (updEventTake(0x32))
-				sub_94A1(4);
+				serialEvent(4);
 			if (updEventTake(0x33))
-				sub_94A1(2);
+				serialEvent(2);
 			if (updEventTake(0x34))
-				sub_94A1(8);
+				serialEvent(8);
 			if (updEventTake(0x35))
-				sub_94A1(0x10);
+				serialEvent(0x10);
 			if (updEventTake(1))
 				sub_A065(0x400);
 			if (updEventTake(2))
@@ -609,7 +613,7 @@ void mainLoop(void)
 			if (updEventTake(0x7a))
 				multiCnChanged();
 			if (updEventTake(0x82))
-				sub_723E();
+				chargeUpdate();
 			break;
 		case 2:
 			if (updEventTake(0x66))
@@ -617,7 +621,7 @@ void mainLoop(void)
 			if (updEventTake(0x69))
 				updModeChange(5);
 			if (updEventTake(0x82))
-				sub_723E();
+				chargeUpdate();
 			break;
 		case 3:
 			if (updEventTake(0x66))
@@ -635,13 +639,13 @@ void mainLoop(void)
 			if (updEventTake(0x20))
 				updModeChange(6);
 			if (updEventTake(0x32))
-				sub_94A1(4);
+				serialEvent(4);
 			if (updEventTake(0x33))
-				sub_94A1(2);
+				serialEvent(2);
 			if (updEventTake(0x34))
-				sub_94A1(8);
+				serialEvent(8);
 			if (updEventTake(0x35))
-				sub_94A1(0x10);
+				serialEvent(0x10);
 			if (updEventTake(1))
 				sub_A065(0x400);
 			if (updEventTake(2))
@@ -657,7 +661,7 @@ void mainLoop(void)
 			if (updEventTake(0x7a))
 				multiCnChanged();
 			if (updEventTake(0x82))
-				sub_723E();
+				chargeUpdate();
 			if (P1.6)
 				hostResult = hostPoll();
 			if ((updLoops & 7) == 0)
