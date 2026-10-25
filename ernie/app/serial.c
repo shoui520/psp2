@@ -2,7 +2,8 @@
  * The command link on UART3: a frame received is checked (its length, its checksum; in text,
  * its "\r\n" and its digits), run by the handler its mode has for the command, and answered
  * with the handler's status and data. The events of event flag 3 (bits 0x0002-0x0010) step
- * it; serialEvent, which would take them, is never called.
+ * it through serial4Event (app/serial4.c); serialEvent, which would take them, is never
+ * called.
  */
 #pragma sfr
 

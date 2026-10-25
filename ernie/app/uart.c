@@ -3,7 +3,8 @@
  * SAU0, 2 and 3 on SAU1), through two ring buffers, the receiving one filled and the sending
  * one emptied by interrupt. A port may have a timeout: after each byte received a timer
  * runs, and when it runs out an event flag is set. UART2 (INTST2, INTSR2, INTSRE2) and UART3
- * (INTST3, INTSR3, INTSRE3) are set up here; UART4 has a port and no channels.
+ * (INTST3, INTSR3, INTSRE3) are set up here; UART4 has its port here and its channels in
+ * app/uart4.c.
  */
 #pragma rtos_interrupt INTSRE3 uart3ErrorInterrupt
 #pragma rtos_interrupt INTSR3 uart3ReceiveInterrupt

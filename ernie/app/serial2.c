@@ -15,6 +15,7 @@
 #include "scratchpad.h"
 #include "serial.h"
 #include "serial2.h"
+#include "serial4.h"
 #include "version.h"
 
 #define SERIAL2_TEST_AREA	0xe0	/* the scratch pad's test area */
@@ -24,16 +25,6 @@ extern ER sub_2C2ED(unsigned char flgid, FLGPTN setptn);
 extern unsigned int sub_2AB46(void);
 extern unsigned char sub_2AB49(int transition);
 extern unsigned char sub_11D4B(void);
-extern unsigned char sub_25A46(void);
-extern void sub_25A4F(unsigned int);
-extern unsigned char sub_25A5D(void);
-extern unsigned char sub_25A74(unsigned int);
-extern unsigned char sub_25AD8(void);
-extern void sub_25B22(unsigned int);
-extern unsigned char sub_26069(unsigned int);
-extern unsigned char sub_260C3(unsigned int);
-extern unsigned char sub_260DD(unsigned int);
-extern void sub_2613A(unsigned char state);
 extern unsigned char sub_29C4B(void);
 extern unsigned char sub_29CC0(void);
 
@@ -88,7 +79,7 @@ void serial2InputLink(void)
 static unsigned char serial2Command0200(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	response->length = 0;
-	sub_2613A(SERIAL_ANSWER);
+	serial4SetAnswer(SERIAL_ANSWER);
 	return 0;
 }
 
@@ -101,7 +92,7 @@ static unsigned char serial2Command0201(struct SerialBuffer *request, struct Ser
 	memset(&serial2Data[12], 0, 4);
 	response->data = serial2Data;
 	response->length = 0x10;
-	sub_2613A(SERIAL_ANSWER);
+	serial4SetAnswer(SERIAL_ANSWER);
 	return 0;
 }
 
@@ -114,25 +105,25 @@ static unsigned char serial2Command0202(struct SerialBuffer *request, struct Ser
 
 	response->length = 0;
 	if (request->length != 4) {
-		sub_2613A(SERIAL_ANSWER);
+		serial4SetAnswer(SERIAL_ANSWER);
 		return 0x32;
 	}
 	mode = request->data[0];
 	value = request->data[1];
 	if (mode == 0)
-		sub_25A4F(2);
+		serial4SetNextMode(2);
 	else if (mode == 1)
-		sub_25A4F(0x82);
+		serial4SetNextMode(0x82);
 	else {
-		sub_2613A(SERIAL_ANSWER);
+		serial4SetAnswer(SERIAL_ANSWER);
 		return 0x33;
 	}
-	result = sub_25A74(value);
+	result = serial4SelectBaud(value);
 	if (result != 0) {
-		sub_2613A(SERIAL_ANSWER);
+		serial4SetAnswer(SERIAL_ANSWER);
 		return 0x33;
 	}
-	sub_2613A(SERIAL_ANSWER);
+	serial4SetAnswer(SERIAL_ANSWER);
 	return 0;
 }
 
@@ -140,9 +131,9 @@ static unsigned char serial2Notify0202(void)
 {
 	unsigned char channel;
 
-	channel = sub_25A46();
-	sub_25B22(channel);
-	return sub_26069(sub_25A5D());
+	channel = serial4GetNextMode();
+	serial4Start(channel);
+	return serial4Reopen(serial4GetBaud());
 }
 
 static unsigned char serial2Command0203(struct SerialBuffer *request, struct SerialBuffer *response)
@@ -151,8 +142,8 @@ static unsigned char serial2Command0203(struct SerialBuffer *request, struct Ser
 
 	result = 0;
 	response->length = 0;
-	result = sub_260C3(2);
-	sub_2613A(SERIAL_ANSWER);
+	result = serial4Unlock(2);
+	serial4SetAnswer(SERIAL_ANSWER);
 	return result;
 }
 
@@ -162,8 +153,8 @@ static unsigned char serial2Command0204(struct SerialBuffer *request, struct Ser
 
 	result = 0;
 	response->length = 0;
-	result = sub_260DD(2);
-	sub_2613A(SERIAL_ANSWER);
+	result = serial4Lock(2);
+	serial4SetAnswer(SERIAL_ANSWER);
 	return result;
 }
 
@@ -182,32 +173,32 @@ static unsigned char serial2Command0205(struct SerialBuffer *request, struct Ser
 	if (mode == 0) {
 		serial2Disarm();
 		if (state != 0x0020 && state != 0x0008) {
-			sub_2613A(SERIAL_ANSWER);
+			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
 		result = sub_2AB49(0x52);
-		sub_2613A(SERIAL_ANSWER_LATER);
+		serial4SetAnswer(SERIAL_ANSWER_LATER);
 	} else if (mode == 2) {
 		if (state != 0x0004 && state != 0x0008) {
-			sub_2613A(SERIAL_ANSWER);
+			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
 		if (!sub_29C4B()) {
-			sub_2613A(SERIAL_ANSWER);
+			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x51;
 		}
 		if (sub_29CC0()) {
-			sub_2613A(SERIAL_ANSWER);
+			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x53;
 		}
 		if (serial2TestAreaUsed() == 0 && !sub_2C658()->startCheckOff) {
-			sub_2613A(SERIAL_ANSWER);
+			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x52;
 		}
 		result = sub_2AB49(0x0e);
-		sub_2613A(SERIAL_ANSWER_LATER);
+		serial4SetAnswer(SERIAL_ANSWER_LATER);
 	} else {
-		sub_2613A(SERIAL_ANSWER);
+		serial4SetAnswer(SERIAL_ANSWER);
 		return 0x33;
 	}
 	return result;
@@ -222,7 +213,7 @@ static unsigned char serial2Command0206(struct SerialBuffer *request, struct Ser
 	state = sub_2AB46();
 	memcpy(serial2Data, &state, response->length);
 	response->data = serial2Data;
-	sub_2613A(SERIAL_ANSWER);
+	serial4SetAnswer(SERIAL_ANSWER);
 	return 0;
 }
 
@@ -233,12 +224,12 @@ static unsigned char serial2Command0211(struct SerialBuffer *request, struct Ser
 
 	result = 0;
 	response->length = 0;
-	if (sub_25AD8()) {
-		sub_2613A(SERIAL_ANSWER);
+	if (serial4IsLocked()) {
+		serial4SetAnswer(SERIAL_ANSWER);
 		return 0x20;
 	}
 	result = scratchPadWrite(SERIAL2_TEST_AREA, SERIAL2_TEST_SIZE, request->data);
-	sub_2613A(SERIAL_ANSWER);
+	serial4SetAnswer(SERIAL_ANSWER);
 	return result;
 }
 
@@ -261,14 +252,14 @@ static unsigned char serial2Command0210(struct SerialBuffer *request, struct Ser
 	unsigned char result;
 
 	result = 0;
-	if (sub_25AD8()) {
-		sub_2613A(SERIAL_ANSWER);
+	if (serial4IsLocked()) {
+		serial4SetAnswer(SERIAL_ANSWER);
 		return 0x20;
 	}
 	response->data = serial2Data;
 	response->length = SERIAL2_TEST_SIZE;
 	result = scratchPadRead(SERIAL2_TEST_AREA, SERIAL2_TEST_SIZE, serial2Data);
-	sub_2613A(SERIAL_ANSWER);
+	serial4SetAnswer(SERIAL_ANSWER);
 	return result;
 }
 

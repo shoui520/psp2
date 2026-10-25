@@ -12,6 +12,7 @@
 #include "rtc.h"
 #include "serial.h"
 #include "serial1.h"
+#include "serial4.h"
 #include "serialauth.h"
 #include "sleepfactor.h"
 #include "updatereq.h"
@@ -20,7 +21,6 @@
 extern unsigned int sub_2AB46(void);
 extern unsigned char sub_10D7A(void);
 extern void sub_2E8C6(void);
-extern void sub_263AD(void);
 extern void sub_2D254(void);
 extern void sub_2D67C(void);
 extern unsigned char sub_10CB3(void);
@@ -30,9 +30,6 @@ extern void sub_275F0(int);
 extern unsigned char sub_2764F(void);
 extern void sub_27631(void);
 extern unsigned char sub_11D4B(void);
-extern void sub_2607C(int);
-extern void sub_260A4(void);
-extern void sub_261C9(FLGPTN ptn);
 extern void sub_2D2A8(FLGPTN ptn);
 extern void sub_2C415(void);
 extern unsigned long sub_2AA79(void);
@@ -72,7 +69,7 @@ void task2(VP_INT exinf)
 				commandRequestRun();
 			}
 			if (ptn & 0x0e1e)
-				sub_261C9(ptn);
+				serial4Event(ptn);
 			if (ptn & 0x00a0) {
 				clr_flg(3, ~(ptn & 0x00a0));
 				nvsRequestEvent(ptn);
@@ -130,9 +127,9 @@ void sub_10B67(FLGPTN ptn)
 	}
 	if (ptn & 0x0100) {
 		if (sub_11D4B())
-			sub_2607C(2);
+			serial4Open2(2);
 		else
-			sub_260A4();
+			serial4Close2();
 	}
 	return;
 }
@@ -194,7 +191,7 @@ unsigned char sub_10D08(void)
 	nvsRequestInit();
 	serialAuthInit();
 	sub_2E8C6();
-	sub_263AD();
+	serial4StartTimers();
 	if (sub_27642() || sub_2764F())
 		sub_275F0(0);
 	else
@@ -228,7 +225,7 @@ unsigned char sub_10DEA(void)
 	unsigned char ret;
 
 	ret = 0;
-	sub_260A4();
+	serial4Close2();
 	sub_27631();
 	serialClose1();
 	serial1Reset();
@@ -241,7 +238,7 @@ unsigned char sub_10E06(void)
 	unsigned char ret;
 
 	ret = 0;
-	sub_260A4();
+	serial4Close2();
 	sub_27631();
 	serialClose1();
 	serial1Reset();

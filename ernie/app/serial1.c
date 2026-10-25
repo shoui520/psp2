@@ -19,6 +19,7 @@
 #include "serial.h"
 #include "serial1.h"
 #include "serial2.h"
+#include "serial4.h"
 #include "serialauth.h"
 #include "sleepfactor.h"
 #include "spidev.h"
@@ -51,9 +52,6 @@ extern unsigned char sub_2DC8B(void);
 extern unsigned char sub_2D05F(void);
 extern void sub_2C315(int, int);
 extern unsigned char sub_11D4B(void);
-extern unsigned char sub_261B5(void);
-extern unsigned int sub_261A5(void);
-extern unsigned char sub_261AC(void);
 extern unsigned char sub_2C15B(unsigned int offset, unsigned int size, unsigned char *buf);
 extern unsigned char sub_2C199(unsigned int offset, unsigned int size, unsigned char *buf);
 extern void sub_2C229(unsigned char *base);
@@ -940,10 +938,10 @@ static unsigned char serial1Command0190(struct SerialBuffer *request, struct Ser
 	response->data = serial1Data.byte;
 	response->length = 8;
 	serial1Data.byte[0] = sub_11D4B();
-	serial1Data.byte[1] = sub_261B5();
-	value = sub_261A5();
+	serial1Data.byte[1] = serial4GetP71();
+	value = serial4GetCommand();
 	memcpy(&serial1Data.byte[2], &value, 2);
-	serial1Data.byte[4] = sub_261AC();
+	serial1Data.byte[4] = serial4GetStatus();
 	serial1Data.byte[5] = (unsigned char)serial2TestAreaUsed();
 	serial1Data.byte[6] = (unsigned char)serial2GetArmed();
 	serial1Data.byte[7] = (unsigned char)serial2InTime();
