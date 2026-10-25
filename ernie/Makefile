@@ -23,10 +23,11 @@ PROGRAM ?= app
 include hw/$(HW).mk
 
 CFLAGS := -DERNIE_HW=$(HW) -DERNIE_FW=$(FW) -Iinclude
-# cc78k0r's options beside the chip: the medium model (its default) and -qx2, its standard
-# optimization. Sony's void functions mostly end in an explicit return, which keeps the last
-# call a call (only a call the function falls off after becomes a branch)
-CAFLAGS := -qx2
+# cc78k0r's options beside the chip: the large model (-ml: Sony passes pointers to locals as
+# far pointers) and -qx2, its standard optimization. Sony's void functions mostly end in an
+# explicit return, which keeps the last call a call (only a call the function falls off
+# after becomes a branch)
+CAFLAGS := -qx2 -ml
 
 all:
 	@echo "ernie is a skeleton: no CA78K0R toolchain yet" >&2; exit 1
