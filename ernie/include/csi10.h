@@ -37,7 +37,7 @@ extern int csi10TransferNoLock(struct Csi10Transfer *transfer);
 extern int csi10Cancel(void);
 extern void csi10StopChannel(void);
 extern void csi10Close(void);
-extern unsigned int csi10GetState(void);
+extern unsigned char csi10GetState(void);
 extern void csi10Release(void);
 
 #endif

@@ -123,7 +123,7 @@ void csi10Close(void)
 	csi10.state = 0;
 }
 
-unsigned int csi10GetState(void)
+unsigned char csi10GetState(void)
 {
 	return csi10.state;
 }
@@ -153,7 +153,7 @@ void csi10Interrupt(void)
 		csi10.receive++;
 		csi10.receiveCount--;
 	}
-	for (i = 0; i < touch.delayByte; i++)
+	for (i = 0; i < touchDelays.byte; i++)
 		NOP();
 	if (csi10.sendCount != 0) {
 		SIO10 = *csi10.send;
@@ -173,14 +173,14 @@ void csi10Interrupt(void)
 			csi10.state = CSI10_REPORT1;
 			break;
 		case CSI10_REPORT1:
-			for (i = 0; i < touch.delayDeselect; i++)
+			for (i = 0; i < touchDelays.deselect; i++)
 				NOP();
 			P0.0 = 1;
 			if (touch.flags & TOUCH_PANEL0)
 				csi10.state = CSI10_COMMAND0;
 			else if (touch.flags & TOUCH_STATUS1) {
 				csi10.state = CSI10_STATUS1;
-				for (i = 0; i < touch.delaySelect; i++)
+				for (i = 0; i < touchDelays.select; i++)
 					NOP();
 			} else
 				csi10.state = CSI10_FRAME;
@@ -189,33 +189,33 @@ void csi10Interrupt(void)
 			csi10.state = CSI10_REPORT0;
 			break;
 		case CSI10_REPORT0:
-			for (i = 0; i < touch.delayDeselect; i++)
+			for (i = 0; i < touchDelays.deselect; i++)
 				NOP();
 			P0.1 = 1;
 			if (touch.flags & TOUCH_STATUS1)
 				csi10.state = CSI10_STATUS1;
 			else if (touch.flags & TOUCH_STATUS0) {
 				csi10.state = CSI10_STATUS0;
-				for (i = 0; i < touch.delaySelect; i++)
+				for (i = 0; i < touchDelays.select; i++)
 					NOP();
 			} else
 				csi10.state = CSI10_FRAME;
 			break;
 		case CSI10_STATUS1:
-			for (i = 0; i < touch.delayDeselect; i++)
+			for (i = 0; i < touchDelays.deselect; i++)
 				NOP();
 			P0.0 = 1;
-			touchFrames[touch.frame].panel[1][TOUCH_PANEL_STATUS] = touchReply[2];
+			touchFrames[touch.frame].panel[1][TOUCH_PANEL_STATUS] = touchReply.data[0];
 			if (touch.flags & TOUCH_STATUS0)
 				csi10.state = CSI10_STATUS0;
 			else
 				csi10.state = CSI10_FRAME;
 			break;
 		case CSI10_STATUS0:
-			for (i = 0; i < touch.delayDeselect; i++)
+			for (i = 0; i < touchDelays.deselect; i++)
 				NOP();
 			P0.1 = 1;
-			touchFrames[touch.frame].panel[0][TOUCH_PANEL_STATUS] = touchReply[2];
+			touchFrames[touch.frame].panel[0][TOUCH_PANEL_STATUS] = touchReply.data[0];
 			csi10.state = CSI10_FRAME;
 			break;
 		}
@@ -235,11 +235,11 @@ void csi10Interrupt(void)
 		case CSI10_COMMAND0:
 			P0.1 = 0;
 			touchFrames[touch.frame].time0 = TCR02;
-			touchFrames[touch.frame].panel[0][TOUCH_PANEL_SEQUENCE] = touch.sequence;
-			for (i = 0; i < touch.delaySelect; i++)
+			touchFrames[touch.frame].panel[0][TOUCH_PANEL_STATE] = touch.state.value;
+			for (i = 0; i < touchDelays.select; i++)
 				NOP();
-			touchCommand.address = touch.panel[0].reportAddress | TOUCH_READ;
-			csi10.receive = touchReply;
+			touchCommand.address = touch.panel[0].objects.report | TOUCH_READ;
+			csi10.receive = (unsigned char *)&touchReply;
 			csi10.receiveCount = 0;
 			csi10.send = (unsigned char *)&touchCommand;
 			csi10.sendCount = 2;
@@ -258,11 +258,11 @@ void csi10Interrupt(void)
 			break;
 		case CSI10_STATUS1:
 			P0.0 = 0;
-			for (i = 0; i < touch.delaySelect; i++)
+			for (i = 0; i < touchDelays.select; i++)
 				NOP();
-			touchCommand.address = touch.panel[1].statusAddress | TOUCH_READ;
-			csi10.receive = touchReply;
-			csi10.receiveCount = sizeof(touchReply);
+			touchCommand.address = touch.panel[1].objects.status | TOUCH_READ;
+			csi10.receive = (unsigned char *)&touchReply;
+			csi10.receiveCount = TOUCH_STATUS_LENGTH;
 			csi10.send = (unsigned char *)&touchCommand;
 			csi10.sendCount = 2;
 			csi10.state |= CSI10_BUSY;
@@ -272,11 +272,11 @@ void csi10Interrupt(void)
 			break;
 		case CSI10_STATUS0:
 			P0.1 = 0;
-			for (i = 0; i < touch.delaySelect; i++)
+			for (i = 0; i < touchDelays.select; i++)
 				NOP();
-			touchCommand.address = touch.panel[0].statusAddress | TOUCH_READ;
-			csi10.receive = touchReply;
-			csi10.receiveCount = sizeof(touchReply);
+			touchCommand.address = touch.panel[0].objects.status | TOUCH_READ;
+			csi10.receive = (unsigned char *)&touchReply;
+			csi10.receiveCount = TOUCH_STATUS_LENGTH;
 			csi10.send = (unsigned char *)&touchCommand;
 			csi10.sendCount = 2;
 			csi10.state |= CSI10_BUSY;
