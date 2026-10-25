@@ -23,6 +23,7 @@
 #include "config.h"
 #include "csi.h"
 #include "host.h"
+#include "inputreq.h"
 #include "kernel.h"
 #include "sleepfactor.h"
 
@@ -57,14 +58,6 @@ extern unsigned char sub_2BBE9(void);
 extern unsigned char sub_2D685(void);
 
 /* the commands' handlers and streams (their files not written yet) */
-extern unsigned char sub_18F6A(unsigned char *out, unsigned char *length);
-extern unsigned char sub_18FD6(unsigned char *out, unsigned char *length);
-extern unsigned char sub_190C6(unsigned char *out, unsigned char *length);
-extern unsigned char sub_19041(unsigned char *out, unsigned char *length);
-extern unsigned char sub_19004(unsigned char *out, unsigned char *length);
-extern unsigned char sub_18F89(unsigned char *out, unsigned char *length);
-extern unsigned char sub_190A7(unsigned char *out, unsigned char *length);
-extern unsigned char sub_18FA8(unsigned char *out, unsigned char *length);
 extern unsigned char sub_206CA(unsigned char *out, unsigned char *length);
 extern unsigned char sub_20702(unsigned char *out, unsigned char *length);
 extern unsigned char sub_2071F(unsigned char *out, unsigned char *length);
@@ -76,10 +69,6 @@ extern unsigned char sub_215C8(unsigned char *out, unsigned char *length);
 extern unsigned char sub_1EFE6(unsigned char *out, unsigned char *length);
 extern unsigned char sub_1F005(unsigned char *out, unsigned char *length);
 extern unsigned char sub_2D289(unsigned char *out, unsigned char *length);
-extern struct HostStream hostStream0300;
-extern struct HostStream hostStream0301;
-extern struct HostStream hostStream0302;
-extern struct HostStream hostStream0400;
 
 struct HostLink hostLink;
 
@@ -111,14 +100,14 @@ static const struct HostCommand hostCommands[] = {
 	{ 0x0012, hostCommandAlarm, 0 },
 	{ 0x0013, hostCommand0013, 0 },
 	{ 0x0014, hostCommandPins, 0 },
-	{ 0x0100, sub_18F6A, 0 },
-	{ 0x0101, sub_18FD6, 0 },
-	{ 0x0102, sub_190C6, 0 },
-	{ 0x0103, sub_19041, 0 },
-	{ 0x0104, sub_19004, 0 },
-	{ 0x0111, sub_18F89, 0 },
-	{ 0x0112, sub_190A7, 0 },
-	{ 0x0113, sub_18FA8, 0 },
+	{ 0x0100, hostCommandControlsInfo, 0 },
+	{ 0x0101, hostCommandControlsAnalog, 0 },
+	{ 0x0102, hostCommand0102, 0 },
+	{ 0x0103, hostCommandMultiCnInfo, 0 },
+	{ 0x0104, hostCommandControlsAnalogBoth, 0 },
+	{ 0x0111, hostCommandAnalog, 0 },
+	{ 0x0112, hostCommand0112, 0 },
+	{ 0x0113, hostCommandAnalogBoth, 0 },
 	{ 0x0300, (HostCommandHandler)&hostStream0300, 1 },
 	{ 0x0301, (HostCommandHandler)&hostStream0301, 1 },
 	{ 0x0302, (HostCommandHandler)&hostStream0302, 1 },
@@ -381,7 +370,7 @@ void sub_138DB(struct HostRequest *request, unsigned char state)
 }
 
 /* the answer to a request: HOST_REQUEST_ANSWER with its status and length,
-   HOST_REQUEST_ERROR, or 0x10 (an answer with status 0x3f) */
+   HOST_REQUEST_ERROR, or HOST_REQUEST_UNKNOWN */
 void hostRequestAnswer(struct HostRequest *request, unsigned char state,
 		       unsigned char status, unsigned char length)
 {
@@ -391,7 +380,7 @@ void hostRequestAnswer(struct HostRequest *request, unsigned char state,
 			request->answerLength = length;
 			request->status = status;
 			break;
-		case 0x10:
+		case HOST_REQUEST_UNKNOWN:
 			request->answerLength = 0;
 			request->status = 0x3f;
 			state = HOST_REQUEST_ANSWER;

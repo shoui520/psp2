@@ -10,6 +10,8 @@
 
 /* a panel's part of a frame: its controller's report, then bytes of the touch module's */
 #define TOUCH_REPORT_SIZE	0x34
+#define TOUCH_PANEL_AGE		0x34	/* the frame's age when its stream sent it (TCR02 counts
+					   down), least significant byte first */
 #define TOUCH_PANEL_STATE	0x36	/* Touch.state when its command went out */
 #define TOUCH_PANEL_STATUS	0x37	/* its status (TOUCH_STATUS0, TOUCH_STATUS1) */
 #define TOUCH_PANEL_SIZE	0x3c
@@ -111,10 +113,14 @@ struct Touch {
 	struct TouchPanel panel[2];
 };
 
-/* what the host sends a controller's bootloader, gathered here */
+/* where a controller's bootloader answers, in place of the objects; what the host sends it is
+   gathered in touchBuffer */
+#define TOUCH_BOOTLOADER	0x7f80
+#define TOUCH_BUFFER_SIZE	0x114
+
 struct TouchBuffer {
-	unsigned int	offset;			/* where the next piece goes */
-	unsigned int	end;			/* and where it ends */
+	unsigned int	frame;			/* the host's number for the frame gathered */
+	unsigned int	end;			/* where the data ends */
 	unsigned char	*data;
 };
 

@@ -17,8 +17,11 @@ struct HostLinkConfig {
 #define HOST_REQUEST_BUSY	2	/* the command is handled */
 #define HOST_REQUEST_ANSWER	6	/* the answer is ready */
 #define HOST_REQUEST_ERROR	8	/* the command failed */
+#define HOST_REQUEST_UNKNOWN	0x10	/* hostRequestAnswer: the command is not known (status
+					   0x3f) */
 
 /* a request's events, for its notify handler */
+#define HOST_EVENT_NONE		0
 #define HOST_EVENT_COMMAND	1	/* a command came in */
 #define HOST_EVENT_ANSWERED	2	/* the answer went out */
 

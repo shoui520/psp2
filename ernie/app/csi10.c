@@ -14,11 +14,9 @@
 
 #include "csi10.h"
 #include "host.h"
+#include "inputreq.h"
 #include "touch.h"
 
-extern struct HostStream hostStream0300;
-extern struct HostStream hostStream0301;
-extern struct HostStream hostStream0302;
 
 static __sreg struct Csi10Transfer csi10;
 

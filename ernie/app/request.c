@@ -6,12 +6,10 @@
 
 #include "command.h"
 #include "host.h"
+#include "inputreq.h"
 
 extern struct HostRequest hostRequestFF57E;
 extern struct HostRequest hostRequestFFC3A;
-extern struct HostRequest hostRequestFEA82;
-extern struct HostRequest hostRequestFEA98;
-extern struct HostRequest hostRequestFEA6C;
 extern struct HostRequest hostRequestFEDDC;
 extern struct HostRequest hostRequestFEE86;
 extern struct HostRequest hostRequestFF15E;
@@ -22,9 +20,9 @@ struct HostRequest * const hostRequests[] = {
 	&commandRequest,
 	&hostRequestFF57E,
 	&hostRequestFFC3A,
-	&hostRequestFEA82,
-	&hostRequestFEA98,
-	&hostRequestFEA6C,
+	&touchRequest,
+	&motionRequest,
+	&controlsRequest,
 	&hostRequestFEDDC,
 	&hostRequestFEE86,
 	&hostRequestFF15E,

@@ -14,7 +14,9 @@
 #include "chip.h"
 #include "config.h"
 #include "input.h"
+#include "inputreq.h"
 #include "kernel.h"
+#include "motion.h"
 #include "sleepfactor.h"
 #include "timer.h"
 #include "touch.h"
@@ -78,15 +80,6 @@ struct InputScan {
 	unsigned int	hold;
 };
 
-/* ticks of the scan left before each request */
-struct InputDelays {
-	unsigned char	flag40;		/* sets bit 0x0040 of event flag 2 */
-	unsigned char	flag80;		/* sets bit 0x0080 of event flag 2 */
-	unsigned char	call1AFD8;
-	unsigned char	reserved;	/* cleared by inputInit, otherwise unused */
-	unsigned char	call1D0CB;
-};
-
 /* a button's presses (the pin monitor's handler counts them) */
 struct ButtonPress {
 	unsigned char	count;		/* presses */
@@ -121,16 +114,12 @@ extern void sub_1C265(void);
 extern void sub_1C042(void);
 extern void sub_1BFAB(void);
 extern unsigned char sub_21F2A(void);
-extern void sub_1AAD3(void);
-extern void sub_1897F(void);
 extern void sub_17204(void);
-extern void sub_1AB0E(void);
 extern void sub_1CFC6(void);
 extern void sub_1BFE9(void);
 extern void sub_1D0A8(void);
 extern void sub_17544(void);
 extern void sub_17580(void);
-extern void sub_1AB70(void);
 extern void sub_1D0CC(void);
 extern void sub_1AE6A(void);
 extern void sub_172BC(void);
@@ -139,7 +128,6 @@ extern void sub_1CFFC(void);
 extern void sub_1D012(void);
 extern void sub_21F33(int);
 extern void sub_1C3A1(void);
-extern void sub_1AFD8(void);
 extern void sub_1D0CB(void);
 extern void sub_2B475(void);
 extern void sub_25263(void);
@@ -151,15 +139,6 @@ extern void sub_29B68(void);
 extern unsigned char sub_1B2C8(void);
 extern unsigned char sub_1B2CC(void);
 extern unsigned char sub_1B2D0(void);
-
-/* PLACEHOLDER: a record of the module at 0x1a252-0x1b00a (not written yet; its INTSR0
-   writes it), reset when the inputs wake */
-struct RecordFEBBC {
-	unsigned char	flag;
-	unsigned int	value[2];
-};
-
-extern struct RecordFEBBC recordFEBBC;
 
 /* the handlers of each group's bits (the constant tables beside sub_1B2C8) */
 extern const struct InputBit inputBits1[];
@@ -433,9 +412,9 @@ void sub_1159F(void)
 	if (sub_21F2A() == 0xff)
 		sub_1AAD3();
 	recordFEBBC.flag = 0;
-	recordFEBBC.value[0] = 0;
-	recordFEBBC.value[1] = 0;
-	sub_1897F();
+	recordFEBBC.value[0].value = 0;
+	recordFEBBC.value[1].value = 0;
+	inputRequestInit();
 	return;
 }
 

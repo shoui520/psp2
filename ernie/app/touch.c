@@ -14,20 +14,15 @@
 #include "config.h"
 #include "csi10.h"
 #include "host.h"
+#include "inputreq.h"
 #include "input.h"
 #include "kernel.h"
 #include "touch.h"
 
-extern struct HostStream hostStream0300;
-extern struct HostStream hostStream0301;
-extern struct HostStream hostStream0302;
 
 extern unsigned char sub_11D1B(void);
 extern unsigned char sub_11D23(void);
 extern unsigned char sub_11D2B(void);
-
-/* where the bootloader answers, in place of the objects */
-#define TOUCH_BOOTLOADER	0x7f80
 
 /* the frame after i */
 #define TOUCH_NEXT_FRAME(i)	((i) + 1 < TOUCH_FRAMES ? (i) + 1 : 0)
@@ -35,7 +30,7 @@ extern unsigned char sub_11D2B(void);
 /* an object's address in the controller */
 #define TOUCH_OBJECT_ADDRESS(o)	((unsigned int)(o).addressHigh << 8 | (o).addressLow)
 
-static unsigned char touchBufferData[0x114];
+static unsigned char touchBufferData[TOUCH_BUFFER_SIZE];
 struct TouchFrame touchFrames[TOUCH_FRAMES];
 struct TouchPacket touchCommand;
 struct TouchPacket touchReply;
@@ -77,7 +72,7 @@ void touchOpen(void)
 	memset(&touch.panel[0], 0, 4);
 	memset(&touch.panel[1], 0, 4);
 	touch.state.value = 0;
-	touchBuffer.offset = 0;
+	touchBuffer.frame = 0;
 	touchBuffer.end = 0;
 	touchBuffer.data = touchBufferData;
 	memset(&touchCommand, 0, sizeof(touchCommand));

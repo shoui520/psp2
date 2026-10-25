@@ -11,6 +11,18 @@ struct InputKeys {
 };
 
 extern struct InputKeys inputKeys;
+
+/* ticks of the scan left before each request */
+struct InputDelays {
+	unsigned char	flag40;		/* sets bit 0x0040 of event flag 2 */
+	unsigned char	flag80;		/* sets bit 0x0080 of event flag 2 */
+	unsigned char	call1AFD8;
+	unsigned char	reserved;	/* cleared by inputInit, otherwise unused */
+	unsigned char	call1D0CB;
+};
+
+extern struct InputDelays inputDelays;
+extern __sreg unsigned char inputState1;
 extern __near unsigned char holdTicks;
 extern __near unsigned char holdReached;
 
