@@ -15,6 +15,7 @@
 #include "csi.h"
 #include "keepram.h"
 #include "kernel.h"
+#include "log.h"
 #include "nvs.h"
 #include "param.h"
 #include "rtc.h"
@@ -30,13 +31,6 @@
 #include "task.h"
 #include "version.h"
 
-extern unsigned char sub_2DAEA(unsigned char *data);
-extern unsigned char sub_2DB73(void);
-extern unsigned char sub_2DBDF(void);
-extern unsigned char sub_2DC1F(unsigned int id, unsigned char *data, unsigned char *length);
-extern unsigned char sub_2DC3C(unsigned int id, unsigned char size, unsigned char *data);
-extern unsigned char sub_2DC57(unsigned int id);
-extern unsigned char sub_2DC8B(void);
 extern unsigned char sub_11D4B(void);
 
 extern const struct SerialCommand1 serialCommands1[];
@@ -652,13 +646,13 @@ static unsigned char serial1Status015x(unsigned char result)
 	}
 }
 
-/* 0x0150: sub_2DAEA's eight bytes */
+/* 0x0150: logGetInfo's eight bytes */
 static unsigned char serial1Command0150(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result = 0;
 
 	response->data = serial1Data.byte;
-	result = sub_2DAEA(serial1Data.byte);
+	result = (unsigned char)logGetInfo((struct LogInfo *)serial1Data.byte);
 	result = serial1Status015x(result);
 	if (result == 0)
 		response->length = 8;
@@ -673,7 +667,7 @@ static unsigned char serial1Command0151(struct SerialBuffer *request, struct Ser
 {
 	unsigned char result = 0;
 
-	result = sub_2DB73();
+	result = (unsigned char)logStart();
 	result = serial1Status015x(result);
 	response->length = 0;
 	serialSetAnswer(SERIAL_ANSWER);
@@ -685,14 +679,14 @@ static unsigned char serial1Command0152(struct SerialBuffer *request, struct Ser
 {
 	unsigned char result = 0;
 
-	result = sub_2DBDF();
+	result = (unsigned char)logStop();
 	result = serial1Status015x(result);
 	response->length = 0;
 	serialSetAnswer(SERIAL_ANSWER);
 	return result;
 }
 
-/* 0x0153: the id: sub_2DC1F's read */
+/* 0x0153: the id: logReadData's read */
 static unsigned char serial1Command0153(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result = 0;
@@ -701,7 +695,7 @@ static unsigned char serial1Command0153(struct SerialBuffer *request, struct Ser
 
 	memcpy(&id, request->data, 2);
 	response->data = serial1Data.byte;
-	result = sub_2DC1F(id, response->data, &length);
+	result = (unsigned char)logReadData(id, response->data, &length);
 	result = serial1Status015x(result);
 	if (result == 0)
 		response->length = length;
@@ -711,7 +705,7 @@ static unsigned char serial1Command0153(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
-/* 0x0154: the id, the size: sub_2DC3C's read */
+/* 0x0154: the id, the size: logReadOffset's read */
 static unsigned char serial1Command0154(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result = 0;
@@ -722,7 +716,7 @@ static unsigned char serial1Command0154(struct SerialBuffer *request, struct Ser
 	id.byte[1] = request->data[1];
 	size = request->data[2];
 	response->data = serial1Data.byte;
-	result = sub_2DC3C(id.value, size, response->data);
+	result = (unsigned char)logReadOffset(id.value, size, response->data);
 	result = serial1Status015x(result);
 	if (result == 0)
 		response->length = size;
@@ -732,14 +726,14 @@ static unsigned char serial1Command0154(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
-/* 0x0155: the id: sub_2DC57 */
+/* 0x0155: the id: logClear */
 static unsigned char serial1Command0155(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result = 0;
 	unsigned int id;
 
 	memcpy(&id, request->data, 2);
-	result = sub_2DC57(id);
+	result = (unsigned char)logClear(id);
 	result = serial1Status015x(result);
 	response->length = 0;
 	serialSetAnswer(SERIAL_ANSWER);
@@ -751,15 +745,15 @@ static unsigned char serial1Command0156(struct SerialBuffer *request, struct Ser
 {
 	unsigned char result = 0;
 
-	result = sub_2DC8B();
+	result = (unsigned char)logClearIfStopped();
 	result = serial1Status015x(result);
 	response->length = 0;
 	serialSetAnswer(SERIAL_ANSWER);
 	return result;
 }
 
-/* 0x0160: in state 4, clears (1) the NVS's syscon area (mask bit 0, then sub_2DC8B) and
-   configRestoreDefaults's (bit 1), or (2) runs nvsFormat and sub_2DC8B */
+/* 0x0160: in state 4, clears (1) the NVS's syscon area (mask bit 0, then logClearIfStopped) and
+   configRestoreDefaults's (bit 1), or (2) runs nvsFormat and logClearIfStopped */
 static unsigned char serial1Command0160(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result = 0;
@@ -780,7 +774,7 @@ static unsigned char serial1Command0160(struct SerialBuffer *request, struct Ser
 		mask = 0xff;
 	if (what == 1) {
 		if (mask & 0x01) {
-			sub_2DBDF();
+			logStop();
 			buffer = serial1Data.byte;
 			memset(buffer, 0xff, 0x20);
 			for (offset = 0; offset < 0x40; offset += 0x20) {
@@ -790,7 +784,7 @@ static unsigned char serial1Command0160(struct SerialBuffer *request, struct Ser
 					goto done;
 				}
 			}
-			result = sub_2DC8B();
+			result = (unsigned char)logClearIfStopped();
 			if (result != 0) {
 				result = 0x92;
 				goto done;
@@ -809,7 +803,7 @@ static unsigned char serial1Command0160(struct SerialBuffer *request, struct Ser
 			result = 0x91;
 			goto done;
 		}
-		result = sub_2DC8B();
+		result = (unsigned char)logClearIfStopped();
 		if (result != 0) {
 			result = 0x92;
 			goto done;

@@ -9,6 +9,7 @@
 
 #include "ernie.h"
 #include "handshake.h"
+#include "log.h"
 #include "state.h"
 
 #define HANDSHAKE_MODES		2
@@ -48,7 +49,6 @@ static __near struct HandshakePacket handshakePacket;
 static __near struct Handshake handshake;
 static __near unsigned int handshakeUnlocked[HANDSHAKE_MODES];
 
-extern void sub_2DAE1(int);
 
 static int handshakeUnlock11(void);
 static int handshakeLockHandler11(void);
@@ -141,7 +141,7 @@ static int handshakeUnlock11(void)
 
 static int handshakeLockHandler11(void)
 {
-	sub_2DAE1(0x16);
+	logEvent(0x16);
 	return 0;
 }
 

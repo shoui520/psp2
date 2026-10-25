@@ -26,6 +26,7 @@
 #include "input.h"
 #include "inputreq.h"
 #include "kernel.h"
+#include "log.h"
 #include "motion.h"
 #include "task.h"
 #include "tau.h"
@@ -69,7 +70,6 @@ struct InputRequests {
 };
 
 extern unsigned char sub_11D1B(void);
-extern void sub_2DAE1(int);
 
 
 void controlsRequestNotify(void);
@@ -613,7 +613,7 @@ static void controlsRequest0184Done(unsigned char command, unsigned char result)
 {
 	if (result == 0) {
 		controlsRequest.status = 0;
-		sub_2DAE1(3);
+		logEvent(3);
 	} else
 		controlsRequest.status = 0x02;
 	controlsRequest.answerLength = 0;

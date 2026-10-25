@@ -10,6 +10,7 @@
 #include "ernie.h"
 #include "config.h"
 #include "kernel.h"
+#include "log.h"
 #include "param.h"
 #include "power.h"
 #include "scratchpad.h"
@@ -24,9 +25,6 @@
 #define RESF_WDRF	0x10
 
 extern unsigned char getResetCause(void);
-extern void sub_2D6EF(void);
-extern void sub_2D712(void);
-extern void sub_2DAE1(int);
 
 void systemInit(void);
 
@@ -69,19 +67,19 @@ void systemInit(void)
 	timerSetHandler(0x1a, &timer);
 	versionInit();
 	cause = getResetCause() & 0xf0;
-	sub_2D6EF();
-	sub_2D712();
+	logQueueInit();
+	logInit();
 	if (cause == 0) {
 		if (resetFlags & RESF_TRAP)
 			scratchPadClear();
 		if (resetFlags & RESF_WDRF) {
 			scratchPadClear();
-			sub_2DAE1(7);
+			logEvent(7);
 		}
 	} else if (cause == 0x30) {
 		if (resetFlags & RESF_TRAP) {
 			scratchPadClear();
-			sub_2DAE1(6);
+			logEvent(6);
 		}
 	}
 	stateEnter();

@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "ernie.h"
+#include "log.h"
 #include "serialauth.h"
 #include "state.h"
 
@@ -45,7 +46,6 @@ static unsigned int serialAuthUnlocked[SERIAL_AUTH_MODES];
 
 static __near struct SerialAuthPacket serialAuthPacket;
 
-extern void sub_2DAE1(int);
 
 static unsigned char serialAuthUnlock0(void);
 static unsigned char serialAuthLock0(void);
@@ -152,30 +152,30 @@ static unsigned char serialAuthUnlock0(void)
 static unsigned char serialAuthLock0(void)
 {
 	stateSerialLock();
-	sub_2DAE1(0x0f);
+	logEvent(0x0f);
 	return 0;
 }
 
 static unsigned char serialAuthUnlock1(void)
 {
-	sub_2DAE1(0x11);
+	logEvent(0x11);
 	return 0;
 }
 
 static unsigned char serialAuthLock1(void)
 {
-	sub_2DAE1(0x10);
+	logEvent(0x10);
 	return 0;
 }
 
 static unsigned char serialAuthUnlock14(void)
 {
-	sub_2DAE1(0x13);
+	logEvent(0x13);
 	return 0;
 }
 
 static unsigned char serialAuthLock14(void)
 {
-	sub_2DAE1(0x12);
+	logEvent(0x12);
 	return 0;
 }

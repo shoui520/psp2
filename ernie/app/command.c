@@ -21,6 +21,7 @@
 #include "handshake.h"
 #include "host.h"
 #include "kernel.h"
+#include "log.h"
 #include "param.h"
 #include "rtc.h"
 #include "scratchpad.h"
@@ -32,9 +33,6 @@
 #include "watchdog.h"
 
 extern int sub_2ED36(void);
-extern unsigned char sub_2DB73(void);
-extern unsigned char sub_2DAEA(unsigned char *buf);
-extern unsigned char sub_2DC1F(unsigned int offset, unsigned char *data, unsigned char *length);
 extern int sub_2ED3C(unsigned char *data);
 extern int sub_2ED5A(unsigned char *data);
 extern int sub_2ED75(unsigned char *data, unsigned char *answer);
@@ -550,7 +548,7 @@ int commandLogStart(unsigned char *data, unsigned char command, CommandDone done
 {
 	unsigned char result;
 
-	result = sub_2DB73();
+	result = (unsigned char)logStart();
 	done(command, result);
 	return 0;
 }
@@ -560,7 +558,7 @@ int commandLogInfo(unsigned char *data, unsigned char command, CommandDone done)
 {
 	unsigned char result;
 
-	result = sub_2DAEA(commandRequestAnswer);
+	result = (unsigned char)logGetInfo((struct LogInfo *)commandRequestAnswer);
 	done(command, result);
 	return 0;
 }
@@ -580,7 +578,7 @@ int commandLogRead(unsigned char *data, unsigned char *answer, unsigned char com
 	if (offset.value == 0)
 		result = 1;
 	else
-		result = sub_2DC1F(offset.value, read->data, &read->length);
+		result = (unsigned char)logReadData(offset.value, read->data, &read->length);
 	done(command, result);
 	return 0;
 }

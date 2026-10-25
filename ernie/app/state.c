@@ -13,6 +13,7 @@
 #include "charge.h"
 #include "kernel.h"
 #include "keepram.h"
+#include "log.h"
 #include "serial.h"
 #include "serial2.h"
 #include "serial4.h"
@@ -25,8 +26,6 @@
 #include "timer.h"
 #include "updatereq.h"
 
-extern void sub_2DAE1(int);
-extern unsigned char sub_2DC1F(unsigned int id, unsigned char *data, unsigned char *length);
 extern void sub_1164E(void);
 extern void sub_116A1(void);
 extern void sub_116CB(void);
@@ -283,13 +282,13 @@ static int stateOffEnter(void)
 	stateCheck();
 	switch (stateCause) {
 	case 0x31:
-		sub_2DAE1(5);
+		logEvent(5);
 		break;
 	case 0x39:
-		sub_2DAE1(0x17);
+		logEvent(0x17);
 		break;
 	case 0x35:
-		sub_2DAE1(0x18);
+		logEvent(0x18);
 		break;
 	}
 	cause = getResetCause();
@@ -307,14 +306,14 @@ static int stateOffEnter(void)
 			stateTransition(0x18);
 	} else if (stateCause == 0x5b)
 		stateTransition(0x19);
-	sub_2DC1F(1, (unsigned char *)&idRecord1, &length);
-	sub_2DC1F(0x0f, &size, &length);
+	logReadData(1, (unsigned char *)&idRecord1, &length);
+	logReadData(0x0f, &size, &length);
 	idRecordsLength = size;
-	sub_2DC1F(0x10, &size, &length);
+	logReadData(0x10, &size, &length);
 	idRecordsLength += size;
-	sub_2DC1F(0x12, &size, &length);
+	logReadData(0x12, &size, &length);
 	idRecordsLength += size;
-	sub_2DC1F(0x16, &size, &length);
+	logReadData(0x16, &size, &length);
 	idRecordsLength += size;
 	return 0;
 }
@@ -327,9 +326,9 @@ static int stateResumeEnter(void)
 	serialAnswer0105();
 	factor = stateGetWakeupFactor();
 	if (factor->bits.notify)
-		sub_2DAE1(2);
+		logEvent(2);
 	else
-		sub_2DAE1(1);
+		logEvent(1);
 	return 0;
 }
 
@@ -339,7 +338,7 @@ static int stateSuspendEnter(void)
 	tau0PowerOff();
 	stateCheck();
 	if (sleepFactorGet() & 0x00800000)
-		sub_2DAE1(0x0b);
+		logEvent(0x0b);
 	if (stateCause == 0x59)
 		stateTransition(0x0a);
 	else if (stateCause == 0x5a)
@@ -361,7 +360,7 @@ static int stateCutEnter(void)
 	tau0PowerOff();
 	stateCheck();
 	if (stateCause == 0x41)
-		sub_2DAE1(8);
+		logEvent(8);
 	return 0;
 }
 

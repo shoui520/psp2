@@ -12,6 +12,7 @@
 #include "config.h"
 #include "cookie.h"
 #include "kernel.h"
+#include "log.h"
 #include "param.h"
 #include "powerreq.h"
 #include "powerseq.h"
@@ -22,7 +23,6 @@
 
 extern void sub_1276A(void);
 extern unsigned char sub_126C9(void);
-extern void sub_2DAE1(int);
 extern void sub_2DFCE(unsigned int);
 extern void sub_2E03A(unsigned int);
 extern void sub_2E082(unsigned int);
@@ -245,7 +245,7 @@ void chargeUpdate(void)
 		chargeResetBattery();
 		if (!configGet()->start.bits.batteryNoRetry && !(state & 0x8000) && (state & 0x0028))
 			chargeTransition(0x38);
-		sub_2DAE1(0x0e);
+		logEvent(0x0e);
 	}
 }
 
@@ -345,10 +345,10 @@ void chargeTempUpdate(unsigned int temp, struct ChargeTemp *t)
 				cookieCtrlCharge(0);
 				if (t->level == 0) {
 					powerStatus.bits.cookieLock0 = 1;
-					sub_2DAE1(9);
+					logEvent(9);
 				} else {
 					powerStatus.bits.cookieLock1 = 1;
-					sub_2DAE1(0x0a);
+					logEvent(0x0a);
 				}
 			} else {
 				if (t->setting1 == 0xff) {

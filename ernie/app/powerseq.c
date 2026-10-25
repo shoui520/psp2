@@ -16,6 +16,7 @@
 #include "cookie.h"
 #include "elmo.h"
 #include "iica.h"
+#include "log.h"
 #include "motion.h"
 #include "powerreq.h"
 #include "powerseq.h"
@@ -25,7 +26,6 @@
 #include "state.h"
 #include "timer.h"
 
-extern void sub_2DAE1(int);
 extern void sub_2E03A(unsigned int);
 extern unsigned char sub_11D57(void);
 extern unsigned char sub_11D61(void);
@@ -96,7 +96,7 @@ void powerSeqOn(void)
 		if (!(status & 0x02)) {
 			if ((status & 0xe0) == 5)
 				cookieCtrlBatteryCharge(0);
-			sub_2DAE1(0x0d);
+			logEvent(0x0d);
 		}
 		for (i = 0; i < 6; i++) {
 			if (!batteryReadInfo(&deviceVersions.battery.id)) {

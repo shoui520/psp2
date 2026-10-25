@@ -8,6 +8,7 @@
 #include "command.h"
 #include "configreq.h"
 #include "kernel.h"
+#include "log.h"
 #include "nvs.h"
 #include "nvsreq.h"
 #include "power.h"
@@ -28,7 +29,6 @@ extern void sub_2E8C6(void);
 extern unsigned char sub_10CB3(void);
 extern unsigned char sub_11D1B(void);
 extern unsigned char sub_11D4B(void);
-extern void sub_2D724(void);
 
 void sub_10B67(FLGPTN ptn);
 unsigned char sub_10C03(void);
@@ -269,7 +269,7 @@ unsigned char sub_10E32(void)
 	}
 	if (state != 0x0010 && (clock & 3) == 3)
 		nvsJobService();
-	sub_2D724();
+	logUpdate();
 	if (state != 0x0004 && state != 0x0008)
 		taskHookStandby();
 	taskHookTick();
