@@ -60,7 +60,7 @@ unsigned char hexDecode(unsigned char *out, const char *in, unsigned int length)
 /*
  * PLACEHOLDER: cryptographic routine, deferred (the handshakes' nonce generator: for each 16
  * bytes of out, a block of the seed, sub_2D6E4's word, 2 bytes of the settings block
- * (chargeReadTempVolt, sub_2C658) and randomCounter, XORed with randomBlock, is encrypted with AES under
+ * (chargeReadTempVolt, configGet) and randomCounter, XORed with randomBlock, is encrypted with AES under
  * the key at 0x105b8 (Keys.wiki's SharedKey_B_B; the schedule at 0xfaa4 when memory pool 2 has
  * no block) into randomBlock, which goes to out; randomCounter counts the blocks).
  */

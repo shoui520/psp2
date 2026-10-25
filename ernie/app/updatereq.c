@@ -17,6 +17,7 @@
 #include "ernie.h"
 #include "aes.h"
 #include "command.h"
+#include "config.h"
 #include "downloader.h"
 #include "handshake.h"
 #include "host.h"
@@ -30,11 +31,6 @@
 #include "updatereq.h"
 #include "version.h"
 
-extern unsigned char sub_2CCA2(void);
-extern unsigned char sub_2CC93(void);
-extern unsigned char sub_2CCDE(void);
-extern unsigned char sub_2CD13(void);
-extern unsigned char sub_2CF46(unsigned long address);
 
 /* the flash self-programming library (0xf2b2-0xf6f5, not written yet) */
 extern void sub_F6EE(void);
@@ -158,7 +154,7 @@ void updaterStartDownloader(void)
 	serialClose1();
 	serialClose2();
 	serialOpen3(3);
-	if (sub_2CCA2())
+	if (configPrepareUpdate())
 		;
 	snapshot = sleepFactorSnapshot();
 	sleepFactor = sleepFactorGet();
@@ -426,7 +422,7 @@ static unsigned char updaterSetRunMode(unsigned int mode)
 	case 0x72ba:
 		switch (updater.state) {
 		case 0x22:
-			result = sub_2CD13();
+			result = configMergeUpdate();
 			break;
 		case 0:
 		case 1:
@@ -460,7 +456,7 @@ static unsigned char updaterSetRunMode(unsigned int mode)
 			result = updaterDecryptInit();
 			if (result == 0) {
 				updater.state = 0x20;
-				sub_2CC93();
+				configClose();
 				stateTransition(0x71);
 				return 0x80;
 			}
@@ -485,7 +481,7 @@ static unsigned char updaterSetSegment(unsigned char segment)
 			return 1;
 		break;
 	case 0x20:
-		segment = sub_2CCDE();
+		segment = configUpdateSegment();
 		break;
 	default:
 		return 1;
@@ -560,7 +556,7 @@ static unsigned char updaterExecProgramming(unsigned long sum)
 	}
 	if (~updater.sum != sum)
 		return 3;
-	result = sub_2CF46((unsigned long)updater.segment << 10);
+	result = configFlashWrite((unsigned long)updater.segment << 10);
 	updaterSegmentSetReceived(updater.segment);
 	return result;
 }

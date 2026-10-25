@@ -112,13 +112,13 @@ void analogInit(void)
 	analogAxes[2].calibrated = 0;
 	analogAxes[3].calibrated = 0;
 	analogFlags = 0;
-	analogMinRange = sub_2C658()->analogMinRange;
+	analogMinRange = configGet()->analogMinRange;
 	if (analogMinRange < 0x32)
 		analogMinRange = 0x32;
-	analogScales[0] = sub_2C658()->analogScale0;
+	analogScales[0] = configGet()->analogScale0;
 	if (analogScales[0] > 400)
 		analogScales[0] = 400;
-	analogScales[1] = sub_2C658()->analogScale1;
+	analogScales[1] = configGet()->analogScale1;
 	if (analogScales[1] > 400)
 		analogScales[1] = 400;
 	analogResetSet0();
@@ -208,12 +208,12 @@ void analogCalibrationReset(void)
 {
 	unsigned int limit;
 
-	limit = sub_2C658()->analogMin;
+	limit = configGet()->analogMin;
 	analogCalibration.axis[0].min = limit;
 	analogCalibration.axis[1].min = limit;
 	analogCalibration.axis[2].min = limit;
 	analogCalibration.axis[3].min = limit;
-	limit = sub_2C658()->analogMax;
+	limit = configGet()->analogMax;
 	analogCalibration.axis[0].max = limit;
 	analogCalibration.axis[1].max = limit;
 	analogCalibration.axis[2].max = limit;
@@ -227,7 +227,7 @@ void analogCalibrationReset(void)
 /* the settings' calibration */
 void analogCalibrationDefault(void)
 {
-	analogCalibration = sub_2C658()->analogCalibration;
+	analogCalibration = configGet()->analogCalibration;
 }
 
 /* reads the calibration kept in the NVS's syscon area into data; done(command, result) when
@@ -262,9 +262,9 @@ static void analogCalibrationLoaded(unsigned char command, unsigned char result)
 	if (result == 0) {
 		for (i = 0; i < ANALOG_AXES; i++) {
 			range = analogCalibration.axis[i].max - analogCalibration.axis[i].min;
-			if (analogCalibration.axis[i].min > sub_2C658()->analogMin ||
-			    analogCalibration.axis[i].max < sub_2C658()->analogMax ||
-			    sub_2C658()->analogMinRange > (unsigned char)(range >> 8)) {
+			if (analogCalibration.axis[i].min > configGet()->analogMin ||
+			    analogCalibration.axis[i].max < configGet()->analogMax ||
+			    configGet()->analogMinRange > (unsigned char)(range >> 8)) {
 				analogCalibrationDefault();
 				return;
 			}

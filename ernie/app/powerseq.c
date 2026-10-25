@@ -107,7 +107,7 @@ void powerSeqOn(void)
 					break;
 				}
 			}
-			if (sub_2C658()->batteryNoRetry)
+			if (configGet()->start.bits.batteryNoRetry)
 				break;
 			powerSleep(500);
 		}
@@ -170,20 +170,20 @@ void powerSeqLevels(void)
 	elmoCommand[1] = 0x01;
 	elmoCommand[2] = 0x00;
 	elmoWrite(elmoCommand, 3);
-	trim = sub_2C658()->voltageTrim;
-	level = sub_2C658()->voltage81;
+	trim = configGet()->voltageTrim;
+	level = configGet()->voltage81;
 	elmoCommand[0] = 0x81;
 	elmoCommand[1] = levelTrim(level, trim);
 	elmoCommand[2] = 0x00;
-	level = sub_2C658()->voltage82;
+	level = configGet()->voltage82;
 	elmoCommand[3] = 0x82;
 	elmoCommand[4] = levelTrim(level, trim);
 	elmoCommand[5] = 0x00;
-	level = sub_2C658()->voltage83;
+	level = configGet()->voltage83;
 	elmoCommand[6] = 0x83;
 	elmoCommand[7] = levelTrim(level, trim);
 	elmoCommand[8] = 0x00;
-	level = sub_2C658()->voltage84;
+	level = configGet()->voltage84;
 	elmoCommand[9] = 0x84;
 	elmoCommand[10] = levelTrim(level, trim);
 	elmoCommand[11] = 0x00;
@@ -423,7 +423,7 @@ unsigned char powerCookieSet(void)
 	unsigned char result;
 
 	cookieReadReg3();
-	elmoCommand[0] = sub_2C658()->cookieRegHigh ? 0xa3 : 0x03;
+	elmoCommand[0] = configGet()->cookieRegHigh ? 0xa3 : 0x03;
 	elmoCommand[1] = cookieRegs[0].byte[0] | 0x80;
 	elmoCommand[2] = cookieRegs[0].byte[1];
 	result = cookieWrite(elmoCommand, 3);
@@ -440,7 +440,7 @@ unsigned char powerCookieClear(void)
 	result = 0;
 	if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1 && !chargeCookieHeld) {
 		cookieReadReg3();
-		elmoCommand[0] = sub_2C658()->cookieRegHigh ? 0xa3 : 0x03;
+		elmoCommand[0] = configGet()->cookieRegHigh ? 0xa3 : 0x03;
 		elmoCommand[1] = cookieRegs[0].byte[0] & 0x7f;
 		elmoCommand[2] = cookieRegs[0].byte[1];
 		result = cookieWrite(elmoCommand, 3);
@@ -655,7 +655,7 @@ unsigned char powerBbmcOn(void)
 		return 2;
 	}
 	if (sub_11D57() == 1) {
-		powerWaitInput(1, sub_2C658()->bbmcPowerDelay);
+		powerWaitInput(1, configGet()->bbmcPowerDelay);
 		if (sub_11D57())
 			powerBbmcPulse();
 		powerSleep(0x20);

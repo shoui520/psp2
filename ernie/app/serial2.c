@@ -189,7 +189,7 @@ static unsigned char serial2Command0205(struct SerialBuffer *request, struct Ser
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x53;
 		}
-		if (serial2TestAreaUsed() == 0 && !sub_2C658()->startCheckOff) {
+		if (serial2TestAreaUsed() == 0 && !configGet()->startCheckOff) {
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x52;
 		}
@@ -237,7 +237,7 @@ static unsigned char serial2Notify0211(void)
 	unsigned char result;
 
 	result = 0;
-	if (serial2GetArmed() != 0 && sub_2C658()->testDisarm) {
+	if (serial2GetArmed() != 0 && configGet()->testDisarm) {
 		serial2Disarm();
 		result = stateTransition(0);
 	}
@@ -314,7 +314,7 @@ unsigned char serial2Arm(void)
 /* 1 while the clock's low byte has not passed the config's limit */
 int serial2InTime(void)
 {
-	return getClock().byte[0] <= sub_2C658()->startClockLimit;
+	return getClock().byte[0] <= configGet()->startClockLimit;
 }
 
 const struct SerialCommand serialCommands2[] = {

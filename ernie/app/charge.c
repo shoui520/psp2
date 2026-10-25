@@ -70,11 +70,11 @@ void chargeInit(void)
 	chargeCookieHeld = 0;
 	chargeAlarmInit();
 	if (deviceVersions.cookie[0] != 0x80) {
-		charge.batteryVolt = sub_2C658()->batteryVolt;
-		charge.batteryRemainCap = sub_2C658()->batteryRemainCap;
-		charge.batteryLifePercent = sub_2C658()->batteryLifePercent;
-		charge.batteryTemp = sub_2C658()->batteryTemp;
-		charge.batteryBicTemp = sub_2C658()->batteryBicTemp;
+		charge.batteryVolt = configGet()->batteryVolt;
+		charge.batteryRemainCap = configGet()->batteryRemainCap;
+		charge.batteryLifePercent = configGet()->batteryLifePercent;
+		charge.batteryTemp = configGet()->batteryTemp;
+		charge.batteryBicTemp = configGet()->batteryBicTemp;
 		powerStatus.byte[0] |= 0x60;
 		charge.flagsLast = 0;
 		charge.flagsRead = 0;
@@ -170,7 +170,7 @@ void chargeUpdate(void)
 		batteryReadBicTemp(&charge.batteryBicTemp);
 		chargeTempUpdate(charge.batteryTemp, &chargeTemp);
 		timerGetRtcTicks(&ticks);
-		if (ticks - charge.checkTicks > sub_2C658()->chargeTempInterval) {
+		if (ticks - charge.checkTicks > configGet()->chargeTempInterval) {
 			charge.checkTicks = ticks;
 			chargeAlarmUpdate();
 		}
@@ -182,7 +182,7 @@ void chargeUpdate(void)
 		batteryReadRemainCap(&charge.batteryRemainCap);
 		batteryReadVolt(&charge.batteryVolt);
 		batteryReadLifePercent(&charge.batteryLifePercent);
-		if (sub_2C658()->batteryLowVolt > charge.batteryVolt)
+		if (configGet()->batteryLowVolt > charge.batteryVolt)
 			sub_2E03A(0);
 		charge.flagsRead = chargeReadFlags();
 		changed = ~(charge.flagsRead ^ charge.flagsLast) & (charge.flags ^ charge.flagsRead);
@@ -227,7 +227,7 @@ void chargeUpdate(void)
 				chargeTransition(0x16);
 				chargeControl.0 = 0;
 			}
-			if (!sub_2C658()->chargeHold && (cookieStatus2.byte[1] & 0x0c) == 0x04 &&
+			if (!configGet()->state.bits.chargeHold && (cookieStatus2.byte[1] & 0x0c) == 0x04 &&
 			    !(stateGetWakeMask() & 0x8000) && chargeUsbHold == 0 &&
 			    (!(charge.flags & 0x0004) || chargeMayStart()) &&
 			    !powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1)
@@ -243,7 +243,7 @@ void chargeUpdate(void)
 			charge.tempTicks = ticks;
 	} else if (status1.bits.battery) {
 		chargeResetBattery();
-		if (!sub_2C658()->batteryNoRetry && !(state & 0x8000) && (state & 0x0028))
+		if (!configGet()->start.bits.batteryNoRetry && !(state & 0x8000) && (state & 0x0028))
 			chargeTransition(0x38);
 		sub_2DAE1(0x0e);
 	}
@@ -322,9 +322,9 @@ void chargeTempUpdate(unsigned int temp, struct ChargeTemp *t)
 
 	i = 0;
 	if (stateGet() == 0x0020)
-		levels = sub_2C658()->chargeTempLevelsCharge;
+		levels = configGet()->chargeTempLevelsCharge;
 	else
-		levels = sub_2C658()->chargeTempLevels;
+		levels = configGet()->chargeTempLevels;
 	if (t->temp < temp)
 		cooling = 0;
 	else
@@ -377,10 +377,10 @@ void chargeAlarmUpdate(void)
 	unsigned char i;
 	struct ChargeAlarmLimit *limits;
 
-	if (sub_2C658()->bbmcDetect)
-		limits = sub_2C658()->chargeAlarmLimits3G;
+	if (configGet()->board.bits.bbmcDetect)
+		limits = configGet()->chargeAlarmLimits3G;
 	else
-		limits = sub_2C658()->chargeAlarmLimits;
+		limits = configGet()->chargeAlarmLimits;
 	for (i = 0; i < 4; i++) {
 		if (limits[i].bicTemp == 0)
 			temp = charge.batteryTemp;
@@ -414,7 +414,7 @@ static void chargeAlarm0(void)
 {
 	if (charge.alarms[0].flags.bits.on) {
 		charge.alarmsOn.bits.alarm0 = 1;
-		timerStart(0x1d, sub_2C658()->chargeAlarm0Delay);
+		timerStart(0x1d, configGet()->chargeAlarm0Delay);
 	} else {
 		charge.alarmsOn.bits.alarm0 = 0;
 	}
@@ -445,7 +445,7 @@ static void chargeAlarm2(void)
 {
 	if (charge.alarms[2].flags.bits.on) {
 		charge.alarmsOn.bits.alarm2 = 1;
-		chargeCookieSetting = sub_2C658()->chargeAlarm2Setting;
+		chargeCookieSetting = configGet()->chargeAlarm2Setting;
 	} else {
 		charge.alarmsOn.bits.alarm2 = 0;
 		chargeCookieSetting = 0xc0;
@@ -520,7 +520,7 @@ int chargeSetCurrent(void)
 
 	result = 0xff;
 	if (powerStatus.bits.usb < 4 && chargeUsbMode < 6) {
-		setting = sub_2C658()->chargeCurrents[powerStatus.bits.usb][chargeUsbMode];
+		setting = configGet()->chargeCurrents[powerStatus.bits.usb][chargeUsbMode];
 		if (setting == 0xff || (powerStatus.bits.usb == 1 && !chargeVbus.1) || !chargeVbus.0) {
 			chargeCurrent = 0xff;
 			result = powerCookieSet();
@@ -546,7 +546,7 @@ int chargeMayStart(void)
 	unsigned int state;
 
 	state = stateGet();
-	if (sub_2C658()->batteryNoRetry)
+	if (configGet()->start.bits.batteryNoRetry)
 		return 1;
 	if (deviceVersions.battery.id == 0xfffe)
 		return 1;
@@ -564,7 +564,7 @@ int chargeMayStart(void)
 			return 0;
 		return 1;
 	}
-	/* Sony's returns nothing here: BC still holds sub_2C658's pointer */
+	/* Sony's returns nothing here: BC still holds configGet's pointer */
 }
 
 int chargeAlarm0On(void)
@@ -601,10 +601,10 @@ void chargeSetBattery(void)
 		return;
 	}
 	if (deviceVersions.battery.version[2] < 0x50) {
-		cookieCtrlReg7(sub_2C658()->batterySetting4x);
+		cookieCtrlReg7(configGet()->batterySetting4x);
 		return;
 	}
-	cookieCtrlReg7(sub_2C658()->batterySetting5x);
+	cookieCtrlReg7(configGet()->batterySetting5x);
 }
 
 /* whether the 3G modem's version changed since the last call */

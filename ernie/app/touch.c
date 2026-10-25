@@ -76,9 +76,9 @@ void touchOpen(void)
 	touchBuffer.end = 0;
 	touchBuffer.data = touchBufferData;
 	memset(&touchCommand, 0, sizeof(touchCommand));
-	touchDelays.select = sub_2C658()->touchDelaySelect;
-	touchDelays.byte = sub_2C658()->touchDelayByte;
-	touchDelays.deselect = sub_2C658()->touchDelayDeselect;
+	touchDelays.select = configGet()->touchDelaySelect;
+	touchDelays.byte = configGet()->touchDelayByte;
+	touchDelays.deselect = configGet()->touchDelayDeselect;
 }
 
 void touchClose(void)
@@ -317,10 +317,10 @@ unsigned char touchWriteVerified(unsigned int address, unsigned char *data,
 		}
 		dly_tsk(1);
 	}
-	for (tries = sub_2C658()->touchWriteTries; tries != 0; tries--) {
+	for (tries = configGet()->touchWriteTries; tries != 0; tries--) {
 		if (touchSpiWrite(address, data, length, panel) != 0)
 			continue;
-		reads = sub_2C658()->touchWriteReads;
+		reads = configGet()->touchWriteReads;
 		matches = 0;
 		for (; reads != 0; reads--) {
 			if (touchSpiRead(address, (unsigned char *)&touchReply, length,
@@ -328,7 +328,7 @@ unsigned char touchWriteVerified(unsigned int address, unsigned char *data,
 			    memcmp(data, &touchReply, length) == 0)
 				matches++;
 		}
-		if (matches == sub_2C658()->touchWriteReads) {
+		if (matches == configGet()->touchWriteReads) {
 			result = 0;
 			goto release;
 		}

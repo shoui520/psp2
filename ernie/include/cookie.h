@@ -7,7 +7,7 @@
 #define ERNIE_COOKIE_H
 
 /* a register's number: from 0xa0 where the settings say so */
-#define COOKIE_REG(reg)		((unsigned char)(sub_2C658()->cookieRegHigh ? (reg) + 0xa0 : (reg)))
+#define COOKIE_REG(reg)		((unsigned char)(configGet()->cookieRegHigh ? (reg) + 0xa0 : (reg)))
 
 /* a register as read and written: byte[0] goes first on the bus */
 union CookieReg {

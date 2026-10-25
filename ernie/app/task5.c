@@ -175,7 +175,7 @@ void sub_21F33(unsigned int bits)
 static void sub_21F53(void)
 {
 	if (sub_126C9()) {
-		if (sub_2C658()->indicatorOn0) {
+		if (configGet()->state.bits.indicatorOn0) {
 			sub_2DF86(1);
 			return;
 		}

@@ -47,6 +47,7 @@ struct Updater {
 };
 
 extern struct HostRequest updaterRequest;
+extern struct Updater updater;
 
 extern void updaterRequestInit(void);
 extern unsigned char hostCommandErnieDlVersion(unsigned char *out, unsigned char *length);

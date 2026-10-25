@@ -30,14 +30,6 @@
 #include "version.h"
 
 extern unsigned char sub_2D6DE(void);
-extern unsigned char sub_2C66A(unsigned char *data);
-extern unsigned char sub_2C6F0(unsigned int id, unsigned char size, unsigned char *data);
-extern unsigned char sub_2C736(unsigned int id, unsigned char size, unsigned char *data);
-extern unsigned char sub_2C7A1(void);
-extern unsigned char sub_2CC93(void);
-extern unsigned char sub_2C7EE(void);
-extern unsigned char sub_2C998(unsigned int id, unsigned char size, unsigned char *data,
-			       int flag);
 extern unsigned char sub_2DAEA(unsigned char *data);
 extern unsigned char sub_2DB73(void);
 extern unsigned char sub_2DBDF(void);
@@ -45,7 +37,6 @@ extern unsigned char sub_2DC1F(unsigned int id, unsigned char *data, unsigned ch
 extern unsigned char sub_2DC3C(unsigned int id, unsigned char size, unsigned char *data);
 extern unsigned char sub_2DC57(unsigned int id);
 extern unsigned char sub_2DC8B(void);
-extern unsigned char sub_2D05F(void);
 extern unsigned char sub_11D4B(void);
 
 extern const struct SerialCommand1 serialCommands1[];
@@ -83,6 +74,7 @@ static union {
 		unsigned char	flags;		/* sub_2D6DE's */
 		unsigned char	reserved[3];
 	} version;				/* command 0x0101's */
+	struct ConfigVersions versions;		/* command 0x0140's */
 } serial1Data;
 
 unsigned char serial1State;
@@ -307,7 +299,7 @@ static unsigned char serial1Command0105(struct SerialBuffer *request, struct Ser
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x53;
 		}
-		if (serial2TestAreaUsed() == 0 && !sub_2C658()->startCheckOff && serial2InTime() != 0) {
+		if (serial2TestAreaUsed() == 0 && !configGet()->startCheckOff && serial2InTime() != 0) {
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x52;
 		}
@@ -493,19 +485,19 @@ static unsigned char serial1Command0301(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
-/* 0x0140: sub_2C66A's eight bytes */
+/* 0x0140: the banks' versions and counts (configGetVersions) */
 static unsigned char serial1Command0140(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result;
 
 	response->data = serial1Data.byte;
 	response->length = 8;
-	result = sub_2C66A(serial1Data.byte);
+	result = configGetVersions(&serial1Data.versions);
 	serialSetAnswer(SERIAL_ANSWER);
 	return result == 0 ? 0 : result;
 }
 
-/* 0x0141: the id, the size (at most 0xff): sub_2C6F0's read */
+/* 0x0141: the offset, the size (at most 0xff): a read of the settings (configRead) */
 static unsigned char serial1Command0141(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	union Serial1Word id;
@@ -516,7 +508,7 @@ static unsigned char serial1Command0141(struct SerialBuffer *request, struct Ser
 	id.byte[1] = request->data[1];
 	size = request->data[2];
 	response->data = serial1Data.byte;
-	result = sub_2C6F0(id.value, (unsigned char)(size < 0xff ? size : 0xff), serial1Data.byte);
+	result = configRead(id.value, (unsigned char)(size < 0xff ? size : 0xff), serial1Data.byte);
 	if (result == 0)
 		response->length = size;
 	else
@@ -525,7 +517,7 @@ static unsigned char serial1Command0141(struct SerialBuffer *request, struct Ser
 	return result == 0 ? 0 : result;
 }
 
-/* 0x0142: the id, the size, the data: sub_2C736's write */
+/* 0x0142: the offset, the size, the data: a write to the open copy (configWrite) */
 static unsigned char serial1Command0142(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	union Serial1Word id;
@@ -535,7 +527,7 @@ static unsigned char serial1Command0142(struct SerialBuffer *request, struct Ser
 	id.byte[0] = request->data[0];
 	id.byte[1] = request->data[1];
 	size = request->data[2];
-	result = sub_2C736(id.value, (unsigned char)(size < 0xff ? size : 0xff), &request->data[3]);
+	result = configWrite(id.value, (unsigned char)(size < 0xff ? size : 0xff), &request->data[3]);
 	response->data = serial1Data.byte;
 	response->length = 0;
 	serialSetAnswer(SERIAL_ANSWER);
@@ -549,7 +541,7 @@ static unsigned char serial1Command0143(struct SerialBuffer *request, struct Ser
 
 	response->data = serial1Data.byte;
 	response->length = 0;
-	result = sub_2C7A1();
+	result = configOpen();
 	serialSetAnswer(SERIAL_ANSWER);
 	return result == 0 ? 0 : result;
 }
@@ -561,7 +553,7 @@ static unsigned char serial1Command0144(struct SerialBuffer *request, struct Ser
 
 	response->data = serial1Data.byte;
 	response->length = 0;
-	result = sub_2CC93();
+	result = configClose();
 	serialSetAnswer(SERIAL_ANSWER);
 	return result == 0 ? 0 : result;
 }
@@ -573,12 +565,12 @@ static unsigned char serial1Command0145(struct SerialBuffer *request, struct Ser
 
 	response->data = serial1Data.byte;
 	response->length = 0;
-	result = sub_2C7EE();
+	result = configCommit();
 	serialSetAnswer(SERIAL_ANSWER);
 	return result == 0 ? 0 : result;
 }
 
-/* 0x0146: the id, the size, the data: sub_2C998's write */
+/* 0x0146: the position, the size, the data: records for the open copy (configWriteRecords) */
 static unsigned char serial1Command0146(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result;
@@ -592,12 +584,12 @@ static unsigned char serial1Command0146(struct SerialBuffer *request, struct Ser
 	data = &request->data[3];
 	response->data = serial1Data.byte;
 	response->length = 0;
-	result = sub_2C998(id.value, size, data, 0);
+	result = configWriteRecords(id.value, size, data, 0);
 	serialSetAnswer(SERIAL_ANSWER);
 	return result == 0 ? 0 : result;
 }
 
-/* 0x0147: as 0x0146, sub_2C998's other write */
+/* 0x0147: as 0x0146, the records checked against the bank in use */
 static unsigned char serial1Command0147(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result;
@@ -611,7 +603,7 @@ static unsigned char serial1Command0147(struct SerialBuffer *request, struct Ser
 	data = &request->data[3];
 	response->data = serial1Data.byte;
 	response->length = 0;
-	result = sub_2C998(id.value, size, data, 1);
+	result = configWriteRecords(id.value, size, data, 1);
 	serialSetAnswer(SERIAL_ANSWER);
 	return result == 0 ? 0 : result;
 }
@@ -767,7 +759,7 @@ static unsigned char serial1Command0156(struct SerialBuffer *request, struct Ser
 }
 
 /* 0x0160: in state 4, clears (1) the NVS's syscon area (mask bit 0, then sub_2DC8B) and
-   sub_2D05F's (bit 1), or (2) runs nvsFormat and sub_2DC8B */
+   configRestoreDefaults's (bit 1), or (2) runs nvsFormat and sub_2DC8B */
 static unsigned char serial1Command0160(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result = 0;
@@ -805,7 +797,7 @@ static unsigned char serial1Command0160(struct SerialBuffer *request, struct Ser
 			}
 		}
 		if (mask & 0x02) {
-			result = sub_2D05F();
+			result = configRestoreDefaults();
 			if (result != 0) {
 				result = 0x93;
 				goto done;

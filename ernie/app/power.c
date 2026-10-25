@@ -34,7 +34,6 @@ struct PowerPart {
 };
 
 extern void inputInit(void);
-extern unsigned char sub_2CD3F(void);
 extern void sub_11572(void);
 extern void sub_1159F(void);
 extern void sub_115F0(void);
@@ -234,7 +233,7 @@ unsigned char powerResume(union PowerRequest *request)
 		return result;
 	}
 	powerPendingReset();
-	if (sub_2CD3F() != 0)
+	if (configTakeChanged() != 0)
 		sub_24076();
 	sleepFactorSet20(0);
 	stateWakeupFactor.word = request->word;
@@ -295,7 +294,7 @@ unsigned char powerOff(void)
 
 	result = 0;
 	powerPendingReset();
-	switch (sub_2C658()->hardwareInfoSelect) {
+	switch (configGet()->hardwareInfoSelect) {
 	case 1:
 		setHardwareInfoFlags(0x80);
 		break;
@@ -308,7 +307,7 @@ unsigned char powerOff(void)
 		clearHardwareInfoFlags(0xc0);
 		break;
 	}
-	if (sub_2CD3F() != 0)
+	if (configTakeChanged() != 0)
 		sub_24076();
 	sub_115F0();
 	powerPendingClear(3);

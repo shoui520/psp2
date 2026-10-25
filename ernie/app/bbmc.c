@@ -116,7 +116,7 @@ void bbmcInit(void)
 	bbmcInputHandlerWake.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	bbmcInputHandlerWake.handler = bbmcPostWake;
 	P33 = 0;
-	if (sub_2C658()->bbmcDetect) {
+	if (configGet()->board.bits.bbmcDetect) {
 		level = P3.2;
 		dly_tsk(1);
 		if (P3.2 == level && level == 0)

@@ -8,6 +8,7 @@
 
 #include <string.h>
 #include "ernie.h"
+#include "config.h"
 #include "kernel.h"
 #include "param.h"
 #include "power.h"
@@ -23,7 +24,6 @@
 
 extern __near unsigned char resetFlags;
 
-extern void sub_2C57F(void);
 extern unsigned char getResetCause(void);
 extern void sub_2D6EF(void);
 extern void sub_2D712(void);
@@ -61,7 +61,7 @@ void systemInit(void)
 	stateEvents = 0;
 	stateCause = 0x7f;
 	resetFlags = RESF;
-	sub_2C57F();
+	configInit();
 	timerInit();
 	paramInit();
 	taskClearPending(-1);

@@ -844,7 +844,7 @@ void sub_11E0A(void)
 			mode = *stateGetWakeupFactor();
 			if (buttonPress2.count == buttonPress2.time1) {
 				if (state != sub_12074() && !mode.bits.notify &&
-				    !sub_2C658()->pressAnyState) {
+				    !configGet()->pressAnyState) {
 					sub_12078(0);
 					return;
 				}
@@ -853,7 +853,7 @@ void sub_11E0A(void)
 				sub_11DE0(1);
 			} else if (buttonPress2.count == buttonPress2.time2 || sub_12784()) {
 				if (state != sub_12074() && state != 0x0008 && !mode.bits.notify &&
-				    !sub_2C658()->pressAnyState) {
+				    !configGet()->pressAnyState) {
 					sub_12078(0);
 					return;
 				}
@@ -865,7 +865,7 @@ void sub_11E0A(void)
 			break;
 		}
 	} else if (buttonPress2.count >= buttonPress2.time1) {
-		if (state != sub_12074() && !sub_2C658()->pressAnyState) {
+		if (state != sub_12074() && !configGet()->pressAnyState) {
 			sub_12078(0);
 			return;
 		}
@@ -1026,7 +1026,7 @@ void sub_1217E(void)
 	unsigned char value;
 
 	buttonPress1.count++;
-	if (stateGet() != sub_12040() && !sub_2C658()->pressAnyState) {
+	if (stateGet() != sub_12040() && !configGet()->pressAnyState) {
 		sub_12044(0);
 	} else if (buttonPress1.count < 2) {
 		sub_11FEF(1);

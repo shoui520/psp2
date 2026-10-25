@@ -41,7 +41,7 @@ unsigned char cookieWrite(unsigned char *data, unsigned char length)
 	cookieIica.rxCount = 0;
 	cookieIica.txData = data;
 	cookieIica.txCount = length;
-	cookieIica.address = sub_2C658()->cookieRegHigh ? 0xa4 : 0xa8;
+	cookieIica.address = configGet()->cookieRegHigh ? 0xa4 : 0xa8;
 	cookieIica.status = &status;
 	for (i = 1; i < length; i++)
 		;
@@ -67,7 +67,7 @@ unsigned char cookieRead(unsigned char *reg, unsigned char *data)
 	cookieIica.rxCount = 2;
 	cookieIica.txData = reg;
 	cookieIica.txCount = 1;
-	cookieIica.address = sub_2C658()->cookieRegHigh ? 0xa4 : 0xa8;
+	cookieIica.address = configGet()->cookieRegHigh ? 0xa4 : 0xa8;
 	cookieIica.status = &status;
 	iicaStart(&cookieIica);
 	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);

@@ -197,9 +197,9 @@ int hostInit(void)
 	hostThrottle.frameStart = 0;
 	hostThrottle.busyTime = 0;
 	hostThrottle.streaming = 0;
-	hostThrottle.busyLimit = sub_2C658()->hostBusyLimit;
-	hostThrottle.idleLimit = sub_2C658()->hostIdleLimit;
-	hostThrottle.pause = sub_2C658()->hostPause;
+	hostThrottle.busyLimit = configGet()->hostBusyLimit;
+	hostThrottle.idleLimit = configGet()->hostIdleLimit;
+	hostThrottle.pause = configGet()->hostPause;
 	tau0PowerOn();
 	TMR02 = 0x8000;
 	TDR02 = 0xffff;

@@ -41,7 +41,7 @@ unsigned char batteryWrite(unsigned char *data, unsigned char length)
 	batteryIica.rxCount = 0;
 	batteryIica.txData = data;
 	batteryIica.txCount = length;
-	batteryIica.address = sub_2C658()->cookieRegHigh ? 0xa4 : 0xaa;
+	batteryIica.address = configGet()->cookieRegHigh ? 0xa4 : 0xaa;
 	batteryIica.status = &status;
 	iicaStart(&batteryIica);
 	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);
@@ -70,7 +70,7 @@ unsigned char batteryRead(unsigned char *reg, unsigned char *data, unsigned char
 	batteryIica.rxCount = length;
 	batteryIica.txData = reg;
 	batteryIica.txCount = 1;
-	batteryIica.address = sub_2C658()->cookieRegHigh ? 0xa4 : 0xaa;
+	batteryIica.address = configGet()->cookieRegHigh ? 0xa4 : 0xaa;
 	batteryIica.status = &status;
 	iicaStart(&batteryIica);
 	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);

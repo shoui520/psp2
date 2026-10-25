@@ -722,7 +722,7 @@ static void powerRequestSetChargeLedCtrl(void)
 			sub_2E016(0);
 			break;
 		case 2:
-			if (sub_2C658()->chargeLedHost) {
+			if (configGet()->chargeLedHost) {
 				sub_2E016(0);
 				sub_2DFF2(1);
 			}
@@ -765,7 +765,7 @@ static void powerRequestCtrlVoltage(void)
 		if (powerRequestData[1] >= 0x40) {
 			result = 3;
 		} else {
-			trim = sub_2C658()->voltageTrim;
+			trim = configGet()->voltageTrim;
 			level = levelTrim(powerRequestData[1], trim);
 			result = powerResult(powerSetVoltage(regulator, level));
 		}
@@ -985,7 +985,7 @@ static void powerRequestReadCookieReg(void)
 	unsigned char reg;
 
 	if (powerRequest.length < 3) {
-		reg = sub_2C658()->cookieRegHigh ? powerRequestData[0] + 0xa0 : powerRequestData[0];
+		reg = configGet()->cookieRegHigh ? powerRequestData[0] + 0xa0 : powerRequestData[0];
 		result = powerResult(cookieRead(&reg, value));
 		if (result == 0) {
 			powerRequestAnswer[0] = value[1];
@@ -1006,7 +1006,7 @@ static void powerRequestWriteCookieReg(void)
 	unsigned char index;
 
 	if (powerRequest.length == 3) {
-		write[0] = sub_2C658()->cookieRegHigh ? powerRequestData[0] + 0xa0 :
+		write[0] = configGet()->cookieRegHigh ? powerRequestData[0] + 0xa0 :
 			   powerRequestData[0];
 		write[1] = powerRequestData[2];
 		write[2] = powerRequestData[1];
@@ -1157,7 +1157,7 @@ static void batteryRequestGetTemp(void)
 
 	if (batteryRequest.length == 0) {
 		if (BATTERY_ABSENT()) {
-			batteryRequestAnswer.word[0] = sub_2C658()->batteryTemp;
+			batteryRequestAnswer.word[0] = configGet()->batteryTemp;
 			result = batteryResult(0);
 		} else
 			result = batteryResult(batteryReadTemp(batteryRequestAnswer.word));
@@ -1175,7 +1175,7 @@ static void batteryRequestGetBicTemp(void)
 
 	if (batteryRequest.length == 0) {
 		if (BATTERY_ABSENT()) {
-			batteryRequestAnswer.word[0] = sub_2C658()->batteryBicTemp;
+			batteryRequestAnswer.word[0] = configGet()->batteryBicTemp;
 			result = batteryResult(0);
 		} else
 			result = batteryResult(batteryReadBicTemp(batteryRequestAnswer.word));
@@ -1194,7 +1194,7 @@ static void batteryRequestGetFullCap(void)
 
 	if (batteryRequest.length == 0) {
 		if (BATTERY_ABSENT()) {
-			batteryRequestAnswer.word[0] = sub_2C658()->batteryFullCap;
+			batteryRequestAnswer.word[0] = configGet()->batteryFullCap;
 			result = batteryResult(0);
 		} else {
 			reg = 0x3c;
@@ -1215,7 +1215,7 @@ static void batteryRequestGetElec(void)
 
 	if (batteryRequest.length == 0) {
 		if (BATTERY_ABSENT()) {
-			batteryRequestAnswer.word[0] = sub_2C658()->batteryElec;
+			batteryRequestAnswer.word[0] = configGet()->batteryElec;
 			result = batteryResult(0);
 		} else {
 			reg = 0x14;
@@ -1236,7 +1236,7 @@ static void batteryRequestGetTTE(void)
 
 	if (batteryRequest.length == 0) {
 		if (BATTERY_ABSENT()) {
-			batteryRequestAnswer.word[0] = sub_2C658()->batteryTte;
+			batteryRequestAnswer.word[0] = configGet()->batteryTte;
 			result = batteryResult(0);
 		} else {
 			reg = 0x16;
@@ -1257,7 +1257,7 @@ static void batteryRequestGetSOH(void)
 
 	if (batteryRequest.length == 0) {
 		if (BATTERY_ABSENT()) {
-			batteryRequestAnswer.word[0] = sub_2C658()->batterySoh;
+			batteryRequestAnswer.word[0] = configGet()->batterySoh;
 			result = batteryResult(0);
 		} else {
 			reg = 0x28;
@@ -1278,7 +1278,7 @@ static void batteryRequestGetFullCap2(void)
 
 	if (batteryRequest.length == 0) {
 		if (BATTERY_ABSENT()) {
-			batteryRequestAnswer.word[0] = sub_2C658()->batteryFullCap2;
+			batteryRequestAnswer.word[0] = configGet()->batteryFullCap2;
 			result = batteryResult(0);
 		} else {
 			reg = 0x12;

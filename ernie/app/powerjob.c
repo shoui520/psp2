@@ -172,11 +172,11 @@ static void powerJobOff(void)
 	chargeControl.1 = 1;
 	sub_2E0D8(2);
 	sub_2E165(0);
-	if (sub_2C658()->indicatorOn0)
+	if (configGet()->state.bits.indicatorOn0)
 		sub_2DF86(1);
 	else
 		sub_2DF86(0);
-	if (sub_2C658()->indicatorOn1)
+	if (configGet()->state.bits.indicatorOn1)
 		sub_2DFAA(1);
 	else
 		sub_2DFAA(0);
@@ -204,7 +204,7 @@ static void powerJobSuspend(void)
 	powerSeqSuspend();
 	if (chargeBatteryLevel9()) {
 		powerWirelessOff();
-		if (!bbmcModeIsNone() || sub_2C658()->suspendCheck)
+		if (!bbmcModeIsNone() || configGet()->suspendCheck)
 			powerBbmcCycle();
 	}
 	POWER_JOB_MODE();

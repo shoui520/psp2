@@ -44,15 +44,15 @@ int paramInit(void)
 
 int paramLoad(void)
 {
-	if (sub_2C658()->bbmcDetect)
-		memcpy(param.chargeLevels, sub_2C658()->chargeLevels, sizeof(param.chargeLevels));
+	if (configGet()->board.bits.bbmcDetect)
+		memcpy(param.chargeLevels, configGet()->chargeLevels, sizeof(param.chargeLevels));
 	else
-		memcpy(param.chargeLevels, sub_2C658()->chargeLevelsNoDetect,
+		memcpy(param.chargeLevels, configGet()->chargeLevelsNoDetect,
 		       sizeof(param.chargeLevels));
-	param.pressTime1 = sub_2C658()->pressTime1;
-	param.pressTime2 = sub_2C658()->pressTime2;
-	param.setting1 = sub_2C658()->paramSetting1;
-	param.setting2 = sub_2C658()->paramSetting2;
+	param.pressTime1 = configGet()->pressTime1;
+	param.pressTime2 = configGet()->pressTime2;
+	param.setting1 = configGet()->paramSetting1;
+	param.setting2 = configGet()->paramSetting2;
 	return 0;
 }
 

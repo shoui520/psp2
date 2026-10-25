@@ -171,11 +171,11 @@ void stateInit(void)
 	stateRequest.byte[1] = 0xff;
 	stateWakeupFactor.word = stateRequest.word;
 	mask = 0xffffffff;
-	mask |= sub_2C658()->wakeMaskOn;
-	mask &= ~sub_2C658()->wakeMaskOff;
-	if (sub_2C658()->wakeUnmask22)
+	mask |= configGet()->wakeMaskOn;
+	mask &= ~configGet()->wakeMaskOff;
+	if (configGet()->start.bits.wakeUnmask22)
 		mask &= ~0x00400000UL;
-	if (sub_2C658()->wakeUnmask15)
+	if (configGet()->start.bits.wakeUnmask15)
 		mask &= ~0x00008000UL;
 	stateSetWakeMask(mask);
 }
@@ -305,7 +305,7 @@ static int stateOffEnter(void)
 	if (stateCause == 0x58)
 		stateTransition(0x0a);
 	else if (stateCause == 0x31) {
-		if (sub_2C658()->offTransition18 && sub_2C658()->offTransitionBlock == 0)
+		if (configGet()->offTransition18 && configGet()->offTransitionBlock == 0)
 			stateTransition(0x18);
 	} else if (stateCause == 0x5b)
 		stateTransition(0x19);
@@ -436,15 +436,15 @@ static int stateOffHandle(struct StateEvent *event)
 			stateRequest.bits.mode = event->transition & 0x7f;
 		}
 		stateRequest.bits.notify = 0;
-		stateWakeMask |= sub_2C658()->wakeMaskOn;
-		stateWakeMask &= ~sub_2C658()->wakeMaskOff;
-		if (sub_2C658()->offWakeUnmask22)
+		stateWakeMask |= configGet()->wakeMaskOn;
+		stateWakeMask &= ~configGet()->wakeMaskOff;
+		if (configGet()->state.bits.offWakeUnmask22)
 			stateWakeMask &= ~0x00400000UL;
 		if (stateRequest.bits.mode != 0 &&
 		    ((1UL << stateRequest.bits.mode) & stateWakeMask))
 			stateNext = 0;
 		if (!(unsigned char)chargeMayStart() || (unsigned char)chargeAlarm0On() ||
-		    (serial2TestAreaUsed() == 0 && !sub_2C658()->startCheckOff &&
+		    (serial2TestAreaUsed() == 0 && !configGet()->startCheckOff &&
 		     serial2InTime() != 0))
 			stateNext = 0;
 		break;
@@ -507,8 +507,8 @@ static int stateSuspendHandle(struct StateEvent *event)
 		stateNext = STATE_RESUME;
 		stateRequest.bits.mode = event->transition & 0x7f;
 		stateRequest.bits.notify = 1;
-		stateWakeMask |= sub_2C658()->suspendWakeMaskOn;
-		stateWakeMask &= ~sub_2C658()->suspendWakeMaskOff;
+		stateWakeMask |= configGet()->suspendWakeMaskOn;
+		stateWakeMask &= ~configGet()->suspendWakeMaskOff;
 		if (stateRequest.bits.mode != 0 &&
 		    ((1UL << stateRequest.bits.mode) & stateWakeMask))
 			stateNext = 0;

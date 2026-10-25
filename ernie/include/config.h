@@ -1,5 +1,7 @@
 /*
- * The settings block (1 KiB) that sub_2C658 returns: its owner is not written yet.
+ * The settings (app/config.c): two banks of 1 KiB in the flash at 0x3b800, each a header and
+ * the 0x3f0 bytes of a ConfigBlock; the newer valid one is used. The host edits a copy in RAM
+ * by records, checked with SHA-1, and the copy is written to the other bank.
  */
 #ifndef ERNIE_CONFIG_H
 #define ERNIE_CONFIG_H
@@ -7,22 +9,38 @@
 #include "analog.h"
 #include "charge.h"
 
+#define CONFIG_SIZE		0x3f0	/* a bank's block */
+#define CONFIG_VERSION		0x31	/* this build's layout */
+#define CONFIG_WRITTEN		0x5a5a
+
 /* PLACEHOLDER: only the fields read so far */
 struct ConfigBlock {
 	struct AnalogCalibration analogCalibration;	/* the sticks' default calibration */
 	unsigned char	analogScale0;		/* set 0's margin, in 1/1000 of the range */
 	unsigned char	analogScale1;		/* set 1's */
-	unsigned char	wakeUnmask22:1;		/* set: wake factor 22 unmasked at the start (stateInit) */
-	unsigned char	batteryNoRetry:1;	/* set: the battery is read once at the power-on
-						   (powerSeqOn) */
-	unsigned char	reserved20:2;
-	unsigned char	wakeUnmask15:1;		/* set: wake factor 15 unmasked */
-	unsigned char	reserved26:3;
-	unsigned char	reserved21;
-	unsigned char	bbmcDetect:1;		/* set: P3.2 low at the start means a 3G modem
-						   (bbmcInit) */
-	unsigned char	reserved17:7;
-	unsigned char	reserved18[0x1a - 0x15];
+	union {
+		unsigned int	value;
+		struct {
+			unsigned int	wakeUnmask22:1;	/* set: wake factor 22 unmasked at the start
+							   (stateInit) */
+			unsigned int	batteryNoRetry:1;	/* set: the battery is read once at the
+								   power-on (powerSeqOn) */
+			unsigned int	reserved20:1;
+			unsigned int	indicatorOn0:1;	/* where layouts before 0x31 kept
+							   indicatorOn0 (configMerge) */
+			unsigned int	wakeUnmask15:1;	/* set: wake factor 15 unmasked */
+			unsigned int	reserved26:11;
+		} bits;
+	} start;				/* kept across a new layout */
+	union {
+		unsigned int	value;
+		struct {
+			unsigned int	bbmcDetect:1;	/* set: P3.2 low at the start means a 3G
+							   modem (bbmcInit) */
+			unsigned int	reserved17:15;
+		} bits;
+	} board;				/* kept across a new layout */
+	unsigned char	reserved18[0x1a - 0x16];
 	struct ChargeTempLevel chargeTempLevels[8];	/* the battery temperature's ranges */
 	struct ChargeTempLevel chargeTempLevelsCharge[8];	/* and in system state 0x20 */
 	struct ChargeLevel chargeLevels[10];	/* the battery's levels (paramLoad), with
@@ -50,7 +68,14 @@ struct ConfigBlock {
 	unsigned int	batteryTte;
 	unsigned int	batterySoh;
 	unsigned int	batteryFullCap2;
-	unsigned char	reserved10[0xec - 0xea];
+	union {
+		unsigned int	value;
+		struct {
+			unsigned int	pressTimesSet:1;	/* set: pressTime1 and 2 are kept across
+								   a new layout */
+			unsigned int	reserved10:15;
+		} bits;
+	} keep;					/* kept across a new layout */
 	unsigned char	paramSetting1;		/* the parameter block's, for the host */
 	unsigned char	paramSetting2;
 	unsigned char	voltage81;		/* the Elmo's regulators 0x81-0x84: their levels at a
@@ -97,14 +122,20 @@ struct ConfigBlock {
 	unsigned char	reserved16;
 	unsigned int	hardwareInfoSelect;	/* power-off's hardware info flags: 1 sets 0x80,
 						   3 sets 0x40, others clear both */
-	unsigned char	offWakeUnmask22:1;	/* set: wake factor 22 unmasked in the off state */
-	unsigned char	reserved11:1;
-	unsigned char	indicatorOn0:1;		/* sub_2DF86's indicator on at a reset, and while
-						   sub_126C9 holds */
-	unsigned char	chargeHold:1;		/* set: no transition 0x0f in chargeUpdate */
-	unsigned char	indicatorOn1:1;		/* sub_2DFAA's indicator on at a reset */
-	unsigned char	reserved13:3;
-	unsigned char	reserved14[0x1ae - 0x1ab];
+	union {
+		unsigned int	value;
+		struct {
+			unsigned int	offWakeUnmask22:1;	/* set: wake factor 22 unmasked in the
+								   off state */
+			unsigned int	reserved11:1;
+			unsigned int	indicatorOn0:1;	/* sub_2DF86's indicator on at a reset, and
+							   while sub_126C9 holds */
+			unsigned int	chargeHold:1;	/* set: no transition 0x0f in chargeUpdate */
+			unsigned int	indicatorOn1:1;	/* sub_2DFAA's indicator on at a reset */
+			unsigned int	reserved13:11;
+		} bits;
+	} state;				/* kept across a new layout */
+	unsigned char	reserved14[0x1ae - 0x1ac];
 	unsigned char	batterySetting4x;	/* cookieCtrlReg7's for a battery version[2] 0x40-0x4f */
 	unsigned char	batterySetting5x;	/* and 0x50 or above */
 	unsigned char	touchDelaySelect;	/* Touch's delays, in NOPs */
@@ -121,8 +152,44 @@ struct ConfigBlock {
 	unsigned char	offTransition18:1;	/* set: the off state entered by transition 0x31
 						   runs transition 0x18 */
 	unsigned char	reserved29:7;
+	unsigned char	reserved30[CONFIG_SIZE - 0x1c5];
 };
 
-extern struct ConfigBlock *sub_2C658(void);
+/* a bank */
+struct ConfigBank {
+	unsigned char	magic[4];		/* "Conf" */
+	unsigned int	state;			/* CONFIG_WRITTEN (or 0x5050) */
+	unsigned int	size;			/* CONFIG_SIZE */
+	unsigned int	version;		/* the layout's: below CONFIG_VERSION the defaults'
+						   are merged in at the start */
+	unsigned int	count;			/* the writes since the defaults (1) */
+	unsigned long	checksum;		/* the sum of block's bytes, complemented */
+	struct ConfigBlock block;
+};
+
+/* configGetVersions's: the bank used's, then the other's */
+struct ConfigVersions {
+	unsigned int	version;
+	unsigned int	count;
+	unsigned int	otherVersion;
+	unsigned int	otherCount;
+};
+
+extern int configInit(void);
+extern struct ConfigBlock *configGet(void);
+extern unsigned char configGetVersions(struct ConfigVersions *versions);
+extern unsigned char configRead(unsigned int offset, unsigned char size, unsigned char *data);
+extern unsigned char configWrite(unsigned int offset, unsigned char size, unsigned char *data);
+extern unsigned char configOpen(void);
+extern unsigned char configCommit(void);
+extern unsigned char configWriteRecords(unsigned int offset, unsigned char size,
+					unsigned char *data, unsigned char check);
+extern unsigned char configClose(void);
+extern unsigned char configPrepareUpdate(void);
+extern unsigned int configUpdateSegment(void);
+extern unsigned char configMergeUpdate(void);
+extern unsigned char configTakeChanged(void);
+extern unsigned char configFlashWrite(unsigned long address);
+extern unsigned char configRestoreDefaults(void);
 
 #endif
