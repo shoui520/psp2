@@ -43,11 +43,44 @@ extern void sub_21F33(int);
 extern unsigned char sub_1B538(void);
 extern void sub_2AA60(unsigned long);
 extern unsigned char sub_2AB49(int);
+extern unsigned char sub_2B61F(unsigned char *buf);
+extern unsigned char sub_2DB73(void);
+extern unsigned char sub_2DAEA(unsigned char *buf);
+extern unsigned char sub_2DC1F(unsigned int offset, unsigned char *data, unsigned char *length);
+extern int sub_2ED3C(unsigned char *data);
+extern int sub_2ED5A(unsigned char *data);
+extern int sub_2ED75(unsigned char *data, unsigned char *answer);
+extern int sub_2EE8D(unsigned char *data, unsigned char *answer);
+
+/* a task-side command is done: the answer from its result */
+typedef void (*CommandDone)(unsigned char command, unsigned char result);
+
+int commandHandshake(unsigned char *data, unsigned char command, CommandDone done);
+void commandHandshakeDone(unsigned char command, unsigned char result);
+int commandLogStart(unsigned char *data, unsigned char command, CommandDone done);
+int commandLogInfo(unsigned char *data, unsigned char command, CommandDone done);
+int commandLogRead(unsigned char *data, unsigned char *answer, unsigned char command,
+		   CommandDone done);
+void commandLogDone(unsigned char command, unsigned char result);
+int commandSnvsHandshake(unsigned char *data, unsigned char command, CommandDone done);
+int commandSnvs00D1(unsigned char *data, unsigned char command, CommandDone done);
+int commandSnvsRead(unsigned char *data, unsigned char *answer, unsigned char command,
+		    CommandDone done);
+int commandSnvsWrite(unsigned char *data, unsigned char *answer, unsigned char command,
+		     CommandDone done);
+void commandSnvsDone(unsigned char command, unsigned char result);
 
 /* request 0: its answer and its command's data */
 struct HostRequest commandRequest;
 unsigned char commandRequestAnswer[0x40];
 unsigned char commandRequestData[0x40];
+
+/* 0x0088's answer: the log's data from offset */
+struct LogRead {
+	unsigned int	offset;
+	unsigned char	length;
+	unsigned char	data[1];
+};
 
 /* the pins command 0x0014 reports */
 union CommandPins {
@@ -468,4 +501,206 @@ allowed:
 		hostRequestSetState(&commandRequest, HOST_REQUEST_RECEIVE);
 		break;
 	}
+}
+
+/* request 0's commands a task handles (event flag 3, 0x2000) */
+void commandRequestRun(void)
+{
+	switch (commandRequest.command) {
+	case 0x0086:
+		commandLogInfo(commandRequestData, 0x86, commandLogDone);
+		break;
+	case 0x0087:
+		commandLogStart(commandRequestData, 0x87, commandLogDone);
+		break;
+	case 0x0088:
+		commandLogRead(commandRequestData, commandRequestAnswer, 0x88, commandLogDone);
+		break;
+	case 0x00a0:
+		commandHandshake(commandRequestData, 0, commandHandshakeDone);
+		break;
+	case 0x00d0:
+		commandSnvsHandshake(commandRequestData, 0xd0, commandSnvsDone);
+		break;
+	case 0x00d1:
+		commandSnvs00D1(commandRequestData, 0xd1, commandSnvsDone);
+		break;
+	case 0x00d2:
+		commandSnvsRead(commandRequestData, commandRequestAnswer, 0xd2, commandSnvsDone);
+		break;
+	case 0x00d3:
+		commandSnvsWrite(commandRequestData, commandRequestAnswer, 0xd3, commandSnvsDone);
+		break;
+	default:
+		hostRequestAnswer(&commandRequest, 0x10, 0, 0);
+		break;
+	}
+}
+
+/* 0x00a0: the host's 0x28 bytes go to the handshake, which answers in their place */
+int commandHandshake(unsigned char *data, unsigned char command, CommandDone done)
+{
+	unsigned char result;
+
+	memcpy(commandRequestAnswer, data, 0x28);
+	result = sub_2B61F(commandRequestAnswer);
+	done(command, result);
+	return 0;
+}
+
+void commandHandshakeDone(unsigned char command, unsigned char result)
+{
+	if (result == 0)
+		hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0x28);
+	else
+		hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x10, 0);
+}
+
+/* 0x0087 (sceSysconLogStart) */
+int commandLogStart(unsigned char *data, unsigned char command, CommandDone done)
+{
+	unsigned char result;
+
+	result = sub_2DB73();
+	done(command, result);
+	return 0;
+}
+
+/* 0x0086 (sceSysconGetLogInfo) */
+int commandLogInfo(unsigned char *data, unsigned char command, CommandDone done)
+{
+	unsigned char result;
+
+	result = sub_2DAEA(commandRequestAnswer);
+	done(command, result);
+	return 0;
+}
+
+/* 0x0088 (sceSysconLogReadData): the log's data from the offset the host gives */
+int commandLogRead(unsigned char *data, unsigned char *answer, unsigned char command,
+		   CommandDone done)
+{
+	unsigned char result;
+	union CommandWord offset;
+	struct LogRead *read;
+
+	read = (struct LogRead *)answer;
+	offset.byte[0] = data[0];
+	offset.byte[1] = data[1];
+	read->offset = offset.value;
+	if (offset.value == 0)
+		result = 1;
+	else
+		result = sub_2DC1F(offset.value, read->data, &read->length);
+	done(command, result);
+	return 0;
+}
+
+void commandLogDone(unsigned char command, unsigned char result)
+{
+	unsigned char status;
+	unsigned char length;
+
+	if (result == 0)
+		status = 0;
+	else if (result == 2)
+		status = 7;
+	else if (result == 3)
+		status = 8;
+	else
+		status = 1;
+	switch (command) {
+	case 0x87:
+		length = 0;
+		break;
+	case 0x86:
+		length = 8;
+		break;
+	case 0x88:
+		length = ((struct LogRead *)commandRequestAnswer)->length + 3;
+		break;
+	}
+	hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, status, length);
+}
+
+/* 0x00d0: the handshake before the SNVS; its 0x28 bytes are answered back */
+int commandSnvsHandshake(unsigned char *data, unsigned char command, CommandDone done)
+{
+	int result;
+
+	result = sub_2ED3C(data);
+	memcpy(commandRequestAnswer, data, 0x28);
+	if (result != 0)
+		result = 0x12;
+	done(command, result);
+	return result;
+}
+
+int commandSnvs00D1(unsigned char *data, unsigned char command, CommandDone done)
+{
+	int result;
+
+	result = sub_2ED5A(data);
+	done(command, result);
+	return result;
+}
+
+/* 0x00d2 (sceSysconSnvsReadData) */
+int commandSnvsRead(unsigned char *data, unsigned char *answer, unsigned char command,
+		    CommandDone done)
+{
+	int result;
+
+	result = sub_2ED75(data, answer);
+	done(command, result);
+	return result;
+}
+
+/* 0x00d3 (sceSysconSnvsWriteData) */
+int commandSnvsWrite(unsigned char *data, unsigned char *answer, unsigned char command,
+		     CommandDone done)
+{
+	int result;
+
+	result = sub_2EE8D(data, answer);
+	done(command, result);
+	return result;
+}
+
+void commandSnvsDone(unsigned char command, unsigned char result)
+{
+	unsigned char length;
+
+	switch (result) {
+	case 0x00:
+		result = 0x00;
+		break;
+	case 0x13:
+		result = 0x13;
+		break;
+	case 0x14:
+		result = 0x14;
+		break;
+	case 0x15:
+		result = 0x15;
+		break;
+	}
+	switch (command) {
+	case 0xd0:
+		length = 0x28;
+		break;
+	case 0xd1:
+		length = 0;
+		break;
+	case 0xd2:
+		length = 0x30;
+		break;
+	case 0xd3:
+		length = 0x10;
+		break;
+	default:
+		length = 0;
+		break;
+	}
+	hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, result, length);
 }

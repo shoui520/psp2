@@ -20,5 +20,6 @@ extern unsigned char hostCommandPins(unsigned char *out, unsigned char *length);
 extern void commandRequestInit(void);
 extern void commandRequestReceive(void);
 extern void commandRequestNotify(void);
+extern void commandRequestRun(void);
 
 #endif

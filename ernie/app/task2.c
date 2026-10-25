@@ -36,7 +36,6 @@ extern void sub_27631(void);
 extern unsigned char sub_11D4B(void);
 extern void sub_2607C(int);
 extern void sub_260A4(void);
-extern void sub_162E8(void);
 extern void sub_261C9(FLGPTN ptn);
 extern void sub_1D1A9(FLGPTN ptn);
 extern void sub_2D2A8(FLGPTN ptn);
@@ -77,7 +76,7 @@ void task2(VP_INT exinf)
 			}
 			if (ptn & 0x2000) {
 				clr_flg(3, ~(ptn & 0x2000));
-				sub_162E8();
+				commandRequestRun();
 			}
 			if (ptn & 0x0e1e)
 				sub_261C9(ptn);
