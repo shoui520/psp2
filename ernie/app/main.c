@@ -10,7 +10,7 @@
 #include "keepram.h"
 
 extern void sub_27651(void);
-extern void sub_10850(void);
+extern void tickStart(void);
 extern void sub_10FC9(void);
 extern void sub_16E7D(void);
 extern void sub_1488D(void);
@@ -40,14 +40,16 @@ void hdwinit(void)
 	XTSTOP = 0;
 	sub_27651();
 	intInit();
-	sub_10850();
+	tickStart();
 	sub_10FC9();
 	sub_16E7D();
+	return;
 }
 
 void main(void)
 {
 	sub_1488D();
+	return;
 }
 
 /* every interrupt masked and at the lowest priority, the UARTs' receptions at level 2 */

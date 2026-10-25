@@ -214,7 +214,7 @@ def main():
 	ap = argparse.ArgumentParser(description='CA78K0R without its linker')
 	ap.add_argument('command', choices=('cc', 'as'))
 	ap.add_argument('source')
-	ap.add_argument('-c', dest='chip', required=True, help='chip (f1176c8)')
+	ap.add_argument('-c', dest='chip', required=True, help='chip (f1030a0)')
 	ap.add_argument('-o', dest='out', required=True)
 	ap.add_argument('-I', dest='includes', action='append', default=[])
 	ap.add_argument('-D', dest='defines', action='append', default=[])
