@@ -25,7 +25,7 @@
 	PUBLIC	_serviceExit, _taskStart, _kernelUnused
 	PUBLIC	_traceServiceEnter, _traceServiceExit, _traceInterruptEnter
 	PUBLIC	_traceInterruptExit, _traceTaskStart, _traceDispatch
-	EXTRN	_kernelInitHook, _standby
+	EXTRN	_kernelInitHook, _standby, _kernelConfig
 	EXTRN	@SEGDE, @RTARG0, @RTARG2, @RTARG4, @RTARG6
 
 ; the configuration (page 0)
@@ -1204,8 +1204,9 @@ _kernelStart:
 	MOV	ES, #0FH
 	BR	$!_dispatch
 
-_kernelUnused:
-	DB	30H, 0FEH, 0D5H, 00H	; nothing reads these
+_kernelUnused:				; never reached: the configuration kept linked
+	MOVW	AX, #LOWW(_kernelConfig)
+	NOP
 
 ; the trace hooks in kHooks
 _hookInit:
