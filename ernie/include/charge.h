@@ -101,6 +101,24 @@ struct ChargeLevel {
 	unsigned int	volt;
 };
 
+#ifdef ERNIE_UPDATER
+/* the updater's, an older revision: no alarms and no timer 0x1f */
+struct Charge {
+	unsigned int	flags;			/* as the application's */
+	unsigned int	flagsRead;
+	unsigned int	flagsLast;
+	unsigned int	batteryRemainCap;
+	unsigned int	batteryVolt;
+	unsigned int	batteryTemp;
+	unsigned int	batteryBicTemp;
+	unsigned int	batteryLifePercent;
+	unsigned int	batteryTempC;
+	unsigned int	batteryBicTempC;
+	unsigned int	acDelay;		/* timer 0x18's, the update's period */
+	unsigned int	tempTicks;		/* not used by the updater */
+	unsigned int	checkTicks;
+};
+#else
 struct Charge {
 	unsigned char	timer1fPending;		/* cleared when timer 0x1f runs */
 	unsigned int	flags;			/* the battery's levels (chargeReadFlags), each
@@ -120,9 +138,32 @@ struct Charge {
 	union ChargeAlarmsOn alarmsOn;
 	struct ChargeAlarm alarms[4];
 };
+#endif
+
+/* the power status (host command 0x0800), from the Cookie's status registers (chargeSetPowerStatus) */
+union PowerStatus {
+	unsigned int	word;
+	unsigned char	byte[2];
+	struct {
+		unsigned char	reserved0:1;
+		unsigned char	status1:1;	/* the Cookie's status 1's bits 12-15 */
+		unsigned char	status2:1;
+		unsigned char	status3:2;
+		unsigned char	ac:1;		/* its bits 0-2; with no Cookie 0x60 */
+		unsigned char	battery:1;
+		unsigned char	charging:1;
+		unsigned char	usb:2;		/* the USB status's bits 2-3 (0x089a) */
+		unsigned char	reserved1:2;
+		unsigned char	cookieLock0:1;	/* either set: the Cookie's register 3 keeps */
+		unsigned char	cookieLock1:1;	/* its bits (powerCookieClear, cookieCtrlChargeAc) */
+		unsigned char	level:2;	/* the Cookie's status 1's bits 3-4 */
+	} bits;
+};
+
 
 extern __sreg union CookieStatus1 cookieStatus1;
 extern __sreg union CookieStatus2 cookieStatus2;
+extern __sreg union PowerStatus powerStatus;
 extern __sreg unsigned char chargeFactors;	/* the charge's sleep factors: 0 status 3 (the AC or
 						   the USB status's bit 1), 1 status 4, 2-5 16-19,
 						   6 22, 7 23 */
@@ -151,13 +192,21 @@ extern void chargeCookieTimer(void);
 extern void chargeTimer1f(void);
 extern void chargeUpdateSoon(void);
 extern int chargeSetCurrent(void);
+#ifdef ERNIE_UPDATER
+extern unsigned char chargeMayStart(void);
+#else
 extern int chargeMayStart(void);
+#endif
 extern int chargeAlarm0On(void);
 extern char chargeBatteryLevel9(void);
 extern char chargeBatteryLevel0(void);
 extern char chargeBatteryLevel1(void);
 extern void chargeSetBattery(void);
+#ifdef ERNIE_UPDATER
+extern unsigned char chargeBbmcChanged(void);
+#else
 extern int chargeBbmcChanged(void);
+#endif
 extern void chargeResetBattery(void);
 extern void chargeTimerStart(unsigned int ticks);
 extern void chargeTimerStop(void);

@@ -29,7 +29,7 @@ struct StateEvent {
 		unsigned int	state;		/* STATE_EVENT_ENTER's: powerState when sent */
 		unsigned char	data;		/* transition 0x0b's, cleared by the off state */
 	} arg;
-	unsigned char	reserved[4];
+	unsigned long	wakeMask;		/* the updater's transitions: stateGetWakeMask's */
 };
 
 #define STATE_EVENT_ENTER	1	/* the state's enter, and its events */
