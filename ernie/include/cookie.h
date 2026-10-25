@@ -6,8 +6,12 @@
 #ifndef ERNIE_COOKIE_H
 #define ERNIE_COOKIE_H
 
-/* a register's number: from 0xa0 where the settings say so */
+/* a register's number: from 0xa0 where the settings say so (the updater's always from 0) */
+#ifdef ERNIE_UPDATER
+#define COOKIE_REG(reg)		(reg)
+#else
 #define COOKIE_REG(reg)		((unsigned char)(configGet()->cookieRegHigh ? (reg) + 0xa0 : (reg)))
+#endif
 
 /* a register as read and written: byte[0] goes first on the bus */
 union CookieReg {
