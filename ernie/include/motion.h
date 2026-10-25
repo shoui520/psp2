@@ -17,6 +17,7 @@ union MotionWord {
    0x0480 answers its two words */
 struct RecordFEBBC {
 	unsigned char	flag;
+	unsigned char	block;		/* the frame being received, stream 0x0400's next */
 	union MotionWord value[2];
 };
 

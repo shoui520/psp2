@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include "ernie.h"
+#include "csi01.h"
 #include "host.h"
 #include "input.h"
 #include "inputreq.h"
@@ -65,7 +66,6 @@ struct InputRequests {
 	} controlsAnswer;
 };
 
-extern unsigned char csi01GetState(void);
 extern unsigned char sub_11D1B(void);
 extern void sub_1C1BA(void);
 extern void sub_1C1F7(void);
@@ -407,7 +407,7 @@ static void motionRequestRun(void)
 	if (inputRequests.motionFlags & MOTION_TRANSFER) {
 		for (;;) {
 			dly_tsk(1);
-			if (csi01GetState() == 2) {
+			if (csi01GetState() == CSI01_OPEN) {
 				inputRequests.motionFlags &= ~MOTION_TRANSFER;
 				if (inputRequests.motionFlags & MOTION_ANSWER) {
 					inputRequests.motionFlags &= ~(MOTION_PENDING | MOTION_ANSWER);
