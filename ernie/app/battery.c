@@ -50,7 +50,7 @@ unsigned char batteryWrite(unsigned char *data, unsigned char length)
 	if (ercd == E_OK) {
 		if (ptn & 0x10)
 			clr_flg(4, ~0x10);
-	} else if (ercd != E_TMOUT) {
+	} else if (ercd == E_TMOUT) {
 		status = 0x10;
 	}
 	return status;
@@ -79,7 +79,7 @@ unsigned char batteryRead(unsigned char *reg, unsigned char *data, unsigned char
 	if (ercd == E_OK) {
 		if (ptn & 0x10)
 			clr_flg(4, ~0x10);
-	} else if (ercd != E_TMOUT) {
+	} else if (ercd == E_TMOUT) {
 		status = 0x10;
 	}
 	return status;
