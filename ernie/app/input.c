@@ -12,6 +12,7 @@
 
 #include "ernie.h"
 #include "chip.h"
+#include "config.h"
 #include "input.h"
 #include "kernel.h"
 #include "timer.h"
@@ -96,15 +97,6 @@ struct ButtonPress {
 	unsigned int	state;		/* the system state the presses were counted in */
 };
 
-/* PLACEHOLDER: the 1 KiB block sub_2C658 returns (its owner not written yet): only the
-   flag read here */
-struct ConfigBlock {
-	unsigned char	before[0xcd];
-	unsigned char	pressAnyState:1;	/* a button's presses go on being counted when the
-						   system state changes */
-	unsigned char	reserved:7;
-};
-
 /* PLACEHOLDER: the word sub_2AB39 returns (its owner not written yet): a 7-bit mode
    (sub_2457F compares it with 0x0f) and a flag that keeps a button's presses counted across
    a state change */
@@ -119,7 +111,6 @@ extern unsigned int sub_2AB46(void);
 extern unsigned char sub_2AB49(int);
 extern struct SystemMode *sub_2AB39(void);
 extern unsigned long sub_2AA79(void);
-extern struct ConfigBlock *sub_2C658(void);
 extern unsigned char sub_2C15B(unsigned char offset, int size, unsigned char *buf);
 extern void sub_2C342(ID flgid, FLGPTN setptn);
 extern void sub_2C394(int, int);
