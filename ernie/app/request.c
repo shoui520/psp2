@@ -6,6 +6,7 @@
 
 #include "bbmc.h"
 #include "command.h"
+#include "configreq.h"
 #include "host.h"
 #include "inputreq.h"
 #include "nvsreq.h"
@@ -13,7 +14,6 @@
 #include "updatereq.h"
 
 extern struct HostRequest hostRequestFFC3A;
-extern struct HostRequest hostRequestFFBE0;
 
 struct HostRequest * const hostRequests[] = {
 	&commandRequest,
@@ -26,7 +26,7 @@ struct HostRequest * const hostRequests[] = {
 	&updaterRequest,
 	&powerRequest,
 	&batteryRequest,
-	&hostRequestFFBE0,
+	&configRequest,
 };
 
 #define HOST_REQUESTS		(sizeof(hostRequests) / sizeof(hostRequests[0]))

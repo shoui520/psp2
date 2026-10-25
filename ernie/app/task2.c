@@ -6,6 +6,7 @@
 #include "ernie.h"
 #include "board.h"
 #include "command.h"
+#include "configreq.h"
 #include "kernel.h"
 #include "nvs.h"
 #include "nvsreq.h"
@@ -23,12 +24,10 @@
 
 extern unsigned char sub_10D7A(void);
 extern void sub_2E8C6(void);
-extern void sub_2D254(void);
 extern void sub_2D67C(void);
 extern unsigned char sub_10CB3(void);
 extern unsigned char sub_11D1B(void);
 extern unsigned char sub_11D4B(void);
-extern void sub_2D2A8(FLGPTN ptn);
 extern void sub_2D724(void);
 
 void sub_10B67(FLGPTN ptn);
@@ -73,7 +72,7 @@ void task2(VP_INT exinf)
 			}
 			if (ptn & 0x4000) {
 				clr_flg(3, ~0x4000);
-				sub_2D2A8(ptn);
+				configRequestEvent(ptn);
 			}
 			if (ptn & 0x0040) {
 				clr_flg(3, ~(ptn & 0x0040));
@@ -190,7 +189,7 @@ unsigned char sub_10D08(void)
 	else
 		boardMultiCnStop();
 	updaterRequestInit();
-	sub_2D254();
+	configRequestInit();
 	sub_2D67C();
 	if (nvsRead(0x2d, 1, &value, 1) == 0)
 		setDlFlags(value);

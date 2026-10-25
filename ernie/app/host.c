@@ -21,6 +21,7 @@
 #include "chip.h"
 #include "command.h"
 #include "config.h"
+#include "configreq.h"
 #include "csi.h"
 #include "handshake.h"
 #include "host.h"
@@ -58,8 +59,6 @@ extern void sub_1706C(void);
 extern void sub_170DA(void);
 extern unsigned char sub_2D685(void);
 
-/* the commands' handlers and streams (their files not written yet) */
-extern unsigned char sub_2D289(unsigned char *out, unsigned char *length);
 
 struct HostLink hostLink;
 
@@ -112,7 +111,7 @@ static const struct HostCommand hostCommands[] = {
 	{ 0x0901, hostCommandBatteryVolt, 0 },
 	{ 0x0902, hostCommandBatteryLifePercent, 0 },
 	{ 0x1100, hostCommandErnieDlVersion, 0 },
-	{ 0x1300, sub_2D289, 0 },
+	{ 0x1300, hostCommandConfigVersions, 0 },
 };
 
 static const struct HostCommand hostBaseCommands[] = {
@@ -125,7 +124,7 @@ static const struct HostCommand hostBaseCommands[] = {
 	{ 0x0013, hostCommand0013, 0 },
 	{ 0x1100, hostCommandErnieDlVersion, 0 },
 	{ 0x1101, hostCommandUpdaterProgress, 0 },
-	{ 0x1300, sub_2D289, 0 },
+	{ 0x1300, hostCommandConfigVersions, 0 },
 };
 
 static const char hostRevision[] = "$Rev: 2579 $";
