@@ -112,8 +112,29 @@ extern int sub_4E21(void);
 extern void sub_4E23(void);
 extern void sub_4E24(void);
 extern int sub_4E25(void);
-extern void sub_6BFE(void);
-extern void sub_6CFF(void);
+
+/* power.c */
+extern unsigned char powerCleared[2];
+extern unsigned char levelTrim(unsigned char level, unsigned char trim);
+extern void powerInit(void);
+extern void powerOn(void);
+extern void powerResume(void);
+extern void powerOff(void);
+extern void powerSuspend(void);
+extern void powerWaitStop(void);
+extern void powerDelayMs(unsigned int ms);
+extern void keyPortsEnable(void);
+extern void keyPortsDisable(void);
+
+/* powerwait.c: the waits polled */
+extern unsigned int powerTimers;
+extern void powerWaitInit(void);
+extern void powerWaitMs(unsigned int ms);
+extern void powerSleep(unsigned int ms);
+extern void powerSleep2(unsigned int ms);
+extern void powerWaitInput(unsigned char edges, unsigned int timeout);
+extern void powerWaitTimers(unsigned int bits);
+extern void powerStartTimer(unsigned int bits, unsigned char id, unsigned int ticks);
 
 extern unsigned char resetFlags;
 extern void rtcInit(void);
@@ -126,8 +147,6 @@ extern void sub_3B1AE(void);
 extern void sub_3598A(void);
 extern void sub_3B604(unsigned int);
 extern int sub_3B718(void);
-extern void sub_6B98(void);
-extern void sub_6BD0(void);
 extern void sub_AD21(void);
 extern void sub_A026(void);
 extern void sub_3AC35(void);
@@ -141,8 +160,6 @@ extern void sub_3AF74(void);
 extern void sub_A1E5(void);
 extern void sub_A219(void);
 extern void sub_A007(void);
-extern void sub_6B2B(void);
-extern void sub_6B42(void);
 extern void sub_94A1(int);
 extern void sub_A065(int);
 extern void sub_723E(void);

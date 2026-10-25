@@ -140,7 +140,7 @@ unsigned char updModeChange(unsigned char mode)
 				sub_3B1AE();
 				watchdogSetup();
 				sub_3598A();
-				sub_6B98();
+				powerResume();
 				hostOpen();
 				refused = 0;
 			}
@@ -176,14 +176,14 @@ unsigned char updModeChange(unsigned char mode)
 			refused = 0;
 			break;
 		case 2:
-			sub_6BD0();
+			powerOff();
 			boardMultiCnOutputOff();
 			sub_3B718();
 			refused = 0;
 			break;
 		case 1:
 			hostClose();
-			sub_6BD0();
+			powerOff();
 			boardMultiCnOutputOff();
 			sub_3B718();
 			refused = 0;
@@ -194,7 +194,7 @@ unsigned char updModeChange(unsigned char mode)
 				break;
 			}
 			hostClose();
-			sub_6BD0();
+			powerOff();
 			refused = 0;
 			setResetCause(0x10);
 			resetSystem();
@@ -205,7 +205,7 @@ unsigned char updModeChange(unsigned char mode)
 				break;
 			}
 			hostClose();
-			sub_6BD0();
+			powerOff();
 			refused = 0;
 			setResetCause(0x11);
 			resetSystem();
@@ -216,14 +216,14 @@ unsigned char updModeChange(unsigned char mode)
 		switch (mode) {
 		case 5:
 			hostClose();
-			sub_6BD0();
+			powerOff();
 			refused = 0;
 			setResetCause(0x10);
 			resetSystem();
 			break;
 		case 6:
 			hostClose();
-			sub_6BD0();
+			powerOff();
 			refused = 0;
 			setResetCause(0x11);
 			resetSystem();
@@ -565,8 +565,8 @@ void mainLoop(void)
 	sub_A219();
 	updEventSet(4);
 	sub_A007();
-	sub_6B2B();
-	sub_6B42();
+	powerInit();
+	powerOn();
 	EI();
 	for (;;) {
 		switch (updModeGet()) {

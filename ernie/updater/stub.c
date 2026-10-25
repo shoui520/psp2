@@ -148,7 +148,7 @@ void sub_4DC5(unsigned int ms)
 	unsigned int count;
 	unsigned int step;
 
-	sub_6CFF();
+	powerWaitInit();
 	while (ms != 0) {
 		step = ms < 500 ? ms : 500;
 		count = (unsigned int)((unsigned long)step * 1000 >> 5) << 2;
@@ -157,7 +157,7 @@ void sub_4DC5(unsigned int ms)
 		TDR03 = count;
 		while (!TMIF03)
 			NOP();
-		sub_6BFE();
+		powerWaitStop();
 		ms -= step;
 	}
 }
