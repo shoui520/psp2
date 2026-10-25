@@ -25,7 +25,10 @@ union PowerRequest {
 struct StateEvent {
 	unsigned char	type;			/* STATE_EVENT_* */
 	unsigned char	transition;		/* STATE_EVENT_TRANSITION's */
-	unsigned int	state;			/* STATE_EVENT_ENTER's: powerState when sent */
+	union {
+		unsigned int	state;		/* STATE_EVENT_ENTER's: powerState when sent */
+		unsigned char	data;		/* transition 0x0b's, cleared by the off state */
+	} arg;
 	unsigned char	reserved[4];
 };
 
@@ -38,12 +41,24 @@ struct StateMsg {
 	struct StateEvent event;
 };
 
+/* the states: powerState, bit 15 set while the power sequence of the state runs */
+#define STATE_START		0x0001
+#define STATE_ON		0x0002
+#define STATE_OFF		0x0004
+#define STATE_SUSPEND		0x0008
+#define STATE_SHUTDOWN		0x0010
+#define STATE_RESUME		0x0020
+#define STATE_RESET		0x0040
+#define STATE_UPDATE_ANSWER	0x0200
+#define STATE_UPDATE		0x0400
+#define STATE_CUT		0x0800
+
 /* a state: its handlers, and the events that end it */
 struct StateEntry {
 	unsigned int	state;
 	unsigned int	events;
-	void		(*enter)(void);
-	void		(*handle)(struct StateEvent *event);
+	int		(*enter)(void);
+	int		(*handle)(struct StateEvent *event);
 };
 
 extern __sreg unsigned char statePhase;	/* the phase: 1 to run, 2 done, 3 failed */

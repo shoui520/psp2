@@ -12,11 +12,11 @@ struct ConfigBlock {
 	struct AnalogCalibration analogCalibration;	/* the sticks' default calibration */
 	unsigned char	analogScale0;		/* set 0's margin, in 1/1000 of the range */
 	unsigned char	analogScale1;		/* set 1's */
-	unsigned char	wakeOff22:1;		/* set: wake factor 22 off (stateInit) */
+	unsigned char	wakeUnmask22:1;		/* set: wake factor 22 unmasked at the start (stateInit) */
 	unsigned char	batteryNoRetry:1;	/* set: the battery is read once at the power-on
 						   (powerSeqOn) */
 	unsigned char	reserved20:2;
-	unsigned char	wakeOff15:1;		/* set: wake factor 15 off */
+	unsigned char	wakeUnmask15:1;		/* set: wake factor 15 unmasked */
 	unsigned char	reserved26:3;
 	unsigned char	reserved21;
 	unsigned char	bbmcDetect:1;		/* set: P3.2 low at the start means a 3G modem
@@ -54,9 +54,12 @@ struct ConfigBlock {
 	unsigned char	reserved22;
 	unsigned char	voltageTrim;		/* passed with a regulator's level (0x088e) */
 	unsigned char	reserved7[0x108 - 0xf4];
-	unsigned long	wakeMaskOff;		/* the wake factors off, and on, at the start */
-	unsigned long	wakeMaskOn;		/* (stateInit) */
-	unsigned char	reserved27[0x12c - 0x110];
+	unsigned long	wakeMaskOff;		/* the wake factors unmasked, and masked, at the */
+	unsigned long	wakeMaskOn;		/* start and in the off state (stateInit,
+						   stateOffHandle) */
+	unsigned long	suspendWakeMaskOff;	/* and in the suspend state */
+	unsigned long	suspendWakeMaskOn;
+	unsigned char	reserved27[0x12c - 0x118];
 	struct ChargeAlarmLimit chargeAlarmLimits[4];	/* the battery temperature's alarms */
 	unsigned int	chargeAlarm0Delay;	/* timer 0x1d's, when alarm 0 comes on */
 	unsigned int	chargeTempInterval;	/* the ticks between two chargeAlarmUpdate */
@@ -87,7 +90,8 @@ struct ConfigBlock {
 	unsigned char	reserved16;
 	unsigned int	hardwareInfoSelect;	/* power-off's hardware info flags: 1 sets 0x80,
 						   3 sets 0x40, others clear both */
-	unsigned char	reserved11:2;
+	unsigned char	offWakeUnmask22:1;	/* set: wake factor 22 unmasked in the off state */
+	unsigned char	reserved11:1;
 	unsigned char	indicatorOn0:1;		/* sub_2DF86's indicator on at a reset, and while
 						   sub_126C9 holds */
 	unsigned char	chargeHold:1;		/* set: no transition 0x0f in chargeUpdate */
@@ -105,6 +109,11 @@ struct ConfigBlock {
 	unsigned int	hostBusyLimit;		/* the host link's busy time before a pause */
 	unsigned int	hostIdleLimit;		/* the idle time that clears the busy time */
 	unsigned int	hostPause;		/* the pause, in ticks */
+	unsigned char	reserved28[0x1c2 - 0x1bc];
+	unsigned int	offTransitionBlock;	/* not 0: no transition 0x18 (offTransition18) */
+	unsigned char	offTransition18:1;	/* set: the off state entered by transition 0x31
+						   runs transition 0x18 */
+	unsigned char	reserved29:7;
 };
 
 extern struct ConfigBlock *sub_2C658(void);

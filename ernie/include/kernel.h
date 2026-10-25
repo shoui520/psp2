@@ -8,6 +8,7 @@
 
 typedef signed int	ER;
 typedef signed int	ID;
+typedef signed int	PRI;
 typedef unsigned int	MODE;
 typedef unsigned int	FLGPTN;
 typedef signed long	TMO;
@@ -29,7 +30,11 @@ typedef struct t_msg {
 #define TMO_POL		0
 #define TMO_FEVR	(-1)
 
+#define TSK_SELF	0
+
+extern ER	act_tsk(ID tskid);
 extern void	ext_tsk(void);
+extern ER	chg_pri(ID tskid, PRI tskpri);
 extern ER	dly_tsk(RELTIM dlytim);
 
 extern ER	set_flg(ID flgid, FLGPTN setptn);
