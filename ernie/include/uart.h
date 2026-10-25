@@ -29,6 +29,9 @@ struct UartPort {
 
 extern struct UartPort uart4;
 
+#ifdef ERNIE_UPDATER
+extern int uartInit(void);
+#endif
 extern void uartStopTx(unsigned char port);
 extern void uartStopRx(unsigned char port);
 extern void uartReset(unsigned char port);
