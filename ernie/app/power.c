@@ -227,7 +227,7 @@ unsigned char powerOn(void)
 	powerPendingClear(2);
 	inputInit();
 	powerPendingClear(3);
-	sub_21E89();
+	powerJobPostOn();
 	powerWait(0x19);
 	powerPendingClear(5);
 	powerPendingClear(4);
@@ -260,7 +260,7 @@ unsigned char powerResume(struct PowerRequest *request)
 	sub_2C394(6, 0x80);
 	powerPendingClear(6);
 	if (request->mode != 0x54) {
-		sub_21E9A();
+		powerJobPostResume();
 		powerWait(0x19);
 	}
 	powerPendingClear(5);
@@ -343,7 +343,7 @@ unsigned char powerOff(void)
 	sub_2C2ED(3, 0x1000);
 	powerWait(0x19);
 	powerPendingClear(2);
-	sub_21EAC();
+	powerJobPostOff();
 	powerWait(0x8ca);
 	powerPendingClear(5);
 	sub_2C394(6, 0x80);
@@ -351,7 +351,7 @@ unsigned char powerOff(void)
 	powerPendingClear(6);
 	PER0.2 = 0;
 	if (saddr_FFE70 == 0x56)
-		sub_21EF4();
+		powerJobPostOffEnd();
 	if (powerPendingGet() != 0)
 		result = 1;
 	return result;
@@ -383,7 +383,7 @@ unsigned char powerSuspend(void)
 	sub_2C2ED(3, 0x1000);
 	powerWait(0x19);
 	powerPendingClear(2);
-	sub_21EBE();
+	powerJobPostSuspend();
 	powerWait(0xfa);
 	powerPendingClear(5);
 	sub_2C394(6, 0x80);
@@ -420,7 +420,7 @@ unsigned char powerShutdown(void)
 	sub_2C2ED(3, 0x1000);
 	powerWait(0x19);
 	powerPendingClear(2);
-	sub_21ED0();
+	powerJobPostShutdown();
 	powerWait(0x8ca);
 	powerPendingClear(5);
 	powerPendingClear(6);
@@ -436,7 +436,7 @@ unsigned char powerCut(void)
 
 	result = 0;
 	clockOutputStop();
-	sub_21EE2();
+	powerJobPostCut();
 	powerWait(0x19);
 	powerPendingClear(5);
 	if (sub_11D57() == 1)
@@ -487,7 +487,7 @@ unsigned char powerReset(void)
 	P5.7 = 0;
 	powerPendingClear(4);
 	powerPendingClear(1);
-	sub_21F06();
+	powerJobPostReset();
 	powerWait(0x19);
 	powerPendingClear(5);
 	powerPendingClear(6);
@@ -521,7 +521,7 @@ unsigned char powerUpdate(void)
 	powerPendingReset();
 	powerPendingClear(3);
 	powerPendingClear(1);
-	sub_21F18();
+	powerJobPostUpdate();
 	powerWait(0xfa);
 	powerPendingClear(5);
 	powerPendingClear(6);

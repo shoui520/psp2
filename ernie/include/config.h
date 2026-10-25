@@ -38,7 +38,11 @@ struct ConfigBlock {
 	unsigned char	reserved5[0x18c - 0x185];
 	unsigned char	chargeLedHost;		/* the host may hand the charge LED over (0x089e
 						   mode 2) */
-	unsigned char	reserved8[0x1a8 - 0x18d];
+	unsigned char	reserved8[0x1a6 - 0x18d];
+	unsigned char	suspendCheck:1;		/* set: a suspend runs sub_2818A also when
+						   sub_267C2 holds */
+	unsigned char	reserved15:7;
+	unsigned char	reserved16;
 	unsigned int	hardwareInfoSelect;	/* power-off's hardware info flags: 1 sets 0x80,
 						   3 sets 0x40, others clear both */
 	unsigned char	reserved11:2;

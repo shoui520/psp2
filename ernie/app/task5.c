@@ -7,17 +7,15 @@
 #include "ernie.h"
 #include "config.h"
 #include "kernel.h"
+#include "powerjob.h"
 #include "powerreq.h"
 #include "task5.h"
 
-extern unsigned char byteFF2EE;
-extern unsigned char byteFF2EF;
 extern unsigned char elmoVersion[2];
 
 unsigned int wordFF24E;
 
 extern void sub_2A5EC(void);
-extern void sub_244DD(void);
 extern void sub_2A593(void);
 extern void sub_28F92(void);
 extern void sub_2E499(void);
@@ -48,8 +46,8 @@ void task5(VP_INT exinf)
 		if (ercd == E_OK) {
 			if (ptn & 0x0002) {
 				clr_flg(4, ~0x0002);
-				byteFF2EF = 0;
-				sub_244DD();
+				powerJobFlag = 0;
+				powerJob();
 			}
 			if (ptn & 0x0080) {
 				clr_flg(4, ~0x0080);
@@ -103,65 +101,65 @@ void task5(VP_INT exinf)
 	}
 }
 
-void sub_21E89(void)
+void powerJobPostOn(void)
 {
-	byteFF2EE = 1;
+	powerJobId = POWER_JOB_ON;
 	sub_2C315(4, 0x0002);
 	return;
 }
 
-void sub_21E9A(void)
+void powerJobPostResume(void)
 {
-	byteFF2EE = 2;
+	powerJobId = POWER_JOB_RESUME;
 	sub_2C315(4, 0x0002);
 	return;
 }
 
-void sub_21EAC(void)
+void powerJobPostOff(void)
 {
-	byteFF2EE = 3;
+	powerJobId = POWER_JOB_OFF;
 	sub_2C315(4, 0x0002);
 	return;
 }
 
-void sub_21EBE(void)
+void powerJobPostSuspend(void)
 {
-	byteFF2EE = 4;
+	powerJobId = POWER_JOB_SUSPEND;
 	sub_2C315(4, 0x0002);
 	return;
 }
 
-void sub_21ED0(void)
+void powerJobPostShutdown(void)
 {
-	byteFF2EE = 5;
+	powerJobId = POWER_JOB_SHUTDOWN;
 	sub_2C315(4, 0x0002);
 	return;
 }
 
-void sub_21EE2(void)
+void powerJobPostCut(void)
 {
-	byteFF2EE = 6;
+	powerJobId = POWER_JOB_CUT;
 	sub_2C315(4, 0x0002);
 	return;
 }
 
-void sub_21EF4(void)
+void powerJobPostOffEnd(void)
 {
-	byteFF2EE = 7;
+	powerJobId = POWER_JOB_OFF_END;
 	sub_2C315(4, 0x0002);
 	return;
 }
 
-void sub_21F06(void)
+void powerJobPostReset(void)
 {
-	byteFF2EE = 9;
+	powerJobId = POWER_JOB_RESET;
 	sub_2C315(4, 0x0002);
 	return;
 }
 
-void sub_21F18(void)
+void powerJobPostUpdate(void)
 {
-	byteFF2EE = 8;
+	powerJobId = POWER_JOB_UPDATE;
 	sub_2C315(4, 0x0002);
 	return;
 }
