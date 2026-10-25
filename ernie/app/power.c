@@ -65,7 +65,7 @@ unsigned char powerCut(void);
 unsigned char powerReset(void);
 unsigned char powerUpdateAnswer(void);
 unsigned char powerUpdate(void);
-void sub_24076(void);
+void powerParamLoad(void);
 
 /* runs the sequence powerState asks for, and ends its phase */
 void powerSequence(void)
@@ -234,7 +234,7 @@ unsigned char powerResume(union PowerRequest *request)
 	}
 	powerPendingReset();
 	if (configTakeChanged() != 0)
-		sub_24076();
+		powerParamLoad();
 	sleepFactorSet20(0);
 	stateWakeupFactor.word = request->word;
 	sub_11572();
@@ -308,7 +308,7 @@ unsigned char powerOff(void)
 		break;
 	}
 	if (configTakeChanged() != 0)
-		sub_24076();
+		powerParamLoad();
 	sub_115F0();
 	powerPendingClear(3);
 	hostIntDisable();
@@ -518,7 +518,7 @@ unsigned char powerUpdate(void)
 	return result;
 }
 
-void sub_24076(void)
+void powerParamLoad(void)
 {
 	paramLoad();
 }

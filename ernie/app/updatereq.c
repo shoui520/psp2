@@ -33,12 +33,12 @@
 
 
 /* the flash self-programming library (0xf2b2-0xf6f5, not written yet) */
-extern void sub_F6EE(void);
-extern unsigned char sub_F365(unsigned char *descriptor);
-extern unsigned char sub_F2F0(void);
-extern unsigned char sub_F43F(unsigned char *flags);
-extern unsigned char sub_F4C6(void);
-extern void sub_F6F2(void);
+extern void FSL_Open(void);
+extern unsigned char FSL_Init(unsigned char *descriptor);
+extern unsigned char FSL_ModeCheck(void);
+extern unsigned char FSL_GetSecurityFlags(unsigned char *flags);
+extern unsigned char fslSetSecurityFlag(void);
+extern void FSL_Close(void);
 extern unsigned char byteFE06C[];		/* the library's descriptor */
 
 /* the NVS byte of the downloader's flags (version.c's setDlFlags) */
@@ -202,17 +202,17 @@ static unsigned char updaterFlashPrepare(void)
 	unsigned char result;
 	unsigned int flags;
 
-	sub_F6EE();
-	result = sub_F365(byteFE06C);
+	FSL_Open();
+	result = FSL_Init(byteFE06C);
 	if (result == 0) {
-		result = sub_F2F0();
+		result = FSL_ModeCheck();
 		if (result == 0) {
-			result = sub_F43F((unsigned char *)&flags);
+			result = FSL_GetSecurityFlags((unsigned char *)&flags);
 			if (result == 0 || (flags & 0x0e) == 0x0e)
-				result = sub_F4C6();
+				result = fslSetSecurityFlag();
 		}
 	}
-	sub_F6F2();
+	FSL_Close();
 	return result;
 }
 

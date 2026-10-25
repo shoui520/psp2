@@ -60,14 +60,14 @@ struct ConfigRecords {
 };
 
 /* the flash library (the updater's, at 0xf2b2-0xf6f2) */
-extern void sub_F6EE(void);
-extern unsigned char sub_F365(unsigned char *descriptor);
-extern unsigned char sub_F2F0(void);
-extern unsigned char sub_F2B2(unsigned int block);
-extern unsigned char loc_F2B6(unsigned int block);
-extern unsigned char loc_F2BA(unsigned int block);
-extern unsigned char sub_F474(unsigned long address, unsigned char words);
-extern void sub_F6F2(void);
+extern void FSL_Open(void);
+extern unsigned char FSL_Init(unsigned char *descriptor);
+extern unsigned char FSL_ModeCheck(void);
+extern unsigned char FSL_BlankCheck(unsigned int block);
+extern unsigned char FSL_Erase(unsigned int block);
+extern unsigned char FSL_IVerify(unsigned int block);
+extern unsigned char FSL_Write(unsigned long address, unsigned char words);
+extern void FSL_Close(void);
 extern unsigned char byteFE06C[];		/* the library's descriptor and write buffer */
 
 /* the banks, in the updater's part of the flash, and the defaults of this build's layout:
@@ -435,20 +435,20 @@ unsigned char configFlashWrite(unsigned long address)
 	unsigned char result;
 
 	tries = 3;
-	sub_F6EE();
-	result = sub_F365(byteFE06C);
+	FSL_Open();
+	result = FSL_Init(byteFE06C);
 	while (result == 0x1f)
-		result = sub_F365(byteFE06C);
+		result = FSL_Init(byteFE06C);
 	if (result == 0) {
 		do {
-			result = sub_F2F0();
+			result = FSL_ModeCheck();
 			if (result == 0) {
 				do
-					result = sub_F2B2((unsigned int)(address >> 10));
+					result = FSL_BlankCheck((unsigned int)(address >> 10));
 				while (result == 0x1f);
 				if (result == 0x1b) {
 					do
-						result = loc_F2B6((unsigned int)(address >> 10));
+						result = FSL_Erase((unsigned int)(address >> 10));
 					while (result == 0x1f);
 				}
 			}
@@ -456,7 +456,7 @@ unsigned char configFlashWrite(unsigned long address)
 				for (i = 0; i < 0x100; i += 0x40) {
 					memcpy(byteFE06C, (unsigned char *)&configBuffer + i * 4, 0x100);
 					do
-						result = sub_F474(address + i * 4, 0x40);
+						result = FSL_Write(address + i * 4, 0x40);
 					while (result == 0x1f);
 					if (result != 0)
 						break;
@@ -464,12 +464,12 @@ unsigned char configFlashWrite(unsigned long address)
 			}
 			if (result == 0) {
 				do
-					result = loc_F2BA((unsigned int)(address >> 10));
+					result = FSL_IVerify((unsigned int)(address >> 10));
 				while (result == 0x1f);
 			}
 		} while (tries-- & (result != 0));
 	}
-	sub_F6F2();
+	FSL_Close();
 	return result;
 }
 

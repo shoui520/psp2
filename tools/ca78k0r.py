@@ -190,7 +190,9 @@ class Listing:
 				no, adrs, obj, _, source = m.groups()
 				segment = adrs == '-----'
 				address = int(adrs, 16) if adrs.strip() and not segment else None
-				st = Statement(int(no), address, bytes.fromhex(obj.strip()), source, segment)
+				# an EQU shows its value, (VALUE), where the bytes go
+				data = b'' if obj.lstrip().startswith('(') else bytes.fromhex(obj.strip())
+				st = Statement(int(no), address, data, source, segment)
 				self.statements.append(st)
 				label = LABEL.match(source)
 				if label and address is not None:

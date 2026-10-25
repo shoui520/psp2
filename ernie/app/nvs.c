@@ -74,15 +74,15 @@ static unsigned char nvsRecord[NVS_RECORD_SIZE];
 static unsigned char nvsBuffer[2 * NVS_RECORD_SIZE];
 
 /* the flash library (the updater's, at 0xf2b2-0xf6f2) */
-extern void sub_F6EE(void);
-extern unsigned char sub_F365(unsigned char *descriptor);
-extern unsigned char loc_F369(unsigned char *descriptor);
-extern unsigned char sub_F2F0(void);
-extern unsigned char sub_F2B2(unsigned char block);
-extern unsigned char loc_F2B6(unsigned char block);
-extern unsigned char loc_F2BA(unsigned int block);
-extern unsigned char loc_F479(unsigned long address, unsigned char words);
-extern void sub_F6F2(void);
+extern void FSL_Open(void);
+extern unsigned char FSL_Init(unsigned char *descriptor);
+extern unsigned char FSL_Init_cont(unsigned char *descriptor);
+extern unsigned char FSL_ModeCheck(void);
+extern unsigned char FSL_BlankCheck(unsigned char block);
+extern unsigned char FSL_Erase(unsigned char block);
+extern unsigned char FSL_IVerify(unsigned int block);
+extern unsigned char FSL_EEPROMWrite(unsigned long address, unsigned char words);
+extern void FSL_Close(void);
 extern unsigned char byteFE06C[];		/* the library's descriptor and write buffer */
 
 
@@ -188,20 +188,20 @@ static unsigned char nvsErase(unsigned char block)
 	retry = 5;
 	if (block < NVS_FIRST_BLOCK)
 		return 0x23;
-	sub_F6EE();
-	result = sub_F365(byteFE06C);
+	FSL_Open();
+	result = FSL_Init(byteFE06C);
 	while (result == FLASH_BUSY)
-		result = loc_F369(byteFE06C);
+		result = FSL_Init_cont(byteFE06C);
 	if (result == FLASH_OK) {
 		do {
-			result = sub_F2F0();
+			result = FSL_ModeCheck();
 			if (result == FLASH_OK) {
 				do
-					result = sub_F2B2(block);
+					result = FSL_BlankCheck(block);
 				while (result == FLASH_BUSY);
 				if (result == FLASH_NOT_BLANK) {
 					do
-						result = loc_F2B6(block);
+						result = FSL_Erase(block);
 					while (result == FLASH_BUSY);
 				}
 			}
@@ -210,7 +210,7 @@ static unsigned char nvsErase(unsigned char block)
 		} while (retry-- != 0 && result == FLASH_ERASE_ERROR);
 	}
 	DI();
-	sub_F6F2();
+	FSL_Close();
 	EI();
 	return result;
 }
@@ -225,27 +225,27 @@ static unsigned char nvsFlashWrite(unsigned char *address, void *data, unsigned 
 	retry = 0;
 	if ((unsigned long)address < 0x3c000)
 		return 0x23;
-	sub_F6EE();
-	result = sub_F365(byteFE06C);
+	FSL_Open();
+	result = FSL_Init(byteFE06C);
 	while (result == FLASH_BUSY)
-		result = loc_F369(byteFE06C);
+		result = FSL_Init_cont(byteFE06C);
 	if (result == FLASH_OK) {
 		memcpy(byteFE06C, data, words << 2);
 		do {
-			result = sub_F2F0();
+			result = FSL_ModeCheck();
 			if (result == FLASH_OK) {
 				do
-					result = loc_F479((unsigned long)address, words);
+					result = FSL_EEPROMWrite((unsigned long)address, words);
 				while (result == FLASH_BUSY);
 			}
 			if (result == FLASH_OK && verify == 1) {
 				do
-					result = loc_F2BA((unsigned long)address >> 10);
+					result = FSL_IVerify((unsigned long)address >> 10);
 				while (result == FLASH_BUSY);
 			}
 		} while (retry-- != 0 && result == FLASH_WRITE_ERROR);
 	}
-	sub_F6F2();
+	FSL_Close();
 	return result;
 }
 
