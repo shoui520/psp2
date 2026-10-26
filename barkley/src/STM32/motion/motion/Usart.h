@@ -36,6 +36,7 @@ public:
 		  u8 hardwareFlowControl);
 	void Receive(void *buf, u32 size, Request::Done::Func func, void *arg);
 	void Send(void *buf, u32 size, Request::Done::Func func, void *arg);
+	u32 Write(const u8 *buf, u32 size);
 
 private:
 	typedef void (Usart::*Step)();
@@ -53,6 +54,14 @@ private:
 	void SendByte(u8 c)
 	{
 		USART_SendData(regs_, c);
+	}
+
+	/* a byte out, waited for */
+	void PutChar(u8 c)
+	{
+		SendByte(c);
+		while (USART_GetFlagStatus(regs_, USART_FLAG_TC) == RESET)
+			;
 	}
 
 	u8 ReceiveByte()

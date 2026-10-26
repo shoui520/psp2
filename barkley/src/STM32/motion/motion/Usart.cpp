@@ -5,6 +5,10 @@
  * pointers) move one byte each.
  */
 
+extern "C" {
+#include "cortexm3_macro.h"
+}
+
 #include "Usart.h"
 #include "stm32f10x_it.h"
 
@@ -151,4 +155,21 @@ void Usart::Isr()
 		OnReceive();
 	if (USART_GetITStatus(regs_, USART_IT_TXE) != RESET)
 		OnSend();
+}
+
+/* the bytes out at once, the interrupts masked (a '\n' as "\r\n"): the console's */
+u32 Usart::Write(const u8 *buf, u32 size)
+{
+	u32 i;
+
+	__SETPRIMASK();
+	for (i = 0; i < size; i++) {
+		u8 c = *buf++;
+
+		if (c == '\n')
+			PutChar('\r');
+		PutChar(c);
+	}
+	__RESETPRIMASK();
+	return i;
 }
