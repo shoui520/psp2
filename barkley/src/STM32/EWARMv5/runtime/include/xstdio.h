@@ -7,13 +7,32 @@
 
 #include <stdarg.h>
 #include <stddef.h>
+#include <stdio.h>
 
 typedef unsigned short _Wchart;		/* the library's wchar_t */
 
-typedef struct {
-	unsigned long wchar;
-	unsigned long state;
-} _Mbstatet;
+/* a stream's mode */
+enum {
+	_MOPENR	= 0x0001,		/* opened for reading */
+	_MOPENW	= 0x0002,		/* opened for writing */
+	_MOPENA	= 0x0004,		/* appending */
+	_MTRUNC	= 0x0008,
+	_MCREAT	= 0x0010,
+	_MBIN	= 0x0020,
+	_MALBUF	= 0x0040,		/* the buffer is malloc's */
+	_MALFIL	= 0x0080,		/* the FILE is malloc's */
+	_MEOF	= 0x0100,
+	_MERR	= 0x0200,
+	_MLBF	= 0x0400,		/* line buffered */
+	_MNBF	= 0x0800,		/* not buffered */
+	_MREAD	= 0x1000,		/* reading */
+	_MWRITE	= 0x2000,		/* writing */
+	_MBYTE	= 0x4000,		/* byte oriented */
+	_MWIDE	= 0x8000,		/* wide oriented */
+};
+
+/* the streams, open or not */
+extern FILE *_Files[FOPEN_MAX];
 
 /* _Pft's flags */
 enum {
@@ -42,6 +61,8 @@ typedef struct {
 	char qual;
 } _Pft;
 
+int _Fwprep(FILE *str);
+void _Close_all(void);
 int _Printf(void *(*pfn)(void *arg, char c), void *arg, const char *fmt, va_list *pap);
 int _Mbtowc(_Wchart *pwc, const char *s, size_t n, _Mbstatet *state);
 int _Wctomb(char *s, _Wchart wc, _Mbstatet *state);

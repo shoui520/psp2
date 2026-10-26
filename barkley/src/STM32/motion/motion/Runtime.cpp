@@ -8,7 +8,10 @@ extern "C" {
 #include "stm32f10x_lib.h"
 #include "cortexm3_macro.h"
 }
+#include <stdarg.h>
+#include <stdio.h>
 #include <yfuns.h>
+#include "Debug.h"
 #include "BufferedUsartStream.h"
 #include "Dispatcher.h"
 #include "System.h"
@@ -90,4 +93,35 @@ void EnterStopMode()
 	__RESETPRIMASK();
 	PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
 	SetStopped(true);
+}
+
+/* the fatal error's message, to the debug port */
+void Panic(const char *format, ...)
+{
+	char buffer[256];
+	va_list ap;
+
+	va_start(ap, format);
+	__write(3, (const unsigned char *)buffer, vsprintf(buffer, format, ap));
+}
+
+/* the version and checksum the image carries: at its head, and in its last word */
+static const u16 *UserVersionAddress()
+{
+	return (const u16 *)0x08003200;
+}
+
+u16 UserVersion()
+{
+	return *UserVersionAddress();
+}
+
+static const u16 *FirmwareChecksumAddress()
+{
+	return (const u16 *)0x0800F3FC;
+}
+
+u16 FirmwareChecksum()
+{
+	return *FirmwareChecksumAddress();
 }
