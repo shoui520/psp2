@@ -9,8 +9,13 @@
 
 #include "stm32f10x_type.h"
 
+#define _ADC
+#define _ADC1
+#define _ADC2
+#define _EXTI
 #define _FLASH
 #define _FLASH_PROG
+#define _NVIC
 #define _RCC
 
 #define HSE_Value		((u32)24000000)

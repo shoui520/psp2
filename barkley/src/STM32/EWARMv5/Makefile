@@ -52,8 +52,9 @@ CXXFLAGS := $(TARGET) -O2 -ffreestanding -fno-common -fno-exceptions -fno-rtti \
 	$(DEFINES) $(INCLUDES)
 
 # in the image's order: the program's (../motion/motion), the library's drivers
-SOURCES := $(MOTION)/MotionProcessor.cpp $(MOTION)/MotionHif.cpp $(MOTION)/AK8975.cpp $(MOTION)/MotionProtoPacketEncoder.cpp
-LIBSOURCES := stm32f10x_rcc.c stm32f10x_flash.c
+SOURCES := $(MOTION)/MotionProcessor.cpp $(MOTION)/MotionHif.cpp $(MOTION)/AK8975.cpp $(MOTION)/MotionProtoPacketEncoder.cpp \
+	$(MOTION)/stm32f10x_it.cpp
+LIBSOURCES := stm32f10x_rcc.c stm32f10x_flash.c stm32f10x_nvic.c stm32f10x_exti.c stm32f10x_adc.c
 # IAR's C library (DLib), what the image links of it
 RUNTIME := xprintf.c
 
