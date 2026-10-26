@@ -136,8 +136,28 @@ public:
 		count_++;
 	}
 
-	void AddRange(u16 value);
-	u16 Mean() const;
+	void Clear()
+	{
+		Reset();
+	}
+
+	/* also the largest and the smallest */
+	void AddRange(u16 value)
+	{
+		if (max_ < value)
+			max_ = value;
+		if (value < min_)
+			min_ = value;
+		sum_ += value;
+		count_++;
+	}
+
+	u16 Mean() const
+	{
+		if (count_ == 0)
+			return 0;
+		return sum_ / count_;
+	}
 
 	u16 max_;
 	u16 min_;
@@ -164,8 +184,24 @@ public:
 		return valid_;
 	}
 
-	void Reset();
-	void Add(const AdcSample *sample);
+	void Reset()
+	{
+		for (u8 i = 0; i < 3; i++) {
+			value_[i].Clear();
+			refSum_[i].Clear();
+		}
+	}
+
+	/* each axis's value, its range, and its reference */
+	void Add(const AdcSample *sample)
+	{
+		value_[0].AddRange(sample->accel[0][0]);
+		value_[1].AddRange(sample->accel[1][0]);
+		value_[2].AddRange(sample->accel[2][0]);
+		refSum_[0].Add(sample->accel[0][1]);
+		refSum_[1].Add(sample->accel[1][1]);
+		refSum_[2].Add(sample->accel[2][1]);
+	}
 
 private:
 	bool valid_;
@@ -227,7 +263,10 @@ public:
 	}
 
 	s8 State() const;
-	bool CanMeasure() const;
+	bool CanMeasure() const
+	{
+		return state_ == MOTION_STATE_RUN || state_ == MOTION_STATE_IDLE;
+	}
 
 private:
 	static void WriteCalibTask(void *arg);
@@ -308,7 +347,14 @@ private:
 	bool RefCalibEnabled() const;
 	bool RefCalibOnce() const;
 	u32 StillThreshold() const;
-	u32 Ratio(u32 scale, u16 value, u16 ref) const;
+
+	/* value * scale / ref, rounded */
+	u32 Ratio(u32 scale, u16 value, u16 ref) const
+	{
+		if (ref == 0)
+			return 0;
+		return (value * scale + ref / 2) / ref;
+	}
 
 	bool HasRequest() const
 	{
@@ -320,7 +366,10 @@ private:
 		return request_ == MOTION_REQUEST_WRITE_CALIB;
 	}
 
-	bool SleepRequested() const;
+	bool SleepRequested() const
+	{
+		return request_ == MOTION_REQUEST_STANDBY || request_ == MOTION_REQUEST_SLEEP;
+	}
 
 	void ResetSelfTest()
 	{

@@ -36,7 +36,15 @@ struct FrameRaw {
 		temp[1] = value[1];
 	}
 
-	void SetAccel(const AdcSample *sample);
+	void SetAccel(const AdcSample *sample)
+	{
+		accel[0] = sample->accel[0][0];
+		accel[1] = sample->accel[1][0];
+		accel[2] = sample->accel[2][0];
+		accelRef[0] = sample->accel[0][1];
+		accelRef[1] = sample->accel[1][1];
+		accelRef[2] = sample->accel[2][1];
+	}
 
 	void SetGyro(const AdcSample *sample)
 	{

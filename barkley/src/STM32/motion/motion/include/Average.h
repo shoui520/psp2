@@ -89,7 +89,13 @@ public:
 		count_ = count;
 	}
 
-	bool Tick();
+	/* true once in each period */
+	bool Tick()
+	{
+		if (++count_ >= period_)
+			count_ = 0;
+		return count_ == 0;
+	}
 
 private:
 	u32 period_;

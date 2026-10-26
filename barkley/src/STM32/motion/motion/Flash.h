@@ -14,7 +14,11 @@ struct CalibBlock {
 	u16 reserved2;
 	u16 count;
 
-	bool IsValid() const;
+	/* written: a version and a serial */
+	bool IsValid() const
+	{
+		return version[0] != 0xFF && serial != 0xFFFFFFFF;
+	}
 
 	u32 Size() const
 	{

@@ -21,6 +21,11 @@ enum {
 	SPI_ERROR_TXE		= 505,
 };
 
+const SpiPortInfo spiPorts[2] = {
+	{ SPI1, 2, 1, SPI1_IRQChannel + 16 },	/* DMA1_Channel3, DMA1_Channel2 */
+	{ SPI2, 4, 3, SPI2_IRQChannel + 16 },	/* DMA1_Channel5, DMA1_Channel4 */
+};
+
 Spi::Spi(s8 port)
 	: port_(port), regs_(spiPorts[port].regs), tx_(spiPorts[port].txDma), rx_(spiPorts[port].rxDma)
 {
