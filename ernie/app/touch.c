@@ -11,6 +11,8 @@
 #pragma NOP
 
 #include <string.h>
+#include "board.h"
+#include "charge.h"
 #include "config.h"
 #include "csi10.h"
 #include "host.h"
@@ -875,11 +877,25 @@ void touchUpdateState(void)
 	unsigned char mode;
 
 	if (touch.flags & (TOUCH_PANEL0 | TOUCH_PANEL1)) {
-		touch.state.bits.valid = 1;
+#if BOARD_TOUCH_CHARGE
+		touch.state.bits.power = chargeGetAc() | chargeGetCharging();
+#else
+		touch.state.bits.power = 1;
+#endif
 		touch.state.bits.input3 = input1Bit3Active();
 		touch.state.bits.input5 = input1Bit5Active();
 		touch.state.bits.input0 = input1Bit0Active();
+#if BOARD_TOUCH_CHARGE
+		if (touch.state.value & 0xf0) {
+			if (chargeUsbIs1() || chargeUsbIs2())
+				mode = 2;
+			else
+				mode = 1;
+		} else
+			mode = 0;
+#else
 		mode = 1;
+#endif
 		if (touch.state.bits.mode != mode) {
 			touchSetMode(mode);
 			touch.state.bits.mode = mode;

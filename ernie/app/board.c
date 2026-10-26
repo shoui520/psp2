@@ -153,11 +153,11 @@ void boardPortInit(void)
 	P6 = 0x05;
 	PM6 = 0x92;
 	P7 = 0x00;
-	PM7 = 0xfd;
+	PM7 = BOARD_PM7;
 	P8 = 0x00;
 	PM8 = 0x00;
 	P9 = 0x00;
-	PM9 = 0x08;
+	PM9 = BOARD_PM9;
 	P11 = 0x00;
 	PM11 = 0xf1;
 	P12 = 0x00;

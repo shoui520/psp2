@@ -24,7 +24,9 @@ a comment; paths are relative to the link file's folder:
 
 Any directive may end in `IF NAME==VALUE` or `IF NAME!=VALUE`: it applies only when the -D
 definition NAME has (or has not) that value (numbers compared as numbers), as a board's own
-objects and places.
+objects and places. An assembly source's `$_IF (NAME==VALUE)` and `$_IF (NAME!=VALUE)` blocks,
+each with an optional `$ELSE`, to their `$ENDIF`, are decided the same way (RA78K0R's own
+conditional assembly cannot see a -D definition).
 
 A segment with a 64K attribute (UNIT64KP, PAGE64KP) stays in one 64 KiB page: one that would
 cross into the next page starts there, and the segments after it that fit fill the rest of
@@ -64,6 +66,32 @@ def same(value, text):
 		return value is not None and number(value) == number(text)
 	except ValueError:
 		return value == text
+
+
+CONDITION = re.compile(r'\s*\$_IF\s*\(\s*(\w+)\s*(==|!=)\s*([^\s)]+)\s*\)\s*(;.*)?$', re.I)
+ELSE = re.compile(r'\s*\$ELSE\s*(;.*)?$', re.I)
+ENDIF = re.compile(r'\s*\$ENDIF\s*(;.*)?$', re.I)
+
+
+def conditions(text, values):
+	"""an assembly source with its $_IF (NAME==VALUE) and $_IF (NAME!=VALUE) blocks (each
+	with an optional $ELSE, to its $ENDIF) decided by the -D definitions, as the link
+	file's IF: the lines of the branch not taken, and the controls, left out"""
+	out, taking = [], [True]
+	for line in text.splitlines():
+		m = CONDITION.match(line)
+		if m:
+			holds = same(values.get(m.group(1)), m.group(3)) == (m.group(2) == '==')
+			taking.append(taking[-1] and holds)
+		elif ELSE.match(line) and len(taking) > 1:
+			taking[-1] = taking[-2] and not taking[-1]
+		elif ENDIF.match(line) and len(taking) > 1:
+			taking.pop()
+		elif taking[-1]:
+			out.append(line)
+	if len(taking) > 1:
+		raise LinkError('$_IF without $ENDIF')
+	return '\n'.join(out) + '\n'
 
 
 class LinkFile:
@@ -197,6 +225,7 @@ class Linker:
 	def __init__(self, link, chip, work, includes, defines, flags):
 		self.link, self.chip, self.work = link, chip, Path(work)
 		self.includes, self.defines, self.flags = includes, defines, flags
+		self.values = dict(d.split('=', 1) if '=' in d else (d, '1') for d in defines)
 		self.work.mkdir(parents=True, exist_ok=True)
 		self.objects = []
 
@@ -211,7 +240,7 @@ class Linker:
 					print(messages, file=sys.stderr)
 				text = asm.read_text(encoding='latin-1')
 			else:
-				text = path.read_text(encoding='latin-1')
+				text = conditions(path.read_text(encoding='latin-1'), self.values)
 			module = ca78k0r.Module(text)
 			dropped = [s for s in module.segments if self.dropped(s.name)]
 			module.segments = [s for s in module.segments if s not in dropped]

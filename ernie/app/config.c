@@ -5,9 +5,12 @@
  * records ending in a SHA-1 digest, and commits it to the other bank, which becomes the one
  * used.
  */
+#pragma sfr
+
 #include <string.h>
 
 #include "ernie.h"
+#include "board.h"
 #include "config.h"
 #include "sha1.h"
 #include "state.h"
@@ -75,7 +78,7 @@ extern unsigned char fslDataBuffer[];		/* the library's descriptor and write buf
 extern const struct ConfigBank configBanks[2];
 extern const struct ConfigBank configDefault;
 
-static struct ConfigBank configBuffer;		/* the open copy */
+struct ConfigBank configBuffer;			/* the open copy, and the updater's output */
 static struct Config config;
 static struct ConfigHash configHash;
 static struct ConfigRecords configRecords;
@@ -441,6 +444,9 @@ unsigned char configFlashWrite(unsigned long address)
 		result = FSL_Init(fslDataBuffer);
 	if (result == 0) {
 		do {
+#if BOARD_WDT
+			WDTE = 0xac;
+#endif
 			result = FSL_ModeCheck();
 			if (result == 0) {
 				do

@@ -33,18 +33,27 @@ extern unsigned char input2Bit1Get(void);
 struct DeviceVersions deviceVersions;
 unsigned char elmoCommand[12];
 
+/* the HDMI output's status bits (BOARD_HDMI) */
+#if BOARD_HDMI
+#define POWER_A1_HDMI		0x8000
+#define POWER_A2_HDMI		0x0200
+#else
+#define POWER_A1_HDMI		0x0000
+#define POWER_A2_HDMI		0x0000
+#endif
+
 static const struct PowerStep powerResumeSteps[3] = {
 	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0xa000 }, 6 },
 	{ { 0x8880, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 4 },
-	{ { 0x7102, 0x0000, 0x0340, 0x0000, 0x0000, 0x0000 }, 8 },
+	{ { 0x7102, 0x0000, 0x0140 | POWER_A2_HDMI, 0x0000, 0x0000, 0x0000 }, 8 },
 };
 static const struct PowerStep powerOffSteps[3] = {
-	{ { 0x7113, 0x8000, 0x1bc0, 0x0000, 0x8000, 0x0000 }, 0x5c },
+	{ { 0x7113, POWER_A1_HDMI, 0x19c0 | POWER_A2_HDMI, 0x0000, 0x8000, 0x0000 }, 0x5c },
 	{ { 0x8880, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 0x5c },
 	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0x0000 }, 0x70 },
 };
 static const struct PowerStep powerSuspendSteps[3] = {
-	{ { 0x7103, 0x8000, 0x0bc0, 0x0000, 0x8000, 0x0000 }, 0x5c },
+	{ { 0x7103, POWER_A1_HDMI, 0x09c0 | POWER_A2_HDMI, 0x0000, 0x8000, 0x0000 }, 0x5c },
 	{ { 0x8000, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 0x5c },
 	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0xa000 }, 0x70 },
 };
@@ -778,6 +787,7 @@ unsigned char powerElmoA0Clear2(unsigned char bit12, unsigned char unused1, unsi
 unsigned char powerHdmiCecOn(void)
 {
 	unsigned char result;
+#if BOARD_HDMI
 	unsigned int mask;
 
 	if (elmoStatusMask.reg[1] & 0x8000) {
@@ -794,12 +804,16 @@ unsigned char powerHdmiCecOn(void)
 			powerSleep(3);
 		}
 	}
+#else
+	result = 0;
+#endif
 	return result;
 }
 
 unsigned char powerHdmiCecOff(void)
 {
 	unsigned char result;
+#if BOARD_HDMI
 	unsigned int mask;
 
 	if (elmoStatusMask.reg[1] & 0x8000) {
@@ -815,6 +829,9 @@ unsigned char powerHdmiCecOff(void)
 	} else {
 		result = 0;
 	}
+#else
+	result = 0;
+#endif
 	return result;
 }
 

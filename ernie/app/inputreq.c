@@ -732,21 +732,24 @@ void touchStream0300Prepare(void)
 }
 
 /* 0x0380 (sceSysconGetTouchpanelDeviceInfo): each controller's family, variant, version and
-   build, read again if the host asks; waits while the scan identifies the controllers */
+   build, read again if the host asks; waits while the scan identifies the controllers (after a
+   touch reset) */
 static void touchRequestDeviceInfo(void)
 {
-	if (inputDelays.flag40 == 0 && inputDelays.flag80 == 0) {
-		if (touchRequest.length < 2) {
-			touchIdentify0();
-			touchIdentify1();
-		}
-		memcpy(inputRequests.touchAnswer, &touch.panel[0].family, 4);
-		memcpy(inputRequests.touchAnswer + 4, &touch.panel[1].family, 4);
-		inputRequests.touchPending = 0;
-		touchRequest.answerLength = 8;
-		touchRequest.status = 0;
-		hostRequestAnswerReady(&touchRequest.state);
+#if BOARD_TOUCH_RESET
+	if (inputDelays.flag40 != 0 || inputDelays.flag80 != 0)
+		return;
+#endif
+	if (touchRequest.length < 2) {
+		touchIdentify0();
+		touchIdentify1();
 	}
+	memcpy(inputRequests.touchAnswer, &touch.panel[0].family, 4);
+	memcpy(inputRequests.touchAnswer + 4, &touch.panel[1].family, 4);
+	inputRequests.touchPending = 0;
+	touchRequest.answerLength = 8;
+	touchRequest.status = 0;
+	hostRequestAnswerReady(&touchRequest.state);
 }
 
 /*

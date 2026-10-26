@@ -99,7 +99,7 @@ union TouchState {
 		unsigned char	input0:1;	/* input1Bit0Active() */
 		unsigned char	input5:1;	/* input1Bit5Active() */
 		unsigned char	input3:1;	/* input1Bit3Active() */
-		unsigned char	valid:1;
+		unsigned char	power:1;	/* AC or charging (PCH-1000; 1 on the others) */
 	} bits;
 };
 

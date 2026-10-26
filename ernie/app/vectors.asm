@@ -16,12 +16,14 @@
 	EXTRN	_cstart, _intp0Interrupt, _intp1Interrupt, _intp2Interrupt, _intp3Interrupt
 	EXTRN	_intp4Interrupt, _hostInterrupt, _uart3SendInterrupt, _uart3ReceiveInterrupt
 	EXTRN	_uart3ErrorInterrupt, _dma0Interrupt, _csiInterrupt, _csi01Interrupt
-	EXTRN	_sre0Interrupt, _csi10Interrupt, _uart4ErrorInterrupt, _iicaInterrupt
+	EXTRN	_sre0Interrupt, _csi10Interrupt, _iicaInterrupt
 	EXTRN	_tm01Interrupt, _tm03Interrupt, _adcInterrupt, _rtcInterrupt
 	EXTRN	_uart2SendInterrupt, _tm04Interrupt, _uart2ReceiveInterrupt, _intp7Interrupt
 	EXTRN	_intp8Interrupt, _intp10Interrupt, _intp11Interrupt, _tickInterrupt
-	EXTRN	_tm11Interrupt, _uart2ErrorInterrupt, _uart4SendInterrupt
-	EXTRN	_uart4ReceiveInterrupt
+	EXTRN	_tm11Interrupt, _uart2ErrorInterrupt
+$_IF (ERNIE_HW!=0x00406000)	; BOARD_SERIAL4: PCH-1000 has no UART4
+	EXTRN	_uart4ErrorInterrupt, _uart4SendInterrupt, _uart4ReceiveInterrupt
+$ENDIF
 
 @@VECT	CSEG	BASE
 _vector_RST:
@@ -60,7 +62,11 @@ _vector_INTST1:
 	DW	LOWW(_csi10Interrupt)	; 24H
 	DW	0			; 26H
 _vector_INTSRE1:
+$_IF (ERNIE_HW!=0x00406000)
 	DW	LOWW(_uart4ErrorInterrupt)	; 28H
+$ELSE
+	DW	0			; 28H
+$ENDIF
 _vector_INTIICA:
 	DW	LOWW(_iicaInterrupt)	; 2AH
 	DW	0			; 2CH
@@ -104,9 +110,17 @@ _vector_INTSRE2:
 	DW	LOWW(_uart2ErrorInterrupt)	; 5CH
 	DW	0			; 5EH
 _vector_INTST4:
+$_IF (ERNIE_HW!=0x00406000)
 	DW	LOWW(_uart4SendInterrupt)	; 60H
+$ELSE
+	DW	0			; 60H
+$ENDIF
 _vector_INTSR4:
+$_IF (ERNIE_HW!=0x00406000)
 	DW	LOWW(_uart4ReceiveInterrupt)	; 62H
+$ELSE
+	DW	0			; 62H
+$ENDIF
 	DW	0			; 64H
 	DW	0			; 66H
 	DW	0			; 68H
@@ -123,7 +137,11 @@ _vector_INTSR4:
 	DW	0			; 7EH
 	DS	40H			; the CALLT table, unused
 _option_bytes:
+$_IF (ERNIE_HW==0x00406000)	; BOARD_WDT: PCH-1000's watchdog runs
+	DB	7FH, 0FFH, 0FFH, 04H	; the watchdog, the LVI, the clock, on-chip debugging
+$ELSE
 	DB	6EH, 0FFH, 0FFH, 04H	; the watchdog, the LVI, the clock, on-chip debugging
+$ENDIF
 _security_id:
 	DB	0, 0, 0, 0, 0, 0, 0, 0, 0, 0	; the on-chip debug security ID
 

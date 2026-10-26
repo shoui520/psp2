@@ -205,6 +205,8 @@ struct ConfigVersions {
 	unsigned int	otherCount;
 };
 
+extern struct ConfigBank configBuffer;
+
 extern int configInit(void);
 extern struct ConfigBlock *configGet(void);
 extern unsigned char configGetVersions(struct ConfigVersions *versions);

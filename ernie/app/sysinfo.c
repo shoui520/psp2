@@ -1,10 +1,12 @@
 /*
  * The system's records: the hang counter, which the RTC's interrupt and INTTM11 count up
- * while hangDetected holds and which resets the system at the settings' hangLimit (in this
- * build nothing is detected), the reset flags (RESF at the start), and the id records.
+ * while hangDetected holds and which resets the system at the settings' hangLimit (PCH-1000
+ * detects one by four pins, the others nothing), the reset flags (RESF at the start), and the
+ * id records.
  */
 #pragma sfr
 
+#include "board.h"
 #include "config.h"
 #include "sysinfo.h"
 
@@ -19,10 +21,18 @@ int hangLimitReached(void)
 	return hangCount == (configGet()->hangLimit < 8 ? 8 : configGet()->hangLimit);
 }
 
+#if BOARD_HANG_PINS
+/* a hang: P11.5, P4.6, P5.0 and P5.3 all low */
+int hangDetected(void)
+{
+	return !P11.5 && !P4.6 && !P5.0 && !P5.3;
+}
+#else
 int hangDetected(void)
 {
 	return 0;
 }
+#endif
 
 int hangStarted(void)
 {

@@ -12,9 +12,7 @@
 #pragma rtos_interrupt INTP3 intp3Interrupt
 #pragma rtos_interrupt INTP10 intp10Interrupt
 #pragma rtos_interrupt INTP8 intp8Interrupt
-#if ERNIE_HW != 0x00406000	/* BOARD_INTP11 (#pragma comes first) */
 #pragma rtos_interrupt INTP11 intp11Interrupt
-#endif
 #pragma interrupt INTTM04 tm04Interrupt
 #pragma rtos_interrupt INTSRE0 sre0Interrupt
 #pragma rtos_interrupt INTP0 intp0Interrupt
@@ -106,13 +104,13 @@ void intp8Interrupt(void)
 }
 
 /* P7.7's edges: the level kept, and the serial link's input told */
-#if BOARD_INTP11
 void intp11Interrupt(void)
 {
+#if BOARD_INTP11
 	intp11Level = P7.7;
 	serial2InputLink();
-}
 #endif
+}
 
 /* the touch panels' frame timer: one shot (TT0 stops channel 4), a frame started while keys
    0x000c are held */

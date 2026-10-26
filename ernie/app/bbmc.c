@@ -12,6 +12,7 @@
 
 #include "ernie.h"
 #include "bbmc.h"
+#include "board.h"
 #include "charge.h"
 #include "chip.h"
 #include "config.h"
@@ -80,8 +81,10 @@ void bbmcInit(void)
 	unsigned char result;
 	unsigned char level;
 
+#if BOARD_BBMC_INIT_PULSE
 	P33 = 1;
 	dly_tsk(0x39d);
+#endif
 	timeout.timer = 0;
 	timeout.timeout = 1;
 	timeout.flgid = 6;

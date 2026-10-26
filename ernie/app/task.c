@@ -9,11 +9,14 @@
 
 #include <stddef.h>
 
+#include "board.h"
 #include "ernie.h"
 #include "iica.h"
 #include "kernel.h"
 #include "state.h"
+#include "sysinfo.h"
 #include "task.h"
+#include "timer.h"
 
 __sreg unsigned int taskPending;
 
@@ -199,11 +202,20 @@ unsigned int taskGetPending(void)
 	return taskPending;
 }
 
-/* standby halts, never stops, in this build */
+#if BOARD_STANDBY_STOP
+/* standby halts while a timer, a task, a dongle or debug link or a hang needs the clock */
+int taskStandbyHalt(void)
+{
+	return timerArmed() || taskGetPending() || boardMultiCnIsDongle() ||
+	       boardMultiCnIsDebug() || hangStarted();
+}
+#else
+/* standby halts, never stops, on the other boards */
 int taskStandbyHalt(void)
 {
 	return 1;
 }
+#endif
 
 unsigned int taskPending1(void)
 {

@@ -8,6 +8,7 @@
 
 #include <string.h>
 #include "ernie.h"
+#include "board.h"
 #include "config.h"
 #include "kernel.h"
 #include "log.h"
@@ -51,7 +52,16 @@ void systemInit(void)
 {
 	struct TimerHandler timer;
 	unsigned char cause;
+#if BOARD_DL_SCRATCHPAD
+	union {
+		unsigned long	value;
+		unsigned char	byte[4];
+	} dlVersion;
+#endif
 
+#if BOARD_WDT
+	WDTE = 0xac;
+#endif
 	powerState = 1;
 	statePhase = 2;
 	stateNext = 0;
@@ -67,6 +77,13 @@ void systemInit(void)
 	timerSetHandler(0x1a, &timer);
 	versionInit();
 	cause = getResetCause() & 0xf0;
+#if BOARD_DL_SCRATCHPAD
+	if (cause == 0) {
+		getErnieDlVersion(dlVersion.byte);
+		if (dlVersion.byte[1] == 0 && dlVersion.byte[2] < 0x16)
+			scratchPadClear();
+	}
+#endif
 	logQueueInit();
 	logInit();
 	if (cause == 0) {

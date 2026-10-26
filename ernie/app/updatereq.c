@@ -97,7 +97,7 @@ void updaterRequestInit(void)
 	updaterRequest.notify = updaterRequestNotify;
 	updaterRequest.state = HOST_REQUEST_RECEIVE;
 	memset(&updater, 0, sizeof(updater));
-	updater.output = (unsigned char *)0xFF706;
+	updater.output = (unsigned char *)&configBuffer;
 	updaterDownloader = (void (*)(void))DOWNLOADER_ENTRY;
 }
 
@@ -303,7 +303,7 @@ unsigned char updaterDecryptInit(void)
 	updater.progress = 0;
 	updater.segmentCount = 0;
 	updater.segmentDone = 0;
-	updater.output = (unsigned char *)0xFF706;
+	updater.output = (unsigned char *)&configBuffer;
 	return result;
 }
 

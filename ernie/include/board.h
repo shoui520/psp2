@@ -36,12 +36,22 @@
    keep input1Bit7Poll empty */
 #define BOARD_INPUT1_BIT7_POLL	(ERNIE_HW == 0x00406000)
 
-/* INTP11 (P7.7, intp11Level): not on PCH-1000, whose intp11Enable does nothing */
+/* INTP11 (P7.7, intp11Level): not on PCH-1000, whose intp11Enable does nothing and whose
+   handler is empty */
 #define BOARD_INTP11		(ERNIE_HW != 0x00406000)
 
 /* the hardware watchdog (WDTE): PCH-1000's runs, kicked by the tasks, the NVS and the
    configuration's flash writes; the others' never */
 #define BOARD_WDT		(ERNIE_HW == 0x00406000)
+
+/* a power-on reset clears the scratch pad under an updater older than 0x16 (getErnieDlVersion's
+   bytes 1 and 2): PCH-1000's systemInit */
+#define BOARD_DL_SCRATCHPAD	(ERNIE_HW == 0x00406000)
+
+/* the HDMI output: HDMI CEC's power (the Elmo's register 0xa1 bit 15: powerHdmiCecOn and
+   Off), with 0xa2's 0x0200 switched off by the power sequences' steps; not on PCH-1000, whose
+   commands 0x0886 do nothing */
+#define BOARD_HDMI		(ERNIE_HW != 0x00406000)
 
 /* the configuration's wake masks the board reads (ConfigBlock.wakeMasks0-2): DEM-3000L's the
    second set, PCH-1000's the third */
@@ -66,6 +76,24 @@
 /* the keys' pins on port 5 (inputKeysOpen, inputKeysClose): P5.0-P5.3; PCH-1000's P5.1 and P5.2
    (its PM5 still opened with 0x0f) */
 #define BOARD_KEYS_P5		(ERNIE_HW == 0x00406000 ? 0x06 : 0x0f)
+
+/* the port modes boardPortInit sets: PCH-1000 drives P7.3 and P7.7 (no input 3 pins there)
+   and P9.3 */
+#define BOARD_PM7		(ERNIE_HW == 0x00406000 ? 0x75 : 0xfd)
+#define BOARD_PM9		(ERNIE_HW == 0x00406000 ? 0x00 : 0x08)
+
+/* bbmcInit starts with the 3G modem's P3.3 pulse (0x39d ticks); PCH-1000's only drives it low */
+#define BOARD_BBMC_INIT_PULSE	(ERNIE_HW != 0x00406000)
+
+/* the touch state's power bit and panel mode follow the charger (touchUpdateState): mode 0
+   with neither power nor an input active, 2 on USB, else 1; the others set power and mode 1 */
+#define BOARD_TOUCH_CHARGE	(ERNIE_HW == 0x00406000)
+
+/* a hang detected by P11.5, P4.6, P5.0 and P5.3 low (hangDetected); the others detect none */
+#define BOARD_HANG_PINS		(ERNIE_HW == 0x00406000)
+
+/* standby may stop the clock when nothing needs it (taskStandbyHalt); the others always halt */
+#define BOARD_STANDBY_STOP	(ERNIE_HW == 0x00406000)
 
 /* boardSetMultiCnOutput's and boardGetMultiCnOutput's outputs */
 #define BOARD_MULTICN_HOST	0	/* P13.0 low, P2.2 high */
