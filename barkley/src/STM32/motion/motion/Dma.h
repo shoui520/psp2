@@ -21,6 +21,12 @@ struct DmaChannelInfo {
 
 extern const DmaChannelInfo dmaChannels[7];
 
+/* a request's results (Request::Result) */
+enum {
+	DMA_ERROR_TRANSFER	= 301,	/* the channel's transfer error */
+	DMA_ERROR_ABORT		= 302,
+};
+
 class Dma {
 public:
 	Dma(s8 channel);
@@ -45,6 +51,19 @@ public:
 	void Stop()
 	{
 		Disable();
+	}
+
+	/* the transfers left (CNDTR) */
+	s16 Remaining()
+	{
+		return regs_->CNDTR;
+	}
+
+	/* stopped before its end: the request fails */
+	void Abort()
+	{
+		Disable();
+		request_.Complete(DMA_ERROR_ABORT);
 	}
 
 protected:

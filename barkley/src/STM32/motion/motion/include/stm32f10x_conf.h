@@ -28,6 +28,9 @@
 #define _I2C2
 #define _NVIC
 #define _RCC
+#define _SPI
+#define _SPI1
+#define _SPI2
 
 #define HSE_Value		((u32)24000000)
 #define HSEStartUp_TimeOut	((u16)0x01FF)
