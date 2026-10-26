@@ -19,6 +19,9 @@
  */
 #include "ernie.h"
 #include "sha1.h"
+#ifdef ERNIE_UPDATER
+#include "util.h"
+#endif
 
 /* Define the SHA1 circular left shift macro */
 #define SHA1CircularShift(bits, word) \
@@ -35,6 +38,10 @@ static const unsigned long K[] = {
 /* Local Function Prototypes */
 void SHA1PadMessage(SHA1Context __near *context);
 void SHA1ProcessMessageBlock(SHA1Context __near *context);
+#ifdef ERNIE_UPDATER
+void SHA1DebugDump(unsigned long a, unsigned long b, unsigned long c, unsigned long d,
+		   unsigned long e);
+#endif
 
 /* initializes the context, on the caller's block and W, in preparation for a new digest */
 int SHA1Reset(SHA1Context __near *context, unsigned char __near *block, unsigned long __near *w)
@@ -172,6 +179,40 @@ void SHA1ProcessMessageBlock(SHA1Context __near *context)
 
 	context->Message_Block_Index = 0;
 }
+
+#ifdef ERNIE_UPDATER
+/* a word as big-endian hex, then a pause */
+#define SHA1DumpWord(word) \
+	do { \
+		(word) = (word) << 24 & 0xff000000 | (word) << 8 & 0x00ff0000 | \
+			 (word) >> 8 & 0x0000ff00 | (word) >> 24 & 0x000000ff; \
+		hexEncode(hex, (unsigned char *)&(word), 4); \
+		for (i = 0; i < 0x2ff; i++) \
+			; \
+	} while (0)
+
+/*
+ * the updater's: the five words of the state as hex lines (crlf and hex, one after the other
+ * in the frame), each followed by a pause; nothing sends them (the debug output it was
+ * written for is not built), and nothing calls it
+ */
+void SHA1DebugDump(unsigned long a, unsigned long b, unsigned long c, unsigned long d,
+		   unsigned long e)
+{
+	unsigned int i;
+	char hex[9];			/* the word's digits and a space, after crlf */
+	char crlf[2] = { '\r', '\n' };
+
+	hex[8] = ' ';
+	SHA1DumpWord(a);
+	SHA1DumpWord(b);
+	SHA1DumpWord(c);
+	SHA1DumpWord(d);
+	SHA1DumpWord(e);
+	for (i = 0; i < 0x2ff; i++)
+		;
+}
+#endif
 
 /*
  * pads the message to a multiple of 512 bits: a 1 bit, zeros, and the message's length in its
