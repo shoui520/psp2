@@ -104,6 +104,14 @@ public:
 protected:
 	DmaNormal tx_;
 	DmaNormal rx_;
+
+private:
+	void InitPort(const I2C_InitTypeDef *init, u8 eventPreemption, u8 eventSub,
+		      u8 errorPreemption, u8 errorSub);
+	void ReinitPort(const I2C_InitTypeDef *init);
+	void InitDma(u8 preemption, u8 sub, u32 txPriority, u32 rxPriority);
+	static void IsrEventCallback(void *arg);
+	static void IsrErrorCallback(void *arg);
 };
 
 #endif
