@@ -26,6 +26,104 @@ struct SecondLoaderHeader {
 	unsigned short signingKeyIndex;
 };
 
+struct BigmacRegisters {
+	volatile unsigned int input;
+	volatile unsigned int output;
+	volatile unsigned int size;
+	volatile unsigned int mode;
+	volatile unsigned int keySlot;
+	volatile unsigned int parameter;
+	unsigned int reserved0;
+	volatile unsigned int start;
+	unsigned int reserved1;
+	volatile unsigned int status;
+	unsigned char reserved2[0x200 - 0x28];
+	volatile unsigned int key[8];
+};
+
+#define BIGMAC ((struct BigmacRegisters *)0xe0050000UL)
+#define BIGMAC_SLOT_OUTPUT 0x10000000U
+#define BIGMAC_INLINE_KEY  0x00000080U
+#define BIGMAC_BUSY        0x00000001U
+#define BIGMAC_ERROR_MASK  0x00078000U
+
+/* Submit one operation. A value below 0x1000 identifies a hardware key slot;
+ * otherwise key identifies 32 bytes to load into the engine.
+ */
+__attribute__((noinline))
+int bigmacRun(unsigned int output, unsigned int input, unsigned int size,
+	      unsigned int key, unsigned int parameter, unsigned int mode)
+{
+	unsigned int i;
+
+	BIGMAC->output = output;
+	BIGMAC->input = input;
+	BIGMAC->size = size;
+	if (parameter != 0)
+		BIGMAC->parameter = parameter;
+	if (output < 0x1000)
+		mode |= BIGMAC_SLOT_OUTPUT;
+	if (key < 0x1000) {
+		BIGMAC->keySlot = key;
+	} else {
+		const unsigned char *bytes = (const unsigned char *)(unsigned long)key;
+
+		for (i = 0; i < 8; i++) {
+			BIGMAC->key[i] = (unsigned int)bytes[0] |
+				((unsigned int)bytes[1] << 8) |
+				((unsigned int)bytes[2] << 16) |
+				((unsigned int)bytes[3] << 24);
+			bytes += 4;
+		}
+		mode |= BIGMAC_INLINE_KEY;
+	}
+	BIGMAC->mode = mode;
+	BIGMAC->start = 1;
+	while (BIGMAC->status & BIGMAC_BUSY)
+		;
+	return (BIGMAC->status & BIGMAC_ERROR_MASK) ? -1 : 0;
+}
+
+int bigmacRunMode301(unsigned int output, unsigned int input, unsigned int size,
+		     unsigned int key)
+{
+	return bigmacRun(output, input, size, key, 0, 0x301);
+}
+
+int bigmacRunMode10a(unsigned int output, unsigned int input, unsigned int size,
+		     unsigned int key, unsigned int parameter)
+{
+	return bigmacRun(output, input, size, key, parameter, 0x10a);
+}
+
+int bigmacRunMode30a(unsigned int output, unsigned int input, unsigned int size,
+		     unsigned int key, unsigned int parameter)
+{
+	return bigmacRun(output, input, size, key, parameter, 0x30a);
+}
+
+int bigmacRunMode33(unsigned int output, unsigned int input, unsigned int size,
+		    unsigned int key)
+{
+	return bigmacRun(output, input, size, key, 0, 0x33);
+}
+
+int bigmacClearMemory(unsigned int address, unsigned int value, unsigned int size)
+{
+	(void)value;
+	return bigmacRun(address, address, size, 0, 0, 0x0c);
+}
+
+int bigmacClearRegisters(void)
+{
+	BIGMAC->output = 0;
+	BIGMAC->input = 0;
+	BIGMAC->size = 0;
+	BIGMAC->parameter = 0;
+	BIGMAC->mode = 0;
+	return 0;
+}
+
 /* Check the lengths and key selectors before processing the image. */
 int checkSecondLoaderHeader(const struct SecondLoaderHeader *header)
 {
