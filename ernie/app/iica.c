@@ -3,7 +3,9 @@
  * rxCount is not 0, reads rxCount bytes after a repeated start, and leaves its result (0, or
  * 1 and 2 for a missing acknowledge) in *status.
  */
+#ifndef ERNIE_UPDATER
 #pragma rtos_interrupt INTIICA iicaInterrupt
+#endif
 #pragma sfr
 #pragma NOP
 
@@ -21,6 +23,42 @@
 
 static struct IicaRequest iicaRequest;
 
+#ifdef ERNIE_UPDATER
+/* the updater's: enables the IICA and sends a stop; 1 when it did not go out */
+unsigned char iicaInit(void)
+{
+	unsigned char i;
+
+	if (IICAEN)
+		return 0;
+	IICAEN = 1;
+	IICE = 0;
+	IICWL = 0x0b;
+	IICWH = 0x08;
+	SVA = 0;
+	IICF = 0;
+	IICCTL1 = 0x0c;
+	IICCTL0 = 0x0c;
+	IICE = 1;
+	P6.0 = 0;
+	P6.1 = 0;
+	PM6.0 = 0;
+	PM6.1 = 0;
+	IICAIF = 0;
+	if (STCEN)
+		return 0;
+	SPT = 1;
+	SPIE = 1;
+	i = 0xff;
+	while (!IICAIF) {
+		if (i-- == 0)
+			return 1;
+	}
+	IICAIF = 0;
+	SPIE = 0;
+	return 0;
+}
+#else
 /* enables the IICA and frees the bus; 1 when the bus stayed busy */
 unsigned char iicaInit(void)
 {
@@ -76,6 +114,7 @@ ready:
 	IICAMK = 0;
 	return 0;
 }
+#endif
 
 /* starts a transfer; the interrupt runs it */
 int iicaStart(struct IicaRequest *request)
@@ -86,6 +125,14 @@ int iicaStart(struct IicaRequest *request)
 	IICA = iicaRequest.address;
 	return 0;
 }
+
+#ifdef ERNIE_UPDATER
+/* PLACEHOLDER: the updater's, called by nothing; named when its use is known */
+int sub_39FB5(void)
+{
+	return 0;
+}
+#endif
 
 /* runs a transfer, polling; 1 or 2 when an interrupt did not come */
 int iicaTransfer(struct IicaRequest *request)
@@ -188,6 +235,7 @@ void iicaClose(void)
 	IICAEN = 0;
 }
 
+#ifndef ERNIE_UPDATER
 /* INTIIC0: the next step of iicaStart's transfer; at its end, event 0x10 of flag 4 */
 void iicaInterrupt(void)
 {
@@ -254,3 +302,4 @@ stop:
 	iicaRequest.state = IICA_DONE;
 	task5SetFlag(4, 0x0010);
 }
+#endif

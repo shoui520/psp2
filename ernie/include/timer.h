@@ -16,9 +16,14 @@ struct Timer {
 	void		(*handler)(void);
 };
 
-/* timers 0x00-0x14 count timerTicks, 0x15-0x1f timerRtcTicks (the RTC's, every 0.5 s) */
+/* timers 0x00-0x14 count timerTicks, 0x15-0x1f timerRtcTicks (the RTC's, every 0.5 s); the
+   updater's 0x15-0x1d count the clock */
 #define TIMER_RTC_FIRST		0x15
+#ifdef ERNIE_UPDATER
+#define TIMER_COUNT		0x1e
+#else
 #define TIMER_COUNT		0x20
+#endif
 
 extern __near struct Timer timers[TIMER_COUNT];
 extern __sreg unsigned int timerTicks;

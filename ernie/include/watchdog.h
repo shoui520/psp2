@@ -5,7 +5,12 @@
 #ifndef ERNIE_WATCHDOG_H
 #define ERNIE_WATCHDOG_H
 
-#define WATCHDOG_TIMER		0x1b	/* an RTC timer: its ticks are 0.5 s */
+/* an RTC timer: its ticks are 0.5 s */
+#ifdef ERNIE_UPDATER
+#define WATCHDOG_TIMER		0x1c
+#else
+#define WATCHDOG_TIMER		0x1b
+#endif
 
 /* the watchdog's setting, as the host sends it */
 union Watchdog {

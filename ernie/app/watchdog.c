@@ -10,6 +10,9 @@
 #include "state.h"
 #include "timer.h"
 #include "watchdog.h"
+#ifdef ERNIE_UPDATER
+#include "../updater/updater.h"
+#endif
 
 static void watchdogExpire(void);
 
@@ -73,6 +76,20 @@ int watchdogKick(void)
 	return watchdogStart();
 }
 
+#ifdef ERNIE_UPDATER
+/* the updater's: transition 0x32 */
+static void watchdogExpire(void)
+{
+	struct StateEvent event;
+
+	switch (watchdog.bytes.mode) {
+	case 0:
+		event.transition = 0x32;
+		updStateEvent(&event);
+		break;
+	}
+}
+#else
 static void watchdogExpire(void)
 {
 	switch (watchdog.bytes.mode) {
@@ -81,3 +98,4 @@ static void watchdogExpire(void)
 		break;
 	}
 }
+#endif

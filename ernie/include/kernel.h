@@ -67,7 +67,13 @@ extern ER	sta_cyc(ID cycid);
 
 extern ER	isig_tim(void);
 
+#ifdef ERNIE_UPDATER
+/* the updater runs no kernel: the code it shares with the application dispatches nothing */
+#define dis_dsp()
+#define ena_dsp()
+#else
 extern ER	dis_dsp(void);
 extern ER	ena_dsp(void);
+#endif
 
 #endif

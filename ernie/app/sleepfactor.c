@@ -245,6 +245,8 @@ void sleepFactorSet19(unsigned char on)
 	}
 }
 
+/* the updater has not the last three */
+#ifndef ERNIE_UPDATER
 void sleepFactorSet22(unsigned char on)
 {
 	if (sleepFactor.bits[2].b6 ^ on) {
@@ -275,3 +277,4 @@ void sleepFactorSet20(unsigned char on)
 		ena_dsp();
 	}
 }
+#endif

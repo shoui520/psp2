@@ -7,7 +7,12 @@
 #include "ernie.h"
 #include "analog.h"
 #include "board.h"
+#ifdef ERNIE_UPDATER
+#include "../updater/updater.h"
+#endif
 
+/* the updater has these in its own board.c */
+#ifndef ERNIE_UPDATER
 /* nothing on this board */
 void boardNone(int value)
 {
@@ -28,6 +33,7 @@ unsigned char boardSuspendSteps(void)
 {
 	return 3;
 }
+#endif
 
 /* the switch off at the start: P2.2 low, then P13.0 */
 unsigned char boardMultiCnOutputOff(void)
@@ -96,11 +102,19 @@ unsigned char boardMultiCnStop(void)
 	return 0;
 }
 
+#ifdef ERNIE_UPDATER
+/* the updater's: something on the multi-connector, as its inputs report it */
+unsigned char boardMultiCnIsDongle(void)
+{
+	return (unsigned char)sub_4D57();
+}
+#else
 /* a dongle on the multi-connector (its ID 2) */
 unsigned char boardMultiCnIsDongle(void)
 {
 	return analogGetMultiCn() == 2;
 }
+#endif
 
 /* a debug board on the multi-connector (UART3 in its debug mode): never on this board */
 unsigned char boardMultiCnIsDebug(void)
@@ -108,6 +122,7 @@ unsigned char boardMultiCnIsDebug(void)
 	return 0;
 }
 
+#ifndef ERNIE_UPDATER
 /* the ports' levels and modes at the start (hdwinit) */
 void boardPortInit(void)
 {
@@ -142,3 +157,4 @@ void boardPortInit(void)
 	P15 = 0x00;
 	PM15 = 0xf8;
 }
+#endif

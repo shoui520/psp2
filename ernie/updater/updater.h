@@ -5,6 +5,13 @@
 #ifndef ERNIE_UPDATER_H
 #define ERNIE_UPDATER_H
 
+/*
+ * the version blocks as the updater reads them: each with the other's layout, the
+ * application's at 0xf00 as the updater's (its version at 8, its time stamp at 0xc) and the
+ * updater's at 0x1f00 as the application's (4 and 8)
+ */
+#define APP_VERSION_INFO	((const struct UpdaterVersionInfo __far *)0xf00)
+
 /* main.c */
 extern void startHook(void);
 extern int csiOpen(void);
@@ -145,7 +152,6 @@ extern void sub_3598A(void);
 extern void sub_3B604(unsigned int);
 extern int sub_3B718(void);
 extern void sub_3AC35(void);
-extern unsigned char sub_3B175(void);
 extern void sub_3AF74(void);
 extern unsigned char sub_A5F9(unsigned char level);
 

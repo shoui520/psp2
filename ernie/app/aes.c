@@ -87,7 +87,15 @@ static const unsigned char aesRcon[14] = {
 	0x1b, 0x36, 0x6c, 0xd8, 0xab, 0x4d,
 };
 
+#ifdef ERNIE_UPDATER
+/* the updater's revision carries no revision string, and tests the near blocks against 0 */
+#define AES_NULL	0
+#else
 static const char aesRevision[] = "$Rev: 2587 $";
+
+/* the application's tests them against NULL, a far null */
+#define AES_NULL	NULL
+#endif
 
 /* a round's key: its 4 words of 4 bytes (the offset in char arithmetic, as the original) */
 #define ROUND_KEY(ks, round)	((const unsigned char *)(ks)->w + (round) * 4 * 4)
@@ -177,7 +185,7 @@ int aesEncrypt(const unsigned char __near *in, unsigned char __near *out, struct
 {
 	unsigned char round, nk, nr;
 
-	if (in == NULL || out == NULL || ks->w == NULL)
+	if (in == AES_NULL || out == AES_NULL || ks->w == NULL)
 		return AES_ERROR_NULL;
 	if (ks->nk < 4 || ks->nk > 8)
 		return AES_ERROR_KEY_LENGTH;
@@ -206,7 +214,7 @@ int aesDecrypt(const unsigned char __near *in, unsigned char __near *out, struct
 {
 	unsigned char round, nk, nr;
 
-	if (out == NULL || in == NULL || ks->w == NULL)
+	if (out == AES_NULL || in == AES_NULL || ks->w == NULL)
 		return AES_ERROR_NULL;
 	if (ks->nk < 4 || ks->nk > 8)
 		return AES_ERROR_KEY_LENGTH;

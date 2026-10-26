@@ -34,13 +34,6 @@
 #include "watchdog.h"
 #include "updater.h"
 
-/*
- * the version blocks as main and the application's entry read them: each with the other's
- * layout, the application's at 0xf00 as the updater's (its version at 8, its time stamp at
- * 0xc) and the updater's at 0x1f00 as the application's (4 and 8)
- */
-#define APP_VERSION_INFO	((const struct UpdaterVersionInfo __far *)0xf00)
-
 /* the events (updEventSet) */
 struct UpdEvents {
 	unsigned int	event01:1;
@@ -512,7 +505,7 @@ int multiCnChanged(void)
 {
 	boardSetMultiCnOutput(BOARD_MULTICN_HOST);
 	sub_3AC35();
-	if (sub_3B175()) {
+	if (boardMultiCnIsDongle()) {
 		serialOpen1(2);
 		sleepFactorSet6(1);
 		sleepFactorSet5(1);
