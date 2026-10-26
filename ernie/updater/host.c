@@ -17,6 +17,8 @@
 #include "ernie.h"
 #include "board.h"
 #include "sleepfactor.h"
+#include "serial.h"
+#include "watchdog.h"
 #include "updater.h"
 
 
@@ -31,11 +33,10 @@
 #define HOST_RESULT_FULL	0x82	/* no free queue entry */
 #define HOST_RESULT_UNKNOWN	0x3f
 
-struct UpdHostLink hostLink;
 struct HostCommandFrame hostRx;
 struct HostAnswerFrame hostTx;
 struct HostSlowCommand hostSlowCommands[HOST_SLOW_COMMANDS];
-char logBuffer[0x86];
+struct UpdHostLink hostLink;
 
 int hostOpen(void)
 {
@@ -81,7 +82,7 @@ unsigned char hostPoll(void)
 			hostTx.result = result;
 		}
 		if (result != HOST_RESULT_UNKNOWN)
-			sub_3B721();
+			watchdogKick();
 	} else if ((slow = hostSlowFind(hostRx.command)) != NULL) {
 		if (slow->state == HOST_SLOW_QUEUED) {
 			logPrintf(" SlowCmd %04X exe resume\r\n", slow->command);
@@ -125,7 +126,7 @@ unsigned char hostPoll(void)
 		if (result != 0x14)
 			hostLink.statusBit5 = 1;
 		if (result != 1)
-			sub_3B721();
+			watchdogKick();
 	}
 	return 0;
 }
@@ -157,7 +158,7 @@ int uart3WritePoll(unsigned char *data, unsigned char count)
 	return 0;
 }
 
-/* in the log's trace mode only: the multi connector switched to the host while it is sent */
+/* in serial mode 3 (the log) only: the multi connector switched to the host while it is sent */
 void logPrintf(const char *format, ...)
 {
 	int length;
@@ -167,7 +168,7 @@ void logPrintf(const char *format, ...)
 		unsigned char	reserved:6;
 	} multiCn;
 
-	if (logMode != 3)
+	if (serial.mode != 3)
 		return;
 	va_starttop(ap, format);
 	length = vsprintf(logBuffer, format, ap);

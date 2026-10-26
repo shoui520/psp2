@@ -21,7 +21,6 @@
 #include "board.h"
 #include "charge.h"
 #include "config.h"
-#include "downloader.h"
 #include "keepram.h"
 #include "nvs.h"
 #include "param.h"
@@ -34,30 +33,12 @@
 #include "timer.h"
 #include "version.h"
 #include "watchdog.h"
+#include "powerseq.h"
 #include "updater.h"
 
 
-unsigned char updMode;		/* updModeChange's */
-unsigned char updReset;		/* started from the reset vector (main), not by the application */
-unsigned char updVersion[4];	/* the running application's version */
-char updBuild[12];		/* and its build time, digits only */
-
-unsigned long updLoops;		/* the main loop's rounds */
-union UpdEvents updEvents;
-unsigned int buttonPowerHeld;	/* the polls P11.5 has been held low */
-unsigned int buttonPsHeld;	/* and P4.6 */
-unsigned long buttonPolls;
-unsigned int buttonShortTime;	/* buttonPoll's times, in polls */
-unsigned int buttonHoldTime1;
-unsigned int buttonHoldTime2;
-union UpdInput updInput;
 
 void mainLoop(void);
-
-/* sleepfactor.c's, reached as far data */
-extern union SleepFactor sleepFactor;
-extern union SleepFactor sleepFactorRead;
-extern union SleepFactorStatus sleepFactorStatus;
 
 void main(void)
 {
@@ -72,44 +53,13 @@ void main(void)
 	mainLoop();
 }
 
-/*
- * the downloader's start (DOWNLOADER_ENTRY), from the application's updaterStartDownloader:
- * the stack reset, the sleep factor and host link it hands over in DOWNLOADER_START taken,
- * every interrupt masked, and the main loop entered as after an update (updReset 0)
- */
-void downloaderStart(void)
-{
-#asm
-	MOVW	SP, #0D500H
-#endasm
-	sleepFactorStatus.value = DOWNLOADER_START->snapshot;
-	sleepFactor.bytes[0] = DOWNLOADER_START->sleepFactor[0];
-	sleepFactor.bytes[1] = DOWNLOADER_START->sleepFactor[1];
-	sleepFactor.bytes[2] = DOWNLOADER_START->sleepFactor[2];
-	sleepFactor.bytes[3] = DOWNLOADER_START->sleepFactor[3];
-	hostLink.frameSize = DOWNLOADER_START->frameSize;
-	hostLink.config = DOWNLOADER_START->link.config;
-	updReset = 0;
-	memcpy(updVersion, IMAGE_VERSION_INFO->version, 4);
-	timeStampDigits(updBuild, (const char __far *)(IMAGE_VERSION_INFO + 1));
-	MK0 = 0xffff;
-	MK1 = 0xffff;
-	MK2 = 0xffff;
-	IF0 = 0;
-	IF1 = 0;
-	IF2 = 0;
-	rtcInit();
-	sleepFactorRead = sleepFactor;
-	mainLoop();
-}
-
 int updaterInitErnieUpdMode(void)
 {
 	if (updReset) {
 		updMode = 0;
 		paramInit();
 		watchdogSet(&configGet()->watchdog);
-		sub_3B718();
+		watchdogStop();
 		updInput.bits.multiCnReported = updInput.bits.multiCn = updInput.bits.multiCnLast =
 			!P2.0 ^ 1;
 	} else {
@@ -187,14 +137,14 @@ unsigned char updModeChange(unsigned char mode)
 		case 2:
 			powerOff();
 			boardMultiCnOutputOff();
-			sub_3B718();
+			watchdogStop();
 			refused = 0;
 			break;
 		case 1:
 			hostClose();
 			powerOff();
 			boardMultiCnOutputOff();
-			sub_3B718();
+			watchdogStop();
 			refused = 0;
 			break;
 		case 5:
@@ -514,7 +464,7 @@ int inputPoll(void)
 int multiCnChanged(void)
 {
 	boardSetMultiCnOutput(BOARD_MULTICN_HOST);
-	sub_3AC35();
+	powerMultiCnOff();
 	if (boardMultiCnIsDongle()) {
 		serialOpen1(2);
 		sleepFactorSet6(1);
@@ -568,7 +518,7 @@ void mainLoop(void)
 	buttonInit();
 	tau0PowerOn();
 	tm00Start();
-	sub_3AF74();
+	timerInit();
 	serial1Reset();
 	serial4StartTimers();
 	serial2Init();

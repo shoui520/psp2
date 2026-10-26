@@ -1,0 +1,138 @@
+# The updater's link (tools/lk78k0r.py): its objects in link order, then where their segments
+# go, as Sony's image has them. Boot cluster 1 (0x1000-0x1fff), the code to 0xbfff and from
+# 0x35400 on; the RAM below the application's stack top, 0xfd500.
+
+OBJECT	entry.c
+OBJECT	main.c
+OBJECT	tau.c
+OBJECT	updater.c
+OBJECT	host.c
+OBJECT	command.c
+OBJECT	spidev.c
+OBJECT	../app/sha1.c
+OBJECT	../app/aes.c
+OBJECT	../app/iica.c
+OBJECT	stub.c
+OBJECT	util.c
+OBJECT	nvs.c
+OBJECT	elmo.c
+OBJECT	power.c
+OBJECT	powerseq.c
+OBJECT	board.c
+OBJECT	powerwait.c
+OBJECT	hostint.c
+OBJECT	battery.c
+OBJECT	charge.c
+OBJECT	cookie.c
+OBJECT	param.c
+OBJECT	uart.c
+OBJECT	uart4.c
+OBJECT	../app/clockout.c
+OBJECT	../app/version.c
+OBJECT	scratchpad.c
+OBJECT	serial1.c
+OBJECT	serial.c
+OBJECT	serialevent.c
+OBJECT	serial2.c
+OBJECT	serial4.c
+OBJECT	serialauth.c
+OBJECT	../app/sleepfactor.c
+OBJECT	timer.c
+OBJECT	../app/board.c
+OBJECT	handshake.c
+OBJECT	config.c
+OBJECT	../app/gf.c
+OBJECT	../app/watchdog.c
+OBJECT	version.c
+OBJECT	cstart.asm
+OBJECT	vectors.asm
+# the CA78K0R libraries' modules it uses
+OBJECT	../lib/lucom.asm
+OBJECT	../lib/iumul.asm
+OBJECT	../lib/lumul.asm
+OBJECT	../lib/cudiv.asm
+OBJECT	../lib/iudiv.asm
+OBJECT	../lib/curem.asm
+OBJECT	../lib/luadd.asm
+OBJECT	../lib/lulsh.asm
+OBJECT	../lib/lursh.asm
+OBJECT	../lib/luband.asm
+OBJECT	../lib/lubor.asm
+OBJECT	../lib/lubxor.asm
+OBJECT	../lib/divuw.asm
+OBJECT	../lib/memcpy.asm
+OBJECT	../lib/memcmp.asm
+OBJECT	../lib/memset.asm
+OBJECT	../lib/memset_n.asm
+OBJECT	../lib/vsprintf.asm
+OBJECT	../lib/fsl.asm
+OBJECT	../lib/fslswap.asm
+OBJECT	../lib/fslflags.asm
+OBJECT	../lib/fslwrite.asm
+OBJECT	../lib/fslopen.asm
+
+# the compiler's runtime registers
+SYMBOL	_@SEGAX		0xffed4
+SYMBOL	_@SEGBC		0xffed5
+SYMBOL	_@SEGDE		0xffed6
+SYMBOL	_@SEGHL		0xffed7
+SYMBOL	_@RTARG0	0xffed8
+SYMBOL	_@RTARG1	0xffed9
+SYMBOL	_@RTARG2	0xffeda
+SYMBOL	_@RTARG3	0xffedb
+SYMBOL	_@RTARG4	0xffedc
+SYMBOL	_@RTARG5	0xffedd
+SYMBOL	_@RTARG6	0xffede
+SYMBOL	_@RTARG7	0xffedf
+# and as the libraries' modules name them
+SYMBOL	@SEGAX		0xffed4
+SYMBOL	@SEGBC		0xffed5
+SYMBOL	@SEGDE		0xffed6
+SYMBOL	@SEGHL		0xffed7
+SYMBOL	@RTARG0		0xffed8
+SYMBOL	@RTARG2		0xffeda
+SYMBOL	@RTARG4		0xffedc
+SYMBOL	@RTARG6		0xffede
+
+# the interrupts' vectors are vectors.asm's table, not the compiler's
+DROP	@@VECT??
+
+# boot cluster 1: the vectors, the CALLT table and the option bytes, then the version block
+AT	0x01000
+SEG	@@VECT
+AT	0x01f00
+SEG	@@CNSTL		version.c
+
+# the code below 0xc000
+AT	0x02000
+SEG	@@CODEL		entry.c
+SEG	@@CSTART
+SEG	@@RTCODE
+SEG	@@BASE
+SEG	@@FSLCOD
+SEG	@@FSLOPN
+SEG	@@CNSTL		main.c updater.c host.c command.c ../app/sha1.c ../app/aes.c util.c
+SEG	@@FSLCNS
+SEG	@@CNSTL
+SEG	@@CODEL		main.c tau.c updater.c host.c stub.c util.c nvs.c elmo.c power.c board.c powerwait.c hostint.c battery.c charge.c cookie.c param.c uart.c uart4.c scratchpad.c serial1.c serial.c serialevent.c serial2.c serial4.c serialauth.c config.c ../app/gf.c
+
+# the code from 0x35400: the libraries, then the rest
+AT	0x35400
+SEG	@@LCODE
+SEG	@@CODEL
+
+# the RAM: the heap, the near data, the flash library's
+AT	0xfd510
+SEG	@@HEAP
+SEG	@@DATA		timer.c serialauth.c handshake.c
+SEG	@@FSLDAT
+SEG	@@DATA
+# kept over a warm start
+AT	0xfd900
+SEG	@@DATAL		main.c param.c ../app/watchdog.c
+SEG	@@DATAL
+# the short direct area
+AT	0xffe20
+SEG	@@DATS
+AT	0xffee2
+SEG	@@FSLSAD

@@ -39,7 +39,7 @@ extern unsigned char FSL_ModeCheck(void);
 extern unsigned char FSL_GetSecurityFlags(unsigned char *flags);
 extern unsigned char fslSetSecurityFlag(void);
 extern void FSL_Close(void);
-extern unsigned char byteFE06C[];		/* the library's descriptor */
+extern unsigned char fslDataBuffer[];		/* the library's descriptor */
 
 /* the NVS byte of the downloader's flags (version.c's setDlFlags) */
 #define UPDATER_NVS_DL_FLAGS	0x2d
@@ -203,7 +203,7 @@ static unsigned char updaterFlashPrepare(void)
 	unsigned int flags;
 
 	FSL_Open();
-	result = FSL_Init(byteFE06C);
+	result = FSL_Init(fslDataBuffer);
 	if (result == 0) {
 		result = FSL_ModeCheck();
 		if (result == 0) {

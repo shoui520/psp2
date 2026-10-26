@@ -23,6 +23,13 @@
 
 extern const struct SerialCommand1 __far serialCommands1[];
 
+/* the application's command 0x0900 passphrase (app/serial1.c): the updater has not the command,
+   only the bytes */
+const unsigned char serial1Password[16] = {
+	0x93, 0xce, 0x8e, 0xbe, 0xdf, 0x7f, 0x69, 0xa9,
+	0x6f, 0x35, 0xdd, 0xe3, 0xbe, 0xcb, 0x97, 0xd5,
+};
+
 union Serial1Word {
 	unsigned int	value;
 	unsigned char	byte[2];

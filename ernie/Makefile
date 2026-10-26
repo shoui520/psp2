@@ -14,7 +14,9 @@
 # Compiler: Renesas CA78K0R (cc78k0r, ra78k0r) for the 78K0R boards, through
 # tools/ca78k0r.py, which places every segment itself (the free edition's linker stops
 # at 64 KiB); CHIP, the device option, comes from hw/<id>.mk. Windows programs, run like
-# psp2snc.exe (tools/host.py). Skeleton: nothing builds yet.
+# psp2snc.exe (tools/host.py). tools/lk78k0r.py links a program by its link file
+# (<program>/<program>.lk) into Intel HEX and a map, in $(O) (default build/<hw>/<version>/).
+# The updater builds; the application's link file is still to come.
 
 HW ?= 0x00415000
 FW ?= 0x01000306
@@ -33,7 +35,20 @@ endif
 # after becomes a branch)
 CAFLAGS := -qx2 -ml
 
-all:
-	@echo "ernie is a skeleton: no CA78K0R toolchain yet" >&2; exit 1
+PYTHON ?= python3
+O ?= build/$(HW)/$(FW)
+LINKFILE := $(PROGRAM)/$(PROGRAM).lk
 
-.PHONY: all
+all: $(O)/$(PROGRAM).hex
+
+# relinked every time: the link compiles every object itself and keeps no dependencies
+$(O)/$(PROGRAM).hex: FORCE
+	@mkdir -p $(O)/$(PROGRAM)
+	$(PYTHON) ../tools/lk78k0r.py $(LINKFILE) -c $(CHIP) -o $@ --map $(O)/$(PROGRAM).map \
+		--work $(O)/$(PROGRAM) $(CFLAGS) --flags "$(CAFLAGS)"
+
+clean:
+	rm -rf $(O)/$(PROGRAM) $(O)/$(PROGRAM).hex $(O)/$(PROGRAM).map
+
+FORCE:
+.PHONY: all clean FORCE

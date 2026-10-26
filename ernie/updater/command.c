@@ -43,7 +43,7 @@ extern unsigned char FSL_IVerify(unsigned int block);
 extern unsigned char FSL_Write(unsigned long address, unsigned char words);
 extern unsigned char fslSetSecurityFlagSwap(void);
 extern void FSL_Close(void);
-extern unsigned char byteFE06C[];		/* the library's descriptor and write buffer */
+extern unsigned char fslDataBuffer[];		/* the library's data buffer (main.c) */
 
 /* 0x0090 and 0x0091's data: where in the scratch pad, and how many bytes */
 struct ScratchPadRange {
@@ -129,6 +129,11 @@ const unsigned char updaterCryptoIv[AES_BLOCK_SIZE] = {
 	0x8e, 0xf2, 0x9a, 0x45, 0x73, 0x0e, 0xf1, 0x30,
 };
 
+/* the updater's state, in one block as Sony's image has it (updater.lk) */
+unsigned char updMode;		/* updModeChange's */
+unsigned char updReset;		/* started from the reset vector (main), not by the application */
+unsigned char updVersion[4];	/* the running application's version */
+char updBuild[12];		/* and its build time, digits only */
 unsigned char updImageChecked;		/* 0x1184 found the image's digest right */
 unsigned char updProgrammed;
 unsigned char updSegment;
@@ -141,8 +146,18 @@ unsigned long updShaW[SHA1WordsSize];
 unsigned char updShaBlock[SHA1BlockSize];
 unsigned long updRoundKeys[44];		/* AES-128: (nr + 1) * nb words */
 unsigned char updIv[AES_BLOCK_SIZE];
+unsigned long updLoops;		/* the main loop's rounds */
+union UpdEvents updEvents;
+unsigned int buttonPowerHeld;	/* the polls P11.5 has been held low */
+unsigned int buttonPsHeld;	/* and P4.6 */
+unsigned long buttonPolls;
+unsigned int buttonShortTime;	/* buttonPoll's times, in polls */
+unsigned int buttonHoldTime1;
+unsigned int buttonHoldTime2;
 struct AesKey updKey;
+union UpdInput updInput;
 unsigned char updProgress;
+char logBuffer[0x80];		/* logPrintf's */
 
 unsigned char updaterInit(void)
 {
@@ -1674,9 +1689,9 @@ int flProg(void)
 
 	tries = 1;
 	FSL_Open();
-	result = FSL_Init(byteFE06C);
+	result = FSL_Init(fslDataBuffer);
 	while (result == 0x1f)
-		result = FSL_Init_cont(byteFE06C);
+		result = FSL_Init_cont(fslDataBuffer);
 	result = FSL_ModeCheck();
 	if (result == 0) {
 		result = FSL_BlankCheck(updSegment);
@@ -1689,7 +1704,7 @@ int flProg(void)
 		do {
 			if (result == 0) {
 				for (i = 0; i < 0x100; i += 0x40) {
-					memcpy(byteFE06C, &updPlain[i << 2], 0x100);
+					memcpy(fslDataBuffer, &updPlain[i << 2], 0x100);
 					if (0)
 						logPrintf("\r\nFP FADR=%06lX SADR=%06lX\r\n",
 							  ((unsigned long)updSegment << 10) + (i << 2),
@@ -1735,7 +1750,7 @@ int flBootClusterSwap(void)
 	unsigned char result;
 
 	FSL_Open();
-	result = FSL_Init(byteFE06C);
+	result = FSL_Init(fslDataBuffer);
 	if (result == 0) {
 		result = FSL_ModeCheck();
 		if (result == 0)

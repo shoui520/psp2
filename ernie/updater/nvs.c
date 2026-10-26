@@ -89,7 +89,7 @@ extern unsigned char FSL_Erase(unsigned char block);
 extern unsigned char FSL_IVerify(unsigned int block);
 extern unsigned char FSL_EEPROMWrite(unsigned long address, unsigned char words);
 extern void FSL_Close(void);
-extern unsigned char byteFE06C[];		/* the library's descriptor and write buffer */
+extern unsigned char fslDataBuffer[];		/* the library's data buffer (main.c) */
 
 
 static unsigned char nvsErase(unsigned char block);
@@ -189,9 +189,9 @@ static unsigned char nvsErase(unsigned char block)
 	unsigned char result;
 
 	FSL_Open();
-	result = FSL_Init(byteFE06C);
+	result = FSL_Init(fslDataBuffer);
 	while (result == FLASH_BUSY)
-		result = FSL_Init_cont(byteFE06C);
+		result = FSL_Init_cont(fslDataBuffer);
 	result = FSL_ModeCheck();
 	if (result == FLASH_OK) {
 		do
@@ -214,12 +214,12 @@ static unsigned char nvsFlashWrite(unsigned char *address, void *data, unsigned 
 	unsigned char result;
 
 	FSL_Open();
-	result = FSL_Init(byteFE06C);
+	result = FSL_Init(fslDataBuffer);
 	while (result == FLASH_BUSY)
-		result = FSL_Init_cont(byteFE06C);
+		result = FSL_Init_cont(fslDataBuffer);
 	result = FSL_ModeCheck();
 	if (result == FLASH_OK) {
-		memcpy(byteFE06C, data, (unsigned char)(words << 2));
+		memcpy(fslDataBuffer, data, (unsigned char)(words << 2));
 		do
 			result = FSL_EEPROMWrite((unsigned long)address, words);
 		while (result == FLASH_BUSY);

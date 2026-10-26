@@ -26,6 +26,12 @@ struct UartConfig {
 
 void intInit(void);
 
+/* at 0xfd900 (updater.lk), where the application keeps it too */
+struct KeepRam keepRam;
+
+/* the flash library's data buffer (FSL_Init's), after the library's own data (updater.lk) */
+__near unsigned char fslDataBuffer[0x100];
+
 /* the clocks: the X1 oscillator as the main clock, the internal oscillator stopped */
 void hdwinit(void)
 {
@@ -131,6 +137,9 @@ int uartsOpen(void)
 	SS1L.3 = 1;
 	return 0;
 }
+
+/* the updater's banner, printed nowhere */
+const char __far updaterBanner[] = "\r\n\n\nWelcome to Ernie Downloader. (0x01.0x00.0x33.0x00)\r\n";
 
 /* every interrupt masked and at the lowest priority */
 void intInit(void)

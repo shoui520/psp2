@@ -11,3 +11,6 @@ const struct UpdaterVersionInfo updaterVersionInfo = {
 	"$Date:: 2011-05-13 13:18:11 +0900#$",
 	"$Date:: 2011-05-13 13:11:31 +0900#$"
 };
+
+/* RESF at the start of the main loop, reported with the version (serial1.c) */
+unsigned char resetFlags;

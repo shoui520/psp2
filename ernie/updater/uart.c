@@ -13,6 +13,7 @@
 #include <stddef.h>
 
 #include "chip.h"
+#include "serial.h"
 #include "timer.h"
 #include "uart.h"
 #include "updater.h"
@@ -371,7 +372,7 @@ void uart3ReceiveInterrupt(void)
 	if ((p->rxWrite + 1 & p->rxMask) != p->rxRead) {
 		p->rxBuffer[p->rxWrite] = data;
 		p->rxWrite = p->rxWrite + 1 & p->rxMask;
-		if (logMode == 3) {
+		if (serial.mode == 3) {
 			if (p->timeout.flgid != 0)
 				timerStart(p->timeout.timer, p->timeout.timeout);
 		} else
@@ -390,7 +391,7 @@ void uart3SendInterrupt(void)
 		p->txRead = p->txRead + 1 & p->txMask;
 	} else {
 		p->flags &= ~UART_SENDING;
-		if (logMode != 3)
+		if (serial.mode != 3)
 			updEventSet(0x33);
 	}
 }

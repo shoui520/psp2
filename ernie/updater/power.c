@@ -20,6 +20,8 @@ struct ElmoRegRead {
 };
 
 unsigned char powerCleared[2];		/* cleared at the init and the resume, read nowhere */
+struct DeviceVersions deviceVersions;
+unsigned char elmoCommand[12];
 
 static const struct ElmoRegRead __far elmoRegRead[] = {
 	{ 0xa0, &elmoStatusMask.reg[0] },

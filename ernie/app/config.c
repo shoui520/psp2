@@ -68,7 +68,7 @@ extern unsigned char FSL_Erase(unsigned int block);
 extern unsigned char FSL_IVerify(unsigned int block);
 extern unsigned char FSL_Write(unsigned long address, unsigned char words);
 extern void FSL_Close(void);
-extern unsigned char byteFE06C[];		/* the library's descriptor and write buffer */
+extern unsigned char fslDataBuffer[];		/* the library's descriptor and write buffer */
 
 /* the banks, in the updater's part of the flash, and the defaults of this build's layout:
    PLACEHOLDER, the defaults (0x800) are not written yet */
@@ -436,9 +436,9 @@ unsigned char configFlashWrite(unsigned long address)
 
 	tries = 3;
 	FSL_Open();
-	result = FSL_Init(byteFE06C);
+	result = FSL_Init(fslDataBuffer);
 	while (result == 0x1f)
-		result = FSL_Init(byteFE06C);
+		result = FSL_Init(fslDataBuffer);
 	if (result == 0) {
 		do {
 			result = FSL_ModeCheck();
@@ -454,7 +454,7 @@ unsigned char configFlashWrite(unsigned long address)
 			}
 			if (result == 0) {
 				for (i = 0; i < 0x100; i += 0x40) {
-					memcpy(byteFE06C, (unsigned char *)&configBuffer + i * 4, 0x100);
+					memcpy(fslDataBuffer, (unsigned char *)&configBuffer + i * 4, 0x100);
 					do
 						result = FSL_Write(address + i * 4, 0x40);
 					while (result == 0x1f);

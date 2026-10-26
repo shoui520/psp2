@@ -21,8 +21,6 @@
 #include "timer.h"
 #include "updater.h"
 
-struct DeviceVersions deviceVersions;
-unsigned char elmoCommand[12];
 unsigned char powerSeqOnState;		/* 7 once powerSeqOn ran; read nowhere */
 
 static const struct PowerStep __far powerResumeSteps[3] = {

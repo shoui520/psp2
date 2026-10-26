@@ -80,6 +80,10 @@ extern union UpdEvents updEvents;
 extern unsigned int buttonPowerHeld;
 extern unsigned int buttonPsHeld;
 extern unsigned long buttonPolls;
+extern unsigned int buttonShortTime;
+extern unsigned int buttonHoldTime1;
+extern unsigned int buttonHoldTime2;
+extern char logBuffer[0x80];
 extern int updaterInitErnieUpdMode(void);
 extern unsigned char updModeGet(void);
 extern unsigned char updModeChange(unsigned char mode);
@@ -145,7 +149,6 @@ extern struct UpdHostLink hostLink;
 extern struct HostCommandFrame hostRx;
 extern struct HostAnswerFrame hostTx;
 extern struct HostSlowCommand hostSlowCommands[HOST_SLOW_COMMANDS];
-extern unsigned char logMode;		/* 3: the log goes out */
 extern int hostOpen(void);
 extern int hostClose(void);
 extern unsigned char hostPoll(void);
@@ -159,7 +162,6 @@ extern struct HostSlowCommand *hostSlowAlloc(unsigned int command);
 extern int hostSlowFree(struct HostSlowCommand *slow);
 extern unsigned char hostSlowPending(void);
 extern void hostSlowRun(void);
-extern void sub_3B721(void);
 
 /* stub.c */
 struct StateEvent;
@@ -224,9 +226,6 @@ extern unsigned char updaterInit(void);
 extern int updaterDecryptInit(void);
 extern unsigned char hostCommandFast(unsigned int command);
 extern unsigned char hostCommandSlow(unsigned int command, struct HostSlowCommand *slow);
-extern int sub_3B718(void);
-extern void sub_3AC35(void);
-extern void sub_3AF74(void);
 extern unsigned char sub_A5F9(unsigned char level);
 
 #endif
