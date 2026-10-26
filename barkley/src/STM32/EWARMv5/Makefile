@@ -53,7 +53,7 @@ CXXFLAGS := $(TARGET) -O2 -ffreestanding -fno-common -fno-exceptions -fno-rtti \
 
 # in the image's order: the program's (../motion/motion), the library's drivers
 SOURCES := $(MOTION)/MotionProcessor.cpp $(MOTION)/MotionHif.cpp $(MOTION)/AK8975.cpp $(MOTION)/MotionProtoPacketEncoder.cpp \
-	$(MOTION)/stm32f10x_it.cpp $(MOTION)/I2cMemIf.cpp $(MOTION)/Spi.cpp $(MOTION)/Usart.cpp $(MOTION)/Dma.cpp $(MOTION)/Board.cpp $(MOTION)/BufferedUsartStream.cpp $(MOTION)/I2c.cpp $(MOTION)/Gpio.cpp $(MOTION)/HifSpi.cpp $(MOTION)/AdcSampler.cpp $(MOTION)/System.cpp $(MOTION)/Adc.cpp $(MOTION)/TimerSlot.cpp $(MOTION)/SampleTimer.cpp
+	$(MOTION)/stm32f10x_it.cpp $(MOTION)/I2cMemIf.cpp $(MOTION)/Spi.cpp $(MOTION)/Usart.cpp $(MOTION)/Dma.cpp $(MOTION)/Board.cpp $(MOTION)/BufferedUsartStream.cpp $(MOTION)/I2c.cpp $(MOTION)/Gpio.cpp $(MOTION)/HifSpi.cpp $(MOTION)/AdcSampler.cpp $(MOTION)/System.cpp $(MOTION)/I2cRegIf.cpp $(MOTION)/Adc.cpp $(MOTION)/TimerSlot.cpp $(MOTION)/SampleTimer.cpp
 LIBSOURCES := stm32f10x_rcc.c stm32f10x_flash.c stm32f10x_gpio.c stm32f10x_nvic.c stm32f10x_exti.c stm32f10x_adc.c stm32f10x_tim.c stm32f10x_i2c.c stm32f10x_dma.c stm32f10x_spi.c stm32f10x_usart.c stm32f10x_systick.c
 # IAR's C library (DLib), what the image links of it
 RUNTIME := xprintf.c
