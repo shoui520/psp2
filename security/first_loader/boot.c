@@ -472,7 +472,35 @@ struct BootSector {
 	unsigned char blockCount[4];
 };
 
-struct EmmcCard;
+struct EmmcCard {
+	unsigned int controllerAddress;
+	unsigned int flags;
+	unsigned char cid[16];
+	unsigned char csd[16];
+	unsigned char cardRegisters[0x70];
+	unsigned char extendedCsd[512];
+	unsigned char csdStructure;
+	unsigned char specificationVersion;
+	unsigned char reservedVersion[2];
+	unsigned int accessTime;
+	unsigned int accessClocks;
+	unsigned int maximumClock;
+	unsigned short commandClasses;
+	unsigned short reservedClasses;
+	unsigned int blockCount;
+	unsigned char readBlockLength;
+	unsigned char readBlockPartial;
+	unsigned char writeBlockMisalign;
+	unsigned char readBlockMisalign;
+	unsigned char readToWriteFactor;
+	unsigned char writeBlockLength;
+	unsigned char writeBlockPartial;
+	unsigned char reservedWrite;
+	unsigned int sectorCount;
+	unsigned int highSpeedClock;
+};
+
+typedef char checkEmmcCardSize[sizeof(struct EmmcCard) == 0x2c0 ? 1 : -1];
 
 struct FirstLoaderSdif {
 	unsigned int flags;
@@ -965,10 +993,252 @@ int sendSdifCommand(struct FirstLoaderSdif *controller,
 	return result;
 }
 
-/* The SDIF controller and card routines are reconstructed below the boot path. */
-int openEmmc(unsigned int port, struct EmmcCard **card);
+int idleSdifCard(struct FirstLoaderSdif *controller)
+{
+	struct FirstLoaderSdifCommand command = { 0 };
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = 1;
+	result = sendSdifCommand(controller, &command, 0);
+	if (result < 0)
+		return result;
+	setSdifClock(controller, 400000, 0);
+	setSdifBusWidth(controller, 1);
+	return 0;
+}
+
+int stopSdifTransfer(struct FirstLoaderSdif *controller, unsigned int busyResponse)
+{
+	struct FirstLoaderSdifCommand command = { 0 };
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = busyResponse ? 0x302b : 0x3013;
+	command.command = 12;
+	result = sendSdifCommand(controller, &command, 3);
+	return result < 0 ? result : 0;
+}
+
+int readSdifCardStatus(struct FirstLoaderSdif *controller, unsigned int *status)
+{
+	struct FirstLoaderSdifCommand command = { 0 };
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = 0x13;
+	command.command = 13;
+	command.argument = (unsigned int)controller->relativeAddress << 16;
+	result = sendSdifCommand(controller, &command, 3);
+	if (result < 0)
+		return result;
+	if (status != 0)
+		*status = command.response[0];
+	return decodeSdifCardStatus(command.response[0]);
+}
+
+int setSdifBlockLength(struct FirstLoaderSdif *controller, unsigned int length)
+{
+	struct FirstLoaderSdifCommand command = { 0 };
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = 0x13;
+	command.command = 16;
+	command.argument = length;
+	result = sendSdifCommand(controller, &command, 3);
+	if (result < 0)
+		return result;
+	return decodeSdifCardStatus(command.response[0]);
+}
+
+int setSdifBlockCount(struct FirstLoaderSdif *controller, unsigned int count)
+{
+	struct FirstLoaderSdifCommand command = { 0 };
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = 0x13;
+	command.command = 23;
+	command.argument = count;
+	result = sendSdifCommand(controller, &command, 3);
+	if (result < 0)
+		return result;
+	return decodeSdifCardStatus(command.response[0]);
+}
+
+int readSdifCid(struct FirstLoaderSdif *controller, unsigned int *cid)
+{
+	struct FirstLoaderSdifCommand command = { 0 };
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = 0x32;
+	command.command = 2;
+	result = sendSdifCommand(controller, &command, 3);
+	if (result < 0)
+		return result;
+	copyWordsAndSum(cid, command.response, 16);
+	return 0;
+}
+
+int readSdifCsd(struct FirstLoaderSdif *controller, unsigned int *csd)
+{
+	struct FirstLoaderSdifCommand command = { 0 };
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = 0x33;
+	command.command = 9;
+	command.argument = (unsigned int)controller->relativeAddress << 16;
+	result = sendSdifCommand(controller, &command, 3);
+	if (result < 0)
+		return result;
+	copyWordsAndSum(csd, command.response, 16);
+	return 0;
+}
+
+int selectSdifCard(struct FirstLoaderSdif *controller, unsigned int select)
+{
+	struct FirstLoaderSdifCommand command = { 0 };
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = select ? 0x13 : 3;
+	command.command = 7;
+	command.argument = select ? (unsigned int)controller->relativeAddress << 16 : 0;
+	result = sendSdifCommand(controller, &command, 3);
+	return result < 0 ? result : 0;
+}
+
+static struct FirstLoaderSdif *emmcController(const struct EmmcCard *card)
+{
+	return (struct FirstLoaderSdif *)(unsigned long)card->controllerAddress;
+}
+
+int readEmmcCid(struct EmmcCard *card, unsigned int *cid)
+{
+	return readSdifCid(emmcController(card), cid);
+}
+
+int readEmmcCsd(struct EmmcCard *card, unsigned int *csd)
+{
+	return readSdifCsd(emmcController(card), csd);
+}
+
+int selectEmmcCard(struct EmmcCard *card, unsigned int select)
+{
+	return selectSdifCard(emmcController(card), select);
+}
+
+int setEmmcBlockLength(struct EmmcCard *card, unsigned int length)
+{
+	return setSdifBlockLength(emmcController(card), length);
+}
+
+int setEmmcBlockCount(struct EmmcCard *card, unsigned int count)
+{
+	return setSdifBlockCount(emmcController(card), count);
+}
+
+int sendEmmcOperationConditions(struct EmmcCard *card, unsigned int conditions,
+				unsigned int *response)
+{
+	struct FirstLoaderSdifCommand command = { 0 };
+	unsigned int retries = 0;
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = 0x42;
+	command.command = 1;
+	command.argument = conditions;
+	do {
+		result = sendSdifCommand(emmcController(card), &command, 0);
+		if (result < 0)
+			return result;
+		if (conditions == 0 || (command.response[0] & 0x80000000U)) {
+			if (response != 0)
+				*response = command.response[0];
+			return 0;
+		}
+		delayMicroseconds(10000);
+		retries++;
+	} while (retries < 100);
+	return (int)0x80320002U;
+}
+
+int setEmmcRelativeAddress(struct EmmcCard *card, unsigned int address)
+{
+	struct FirstLoaderSdifCommand command = { 0 };
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = 0x13;
+	command.command = 3;
+	command.argument = address << 16;
+	result = sendSdifCommand(emmcController(card), &command, 3);
+	return result < 0 ? result : decodeSdifCardStatus(command.response[0]);
+}
+
+int switchEmmcSetting(struct EmmcCard *card, unsigned int access,
+		      unsigned int index, unsigned int value)
+{
+	struct FirstLoaderSdifCommand command = { 0 };
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = 0x2b;
+	command.command = 6;
+	command.argument = 0x03000000U | (access & 3) | ((index & 0xff) << 16) |
+			   ((value & 0xff) << 8);
+	result = sendSdifCommand(emmcController(card), &command, 3);
+	return result < 0 ? result : 0;
+}
+
+int readEmmcExtendedCsd(struct EmmcCard *card, void *destination)
+{
+	struct FirstLoaderSdifCommand command = { 0 };
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = 0x114;
+	command.command = 8;
+	command.bufferAddress = (unsigned int)(unsigned long)destination;
+	command.blockSize = 512;
+	result = sendSdifCommand(emmcController(card), &command, 3);
+	return result < 0 ? result : 0;
+}
+
 int readEmmcBlocks(struct EmmcCard *card, unsigned int block,
-		   void *destination, unsigned int count);
+		   void *destination, unsigned int count)
+{
+	struct FirstLoaderSdif *controller =
+		(struct FirstLoaderSdif *)(unsigned long)card->controllerAddress;
+	struct FirstLoaderSdifCommand command = { 0 };
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = 0x114;
+	command.command = count == 1 ? 17 : 18;
+	command.argument = (card->flags & 1) ? block : block << 9;
+	command.bufferAddress = (unsigned int)(unsigned long)destination;
+	command.blockSize = 512;
+	command.blockCount = count;
+	if (command.command == 18) {
+		result = setEmmcBlockCount(card, count);
+		if (result < 0)
+			return result;
+	}
+	result = sendSdifCommand(controller, &command, 0);
+	if (result < 0) {
+		if (command.command == 18 && result != (int)0x8032011dU &&
+		    result != (int)0x8032011eU && result != (int)0x8032011fU)
+			stopSdifTransfer(controller, 0);
+		return result;
+	}
+	result = readSdifCardStatus(controller, 0);
+	return result < 0 ? result : 0;
+}
 
 static volatile unsigned int bootHardwareMode;
 
@@ -976,6 +1246,115 @@ static unsigned int readLittleEndianWord(const unsigned char *bytes)
 {
 	return (unsigned int)bytes[0] | ((unsigned int)bytes[1] << 8) |
 	       ((unsigned int)bytes[2] << 16) | ((unsigned int)bytes[3] << 24);
+}
+
+static struct EmmcCard emmcCard;
+
+struct EmmcCard *getEmmcCard(void)
+{
+	return &emmcCard;
+}
+
+static const unsigned int emmcTimeUnits[8] = {
+	1, 10, 100, 1000, 10000, 100000, 1000000, 10000000,
+};
+static const unsigned char emmcTimeMultipliers[16] = {
+	0, 10, 12, 13, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80,
+};
+static const unsigned int emmcClockUnits[8] = {
+	10000, 100000, 1000000, 10000000, 0, 0, 0, 0,
+};
+static const unsigned char emmcClockMultipliers[16] = {
+	0, 10, 12, 13, 15, 20, 26, 30, 35, 40, 45, 52, 55, 60, 70, 80,
+};
+
+int openEmmc(unsigned int port, struct EmmcCard **resultCard)
+{
+	struct FirstLoaderSdif *controller = getSdif(port);
+	struct EmmcCard *card = getEmmcCard();
+	const unsigned char *csd = card->csd;
+	unsigned int response;
+	unsigned int multiplier;
+	unsigned int unit;
+	int result;
+
+	if (controller == 0)
+		return -1;
+	result = isSdifCardPresent(controller);
+	if (result < 0)
+		return result;
+	if (result == 0)
+		return -1;
+	card->controllerAddress = (unsigned int)(unsigned long)controller;
+	card->flags = 0;
+	result = powerOnSdif(controller);
+	if (result < 0)
+		return result;
+	result = idleSdifCard(controller);
+	if (result < 0)
+		return result;
+	result = sendEmmcOperationConditions(card, controller->flags | 0x40000000U,
+					     &response);
+	if (result < 0)
+		return result;
+	result = readEmmcCid(card, (unsigned int *)card->cid);
+	if (result < 0)
+		return result;
+	result = setEmmcRelativeAddress(card, 1);
+	if (result < 0)
+		return result;
+	controller->relativeAddress = 1;
+	result = readEmmcCsd(card, (unsigned int *)card->csd);
+	if (result < 0)
+		return result;
+	card->csdStructure = readBits(csd, 0x7e, 2);
+	card->specificationVersion = readBits(csd, 0x7a, 4);
+	multiplier = readBits(csd, 0x73, 4);
+	unit = readBits(csd, 0x70, 3);
+	card->accessTime = emmcTimeMultipliers[multiplier] * emmcTimeUnits[unit] / 10;
+	card->accessClocks = readBits(csd, 0x68, 8) * 100;
+	multiplier = readBits(csd, 0x63, 4);
+	unit = readBits(csd, 0x60, 3);
+	card->maximumClock = emmcClockMultipliers[multiplier] * emmcClockUnits[unit];
+	multiplier = readBits(csd, 0x2f, 3);
+	card->blockCount = (readBits(csd, 0x3e, 12) + 1) << ((multiplier + 2) & 31);
+	card->commandClasses = readBits(csd, 0x54, 12);
+	card->readBlockLength = readBits(csd, 0x50, 4);
+	card->readBlockPartial = readBits(csd, 0x4f, 1);
+	card->writeBlockMisalign = readBits(csd, 0x4e, 1);
+	card->readBlockMisalign = readBits(csd, 0x4d, 1);
+	card->readToWriteFactor = readBits(csd, 0x1a, 3);
+	card->writeBlockLength = readBits(csd, 0x16, 4);
+	card->writeBlockPartial = readBits(csd, 0x15, 1);
+	result = selectEmmcCard(card, 1);
+	if (result < 0)
+		return result;
+	result = readEmmcExtendedCsd(card, card->extendedCsd);
+	if (result < 0)
+		return result;
+	card->sectorCount = readLittleEndianWord(card->extendedCsd + 0xd4);
+	card->flags |= 1;
+	switch (card->extendedCsd[0xc4] & 3) {
+	case 1: card->highSpeedClock = 26000000; break;
+	case 2: case 3: card->highSpeedClock = 52000000; break;
+	default: break;
+	}
+	result = setEmmcBlockLength(card, 512);
+	if (result < 0)
+		return result;
+	if (card->highSpeedClock != 0) {
+		result = switchEmmcSetting(card, 0, 0xb9, 1);
+		if (result < 0)
+			return result;
+		result = setSdifClock(controller, card->highSpeedClock, 1);
+	} else {
+		result = setSdifClock(controller, card->maximumClock, 0);
+	}
+	if (result < 0)
+		return result;
+	if (resultCard != 0)
+		*resultCard = card;
+	return 0;
 }
 
 int readSecondLoaderFromEmmc(unsigned char *destination)
