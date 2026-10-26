@@ -82,8 +82,7 @@ void Spi::IsrCallback(void *arg)
 void Spi::Isr()
 {
 	if (SPI_I2S_GetITStatus(regs_, SPI_I2S_IT_ERR) != RESET) {
-		volatile u16 status = regs_->SR;	/* Sony's: read, kept, not used */
-
+		(void)regs_->SR;	/* Sony's: read once more than printed */
 		printf("Spi::SpiIsr() ERROR:%04X.\n", regs_->SR);
 	}
 }

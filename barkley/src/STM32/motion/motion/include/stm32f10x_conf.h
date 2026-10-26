@@ -31,6 +31,10 @@
 #define _SPI
 #define _SPI1
 #define _SPI2
+#define _USART
+#define _USART1
+#define _USART2
+#define _USART3
 
 #define HSE_Value		((u32)24000000)
 #define HSEStartUp_TimeOut	((u16)0x01FF)
