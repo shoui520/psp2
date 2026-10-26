@@ -23,6 +23,15 @@
 #define _EXTI
 #define _FLASH
 #define _FLASH_PROG
+#define _GPIO
+#define _AFIO
+#define _GPIOA
+#define _GPIOB
+#define _GPIOC
+#define _GPIOD
+#define _GPIOE
+#define _GPIOF
+#define _GPIOG
 #define _I2C
 #define _I2C1
 #define _I2C2
