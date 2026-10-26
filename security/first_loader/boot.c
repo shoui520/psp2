@@ -16,6 +16,37 @@
 /* code that differs between the builds: FL_SINCE(0x20110616) */
 #define FL_SINCE(date)	(FL_BUILD_DATE >= (date))
 
+struct SecondLoaderHeader {
+	unsigned int magic;
+	unsigned int imageSize;
+	unsigned int firstPartSize;
+	unsigned int secondPartSize;
+	unsigned int decodedSize;
+	unsigned short keyIndex;
+	unsigned short signingKeyIndex;
+};
+
+/* Check the lengths and key selectors before processing the image. */
+int checkSecondLoaderHeader(const struct SecondLoaderHeader *header)
+{
+	unsigned int size = header->imageSize;
+	unsigned int decodedSize;
+
+	if (header->magic != 0x64b2c8e5 || size < 0x2b0 || size >= 0x10000)
+		return -1;
+	if (header->firstPartSize >= size || header->secondPartSize >= size)
+		return -1;
+	if (header->firstPartSize + header->secondPartSize + 0x2b0 != size)
+		return -1;
+	decodedSize = header->decodedSize;
+	if (FL_SINCE(0x20110616) && decodedSize >= 0x1bc00)
+		return -1;
+	if (decodedSize + size >= 0x1bc00 || header->signingKeyIndex >= 16 ||
+	    header->keyIndex >= 6)
+		return -1;
+	return 0;
+}
+
 /* Copy whole words and return their sum. When size / 4 is zero the original
  * hardware loop counter wraps, so that case requires a full counter cycle.
  */
