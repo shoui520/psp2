@@ -54,6 +54,12 @@ public:
 		Disable();
 	}
 
+	/* the function the request reports to, the transfer left as it is */
+	void SetDone(Request::Done::Func func, void *arg)
+	{
+		request_.done_.Set(func, arg);
+	}
+
 	/* the transfers left (CNDTR) */
 	s16 Remaining()
 	{
@@ -102,9 +108,9 @@ private:
 };
 
 /* a buffer round and round: the request reports each half as it fills */
-class DmaCirc : public Dma {
+class DmaCirc : public DmaNormal {
 public:
-	DmaCirc(s8 channel) : Dma(channel) {}
+	DmaCirc(s8 channel) : DmaNormal(channel) {}
 	void Init(const DMA_InitTypeDef *init, u8 preemption, u8 sub, u32 priority);
 	void Start(void *buf, u16 size, Request::Done::Func func, void *arg);
 
@@ -114,7 +120,17 @@ public:
 		DMA_ITConfig(regs_, DMA_IT_TC | DMA_IT_HT | DMA_IT_TE, ENABLE);
 	}
 
+	void Stop()
+	{
+		Halt();
+	}
+
 private:
+	void Halt()
+	{
+		Dma::Stop();
+	}
+
 	static void IsrCallback(void *arg);
 	void Isr();
 

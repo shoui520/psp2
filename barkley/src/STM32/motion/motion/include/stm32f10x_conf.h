@@ -40,6 +40,11 @@
 #define _SPI
 #define _SPI1
 #define _SPI2
+#define _TIM
+#define _TIM1
+#define _TIM2
+#define _TIM3
+#define _TIM4
 #define _USART
 #define _USART1
 #define _USART2
