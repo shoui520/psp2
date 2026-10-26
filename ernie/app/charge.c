@@ -93,6 +93,9 @@ void chargeInit(void)
 		if (deviceVersions.battery.version[2] != 0)
 			chargeSetBattery();
 	}
+#if BOARD_CHARGE_TIMER1F
+	charge.timer1fPending = 0;
+#endif
 	handler.handler = chargeTimer;
 	timerSetHandler(0x17, &handler);
 	handler.handler = chargeCookieTimer;
@@ -221,16 +224,33 @@ void chargeUpdate(void)
 		if ((charge.flags & 0x0040) && P14.5 && !P11.4)
 			chargeTransition(0x40);
 		if (state & 0x000c) {
+#if BOARD_CHARGE_TIMER1F
+			if (((configGet()->state.bits.offWakeUnmask22 && chargeFactors.0) ||
+			     chargeControl.0) && chargeMayStart() && !chargeAlarm0On()) {
+				chargeTransition(0x16);
+				chargeControl.0 = 0;
+				chargeTimer1fStop();
+			}
+#else
 			if (chargeControl.0 && chargeMayStart() && !chargeAlarm0On()) {
 				chargeTransition(0x16);
 				chargeControl.0 = 0;
 			}
+#endif
 			if (!configGet()->state.bits.chargeHold && (cookieStatus2.byte[1] & 0x0c) == 0x04 &&
 			    !(stateGetWakeMask() & 0x8000) && chargeUsbHold == 0 &&
 			    (!(charge.flags & 0x0004) || chargeMayStart()) &&
 			    !powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1)
 				chargeTransition(0x0f);
 		} else if (state & 0x0020) {
+#if BOARD_CHARGE_TIMER1F
+			if (configGet()->state.bits.chargeTimer1f) {
+				if (!chargeFactors.0 && !charge.timer1fPending)
+					chargeTimer1fStart();
+				else if (chargeFactors.0 && charge.timer1fPending)
+					chargeTimer1fStop();
+			}
+#endif
 		}
 		if (chargeBbmcChanged())
 			chargeSetCurrent();
@@ -654,13 +674,21 @@ void chargeReadTempVolt(unsigned int *value)
 	*value = charge.batteryTemp + charge.batteryVolt;
 }
 
-/* no caller */
-void chargeUnused0(void)
+/* timer 0x1f (chargeTimer1f), on PCH-1000 only: the others have no caller */
+void chargeTimer1fStart(void)
 {
+#if BOARD_CHARGE_TIMER1F
+	timerStart(0x1f, configGet()->chargeTimer1fDelay + 120);
+	charge.timer1fPending = 1;
+#endif
 }
 
-void chargeUnused1(void)
+void chargeTimer1fStop(void)
 {
+#if BOARD_CHARGE_TIMER1F
+	charge.timer1fPending = 0;
+	timerStop(0x1f);
+#endif
 }
 
 /* the update's period while the power status's AC is set, or in system states 4, 8 and 0x20 */
@@ -676,7 +704,11 @@ void chargeSetAcDelay(void)
 		break;
 	case 0x0004:
 	case 0x0008:
+#if BOARD_CHARGE_TIMER1F
+		charge.acDelay = 60;
+#else
 		charge.acDelay = 10;
+#endif
 		break;
 	}
 }

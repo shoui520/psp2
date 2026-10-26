@@ -14,6 +14,15 @@
 #define CONFIG_VERSION		0x31	/* this build's layout */
 #define CONFIG_WRITTEN		0x5a5a
 
+/* the wake factors unmasked, and masked, at the start and in the off state (stateInit,
+   stateOffHandle), and in the suspend state */
+struct ConfigWakeMasks {
+	unsigned long	off;
+	unsigned long	on;
+	unsigned long	suspendOff;
+	unsigned long	suspendOn;
+};
+
 /* PLACEHOLDER: only the fields read so far */
 struct ConfigBlock {
 	struct AnalogCalibration analogCalibration;	/* the sticks' default calibration */
@@ -94,15 +103,18 @@ struct ConfigBlock {
 	unsigned char	voltage82;
 	unsigned char	voltage83;
 	unsigned char	voltage84;
+#if ERNIE_HW == 0x00406000
+	unsigned char	reserved22[2];		/* PCH-1000's layout: the trim a byte later */
+	unsigned char	voltageTrim;		/* passed with a regulator's level (0x088e) */
+	unsigned char	reserved7[0xf8 - 0xf5];
+#else
 	unsigned char	reserved22;
 	unsigned char	voltageTrim;		/* passed with a regulator's level (0x088e) */
-	unsigned char	reserved7[0x108 - 0xf4];
-	unsigned long	wakeMaskOff;		/* the wake factors unmasked, and masked, at the */
-	unsigned long	wakeMaskOn;		/* start and in the off state (stateInit,
-						   stateOffHandle) */
-	unsigned long	suspendWakeMaskOff;	/* and in the suspend state */
-	unsigned long	suspendWakeMaskOn;
-	unsigned char	reserved27[0x128 - 0x118];
+	unsigned char	reserved7[0xf8 - 0xf4];
+#endif
+	struct ConfigWakeMasks wakeMasks0;	/* the sets each board reads (BOARD_WAKE_MASKS): */
+	struct ConfigWakeMasks wakeMasks1;	/* DEM-3000L's */
+	struct ConfigWakeMasks wakeMasks2;	/* PCH-1000's */
 	unsigned char	wlanLine;		/* the updater's: P3.1, the WLAN's line, driven */
 	unsigned char	reserved31[0x12c - 0x129];
 	struct ChargeAlarmLimit chargeAlarmLimits[4];	/* the battery temperature's alarms */
@@ -139,8 +151,12 @@ struct ConfigBlock {
 		unsigned int	value;
 		struct {
 			unsigned int	offWakeUnmask22:1;	/* set: wake factor 22 unmasked in the
-								   off state */
-			unsigned int	reserved11:1;
+								   off state; on PCH-1000 also
+								   transition 0x16 with the AC on */
+			unsigned int	chargeTimer1f:1;	/* PCH-1000: set: in the system
+								   states with bit 5, timer 0x1f runs
+								   while the AC is off
+								   (chargeTimer1fStart) */
 			unsigned int	chargeLedOff:1;	/* the charge LED off at a reset, and while
 							   input1Bit7Active holds (chargeLedSetOff) */
 			unsigned int	chargeHold:1;	/* set: no transition 0x0f in chargeUpdate */
@@ -149,7 +165,7 @@ struct ConfigBlock {
 			unsigned int	reserved13:11;
 		} bits;
 	} state;				/* kept across a new layout */
-	unsigned char	reserved14[0x1ae - 0x1ac];
+	unsigned int	chargeTimer1fDelay;	/* PCH-1000: timer 0x1f's, less 120 ticks */
 	unsigned char	batterySetting4x;	/* cookieCtrlReg7's for a battery version[2] 0x40-0x4f */
 	unsigned char	batterySetting5x;	/* and 0x50 or above */
 	unsigned char	touchDelaySelect;	/* Touch's delays, in NOPs */

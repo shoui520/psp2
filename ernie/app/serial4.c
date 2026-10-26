@@ -19,6 +19,7 @@
 #include "util.h"
 
 
+#if BOARD_SERIAL4
 struct Serial serial4;
 unsigned char serial4Text[0x80];
 unsigned char serial4Frame[SERIAL_FRAME_SIZE];
@@ -373,6 +374,7 @@ unsigned char serial4GetP71(void)
 void serial4Trace(unsigned char *buffer)
 {
 }
+#endif
 
 /* the events of event flag 3: UART4's in mode 2, UART3's in mode 1 */
 unsigned char serial4Event(FLGPTN ptn)
@@ -380,6 +382,7 @@ unsigned char serial4Event(FLGPTN ptn)
 	unsigned char result;
 
 	result = 0;
+#if BOARD_SERIAL4
 	if ((ptn & 0x0e00) && (serial4GetMode() & SERIAL_MODE) == 2) {
 		if (ptn & 0x0400) {
 			clr_flg(3, ~0x0400);
@@ -412,6 +415,7 @@ unsigned char serial4Event(FLGPTN ptn)
 			break;
 		}
 	}
+#endif
 	if ((ptn & 0x001e) && (serialGetMode() & SERIAL_MODE) == 1) {
 		if (ptn & 0x0010) {
 			clr_flg(3, ~0x0010);

@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "ernie.h"
+#include "board.h"
 #include "charge.h"
 #include "config.h"
 #include "kernel.h"
@@ -26,9 +27,6 @@
 
 extern unsigned char intp11Low(void);
 
-static unsigned char serial2Data[0x20];
-static unsigned char serial2Armed;	/* the test area was empty: notification 0x0211 may run */
-
 /* level less trim, or 0 when that is 0x40 or more */
 unsigned char levelTrim(unsigned char level, unsigned char trim)
 {
@@ -39,6 +37,11 @@ unsigned char levelTrim(unsigned char level, unsigned char trim)
 		result = 0;
 	return result;
 }
+
+#if BOARD_SERIAL2
+static unsigned char serial2Data[0x20];
+static unsigned char serial2Armed;	/* the test area was empty: notification 0x0211 may run */
+
 
 void serial2Init(void)
 {
@@ -333,3 +336,4 @@ const struct SerialNotify serialNotifies2[] = {
 	{ 0x0202, serial2Notify0202 },
 	{ 0x0211, serial2Notify0211 },
 };
+#endif

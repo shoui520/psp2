@@ -89,7 +89,7 @@ extern __near unsigned char holdReached;
 extern void inputProcess(void);
 extern unsigned char button2Keys(void);
 extern void levelMonitor1Poll(void);
-extern void levelMonitorNone(void);
+extern void input1Bit7Poll(void);
 extern unsigned char button2HoldReached(unsigned char ticks);
 extern void button2HoldReset(void);
 extern void inputScanHold(unsigned int ticks);

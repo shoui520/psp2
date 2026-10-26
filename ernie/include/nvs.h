@@ -1,6 +1,6 @@
 /*
  * The NVS (app/nvs.c): the settings kept in the data flash, read and written by offset in
- * area 0 (0-0xf3f) or area 1 (0x40 bytes), at most 0x20 bytes at a time.
+ * area 0 (0-0xf3f; PCH-1000: 0-0xb5f) or area 1 (0x40 bytes), at most 0x20 bytes at a time.
  */
 #ifndef ERNIE_NVS_H
 #define ERNIE_NVS_H

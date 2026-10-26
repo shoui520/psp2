@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "ernie.h"
+#include "board.h"
 #include "config.h"
 #include "host.h"
 #include "charge.h"
@@ -168,8 +169,8 @@ void stateInit(void)
 	stateRequest.byte[1] = 0xff;
 	stateWakeupFactor.word = stateRequest.word;
 	mask = 0xffffffff;
-	mask |= configGet()->wakeMaskOn;
-	mask &= ~configGet()->wakeMaskOff;
+	mask |= configGet()->BOARD_WAKE_MASKS.on;
+	mask &= ~configGet()->BOARD_WAKE_MASKS.off;
 	if (configGet()->start.bits.wakeUnmask22)
 		mask &= ~0x00400000UL;
 	if (configGet()->start.bits.wakeUnmask15)
@@ -433,8 +434,8 @@ static int stateOffHandle(struct StateEvent *event)
 			stateRequest.bits.mode = event->transition & 0x7f;
 		}
 		stateRequest.bits.notify = 0;
-		stateWakeMask |= configGet()->wakeMaskOn;
-		stateWakeMask &= ~configGet()->wakeMaskOff;
+		stateWakeMask |= configGet()->BOARD_WAKE_MASKS.on;
+		stateWakeMask &= ~configGet()->BOARD_WAKE_MASKS.off;
 		if (configGet()->state.bits.offWakeUnmask22)
 			stateWakeMask &= ~0x00400000UL;
 		if (stateRequest.bits.mode != 0 &&
@@ -504,8 +505,8 @@ static int stateSuspendHandle(struct StateEvent *event)
 		stateNext = STATE_RESUME;
 		stateRequest.bits.mode = event->transition & 0x7f;
 		stateRequest.bits.notify = 1;
-		stateWakeMask |= configGet()->suspendWakeMaskOn;
-		stateWakeMask &= ~configGet()->suspendWakeMaskOff;
+		stateWakeMask |= configGet()->BOARD_WAKE_MASKS.suspendOn;
+		stateWakeMask &= ~configGet()->BOARD_WAKE_MASKS.suspendOff;
 		if (stateRequest.bits.mode != 0 &&
 		    ((1UL << stateRequest.bits.mode) & stateWakeMask))
 			stateNext = 0;
@@ -655,8 +656,10 @@ void stateInputWake2(void)
 		pinMonitor1Enable(1);
 	} else {
 		if (!(unsigned char)button2Result() && !input1Bit6Active() && state == STATE_OFF) {
+#if BOARD_SERIAL2
 			stateTransition(0);
 			serial2Arm();
+#endif
 		}
 		button2Reset();
 	}

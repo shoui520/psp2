@@ -17,6 +17,13 @@
 #include "powerseq.h"
 #include "powerwait.h"
 
+/* the battery's address on the I2C bus: the Cookie's where the settings move it */
+#if BOARD_COOKIE_REG_HIGH
+#define BATTERY_ADDRESS		(configGet()->cookieRegHigh ? 0xa4 : 0xaa)
+#else
+#define BATTERY_ADDRESS		0xaa
+#endif
+
 static struct IicaRequest batteryIica;
 static unsigned char batteryBLBuffer[BATTERY_BL_SIZE - 1];
 struct BatteryBLCommand batteryBLCommand;
@@ -41,7 +48,7 @@ unsigned char batteryWrite(unsigned char *data, unsigned char length)
 	batteryIica.rxCount = 0;
 	batteryIica.txData = data;
 	batteryIica.txCount = length;
-	batteryIica.address = configGet()->cookieRegHigh ? 0xa4 : 0xaa;
+	batteryIica.address = BATTERY_ADDRESS;
 	batteryIica.status = &status;
 	iicaStart(&batteryIica);
 	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);
@@ -70,7 +77,7 @@ unsigned char batteryRead(unsigned char *reg, unsigned char *data, unsigned char
 	batteryIica.rxCount = length;
 	batteryIica.txData = reg;
 	batteryIica.txCount = 1;
-	batteryIica.address = configGet()->cookieRegHigh ? 0xa4 : 0xaa;
+	batteryIica.address = BATTERY_ADDRESS;
 	batteryIica.status = &status;
 	iicaStart(&batteryIica);
 	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);

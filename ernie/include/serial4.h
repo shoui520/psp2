@@ -5,9 +5,11 @@
 #ifndef ERNIE_SERIAL4_H
 #define ERNIE_SERIAL4_H
 
+#include "board.h"
 #include "kernel.h"
 #include "serial.h"
 
+#if BOARD_SERIAL4
 #define SERIAL4_PORT		4	/* the UART */
 
 extern struct Serial serial4;
@@ -47,6 +49,16 @@ extern unsigned int serial4GetCommand(void);
 extern unsigned char serial4GetStatus(void);
 extern unsigned char serial4GetP71(void);
 extern void serial4Trace(unsigned char *buffer);
+#else
+/* no UART4 link: nothing to open, close or answer, its state read as 0 */
+#define serial4Reopen(baud)
+#define serial4Open2(baud)
+#define serial4Close2()
+#define serial4Answer0205()
+#define serial4GetCommand()	0
+#define serial4GetStatus()	0
+#define serial4GetP71()		0
+#endif
 extern unsigned char serial4Event(FLGPTN ptn);
 extern void serial4PostTimeout(void);
 extern void serial4PostTimeout3(void);

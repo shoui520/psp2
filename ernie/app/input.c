@@ -13,6 +13,7 @@
 #include "ernie.h"
 #include "adc.h"
 #include "analog.h"
+#include "board.h"
 #include "charge.h"
 #include "chip.h"
 #include "config.h"
@@ -126,6 +127,7 @@ void inputShutdownMark(void);
 void inputScanMode1(unsigned int interval);
 void inputScanMode2(unsigned int interval);
 void input1Bit7Changed(void);
+void inputNone(void);
 unsigned char button2HoldDone(void);
 
 unsigned int inputReserved;
@@ -210,8 +212,13 @@ void inputInit(void)
 	inputState3 = 0x04;
 	inputGroup3.prev = 0x04;
 	inputGroup3.changed = 0;
+#if BOARD_INPUT3_PINS
 	inputGroup3.pending = 0x24;
 	inputGroup3.enable = 0x3d;
+#else
+	inputGroup3.pending = 0x26;
+	inputGroup3.enable = 0x3f;
+#endif
 	inputGroup3.bits = inputBits3;
 	inputGroup3.count = inputBits3Count;
 	inputHandlerWake2.type = 1;
@@ -223,12 +230,21 @@ void inputInit(void)
 	inputHandler1Bit2High.type = 1;
 	inputHandler1Bit2High.edges = INPUT_EDGE_HIGH;
 	inputHandler1Bit2High.handler = input1Bit2High;
+#if BOARD_SERIAL2
 	inputHandlerSerial2Request.type = 1;
 	inputHandlerSerial2Request.edges = INPUT_EDGE_HIGH;
 	inputHandlerSerial2Request.handler = serial2InputRequest;
 	inputHandlerSerial2Link.type = 1;
 	inputHandlerSerial2Link.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandlerSerial2Link.handler = serial2InputLink;
+#else
+	inputHandlerSerial2Request.type = 0;
+	inputHandlerSerial2Request.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	inputHandlerSerial2Request.handler = inputNone;
+	inputHandlerSerial2Link.type = 0;
+	inputHandlerSerial2Link.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	inputHandlerSerial2Link.handler = inputNone;
+#endif
 	inputHandlerSerial1.type = 1;
 	inputHandlerSerial1.edges = INPUT_EDGE_HIGH;
 	inputHandlerSerial1.handler = serial1InputHandler;
@@ -283,8 +299,10 @@ void inputInit(void)
 	config.handler = pinMonitor6Expired;
 	pinMonitor6Set(&config);
 	pinMonitor6Enable(0);
+#if BOARD_TOUCH_RESET
 	inputDelays.flag40 = 0;
 	inputDelays.flag80 = 0;
+#endif
 	inputDelays.motionInfo = 0;
 	inputDelays.reserved = 0;
 	inputDelays.latchOn = 0;
@@ -364,7 +382,9 @@ void inputStateOff(void)
 	intp3Enable(0);
 	intp13Enable(1);
 	intp1Enable(1);
+#if BOARD_INTP11
 	intp11Enable(1);
+#endif
 	if (coldStart && !P4.6)
 		inputScanHold(0x754);
 	else
@@ -455,7 +475,7 @@ void inputReset(void)
 /* P5.0-3, P8 and P11.2-3 inputs with their pull-ups (the keys button1Keys reads) */
 void inputKeysOpen(void)
 {
-	PU5 = 0x0f | PU5;
+	PU5 = BOARD_KEYS_P5 | PU5;
 	PM5 = 0x0f | PM5;
 	PU8 = 0xff;
 	PM8 = 0xff;
@@ -466,8 +486,8 @@ void inputKeysOpen(void)
 /* and back to outputs at 0 */
 void inputKeysClose(void)
 {
-	P5 = 0xf0 & P5;
-	PM5 = 0xf0 & PM5;
+	P5 = (unsigned char)~BOARD_KEYS_P5 & P5;
+	PM5 = (unsigned char)~BOARD_KEYS_P5 & PM5;
 	P8 = 0;
 	PM8 = 0;
 	P11 = 0xf3 & P11;
@@ -511,6 +531,9 @@ void sampleInputs1(void)
 	inputRaw1.4 = P4.6;
 	inputRaw1.5 = P2.0;
 	inputRaw1.6 = P11.5;
+#if BOARD_INPUT1_BIT7_POLL
+	inputRaw1.7 = P14.5;
+#endif
 	if (stateGet() == 0x0020)
 		inputRaw1.0 = P11.0;
 	inputGroupUpdate(&inputRaw1, &inputState1, &inputGroup1);
@@ -533,8 +556,10 @@ void sampleInputs2(void)
 
 void sampleInputs3(void)
 {
+#if BOARD_INPUT3_PINS
 	inputRaw3.0 = P7.3;
 	inputRaw3.1 = P7.7;
+#endif
 	inputGroupUpdate(&inputRaw3, &inputState3, &inputGroup3);
 	if (inputGroup3.changed) {
 	}
@@ -714,7 +739,11 @@ unsigned char input3Bit5High(void)
 
 unsigned char intp11Low(void)
 {
+#if BOARD_INTP11
 	return intp11Level == 0;
+#else
+	return inputState3.1 == 0;
+#endif
 }
 
 int input2Bit0Get(void)
@@ -732,6 +761,7 @@ void inputMotionInfoLater(void)
 	inputDelays.motionInfo = 0x10;
 }
 
+#if BOARD_TOUCH_RESET
 void inputFlag40Later(void)
 {
 	inputDelays.flag40 = 9;
@@ -741,6 +771,7 @@ void inputFlag80Later(void)
 {
 	inputDelays.flag80 = 9;
 }
+#endif
 
 /* the external interrupts: on (an edge chosen per pin) or off */
 void intp2Enable(unsigned char enable)
@@ -860,6 +891,7 @@ void intp13Enable(unsigned char enable)
 
 void intp11Enable(unsigned char enable)
 {
+#if BOARD_INTP11
 	if (enable == 0) {
 		EGP1.3 = 0;
 		EGN1.3 = 0;
@@ -871,6 +903,7 @@ void intp11Enable(unsigned char enable)
 		PIF11 = 0;
 		PMK11 = 0;
 	}
+#endif
 }
 
 void pinMonitor0Set(struct PinConfig *config)
@@ -1256,6 +1289,7 @@ void inputScanTimer(void)
 		if (--inputDelays.motionInfo == 0)
 			motionInfoStart();
 	}
+#if BOARD_TOUCH_RESET
 	if (inputDelays.flag40 != 0) {
 		if (--inputDelays.flag40 == 0)
 			task3SetFlag(2, 0x0040);
@@ -1264,6 +1298,7 @@ void inputScanTimer(void)
 		if (--inputDelays.flag80 == 0)
 			task3SetFlag(2, 0x0080);
 	}
+#endif
 	if (inputDelays.latchOn != 0) {
 		if (--inputDelays.latchOn == 0)
 			analogLatchOn();
@@ -1298,8 +1333,23 @@ void levelMonitor2Poll(void)
 	}
 }
 
-void levelMonitorNone(void)
+/* the RTC's interrupt (state 0x0010), after a shutdown is marked: P14.5 as input 1's bit 7 */
+void input1Bit7Poll(void)
 {
+#if BOARD_INPUT1_BIT7_POLL
+	if (inputShutdownMarked != 0) {
+		inputRaw1.7 = P14.5;
+		if (inputState1.7 != inputRaw1.7 && (inputGroup1.prev & 0x80) == (inputRaw1 & 0x80)) {
+			inputState1.7 = inputRaw1.7;
+			if (!inputState1.7)
+				stateTransition(0x62);
+		}
+		if (inputRaw1.7)
+			inputGroup1.prev |= 0x80;
+		else
+			inputGroup1.prev &= ~0x80;
+	}
+#endif
 }
 
 unsigned char levelMonitor2Low(void)

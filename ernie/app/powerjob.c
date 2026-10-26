@@ -113,10 +113,12 @@ static void powerJobResume(void)
 		powerLedSetPwm(1);
 	}
 	powerSeqResume();
+#if BOARD_TOUCH_RESET
 	P0.6 = 1;
 	P0.5 = 1;
 	inputFlag40Later();
 	inputFlag80Later();
+#endif
 	powerRequestInit();
 	chargeSetAcDelay();
 	task5SetFlag(4, 0x20);
@@ -171,6 +173,9 @@ static void powerJobOff(void)
 	chargeLedSetHost(0);
 	chargeLedSetHostOff(0);
 	chargeLedSetCharging(0);
+#if BOARD_CHARGE_TIMER1F
+	chargeTimer1fStop();
+#endif
 	powerReady(POWER_JOB_PART);
 }
 

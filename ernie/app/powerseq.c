@@ -423,7 +423,11 @@ unsigned char powerCookieSet(void)
 	unsigned char result;
 
 	cookieReadReg3();
+#if BOARD_COOKIE_REG_HIGH
 	elmoCommand[0] = configGet()->cookieRegHigh ? 0xa3 : 0x03;
+#else
+	elmoCommand[0] = 0x03;
+#endif
 	elmoCommand[1] = cookieRegs[0].byte[0] | 0x80;
 	elmoCommand[2] = cookieRegs[0].byte[1];
 	result = cookieWrite(elmoCommand, 3);
@@ -440,7 +444,11 @@ unsigned char powerCookieClear(void)
 	result = 0;
 	if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1 && !chargeCookieHeld) {
 		cookieReadReg3();
+#if BOARD_COOKIE_REG_HIGH
 		elmoCommand[0] = configGet()->cookieRegHigh ? 0xa3 : 0x03;
+#else
+		elmoCommand[0] = 0x03;
+#endif
 		elmoCommand[1] = cookieRegs[0].byte[0] & 0x7f;
 		elmoCommand[2] = cookieRegs[0].byte[1];
 		result = cookieWrite(elmoCommand, 3);

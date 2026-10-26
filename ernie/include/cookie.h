@@ -6,11 +6,20 @@
 #ifndef ERNIE_COOKIE_H
 #define ERNIE_COOKIE_H
 
+#include "board.h"
+
 /* a register's number: from 0xa0 where the settings say so (the updater's always from 0) */
-#ifdef ERNIE_UPDATER
+#if defined(ERNIE_UPDATER) || !BOARD_COOKIE_REG_HIGH
 #define COOKIE_REG(reg)		(reg)
 #else
 #define COOKIE_REG(reg)		((unsigned char)(configGet()->cookieRegHigh ? (reg) + 0xa0 : (reg)))
+#endif
+
+/* the Cookie's address on the I2C bus */
+#if BOARD_COOKIE_REG_HIGH
+#define COOKIE_ADDRESS		(configGet()->cookieRegHigh ? 0xa4 : 0xa8)
+#else
+#define COOKIE_ADDRESS		0xa8
 #endif
 
 /* a register as read and written: byte[0] goes first on the bus */

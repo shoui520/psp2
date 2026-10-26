@@ -1,28 +1,30 @@
 /*
  * The NVS: 0x1000 bytes of settings kept in the data flash's last 16 blocks (0xf0-0xff,
- * 0x3c000-0x3ffff, 1 KiB each) through the flash library. Four blocks hold the data in
- * 0x20-byte records, four more take a copy when the data is moved, the rest are spares; a
- * block's header (at 0x3e8) names its place and generation. Area 0 is offsets 0-0xf3f, area 1
- * the 0x40 bytes after it.
+ * 0x3c000-0x3ffff, 1 KiB each) through the flash library. Four blocks (three on PCH-1000)
+ * hold the data in 0x20-byte records, as many more take a copy when the data is moved, the
+ * rest are spares; a block's header (at 0x3e8) names its place and generation. Area 0 is
+ * offsets 0-0xf3f (0-0xb5f), area 1 the 0x40 bytes after it.
  */
+#pragma sfr
 #pragma DI
 #pragma EI
 
 #include <string.h>
 
 #include "ernie.h"
+#include "board.h"
 #include "nvs.h"
 
 #define NVS_FIRST_BLOCK		0xf0
 #define NVS_BLOCKS		0x10
-#define NVS_DATA_BLOCKS		4
-#define NVS_SPARE_BLOCKS	8
+#define NVS_DATA_BLOCKS		BOARD_NVS_DATA_BLOCKS
+#define NVS_SPARE_BLOCKS	(NVS_BLOCKS - 2 * NVS_DATA_BLOCKS)
 #define NVS_RECORD_SIZE		0x20
 #define NVS_RECORDS		0x1f	/* a block's records */
 #define NVS_HEADER		0x3e8	/* a block's header, after its records */
 #define NVS_ENTRIES		0x19	/* a spare's entries */
-#define NVS_AREA0_SIZE		0xf40
 #define NVS_AREA1_SIZE		0x40
+#define NVS_AREA0_SIZE		(NVS_DATA_BLOCKS * NVS_RECORDS * NVS_RECORD_SIZE - NVS_AREA1_SIZE)
 
 /* the flash library's status */
 #define FLASH_OK		0x00
@@ -194,6 +196,9 @@ static unsigned char nvsErase(unsigned char block)
 		result = FSL_Init_cont(fslDataBuffer);
 	if (result == FLASH_OK) {
 		do {
+#if BOARD_WDT
+			WDTE = 0xac;
+#endif
 			result = FSL_ModeCheck();
 			if (result == FLASH_OK) {
 				do
@@ -419,6 +424,9 @@ unsigned char nvsMove(void)
 	if (header.generation != 0)
 		header.generation--;
 	for (i = 0; i < NVS_DATA_BLOCKS; i++) {
+#if BOARD_WDT
+		WDTE = 0xac;
+#endif
 		block = nvsCopyBlocks[i];
 		if (block == 0) {
 			result = 8;

@@ -22,6 +22,10 @@ a comment; paths are relative to the link file's folder:
   FILL byte		the byte the gaps between a SEG's segments and an AT's are filled with
 			(default none: only what is assembled is written)
 
+Any directive may end in `IF NAME==VALUE` or `IF NAME!=VALUE`: it applies only when the -D
+definition NAME has (or has not) that value (numbers compared as numbers), as a board's own
+objects and places.
+
 A segment with a 64K attribute (UNIT64KP, PAGE64KP) stays in one 64 KiB page: one that would
 cross into the next page starts there, and the segments after it that fit fill the rest of
 the page left behind, as CA78K0R's linker does.
@@ -54,14 +58,30 @@ def number(text):
 	return int(text, 0)
 
 
+def same(value, text):
+	"""a -D definition's value is text (as numbers when both are)"""
+	try:
+		return value is not None and number(value) == number(text)
+	except ValueError:
+		return value == text
+
+
 class LinkFile:
 	"""a link file's directives"""
 
-	def __init__(self, path):
+	def __init__(self, path, defines=()):
 		self.path, self.objects, self.symbols, self.drop, self.steps = Path(path), [], {}, set(), []
 		self.reserved = []
+		values = dict(d.split('=', 1) if '=' in d else (d, '1') for d in defines)
 		for no, line in enumerate(Path(path).read_text().splitlines(), 1):
 			words = line.split('#', 1)[0].split()
+			if len(words) > 2 and words[-2].upper() == 'IF':
+				m = re.fullmatch(r'(\w+)(==|!=)(\S+)', words[-1])
+				if not m:
+					raise LinkError(f'{path}:{no}: {line.strip()}')
+				if (same(values.get(m.group(1)), m.group(3))) != (m.group(2) == '=='):
+					continue
+				words = words[:-2]
 			if not words:
 				continue
 			op, args = words[0].upper(), words[1:]
@@ -382,7 +402,7 @@ def main():
 	args = ap.parse_args()
 	work = args.work or tempfile.mkdtemp(prefix='lk78k0r-')
 	try:
-		linker = Linker(LinkFile(args.link), args.chip, work, args.includes, args.defines,
+		linker = Linker(LinkFile(args.link, args.defines), args.chip, work, args.includes, args.defines,
 				args.flags.split())
 		linker.load()
 		linker.measure()

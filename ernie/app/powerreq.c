@@ -785,13 +785,17 @@ static void powerRequestCtrlDeviceReset(void)
 				P6.3 = powerRequestData[0];
 			}
 			if (powerRequestData[1] & 0x04) {
+#if BOARD_TOUCH_RESET
 				if (powerRequestData[0] != 0)
 					inputFlag80Later();
+#endif
 				P0.5 = powerRequestData[0];
 			}
 			if (powerRequestData[1] & 0x08) {
+#if BOARD_TOUCH_RESET
 				if (powerRequestData[0] != 0)
 					inputFlag40Later();
+#endif
 				P0.6 = powerRequestData[0];
 			}
 			if (powerRequestData[1] & 0x10)
@@ -978,7 +982,11 @@ static void powerRequestReadCookieReg(void)
 	unsigned char reg;
 
 	if (powerRequest.length < 3) {
+#if BOARD_COOKIE_REG_HIGH
 		reg = configGet()->cookieRegHigh ? powerRequestData[0] + 0xa0 : powerRequestData[0];
+#else
+		reg = powerRequestData[0];
+#endif
 		result = powerResult(cookieRead(&reg, value));
 		if (result == 0) {
 			powerRequestAnswer[0] = value[1];
@@ -999,8 +1007,12 @@ static void powerRequestWriteCookieReg(void)
 	unsigned char index;
 
 	if (powerRequest.length == 3) {
+#if BOARD_COOKIE_REG_HIGH
 		write[0] = configGet()->cookieRegHigh ? powerRequestData[0] + 0xa0 :
 			   powerRequestData[0];
+#else
+		write[0] = powerRequestData[0];
+#endif
 		write[1] = powerRequestData[2];
 		write[2] = powerRequestData[1];
 		result = powerResult(cookieWrite(write, 3));
@@ -1129,7 +1141,11 @@ unsigned char hostCommandBatteryLifePercent(unsigned char *out, unsigned char *l
 }
 
 /* the battery's word for the host, or the setting's when no battery answered */
+#if BOARD_BATTERY_STANDIN
 #define BATTERY_ABSENT()	(deviceVersions.battery.version[0] == 0xffff)
+#else
+#define BATTERY_ABSENT()	0
+#endif
 
 /* 0x0980 (sceSysconGetBatteryVersion) */
 static void batteryRequestGetVersion(void)

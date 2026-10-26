@@ -47,7 +47,7 @@ OBJECT	iica.c
 OBJECT	powerjob.c
 OBJECT	elmo.c
 OBJECT	serial2.c
-OBJECT	uart4.c
+OBJECT	uart4.c		IF ERNIE_HW!=0x00406000	# BOARD_SERIAL4
 OBJECT	interrupt.c
 OBJECT	serial4.c
 OBJECT	task6.c

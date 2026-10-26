@@ -150,7 +150,7 @@ void rtcInterrupt(void)
 	rtcClockLow = keepRam.clock;
 	if (state == 0x0010) {
 		levelMonitor1Poll();
-		levelMonitorNone();
+		input1Bit7Poll();
 	} else if (state == 0x0800)
 		levelMonitor1Poll();
 	if (rtcClockLow & 0x0001) {

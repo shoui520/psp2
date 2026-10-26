@@ -40,7 +40,9 @@ unsigned char boardMultiCnOutputOff(void)
 {
 	unsigned char wait;
 
+#if BOARD_HOST_OUTPUT
 	P2.2 = 0;
+#endif
 	wait = 2;
 	while (wait--)
 		;
@@ -52,8 +54,10 @@ unsigned char boardGetMultiCnOutput(void)
 {
 	if (P13.0)
 		return BOARD_MULTICN_DONGLE;
+#if BOARD_HOST_OUTPUT
 	if (P2.2)
 		return BOARD_MULTICN_HOST;
+#endif
 	return BOARD_MULTICN_OFF;
 }
 
@@ -70,17 +74,23 @@ unsigned char boardSetMultiCnOutput(unsigned char output)
 		wait = 2;
 		while (wait--)
 			;
+#if BOARD_HOST_OUTPUT
 		P2.2 = 1;
+#endif
 		break;
 	case BOARD_MULTICN_DONGLE:
 		P13.0 = 1;
 		wait = 2;
 		while (wait--)
 			;
+#if BOARD_HOST_OUTPUT
 		P2.2 = 1;
+#endif
 		break;
 	default:
+#if BOARD_HOST_OUTPUT
 		P2.2 = 0;
+#endif
 		wait = 2;
 		while (wait--)
 			;
@@ -94,7 +104,9 @@ unsigned char boardMultiCnStop(void)
 {
 	unsigned char wait;
 
+#if BOARD_HOST_OUTPUT
 	P2.2 = 0;
+#endif
 	wait = 2;
 	while (wait--)
 		;

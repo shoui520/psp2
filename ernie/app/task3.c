@@ -7,6 +7,7 @@
 
 #include "ernie.h"
 #include "analog.h"
+#include "board.h"
 #include "input.h"
 #include "inputreq.h"
 #include "kernel.h"
@@ -19,10 +20,16 @@ void task3(VP_INT exinf)
 {
 	ER ercd;
 	FLGPTN ptn;
+#if BOARD_TOUCH_RESET
 	unsigned char data[2];
+#endif
 
 	for (;;) {
+#if BOARD_TOUCH_RESET
 		ercd = wai_flg(2, 0x00dc, TWF_ORW, &ptn);
+#else
+		ercd = wai_flg(2, 0x001c, TWF_ORW, &ptn);
+#endif
 		if (ercd == E_OK) {
 			if (ptn & 0x0008) {
 				clr_flg(2, ~0x0008);
@@ -42,6 +49,7 @@ void task3(VP_INT exinf)
 				clr_flg(2, ~0x0010);
 				controlsRequestRun();
 			}
+#if BOARD_TOUCH_RESET
 			if (ptn & 0x0040) {
 				clr_flg(2, ~0x0040);
 				touchIdentify0();
@@ -51,6 +59,7 @@ void task3(VP_INT exinf)
 				touchIdentify1();
 				touchReadConfigVersion1(data);
 			}
+#endif
 			if (ptn & 0x0100) {
 				clr_flg(2, ~0x0100);
 				touchUpdateState();

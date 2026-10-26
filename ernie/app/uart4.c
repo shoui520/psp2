@@ -2,6 +2,7 @@
  * UART4 on SAU2 (channel 0 sends, channel 1 receives; TxD4 P9.4, RxD4 P9.3): opened at one of
  * uart4Bauds' speeds, and read and written through uart4's ring buffers.
  */
+#if ERNIE_HW != 0x00406000	/* BOARD_SERIAL4 (#pragma comes first) */
 #pragma rtos_interrupt INTSRE1 uart4ErrorInterrupt
 #pragma rtos_interrupt INTSR4 uart4ReceiveInterrupt
 #pragma rtos_interrupt INTST4 uart4SendInterrupt
@@ -205,3 +206,4 @@ void uart4SendInterrupt(void)
 	} else
 		task2SetFlag(3, 0x0200);
 }
+#endif

@@ -26,7 +26,7 @@ struct VersionFlags {
 #endif
 #else
 #define APP_VERSION	ERNIE_FW
-#if ERNIE_HW == 0x00415000 && ERNIE_FW == 0x01000306
+#if ERNIE_FW == 0x01000306		/* every board's */
 #define APP_TIME_STAMP	"$Date:: 2012-01-26 14:43:38 +0900#$"
 #endif
 #endif

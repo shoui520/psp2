@@ -1043,7 +1043,12 @@ static unsigned char serial1Command0950(struct SerialBuffer *request, struct Ser
 	}
 	paramGetBase(&base);
 	step = level - base;
+#if ERNIE_HW == 0x00406000
+	/* PCH-1000's build multiplies in 16 bits; the others' take the product's low byte */
+	value.value = 1400 - (unsigned int)step * 10;
+#else
 	value.value = 1400 - step * 10;
+#endif
 	response->length = 2;
 	response->data = serial1Data.byte;
 	response->data[0] = value.byte[1];

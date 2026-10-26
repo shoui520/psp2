@@ -3,6 +3,8 @@
  */
 #pragma rtos_task task2
 
+#pragma sfr
+
 #include "ernie.h"
 #include "board.h"
 #include "command.h"
@@ -306,6 +308,9 @@ unsigned char task2Tick(void)
 	ret = 0;
 	state = stateGet();
 	clock = getClock().byte[0];
+#if BOARD_WDT
+	WDTE = 0xac;
+#endif
 	if (isAlarmReached()) {
 		sleepFactorSet3(1);
 		if ((stateGetWakeMask() & 2) == 0) {
