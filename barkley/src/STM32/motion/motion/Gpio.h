@@ -6,6 +6,7 @@
 #define GPIO_H
 
 #include "stm32f10x_type.h"
+#include "Callback.h"
 
 class Input {
 public:
@@ -41,10 +42,26 @@ private:
 	bool level_;
 };
 
-class ExtiHandler {
+/* a pin's EXTI line: the edge it triggers on and the handler it calls, its interrupt
+   masked or not, its pending bit */
+class ExtiHandler : public Input {
 public:
+	typedef Callback<void (s8)> Handler;
+
 	ExtiHandler() {}
-	virtual void Handle();
+	virtual bool Get() const { return false; }
+	virtual void SetTrigger(s8 edge, Handler::Func func, void *arg) {}
+	virtual void Enable() {}
+	virtual void Disable() {}
+	virtual void Unmask() {}
+	virtual void Mask() {}
+	virtual void ClearPending() {}
+
+	void Start(s8 edge, Handler::Func func, void *arg)
+	{
+		SetTrigger(edge, func, arg);
+		Enable();
+	}
 };
 
 class ExtiPin : public GpioIn, public ExtiHandler {
