@@ -96,6 +96,7 @@ public:
 		return packet_.data_.halfword;
 	}
 
+#if MOTION_IMAGE != 0
 	/* the port set up again, after the STOP mode */
 	void Enable()
 	{
@@ -106,6 +107,7 @@ public:
 	{
 		DeInit();
 	}
+#endif
 
 private:
 	static void WriteCallback(void *arg, Request *request);

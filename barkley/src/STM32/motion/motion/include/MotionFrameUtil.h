@@ -120,17 +120,35 @@ enum {
    magnetometer's calibration */
 class FrameStatus {
 public:
+#if MOTION_IMAGE == 0
+	FrameStatus() : value_(0xF0) {}
+#else
 	FrameStatus() : value_(0) {}
+#endif
 
 	void SetSampleType(u8 type)
 	{
 		value_ = type | (value_ & 0xF0);
 	}
 
+#if MOTION_IMAGE == 0
+	/* the high four bits the state's */
+	void SetState(s8 state)
+	{
+		value_ = (value_ & 0x0F) | (state << 4);
+	}
+
+	/* no state: the magnetometer not measuring */
+	void ClearState()
+	{
+		value_ |= 0xF0;
+	}
+#else
 	void SetState(s8 state)
 	{
 		value_ = (value_ & 0xCF) | (state << 4);
 	}
+#endif
 
 	void SetMagCalibrated()
 	{

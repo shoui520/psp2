@@ -14,7 +14,11 @@
 
 #include "MotionHif.h"
 
+#if MOTION_IMAGE == 0
+const MotionHif::Command MotionHif::commands_[HIF_CMD_SELECT_MEAS_TYPE] = {
+#else
 const MotionHif::Command MotionHif::commands_[HIF_COMMANDS] = {
+#endif
 	&MotionHif::CmdNop,
 	&MotionHif::CmdSync,
 	&MotionHif::CmdStartMeasure,
@@ -30,14 +34,20 @@ const MotionHif::Command MotionHif::commands_[HIF_COMMANDS] = {
 	&MotionHif::CmdReadDeviceInfo,
 	&MotionHif::CmdInvalid,
 	&MotionHif::CmdSwitchFrameSize,
+#if MOTION_IMAGE != 0
 	&MotionHif::CmdSelectMeasType,
+#endif
 };
 
+#if MOTION_IMAGE == 0
+const s8 MotionHif::sampleTypes_[MOTION_TYPES] = { 0, 1, 2, 3, 4, 5 };
+#else
 const s8 MotionHif::sampleTypes_[MOTION_TYPES] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 
 const s8 MotionHif::measTypes_[4] = {
 	MOTION_STATE_RUN, MOTION_STATE_STANDBY, MOTION_STATE_IDLE, MOTION_STATE_SLEEP,
 };
+#endif
 
 /* a calibration block on its way to or from the flash */
 static u8 calibBuffer[0x200];
@@ -45,7 +55,11 @@ static u8 calibBuffer[0x200];
 MotionHif::MotionHif(MotionProcessor *processor, MotionFrame *frames, u32 frameCount,
 		     const u32 *thresholds)
 	: processor_(processor), thresholds_(thresholds), threshold_(thresholds[1]),
+#if MOTION_IMAGE == 0
+	  listenerId_(-1), frames_(frames, frameCount),
+#else
 	  listenerId_(-1), isMeasuretypeStop_(false), frames_(frames, frameCount),
+#endif
 	  calibWritingStatus_(3), calibReadStatus_(2)
 {
 	writer_.SetMaxSize(56);
@@ -57,17 +71,23 @@ void MotionHif::Reset()
 	isMeasuring_ = false;
 	ClearFrames();
 	writer_.Begin(txBuffer_);
+#if MOTION_IMAGE == 0
+	deviceInfoPending_ = false;
+#else
 	ClearReports();
+#endif
 }
 
 u8 *MotionHif::BuildFrame(u32 *size)
 {
 	if (deviceInfoPending_ && ReportDeviceInfo())
 		deviceInfoPending_ = false;
+#if MOTION_IMAGE != 0
 	if (resultPending_) {
 		ReportResultCode(result_, HIF_CMD_WRITE_CALIB);
 		resultPending_ = false;
 	}
+#endif
 	if (isMeasuring_) {
 		OnSend();
 		if (rawFrame_ != 0) {
@@ -95,6 +115,7 @@ void MotionHif::ParseFrame(u8 *frame)
 		return;
 	}
 	while ((packet = (const HifPacket *)reader_.Next()) != 0) {
+		/* image 00: an id of HIF_CMD_SELECT_MEAS_TYPE reads past its table */
 		if (packet->id < HIF_COMMANDS && commands_[packet->id] != &MotionHif::CmdInvalid) {
 			(this->*commands_[packet->id])(packet);
 		} else {
@@ -128,7 +149,9 @@ void MotionHif::CmdStartMeasure(const HifPacket *packet)
 	if (isMeasuring_)
 		return;
 	isMeasuring_ = true;
+#if MOTION_IMAGE != 0
 	isMeasuretypeStop_ = false;
+#endif
 	ClearFrames();
 	processor_->Start();
 }
@@ -160,7 +183,9 @@ void MotionHif::CmdReadCalib(const HifPacket *packet)
 	s32 result;
 
 	isMeasuring_ = false;
-	processor_->Stop();
+#if MOTION_IMAGE != 0
+	processor_->Stop();		/* image 00: ReadCalib stops it */
+#endif
 	reply = (CalibPacket *)writer_.GetPayload(&free);
 	if (free < 12) {
 		printf("MotionHif::CmdReadCalib ERROR, size=%u.\n", free);
@@ -177,6 +202,13 @@ void MotionHif::CmdReadCalib(const HifPacket *packet)
 	}
 	reply->SetHeader(packet->value, calibSize, calibOffset);
 	n = reply->Capacity(free);
+#if MOTION_IMAGE == 0
+	if (n + calibOffset >= calibSize)
+		n = calibSize - calibOffset;
+	size = reply->SetData(calibBuffer + calibOffset, n);
+	calibOffset += n;
+	writer_.AddPayloadSize(size);
+#else
 	if (calibSize >= calibOffset) {
 		if (n + calibOffset >= calibSize)
 			n = calibSize - calibOffset;
@@ -186,6 +218,7 @@ void MotionHif::CmdReadCalib(const HifPacket *packet)
 	} else {
 		ReportCalibDataReadError(reply, packet->value, MOTION_ERROR_INVALID);
 	}
+#endif
 }
 
 void MotionHif::CmdWriteCalib(const HifPacket *packet)
@@ -258,6 +291,7 @@ void MotionHif::CmdSwitchFrameSize(const HifPacket *packet)
 	}
 }
 
+#if MOTION_IMAGE != 0
 void MotionHif::CmdSelectMeasType(const HifPacket *packet)
 {
 	u16 index = packet->value;
@@ -291,20 +325,29 @@ void MotionHif::CmdSelectMeasType(const HifPacket *packet)
 		ReportResultCode(MOTION_ERROR_TRANSITION, HIF_CMD_SELECT_MEAS_TYPE);
 	}
 }
+#endif
 
 void MotionHif::CmdRestart(const HifPacket *packet)
 {
 	isMeasuring_ = false;
+#if MOTION_IMAGE == 0
+	deviceInfoPending_ = false;
+#else
 	isMeasuretypeStop_ = false;
 	ClearReports();
+#endif
 	MotionProcessor::RestartSystem();
 }
 
 void MotionHif::CmdReset(const HifPacket *packet)
 {
 	isMeasuring_ = false;
+#if MOTION_IMAGE == 0
+	deviceInfoPending_ = false;
+#else
 	isMeasuretypeStop_ = false;
 	ClearReports();
+#endif
 	MotionProcessor::ResetSystem();
 }
 
@@ -315,11 +358,13 @@ void MotionHif::CmdReadCalibWritingStatus(const HifPacket *packet)
 
 void MotionHif::CmdReadDeviceInfo(const HifPacket *packet)
 {
+#if MOTION_IMAGE != 0
 	if (isMeasuretypeStop_) {
 		printf("MotionHif::CmdReadDeviceInfo() Now Measure Stopping.\n");
 		ReportResultCode(MOTION_ERROR_STOPPING, HIF_CMD_READ_DEVICE_INFO);
 		return;
 	}
+#endif
 	isMeasuring_ = false;
 	ClearFrames();
 	processor_->Stop();
@@ -408,6 +453,12 @@ void MotionHif::WriteCalibCallback(void *arg, s32 result)
 
 void MotionHif::OnWriteCalibDone(s32 result)
 {
+#if MOTION_IMAGE == 0
+	if (result != MOTION_OK)
+		calibWritingStatus_ = -1;
+	else
+		calibWritingStatus_ = 0;
+#else
 	if (result != MOTION_OK) {
 		if (result == MOTION_ERROR_VERIFY)
 			result_ = MOTION_ERROR_VERIFY;
@@ -418,6 +469,7 @@ void MotionHif::OnWriteCalibDone(s32 result)
 	} else {
 		calibWritingStatus_ = 0;
 	}
+#endif
 }
 
 void MotionHif::CmdInvalid(const HifPacket *packet)

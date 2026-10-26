@@ -77,6 +77,7 @@ private:
 		free_ -= 6;
 	}
 
+#if MOTION_IMAGE != 0
 	bool IsMagUpdated(s8 status)
 	{
 		return status < 0;
@@ -86,6 +87,7 @@ private:
 	{
 		*status |= 0x80;
 	}
+#endif
 
 	MotionDataPacket *packet_;
 	u32 size_;
@@ -100,7 +102,9 @@ private:
 	u8 status_;
 	MotionFrame *held_;		/* a frame that did not fit, for the next packet */
 	MotionFrame saved_;
-	bool magUpdated_;
+#if MOTION_IMAGE != 0
+	bool magUpdated_;		/* a frame's status had bit 7 (image 01) */
+#endif
 };
 
 #endif

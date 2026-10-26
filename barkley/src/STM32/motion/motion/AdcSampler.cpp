@@ -63,6 +63,15 @@ void AdcSampler::OnSamples(Request *request)
 	}
 }
 
+#if MOTION_IMAGE == 0
+/* the conversions again, their first half reported */
+void AdcSampler::StartSelfTest(Func::Func func, void *arg)
+{
+	callback_.Set(func, arg);
+	adc_->Start(buffer_, count_ * sizeof(AdcSample), SelfTestCallback, this);
+	timer_->Start();
+}
+#else
 /* the conversions from the next trigger; the timer is left stopped */
 void AdcSampler::StartTriggered(Func::Func func, void *arg)
 {
@@ -78,6 +87,7 @@ void AdcSampler::StartSelfTest(Func::Func func, void *arg)
 	adc_->SetDone(SelfTestCallback, this);
 	timer_->Resume();
 }
+#endif
 
 void AdcSampler::SelfTestCallback(void *arg, Request *request)
 {

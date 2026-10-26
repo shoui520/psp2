@@ -1,6 +1,6 @@
 /*
  * Runtime: what the main loop runs: the tasks posted, then the idle task, until the
- * MCU wakes from the STOP mode; the timers on the timer slots; the reset two seconds
+ * MCU wakes from the STOP mode (image 00: for ever); the timers on the timer slots; the reset two seconds
  * after it is asked for; the watchdog; and the C library's output, to the streams.
  */
 
@@ -50,10 +50,17 @@ void RunTasks(void (*idle)(void *arg), void *arg)
 		callback.Set(idle, arg);
 	else
 		callback.Set(IdleTask, 0);
+#if MOTION_IMAGE == 0
+	for (;;) {
+		dispatcher.Dispatch();
+		callback();
+	}
+#else
 	do {
 		dispatcher.Dispatch();
 		callback();
 	} while (!IsStopped());
+#endif
 }
 
 bool AddTimer(TimerSlotHandler *handler)
@@ -86,6 +93,7 @@ void StartWatchdog()
 	IWDG_Enable();
 }
 
+#if MOTION_IMAGE != 0
 /* the timer slots' interrupt off; on waking, the main loop's dispatching ends */
 void EnterStopMode()
 {
@@ -95,6 +103,7 @@ void EnterStopMode()
 	PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
 	SetStopped(true);
 }
+#endif
 
 /* the fatal error's message, to the debug port */
 void Panic(const char *format, ...)

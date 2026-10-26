@@ -2,6 +2,10 @@
  * MotionProcessor: the sensors' sampling and the frames made from it: the ADC's
  * accelerometer, gyroscope and temperature samples, the AK8975's magnetic field,
  * averaged or calibrated as the measurement type says, and the device information.
+ *
+ * Image 00 is Sony's branch U0652 of the code (its assert path names
+ * barkley\branch\U0652): a processor that only starts and stops, without the states,
+ * the timeouts and the reference calibration trunk (image 01) has.
  */
 #ifndef MOTIONPROCESSOR_H
 #define MOTIONPROCESSOR_H
@@ -60,11 +64,33 @@ enum {
 
 /* the measurement types */
 enum {
+#if MOTION_IMAGE == 0
+	MOTION_TYPES = 6,
+#else
 	MOTION_TYPES = 8,
+#endif
 	MOTION_TYPE_MAG_ONLY = 7,
 };
 
 /* the processor's parameters (flash, the image's constants) */
+#if MOTION_IMAGE == 0
+struct MotionConfig {
+	const CalibBlock *calibBlocks[4];
+	u32 bootWait;			/* ADC samples before the magnetometer boots */
+	u32 accelScale;
+	u8 accelBits;
+	u8 gyroBits;
+	u8 magBits;
+	u8 tempBits;
+	struct {
+		u32 framePeriod;
+		u32 gyroPeriod;
+		u32 magPeriod;
+		u32 tempPeriod;
+		u32 sampleType;
+	} types[MOTION_TYPES];
+};
+#else
 struct MotionConfig {
 	const CalibBlock *calibBlocks[4];
 	u32 bootWait;			/* ADC samples before the magnetometer boots */
@@ -91,6 +117,7 @@ struct MotionConfig {
 	u32 refCalibPeriod;
 	u32 stillThreshold;
 };
+#endif
 
 /* the boot loader's information in the MCU's flash */
 struct LoaderInfo {
@@ -217,6 +244,146 @@ public:
 	Statistic refSum_[3];
 };
 
+#if MOTION_IMAGE == 0
+class MotionProcessor {
+public:
+	typedef void (MotionProcessor::*SampleHandler)(const AdcSample *sample);
+	typedef void (MotionProcessor::*MagHandler)(const u8 *data);
+	typedef Callback<void (s32)> Done;
+
+	struct TypeHandlers {
+		SampleHandler sample;
+		MagHandler mag;
+		u8 frameFormat;
+	};
+
+	MotionProcessor(AdcSampler *sampler, AK8975 *ak8975, ExtiPin *boardPin,
+			Listener *listeners, u32 listenerCount, const MotionConfig *config);
+	void Init();
+	void StartSampling();
+	void Start();
+	void Stop();
+	void SetMeasType(s8 type);
+	void GetVersion(VersionInfo *version);
+	s32 WriteCalib(u8 block, const u8 *src, u32 size, Done::Func func, void *arg);
+	s32 ReadCalib(u8 block, u8 *dst, u32 dstSize, u32 *size);
+	static void RestartSystem();
+	static void ResetSystem();
+	s32 AddListener(Listener::Func func, void *arg);
+	s32 StartSelfTest(Done::Func func, void *arg);
+	void ResetBoardType();
+
+	s8 BoardType() const
+	{
+		return boardType_;
+	}
+
+	const DeviceInfo *GetDeviceInfo() const
+	{
+		return &info_;
+	}
+
+	const u16 *GetChecksum() const
+	{
+		return &checksum_;
+	}
+
+private:
+	static void WriteCalibTask(void *arg);
+	void WriteCalibNow();
+	void ResetAverages();
+	void OnSampleRaw(const AdcSample *sample);
+	void OnSampleAverage(const AdcSample *sample);
+	void OnSampleCalibrated(const AdcSample *sample);
+	void OnSampleNone(const AdcSample *sample) {}
+	void ScaleAccel(const AdcSample *sample, u32 *accel);
+	void Transform(s32 *out, const s32 *matrix, const s32 *in);
+	void CalibrateAccel(const u16 *in, s16 *out);
+	void CalibrateGyro(const u16 *in, s16 *out);
+	void OnMagRaw(const u8 *data);
+	void OnMagAverage(const u8 *data);
+	void OnMagOnly(const u8 *data)
+	{
+		OnMagAverage(data);
+	}
+	void OnMagCalibrated(const u8 *data)
+	{
+		OnMagAverage(data);
+	}
+	void ReadDeviceInfo();
+	void NotifyListeners();
+	static void BootSampleCallback(void *arg, s32 result, const AdcSample *sample);
+	void OnBootSample(s32 result, const AdcSample *sample);
+	static void SampleCallback(void *arg, s32 result, const AdcSample *sample);
+	void OnSample(s32 result, const AdcSample *sample);
+	void BootMag();
+	static void BootCallback(void *arg, s32 result);
+	void OnBoot(s32 result);
+	static void MeasureCallback(void *arg, s32 result, u8 *data);
+	void OnMeasure(s32 result, u8 *data);
+	void ReadChecksum();
+	void FinishSelfTest();
+	static void SelfTestCallback(void *arg, s32 result, const AdcSample *sample);
+	void OnSelfTestSample(s32 result, const AdcSample *sample);
+
+	/* value * scale / ref, rounded */
+	u32 Ratio(u32 scale, u16 value, u16 ref) const
+	{
+		return (value * scale + ref / 2) / ref;
+	}
+
+	void ResetSelfTest()
+	{
+		selfTestCount_ = 0;
+	}
+
+	AdcSampler *sampler_;
+	AK8975 *ak8975_;
+	const MotionConfig *config_;
+	u32 accelScale_;
+	u32 bootWait_;
+	DeviceInfo info_;
+	u16 checksum_;			/* the firmware's, for the debug report */
+	Listener *listeners_;
+	u32 listenerCount_;
+	Divider frameDivider_;
+	Divider gyroDivider_;
+	Divider magDivider_;
+	Divider tempDivider_;
+	Averager<u16> accel_[3];
+	Averager<u16> gyro_[3];
+	Averager<s16> mag_[3];
+	Averager<u16> temp_;
+	u16 temperature_[2];
+	bool magRunning_;
+	u32 magBuffer_;
+	u8 magData_[2][7];
+	const u8 *magRaw_;
+	bool magSync_;
+	bool magSynced_;
+	u32 calibBlock_;
+	const u8 *calibSrc_;
+	u32 calibSize_;
+	Done calibDone_;
+	s8 state_;			/* the frames' state once the magnetometer runs */
+	Done selfTestDone_;
+	FrameStatus status_;
+	bool stopped_;
+	MotionFrame frame_;
+	u16 frameCount_;
+	const CalibParams *params_;
+	SampleHandler sampleHandler_;
+	MagHandler magHandler_;
+	ExtiHandler *boardPin_;		/* low on the board type 1 */
+	s8 boardType_;
+	u8 reserved2_;
+	u8 selfTestCount_;
+	u16 selfTest_[3][16];
+
+	static const TypeHandlers typeHandlers_[MOTION_TYPES];
+	static const u16 selfTestRange_[3][2];
+};
+#else
 class MotionProcessor {
 public:
 	typedef void (MotionProcessor::*SampleHandler)(const AdcSample *sample);
@@ -434,5 +601,6 @@ private:
 	static const TypeHandlers typeHandlers_[MOTION_TYPES];
 	static const u16 selfTestRange_[3][2];
 };
+#endif
 
 #endif

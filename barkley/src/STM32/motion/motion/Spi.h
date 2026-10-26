@@ -41,6 +41,7 @@ public:
 		DmaReceive(buf, size);
 	}
 
+#if MOTION_IMAGE != 0
 	void Enable()
 	{
 		SPI_Cmd(regs_, ENABLE);
@@ -50,6 +51,7 @@ public:
 	{
 		SPI_Cmd(regs_, DISABLE);
 	}
+#endif
 
 protected:
 	/* a DMA channel's end */
@@ -93,8 +95,10 @@ public:
 	}
 
 	void Init(const SPI_InitTypeDef *init, u8 preemption, u8 sub, u32 txPriority, u32 rxPriority);
+#if MOTION_IMAGE != 0
 	void Stop();
 	void Restart();
+#endif
 
 	/* a transfer: the data sent, while the host's chip select is awaited */
 	void Send(void *buf, u16 size, Request::Done::Func func, void *arg)
@@ -109,8 +113,10 @@ private:
 	virtual void DmaReceiveDone(Request *request);
 	static void CsCallback(void *arg, s8 level);
 	void OnCs(s8 level);
+#if MOTION_IMAGE != 0
 	static void StopCsCallback(void *arg, s8 level);
 	void OnStopCs(s8 level);
+#endif
 
 	ExtiHandler *cs_;
 	s32 error_;

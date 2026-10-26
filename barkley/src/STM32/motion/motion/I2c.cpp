@@ -61,6 +61,7 @@ void I2c::InitPort(const I2C_InitTypeDef *init, u8 eventPreemption, u8 eventSub,
 	I2C_Cmd(regs_, ENABLE);
 }
 
+#if MOTION_IMAGE != 0
 void I2c::ReinitPort(const I2C_InitTypeDef *init)
 {
 	I2C_Cmd(regs_, DISABLE);
@@ -84,6 +85,7 @@ void I2c::DeInit()
 		break;
 	}
 }
+#endif
 
 void I2c::IsrEventCallback(void *arg)
 {
@@ -103,10 +105,12 @@ void I2c::Init(const I2C_InitTypeDef *init, u8 eventPreemption, u8 eventSub,
 	InitDma(errorPreemption, errorSub, txPriority, rxPriority);
 }
 
+#if MOTION_IMAGE != 0
 void I2c::Reinit(const I2C_InitTypeDef *init)
 {
 	ReinitPort(init);
 }
+#endif
 
 /* both channels move bytes between the data register and memory, one at a time */
 void I2c::InitDma(u8 preemption, u8 sub, u32 txPriority, u32 rxPriority)

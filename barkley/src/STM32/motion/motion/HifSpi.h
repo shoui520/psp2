@@ -15,8 +15,10 @@ public:
 	       const u32 *thresholds, SpiSlave *spi, Output *line0, Output *line1);
 	void Init();
 	void Start();
+#if MOTION_IMAGE != 0
 	void Suspend();
 	void Resume();
+#endif
 	virtual void OnFrame(const MotionFrame *frame);
 	virtual void OnSend();
 	virtual void OnReady();
@@ -40,7 +42,7 @@ private:
 
 	SpiSlave *spi_;
 	Output *line0_;			/* two outputs to the host, kept and not used */
-	Output *line1_;
+	Output *line1_;			/* (image 00: a transfer set up, a frame ready) */
 	bool receiving_;		/* a transfer set up */
 	bool pending_;			/* ready while none was */
 	u8 rxBuffer_[MOTION_FRAME_MAX];

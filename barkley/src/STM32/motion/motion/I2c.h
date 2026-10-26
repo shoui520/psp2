@@ -47,8 +47,10 @@ public:
 
 	void Init(const I2C_InitTypeDef *init, u8 eventPreemption, u8 eventSub,
 		  u8 errorPreemption, u8 errorSub, u32 txPriority, u32 rxPriority);
+#if MOTION_IMAGE != 0
 	void Reinit(const I2C_InitTypeDef *init);
 	void DeInit();
+#endif
 	s32 GetError();
 
 	/* the event and error interrupts */
@@ -108,7 +110,9 @@ protected:
 private:
 	void InitPort(const I2C_InitTypeDef *init, u8 eventPreemption, u8 eventSub,
 		      u8 errorPreemption, u8 errorSub);
+#if MOTION_IMAGE != 0
 	void ReinitPort(const I2C_InitTypeDef *init);
+#endif
 	void InitDma(u8 preemption, u8 sub, u32 txPriority, u32 rxPriority);
 	static void IsrEventCallback(void *arg);
 	static void IsrErrorCallback(void *arg);

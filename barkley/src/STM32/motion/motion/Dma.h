@@ -31,7 +31,9 @@ enum {
 class Dma {
 public:
 	Dma(s8 channel);
+#if MOTION_IMAGE != 0
 	void DeInit();
+#endif
 	void Start(void *buf, u16 size, Request::Done::Func func, void *arg);
 
 	void EnableIt()

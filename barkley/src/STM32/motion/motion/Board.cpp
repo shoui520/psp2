@@ -1,6 +1,7 @@
 /*
- * Board: the clocks, from the settings for the system clock and the oscillator the
- * board has, and the pins of each port.
+ * Board: the program's devices; the clocks, from the settings for the system clock and
+ * the oscillator the board has, and the pins of each port. In image 00 (branch U0652)
+ * the clocks are main's and the pins System's.
  */
 
 extern "C" {
@@ -19,6 +20,24 @@ extern "C" {
 #define SYSCLK_Value	((u32)16000000)
 
 /* the motion processor's parameters */
+#if MOTION_IMAGE == 0
+static const MotionConfig motionConfig = {
+	{
+		(const CalibBlock *)0x0800FC00, (const CalibBlock *)0x0800F800,
+		(const CalibBlock *)0x0800F400, (const CalibBlock *)0x0800F400,
+	},
+	161, 0x8000,
+	16, 12, 13, 12,
+	{
+		{  80,  80,  80, 16000,  5 },
+		{  32, 160, 160, 16000,  2 },
+		{  32, 160, 160, 16000,  2 },
+		{  80,  80,  80, 16000,  5 },
+		{ 160, 160, 160, 16000, 10 },
+		{  80, 160, 160, 16000,  5 },
+	},
+};
+#else
 static const MotionConfig motionConfig = {
 	{
 		(const CalibBlock *)0x0800FC00, (const CalibBlock *)0x0800F800,
@@ -39,6 +58,7 @@ static const MotionConfig motionConfig = {
 	{ 0, 0, 0, 0, 0, 0, 1, 2 },
 	310, 32, 8000, 254,
 };
+#endif
 
 /* the host link's SPI, by board type: the bits sent LSB or MSB first */
 static const SPI_InitTypeDef spiConfigs[2] = {
@@ -49,7 +69,11 @@ static const SPI_InitTypeDef spiConfigs[2] = {
 };
 
 /* the host link's thresholds, by measurement type */
+#if MOTION_IMAGE == 0
+static const u32 hifThresholds[MOTION_TYPES] = { 2, 5, 5, 1, 2, 5 };
+#else
 static const u32 hifThresholds[MOTION_TYPES] = { 2, 5, 5, 1, 2, 5, 5, 5 };
+#endif
 
 #define ADC_SAMPLES	16
 #define HIF_FRAMES	10
@@ -63,12 +87,18 @@ static Adc adc(0, ADC_ExternalTrigConv_T1_CC3);
 static AdcSample adcSamples[2 * ADC_SAMPLES];
 static AdcSampler sampler(&sampleTimer, &adc, adcSamples, ADC_SAMPLES);
 static Listener listeners[3];
+#if MOTION_IMAGE == 0
+/* PC10: the board type */
+static ExtiPin boardPin(2, 10, 1);
+static MotionProcessor processor(&sampler, &ak8975, &boardPin, listeners, 3, &motionConfig);
+#else
 static ExtiPin drdy(2, 10, 1);
 static GpioOut stopLed(2, 6, 1);
 static GpioOut magPower(0, 1, 1);
 static GpioOut gyroStandby(2, 8, 0);
 static MotionProcessor processor(&sampler, &ak8975, &magPower, &drdy, &stopLed, &gyroStandby,
 				 listeners, 3, &motionConfig);
+#endif
 static ExtiPin hostCs(1, 12, 1);
 static SpiSlave spi(1, &hostCs);
 static GpioOut hifLine0(2, 7, 1);
@@ -105,6 +135,7 @@ const u16 *GetChecksum()
 	return processor.GetChecksum();
 }
 
+#if MOTION_IMAGE != 0
 /* the host link stopped for the STOP mode */
 void PrepareStop()
 {
@@ -115,10 +146,6 @@ void ResumeFromStop()
 {
 	hif.Resume();
 }
-
-/* RCC_CFGR2 (the value line's PREDIV1, the oscillator's divider before the PLL); the
-   library has no field for it */
-#define RCC_CFGR2	(*(vu32 *)(RCC_BASE + 0x2C))
 
 /* how a system clock is made from an oscillator */
 struct ClockConfig {
@@ -315,3 +342,4 @@ void RestoreClocks()
 {
 	SetupClocks();
 }
+#endif

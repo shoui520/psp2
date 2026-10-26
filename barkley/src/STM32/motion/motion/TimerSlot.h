@@ -12,7 +12,9 @@ public:
 	TimerSlot(TimerSlotHandler **slots, u32 count);
 	void Init(u8 preemption, u8 sub, u32 reload, s32 elapsed);
 	void Start();
+#if MOTION_IMAGE != 0
 	void Resume();
+#endif
 	bool Add(TimerSlotHandler *handler);
 	bool Remove(TimerSlotHandler *handler);
 

@@ -18,7 +18,9 @@ public:
 	AdcSampler(SampleTimer *timer, Adc *adc, AdcSample *buffer, u32 count);
 	void Init(u8 preemption, u8 sub, u32 priority, u16 prescaler, u32 clock, u32 rate);
 	void Start(Func::Func func, void *arg);
+#if MOTION_IMAGE != 0
 	void StartTriggered(Func::Func func, void *arg);
+#endif
 	void StartSelfTest(Func::Func func, void *arg);
 
 	void SetCallback(Func::Func func, void *arg)
@@ -33,7 +35,11 @@ public:
 
 	void StopSelfTest()
 	{
+#if MOTION_IMAGE == 0
+		timer_->Stop();
+#else
 		Stop();
+#endif
 	}
 
 	void Resume()

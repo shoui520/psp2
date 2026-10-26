@@ -28,6 +28,25 @@ public:
 		if (head_ >= tail_) {
 			u32 end = size_ - head_;
 
+#if MOTION_IMAGE == 0
+			/* image 00 tests the room to the end before the room left: with the
+			   tail at 0, the second piece's size is n - end, -1 */
+			if (end < size) {
+				*firstSize = end;
+				*second = buffer_;
+				if (tail_ + end - 1 < size)
+					n = tail_ + end - 1;
+				*secondSize = n - end;
+				head_ = *secondSize;
+			} else {
+				*firstSize = n;
+				*second = 0;
+				*secondSize = 0;
+				head_ += n;
+				if (head_ == size_)
+					head_ = 0;
+			}
+#else
 			if (tail_ + end - 1 < size)
 				n = tail_ + end - 1;
 			if (n >= end) {
@@ -41,6 +60,7 @@ public:
 				*secondSize = 0;
 				head_ += n;
 			}
+#endif
 		} else {
 			if (tail_ - head_ - 1 < size)
 				n = tail_ - head_ - 1;

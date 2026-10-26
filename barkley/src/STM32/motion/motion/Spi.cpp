@@ -94,11 +94,14 @@ void Spi::Isr()
 
 void SpiSlave::Init(const SPI_InitTypeDef *init, u8 preemption, u8 sub, u32 txPriority, u32 rxPriority)
 {
+#if MOTION_IMAGE != 0
 	cs_->Disable();
+#endif
 	cs_->SetTrigger(0, CsCallback, this);
 	Spi::Init(init, preemption, sub, txPriority, rxPriority);
 }
 
+#if MOTION_IMAGE != 0
 /* the port off; the host's next chip select is let pass */
 void SpiSlave::Stop()
 {
@@ -114,6 +117,7 @@ void SpiSlave::Restart()
 	cs_->SetTrigger(0, CsCallback, this);
 	Enable();
 }
+#endif
 
 void SpiSlave::DmaSendDone(Request *request)
 {
@@ -176,6 +180,7 @@ void SpiSlave::OnCs(s8 level)
 	rxRequest_.Complete(error_);
 }
 
+#if MOTION_IMAGE != 0
 void SpiSlave::StopCsCallback(void *arg, s8 level)
 {
 	static_cast<SpiSlave *>(arg)->OnStopCs(level);
@@ -185,3 +190,4 @@ void SpiSlave::OnStopCs(s8 level)
 {
 	cs_->Disable();
 }
+#endif

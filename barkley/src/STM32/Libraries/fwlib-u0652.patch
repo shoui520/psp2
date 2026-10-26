@@ -1,0 +1,45 @@
+diff -ru a/inc/stm32f10x_type.h b/inc/stm32f10x_type.h
+--- a/inc/stm32f10x_type.h	2026-10-26 16:41:18.962883148 +0000
++++ b/inc/stm32f10x_type.h	2026-10-26 16:41:18.980020648 +0000
+@@ -22,7 +22,7 @@
+ /* Exported types ------------------------------------------------------------*/
+ typedef signed long  s32;
+ typedef signed short s16;
+-typedef signed char  s8;
++typedef char         s8;  /* SCE (branch U0652): a plain char, unsigned */
+ 
+ typedef signed long  const sc32;  /* Read Only */
+ typedef signed short const sc16;  /* Read Only */
+diff -ru a/src/stm32f10x_rcc.c b/src/stm32f10x_rcc.c
+--- a/src/stm32f10x_rcc.c	2026-10-26 16:41:18.964456159 +0000
++++ b/src/stm32f10x_rcc.c	2026-10-26 16:41:31.977438507 +0000
+@@ -111,6 +111,10 @@
+ static uc8 APBAHBPrescTable[16] = {0, 0, 0, 0, 1, 2, 3, 4, 1, 2, 3, 4, 6, 7, 8, 9};
+ static uc8 ADCPrescTable[4] = {2, 4, 6, 8};
+ 
++/* SCE (branch U0652): ST's earlier release, the start-up's state in file statics */
++static volatile FlagStatus HSEStatus;
++static vu32 StartUpCounter = 0;
++
+ /* Private function prototypes -----------------------------------------------*/
+ /* Private functions ---------------------------------------------------------*/
+ 
+@@ -197,16 +201,14 @@
+ *******************************************************************************/
+ ErrorStatus RCC_WaitForHSEStartUp(void)
+ {
+-  vu32 StartUpCounter = 0;
+   ErrorStatus status = ERROR;
+-  FlagStatus HSEStatus = RESET;
+-  
++
+   /* Wait till HSE is ready and if Time out is reached exit */
+   do
+   {
+     HSEStatus = RCC_GetFlagStatus(RCC_FLAG_HSERDY);
+     StartUpCounter++;  
+-  } while((StartUpCounter != HSEStartUp_TimeOut) && (HSEStatus == RESET));
++  } while((HSEStatus == RESET) && (StartUpCounter != HSEStartUp_TimeOut));
+ 
+ 
+   if (RCC_GetFlagStatus(RCC_FLAG_HSERDY) != RESET)

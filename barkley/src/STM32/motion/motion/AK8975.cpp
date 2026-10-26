@@ -114,7 +114,9 @@ void AK8975::OnFuseRomExit(s32 result)
 	if (result != 0) {
 		FinishBoot(result);
 	} else {
+#if MOTION_IMAGE != 0
 		drdy_->ClearPending();
+#endif
 		drdy_->Start(1, SelfTestReadyCallback, this);
 		WriteBytes(regs, values, 2, &AK8975::OnSelfTestStart);
 	}
@@ -126,7 +128,9 @@ void AK8975::FinishBoot(s32 result)
 	drdy_->Disable();
 	ClearBooting();
 	if (result == 0) {
+#if MOTION_IMAGE != 0
 		drdy_->ClearPending();
+#endif
 		drdy_->Start(1, MeasureReadyCallback, this);
 	} else {
 		SetError(AK8975_STATUS_FAILED);
@@ -139,15 +143,20 @@ void AK8975::Measure(u8 *data, Measured::Func func, void *arg)
 {
 	data_ = data;
 	measured_.Set(func, arg);
+#if MOTION_IMAGE != 0
 	drdy_->ClearPending();
 	drdy_->Start(1, MeasureReadyCallback, this);
+#endif
 	WriteByte(AK8975_CNTL, AK8975_MODE_SINGLE, &AK8975::OnMeasureStart);
 }
 
+/* image 00 leaves DRDY's interrupt on from the boot, image 01 only while measuring */
 void AK8975::OnMeasureStart(s32 result)
 {
 	if (result != 0) {
+#if MOTION_IMAGE != 0
 		drdy_->Disable();
+#endif
 		measured_(result, 0);
 	}
 }
@@ -234,7 +243,9 @@ void AK8975::OnMeasureReady(s8 level)
 void AK8975::OnReadMeasurement(s32 result)
 {
 	if (result != 0) {
+#if MOTION_IMAGE != 0
 		drdy_->Disable();
+#endif
 		measured_(result, 0);
 	} else {
 		ReadByte(AK8975_ST2, &AK8975::OnReadMeasureStatus);
@@ -244,13 +255,17 @@ void AK8975::OnReadMeasurement(s32 result)
 void AK8975::OnReadMeasureStatus(s32 result)
 {
 	if (result != 0) {
+#if MOTION_IMAGE != 0
 		drdy_->Disable();
+#endif
 		measured_(result, 0);
 	} else {
 		u8 status = ByteData() >> 2;
 
 		*data_ = status;
+#if MOTION_IMAGE != 0
 		drdy_->Disable();
+#endif
 		measured_(0, data_);
 	}
 }
@@ -268,7 +283,7 @@ void AK8975::DumpStatus()
 	printf("Data Size      : %d\n", status.size);
 	if (status.size == 1)
 		printf("Byte Data      : 0x%02X(%u|%d)\n", status.data.byte, status.data.byte,
-		       (s8)status.data.byte);
+		       (signed char)status.data.byte);
 	else
 		printf("Halfword Data  : 0x%04X(%u|%d)\n", status.data.halfword, status.data.halfword,
 		       (s16)status.data.halfword);
@@ -392,6 +407,7 @@ void AK8975::SetError(u8 flags)
 	info_->status |= flags;
 }
 
+#if MOTION_IMAGE != 0
 void AK8975::AbortBoot()
 {
 	drdy_->Disable();
@@ -405,3 +421,4 @@ void AK8975::AbortMeasure()
 	drdy_->ClearPending();
 	measured_.Set(IgnoreMeasured, this);
 }
+#endif

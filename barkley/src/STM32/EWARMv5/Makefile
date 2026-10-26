@@ -7,7 +7,8 @@
 #
 #   make IMAGE=00|01
 #
-# image/<NN>.mk selects an image: 00 (AMI304 and AK8975), 01 (AK8975).
+# image/<NN>.mk selects an image: 00 (Sony's branch U0652), 01 (trunk); both have the
+# AK8975 magnetometer.
 #   motionC.icf   IAR link configuration (flash, RAM, vector table first)
 #
 # Sony's layout (barkley trunk, from the images' assert paths): this folder is the IAR
@@ -23,6 +24,7 @@
 
 IMAGE ?= 01
 O ?= build/$(IMAGE)
+LIBPATCHES :=
 
 include image/$(IMAGE).mk
 
@@ -31,8 +33,8 @@ GCC48 := $(ROOT)/tools/gcc48.sh
 MOTION := ../motion/motion
 
 # ST's STM32F10x Firmware Library V2.0.3 (contrib/), with Sony's changes
-# (../Libraries/fwlib.patch) applied to a copy in the build folder; its configuration,
-# stm32f10x_conf.h, is Sony's (../motion/motion/include)
+# (../Libraries/fwlib.patch, and the image's LIBPATCHES) applied to a copy in the build
+# folder; its configuration, stm32f10x_conf.h, is Sony's (../motion/motion/include)
 FWLIB := $(ROOT)/contrib/stm32f10x-fwlib-2.0.3/library
 LIB := $(O)/library
 
@@ -73,11 +75,11 @@ $(OBJECTS): $(LIB)/.patched Makefile
 
 # the library's copy with Sony's changes
 fwlib: $(LIB)/.patched
-$(LIB)/.patched: ../Libraries/fwlib.patch $(wildcard $(FWLIB)/*/*)
+$(LIB)/.patched: ../Libraries/fwlib.patch $(LIBPATCHES) $(wildcard $(FWLIB)/*/*)
 	rm -rf $(LIB)
 	mkdir -p $(O)
 	cp -R $(FWLIB) $(LIB)
-	cd $(LIB) && patch -s -p1 < $(CURDIR)/../Libraries/fwlib.patch
+	cd $(LIB) && for p in ../Libraries/fwlib.patch $(LIBPATCHES); do patch -s -p1 < $(CURDIR)/$$p; done
 	touch $@
 
 $(O)/%.c.o: $(LIB)/src/%.c

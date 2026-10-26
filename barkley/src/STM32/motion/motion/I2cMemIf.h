@@ -40,8 +40,10 @@ public:
 	I2cMemIf(s8 port, u8 address, u16 regSize);
 	s32 Init(const I2C_InitTypeDef *init, u8 eventPreemption, u8 eventSub,
 		 u8 errorPreemption, u8 errorSub, u32 txPriority, u32 rxPriority);
+#if MOTION_IMAGE != 0
 	s32 Reinit(const I2C_InitTypeDef *init);
 	void DeInit();
+#endif
 	void Start(void *buf, u16 size, Request::Done::Func func, void *arg, s8 write);
 
 	void Read(void *buf, u16 size, Request::Done::Func func, void *arg)

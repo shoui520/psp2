@@ -60,6 +60,7 @@ void ExtiPin::Isr()
 	EXTI_ClearITPendingBit(line_);
 }
 
+#if MOTION_IMAGE != 0
 /* the line's interrupt's and the line's pending bits cleared */
 void ExtiPin::ClearPending()
 {
@@ -97,3 +98,4 @@ void ExtiPin::ClearPending()
 	}
 	EXTI_ClearITPendingBit(line_);
 }
+#endif

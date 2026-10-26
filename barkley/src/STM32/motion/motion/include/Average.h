@@ -66,8 +66,10 @@ T Averager<T>::Get()
 {
 	Sum average;
 
+#if MOTION_IMAGE != 0
 	if (count_ == 0)
 		return 0;
+#endif
 	average = ((sum_ << shift_) + count_ / 2) / count_;
 	if (average > AverageLimits<T>::Max)
 		average = AverageLimits<T>::Max;
@@ -90,12 +92,23 @@ public:
 	}
 
 	/* true once in each period */
+#if MOTION_IMAGE == 0
+	bool Tick()
+	{
+		bool due = count_ == 0;
+
+		if (++count_ >= period_)
+			count_ = 0;
+		return due;
+	}
+#else
 	bool Tick()
 	{
 		if (++count_ >= period_)
 			count_ = 0;
 		return count_ == 0;
 	}
+#endif
 
 private:
 	u32 period_;

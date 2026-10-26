@@ -15,7 +15,9 @@ extern "C" {
 BufferedUsartStream::BufferedUsartStream(s8 port, s8 mode, u8 *buffer, u32 size, u32 chunk)
 	: Usart(port, mode), fifo_(buffer, size), chunk_(chunk), writers_(0), sending_(false)
 {
+#if MOTION_IMAGE != 0
 	discard_ = true;
+#endif
 	segments_[2].buf = 0;
 }
 
@@ -27,8 +29,10 @@ u32 BufferedUsartStream::Put(const u8 *buf, u32 size)
 	u8 *first;
 	u32 n;
 
+#if MOTION_IMAGE != 0
 	if (discard_)
 		return size;
+#endif
 	__SETPRIMASK();
 	writers_++;
 	n = fifo_.Reserve(size, &first, &firstSize, &second, &secondSize);

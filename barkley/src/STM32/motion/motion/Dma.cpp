@@ -66,6 +66,7 @@ void DmaNormal::Isr()
 	}
 }
 
+#if MOTION_IMAGE != 0
 /* the channel's interrupt and flags cleared */
 void Dma::DeInit()
 {
@@ -96,6 +97,7 @@ void Dma::DeInit()
 	DMA_ClearITPendingBit(dmaChannels[channel_].ht);
 	DMA_ClearITPendingBit(dmaChannels[channel_].te);
 }
+#endif
 
 void Dma::Start(void *buf, u16 size, Request::Done::Func func, void *arg)
 {

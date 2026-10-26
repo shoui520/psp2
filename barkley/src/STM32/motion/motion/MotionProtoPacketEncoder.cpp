@@ -24,7 +24,9 @@ bool MotionProtoPacketPacker::Begin(u8 *packet, u32 size)
 	free_ = size - (sizeof(MotionDataPacket) - 1);
 	data_ = packet_->data;
 	count_ = 0;
+#if MOTION_IMAGE != 0
 	magUpdated_ = false;
+#endif
 	fields_ = 0;
 	return true;
 }
@@ -125,8 +127,10 @@ bool MotionProtoPacketPacker::AddFrame(MotionFrame *frame)
 		lastCount_ = frame->count_;
 		status_ = frame->status_;
 		count_++;
+#if MOTION_IMAGE != 0
 		if (IsMagUpdated(status_))
 			magUpdated_ = true;
+#endif
 	} else {
 		if (added != 0)
 			fields_ |= (added | missing) << (count_ * 4);
@@ -147,8 +151,10 @@ u32 MotionProtoPacketPacker::Finish()
 	packet_->id = HIF_PACKET_MOTION_DATA;
 	packet_->size = size;
 	packet_->format = format_;
+#if MOTION_IMAGE != 0
 	if (magUpdated_)
 		SetMagUpdated(&status_);
+#endif
 	packet_->status = status_;
 	packet_->count = firstCount_;
 	packet_->fields = fields_;

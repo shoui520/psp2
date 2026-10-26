@@ -1,7 +1,7 @@
 /*
  * BufferedUsartStream: a USART port whose output is queued and sent by its interrupts,
  * at most a given size at a time; the writers do not wait. With discard set, the
- * output goes nowhere.
+ * output goes nowhere (image 00 has no discard).
  */
 #ifndef BUFFEREDUSARTSTREAM_H
 #define BUFFEREDUSARTSTREAM_H
@@ -28,10 +28,12 @@ public:
 		Usart::Receive(buf, size, func, arg);
 	}
 
+#if MOTION_IMAGE != 0
 	void SetDiscard(bool discard)
 	{
 		discard_ = discard;
 	}
+#endif
 
 private:
 	/* a piece of the queue being sent */
@@ -50,7 +52,9 @@ private:
 	bool sending_;
 	Segment segments_[3];		/* what is sent, ended by a null buf */
 	Segment *volatile current_;
+#if MOTION_IMAGE != 0
 	bool discard_;
+#endif
 };
 
 #endif

@@ -1,7 +1,8 @@
 /*
  * Gpio: GPIO pins, read or driven through their bit-band aliases (a pin may be
  * inverted: its level is the pin's state XOR invert), and a pin that interrupts on its
- * EXTI line.
+ * EXTI line. In image 00 an output's level cannot be read back, and the line's pending
+ * bit is not cleared but by its interrupt.
  */
 #ifndef GPIO_H
 #define GPIO_H
@@ -29,11 +30,13 @@ class Output {
 public:
 	Output() {}
 	virtual void Set(s8 level) {}
+#if MOTION_IMAGE != 0
 
 	virtual s8 Get() const
 	{
 		return 0;
 	}
+#endif
 };
 
 class GpioIn : public Input {
@@ -66,11 +69,13 @@ public:
 	{
 		*bit_ = level ^ invert_;
 	}
+#if MOTION_IMAGE != 0
 
 	virtual s8 Get() const
 	{
 		return invert_ ^ *bit_;
 	}
+#endif
 
 private:
 	vu32 *bit_;
@@ -96,7 +101,9 @@ public:
 	virtual void Disable() {}
 	virtual void Unmask() {}
 	virtual void Mask() {}
+#if MOTION_IMAGE != 0
 	virtual void ClearPending() {}
+#endif
 
 	void Start(s8 edge, Handler::Func func, void *arg)
 	{
@@ -137,7 +144,9 @@ public:
 		*imr_ = 0;
 	}
 
+#if MOTION_IMAGE != 0
 	virtual void ClearPending();
+#endif
 
 private:
 	static void IsrCallback(void *arg);

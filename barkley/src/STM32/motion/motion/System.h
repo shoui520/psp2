@@ -19,9 +19,11 @@ extern UsartStream debugStream;
 void InitSystem();
 void StartSystem();
 void IdleTask(void *arg);
+#if MOTION_IMAGE != 0
 void ResumeSystem();
 void SetStopped(bool value);
 bool IsStopped();
+#endif
 
 bool PostTask(void (*func)(void *arg), void *arg);
 void RunTasks(void (*idle)(void *arg), void *arg);
@@ -29,8 +31,10 @@ bool AddTimer(TimerSlotHandler *handler);
 bool RemoveTimer(TimerSlotHandler *handler);
 void ScheduleReset();
 void StartWatchdog();
+#if MOTION_IMAGE != 0
 void EnterStopMode();
 void PrepareStop();
+#endif
 u16 UserVersion();
 u16 FirmwareChecksum();
 

@@ -193,7 +193,9 @@ private:
 	void CmdWriteCalib(const HifPacket *packet);
 	void CmdSetSampleType(const HifPacket *packet);
 	void CmdSwitchFrameSize(const HifPacket *packet);
+#if MOTION_IMAGE != 0
 	void CmdSelectMeasType(const HifPacket *packet);
+#endif
 	void CmdRestart(const HifPacket *packet);
 	void CmdReset(const HifPacket *packet);
 	void CmdReadCalibWritingStatus(const HifPacket *packet);
@@ -218,18 +220,22 @@ private:
 		__RESETPRIMASK();
 	}
 
+#if MOTION_IMAGE != 0
 	void ClearReports()
 	{
 		deviceInfoPending_ = false;
 		resultPending_ = false;
 	}
+#endif
 
 	MotionProcessor *processor_;
 	const u32 *thresholds_;		/* frames queued before the host is told, per sample type */
 	u32 threshold_;
 	s32 listenerId_;
 	bool isMeasuring_;
+#if MOTION_IMAGE != 0
 	bool isMeasuretypeStop_;
+#endif
 	RingBuffer<MotionFrame> frames_;
 	const MotionFrame *rawFrame_;	/* a calibrated frame, sent alone */
 	u8 txBuffer_[MOTION_FRAME_MAX];
@@ -240,14 +246,22 @@ private:
 	s8 calibWritingStatus_;		/* 3 none, 1 receiving, 2 writing, 0 written, -1 failed */
 	u8 calibReadStatus_;		/* set, never read */
 	bool deviceInfoPending_;
+#if MOTION_IMAGE != 0
 	bool resultPending_;
 	s32 result_;
+#endif
 	u32 frameSize_;
 	u32 reserved_;			/* nothing reads or writes it (HifSpi's members follow at 288) */
 
+#if MOTION_IMAGE == 0
+	/* no HIF_CMD_SELECT_MEAS_TYPE: ParseFrame still takes ids below HIF_COMMANDS */
+	static const Command commands_[HIF_CMD_SELECT_MEAS_TYPE];
+	static const s8 sampleTypes_[MOTION_TYPES];
+#else
 	static const Command commands_[HIF_COMMANDS];
 	static const s8 sampleTypes_[MOTION_TYPES];
 	static const s8 measTypes_[4];
+#endif
 };
 
 #endif

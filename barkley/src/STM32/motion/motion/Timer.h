@@ -47,7 +47,9 @@ public:
 	virtual void Tick(s32 elapsed);
 	virtual void Start(s32 ticks, Callback<void ()>::Func func, void *arg);
 	virtual void Stop();
+#if MOTION_IMAGE != 0
 	bool StartChecked(s32 ticks, Callback<void ()>::Func func, void *arg);
+#endif
 
 private:
 	s32 remaining_;

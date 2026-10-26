@@ -23,6 +23,7 @@ void Timer::Start(s32 ticks, Callback<void ()>::Func func, void *arg)
 	Register();
 }
 
+#if MOTION_IMAGE != 0
 /* as Start: false when every slot is taken */
 bool Timer::StartChecked(s32 ticks, Callback<void ()>::Func func, void *arg)
 {
@@ -30,6 +31,7 @@ bool Timer::StartChecked(s32 ticks, Callback<void ()>::Func func, void *arg)
 	remaining_ = ticks;
 	return Register();
 }
+#endif
 
 void Timer::Stop()
 {

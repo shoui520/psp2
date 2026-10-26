@@ -34,6 +34,7 @@ public:
 	AK8975(I2cRegIf *i2c, ExtiHandler *drdy);
 	void Boot(u8 *info, Done::Func func, void *arg);
 	void Measure(u8 *data, Measured::Func func, void *arg);
+#if MOTION_IMAGE != 0
 	void AbortBoot();
 	void AbortMeasure();
 
@@ -46,6 +47,7 @@ public:
 	{
 		i2c_->Disable();
 	}
+#endif
 
 private:
 	typedef void (AK8975::*Step)(s32 result);
@@ -104,8 +106,10 @@ private:
 		(this->*step_)(result);
 	}
 
+#if MOTION_IMAGE != 0
 	static void IgnoreDone(void *arg, s32 result) {}
 	static void IgnoreMeasured(void *arg, s32 result, u8 *data) {}
+#endif
 
 	I2cRegIf *i2c_;
 	ExtiHandler *drdy_;

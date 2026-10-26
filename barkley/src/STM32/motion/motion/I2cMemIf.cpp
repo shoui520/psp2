@@ -33,6 +33,7 @@ s32 I2cMemIf::Init(const I2C_InitTypeDef *init, u8 eventPreemption, u8 eventSub,
 	return 0;
 }
 
+#if MOTION_IMAGE != 0
 s32 I2cMemIf::Reinit(const I2C_InitTypeDef *init)
 {
 	I2c::Reinit(init);
@@ -54,6 +55,7 @@ void I2cMemIf::DeInit()
 	I2c::DeInit();
 	Disable();
 }
+#endif
 
 void I2cMemIf::Start(void *buf, u16 size, Request::Done::Func func, void *arg, s8 write)
 {

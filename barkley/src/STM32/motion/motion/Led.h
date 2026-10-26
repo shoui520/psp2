@@ -1,7 +1,8 @@
 /*
  * Led: the board's two LEDs, shown together as a two-bit pattern (LedPair), and the
  * blinkers: one toggling on a periodic timer (Blinker), one counting the main loop's
- * idle passes (CountBlinker). The blinkers keep their state; they do not drive the LED.
+ * idle passes (CountBlinker). The blinkers keep their state; they do not drive the LED
+ * (image 00's do: the LED on while the state is 0).
  */
 #ifndef LED_H
 #define LED_H
@@ -60,6 +61,11 @@ private:
 
 	void Toggle()
 	{
+#if MOTION_IMAGE == 0
+		static const s8 levels[2] = { 1, 0 };
+
+		led_->Set(levels[on_]);
+#endif
 		on_ ^= 1;
 	}
 
@@ -83,7 +89,14 @@ public:
 	{
 		count_++;
 		if (count_ >= period_) {
+#if MOTION_IMAGE == 0
+			static const s8 levels[2] = { 1, 0 };
+
 			count_ = 0;
+			led_->Set(levels[on_]);
+#else
+			count_ = 0;
+#endif
 			on_ ^= 1;
 		}
 	}

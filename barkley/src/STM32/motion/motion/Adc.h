@@ -46,7 +46,9 @@ public:
 	/* the conversions into buf, size halfwords round and round */
 	void Start(void *buf, u16 size, Request::Done::Func func, void *arg)
 	{
+#if MOTION_IMAGE != 0
 		dma_.Stop();
+#endif
 		dma_.Start(buf, size, func, arg);
 	}
 

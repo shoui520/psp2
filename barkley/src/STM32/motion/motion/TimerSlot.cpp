@@ -33,11 +33,13 @@ void TimerSlot::Start()
 	SysTick_CounterCmd(SysTick_Counter_Enable);
 }
 
+#if MOTION_IMAGE != 0
 /* the interrupt on again, after the STOP mode */
 void TimerSlot::Resume()
 {
 	SysTick_ITConfig(ENABLE);
 }
+#endif
 
 bool TimerSlot::Add(TimerSlotHandler *handler)
 {
@@ -50,7 +52,9 @@ bool TimerSlot::Add(TimerSlotHandler *handler)
 			return true;
 		}
 	}
+#if MOTION_IMAGE != 0
 	printf("TimerSlot full.\n");
+#endif
 	return false;
 }
 
