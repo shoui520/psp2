@@ -221,6 +221,11 @@ public:
 		return &info_;
 	}
 
+	const u16 *GetChecksum() const
+	{
+		return &checksum_;
+	}
+
 	s8 State() const;
 	bool CanMeasure() const;
 

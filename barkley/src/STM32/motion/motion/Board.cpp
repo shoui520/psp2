@@ -6,11 +6,115 @@
 extern "C" {
 #include "stm32f10x_lib.h"
 }
+#include "AK8975.h"
+#include "AdcSampler.h"
 #include "Board.h"
+#include "HifSpi.h"
+#include "I2cRegIf.h"
+#include "MotionProcessor.h"
+#include "System.h"
 #include "stm32f10x_it.h"
 
 /* the system clock the program runs at */
 #define SYSCLK_Value	((u32)16000000)
+
+/* the motion processor's parameters */
+static const MotionConfig motionConfig = {
+	{
+		(const CalibBlock *)0x0800FC00, (const CalibBlock *)0x0800F800,
+		(const CalibBlock *)0x0800F400, (const CalibBlock *)0x0800F400,
+	},
+	161, 32, 16, 101, 101, 11, 0x8000,
+	16, 12, 13, 12,
+	{
+		{  80,  80,  80, 16000,  5 },
+		{  32, 160, 160, 16000,  2 },
+		{  32, 160, 160, 16000,  2 },
+		{  80,  80,  80, 16000,  5 },
+		{ 160, 160, 160, 16000, 10 },
+		{  80, 160, 160, 16000,  5 },
+		{  32, 160, 160, 16000,  2 },
+		{  32, 160, 160, 16000,  2 },
+	},
+	{ 0, 0, 0, 0, 0, 0, 1, 2 },
+	310, 32, 8000, 254,
+};
+
+/* the host link's SPI, by board type: the bits sent LSB or MSB first */
+static const SPI_InitTypeDef spiConfigs[2] = {
+	{ SPI_Direction_2Lines_FullDuplex, SPI_Mode_Slave, SPI_DataSize_8b, SPI_CPOL_High,
+	  SPI_CPHA_2Edge, SPI_NSS_Soft, SPI_BaudRatePrescaler_4, SPI_FirstBit_LSB, 7 },
+	{ SPI_Direction_2Lines_FullDuplex, SPI_Mode_Slave, SPI_DataSize_8b, SPI_CPOL_High,
+	  SPI_CPHA_2Edge, SPI_NSS_Soft, SPI_BaudRatePrescaler_4, SPI_FirstBit_MSB, 7 },
+};
+
+/* the host link's thresholds, by measurement type */
+static const u32 hifThresholds[MOTION_TYPES] = { 2, 5, 5, 1, 2, 5, 5, 5 };
+
+#define ADC_SAMPLES	16
+#define HIF_FRAMES	10
+
+static I2cRegIf i2cRegIf(0);
+static ExtiPin magDrdy(1, 8, 0);
+static AK8975 ak8975(&i2cRegIf, &magDrdy);
+static TimerChannel3 sampleChannel(0);
+static SampleTimer sampleTimer(0, &sampleChannel);
+static Adc adc(0, ADC_ExternalTrigConv_T1_CC3);
+static AdcSample adcSamples[2 * ADC_SAMPLES];
+static AdcSampler sampler(&sampleTimer, &adc, adcSamples, ADC_SAMPLES);
+static Listener listeners[3];
+static ExtiPin drdy(2, 10, 1);
+static GpioOut stopLed(2, 6, 1);
+static GpioOut magPower(0, 1, 1);
+static GpioOut gyroStandby(2, 8, 0);
+static MotionProcessor processor(&sampler, &ak8975, &magPower, &drdy, &stopLed, &gyroStandby,
+				 listeners, 3, &motionConfig);
+static ExtiPin hostCs(1, 12, 1);
+static SpiSlave spi(1, &hostCs);
+static GpioOut hifLine0(2, 7, 1);
+static GpioOut hifLine1(2, 6, 1);
+static MotionFrame frames[HIF_FRAMES];
+static HifSpi hif(&processor, frames, HIF_FRAMES, hifThresholds, &spi, &hifLine0, &hifLine1);
+
+/* the samples at 16 kHz on TIM1's channel 3; the host link as the board type says */
+void InitDevices()
+{
+	i2cRegIf.Init(4, 1, 3, 1, DMA_Priority_High, DMA_Priority_High);
+	magDrdy.Init(4, 1);
+	sampler.Init(4, 0, DMA_Priority_Medium, 0, SYSCLK_Value, 16000);
+	hostCs.Init(4, 1);
+	processor.ResetBoardType();
+	spi.Init(&spiConfigs[processor.BoardType()], 4, 1, DMA_Priority_VeryHigh, DMA_Priority_High);
+	processor.Init();
+	hif.Init();
+}
+
+void StartDevices()
+{
+	processor.StartSampling();
+	hif.Start();
+}
+
+const DeviceInfo *GetDeviceInfo()
+{
+	return processor.GetDeviceInfo();
+}
+
+const u16 *GetChecksum()
+{
+	return processor.GetChecksum();
+}
+
+/* the host link stopped for the STOP mode */
+void PrepareStop()
+{
+	hif.Suspend();
+}
+
+void ResumeFromStop()
+{
+	hif.Resume();
+}
 
 /* RCC_CFGR2 (the value line's PREDIV1, the oscillator's divider before the PLL); the
    library has no field for it */

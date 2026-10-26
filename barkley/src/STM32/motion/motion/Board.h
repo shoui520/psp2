@@ -5,10 +5,25 @@
 #ifndef BOARD_H
 #define BOARD_H
 
+#include "stm32f10x_type.h"
+
 /* the clocks, the pins, the vector table and the interrupt priorities */
 void InitBoard();
 
 /* the clocks again, after the STOP mode (which runs on the HSI) */
 void RestoreClocks();
+
+struct DeviceInfo;
+
+/* the program's devices set up, then started */
+void InitDevices();
+void StartDevices();
+
+/* what main prints: the device information and the firmware's checksum */
+const DeviceInfo *GetDeviceInfo();
+const u16 *GetChecksum();
+
+/* the host link on again, after the STOP mode */
+void ResumeFromStop();
 
 #endif
