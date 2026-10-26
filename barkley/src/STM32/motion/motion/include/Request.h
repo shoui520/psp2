@@ -28,6 +28,20 @@ public:
 		result_ = result;
 	}
 
+	/* the result and what is left */
+	void SetResult(s32 result, u32 remaining)
+	{
+		result_ = result;
+		remaining_ = remaining;
+	}
+
+	/* the result and where the data stands */
+	void SetResult(s32 result, u8 *cur)
+	{
+		result_ = result;
+		cur_ = cur;
+	}
+
 	s32 Result() const
 	{
 		return result_;
@@ -47,6 +61,19 @@ public:
 	void Complete(s32 result)
 	{
 		SetResult(result);
+		Notify();
+	}
+
+	void Complete(s32 result, u32 remaining)
+	{
+		SetResult(result, remaining);
+		Notify();
+	}
+
+	/* a part done: the data at cur */
+	void Report(s32 result, u8 *cur)
+	{
+		SetResult(result, cur);
 		Notify();
 	}
 

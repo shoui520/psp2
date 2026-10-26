@@ -9,6 +9,7 @@ extern "C" {
 #include "stm32f10x_lib.h"
 }
 #include "Request.h"
+#include "stm32f10x_it.h"
 
 /* a channel's registers, interrupt and its flags in DMA1's ISR and IFCR */
 struct DmaChannelInfo {
@@ -67,16 +68,57 @@ public:
 	}
 
 protected:
+	void Configure(const DMA_InitTypeDef *init, u32 priority, u32 mode);
+	void RegisterIrq(IrqHandler::Func func, void *arg, u8 preemption, u8 sub);
+
+	/* the request set and the channel on: the transfer runs */
+	void Run(void *buf, u16 size, Request::Done::Func func, void *arg)
+	{
+		request_.Set(buf, size, func, arg);
+		DMA_Cmd(regs_, ENABLE);
+	}
+
+	/* the bytes of each transfer (PSIZE) */
+	u32 ElementSize()
+	{
+		return 1 << ((regs_->CCR & 0x300) >> 8);
+	}
+
 	s8 channel_;
 	DMA_Channel_TypeDef *regs_;
 	Request request_;
 	const DmaChannelInfo *info_;
 };
 
+/* a buffer once: the request completes at its end */
 class DmaNormal : public Dma {
 public:
 	DmaNormal(s8 channel) : Dma(channel) {}
 	void Init(const DMA_InitTypeDef *init, u8 preemption, u8 sub, u32 priority);
+
+private:
+	static void IsrCallback(void *arg);
+	void Isr();
+};
+
+/* a buffer round and round: the request reports each half as it fills */
+class DmaCirc : public Dma {
+public:
+	DmaCirc(s8 channel) : Dma(channel) {}
+	void Init(const DMA_InitTypeDef *init, u8 preemption, u8 sub, u32 priority);
+	void Start(void *buf, u16 size, Request::Done::Func func, void *arg);
+
+	/* the half and whole transfer interrupts too */
+	void EnableIt()
+	{
+		DMA_ITConfig(regs_, DMA_IT_TC | DMA_IT_HT | DMA_IT_TE, ENABLE);
+	}
+
+private:
+	static void IsrCallback(void *arg);
+	void Isr();
+
+	u8 *half_;		/* the second half */
 };
 
 #endif

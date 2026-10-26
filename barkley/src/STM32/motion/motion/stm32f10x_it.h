@@ -5,7 +5,9 @@
 #ifndef STM32F10X_IT_H
 #define STM32F10X_IT_H
 
-#include "stm32f10x_type.h"
+extern "C" {
+#include "stm32f10x_map.h"
+}
 #include "Callback.h"
 
 typedef Callback<void ()> IrqHandler;
@@ -21,5 +23,16 @@ void RegisterExtiHandler(s8 line, IrqHandler::Func func, void *arg, u8 preemptio
 /* the shared interrupts' priorities: EXTI9_5, EXTI15_10, ADC1_2, two bytes each
    (preemption, sub) */
 void SetSharedIrqPriorities(const u8 *priority);
+
+/* the interrupt's pending bit cleared (its channel number, of the 43) */
+inline void ClearPendingIrq(s8 irq)
+{
+	if (irq < 43) {
+		if (irq >= 32)
+			NVIC->ICPR[1] = 1 << (irq - 32);
+		else
+			NVIC->ICPR[0] = 1 << irq;
+	}
+}
 
 #endif
