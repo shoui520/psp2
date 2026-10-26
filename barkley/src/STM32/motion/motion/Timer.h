@@ -16,8 +16,8 @@ public:
 	TimerSlotHandler() {}
 	virtual void Tick(s32 elapsed) {}
 
-	void Register();
-	void Unregister();
+	bool Register();
+	bool Unregister();
 
 	void SetSlot(u32 slot)
 	{
