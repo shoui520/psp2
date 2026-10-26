@@ -34,11 +34,48 @@ union UpdInput {
 	} bits;
 };
 
+/* the events (updEventSet) */
+union UpdEvents {
+	unsigned long	value;
+	struct {
+		unsigned int	event01:1;
+		unsigned int	event02:1;
+		unsigned int	event03:1;
+		unsigned int	event04:1;
+		unsigned int	event05:1;
+		unsigned int	event0a:1;
+		unsigned int	event14:1;
+		unsigned int	event15:1;
+		unsigned int	event32:1;
+		unsigned int	event33:1;
+		unsigned int	event34:1;
+		unsigned int	event64:1;
+		unsigned int	event67:1;
+		unsigned int	event69:1;
+		unsigned int	event66:1;
+		unsigned int	event78:1;
+		unsigned int	event79:1;
+		unsigned int	event7a:1;
+		unsigned int	event16:1;
+		unsigned int	event1e:1;
+		unsigned int	event1f:1;
+		unsigned int	event20:1;
+		unsigned int	event35:1;
+		unsigned int	event82:1;
+		unsigned int	reserved:8;
+	} bits;
+};
+
 extern unsigned char updMode;
 extern unsigned char updReset;
 extern unsigned char updVersion[4];
 extern char updBuild[12];
 extern union UpdInput updInput;
+extern unsigned long updLoops;
+extern union UpdEvents updEvents;
+extern unsigned int buttonPowerHeld;
+extern unsigned int buttonPsHeld;
+extern unsigned long buttonPolls;
 extern int updaterInitErnieUpdMode(void);
 extern unsigned char updModeGet(void);
 extern unsigned char updModeChange(unsigned char mode);
@@ -75,17 +112,35 @@ struct HostAnswerFrame {
 	unsigned char	data[0x7c];
 };
 
-/* PLACEHOLDER: a queued slow command; only the fields read so far */
+/* hostSlowCommand's states */
+#define HOST_SLOW_QUEUED	1	/* runs from the main loop */
+#define HOST_SLOW_DONE		2	/* its answer is ready */
+
+#define HOST_SLOW_COMMANDS	3
+
+/* the image check's progress (0x1184's handler) */
+struct HostSlowHash {
+	unsigned char	segment;	/* the next segment to hash */
+	unsigned char	segmentDone;	/* the segments hashed */
+	unsigned char	segmentCount;	/* the segments received */
+};
+
+/* a queued slow command */
 struct HostSlowCommand {
 	unsigned int	command;	/* 0: the entry is free */
 	struct HostAnswerFrame answer;	/* the handler's, sent from its length on */
-	unsigned char	reserved[0x90];
+	struct HostCommandFrame frame;	/* the command, for the handler */
+	struct HostSlowHash hash;
+	unsigned char	reserved[0x0c];
 	void		(*handler)(struct HostSlowCommand *slow);	/* run from the main loop */
 	signed char	state;		/* HOST_SLOW_* */
 	unsigned char	reserved2;
 };
 
 extern struct UpdHostLink hostLink;
+extern struct HostCommandFrame hostRx;
+extern struct HostAnswerFrame hostTx;
+extern struct HostSlowCommand hostSlowCommands[HOST_SLOW_COMMANDS];
 extern unsigned char logMode;		/* 3: the log goes out */
 extern int hostOpen(void);
 extern int hostClose(void);
@@ -100,8 +155,6 @@ extern struct HostSlowCommand *hostSlowAlloc(unsigned int command);
 extern int hostSlowFree(struct HostSlowCommand *slow);
 extern unsigned char hostSlowPending(void);
 extern void hostSlowRun(void);
-extern unsigned char hostCommandFast(unsigned int command);
-extern unsigned char hostCommandSlow(unsigned int command, struct HostSlowCommand *slow);
 extern void sub_3B721(void);
 
 /* stub.c */
@@ -146,10 +199,19 @@ extern void powerStartTimer(unsigned int bits, unsigned char id, unsigned int ti
 extern unsigned char resetFlags;
 extern void rtcInit(void);
 extern unsigned char configStorageInit(void);
-extern unsigned char updaterInit(void);
 extern void sub_3B1AE(void);
-extern void sub_3598A(void);
 extern void sub_3B604(unsigned int);
+extern unsigned char sub_3B5AF(void);
+
+/* command.c: the host's commands, and the update's */
+extern unsigned char updSegment;		/* the segment programmed ("block") */
+extern unsigned char updCipher[0x400];	/* its data as it comes in */
+extern unsigned char updReceived[0x100];	/* the segments programmed */
+extern unsigned char updProgress;	/* the image check's, in percent */
+extern unsigned char updaterInit(void);
+extern int updaterDecryptInit(void);
+extern unsigned char hostCommandFast(unsigned int command);
+extern unsigned char hostCommandSlow(unsigned int command, struct HostSlowCommand *slow);
 extern int sub_3B718(void);
 extern void sub_3AC35(void);
 extern void sub_3AF74(void);

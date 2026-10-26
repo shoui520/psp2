@@ -30,6 +30,7 @@ union Serial1Args {
 };
 
 extern unsigned char serial1State;
+extern unsigned char serial1Buffer[0x28];
 extern union Serial1Args serial1Args;
 
 extern void serial1Reset(void);

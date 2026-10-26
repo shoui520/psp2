@@ -34,34 +34,6 @@
 #include "watchdog.h"
 #include "updater.h"
 
-/* the events (updEventSet) */
-struct UpdEvents {
-	unsigned int	event01:1;
-	unsigned int	event02:1;
-	unsigned int	event03:1;
-	unsigned int	event04:1;
-	unsigned int	event05:1;
-	unsigned int	event0a:1;
-	unsigned int	event14:1;
-	unsigned int	event15:1;
-	unsigned int	event32:1;
-	unsigned int	event33:1;
-	unsigned int	event34:1;
-	unsigned int	event64:1;
-	unsigned int	event67:1;
-	unsigned int	event69:1;
-	unsigned int	event66:1;
-	unsigned int	event78:1;
-	unsigned int	event79:1;
-	unsigned int	event7a:1;
-	unsigned int	event16:1;
-	unsigned int	event1e:1;
-	unsigned int	event1f:1;
-	unsigned int	event20:1;
-	unsigned int	event35:1;
-	unsigned int	event82:1;
-	unsigned int	reserved:8;
-};
 
 unsigned char updMode;		/* updModeChange's */
 unsigned char updReset;		/* started from the reset vector (main), not by the application */
@@ -69,7 +41,7 @@ unsigned char updVersion[4];	/* the running application's version */
 char updBuild[12];		/* and its build time, digits only */
 
 unsigned long updLoops;		/* the main loop's rounds */
-struct UpdEvents updEvents;
+union UpdEvents updEvents;
 unsigned int buttonPowerHeld;	/* the polls P11.5 has been held low */
 unsigned int buttonPsHeld;	/* and P4.6 */
 unsigned long buttonPolls;
@@ -105,7 +77,7 @@ int updaterInitErnieUpdMode(void)
 	} else {
 		updMode = 3;
 		hostOpen();
-		sub_3598A();
+		updaterDecryptInit();
 		sub_3B604(0xa5a5);
 		updInput.bits.multiCnReported = updInput.bits.multiCn = updInput.bits.multiCnLast =
 			!P2.0;
@@ -138,7 +110,7 @@ unsigned char updModeChange(unsigned char mode)
 			if (chargeMayStart()) {
 				sub_3B1AE();
 				watchdogSetup();
-				sub_3598A();
+				updaterDecryptInit();
 				powerResume();
 				hostOpen();
 				refused = 0;
@@ -253,100 +225,100 @@ unsigned char updEventTake(unsigned char event)
 	set = 0;
 	switch (event) {
 	case 0x01:
-		if (set = updEvents.event01)
-			updEvents.event01 = 0;
+		if (set = updEvents.bits.event01)
+			updEvents.bits.event01 = 0;
 		break;
 	case 0x02:
-		if (set = updEvents.event02)
-			updEvents.event02 = 0;
+		if (set = updEvents.bits.event02)
+			updEvents.bits.event02 = 0;
 		break;
 	case 0x03:
-		if (set = updEvents.event03)
-			updEvents.event03 = 0;
+		if (set = updEvents.bits.event03)
+			updEvents.bits.event03 = 0;
 		break;
 	case 0x04:
-		if (set = updEvents.event04)
-			updEvents.event04 = 0;
+		if (set = updEvents.bits.event04)
+			updEvents.bits.event04 = 0;
 		break;
 	case 0x05:
-		if (set = updEvents.event05)
-			updEvents.event05 = 0;
+		if (set = updEvents.bits.event05)
+			updEvents.bits.event05 = 0;
 		break;
 	case 0x14:
-		if (set = updEvents.event14)
-			updEvents.event14 = 0;
+		if (set = updEvents.bits.event14)
+			updEvents.bits.event14 = 0;
 		break;
 	case 0x15:
-		if (set = updEvents.event15)
-			updEvents.event15 = 0;
+		if (set = updEvents.bits.event15)
+			updEvents.bits.event15 = 0;
 		break;
 	case 0x16:
-		if (set = updEvents.event16)
-			updEvents.event16 = 0;
+		if (set = updEvents.bits.event16)
+			updEvents.bits.event16 = 0;
 		break;
 	case 0x1e:
-		if (set = updEvents.event1e)
-			updEvents.event1e = 0;
+		if (set = updEvents.bits.event1e)
+			updEvents.bits.event1e = 0;
 		break;
 	case 0x1f:
-		if (set = updEvents.event1f)
-			updEvents.event1f = 0;
+		if (set = updEvents.bits.event1f)
+			updEvents.bits.event1f = 0;
 		break;
 	case 0x20:
-		if (set = updEvents.event20)
-			updEvents.event20 = 0;
+		if (set = updEvents.bits.event20)
+			updEvents.bits.event20 = 0;
 		break;
 	case 0x32:
-		if (set = updEvents.event32)
-			updEvents.event32 = 0;
+		if (set = updEvents.bits.event32)
+			updEvents.bits.event32 = 0;
 		break;
 	case 0x33:
-		if (set = updEvents.event33)
-			updEvents.event33 = 0;
+		if (set = updEvents.bits.event33)
+			updEvents.bits.event33 = 0;
 		break;
 	case 0x34:
-		if (set = updEvents.event34)
-			updEvents.event34 = 0;
+		if (set = updEvents.bits.event34)
+			updEvents.bits.event34 = 0;
 		break;
 	case 0x35:
-		if (set = updEvents.event35)
-			updEvents.event35 = 0;
+		if (set = updEvents.bits.event35)
+			updEvents.bits.event35 = 0;
 		break;
 	case 0x0a:
-		if (set = updEvents.event0a)
-			updEvents.event0a = 0;
+		if (set = updEvents.bits.event0a)
+			updEvents.bits.event0a = 0;
 		break;
 	case 0x64:
-		if (set = updEvents.event64)
-			updEvents.event64 = 0;
+		if (set = updEvents.bits.event64)
+			updEvents.bits.event64 = 0;
 		break;
 	case 0x67:
-		if (set = updEvents.event67)
-			updEvents.event67 = 0;
+		if (set = updEvents.bits.event67)
+			updEvents.bits.event67 = 0;
 		break;
 	case 0x69:
-		if (set = updEvents.event69)
-			updEvents.event69 = 0;
+		if (set = updEvents.bits.event69)
+			updEvents.bits.event69 = 0;
 		break;
 	case 0x66:
-		if (set = updEvents.event66)
-			updEvents.event66 = 0;
+		if (set = updEvents.bits.event66)
+			updEvents.bits.event66 = 0;
 		break;
 	case 0x78:
-		if (set = updEvents.event78)
-			updEvents.event78 = 0;
+		if (set = updEvents.bits.event78)
+			updEvents.bits.event78 = 0;
 		break;
 	case 0x79:
-		if (set = updEvents.event79)
-			updEvents.event79 = 0;
+		if (set = updEvents.bits.event79)
+			updEvents.bits.event79 = 0;
 		break;
 	case 0x7a:
-		if (set = updEvents.event7a)
-			updEvents.event7a = 0;
+		if (set = updEvents.bits.event7a)
+			updEvents.bits.event7a = 0;
 		break;
 	case 0x82:
-		if (set = updEvents.event82)
-			updEvents.event82 = 0;
+		if (set = updEvents.bits.event82)
+			updEvents.bits.event82 = 0;
 		break;
 	}
 	return set;
@@ -360,76 +332,76 @@ unsigned char updEventSet(unsigned char event)
 	unknown = 0;
 	switch (event) {
 	case 0x01:
-		updEvents.event01 = 1;
+		updEvents.bits.event01 = 1;
 		break;
 	case 0x02:
-		updEvents.event02 = 1;
+		updEvents.bits.event02 = 1;
 		break;
 	case 0x03:
-		updEvents.event03 = 1;
+		updEvents.bits.event03 = 1;
 		break;
 	case 0x04:
-		updEvents.event04 = 1;
+		updEvents.bits.event04 = 1;
 		break;
 	case 0x05:
-		updEvents.event05 = 1;
+		updEvents.bits.event05 = 1;
 		break;
 	case 0x14:
-		updEvents.event14 = 1;
+		updEvents.bits.event14 = 1;
 		break;
 	case 0x15:
-		updEvents.event15 = 1;
+		updEvents.bits.event15 = 1;
 		break;
 	case 0x16:
-		updEvents.event16 = 1;
+		updEvents.bits.event16 = 1;
 		break;
 	case 0x1e:
-		updEvents.event1e = 1;
+		updEvents.bits.event1e = 1;
 		break;
 	case 0x1f:
-		updEvents.event1f = 1;
+		updEvents.bits.event1f = 1;
 		break;
 	case 0x20:
-		updEvents.event20 = 1;
+		updEvents.bits.event20 = 1;
 		break;
 	case 0x32:
-		updEvents.event32 = 1;
+		updEvents.bits.event32 = 1;
 		break;
 	case 0x33:
-		updEvents.event33 = 1;
+		updEvents.bits.event33 = 1;
 		break;
 	case 0x34:
-		updEvents.event34 = 1;
+		updEvents.bits.event34 = 1;
 		break;
 	case 0x35:
-		updEvents.event35 = 1;
+		updEvents.bits.event35 = 1;
 		break;
 	case 0x0a:
-		updEvents.event0a = 1;
+		updEvents.bits.event0a = 1;
 		break;
 	case 0x64:
-		updEvents.event64 = 1;
+		updEvents.bits.event64 = 1;
 		break;
 	case 0x67:
-		updEvents.event67 = 1;
+		updEvents.bits.event67 = 1;
 		break;
 	case 0x69:
-		updEvents.event69 = 1;
+		updEvents.bits.event69 = 1;
 		break;
 	case 0x66:
-		updEvents.event66 = 1;
+		updEvents.bits.event66 = 1;
 		break;
 	case 0x78:
-		updEvents.event78 = 1;
+		updEvents.bits.event78 = 1;
 		break;
 	case 0x79:
-		updEvents.event79 = 1;
+		updEvents.bits.event79 = 1;
 		break;
 	case 0x7a:
-		updEvents.event7a = 1;
+		updEvents.bits.event7a = 1;
 		break;
 	case 0x82:
-		updEvents.event82 = 1;
+		updEvents.bits.event82 = 1;
 		break;
 	default:
 		unknown = 1;

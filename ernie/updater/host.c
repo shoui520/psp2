@@ -19,9 +19,6 @@
 #include "sleepfactor.h"
 #include "updater.h"
 
-/* hostSlowCommand's states */
-#define HOST_SLOW_QUEUED	1	/* runs from the main loop */
-#define HOST_SLOW_DONE		2	/* its answer is ready */
 
 /* the frame's status byte */
 #define HOST_STATUS_CHECKSUM	0x02	/* the last command's checksum was wrong */
@@ -33,8 +30,6 @@
 #define HOST_RESULT_RUNNING	0x81	/* and is not done yet */
 #define HOST_RESULT_FULL	0x82	/* no free queue entry */
 #define HOST_RESULT_UNKNOWN	0x3f
-
-#define HOST_SLOW_COMMANDS	3
 
 struct UpdHostLink hostLink;
 struct HostCommandFrame hostRx;

@@ -33,6 +33,9 @@
 #define SERIAL_ANSWER		7	/* event 0x0008: sends the answer */
 #define SERIAL_RESTART		0xff
 
+/* the frame request 0x20 sends mode 1's buffer in */
+#define SERIAL_REQUEST_FRAME	0x8310
+
 /* serialReceive's results, a frame's status */
 #define SERIAL_OK		0
 #define SERIAL_UNKNOWN		1	/* no handler has the command */

@@ -8,8 +8,6 @@
 
 #include "host.h"
 
-#define SERIAL_REQUEST_FRAME	0x8310	/* the frame carrying the buffer's bytes */
-
 extern struct HostRequest serialRequest;
 
 extern void serialRequestInit(void);
