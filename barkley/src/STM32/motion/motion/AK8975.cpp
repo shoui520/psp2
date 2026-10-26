@@ -49,7 +49,7 @@ static const struct {
 	{ -1000, -300 },
 };
 
-AK8975::AK8975(I2cMemIf *i2c, ExtiHandler *drdy)
+AK8975::AK8975(I2cRegIf *i2c, ExtiHandler *drdy)
 	: i2c_(i2c), drdy_(drdy), state_(0)
 {
 }

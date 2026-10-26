@@ -49,6 +49,21 @@ public:
 		func_(arg_, a1);
 	}
 
+	/* the callback cleared, then called: it runs once */
+	void Take(A1 a1)
+	{
+		Func func = func_;
+
+		func_ = 0;
+		func(arg_, a1);
+	}
+
+	void TakeIfSet(A1 a1)
+	{
+		if (func_ != 0)
+			Take(a1);
+	}
+
 private:
 	Func func_;
 	void *arg_;

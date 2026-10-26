@@ -8,7 +8,7 @@
 #include "stm32f10x_type.h"
 #include "Callback.h"
 #include "Gpio.h"
-#include "I2cMemIf.h"
+#include "I2cRegIf.h"
 
 /* what Boot reads of the device (DeviceInfo's magInfo) */
 struct AK8975Info {
@@ -31,7 +31,7 @@ public:
 	typedef Callback<void (s32)> Done;
 	typedef Callback<void (s32, u8 *)> Measured;
 
-	AK8975(I2cMemIf *i2c, ExtiHandler *drdy);
+	AK8975(I2cRegIf *i2c, ExtiHandler *drdy);
 	void Boot(u8 *info, Done::Func func, void *arg);
 	void Measure(u8 *data, Measured::Func func, void *arg);
 	void AbortBoot();
@@ -107,7 +107,7 @@ private:
 	static void IgnoreDone(void *arg, s32 result) {}
 	static void IgnoreMeasured(void *arg, s32 result, u8 *data) {}
 
-	I2cMemIf *i2c_;
+	I2cRegIf *i2c_;
 	ExtiHandler *drdy_;
 	u32 reserved_;
 	u8 *data_;			/* Measure's: ST2 >> 2, then HX, HY, HZ */
