@@ -10,6 +10,19 @@ diff -ru a/inc/stm32f10x_map.h b/inc/stm32f10x_map.h
  } RCC_TypeDef;
  
  /*------------------------ Real-Time Clock -----------------------------------*/
+diff -ru a/inc/stm32f10x_type.h b/inc/stm32f10x_type.h
+--- a/inc/stm32f10x_type.h
++++ b/inc/stm32f10x_type.h
+@@ -52,7 +52,9 @@
+ typedef volatile unsigned short const vuc16;  /* Read Only */
+ typedef volatile unsigned char  const vuc8;   /* Read Only */
+ 
++#ifndef __cplusplus            /* SCE: C++ has bool */
+ typedef enum {FALSE = 0, TRUE = !FALSE} bool;
++#endif
+ 
+ typedef enum {RESET = 0, SET = !RESET} FlagStatus, ITStatus;
+ 
 diff -ru a/src/stm32f10x_rcc.c b/src/stm32f10x_rcc.c
 --- a/src/stm32f10x_rcc.c
 +++ b/src/stm32f10x_rcc.c

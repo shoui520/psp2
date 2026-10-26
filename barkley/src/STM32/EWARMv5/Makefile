@@ -37,24 +37,32 @@ FWLIB := $(ROOT)/contrib/stm32f10x-fwlib-2.0.3/library
 LIB := $(O)/library
 
 DEFINES := -DMOTION_IMAGE=$(MOTION_IMAGE)
-INCLUDES := -I$(MOTION)/include -I$(MOTION) -I$(LIB)/inc
+# IAR's C library (DLib): our headers and code for what the image links of it
+INCLUDES := -I$(MOTION)/include -I$(MOTION) -I$(LIB)/inc -Iruntime/include
 # IAR's enums take the smallest type that holds them (-fshort-enums)
-TARGET := -mcpu=cortex-m3 -mthumb -fshort-enums -fno-section-anchors
+TARGET := -mcpu=cortex-m3 -mthumb -fshort-enums -fno-section-anchors -MMD -MP
 CFLAGS := $(TARGET) -O2 -ffreestanding -fno-common -std=gnu99 $(DEFINES) $(INCLUDES)
 # IAR kept the library's static helpers (FLASH's delay) as functions
 LIBCFLAGS := $(CFLAGS) -fno-inline
+# IAR called the small member functions (no inlining), did not turn calls into jumps, and
+# compiled a switch as compares
 CXXFLAGS := $(TARGET) -O2 -ffreestanding -fno-common -fno-exceptions -fno-rtti \
-	-fno-threadsafe-statics -fno-use-cxa-atexit $(DEFINES) $(INCLUDES)
+	-fno-threadsafe-statics -fno-use-cxa-atexit -fno-inline -fno-optimize-sibling-calls -fno-ipa-sra -fno-ipa-cp \
+	-fno-jump-tables \
+	$(DEFINES) $(INCLUDES)
 
 # in the image's order: the program's (../motion/motion), the library's drivers
-SOURCES :=
+SOURCES := $(MOTION)/MotionProcessor.cpp
 LIBSOURCES := stm32f10x_rcc.c stm32f10x_flash.c
 
 OBJECTS := $(patsubst %,$(O)/%.o,$(notdir $(SOURCES)) $(LIBSOURCES))
 
 all: $(OBJECTS)
 
-$(OBJECTS): $(LIB)/.patched
+$(OBJECTS): $(LIB)/.patched Makefile
+
+# the headers each object read
+-include $(OBJECTS:.o=.d)
 
 # the library's copy with Sony's changes
 fwlib: $(LIB)/.patched
