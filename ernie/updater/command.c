@@ -8,6 +8,8 @@
  * update needs.
  */
 #pragma sfr
+#pragma EI
+#pragma NOP
 
 #include <string.h>
 #include "chip.h"
@@ -30,13 +32,22 @@
 #include "version.h"
 #include "updater.h"
 
-/* the update's flash module (0x37f6f-0x384a2, not written yet) */
-extern unsigned char sub_37FBF(unsigned char segment);
-extern unsigned long sub_3802D(void);
-extern void sub_3808C(struct HostSlowCommand *slow);
-extern unsigned char sub_382CC(void);
-extern unsigned char sub_38303(void);
-extern void sub_3843F(void);
+/* the flash self-programming library (ernie/lib) */
+extern void FSL_Open(void);
+extern unsigned char FSL_Init(unsigned char *descriptor);
+extern unsigned char FSL_Init_cont(unsigned char *descriptor);
+extern unsigned char FSL_ModeCheck(void);
+extern unsigned char FSL_BlankCheck(unsigned char block);
+extern unsigned char FSL_Erase(unsigned char block);
+extern unsigned char FSL_IVerify(unsigned int block);
+extern unsigned char FSL_Write(unsigned long address, unsigned char words);
+extern unsigned char fslSetSecurityFlagSwap(void);
+extern void FSL_Close(void);
+extern unsigned char byteFE06C[];		/* the library's descriptor and write buffer */
+
+/* the image's version block, in boot cluster 1 until the clusters are swapped: read as the
+   application's, its time stamp right after it */
+#define IMAGE_VERSION_INFO	((const struct AppVersionInfo __far *)0x1f00)
 
 /* the handshake (0x3b1ae-0x3b60b, not written yet) */
 extern unsigned char sub_3B26E(unsigned char *data);
@@ -105,6 +116,14 @@ int hostCommandSerialWrite(struct HostCommandFrame *rx, struct HostSlowCommand *
 int hostCommandSerialWriteOrSend(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
 unsigned char powerResult(unsigned char result);
 unsigned char batteryResult(unsigned char result);
+int flSetSegment(unsigned char segment);
+unsigned long flChecksum(void);
+void flImageCheck(struct HostSlowCommand *slow);
+int flHashCheck(unsigned char *digest);
+int flDecrypt(void);
+int flProg(void);
+void flReboot(void);
+int flBootClusterSwap(void);
 
 /* the PS Dev Wiki's "Ernie Update AES128CBC Key 0x10/0x30/0x31/0x40/0x41 (PHAT)" */
 const unsigned char updaterCryptoKey[16] = {
@@ -443,7 +462,7 @@ int updaterSetSegment(struct HostSlowCommand *slow)
 	unsigned char error;
 
 	data = hostRx.data;
-	error = sub_37FBF(data[0]);
+	error = flSetSegment(data[0]);
 	slow->answer.length = 2;
 	slow->answer.result = error == 0 ? 0 : 4;
 	return 0;
@@ -485,14 +504,14 @@ int updaterExecProgramming(struct HostSlowCommand *slow)
 	((unsigned char __near *)&sum)[3] = data[3];
 	logPrintf("FlProg: block=%03d,sum=%08lX ", updSegment, sum);
 	logPrintf("[S");
-	if (sum == sub_3802D()) {
+	if (sum == flChecksum()) {
 		logPrintf("D");
-		error = sub_382CC();
+		error = flDecrypt();
 		logPrintf("P");
 		if (error)
 			result = 2;
 		else {
-			error = sub_38303();
+			error = flProg();
 			switch (error) {
 			case 0x00:
 				result = 0x00;
@@ -531,7 +550,7 @@ int updaterExecProgramming(struct HostSlowCommand *slow)
 	return 0;
 }
 
-/* 0x1184: the image's digest, checked from the main loop (sub_3808C) */
+/* 0x1184: the image's digest, checked from the main loop (flImageCheck) */
 int updaterExecFinalize(struct HostSlowCommand *slow)
 {
 	unsigned int i;
@@ -550,7 +569,7 @@ int updaterExecFinalize(struct HostSlowCommand *slow)
 		slow->hash.segment = 0;
 		slow->hash.segmentDone = 0;
 		slow->hash.segmentCount = count;
-		slow->handler = sub_3808C;
+		slow->handler = flImageCheck;
 		slow->state = 1;
 		memcpy(&slow->frame, &hostRx, sizeof(slow->frame));
 		updProgress = 0;
@@ -567,7 +586,7 @@ int updaterReboot(struct HostSlowCommand *slow)
 	slow->answer.result = 9;
 	if (data[0] == 0xba && data[1] == 0x72) {
 		powerOff();
-		sub_3843F();
+		flReboot();
 	} else if (data[0] == 0x54 && data[1] == 0x9a)
 		slow->answer.result = 0;
 	else
@@ -1533,4 +1552,203 @@ unsigned char batteryResult(unsigned char result)
 		break;
 	}
 	return status;
+}
+
+/*
+ * The update's flash module: the segment's buffers, its checksum and decryption, its
+ * programming, and the image's digest. Segments 0-3 (boot cluster 0) are written to 4-7
+ * (boot cluster 1), which the boot cluster swap then puts in their place; 0xe0 is written
+ * to 0xd4, and 0xe1-0xed (the updater's own) are refused.
+ */
+int flSetSegment(unsigned char segment)
+{
+	if (segment >= 0x100)
+		return 1;
+	if (segment == 0xe0)
+		segment = 0xd4;
+	else if (segment > 0xe0 && segment < 0xee)
+		return 1;
+	if (segment < 4)
+		segment += 4;
+	updSegment = segment;
+	updReceived[segment] = 1;
+	memset(updPlain, 0, sizeof(updPlain));
+	memset(updCipher, 0, sizeof(updCipher));
+	logPrintf("Segment: %d\r\n", segment);
+	return 0;
+}
+
+/* the complement of the sum of the segment's ciphertext */
+unsigned long flChecksum(void)
+{
+	unsigned long sum;
+	unsigned char *data;
+	unsigned int i;
+
+	sum = 0;
+	data = updCipher;
+	for (i = 0; i < sizeof(updCipher); i++)
+		sum += *data++;
+	if (0)
+		logPrintf("\r\nImgChksum=%08ld\r\n", sum);
+	return ~sum;
+}
+
+/*
+ * 0x1184's handler, from the main loop: hashes two programmed segments a call, then checks
+ * the digest, takes the image's version and swaps the boot clusters
+ */
+void flImageCheck(struct HostSlowCommand *slow)
+{
+	unsigned char *digest;
+	struct HostSlowHash *hash;
+	unsigned int segment;
+	unsigned char count;
+	unsigned char result;
+
+	count = 2;
+	hash = &slow->hash;
+	for (segment = hash->segment; segment < 0x100; segment++) {
+		if (updReceived[segment]) {
+			if (count-- == 0) {
+				hash->segment = segment;
+				return;
+			}
+			logPrintf("SHA1 digesting(%d)\r", segment);
+			result = SHA1Input((SHA1Context __near *)&updSha,
+					   (const unsigned char *)((unsigned long)segment << 10), 0x400);
+			if (result != 0) {
+				logPrintf("\nsha1update error%d\r\n", result);
+				slow->answer.result = 8;
+				goto done;
+			}
+			hash->segmentDone++;
+			updProgress = (unsigned int)hash->segmentDone * 100 / (unsigned int)hash->segmentCount;
+		}
+	}
+	digest = slow->frame.data;
+	result = flHashCheck(digest);
+	if (result == 0) {
+		memcpy(updVersion, IMAGE_VERSION_INFO->version, 4);
+		timeStampDigits(updBuild, (const char __far *)(IMAGE_VERSION_INFO + 1));
+		if (flBootClusterSwap() == 0) {
+			updImageChecked = 1;
+			slow->answer.result = 0;
+		} else {
+			slow->answer.result = 7;
+			EI();
+		}
+	} else
+		slow->answer.result = 8;
+done:
+	slow->answer.length = 2;
+	slow->state = HOST_SLOW_DONE;
+}
+
+/* the image's SHA-1 against digest's */
+int flHashCheck(unsigned char *digest)
+{
+	unsigned char result;
+	unsigned char hash[SHA1HashSize];
+
+	result = 0;
+	result = SHA1Result((SHA1Context __near *)&updSha, (unsigned char __near *)hash);
+	if (result != 0) {
+		logPrintf("\nsha1result error\r\n");
+		return 2;
+	}
+	result = memcmp(hash, digest, SHA1HashSize);
+	logPrintf("\nImage HashCheck %02X %02X %02X %02X... %s\n\r", digest[0], digest[1],
+		  digest[2], digest[3], result == 0 ? "OK" : "NG");
+	return result;
+}
+
+/* the segment AES-128-CBC decrypted, the IV chained from its last ciphertext block */
+int flDecrypt(void)
+{
+	aesCbcDecrypt((const unsigned char __near *)updCipher, (unsigned char __near *)updPlain,
+		      (struct AesKey __near *)&updKey, updIv, sizeof(updCipher));
+	memcpy(updIv, &updCipher[sizeof(updCipher) - AES_BLOCK_SIZE], AES_BLOCK_SIZE);
+	return 0;
+}
+
+/* programs the segment: erased if not blank, written 0x40 words at a time, verified */
+int flProg(void)
+{
+	unsigned char result;
+	unsigned int i;
+	int tries;
+
+	tries = 1;
+	FSL_Open();
+	result = FSL_Init(byteFE06C);
+	while (result == 0x1f)
+		result = FSL_Init_cont(byteFE06C);
+	result = FSL_ModeCheck();
+	if (result == 0) {
+		result = FSL_BlankCheck(updSegment);
+		if (result == 0x1b) {
+			do
+				result = FSL_Erase(updSegment);
+			while (result == 0x1f);
+		}
+		updProgrammed = 1;
+		do {
+			if (result == 0) {
+				for (i = 0; i < 0x100; i += 0x40) {
+					memcpy(byteFE06C, &updPlain[i << 2], 0x100);
+					if (0)
+						logPrintf("\r\nFP FADR=%06lX SADR=%06lX\r\n",
+							  ((unsigned long)updSegment << 10) + (i << 2),
+							  (unsigned long)&updPlain[i << 2]);
+					do
+						result = FSL_Write(((unsigned long)updSegment << 10) +
+								   (i << 2), 0x40);
+					while (result == 0x1f);
+					if (result != 0)
+						goto close;
+				}
+				do
+					result = FSL_IVerify(updSegment);
+				while (result == 0x1f);
+				if (tries != 0 && result == 0x1b)
+					result = FSL_Erase(updSegment);
+			}
+		} while (tries-- != 0 && result != 0);
+	}
+close:
+	FSL_Close();
+	if (result != 0)
+		logPrintf("FlProg: Error=%02Xh Block=%02d\r\n", result, updSegment);
+	return result;
+}
+
+/* 0x1183's reboot: an illegal instruction resets the chip */
+void flReboot(void)
+{
+	logPrintf("ErnieRebooting\r\n");
+#asm
+	EXTRN	_cstart
+	DB	0FFH
+	BR	!!_cstart
+#endasm
+	while (1)
+		NOP();
+}
+
+/* swaps the boot clusters, so the image's cluster 1 boots */
+int flBootClusterSwap(void)
+{
+	unsigned char result;
+
+	FSL_Open();
+	result = FSL_Init(byteFE06C);
+	if (result == 0) {
+		result = FSL_ModeCheck();
+		if (result == 0)
+			result = fslSetSecurityFlagSwap();
+	}
+	FSL_Close();
+	logPrintf("Boot Cluster Swap %d %s\r\n", result, result == 0 ? "OK" : "NG");
+	return result;
 }
