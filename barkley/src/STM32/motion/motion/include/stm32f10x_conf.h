@@ -40,6 +40,7 @@
 #define _SPI
 #define _SPI1
 #define _SPI2
+#define _SysTick
 #define _TIM
 #define _TIM1
 #define _TIM2

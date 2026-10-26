@@ -53,7 +53,15 @@ private:
 	s32 remaining_;
 };
 
-class PeriodicTimer : public TimerSlotHandler, public ITimer {
+/* the same interface for a timer that runs on: the function called every period */
+class IPeriodicTimer {
+public:
+	IPeriodicTimer() {}
+	virtual void Start(s32 ticks, Callback<void ()>::Func func, void *arg) {}
+	virtual void Stop() {}
+};
+
+class PeriodicTimer : public TimerSlotHandler, public IPeriodicTimer {
 public:
 	PeriodicTimer() {}
 	virtual void Tick(s32 elapsed);
