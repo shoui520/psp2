@@ -8,7 +8,7 @@
 
 	PUBLIC	_cstart, _cstartHalt
 	PUBLIC	_heapUsed, _heapBreak, _heapArea
-	EXTRN	_?R_INIT, _?R_INIS, _?R_INITL, _?DATA, _?DATAL, _?DATS
+	EXTRN	_?R_INIT, _?R_INIS, _?RLINIT, _?DATA, _?DATAL, _?DATS
 	EXTRN	_hdwinit, _main, _kernelStart, _keepRam
 
 STACKTOP	EQU	0FE20H		; the stack grows down from here, to RAMBOTTOM
@@ -23,8 +23,8 @@ SADDRSIZE	EQU	0C0H		; the short direct area above the stack (0xffe20)
 _@R_INIT:
 @@R_INIS	CSEG	UNIT64KP
 _@R_INIS:
-@@R_INITL	CSEG	UNIT64KP
-_@R_INITL:
+@@RLINIT	CSEG	UNIT64KP
+_@RLINIT:
 @@INIT	DSEG	BASEP
 _@INIT:
 @@INIS	DSEG	BASEP
@@ -140,11 +140,11 @@ _cstart:
 	MOVW	AX, HL
 	CMPW	AX, #LOWW(_?R_INIT)
 	BNZ	$?copy1
-	MOVW	HL, #LOWW(_@R_INITL)
+	MOVW	HL, #LOWW(_@RLINIT)
 	MOVW	DE, #LOWW(_@INITL)
 	BR	$?copy2End
 ?copy2:
-	MOV	ES, #HIGHW(_@R_INITL)
+	MOV	ES, #HIGHW(_@RLINIT)
 	MOV	A, ES:[HL]
 	MOV	ES, #0FH
 	MOV	ES:[DE], A
@@ -152,7 +152,7 @@ _cstart:
 	INCW	DE
 ?copy2End:
 	MOVW	AX, HL
-	CMPW	AX, #LOWW(_?R_INITL)
+	CMPW	AX, #LOWW(_?RLINIT)
 	BNZ	$?copy2
 	; the uninitialised data
 	MOVW	HL, #LOWW(_@DATA)

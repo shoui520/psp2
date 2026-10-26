@@ -12,6 +12,8 @@
 #include "timer.h"
 
 __near struct Timer timers[TIMER_COUNT];
+__sreg unsigned int timerTicks;
+__sreg unsigned int timerRtcTicks;
 
 int timerInit(void)
 {

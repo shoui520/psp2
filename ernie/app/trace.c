@@ -4,10 +4,9 @@
  */
 #include "ernie.h"
 #include "kernel.h"
+#include "serial.h"
 #include "trace.h"
 #include "uart.h"
-
-extern unsigned char byteFECB8;
 
 unsigned int traceMask;			/* the categories not written */
 
@@ -81,14 +80,14 @@ void tracePrintf(const char *format, ...)
 
 unsigned char traceUartWrite(unsigned char *data, unsigned char size)
 {
-	if (byteFECB8 == 3)
+	if (serial.mode == 3)
 		return uartWrite(TRACE_PORT, data, size);
 	return 0;
 }
 
 unsigned char traceUartRead(unsigned char *data, unsigned char size)
 {
-	if (byteFECB8 == 3)
+	if (serial.mode == 3)
 		return uartRead(TRACE_PORT, data, size);
 	return 0;
 }

@@ -70,8 +70,8 @@ extern unsigned char FSL_Write(unsigned long address, unsigned char words);
 extern void FSL_Close(void);
 extern unsigned char fslDataBuffer[];		/* the library's descriptor and write buffer */
 
-/* the banks, in the updater's part of the flash, and the defaults of this build's layout:
-   PLACEHOLDER, the defaults (0x800) are not written yet */
+/* the banks, in the updater's part of the flash (app.lk), and the defaults of this build's
+   layout (configdefault.c, at 0x800) */
 extern const struct ConfigBank configBanks[2];
 extern const struct ConfigBank configDefault;
 

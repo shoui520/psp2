@@ -95,6 +95,7 @@ SYMBOL	@RTARG0		0xffed8
 SYMBOL	@RTARG2		0xffeda
 SYMBOL	@RTARG4		0xffedc
 SYMBOL	@RTARG6		0xffede
+RESERVE	0xffed4		12
 
 # the interrupts' vectors are vectors.asm's table, not the compiler's
 DROP	@@VECT??
@@ -116,7 +117,7 @@ SEG	@@FSLOPN
 # the startup's initialised data (none): empty
 SEG	@@R_INIT
 SEG	@@R_INIS
-SEG	@@R_INITL
+SEG	@@RLINIT
 SEG	@@CNSTL		main.c updater.c host.c command.c ../app/sha1.c ../app/aes.c util.c
 SEG	@@FSLCNS
 SEG	@@CNSTL

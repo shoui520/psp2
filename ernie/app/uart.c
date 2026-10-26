@@ -20,6 +20,7 @@
 
 #include "chip.h"
 #include "kernel.h"
+#include "serial.h"
 #include "task.h"
 #include "timer.h"
 #include "uart.h"
@@ -50,8 +51,6 @@ struct UartBaud {
 	unsigned char	prescaler;
 	unsigned char	divisor;
 };
-
-extern unsigned char byteFECB8;
 
 void uart2Timeout(void);
 void uart3Timeout(void);
@@ -407,7 +406,7 @@ void uart3ReceiveInterrupt(void)
 	if ((p->rxWrite + 1 & p->rxMask) != p->rxRead) {
 		p->rxBuffer[p->rxWrite] = data;
 		p->rxWrite = p->rxWrite + 1 & p->rxMask;
-		if (byteFECB8 == 3) {
+		if (serial.mode == 3) {
 			if (p->timeout.flgid != 0)
 				timerStart(p->timeout.timer, p->timeout.timeout);
 		} else
@@ -425,7 +424,7 @@ void uart3SendInterrupt(void)
 		p->txRead = p->txRead + 1 & p->txMask;
 	} else {
 		p->flags &= ~UART_SENDING;
-		if (byteFECB8 != 3)
+		if (serial.mode != 3)
 			task2SetFlag(3, 2);
 	}
 }

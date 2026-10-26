@@ -1,0 +1,200 @@
+# The application's link (tools/lk78k0r.py): its objects in link order, then where their
+# segments go, as Sony's image has them. Boot cluster 0 (0x0000-0x0fff: the vectors, the
+# configuration's defaults at 0x800, the version block at 0xf00), the kernel from 0xc000, the
+# rest from 0xe000 to 0x353ff; the RAM the updater keeps (0xfd900) first.
+
+OBJECT	main.c
+OBJECT	tau.c
+OBJECT	standby.c
+OBJECT	task1.c
+OBJECT	task2.c
+OBJECT	version.c
+OBJECT	rtc.c
+OBJECT	task3.c
+OBJECT	input.c
+OBJECT	aes.c
+OBJECT	host.c
+OBJECT	request.c
+OBJECT	csi.c
+OBJECT	sleepfactor.c
+OBJECT	spidev.c
+OBJECT	command.c
+OBJECT	uart.c
+OBJECT	clockout.c
+OBJECT	csi10.c
+OBJECT	dma.c
+OBJECT	touch.c
+OBJECT	inputreq.c
+OBJECT	csi01.c
+OBJECT	motion.c
+OBJECT	util.c
+OBJECT	inputbits.c
+OBJECT	serial.c
+OBJECT	adc.c
+OBJECT	analog.c
+OBJECT	scratchpad.c
+OBJECT	nvsreq.c
+OBJECT	serial1.c
+OBJECT	updatereq.c
+OBJECT	sha1.c
+OBJECT	powerreq.c
+OBJECT	task5.c
+OBJECT	serialauth.c
+OBJECT	nvs.c
+OBJECT	power.c
+OBJECT	timer.c
+OBJECT	iica.c
+OBJECT	powerjob.c
+OBJECT	elmo.c
+OBJECT	serial2.c
+OBJECT	uart4.c
+OBJECT	interrupt.c
+OBJECT	serial4.c
+OBJECT	task6.c
+OBJECT	bbmc.c
+OBJECT	trace.c
+OBJECT	board.c
+OBJECT	powerseq.c
+OBJECT	battery.c
+OBJECT	charge.c
+OBJECT	cookie.c
+OBJECT	powerwait.c
+OBJECT	state.c
+OBJECT	handshake.c
+OBJECT	serial1op.c
+OBJECT	param.c
+OBJECT	task.c
+OBJECT	config.c
+OBJECT	configreq.c
+OBJECT	watchdog.c
+OBJECT	sysinfo.c
+OBJECT	log.c
+OBJECT	led.c
+OBJECT	serialreq.c
+OBJECT	snvs.c
+OBJECT	gf.c
+OBJECT	configdefault.c
+OBJECT	kernel.asm
+OBJECT	kernelcfg.asm
+OBJECT	cstart.asm
+OBJECT	vectors.asm
+# the CA78K0R libraries' modules it uses
+OBJECT	../lib/lucom.asm
+OBJECT	../lib/iumul.asm
+OBJECT	../lib/lumul.asm
+OBJECT	../lib/cudiv.asm
+OBJECT	../lib/iudiv.asm
+OBJECT	../lib/curem.asm
+OBJECT	../lib/luadd.asm
+OBJECT	../lib/lulsh.asm
+OBJECT	../lib/lursh.asm
+OBJECT	../lib/iscmp.asm
+OBJECT	../lib/luband.asm
+OBJECT	../lib/lubor.asm
+OBJECT	../lib/lubxor.asm
+OBJECT	../lib/divuw.asm
+OBJECT	../lib/fsl.asm
+OBJECT	../lib/fslinfo.asm
+OBJECT	../lib/fslwrite.asm
+OBJECT	../lib/fslsecurity.asm
+OBJECT	../lib/fslflags.asm
+OBJECT	../lib/fslswap.asm
+OBJECT	../lib/memcpy.asm
+OBJECT	../lib/memcpy_n.asm
+OBJECT	../lib/memmove.asm
+OBJECT	../lib/memcmp.asm
+OBJECT	../lib/memset.asm
+OBJECT	../lib/memset_n.asm
+OBJECT	../lib/fslopen.asm
+# the ends of the startup's segments, after everything
+OBJECT	cstartend.asm
+
+# the compiler's runtime registers
+SYMBOL	_@SEGAX		0xffed4
+SYMBOL	_@SEGBC		0xffed5
+SYMBOL	_@SEGDE		0xffed6
+SYMBOL	_@SEGHL		0xffed7
+SYMBOL	_@RTARG0	0xffed8
+SYMBOL	_@RTARG1	0xffed9
+SYMBOL	_@RTARG2	0xffeda
+SYMBOL	_@RTARG3	0xffedb
+SYMBOL	_@RTARG4	0xffedc
+SYMBOL	_@RTARG5	0xffedd
+SYMBOL	_@RTARG6	0xffede
+SYMBOL	_@RTARG7	0xffedf
+# and as the libraries' and the kernel's modules name them
+SYMBOL	@SEGAX		0xffed4
+SYMBOL	@SEGBC		0xffed5
+SYMBOL	@SEGDE		0xffed6
+SYMBOL	@SEGHL		0xffed7
+SYMBOL	@RTARG0		0xffed8
+SYMBOL	@RTARG2		0xffeda
+SYMBOL	@RTARG4		0xffedc
+SYMBOL	@RTARG6		0xffede
+RESERVE	0xffed4		12
+# the settings' two banks in the flash, which neither program's image holds
+SYMBOL	_configBanks	0x3b800
+
+# the kernel's own RAM (kernel.asm's and kernelcfg.asm's addresses): its state and trace
+# hooks from 0xfdd46, the fixed-size pools' blocks 0xfde2c-0xfe06b
+RESERVE	0xfdd46		0x326
+
+# the interrupts' vectors are vectors.asm's table, not the compiler's
+DROP	@@VECT??
+
+# boot cluster 0: the vectors, the CALLT table and the option bytes, the configuration's
+# defaults ("ConfZZ"), the version block
+AT	0x00000
+SEG	@@VECT
+AT	0x00800
+SEG	@@CNSTL		configdefault.c
+AT	0x00f00
+SEG	@@CNSTL		version.c
+
+# the kernel and its configuration
+AT	0x0c000
+SEG	@@KERNEL
+AT	0x0d5fe		# where kernel.asm reads it
+SEG	@@KCFG
+
+# the startup, the runtime, the interrupts, the flash library and the C library's functions,
+# then the constants
+AT	0x0e000
+SEG	@@CSTART
+SEG	@@RTCODE
+SEG	@@BASE
+SEG	@@FSLCOD
+SEG	@@LCODE
+SEG	@@FSLOPN
+SEG	@@R_INIT
+SEG	@@R_INIS
+SEG	@@CNSTL
+SEG	@@FSLCNS
+# the initialised data's values
+SEG	@@RLINIT	cstart.asm
+SEG	@@RLINIT
+# the code, to 0x353ff (the updater's from 0x35400)
+SEG	@@CODEL
+
+# the RAM: kept over a warm start, then the heap, the near data, the flash library's
+AT	0xfd900
+SEG	@@DATAL		main.c param.c watchdog.c
+SEG	@@HEAP
+SEG	@@INIT
+SEG	@@DATA		cstart.asm input.c util.c adc.c analog.c serialauth.c power.c timer.c sysinfo.c handshake.c cstartend.asm
+SEG	@@FSLDAT
+# the startup's (empty) saddr initialised data, where Sony's link has it
+SEG	@@INIS
+# after the kernel's: the flash library's buffer, the initialised data, then what cstart
+# clears, from its start label to cstartend's
+AT	0xfe06c
+SEG	@@DATA		main.c
+SEG	@@INITL
+SEG	@@DATAL		cstart.asm
+SEG	@@DATAL
+# the short direct area
+AT	0xffe20
+SEG	@@DATS		cstart.asm
+SEG	@@DATS
+AT	0xffee2
+SEG	@@FSLSAD

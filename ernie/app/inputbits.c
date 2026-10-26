@@ -9,9 +9,9 @@
 #include "inputbits.h"
 #include "powerreq.h"
 
-/* set up by modules not written yet; inputHandlerFE16C never is (nothing else refers to it, so
-   its owner is not known): type 0, never called */
-extern struct InputHandler inputHandlerFE16C;
+/* nothing else refers to it, so its owner is not known: type 0, never called; the program's
+   one initialised variable */
+struct InputHandler inputHandlerFE16C = { 0, 0, 0 };
 
 #define LENGTH(list)	(sizeof(list) / sizeof((list)[0]))
 
@@ -28,8 +28,8 @@ static struct InputHandler * const inputHandlers1Bit7[] = {
 	&inputHandler29B68, &inputHandler1275F
 };
 static struct InputHandler * const inputHandlers1Bit3[] = { &inputHandler12698 };
-static struct InputHandler * const inputHandlers3Bit0[] = { &inputHandler25263 };
-static struct InputHandler * const inputHandlers3Bit1[] = { &inputHandler2526B };
+static struct InputHandler * const inputHandlers3Bit0[] = { &inputHandlerSerial2Request };
+static struct InputHandler * const inputHandlers3Bit1[] = { &inputHandlerSerial2Link };
 static struct InputHandler * const inputHandlers3Bit2[] = { &inputHandler224FD };
 static struct InputHandler * const inputHandlers2Bit0[] = {
 	&powerInputHandler, &bbmcInputHandlerPower

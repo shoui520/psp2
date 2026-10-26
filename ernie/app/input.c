@@ -61,11 +61,6 @@ struct ButtonPress {
 };
 
 extern unsigned char getResetCause(void);
-extern void sub_17159(void);
-extern void sub_17204(void);
-extern void sub_17544(void);
-extern void sub_17580(void);
-extern void sub_172BC(void);
 
 void sub_11D97(unsigned char enable);
 void sub_11D83(unsigned char enable);
@@ -324,7 +319,7 @@ void sub_1159F(void)
 	union PowerRequest mode;
 
 	sub_1179E();
-	sub_17159();
+	touchOpen();
 	mode = *stateGetWakeupFactor();
 	if (!mode.bits.notify)
 		analogCalibrationLoad();
@@ -353,7 +348,7 @@ void sub_115F0(void)
 			inputScanHold(0x1a);
 		}
 	}
-	sub_17204();
+	touchClose();
 	motionClose();
 	sub_117C4();
 	analogStop();
@@ -379,7 +374,7 @@ void sub_1164E(void)
 
 void sub_1168D(void)
 {
-	sub_17204();
+	touchClose();
 	motionClose();
 	sub_117C4();
 	analogStop();
@@ -396,7 +391,7 @@ void sub_116A1(void)
 
 void sub_116B7(void)
 {
-	sub_17204();
+	touchClose();
 	motionClose();
 	sub_117C4();
 	analogStop();
@@ -433,7 +428,7 @@ void sub_116D8(void)
 			inputScanHold(0x1a);
 		}
 	}
-	sub_17204();
+	touchClose();
 	motionClose();
 	sub_117C4();
 	analogStop();
@@ -450,8 +445,8 @@ void sub_1177B(void)
 
 void sub_1178A(void)
 {
-	sub_17544();
-	sub_17580();
+	touchDisable0();
+	touchDisable1();
 	motionStop();
 	analogStop();
 	analogLatchOff();
@@ -491,7 +486,7 @@ void inputProcess(void)
 		if (events & 0x0400)
 			motionInfoPoll();
 		if (touch.rate == 0 && (events & 0x000c))
-			sub_172BC();
+			touchStartFrame();
 	case 0x0004:
 	case 0x0008:
 		sampleInputs1();

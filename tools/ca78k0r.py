@@ -173,7 +173,7 @@ class Listing:
 	addresses and the segments."""
 
 	# a macro's expansion has no source line number of its own
-	MAIN = re.compile(r'^ *(?:\d+ +)?(\d+) (.{5})  (.{8})(.{6})(.*)$')
+	MAIN = re.compile(r'^ *(?:\d+ +)?(\d+) ([0-9A-F]{5}|-{5}| {5})  (.{8})(.{6})(.*)$')
 	MORE = re.compile(r'^ {12}([0-9A-F]{5})  ([0-9A-F]+)(?:\s.*)?$')
 	SEG = re.compile(r'^([0-9A-F]{5}) ([0-9A-F]{5})H +(\S+)\s*$')
 

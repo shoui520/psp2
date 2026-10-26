@@ -127,8 +127,8 @@ int iicaStart(struct IicaRequest *request)
 }
 
 #ifdef ERNIE_UPDATER
-/* PLACEHOLDER: the updater's, called by nothing; named when its use is known */
-int sub_39FB5(void)
+/* the updater's: nothing calls it, and it does nothing */
+int iicaNone(void)
 {
 	return 0;
 }

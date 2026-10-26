@@ -16,7 +16,7 @@
 # at 64 KiB); CHIP, the device option, comes from hw/<id>.mk. Windows programs, run like
 # psp2snc.exe (tools/host.py). tools/lk78k0r.py links a program by its link file
 # (<program>/<program>.lk) into Intel HEX and a map, in $(O) (default build/<hw>/<version>/).
-# The updater builds; the application's link file is still to come.
+# Both programs build (PROGRAM=app, PROGRAM=updater).
 
 HW ?= 0x00415000
 FW ?= 0x01000306

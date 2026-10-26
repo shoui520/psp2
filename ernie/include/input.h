@@ -42,8 +42,8 @@ struct InputBit {
 extern struct InputHandler inputHandlerWake2;
 extern struct InputHandler inputHandler1245B;
 extern struct InputHandler inputHandler1245C;
-extern struct InputHandler inputHandler25263;
-extern struct InputHandler inputHandler2526B;
+extern struct InputHandler inputHandlerSerial2Request;
+extern struct InputHandler inputHandlerSerial2Link;
 extern struct InputHandler inputHandlerSerial1;
 extern struct InputHandler inputHandler224FD;
 extern struct InputHandler inputHandler1245D;

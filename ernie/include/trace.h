@@ -1,6 +1,6 @@
 /*
  * The debug trace (app/trace.c): text and bytes written to UART3 while the UART3 link is in
- * its debug mode (byteFECB8 3), each under a mask of categories; a category whose bit is set
+ * its debug mode (serial.mode 3), each under a mask of categories; a category whose bit is set
  * in traceMask is not written. The logging builds' formatted traces are compiled out
  * (tracePrintf does nothing).
  */

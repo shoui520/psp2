@@ -18,6 +18,7 @@ a comment; paths are relative to the link file's folder:
 			(or only those of the objects named, in that order), one after the other from the
 			location on, each at a multiple of n (default: 2 for a segment the
 			assembler aligns, a P attribute, else 1); the location moves past them
+  RESERVE address size	memory no segment may take (what code uses by absolute address)
   FILL byte		the byte the gaps between a SEG's segments and an AT's are filled with
 			(default none: only what is assembled is written)
 
@@ -26,7 +27,8 @@ cross into the next page starts there, and the segments after it that fit fill t
 the page left behind, as CA78K0R's linker does.
 
 A segment with an AT attribute of its own goes there, and an object's segment no SEG names is
-an error, as is a symbol no object or SYMBOL defines. The output is Intel HEX of every byte
+an error, as are a symbol no object or SYMBOL defines and segments that overlap each other
+or a RESERVE. The output is Intel HEX of every byte
 the program places; --map lists every segment and public symbol with its address.
 """
 from pathlib import Path
@@ -57,6 +59,7 @@ class LinkFile:
 
 	def __init__(self, path):
 		self.path, self.objects, self.symbols, self.drop, self.steps = Path(path), [], {}, set(), []
+		self.reserved = []
 		for no, line in enumerate(Path(path).read_text().splitlines(), 1):
 			words = line.split('#', 1)[0].split()
 			if not words:
@@ -69,6 +72,8 @@ class LinkFile:
 					self.symbols[args[0]] = number(args[1])
 				elif op == 'DROP' and len(args) == 1:
 					self.drop.add(args[0].upper())
+				elif op == 'RESERVE' and len(args) == 2:
+					self.reserved.append((number(args[0]), number(args[1])))
 				elif op == 'AT' and len(args) == 1:
 					self.steps.append(('AT', number(args[0])))
 				elif op == 'FILL' and len(args) == 1:
@@ -279,6 +284,13 @@ class Linker:
 		for obj in self.objects:
 			for seg in obj.segments():
 				obj.base.setdefault(id(seg), None)
+		used = sorted([(start, size, 'RESERVE') for start, size in self.link.reserved] +
+			      [(obj.base[id(seg)], obj.size[id(seg)], f'{obj.name} {seg.name}')
+			       for obj in self.objects for seg in obj.segments()
+			       if obj.base[id(seg)] is not None and obj.size[id(seg)]])
+		for (a, n, what), (b, _, other) in zip(used, used[1:]):
+			if a + n > b:
+				raise LinkError(f'{what} ({a:05x}-{a + n - 1:05x}) overlaps {other} at {b:05x}')
 
 	@staticmethod
 	def hole(holes, size, align, seg):

@@ -23,6 +23,7 @@
 #include "config.h"
 #include "configreq.h"
 #include "csi.h"
+#include "dma.h"
 #include "handshake.h"
 #include "host.h"
 #include "inputreq.h"
@@ -56,8 +57,6 @@ struct HostCommand {
 	unsigned char	type;
 };
 
-extern void sub_1706C(void);
-extern void sub_170DA(void);
 
 
 struct HostLink hostLink;
@@ -490,8 +489,8 @@ int hostFrameCommand(void)
 	while (DST0)
 		NOP();
 	csiRelease();
-	sub_1706C();
-	sub_170DA();
+	dma0End();
+	dma1End();
 	length = 1;
 	if ((hostLink.rx[2] & 1) == 0)
 		length++;

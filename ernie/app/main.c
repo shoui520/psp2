@@ -16,6 +16,12 @@
 
 void intInit(void);
 
+/* at 0xfd900 (app.lk), where the updater keeps it too */
+struct KeepRam keepRam;
+
+/* the flash library's data buffer (FSL_Init's), after the kernel's RAM (app.lk) */
+__near unsigned char fslDataBuffer[0x100];
+
 /* called by the kernel once it has made its objects, before the first task runs */
 void kernelInitHook(void)
 {
