@@ -7,6 +7,27 @@
 #ifndef ERNIE_SLEEPFACTOR_H
 #define ERNIE_SLEEPFACTOR_H
 
+#include "chip.h"
+
+/* the flags (sleepfactor.c's sleepFactor, and sleepFactorRead as the host reads them) */
+union SleepFactor {
+	unsigned long	value;
+	unsigned char	bytes[4];
+	struct SfrBits	bits[4];
+};
+
+/* the status bits sleepFactorSnapshot returns; bits 0, 1 and 5 are the link's (HostFlags) */
+union SleepFactorStatus {
+	unsigned char	value;
+	struct {
+		unsigned char	reserved1:2;
+		unsigned char	changed:1;	/* a flag changed since the host read them */
+		unsigned char	status3:1;	/* set by the module at 0x28eeb */
+		unsigned char	status4:1;	/* set by the module at 0x28eeb */
+		unsigned char	reserved2:3;
+	} bits;
+};
+
 extern void sleepFactorInit(void);
 extern unsigned char sleepFactorSnapshot(void);
 extern void sleepFactorAcknowledge(void);

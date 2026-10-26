@@ -10,26 +10,10 @@
 #include "kernel.h"
 #include "sleepfactor.h"
 
-union SleepFactor {
-	unsigned long	value;
-	struct SfrBits	bits[4];
-};
-
-/* the status bits sleepFactorSnapshot returns; bits 0, 1 and 5 are the link's (HostFlags) */
-union SleepFactorStatus {
-	unsigned char	value;
-	struct {
-		unsigned char	reserved1:2;
-		unsigned char	changed:1;	/* a flag changed since the host read them */
-		unsigned char	status3:1;	/* set by the module at 0x28eeb */
-		unsigned char	status4:1;	/* set by the module at 0x28eeb */
-		unsigned char	reserved2:3;
-	} bits;
-};
-
-static __sreg union SleepFactor sleepFactor;
-static __sreg union SleepFactor sleepFactorRead;	/* the flags the host reads */
-static __sreg union SleepFactorStatus sleepFactorStatus;
+/* not static: the updater's downloaderStart takes them over from the application */
+__sreg union SleepFactor sleepFactor;
+__sreg union SleepFactor sleepFactorRead;	/* the flags the host reads */
+__sreg union SleepFactorStatus sleepFactorStatus;
 
 void sleepFactorInit(void)
 {

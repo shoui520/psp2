@@ -6,7 +6,13 @@
 #ifndef ERNIE_DOWNLOADER_H
 #define ERNIE_DOWNLOADER_H
 
+/* the host link's config: the application's HostLinkConfig, a word to the updater (UpdHostLink) */
+#ifdef ERNIE_UPDATER
+typedef unsigned int DownloaderLinkConfig;
+#else
 #include "host.h"
+typedef struct HostLinkConfig DownloaderLinkConfig;
+#endif
 
 #define DOWNLOADER_ENTRY	0x2000
 
@@ -17,7 +23,7 @@ struct DownloaderStart {
 	unsigned char	frameSize;	/* hostLink.frameSize */
 	union {
 		unsigned int		size;	/* downloaders to 1.02.ff: the config's size only */
-		struct HostLinkConfig	config;	/* later ones: hostLink.config */
+		DownloaderLinkConfig	config;	/* later ones: hostLink.config */
 	} link;
 };
 

@@ -12,6 +12,10 @@
  */
 #define APP_VERSION_INFO	((const struct UpdaterVersionInfo __far *)0xf00)
 
+/* the image's version block, in boot cluster 1 until the clusters are swapped: read as the
+   application's, its time stamp right after it */
+#define IMAGE_VERSION_INFO	((const struct AppVersionInfo __far *)0x1f00)
+
 /* main.c */
 extern void startHook(void);
 extern int csiOpen(void);

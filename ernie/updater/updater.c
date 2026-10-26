@@ -21,6 +21,7 @@
 #include "board.h"
 #include "charge.h"
 #include "config.h"
+#include "downloader.h"
 #include "keepram.h"
 #include "nvs.h"
 #include "param.h"
@@ -53,6 +54,11 @@ union UpdInput updInput;
 
 void mainLoop(void);
 
+/* sleepfactor.c's, reached as far data */
+extern union SleepFactor sleepFactor;
+extern union SleepFactor sleepFactorRead;
+extern union SleepFactorStatus sleepFactorStatus;
+
 void main(void)
 {
 	rtcInit();
@@ -63,6 +69,37 @@ void main(void)
 	memcpy(updVersion, APP_VERSION_INFO->version, 4);
 	timeStampDigits(updBuild, APP_VERSION_INFO->timeStamp);
 	boardMultiCnOutputOff();
+	mainLoop();
+}
+
+/*
+ * the downloader's start (DOWNLOADER_ENTRY), from the application's updaterStartDownloader:
+ * the stack reset, the sleep factor and host link it hands over in DOWNLOADER_START taken,
+ * every interrupt masked, and the main loop entered as after an update (updReset 0)
+ */
+void downloaderStart(void)
+{
+#asm
+	MOVW	SP, #0D500H
+#endasm
+	sleepFactorStatus.value = DOWNLOADER_START->snapshot;
+	sleepFactor.bytes[0] = DOWNLOADER_START->sleepFactor[0];
+	sleepFactor.bytes[1] = DOWNLOADER_START->sleepFactor[1];
+	sleepFactor.bytes[2] = DOWNLOADER_START->sleepFactor[2];
+	sleepFactor.bytes[3] = DOWNLOADER_START->sleepFactor[3];
+	hostLink.frameSize = DOWNLOADER_START->frameSize;
+	hostLink.config = DOWNLOADER_START->link.config;
+	updReset = 0;
+	memcpy(updVersion, IMAGE_VERSION_INFO->version, 4);
+	timeStampDigits(updBuild, (const char __far *)(IMAGE_VERSION_INFO + 1));
+	MK0 = 0xffff;
+	MK1 = 0xffff;
+	MK2 = 0xffff;
+	IF0 = 0;
+	IF1 = 0;
+	IF2 = 0;
+	rtcInit();
+	sleepFactorRead = sleepFactor;
 	mainLoop();
 }
 

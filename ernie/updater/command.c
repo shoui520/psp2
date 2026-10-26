@@ -45,12 +45,6 @@ extern unsigned char fslSetSecurityFlagSwap(void);
 extern void FSL_Close(void);
 extern unsigned char byteFE06C[];		/* the library's descriptor and write buffer */
 
-/* the image's version block, in boot cluster 1 until the clusters are swapped: read as the
-   application's, its time stamp right after it */
-#define IMAGE_VERSION_INFO	((const struct AppVersionInfo __far *)0x1f00)
-
-/* the handshake (0x3b1ae-0x3b60b, not written yet) */
-
 /* 0x0090 and 0x0091's data: where in the scratch pad, and how many bytes */
 struct ScratchPadRange {
 	unsigned int	offset;
