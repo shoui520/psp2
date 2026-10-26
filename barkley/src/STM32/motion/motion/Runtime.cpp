@@ -12,6 +12,7 @@ extern "C" {
 #include <stdio.h>
 #include <yfuns.h>
 #include "Debug.h"
+#include "motion.h"
 #include "BufferedUsartStream.h"
 #include "Dispatcher.h"
 #include "System.h"
@@ -105,10 +106,14 @@ void Panic(const char *format, ...)
 	__write(3, (const unsigned char *)buffer, vsprintf(buffer, format, ap));
 }
 
-/* the version and checksum the image carries: at its head, and in its last word */
+/* the version and checksum the image carries, where the link configuration places
+   them: at its head (0x08003200), and in its last word (0 in the image) */
+extern "C" const u16 userVersion __attribute__((section(".userversion"))) = MOTION_USER_VERSION;
+extern "C" const u32 firmwareChecksum __attribute__((section(".checksum"))) = 0;
+
 static const u16 *UserVersionAddress()
 {
-	return (const u16 *)0x08003200;
+	return &userVersion;
 }
 
 u16 UserVersion()
@@ -118,7 +123,7 @@ u16 UserVersion()
 
 static const u16 *FirmwareChecksumAddress()
 {
-	return (const u16 *)0x0800F3FC;
+	return (const u16 *)&firmwareChecksum;
 }
 
 u16 FirmwareChecksum()

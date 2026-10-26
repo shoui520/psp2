@@ -11,4 +11,7 @@
 /* image 00 also drives an AMI304 magnetometer */
 #define MOTION_HAS_AMI304	(MOTION_IMAGE == 0)
 
+/* the image's version, at its head */
+#define MOTION_USER_VERSION	(MOTION_IMAGE == 0 ? 0x0652 : 0x1010)
+
 #endif

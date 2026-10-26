@@ -1,6 +1,9 @@
 /*
- * IAR link configuration: the application in flash from 0x08003000 (vector table first),
- * the stack at the bottom of RAM (initial sp 0x20000400), data after it.
+ * IAR link configuration: the application in flash from 0x08003000 (vector table first,
+ * its version at 0x08003200, its checksum in its last word), the stack at the bottom of
+ * RAM (initial sp 0x20000400), the heap (runtime/xgetmemchunk.c, 0x200 bytes) and exit's
+ * table (runtime/exit.c, 0x180 bytes) after it, then the data, initialised from a
+ * PackBits-compressed copy.
  */
 
 define symbol __ICFEDIT_intvec_start__ = 0x08003000;
@@ -16,10 +19,12 @@ define region RAM_region = mem:[from __ICFEDIT_region_RAM_start__ to __ICFEDIT_r
 
 define block CSTACK with alignment = 8, size = __ICFEDIT_size_cstack__ { };
 
-initialize by copy { readwrite };
+initialize by copy with packing = packbits { readwrite };
 do not initialize { section .noinit };
 
 place at address mem:__ICFEDIT_intvec_start__ { readonly section .intvec };
+place at address mem:0x08003200 { readonly section .userversion };
+place at address mem:0x0800f3fc { readonly section .checksum };
 place at start of RAM_region { block CSTACK };
 place in ROM_region { readonly };
 place in RAM_region { readwrite };
