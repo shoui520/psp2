@@ -1,11 +1,13 @@
 ; The updater's C startup: the application's (app/cstart.asm) with the updater's memory: its
 ; stack below 0xd500, the RAM from there kept on a warm start, and no initialised data. Then
-; startHook and main, which does not return. Written from the original.
+; startHook and main, which does not return. Written from the original; what it copies and
+; clears runs between its segments' start labels and cstartend.asm's end labels.
 
 	NAME	cstart
 
 	PUBLIC	_cstart
 	PUBLIC	_heapUsed, _heapBreak, _heapArea
+	EXTRN	_?R_INIT, _?R_INIS, _?R_INITL, _?DATA, _?DATAL, _?DATS
 	EXTRN	_hdwinit, _startHook, _main, _keepRam
 
 STACKTOP	EQU	0D500H		; the stack grows down from here, to RAMBOTTOM
@@ -14,18 +16,27 @@ RAMBOTTOM	EQU	0CF00H		; the RAM's start (0xfcf00)
 KEEPEND		EQU	0D900H + 4 + 0FCH	; the kept RAM's end: its header and the bytes summed
 KEEPCLEAR	EQU	0D500H		; what a warm start clears from
 SADDRSIZE	EQU	0C0H		; its size
-ROMDATA		EQU	29F1H		; the initialised data's values (none)
-ROMDATAEND	EQU	29F1H
-INITDATA	EQU	0D8F8H		; and their place
-NEARBSS		EQU	0D534H		; the uninitialised near data
-NEARBSSEND	EQU	0D7E8H
-FARBSS		EQU	0DA90H		; the uninitialised data of page 0xf
-FARBSSEND	EQU	0F168H
-SADDRBSS	EQU	0FE20H		; the uninitialised short direct data
-SADDRBSSEND	EQU	0FE42H
-NOINIT		EQU	29F1H		; the empty initialised sections' values
-NOINIT1		EQU	0CF00H
-NOINIT2		EQU	0D7F8H
+
+; the starts of the segments copied and cleared (cstartend.asm has their ends): the
+; initialised data's values in ROM and their places in RAM, and the uninitialised data
+@@R_INIT	CSEG	UNIT64KP
+_@R_INIT:
+@@R_INIS	CSEG	UNIT64KP
+_@R_INIS:
+@@R_INITL	CSEG	UNIT64KP
+_@R_INITL:
+@@INIT	DSEG	BASEP
+_@INIT:
+@@INIS	DSEG	BASEP
+_@INIS:
+@@INITL	DSEG	UNIT64KP
+_@INITL:
+@@DATA	DSEG	BASEP
+_@DATA:
+@@DATAL	DSEG	UNIT64KP
+_@DATAL:
+@@DATS	DSEG	SADDRP
+_@DATS:
 
 ; the C library's memory pool: what is used and the next free byte
 @@HEAP	DSEG	UNITP
@@ -116,9 +127,9 @@ _cstart:
 	MOVW	AX, #LOWW(_heapArea)
 	MOVW	!_heapBreak, AX
 	; the initialised data
-	MOV	ES, #0
-	MOVW	HL, #NOINIT
-	MOVW	DE, #NOINIT1
+	MOV	ES, #HIGHW(_@R_INIT)
+	MOVW	HL, #LOWW(_@R_INIT)
+	MOVW	DE, #LOWW(_@INIT)
 	BR	$?copy1End
 ?copy1:
 	MOV	A, ES:[HL]
@@ -127,13 +138,13 @@ _cstart:
 	INCW	DE
 ?copy1End:
 	MOVW	AX, HL
-	CMPW	AX, #NOINIT
+	CMPW	AX, #LOWW(_?R_INIT)
 	BNZ	$?copy1
-	MOVW	HL, #ROMDATA
-	MOVW	DE, #INITDATA
+	MOVW	HL, #LOWW(_@R_INITL)
+	MOVW	DE, #LOWW(_@INITL)
 	BR	$?copy2End
 ?copy2:
-	MOV	ES, #0
+	MOV	ES, #HIGHW(_@R_INITL)
 	MOV	A, ES:[HL]
 	MOV	ES, #0FH
 	MOV	ES:[DE], A
@@ -141,11 +152,11 @@ _cstart:
 	INCW	DE
 ?copy2End:
 	MOVW	AX, HL
-	CMPW	AX, #ROMDATAEND
+	CMPW	AX, #LOWW(_?R_INITL)
 	BNZ	$?copy2
 	; the uninitialised data
-	MOVW	HL, #NEARBSS
-	MOVW	AX, #NEARBSSEND
+	MOVW	HL, #LOWW(_@DATA)
+	MOVW	AX, #LOWW(_?DATA)
 	BR	$?bss1End
 ?bss1:
 	MOV	[HL+0], #0
@@ -154,8 +165,8 @@ _cstart:
 	CMPW	AX, HL
 	BNZ	$?bss1
 	MOV	ES, #0FH
-	MOVW	HL, #FARBSS
-	MOVW	AX, #FARBSSEND
+	MOVW	HL, #LOWW(_@DATAL)
+	MOVW	AX, #LOWW(_?DATAL)
 	BR	$?bss2End
 ?bss2:
 	MOV	ES:[HL+0], #0
@@ -163,9 +174,9 @@ _cstart:
 ?bss2End:
 	CMPW	AX, HL
 	BNZ	$?bss2
-	MOV	ES, #0
-	MOVW	HL, #NOINIT
-	MOVW	DE, #NOINIT2
+	MOV	ES, #HIGHW(_@R_INIS)
+	MOVW	HL, #LOWW(_@R_INIS)
+	MOVW	DE, #LOWW(_@INIS)
 	BR	$?copy3End
 ?copy3:
 	MOV	A, ES:[HL]
@@ -174,10 +185,10 @@ _cstart:
 	INCW	DE
 ?copy3End:
 	MOVW	AX, HL
-	CMPW	AX, #NOINIT
+	CMPW	AX, #LOWW(_?R_INIS)
 	BNZ	$?copy3
-	MOVW	HL, #SADDRBSS
-	MOVW	AX, #SADDRBSSEND
+	MOVW	HL, #LOWW(_@DATS)
+	MOVW	AX, #LOWW(_?DATS)
 	BR	$?bss3End
 ?bss3:
 	MOV	[HL+0], #0

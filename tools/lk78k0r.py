@@ -15,11 +15,15 @@ a comment; paths are relative to the link file's folder:
   AT address		the location the next segments go to
   SEG name [ALIGN n] [path...]
 			every object's segment of that name not placed yet, in link order
-			(or only those of the objects named), one after the other from the
+			(or only those of the objects named, in that order), one after the other from the
 			location on, each at a multiple of n (default: 2 for a segment the
 			assembler aligns, a P attribute, else 1); the location moves past them
   FILL byte		the byte the gaps between a SEG's segments and an AT's are filled with
 			(default none: only what is assembled is written)
+
+A segment with a 64K attribute (UNIT64KP, PAGE64KP) stays in one 64 KiB page: one that would
+cross into the next page starts there, and the segments after it that fit fill the rest of
+the page left behind, as CA78K0R's linker does.
 
 A segment with an AT attribute of its own goes there, and an object's segment no SEG names is
 an error, as is a symbol no object or SYMBOL defines. The output is Intel HEX of every byte
@@ -98,6 +102,12 @@ class Object:
 def segment_at(seg):
 	m = ATTR_AT.search(seg.attr)
 	return int(m.group(1), 16) if m else None
+
+
+def in_page(seg, start, size):
+	"""whether the segment fits at start: a 64K attribute (UNIT64KP, PAGE64KP) keeps it in
+	one 64 KiB page"""
+	return '64K' not in seg.attr.upper() or not size or start >> 16 == start + size - 1 >> 16
 
 
 def aligned(seg):
@@ -222,9 +232,10 @@ class Linker:
 						obj.offsets[label] = (seg, listing.labels[label] - place[id(seg)])
 
 	def place(self):
-		location, fill, self.fills = None, None, []
+		location, fill, self.fills, holes = None, None, [], {}
+		# an empty segment is placed only for its labels (a startup's bounds)
 		pending = {(obj.name, id(seg)): (obj, seg) for obj in self.objects for seg in obj.segments()
-			   if obj.size[id(seg)]}
+			   if obj.size[id(seg)] or seg.labels}
 		for obj in self.objects:
 			for seg in obj.segments():
 				at = segment_at(seg)
@@ -242,18 +253,25 @@ class Linker:
 				_, name, align, only = step
 				if location is None:
 					raise LinkError(f'SEG {name} before any AT')
-				for obj in self.objects:
-					if only and obj.name not in only:
-						continue
+				named = {obj.name: obj for obj in self.objects}
+				for obj in [named[n] for n in only] if only else self.objects:
 					for seg in obj.segments():
 						if seg.name.upper() != name or (obj.name, id(seg)) not in pending:
 							continue
 						step_align = align or aligned(seg)
-						start = -(-location // step_align) * step_align
-						if fill is not None and start > location:
-							self.fills.append((location, start, fill))
+						size = obj.size[id(seg)]
+						start = self.hole(holes.setdefault(name, []), size, step_align, seg)
+						if start is None:
+							start = -(-location // step_align) * step_align
+							if not in_page(seg, start, size):
+								# a segment kept in a 64 KiB page starts the next one, and
+								# what is left of this one takes the segments that fit
+								holes[name].append([location, start + 0xffff & ~0xffff])
+								start = holes[name][-1][1]
+							if fill is not None and start > location:
+								self.fills.append((location, start, fill))
+							location = start + size
 						obj.base[id(seg)] = start
-						location = start + obj.size[id(seg)]
 						del pending[(obj.name, id(seg))]
 		if pending:
 			left = sorted(f'{obj.name} {seg.name}' for obj, seg in pending.values())
@@ -261,6 +279,16 @@ class Linker:
 		for obj in self.objects:
 			for seg in obj.segments():
 				obj.base.setdefault(id(seg), None)
+
+	@staticmethod
+	def hole(holes, size, align, seg):
+		"""the start of the first hole the segment fits in, which it then fills from there"""
+		for h in holes:
+			start = -(-h[0] // align) * align
+			if start + size <= h[1] and in_page(seg, start, size):
+				h[0] = start + size
+				return start
+		return None
 
 	def address(self, name):
 		if name in self.link.symbols:

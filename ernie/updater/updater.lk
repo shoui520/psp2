@@ -70,6 +70,8 @@ OBJECT	../lib/fslswap.asm
 OBJECT	../lib/fslflags.asm
 OBJECT	../lib/fslwrite.asm
 OBJECT	../lib/fslopen.asm
+# the ends of the startup's segments, after everything
+OBJECT	../app/cstartend.asm
 
 # the compiler's runtime registers
 SYMBOL	_@SEGAX		0xffed4
@@ -111,6 +113,10 @@ SEG	@@RTCODE
 SEG	@@BASE
 SEG	@@FSLCOD
 SEG	@@FSLOPN
+# the startup's initialised data (none): empty
+SEG	@@R_INIT
+SEG	@@R_INIS
+SEG	@@R_INITL
 SEG	@@CNSTL		main.c updater.c host.c command.c ../app/sha1.c ../app/aes.c util.c
 SEG	@@FSLCNS
 SEG	@@CNSTL
@@ -124,15 +130,22 @@ SEG	@@CODEL
 # the RAM: the heap, the near data, the flash library's
 AT	0xfd510
 SEG	@@HEAP
-SEG	@@DATA		timer.c serialauth.c handshake.c
+SEG	@@INIT
+SEG	@@DATA		cstart.asm timer.c serialauth.c handshake.c ../app/cstartend.asm
 SEG	@@FSLDAT
+# the startup's (empty) saddr initialised data, where Sony's link has it
+SEG	@@INIS
 SEG	@@DATA
+SEG	@@INITL
 # kept over a warm start
 AT	0xfd900
 SEG	@@DATAL		main.c param.c ../app/watchdog.c
+# what cstart clears, from its start label to cstartend's
+SEG	@@DATAL		cstart.asm
 SEG	@@DATAL
 # the short direct area
 AT	0xffe20
+SEG	@@DATS		cstart.asm
 SEG	@@DATS
 AT	0xffee2
 SEG	@@FSLSAD
