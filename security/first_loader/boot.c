@@ -16,6 +16,18 @@
 /* code that differs between the builds: FL_SINCE(0x20110616) */
 #define FL_SINCE(date)	(FL_BUILD_DATE >= (date))
 
+/* GCC 4.5 predates C11; retain the shared headers' layout checks in C99. */
+#define FL_JOIN_INNER(a, b) a##b
+#define FL_JOIN(a, b) FL_JOIN_INNER(a, b)
+#define _Static_assert(condition, message) \
+	typedef char FL_JOIN(fl_static_assert_, __LINE__)[(condition) ? 1 : -1]
+#include <lowio/pervasive_regs.h>
+#include <cmep_regs.h>
+#include <sdif_regs.h>
+#undef _Static_assert
+#undef FL_JOIN
+#undef FL_JOIN_INNER
+
 struct SecondLoaderHeader {
 	unsigned int magic;
 	unsigned int imageSize;
@@ -66,10 +78,36 @@ struct KeyPolicy {
 	unsigned char bank7[32];
 };
 
+struct KeyringRegisters {
+	volatile unsigned int bootParameters[8];
+	volatile unsigned int select;
+	volatile unsigned int command;
+	volatile unsigned int probeSelect;
+	volatile unsigned int probeStatus;
+};
+
+struct GpioRegisters {
+	volatile unsigned int direction;
+	volatile unsigned int input;
+	volatile unsigned int set;
+	volatile unsigned int clear;
+};
+
 #define BIGMAC ((struct BigmacRegisters *)0xe0050000UL)
 #define BIGNUM ((struct BignumRegisters *)0xe0040000UL)
 #define BIGNUM_ACK (*(volatile unsigned int *)0xe0020020UL)
-#define KEYRING_COMMAND (*(volatile unsigned int *)0xe0030024UL)
+#define KEYRING ((struct KeyringRegisters *)0xe0030000UL)
+#define KEYRING_COMMAND (KEYRING->command)
+#define CMEP ((SceCmepMailboxRegisters *)CMEP_MAILBOX_BASE)
+#define GPIO ((struct GpioRegisters *)0xe20a0000UL)
+#define BOOT_FUSE_WORDS ((volatile unsigned int *)0xe0062020UL)
+#define CMEP_RESET_FLAGS (*(volatile unsigned int *)0xe0020000UL)
+#define BOOT_SECURITY_COMMAND (*(volatile unsigned int *)0xe0070008UL)
+#define BOOT_SECURITY_START (*(volatile unsigned int *)0xe0070000UL)
+#define BIGMAC_RANDOM (*(volatile unsigned int *)0xe005003cUL)
+#define BOOT_FUSE_FLAGS (*(volatile unsigned int *)0xe0064060UL)
+#define BOOT_BRIDGE_STATUS (*(volatile unsigned int *)0x30000118UL)
+#define BOOT_BRIDGE_CONTROL (*(volatile unsigned int *)0x30000208UL)
 #define BIGMAC_SLOT_OUTPUT 0x10000000U
 #define BIGMAC_INLINE_KEY  0x00000080U
 #define BIGMAC_BUSY        0x00000001U
@@ -255,6 +293,46 @@ int bigmacClearRegisters(void)
 	return 0;
 }
 
+void initializeBootSecurity(void)
+{
+	KEYRING_COMMAND = 0x1c0f020eU;
+	KEYRING_COMMAND = 0x1c0f020fU;
+	BOOT_SECURITY_COMMAND = 0x020e020fU;
+	BOOT_SECURITY_START = 1;
+}
+
+int detectExternalBoot(void)
+{
+	KEYRING->probeSelect = 0x501;
+	if ((KEYRING->probeStatus & 3) != 3)
+		return -1;
+	return (BOOT_FUSE_WORDS[0] & 1) ? 0x41 : 0x21;
+}
+
+void setBootParameters(unsigned int bootMode, unsigned int bootArgument)
+{
+	unsigned int parameters[8];
+	unsigned int i;
+
+	if (bootMode & 1) {
+		for (i = 0; i < 8; i++)
+			parameters[i] = BOOT_FUSE_WORDS[i];
+		parameters[0] |= 4;
+		parameters[7] = (parameters[7] & 0x0fffffffU) | (bootArgument << 28);
+	} else {
+		parameters[0] = (bootMode & 0x40 ? 3U : 0U) |
+				(bootMode == 0x20 ? 1U : 0U) |
+				(bootMode & 4 ? 8U : 0U);
+		for (i = 1; i < 7; i++)
+			parameters[i] = 0;
+		parameters[7] = bootArgument << 28;
+	}
+	for (i = 0; i < 8; i++)
+		KEYRING->bootParameters[i] = parameters[i];
+	KEYRING->select = 0x501;
+	KEYRING_COMMAND = 0x08000501U;
+}
+
 /* Check the lengths and key selectors before processing the image. */
 int checkSecondLoaderHeader(const struct SecondLoaderHeader *header)
 {
@@ -336,6 +414,616 @@ unsigned int readBits(const unsigned char *data, unsigned int first,
 		}
 	}
 	return result;
+}
+
+static unsigned char externalBootKey[32] = {
+	0xf4, 0x77, 0x16, 0xe6, 0xc5, 0x64, 0x9f, 0xd6,
+	0x48, 0x53, 0x8f, 0xd9, 0x77, 0x3d, 0x12, 0xd1,
+	0x22, 0x9e, 0x11, 0x87, 0x37, 0xb1, 0xd7, 0x82,
+	0xd6, 0xa8, 0x0c, 0xdb, 0x72, 0xe4, 0xb9, 0xc3,
+};
+
+int probeExternalBoot(void)
+{
+	unsigned int challenge[4];
+	unsigned int response[4];
+	unsigned int encrypted[4];
+	int result;
+
+	GPIO->direction = 8;
+	if (!(GPIO->input & 0x10)) {
+		fillBytes(externalBootKey, 0, sizeof(externalBootKey));
+		return 0;
+	}
+	CMEP_RESET_FLAGS |= 0x10;
+	challenge[0] = BIGMAC_RANDOM;
+	challenge[1] = BIGMAC_RANDOM;
+	challenge[2] = challenge[0];
+	challenge[3] = challenge[1];
+	CMEP->cry2Debugger[0] = challenge[0];
+	CMEP->cry2Debugger[1] = challenge[1];
+	GPIO->set = 8;
+	while (GPIO->input & 0x10)
+		;
+	response[0] = CMEP->debugger2Cry[0];
+	response[1] = CMEP->debugger2Cry[1];
+	CMEP->debugger2Cry[0] = 0xffffffffU;
+	CMEP->debugger2Cry[1] = 0xffffffffU;
+	CMEP->debugger2Cry2[0] = 0xffffffffU;
+	CMEP->debugger2Cry2[1] = 0xffffffffU;
+	GPIO->clear = 8;
+	result = bigmacRunMode301((unsigned int)(unsigned long)encrypted,
+				  (unsigned int)(unsigned long)challenge, 8,
+				  (unsigned int)(unsigned long)externalBootKey);
+	if (result < 0 || compareBytes(response, encrypted, 8))
+		result = -1;
+	else
+		result = 1;
+	fillBytes(externalBootKey, 0, sizeof(externalBootKey));
+	fillBytes(challenge, 0, sizeof(challenge));
+	fillBytes(response, 0, sizeof(response));
+	fillBytes(encrypted, 0, sizeof(encrypted));
+	return result;
+}
+
+struct BootSector {
+	unsigned char header[0x30];
+	unsigned char firstBlock[4];
+	unsigned char blockCount[4];
+};
+
+struct EmmcCard;
+
+struct FirstLoaderSdif {
+	unsigned int flags;
+	unsigned int baseClock;
+	unsigned int maximumClock;
+	unsigned short relativeAddress;
+	unsigned char port;
+	unsigned char commandComplete;
+	unsigned int activeRequest;
+	unsigned int activeTransfer;
+	unsigned int registersAddress;
+};
+
+struct FirstLoaderSdifCommand {
+	unsigned int size;
+	unsigned int flags;
+	unsigned int command;
+	unsigned int argument;
+	unsigned int response[4];
+	unsigned int bufferAddress;
+	unsigned int blockSize;
+	unsigned int blockCount;
+	int error;
+};
+
+static struct FirstLoaderSdif sdif;
+
+static volatile SdifHostRegisters *sdifRegisters(const struct FirstLoaderSdif *controller)
+{
+	return (volatile SdifHostRegisters *)(unsigned long)controller->registersAddress;
+}
+
+struct FirstLoaderSdif *getSdif(unsigned int port)
+{
+	(void)port;
+	return &sdif;
+}
+
+int resetSdif(struct FirstLoaderSdif *controller, unsigned int reset)
+{
+	volatile SdifHostRegisters *registers = sdifRegisters(controller);
+
+	if (reset & 1) {
+		registers->softwareReset = 1;
+		while (registers->softwareReset & 1)
+			;
+	}
+	if (reset & 2) {
+		registers->normalInterruptEnable = 0xf3;
+		registers->errorInterruptEnable = 0x17f;
+		registers->normalSignalEnable = 0xf3;
+		registers->errorSignalEnable = 0x17f;
+		registers->timeoutControl = 0x0e;
+		while (!(registers->presentState & 0x20000U))
+			;
+		registers->normalInterruptStatus = registers->normalInterruptStatus;
+		registers->errorInterruptStatus = registers->errorInterruptStatus;
+		while (registers->normalInterruptStatus != 0)
+			;
+		while (registers->errorInterruptStatus != 0)
+			;
+	}
+	return 0;
+}
+
+int initializeSdif(unsigned int port, unsigned int slowClock)
+{
+	unsigned int physicalPort = port & 0xff;
+
+	fillBytes(&sdif, 0, sizeof(sdif));
+	sdif.port = physicalPort;
+	sdif.baseClock = 48000000;
+	sdif.maximumClock = slowClock ? 24000000 : 48000000;
+	sdif.registersAddress = SDIF_REG_BASE(physicalPort);
+	if (port == 0x101) {
+		sdif.flags = 0x300000;
+		sdif.registersAddress = SDIF_REG_BASE(0);
+	} else if (port == 1) {
+		sdif.flags = 0x300000;
+	} else if (port == 0) {
+		sdif.flags = 0x80;
+	}
+	resetSdif(&sdif, 3);
+	return 0;
+}
+
+int powerOnSdif(struct FirstLoaderSdif *controller)
+{
+	volatile SdifHostRegisters *registers = sdifRegisters(controller);
+
+	while (!(registers->presentState & 0x20000U))
+		;
+	if (registers->presentState & 0x10000U) {
+		registers->powerControl |= 0x0f;
+		registers->clockControl = 0;
+		registers->clockControl = 0x8001;
+		while (!(registers->clockControl & 2))
+			;
+		registers->clockControl |= 4;
+		registers->hostControl = 0;
+	}
+	return 0;
+}
+
+int powerOffSdif(struct FirstLoaderSdif *controller)
+{
+	volatile SdifHostRegisters *registers = sdifRegisters(controller);
+
+	registers->clockControl = 0;
+	registers->hostControl = 0;
+	registers->powerControl = 0;
+	return 0;
+}
+
+int setSdifBusWidth(struct FirstLoaderSdif *controller, unsigned int width)
+{
+	volatile SdifHostRegisters *registers = sdifRegisters(controller);
+	unsigned char control = registers->hostControl;
+
+	if (width == 8)
+		control = (control | 0x20) & ~2;
+	else if (width == 4)
+		control = (control & ~0x20) | 2;
+	else
+		control &= ~(0x20 | 2);
+	registers->hostControl = control;
+	return 0;
+}
+
+void delayMicroseconds(unsigned int microseconds);
+
+int isSdifCardPresent(struct FirstLoaderSdif *controller)
+{
+	volatile SdifHostRegisters *registers = sdifRegisters(controller);
+	unsigned int retries = 1000;
+
+	while (!(registers->presentState & 0x20000U)) {
+		if (retries == 0)
+			return (int)0x80320002U;
+		retries--;
+		delayMicroseconds(1000);
+	}
+	return (registers->presentState & 0x10000U) != 0;
+}
+
+int setSdifClock(struct FirstLoaderSdif *controller, unsigned int frequency,
+		 unsigned int highSpeed)
+{
+	volatile SdifHostRegisters *registers = sdifRegisters(controller);
+	unsigned int divisor = 0;
+	unsigned int retries = 10;
+	unsigned short clock;
+	unsigned char control;
+
+	if (frequency > controller->maximumClock)
+		frequency = controller->maximumClock;
+	while (divisor < 8 && frequency < (controller->baseClock >> divisor))
+		divisor++;
+	registers->clockControl = 0;
+	clock = registers->clockControl;
+	clock |= (0x80U << divisor) & 0xff00U;
+	registers->clockControl = clock | 1;
+	while (!(registers->clockControl & 2)) {
+		if (retries == 0)
+			return (int)0x80320002U;
+		retries--;
+		delayMicroseconds(1000);
+	}
+	registers->clockControl |= 4;
+	control = registers->hostControl;
+	if (highSpeed)
+		control |= 4;
+	else
+		control &= ~4;
+	registers->hostControl = control;
+	return 0;
+}
+
+void collectSdifResponse(struct FirstLoaderSdif *controller,
+			 struct FirstLoaderSdifCommand *command)
+{
+	volatile SdifHostRegisters *registers = sdifRegisters(controller);
+	unsigned int format = command->flags & 0xf8;
+	unsigned int response0;
+	unsigned int response1;
+	unsigned int response2;
+	unsigned int response3;
+
+	command->error = 0;
+	switch (format) {
+	case 0x10:
+	case 0x28:
+		command->response[0] = registers->response[0];
+		if (command->flags & 0x800)
+			command->response[3] = registers->response[3];
+		break;
+	case 0x30:
+		response0 = registers->response[0];
+		response1 = registers->response[1];
+		response2 = registers->response[2];
+		response3 = registers->response[3];
+		command->response[0] = response0 << 8;
+		command->response[1] = (response1 << 8) | (response0 >> 24);
+		command->response[2] = (response2 << 8) | (response1 >> 24);
+		command->response[3] = (response3 << 8) | (response2 >> 24);
+		break;
+	case 0x40:
+	case 0x50:
+	case 0x60:
+	case 0x78:
+	case 0x80:
+	case 0x90:
+		command->response[0] = registers->response[0];
+		break;
+	default:
+		break;
+	}
+	if (command->flags & 0x3000) {
+		registers->softwareReset = 6;
+		while (registers->softwareReset & 6)
+			;
+	}
+}
+
+int decodeSdifCardStatus(unsigned int status)
+{
+	unsigned int i;
+
+	status &= 0xfdffe008U;
+	if (status == 0)
+		return 0;
+	for (i = 0; i < 32; i++) {
+		if (status & (1U << i))
+			break;
+	}
+	return (int)(0x80320100U + i);
+}
+
+void resetSdifErrors(struct FirstLoaderSdif *controller, unsigned int errors)
+{
+	volatile SdifHostRegisters *registers = sdifRegisters(controller);
+	unsigned short enabled;
+
+	if (errors == 0)
+		return;
+	enabled = registers->errorInterruptEnable;
+	registers->errorInterruptEnable = 0;
+	while ((short)registers->errorInterruptEnable != 0)
+		;
+	if (errors & 0x0f) {
+		registers->softwareReset = 2;
+		while (registers->softwareReset & 2)
+			;
+	}
+	if (errors & 0x70) {
+		registers->softwareReset = 4;
+		while (registers->softwareReset & 4)
+			;
+	}
+	registers->errorInterruptStatus = registers->errorInterruptStatus;
+	while ((short)registers->errorInterruptStatus != 0)
+		;
+	registers->errorInterruptEnable = enabled;
+	while (registers->errorInterruptEnable != enabled)
+		;
+}
+
+void handleSdifCommandInterrupt(struct FirstLoaderSdif *controller,
+				unsigned int normal, unsigned int errors)
+{
+	struct FirstLoaderSdifCommand *command =
+		(struct FirstLoaderSdifCommand *)(unsigned long)controller->activeRequest;
+
+	if (command == 0)
+		return;
+	if (errors != 0) {
+		command->error = (int)(0x80320002U + ((errors & 1) == 0));
+		command->flags |= 0x40000000U;
+		resetSdifErrors(controller, errors);
+		return;
+	}
+	if (!(normal & 1))
+		return;
+	controller->commandComplete = 1;
+	collectSdifResponse(controller, command);
+	if (controller->activeTransfer == 0 && !(command->flags & 8))
+		command->flags |= 0x80000000U;
+}
+
+void handleSdifDataInterrupt(struct FirstLoaderSdif *controller,
+			     unsigned int normal, unsigned int errors)
+{
+	struct FirstLoaderSdifCommand *command =
+		(struct FirstLoaderSdifCommand *)(unsigned long)controller->activeRequest;
+	volatile SdifHostRegisters *registers = sdifRegisters(controller);
+	unsigned char *buffer;
+	unsigned int i;
+
+	if (command == 0)
+		return;
+	if (controller->activeTransfer == 0) {
+		if ((normal & 2) && (command->flags & 8))
+			command->flags |= 0x80000000U;
+		return;
+	}
+	if (errors != 0) {
+		controller->activeTransfer = 0;
+		command->error = (int)(0x80320002U + ((errors & 0x10) == 0));
+		command->flags |= 0x40000000U;
+		resetSdifErrors(controller, errors);
+		return;
+	}
+	if ((normal & 0x20) && (command->flags & 0x700) == 0x100 &&
+	    (int)command->blockCount > 0) {
+		command->blockCount--;
+		while (!(registers->presentState & 0x800))
+			;
+		buffer = (unsigned char *)(unsigned long)command->bufferAddress;
+		for (i = 0; (int)i < (int)command->blockSize;) {
+			unsigned int remaining = command->blockSize - i;
+
+			if (remaining == 1) {
+				buffer[i++] = registers->buffer.byte;
+			} else if (remaining < 4) {
+				unsigned int value = registers->buffer.halfword;
+
+				buffer[i++] = value;
+				buffer[i++] = value >> 8;
+			} else {
+				unsigned int value = registers->buffer.word;
+
+				if (command->bufferAddress & 3) {
+					buffer[i] = value;
+					buffer[i + 1] = value >> 8;
+					buffer[i + 2] = value >> 16;
+					buffer[i + 3] = value >> 24;
+				} else {
+					*(unsigned int *)(buffer + i) = value;
+				}
+				i += 4;
+			}
+		}
+		command->bufferAddress += command->blockSize;
+	}
+	if ((normal & 0x10) && (command->flags & 0x700) == 0x200 &&
+	    (int)command->blockCount > 0) {
+		command->blockCount--;
+		while (!(registers->presentState & 0x400))
+			;
+		buffer = (unsigned char *)(unsigned long)command->bufferAddress;
+		for (i = 0; (int)i < (int)command->blockSize;) {
+			unsigned int remaining = command->blockSize - i;
+			unsigned int value;
+
+			if (remaining == 1) {
+				registers->buffer.byte = buffer[i++];
+			} else if (remaining < 4) {
+				value = buffer[i] | ((unsigned int)buffer[i + 1] << 8);
+				i += 2;
+				registers->buffer.halfword = value;
+			} else {
+				if (command->bufferAddress & 3)
+					value = buffer[i] | ((unsigned int)buffer[i + 1] << 8) |
+						((unsigned int)buffer[i + 2] << 16) |
+						((unsigned int)buffer[i + 3] << 24);
+				else
+					value = *(unsigned int *)(buffer + i);
+				i += 4;
+				registers->buffer.word = value;
+			}
+		}
+		command->bufferAddress += command->blockSize;
+	}
+	if (normal & 2) {
+		if (controller->commandComplete)
+			command->flags |= 0x80000000U;
+		controller->activeTransfer = 0;
+	}
+}
+
+void pollSdifInterrupt(unsigned int port, struct FirstLoaderSdif *controller,
+		       unsigned int unused)
+{
+	volatile SdifHostRegisters *registers = sdifRegisters(controller);
+	unsigned int normal = registers->normalInterruptStatus & 0xfe3fU;
+	unsigned int errors = registers->errorInterruptStatus;
+
+	(void)port;
+	(void)unused;
+	(void)registers->autoCmd12Error;
+	if ((normal & 1) || (errors & 0x0f)) {
+		registers->normalInterruptStatus = 1;
+		registers->errorInterruptStatus = 0x0f;
+		while (registers->normalInterruptStatus & 1)
+			;
+		while (registers->errorInterruptStatus & 0x0f)
+			;
+		handleSdifCommandInterrupt(controller, normal, errors);
+	}
+	if ((normal & 0x32) || (errors & 0x70)) {
+		registers->normalInterruptStatus = 0x32;
+		registers->errorInterruptStatus = 0x70;
+		while (registers->normalInterruptStatus & 0x32)
+			;
+		while (registers->errorInterruptStatus & 0x70)
+			;
+		handleSdifDataInterrupt(controller, normal, errors);
+	}
+}
+
+int executeSdifCommand(struct FirstLoaderSdif *controller,
+		       struct FirstLoaderSdifCommand *command)
+{
+	volatile SdifHostRegisters *registers = sdifRegisters(controller);
+	unsigned int format;
+	unsigned int responseMode;
+	unsigned int kind;
+	unsigned int transferMode;
+	int result;
+
+	command->error = 0;
+	command->flags &= 0x3fffffffU;
+	controller->commandComplete = 0;
+	controller->activeTransfer = 0;
+	controller->activeRequest = (unsigned int)(unsigned long)command;
+	for (;;) {
+		if (registers->presentState & 1)
+			continue;
+		if (command->command == 12)
+			break;
+		if ((command->flags & 7) != 4 && (command->flags & 0xf8) != 0x28)
+			break;
+		if (!(registers->presentState & 2))
+			break;
+	}
+	format = command->flags & 0xf8;
+	switch (format) {
+	case 0x30: responseMode = 9; break;
+	case 0x28: case 0x78: responseMode = 0x1b; break;
+	case 0x10: case 0x60: case 0x80: case 0x90: responseMode = 0x1a; break;
+	case 0x40: case 0x50: responseMode = 2; break;
+	default: responseMode = 0; break;
+	}
+	kind = command->flags & 7;
+	if (kind == 1 || kind == 2 || kind == 3) {
+		registers->argument = command->argument;
+		registers->transferMode = 0;
+		registers->command = (command->command << 8) | responseMode;
+	} else if (kind == 4) {
+		controller->activeTransfer = (unsigned int)(unsigned long)command;
+		registers->timeoutControl = 0x0e;
+		registers->hostControl &= 0xe7;
+		registers->blockSize = command->blockSize | 0x7000;
+		registers->blockCount = command->blockCount;
+		transferMode = (command->flags & 0x100) ? 0x10 : 0;
+		if (command->flags & 0x800)
+			transferMode |= 4;
+		if (command->blockCount == 0)
+			command->blockCount = 1;
+		else if (command->blockCount == 1)
+			transferMode |= 2;
+		else if ((int)command->blockCount >= 2)
+			transferMode |= 0x22;
+		registers->argument = command->argument;
+		registers->transferMode = transferMode;
+		registers->command = (command->command << 8) | 0x20 | responseMode;
+	}
+	while (!(command->flags & 0xc0000000U)) {
+		if ((short)registers->normalInterruptStatus != 0 ||
+		    (short)registers->errorInterruptStatus != 0)
+			pollSdifInterrupt(controller->port, controller, 0);
+		delayMicroseconds(1000);
+	}
+	result = (command->flags & 0x40000000U) ? command->error : 0;
+	controller->activeRequest = 0;
+	return result;
+}
+
+int sendSdifCommand(struct FirstLoaderSdif *controller,
+		    struct FirstLoaderSdifCommand *command, int retries)
+{
+	int result;
+
+	do {
+		result = executeSdifCommand(controller, command);
+		if (result >= 0)
+			break;
+		retries--;
+	} while (retries >= 1);
+	return result;
+}
+
+/* The SDIF controller and card routines are reconstructed below the boot path. */
+int openEmmc(unsigned int port, struct EmmcCard **card);
+int readEmmcBlocks(struct EmmcCard *card, unsigned int block,
+		   void *destination, unsigned int count);
+
+static volatile unsigned int bootHardwareMode;
+
+static unsigned int readLittleEndianWord(const unsigned char *bytes)
+{
+	return (unsigned int)bytes[0] | ((unsigned int)bytes[1] << 8) |
+	       ((unsigned int)bytes[2] << 16) | ((unsigned int)bytes[3] << 24);
+}
+
+int readSecondLoaderFromEmmc(unsigned char *destination)
+{
+	struct BootSector *sector = (struct BootSector *)destination;
+	struct EmmcCard *card;
+	unsigned int firstBlock;
+	unsigned int blockCount;
+	unsigned int i;
+	int result;
+
+	if (bootHardwareMode == 0) {
+		PERVASIVE_MISC->sdifVoltage |= 1;
+		PERVASIVE_RESET->bigmac = 1;
+		PERVASIVE_GATE->sdif[0] = 1;
+		while (PERVASIVE_GATE->sdif[0] == 0)
+			;
+		PERVASIVE_RESET->sdif[0] = 0;
+		while (PERVASIVE_RESET->sdif[0] != 0)
+			;
+		PERVASIVE_RESET->bigmac = 0;
+		while (PERVASIVE_RESET->bigmac != 0)
+			;
+	} else if (BOOT_BRIDGE_STATUS & 0x20000) {
+		BOOT_BRIDGE_CONTROL = 0x80000001U;
+	}
+	initializeBootSecurity();
+	result = initializeSdif(0, (BOOT_FUSE_FLAGS & 0x10000U) == 0);
+	if (result < 0)
+		return result;
+	result = openEmmc(0, &card);
+	if (result < 0)
+		return result;
+	result = readEmmcBlocks(card, 0, destination, 1);
+	if (result < 0)
+		return result;
+	firstBlock = readLittleEndianWord(sector->firstBlock);
+	blockCount = readLittleEndianWord(sector->blockCount);
+	if (blockCount == 0 || blockCount >= 0xdf) {
+		fillBytes(destination, 0, 0x200);
+		return -1;
+	}
+	for (i = 0; i < blockCount; i++) {
+		result = readEmmcBlocks(card, firstBlock + i, destination + i * 0x200, 1);
+		if (result < 0)
+			return result;
+	}
+	return 0;
 }
 
 static unsigned char slot8Seed[32] = {

@@ -29,11 +29,13 @@ AS := $(BINUTILS)as
 LD := $(BINUTILS)ld
 OBJCOPY := $(BINUTILS)objcopy
 
-CFLAGS := -mel -O2 -std=gnu99 -Wall -ffreestanding -fno-builtin -DFL_BUILD_DATE=$(FL_BUILD_DATE)
+CFLAGS := -mel -O2 -std=gnu99 -Wall -ffreestanding -fno-builtin -DFL_BUILD_DATE=$(FL_BUILD_DATE) \
+	-I../../sys/internal/include -I../../sys/internal/secure/sbl_smsched \
+	-I../../sys/internal/driver/src/sdif -I../../sys/sdk/target/include
 ASFLAGS := -mel -Wa,--defsym,FL_BUILD_DATE=$(FL_BUILD_DATE)
 
 OBJS := $(O)/$(FW)/boot.s.o
-PARTIAL_OBJS := $(O)/$(FW)/boot.c.o
+PARTIAL_OBJS := $(O)/$(FW)/boot.c.o $(O)/$(FW)/boot_delay.c.o
 
 .PHONY: image clean
 image: $(PARTIAL_OBJS) $(O)/$(FW)/first_loader.bin
