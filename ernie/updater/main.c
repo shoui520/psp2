@@ -3,6 +3,7 @@
  * (hdwinit, which cstart calls), the SPI link to the host and the UARTs opened, and the
  * resets, which record their cause in the RAM kept over a reset as the application's do.
  */
+#pragma interrupt INTRTC rtcInterrupt
 #pragma sfr
 #pragma DI
 #pragma NOP
@@ -13,6 +14,7 @@
 #include "clockout.h"
 #include "keepram.h"
 #include "tau.h"
+#include "timer.h"
 #include "updater.h"
 
 /* UARTs' speeds: SPS's prescaler, SDR's divisor and the channels' SCR */
@@ -199,4 +201,20 @@ void resetChip(void)
 	MOVW	AX, ES:!0
 	BR	AX
 #endasm
+}
+
+/* every 0.5 s: the kept clock counts, and timers 0x15-0x1d whose time came run */
+void rtcInterrupt(void)
+{
+	unsigned int clock;
+	unsigned char i;
+
+	keepRam.clock++;
+	clock = (unsigned int)keepRam.clock;
+	for (i = TIMER_RTC_FIRST; i < TIMER_COUNT; i++) {
+		if (timers[i].state == 1 && timers[i].time == clock) {
+			timers[i].state = 0;
+			timers[i].handler();
+		}
+	}
 }

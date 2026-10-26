@@ -3,6 +3,9 @@
  * serial channels, one sending and one receiving, through two ring buffers. UART3 is set up
  * here (uartInit, uart3Open); UART2 is not, and its timeout and UART3's do nothing.
  */
+#pragma interrupt INTSRE3 uart3ErrorInterrupt
+#pragma interrupt INTSR3 uart3ReceiveInterrupt
+#pragma interrupt INTST3 uart3SendInterrupt
 #pragma sfr
 #pragma DI
 #pragma EI
@@ -12,6 +15,7 @@
 #include "chip.h"
 #include "timer.h"
 #include "uart.h"
+#include "updater.h"
 
 /* UartPort.flags */
 #define UART_OPEN		0x01
@@ -340,4 +344,53 @@ int uart2Open(void)
 int uart2Close(unsigned char keep)
 {
 	return 0;
+}
+
+/* a reception error: cleared, and on an overrun the channel restarts */
+void uart3ErrorInterrupt(void)
+{
+	unsigned char status;
+
+	status = SDR13;	/* the byte in error, dropped */
+	status = SSR13;
+	SIR13 = status & 0x07;
+	if (status & 0x04) {
+		ST1L.3 = 1;
+		SS1L.3 = 1;
+	}
+}
+
+/* a byte received; with the log out, the port's timeout runs again, else timer 0x12 */
+void uart3ReceiveInterrupt(void)
+{
+	struct UartPort *p;
+	unsigned char data;
+
+	p = &uart3;
+	data = SDR13;
+	if ((p->rxWrite + 1 & p->rxMask) != p->rxRead) {
+		p->rxBuffer[p->rxWrite] = data;
+		p->rxWrite = p->rxWrite + 1 & p->rxMask;
+		if (logMode == 3) {
+			if (p->timeout.flgid != 0)
+				timerStart(p->timeout.timer, p->timeout.timeout);
+		} else
+			timerStart(0x12, 2);
+	}
+}
+
+/* the next byte queued, or, with none left, event 0x33 unless the log is out */
+void uart3SendInterrupt(void)
+{
+	struct UartPort *p;
+
+	p = &uart3;
+	if (p->txWrite - p->txRead & p->txMask) {
+		SDR12 = p->txBuffer[p->txRead];
+		p->txRead = p->txRead + 1 & p->txMask;
+	} else {
+		p->flags &= ~UART_SENDING;
+		if (logMode != 3)
+			updEventSet(0x33);
+	}
 }

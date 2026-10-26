@@ -10,6 +10,7 @@
  * The updater starts either from its reset vector (cstart, main) or from the application
  * (the entry at 0x2000, which carries the host link over).
  */
+#pragma interrupt INTTM00 tm00Interrupt
 #pragma sfr
 #pragma DI
 #pragma EI
@@ -654,5 +655,30 @@ void mainLoop(void)
 			break;
 		}
 		updLoops++;
+	}
+}
+
+/* every 4 ms (TM00): P4.0 toggled, the timers' tick, the inputs, and a button press as its event */
+void tm00Interrupt(void)
+{
+	P40 ^= 1;
+	timerTick();
+	inputPoll();
+	switch (buttonPoll()) {
+	case 1:
+		updEventSet(0x64);
+		break;
+	case 3:
+		updEventSet(0x66);
+		break;
+	case 4:
+		updEventSet(0x67);
+		break;
+	case 5:
+		updEventSet(0x68);
+		break;
+	case 6:
+		updEventSet(0x69);
+		break;
 	}
 }

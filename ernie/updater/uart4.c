@@ -3,12 +3,17 @@
  * uart4Bauds' speeds, and read and written through uart4's ring buffers. The updater's, the
  * application's without the dispatch lock.
  */
+#pragma interrupt INTSRE1 uart4ErrorInterrupt
+#pragma interrupt INTSR4 uart4ReceiveInterrupt
+#pragma interrupt INTST4 uart4SendInterrupt
 #pragma sfr
 
 #include "ernie.h"
 #include "chip.h"
 #include "uart.h"
 #include "uart4.h"
+#include "timer.h"
+#include "updater.h"
 
 /* uart4Open's speeds */
 struct Uart4Baud {
@@ -161,4 +166,37 @@ unsigned char uart4Write(unsigned char *buf, unsigned char size)
 		SDR20 = data;
 	}
 	return length;
+}
+
+void uart4ErrorInterrupt(void)
+{
+	unsigned char status;
+
+	status = SDR21;	/* the byte in error, dropped */
+	status = SSR21;
+	SIR21 = status & 0x07;
+}
+
+void uart4ReceiveInterrupt(void)
+{
+	unsigned char data;
+
+	data = SDR21;
+	if ((uart4.rxWrite + 1 & uart4.rxMask) != uart4.rxRead) {
+		uart4.rxBuffer[uart4.rxWrite] = data;
+		uart4.rxWrite = uart4.rxWrite + 1 & uart4.rxMask;
+		timerStart(0x11, 2);
+	}
+}
+
+/* the next byte queued, or, with none left, event 2 */
+void uart4SendInterrupt(void)
+{
+	struct UartPort *p = &uart4;
+
+	if (p->txWrite - p->txRead & p->txMask) {
+		SDR20 = p->txBuffer[p->txRead];
+		p->txRead = p->txRead + 1 & p->txMask;
+	} else
+		updEventSet(2);
 }

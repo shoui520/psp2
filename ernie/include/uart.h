@@ -9,7 +9,11 @@
 struct UartTimeout {
 	unsigned char	timer;
 	unsigned char	timeout;
+#ifdef ERNIE_UPDATER
+	unsigned int	flgid;		/* the updater's a word, at the same place */
+#else
 	unsigned char	flgid;
+#endif
 	unsigned int	pattern;
 };
 

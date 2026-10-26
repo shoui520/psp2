@@ -40,6 +40,9 @@ struct SfrBits {
 #define P36			SFR_BITS(0xfff03).b6
 #define PM36			SFR_BITS(0xfff23).b6
 
+/* port 4's bit 0 (P4.0): the updater toggles it every 4 ms (tm00Interrupt) */
+#define P40			SFR_BITS(0xfff04).b0
+
 /* port 9's bit 0 (P9.0) and its mode (PM9.0) */
 #define P90			SFR_BITS(0xfff09).b0
 #define PM90			SFR_BITS(0xfff29).b0
