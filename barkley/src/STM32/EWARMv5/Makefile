@@ -15,20 +15,73 @@
 # messages name) is in ../motion/motion, its headers in ../motion/motion/include, which is
 # on the include path (the asserts name EWARMv5\..\motion\motion\include\MotionFrameUtil.h).
 #
-# Compiler: IAR Embedded Workbench for ARM, C++ (the reset path is IAR's __cmain:
-# __low_level_init, __iar_data_init3, __call_ctors, main); version not identified. A
-# Windows program, run like psp2snc.exe (tools/host.py). The flash code uses ST's
-# STM32F10x Standard Peripheral Library, to be vendored under contrib/ once its
-# version is pinned. Skeleton: nothing builds yet.
+# Compiler: Sony built it with IAR Embedded Workbench for ARM 5, C++ (the reset path is
+# IAR's __cmain: __low_level_init, __iar_data_init3, __call_ctors, main). IAR's compiler
+# is not available here; the sources are compiled with the project's GCC 4.8 for the
+# Cortex-M3 (tools/gcc48.sh), and each function is checked against Sony's for the same
+# behaviour. The flash code uses ST's STM32F10x Standard Peripheral Library.
 
 IMAGE ?= 01
+O ?= build/$(IMAGE)
 
 include image/$(IMAGE).mk
 
+ROOT := ../../../..
+GCC48 := $(ROOT)/tools/gcc48.sh
+MOTION := ../motion/motion
+
+# ST's STM32F10x Firmware Library V2.0.3 (contrib/), with Sony's changes
+# (../Libraries/fwlib.patch) applied to a copy in the build folder; its configuration,
+# stm32f10x_conf.h, is Sony's (../motion/motion/include)
+FWLIB := $(ROOT)/contrib/stm32f10x-fwlib-2.0.3/library
+LIB := $(O)/library
+
 DEFINES := -DMOTION_IMAGE=$(MOTION_IMAGE)
-INCLUDES := -I../motion/motion/include -I../motion/motion
+INCLUDES := -I$(MOTION)/include -I$(MOTION) -I$(LIB)/inc
+# IAR's enums take the smallest type that holds them (-fshort-enums)
+TARGET := -mcpu=cortex-m3 -mthumb -fshort-enums -fno-section-anchors
+CFLAGS := $(TARGET) -O2 -ffreestanding -fno-common -std=gnu99 $(DEFINES) $(INCLUDES)
+# IAR kept the library's static helpers (FLASH's delay) as functions
+LIBCFLAGS := $(CFLAGS) -fno-inline
+CXXFLAGS := $(TARGET) -O2 -ffreestanding -fno-common -fno-exceptions -fno-rtti \
+	-fno-threadsafe-statics -fno-use-cxa-atexit $(DEFINES) $(INCLUDES)
 
-all:
-	@echo "motionC is a skeleton: no IAR toolchain yet" >&2; exit 1
+# in the image's order: the program's (../motion/motion), the library's drivers
+SOURCES :=
+LIBSOURCES := stm32f10x_rcc.c stm32f10x_flash.c
 
-.PHONY: all
+OBJECTS := $(patsubst %,$(O)/%.o,$(notdir $(SOURCES)) $(LIBSOURCES))
+
+all: $(OBJECTS)
+
+$(OBJECTS): $(LIB)/.patched
+
+# the library's copy with Sony's changes
+fwlib: $(LIB)/.patched
+$(LIB)/.patched: ../Libraries/fwlib.patch
+	rm -rf $(LIB)
+	mkdir -p $(O)
+	cp -R $(FWLIB) $(LIB)
+	cd $(LIB) && patch -s -p1 < $(CURDIR)/../Libraries/fwlib.patch
+	touch $@
+
+$(O)/%.c.o: $(LIB)/src/%.c
+	@mkdir -p $(O)
+	$(GCC48) $(LIBCFLAGS) -c $< -o $@
+
+$(O)/%.c.o: $(MOTION)/%.c
+	@mkdir -p $(O)
+	$(GCC48) $(CFLAGS) -c $< -o $@
+
+$(O)/%.cpp.o: $(MOTION)/%.cpp
+	@mkdir -p $(O)
+	GCC48_DRIVER=g++ $(GCC48) $(CXXFLAGS) -c $< -o $@
+
+# the compile commands' options, for barkleymatch.py
+flags:
+	@echo "CFLAGS=$(CFLAGS)"
+	@echo "CXXFLAGS=$(CXXFLAGS)"
+	@echo "LIBCFLAGS=$(LIBCFLAGS)"
+	@echo "LIB=$(LIB)"
+
+.PHONY: all flags fwlib

@@ -1,0 +1,44 @@
+diff -ru a/inc/stm32f10x_map.h b/inc/stm32f10x_map.h
+--- a/inc/stm32f10x_map.h
++++ b/inc/stm32f10x_map.h
+@@ -435,6 +435,8 @@
+   vu32 APB1ENR;
+   vu32 BDCR;
+   vu32 CSR;
++  u32 RESERVED0;
++  vu32 CFGR2;            /* SCE: the value line's PLL source divider (PREDIV1) */
+ } RCC_TypeDef;
+ 
+ /*------------------------ Real-Time Clock -----------------------------------*/
+diff -ru a/src/stm32f10x_rcc.c b/src/stm32f10x_rcc.c
+--- a/src/stm32f10x_rcc.c
++++ b/src/stm32f10x_rcc.c
+@@ -206,7 +206,7 @@
+   {
+     HSEStatus = RCC_GetFlagStatus(RCC_FLAG_HSERDY);
+     StartUpCounter++;  
+-  } while((HSEStatus == RESET) && (StartUpCounter != HSEStartUp_TimeOut));
++  } while((StartUpCounter != HSEStartUp_TimeOut) && (HSEStatus == RESET));
+ 
+ 
+   if (RCC_GetFlagStatus(RCC_FLAG_HSERDY) != RESET)
+@@ -694,17 +694,8 @@
+         RCC_Clocks->SYSCLK_Frequency = (HSI_Value >> 1) * pllmull;
+       }
+       else
+-      {/* HSE selected as PLL clock entry */
+-
+-        if ((RCC->CFGR & CFGR_PLLXTPRE_Mask) != (u32)RESET)
+-        {/* HSE oscillator clock divided by 2 */
+-
+-          RCC_Clocks->SYSCLK_Frequency = (HSE_Value >> 1) * pllmull;
+-        }
+-        else
+-        {
+-          RCC_Clocks->SYSCLK_Frequency = HSE_Value * pllmull;
+-        }
++      {/* SCE: HSE through the value line's PREDIV1 selected as PLL clock entry */
++        RCC_Clocks->SYSCLK_Frequency = (HSE_Value / ((RCC->CFGR2 & 0xF) + 1)) * pllmull;
+       }
+       break;
+ 
