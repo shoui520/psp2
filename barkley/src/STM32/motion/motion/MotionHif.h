@@ -243,6 +243,7 @@ private:
 	bool resultPending_;
 	s32 result_;
 	u32 frameSize_;
+	u32 reserved_;			/* nothing reads or writes it (HifSpi's members follow at 288) */
 
 	static const Command commands_[HIF_COMMANDS];
 	static const s8 sampleTypes_[MOTION_TYPES];
