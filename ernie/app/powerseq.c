@@ -337,7 +337,7 @@ unsigned char powerAccOff(void)
 	return result;
 }
 
-unsigned char powerWirelessOn(void)
+unsigned char powerOnWlan(void)
 {
 	unsigned char result;
 	unsigned int mask0;
@@ -369,7 +369,7 @@ unsigned char powerWirelessOn(void)
 	return result;
 }
 
-unsigned char powerWirelessOff(void)
+unsigned char powerOffWlan(void)
 {
 	unsigned char result;
 	unsigned int mask0;

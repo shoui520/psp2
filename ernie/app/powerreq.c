@@ -503,9 +503,9 @@ static void powerRequestCtrlWirelessPower(void)
 
 	if (powerRequest.length == 1) {
 		if (powerRequestData[0] != 0)
-			result = powerWirelessOn();
+			result = powerOnWlan();
 		else
-			result = powerWirelessOff();
+			result = powerOffWlan();
 		result = powerResult(result);
 	} else
 		result = 0x3b;

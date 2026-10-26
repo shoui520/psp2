@@ -18,6 +18,9 @@ extern void sleepFactorSet7(unsigned char on);
 extern void sleepFactorSet3(unsigned char on);
 extern void sleepFactorSet8(unsigned char on);
 extern void sleepFactorSet25(unsigned char on);
+#ifdef ERNIE_UPDATER
+extern void sleepFactorSet24(unsigned char on);
+#endif
 extern void sleepFactorSetStatus3(unsigned char on);
 extern void sleepFactorSet0(unsigned char on);
 extern void sleepFactorSet1(unsigned char on);

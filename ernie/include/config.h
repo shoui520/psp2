@@ -102,7 +102,9 @@ struct ConfigBlock {
 						   stateOffHandle) */
 	unsigned long	suspendWakeMaskOff;	/* and in the suspend state */
 	unsigned long	suspendWakeMaskOn;
-	unsigned char	reserved27[0x12c - 0x118];
+	unsigned char	reserved27[0x128 - 0x118];
+	unsigned char	wlanLine;		/* the updater's: P3.1, the WLAN's line, driven */
+	unsigned char	reserved31[0x12c - 0x129];
 	struct ChargeAlarmLimit chargeAlarmLimits[4];	/* the battery temperature's alarms */
 	unsigned int	chargeAlarm0Delay;	/* timer 0x1d's, when alarm 0 comes on */
 	unsigned int	chargeTempInterval;	/* the ticks between two chargeAlarmUpdate */

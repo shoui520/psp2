@@ -190,7 +190,7 @@ void chargeUpdate(void)
 			ena_dsp();
 			if (changed & 0x0200) {
 				if ((charge.flags & 0x0200) && (state & 0x0008)) {
-					powerWirelessOff();
+					powerOffWlan();
 					powerBbmcCycle();
 				}
 				chargeFactors.5 = (charge.flags & 0x0200) ? 1 : 0;

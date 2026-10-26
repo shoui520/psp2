@@ -191,7 +191,7 @@ static void powerJobSuspend(void)
 {
 	powerSeqSuspend();
 	if (chargeBatteryLevel9()) {
-		powerWirelessOff();
+		powerOffWlan();
 		if (!bbmcModeIsNone() || configGet()->suspendCheck)
 			powerBbmcCycle();
 	}

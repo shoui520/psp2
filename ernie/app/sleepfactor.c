@@ -189,6 +189,19 @@ void sleepFactorSet10(unsigned char on)
 	}
 }
 
+#ifdef ERNIE_UPDATER
+/* the updater's only */
+void sleepFactorSet24(unsigned char on)
+{
+	if (sleepFactor.bits[3].b0 ^ on) {
+		dis_dsp();
+		sleepFactor.bits[3].b0 = on;
+		sleepFactorStatus.bits.changed = 1;
+		ena_dsp();
+	}
+}
+#endif
+
 void sleepFactorSetStatus4(unsigned char on)
 {
 	sleepFactorStatus.bits.status4 = on;
