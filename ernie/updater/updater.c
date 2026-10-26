@@ -78,7 +78,7 @@ int updaterInitErnieUpdMode(void)
 		updMode = 3;
 		hostOpen();
 		updaterDecryptInit();
-		sub_3B604(0xa5a5);
+		handshakeSetUnlocked(HANDSHAKE_UNLOCKED);
 		updInput.bits.multiCnReported = updInput.bits.multiCn = updInput.bits.multiCnLast =
 			!P2.0;
 	}
@@ -108,7 +108,7 @@ unsigned char updModeChange(unsigned char mode)
 			break;
 		case 3:
 			if (chargeMayStart()) {
-				sub_3B1AE();
+				handshakeInit();
 				watchdogSetup();
 				updaterDecryptInit();
 				powerResume();

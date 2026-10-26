@@ -199,9 +199,17 @@ extern void powerStartTimer(unsigned int bits, unsigned char id, unsigned int ti
 extern unsigned char resetFlags;
 extern void rtcInit(void);
 extern unsigned char configStorageInit(void);
-extern void sub_3B1AE(void);
-extern void sub_3B604(unsigned int);
-extern unsigned char sub_3B5AF(void);
+
+/* handshake.c: the host's handshake, mode 0x0b only */
+#define HANDSHAKE_LOCKED	0x5a5a
+#define HANDSHAKE_UNLOCKED	0xa5a5
+extern int handshakeInit(void);
+extern unsigned char handshakeSetMode(unsigned char state, unsigned char mode);
+extern unsigned char handshakeCommand(unsigned char *data);
+extern unsigned char handshakeState(void);
+extern unsigned char handshakeUnlocked11(void);
+extern unsigned char handshakeRefuse(void);
+extern void handshakeSetUnlocked(unsigned int unlocked);
 
 /* command.c: the host's commands, and the update's */
 extern unsigned char updSegment;		/* the segment programmed ("block") */

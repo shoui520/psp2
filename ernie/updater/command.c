@@ -4,7 +4,7 @@
  * its data in pieces, 0x1182 its programming (the data AES-128-CBC decrypted with the PS Dev
  * Wiki's "Ernie Update AES128CBC Key" for the PHAT boards, then written), then 0x1184 the
  * SHA-1 of every segment programmed, checked from the main loop, and 0x1183 the reboot. A
- * mode the application started (sub_3B5AF) takes every command; the others only those an
+ * mode the application started (handshakeUnlocked11) takes every command; the others only those an
  * update needs.
  */
 #pragma sfr
@@ -50,7 +50,6 @@ extern unsigned char byteFE06C[];		/* the library's descriptor and write buffer 
 #define IMAGE_VERSION_INFO	((const struct AppVersionInfo __far *)0x1f00)
 
 /* the handshake (0x3b1ae-0x3b60b, not written yet) */
-extern unsigned char sub_3B26E(unsigned char *data);
 
 /* 0x0090 and 0x0091's data: where in the scratch pad, and how many bytes */
 struct ScratchPadRange {
@@ -191,7 +190,7 @@ unsigned char hostCommandFast(unsigned int command)
 {
 	unsigned char result;
 
-	if (!sub_3B5AF()) {
+	if (!handshakeUnlocked11()) {
 		switch (command) {
 		case 0x0000:
 			result = hostCommandNull();
@@ -291,7 +290,7 @@ unsigned char hostCommandSlow(unsigned int command, struct HostSlowCommand *slow
 	if (hostLink.statusBit1)
 		return (unsigned char)kermitCmdChecksumError(slow);
 	rx = &hostRx;
-	if (!sub_3B5AF()) {
+	if (!handshakeUnlocked11()) {
 		switch (command) {
 		case 0x80:
 			result = hostCommandSetLinkConfig(slow);
@@ -903,7 +902,7 @@ int hostCommandHandshake(struct HostCommandFrame *rx, struct HostSlowCommand *sl
 
 	answer = &slow->answer;
 	memcpy(buf, rx->data, sizeof(buf));
-	error = sub_3B26E(buf);
+	error = handshakeCommand(buf);
 	memcpy(answer->data, buf, sizeof(buf));
 	answer->length = 0x2a;
 	if (error == 0)
