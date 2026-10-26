@@ -134,7 +134,7 @@ unsigned char serialAuthUnlocked14(void)
 	return serialAuthUnlocked[2] == SERIAL_AUTH_UNLOCKED;
 }
 
-void sub_224FD(void)
+void serialAuthInput(void)
 {
 }
 

@@ -44,9 +44,9 @@
 #define BBMC_REG_OR		1
 #define BBMC_REG_READ_ONLY	3
 
-extern unsigned char sub_11D57(void);
-extern unsigned char sub_11D61(void);
-extern void sub_123DB(int);
+extern unsigned char input2Bit0Get(void);
+extern unsigned char input2Bit1Get(void);
+extern void intp8Enable(int);
 
 struct Bbmc bbmc;			/* the link */
 static unsigned int bbmcSavedMode;	/* the mode as NVS holds it */
@@ -221,7 +221,7 @@ void bbmcStop(void)
 void bbmcWake(void)
 {
 	bbmcSetModeActive(0x0200);
-	if (sub_11D57())
+	if (input2Bit0Get())
 		bbmc.state = 2;
 }
 
@@ -273,10 +273,10 @@ unsigned char bbmcEvent(FLGPTN ptn)
 	if (ptn & BBMC_EVENT_POWER) {
 		unsigned char level;
 
-		level = sub_11D57();
+		level = input2Bit0Get();
 		if (level != 0) {
 			if (bbmc.state == 1 || stateGet() == 0x0004)
-				sub_21F33(0x0200);
+				powerDeviceSetPending(0x0200);
 			else
 				bbmcPowerOn();
 		} else {
@@ -298,7 +298,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 	if (ptn & BBMC_EVENT_WAKE) {
 		unsigned char level;
 
-		level = sub_11D61();
+		level = input2Bit1Get();
 		if (level == 0 && bbmc.state != 1)
 			bbmcSetStatus(4);
 	}
@@ -309,13 +309,13 @@ unsigned char bbmcEvent(FLGPTN ptn)
 	if (ptn & BBMC_EVENT_LINK_TIMEOUT) {
 		if (stateGet() == 0x0008) {
 			uart2Close(1);
-			sub_123DB(1);
+			intp8Enable(1);
 		}
 	}
 	if (ptn & BBMC_EVENT_START)
 		;
 	if (ptn & BBMC_EVENT_RESUME) {
-		sub_123DB(0);
+		intp8Enable(0);
 		uart2Open();
 		timerStart(0x13, 5000);
 	}
@@ -340,7 +340,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 		case 0x8008:
 			if (bbmcIsOn()) {
 				uart2Close(1);
-				sub_123DB(1);
+				intp8Enable(1);
 				if (P7.4)
 					task6SetFlag(6, BBMC_EVENT_RESUME);
 				bbmc.transition = 0;

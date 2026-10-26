@@ -34,14 +34,14 @@ struct PowerPart {
 };
 
 extern void inputInit(void);
-extern void sub_11572(void);
-extern void sub_1159F(void);
-extern void sub_115F0(void);
-extern void sub_116D8(void);
-extern void sub_1168D(void);
-extern void sub_116B7(void);
-extern void sub_1178A(void);
-extern unsigned char sub_11D57(void);
+extern void inputResumePrepare(void);
+extern void inputResumeOpen(void);
+extern void inputPowerOff(void);
+extern void inputSuspend(void);
+extern void inputShutdown(void);
+extern void inputCut(void);
+extern void inputReset(void);
+extern unsigned char input2Bit0Get(void);
 
 static unsigned char powerError;
 
@@ -117,17 +117,17 @@ void powerSequence(void)
 	taskHookState();
 }
 
-void sub_23A30(void)
+void powerErrorClear(void)
 {
 	powerError = 0;
 }
 
-unsigned char sub_23A37(void)
+unsigned char powerErrorGet(void)
 {
 	return powerError;
 }
 
-unsigned char sub_23A40(void)
+unsigned char powerFaulty(void)
 {
 	return 0;
 }
@@ -203,7 +203,7 @@ unsigned char powerOn(void)
 	result = 0;
 	powerPendingReset();
 	sleepFactorInit();
-	sub_23A30();
+	powerErrorClear();
 	spiDevInit();
 	powerPendingClear(1);
 	task2SetFlag(3, 0x1000);
@@ -237,7 +237,7 @@ unsigned char powerResume(union PowerRequest *request)
 		powerParamLoad();
 	sleepFactorSet20(0);
 	stateWakeupFactor.word = request->word;
-	sub_11572();
+	inputResumePrepare();
 	task2SetFlag(3, 0x1000);
 	powerWait(0x19);
 	powerPendingClear(2);
@@ -248,7 +248,7 @@ unsigned char powerResume(union PowerRequest *request)
 		powerWait(0x19);
 	}
 	powerPendingClear(5);
-	sub_1159F();
+	inputResumeOpen();
 	powerPendingClear(3);
 	csiOpenLsb();
 	hostInit();
@@ -263,8 +263,8 @@ unsigned char powerResume(union PowerRequest *request)
 		result = spiDevAuthenticate();
 		break;
 	case 0x0d:
-		sub_23A30();
-		result = sub_23A37();
+		powerErrorClear();
+		result = powerErrorGet();
 		break;
 	case 0x11:
 		result = spiDevPowerOn();
@@ -309,7 +309,7 @@ unsigned char powerOff(void)
 	}
 	if (configTakeChanged() != 0)
 		powerParamLoad();
-	sub_115F0();
+	inputPowerOff();
 	powerPendingClear(3);
 	hostIntDisable();
 	dly_tsk(1);
@@ -349,7 +349,7 @@ unsigned char powerSuspend(void)
 	result = 0;
 	powerPendingReset();
 	sleepFactorSet20(0);
-	sub_116D8();
+	inputSuspend();
 	powerPendingClear(3);
 	hostIntDisable();
 	dly_tsk(1);
@@ -386,7 +386,7 @@ unsigned char powerShutdown(void)
 
 	result = 0;
 	powerPendingReset();
-	sub_1168D();
+	inputShutdown();
 	powerPendingClear(3);
 	hostIntDisable();
 	dly_tsk(1);
@@ -423,7 +423,7 @@ unsigned char powerCut(void)
 	powerJobPostCut();
 	powerWait(0x19);
 	powerPendingClear(5);
-	if (sub_11D57() == 1)
+	if (input2Bit0Get() == 1)
 		P33 = 1;
 	P6.2 = 0;
 	hostIntDisable();
@@ -439,7 +439,7 @@ unsigned char powerCut(void)
 	P1.7 = 0;
 	dly_tsk(1);
 	powerPendingClear(1);
-	sub_116B7();
+	inputCut();
 	powerPendingClear(3);
 	powerPendingClear(6);
 	task2SetFlag(3, 0x1000);
@@ -463,7 +463,7 @@ unsigned char powerReset(void)
 
 	result = 0;
 	powerPendingReset();
-	sub_1178A();
+	inputReset();
 	powerPendingClear(3);
 	hostIntDisable();
 	dly_tsk(1);

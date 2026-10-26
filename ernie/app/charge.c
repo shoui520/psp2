@@ -22,8 +22,8 @@
 #include "task.h"
 #include "timer.h"
 
-extern void sub_1276A(void);
-extern unsigned char sub_126C9(void);
+extern void inputChanged(void);
+extern unsigned char input1Bit7Active(void);
 
 __sreg union CookieStatus1 cookieStatus1;
 __sreg union CookieStatus2 cookieStatus2;
@@ -128,7 +128,7 @@ void chargeUpdate(void)
 		if ((status1.bits.ac ^ cookieStatus1.bits.ac) ||
 		    (status1.bits.charging ^ cookieStatus1.bits.charging) ||
 		    (status2.bits.vbus ^ cookieStatus2.bits.vbus))
-			sub_1276A();
+			inputChanged();
 		if (cookieStatus1.bits.level)
 			;
 	}
@@ -203,7 +203,7 @@ void chargeUpdate(void)
 			chargeFactors.4 = (charge.flags & 0x0100) ? 1 : 0;
 			sleepFactorSet18(chargeFactors.4);
 			if (chargeFactors.5) {
-				if (sub_126C9())
+				if (input1Bit7Active())
 					chargeLedSetBlink(1);
 				powerLedSetAlarm(1);
 			} else {

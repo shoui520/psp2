@@ -133,8 +133,8 @@ int hostFrameBegin(void);
 int hostFrameCommand(void);
 unsigned char hostFrameData(void);
 int hostFrameFinish(void);
-int sub_141DF(void);
-int sub_14215(void);
+int hostRequestSendCommandHigh(void);
+int hostThrottleFrameEnd(void);
 int hostDispatch(unsigned int command, unsigned char *out, unsigned char *length);
 struct HostRequest *hostFindRequest(unsigned char id);
 unsigned char hostChecksum(unsigned char *data, unsigned char length);
@@ -304,11 +304,11 @@ int hostStep(FLGPTN flgptn)
 		hostLink.state = HOST_IDLE;
 		break;
 	case 0x18:
-		sub_141DF();
+		hostRequestSendCommandHigh();
 		hostLink.state++;
 		break;
 	case 0x1a:
-		sub_14215();
+		hostThrottleFrameEnd();
 		hostLink.state = HOST_IDLE;
 		break;
 	case HOST_ABORT:
@@ -342,7 +342,7 @@ void hostRequestSetState(struct HostRequest *request, unsigned char state)
 	}
 }
 
-void sub_138DB(struct HostRequest *request, unsigned char state)
+void hostRequestSetStateChecked(struct HostRequest *request, unsigned char state)
 {
 	if (request != NULL) {
 		switch (state) {
@@ -581,7 +581,7 @@ int hostFrameFinish(void)
 	return 0;
 }
 
-int sub_141DF(void)
+int hostRequestSendCommandHigh(void)
 {
 	struct HostRequest *request;
 
@@ -591,7 +591,7 @@ int sub_141DF(void)
 	return 0;
 }
 
-int sub_14215(void)
+int hostThrottleFrameEnd(void)
 {
 	P90 = 1;
 	P5.7 = 1;

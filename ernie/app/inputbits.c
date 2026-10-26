@@ -11,31 +11,31 @@
 
 /* nothing else refers to it, so its owner is not known: type 0, never called; the program's
    one initialised variable */
-struct InputHandler inputHandlerFE16C = { 0, 0, 0 };
+struct InputHandler inputHandler1Bit1 = { 0, 0, 0 };
 
 #define LENGTH(list)	(sizeof(list) / sizeof((list)[0]))
 
 static struct InputHandler * const inputHandlers1Bit4[] = { &inputHandlerWake2 };
 static struct InputHandler * const inputHandlers1Bit2[] = {
-	&inputHandler1245B, &inputHandler1245C
+	&inputHandler1Bit2Low, &inputHandler1Bit2High
 };
-static struct InputHandler * const inputHandlers1Bit1[] = { &inputHandlerFE16C };
+static struct InputHandler * const inputHandlers1Bit1[] = { &inputHandler1Bit1 };
 static struct InputHandler * const inputHandlers1Bit5[] = {
-	&inputHandlerSerial1, &inputHandler1245D
+	&inputHandlerSerial1, &inputHandlerMultiCn
 };
 static struct InputHandler * const inputHandlers1Bit6[] = { &inputHandlerWake1 };
 static struct InputHandler * const inputHandlers1Bit7[] = {
-	&inputHandler29B68, &inputHandler1275F
+	&inputHandlerCharge, &inputHandler1Bit7
 };
-static struct InputHandler * const inputHandlers1Bit3[] = { &inputHandler12698 };
+static struct InputHandler * const inputHandlers1Bit3[] = { &inputHandler1Bit3 };
 static struct InputHandler * const inputHandlers3Bit0[] = { &inputHandlerSerial2Request };
 static struct InputHandler * const inputHandlers3Bit1[] = { &inputHandlerSerial2Link };
-static struct InputHandler * const inputHandlers3Bit2[] = { &inputHandler224FD };
+static struct InputHandler * const inputHandlers3Bit2[] = { &inputHandler3Bit2 };
 static struct InputHandler * const inputHandlers2Bit0[] = {
 	&powerInputHandler, &bbmcInputHandlerPower
 };
 static struct InputHandler * const inputHandlers2Bit1[] = { &bbmcInputHandlerWake };
-static struct InputHandler * const inputHandlers1Bit0[] = { &inputHandler12489 };
+static struct InputHandler * const inputHandlers1Bit0[] = { &inputHandler1Bit0 };
 
 static unsigned char inputHandlers1Bit6Count(void);
 static unsigned char inputHandlers1Bit7Count(void);

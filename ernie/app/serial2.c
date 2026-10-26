@@ -24,7 +24,7 @@
 #define SERIAL2_TEST_AREA	0xe0	/* the scratch pad's test area */
 #define SERIAL2_TEST_SIZE	0x20
 
-extern unsigned char sub_11D4B(void);
+extern unsigned char intp11Low(void);
 
 static unsigned char serial2Data[0x20];
 static unsigned char serial2Armed;	/* the test area was empty: notification 0x0211 may run */
@@ -65,11 +65,11 @@ void serial2InputRequest(void)
 	return;
 }
 
-/* an input's edges: event 0x0100 of flag 3, and P7.1 high unless sub_11D4B holds */
+/* an input's edges: event 0x0100 of flag 3, and P7.1 high unless intp11Low holds */
 void serial2InputLink(void)
 {
 	task2SetFlag(3, 0x0100);
-	if (!sub_11D4B())
+	if (!intp11Low())
 		serial2SetP71(1);
 }
 

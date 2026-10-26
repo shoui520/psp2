@@ -40,18 +40,18 @@ struct InputBit {
 };
 
 extern struct InputHandler inputHandlerWake2;
-extern struct InputHandler inputHandler1245B;
-extern struct InputHandler inputHandler1245C;
+extern struct InputHandler inputHandler1Bit2Low;
+extern struct InputHandler inputHandler1Bit2High;
 extern struct InputHandler inputHandlerSerial2Request;
 extern struct InputHandler inputHandlerSerial2Link;
 extern struct InputHandler inputHandlerSerial1;
-extern struct InputHandler inputHandler224FD;
-extern struct InputHandler inputHandler1245D;
+extern struct InputHandler inputHandler3Bit2;
+extern struct InputHandler inputHandlerMultiCn;
 extern struct InputHandler inputHandlerWake1;
-extern struct InputHandler inputHandler29B68;
-extern struct InputHandler inputHandler1275F;
-extern struct InputHandler inputHandler12698;
-extern struct InputHandler inputHandler12489;
+extern struct InputHandler inputHandlerCharge;
+extern struct InputHandler inputHandler1Bit7;
+extern struct InputHandler inputHandler1Bit3;
+extern struct InputHandler inputHandler1Bit0;
 /* a group of input bits, debounced over two samples */
 struct InputGroup {
 	unsigned char	enable;		/* the bits dispatched */
@@ -87,11 +87,11 @@ extern __near unsigned char holdTicks;
 extern __near unsigned char holdReached;
 
 extern void inputProcess(void);
-extern unsigned char sub_12081(void);
-extern void sub_125F2(void);
-extern void sub_1267E(void);
-extern unsigned char sub_12775(unsigned char ticks);
-extern void sub_1278E(void);
+extern unsigned char button2Keys(void);
+extern void levelMonitor1Poll(void);
+extern void levelMonitorNone(void);
+extern unsigned char button2HoldReached(unsigned char ticks);
+extern void button2HoldReset(void);
 extern void inputScanHold(unsigned int ticks);
 extern void pinMonitor0Enable(unsigned char enable);
 extern void pinMonitor1Enable(unsigned char enable);

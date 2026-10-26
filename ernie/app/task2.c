@@ -29,8 +29,8 @@
 #include "version.h"
 #include "watchdog.h"
 
-extern unsigned char sub_11D1B(void);
-extern unsigned char sub_11D4B(void);
+extern unsigned char input1Bit5Active(void);
+extern unsigned char intp11Low(void);
 
 void task2MultiCnEvent(FLGPTN ptn);
 unsigned char task2StateEvent(void);
@@ -93,7 +93,7 @@ void task2MultiCnEvent(FLGPTN ptn)
 
 	state = serialGetMode();
 	if (ptn & 0x0001) {
-		if (sub_11D1B()) {
+		if (input1Bit5Active()) {
 			if (boardMultiCnIsDongle()) {
 				boardSetMultiCnOutput(0);
 				switch (state) {
@@ -122,7 +122,7 @@ void task2MultiCnEvent(FLGPTN ptn)
 		}
 	}
 	if (ptn & 0x0100) {
-		if (sub_11D4B())
+		if (intp11Low())
 			serial4Open2(2);
 		else
 			serial4Close2();

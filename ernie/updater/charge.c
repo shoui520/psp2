@@ -311,7 +311,7 @@ void chargeTimer(void)
 
 void chargeUpdateSoon(void)
 {
-	if (!(unsigned char)sub_4D6B())
+	if (!(unsigned char)chargeVbusCharging())
 		chargeUsbMode = 0;
 	updEventSet(0x82);
 }

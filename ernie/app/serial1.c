@@ -31,7 +31,7 @@
 #include "task.h"
 #include "version.h"
 
-extern unsigned char sub_11D4B(void);
+extern unsigned char intp11Low(void);
 
 extern const struct SerialCommand1 serialCommands1[];
 
@@ -910,7 +910,7 @@ static unsigned char serial1Command0190(struct SerialBuffer *request, struct Ser
 
 	response->data = serial1Data.byte;
 	response->length = 8;
-	serial1Data.byte[0] = sub_11D4B();
+	serial1Data.byte[0] = intp11Low();
 	serial1Data.byte[1] = serial4GetP71();
 	value = serial4GetCommand();
 	memcpy(&serial1Data.byte[2], &value, 2);

@@ -47,11 +47,11 @@ struct PowerCommand {
 	void		(*handler)(void);
 };
 
-extern unsigned char sub_11D57(void);
-extern unsigned char sub_11D61(void);
-extern void sub_11D6B(void);
-extern void sub_11D73(void);
-extern void sub_11D7B(void);
+extern unsigned char input2Bit0Get(void);
+extern unsigned char input2Bit1Get(void);
+extern void inputMotionInfoLater(void);
+extern void inputFlag40Later(void);
+extern void inputFlag80Later(void);
 
 /* the power status (0x0800) and the USB state (0x0804, 0x089a), the power module's */
 
@@ -331,7 +331,7 @@ unsigned char hostCommand0804(unsigned char *out, unsigned char *length)
 	if (chargeCurrent != 0xff) {
 		chargeCurrent = 0xff;
 		chargeUsbMode = 4;
-		sub_21F33(0x1000);
+		powerDeviceSetPending(0x1000);
 	}
 	*length = 0;
 	return 0;
@@ -583,7 +583,7 @@ static void powerRequest088D(void)
 		if (powerRequest.length == 1) {
 			if (powerRequestData[0] & 0x01) {
 				if (powerRequestData[0] & 0x80) {
-					if (sub_11D57() == 1) {
+					if (input2Bit0Get() == 1) {
 						powerBbmcPulse();
 						powerSleep(500);
 					}
@@ -592,9 +592,9 @@ static void powerRequest088D(void)
 			} else {
 				result = powerBbmcCycle();
 				if (powerRequestData[0] & 0x80) {
-					if (sub_11D57() == 1)
+					if (input2Bit0Get() == 1)
 						powerBbmcPulse();
-					if (result != 0 && sub_11D61() == 0)
+					if (result != 0 && input2Bit1Get() == 0)
 						result = 0;
 				}
 			}
@@ -780,18 +780,18 @@ static void powerRequestCtrlDeviceReset(void)
 			if (powerRequestData[1] & 0x02) {
 				if (powerRequestData[0] != 0 && motionGetStatus() != 0xff) {
 					P4.2 = 1;
-					sub_11D6B();
+					inputMotionInfoLater();
 				}
 				P6.3 = powerRequestData[0];
 			}
 			if (powerRequestData[1] & 0x04) {
 				if (powerRequestData[0] != 0)
-					sub_11D7B();
+					inputFlag80Later();
 				P0.5 = powerRequestData[0];
 			}
 			if (powerRequestData[1] & 0x08) {
 				if (powerRequestData[0] != 0)
-					sub_11D73();
+					inputFlag40Later();
 				P0.6 = powerRequestData[0];
 			}
 			if (powerRequestData[1] & 0x10)

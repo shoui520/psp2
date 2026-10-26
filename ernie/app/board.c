@@ -106,7 +106,7 @@ unsigned char boardMultiCnStop(void)
 /* the updater's: something on the multi-connector, as its inputs report it */
 unsigned char boardMultiCnIsDongle(void)
 {
-	return (unsigned char)sub_4D57();
+	return (unsigned char)input1Bit5Active();
 }
 #else
 /* a dongle on the multi-connector (its ID 2) */

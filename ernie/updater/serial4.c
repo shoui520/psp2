@@ -256,7 +256,7 @@ void serial4Flush(int port)
 /* opens UART4 again at baud, 13 ticks on */
 unsigned char serial4Reopen(int baud)
 {
-	sub_4DC5(13);
+	powerWaitLong(13);
 	return (unsigned char)uart4Open(baud);
 }
 
@@ -264,8 +264,8 @@ unsigned char serial4Open2(int baud)
 {
 	uart4Open(baud);
 	serial4Start(2);
-	sub_A5F9(1);
-	sub_4DC5(13);
+	serialSetLevel(1);
+	powerWaitLong(13);
 	serial2SetP71(0);
 	serial4.link = 2;
 	return 0;

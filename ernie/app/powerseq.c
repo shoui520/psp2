@@ -27,8 +27,8 @@
 #include "state.h"
 #include "timer.h"
 
-extern unsigned char sub_11D57(void);
-extern unsigned char sub_11D61(void);
+extern unsigned char input2Bit0Get(void);
+extern unsigned char input2Bit1Get(void);
 
 struct DeviceVersions deviceVersions;
 unsigned char elmoCommand[12];
@@ -634,7 +634,7 @@ unsigned char powerBbmcOff(void)
 	P37 = 0;
 	P125 = 0;
 	bbmcSetOff();
-	if (sub_11D57() == 1 && bbmcGetMode() == 0) {
+	if (input2Bit0Get() == 1 && bbmcGetMode() == 0) {
 		P6.5 = 1;
 		powerSleep(0x14);
 		P6.5 = 0;
@@ -650,16 +650,16 @@ unsigned char powerBbmcOn(void)
 		P33 = 1;
 		powerWaitInput(1, 0x4e2);
 		P33 = 0;
-		if (sub_11D57() == 0)
+		if (input2Bit0Get() == 0)
 			return 0;
 		return 2;
 	}
-	if (sub_11D57() == 1) {
+	if (input2Bit0Get() == 1) {
 		powerWaitInput(1, configGet()->bbmcPowerDelay);
-		if (sub_11D57())
+		if (input2Bit0Get())
 			powerBbmcPulse();
 		powerSleep(0x20);
-		if (sub_11D61() == 0) {
+		if (input2Bit1Get() == 0) {
 			sleepFactorSet9(0);
 			result = 0;
 		} else {
@@ -946,11 +946,11 @@ unsigned char powerBbmcStart(void)
 	unsigned char result;
 
 	bbmcStart();
-	if (sub_11D57() == 0) {
+	if (input2Bit0Get() == 0) {
 		P6.5 = 1;
 		powerWaitInput(2, 0x2ee);
 		P6.5 = 0;
-		if (sub_11D57() == 1 && sub_11D61() == 1) {
+		if (input2Bit0Get() == 1 && input2Bit1Get() == 1) {
 			sleepFactorSet9(1);
 			result = 0;
 		} else {

@@ -20,10 +20,10 @@
 
 unsigned int powerDevicePending;
 
-extern unsigned char sub_126C9(void);
+extern unsigned char input1Bit7Active(void);
 
-static void sub_21F53(void);
-static void sub_21F8E(void);
+static void task5ChargeLed(void);
+static void task5LedOff(void);
 
 void task5(VP_INT exinf)
 {
@@ -62,11 +62,11 @@ void task5(VP_INT exinf)
 			}
 			if (ptn & 0x0008) {
 				clr_flg(4, ~0x0008);
-				sub_21F8E();
+				task5LedOff();
 			}
 			if (ptn & 0x1000) {
 				clr_flg(4, ~0x1000);
-				sub_21F53();
+				task5ChargeLed();
 			}
 			if (ptn & 0x0800) {
 				clr_flg(4, ~0x0800);
@@ -154,21 +154,21 @@ void powerJobPostUpdate(void)
 	return;
 }
 
-unsigned char sub_21F2A(void)
+unsigned char elmoVersion0(void)
 {
 	return deviceVersions.elmo[0];
 }
 
-void sub_21F33(unsigned int bits)
+void powerDeviceSetPending(unsigned int bits)
 {
 	powerDevicePending |= bits;
 	task5SetFlag(4, 0x0080);
 	return;
 }
 
-static void sub_21F53(void)
+static void task5ChargeLed(void)
 {
-	if (sub_126C9()) {
+	if (input1Bit7Active()) {
 		if (configGet()->state.bits.chargeLedOff) {
 			chargeLedSetOff(1);
 			return;
@@ -183,7 +183,7 @@ static void sub_21F53(void)
 	return;
 }
 
-static void sub_21F8E(void)
+static void task5LedOff(void)
 {
 	ledSetOff(1);
 }

@@ -96,9 +96,9 @@ union TouchState {
 	struct {
 		unsigned char	mode:2;		/* the panels' settings (touchSetMode) */
 		unsigned char	reserved:2;
-		unsigned char	input0:1;	/* sub_11D23() */
-		unsigned char	input5:1;	/* sub_11D1B() */
-		unsigned char	input3:1;	/* sub_11D2B() */
+		unsigned char	input0:1;	/* input1Bit0Active() */
+		unsigned char	input5:1;	/* input1Bit5Active() */
+		unsigned char	input3:1;	/* input1Bit3Active() */
 		unsigned char	valid:1;
 	} bits;
 };

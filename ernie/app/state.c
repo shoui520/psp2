@@ -26,23 +26,23 @@
 #include "timer.h"
 #include "updatereq.h"
 
-extern void sub_1164E(void);
-extern void sub_116A1(void);
-extern void sub_116CB(void);
-extern void sub_1177B(void);
-extern unsigned char sub_11D3B(void);
-extern unsigned char sub_1267F(void);
-extern unsigned char sub_1268B(void);
-extern unsigned char sub_126C9(void);
-extern int sub_23A40(void);
-extern unsigned char sub_11CFB(void);
-extern unsigned char sub_11D03(void);
+extern void inputStateOff(void);
+extern void inputStateShutdown(void);
+extern void inputStateCut(void);
+extern void inputStateSuspend(void);
+extern unsigned char input3Bit2Active(void);
+extern unsigned char levelMonitor2Low(void);
+extern unsigned char levelMonitor1High(void);
+extern unsigned char input1Bit7Active(void);
+extern int powerFaulty(void);
+extern unsigned char input1Bit4Active(void);
+extern unsigned char input1Bit6Active(void);
 extern void pinMonitor1Enable(unsigned char enable);
 extern void pinMonitor0Enable(unsigned char enable);
-extern int sub_12019(void);
-extern int sub_1203A(void);
-extern int sub_1204D(void);
-extern int sub_1206E(void);
+extern int button1Reset(void);
+extern int button1Result(void);
+extern int button2Reset(void);
+extern int button2Result(void);
 
 static int stateStartEnter(void);
 static int stateOnEnter(void);
@@ -275,7 +275,7 @@ static int stateOffEnter(void)
 	unsigned char length;
 	unsigned char size;
 
-	sub_1164E();
+	inputStateOff();
 	serial4Answer0205();
 	serialAnswer0105();
 	tau0PowerOff();
@@ -334,7 +334,7 @@ static int stateResumeEnter(void)
 
 static int stateSuspendEnter(void)
 {
-	sub_1177B();
+	inputStateSuspend();
 	tau0PowerOff();
 	stateCheck();
 	if (sleepFactorGet() & 0x00800000)
@@ -348,7 +348,7 @@ static int stateSuspendEnter(void)
 
 static int stateShutdownEnter(void)
 {
-	sub_116A1();
+	inputStateShutdown();
 	tau0PowerOff();
 	stateCheck();
 	return 0;
@@ -356,7 +356,7 @@ static int stateShutdownEnter(void)
 
 static int stateCutEnter(void)
 {
-	sub_116CB();
+	inputStateCut();
 	tau0PowerOff();
 	stateCheck();
 	if (stateCause == 0x41)
@@ -415,10 +415,10 @@ static int stateOffHandle(struct StateEvent *event)
 	default:
 		if ((event->transition & 0x7f) >= 0x20)
 			break;
-		if (sub_23A40() != 0) {
+		if (powerFaulty() != 0) {
 			stateNext = STATE_RESUME;
 			stateRequest.bits.mode = 0x0d;
-		} else if (serialAuthUnlocked0() != 0 || sub_11D3B() != 0) {
+		} else if (serialAuthUnlocked0() != 0 || input3Bit2Active() != 0) {
 			stateNext = STATE_RESUME;
 			stateRequest.bits.mode = 0x0c;
 		} else if (event->transition == 0x11) {
@@ -522,11 +522,11 @@ static int stateShutdownHandle(struct StateEvent *event)
 		stateNext = STATE_CUT;
 		break;
 	case 0x61:
-		if (sub_1268B())
+		if (levelMonitor1High())
 			stateNext = STATE_ON;
 		break;
 	case 0x62:
-		if (sub_126C9())
+		if (input1Bit7Active())
 			stateNext = STATE_ON;
 		break;
 	}
@@ -538,7 +538,7 @@ static int stateCutHandle(struct StateEvent *event)
 	switch (event->transition) {
 	case 0x42:
 	case 0x61:
-		if (!sub_1267F() && sub_1268B())
+		if (!levelMonitor2Low() && levelMonitor1High())
 			stateNext = STATE_ON;
 		break;
 	}
@@ -641,42 +641,42 @@ static unsigned int stateNextOf(void)
 	return next;
 }
 
-/* input handler: input 1.4 (sub_11CFB) wakes a suspended system; its release with button 2
+/* input handler: input 1.4 (input1Bit4Active) wakes a suspended system; its release with button 2
    not pressed and input 1.6 up starts an off one */
 void stateInputWake2(void)
 {
 	unsigned int state;
 
 	state = stateGet();
-	if (sub_11CFB()) {
+	if (input1Bit4Active()) {
 		if (state == STATE_SUSPEND)
 			stateTransition(0);
-		sub_1204D();
+		button2Reset();
 		pinMonitor1Enable(1);
 	} else {
-		if (!(unsigned char)sub_1206E() && !sub_11D03() && state == STATE_OFF) {
+		if (!(unsigned char)button2Result() && !input1Bit6Active() && state == STATE_OFF) {
 			stateTransition(0);
 			serial2Arm();
 		}
-		sub_1204D();
+		button2Reset();
 	}
 }
 
-/* input handler: input 1.6 (sub_11D03) wakes a suspended system by transition 0x12 */
+/* input handler: input 1.6 (input1Bit6Active) wakes a suspended system by transition 0x12 */
 void stateInputWake1(void)
 {
 	unsigned int state;
 
 	state = stateGet();
-	if (sub_11D03()) {
+	if (input1Bit6Active()) {
 		if (state == STATE_SUSPEND)
 			stateTransition(0x12);
-		sub_12019();
+		button1Reset();
 		pinMonitor0Enable(1);
 	} else {
-		if ((unsigned char)sub_1203A()) {
+		if ((unsigned char)button1Result()) {
 		}
-		sub_12019();
+		button1Reset();
 	}
 }
 

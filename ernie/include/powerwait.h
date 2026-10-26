@@ -1,5 +1,5 @@
 /*
- * The power sequences' waits (app/powerwait.c): the device jobs task 5 runs (sub_21F33 posts
+ * The power sequences' waits (app/powerwait.c): the device jobs task 5 runs (powerDeviceSetPending posts
  * their bits), the waits on TM03 and the kernel's ticks, the wait for the power input's edge,
  * and the timers 4-0xe whose bits a sequence waits on.
  */

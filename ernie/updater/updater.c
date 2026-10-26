@@ -481,7 +481,7 @@ int multiCnChanged(void)
 /* event 4: P7.7 changed */
 int p77Changed(void)
 {
-	if (sub_4D63())
+	if (intp11Low())
 		serial4Open2(2);
 	else
 		serial4Close2();

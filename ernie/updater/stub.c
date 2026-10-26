@@ -83,36 +83,36 @@ int stateSerialLock(void)
 	return (unsigned char)updStateEvent(&event);
 }
 
-int sub_4D3F(void)
+int input2Bit0Get(void)
 {
 	if (P12.6)
 		return 1;
 	return 0;
 }
 
-int sub_4D47(void)
+int input2Bit1Get(void)
 {
 	if (P3.4)
 		return 1;
 	return 0;
 }
 
-int sub_4D4F(void)
+int input3Bit0High(void)
 {
 	return P7.3 != 0;
 }
 
-int sub_4D57(void)
+int input1Bit5Active(void)
 {
 	return updInput.bits.multiCnReported;
 }
 
-unsigned char sub_4D63(void)
+unsigned char intp11Low(void)
 {
 	return P7.7 == 0;
 }
 
-int sub_4D6B(void)
+int chargeVbusCharging(void)
 {
 	return 1;
 }
@@ -143,7 +143,7 @@ int updStateEvent(struct StateEvent *event)
 }
 
 /* waits ms milliseconds on timer channel 3, at most 500 at a time */
-void sub_4DC5(unsigned int ms)
+void powerWaitLong(unsigned int ms)
 {
 	unsigned int count;
 	unsigned int step;
@@ -162,25 +162,25 @@ void sub_4DC5(unsigned int ms)
 	}
 }
 
-int sub_4E1F(void)
+int bbmcStart(void)
 {
 	return 0;
 }
 
-int sub_4E21(void)
+int bbmcSetOff(void)
 {
 	return 0;
 }
 
-void sub_4E23(void)
+void bbmcStop(void)
 {
 }
 
-void sub_4E24(void)
+void bbmcWake(void)
 {
 }
 
-int sub_4E25(void)
+int bbmcGetMode(void)
 {
 	return 0;
 }

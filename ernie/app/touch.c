@@ -20,9 +20,9 @@
 #include "touch.h"
 
 
-extern unsigned char sub_11D1B(void);
-extern unsigned char sub_11D23(void);
-extern unsigned char sub_11D2B(void);
+extern unsigned char input1Bit5Active(void);
+extern unsigned char input1Bit0Active(void);
+extern unsigned char input1Bit3Active(void);
 
 /* the frame after i */
 #define TOUCH_NEXT_FRAME(i)	((i) + 1 < TOUCH_FRAMES ? (i) + 1 : 0)
@@ -876,9 +876,9 @@ void touchUpdateState(void)
 
 	if (touch.flags & (TOUCH_PANEL0 | TOUCH_PANEL1)) {
 		touch.state.bits.valid = 1;
-		touch.state.bits.input3 = sub_11D2B();
-		touch.state.bits.input5 = sub_11D1B();
-		touch.state.bits.input0 = sub_11D23();
+		touch.state.bits.input3 = input1Bit3Active();
+		touch.state.bits.input5 = input1Bit5Active();
+		touch.state.bits.input0 = input1Bit0Active();
 		mode = 1;
 		if (touch.state.bits.mode != mode) {
 			touchSetMode(mode);

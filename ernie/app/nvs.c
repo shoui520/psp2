@@ -701,7 +701,7 @@ unsigned char nvsGetInfo(unsigned char *mark, unsigned char *missing, unsigned i
 	return 0;
 }
 
-void sub_233C0(void)
+void nvsNone(void)
 {
 }
 

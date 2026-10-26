@@ -69,7 +69,7 @@ struct InputRequests {
 	} controlsAnswer;
 };
 
-extern unsigned char sub_11D1B(void);
+extern unsigned char input1Bit5Active(void);
 
 
 void controlsRequestNotify(void);
@@ -510,7 +510,7 @@ unsigned char hostCommandControlsAnalogBoth(unsigned char *out, unsigned char *l
 /* 0x0103 (sceSysconGetMultiCnInfo) */
 unsigned char hostCommandMultiCnInfo(unsigned char *out, unsigned char *length)
 {
-	if (sub_11D1B())
+	if (input1Bit5Active())
 		out[0] = 0x80;
 	else
 		out[0] = 0;

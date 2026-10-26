@@ -397,30 +397,30 @@ unsigned char powerBbmcOn(void)
 {
 	unsigned char result;
 
-	if ((unsigned char)sub_4E25()) {
-		sub_4E21();
+	if ((unsigned char)bbmcGetMode()) {
+		bbmcSetOff();
 		P33 = 1;
 		powerWaitInput(1, 0x4e2);
 		P33 = 0;
-		if ((unsigned char)sub_4D3F() == 0)
+		if ((unsigned char)input2Bit0Get() == 0)
 			return 0;
 		return 2;
 	}
-	sub_4E21();
+	bbmcSetOff();
 	P37 = 0;
 	P125 = 0;
-	if ((unsigned char)sub_4D3F() == 1) {
+	if ((unsigned char)input2Bit0Get() == 1) {
 		P6.5 = 1;
 		powerSleep2(0x14);
 		P6.5 = 0;
 		powerWaitInput(1, 0x4e2);
-		if ((unsigned char)sub_4D3F()) {
+		if ((unsigned char)input2Bit0Get()) {
 			P33 = 1;
 			powerSleep2(0x0e74);
 			P33 = 0;
 		}
 		powerSleep2(0x20);
-		if ((unsigned char)sub_4D47() == 0) {
+		if ((unsigned char)input2Bit1Get() == 0) {
 			sleepFactorSet9(0);
 			result = 0;
 		} else {
@@ -430,7 +430,7 @@ unsigned char powerBbmcOn(void)
 		result = 0;
 	}
 	if (result)
-		sub_4E24();
+		bbmcWake();
 	return result;
 }
 
@@ -439,17 +439,17 @@ unsigned char powerBbmcCycle(void)
 {
 	unsigned char result;
 
-	sub_4E21();
+	bbmcSetOff();
 	P37 = 0;
 	P125 = 0;
 	P33 = 1;
 	powerSleep2(0x0e74);
 	P33 = 0;
-	if ((unsigned char)sub_4D47() == 0) {
+	if ((unsigned char)input2Bit1Get() == 0) {
 		sleepFactorSet9(0);
 		result = 0;
 	} else {
-		sub_4E24();
+		bbmcWake();
 		result = 2;
 	}
 	return result;

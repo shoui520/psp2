@@ -142,7 +142,7 @@ struct ConfigBlock {
 								   off state */
 			unsigned int	reserved11:1;
 			unsigned int	chargeLedOff:1;	/* the charge LED off at a reset, and while
-							   sub_126C9 holds (chargeLedSetOff) */
+							   input1Bit7Active holds (chargeLedSetOff) */
 			unsigned int	chargeHold:1;	/* set: no transition 0x0f in chargeUpdate */
 			unsigned int	chargeLedStateOff:1;	/* the charge LED off in the system
 									   states with bit 5 (chargeLedSetStateOff) */

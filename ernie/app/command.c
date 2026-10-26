@@ -380,14 +380,14 @@ allowed:
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 4, 0);
 				else if (commandRequestData[0] == 0) {
 					boardSetMultiCnOutput(0);
-					sub_21F33(0x20);
+					powerDeviceSetPending(0x20);
 					dly_tsk(25);
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 				} else if (serialGetState() != 0 && serialGetState() != 1)
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 5, 0);
 				else {
 					boardSetMultiCnOutput(1);
-					sub_21F33(0x10);
+					powerDeviceSetPending(0x10);
 					dly_tsk(10);
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 				}

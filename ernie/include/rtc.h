@@ -22,7 +22,7 @@ extern void		setClock(unsigned long clock);
 extern union RtcTick	getAlarm(void);
 extern void		setAlarm(unsigned long alarm);
 extern int		isAlarmReached(void);
-extern unsigned int	sub_11118(void);
+extern unsigned int	sleepFactorBit3Get(void);
 extern void		setAlarmMode(unsigned char mode);
 extern unsigned char	getAlarmMode(void);
 

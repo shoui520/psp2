@@ -138,7 +138,7 @@ unsigned char serialAuthUnlocked14(void)
 }
 
 /* never called */
-void sub_B2B4(void)
+void serialAuthNone(void)
 {
 }
 

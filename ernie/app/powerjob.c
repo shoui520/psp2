@@ -26,8 +26,8 @@
 #define POWER_JOB_PART	5	/* the power part the jobs report */
 
 
-extern void sub_11D73(void);
-extern void sub_11D7B(void);
+extern void inputFlag40Later(void);
+extern void inputFlag80Later(void);
 
 unsigned char powerResumed;		/* set by a resume, cleared by a power on */
 static unsigned char padding;		/* 0xff2ed: nothing uses it */
@@ -115,8 +115,8 @@ static void powerJobResume(void)
 	powerSeqResume();
 	P0.6 = 1;
 	P0.5 = 1;
-	sub_11D73();
-	sub_11D7B();
+	inputFlag40Later();
+	inputFlag80Later();
 	powerRequestInit();
 	chargeSetAcDelay();
 	task5SetFlag(4, 0x20);

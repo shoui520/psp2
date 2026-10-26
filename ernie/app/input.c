@@ -62,76 +62,76 @@ struct ButtonPress {
 
 extern unsigned char getResetCause(void);
 
-void sub_11D97(unsigned char enable);
-void sub_11D83(unsigned char enable);
-void sub_11F84(unsigned char enable);
-void sub_11FA6(unsigned char enable);
-void sub_1224B(unsigned char enable);
-void sub_12296(unsigned char enable);
-void sub_122E7(unsigned char enable);
-void sub_12360(unsigned char enable);
-void sub_123DB(unsigned char enable);
-void sub_1179E(void);
-void sub_117C4(void);
+void intp1Enable(unsigned char enable);
+void intp2Enable(unsigned char enable);
+void intp13Enable(unsigned char enable);
+void intp11Enable(unsigned char enable);
+void intp7Enable(unsigned char enable);
+void intp4Enable(unsigned char enable);
+void intp3Enable(unsigned char enable);
+void intp10Enable(unsigned char enable);
+void intp8Enable(unsigned char enable);
+void inputKeysOpen(void);
+void inputKeysClose(void);
 void sampleInputs1(void);
 void sampleInputs2(void);
 void sampleInputs3(void);
 void inputGroupUpdate(unsigned char *raw, unsigned char *state, struct InputGroup *group);
 void pinMonitorPoll(void);
-unsigned char sub_11D1B(void);
-unsigned char sub_11D23(void);
-unsigned char sub_11D2B(void);
+unsigned char input1Bit5Active(void);
+unsigned char input1Bit0Active(void);
+unsigned char input1Bit3Active(void);
 void pinMonitor1Set(struct PinConfig *config);
 void pinMonitor1Enable(unsigned char enable);
-void sub_11E0A(void);
+void button2Held(void);
 void pinMonitor0Set(struct PinConfig *config);
 void pinMonitor0Enable(unsigned char enable);
-int sub_12019(void);
-int sub_12040(void);
-int sub_12044(unsigned int state);
-int sub_1204D(void);
-unsigned int sub_12074(void);
-int sub_12078(unsigned int state);
-unsigned char sub_12081(void);
-unsigned char sub_120B8(unsigned char *keys);
-unsigned char sub_120E7(unsigned char *keys);
-unsigned char sub_12111(void);
-void sub_1217E(void);
+int button1Reset(void);
+int button1State(void);
+int button1SetState(unsigned int state);
+int button2Reset(void);
+unsigned int button2State(void);
+int button2SetState(unsigned int state);
+unsigned char button2Keys(void);
+unsigned char keysBothButtons(unsigned char *keys);
+unsigned char keysButtonsOnly(unsigned char *keys);
+unsigned char button1Keys(void);
+void button1Held(void);
 void pinMonitor2Set(struct PinConfig *config);
 void pinMonitor2Enable(unsigned char enable);
-void sub_12295(void);
+void pinMonitor2Expired(void);
 void pinMonitor3Set(struct PinConfig *config);
 void pinMonitor3Enable(unsigned char enable);
-void sub_122E0(void);
+void pinMonitor3Expired(void);
 void pinMonitor4Set(struct PinConfig *config);
 void pinMonitor4Enable(unsigned char enable);
-void sub_1235A(void);
+void pinMonitor4Expired(void);
 void pinMonitor5Set(struct PinConfig *config);
 void pinMonitor5Enable(unsigned char enable);
-void sub_123D3(void);
+void pinMonitor5Expired(void);
 void pinMonitor6Set(struct PinConfig *config);
 void pinMonitor6Enable(unsigned char enable);
-void sub_1244E(void);
-void sub_1245B(void);
-void sub_1245C(void);
-void sub_1245D(void);
-void sub_12489(void);
+void pinMonitor6Expired(void);
+void input1Bit2Low(void);
+void input1Bit2High(void);
+void inputMultiCnChanged(void);
+void input1Bit0Changed(void);
 void inputScanHold(unsigned int ticks);
 void inputScanTimer(void);
-void sub_12638(void);
-void sub_12698(void);
-void sub_126D1(void);
-void sub_126E4(void);
-void sub_126F7(void);
+void levelMonitor2Poll(void);
+void input1Bit3Changed(void);
+void levelMonitor1Start(void);
+void levelMonitor2Start(void);
+void inputShutdownMark(void);
 void inputScanMode1(unsigned int interval);
 void inputScanMode2(unsigned int interval);
-void sub_1275F(void);
-unsigned char sub_12784(void);
+void input1Bit7Changed(void);
+unsigned char button2HoldDone(void);
 
 unsigned int inputReserved;
 unsigned char scanCount;			/* the scan's ticks */
 unsigned char coldStart;			/* the reset cause's high nibble was 0 */
-unsigned char inputFlag126F7;			/* set by sub_126F7 */
+unsigned char inputShutdownMarked;			/* set by inputShutdownMark */
 struct InputKeys inputKeys;
 struct LevelMonitor levelMonitor1;		/* P11.4, reports 0x61 */
 struct LevelMonitor levelMonitor2;		/* P12.0, reports 0x42 */
@@ -139,18 +139,18 @@ struct InputGroup inputGroup1;
 struct InputGroup inputGroup2;
 struct InputGroup inputGroup3;
 struct InputHandler inputHandlerWake2;
-struct InputHandler inputHandler1245B;
-struct InputHandler inputHandler1245C;
+struct InputHandler inputHandler1Bit2Low;
+struct InputHandler inputHandler1Bit2High;
 struct InputHandler inputHandlerSerial2Request;
 struct InputHandler inputHandlerSerial2Link;
 struct InputHandler inputHandlerSerial1;
-struct InputHandler inputHandler224FD;
-struct InputHandler inputHandler1245D;
+struct InputHandler inputHandler3Bit2;
+struct InputHandler inputHandlerMultiCn;
 struct InputHandler inputHandlerWake1;
-struct InputHandler inputHandler29B68;
-struct InputHandler inputHandler1275F;
-struct InputHandler inputHandler12698;
-struct InputHandler inputHandler12489;
+struct InputHandler inputHandlerCharge;
+struct InputHandler inputHandler1Bit7;
+struct InputHandler inputHandler1Bit3;
+struct InputHandler inputHandler1Bit0;
 struct InputDelays inputDelays;
 struct InputScan inputScan;
 struct PinMonitors pinMonitors;
@@ -180,15 +180,15 @@ void inputInit(void)
 	PM3.1 = 0;
 	P3.1 = 0;
 	PM6.7 = 1;
-	sub_11D97(0);
-	sub_11D83(0);
-	sub_11F84(0);
-	sub_1224B(0);
-	sub_12296(0);
-	sub_122E7(0);
-	sub_12360(0);
-	sub_123DB(0);
-	sub_11FA6(0);
+	intp1Enable(0);
+	intp2Enable(0);
+	intp13Enable(0);
+	intp7Enable(0);
+	intp4Enable(0);
+	intp3Enable(0);
+	intp10Enable(0);
+	intp8Enable(0);
+	intp11Enable(0);
 	intp11Level = 1;
 	inputRaw1 = 0xff;
 	inputState1 = 0xff;
@@ -217,12 +217,12 @@ void inputInit(void)
 	inputHandlerWake2.type = 1;
 	inputHandlerWake2.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandlerWake2.handler = stateInputWake2;
-	inputHandler1245B.type = 1;
-	inputHandler1245B.edges = INPUT_EDGE_LOW;
-	inputHandler1245B.handler = sub_1245B;
-	inputHandler1245C.type = 1;
-	inputHandler1245C.edges = INPUT_EDGE_HIGH;
-	inputHandler1245C.handler = sub_1245C;
+	inputHandler1Bit2Low.type = 1;
+	inputHandler1Bit2Low.edges = INPUT_EDGE_LOW;
+	inputHandler1Bit2Low.handler = input1Bit2Low;
+	inputHandler1Bit2High.type = 1;
+	inputHandler1Bit2High.edges = INPUT_EDGE_HIGH;
+	inputHandler1Bit2High.handler = input1Bit2High;
 	inputHandlerSerial2Request.type = 1;
 	inputHandlerSerial2Request.edges = INPUT_EDGE_HIGH;
 	inputHandlerSerial2Request.handler = serial2InputRequest;
@@ -232,55 +232,55 @@ void inputInit(void)
 	inputHandlerSerial1.type = 1;
 	inputHandlerSerial1.edges = INPUT_EDGE_HIGH;
 	inputHandlerSerial1.handler = serial1InputHandler;
-	inputHandler1245D.type = 1;
-	inputHandler1245D.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
-	inputHandler1245D.handler = sub_1245D;
-	inputHandler224FD.type = 1;
-	inputHandler224FD.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
-	inputHandler224FD.handler = sub_224FD;
+	inputHandlerMultiCn.type = 1;
+	inputHandlerMultiCn.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	inputHandlerMultiCn.handler = inputMultiCnChanged;
+	inputHandler3Bit2.type = 1;
+	inputHandler3Bit2.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	inputHandler3Bit2.handler = serialAuthInput;
 	inputHandlerWake1.type = 1;
 	inputHandlerWake1.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandlerWake1.handler = stateInputWake1;
-	inputHandler29B68.type = 1;
-	inputHandler29B68.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
-	inputHandler29B68.handler = chargeUpdateSoon;
-	inputHandler1275F.type = 1;
-	inputHandler1275F.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
-	inputHandler1275F.handler = sub_1275F;
-	inputHandler12698.type = 1;
-	inputHandler12698.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
-	inputHandler12698.handler = sub_12698;
-	inputHandler12489.type = 1;
-	inputHandler12489.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
-	inputHandler12489.handler = sub_12489;
+	inputHandlerCharge.type = 1;
+	inputHandlerCharge.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	inputHandlerCharge.handler = chargeUpdateSoon;
+	inputHandler1Bit7.type = 1;
+	inputHandler1Bit7.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	inputHandler1Bit7.handler = input1Bit7Changed;
+	inputHandler1Bit3.type = 1;
+	inputHandler1Bit3.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	inputHandler1Bit3.handler = input1Bit3Changed;
+	inputHandler1Bit0.type = 1;
+	inputHandler1Bit0.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	inputHandler1Bit0.handler = input1Bit0Changed;
 	config.reload = 0x40;
-	config.handler = sub_1217E;
+	config.handler = button1Held;
 	pinMonitor0Set(&config);
 	pinMonitor0Enable(0);
-	sub_12019();
+	button1Reset();
 	config.reload = 0x40;
-	config.handler = sub_11E0A;
+	config.handler = button2Held;
 	pinMonitor1Set(&config);
 	pinMonitor1Enable(0);
-	sub_1204D();
+	button2Reset();
 	config.reload = 3;
-	config.handler = sub_1235A;
+	config.handler = pinMonitor4Expired;
 	pinMonitor4Set(&config);
 	pinMonitor4Enable(0);
 	config.reload = 3;
-	config.handler = sub_122E0;
+	config.handler = pinMonitor3Expired;
 	pinMonitor3Set(&config);
 	pinMonitor3Enable(0);
 	config.reload = 3;
-	config.handler = sub_12295;
+	config.handler = pinMonitor2Expired;
 	pinMonitor2Set(&config);
 	pinMonitor2Enable(0);
 	config.reload = 3;
-	config.handler = sub_123D3;
+	config.handler = pinMonitor5Expired;
 	pinMonitor5Set(&config);
 	pinMonitor5Enable(0);
 	config.reload = 0;
-	config.handler = sub_1244E;
+	config.handler = pinMonitor6Expired;
 	pinMonitor6Set(&config);
 	pinMonitor6Enable(0);
 	inputDelays.flag40 = 0;
@@ -290,7 +290,7 @@ void inputInit(void)
 	inputDelays.latchOn = 0;
 	inputKeys.state = 0;
 	inputKeys.events = 0;
-	inputFlag126F7 = 0;
+	inputShutdownMarked = 0;
 	levelMonitor1.enable = 0;
 	levelMonitor2.enable = 0;
 	inputScan.mode = 0;
@@ -301,24 +301,24 @@ void inputInit(void)
 	timerSetHandler(0x16, &timer);
 }
 
-void sub_11572(void)
+void inputResumePrepare(void)
 {
-	sub_11D97(0);
-	sub_11F84(0);
-	sub_11D83(0);
-	sub_1224B(0);
-	sub_12296(0);
-	sub_122E7(0);
-	sub_12360(0);
-	sub_123DB(0);
+	intp1Enable(0);
+	intp13Enable(0);
+	intp2Enable(0);
+	intp7Enable(0);
+	intp4Enable(0);
+	intp3Enable(0);
+	intp10Enable(0);
+	intp8Enable(0);
 	inputScanMode1(1);
 }
 
-void sub_1159F(void)
+void inputResumeOpen(void)
 {
 	union PowerRequest mode;
 
-	sub_1179E();
+	inputKeysOpen();
 	touchOpen();
 	mode = *stateGetWakeupFactor();
 	if (!mode.bits.notify)
@@ -326,7 +326,7 @@ void sub_1159F(void)
 	analogInit();
 	adcOpenForBoard();
 	inputGroup1.pending |= 0x08;
-	if (sub_21F2A() == 0xff)
+	if (elmoVersion0() == 0xff)
 		motionOpen();
 	motion.status = 0;
 	motion.info[0].value = 0;
@@ -335,13 +335,13 @@ void sub_1159F(void)
 	return;
 }
 
-void sub_115F0(void)
+void inputPowerOff(void)
 {
 	unsigned long flags;
 
 	flags = stateGetWakeMask();
 	if ((flags & 0x00010000) == 0) {
-		sub_12360(1);
+		intp10Enable(1);
 		if (!P7.6) {
 			pinMonitor5Enable(1);
 			pinMonitors.pin[5].last = 0;
@@ -350,21 +350,21 @@ void sub_115F0(void)
 	}
 	touchClose();
 	motionClose();
-	sub_117C4();
+	inputKeysClose();
 	analogStop();
 	adcCloseForBoard();
 	analogLatchInit();
 	return;
 }
 
-void sub_1164E(void)
+void inputStateOff(void)
 {
-	sub_1224B(0);
-	sub_12296(0);
-	sub_122E7(0);
-	sub_11F84(1);
-	sub_11D97(1);
-	sub_11FA6(1);
+	intp7Enable(0);
+	intp4Enable(0);
+	intp3Enable(0);
+	intp13Enable(1);
+	intp1Enable(1);
+	intp11Enable(1);
 	if (coldStart && !P4.6)
 		inputScanHold(0x754);
 	else
@@ -372,46 +372,46 @@ void sub_1164E(void)
 	coldStart = 0;
 }
 
-void sub_1168D(void)
+void inputShutdown(void)
 {
 	touchClose();
 	motionClose();
-	sub_117C4();
+	inputKeysClose();
 	analogStop();
 	adcCloseForBoard();
 }
 
-void sub_116A1(void)
+void inputStateShutdown(void)
 {
-	sub_126D1();
-	sub_126F7();
+	levelMonitor1Start();
+	inputShutdownMark();
 	timerStop(3);
 	timerStop(0x16);
 }
 
-void sub_116B7(void)
+void inputCut(void)
 {
 	touchClose();
 	motionClose();
-	sub_117C4();
+	inputKeysClose();
 	analogStop();
 	adcCloseForBoard();
 }
 
-void sub_116CB(void)
+void inputStateCut(void)
 {
-	sub_126E4();
-	sub_126D1();
+	levelMonitor2Start();
+	levelMonitor1Start();
 	inputScanMode2(1);
 }
 
-void sub_116D8(void)
+void inputSuspend(void)
 {
 	unsigned long flags;
 
 	flags = stateGetWakeMask();
 	if ((flags & 0x00000004) == 0) {
-		sub_122E7(1);
+		intp3Enable(1);
 		if (!P3.0) {
 			pinMonitor4Enable(1);
 			pinMonitors.pin[4].last = 0;
@@ -421,7 +421,7 @@ void sub_116D8(void)
 	if ((flags & 0x00000008) == 0) {
 	}
 	if ((flags & 0x00010000) == 0) {
-		sub_12360(1);
+		intp10Enable(1);
 		if (!P7.6) {
 			pinMonitor5Enable(1);
 			pinMonitors.pin[5].last = 0;
@@ -430,20 +430,20 @@ void sub_116D8(void)
 	}
 	touchClose();
 	motionClose();
-	sub_117C4();
+	inputKeysClose();
 	analogStop();
 	adcCloseForBoard();
 	return;
 }
 
-void sub_1177B(void)
+void inputStateSuspend(void)
 {
-	sub_11D97(1);
-	sub_11F84(1);
+	intp1Enable(1);
+	intp13Enable(1);
 	inputScanMode2(1);
 }
 
-void sub_1178A(void)
+void inputReset(void)
 {
 	touchDisable0();
 	touchDisable1();
@@ -452,8 +452,8 @@ void sub_1178A(void)
 	analogLatchOff();
 }
 
-/* P5.0-3, P8 and P11.2-3 inputs with their pull-ups (the keys sub_12111 reads) */
-void sub_1179E(void)
+/* P5.0-3, P8 and P11.2-3 inputs with their pull-ups (the keys button1Keys reads) */
+void inputKeysOpen(void)
 {
 	PU5 = 0x0f | PU5;
 	PM5 = 0x0f | PM5;
@@ -464,7 +464,7 @@ void sub_1179E(void)
 }
 
 /* and back to outputs at 0 */
-void sub_117C4(void)
+void inputKeysClose(void)
 {
 	P5 = 0xf0 & P5;
 	PM5 = 0xf0 & PM5;
@@ -498,7 +498,7 @@ void inputProcess(void)
 			analogStart(keys);
 		break;
 	case 0x0800:
-		sub_12638();
+		levelMonitor2Poll();
 		break;
 	case 0x0010:
 		break;
@@ -662,88 +662,88 @@ void pinMonitorPoll(void)
 	}
 }
 
-unsigned char sub_11CFB(void)
+unsigned char input1Bit4Active(void)
 {
 	return !inputState1.4;
 }
 
-unsigned char sub_11D03(void)
+unsigned char input1Bit6Active(void)
 {
 	return !inputState1.6;
 }
 
-unsigned char sub_11D0B(void)
+unsigned char input1Bit1Active(void)
 {
 	return !inputState1.1;
 }
 
-unsigned char sub_11D13(void)
+unsigned char input1Bit2Active(void)
 {
 	return !inputState1.2;
 }
 
-unsigned char sub_11D1B(void)
+unsigned char input1Bit5Active(void)
 {
 	return !inputState1.5;
 }
 
-unsigned char sub_11D23(void)
+unsigned char input1Bit0Active(void)
 {
 	return !inputState1.0;
 }
 
-unsigned char sub_11D2B(void)
+unsigned char input1Bit3Active(void)
 {
 	return !inputState1.3;
 }
 
-unsigned char sub_11D33(void)
+unsigned char input3Bit0High(void)
 {
 	return inputState3.0 != 0;
 }
 
-unsigned char sub_11D3B(void)
+unsigned char input3Bit2Active(void)
 {
 	return !inputState3.2;
 }
 
-unsigned char sub_11D43(void)
+unsigned char input3Bit5High(void)
 {
 	return inputState3.5 != 0;
 }
 
-unsigned char sub_11D4B(void)
+unsigned char intp11Low(void)
 {
 	return intp11Level == 0;
 }
 
-int sub_11D57(void)
+int input2Bit0Get(void)
 {
 	return (unsigned char)inputState2.0;
 }
 
-int sub_11D61(void)
+int input2Bit1Get(void)
 {
 	return (unsigned char)inputState2.1;
 }
 
-void sub_11D6B(void)
+void inputMotionInfoLater(void)
 {
 	inputDelays.motionInfo = 0x10;
 }
 
-void sub_11D73(void)
+void inputFlag40Later(void)
 {
 	inputDelays.flag40 = 9;
 }
 
-void sub_11D7B(void)
+void inputFlag80Later(void)
 {
 	inputDelays.flag80 = 9;
 }
 
 /* the external interrupts: on (an edge chosen per pin) or off */
-void sub_11D83(unsigned char enable)
+void intp2Enable(unsigned char enable)
 {
 	if (enable == 0) {
 		EGP0.2 = 0;
@@ -753,7 +753,7 @@ void sub_11D83(unsigned char enable)
 	}
 }
 
-void sub_11D97(unsigned char enable)
+void intp1Enable(unsigned char enable)
 {
 	if (enable == 0) {
 		EGP0.1 = 0;
@@ -786,7 +786,7 @@ void pinMonitor1Enable(unsigned char enable)
 }
 
 /* pin monitor 1's handler (P4.6 held): its presses counted with the key read at the second */
-void sub_11E0A(void)
+void button2Held(void)
 {
 	unsigned int state;
 	unsigned char value;
@@ -797,32 +797,32 @@ void sub_11E0A(void)
 	if (buttonPress2.count < 2) {
 		pinMonitor1Enable(1);
 	} else if (buttonPress2.count == 2) {
-		sub_1179E();
+		inputKeysOpen();
 		dly_tsk(3);
-		buttonPress2.keys = sub_12081();
+		buttonPress2.keys = button2Keys();
 		pinMonitor1Enable(1);
 		paramRead(0x2e, 1, &value);
 		buttonPress2.time1 = value >= 4 ? value : 3;
 		paramRead(0x2f, 1, &value);
 		buttonPress2.time2 = value >= 4 ? value : 3;
-	} else if (buttonPress2.keys == sub_12081()) {
+	} else if (buttonPress2.keys == button2Keys()) {
 		switch (buttonPress2.keys) {
 		case 1:
 		case 2:
 			mode = *stateGetWakeupFactor();
 			if (buttonPress2.count == buttonPress2.time1) {
-				if (state != sub_12074() && !mode.bits.notify &&
+				if (state != button2State() && !mode.bits.notify &&
 				    !configGet()->pressAnyState) {
-					sub_12078(0);
+					button2SetState(0);
 					return;
 				}
 				buttonPress2.result = buttonPress2.keys;
 				stateTransition(0x14);
 				pinMonitor1Enable(1);
-			} else if (buttonPress2.count == buttonPress2.time2 || sub_12784()) {
-				if (state != sub_12074() && state != 0x0008 && !mode.bits.notify &&
+			} else if (buttonPress2.count == buttonPress2.time2 || button2HoldDone()) {
+				if (state != button2State() && state != 0x0008 && !mode.bits.notify &&
 				    !configGet()->pressAnyState) {
-					sub_12078(0);
+					button2SetState(0);
 					return;
 				}
 				buttonPress2.result = 2;
@@ -833,8 +833,8 @@ void sub_11E0A(void)
 			break;
 		}
 	} else if (buttonPress2.count >= buttonPress2.time1) {
-		if (state != sub_12074() && !configGet()->pressAnyState) {
-			sub_12078(0);
+		if (state != button2State() && !configGet()->pressAnyState) {
+			button2SetState(0);
 			return;
 		}
 		buttonPress1.keys = 1;
@@ -843,7 +843,7 @@ void sub_11E0A(void)
 	}
 }
 
-void sub_11F84(unsigned char enable)
+void intp13Enable(unsigned char enable)
 {
 	if (enable == 0) {
 		EGP13 = 0;
@@ -858,7 +858,7 @@ void sub_11F84(unsigned char enable)
 	}
 }
 
-void sub_11FA6(unsigned char enable)
+void intp11Enable(unsigned char enable)
 {
 	if (enable == 0) {
 		EGP1.3 = 0;
@@ -890,61 +890,61 @@ void pinMonitor0Enable(unsigned char enable)
 	}
 }
 
-int sub_12019(void)
+int button1Reset(void)
 {
 	if (pinMonitors.mask & 0x01)
 		return 1;
 	buttonPress1.count = 0;
 	buttonPress1.keys = 0;
 	buttonPress1.result = 0;
-	sub_12044(stateGet());
+	button1SetState(stateGet());
 	return 0;
 }
 
-int sub_1203A(void)
+int button1Result(void)
 {
 	return buttonPress1.result;
 }
 
-int sub_12040(void)
+int button1State(void)
 {
 	return buttonPress1.state;
 }
 
-int sub_12044(unsigned int state)
+int button1SetState(unsigned int state)
 {
 	buttonPress1.state = state;
 	return 0;
 }
 
-int sub_1204D(void)
+int button2Reset(void)
 {
 	if (pinMonitors.mask & 0x02)
 		return 1;
 	buttonPress2.count = 0;
 	buttonPress2.keys = 0;
 	buttonPress2.result = 0;
-	sub_12078(stateGet());
+	button2SetState(stateGet());
 	return 0;
 }
 
-int sub_1206E(void)
+int button2Result(void)
 {
 	return buttonPress2.result;
 }
 
-unsigned int sub_12074(void)
+unsigned int button2State(void)
 {
 	return buttonPress2.state;
 }
 
-int sub_12078(unsigned int state)
+int button2SetState(unsigned int state)
 {
 	buttonPress2.state = state;
 	return 0;
 }
 
-unsigned char sub_12081(void)
+unsigned char button2Keys(void)
 {
 	unsigned char keys;
 
@@ -954,23 +954,23 @@ unsigned char sub_12081(void)
 	return keys;
 }
 
-unsigned char sub_1208E(unsigned char *keys)
+unsigned char keysComboA9(unsigned char *keys)
 {
 	return keys[0] == 0xff && keys[1] == 0xa9;
 }
 
-unsigned char sub_120B8(unsigned char *keys)
+unsigned char keysBothButtons(unsigned char *keys)
 {
 	return (~keys[1] & 0x10) && (~keys[1] & 0x40);
 }
 
-unsigned char sub_120E7(unsigned char *keys)
+unsigned char keysButtonsOnly(unsigned char *keys)
 {
 	return keys[0] == 0xff && keys[1] == 0xaf;
 }
 
 /* the keys held: P8, P5.0-3 and the two buttons */
-unsigned char sub_12111(void)
+unsigned char button1Keys(void)
 {
 	unsigned char result;
 	unsigned char keys[2];
@@ -979,9 +979,9 @@ unsigned char sub_12111(void)
 	keys[1] = (0x0f & P5) | ((!P11.5 ? (unsigned char)0xef : (unsigned char)0xff) &
 				 (!P4.6 ? (unsigned char)0xbf : (unsigned char)0xff) & 0xf0);
 	result = 0;
-	if (sub_120B8(keys) && stateGet() == 0x0004)
+	if (keysBothButtons(keys) && stateGet() == 0x0004)
 		result = 3;
-	else if (sub_120E7(keys))
+	else if (keysButtonsOnly(keys))
 		result = 2;
 	else
 		result = 1;
@@ -989,25 +989,25 @@ unsigned char sub_12111(void)
 }
 
 /* pin monitor 0's handler (P11.5 held) */
-void sub_1217E(void)
+void button1Held(void)
 {
 	unsigned char value;
 
 	buttonPress1.count++;
-	if (stateGet() != sub_12040() && !configGet()->pressAnyState) {
-		sub_12044(0);
+	if (stateGet() != button1State() && !configGet()->pressAnyState) {
+		button1SetState(0);
 	} else if (buttonPress1.count < 2) {
 		pinMonitor0Enable(1);
 	} else if (buttonPress1.count == 2) {
-		sub_1179E();
+		inputKeysOpen();
 		dly_tsk(3);
-		buttonPress1.keys = sub_12111();
+		buttonPress1.keys = button1Keys();
 		pinMonitor0Enable(1);
 		paramRead(0x2e, 1, &value);
 		buttonPress1.time1 = value >= 4 ? value : 3;
 		paramRead(0x2f, 1, &value);
 		buttonPress1.time2 = value >= 4 ? value : 3;
-	} else if (buttonPress1.keys == sub_12111()) {
+	} else if (buttonPress1.keys == button1Keys()) {
 		switch (buttonPress1.keys) {
 		case 3:
 			if (buttonPress1.count == buttonPress1.time1) {
@@ -1021,7 +1021,7 @@ void sub_1217E(void)
 	}
 }
 
-void sub_1224B(unsigned char enable)
+void intp7Enable(unsigned char enable)
 {
 	if (enable == 0) {
 		EGP0.7 = 0;
@@ -1043,11 +1043,11 @@ void pinMonitor2Enable(unsigned char enable)
 		pinMonitors.mask &= ~0x04;
 }
 
-void sub_12295(void)
+void pinMonitor2Expired(void)
 {
 }
 
-void sub_12296(unsigned char enable)
+void intp4Enable(unsigned char enable)
 {
 	if (enable == 0) {
 		EGP0.4 = 0;
@@ -1069,12 +1069,12 @@ void pinMonitor3Enable(unsigned char enable)
 		pinMonitors.mask &= ~0x08;
 }
 
-void sub_122E0(void)
+void pinMonitor3Expired(void)
 {
 	stateTransition(5);
 }
 
-void sub_122E7(unsigned char enable)
+void intp3Enable(unsigned char enable)
 {
 	if (enable == 0) {
 		EGP0.3 = 0;
@@ -1106,12 +1106,12 @@ void pinMonitor4Enable(unsigned char enable)
 	}
 }
 
-void sub_1235A(void)
+void pinMonitor4Expired(void)
 {
 	stateTransition(2);
 }
 
-void sub_12360(unsigned char enable)
+void intp10Enable(unsigned char enable)
 {
 	if (enable == 0) {
 		EGP1.2 = 0;
@@ -1143,13 +1143,13 @@ void pinMonitor5Enable(unsigned char enable)
 	}
 }
 
-void sub_123D3(void)
+void pinMonitor5Expired(void)
 {
 	stateTransition(0x10);
 	return;
 }
 
-void sub_123DB(unsigned char enable)
+void intp8Enable(unsigned char enable)
 {
 	if (enable == 0) {
 		EGP1.0 = 0;
@@ -1181,38 +1181,38 @@ void pinMonitor6Enable(unsigned char enable)
 	}
 }
 
-void sub_1244E(void)
+void pinMonitor6Expired(void)
 {
 	task6SetFlag(6, 0x0200);
 }
 
-void sub_1245B(void)
+void input1Bit2Low(void)
 {
 }
 
-void sub_1245C(void)
+void input1Bit2High(void)
 {
 }
 
-void sub_1245D(void)
+void inputMultiCnChanged(void)
 {
-	if (sub_11D1B() == 1) {
+	if (input1Bit5Active() == 1) {
 		analogMultiCnStart();
 	} else {
 		analogMultiCnStop();
-		sub_21F33(0x20);
+		powerDeviceSetPending(0x20);
 		sleepFactorSet5(0);
 		analogMultiCnInit();
 	}
 	set_flg(2, 0x0100);
 }
 
-void sub_12489(void)
+void input1Bit0Changed(void)
 {
-	if (sub_11D23() == 1) {
+	if (input1Bit0Active() == 1) {
 		sleepFactorSet15(1);
 	} else {
-		sub_21F33(2);
+		powerDeviceSetPending(2);
 		sleepFactorSet15(0);
 	}
 	set_flg(2, 0x0100);
@@ -1271,7 +1271,7 @@ void inputScanTimer(void)
 }
 
 /* the RTC's interrupt (state 0x0010 or 0x0800): P11.4 */
-void sub_125F2(void)
+void levelMonitor1Poll(void)
 {
 	if (levelMonitor1.enable != 0) {
 		levelMonitor1.now = P11.4;
@@ -1285,7 +1285,7 @@ void sub_125F2(void)
 }
 
 /* task 3 in state 0x0800: P12.0 */
-void sub_12638(void)
+void levelMonitor2Poll(void)
 {
 	if (levelMonitor2.enable != 0) {
 		levelMonitor2.now = P12.0;
@@ -1298,42 +1298,42 @@ void sub_12638(void)
 	}
 }
 
-void sub_1267E(void)
+void levelMonitorNone(void)
 {
 }
 
-unsigned char sub_1267F(void)
+unsigned char levelMonitor2Low(void)
 {
 	return levelMonitor2.state == 0;
 }
 
-unsigned char sub_1268B(void)
+unsigned char levelMonitor1High(void)
 {
 	return levelMonitor1.state == 1;
 }
 
-void sub_12698(void)
+void input1Bit3Changed(void)
 {
-	if (sub_11D2B() == 1) {
+	if (input1Bit3Active() == 1) {
 		if (stateGet() == 0x0020)
 			inputDelays.latchOn = 0x40;
 	} else {
-		sub_21F33(8);
+		powerDeviceSetPending(8);
 		analogLatchInit();
 	}
 	set_flg(2, 0x0100);
 }
 
-void sub_126C8(void)
+void inputNone(void)
 {
 }
 
-unsigned char sub_126C9(void)
+unsigned char input1Bit7Active(void)
 {
 	return !inputState1.7;
 }
 
-void sub_126D1(void)
+void levelMonitor1Start(void)
 {
 	levelMonitor1.last = 0;
 	levelMonitor1.now = 0;
@@ -1341,7 +1341,7 @@ void sub_126D1(void)
 	levelMonitor1.enable = 1;
 }
 
-void sub_126E4(void)
+void levelMonitor2Start(void)
 {
 	levelMonitor2.last = 0;
 	levelMonitor2.now = 0;
@@ -1349,9 +1349,9 @@ void sub_126E4(void)
 	levelMonitor2.enable = 1;
 }
 
-void sub_126F7(void)
+void inputShutdownMark(void)
 {
-	inputFlag126F7 = 1;
+	inputShutdownMarked = 1;
 }
 
 /* the scan on timer 3 every interval */
@@ -1383,29 +1383,29 @@ void inputScanMode2(unsigned int interval)
 	return;
 }
 
-void sub_1275F(void)
+void input1Bit7Changed(void)
 {
 	set_flg(2, 0x0100);
 	return;
 }
 
-void sub_1276A(void)
+void inputChanged(void)
 {
 	set_flg(2, 0x0100);
 	return;
 }
 
-unsigned char sub_12775(unsigned char ticks)
+unsigned char button2HoldReached(unsigned char ticks)
 {
 	return ticks == buttonPress2.time2 + 1;
 }
 
-unsigned char sub_12784(void)
+unsigned char button2HoldDone(void)
 {
 	return holdReached == 1;
 }
 
-void sub_1278E(void)
+void button2HoldReset(void)
 {
 	unsigned char value;
 

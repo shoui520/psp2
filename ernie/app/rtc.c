@@ -48,7 +48,7 @@ void rtcStart(void)
 {
 	RTCMK = 1;
 	rtcInit();
-	sub_1278E();
+	button2HoldReset();
 	RTCIF = 0;
 	RTCMK = 0;
 	switch (getResetCause()) {
@@ -117,7 +117,7 @@ int isAlarmReached(void)
 	return reached;
 }
 
-unsigned int sub_11118(void)
+unsigned int sleepFactorBit3Get(void)
 {
 	return sleepFactorGet() & 8;
 }
@@ -149,10 +149,10 @@ void rtcInterrupt(void)
 	EI();
 	rtcClockLow = keepRam.clock;
 	if (state == 0x0010) {
-		sub_125F2();
-		sub_1267E();
+		levelMonitor1Poll();
+		levelMonitorNone();
 	} else if (state == 0x0800)
-		sub_125F2();
+		levelMonitor1Poll();
 	if (rtcClockLow & 0x0001) {
 		task2SetFlag(3, 0x8000);
 		if (hangDetected() != 0) {
@@ -170,9 +170,9 @@ void rtcInterrupt(void)
 		}
 	}
 	if (!P4.6) {
-		if (sub_12081() == 1) {
+		if (button2Keys() == 1) {
 			holdTicks++;
-			if (sub_12775(holdTicks) != 0)
+			if (button2HoldReached(holdTicks) != 0)
 				holdReached = 1;
 		}
 	} else {

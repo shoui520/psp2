@@ -343,13 +343,13 @@ void serialFlush(int port)
 /* opens UART3 again at baud, 13 ticks on */
 unsigned char serialReopen(int baud)
 {
-	sub_4DC5(13);
+	powerWaitLong(13);
 	return uart3Open(baud);
 }
 
 unsigned char serialOpen1(int baud)
 {
-	sub_A5F9(0);
+	serialSetLevel(0);
 	uart3Open(baud);
 	serialStart(1);
 	serial.link = 1;
@@ -367,7 +367,7 @@ unsigned char serialOpen2(int baud)
 {
 	uart3Open(baud);
 	serialStart(2);
-	sub_A5F9(1);
+	serialSetLevel(1);
 	serial2SetP71(0);
 	serial.link = 2;
 	return 0;

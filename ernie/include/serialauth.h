@@ -15,6 +15,6 @@ extern unsigned char serialAuthState(void);
 extern unsigned char serialAuthUnlocked0(void);
 extern unsigned char serialAuthUnlocked1(void);
 extern unsigned char serialAuthUnlocked14(void);
-extern void sub_224FD(void);
+extern void serialAuthInput(void);
 
 #endif

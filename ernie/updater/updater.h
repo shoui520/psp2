@@ -1,6 +1,6 @@
 /*
  * The updater's own functions and data, which the application has in other forms or not at
- * all. PLACEHOLDER: the sub_ names are functions not written yet, named when they are.
+ * all; its stubs (stub.c) take the names of the application's functions they stand for.
  */
 #ifndef ERNIE_UPDATER_H
 #define ERNIE_UPDATER_H
@@ -166,18 +166,18 @@ extern void hostSlowRun(void);
 /* stub.c */
 struct StateEvent;
 extern int updStateEvent(struct StateEvent *event);
-extern int sub_4D3F(void);
-extern int sub_4D47(void);
-extern int sub_4D4F(void);
-extern int sub_4D57(void);
-extern unsigned char sub_4D63(void);
-extern int sub_4D6B(void);
-extern void sub_4DC5(unsigned int ms);
-extern int sub_4E1F(void);
-extern int sub_4E21(void);
-extern void sub_4E23(void);
-extern void sub_4E24(void);
-extern int sub_4E25(void);
+extern int input2Bit0Get(void);
+extern int input2Bit1Get(void);
+extern int input3Bit0High(void);
+extern int input1Bit5Active(void);
+extern unsigned char intp11Low(void);
+extern int chargeVbusCharging(void);
+extern void powerWaitLong(unsigned int ms);
+extern int bbmcStart(void);
+extern int bbmcSetOff(void);
+extern void bbmcStop(void);
+extern void bbmcWake(void);
+extern int bbmcGetMode(void);
 
 /* power.c */
 extern unsigned char powerCleared[2];
@@ -226,6 +226,6 @@ extern unsigned char updaterInit(void);
 extern int updaterDecryptInit(void);
 extern unsigned char hostCommandFast(unsigned int command);
 extern unsigned char hostCommandSlow(unsigned int command, struct HostSlowCommand *slow);
-extern unsigned char sub_A5F9(unsigned char level);
+extern unsigned char serialSetLevel(unsigned char level);
 
 #endif

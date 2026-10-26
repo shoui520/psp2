@@ -33,7 +33,7 @@ static const struct PowerDeviceJob powerDeviceJobs[] = {
 static unsigned int powerWaitReserved[2];
 unsigned int powerTimers;
 
-/* task 5's, for each job whose bit sub_21F33 posted */
+/* task 5's, for each job whose bit powerDeviceSetPending posted */
 void powerDeviceRun(void)
 {
 	unsigned char i;

@@ -39,12 +39,12 @@ unsigned char serialNotifies2Count(void)
 	return 1;
 }
 
-/* an input's rising edge: transition 0x52, when sub_4D4F allows it */
+/* an input's rising edge: transition 0x52, when input3Bit0High allows it */
 void serial2InputRequest(void)
 {
 	struct StateEvent event;
 
-	if ((unsigned char)sub_4D4F()) {
+	if ((unsigned char)input3Bit0High()) {
 		event.transition = 0x52;
 		event.wakeMask = stateGetWakeMask();
 		updStateEvent(&event);
@@ -236,7 +236,7 @@ unsigned char serial2SetP71(unsigned char level)
 }
 
 /* PLACEHOLDER: takes a level and does nothing; called with 0 by serialOpen1, 1 by serialOpen2 */
-unsigned char sub_A5F9(unsigned char level)
+unsigned char serialSetLevel(unsigned char level)
 {
 	return 0;
 }

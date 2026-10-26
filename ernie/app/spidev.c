@@ -23,7 +23,7 @@ void spiDevInit(void)
  * PLACEHOLDER: cryptographic routine, deferred (the device's authentication: with the device
  * powered and ready, the two words of registers 0x88 and 0x8c are encrypted with AES-256
  * under the key schedule at 0xfaa4 and written to registers 0x80 and 0x84; the result is
- * reported with sub_2DAE1 and the host link resumed). Returns the last transfer's result.
+ * reported with logEvent and the host link resumed). Returns the last transfer's result.
  */
 unsigned char spiDevAuthenticate(void)
 {
