@@ -32,10 +32,11 @@ OBJCOPY := $(BINUTILS)objcopy
 CFLAGS := -mel -O2 -std=gnu99 -Wall -ffreestanding -fno-builtin -DFL_BUILD_DATE=$(FL_BUILD_DATE)
 ASFLAGS := -mel -Wa,--defsym,FL_BUILD_DATE=$(FL_BUILD_DATE)
 
-OBJS := $(O)/$(FW)/boot.s.o $(O)/$(FW)/boot.c.o
+OBJS := $(O)/$(FW)/boot.s.o
+PARTIAL_OBJS := $(O)/$(FW)/boot.c.o
 
 .PHONY: image clean
-image: $(O)/$(FW)/first_loader.bin
+image: $(PARTIAL_OBJS) $(O)/$(FW)/first_loader.bin
 
 $(O)/$(FW)/%.s.o: %.s fw/$(FW).mk
 	@mkdir -p $(dir $@)
