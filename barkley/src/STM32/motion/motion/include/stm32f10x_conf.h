@@ -35,7 +35,9 @@
 #define _I2C
 #define _I2C1
 #define _I2C2
+#define _IWDG
 #define _NVIC
+#define _PWR
 #define _RCC
 #define _SPI
 #define _SPI1

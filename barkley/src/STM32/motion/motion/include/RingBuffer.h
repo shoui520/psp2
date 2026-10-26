@@ -1,6 +1,6 @@
 /*
  * RingBuffer: a queue of items in a caller's array; when full, the oldest item gives
- * way to the newest.
+ * way to the newest (Push), or no room is given (Reserve).
  */
 #ifndef RINGBUFFER_H
 #define RINGBUFFER_H
@@ -26,6 +26,7 @@ public:
 		return slot;
 	}
 
+	T *Reserve();
 	T *Pop();
 
 	u32 Count() const
@@ -54,6 +55,21 @@ T *RingBuffer<T>::Alloc()
 		next = 0;
 	if (next == tail_ && ++tail_ == size_)
 		tail_ = 0;
+	slot = &buffer_[head_];
+	head_ = next;
+	return slot;
+}
+
+template <typename T>
+T *RingBuffer<T>::Reserve()
+{
+	u32 next = head_ + 1;
+	T *slot;
+
+	if (next == size_)
+		next = 0;
+	if (next == tail_)
+		return 0;
 	slot = &buffer_[head_];
 	head_ = next;
 	return slot;

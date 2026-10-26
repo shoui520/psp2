@@ -24,6 +24,7 @@ void SetStopped(bool value);
 bool IsStopped();
 
 bool PostTask(void (*func)(void *arg), void *arg);
+void RunTasks(void (*idle)(void *arg), void *arg);
 bool AddTimer(TimerSlotHandler *handler);
 bool RemoveTimer(TimerSlotHandler *handler);
 void ScheduleReset();

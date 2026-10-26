@@ -64,7 +64,7 @@ public:
 			Take(a1);
 	}
 
-private:
+protected:
 	Func func_;
 	void *arg_;
 };
