@@ -1,12 +1,17 @@
 /*
  * MotionFrameUtil: the motion frames the processor fills for the Vita: a header (the
  * frame's format, the sensors' status, a counter, which fields it holds) and the
- * samples, laid out as the frame's format says.
+ * samples, laid out as the frame's format says; and the frames of the host link that
+ * carry them: a size byte, packets (an id, a size, the data), an end mark and a sum.
  */
 #ifndef MOTIONFRAMEUTIL_H
 #define MOTIONFRAMEUTIL_H
 
 #include "stm32f10x_type.h"
+#include "Debug.h"
+
+/* the file name IAR gave this header's asserts (its path in Sony's build) */
+#define MOTIONFRAMEUTIL_FILE	"C:\\work\\svn\\NGP\\barkley\\trunk\\src\\STM32\\EWARMv5\\..\\motion\\motion\\include\\MotionFrameUtil.h"
 
 /* what the ADC samples, every sample period: the accelerometer's axes, each beside its
    reference, the gyroscope's axes and the temperature */
@@ -93,6 +98,14 @@ enum {
 	FRAME_ACCEL	= 1 << 1,
 	FRAME_GYRO	= 1 << 2,
 	FRAME_MAG	= 1 << 3,
+};
+
+/* the frame formats: which samples a frame holds */
+enum {
+	FRAME_FORMAT_RAW,		/* FrameRaw */
+	FRAME_FORMAT_AVERAGE,		/* FrameAverage */
+	FRAME_FORMAT_MAG,
+	FRAME_FORMAT_CALIBRATED,	/* FrameCalibrated */
 };
 
 /* the sensors' status byte of a frame: the sample type, the processor's state, the
@@ -191,13 +204,92 @@ public:
 		fields_ |= FRAME_MAG;
 	}
 
-private:
 	u8 format_;
 	u8 status_;
 	u16 count_;
 	u8 fields_;
 	u8 reserved_;
 	u16 samples_[14];
+};
+
+/* the frames of the host link */
+enum {
+	MOTION_FRAME_HEADER	= 1,		/* the size byte */
+	MOTION_FRAME_TRAILER	= 2,		/* the end mark and the sum */
+	MOTION_FRAME_MAX	= 128,
+};
+
+/* a frame ends with a zero and the sum of the bytes before it */
+struct FrameTrailer {
+	u8 eof;
+	u8 checkSum;
+
+	void Set(u8 mark, u8 sum)
+	{
+		eof = mark;
+		checkSum = sum;
+	}
+};
+
+class MotionFrameUtil {
+protected:
+	u8 CheckSum(const u8 *data, u32 size);
+};
+
+/* builds a frame of packets in a buffer */
+class MotionFrameWriter : public MotionFrameUtil {
+public:
+	MotionFrameWriter() : buffer_(0), size_(0) {}
+
+	void Begin(u8 *buffer)
+	{
+		buffer_ = buffer;
+		size_ = 0;
+	}
+
+	void SetMaxSize(u32 size)
+	{
+		maxSize_ = size;
+	}
+
+	/* where the next packet goes, and the room left for it */
+	u8 *GetPayload(u32 *free)
+	{
+		*free = maxSize_ - size_;
+		return buffer_ + size_ + MOTION_FRAME_HEADER;
+	}
+
+	void AddPayloadSize(u32 size);
+	u8 Finish();
+
+private:
+	u8 *buffer_;
+	u32 size_;
+	u32 maxSize_;
+};
+
+inline void MotionFrameWriter::AddPayloadSize(u32 size)
+{
+	size_ += size;
+	if (maxSize_ < size_)
+		Panic("%5s:%d @%5s: ", MOTIONFRAMEUTIL_FILE, 61, "AddPayloadSize");	/* line 61 of Sony's header */
+}
+
+/* reads the packets of a frame the host sent */
+class MotionFrameReader : public MotionFrameUtil {
+public:
+	void SetMaxSize(u32 size)
+	{
+		maxSize_ = size;
+	}
+
+	s32 Open(u8 *frame);
+	u8 *Next();
+
+private:
+	u32 remaining_;
+	u8 *packet_;
+	u32 maxSize_;
 };
 
 #endif

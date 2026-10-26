@@ -361,6 +361,11 @@ s32 MotionProcessor::ReadCalib(u8 block, u8 *dst, u32 dstSize, u32 *size)
 	return MOTION_OK;
 }
 
+void MotionProcessor::RestartSystem()
+{
+	ScheduleReset();
+}
+
 void MotionProcessor::ResetSystem()
 {
 	StartWatchdog();
@@ -872,7 +877,7 @@ void MotionProcessor::OnRetryMeasure()
 
 void MotionProcessor::ReadChecksum()
 {
-	info_.checksum = FirmwareChecksum();
+	checksum_ = FirmwareChecksum();
 }
 
 void MotionProcessor::ResetBoardType()

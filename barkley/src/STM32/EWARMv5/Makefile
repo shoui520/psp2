@@ -52,7 +52,7 @@ CXXFLAGS := $(TARGET) -O2 -ffreestanding -fno-common -fno-exceptions -fno-rtti \
 	$(DEFINES) $(INCLUDES)
 
 # in the image's order: the program's (../motion/motion), the library's drivers
-SOURCES := $(MOTION)/MotionProcessor.cpp
+SOURCES := $(MOTION)/MotionProcessor.cpp $(MOTION)/MotionHif.cpp $(MOTION)/MotionProtoPacketEncoder.cpp
 LIBSOURCES := stm32f10x_rcc.c stm32f10x_flash.c
 
 OBJECTS := $(patsubst %,$(O)/%.o,$(notdir $(SOURCES)) $(LIBSOURCES))

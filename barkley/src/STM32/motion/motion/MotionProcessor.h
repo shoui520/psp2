@@ -25,12 +25,20 @@ struct CalibParams;
 enum {
 	MOTION_OK			= 0,
 	MOTION_ERROR_INVALID		= 1100,
+	MOTION_ERROR_FRAME_SIZE		= 1102,
+	MOTION_ERROR_FRAME_EOF		= 1103,
+	MOTION_ERROR_FRAME_CHECKSUM	= 1104,
 	MOTION_ERROR_PACKET_ID		= 1105,
 	MOTION_ERROR_NO_SPACE		= 1106,
 	MOTION_ERROR_FLASH		= 1107,
 	MOTION_ERROR_SIZE		= 1108,
+	MOTION_ERROR_SAMPLE_TYPE	= 1115,
 	MOTION_ERROR_BUSY		= 1116,
+	MOTION_ERROR_FRAME_LENGTH	= 1119,
 	MOTION_ERROR_VERIFY		= 1120,
+	MOTION_ERROR_MEAS_TYPE		= 1121,
+	MOTION_ERROR_STOPPING		= 1122,
+	MOTION_ERROR_TRANSITION		= 1123,
 };
 
 /* the processor's states */
@@ -103,7 +111,6 @@ struct DeviceInfo {
 	u8 selfTestFailed;
 	u16 accelRef[3];
 	u8 reserved;
-	u16 checksum;
 } __attribute__((packed));
 
 struct VersionInfo {
@@ -198,6 +205,7 @@ public:
 	void GetVersion(VersionInfo *version);
 	s32 WriteCalib(u8 block, const u8 *src, u32 size, Done::Func func, void *arg);
 	s32 ReadCalib(u8 block, u8 *dst, u32 dstSize, u32 *size);
+	static void RestartSystem();
 	static void ResetSystem();
 	s32 AddListener(Listener::Func func, void *arg);
 	s32 StartSelfTest(Done::Func func, void *arg);
@@ -326,6 +334,7 @@ private:
 	u32 bootWait_;
 	u32 wakeWait_;
 	DeviceInfo info_;
+	u16 checksum_;			/* the firmware's, for the debug report */
 	Listener *listeners_;
 	u32 listenerCount_;
 	Divider frameDivider_;

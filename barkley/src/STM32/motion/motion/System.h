@@ -12,6 +12,7 @@ class TimerSlotHandler;
 bool PostTask(void (*func)(void *arg), void *arg);
 bool AddTimer(TimerSlotHandler *handler);
 bool RemoveTimer(TimerSlotHandler *handler);
+void ScheduleReset();
 void StartWatchdog();
 void EnterStopMode();
 void PrepareStop();
