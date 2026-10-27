@@ -42,6 +42,7 @@ set(sysmem_sources
 	${sysmem_dir}/uid.c
 	${sysmem_dir}/murmurhash3.c
 	${sysmem_dir}/memblock_obj.c
+	${sysmem_dir}/uid_heap.c
 	${sysmem_dir}/uid_class.c
 	${sysmem_dir}/vslot.c
 	${sysmem_dir}/sysmem.c

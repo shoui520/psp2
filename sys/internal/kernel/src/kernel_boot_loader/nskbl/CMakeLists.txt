@@ -15,6 +15,7 @@ set(intrmgr_source ../../intrmgr)
 set(sysmem_c_sources
 	${sysmem_source}/uid.c
 	${sysmem_source}/memblock_obj.c
+	${sysmem_source}/uid_heap.c
 	${sysmem_source}/uid_class.c
 	${sysmem_source}/smb.c
 	${sysmem_source}/sysmem.c
