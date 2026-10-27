@@ -434,10 +434,20 @@ int bigmacStartAes128EcbEncrypt(void *dst, const void *src, uint32_t size,
 		const void *key, const uint32_t *ctrl);
 int bigmacStartAes128EcbDecrypt(void *dst, const void *src, uint32_t size,
 		const void *key, const uint32_t *ctrl);
+int bigmacStartAes256EcbEncrypt(void *dst, const void *src, uint32_t size,
+		const void *key, const uint32_t *ctrl);
+int bigmacStartAes256EcbDecrypt(void *dst, const void *src, uint32_t size,
+		const void *key, const uint32_t *ctrl);
 int bigmacStartAes128CbcEncrypt(void *dst, const void *src, uint32_t size,
 		const void *key, const void *iv, const uint32_t *ctrl);
 int bigmacStartAes128CbcDecrypt(void *dst, const void *src, uint32_t size,
 		const void *key, const void *iv, const uint32_t *ctrl);
+int bigmacStartAes256CbcEncrypt(void *dst, const void *src, uint32_t size,
+		const void *key, const void *iv, const uint32_t *ctrl);
+int bigmacStartAes256CbcDecrypt(void *dst, const void *src, uint32_t size,
+		const void *key, const void *iv, const uint32_t *ctrl);
+int bigmacStartAesCmac(void *dstMac, const void *src, uint32_t size,
+		const void *key, uint32_t keyByteLen, const uint32_t *ctrl);
 void bigmacReverseBswap128(uint32_t *words4);
 int bigmacAes128EcbEncryptSync(void *dst, const void *src, uint32_t size,
 		const void *key);

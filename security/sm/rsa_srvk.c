@@ -220,6 +220,79 @@ int bigmacStartAes128CbcDecrypt(void *dst, const void *src, uint32_t size,
 	return bigmacStartAesCipher(dst, src, size, key, iv, 2u, 1u, 1u, ctrl);
 }
 
+/* (name ours) */
+int bigmacStartAes256EcbEncrypt(void *dst, const void *src, uint32_t size,
+		const void *key, const uint32_t *ctrl)
+{
+	return bigmacStartAesCipher(dst, src, size, key, NULL, 1u, 0u, 3u, ctrl);
+}
+
+/* (name ours) */
+int bigmacStartAes256EcbDecrypt(void *dst, const void *src, uint32_t size,
+		const void *key, const uint32_t *ctrl)
+{
+	return bigmacStartAesCipher(dst, src, size, key, NULL, 2u, 0u, 3u, ctrl);
+}
+
+/* (name ours) */
+int bigmacStartAes256CbcEncrypt(void *dst, const void *src, uint32_t size,
+		const void *key, const void *iv, const uint32_t *ctrl)
+{
+	return bigmacStartAesCipher(dst, src, size, key, iv, 1u, 1u, 3u, ctrl);
+}
+
+/* (name ours) */
+int bigmacStartAes256CbcDecrypt(void *dst, const void *src, uint32_t size,
+		const void *key, const void *iv, const uint32_t *ctrl)
+{
+	return bigmacStartAesCipher(dst, src, size, key, iv, 2u, 1u, 3u, ctrl);
+}
+
+/* (name ours) */
+int bigmacStartAesCmac(void *dstMac, const void *src, uint32_t size,
+		const void *key, uint32_t keyByteLen, const uint32_t *ctrl)
+{
+	uint32_t ch = ctrl[0];
+	uint32_t flags = ctrl[1];
+	uint32_t chIdx;
+	uint32_t funcVal;
+
+	if (keyByteLen != 16u && keyByteLen != 24u && keyByteLen != 32u)
+		return (int)0x800f0016;
+	if (size == 0u || (size & 0x0fu) != 0u)
+		return (int)0x800f0016;
+
+	chIdx = ch & 1u;
+	BIGMAC->ch[chIdx].src = (uint32_t)(uintptr_t)src;
+	BIGMAC->ch[chIdx].dst = (uint32_t)(uintptr_t)dstMac;
+	BIGMAC->ch[chIdx].length = size;
+
+	funcVal = (flags & ~7u) | 0x3bu;
+	if (keyByteLen == 24u)
+		funcVal = (funcVal & ~0x300u) | 0x200u;
+	else if (keyByteLen == 32u)
+		funcVal |= 0x300u;
+	else if (keyByteLen == 16u)
+		funcVal = (funcVal & ~0x300u) | 0x100u;
+
+	BIGMAC->ch[chIdx].func = funcVal & ~0x0c00u;
+	if ((funcVal & 0x80u) == 0u) {
+		BIGMAC->ch[chIdx].keySlot = *(const uint32_t *)key;
+	} else {
+		volatile uint32_t *extKey = &BIGMAC->externalKey[chIdx * 32u];
+		const uint32_t *kWords;
+
+		for (kWords = (const uint32_t *)key;
+		     (uint32_t)((uintptr_t)kWords - (uintptr_t)key) < keyByteLen;
+		     kWords++) {
+			*extKey++ = *kWords;
+		}
+	}
+
+	BIGMAC->ch[chIdx].trigger = 1u;
+	return 0;
+}
+
 /* 0x80f100 (name ours) */
 void bigmacReverseBswap128(uint32_t *words4)
 {
