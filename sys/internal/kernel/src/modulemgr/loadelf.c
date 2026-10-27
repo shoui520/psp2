@@ -254,12 +254,19 @@ int LoadelfLoadSegment(LoadelfContext *ctx, SelfParser *reader, int index, Loade
 
 SceUInt32 Loadelf_GetAddrBias(LoadelfContext *ctx, const void *addr)
 {
+#if MODULEMGR_NSKBL
+	/* NSKBL loads every segment at its own address */
+	(void)ctx;
+	(void)addr;
+	return 0;
+#else
 	SceModuleCB *cb = ctx->cb;
 	int idx = ModuleCBGetSegmentIndex(cb, (SceUInt32)addr);
 	SceModuleSegment *seg = idx < cb->nSegments ? &cb->segment[idx] : NULL;
 
 	SCE_DBG_ASSERT_LEVEL(0, ctx->seg[idx].kaddr != NULL, 789);
 	return (SceUInt32)ctx->seg[idx].kaddr - (SceUInt32)seg->vaddr;
+#endif
 }
 
 static int LoadelfLoadSharedImage(LoadelfContext *ctx)

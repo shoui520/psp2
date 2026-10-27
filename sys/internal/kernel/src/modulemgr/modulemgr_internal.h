@@ -39,8 +39,8 @@
 #include <sysmem/sysroot_modulemgr.h>
 #include <sysmem/uid_guid.h>
 
-/* the kernel heap; the debug build calls the heap API directly */
-#if FW_DEBUG
+/* the kernel heap; the debug build calls the heap API directly (NSKBL's does not) */
+#if FW_DEBUG && !MODULEMGR_NSKBL
 #define ModulemgrKernelAlloc(size)	SceSysmemForDriver_B415B5A8(0x1000b, (size), NULL, \
 						    __builtin_return_address(0))
 #define ModulemgrKernelFree(ptr)	sceKernelFreeHeapMemory(0x1000b, (ptr))
@@ -455,8 +455,14 @@ int ModuleCBIsInText(SceModuleCB *cb, SceUInt32 addr, SceSize size);
 int ModuleCBIsInReadOnly(SceModuleCB *cb, SceUInt32 addr, SceSize size);
 int ModuleCBGetSegmentOffset(SceModuleCB *cb, SceUInt32 addr, int *seg, SceUInt32 *offset);
 int ModulemgrCopyIn(SceUID pid, void *dst, const void *src, SceSize len);
+#if MODULEMGR_NSKBL
+/* NSKBL loads into the kernel only */
+#define ModulemgrAlloc(pid, size)	((void)(pid), ModulemgrKernelAlloc(size))
+#define ModulemgrFree(pid, ptr)		((void)(pid), ModulemgrKernelFree(ptr))
+#else
 void *ModulemgrAlloc(SceUID pid, SceSize size);
 void ModulemgrFree(SceUID pid, void *ptr);
+#endif
 
 /* libentcb.c */
 typedef struct LibEntNidTable {

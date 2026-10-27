@@ -2174,6 +2174,7 @@ int ModulemgrCopyIn(SceUID pid, void *dst, const void *src, SceSize len)
 	return 0;
 }
 
+#if !MODULEMGR_NSKBL
 /* name unknown */
 void *ModulemgrAlloc(SceUID pid, SceSize size)
 {
@@ -2190,3 +2191,4 @@ void ModulemgrFree(SceUID pid, void *ptr)
 	else
 		ModulemgrKernelFree(ptr);
 }
+#endif

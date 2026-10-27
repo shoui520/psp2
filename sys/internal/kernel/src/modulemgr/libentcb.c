@@ -15,6 +15,7 @@ int LibEnt_checkEntTable(LoadelfContext *ctx)
 	SceSize libentSize;
 	const char *name;
 
+#if !MODULEMGR_NSKBL
 	if ((cb->flags & MODULE_FLAG_SHARED_MASK) != 0) {
 		SCE_DBG_ASSERT_LEVEL(0, cb->shared != NULL, 53);
 		libentSize = ctx->libentSize;
@@ -22,6 +23,7 @@ int LibEnt_checkEntTable(LoadelfContext *ctx)
 		cb->libEntCount = count;
 		goto out;
 	}
+#endif
 
 	bias = Loadelf_GetAddrBias(ctx, cb->libentTop);
 	ent = (SceModuleExports *)((SceUInt32)cb->libentTop + bias);
@@ -47,13 +49,20 @@ int LibEnt_checkEntTable(LoadelfContext *ctx)
 						  strnlen(name + bias, 0x100)))
 				return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 			if ((ent->attr & LIBRARY_ATTR_SYSCALL) != 0) {
+#if MODULEMGR_NSKBL
+				if (ent->nvar != 0)
+#else
 				if (cb->pid != SCE_KERNEL_PROCESS_ID || ent->nvar != 0)
+#endif
 					return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 				cb->flags |= MODULE_FLAG_NO_STOP;
 			}
 		}
 		ent = (SceModuleExports *)((SceUInt8 *)ent + ent->size);
 	}
+#if MODULEMGR_NSKBL
+	libentSize = ctx->libentSize;
+#else
 	if (cb->pid == SCE_KERNEL_PROCESS_ID || (cb->flags & MODULE_FLAG_SHARED_MASK) != 0) {
 		libentSize = ctx->libentSize;
 	} else {
@@ -61,6 +70,7 @@ int LibEnt_checkEntTable(LoadelfContext *ctx)
 		ctx->libentSize = libentSize;
 	}
 out:
+#endif
 	ctx->libEntCBSize = count * sizeof(LibEntCB);
 	ctx->libstubOffset = ctx->linkInfoUnk + libentSize + count * sizeof(LibEntCB);
 	return 0;
@@ -89,14 +99,20 @@ int LibEntCBInit(LoadelfContext *ctx)
 	SceModuleCB *cb = ctx->cb;
 	SceUInt32 offset = ctx->linkInfoUnk;
 	int count = cb->libEntCount;
+#if !MODULEMGR_NSKBL
 	int shared = (cb->flags & MODULE_FLAG_SHARED_MASK) != 0;
-	SceModuleExports *src, *end, *dst, *exports;
-	LibEntCB *ent;
+	SceModuleExports *src, *end, *dst;
 	SceUInt32 bias;
-	int i;
 	const char *name;
 	char *interned;
+#endif
+	SceModuleExports *exports;
+	LibEntCB *ent;
+	int i;
 
+#if MODULEMGR_NSKBL
+	cb->libent = NULL;
+#else
 	if (cb->pid == SCE_KERNEL_PROCESS_ID) {
 		cb->libent = NULL;
 	} else if (shared) {
@@ -123,6 +139,7 @@ int LibEntCBInit(LoadelfContext *ctx)
 				return SCE_KERNEL_ERROR_MODULEMGR_NOMEM;
 		}
 	}
+#endif
 
 	if (ctx->libEntCBSize != 0) {
 		ent = (LibEntCB *)((SceUInt8 *)cb->linkInfo + offset);
@@ -135,8 +152,10 @@ int LibEntCBInit(LoadelfContext *ctx)
 		for (i = 0; i < count; i++) {
 			ent[i].cb = cb;
 			ent[i].exports = &exports[i];
+#if !MODULEMGR_NSKBL
 			if (shared)
 				ent[i].flags = LIBENT_FLAG_SHARED;
+#endif
 		}
 	}
 	return 0;
@@ -145,6 +164,9 @@ int LibEntCBInit(LoadelfContext *ctx)
 /* name unknown: release the interned library names */
 void LibEntFreeNames(SceModuleCB *cb)
 {
+#if MODULEMGR_NSKBL
+	(void)cb;	/* NSKBL interns no names */
+#else
 	SceModuleExports *ent;
 	int i, count;
 
@@ -161,6 +183,7 @@ void LibEntFreeNames(SceModuleCB *cb)
 			} while (i < count);
 		}
 	}
+#endif
 }
 
 /* name unknown */
@@ -173,6 +196,7 @@ void ModuleCBFreeLinkInfo(SceModuleCB *cb)
 		ModulemgrFree(pid, linkInfo);
 }
 
+#if !MODULEMGR_NSKBL
 /* name unknown: index of the export entry at addr */
 int LibEntGetIndex(SceModuleCB *cb, SceUInt32 addr)
 {
@@ -183,14 +207,17 @@ int LibEntGetIndex(SceModuleCB *cb, SceUInt32 addr)
 	}
 	return SCE_KERNEL_ERROR_MODULEMGR_INVALID_LIB;
 }
+#endif
 
 /* name unknown */
 void LibEntCBClear(LibEntCB *ent)
 {
+#if !MODULEMGR_NSKBL
 	if (ent->puid > 0) {
 		scePUIDClose(ent->cb->pid, ent->puid);
 		ent->puid = 0;
 	}
+#endif
 	if (ent->guid > 0) {
 		sceGUIDClose(ent->guid);
 		ent->guid = 0;
@@ -205,16 +232,21 @@ void LibEntCBClear(LibEntCB *ent)
 /* name unknown: the NID, entry and hash tables of a library, copied in for users */
 int LibEntGetNidTable(LibEntCB *ent, LibEntNidTable *info)
 {
+#if !MODULEMGR_NSKBL
 	SceModuleCB *cb = ent->cb;
 	SceUID pid = cb->pid;
-	SceModuleExports *exports;
-	SceUInt32 nfunc, nvar, n, i;
-	SceSize funcHash, nidSize, size;
-	SceNID *nidtable;
-	void **entrytable, **ents;
+	SceSize nidSize, size;
+	void **ents;
 	SceUInt16 entflags;
 	SceUInt8 *copy;
+	SceUInt32 i;
 	int ret;
+#endif
+	SceModuleExports *exports;
+	SceUInt32 nfunc, nvar, n;
+	SceSize funcHash;
+	SceNID *nidtable;
+	void **entrytable;
 
 	memset(info, 0, sizeof(*info));
 	exports = ent->exports;
@@ -234,6 +266,7 @@ int LibEntGetNidTable(LibEntCB *ent, LibEntNidTable *info)
 	info->nvar = nvar;
 	info->varHashBits = g_hashShift[exports->hashinfo >> 4];
 
+#if !MODULEMGR_NSKBL
 	if (cb->pid != SCE_KERNEL_PROCESS_ID) {
 		nidSize = n * 4;
 		size = nidSize + ((4 << (30 - info->varHashBits)) + funcHash) * 2;
@@ -263,6 +296,7 @@ int LibEntGetNidTable(LibEntCB *ent, LibEntNidTable *info)
 			ent->flags = entflags | LIBENT_FLAG_SHARED;
 		}
 	}
+#endif
 	info->hashTable = info->nidtable + info->nvar + info->nfunc;
 	info->varHashTable = (SceUInt8 *)info->hashTable + funcHash * 2;
 	return 0;
@@ -271,8 +305,12 @@ int LibEntGetNidTable(LibEntCB *ent, LibEntNidTable *info)
 /* name unknown */
 void LibEntReleaseNidTable(LibEntNidTable *info)
 {
+#if MODULEMGR_NSKBL
+	(void)info;	/* nothing is copied in for the kernel */
+#else
 	if (info->copy != NULL)
 		ModulemgrFree(info->libEntCB->cb->pid, info->copy);
+#endif
 }
 
 /* name unknown: call func for every function ('f') and variable ('v') entry */
