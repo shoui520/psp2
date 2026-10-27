@@ -78,11 +78,11 @@ firstLoaderEntry:
 	sub	$3, $2
 	srl	$3, 3
 	add	$3, -1
-	/* The linker keeps BSS nonempty and eight-byte aligned. */
+	/* The retail loop clears eight bytes per iteration. */
 	repeat	$3, 1f
 	sw	$1, ($2)
-	sw	$1, 4($2)
 1:
+	sw	$1, 4($2)
 	add	$2, 8
 	movu	$0, 0x5fff0
 	mov	$sp, $0

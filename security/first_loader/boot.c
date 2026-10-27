@@ -217,14 +217,14 @@ struct FirstLoaderSdifCommand {
 	int error;
 };
 
-static struct FirstLoaderSdif sdif;
-static unsigned int sdifPowerState;
+static struct FirstLoaderSdif sdif __attribute__((section(".fl.bss.sdif")));
+static unsigned int sdifPowerState __attribute__((section(".fl.sdifPowerState"))) = 0;
 
 void delayMicroseconds(unsigned int microseconds);
 
-static volatile unsigned int bootHardwareMode;
+static volatile unsigned int bootHardwareMode __attribute__((section(".fl.bootHardwareMode"))) = 0;
 
-static union FirstLoaderCard firstLoaderCard;
+static union FirstLoaderCard firstLoaderCard __attribute__((section(".fl.bss.firstLoaderCard")));
 
 static const unsigned int emmcTimeUnits[8] __attribute__((section(".fl.emmcTimeUnits"))) = {
 	1, 10, 100, 1000, 10000, 100000, 1000000, 10000000,
@@ -292,8 +292,8 @@ static unsigned char digestIv[16] __attribute__((section(".fl.digestIv"))) = {
 	0xee, 0xb5, 0xec, 0x5c, 0xcf, 0x1c, 0xf4, 0x31,
 	0x13, 0xf5, 0x21, 0x3a, 0xd5, 0xb8, 0xd6, 0xda,
 };
-static unsigned char expectedDigest[32];
-static unsigned char actualDigest[32];
+static unsigned char expectedDigest[32] __attribute__((section(".fl.bss.expectedDigest")));
+static unsigned char actualDigest[32] __attribute__((section(".fl.bss.actualDigest")));
 
 static unsigned char signatureSeed[32] __attribute__((section(".fl.signatureSeed"))) = {
 	0x4a, 0x41, 0xde, 0xde, 0xff, 0xba, 0xc0, 0x4f,
@@ -324,7 +324,7 @@ static const unsigned int fallbackModulus[64] __attribute__((section(".fl.fallba
 	0xfac695b2U, 0x92c7d110U, 0xc066b27cU, 0xcc25308bU,
 	0x7e83a476U, 0x8b20d8f0U, 0x595030baU, 0xbcda3de2U,
 };
-static unsigned int signatureDigest[8];
+static unsigned int signatureDigest[8] __attribute__((section(".fl.bss.signatureDigest")));
 
 
 
@@ -2194,20 +2194,20 @@ int openSdifCard(unsigned int port, struct SdifCard **resultCard)
 
 	csdStructure = readBits(card->csd, 0x7e, 2);
 	card->csdStructure = csdStructure;
-	unit = readBits(card->csd, 0x60, 3);
+	if (csdStructure != 0 && csdStructure != 1)
+		return -1;
 	multiplier = readBits(card->csd, 99, 4);
+	unit = readBits(card->csd, 0x60, 3);
 	card->maximumClock = sdifClockMultipliers[multiplier] *
 			     sdifClockUnits[unit];
 	card->commandClasses = readBits(card->csd, 0x54, 12);
 	if (csdStructure == 1) {
 		card->sectorCount = (readBits(card->csd, 0x30, 0x16) + 1) * 0x400;
 		card->flags |= 1;
-	} else if (csdStructure == 0) {
+	} else {
 		multiplier = readBits(card->csd, 0x2f, 3);
 		card->sectorCount = (readBits(card->csd, 0x3e, 12) + 1) <<
 				    (multiplier + 2);
-	} else {
-		return -1;
 	}
 
 	result = readSdifScr(card, card->scr);

@@ -25,6 +25,8 @@ SECTIONS
 		KEEP(*(.text.start))
 		*(.text .text.*)
 		/* Keep the initialized state at its retail ROM addresses. */
+		. = 0x00002680;
+		KEEP(*(.fl.bootHardwareMode))
 		. = 0x00002684;
 		KEEP(*(.fl.slot8Seed))
 		. = 0x000026a4;
@@ -65,6 +67,8 @@ SECTIONS
 		KEEP(*(.fl.fallbackModulus))
 		. = 0x000029f0;
 		KEEP(*(.fl.externalBootKey))
+		. = 0x00002a10;
+		KEEP(*(.fl.sdifPowerState))
 		. = 0x00002a20;
 		*(.rodata .rodata.*)
 		*(.sdata .sdata.*)
@@ -75,12 +79,16 @@ SECTIONS
 	__program_load = LOADADDR(.program);
 	__program_size = SIZEOF(.program);
 
-	.bss (NOLOAD) : ALIGN(8)
+	.bss 0x5ea80 (NOLOAD) :
 	{
 		__bss_start = .;
+		KEEP(*(.fl.bss.firstLoaderCard))
+		KEEP(*(.fl.bss.signatureDigest))
+		KEEP(*(.fl.bss.expectedDigest))
+		KEEP(*(.fl.bss.actualDigest))
+		KEEP(*(.fl.bss.sdif))
 		*(.sbss .sbss.*)
 		*(.bss .bss.* COMMON)
-		. = ALIGN(8);
 		__bss_end = .;
 	} > ram
 	__sdabase = ADDR(.bss);
