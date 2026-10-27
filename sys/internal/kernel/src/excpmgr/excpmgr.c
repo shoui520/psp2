@@ -49,10 +49,13 @@ static const unsigned int armNop = 0xe320f000;
 static const unsigned int thumbNop = 0xbf00bf00;
 #endif
 
+/* the release boot loader prints no exception report */
+#if FW_DEBUG || !EXCPMGR_NSKBL
 void printVfpRegisters(SceExcpmgrContext *context);
 void printWPT(SceExcpmgrContext *context);
+#endif
 
-#if !FW_DEBUG || EXCPMGR_NSKBL
+#if !FW_DEBUG && !EXCPMGR_NSKBL || FW_DEBUG && EXCPMGR_NSKBL
 static const char *const exceptionNames[] = {
 	"",
 	"Halting Debug-mode",
@@ -106,12 +109,13 @@ static int excpResume(int value, void *args)
 #define EXCP_REPORT_EXTERNAL_DATA
 #define EXCP_IT_TEXT(_index) g_excpmgrITText##_index
 #endif
-#if FW_DEBUG || EXCPMGR_NSKBL
+#if FW_DEBUG
 #define EXCP_REPORT_LINKAGE
 #endif
 #include "excpmgr_handler_report.h"
 #undef EXCP_REPORT_LINKAGE
 
+#if FW_DEBUG || !EXCPMGR_NSKBL
 void printVfpRegisters(SceExcpmgrContext *context)
 {
 	unsigned int regs[64];
@@ -196,6 +200,7 @@ void printWPT(SceExcpmgrContext *context)
 		i++;
 	} while (i != last);
 }
+#endif
 
 void _sceKernelPanicHandlerCommon(SceExcpmgrContext *context, unsigned int reason,
 				  const SceKernelDebugInfo *info, const char *message)

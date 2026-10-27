@@ -1,6 +1,7 @@
 /* Exception manager private state. */
 #pragma once
 #include <scetypes.h>
+#include <fw.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/cpu.h>
 #include <sysmem/debug.h>

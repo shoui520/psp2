@@ -72,6 +72,16 @@ int sceKernelRegisterDefaultExceptionHandler(SceExcpmgrHandler *handler)
 	end = &g_excpHandlers.first[0][SCE_EXCP_PRIORITY_MAX];
 	for (code = 0; code != SCE_EXCP_MAX; code++, end += SCE_EXCP_PRIORITY_MAX) {
 		entry = end;
+#if EXCPMGR_NSKBL && !FW_SINCE(0x04000000)
+		/* the 3.6x boot loader looks at slots 7 to 1 only */
+		for (i = 7; i != 0; i--) {
+			link = *--entry;
+			if (__builtin_expect(link != NULL, 1)) {
+				excpPokeWord((unsigned int)link, (unsigned int)handler);
+				goto next;
+			}
+		}
+#else
 		for (i = 7; ; i--) {
 			link = *--entry;
 			if (__builtin_expect(link != NULL, 1)) {
@@ -81,6 +91,7 @@ int sceKernelRegisterDefaultExceptionHandler(SceExcpmgrHandler *handler)
 			if (i == 0)
 				break;
 		}
+#endif
 		g_excpHandlers.head[code] = handler;
 		excpSetVector(code, handler);
 next:
