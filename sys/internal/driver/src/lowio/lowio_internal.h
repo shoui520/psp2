@@ -35,6 +35,18 @@ static inline void LowioDsb(void)
 	__asm__ volatile("dsb sy" : : : "memory");
 }
 
+/* pervasive.c, pervasive_clock.c: store a Misc word; returns whether it was set before. */
+static inline __attribute__((always_inline)) uint32_t MiscReplace(
+	volatile uint32_t *reg, uint32_t value)
+{
+	uint32_t previous = *reg;
+
+	*reg = value;
+	previous = previous != 0;
+	LowioDmb();
+	return previous;
+}
+
 /* smc.S: the monitor gets r2 and r3 as the caller left them */
 uint32_t Smc110(uint32_t bus, uint32_t state);
 int Smc111(volatile uint32_t *reg, int value);

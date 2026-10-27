@@ -7,7 +7,8 @@ psp2_module(os0_kd_lowio KIND kernel COMPILER gcc48 SOURCES
 	smc.S
 	lowio.c
 	lowio_state.c
-	pervasive_init.c
+	pervasive.c
+	pervasive_clock.c
 	cdram.c
 	gpio.c
 	pwm.c
@@ -15,12 +16,5 @@ psp2_module(os0_kd_lowio KIND kernel COMPILER gcc48 SOURCES
 	csi.c
 	dsi.c
 	iftu.c
-	pervasive_controls.c
-	pervasive_reset.c
-	pervasive_gate.c
-	pervasive_registers.c
-	pervasive_config.c
-	pervasive_clock.c
-	pervasive_pixel.c
 	secure_controls.c
 )
