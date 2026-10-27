@@ -476,8 +476,9 @@ int probeExternalBoot(void)
 	CMEP->debugger2Cry2[0] = 0xffffffffU;
 	CMEP->debugger2Cry2[1] = 0xffffffffU;
 	GPIO->clear = 8;
+	/* Encrypt the 16-byte challenge; the reply contains only eight bytes. */
 	result = bigmacRunMode301((unsigned int)(unsigned long)encrypted,
-				  (unsigned int)(unsigned long)challenge, 8,
+				  (unsigned int)(unsigned long)challenge, sizeof(challenge),
 				  (unsigned int)(unsigned long)externalBootKey);
 	if (result < 0 || compareBytes(response, encrypted, 8))
 		result = -1;
