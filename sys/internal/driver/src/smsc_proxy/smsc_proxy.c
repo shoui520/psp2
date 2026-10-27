@@ -9,11 +9,17 @@
  * event flag, call the channel's handler, or acknowledge.
  *
  * Every API entry stores TPIDRURO << 16 while it runs and restores it on exit.
+ *
+ * NSKBL (SMSC_PROXY_NSKBL) runs without a thread manager: a session's event is
+ * a word the interrupt handler sets and sceSblSmSchedProxyWait polls, its wait
+ * lock a byte taken by compare-and-set; there is no system event handler, stop,
+ * kill or F00D register access.
  */
 
 #include <fw.h>
 #include <stddef.h>
 #include <sysmem/cpu.h>
+#include <sysmem/barrier.h>
 #include <sysmem/debug.h>
 #include <smsc_proxy/smsc_proxy.h>
 #include <sysmem/sysroot.h>
@@ -77,8 +83,13 @@ typedef struct Session {
 	int used;
 	SceUID id;
 	SceUInt32 handle;		/* TrustZone side handle */
+#if SMSC_PROXY_NSKBL
+	SceUInt32 event;		/* the interrupt handler's event bits */
+	SceInt8 waitLock;		/* taken by sceSblSmSchedProxyWait */
+#else
 	SceUID eventFlag;
 	SceUID mutex;
+#endif
 	Channel channel[CHANNEL_COUNT];
 } Session;
 
@@ -130,6 +141,7 @@ static volatile Session *SessionLookup(SceUID id, int *status)
 		*status = LOOKUP_ID_CLEARED;
 		return NULL;
 	}
+#if !SMSC_PROXY_NSKBL
 	if (s->eventFlag == -1) {
 		*status = LOOKUP_NO_EVENT_FLAG;
 		return NULL;
@@ -138,6 +150,7 @@ static volatile Session *SessionLookup(SceUID id, int *status)
 		*status = LOOKUP_NO_MUTEX;
 		return NULL;
 	}
+#endif
 	*status = LOOKUP_OK;
 	return s;
 }
@@ -180,10 +193,12 @@ static int softIntrHandler(int intrCode, void *userCtx)
 			SCE_PANIC(1002);
 		else if (lookup == LOOKUP_ID_CLEARED)
 			SCE_PANIC(1005);
+#if !SMSC_PROXY_NSKBL
 		else if (lookup == LOOKUP_NO_EVENT_FLAG)
 			SCE_PANIC(1009);
 		else if (lookup == LOOKUP_NO_MUTEX)
 			SCE_PANIC(1012);
+#endif
 		else
 			SCE_PANIC(1015);
 	}
@@ -203,8 +218,18 @@ static int softIntrHandler(int intrCode, void *userCtx)
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
 
+#if SMSC_PROXY_NSKBL
+	if (flags & MSG_SET_EVENT) {
+		state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+		s->event |= eventBits;
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
+		dsb();
+		sev();
+	}
+#else
 	if ((flags & MSG_SET_EVENT) && sceKernelSetEventFlag(s->eventFlag, eventBits) < 0)
 		SCE_PANIC(1045);
+#endif
 
 	if (handler == NULL) {
 		ret = SmcCall(handle, channel, msg->ack, 0, SMC_INTR_DONE);
@@ -249,6 +274,7 @@ static int updateMailbox(SceUInt32 command, SceUID id, int channel, SceUInt32 va
 	return SmcCall(s->handle, channel, value, 0, command);
 }
 
+__attribute__((noinline, noclone))
 static int accessMailbox(SceUInt32 command, SceUID id, int channel, SceUInt32 *value)
 {
 	SceSize size;
@@ -296,6 +322,7 @@ static void SessionFree(SceUID id)
 	s = SessionLookup(id, &status);
 	if (s == NULL)
 		return;
+#if !SMSC_PROXY_NSKBL
 	if (s->eventFlag != -1) {
 		sceKernelDeleteEventFlag(s->eventFlag);
 		s->eventFlag = -1;
@@ -304,10 +331,12 @@ static void SessionFree(SceUID id)
 		sceKernelDeleteMutex(s->mutex);
 		s->mutex = -1;
 	}
+#endif
 	s->id = -1;
 	s->used = 0;
 }
 
+#if !SMSC_PROXY_NSKBL
 /* name unknown */
 static int sysEventHandler(int resume, int eventId, void *args, void *opt)
 {
@@ -321,6 +350,7 @@ static int sysEventHandler(int resume, int eventId, void *args, void *opt)
 	}
 	return 0;
 }
+#endif
 
 int sceSblSmSchedProxyModuleStart(SceSize args, void *argp)
 {
@@ -346,9 +376,11 @@ int sceSblSmSchedProxyModuleStart(SceSize args, void *argp)
 					    NULL, 0x80, 0xf, NULL);
 	if (ret < 0)
 		return ret;
+#if !SMSC_PROXY_NSKBL
 	ret = sceKernelRegisterSysEventHandler("SceSblSmSchedProxy", sysEventHandler, NULL);
 	if (ret < 0)
 		return ret;
+#endif
 
 	s_lock = 0;
 	s_state = STATE_READY;
@@ -362,6 +394,7 @@ int SceSblSmSchedProxyForKernel_A488D604(void)
 	return sceSblSmSchedProxyModuleStart(0, NULL);
 }
 
+#if !SMSC_PROXY_NSKBL
 /* name unknown */
 __attribute__((noinline)) static int Terminate(void)
 {
@@ -386,6 +419,7 @@ int SceSblSmSchedProxyForKernel_33A3A1E2(void)
 		return 0;
 	return Terminate();
 }
+#endif
 
 int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUInt32 *in,
 			     const SelfAuthRequest *param, SceUID *id)
@@ -435,6 +469,10 @@ int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUIn
 		s->channel[i].pending.result = 0;
 		s->channel[i].pending.state = 0;
 	}
+#if SMSC_PROXY_NSKBL
+	s->waitLock = 0;
+	s->event = 0;
+#else
 	s->eventFlag = -1;
 	s->mutex = -1;
 
@@ -446,6 +484,7 @@ int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUIn
 	if (ret < 0)
 		goto fail_session;
 	s->mutex = ret;
+#endif
 	if (newId == -1) {
 		sceSyscallLeave(tls);
 		return SCE_SBL_ERROR_SMSCHED_NO_MEMORY;
@@ -523,10 +562,12 @@ fail_buffer:
 	sceSyscallLeave(tls);
 	return ret;
 
+#if !SMSC_PROXY_NSKBL
 fail_session:
 	SessionFree(newId);
 	sceSyscallLeave(tls);
 	return SCE_SBL_ERROR_SMSCHED_NO_MEMORY;
+#endif
 }
 
 int sceSblSmSchedProxyWait(SceUID id, SceUInt32 *result)
@@ -536,6 +577,9 @@ int sceSblSmSchedProxyWait(SceUID id, SceUInt32 *result)
 	SmschedIntrStatus *buf;
 	volatile Session *s;
 	int status, index, ret, value;
+#if SMSC_PROXY_NSKBL
+	int state;
+#endif
 
 	tls = sceSyscallEnter();
 	if (s_state != STATE_READY) {
@@ -550,6 +594,23 @@ int sceSblSmSchedProxyWait(SceUID id, SceUInt32 *result)
 		sceSyscallLeave(tls);
 		return SCE_SBL_ERROR_SMSCHED_NO_REQUEST;
 	}
+#if SMSC_PROXY_NSKBL
+	if (sceKernelAtomicCompareAndSet8((SceInt8 *)&s->waitLock, 0, 1) != 0)
+		goto invalid;
+
+	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	if (!(s->event & 1)) {
+		do {
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
+			do
+				wfe();
+			while (!(s->event & 1));
+			state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+		} while (!(s->event & 1));
+		s->event = 0;
+	}
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
+#else
 	if (sceKernelTryLockMutex(s->mutex, 1) < 0)
 		goto invalid;
 
@@ -558,6 +619,7 @@ int sceSblSmSchedProxyWait(SceUID id, SceUInt32 *result)
 	sceKernelSysrootEnableAutoClockDown();
 	if (ret < 0)
 		goto out;
+#endif
 
 	ret = index = sceSblTzsBridgeAllocArgArea(8, (void **)&buf, &size);
 	if (index < 0)
@@ -636,6 +698,7 @@ int sceSblSmSchedProxyGetStatus(SceUID id, SceUInt32 *status)
 	return ret;
 }
 
+#if !SMSC_PROXY_NSKBL
 int sceSblSmSchedProxyKill(SceUID id)
 {
 	SceUInt32 tls = sceSyscallEnter();
@@ -667,6 +730,8 @@ int SceSblSmSchedProxyForKernel_1DFC8624(void)
 	return SCE_SBL_ERROR_SMSCHED_NOT_SUPPORTED;
 }
 
+#endif
+
 int SceSblSmSchedProxyForKernel_723B382F(SceUID id, int channel, SceUInt32 value)
 {
 	SceUInt32 tls = sceSyscallEnter();
@@ -676,6 +741,7 @@ int SceSblSmSchedProxyForKernel_723B382F(SceUID id, int channel, SceUInt32 value
 	return ret;
 }
 
+#if !SMSC_PROXY_NSKBL
 int SceSblSmSchedProxyForKernel_F70C04EC(SceUID id, int channel, SceUInt32 *value)
 {
 	SceUInt32 tls = sceSyscallEnter();
@@ -693,6 +759,8 @@ int SceSblSmSchedProxyForKernel_3CE17233(SceUID id, int channel, SceUInt32 value
 	sceSyscallLeave(tls);
 	return ret;
 }
+
+#endif
 
 int sceSblSmSchedProxyWriteCry2Arm(SceUID id, int channel, SceUInt32 value)
 {
