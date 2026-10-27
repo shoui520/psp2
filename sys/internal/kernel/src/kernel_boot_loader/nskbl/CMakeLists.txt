@@ -43,6 +43,7 @@ set(sysmem_c_sources
 	${sysmem_source}/led.c
 	${sysmem_source}/debug_state.c
 	${sysmem_source}/debug_dump.c
+	${sysmem_source}/debug_asm.S
 	${sysmem_source}/debug_output.c
 	${sysmem_source}/memset_chk.c
 	${sysmem_source}/memcpy_chk.c
