@@ -518,7 +518,9 @@ void LibraryDBUnlock(LibraryDB *db, int intr);
 LibEntCB *LibraryDBUnlinkLib(LibraryDB *db, SceNID libnid, const char *name);
 SceModuleCB **Addr2ModGetEntry(SceModuleCB **table, Addr2ModExidx **exidxBase, SceUInt32 addr,
 			       Addr2ModExidx **exidx);
+#if !MODULEMGR_NSKBL
 void Addr2ModRegister(Addr2ModTable *tbl, SceModuleCB *cb);
+#endif
 int LibraryDBUsesPUID(SceUID pid);
 SceLibraryObject *LibraryDBReferLibrary(SceUID pid, SceUID uid);
 void LibraryDBDelete(SceUID pid);

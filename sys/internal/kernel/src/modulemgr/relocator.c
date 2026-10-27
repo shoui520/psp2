@@ -477,6 +477,7 @@ void relocatorFormCount(void)
 	g_relocForms = 0;
 }
 
+#if !MODULEMGR_NSKBL
 void relocatorFormLogPrint(void)
 {
 	SCE_DBG_PRINTF_LEVEL(1, 0, 442, "Relocation Forms [%d, %d] %d %d, %d %d %d, %d %d %d %d\n\n",
@@ -498,3 +499,4 @@ void relocatorFormLogPrint(void)
 	g_relocFormCount[11] = 0;
 	g_relocForms = 0;
 }
+#endif
