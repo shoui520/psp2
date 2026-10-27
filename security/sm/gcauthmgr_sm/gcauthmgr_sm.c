@@ -234,7 +234,7 @@ uint32_t sm_udivsi3(uint32_t a, uint32_t b);
 uint32_t sm_umodsi3(uint32_t a, uint32_t b);
 
 /* .rodata constant tables (0x812708..0x813300) */
-static void (* const g_kirk_service_vtable[2])(void *, void *) = { sm_service_invoke_cb, sm_service_invoke_cb };
+static void (* const g_kirk_service_vtable[2])(void *, void *) = { sm_service_invoke_cb, NULL };
 
 static const uint8_t g_keyseed_kirk_13_24_25[0x10] = {
 	0x78, 0xea, 0x6e, 0xd4, 0x3a, 0xb5, 0x59, 0xd4,
@@ -696,6 +696,8 @@ uint32_t bigmac_derive_keyslot_ecb(const void *key_src, uint32_t dst_slot, uint3
 {
 	uint32_t status;
 
+	MMIO_WRITE32(0xe0030028u, dst_slot & 0xffffu);
+	(void)MMIO_READ32(0xe003002cu);
 	MMIO_WRITE32(0xe0050000u, MMIO_ADDPTR(key_src));
 	MMIO_WRITE32(0xe0050004u, dst_slot);
 	MMIO_WRITE32(0xe0050008u, 0x10u);
@@ -706,7 +708,6 @@ uint32_t bigmac_derive_keyslot_ecb(const void *key_src, uint32_t dst_slot, uint3
 		status = MMIO_READ32(0xe0050024u);
 	} while ((status & 1u) != 0);
 	MMIO_WRITE32(0xe0030028u, dst_slot & 0xffffu);
-	status = MMIO_READ32(0xe0050024u);
 	if ((MMIO_READ32(0xe003002cu) & 2u) == 0)
 		status = 0x11u;
 	return status;
@@ -717,11 +718,12 @@ uint32_t bigmac_derive_keyslot_cbc(const void *key_src, const void *iv_src, uint
 {
 	uint32_t status;
 
-	MMIO_WRITE32(0xe0050008u, 0x10u);
-	MMIO_WRITE32(0xe005000cu, 0x1000010au);
 	MMIO_WRITE32(0xe0030028u, dst_slot & 0xffffu);
+	(void)MMIO_READ32(0xe003002cu);
 	MMIO_WRITE32(0xe0050000u, MMIO_ADDPTR(key_src));
 	MMIO_WRITE32(0xe0050004u, dst_slot);
+	MMIO_WRITE32(0xe0050008u, 0x10u);
+	MMIO_WRITE32(0xe005000cu, 0x1000010au);
 	sm_memcpy(g_zero_iv_buf, iv_src, 0x10);
 	MMIO_WRITE32(0xe0050014u, MMIO_ADDPTR(g_zero_iv_buf));
 	MMIO_WRITE32(0xe0050010u, src_slot & 0x7ffu);
@@ -730,7 +732,6 @@ uint32_t bigmac_derive_keyslot_cbc(const void *key_src, const void *iv_src, uint
 		status = MMIO_READ32(0xe0050024u);
 	} while ((status & 1u) != 0);
 	MMIO_WRITE32(0xe0030028u, dst_slot & 0xffffu);
-	status = MMIO_READ32(0xe0050024u);
 	if ((MMIO_READ32(0xe003002cu) & 2u) == 0)
 		status = 0x11u;
 	return status;
@@ -762,6 +763,8 @@ uint32_t bigmac_load_keyslot_204(const void *key_src)
 {
 	uint32_t status;
 
+	MMIO_WRITE32(0xe0030028u, 0u);
+	(void)MMIO_READ32(0xe003002cu);
 	MMIO_WRITE32(0xe0050000u, MMIO_ADDPTR(key_src));
 	MMIO_WRITE32(0xe0050004u, 0u);
 	MMIO_WRITE32(0xe0050008u, 0x10u);
@@ -772,7 +775,6 @@ uint32_t bigmac_load_keyslot_204(const void *key_src)
 		status = MMIO_READ32(0xe0050024u);
 	} while ((status & 1u) != 0);
 	MMIO_WRITE32(0xe0030028u, status & 1u);
-	status = MMIO_READ32(0xe0050024u);
 	if ((MMIO_READ32(0xe003002cu) & 2u) == 0)
 		status = 0x11u;
 	return status;
@@ -2056,6 +2058,7 @@ void sm_mailbox_irq_handler(void)
 
 	if ((reg & 1u) == 0)
 		return;
+	MMIO_WRITE32(0xe0000014u, reg);
 	phys_addr = reg & ~1u;
 	if (sm_validate_phys_range(phys_addr, 0x40u) != 0) {
 		pkt_size = MMIO_READ32(phys_addr);
