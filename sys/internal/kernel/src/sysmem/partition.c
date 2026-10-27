@@ -2033,6 +2033,24 @@ int PartitionAllocMemBlockByCommandRaw(Partition *partition, SceKernelAllocMemBl
 	MemBlockFill(command->block);
 	return ret;
 }
+#elif SYSMEM_NSKBL
+/* the boot loader has no CDRAM either; every block takes sysroot's name 4 */
+int PartitionAllocMemBlockByCommandRaw(Partition *partition, SceKernelAllocMemBlockCommand *command)
+{
+	MemBlockObject *block;
+	int ret;
+
+	if (command->opt.attr & ALLOC_ATTR_HAS_VBASE)
+		ret = PartitionAllocMemBlockCoreByAddrByCommandRaw(partition, command,
+								   command->opt.vbase);
+	else
+		ret = PartitionAllocMemBlockCoreByCommandRaw(partition, command);
+	block = command->block;
+	MemBlockSetNameNonNullRaw(block, SysrootGetMemBlockName(4));
+	if (ret >= 0)
+		MemBlockFill(command->block);
+	return ret;
+}
 #else
 int PartitionAllocMemBlockByCommandRaw(Partition *partition, SceKernelAllocMemBlockCommand *command)
 {
