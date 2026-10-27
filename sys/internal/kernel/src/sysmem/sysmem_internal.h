@@ -319,7 +319,11 @@ int FixedHeapInitForProcess(FixedHeap *heap, SceUID pid, const char *name, SceUI
 			    SceSize itemSize, void *partition, SceSize pageSize,
 			    SceUInt16 maxPages);
 FixedHeapClass *FixedHeapGetClass(void);
+#if SYSMEM_NSKBL
+int FixedHeapInitClass(FixedHeapClass *cls, const char *name, SceSize itemsize, SceClass *parent);
+#else
 int FixedHeapInitClass(FixedHeapClass *cls, const char *name);
+#endif
 int FixedHeapRelease(FixedHeap *heap);
 int FixedHeapFinish(FixedHeap *heap);
 void FixedHeapInitLock(FixedHeap *heap);
@@ -396,11 +400,19 @@ int NameHeapFind(const char *name, SceUInt32 flags, NameEntry **out);
 int NameHeapInit(struct UIDManager *manager);
 int NameEntrySetUIDEntry(NameEntry *entry, void *uidEntry);
 
-/* uid_class.c */
+/* uid_heap.c */
 int UIDHeapInit(UIDHeap *heap);
-int UIDHeapClassInit(UIDHeapClass *cls, const char *name, SceClassCallback create,
-		     SceClassCallback destroy, int (*alloc)(void *heap, SceSize size, void **object),
-		     int (*free)(void *heap, void *object));
+#if SYSMEM_NSKBL
+int sceUIDHeapClassInit(UIDHeapClass *cls, const char *name, SceClass *parent,
+			SceSize itemsize, SceClassCallback create, SceClassCallback destroy,
+			int (*alloc)(void *heap, SceSize size, void **object),
+			int (*free)(void *heap, void *object));
+#else
+int sceUIDHeapClassInit(UIDHeapClass *cls, const char *name, SceClassCallback create,
+			SceClassCallback destroy,
+			int (*alloc)(void *heap, SceSize size, void **object),
+			int (*free)(void *heap, void *object));
+#endif
 int UIDHeapObjectCreate(void *object);
 int UIDHeapObjectDestroy(void *object);
 int UIDHeapCallAlloc(void *heap, SceSize size, void **object);
@@ -421,7 +433,11 @@ typedef struct AddressSpaceSubbudgetInfo {
 int AddressSpaceObjectCreate(void *object);
 int AddressSpaceObjectDestroy(void *object);
 int UIDHeapClassInitManager(struct UIDManager *manager);
-int UIDClassInit(struct UIDManager *manager);
+#if SYSMEM_NSKBL
+int UIDClassStart(struct UIDManager *manager);
+#else
+int UIDClassModuleStart(struct UIDManager *manager);
+#endif
 
 /* sceKernelGetClassInfoAll */
 typedef struct SceKernelClassInfo {

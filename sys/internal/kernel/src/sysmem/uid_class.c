@@ -5,12 +5,12 @@
  */
 
 #include <sysmem/sysclib.h>
+#include <sysmem/sysroot.h>
 #include "sysmem_internal.h"
 
 /* SceUIDClass */
 static SceClass *s_uidClass;
 
-#if !SYSMEM_NSKBL
 /* name unknown: SceUIDClass's constructor and destructor */
 static int UIDClassCreate(void *object)
 {
@@ -22,7 +22,6 @@ static int UIDClassDestroy(void *object)
 {
 	return 0;
 }
-#endif
 
 /* a class onto the ring, with the next index */
 int RegisterClass(SceClass *cls)
@@ -155,11 +154,12 @@ int sceUIDClassInitClass(SceClass *cls, const char *name, void *uidclass, SceSiz
 	return 0;
 }
 
-#if !SYSMEM_NSKBL
 SceClass *SceSysmemForDriver_85336A1C(void)
 {
 	return s_uidClass;
 }
+
+#if !SYSMEM_NSKBL
 
 /* sceKernelGetClassInfoAll: one info per class, from SceUIDClass on */
 int SceSysmemForKernel_100B4029(SceKernelClassInfo *info, SceUInt32 max, SceUInt32 *count)
@@ -194,8 +194,38 @@ int SceSysmemForKernel_100B4029(SceKernelClassInfo *info, SceUInt32 max, SceUInt
 	return i;
 }
 
-/* name unknown: SceUIDClass */
-int UIDClassInit(UIDManager *manager)
+#endif
+
+#if SYSMEM_NSKBL
+/* SceUIDClass, the root, made by core 0 (the boot loaders' UIDClassStart) */
+int UIDClassStart(UIDManager *manager)
+{
+	SceClass *cls;
+
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0) {
+		cls = sceKernelSysrootAlloc(sizeof(SceClass));
+		manager->uidClass = cls;
+		s_uidClass = cls;
+		cls->itemsize = sizeof(SceObjectBase);
+		cls->name = "SceUIDClass";
+		cls->root = cls;
+		cls->uidclass = NULL;
+		cls->itemsize_aligned = sizeof(SceObjectBase);
+		cls->create_cb = UIDClassCreate;
+		cls->destroy_cb = UIDClassDestroy;
+		cls->magic = SCE_CLASS_MAGIC;
+		cls->attributes = 0;
+		cls->defaultObjectType = 0;
+		RegisterClass(cls);
+		g_uidManager->uidClass = s_uidClass;
+	}
+	sceKernelSysrootCorelockUnlock();
+	return 0;
+}
+#else
+/* SceUIDClass, the root (0.931's UIDClassModuleStart) */
+int UIDClassModuleStart(UIDManager *manager)
 {
 	SceClass *cls = manager->uidClass;
 

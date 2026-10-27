@@ -666,7 +666,7 @@ int SysmemModuleStart(SceSize args, void *argp)
 	BitheapModuleStart();
 	PhyMemLowModuleStart(g_uidManager);
 	PhyMemModuleStart(g_uidManager);
-	if (UIDClassInit(g_uidManager) < 0)
+	if (UIDClassModuleStart(g_uidManager) < 0)
 		SCE_PANIC(1835);
 	VirPageDestroy();
 	if (UIDDLinkClassInit(g_uidManager) < 0)

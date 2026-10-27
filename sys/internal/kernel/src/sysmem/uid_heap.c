@@ -6,19 +6,18 @@
  */
 
 #include <sysmem/sysclib.h>
+#include <sysmem/sysroot.h>
 #include "sysmem_internal.h"
 
 /* SceUIDHeapClass */
 static UIDHeapClass *s_uidHeapClass;
 
-#if !SYSMEM_NSKBL
 /* name unknown: SceUIDHeapClass's constructor and destructor */
 static int UIDHeapCreate(void *object)
 {
 	((FixedHeap *)object)->owner = NULL;
 	return 0;
 }
-#endif
 
 /* name unknown: the constructor of an address space object (address_space.c's class) */
 int AddressSpaceObjectCreate(void *object)
@@ -49,13 +48,11 @@ int UIDHeapObjectCreate(void *object)
 	return 0;
 }
 
-#if !SYSMEM_NSKBL
 static int UIDHeapDestroy(void *object)
 {
 	((FixedHeap *)object)->owner = NULL;
 	return 0;
 }
-#endif
 
 /* name unknown: the destructor of an address space object */
 int AddressSpaceObjectDestroy(void *object)
@@ -64,7 +61,6 @@ int AddressSpaceObjectDestroy(void *object)
 	return 0;
 }
 
-#if !SYSMEM_NSKBL
 /* the destructor of a fixed heap */
 int UIDHeapObjectDestroy(void *object)
 {
@@ -76,9 +72,29 @@ SceClass *SceSysmemForKernel_7C878E94(void)
 	return &s_uidHeapClass->cls;
 }
 
-int UIDHeapClassInit(UIDHeapClass *cls, const char *name, SceClassCallback create,
-		     SceClassCallback destroy, int (*alloc)(void *heap, SceSize size, void **object),
-		     int (*free)(void *heap, void *object))
+#if SYSMEM_NSKBL
+/* the boot loader makes each heap class here, as a class of its parent */
+int sceUIDHeapClassInit(UIDHeapClass *cls, const char *name, SceClass *parent,
+			SceSize itemsize, SceClassCallback create, SceClassCallback destroy,
+			int (*alloc)(void *heap, SceSize size, void **object),
+			int (*free)(void *heap, void *object))
+{
+	int ret;
+
+	ret = sceUIDClassInitClass(&cls->cls, name, parent, itemsize, create, destroy);
+	if (ret < 0) {
+		SCE_DBG_ASSERT_FAIL(70);
+		return ret;
+	}
+	cls->alloc = alloc;
+	cls->free = free;
+	return 0;
+}
+#else
+int sceUIDHeapClassInit(UIDHeapClass *cls, const char *name, SceClassCallback create,
+			SceClassCallback destroy,
+			int (*alloc)(void *heap, SceSize size, void **object),
+			int (*free)(void *heap, void *object))
 {
 	cls->cls.name = name;
 	cls->cls.create_cb = create;
@@ -95,7 +111,6 @@ int UIDHeapCallAlloc(void *heap, SceSize size, void **object)
 	return ((UIDHeap *)heap)->cls->heapClass.alloc(heap, size, object);
 }
 
-#if !SYSMEM_NSKBL
 int UIDHeapCallFree(void *heap, void *object)
 {
 	return ((UIDHeap *)heap)->cls->heapClass.free(heap, object);
@@ -110,6 +125,22 @@ int UIDHeapInit(UIDHeap *heap)
 /* name unknown: SceUIDHeapClass */
 int UIDHeapClassInitManager(UIDManager *manager)
 {
+#if SYSMEM_NSKBL
+	/* core 0 makes the class; its objects are a UIDHeap and its owner */
+	UIDHeapClass *cls;
+	int ret = 0;
+
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0) {
+		cls = sceKernelSysrootAlloc(sizeof(UIDHeapClass));
+		manager->uidHeapClass = cls;
+		s_uidHeapClass = cls;
+		ret = sceUIDHeapClassInit(cls, "SceUIDHeapClass", SceSysmemForDriver_85336A1C(), 12,
+					  UIDHeapCreate, UIDHeapDestroy, NULL, NULL);
+	}
+	sceKernelSysrootCorelockUnlock();
+	return ret;
+#else
 	UIDHeapClass *cls = manager->uidHeapClass;
 
 	s_uidHeapClass = cls;
@@ -119,5 +150,5 @@ int UIDHeapClassInitManager(UIDManager *manager)
 	cls->alloc = NULL;
 	cls->free = NULL;
 	return 0;
-}
 #endif
+}

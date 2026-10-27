@@ -480,12 +480,22 @@ FixedHeapClass *FixedHeapGetClass(void)
 }
 
 /* name unknown */
+#if SYSMEM_NSKBL
+int FixedHeapInitClass(FixedHeapClass *cls, const char *name, SceSize itemsize, SceClass *parent)
+{
+	int ret;
+
+	ret = sceUIDHeapClassInit(&cls->heapClass, name, parent, itemsize, UIDHeapObjectCreate,
+				  UIDHeapObjectDestroy, FixedHeapClassAlloc,
+				  (int (*)(void *, void *))FixedHeapFreeObject);
+#else
 int FixedHeapInitClass(FixedHeapClass *cls, const char *name)
 {
 	int ret;
 
-	ret = UIDHeapClassInit(&cls->heapClass, name, UIDHeapObjectCreate, UIDHeapObjectDestroy,
-			       FixedHeapClassAlloc, (int (*)(void *, void *))FixedHeapFreeObject);
+	ret = sceUIDHeapClassInit(&cls->heapClass, name, UIDHeapObjectCreate, UIDHeapObjectDestroy,
+				  FixedHeapClassAlloc, (int (*)(void *, void *))FixedHeapFreeObject);
+#endif
 	cls->onCarve = NULL;
 	cls->setPage = FixedHeapClassSetPage;
 	return ret;

@@ -1362,7 +1362,7 @@ SceSize SceSysmemForKernel_D124075A(void *ptr)
 int HeapModuleStart(const UIDManager *manager)
 {
 	s_heapClass = manager->heapClass;
-	UIDHeapClassInit((UIDHeapClass *)s_heapClass, "SceUIDKernelHeapClass",
+	sceUIDHeapClassInit((UIDHeapClass *)s_heapClass, "SceUIDKernelHeapClass",
 			 (SceClassCallback)HeapObjectCreate, (SceClassCallback)HeapObjectDestroy,
 			 HeapObjectAlloc, HeapObjectFree);
 	s_kernelHeap = manager->heapDefault;
