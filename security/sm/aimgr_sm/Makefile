@@ -1,5 +1,11 @@
-# os0:sm/aimgr_sm.self (SceSblAimgrSm), a secure module. See ../Makefile.
 MODULE := aimgr_sm
-SOURCES := aimgr_sm.c
+SOURCES := \
+	aimgr_sm.c \
+	../sm_runtime.c \
+	bigmac.c \
+	../sm_syscall.c \
+	../string.c \
+	../muldiv.c
+EXTRA_CFLAGS := -fno-inline -fno-ipa-cp -fno-ipa-sra -fstack-protector -fno-merge-constants -fno-zero-initialized-in-bss -mtiny=0 -mdc -fno-common -fno-toplevel-reorder
 
 include ../sm.mk
