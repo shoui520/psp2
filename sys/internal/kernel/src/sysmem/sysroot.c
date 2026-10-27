@@ -107,7 +107,7 @@ struct SysrootState {
 	struct SysrootInitCallbackSlot initCallbacks[9][8];
 	int (*threadMgrStartAfterProcess)(void);
 	int (*iofilemgrStart)(void);
-	uint32_t reserved1;
+	void *uidPlaceholderObject;		/* 0x2dc: the boot loaders' */
 	void *fallbackPUIDEntryHeap;
 	char *memBlockNames[9];		/* 0x2e4 */
 	SceUID sysrootUid;			/* 0x308 */
@@ -400,10 +400,14 @@ int SceSysrootForKernel_DD7821AA(uint32_t value)
 	return 0;
 }
 
+#endif
+
 SceSize SceSysrootForKernel_EEB867C0(void)
 {
 	return sizeof(struct SysrootState);
 }
+
+#if !SYSMEM_NSKBL
 
 int SceSysrootForDriver_F804F761(void)
 {
@@ -714,10 +718,14 @@ struct SysrootPerCpu *SceSysrootForKernel_06182D59(unsigned int cpu)
 	return &s_sysrootState->perCpu[cpu];
 }
 
+#endif
+
 uint32_t SceSysrootForKernel_085C2BCB(void)
 {
 	return s_sysrootClass;
 }
+
+#if !SYSMEM_NSKBL
 
 void *sceKernelSysrootGetModulePrivate(unsigned int index)
 {
@@ -1092,6 +1100,8 @@ int SceSysrootForDriver_39F9C968(SceUInt32 status, SceUInt32 value)
 	return callback ? callback(status, value) : 0;
 }
 
+#endif
+
 struct SysrootState *SceSysrootForKernel_3E455842(void)
 {
 	return s_sysrootState;
@@ -1105,6 +1115,18 @@ void sceKernelSysrootSetSysroot(SceUID uid)
 SceKblParam *sceKernelSysrootGetKblParam(void)
 {
 	return s_sysrootState->kblParam;
+}
+
+#if SYSMEM_NSKBL
+/* name unknown: the object of every boot GUID that has none of its own (uid.c's UIDStart) */
+void *SysrootGetUIDPlaceholderObject(void)
+{
+	return s_sysrootState->uidPlaceholderObject;
+}
+
+void SysrootSetUIDPlaceholderObject(void *object)
+{
+	s_sysrootState->uidPlaceholderObject = object;
 }
 #endif
 
@@ -1254,10 +1276,14 @@ void SceSysrootForDriver_42FC9FFF(void)
 	s_sysrootState->dbgpNetAttach = 0;
 }
 
+#endif
+
 void SceSysrootForKernel_59B76D23(void *value)
 {
 	s_sysrootState->fallbackPUIDEntryHeap = value;
 }
+
+#if !SYSMEM_NSKBL
 
 uint32_t sceKernelSysrootGetStatus(void)
 {
@@ -2720,7 +2746,7 @@ int SetupCore0(SceKernelBootParam *param)
 		SceCpuForKernel_A65F6F14(&s_sysrootState->corelock);
 
 		state = s_sysrootState;
-		state->reserved1 = 0;
+		state->uidPlaceholderObject = NULL;
 		state->fallbackPUIDEntryHeap = NULL;
 		state->memBlockNames[0] = sceKernelSysrootAlloc(SYSROOT_NAME_SIZE);
 		__builtin_strncpy(s_sysrootState->memBlockNames[0], "SceSysrootFixedHeap", SYSROOT_NAME_SIZE);

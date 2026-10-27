@@ -6,6 +6,7 @@
  */
 
 #include "sysmem_internal.h"
+#include <sysmem/sysroot.h>
 
 /* phymem.c */
 struct PhyPage;
@@ -237,7 +238,27 @@ int VirPageFree(void *partition, FixedHeap *heap, VirPage *vp)
 	return ret;
 }
 
-#if !SYSMEM_NSKBL
+#if SYSMEM_NSKBL
+/* the boot loaders' (0.990 SKBL's name); os0's VirPageCreate, with nothing for core 0 to do */
+int VirPageStart(void)
+{
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0) {
+	}
+	sceKernelSysrootCorelockUnlock();
+	return 0;
+}
+
+/* name unknown: os0's VirPageDestroy, likewise empty */
+int VirPageDestroy(void)
+{
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0) {
+	}
+	sceKernelSysrootCorelockUnlock();
+	return 0;
+}
+#else
 /* name unknown: the virtual page class constructor */
 int VirPageCreate(void)
 {

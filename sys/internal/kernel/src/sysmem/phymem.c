@@ -11,7 +11,6 @@
 /* the globals are not static: the unconverted part of the file sets them */
 
 #define PHYMEM_PAGES_PER_1M		0x100
-#define PHYMEM_BUDDY_ORDERS		9	/* 4 KiB .. 1 MiB */
 
 #define PHYPAGE_PINDEX(_info)		((_info) & 0xfffff)
 #define PHYPAGE_ORDER_MASK		0x1f00000
@@ -54,40 +53,8 @@ typedef struct PhyMemSegment {
 	void *phyMemLow;		/* 0x20: CDRAM partitions */
 } PhyMemSegment;
 
-/* the per-CPU cache of single pages */
-typedef struct PhyMemPartCpuCache {
-	SceUInt16 max;
-	SceUInt16 count;
-	PhyPage *pages[7];
-} PhyMemPartCpuCache;
-
-typedef struct PhyMemPartBuddy {
-	SceUInt32 state;
-	SceUInt32 pindex;		/* the first free block's */
-} PhyMemPartBuddy;
-
 #define PHYMEM_BUDDY_EMPTY		0x10001
 #define PHYMEM_BUDDY_HAS		0x10002
-
-typedef struct PhyMemPart {
-	SceObjectBase base;
-	volatile SceInt32 refCount;	/* 0x08: atomics; PhyMemPartGetARCount reads the word */
-	SceUInt32 flags;		/* 0x0c: bit0 = active */
-	SceUID uid;			/* 0x10 */
-	SceUInt32 type;			/* 0x14 */
-	SceKernelSpinlock lock;		/* 0x18 */
-	PhyMemPartCpuCache *cpuCache;	/* 0x1c */
-	PhyPage *freeList;		/* 0x20: whole 1 MiB units, sorted */
-	PhyPage freeListHead;		/* 0x24 */
-	PhyMemPartBuddy buddy[PHYMEM_BUDDY_ORDERS];	/* 0x34 */
-	PhyMemSegment *segments;	/* 0x7c */
-	SceInt32 useCount;		/* 0x80: creators and openers; the last delete frees */
-	volatile SceInt32 freeSize;	/* 0x84: Sony rereads it on every use */
-	SceInt32 freeSizeMin;		/* 0x88 */
-	char name[0x20];		/* 0x8c */
-} PhyMemPart;
-
-_Static_assert(sizeof(PhyMemPart) == 0xac, "PhyMemPart size");
 
 #define PHYMEM_PART_ACTIVE		0x1
 #define PHYMEM_PART_TYPE(_part)		((_part)->type & 0xf0000)
@@ -2399,7 +2366,7 @@ static PhyMemPart *s_phyPartCdramBoot;
 /* name unknown: the partitions the boot loader made, and the kernel's free size recounted */
 int PhyMemModuleStart(const UIDManager *manager)
 {
-	PhyMemPart *part = manager->phyPartKernel;
+	PhyMemPart *part = manager->pPhyMemPartKD;
 	PhyPage *page;
 	SceUInt32 pindex;
 	SceSize size = 0;

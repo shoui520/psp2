@@ -13,6 +13,10 @@
 #include "sysmem_internal.h"
 #include "memblock_obj_module.h"
 #include <sysmem/sysroot.h>
+#if SYSMEM_NSKBL
+#include <kernel_boot_loader/kernel_boot_param.h>
+#include "mmu.h"
+#endif
 
 #define UID_WRITE_LOCK(heap, line)	FixedHeapWriteLock(&(heap)->fixedHeap, __func__, (line))
 #define UID_WRITE_UNLOCK(heap, state)	FixedHeapWriteUnlock(&(heap)->fixedHeap, (state))
@@ -33,66 +37,11 @@
 #define UID_ERROR_NAME_TOO_LONG		SCE_KERNEL_ERROR_UID_NAME_TOO_LONG
 /* names unknown */
 
-/* SceUIDDLinkClass, SceUIDEntryHeapClass and the default "heap" of registered objects */
-static SceClass *s_dlinkClass;
+/* SceUIDEntryHeapClass and the default "heap" of registered objects */
 static FixedHeapClass *s_entryHeapClass;
 static void *s_registerHeap;
 /* the last mismatching UID UIDEntryCheckInvalid warned about */
 static SceUID s_lastWarnedUID = -1;
-
-/* name unknown: SceUIDDLinkClass's constructor and destructor */
-static int UIDDLinkCreate(void *object)
-{
-	void **link = object;
-
-	link[0] = object;
-	link[2] = object;
-	return 0;
-}
-
-#if !SYSMEM_NSKBL
-static int UIDDLinkDestroy(void *object)
-{
-	void **link = object;
-
-	link[2] = NULL;
-	return 0;
-}
-#endif
-
-/* SceSysmemForKernel_7CDB7655 */
-int SceSysmemForKernel_7CDB7655(SceClass *cls, const char *name, void *uidclass, SceSize itemsize,
-				SceClassCallback create, SceClassCallback destroy)
-{
-	return sceUIDClassInitClass(cls, name, uidclass, itemsize, create, destroy);
-}
-
-#if !SYSMEM_NSKBL
-/* name unknown */
-void UIDClassSetCallbacks(SceClass *cls, const char *name, SceClassCallback create,
-			  SceClassCallback destroy)
-{
-	cls->name = name;
-	cls->create_cb = create;
-	cls->destroy_cb = destroy;
-}
-
-SceClass *SceSysmemForKernel_E4193EB6(void)
-{
-	return s_dlinkClass;
-}
-
-/* name unknown */
-int UIDDLinkClassInit(UIDManager *manager)
-{
-	SceClass *cls = manager->dlinkClass;
-
-	s_dlinkClass = cls;
-	cls->name = "SceUIDDLinkClass";
-	cls->create_cb = UIDDLinkCreate;
-	cls->destroy_cb = UIDDLinkDestroy;
-	return 0;
-}
 
 /* name unknown: SceUIDEntryHeapClass's onCarve, a new entry's first UID */
 static void UIDEntryHeapClassOnCarve(void *object, SceUInt32 index)
@@ -104,6 +53,8 @@ static void UIDEntryHeapClassOnCarve(void *object, SceUInt32 index)
 	entry->useCount = 0;
 	entry->uid = (SceUInt16)(index << 1) | UID_GENERATION_ONE | 1;
 }
+
+#if !SYSMEM_NSKBL
 
 /* name unknown: vector match, the entries of a process */
 static SceUInt32 UIDFuncMatchPID(UIDEntry *entry, UIDFuncVector *vector)
@@ -556,11 +507,15 @@ int UIDFuncVectorGetUIDVectorWeak(UIDFuncVector *vector)
 	return vector->total;
 }
 
+#endif
+
 /* name unknown: SceUIDEntryHeapClass's setPage */
 static int UIDEntryHeapClassSetPage(FixedHeap *heap, void *page)
 {
 	return FixedHeapSetPage(heap, page);
 }
+
+#if !SYSMEM_NSKBL
 #endif
 
 /* name unknown: no links and no users left (one link with UID_ENTRY_ATTR_SINGLE_LINK) */
@@ -3645,5 +3600,291 @@ int sceUIDEntryHeapSetHook(SceUID guid, FixedHeapObjectHook *hook)
 	/* no hooks before 4.00 */
 	return 0;
 #endif
+}
+#endif
+
+#if SYSMEM_NSKBL
+/* the last of the GUIDs the boot loader reserves */
+#define UID_BOOT_GUID_LAST		0x1005f
+
+/*
+ * The boot loaders' UID start, core 0's part: SceUIDEntryHeapClass, the GUID
+ * entry heap ("SceUIDHeap") on the page the boot loader mapped for it,
+ * SceUIDSysrootClass, and the first GUIDs, 0x10001 to 0x1005f: the sysroot,
+ * the entry heap, the physical memory partitions, and a placeholder for every
+ * boot object made later.
+ */
+static int UIDStartCore0(SceKernelBootParam *param, UIDManager *manager)
+{
+	UIDEntryHeap *heap;
+	struct Partition *partition;
+	PhyMemPart *tool;
+	PhyPage *page;
+	SceClass *cls, *parent;
+	void *object;
+	void **pages, **blocks;
+	char *name;
+	uintptr_t va;
+	SceSize size, sysrootSize;
+	SceUID guid;
+	int ret;
+
+	s_entryHeapClass = sceKernelSysrootAlloc(sizeof(FixedHeapClass));
+	manager->entryHeapClass = s_entryHeapClass;
+	manager->registerHeap = sceKernelSysrootAlloc(12);
+	s_registerHeap = manager->registerHeap;
+	page = NULL;
+	parent = &FixedHeapGetClass()->heapClass.cls;
+	va = param->fixedHeapUIDEntry.vbase;
+	size = param->fixedHeapUIDEntry.psize;
+	ret = FixedHeapInitClass(s_entryHeapClass, "SceUIDEntryHeapClass", sizeof(UIDEntryHeap),
+				 parent);
+	if (ret < 0)
+		return ret;
+	s_entryHeapClass->onCarve = UIDEntryHeapClassOnCarve;
+	s_entryHeapClass->setPage = UIDEntryHeapClassSetPage;
+	ret = PhyMemPartAllocPhyPage(param->pPhyMemPartKD, size, 0x10, &page);
+	if (ret < 0)
+		return ret;
+	if (size == 0x1000) {
+		ret = sceKernelMMUMapSmallPage(param->pL2PageTable000,
+					       MEMBLOCK_CODE_KERNEL_ROOT_RW | MEMBLOCK_CODE_GLOBAL, va,
+					       va - param->l2PageTable000VBase,
+					       page->info << PHYMEM_PAGE_SHIFT);
+		if (ret < 0)
+			return ret;
+	} else if (size == 0x10000) {
+		ret = sceKernelMMUMapLargePages(param->pL2PageTable000,
+						MEMBLOCK_CODE_KERNEL_ROOT_RW | MEMBLOCK_CODE_GLOBAL, va,
+						va - param->l2PageTable000VBase, 0x10000,
+						page->info << PHYMEM_PAGE_SHIFT);
+		if (ret < 0)
+			return ret;
+	}
+
+	heap = sceKernelSysrootAlloc(sizeof(UIDEntryHeap));
+	name = sceKernelSysrootAlloc(0x20);
+	strncpy(name, "SceUIDHeap", 0x20);
+	pages = sceKernelSysrootAlloc(0x100);
+	blocks = sceKernelSysrootAlloc(0x100);
+	partition = PartitionGetKernel();
+	heap->fixedHeap.uidHeap.cls = s_entryHeapClass;
+	ret = FixedHeapInitForUID(&heap->fixedHeap, name, FIXED_HEAP_ATTR_UID_ENTRIES, 32, size,
+				  (void *)va, partition, 0x40, pages, blocks);
+	if (ret < 0)
+		return ret;
+	FixedHeapInitLock(&heap->fixedHeap);
+	param->pFixedHeapUIDEntry = &heap->fixedHeap;
+	heap->pid = SCE_KERNEL_PROCESS_ID;
+	param->pPageFixedHeapUIDEntry = page;
+	SceSysrootForKernel_59B76D23(heap);
+	manager->guidEntryHeap = &heap->fixedHeap;
+
+	cls = (SceClass *)SceSysrootForKernel_085C2BCB();
+	parent = SceSysmemForDriver_85336A1C();
+	sysrootSize = SceSysrootForKernel_EEB867C0();
+	ret = sceUIDClassInitClass(cls, "SceUIDSysrootClass", parent, sysrootSize, NULL, NULL);
+	if (ret < 0)
+		return ret;
+	SysrootSetUIDPlaceholderObject(sceKernelSysrootAlloc(8));
+
+	for (guid = SCE_KERNEL_SYSROOT_ID; guid <= UID_BOOT_GUID_LAST; guid += 2) {
+		cls = SceSysmemForDriver_85336A1C();
+		object = SysrootGetUIDPlaceholderObject();
+		switch (guid) {
+		case SCE_KERNEL_SYSROOT_ID:
+			cls = (SceClass *)SceSysrootForKernel_085C2BCB();
+			object = SceSysrootForKernel_3E455842();
+			sceKernelSysrootSetSysroot(SCE_KERNEL_SYSROOT_ID);
+			break;
+		case SCE_KERNEL_GUID_ENTRY_HEAP_ID:
+			cls = &s_entryHeapClass->heapClass.cls;
+			object = manager->guidEntryHeap;
+			break;
+		case SCE_KERNEL_PHYMEMPART_ID:
+			object = param->pPhyMemPartKD;
+			param->pPhyMemPartKD->uid = SCE_KERNEL_PHYMEMPART_ID;
+			break;
+		case SCE_KERNEL_PHYMEMPART_TOOL_ID:
+			tool = param->pPhyMemPartTool;
+			if (tool != NULL) {
+				tool->uid = SCE_KERNEL_PHYMEMPART_TOOL_ID;
+				object = tool;
+			}
+			break;
+		/* made by FixedHeapStart and FixedHeapStartPhase2 */
+		case SCE_KERNEL_FIXED_HEAP_16B_ID:
+		case SCE_KERNEL_FIXED_HEAP_32B_ID:
+		case SCE_KERNEL_FIXED_HEAP_48B_ID:
+		case SCE_KERNEL_FIXED_HEAP_64B_ID:
+		case SCE_KERNEL_FIXED_HEAP_128B_ID:
+		case SCE_KERNEL_FIXED_HEAP_256B_ID:
+		case SCE_KERNEL_FIXED_HEAP_512B_ID:
+		case SCE_KERNEL_FIXED_HEAP_L2_OBJECT_ID:
+			cls = &FixedHeapGetClass()->heapClass.cls;
+			break;
+		}
+		GUIDRegister(cls, NULL, object, UID_ENTRY_ATTR_BOOT | UID_ENTRY_ATTR_LEVEL_DEFAULT |
+					      UID_ENTRY_ATTR_PERMANENT);
+	}
+	return 0;
+}
+
+int UIDStart(SceKernelBootParam *param, UIDManager *manager)
+{
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0)
+		UIDStartCore0(param, manager);
+	sceKernelSysrootCorelockUnlock();
+	return 0;
+}
+
+/*
+ * name unknown: the names of the first GUIDs, after the boot objects are
+ * made. A GUID the table leaves out keeps the name before it.
+ */
+int UIDStartPhase2(void)
+{
+	const char *name = NULL;
+	SceUID guid;
+
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() != 0) {
+		sceKernelSysrootCorelockUnlock();
+		return 0;
+	}
+	for (guid = SCE_KERNEL_SYSROOT_ID; guid <= UID_BOOT_GUID_LAST; guid += 2) {
+		switch (guid) {
+		case SCE_KERNEL_SYSROOT_ID:
+			name = "SceSysroot";
+			break;
+		case SCE_KERNEL_GUID_ENTRY_HEAP_ID:
+			name = "SceGUIDEntryHeap";
+			break;
+		case SCE_KERNEL_PROCESS_ID:
+			name = "SceKernelProcess";
+			break;
+		case SCE_KERNEL_ADDRESS_SPACE_ID:
+			name = "SceKernelAddressSpace";
+			break;
+		case SCE_KERNEL_PARTITION_ROOT_ID:
+			name = "SceKernelRoot";
+			break;
+		case SCE_KERNEL_HEAP_ID:
+			name = "SceKernelHeap";
+			break;
+		case SCE_KERNEL_HEAP_UNCACHE_ID:
+			name = "SceKernelHeapUncache";
+			break;
+		case SCE_KERNEL_PHYMEMPART_ID:
+			name = "SceKernelPhyMemPart";
+			break;
+		case SCE_KERNEL_PHYMEMPART_TOOL_ID:
+			name = "SceToolPhyMemPart";
+			break;
+		case SCE_KERNEL_DUMMY_PROCESS_GAME_ID:
+			name = "SceKernelDummyProcessGame";
+			break;
+		case SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID:
+			name = "SceKernelDummyProcessSystem";
+			break;
+		case SCE_KERNEL_ALL_PROCESS_ID:
+			name = "SceKernelAllProcess";
+			break;
+		case SCE_KERNEL_THREAD_ID_SYSTEM_ALL_ID:
+			name = "SceUIDThreadIdSystemAll";
+			break;
+		case SCE_UID_THREAD_ID_PROCESS_ALL:
+			name = "SceUIDThreadIdProcessAll";
+			break;
+		case 0x10029:
+			name = "SceUIDReserved29";
+			break;
+		case SCE_KERNEL_HEAP_TOOL_ID:
+			name = "SceToolHeap";
+			break;
+		case 0x1002d:
+			name = "SceUIDReserved2D";
+			break;
+		case 0x1002f:
+			name = "SceUIDReserved2F";
+			break;
+		case 0x10031:
+			name = "SceUIDReserved31";
+			break;
+		case SCE_KERNEL_FIXED_HEAP_16B_ID:
+			name = "SceKernelFixedHeap16B";
+			break;
+		case SCE_KERNEL_FIXED_HEAP_32B_ID:
+			name = "SceKernelFixedHeap32B";
+			break;
+		case SCE_KERNEL_FIXED_HEAP_48B_ID:
+			name = "SceKernelFixedHeap48B";
+			break;
+		case SCE_KERNEL_FIXED_HEAP_64B_ID:
+			name = "SceKernelFixedHeap64B";
+			break;
+		case SCE_KERNEL_FIXED_HEAP_128B_ID:
+			name = "SceKernelFixedHeap128B";
+			break;
+		case SCE_KERNEL_FIXED_HEAP_256B_ID:
+			name = "SceKernelFixedHeap256B";
+			break;
+		case SCE_KERNEL_FIXED_HEAP_512B_ID:
+			name = "SceKernelFixedHeap512B";
+			break;
+		case SCE_KERNEL_FIXED_HEAP_L2_OBJECT_ID:
+			name = "SceKernelFixedHeapL2Object";
+			break;
+		case SCE_KERNEL_PARTITION_USER_SHARED_ID:
+			name = "SceKernelUserShared";
+			break;
+		case SCE_KERNEL_PARTITION_IO_ID:
+			name = "SceKernelIO";
+			break;
+		case SCE_KERNEL_PARTITION_CDRAM_ID:
+			name = "SceKernelCdram";
+			break;
+		case 0x10049:
+			name = "SceUIDReserved49";
+			break;
+		case SCE_KERNEL_PARTITION_TMP_ID:
+			name = "SceKernelTmp";
+			break;
+		case SCE_KERNEL_PARTITION_ROOT_UNCACHE_ID:
+			name = "SceKernelRootUncache";
+			break;
+		case SCE_KERNEL_PARTITION_KMP_ID:
+			name = "SceKernelKMP";
+			break;
+		case SCE_KERNEL_PARTITION_ROOT_UNCACHE_GPU_GAME_ID:
+			name = "SceKernelRootUncacheGpuGame";
+			break;
+		case SCE_KERNEL_PARTITION_TMP_FS_GAME_ID:
+			name = "SceKernelTmpFsGame";
+			break;
+		case SCE_KERNEL_PARTITION_ROOT_TOOL_ID:
+			name = "SceKernelTool";
+			break;
+		case SCE_KERNEL_PARTITION_ROOT_TOOL_UNCACHE_ID:
+			name = "SceKernelToolUncache";
+			break;
+		case SCE_KERNEL_PROCESS_BUDGET_KERNEL_ID:
+			name = "SceProcessmgrKernelBudget";
+			break;
+		case SCE_KERNEL_PROCESS_BUDGET_SHELL_ID:
+			name = "SceProcessmgrShellBudget";
+			break;
+		case SCE_KERNEL_PROCESS_BUDGET_FULL_GAME_ID:
+			name = "SceProcessmgrFullGameBudget";
+			break;
+		case UID_BOOT_GUID_LAST:
+			name = "SceUIDReserved5F";
+			break;
+		}
+		GUIDSet(guid, NULL, name, NULL);
+	}
+	sceKernelSysrootCorelockUnlock();
+	return 0;
 }
 #endif

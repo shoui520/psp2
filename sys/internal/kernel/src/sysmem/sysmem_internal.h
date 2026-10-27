@@ -327,6 +327,13 @@ int FixedHeapBootInitialize(FixedHeap *heap, const char *name, SceUInt32 attr, S
 			    void **blocks);
 int FixedHeapStart(struct SceKernelBootParam *param, struct UIDManager *manager);
 int FixedHeapStartPhase2(void);
+int FixedHeapInitForUID(FixedHeap *heap, char *name, SceUInt32 attr, SceSize itemSize,
+			SceSize pageSize, void *base, struct Partition *partition, SceUInt16 maxPages,
+			void **pages, void **blocks);
+int UIDStart(struct SceKernelBootParam *param, struct UIDManager *manager);
+int UIDStartPhase2(void);
+void *SysrootGetUIDPlaceholderObject(void);
+void SysrootSetUIDPlaceholderObject(void *object);
 #else
 int FixedHeapInitClass(FixedHeapClass *cls, const char *name);
 #endif
@@ -495,6 +502,7 @@ void *SetMemory32Core(void *destination, SceUInt32 pattern, SceSize size);
 #define UID_ENTRY_ATTR_LINK_ANY		0x00a00000
 #define UID_ENTRY_ATTR_CLOSED		0x00c00000
 #define UID_ENTRY_ATTR_ALL		0x00f00000
+#define UID_ENTRY_ATTR_BOOT		0x01000000	/* registered at boot (UIDStart) */
 #define UID_ENTRY_ATTR_DESTRUCT		0x08000000	/* destruct the object even without a heap */
 #define UID_ENTRY_ATTR_WEAK		0x10000000	/* PUID: closing it does not close the GUID */
 #define UID_ENTRY_ATTR_PUID		0x40000000	/* a process's entry */
@@ -586,7 +594,7 @@ typedef struct UIDManager {
 	SceClass *classes;			/* 0x04: the ring of every class */
 	FixedHeap *guidEntryHeap;		/* 0x08: fixed heap of the GUID entries */
 	struct PhyPageTableMgr *phyPageTableMgr;	/* 0x0c */
-	struct PhyMemPart *phyPartKernel;	/* 0x10 */
+	struct PhyMemPart *pPhyMemPartKD;	/* 0x10 */
 	struct PhyMemPart *phyPartTool;		/* 0x14 */
 	FixedHeap *fixedHeap16B;		/* 0x18 */
 	FixedHeap *fixedHeap32B;		/* 0x1c: kernel fixed heaps by object size */
@@ -911,6 +919,41 @@ typedef struct PhyPage {
 	struct PhyPage *next;
 } PhyPage;
 
+#define PHYMEM_BUDDY_ORDERS		9	/* 4 KiB .. 1 MiB */
+
+/* the per-CPU cache of single pages */
+typedef struct PhyMemPartCpuCache {
+	SceUInt16 max;
+	SceUInt16 count;
+	PhyPage *pages[7];
+} PhyMemPartCpuCache;
+
+typedef struct PhyMemPartBuddy {
+	SceUInt32 state;
+	SceUInt32 pindex;		/* the first free block's */
+} PhyMemPartBuddy;
+
+/* a physical memory partition (phymem.c; uid.c gives the boot ones their GUIDs) */
+struct PhyMemPart {
+	SceObjectBase base;
+	volatile SceInt32 refCount;	/* 0x08: atomics; PhyMemPartGetARCount reads the word */
+	SceUInt32 flags;		/* 0x0c: bit0 = active */
+	SceUID uid;			/* 0x10 */
+	SceUInt32 type;			/* 0x14 */
+	SceKernelSpinlock lock;		/* 0x18 */
+	PhyMemPartCpuCache *cpuCache;	/* 0x1c */
+	PhyPage *freeList;		/* 0x20: whole 1 MiB units, sorted */
+	PhyPage freeListHead;		/* 0x24 */
+	PhyMemPartBuddy buddy[PHYMEM_BUDDY_ORDERS];	/* 0x34 */
+	struct PhyMemSegment *segments;	/* 0x7c */
+	SceInt32 useCount;		/* 0x80: creators and openers; the last delete frees */
+	volatile SceInt32 freeSize;	/* 0x84: Sony rereads it on every use */
+	SceInt32 freeSizeMin;		/* 0x88 */
+	char name[0x20];		/* 0x8c */
+};
+
+_Static_assert(sizeof(PhyMemPart) == 0xac, "PhyMemPart size");
+
 typedef struct PhyMemLow {
 	SceKernelSpinlock lock;
 	uintptr_t base;
@@ -1014,6 +1057,7 @@ uint32_t SysrootGetTimeLow(void);
 int GUIDUnregisterChecked(SceUID guid);
 int GUIDSetCNOA(SceUID guid, void *cls, const char *name, void *object, SceUInt32 attr);
 int UIDDLinkClassInit(struct UIDManager *manager);
+int UIDDLinkStart(struct UIDManager *manager);
 int UIDEntryHeapClassInit(struct UIDManager *manager);
 void UIDClassSetCallbacks(SceClass *cls, const char *name, SceClassCallback create,
 			  SceClassCallback destroy);
@@ -1034,6 +1078,7 @@ int VirPageGetMapRange(VirPage *vp, uintptr_t *pbase, SceSize *size);
 int VirPageGetPhyBase(VirPage *vp, uintptr_t *pbase);
 int VirPageFree(void *partition, FixedHeap *heap, VirPage *vp);
 int VirPageCreate(void);
+int VirPageStart(void);
 int VirPageDestroy(void);
 void AllocMemBlockCommandInit(SceKernelAllocMemBlockCommand *command, const char *name,
 			      SceSize size);

@@ -35,6 +35,8 @@ set(sysmem_c_sources
 	${sysmem_source}/memblock_vpl.c
 	${sysmem_source}/memblock_partial.c
 	${sysmem_source}/virpage.c
+	${sysmem_source}/uid_dlink.c
+	${sysmem_source}/murmurhash3.c
 	${sysmem_source}/l1pagetable.c
 	${sysmem_source}/sysroot.c
 	${sysmem_source}/led.c

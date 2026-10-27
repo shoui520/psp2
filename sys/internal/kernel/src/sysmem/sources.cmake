@@ -39,6 +39,7 @@ set(sysmem_sources
 	${sysmem_dir}/memory_set32.S
 	${sysmem_dir}/sha1_transform.S
 	${sysmem_dir}/oheap.c
+	${sysmem_dir}/uid_dlink.c
 	${sysmem_dir}/uid.c
 	${sysmem_dir}/murmurhash3.c
 	${sysmem_dir}/memblock_obj.c

@@ -914,6 +914,15 @@ static int CreateInitialFixedHeap(FixedHeap *heap, char *name, SceUInt32 attr,
 	return 0;
 }
 
+/* name unknown: FixedHeapInit for uid.c's GUID entry heap (UIDStart) */
+int FixedHeapInitForUID(FixedHeap *heap, char *name, SceUInt32 attr, SceSize itemSize,
+			SceSize pageSize, void *base, struct Partition *partition, SceUInt16 maxPages,
+			void **pages, void **blocks)
+{
+	return FixedHeapInit(heap, name, attr, itemSize, pageSize, base, partition, maxPages,
+			     pages, blocks);
+}
+
 /* a kernel fixed heap on a memblock of its own in a partition */
 int FixedHeapBootInitialize(FixedHeap *heap, const char *name, SceUInt32 attr, SceUID partitionId,
 			    SceSize itemSize, SceSize pageSize, SceUInt16 maxPages, void **pages,
@@ -1153,70 +1162,70 @@ int FixedHeapStart(SceKernelBootParam *param, UIDManager *manager)
 			return ret;
 		}
 
-		param->fixedHeap32BObject = sceKernelSysrootAlloc(sizeof(FixedHeap));
+		param->pFixedHeap32B = sceKernelSysrootAlloc(sizeof(FixedHeap));
 		pages = sceKernelSysrootAlloc(0x200);
 		blocks = sceKernelSysrootAlloc(0x200);
 		name = sceKernelSysrootAlloc(0x20);
 		strncpy(name, "SceKernelFixedHeap32B", 0x20);
-		ret = CreateInitialFixedHeap(param->fixedHeap32BObject, name, FIXED_HEAP_ATTR_CPU_CACHE,
+		ret = CreateInitialFixedHeap(param->pFixedHeap32B, name, FIXED_HEAP_ATTR_CPU_CACHE,
 					     &param->l2PageTable000VBase, &param->pL2PageTable000,
-					     param->phyPartKernel, param->fixedHeap32B.vbase,
+					     param->pPhyMemPartKD, param->fixedHeap32B.vbase,
 					     param->fixedHeap32B.psize, 32, pages, blocks, &page);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(2882);
 			return ret;
 		}
-		param->fixedHeap32BPage = page;
+		param->pPageFixedHeap32B = page;
 
-		param->fixedHeap48BObject = sceKernelSysrootAlloc(sizeof(FixedHeap));
+		param->pFixedHeap48B = sceKernelSysrootAlloc(sizeof(FixedHeap));
 		pages = sceKernelSysrootAlloc(0x200);
 		blocks = sceKernelSysrootAlloc(0x200);
 		name = sceKernelSysrootAlloc(0x20);
 		strncpy(name, "SceKernelFixedHeap48B", 0x20);
-		ret = CreateInitialFixedHeap(param->fixedHeap48BObject, name, FIXED_HEAP_ATTR_CPU_CACHE,
+		ret = CreateInitialFixedHeap(param->pFixedHeap48B, name, FIXED_HEAP_ATTR_CPU_CACHE,
 					     &param->l2PageTable000VBase, &param->pL2PageTable000,
-					     param->phyPartKernel, param->fixedHeap48B.vbase,
+					     param->pPhyMemPartKD, param->fixedHeap48B.vbase,
 					     param->fixedHeap48B.psize, 48, pages, blocks, &page);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(2911);
 			return ret;
 		}
-		param->fixedHeap48BPage = page;
+		param->pPageFixedHeap48B = page;
 
-		param->fixedHeap64BObject = sceKernelSysrootAlloc(sizeof(FixedHeap));
+		param->pFixedHeap64B = sceKernelSysrootAlloc(sizeof(FixedHeap));
 		pages = sceKernelSysrootAlloc(0x200);
 		blocks = sceKernelSysrootAlloc(0x200);
 		name = sceKernelSysrootAlloc(0x20);
 		strncpy(name, "SceKernelFixedHeap64B", 0x20);
-		ret = CreateInitialFixedHeap(param->fixedHeap64BObject, name, FIXED_HEAP_ATTR_CPU_CACHE,
+		ret = CreateInitialFixedHeap(param->pFixedHeap64B, name, FIXED_HEAP_ATTR_CPU_CACHE,
 					     &param->l2PageTable000VBase, &param->pL2PageTable000,
-					     param->phyPartKernel, param->fixedHeap64B.vbase,
+					     param->pPhyMemPartKD, param->fixedHeap64B.vbase,
 					     param->fixedHeap64B.psize, 64, pages, blocks, &page);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(2939);
 			return ret;
 		}
-		param->fixedHeap64BPage = page;
+		param->pPageFixedHeap64B = page;
 
-		param->fixedHeapForL2ObjectObject = sceKernelSysrootAlloc(sizeof(FixedHeap));
+		param->pFixedHeapForL2Object = sceKernelSysrootAlloc(sizeof(FixedHeap));
 		pages = sceKernelSysrootAlloc(0x200);
 		blocks = sceKernelSysrootAlloc(0x200);
 		name = sceKernelSysrootAlloc(0x20);
 		strncpy(name, "SceKernelFixedHeapL2Object", 0x20);
-		ret = CreateInitialFixedHeap(param->fixedHeapForL2ObjectObject, name, 0,
+		ret = CreateInitialFixedHeap(param->pFixedHeapForL2Object, name, 0,
 					     &param->l2PageTable000VBase, &param->pL2PageTable000,
-					     param->phyPartKernel, param->fixedHeapForL2Object.vbase,
+					     param->pPhyMemPartKD, param->fixedHeapForL2Object.vbase,
 					     param->fixedHeapForL2Object.psize, 64, pages, blocks, &page);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(2967);
 			return ret;
 		}
-		param->fixedHeapForL2ObjectPage = page;
+		param->pPageFixedHeapForL2Object = page;
 
-		manager->fixedHeap32B = param->fixedHeap32BObject;
-		manager->fixedHeap48B = param->fixedHeap48BObject;
-		manager->fixedHeap64B = param->fixedHeap64BObject;
-		manager->fixedHeapL2Object = param->fixedHeapForL2ObjectObject;
+		manager->fixedHeap32B = param->pFixedHeap32B;
+		manager->fixedHeap48B = param->pFixedHeap48B;
+		manager->fixedHeap64B = param->pFixedHeap64B;
+		manager->fixedHeapL2Object = param->pFixedHeapForL2Object;
 	}
 	sceKernelSysrootCorelockUnlock();
 	return ret;

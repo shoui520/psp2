@@ -810,12 +810,12 @@ void boot(void)
 		param->l2Vector.extraHigh = 0x4000;
 
 		seed = ror4(seed);
-		param->phyPageTable.name = "SceKernelPhyPageTable";
-		param->phyPageTable.pbase = param->memory[0].pbase + 0x118000;
-		param->phyPageTable.vbase = MapASLR(0x8000, seed);
-		param->phyPageTable.psize = 0x8000;
-		param->phyPageTable.vsize = 0x8000;
-		param->phyPageTable.extraHigh = 0;
+		param->phypage.name = "SceKernelPhyPageTable";
+		param->phypage.pbase = param->memory[0].pbase + 0x118000;
+		param->phypage.vbase = MapASLR(0x8000, seed);
+		param->phypage.psize = 0x8000;
+		param->phypage.vsize = 0x8000;
+		param->phypage.extraHigh = 0;
 
 		param->bootKernelImage.name = "SceBootKernelImage";
 		param->bootKernelImage.pbase = 0x50000000;
@@ -875,9 +875,9 @@ void boot(void)
 					  param->l2Vector.vbase - param->l2PageTable000MapBase, 0x4000,
 					  param->l2Vector.pbase);
 		sceKernelMMUMapSmallPages((uint32_t *)param->l2PageTable000.pbase, BOOT_MAP_DATA,
-					  param->phyPageTable.vbase,
-					  param->phyPageTable.vbase - param->l2PageTable000MapBase,
-					  param->phyPageTable.psize, param->phyPageTable.pbase);
+					  param->phypage.vbase,
+					  param->phypage.vbase - param->l2PageTable000MapBase,
+					  param->phypage.psize, param->phypage.pbase);
 	}
 	SceCpuForKernel_FE2B77A3(&bootSaveArea.corelock);
 	writeTtbr0(MMUTtbrValue(param->ttbr0.pbase));
@@ -1231,19 +1231,19 @@ void boot(void)
 
 		seed = ror5(seed);
 		mega = MapMegaASLR(seed);
-		param->phyPageTable.name = "SceKernelPhyPageTable";
-		param->phyPageTable.pbase = param->memory[0].pbase + 0x80000;
-		param->phyPageTable.vbase = mega;
-		param->phyPageTable.psize = 0x80000;
-		param->phyPageTable.vsize = 0x80000;
-		param->phyPageTable.extraHigh = 0;
+		param->phypage.name = "SceKernelPhyPageTable";
+		param->phypage.pbase = param->memory[0].pbase + 0x80000;
+		param->phypage.vbase = mega;
+		param->phypage.psize = 0x80000;
+		param->phypage.vsize = 0x80000;
+		param->phypage.extraHigh = 0;
 
-		param->phyPageTableHigh.name = "SceKernelPhyPageTableHigh";
-		param->phyPageTableHigh.pbase = 0x77f00000;
-		param->phyPageTableHigh.vbase = mega + 0x80000;
-		param->phyPageTableHigh.psize = 0x80000;
-		param->phyPageTableHigh.vsize = 0x80000;
-		param->phyPageTableHigh.extraHigh = 0;
+		param->phypageHigh.name = "SceKernelPhyPageTableHigh";
+		param->phypageHigh.pbase = 0x77f00000;
+		param->phypageHigh.vbase = mega + 0x80000;
+		param->phypageHigh.psize = 0x80000;
+		param->phypageHigh.vsize = 0x80000;
+		param->phypageHigh.extraHigh = 0;
 
 		param->bootKernelImage.name = "SceBootKernelImage";
 		param->bootKernelImage.pbase = KBL_IMAGE_ADDRESS;
@@ -1297,20 +1297,20 @@ void boot(void)
 					  param->l2Vector.pbase);
 
 		/* the physical page tables: large pages in the next L2 table */
-		sceKernelMMUSetL2PageTable(param->phyPageTable.vbase <= param->ttbr0MaxAddress ?
+		sceKernelMMUSetL2PageTable(param->phypage.vbase <= param->ttbr0MaxAddress ?
 					   (uint32_t *)param->ttbr0.pbase :
 					   (uint32_t *)param->ttbr1.pbase,
-					   BOOT_DOMAIN_KERNEL, param->phyPageTable.vbase,
+					   BOOT_DOMAIN_KERNEL, param->phypage.vbase,
 					   param->l2PageTable000.pbase + 0x400);
 		sceKernelMMUL2Init((uint32_t *)(param->l2PageTable000.pbase + 0x400));
 		sceKernelMMUMapLargePages((uint32_t *)(param->l2PageTable000.pbase + 0x400),
-					  BOOT_MAP_DATA, param->phyPageTable.vbase, 0,
-					  param->phyPageTable.psize, param->phyPageTable.pbase);
+					  BOOT_MAP_DATA, param->phypage.vbase, 0,
+					  param->phypage.psize, param->phypage.pbase);
 		if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART))
 			sceKernelMMUMapLargePages((uint32_t *)(param->l2PageTable000.pbase + 0x400),
-						  BOOT_MAP_DATA, param->phyPageTableHigh.vbase,
-						  0x80000, param->phyPageTableHigh.psize,
-						  param->phyPageTableHigh.pbase);
+						  BOOT_MAP_DATA, param->phypageHigh.vbase,
+						  0x80000, param->phypageHigh.psize,
+						  param->phypageHigh.pbase);
 	}
 	SceCpuForKernel_FE2B77A3(&s_bootCorelock);
 	writeTtbr0(MMUTtbrValue(param->ttbr0.pbase));
