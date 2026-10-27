@@ -3,7 +3,13 @@
  * generator the handshakes' nonces come from.
  */
 #include "charge.h"
+#include "aes.h"
+#include "authkeys.h"
+#include "config.h"
+#include "kernel.h"
+#include "sysinfo.h"
 #include "util.h"
+#include <string.h>
 
 static const char hexDigits[] = "0123456789ABCDEF";
 
@@ -57,13 +63,45 @@ unsigned char hexDecode(unsigned char *out, const char *in, unsigned int length)
 	return 0;
 }
 
-/*
- * PLACEHOLDER: cryptographic routine, deferred (the handshakes' nonce generator: for each 16
- * bytes of out, a block of the seed, getIdRecord1's word, 2 bytes of the settings block
- * (chargeReadTempVolt, configGet) and randomCounter, XORed with randomBlock, is encrypted with AES under
- * the key at 0x105b8 (Keys.wiki's SharedKey_B_B; the schedule at 0xfaa4 when memory pool 2 has
- * no block) into randomBlock, which goes to out; randomCounter counts the blocks).
- */
+/* Generate successive nonce blocks from the device state and the preceding block. */
 void randomGenerate(unsigned long seed, unsigned char *out, unsigned char length)
 {
+	struct AesKey key;
+	unsigned char input[16];
+	VP block;
+	unsigned long id;
+	unsigned char i;
+	unsigned char offset;
+
+	memcpy_n(input, &seed, 4);
+	offset = 0;
+	while (length != 0) {
+		id = getIdRecord1();
+		memcpy_n(input + 4, &id, 4);
+		chargeReadTempVolt((unsigned int *)(input + 8));
+		memcpy(input + 10, configGet(), 2);
+		memcpy_n(input + 12, &randomCounter, 4);
+		for (i = 16; i != 0; ) {
+			i--;
+			input[i] ^= randomBlock[i];
+		}
+		key.nk = 4;
+		key.nb = 4;
+		if (pget_mpf(2, &block) == E_OK) {
+			key.w = (unsigned long *)(unsigned long __near *)block;
+			aesKeyExpansion(randomKey, (struct AesKey __near *)&key);
+		} else {
+			key.w = (unsigned long *)factoryRoundKeys;
+		}
+		aesEncrypt((unsigned char __near *)input, randomBlock,
+			   (struct AesKey __near *)&key);
+		rel_mpf(2, block);
+		randomCounter++;
+		memcpy_n((unsigned char __near *)out + offset, randomBlock,
+			 length < 16 ? length : 16);
+		if (length < 16)
+			break;
+		offset += length < 16 ? length : 16;
+		length -= 16;
+	}
 }
