@@ -7,6 +7,19 @@
 
 #include <scetypes.h>
 
+/* the errors (base 0x803ff000) */
+#define SFAT_ERROR_INVALID_ARGUMENT	-2143293440	/* 0x803FF000 */
+#define SFAT_ERROR_BAD_FD		-2143293439	/* 0x803FF001 */
+#define SFAT_ERROR_INVALID_WHENCE	-2143293438	/* 0x803FF002 */
+#define SFAT_ERROR_SECTOR_SIZE		-2143293437	/* 0x803FF003 */
+#define SFAT_ERROR_SEEK_RANGE		-2143293436	/* 0x803FF004 */
+#define SFAT_ERROR_NO_MEMORY		-2143293435	/* 0x803FF005: also no free file */
+#define SFAT_ERROR_BUSY			-2143293434	/* 0x803FF006 */
+#define SFAT_ERROR_NOT_FOUND		-2143293433	/* 0x803FF007: also no reader, no partition */
+#define SFAT_ERROR_POSITION		-2143293432	/* 0x803FF008 */
+#define SFAT_ERROR_IO			-2143293431	/* 0x803FF009: a broken cluster chain */
+#define SFAT_ERROR_FILE_SIZE		-2143293430	/* 0x803FF00A */
+
 /* the mount flags */
 #define SFAT_MOUNT_NO_MBR	0x00008000	/* the volume starts at sector 0 */
 #define SFAT_MOUNT_SCE_MBR	0x00010000	/* the active partition of Sony's MBR */
@@ -33,7 +46,7 @@ typedef struct SfatVolume {
 	SceUInt32 rootEntries;		/* 0x34: FAT12 and FAT16 */
 	SceUInt32 dataStart;		/* 0x38 */
 	SceUInt32 totalSectors;		/* 0x3c */
-	SceUInt32 clusterCount;		/* 0x40 */
+	int clusterCount;		/* 0x40 */
 	SceUInt32 freeHint;		/* 0x44 */
 	SceUInt32 sectorsPerCluster;	/* 0x48 */
 	SceUInt32 clusterSize;		/* 0x4c */
@@ -47,11 +60,15 @@ _Static_assert(sizeof(SfatVolume) == 0x5c, "SfatVolume");
 int SfatInit(void);
 int SfatTerm(void);
 int SfatMount(SfatVolume *volume, SceUInt32 flags, SfatReadSectors read, void *argument);
-int SfatUnmount(SfatVolume *volume, int flags);
-int SfatOpen(SfatVolume *volume, const char *path, int flags);
+int SfatUnmount(SfatVolume *volume, int flags);	/* flags unused */
+int SfatOpen(SfatVolume *volume, const char *path, int flags);	/* flags unused */
 int SfatClose(int fd);
 int SfatRead(int fd, void *buffer, SceSize size);
 int SfatLseek(int fd, int offset, int whence);
+
+/* a reader every volume uses instead of its own, when set */
+extern SfatReadSectors g_sfatReadHook;
+extern void *g_sfatReadHookArgument;
 
 /* the volumes kbl_main.c mounts */
 extern SfatVolume g_os0Volume;

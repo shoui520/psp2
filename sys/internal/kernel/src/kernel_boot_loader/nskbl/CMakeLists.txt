@@ -121,6 +121,7 @@ psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	${sdif_source}/sd.c
 	${sdif_source}/adma.c
 	${sdif_source}/card_cmd.c
+	sfat.c
 	${lowio_source}/lowio_state.c
 	${lowio_source}/pervasive.c
 	${lowio_source}/pervasive_clock.c
@@ -157,6 +158,10 @@ set_source_files_properties(../skbl/boot.c PROPERTIES COMPILE_DEFINITIONS "BOOT_
 # NSKBL's own files see sysmem's and authmgr's interfaces as NSKBL builds them
 set_source_files_properties(kbl_main.c archive_ns.c iofilemgr_if.c PROPERTIES
 	COMPILE_DEFINITIONS "SYSMEM_NSKBL;AUTHMGR_NSKBL")
+# SceSfat, NSKBL's FAT driver, at -O3 (its loops over the open files unrolled, its directory
+# scan prefetched) with signed characters
+set_source_files_properties(sfat.c PROPERTIES COMPILE_DEFINITIONS SYSMEM_NSKBL
+	COMPILE_OPTIONS "-O3;-fsigned-char")
 # SceLowio's Pervasive driver, its own files built for the boot loader (LOWIO_KBL: physical
 # registers, no lock; LOWIO_NSKBL: what this image keeps), at the boot loader's -O2: the images keep
 # ResetSet and GateSet whole, where os0's -O3 clones them
