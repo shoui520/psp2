@@ -740,22 +740,25 @@ uint32_t bigmac_derive_keyslot_cbc(const void *key_src, const void *iv_src, uint
 /* 0x80b55e */
 uint32_t bigmac_aes_cbc_keyslot(void *dst, const void *src, uint32_t len, uint32_t keyslot, uint32_t mode)
 {
+	uint32_t status;
+
 	if (src == NULL || dst == NULL)
 		return 0x12u;
 	MMIO_WRITE32(0xe0030028u, keyslot & 0xffffu);
 	if ((MMIO_READ32(0xe003002cu) & 2u) != 2u)
 		return 0x11u;
-	MMIO_WRITE32(0xe0050008u, len & 0xffffffu);
-	MMIO_WRITE32(0xe005000cu, (mode & 7u) | 0x108u);
 	MMIO_WRITE32(0xe0050000u, MMIO_ADDPTR(src));
 	MMIO_WRITE32(0xe0050004u, MMIO_ADDPTR(dst));
+	MMIO_WRITE32(0xe0050008u, len & 0xffffffu);
+	MMIO_WRITE32(0xe005000cu, (mode & 7u) | 0x108u);
 	sm_memset(g_zero_iv_buf, 0, 0x10);
 	MMIO_WRITE32(0xe0050014u, MMIO_ADDPTR(g_zero_iv_buf));
 	MMIO_WRITE32(0xe0050010u, keyslot & 0x7ffu);
 	MMIO_WRITE32(0xe005001cu, 1u);
-	while ((MMIO_READ32(0xe0050024u) & 1u) != 0)
-		;
-	return MMIO_READ32(0xe0050024u);
+	do {
+		status = MMIO_READ32(0xe0050024u);
+	} while ((status & 1u) != 0);
+	return status;
 }
 
 /* 0x80b614 */
@@ -783,22 +786,25 @@ uint32_t bigmac_load_keyslot_204(const void *key_src)
 /* 0x80b6a0 */
 uint32_t bigmac_aes_ecb_slot0(void *dst, const void *src, uint32_t len)
 {
+	uint32_t status;
+
 	if (src == NULL || dst == NULL || len > 0x20u)
 		return 0x12u;
 	MMIO_WRITE32(0xe0030028u, 0u);
 	if ((MMIO_READ32(0xe003002cu) & 2u) != 2u)
 		return 0x11u;
-	MMIO_WRITE32(0xe0050008u, len & 0xffffffu);
-	MMIO_WRITE32(0xe005000cu, 0x10au);
 	MMIO_WRITE32(0xe0050000u, MMIO_ADDPTR(src));
 	MMIO_WRITE32(0xe0050004u, MMIO_ADDPTR(dst));
+	MMIO_WRITE32(0xe0050008u, len & 0xffffffu);
+	MMIO_WRITE32(0xe005000cu, 0x10au);
 	sm_memset(g_zero_iv_buf, 0, 0x10);
 	MMIO_WRITE32(0xe0050014u, MMIO_ADDPTR(g_zero_iv_buf));
 	MMIO_WRITE32(0xe0050010u, 0u);
 	MMIO_WRITE32(0xe005001cu, 1u);
-	while ((MMIO_READ32(0xe0050024u) & 1u) != 0)
-		;
-	return MMIO_READ32(0xe0050024u);
+	do {
+		status = MMIO_READ32(0xe0050024u);
+	} while ((status & 1u) != 0);
+	return status;
 }
 
 /* 0x80b750 */
@@ -842,6 +848,8 @@ int kirk_cmd_18_ecdsa_verify_224(void *req)
 /* 0x80b8a2 */
 uint32_t bigmac_cmac_keyslot(void *dst, const void *src, uint32_t len, uint32_t keyslot)
 {
+	uint32_t status;
+
 	if (src == NULL || dst == NULL)
 		return 0x12u;
 	MMIO_WRITE32(0xe0030028u, keyslot & 0xffffu);
@@ -853,9 +861,10 @@ uint32_t bigmac_cmac_keyslot(void *dst, const void *src, uint32_t len, uint32_t 
 	MMIO_WRITE32(0xe005000cu, 0x13bu);
 	MMIO_WRITE32(0xe0050010u, keyslot & 0x7ffu);
 	MMIO_WRITE32(0xe005001cu, 1u);
-	while ((MMIO_READ32(0xe0050024u) & 1u) != 0)
-		;
-	return MMIO_READ32(0xe0050024u);
+	do {
+		status = MMIO_READ32(0xe0050024u);
+	} while ((status & 1u) != 0);
+	return status;
 }
 
 /* 0x80b914 */
@@ -1715,6 +1724,8 @@ int kirk_cmd_04_aes_cbc_encrypt(void *req)
 /* 0x80d13e */
 uint32_t bigmac_aes_ecb_encrypt_slot0(void *dst, const void *src)
 {
+	uint32_t status;
+
 	if (src == NULL || dst == NULL)
 		return 0x12u;
 	MMIO_WRITE32(0xe0030028u, 0x212u);
@@ -1726,9 +1737,10 @@ uint32_t bigmac_aes_ecb_encrypt_slot0(void *dst, const void *src)
 	MMIO_WRITE32(0xe005000cu, 0x301u);
 	MMIO_WRITE32(0xe0050010u, 0x212u);
 	MMIO_WRITE32(0xe005001cu, 1u);
-	while ((MMIO_READ32(0xe0050024u) & 1u) != 0)
-		;
-	return MMIO_READ32(0xe0050024u);
+	do {
+		status = MMIO_READ32(0xe0050024u);
+	} while ((status & 1u) != 0);
+	return status;
 }
 
 /* 0x80d1a8 */
@@ -2243,10 +2255,12 @@ int bigmac_ctx_get_status(const uint32_t *ctx, uint32_t *status_out)
 uint32_t bigmac_ctx_wait(const uint32_t *ctx)
 {
 	uint32_t ch_off = (ctx[0] & 1u) * 0x80u;
+	uint32_t status;
 
-	while ((MMIO_READ32(0xe0050024u + ch_off) & 1u) != 0)
-		;
-	if (MMIO_READ32(0xe0050024u + ch_off) == 0)
+	do {
+		status = MMIO_READ32(0xe0050024u + ch_off);
+	} while ((status & 1u) != 0);
+	if (status == 0)
 		return 0;
 	return 0x800f0005u;
 }
@@ -2558,7 +2572,7 @@ int bignum_is_valid_scalar(const uint32_t *val, const uint32_t *limit, int nword
 
 static uint32_t count_leading_zeros_u32(uint32_t x)
 {
-	uint32_t s16 = (uint32_t)((int32_t)~(x >> 16) >> 16) & 16u;
+	uint32_t s16 = (uint32_t)((int32_t)(0u - (x >> 16)) >> 16) & 16u;
 	uint32_t v = x >> s16;
 	uint32_t s8 = (uint32_t)((int32_t)(v - 0x100u) >> 16) & 8u;
 	v <<= s8;
