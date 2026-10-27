@@ -80,13 +80,27 @@ typedef struct SmServiceHookVtable {
 typedef struct SmServiceHookNode {
 	uint32_t cmdId;					/* 0x00 */
 	struct SmServiceHookNode *next;			/* 0x04 */
-	const SmServiceHookVtable *vtable;		/* 0x08 */
-	void (*handler)(void *commBuf);			/* 0x0c */
+	const void *vtable;				/* 0x08 */
+	void *handler;					/* 0x0c */
 	void *arg0;					/* 0x10 */
-	void *arg1;					/* 0x14 */
+	int32_t adj;					/* 0x14 */
 } SmServiceHookNode;
 
 _Static_assert(sizeof(SmServiceHookNode) == 0x18, "SmServiceHookNode size");
+
+typedef int (*SmCmdMethod)(void *mgr, void *packetBuf);
+
+typedef struct SmMemberFnPtr {
+	SmCmdMethod fn;					/* 0x00 */
+	int32_t adj;					/* 0x04 */
+} SmMemberFnPtr;
+
+typedef struct SmHookSpec {
+	uint32_t cmdId;					/* 0x00 */
+	SmServiceHookNode *node;			/* 0x04 */
+	SmCmdMethod fn;					/* 0x08 */
+	int32_t adj;					/* 0x0c */
+} SmHookSpec;
 
 typedef struct SmServiceContext {
 	uint32_t running;				/* 0x00 */
@@ -162,5 +176,45 @@ int bigmacStartAesCipher(void *dst, const void *src, uint32_t size,
 		uint32_t useExternalKey, uint32_t keyBits, const uint32_t *bmCtrl);
 int bigmacStartMemcpy(void *dst, const void *src, uint32_t size,
 		const uint32_t *bmCtrl);
+
+/* ============================================================================
+ * aimgr.c: Console ID / OpenPSID & Endian Helpers (names ours)
+ * ============================================================================ */
+
+void aimgrReadKeyringSlot32(uint32_t slotIndex, uint32_t *outWords8);
+void aimgrClearConsoleId(void *buf16);
+void aimgrClearConsoleId2(void *buf16);
+void aimgrReadConsoleId(void *out16);
+void aimgrReadConsoleIdAlias1(void *out16);
+void aimgrReadConsoleIdAlias2(void *out16);
+int aimgrIsTool(const uint8_t *cid);
+int aimgrIsTest(const uint8_t *cid);
+int aimgrIsDex(const uint8_t *cid);
+int aimgrIsTestSub4(const uint8_t *cid);
+int aimgrIsCexSub2(const uint8_t *cid);
+uint16_t aimgrExtractProductSubCode(const uint8_t *cid, uint32_t rawWord2);
+int aimgrIsCexSub16Factory36(const uint8_t *cid);
+int aimgrIsRetailOrChord(const uint8_t *cid);
+int aimgrGetConsoleId(const uint8_t *rawCid, uint8_t *outCid);
+int aimgrGetOpenPsId(uint32_t unused, void *outOpenPsId16);
+int aimgrIsDolceHardware(void);
+int aimgrIsNotDolceHardware(void);
+int aimgrIsGenuineVshTarget(const uint8_t *cid);
+int aimgrIsValidProductTarget(const uint8_t *cid);
+uint16_t htole16Sm(uint16_t v);
+uint16_t le16tohSm(uint16_t v);
+uint32_t htole32Sm(uint32_t v);
+uint32_t le32tohSm(uint32_t v);
+uint64_t *htole64Sm(uint64_t *out, const uint64_t *in);
+uint64_t *le64tohSm(uint64_t *out, const uint64_t *in);
+int16_t bswap16Sm(uint16_t v);
+int16_t htobe16Sm(uint16_t v);
+int16_t be16tohSm(uint16_t v);
+uint32_t bswap32Sm(uint32_t v);
+uint32_t htobe32Sm(uint32_t v);
+uint32_t be32tohSm(uint32_t v);
+uint64_t *bswap64Sm(uint64_t *out, const uint64_t *in);
+uint64_t *htobe64Sm(uint64_t *out, const uint64_t *in);
+uint64_t *be64tohSm(uint64_t *out, const uint64_t *in);
 
 #endif /* SM_COMMON_H */
