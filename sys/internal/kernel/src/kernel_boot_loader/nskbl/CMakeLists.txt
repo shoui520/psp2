@@ -14,6 +14,19 @@ set(lowio_source ../../../../driver/src/lowio)
 set(sdif_source ../../../../driver/src/sdif)
 set(intrmgr_source ../../intrmgr)
 set(smsc_proxy_source ../../../../driver/src/smsc_proxy)
+set(modulemgr_source ../../modulemgr)
+# SceKernelModulemgr's files in NSKBL's link order
+set(modulemgr_c_sources
+	${modulemgr_source}/modulemgr.c
+	${modulemgr_source}/modulecb.c
+	${modulemgr_source}/loadelf.c
+	${modulemgr_source}/stub_linker.c
+	${modulemgr_source}/loadcore.c
+	${modulemgr_source}/relocator.c
+	${modulemgr_source}/librarydb.c
+	${modulemgr_source}/libstubcb.c
+	${modulemgr_source}/libentcb.c
+)
 # the kernel heap's dlmalloc/malloc.c, prepared as SceSysmem's (sysmem/sources.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/${sysmem_source}/vendor_patch.cmake)
 set(sysmem_dlmalloc_source "${CMAKE_CURRENT_BINARY_DIR}/dlmalloc-sce.c")
@@ -89,6 +102,7 @@ psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	${smsc_proxy_source}/tzs_bridge.c
 	${smsc_proxy_source}/smc.S
 	../../authmgr/authmgr.c
+	${modulemgr_c_sources}
 	${sysmem_source}/copy_forward.S
 	${sysmem_source}/fill_core.S
 	${sdif_source}/sdif.c
@@ -119,6 +133,13 @@ set_source_files_properties(${smsc_proxy_source}/smsc_proxy.c PROPERTIES
 	COMPILE_DEFINITIONS SMSC_PROXY_NSKBL)
 set_source_files_properties(../../authmgr/authmgr.c PROPERTIES
 	COMPILE_DEFINITIONS AUTHMGR_NSKBL)
+# modulemgr's per-firmware definitions (MODULE_OBJECT_VERSION), from its own fw/<FW>.local.cmake
+set(nskbl_module_defines "${MODULE_DEFINES}")
+include(${CMAKE_CURRENT_SOURCE_DIR}/${modulemgr_source}/fw/${FW}.local.cmake)
+set(modulemgr_defines ${MODULE_DEFINES})
+set(MODULE_DEFINES "${nskbl_module_defines}")
+set_source_files_properties(${modulemgr_c_sources} PROPERTIES
+	COMPILE_DEFINITIONS "MODULEMGR_NSKBL;${modulemgr_defines}")
 set_source_files_properties(${sdif_source}/sdif.c ${sdif_source}/cmd_queue.c
 	${sdif_source}/sdio_intr.c ${sdif_source}/mmc.c ${sdif_source}/sd.c
 	${sdif_source}/adma.c ${sdif_source}/card_cmd.c PROPERTIES COMPILE_DEFINITIONS SDIF_NSKBL)
