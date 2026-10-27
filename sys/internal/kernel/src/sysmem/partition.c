@@ -228,7 +228,7 @@ static inline uintptr_t MemBlockCdramPbase(SceUInt32 code, uintptr_t vbase)
 int PartitionFreeMemBlockMappedToVirAllocRaw(Partition *partition, MemBlockObject *block)
 {
 	void *phyPart;
-#ifndef SYSMEM_TZS
+#if !defined(SYSMEM_TZS) && !SYSMEM_NSKBL
 	uintptr_t pa;
 	SceUInt32 code;
 #endif
@@ -242,7 +242,7 @@ int PartitionFreeMemBlockMappedToVirAllocRaw(Partition *partition, MemBlockObjec
 		}
 	}
 	MemBlockStatusStateChangePhyAllocFromMA(block);
-#ifndef SYSMEM_TZS	/* the secure world has no CDRAM */
+#if !defined(SYSMEM_TZS) && !SYSMEM_NSKBL	/* the secure world and the boot loader have no CDRAM */
 	code = block->code;
 	if (MemBlockCodeIsCdram(code)) {
 		if (block->attr & MEMBLOCK_ATTR_KEEP_PHY) {

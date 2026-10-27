@@ -75,7 +75,9 @@ typedef struct PhyMemSegment {
 #define SCE_KERNEL_PAGE_VENEZIA_INDEX		8
 #define SCE_KERNEL_PAGE_VIP_INDEX		9
 
+#if !SYSMEM_NSKBL
 static SceClass *s_phyMemPartClass;
+#endif
 /* the pages of Venezia and the VIP */
 static PhyPage *s_phyPageVenezia;
 static PhyPage *s_phyPageVip;
@@ -85,9 +87,11 @@ static PhyPageTableMgr *s_phyPageTableMgr;
 static PhyMemPart *s_phyPartKernel;
 static PhyMemPart *s_phyPartTool;
 PhyMemPart *s_phyPartGame;
+#if !SYSMEM_NSKBL
 static PhyMemPart *s_phyPartCdram;
 /* how much the game partition has grown */
 static SceSize s_phyMemPartGrownSize;
+#endif
 /* PLACEHOLDER: the partition tracker; only the allocation callback is known */
 typedef struct PhyMemPartHook {
 	void (*alloc)(struct PhyMemPart *part, SceSize size, struct PhyPage *page,
@@ -106,7 +110,9 @@ typedef struct PhyMemPartLogCallback {
 #if FW_DEBUG
 /* debug builds only: the partition tracker and log */
 static const PhyMemPartHook *s_phyMemPartHook;
+#if !SYSMEM_NSKBL
 static const PhyMemPartLogCallback *s_phyMemPartLogCallback;
+#endif
 #endif
 
 #if !SYSMEM_NSKBL
@@ -292,7 +298,7 @@ static inline SceInt32 PhyMemPartRelease(PhyMemPart *part)
 	return count;
 }
 
-#if FW_DEBUG
+#if FW_DEBUG && !SYSMEM_NSKBL
 /* Sony's compiler kept out-of-line copies for the two debug listings */
 static __attribute__((noinline)) SceInt32 PhyMemPartReferCall(PhyMemPart *part)
 {
@@ -679,6 +685,7 @@ int PhyMemPartCheckAndFixFreeSizeRaw(PhyMemPart *part, const char *op, SceSize s
 }
 #endif
 
+#if !SYSMEM_NSKBL	/* the boot loader has no CDRAM */
 int PhyMemPartCdramFreeCore(PhyMemPart *part, uintptr_t pa, SceSize size)
 {
 	int flags, ret;
@@ -727,6 +734,7 @@ int PhyMemPartCdramAllocCore(PhyMemPart *part, SceSize size, SceSize alignment, 
 	PhyMemPartRelease(part);
 	return ret;
 }
+#endif
 
 #define PHYMEM_CPU_COUNT		4
 
@@ -2355,6 +2363,7 @@ int sceKernelGetPhyMemPartInfoByID(SceUID uid, SceKernelPhyMemPartInfoForDebugge
 
 /* the fixed GUIDs of the kernel and tool partitions */
 
+#if !SYSMEM_NSKBL
 static SceClass s_phyMemPartClassBody;
 
 /* the boot CDRAM partition, a static one over the static allocator's range */
@@ -2362,7 +2371,6 @@ static PhyMemSegment s_phyMemSegmentCdramBoot;
 static PhyMemPart s_phyMemPartCdramBoot;
 static PhyMemPart *s_phyPartCdramBoot;
 
-#if !SYSMEM_NSKBL
 /* name unknown: the partitions the boot loader made, and the kernel's free size recounted */
 int PhyMemModuleStart(const UIDManager *manager)
 {
@@ -2594,6 +2602,7 @@ int PhyMemStart(SceKernelBootParam *pBoot, UIDManager *manager)
 }
 #endif
 
+#if !SYSMEM_NSKBL
 /* name unknown: CDRAM from the partition sceKernelSetPhyPartCdram set */
 int PhyMemCdramAlloc(SceSize size, SceSize alignment, uintptr_t *pa)
 {
@@ -2606,7 +2615,6 @@ int PhyMemCdramFree(uintptr_t pa, SceSize size)
 	return PhyMemPartCdramFreeCore(s_phyPartCdram, pa, size);
 }
 
-#if !SYSMEM_NSKBL
 /* name unknown: the static CDRAM allocator reset */
 int SceSysmemForKernel_02DAD732(void)
 {
