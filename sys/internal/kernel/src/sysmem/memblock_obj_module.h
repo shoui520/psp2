@@ -118,6 +118,19 @@ MEMBLOCK_OBJ_MODULE_INLINE void MemBlockSetNameRaw(MemBlockObject *block, const 
 
 #endif
 
+#if SYSMEM_NSKBL
+/*
+ * name unknown: MemBlockSetNameRaw as NSKBL's partition.c inlines it for a
+ * name from SysmemAllocName, without the NULL branch (one record for all).
+ */
+static inline void MemBlockSetNameNonNullRaw(MemBlockObject *block, const char *name)
+{
+	SCE_DBG_ASSERT_CHECK_FUNC(name != NULL, 653, "MemBlockSetNameRaw");
+	block->name = name;
+	block->flags |= MEMBLOCK_FLAG_NAMED;
+}
+#endif
+
 /* GUIDApplyWithClass: result = func(object, argument), under the GUID lock */
 typedef struct GUIDApplyArgs {
 	int result;

@@ -415,7 +415,11 @@ SceSize MemBlockGetMapSize(MemBlockObject *block)
 #endif
 
 /* the given physical pages behind the block's first virtual page, marked mapped */
+#if SYSMEM_NSKBL	/* partition.c's boot blocks call it */
+int MemBlockAssocPhyPage(MemBlockObject *block, struct PhyPage *page)
+#else
 SYSMEM_DEBUG_FUNC int MemBlockAssocPhyPage(MemBlockObject *block, struct PhyPage *page)
+#endif
 {
 	VirPage *vp;
 

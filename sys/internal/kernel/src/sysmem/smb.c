@@ -382,6 +382,59 @@ int SimpleMemBlockGetPbase(MemBlockObject *block, uintptr_t *pbase)
 	return 0;
 }
 
+#if SYSMEM_NSKBL
+/*
+ * A simple memblock over one of the boot loader's mappings at va, backed by
+ * its pages (new ones when it has none); kept out of the FIFOs.
+ */
+int AllocPremappedBootSimpleMemBlock(const char *name, SceUInt32 smbType, SceUInt32 flags,
+				     uintptr_t va, struct PhyPage *page, MemBlockObject **pBlock)
+{
+	SceUInt32 code = SmbMemBlockCode(smbType);
+	SceSize size;
+	int ret;
+
+	if (flags & ~0x33)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	size = SMB_TYPE_SIZE(smbType);
+	ret = PartitionAllocSimpleMemBlockByAddr(PartitionGetKernel(), smbType, va, size, pBlock);
+	if (ret < 0)
+		return ret;
+	(*pBlock)->base.sce_class = s_smbClass;
+	(*pBlock)->attr |= 0x80000000;
+	MemBlockStatusStateChangeVirAllocFromFreeRaw(*pBlock);
+	(*pBlock)->code = code;
+	(*pBlock)->partition = PartitionGetKernel();
+	(*pBlock)->smbType = smbType;
+	switch (SMB_TYPE_LAYOUT(smbType)) {
+	case SMB_LAYOUT_GUARD1:
+		size -= 0x1000;
+		break;
+	case SMB_LAYOUT_GUARD2:
+		size -= 0x2000;
+		break;
+	case SMB_LAYOUT_ONE_PAGE:
+		size = 0x1000;
+		break;
+	}
+	if (page == NULL) {
+		ret = PhyMemPartAllocPhyPage(SceSysmemForKernel_0164D817(), size, 0x10, &page);
+		if (ret < 0)
+			return ret;
+	}
+	(*pBlock)->smbPage = page;
+	if (!(flags & SMB_ALLOC_NO_MAP)) {
+		ret = SimpleMemBlockMap(*pBlock, flags);
+		if (ret < 0)
+			return ret;
+	}
+	MemBlockSetNameRaw(*pBlock, name);
+	if (!(flags & SMB_ALLOC_NO_CLEAR))
+		return SimpleMemBlockClear(*pBlock);
+	return 0;
+}
+#endif
+
 #if !SYSMEM_NSKBL
 /* name unknown: the class, the boot stock of blocks, and their sections reserved */
 int SimpleMemBlockModuleStart(const UIDManager *manager)

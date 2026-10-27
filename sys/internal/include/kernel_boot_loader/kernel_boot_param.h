@@ -100,7 +100,7 @@ typedef struct SceKernelBootParam {
 	struct PhyPage *pPageL2Vector;
 	struct PhyPage *pPagePhypage;
 	struct PhyPage *pPagePhypageHigh;	/* 0x2b8 */
-	uint32_t reserved3;
+	struct PhyPage *pPageBootKernelImage;	/* 0x2bc */
 	struct PhyPage *pPageFixedHeap32B;	/* 0x2c0: the pages backing the fixed heap mappings */
 	struct PhyPage *pPageFixedHeap48B;
 	struct PhyPage *pPageFixedHeap64B;

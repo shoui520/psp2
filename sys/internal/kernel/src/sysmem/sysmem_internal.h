@@ -636,7 +636,8 @@ typedef struct UIDManager {
 	SceClass *partitionClass;		/* 0xb8: "SceUIDPartitionClass" */
 	SceClass *heapClass;			/* 0xbc: "SceUIDKernelHeapClass" */
 	void *registerHeap;			/* 0xc0: "heap" of objects registered, not created */
-	SceUInt32 partitionReserved[2];		/* 0xc4: kept by PartitionModuleStart, unused */
+	void *rootPartitionObject;		/* 0xc4: the root partition's PartitionInit object */
+	struct AddressSpaceContext *rootContext;	/* 0xc8: the root partition's context */
 	SceUID uncacheHeap;			/* 0xcc: the uncached kernel heap */
 	struct AddressSpaceContext *kernelContext;	/* 0xd0: the kernel address space's */
 	struct AddressSpaceGlobals *addressSpaceGlobals;	/* 0xd4 */
@@ -796,6 +797,19 @@ int L2PageTableFree(FixedHeap *heap, L2PageTable *l2pt);
 int L2PageTableInit(L2PageTable *l2pt);
 int L2PageTableGetPageCount(L2PageTable *l2pt);
 void L2PageTableUnreserve(L2PageTable *l2pt, SceSize size);
+#if SYSMEM_NSKBL
+int L2PageTableAddPageCount(L2PageTable *l2pt, SceSize size, SceSize extra);
+int MemBlockAssocPhyPage(struct MemBlockObject *block, struct PhyPage *page);
+int PartitionAllocMemBlockByAddrByCommand(struct Partition *partition,
+					  SceKernelAllocMemBlockCommand *command, uintptr_t va);
+int PartitionMapL2PageTable(struct Partition *partition, L2PageTable *l2pt, SceUInt32 flags);
+int PartitionAllocSimpleMemBlockByAddr(struct Partition *partition, SceUInt32 smbType,
+				       uintptr_t va, SceSize size, struct MemBlockObject **block);
+int AllocPremappedBootSimpleMemBlock(const char *name, SceUInt32 smbType, SceUInt32 flags,
+				     uintptr_t va, struct PhyPage *page,
+				     struct MemBlockObject **pBlock);
+int PartitionStart(struct SceKernelBootParam *pBoot, struct UIDManager *manager);
+#endif
 int L2PageTableMapPages(L2PageTable *l2pt, SceUInt32 type, uintptr_t va, SceSize size,
 			uintptr_t pa);
 int L2PageTableRemapPages(L2PageTable *l2pt, MemBlockObject *block, SceUInt32 type,

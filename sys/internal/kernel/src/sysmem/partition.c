@@ -5,6 +5,7 @@
  * simple memblocks four at a time) and a domain.
  */
 
+#include <sysmem/sysroot.h>
 #include "sysmem_internal.h"
 #include <sysmem/uid_guid.h>
 #include "memblock_obj_module.h"
@@ -762,6 +763,61 @@ int TinyPartitionInitList(TinyPartition *tiny)
 	TinyPartitionLinkFreeAfter(tiny->blocks, block);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
 	return ret;
+}
+
+#define PARTITION_ATTR_ROOT		0x01	/* PLACEHOLDER: name; made with a root object */
+#define PARTITION_ATTR_KEEP		0x08	/* PLACEHOLDER: name; never deleted */
+
+/*
+ * A partition of [vbase, vbase + size) in the context's address space. A
+ * failure leaves it half made; it is not reported.
+ */
+#if SYSMEM_NSKBL
+static __attribute__((noinline))
+#else
+static inline
+#endif
+int PartitionInit(Partition *partition, const char *name, SceUInt8 domain, uintptr_t vbase,
+		  SceSize size, const PartitionInitParam *param, AddressSpaceContext *context,
+		  PartitionRootObject *rootObject)
+{
+	SceUInt32 attr;
+	int ret;
+
+	partition->refCount = 0;
+	ret = TinyPartitionInitRaw(&partition->tiny, name, vbase, size, context);
+	if (ret < 0 || param->size != sizeof(*param))
+		return 0;
+	attr = param->attr;
+	if (attr & ~0xf)
+		return 0;
+	partition->entryAttr = param->entryAttr;
+	partition->entryAttrMask = param->entryAttrMask;
+	if ((attr & PARTITION_ATTR_ROOT) && rootObject == NULL) {
+		SCE_DBG_ASSERT_CHECK(rootObject != NULL, 5981);
+		return 0;
+	}
+	partition->attr = attr;
+	partition->domain = domain;
+	partition->l2Lock = 0;
+	partition->rootObject = rootObject;
+	partition->l2Count = 0;
+	partition->virPageCount = 0;
+	partition->addressSpace = NULL;
+	ret = TinyPartitionInitList(&partition->tiny);
+	if (ret < 0) {
+		SCE_DBG_PRINTF(0xb, 6004, "TinyPartitionInitList failed 0x%08x\n", ret);
+		return 0;
+	}
+	partition->l2BlockLock = 0;
+	partition->l2Blocks = NULL;
+	partition->l2CacheLock = 0;
+	partition->l2Cache = NULL;
+	partition->l2CacheCount = 0;
+	partition->mapLock = 0;
+	partition->pid = -1;
+	partition->uid = -1;
+	return 0;
 }
 
 /* a free block off the free list (it links to itself) */
@@ -1876,6 +1932,84 @@ static inline uintptr_t MemBlockCdramVirToPhy(SceUInt32 code, uintptr_t va)
 	}
 }
 
+#if SYSMEM_NSKBL
+/* a block allocated at va, taken through to filled */
+int PartitionAllocMemBlockByAddrByCommand(Partition *partition,
+					  SceKernelAllocMemBlockCommand *command, uintptr_t va)
+{
+	int ret;
+
+	ret = PartitionAllocMemBlockCoreByAddrByCommandRaw(partition, command, va);
+	if (ret < 0)
+		return ret;
+	return MemBlockFill(command->block);
+}
+
+#define PARTITION_BOOT_L2PT_RANGE	0x100000	/* the MiB a boot L2 table maps */
+
+/* the pages the boot loader mapped for a block, counted in its boot L2 table */
+static inline void FixL2PageTableCountCore(SceKernelBootParam *pBoot,
+					   const SceKernelBootMapping *mapping)
+{
+	L2PageTable *l2pt;
+
+	l2pt = pBoot->pL2PageTableObject000;
+	SCE_DBG_ASSERT_LEVEL_FUNC(0, l2pt != NULL, 7883, "FixL2PageTableCountCore");
+	if (l2pt->vbase > mapping->vbase ||
+	    mapping->vbase >= l2pt->vbase + PARTITION_BOOT_L2PT_RANGE) {
+		l2pt = pBoot->pL2PageTableObjectPhypage;
+		SCE_DBG_ASSERT_LEVEL_FUNC(0, l2pt != NULL, 7883, "FixL2PageTableCountCore");
+		if (l2pt->vbase > mapping->vbase ||
+		    mapping->vbase >= l2pt->vbase + PARTITION_BOOT_L2PT_RANGE)
+			return;
+	}
+	L2PageTableAddPageCount(l2pt, mapping->vsize - mapping->extraHigh, mapping->extraHigh);
+}
+
+/* a block over one of the boot loader's mappings, backed by its pages */
+static int AllocPremappedBootBlock(SceKernelBootParam *pBoot, Partition *partition,
+				   void *phyMemPart, const SceKernelBootMapping *mapping,
+				   struct PhyPage *page, MemBlockObject **out)
+{
+	SceKernelAllocMemBlockCommand command;
+	MemBlockObject *block;
+	int ret;
+
+	AllocMemBlockCommandInit(&command, mapping->name, mapping->vsize);
+	command.code = MEMBLOCK_CODE_KERNEL_ROOT_RW;
+	ret = MemBlockCode2TypeInfo(MEMBLOCK_CODE_KERNEL_ROOT_RW, &command.typeInfo);
+	if (ret < 0) {
+		SCE_DBG_ASSERT_FAIL(7931);
+		return ret;
+	}
+	command.opt.alignment = 0;
+	command.opt.extraLow = 0;
+	if (mapping->extraHigh != 0) {
+		command.opt.extraHigh = mapping->extraHigh;
+		command.opt.attr = ALLOC_ATTR_NO_CLEAR | ALLOC_ATTR_NOPHYPAGE | ALLOC_ATTR_HAS_EXTRA_HIGH;
+	} else {
+		command.opt.extraHigh = 0;
+		command.opt.attr = ALLOC_ATTR_NO_CLEAR | ALLOC_ATTR_NOPHYPAGE;
+	}
+	command.phyMemPart = phyMemPart;
+	command.partition = partition;
+	ret = PartitionAllocMemBlockByAddrByCommand(partition, &command, mapping->vbase);
+	if (ret < 0)
+		return ret;
+	block = command.block;
+	MemBlockSetNameNonNullRaw(block, SysmemAllocName(mapping->name));
+	if (page != NULL) {
+		ret = MemBlockAssocPhyPage(command.block, page);
+		if (ret < 0)
+			return ret;
+	}
+	FixL2PageTableCountCore(pBoot, mapping);
+	if (command.block != NULL)
+		*out = command.block;
+	return 0;
+}
+#endif
+
 /*
  * A block allocated by the command. CDRAM blocks get their physical pages
  * first (given, a mirror's, or from the CDRAM partition) and sit at the
@@ -2082,19 +2216,46 @@ static inline int PartitionL2CAllocL2PageTableVectorR1(Partition *partition, Sce
 {
 	AddressSpaceContext *context = partition->tiny.context;
 	SceUInt32 *tables = context->l2Tables;
+	int ret;
 
 	if (tables == NULL) {
-		if (partition->attr & 1) {
+		if (partition->attr & PARTITION_ATTR_ROOT) {
 			SCE_DBG_ASSERT_CHECK(tables != NULL, 4525);
-			return -1;
+			return SCE_KERNEL_ERROR_ERROR;
 		}
-		if (AddressSpaceContextAllocL2Tables(context) < 0)
-			return -1;
+		ret = AddressSpaceContextAllocL2Tables(context);
+		if (ret < 0)
+			return ret;
 		tables = context->l2Tables;
 	}
 	*out = tables;
 	return 0;
 }
+
+#if SYSMEM_NSKBL
+/* a table made elsewhere (the boot loader's) entered in the address space's slots */
+int PartitionMapL2PageTable(Partition *partition, L2PageTable *l2pt, SceUInt32 flags)
+{
+	SceUInt32 *tables, *slot;
+	int intr = 0, ret;
+
+	if (!(flags & PARTITION_L2C_LOCKED))
+		intr = SceCpuForDriver_4C38CE4D(&partition->l2Lock);
+	ret = PartitionL2CAllocL2PageTableVectorR1(partition, &tables);
+	if (ret >= 0) {
+		slot = &tables[l2pt->vbase >> 20];
+		if (AS_L2_SLOT_TYPE(*slot) == AS_L2_SLOT_BLOCK)
+			l2pt->firstBlock = (MemBlockObject *)AS_L2_SLOT_PTR(*slot);
+		*slot = ((uintptr_t)l2pt & ~3u) | AS_L2_SLOT_TABLE;
+		l2pt->partition = partition;
+		SceCpuForKernel_9DA58A9E((uint32_t *)&partition->l2Count);
+		ret = 0;
+	}
+	if (!(flags & PARTITION_L2C_LOCKED))
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
+	return ret;
+}
+#endif
 
 /*
  * An L2 page table for the MiB at va: the object from the partition's cache,
@@ -2244,60 +2405,20 @@ void PartitionVirPageRelease(Partition *partition)
 	SceCpuForKernel_0E04BD2E((uint32_t *)&partition->virPageCount);
 }
 
-#define PARTITION_ATTR_1		0x01	/* PLACEHOLDER: not supported here */
-#define PARTITION_ATTR_KEEP		0x08	/* PLACEHOLDER: name; never deleted */
-
-/*
- * A partition of [vbase, vbase + size) in the context's address space. It is
- * returned even when the parameters turn out wrong.
- */
-Partition *PartitionInit(const char *name, SceUInt8 domain, uintptr_t vbase, SceSize size,
-			 const PartitionInitParam *param)
+/* a partition from the kernel heap; returned even when it is left half made */
+Partition *CreatePartition(const char *name, SceUInt8 domain, uintptr_t vbase, SceSize size,
+			   const PartitionInitParam *param)
 {
 	AddressSpaceContext *context;
 	Partition *partition;
-	SceUInt32 attr;
-	int ret;
 
 	partition = SceSysmemForKernel_85571907(sizeof(*partition));
-	if (partition == NULL)
-		return NULL;
-	SetMemory32Core(partition, 0, sizeof(*partition));
-	context = param->context;
-	partition->refCount = 0;
-	partition->tiny.base.sce_class = s_partitionClass;
-	ret = TinyPartitionInitRaw(&partition->tiny, name, vbase, size, context);
-	if (ret < 0 || param->size != sizeof(*param))
-		return partition;
-	attr = param->attr;
-	if (attr & ~0xf)
-		return partition;
-	partition->entryAttr = param->entryAttr;
-	partition->entryAttrMask = param->entryAttrMask;
-	if (attr & PARTITION_ATTR_1) {
-		SCE_DBG_ASSERT_FAIL(5981);
-		return partition;
+	if (partition != NULL) {
+		SetMemory32Core(partition, 0, sizeof(*partition));
+		context = param->context;
+		partition->tiny.base.sce_class = s_partitionClass;
+		PartitionInit(partition, name, domain, vbase, size, param, context, NULL);
 	}
-	partition->l2Lock = 0;
-	partition->attr = attr;
-	partition->domain = domain;
-	partition->l2Count = 0;
-	partition->virPageCount = 0;
-	partition->addressSpace = NULL;
-	partition->reserved = 0;
-	ret = TinyPartitionInitList(&partition->tiny);
-	if (ret < 0) {
-		SCE_DBG_PRINTF(0xb, 6004, "TinyPartitionInitList failed 0x%08x\n", ret);
-		return partition;
-	}
-	partition->l2BlockLock = 0;
-	partition->l2Blocks = NULL;
-	partition->l2CacheLock = 0;
-	partition->l2Cache = NULL;
-	partition->l2CacheCount = 0;
-	partition->mapLock = 0;
-	partition->pid = -1;
-	partition->uid = -1;
 	return partition;
 }
 
@@ -2635,6 +2756,28 @@ int PartitionAllocSimpleMemBlock(Partition *partition, SceUInt32 smbType, SceSiz
 	return ret;
 }
 
+#if SYSMEM_NSKBL
+/* a block of the size at va in the kernel partition, for a boot simple memblock */
+int PartitionAllocSimpleMemBlockByAddr(Partition *partition, SceUInt32 smbType, uintptr_t va,
+				       SceSize size, MemBlockObject **block)
+{
+	SceKernelAllocMemBlockCommand command;
+	int ret;
+
+	SCE_DBG_ASSERT_CHECK(partition == g_uidManager->kernelPartition, 6896);
+	AllocMemBlockCommandInit(&command, NULL, size);
+	command.code = MEMBLOCK_CODE_KERNEL_ROOT_RW;
+	ret = MemBlockCode2TypeInfo(MEMBLOCK_CODE_KERNEL_ROOT_RW, &command.typeInfo);
+	if (ret < 0) {
+		SCE_DBG_ASSERT_FAIL(6907);
+		return ret;
+	}
+	command.partition = partition;
+	ret = PartitionAllocMemBlockInListByAddrByCommandRaw(partition, &command, va);
+	*block = command.block;
+	return ret;
+}
+#else
 /* name unknown: an address range for a virtual slot of the code */
 int PartitionAllocVSlot(Partition *partition, SceUInt32 code, SceSize size, MemBlockObject **slot)
 {
@@ -2658,6 +2801,7 @@ int PartitionAllocVSlot(Partition *partition, SceUInt32 code, SceSize size, MemB
 	}
 	return ret;
 }
+#endif
 
 /* name unknown: a block and its base freed, for the other files */
 int PartitionFreeMemBlockWithBase(Partition *partition, MemBlockObject *block,
@@ -2977,7 +3121,7 @@ SceUID sceKernelCreatePartition(const char *name, SceUInt8 domain, uintptr_t vba
 		SCE_DBG_ASSERT_FAIL(7438);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	partition = PartitionInit(name, domain, vbase, size, param);
+	partition = CreatePartition(name, domain, vbase, size, param);
 	if (partition == NULL)
 		return SCE_KERNEL_ERROR_PARTITION_ERROR;
 	uid = param->uid;
@@ -3112,8 +3256,228 @@ int MemBlockFreeFromPartition(MemBlockObject *block)
 /* SceUIDTinyPartitionClass */
 static SceClass *s_tinyPartitionClass;
 static Partition *s_kernelPartition;
-static SceUInt32 s_partitionReserved0;
-static SceUInt32 s_partitionReserved1;
+static PartitionRootObject *s_rootPartitionObject;
+static AddressSpaceContext *s_rootContext;
+
+#if SYSMEM_NSKBL
+#define PARTITION_ROOT_DOMAIN		12
+#define PARTITION_ROOT_SIZE		0x8000000
+#define PARTITION_ROOT_CONTEXT_ID	0xf0
+#define PARTITION_ROOT_DACR		0x55555555	/* every domain a client */
+#define PARTITION_ROOT_ENTRY_ATTR	0x10000
+
+/* a block over the boot kernel image's mapping, when the root partition holds it */
+static inline void PartitionAllocBootBlock(Partition *partition, const SceKernelBootMapping *mapping,
+					   struct PhyPage *page)
+{
+	SceKernelAllocMemBlockCommand command;
+
+	if (partition->tiny.vbase > mapping->vbase ||
+	    mapping->vbase + mapping->vsize > partition->tiny.vbase + partition->tiny.size)
+		return;
+	AllocMemBlockCommandInit(&command, mapping->name, mapping->vsize);
+	command.code = MEMBLOCK_CODE_KERNEL_ROOT_RW;
+	if (MemBlockCode2TypeInfo(MEMBLOCK_CODE_KERNEL_ROOT_RW, &command.typeInfo) < 0)
+		return;
+	command.opt.attr = ALLOC_ATTR_NOPHYPAGE;
+	command.partition = partition;
+	command.opt.extraHigh = mapping->extraHigh;
+	command.phyMemPart = SceSysmemForKernel_0164D817();
+	if (PartitionAllocMemBlockByAddrByCommand(partition, &command, mapping->vbase) < 0)
+		return;
+	if (MemBlockAssocPhyPage(command.block, page) < 0)
+		SCE_DBG_ASSERT_FAIL(6169);
+}
+
+/*
+ * The partition classes and the root partition "SceKernelRoot" over the
+ * kernel's first 128 MiB, with blocks for everything the boot loader mapped
+ * there: the reset vector, the first L2 tables, the sysroot, the translation
+ * tables, the boot heaps, the exception vectors and the page tables.
+ */
+static inline __attribute__((always_inline)) int PartitionStartCore0(SceKernelBootParam *pBoot,
+								  UIDManager *manager)
+{
+	PartitionInitParam param;
+	MemBlockObject *block;
+	Partition *root;
+	void *phyMemPartKD;
+	int intr, ret;
+
+	manager->tinyPartitionClass = sceKernelSysrootAlloc(sizeof(SceClass));
+	s_tinyPartitionClass = manager->tinyPartitionClass;
+	manager->partitionClass = sceKernelSysrootAlloc(sizeof(SceClass));
+	s_partitionClass = manager->partitionClass;
+	manager->kernelPartition = sceKernelSysrootAlloc(sizeof(Partition));
+	s_kernelPartition = manager->kernelPartition;
+	manager->rootPartitionObject = sceKernelSysrootAlloc(sizeof(PartitionRootObject));
+	s_rootPartitionObject = manager->rootPartitionObject;
+	manager->rootContext = sceKernelSysrootAlloc(sizeof(AddressSpaceContext));
+	s_rootContext = manager->rootContext;
+	memset(s_tinyPartitionClass, 0, sizeof(SceClass));
+	memset(s_partitionClass, 0, sizeof(SceClass));
+	memset(s_kernelPartition, 0, sizeof(Partition));
+	memset(s_rootPartitionObject, 0, sizeof(PartitionRootObject));
+	memset(s_rootContext, 0, sizeof(AddressSpaceContext));
+	sceUIDClassInitClass(s_tinyPartitionClass, "SceUIDTinyPartitionClass",
+			     SceSysmemForDriver_85336A1C(), sizeof(TinyPartition), NULL, NULL);
+	ret = sceUIDClassInitClass(s_partitionClass, "SceUIDPartitionClass", s_tinyPartitionClass,
+				   sizeof(Partition), NULL, NULL);
+	if (ret < 0) {
+		SCE_DBG_ASSERT_FAIL(8039);
+		goto out;
+	}
+
+	phyMemPartKD = SceSysmemForKernel_0164D817();
+	root = s_kernelPartition;
+	root->tiny.base.sce_class = s_partitionClass;
+	ret = sceGUIDSet(SCE_KERNEL_PARTITION_ROOT_ID, s_partitionClass, NULL, &root->tiny.base);
+	if (ret < 0)
+		goto out;
+	pBoot->partitionRootId = SCE_KERNEL_PARTITION_ROOT_ID;
+	s_rootContext->mmu.ttbr1 = SceCpuForKernel_9818A20B(pBoot->ttbr1.pbase);
+	s_rootContext->mmu.dacr = PARTITION_ROOT_DACR;
+	s_rootContext->mmu.contextId = PARTITION_ROOT_CONTEXT_ID;
+	s_rootContext->l1pt = &manager->kernelL1PageTable;
+	s_rootContext->l2Tables = NULL;
+	s_rootContext->memBlockHeap = pBoot->pFixedHeap64B;
+	s_rootContext->virPageHeap = pBoot->pFixedHeap32B;
+	s_rootContext->l2ptHeap = pBoot->pFixedHeapForL2Object;
+	s_rootContext->l2Tables = (SceUInt32 *)pBoot->l2Vector.vbase;
+	memset(s_rootContext->l2Tables, 0, AS_L2_TABLES_SIZE);
+	*s_rootPartitionObject = (PartitionRootObject){ { 0 } };
+	param.size = sizeof(param);
+	param.attr = PARTITION_ATTR_ROOT | PARTITION_ATTR_KEEP;
+	param.entryAttr = PARTITION_ROOT_ENTRY_ATTR;
+	param.entryAttrMask = -1;
+	PartitionInit(root, SysmemAllocName("SceKernelRoot"), PARTITION_ROOT_DOMAIN, 0,
+		      PARTITION_ROOT_SIZE, &param, s_rootContext, s_rootPartitionObject);
+	root->uid = SCE_KERNEL_PARTITION_ROOT_ID;
+	pBoot->pPartitionRoot = root;
+	pBoot->pFixedHeap32B->optPartition = root;
+	pBoot->pFixedHeap48B->optPartition = root;
+	pBoot->pFixedHeap64B->optPartition = root;
+	pBoot->pFixedHeapForL2Object->optPartition = root;
+	pBoot->pFixedHeapUIDEntry->optPartition = root;
+	PartitionMapL2PageTable(root, pBoot->pL2PageTableObject000, 0);
+	PartitionMapL2PageTable(root, pBoot->pL2PageTableObjectPhypage, 0);
+
+	/* the reset vector */
+	{
+		SceKernelAllocMemBlockCommand command;
+
+		AllocMemBlockCommandInit(&command, pBoot->reset.name, pBoot->reset.vsize);
+		command.code = MEMBLOCK_CODE_KERNEL_ROOT_RW;
+		if (MemBlockCode2TypeInfo(MEMBLOCK_CODE_KERNEL_ROOT_RW, &command.typeInfo) < 0)
+			SCE_DBG_ASSERT_FAIL(8141);
+		command.opt.attr = ALLOC_ATTR_NO_CLEAR | ALLOC_ATTR_NOPHYPAGE | ALLOC_ATTR_VBASE_ANY |
+				   ALLOC_ATTR_HAS_EXTRA_HIGH;
+		command.opt.alignment = 0;
+		command.opt.extraLow = 0;
+		command.opt.extraHigh = pBoot->reset.extraHigh;
+		command.phyMemPart = phyMemPartKD;
+		command.partition = root;
+		ret = PartitionAllocMemBlockByAddrByCommand(root, &command, pBoot->reset.vbase);
+		if (ret < 0)
+			goto out;
+		block = command.block;
+		MemBlockSetNameNonNullRaw(block, SysmemAllocName(pBoot->reset.name));
+		ret = MemBlockAssocPhyPage(command.block, pBoot->pPageReset);
+		if (ret < 0)
+			goto out;
+		L2PageTableAddPageCount(pBoot->pL2PageTableObject000,
+					pBoot->reset.vsize - pBoot->reset.extraHigh, pBoot->reset.extraHigh);
+	}
+
+	/* the simple memblock holding the first L2 tables: its last two quarters are in use */
+	ret = AllocPremappedBootSimpleMemBlock(SysmemAllocName(pBoot->l2PageTable000.name), 0x1000,
+					       3, pBoot->l2PageTable000.vbase,
+					       pBoot->pPageL2PageTable000, &block);
+	if (ret < 0)
+		goto out;
+	FixL2PageTableCountCore(pBoot, &pBoot->l2PageTable000);
+	block->flags |= MEMBLOCK_L2PT;
+	MemBlockL2PageTableSetFreeRaw(block, MEMBLOCK_L2PT_FREE(2) | MEMBLOCK_L2PT_FREE(3));
+	pBoot->pL2PageTableObject000->flags |= 1;
+	pBoot->pL2PageTableObject000->block = block;
+	pBoot->pL2PageTableObjectPhypage->flags |= 2;
+	pBoot->pL2PageTableObjectPhypage->block = block;
+	block->lock = 0;
+	intr = SceCpuForDriver_4C38CE4D(&root->l2BlockLock);
+	block->smbNext = root->l2Blocks;
+	root->l2Blocks = block;
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&root->l2BlockLock, intr);
+
+	ret = AllocPremappedBootBlock(pBoot, root, phyMemPartKD, &pBoot->sysroot,
+				      pBoot->pPageSysroot, &block);
+	if (ret < 0)
+		goto out;
+	ret = AllocPremappedBootBlock(pBoot, root, phyMemPartKD, &pBoot->ttbr0,
+				      pBoot->pPageTTBR0, &block);
+	if (ret < 0)
+		goto out;
+	ret = AllocPremappedBootBlock(pBoot, root, phyMemPartKD, &pBoot->ttbr1,
+				      pBoot->pPageTTBR1, &block);
+	if (ret < 0)
+		goto out;
+	ret = AllocPremappedBootBlock(pBoot, root, phyMemPartKD, &pBoot->fixedHeap32B,
+				      pBoot->pPageFixedHeap32B, &block);
+	if (ret < 0)
+		goto out;
+	ret = AllocPremappedBootBlock(pBoot, root, phyMemPartKD, &pBoot->fixedHeap48B,
+				      pBoot->pPageFixedHeap48B, &block);
+	if (ret < 0)
+		goto out;
+	ret = AllocPremappedBootBlock(pBoot, root, phyMemPartKD, &pBoot->fixedHeap64B,
+				      pBoot->pPageFixedHeap64B, &block);
+	if (ret < 0)
+		goto out;
+	ret = AllocPremappedBootBlock(pBoot, root, phyMemPartKD, &pBoot->fixedHeapUIDEntry,
+				      pBoot->pPageFixedHeapUIDEntry, &block);
+	if (ret < 0)
+		goto out;
+	ret = AllocPremappedBootBlock(pBoot, root, phyMemPartKD, &pBoot->fixedHeapForL2Object,
+				      pBoot->pPageFixedHeapForL2Object, &block);
+	if (ret < 0)
+		goto out;
+	ret = AllocPremappedBootBlock(pBoot, root, phyMemPartKD, &pBoot->exceptionEntry, NULL,
+				      &block);
+	if (ret < 0)
+		goto out;
+	ret = AllocPremappedBootBlock(pBoot, root, phyMemPartKD, &pBoot->l2Vector,
+				      pBoot->pPageL2Vector, &block);
+	if (ret < 0)
+		goto out;
+	ret = AllocPremappedBootBlock(pBoot, root, phyMemPartKD, &pBoot->phypage,
+				      pBoot->pPagePhypage, &block);
+	if (ret < 0)
+		goto out;
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
+		ret = AllocPremappedBootBlock(pBoot, root, phyMemPartKD, &pBoot->phypageHigh,
+					      pBoot->pPagePhypageHigh, &block);
+		if (ret < 0)
+			goto out;
+		MemBlockSetPhyMemPartRaw(block, pBoot->pPhyMemPartTool);
+	}
+	PartitionAllocBootBlock(root, &pBoot->bootKernelImage, pBoot->pPageBootKernelImage);
+	ret = 0;
+	g_uidManager->kernelPartition = pBoot->pPartitionRoot;
+out:
+	sceKernelSysrootSetStatus(2);
+	return ret;
+}
+
+int PartitionStart(SceKernelBootParam *pBoot, UIDManager *manager)
+{
+	int ret = 0;
+
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0)
+		ret = PartitionStartCore0(pBoot, manager);
+	sceKernelSysrootCorelockUnlock();
+	return ret;
+}
+#endif
 
 #define PARTITION_ASLR_CODE		0x1060d004
 #define PARTITION_MAGIC_VA		0x07f00000
@@ -3137,8 +3501,8 @@ int PartitionModuleStart(const UIDManager *manager)
 	s_partitionClass = manager->partitionClass;
 	s_kernelPartition = manager->kernelPartition;
 	s_tinyPartitionClass = manager->tinyPartitionClass;
-	s_partitionReserved0 = manager->partitionReserved[0];
-	s_partitionReserved1 = manager->partitionReserved[1];
+	s_rootPartitionObject = manager->rootPartitionObject;
+	s_rootContext = manager->rootContext;
 	s_tinyPartitionClass->name = "SceUIDTinyPartitionClass";
 	s_tinyPartitionClass->create_cb = NULL;
 	s_tinyPartitionClass->destroy_cb = NULL;

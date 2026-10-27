@@ -93,6 +93,14 @@ typedef struct L2PageTable {
 _Static_assert(sizeof(L2PageTable) == 0x40, "L2PageTable size");
 
 /* a partition: a tiny partition with its own L2 page tables (partition.c) */
+/*
+ * name unknown: the object a partition with attr bit 0 is made with (only
+ * the root, in NSKBL: 24 bytes, zeroed, never read there).
+ */
+typedef struct PartitionRootObject {
+	SceUInt32 reserved[6];
+} PartitionRootObject;
+
 typedef struct Partition {
 	TinyPartition tiny;
 	SceInt32 refCount;			/* 0x38 */
@@ -104,7 +112,7 @@ typedef struct Partition {
 	SceUInt8 domain;			/* 0x50 */
 	SceUInt8 padding[3];
 	struct AddressSpaceObject *addressSpace;	/* 0x54 */
-	SceUInt32 reserved;			/* 0x58: zeroed by PartitionInit, never read */
+	struct PartitionRootObject *rootObject;	/* 0x58: attr bit 0's object, from PartitionInit */
 	SceUInt32 entryAttr;			/* 0x5c: the creation table entry's attr ... */
 	SceUInt32 entryAttrMask;		/* 0x60: ... and mask; stored, never read */
 	SceUID pid;				/* 0x64: the owning process */

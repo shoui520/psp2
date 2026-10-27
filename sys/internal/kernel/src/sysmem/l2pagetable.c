@@ -105,6 +105,20 @@ int L2PageTableGetPageCount(L2PageTable *l2pt)
 	return mapped + reserved;
 }
 
+#if SYSMEM_NSKBL
+/* name unknown: pages the boot loader mapped in the table's MiB, counted */
+int L2PageTableAddPageCount(L2PageTable *l2pt, SceSize size, SceSize extra)
+{
+	int flags = SceCpuForDriver_4C38CE4D(&l2pt->lock);
+
+	l2pt->mappedPages += size >> 12;
+	if (extra != 0)
+		l2pt->reservedPages += extra >> 12;
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l2pt->lock, flags);
+	return 0;
+}
+#endif
+
 /* name unknown: releases reserved pages */
 void L2PageTableUnreserve(L2PageTable *l2pt, SceSize size)
 {

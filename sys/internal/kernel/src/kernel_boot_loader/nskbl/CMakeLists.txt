@@ -30,6 +30,7 @@ set(sysmem_c_sources
 	${sysmem_source}/phymem.c
 	${sysmem_source}/phymem_low.c
 	${sysmem_source}/dlmalloc/heap.c
+	${sysmem_source}/memory_set32.S
 	${sysmem_source}/oheap.c
 	${sysmem_source}/memblock_db.c
 	${sysmem_source}/memblock_vpl.c
