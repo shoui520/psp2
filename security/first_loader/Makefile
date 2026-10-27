@@ -42,6 +42,10 @@ $(O)/$(FW)/%.s.o: %.s fw/$(FW).mk
 	@mkdir -p $(dir $@)
 	$(CC) $(ASFLAGS) -c $< -o $@
 
+$(O)/$(FW)/boot_delay.c.o: boot_delay.c fw/$(FW).mk
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -mno-repeat -c $< -o $@
+
 $(O)/$(FW)/%.c.o: %.c fw/$(FW).mk
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
