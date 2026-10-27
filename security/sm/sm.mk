@@ -9,8 +9,18 @@ SM := $(dir $(lastword $(MAKEFILE_LIST)))
 CC := $(GCC)gcc
 LD := $(BINUTILS)ld
 
-INCLUDES := -I$(SM)include -Iinclude
-CFLAGS := -mel -O2 -std=gnu99 -Wall -ffreestanding -fno-builtin $(INCLUDES)
+ifeq ($(FW),4.00-DEBUGGER)
+FW_DEFINES := -DFW_VERSION=0x04000000 -DFW_DEBUG=1 -DFW_CEX=0 -DFW_TOOL=0
+else ifeq ($(FW),3.630.011-DEBUGGER)
+FW_DEFINES := -DFW_VERSION=0x03630011 -DFW_DEBUG=1 -DFW_CEX=0 -DFW_TOOL=0
+else ifeq ($(FW),3.650.011-TOOL)
+FW_DEFINES := -DFW_VERSION=0x03650011 -DFW_DEBUG=0 -DFW_CEX=0 -DFW_TOOL=1
+else
+FW_DEFINES := -DFW_VERSION=0x03650000 -DFW_DEBUG=0 -DFW_CEX=1 -DFW_TOOL=0
+endif
+
+INCLUDES := -I. -I$(SM)include -Iinclude -I$(SM)../../cmake/include -I$(SM)../../sys/sdk/target/include -I$(SM)../../sys/internal/include
+CFLAGS := -mel -O2 -std=gnu99 -Wall -fno-strict-aliasing -ffreestanding -fno-builtin $(FW_DEFINES) $(INCLUDES) $(EXTRA_CFLAGS)
 ASFLAGS := -mel $(INCLUDES)
 
 SM_SOURCES := $(SM)crt0.S $(SM)init.c

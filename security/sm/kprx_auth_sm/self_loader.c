@@ -20,14 +20,6 @@
 #include <modulemgr/self.h>
 #include <modulemgr/elf.h>
 
-typedef struct SceSelfSegmentInfo {
-	uint64_t offset;			/* 0x00 */
-	uint64_t length;			/* 0x08 */
-	uint32_t compression;			/* 0x10 */
-	uint32_t encryption;			/* 0x14 */
-	uint64_t reserved;			/* 0x18 */
-} SceSelfSegmentInfo;
-
 _Static_assert(sizeof(SceSelfSegmentInfo) == 0x20, "SceSelfSegmentInfo size");
 
 typedef struct CfStaticKeyParams {

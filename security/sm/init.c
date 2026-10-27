@@ -24,3 +24,19 @@ void call_dtors(void)
 	for (fn = __dtors_start; fn != __dtors_end; fn++)
 		(*fn)();
 }
+
+void __attribute__((weak, noreturn)) __stack_chk_fail(void)
+{
+	unsigned int caller;
+
+	__asm__ volatile(
+		"ldc %0, $lp\n\t"
+		"mov $1, %0\n\t"
+		"mov $4, 7\n\t"
+		"swi 0x0"
+		: "=r"(caller)
+		:
+		: "$1", "$4", "memory");
+	for (;;)
+		;
+}
