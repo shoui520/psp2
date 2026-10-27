@@ -24,6 +24,48 @@ SECTIONS
 	{
 		KEEP(*(.text.start))
 		*(.text .text.*)
+		/* Keep the initialized state at its retail ROM addresses. */
+		. = 0x00002684;
+		KEEP(*(.fl.slot8Seed))
+		. = 0x000026a4;
+		KEEP(*(.fl.slot9Seed))
+		. = 0x000026c4;
+		KEEP(*(.fl.signatureSeed))
+		. = 0x000026e4;
+		KEEP(*(.fl.signatureExponent))
+		. = 0x000026f4;
+		KEEP(*(.fl.signatureDigestPrefix))
+		. = 0x00002706;
+		KEEP(*(.fl.permissionBits))
+		. = 0x00002710;
+		KEEP(*(.fl.emmcTimeUnits))
+		. = 0x00002730;
+		KEEP(*(.fl.emmcTimeMultipliers))
+		. = 0x00002740;
+		KEEP(*(.fl.emmcClockUnits))
+		. = 0x00002760;
+		KEEP(*(.fl.emmcClockMultipliers))
+		. = 0x00002770;
+		KEEP(*(.fl.sdifClockUnits))
+		. = 0x00002790;
+		KEEP(*(.fl.sdifClockMultipliers))
+		. = 0x00002800;
+		KEEP(*(.fl.slot8Iv))
+		. = 0x00002810;
+		KEEP(*(.fl.slot9Iv))
+		. = 0x00002820;
+		KEEP(*(.fl.keyIvs))
+		. = 0x00002880;
+		KEEP(*(.fl.derivedKeyIvs))
+		. = 0x000028d0;
+		KEEP(*(.fl.digestIv))
+		. = 0x000028e0;
+		KEEP(*(.fl.payloadIv))
+		. = 0x000028f0;
+		KEEP(*(.fl.fallbackModulus))
+		. = 0x000029f0;
+		KEEP(*(.fl.externalBootKey))
+		. = 0x00002a20;
 		*(.rodata .rodata.*)
 		*(.sdata .sdata.*)
 		*(.data .data.*)

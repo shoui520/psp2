@@ -28,7 +28,8 @@ AS := $(BINUTILS)as
 LD := $(BINUTILS)ld
 OBJCOPY := $(BINUTILS)objcopy
 
-CFLAGS := -mel -O2 -std=gnu99 -Wall -ffreestanding -fno-builtin -DFL_BUILD_DATE=$(FL_BUILD_DATE) \
+CFLAGS := -mel -O2 -std=gnu99 -Wall -ffreestanding -fno-builtin -fno-toplevel-reorder -mno-repeat \
+	-DFL_BUILD_DATE=$(FL_BUILD_DATE) \
 	-I../../sys/internal/include -I../../sys/internal/secure/sbl_smsched \
 	-I../../sys/internal/driver/src/sdif -I../../sys/sdk/target/include
 ASFLAGS := -mel -Wa,--defsym,FL_BUILD_DATE=$(FL_BUILD_DATE)
@@ -44,7 +45,7 @@ $(O)/$(FW)/%.s.o: %.s fw/$(FW).mk
 
 $(O)/$(FW)/boot_delay.c.o: boot_delay.c fw/$(FW).mk
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -mno-repeat -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(O)/$(FW)/%.c.o: %.c fw/$(FW).mk
 	@mkdir -p $(dir $@)
