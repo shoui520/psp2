@@ -135,6 +135,7 @@ int AllocMemBlockForKernelByCommand(SceKernelAllocMemBlockCommand *command)
 	return -1;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: a list block mapped (flags bit 0 only) */
 int MapMemBlockByGUID(SceUID guid, SceUInt32 flags)
 {
@@ -383,9 +384,11 @@ int UIDReleaseObjectForPID(SceUID pid, SceUID uid)
 	}
 	return sceGUIDReleaseObject(uid);
 }
+#endif
 
 #define MEMBLOCK_INFO_BY_RANGE		2	/* [va, va + size) must lie in the block */
 
+#if !SYSMEM_NSKBL
 /* the user info of the caller's block holding va */
 int GetMemBlockInfoByRangeForUser(SceUInt32 mode, uintptr_t va, SceSize size,
 				  SceKernelMemBlockInfo *userInfo)
@@ -421,11 +424,13 @@ int GetMemBlockInfoByRangeForUser(SceUInt32 mode, uintptr_t va, SceSize size,
 	info.type = type;
 	return sceKernelCopyToUser(userInfo, &info, sizeof(info));
 }
+#endif
 
 int MemBlockOptSetClientInfoRaw(MemBlockObject *block, const SceKernelAllocMemBlockKernelOpt *opt);
 
 #define AS_LOCK_RANGE_MAX		16	/* blocks one call may lock */
 
+#if !SYSMEM_NSKBL
 /* the access a lock mode needs the blocks to have */
 int ASLockUnlockModeCheck(SceUInt32 mode, SceUInt32 *access)
 {
@@ -655,11 +660,13 @@ int VARangeToPAVectorForPID(SceUID pid, uint32_t mode, const SceKernelPARange *r
 	vector->nDataInVector = count;
 	return 0;
 }
+#endif
 
 #pragma push_macro("__FILE_NAME__")
 #undef __FILE_NAME__
 #define __FILE_NAME__ "memblock_obj_module.h"
 
+#if !SYSMEM_NSKBL
 /* name from the record: pid leaves the block's clients */
 __attribute__((noinline)) void MemBlockOptGetClientInfo(MemBlockObject *block, SceUID pid)
 {
@@ -668,6 +675,7 @@ __attribute__((noinline)) void MemBlockOptGetClientInfo(MemBlockObject *block, S
 	if (block->opt != 0)
 		MemBlockClientInfoRemoveGUID((MemBlockClientInfo *)block->opt, pid);
 }
+#endif
 
 #pragma pop_macro("__FILE_NAME__")
 
@@ -699,6 +707,7 @@ int MemBlockOptGetBase(MemBlockObject *block, MemBlockObject **base, void **info
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 /* an allocation given as a whole command */
 int sceKernelAllocMemBlockByCommand(SceKernelAllocMemBlockCommand *command)
 {
@@ -738,6 +747,7 @@ int sceKernelAllocMemBlockByCommand(SceKernelAllocMemBlockCommand *command)
 		SCE_DBG_PRINTF(0xb, 707, "AllocMemBlockForKernelByCommand failed 0x%08x\n", ret);
 	return ret;
 }
+#endif
 
 /* the kernel tmp types as user code may ask for them */
 static inline void KernelTmp2UserKtmpType(SceUInt32 type)
@@ -856,6 +866,7 @@ SceUID sceKernelAllocMemBlockForKernel(const char *name, SceKernelMemBlockType t
 	return sceKernelAllocMemBlockWithInfoForKernel(name, type, size, opt, NULL);
 }
 
+#if !SYSMEM_NSKBL
 /* the access a type grants, as SCE_KERNEL_MEMORY_REF_PERM bits */
 SceUInt32 SceSysmemForDriver_6A0792A3(SceUInt32 type)
 {
@@ -976,6 +987,7 @@ int SceSysmemForDriver_4C584B29(SceUID guid, uintptr_t va, SceSize size, SceUInt
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 }
+#endif
 
 /* the codes a block of one code may be remapped to; 0 ends a code's list */
 typedef struct MemBlockRemapRule {
@@ -1142,10 +1154,12 @@ int FreeMemBlockCore(SceUID guid, int checkLock, MemBlockObject **freed, MemBloc
 	FreeMemBlockCore(guid, checkLock, freed, base)
 #endif
 
+#if !SYSMEM_NSKBL
 int sceKernelFreeMemBlock(SceUID guid)
 {
 	return FreeMemBlockCore(guid, 0, NULL, NULL, NULL, NULL);
 }
+#endif
 
 /* the user allocation options: SceKernelAllocMemBlockOpt as the kernel reads it, up to 0x40 bytes */
 typedef struct MemBlockUserOpt {
@@ -1169,6 +1183,7 @@ typedef struct MemBlockUserOpt {
 
 #define MEMBLOCK_ALLOC_USER_CLIENT	0x4000	/* AllocMemBlockForUser flags */
 
+#if !SYSMEM_NSKBL
 /* the titles that may still pass the attr bits a newer SDK rejects */
 static inline int checkTitle(char *titleId)
 {
@@ -1432,6 +1447,7 @@ SceUID sceKernelFindMemBlockByAddr(void *addr, SceSize size)
 	return AddressSpaceFindMemBlockCB(sceKernelSysrootGetCurrentAddressSpaceCB(),
 					  (uintptr_t)addr, size, NULL);
 }
+#endif
 
 /* told about lock reference changes (debug builds; SceSysmemForKernel_F57A97A0) */
 typedef struct MemBlockDebugCallbacks {
@@ -1446,6 +1462,7 @@ typedef struct MemBlockDebugCallbacks {
 static MemBlockDebugCallbacks *s_memBlockDebugCallbacks;
 #endif
 
+#if !SYSMEM_NSKBL
 int sceKernelIncRefCountMemBlock(SceUID guid)
 {
 	MemBlockObject *block;
@@ -1577,6 +1594,7 @@ int sceKernelUnlockRange(void *addr, SceSize size)
 	return ASUnlockRangeWithMode(sceKernelSysrootGetCurrentAddressSpaceCB(), 0, (uintptr_t)addr,
 				     size);
 }
+#endif
 
 /* what a user map block records (opt state 3) */
 typedef struct UserMapInfo {
@@ -1590,12 +1608,14 @@ typedef struct UserMapInfo {
 #undef __FILE_NAME__
 #define __FILE_NAME__ "memblock_obj_module.h"
 
+#if !SYSMEM_NSKBL
 static inline void MemBlockOptSetUserMapInfoRaw(MemBlockObject *block, UserMapInfo *info)
 {
 	SCE_DBG_ASSERT_CHECK((block->flags & MEMBLOCK_OPT_MASK) == 0, 1005);
 	block->opt = (SceUInt32)info;
 	block->flags = (block->flags & ~MEMBLOCK_OPT_MASK) | MEMBLOCK_OPT_USER_MAP;
 }
+#endif
 
 #pragma pop_macro("__FILE_NAME__")
 
@@ -1603,6 +1623,7 @@ static inline void MemBlockOptSetUserMapInfoRaw(MemBlockObject *block, UserMapIn
 #define USER_MAP_SHARED			0x11	/* PLACEHOLDER: name */
 #define USER_MAP_VECTOR			4	/* ranges kept on the stack */
 
+#if !SYSMEM_NSKBL
 /* the memory types the pages are already mapped with */
 static inline int UserMapIsDeviceMemory(int memoryType)
 {
@@ -2124,11 +2145,13 @@ int GetMemBlockInfoAll(TinyPartition *tiny, uintptr_t lo, uintptr_t hi, uintptr_
 invalid:
 	return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 }
+#endif
 
 #define MEMBLOCK_ERROR_OVERFLOW_FATAL	0xc0024b0b
 
 #define VM_SIZE_MAX			0x1000000
 
+#if !SYSMEM_NSKBL
 /* the program authority IDs denied SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_GAME_RW */
 static inline int MemBlockAuthDenied(SceUInt32 authLow, SceUInt32 authHigh)
 {
@@ -2200,9 +2223,11 @@ SceUID sceKernelAllocMemBlockForUser(const char *name, SceKernelMemBlockType typ
 	SysrootDecProcessResource(restype);
 	return ret;
 }
+#endif
 
 #define DOMAIN_VM			2
 
+#if !SYSMEM_NSKBL
 /* a block of the VM domain, listed in the process's VM blocks */
 SceUID sceKernelAllocMemBlockForVMForUser(const char *userName, SceSize size)
 {
@@ -2439,9 +2464,11 @@ int FreeMemBlockByGUID(SceUID guid)
 		MemBlockOptGetClientInfo(base, guid);
 	return ret;
 }
+#endif
 
 #define MEMBLOCK_ERROR_LOCKED_FATAL	0xc0024b10
 
+#if !SYSMEM_NSKBL
 /* the resource counter a block was charged to */
 static inline SceUInt32 MemBlockRestype(SceUInt32 type, SceUInt32 attr)
 {
@@ -2515,10 +2542,12 @@ int sceKernelFreeMemBlockForVMForUser(SceUID puid)
 	entry->puid = -1;
 	return sceKernelFreeMemBlockForUser(puid);
 }
+#endif
 
 #define MEMBLOCK_OPEN_RO		0x10
 #define MEMBLOCK_OPEN_RW		0x30
 
+#if !SYSMEM_NSKBL
 /*
  * A mirror of a named shared block for the caller: the block's clients
  * must hold all the capabilities its client info lists.
@@ -2773,6 +2802,7 @@ int SceSysmemForKernel_F57A97A0(MemBlockDebugCallbacks *callbacks)
 #endif
 	return 0;
 }
+#endif
 
 #pragma push_macro("__FILE_NAME__")
 #undef __FILE_NAME__
@@ -2780,6 +2810,7 @@ int SceSysmemForKernel_F57A97A0(MemBlockDebugCallbacks *callbacks)
 
 #define MEMBLOCK_CLIENT_PIDS		0x20
 
+#if !SYSMEM_NSKBL
 /* the block gets client info, copied from the allocation options */
 int MemBlockOptSetClientInfoRaw(MemBlockObject *block, const SceKernelAllocMemBlockKernelOpt *opt)
 {
@@ -2816,6 +2847,7 @@ int MemBlockOptSetClientInfoRaw(MemBlockObject *block, const SceKernelAllocMemBl
 	}
 	return 0;
 }
+#endif
 
 #pragma pop_macro("__FILE_NAME__")
 

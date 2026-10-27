@@ -1,23 +1,61 @@
 # NSKBL, the non-secure kernel boot loader: segment 3 of kernel_boot_loader.self
 # (ARZL-compressed there), a flat ARM image that runs at 0x51000000.
-# Sony built it from os0 sources (SYSMEM_NSKBL in SceSysmem's); the reset vector
-# and exception entries are the original's; boot.c is SKBL's (BOOT_NSKBL): the same
-# exception handlers and ASLR helpers, and NSKBL's own boot(); memset and memcpy are
-# SceSysmem's memset_chk.c and memcpy_chk.c with sysclib's assembly cores.
+# Sony built it from os0 sources: its SceSysmem, SceKernelIntrMgr and SceSdif parts are
+# those modules' own files compiled with SYSMEM_NSKBL, INTRMGR_NSKBL and SDIF_NSKBL, which
+# leave out what the boot loader does not have (the inlining in Sony's image shows its
+# translation units held only those functions); the sources are listed in NSKBL's link
+# order. The reset vector and exception entries are the original's; boot.c is SKBL's
+# (BOOT_NSKBL): the same exception handlers and ASLR helpers, and NSKBL's own boot();
+# memset and memcpy are SceSysmem's memset_chk.c and memcpy_chk.c with sysclib's
+# assembly cores.
 set(sysmem_source ../../sysmem)
 set(sdif_source ../../../../driver/src/sdif)
 set(intrmgr_source ../../intrmgr)
+set(sysmem_c_sources
+	${sysmem_source}/uid.c
+	${sysmem_source}/memblock_obj.c
+	${sysmem_source}/uid_class.c
+	${sysmem_source}/smb.c
+	${sysmem_source}/sysmem.c
+	${sysmem_source}/sysmem_heap.c
+	${sysmem_source}/nameheap2.c
+	${sysmem_source}/heaplib.c
+	${sysmem_source}/l2pagetable.c
+	${sysmem_source}/memblock.c
+	${sysmem_source}/address_space.c
+	${sysmem_source}/partition.c
+	${sysmem_source}/fixed_heap.c
+	${sysmem_source}/phymem.c
+	${sysmem_source}/phymem_low.c
+	${sysmem_source}/dlmalloc/heap.c
+	${sysmem_source}/oheap.c
+	${sysmem_source}/memblock_db.c
+	${sysmem_source}/memblock_vpl.c
+	${sysmem_source}/memblock_partial.c
+	${sysmem_source}/virpage.c
+	${sysmem_source}/l1pagetable.c
+	${sysmem_source}/sysroot.c
+	${sysmem_source}/led.c
+	${sysmem_source}/debug_state.c
+	${sysmem_source}/debug_dump.c
+	${sysmem_source}/debug_output.c
+	${sysmem_source}/memset_chk.c
+	${sysmem_source}/memcpy_chk.c
+	${sysmem_source}/cpu_cache.c
+	${sysmem_source}/cpu.c
+	${sysmem_source}/corelock.c
+	${sysmem_source}/cache.c
+	${sysmem_source}/mmu.c
+	${sysmem_source}/aimgr.c
+	${sysmem_source}/serial.c
+)
 psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	reset.S
 	../skbl/boot.c
 	${intrmgr_source}/intrmgr.c
-	${sysmem_source}/led.c
-	${sysmem_source}/serial.c
-	${sysmem_source}/sysroot.c
-	${sysmem_source}/memset_chk.c
-	${sysmem_source}/memcpy_chk.c
-	../../sysmem/copy_forward.S
-	../../sysmem/fill_core.S
+	${sysmem_c_sources}
+	${sysmem_source}/copy_forward.S
+	${sysmem_source}/fill_core.S
 	${sdif_source}/sdif.c
 	${sdif_source}/cmd_queue.c
 	${sdif_source}/mmc.c
@@ -28,10 +66,13 @@ psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	../pervasive_kbl.c
 )
 set_source_files_properties(${intrmgr_source}/intrmgr.c PROPERTIES COMPILE_DEFINITIONS INTRMGR_NSKBL)
-set_source_files_properties(${sysmem_source}/led.c ${sysmem_source}/sysroot.c PROPERTIES
-	COMPILE_DEFINITIONS SYSMEM_NSKBL)
-set_source_files_properties(${sysmem_source}/serial.c PROPERTIES
-	COMPILE_DEFINITIONS SYSMEM_NSKBL COMPILE_OPTIONS "-fsigned-char")
+# SceSysmem's flags (sysmem/sources.cmake): NULL tests after a dereference dropped,
+# caller-saved registers kept across leaf calls, signed characters in serial.c and uid.c
+set_source_files_properties(${sysmem_c_sources} PROPERTIES
+	COMPILE_DEFINITIONS SYSMEM_NSKBL
+	COMPILE_OPTIONS "-fdelete-null-pointer-checks;-fuse-caller-save")
+set_source_files_properties(${sysmem_source}/serial.c ${sysmem_source}/uid.c PROPERTIES
+	COMPILE_OPTIONS "-fdelete-null-pointer-checks;-fuse-caller-save;-fsigned-char")
 set_source_files_properties(${sdif_source}/sdif.c ${sdif_source}/cmd_queue.c
 	${sdif_source}/mmc.c ${sdif_source}/card_cmd.c ${sdif_source}/sd.c
 	${sdif_source}/adma.c PROPERTIES COMPILE_DEFINITIONS SDIF_NSKBL)

@@ -623,6 +623,7 @@ int FixedHeapAllocObjectRaw(FixedHeap *heap, int raw, void **object)
 	return FixedHeapAllocObjectWithOpt(heap, 0, raw, object);
 }
 
+#if !SYSMEM_NSKBL
 /* the objects on a free list, stopping at its tail or at a loop */
 static inline SceUInt32 FixedHeapCountList(void *head, void *tail)
 {
@@ -685,6 +686,7 @@ int FixedHeapGetInfo(FixedHeap *heap, SceKernelFixedHeapInfo *info)
 	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&heap->lock, state);
 	return 0;
 }
+#endif
 
 #if FW_DEBUG
 /* debug builds only (and so 4.00 only here) */
@@ -726,6 +728,7 @@ int FixedHeapGetObjectByIndexRaw(FixedHeap *heap, SceUInt32 index, void **object
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: func(object, index, arg) for every object carved, until it returns 1 */
 int FixedHeapWalk(FixedHeap *heap, int (*func)(void *object, SceUInt32 index, void *arg),
 		  void *arg)
@@ -786,6 +789,7 @@ int FixedHeapApplyRangeWithIndexArgRaw(FixedHeap *heap, SceUInt32 start, SceUInt
 	*next = index;
 	return 0;
 }
+#endif
 
 static __attribute__((noinline)) int FixedHeapInit(FixedHeap *heap, char *name, SceUInt32 attr, SceSize itemSize,
 			 SceSize pageSize, void *firstPage, struct Partition *partition, SceUInt16 maxPages,
@@ -843,6 +847,7 @@ static __attribute__((noinline)) int FixedHeapInit(FixedHeap *heap, char *name, 
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: the same as the class's setPage */
 int FixedHeapSetPage(FixedHeap *heap, void *page)
 {
@@ -1028,12 +1033,14 @@ int FixedHeapSetUID(struct UIDManager *manager)
 	FixedHeapSetGUID(SCE_KERNEL_FIXED_HEAP_L2_OBJECT_ID, g_uidManager->fixedHeapL2Object);
 	return ret;
 }
+#endif
 
 #if FW_DEBUG
 /* FixedHeapStart: this firmware's link keeps only its record (no code reaches it) */
 SCE_DBGINFO_DEFINE(static, fixedHeapStartRecord, 2911, "FixedHeapStart");
 #endif
 
+#if !SYSMEM_NSKBL
 /* sceKernelGetKernelFixedHeap */
 FixedHeap *SceSysmemForKernel_3717C322(SceSize size)
 {
@@ -1097,3 +1104,4 @@ int sceKernelFixedHeapSetHook(SceUID uid, FixedHeapObjectHook *hook)
 	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&heap->lock, state);
 	return 0;
 }
+#endif

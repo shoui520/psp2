@@ -32,11 +32,13 @@ static inline uintptr_t VplPagePbase(const struct PhyPage *page)
 	return *(const SceUInt32 *)page << 12;
 }
 
+#if !SYSMEM_NSKBL
 /* whether the PhyPage is an allocated block (link bits 28..29 both set) */
 static inline int VplPageAllocated(const struct PhyPage *page)
 {
 	return (*(const SceUInt32 *)page & 0x30000000) == 0x30000000;
 }
+#endif
 
 /* the largest piece at va (and pa): a power of two no larger than size, aligned at both */
 static inline SceSize VplChunk(uintptr_t va, uintptr_t pa, SceSize size)
@@ -246,6 +248,7 @@ SceSize MemBlockVirPageListGetTailType1Size(MemBlockObject *block)
 
 #endif
 
+#if !SYSMEM_NSKBL
 /* name unknown: the mapped pages, in bytes */
 SceSize MemBlockVirPageListGetMappedSize(MemBlockObject *block)
 {
@@ -262,6 +265,7 @@ SceSize MemBlockVirPageListGetMappedSize(MemBlockObject *block)
 			size += vp->size;
 	return size;
 }
+#endif
 
 /* name unknown: the pages with physical memory behind them, in bytes */
 SceSize MemBlockVirPageListGetPhySize(MemBlockObject *block)
@@ -288,6 +292,7 @@ SceSize MemBlockVirPageListGetPhySize(MemBlockObject *block)
 	return size;
 }
 
+#if !SYSMEM_NSKBL
 /* whether every mapped page lies in [pa, pa + size): 1 yes, 0 no */
 int MemBlockVirPageListCheckWithinPhyRange(MemBlockObject *block, uintptr_t pa, SceSize size)
 {
@@ -370,6 +375,7 @@ int MemBlockVirPageListGetInfo(MemBlockObject *block, MemBlockPhyInfo *info)
 	}
 	return 0;
 }
+#endif
 
 /* every page backed; on failure the pages backed so far are freed */
 int MemBlockVirPageListAllocPhyPage(MemBlockObject *block, PartitionObject *partition,

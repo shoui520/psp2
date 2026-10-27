@@ -197,12 +197,14 @@ int MMUSetReady(void)
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown */
 int MMUInitPost(void)
 {
 	MMUSetReady();
 	return 0;
 }
+#endif
 
 /* the L1 section attributes of a memblock type, domain in bits 8:5 */
 __attribute__((noinline))
@@ -460,10 +462,12 @@ privWrite:
 	return SCE_KERNEL_ERROR_VA2PA_FAULT;
 }
 
+#if !SYSMEM_NSKBL
 uint8_t SceCpuForKernel_FD54A91D(void)
 {
 	return readContextId();
 }
+#endif
 
 /* name unknown: the current translation context */
 __attribute__((noinline))
@@ -519,6 +523,7 @@ int MMUContextSwitch(const MMUContext *context, MMUContext *saved, uint32_t *con
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: the same with barriers, for a context that was just changed */
 __attribute__((noinline))
 int MMUContextSwitchSync(const MMUContext *context, MMUContext *saved)
@@ -545,6 +550,7 @@ int MMUContextSwitchSync(const MMUContext *context, MMUContext *saved)
 	MMUResumeIntr(flags);
 	return 0;
 }
+#endif
 
 int sceKernelMMUL1Init(uint32_t *l1)
 {
@@ -847,22 +853,26 @@ int sceKernelMMUUnmapSmallPagesWithFlags(uint32_t *l2, uint32_t asid, uintptr_t 
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown */
 int MMUVAtoPAWithFlags(uint32_t mode, uint32_t flags, uintptr_t va, uintptr_t *pa)
 {
 	return MMUVAtoPACore(mode, flags, va, pa, NULL);
 }
+#endif
 
 int SceCpuForKernel_1BD23326(uint32_t mode, uintptr_t va, uintptr_t *pa)
 {
 	return MMUVAtoPACore(mode, 0, va, pa, NULL);
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown */
 int MMUVAtoPAWithMemoryType(uint32_t mode, uintptr_t va, uintptr_t *pa, int *memoryType)
 {
 	return MMUVAtoPACore(mode, 0, va, pa, memoryType);
 }
+#endif
 
 /* the memory type of the first access to va that is permitted */
 int SceCpuForKernel_87F7631D(uintptr_t va)
@@ -888,6 +898,7 @@ int SceCpuForKernel_87F7631D(uintptr_t va)
 	return PAR2MemoryType(par);
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: whether every page of a range permits all the accesses in mode */
 int MMUCheckAccessibleRange(uint32_t mode, uintptr_t va, SceSize size)
 {
@@ -921,6 +932,7 @@ int MMUCheckAccessibleRange(uint32_t mode, uintptr_t va, SceSize size)
 	}
 	return 0;
 }
+#endif
 
 int SceCpuForKernel_14E0B0C4(uintptr_t va, uintptr_t *pa)
 {
@@ -966,6 +978,7 @@ int sceKernelMMUL1VAtoPABySW(const uint32_t *l1, uintptr_t va, uintptr_t *pa)
 #define MMU_PERM_PRIV_RW_USER_RW	0x30
 #define MMU_PERM_PRIV_RW_USER_RO	0x50
 
+#if !SYSMEM_NSKBL
 int sceKernelMMUL1IsEqualAccessibleBySW(const uint32_t *l1, uint32_t perm, uintptr_t va,
 					uintptr_t *pa)
 {
@@ -1054,6 +1067,7 @@ int sceKernelMMUL1GetMemoryType(const uint32_t *l1, uintptr_t va)
 	SCE_DBG_ASSERT_FAIL(2261);
 	return SCE_KERNEL_ERROR_CPU_ERROR;
 }
+#endif
 
 /* name unknown: sceKernelMMUL2VAtoPABySW */
 int MMUL2VAtoPABySW(const uint32_t *l2, uintptr_t va, uintptr_t *pa)
@@ -1071,6 +1085,7 @@ int MMUL2VAtoPABySW(const uint32_t *l2, uintptr_t va, uintptr_t *pa)
 	return MMU_WALK_FAULT;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: sceKernelMMUL2IsEqualAccessibleBySW */
 int MMUL2IsEqualAccessibleBySW(const uint32_t *l2, uint32_t perm, uintptr_t va, uintptr_t *pa)
 {
@@ -1177,6 +1192,7 @@ int sceKernelMMUL2GetMemoryType(const uint32_t *l2, uintptr_t va)
 	SCE_DBG_ASSERT_FAIL(2436);
 	return SCE_KERNEL_ERROR_CPU_ERROR;
 }
+#endif
 
 /* whether [va, va + size) maps to [pa, pa + size) in context (NULL: the current one) */
 int MMUIsValidMap(const MMUContext *context, uintptr_t va, SceSize size, uintptr_t pa)

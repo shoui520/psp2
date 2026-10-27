@@ -11,6 +11,7 @@ volatile uintptr_t s_debugPutcharHandler;
 volatile uintptr_t s_debugPutcharArgument;
 volatile uint32_t s_debugPrintLevel;
 
+#if !SYSMEM_NSKBL
 __attribute__((noinline))
 uint32_t SceDebugForKernel_C5889385(uint32_t level)
 {
@@ -26,6 +27,7 @@ int InitializeDebugPrintLevel(const struct SysmemBootContext *context)
 	SceDebugForKernel_C5889385(context->debugPrintLevel);
 	return 0;
 }
+#endif
 
 /* boot type indicator 2: no crash dumps */
 #define BOOT_NO_CRASH_DUMP		0x40
@@ -33,6 +35,7 @@ int InitializeDebugPrintLevel(const struct SysmemBootContext *context)
 extern DebugCrashDumpHandler s_crashDumpHandler;
 extern int s_crashDumpEnabled;
 
+#if !SYSMEM_NSKBL
 /* name unknown: the assertion level from the DIP switches, crash dumps on */
 int InitializeAssertLevel(const struct SysmemBootContext *context)
 {
@@ -45,6 +48,7 @@ int InitializeAssertLevel(const struct SysmemBootContext *context)
 		s_crashDumpEnabled = 1;
 	return 0;
 }
+#endif
 
 /* name unknown: core 0's lock taken, the lock released (no call reaches it) */
 int InitializeDebugCorelock(void)
@@ -55,6 +59,7 @@ int InitializeDebugCorelock(void)
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: a boot step with nothing left to do */
 int InitializeDebugNop(void)
 {
@@ -79,6 +84,7 @@ uint32_t SceDebugForKernel_A0CE3287(uint32_t level)
 	s_assertLevel = level;
 	return previous;
 }
+#endif
 
 void SceDebugForDriver_FD753E7A(SceUInt32 level, SceBool condition,
 			   const SceKernelDebugInfo *info, const void *caller)

@@ -32,12 +32,14 @@ struct DebugTty s_debugTty;
 static char s_debugPrefix[256];
 volatile SceKernelSpinlock s_debugPrintLock;
 
+#if !SYSMEM_NSKBL
 int SceDebugForKernel_88AD6D0C(DebugPrintfHandler handler, void *argument)
 {
 	s_debugKprintfHandler = handler;
 	s_debugKprintfArgument = argument;
 	return (uintptr_t)handler;
 }
+#endif
 
 __attribute__((noinline))
 void DebugAppendCharacter(int character)
@@ -54,11 +56,13 @@ void DebugAppendCharacter(int character)
 	s_debugTty.ring[index] = character;
 }
 
+#if !SYSMEM_NSKBL
 int SceDebugForKernel_3A21194E(int character)
 {
 	DebugAppendCharacter(character);
 	return 1;
 }
+#endif
 
 __attribute__((noinline))
 void DebugPutcharCallback(void *context, int character)
@@ -74,11 +78,13 @@ void DebugPutcharCallback(void *context, int character)
 		handler(s_debugPutcharArgument, character);
 }
 
+#if !SYSMEM_NSKBL
 int SceDebugForKernel_2AABAEDA(int character)
 {
 	DebugPutcharCallback(NULL, character);
 	return 1;
 }
+#endif
 
 int DebugDefaultPrintf(int argument, const char *format,
 		       va_list arguments)
@@ -151,6 +157,7 @@ int SceDebugForDriver_1A3F2AA4(int level, const char *format, ...)
 	return result;
 }
 
+#if !SYSMEM_NSKBL
 int SceDebugForDriver_611A158B(int level, const char *format,
 			  va_list arguments)
 {
@@ -165,6 +172,7 @@ int SceDebugForDriver_611A158B(int level, const char *format,
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, flags);
 	return result;
 }
+#endif
 
 __attribute__((noinline))
 int DebugPrintfPrefix(const char *format, ...)

@@ -145,6 +145,7 @@ static const PhyMemPartHook *s_phyMemPartHook;
 static const PhyMemPartLogCallback *s_phyMemPartLogCallback;
 #endif
 
+#if !SYSMEM_NSKBL
 /* sceKernelSetPhyMemPartHook */
 int SceSysmemForKernel_31FA81B5(const PhyMemPartHook *hook)
 {
@@ -248,6 +249,7 @@ int sceKernelGetPhyMemInfo(SceUInt32 type, SceKernelPhyMemRangeInfo *info)
 	info->rangeSize = pages->size;
 	return 0;
 }
+#endif
 
 /* the page descriptor of pindex in one table, NULL outside it */
 static inline __attribute__((always_inline))
@@ -441,6 +443,7 @@ int PhyPageTableMgrCheckPhyPage(PhyPageTableMgr *mgr, const void *va, int mode)
 }
 #endif
 
+#if !SYSMEM_NSKBL
 /* name unknown: an empty segment */
 PhyMemSegment *PhyMemSegmentCreate(void)
 {
@@ -471,6 +474,7 @@ void PhyMemPartFreeRaw(PhyMemPart *part)
 	SetMemory32Core(part, PHYMEM_PART_DEAD_FILL, sizeof(*part));
 	SceSysmemForKernel_4233C16D(part);
 }
+#endif
 
 /* name unknown: a segment's first page as one free unit of the whole segment */
 __attribute__((noinline))
@@ -508,6 +512,7 @@ static inline void PhyMemPartResetFreeSize(PhyMemPart *part, SceSize psize,
 	}
 }
 
+#if !SYSMEM_NSKBL
 int PhyMemPartInitCdramRaw(PhyMemPart *part, uintptr_t pbase, SceSize psize)
 {
 	PhyMemSegment *segment;
@@ -582,6 +587,7 @@ int PhyMemPartRecycleRaw(PhyMemPart *part)
 	PhyMemPartResetFreeSize(part, segment->psize, segment->next);
 	return 0;
 }
+#endif
 
 int PhyMemPartInitWoSegmentRaw(PhyMemPart *part)
 {
@@ -796,6 +802,7 @@ static inline SceSize PhyMemPartCpuCacheGetFreeSize(const PhyMemPartCpuCache *ca
 	return size;
 }
 
+#if !SYSMEM_NSKBL
 int PhyMemPartGetInfoForDebugger(PhyMemPart *part, SceKernelPhyMemPartInfoForDebugger *info)
 {
 	struct SceKernelPhyMemPartFreeBlock *block;
@@ -905,6 +912,7 @@ out:
 	PhyMemPartReleaseCall(part);
 	return ret;
 }
+#endif
 
 #if FW_DEBUG
 /* the free list and every buddy list reachable */
@@ -1271,6 +1279,7 @@ int PhyMemSegmentInit(PhyMemSegment *segment, PhyPageTableMgr *mgr, uintptr_t pb
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 /* the segment's memory, taken from the main (LPDDR2) or static (CDRAM) allocator */
 int PhyMemPartCreatePhyMemPartSegmentByPbaseRaw(PhyMemPart *part, PhyMemSegment *segment,
 						uintptr_t pbase, SceSize psize, SceSize *allocated)
@@ -1318,6 +1327,7 @@ int PhyMemPartCreatePhyMemPartSegmentByPbaseRaw(PhyMemPart *part, PhyMemSegment 
 		return SCE_KERNEL_ERROR_ERROR;
 	}
 }
+#endif
 
 /* name unknown: a partition over its first segment, all free */
 int PhyMemPartInitWithSegmentRaw(PhyMemPart *part, PhyPageTableMgr *mgr, uintptr_t pbase,
@@ -1837,6 +1847,7 @@ SceSize PhyMemPartGetFreeSizeInternal(PhyMemPart *part)
 	return size;
 }
 
+#if !SYSMEM_NSKBL
 int PhyMemPartCdramAlloc(PhyMemPart *part, SceSize size, SceSize alignment, uintptr_t *pa)
 {
 	if (PHYMEM_PART_TYPE(part) == PHYMEM_PART_TYPE_CDRAM)
@@ -1918,6 +1929,7 @@ int sceKernelGetPhyMemPartInfoCore(PhyMemPart *part, SceKernelPhyMemPartInfoCore
 	SCE_DBG_ASSERT_CHECK((info->psize & 0xfffff) == 0, 3160);
 	return ret;
 }
+#endif
 
 /* name unknown */
 const char *PhyMemPartGetName(PhyMemPart *part)
@@ -1938,6 +1950,7 @@ SceUInt32 PhyMemPartTestAttr(PhyMemPart *part, SceUInt32 mask)
 	return attr;
 }
 
+#if !SYSMEM_NSKBL
 /* the segments' memory back to the main allocator, then the segments and cache freed */
 static inline void PhyMemPartRecoveryRaw(PhyMemPart *part)
 {
@@ -2372,6 +2385,7 @@ int sceKernelGetPhyMemPartInfoByID(SceUID uid, SceKernelPhyMemPartInfoForDebugge
 		ret = PhyMemPartGetInfoForDebugger(part, info);
 	return ret;
 }
+#endif
 
 /* the fixed GUIDs of the kernel and tool partitions */
 
@@ -2382,6 +2396,7 @@ static PhyMemSegment s_phyMemSegmentCdramBoot;
 static PhyMemPart s_phyMemPartCdramBoot;
 static PhyMemPart *s_phyPartCdramBoot;
 
+#if !SYSMEM_NSKBL
 /* name unknown: the partitions the boot loader made, and the kernel's free size recounted */
 int PhyMemModuleStart(const UIDManager *manager)
 {
@@ -2448,6 +2463,7 @@ int PhyMemPartInitCdram(void)
 	PhyMemPartInitCdramRaw(&s_phyMemPartCdramBoot, 0x20000000, 0x8000000);
 	return 0;
 }
+#endif
 
 /* name unknown: CDRAM from the partition sceKernelSetPhyPartCdram set */
 int PhyMemCdramAlloc(SceSize size, SceSize alignment, uintptr_t *pa)
@@ -2461,8 +2477,10 @@ int PhyMemCdramFree(uintptr_t pa, SceSize size)
 	return PhyMemPartCdramFreeCore(s_phyPartCdram, pa, size);
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: the static CDRAM allocator reset */
 int SceSysmemForKernel_02DAD732(void)
 {
 	return PhyMemLowStaticInit();
 }
+#endif

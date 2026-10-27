@@ -51,6 +51,7 @@ static inline int AimgrIsDolceHardware(void)
 	return model == 0x700000 || model == 0x720000 || model == 0x510000;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown */
 int AimgrInit(void)
 {
@@ -66,6 +67,7 @@ int AimgrInit(void)
 	s_psCode.code = kbl->pscode;
 	return 0;
 }
+#endif
 
 int SceSblAIMgrForDriver_3B638885(void)
 {
@@ -117,6 +119,7 @@ int SceSblAIMgrForDriver_963CA644(void)
 	return 1;
 }
 
+#if !SYSMEM_NSKBL
 int SceSblAIMgrForDriver_4273B97B(void)
 {
 	return SceSblAIMgrForDriver_963CA644();
@@ -174,3 +177,4 @@ int SceSblAIMgrForDriver_47D9CF13(SceUInt32 *smi)
 	*smi = kbl->factory_fw_version;
 	return 0;
 }
+#endif

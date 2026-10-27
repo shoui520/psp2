@@ -46,6 +46,7 @@ static SceSize s_userIOPASize;
 /* PLACEHOLDER: where the class pointer and the ASID heap are kept; set by the unconverted module start */
 static AddressSpaceGlobals *s_addressSpaceGlobals;
 
+#if !SYSMEM_NSKBL
 /* name unknown: the physical window user I/O mappings get (smaller with dipsw 0xd5) */
 void AddressSpaceInitUserIOPA(void)
 {
@@ -72,6 +73,7 @@ int AddressSpaceFreeContext(AddressSpaceObject *as, AddressSpaceContext *context
 	as->heap->funcFree(as->heap->arg, context);
 	return 0;
 }
+#endif
 
 /* a partition of the address space, as an entry of the creation tables describes it */
 typedef struct AddressSpacePartitionEntry {
@@ -127,6 +129,7 @@ int AddressSpaceCreatePartitionByCommandRaw(AddressSpaceObject *as, SceUID pid,
 
 #define ADDRESS_SPACE_DEAD		0x07fd9f97
 
+#if !SYSMEM_NSKBL
 /* an address space taken apart once nobody refers to it: partitions, context, ASID */
 void DeleteAddressSpace(AddressSpaceObject *as)
 {
@@ -173,6 +176,7 @@ void DeleteAddressSpace(AddressSpaceObject *as)
 	if (ret < 0)
 		SCE_DBG_PRINTF(0xb, 2108, "FreeAsidUser failed 0x%08x\n", ret);
 }
+#endif
 
 #if FW_DEBUG
 /* debug builds check the index, out of line */
@@ -210,6 +214,7 @@ static int AddressSpaceGetPhyMemPartByIndexRaw(SceUInt32 index)
 	}
 }
 
+#if !SYSMEM_NSKBL
 /* sceKernelGetUIDAddressSpaceClass */
 SceClass *SceSysmemForKernel_99D3BF76(void)
 {
@@ -239,9 +244,11 @@ int SceSysmemForDriver_2D711589(const MMUContext *context, MMUContext *saved)
 {
 	return MMUContextSwitchSync(context, saved);
 }
+#endif
 
 #define MMU_MODE_KERNEL_RW		0x33
 
+#if !SYSMEM_NSKBL
 /* the physical ranges behind [va, va + size) of the address space */
 int AddressSpaceVARangeToPAVector(AddressSpaceObject *as, const SceKernelPARange *range,
 				  SceKernelPAVector *vector, int *memoryType)
@@ -304,6 +311,7 @@ out:
 	AddressSpaceRelease(as);
 	return ret;
 }
+#endif
 
 /* name unknown */
 struct Partition *AddressSpaceGetPartitionByIndex(AddressSpaceObject *as, SceUInt32 index)
@@ -382,11 +390,13 @@ int AddressSpaceAllocPartitionMemBlockByCommandRaw(AddressSpaceObject *as,
 	return MemBlockCreateGUID(command->name, command->block, command->opt.attr);
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: the kernel's (10) or the shell's (11) physical memory partition */
 int AddressSpaceGetDefaultPhyMemPart(AddressSpaceObject *as, int kernel, void **part)
 {
 	return AddressSpaceGetPhyMemPartByIndex(as, kernel == 1 ? 10 : 11, part);
 }
+#endif
 
 /* name unknown: the physical memory partition for a code */
 int AddressSpaceGetPhyMemPart(AddressSpaceObject *as, SceUInt32 code, void **part)
@@ -478,6 +488,7 @@ int AddressSpaceSwitchContext(AddressSpaceObject *as)
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: memory of another address space set, from inside it with every domain open */
 int AddressSpaceMemset(AddressSpaceObject *as, void *dst, int c, SceSize size)
 {
@@ -630,6 +641,7 @@ out:
 	AddressSpaceRelease(as);
 	return ret;
 }
+#endif
 
 /* the main and the shell subbudget's physical memory partitions */
 #define AS_PHYMEMPART_GAME		10
@@ -637,6 +649,7 @@ out:
 #define AS_PHYMEMPART_CDRAM		12
 #define AS_PHYMEMPART_PHYCONT		8
 
+#if !SYSMEM_NSKBL
 int AddressSpaceGetSubbudgetInfo(AddressSpaceObject *as, SceUInt32 subbudget,
 				 AddressSpaceSubbudgetInfo *out)
 {
@@ -704,6 +717,7 @@ int AddressSpaceGetFreeMemorySize(AddressSpaceObject *as, SceKernelFreeMemorySiz
 	AddressSpaceRelease(as);
 	return 0;
 }
+#endif
 
 /* a base block freed in the partition its info names (the address space by GUID) */
 int AddressSpaceIdFreeMemBlock(SceUID guid, MemBlockBaseInfo *info, MemBlockObject **baseBlock,
@@ -737,6 +751,7 @@ out:
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /* sceKernelAddressSpaceGetPartitionByIndex */
 struct Partition *SceSysmemForKernel_1F84FE44(AddressSpaceObject *as, SceUInt32 index)
 {
@@ -773,6 +788,7 @@ int sceKernelAddressSpaceCtrSetObjectHeap(AddressSpaceObject *as, ObjectHeap *he
 	AddressSpaceRelease(as);
 	return 0;
 }
+#endif
 
 #define AS_PARTITION_TOOL_A		20
 #define AS_PARTITION_TOOL_B		21
@@ -795,6 +811,7 @@ static const AddressSpacePartitionEntry s_userToolPartition = {
 	"SceKernelUserTool", 5, 0xf0000000, 0x10000000, 0, 0xffffffff, 8, -1
 };
 
+#if !SYSMEM_NSKBL
 /* the context: the new L1 table, the kernel's L1 table for the other half, the kernel's heaps */
 static inline int AddressSpaceAllocAsCommonRaw(AddressSpaceObject *as, uint32_t *l1Table,
 					       SceUInt32 asid)
@@ -916,9 +933,11 @@ free:
 	heap->funcFree(heap->arg, as);
 	return ret;
 }
+#endif
 
 #define USER_IOPA_VBASE			0x80000000
 
+#if !SYSMEM_NSKBL
 /* the user I/O page at 0x80000000 */
 static inline int AddressSpaceAddDefaultUserIOPARaw(AddressSpaceObject *as)
 {
@@ -1164,6 +1183,7 @@ int SceSysmemForKernel_5E772E19(SceUID guid, SceUID pid)
 	AddressSpaceRelease(as);
 	return 0;
 }
+#endif
 
 /* the GUID names of the user partitions, prefixed */
 static const struct {
@@ -1180,6 +1200,7 @@ static const struct {
 	{ 8, "uptool: " },
 };
 
+#if !SYSMEM_NSKBL
 /* the address space and its partitions named after the process */
 int sceKernelAddressSpaceSetName(SceUID guid, const char *name)
 {
@@ -1414,6 +1435,7 @@ AddressSpaceObject *SceSysmemForKernel_2E5CC243(void)
 {
 	return s_kernelAddressSpace;
 }
+#endif
 
 #ifdef SYSMEM_TZS
 /* name unknown: the kernel address space's lower L1 table */
@@ -1423,6 +1445,7 @@ uint32_t *SceSysmemForTZS_038EAEEE(void)
 }
 #endif
 
+#if !SYSMEM_NSKBL
 /* the physical window user I/O mappings get */
 int SceSysmemForDriver_C9928F5E(uintptr_t *base, SceSize *size)
 {
@@ -1450,11 +1473,13 @@ int AddressSpaceKernelReady(void)
 {
 	return s_kernelAddressSpace != NULL ? 0 : SCE_KERNEL_ERROR_ERROR;
 }
+#endif
 
 #define ASID_COUNT			0x100
 #define ASID_RESERVED_LOW		2	/* 0, 1: the kernel's */
 #define ASID_RESERVED_HIGH		0xf0	/* 0xf0..0xff */
 
+#if !SYSMEM_NSKBL
 /* the class, the kernel address space and the user ASID heap */
 int AsidUserStart(const UIDManager *manager)
 {
@@ -1494,6 +1519,7 @@ int AsidUserStart(const UIDManager *manager)
 #endif
 	return ret;
 }
+#endif
 
 /* the game partitions of the kernel address space */
 static const AddressSpacePartitionEntry s_kernelGamePartitions[] = {
@@ -1505,6 +1531,7 @@ static const AddressSpacePartitionEntry s_kernelGamePartitions[] = {
 #define AS_PARTITION_TMPFS_GAME		18
 #define AS_PARTITION_TMPFS_GAME_ALIAS	19
 
+#if !SYSMEM_NSKBL
 /* name unknown: the kernel's game partitions; partition 19 aliases 18 */
 void AddressSpaceKernelGameStart(void)
 {
@@ -1521,3 +1548,4 @@ void AddressSpaceKernelGameStart(void)
 			kernel->partition[AS_PARTITION_TMPFS_GAME];
 	AddressSpaceRelease(kernel);
 }
+#endif

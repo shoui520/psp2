@@ -172,6 +172,7 @@ int VirPageAllocPhyPage(VirPage *vp, void *partition, void *phyPart, VirPage **o
 	}
 }
 
+#if !SYSMEM_NSKBL
 /* the physical range a page maps, none for the unbacked types */
 int VirPageGetMapRange(VirPage *vp, uintptr_t *pbase, SceSize *size)
 {
@@ -203,6 +204,7 @@ int VirPageGetMapRange(VirPage *vp, uintptr_t *pbase, SceSize *size)
 	*size = len;
 	return 0;
 }
+#endif
 
 int VirPageGetPhyBase(VirPage *vp, uintptr_t *pbase)
 {
@@ -235,6 +237,7 @@ int VirPageFree(void *partition, FixedHeap *heap, VirPage *vp)
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: the virtual page class constructor */
 int VirPageCreate(void)
 {
@@ -246,6 +249,7 @@ int VirPageDestroy(void)
 {
 	return 0;
 }
+#endif
 
 /*
  * The memblock allocation parameters (sysmem_internal.h).

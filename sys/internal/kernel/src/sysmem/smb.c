@@ -306,12 +306,14 @@ int AllocSimpleMemBlock(const char *name, SceUInt32 smbType, void *phyMemPart, S
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: a block anywhere in the kernel's physical partition */
 int SceSysmemForKernel_814CDCC5(const char *name, SceUInt32 smbType, SceUInt32 flags,
 				MemBlockObject **pBlock)
 {
 	return AllocSimpleMemBlock(name, smbType, NULL, flags, pBlock);
 }
+#endif
 
 /* name unknown: unmapped, its pages freed and back on its FIFO */
 int FreeSimpleMemBlock(MemBlockObject *block, SceUInt32 flags)
@@ -354,6 +356,7 @@ typedef struct SceKernelSimpleMemBlockInfo {
 	} fifo[SMB_FIFO_COUNT];
 } SceKernelSimpleMemBlockInfo;
 
+#if !SYSMEM_NSKBL
 int SceSysmemForKernel_BD625136(SceKernelSimpleMemBlockInfo *info)
 {
 	SmbFifo *fifo;
@@ -369,6 +372,7 @@ int SceSysmemForKernel_BD625136(SceKernelSimpleMemBlockInfo *info)
 	}
 	return 0;
 }
+#endif
 
 /* name unknown: the physical address of the block's pages */
 int SimpleMemBlockGetPbase(MemBlockObject *block, uintptr_t *pbase)
@@ -377,6 +381,7 @@ int SimpleMemBlockGetPbase(MemBlockObject *block, uintptr_t *pbase)
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: the class, the boot stock of blocks, and their sections reserved */
 int SimpleMemBlockModuleStart(const UIDManager *manager)
 {
@@ -417,3 +422,4 @@ int SimpleMemBlockModuleStart(const UIDManager *manager)
 			PartitionReserveSection(PartitionGetKernel(), i << 20);
 	return 0;
 }
+#endif

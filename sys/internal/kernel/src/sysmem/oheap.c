@@ -79,6 +79,7 @@ static int ObjectHeapSetSizeClass(ObjectHeap *heap, SceSize size, void *fixedHea
 	return SCE_KERNEL_ERROR_ERROR;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: a size class with a fixed heap from the kernel heap */
 static int ObjectHeapAddKernelSizeClass(ObjectHeap *heap, SceSize size)
 {
@@ -101,6 +102,7 @@ static int ObjectHeapAddKernelSizeClass(ObjectHeap *heap, SceSize size)
 	ObjectHeapSetSizeClass(heap, size, fixedHeap, uid);
 	return 0;
 }
+#endif
 
 void *ObjectHeapGetHeap(ObjectHeap *heap, SceSize size)
 {
@@ -118,6 +120,7 @@ void *ObjectHeapGetHeap(ObjectHeap *heap, SceSize size)
 	return NULL;
 }
 
+#if !SYSMEM_NSKBL
 int ObjectHeapSetResourceLimit(ObjectHeap *heap, unsigned int type, SceUInt32 max,
 			       SceUInt32 reserve)
 {
@@ -162,6 +165,7 @@ void *ObjectHeapGetDefaultHeap(ObjectHeap *heap)
 		return NULL;
 	return heap->defaultHeap;
 }
+#endif
 
 /*
  * Count one more object of the type against its limit; hand out a
@@ -244,6 +248,7 @@ int ObjectHeapFreeLimit(ObjectHeap *heap, unsigned int type, void *object)
 	return kept;
 }
 
+#if !SYSMEM_NSKBL
 /* sceKernelGetObjectHeap (wiki name) */
 ObjectHeap *SceSysmemForKernel_857408DA(void)
 {
@@ -495,3 +500,4 @@ int ObjectHeapInitShared(void)
 	ObjectHeapSetSizeClass(s_sharedObjectHeap, (SceSize)-1, s_sharedHeap, -1);
 	return 0;
 }
+#endif

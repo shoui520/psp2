@@ -119,6 +119,7 @@ int s_crashDumpEnabled;			/* set at boot unless the KBL says not to */
 static DebugFrame s_backtraceFrames[4][32];
 static SceUInt8 s_faultStacks[4][0x1000];
 
+#if !SYSMEM_NSKBL
 void SceDebugForKernel_4C62F8CC(DebugCrashDumpHandler handler)
 {
 	s_crashDumpHandler = handler;
@@ -146,6 +147,7 @@ void SceDebugForKernel_67E9D1EC(DebugFaultHandler handler)
 {
 	s_faultHandler = handler;
 }
+#endif
 
 static inline int DebugCpuId(void)
 {
@@ -437,6 +439,7 @@ void DebugFaultDump(void *argument)
 /* the top of this CPU's fault stack */
 #define DEBUG_FAULT_STACK()	(&s_faultStacks[DebugCpuId()][0xff8])
 
+#if !SYSMEM_NSKBL
 void sceKernelAssert(SceBool cond, const SceKernelDebugInfo *info, const void *lr)
 {
 	DebugFault fault;
@@ -452,6 +455,7 @@ void sceKernelAssert(SceBool cond, const SceKernelDebugInfo *info, const void *l
 	DebugCallOnStack(&fault, DEBUG_FAULT_STACK(), DebugFaultDump);
 	sceKernelCpuResumeIntr(fault.interrupts);
 }
+#endif
 
 /* returns no value: its callers' int is what r0 holds */
 int SceDebugForDriver_821A2D59(SceUInt32 level, SceBool cond, const SceKernelDebugInfo *info,
@@ -726,6 +730,7 @@ static EventLogHandler s_eventLogHandler;
 static SceUInt32 s_eventLogNext[4] = { 0, 4, 8, 12 };
 static EventLogEntry s_eventLog[EVENT_LOG_ENTRIES];
 
+#if !SYSMEM_NSKBL
 void SceDebugForKernel_78027203(EventLogHandler handler)
 {
 	s_eventLogHandler = handler;
@@ -803,3 +808,4 @@ SceSSize SceDebugForDriver_CC5365D3(void *buffer, SceSize size, SceUInt32 *count
 	sceKernelCpuResumeIntr(flags);
 	return size - left;
 }
+#endif

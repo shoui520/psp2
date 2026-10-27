@@ -481,6 +481,7 @@ int MemBlockPartialFreeRaw(MemBlockObject *block, PartitionObject *partition)
 				  PARTIAL_OP_FREE, block->vbase, block->size);
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown */
 int MemBlockPartialOpRange(PartitionObject *partition, MemBlockObject *block, SceUInt32 op,
 			   uintptr_t va, SceSize size)
@@ -488,6 +489,7 @@ int MemBlockPartialOpRange(PartitionObject *partition, MemBlockObject *block, Sc
 	return PartialInfoOpRange(partition, block, MemBlockGetPartialInfoRaw(block), op, va,
 				  size);
 }
+#endif
 
 /* name unknown: the free units at the start, in bytes */
 SceSize MemBlockPartialGetHeadFreeSize(MemBlockObject *block)
@@ -521,6 +523,7 @@ SceSize MemBlockPartialGetTailSize(MemBlockObject *block)
 	return size;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: the mapped units, in bytes */
 SceSize MemBlockPartialGetMappedSize(MemBlockObject *block)
 {
@@ -534,6 +537,7 @@ SceSize MemBlockPartialGetMappedSize(MemBlockObject *block)
 			size += unitSize;
 	return size;
 }
+#endif
 
 /* name unknown: the allocated units, in bytes */
 SceSize MemBlockPartialGetAllocatedSize(MemBlockObject *block)

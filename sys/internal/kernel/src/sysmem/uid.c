@@ -50,6 +50,7 @@ static int UIDDLinkCreate(void *object)
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 static int UIDDLinkDestroy(void *object)
 {
 	void **link = object;
@@ -57,6 +58,7 @@ static int UIDDLinkDestroy(void *object)
 	link[2] = NULL;
 	return 0;
 }
+#endif
 
 /* SceSysmemForKernel_7CDB7655 */
 int SceSysmemForKernel_7CDB7655(SceClass *cls, const char *name, void *uidclass, SceSize itemsize,
@@ -65,6 +67,7 @@ int SceSysmemForKernel_7CDB7655(SceClass *cls, const char *name, void *uidclass,
 	return sceUIDClassInitClass(cls, name, uidclass, itemsize, create, destroy);
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown */
 void UIDClassSetCallbacks(SceClass *cls, const char *name, SceClassCallback create,
 			  SceClassCallback destroy)
@@ -153,6 +156,7 @@ static SceUInt32 UIDFuncMatchState(UIDEntry *entry, UIDFuncVector *vector)
 		return UID_WALK_CONTINUE | UID_WALK_MATCH;
 	return result | UID_WALK_CONTINUE;
 }
+#endif
 
 /* a fixed heap walk looking for an entry */
 typedef struct UIDEntryFind {
@@ -161,6 +165,7 @@ typedef struct UIDEntryFind {
 	SceUInt32 index;
 } UIDEntryFind;
 
+#if !SYSMEM_NSKBL
 /* name unknown: walk callback, the entry of an object */
 static int UIDEntryFindByObject(void *object, SceUInt32 index, void *arg)
 {
@@ -201,6 +206,7 @@ int UIDEntryIncLinkCountRaw(UIDEntry *entry)
 	SCE_DBG_PRINTF(0xb, 886, "Error:linkCount=0x%08x >= SCE_UID_ENTRY_MAX_LCOUNT\n", linkCount);
 	return 0;
 }
+#endif
 
 #if !FW_DEBUG
 static inline
@@ -218,6 +224,7 @@ int UIDEntryIsValidWithUIDRaw(const UIDEntry *entry, SceUID uid)
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 /* walk callback, the PUID of a GUID */
 static int UIDEntryFindByBaseGUID(void *object, SceUInt32 index, void *arg)
 {
@@ -240,6 +247,7 @@ static int UIDEntryFindByBaseGUID(void *object, SceUInt32 index, void *arg)
 	find->index = index;
 	return 1;
 }
+#endif
 
 /* the entry of a UID, if the UID is its current one */
 int UIDEntryCheckInvalid(UIDEntryHeap *heap, SceUID uid, SceUInt32 flags, UIDEntry **out)
@@ -424,6 +432,7 @@ int GUIDGetName(SceUID guid, const char **name)
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 int GUIDGetVisibilityLevel(SceUID guid)
 {
 	UIDEntryHeap *heap = GUID_ENTRY_HEAP();
@@ -552,6 +561,7 @@ static int UIDEntryHeapClassSetPage(FixedHeap *heap, void *page)
 {
 	return FixedHeapSetPage(heap, page);
 }
+#endif
 
 /* name unknown: no links and no users left (one link with UID_ENTRY_ATTR_SINGLE_LINK) */
 __attribute__((noinline)) int UIDEntryIsUnused(const UIDEntry *entry)
@@ -645,6 +655,7 @@ int GUIDSet(SceUID guid, SceClass *cls, const char *name, SceObjectBase *object)
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /* a kernel address that is mapped; 3.6x keeps only GCC's split tail (IsSafe.part) */
 #if !FW_SINCE(0x04000000)
 static
@@ -690,6 +701,7 @@ static void UIDFuncAddEntryInfo(UIDFuncVector *vector, UIDEntry *entry)
 	info->pid = entry->pid;
 	vector->count++;
 }
+#endif
 
 /* walk callback of the UID vectors by class */
 typedef struct UIDVectorByClass {
@@ -702,6 +714,7 @@ typedef struct UIDVectorByClass {
 	SceUInt32 total;
 } UIDVectorByClass;
 
+#if !SYSMEM_NSKBL
 static int UIDEntryCheckClass(void *object, SceUInt32 index, void *arg)
 {
 	UIDEntry *entry = object;
@@ -742,6 +755,7 @@ static int UIDEntryCheckClass(void *object, SceUInt32 index, void *arg)
 	vector->count++;
 	return 0;
 }
+#endif
 
 /* walk callback of the entry infos (by class, or all with cls NULL) */
 typedef struct UIDEntryInfoWalk {
@@ -754,6 +768,7 @@ typedef struct UIDEntryInfoWalk {
 	SceUInt32 total;
 } UIDEntryInfoWalk;
 
+#if !SYSMEM_NSKBL
 static int UIDEntryFuncForGetInfo(void *object, SceUInt32 index, void *arg)
 {
 	UIDEntry *entry = object;
@@ -948,6 +963,7 @@ int UIDEntryCheckClassRaw(const UIDEntry *entry, SceClass *cls, int mode)
 	}
 	return 0;
 }
+#endif
 
 /* an entry about to be freed must be destructed and in the heap */
 static inline void UIDEntryHeapCheckFreeUIDEntry(UIDEntryHeap *heap, UIDEntry *entry)
@@ -961,6 +977,7 @@ static inline void UIDEntryHeapCheckFreeUIDEntry(UIDEntryHeap *heap, UIDEntry *e
 #endif
 }
 
+#if !SYSMEM_NSKBL
 /* name from Sony's messages: a free entry of the heap, checked */
 static inline int UIDEntryHeapAllocateObject(UIDEntryHeap *heap, UIDEntry **entry)
 {
@@ -977,6 +994,7 @@ static inline int UIDEntryHeapFreeObject(UIDEntryHeap *heap, UIDEntry *entry)
 	UIDEntryHeapCheckFreeUIDEntry(heap, entry);
 	return FixedHeapFreeObject(&heap->fixedHeap, entry);
 }
+#endif
 
 /* the object of a closed entry, freed by DeleteParamClean after the lock */
 static inline int DeleteParamAdd(DeleteParam *param, SceObjectBase *object, void *heap,
@@ -1129,6 +1147,7 @@ static inline SceUID UIDEntryHeapCheckIndex(UIDEntryHeap *heap, const UIDEntry *
 	return entry->uid;
 }
 
+#if !SYSMEM_NSKBL
 /* a link of the name of its base */
 static inline int UIDEntryConstructNameLinkRaw(UIDEntry *entry, const char *name, SceUInt32 attr)
 {
@@ -1154,6 +1173,7 @@ static inline int UIDEntryConstructNameLinkRaw(UIDEntry *entry, const char *name
 	entry->name = nameEntry->name;
 	return 0;
 }
+#endif
 
 /* what a PUID or a link copies from its GUID entry */
 typedef struct GUIDBaseInfo {
@@ -1168,6 +1188,7 @@ typedef struct GUIDBaseInfo {
 	SceUID baseGuid;			/* 0x20 */
 } GUIDBaseInfo;
 
+#if !SYSMEM_NSKBL
 int UIDEntryHeapSetPUIDEntryChainRaw(UIDEntryHeap *heap, UIDEntry *entry, SceUID guid,
 					    const GUIDBaseInfo *info, SceUInt32 attr)
 {
@@ -1255,6 +1276,7 @@ SYSMEM_DEBUG_FUNC int UIDEntryConstructByBase(UIDEntryHeap *heap, UIDEntry *entr
 	}
 	return UIDEntryHeapCheckIndex(heap, entry, 0);
 }
+#endif
 
 /* a GUID entry's class, if it has an object */
 static inline int UIDEntryGetClass(const UIDEntry *entry, SceClass **cls)
@@ -1312,6 +1334,7 @@ int GUIDUnregister(SceUID guid)
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /* cls is base or one of its subclasses (SceSysmemForKernel_7F7D5C4A; Sony's compiler inlines it) */
 static inline __attribute__((always_inline)) int UIDClassIsSubclass(SceClass *cls, SceClass *base)
 {
@@ -1323,6 +1346,7 @@ static inline __attribute__((always_inline)) int UIDClassIsSubclass(SceClass *cl
 	}
 	return 0;
 }
+#endif
 
 /* the entry's name, inserted into the name heap its attr selects */
 static inline int UIDEntryConstructNameInsertRaw(UIDEntry *entry, const char *name, SceUInt32 attr)
@@ -1414,6 +1438,7 @@ out:
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /* the base info of a GUID entry, one link more */
 static inline void GUIDBaseInfoSetLinks(GUIDBaseInfo *info, const UIDEntry *base, SceUInt32 attr)
 {
@@ -1633,6 +1658,7 @@ free:
 	UIDEntryHeapFreeObject(heap, entry);
 	return ret;
 }
+#endif
 
 /* the constructors of cls and its base classes, the base class first */
 int sceUIDCallConstructor(SceClass *cls, SceObjectBase *object)
@@ -1775,6 +1801,7 @@ void DeleteParamClean(DeleteParam *param)
 	}
 }
 
+#if !SYSMEM_NSKBL
 /* one link less of a GUID, closing it when it was the last */
 int GUIDCloseLink(SceUID guid)
 {
@@ -1926,6 +1953,7 @@ int SceSysmemForKernel_7F7D5C4A(SceClass *cls, SceClass *base)
 {
 	return UIDClassIsSubclass(cls, base);
 }
+#endif
 
 /* a GUID for an object the caller made */
 int GUIDRegister(SceClass *cls, const char *name, SceObjectBase *object, SceUInt32 attr)
@@ -1944,6 +1972,7 @@ int GUIDRegister(SceClass *cls, const char *name, SceObjectBase *object, SceUInt
 						   attr);
 }
 
+#if !SYSMEM_NSKBL
 static inline int UIDEntrySetCNOA(UIDEntry *entry, SceClass *cls, const char *name,
 				  SceObjectBase *object, SceUInt32 attr)
 {
@@ -2031,6 +2060,7 @@ int GUIDFindByName(const char *name)
 		ret = entry->uid;
 	return ret;
 }
+#endif
 
 /* one user less of a GUID */
 /* one use less: the last use of an entry closed meanwhile closes it */
@@ -2106,6 +2136,7 @@ static inline SceUInt32 UIDCreateAttr(SceUInt32 attr)
 	return attr;
 }
 
+#if !SYSMEM_NSKBL
 int SceSysmemForKernel_6D26B066(SceClass *pClass, const char *name, SceUInt32 attr,
 				 SceObjectBase **ppEntry)
 {
@@ -2130,6 +2161,7 @@ SceUID sceGUIDKernelCreate(SceClass *cls, const char *name, SceObjectBase **obj)
 {
 	return SceSysmemForKernel_6D26B066(cls, name, UID_ENTRY_ATTR_LEVEL_DEFAULT, obj);
 }
+#endif
 
 /* sceGUIDRegister */
 SceUID SceSysmemForKernel_6DB44A42(SceClass *cls, const char *name, void *object)
@@ -2156,6 +2188,7 @@ int sceGUIDSet(SceUID guid, SceClass *cls, const char *name,
 	return GUIDSet(guid, cls, name, object);
 }
 
+#if !SYSMEM_NSKBL
 /* sceGUIDSetCNOA */
 int SceSysmemForKernel_5EDDEEB5(SceUID guid, SceClass *cls, const char *name,
 				SceObjectBase *object, SceUInt32 attr)
@@ -2289,6 +2322,7 @@ SceUID GUIDOpenByName(const char *name)
 	UIDEntryHeapFreeObject(heap, entry);
 	return ret;
 }
+#endif
 
 /* one link less: the last one closes the GUID */
 static inline int UIDEntryCloseAPI(UIDEntryHeap *heap, UIDEntry **pEntry, DeleteParam *param)
@@ -2376,6 +2410,7 @@ int sceGUIDGetObject(SceUID guid, void *object)
 	return GUIDGetObjectWithClass(guid, NULL, object);
 }
 
+#if !SYSMEM_NSKBL
 /* sceUIDEntryHeapCreate: the PUID entry heap of a process, in the heap heapGuid */
 SceUID SceSysmemForKernel_89BEF058(SceUID pid, SceUID heapGuid)
 {
@@ -2489,6 +2524,7 @@ SceInt32 SceSysmemForKernel_CCD47B97(SceUID entryHeapId, void *pInfo)
 	UID_READ_UNLOCK(heap, state);
 	return ret;
 }
+#endif
 
 SceUID sceGUIDKernelCreateWithOpt(SceClass *sce_class, const char *name, const UIDCreateOpt *opt,
 				   SceObjectBase **obj)
@@ -2545,6 +2581,7 @@ create:
 			  (type << UID_ENTRY_ATTR_TYPE_SHIFT & UID_ENTRY_ATTR_TYPE_MASK), obj);
 }
 
+#if !SYSMEM_NSKBL
 /* an object of cls from the heap of heapGuid (the kernel heap if none) */
 SceUID SceSysmemForDriver_89A44858(SceClass *cls, const char *name, SceUID heapGuid, SceObjectBase **obj)
 {
@@ -2713,6 +2750,7 @@ int sceGUIDSetPID(SceUID guid, SceUID pid)
 	UID_WRITE_UNLOCK(heap, state);
 	return ret;
 }
+#endif
 
 int sceGUIDSetName(SceUID guid, const char *name)
 {
@@ -2748,12 +2786,14 @@ int GUIDApplyWithClass(SceUID guid, SceClass *cls, int (*func)(SceObjectBase *ob
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 int sceGUIDReferObject(SceUID guid, SceObjectBase **object)
 {
 	if (!UIDIsGUID(guid))
 		return UID_ERROR_INVALID_UID;
 	return GUIDReferObjectClassCheckCommon(guid, 0, NULL, 7, 0, object);
 }
+#endif
 
 int sceGUIDReferObjectWithClass(SceUID guid, SceClass *sce_class, SceObjectBase **object)
 {
@@ -2770,6 +2810,7 @@ int GUIDReferObjectWithClassExclusive(SceUID guid, SceClass *cls, SceObjectBase 
 	return GUIDReferObjectClassCheckCommon(guid, 1, cls, 7, 1, object);
 }
 
+#if !SYSMEM_NSKBL
 int sceGUIDReferObjectWithLevel(SceUID guid, SceUInt32 level, SceObjectBase **object)
 {
 	if (!UIDIsGUID(guid))
@@ -2795,6 +2836,7 @@ int sceGUIDReferObjectWithSubclass(SceUID guid, SceClass *cls, SceObjectBase **o
 		return UID_ERROR_INVALID_UID;
 	return GUIDReferObjectClassCheckCommon(guid, 2, cls, 7, 0, object);
 }
+#endif
 
 int sceGUIDReleaseObject(SceUID guid)
 {
@@ -2811,6 +2853,7 @@ int sceGUIDReleaseObject(SceUID guid)
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /* sceGUIDFindByName */
 SceUID SceSysmemForKernel_BDE00106(const char *name)
 {
@@ -3599,3 +3642,4 @@ int sceUIDEntryHeapSetHook(SceUID guid, FixedHeapObjectHook *hook)
 	return 0;
 #endif
 }
+#endif

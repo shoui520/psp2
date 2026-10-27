@@ -171,8 +171,10 @@ int L2PageTableUnmapPages(L2PageTable *l2pt, SceUInt32 asid, uintptr_t va, SceSi
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: nothing to set up */
 int L2PageTableModuleStart(void)
 {
 	return 0;
 }
+#endif

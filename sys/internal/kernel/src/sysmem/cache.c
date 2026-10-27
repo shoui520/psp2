@@ -88,6 +88,7 @@ static inline int CacheIsUncachedAddress(const void *start)
 	return address - 0x20000000 < 0x20000000 || address - 0x60000000 < 0x21000000;
 }
 
+#if !SYSMEM_NSKBL
 __attribute__((noinline))
 void _sceKernelDcacheCleanInvalidateRangeCore(const void *start, SceSize size, int flags
 					      CACHE_CALLER_PARAMS)
@@ -143,6 +144,7 @@ void _sceKernelDcacheCleanInvalidateRangeCore(const void *start, SceSize size, i
 	}
 	SceCpuForKernel_4F442396((const void *)address, size);
 }
+#endif
 
 __attribute__((noinline))
 void _sceKernelDcacheCleanRangeCore(const void *start, SceSize size, int flags
@@ -221,6 +223,7 @@ void _sceKernelDcacheInvalidateRangeCore(const void *start, SceSize size, int fl
 	SceCpuForKernel_4236E06A(start, size);
 }
 
+#if !SYSMEM_NSKBL
 void sceKernelIcacheInvalidateRange(const void *start, SceSize size)
 {
 	uintptr_t va = (uintptr_t)start, pa;
@@ -251,6 +254,7 @@ void sceKernelIcacheInvalidateRange(const void *start, SceSize size)
 	CpuL2CacheSyncCore();
 	SceCpuForKernel_2E637B1D(start, size);
 }
+#endif
 
 void sceKernelDcacheInvalidateRangeForL1WBWA(const void *start, SceSize size)
 {
@@ -258,11 +262,13 @@ void sceKernelDcacheInvalidateRangeForL1WBWA(const void *start, SceSize size)
 		CACHE_CALLER("sceKernelDcacheInvalidateRangeForL1WBWA"));
 }
 
+#if !SYSMEM_NSKBL
 void sceKernelDcacheInvalidateRange(const void *start, SceSize size)
 {
 	_sceKernelDcacheInvalidateRangeCore(start, size, CACHE_RANGE_SKIP_UNCACHED
 		CACHE_CALLER("sceKernelDcacheInvalidateRange"));
 }
+#endif
 
 /* name unknown: invalidates a range whose physical address the caller knows */
 void CacheInvalidateRangeWithPA(const void *start, uintptr_t pa, SceSize size)
@@ -290,6 +296,7 @@ void CacheInvalidateRangeWithPA(const void *start, uintptr_t pa, SceSize size)
 	SceCpuForKernel_4236E06A(start, size);
 }
 
+#if !SYSMEM_NSKBL
 void sceKernelDcacheCleanRangeForL1WBWA(const void *start, SceSize size)
 {
 	_sceKernelDcacheCleanRangeCore(start, size, CACHE_RANGE_L1_ONLY
@@ -307,6 +314,7 @@ void SceCpuForKernel_A0A70166(void)
 	if (CachePleEnabled())
 		CachePleFlush();
 }
+#endif
 
 #ifdef SYSMEM_TZS
 /* the whole data cache, L1 then L2, cleaned and invalidated */
@@ -320,6 +328,7 @@ void sceKernelDcacheCleanInvalidateAll(void)
 }
 #endif
 
+#if !SYSMEM_NSKBL
 void sceKernelDcacheCleanInvalidateRangeForL1WBWA(const void *start, SceSize size)
 {
 	_sceKernelDcacheCleanInvalidateRangeCore(start, size, CACHE_RANGE_L1_ONLY
@@ -331,12 +340,15 @@ void sceKernelDcacheCleanInvalidateRange(const void *start, SceSize size)
 	_sceKernelDcacheCleanInvalidateRangeCore(start, size, CACHE_RANGE_SKIP_UNCACHED
 		CACHE_CALLER("sceKernelDcacheCleanInvalidateRange"));
 }
+#endif
 
 /* vmaccess.S: the code whose faults are recovered */
 extern const char VmaccessStart[], VmaccessEnd[];
 
+#if !SYSMEM_NSKBL
 void SceCpuForKernel_C32687D0(uintptr_t *start, uintptr_t *end)
 {
 	*start = (uintptr_t)VmaccessStart;
 	*end = (uintptr_t)VmaccessEnd;
 }
+#endif

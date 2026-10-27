@@ -152,6 +152,7 @@ int MemBlockUnmapRaw(MemBlockObject *block, Partition *partition)
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /*
  * name unknown: the info of the used blocks based in [lo, hi) (with flags
  * bit 0, only those within [pa, pa + psize)); *count of them filled, the
@@ -196,6 +197,7 @@ next:
 	*count = filled;
 	return used;
 }
+#endif
 
 /* the CDRAM codes, freed through the CDRAM partitions */
 static inline int MemBlockCodeIsCdram(SceUInt32 code)
@@ -2299,6 +2301,7 @@ Partition *PartitionInit(const char *name, SceUInt8 domain, uintptr_t vbase, Sce
 	return partition;
 }
 
+#if !SYSMEM_NSKBL
 /* waits for the last reference, frees the cached L2 tables and the partition */
 int DeletePartition(Partition *partition)
 {
@@ -2323,6 +2326,7 @@ int DeletePartition(Partition *partition)
 	SceSysmemForKernel_4233C16D(partition);
 	return 0;
 }
+#endif
 
 /* a new virtual page, for virpage.c */
 int PartitionAllocVirPage(Partition *partition, VirPage **vp)
@@ -2330,6 +2334,7 @@ int PartitionAllocVirPage(Partition *partition, VirPage **vp)
 	return PartitionAllocVirPageRaw(partition, vp);
 }
 
+#if !SYSMEM_NSKBL
 /* the L2 page table for the MiB at va, kept (0x8000) even when it empties */
 int PartitionReserveSection(Partition *partition, uintptr_t va)
 {
@@ -2346,6 +2351,7 @@ int PartitionReserveSection(Partition *partition, uintptr_t va)
 	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
 	return ret;
 }
+#endif
 
 /* [va, va + size) in one MiB mapped to pa, its L2 page table made if needed */
 int PartitionMapPages(Partition *partition, SceUInt32 code, uintptr_t va, SceSize size,
@@ -2372,6 +2378,7 @@ int PartitionMapPages(Partition *partition, SceUInt32 code, uintptr_t va, SceSiz
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 int PartitionRemapPages(Partition *partition, MemBlockObject *block, SceUInt32 type,
 			uintptr_t va, SceSize size, uintptr_t pa, SceUInt32 flags)
 {
@@ -2385,6 +2392,7 @@ int PartitionRemapPages(Partition *partition, MemBlockObject *block, SceUInt32 t
 	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->mapLock, intr);
 	return ret;
 }
+#endif
 
 /* [va, va + size) in one MiB unmapped (mode 1: kept reserved) */
 int PartitionUnmapL2PageTable(Partition *partition, uintptr_t va, SceSize size, SceUInt32 mode,
@@ -2465,6 +2473,7 @@ static inline L2PageTable *PartitionGetL2PageTable(Partition *partition, uintptr
 	return (L2PageTable *)AS_L2_SLOT_PTR(slot);
 }
 
+#if !SYSMEM_NSKBL
 /* the memory type va is mapped with, 0 outside the partition */
 int PartitionGetMemoryType(Partition *partition, uintptr_t va)
 {
@@ -2491,6 +2500,7 @@ int PartitionGetMemoryType(Partition *partition, uintptr_t va)
 		return type;
 	}
 }
+#endif
 
 /* name unknown: va's physical address from the page tables */
 int PartitionVAtoPABySW(Partition *partition, uintptr_t va, uintptr_t *pa)
@@ -2509,6 +2519,7 @@ int PartitionVAtoPABySW(Partition *partition, uintptr_t va, uintptr_t *pa)
 	return MMUL2VAtoPABySW(l2pt->table, va, pa);
 }
 
+#if !SYSMEM_NSKBL
 /* whether va is accessible with perm, from the page tables */
 int PartitionIsEqualAccessibleBySW(Partition *partition, SceUInt32 perm, uintptr_t va,
 				   uintptr_t *pa)
@@ -2589,6 +2600,7 @@ int PartitionAllocMemBlockByCommand(Partition *partition, SceKernelAllocMemBlock
 {
 	return PartitionAllocMemBlockByCommandRaw(partition, command);
 }
+#endif
 
 /* name unknown */
 int PartitionAllocMemBlockWithPhyMemPartExt(Partition *partition, void *phyMemPart,
@@ -2711,6 +2723,7 @@ done:
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: an address space's L2 page tables and their slots freed */
 int AddressSpaceContextFreeL2Tables(AddressSpaceContext *context)
 {
@@ -2826,6 +2839,7 @@ int PartitionMapMemBlock(Partition *partition, MemBlockObject *block,
 	}
 	return MemBlockVirPageListMapRaw(block, command, partition, flags);
 }
+#endif
 
 int PartitionUnmapMemBlock(Partition *partition, MemBlockObject *block)
 {
@@ -2867,6 +2881,7 @@ int TinyPartitionFindMemBlock(TinyPartition *tiny, uintptr_t va, SceSize size,
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 int PartitionGetMemBlockInfoByAddr(TinyPartition *tiny, uintptr_t va, SceUInt32 arg, void *info)
 {
 	MemBlockObject *block = NULL, *link;
@@ -2940,6 +2955,7 @@ L2PageTable *SceSysmemForKernel_456ECB54(Partition *partition, uintptr_t va)
 	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
 	return l2pt;
 }
+#endif
 
 /* a partition with a GUID (param->uid, or a new one) */
 SceUID sceKernelCreatePartition(const char *name, SceUInt8 domain, uintptr_t vbase, SceSize size,
@@ -2978,6 +2994,7 @@ SceUID sceKernelCreatePartition(const char *name, SceUInt8 domain, uintptr_t vba
 	return uid;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: a kernel block with extraLow bytes below it */
 SceUID SceSysmemForKernel_40870E74(const char *name, SceSize size, SceSize extraLow)
 {
@@ -3003,6 +3020,7 @@ SceUID SceSysmemForKernel_40870E74(const char *name, SceSize size, SceSize extra
 		return ret;
 	return MemBlockCreateGUID(name, block, opt.attr);
 }
+#endif
 
 SceUID sceKernelAllocPartitionMemBlock(SceUID partUid, const char *name, SceUInt32 type,
 					SceSize size, const SceKernelAllocMemBlockKernelOpt *opt)
@@ -3049,6 +3067,7 @@ alloc:
 	return MemBlockCreateGUID(name, command.block, attr);
 }
 
+#if !SYSMEM_NSKBL
 /* sceKernelGetUIDPartitionClass */
 SceClass *SceSysmemForKernel_5C0FC6BE(void)
 {
@@ -3076,6 +3095,7 @@ int SceSysmemForKernel_FB101B86(SceUID uid, PartitionInfo *info)
 		return SCE_KERNEL_ERROR_ERROR;
 	return PartitionGetInfo(partition, info);
 }
+#endif
 
 /* name unknown: the kernel's partition */
 Partition *PartitionGetKernel(void)
@@ -3098,6 +3118,7 @@ static SceUInt32 s_partitionReserved1;
 #define PARTITION_ASLR_CODE		0x1060d004
 #define PARTITION_MAGIC_VA		0x07f00000
 
+#if !SYSMEM_NSKBL
 /*
  * The classes; then the kernel partition's layout randomised by up to three
  * pad blocks ("SceASLR") and a MiB taken at a fixed address ("SceMagic").
@@ -3168,6 +3189,7 @@ int PartitionModuleStart(const UIDManager *manager)
 	MemBlockSetNameRaw(block, "SceMagic");
 	return ret;
 }
+#endif
 
 #ifndef SYSMEM_TZS	/* the secure world has no user shared partition */
 /* the user shared tiny partition's context: only its memblock heap */

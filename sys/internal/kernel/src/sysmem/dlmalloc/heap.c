@@ -119,6 +119,7 @@ static SceClass *s_heapClass;			/* "SceUIDKernelHeapClass" */
 static HeapHooks s_hooks;
 #endif
 
+#if !SYSMEM_NSKBL
 /* name unknown: SceUIDKernelHeapClass's constructor */
 static int HeapObjectCreate(SceObjectBase *object)
 {
@@ -140,6 +141,7 @@ static int HeapObjectCreate(SceObjectBase *object)
 	heap->blocks = NULL;
 	return 0;
 }
+#endif
 
 /* name unknown: sceKernelCreateHeap's funcUID, a new GUID for the heap */
 static SceUID HeapCreateGUID(KernelHeap *heap, const char *name)
@@ -161,6 +163,7 @@ SceSize HeapFreeBlock(KernelHeap *heap, MemBlockObject *block)
 	return size;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: the heap's memory ranges (its mmapped segments, then its other
    blocks), up to max of them; returns how many there are */
 SceUInt32 HeapGetBlockList(KernelHeap *heap, SceUInt32 max,
@@ -209,6 +212,7 @@ SceUInt32 HeapGetBlockList(KernelHeap *heap, SceUInt32 max,
 	}
 	return count;
 }
+#endif
 
 /* name unknown: the heap object cleared and given back, unless it was the caller's */
 int FreeHeapObject(KernelHeap *heap)
@@ -402,6 +406,7 @@ static inline KernelHeap *GUIDReferHeap(SceUID uid)
 	return heap;
 }
 
+#if !SYSMEM_NSKBL
 /* name kept from the records */
 static int HeapEnableDiableMode(SceUID uid, SceUInt32 mode, int enable)
 {
@@ -424,6 +429,7 @@ static int HeapEnableDiableMode(SceUID uid, SceUInt32 mode, int enable)
 	sceGUIDReleaseObject(uid);
 	return 0;
 }
+#endif
 
 #pragma push_macro("__FILE_NAME__")
 #undef __FILE_NAME__
@@ -476,6 +482,7 @@ int HeapFree(KernelHeap *heap, void *ptr)
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: SceUIDKernelHeapClass's free (HeapFree inlined) */
 __attribute__((flatten)) static int HeapObjectFree(void *object, void *ptr)
 {
@@ -506,6 +513,7 @@ int SceSysmemForKernel_42834422(const HeapHooks *hooks)
 #endif
 	return 0;
 }
+#endif
 
 SceUID sceKernelCreateHeap(const char *name, SceSize size, SceKernelHeapCreateOpt *opt)
 {
@@ -525,6 +533,7 @@ int sceKernelDeleteHeap(SceUID uid)
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 int sceKernelPrintHeapSegmentList(SceUID uid)
 {
 	KernelHeap *heap;
@@ -592,6 +601,7 @@ int SceSysmemForKernel_6E82D5A0(SceUID uid, SceUInt32 mode)
 {
 	return HeapEnableDiableMode(uid, mode, 0);
 }
+#endif
 
 /* name unknown: the heap's lock taken; returns the interrupt state */
 int HeapLock(KernelHeap *heap)
@@ -741,6 +751,7 @@ static void *sceKernelAllocHeapMemoryWithOptionCore(SceUID uid, SceSize size, Sc
 	return ptr;
 }
 
+#if !SYSMEM_NSKBL
 /* the caller passes its own return address for the hook */
 void *SceSysmemForDriver_B415B5A8(SceUID uid, SceSize size, void *opt, const void *caller)
 {
@@ -776,6 +787,7 @@ void *sceKernelAllocHeapMemory(SceUID uid, SceSize size)
 #endif
 	return ptr;
 }
+#endif
 
 /* name kept from the records: a new block vector of capacity slots */
 int AllocVectorBlock(KernelHeap *heap, SceUInt32 capacity)
@@ -797,6 +809,7 @@ int AllocVectorBlock(KernelHeap *heap, SceUInt32 capacity)
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 /* sceKernelReallocHeapMemory (without the hooks or the heap lock) */
 void *SceSysmemForKernel_8EE8B917(SceUID uid, void *ptr, SceSize size)
 {
@@ -806,6 +819,7 @@ void *SceSysmemForKernel_8EE8B917(SceUID uid, void *ptr, SceSize size)
 		return NULL;
 	return mspace_realloc(heap->msp, ptr, size);
 }
+#endif
 
 int sceKernelFreeHeapMemory(SceUID uid, void *ptr)
 {
@@ -847,6 +861,7 @@ static inline void CheckBlock(KernelHeap *heap)
 	}
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: SceUIDKernelHeapClass's destructor */
 static int HeapObjectDestroy(SceObjectBase *object)
 {
@@ -925,6 +940,7 @@ int SceSysmemForKernel_4233C16D(void *ptr)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&heap->lock, intr);
 	return ret;
 }
+#endif
 
 /* a new block in the heap's vector (not for the kernel heap) */
 static inline void AddBlock(KernelHeap *heap, MemBlockObject *block)
@@ -1141,6 +1157,7 @@ int sceKernelDlMunmap(KernelHeap *heap, void *base, SceSize size)
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: dlmalloc's direct mmap, the same as its mmap */
 void *sceKernelDlDirectMmap(KernelHeap *heap, SceSize size)
 {
@@ -1352,6 +1369,7 @@ int HeapModuleStart(const UIDManager *manager)
 	s_uncacheHeap = manager->uncacheHeap;
 	return 0;
 }
+#endif
 
 #if FW_DEBUG
 /* CreateToolHeap: this firmware's link keeps only its record (no code reaches it) */

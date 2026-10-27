@@ -320,6 +320,7 @@ int MemBlockCode2TypeInfo(SceUInt32 code, const MemBlockTypeInfo **info)
 	return SCE_KERNEL_ERROR_ILLEGAL_MEMBLOCK_TYPE;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: a code's type */
 int MemBlockCode2Type(SceUInt32 code, SceUInt32 *type)
 {
@@ -331,3 +332,4 @@ int MemBlockCode2Type(SceUInt32 code, SceUInt32 *type)
 		*type = info->type;
 	return ret;
 }
+#endif

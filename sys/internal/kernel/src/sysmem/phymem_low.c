@@ -53,6 +53,7 @@ static SceUInt32 s_phyMemLowStaticBitmap[16];
 	 (size) <= (pml)->size && !((size) & (pml)->unitMask) && \
 	 (pa) + (size) <= (pml)->size + (pml)->base)
 
+#if !SYSMEM_NSKBL
 /* name unknown: marks [pa, pa + size) used, if all of it is free */
 __attribute__((noinline))
 int PhyMemLowMarkUsed(PhyMemLow *pml, uintptr_t pa, SceSize size)
@@ -116,6 +117,7 @@ out:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&pml->lock, flags);
 	return ret;
 }
+#endif
 
 /* name unknown: marks the units from start through (*lastWord, *lastBit) used */
 __attribute__((noinline))
@@ -139,6 +141,7 @@ void PhyMemLowSetBits(const PhyMemLowCursor *start, const SceUInt32 *lastWord,
 	}
 }
 
+#if !SYSMEM_NSKBL
 int SceSysmemForKernel_2C7B8D65(const PhyMemLowHook *hook)
 {
 #if FW_DEBUG
@@ -146,6 +149,7 @@ int SceSysmemForKernel_2C7B8D65(const PhyMemLowHook *hook)
 #endif
 	return 0;
 }
+#endif
 
 #if FW_DEBUG
 /* prints the bitmap, one line per word */
@@ -289,6 +293,7 @@ out:
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: marks [pa, pa + size) free */
 __attribute__((noinline))
 int PhyMemLowFree(PhyMemLow *pml, uintptr_t pa, SceSize size)
@@ -342,6 +347,7 @@ int PhyMemLowGetFreeSize(PhyMemLow *pml, SceSize *free)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&pml->lock, flags);
 	return 0;
 }
+#endif
 
 /* name unknown: the main allocator */
 int PhyMemLowMainAlloc(SceSize size, SceSize alignment, SceUInt32 flags, uintptr_t *pa,
@@ -350,6 +356,7 @@ int PhyMemLowMainAlloc(SceSize size, SceSize alignment, SceUInt32 flags, uintptr
 	return PhyMemLowAlloc(s_phyMemLowMain, size, alignment, flags, pa, allocated);
 }
 
+#if !SYSMEM_NSKBL
 int PhyMemLowMainMarkUsed(uintptr_t pa, SceSize size)
 {
 	return PhyMemLowMarkUsed(s_phyMemLowMain, pa, size);
@@ -488,3 +495,4 @@ int PhyMemLowStaticInit(void)
 	while (bitmap != &s_phyMemLowStaticBitmap[16]);
 	return 0;
 }
+#endif

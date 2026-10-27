@@ -25,6 +25,7 @@ static volatile uint32_t s_cpuIrqDisabledAt[4];
 static struct CpuLongIrqHandlerRecord *volatile s_cpuLongIrqHandlerRecord;
 #endif
 
+#if !SYSMEM_NSKBL
 void SceCpuForKernel_B331AB16(struct CpuLongIrqHandlerRecord *record)
 {
 #if CPU_DEBUG
@@ -33,6 +34,7 @@ void SceCpuForKernel_B331AB16(struct CpuLongIrqHandlerRecord *record)
 	(void)record;
 #endif
 }
+#endif
 
 #if CPU_DEBUG
 
@@ -264,6 +266,7 @@ void sceKernelSpinlockLowUnlock(volatile SceKernelSpinlock *lock)
 }
 #endif
 
+#if !SYSMEM_NSKBL
 int SceCpuForKernel_050B8EF6(void)
 {
 	writeBpiall(0);
@@ -290,6 +293,7 @@ void SceCpuForKernel_C6426313(void)
 	nop();
 	nop();
 }
+#endif
 
 #if CPU_DEBUG
 void sceKernelSpinlockLowUnlockCpuResumeIntr(volatile SceKernelSpinlock *lock, SceKernelIntrStatus flags)

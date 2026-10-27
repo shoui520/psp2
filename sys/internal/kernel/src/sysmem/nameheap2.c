@@ -16,11 +16,13 @@
 /* both tables, set up by the UID manager; [0] for flag 2, [1] for the rest */
 static NameHeapControl *s_nameHeapControls;
 
+#if !SYSMEM_NSKBL
 /* sceKernelSetNameHeapHook: no hooks in this build */
 int SceSysmemForKernel_6DBDA03B(void *hook)
 {
 	return 0;
 }
+#endif
 
 /* name unknown: a name of table 0 that belongs to a UID entry */
 int NameEntrySetUIDEntry(NameEntry *entry, void *uidEntry)
@@ -100,6 +102,7 @@ static inline int NameEntryGetBucket(const NameEntry *entry, SceUInt32 *bucket)
 	return *bucket < NAME_HEAP_BUCKETS;
 }
 
+#if !SYSMEM_NSKBL
 static inline int NameHeapControlLink(NameHeapControl *control, const char *name, SceUInt32 flags,
 				      NameEntry **out)
 {
@@ -150,6 +153,7 @@ static inline int NameHeapControlLink(NameHeapControl *control, const char *name
 	*out = *link;
 	return 0;
 }
+#endif
 
 static inline int NameHeapControlInsert(NameHeapControl *control, const char *name,
 					SceUInt32 flags, NameEntry **out)
@@ -274,6 +278,7 @@ int NameHeapInsert(const char *name, SceUInt32 flags, NameEntry **out)
 	return NameHeapControlInsert(control, name, flags, out);
 }
 
+#if !SYSMEM_NSKBL
 /* another reference to a name already there */
 int NameHeapLink(const char *name, SceUInt32 flags, NameEntry **out)
 {
@@ -288,6 +293,7 @@ int NameHeapLink(const char *name, SceUInt32 flags, NameEntry **out)
 		SCE_DBG_PRINTF(0xb, 762, "[%s], 0x%08x failed 0x%08x\n", name, flags, ret);
 	return ret;
 }
+#endif
 
 int NameHeapDelete(const char *name, SceUInt32 flags)
 {
@@ -298,6 +304,7 @@ int NameHeapDelete(const char *name, SceUInt32 flags)
 	return NameHeapControlDelete(NameHeapGetControl(flags), name, flags);
 }
 
+#if !SYSMEM_NSKBL
 /* the entry of a name, without a reference */
 int NameHeapFind(const char *name, SceUInt32 flags, NameEntry **out)
 {
@@ -408,3 +415,4 @@ int NameHeapInit(struct UIDManager *manager)
 	s_nameHeapControls = manager->nameHeapControls;
 	return 0;
 }
+#endif

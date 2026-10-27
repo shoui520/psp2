@@ -15,6 +15,7 @@
 #define L1_LINES_AFTER_FIRST(address, size) \
 	((((address) + (size) - 1) >> L1_CACHE_LINE_SHIFT) - ((address) >> L1_CACHE_LINE_SHIFT))
 
+#if !SYSMEM_NSKBL
 int SceCpuForKernel_15A48AB4(void)
 {
 	writeIciallu(0);
@@ -22,6 +23,7 @@ int SceCpuForKernel_15A48AB4(void)
 	isb();
 	return 0;
 }
+#endif
 
 int SceCpuForKernel_803C84BF(void)
 {
@@ -31,6 +33,7 @@ int SceCpuForKernel_803C84BF(void)
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 void SceCpuForKernel_7ED856FE(const void *address)
 {
 	writeDcimvac(address);
@@ -48,6 +51,7 @@ void SceCpuForKernel_597426D2(const void *address)
 	writeDccimvac(address);
 	dsb();
 }
+#endif
 
 void SceCpuForKernel_2E637B1D(const void *start, uint32_t size)
 {
@@ -74,6 +78,7 @@ void SceCpuForKernel_4236E06A(const void *start, uint32_t size)
 	dsb();
 }
 
+#if !SYSMEM_NSKBL
 void SceCpuForKernel_70350360(const void *start, uint32_t size)
 {
 	uint32_t address = (uintptr_t)start;
@@ -144,3 +149,4 @@ void SceCpuForKernel_4BBA5C82(void)
 	} while (setWay < L1_DCACHE_WAY_SIZE);
 	dsb();
 }
+#endif

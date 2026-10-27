@@ -38,6 +38,7 @@ void *HeapAllocLocked(void *heap, SceSize size)
 	return ptr;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: the same for a free */
 int HeapFreeLocked(void *heap, void *ptr)
 {
@@ -47,6 +48,7 @@ int HeapFreeLocked(void *heap, void *ptr)
 	HeapUnlock(heap, intr);
 	return ret;
 }
+#endif
 
 /* name unknown */
 void *UIDManagerGetKernelHeap(void)
@@ -54,9 +56,11 @@ void *UIDManagerGetKernelHeap(void)
 	return g_uidManager->heapDefault;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown */
 int SysmemHeapModuleStart(const UIDManager *manager)
 {
 	HeapModuleStart(manager);
 	return 0;
 }
+#endif

@@ -34,6 +34,7 @@ static inline SceSize SmallPageRest(uintptr_t va)
 	return (~va & 0xfff) + 1;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: the one physical range a VA range lies in, by the MMU */
 int VARangeToPARangeByHW(const SceKernelVARange *range, SceKernelPARange *out)
 {
@@ -60,6 +61,7 @@ int VARangeToPARangeByHW(const SceKernelVARange *range, SceKernelPARange *out)
 	}
 	return 0;
 }
+#endif
 
 /* name unknown: the physical ranges a VA range lies in, by the MMU */
 int VARangeToPAVectorByHW(const SceKernelVARange *range, SceKernelPAVector *vector)
@@ -127,6 +129,7 @@ int VARangeToPAVectorByHW(const SceKernelVARange *range, SceKernelPAVector *vect
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: the one physical range a VA range lies in, from the page tables */
 int VARangeToPARangeBySW(const SceKernelVARange *range, SceKernelPARange *out)
 {
@@ -170,6 +173,7 @@ int VARangeToPARangeBySW(const SceKernelVARange *range, SceKernelPARange *out)
 	}
 	return 0;
 }
+#endif
 
 int VARangeToPAVectorBySWCore(const SceKernelVARange *range, SceKernelPAVector *vector)
 {
@@ -273,6 +277,7 @@ int sceKernelVAtoPA(const void *va, uintptr_t *pa)
 	return SceCpuForKernel_1BD23326(SYSMEM_VA2PA_MODE, (uintptr_t)va, pa);
 }
 
+#if !SYSMEM_NSKBL
 int sceKernelIsAccessibleRange(SceUInt32 mode, const void *addr, SceSize size)
 {
 	if ((uintptr_t)addr + size < (uintptr_t)addr)
@@ -437,6 +442,7 @@ int sceKernelVARangeToPAVectorByHW(const SceKernelVARange *range, SceKernelPAVec
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
 	return VARangeToPAVectorByHW(range, vector);
 }
+#endif
 
 int sceKernelVARangeToPAVector(const SceKernelVARange *range, SceKernelPAVector *vector)
 {
@@ -455,6 +461,7 @@ int sceKernelVARangeToPAVector(const SceKernelVARange *range, SceKernelPAVector 
 	return VARangeToPAVectorByHW(range, vector);
 }
 
+#if !SYSMEM_NSKBL
 /* what memory va's physical address is in */
 int sceKernelGetPhysicalMemoryType(const void *va)
 {
@@ -526,11 +533,13 @@ SceUInt32 SceSysmemForKernel_4E6D8BC3(void)
 		return SYSMEM_ERROR_NOT_THREAD;
 	return (thread->pRegisterContext->userDacr & 0x30) == 0x30 ? 2 : 0;
 }
+#endif
 
 /* the DACR bits of domain 2 (the VM domain): 0x30 manager, 0x10 client */
 #define VM_DOMAIN_MASK			0x30
 #define VM_DOMAIN_CLIENT		0x10
 
+#if !SYSMEM_NSKBL
 /* the current process takes domain 2 as manager (its VM blocks become accessible) */
 int sceKernelOpenVMDomainForUser(void)
 {
@@ -613,6 +622,7 @@ void SceSysmemForKernel_CAB15F74(SceUID pid)
 		storage->vmBlocks = NULL;
 	}
 }
+#endif
 
 /* PLACEHOLDER: name; a second copy of the canary, written once and never read */
 unsigned int s_stackChkGuardCopy = 0x0b8064e5;
@@ -624,6 +634,7 @@ UIDManager *g_uidManager;
 /* the domain access sysmem reads the KBL parameters with */
 #define SYSMEM_BOOT_DACR		0x17450000
 
+#if !SYSMEM_NSKBL
 int SysmemModuleStart(SceSize args, void *argp)
 {
 	const struct SysmemBootContext *context = argp;
@@ -697,6 +708,7 @@ int SysmemModuleStart(SceSize args, void *argp)
 #endif
 	return 0;
 }
+#endif
 
 #ifndef SYSMEM_TZS	/* the secure world has no process manager */
 int sceKernelSysmemModuleStartAfterProcessmgr(void)
@@ -716,11 +728,13 @@ int sceKernelSysmemModuleStartAfterProcessmgr(void)
 }
 #endif
 
+#if !SYSMEM_NSKBL
 int sceKernelSysmemCleaner(void)
 {
 	SCE_DBG_PRINTF(0xb, 1969, "()\n");
 	return 0;
 }
+#endif
 
 /*
  * SceSysmem: copies between kernel and user memory. The user side is touched
@@ -748,6 +762,7 @@ SceSSize VmaccessStrncpyToUser(char *userDst, const char *src, SceSize n);
 SceSSize VmaccessCountFillUser32(const void *userSrc, SceUInt32 value, SceSize size);
 SceSSize VmaccessCountFillUser64(const void *userSrc, SceUInt32 low, SceUInt32 high, SceSize size);
 
+#if !SYSMEM_NSKBL
 /* fault in the kernel buffer's pages */
 static inline void UserCopyTouchKernel(const void *buffer, SceSize size)
 {
@@ -786,6 +801,7 @@ int sceKernelCopyFromUser(void *dst, const void *src, SceSize size)
 	writeDacr(dacr);
 	return ret;
 }
+#endif
 
 /*
  * In pid's address space: interrupts off, its translation context in, the
@@ -807,6 +823,7 @@ int sceKernelCopyFromUser(void *dst, const void *src, SceSize size)
 	sceKernelCpuResumeIntr(flags);					\
 } while (0)
 
+#if !SYSMEM_NSKBL
 int sceKernelCopyFromUserProc(SceUID pid, void *dst, const void *src, SceSize size)
 {
 	int ret;
@@ -1059,3 +1076,4 @@ SceSSize sceKernelStrncpyToUserProc(SceUID pid, char *dst, const char *src, SceS
 	USER_COPY_IN_PROCESS(pid, ret, VmaccessStrncpyToUser(dst, src, n));
 	return ret;
 }
+#endif

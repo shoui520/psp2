@@ -40,6 +40,7 @@ int MemBlockGetVBaseCB(SceObjectBase *object, void *argument)
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: the block's code */
 __attribute__((noinline))
 SceUInt32 MemBlockGetCode(MemBlockObject *block)
@@ -67,6 +68,7 @@ struct Partition *GetMemBlockPartition(MemBlockObject *block)
 	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, flags);
 	return partition;
 }
+#endif
 
 int sceKernelGetMemBlockVBase(SceUID uid, void **base)
 {
@@ -79,6 +81,7 @@ int sceKernelGetMemBlockVBase(SceUID uid, void **base)
 	return GUIDApplyWithClass(uid, s_memBlockClass, MemBlockGetVBaseCB, &args);
 }
 
+#if !SYSMEM_NSKBL
 int SceSysmemForKernel_D44FE44B(SceUID uid, unsigned int *type)
 {
 	GUIDApplyArgs args;
@@ -89,6 +92,7 @@ int SceSysmemForKernel_D44FE44B(SceUID uid, unsigned int *type)
 	args.argument = type;
 	return GUIDApplyWithClass(uid, s_memBlockClass, MemBlockGetTypeCB, &args);
 }
+#endif
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "memblock_obj_module.h"
@@ -242,6 +246,7 @@ SceSize MemBlockGetAllocMapSize(MemBlockObject *block)
 	return size;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: the one physical range behind the block (an error when there are more) */
 int MemBlockGetPhyRange(MemBlockObject *block, uintptr_t range[2])
 {
@@ -295,6 +300,7 @@ int MemBlockGetPhyRangeList(MemBlockObject *block, SceKernelPAVector *vector,
 	}
 	return 0;
 }
+#endif
 
 /* name unknown: the block an allocation mirrors */
 int MemBlockGetMirrorBlock(const SceKernelAllocMemBlockKernelOpt *opt, MemBlockObject **block)
@@ -382,6 +388,7 @@ SceSize MemBlockGetTailType1Size(MemBlockObject *block)
 }
 #endif
 
+#if !SYSMEM_NSKBL
 /* the mapped bytes */
 SceSize MemBlockGetMapSize(MemBlockObject *block)
 {
@@ -404,6 +411,7 @@ SceSize MemBlockGetMapSize(MemBlockObject *block)
 		return whole;
 	}
 }
+#endif
 
 /* the given physical pages behind the block's first virtual page, marked mapped */
 SYSMEM_DEBUG_FUNC int MemBlockAssocPhyPage(MemBlockObject *block, struct PhyPage *page)
@@ -663,6 +671,7 @@ SceUInt16 MemBlockGetLockRef(MemBlockObject *block)
 	return count;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown */
 void MemBlockIncLockRef(MemBlockObject *block)
 {
@@ -697,6 +706,7 @@ SceUID MemBlockGetGUID(MemBlockObject *block)
 	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, flags);
 	return uid;
 }
+#endif
 
 /* name unknown: a list block's physical pages freed (game pages from the game partition) */
 int MemBlockFreePhyPages(MemBlockObject *block, void *phyPart)
@@ -739,6 +749,7 @@ void FreeMemBlockObject(FixedHeap *heap, MemBlockObject *block)
 	FixedHeapFreeObject(heap, block);
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: base info attached to the block of uid */
 int MemBlockSetBaseInfo(SceUID uid, void *info)
 {
@@ -782,6 +793,7 @@ int MemBlockSetBaseInfo(SceUID uid, void *info)
 	sceGUIDReleaseObject(uid);
 	return 0;
 }
+#endif
 
 #pragma push_macro("__FILE_NAME__")
 #undef __FILE_NAME__
@@ -805,6 +817,7 @@ int sceKernelGetMemBlockAllocMapSize(SceUID uid, SceSize *size)
 
 #pragma pop_macro("__FILE_NAME__")
 
+#if !SYSMEM_NSKBL
 /* name unknown: physical pages for the block of uid */
 int SceSysmemForKernel_441E6BE9(SceUID uid, struct PhyPage *page)
 {
@@ -814,6 +827,7 @@ int SceSysmemForKernel_441E6BE9(SceUID uid, struct PhyPage *page)
 		return MemBlockAssocPhyPage(block, page);
 	return SCE_KERNEL_ERROR_ILLEGAL_BLOCK_ID;
 }
+#endif
 
 int sceKernelGetMemBlockMappedBase(SceUID uid, void **base)
 {
@@ -827,6 +841,7 @@ int sceKernelGetMemBlockMappedBase(SceUID uid, void **base)
 	return GUIDApplyWithClass(uid, s_memBlockClass, MemBlockGetMappedBaseCB, &args);
 }
 
+#if !SYSMEM_NSKBL
 int sceKernelGetMemBlockBase(SceUID uid, void **base)
 {
 	return sceKernelGetMemBlockMappedBase(uid, base);
@@ -841,3 +856,4 @@ void MemBlockObjModuleStart(const UIDManager *manager)
 			     (SceClassCallback)MemBlockObjectDestroy);
 	SimpleMemBlockModuleStart(manager);
 }
+#endif

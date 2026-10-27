@@ -41,6 +41,7 @@ int L1PageTableCheckMap(Partition *partition, uintptr_t va, SceSize size, uintpt
 	return MMUIsValidMap(context, va, size, pa);
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: a new L1 page table object */
 void L1PageTableInit(L1PageTable *l1pt, uint32_t *low, uint32_t *high, uintptr_t split,
 		     SceUInt32 reserved)
@@ -51,6 +52,7 @@ void L1PageTableInit(L1PageTable *l1pt, uint32_t *low, uint32_t *high, uintptr_t
 	l1pt->high = high;
 	l1pt->split = split;
 }
+#endif
 
 int L1PageTableMapDirect(L1PageTable *l1pt, SceUInt32 type, SceUInt32 domain, uintptr_t va,
 			 SceSize size, uintptr_t pa)
@@ -73,6 +75,7 @@ int L1PageTableMapDirect(L1PageTable *l1pt, SceUInt32 type, SceUInt32 domain, ui
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown */
 int L1PageTableUnmapDirect(L1PageTable *l1pt, SceUInt32 asid, SceUInt32 domain, uintptr_t va,
 			   SceSize size)
@@ -93,6 +96,7 @@ int L1PageTableUnmapDirect(L1PageTable *l1pt, SceUInt32 asid, SceUInt32 domain, 
 	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l1pt->lock, flags);
 	return ret;
 }
+#endif
 
 /* unit is the block's mapping granularity */
 int L1PageTableMap(L1PageTable *l1pt, MemBlockObject *block, SceUInt32 type,
@@ -222,6 +226,7 @@ int L1PageTableVAtoPABySW(L1PageTable *l1pt, uintptr_t va, uintptr_t *pa)
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown */
 int L1PageTableIsEqualAccessibleBySW(L1PageTable *l1pt, SceUInt32 perm, uintptr_t va,
 				     uintptr_t *pa)
@@ -250,3 +255,4 @@ int L1PageTableModuleStart(void)
 {
 	return 0;
 }
+#endif

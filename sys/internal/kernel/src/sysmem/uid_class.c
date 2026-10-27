@@ -12,12 +12,14 @@
 static UIDHeapClass *s_uidHeapClass;
 static SceClass *s_uidClass;
 
+#if !SYSMEM_NSKBL
 /* name unknown: SceUIDHeapClass's constructor and destructor */
 static int UIDHeapCreate(void *object)
 {
 	((FixedHeap *)object)->owner = NULL;
 	return 0;
 }
+#endif
 
 /* name unknown: the constructor of an address space object (address_space.c's class) */
 int AddressSpaceObjectCreate(void *object)
@@ -48,11 +50,13 @@ int UIDHeapObjectCreate(void *object)
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 static int UIDHeapDestroy(void *object)
 {
 	((FixedHeap *)object)->owner = NULL;
 	return 0;
 }
+#endif
 
 /* name unknown: the destructor of an address space object */
 int AddressSpaceObjectDestroy(void *object)
@@ -61,6 +65,7 @@ int AddressSpaceObjectDestroy(void *object)
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 /* the destructor of a fixed heap */
 int UIDHeapObjectDestroy(void *object)
 {
@@ -83,6 +88,7 @@ int UIDHeapClassInit(UIDHeapClass *cls, const char *name, SceClassCallback creat
 	cls->free = free;
 	return 0;
 }
+#endif
 
 /* an object from a heap, by the heap's class */
 int UIDHeapCallAlloc(void *heap, SceSize size, void **object)
@@ -90,6 +96,7 @@ int UIDHeapCallAlloc(void *heap, SceSize size, void **object)
 	return ((UIDHeap *)heap)->cls->heapClass.alloc(heap, size, object);
 }
 
+#if !SYSMEM_NSKBL
 int UIDHeapCallFree(void *heap, void *object)
 {
 	return ((UIDHeap *)heap)->cls->heapClass.free(heap, object);
@@ -126,6 +133,7 @@ static int UIDClassDestroy(void *object)
 {
 	return 0;
 }
+#endif
 
 /* a class onto the ring, with the next index */
 int RegisterClass(SceClass *cls)
@@ -180,6 +188,7 @@ int RegisterClass(SceClass *cls)
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 int SceSysmemForKernel_7D87F706(const char *name, SceClass **cls)
 {
 	SceClass *head, *c;
@@ -228,6 +237,7 @@ found:
 	*cls = c;
 	return 0;
 }
+#endif
 
 int sceUIDClassInitClass(SceClass *cls, const char *name, void *uidclass, SceSize itemsize,
 			  SceClassCallback create, SceClassCallback destroy)
@@ -256,6 +266,7 @@ int sceUIDClassInitClass(SceClass *cls, const char *name, void *uidclass, SceSiz
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 SceClass *SceSysmemForDriver_85336A1C(void)
 {
 	return s_uidClass;
@@ -305,3 +316,4 @@ int UIDClassInit(UIDManager *manager)
 	cls->destroy_cb = UIDClassDestroy;
 	return 0;
 }
+#endif
