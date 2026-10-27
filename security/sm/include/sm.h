@@ -8,6 +8,10 @@
 #define SM_LOAD_ADDRESS		0x80b000
 
 extern unsigned int __stack_chk_guard;
+extern void (*__ctors_start[])(void);
+extern void (*__ctors_end[])(void);
+extern void (*__dtors_start[])(void);
+extern void (*__dtors_end[])(void);
 
 void call_ctors(void);
 void call_dtors(void);

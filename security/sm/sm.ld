@@ -20,6 +20,7 @@ SECTIONS
 	.dtors : { __dtors_start = .; KEEP(*(.dtors)) __dtors_end = .; }
 	.sdata : { __sdata_start = .; *(.sdata .sdata.*) }
 	__gp = __sdata_start + 0x8000;
+	__sdabase = __gp;
 	.sbss : { *(.sbss .sbss.*) }
 	.bss : { *(.bss .bss.* COMMON) }
 
