@@ -34,6 +34,42 @@ static inline void LowioDsb(void)
 	__asm__ volatile("dsb sy" : : : "memory");
 }
 
+/*
+ * The boot loaders build pervasive.c and pervasive_clock.c too (LOWIO_KBL;
+ * LOWIO_SKBL and LOWIO_NSKBL for what only one of them keeps). They run
+ * alone, before any mapping: the register blocks are at their physical
+ * addresses and nothing takes the lock.
+ */
+#if LOWIO_KBL
+#define MISC_REGS	PERVASIVE_MISC
+#define RESET_REGS	PERVASIVE_RESET
+#define GATE_REGS	PERVASIVE_GATE
+#define BASECLK_REGS	PERVASIVE_BASECLK
+#else
+#define MISC_REGS	s_misc
+#define RESET_REGS	s_reset
+#define GATE_REGS	s_gate
+#define BASECLK_REGS	s_baseClock
+#endif
+
+static inline uint32_t PervasiveLock(void)
+{
+#if LOWIO_KBL
+	return 0;
+#else
+	return sceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+#endif
+}
+
+static inline void PervasiveUnlock(uint32_t state)
+{
+#if LOWIO_KBL
+	(void)state;
+#else
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+#endif
+}
+
 /* pervasive.c, pervasive_clock.c: store a Misc word; returns whether it was set before. */
 static inline __attribute__((always_inline)) uint32_t MiscReplace(
 	volatile uint32_t *reg, uint32_t value)
@@ -68,3 +104,17 @@ int LowioPixelClockInit(void);
 
 /* pervasive_registers.c */
 int PervasiveMiscInit(void);
+
+#if LOWIO_SKBL
+/* pervasive.c's steps of SKBL's power-on sequences (pervasive_clock.c) */
+int CompatRamResetEnable(void);
+int CompatRamResetDisable(void);
+int CompatRamGateEnable(void);
+int CompatRamGateDisable(void);
+int CompatRamIsolationDisable(void);
+int CompatRamBusIdle(void);
+int SonyRegbusResetDisable(void);
+int SonyRegbusGateEnable(void);
+int SonyRegbusIsolationDisable(void);
+int SonyRegbusBusIdle(void);
+#endif

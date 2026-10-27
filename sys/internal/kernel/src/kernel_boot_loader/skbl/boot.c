@@ -27,7 +27,6 @@
 #include <buserror/ssx_firewall_regs.h>
 #include <systimer/timer_regs.h>
 #include "boot.h"
-#include "../pervasive_kbl.h"
 #include "../../sysmem/sysmem_internal.h"
 #include <lowio/pervasive.h>
 #include <sysmem/dipsw.h>
@@ -47,8 +46,6 @@
 /* the other boot loader parts boot() calls */
 int InitializeDebugBuffer(void);
 int KblGetBuildNumber(void);
-int CompatRamPowerOn(void);
-int SonyRegbusPowerOn(void);
 int sceKernelMMUMapSmallPage(uint32_t *l2, uint32_t type, uintptr_t va, uintptr_t offset,
 			     uintptr_t pa);
 uint32_t MMUTtbrValue(uintptr_t l1);

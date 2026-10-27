@@ -1,7 +1,7 @@
 # NSKBL, the non-secure kernel boot loader: segment 3 of kernel_boot_loader.self
 # (ARZL-compressed there), a flat ARM image that runs at 0x51000000.
-# Sony built it from os0 sources: its SceSysmem, SceKernelIntrMgr and SceSdif parts are
-# those modules' own files compiled with SYSMEM_NSKBL, INTRMGR_NSKBL and SDIF_NSKBL, which
+# Sony built it from os0 sources: its SceSysmem, SceKernelIntrMgr, SceSdif and SceLowio parts are
+# those modules' own files compiled with SYSMEM_NSKBL, INTRMGR_NSKBL, SDIF_NSKBL and LOWIO_NSKBL, which
 # leave out what the boot loader does not have (the inlining in Sony's image shows its
 # translation units held only those functions); the sources are listed in NSKBL's link
 # order. The reset vector and exception entries are the original's; boot.c is SKBL's
@@ -9,6 +9,7 @@
 # memset and memcpy are SceSysmem's memset_chk.c and memcpy_chk.c with sysclib's
 # assembly cores.
 set(sysmem_source ../../sysmem)
+set(lowio_source ../../../../driver/src/lowio)
 set(sdif_source ../../../../driver/src/sdif)
 set(intrmgr_source ../../intrmgr)
 set(sysmem_c_sources
@@ -62,8 +63,9 @@ psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	${sdif_source}/card_cmd.c
 	${sdif_source}/sd.c
 	${sdif_source}/adma.c
-	../pervasive_init_kbl.c
-	../pervasive_kbl.c
+	${lowio_source}/lowio_state.c
+	${lowio_source}/pervasive.c
+	${lowio_source}/pervasive_clock.c
 )
 set_source_files_properties(${intrmgr_source}/intrmgr.c PROPERTIES COMPILE_DEFINITIONS INTRMGR_NSKBL)
 # SceSysmem's flags (sysmem/sources.cmake): NULL tests after a dereference dropped,
@@ -76,4 +78,10 @@ set_source_files_properties(${sysmem_source}/serial.c ${sysmem_source}/uid.c PRO
 set_source_files_properties(${sdif_source}/sdif.c ${sdif_source}/cmd_queue.c
 	${sdif_source}/mmc.c ${sdif_source}/card_cmd.c ${sdif_source}/sd.c
 	${sdif_source}/adma.c PROPERTIES COMPILE_DEFINITIONS SDIF_NSKBL)
-set_source_files_properties(../skbl/boot.c PROPERTIES COMPILE_DEFINITIONS "BOOT_NSKBL;SYSMEM_NSKBL")
+set_source_files_properties(../skbl/boot.c PROPERTIES COMPILE_DEFINITIONS "BOOT_NSKBL;SYSMEM_NSKBL;LOWIO_KBL")
+# SceLowio's Pervasive driver, its own files built for the boot loader (LOWIO_KBL: physical
+# registers, no lock; LOWIO_NSKBL: what this image keeps), at the boot loader's -O2: the images keep
+# ResetSet and GateSet whole, where os0's -O3 clones them
+set_source_files_properties(${lowio_source}/lowio_state.c ${lowio_source}/pervasive.c
+	${lowio_source}/pervasive_clock.c PROPERTIES
+	COMPILE_DEFINITIONS "LOWIO_KBL;LOWIO_NSKBL")

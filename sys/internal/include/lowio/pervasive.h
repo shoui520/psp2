@@ -179,3 +179,29 @@ int ScePervasiveForDriver_FBE5AA2F(void);
 int ScePervasiveForDriver_FF4B3CA6(int port);
 /* vitasdk: kscePervasiveDsiResetDisable */
 int ScePervasiveForDriver_FFB43AC2(int port, unsigned int mask);
+
+#if LOWIO_KBL
+/*
+ * The boot loaders' build of pervasive.c and pervasive_clock.c: PervasiveInit is
+ * global there (static in os0), and SKBL keeps the devices only it brings up.
+ */
+int PervasiveInit(void);
+int ArmDebuggerResetDisable(void);
+int DebugPaResetDisable(void);
+int DebugBusResetDisable(void);
+int BootDeviceResetDisable(void);
+int Lpddr2ResetDisable(int port);
+int TimerResetDisable(void);
+int DebugDeviceResetDisable(void);
+int Lpddr2IsolationDisable(int port);
+int ArmGateEnable(uint32_t mask);
+int ArmDebuggerGateEnable(void);
+int DebugPaGateEnable(void);
+int DebugBusGateEnable(void);
+int BootDeviceGateEnable(void);
+int Lpddr2GateEnable(int port);
+int TimerGateEnable(void);
+int DebugDeviceGateEnable(void);
+int CompatRamPowerOn(void);
+int SonyRegbusPowerOn(void);
+#endif

@@ -11,6 +11,7 @@
 # cores. The other C functions are stubs and the TrustZone module archive is not
 # packed yet.
 set(sysmem_source ../../sysmem)
+set(lowio_source ../../../../driver/src/lowio)
 set(intrmgr_source ../../intrmgr/tzs)
 psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
 	reset.S
@@ -32,8 +33,9 @@ psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
 	../../sysmem/copy_forward.S
 	../../sysmem/move.S
 	../../sysmem/fill_core.S
-	../pervasive_init_kbl.c
-	../pervasive_kbl.c
+	${lowio_source}/lowio_state.c
+	${lowio_source}/pervasive.c
+	${lowio_source}/pervasive_clock.c
 	compat_sram.S
 )
 set_source_files_properties(${sysmem_source}/serial.c PROPERTIES
@@ -47,8 +49,12 @@ set_source_files_properties(${intrmgr_source}/intrmgr.c ${intrmgr_source}/usleep
 	COMPILE_DEFINITIONS INTRMGR_SKBL)
 set_source_files_properties(${intrmgr_source}/dmacmgr_tzs.c PROPERTIES
 	COMPILE_DEFINITIONS INTRMGR_SKBL COMPILE_OPTIONS "-Os")
-set_source_files_properties(../pervasive_kbl.c PROPERTIES
-	COMPILE_DEFINITIONS PERVASIVE_SKBL)
-# the boot loader's own files see sysmem's interface as SKBL builds it
+# the boot loader's own files see sysmem's and lowio's interfaces as SKBL builds them
 set_property(SOURCE boot.c kbl_main.c archive_tzs.c APPEND PROPERTY
-	COMPILE_DEFINITIONS SYSMEM_NSKBL SYSMEM_SKBL)
+	COMPILE_DEFINITIONS SYSMEM_NSKBL SYSMEM_SKBL LOWIO_KBL)
+# SceLowio's Pervasive driver, its own files built for the boot loader (LOWIO_KBL: physical
+# registers, no lock; LOWIO_SKBL: what this image keeps), at the boot loader's -O2: the images keep
+# ResetSet and GateSet whole, where os0's -O3 clones them
+set_source_files_properties(${lowio_source}/lowio_state.c ${lowio_source}/pervasive.c
+	${lowio_source}/pervasive_clock.c PROPERTIES
+	COMPILE_DEFINITIONS "LOWIO_KBL;LOWIO_SKBL")
