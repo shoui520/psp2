@@ -7,6 +7,7 @@
 #include "sysmem_internal.h"
 #include <sysmem/uid_guid.h>
 #include <sysmem/dipsw.h>
+#include <sysmem/sysroot.h>
 
 /* the globals are not static: the unconverted part of the file sets them */
 
@@ -28,12 +29,14 @@
 typedef struct PhyPageTable {
 	uintptr_t pbase;		/* of page index 0 */
 	uintptr_t pbaseEnd;		/* 0x04: printed beside pbase */
-	SceUInt32 reserved0;
+	uintptr_t pbaseMin;		/* 0x08: the address of pindexMin */
 	SceUInt32 *entries;		/* 0x0c */
-	SceUInt32 reserved1[2];
+	SceSize entriesSize;		/* 0x10: in bytes */
+	SceUInt32 entryCount;		/* 0x14 */
 	SceUInt32 basePindex;		/* 0x18 */
 	SceUInt32 pindexMin;		/* 0x1c */
 	SceUInt32 pindexMax;		/* 0x20 */
+	struct PhyPageTable *pNext;	/* 0x24: the next range ("no pNext") */
 } PhyPageTable;
 
 typedef struct PhyPageTableMgr {
@@ -72,15 +75,10 @@ typedef struct PhyMemSegment {
 #define SCE_KERNEL_PAGE_VENEZIA_INDEX		8
 #define SCE_KERNEL_PAGE_VIP_INDEX		9
 
-/* the pages of Venezia or the VIP */
-typedef struct PhyMemPageRange {
-	SceUInt32 page;
-	SceSize size;
-} PhyMemPageRange;
-
 static SceClass *s_phyMemPartClass;
-static const PhyMemPageRange *s_phyPageVenezia;
-static const PhyMemPageRange *s_phyPageVip;
+/* the pages of Venezia and the VIP */
+static PhyPage *s_phyPageVenezia;
+static PhyPage *s_phyPageVip;
 
 /* the kernel's page table manager, set by PhyMemModuleStartPhase2 */
 static PhyPageTableMgr *s_phyPageTableMgr;
@@ -185,7 +183,7 @@ int SceSysmemForKernel_021053DD(SceUInt32 visibility, SceUID *vector, SceSize ve
 /* a physical range by index */
 int sceKernelGetPhyMemInfo(SceUInt32 type, SceKernelPhyMemRangeInfo *info)
 {
-	const PhyMemPageRange *pages;
+	const PhyPage *pages;
 	const PhyMemSegment *segment;
 
 	if (info == NULL || info->size != sizeof(*info))
@@ -211,7 +209,7 @@ int sceKernelGetPhyMemInfo(SceUInt32 type, SceKernelPhyMemRangeInfo *info)
 	default:
 		return SCE_KERNEL_ERROR_PHYMEM_ERROR;
 	}
-	info->base = pages->page << 12;
+	info->base = PhyPageGetAddress(pages);
 	info->rangeSize = pages->size;
 	return 0;
 }
@@ -2427,6 +2425,169 @@ int PhyMemPartInitCdram(void)
 	s_phyMemPartCdramBoot.segments = &s_phyMemSegmentCdramBoot;
 	s_phyMemSegmentCdramBoot.phyMemLow = NULL;
 	PhyMemPartInitCdramRaw(&s_phyMemPartCdramBoot, 0x20000000, 0x8000000);
+	return 0;
+}
+#else
+/* name unknown: a page table over [pbase, pbase + psize), its links cleared */
+static inline void PhyPageTableInit(PhyPageTable *table, uintptr_t pbase, uintptr_t pbaseMin,
+				    SceUInt32 *entries)
+{
+	SceUInt32 *entry;
+
+	table->pbase = pbase;
+	table->pbaseEnd = 0x20000000;
+	table->basePindex = pbase >> PHYMEM_PAGE_SHIFT;
+	table->pbaseMin = pbaseMin;
+	table->pindexMin = pbaseMin >> PHYMEM_PAGE_SHIFT;
+	table->pindexMax = (pbase + 0x20000000) >> PHYMEM_PAGE_SHIFT;
+	table->entries = entries;
+	for (entry = entries; entry != entries + 0x20000; entry++)
+		*entry &= ~PHYPAGE_LINK_MASK;
+	table->entriesSize = 0x20000 * sizeof(SceUInt32);
+	table->entryCount = 0x20000;
+}
+
+/* name unknown: a partition from the sysroot, empty */
+static inline PhyMemPart *PhyMemPartBootCreate(PhyMemPart **out, const char *name,
+					       SceUInt32 type)
+{
+	PhyMemPart *part = sceKernelSysrootAlloc(sizeof(PhyMemPart));
+
+	*out = part;
+	part->segments = sceKernelSysrootAlloc(sizeof(PhyMemSegment));
+	part = *out;
+	strncpy(part->name, name, sizeof(part->name) - 1);
+	part->name[sizeof(part->name) - 1] = '\0';
+	part->type = type;
+	return part;
+}
+
+/* the page tables, the kernel's and tool's partitions, and the pages the boot loaders used */
+static void PhyMemStartCore0(SceKernelBootParam *pBoot, UIDManager *manager)
+{
+	PhyPageTableMgr *mgr;
+	PhyPageTable *table, *high;
+	PhyMemPart *part;
+	SceUInt32 model;
+	uintptr_t pa;
+	SceSize size, allocated;
+	PhyPage *page;
+
+	mgr = sceKernelSysrootAlloc(sizeof(PhyPageTableMgr));
+	manager->phyPageTableMgr = mgr;
+	s_phyPageTableMgr = mgr;
+	table = sceKernelSysrootAlloc(sizeof(PhyPageTable));
+	mgr->tables[0] = table;
+	PhyPageTableInit(table, 0x40000000, manager->memory[0].pbase,
+			 (SceUInt32 *)pBoot->phypage.vbase);
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
+		high = sceKernelSysrootAlloc(sizeof(PhyPageTable));
+		table->pNext = high;
+		PhyPageTableInit(high, 0x60000000, 0x20000000,
+				 (SceUInt32 *)pBoot->phypageHigh.vbase);
+		mgr->tables[1] = high;
+	} else {
+		table->pNext = NULL;
+		mgr->tables[1] = NULL;
+	}
+
+	part = PhyMemPartBootCreate(&s_phyPartKernel, "ScePhyMemPartKD", 0x1001a);
+	manager->pPhyMemPartKD = part;
+	pBoot->pPhyMemPartKD = part;
+	part->cpuCache = sceKernelSysrootAlloc(0x80);
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
+		part = PhyMemPartBootCreate(&s_phyPartTool, "ScePhyMemPartTool", 0x10002);
+		manager->phyPartTool = part;
+		pBoot->pPhyMemPartTool = part;
+		part->cpuCache = sceKernelSysrootAlloc(0x80);
+	} else {
+		s_phyPartTool = NULL;
+	}
+
+	/* the kernel's partition: 36 MiB of LPDDR2 after the boot loader's, 32 on the 0x201xx models */
+	model = SceSysrootForDriver_4D98B15B();
+	switch (model) {
+	case 0x10100:
+	case 0x10150:
+	case 0x10200:
+	case 0x10220:
+		size = 0x2400000;
+		break;
+	case 0x20100:
+	case 0x20101:
+	case 0x20110:
+		size = 0x2000000;
+		break;
+	default:
+		size = 0x2400000;
+		SCE_DBG_PRINTF(0xb, 5633, "Unknown model 0x%08x\n", model);
+		break;
+	}
+	PhyMemLowMainAlloc(size, 0, 1, &pa, &allocated);
+	if (manager->memory[0].pbase != pa)
+		SCE_PANIC(5645);
+	PhyMemPartInitWithSegmentRaw(s_phyPartKernel, mgr, pa, size);
+
+	/* Venezia's and the VIP's pages, above a temporary page that keeps them off the bottom */
+	if (PhyMemPartAllocPhyPage(s_phyPartKernel, 0x600000, 0x10, &page) < 0)
+		SCE_PANIC(5656);
+	SCE_DBG_PRINTF(0xb, 5659, "TMP(FIX):0x%08x+0x%08x\n", PhyPageGetAddress(page), page->size);
+	PhyMemPartAllocPhyPage(s_phyPartKernel, 0x400000, 0x10, &s_phyPageVenezia);
+	manager->phyPageVenezia = s_phyPageVenezia;
+	PhyMemPartAllocPhyPage(s_phyPartKernel, 0x100000, 0x10, &s_phyPageVip);
+	manager->phyPageVip = s_phyPageVip;
+	PhyMemPartFreePhyPage(s_phyPartKernel, page);
+
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
+		pa = 0x70000000;
+		PhyMemLowMainMarkUsed(pa, 0x8000000);
+		PhyMemPartInitWithSegmentRaw(s_phyPartTool, mgr, pa, 0x8000000);
+	}
+
+	/* the pages under the boot loaders' mappings */
+	if (PhyMemPartAllocPhyPage(s_phyPartKernel, pBoot->reset.psize, 0x10, &pBoot->pPageReset) < 0)
+		SCE_PANIC(5718);
+	manager->phyPageReset = pBoot->pPageReset;
+	if (PhyMemPartAllocPhyPage(s_phyPartKernel, pBoot->l2PageTable000.psize, 0x10,
+				   &pBoot->pPageL2PageTable000) < 0)
+		SCE_PANIC(5737);
+	if (PhyMemPartAllocPhyPage(s_phyPartKernel, pBoot->sysroot.psize, 0x10,
+				   &pBoot->pPageSysroot) < 0)
+		SCE_PANIC(5749);
+	if (PhyMemPartAllocPhyPage(s_phyPartKernel, pBoot->ttbr0.psize, 0x10, &pBoot->pPageTTBR0) < 0)
+		SCE_PANIC(5763);
+	if (PhyMemPartAllocPhyPage(s_phyPartKernel, pBoot->ttbr1.psize, 0x10, &pBoot->pPageTTBR1) < 0)
+		SCE_PANIC(5777);
+	if (PhyMemPartAllocPhyPage(s_phyPartKernel, pBoot->l2Vector.psize, 0x10,
+				   &pBoot->pPageL2Vector) < 0)
+		SCE_PANIC(5792);
+	if (PhyMemPartAllocPhyPage(s_phyPartKernel, pBoot->phypage.psize, 0x10,
+				   &pBoot->pPagePhypage) < 0)
+		SCE_PANIC(5807);
+	if (pBoot->phypage.pbase != PhyPageGetAddress(pBoot->pPagePhypage))
+		SCE_DBG_ASSERT_FAIL(5813);
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
+		if (PhyMemPartAllocPhyPage(s_phyPartTool, pBoot->phypageHigh.psize, 0x10,
+					   &pBoot->pPagePhypageHigh) < 0)
+			SCE_PANIC(5828);
+		if (pBoot->phypageHigh.pbase != PhyPageGetAddress(pBoot->pPagePhypageHigh)) {
+			SCE_DBG_PRINTF(0xb, 5834, "pBoot->phypageHigh.pbase=0x%08x\n",
+				       pBoot->phypageHigh.pbase);
+			SCE_DBG_PRINTF(0xb, 5836, "PhyPageGetAddress(pBoot->pPagePhypageHigh)=0x%08x\n",
+				       PhyPageGetAddress(pBoot->pPagePhypageHigh));
+			SCE_DBG_ASSERT_FAIL(5837);
+		}
+	} else {
+		pBoot->pPagePhypageHigh = NULL;
+	}
+}
+
+int PhyMemStart(SceKernelBootParam *pBoot, UIDManager *manager)
+{
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0)
+		PhyMemStartCore0(pBoot, manager);
+	sceKernelSysrootCorelockUnlock();
 	return 0;
 }
 #endif

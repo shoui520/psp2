@@ -219,7 +219,7 @@ int L2PageTableStart(struct SceKernelBootParam *param, UIDManager *manager)
 			return ret;
 		l2pt->vbase = param->l2PageTable000VBase;
 		l2pt->table = param->pL2PageTable000;
-		l2pt->tablePa = param->pPageL2PageTable000->info << 12;
+		l2pt->tablePa = PhyPageGetAddress(param->pPageL2PageTable000);
 		l2pt->flags |= L2PT_FLAG_KEPT;
 		param->pL2PageTableObject000 = l2pt;
 		ret = AllocBootL2PageTableObject(&l2pt);
@@ -227,7 +227,7 @@ int L2PageTableStart(struct SceKernelBootParam *param, UIDManager *manager)
 			return ret;
 		l2pt->vbase = param->phypage.vbase;
 		l2pt->table = param->pL2PageTable000 + 0x100;
-		l2pt->tablePa = (param->pPageL2PageTable000->info << 12) + 0x400;
+		l2pt->tablePa = PhyPageGetAddress(param->pPageL2PageTable000) + 0x400;
 		l2pt->flags |= L2PT_FLAG_KEPT;
 		param->pL2PageTableObjectPhypage = l2pt;
 	}

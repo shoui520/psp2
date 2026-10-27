@@ -5,6 +5,8 @@
  * and a static one; the kernel picks them by memory type code.
  */
 
+#include <sysmem/dipsw.h>
+#include <sysmem/sysroot.h>
 #include "sysmem_internal.h"
 
 /* the memory type codes the exports take */
@@ -17,6 +19,7 @@
 #define PHYMEM_LOW_ALLOC_PARTIAL	0x02	/* a shorter run will do */
 
 #define PHYMEM_LOW_UNIT_SHIFT		18
+#define PHYMEM_LOW_BOOT_UNIT_SHIFT	20	/* the boot loader's allocators */
 
 _Static_assert(sizeof(PhyMemLow) == 0x20, "PhyMemLow size");
 
@@ -45,17 +48,25 @@ static const PhyMemLowHook *s_phyMemLowHook;
 #endif
 static PhyMemLow *s_phyMemLowMain;
 static PhyMemLow *s_phyMemLowSub;
+#if SYSMEM_NSKBL
+static SceUInt32 *s_phyMemLowSubBitmap;
+static SceUInt32 *s_phyMemLowMainBitmap;
+#else
 static PhyMemLow s_phyMemLowStatic;
 static SceUInt32 s_phyMemLowStaticBitmap[16];
+#endif
 
 #define PhyMemLowRangeValid(pml, pa, size) \
 	((pa) >= (pml)->base && !((pa) & (pml)->unitMask) && \
 	 (size) <= (pml)->size && !((size) & (pml)->unitMask) && \
 	 (pa) + (size) <= (pml)->size + (pml)->base)
 
-#if !SYSMEM_NSKBL
 /* name unknown: marks [pa, pa + size) used, if all of it is free */
+#if SYSMEM_NSKBL
+static	/* one caller, which GCC inlines it into, as in Sony's NSKBL */
+#else
 __attribute__((noinline))
+#endif
 int PhyMemLowMarkUsed(PhyMemLow *pml, uintptr_t pa, SceSize size)
 {
 	SceUInt32 *start, *unit, first, word, index, bit, b, count, n;
@@ -117,7 +128,6 @@ out:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&pml->lock, flags);
 	return ret;
 }
-#endif
 
 /* name unknown: marks the units from start through (*lastWord, *lastBit) used */
 __attribute__((noinline))
@@ -356,12 +366,12 @@ int PhyMemLowMainAlloc(SceSize size, SceSize alignment, SceUInt32 flags, uintptr
 	return PhyMemLowAlloc(s_phyMemLowMain, size, alignment, flags, pa, allocated);
 }
 
-#if !SYSMEM_NSKBL
 int PhyMemLowMainMarkUsed(uintptr_t pa, SceSize size)
 {
 	return PhyMemLowMarkUsed(s_phyMemLowMain, pa, size);
 }
 
+#if !SYSMEM_NSKBL
 int PhyMemLowMainFree(uintptr_t pa, SceSize size)
 {
 	return PhyMemLowFree(s_phyMemLowMain, pa, size);
@@ -493,6 +503,58 @@ int PhyMemLowStaticInit(void)
 	do
 		*bitmap++ = 0;
 	while (bitmap != &s_phyMemLowStaticBitmap[16]);
+	return 0;
+}
+#else
+/* name unknown: the main and sub allocators in 1 MiB units, made by core 0 */
+int PhyMemLowStart(UIDManager *manager)
+{
+	PhyMemLow *pml;
+	SceUInt32 *bitmap;
+	SceUInt32 i;
+	SceSize size, allocated;
+	uintptr_t pa;
+
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0) {
+		s_phyMemLowMain = sceKernelSysrootAlloc(sizeof(PhyMemLow));
+		s_phyMemLowMainBitmap = sceKernelSysrootAlloc(32 * sizeof(SceUInt32));
+		manager->phyMemLowMain = s_phyMemLowMain;
+		if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART))
+			size = 0x40000000;
+		else
+			size = 0x20000000;
+		bitmap = s_phyMemLowMainBitmap;
+		pml = s_phyMemLowMain;
+		pml->size = size;
+		pml->wordCount = size >> (PHYMEM_LOW_BOOT_UNIT_SHIFT + 5);
+		pml->lock = 0;
+		pml->bitmap = bitmap;
+		pml->base = 0x40000000;
+		pml->unitSize = 1 << PHYMEM_LOW_BOOT_UNIT_SHIFT;
+		pml->unitShift = PHYMEM_LOW_BOOT_UNIT_SHIFT;
+		pml->unitMask = (1 << PHYMEM_LOW_BOOT_UNIT_SHIFT) - 1;
+		for (i = 0; i < pml->wordCount; i++)
+			bitmap[i] = 0;
+		s_phyMemLowSub = sceKernelSysrootAlloc(sizeof(PhyMemLow));
+		s_phyMemLowSubBitmap = sceKernelSysrootAlloc(16 * sizeof(SceUInt32));
+		manager->phyMemLowSub = s_phyMemLowSub;
+		bitmap = s_phyMemLowSubBitmap;
+		pml = s_phyMemLowSub;
+		pml->bitmap = bitmap;
+		pml->base = 0x80000000;
+		pml->size = 0x20000000;
+		pml->unitSize = 1 << PHYMEM_LOW_BOOT_UNIT_SHIFT;
+		pml->unitShift = PHYMEM_LOW_BOOT_UNIT_SHIFT;
+		pml->unitMask = (1 << PHYMEM_LOW_BOOT_UNIT_SHIFT) - 1;
+		pml->wordCount = 16;
+		pml->lock = 0;
+		for (i = 0; i < pml->wordCount; i++)
+			bitmap[i] = 0;
+		/* the boot loader's own first 2 MiB */
+		PhyMemLowAlloc(s_phyMemLowMain, 0x200000, 0, PHYMEM_LOW_ALLOC_FLAG_1, &pa, &allocated);
+	}
+	sceKernelSysrootCorelockUnlock();
 	return 0;
 }
 #endif

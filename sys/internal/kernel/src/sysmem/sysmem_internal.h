@@ -20,6 +20,7 @@
 #include <threadmgr/threadcb.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/address_space.h>
+#include <kernel_boot_loader/kernel_boot_param.h>
 
 /*
  * A function of one file that Sony's debug build leaves out of line and its release builds
@@ -613,13 +614,14 @@ typedef struct UIDManager {
 	struct Partition *kernelPartition;	/* 0x40: simple memblocks and L2 tables live here */
 	void *heapDefault;			/* 0x44 */
 	ObjectHeap *kernelObjectHeap;		/* 0x48: the kernel's object heap */
-	SceUInt8 reserved1[0x70 - 0x4c];
+	SceUInt32 numMemory;			/* 0x4c: the boot param's memory ranges */
+	SceKernelBootMemory memory[SCE_KERNEL_BOOT_MEMORY_MAX];	/* 0x50 */
 	L1PageTable kernelL1PageTable;		/* 0x70: the boot loader's TTBR0/TTBR1 tables */
 	struct PhyMemLow *phyMemLowMain;	/* 0x84 */
 	struct PhyMemLow *phyMemLowSub;		/* 0x88 */
-	void *phyPageReset;			/* 0x8c */
-	const struct PhyMemPageRange *phyPageVenezia;	/* 0x90 */
-	const struct PhyMemPageRange *phyPageVip;	/* 0x94 */
+	struct PhyPage *phyPageReset;		/* 0x8c */
+	struct PhyPage *phyPageVenezia;		/* 0x90 */
+	struct PhyPage *phyPageVip;		/* 0x94 */
 	SceClass *uidClass;			/* 0x98: "SceUIDClass", the root */
 	SceClass *dlinkClass;			/* 0x9c: "SceUIDDLinkClass" */
 	UIDHeapClass *uidHeapClass;		/* 0xa0: "SceUIDHeapClass" */
@@ -777,6 +779,7 @@ int L1PageTableGetMemoryType(L1PageTable *l1pt, uintptr_t va);
 int L1PageTableModuleStart(void);
 int L1PageTableStart(struct SceKernelBootParam *param, struct UIDManager *manager);
 int L1PageTableStartFirst(void);
+int PhyMemLowStart(struct UIDManager *manager);
 int L2PageTableStart(struct SceKernelBootParam *param, struct UIDManager *manager);
 int BlockStart(void);
 int SimpleMemBlockStartPhase2(void);
@@ -935,6 +938,9 @@ typedef struct PhyPage {
 	struct PhyPage *next;
 } PhyPage;
 
+/* the physical address of the page's first byte */
+#define PhyPageGetAddress(_page)	((_page)->info << 12)
+
 #define PHYMEM_BUDDY_ORDERS		9	/* 4 KiB .. 1 MiB */
 
 /* the per-CPU cache of single pages */
@@ -992,6 +998,7 @@ int PhyMemPartGetInfoCore(PhyMemPart *part, SceKernelPhyMemPartInfoCore *info);
 const char *PhyMemPartGetName(PhyMemPart *part);
 SceUInt32 PhyMemPartTestAttr(PhyMemPart *part, SceUInt32 mask);
 int PhyMemModuleStart(const UIDManager *manager);
+int PhyMemStart(struct SceKernelBootParam *param, UIDManager *manager);
 int PhyMemModuleStartPhase2(const UIDManager *manager);
 int PhyMemPartInitCdram(void);
 int PhyMemCdramAlloc(SceSize size, SceSize alignment, uintptr_t *pa);
