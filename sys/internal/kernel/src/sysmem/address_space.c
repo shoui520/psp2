@@ -491,7 +491,6 @@ int AddressSpaceSwitchContext(AddressSpaceObject *as)
 	return ret;
 }
 
-#if !SYSMEM_NSKBL
 /* name unknown: memory of another address space set, from inside it with every domain open */
 int AddressSpaceMemset(AddressSpaceObject *as, void *dst, int c, SceSize size)
 {
@@ -510,6 +509,7 @@ int AddressSpaceMemset(AddressSpaceObject *as, void *dst, int c, SceSize size)
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: whether [va, va + size) is accessible with mode, inside the address space */
 int AddressSpaceCheckAccessibleRange(AddressSpaceObject *as, uint32_t mode, uintptr_t va,
 				     SceSize size)
@@ -540,6 +540,7 @@ int AddressSpaceVAtoPAWithMode(AddressSpaceObject *as, uint32_t mode, uintptr_t 
 	AddressSpaceRelease(as);
 	return ret;
 }
+#endif
 
 /* name unknown: va's physical address from the page tables */
 int AddressSpaceVAtoPABySW(AddressSpaceObject *as, uintptr_t va, uintptr_t *pa)
@@ -562,6 +563,7 @@ out:
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: the memory type va is mapped with */
 int AddressSpaceGetMemoryType(AddressSpaceObject *as, uintptr_t va)
 {
@@ -762,6 +764,7 @@ struct Partition *SceSysmemForKernel_1F84FE44(AddressSpaceObject *as, SceUInt32 
 {
 	return AddressSpaceGetPartitionByIndex(as, index);
 }
+#endif
 
 /* name unknown: the address space's translation context */
 MMUContext *AddressSpaceGetMMUContext(AddressSpaceObject *as)
@@ -774,6 +777,7 @@ MMUContext *AddressSpaceGetMMUContext(AddressSpaceObject *as)
 	return context;
 }
 
+#if !SYSMEM_NSKBL
 /* the heaps the address space's memblocks, virtual pages and L2 tables come from */
 int sceKernelAddressSpaceCtrSetObjectHeap(AddressSpaceObject *as, ObjectHeap *heap)
 {
@@ -1435,12 +1439,13 @@ int SceSysmemForKernel_47C55DCC(SceUInt32 index, void **part)
 						part);
 }
 
+#endif
+
 /* sceKernelGetKernelAddressSpace */
 AddressSpaceObject *sceKernelGetKernelAddressSpace(void)
 {
 	return s_kernelAddressSpace;
 }
-#endif
 
 #ifdef SYSMEM_TZS
 /* name unknown: the kernel address space's lower L1 table */

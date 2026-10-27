@@ -2739,13 +2739,13 @@ int PartitionGetMemBlockPAVector(Partition *partition, MemBlockObject *block,
 	}
 	return 0;
 }
+#endif
 
 /* name unknown: by command, for the other files */
 int PartitionAllocMemBlockByCommand(Partition *partition, SceKernelAllocMemBlockCommand *command)
 {
 	return PartitionAllocMemBlockByCommandRaw(partition, command);
 }
-#endif
 
 /* name unknown */
 int PartitionAllocMemBlockWithPhyMemPartExt(Partition *partition, void *phyMemPart,

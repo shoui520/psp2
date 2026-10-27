@@ -1162,12 +1162,13 @@ int sceKernelDlMunmap(KernelHeap *heap, void *base, SceSize size)
 	return 0;
 }
 
-#if !SYSMEM_NSKBL
 /* name unknown: dlmalloc's direct mmap, the same as its mmap */
 void *sceKernelDlDirectMmap(KernelHeap *heap, SceSize size)
 {
 	return sceKernelDlMmap(heap, size);
 }
+
+#if !SYSMEM_NSKBL
 
 int sceKernelGetHeapInfoByPtr(void *object, void *pInfo)
 {
