@@ -161,6 +161,60 @@ _Static_assert(sizeof(SdifPortState) == 0xc0, "SdifPortState");
 _Static_assert(sizeof(SdifContextGlobal) == 0x24c0, "SdifContextGlobal");
 _Static_assert(offsetof(SdifPortState, lock) == 0x94, "SdifPortState.lock");
 
+/*
+ * The boot loader (SDIF_NSKBL) drives the ports with interrupts masked on one thread: every
+ * port polls, the port lock is only a barrier pair, and a synchronous command completes inside
+ * sdifPrepareSyncCommand, which keeps the send and the wait to itself.
+ */
+#if SDIF_NSKBL
+#include <sysmem/barrier.h>
+#define SDIF_SYNC_STATIC static
+/* its callers call sdifPrepareSyncCommand (NSKBL 0x51025eb4, and a clone of it for a NULL
+   secondary command at 0x51025d04); os0's callers have it inlined */
+#define SDIF_PREPARE_INLINE
+/* no syscon driver: the ports are clocked as for a syscon before version 0x80 */
+#define sdifSysconVersion() 0U
+
+static inline int sdifIsPolling(const SdifPortState *port)
+{
+	(void)port;
+	return 1;
+}
+
+static inline int sdifSpinLock(SceKernelSpinlock *lock)
+{
+	(void)lock;
+	dmb();
+	return 0;
+}
+
+static inline void sdifSpinUnlock(SceKernelSpinlock *lock, int intrState)
+{
+	(void)lock;
+	(void)intrState;
+	dsb();
+}
+#else
+#define SDIF_SYNC_STATIC
+#define SDIF_PREPARE_INLINE inline
+#define sdifSysconVersion() ((uint32_t)SceSysconForDriver_CBD6D8BC())
+
+static inline int sdifIsPolling(const SdifPortState *port)
+{
+	return port->polling;
+}
+
+static inline int sdifSpinLock(SceKernelSpinlock *lock)
+{
+	return sceKernelSpinlockLowLockCpuSuspendIntr(lock);
+}
+
+static inline void sdifSpinUnlock(SceKernelSpinlock *lock, int intrState)
+{
+	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+}
+#endif
+
 extern SdifContextGlobal gSdifContexts[3];
 int sdifEnableFunctionInterrupt(SdifContextGlobal *context, int function);
 int sdifDisableFunctionInterrupt(SdifContextGlobal *context, int function);
@@ -187,7 +241,9 @@ void sdifDispatchFunctionInterrupt(SdifContextGlobal *context);
 void sdifCommandQueueInitialize(SdifCommandQueue *queue);
 void sdifCommandQueuePush(SdifCommandQueue *queue, SdifCommand *command);
 void sceSdifDumpAdmaInfo(SdifCommand *command);
+#if !SDIF_NSKBL
 int sceSdifWaitCmdCompletionCore(SdifCommand *command);
+#endif
 SdifCommand *sdifCommandQueueRemove(SdifCommandQueue *queue, unsigned int index);
 SdifCommand *sdifCommandQueueFind(SdifCommandQueue *queue, unsigned int index);
 void sdifCommandQueuePushFront(SdifCommandQueue *queue, SdifCommand *command);

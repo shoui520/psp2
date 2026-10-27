@@ -22,6 +22,7 @@ void sdifCommandQueuePush(SdifCommandQueue *queue, SdifCommand *command)
 	}
 }
 
+#if !SDIF_NSKBL
 void sdifCommandQueuePushFront(SdifCommandQueue *queue, SdifCommand *command)
 {
 	SdifCommand *head = queue->head;
@@ -32,6 +33,7 @@ void sdifCommandQueuePushFront(SdifCommandQueue *queue, SdifCommand *command)
 	if (!tail)
 		queue->tail = command;
 }
+#endif
 
 SdifCommand *sdifCommandQueuePop(SdifCommandQueue *queue)
 {
@@ -47,6 +49,7 @@ SdifCommand *sdifCommandQueuePop(SdifCommandQueue *queue)
 	return command;
 }
 
+#if !SDIF_NSKBL
 SdifCommand *sdifCommandQueueRemove(SdifCommandQueue *queue, unsigned int index)
 {
 	SdifCommand *command = queue->head;
@@ -89,6 +92,7 @@ SdifCommand *sdifCommandQueueFind(SdifCommandQueue *queue, unsigned int index)
 	}
 	return command;
 }
+#endif
 
 void _sceSdifCmdQueueDump(SdifCommandQueue *queue)
 {

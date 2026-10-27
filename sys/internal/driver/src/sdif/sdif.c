@@ -61,6 +61,7 @@ static const uint32_t sdifRegisterAddresses[SDIF_PORTS] = {
 SdifGeneralState gSdifState = { 0 };
 SdifContextGlobal gSdifContexts[3] __attribute__((aligned(64)));
 
+#if !SDIF_NSKBL
 int sdifEnableSubIntr(int interrupt, int subInterrupt)
 {
 	SdifContextGlobal *context = &gSdifContexts[interrupt - 220];
@@ -69,11 +70,11 @@ int sdifEnableSubIntr(int interrupt, int subInterrupt)
 	uint32_t mask;
 	int result;
 
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&context->port.lock);
+	intrState = sdifSpinLock(&context->port.lock);
 	if ((unsigned int)(subInterrupt - 2) <= 6) {
 		result = sdifEnableFunctionInterrupt(context, subInterrupt - 1);
 		if (result != 0) {
-			sceKernelSpinlockLowUnlockCpuResumeIntr(&context->port.lock,
+			sdifSpinUnlock(&context->port.lock,
 							intrState);
 			return result;
 		}
@@ -88,13 +89,14 @@ int sdifEnableSubIntr(int interrupt, int subInterrupt)
 		registers->normalSignalEnable = enable | 0x100;
 	}
 	__asm__ volatile("dsb sy" : : : "memory");
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&context->port.lock, intrState);
+	sdifSpinUnlock(&context->port.lock, intrState);
 	return 0;
 }
+#endif
 
 void sdifCompleteSyncCommand(SdifCommand *command)
 {
-	if (command->context->port.polling == 0) {
+	if (!sdifIsPolling(&command->context->port)) {
 		if (command->errorCode != 0) {
 			sceKernelSetEventFlag(command->eventFlag, 16);
 			return;
@@ -103,6 +105,7 @@ void sdifCompleteSyncCommand(SdifCommand *command)
 	}
 }
 
+#if !SDIF_NSKBL
 int sdifDisableSubIntr(int interrupt, int subInterrupt)
 {
 	SdifContextGlobal *context = &gSdifContexts[interrupt - 220];
@@ -110,11 +113,11 @@ int sdifDisableSubIntr(int interrupt, int subInterrupt)
 	uint32_t mask;
 	int result;
 
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&context->port.lock);
+	intrState = sdifSpinLock(&context->port.lock);
 	if ((unsigned int)(subInterrupt - 2) <= 6) {
 		result = sdifDisableFunctionInterrupt(context, subInterrupt - 1);
 		if (result != 0) {
-			sceKernelSpinlockLowUnlockCpuResumeIntr(&context->port.lock,
+			sdifSpinUnlock(&context->port.lock,
 							intrState);
 			return result;
 		}
@@ -126,9 +129,10 @@ int sdifDisableSubIntr(int interrupt, int subInterrupt)
 		context->port.registers->normalSignalEnable &= ~0x100;
 	}
 	__asm__ volatile("dsb sy" : : : "memory");
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&context->port.lock, intrState);
+	sdifSpinUnlock(&context->port.lock, intrState);
 	return 0;
 }
+#endif
 
 int _sceSdifSendCmdCore(SdifContextGlobal *context, SdifCommand *command,
 		       int notify)
@@ -337,6 +341,7 @@ nextCommand:
 	}
 }
 
+#if !SDIF_NSKBL
 int SceSdifForDriver_E5E5F42E(void)
 {
 	SdifContextGlobal *context;
@@ -351,7 +356,7 @@ int SceSdifForDriver_E5E5F42E(void)
 		context = &gSdifContexts[0];
 		do {
 			port = &context->port;
-			intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+			intrState = sdifSpinLock(&port->lock);
 			registers = port->registers;
 			__builtin_prefetch(&context[2].port.registers);
 			__builtin_prefetch(&context[2].port.part);
@@ -362,7 +367,7 @@ int SceSdifForDriver_E5E5F42E(void)
 			port->part = NULL;
 			port->removedDeviceType = 0;
 			port->removedPart = NULL;
-			sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+			sdifSpinUnlock(&port->lock, intrState);
 			interrupt = port->index + 220;
 			sceKernelDisableIntr(interrupt);
 			sceKernelReleaseIntrHandler(interrupt);
@@ -378,6 +383,7 @@ int SceSdifForDriver_E5E5F42E(void)
 	}
 	return 0;
 }
+#endif
 
 SdifContextGlobal *SceSdifForDriver_DC8F52F8(unsigned int index)
 {
@@ -388,14 +394,14 @@ SdifContextGlobal *SceSdifForDriver_DC8F52F8(unsigned int index)
 
 int sdifLockPort(SdifContextGlobal *context)
 {
-	if (context->port.polling)
+	if (sdifIsPolling(&context->port))
 		return 0;
 	return lockFastMutex(&context->port.mutex);
 }
 
 int sdifUnlockPort(SdifContextGlobal *context)
 {
-	if (context->port.polling)
+	if (sdifIsPolling(&context->port))
 		return 0;
 	return sceKernelUnlockFastMutex(&context->port.mutex);
 }
@@ -425,7 +431,7 @@ int _sceSdifReset(SdifContextGlobal *context, int flags)
 				goto resetPort;
 			ScePervasiveForDriver_9F8E589C(index, 512);
 		} else if (revision == 0x100) {
-			if (((uint32_t)SceSysconForDriver_CBD6D8BC() & 0xff0000) < 0x800000) {
+			if ((sdifSysconVersion() & 0xff0000) < 0x800000) {
 				if (index != 0) {
 					if (index - 1 <= 1)
 						ScePervasiveForDriver_043B33F5(index, 2);
@@ -488,8 +494,8 @@ resetEmmc:
 		registers->softwareReset = 1;
 		while (registers->softwareReset & 1)
 			;
-		registers->timeoutControl = port->timeoutControl;
 		interrupts = port->index == 2 ? 507 : 251;
+		registers->timeoutControl = port->timeoutControl;
 		retries = 102;
 		while (!(registers->presentState & 0x20000)) {
 			if (port->index == 1 && --retries == 0)
@@ -513,6 +519,7 @@ resetEmmc:
 	return 0;
 }
 
+#if !SDIF_NSKBL
 int sceSdifResume0(int phase, int event)
 {
 	SdifContextGlobal *context;
@@ -533,9 +540,9 @@ int sceSdifResume0(int phase, int event)
 					do {
 						port = &context->port;
 						port->polling = 1;
-						intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+						intrState = sdifSpinLock(&port->lock);
 						_sceSdifReset(context, 3);
-						sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+						sdifSpinUnlock(&port->lock, intrState);
 						if (index != 0) {
 							port->polling = 0;
 							sceKernelEnableIntr(index + 220);
@@ -566,7 +573,7 @@ int sceSdifResume0(int phase, int event)
 		do {
 			port = &context->port;
 			sceKernelDisableIntr(index + 220);
-			intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+			intrState = sdifSpinLock(&port->lock);
 			registers = port->registers;
 			__builtin_prefetch(&context[3].port.registers);
 			registers->clockControl = 0;
@@ -576,7 +583,7 @@ int sceSdifResume0(int phase, int event)
 			port->part = NULL;
 			port->removedDeviceType = 0;
 			port->removedPart = NULL;
-			sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+			sdifSpinUnlock(&port->lock, intrState);
 			ScePervasiveForDriver_3D8A8712(index);
 			ScePervasiveForDriver_4E43299D(index);
 			++index;
@@ -585,7 +592,9 @@ int sceSdifResume0(int phase, int event)
 	}
 	return 0;
 }
+#endif
 
+#if !SDIF_NSKBL
 int sceSdifInit(void)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
@@ -675,9 +684,9 @@ int sceSdifInit(void)
 			sdifCommandQueuePush(&port->freeCommands, command++);
 		} while (commandIndex != 16);
 		++index;
-		intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+		intrState = sdifSpinLock(&port->lock);
 		_sceSdifReset(context, 3);
-		sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+		sdifSpinUnlock(&port->lock, intrState);
 		sceKernelEnableIntr(interrupt);
 	} while (gSdifState.portCount > index);
 	result = sceKernelRegisterSysEventHandler("SceSdif",
@@ -726,20 +735,119 @@ cleanupPorts:
 	}
 	return result;
 }
+#else
+/*
+ * The boot loader's bring-up: the host registers are used at their physical addresses, and
+ * a port needs only its descriptor buffer (no mutex, event flag or interrupt handler).
+ */
+int sceSdifInit(void)
+{
+	SceKernelAllocMemBlockKernelOpt opt;
+	SdifContextGlobal *context;
+	SdifPortState *port;
+	SdifCommand *command;
+	SceKernelIntrStatus intrState;
+	const SceKernelDebugInfo *debugInfo;
+	const char *name;
+	void *address;
+	uint32_t leadingPhysicalAddress;
+	uint32_t trailingPhysicalAddress;
+	uint32_t index = 0;
+	uint32_t commandIndex;
+	int result;
 
+	memset(gSdifContexts, 0, sizeof(gSdifContexts));
+	gSdifState.portCount = 3;
+	do {
+		context = &gSdifContexts[index];
+		port = &context->port;
+		name = sdifMemblockNames[index];
+		port->index = index;
+		port->registers = (volatile SdifHostRegisters *)
+			(index < SDIF_PORTS ? sdifRegisterAddresses[index] : 0);
+		memset(&opt, 0, sizeof(opt));
+		opt.size = sizeof(opt);
+		opt.attr = 0x200000;
+		result = sceKernelAllocMemBlockForKernel(name, 0x1020d006, 0x10000, &opt);
+		if (result < 0)
+			goto cleanupPorts;
+		port->descriptorMemblock = result;
+		sceKernelGetMemBlockBase(result, &port->descriptorBuffer);
+		sdifCommandQueueInitialize(&port->freeCommands);
+		sdifCommandQueueInitialize(&port->pendingCommands);
+		command = &context->commands[0];
+		commandIndex = 0;
+		do {
+			command->state = 0;
+			command->index = commandIndex;
+			__builtin_prefetch(&command[3].state);
+			address = command->leadingBuffer;
+			result = sceKernelVAtoPA(address, &leadingPhysicalAddress);
+			if (result < 0) {
+				debugInfo = SCE_DBGINFO_FUNC(3710, "_sceSdifInitDmaAlignmentBuffer");
+				goto addressError;
+			}
+			address = command->trailingBuffer;
+			result = sceKernelVAtoPA(address, &trailingPhysicalAddress);
+			if (result < 0) {
+				debugInfo = SCE_DBGINFO_FUNC(3717, "_sceSdifInitDmaAlignmentBuffer");
+				goto addressError;
+			}
+			command->leadingPhysicalAddress = leadingPhysicalAddress;
+			command->trailingPhysicalAddress = trailingPhysicalAddress;
+			address = command->defaultDescriptors;
+			result = sceKernelVAtoPA(address, &command->defaultDescriptorPhysicalAddress);
+			if (result < 0) {
+				debugInfo = SCE_DBGINFO_FUNC(3690, "_sceSdifInitCmd");
+				goto addressError;
+			}
+			++commandIndex;
+			sdifCommandQueuePush(&port->freeCommands, command++);
+		} while (commandIndex != 16);
+		intrState = sdifSpinLock(&port->lock);
+		_sceSdifReset(context, 3);
+		sdifSpinUnlock(&port->lock, intrState);
+		++index;
+	} while (gSdifState.portCount > index);
+	return 0;
+
+addressError:
+#if FW_DEBUG
+	SceDebugForDriver_D9703808(1, 0, debugInfo,
+				     "VA to PA error:0x%x  VA:%p\n", result, address);
+#else
+	(void)debugInfo;
+#endif
+	sceKernelFreeMemBlock(port->descriptorMemblock);
+cleanupPorts:
+	if (index != 0) {
+		commandIndex = 0;
+		context = &gSdifContexts[0];
+		do {
+			sceKernelFreeMemBlock(context->port.descriptorMemblock);
+			context++;
+			commandIndex++;
+		} while (commandIndex != index);
+	}
+	return result;
+}
+#endif
+
+#if !SDIF_NSKBL
 int module_start(SceSize arglen, const void *argp)
 {
 	return (unsigned int)sceSdifInit() >> 31;
 }
+#endif
 
 int sceSdifReset(SdifContextGlobal *context, int flags)
 {
 	SceKernelIntrStatus intrState;
 	int result;
 
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&context->port.lock);
+	intrState = sdifSpinLock(&context->port.lock);
 	result = _sceSdifReset(context, flags);
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&context->port.lock, intrState);
+	sdifSpinUnlock(&context->port.lock, intrState);
 	return result;
 }
 
@@ -750,7 +858,7 @@ int sdifPowerOn(SdifContextGlobal *context, uint8_t powerControl)
 	volatile SdifHostRegisters *registers;
 	int retries = 102;
 
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+	intrState = sdifSpinLock(&port->lock);
 	registers = port->registers;
 	while (!(registers->presentState & 0x20000)) {
 		if (port->index == 1 && --retries == 0)
@@ -769,7 +877,7 @@ int sdifPowerOn(SdifContextGlobal *context, uint8_t powerControl)
 			port->registers->clockControl |= 4;
 		registers->hostControl = 0;
 	}
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+	sdifSpinUnlock(&port->lock, intrState);
 	return 0;
 }
 
@@ -794,7 +902,7 @@ int sdifSetClock(SdifContextGlobal *context, uint32_t frequency, int highSpeed)
 	int retries = 41;
 	volatile int delay;
 
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&context->port.lock);
+	intrState = sdifSpinLock(&context->port.lock);
 	if (frequency > 47999999)
 		shift = 0;
 	else if (frequency > 23999999)
@@ -823,7 +931,7 @@ setClock:
 	registers->clockControl = clockControl;
 	while (!(registers->clockControl & 2)) {
 		if (--retries == 0) {
-			sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+			sdifSpinUnlock(&port->lock, intrState);
 			return 0x80320004;
 		}
 		for (delay = 25000; delay != 0; --delay)
@@ -836,7 +944,7 @@ setClock:
 		registers->hostControl = hostControl | 4;
 	else
 		registers->hostControl = hostControl & 0xfb;
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+	sdifSpinUnlock(&port->lock, intrState);
 	return 0;
 }
 
@@ -847,18 +955,18 @@ int sdifSetBusWidth(SdifContextGlobal *context, int width)
 	SceKernelIntrStatus intrState;
 	uint8_t hostControl;
 
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+	intrState = sdifSpinLock(&port->lock);
 	registers = port->registers;
 	port->busWidth = width;
 	hostControl = registers->hostControl;
 	if (width == 8)
-		hostControl = (hostControl & 0xdd) | 0x20;
+		hostControl = (hostControl & ~2) | 0x20;
 	else if (width == 4)
-		hostControl = (hostControl & 0xdd) | 2;
+		hostControl = (hostControl & ~0x20) | 2;
 	else
 		hostControl &= 0xdd;
 	registers->hostControl = hostControl;
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+	sdifSpinUnlock(&port->lock, intrState);
 	return 0;
 }
 
@@ -909,7 +1017,7 @@ int sceSdifInterrupt(int interrupt, SdifContextGlobal *context, unsigned int int
 	int removed = 0;
 	SdifCommand *command;
 
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+	intrState = sdifSpinLock(&port->lock);
 	normalStatus = registers->normalInterruptStatus;
 	errorStatus = registers->errorInterruptStatus;
 	if (errorStatus & 0x200) {
@@ -1245,18 +1353,18 @@ int sceSdifInterrupt(int interrupt, SdifContextGlobal *context, unsigned int int
 			}
 		}
 	}
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+	sdifSpinUnlock(&port->lock, intrState);
 	sdifDispatchFunctionInterrupt(context);
 	return -1;
 }
 
-int sceSdifWaitCmdCompletionCore(SdifCommand *command)
+SDIF_SYNC_STATIC int sceSdifWaitCmdCompletionCore(SdifCommand *command)
 {
 	SdifContextGlobal *context = command->context;
 	SdifPortState *port = &context->port;
 	int result;
 
-	if (port->polling)
+	if (sdifIsPolling(port))
 		goto polling;
 	if (port->index == 1 && (command->command == 8 || command->command == 6) &&
 	    port->deviceType == 1) {
@@ -1268,7 +1376,7 @@ int sceSdifWaitCmdCompletionCore(SdifCommand *command)
 			SceKernelIntrStatus intrState;
 			SdifCommand *current;
 
-			intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+			intrState = sdifSpinLock(&port->lock);
 			current = port->currentCommand;
 			if (current) {
 				current->errorCode = 0x80320021;
@@ -1286,7 +1394,7 @@ int sceSdifWaitCmdCompletionCore(SdifCommand *command)
 				(void)clearResult;
 #endif
 			}
-			sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+			sdifSpinUnlock(&port->lock, intrState);
 			result = 0x80320021;
 			SceDebugForDriver_02B04343(0, SCE_DBGINFO(2648), "0x%x\n", result);
 		}
@@ -1315,8 +1423,8 @@ polling:
 	goto completed;
 }
 
-int sceSdifSendSyncCmd(SdifContextGlobal *context, SdifCommand *command,
-		       SdifCommand *secondary, int retries, int checkCard)
+SDIF_SYNC_STATIC int sceSdifSendSyncCmd(SdifContextGlobal *context, SdifCommand *command,
+					SdifCommand *secondary, int retries, int checkCard)
 {
 	void *buffer = command->buffer;
 	uint32_t flags = command->flags;
@@ -1329,19 +1437,19 @@ int sceSdifSendSyncCmd(SdifContextGlobal *context, SdifCommand *command,
 		SceKernelIntrStatus intrState;
 		SdifCommand *completion;
 
-		intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+		intrState = sdifSpinLock(&port->lock);
 		if (checkCard && (!(port->registers->powerControl & 1) || !port->deviceType)) {
-			sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+			sdifSpinUnlock(&port->lock, intrState);
 			result = 0x8032001a;
 			break;
 		}
 		if (port->currentCommand) {
 			sdifCommandQueuePush(&port->pendingCommands, command);
 			command->state = 1;
-			sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+			sdifSpinUnlock(&port->lock, intrState);
 		} else {
 			result = _sceSdifSendCmdCore(context, command, 0);
-			sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+			sdifSpinUnlock(&port->lock, intrState);
 			if (result)
 				break;
 		}
@@ -1360,7 +1468,7 @@ int sceSdifSendSyncCmd(SdifContextGlobal *context, SdifCommand *command,
 		if (--retries <= 0)
 			break;
 	}
-	if (!port->polling)
+	if (!sdifIsPolling(port))
 		sceKernelUnlockFastMutex(&port->mutex);
 	if (secondary && (secondary->flags & 0x400))
 		freeAdmaDescriptorArea(secondary);
@@ -1369,15 +1477,16 @@ int sceSdifSendSyncCmd(SdifContextGlobal *context, SdifCommand *command,
 	return result;
 }
 
+#if !SDIF_NSKBL
 SdifCommand *sdifRemovePendingCommand(SdifContextGlobal *context, unsigned int index)
 {
 	SceKernelSpinlock *lock = &context->port.lock;
 	SceKernelIntrStatus intrState;
 	SdifCommand *command;
 
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
+	intrState = sdifSpinLock(lock);
 	command = sdifCommandQueueRemove(&context->port.pendingCommands, index);
-	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+	sdifSpinUnlock(lock, intrState);
 	return command;
 }
 
@@ -1392,17 +1501,17 @@ int sdifWaitPendingCommand(SdifContextGlobal *context, unsigned int index,
 	int result;
 
 	(void)reserved;
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
+	intrState = sdifSpinLock(lock);
 	command = context->port.currentCommand;
 	if (!command || command->index != index)
 		command = sdifCommandQueueFind(&context->port.pendingCommands, index);
 	if (!command) {
-		sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+		sdifSpinUnlock(lock, intrState);
 		return 0x80320012;
 	}
 	eventFlag = sceKernelCreateEventFlag("SceSdif", 0, 0, NULL);
 	if (eventFlag < 0) {
-		sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+		sdifSpinUnlock(lock, intrState);
 		return eventFlag;
 	}
 	completion = command->secondaryCommand;
@@ -1411,7 +1520,7 @@ int sdifWaitPendingCommand(SdifContextGlobal *context, unsigned int index,
 	completion->callback = sdifCompleteSyncCommand;
 	completion->eventFlag = eventFlag;
 	completion->context = context;
-	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+	sdifSpinUnlock(lock, intrState);
 	result = sceSdifWaitCmdCompletionCore(completion);
 	*completed = completion;
 	sceKernelDeleteEventFlag(eventFlag);
@@ -1424,17 +1533,17 @@ int sdifGetCommandState(SdifContextGlobal *context, unsigned int index)
 	SceKernelIntrStatus intrState;
 	SdifCommand *command;
 
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
+	intrState = sdifSpinLock(lock);
 	command = context->port.currentCommand;
 	if (command && command->index == index) {
-		sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+		sdifSpinUnlock(lock, intrState);
 		return 1;
 	}
 	if (sdifCommandQueueFind(&context->port.pendingCommands, index)) {
-		sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+		sdifSpinUnlock(lock, intrState);
 		return 2;
 	}
-	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+	sdifSpinUnlock(lock, intrState);
 	return 0;
 }
 
@@ -1491,7 +1600,7 @@ int sdifSendAsyncCommand(SdifContextGlobal *context, SdifCommand *command,
 		}
 	}
 	lock = &context->port.lock;
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
+	intrState = sdifSpinLock(lock);
 	if ((context->port.registers->powerControl & 1) && context->port.deviceType) {
 		if (context->port.currentCommand) {
 			sdifCommandQueuePush(&context->port.pendingCommands, command);
@@ -1499,22 +1608,23 @@ int sdifSendAsyncCommand(SdifContextGlobal *context, SdifCommand *command,
 			result = 0;
 		} else
 			result = _sceSdifSendCmdCore(context, command, 0);
-		sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+		sdifSpinUnlock(lock, intrState);
 		return result;
 	}
-	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+	sdifSpinUnlock(lock, intrState);
 	return 0x8032001a;
 }
+#endif
 
-int sdifPrepareSyncCommand(SdifContextGlobal *context, SdifCommand *command,
-			   SdifCommand *secondary, int retries, int checkCard)
+SDIF_PREPARE_INLINE int sdifPrepareSyncCommand(SdifContextGlobal *context, SdifCommand *command,
+					       SdifCommand *secondary, int retries, int checkCard)
 {
 	SdifPortState *port = &context->port;
 	SceUID *eventFlag = &port->eventFlag;
 	uint32_t flags;
 	int result;
 
-	if (!port->polling) {
+	if (!sdifIsPolling(port)) {
 		result = lockFastMutex(&port->mutex);
 		if (result < 0)
 			return result;
@@ -1553,7 +1663,7 @@ int sdifPrepareSyncCommand(SdifContextGlobal *context, SdifCommand *command,
 	}
 	return sceSdifSendSyncCmd(context, command, secondary, retries, checkCard);
 unlock:
-	if (!port->polling)
+	if (!sdifIsPolling(port))
 		sceKernelUnlockFastMutex(&port->mutex);
 	return result;
 }
@@ -1561,174 +1671,42 @@ unlock:
 int sdifSendCheckedSyncCommand(SdifContextGlobal *context, SdifCommand *command,
 			   SdifCommand *secondary, int retries)
 {
-	SdifPortState *port = &context->port;
-	SceUID *eventFlag = &port->eventFlag;
-	uint32_t flags;
-	int result;
-
-	if (!port->polling) {
-		result = lockFastMutex(&port->mutex);
-		if (result < 0)
-			return result;
-	}
-	flags = command->flags;
-	command->context = context;
-	command->secondaryCommand = secondary;
-	command->callback = sdifCompleteSyncCommand;
-	command->eventFlag = *eventFlag;
-	if (!(flags & 0x400) ||
-	    (command->flags = flags & ~0x100000U,
-	     command->leadingLength = 0,
-	     command->trailingLength = 0,
-	     (result = setAdmaDescriptorsForAlignedData(command)) == 0)) {
-		if (!secondary)
-			return sceSdifSendSyncCmd(context, command, secondary, retries, 1);
-		flags = secondary->flags;
-		secondary->callback = sdifCompleteSyncCommand;
-		secondary->eventFlag = *eventFlag;
-		secondary->secondaryCommand = NULL;
-		secondary->context = context;
-		secondary->flags = flags & 0x3fffffff;
-		if (!(flags & 0x400) ||
-		    (secondary->leadingLength = 0,
-		     secondary->flags = flags & 0x3fefffff,
-		     secondary->trailingLength = 0,
-		     (result = setAdmaDescriptorsForAlignedData(secondary)) == 0)) {
-			command->callback = NULL;
-			return sceSdifSendSyncCmd(context, command, secondary, retries, 1);
-		}
-		freeAdmaDescriptorArea(command);
-	}
-	if (!port->polling)
-		sceKernelUnlockFastMutex(&port->mutex);
-	return result;
+	return sdifPrepareSyncCommand(context, command, secondary, retries, 1);
 }
 
 int sdifSendCheckedApplicationCommand(SdifContextGlobal *context, SdifCommand *secondary,
 				      int retries)
 {
 	SdifCommand *command = __builtin_alloca(sizeof(*command) + 64 - __alignof__(uint64_t));
-	SdifPortState *port = &context->port;
-	SceUID *eventFlag = &port->eventFlag;
-	uint32_t flags;
-	int result;
 
 	command = (SdifCommand *)(((uintptr_t)command + 63) & ~63U);
 	command->flags = 0x13;
 	command->command = 55;
 	command->buffer = NULL;
 	command->size = sizeof(*command);
-	command->argument = (uint32_t)port->relativeCardAddress << 16;
-	if (!port->polling) {
-		result = lockFastMutex(&port->mutex);
-		if (result < 0)
-			return result;
-	}
-	flags = command->flags;
-	command->context = context;
-	command->secondaryCommand = secondary;
-	command->callback = sdifCompleteSyncCommand;
-	command->eventFlag = *eventFlag;
-	if (flags & 0x400) {
-		command->flags = flags & ~0x100000U;
-		command->leadingLength = 0;
-		command->trailingLength = 0;
-		result = setAdmaDescriptorsForAlignedData(command);
-		if (result)
-			goto unlock;
-	}
-	if (secondary) {
-		flags = secondary->flags;
-		secondary->callback = sdifCompleteSyncCommand;
-		secondary->eventFlag = *eventFlag;
-		secondary->secondaryCommand = NULL;
-		secondary->context = context;
-		secondary->flags = flags & 0x3fffffff;
-		if (flags & 0x400) {
-			secondary->leadingLength = 0;
-			secondary->flags = flags & 0x3fefffff;
-			secondary->trailingLength = 0;
-			result = setAdmaDescriptorsForAlignedData(secondary);
-			if (result) {
-				freeAdmaDescriptorArea(command);
-				goto unlock;
-			}
-		}
-		command->callback = NULL;
-	}
-	return sceSdifSendSyncCmd(context, command, secondary, retries, 1);
-unlock:
-	if (!port->polling)
-		sceKernelUnlockFastMutex(&port->mutex);
-	return result;
+	command->argument = (uint32_t)context->port.relativeCardAddress << 16;
+	return sdifPrepareSyncCommand(context, command, secondary, retries, 1);
 }
 
 int sdifSendApplicationCommand(SdifContextGlobal *context, SdifCommand *secondary,
 				      int retries)
 {
 	SdifCommand *command = __builtin_alloca(sizeof(*command) + 64 - __alignof__(uint64_t));
-	SdifPortState *port = &context->port;
-	SceUID *eventFlag = &port->eventFlag;
-	uint32_t flags;
-	int result;
 
 	command = (SdifCommand *)(((uintptr_t)command + 63) & ~63U);
 	command->flags = 0x13;
 	command->command = 55;
 	command->buffer = NULL;
 	command->size = sizeof(*command);
-	command->argument = (uint32_t)port->relativeCardAddress << 16;
-	if (!port->polling) {
-		result = lockFastMutex(&port->mutex);
-		if (result < 0)
-			return result;
-	}
-	flags = command->flags;
-	command->context = context;
-	command->secondaryCommand = secondary;
-	command->callback = sdifCompleteSyncCommand;
-	command->eventFlag = *eventFlag;
-	if (flags & 0x400) {
-		command->flags = flags & ~0x100000U;
-		command->leadingLength = 0;
-		command->trailingLength = 0;
-		result = setAdmaDescriptorsForAlignedData(command);
-		if (result)
-			goto unlock;
-	}
-	if (secondary) {
-		flags = secondary->flags;
-		secondary->callback = sdifCompleteSyncCommand;
-		secondary->eventFlag = *eventFlag;
-		secondary->secondaryCommand = NULL;
-		secondary->context = context;
-		secondary->flags = flags & 0x3fffffff;
-		if (flags & 0x400) {
-			secondary->leadingLength = 0;
-			secondary->flags = flags & 0x3fefffff;
-			secondary->trailingLength = 0;
-			result = setAdmaDescriptorsForAlignedData(secondary);
-			if (result) {
-				freeAdmaDescriptorArea(command);
-				goto unlock;
-			}
-		}
-		command->callback = NULL;
-	}
-	return sceSdifSendSyncCmd(context, command, secondary, retries, 0);
-unlock:
-	if (!port->polling)
-		sceKernelUnlockFastMutex(&port->mutex);
-	return result;
+	command->argument = (uint32_t)context->port.relativeCardAddress << 16;
+	return sdifPrepareSyncCommand(context, command, secondary, retries, 0);
 }
 
 int sdifResetCard(SdifContextGlobal *context)
 {
 	SdifCommand *command = __builtin_alloca(sizeof(*command) + 64 - __alignof__(uint64_t));
 	SdifPortState *port = &context->port;
-	SceUID *eventFlag = &port->eventFlag;
 	volatile SdifHostRegisters *registers;
-	uint32_t flags;
 	int result, intrState, retries;
 	volatile int delay;
 
@@ -1738,32 +1716,10 @@ int sdifResetCard(SdifContextGlobal *context)
 	command->flags = 1;
 	command->command = 0;
 	command->argument = 0;
-	if (!port->polling) {
-		result = lockFastMutex(&port->mutex);
-		if (result < 0)
-			return result;
-	}
-	flags = command->flags;
-	command->context = context;
-	command->secondaryCommand = NULL;
-	command->callback = sdifCompleteSyncCommand;
-	command->eventFlag = *eventFlag;
-	if (flags & 0x400) {
-		command->flags = flags & ~0x100000U;
-		command->leadingLength = 0;
-		command->trailingLength = 0;
-		result = setAdmaDescriptorsForAlignedData(command);
-		if (result) {
-			if (!port->polling)
-				sceKernelUnlockFastMutex(&port->mutex);
-			goto complete;
-		}
-	}
-	result = sceSdifSendSyncCmd(context, command, NULL, 0, 0);
-complete:
+	result = sdifPrepareSyncCommand(context, command, NULL, 0, 0);
 	if (result < 0)
 		return result;
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+	intrState = sdifSpinLock(&port->lock);
 	registers = port->registers;
 	registers->clockControl = 0;
 	registers->clockControl = 0x4001;
@@ -1778,21 +1734,18 @@ complete:
 		registers->clockControl |= 4;
 	registers->hostControl &= ~4U;
 unlock:
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+	sdifSpinUnlock(&port->lock, intrState);
+	intrState = sdifSpinLock(&port->lock);
 	registers = port->registers;
 	port->busWidth = 1;
 	registers->hostControl &= 0xdd;
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+	sdifSpinUnlock(&port->lock, intrState);
 	return 0;
 }
 
 int sdifReadCid(SdifContextGlobal *context, uint32_t cid[4])
 {
 	SdifCommand *command = __builtin_alloca(sizeof(*command) + 64 - __alignof__(uint64_t));
-	SdifPortState *port = &context->port;
-	SceUID *eventFlag = &port->eventFlag;
-	uint32_t flags;
 	int result;
 
 	command = (SdifCommand *)(((uintptr_t)command + 63) & ~63U);
@@ -1801,29 +1754,7 @@ int sdifReadCid(SdifContextGlobal *context, uint32_t cid[4])
 	command->flags = 0x32;
 	command->command = 2;
 	command->argument = 0;
-	if (!port->polling) {
-		result = lockFastMutex(&port->mutex);
-		if (result < 0)
-			return result;
-	}
-	flags = command->flags;
-	command->context = context;
-	command->secondaryCommand = NULL;
-	command->callback = sdifCompleteSyncCommand;
-	command->eventFlag = *eventFlag;
-	if (flags & 0x400) {
-		command->flags = flags & ~0x100000U;
-		command->leadingLength = 0;
-		command->trailingLength = 0;
-		result = setAdmaDescriptorsForAlignedData(command);
-		if (result) {
-			if (!port->polling)
-				sceKernelUnlockFastMutex(&port->mutex);
-			goto complete;
-		}
-	}
-	result = sceSdifSendSyncCmd(context, command, NULL, 3, 1);
-complete:
+	result = sdifSendCheckedSyncCommand(context, command, NULL, 3);
 	if (result < 0)
 		return result;
 	__builtin_memcpy(cid, command->response, sizeof(command->response));
@@ -1834,8 +1765,6 @@ int sdifReadCsd(SdifContextGlobal *context, uint32_t csd[4])
 {
 	SdifCommand *command = __builtin_alloca(sizeof(*command) + 64 - __alignof__(uint64_t));
 	SdifPortState *port = &context->port;
-	SceUID *eventFlag = &port->eventFlag;
-	uint32_t flags;
 	int result;
 
 	command = (SdifCommand *)(((uintptr_t)command + 63) & ~63U);
@@ -1844,29 +1773,7 @@ int sdifReadCsd(SdifContextGlobal *context, uint32_t csd[4])
 	command->size = sizeof(*command);
 	command->argument = (uint32_t)port->relativeCardAddress << 16;
 	command->buffer = NULL;
-	if (!port->polling) {
-		result = lockFastMutex(&port->mutex);
-		if (result < 0)
-			return result;
-	}
-	flags = command->flags;
-	command->context = context;
-	command->secondaryCommand = NULL;
-	command->callback = sdifCompleteSyncCommand;
-	command->eventFlag = *eventFlag;
-	if (flags & 0x400) {
-		command->flags = flags & ~0x100000U;
-		command->leadingLength = 0;
-		command->trailingLength = 0;
-		result = setAdmaDescriptorsForAlignedData(command);
-		if (result) {
-			if (!port->polling)
-				sceKernelUnlockFastMutex(&port->mutex);
-			goto complete;
-		}
-	}
-	result = sceSdifSendSyncCmd(context, command, NULL, 3, 1);
-complete:
+	result = sdifSendCheckedSyncCommand(context, command, NULL, 3);
 	if (result < 0)
 		return result;
 	__builtin_memcpy(csd, command->response, sizeof(command->response));
@@ -1877,7 +1784,6 @@ int sdifSelectCard(SdifContextGlobal *context, int select)
 {
 	SdifCommand *command = __builtin_alloca(sizeof(*command) + 64 - __alignof__(uint64_t));
 	SdifPortState *port = &context->port;
-	SceUID *eventFlag = &port->eventFlag;
 	uint32_t flags;
 	int result;
 
@@ -1891,32 +1797,11 @@ int sdifSelectCard(SdifContextGlobal *context, int select)
 	command->flags = flags;
 	command->command = 7;
 	command->argument = select;
-	if (!port->polling) {
-		result = lockFastMutex(&port->mutex);
-		if (result < 0)
-			return result;
-	}
-	flags = command->flags;
-	command->context = context;
-	command->secondaryCommand = NULL;
-	command->callback = sdifCompleteSyncCommand;
-	command->eventFlag = *eventFlag;
-	if (flags & 0x400) {
-		command->flags = flags & ~0x100000U;
-		command->leadingLength = 0;
-		command->trailingLength = 0;
-		result = setAdmaDescriptorsForAlignedData(command);
-		if (result) {
-			if (!port->polling)
-				sceKernelUnlockFastMutex(&port->mutex);
-			goto complete;
-		}
-	}
-	result = sceSdifSendSyncCmd(context, command, NULL, 3, 1);
-complete:
+	result = sdifSendCheckedSyncCommand(context, command, NULL, 3);
 	return result < 0 ? result : 0;
 }
 
+#if !SDIF_NSKBL
 int sdifDeselectCard(SdifContextGlobal *context)
 {
 	SdifPortState *port = &context->port;
@@ -1928,6 +1813,7 @@ int sdifDeselectCard(SdifContextGlobal *context)
 	port->relativeCardAddress = relativeCardAddress;
 	return result;
 }
+#endif
 
 int sdifGetCardStatusError(uint32_t status)
 {
@@ -1942,8 +1828,6 @@ int SceSdifForDriver_53518827(SdifContextGlobal *context, uint32_t *status)
 {
 	SdifCommand *command = __builtin_alloca(sizeof(*command) + 64 - __alignof__(uint64_t));
 	SdifPortState *port = &context->port;
-	SceUID *eventFlag = &port->eventFlag;
-	uint32_t flags;
 	int result;
 	uint32_t response, errors;
 
@@ -1953,29 +1837,7 @@ int SceSdifForDriver_53518827(SdifContextGlobal *context, uint32_t *status)
 	command->size = sizeof(*command);
 	command->argument = (uint32_t)port->relativeCardAddress << 16;
 	command->buffer = NULL;
-	if (!port->polling) {
-		result = lockFastMutex(&port->mutex);
-		if (result < 0)
-			return result;
-	}
-	flags = command->flags;
-	command->context = context;
-	command->secondaryCommand = NULL;
-	command->callback = sdifCompleteSyncCommand;
-	command->eventFlag = *eventFlag;
-	if (flags & 0x400) {
-		command->flags = flags & ~0x100000U;
-		command->leadingLength = 0;
-		command->trailingLength = 0;
-		result = setAdmaDescriptorsForAlignedData(command);
-		if (result) {
-			if (!port->polling)
-				sceKernelUnlockFastMutex(&port->mutex);
-			goto complete;
-		}
-	}
-	result = sceSdifSendSyncCmd(context, command, NULL, 3, 1);
-complete:
+	result = sdifSendCheckedSyncCommand(context, command, NULL, 3);
 	if (result < 0)
 		return result;
 	response = command->response[0];
@@ -1993,9 +1855,6 @@ complete:
 int sdifSetBlockLength(SdifContextGlobal *context, uint32_t blockLength)
 {
 	SdifCommand *command = __builtin_alloca(sizeof(*command) + 64 - __alignof__(uint64_t));
-	SdifPortState *port = &context->port;
-	SceUID *eventFlag = &port->eventFlag;
-	uint32_t flags;
 	int result;
 	uint32_t response, errors;
 
@@ -2005,29 +1864,7 @@ int sdifSetBlockLength(SdifContextGlobal *context, uint32_t blockLength)
 	command->flags = 0x13;
 	command->command = 16;
 	command->buffer = NULL;
-	if (!port->polling) {
-		result = lockFastMutex(&port->mutex);
-		if (result < 0)
-			return result;
-	}
-	flags = command->flags;
-	command->context = context;
-	command->secondaryCommand = NULL;
-	command->callback = sdifCompleteSyncCommand;
-	command->eventFlag = *eventFlag;
-	if (flags & 0x400) {
-		command->flags = flags & ~0x100000U;
-		command->leadingLength = 0;
-		command->trailingLength = 0;
-		result = setAdmaDescriptorsForAlignedData(command);
-		if (result) {
-			if (!port->polling)
-				sceKernelUnlockFastMutex(&port->mutex);
-			goto complete;
-		}
-	}
-	result = sceSdifSendSyncCmd(context, command, NULL, 3, 1);
-complete:
+	result = sdifSendCheckedSyncCommand(context, command, NULL, 3);
 	if (result < 0)
 		return result;
 	response = command->response[0];
@@ -2040,6 +1877,7 @@ complete:
 	return 0;
 }
 
+#if !SDIF_NSKBL
 int SceSdifForDriver_3DF7E207(unsigned int index, SdifHostInfo *info)
 {
 	SdifPortState *port;
@@ -2104,7 +1942,7 @@ int SceSdifForDriver_6CC8E28D(unsigned int index)
 		return 0x80320001;
 	port = &context->port;
 	registers = port->registers;
-	if (!port->polling)
+	if (!sdifIsPolling(port))
 		lockFastMutex(&port->mutex);
 	sceKernelDelayThread(25000);
 	if (!(registers->presentState & 0x10000))
@@ -2117,7 +1955,7 @@ int SceSdifForDriver_6CC8E28D(unsigned int index)
 	command->buffer = NULL;
 	registers->powerControl |= 1;
 	command->argument = (uint32_t)port->relativeCardAddress << 16;
-	if (!port->polling) {
+	if (!sdifIsPolling(port)) {
 		result = lockFastMutex(&port->mutex);
 		if (result < 0)
 			goto restore;
@@ -2133,29 +1971,29 @@ int SceSdifForDriver_6CC8E28D(unsigned int index)
 		command->trailingLength = 0;
 		result = setAdmaDescriptorsForAlignedData(command);
 		if (result) {
-			if (!port->polling)
+			if (!sdifIsPolling(port))
 				sceKernelUnlockFastMutex(&port->mutex);
 			goto restore;
 		}
 	}
 	result = sceSdifSendSyncCmd(context, command, NULL, 0, 0);
 	if (!result && (command->response[0] & 0x1e00) == 0x800) {
-		intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+		intrState = sdifSpinLock(&port->lock);
 		if (!port->part) {
 			port->deviceType = port->removedDeviceType;
 			port->part = port->removedPart;
 			port->removedDeviceType = 0;
 			port->removedPart = NULL;
 		}
-		sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
-		if (!port->polling)
+		sdifSpinUnlock(&port->lock, intrState);
+		if (!sdifIsPolling(port))
 			sceKernelUnlockFastMutex(&port->mutex);
 		return result;
 	}
 restore:
 	registers->powerControl = powerControl;
 unlock:
-	if (!port->polling)
+	if (!sdifIsPolling(port))
 		sceKernelUnlockFastMutex(&port->mutex);
 	return 0x80320020;
 }
@@ -2173,9 +2011,9 @@ int SceSdifForDriver_B83F7518(unsigned int index, SdifCommandInfo *info)
 		return 0x80320001;
 	context = &gSdifContexts[index];
 	port = &context->port;
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+	intrState = sdifSpinLock(&port->lock);
 	command = sdifCommandQueuePop(&port->freeCommands);
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+	sdifSpinUnlock(&port->lock, intrState);
 	if (!command)
 		return 0x80320011;
 	command->flags = info->flags;
@@ -2186,7 +2024,7 @@ int SceSdifForDriver_B83F7518(unsigned int index, SdifCommandInfo *info)
 	command->blockCount = info->blockCount;
 	command->endTime = 0;
 	command->size = sizeof(*command);
-	if (!port->polling) {
+	if (!sdifIsPolling(port)) {
 		result = lockFastMutex(&port->mutex);
 		if (result < 0)
 			goto release;
@@ -2202,7 +2040,7 @@ int SceSdifForDriver_B83F7518(unsigned int index, SdifCommandInfo *info)
 		command->trailingLength = 0;
 		result = setAdmaDescriptorsForAlignedData(command);
 		if (result) {
-			if (!port->polling)
+			if (!sdifIsPolling(port))
 				sceKernelUnlockFastMutex(&port->mutex);
 			goto complete;
 		}
@@ -2222,10 +2060,10 @@ complete:
 	}
 release:
 	port->lastTransferTime = command->endTime - command->startTime;
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+	intrState = sdifSpinLock(&port->lock);
 	command->state = 0;
 	sdifCommandQueuePush(&port->freeCommands, command);
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+	sdifSpinUnlock(&port->lock, intrState);
 	return result;
 }
 
@@ -2268,6 +2106,7 @@ SdifCommand *sdifAllocateCommand(SdifContextGlobal *context)
 {
 	return sdifCommandQueuePop(&context->port.freeCommands);
 }
+#endif
 
 SdifCommand *sdifAllocateCommandLocked(SdifContextGlobal *context)
 {
@@ -2275,34 +2114,36 @@ SdifCommand *sdifAllocateCommandLocked(SdifContextGlobal *context)
 	SdifCommand *command;
 	int intrState;
 
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
+	intrState = sdifSpinLock(lock);
 	command = sdifCommandQueuePop(&context->port.freeCommands);
-	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+	sdifSpinUnlock(lock, intrState);
 	return command;
 }
 
+#if !SDIF_NSKBL
 void sdifFreeCommand(SdifContextGlobal *context, SdifCommand *command)
 {
 	command->state = 0;
 	sdifCommandQueuePush(&context->port.freeCommands, command);
 }
+#endif
 
 void sdifFreeCommandLocked(SdifContextGlobal *context, SdifCommand *command)
 {
 	SceKernelSpinlock *lock = &context->port.lock;
 	int intrState;
 
-	intrState = sceKernelSpinlockLowLockCpuSuspendIntr(lock);
+	intrState = sdifSpinLock(lock);
 	command->state = 0;
 	sdifCommandQueuePush(&context->port.freeCommands, command);
-	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+	sdifSpinUnlock(lock, intrState);
 }
 
 void sdifDelay(SdifContextGlobal *context, int microseconds)
 {
 	volatile int delay;
 
-	if (!context->port.polling) {
+	if (!sdifIsPolling(&context->port)) {
 		sceKernelDelayThread(microseconds);
 		return;
 	}

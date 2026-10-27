@@ -179,11 +179,16 @@ uint32_t ScePervasiveForDriver_2A563E35(void)
 	return (uintptr_t)s_pervasive2;
 }
 
+#endif
+
+#if !LOWIO_KBL || LOWIO_NSKBL	/* the boot loader's sdif reads the revision */
 uint32_t ScePervasiveForDriver_714EEFB7(void)
 {
 	return s_pervasive.hardwareInfo[0];
 }
+#endif
 
+#if !LOWIO_KBL
 uint32_t ScePervasiveForDriver_41C3C299(void)
 {
 	return s_pervasive.hardwareInfo[1];
