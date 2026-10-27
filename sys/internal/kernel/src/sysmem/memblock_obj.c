@@ -846,12 +846,12 @@ int sceKernelGetMemBlockMappedBase(SceUID uid, void **base)
 	return GUIDApplyWithClass(uid, s_memBlockClass, MemBlockGetMappedBaseCB, &args);
 }
 
-#if !SYSMEM_NSKBL
 int sceKernelGetMemBlockBase(SceUID uid, void **base)
 {
 	return sceKernelGetMemBlockMappedBase(uid, base);
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: SceUIDMemBlockClass gets its callbacks, then the simple memblocks start */
 void MemBlockObjModuleStart(const UIDManager *manager)
 {

@@ -71,12 +71,14 @@ int SceDebugForKernel_0EDA5174(uint32_t value)
 	(void)value;
 	return 0;
 }
+#endif
 
 int sceKernelGetAssertLevel(void)
 {
 	return s_assertLevel;
 }
 
+#if !SYSMEM_NSKBL
 uint32_t SceDebugForKernel_A0CE3287(uint32_t level)
 {
 	uint32_t previous = s_assertLevel;

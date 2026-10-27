@@ -131,6 +131,7 @@ psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	${excpmgr_source}/excpmgr_vector.S
 	${excpmgr_source}/excpmgr_initial.S
 	${excpmgr_source}/excpmgr_context.S
+	${intrmgr_source}/intrmgr_asm.S
 	${intrmgr_source}/intrmgr.c
 	${sysmem_c_sources}
 	${smsc_proxy_source}/smsc_proxy.c
@@ -164,7 +165,7 @@ psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	${nskbl_libunwind_source}
 	${libgcc_source}/unwind_pr.c
 )
-set_source_files_properties(${intrmgr_source}/intrmgr.c PROPERTIES COMPILE_DEFINITIONS INTRMGR_NSKBL)
+set_source_files_properties(${intrmgr_source}/intrmgr_asm.S ${intrmgr_source}/intrmgr.c PROPERTIES COMPILE_DEFINITIONS INTRMGR_NSKBL)
 set_source_files_properties(${excpmgr_source}/excpmgr.c PROPERTIES COMPILE_DEFINITIONS EXCPMGR_NSKBL)
 # SceSysmem's flags (sysmem/sources.cmake): NULL tests after a dereference dropped,
 # caller-saved registers kept across leaf calls, signed characters in serial.c and uid.c

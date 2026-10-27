@@ -21,6 +21,8 @@ _Static_assert(__builtin_offsetof(IntrHandler, intrCode) == 4, "handler code");
 _Static_assert(__builtin_offsetof(IntrHandler, arg) == 8, "handler arg");
 _Static_assert(__builtin_offsetof(IntrHandler, priority) == 0xc, "handler priority");
 _Static_assert(__builtin_offsetof(IntrHandler, count) == 0x20, "handler count");
+_Static_assert(sizeof(IntrHandler) == 0x40, "handler record");
+_Static_assert(sizeof(IntrCpuState) == 0x80, "CPU state");
 _Static_assert(sizeof(IntrLevelStack) == INTR_LEVEL_STACK_SIZE, "nesting stack ABI");
 
 int CurrentNesting(void);

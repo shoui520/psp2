@@ -368,6 +368,7 @@ int NameHeapFind(const char *name, SceUInt32 flags, NameEntry **out)
 	*out = *link;
 	return ret;
 }
+#endif
 
 /* sceKernelNameHeapInsert: *out is the kept copy of name */
 int sceKernelNameHeapInsert(const char *name, unsigned int flags, char **out)
@@ -382,6 +383,7 @@ int sceKernelNameHeapInsert(const char *name, unsigned int flags, char **out)
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /* sceKernelNameHeapLink */
 int SceSysmemForKernel_40965FD1(const char *name, SceUInt32 flags, char **out)
 {

@@ -412,6 +412,16 @@ int AddressSpaceGetPhyMemPart(AddressSpaceObject *as, SceUInt32 code, void **par
 #define MEMBLOCK_TYPE_MIRROR_SIZE	0x00800000	/* a mirror's size from its base */
 #define MEMBLOCK_TYPE_UNCHECKED		0x01000000
 
+#if SYSMEM_NSKBL
+/* NSKBL has no UIDs to find a mirror's base block by: it asserts, and there is none */
+static inline MemBlockObject *AllocMemBlockOptGetBaseMemBlock(const SceKernelAllocMemBlockKernelOpt *opt)
+{
+	(void)opt;
+	SCE_DBG_ASSERT_FAIL(670);
+	return NULL;
+}
+#endif
+
 /* a block of the command's address space, partition and backing from its code */
 int AddressSpaceAllocMemBlockByCommand(AddressSpaceObject *unused,
 				       SceKernelAllocMemBlockCommand *command)
@@ -420,7 +430,9 @@ int AddressSpaceAllocMemBlockByCommand(AddressSpaceObject *unused,
 	MemBlockObject *mirror = NULL;
 	struct Partition *partition;
 	SceUInt32 attr, pindex, ppindex;
+#if !SYSMEM_NSKBL
 	SceUID guid;
+#endif
 	int ret;
 
 	AddressSpaceRefer(as);
@@ -457,6 +469,9 @@ int AddressSpaceAllocMemBlockByCommand(AddressSpaceObject *unused,
 			}
 		} else if (attr & MEMBLOCK_TYPE_MIRROR_SIZE) {
 			if (command->opt.attr & SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_MIRROR_BLOCKID) {
+#if SYSMEM_NSKBL
+				mirror = AllocMemBlockOptGetBaseMemBlock(&command->opt);
+#else
 				ret = MemBlockGetMirrorBlock(&command->opt, &mirror);
 				if (ret < 0) {
 					/* given as a PUID of the caller */
@@ -468,6 +483,7 @@ int AddressSpaceAllocMemBlockByCommand(AddressSpaceObject *unused,
 					if (ret < 0)
 						goto out;
 				}
+#endif
 				command->size = mirror->size;
 			}
 		} else {

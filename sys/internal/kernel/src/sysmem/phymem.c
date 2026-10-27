@@ -621,7 +621,7 @@ int PhyMemPartGetFreeSizeRaw(PhyMemPart *part, SceSize *freeSize)
 	switch (PHYMEM_PART_TYPE(part)) {
 	case PHYMEM_PART_TYPE_LPDDR2:
 		break;
-#ifndef SYSMEM_TZS	/* the secure world has no CDRAM */
+#if !defined(SYSMEM_TZS) && !SYSMEM_NSKBL	/* the secure world and the boot loader have no CDRAM */
 	case PHYMEM_PART_TYPE_CDRAM:
 		return PhyMemLowGetFreeSize(part->segments->phyMemLow, freeSize);
 #endif

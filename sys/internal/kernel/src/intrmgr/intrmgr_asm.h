@@ -18,6 +18,10 @@
 #define INTR_HANDLER_ARG	8
 #define INTR_HANDLER_PRIORITY	0xc
 #define INTR_HANDLER_COUNT	0x20
+#define INTR_HANDLER_SIZE	0x40
+
+/* IntrCpuState (intrmgr_state.h) */
+#define INTR_CPU_STATE_SIZE	0x80
 
 #define CPSR_MODE_IRQ		0x12
 #define CPSR_MODE_SYSTEM	0x1f

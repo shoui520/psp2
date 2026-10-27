@@ -28,6 +28,183 @@
 	.fpu	neon
 	.section .text.intrmgr_asm, "ax", %progbits
 
+#if defined(INTRMGR_NSKBL)
+	.arm
+/*
+ * NSKBL's IRQ handler: the boot loader's simpler one, without threads, hooks or
+ * traces. It saves r0, r1, r12, lr and the SPSR below the IRQ stack, takes the
+ * interrupt (1023: spurious), enters its handler on the System-mode stack of
+ * the nesting level, with the VFP state saved and interrupts on, disables an
+ * SPI the handler returned other than -1 for, ends the interrupt and returns
+ * with RFE.
+ */
+	FUNCTION interruptEntry
+	.word	0, 0
+	sub	lr, lr, #4
+	str	lr, [sp, #-0x1c]
+	str	r0, [sp, #-4]
+	str	r1, [sp, #-8]
+	str	r12, [sp, #-0x18]
+	LOAD_GLOBAL r0, g_intrCpuInterface
+	ldr	r12, [r0, #12]				@ GICC_IAR
+	ldr	r1, .LspuriousInterrupt
+	and	r0, r12, r1
+	cmp	r0, r1
+	bne	.LfindHandler
+	ldr	r12, [sp, #-0x18]
+	ldr	r1, [sp, #-8]
+	ldr	r0, [sp, #-4]
+	movs	pc, lr
+.LspuriousInterrupt:
+	.word	0x3ff
+.LfindHandler:
+	mov	lr, #INTR_HANDLER_SIZE
+	mul	r1, r0, lr
+	LOAD_ADDRESS r0, g_intrState
+	add	r1, r1, r0
+	ldr	lr, [r1]
+	cmp	lr, #0
+	bne	.LenterHandler
+	ldr	r12, [sp, #-0x18]
+	ldr	r1, [sp, #-8]
+	ldr	r0, [sp, #-4]
+	ldr	lr, [sp, #-0x1c]
+	movs	pc, lr
+.LenterHandler:
+	mrs	lr, spsr
+	str	lr, [sp, #-0x20]
+	mov	r0, sp
+	cps	#CPSR_MODE_SYSTEM
+	str	r2, [r0, #-0xc]
+	str	r3, [r0, #-0x10]
+	mrc	p15, 0, r3, c0, c0, 5			@ MPIDR
+	and	r3, r3, #0xf
+	mov	r2, #INTR_CPU_STATE_SIZE
+	mul	r2, r3, r2
+	LOAD_ADDRESS r3, g_intrCpu
+	add	r2, r2, r3
+	ldr	r3, [r2]				@ nesting
+	add	r3, r3, #1
+	str	r3, [r2]
+	sub	r3, r3, #1
+	stmdb	sp!, {r1}
+	mrc	p15, 0, r1, c0, c0, 5			@ MPIDR
+	and	r1, r1, #0xf
+	mov	r2, #INTR_CPU_STACK_SIZE
+	mul	r1, r2, r1
+	LOAD_ADDRESS r2, g_intrStackGuard
+	sub	r2, r2, r1
+	mov	r1, #INTR_LEVEL_STACK_SIZE
+	mul	r1, r3, r1
+	sub	r1, r2, r1
+	ldr	r2, [r0, #-4]
+	ldr	r3, [r0, #-8]
+	stmdb	r1!, {r2, r3}
+	ldr	r2, [r0, #-0x1c]
+	ldr	r3, [r0, #-0x20]
+	stmdb	r1!, {r2, r3}
+	ldmia	sp!, {r2}
+	stmdb	r1!, {sp, lr}
+	mov	sp, r1
+	mov	r1, r2
+	ldr	lr, [r0, #-0x18]
+	push	{r4-r11, lr}
+	ldr	r3, [r0, #-0x10]
+	ldr	r2, [r0, #-0xc]
+	push	{r2, r3}
+	vpush	{d16-d31}
+	vpush	{d0-d15}
+	vmrs	r5, fpexc
+	vmrs	r6, fpscr
+	push	{r5, r6}
+	mov	r3, #0x3000000				@ FPSCR: default NaN, flush to zero
+	vmsr	fpscr, r3
+	stmdb	sp!, {r12}
+	cpsie	i
+	mov	r12, r1
+	ldr	lr, [r12]
+	ldrh	r0, [r12, #INTR_HANDLER_CODE]
+	ldr	r1, [r12, #INTR_HANDLER_ARG]
+	ldrh	r2, [r12, #INTR_HANDLER_PRIORITY]
+	blx	lr
+	cpsid	i
+	ldmia	sp!, {r12}
+	cmn	r0, #1
+	beq	.LendInterrupt
+	bic	r0, r12, #0x1c00
+	cmp	r0, #31
+	bls	.LendInterrupt
+	bic	r1, r0, #0x3e0
+	mov	r2, #1
+	mov	r2, r2, lsl r1
+	mov	r1, r0, lsr #5
+	mov	r1, r1, lsl #2
+	LOAD_GLOBAL lr, g_intrDistributor
+	add	r3, lr, #0x180				@ GICD_ICENABLER
+	str	r2, [r3, r1]
+.LendInterrupt:
+	LOAD_GLOBAL lr, g_intrCpuInterface
+	str	r12, [lr, #16]				@ GICC_EOIR
+	mrc	p15, 0, r3, c0, c0, 5			@ MPIDR
+	and	r3, r3, #0xf
+	mov	r2, #INTR_CPU_STATE_SIZE
+	mul	r1, r2, r3
+	LOAD_ADDRESS r2, g_intrCpu
+	add	r2, r1, r2
+	ldr	r0, [r2]
+	sub	r0, r0, #1
+	str	r0, [r2]
+	ldmia	sp!, {r0}
+	vmsr	fpexc, r0
+	ldmia	sp!, {r0}
+	vmsr	fpscr, r0
+	vpop	{d0-d15}
+	vpop	{d16-d31}
+	pop	{r2-r12}
+	ldmia	sp!, {r1}
+	ldmia	sp!, {lr}
+	mov	r0, sp
+	mov	sp, r1
+	ldm	r0!, {r1}
+	str	r1, [sp, #-8]
+	ldm	r0!, {r1}
+	str	r1, [sp, #-4]
+	sub	sp, sp, #8
+	ldm	r0!, {r1}
+	stmdb	sp!, {r1}
+	ldm	r0!, {r1}
+	ldmia	sp!, {r0}
+	clrex
+	rfeia	sp!
+	END_FUNCTION interruptEntry
+
+/* int intrmgrSmc(uint32_t paddr, uint32_t command): SCE_MONCALL_SET_SHARED_MEMORY. */
+	FUNCTION_DEFAULT_UNWIND intrmgrSmc
+	movw	ip, #0x101
+	smc	#0
+	bx	lr
+	END_FUNCTION intrmgrSmc
+
+	FUNCTION_DEFAULT_UNWIND enableInterrupts
+	cpsie	i
+	bx	lr
+	END_FUNCTION enableInterrupts
+
+	FUNCTION_DEFAULT_UNWIND SceKblForKernel_DDB3A1A8
+	cpsid	i
+	bx	lr
+	END_FUNCTION SceKblForKernel_DDB3A1A8
+
+/* nothing in NSKBL calls it (os0: buserror's busErrorSmc10C) */
+	FUNCTION_DEFAULT_UNWIND intrmgrSmc10C
+	movw	ip, #0x10c
+	smc	#0
+	bx	lr
+	END_FUNCTION intrmgrSmc10C
+
+	.balign	32
+#else
+
 	.arm
 /*
  * The IRQ exception handler of the interrupt manager and the pieces of it the
@@ -1185,3 +1362,4 @@ SceIntrmgrForKernel_71E08D71:
 	bx	lr
 	.fnend
 	.size	SceIntrmgrForKernel_71E08D71, . - SceIntrmgrForKernel_71E08D71
+#endif

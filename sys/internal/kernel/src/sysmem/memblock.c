@@ -1078,7 +1078,8 @@ int sceKernelUnmapMemBlock(SceUID guid)
  * A block freed by its GUID once nobody else refers to it: its base info
  * dropped (or handed back), the clients mapping it unmapped first.
  */
-#ifdef SYSMEM_TZS	/* the secure world's callers want neither the type nor the attributes */
+#if defined(SYSMEM_TZS) || SYSMEM_NSKBL	/* the secure world's and the boot loader's callers
+					   want neither the type nor the attributes */
 int FreeMemBlockCore(SceUID guid, int checkLock, MemBlockObject **freed, MemBlockObject **base)
 #else
 int FreeMemBlockCore(SceUID guid, int checkLock, MemBlockObject **freed, MemBlockObject **base,
@@ -1105,7 +1106,7 @@ int FreeMemBlockCore(SceUID guid, int checkLock, MemBlockObject **freed, MemBloc
 		GUIDReleaseObject(guid);
 		return SCE_KERNEL_ERROR_MEMBLOCK_LOCKED;
 	}
-#ifndef SYSMEM_TZS
+#if !defined(SYSMEM_TZS) && !SYSMEM_NSKBL
 	if (attr != NULL)
 		*attr = block->attr;
 	if (type != NULL)
@@ -1148,18 +1149,16 @@ int FreeMemBlockCore(SceUID guid, int checkLock, MemBlockObject **freed, MemBloc
 	return ret;
 }
 
-#ifdef SYSMEM_TZS
-/* the secure world's FreeMemBlockCore takes no type or attribute pointers */
+#if defined(SYSMEM_TZS) || SYSMEM_NSKBL
+/* the secure world's and the boot loader's FreeMemBlockCore take no type or attribute pointers */
 #define FreeMemBlockCore(guid, checkLock, freed, base, type, attr) \
 	FreeMemBlockCore(guid, checkLock, freed, base)
 #endif
 
-#if !SYSMEM_NSKBL
 int sceKernelFreeMemBlock(SceUID guid)
 {
 	return FreeMemBlockCore(guid, 0, NULL, NULL, NULL, NULL);
 }
-#endif
 
 /* the user allocation options: SceKernelAllocMemBlockOpt as the kernel reads it, up to 0x40 bytes */
 typedef struct MemBlockUserOpt {
