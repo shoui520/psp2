@@ -222,6 +222,9 @@ UnmapKbl:
 	.balign	8
 	.space	0x4000
 systemStackTop:
+/* boot() clears .bss from here, above the System-mode stack it runs on */
+	.global	_fbss
+_fbss:
 	.space	0x1000
 abortStackTop:
 	.space	0x1000

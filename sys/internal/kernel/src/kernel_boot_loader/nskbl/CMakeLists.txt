@@ -92,6 +92,7 @@ set(sysmem_c_sources
 	${sysmem_source}/l2cc.c
 	${sysmem_source}/l2cc_maintenance.S
 	${sysmem_source}/qafmgr.c
+	../../acmgr/acmgr.c
 	${sysmem_source}/aimgr.c
 	${sysmem_source}/serial.c
 	${sysmem_source}/dipsw.c
@@ -121,18 +122,20 @@ set(nskbl_unwind_source "${CMAKE_CURRENT_BINARY_DIR}/gcc48-unwind.c")
 gcc48_prepare_unwind("${gcc_source}/libgcc/config/arm/unwind-arm.c" "${nskbl_unwind_source}")
 set(nskbl_libunwind_source "${CMAKE_CURRENT_BINARY_DIR}/libunwind.S")
 gcc48_prepare_libunwind("${gcc_source}/libgcc/config/arm/libunwind.S" "${nskbl_libunwind_source}")
-psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
+psp2_image(slb2_nskbl ADDRESS 0x51000000 LINKER_SCRIPT nskbl.ld SOURCES
 	reset.S
 	../skbl/boot.c
 	kbl_main.c
 	archive_ns.c
 	iofilemgr_if.c
+	exports.c
 	${excpmgr_source}/excpmgr.c
 	${excpmgr_source}/excpmgr_vector.S
 	${excpmgr_source}/excpmgr_initial.S
 	${excpmgr_source}/excpmgr_context.S
 	${intrmgr_source}/intrmgr_asm.S
 	${intrmgr_source}/intrmgr.c
+	${intrmgr_source}/intrmgr_data.c
 	${sysmem_c_sources}
 	${smsc_proxy_source}/smsc_proxy.c
 	${smsc_proxy_source}/tzs_bridge.c
@@ -165,7 +168,7 @@ psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	${nskbl_libunwind_source}
 	${libgcc_source}/unwind_pr.c
 )
-set_source_files_properties(${intrmgr_source}/intrmgr_asm.S ${intrmgr_source}/intrmgr.c PROPERTIES COMPILE_DEFINITIONS INTRMGR_NSKBL)
+set_source_files_properties(${intrmgr_source}/intrmgr_asm.S ${intrmgr_source}/intrmgr.c ${intrmgr_source}/intrmgr_data.c PROPERTIES COMPILE_DEFINITIONS INTRMGR_NSKBL)
 set_source_files_properties(${excpmgr_source}/excpmgr.c PROPERTIES COMPILE_DEFINITIONS EXCPMGR_NSKBL)
 # SceSysmem's flags (sysmem/sources.cmake): NULL tests after a dereference dropped,
 # caller-saved registers kept across leaf calls, signed characters in serial.c and uid.c
@@ -225,3 +228,7 @@ set_source_files_properties(sfat.c PROPERTIES COMPILE_DEFINITIONS SYSMEM_NSKBL
 set_source_files_properties(${lowio_source}/lowio_state.c ${lowio_source}/pervasive.c
 	${lowio_source}/pervasive_clock.c PROPERTIES
 	COMPILE_DEFINITIONS "LOWIO_KBL;LOWIO_NSKBL")
+# SceSblACMgr's flags (acmgr/CMakeLists.txt)
+set_source_files_properties(../../acmgr/acmgr.c PROPERTIES
+	COMPILE_DEFINITIONS ACMGR_NSKBL
+	COMPILE_OPTIONS "-fno-inline-small-functions;-ffunction-sections")

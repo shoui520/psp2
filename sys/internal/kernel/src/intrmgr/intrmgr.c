@@ -54,6 +54,7 @@ static inline __attribute__((always_inline)) void PatchCode(void *address, void 
 	writeDacr(dacr);
 }
 
+#if !defined(INTRMGR_NSKBL)	/* the boot loader keeps only the four functions below */
 /* names unknown: suspend/resume registration callbacks. */
 int SuspendController(int value, void *args)
 {
@@ -98,6 +99,7 @@ int ResumeController(int value, void *args)
 	sceKernelSysrootCorelockUnlock();
 	return 0;
 }
+#endif
 
 #if defined(INTRMGR_NSKBL)
 #include <sysmem/sysroot_init.h>
@@ -131,6 +133,7 @@ int __attribute__((noinline)) CurrentNesting(void)
 #define ARM_BRANCH(from, to) \
 	(0xea000000 | ((((int)(to) - 8 - (int)(from)) >> 2) & 0xffffff))
 
+#if !defined(INTRMGR_NSKBL)
 void SceIntrmgrForKernel_217AC350(void *enter, void *leave)
 {
 	SceUInt32 code;
@@ -200,6 +203,7 @@ int SceIntrmgrForDriver_C568F145(unsigned int value)
 {
 	return g_intrEvent(0x100000, 4, &value);
 }
+#endif
 
 int sceKernelRegisterIntrHandler(unsigned int intrCode, const char *name, unsigned int type,
 				void *handler, void *arg, unsigned int priority,
@@ -318,6 +322,7 @@ Return:
 	return result;
 }
 
+#if !defined(INTRMGR_NSKBL)
 int sceKernelReleaseIntrHandler(unsigned int code)
 {
 	int intrCode = code;
@@ -928,6 +933,7 @@ void intrStackOverflow(unsigned int depth, unsigned int interrupt)
 	for (;;)
 		;
 }
+#endif
 
 #if defined(INTRMGR_NSKBL)
 /* NSKBL: the block the secure kernel's requests are shared through */
@@ -1137,6 +1143,7 @@ int module_bootstart(SceSize arglen, void *argp)
 }
 #endif
 
+#if !defined(INTRMGR_NSKBL)
 void invalidApiStatCfunc(const ThreadSyscallFrame *frame, void *result, unsigned int state)
 {
 	(void)result;
@@ -1172,3 +1179,4 @@ void illegalUserDACRCfunc(const ThreadCB *thread, unsigned int dacr)
 		thread->threadId, SceSysmemForDriver_E655852F(thread->threadId));
 	SCE_PANIC(2354);
 }
+#endif

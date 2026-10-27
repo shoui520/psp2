@@ -5,6 +5,27 @@
 #define INTR_DATA __attribute__((section(".bss.intrmgr"), aligned(4)))
 
 /* GCC emits these independent definitions in reverse declaration order. */
+#if defined(INTRMGR_NSKBL)
+/* the boot loader keeps the handler table, the stacks, the heap and the hooks */
+void (*g_intrRegistered)(unsigned int) INTR_DATA;
+SceUID g_intrHeap INTR_DATA;
+IntrLevelStack g_intrStacks[64] INTR_DATA;
+IntrState g_intrState
+	__attribute__((section(".bss.intrmgr"), aligned(128)));
+void *g_intrEnterIntr INTR_DATA;
+void *g_intrLeaveSubIntr INTR_DATA;
+SceUInt32 g_intrDistributor INTR_DATA;
+SceSyscallTable g_intrSyscall INTR_DATA;
+SceUInt32 g_intrCpuInterface INTR_DATA;
+void *g_intrLeaveSyscall INTR_DATA;
+void *g_intrEnterSyscall INTR_DATA;
+void *g_intrLeaveIntr INTR_DATA;
+void *g_intrEnterSubIntr INTR_DATA;
+
+/* the end of the nesting stacks, where os0 keeps its stack guard */
+__asm__(".global g_intrStackGuard\n"
+	".set g_intrStackGuard, g_intrStacks + 64 * 0x2000");
+#else
 #if FW_SINCE(0x04000000)
 void (*g_intrReleased)(unsigned int) INTR_DATA;
 SceUID g_intrHeap INTR_DATA;
@@ -37,6 +58,7 @@ SceUInt32 g_intrReserved2[15] INTR_DATA;
 void *g_intrSysroot INTR_DATA;
 IntrState g_intrState
 	__attribute__((section(".bss.intrmgr"), aligned(128)));
+#endif
 
 /*
  * The first nested-IRQ frame, 0x138 bytes below the end of the nesting

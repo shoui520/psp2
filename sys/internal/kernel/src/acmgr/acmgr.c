@@ -60,6 +60,7 @@ typedef struct AcMgrMediaType {
 
 #define ENC(s)	((const SceChar8 *)(s))
 
+#if !ACMGR_NSKBL	/* the boot loader keeps only the media types, sceSblACMgrGetMediaType and E87D1777 */
 static const AcMgrPathRule webCorePaths[] = {			/* "vs0:" "data/external/cert/" ... */
 	{ ENC("\x89\x8c\xcf\xc5"), 4, ENC("\x9b\x9e\x8b\x9e\xd0\x9a\x87\x8b\x9a\x8d\x91\x9e\x93\xd0\x9c\x9a\x8d\x8b\xd0"), 19 },
 	{ ENC("\x89\x8c\xcf\xc5"), 4, ENC("\x9b\x9e\x8b\x9e\xd0\x9a\x87\x8b\x9a\x8d\x91\x9e\x93\xd0\x88\x9a\x9d\x9c\x90\x8d\x9a\xd0"), 22 },
@@ -133,6 +134,8 @@ static const AcMgrMountPoint mountPoints[] = {
 	{ ENC("\x8a\x92\x9e\xcf\xc5"), 5, 0x106 },
 };
 
+#endif
+
 static const AcMgrMediaType mediaTypes[] = {
 	{ ENC("\x8c\x9b"), 2, ENC("\xc5"), 1, 0x1 },
 	{ ENC("\x90\x8c"), 2, ENC("\xc5"), 1, 0x2 },
@@ -166,6 +169,7 @@ static const AcMgrMediaType mediaTypes[] = {
 	{ ENC("\x8a\x92\x9e"), 3, ENC("\xc5"), 1, 0x1b },
 };
 
+#if !ACMGR_NSKBL
 /* the first len bytes of s are the inverted bytes of encoded */
 static inline int matchEncoded(const SceChar8 *s, const SceChar8 *encoded, SceSize len)
 {
@@ -203,6 +207,8 @@ int SceSblACMgrForKernel_1948E9DB(void)
 {
 	return 0;
 }
+
+#endif
 
 int sceSblACMgrGetMediaType(const char *pathname, SceUInt32 *mediaType)
 {
@@ -243,6 +249,7 @@ int sceSblACMgrGetMediaType(const char *pathname, SceUInt32 *mediaType)
 	return ACMGR_ERROR_AUTH_INFO;
 }
 
+#if !ACMGR_NSKBL
 int SceSblACMgrForDriver_5F9AF49C(SceUID pid, const SceChar8 *path)
 {
 	SceSelfAuthInfo info;
@@ -595,10 +602,17 @@ int SceSblACMgrForDriver_4CBD6156(SceUID pid)
 	return hasAttribute(pid, 0x10) == 0;
 }
 
+#endif
+
 int SceSblACMgrForDriver_E87D1777(void)
 {
 	return sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE);
 }
+
+#if ACMGR_NSKBL
+/* the boot loader exports it under SceSblACMgrForKernel's NID only */
+int SceSblACMgrForKernel_BBA13D9C(void) __attribute__((alias("SceSblACMgrForDriver_E87D1777")));
+#else
 
 int SceSblACMgrForDriver_AD717E7A(SceUID pid)
 {
@@ -790,3 +804,4 @@ int SceSblACMgrForDriver_A92CD636(SceUID pid)
 {
 	return sceSblACMgrHasCapability(pid, 0x87);
 }
+#endif

@@ -117,7 +117,6 @@ int SceSblAIMgrForDriver_963CA644(void)
 	return 1;
 }
 
-#if !SYSMEM_NSKBL
 int SceSblAIMgrForDriver_4273B97B(void)
 {
 	return SceSblAIMgrForDriver_963CA644();
@@ -130,6 +129,7 @@ int SceSblAIMgrForDriver_71608CA3(void)
 	return sceKernelCheckDipsw(DIPSW_PLATFORM_DOLCE) != 0;
 }
 
+#if !SYSMEM_NSKBL	/* the boot loader exports the ones above */
 int SceSblAIMgrForDriver_37A79140(void)
 {
 	return AimgrProductCode() == PRODUCT_CODE_TOOL && AimgrProductSubCode() == 4;

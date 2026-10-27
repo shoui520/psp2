@@ -266,3 +266,11 @@ int SceDebugForDriver_D9703808(SceUInt32 level, SceUInt32 flags,
 	va_end(arguments);
 	return result;
 }
+
+#if SYSMEM_NSKBL
+/* name unknown: the print level, which the boot loader exports to psp2bootconfig */
+uint32_t SceKblForKernel_C011935A(void)
+{
+	return s_debugPrintLevel;
+}
+#endif
