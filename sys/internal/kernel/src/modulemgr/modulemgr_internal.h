@@ -642,7 +642,9 @@ int link_variables(StubLinkerInfo *info, int mode);
 int link_functions(StubLinkerInfo *info, int mode, const ModulemgrLibraryPatch *patch);
 int StubLinkerLinkAll(StubLinkerInfo *info, const ModulemgrLibraryPatch *patch);
 int StubLinkerUnlinkAll(StubLinkerInfo *info);
+#if !MODULEMGR_NSKBL
 int StubLinkerUndefFunctions(StubLinkerInfo *info);
+#endif
 
 /* syscallcb.c */
 int func_noentry(void);

@@ -56,6 +56,18 @@ typedef struct StubLinkerInsn {
 } StubLinkerInsn;
 
 /* name unknown */
+#if MODULEMGR_NSKBL
+/* NSKBL reads the kernel's own words */
+static inline int StubLinkerCopyIn(SceUID pid, void *dst, const void *src, SceSize len)
+{
+	SceUInt32 *d = dst;
+	const SceUInt32 *p = src;
+
+	for (; len != 0; len -= 4)
+		*d++ = *p++;
+	return 0;
+}
+#else
 int StubLinkerCopyIn(SceUID pid, void *dst, const void *src, SceSize len)
 {
 	if (pid != SCE_KERNEL_PROCESS_ID)
@@ -63,8 +75,12 @@ int StubLinkerCopyIn(SceUID pid, void *dst, const void *src, SceSize len)
 	memcpy(dst, src, len);
 	return 0;
 }
+#endif
 
 /* name unknown: read a Thumb-2 instruction from under any breakpoints */
+#if MODULEMGR_NSKBL
+static	/* NSKBL inlines it */
+#endif
 int StubLinkerReadThumb(SceUID pid, SceUInt32 addr, StubLinkerInsn *in, int debugger)
 {
 	SceUInt16 *half = (SceUInt16 *)&in->insn;
@@ -86,6 +102,9 @@ int StubLinkerReadThumb(SceUID pid, SceUInt32 addr, StubLinkerInsn *in, int debu
 }
 
 /* name unknown: read an ARM instruction from under a breakpoint */
+#if MODULEMGR_NSKBL
+static	/* NSKBL inlines it */
+#endif
 int StubLinkerReadArm(SceUID pid, SceUInt32 addr, StubLinkerInsn *in, int debugger)
 {
 	SceUInt32 orig;
@@ -129,7 +148,7 @@ static inline void StubLinkerWriteKernelWord(SceUInt32 *dst, SceUInt32 value)
 
 int apply_reftable(SceModuleCB *cb, const void *reftable, SceUInt32 value, int mode)
 {
-	SceUID pid = cb->pid, map = 0;
+	SceUID pid = ModuleCBGetPid(cb), map = 0;
 	SceUInt8 buf[0x200];
 	const SceUInt32 *p, *next, *end;
 	SceModuleSegment *seg = NULL;
@@ -142,7 +161,11 @@ int apply_reftable(SceModuleCB *cb, const void *reftable, SceUInt32 value, int m
 	SceUInt32 koffset;
 	int debugger, ret;
 
+#if MODULEMGR_NSKBL
+	debugger = 0;	/* NSKBL has no debugger */
+#else
 	debugger = SceSysrootForKernel_6050A467(pid);
+#endif
 	if (!ModuleCBIsInReadOnly(cb, (SceUInt32)reftable, 4))
 		return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REF_INFO;
 	ret = StubLinkerCopyIn(pid, &hdr, reftable, 4);
@@ -179,6 +202,7 @@ int apply_reftable(SceModuleCB *cb, const void *reftable, SceUInt32 value, int m
 			break;
 		}
 		w = p[0];
+		__builtin_prefetch(p + 10);
 		if ((w & 0xf) == 1) {
 			addend = (SceInt32)w >> 16;
 		} else if ((w & 0xf) == 2) {
@@ -405,13 +429,17 @@ int link_functions(StubLinkerInfo *info, int mode, const ModulemgrLibraryPatch *
 {
 	LibStubCB *stub = info->stub.libStubCB;
 	LibEntCB *ent = info->ent.libEntCB;
-	SceUID pid = stub->cb->pid;
+	SceUID pid = ModuleCBGetPid(stub->cb);
 	SceUInt32 i, j, n, idx, num, addr, size, dacr, orig;
 	SceUInt32 code[4], cur[4];
 	int debugger, kind, segno, offset, ret;
 	SceNID nid;
 
+#if MODULEMGR_NSKBL
+	debugger = 0;	/* NSKBL has no debugger */
+#else
 	debugger = SceSysrootForKernel_6050A467(pid);
+#endif
 	n = info->stub.nfunc;
 	if (n == 0)
 		return 0;
@@ -438,11 +466,14 @@ int link_functions(StubLinkerInfo *info, int mode, const ModulemgrLibraryPatch *
 	for (i = 0; i < n; i++) {
 		addr = (SceUInt32)info->stub.funcent[i];
 		if (mode != STUBLINKER_LINK) {
+#if !MODULEMGR_NSKBL
 			if (mode == STUBLINKER_UNDEF) {
 				kind = mode;
 				code[0] = STUB_BKPT;
 				size = 4;
-			} else {
+			} else
+#endif
+			{
 				kind = mode;
 noentry:
 				size = 8;
@@ -466,12 +497,15 @@ noentry:
 					ent->exports->libname, ent->exports->version);
 				goto noentry;
 			}
+#if !MODULEMGR_NSKBL
 			if ((ent->exports->attr & LIBRARY_ATTR_SYSCALL) != 0) {
 				num = (idx + ent->syscallIndex) & 0xfff;
 				SyscallCBSetEntry(ent, idx);
 				code[1] = STUB_SVC_0;
 				code[2] = STUB_BX_LR;
-			} else {
+			} else
+#endif
+			{
 				num = (SceUInt32)info->ent.entrytable[idx];
 				code[2] = STUB_BX_R12;
 				code[1] = STUB_MOVT_R12 | ((num >> 16) & 0xfff) | (num >> 28) << 16;
@@ -501,8 +535,10 @@ noentry:
 				}
 			}
 		}
+#if !MODULEMGR_NSKBL
 		if ((cur[0] & ARM_BKPT_MASK) == ARM_BKPT)
 			continue;
+#endif
 		if (cur[0] != STUB_SUB_R12_PC_8 && cur[0] != STUB_MVN_R0_0 &&
 		    (cur[0] & 0xfff0f000) != STUB_MOVW_R12)
 			return SCE_KERNEL_ERROR_MODULEMGR_INVALID_STUB;
@@ -552,8 +588,10 @@ int StubLinkerUnlinkAll(StubLinkerInfo *info)
 	return ret;
 }
 
+#if !MODULEMGR_NSKBL
 /* Sony's name (1.80 records): undefine every function stub of an import */
 int StubLinkerUndefFunctions(StubLinkerInfo *info)
 {
 	return link_functions(info, STUBLINKER_UNDEF, NULL);
 }
+#endif
