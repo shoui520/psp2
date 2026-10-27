@@ -12,10 +12,13 @@ union DipswState {
 static union DipswState s_bootDipsw;
 static union DipswState *s_dipsw;
 
-/* Name unknown; replaces the DIP-switch words the kernel reads (no call reaches it). */
-int DipswSetState(union DipswState *dipsw)
+/*
+ * Name unknown; replaces the DIP-switch words the kernel reads (no call reaches it in
+ * os0; the boot loaders point it at their KBL Param's)
+ */
+int DipswSetState(SceDipsw *dipsw)
 {
-	s_dipsw = dipsw;
+	s_dipsw = (union DipswState *)dipsw;
 	return 0;
 }
 
@@ -45,11 +48,13 @@ int sceKernelCheckDipsw(unsigned int bit)
 	return (s_dipsw->words[bit >> 5] >> (bit & 31)) & 1;
 }
 
+#if !SYSMEM_NSKBL
 __attribute__((noinline))
 void SceDipswForDriver_82E45FBF(unsigned int bit)
 {
 	s_dipsw->words[bit >> 5] |= UINT32_C(1) << (bit & 31);
 }
+#endif
 
 __attribute__((noinline))
 void SceDipswForDriver_F1F3E9FE(unsigned int bit)
@@ -57,6 +62,7 @@ void SceDipswForDriver_F1F3E9FE(unsigned int bit)
 	s_dipsw->words[bit >> 5] &= ~(UINT32_C(1) << (bit & 31));
 }
 
+#if !SYSMEM_NSKBL
 /* Name unknown; high DIP-switch numbers require process capability bit1. */
 __attribute__((noinline))
 int CheckDipswAccess(void)
@@ -108,3 +114,4 @@ int sceKernelClearDipsw(unsigned int bit)
 	SceDipswForDriver_F1F3E9FE(bit);
 	return 0;
 }
+#endif

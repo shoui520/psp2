@@ -57,6 +57,7 @@ set(sysmem_c_sources
 	${sysmem_source}/mmu.c
 	${sysmem_source}/aimgr.c
 	${sysmem_source}/serial.c
+	${sysmem_source}/dipsw.c
 )
 psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	reset.S

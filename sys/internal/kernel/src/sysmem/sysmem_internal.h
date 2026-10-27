@@ -751,14 +751,9 @@ int InitializeDebugNop(void);
 int InitializeDebugCorelock(void);
 
 /* dipsw.c */
-union DipswState;
-int DipswSetState(union DipswState *dipsw);
-#if defined(SYSMEM_SKBL) || defined(SYSMEM_NSKBL)
 struct SceDipsw;
-int InitializeDipsw(struct SceDipsw *dipsw);	/* the boot loaders' own */
-#else
+int DipswSetState(struct SceDipsw *dipsw);
 int InitializeDipsw(const struct SysmemBootContext *context);
-#endif
 
 /* l1pagetable.c */
 void L1PageTableInit(L1PageTable *l1pt, uint32_t *low, uint32_t *high, uintptr_t split,

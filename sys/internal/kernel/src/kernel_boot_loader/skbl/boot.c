@@ -445,7 +445,7 @@ static inline uint32_t BootCpu0Init(void *lr)
 		for (i = 0; i < 8; i++)
 			s_kblParam.dipswWords[i] = bootDefaultDipsw[i] | s_kblParam.dipswWords[i];
 	}
-	InitializeDipsw(&s_kblParam.dipsw);
+	DipswSetState(&s_kblParam.dipsw);
 	if (s_kblParam.boot_flags[1] == 0xff) {
 		SceDipswForDriver_F1F3E9FE(DIPSW_UART0_CONSOLE);
 		SceDipswForDriver_F1F3E9FE(DIPSW_USER_UART);
@@ -1000,7 +1000,7 @@ static inline uint32_t BootCpu0Init(void *lr)
 	param->socCacheStatus = PERVASIVE_MISC->cacheStatus;
 	memcpy(&s_kblParam, (void *)(SCE_KBL_PARAM_ADDRESS + 0x40200000), sizeof(s_kblParam));
 	param->kblParam = &s_kblParam;
-	InitializeDipsw(&s_kblParam.dipsw);
+	DipswSetState(&s_kblParam.dipsw);
 	InitializeAssertLevel();
 	InitializeDebugBuffer();
 	if (sceKernelCheckDipsw(DIPSW_UART1_CONSOLE) || sceKernelCheckDipsw(DIPSW_UART0_CONSOLE) ||

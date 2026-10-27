@@ -408,7 +408,6 @@ SceSize SceSysrootForKernel_EEB867C0(void)
 }
 
 #if !SYSMEM_NSKBL
-
 int SceSysrootForDriver_F804F761(void)
 {
 	return 0;
@@ -726,7 +725,6 @@ uint32_t SceSysrootForKernel_085C2BCB(void)
 }
 
 #if !SYSMEM_NSKBL
-
 void *sceKernelSysrootGetModulePrivate(unsigned int index)
 {
 	return s_sysrootState->modulePrivate[index];
@@ -1292,13 +1290,12 @@ void SysrootSetFallbackAddressSpaceCB(void *addressSpace)
 {
 	s_sysrootState->fallbackAddressSpaceCB = addressSpace;
 }
-#else
+#endif
 
 uint32_t sceKernelSysrootGetStatus(void)
 {
 	return s_sysrootState->status;
 }
-#endif
 
 void SceSysrootForKernel_611F17A4(void *context)
 {
@@ -1306,7 +1303,6 @@ void SceSysrootForKernel_611F17A4(void *context)
 }
 
 #if !SYSMEM_NSKBL
-
 void SceSysrootForKernel_642123EB(void)
 {
 	s_sysrootState->bootArgs = 0;
@@ -2649,12 +2645,12 @@ int sceKernelIsPSVitaTV(void)
 /* bootFlags: set when the system resumed rather than booted */
 #define SYSROOT_BOOT_FLAG_WARM		0x10
 
-#if !SYSMEM_NSKBL
 int sceKernelIsColdBoot(void)
 {
 	return !(s_sysrootState->bootFlags & SYSROOT_BOOT_FLAG_WARM);
 }
 
+#if !SYSMEM_NSKBL
 /* the current thread's attributes, from the thread manager */
 int sceKernelSysrootGetCurrentThreadAttr(uint32_t *attr)
 {
@@ -2786,7 +2782,7 @@ int SetupCore0(SceKernelBootParam *param)
 		kblParam = param->kblParam;
 		state->kblParam = block;
 		__builtin_memcpy(s_sysrootState->kblParam, kblParam, sizeof(SceKblParam));
-		InitializeDipsw(&s_sysrootState->kblParam->dipsw);
+		DipswSetState(&s_sysrootState->kblParam->dipsw);
 
 		state = s_sysrootState;
 		state->registeredPid = -1;
