@@ -11,9 +11,19 @@ void (*g_statusCallback)(SceModuleCB *cb);
 
 int ModuleObjNew(SceUID pid, SceUInt32 flags, SceModuleObject **out)
 {
-	UIDCreateOpt opt, *optp;
 	SceModuleObject *obj;
 	SceUID uid;
+#if MODULEMGR_NSKBL
+	/* NSKBL's modules are the kernel's: no process heap */
+	uid = sceGUIDKernelCreateWithOpt(g_moduleClass, "SceModuleMgrNewModule", NULL, (SceObjectBase **)&obj);
+	if (uid < 0) {
+		SCE_DBG_PRINTF_LEVEL(1, 0xb, 78, "UIDcreate failed 0x%08x\n", uid);
+		return uid;
+	}
+	obj->cb.pid = pid;
+	obj->cb.sdkVersion = 0xffffffff;
+#else
+	UIDCreateOpt opt, *optp;
 	int ret;
 
 	if (pid == SCE_KERNEL_PROCESS_ID) {
@@ -46,6 +56,7 @@ int ModuleObjNew(SceUID pid, SceUInt32 flags, SceModuleObject **out)
 
 	obj->cb.pid = pid;
 	obj->cb.sdkVersion = pid == SCE_KERNEL_PROCESS_ID ? 0xffffffff : MODULE_OBJECT_VERSION;
+#endif
 	obj->cb.modid = uid;
 	if (out != NULL)
 		*out = obj;
@@ -70,11 +81,14 @@ static inline int ModuleInfoSegReadOnly(SceModuleCB *cb, SceUInt32 seg)
 int ModuleCBCopyInfo(LoadelfContext *ctx)
 {
 	SceModuleCB *cb = ctx->cb;
+#if !MODULEMGR_NSKBL
 	SceModuleCB *orig;
+#endif
 	SceModuleInfo info;
 	SceUInt32 s, off, base, stubSize, tlsEnd;
 	int ret;
 
+#if !MODULEMGR_NSKBL
 	if ((cb->flags & MODULE_FLAG_SHARED_MASK) != 0) {
 		orig = cb->shared->cb;
 		cb->libentTop = orig->libentTop;
@@ -103,6 +117,7 @@ int ModuleCBCopyInfo(LoadelfContext *ctx)
 		cb->sdkVersion = orig->sdkVersion;
 		return 0;
 	}
+#endif
 
 	s = SEG_INDEX(ctx->entry);
 	off = SEG_OFFSET(ctx->entry);
@@ -147,8 +162,12 @@ int ModuleCBCopyInfo(LoadelfContext *ctx)
 		return 0x80025001;
 
 	cb->attr = info.modattr;
+#if MODULEMGR_NSKBL
+	__builtin_memcpy(cb->version, info.modver, sizeof(cb->version));
+#else
 	cb->version[0] = info.modver[0];
 	cb->version[1] = info.modver[1];
+#endif
 	info.name[26] = '\0';
 	ret = sceGUIDSetName(cb->modid, info.name);
 	if (ret < 0)
@@ -169,6 +188,7 @@ int ModuleCBCopyInfo(LoadelfContext *ctx)
 	return 0;
 }
 
+#if !MODULEMGR_NSKBL
 int SceModulemgrForKernel_74A4E0EE(void (*callback)(SceModuleCB *cb))
 {
 	if (g_statusCallback != NULL && g_statusCallback != callback)
@@ -184,6 +204,7 @@ int SceModulemgrForKernel_ACBC97C9(void (*callback)(SceModuleCB *cb))
 	g_statusCallback = NULL;
 	return 0;
 }
+#endif
 
 /* name unknown */
 void ModuleCBSetStatus(SceModuleCB *cb, SceUInt8 status)
@@ -252,8 +273,10 @@ void ModuleCBDumpLoadAddress(SceModuleCB *cb)
 
 void ModuleCBShowStartMessage(SceModuleCB *cb, int noResident, SceUInt32 usec)
 {
+#if !MODULEMGR_NSKBL
 	if (!SceSblACMgrForKernel_BBA13D9C() && cb->pid != SCE_KERNEL_PROCESS_ID)
 		return;
+#endif
 	if (noResident < 1)
 		SCE_PRINTF_WITH_INFO(0, 354, "[%-27s]:Starting...  OK   %8uusec\n", cb->name, usec);
 	else
@@ -261,6 +284,7 @@ void ModuleCBShowStartMessage(SceModuleCB *cb, int noResident, SceUInt32 usec)
 				     cb->name, usec);
 }
 
+#if !MODULEMGR_NSKBL
 /* name unknown: addr..addr+size lies in one segment */
 int ModuleCBIsInRange(SceModuleCB *cb, SceUInt32 addr, SceSize size)
 {
@@ -279,8 +303,12 @@ int ModuleCBIsInRange(SceModuleCB *cb, SceUInt32 addr, SceSize size)
 	} while (i < cb->nSegments);
 	return 0;
 }
+#endif
 
 /* name unknown */
+#if MODULEMGR_NSKBL
+static inline	/* NSKBL inlines it */
+#endif
 int ModuleCBGetSegmentIndex(SceModuleCB *cb, SceUInt32 addr)
 {
 	SceModuleSegment *seg;
@@ -293,6 +321,7 @@ int ModuleCBGetSegmentIndex(SceModuleCB *cb, SceUInt32 addr)
 	return -1;
 }
 
+#if !MODULEMGR_NSKBL
 /* name unknown */
 int ModuleCBIsInText(SceModuleCB *cb, SceUInt32 addr, SceSize size)
 {
@@ -309,6 +338,7 @@ int ModuleCBIsInText(SceModuleCB *cb, SceUInt32 addr, SceSize size)
 		return 0;
 	return addr + size <= seg->memsz + (SceUInt32)seg->vaddr;
 }
+#endif
 
 /* name unknown */
 int ModuleCBIsInReadOnly(SceModuleCB *cb, SceUInt32 addr, SceSize size)

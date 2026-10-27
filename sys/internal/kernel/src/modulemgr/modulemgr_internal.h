@@ -459,7 +459,9 @@ int ModuleCBSetPath(SceModuleCB *cb, const char *path, SceUInt32 flags);
 void ModuleCBDumpLoadAddress(SceModuleCB *cb);
 void ModuleCBShowStartMessage(SceModuleCB *cb, int noResident, SceUInt32 usec);
 int ModuleCBIsInRange(SceModuleCB *cb, SceUInt32 addr, SceSize size);
+#if !MODULEMGR_NSKBL
 int ModuleCBGetSegmentIndex(SceModuleCB *cb, SceUInt32 addr);
+#endif
 int ModuleCBIsInText(SceModuleCB *cb, SceUInt32 addr, SceSize size);
 int ModuleCBIsInReadOnly(SceModuleCB *cb, SceUInt32 addr, SceSize size);
 int ModuleCBGetSegmentOffset(SceModuleCB *cb, SceUInt32 addr, int *seg, SceUInt32 *offset);
