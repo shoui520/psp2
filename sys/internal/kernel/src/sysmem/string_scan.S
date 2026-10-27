@@ -59,6 +59,8 @@ strnlen:
 	.balign	16
 	.size	strnlen, . - strnlen
 
+/* the boot loader (SYSMEM_NSKBL) keeps only the length scans */
+#if !SYSMEM_NSKBL
 #ifdef SYSMEM_TZS
 	/* a section of its own: the secure world's link keeps only what is called */
 	.section .text.memchr, "ax", %progbits
@@ -192,3 +194,4 @@ strrchr:
 	subs	r0, #4
 	pop	{r4, pc}
 	.size	strrchr, . - strrchr
+#endif

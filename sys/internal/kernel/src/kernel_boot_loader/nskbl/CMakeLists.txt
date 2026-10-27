@@ -12,6 +12,13 @@ set(sysmem_source ../../sysmem)
 set(lowio_source ../../../../driver/src/lowio)
 set(sdif_source ../../../../driver/src/sdif)
 set(intrmgr_source ../../intrmgr)
+# the kernel heap's dlmalloc/malloc.c, prepared as SceSysmem's (sysmem/sources.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/${sysmem_source}/vendor_patch.cmake)
+set(sysmem_dlmalloc_source "${CMAKE_CURRENT_BINARY_DIR}/dlmalloc-sce.c")
+sysmem_prepare_patched(
+	"${PSP2_SRC}/contrib/dlmalloc-2.8.4/malloc.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/${sysmem_source}/dlmalloc_sce.patch"
+	"${sysmem_dlmalloc_source}")
 set(sysmem_c_sources
 	${sysmem_source}/uid.c
 	${sysmem_source}/memblock_obj.c
@@ -39,11 +46,13 @@ set(sysmem_c_sources
 	${sysmem_source}/uid_dlink.c
 	${sysmem_source}/murmurhash3.c
 	${sysmem_source}/l1pagetable.c
+	${sysmem_dlmalloc_source}
 	${sysmem_source}/sysroot.c
 	${sysmem_source}/led.c
 	${sysmem_source}/debug_state.c
 	${sysmem_source}/debug_dump.c
 	${sysmem_source}/debug_asm.S
+	${sysmem_source}/string_scan.S
 	${sysmem_source}/debug_output.c
 	${sysmem_source}/memset_chk.c
 	${sysmem_source}/memcpy_chk.c

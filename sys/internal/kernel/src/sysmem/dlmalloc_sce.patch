@@ -219,6 +219,15 @@
  #else
          magic = (size_t)(time(0) ^ (size_t)0x55555555U);
  #endif
+@@ -3323,7 +3391,7 @@
+ 
+ /* ----------------------------- statistics ------------------------------ */
+ 
+-#if !NO_MALLINFO
++#if !NO_MALLINFO && !SYSMEM_NSKBL
+ static struct mallinfo internal_mallinfo(mstate m) {
+   struct mallinfo nm = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+   ensure_initialization();
 @@ -3364,7 +3432,14 @@
  }
  #endif /* !NO_MALLINFO */
@@ -230,7 +239,7 @@
 +  size_t system_bytes;
 +  size_t in_use_bytes;
 +};
-+
++#if !SYSMEM_NSKBL	/* SCE: not in the boot loader */
 +static void internal_malloc_stats(mstate m, struct malloc_stats* stats) {
    ensure_initialization();
    if (!PREACTION(m)) {
@@ -249,7 +258,8 @@
      POSTACTION(m);
    }
  }
- 
+-
++#endif /* !SYSMEM_NSKBL */
 +/* SCE: walks every chunk, checking the footers of the chunks in use, and
 +   whether mem (when given) is one of them; returns the chunks in use.
 +   Corruption is reported in every build, the rest only in debug builds. */
@@ -326,6 +336,24 @@
      if (mm != CMFAIL) {
        size_t offset = align_offset(chunk2mem(mm));
        size_t psize = mmsize - offset - MMAP_FOOT_PAD;
+@@ -3683,7 +3822,7 @@
+   }
+   return 0;
+ }
+-
++#if !SYSMEM_NSKBL	/* SCE: not in the boot loader */
+ /* Realloc using mmap */
+ static mchunkptr mmap_resize(mstate m, mchunkptr oldp, size_t nb) {
+   size_t oldsize = chunksize(oldp);
+@@ -3717,7 +3856,7 @@
+   }
+   return 0;
+ }
+-
++#endif /* !SYSMEM_NSKBL */
+ /* -------------------------- mspace management -------------------------- */
+ 
+ /* Initialize top chunk and its size */
 @@ -3763,50 +3902,9 @@
    init_bins(m);
  }
@@ -479,6 +507,24 @@
  static void* tmalloc_small(mstate m, size_t nb) {
    tchunkptr t, v;
    size_t rsize;
+@@ -4289,7 +4366,7 @@
+ }
+ 
+ /* --------------------------- realloc support --------------------------- */
+-
++#if !SYSMEM_NSKBL	/* SCE: not in the boot loader */
+ static void* internal_realloc(mstate m, void* oldmem, size_t bytes) {
+   if (bytes >= MAX_REQUEST) {
+     MALLOC_FAILURE_ACTION;
+@@ -4362,7 +4439,7 @@
+   }
+   return 0;
+ }
+-
++#endif /* !SYSMEM_NSKBL */
+ /* --------------------------- memalign support -------------------------- */
+ 
+ static void* internal_memalign(mstate m, size_t alignment, size_t bytes) {
 @@ -4448,138 +4525,8 @@
      }
    }
@@ -701,7 +747,8 @@
    }
    return (mspace)m;
  }
- 
+-
++#if !SYSMEM_NSKBL	/* SCE: not in the boot loader */
 -int mspace_track_large_chunks(mspace msp, int enable) {
 -  int ret = 0;
 -  mstate ms = (mstate)msp;
@@ -739,7 +786,8 @@
 -  return ret;
 +  return count;
  }
- 
+-
++#endif /* !SYSMEM_NSKBL */
 +#line 5362	/* SCE: the line in Sony's dlmalloc/malloc.c */
  size_t destroy_mspace(mspace msp) {
    size_t freed = 0;
@@ -773,7 +821,8 @@
 @@ -5256,26 +5216,7 @@
    }
  }
- 
+-
++#line 5624	/* SCE: the line in Sony's dlmalloc/malloc.c, kept by the boot loader too */
 -void* mspace_calloc(mspace msp, size_t n_elements, size_t elem_size) {
 -  void* mem;
 -  size_t req = 0;
@@ -794,14 +843,24 @@
 -  return mem;
 -}
 -
-+#line 5625	/* SCE: the line in Sony's dlmalloc/malloc.c */
++#if !SYSMEM_NSKBL	/* SCE: not in the boot loader */
  void* mspace_realloc(mspace msp, void* oldmem, size_t bytes) {
    if (oldmem == 0)
      return mspace_malloc(msp, bytes);
+@@ -5299,7 +5240,7 @@
+     return internal_realloc(ms, oldmem, bytes);
+   }
+ }
+-
++#endif /* !SYSMEM_NSKBL */
+ void* mspace_memalign(mspace msp, size_t alignment, size_t bytes) {
+   mstate ms = (mstate)msp;
+   if (!ok_magic(ms)) {
 @@ -5309,70 +5250,74 @@
    return internal_memalign(ms, alignment, bytes);
  }
- 
+-
++#if !SYSMEM_NSKBL	/* SCE: not in the boot loader */
 -void** mspace_independent_calloc(mspace msp, size_t n_elements,
 -                                 size_t elem_size, void* chunks[]) {
 -  size_t sz = elem_size; /* serves as 1-element array */
@@ -926,6 +985,15 @@
  struct mallinfo mspace_mallinfo(mspace msp) {
    mstate ms = (mstate)msp;
    if (!ok_magic(ms)) {
+@@ -5390,7 +5336,7 @@
+   return internal_mallinfo(ms);
+ }
+ #endif /* NO_MALLINFO */
+-
++#endif /* !SYSMEM_NSKBL */
+ size_t mspace_usable_size(void* mem) {
+   if (mem != 0) {
+     mchunkptr p = mem2chunk(mem);
 @@ -5400,9 +5346,7 @@
    return 0;
  }
