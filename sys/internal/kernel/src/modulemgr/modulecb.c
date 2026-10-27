@@ -194,6 +194,20 @@ void ModuleCBSetStatus(SceModuleCB *cb, SceUInt8 status)
 }
 
 /* name unknown */
+#if MODULEMGR_NSKBL
+int ModuleCBSetPath(SceModuleCB *cb, const char *path)
+{
+	SceSize len;
+
+	len = strnlen(path, 0xff);
+	cb->path = ModulemgrAlloc(ModuleCBGetPid(cb), len + 1);
+	if (cb->path == NULL)
+		return SCE_KERNEL_ERROR_MODULEMGR_NOMEM;
+	memcpy(cb->path, path, len);
+	cb->path[len] = '\0';
+	return 0;
+}
+#else
 int ModuleCBSetPath(SceModuleCB *cb, const char *path, SceUInt32 flags)
 {
 	SceUInt16 cbFlags = cb->flags;
@@ -220,6 +234,7 @@ int ModuleCBSetPath(SceModuleCB *cb, const char *path, SceUInt32 flags)
 	__builtin_memcpy(cb->path, "bootfs:", 7);
 	return 0;
 }
+#endif
 
 void ModuleCBDumpLoadAddress(SceModuleCB *cb)
 {

@@ -194,6 +194,7 @@ typedef struct SceModuleProbesInfo {
 typedef struct SceModuleObject {
 	SceUInt32 base[2];		/* SceObjectBase */
 	SceModuleCB cb;
+	SceUInt32 reserved;		/* after the control block: NSKBL's on-stack SceModuleCB has 0xe8 bytes */
 } SceModuleObject;
 
 typedef struct LibStubCB {
@@ -409,7 +410,11 @@ extern SceUInt32 g_relocForms;
 
 /* loadelf.c */
 SceUInt32 Loadelf_GetAddrBias(LoadelfContext *ctx, const void *addr);
+#if MODULEMGR_NSKBL
+SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth);
+#else
 SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, SceUInt32 flags);
+#endif
 int LoadelfFreeImage(SceModuleCB *cb);
 int LoadelfMapImage(LoadelfContext *ctx);
 
@@ -446,7 +451,11 @@ SceUID loadStartSharedModuleCommon(SceUID pid, const char *path, SceSize args, v
 int ModuleObjNew(SceUID pid, SceUInt32 flags, SceModuleObject **out);
 int ModuleCBCopyInfo(LoadelfContext *ctx);
 void ModuleCBSetStatus(SceModuleCB *cb, SceUInt8 status);
+#if MODULEMGR_NSKBL
+int ModuleCBSetPath(SceModuleCB *cb, const char *path);
+#else
 int ModuleCBSetPath(SceModuleCB *cb, const char *path, SceUInt32 flags);
+#endif
 void ModuleCBDumpLoadAddress(SceModuleCB *cb);
 void ModuleCBShowStartMessage(SceModuleCB *cb, int noResident, SceUInt32 usec);
 int ModuleCBIsInRange(SceModuleCB *cb, SceUInt32 addr, SceSize size);
@@ -460,6 +469,7 @@ int ModulemgrCopyIn(SceUID pid, void *dst, const void *src, SceSize len);
 #define ModuleCBGetPid(cb)		((void)(cb), SCE_KERNEL_PROCESS_ID)
 #define ModulemgrAlloc(pid, size)	((void)(pid), ModulemgrKernelAlloc(size))
 #define ModulemgrFree(pid, ptr)		((void)(pid), ModulemgrKernelFree(ptr))
+extern LibraryDB *g_kernelDB;		/* librarydb.c, set by sceKernelModulemgrStart */
 #else
 #define ModuleCBGetPid(cb)		((cb)->pid)
 void *ModulemgrAlloc(SceUID pid, SceSize size);

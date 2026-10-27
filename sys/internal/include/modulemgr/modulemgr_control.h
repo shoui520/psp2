@@ -71,12 +71,11 @@ typedef struct SceModuleCB {
 	struct SceModuleProbesInfo *probesInfo;
 	void **probes;
 	SceUInt32 reserved2;
-	SceUInt32 reserved3;
 } SceModuleCB;
 
 #ifndef __cplusplus
 _Static_assert(sizeof(SceModuleSegment) == 0x14, "module segment record");
-_Static_assert(sizeof(SceModuleCB) == 0xec, "module control record");
+_Static_assert(sizeof(SceModuleCB) == 0xe8, "module control record");
 _Static_assert(offsetof(SceModuleCB, modid) == 0xc, "module ID");
 _Static_assert(offsetof(SceModuleCB, version) == 0x1a, "module version");
 _Static_assert(offsetof(SceModuleCB, name) == 0x1c, "module name");

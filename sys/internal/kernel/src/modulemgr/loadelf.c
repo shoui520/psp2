@@ -345,7 +345,11 @@ static int LoadelfAllocRelaTmp(SceModuleCB *cb, SceSize size)
 static SceUInt8 s_relaTmp[0x20000] __attribute__((aligned(64)));
 #endif
 
+#if MODULEMGR_NSKBL
+SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth)
+#else
 SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, SceUInt32 flags)
+#endif
 {
 	SceModuleCB *cb = ctx->cb;
 	LoadelfTiming *t;
