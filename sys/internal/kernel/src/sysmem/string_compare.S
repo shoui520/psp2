@@ -30,6 +30,8 @@ strncmp:
 	bx	lr
 	.size	strncmp, . - strncmp
 
+/* the boot loader (SYSMEM_NSKBL) keeps only strncmp */
+#if !SYSMEM_NSKBL
 	.thumb
 #ifdef SYSMEM_TZS
 	/* a section of its own: the secure world's link keeps only what is called */
@@ -66,3 +68,4 @@ timingsafe_memcmp:
 	pop	{r4-r7}
 	bx	lr
 	.size	timingsafe_memcmp, . - timingsafe_memcmp
+#endif

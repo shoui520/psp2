@@ -29,6 +29,7 @@ void FormatBufferCharacter(void *context, int character)
 		*buffer->cursor++ = character;
 }
 
+#if !SYSMEM_NSKBL	/* not in the boot loader */
 int vsnprintf(char *destination, size_t capacity, const char *format,
 	      va_list arguments)
 {
@@ -37,6 +38,7 @@ int vsnprintf(char *destination, size_t capacity, const char *format,
 	__prnt(FormatBufferCharacter, &buffer, format, arguments);
 	return buffer.count;
 }
+#endif
 
 int snprintf(char *destination, size_t capacity, const char *format, ...)
 {

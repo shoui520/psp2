@@ -34,6 +34,7 @@ int look_ctype_table(int value)
 	return (uint32_t)value < 128 ? asciiClass[value] : 0;
 }
 
+#if !SYSMEM_NSKBL	/* the boot loader keeps only look_ctype_table */
 int tolower(int value)
 {
 	if ((uint32_t)value < 128 && (asciiClass[value] & ASCII_UPPER))
@@ -47,3 +48,4 @@ int toupper(int value)
 		value -= 'a' - 'A';
 	return value;
 }
+#endif

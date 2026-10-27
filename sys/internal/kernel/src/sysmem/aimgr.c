@@ -51,8 +51,7 @@ static inline int AimgrIsDolceHardware(void)
 	return model == 0x700000 || model == 0x720000 || model == 0x510000;
 }
 
-#if !SYSMEM_NSKBL
-/* name unknown */
+/* name unknown (the boot loader's sceKblMain calls it too) */
 int AimgrInit(void)
 {
 	SceKblParam *kbl = sceKernelSysrootGetKblParam();
@@ -67,7 +66,6 @@ int AimgrInit(void)
 	s_psCode.code = kbl->pscode;
 	return 0;
 }
-#endif
 
 int SceSblAIMgrForDriver_3B638885(void)
 {

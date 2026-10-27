@@ -23,7 +23,9 @@ static volatile SceGpioRegisters *s_ledRegs = (void *)GPIO0_REG_BASE;
 static volatile SceUInt32 s_gpo = 0xff;
 /* the GPO bits that reach the LEDs */
 static volatile SceInt32 s_gpoMask = 0xff;
+#if !SYSMEM_NSKBL
 static SceUInt32 s_gpi;
+#endif
 static void (*s_ledHandle0)(int a1, int a2, int a3, int a4);
 static void (*s_ledHandle1)(int a1, int a2, int a3, int a4);
 
@@ -36,6 +38,8 @@ static inline void LedWriteGPO(SceUInt32 gpo)
 	regs->outputSet = bits & LED_GPO_BITS;
 }
 
+/* the boot loader (SYSMEM_NSKBL) keeps only sceKernelSetGPO */
+#if !SYSMEM_NSKBL
 /* name unknown: suspend and resume handlers */
 static int LedSuspend(int value, void *args)
 {
@@ -47,6 +51,8 @@ static int LedResume(int value, void *args)
 	return sceKernelSetGPO(s_gpo);
 }
 
+#endif
+
 int sceKernelSetGPO(SceUInt32 gpo)
 {
 	s_gpo = gpo;
@@ -54,6 +60,7 @@ int sceKernelSetGPO(SceUInt32 gpo)
 	return 0;
 }
 
+#if !SYSMEM_NSKBL
 /* SceDebugLed's own copy of sceKernelSetGPO, the one the user syscall runs */
 int sceKernelSetGPOForUser(SceUInt32 gpo)
 {
@@ -127,6 +134,7 @@ void sceDebugLedInvokeHandle0ForUser(int a1, int a2, int a3, int a4)
 	if (s_ledHandle0 != NULL)
 		s_ledHandle0(a1, a2, a3, a4);
 }
+#endif
 #endif
 
 #if defined(SYSMEM_SKBL) || defined(SYSMEM_NSKBL)

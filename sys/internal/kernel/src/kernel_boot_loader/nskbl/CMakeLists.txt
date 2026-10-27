@@ -52,10 +52,16 @@ set(sysmem_c_sources
 	${sysmem_source}/debug_state.c
 	${sysmem_source}/debug_dump.c
 	${sysmem_source}/debug_asm.S
+	${sysmem_source}/string_compare.S
 	${sysmem_source}/string_scan.S
+	${sysmem_source}/ctype.c
+	${sysmem_source}/bsd_prnt.c
+	${sysmem_source}/formatter_buffer.c
+	${sysmem_source}/strncpy.S
 	${sysmem_source}/debug_output.c
 	${sysmem_source}/memset_chk.c
 	${sysmem_source}/memcpy_chk.c
+	${sysmem_source}/stack_chk.c
 	${sysmem_source}/cpu_cache.c
 	${sysmem_source}/atomics_small.c
 	${sysmem_source}/atomics32.c
@@ -65,6 +71,7 @@ set(sysmem_c_sources
 	${sysmem_source}/corelock.c
 	${sysmem_source}/cache.c
 	${sysmem_source}/mmu.c
+	${sysmem_source}/qafmgr.c
 	${sysmem_source}/aimgr.c
 	${sysmem_source}/serial.c
 	${sysmem_source}/dipsw.c
