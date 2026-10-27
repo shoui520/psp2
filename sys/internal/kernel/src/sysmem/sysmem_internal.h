@@ -740,11 +740,17 @@ int BitheapModuleStart(void);
 /* cache.c */
 void CacheInvalidateRangeWithPA(const void *start, uintptr_t pa, SceSize size);
 
-/* debug_state.c */
-int InitializeDebugPrintLevel(const struct SysmemBootContext *context);
+/* debug_state.c; the boot loaders' own in debug_dump.c */
 #if defined(SYSMEM_SKBL) || defined(SYSMEM_NSKBL)
-int InitializeAssertLevel(void);	/* the boot loaders' own */
+int InitializeDebugPrintLevel(void);
+int InitializeDebugPutcharPrivate(void);
+int InitializeDebugBuffer(void);
+/* cpu.c */
+struct SceKernelBootParam;
+void KblCallWithStack(struct SceKernelBootParam *param, void (*func)(struct SceKernelBootParam *),
+		      void *stack);	/* returns only if func does */
 #else
+int InitializeDebugPrintLevel(const struct SysmemBootContext *context);
 int InitializeAssertLevel(const struct SysmemBootContext *context);
 #endif
 int InitializeDebugNop(void);

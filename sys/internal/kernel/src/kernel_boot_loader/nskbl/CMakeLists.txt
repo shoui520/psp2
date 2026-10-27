@@ -7,6 +7,7 @@
 # translation units held only those functions); the sources are listed in NSKBL's link
 # order. The reset vector and exception entries are the original's; boot.c is SKBL's
 # (BOOT_NSKBL): the same exception handlers and ASLR helpers, and NSKBL's own boot();
+# kbl_main.c, archive_ns.c and iofilemgr_if.c are NSKBL's own, on its FAT driver (sfat.h);
 # memset and memcpy are SceSysmem's memset_chk.c and memcpy_chk.c with sysclib's
 # assembly cores.
 set(sysmem_source ../../sysmem)
@@ -97,6 +98,9 @@ set(sysmem_c_sources
 psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	reset.S
 	../skbl/boot.c
+	kbl_main.c
+	archive_ns.c
+	iofilemgr_if.c
 	${excpmgr_source}/excpmgr.c
 	${excpmgr_source}/excpmgr_vector.S
 	${excpmgr_source}/excpmgr_initial.S
@@ -150,6 +154,9 @@ set_source_files_properties(${sdif_source}/sdif.c ${sdif_source}/cmd_queue.c
 	${sdif_source}/sdio_intr.c ${sdif_source}/mmc.c ${sdif_source}/sd.c
 	${sdif_source}/adma.c ${sdif_source}/card_cmd.c PROPERTIES COMPILE_DEFINITIONS SDIF_NSKBL)
 set_source_files_properties(../skbl/boot.c PROPERTIES COMPILE_DEFINITIONS "BOOT_NSKBL;SYSMEM_NSKBL;LOWIO_KBL")
+# NSKBL's own files see sysmem's and authmgr's interfaces as NSKBL builds them
+set_source_files_properties(kbl_main.c archive_ns.c iofilemgr_if.c PROPERTIES
+	COMPILE_DEFINITIONS "SYSMEM_NSKBL;AUTHMGR_NSKBL")
 # SceLowio's Pervasive driver, its own files built for the boot loader (LOWIO_KBL: physical
 # registers, no lock; LOWIO_NSKBL: what this image keeps), at the boot loader's -O2: the images keep
 # ResetSet and GateSet whole, where os0's -O3 clones them

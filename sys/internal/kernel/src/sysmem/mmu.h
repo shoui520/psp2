@@ -39,6 +39,10 @@ int MMUCheckAccessibleRange(uint32_t mode, uintptr_t va, SceSize size);
 /* mmu.c */
 int MMUSetReady(void);
 int MMUInitPost(void);
+/* the boot loaders: KblMMUInit (cache.c) starts the performance monitor (KblPmuInit, dipsw.c) */
+struct SceKernelBootParam;
+int KblMMUInit(struct SceKernelBootParam *param);
+int KblPmuInit(void *sysroot);
 int sceKernelMMUL1Init(uint32_t *l1);
 int sceKernelMMUSetL2PageTable(uint32_t *l1, uint32_t domain, uintptr_t va, uintptr_t l2pa);
 int sceKernelMMUUnsetL2PageTable(uint32_t *l1, uintptr_t va);

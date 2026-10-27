@@ -136,6 +136,18 @@ int CpuResumeIntrLow(int flags)
 }
 #endif
 
+#if SYSMEM_NSKBL
+struct SceKernelBootParam;
+
+/* name unknown: the boot loader goes on in func(param) on the stack that ends at stack */
+__attribute__((naked))
+void KblCallWithStack(struct SceKernelBootParam *param, void (*func)(struct SceKernelBootParam *),
+		      void *stack)
+{
+	__asm__ volatile("mov	sp, r2\n\tbx	r1");
+}
+#endif
+
 #if CPU_DEBUG
 SceKernelIntrStatus sceKernelSpinlockLowTrylockCpuSuspendIntr(volatile SceKernelSpinlock *lock)
 {

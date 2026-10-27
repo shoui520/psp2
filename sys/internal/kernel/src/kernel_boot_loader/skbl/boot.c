@@ -44,7 +44,6 @@
 #define LPDDR1_FIREWALL		((SceSsxFirewallRegisters *)SSX_FIREWALL_LPDDR1_BASE)
 
 /* the other boot loader parts boot() calls */
-int InitializeDebugBuffer(void);
 int KblGetBuildNumber(void);
 int sceKernelMMUMapSmallPage(uint32_t *l2, uint32_t type, uintptr_t va, uintptr_t offset,
 			     uintptr_t pa);
@@ -109,8 +108,10 @@ static struct {
 static uint8_t s_aslrUsed[0x100];		/* the first megabyte's pages ASLR placed */
 #ifdef BOOT_NSKBL
 static uint8_t s_megaAslrUsed[0x10];		/* the megabytes of the first 16 MiB ASLR placed */
-#endif
+SceKblParam s_kblParam;				/* NSKBL's kbl_main.c reads it too */
+#else
 static SceKblParam s_kblParam;
+#endif
 
 #define QA_LEVEL(_on, _off)	((s_kblParam.qa_flags[0xd] & 1) ? (_on) : (_off))
 
@@ -520,7 +521,7 @@ static inline uint32_t BootCpu0Init(void *lr)
 			sceKernelClearDipsw(DIPSW_SYSTEM_TTY);
 	}
 
-	InitializeAssertLevel();
+	InitializeDebugPrintLevel();
 	InitializeDebugBuffer();
 	if (sceKernelCheckDipsw(DIPSW_UART1_CONSOLE) || sceKernelCheckDipsw(DIPSW_UART0_CONSOLE) ||
 	    sceKernelCheckDipsw(DIPSW_CONSOLE_LOGGING)) {
@@ -1001,7 +1002,7 @@ static inline uint32_t BootCpu0Init(void *lr)
 	memcpy(&s_kblParam, (void *)(SCE_KBL_PARAM_ADDRESS + 0x40200000), sizeof(s_kblParam));
 	param->kblParam = &s_kblParam;
 	DipswSetState(&s_kblParam.dipsw);
-	InitializeAssertLevel();
+	InitializeDebugPrintLevel();
 	InitializeDebugBuffer();
 	if (sceKernelCheckDipsw(DIPSW_UART1_CONSOLE) || sceKernelCheckDipsw(DIPSW_UART0_CONSOLE) ||
 	    sceKernelCheckDipsw(DIPSW_CONSOLE_LOGGING)) {
@@ -1497,6 +1498,14 @@ void monitor_irq_handler(void)
 void monitor_fiq_handler(void)
 {
 	boot_fiq_handler();
+}
+
+#else
+
+/* name unknown: the build number boot() prints */
+int KblGetBuildNumber(void)
+{
+	return 300;
 }
 
 #endif

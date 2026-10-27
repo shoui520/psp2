@@ -197,14 +197,14 @@ int MMUSetReady(void)
 	return 0;
 }
 
-#if !SYSMEM_NSKBL
-/* name unknown */
+/* name unknown; the boot loader's leaves the MMU not ready */
 int MMUInitPost(void)
 {
+#if !SYSMEM_NSKBL
 	MMUSetReady();
+#endif
 	return 0;
 }
-#endif
 
 /* the L1 section attributes of a memblock type, domain in bits 8:5 */
 __attribute__((noinline))

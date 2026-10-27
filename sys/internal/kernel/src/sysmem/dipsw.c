@@ -3,6 +3,9 @@
 #include <sysmem/dipsw.h>
 #include "sysmem_boot.h"
 #include "sysmem_internal.h"
+#if SYSMEM_NSKBL
+#include <sysmem/cp15.h>
+#endif
 
 union DipswState {
 	SceDipsw info;
@@ -11,6 +14,20 @@ union DipswState {
 
 static union DipswState s_bootDipsw;
 static union DipswState *s_dipsw;
+
+#if SYSMEM_NSKBL
+/*
+ * name unknown: the boot loader's start of the performance monitor, its counters reset
+ * and enabled (between l2cc_maintenance.S and this file in NSKBL; no file of os0 has it)
+ */
+int KblPmuInit(void *sysroot)
+{
+	(void)sysroot;
+	writePmcr(PMCR_C);
+	writePmcr(PMCR_E);
+	return 0;
+}
+#endif
 
 /*
  * Name unknown; replaces the DIP-switch words the kernel reads (no call reaches it in

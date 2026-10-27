@@ -31,6 +31,7 @@
 #define BOOT_TYPE_MEMORY_TEST		0x00000008	/* never set by the release second_loader */
 #define BOOT_TYPE_SPECIAL_MEDIA		0x00000040	/* modules come from sd0: (NSKBL) */
 #define BOOT_TYPE_JIG			0x00010000	/* the jig handshake passed */
+#define BOOT_TYPE_SD_CARD		0x00040000	/* an SD card to mount as sd0: (NSKBL) */
 #define BOOT_TYPE_SD_MODE		0x00080000
 
 #define SCE_KBL_PARAM_MAGIC		0xcbac03aa	/* SceKblParam.magic */

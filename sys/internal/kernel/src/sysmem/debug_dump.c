@@ -728,6 +728,42 @@ static EventLogHandler s_eventLogHandler;
 static SceUInt32 s_eventLogNext[4] = { 0, 4, 8, 12 };
 static EventLogEntry s_eventLog[EVENT_LOG_ENTRIES];
 
+#if SYSMEM_NSKBL
+/* the boot loader's debug start, from its DIP switches (os0's comes from the KBL) */
+extern volatile uint32_t s_debugPrintLevel;
+static uintptr_t *s_debugPutcharPrivate;
+
+/* name unknown: the print level from the DIP switches */
+int InitializeDebugPrintLevel(void)
+{
+	if (sceKernelCheckDipsw(DIPSW_DEBUG_LEVEL_2))
+		s_debugPrintLevel = 2;
+	else if (sceKernelCheckDipsw(DIPSW_DEBUG_LEVEL_1))
+		s_debugPrintLevel = 1;
+	return 0;
+}
+
+/* name unknown: the putchar handler, left for the kernel in the sysroot's module slot 2 */
+int InitializeDebugPutcharPrivate(void)
+{
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0) {
+		s_debugPutcharPrivate = sceKernelSysrootAlloc(sizeof(*s_debugPutcharPrivate));
+		sceKernelSysrootSetModulePrivate(2, s_debugPutcharPrivate);
+		*s_debugPutcharPrivate = SceDebugForKernel_8D474850();
+	}
+	sceKernelSysrootCorelockUnlock();
+	return 0;
+}
+
+/* name unknown: the event log cleared */
+int InitializeDebugBuffer(void)
+{
+	memset(s_eventLog, 0, sizeof(s_eventLog));
+	return 0;
+}
+#endif
+
 #if !SYSMEM_NSKBL
 void SceDebugForKernel_78027203(EventLogHandler handler)
 {

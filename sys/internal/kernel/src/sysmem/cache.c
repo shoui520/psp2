@@ -12,6 +12,10 @@
 #include <fw.h>
 #include <sysmem/debug.h>
 #include <sysmem/cpu.h>
+#if SYSMEM_NSKBL
+#include <kernel_boot_loader/kernel_boot_param.h>
+#include "mmu.h"
+#endif
 
 /* what the range functions do */
 #define CACHE_RANGE_SKIP_UNCACHED	0x01	/* leave uncached ranges alone */
@@ -350,5 +354,18 @@ void SceCpuForKernel_C32687D0(uintptr_t *start, uintptr_t *end)
 {
 	*start = (uintptr_t)VmaccessStart;
 	*end = (uintptr_t)VmaccessEnd;
+}
+#endif
+
+#if SYSMEM_NSKBL
+/*
+ * name unknown: the boot loader's MMU step, the performance monitor started (after the cache
+ * functions in NSKBL, before mmu.c)
+ */
+int KblMMUInit(struct SceKernelBootParam *param)
+{
+	KblPmuInit(param->pSysroot);
+	MMUInitPost();
+	return 0;
 }
 #endif

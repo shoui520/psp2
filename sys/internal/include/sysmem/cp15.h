@@ -114,6 +114,7 @@
 
 /* PMCR and PMCNTENSET/CLR bits (ARMv7-A) */
 #define PMCR_E			0x01		/* counters enabled */
+#define PMCR_C			0x04		/* the cycle counter reset */
 #define PMCR_X			0x10		/* events exported */
 #define PMCNTEN_C		0x80000000	/* the cycle counter */
 
