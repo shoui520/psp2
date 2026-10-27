@@ -184,7 +184,12 @@ static inline void FixedHeapCountAlloc(FixedHeap *heap)
 }
 
 /* name unknown: the kernel heap's page tables (and name) back where they came from */
-static void FixedHeapReleaseTables(FixedHeap *heap, int all)
+#if SYSMEM_NSKBL
+static __attribute__((noinline, noclone))
+#else
+static
+#endif
+void FixedHeapReleaseTables(FixedHeap *heap, int all)
 {
 	if (heap->attr & FIXED_HEAP_ATTR_NAME_HEAP) {
 		if (all == 1 && heap->name != NULL) {
@@ -219,7 +224,12 @@ static void FixedHeapReleaseTables(FixedHeap *heap, int all)
 }
 
 /* name unknown: move the page tables to larger ones, from where attr says */
-static int FixedHeapReplaceTables(FixedHeap *heap, SceUInt32 attr, uintptr_t *pages, void **blocks,
+#if SYSMEM_NSKBL
+static __attribute__((noinline, noclone))
+#else
+static
+#endif
+int FixedHeapReplaceTables(FixedHeap *heap, SceUInt32 attr, uintptr_t *pages, void **blocks,
 				  SceUInt32 maxPages)
 {
 	unsigned int i;
