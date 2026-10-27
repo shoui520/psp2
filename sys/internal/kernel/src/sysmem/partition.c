@@ -3160,7 +3160,6 @@ SceUID sceKernelCreatePartition(const char *name, SceUInt8 domain, uintptr_t vba
 	return uid;
 }
 
-#if !SYSMEM_NSKBL
 /* name unknown: a kernel block with extraLow bytes below it */
 SceUID sceKernelAllocPartitionStackMemBlock(const char *name, SceSize size, SceSize extraLow)
 {
@@ -3186,7 +3185,6 @@ SceUID sceKernelAllocPartitionStackMemBlock(const char *name, SceSize size, SceS
 		return ret;
 	return MemBlockCreateGUID(name, block, opt.attr);
 }
-#endif
 
 SceUID sceKernelAllocPartitionMemBlock(SceUID partUid, const char *name, SceUInt32 type,
 					SceSize size, const SceKernelAllocMemBlockKernelOpt *opt)
