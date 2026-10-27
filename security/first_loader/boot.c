@@ -418,6 +418,26 @@ unsigned int readBits(const unsigned char *data, unsigned int first,
 	return result;
 }
 
+static unsigned int __attribute__((noinline, noclone))
+readEmmcBits(const unsigned char *data, unsigned int first,
+	     unsigned int count)
+{
+	unsigned int result = 0;
+	unsigned int i;
+
+	data += first >> 3;
+	first &= 7;
+	for (i = 0; i < count; i++) {
+		if (*data & (1U << first))
+			result |= 1U << (i & 31);
+		if (++first == 8) {
+			first = 0;
+			data++;
+		}
+	}
+	return result;
+}
+
 static unsigned char externalBootKey[32] = {
 	0xf4, 0x77, 0x16, 0xe6, 0xc5, 0x64, 0x9f, 0xd6,
 	0x48, 0x53, 0x8f, 0xd9, 0x77, 0x3d, 0x12, 0xd1,
@@ -759,7 +779,7 @@ void collectSdifResponse(struct FirstLoaderSdif *controller,
 	}
 }
 
-int decodeSdifCardStatus(unsigned int status)
+int __attribute__((noinline)) decodeSdifCardStatus(unsigned int status)
 {
 	unsigned int i;
 
@@ -1027,11 +1047,13 @@ int sendSdifCommand(struct FirstLoaderSdif *controller,
 	return result;
 }
 
-int sendSdifApplicationCommand(struct FirstLoaderSdif *controller,
+int sendSdifApplicationCommand(struct SdifCard *card,
 			       struct FirstLoaderSdifCommand *command,
 			       int retries)
 {
-	struct FirstLoaderSdifCommand prefixCommand = { 0 };
+	struct FirstLoaderSdif *controller =
+		(struct FirstLoaderSdif *)(unsigned long)card->controllerAddress;
+	struct FirstLoaderSdifCommand prefixCommand;
 	int attempt;
 	int result = -1;
 
@@ -1043,6 +1065,7 @@ int sendSdifApplicationCommand(struct FirstLoaderSdif *controller,
 		prefixCommand.command = 55;
 		prefixCommand.argument =
 			(unsigned int)controller->relativeAddress << 16;
+		prefixCommand.bufferAddress = 0;
 		result = sendSdifCommand(controller, &prefixCommand, 0);
 		if (result < 0)
 			continue;
@@ -1055,11 +1078,11 @@ int sendSdifApplicationCommand(struct FirstLoaderSdif *controller,
 	return result;
 }
 
-int requestSdifOperatingConditions(struct FirstLoaderSdif *controller,
+int requestSdifOperatingConditions(struct SdifCard *card,
 				   unsigned int conditions,
 				   unsigned int *response)
 {
-	struct FirstLoaderSdifCommand command = { 0 };
+	struct FirstLoaderSdifCommand command;
 	unsigned int attempts = 0;
 	int result;
 
@@ -1067,8 +1090,9 @@ int requestSdifOperatingConditions(struct FirstLoaderSdif *controller,
 	command.flags = 0x42;
 	command.command = 41;
 	command.argument = conditions;
+	command.bufferAddress = 0;
 	do {
-		result = sendSdifApplicationCommand(controller, &command, 3);
+		result = sendSdifApplicationCommand(card, &command, 3);
 		if (result < 0)
 			return result;
 		if (conditions == 0 || (command.response[0] & 0x80000000U))
@@ -1083,33 +1107,35 @@ int requestSdifOperatingConditions(struct FirstLoaderSdif *controller,
 	return 0;
 }
 
-int setSdifCardDetectPullup(struct FirstLoaderSdif *controller,
+int setSdifCardDetectPullup(struct SdifCard *card,
 			    unsigned int enable)
 {
-	struct FirstLoaderSdifCommand command = { 0 };
+	struct FirstLoaderSdifCommand command;
 	int result;
 
 	command.size = sizeof(command);
 	command.flags = 0x13;
 	command.command = 42;
 	command.argument = enable != 0;
-	result = sendSdifApplicationCommand(controller, &command, 3);
+	result = sendSdifApplicationCommand(card, &command, 3);
 	if (result < 0)
 		return result;
 	return decodeSdifCardStatus(command.response[0]);
 }
 
-int readSdifScr(struct FirstLoaderSdif *controller, void *destination)
+int readSdifScr(struct SdifCard *card, void *destination)
 {
-	struct FirstLoaderSdifCommand command = { 0 };
+	struct FirstLoaderSdifCommand command;
 	int result;
 
 	command.size = sizeof(command);
 	command.flags = 0x114;
 	command.command = 51;
+	command.argument = 0;
 	command.bufferAddress = (unsigned int)(unsigned long)destination;
 	command.blockSize = 8;
-	result = sendSdifApplicationCommand(controller, &command, 3);
+	command.blockCount = 0;
+	result = sendSdifApplicationCommand(card, &command, 3);
 	return result < 0 ? result : 0;
 }
 
@@ -1142,13 +1168,14 @@ int stopSdifTransfer(struct FirstLoaderSdif *controller, unsigned int busyRespon
 
 int readSdifCardStatus(struct FirstLoaderSdif *controller, unsigned int *status)
 {
-	struct FirstLoaderSdifCommand command = { 0 };
+	struct FirstLoaderSdifCommand command;
 	int result;
 
 	command.size = sizeof(command);
 	command.flags = 0x13;
 	command.command = 13;
 	command.argument = (unsigned int)controller->relativeAddress << 16;
+	command.bufferAddress = 0;
 	result = sendSdifCommand(controller, &command, 3);
 	if (result < 0)
 		return result;
@@ -1159,13 +1186,14 @@ int readSdifCardStatus(struct FirstLoaderSdif *controller, unsigned int *status)
 
 int setSdifBlockLength(struct FirstLoaderSdif *controller, unsigned int length)
 {
-	struct FirstLoaderSdifCommand command = { 0 };
+	struct FirstLoaderSdifCommand command;
 	int result;
 
 	command.size = sizeof(command);
 	command.flags = 0x13;
 	command.command = 16;
 	command.argument = length;
+	command.bufferAddress = 0;
 	result = sendSdifCommand(controller, &command, 3);
 	if (result < 0)
 		return result;
@@ -1174,13 +1202,14 @@ int setSdifBlockLength(struct FirstLoaderSdif *controller, unsigned int length)
 
 int setSdifBlockCount(struct FirstLoaderSdif *controller, unsigned int count)
 {
-	struct FirstLoaderSdifCommand command = { 0 };
+	struct FirstLoaderSdifCommand command;
 	int result;
 
 	command.size = sizeof(command);
 	command.flags = 0x13;
 	command.command = 23;
 	command.argument = count;
+	command.bufferAddress = 0;
 	result = sendSdifCommand(controller, &command, 3);
 	if (result < 0)
 		return result;
@@ -1189,12 +1218,14 @@ int setSdifBlockCount(struct FirstLoaderSdif *controller, unsigned int count)
 
 int readSdifCid(struct FirstLoaderSdif *controller, unsigned int *cid)
 {
-	struct FirstLoaderSdifCommand command = { 0 };
+	struct FirstLoaderSdifCommand command;
 	int result;
 
 	command.size = sizeof(command);
 	command.flags = 0x32;
 	command.command = 2;
+	command.argument = 0;
+	command.bufferAddress = 0;
 	result = sendSdifCommand(controller, &command, 3);
 	if (result < 0)
 		return result;
@@ -1202,15 +1233,44 @@ int readSdifCid(struct FirstLoaderSdif *controller, unsigned int *cid)
 	return 0;
 }
 
-int readSdifRelativeAddress(struct FirstLoaderSdif *controller,
+int readSdifCidForCard(struct SdifCard *card, unsigned int *cid)
+{
+	struct FirstLoaderSdif *controller =
+		(struct FirstLoaderSdif *)(unsigned long)card->controllerAddress;
+
+	return readSdifCid(controller, cid);
+}
+
+int readSdifCidWithRca(struct FirstLoaderSdif *controller,
+		       unsigned int *cid)
+{
+	struct FirstLoaderSdifCommand command;
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = 0x33;
+	command.command = 10;
+	command.argument = (unsigned int)controller->relativeAddress << 16;
+	command.bufferAddress = 0;
+	result = sendSdifCommand(controller, &command, 3);
+	if (result < 0)
+		return result;
+	copyWordsAndSum(cid, command.response, 16);
+	return 0;
+}
+
+int readSdifRelativeAddress(struct SdifCard *card,
 			    unsigned short *relativeAddress)
 {
-	struct FirstLoaderSdifCommand command = { 0 };
+	struct FirstLoaderSdif *controller =
+		(struct FirstLoaderSdif *)(unsigned long)card->controllerAddress;
+	struct FirstLoaderSdifCommand command;
 	int result;
 
 	command.size = sizeof(command);
 	command.flags = 0x82;
 	command.command = 3;
+	command.argument = 0;
 	result = sendSdifCommand(controller, &command, 3);
 	if (result < 0)
 		return result;
@@ -1221,13 +1281,14 @@ int readSdifRelativeAddress(struct FirstLoaderSdif *controller,
 
 int readSdifCsd(struct FirstLoaderSdif *controller, unsigned int *csd)
 {
-	struct FirstLoaderSdifCommand command = { 0 };
+	struct FirstLoaderSdifCommand command;
 	int result;
 
 	command.size = sizeof(command);
 	command.flags = 0x33;
 	command.command = 9;
 	command.argument = (unsigned int)controller->relativeAddress << 16;
+	command.bufferAddress = 0;
 	result = sendSdifCommand(controller, &command, 3);
 	if (result < 0)
 		return result;
@@ -1237,7 +1298,7 @@ int readSdifCsd(struct FirstLoaderSdif *controller, unsigned int *csd)
 
 int selectSdifCard(struct FirstLoaderSdif *controller, unsigned int select)
 {
-	struct FirstLoaderSdifCommand command = { 0 };
+	struct FirstLoaderSdifCommand command;
 	int result;
 
 	command.size = sizeof(command);
@@ -1246,6 +1307,61 @@ int selectSdifCard(struct FirstLoaderSdif *controller, unsigned int select)
 	command.argument = select ? (unsigned int)controller->relativeAddress << 16 : 0;
 	result = sendSdifCommand(controller, &command, 3);
 	return result < 0 ? result : 0;
+}
+
+int sendSdifInterfaceCondition(struct SdifCard *card,
+			       unsigned int voltageFlags)
+{
+	struct FirstLoaderSdif *controller =
+		(struct FirstLoaderSdif *)(unsigned long)card->controllerAddress;
+	struct FirstLoaderSdifCommand command;
+
+	command.size = sizeof(command);
+	command.flags = 0x92;
+	command.command = 8;
+	command.argument = (voltageFlags & 0xff8000U) ? 0x1aa : 0xaa;
+	command.bufferAddress = 0;
+	return sendSdifCommand(controller, &command, 3);
+}
+
+int selectSdifCardForCard(struct SdifCard *card, unsigned int select)
+{
+	struct FirstLoaderSdif *controller =
+		(struct FirstLoaderSdif *)(unsigned long)card->controllerAddress;
+
+	return selectSdifCard(controller, select);
+}
+
+int readSdifCsdForCard(struct SdifCard *card, unsigned int *csd)
+{
+	struct FirstLoaderSdif *controller =
+		(struct FirstLoaderSdif *)(unsigned long)card->controllerAddress;
+
+	return readSdifCsd(controller, csd);
+}
+
+int readSdifCidWithRcaForCard(struct SdifCard *card, unsigned int *cid)
+{
+	struct FirstLoaderSdif *controller =
+		(struct FirstLoaderSdif *)(unsigned long)card->controllerAddress;
+
+	return readSdifCidWithRca(controller, cid);
+}
+
+int readSdifStatusForCard(struct SdifCard *card, unsigned int *status)
+{
+	struct FirstLoaderSdif *controller =
+		(struct FirstLoaderSdif *)(unsigned long)card->controllerAddress;
+
+	return readSdifCardStatus(controller, status);
+}
+
+int setSdifBlockLengthForCard(struct SdifCard *card, unsigned int length)
+{
+	struct FirstLoaderSdif *controller =
+		(struct FirstLoaderSdif *)(unsigned long)card->controllerAddress;
+
+	return setSdifBlockLength(controller, length);
 }
 
 static struct FirstLoaderSdif *emmcController(const struct EmmcCard *card)
@@ -1261,6 +1377,16 @@ int readEmmcCid(struct EmmcCard *card, unsigned int *cid)
 int readEmmcCsd(struct EmmcCard *card, unsigned int *csd)
 {
 	return readSdifCsd(emmcController(card), csd);
+}
+
+int readEmmcCidWithRca(struct EmmcCard *card, unsigned int *cid)
+{
+	return readSdifCidWithRca(emmcController(card), cid);
+}
+
+int readEmmcCardStatus(struct EmmcCard *card, unsigned int *status)
+{
+	return readSdifCardStatus(emmcController(card), status);
 }
 
 int selectEmmcCard(struct EmmcCard *card, unsigned int select)
@@ -1439,7 +1565,6 @@ int openSdifCard(unsigned int port, struct SdifCard **resultCard)
 {
 	struct FirstLoaderSdif *controller = getSdif(port);
 	struct SdifCard *card;
-	struct FirstLoaderSdifCommand command = { 0 };
 	unsigned short relativeAddress;
 	unsigned int multiplier;
 	unsigned int unit;
@@ -1475,39 +1600,37 @@ int openSdifCard(unsigned int port, struct SdifCard **resultCard)
 	if (result < 0)
 		return result;
 
-	command.size = sizeof(command);
-	command.flags = 0x92;
-	command.command = 8;
-	command.argument = (controller->flags & 0xff8000U) ? 0x1aa : 0xaa;
-	sendSdifCommand(controller, &command, 3);
-	controller->relativeAddress = 0;
 	conditions = controller->flags;
-	result = requestSdifOperatingConditions(controller, conditions, 0);
+	result = sendSdifInterfaceCondition(card, conditions);
+	if (result == 0)
+		conditions |= 0x40000000U;
+	controller->relativeAddress = 0;
+	result = requestSdifOperatingConditions(card, conditions, 0);
 	if (result < 0)
 		return result;
-	result = readSdifCid(controller, (unsigned int *)card->cid);
+	result = readSdifCidForCard(card, (unsigned int *)card->cid);
 	if (result < 0)
 		return result;
-	result = readSdifRelativeAddress(controller, &relativeAddress);
+	result = readSdifRelativeAddress(card, &relativeAddress);
 	if (result < 0)
 		return result;
 	if (relativeAddress == 0) {
-		result = readSdifRelativeAddress(controller, &relativeAddress);
+		result = readSdifRelativeAddress(card, &relativeAddress);
 		if (result < 0)
 			return result;
 	}
 	controller->relativeAddress = relativeAddress;
-	result = selectSdifCard(controller, 1);
+	result = selectSdifCardForCard(card, 1);
 	if (result < 0)
 		return result;
-	result = setSdifCardDetectPullup(controller, 0);
+	result = setSdifCardDetectPullup(card, 0);
 	if (result < 0)
 		return result;
-	selectSdifCard(controller, 0);
-	result = readSdifCsd(controller, (unsigned int *)card->csd);
+	selectSdifCardForCard(card, 0);
+	result = readSdifCsdForCard(card, (unsigned int *)card->csd);
 	if (result < 0)
 		return result;
-	result = selectSdifCard(controller, 1);
+	result = selectSdifCardForCard(card, 1);
 	if (result < 0)
 		return result;
 
@@ -1529,7 +1652,7 @@ int openSdifCard(unsigned int port, struct SdifCard **resultCard)
 		return -1;
 	}
 
-	result = readSdifScr(controller, card->scr);
+	result = readSdifScr(card, card->scr);
 	if (result < 0)
 		return result;
 	card->scrStructure = card->scr[0] >> 4;
@@ -1540,7 +1663,7 @@ int openSdifCard(unsigned int port, struct SdifCard **resultCard)
 	if (card->sdSpecification == 2 && (card->scr[2] & 0x80))
 		card->sdSpecification = 3;
 	card->commandSupport = card->scr[3] & 2;
-	result = setSdifBlockLength(controller, 0x200);
+	result = setSdifBlockLengthForCard(card, 0x200);
 	if (result < 0)
 		return result;
 	if (resultCard != 0)
@@ -1587,25 +1710,26 @@ int openEmmc(unsigned int port, struct EmmcCard **resultCard)
 	result = readEmmcCsd(card, (unsigned int *)card->csd);
 	if (result < 0)
 		return result;
-	card->csdStructure = readBits(csd, 0x7e, 2);
-	card->specificationVersion = readBits(csd, 0x7a, 4);
-	multiplier = readBits(csd, 0x73, 4);
-	unit = readBits(csd, 0x70, 3);
+	card->csdStructure = readEmmcBits(csd, 0x7e, 2);
+	card->specificationVersion = readEmmcBits(csd, 0x7a, 4);
+	multiplier = readEmmcBits(csd, 0x73, 4);
+	unit = readEmmcBits(csd, 0x70, 3);
 	card->accessTime = emmcTimeMultipliers[multiplier] * emmcTimeUnits[unit] / 10;
-	card->accessClocks = readBits(csd, 0x68, 8) * 100;
-	multiplier = readBits(csd, 0x63, 4);
-	unit = readBits(csd, 0x60, 3);
+	card->accessClocks = readEmmcBits(csd, 0x68, 8) * 100;
+	multiplier = readEmmcBits(csd, 0x63, 4);
+	unit = readEmmcBits(csd, 0x60, 3);
 	card->maximumClock = emmcClockMultipliers[multiplier] * emmcClockUnits[unit];
-	multiplier = readBits(csd, 0x2f, 3);
-	card->blockCount = (readBits(csd, 0x3e, 12) + 1) << ((multiplier + 2) & 31);
-	card->commandClasses = readBits(csd, 0x54, 12);
-	card->readBlockLength = readBits(csd, 0x50, 4);
-	card->readBlockPartial = readBits(csd, 0x4f, 1);
-	card->writeBlockMisalign = readBits(csd, 0x4e, 1);
-	card->readBlockMisalign = readBits(csd, 0x4d, 1);
-	card->readToWriteFactor = readBits(csd, 0x1a, 3);
-	card->writeBlockLength = readBits(csd, 0x16, 4);
-	card->writeBlockPartial = readBits(csd, 0x15, 1);
+	multiplier = readEmmcBits(csd, 0x2f, 3);
+	card->blockCount = (readEmmcBits(csd, 0x3e, 12) + 1) <<
+			   ((multiplier + 2) & 31);
+	card->commandClasses = readEmmcBits(csd, 0x54, 12);
+	card->readBlockLength = readEmmcBits(csd, 0x50, 4);
+	card->readBlockPartial = readEmmcBits(csd, 0x4f, 1);
+	card->writeBlockMisalign = readEmmcBits(csd, 0x4e, 1);
+	card->readBlockMisalign = readEmmcBits(csd, 0x4d, 1);
+	card->readToWriteFactor = readEmmcBits(csd, 0x1a, 3);
+	card->writeBlockLength = readEmmcBits(csd, 0x16, 4);
+	card->writeBlockPartial = readEmmcBits(csd, 0x15, 1);
 	result = selectEmmcCard(card, 1);
 	if (result < 0)
 		return result;
