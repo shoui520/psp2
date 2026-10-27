@@ -501,7 +501,9 @@ typedef struct LibStubNidTable {
 	LibStubCB *libStubCB;
 } LibStubNidTable;
 
+#if !MODULEMGR_NSKBL
 SceModuleImports *LibStubNormalize(SceModuleImports *dst, const void *src);
+#endif
 int LibStub_checkStubTable(LoadelfContext *ctx);
 int LibStubCBInit(LoadelfContext *ctx);
 void LibStubFree(SceModuleCB *cb);

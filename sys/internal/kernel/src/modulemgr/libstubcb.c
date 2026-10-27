@@ -28,6 +28,9 @@ typedef struct SceKernelStubNidEntry {
 } SceKernelStubNidEntry;
 
 /* name unknown: bring a 0x24- or 0x34-byte import entry into the 0x24-byte form */
+#if MODULEMGR_NSKBL
+static	/* NSKBL inlines it into its two callers */
+#endif
 SceModuleImports *LibStubNormalize(SceModuleImports *dst, const void *src)
 {
 	const SceModuleImports34 *imp = src;
@@ -60,12 +63,14 @@ int LibStub_checkStubTable(LoadelfContext *ctx)
 	const char *libname;
 	SceSize n;
 
+#if !MODULEMGR_NSKBL
 	if ((cb->flags & MODULE_FLAG_SHARED_MASK) != 0) {
 		SCE_DBG_ASSERT_LEVEL(0, cb->shared != NULL, 73);
 		cb->libStubCount = cb->shared->cb->libStubCount;
 		ctx->libStubCBSize = cb->libStubCount * sizeof(LibStubCB);
 		return 0;
 	}
+#endif
 
 	bias = Loadelf_GetAddrBias(ctx, cb->libstubTop);
 	end = (SceUInt8 *)cb->libstubBtm + bias;
@@ -105,7 +110,11 @@ int LibStub_checkStubTable(LoadelfContext *ctx)
 			    !ModuleCBIsInReadOnly(cb, (SceUInt32)imp->varent, n))
 				return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 		}
+#if MODULEMGR_NSKBL
+		if (esize != sizeof(SceModuleImports))
+#else
 		if (cb->pid != SCE_KERNEL_PROCESS_ID || esize != sizeof(SceModuleImports))
+#endif
 			ctx->libstubSize = count * sizeof(SceModuleImports);
 		p += *p;
 		if (end <= p) {
@@ -123,17 +132,24 @@ int LibStubCBInit(LoadelfContext *ctx)
 	SceUInt32 offset = ctx->libstubOffset;
 	SceUInt16 count = cb->libStubCount;
 	SceModuleImports *dst, *imp, *im;
-	SceModuleCB *c;
 	LibStubCB *stub, *cur;
 	SceUInt8 *p, *end;
-	SceUInt32 bias, i, n;
+	SceUInt32 i, n;
+#if !MODULEMGR_NSKBL
+	SceModuleCB *c;
+	SceUInt32 bias;
 	SceUInt16 nfunc, nvar;
 	const char *name;
 	char *interned;
 	void **copy;
 	SceUID pid;
+#endif
 
+#if MODULEMGR_NSKBL
+	{	/* NSKBL loads kernel modules only */
+#else
 	if (cb->pid == SCE_KERNEL_PROCESS_ID) {
+#endif
 		p = cb->libstubTop;
 		end = cb->libstubBtm;
 		if (p == end || *p == sizeof(SceModuleImports)) {
@@ -147,8 +163,12 @@ int LibStubCBInit(LoadelfContext *ctx)
 				LibStubNormalize(dst, p);
 			}
 		}
+#if !MODULEMGR_NSKBL
 		bias = 0;
-	} else if ((cb->flags & MODULE_FLAG_SHARED_MASK) == 0) {
+#endif
+	}
+#if !MODULEMGR_NSKBL
+	else if ((cb->flags & MODULE_FLAG_SHARED_MASK) == 0) {
 		bias = Loadelf_GetAddrBias(ctx, cb->libstubTop);
 		end = (SceUInt8 *)cb->libstubBtm + bias;
 		dst = (SceModuleImports *)((SceUInt8 *)cb->linkInfo + offset);
@@ -171,6 +191,7 @@ int LibStubCBInit(LoadelfContext *ctx)
 		bias = 0;
 		cb->libstub = cb->shared->cb->libstub;
 	}
+#endif
 
 	if (ctx->libStubCBSize == 0)
 		return 0;
@@ -190,6 +211,7 @@ int LibStubCBInit(LoadelfContext *ctx)
 		cur->cb = cb;
 		cur->guid = 0;
 		cur->toolCopy = NULL;
+#if !MODULEMGR_NSKBL
 		if (cb->pid == SCE_KERNEL_PROCESS_ID)
 			continue;
 		c = ctx->cb;
@@ -219,6 +241,7 @@ int LibStubCBInit(LoadelfContext *ctx)
 			memcpy(cur->toolCopy + cur->imports->nfunc * 2,
 			       (SceUInt8 *)cur->imports->varent + bias, cur->imports->nvar * 4);
 		}
+#endif
 	}
 	return 0;
 }
@@ -226,6 +249,9 @@ int LibStubCBInit(LoadelfContext *ctx)
 /* name unknown: release the interned names and the tool heap copies */
 void LibStubFree(SceModuleCB *cb)
 {
+#if MODULEMGR_NSKBL
+	(void)cb;	/* NSKBL interns no names and keeps no tool copies */
+#else
 	SceUID pid = cb->pid;
 	SceModuleImports *imp;
 	LibStubCB *stub;
@@ -250,6 +276,7 @@ void LibStubFree(SceModuleCB *cb)
 			stub->toolCopy = NULL;
 		}
 	}
+#endif
 }
 
 /* name unknown */
@@ -296,11 +323,14 @@ int LibStubCBCreateUID(LibStubCB *stub, SceUInt16 index)
 int LibStubGetNidTable(LibStubCB *stub, LibStubNidTable *info)
 {
 	SceModuleImports *imp = stub->imports;
+	SceUInt32 nfunc = imp->nfunc, nvar = imp->nvar;
+#if !MODULEMGR_NSKBL
 	SceModuleCB *cb = stub->cb;
-	SceUInt32 nfunc = imp->nfunc, nvar = imp->nvar, i;
+	SceUInt32 i;
 	SceUInt8 *copy;
 	void **ents;
 	int local, ret;
+#endif
 
 	info->funcent = imp->funcent;
 	info->libStubCB = stub;
@@ -310,6 +340,7 @@ int LibStubGetNidTable(LibStubCB *stub, LibStubNidTable *info)
 	info->nfunc = nfunc;
 	info->nvar = nvar;
 	info->copy = NULL;
+#if !MODULEMGR_NSKBL	/* NSKBL's imports are the kernel's own tables */
 	if (cb->pid == SCE_KERNEL_PROCESS_ID || nfunc + nvar == 0)
 		return 0;
 
@@ -353,12 +384,16 @@ int LibStubGetNidTable(LibStubCB *stub, LibStubNidTable *info)
 			}
 		}
 	}
+#endif
 	return 0;
 }
 
 /* name unknown: the stub tables were written; drop the cached lines */
 void LibStubReleaseNidTable(LibStubNidTable *info)
 {
+#if MODULEMGR_NSKBL
+	(void)info;	/* nothing was copied */
+#else
 	LibStubCB *stub;
 	SceModuleImports *imp;
 	SceUInt32 t;
@@ -379,8 +414,10 @@ void LibStubReleaseNidTable(LibStubNidTable *info)
 		SceSysmemForKernel_FCB5745A((SceUInt32 *)imp->funcnid, t, imp->nfunc);
 out:
 	ModulemgrFree(info->libStubCB->cb->pid, info->copy);
+#endif
 }
 
+#if !MODULEMGR_NSKBL
 /* the debugger's id of an import */
 static inline SceUID getStubUIDByLibStubCB(SceUID pid, LibStubCB *stub)
 {
@@ -582,3 +619,4 @@ MODULEMGR_COLD int sceKernelGetStubNidTableForDebugger(SceUID pid, SceUID stubid
 	ModulemgrReleaseProcess(pid);
 	return ret;
 }
+#endif
