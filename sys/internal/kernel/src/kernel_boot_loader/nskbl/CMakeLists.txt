@@ -22,6 +22,7 @@ set(modulemgr_c_sources
 	${modulemgr_source}/modulemgr.c
 	${modulemgr_source}/modulecb.c
 	${modulemgr_source}/loadelf.c
+	${modulemgr_source}/self_decrypter_kbl.c
 	${modulemgr_source}/stub_linker.c
 	${modulemgr_source}/loadcore.c
 	${modulemgr_source}/relocator.c
@@ -95,6 +96,31 @@ set(sysmem_c_sources
 	${sysmem_source}/serial.c
 	${sysmem_source}/dipsw.c
 )
+# SceSysmem's files Sony linked after the drivers: memmove, and the zlib inflater of
+# SceKernelUtils (zlib streams only)
+set(sysmem_tail_sources
+	${sysmem_source}/memmove_chk.c
+	${sysmem_source}/move.S
+	${sysmem_source}/gzip.c
+	${sysmem_source}/deflate.S
+	${sysmem_source}/deflate_huffman.S
+)
+# the compiler runtime, last: the EABI divisions and of GCC's bpabi.c only __gnu_uldivmod_helper,
+# the one NSKBL's 64-bit division calls; in ARM instructions, the toolchain's own libgcc, where
+# sysmem builds LibKernel's Thumb one (sysmem/sources.cmake)
+set(libgcc_source ${PSP2_SRC}/toolchains/libgcc)
+set(gcc_source ${PSP2_SRC}/contrib/gcc-4.8-2014.05)
+include(${libgcc_source}/select.cmake)
+set(nskbl_bpabi_source "${CMAKE_CURRENT_BINARY_DIR}/bpabi-uldivmod.c")
+gcc48_select_tail("${gcc_source}/libgcc/config/arm/bpabi.c" "${nskbl_bpabi_source}"
+	"long long\n__gnu_ldivmod_helper (" "unsigned long long\n__gnu_uldivmod_helper (")
+# and the EHABI unwinder the runtime's unwind tables bring in, LibKernel's adaptation of it
+# (toolchains/libgcc/unwind.cmake: no WMMX state)
+include(${libgcc_source}/unwind.cmake)
+set(nskbl_unwind_source "${CMAKE_CURRENT_BINARY_DIR}/gcc48-unwind.c")
+gcc48_prepare_unwind("${gcc_source}/libgcc/config/arm/unwind-arm.c" "${nskbl_unwind_source}")
+set(nskbl_libunwind_source "${CMAKE_CURRENT_BINARY_DIR}/libunwind.S")
+gcc48_prepare_libunwind("${gcc_source}/libgcc/config/arm/libunwind.S" "${nskbl_libunwind_source}")
 psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	reset.S
 	../skbl/boot.c
@@ -125,6 +151,18 @@ psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	${lowio_source}/lowio_state.c
 	${lowio_source}/pervasive.c
 	${lowio_source}/pervasive_clock.c
+	threadmgr_if.c
+	${sysmem_tail_sources}
+	abort.c
+	${libgcc_source}/udiv.S
+	${libgcc_source}/idiv.S
+	${libgcc_source}/dvmd_tls.S
+	${libgcc_source}/uldivmod.S
+	${nskbl_bpabi_source}
+	${libgcc_source}/udiv64.c
+	${nskbl_unwind_source}
+	${nskbl_libunwind_source}
+	${libgcc_source}/unwind_pr.c
 )
 set_source_files_properties(${intrmgr_source}/intrmgr.c PROPERTIES COMPILE_DEFINITIONS INTRMGR_NSKBL)
 set_source_files_properties(${excpmgr_source}/excpmgr.c PROPERTIES COMPILE_DEFINITIONS EXCPMGR_NSKBL)
@@ -158,6 +196,24 @@ set_source_files_properties(../skbl/boot.c PROPERTIES COMPILE_DEFINITIONS "BOOT_
 # NSKBL's own files see sysmem's and authmgr's interfaces as NSKBL builds them
 set_source_files_properties(kbl_main.c archive_ns.c iofilemgr_if.c PROPERTIES
 	COMPILE_DEFINITIONS "SYSMEM_NSKBL;AUTHMGR_NSKBL")
+set_source_files_properties(${sysmem_tail_sources} PROPERTIES
+	COMPILE_DEFINITIONS SYSMEM_NSKBL
+	COMPILE_OPTIONS "-fdelete-null-pointer-checks;-fuse-caller-save")
+set_source_files_properties(${libgcc_source}/udiv.S ${libgcc_source}/idiv.S
+	${libgcc_source}/dvmd_tls.S ${libgcc_source}/uldivmod.S PROPERTIES COMPILE_OPTIONS "-marm")
+set_source_files_properties(${libgcc_source}/udiv64.c ${nskbl_bpabi_source} PROPERTIES
+	COMPILE_OPTIONS "-fno-stack-protector;-fbuilding-libgcc;-marm"
+	COMPILE_DEFINITIONS "IN_LIBGCC2"
+	INCLUDE_DIRECTORIES "${libgcc_source};${libgcc_source}/target;${gcc_source}/gcc;${gcc_source}/gcc/ginclude;${gcc_source}/libgcc;${gcc_source}/include")
+set_source_files_properties(${nskbl_unwind_source} ${libgcc_source}/unwind_pr.c PROPERTIES
+	COMPILE_OPTIONS "-std=gnu99;-fno-inline;-fno-stack-protector;-marm"
+	INCLUDE_DIRECTORIES "${libgcc_source};${libgcc_source}/target;${gcc_source}/gcc;${gcc_source}/gcc/ginclude;${gcc_source}/libgcc;${gcc_source}/include")
+set_property(SOURCE ${nskbl_unwind_source} ${libgcc_source}/unwind_pr.c APPEND PROPERTY
+	COMPILE_OPTIONS "-include;${CMAKE_CURRENT_SOURCE_DIR}/unwind_unused.h")
+set_property(SOURCE ${libgcc_source}/unwind_pr.c APPEND PROPERTY COMPILE_DEFINITIONS NSKBL_UNWIND_PR)
+set_property(SOURCE ${nskbl_libunwind_source} APPEND PROPERTY COMPILE_OPTIONS "-marm")
+include(${libgcc_source}/lib1funcs.cmake)
+gcc48_use_lib1funcs(slb2_nskbl)
 # SceSfat, NSKBL's FAT driver, at -O3 (its loops over the open files unrolled, its directory
 # scan prefetched) with signed characters
 set_source_files_properties(sfat.c PROPERTIES COMPILE_DEFINITIONS SYSMEM_NSKBL

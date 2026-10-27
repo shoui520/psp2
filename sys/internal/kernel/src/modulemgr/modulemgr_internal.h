@@ -302,7 +302,7 @@ typedef struct SelfParser {
 	SelfAuthRequest *auth;
 	SceUID fd;
 	SceUID pid;
-	SceUInt32 reserved;
+	SceSize fileSize;		/* NSKBL: the bytes of the file read into its buffer */
 } SelfParser;
 
 /* bootimage_fs.c */
@@ -578,7 +578,7 @@ SceUID BootimageOpen(const char *path);
 int sceLoadcoreIoClose(SceUID fd);
 int sceLoadcoreIoReadFrom(void *buf, SceSize size, SceOff offset);
 
-/* self_decrypter.c */
+/* self_decrypter.c (NSKBL: self_decrypter_kbl.c) */
 int SelfParserCheckElfHeader(const void *ehdr, SceSize size);
 int SelfParserOpen(SelfParser *reader, SceUID pid, SceUID fd, SelfAuthRequest *auth);
 int SelfParserClose(SelfParser *reader);

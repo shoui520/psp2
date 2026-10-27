@@ -1,5 +1,5 @@
 # Build the SCE adaptation of the assembly runtime without changing the pristine upstream files.
-# Sony's libgcc reaches __aeabi_idiv0 and __aeabi_ldiv0 from Thumb-2 code with the ARMv6-M
+# Sony's libgcc reaches __aeabi_idiv0 and __aeabi_ldiv0 from Thumb-2 (and ARM) code with the ARMv6-M
 # tail call (the handler's address made PC-relative and popped into pc), where CodeSourcery's
 # branches with b.w. Writes lib1funcs.S and bpabi.S into OUTPUT_DIR; the files they include
 # come from UPSTREAM_DIR, which follows OUTPUT_DIR on the include path.
@@ -14,6 +14,15 @@ function(gcc48_prepare_lib1funcs upstream_dir output_dir)
 	endif()
 	string(REPLACE "${branch}"
 		"\t/* SCE: the ARMv6-M tail call */\n${tail}\t.word\t__aeabi_idiv0 - 4b\n#else"
+		source "${source}")
+	# the same in ARM_LDIV0, for the ARM runtime (NSKBL's)
+	set(branch "\tb\tSYM (__aeabi_idiv0) __PLT__\n.endm\n#else")
+	string(FIND "${source}" "${branch}" at)
+	if(at LESS 0)
+		message(FATAL_ERROR "Pinned GCC ARM_LDIV0 branch marker missing")
+	endif()
+	string(REPLACE "${branch}"
+		"\t/* SCE: the ARMv6-M tail call */\n${tail}\t.word\t__aeabi_idiv0 - 4b\n.endm\n#else"
 		source "${source}")
 	file(WRITE "${output_dir}/lib1funcs.S" "${source}")
 

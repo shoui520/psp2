@@ -84,6 +84,7 @@ int sceZlibDecompress(void *dst, SceSize dst_size, const void *src, uint32_t *ad
 	return ret;
 }
 
+#if !SYSMEM_NSKBL	/* NSKBL reads zlib streams only */
 const void *sceZlibGetCompressedData(const void *src)
 {
 	const void *data;
@@ -200,3 +201,4 @@ const void *sceGzipGetCompressedData(const void *src)
 		return NULL;
 	return data;
 }
+#endif

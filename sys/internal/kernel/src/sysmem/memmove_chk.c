@@ -7,7 +7,7 @@
 
 extern void *MoveMemoryCore(void *destination, const void *source, size_t size);
 
-#if FW_DEBUG
+#if FW_DEBUG && !SYSMEM_NSKBL
 void *memmove(void *destination, const void *source, size_t size)
 {
 	const void *caller = __builtin_return_address(0);

@@ -11,7 +11,11 @@
 	.thumb
 	.text
 
+#if SYSMEM_NSKBL
+	.balign	2	/* NSKBL places it right after sceDeflateDecompress */
+#else
 	.balign	4
+#endif
 /*
  * DeflateBuildPrecode(state): the 128-entry lookup of the code-length code
  * from the per-length bit masks of its symbols.

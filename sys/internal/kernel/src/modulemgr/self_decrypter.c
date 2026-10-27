@@ -17,13 +17,6 @@
 #define SELF_EVF_DONE		0x00000008
 #define SELF_EVF_UNLOCKED	0x80000000
 
-typedef struct SceSelfSegmentInfo {
-	SceUInt64 offset;
-	SceUInt64 length;
-	SceUInt64 compression;
-	SceUInt64 encryption;
-} SceSelfSegmentInfo;
-
 /* one of the two read buffers shared with the decrypter thread */
 typedef struct SelfDecrypterSlot {
 	int result;

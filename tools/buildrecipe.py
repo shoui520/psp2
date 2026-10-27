@@ -44,7 +44,7 @@ def compile_options(argv):
     for i, x in enumerate(argv):
         if x.startswith('-I'):
             includes.append(x)
-        elif x == '-isystem' and i + 1 < len(argv):
+        elif x in ('-isystem', '-include') and i + 1 < len(argv):
             includes += argv[i:i + 2]
     return dict(defines=[x for x in argv if x.startswith('-D')],
                 includes=includes,

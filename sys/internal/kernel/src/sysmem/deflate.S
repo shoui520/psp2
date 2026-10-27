@@ -380,6 +380,7 @@ sceDeflateDecompress:
 	pop.w	{r4, r5, r6, r7, r8, r9, sl, fp, pc}
 	.size	sceDeflateDecompress, . - sceDeflateDecompress
 
+#if !SYSMEM_NSKBL	/* NSKBL inflates whole streams only */
 /* sceDeflateDecompressPartial without a valid cbInfo: SCE_DEFLATE_ERROR_INVALID_CBINFO */
 	.type	DeflatePartialInvalidCbInfo, %function
 	.thumb_func
@@ -947,3 +948,4 @@ DeflateRefill:
 	mov.w	r9, r9, ror #16
 	pop.w	{r0, r1, r2, r3, ip, pc}
 	.size	DeflateRefill, . - DeflateRefill
+#endif

@@ -33,6 +33,14 @@ typedef struct SceSelfImageHeader {
 	SceSelfAppInfo appInfo;
 } SceSelfImageHeader;
 
+/* where each program segment lies in the file, and how it is stored */
+typedef struct SceSelfSegmentInfo {
+	SceUInt64 offset;
+	SceUInt64 length;
+	SceUInt64 compression;
+	SceUInt64 encryption;
+} SceSelfSegmentInfo;
+
 /* Control records have a 64-byte or 256-byte payload, selected by type. */
 typedef struct SceSelfControlInfo {
 	SceUInt32 type;
@@ -52,6 +60,7 @@ _Static_assert(offsetof(SceSelfHeader, selfType) == 48 &&
 	       offsetof(SceSelfHeader, controlInfoSize) == 112,
 	       "SELF extended header fields");
 _Static_assert(sizeof(SceSelfAppInfo) == 32, "SELF application info");
+_Static_assert(sizeof(SceSelfSegmentInfo) == 32, "SELF segment info");
 _Static_assert(sizeof(SceSelfImageHeader) == 160 &&
 	       offsetof(SceSelfImageHeader, appInfo.authId) == 128 &&
 	       offsetof(SceSelfImageHeader, appInfo.version) == 144,
