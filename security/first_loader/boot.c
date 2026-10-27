@@ -375,7 +375,9 @@ copyWordsAndSum(unsigned int *dst, const unsigned int *src, unsigned int size)
 	return sum;
 }
 
-void *fillBytes(void *dst, int value, unsigned int size)
+/* Retail calls this shared helper from multiple boot paths. */
+void *__attribute__((noinline, noclone))
+fillBytes(void *dst, int value, unsigned int size)
 {
 	unsigned char *p = dst;
 	unsigned int i;
