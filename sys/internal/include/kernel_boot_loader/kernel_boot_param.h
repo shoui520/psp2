@@ -16,6 +16,7 @@ struct SceCorelockContext;
 struct PhyMemPart;
 struct PhyPage;
 struct FixedHeap;
+struct L2PageTable;
 
 #define SCE_KERNEL_BOOT_PARAM_MAGIC	0x7f407c30
 #define SCE_KERNEL_BOOT_MEMORY_MAX	4
@@ -61,9 +62,9 @@ typedef struct SceKernelBootParam {
 	uint32_t hardwareDependent[2];		/* 0x50: by the KBL Param's hardware info */
 	SceKernelBootMapping ttbr0;		/* 0x58 */
 	SceUIntPtr ttbr0MaxAddress;		/* the last address TTBR0 translates */
-	SceSize ttbr0Size;
+	SceSize sizeTTBR0Address;
 	SceKernelBootMapping ttbr1;		/* 0x78 */
-	SceSize ttbr1Size;
+	SceSize sizeTTBR1Address;
 	SceUIntPtr l2PageTable000MapBase;	/* 0x94: the first address SceKernelL2PageTable000 maps */
 	SceKernelBootMapping reset;		/* 0x98 */
 	SceKernelBootMapping exceptionEntry;	/* 0xb0 */
@@ -108,7 +109,9 @@ typedef struct SceKernelBootParam {
 	struct FixedHeap *pFixedHeapForL2Object;
 	struct PhyPage *pPageFixedHeapUIDEntry;	/* 0x2e0: "SceUIDHeap", the GUID entry heap */
 	struct FixedHeap *pFixedHeapUIDEntry;
-	uint32_t reserved4[5];
+	struct L2PageTable *pL2PageTableObject000;	/* 0x2e8: the L2 tables in SceKernelL2PageTable000 */
+	struct L2PageTable *pL2PageTableObjectPhypage;	/* its second, for the phypage mapping's MiB */
+	uint32_t reserved4[3];
 	uintptr_t debugPutchar;			/* 0x2fc: the boot loader's putchar */
 	uintptr_t debugPrintf;			/* 0x300: the boot loader's printf */
 	uintptr_t debugPutcharHandler;		/* the putchar handler registered with it */
@@ -119,8 +122,9 @@ typedef struct SceKernelBootParam {
 _Static_assert(offsetof(SceKernelBootParam, kblParam) == 0x2c, "boot param KBL Param");
 _Static_assert(offsetof(SceKernelBootParam, socRevision) == 0x44, "boot param SoC revision");
 _Static_assert(offsetof(SceKernelBootParam, ttbr0) == 0x58, "boot param TTBR0");
-_Static_assert(offsetof(SceKernelBootParam, ttbr1Size) == 0x90, "boot param TTBR1 size");
+_Static_assert(offsetof(SceKernelBootParam, sizeTTBR1Address) == 0x90, "boot param TTBR1 size");
 _Static_assert(offsetof(SceKernelBootParam, reset) == 0x98, "boot param reset");
+_Static_assert(offsetof(SceKernelBootParam, pL2PageTableObject000) == 0x2e8, "boot param L2 objects");
 _Static_assert(offsetof(SceKernelBootParam, sysroot) == 0xf8, "boot param sysroot");
 _Static_assert(offsetof(SceKernelBootParam, phypage) == 0x1a0, "boot param phy page table");
 _Static_assert(offsetof(SceKernelBootParam, hardwareRegisters) == 0x1e8, "boot param registers");

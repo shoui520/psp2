@@ -5,6 +5,7 @@
  */
 
 #include "sysmem_internal.h"
+#include <kernel_boot_loader/kernel_boot_param.h>
 #include "memblock_obj_module.h"
 #include <sysmem/sysroot.h>
 
@@ -253,6 +254,33 @@ int L1PageTableGetMemoryType(L1PageTable *l1pt, uintptr_t va)
 /* name unknown: nothing to set up */
 int L1PageTableModuleStart(void)
 {
+	return 0;
+}
+#else
+/* the kernel's L1 tables, the boot loader's TTBR0 and TTBR1 mappings (core 0) */
+int L1PageTableStart(struct SceKernelBootParam *param, UIDManager *manager)
+{
+	L1PageTable *l1pt = &manager->kernelL1PageTable;
+
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0) {
+		l1pt->low = (uint32_t *)param->ttbr0.vbase;
+		l1pt->high = (uint32_t *)param->ttbr1.vbase;
+		l1pt->lock = 0;
+		l1pt->split = param->sizeTTBR0Address;
+		l1pt->reserved = param->sizeTTBR1Address;
+	}
+	sceKernelSysrootCorelockUnlock();
+	return 0;
+}
+
+/* name unknown: nothing for any core before the physical memory starts */
+int L1PageTableStartFirst(void)
+{
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0) {
+	}
+	sceKernelSysrootCorelockUnlock();
 	return 0;
 }
 #endif

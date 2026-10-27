@@ -3,6 +3,8 @@
  * counts the pages mapped through it, under its own lock.
  */
 
+#include <kernel_boot_loader/kernel_boot_param.h>
+#include <sysmem/sysroot.h>
 #include "sysmem_internal.h"
 #include "memblock_obj_module.h"
 
@@ -11,12 +13,38 @@
 
 #define L2PT_LARGE_PAGE			0x10000
 
+/* L2PageTable flags: never freed */
+#define L2PT_FLAG_KEPT			0x8000
+
 /* L2PageTableUnmapPages flags: the pages stay reserved */
 #define L2PT_UNMAP_KEEP_RESERVED	0x01
 /* L2PageTableRemapPages flags: write the caches back first */
 #define L2PT_REMAP_SYNC_CACHES		0x01
 
 /* L2PageTable: sysmem_internal.h */
+
+#if SYSMEM_NSKBL
+/* name unknown: a cleared table object from the sysroot heap, for the boot tables */
+static int AllocBootL2PageTableObject(L2PageTable **out)
+{
+	L2PageTable *l2pt = sceKernelSysrootAlloc(sizeof(L2PageTable));
+
+	*out = l2pt;
+	l2pt->magic = L2PAGETABLE_MAGIC;
+	l2pt->lock = 0;
+	l2pt->vbase = 0;
+	l2pt->flags = 0;
+	l2pt->mappedPages = 0;
+	l2pt->reservedPages = 0;
+	l2pt->table = NULL;
+	l2pt->reserved2 = 0;
+	l2pt->tablePa = 0;
+	l2pt->block = NULL;
+	l2pt->partition = NULL;
+	l2pt->firstBlock = NULL;
+	return 0;
+}
+#endif
 
 /* name unknown: a cleared table object from the heap */
 int AllocL2PageTableObject(Partition *partition, FixedHeap *heap, SceUInt32 opt, L2PageTable **out)
@@ -175,6 +203,35 @@ int L2PageTableUnmapPages(L2PageTable *l2pt, SceUInt32 asid, uintptr_t va, SceSi
 /* name unknown: nothing to set up */
 int L2PageTableModuleStart(void)
 {
+	return 0;
+}
+#else
+/* the objects of the two L2 tables in SceKernelL2PageTable000, made by core 0 */
+int L2PageTableStart(struct SceKernelBootParam *param, UIDManager *manager)
+{
+	L2PageTable *l2pt;
+	int ret;
+
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0) {
+		ret = AllocBootL2PageTableObject(&l2pt);
+		if (ret < 0)
+			return ret;
+		l2pt->vbase = param->l2PageTable000VBase;
+		l2pt->table = param->pL2PageTable000;
+		l2pt->tablePa = param->pPageL2PageTable000->info << 12;
+		l2pt->flags |= L2PT_FLAG_KEPT;
+		param->pL2PageTableObject000 = l2pt;
+		ret = AllocBootL2PageTableObject(&l2pt);
+		if (ret < 0)
+			return ret;
+		l2pt->vbase = param->phypage.vbase;
+		l2pt->table = param->pL2PageTable000 + 0x100;
+		l2pt->tablePa = (param->pPageL2PageTable000->info << 12) + 0x400;
+		l2pt->flags |= L2PT_FLAG_KEPT;
+		param->pL2PageTableObjectPhypage = l2pt;
+	}
+	sceKernelSysrootCorelockUnlock();
 	return 0;
 }
 #endif

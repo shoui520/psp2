@@ -451,4 +451,23 @@ void SimpleMemBlockStart(UIDManager *manager)
 	}
 	manager->smbFifo = s_smbFifo;
 }
+
+/* name unknown: the boot stock of simple memblocks, once the kernel partition exists */
+int SimpleMemBlockStartPhase2(void)
+{
+	int i;
+
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0) {
+		for (i = 0x200; i != 0; i--)
+			SimpleMemBlockNew(0x1000);
+		for (i = 0x20; i != 0; i--)
+			SimpleMemBlockNew(0x4002);
+		for (i = 0x40; i != 0; i--)
+			SimpleMemBlockNew(0x10004);
+		SimpleMemBlockNew(0x100808);
+	}
+	sceKernelSysrootCorelockUnlock();
+	return 0;
+}
 #endif

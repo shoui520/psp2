@@ -2865,3 +2865,15 @@ SceUID MemBlockCreateGUID(const char *name, MemBlockObject *block, SceUInt32 att
 		block->guid = guid;
 	return guid;
 }
+
+#if SYSMEM_NSKBL
+/* the boot loaders' memblock start: nothing for any core */
+int BlockStart(void)
+{
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0) {
+	}
+	sceKernelSysrootCorelockUnlock();
+	return 0;
+}
+#endif

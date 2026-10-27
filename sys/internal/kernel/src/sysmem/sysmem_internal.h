@@ -613,7 +613,8 @@ typedef struct UIDManager {
 	struct Partition *kernelPartition;	/* 0x40: simple memblocks and L2 tables live here */
 	void *heapDefault;			/* 0x44 */
 	ObjectHeap *kernelObjectHeap;		/* 0x48: the kernel's object heap */
-	SceUInt8 reserved1[0x84 - 0x4c];
+	SceUInt8 reserved1[0x70 - 0x4c];
+	L1PageTable kernelL1PageTable;		/* 0x70: the boot loader's TTBR0/TTBR1 tables */
 	struct PhyMemLow *phyMemLowMain;	/* 0x84 */
 	struct PhyMemLow *phyMemLowSub;		/* 0x88 */
 	void *phyPageReset;			/* 0x8c */
@@ -774,6 +775,11 @@ int L1PageTableIsEqualAccessibleBySW(L1PageTable *l1pt, SceUInt32 perm, uintptr_
 				     uintptr_t *pa);
 int L1PageTableGetMemoryType(L1PageTable *l1pt, uintptr_t va);
 int L1PageTableModuleStart(void);
+int L1PageTableStart(struct SceKernelBootParam *param, struct UIDManager *manager);
+int L1PageTableStartFirst(void);
+int L2PageTableStart(struct SceKernelBootParam *param, struct UIDManager *manager);
+int BlockStart(void);
+int SimpleMemBlockStartPhase2(void);
 
 /* l2cc.c */
 void sceKernelL2CacheRemap(void);

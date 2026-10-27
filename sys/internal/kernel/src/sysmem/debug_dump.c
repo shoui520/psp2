@@ -439,7 +439,6 @@ void DebugFaultDump(void *argument)
 /* the top of this CPU's fault stack */
 #define DEBUG_FAULT_STACK()	(&s_faultStacks[DebugCpuId()][0xff8])
 
-#if !SYSMEM_NSKBL
 void sceKernelAssert(SceBool cond, const SceKernelDebugInfo *info, const void *lr)
 {
 	DebugFault fault;
@@ -455,7 +454,6 @@ void sceKernelAssert(SceBool cond, const SceKernelDebugInfo *info, const void *l
 	DebugCallOnStack(&fault, DEBUG_FAULT_STACK(), DebugFaultDump);
 	sceKernelCpuResumeIntr(fault.interrupts);
 }
-#endif
 
 /* returns no value: its callers' int is what r0 holds */
 int SceDebugForDriver_821A2D59(SceUInt32 level, SceBool cond, const SceKernelDebugInfo *info,

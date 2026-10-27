@@ -748,7 +748,7 @@ void boot(void)
 		param->ttbr0.vbase = MapASLR(0x4000, seed);
 		param->ttbr0.psize = 0x4000;
 		param->ttbr0.vsize = 0x4000;
-		param->ttbr0Size = 0x40000000;
+		param->sizeTTBR0Address = 0x40000000;
 
 		seed = ror4(seed);
 		param->ttbr1.name = "SceKernelTTBR1";
@@ -756,7 +756,7 @@ void boot(void)
 		param->ttbr1.vbase = MapASLR(0x4000, seed);
 		param->ttbr1.psize = 0x4000;
 		param->ttbr1.vsize = 0x4000;
-		param->ttbr1Size = 0xc0000000;
+		param->sizeTTBR1Address = 0xc0000000;
 
 		seed = ror4(seed);
 		param->fixedHeap32B.name = "SceKernelFixedHeap32B";
@@ -1168,7 +1168,7 @@ void boot(void)
 		param->ttbr0.vbase = MapASLR(0x4000, seed);
 		param->ttbr0.psize = 0x4000;
 		param->ttbr0.vsize = 0x4000;
-		param->ttbr0Size = 0x40000000;
+		param->sizeTTBR0Address = 0x40000000;
 
 		seed = ror5(seed);
 		param->ttbr1.name = "SceKernelTTBR1";
@@ -1176,7 +1176,7 @@ void boot(void)
 		param->ttbr1.vbase = MapASLR(0x4000, seed);
 		param->ttbr1.psize = 0x4000;
 		param->ttbr1.vsize = 0x4000;
-		param->ttbr1Size = 0xc0000000;
+		param->sizeTTBR1Address = 0xc0000000;
 
 		seed = ror5(seed);
 		param->fixedHeap32B.name = "SceKernelFixedHeap32B";
