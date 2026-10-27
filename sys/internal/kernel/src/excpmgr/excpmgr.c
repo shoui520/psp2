@@ -12,7 +12,14 @@
 #pragma GCC diagnostic pop
 
 /* GCC emits these zero-initialized definitions in reverse declaration order. */
-#if FW_DEBUG
+#if EXCPMGR_NSKBL
+/* the boot loader's: no VM window */
+SceExcpmgrData g_excpData = { { 0 } };
+unsigned int g_codeStart = 0;
+unsigned char g_excpStack[4][EXCP_STACK_SIZE] __attribute__((aligned(32))) = { { 0 } };
+unsigned int g_codeEnd = 0;
+ExcpHandlerTable g_excpHandlers = { 0 };
+#elif FW_DEBUG
 unsigned int g_vmEnd = 0;
 unsigned int g_codeStart = 0;
 ExcpHandlerTable g_excpHandlers = { 0 };
@@ -30,12 +37,14 @@ unsigned char g_excpStack[4][EXCP_STACK_SIZE] __attribute__((aligned(32))) = { 0
 SceExcpmgrCallback g_dabtCallback = NULL;
 SceExcpmgrCallback g_pabtCallback = NULL;
 SceExcpmgrCallback g_undefCallback = NULL;
+#if !EXCPMGR_NSKBL
 SceExcpmgrData g_excpData = { 0 };
+#endif
 
 /* Handler definitions are shared with the KBL and emitted in Sony's order. */
 #include "excpmgr_handler_cpu.h"
 
-#if !FW_DEBUG
+#if !FW_DEBUG && !EXCPMGR_NSKBL
 static const unsigned int armNop = 0xe320f000;
 static const unsigned int thumbNop = 0xbf00bf00;
 #endif
@@ -43,7 +52,7 @@ static const unsigned int thumbNop = 0xbf00bf00;
 void printVfpRegisters(SceExcpmgrContext *context);
 void printWPT(SceExcpmgrContext *context);
 
-#if !FW_DEBUG
+#if !FW_DEBUG || EXCPMGR_NSKBL
 static const char *const exceptionNames[] = {
 	"",
 	"Halting Debug-mode",
@@ -74,6 +83,7 @@ static const char *const waypointNames[] = {
 };
 #endif
 
+#if !EXCPMGR_NSKBL
 /* name unknown: suspend callback, nothing to save */
 static int excpSuspend(int value, void *args)
 {
@@ -89,10 +99,14 @@ static int excpResume(int value, void *args)
 		trace->control = 1;
 	return 0;
 }
+#endif
 
-#if FW_DEBUG
+/* the boot loader keeps its report texts and tables with its own code */
+#if FW_DEBUG && !EXCPMGR_NSKBL
 #define EXCP_REPORT_EXTERNAL_DATA
 #define EXCP_IT_TEXT(_index) g_excpmgrITText##_index
+#endif
+#if FW_DEBUG || EXCPMGR_NSKBL
 #define EXCP_REPORT_LINKAGE
 #endif
 #include "excpmgr_handler_report.h"
@@ -223,6 +237,7 @@ void _sceKernelPanicHandlerCommon(SceExcpmgrContext *context, unsigned int reaso
 	__builtin_unreachable();	/* sysmem's report stops the CPU */
 }
 
+#if !EXCPMGR_NSKBL
 void SceExcpmgrForKernel_58F7212B(SceExcpmgrCallback callback)
 {
 	g_pabtCallback = callback;
@@ -237,9 +252,11 @@ void SceExcpmgrForKernel_1FBF5654(SceExcpmgrCallback callback)
 {
 	g_undefCallback = callback;
 }
+#endif
 
 #include "excpmgr_handler_register.h"
 
+#if !EXCPMGR_NSKBL
 int sceKernelReleaseExceptionHandler(unsigned int code, SceExcpmgrHandler *handler)
 {
 	SceExcpmgrHandler *head, *next, *prev, *last, *cur, *after;
@@ -333,6 +350,7 @@ SceExcpmgrHandler *SceExcpmgrForKernel_4337DD78(void)
 {
 	return g_excpHandlers.defaultHandler;
 }
+#endif
 
 #include "excpmgr_handler_default.h"
 
@@ -343,11 +361,14 @@ SceExcpmgrHandler *SceExcpmgrForKernel_4337DD78(void)
  */
 int ClassifyAbortInstruction(unsigned int pc, unsigned int cpsr)
 {
+#if !EXCPMGR_NSKBL
 	const unsigned short *code;
 	unsigned int instruction;
+#endif
 
 	if (!(cpsr & 0x20))
 		return 0;
+#if !EXCPMGR_NSKBL
 	if (g_vmStart <= pc && pc < g_vmEnd) {
 		code = (const unsigned short *)(pc & ~1U);
 		instruction = code[0] << 16 | code[1];
@@ -358,6 +379,7 @@ int ClassifyAbortInstruction(unsigned int pc, unsigned int cpsr)
 			return 12;
 		return (instruction & 0xffd00f00) == 0xf9100e00 ? 12 : 0;
 	}
+#endif
 	if (pc < g_codeStart)
 		return 0;
 	return pc < g_codeEnd ? SCE_KERNEL_ERROR_INVALID_MEMORY_ACCESS : 0;
@@ -367,6 +389,12 @@ int ClassifyAbortInstruction(unsigned int pc, unsigned int cpsr)
  * name unknown: a user process hit its debug trap instruction; replace it with
  * a NOP in the process text and resume there. Returns the pc to resume at.
  */
+#if EXCPMGR_NSKBL
+unsigned int PatchUserInstruction(SceExcpmgrContext *context)
+{
+	return 0;	/* the boot loader runs no user process */
+}
+#else
 unsigned int PatchUserInstruction(SceExcpmgrContext *context)
 {
 	unsigned int cpsr = context->cpsr;
@@ -400,7 +428,9 @@ unsigned int PatchUserInstruction(SceExcpmgrContext *context)
 			;
 	return pc;
 }
+#endif
 
+#if !EXCPMGR_NSKBL
 /* exception nesting depth of this core, 0 in thread context */
 int SceExcpmgrForKernel_B615A7DA(void)
 {
@@ -430,17 +460,24 @@ void SceExcpmgrForKernel_E7487AFD(ProcessHwWatchpoints *regs)
 {
 	g_excpData.kernelWatchpoints = regs;
 }
+#endif
 
 int Init(SceSize args, void *argp)
 {
+#if !EXCPMGR_NSKBL
 	SceKernelAllocMemBlockKernelOpt opt;
 	void *trace;
+#endif
 	unsigned int dacr, code, cpu, offset, value;
 	unsigned int start, size, i;
+#if !EXCPMGR_NSKBL
 	ExcpTraceArea *area, *areaWord;
+#endif
 	unsigned char *stack;
 	unsigned int *vectors;
+#if !EXCPMGR_NSKBL
 	SceUID uid;
+#endif
 
 	g_excpHandlers.lock = 0;
 	vectors = sceKernelSysrootGetVbaseResetVector();
@@ -454,7 +491,9 @@ int Init(SceSize args, void *argp)
 		cacheLineDown(start + size + 31) - cacheLineDown(start));
 	writeDacr(dacr);
 	sceKernelL1IcacheInvalidateEntireAllCore();
+#if !EXCPMGR_NSKBL
 	SceCpuForKernel_C32687D0(&g_vmStart, &g_vmEnd);
+#endif
 
 	g_excpHandlers.defaultHandler = NULL;
 	for (code = 0; code < SCE_EXCP_MAX; code++) {
@@ -497,6 +536,7 @@ int Init(SceSize args, void *argp)
 	g_excpData.kernelWatchpoints = NULL;
 	sceKernelSysrootSetModulePrivate(4, &g_excpData);
 
+#if !EXCPMGR_NSKBL
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
@@ -515,12 +555,14 @@ int Init(SceSize args, void *argp)
 	}
 	SceKernelSuspendForDriver_CE7A2207(0x1e, excpSuspend, NULL);
 	SceKernelSuspendForDriver_105C5752(0x1e, excpResume, NULL);
+#endif
 	g_pabtCallback = NULL;
 	g_dabtCallback = NULL;
 	g_undefCallback = NULL;
 	return 0;
 }
 
+#if !EXCPMGR_NSKBL
 int module_bootstart(SceSize args, void *argp)
 {
 	unsigned int cpu = sceKernelCpuId();
@@ -702,4 +744,45 @@ int SceExcpmgrForKernel_44CE04B8(unsigned int start, unsigned int end)
 	g_codeEnd = end;
 	return 0;
 }
+#else
+/* a processor mode's stack pointer (C cannot name banked registers) */
+#define setModeStackPointer(mode, sp) do {					\
+	unsigned int __psr;							\
+	__asm__ volatile("mrs %0, cpsr\n\t"					\
+			 "cpsid aif, #" #mode "\n\t"				\
+			 "mov sp, %1\n\t"					\
+			 "msr cpsr_fc, %0"					\
+			 : "=&r" (__psr) : "r" (sp) : "memory");		\
+} while (0)
+
+/* name unknown: one 8K stack from the kernel partition, its top 0x40 bytes left free */
+static inline void *excpAllocModeStack(const char *name)
+{
+	void *base;
+	SceUID uid;
+
+	sceKernelSysrootCorelockLock(0);
+	uid = sceKernelAllocPartitionStackMemBlock(name, 0x2000, 0x1000);
+	sceKernelSysrootCorelockUnlock();
+	sceKernelGetMemBlockVBase(uid, &base);
+	return (char *)base + 0x1fc0;
+}
+
+/*
+ * name unknown: the boot loader's excpmgr start, on every CPU: the IRQ, SVC, abort
+ * and undefined-mode stacks of this CPU, then (CPU 0) the vectors and handlers.
+ */
+int sceKernelExcpmgrStart(void)
+{
+	setModeStackPointer(18, excpAllocModeStack("SceKernelIRQStack"));
+	setModeStackPointer(19, excpAllocModeStack("SceKernelSvcStack"));
+	setModeStackPointer(23, excpAllocModeStack("SceKernelAbtStack"));
+	setModeStackPointer(27, excpAllocModeStack("SceKernelUndStack"));
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0)
+		Init(0, NULL);
+	sceKernelSysrootCorelockUnlock();
+	return 0;
+}
+#endif
 

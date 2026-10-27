@@ -1,7 +1,7 @@
 /* Named readonly objects in the original exception-report order. */
 #pragma once
 
-#if FW_DEBUG
+#if FW_DEBUG && !EXCPMGR_NSKBL
 #include "excpmgr_report_text.h"
 #include "excpmgr_fault_text.h"
 #define EXCP_REPORT_TEXT(_name, _text) EXCP_TEXT_REF_##_name

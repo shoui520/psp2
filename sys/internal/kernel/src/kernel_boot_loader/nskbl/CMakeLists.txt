@@ -1,8 +1,8 @@
 # NSKBL, the non-secure kernel boot loader: segment 3 of kernel_boot_loader.self
 # (ARZL-compressed there), a flat ARM image that runs at 0x51000000.
-# Sony built it from os0 sources: its SceSysmem, SceKernelIntrMgr, SceSblSmschedProxy, SceSblAuthMgr, SceSdif and
+# Sony built it from os0 sources: its SceSysmem, SceExcpmgr, SceKernelIntrMgr, SceSblSmschedProxy, SceSblAuthMgr, SceSdif and
 # SceLowio parts are those modules' own files compiled with SYSMEM_NSKBL, INTRMGR_NSKBL,
-# SMSC_PROXY_NSKBL, AUTHMGR_NSKBL, SDIF_NSKBL and LOWIO_NSKBL, which
+# EXCPMGR_NSKBL, SMSC_PROXY_NSKBL, AUTHMGR_NSKBL, SDIF_NSKBL and LOWIO_NSKBL, which
 # leave out what the boot loader does not have (the inlining in Sony's image shows its
 # translation units held only those functions); the sources are listed in NSKBL's link
 # order. The reset vector and exception entries are the original's; boot.c is SKBL's
@@ -15,6 +15,7 @@ set(sdif_source ../../../../driver/src/sdif)
 set(intrmgr_source ../../intrmgr)
 set(smsc_proxy_source ../../../../driver/src/smsc_proxy)
 set(modulemgr_source ../../modulemgr)
+set(excpmgr_source ../../excpmgr)
 # SceKernelModulemgr's files in NSKBL's link order
 set(modulemgr_c_sources
 	${modulemgr_source}/modulemgr.c
@@ -96,6 +97,10 @@ set(sysmem_c_sources
 psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	reset.S
 	../skbl/boot.c
+	${excpmgr_source}/excpmgr.c
+	${excpmgr_source}/excpmgr_vector.S
+	${excpmgr_source}/excpmgr_initial.S
+	${excpmgr_source}/excpmgr_context.S
 	${intrmgr_source}/intrmgr.c
 	${sysmem_c_sources}
 	${smsc_proxy_source}/smsc_proxy.c
@@ -117,6 +122,7 @@ psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	${lowio_source}/pervasive_clock.c
 )
 set_source_files_properties(${intrmgr_source}/intrmgr.c PROPERTIES COMPILE_DEFINITIONS INTRMGR_NSKBL)
+set_source_files_properties(${excpmgr_source}/excpmgr.c PROPERTIES COMPILE_DEFINITIONS EXCPMGR_NSKBL)
 # SceSysmem's flags (sysmem/sources.cmake): NULL tests after a dereference dropped,
 # caller-saved registers kept across leaf calls, signed characters in serial.c and uid.c
 set_source_files_properties(${sysmem_c_sources} PROPERTIES
