@@ -329,7 +329,8 @@ void setBootParameters(unsigned int bootMode, unsigned int bootArgument)
 			parameters[i] = 0;
 		parameters[7] = bootArgument << 28;
 	}
-	for (i = 0; i < 8; i++)
+	KEYRING->bootParameters[7] = parameters[7];
+	for (i = 0; i < 7; i++)
 		KEYRING->bootParameters[i] = parameters[i];
 	KEYRING->select = 0x501;
 	KEYRING_COMMAND = 0x08000501U;
