@@ -213,56 +213,50 @@ uint32_t ScePervasiveForDriver_A1D2E440(uint32_t value)
  * Each helper returns whether the bits were set before the change.
  */
 
-/* Take a device out of reset; wait for the write to land. */
-static __attribute__((noinline)) int ResetDisable(volatile uint32_t *reg,
-	uint32_t mask)
+/*
+ * Set or clear a device's reset bits; returns whether they were set before.
+ * Taking a device out of reset waits for the write to land.
+ */
+static __attribute__((noinline)) int ResetSet(volatile uint32_t *reg,
+	uint32_t mask, int enable)
 {
 	uint32_t state, previous;
 
 	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
 	previous = *reg;
-	*reg = previous & ~mask;
-	LowioDmb();
-	(void)*reg;
-	LowioDsb();
+	if (!enable) {
+		*reg = previous & ~mask;
+		LowioDmb();
+		(void)*reg;
+		LowioDsb();
+	} else {
+		*reg = previous | mask;
+		LowioDmb();
+	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return (previous & mask) != 0;
 }
 
 static __attribute__((noinline)) int ResetDisableDevice(volatile uint32_t *reg)
 {
-	return ResetDisable(reg, 1);
+	return ResetSet(reg, 1, 0);
 }
 
 static __attribute__((noinline)) int ResetDisableMask(volatile uint32_t *reg,
 	uint32_t mask)
 {
-	return ResetDisable(reg, mask);
-}
-
-/* Put a device in reset. */
-static __attribute__((noinline)) int ResetEnable(volatile uint32_t *reg,
-	uint32_t mask)
-{
-	uint32_t state, previous;
-
-	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
-	previous = *reg;
-	*reg = previous | mask;
-	LowioDmb();
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
-	return (previous & mask) != 0;
+	return ResetSet(reg, mask, 0);
 }
 
 static __attribute__((noinline)) int ResetEnableDevice(volatile uint32_t *reg)
 {
-	return ResetEnable(reg, 1);
+	return ResetSet(reg, 1, 1);
 }
 
 static __attribute__((noinline)) int ResetEnableMask(volatile uint32_t *reg,
 	uint32_t mask)
 {
-	return ResetEnable(reg, mask);
+	return ResetSet(reg, mask, 1);
 }
 
 int ScePervasiveForDriver_3E79D3D3(void)
@@ -587,15 +581,21 @@ uint32_t ScePervasiveForDriver_5B4EF352(void)
  * Each helper returns whether the bits were set before the change.
  */
 
-/* Start a device's clock; wait for the write to land. */
-static __attribute__((noinline)) int GateEnable(volatile uint32_t *reg,
-	uint32_t mask)
+/*
+ * Start or stop a device's clocks; returns whether they ran before. Both wait
+ * for the write to land.
+ */
+static __attribute__((noinline)) int GateSet(volatile uint32_t *reg,
+	uint32_t mask, int enable)
 {
 	uint32_t state, previous;
 
 	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
 	previous = *reg;
-	*reg = previous | mask;
+	if (enable)
+		*reg = previous | mask;
+	else
+		*reg = previous & ~mask;
 	LowioDmb();
 	(void)*reg;
 	LowioDsb();
@@ -605,38 +605,22 @@ static __attribute__((noinline)) int GateEnable(volatile uint32_t *reg,
 
 static __attribute__((noinline)) int GateEnableDevice(volatile uint32_t *reg)
 {
-	return GateEnable(reg, 1);
-}
-
-/* Stop a device's clock; wait for the write to land. */
-static __attribute__((noinline)) int GateDisable(volatile uint32_t *reg,
-	uint32_t mask)
-{
-	uint32_t state, previous;
-
-	state = sceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
-	previous = *reg;
-	*reg = previous & ~mask;
-	LowioDmb();
-	(void)*reg;
-	LowioDsb();
-	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
-	return (previous & mask) != 0;
+	return GateSet(reg, 1, 1);
 }
 
 static __attribute__((noinline)) int GateDisableDevice(volatile uint32_t *reg)
 {
-	return GateDisable(reg, 1);
+	return GateSet(reg, 1, 0);
 }
 
 int ScePervasiveForDriver_39E51AE2(unsigned int mask)
 {
-	return GateEnable(&s_gate->gpu, mask & 0xf000f);
+	return GateSet(&s_gate->gpu, mask & 0xf000f, 1);
 }
 
 int ScePervasiveForDriver_CA0ACFC5(unsigned int mask)
 {
-	return GateDisable(&s_gate->gpu, mask & 0xf000f);
+	return GateSet(&s_gate->gpu, mask & 0xf000f, 0);
 }
 
 int ScePervasiveForDriver_8EE3AEDF(void)
@@ -671,22 +655,22 @@ int ScePervasiveForDriver_39979C55(void)
 
 int ScePervasiveForDriver_FB01A2DD(void)
 {
-	return GateEnable(&s_gate->venezia, 1);
+	return GateSet(&s_gate->venezia, 1, 1);
 }
 
 int ScePervasiveForDriver_2EEBE9AE(void)
 {
-	return GateDisable(&s_gate->venezia, 1);
+	return GateSet(&s_gate->venezia, 1, 0);
 }
 
 int ScePervasiveForDriver_B9904983(void)
 {
-	return GateEnable(&s_gate->venezia, 2);
+	return GateSet(&s_gate->venezia, 2, 1);
 }
 
 int ScePervasiveForDriver_FBE5AA2F(void)
 {
-	return GateDisable(&s_gate->venezia, 2);
+	return GateSet(&s_gate->venezia, 2, 0);
 }
 
 int ScePervasiveForDriver_B1CFA18F(void)
@@ -745,14 +729,14 @@ int ScePervasiveForDriver_BC42C72F(int port, unsigned int mask)
 {
 	volatile uint32_t *dsi = s_gate->dsi;
 
-	return GateEnable(&dsi[port], mask);
+	return GateSet(&dsi[port], mask, 1);
 }
 
 int ScePervasiveForDriver_25AE181E(int port, unsigned int mask)
 {
 	volatile uint32_t *dsi = s_gate->dsi;
 
-	return GateDisable(&dsi[port], mask);
+	return GateSet(&dsi[port], mask, 0);
 }
 
 int ScePervasiveForDriver_07F2A738(void)
@@ -779,14 +763,14 @@ int ScePervasiveForDriver_A2EFD7AF(int port, unsigned int mask)
 {
 	volatile uint32_t *usb = s_gate->usb;
 
-	return GateEnable(&usb[port], mask);
+	return GateSet(&usb[port], mask, 1);
 }
 
 int ScePervasiveForDriver_AD1E81EB(int port, unsigned int mask)
 {
 	volatile uint32_t *usb = s_gate->usb;
 
-	return GateDisable(&usb[port], mask);
+	return GateSet(&usb[port], mask, 0);
 }
 
 int ScePervasiveForDriver_3CF7A012(int port)
