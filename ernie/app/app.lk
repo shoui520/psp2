@@ -13,6 +13,7 @@ OBJECT	rtc.c
 OBJECT	task3.c
 OBJECT	input.c
 OBJECT	aes.c
+OBJECT	authkeys.c
 OBJECT	host.c
 OBJECT	request.c
 OBJECT	csi.c

@@ -11,6 +11,7 @@ OBJECT	command.c
 OBJECT	spidev.c
 OBJECT	../app/sha1.c
 OBJECT	../app/aes.c
+OBJECT	../app/authkeys.c
 OBJECT	../app/iica.c
 OBJECT	stub.c
 OBJECT	util.c

@@ -11,23 +11,84 @@
 #include <string.h>
 
 #include "chip.h"
+#include "aes.h"
+#include "authkeys.h"
+#include "board.h"
 #include "csi.h"
 #include "kernel.h"
+#include "log.h"
 #include "spidev.h"
 
 void spiDevInit(void)
 {
 }
 
-/*
- * PLACEHOLDER: cryptographic routine, deferred (the device's authentication: with the device
- * powered and ready, the two words of registers 0x88 and 0x8c are encrypted with AES-256
- * under the key schedule at 0xfaa4 and written to registers 0x80 and 0x84; the result is
- * reported with logEvent and the host link resumed). Returns the last transfer's result.
- */
+/* Authenticate the device, then release the host link. */
 unsigned char spiDevAuthenticate(void)
 {
-	return 1;
+	union {
+		unsigned long words[4];
+		unsigned char bytes[16];
+	} block;
+	struct AesKey key;
+	unsigned char result = 0;
+	unsigned char timeout = 0;
+	unsigned char retries;
+	unsigned long word;
+
+	set_flg(1, 0x0080);
+	dly_tsk(3);
+	P5.7 = 1;
+	P1.7 = 1;
+	retries = 60;
+	while (!P1.6) {
+#if BOARD_WDT
+		WDTE = 0xac;
+#endif
+		dly_tsk(50);
+		if (--retries == 0) {
+			timeout = 1;
+			break;
+		}
+	}
+	result = spiDevRead(SPIDEV_READ, 0x88, block.bytes);
+	word = block.words[0];
+	block.words[0] = (word << 24) | ((word << 8) & 0x00ff0000UL) |
+			 ((word >> 8) & 0x0000ff00UL) | (word >> 24);
+	result = spiDevRead(SPIDEV_READ, 0x8c, block.bytes + 4);
+	word = block.words[1];
+	block.words[1] = (word << 24) | ((word << 8) & 0x00ff0000UL) |
+			 ((word >> 8) & 0x0000ff00UL) | (word >> 24);
+	memcpy(block.bytes + 8, block.bytes, 8);
+	key.w = (unsigned long *)factoryRoundKeys;
+	key.nk = 8;
+	key.nb = 4;
+	aesEncrypt((unsigned char __near *)block.bytes, (unsigned char __near *)block.bytes,
+		   (struct AesKey __near *)&key);
+	word = block.words[0];
+	block.words[0] = (word << 24) | ((word << 8) & 0x00ff0000UL) |
+			 ((word >> 8) & 0x0000ff00UL) | (word >> 24);
+	result = spiDevWrite(SPIDEV_WRITE, 0x80, block.bytes);
+	word = block.words[1];
+	block.words[1] = (word << 24) | ((word << 8) & 0x00ff0000UL) |
+			 ((word >> 8) & 0x0000ff00UL) | (word >> 24);
+	result = spiDevWrite(SPIDEV_WRITE, 0x84, block.bytes + 4);
+	memset(block.bytes, 0, sizeof(block.bytes));
+	P5.7 = 0;
+	retries = 60;
+	while (P1.6) {
+#if BOARD_WDT
+		WDTE = 0xac;
+#endif
+		dly_tsk(50);
+		if (--retries == 0) {
+			timeout = 1;
+			break;
+		}
+	}
+	logEvent(timeout ? 0x14 : 0x15);
+	set_flg(1, 0x0040);
+	return result;
 }
 
 /* reads a register's 4 bytes; the transfer's result */

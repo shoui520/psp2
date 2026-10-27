@@ -4,6 +4,9 @@
  */
 #include "util.h"
 #include "updater.h"
+#include "aes.h"
+#include "authkeys.h"
+#include "rtc.h"
 
 static const char __far hexDigits[] = "0123456789ABCDEF";
 
@@ -54,11 +57,19 @@ unsigned char hexDecode(unsigned char *out, const char *in, unsigned int length)
 	return 0;
 }
 
-/*
- * PLACEHOLDER: cryptographic routine, deferred (the serial handshake's nonce: the seed's 4
- * bytes and the clock's low 2 (getClock), encrypted in place with AES (aesEncrypt) under the
- * key at 0x34f2, Keys.wiki's SharedKey_B_B of handshake keyset 0xB).
- */
+/* Mix the seed and the clock into the caller's block, then encrypt it in place. */
 void randomGenerate(const unsigned char __near *seed, unsigned char __near *nonce)
 {
+	struct AesKey key;
+
+	nonce[0] = seed[0];
+	nonce[1] = seed[1];
+	nonce[2] = seed[2];
+	nonce[3] = seed[3];
+	nonce[4] = getClock().byte[0];
+	nonce[5] = getClock().byte[1];
+	key.w = (unsigned long *)factoryRoundKeys;
+	key.nk = 4;
+	key.nb = 4;
+	aesEncrypt(nonce, nonce, (struct AesKey __near *)&key);
 }
