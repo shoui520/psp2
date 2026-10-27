@@ -38,6 +38,12 @@
 #define SCE_SBL_ERROR_NOT_ALLOWED		((int)0x800f0030u)
 #define SCE_SBL_ERROR_BIGNUM_INVALID		((int)0x800f0116u)
 #define SCE_SBL_ERROR_SRV_ALLOC_FAILED		((int)0x800f0216u)
+#define SCE_SBL_ERROR_CF_NOT_FOUND		((int)0x800f0602u)
+#define SCE_SBL_ERROR_CF_IO			((int)0x800f0605u)
+#define SCE_SBL_ERROR_CF_INVALID_VALUE		((int)0x800f0616u)
+#define SCE_SBL_ERROR_CF_BAD_HEADER		((int)0x800f0624u)
+#define SCE_SBL_ERROR_CF_UNSUPPORTED_ALGO	((int)0x800f0625u)
+#define SCE_SBL_ERROR_CF_BAD_DIGEST		((int)0x800f0627u)
 
 /* ============================================================================
  * Hardware MMIO Accessors
@@ -216,5 +222,240 @@ uint32_t be32tohSm(uint32_t v);
 uint64_t *bswap64Sm(uint64_t *out, const uint64_t *in);
 uint64_t *htobe64Sm(uint64_t *out, const uint64_t *in);
 uint64_t *be64tohSm(uint64_t *out, const uint64_t *in);
+
+/* ============================================================================
+ * sm_heap.c: Page & Best-Fit Heap Allocator (names ours)
+ * ============================================================================ */
+
+typedef struct SmHeapBlock {
+	void *userPtr;					/* 0x00 */
+	uint32_t size;					/* 0x04 */
+	uint32_t pageCount;				/* 0x08 */
+	uint32_t padBytes;				/* 0x0c */
+	struct SmHeapBlock *prev;			/* 0x10 */
+	struct SmHeapBlock *next;			/* 0x14 */
+} SmHeapBlock;
+
+_Static_assert(sizeof(SmHeapBlock) == 0x18, "SmHeapBlock size");
+
+void *operatorNew(size_t size);
+void *operatorNewNothrow(size_t size, const void *nothrow);
+void *operatorNewArray(size_t size);
+void *operatorNewArrayNothrow(size_t size, const void *nothrow);
+void operatorDelete(void *ptr);
+void operatorDeleteNothrow(void *ptr, const void *nothrow);
+void operatorDeleteArray(void *ptr);
+void operatorDeleteArrayNothrow(void *ptr, const void *nothrow);
+void smHeapInsertSorted(SmHeapBlock *blk, SmHeapBlock **listHead);
+void smHeapUnlinkBlock(SmHeapBlock *blk, SmHeapBlock **listHead);
+SmHeapBlock *smHeapMergeBlocks(SmHeapBlock *b1, SmHeapBlock *b2);
+uint8_t smHeapAreBlocksAdjacentInPage(const SmHeapBlock *b1, const SmHeapBlock *b2);
+int smHeapFreePages(void *pageAddr, uint32_t pageCount);
+int smHeapAllocPages(void **outAddr, uint32_t pageCount, int zeroMem);
+void smHeapCoalesceBlock(SmHeapBlock *blk);
+int smHeapInitCore(void *poolBase, uint32_t poolSize);
+int smHeapInit(void *poolBase, uint32_t poolSize);
+void *smHeapMalloc(size_t size);
+void *smHeapCalloc(size_t nmemb, size_t size);
+void smHeapFree(void *ptr);
+void *smHeapAllocPagesZeroed(uint32_t pageCount);
+void *smHeapAllocPagesUninit(uint32_t pageCount);
+int smHeapFreePagesThunk(void *pageAddr, uint32_t pageCount);
+uint32_t smHeapAlignUpShift(uint32_t val, uint32_t alignMask, uint32_t shift);
+
+/* ============================================================================
+ * Certified File (cf_loader.c) & RSA / Bigmac (rsa_srvk.c) (names ours)
+ * ============================================================================ */
+
+typedef struct SelfAuthContext {
+	uint8_t *hdrBuf;			/* 0x00 */
+	uint32_t hdrBufSize;			/* 0x04 */
+} SelfAuthContext;
+
+typedef struct CfHmacContext {
+	uint32_t state;				/* 0x00 */
+	uint8_t iv[40];				/* 0x04 */
+	uint8_t digest[32];			/* 0x2c */
+	uint8_t blockBuf[64];			/* 0x4c */
+	uint32_t bufUsed;			/* 0x8c */
+	uint8_t hmacKey[64];			/* 0x90 */
+	uint32_t keyLen;			/* 0xd0 */
+} CfHmacContext;
+
+_Static_assert(sizeof(CfHmacContext) == 0xd4, "CfHmacContext size");
+
+typedef struct SceCfMetadataHeader {
+	uint64_t signatureInputLength;		/* 0x00 */
+	uint32_t signatureType;			/* 0x08: 5 = RSA-2048 */
+	uint32_t sectionCount;			/* 0x0c */
+	uint32_t keyCount;			/* 0x10: count of 16-byte keyPool slots */
+	uint32_t optHeaderSize;			/* 0x14 */
+	uint64_t reserved;			/* 0x18 */
+} SceCfMetadataHeader;
+
+_Static_assert(sizeof(SceCfMetadataHeader) == 0x20, "SceCfMetadataHeader size");
+
+typedef struct SceCfMetadataSection {
+	uint64_t offset;			/* 0x00 */
+	uint64_t size;				/* 0x08 */
+	uint32_t type;				/* 0x10 */
+	uint32_t index;				/* 0x14 */
+	uint32_t hashAlgorithm;			/* 0x18: 6 = HMAC-SHA256 */
+	uint32_t hashKeyIndex;			/* 0x1c: index in 16-byte keyPool */
+	uint32_t encryptionAlgorithm;		/* 0x20: 1 = none, 3 = AES-128-CTR */
+	uint32_t keyIndex;			/* 0x24: index in 16-byte keyPool */
+	uint32_t ivIndex;			/* 0x28: index in 16-byte keyPool */
+	uint32_t compressionAlgorithm;		/* 0x2c: 1 = plain, 2 = compressed */
+} SceCfMetadataSection;
+
+_Static_assert(sizeof(SceCfMetadataSection) == 0x30, "SceCfMetadataSection size");
+
+typedef int (*SelfHeaderReadCallback)(uintptr_t dstAddr, const uint64_t *offset,
+		uint32_t size, uint32_t *outRead, void *arg);
+typedef int (*SelfSegmentReadCallback)(const uint64_t *offset, uint32_t size,
+		uint64_t *outSrcAddr, uint64_t *outDstAddr, uint32_t *outChunkSize,
+		uint32_t *outFlags, void *arg);
+typedef int (*SelfSegmentDoneCallback)(const uint64_t *offset, uint32_t reqSize,
+		const uint64_t *srcAddr, const uint64_t *dstAddr, uint32_t chunkSize,
+		uint32_t flags, void *arg);
+typedef int (*CfGetKeysCallback)(const uint8_t **outMetaKey, const uint8_t **outRootPubKey,
+		uint32_t *outSigType, const uint8_t **outRootKey, void *arg);
+
+typedef struct CfSegmentDecryptState {
+	const SelfAuthContext *selfCtx;		/* 0x00 */
+	uint32_t reserved04[3];			/* 0x04 */
+	SceCfMetadataSection section;		/* 0x10 */
+	SelfSegmentReadCallback readCb;		/* 0x40 */
+	void *readCbArg;			/* 0x44 */
+	SelfSegmentDoneCallback doneCb;		/* 0x48 */
+	void *doneCbArg;			/* 0x4c */
+	uint64_t curOffset;			/* 0x50 */
+	uint64_t remSize;			/* 0x58 */
+	uint8_t headBlock[16];			/* 0x60 */
+	uint32_t headLen;			/* 0x70 */
+	const uint8_t *expectedDigest;		/* 0x74 */
+	CfHmacContext hmacCtx;			/* 0x78 */
+	const uint8_t *cipherKey;		/* 0x14c */
+	uint8_t cipherIv[16];			/* 0x150 */
+} CfSegmentDecryptState;
+
+_Static_assert(sizeof(CfSegmentDecryptState) == 0x160, "CfSegmentDecryptState size");
+
+typedef struct RsaPublicKey2048 {
+	const void *modulus;			/* 0x00 */
+	uint32_t modulusSize;			/* 0x04: 0x100 bytes */
+	const void *exponent;			/* 0x08 */
+	uint32_t exponentSize;			/* 0x0c: 4 bytes */
+} RsaPublicKey2048;
+
+typedef struct BignumPublicKey {
+	const uint32_t *modulus;		/* 0x00 */
+	uint32_t modulusWords;			/* 0x04: words */
+	const uint32_t *exponent;		/* 0x08 */
+	uint32_t exponentWords;			/* 0x0c: words */
+} BignumPublicKey;
+
+typedef struct SceSmRangeEntry {
+	uint32_t paddr;				/* 0x00 */
+	uint32_t size;				/* 0x04 */
+} SceSmRangeEntry;
+
+typedef struct SceSmScatterList {
+	int32_t count;				/* 0x00 */
+	const SceSmRangeEntry *entries;		/* 0x04 */
+} SceSmScatterList;
+
+SceCfMetadataHeader *cfGetMetadataHeader(const SelfAuthContext *ctx);
+SceCfMetadataSection *cfGetMetadataSections(const SelfAuthContext *ctx);
+uint8_t *cfGetMetadataKeyPool(const SelfAuthContext *ctx);
+int cfDefaultGetKeysCallback(const uint8_t **outMetaKey, const uint8_t **outRootPubKey,
+		uint32_t *outSigType, const uint8_t **outRootKey, void *arg);
+int cfGetSignatureSize(uint32_t sigType, uint32_t *outSize);
+int cfValidateMetadataHeaderBounds(const uint8_t *hdr, const SceCfMetadataHeader *metaHdr,
+		uint32_t expectedSigType, const int64_t *expectedHeaderLen);
+int cfProcessUnalignedSegmentBlock(CfSegmentDecryptState *state,
+		const uint64_t *blockSizePtr, uint8_t *scratchBuf, int updateHmac);
+int cfSegmentDecryptUpdate(CfSegmentDecryptState *state,
+		const uint64_t *startOffset, const uint64_t *totalSize,
+		SelfSegmentReadCallback readCb, void *readCbArg,
+		SelfSegmentDoneCallback doneCb, void *doneCbArg);
+int cfSegmentDecryptFinal(CfSegmentDecryptState *state);
+int cfSegmentDecryptInit(CfSegmentDecryptState *state,
+		const SelfAuthContext *ctx, uint32_t sectionIndex,
+		const SceCfMetadataSection *explicitSection);
+int cfVerifyRsaSignature(const void *hdrBuf, uint32_t sigInputLen,
+		const void *signature, const uint8_t *rootPubKey);
+int cfAuthenticateAndDecryptHeaderWithKeyCb(const SelfAuthContext *ctx,
+		CfGetKeysCallback getKeysCb, void *getKeysArg,
+		int allowUnsignedOrDev, int16_t expectedAttribute,
+		SelfHeaderReadCallback readCb, void *readCbArg,
+		int32_t expectedHeaderSize, const int64_t *expectedFileOffset);
+int selfInitAndVerifyHeader(const SelfAuthContext *ctx, const void *metaKey,
+		const void *rootPubKey, uint32_t sigType, int allowUnsignedOrDev,
+		uint16_t expectedAttribute, SelfHeaderReadCallback readCb,
+		void *readCbArg, int32_t expectedHeaderSize,
+		const int64_t *expectedFileOffset);
+int cfGetSectionCount(const SelfAuthContext *ctx, uint32_t *outCount);
+int cfGetSectionEntry(const SelfAuthContext *ctx, uint32_t index,
+		const SceCfMetadataSection **outSection);
+int cfFindSectionEntryByTypeAndIndex(const SelfAuthContext *ctx,
+		uint32_t type, uint32_t index,
+		const SceCfMetadataSection **outSection);
+int cfGetExtHeaderAndMetaOffset(const SelfAuthContext *ctx,
+		const uint8_t **outExtHdr, uint32_t *outMetaOffset);
+int cfGetOptHeaders(const SelfAuthContext *ctx,
+		const uint8_t **outOptHdr, uint32_t *outOptSize);
+int cfDecryptAndVerifySection(const SelfAuthContext *ctx, uint32_t sectionIndex,
+		SelfSegmentReadCallback readCb, void *readCbArg,
+		SelfSegmentDoneCallback doneCb, void *doneCbArg);
+int selfDecryptAndLoadSegment(const SelfAuthContext *ctx, uint32_t segType,
+		uint32_t segIndex, SelfSegmentReadCallback readCb, void *readCbArg,
+		SelfSegmentDoneCallback doneCb, void *doneCbArg);
+int cfStreamSegmentInitThunk(CfSegmentDecryptState *state,
+		const SelfAuthContext *ctx, uint32_t sectionIndex,
+		const SceCfMetadataSection *explicitSection);
+int cfStreamSegmentInitByTypeAndIndex(CfSegmentDecryptState *state,
+		const SelfAuthContext *ctx, uint32_t type, uint32_t index);
+int cfStreamSegmentFinal(CfSegmentDecryptState *state);
+int cfStreamSegmentUpdateRange(CfSegmentDecryptState *state,
+		const uint64_t *offset, const uint64_t *size,
+		SelfSegmentReadCallback readCb, void *readCbArg,
+		SelfSegmentDoneCallback doneCb, void *doneCbArg);
+int cfAesCipher(uint32_t chainSelect, uint32_t dirSelect, uint32_t keyBitsSelect,
+		void *dst, const void *src, uint32_t size, const void *key,
+		void *iv, void *outIv, void *unusedDesc);
+int cfCopyBytes(void *dst, const void *src, uint32_t size, void *unusedDesc);
+int cfHmacSha256InitShortKey(CfHmacContext *ctx, const void *key, uint32_t keyLen);
+int cfVerifyRsaPkcs1v15(void *workBuf256, const void *signature256,
+		const RsaPublicKey2048 *pubKey, const void *hash32,
+		uint32_t digestAlgo, void *unusedDesc);
+
+int bigmacStartAes128EcbEncrypt(void *dst, const void *src, uint32_t size,
+		const void *key, const uint32_t *ctrl);
+int bigmacStartAes128EcbDecrypt(void *dst, const void *src, uint32_t size,
+		const void *key, const uint32_t *ctrl);
+int bigmacStartAes128CbcEncrypt(void *dst, const void *src, uint32_t size,
+		const void *key, const void *iv, const uint32_t *ctrl);
+int bigmacStartAes128CbcDecrypt(void *dst, const void *src, uint32_t size,
+		const void *key, const void *iv, const uint32_t *ctrl);
+void bigmacReverseBswap128(uint32_t *words4);
+int bigmacAes128EcbEncryptSync(void *dst, const void *src, uint32_t size,
+		const void *key);
+int bigmacAes128EcbDecryptSync(void *dst, const void *src, uint32_t size,
+		const void *key);
+int bigmacAes128CbcEncryptSync(void *dst, const void *src, uint32_t size,
+		const void *key, void *iv);
+int bigmacAes128CbcDecryptSync(void *dst, const void *src, uint32_t size,
+		const void *key, void *iv);
+int bigmacSha256(void *dstDigest, const void *src, uint32_t size);
+int bigmacHmacSha256OneShotStart(void *dstDigest, const void *src, uint32_t size,
+		const void *key64, uint32_t keyLen, const uint32_t *bmCtrl);
+int bigmacHmacSha256Init(CfHmacContext *ctx, const void *key64, uint32_t keyLen);
+int bigmacHmacSha256Update(CfHmacContext *ctx, const void *data, uint32_t size,
+		uint32_t isFinalFlag);
+int bigmacHmacSha256Final(void *outDigest32, CfHmacContext *ctx);
+int bignumVerifyRsaPkcs1v15(void *workBuf256, const void *signature256,
+		const BignumPublicKey *pubKey, const void *expectedDigest,
+		uint32_t oidIndex);
 
 #endif /* SM_COMMON_H */
