@@ -144,6 +144,9 @@ AT	0xfd900
 SEG	@@DATAL		main.c param.c ../app/watchdog.c
 # what cstart clears, from its start label to cstartend's
 SEG	@@DATAL		cstart.asm
+# Keep serial1 and the following serial state at their original RAM addresses.
+SEG	@@DATAL		host.c command.c ../app/iica.c stub.c nvs.c elmo.c power.c powerseq.c powerwait.c battery.c charge.c cookie.c uart.c uart4.c ../app/version.c IF ERNIE_HW==0x00415000
+AT	0xfee56		IF ERNIE_HW==0x00415000
 SEG	@@DATAL
 # the short direct area
 AT	0xffe20
