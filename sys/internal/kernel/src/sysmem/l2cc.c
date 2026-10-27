@@ -3,7 +3,8 @@
  * physical address until sceKernelL2CacheRemap maps them. The sync and
  * the by-address maintenance are Sony's assembly (l2cc_maintenance.S), as
  * are SKBL's (SYSMEM_SKBL) setup, enable, disable and whole-cache
- * maintenance; SKBL keeps the registers physical.
+ * maintenance; SKBL keeps the registers physical. NSKBL (SYSMEM_NSKBL) has
+ * only the register base and the assembly.
  */
 
 #include <stddef.h>
@@ -32,7 +33,7 @@ void CpuL2CacheInit(ScePl310Registers *registerBase)
 	CpuL2CacheDisable();
 	CpuL2CacheSetup();
 }
-#else
+#elif !SYSMEM_NSKBL
 void SceCpuForDriver_E813EBB2(void)
 {
 	dsb();
@@ -40,7 +41,7 @@ void SceCpuForDriver_E813EBB2(void)
 }
 #endif
 
-#if !defined(SYSMEM_SKBL)
+#if !defined(SYSMEM_SKBL) && !SYSMEM_NSKBL
 
 /* the controller's registers into kernel virtual memory */
 void sceKernelL2CacheRemap(void)

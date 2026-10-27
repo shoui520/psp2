@@ -71,6 +71,8 @@ set(sysmem_c_sources
 	${sysmem_source}/corelock.c
 	${sysmem_source}/cache.c
 	${sysmem_source}/mmu.c
+	${sysmem_source}/l2cc.c
+	${sysmem_source}/l2cc_maintenance.S
 	${sysmem_source}/qafmgr.c
 	${sysmem_source}/aimgr.c
 	${sysmem_source}/serial.c
@@ -99,6 +101,7 @@ set_source_files_properties(${intrmgr_source}/intrmgr.c PROPERTIES COMPILE_DEFIN
 set_source_files_properties(${sysmem_c_sources} PROPERTIES
 	COMPILE_DEFINITIONS SYSMEM_NSKBL
 	COMPILE_OPTIONS "-fdelete-null-pointer-checks;-fuse-caller-save")
+set_source_files_properties(${sysmem_source}/l2cc_maintenance.S PROPERTIES COMPILE_OPTIONS "")
 set_source_files_properties(${sysmem_source}/serial.c ${sysmem_source}/uid.c PROPERTIES
 	COMPILE_OPTIONS "-fdelete-null-pointer-checks;-fuse-caller-save;-fsigned-char")
 # the atomic entry points in ARM instructions, as os0's (sysmem/sources.cmake)

@@ -5,7 +5,8 @@
  * the invalidate does not widen the size by the start's offset in its line.
  * SKBL (SYSMEM_SKBL) adds the controller's setup, enable and disable and
  * invalidate-all; it and the TrustZone build (SYSMEM_TZS) add
- * clean-and-invalidate-all, by way.
+ * clean-and-invalidate-all, by way. NSKBL (SYSMEM_NSKBL) has no
+ * clean-and-invalidate by address.
  * Register offsets: sysmem/pl310_regs.h.
  */
 	.syntax unified
@@ -185,6 +186,7 @@ CpuL2CleanRangePA:
 	.balign	4
 	.size	CpuL2CleanRangePA, . - CpuL2CleanRangePA
 
+#if !defined(SYSMEM_NSKBL)
 	.global	CpuL2CleanInvalidateRangePA
 	.type	CpuL2CleanInvalidateRangePA, %function
 	.thumb_func
@@ -202,6 +204,7 @@ CpuL2CleanInvalidateRangePA:
 2:	bx	lr
 	.balign	4
 	.size	CpuL2CleanInvalidateRangePA, . - CpuL2CleanInvalidateRangePA
+#endif
 
 #if defined(SYSMEM_SKBL) || defined(SYSMEM_TZS)
 	.global	CpuL2CleanInvalidateAll

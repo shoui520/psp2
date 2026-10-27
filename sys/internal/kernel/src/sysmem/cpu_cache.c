@@ -78,7 +78,6 @@ void SceCpuForKernel_4236E06A(const void *start, uint32_t size)
 	dsb();
 }
 
-#if !SYSMEM_NSKBL
 void SceCpuForKernel_70350360(const void *start, uint32_t size)
 {
 	uint32_t address = (uintptr_t)start;
@@ -105,6 +104,7 @@ void SceCpuForKernel_4F442396(const void *start, uint32_t size)
 	dsb();
 }
 
+#if !SYSMEM_NSKBL
 void SceCpuForKernel_F9B0B171(void)
 {
 	uint32_t setWay = 0;
