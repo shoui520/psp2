@@ -93,10 +93,11 @@ psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	${sysmem_source}/fill_core.S
 	${sdif_source}/sdif.c
 	${sdif_source}/cmd_queue.c
+	${sdif_source}/sdio_intr.c
 	${sdif_source}/mmc.c
-	${sdif_source}/card_cmd.c
 	${sdif_source}/sd.c
 	${sdif_source}/adma.c
+	${sdif_source}/card_cmd.c
 	${lowio_source}/lowio_state.c
 	${lowio_source}/pervasive.c
 	${lowio_source}/pervasive_clock.c
@@ -119,8 +120,8 @@ set_source_files_properties(${smsc_proxy_source}/smsc_proxy.c PROPERTIES
 set_source_files_properties(../../authmgr/authmgr.c PROPERTIES
 	COMPILE_DEFINITIONS AUTHMGR_NSKBL)
 set_source_files_properties(${sdif_source}/sdif.c ${sdif_source}/cmd_queue.c
-	${sdif_source}/mmc.c ${sdif_source}/card_cmd.c ${sdif_source}/sd.c
-	${sdif_source}/adma.c PROPERTIES COMPILE_DEFINITIONS SDIF_NSKBL)
+	${sdif_source}/sdio_intr.c ${sdif_source}/mmc.c ${sdif_source}/sd.c
+	${sdif_source}/adma.c ${sdif_source}/card_cmd.c PROPERTIES COMPILE_DEFINITIONS SDIF_NSKBL)
 set_source_files_properties(../skbl/boot.c PROPERTIES COMPILE_DEFINITIONS "BOOT_NSKBL;SYSMEM_NSKBL;LOWIO_KBL")
 # SceLowio's Pervasive driver, its own files built for the boot loader (LOWIO_KBL: physical
 # registers, no lock; LOWIO_NSKBL: what this image keeps), at the boot loader's -O2: the images keep

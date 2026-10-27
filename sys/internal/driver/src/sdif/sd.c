@@ -322,6 +322,7 @@ freeError:
 	return result;
 }
 
+#if !SDIF_NSKBL
 SdifContextPart *SceSdifForDriver_B9EA5B1E(unsigned int index)
 {
 	SdifContextGlobal *context = SceSdifForDriver_DC8F52F8(index);
@@ -449,6 +450,7 @@ int SceSdifForDriver_AF702FE7(SdifContextPart *sd, uint32_t blockLength)
 		sd->blockLength = blockLength;
 	return result;
 }
+#endif
 
 int SceSdifForDriver_B9593652(SdifContextPart *sd, uint32_t sector,
 			void *buffer, uint32_t count)
@@ -494,6 +496,7 @@ int SceSdifForDriver_B9593652(SdifContextPart *sd, uint32_t sector,
 	return 0;
 }
 
+#if !SDIF_NSKBL
 int sceSdWriteSectorInternal(SdifContextPart *sd, uint32_t sector,
 			    const void *buffer, uint32_t count)
 {
@@ -614,3 +617,4 @@ int SceSdifForDriver_E091BA2E(SdifContextPart *sd, uint32_t sector,
 	*writeProtected = 0;
 	return 0;
 }
+#endif

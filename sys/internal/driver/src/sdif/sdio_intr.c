@@ -1,6 +1,7 @@
 /* SceSdif SDIO interrupt command callbacks. */
 #include "sdif_internal.h"
 
+#if !SDIF_NSKBL
 void sdifCompleteFunctionMaskWrite(SdifCommand *command)
 {
 	SdifContextGlobal *context = command->context;
@@ -111,6 +112,7 @@ void sdifStartFunctionInterrupt(SdifContextGlobal *context, int interrupt,
 	registers->normalSignalEnable = signalEnable | 0x100;
 	registers->normalInterruptEnable |= 0x100;
 }
+#endif
 
 void sdifDispatchFunctionInterrupt(SdifContextGlobal *context)
 {
@@ -118,6 +120,7 @@ void sdifDispatchFunctionInterrupt(SdifContextGlobal *context)
 
 	if (!port->interruptDispatchPending || !port->pendingFunctions)
 		return;
+#if !SDIF_NSKBL
 	if (port->pendingFunctions & 2)
 		sceKernelCallSubIntrHandler(port->interruptNumber, 2, (void *)0x100);
 	if (port->pendingFunctions & 4)
@@ -138,10 +141,12 @@ void sdifDispatchFunctionInterrupt(SdifContextGlobal *context)
 	if (port->pendingFunctions & 0x80)
 		sceKernelCallSubIntrHandler(port->interruptNumber, 8,
 			(void *)(uintptr_t)port->interruptFunctions);
+#endif
 	port->interruptDispatchPending = 0;
 	port->pendingFunctions = 0;
 }
 
+#if !SDIF_NSKBL
 int sdifEnableFunctionInterrupt(SdifContextGlobal *context, int function)
 {
 	uint32_t mask = (uint8_t)((1U << function) |
@@ -194,3 +199,4 @@ int sdifDisableFunctionInterrupt(SdifContextGlobal *context, int function)
 	sdifQueueCommand(context, command, 1);
 	return 0;
 }
+#endif

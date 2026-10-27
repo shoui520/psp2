@@ -293,6 +293,7 @@ error:
 	return result;
 }
 
+#if !SDIF_NSKBL
 /* Export B32776C7: change the MMC card's block length under the port lock. */
 int SceSdifForDriver_B32776C7(SdifMmcContext *part, uint32_t blockLength)
 {
@@ -309,6 +310,7 @@ int SceSdifForDriver_B32776C7(SdifMmcContext *part, uint32_t blockLength)
 	}
 	return result;
 }
+#endif
 
 int sceMmcReadSector(SdifMmcContext *part, unsigned int sector, void *buffer,
 		     unsigned int count)
@@ -350,6 +352,7 @@ int sceMmcReadSector(SdifMmcContext *part, unsigned int sector, void *buffer,
 	return result;
 }
 
+#if !SDIF_NSKBL
 int sceMmcWriteSectorInternal(SdifMmcContext *part, unsigned int sector,
 			    const void *buffer, unsigned int count)
 {
@@ -743,6 +746,7 @@ int sendWriteProtectStatus(SdifMmcContext *part, unsigned int sector,
 	*writeProtected = (((const uint8_t *)&status)[3] & 1) != 0;
 	return 0;
 }
+#endif
 
 int sdifStartMmcInitialization(unsigned int index, SdifMmcContext **part)
 {
@@ -1178,6 +1182,7 @@ int SceSdifForDriver_22C82E79(unsigned int index, SdifMmcContext **part)
 	return 0;
 }
 
+#if !SDIF_NSKBL
 SdifMmcContext *SceSdifForDriver_6A71987F(unsigned int index)
 {
 	SdifContextGlobal *context = SceSdifForDriver_DC8F52F8(index);
@@ -1205,3 +1210,4 @@ int sddev_get_sd_cid(SdifMmcContext *part, void *cid)
 	__builtin_memcpy(cid, &part->cid, sizeof(part->cid));
 	return 0;
 }
+#endif
