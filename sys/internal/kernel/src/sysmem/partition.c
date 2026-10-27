@@ -2268,7 +2268,9 @@ int PartitionL2CAllocL2PageTableRaw(Partition *partition, uintptr_t va, SceUInt3
 	AddressSpaceContext *context;
 	MemBlockObject *block;
 	L2PageTable *l2pt;
+#if !SYSMEM_NSKBL
 	SceUInt32 *tables, *slot;
+#endif
 	uintptr_t tableVa, tablePa;
 	SceUInt32 quarter;
 	int intr, l2Intr = 0, ret;
@@ -2342,6 +2344,9 @@ int PartitionL2CAllocL2PageTableRaw(Partition *partition, uintptr_t va, SceUInt3
 	ret = L1PageTableSetL2PageTable(context->l1pt, partition->domain, l2pt->vbase, l2pt->tablePa);
 	if (ret < 0)
 		goto out;
+#if SYSMEM_NSKBL
+	PartitionMapL2PageTable(partition, l2pt, PARTITION_L2C_LOCKED);
+#else
 	if (PartitionL2CAllocL2PageTableVectorR1(partition, &tables) >= 0) {
 		slot = &tables[l2pt->vbase >> 20];
 		if (AS_L2_SLOT_TYPE(*slot) == AS_L2_SLOT_BLOCK)
@@ -2350,6 +2355,7 @@ int PartitionL2CAllocL2PageTableRaw(Partition *partition, uintptr_t va, SceUInt3
 		l2pt->partition = partition;
 		SceCpuForKernel_9DA58A9E((uint32_t *)&partition->l2Count);
 	}
+#endif
 	if (MemBlockL2PageTableFreeCount(block) > 0) {
 		MemBlockObject *listed = block;	/* Sony reads it before the lock call */
 
