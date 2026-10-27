@@ -458,7 +458,7 @@ int HeapFree(KernelHeap *heap, void *ptr)
 
 	if (ptr != NULL)
 		size = mspace_usable_size(ptr);
-#ifndef SYSMEM_TZS	/* the secure world does not check the lock */
+#if !defined(SYSMEM_TZS) && !SYSMEM_NSKBL	/* the secure world and the boot loader do not check the lock */
 	if (heap->lock == 0) {
 		SCE_DBG_PRINTF(0xb, 1148, "heap must been locked.(heap=%p)\n***\n", heap);
 		SCE_DBG_ASSERT_FAIL(1149);
@@ -625,7 +625,7 @@ void *HeapAllocPrologueBody(KernelHeap *heap, SceSize size, SceSize alignment)
 	void *ptr;
 	int ret;
 
-#ifndef SYSMEM_TZS	/* the secure world does not check the lock */
+#if !defined(SYSMEM_TZS) && !SYSMEM_NSKBL	/* the secure world and the boot loader do not check the lock */
 	if (heap->lock == 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 1050, "HeapAllocPrologue",
 				    "heap must been locked.(heap=%p)\n***\n", heap);

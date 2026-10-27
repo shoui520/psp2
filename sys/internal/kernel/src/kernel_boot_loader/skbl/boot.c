@@ -47,7 +47,7 @@
 int KblGetBuildNumber(void);
 int sceKernelMMUMapSmallPage(uint32_t *l2, uint32_t type, uintptr_t va, uintptr_t offset,
 			     uintptr_t pa);
-uint32_t MMUTtbrValue(uintptr_t l1);
+uint32_t SceCpuForKernel_9818A20B(uint32_t value);	/* mmu.c: a page table's TTBR value */
 void CpuL2CacheSetEventMonitorBus(int enable);
 void CpuL2InvalidateAll(void);
 void CpuL2CacheEnable(void);
@@ -881,8 +881,8 @@ void boot(void)
 					  param->phypage.psize, param->phypage.pbase);
 	}
 	SceCpuForKernel_FE2B77A3(&bootSaveArea.corelock);
-	writeTtbr0(MMUTtbrValue(param->ttbr0.pbase));
-	writeTtbr1(MMUTtbrValue(param->ttbr1.pbase));
+	writeTtbr0(SceCpuForKernel_9818A20B(param->ttbr0.pbase));
+	writeTtbr1(SceCpuForKernel_9818A20B(param->ttbr1.pbase));
 	writeTtbcr(param->cpu[cpu].ttbcr);
 	writeDacr(DACR_ALL_CLIENT);
 	writeContextId(param->cpu[cpu].contextId);
@@ -1314,8 +1314,8 @@ void boot(void)
 						  param->phypageHigh.pbase);
 	}
 	SceCpuForKernel_FE2B77A3(&s_bootCorelock);
-	writeTtbr0(MMUTtbrValue(param->ttbr0.pbase));
-	writeTtbr1(MMUTtbrValue(param->ttbr1.pbase));
+	writeTtbr0(SceCpuForKernel_9818A20B(param->ttbr0.pbase));
+	writeTtbr1(SceCpuForKernel_9818A20B(param->ttbr1.pbase));
 	writeTtbcr(param->cpu[cpu].ttbcr);
 	writeDacr(DACR_ALL_CLIENT);
 	writeContextId(param->cpu[cpu].contextId);

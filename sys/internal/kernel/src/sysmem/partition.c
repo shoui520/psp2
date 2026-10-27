@@ -1673,11 +1673,16 @@ int MemBlockVirAlloc2MappedByCommand(MemBlockObject *block, SceKernelAllocMemBlo
 	block->virPages = NULL;
 	block->flags &= ~MEMBLOCK_KIND_MASK;
 	block->code = command->code;
+#if SYSMEM_NSKBL
+	/* the boot loader has no clients; every block takes sysroot's name 4 */
+	MemBlockSetNameNonNullRaw(block, SysrootGetMemBlockName(4));
+#else
 #ifndef SYSMEM_TZS	/* no clients in the secure world */
 	if (command->opt.attr & ALLOC_ATTR_CLIENT_INFO)
 		MemBlockOptSetClientInfoRaw(block, &command->opt);
 #endif
 	MemBlockSetNameRaw(block, command->name);
+#endif
 
 	typeAttr = command->typeInfo->attr;
 	if ((typeAttr & MEMBLOCK_TYPE_NO_CLEAR) || (command->code & 0xf00000) == 0x100000 ||
@@ -1691,7 +1696,7 @@ int MemBlockVirAlloc2MappedByCommand(MemBlockObject *block, SceKernelAllocMemBlo
 			      SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR_LIST))) {
 			block->attr |= MEMBLOCK_ATTR_NEEDS_CLEAR;
 		}
-#ifndef SYSMEM_TZS	/* the secure world has no CDRAM */
+#if !defined(SYSMEM_TZS) && !SYSMEM_NSKBL	/* the secure world and the boot loader have no CDRAM */
 		else {
 			typeAttr &= MEMBLOCK_TYPE_CDRAM;
 			AllocMemBlockCommandAssertCdramCode(command->code, typeAttr);

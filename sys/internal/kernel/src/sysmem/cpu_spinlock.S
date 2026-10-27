@@ -110,6 +110,33 @@
 	bx	lr
 	endfunc	sceKernelGetCpuId, sceKernelCpuId
 
+#if SYSMEM_NSKBL
+/*
+ * uint32_t CpuSctlrInit(void): the boot loader's SCTLR (MMU, caches, branch
+ * prediction and round-robin replacement on; alignment checks, TEX remap, high
+ * vectors, SWP and Thumb exceptions off; access flag on), the instruction cache
+ * invalidated; returns the value written
+ */
+	func	CpuSctlrInit
+	mrc	p15, 0, r0, c1, c0, 0			@ SCTLR
+	bic.w	r0, r0, #0x40000000			@ TE
+	orr.w	r0, r0, #0x20000000			@ AFE
+	orr.w	r0, r0, #0x4000				@ RR
+	bic.w	r0, r0, #0x10000000			@ TRE
+	bic.w	r0, r0, #0x2000				@ V
+	orr.w	r0, r0, #0x1000				@ I
+	orr.w	r0, r0, #0x800				@ Z
+	bic.w	r0, r0, #0x400				@ SW
+	orr.w	r0, r0, #4				@ C
+	bic.w	r0, r0, #2				@ A
+	orr.w	r0, r0, #1				@ M
+	mcr	p15, 0, r0, c1, c0, 0
+	movs	r1, #0
+	mcr	p15, 0, r1, c7, c5, 0			@ ICIALLU
+	bx	lr
+	endfunc	CpuSctlrInit
+#endif
+
 /* void sceKernelSpinlockLowLock(lock): spins (wfe) until the lock is free */
 	func	sceKernelSpinlockLowLock
 0:	ldrex	r1, [r0]

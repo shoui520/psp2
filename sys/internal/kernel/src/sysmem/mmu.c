@@ -788,6 +788,27 @@ int sceKernelMMUUnmapLargePagesWithFlags(uint32_t *l2, uint32_t asid, uintptr_t 
 	return 0;
 }
 
+#if SYSMEM_NSKBL
+/* the boot loaders' one small page at offset in the L2 table (va unused) */
+int sceKernelMMUMapSmallPage(uint32_t *l2, uint32_t type, uintptr_t va, uintptr_t offset,
+			     uintptr_t pa)
+{
+	(void)va;
+	SCE_DBG_ASSERT_CHECK(MMUInterruptsDisabled(), 1469);
+	if ((uintptr_t)l2 & 0x3ff) {
+		SCE_DBG_PRINTF(0xb, 1472, "l2base=%p\n", l2);
+		SCE_PANIC(1473);
+	}
+	if (offset >= 0x100000) {
+		SCE_DBG_ASSERT_FAIL(1482);
+		return SCE_KERNEL_ERROR_MMU_L2_INDEX_OVERFLOW;
+	}
+	MMUWritePTE(&l2[offset >> 12], MemBlockTypeToL2PTESmallPage(type) | (pa & 0xfffff000));
+	MMU_DSB();
+	return 0;
+}
+#endif
+
 int sceKernelMMUMapSmallPages(uint32_t *l2, uint32_t type, uint32_t domain, uintptr_t offset,
 			      SceSize size, uintptr_t pa)
 {
