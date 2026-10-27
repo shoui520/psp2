@@ -73,10 +73,12 @@ int SceDebugForKernel_0EDA5174(uint32_t value)
 }
 #endif
 
+#if FW_DEBUG || !SYSMEM_NSKBL	/* the release boot loader has no assertions */
 int sceKernelGetAssertLevel(void)
 {
 	return s_assertLevel;
 }
+#endif
 
 #if !SYSMEM_NSKBL
 uint32_t SceDebugForKernel_A0CE3287(uint32_t level)
@@ -88,12 +90,14 @@ uint32_t SceDebugForKernel_A0CE3287(uint32_t level)
 }
 #endif
 
+#if FW_DEBUG || !SYSMEM_NSKBL	/* the release boot loader has no assertions */
 void SceDebugForDriver_FD753E7A(SceUInt32 level, SceBool condition,
 			   const SceKernelDebugInfo *info, const void *caller)
 {
 	if ((int32_t)level <= (int32_t)s_assertLevel)
 		sceKernelAssert(condition, info, caller);
 }
+#endif
 
 uintptr_t SceDebugForKernel_8D474850(void)
 {

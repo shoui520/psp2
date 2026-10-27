@@ -400,6 +400,7 @@
 3:	b	1b
 	endfunc	CpuRWSpinlockReadLockIrq, SceCpuForDriver_EC53D007
 
+#if FW_DEBUG || !SYSMEM_NSKBL	/* not in the release boot loader */
 /* int CpuRWSpinlockTryReadLockIrq(lock): the previous I bit, or -1 */
 	func	CpuRWSpinlockTryReadLockIrq, SceCpuForDriver_F02467D1
 	mrs	r3, cpsr
@@ -417,6 +418,7 @@
 	movs.w	r0, #-1
 	bx	lr
 	endfunc	CpuRWSpinlockTryReadLockIrq, SceCpuForDriver_F02467D1
+#endif
 
 /* void CpuRWSpinlockReadUnlockIrq(lock, flags) */
 	func	CpuRWSpinlockReadUnlockIrq, sceKernelRWSpinlockLowReadUnlockCpuResumeIntr

@@ -12,6 +12,7 @@
  */
 #include <stdint.h>
 #include <stddef.h>
+#include <fw.h>
 #include <sysmem/suspend.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/barrier.h>
@@ -222,7 +223,12 @@ static __attribute__((noinline)) int authMgrIntrHandlerforInvoke(SceUID reqId, i
 }
 
 #if AUTHMGR_NSKBL
+#if FW_DEBUG
 static __attribute__((noinline)) int authMgrWaitSM(void)
+#else
+/* the release boot loader has it inlined into its callers */
+static int authMgrWaitSM(void)
+#endif
 {
 	int ret;
 

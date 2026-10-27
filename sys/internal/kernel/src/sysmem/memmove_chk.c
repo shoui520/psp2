@@ -29,6 +29,7 @@ void *memmove(void *destination, const void *source, size_t size)
 }
 #endif
 
+#if FW_DEBUG || !SYSMEM_NSKBL	/* the release boot loader moves unchecked */
 void *__memmove_chk(void *destination, const void *source, size_t size,
 		    size_t capacity)
 {
@@ -36,3 +37,4 @@ void *__memmove_chk(void *destination, const void *source, size_t size,
 		__asm__ volatile("bkpt #0x81" ::: "memory");
 	return MoveMemoryCore(destination, source, size);
 }
+#endif

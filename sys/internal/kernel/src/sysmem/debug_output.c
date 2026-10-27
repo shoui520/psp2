@@ -247,6 +247,7 @@ int SceDebugForDriver_02B04343(SceUInt32 flags, const SceKernelDebugInfo *info,
 	return result;
 }
 
+#if FW_DEBUG || !SYSMEM_NSKBL	/* the release boot loader prints no leveled messages */
 int SceDebugForDriver_D9703808(SceUInt32 level, SceUInt32 flags,
 				 const SceKernelDebugInfo *info,
 				 const char *format, ...)
@@ -266,6 +267,7 @@ int SceDebugForDriver_D9703808(SceUInt32 level, SceUInt32 flags,
 	va_end(arguments);
 	return result;
 }
+#endif
 
 #if SYSMEM_NSKBL
 /* name unknown: the print level, which the boot loader exports to psp2bootconfig */

@@ -83,12 +83,17 @@ static const char *const s_bootStackNames[SCE_KERNEL_BOOT_CPU_MAX] = {
 	"SceKernelBootStackCore3",
 };
 
+#if FW_SINCE(0x04000000)
 /* name unknown: the build number sceKblMain prints */
 __attribute__((noinline))
 int KblMainGetBuildNumber(void)
 {
 	return 284;
 }
+#else
+/* the 3.6x boot loader prints boot()'s build number */
+int KblGetBuildNumber(void);
+#endif
 
 /* name unknown: a volume's sectors from its device */
 static int KblReadSectors(void *argument, SceUInt32 sector, SceUInt32 count, void *buffer)
@@ -252,7 +257,11 @@ void sceKblMain(SceKernelBootParam *param)
 		sceKernelSysrootCorelockUnlock();
 		sceKernelPrintfLevel(IsAllowKernelDebug() ? 1 : 2,
 				      "Starting PSP2 Kernel [0x%08x]: %d\n", FW_VERSION,
+#if FW_SINCE(0x04000000)
 				      KblMainGetBuildNumber());
+#else
+				      KblGetBuildNumber());
+#endif
 		if (sceKernelSysrootIsSafeMode())
 			sceKernelPrintfLevel(IsAllowKernelDebug() ? 0 : 2,
 					      "\tSafe Mode : [ YES ]\n");

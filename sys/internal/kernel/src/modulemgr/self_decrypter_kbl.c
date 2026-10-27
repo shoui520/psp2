@@ -10,6 +10,10 @@
 #include "modulemgr_internal.h"
 #include <modulemgr/self.h>
 
+#if !FW_DEBUG
+void *MoveMemoryCore(void *destination, const void *source, size_t size);
+#endif
+
 #define ET_SCE_EXEC		0xfe00
 
 /* the file, and the space a misaligned segment is moved to */
@@ -176,8 +180,13 @@ int SelfDecrypterLoadSegment(SelfParser *reader, int index, void *dst, LoadelfTi
 	}
 	src = s_buffer + offset;
 	if (offset & (SELF_SEGMENT_ALIGN - 1))
+#if FW_DEBUG
 		src = __memmove_chk(s_buffer + SELF_HEADER_SIZE, src, length,
 				    SELF_BUFFER_SIZE - SELF_HEADER_SIZE);
+#else
+		/* the release boot loader moves it unchecked */
+		src = MoveMemoryCore(s_buffer + SELF_HEADER_SIZE, src, length);
+#endif
 	if (!reader->authenticated) {
 		ret = sceSblAuthMgrOpen(&reader->authContext);
 		if (ret < 0)
