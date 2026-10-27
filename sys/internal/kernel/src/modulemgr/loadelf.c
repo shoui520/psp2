@@ -596,14 +596,12 @@ close:
 	return ret;
 }
 
-#if !MODULEMGR_NSKBL
 /* name unknown */
 int LoadelfFreeImage(SceModuleCB *cb)
 {
 	LoadelfFreeSegments(cb, NULL);
 	return 0;
 }
-#endif
 
 int LoadelfMapImage(LoadelfContext *ctx)
 {
