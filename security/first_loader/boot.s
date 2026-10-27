@@ -133,7 +133,8 @@ firstLoaderEntry:
 /* This 32-byte block is copied to 0x5ffe0 immediately before the handoff. */
 	.section .text.handoff, "ax"
 	.global	secondLoaderTrampoline
-	.space	4, 0
+	/* Preserve the original unreferenced word before this block. */
+	.byte	0xc8, 0xdc, 0xc0, 0x05
 secondLoaderTrampoline:
 	repeat	$1, 5f
 	nop

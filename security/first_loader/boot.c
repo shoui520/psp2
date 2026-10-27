@@ -2118,7 +2118,7 @@ int processSecondLoader(unsigned int bootMode, unsigned char *destination,
 	return 0;
 }
 
-void firstLoaderMain(unsigned char *destination, struct SecondLoaderHeader *header)
+int firstLoaderMain(unsigned char *destination, struct SecondLoaderHeader *header)
 {
 	unsigned char *image = (unsigned char *)header;
 	unsigned int bootMode;
@@ -2184,7 +2184,7 @@ void firstLoaderMain(unsigned char *destination, struct SecondLoaderHeader *head
 		goto bootFailure;
 	setBootParameters(bootMode, bootArgument);
 	*(volatile unsigned int *)0xe0000000UL = 1;
-	return;
+	return 0;
 
 bootFailure:
 	delayMicroseconds(BIGMAC_RANDOM & 0xffffU);
