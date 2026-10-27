@@ -2,6 +2,7 @@
 #include <sysmem/atomic.h>
 #include <sysmem/cpu.h>
 
+#if !SYSMEM_NSKBL
 void SceCpuForDriver_0836537E(int8_t *address, int8_t value)
 {
 	AtomicSet8((uint8_t *)address, (uint8_t)value);
@@ -11,6 +12,7 @@ void SceCpuForDriver_532CA3E8(int16_t *address, int16_t value)
 {
 	AtomicSet16((uint16_t *)address, (uint16_t)value);
 }
+#endif
 
 int8_t SceCpuForDriver_3627F4E0(int8_t *address, int8_t expected,
 		int8_t replacement)
@@ -18,6 +20,7 @@ int8_t SceCpuForDriver_3627F4E0(int8_t *address, int8_t expected,
 	return AtomicCompareAndSwap8((uint8_t *)address, expected, replacement);
 }
 
+#if !SYSMEM_NSKBL
 int16_t SceCpuForDriver_6F63F56D(int16_t *address, int16_t expected,
 		int16_t replacement)
 {
@@ -48,22 +51,26 @@ int8_t SceCpuForDriver_1E850481(int8_t *address, int8_t value)
 {
 	return AtomicUpdate8((uint8_t *)address, value, ATOMIC_ADD, 1);
 }
+#endif
 
 int16_t SceCpuForDriver_59F74E94(int16_t *address, int16_t value)
 {
 	return AtomicUpdate16((uint16_t *)address, value, ATOMIC_ADD, 1);
 }
 
+#if !SYSMEM_NSKBL
 int8_t SceCpuForDriver_7B43D0D7(int8_t *address, int8_t value)
 {
 	return AtomicUpdate8((uint8_t *)address, value, ATOMIC_SUBTRACT, 0);
 }
+#endif
 
 int16_t SceCpuForDriver_3EE9B5B8(int16_t *address, int16_t value)
 {
 	return AtomicUpdate16((uint16_t *)address, value, ATOMIC_SUBTRACT, 0);
 }
 
+#if !SYSMEM_NSKBL
 int8_t SceCpuForDriver_EB085370(int8_t *address, int8_t value)
 {
 	return AtomicUpdate8((uint8_t *)address, value, ATOMIC_SUBTRACT, 1);
@@ -178,6 +185,7 @@ int8_t SceCpuForDriver_45153D4E(int8_t *address)
 {
 	return AtomicDecrementNonnegative8((uint8_t *)address);
 }
+#endif
 
 int16_t SceCpuForDriver_9A693F5B(int16_t *address)
 {

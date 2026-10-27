@@ -12,8 +12,8 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/cpu.h>
 
-/* the secure world's SceCpu (SYSMEM_TZS) is the release kernel's in every firmware */
-#if FW_DEBUG && !defined(SYSMEM_TZS)
+/* the secure world's (SYSMEM_TZS) and the boot loader's (SYSMEM_NSKBL) SceCpu are the release kernel's */
+#if FW_DEBUG && !defined(SYSMEM_TZS) && !SYSMEM_NSKBL
 #define CPU_DEBUG 1
 #else
 #define CPU_DEBUG 0

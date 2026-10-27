@@ -47,7 +47,11 @@ set(sysmem_c_sources
 	${sysmem_source}/memset_chk.c
 	${sysmem_source}/memcpy_chk.c
 	${sysmem_source}/cpu_cache.c
+	${sysmem_source}/atomics_small.c
+	${sysmem_source}/atomics32.c
+	${sysmem_source}/atomic_counters.c
 	${sysmem_source}/cpu.c
+	${sysmem_source}/cpu_spinlock.S
 	${sysmem_source}/corelock.c
 	${sysmem_source}/cache.c
 	${sysmem_source}/mmu.c
@@ -79,6 +83,10 @@ set_source_files_properties(${sysmem_c_sources} PROPERTIES
 	COMPILE_OPTIONS "-fdelete-null-pointer-checks;-fuse-caller-save")
 set_source_files_properties(${sysmem_source}/serial.c ${sysmem_source}/uid.c PROPERTIES
 	COMPILE_OPTIONS "-fdelete-null-pointer-checks;-fuse-caller-save;-fsigned-char")
+# the atomic entry points in ARM instructions, as os0's (sysmem/sources.cmake)
+set_source_files_properties(${sysmem_source}/atomics_small.c ${sysmem_source}/atomics32.c
+	${sysmem_source}/atomic_counters.c PROPERTIES
+	COMPILE_OPTIONS "-fdelete-null-pointer-checks;-fuse-caller-save;-marm")
 set_source_files_properties(${sdif_source}/sdif.c ${sdif_source}/cmd_queue.c
 	${sdif_source}/mmc.c ${sdif_source}/card_cmd.c ${sdif_source}/sd.c
 	${sdif_source}/adma.c PROPERTIES COMPILE_DEFINITIONS SDIF_NSKBL)

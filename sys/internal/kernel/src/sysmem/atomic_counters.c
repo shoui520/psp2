@@ -52,6 +52,7 @@ uint32_t SceCpuForKernel_9DA58A9E(uint32_t *address)
 	return next;
 }
 
+#if !SYSMEM_NSKBL
 int32_t SceCpuForDriver_26F71995(uint32_t *address, int32_t value)
 {
 	int32_t previous;
@@ -194,3 +195,4 @@ int SceCpuForKernel_A3D7140F(uint64_t *address, int32_t value)
 	AtomicFullBarrier();
 	return insufficient;
 }
+#endif

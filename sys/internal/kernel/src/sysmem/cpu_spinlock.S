@@ -12,8 +12,11 @@
  * writer and the reader count otherwise (RW spinlock).
  */
 
-/* the secure world's SceCpu (SYSMEM_TZS) is the release kernel's in every firmware */
-#if FW_DEBUG && !defined(SYSMEM_TZS)
+/*
+ * the secure world's SceCpu (SYSMEM_TZS) is the release kernel's in every firmware, and so
+ * is the boot loader's (SYSMEM_NSKBL), which keeps only the locks it takes
+ */
+#if FW_DEBUG && !defined(SYSMEM_TZS) && !SYSMEM_NSKBL
 #define CPU_DEBUG 1
 #else
 #define CPU_DEBUG 0
@@ -119,6 +122,7 @@
 2:	b	0b
 	endfunc	sceKernelSpinlockLowLock
 
+#if !SYSMEM_NSKBL
 /* int SceCpuForDriver_5AC9D394(lock): 0, or -1 when the lock is taken */
 	func	SceCpuForDriver_5AC9D394
 0:	ldrex	r1, [r0]
@@ -132,6 +136,7 @@
 1:	movs.w	r0, #-1
 	bx	lr
 	endfunc	SceCpuForDriver_5AC9D394
+#endif
 
 /* void CpuSpinlockUnlock(lock) */
 	func	CpuSpinlockUnlock, sceKernelSpinlockLowUnlock
@@ -171,6 +176,7 @@
 	b	1b
 	endfunc	CpuSpinlockLockIrqWithCaller, sceKernelSpinlockLowLockCpuSuspendIntr
 
+#if !SYSMEM_NSKBL
 /*
  * int CpuSpinlockTrylockIrqCore(lock): as CpuSpinlockLockIrqCore, or -1 with the
  * IRQs as they were when the lock is taken.
@@ -197,6 +203,7 @@
 	mov	r2, r1
 	b	1b
 	endfunc	CpuSpinlockTrylockIrqWithCaller, sceKernelSpinlockLowTrylockCpuSuspendIntr
+#endif
 
 /* void CpuSpinlockUnlockIrq(lock, flags): unlocks; IRQs on unless flags */
 	func	CpuSpinlockUnlockIrq, sceKernelSpinlockLowUnlockCpuResumeIntr
@@ -209,6 +216,7 @@
 	bx	lr
 	endfunc	CpuSpinlockUnlockIrq, sceKernelSpinlockLowUnlockCpuResumeIntr
 
+#if !SYSMEM_NSKBL
 /*
  * void SceCpuForDriver_3F42B434(lock). As in Sony's code, a successful
  * strex loops back (and then waits on its own lock) and a failed one returns.
@@ -249,6 +257,7 @@
 	sev
 	bx	lr
 	endfunc	CpuRWSpinlockWriteUnlock, sceKernelRWSpinlockLowWriteUnlock
+#endif
 
 /* int CpuRWSpinlockWriteLockIrq(lock): the previous I bit */
 	func	CpuRWSpinlockWriteLockIrq, SceCpuForDriver_4C38CE4D
@@ -268,6 +277,7 @@
 3:	b	1b
 	endfunc	CpuRWSpinlockWriteLockIrq, SceCpuForDriver_4C38CE4D
 
+#if !SYSMEM_NSKBL
 /* int CpuRWSpinlockTryWriteLockIrq(lock): the previous I bit, or -1 when held */
 	func	CpuRWSpinlockTryWriteLockIrq, SceCpuForDriver_DE6482C6
 	mrs	r3, cpsr
@@ -285,6 +295,7 @@
 	movs.w	r0, #-1
 	bx	lr
 	endfunc	CpuRWSpinlockTryWriteLockIrq, SceCpuForDriver_DE6482C6
+#endif
 
 /* void CpuRWSpinlockWriteUnlockIrq(lock, flags) */
 	func	CpuRWSpinlockWriteUnlockIrq, sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr
@@ -297,6 +308,7 @@
 	bx	lr
 	endfunc	CpuRWSpinlockWriteUnlockIrq, sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr
 
+#if !SYSMEM_NSKBL
 /* void SceCpuForDriver_CAC9AE80(lock): waits while a writer holds it */
 	func	SceCpuForDriver_CAC9AE80
 0:	ldrex	r1, [r0]
@@ -341,6 +353,7 @@
 	sev
 2:	bx	lr
 	endfunc	CpuRWSpinlockReadUnlock, sceKernelRWSpinlockLowReadUnlock
+#endif
 
 /* int CpuRWSpinlockReadLockIrq(lock): the previous I bit */
 	func	CpuRWSpinlockReadLockIrq, SceCpuForDriver_EC53D007
