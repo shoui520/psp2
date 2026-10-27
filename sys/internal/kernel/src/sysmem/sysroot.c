@@ -42,12 +42,6 @@ struct SysrootInitCallbackSlot {
 	void *argument;
 };
 
-struct SysrootSelfImage {
-	void *data;
-	SceSize size;
-};
-
-_Static_assert(sizeof(struct SysrootSelfImage) == 8, "Sysroot SELF image entry size");
 
 /*
  * The debugger's event notifiers (deci4p_sdbgp registers them): each sends
@@ -609,6 +603,7 @@ int SceSysrootForKernel_79C9AE10(void)
 		return 1;
 	return (kbl->wakeup_factor & 0x7f) == 0x0f;
 }
+#endif
 
 int sceKernelSysrootIsSafeMode(void)
 {
@@ -630,6 +625,7 @@ int sceKernelSysrootIsSafeMode(void)
 	return (releasedControls & 0xc0) == 0;
 }
 
+#if !SYSMEM_NSKBL
 int sceKernelSysrootGetThreadAccessLevel(void)
 {
 	int (*getThreadAccessLevel)(void) = s_sysrootState->getThreadAccessLevel;
@@ -727,13 +723,12 @@ int SysrootModuleStart(const struct SysmemBootContext *context)
 	SceDebugForKernel_0EDA5174((uintptr_t)state->modulePrivate[2]);
 	return 0;
 }
+#endif
 
 struct SysrootPerCpu *SceSysrootForKernel_06182D59(unsigned int cpu)
 {
 	return &s_sysrootState->perCpu[cpu];
 }
-
-#endif
 
 uint32_t SceSysrootForKernel_085C2BCB(void)
 {
@@ -1486,6 +1481,14 @@ void SceSysrootForDriver_400B9793(int (*callback)(int arg))
 uint32_t SceSysrootForDriver_4D98B15B(void)
 {
 	return s_sysrootState->modelInfo;
+}
+#endif
+
+#if SYSMEM_NSKBL
+/* name unknown: the boot loader's cache of the secure modules (cacheSecurityModules) */
+void SysrootSetSelfImages(const struct SysrootSelfImage *images)
+{
+	s_sysrootState->selfImages = images;
 }
 #endif
 

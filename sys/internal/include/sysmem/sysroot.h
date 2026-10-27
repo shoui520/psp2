@@ -55,6 +55,16 @@ struct SceKblParam;
 struct SysrootDebugNotifiers;
 struct SysrootProfiler;
 
+/* a secure module the boot loader read into memory (sysroot's selfImages) */
+struct SysrootSelfImage {
+	void *data;
+	SceSize size;
+};
+
+#ifndef __cplusplus
+_Static_assert(sizeof(struct SysrootSelfImage) == 8, "Sysroot SELF image entry size");
+#endif
+
 #include <buserror/buserror_types.h>
 
 /* the sysroot shared memory (sceKernelSysrootGetSharedMemory), name unknown */
@@ -286,6 +296,9 @@ void SceSysrootForDriver_7C0BE393(SysrootSetSwInfoStr callback);
 void SceSysrootForDriver_7C2C10E2(uint32_t phase, uint32_t kind);
 void SceSysrootForDriver_82FC6405(SysrootBusErrorGetInfo callback);
 int sceKernelSysrootIsSafeMode(void);
+#if SYSMEM_NSKBL
+void SysrootSetSelfImages(const struct SysrootSelfImage *images);
+#endif
 int SceSysrootForDriver_84C0BE05(SceUID pid);
 void SceSysrootForDriver_8747D415(SysrootBusErrorHandler callback);
 int SceSysrootForDriver_89D19090(void);
