@@ -339,6 +339,9 @@ function(psp2_image name)
 		target_link_options(${name} PRIVATE -Wl,--no-warn-rwx-segments)
 		target_link_libraries(${name} PRIVATE gcc)
 	endif()
+	add_custom_command(TARGET ${name} POST_BUILD
+		COMMAND python3 "${PSP2_SRC}/tools/dbginfo.py" $<TARGET_FILE:${name}>
+		VERBATIM)
 	add_custom_command(OUTPUT ${name}.bin
 		COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${name}> ${name}.bin
 		DEPENDS ${name}

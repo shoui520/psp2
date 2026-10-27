@@ -215,6 +215,12 @@ int SceDebugForDriver_821A2D59(SceUInt32 level, SceBool cond, const SceKernelDeb
 		SceDebugForDriver_FD753E7A(1, (_cond), SCE_DBGINFO(_line), (_lr));	\
 } while (0)
 
+/* the same in a function Sony named differently */
+#define SCE_DBG_ASSERT_CHECK_LR_FUNC(_cond, _line, _func, _lr) do {	\
+	if (sceKernelGetAssertLevel() > 0)				\
+		SceDebugForDriver_FD753E7A(1, (_cond), SCE_DBGINFO_FUNC(_line, _func), (_lr));	\
+} while (0)
+
 /* level _level assertion, checked only while assertions of that level are enabled */
 #define SCE_DBG_ASSERT_LEVEL_CHECK(_level, _cond, _line) do {		\
 	if (sceKernelGetAssertLevel() >= (_level))			\
@@ -271,6 +277,7 @@ int SceDebugForDriver_821A2D59(SceUInt32 level, SceBool cond, const SceKernelDeb
 #define SCE_DBG_ASSERT(_cond, _line)			do { } while (0)
 #define SCE_DBG_ASSERT_CHECK(_cond, _line)		do { } while (0)
 #define SCE_DBG_ASSERT_CHECK_LR(_cond, _line, _lr)	do { } while (0)
+#define SCE_DBG_ASSERT_CHECK_LR_FUNC(_cond, _line, _func, _lr)	do { } while (0)
 #define SCE_DBG_ASSERT_FAIL(_line)			do { } while (0)
 #define SCE_DBG_ASSERT_LEVEL_CHECK(_level, _cond, _line)	do { } while (0)
 #define SCE_DBG_PRINTF_FUNC(_flags, _line, _func, _fmt, ...)	do { } while (0)

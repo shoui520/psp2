@@ -659,11 +659,13 @@ void SceDebugForKernel_CCABDD98(const SceKernelDebugInfo *info,
 		SceSysrootForKernel_0DF574A9();
 }
 
+#if !SYSMEM_NSKBL	/* the boot loader has no syscalls */
 void SceDebugForKernel_BCC8D0B2(SceUID pid, const ThreadSyscallFrame *frame,
 				const SceUInt32 *result)
 {
 	DebugPrintSyscallFrame(pid, frame, result);
 }
+#endif
 #endif
 
 /* the last output in the TTY ring, oldest first */

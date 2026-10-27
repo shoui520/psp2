@@ -39,7 +39,7 @@ static const SceNID libraryNids[LIBRARY_NFUNC]
 
 /* hashinfo 2: for each top nibble of a NID, the index of its first NID */
 static const SceUInt16 libraryNidHash[16]
-	__attribute__((section(".sceExport.rodata.hash"), aligned(4))) = {
+	__attribute__((section(".sceExport.rodata.hash"), aligned(4), used)) = {
 	0, 1, 4, 5, 6, 6, 7, 8, 10, 13, 17, 18, 21, 26, 28, 28,
 };
 

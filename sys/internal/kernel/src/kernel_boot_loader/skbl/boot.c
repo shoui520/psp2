@@ -1010,11 +1010,11 @@ static inline uint32_t BootCpu0Init(void *lr)
 		sceKernelSetGPO(BOOT_GPO(2));
 		SceDebugForKernel_22546577((uintptr_t)SerialDebugPutchar, 0);
 	}
-	SCE_PRINTF_WITH_INFO(0, 1868, "===================================================\n");
+	SCE_PRINTF_WITH_INFO_FUNC(0, 1868, "boot", "===================================================\n");
 	sceKernelPrintfLevel(QA_LEVEL(0, 2),
 			      "Starting PSP2 Kernel Boot Loader (Non-secure) [0x%08x]: %d\n",
 			      FW_VERSION, KblGetBuildNumber());
-	SCE_DBG_PRINTF_LEVEL(1, 0, 1897, "\n");
+	SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1897, "boot", "\n");
 
 	kermit = param->socRevision & 0x1ffff;
 	s_bootParam.current = param;
@@ -1024,7 +1024,7 @@ static inline uint32_t BootCpu0Init(void *lr)
 	param->size = sizeof(*param);
 	param->secure = 0;
 	if (kermit == 0)
-		SCE_DBG_ASSERT_CHECK_LR(0, 1932, lr);
+		SCE_DBG_ASSERT_CHECK_LR_FUNC(0, 1932, "boot", lr);
 
 	/* the CP's boot switches */
 	sceKernelPrintfLevel(QA_LEVEL(1, 2), "\tBOOTSW\n");

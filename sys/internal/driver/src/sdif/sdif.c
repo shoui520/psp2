@@ -1372,6 +1372,7 @@ SDIF_SYNC_STATIC int sceSdifWaitCmdCompletionCore(SdifCommand *command)
 
 	if (sdifIsPolling(port))
 		goto polling;
+#if !SDIF_NSKBL	/* the boot loader polls */
 	if (port->index == 1 && (command->command == 8 || command->command == 6) &&
 	    port->deviceType == 1) {
 		SceUInt timeout = 5000000;
@@ -1408,9 +1409,12 @@ SDIF_SYNC_STATIC int sceSdifWaitCmdCompletionCore(SdifCommand *command)
 		result = sceKernelWaitEventFlag(command->eventFlag, 0x11, 5, NULL, NULL);
 	if (result)
 		goto checkResult;
+#endif
 completed:
 	result = command->errorCode;
+#if !SDIF_NSKBL
 checkResult:
+#endif
 	if (result == (int)0x8032000c) {
 		_sceSdifDumpReg(command->context);
 		sceSdifDumpAdmaInfo(command);

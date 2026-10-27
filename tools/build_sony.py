@@ -110,8 +110,13 @@ def main():
         # already contain the applied relocations, which its reader decodes.
         packaged_raw = raw.with_suffix('.rel.elf')
         packaged_raw.write_bytes(elfsections.linked_rela_to_rel(raw.read_bytes()))
+    packaging_make = cwd / 'CMakeFiles' / (target + '_velf.dir') / 'build.make'
+    if not packaging_make.exists():
+        # a raw boot image (psp2_image): the linked ELF is the module
+        print(raw)
+        return
     # Use the configured export file and all firmware-specific fixup arguments.
-    packaging = (cwd / 'CMakeFiles' / (target + '_velf.dir') / 'build.make').read_text()
+    packaging = packaging_make.read_text()
     sce_layout = '/mkprx.py elf ' in packaging
     markers = ('/mkprx.py elf ',) if sce_layout else ('vita-elf-create ', '/fixup_velf.py ', '/fixup_unwind.py ')
     for marker in markers:

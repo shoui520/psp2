@@ -197,7 +197,7 @@ int LoadcoreLinkClient(LibEntCB *ent, LibStubCB *stub, const ModulemgrLibraryPat
 	if (pid == libPid) {
 		pid = libPid;
 	} else {
-#if FW_DEBUG
+#if FW_DEBUG && !MODULEMGR_NSKBL	/* the boot loader has one process */
 		if (pid == SCE_KERNEL_PROCESS_ID || (ent->exports->attr & LIBRARY_ATTR_SYSCALL) == 0) {
 			SCE_DBG_ASSERT_LEVEL(0, 0, 183);
 			pid = ModuleCBGetPid(stub->cb);

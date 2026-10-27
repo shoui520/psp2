@@ -14,7 +14,7 @@ SECTIONS
 		*(.text .text.*)
 	}
 	.rodata : {
-		*(.rodata .rodata.*)
+		*(.rodata .rodata.* .sce_dbginfo .sce_dbginfo.*)
 	}
 	.sceLib.ent ALIGN(4) : {
 		__sce_libent_top = .;
@@ -39,6 +39,11 @@ SECTIONS
 		*(.bss .bss.* COMMON)
 		. = ALIGN(4);
 		_end = .;
+	}
+
+	/* the debug records' file, line and function, which dbginfo.py hashes into them */
+	.sce_dbgsrc 0 : {
+		*(.debug_sce_dbgsrc)
 	}
 
 	/DISCARD/ : {
