@@ -614,6 +614,9 @@ MemBlockObject *AsCommonGetBlockLink(const SceUInt32 *l2Tables, uintptr_t va)
 	return NULL;
 }
 
+#if SYSMEM_NSKBL
+__attribute__((noinline))	/* the release boot loader calls it whole */
+#endif
 int MemBlockMapWithOpt(MemBlockObject *block, const SceKernelAllocMemBlockCommand *command,
 		       Partition *partition)
 {
