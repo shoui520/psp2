@@ -710,7 +710,7 @@ int SysmemModuleStart(SceSize args, void *argp)
 }
 #endif
 
-#ifndef SYSMEM_TZS	/* the secure world has no process manager */
+#if !defined(SYSMEM_TZS) && !SYSMEM_NSKBL	/* the secure world has no process manager */
 int sceKernelSysmemModuleStartAfterProcessmgr(void)
 {
 	int key;

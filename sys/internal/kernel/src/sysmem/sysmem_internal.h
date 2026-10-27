@@ -809,6 +809,8 @@ int AllocPremappedBootSimpleMemBlock(const char *name, SceUInt32 smbType, SceUIn
 				     uintptr_t va, struct PhyPage *page,
 				     struct MemBlockObject **pBlock);
 int PartitionStart(struct SceKernelBootParam *pBoot, struct UIDManager *manager);
+int PartitionStartPhase2(void);
+int SysmemStart(struct SceKernelBootParam *pBoot);
 #endif
 int L2PageTableMapPages(L2PageTable *l2pt, SceUInt32 type, uintptr_t va, SceSize size,
 			uintptr_t pa);

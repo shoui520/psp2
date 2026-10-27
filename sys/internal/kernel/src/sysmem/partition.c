@@ -3259,6 +3259,9 @@ static Partition *s_kernelPartition;
 static PartitionRootObject *s_rootPartitionObject;
 static AddressSpaceContext *s_rootContext;
 
+#define PARTITION_ASLR_CODE		0x1060d004
+#define PARTITION_MAGIC_VA		0x07f00000
+
 #if SYSMEM_NSKBL
 #define PARTITION_ROOT_DOMAIN		12
 #define PARTITION_ROOT_SIZE		0x8000000
@@ -3477,10 +3480,51 @@ int PartitionStart(SceKernelBootParam *pBoot, UIDManager *manager)
 	sceKernelSysrootCorelockUnlock();
 	return ret;
 }
-#endif
 
-#define PARTITION_ASLR_CODE		0x1060d004
-#define PARTITION_MAGIC_VA		0x07f00000
+/* the kernel partition's layout randomised by up to two pad blocks ("SceASLR") */
+int PartitionStartPhase2(void)
+{
+	SceSize sizes[2] = { 0x1000, 0x10000 };
+	SceKernelAllocMemBlockCommand command;
+	MemBlockObject *block;
+	Partition *kernel;
+	SceUInt32 random;
+	char *name;
+	SceSize size;
+	int i, ret;
+
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0) {
+		kernel = g_uidManager->kernelPartition;
+		random = SceDipswForDriver_B2AD48BE(3);
+		for (i = 0; i < 2; i++) {
+			size = (random & 7) * sizes[i];
+			random >>= 4;
+			if (size == 0)
+				continue;
+			AllocMemBlockCommandInit(&command, NULL, size);
+			command.code = PARTITION_ASLR_CODE;
+			MemBlockCode2TypeInfo(PARTITION_ASLR_CODE, &command.typeInfo);
+			command.partition = kernel;
+			command.block = NULL;
+			ret = PartitionAllocMemBlockInListByCommandRaw(kernel, &command, sizes[i]);
+			if (ret < 0) {
+				SCE_DBG_PRINTF(0xb, 8441, "AllocMemBlockInListByCommand failed 0x%08x\n",
+					       ret);
+				break;
+			}
+			block = command.block;
+			block->partition = kernel;
+			block->code = PARTITION_ASLR_CODE;
+			name = sceKernelSysrootAlloc(sizeof("SceASLR"));
+			__builtin_memcpy(name, "SceASLR", sizeof("SceASLR"));
+			MemBlockSetNameNonNullRaw(block, name);
+		}
+	}
+	sceKernelSysrootCorelockUnlock();
+	return 0;
+}
+#endif
 
 #if !SYSMEM_NSKBL
 /*
@@ -3555,7 +3599,7 @@ int PartitionModuleStart(const UIDManager *manager)
 }
 #endif
 
-#ifndef SYSMEM_TZS	/* the secure world has no user shared partition */
+#if !defined(SYSMEM_TZS) && !SYSMEM_NSKBL	/* the secure world and NSKBL have no user shared partition */
 /* the user shared tiny partition's context: only its memblock heap */
 static AddressSpaceContext s_userSharedContext;
 
