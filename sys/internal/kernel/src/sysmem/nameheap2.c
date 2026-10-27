@@ -7,7 +7,9 @@
  */
 
 #include <sysmem/sysclib.h>
+#include <sysmem/sysroot.h>
 #include "sysmem_internal.h"
+#include "memblock_obj_module.h"
 
 #define NAME_HEAP_ERROR_NO_MEMORY	SCE_KERNEL_ERROR_SYSMEM_ERROR
 #define NAME_HEAP_ERROR_EXIST		SCE_KERNEL_ERROR_DUPLICATE_NAME
@@ -15,6 +17,36 @@
 
 /* both tables, set up by the UID manager; [0] for flag 2, [1] for the rest */
 static NameHeapControl *s_nameHeapControls;
+
+#if SYSMEM_NSKBL
+/* name unknown: what the boot loaders allocate for UIDManager.nameHeapControls */
+typedef struct NameHeap {
+	NameHeapControl controls[2];
+	MemBlockObject *hashBlock;		/* 0xa8: both tables' buckets */
+} NameHeap;
+
+#define NAME_HEAP_HASH_SEED		0xcdc55091
+
+/* an empty table over buckets */
+static __attribute__((noinline)) int NameHeapControlInit(NameHeapControl *control, SceUInt32 attr,
+							 NameEntry **buckets)
+{
+	NameEntry **bucket;
+	int i;
+
+	control->attr = attr;
+	control->buckets = buckets;
+	for (bucket = buckets; bucket != buckets + NAME_HEAP_BUCKETS; bucket++)
+		*bucket = NULL;
+	control->seed = NAME_HEAP_HASH_SEED;
+	control->entryHeap = SceSysmemForKernel_3717C322(sizeof(NameEntry));
+	SCE_DBG_ASSERT_CHECK(control->entryHeap != NULL, 394);
+	for (i = 0; i < NAME_HEAP_LOCKS; i++)
+		control->locks[i] = 0;
+	control->count = 0;
+	return 0;
+}
+#endif
 
 #if !SYSMEM_NSKBL
 /* sceKernelSetNameHeapHook: no hooks in this build */
@@ -413,6 +445,59 @@ int SceSysmemForKernel_01194C2E(void *pInfo)
 int NameHeapInit(struct UIDManager *manager)
 {
 	s_nameHeapControls = manager->nameHeapControls;
+	return 0;
+}
+#endif
+
+#if SYSMEM_NSKBL
+/* the buckets of both tables, from the kernel's pages; the block goes to the name heap */
+static inline int AllocHashMemory(MemBlockObject **block)
+{
+	SceKernelAllocMemBlockKernelOpt opt;
+	NameHeap *heap;
+	char *name;
+	int ret;
+
+	name = sceKernelSysrootAlloc(0x20);
+	strncpy(name, "SceKernelNameHeapHash", 0x20);
+	heap = (NameHeap *)s_nameHeapControls;
+	memset(&opt, 0, sizeof(opt));
+	opt.size = sizeof(opt);
+	opt.attr = ALLOC_ATTR_NO_CLEAR | ALLOC_ATTR_HAS_EXTRA_HIGH;
+	opt.extraHigh = 0x1000;
+	ret = PartitionAllocMemBlockWithPhyMemPartExt(PartitionGetKernel(), SceSysmemForKernel_0164D817(),
+						      name, MEMBLOCK_CODE_KERNEL_ROOT_RW, 0x2000, &opt,
+						      block);
+	if (ret < 0)
+		SCE_DBG_PRINTF(0xb, 936, "PartitionAllocMemBlock failed 0x%08x\n", ret);
+	heap->hashBlock = *block;
+	return ret;
+}
+
+/* the two tables, made by core 0 (0.990's NameHeapStartCore) */
+static inline void NameHeapStartCore(UIDManager *manager)
+{
+	NameHeap *heap;
+	NameEntry **buckets;
+	MemBlockObject *block;
+
+	heap = sceKernelSysrootAlloc(sizeof(NameHeap));
+	manager->nameHeapControls = heap->controls;
+	s_nameHeapControls = heap->controls;
+	if (AllocHashMemory(&block) < 0)
+		return;
+	buckets = (NameEntry **)block->vbase;
+	if (NameHeapControlInit(&s_nameHeapControls[0], NAME_HEAP_CONTROL_ATTR_UNIQUE, buckets) < 0)
+		return;
+	NameHeapControlInit(&s_nameHeapControls[1], 0, buckets + NAME_HEAP_BUCKETS);
+}
+
+int NameHeapStart(UIDManager *manager)
+{
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0)
+		NameHeapStartCore(manager);
+	sceKernelSysrootCorelockUnlock();
 	return 0;
 }
 #endif

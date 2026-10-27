@@ -415,6 +415,7 @@ int NameHeapInsert(const char *name, SceUInt32 flags, NameEntry **out);
 int NameHeapLink(const char *name, SceUInt32 flags, NameEntry **out);
 int NameHeapDelete(const char *name, SceUInt32 flags);
 int NameHeapFind(const char *name, SceUInt32 flags, NameEntry **out);
+int NameHeapStart(struct UIDManager *manager);
 int NameHeapInit(struct UIDManager *manager);
 int NameEntrySetUIDEntry(NameEntry *entry, void *uidEntry);
 
