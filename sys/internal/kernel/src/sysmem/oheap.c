@@ -4,6 +4,7 @@
  * each type against the owner's resource limits.
  */
 
+#include <sysmem/sysroot.h>
 #include "sysmem_internal.h"
 #include <sysmem/uid_guid.h>
 
@@ -499,5 +500,36 @@ int ObjectHeapInitShared(void)
 		return ret;
 	ObjectHeapSetSizeClass(s_sharedObjectHeap, (SceSize)-1, s_sharedHeap, -1);
 	return 0;
+}
+#else
+/* name unknown: a size class of the kernel's object heap */
+int ObjectHeapSetKernelSizeClass(SceSize size, void *fixedHeap, SceUID uid)
+{
+	return ObjectHeapSetSizeClass(s_kernelObjectHeap, size, fixedHeap, uid);
+}
+
+/* name unknown: the kernel's object heap, made by core 0 from the boot fixed heaps */
+void ObjectHeapStart(UIDManager *manager)
+{
+	ObjectHeap *heap;
+	ObjectHeapSizeClass *sizeClasses;
+
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0) {
+		s_kernelObjectHeap = sceKernelSysrootAlloc(sizeof(ObjectHeap));
+		sizeClasses = sceKernelSysrootAlloc(16 * sizeof(*sizeClasses));
+		heap = s_kernelObjectHeap;
+		ObjectHeapInit(heap, SceSysmemForKernel_0164D817(), 16, sizeClasses, NULL);
+		ObjectHeapSetSizeClass(heap, 0x10, NULL, -1);
+		ObjectHeapSetSizeClass(heap, 0x20, manager->fixedHeap32B, -1);
+		ObjectHeapSetSizeClass(heap, 0x40, manager->fixedHeap64B, -1);
+		ObjectHeapSetSizeClass(heap, 0x80, NULL, -1);
+		ObjectHeapSetSizeClass(heap, 0x100, NULL, -1);
+		ObjectHeapSetSizeClass(heap, 0x200, NULL, -1);
+		ObjectHeapSetSizeClass(heap, (SceSize)-1, NULL, -1);
+		heap->defaultHeap = manager->fixedHeapL2Object;
+		manager->kernelObjectHeap = heap;
+	}
+	sceKernelSysrootCorelockUnlock();
 }
 #endif

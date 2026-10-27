@@ -7,6 +7,7 @@
 #define __FILE_NAME__ "memblock_obj_module.h"
 #define MEMBLOCK_OBJ_MODULE_EXTERN
 #include <sysmem/cp15.h>
+#include <sysmem/sysroot.h>
 #include "memblock_obj_module.h"
 
 #undef __FILE_NAME__
@@ -855,5 +856,27 @@ void MemBlockObjModuleStart(const UIDManager *manager)
 			     (SceClassCallback)MemBlockObjectCreate,
 			     (SceClassCallback)MemBlockObjectDestroy);
 	SimpleMemBlockModuleStart(manager);
+}
+#else
+/* name unknown: the simple memblocks, then SceUIDMemBlockClass, made by core 0 */
+int MemBlockObjStart(UIDManager *manager)
+{
+	SceClass *cls;
+	int ret = 0;
+
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0) {
+		SimpleMemBlockStart(manager);
+		cls = sceKernelSysrootAlloc(sizeof(SceClass));
+		manager->memBlockClass = cls;
+		s_memBlockClass = cls;
+		ret = SceSysmemForKernel_7CDB7655(cls, "SceUIDMemBlockClass", SceSysmemForKernel_E4193EB6(),
+						  64, (SceClassCallback)MemBlockObjectCreate,
+						  (SceClassCallback)MemBlockObjectDestroy);
+		if (ret >= 0)
+			s_memBlockClass->attributes |= 0x1000;
+	}
+	sceKernelSysrootCorelockUnlock();
+	return ret;
 }
 #endif

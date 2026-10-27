@@ -403,3 +403,4 @@ int AllocMemBlockObject(FixedHeap *heap, MemBlockObject **block);
 void FreeMemBlockObject(FixedHeap *heap, MemBlockObject *block);
 int MemBlockSetBaseInfo(SceUID uid, void *info);
 void MemBlockObjModuleStart(const UIDManager *manager);
+int MemBlockObjStart(UIDManager *manager);

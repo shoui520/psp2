@@ -313,6 +313,8 @@ int ObjectHeapFreeLimit(ObjectHeap *heap, unsigned int type, void *object);
 void *ObjectHeapGetDefaultHeap(ObjectHeap *heap);
 void ObjectHeapSetKernelHeap(const struct UIDManager *manager);
 int ObjectHeapInitShared(void);
+int ObjectHeapSetKernelSizeClass(SceSize size, void *fixedHeap, SceUID uid);
+void ObjectHeapStart(struct UIDManager *manager);
 
 /* fixed_heap.c */
 int FixedHeapInitForProcess(FixedHeap *heap, SceUID pid, const char *name, SceUInt32 attr,
@@ -334,6 +336,8 @@ int UIDStart(struct SceKernelBootParam *param, struct UIDManager *manager);
 int UIDStartPhase2(void);
 void *SysrootGetUIDPlaceholderObject(void);
 void SysrootSetUIDPlaceholderObject(void *object);
+int HeaplibStart(struct SceKernelBootParam *param, struct UIDManager *manager);
+int HeaplibStartPhase2(struct SceKernelBootParam *param, struct UIDManager *manager);
 #else
 int FixedHeapInitClass(FixedHeapClass *cls, const char *name);
 #endif
@@ -590,7 +594,7 @@ typedef struct UIDFuncVector {
 
 /* the UID manager */
 typedef struct UIDManager {
-	SceUInt32 reserved0;
+	SceSize size;				/* 0x00: sizeof(UIDManager), set by the boot loader */
 	SceClass *classes;			/* 0x04: the ring of every class */
 	FixedHeap *guidEntryHeap;		/* 0x08: fixed heap of the GUID entries */
 	struct PhyPageTableMgr *phyPageTableMgr;	/* 0x0c */
@@ -633,6 +637,8 @@ typedef struct UIDManager {
 	SceUInt32 processStorageKey;		/* 0xd8: sysmem's process-local storage */
 } UIDManager;
 
+_Static_assert(sizeof(UIDManager) == 0xdc, "UIDManager");
+
 extern UIDManager *g_uidManager;
 
 /* heap.c: the kernel heaps */
@@ -642,6 +648,10 @@ void HeapUnlock(struct KernelHeap *heap, int intr);
 void *HeapAllocPrologue(struct KernelHeap *heap, SceSize size, SceSize alignment);
 int HeapFree(struct KernelHeap *heap, void *ptr);
 int HeapModuleStart(const UIDManager *manager);
+int HeaplibImplementationStart(void);
+int HeaplibImplementationStartCore0(UIDManager *manager);
+int HeaplibImplementationStartPhase2(void);
+int HeaplibImplementationStartPhase2Core0(UIDManager *manager);
 
 /* a VM block of a process (sceKernelAllocMemBlockForVMForUser) */
 typedef struct SysmemVMBlock {
@@ -1017,6 +1027,7 @@ int SceSysmemForKernel_39D5A3B7(struct MemBlockObject *smb, void **base);	/* sce
 int FreeSimpleMemBlock(MemBlockObject *block, SceUInt32 flags);
 int SimpleMemBlockGetPbase(MemBlockObject *block, uintptr_t *pbase);
 int SimpleMemBlockModuleStart(const UIDManager *manager);
+void SimpleMemBlockStart(UIDManager *manager);
 
 /* sysmem.c: the kernel heap under its lock */
 void *HeapAllocLocked(void *heap, SceSize size);

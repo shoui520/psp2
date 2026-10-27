@@ -38,7 +38,6 @@ void *HeapAllocLocked(void *heap, SceSize size)
 	return ptr;
 }
 
-#if !SYSMEM_NSKBL
 /* name unknown: the same for a free */
 int HeapFreeLocked(void *heap, void *ptr)
 {
@@ -48,7 +47,6 @@ int HeapFreeLocked(void *heap, void *ptr)
 	HeapUnlock(heap, intr);
 	return ret;
 }
-#endif
 
 /* name unknown */
 void *UIDManagerGetKernelHeap(void)

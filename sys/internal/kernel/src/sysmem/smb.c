@@ -5,6 +5,7 @@
  * physical pages (with guard pages around it for some types).
  */
 
+#include <sysmem/sysroot.h>
 #include "sysmem_internal.h"
 #define MEMBLOCK_OBJ_MODULE_CALL
 #include "memblock_obj_module.h"
@@ -421,5 +422,33 @@ int SimpleMemBlockModuleStart(const UIDManager *manager)
 		if (sectionUsed[i] == 1)
 			PartitionReserveSection(PartitionGetKernel(), i << 20);
 	return 0;
+}
+#else
+/* the class and the FIFOs, empty; the boot loader makes no blocks in advance */
+void SimpleMemBlockStart(UIDManager *manager)
+{
+	SceClass *cls;
+	SmbFifo *fifo;
+	int i;
+
+	manager->size = sizeof(UIDManager);
+	cls = sceKernelSysrootAlloc(sizeof(SceClass));
+	manager->smbClass = cls;
+	s_smbClass = cls;
+	if (SceSysmemForKernel_7CDB7655(cls, "SceUIDSimpleMemBlockClass", SceSysmemForKernel_E4193EB6(),
+					64, (SceClassCallback)SimpleMemBlockCreate,
+					(SceClassCallback)SimpleMemBlockDestroy) < 0)
+		SCE_PANIC(979);
+	s_smbClass->attributes |= 0x1000;
+	s_smbFifo = sceKernelSysrootAlloc(SMB_FIFO_COUNT * sizeof(SmbFifo));
+	for (i = 0; i < SMB_FIFO_COUNT; i++) {
+		fifo = GetFIFO(i);
+		fifo->lock = 0;
+		fifo->count = 0;
+		fifo->lowCount = 0;
+		fifo->head = NULL;
+		fifo->tail = NULL;
+	}
+	manager->smbFifo = s_smbFifo;
 }
 #endif

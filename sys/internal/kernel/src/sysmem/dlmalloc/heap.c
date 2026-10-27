@@ -7,6 +7,7 @@
 #include "../sysmem_internal.h"
 #include <sysmem/uid_guid.h>
 #include <sysmem/sysroot.h>
+#include <sysmem/dipsw.h>
 #define MEMBLOCK_OBJ_MODULE_FILE	"dlmalloc/../memblock_obj_module.h"
 #include "../memblock_obj_module.h"
 #include <sysmem/heap_info.h>
@@ -107,9 +108,12 @@ _Static_assert(sizeof(KernelHeap) == 0x80, "KernelHeap size");
 SceUInt32 s_uncacheHeap = (SceUInt32)-1;	/* the uncached heap's UID */
 static KernelHeap *s_kernelHeap;		/* UIDManager +0x44 */
 static SceClass *s_heapClass;			/* "SceUIDKernelHeapClass" */
+#if SYSMEM_NSKBL
+static SceUID s_toolHeap;			/* SceToolHeap, -1 without one */
+#endif
 
-/* the allocation hooks: a debug kernel's, not the secure world's */
-#if FW_DEBUG && !defined(SYSMEM_TZS)
+/* the allocation hooks: a debug kernel's, not the secure world's or the boot loader's */
+#if FW_DEBUG && !defined(SYSMEM_TZS) && !SYSMEM_NSKBL
 #define HEAP_HOOKS 1
 #else
 #define HEAP_HOOKS 0
@@ -119,7 +123,6 @@ static SceClass *s_heapClass;			/* "SceUIDKernelHeapClass" */
 static HeapHooks s_hooks;
 #endif
 
-#if !SYSMEM_NSKBL
 /* name unknown: SceUIDKernelHeapClass's constructor */
 static int HeapObjectCreate(SceObjectBase *object)
 {
@@ -141,7 +144,6 @@ static int HeapObjectCreate(SceObjectBase *object)
 	heap->blocks = NULL;
 	return 0;
 }
-#endif
 
 /* name unknown: sceKernelCreateHeap's funcUID, a new GUID for the heap */
 static SceUID HeapCreateGUID(KernelHeap *heap, const char *name)
@@ -482,7 +484,6 @@ int HeapFree(KernelHeap *heap, void *ptr)
 	return ret;
 }
 
-#if !SYSMEM_NSKBL
 /* name unknown: SceUIDKernelHeapClass's free (HeapFree inlined) */
 __attribute__((flatten)) static int HeapObjectFree(void *object, void *ptr)
 {
@@ -499,6 +500,7 @@ __attribute__((flatten)) static int HeapObjectFree(void *object, void *ptr)
 	return ret;
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: hooks on every allocation and free; NULL removes them */
 int SceSysmemForKernel_42834422(const HeapHooks *hooks)
 {
@@ -687,7 +689,7 @@ void *HeapAllocPrologue(KernelHeap *heap, SceSize size, SceSize alignment)
 }
 
 /* name kept from the records: an allocation, reporting the memblock it mapped */
-static void *HeapAllocHeapMemoryWithOption(KernelHeap *heap, SceSize size,
+static __attribute__((noinline)) void *HeapAllocHeapMemoryWithOption(KernelHeap *heap, SceSize size,
 					   SceAllocOpt *opt)
 {
 	HeapMmapResult result;
@@ -733,7 +735,8 @@ static void *HeapAllocHeapMemoryWithOption(KernelHeap *heap, SceSize size,
 }
 
 /* name kept from the records */
-static void *sceKernelAllocHeapMemoryWithOptionCore(SceUID uid, SceSize size, SceAllocOpt *opt)
+static __attribute__((noinline)) void *sceKernelAllocHeapMemoryWithOptionCore(SceUID uid, SceSize size,
+								       SceAllocOpt *opt)
 {
 	KernelHeap *heap;
 	void *ptr;
@@ -775,6 +778,7 @@ void *sceKernelAllocHeapMemoryWithOption(SceUID uid, SceSize size, SceAllocOpt *
 #endif
 	return ptr;
 }
+#endif
 
 void *sceKernelAllocHeapMemory(SceUID uid, SceSize size)
 {
@@ -787,7 +791,6 @@ void *sceKernelAllocHeapMemory(SceUID uid, SceSize size)
 #endif
 	return ptr;
 }
-#endif
 
 /* name kept from the records: a new block vector of capacity slots */
 int AllocVectorBlock(KernelHeap *heap, SceUInt32 capacity)
@@ -861,7 +864,6 @@ static inline void CheckBlock(KernelHeap *heap)
 	}
 }
 
-#if !SYSMEM_NSKBL
 /* name unknown: SceUIDKernelHeapClass's destructor */
 static int HeapObjectDestroy(SceObjectBase *object)
 {
@@ -881,6 +883,7 @@ static int HeapObjectDestroy(SceObjectBase *object)
 	return FreeHeapObject(heap);
 }
 
+#if !SYSMEM_NSKBL
 int sceKernelVerifyHeap(SceUID uid, void *ptr)
 {
 	KernelHeap *heap;
@@ -897,6 +900,7 @@ int sceKernelVerifyHeap(SceUID uid, void *ptr)
 	sceGUIDReleaseObject(uid);
 	return ret;
 }
+#endif
 
 void *SceSysmemForKernel_85571907(SceSize size)
 {
@@ -910,6 +914,7 @@ void *SceSysmemForKernel_85571907(SceSize size)
 	return ptr;
 }
 
+#if !SYSMEM_NSKBL
 /* sceKernelAllocWithOpt */
 void *SceSysmemForKernel_CF3C3F7A(SceSize size, SceAllocOpt *opt)
 {
@@ -922,6 +927,7 @@ void *SceSysmemForKernel_CF3C3F7A(SceSize size, SceAllocOpt *opt)
 #endif
 	return ptr;
 }
+#endif
 
 int SceSysmemForKernel_4233C16D(void *ptr)
 {
@@ -940,7 +946,6 @@ int SceSysmemForKernel_4233C16D(void *ptr)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&heap->lock, intr);
 	return ret;
 }
-#endif
 
 /* a new block in the heap's vector (not for the kernel heap) */
 static inline void AddBlock(KernelHeap *heap, MemBlockObject *block)
@@ -1335,6 +1340,8 @@ void *SceSysmemForDriver_7750CEA7(SceSize size)
 	return ptr;
 }
 
+#endif
+
 void *SceSysmemForDriver_0B4ED16A(SceSize size, SceAllocOpt *opt)
 {
 	void *ptr = sceKernelAllocHeapMemoryWithOptionCore(s_uncacheHeap, size, opt);
@@ -1346,6 +1353,8 @@ void *SceSysmemForDriver_0B4ED16A(SceSize size, SceAllocOpt *opt)
 #endif
 	return ptr;
 }
+
+#if !SYSMEM_NSKBL
 
 int SceSysmemForDriver_FB817A59(void *ptr)
 {
@@ -1369,9 +1378,104 @@ int HeapModuleStart(const UIDManager *manager)
 	s_uncacheHeap = manager->uncacheHeap;
 	return 0;
 }
+#else
+/* the boot loader's: SceUIDKernelHeapClass and SceKernelHeap, made by core 0 */
+int HeaplibImplementationStartCore0(UIDManager *manager)
+{
+	UIDHeapClass *cls;
+	KernelHeap *heap;
+	int ret;
+
+	cls = sceKernelSysrootAlloc(sizeof(UIDHeapClass));
+	manager->heapClass = &cls->cls;
+	s_heapClass = &cls->cls;
+	ret = sceUIDHeapClassInit(cls, "SceUIDKernelHeapClass", SceSysmemForKernel_7C878E94(),
+				  sizeof(KernelHeap), (SceClassCallback)HeapObjectCreate,
+				  (SceClassCallback)HeapObjectDestroy, HeapObjectAlloc, HeapObjectFree);
+	if (ret < 0) {
+		SCE_DBG_ASSERT_FAIL(2160);
+		return ret;
+	}
+	CreateHeap("SceKernelHeap", 0xff000, SCE_KERNEL_HEAP_ID, NULL, NULL);
+	heap = SceSysmemForKernel_FA6C098C(SCE_KERNEL_HEAP_ID);
+	manager->heapDefault = heap;
+	s_kernelHeap = heap;
+	ObjectHeapSetKernelSizeClass((SceSize)-1, heap, -1);
+	sceKernelSysrootSetStatus(3);
+	return 0;
+}
+
+/* name unknown: nothing for the other cores */
+int HeaplibImplementationStart(void)
+{
+	return 0;
+}
+
+static inline SceUID CreateUncacheHeap(void)
+{
+	SceKernelHeapCreateOpt opt;
+	SceUID uid;
+
+	if (s_uncacheHeap != (SceUInt32)-1)
+		return s_uncacheHeap;
+	opt.size = sizeof(opt);
+	opt.flags = HEAP_AUTO_EXTEND | HEAP_HAS_MEMTYPE;
+	opt.maxSize = 0;
+	opt.memBlock = 0;
+	opt.memtype = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW;
+	opt.pid = 0;
+	opt.heap = NULL;
+	uid = CreateHeap("SceKernelHeapUncache", 0x8000, SCE_KERNEL_HEAP_UNCACHE_ID, &opt, NULL);
+	s_uncacheHeap = uid;
+	if (uid < 0) {
+		SCE_DBG_PRINTF_FUNC(0xb, 2062, "CreateUncacheHeap",
+				    "sceKernelCreateHeap failed 0x%08x\n", uid);
+		s_uncacheHeap = (SceUInt32)-1;
+		return -1;
+	}
+	return uid;
+}
+
+/* SceToolHeap, only with the tool's physical partition */
+static inline void CreateToolHeap(void)
+{
+	SceKernelHeapCreateOpt opt;
+
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
+		opt.size = sizeof(opt);
+		opt.flags = HEAP_AUTO_EXTEND | HEAP_HAS_MEMTYPE;
+		opt.maxSize = 0;
+		opt.memBlock = 0;
+		opt.memtype = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW;
+		opt.pid = 0;
+		opt.heap = NULL;
+		s_toolHeap = CreateHeap("SceToolHeap", 0x10000, SCE_KERNEL_HEAP_TOOL_ID, &opt, NULL);
+		if (s_toolHeap < 0) {
+			SCE_DBG_PRINTF_FUNC(0xb, 2089, "CreateToolHeap",
+					    "CreateHeap failed 0x%08x\n", s_toolHeap);
+			s_toolHeap = -1;
+		}
+	} else {
+		s_toolHeap = -1;
+	}
+}
+
+/* name unknown: the uncached heap and the tool's, made by core 0 */
+int HeaplibImplementationStartPhase2Core0(UIDManager *manager)
+{
+	manager->uncacheHeap = CreateUncacheHeap();
+	CreateToolHeap();
+	return 0;
+}
+
+/* name unknown: nothing for the other cores */
+int HeaplibImplementationStartPhase2(void)
+{
+	return 0;
+}
 #endif
 
-#if FW_DEBUG
+#if FW_DEBUG && !SYSMEM_NSKBL
 /* CreateToolHeap: this firmware's link keeps only its record (no code reaches it) */
 SCE_DBGINFO_DEFINE(static, createToolHeapRecord, 2089, "CreateToolHeap");
 #endif
