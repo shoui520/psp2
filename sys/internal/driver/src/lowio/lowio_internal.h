@@ -18,7 +18,6 @@ extern ScePervasiveResetRegisters *s_reset;
 extern ScePervasiveGateRegisters *s_gate;
 extern volatile SceUartClkgenRegisters *s_uartClock;
 extern ScePervasiveBaseClkRegisters *s_baseClock;
-extern uint8_t *s_tas[8];
 extern SceKernelSpinlock s_pervasiveLock;
 
 /*

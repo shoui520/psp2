@@ -19,11 +19,17 @@
 
 void LowioIdleEntry(void);
 
-/* Hardware-info registers cached by initialization; the final four names unknown. */
-uint32_t s_hardwareInfo[5];
-
-static SceKernelFastMutex s_pervasiveMutex;
-static SceUID s_pervasiveUids[16];
+/*
+ * PervasiveInit's state, one object: the mapping lock and UIDs, the TAS
+ * blocks' mappings and the hardware-info registers it caches (the final four
+ * names unknown).
+ */
+static struct {
+	SceKernelFastMutex mutex;
+	SceUID uids[16];
+	uint8_t *tas[8];
+	uint32_t hardwareInfo[5];
+} s_pervasive;
 
 static const struct {
 	const char *name;
@@ -37,14 +43,14 @@ static const struct {
 	{ "ScePervasiveBaseClk", PERVASIVE_BASECLK_BASE, PERVASIVE_PAGE_SIZE, &s_baseClock },
 	{ "ScePervasiveVid", PERVASIVE_VID_BASE, PERVASIVE_PAGE_SIZE, &s_video },
 	{ "ScePervasiveMailbox", PERVASIVE_MAILBOX_BASE, PERVASIVE_PAGE_SIZE, &s_mailbox },
-	{ "ScePervasiveTas0", PERVASIVE_TAS_BASE(0), PERVASIVE_PAGE_SIZE, &s_tas[0] },
-	{ "ScePervasiveTas1", PERVASIVE_TAS_BASE(1), PERVASIVE_PAGE_SIZE, &s_tas[1] },
-	{ "ScePervasiveTas2", PERVASIVE_TAS_BASE(2), PERVASIVE_PAGE_SIZE, &s_tas[2] },
-	{ "ScePervasiveTas3", PERVASIVE_TAS_BASE(3), PERVASIVE_PAGE_SIZE, &s_tas[3] },
-	{ "ScePervasiveTas4", PERVASIVE_TAS_BASE(4), PERVASIVE_PAGE_SIZE, &s_tas[4] },
-	{ "ScePervasiveTas5", PERVASIVE_TAS_BASE(5), PERVASIVE_PAGE_SIZE, &s_tas[5] },
-	{ "ScePervasiveTas6", PERVASIVE_TAS_BASE(6), PERVASIVE_PAGE_SIZE, &s_tas[6] },
-	{ "ScePervasiveTas7", PERVASIVE_TAS_BASE(7), PERVASIVE_PAGE_SIZE, &s_tas[7] },
+	{ "ScePervasiveTas0", PERVASIVE_TAS_BASE(0), PERVASIVE_PAGE_SIZE, &s_pervasive.tas[0] },
+	{ "ScePervasiveTas1", PERVASIVE_TAS_BASE(1), PERVASIVE_PAGE_SIZE, &s_pervasive.tas[1] },
+	{ "ScePervasiveTas2", PERVASIVE_TAS_BASE(2), PERVASIVE_PAGE_SIZE, &s_pervasive.tas[2] },
+	{ "ScePervasiveTas3", PERVASIVE_TAS_BASE(3), PERVASIVE_PAGE_SIZE, &s_pervasive.tas[3] },
+	{ "ScePervasiveTas4", PERVASIVE_TAS_BASE(4), PERVASIVE_PAGE_SIZE, &s_pervasive.tas[4] },
+	{ "ScePervasiveTas5", PERVASIVE_TAS_BASE(5), PERVASIVE_PAGE_SIZE, &s_pervasive.tas[5] },
+	{ "ScePervasiveTas6", PERVASIVE_TAS_BASE(6), PERVASIVE_PAGE_SIZE, &s_pervasive.tas[6] },
+	{ "ScePervasiveTas7", PERVASIVE_TAS_BASE(7), PERVASIVE_PAGE_SIZE, &s_pervasive.tas[7] },
 	{ "ScePervasive2", PERVASIVE2_BASE, PERVASIVE_PAGE_SIZE, &s_pervasive2 },
 	{ "SceUartclkReg", UART_CLKGEN_BASE, PERVASIVE_PAGE_SIZE, &s_uartClock },
 };
@@ -74,7 +80,7 @@ static __attribute__((noinline)) int PervasiveInit(void)
 	unsigned i;
 	int ret;
 
-	ret = sceKernelInitializeFastMutex(&s_pervasiveMutex, "ScePervasive",
+	ret = sceKernelInitializeFastMutex(&s_pervasive.mutex, "ScePervasive",
 		2, NULL);
 	if (ret < 0)
 		return ret;
@@ -91,17 +97,17 @@ static __attribute__((noinline)) int PervasiveInit(void)
 
 			/* Sony frees the whole UID array, including untouched entries. */
 			for (j = 0; j < 16; j++)
-				sceKernelFreeMemBlock(s_pervasiveUids[j]);
-			sceKernelFinalizeFastMutex(&s_pervasiveMutex);
+				sceKernelFreeMemBlock(s_pervasive.uids[j]);
+			sceKernelFinalizeFastMutex(&s_pervasive.mutex);
 			return ret;
 		}
-		s_pervasiveUids[i] = ret;
+		s_pervasive.uids[i] = ret;
 		sceKernelGetMemBlockBase(ret, (void **)s_pervasiveDevices[i].base);
 	}
-	s_hardwareInfo[0] = s_misc->revision;
-	s_hardwareInfo[1] = s_misc->cacheStatus;
+	s_pervasive.hardwareInfo[0] = s_misc->revision;
+	s_pervasive.hardwareInfo[1] = s_misc->cacheStatus;
 	for (i = 0; i < 3; i++)
-		s_hardwareInfo[i + 2] = s_misc->hardwareInfo[i];
+		s_pervasive.hardwareInfo[i + 2] = s_misc->hardwareInfo[i];
 	PervasiveClockInit();
 	sceKernelRegisterSysEventHandler("ScePervasive", PervasiveSysEvent, NULL);
 	SceThreadmgrForDriver_B4A05763(LowioIdleEntry);
@@ -134,7 +140,7 @@ uint32_t ScePervasiveForDriver_04D145C7(void)
 
 uint32_t ScePervasiveForDriver_270BE98A(unsigned index)
 {
-	return index < 8 ? (uintptr_t)s_tas[index] : 0;
+	return index < 8 ? (uintptr_t)s_pervasive.tas[index] : 0;
 }
 
 uint32_t ScePervasiveForDriver_2A563E35(void)
@@ -144,27 +150,27 @@ uint32_t ScePervasiveForDriver_2A563E35(void)
 
 uint32_t ScePervasiveForDriver_714EEFB7(void)
 {
-	return s_hardwareInfo[0];
+	return s_pervasive.hardwareInfo[0];
 }
 
 uint32_t ScePervasiveForDriver_41C3C299(void)
 {
-	return s_hardwareInfo[1];
+	return s_pervasive.hardwareInfo[1];
 }
 
 uint32_t ScePervasiveForDriver_FB0EF8C7(void)
 {
-	return s_hardwareInfo[2];
+	return s_pervasive.hardwareInfo[2];
 }
 
 uint32_t ScePervasiveForDriver_443E2A3F(void)
 {
-	return s_hardwareInfo[3];
+	return s_pervasive.hardwareInfo[3];
 }
 
 uint32_t ScePervasiveForDriver_F58EF3A5(void)
 {
-	return s_hardwareInfo[4];
+	return s_pervasive.hardwareInfo[4];
 }
 
 uint32_t ScePervasiveForDriver_84EAB5BC(void)
