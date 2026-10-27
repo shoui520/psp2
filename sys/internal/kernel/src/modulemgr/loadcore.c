@@ -70,7 +70,7 @@ int LoadcoreUnlinkClient(LibStubCB *stub)
 	ret = LoadcoreSwitchProcess(ModuleCBGetPid(stub->cb), &pc);
 	if (ret < 0)
 		return ret;
-	ret = LibStubGetNidTable(stub, &info.stub);
+	ret = LibStubCBPrepareLink(stub, &info.stub);
 	if (ret >= 0) {
 		ret = StubLinkerUnlinkAll(&info);
 		if (ret < 0)
@@ -207,9 +207,9 @@ int LoadcoreLinkClient(LibEntCB *ent, LibStubCB *stub, const ModulemgrLibraryPat
 	ret = LoadcoreSwitchProcess(pid, &pc);
 	if (ret < 0)
 		return ret;
-	ret = LibStubGetNidTable(stub, &info.stub);
+	ret = LibStubCBPrepareLink(stub, &info.stub);
 	if (ret >= 0) {
-		ret = LibEntGetNidTable(ent, &info.ent);
+		ret = LibEntCBPrepareLink(ent, &info.ent);
 		if (ret >= 0) {
 			ret = StubLinkerLinkAll(&info, patch);
 			if (ret >= 0)
@@ -510,7 +510,7 @@ LoadcoreUnlinkLibraryEntries(SceModuleCB *cb, LibStubCB *stub, SceUInt32 flags)
 	ret = LoadcoreSwitchProcess(ModuleCBGetPid(stub->cb), &pc);
 	if (ret < 0)
 		return ret;
-	ret = LibStubGetNidTable(stub, &info.stub);
+	ret = LibStubCBPrepareLink(stub, &info.stub);
 	if (ret >= 0)
 		ret = StubLinkerUndefFunctions(&info);
 	LibStubReleaseNidTable(&info.stub);
@@ -544,7 +544,7 @@ static inline __attribute__((always_inline)) void LoadcoreUndefClient(LibStubCB 
 
 	if (LoadcoreSwitchProcess(ModuleCBGetPid(stub->cb), &pc) < 0)
 		return;
-	ret = LibStubGetNidTable(stub, &info.stub);
+	ret = LibStubCBPrepareLink(stub, &info.stub);
 	if (ret >= 0) {
 		ret = StubLinkerUnlinkAll(&info);
 		if (ret < 0)

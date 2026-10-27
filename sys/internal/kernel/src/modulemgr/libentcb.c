@@ -229,8 +229,11 @@ void LibEntCBClear(LibEntCB *ent)
 	ent->older = NULL;
 }
 
-/* name unknown: the NID, entry and hash tables of a library, copied in for users */
-int LibEntGetNidTable(LibEntCB *ent, LibEntNidTable *info)
+/*
+ * Sony's name (NSKBL prints "LibEntCBPrepareLink() failed" after the call):
+ * the NID, entry and hash tables of a library, copied in for users
+ */
+int LibEntCBPrepareLink(LibEntCB *ent, LibEntNidTable *info)
 {
 #if !MODULEMGR_NSKBL
 	SceModuleCB *cb = ent->cb;
@@ -321,7 +324,7 @@ int LibEntForEachEntry(LibEntCB *ent, int (*func)(SceNID nid, void *entry, int t
 	SceUInt32 i, n;
 	int ret;
 
-	ret = LibEntGetNidTable(ent, &info);
+	ret = LibEntCBPrepareLink(ent, &info);
 	if (ret >= 0 && (n = info.nfunc + info.nvar) != 0) {
 		for (i = 0; i < n; i++) {
 			ret = func(info.nidtable[i], info.entrytable[i], i < info.nfunc ? 'f' : 'v',

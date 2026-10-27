@@ -487,7 +487,7 @@ void LibEntFreeNames(SceModuleCB *cb);
 void ModuleCBFreeLinkInfo(SceModuleCB *cb);
 int LibEntGetIndex(SceModuleCB *cb, SceUInt32 addr);
 void LibEntCBClear(LibEntCB *ent);
-int LibEntGetNidTable(LibEntCB *ent, LibEntNidTable *info);
+int LibEntCBPrepareLink(LibEntCB *ent, LibEntNidTable *info);
 void LibEntReleaseNidTable(LibEntNidTable *info);
 int LibEntForEachEntry(LibEntCB *ent, int (*func)(SceNID nid, void *entry, int type, void *arg), void *arg);
 
@@ -513,7 +513,7 @@ int LibStubClassCreate(void *obj);
 int LibStubClassDestroy(void *obj);
 void LibStubCBClear(LibStubCB *stub);
 int LibStubCBCreateUID(LibStubCB *stub, SceUInt16 index);
-int LibStubGetNidTable(LibStubCB *stub, LibStubNidTable *info);
+int LibStubCBPrepareLink(LibStubCB *stub, LibStubNidTable *info);
 void LibStubReleaseNidTable(LibStubNidTable *info);
 
 /* librarydb.c */

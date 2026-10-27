@@ -319,8 +319,11 @@ int LibStubCBCreateUID(LibStubCB *stub, SceUInt16 index)
 	return 0;
 }
 
-/* name unknown: the NID and entry tables of an import, copied in for users */
-int LibStubGetNidTable(LibStubCB *stub, LibStubNidTable *info)
+/*
+ * Sony's name (NSKBL prints "LibStubCBPrepareLink() failed" after the call):
+ * the NID and entry tables of an import, copied in for users
+ */
+int LibStubCBPrepareLink(LibStubCB *stub, LibStubNidTable *info)
 {
 	SceModuleImports *imp = stub->imports;
 	SceUInt32 nfunc = imp->nfunc, nvar = imp->nvar;
