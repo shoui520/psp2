@@ -2650,6 +2650,7 @@ int SceSysmemForKernel_E8CC2166(SceUID guid, SceUInt32 level)
 }
 #endif
 
+#if FW_DEBUG || !SYSMEM_NSKBL	/* not in the release boot loader */
 int sceGUIDGetName(SceUID guid, const char **name)
 {
 	if (!UIDIsGUID(guid))
@@ -2658,6 +2659,7 @@ int sceGUIDGetName(SceUID guid, const char **name)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	return GUIDGetName(guid, name);
 }
+#endif
 
 #if !SYSMEM_NSKBL
 

@@ -27,9 +27,13 @@ typedef struct NameHeap {
 
 #define NAME_HEAP_HASH_SEED		0xcdc55091
 
-/* an empty table over buckets */
+/* an empty table over buckets (inlined into NameHeapStart in the release boot loader) */
+#if SYSMEM_NSKBL && !FW_DEBUG
+static int NameHeapControlInit(NameHeapControl *control, SceUInt32 attr, NameEntry **buckets)
+#else
 static __attribute__((noinline)) int NameHeapControlInit(NameHeapControl *control, SceUInt32 attr,
 							 NameEntry **buckets)
+#endif
 {
 	NameEntry **bucket;
 	int i;

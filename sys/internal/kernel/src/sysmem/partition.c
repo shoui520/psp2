@@ -614,6 +614,9 @@ MemBlockObject *AsCommonGetBlockLink(const SceUInt32 *l2Tables, uintptr_t va)
 	return NULL;
 }
 
+#if SYSMEM_NSKBL
+__attribute__((noinline))	/* the release boot loader calls it whole */
+#endif
 int MemBlockMapWithOpt(MemBlockObject *block, const SceKernelAllocMemBlockCommand *command,
 		       Partition *partition)
 {
@@ -772,7 +775,7 @@ int TinyPartitionInitList(TinyPartition *tiny)
  * A partition of [vbase, vbase + size) in the context's address space. A
  * failure leaves it half made; it is not reported.
  */
-#if SYSMEM_NSKBL
+#if SYSMEM_NSKBL && FW_DEBUG	/* the release boot loader has it inlined, as os0 does */
 static __attribute__((noinline))
 #else
 static inline
@@ -1953,8 +1956,13 @@ int PartitionAllocMemBlockByAddrByCommand(Partition *partition,
 #define PARTITION_BOOT_L2PT_RANGE	0x100000	/* the MiB a boot L2 table maps */
 
 /* the pages the boot loader mapped for a block, counted in its boot L2 table */
+#if SYSMEM_NSKBL && !FW_DEBUG	/* out of line in the release boot loader */
+static __attribute__((noinline)) void FixL2PageTableCountCore(SceKernelBootParam *pBoot,
+							      const SceKernelBootMapping *mapping)
+#else
 static inline void FixL2PageTableCountCore(SceKernelBootParam *pBoot,
 					   const SceKernelBootMapping *mapping)
+#endif
 {
 	L2PageTable *l2pt;
 
