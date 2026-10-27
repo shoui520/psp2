@@ -268,10 +268,12 @@ PhyPage *PhyMemPartGetPhyPageByIndexBody(PhyMemPart *part, SceUInt32 pindex)
 			return PhyPageTableMgrGetPhyPage(segment->tables, pindex);
 	SCE_DBG_PRINTF_FUNC(0xb, 1705, "PhyMemPartGetPhyPageByIndexRaw",
 			    "There is no segment for pindex=0x%08x\n", pindex);
+#if FW_DEBUG || !SYSMEM_NSKBL	/* the release boot loader lists no segments */
 	for (segment = part->segments; segment != NULL; segment = segment->next)
 		SCE_DBG_PRINTF_FUNC(0xb, 1709, "PhyMemPartGetPhyPageByIndexRaw",
 				    "pSegment:0x%08x - 0x%08x\n", segment->pindexStart,
 				    segment->pindexEnd);
+#endif
 	return NULL;
 }
 
