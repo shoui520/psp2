@@ -428,6 +428,178 @@ int bigmacHmacSha256Final(void *outDigest32, CfHmacContext *ctx)
 	return bigmacHmacExtractDigest(6u, (uint8_t *)outDigest32, ctx, bmCtrl);
 }
 
+/* (name ours) */
+static int bigmacHashStartHw(uint32_t hashAlgo, CfHmacContext *ctx,
+		const void *src, uint32_t size, uint32_t isFinal,
+		const uint32_t *bmCtrl)
+{
+	uint32_t ch = bmCtrl[0];
+	uint32_t flags = bmCtrl[1];
+	uint32_t chIdx;
+	uint32_t funcVal;
+
+	if ((isFinal == 0u && (size & 0x3fu) != 0u) ||
+	    size == 0u || ((uintptr_t)src & 3u) != 0u) {
+		return (int)0x800f0016;
+	}
+
+	chIdx = ch & 1u;
+	BIGMAC->ch[chIdx].src = (uint32_t)(uintptr_t)src;
+	BIGMAC->ch[chIdx].dst = (uint32_t)(uintptr_t)ctx->digest;
+	BIGMAC->ch[chIdx].length = size;
+
+	funcVal = ((hashAlgo & 7u) << 3) | (flags & ~0x3fu) | 3u;
+	if (isFinal == 0u) {
+		if (ctx->state != 0u) {
+			funcVal |= 0x0c00u;
+		} else {
+			funcVal = (funcVal & ~0x0c00u) | 0x0400u;
+			ctx->state = 1u;
+		}
+	} else {
+		funcVal &= ~0x0c00u;
+		if (ctx->state != 0u)
+			funcVal |= 0x0800u;
+		ctx->state = 2u;
+	}
+
+	BIGMAC->ch[chIdx].func = funcVal;
+	BIGMAC->ch[chIdx].iv = (uint32_t)(uintptr_t)ctx->iv;
+	BIGMAC->ch[chIdx].trigger = 1u;
+	return 0;
+}
+
+/* (name ours) */
+static int bigmacHashUpdateBlock(uint32_t hashAlgo, CfHmacContext *ctx,
+		const void *data, uint32_t size, uint32_t *outConsumed,
+		uint32_t isFinal, const uint32_t *bmCtrl)
+{
+	uint32_t bufUsed = ctx->bufUsed;
+	int status;
+
+	if (bufUsed > 63u)
+		return (int)0x800f0016;
+
+	if (bufUsed == 0u && ((uintptr_t)data & 3u) == 0u) {
+		uint32_t alignedSize;
+
+		if (isFinal != 0u) {
+			status = bigmacHashStartHw(hashAlgo, ctx, data, size,
+					isFinal, bmCtrl);
+			*outConsumed = (status == 0) ? size : 0u;
+			return status;
+		}
+
+		alignedSize = size & ~0x3fu;
+		if (alignedSize != 0u) {
+			status = bigmacHashStartHw(hashAlgo, ctx, data,
+					alignedSize, 0u, bmCtrl);
+			if (status != 0) {
+				*outConsumed = 0u;
+				return status;
+			}
+		}
+		memcpy(ctx->blockBuf, (const uint8_t *)data + alignedSize,
+				size - alignedSize);
+		ctx->bufUsed = size - alignedSize;
+		*outConsumed = size;
+		return 0;
+	} else {
+		uint32_t space = 64u - bufUsed;
+		uint32_t copyLen = (size <= space) ? size : space;
+		uint32_t blockFinal;
+
+		memcpy(ctx->blockBuf + bufUsed, data, copyLen);
+		if (copyLen != space && (size != copyLen || isFinal == 0u)) {
+			*outConsumed = copyLen;
+			ctx->bufUsed += copyLen;
+			return 0;
+		}
+
+		blockFinal = (size == copyLen && isFinal != 0u) ? 1u : 0u;
+		status = bigmacHashStartHw(hashAlgo, ctx, ctx->blockBuf,
+				bufUsed + copyLen, blockFinal, bmCtrl);
+		if (status != 0) {
+			*outConsumed = 0u;
+			return status;
+		}
+		ctx->bufUsed = 0u;
+		*outConsumed = copyLen;
+		return 0;
+	}
+}
+
+/* (name ours) */
+int bigmacSha256Init(CfHmacContext *ctx)
+{
+	uint32_t i;
+
+	ctx->state = 0u;
+	for (i = 0u; i < 32u; i++)
+		ctx->digest[i] = 0u;
+	for (i = 0u; i < 64u; i++)
+		ctx->blockBuf[i] = 0u;
+	ctx->bufUsed = 0u;
+	return 0;
+}
+
+/* (name ours) */
+int bigmacSha256Update(CfHmacContext *ctx, const void *data, uint32_t size,
+		uint32_t isFinalFlag)
+{
+	uint32_t bmCtrl[2];
+	uint32_t consumed = 0u;
+	uint32_t offset = 0u;
+	int status;
+
+	bigmacInitChannel0(bmCtrl);
+	while ((int32_t)size > 0) {
+		status = bigmacHashUpdateBlock(2u, ctx,
+				(const uint8_t *)data + offset,
+				size, &consumed, isFinalFlag, bmCtrl);
+		if (status != 0)
+			return status;
+		status = bigmacWaitChannelDone(bmCtrl);
+		if (status != 0)
+			return status;
+		offset += consumed;
+		size -= consumed;
+	}
+	return (size == 0u) ? 0 : (int)0x800f0005;
+}
+
+/* (name ours) */
+int bigmacSha256Final(void *outDigest32, const CfHmacContext *ctx)
+{
+	static const uint32_t s_hashDigestSizes[3] = { 20u, 28u, 32u };
+	uint32_t digestSizes[3];
+	uint8_t *out = (uint8_t *)outDigest32;
+	uint32_t len;
+	uint32_t i;
+
+	memcpy(digestSizes, s_hashDigestSizes, sizeof(digestSizes));
+	len = digestSizes[2];
+	for (i = 0u; i < len; i++)
+		out[i] = ctx->digest[i];
+	return 0;
+}
+
+/* (name ours) */
+int bignumModExp2048(void *dst, const void *base, const BignumPublicKey *pubKey)
+{
+	uint32_t state;
+	int status;
+
+	bignumInitState(&state);
+	for (;;) {
+		status = bignumModExpStep(dst, base, pubKey, &state);
+		if (status != (int)0x800f0010)
+			break;
+		bignumWaitInterrupt();
+	}
+	return status;
+}
+
 /* 0x80f3d0 (name ours) */
 int bignumVerifyRsaPkcs1v15(void *workBuf256, const void *signature256,
 		const BignumPublicKey *pubKey, const void *expectedDigest,

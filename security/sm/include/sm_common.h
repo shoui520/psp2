@@ -464,6 +464,11 @@ int bigmacHmacSha256Init(CfHmacContext *ctx, const void *key64, uint32_t keyLen)
 int bigmacHmacSha256Update(CfHmacContext *ctx, const void *data, uint32_t size,
 		uint32_t isFinalFlag);
 int bigmacHmacSha256Final(void *outDigest32, CfHmacContext *ctx);
+int bigmacSha256Init(CfHmacContext *ctx);
+int bigmacSha256Update(CfHmacContext *ctx, const void *data, uint32_t size,
+		uint32_t isFinalFlag);
+int bigmacSha256Final(void *outDigest32, const CfHmacContext *ctx);
+int bignumModExp2048(void *dst, const void *base, const BignumPublicKey *pubKey);
 int bignumVerifyRsaPkcs1v15(void *workBuf256, const void *signature256,
 		const BignumPublicKey *pubKey, const void *expectedDigest,
 		uint32_t oidIndex);
