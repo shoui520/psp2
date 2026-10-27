@@ -58,18 +58,19 @@ unsigned char hexDecode(unsigned char *out, const char *in, unsigned int length)
 }
 
 /* Mix the seed and the clock into the caller's block, then encrypt it in place. */
-void randomGenerate(const unsigned char __near *seed, unsigned char __near *nonce)
+void randomGenerate(const unsigned char __near *seed, unsigned char *nonce)
 {
 	struct AesKey key;
 
-	nonce[0] = seed[0];
-	nonce[1] = seed[1];
-	nonce[2] = seed[2];
-	nonce[3] = seed[3];
-	nonce[4] = getClock().byte[0];
-	nonce[5] = getClock().byte[1];
+	((unsigned char __near *)nonce)[0] = seed[0];
+	((unsigned char __near *)nonce)[1] = seed[1];
+	((unsigned char __near *)nonce)[2] = seed[2];
+	((unsigned char __near *)nonce)[3] = seed[3];
+	((unsigned char __near *)nonce)[4] = getClock().byte[0];
+	((unsigned char __near *)nonce)[5] = getClock().byte[1];
 	key.w = (unsigned long *)factoryRoundKeys;
 	key.nk = 4;
 	key.nb = 4;
-	aesEncrypt(nonce, nonce, (struct AesKey __near *)&key);
+	aesEncrypt((unsigned char __near *)nonce, (unsigned char __near *)nonce,
+		   (struct AesKey __near *)&key);
 }

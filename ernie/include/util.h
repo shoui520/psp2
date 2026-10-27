@@ -15,7 +15,7 @@ extern void hexEncode(char *out, const unsigned char *in, unsigned int length);
 extern unsigned char hexDigitValue(unsigned char c);
 extern unsigned char hexDecode(unsigned char *out, const char *in, unsigned int length);
 #ifdef ERNIE_UPDATER
-extern void randomGenerate(const unsigned char __near *seed, unsigned char __near *nonce);
+extern void randomGenerate(const unsigned char __near *seed, unsigned char *nonce);
 #else
 extern void randomGenerate(unsigned long seed, unsigned char *out, unsigned char length);
 #endif
