@@ -847,7 +847,6 @@ static __attribute__((noinline)) int FixedHeapInit(FixedHeap *heap, char *name, 
 	return 0;
 }
 
-#if !SYSMEM_NSKBL
 /* name unknown: the same as the class's setPage */
 int FixedHeapSetPage(FixedHeap *heap, void *page)
 {
@@ -856,6 +855,8 @@ int FixedHeapSetPage(FixedHeap *heap, void *page)
 	heap->usedInPage = 0;
 	return 0;
 }
+
+#if !SYSMEM_NSKBL
 
 /*
  * A fixed heap of pid's for objects of itemSize bytes, named after name (or
@@ -1040,7 +1041,6 @@ int FixedHeapSetUID(struct UIDManager *manager)
 SCE_DBGINFO_DEFINE(static, fixedHeapStartRecord, 2911, "FixedHeapStart");
 #endif
 
-#if !SYSMEM_NSKBL
 /* sceKernelGetKernelFixedHeap */
 FixedHeap *SceSysmemForKernel_3717C322(SceSize size)
 {
@@ -1077,6 +1077,7 @@ int SceSysmemForKernel_93344755(FixedHeap *heap, void *object)
 	return FixedHeapFreeObject(heap, object);
 }
 
+#if !SYSMEM_NSKBL
 /* sceKernelFixedHeapSetHookByPointer */
 int SceSysmemForKernel_811C452B(FixedHeap *heap, FixedHeapObjectHook *hook)
 {
