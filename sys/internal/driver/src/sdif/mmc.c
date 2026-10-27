@@ -180,9 +180,12 @@ int sceMmcReadSectorInternal(SdifMmcContext *part, unsigned int sector,
 	SdifContextGlobal *context = part->contextGlobal;
 	SdifCommand *command, *secondary;
 	const SceKernelDebugInfo *info;
+#if !SDIF_NSKBL
 	uint32_t delay;
 	uint64_t transferTime;
-	int result, line, delayIndex;
+	int delayIndex;
+#endif
+	int result, line;
 
 	if (!context)
 		return 0x8032000e;
@@ -245,6 +248,7 @@ int sceMmcReadSectorInternal(SdifMmcContext *part, unsigned int sector,
 	}
 	sdifFreeCommandLocked(context, command);
 	if (context->port.slowMode == 1 && context->port.index == 1) {
+#if !SDIF_NSKBL
 		transferTime = context->port.lastTransferTime;
 		if (count > 128) {
 			delay = 47 * count;
@@ -267,9 +271,12 @@ int sceMmcReadSectorInternal(SdifMmcContext *part, unsigned int sector,
 				delayIndex = 7;
 			delay = mmcReadDelay[delayIndex];
 		}
+#endif
 		context->port.readRetries++;
+#if !SDIF_NSKBL
 		if (transferTime < delay)
 			sceKernelDelayThread(delay - transferTime);
+#endif
 	}
 	sdifUnlockPort(context);
 	return 0;
