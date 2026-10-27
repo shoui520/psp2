@@ -1503,7 +1503,7 @@ void monitor_fiq_handler(void)
 #else
 
 /* name unknown: the build number boot() prints */
-int KblGetBuildNumber(void)
+__attribute__((noinline)) int KblGetBuildNumber(void)	/* boot() calls it whole */
 {
 	return 300;
 }

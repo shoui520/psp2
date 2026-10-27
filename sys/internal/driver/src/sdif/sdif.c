@@ -1014,7 +1014,9 @@ int sceSdifInterrupt(int interrupt, SdifContextGlobal *context, unsigned int int
 	SceKernelIntrStatus intrState;
 	uint16_t normalStatus;
 	unsigned int errorStatus;
+#if !SDIF_NSKBL
 	int removed = 0;
+#endif
 	SdifCommand *command;
 
 	intrState = sdifSpinLock(&port->lock);
@@ -1041,6 +1043,7 @@ int sceSdifInterrupt(int interrupt, SdifContextGlobal *context, unsigned int int
 #endif
 		registers->errorInterruptStatus = 0x100;
 	}
+#if !SDIF_NSKBL	/* the boot loader takes no card or function interrupts */
 	if (normalStatus & 0x100) {
 		registers->normalInterruptStatus = 0x100;
 		if (port->interruptMask & 0x1fc)
@@ -1068,6 +1071,7 @@ int sceSdifInterrupt(int interrupt, SdifContextGlobal *context, unsigned int int
 		if (port->interruptMask & 1)
 			sceKernelCallSubIntrHandler(interrupt, 0, (void *)0x40);
 	}
+#endif
 	if ((normalStatus & 1) || (errorStatus & 0xf)) {
 		command = port->currentCommand;
 		registers->normalInterruptStatus = 1;
@@ -1319,6 +1323,7 @@ int sceSdifInterrupt(int interrupt, SdifContextGlobal *context, unsigned int int
 			}
 		}
 	}
+#if !SDIF_NSKBL
 	if (removed) {
 		command = port->currentCommand;
 		if (command) {
@@ -1353,6 +1358,7 @@ int sceSdifInterrupt(int interrupt, SdifContextGlobal *context, unsigned int int
 			}
 		}
 	}
+#endif
 	sdifSpinUnlock(&port->lock, intrState);
 	sdifDispatchFunctionInterrupt(context);
 	return -1;
