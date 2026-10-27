@@ -139,6 +139,7 @@ SceSize SceSysmemForKernel_BC36755F(void)
 {
 	return s_phyMemPartGrownSize;
 }
+#endif
 
 /* sceKernelGetPhyPartKernel (sysmem_internal.h declares it with void *) */
 void *SceSysmemForKernel_0164D817(void)
@@ -152,6 +153,7 @@ PhyMemPart *SceSysmemForKernel_0B1B4ACA(void)
 	return s_phyPartTool;
 }
 
+#if !SYSMEM_NSKBL
 /* sceKernelGetPhyPartGame */
 PhyMemPart *SceSysmemForKernel_62800A6B(void)
 {

@@ -1234,11 +1234,14 @@ void sceKernelSysrootSetVbaseResetVector(void *vector)
 	s_sysrootState->vbaseResetVector = vector;
 }
 
+#endif
+
 void *SceSysrootForKernel_118657C6(void)
 {
 	return s_sysrootState->intrMMUContext;
 }
 
+#if !SYSMEM_NSKBL
 #ifdef SYSMEM_TZS
 unsigned int *sceKernelSysrootGetVbaseMonitorVector(void)
 {
@@ -1283,17 +1286,26 @@ void SceSysrootForKernel_59B76D23(void *value)
 	s_sysrootState->fallbackPUIDEntryHeap = value;
 }
 
-#if !SYSMEM_NSKBL
+#if SYSMEM_NSKBL
+/* the boot loaders': the kernel address space, until a process manager answers */
+void SysrootSetFallbackAddressSpaceCB(void *addressSpace)
+{
+	s_sysrootState->fallbackAddressSpaceCB = addressSpace;
+}
+#else
 
 uint32_t sceKernelSysrootGetStatus(void)
 {
 	return s_sysrootState->status;
 }
+#endif
 
 void SceSysrootForKernel_611F17A4(void *context)
 {
 	s_sysrootState->intrMMUContext = context;
 }
+
+#if !SYSMEM_NSKBL
 
 void SceSysrootForKernel_642123EB(void)
 {

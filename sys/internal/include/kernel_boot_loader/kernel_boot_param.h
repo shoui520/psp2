@@ -17,6 +17,8 @@ struct PhyMemPart;
 struct PhyPage;
 struct FixedHeap;
 struct L2PageTable;
+struct Partition;
+struct AddressSpaceObject;
 
 #define SCE_KERNEL_BOOT_PARAM_MAGIC	0x7f407c30
 #define SCE_KERNEL_BOOT_MEMORY_MAX	4
@@ -111,7 +113,9 @@ typedef struct SceKernelBootParam {
 	struct FixedHeap *pFixedHeapUIDEntry;
 	struct L2PageTable *pL2PageTableObject000;	/* 0x2e8: the L2 tables in SceKernelL2PageTable000 */
 	struct L2PageTable *pL2PageTableObjectPhypage;	/* its second, for the phypage mapping's MiB */
-	uint32_t reserved4[3];
+	struct Partition *pPartitionRoot;	/* 0x2f0: "SceKernelRoot", the kernel address space's first */
+	SceUID partitionRootId;			/* 0x2f4: its GUID */
+	struct AddressSpaceObject *pAddressSpace;	/* 0x2f8: the kernel address space */
 	uintptr_t debugPutchar;			/* 0x2fc: the boot loader's putchar */
 	uintptr_t debugPrintf;			/* 0x300: the boot loader's printf */
 	uintptr_t debugPutcharHandler;		/* the putchar handler registered with it */
@@ -136,6 +140,7 @@ _Static_assert(offsetof(SceKernelBootParam, pPageFixedHeap32B) == 0x2c0, "boot p
 _Static_assert(offsetof(SceKernelBootParam, pFixedHeap32B) == 0x2d0, "boot param fixed heaps");
 _Static_assert(offsetof(SceKernelBootParam, pPagePhypageHigh) == 0x2b8, "boot param mapping pages");
 _Static_assert(offsetof(SceKernelBootParam, pFixedHeapUIDEntry) == 0x2e4, "boot param GUID entry heap");
+_Static_assert(offsetof(SceKernelBootParam, pPartitionRoot) == 0x2f0, "boot param root partition");
 _Static_assert(offsetof(SceKernelBootParam, debugPutchar) == 0x2fc, "boot param putchar");
 _Static_assert(offsetof(SceKernelBootParam, debugPrintLevel) == 0x308, "boot param print level");
 _Static_assert(sizeof(SceKernelBootParam) == 0x310, "boot param size");

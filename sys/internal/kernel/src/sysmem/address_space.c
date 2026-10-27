@@ -88,6 +88,9 @@ typedef struct AddressSpacePartitionEntry {
 } AddressSpacePartitionEntry;
 
 /* a partition created from a table entry (dupName: the name copied) */
+#if SYSMEM_NSKBL
+static
+#endif
 int AddressSpaceCreatePartitionByCommandRaw(AddressSpaceObject *as, SceUID pid,
 					    const AddressSpacePartitionEntry *entry, int dupName,
 					    SceUInt32 attr)
@@ -648,6 +651,8 @@ out:
 #define AS_PHYMEMPART_SHELL		11
 #define AS_PHYMEMPART_CDRAM		12
 #define AS_PHYMEMPART_PHYCONT		8
+#define AS_PHYMEMPART_KD		6
+#define AS_PHYMEMPART_TOOL		15
 
 #if !SYSMEM_NSKBL
 int AddressSpaceGetSubbudgetInfo(AddressSpaceObject *as, SceUInt32 subbudget,
@@ -1547,5 +1552,173 @@ void AddressSpaceKernelGameStart(void)
 		kernel->partition[AS_PARTITION_TMPFS_GAME_ALIAS] =
 			kernel->partition[AS_PARTITION_TMPFS_GAME];
 	AddressSpaceRelease(kernel);
+}
+#endif
+
+#if SYSMEM_NSKBL
+/* the kernel's partitions; the tool's with DIPSW 0xd2 */
+static const AddressSpacePartitionEntry s_kernelPartitions[] = {
+	{ "SceKernelIO", 11, 0x28000000, 0x08000000, 0x10000, 0xffffffff, 2, 0x10045 },
+	{ "SceKernelCdram", 9, 0x20000000, 0x08000000, 0, 0xffffffff, 4, 0x10047 },
+	{ "SceKernelTmp", 12, 0x10000000, 0x08000000, 0, 0xffffffff, 6, 0x1004b },
+	{ "SceKernelRootUncache", 12, 0x30000000, 0x04000000, 0x10000, 0xffff00ff, 3, 0x1004d },
+	{ "SceKernelKMP", 12, 0x80000000, 0x40000000, 0, 0xffffffff, 12, 0x1004f },
+};
+
+static const AddressSpacePartitionEntry s_kernelToolPartitions[] = {
+	{ "SceKernelTool", 13, 0x08000000, 0x08000000, 0, 0xffffffff, 20, 0x10055 },
+	{ "SceKernelToolUncache", 13, 0x34000000, 0x04000000, 0x10000, 0xffff00ff, 21, 0x10057 },
+};
+
+#define AS_PARTITION_ROOT		1
+#define AS_PARTITION_ROOT_UNCACHE	3
+#define AS_PARTITION_ROOT_UNCACHE_ALIAS	5
+
+/* the kernel's direct mapping of the user I/O window, with DIPSW 0x9f and 0xd4 */
+#define AS_USER_PA_MAPPING_VBASE	0xc0000000
+#define AS_USER_PA_MAPPING_TYPE		0x8006
+#define AS_USER_PA_MAPPING_DOMAIN	8
+
+#define ADDRESS_SPACE_TYPE_KERNEL	0x30000002
+
+/* the kernel address space's objects come from the kernel heap */
+static void *AddressSpaceKernelHeapAlloc(void *arg, SceSize size)
+{
+	return SceSysmemForKernel_85571907(size);
+}
+
+static void AddressSpaceKernelHeapFree(void *arg, void *ptr)
+{
+	SceSysmemForKernel_4233C16D(ptr);
+}
+
+static SceKernelHeapHook s_kernelHeapHook;
+
+/* sceKernelAddressSpaceSetPhyMemPart on the object */
+static inline void AddressSpaceSetPhyMemPartRaw(AddressSpaceObject *as, SceUInt32 index,
+						void *pPhyMemPart)
+{
+	AddressSpaceRefer(as);
+	as->phyMemPart[index] = pPhyMemPart;
+	AddressSpaceRelease(as);
+}
+
+static inline void AddressSpaceCreatePartitionForKernel(AddressSpaceObject *as)
+{
+	SceUInt32 i;
+
+	for (i = 0; i < sizeof(s_kernelPartitions) / sizeof(s_kernelPartitions[0]); i++) {
+		if (AddressSpaceCreatePartitionByCommandRaw(as, SCE_KERNEL_PROCESS_ID,
+							    &s_kernelPartitions[i], 1, 8) < 0)
+			SCE_DBG_ASSERT_FAIL(1825);
+	}
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
+		for (i = 0; i < sizeof(s_kernelToolPartitions) / sizeof(s_kernelToolPartitions[0]); i++) {
+			if (AddressSpaceCreatePartitionByCommandRaw(as, SCE_KERNEL_PROCESS_ID,
+								    &s_kernelToolPartitions[i], 1, 8) < 0)
+				SCE_DBG_ASSERT_FAIL(1839);
+		}
+	}
+	if (as->partition[AS_PARTITION_ROOT_UNCACHE] != NULL)
+		as->partition[AS_PARTITION_ROOT_UNCACHE_ALIAS] = as->partition[AS_PARTITION_ROOT_UNCACHE];
+	if (as->partition[AS_PARTITION_TMPFS_GAME] != NULL)
+		as->partition[AS_PARTITION_TMPFS_GAME_ALIAS] = as->partition[AS_PARTITION_TMPFS_GAME];
+}
+
+/* the class and the kernel address space, on the boot loader's root partition */
+static inline void AddressSpaceStartCore0(SceKernelBootParam *pBoot, UIDManager *manager)
+{
+	AddressSpaceGlobals *globals;
+	AddressSpaceObject *as;
+	SceClass *parent;
+	SceClass *cls;
+	struct Partition *root;
+	struct Partition *part;
+	MMUContext saved;
+	uintptr_t base;
+	SceSize size;
+	SceUInt32 i;
+
+	if (!sceKernelCheckDipsw(DIPSW_USER_PA_MAPPING_ADDRESS)) {
+		s_userIOPASize = 0x20000000;
+		s_userIOPABase = 0x80000000;
+	} else {
+		s_userIOPASize = 0x8000000;
+		s_userIOPABase = 0x78000000;
+	}
+	s_addressSpaceGlobals = SceSysmemForKernel_85571907(sizeof(*s_addressSpaceGlobals));
+	s_addressSpaceGlobals->asidHeap = SceSysmemForKernel_85571907(0x20);
+	s_addressSpaceGlobals->asidBuffer = SceSysmemForKernel_85571907(0x40);
+	s_addressSpaceGlobals->cls = SceSysmemForKernel_85571907(sizeof(SceClass));
+	globals = s_addressSpaceGlobals;
+	manager->addressSpaceGlobals = globals;
+	parent = SceSysmemForDriver_85336A1C();
+	if (sceUIDClassInitClass(globals->cls, "SceUIDAddressSpaceClass", parent,
+				 sizeof(AddressSpaceObject), AddressSpaceObjectCreate,
+				 AddressSpaceObjectDestroy) < 0)
+		return;
+	as = SceSysmemForKernel_85571907(sizeof(*as));
+	if (as == NULL)
+		return;
+	as->refCount = 0;
+	as->lock = 0;
+	as->type = 0;
+	for (i = 0; i < ADDRESS_SPACE_PARTITIONS; i++) {
+		as->partition[i] = NULL;
+		as->partitionUid[i] = -1;
+	}
+	for (i = 0; i < ADDRESS_SPACE_PHYMEMPARTS; i++)
+		as->phyMemPart[i] = NULL;
+	as->heap = &s_kernelHeapHook;
+	as->userIOTimerBase = 0;
+	cls = s_addressSpaceGlobals->cls;
+	as->userIOPA = -1;
+	as->userIOTimer = -1;
+	as->magic = ADDRESS_SPACE_MAGIC;
+	as->type = ADDRESS_SPACE_TYPE_KERNEL;
+	root = pBoot->pPartitionRoot;
+	pBoot->pAddressSpace = as;
+	as->context = root->tiny.context;
+	as->partition[AS_PARTITION_ROOT] = root;
+	root->addressSpace = as;
+	root->entryAttr = 0x10000;
+	root->entryAttrMask = 0xffffffff;
+	s_kernelHeapHook.arg = (void *)SCE_KERNEL_HEAP_ID;
+	s_kernelHeapHook.funcAlloc = AddressSpaceKernelHeapAlloc;
+	s_kernelHeapHook.funcFree = AddressSpaceKernelHeapFree;
+	sceGUIDSet(SCE_KERNEL_ADDRESS_SPACE_ID, cls, NULL, &as->base);
+	SysrootSetFallbackAddressSpaceCB(as);
+	manager->kernelContext = as->context;
+	SceSysrootForKernel_611F17A4(as->context);
+	part = SceSysmemForKernel_FA6C098C(SCE_KERNEL_PARTITION_ROOT_ID);
+	part->tiny.context->partition = part;
+	AddressSpaceCreatePartitionForKernel(as);
+	if (sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE) && sceKernelCheckDipsw(DIPSW_USER_PA_MAPPING)) {
+		if (!sceKernelCheckDipsw(DIPSW_USER_PA_MAPPING_ADDRESS)) {
+			size = 0x20000000;
+			base = 0x80000000;
+		} else {
+			size = 0x8000000;
+			base = 0x78000000;
+		}
+		MMUContextSave(&saved);
+		AddressSpaceSwitchContext(as);
+		L1PageTableMapDirect(as->context->l1pt, AS_USER_PA_MAPPING_TYPE,
+				     AS_USER_PA_MAPPING_DOMAIN, AS_USER_PA_MAPPING_VBASE, size, base);
+		MMUContextRestore(&saved);
+	}
+	AddressSpaceSetPhyMemPartRaw(as, AS_PHYMEMPART_KD, SceSysmemForKernel_0164D817());
+	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART))
+		AddressSpaceSetPhyMemPartRaw(as, AS_PHYMEMPART_TOOL, SceSysmemForKernel_0B1B4ACA());
+	s_kernelAddressSpace = as;
+}
+
+int AddressSpaceStart(SceKernelBootParam *pBoot, UIDManager *manager)
+{
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0)
+		AddressSpaceStartCore0(pBoot, manager);
+	sceKernelSysrootCorelockUnlock();
+	return 0;
 }
 #endif

@@ -337,6 +337,7 @@ int UIDStart(struct SceKernelBootParam *param, struct UIDManager *manager);
 int UIDStartPhase2(void);
 void *SysrootGetUIDPlaceholderObject(void);
 void SysrootSetUIDPlaceholderObject(void *object);
+void SysrootSetFallbackAddressSpaceCB(void *addressSpace);
 int HeaplibStart(struct SceKernelBootParam *param, struct UIDManager *manager);
 int HeaplibStartPhase2(struct SceKernelBootParam *param, struct UIDManager *manager);
 #else
@@ -416,6 +417,7 @@ int NameHeapLink(const char *name, SceUInt32 flags, NameEntry **out);
 int NameHeapDelete(const char *name, SceUInt32 flags);
 int NameHeapFind(const char *name, SceUInt32 flags, NameEntry **out);
 int NameHeapStart(struct UIDManager *manager);
+int AddressSpaceStart(struct SceKernelBootParam *pBoot, struct UIDManager *manager);
 int NameHeapInit(struct UIDManager *manager);
 int NameEntrySetUIDEntry(NameEntry *entry, void *uidEntry);
 
@@ -636,7 +638,7 @@ typedef struct UIDManager {
 	void *registerHeap;			/* 0xc0: "heap" of objects registered, not created */
 	SceUInt32 partitionReserved[2];		/* 0xc4: kept by PartitionModuleStart, unused */
 	SceUID uncacheHeap;			/* 0xcc: the uncached kernel heap */
-	SceUInt32 reserved2;
+	struct AddressSpaceContext *kernelContext;	/* 0xd0: the kernel address space's */
 	struct AddressSpaceGlobals *addressSpaceGlobals;	/* 0xd4 */
 	SceUInt32 processStorageKey;		/* 0xd8: sysmem's process-local storage */
 } UIDManager;
