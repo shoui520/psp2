@@ -10,12 +10,11 @@
 # Makefile, beside second_loader):
 #   boot.s     the vector table, reset (copies the program to 0x5c000), and the
 #              copyright notice and build date in the last 0x80 bytes
-#   boot.c     the program run at 0x5c000 (skeleton)
+#   boot.c     the program run at 0x5c000
 #   boot.ld    the ROM's layout
 #
-# Sony's Cmep compiler is not identified yet; the ROM part is assembly and builds with
-# binutils 2.27 for mep-elf. Until the program is written its copy length (reset's r3,
-# ROM 0xcc) is 0; everything else in 0x0-0x180 and 0x3f80-0x4000 matches the originals.
+# Sony's Cmep compiler is not identified yet; the ROM part builds with binutils 2.27 for
+# mep-elf. Program code generation is still being compared with the retail ROM.
 
 GCC ?= mep-elf-
 BINUTILS ?= mep-elf-
@@ -34,11 +33,10 @@ CFLAGS := -mel -O2 -std=gnu99 -Wall -ffreestanding -fno-builtin -DFL_BUILD_DATE=
 	-I../../sys/internal/driver/src/sdif -I../../sys/sdk/target/include
 ASFLAGS := -mel -Wa,--defsym,FL_BUILD_DATE=$(FL_BUILD_DATE)
 
-OBJS := $(O)/$(FW)/boot.s.o
-PARTIAL_OBJS := $(O)/$(FW)/boot.c.o $(O)/$(FW)/boot_delay.c.o
+OBJS := $(O)/$(FW)/boot.s.o $(O)/$(FW)/boot.c.o $(O)/$(FW)/boot_delay.c.o
 
 .PHONY: image clean
-image: $(PARTIAL_OBJS) $(O)/$(FW)/first_loader.bin
+image: $(O)/$(FW)/first_loader.bin
 
 $(O)/$(FW)/%.s.o: %.s fw/$(FW).mk
 	@mkdir -p $(dir $@)

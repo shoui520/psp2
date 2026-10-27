@@ -25,6 +25,7 @@ SECTIONS
 		KEEP(*(.text.start))
 		*(.text .text.*)
 		*(.rodata .rodata.*)
+		*(.sdata .sdata.*)
 		*(.data .data.*)
 		. = ALIGN(8);
 	} > ram
@@ -32,7 +33,16 @@ SECTIONS
 	__program_load = LOADADDR(.program);
 	__program_size = SIZEOF(.program);
 
-	.bss (NOLOAD) : { *(.bss .bss.* COMMON) } > ram
+	.bss (NOLOAD) : ALIGN(8)
+	{
+		__bss_start = .;
+		*(.sbss .sbss.*)
+		*(.bss .bss.* COMMON)
+		. = ALIGN(8);
+		__bss_end = .;
+	} > ram
+	__sdabase = ADDR(.bss);
+	__stack_top = 0x5fff0;
 
 	.signature 0x43f80 : { KEEP(*(.signature)) } > rom
 

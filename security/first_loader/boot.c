@@ -5,8 +5,9 @@
  * controller (0xe0030000), the bignum unit (0xe0040000), Bigmac (0xe0050000), Sdif
  * (0xe0b00000), GPIO 0 (0xe20a0000) and Pervasive (0xe3100000).
  *
- * The program is incomplete. These helpers are compiled but are not linked into
- * the ROM until the program's startup and its callers are implemented.
+ * The retail C reconstruction covers the observed boot paths and links with
+ * the reset code. Its instruction-level match to the original is still under
+ * review.
  */
 
 #ifndef FL_BUILD_DATE
@@ -24,6 +25,7 @@
 #include <lowio/pervasive_regs.h>
 #include <cmep_regs.h>
 #include <sdif_regs.h>
+#include <stddef.h>
 #undef _Static_assert
 #undef FL_JOIN
 #undef FL_JOIN_INNER
@@ -293,7 +295,7 @@ int bigmacClearRegisters(void)
 	return 0;
 }
 
-void initializeBootSecurity(void)
+void __attribute__((noinline)) initializeBootSecurity(void)
 {
 	KEYRING_COMMAND = 0x1c0f020eU;
 	KEYRING_COMMAND = 0x1c0f020fU;
@@ -301,7 +303,7 @@ void initializeBootSecurity(void)
 	BOOT_SECURITY_START = 1;
 }
 
-int detectExternalBoot(void)
+int __attribute__((noinline)) detectExternalBoot(void)
 {
 	KEYRING->probeSelect = 0x501;
 	if ((KEYRING->probeStatus & 3) != 3)
@@ -357,8 +359,8 @@ int checkSecondLoaderHeader(const struct SecondLoaderHeader *header)
 /* Copy whole words and return their sum. When size / 4 is zero the original
  * hardware loop counter wraps, so that case requires a full counter cycle.
  */
-unsigned int copyWordsAndSum(unsigned int *dst, const unsigned int *src,
-			     unsigned int size)
+unsigned int __attribute__((noinline))
+copyWordsAndSum(unsigned int *dst, const unsigned int *src, unsigned int size)
 {
 	unsigned int words = size >> 2;
 	unsigned int sum = 0;
@@ -502,6 +504,37 @@ struct EmmcCard {
 
 typedef char checkEmmcCardSize[sizeof(struct EmmcCard) == 0x2c0 ? 1 : -1];
 
+struct SdifCard {
+	unsigned int controllerAddress;
+	unsigned int flags;
+	unsigned char cid[16];
+	unsigned char csd[16];
+	unsigned char cardRegisters[0xb0];
+	unsigned char scr[8];
+	unsigned char csdStructure;
+	unsigned char reservedCsd[3];
+	unsigned int maximumClock;
+	unsigned short commandClasses;
+	unsigned short reservedClasses;
+	unsigned int sectorCount;
+	unsigned char scrStructure;
+	unsigned char sdSpecification;
+	unsigned char dataStatusAfterErase;
+	unsigned char securitySupport;
+	unsigned char busWidthSupport;
+	unsigned char reservedScr;
+	unsigned short commandSupport;
+};
+
+typedef char checkSdifCardSize[sizeof(struct SdifCard) == 0xf8 ? 1 : -1];
+typedef char checkSdifCardCapacityOffset[
+	__builtin_offsetof(struct SdifCard, sectorCount) == 0xec ? 1 : -1];
+
+union FirstLoaderCard {
+	struct EmmcCard emmc;
+	struct SdifCard sd;
+};
+
 struct FirstLoaderSdif {
 	unsigned int flags;
 	unsigned int baseClock;
@@ -527,6 +560,7 @@ struct FirstLoaderSdifCommand {
 };
 
 static struct FirstLoaderSdif sdif;
+static unsigned int sdifPowerState;
 
 static volatile SdifHostRegisters *sdifRegisters(const struct FirstLoaderSdif *controller)
 {
@@ -993,6 +1027,92 @@ int sendSdifCommand(struct FirstLoaderSdif *controller,
 	return result;
 }
 
+int sendSdifApplicationCommand(struct FirstLoaderSdif *controller,
+			       struct FirstLoaderSdifCommand *command,
+			       int retries)
+{
+	struct FirstLoaderSdifCommand prefixCommand = { 0 };
+	int attempt;
+	int result = -1;
+
+	if (retries < 1)
+		retries = 1;
+	for (attempt = 0; attempt < retries; attempt++) {
+		prefixCommand.size = sizeof(prefixCommand);
+		prefixCommand.flags = 0x13;
+		prefixCommand.command = 55;
+		prefixCommand.argument =
+			(unsigned int)controller->relativeAddress << 16;
+		result = sendSdifCommand(controller, &prefixCommand, 0);
+		if (result < 0)
+			continue;
+		if ((prefixCommand.response[0] & 0x20U) == 0)
+			return (int)0x80320105U;
+		result = sendSdifCommand(controller, command, 0);
+		if (result >= 0)
+			return result;
+	}
+	return result;
+}
+
+int requestSdifOperatingConditions(struct FirstLoaderSdif *controller,
+				   unsigned int conditions,
+				   unsigned int *response)
+{
+	struct FirstLoaderSdifCommand command = { 0 };
+	unsigned int attempts = 0;
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = 0x42;
+	command.command = 41;
+	command.argument = conditions;
+	do {
+		result = sendSdifApplicationCommand(controller, &command, 3);
+		if (result < 0)
+			return result;
+		if (conditions == 0 || (command.response[0] & 0x80000000U))
+			break;
+		delayMicroseconds(10000);
+		attempts++;
+		if (attempts >= 100)
+			return (int)0x80320002U;
+	} while (1);
+	if (response != 0)
+		*response = command.response[0];
+	return 0;
+}
+
+int setSdifCardDetectPullup(struct FirstLoaderSdif *controller,
+			    unsigned int enable)
+{
+	struct FirstLoaderSdifCommand command = { 0 };
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = 0x13;
+	command.command = 42;
+	command.argument = enable != 0;
+	result = sendSdifApplicationCommand(controller, &command, 3);
+	if (result < 0)
+		return result;
+	return decodeSdifCardStatus(command.response[0]);
+}
+
+int readSdifScr(struct FirstLoaderSdif *controller, void *destination)
+{
+	struct FirstLoaderSdifCommand command = { 0 };
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = 0x114;
+	command.command = 51;
+	command.bufferAddress = (unsigned int)(unsigned long)destination;
+	command.blockSize = 8;
+	result = sendSdifApplicationCommand(controller, &command, 3);
+	return result < 0 ? result : 0;
+}
+
 int idleSdifCard(struct FirstLoaderSdif *controller)
 {
 	struct FirstLoaderSdifCommand command = { 0 };
@@ -1079,6 +1199,23 @@ int readSdifCid(struct FirstLoaderSdif *controller, unsigned int *cid)
 	if (result < 0)
 		return result;
 	copyWordsAndSum(cid, command.response, 16);
+	return 0;
+}
+
+int readSdifRelativeAddress(struct FirstLoaderSdif *controller,
+			    unsigned short *relativeAddress)
+{
+	struct FirstLoaderSdifCommand command = { 0 };
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = 0x82;
+	command.command = 3;
+	result = sendSdifCommand(controller, &command, 3);
+	if (result < 0)
+		return result;
+	if (relativeAddress != 0)
+		*relativeAddress = command.response[0] >> 16;
 	return 0;
 }
 
@@ -1248,11 +1385,16 @@ static unsigned int readLittleEndianWord(const unsigned char *bytes)
 	       ((unsigned int)bytes[2] << 16) | ((unsigned int)bytes[3] << 24);
 }
 
-static struct EmmcCard emmcCard;
+static union FirstLoaderCard firstLoaderCard;
 
 struct EmmcCard *getEmmcCard(void)
 {
-	return &emmcCard;
+	return &firstLoaderCard.emmc;
+}
+
+struct SdifCard *getSdifCard(void)
+{
+	return &firstLoaderCard.sd;
 }
 
 static const unsigned int emmcTimeUnits[8] = {
@@ -1267,6 +1409,144 @@ static const unsigned int emmcClockUnits[8] = {
 static const unsigned char emmcClockMultipliers[16] = {
 	0, 10, 12, 13, 15, 20, 26, 30, 35, 40, 45, 52, 55, 60, 70, 80,
 };
+
+int readSdifBlocks(struct SdifCard *card, unsigned int block,
+		   void *destination, unsigned int count)
+{
+	struct FirstLoaderSdif *controller =
+		(struct FirstLoaderSdif *)(unsigned long)card->controllerAddress;
+	struct FirstLoaderSdifCommand command = { 0 };
+	int result;
+
+	command.size = sizeof(command);
+	command.flags = count == 1 ? 0x114 : 0x914;
+	command.command = count == 1 ? 17 : 18;
+	command.argument = (card->flags & 1) ? block : block << 9;
+	command.bufferAddress = (unsigned int)(unsigned long)destination;
+	command.blockSize = 0x200;
+	command.blockCount = count;
+	result = sendSdifCommand(controller, &command, 0);
+	if (result < 0) {
+		if (command.command == 18)
+			stopSdifTransfer(controller, 1);
+		return result;
+	}
+	result = readSdifCardStatus(controller, 0);
+	return result < 0 ? result : 0;
+}
+
+int openSdifCard(unsigned int port, struct SdifCard **resultCard)
+{
+	struct FirstLoaderSdif *controller = getSdif(port);
+	struct SdifCard *card;
+	struct FirstLoaderSdifCommand command = { 0 };
+	unsigned short relativeAddress;
+	unsigned int multiplier;
+	unsigned int unit;
+	unsigned int conditions;
+	unsigned int csdStructure;
+	int result;
+
+	if (controller == 0)
+		return -1;
+	result = isSdifCardPresent(controller);
+	if (result < 0)
+		return result;
+	if (result == 0)
+		return (int)0x80320001U;
+	card = getSdifCard();
+	card->controllerAddress = (unsigned int)(unsigned long)controller;
+	card->flags = 0;
+	if (sdifPowerState != 0) {
+		result = powerOffSdif(controller);
+		if (result < 0)
+			return result;
+		delayMicroseconds(10000);
+	}
+	result = powerOnSdif(controller);
+	if (result < 0)
+		return result;
+	sdifPowerState = 1;
+	delayMicroseconds(10000);
+	result = resetSdif(controller, 2);
+	if (result < 0)
+		return result;
+	result = idleSdifCard(controller);
+	if (result < 0)
+		return result;
+
+	command.size = sizeof(command);
+	command.flags = 0x92;
+	command.command = 8;
+	command.argument = (controller->flags & 0xff8000U) ? 0x1aa : 0xaa;
+	sendSdifCommand(controller, &command, 3);
+	controller->relativeAddress = 0;
+	conditions = controller->flags;
+	result = requestSdifOperatingConditions(controller, conditions, 0);
+	if (result < 0)
+		return result;
+	result = readSdifCid(controller, (unsigned int *)card->cid);
+	if (result < 0)
+		return result;
+	result = readSdifRelativeAddress(controller, &relativeAddress);
+	if (result < 0)
+		return result;
+	if (relativeAddress == 0) {
+		result = readSdifRelativeAddress(controller, &relativeAddress);
+		if (result < 0)
+			return result;
+	}
+	controller->relativeAddress = relativeAddress;
+	result = selectSdifCard(controller, 1);
+	if (result < 0)
+		return result;
+	result = setSdifCardDetectPullup(controller, 0);
+	if (result < 0)
+		return result;
+	selectSdifCard(controller, 0);
+	result = readSdifCsd(controller, (unsigned int *)card->csd);
+	if (result < 0)
+		return result;
+	result = selectSdifCard(controller, 1);
+	if (result < 0)
+		return result;
+
+	csdStructure = readBits(card->csd, 0x7e, 2);
+	card->csdStructure = csdStructure;
+	unit = readBits(card->csd, 0x60, 3);
+	multiplier = readBits(card->csd, 99, 4);
+	card->maximumClock = emmcTimeMultipliers[multiplier] *
+			     emmcClockUnits[unit];
+	card->commandClasses = readBits(card->csd, 0x54, 12);
+	if (csdStructure == 1) {
+		card->sectorCount = (readBits(card->csd, 0x30, 0x16) + 1) * 0x400;
+		card->flags |= 1;
+	} else if (csdStructure == 0) {
+		multiplier = readBits(card->csd, 0x2f, 3);
+		card->sectorCount = (readBits(card->csd, 0x3e, 12) + 1) <<
+				    (multiplier + 2);
+	} else {
+		return -1;
+	}
+
+	result = readSdifScr(controller, card->scr);
+	if (result < 0)
+		return result;
+	card->scrStructure = card->scr[0] >> 4;
+	card->sdSpecification = card->scr[0] & 0xf;
+	card->dataStatusAfterErase = card->scr[1] >> 7;
+	card->securitySupport = (card->scr[1] >> 4) & 7;
+	card->busWidthSupport = card->scr[1] & 0xf;
+	if (card->sdSpecification == 2 && (card->scr[2] & 0x80))
+		card->sdSpecification = 3;
+	card->commandSupport = card->scr[3] & 2;
+	result = setSdifBlockLength(controller, 0x200);
+	if (result < 0)
+		return result;
+	if (resultCard != 0)
+		*resultCard = card;
+	return 0;
+}
 
 int openEmmc(unsigned int port, struct EmmcCard **resultCard)
 {
@@ -1399,6 +1679,56 @@ int readSecondLoaderFromEmmc(unsigned char *destination)
 	}
 	for (i = 0; i < blockCount; i++) {
 		result = readEmmcBlocks(card, firstBlock + i, destination + i * 0x200, 1);
+		if (result < 0)
+			return result;
+	}
+	return 0;
+}
+
+int readSecondLoaderFromSd(unsigned char *destination)
+{
+	struct BootSector *sector = (struct BootSector *)destination;
+	struct SdifCard *card;
+	unsigned int port = 1;
+	unsigned int firstBlock;
+	unsigned int blockCount;
+	unsigned int i;
+	int result;
+
+	if (bootHardwareMode == 0) {
+		PERVASIVE_MISC->gameCard = 0;
+		while (PERVASIVE_MISC->gameCard != 0)
+			;
+		PERVASIVE_GATE->sdif[1] = 1;
+		while (PERVASIVE_GATE->sdif[1] == 0)
+			;
+		PERVASIVE_RESET->sdif[1] = 0;
+		while (PERVASIVE_RESET->sdif[1] != 0)
+			;
+	} else if (BOOT_BRIDGE_STATUS & 0x20000U) {
+		port = 0x101;
+		BOOT_BRIDGE_CONTROL = 0;
+	}
+	result = initializeSdif(port, (BOOT_FUSE_FLAGS & 0x20000U) == 0);
+	if (result < 0)
+		return result;
+	result = openSdifCard(port, &card);
+	if (result < 0)
+		return result;
+	result = readSdifBlocks(card, 0, destination, 1);
+	if (result < 0)
+		return result;
+	firstBlock = readLittleEndianWord(sector->firstBlock);
+	blockCount = readLittleEndianWord(sector->blockCount);
+	if (firstBlock >= card->sectorCount ||
+	    card->sectorCount < firstBlock + blockCount ||
+	    blockCount == 0 || blockCount >= 0xdf) {
+		fillBytes(destination, 0, 0x200);
+		return -1;
+	}
+	for (i = 0; i < blockCount; i++) {
+		result = readSdifBlocks(card, firstBlock + i,
+				       destination + i * 0x200, 1);
 		if (result < 0)
 			return result;
 	}
@@ -1659,4 +1989,79 @@ int processSecondLoader(unsigned int bootMode, unsigned char *destination,
 	bigmacClearRegisters();
 	*bootArgument = keyIndex;
 	return 0;
+}
+
+void firstLoaderMain(unsigned char *destination, struct SecondLoaderHeader *header)
+{
+	unsigned char *image = (unsigned char *)header;
+	unsigned int bootMode;
+	unsigned int bootArgument = 0;
+	int result;
+
+	initializeBootSecurity();
+	bootMode = detectExternalBoot();
+	if ((int)bootMode < 0) {
+		unsigned int hardwareMode = bootHardwareMode;
+		int externalBootResult;
+
+		if (hardwareMode == 0) {
+			PERVASIVE_BASECLK->cmepClock = 0x10004;
+			PERVASIVE_BASECLK->busClock = 1;
+			PERVASIVE_GATE->sdif[0] = 1;
+			PERVASIVE_RESET->sdif[0] = 0;
+			externalBootResult = probeExternalBoot();
+		} else if (hardwareMode == 1) {
+			externalBootResult = probeExternalBoot();
+		} else {
+			externalBootResult = hardwareMode != 2;
+		}
+
+		bootMode = 0x20;
+		if (externalBootResult >= 0) {
+			bootMode = 0x22;
+			if (externalBootResult == 1)
+				bootMode = 0x44;
+		}
+	}
+
+	if (bootMode & 1U) {
+		volatile unsigned int *bootSource =
+			(volatile unsigned int *)0xe0000010UL;
+		unsigned int sourceAddress;
+
+		while ((*bootSource & 1U) == 0)
+			;
+		sourceAddress = *bootSource & 0xfffffffcU;
+		copyWordsAndSum((unsigned int *)image,
+				(const unsigned int *)(unsigned long)sourceAddress, 0x40);
+		result = checkSecondLoaderHeader(header);
+		if (result < 0)
+			goto bootFailure;
+		copyWordsAndSum((unsigned int *)(image + 0x40),
+				(const unsigned int *)(unsigned long)(sourceAddress + 0x40),
+				header->decodedSize + header->imageSize - 0x40);
+	} else if (bootMode & 0x20U) {
+		do {
+			result = readSecondLoaderFromEmmc(image);
+		} while (result < 0);
+	} else if (bootMode & 0x40U) {
+		do {
+			result = readSecondLoaderFromSd(image);
+		} while (result < 0);
+	} else {
+		goto bootFailure;
+	}
+
+	result = processSecondLoader(bootMode, destination, header, &bootArgument);
+	if (result < 0)
+		goto bootFailure;
+	setBootParameters(bootMode, bootArgument);
+	*(volatile unsigned int *)0xe0000000UL = 1;
+	return;
+
+bootFailure:
+	delayMicroseconds(BIGMAC_RANDOM & 0xffffU);
+	*(volatile unsigned int *)0xe0000000UL = 2;
+	for (;;)
+		;
 }
