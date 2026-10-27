@@ -340,12 +340,14 @@ static int LoadelfAllocRelaTmp(SceModuleCB *cb, SceSize size)
 	}
 	return sceKernelAllocMemBlockForKernel("SceModuleMgrRelaTmp", memtype, PAGE_ROUND(size), &opt);
 }
-#else
+#elif !MODULEMGR_SKBL
 /* name unknown: NSKBL relocates from one static buffer */
 static SceUInt8 s_relaTmp[0x20000] __attribute__((aligned(64)));
 #endif
 
-#if MODULEMGR_NSKBL
+#if MODULEMGR_SKBL
+SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, const void *buffer, SceSize size, SceUInt32 flags)
+#elif MODULEMGR_NSKBL
 SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth)
 #else
 SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, SceUInt32 flags)
@@ -374,7 +376,11 @@ SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *aut
 		return LoadelfLoadSharedImage(ctx);
 #endif
 
+#if MODULEMGR_SKBL
+	ret = SelfParserOpenFromMem(&reader, buffer, size);
+#else
 	ret = SelfParserOpen(&reader, ModuleCBGetPid(cb), fd, auth);
+#endif
 	if (ret < 0)
 		return ret;
 
@@ -488,6 +494,15 @@ SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *aut
 				    relaCount > 2)
 					goto bad;
 				if (ph->p_filesz != 0) {
+#if MODULEMGR_SKBL
+					SceUInt32 offset = SelfParserGetPhdrOffset(&reader, i);
+
+					if ((int)offset < 0) {
+						ret = offset;
+						goto fail;
+					}
+					ret = RelocatorRelSegment(ctx, (SceUInt32 *)((char *)reader.header + offset), ph->p_filesz);
+#else
 					if (ph->p_filesz > sizeof(s_relaTmp)) {
 						ret = SCE_KERNEL_ERROR_MODULEMGR_NOMEM;
 						goto fail;
@@ -496,6 +511,7 @@ SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *aut
 					if (ret < 0)
 						goto fail;
 					ret = RelocatorRelSegment(ctx, (SceUInt32 *)s_relaTmp, ph->p_filesz);
+#endif
 					if (ret < 0)
 						goto fail;
 					relaCount++;
@@ -596,16 +612,20 @@ bad:
 fail:
 	LoadelfFreeSegments(cb, ctx);
 close:
+#if !MODULEMGR_SKBL
 	SelfParserClose(&reader);
+#endif
 	return ret;
 }
 
+#if !MODULEMGR_SKBL
 /* name unknown */
 int LoadelfFreeImage(SceModuleCB *cb)
 {
 	LoadelfFreeSegments(cb, NULL);
 	return 0;
 }
+#endif
 
 int LoadelfMapImage(LoadelfContext *ctx)
 {

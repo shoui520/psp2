@@ -12,7 +12,9 @@ typedef struct RelocSegment {
 	SceUInt8 *kaddr;		/* kernel mapping */
 } RelocSegment;
 
+#if !MODULEMGR_SKBL
 SceUInt32 g_relocFormCount[12];
+#endif
 SceUInt32 g_relocForms;
 LoadelfTiming *g_loadTiming;
 
@@ -463,6 +465,7 @@ wrong_sym:
 	return SCE_KERNEL_ERROR_MODULEMGR_INVALID_REL_INFO;
 }
 
+#if !MODULEMGR_SKBL
 /* name unknown: count the forms used by the last module */
 void relocatorFormCount(void)
 {
@@ -476,6 +479,7 @@ void relocatorFormCount(void)
 	}
 	g_relocForms = 0;
 }
+#endif
 
 #if !MODULEMGR_NSKBL
 void relocatorFormLogPrint(void)

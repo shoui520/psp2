@@ -3,7 +3,7 @@
 #include <sysmem/dipsw.h>
 #include "sysmem_boot.h"
 #include "sysmem_internal.h"
-#if SYSMEM_NSKBL
+#if SYSMEM_NSKBL || defined(SYSMEM_SKBL)
 #include <sysmem/cp15.h>
 #endif
 
@@ -15,7 +15,7 @@ union DipswState {
 static union DipswState s_bootDipsw;
 static union DipswState *s_dipsw;
 
-#if SYSMEM_NSKBL
+#if SYSMEM_NSKBL || defined(SYSMEM_SKBL)
 /*
  * name unknown: the boot loader's start of the performance monitor, its counters reset
  * and enabled (between l2cc_maintenance.S and this file in NSKBL; no file of os0 has it)
@@ -54,10 +54,12 @@ int InitializeDipsw(const struct SysmemBootContext *context)
 	return 0;
 }
 
+#if !defined(SYSMEM_SKBL)
 SceUInt32 SceDipswForDriver_B2AD48BE(unsigned int index)
 {
 	return s_dipsw->words[index];
 }
+#endif
 
 __attribute__((noinline))
 int sceKernelCheckDipsw(unsigned int bit)
@@ -65,7 +67,7 @@ int sceKernelCheckDipsw(unsigned int bit)
 	return (s_dipsw->words[bit >> 5] >> (bit & 31)) & 1;
 }
 
-#if !SYSMEM_NSKBL
+#if !SYSMEM_NSKBL || defined(SYSMEM_SKBL)
 __attribute__((noinline))
 void sceKernelSetDipsw(unsigned int bit)
 {
@@ -79,7 +81,7 @@ void sceKernelClearDipsw(unsigned int bit)
 	s_dipsw->words[bit >> 5] &= ~(UINT32_C(1) << (bit & 31));
 }
 
-#if !SYSMEM_NSKBL
+#if !SYSMEM_NSKBL && !defined(SYSMEM_SKBL)
 /* Name unknown; high DIP-switch numbers require process capability bit1. */
 __attribute__((noinline))
 int CheckDipswAccess(void)

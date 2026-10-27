@@ -7,7 +7,7 @@
 
 extern void *MoveMemoryCore(void *destination, const void *source, size_t size);
 
-#if FW_DEBUG && !SYSMEM_NSKBL
+#if FW_DEBUG && (!SYSMEM_NSKBL || defined(SYSMEM_SKBL))
 void *memmove(void *destination, const void *source, size_t size)
 {
 	const void *caller = __builtin_return_address(0);
@@ -29,7 +29,7 @@ void *memmove(void *destination, const void *source, size_t size)
 }
 #endif
 
-#if FW_DEBUG || !SYSMEM_NSKBL	/* the release boot loader moves unchecked */
+#if (FW_DEBUG || !SYSMEM_NSKBL) && !defined(SYSMEM_SKBL)	/* the release boot loader moves unchecked */
 void *__memmove_chk(void *destination, const void *source, size_t size,
 		    size_t capacity)
 {

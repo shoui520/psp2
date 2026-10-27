@@ -512,6 +512,15 @@ int SimpleMemBlockStartPhase2(void)
 
 	sceKernelSysrootCorelockLock(0);
 	if (sceKernelCpuId() == 0) {
+#if defined(SYSMEM_SKBL)
+		for (i = 8; i != 0; i--)
+			SimpleMemBlockNew(0x1000);
+		for (i = 4; i != 0; i--)
+			SimpleMemBlockNew(0x4002);
+		for (i = 2; i != 0; i--)
+			SimpleMemBlockNew(0x10004);
+		SimpleMemBlockNew(0x100808);
+#else
 		for (i = 0x200; i != 0; i--)
 			SimpleMemBlockNew(0x1000);
 		for (i = 0x20; i != 0; i--)
@@ -519,6 +528,7 @@ int SimpleMemBlockStartPhase2(void)
 		for (i = 0x40; i != 0; i--)
 			SimpleMemBlockNew(0x10004);
 		SimpleMemBlockNew(0x100808);
+#endif
 	}
 	sceKernelSysrootCorelockUnlock();
 	return 0;

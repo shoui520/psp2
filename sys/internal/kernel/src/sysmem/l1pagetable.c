@@ -55,6 +55,7 @@ void L1PageTableInit(L1PageTable *l1pt, uint32_t *low, uint32_t *high, uintptr_t
 }
 #endif
 
+#if !defined(SYSMEM_SKBL)
 int L1PageTableMapDirect(L1PageTable *l1pt, SceUInt32 type, SceUInt32 domain, uintptr_t va,
 			 SceSize size, uintptr_t pa)
 {
@@ -75,6 +76,7 @@ int L1PageTableMapDirect(L1PageTable *l1pt, SceUInt32 type, SceUInt32 domain, ui
 	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l1pt->lock, flags);
 	return ret;
 }
+#endif
 
 #if !SYSMEM_NSKBL
 /* name unknown */
@@ -216,6 +218,7 @@ out:
 	return ret;
 }
 
+#if !defined(SYSMEM_SKBL)
 /* name unknown */
 int L1PageTableVAtoPABySW(L1PageTable *l1pt, uintptr_t va, uintptr_t *pa)
 {
@@ -226,6 +229,7 @@ int L1PageTableVAtoPABySW(L1PageTable *l1pt, uintptr_t va, uintptr_t *pa)
 	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&l1pt->lock, flags);
 	return ret;
 }
+#endif
 
 #if !SYSMEM_NSKBL
 /* name unknown */

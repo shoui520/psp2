@@ -246,6 +246,7 @@ int LibStubCBInit(LoadelfContext *ctx)
 	return 0;
 }
 
+#if !MODULEMGR_SKBL
 /* name unknown: release the interned names and the tool heap copies */
 void LibStubFree(SceModuleCB *cb)
 {
@@ -278,6 +279,7 @@ void LibStubFree(SceModuleCB *cb)
 	}
 #endif
 }
+#endif
 
 /* name unknown */
 int LibStubClassCreate(void *obj)
@@ -292,6 +294,7 @@ int LibStubClassDestroy(void *obj)
 	return 0;
 }
 
+#if !MODULEMGR_SKBL
 /* name unknown */
 void LibStubCBClear(LibStubCB *stub)
 {
@@ -302,6 +305,7 @@ void LibStubCBClear(LibStubCB *stub)
 		stub->guid = 0;
 	}
 }
+#endif
 
 /* name unknown */
 int LibStubCBCreateUID(LibStubCB *stub, SceUInt16 index)

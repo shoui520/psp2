@@ -473,6 +473,7 @@ void SceSysrootForDriver_7C2C10E2(uint32_t phase, uint32_t kind)
 }
 #endif
 
+#if !defined(SYSMEM_SKBL)
 int sceKernelRegisterInitCallback(SysrootInitCallback callback, uint32_t phase,
 				  void *argument, int *result)
 {
@@ -510,6 +511,7 @@ unlock:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->initCallbackLock, flags);
 	return status;
 }
+#endif
 
 #if !SYSMEM_NSKBL
 int SceSysrootForKernel_F10AB792(uint32_t index, struct SysrootSelfInfo *info)
@@ -664,6 +666,7 @@ void *sceKernelSysrootGetCurrentAddressSpaceCB(void)
 	return getCurrentAddressSpaceCB ? getCurrentAddressSpaceCB() :
 		state->fallbackAddressSpaceCB;
 }
+#endif
 
 SceUID SceSysrootForKernel_7385CADE(void)
 {
@@ -672,6 +675,7 @@ SceUID SceSysrootForKernel_7385CADE(void)
 	return getProcessId ? getProcessId() : SCE_KERNEL_PROCESS_ID;
 }
 
+#if !defined(SYSMEM_SKBL)
 int sceKernelSysrootIsUserModeThread(void)
 {
 	int (*isUserModeThread)(void) = s_sysrootState->isUserModeThread;
@@ -696,14 +700,12 @@ void *sceKernelSysrootGetCurrentUIDEntryHeapCB(void)
 }
 #endif
 
-#if !defined(SYSMEM_SKBL)
 SceUID SceSysrootForKernel_D441DC34(void)
 {
 	SceUID (*getThreadId)(void) = s_sysrootState->getThreadId;
 
 	return getThreadId ? getThreadId() : -1;
 }
-#endif
 
 #if !SYSMEM_NSKBL
 int SysrootModuleStart(const struct SysmemBootContext *context)
@@ -816,14 +818,12 @@ int sceKernelSysrootGetUIDEntryHeap(SceUID processId, void **entryHeap)
 }
 #endif
 
-#if !defined(SYSMEM_SKBL)
 SceUID SceSysrootForKernel_7334F1E8(SceUID processId)
 {
 	const SysrootProcessmgrOps *ops = s_sysrootState->processmgrOps;
 
 	return ops ? ops->getAddressSpace(processId) : SCE_KERNEL_ADDRESS_SPACE_ID;
 }
-#endif
 
 #if !SYSMEM_NSKBL
 int SceSysrootForKernel_EC3124A3(SceUID processId, char *name, SceSize size)
@@ -849,7 +849,6 @@ int SysrootDecProcessResource(SceUInt32 type)
 }
 #endif
 
-#if !defined(SYSMEM_SKBL)
 int SysrootPIDtoAddressSpaceCB(SceUID processId, void **addressSpaceCB)
 {
 	struct SysrootState *state = s_sysrootState;
@@ -873,7 +872,6 @@ static uint64_t ReadSysrootTimeStable(void)
 	} while (high != time->countHi);
 	return (uint64_t)high << 32 | low;
 }
-#endif
 
 #if !SYSMEM_NSKBL
 int SceSysrootForKernel_1D8DB3A5(uint64_t *time)
@@ -885,17 +883,18 @@ int SceSysrootForKernel_1D8DB3A5(uint64_t *time)
 }
 #endif
 
-#if !defined(SYSMEM_SKBL)
 uint64_t SceSysrootForKernel_E20F6FC8(void)
 {
 	return ReadSysrootTimeStable();
 }
 
+#ifdef SYSMEM_SKBL
+__attribute__((noinline))
+#endif
 uint32_t SceSysrootForKernel_41636522(void)
 {
 	return s_sysrootState->sharedTime->countLo;
 }
-#endif
 
 _Static_assert(offsetof(struct SysrootState, sysrootUid) == 0x308,
 	       "Sysroot UID offset");
@@ -1247,26 +1246,31 @@ _Static_assert(offsetof(struct SysrootState, btOps) == 0x3f4,
 _Static_assert(offsetof(struct SysrootState, hidOps) == 0x3f8,
 	       "Sysroot hidOps offset");
 
-#if !defined(SYSMEM_SKBL)
 void sceKernelSysrootSetVbaseResetVector(void *vector)
 {
 	s_sysrootState->vbaseResetVector = vector;
 }
-#endif
 
 void *SceSysrootForKernel_118657C6(void)
 {
 	return s_sysrootState->intrMMUContext;
 }
 
-#if !SYSMEM_NSKBL
-#ifdef SYSMEM_TZS
+#if defined(SYSMEM_TZS) || defined(SYSMEM_SKBL)
 unsigned int *sceKernelSysrootGetVbaseMonitorVector(void)
 {
 	return s_sysrootState->vbaseMonitorVector;
 }
 #endif
 
+#if defined(SYSMEM_SKBL)
+void sceKernelSysrootSetVbaseMonitorVector(uint32_t vector)
+{
+	s_sysrootState->vbaseMonitorVector = (unsigned int *)vector;
+}
+#endif
+
+#if !SYSMEM_NSKBL
 void SceSysrootForKernel_21F5790B(void (*callback)(void))
 {
 	s_sysrootState->debugHook = callback;
@@ -1374,12 +1378,10 @@ void SceSysrootForDriver_C728BC61(void)
 }
 #endif
 
-#if !defined(SYSMEM_SKBL)
 void *sceKernelSysrootGetSharedMemory(void)
 {
 	return s_sysrootState->sharedMemory;
 }
-#endif
 
 #if !SYSMEM_NSKBL
 void SceSysrootForKernel_CC119171(SysrootPfsMgrGetMountInfo callback)
@@ -1420,10 +1422,12 @@ void SceSysrootForDriver_ECADF8C3(SysrootNetHook callback)
 }
 #endif
 
+#if !defined(SYSMEM_SKBL)
 void sceKernelSysrootSetSharedMemory(void *base)
 {
 	s_sysrootState->sharedMemory = base;
 }
+#endif
 
 #if !SYSMEM_NSKBL
 uint32_t SceSysrootForKernel_FFD6E24D(void)
@@ -1484,7 +1488,7 @@ uint32_t SceSysrootForDriver_4D98B15B(void)
 }
 #endif
 
-#if SYSMEM_NSKBL
+#if SYSMEM_NSKBL && !defined(SYSMEM_SKBL)
 /* name unknown: the boot loader's cache of the secure modules (cacheSecurityModules) */
 void SysrootSetSelfImages(const struct SysrootSelfImage *images)
 {
@@ -1949,7 +1953,6 @@ void *sceKernelSysrootGetProcessCBExitDeleteThread(struct SceProcessObject *proc
 }
 #endif
 
-#if !defined(SYSMEM_SKBL)
 /* Original private dispatcher names are unknown. */
 void *SysrootGetProcessObjectHeap(SceUID pid, int kind)
 {
@@ -1957,7 +1960,6 @@ void *SysrootGetProcessObjectHeap(SceUID pid, int kind)
 
 	return ops ? ops->getObjectHeap(pid, kind) : NULL;
 }
-#endif
 
 #if !SYSMEM_NSKBL
 int SysrootCreateProcessLocalStorage(const char *name, SceSize size)
@@ -2155,7 +2157,6 @@ int SceSysrootForDriver_DC651D22(void *buffer, SceSize size, SceUInt32 *count)
  * original has no fallback value it hands back its first argument unchanged.
  */
 
-#if !defined(SYSMEM_SKBL)
 void SceSysrootForKernel_0DF574A9(void)
 {
 	void (*callback)(void) = s_sysrootState->debugHook;
@@ -2163,7 +2164,6 @@ void SceSysrootForKernel_0DF574A9(void)
 	if (callback != NULL)
 		callback();
 }
-#endif
 
 #if !SYSMEM_NSKBL
 int sceKernelSysrootDbgpSuspendProcessAndWaitResume(SceUID pid,
@@ -2403,7 +2403,6 @@ int SceSysrootForDriver_CA497324(SceUID pid, SceUID modid, SceUInt64 time)
 }
 #endif
 
-#if !defined(SYSMEM_SKBL)
 int SceSysrootForDriver_CC7A0E63(int type, SceSize size, const char *buffer)
 {
 	SysrootSendSystemError callback = s_sysrootState->sendSystemError;
@@ -2412,7 +2411,6 @@ int SceSysrootForDriver_CC7A0E63(int type, SceSize size, const char *buffer)
 		return type;
 	return callback(type, size, buffer);
 }
-#endif
 
 #if !SYSMEM_NSKBL
 int SceSysrootForDriver_CCB8BB5E(void *interface)
@@ -2724,6 +2722,23 @@ int sceKernelIsColdBoot(void)
 	return !(s_sysrootState->bootFlags & SYSROOT_BOOT_FLAG_WARM);
 }
 
+#if defined(SYSMEM_SKBL)
+void sceKernelSysrootSetBootStatus(uint32_t status)
+{
+	switch (status) {
+	case 0:
+		s_sysrootState->bootFlags &= ~SYSROOT_BOOT_FLAG_WARM;
+		break;
+	case SYSROOT_BOOT_FLAG_WARM:
+		s_sysrootState->bootFlags |= SYSROOT_BOOT_FLAG_WARM;
+		break;
+	default:
+		SCE_DBG_ASSERT_FAIL(173);
+		break;
+	}
+}
+#endif
+
 #if !SYSMEM_NSKBL
 /* the current thread's attributes, from the thread manager */
 int sceKernelSysrootGetCurrentThreadAttr(uint32_t *attr)
@@ -2761,7 +2776,6 @@ void sceKernelSysrootCorelockUnlock(void)
 	SceCpuForKernel_FE2B77A3(&s_sysrootState->corelock);
 }
 
-#if !defined(SYSMEM_SKBL)
 /* name unknown: the names of the boot memblocks (sysroot.c); 4 is also the default */
 const char *SysrootGetMemBlockName(unsigned int index)
 {
@@ -2787,7 +2801,6 @@ const char *SysrootGetMemBlockName(unsigned int index)
 		return s_sysrootState->memBlockNames[4];
 	}
 }
-#endif
 
 #if SYSMEM_NSKBL
 
@@ -2930,4 +2943,11 @@ int SetupCore0(SceKernelBootParam *param)
 	SceCpuForKernel_FE2B77A3(param->corelock);
 	return 0;
 }
+
+#if defined(SYSMEM_SKBL)
+uint32_t SceThreadmgrForDriver_47F6DE49(void)
+{
+	return SceSysrootForKernel_41636522();
+}
+#endif
 #endif

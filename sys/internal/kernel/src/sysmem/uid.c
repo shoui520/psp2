@@ -2650,7 +2650,7 @@ int SceSysmemForKernel_E8CC2166(SceUID guid, SceUInt32 level)
 }
 #endif
 
-#if FW_DEBUG || !SYSMEM_NSKBL	/* not in the release boot loader */
+#if (FW_DEBUG || !SYSMEM_NSKBL) && !defined(SYSMEM_SKBL)	/* not in the release boot loader */
 int sceGUIDGetName(SceUID guid, const char **name)
 {
 	if (!UIDIsGUID(guid))

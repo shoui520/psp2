@@ -1,6 +1,15 @@
 /* ARM and secure-monitor exception vectors of the secure kernel. */
 #include "excpmgr.h"
 
+#if defined(EXCPMGR_SKBL)
+/* GCC emits zero-initialized definitions in reverse declaration order;
+ * g_excpData and the mode stack tables sit in excpmgr_vector.S. */
+ExcpHandlerTable g_excpHandlers = { 0 };
+unsigned char g_excpStack[4][EXCP_STACK_SIZE] __attribute__((aligned(32))) = { { 0 } };
+SceExcpmgrCallback g_undefCallback;
+SceExcpmgrCallback g_pabtCallback;
+SceExcpmgrCallback g_dabtCallback;
+#else
 SceExcpmgrData g_excpData;
 void *g_irqStack[4];
 void *g_svcStack[4];
@@ -11,6 +20,7 @@ SceExcpmgrCallback g_pabtCallback;
 SceExcpmgrCallback g_dabtCallback;
 unsigned char g_excpStack[4][EXCP_STACK_SIZE];
 ExcpHandlerTable g_excpHandlers;
+#endif
 
 static void _sceKernelPanicHandlerCommon(SceExcpmgrContext *context, unsigned int reason,
 					 const SceKernelDebugInfo *info, const char *message)
@@ -53,11 +63,13 @@ static void _sceKernelPanicHandlerCommon(SceExcpmgrContext *context, unsigned in
 		;
 }
 
+#if !defined(EXCPMGR_SKBL)
 void sceKernelDefaultHandlerFiqCfunc(void)
 {
 	SCE_DBG_PRINTF(0xb, 550, "()\n");
 	sceKernelDefaultHandlerCfunc();
 }
+#endif
 
 int sceKernelRegisterMonitorEntry(unsigned int code, SceExcpmgrHandler *handler)
 {
@@ -105,7 +117,11 @@ void sceKernelDefaultHandlerSmcCfunc(void)
 		;
 }
 
+#if defined(EXCPMGR_SKBL)
+static __attribute__((noinline)) int Init(SceSize args, void *argp)
+#else
 int module_start(SceSize args, void *argp)
+#endif
 {
 	unsigned int code, priority, cpu, value;
 	unsigned char *stack;
@@ -136,11 +152,30 @@ int module_start(SceSize args, void *argp)
 
 	/* word 0x20 of each core's vector bank: the sysroot per-core block */
 	for (cpu = 0; cpu < 4; cpu++) {
+#if defined(EXCPMGR_SKBL)
+		value = (unsigned int)SceSysrootForKernel_06182D59(cpu);
+#else
 		value = SceSysrootForTZS_317E7556(cpu);
+#endif
 		excpPokeVector(&g_excpHandlers.vectors[cpu * 16 + 8], &value);
 	}
 
 	stack = g_excpStack[0];
+#if defined(EXCPMGR_SKBL)
+	cpu = 0;
+	for (;;) {
+		unsigned int *entry;
+
+		g_excpData.nestCount[cpu] = 0;
+		entry = &g_excpData.nestCount[cpu++];
+		((unsigned char **)entry)[8] = stack;
+		((unsigned char **)entry)[12] = stack + EXCP_STACK_SIZE;
+		if (cpu == 4)
+			break;
+		stack += EXCP_STACK_SIZE;
+	}
+	g_excpData.kernelMmu = SceSysrootForKernel_118657C6();
+#else
 	for (cpu = 0; cpu < 4; cpu++) {
 		g_excpData.nestCount[cpu] = 0;
 		g_excpData.stackBase[cpu] = stack;
@@ -148,6 +183,7 @@ int module_start(SceSize args, void *argp)
 		g_excpData.stackTop[cpu] = stack;
 	}
 	g_excpData.kernelMmu = sceKernelSysrootGetKernelMMUContext();
+#endif
 	g_excpData.kernelBreakpoints = NULL;
 	g_excpData.kernelWatchpoints = NULL;
 	sceKernelSysrootSetModulePrivate(4, &g_excpData);
@@ -163,6 +199,50 @@ int module_start(SceSize args, void *argp)
 	return 0;
 }
 
+#if defined(EXCPMGR_SKBL)
+/* a processor mode's stack pointer (C cannot name banked registers) */
+#define setModeStackPointer(mode, sp) do {					\
+	unsigned int __psr;							\
+	__asm__ volatile("mrs %0, cpsr\n\t"					\
+			 "cpsid aif, #" #mode "\n\t"				\
+			 "mov sp, %1\n\t"					\
+			 "msr cpsr_fc, %0"					\
+			 : "=&r" (__psr) : "r" (sp) : "memory");		\
+} while (0)
+
+/* name ours: one 8K stack from the kernel partition, its top 0x40 bytes left free */
+static inline void *excpAllocModeStack(const char *name)
+{
+	void *base;
+	SceUID uid;
+
+	sceKernelSysrootCorelockLock(0);
+	uid = sceKernelAllocPartitionStackMemBlock(name, 0x2000, 0x1000);
+	sceKernelSysrootCorelockUnlock();
+	sceKernelGetMemBlockVBase(uid, &base);
+	return (char *)base + 0x1fc0;
+}
+
+/*
+ * name ours: SKBL's excpmgr start, on every CPU: the IRQ, SVC, abort,
+ * undefined, FIQ and monitor-mode stacks of this CPU, then (CPU 0) the vectors
+ * and handlers.
+ */
+int ExcpmgrModuleStart(void)
+{
+	setModeStackPointer(18, excpAllocModeStack("SceKernelIRQStack"));
+	setModeStackPointer(19, excpAllocModeStack("SceKernelSvcStack"));
+	setModeStackPointer(23, excpAllocModeStack("SceKernelAbtStack"));
+	setModeStackPointer(27, excpAllocModeStack("SceKernelUndStack"));
+	setModeStackPointer(17, excpAllocModeStack("SceKernelFIQStack"));
+	setModeStackPointer(22, excpAllocModeStack("SceKernelMonStack"));
+	sceKernelSysrootCorelockLock(0);
+	if (sceKernelCpuId() == 0)
+		Init(0, NULL);
+	sceKernelSysrootCorelockUnlock();
+	return 0;
+}
+#else
 /* the banked SP of another processor mode (C cannot name banked registers) */
 #define modeStackPointer(mode) ({						\
 	unsigned int __psr;							\
@@ -186,3 +266,4 @@ int module_bootstart(SceSize args, void *argp)
 	writeVbar((unsigned int)sceKernelSysrootGetVbaseResetVector() + cpu * 0x40);
 	return 0;
 }
+#endif

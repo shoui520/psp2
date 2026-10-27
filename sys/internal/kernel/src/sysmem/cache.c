@@ -92,7 +92,7 @@ static inline int CacheIsUncachedAddress(const void *start)
 	return address - 0x20000000 < 0x20000000 || address - 0x60000000 < 0x21000000;
 }
 
-#if !SYSMEM_NSKBL
+#if !SYSMEM_NSKBL || defined(SYSMEM_SKBL)
 __attribute__((noinline))
 void _sceKernelDcacheCleanInvalidateRangeCore(const void *start, SceSize size, int flags
 					      CACHE_CALLER_PARAMS)
@@ -338,7 +338,9 @@ void sceKernelDcacheCleanInvalidateRangeForL1WBWA(const void *start, SceSize siz
 	_sceKernelDcacheCleanInvalidateRangeCore(start, size, CACHE_RANGE_L1_ONLY
 		CACHE_CALLER("sceKernelDcacheCleanInvalidateRangeForL1WBWA"));
 }
+#endif
 
+#if !SYSMEM_NSKBL || defined(SYSMEM_SKBL)
 void sceKernelDcacheCleanInvalidateRange(const void *start, SceSize size)
 {
 	_sceKernelDcacheCleanInvalidateRangeCore(start, size, CACHE_RANGE_SKIP_UNCACHED

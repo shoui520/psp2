@@ -63,6 +63,7 @@ int VARangeToPARangeByHW(const SceKernelVARange *range, SceKernelPARange *out)
 }
 #endif
 
+#if !defined(SYSMEM_SKBL)
 /* name unknown: the physical ranges a VA range lies in, by the MMU */
 int VARangeToPAVectorByHW(const SceKernelVARange *range, SceKernelPAVector *vector)
 {
@@ -259,6 +260,7 @@ int VARangeToPAVectorBySWCore(const SceKernelVARange *range, SceKernelPAVector *
 	vector->nDataInVector = count;
 	return 0;
 }
+#endif
 
 /* a base block freed from the address space of the process its info names */
 int PIDFreeMemBlock(MemBlockBaseInfo *info, MemBlockObject **baseBlock, void **baseInfo)
@@ -444,6 +446,7 @@ int sceKernelVARangeToPAVectorByHW(const SceKernelVARange *range, SceKernelPAVec
 }
 #endif
 
+#if !defined(SYSMEM_SKBL)
 int sceKernelVARangeToPAVector(const SceKernelVARange *range, SceKernelPAVector *vector)
 {
 	if (range == NULL) {
@@ -460,6 +463,7 @@ int sceKernelVARangeToPAVector(const SceKernelVARange *range, SceKernelPAVector 
 		return VARangeToPAVectorBySWCore(range, vector);
 	return VARangeToPAVectorByHW(range, vector);
 }
+#endif
 
 #if !SYSMEM_NSKBL
 /* what memory va's physical address is in */

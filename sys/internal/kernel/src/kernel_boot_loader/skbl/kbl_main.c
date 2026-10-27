@@ -35,10 +35,10 @@ void sceKernelSysrootSetBootStatus(unsigned int status);
 
 /* the rest of the TrustZone kernel */
 int KblMainGetBuildNumber(void);
-int SysmemInitNop(void);
+int InitializeDebugCorelock(void);
 int InitializeDebugPutcharPrivate(void);
 int KblMMUInit(SceKernelBootParam *param);
-int SysmemModuleStart(SceKernelBootParam *param);
+int SysmemStart(SceKernelBootParam *param);
 void KblCallWithStack(SceKernelBootParam *param, void (*func)(SceKernelBootParam *),
 		      void *stack);
 int sceKernelModulemgrStart(SceKernelBootParam *param);
@@ -263,7 +263,7 @@ int sceKblMain(SceKernelBootParam *param)
 					      "Time taken to load KBL: %d us\n",
 					      param->kblParam->kbl_load_time);
 #endif
-		if (SceSysrootForKernel_sceKernelSysrootIsSafeMode())
+		if (sceKernelSysrootIsSafeMode())
 			sceKernelPrintfLevel(IsAllowKernelDebug() ? 0 : 2,
 					      "\tSafe Mode : [ YES ]\n");
 	} else {
@@ -272,10 +272,10 @@ int sceKblMain(SceKernelBootParam *param)
 		sceKernelSysrootCorelockLock(0);
 		sceKernelSysrootCorelockUnlock();
 	}
-	SysmemInitNop();
+	InitializeDebugCorelock();
 	InitializeDebugPutcharPrivate();
 	KblMMUInit(param);
-	SysmemModuleStart(param);
+	SysmemStart(param);
 	AimgrInit();
 	KblCorelockSync(&param->corelock);
 

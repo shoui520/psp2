@@ -17,6 +17,11 @@
 	.type	MoveMemoryCore, %function
 	.thumb_func
 MoveMemoryCore:
+#if !FW_DEBUG && !defined(SYSCLIB_NO_STANDARD_ALIASES)
+	.global	memmove
+	.type	memmove, %function
+	.thumb_set memmove, MoveMemoryCore
+#endif
 	cbz	r2, .Lreturn
 	subs	r3, r0, r1
 	beq	.Lreturn

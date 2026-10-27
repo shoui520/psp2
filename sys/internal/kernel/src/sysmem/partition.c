@@ -342,8 +342,13 @@ static inline void TinyPartitionSetFreeSizeR1(TinyPartition *tiny, SceSize size)
 	SCE_DBG_ASSERT_CHECK_FUNC_RELOAD(size >= tiny->freeSize, 2780, "TinyPartitionSetFreeSizeR1");
 }
 
-SYSMEM_DEBUG_FUNC int TinyPartitionInitRaw(TinyPartition *tiny, const char *name, uintptr_t vbase,
-					   SceSize size, AddressSpaceContext *context)
+#if defined(SYSMEM_SKBL)
+static inline
+#else
+SYSMEM_DEBUG_FUNC
+#endif
+int TinyPartitionInitRaw(TinyPartition *tiny, const char *name, uintptr_t vbase,
+			 SceSize size, AddressSpaceContext *context)
 {
 	if (vbase & 0xffffff) {
 		SCE_DBG_ASSERT_FAIL(3051);
@@ -742,6 +747,9 @@ int TinyPartitionSplitFreeMemBlockRaw(TinyPartition *tiny, MemBlockObject *block
 }
 
 /* the list sentinel, and one free block over the whole range */
+#if defined(SYSMEM_SKBL) && FW_DEBUG
+static inline
+#endif
 int TinyPartitionInitList(TinyPartition *tiny)
 {
 	AddressSpaceContext *context = tiny->context;
@@ -1077,7 +1085,7 @@ out:
 }
 
 /* the kernel/user shared tiny partition (CreateTinyPartitionRaw) */
-#ifdef SYSMEM_TZS	/* the secure world has none */
+#if defined(SYSMEM_TZS) || defined(SYSMEM_SKBL)	/* the secure world has none */
 #define s_tinyPartitionUserShared	((TinyPartition *)NULL)
 #else
 static TinyPartition *s_tinyPartitionUserShared;
@@ -1851,6 +1859,7 @@ static inline int PartitionAllocMemBlockCoreByCommandRaw(Partition *partition,
 		shared = s_tinyPartitionUserShared;
 		if (shared == NULL)
 			return SCE_KERNEL_ERROR_PARTITION_ERROR;
+#ifndef SYSMEM_SKBL
 		intr = sceKernelSpinlockLowLockCpuSuspendIntr(&shared->lock);
 		ret = TinyPartitionAllocMemBlockRaw(shared, command, align, &sharedBlock);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&shared->lock, intr);
@@ -1867,6 +1876,7 @@ static inline int PartitionAllocMemBlockCoreByCommandRaw(Partition *partition,
 		block = command->block;
 		sharedBlock->code = command->code;
 		MemBlockOptSetVirBaseBlockRaw(block, sharedBlock);
+#endif
 	} else {
 		ret = PartitionAllocMemBlockInListByCommandRaw(partition, command, align);
 		if (ret < 0) {
@@ -1896,12 +1906,14 @@ vir_alloc:
 							  PartitionUnlinkBlockSlots);
 			command->block = NULL;
 		}
+#ifndef SYSMEM_SKBL
 		if (sharedBlock != NULL) {
 			SCE_DBG_PRINTF(0xb, 5437, "->FreeMemBlockFromListForShared()\n");
 			if (sharedBlock->code != 0)
 				TinyPartitionFreeMemBlock(s_tinyPartitionUserShared, sharedBlock, 2,
 							  NULL);
 		}
+#endif
 	}
 	return ret;
 fail:
@@ -2658,6 +2670,7 @@ int PartitionGetMemoryType(Partition *partition, uintptr_t va)
 }
 #endif
 
+#if !defined(SYSMEM_SKBL)
 /* name unknown: va's physical address from the page tables */
 int PartitionVAtoPABySW(Partition *partition, uintptr_t va, uintptr_t *pa)
 {
@@ -2674,6 +2687,7 @@ int PartitionVAtoPABySW(Partition *partition, uintptr_t va, uintptr_t *pa)
 		return SCE_KERNEL_ERROR_PARTITION_ERROR;
 	return MMUL2VAtoPABySW(l2pt->table, va, pa);
 }
+#endif
 
 #if !SYSMEM_NSKBL
 /* whether va is accessible with perm, from the page tables */
@@ -3396,7 +3410,9 @@ static inline __attribute__((always_inline)) int PartitionStartCore0(SceKernelBo
 	pBoot->pFixedHeapForL2Object->optPartition = root;
 	pBoot->pFixedHeapUIDEntry->optPartition = root;
 	PartitionMapL2PageTable(root, pBoot->pL2PageTableObject000, 0);
+#if !defined(SYSMEM_SKBL)
 	PartitionMapL2PageTable(root, pBoot->pL2PageTableObjectPhypage, 0);
+#endif
 
 	/* the reset vector */
 	{
@@ -3433,11 +3449,18 @@ static inline __attribute__((always_inline)) int PartitionStartCore0(SceKernelBo
 		goto out;
 	FixL2PageTableCountCore(pBoot, &pBoot->l2PageTable000);
 	block->flags |= MEMBLOCK_L2PT;
+#if defined(SYSMEM_SKBL)
+	MemBlockL2PageTableSetFreeRaw(block,
+				      MEMBLOCK_L2PT_FREE(1) | MEMBLOCK_L2PT_FREE(2) | MEMBLOCK_L2PT_FREE(3));
+	pBoot->pL2PageTableObject000->flags |= 1;
+	pBoot->pL2PageTableObject000->block = block;
+#else
 	MemBlockL2PageTableSetFreeRaw(block, MEMBLOCK_L2PT_FREE(2) | MEMBLOCK_L2PT_FREE(3));
 	pBoot->pL2PageTableObject000->flags |= 1;
 	pBoot->pL2PageTableObject000->block = block;
 	pBoot->pL2PageTableObjectPhypage->flags |= 2;
 	pBoot->pL2PageTableObjectPhypage->block = block;
+#endif
 	block->lock = 0;
 	intr = SceCpuForDriver_4C38CE4D(&root->l2BlockLock);
 	block->smbNext = root->l2Blocks;
@@ -3488,6 +3511,7 @@ static inline __attribute__((always_inline)) int PartitionStartCore0(SceKernelBo
 				      pBoot->pPagePhypage, &block);
 	if (ret < 0)
 		goto out;
+#if !defined(SYSMEM_SKBL)
 	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
 		ret = AllocPremappedBootBlock(pBoot, root, phyMemPartKD, &pBoot->phypageHigh,
 					      pBoot->pPagePhypageHigh, &block);
@@ -3495,6 +3519,7 @@ static inline __attribute__((always_inline)) int PartitionStartCore0(SceKernelBo
 			goto out;
 		MemBlockSetPhyMemPartRaw(block, pBoot->pPhyMemPartTool);
 	}
+#endif
 	PartitionAllocBootBlock(root, &pBoot->bootKernelImage, pBoot->pPageBootKernelImage);
 	ret = 0;
 	g_uidManager->kernelPartition = pBoot->pPartitionRoot;
@@ -3517,6 +3542,7 @@ int PartitionStart(SceKernelBootParam *pBoot, UIDManager *manager)
 /* the kernel partition's layout randomised by up to two pad blocks ("SceASLR") */
 int PartitionStartPhase2(void)
 {
+#if !defined(SYSMEM_SKBL)
 	SceSize sizes[2] = { 0x1000, 0x10000 };
 	SceKernelAllocMemBlockCommand command;
 	MemBlockObject *block;
@@ -3555,6 +3581,7 @@ int PartitionStartPhase2(void)
 		}
 	}
 	sceKernelSysrootCorelockUnlock();
+#endif
 	return 0;
 }
 #endif

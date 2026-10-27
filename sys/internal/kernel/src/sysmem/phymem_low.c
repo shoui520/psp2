@@ -61,6 +61,7 @@ static SceUInt32 s_phyMemLowStaticBitmap[16];
 	 (size) <= (pml)->size && !((size) & (pml)->unitMask) && \
 	 (pa) + (size) <= (pml)->size + (pml)->base)
 
+#if !defined(SYSMEM_SKBL)
 /* name unknown: marks [pa, pa + size) used, if all of it is free */
 #if SYSMEM_NSKBL
 static	/* one caller, which GCC inlines it into, as in Sony's NSKBL */
@@ -370,6 +371,7 @@ int PhyMemLowMainMarkUsed(uintptr_t pa, SceSize size)
 {
 	return PhyMemLowMarkUsed(s_phyMemLowMain, pa, size);
 }
+#endif	/* !SYSMEM_SKBL */
 
 #if !SYSMEM_NSKBL
 int PhyMemLowMainFree(uintptr_t pa, SceSize size)
@@ -509,14 +511,17 @@ int PhyMemLowStaticInit(void)
 /* name unknown: the main and sub allocators in 1 MiB units, made by core 0 */
 int PhyMemLowStart(UIDManager *manager)
 {
+#if !defined(SYSMEM_SKBL)
 	PhyMemLow *pml;
 	SceUInt32 *bitmap;
 	SceUInt32 i;
 	SceSize size, allocated;
 	uintptr_t pa;
+#endif
 
 	sceKernelSysrootCorelockLock(0);
 	if (sceKernelCpuId() == 0) {
+#if !defined(SYSMEM_SKBL)
 		s_phyMemLowMain = sceKernelSysrootAlloc(sizeof(PhyMemLow));
 		s_phyMemLowMainBitmap = sceKernelSysrootAlloc(32 * sizeof(SceUInt32));
 		manager->phyMemLowMain = s_phyMemLowMain;
@@ -553,6 +558,7 @@ int PhyMemLowStart(UIDManager *manager)
 			bitmap[i] = 0;
 		/* the boot loader's own first 2 MiB */
 		PhyMemLowAlloc(s_phyMemLowMain, 0x200000, 0, PHYMEM_LOW_ALLOC_FLAG_1, &pa, &allocated);
+#endif
 	}
 	sceKernelSysrootCorelockUnlock();
 	return 0;

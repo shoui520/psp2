@@ -33,7 +33,7 @@
  * The interrupt masks the IRQ locks take and give back: the secure world
  * masks FIQs with the IRQs and restores both bits from the saved flags.
  */
-#ifdef SYSMEM_TZS
+#if defined(SYSMEM_TZS) || defined(SYSMEM_SKBL)
 #define PSR_MASK_BITS	0xc0
 #define IRQ_OFF		cpsid	if
 #else
@@ -43,7 +43,7 @@
 
 /* irq_restore flags, scratch: the IRQs (and FIQs) back as flags has them */
 	.macro	irq_restore flags, scratch
-#ifdef SYSMEM_TZS
+#if defined(SYSMEM_TZS) || defined(SYSMEM_SKBL)
 	mrs	\scratch, cpsr
 	lsrs	\flags, \flags, #6
 	bfi	\scratch, \flags, #6, #2
@@ -135,6 +135,26 @@
 	mcr	p15, 0, r1, c7, c5, 0			@ ICIALLU
 	bx	lr
 	endfunc	CpuSctlrInit
+#if defined(SYSMEM_SKBL)
+/*
+ * uint32_t CpuActlrInit(void): the instruction cache invalidated, then the boot
+ * loader's ACTLR (parity off, alloc in one way on, exclusive cache off, SMP on,
+ * WFLZ on, FW on); returns the value written
+ */
+	func	CpuActlrInit
+	movs	r1, #0
+	mcr	p15, 0, r1, c7, c5, 0			@ ICIALLU
+	mrc	p15, 0, r0, c1, c0, 1			@ ACTLR
+	bic.w	r0, r0, #0x200				@ Parity
+	orr.w	r0, r0, #0x100				@ Alloc in one way
+	bic.w	r0, r0, #0x80				@ EXCL
+	orr.w	r0, r0, #0x40				@ SMP
+	orr.w	r0, r0, #8				@ WFLZ
+	orr.w	r0, r0, #1				@ FW
+	mcr	p15, 0, r0, c1, c0, 1
+	bx	lr
+	endfunc	CpuActlrInit
+#endif
 #endif
 
 /* void sceKernelSpinlockLowLock(lock): spins (wfe) until the lock is free */

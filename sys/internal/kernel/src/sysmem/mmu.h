@@ -48,6 +48,9 @@ int sceKernelMMUSetL2PageTable(uint32_t *l1, uint32_t domain, uintptr_t va, uint
 int sceKernelMMUUnsetL2PageTable(uint32_t *l1, uintptr_t va);
 int sceKernelMMUMapSupersections(uint32_t *l1, uint32_t type, uint32_t domain, uintptr_t va,
 				 SceSize size, uintptr_t pa);
+int sceKernelMMUMapSection(uint32_t *l1, uint32_t type, uint32_t domain, uintptr_t va,
+			   uintptr_t pa);
+int sceKernelMMUUnmapSectionWithFlags(uint32_t *l1, uint32_t asid, uintptr_t va, uint32_t flags);
 int sceKernelMMUMapSections(uint32_t *l1, uint32_t type, uint32_t domain, uintptr_t va,
 			    SceSize size, uintptr_t pa);
 int sceKernelMMUUnmapSectionsWithFlags(uint32_t *l1, uint32_t asid, uintptr_t va, SceSize size,

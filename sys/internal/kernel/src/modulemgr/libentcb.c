@@ -161,6 +161,7 @@ int LibEntCBInit(LoadelfContext *ctx)
 	return 0;
 }
 
+#if !MODULEMGR_SKBL
 /* name unknown: release the interned library names */
 void LibEntFreeNames(SceModuleCB *cb)
 {
@@ -195,6 +196,7 @@ void ModuleCBFreeLinkInfo(SceModuleCB *cb)
 	if (linkInfo != NULL)
 		ModulemgrFree(pid, linkInfo);
 }
+#endif
 
 #if !MODULEMGR_NSKBL
 /* name unknown: index of the export entry at addr */

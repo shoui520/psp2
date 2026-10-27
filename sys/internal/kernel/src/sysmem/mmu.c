@@ -103,7 +103,7 @@ static inline int MMUInterruptsDisabled(void)
 }
 
 /* cpu.c's CpuSuspendIntrLow/CpuResumeIntrLow, inlined */
-#ifdef SYSMEM_TZS
+#if defined(SYSMEM_TZS) || defined(SYSMEM_SKBL)
 static inline int MMUSuspendIntr(void)
 {
 	uint32_t status = readCpsr() & (PSR_I_BIT | PSR_F_BIT);
@@ -200,7 +200,7 @@ int MMUSetReady(void)
 /* name unknown; the boot loader's leaves the MMU not ready */
 int MMUInitPost(void)
 {
-#if !SYSMEM_NSKBL
+#if !SYSMEM_NSKBL && !defined(SYSMEM_SKBL)
 	MMUSetReady();
 #endif
 	return 0;
@@ -462,7 +462,7 @@ privWrite:
 	return SCE_KERNEL_ERROR_VA2PA_FAULT;
 }
 
-#if !SYSMEM_NSKBL
+#if !SYSMEM_NSKBL || defined(SYSMEM_SKBL)
 uint8_t SceCpuForKernel_FD54A91D(void)
 {
 	return readContextId();
@@ -523,7 +523,7 @@ int MMUContextSwitch(const MMUContext *context, MMUContext *saved, uint32_t *con
 	return 0;
 }
 
-#if !SYSMEM_NSKBL
+#if !SYSMEM_NSKBL && !defined(SYSMEM_SKBL)
 /* name unknown: the same with barriers, for a context that was just changed */
 __attribute__((noinline))
 int MMUContextSwitchSync(const MMUContext *context, MMUContext *saved)
@@ -636,6 +636,53 @@ int sceKernelMMUMapSupersections(uint32_t *l1, uint32_t type, uint32_t domain, u
 	MMU_DSB();
 	return 0;
 }
+
+#if defined(SYSMEM_SKBL)
+int sceKernelMMUMapSection(uint32_t *l1, uint32_t type, uint32_t domain, uintptr_t va,
+			   uintptr_t pa)
+{
+	uint32_t *pte, attr;
+
+	if ((uintptr_t)l1 << 20) {
+		SCE_DBG_PRINTF(0xb, 798, "l1base=%p\n", l1);
+		SCE_PANIC(799);
+	}
+	pte = &l1[va >> 20];
+#if FW_DEBUG
+	if (MMU_L1_TYPE(*pte) != MMU_L1_TYPE_FAULT) {
+		SCE_DBG_PRINTF(0xb, 808, "PTE         %p:0x%08x\n", pte, *pte);
+		SCE_DBG_PRINTF(0xb, 809, "TTBRCR:     0x%08x\n", readTtbcr());
+		SCE_DBG_PRINTF(0xb, 810, "TTBR0:      0x%08x\n", readTtbr0());
+		SCE_DBG_PRINTF(0xb, 811, "TTBR1:      0x%08x\n", readTtbr1());
+		SCE_DBG_PRINTF(0xb, 812, "CONTEXTID:  0x%08x\n", readContextId());
+		return SCE_KERNEL_ERROR_CPU_MMU_L1PTE_NOT_FAULT;
+	}
+#endif
+	attr = MemBlockTypeToL1PTE(type, domain);
+	MMUWritePTE(pte, attr | ((pa >> 20) << 20) | MMU_L1_TYPE_SECTION);
+	MMU_DSB();
+	return 0;
+}
+
+int sceKernelMMUUnmapSectionWithFlags(uint32_t *l1, uint32_t asid, uintptr_t va, uint32_t flags)
+{
+	SCE_DBG_ASSERT_CHECK(MMUInterruptsDisabled(), 841);
+	if ((uintptr_t)l1 << 20) {
+		SCE_DBG_PRINTF(0xb, 844, "l1base=%p\n", l1);
+		SCE_PANIC(845);
+	}
+	SCE_DBG_ASSERT_CHECK(1, 848);
+	if (flags & ~1) {
+		SCE_DBG_ASSERT_FAIL(851);
+		return SCE_KERNEL_ERROR_INVALID_FLAGS;
+	}
+	MMUWritePTE(&l1[va >> 20], MMU_L1_FAULT);
+	MMU_ISB();
+	MMUInvalidateTLBEntry(va, asid);
+	MMU_DSB();
+	return 0;
+}
+#endif
 
 int sceKernelMMUMapSections(uint32_t *l1, uint32_t type, uint32_t domain, uintptr_t va,
 			    SceSize size, uintptr_t pa)
@@ -788,7 +835,7 @@ int sceKernelMMUUnmapLargePagesWithFlags(uint32_t *l2, uint32_t asid, uintptr_t 
 	return 0;
 }
 
-#if SYSMEM_NSKBL
+#if SYSMEM_NSKBL || defined(SYSMEM_SKBL)
 /* the boot loaders' one small page at offset in the L2 table (va unused) */
 int sceKernelMMUMapSmallPage(uint32_t *l2, uint32_t type, uintptr_t va, uintptr_t offset,
 			     uintptr_t pa)
@@ -885,7 +932,7 @@ int SceCpuForKernel_1BD23326(uint32_t mode, uintptr_t va, uintptr_t *pa)
 	return MMUVAtoPACore(mode, 0, va, pa, NULL);
 }
 
-#if !SYSMEM_NSKBL
+#if !SYSMEM_NSKBL && !defined(SYSMEM_SKBL)
 /* name unknown */
 int MMUVAtoPAWithMemoryType(uint32_t mode, uintptr_t va, uintptr_t *pa, int *memoryType)
 {
@@ -917,7 +964,7 @@ int SceCpuForKernel_87F7631D(uintptr_t va)
 	return PAR2MemoryType(par);
 }
 
-#if !SYSMEM_NSKBL
+#if !SYSMEM_NSKBL && !defined(SYSMEM_SKBL)
 /* name unknown: whether every page of a range permits all the accesses in mode */
 int MMUCheckAccessibleRange(uint32_t mode, uintptr_t va, SceSize size)
 {
@@ -958,6 +1005,7 @@ int SceCpuForKernel_14E0B0C4(uintptr_t va, uintptr_t *pa)
 	return MMUVAtoPACore(MMU_ACCESS_ANY, 0, va, pa, NULL);
 }
 
+#if !defined(SYSMEM_SKBL)
 int sceKernelMMUL1VAtoPABySW(const uint32_t *l1, uintptr_t va, uintptr_t *pa)
 {
 	uint32_t entry = l1[va >> 20];
@@ -1211,6 +1259,7 @@ int sceKernelMMUL2GetMemoryType(const uint32_t *l2, uintptr_t va)
 	SCE_DBG_ASSERT_FAIL(2436);
 	return SCE_KERNEL_ERROR_CPU_ERROR;
 }
+#endif
 #endif
 
 /* whether [va, va + size) maps to [pa, pa + size) in context (NULL: the current one) */

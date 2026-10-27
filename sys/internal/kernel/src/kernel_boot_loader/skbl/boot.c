@@ -529,19 +529,21 @@ static inline uint32_t BootCpu0Init(void *lr)
 		sceKernelSetGPO(0x82);
 		SceDebugForKernel_22546577((uintptr_t)SerialDebugPutchar, 0);
 	}
-	SCE_PRINTF_WITH_INFO(0, 1868, "===================================================\n");
-	SCE_PRINTF_WITH_INFO(0, 1871, "Starting PSP2 Kernel Boot Loader [0x%08x]: %d\n",
-			     FW_VERSION, KblGetBuildNumber());
-	SCE_PRINTF_WITH_INFO(0, 1873, "revision   : %s\nbuild date : %s\n",
-			     bootRevision, bootBuildDate);
+	SCE_PRINTF_WITH_INFO_FUNC(0, 1868, "boot",
+				  "===================================================\n");
+	SCE_PRINTF_WITH_INFO_FUNC(0, 1871, "boot",
+				  "Starting PSP2 Kernel Boot Loader [0x%08x]: %d\n",
+				  FW_VERSION, KblGetBuildNumber());
+	SCE_PRINTF_WITH_INFO_FUNC(0, 1873, "boot", "revision   : %s\nbuild date : %s\n",
+				  bootRevision, bootBuildDate);
 	if (s_kblParam.dipswWords[1] != 0)
-		SCE_PRINTF_WITH_INFO(0, 1882, "cp info.   : bid.%x ver.%04x\n",
-				     s_kblParam.dipswWords[1] >> 16,
-				     s_kblParam.dipswWords[1] & 0xffff);
+		SCE_PRINTF_WITH_INFO_FUNC(0, 1882, "boot", "cp info.   : bid.%x ver.%04x\n",
+					  s_kblParam.dipswWords[1] >> 16,
+					  s_kblParam.dipswWords[1] & 0xffff);
 	else
-		SCE_PRINTF_WITH_INFO(0, 1884, "cp info.   : (N/A)\n");
+		SCE_PRINTF_WITH_INFO_FUNC(0, 1884, "boot", "cp info.   : (N/A)\n");
 	if (s_kblParam.boot_type_indicator_1 & BOOT_TYPE_PRODUCT_MODE)
-		SCE_DBG_PRINTF_LEVEL(1, 0, 1889, "\tProduct Mode : [ YES ]\n");
+		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1889, "boot", "\tProduct Mode : [ YES ]\n");
 	if (((s_kblParam.boot_type_indicator_1 & BOOT_TYPE_PRODUCT_MODE) ||
 	     (s_kblParam.qa_flags[0xd] & 1)) &&
 	    (s_kblParam.boot_type_indicator_1 & BOOT_TYPE_MEMORY_TEST))
@@ -555,22 +557,22 @@ static inline uint32_t BootCpu0Init(void *lr)
 	param->size = sizeof(*param);
 	param->secure = 1;
 	if (kermit == 0) {
-		SCE_DBG_ASSERT_CHECK_LR(0, 1932, lr);
+		SCE_DBG_ASSERT_CHECK_LR_FUNC(0, 1932, "boot", lr);
 		kermit = s_bootParam.current->kermitRevision;
 	}
 	if (s_kblParam.qa_flags[0xd] & 1)
 		chip = (kermit & 0x1ff00) ? "Kermit1.5" : "Kermit1.0";
 	else
 		chip = "";
-	SCE_DBG_PRINTF_LEVEL(1, 0, 1941, "\t%s Revision=%d.%d\n", chip, (kermit >> 4) & 0xf,
-			     kermit & 0xf);
+	SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1941, "boot", "\t%s Revision=%d.%d\n", chip,
+				  (kermit >> 4) & 0xf, kermit & 0xf);
 	switch (s_bootParam.current->kermitRevision) {
 	case 0x00:
 	case 0x11:
 	case 0x20:
 	case 0x30:
 	case 0x32:
-		SCE_DBG_ASSERT_CHECK_LR(0, 1950, lr);
+		SCE_DBG_ASSERT_CHECK_LR_FUNC(0, 1950, "boot", lr);
 		break;
 	case 0x40:
 	case 0x42:
@@ -584,15 +586,15 @@ static inline uint32_t BootCpu0Init(void *lr)
 			sceKernelPrintfLevel(QA_LEVEL(0, 2), "\tL2 Cache is defective\n");
 		break;
 	default:
-		SCE_DBG_PRINTF_LEVEL(1, 0, 1968, "\tUnknown chip revision [rev=%x]\n",
-				     s_bootParam.current->kermitRevision);
+		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1968, "boot", "\tUnknown chip revision [rev=%x]\n",
+					  s_bootParam.current->kermitRevision);
 		break;
 	}
 
 	aslr = s_kblParam.dipsw.aslr_seed;
 	sceKernelPrintfLevel(QA_LEVEL(1, 2), "\tASLR: 0x%08x\n", aslr);
-	SCE_PRINTF_WITH_INFO(0, 1993, "session ID : %02X%02X%02X%02X%02X%02X%02X%02X"
-			     "%02X%02X%02X%02X%02X%02X%02X%02X\n",
+	SCE_PRINTF_WITH_INFO_FUNC(0, 1993, "boot", "session ID : %02X%02X%02X%02X%02X%02X%02X%02X"
+				  "%02X%02X%02X%02X%02X%02X%02X%02X\n",
 			     s_kblParam.session_id[0], s_kblParam.session_id[1],
 			     s_kblParam.session_id[2], s_kblParam.session_id[3],
 			     s_kblParam.session_id[4], s_kblParam.session_id[5],

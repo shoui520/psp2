@@ -778,7 +778,7 @@ SceUID sceKernelAllocMemBlockWithInfoForKernel(const char *name, SceUInt32 type,
 	int ret;
 
 	AllocMemBlockCommandInitWithType(&command, name, type, size);
-#ifndef SYSMEM_TZS	/* no user mode threads in the secure world */
+#if !defined(SYSMEM_TZS) && !defined(SYSMEM_SKBL)	/* no user mode threads in the secure world */
 	switch (type) {
 	case SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TMP_NC_R:
 	case SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TMP_NC_RW:
@@ -845,7 +845,7 @@ SceUID sceKernelAllocMemBlockWithInfoForKernel(const char *name, SceUInt32 type,
 	}
 	if (!(attr & SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PID)) {
 		command.opt.attr = attr | SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PID;
-#ifdef SYSMEM_TZS
+#if defined(SYSMEM_TZS) || defined(SYSMEM_SKBL)
 		command.opt.pid = SCE_KERNEL_PROCESS_ID;
 #else
 		command.opt.pid = SceSysrootForKernel_7385CADE();

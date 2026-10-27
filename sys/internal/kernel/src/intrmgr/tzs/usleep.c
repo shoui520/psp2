@@ -31,7 +31,11 @@ static UsleepState s_usleep;
 static SceKernelSpinlock s_cpuWait[4];		/* held while the core sleeps */
 static volatile SceWordTimerRegisters *s_timer;
 
+#if defined(INTRMGR_SKBL) && !FW_DEBUG
 static int SetTargetCPU(int cpu)
+#else
+static __attribute__((noinline)) int SetTargetCPU(int cpu)
+#endif
 {
 	int ret = sceKernelSetIntrTargetCpu(USLEEP_INTR, 1 << cpu);
 
@@ -73,6 +77,7 @@ static int UsleepIntrHandler(int intrCode, void *userCtx)
 	return -1;
 }
 
+#if !defined(INTRMGR_SKBL)
 void sceKernelUsleep(SceUInt32 usec)
 {
 	int cpu = sceKernelCpuId();
@@ -107,6 +112,7 @@ void sceKernelUsleep(SceUInt32 usec)
 	/* until UsleepIntrHandler releases it */
 	sceKernelSpinlockLowLock(&s_cpuWait[cpu]);
 }
+#endif
 
 int InitUsleepTimer(int remap)
 {

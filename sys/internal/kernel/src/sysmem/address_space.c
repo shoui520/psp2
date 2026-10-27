@@ -558,6 +558,7 @@ int AddressSpaceVAtoPAWithMode(AddressSpaceObject *as, uint32_t mode, uintptr_t 
 }
 #endif
 
+#if !defined(SYSMEM_SKBL)
 /* name unknown: va's physical address from the page tables */
 int AddressSpaceVAtoPABySW(AddressSpaceObject *as, uintptr_t va, uintptr_t *pa)
 {
@@ -578,6 +579,7 @@ out:
 	AddressSpaceRelease(as);
 	return ret;
 }
+#endif
 
 #if !SYSMEM_NSKBL
 /* name unknown: the memory type va is mapped with */
@@ -1655,11 +1657,14 @@ static inline void AddressSpaceStartCore0(SceKernelBootParam *pBoot, UIDManager 
 	SceClass *cls;
 	struct Partition *root;
 	struct Partition *part;
+#if !defined(SYSMEM_SKBL)
 	MMUContext saved;
 	uintptr_t base;
 	SceSize size;
+#endif
 	SceUInt32 i;
 
+#if !defined(SYSMEM_SKBL)
 	if (!sceKernelCheckDipsw(DIPSW_USER_PA_MAPPING_ADDRESS)) {
 		s_userIOPASize = 0x20000000;
 		s_userIOPABase = 0x80000000;
@@ -1667,6 +1672,7 @@ static inline void AddressSpaceStartCore0(SceKernelBootParam *pBoot, UIDManager 
 		s_userIOPASize = 0x8000000;
 		s_userIOPABase = 0x78000000;
 	}
+#endif
 	s_addressSpaceGlobals = SceSysmemForKernel_85571907(sizeof(*s_addressSpaceGlobals));
 	s_addressSpaceGlobals->asidHeap = SceSysmemForKernel_85571907(0x20);
 	s_addressSpaceGlobals->asidBuffer = SceSysmemForKernel_85571907(0x40);
@@ -1714,6 +1720,7 @@ static inline void AddressSpaceStartCore0(SceKernelBootParam *pBoot, UIDManager 
 	part = SceSysmemForKernel_FA6C098C(SCE_KERNEL_PARTITION_ROOT_ID);
 	part->tiny.context->partition = part;
 	AddressSpaceCreatePartitionForKernel(as);
+#if !defined(SYSMEM_SKBL)
 	if (sceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE) && sceKernelCheckDipsw(DIPSW_USER_PA_MAPPING)) {
 		if (!sceKernelCheckDipsw(DIPSW_USER_PA_MAPPING_ADDRESS)) {
 			size = 0x20000000;
@@ -1728,6 +1735,7 @@ static inline void AddressSpaceStartCore0(SceKernelBootParam *pBoot, UIDManager 
 				     AS_USER_PA_MAPPING_DOMAIN, AS_USER_PA_MAPPING_VBASE, size, base);
 		MMUContextRestore(&saved);
 	}
+#endif
 	AddressSpaceSetPhyMemPartRaw(as, AS_PHYMEMPART_KD, SceSysmemForKernel_0164D817());
 	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART))
 		AddressSpaceSetPhyMemPartRaw(as, AS_PHYMEMPART_TOOL, SceSysmemForKernel_0B1B4ACA());

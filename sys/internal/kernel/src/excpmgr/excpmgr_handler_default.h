@@ -40,6 +40,14 @@ void sceKernelDefaultHandlerIrqCfunc(void)
 	sceKernelDefaultHandlerCfunc();
 }
 
+#if defined(EXCPMGR_SKBL)
+void sceKernelDefaultHandlerFiqCfunc(void)
+{
+	SCE_DBG_PRINTF(0xb, 550, EXCP_REPORT_TEXT(emptyFormat, "()\n"));
+	sceKernelDefaultHandlerCfunc();
+}
+#endif
+
 void sceKernelPanicHandlerUndefCfunc(SceExcpmgrContext *context)
 {
 	_sceKernelPanicHandlerCommon(context, 6, SCE_DBGINFO(1204), EXCP_REPORT_TEXT(undef, "UNDEF"));

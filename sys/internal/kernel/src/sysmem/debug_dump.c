@@ -154,7 +154,7 @@ static inline int DebugCpuId(void)
 	return readMpidr() & 3;
 }
 
-#ifdef SYSMEM_TZS
+#if defined(SYSMEM_TZS) || defined(SYSMEM_SKBL)
 /* name unknown: prints the kernel backtrace, then thid's user one (the secure world has no processes) */
 __attribute__((noinline))
 void DebugPrintBacktrace(SceUID thid, const void *lr)
@@ -297,13 +297,13 @@ void DebugFaultDump(void *argument)
 	DebugDumpHeader header;
 	DebugFrame *frames, *out;
 	DebugDumpHeader *dump;
-#ifndef SYSMEM_TZS
+#if !defined(SYSMEM_TZS) && !defined(SYSMEM_SKBL)
 	const ThreadSyscallFrame *syscall;
 	DebugDumpSyscall *syscallDump;
 #endif
 	SceUInt64 time = SceSysrootForKernel_E20F6FC8();
 	int cpu = sceKernelCpuId();
-#ifndef SYSMEM_TZS
+#if !defined(SYSMEM_TZS) && !defined(SYSMEM_SKBL)
 	SceUInt32 fingerprint;
 	void *textBase;
 	DebugModuleName name;
@@ -335,7 +335,7 @@ void DebugFaultDump(void *argument)
 	if (fault->format != NULL)
 		SceDebugForDriver_411C0733(fault->format, fault->arguments);
 
-#ifdef SYSMEM_TZS
+#if defined(SYSMEM_TZS) || defined(SYSMEM_SKBL)
 	dump = (DebugDumpHeader *)(sceKernelSysrootGetSharedMemory() + DEBUG_DUMP_OFFSET +
 				   cpu * 0x1000);
 	caller = fault->caller;
@@ -380,7 +380,7 @@ void DebugFaultDump(void *argument)
 			out += count;
 		}
 	}
-#ifndef SYSMEM_TZS
+#if !defined(SYSMEM_TZS) && !defined(SYSMEM_SKBL)
 	if (syscall != NULL) {
 		syscallDump = (DebugDumpSyscall *)out;
 		memcpy(&syscallDump->frame, syscall, sizeof(*syscall));
@@ -416,7 +416,7 @@ void DebugFaultDump(void *argument)
 		vbar = readVbar();
 		DebugSecureCrashDump(DEBUG_DUMP_FAULT, ttbr0, vbar, sysroot);
 	}
-#ifdef SYSMEM_TZS
+#if defined(SYSMEM_TZS) || defined(SYSMEM_SKBL)
 	DebugPrintBacktrace(0, fault->lr);
 	DebugPrintSyscallFrame(0);
 #else
@@ -510,7 +510,7 @@ void SceDebugForDriver_00CCE39C(const SceKernelDebugInfo *info, const void *lr, 
 }
 
 /* the secure world has no exception dump */
-#ifndef SYSMEM_TZS
+#if !defined(SYSMEM_TZS) && !defined(SYSMEM_SKBL)
 /* where a kernel code address lies, or -1/NULL for user addresses */
 static inline void DebugDumpResolve(SceUInt32 address, SceUInt32 *fingerprint, void **textBase)
 {

@@ -21,7 +21,9 @@
 #define MONCALL_LAST			0x500
 #define MONCALL_TABLE_SIZE		0x1000
 
+#if !defined(INTRMGR_SKBL)
 IntrState g_intrState;
+#endif
 volatile GicCpuInterface *volatile g_intrCpuInterface;
 GicDistributor *volatile g_intrDistributor;
 SceKernelMonitorCallHandler *g_moncallTable;
@@ -33,11 +35,13 @@ void *g_intrLeaveIntr;
 void *g_intrEnterSubIntr;
 void *g_intrLeaveSubIntr;
 
+#if !defined(INTRMGR_SKBL)
 /* name unknown: each CPU's stack for monitor calls, CPU 0's on top; it ends
  * where g_smcHandlerTable starts, and intrmgr_entry.S takes that as its top */
 char g_monitorStack[4][0x1000];
 /* name unknown: the SMC fast calls below 0x100; nothing in the module fills it */
 void *g_smcHandlerTable[0x100];
+#endif
 
 /* name unknown: the priority as the secure world writes it; a Non-secure
  * (group 1) interrupt's sits in the lower half of the range */
@@ -49,6 +53,7 @@ void SetPriority(unsigned int intrCode, unsigned char priority)
 		g_intrDistributor->priority[intrCode] = priority >> 1;
 }
 
+#if !defined(INTRMGR_SKBL)
 static int UnmapKblArea(int arg0, int arg1, int arg2, int arg3)
 {
 	if (sceKernelAddressSpaceUnmap(SCE_KERNEL_ADDRESS_SPACE_ID, 0xf7, 0xc,
@@ -140,9 +145,14 @@ static int SetL2ccControl(int arg0, int arg1, int arg2, int arg3)
 	CpuL2CacheSyncCore();
 	return SetL2ccReg(offsetof(ScePl310Registers, control), arg0);
 }
+#endif
 
 /* name unknown: interrupt context without a thread context */
+#if defined(INTRMGR_SKBL)
+static int IllegalContext(void)
+#else
 int IllegalContext(void)
+#endif
 {
 	if (getCurrentThreadCB())
 		return 0;
@@ -237,6 +247,7 @@ out:
 	return result;
 }
 
+#if !defined(INTRMGR_SKBL)
 int sceKernelReleaseIntrHandler(unsigned int intrCode)
 {
 	IntrHandler *info;
@@ -271,6 +282,7 @@ int sceKernelReleaseIntrHandler(unsigned int intrCode)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
+#endif
 
 int sceKernelEnableIntr(unsigned int intrCode)
 {
@@ -287,6 +299,7 @@ int sceKernelEnableIntr(unsigned int intrCode)
 	return 0;
 }
 
+#if !defined(INTRMGR_SKBL)
 int sceKernelDisableIntr(unsigned int intrCode)
 {
 	if (intrCode - 16 >= 240) {
@@ -300,6 +313,7 @@ int sceKernelDisableIntr(unsigned int intrCode)
 	g_intrDistributor->clearEnable[intrCode >> 5] = 1U << (intrCode & 31);
 	return 0;
 }
+#endif
 
 int sceKernelSetIntrTargetCpu(unsigned int intrCode, unsigned int target)
 {
@@ -327,6 +341,7 @@ int sceKernelSetIntrTargetCpu(unsigned int intrCode, unsigned int target)
 	return 0;
 }
 
+#if !defined(INTRMGR_SKBL)
 int sceKernelGenerateSoftIntr(unsigned int intrCode, unsigned int filter, unsigned int target)
 {
 	unsigned int mask, value;
@@ -386,6 +401,7 @@ static inline int sceKernelAllocMonitorCallTable(void)
 	memset(base, 0, MONCALL_TABLE_SIZE);
 	return 0;
 }
+#endif
 
 static inline int Start(void)
 {
@@ -614,9 +630,8 @@ int sceKernelIntrMgrModuleStart(SceSize arglen, void *argp)
 	return 0;
 }
 
-#endif
-
 int module_bootstart(SceSize arglen, void *argp)
 {
 	return 0;
 }
+#endif

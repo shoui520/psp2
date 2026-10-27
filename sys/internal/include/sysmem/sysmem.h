@@ -418,7 +418,9 @@ int sceKernelPartialUnmapMemBlock(SceUID guid, uintptr_t va, SceSize size, SceUI
 int sceKernelCopyToUser(void *dst, const void *src, SceSize size);
 int sceKernelUnlockRange(void *addr, SceSize size);
 int sceGUIDReferObjectWithClassLevel(SceUID guid, SceClass *pClass, SceUInt32 level, SceObjectBase **entry);
+#if !defined(SYSMEM_SKBL)
 void *sceKernelAllocHeapMemory(SceUID uid, SceSize size) __attribute__((alloc_size(2)));
+#endif
 /* vitasdk: ksceKernelUserMapWithFlags */
 SceUID SceSysmemForDriver_7D4F8B5F(const char *name, int permission, int flags, const void *user_buf, SceSize size, void **kernel_page, SceSize *kernel_size, unsigned int *kernel_offset);
 /* vitasdk: ksceKernelStrncpyToUser */

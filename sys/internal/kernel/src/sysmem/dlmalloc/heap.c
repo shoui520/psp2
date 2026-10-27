@@ -108,7 +108,7 @@ _Static_assert(sizeof(KernelHeap) == 0x80, "KernelHeap size");
 SceUInt32 s_uncacheHeap = (SceUInt32)-1;	/* the uncached heap's UID */
 static KernelHeap *s_kernelHeap;		/* UIDManager +0x44 */
 static SceClass *s_heapClass;			/* "SceUIDKernelHeapClass" */
-#if SYSMEM_NSKBL
+#if SYSMEM_NSKBL && !defined(SYSMEM_SKBL)
 static SceUID s_toolHeap;			/* SceToolHeap, -1 without one */
 #endif
 
@@ -145,11 +145,13 @@ static int HeapObjectCreate(SceObjectBase *object)
 	return 0;
 }
 
+#if !defined(SYSMEM_SKBL)
 /* name unknown: sceKernelCreateHeap's funcUID, a new GUID for the heap */
 static SceUID HeapCreateGUID(KernelHeap *heap, const char *name)
 {
 	return sceGUIDRegister(s_heapClass, name, heap);
 }
+#endif
 
 /* name unknown: a block of the heap given back; returns its size */
 SceSize HeapFreeBlock(KernelHeap *heap, MemBlockObject *block)
@@ -517,6 +519,7 @@ int SceSysmemForKernel_42834422(const HeapHooks *hooks)
 }
 #endif
 
+#if !defined(SYSMEM_SKBL)
 SceUID sceKernelCreateHeap(const char *name, SceSize size, SceKernelHeapCreateOpt *opt)
 {
 	return CreateHeap(name, size, -1, opt, HeapCreateGUID);
@@ -534,6 +537,7 @@ int sceKernelDeleteHeap(SceUID uid)
 	} while (ret < 0);
 	return ret;
 }
+#endif
 
 #if !SYSMEM_NSKBL
 int sceKernelPrintHeapSegmentList(SceUID uid)
@@ -735,7 +739,10 @@ static __attribute__((noinline)) void *HeapAllocHeapMemoryWithOption(KernelHeap 
 }
 
 /* name kept from the records */
-static __attribute__((noinline)) void *sceKernelAllocHeapMemoryWithOptionCore(SceUID uid, SceSize size,
+#if !defined(SYSMEM_SKBL)
+static
+#endif
+__attribute__((noinline)) void *sceKernelAllocHeapMemoryWithOptionCore(SceUID uid, SceSize size,
 								       SceAllocOpt *opt)
 {
 	KernelHeap *heap;
@@ -780,6 +787,9 @@ void *sceKernelAllocHeapMemoryWithOption(SceUID uid, SceSize size, SceAllocOpt *
 }
 #endif
 
+#if defined(SYSMEM_SKBL)
+static inline
+#endif
 void *sceKernelAllocHeapMemory(SceUID uid, SceSize size)
 {
 	void *ptr = sceKernelAllocHeapMemoryWithOptionCore(uid, size, NULL);
@@ -993,7 +1003,7 @@ added:
 }
 
 /* the size from which the default heap's growth is reported */
-#ifdef SYSMEM_TZS
+#if defined(SYSMEM_TZS) || defined(SYSMEM_SKBL)
 #define HEAP_GROW_REPORT_SIZE	0x2000
 #else
 #define HEAP_GROW_REPORT_SIZE	0xff000
@@ -1343,6 +1353,7 @@ void *sceKernelAllocUncacheHeapMemory(SceSize size)
 
 #endif
 
+#if !defined(SYSMEM_SKBL)
 void *sceKernelAllocUncacheHeapMemoryWithOption(SceSize size, SceAllocOpt *opt)
 {
 	void *ptr = sceKernelAllocHeapMemoryWithOptionCore(s_uncacheHeap, size, opt);
@@ -1354,6 +1365,7 @@ void *sceKernelAllocUncacheHeapMemoryWithOption(SceSize size, SceAllocOpt *opt)
 #endif
 	return ptr;
 }
+#endif
 
 #if !SYSMEM_NSKBL
 
@@ -1397,7 +1409,7 @@ int HeaplibImplementationStartCore0(UIDManager *manager)
 		SCE_DBG_ASSERT_FAIL(2160);
 		return ret;
 	}
-	CreateHeap("SceKernelHeap", 0xff000, SCE_KERNEL_HEAP_ID, NULL, NULL);
+	CreateHeap("SceKernelHeap", HEAP_GROW_REPORT_SIZE, SCE_KERNEL_HEAP_ID, NULL, NULL);
 	heap = SceSysmemForKernel_FA6C098C(SCE_KERNEL_HEAP_ID);
 	manager->heapDefault = heap;
 	s_kernelHeap = heap;
@@ -1437,6 +1449,7 @@ static inline SceUID CreateUncacheHeap(void)
 	return uid;
 }
 
+#if !defined(SYSMEM_SKBL)
 /* SceToolHeap, only with the tool's physical partition */
 static inline void CreateToolHeap(void)
 {
@@ -1460,12 +1473,15 @@ static inline void CreateToolHeap(void)
 		s_toolHeap = -1;
 	}
 }
+#endif
 
 /* name unknown: the uncached heap and the tool's, made by core 0 */
 int HeaplibImplementationStartPhase2Core0(UIDManager *manager)
 {
 	manager->uncacheHeap = CreateUncacheHeap();
+#if !defined(SYSMEM_SKBL)
 	CreateToolHeap();
+#endif
 	return 0;
 }
 

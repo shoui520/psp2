@@ -21,7 +21,7 @@
 #include "../../sysmem/sysmem_internal.h"
 
 /* the rest of the TrustZone kernel */
-uint32_t DebugGetPrintLevel(void);
+uint32_t SceKblForKernel_C011935A(void);
 SceUID sceKernelLoadModuleBufferWithoutStart(const void *buffer, SceSize size);
 int sceKernelGetModuleBootEntry(SceUID uid, int (**entry)(SceSize args, void *argp));
 SceSize sceArlzDecode(void *dst, SceSize dstSize, const void *src, int flags);
@@ -126,7 +126,7 @@ int KblArchive(SceKernelBootParam *param)
 	param->debugPutchar = (uintptr_t)SerialDebugPutchar;
 	param->debugPrintf = (uintptr_t)SceDebugForDriver_391B74B7;
 	param->debugPutcharHandler = SceDebugForKernel_8D474850();
-	param->debugPrintLevel = DebugGetPrintLevel();
+	param->debugPrintLevel = SceKblForKernel_C011935A();
 
 	sceKernelSysrootCorelockLock(0);
 	if (sceKernelCpuId() == 0) {

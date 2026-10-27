@@ -9,7 +9,9 @@
 #pragma once
 
 /* the ForTZS imports under their os0 names, before any declaration */
+#if !defined(INTRMGR_SKBL)
 #include <sysmem/debug_tzs.h>
+#endif
 
 #include <fw.h>
 #include <scetypes.h>
@@ -35,7 +37,9 @@ extern volatile GicCpuInterface *volatile g_intrCpuInterface;
 extern SceKernelMonitorCallHandler *g_moncallTable;
 extern SceUID g_moncallTableUid;
 
+#if !defined(INTRMGR_SKBL)
 int IllegalContext(void);
+#endif
 
 /* intrmgr_entry.S */
 extern SceExcpmgrHandler monitorFiqEntry, monitorSmcEntry;

@@ -95,7 +95,7 @@ SceKernelIntrStatus SceCpuForDriver_EC53D007(volatile SceKernelRWSpinlock *lock)
 }
 #endif
 
-#ifdef SYSMEM_TZS
+#if defined(SYSMEM_TZS) || defined(SYSMEM_SKBL)
 /* the secure world masks FIQs with the IRQs, and returns both bits */
 __attribute__((noinline))
 int CpuSuspendIntrLow(void)

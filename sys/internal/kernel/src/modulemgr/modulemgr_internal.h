@@ -39,6 +39,11 @@
 #include <sysmem/sysroot_modulemgr.h>
 #include <sysmem/uid_guid.h>
 
+/* SKBL shares NSKBL's single-core kernel-only layout, with in-memory ELF loading */
+#if MODULEMGR_SKBL && !MODULEMGR_NSKBL
+#define MODULEMGR_NSKBL 1
+#endif
+
 /* the kernel heap; the debug build calls the heap API directly (NSKBL's does not) */
 #if FW_DEBUG && !MODULEMGR_NSKBL
 #define ModulemgrKernelAlloc(size)	SceSysmemForDriver_B415B5A8(0x1000b, (size), NULL, \
@@ -253,7 +258,9 @@ typedef struct ModulemgrPrivate {
 	SceClass libraryClass;
 	SceClass stubClass;
 	LibraryDB kernelDB;
+#if !MODULEMGR_SKBL
 	SceUID kblModid;		/* stopped by sceKernelFinalizeKbl */
+#endif
 } ModulemgrPrivate;
 
 /* loader state passed through loadelf.c */
@@ -293,6 +300,7 @@ typedef struct SelfParser {
 	SceSize headerSize;
 	void *ehdr;
 	void *phdr;			/* Elf32_Phdr[] */
+#if !MODULEMGR_SKBL
 	SceUInt8 type;			/* 1: ELF, 2: SELF */
 	SceUInt8 authenticated;		/* the SELF header went through the auth manager */
 	SceUInt8 padding[2];
@@ -303,6 +311,7 @@ typedef struct SelfParser {
 	SceUID fd;
 	SceUID pid;
 	SceSize fileSize;		/* NSKBL: the bytes of the file read into its buffer */
+#endif
 } SelfParser;
 
 /* bootimage_fs.c */
@@ -410,7 +419,9 @@ extern SceUInt32 g_relocForms;
 
 /* loadelf.c */
 SceUInt32 Loadelf_GetAddrBias(LoadelfContext *ctx, const void *addr);
-#if MODULEMGR_NSKBL
+#if MODULEMGR_SKBL
+SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, const void *buffer, SceSize size, SceUInt32 flags);
+#elif MODULEMGR_NSKBL
 SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth);
 #else
 SceUInt32 LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, SceUInt32 flags);
@@ -450,7 +461,11 @@ SceUID loadStartSharedModuleCommon(SceUID pid, const char *path, SceSize args, v
 /* modulecb.c */
 int ModuleObjNew(SceUID pid, SceUInt32 flags, SceModuleObject **out);
 int ModuleCBCopyInfo(LoadelfContext *ctx);
+#if MODULEMGR_SKBL
+#define ModuleCBSetStatus(cb, st)	((void)((cb)->status = (st)))
+#else
 void ModuleCBSetStatus(SceModuleCB *cb, SceUInt8 status);
+#endif
 #if MODULEMGR_NSKBL
 int ModuleCBSetPath(SceModuleCB *cb, const char *path);
 #else
@@ -529,8 +544,10 @@ int LibStubCBPrepareLink(LibStubCB *stub, LibStubNidTable *info);
 void LibStubReleaseNidTable(LibStubNidTable *info);
 
 /* librarydb.c */
+#if !MODULEMGR_SKBL
 LibraryDB *LibraryDBLock(SceUID pid, int *intr);
 void LibraryDBUnlock(LibraryDB *db, int intr);
+#endif
 LibEntCB *LibraryDBUnlinkLib(LibraryDB *db, SceNID libnid, const char *name);
 SceModuleCB **Addr2ModGetEntry(SceModuleCB **table, Addr2ModExidx **exidxBase, SceUInt32 addr,
 			       Addr2ModExidx **exidx);
@@ -578,8 +595,11 @@ SceUID BootimageOpen(const char *path);
 int sceLoadcoreIoClose(SceUID fd);
 int sceLoadcoreIoReadFrom(void *buf, SceSize size, SceOff offset);
 
-/* self_decrypter.c (NSKBL: self_decrypter_kbl.c) */
+/* self_decrypter.c (NSKBL: self_decrypter_kbl.c, SKBL: self_parser.c) */
+#if !MODULEMGR_SKBL
 int SelfParserCheckElfHeader(const void *ehdr, SceSize size);
+#endif
+int SelfParserOpenFromMem(SelfParser *reader, const void *buffer, SceSize size);
 int SelfParserOpen(SelfParser *reader, SceUID pid, SceUID fd, SelfAuthRequest *auth);
 int SelfParserClose(SelfParser *reader);
 int SelfParserGetType(SelfParser *reader);
@@ -650,8 +670,10 @@ int _sceKernelCloseModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt
 
 /* stub_linker.c */
 int apply_reftable(SceModuleCB *cb, const void *reftable, SceUInt32 value, int mode);
+#if !MODULEMGR_SKBL
 int link_variables(StubLinkerInfo *info, int mode);
 int link_functions(StubLinkerInfo *info, int mode, const ModulemgrLibraryPatch *patch);
+#endif
 int StubLinkerLinkAll(StubLinkerInfo *info, const ModulemgrLibraryPatch *patch);
 int StubLinkerUnlinkAll(StubLinkerInfo *info);
 #if !MODULEMGR_NSKBL

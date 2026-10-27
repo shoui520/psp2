@@ -338,3 +338,19 @@ resumeJump:					/* the reset vector's target */
 
 	.global	compatSramResumeEnd		/* the end of the copy */
 compatSramResumeEnd:
+
+/*
+ * The TrustZone module images follow compatSramResumeEnd in SKBL's read-only
+ * data: SceSysmem's ARZL archive, then the plain ELFs of SceExcpmgr,
+ * SceKernelIntrMgr, SceKernelBusError, SceSblSmsched and SceDriverTzs
+ * (built from their own folders under slb2:kbl/).
+ */
+	.global	tzsSysmemArchive, tzsExcpmgrImage, tzsIntrMgrImage, tzsBusErrorImage
+	.global	tzsSmschedImage, tzsDriverTzsImage, tzsImagesEnd
+tzsSysmemArchive:
+tzsExcpmgrImage:
+tzsIntrMgrImage:
+tzsBusErrorImage:
+tzsSmschedImage:
+tzsDriverTzsImage:
+tzsImagesEnd:

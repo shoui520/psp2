@@ -61,6 +61,7 @@ static inline int LoadcoreLibraryMatches(const LibEntCB *ent, const LibStubCB *s
 	       imp->version <= exp->version;
 }
 
+#if !MODULEMGR_SKBL
 int LoadcoreUnlinkClient(LibStubCB *stub)
 {
 	StubLinkerInfo info;
@@ -80,7 +81,9 @@ int LoadcoreUnlinkClient(LibStubCB *stub)
 	LoadcoreRestoreProcess(ModuleCBGetPid(stub->cb), &pc);
 	return ret;
 }
+#endif
 
+#if !MODULEMGR_SKBL
 /* name unknown: the NONAME library entries that describe the module itself */
 int LoadcoreSetModuleEntry(SceNID nid, void *entry, int type, void *arg)
 {
@@ -150,6 +153,7 @@ int LoadcoreSetModuleEntry(SceNID nid, void *entry, int type, void *arg)
 		return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 	return 0;
 }
+#endif
 
 #if MODULEMGR_NSKBL
 static	/* inlined into LoadcoreLinkClient, its one caller in NSKBL */
@@ -221,6 +225,52 @@ int LoadcoreLinkClient(LibEntCB *ent, LibStubCB *stub, const ModulemgrLibraryPat
 	LoadcoreRestoreProcess(ModuleCBGetPid(stub->cb), &pc);
 	return ret;
 }
+
+#if MODULEMGR_SKBL
+int LoadcoreSetModuleEntry(SceNID nid, void *entry, int type, void *arg)
+{
+	SceModuleCB *cb = arg;
+
+	if (type == 'f') {
+		switch (nid) {
+		case NID_MODULE_START:
+			cb->moduleStart = entry;
+			break;
+		case NID_MODULE_STOP:
+			cb->moduleStop = entry;
+			break;
+		case NID_MODULE_EXIT:
+			cb->moduleExit = entry;
+			break;
+		case NID_MODULE_BOOTSTART:
+			cb->moduleBootstart = entry;
+			break;
+		}
+		return 0;
+	}
+
+	switch (nid) {
+	case NID_MODULE_SDK_VERSION:
+		if (entry == NULL)
+			return 0;
+		if (!ModuleCBIsInReadOnly(cb, (SceUInt32)entry, 4))
+			return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
+		cb->sdkVersion = *(SceUInt32 *)entry;
+		return 0;
+	case NID_MODULE_PROBES_INFO:
+		cb->probesInfo = entry;
+		break;
+	case NID_MODULE_PROBES:
+		cb->probes = entry;
+		break;
+	default:
+		return 0;
+	}
+	if (entry != NULL && !ModuleCBIsInReadOnly(cb, (SceUInt32)entry, 1))
+		return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
+	return 0;
+}
+#endif
 
 #if !MODULEMGR_NSKBL
 /*
@@ -297,7 +347,10 @@ int LoadcoreRegisterLibrary(SceModuleCB *cb, int index, SceUInt32 flags)
 	LibEntCB *ent = &cb->libEntCB[index];
 	SceUID pid = ModuleCBGetPid(cb);
 	LibStubCB *stub, *next;
-	int linked, ret, res;
+	int linked, ret;
+#if !MODULEMGR_SKBL
+	int res;
+#endif
 
 	if (ent->guid != 0)
 		return SCE_KERNEL_ERROR_MODULEMGR_OLD_LIB;
@@ -327,6 +380,7 @@ int LoadcoreRegisterLibrary(SceModuleCB *cb, int index, SceUInt32 flags)
 			continue;
 		}
 		LibraryDBRegisterLostClient(stub);
+#if !MODULEMGR_SKBL
 		/* undo the clients linked so far */
 		while (linked != 0) {
 			stub = ent->clients;
@@ -347,11 +401,13 @@ int LoadcoreRegisterLibrary(SceModuleCB *cb, int index, SceUInt32 flags)
 			LibraryDBRegisterLostClient(stub);
 			linked--;
 		}
+#endif
 		return ret;
 	}
 	return 0;
 }
 
+#if !MODULEMGR_SKBL
 SceUInt32 LoadcoreReleaseLibrary(SceModuleCB *cb, int index, SceUInt32 flags)
 {
 	LibStubCB *stub, *next;
@@ -553,6 +609,7 @@ static inline __attribute__((always_inline)) void LoadcoreUndefClient(LibStubCB 
 	LibStubReleaseNidTable(&info.stub);
 	LoadcoreRestoreProcess(ModuleCBGetPid(stub->cb), &pc);
 }
+#endif
 
 static inline __attribute__((always_inline)) const ModulemgrLibraryPatch *
 LoadcoreFindPatch(const ModulemgrTitlePatch *patch, const char *libname)
@@ -594,10 +651,14 @@ int LoadcoreLinkLibraryEntries(SceModuleCB *cb, SceUInt32 flags, const Modulemgr
 			if ((imp->attr & IMPORT_ATTR_WEAK) == 0)
 				SCE_PRINTF_WITH_INFO(0, 371, "# Library not found: [%s, ver=%d]\n",
 						     imp->libname, imp->version);
+#if MODULEMGR_SKBL
+			goto fail;
+#else
 			if (ModuleCBGetPid(cb) != SCE_KERNEL_PROCESS_ID &&
 			    strncmp(stub->imports->libname, "SceDTrace", 0x100) == 0)
 				goto lost;
 			goto missing;
+#endif
 		}
 #if !MODULEMGR_NSKBL
 		if ((flags & LINK_FLAG_NO_UNDEF) != 0) {
@@ -612,6 +673,9 @@ int LoadcoreLinkLibraryEntries(SceModuleCB *cb, SceUInt32 flags, const Modulemgr
 			continue;
 
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 405, "link client failed (0x%08x)\n", ret);
+#if MODULEMGR_SKBL
+		goto fail;
+#else
 		imp = stub->imports;
 		if (ModuleCBGetPid(cb) != SCE_KERNEL_PROCESS_ID) {
 			if (strncmp(imp->libname, "SceDTrace", 0x100) == 0)
@@ -648,12 +712,17 @@ missing:
 		goto fail;
 lost:
 		LibraryDBRegisterLostClient(stub);
+#endif
 	}
 	return 0;
 
 fail:
+#if MODULEMGR_SKBL
+	SCE_PANIC_FUNC(806, "LoadcoreLinkLibraries");
+#else
 	LoadcoreUnlinkLibraries(cb, 0);
 	return ret;
+#endif
 }
 
 #if !MODULEMGR_NSKBL
@@ -702,6 +771,7 @@ int LoadcoreRegisterModuleLibraries(SceModuleCB *cb)
 	return 0;
 }
 
+#if !MODULEMGR_SKBL
 int LoadcoreUnregisterModuleLibraries(SceModuleCB *cb, SceUInt32 flags)
 {
 	int i, ret;
@@ -713,12 +783,16 @@ int LoadcoreUnregisterModuleLibraries(SceModuleCB *cb, SceUInt32 flags)
 	}
 	return 0;
 }
+#endif
 
 #if !MODULEMGR_NSKBL
 static inline __attribute__((always_inline)) int linkLostClientLibrary(SceUID pid, LibEntCB *ent)
 {
 	LibStubCB *stub, *next;
-	int linked, ret, res;
+	int linked, ret;
+#if !MODULEMGR_SKBL
+	int res;
+#endif
 
 	linked = 0;
 	for (stub = LibraryDBGetLostClientHead(pid); stub != NULL; stub = next) {

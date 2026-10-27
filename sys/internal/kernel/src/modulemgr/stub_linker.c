@@ -380,6 +380,9 @@ static inline SceUInt32 StubLinkerFindNid(const SceUInt16 *hash, SceUInt32 bits,
 	return i;
 }
 
+#if MODULEMGR_SKBL
+static
+#endif
 int link_variables(StubLinkerInfo *info, int mode)
 {
 	SceUInt32 n = info->stub.nvar;
@@ -425,6 +428,9 @@ int link_variables(StubLinkerInfo *info, int mode)
 	return 0;
 }
 
+#if MODULEMGR_SKBL
+static
+#endif
 int link_functions(StubLinkerInfo *info, int mode, const ModulemgrLibraryPatch *patch)
 {
 	LibStubCB *stub = info->stub.libStubCB;
@@ -571,12 +577,18 @@ int StubLinkerLinkAll(StubLinkerInfo *info, const ModulemgrLibraryPatch *patch)
 	ret = link_functions(info, STUBLINKER_LINK, patch);
 	if (ret >= 0) {
 		ret = link_variables(info, STUBLINKER_LINK);
+#if MODULEMGR_SKBL
+		if (ret < 0)
+			SCE_PANIC(1022);
+#else
 		if (ret < 0 && link_functions(info, STUBLINKER_UNLINK, NULL) < 0)
 			SCE_PANIC(1019);
+#endif
 	}
 	return ret;
 }
 
+#if !MODULEMGR_SKBL
 /* name unknown */
 int StubLinkerUnlinkAll(StubLinkerInfo *info)
 {
@@ -587,6 +599,7 @@ int StubLinkerUnlinkAll(StubLinkerInfo *info)
 		ret = link_variables(info, STUBLINKER_UNLINK);
 	return ret;
 }
+#endif
 
 #if !MODULEMGR_NSKBL
 /* Sony's name (1.80 records): undefine every function stub of an import */

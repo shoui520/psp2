@@ -236,6 +236,9 @@ int L2PageTableStart(struct SceKernelBootParam *param, UIDManager *manager)
 		l2pt->tablePa = PhyPageGetAddress(param->pPageL2PageTable000);
 		l2pt->flags |= L2PT_FLAG_KEPT;
 		param->pL2PageTableObject000 = l2pt;
+#if defined(SYSMEM_SKBL)
+		param->pL2PageTableObjectPhypage = NULL;
+#else
 		ret = AllocBootL2PageTableObject(&l2pt);
 		if (ret < 0)
 			return ret;
@@ -244,6 +247,7 @@ int L2PageTableStart(struct SceKernelBootParam *param, UIDManager *manager)
 		l2pt->tablePa = PhyPageGetAddress(param->pPageL2PageTable000) + 0x400;
 		l2pt->flags |= L2PT_FLAG_KEPT;
 		param->pL2PageTableObjectPhypage = l2pt;
+#endif
 	}
 	sceKernelSysrootCorelockUnlock();
 	return 0;

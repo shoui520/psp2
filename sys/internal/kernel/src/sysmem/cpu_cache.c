@@ -15,7 +15,7 @@
 #define L1_LINES_AFTER_FIRST(address, size) \
 	((((address) + (size) - 1) >> L1_CACHE_LINE_SHIFT) - ((address) >> L1_CACHE_LINE_SHIFT))
 
-#if !SYSMEM_NSKBL
+#if !SYSMEM_NSKBL || defined(SYSMEM_SKBL)
 int SceCpuForKernel_15A48AB4(void)
 {
 	writeIciallu(0);
@@ -104,7 +104,7 @@ void SceCpuForKernel_4F442396(const void *start, uint32_t size)
 	dsb();
 }
 
-#if !SYSMEM_NSKBL
+#if !SYSMEM_NSKBL || defined(SYSMEM_SKBL)
 void SceCpuForKernel_F9B0B171(void)
 {
 	uint32_t setWay = 0;

@@ -18,9 +18,12 @@ Addr2ModTable g_kernelAddr2Mod;
 
 #if MODULEMGR_NSKBL
 /* name unknown: NSKBL has the kernel's database only, set by sceKernelModulemgrStart */
-LibraryDB *g_kernelDB;
+LibraryDB *g_kernelDB = NULL;
 
 /* name unknown: NSKBL's has no lock */
+#if MODULEMGR_SKBL
+static
+#endif
 LibraryDB *LibraryDBLock(SceUID pid, int *intr)
 {
 	return g_kernelDB;
@@ -191,6 +194,9 @@ static LIBDB_DEBUG_NOINLINE SceUID GetLibUIDByLibEntCB(SceUID pid, const SceUID 
 #endif
 
 /* name unknown */
+#if MODULEMGR_SKBL
+static
+#endif
 void LibraryDBUnlock(LibraryDB *db, int intr)
 {
 #if !MODULEMGR_NSKBL
@@ -389,6 +395,7 @@ unlock:
 }
 #endif
 
+#if !MODULEMGR_SKBL
 void LibraryDBReleaseModule(SceModuleCB *cb)
 {
 	int intr;
@@ -449,6 +456,7 @@ notfound:
 unlock:
 	LibraryDBUnlock(db, intr);
 }
+#endif
 
 void LibraryDBRegisterLostClient(LibStubCB *stub)
 {
@@ -606,6 +614,7 @@ unlock:
 	return uid;
 }
 
+#if !MODULEMGR_SKBL
 /* name unknown: remove a library version; the next older one becomes current */
 int LibraryDBReleaseLib(LibraryDB *db, LibEntCB *ent)
 {
@@ -635,6 +644,7 @@ int LibraryDBReleaseLib(LibraryDB *db, LibEntCB *ent)
 	db->libCount--;
 	return 0;
 }
+#endif
 
 static inline LibEntCB *findLib(SceUID pid, SceNID libnid, const char *name)
 {

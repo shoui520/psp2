@@ -59,13 +59,15 @@ int InitializeDebugCorelock(void)
 	return 0;
 }
 
-#if !SYSMEM_NSKBL
+#if !SYSMEM_NSKBL || defined(SYSMEM_SKBL)
 /* name unknown: a boot step with nothing left to do */
 int InitializeDebugNop(void)
 {
 	return 0;
 }
+#endif
 
+#if !SYSMEM_NSKBL
 int SceDebugForKernel_0EDA5174(uint32_t value)
 {
 	(void)value;

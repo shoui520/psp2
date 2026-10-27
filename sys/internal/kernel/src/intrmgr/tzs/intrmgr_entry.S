@@ -237,3 +237,25 @@ monitorSmcEntry:
 	rfeia	sp!
 	.balign	64
 	.size	monitorSmcEntry, . - monitorSmcEntry
+
+#if defined(INTRMGR_SKBL)
+	.bss
+	.balign	128
+	.global	g_intrState
+	.type	g_intrState, %object
+g_intrState:
+	.space	0x4280
+	.size	g_intrState, . - g_intrState
+
+	.global	g_monitorStack
+	.type	g_monitorStack, %object
+g_monitorStack:
+	.space	4 * 0x1000
+	.size	g_monitorStack, . - g_monitorStack
+
+	.global	g_smcHandlerTable
+	.type	g_smcHandlerTable, %object
+g_smcHandlerTable:
+	.space	0x100 * 4
+	.size	g_smcHandlerTable, . - g_smcHandlerTable
+#endif

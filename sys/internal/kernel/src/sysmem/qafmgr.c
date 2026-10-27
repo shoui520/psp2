@@ -18,8 +18,8 @@ int SceQafMgrForDriver_382C71E8(void)
 	return QafMgrFlag(0xd, 0);
 }
 
-/* the boot loader (SYSMEM_NSKBL) keeps only 382C71E8 and 082A4FC2 */
-#if !SYSMEM_NSKBL
+/* the boot loader (SYSMEM_NSKBL) keeps only 382C71E8 and 082A4FC2; SKBL keeps only 382C71E8 */
+#if !SYSMEM_NSKBL && !defined(SYSMEM_SKBL)
 int SceQafMgrForDriver_CAD47130(void)
 {
 	return QafMgrFlag(0xd, 1);
@@ -57,12 +57,14 @@ int SceQafMgrForDriver_0E588747(void)
 
 #endif
 
+#if !defined(SYSMEM_SKBL)
 int SceQafMgrForDriver_082A4FC2(void)
 {
 	return QafMgrFlag(0xe, 0);
 }
+#endif
 
-#if !SYSMEM_NSKBL
+#if !SYSMEM_NSKBL && !defined(SYSMEM_SKBL)
 int SceQafMgrForDriver_B9770A13(void)
 {
 	return QafMgrFlag(0xd, 1);

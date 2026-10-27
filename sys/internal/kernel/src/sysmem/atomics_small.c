@@ -14,11 +14,13 @@ void sceKernelAtomicSet16(int16_t *address, int16_t value)
 }
 #endif
 
+#if !defined(SYSMEM_SKBL)
 int8_t sceKernelAtomicCompareAndSet8(int8_t *address, int8_t expected,
 		int8_t replacement)
 {
 	return AtomicCompareAndSwap8((uint8_t *)address, expected, replacement);
 }
+#endif
 
 #if !SYSMEM_NSKBL
 int16_t sceKernelAtomicCompareAndSet16(int16_t *address, int16_t expected,

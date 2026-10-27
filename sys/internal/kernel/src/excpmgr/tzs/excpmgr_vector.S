@@ -20,6 +20,11 @@
 	.arm
 #include "../excpmgr_asm.h"
 
+#if defined(EXCPMGR_SKBL)
+#define monitorVectors		excpMonitorVectors
+#define monitorVectorsEnd	excpMonitorVectorsEnd
+#endif
+
 /*
  * Exception vector page template, copied to the vector page by module_start:
  * four per-core banks of 0x40 bytes (VBAR = base + core * 0x40), eight vectors
@@ -148,3 +153,29 @@ monitorVectorsEnd:
 	mcr	p15, 0, r1, c13, c0, 4		@ TPIDRPRW
 	b	.
 	END_FUNCTION excpPanicLeave
+
+#if defined(EXCPMGR_SKBL)
+	.bss
+	.balign	4
+	.global	g_excpData, g_irqStack, g_svcStack, g_abortStack, g_undefStack
+	.type	g_excpData, %object
+g_excpData:
+	.space	0x4c
+	.size	g_excpData, . - g_excpData
+	.type	g_irqStack, %object
+g_irqStack:
+	.space	0x10
+	.size	g_irqStack, . - g_irqStack
+	.type	g_svcStack, %object
+g_svcStack:
+	.space	0x10
+	.size	g_svcStack, . - g_svcStack
+	.type	g_abortStack, %object
+g_abortStack:
+	.space	0x10
+	.size	g_abortStack, . - g_abortStack
+	.type	g_undefStack, %object
+g_undefStack:
+	.space	0x10
+	.size	g_undefStack, . - g_undefStack
+#endif

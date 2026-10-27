@@ -1306,6 +1306,9 @@ int PhyMemPartCreatePhyMemPartSegmentByPbaseRaw(PhyMemPart *part, PhyMemSegment 
 #endif
 
 /* name unknown: a partition over its first segment, all free */
+#if defined(SYSMEM_SKBL)
+static inline
+#endif
 int PhyMemPartInitWithSegmentRaw(PhyMemPart *part, PhyPageTableMgr *mgr, uintptr_t pbase,
 				 SceSize psize)
 {
@@ -2441,6 +2444,26 @@ int PhyMemPartInitCdram(void)
 }
 #else
 /* name unknown: a page table over [pbase, pbase + psize), its links cleared */
+#if defined(SYSMEM_SKBL)
+static inline void PhyPageTableInit(PhyPageTable *table, uintptr_t pbase, SceSize psize,
+				    uintptr_t pbaseMin, SceUInt32 *entries)
+{
+	SceUInt32 *entry = entries, count = 0;
+	uintptr_t pa;
+
+	table->pbase = pbase;
+	table->pbaseEnd = psize;
+	table->pbaseMin = pbaseMin;
+	table->pindexMax = (pbase + psize) >> PHYMEM_PAGE_SHIFT;
+	table->basePindex = pbase >> PHYMEM_PAGE_SHIFT;
+	table->pindexMin = pbaseMin >> PHYMEM_PAGE_SHIFT;
+	table->entries = entries;
+	for (pa = pbase; pa < pbase + psize; pa += 0x1000, count++)
+		*entry++ &= ~PHYPAGE_LINK_MASK;
+	table->entriesSize = count * sizeof(SceUInt32);
+	table->entryCount = count;
+}
+#else
 static inline void PhyPageTableInit(PhyPageTable *table, uintptr_t pbase, uintptr_t pbaseMin,
 				    SceUInt32 *entries)
 {
@@ -2458,6 +2481,7 @@ static inline void PhyPageTableInit(PhyPageTable *table, uintptr_t pbase, uintpt
 	table->entriesSize = 0x20000 * sizeof(SceUInt32);
 	table->entryCount = 0x20000;
 }
+#endif
 
 /* name unknown: a partition from the sysroot, empty */
 static inline PhyMemPart *PhyMemPartBootCreate(PhyMemPart **out, const char *name,
@@ -2478,11 +2502,14 @@ static inline PhyMemPart *PhyMemPartBootCreate(PhyMemPart **out, const char *nam
 static void PhyMemStartCore0(SceKernelBootParam *pBoot, UIDManager *manager)
 {
 	PhyPageTableMgr *mgr;
-	PhyPageTable *table, *high;
+	PhyPageTable *table;
 	PhyMemPart *part;
+#if !defined(SYSMEM_SKBL)
+	PhyPageTable *high;
 	SceUInt32 model;
 	uintptr_t pa;
 	SceSize size, allocated;
+#endif
 	PhyPage *page;
 
 	mgr = sceKernelSysrootAlloc(sizeof(PhyPageTableMgr));
@@ -2490,6 +2517,11 @@ static void PhyMemStartCore0(SceKernelBootParam *pBoot, UIDManager *manager)
 	s_phyPageTableMgr = mgr;
 	table = sceKernelSysrootAlloc(sizeof(PhyPageTable));
 	mgr->tables[0] = table;
+#if defined(SYSMEM_SKBL)
+	PhyPageTableInit(table, manager->memory[0].pbase, manager->memory[0].psize,
+			 manager->memory[0].pbase, (SceUInt32 *)pBoot->phypage.vbase);
+	table->pNext = NULL;
+#else
 	PhyPageTableInit(table, 0x40000000, manager->memory[0].pbase,
 			 (SceUInt32 *)pBoot->phypage.vbase);
 	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
@@ -2502,6 +2534,7 @@ static void PhyMemStartCore0(SceKernelBootParam *pBoot, UIDManager *manager)
 		table->pNext = NULL;
 		mgr->tables[1] = NULL;
 	}
+#endif
 
 	part = PhyMemPartBootCreate(&s_phyPartKernel, "ScePhyMemPartKD", 0x1001a);
 	manager->pPhyMemPartKD = part;
@@ -2516,6 +2549,13 @@ static void PhyMemStartCore0(SceKernelBootParam *pBoot, UIDManager *manager)
 		s_phyPartTool = NULL;
 	}
 
+#if defined(SYSMEM_SKBL)
+	PhyMemPartInitWithSegmentRaw(s_phyPartKernel, mgr, manager->memory[0].pbase,
+				     manager->memory[0].psize);
+	/* the boot loader's own first 1 MiB */
+	if (PhyMemPartAllocPhyPage(s_phyPartKernel, 0x100000, 0x10, &page) < 0)
+		SCE_PANIC(5706);
+#else
 	/* the kernel's partition: 36 MiB of LPDDR2 after the boot loader's, 32 on the 0x201xx models */
 	model = SceSysrootForDriver_4D98B15B();
 	switch (model) {
@@ -2555,6 +2595,7 @@ static void PhyMemStartCore0(SceKernelBootParam *pBoot, UIDManager *manager)
 		PhyMemLowMainMarkUsed(pa, 0x8000000);
 		PhyMemPartInitWithSegmentRaw(s_phyPartTool, mgr, pa, 0x8000000);
 	}
+#endif
 
 	/* the pages under the boot loaders' mappings */
 	if (PhyMemPartAllocPhyPage(s_phyPartKernel, pBoot->reset.psize, 0x10, &pBoot->pPageReset) < 0)
@@ -2578,6 +2619,7 @@ static void PhyMemStartCore0(SceKernelBootParam *pBoot, UIDManager *manager)
 		SCE_PANIC(5807);
 	if (pBoot->phypage.pbase != PhyPageGetAddress(pBoot->pPagePhypage))
 		SCE_DBG_ASSERT_FAIL(5813);
+#if !defined(SYSMEM_SKBL)
 	if (sceKernelCheckDipsw(SCE_DIPSW_ENABLE_TOOL_PHYMEMPART)) {
 		if (PhyMemPartAllocPhyPage(s_phyPartTool, pBoot->phypageHigh.psize, 0x10,
 					   &pBoot->pPagePhypageHigh) < 0)
@@ -2592,6 +2634,7 @@ static void PhyMemStartCore0(SceKernelBootParam *pBoot, UIDManager *manager)
 	} else {
 		pBoot->pPagePhypageHigh = NULL;
 	}
+#endif
 }
 
 int PhyMemStart(SceKernelBootParam *pBoot, UIDManager *manager)

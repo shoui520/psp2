@@ -7,7 +7,9 @@
 #define SEG_INDEX(x)	((x) >> 30)
 #define SEG_OFFSET(x)	((x) & 0x3fffffff)
 
+#if !MODULEMGR_SKBL
 void (*g_statusCallback)(SceModuleCB *cb);
+#endif
 
 int ModuleObjNew(SceUID pid, SceUInt32 flags, SceModuleObject **out)
 {
@@ -206,6 +208,7 @@ int SceModulemgrForKernel_ACBC97C9(void (*callback)(SceModuleCB *cb))
 }
 #endif
 
+#if !MODULEMGR_SKBL
 /* name unknown */
 void ModuleCBSetStatus(SceModuleCB *cb, SceUInt8 status)
 {
@@ -256,6 +259,7 @@ int ModuleCBSetPath(SceModuleCB *cb, const char *path, SceUInt32 flags)
 	return 0;
 }
 #endif
+#endif
 
 void ModuleCBDumpLoadAddress(SceModuleCB *cb)
 {
@@ -273,7 +277,10 @@ void ModuleCBDumpLoadAddress(SceModuleCB *cb)
 
 void ModuleCBShowStartMessage(SceModuleCB *cb, int noResident, SceUInt32 usec)
 {
-#if !MODULEMGR_NSKBL
+#if MODULEMGR_SKBL
+	if (!SceQafMgrForDriver_382C71E8())
+		return;
+#elif !MODULEMGR_NSKBL
 	if (!SceSblACMgrForKernel_BBA13D9C() && cb->pid != SCE_KERNEL_PROCESS_ID)
 		return;
 #endif

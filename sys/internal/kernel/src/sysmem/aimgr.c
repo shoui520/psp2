@@ -67,6 +67,7 @@ int AimgrInit(void)
 	return 0;
 }
 
+#if !defined(SYSMEM_SKBL)
 int SceSblAIMgrForDriver_3B638885(void)
 {
 	return AimgrProductCode() == PRODUCT_CODE_TEST;
@@ -175,4 +176,5 @@ int SceSblAIMgrForDriver_47D9CF13(SceUInt32 *smi)
 	*smi = kbl->factory_fw_version;
 	return 0;
 }
+#endif
 #endif
