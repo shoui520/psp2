@@ -853,13 +853,11 @@ int sceKernelMMUUnmapSmallPagesWithFlags(uint32_t *l2, uint32_t asid, uintptr_t 
 	return 0;
 }
 
-#if !SYSMEM_NSKBL
 /* name unknown */
 int MMUVAtoPAWithFlags(uint32_t mode, uint32_t flags, uintptr_t va, uintptr_t *pa)
 {
 	return MMUVAtoPACore(mode, flags, va, pa, NULL);
 }
-#endif
 
 int SceCpuForKernel_1BD23326(uint32_t mode, uintptr_t va, uintptr_t *pa)
 {

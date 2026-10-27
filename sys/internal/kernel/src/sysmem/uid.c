@@ -2610,6 +2610,7 @@ SceClass *sceGUIDtoClass(SceUID uid)
 		cls = NULL;
 	return cls;
 }
+#endif
 
 const char *SceSysmemForDriver_E655852F(SceUID guid)
 {
@@ -2620,6 +2621,7 @@ const char *SceSysmemForDriver_E655852F(SceUID guid)
 	return name;
 }
 
+#if !SYSMEM_NSKBL
 /* sceGUIDGetVisibilityLevel */
 int SceSysmemForKernel_4E923101(SceUID guid)
 {
@@ -2646,6 +2648,7 @@ int SceSysmemForKernel_E8CC2166(SceUID guid, SceUInt32 level)
 	UID_WRITE_UNLOCK(heap, state);
 	return ret;
 }
+#endif
 
 int sceGUIDGetName(SceUID guid, const char **name)
 {
@@ -2655,6 +2658,8 @@ int sceGUIDGetName(SceUID guid, const char **name)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	return GUIDGetName(guid, name);
 }
+
+#if !SYSMEM_NSKBL
 
 SceUID sceGUIDGetPID(SceUID guid)
 {

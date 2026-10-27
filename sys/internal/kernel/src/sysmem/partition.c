@@ -2523,7 +2523,6 @@ int PartitionMapPages(Partition *partition, SceUInt32 code, uintptr_t va, SceSiz
 	return ret;
 }
 
-#if !SYSMEM_NSKBL
 int PartitionRemapPages(Partition *partition, MemBlockObject *block, SceUInt32 type,
 			uintptr_t va, SceSize size, uintptr_t pa, SceUInt32 flags)
 {
@@ -2537,7 +2536,6 @@ int PartitionRemapPages(Partition *partition, MemBlockObject *block, SceUInt32 t
 	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->mapLock, intr);
 	return ret;
 }
-#endif
 
 /* [va, va + size) in one MiB unmapped (mode 1: kept reserved) */
 int PartitionUnmapL2PageTable(Partition *partition, uintptr_t va, SceSize size, SceUInt32 mode,
