@@ -456,10 +456,12 @@ int ModuleCBIsInReadOnly(SceModuleCB *cb, SceUInt32 addr, SceSize size);
 int ModuleCBGetSegmentOffset(SceModuleCB *cb, SceUInt32 addr, int *seg, SceUInt32 *offset);
 int ModulemgrCopyIn(SceUID pid, void *dst, const void *src, SceSize len);
 #if MODULEMGR_NSKBL
-/* NSKBL loads into the kernel only */
+/* NSKBL loads into the kernel only: every module's process is the kernel */
+#define ModuleCBGetPid(cb)		((void)(cb), SCE_KERNEL_PROCESS_ID)
 #define ModulemgrAlloc(pid, size)	((void)(pid), ModulemgrKernelAlloc(size))
 #define ModulemgrFree(pid, ptr)		((void)(pid), ModulemgrKernelFree(ptr))
 #else
+#define ModuleCBGetPid(cb)		((cb)->pid)
 void *ModulemgrAlloc(SceUID pid, SceSize size);
 void ModulemgrFree(SceUID pid, void *ptr);
 #endif
@@ -590,8 +592,10 @@ typedef struct StubLinkerInfo {
 } StubLinkerInfo;
 
 int LoadcoreUnlinkClient(LibStubCB *stub);
+#if !MODULEMGR_NSKBL
 int LoadcoreRegisterSyscallTableEntries(LibEntCB *ent);
 void registerClient(LibEntCB *ent, LibStubCB *stub);
+#endif
 int LoadcoreLinkClient(LibEntCB *ent, LibStubCB *stub, const ModulemgrLibraryPatch *patch);
 int LibraryClassCreate(SceLibraryObject *obj);
 int LibraryClassDestroy(SceLibraryObject *obj);
@@ -603,7 +607,9 @@ int LoadcoreIsLibraryImported(SceUID pid, const char *name);
 int LoadcoreExportModuleEntries(SceModuleCB *cb);
 int LoadcoreRegisterModuleLibraries(SceModuleCB *cb);
 int LoadcoreUnregisterModuleLibraries(SceModuleCB *cb, SceUInt32 flags);
+#if !MODULEMGR_NSKBL
 int sceKernelLinkWeakLibraryByLibname(SceUID pid, const char *libname);
+#endif
 
 /* syscall.c */
 
