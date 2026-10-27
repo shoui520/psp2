@@ -75,6 +75,11 @@ int sceSblAuthMgrClearDmac5Key(int slot, int value);
 int sceSblAuthMgrDecBindData(void *input, SceSize inputSize, void *output, SceSize outputSize,
 			     int flags);
 int sceSblAuthMgrVerifySpsfo(struct SceSblSpfsoCtx *ctx);
+#if AUTHMGR_NSKBL
+/* NSKBL's: its boot loader starts and stops the module itself */
+int sceSblAuthMgrStart(void);
+int sceSblAuthMgrStopSm(void);
+#endif
 /* vitasdk: ksceSblAuthMgrCompareSwVersion */
 int SceSblAuthMgrForKernel_ABAB8466(SceUInt32 version);
 int SceSblAuthMgrForKernel_2A83A012(void);

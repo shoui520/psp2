@@ -1,8 +1,8 @@
 # NSKBL, the non-secure kernel boot loader: segment 3 of kernel_boot_loader.self
 # (ARZL-compressed there), a flat ARM image that runs at 0x51000000.
-# Sony built it from os0 sources: its SceSysmem, SceKernelIntrMgr, SceSblSmschedProxy, SceSdif and
+# Sony built it from os0 sources: its SceSysmem, SceKernelIntrMgr, SceSblSmschedProxy, SceSblAuthMgr, SceSdif and
 # SceLowio parts are those modules' own files compiled with SYSMEM_NSKBL, INTRMGR_NSKBL,
-# SMSC_PROXY_NSKBL, SDIF_NSKBL and LOWIO_NSKBL, which
+# SMSC_PROXY_NSKBL, AUTHMGR_NSKBL, SDIF_NSKBL and LOWIO_NSKBL, which
 # leave out what the boot loader does not have (the inlining in Sony's image shows its
 # translation units held only those functions); the sources are listed in NSKBL's link
 # order. The reset vector and exception entries are the original's; boot.c is SKBL's
@@ -88,6 +88,7 @@ psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	${smsc_proxy_source}/smsc_proxy.c
 	${smsc_proxy_source}/tzs_bridge.c
 	${smsc_proxy_source}/smc.S
+	../../authmgr/authmgr.c
 	${sysmem_source}/copy_forward.S
 	${sysmem_source}/fill_core.S
 	${sdif_source}/sdif.c
@@ -115,6 +116,8 @@ set_source_files_properties(${sysmem_source}/atomics_small.c ${sysmem_source}/at
 	COMPILE_OPTIONS "-fdelete-null-pointer-checks;-fuse-caller-save;-marm")
 set_source_files_properties(${smsc_proxy_source}/smsc_proxy.c PROPERTIES
 	COMPILE_DEFINITIONS SMSC_PROXY_NSKBL)
+set_source_files_properties(../../authmgr/authmgr.c PROPERTIES
+	COMPILE_DEFINITIONS AUTHMGR_NSKBL)
 set_source_files_properties(${sdif_source}/sdif.c ${sdif_source}/cmd_queue.c
 	${sdif_source}/mmc.c ${sdif_source}/card_cmd.c ${sdif_source}/sd.c
 	${sdif_source}/adma.c PROPERTIES COMPILE_DEFINITIONS SDIF_NSKBL)
