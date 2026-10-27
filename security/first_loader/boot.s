@@ -70,29 +70,26 @@ copy:
 /* Program entry: establish the C runtime state and clear its BSS. */
 	.section .text.start, "ax"
 	.global	firstLoaderEntry
+	jmp	firstLoaderEntry
 firstLoaderEntry:
-	movh	$1, %hi(__bss_start)
-	add3	$1, $1, %lo(__bss_start)
-	movh	$2, %hi(__bss_end)
-	add3	$2, $2, %lo(__bss_end)
-	sub	$2, $1
-	srl	$2, 2
-	mov	$0, 0
-	beqi	$2, 0, 2f
+	movu	$2, __bss_start
+	movu	$3, __bss_end
+	mov	$1, 0
+	sub	$3, $2
+	srl	$3, 3
+	add	$3, -1
+	/* The linker keeps BSS nonempty and eight-byte aligned. */
+	repeat	$3, 1f
+	sw	$1, ($2)
+	sw	$1, 4($2)
 1:
-	sw	$0, ($1)
-	add	$1, 4
-	add	$2, -1
-	bnez	$2, 1b
-2:
+	add	$2, 8
 	movu	$0, 0x5fff0
 	mov	$sp, $0
-	movh	$0, %hi(__sdabase)
-	add3	$0, $0, %lo(__sdabase)
-	mov	$gp, $0
-	movh	$0, 0x6
-	add3	$0, $0, -0x1860
-	mov	$tp, $0
+	movh	$gp, %hi(__sdabase)
+	add3	$gp, $gp, %lo(__sdabase)
+	movh	$tp, 0x6
+	add3	$tp, $tp, -0x1860
 	mov	$0, 0
 	stc	$0, $hi
 	stc	$0, $lo
@@ -136,6 +133,7 @@ firstLoaderEntry:
 /* This 32-byte block is copied to 0x5ffe0 immediately before the handoff. */
 	.section .text.handoff, "ax"
 	.global	secondLoaderTrampoline
+	.space	4, 0
 secondLoaderTrampoline:
 	repeat	$1, 5f
 	nop
