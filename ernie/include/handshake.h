@@ -9,6 +9,8 @@
 #define HANDSHAKE_UNLOCKED	0xa5a5
 #define HANDSHAKE_LOCKED	0x5a5a
 
+extern unsigned char handshakeKey[16];
+
 extern int handshakeInit(unsigned char keepKey);
 extern unsigned char handshakeSetMode(unsigned char state, unsigned char mode);
 extern unsigned char handshakeCommand(unsigned char *data);

@@ -175,6 +175,19 @@ SEG	@@FSLCNS
 SEG	@@RLINIT	cstart.asm
 SEG	@@RLINIT
 # the code, to 0x353ff (the updater's from 0x35400)
+SEG	@@CODEL		IF ERNIE_FW!=0x01000306
+SEG	@@CODEL		main.c tau.c standby.c task1.c task2.c version.c rtc.c task3.c input.c aes.c authkeys.c
+SEG	@@CODEL		host.c request.c csi.c sleepfactor.c spidev.c command.c uart.c clockout.c csi10.c dma.c
+SEG	@@CODEL		touch.c inputreq.c csi01.c motion.c util.c inputbits.c serial.c adc.c analog.c scratchpad.c
+SEG	@@CODEL		nvsreq.c serial1.c updatereq.c sha1.c powerreq.c task5.c serialauth.c nvs.c power.c timer.c
+SEG	@@CODEL		iica.c powerjob.c elmo.c serial2.c
+SEG	@@CODEL		uart4.c IF ERNIE_HW!=0x00406000
+SEG	@@CODEL		interrupt.c serial4.c task6.c bbmc.c trace.c board.c powerseq.c battery.c charge.c cookie.c powerwait.c state.c
+# The original initialization leaves a return-address byte on the stack that the
+# host handshake passes to rel_mpf when its first allocation fails. Preserve it.
+AT	0x2b48d		IF ERNIE_HW==0x00415000
+AT	0x29ced		IF ERNIE_HW==0x00406000
+SEG	@@CODEL		handshake.c
 SEG	@@CODEL
 
 # the RAM: kept over a warm start, then the heap, the near data, the flash library's
@@ -182,7 +195,14 @@ AT	0xfd900
 SEG	@@DATAL		main.c param.c watchdog.c
 SEG	@@HEAP
 SEG	@@INIT
-SEG	@@DATA		cstart.asm input.c util.c adc.c analog.c serialauth.c power.c timer.c sysinfo.c handshake.c cstartend.asm
+SEG	@@DATA		cstart.asm input.c util.c adc.c analog.c serialauth.c power.c timer.c sysinfo.c
+SEG	@@DATA		handshake.c cstartend.asm IF ERNIE_FW!=0x01000306
+SEG	@@FSLDAT	IF ERNIE_FW!=0x01000306
+SEG	@@INIS		IF ERNIE_FW!=0x01000306
+# The original handshake packet and state start here on these boards.
+AT	0xfdcde		IF ERNIE_HW==0x00415000
+AT	0xfdcde		IF ERNIE_HW==0x00406000
+SEG	@@DATA		handshake.c cstartend.asm
 SEG	@@FSLDAT
 # the startup's (empty) saddr initialised data, where Sony's link has it
 SEG	@@INIS

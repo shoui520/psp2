@@ -3,11 +3,18 @@
  * (0x00d2) and writes (0x00d3) the NVS with packets encrypted under its session key; 0x00d1
  * locks it again. snvsCheck keeps the packets in sequence and checks their sums.
  */
+#include "aes.h"
+#include "authkeys.h"
 #include "handshake.h"
 #include "kernel.h"
+#include "nvs.h"
 #include "snvs.h"
 
 static struct Snvs snvs;
+static unsigned char snvsBuffer[0x30];
+
+static unsigned int snvsChecksum(unsigned char *data, unsigned int length);
+static int snvsCheck(struct SnvsPacket *packet, unsigned int length);
 
 void snvsReset(void)
 {
@@ -42,28 +49,72 @@ int snvsLock(unsigned char *data)
 	return result;
 }
 
-/*
- * PLACEHOLDER: cryptographic routine, deferred (0x00d2, sceSysconSnvsReadData: takes a block
- * of memory pool 2 (status 0x13 without one), AES-CBC decrypts the host's 0x10-byte packet
- * from data into the buffer at 0xffcaa under handshakeKey (0xff6f6) with the IV at 0x10588,
- * checks it with snvsCheck, reads the packet's NVS offset and size into it at 0x0e, puts
- * snvsChecksum of its first 0x2e bytes at 0x2e, and AES-CBC encrypts the 0x30 bytes into
- * answer; then frees the block and returns the status). Returns 0.
- */
+/* Decrypt the request, read the selected NVS bytes and encrypt the response. */
 int snvsRead(unsigned char *data, unsigned char *answer)
 {
-	return 0;
+	int result = 0;
+	struct AesKey key;
+	VP block;
+	int poolResult;
+	struct SnvsPacket *packet = (struct SnvsPacket *)snvsBuffer;
+	unsigned int checksum;
+
+	poolResult = pget_mpf(2, &block);
+	if (poolResult != E_OK) {
+		result = 0x13;
+	} else {
+		key.w = (unsigned long *)(unsigned long __near *)block;
+		key.nk = 4;
+		key.nb = 4;
+		aesKeyExpansion((const unsigned long *)handshakeKey, (struct AesKey __near *)&key);
+		aesCbcDecrypt((const unsigned char __near *)data, (unsigned char __near *)snvsBuffer,
+			      (struct AesKey __near *)&key, handshakeIv, 0x10);
+		result = snvsCheck(packet, 0x10);
+		if (result == 0) {
+			result = nvsRead(packet->offset, packet->size, snvsBuffer + 0x0e, 0);
+			checksum = snvsChecksum(snvsBuffer, 0x2e);
+			snvsBuffer[0x2e] = checksum;
+			snvsBuffer[0x2f] = checksum >> 8;
+			aesCbcEncrypt((const unsigned char __near *)snvsBuffer, (unsigned char __near *)answer,
+				      (struct AesKey __near *)&key, handshakeIv, 0x30);
+		}
+	}
+	rel_mpf(2, block);
+	return result;
 }
 
-/*
- * PLACEHOLDER: cryptographic routine, deferred (0x00d3, sceSysconSnvsWriteData: as snvsRead,
- * the host's 0x30-byte packet decrypted and checked, its 0x20 bytes at 0x0e written to its NVS
- * offset and size, snvsChecksum of the first 0x0e bytes put at 0x0e, and the first 0x10 bytes
- * encrypted into answer). Returns 0.
- */
+/* Decrypt the write packet and return its encrypted acknowledgement. */
 int snvsWrite(unsigned char *data, unsigned char *answer)
 {
-	return 0;
+	int result = 0;
+	struct AesKey key;
+	VP block;
+	int poolResult;
+	struct SnvsPacket *packet = (struct SnvsPacket *)snvsBuffer;
+	unsigned int checksum;
+
+	poolResult = pget_mpf(2, &block);
+	if (poolResult != E_OK) {
+		result = 0x13;
+	} else {
+		key.w = (unsigned long *)(unsigned long __near *)block;
+		key.nk = 4;
+		key.nb = 4;
+		aesKeyExpansion((const unsigned long *)handshakeKey, (struct AesKey __near *)&key);
+		aesCbcDecrypt((const unsigned char __near *)data, (unsigned char __near *)snvsBuffer,
+			      (struct AesKey __near *)&key, handshakeIv, 0x30);
+		result = snvsCheck(packet, 0x30);
+		if (result == 0) {
+			result = nvsWrite(packet->offset, packet->size, snvsBuffer + 0x0e, 0);
+			checksum = snvsChecksum(snvsBuffer, 0x0e);
+			snvsBuffer[0x0e] = checksum;
+			snvsBuffer[0x0f] = checksum >> 8;
+			aesCbcEncrypt((const unsigned char __near *)snvsBuffer, (unsigned char __near *)answer,
+				      (struct AesKey __near *)&key, handshakeIv, 0x10);
+		}
+	}
+	rel_mpf(2, block);
+	return result;
 }
 
 /* 0xffff less the sum of length bytes (at most 0x40) */
